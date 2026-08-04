@@ -23,6 +23,7 @@ from app.config import Settings
 from app.loader import compare_preset_to_dict, get_data_dir, load_all_locations, load_compare_presets
 from services import alert_log
 from services.alert_state import AlertStateService
+from services.compare_alert_guard import is_silenced
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.trip_alert import radar_alert_due
@@ -83,6 +84,16 @@ class CompareRadarAlertService:
         preset_id = preset.get("id", "")
         location_ids = preset.get("location_ids") or []
         if not preset_id or not location_ids:
+            return False
+        # Issue #1467 S2 AG6: pausierte/archivierte Ortsvergleiche schweigen
+        # in ALLEN Alarm-Pfaden (PO-Vorgabe). Der Riegel sitzt vor der
+        # `radar_alert_enabled`-Pruefung und vor jedem Nowcast-Abruf
+        # (AC-20b-Wirkung im zweiten Pfad). Regel nur im geteilten Baustein
+        # (AC-28), nie hier inline.
+        if is_silenced(preset):
+            logger.debug(
+                f"Compare-Radar-Alert skipped: preset {preset_id} is paused/archived"
+            )
             return False
         # AC-6: Default AUS — kein get_nowcast-Aufruf bei fehlendem/false Feld.
         if not preset.get("radar_alert_enabled", False):

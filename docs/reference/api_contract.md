@@ -1767,7 +1767,8 @@ Details in `docs/specs/modules/compare_preset_zeitplan.md`). `weekday` gilt als 
 ("Compare Presets Slot-Check (hourly)", vormals einmal täglich 06:00 UTC) prüft pro Preset, ob
 die aktuelle Stunde (Europe/Vienna) mit `morning_time`/`evening_time` übereinstimmt; Morgen-Slot
 versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards vor jedem Versand:
-`schedule=="manual"` (pausiert), `archived_at` gesetzt, `end_date` gesetzt und `< heute`.
+siehe `compare_alert_guard.is_silenced()` (Issue #1467 S2 AG6: `paused_at` gesetzt, `schedule=="manual"`,
+oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 
 **DisplayConfig Keys (Issue #680 onwards):**
 - `active_metrics`: Ausgewählte Metriken für den Vergleich. **Speicherformat seit
@@ -2100,8 +2101,9 @@ Pause-Flag (`manual` = pausiert). Details: `docs/specs/modules/compare_preset_ze
 Prüft für jeden Nutzer alle Compare-Presets auf Slot-Fälligkeit zur aktuellen Stunde
 (optionaler Query-Parameter `hour`, Default: aktuelle Stunde Europe/Vienna — Muster
 `trigger_trip_reports`). Fällige Presets: Morgen-Slot → Compare Engine mit `target_date=heute`,
-Abend-Slot → `target_date=morgen`. Guards vor Versand: `schedule=="manual"` (pausiert),
-`archived_at` gesetzt, `end_date` gesetzt und in der Vergangenheit. Rendert/sendet E-Mails,
+Abend-Slot → `target_date=morgen`. Guards vor Versand: siehe `compare_alert_guard.is_silenced()`
+(Issue #1467 S2 AG6: `paused_at` gesetzt, `schedule=="manual"`, oder `archived_at` gesetzt);
+zusätzlich `end_date` gesetzt und in der Vergangenheit. Rendert/sendet E-Mails,
 aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 
 **Query Parameters:**
@@ -2142,7 +2144,7 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 **Internal Behavior (seit Issue #1232 Scheibe 2a):**
 
 1. Load über den zentralen Loader `load_compare_presets()`/`compare_preset_to_dict()` (`src/app/loader.py`, Issue #1250 Scheibe 1, `strict=True`) — liest seit Issue #1250 S7b per-Datei `data/users/{user_id}/briefings/*.json`, invers gefiltert auf `kind == "vergleich"` (partial-tolerant) statt der alten Single-File `compare_presets.json` (nur noch Migrations-Quelle/Rollback) — Rückgabe bleibt dieselbe Dict-Liste wie zuvor (`compare_preset_to_dict()` liefert den unveränderten Roh-Dict je Preset)
-2. Für jedes Preset: Guards prüfen — `schedule == "manual"` → skip (pausiert); `archived_at` gesetzt → skip; `end_date` gesetzt und `< heute` (Europe/Vienna) → skip
+2. Für jedes Preset: Guards prüfen — via `compare_alert_guard.is_silenced()` (Issue #1467 S2 AG6): `paused_at` gesetzt → skip (pausiert); `schedule == "manual"` → skip (pausiert); `archived_at` gesetzt → skip; zusätzlich `end_date` gesetzt und `< heute` (Europe/Vienna) → skip
 3. Slot-Werte lesen (Preset ohne Slot-Felder — z. B. weil die Go-Migration die Datei noch nicht neu geschrieben hat — bekommt dieselben Fallback-Defaults wie `LoadComparePresets`); Morgen-Slot fällig wenn `morning_enabled` und `morning_time.hour == hour` (`target_date=heute`), Abend-Slot fällig wenn `evening_enabled` und `evening_time.hour == hour` (`target_date=morgen`)
 4. Für jedes fällige Preset:
    - Validate `location_ids` (warn if empty, increment `error_count`)

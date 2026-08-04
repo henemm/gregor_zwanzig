@@ -4,7 +4,7 @@ type: refactor
 created: 2026-08-03
 updated: 2026-08-04
 status: draft
-version: "1.1"
+version: "1.2"
 tags: [alerts, trip, compare, epic-1458, issue-1467, s2]
 ---
 
@@ -274,6 +274,76 @@ einzelne Guard-Zeile, und ein Riegel nur im halben Bestand wäre genau der inkon
 Zustand, den diese Scheibe beseitigen soll. Richtung der Verhaltensänderung: **weniger**
 Meldungen — anders als bei allen anderen Risiken dieser Scheibe hier ausdrücklich gewollt.
 
+**Belegter Schadensfall (gemessen 2026-08-04 in Produktivdaten).**
+`data/users/henning/alert_log.json` enthält genau EINEN Ortsvergleich-Alarm der gesamten
+Historie: `cp-eb6ba0b239d90e37`, `sent_at 2026-08-04T04:00:26Z`, `reason forecast_change`
+(Böen, MODERATE, per E-Mail). Dasselbe Preset trägt `paused_at 2026-07-31T20:08:12` — der
+Alarm ging **vier Tage nach dem Pausieren** raus. AG6 behebt einen belegten Fehler, kein
+theoretisches Risiko.
+
+**Was „pausiert" heißt — PO-Entscheidung 2026-08-04 (präzisiert AC-20).**
+Die Oberfläche leitet den Status in `frontend/src/lib/components/compare/subscriptionHelpers.ts:83-88`
+ODER-verknüpft ab: `paused_at` gesetzt ODER `schedule == "manual"` ⇒ Beschriftung „pausiert".
+Der Riegel folgt **dieser** Vorlage, damit Anzeige und Verhalten nicht auseinanderlaufen.
+Vorgelegt wurde die Alternative „nur ausdrücklich per Knopf Pausiertes schweigt"; der PO hat
+sich für die Deckungsgleichheit mit der Anzeige entschieden.
+
+⚠️ **Sofort sichtbare Betriebsfolge, dem PO vor der Freigabe genannt:** alle fünf realen
+Ortsvergleiche tragen heute `schedule="manual"` (vier davon ohne `paused_at` — sie haben nie
+einen Zeitplan bekommen). Nach dem Deploy sendet damit **zunächst kein Ortsvergleich mehr
+Alarme**, bis einem davon ein Zeitplan gegeben wird. Bewusst nicht technisch abgefedert (keine
+Übergangsregel, kein Bestandsschutz) — eine Ausnahme würde genau die Zweideutigkeit
+konservieren, die diese Scheibe beseitigt.
+
+**DRY-Befund vor der AC-Freigabe (#1481 Baustein B).** Dieselbe Frage wird heute an **vier**
+Stellen beantwortet, und keine zwei gleich:
+
+| Stelle | prüft | Zweck |
+|---|---|---|
+| `compare_slot_scheduler.py:76-79` | `schedule`, `archived_at` | Briefing-Fälligkeit |
+| `scheduler_dispatch_service.py:66-68` | `archived_at`, `paused_at` **oder** `schedule` | Auto-Pause („schon stillgelegt?") |
+| `compare_official_alert.py:88-93` | `schedule`, `archived_at` | amtlicher Alarm |
+| `subscriptionHelpers.ts:83-88` | `paused_at` **oder** `schedule`, plus `draft` | Anzeige-Status |
+
+`is_silenced()` darf keine fünfte Fassung werden. Verbindlich abgelöst wird
+`compare_official_alert.py` (AC-28). `compare_slot_scheduler.py` zieht mit.
+
+**Korrektur 2026-08-04 (Anlass: Adversary-Fund F001, Runde 1) — gemessene Wirkung im
+Briefing-Weg.** Der frühere Satz an dieser Stelle („dort ist `paused_at` neu, wirkt aber
+praktisch nicht, weil `end_date` unmittelbar davor separat geprüft wird") war eine Annahme
+statt einer Messung und ist in beiden Hälften falsch: der Guard steht in
+`compare_slot_scheduler.py:78-83` **vor** der `end_date`-Prüfung (`:85-89`), und beide sind
+ohnehin unabhängige Bedingungen. Gemessen gilt: **`paused_at` legt im Briefing-Weg
+tatsächlich still** — ein Preset mit gesetztem `paused_at`, aktivem `schedule` und gültigem
+`end_date` in der Zukunft ist ab jetzt nicht mehr fällig und bekommt auch **kein reguläres
+Ortsvergleich-Briefing** mehr, nicht nur keine Alarme. Das ist fachlich gewollt (PO-Vorgabe
+„als würde es sie im System nicht geben") und bleibt so. Bewacht wird die Wirkung seit
+diesem Fix durch das Testpaar
+`tests/tdd/test_compare_alert_paused_archived_silent.py::test_paused_preset_is_not_due_for_regular_compare_briefing`
+(pausiert ⇒ nicht fällig) und `::test_active_preset_with_same_fixture_is_due_for_regular_compare_briefing`
+(identische Fixture ohne `paused_at` ⇒ fällig). Vorher wurde die gezielte Neutralisierung
+genau dieses Anteils (`is_silenced({**preset, "paused_at": None})`) von **keinem** der 42
+einschlägigen Tests gefangen; jetzt macht sie genau den ersten der beiden Tests rot
+(1 Fehlschlag von 44).
+
+**Nachtrag 2026-08-04 (Anlass: Adversary-Fund F003, Runde 3) — beide Slots getrennt bewacht.**
+`presets_due_for_hour` entscheidet für Morgen- und Abend-Slot in zwei **unabhängigen** Zweigen
+(`compare_slot_scheduler.py:101-104`, KL-5). Das obige Testpaar verdrahtete nur den
+Morgen-Slot; eine Verfälschung, die den Riegel ausschließlich im Abend-Zweig neutralisiert
+(Morgen-Zweig unberührt), rutschte deshalb durch alle 44 Tests. Die Fixture `_briefing_preset`
+nimmt jetzt den Slot als Parameter (`slot="morning"|"evening"`, eine Fixture statt einer
+Zweitfassung), und **jeder** der beiden Slots hat sein eigenes Paar aus Nachweis
+(`::test_paused_preset_is_not_due_for_evening_compare_briefing`) und Gegenprobe
+(`::test_active_preset_is_due_for_evening_compare_briefing`, fällig mit Zieldatum **Folgetag**).
+Die Zusicherung ist damit an **beiden** Stellen geprüft, an denen sie wirkt. Der
+ausgelieferte Produktivcode war und bleibt an dieser Stelle korrekt — es fehlte allein der
+Wächter; gemessen: die Abend-Mutation macht genau den neuen Abend-Nachweis rot (1 Fehlschlag
+von 46), Morgen-Paar und Abend-Gegenprobe bleiben grün.
+
+`scheduler_dispatch_service.py:66-68` bleibt **bewusst unverändert**: dort bedeutet der
+`continue` „schon stillgelegt, nicht erneut schreiben", nicht „nicht senden" — gleiche
+Bedingung, andere Aussage.
+
 ## Invarianten (gelten über alle sechs Arbeitsgänge)
 
 - **Der gefährlichste Fehler ist der ausbleibende Alarm.** Zielmarke: Verhalten unverändert
@@ -308,6 +378,15 @@ Meldungen — anders als bei allen anderen Risiken dieser Scheibe hier ausdrück
   `internal/scheduler/scheduler.go` (zwei `*/15`-Jobs) bleiben unangetastet.
 - Radar-Onset- und amtliche Telegram-Nachrichten bleiben gebündelt (bewusst NICHT auf
   „eine je Ort" umgestellt — das wäre S3/S4-Scope).
+- **Der Handversand prüft den Stilllegungs-Riegel NICHT — PO-Entscheidung 2026-08-04, Anlass
+  Adversary-Fund F002 (Runde 1).** `src/services/scheduler_dispatch_service.py:425-458`
+  (`send_compare_preset`, Endpunkt `POST /api/scheduler/compare-presets/{id}/send`) ruft
+  `is_silenced()` an keiner Stelle auf; `src/app/loader.py:291-330` (`load_compare_presets`)
+  filtert pausierte/archivierte Presets nicht heraus. Ein pausierter oder archivierter
+  Ortsvergleich kann damit weiterhin per Knopf zugestellt werden — **das bleibt so**.
+  Begründung: der Knopf ist eine ausdrückliche Nutzerhandlung, der Riegel richtet sich gegen
+  das **automatische** Senden. Dieselbe Linie wie AG5, wo genau dieser Endpunkt bewusst
+  `on_demand=True` übergibt. Kein Code, kein AC, keine offene Lücke.
 
 ## Risiken
 
@@ -325,7 +404,7 @@ Meldungen — anders als bei allen anderen Risiken dieser Scheibe hier ausdrück
 | Datei | Art | Arbeitsgang | Beschreibung |
 |---|---|---|---|
 | `src/services/compare_alert_channels.py` | CREATE | AG1 | Der EINE Compare-Kanal-Resolver |
-| `src/services/compare_alert_guard.py` | CREATE | AG6 | `is_silenced(preset)` — Pausiert/Archiviert-Riegel |
+| `src/services/compare_alert_guard.py` | CREATE | AG6 | `is_silenced(preset)` — Pausiert/Archiviert-Riegel; ODER-verknüpft nach Vorlage `subscriptionHelpers.ts:83-88` |
 | `src/services/alert_briefing_anchor.py` | CREATE | AG5 | Geteilter Baustein Anker-Schreiben + Gedächtnis-Reset, `on_demand`-Gate |
 | `src/services/compare_alert.py` | MODIFY | AG2, AG4, AG6 | Ruhezeit vor Fetch; `channels={"email"}` → Resolver; früher Guard-Aufruf |
 | `src/services/compare_radar_alert.py` | MODIFY | AG6 | Guard-Aufruf ergänzt |
@@ -335,7 +414,13 @@ Meldungen — anders als bei allen anderen Risiken dieser Scheibe hier ausdrück
 | `src/output/renderers/alert/render.py` | MODIFY | AG3 | `_sms_token`/`render_sms` mit optionaler Orts-Positions-Kodierung; neue Per-Ort-Telegram-Renderfunktion |
 | `src/services/notification_service.py` | MODIFY | AG3 | `send_multi_location_deviation_alert`/`_dispatch_alert_message`: Telegram-Fan-out je Ort NUR im Deviation-Alert-Pfad |
 | `tests/tdd/test_issue_1169_compare_alert_consumer.py` | MODIFY | AG4 | Assertion `:645`, Modul-Docstring `:13-14`, Test-Docstring `:591-594` — E-Mail-only-Festschreibung entfernen/umschreiben |
-| `tests/test_success_status_guard.py` | MODIFY (bedingt) | AG2, AG6 | Ordinal-Schlüssel nachziehen, falls Strukturänderung sie verschiebt |
+| `src/services/compare_slot_scheduler.py` | MODIFY | AG6 | `:78-83` delegiert an `is_silenced` (vor der `end_date`-Prüfung `:85-89`). `paused_at` wirkt hier **tatsächlich**: ein pausierter Ortsvergleich bekommt auch kein reguläres Briefing mehr — bewacht durch das F001-Testpaar, s. AG6-Text |
+| `tests/tdd/test_compare_alert_quiet_hours_precedes_fetch.py` | MODIFY | AG6 | Fixture `:142` `schedule: "manual"` → aktiver Zeitplan (sonst blockt der Riegel den Test) |
+| `tests/tdd/test_compare_alert_metric_gating.py` | MODIFY | AG6 | Fixture `:110`, dito |
+| `tests/tdd/test_compare_radar_alert.py` | MODIFY | AG6 | Fixture `:88`, dito |
+| `tests/tdd/test_issue_1170_compare_alert_config.py` | MODIFY | AG6 | **Nachtrag 2026-08-04** — zwei Preset-Builder trugen `schedule: "manual"`, zwei Tests wurden durch den Riegel rot (`sent=0` statt 1). Prüfen Empfindlichkeitsstufen + Bündelung, also weiterhin gültige Zusicherungen ⇒ aktiver Zeitplan |
+| `tests/tdd/test_issue_1169_compare_alert_consumer.py` | MODIFY | AG4, **AG6** | AG6-Nachtrag: Preset-Builder auf aktiven Zeitplan. ⚠️ Datei trägt `pytestmark = pytest.mark.email` und läuft nur in der Live-Schicht (`/e2e-verify`) — die Korrektur ist **statisch abgeleitet, nicht durch einen Testlauf belegt**. Beim E2E-Lauf gegenprüfen |
+| `tests/test_success_status_guard.py` | MODIFY (bedingt) | AG2, AG6 | Ordinal-Schlüssel nachziehen, falls Strukturänderung sie verschiebt. **AG6: Bedingung trat NICHT ein** — Wächter ohne Änderung grün (gemessen 2026-08-04) |
 
 ## Testplan
 
@@ -360,7 +445,16 @@ dupliziert).
   kein Alarm bei unverändertem Wert nach Briefing, Alarm bei starkem Ausschlag, alle Orte
   zurückgesetzt, Handversand ändert nichts, zweiter Nutzer unberührt.
 - **AG6** — `tests/tdd/test_compare_alert_paused_archived_silent.py` (neu): pausiert/archiviert
-  für beide Pfade (Δ-Wetter, Nowcast), aktives Preset desselben Nutzers meldet weiter.
+  für beide Pfade (Δ-Wetter, Nowcast), beide Merkmale einzeln (AC-20 Fall b!), Fetch-Spion für
+  AC-20b, aktives Preset desselben Nutzers meldet weiter, Verdrahtungstests für AC-28.
+  **Zwingend mitzuziehen — vier Bestandsfixtures führen ein Preset mit `schedule: "manual"`
+  und erwarten einen Alarm; sie werden durch den Riegel rot:**
+  `test_compare_alert_quiet_hours_precedes_fetch.py:142`,
+  `test_compare_alert_metric_gating.py:110`, `test_compare_radar_alert.py:88`,
+  `test_compare_preset_send.py:63` (Handversand — voraussichtlich nicht betroffen, prüfen).
+  Jeder dieser Tests prüft eine **andere**, weiterhin gültige Zusicherung ⇒ die Fixture wird
+  auf einen aktiven Zeitplan korrigiert. **Verboten:** den Riegel abschwächen oder den Test
+  löschen, um sie grün zu bekommen.
 - Nach jedem Arbeitsgang: `python3 .claude/hooks/workflow.py status` (LoC-Budget) und ein
   gezielter Lauf von `tests/test_success_status_guard.py` (Ordinal-Drift, R6).
 
@@ -552,10 +646,22 @@ dupliziert).
 
 **AG6 — Pausierte und archivierte Ortsvergleiche schweigen**
 
-- **AC-20:** Given ein Ortsvergleichs-Preset mit `schedule: "manual"` (pausiert) und einer
+- **AC-20:** Given ein Ortsvergleichs-Preset, das die Oberfläche als „pausiert" beschriftet —
+  also `paused_at` gesetzt ODER `schedule: "manual"`, jeweils für sich genügend — und einer
   auslösenden Wetteränderung, When `CompareAlertService.check_all_compare_presets()` läuft,
   Then wird KEIN Änderungsalarm versendet.
-  - Test: pausiertes Preset, auslösender Δ-Wert, keine Zustellung auf keinem Kanal.
+  - Test: **drei** Presets nacheinander — (a) nur `schedule="manual"`, (b) nur `paused_at`
+    gesetzt bei aktivem `schedule`, (c) beides gesetzt. In allen drei Fällen auslösender
+    Δ-Wert, keine Zustellung auf keinem Kanal. Fall (b) ist der eigentliche Prüfstein: er
+    fällt durch, wenn der Riegel nur auf `schedule` liest.
+
+- **AC-20b:** Given dasselbe pausierte Preset, When der Änderungsalarm-Lauf es erreicht, Then
+  wird für dieses Preset **kein Wetterabruf ausgelöst** — der Riegel greift vor der
+  Datenbeschaffung, nicht erst vor dem Versand.
+  - Test: Fetch-Spion zählt Aufrufe (Muster `test_compare_alert_quiet_hours_precedes_fetch.py`
+    aus AG2); Zähler bleibt bei 0. Ohne dieses AC wäre der Riegel erfüllbar, indem nur der
+    Versand unterdrückt wird — dann verbrauchen pausierte Vergleiche weiter Abruf-Kontingent
+    (#1329) und die Zusicherung „als würde es sie nicht geben" wäre nur halb wahr.
 
 - **AC-21:** Given dasselbe pausierte Preset mit einem auslösenden Radar-Nowcast, When
   `CompareRadarAlertService.check_all_compare_presets()` läuft, Then wird KEIN Nowcast-Alarm
@@ -573,8 +679,28 @@ dupliziert).
   - Test: zweites, aktives Preset in derselben Fixture, Zustellung erfolgt — Beweis, dass der
     Riegel nicht zu breit greift.
 
+- **AC-28:** Given die Stilllegungs-Regel („pausiert oder archiviert"), When irgendein
+  Alarmpfad sie auswertet, Then stammt die Antwort aus **genau einer** Fassung
+  (`compare_alert_guard.is_silenced`) — `compare_official_alert.py` hält keine eigene
+  Inline-Prüfung mehr.
+  - Test: Verdrahtungstest je Aufrufer nach dem Muster aus AG1 — das `is_silenced`-Symbol wird
+    **im verbrauchenden Modul** ersetzt; baut eine Stelle wieder eigene Logik, wird der Test
+    rot. Zusätzlich: das amtliche Bestandsverhalten (`test_compare_official_alert.py`, AC-4
+    aus #1233) bleibt unverändert grün — die Ablösung ist verhaltensgleich.
+  - Nicht Teil dieses AC: `scheduler_dispatch_service.py:66-68` (andere Aussage, s. AG6-Text).
+
 ## Known Limitations
 
+- **AG6 / F004 (LOW, bewusst offen — Adversary Runde 4).** Der Stilllegungs-Riegel im
+  Briefing-Weg ist je Slot einzeln bewacht (Morgen und Abend, s. F003), aber nicht für den
+  Fall **beider gleichzeitig aktiver Slots** (KL-5). Eine Verfälschung, die `paused_at`
+  ausschließlich in dieser Kombination neutralisiert, rutscht durch alle 46 Tests.
+  **Kein Fix** — der ausgelieferte Code hat genau EINEN uniformen Guard vor der
+  Slot-Auflösung (`compare_slot_scheduler.py:78-83`) und keine Kombinations-Sonderbehandlung;
+  eine solche Mutation wäre kein plausibler Refactoring-Unfall wie F001/F003, sondern müsste
+  bewusst neu eingeführt werden. Der Adversary hat sie selbst als Überabsicherung eingestuft.
+  Sollte dort je eine Fallunterscheidung nach Slot-Kombination entstehen, ist dieser Test
+  nachzuziehen.
 - Die SMS-Ortsnummer ist nur innerhalb EINES Presets stabil und deckungsgleich mit der
   Vergleichs-E-Mail-Spaltenreihenfolge zum Sendezeitpunkt. Ändert der Nutzer die Ortsliste
   zwischen zwei Meldungen, kann sich die Nummer für einen Ort verschieben — analog zum
@@ -625,3 +751,56 @@ dupliziert).
   vor dem Fan-out je Ort (AC-7c). Stil-Aufloesung DRY in `compare_alert_channels.py`.
   Adversary VERIFIED, 7 von 7 Kern-Mutationen gefangen. Staging-Nachweis ueber
   Telegram-Kurzform: 1 Nachricht bei „kurzform" gegen 2 bei „rich".
+
+- 2026-08-04 (v1.2): **AG6 praezisiert vor der Umsetzung**, drei Messungen am Ist-Stand
+  (`3acc8515`) und eine PO-Entscheidung. (1) **AC-20 ODER-verknuepft** — „pausiert" ist, was
+  die Oberflaeche als pausiert beschriftet (`subscriptionHelpers.ts:83-88`): `paused_at`
+  gesetzt ODER `schedule == "manual"`, jedes fuer sich genuegend. Der alte Wortlaut las nur
+  `schedule` und haette ein per Knopf pausiertes Preset ohne Zeitplan-Umstellung
+  durchgelassen. PO-Entscheidung 2026-08-04 gegen die vorgelegte Alternative „nur
+  ausdruecklich Pausiertes schweigt"; die Betriebsfolge (alle fuenf realen Ortsvergleiche
+  schweigen zunaechst) wurde vor der Entscheidung genannt. (2) **AC-20b neu** — der Riegel
+  greift vor dem Wetterabruf, nicht erst vor dem Versand; ohne dieses AC waere die Zusicherung
+  „als wuerde es sie nicht geben" durch reine Versandunterdrueckung scheinbar erfuellbar.
+  (3) **AC-28 neu** — genau EINE Fassung der Stilllegungs-Regel, belegt per Verdrahtungstest;
+  Anlass ist der Reuse-Befund, dass dieselbe Frage heute an vier Stellen unterschiedlich
+  beantwortet wird (#1481 Baustein B, Pruefung vor der AC-Freigabe). (4) Vier Bestandsfixtures
+  mit `schedule: "manual"` werden durch den Riegel rot und sind als Pflichtarbeit benannt —
+  Fixture korrigieren, nicht den Riegel abschwaechen. **Belegter Schadensfall** ergaenzt: der
+  einzige Ortsvergleich-Alarm der Historie ging vier Tage nach dem Pausieren des Presets raus.
+
+- 2026-08-04 (v1.2, Fortschreibung nach Adversary-Runde 1 zu AG6): zwei Korrekturen, **kein
+  Produktivcode geaendert**. (1) **F001 (MEDIUM) behoben** — der Satz „dort ist `paused_at`
+  neu, wirkt aber praktisch nicht, weil `end_date` unmittelbar davor separat geprueft wird"
+  war eine Annahme statt einer Messung und in beiden Haelften falsch: der Guard steht
+  `compare_slot_scheduler.py:78-83` VOR der `end_date`-Pruefung (`:85-89`), und beide sind
+  unabhaengige Bedingungen. Ersetzt durch die gemessene Wirkung: `paused_at` legt im
+  Briefing-Weg tatsaechlich still (kein reguläres Ortsvergleich-Briefing mehr fuer ein
+  pausiertes Preset) — fachlich gewollt, bleibt so. Neu bewacht durch das Testpaar
+  `test_paused_preset_is_not_due_for_regular_compare_briefing` /
+  `test_active_preset_with_same_fixture_is_due_for_regular_compare_briefing` in
+  `tests/tdd/test_compare_alert_paused_archived_silent.py`. Mutations-Beleg: die gezielte
+  Neutralisierung `is_silenced({**preset, "paused_at": None})` in `presets_due_for_hour` liess
+  vorher alle 42 einschlaegigen Tests gruen und macht jetzt genau diesen einen Test rot (1 von
+  44); die vollstaendige Entfernung des `paused_at`-Zweigs aus `is_silenced` faengt jetzt 6
+  statt 5 Tests. (2) **F002 (LOW) als PO-Entscheidung festgehalten** — der Handversand
+  (`scheduler_dispatch_service.py:425-458`, `POST /api/scheduler/compare-presets/{id}/send`)
+  prueft den Riegel bewusst NICHT; ausdrueckliche Nutzerhandlung schlaegt den Riegel gegen
+  automatisches Senden, dieselbe Linie wie `on_demand=True` in AG5. Eingetragen unter
+  „Nicht-Ziele / bewusst unveraendert", damit es nicht als offene Luecke wiederkehrt.
+
+- 2026-08-04 (v1.2, Fortschreibung nach Adversary-Runde 3 zu AG6): **F003 (MEDIUM) behoben,
+  reine Testarbeit — kein Produktivcode geaendert.** Der F001-Fix wurde in Runde 3 bestaetigt,
+  liess aber eine Luecke derselben Fehlerklasse offen: die Fixture `_briefing_preset`
+  verdrahtete `evening_enabled=False` fest und pruefte damit nur den Morgen-Slot, waehrend
+  `presets_due_for_hour` Morgen- und Abend-Slot unabhaengig entscheidet (`:101-104`, KL-5).
+  Eine Verfaelschung, die den Riegel ausschliesslich im Abend-Zweig neutralisiert, rutschte
+  durch alle 44 Tests. Behoben durch einen **Slot-Parameter an derselben Fixture**
+  (`slot="morning"|"evening"`, keine Zweitfassung) plus dem zweiten Paar
+  `test_paused_preset_is_not_due_for_evening_compare_briefing` (pausiert ⇒ nicht faellig) /
+  `test_active_preset_is_due_for_evening_compare_briefing` (identische Fixture ohne
+  `paused_at` ⇒ faellig, Zieldatum Folgetag). Mutations-Beleg: der Guard nur im Abend-Zweig
+  durch `is_silenced({**preset, "paused_at": None})` ersetzt (Morgen-Zweig unberuehrt) macht
+  genau den neuen Abend-Nachweis rot (1 von 46); Morgen-Paar und Abend-Gegenprobe bleiben
+  gruen. Nach Rueckspielen der Sicherungskopie 42 von 42 gruen
+  (`test_compare_alert_paused_archived_silent.py` + `test_compare_preset_slot_dispatch.py`).

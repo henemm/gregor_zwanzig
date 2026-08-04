@@ -27,6 +27,7 @@ from services.compare_alert_channels import (
     effective_compare_channels,
     effective_compare_telegram_style,
 )
+from services.compare_alert_guard import is_silenced
 from services.compare_location_weather_source import CompareLocationWeatherSource
 from services.compare_weather_snapshot import CompareWeatherSnapshotService
 from services.deviation_alert_engine import DeviationAlertEngine
@@ -103,6 +104,16 @@ class CompareAlertService:
             preset_id = preset.get("id", "")
             location_ids = preset.get("location_ids") or []
             if not preset_id or not location_ids:
+                continue
+
+            # Issue #1467 S2 AG6: pausierte/archivierte Ortsvergleiche
+            # verhalten sich, als gaebe es sie nicht (PO-Vorgabe). Der Riegel
+            # sitzt bewusst GANZ vorne — vor Sperrzeit, Tageslimit, Ruhezeit
+            # und vor jedem Wetterabruf (AC-20b): ein stillgelegter Vergleich
+            # darf weder Abruf-Kontingent noch Laufzeit kosten. Die Regel
+            # steht nur im geteilten Baustein (AC-28), nie hier inline.
+            if is_silenced(preset):
+                logger.debug(f"Compare-Alert skipped: preset {preset_id} is paused/archived")
                 continue
 
             # Issue #1213 (AC-4): `None`/fehlend muss VOR dem Store-Aufruf auf

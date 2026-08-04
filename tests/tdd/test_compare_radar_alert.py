@@ -85,7 +85,11 @@ def _radar_preset(
         "name": name or preset_id,
         "user_id": "default",
         "location_ids": location_ids,
-        "schedule": "manual",
+        # Issue #1467 S2 AG6: `schedule="manual"` gilt seither als "pausiert"
+        # und schweigt in allen Alarm-Pfaden. Diese Datei prueft den
+        # NOWCAST-Pfad (Onset, Cooldown, Ortszeit) — ihre Presets muessen den
+        # Stilllegungs-Riegel passieren, brauchen also einen aktiven Zeitplan.
+        "schedule": "daily",
         "weekday": 4,
         "profil": "ALLGEMEIN",
         "hour_from": 9,

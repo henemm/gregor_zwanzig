@@ -36,6 +36,7 @@ from services.compare_alert_channels import (
     effective_compare_channels,
     effective_compare_telegram_style,
 )
+from services.compare_alert_guard import is_silenced
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.official_alerts import get_official_alerts_for_location
@@ -85,11 +86,15 @@ class CompareOfficialAlertService:
         location_ids = preset.get("location_ids") or []
         if not preset_id or not location_ids:
             return False
-        # #1233: schedule=="manual" == deaktivierter Ortsvergleich -> nicht senden.
-        if preset.get("schedule") == "manual":
-            return False
-        # #1233: archivierte Vergleiche sind kein aktiver Alarm-Empfaenger mehr.
-        if preset.get("archived_at"):
+        # #1233 (schedule=="manual" / archived_at) — seit Issue #1467 S2 AG6
+        # steht diese Regel nur noch EINMAL, im geteilten Baustein (AC-28);
+        # `paused_at` kommt dort hinzu. Verhaltensgleich fuer den amtlichen
+        # Pfad, deshalb bleibt `test_compare_official_alert.py` (AC-4 aus
+        # #1233) unveraendert gruen.
+        if is_silenced(preset):
+            logger.debug(
+                f"Compare official alert skipped: preset {preset_id} is paused/archived"
+            )
             return False
         official_warnings = preset.get("official_warnings")
         # Issue #1258: official_warnings.enabled loest das Legacy-Feld ab.

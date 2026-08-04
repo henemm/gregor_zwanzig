@@ -19,6 +19,8 @@ import logging
 from datetime import date, time as dt_time, timedelta
 from typing import NamedTuple
 
+from services.compare_alert_guard import is_silenced
+
 logger = logging.getLogger("scheduler.compare_slot")
 
 
@@ -58,10 +60,11 @@ def resolve_preset_slots(preset: dict) -> PresetSlots:
 def presets_due_for_hour(presets: list, hour: int, today: date) -> list:
     """Liefert je faelligem Preset ein `(preset, target_date)`-Tupel.
 
-    Guards (in dieser Reihenfolge): `schedule == "manual"` pausiert
-    (unabhaengig von etwaigen explizit gesetzten Slots), `archived_at`
-    gesetzt stoppt vollstaendig, `end_date` in der Vergangenheit stoppt ab
-    dem Folgetag. Morgen- und Abend-Slot werden unabhaengig voneinander
+    Guards (in dieser Reihenfolge): stillgelegt laut
+    `compare_alert_guard.is_silenced` — `paused_at` gesetzt ODER
+    `schedule == "manual"` ODER `archived_at` gesetzt (unabhaengig von
+    etwaigen explizit gesetzten Slots), danach `end_date` in der
+    Vergangenheit stoppt ab dem Folgetag. Morgen- und Abend-Slot werden unabhaengig voneinander
     geprueft (KL-5: beide koennen in derselben Stunde faellig sein).
 
     Adversary-Fund F002 (#1232 Scheibe 2a): ein einzelnes Preset mit
@@ -72,9 +75,11 @@ def presets_due_for_hour(presets: list, hour: int, today: date) -> list:
     """
     due: list = []
     for preset in presets:
-        if preset.get("schedule") == "manual":
-            continue
-        if preset.get("archived_at"):
+        # Issue #1467 S2 AG6: dieselbe Frage wie in den drei Alarm-Pfaden —
+        # deshalb dieselbe, einzige Fassung (AC-28). `paused_at` kommt damit
+        # neu hinzu; ein pausiertes Preset war hier ohnehin nie faellig
+        # gemeint.
+        if is_silenced(preset):
             continue
 
         try:

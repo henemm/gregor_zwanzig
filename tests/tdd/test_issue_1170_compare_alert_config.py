@@ -104,7 +104,12 @@ def _preset_with_alert_levels(
         "name": preset_id,
         "user_id": "default",
         "location_ids": location_ids,
-        "schedule": "manual",
+        # Issue #1467 S2 AG6: `schedule="manual"` gilt seither als "pausiert"
+        # und schweigt in allen Alarm-Pfaden. Diese Datei prueft die
+        # EMPFINDLICHKEITS-Konfiguration bzw. die Buendelung (#1170) — ihre
+        # Presets muessen den Stilllegungs-Riegel passieren, brauchen also
+        # einen aktiven Zeitplan.
+        "schedule": "daily",
         "weekday": 4,
         "profil": "ALLGEMEIN",
         "hour_from": 9,
@@ -133,7 +138,12 @@ def _preset_multi(preset_id: str, location_ids: list[str], empfaenger: list[str]
         "name": preset_id,
         "user_id": "default",
         "location_ids": location_ids,
-        "schedule": "manual",
+        # Issue #1467 S2 AG6: `schedule="manual"` gilt seither als "pausiert"
+        # und schweigt in allen Alarm-Pfaden. Diese Datei prueft die
+        # EMPFINDLICHKEITS-Konfiguration bzw. die Buendelung (#1170) — ihre
+        # Presets muessen den Stilllegungs-Riegel passieren, brauchen also
+        # einen aktiven Zeitplan.
+        "schedule": "daily",
         "weekday": 4,
         "profil": "ALLGEMEIN",
         "hour_from": 9,
