@@ -21,6 +21,27 @@ folgenlos gemacht.
 
 from __future__ import annotations
 
+# Plugin-Sonde (#1196, Vorbild test_issue_811_renderer_gate.py): die Hooks
+# dieser Suite laufen ueber hook_utils, einen Shim auf das installierte
+# agent-os-openspec-Plugin. Ohne Plugin (CI-Runner, Web-Sessions) sauber
+# ueberspringen statt rot — auf dem Server (Plugin vorhanden) laeuft alles.
+import importlib.util as _gz_ilu
+from pathlib import Path as _GzPath
+
+import pytest as _gz_pytest
+
+_gz_hook_utils = _GzPath(__file__).resolve().parents[2] / ".claude" / "hooks" / "hook_utils.py"
+try:
+    _gz_spec = _gz_ilu.spec_from_file_location("_gz_hook_utils_probe", _gz_hook_utils)
+    _gz_mod = _gz_ilu.module_from_spec(_gz_spec)
+    _gz_spec.loader.exec_module(_gz_mod)
+except ImportError as _gz_exc:
+    _gz_pytest.skip(
+        f"agent-os-openspec-Plugin fehlt ({_gz_exc}) — Hook-Suite braucht die "
+        "installierten Server-Hooks (#1196)",
+        allow_module_level=True,
+    )
+
 import json
 import os
 import shutil
