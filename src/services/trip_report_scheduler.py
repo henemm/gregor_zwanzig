@@ -1516,6 +1516,26 @@ class TripReportSchedulerService:
                 if key not in forecast and key in fetched_fc:
                     forecast[key] = fetched_fc[key]
 
+        # Fix #1482: "Etappe existiert, aber keine Daten" von "gar keine Etappe"
+        # unterscheiden. Nur der erste Fall ist eine Datenluecke und muss in der
+        # Kurzform als "TH+:?" erscheinen statt als Entwarnung "TH+:-".
+        # Der Marker liegt unter einem eigenen Schluessel, NICHT unter "+1"/"+2"
+        # — die E-Mail-Renderer iterieren genau diese beiden und lesen dort
+        # 'date'/'text'; ein Eintrag ohne diese Felder wuerde sie brechen.
+        # Fail-soft wie der Rest dieser Methode: ohne Trip-Objekt (Vorschau-Pfad)
+        # gibt es keine Etappenliste — dann bleibt es beim Bestandsverhalten.
+        future_stages = (
+            trip.get_future_stages(target_date) if trip is not None else []
+        )
+        stage_dates = {s.date for s in future_stages}
+        gaps = {
+            key
+            for offset, key in [(1, "+1"), (2, "+2")]
+            if key not in forecast and target_date + timedelta(days=offset) in stage_dates
+        }
+        if gaps:
+            forecast["_gap_offsets"] = gaps
+
         return forecast if forecast else None
 
     def _thunder_entry_from_trend_row(

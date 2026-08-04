@@ -275,13 +275,21 @@ def render_plain(
     outlook_active = show_outlook and bool(multi_day_trend)
 
     if thunder_forecast and not outlook_active:
-        lines.append("━━ Gewitter-Vorschau ━━")
+        # Fix #1482: Ueberschrift nur mit Eintraegen -- dieselbe Absicherung,
+        # die die HTML-Fassung schon hat (`if items:`). Seit #1482 kann
+        # `thunder_forecast` ausschliesslich den SMS-Luecken-Marker
+        # ("_gap_offsets") tragen; ohne diese Klammer stuende hier eine leere
+        # "Gewitter-Vorschau". Fuer jede bisherige Eingabe unveraendert.
+        _thunder_lines: list[str] = []
         for key in ("+1", "+2"):
             if key in thunder_forecast:
                 fc = thunder_forecast[key]
                 icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
-                lines.append(f"  {fc['date']}: {icon}{fc['text']}")
-        lines.append("")
+                _thunder_lines.append(f"  {fc['date']}: {icon}{fc['text']}")
+        if _thunder_lines:
+            lines.append("━━ Gewitter-Vorschau ━━")
+            lines.extend(_thunder_lines)
+            lines.append("")
 
     if outlook_active:
         # Epic #1301 B4: Ausblick-Klartext-Block in geteilten Baustein

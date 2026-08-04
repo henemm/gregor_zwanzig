@@ -289,8 +289,13 @@ def build_token_line(
 
     if tomorrow is not None:
         spec = by_sym.get(FORECAST_THP) or by_sym.get("TH+")
+        # Fix #1482: die Luecke des FOLGETAGS traegt 'tomorrow', nicht 'today' --
+        # ohne diesen Parameter blieb die Gap->"?"-Logik (oben) fuer 'TH+:'
+        # strukturell wirkungslos und eine fehlende Vorhersage sah wie eine
+        # Entwarnung aus.
         tok = _mk_metric(FORECAST_THP, tomorrow.thunder_hourly, spec,
-                         report_type, is_level=True)
+                         report_type, is_level=True,
+                         has_gap=tomorrow.has_data_gap)
         if tok:
             tokens.append(tok)
 

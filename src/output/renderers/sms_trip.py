@@ -106,9 +106,15 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
 # SMS_SYMBOL_BY_METRIC wuerde zusaetzlich einen Schwellwert auf 'D' legen
 # (#624), den es fuer Temperatur-Token gar nicht gibt. Daher hier, in der
 # frueher 'FELT' benannten Mehrfach-Tabelle.
+# Fix #1482: 'thunder' traegt ZWEI Kuerzel -- 'TH:' (berichtete Etappe) und
+# 'TH+:' (Folge-Etappe). 'TH+:' hing an keinem Eintrag und blieb deshalb auch
+# nach Abwahl der Metrik "Gewitter" in der Kurzform stehen. SMS_SYMBOL_BY_METRIC
+# bildet 1:1 ab (nur 'TH:') und wird zusaetzlich fuer Schwellwerte gelesen
+# (#624) -- ein zweiter Eintrag dort wuerde das Schwellwert-Dict verfaelschen.
 SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
     "temperature": ("N", "K", "D"),
     "wind_chill": ("FN", "FK", "FD", "WC"),
+    "thunder": ("TH:", "TH+:"),
 }
 
 # RiskType → SMS risk label (German, ultra-compact). Used by format_alert_sms.
@@ -422,6 +428,12 @@ class SMSTripFormatter:
         # passend zu tokens/metrics.LEVELS) — NICHT aus thunder_ordinal(), das
         # ist die Sortier-Ordnung und wuerde MED als 'L' rendern.
         tomorrow_thunder: tuple = ()
+        # Fix #1482: echte Datenluecke der Folge-Etappe (Etappe existiert, aber
+        # weder Trend noch Fallback-Fetch lieferten Daten) -> "TH+:?" statt der
+        # Fehl-Entwarnung "TH+:-". Der Marker steht bewusst NICHT unter "+1"/
+        # "+2" selbst, weil die E-Mail-Renderer diese Schluessel iterieren und
+        # dort 'date'/'text' erwarten (Spec, Mangel 2, Punkt 1).
+        tomorrow_gap = False
         if thunder_forecast and "+1" in thunder_forecast:
             entry = thunder_forecast["+1"]
             lvl_val = thunder_label_value(entry.get("level"))
@@ -431,7 +443,11 @@ class SMSTripFormatter:
             # stand hier die hartkodierte 12, die wie eine Vorhersage aussah.
             if lvl_val > 0 and hour is not None:
                 tomorrow_thunder = (HourlyValue(int(hour), float(lvl_val)),)
-        tomorrow_day = DailyForecast(thunder_hourly=tomorrow_thunder)
+        elif thunder_forecast:
+            tomorrow_gap = "+1" in (thunder_forecast.get("_gap_offsets") or ())
+        tomorrow_day = DailyForecast(
+            thunder_hourly=tomorrow_thunder, has_data_gap=tomorrow_gap,
+        )
         # `replace` statt Neubau: der Warn-Block (#1318) darf beim Anhaengen
         # des Folgetags nicht verlorengehen.
         forecast = replace(forecast, days=(forecast.days[0], tomorrow_day))

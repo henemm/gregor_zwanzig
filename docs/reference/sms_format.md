@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.15"
+version: "2.17"
 status: active
 created: 2025-12-27
-updated: 2026-08-03
+updated: 2026-08-04
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.15)
+# SMS / Kompakt-Format Specification (v2.17)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -54,7 +54,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Forecast (gefühlt) | `FK FD` | Morgen + Abend, aber nur bei aktivierter Metrik „Gefühlte Temperatur“ |
 | Forecast (Höchst) | `D` | Morgen + Abend, nur bei aktivierter Metrik „Temperatur“ (Issue #1415) |
 | Forecast | `R PR W G TH:` | nur bei aktivierter Metrik (bei `-` als Null-Wert) |
-| Forecast (Gewitter Folge-Etappe) | `TH+:` | derzeit **immer** — die Abwahl der Metrik „Gewitter“ wirkt auf `TH:`, aber nicht auf `TH+:` (gemessene Ist-Abweichung, s. Hinweis unter §2) |
+| Forecast (Gewitter Folge-Etappe) | `TH+:` | nur bei aktivierter Metrik „Gewitter“ — seit Fix #1482 (2026-08-04) synchron mit `TH:` über dieselbe Metrik-Bindung (vorher Ist-Abweichung, s. Hinweis unter §2) |
 | Confidence | `C` | nur wenn Provider Konfidenz liefert (Issue #121, v2.1) |
 | Risks (Vigilance) | `HR:TH:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
 | Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab Stufe ORANGE (§3.4c) |
@@ -69,12 +69,13 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 
 **Hinweis zu `K`/`FK`/`FD`/`FN` (Issue #1410, 2026-07-28):** `K` ist die Tiefsttemperatur **unterwegs** (kälteste Gehzeit-Stunde) und steht unabhängig neben `N` (Nacht am Schlafplatz) — beide erscheinen abends gemeinsam, morgens nur `K`. Das `F`-Präfix bezeichnet die **gefühlte** Temperatur (`FN`/`FK`/`FD` als Parität zu `N`/`K`/`D`); diese drei erscheinen ausschliesslich, wenn die Metrik „Gefühlte Temperatur“ (`wind_chill`) im Trip aktiviert ist.
 
-**Grundregel „gewählt / nicht gewählt“ (PO-Entscheidung 2026-08-03, Issue #1415):** Für **jedes** Vorhersage-Kürzel gilt: geprüft, aber nichts über der Schwelle bzw. kein Wert ⇒ Null-Form (`R-`, `K-`); Metrik im Trip **abgewählt** ⇒ das Kürzel entfällt vollständig, auch die Null-Form. Eine dritte Stufe „Wert nicht abrufbar / Datenlücke im Fenster ⇒ `R?`“ (#1328) gibt es **nur** bei den Schwellwert-Kürzeln `R`/`PR`/`W`/`G`/`TH:`, nicht bei den Temperatur-Kürzeln und nicht bei `TH+:` (s. „Bekannte Ist-Abweichungen“ direkt unten und §4). Es gibt damit **keine unbedingten Vorhersage-Token** mehr: `N`/`K`/`D` (Metrik „Temperatur“) verhalten sich seit #1415 exakt wie `FN`/`FK`/`FD` (Metrik „Gefühlte Temperatur“). Die Bindung Kürzel→Metrik liegt an genau einer Stelle: `SMS_MULTI_SYMBOLS_BY_METRIC` (mehrere Kürzel je Metrik) bzw. `SMS_SYMBOL_BY_METRIC` (1:1) in `src/output/renderers/sms_trip.py`, ausgewertet in `trip_report.py` (`disabled_specs` → `output/tokens/builder.py::_visible()`).
+**Grundregel „gewählt / nicht gewählt“ (PO-Entscheidung 2026-08-03, Issue #1415):** Für **jedes** Vorhersage-Kürzel gilt: geprüft, aber nichts über der Schwelle bzw. kein Wert ⇒ Null-Form (`R-`, `K-`); Metrik im Trip **abgewählt** ⇒ das Kürzel entfällt vollständig, auch die Null-Form. Eine dritte Stufe „Wert nicht abrufbar / Datenlücke im Fenster ⇒ `R?`“ (#1328) gibt es **nur** bei den Schwellwert-Kürzeln `R`/`PR`/`W`/`G`/`TH:`/`TH+:` (`TH+:` seit Fix #1482, 2026-08-04, s. „Bekannte Ist-Abweichungen“), nicht bei den Temperatur-Kürzeln (s. §4). Es gibt damit **keine unbedingten Vorhersage-Token** mehr: `N`/`K`/`D` (Metrik „Temperatur“) verhalten sich seit #1415 exakt wie `FN`/`FK`/`FD` (Metrik „Gefühlte Temperatur“), und `TH+:` verhält sich seit #1482 exakt wie `TH:`. Die Bindung Kürzel→Metrik liegt an genau einer Stelle: `SMS_MULTI_SYMBOLS_BY_METRIC` (mehrere Kürzel je Metrik) bzw. `SMS_SYMBOL_BY_METRIC` (1:1) in `src/output/renderers/sms_trip.py`, ausgewertet in `trip_report.py` (`disabled_specs` → `output/tokens/builder.py::_visible()`).
 
-**Bekannte Ist-Abweichungen (Stand 2026-08-03, beide beim PO zur Entscheidung — hier als IST beschrieben, nicht als beschlossenes SOLL):**
+**Bekannte Ist-Abweichungen (Stand 2026-08-04):**
 
-1. `TH+:` (Gewitter der Folge-Etappe) hängt an keinem Eintrag dieser Bindung und erscheint deshalb auch bei abgewählter Metrik „Gewitter“ — im Gegensatz zum `TH:` derselben Metrik (`builder.py::build_token_line`, Suche nach `TH+:`/`TH+` in `by_sym`). Nicht mit #1415 mitgefixt (Umfang), gemeldet als Nebenbefund.
-2. Die `?`-Form der Dreiteilung gibt es **nur** für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:` — sie entsteht allein in `builder.py:126-127` (`_mk_metric`: `if value == "-" and has_gap: value = "?"`). Die Temperatur-Kürzel `N`/`K`/`D`/`FN`/`FK`/`FD` durchlaufen diesen Zweig nicht, sondern `render_temperature()`, das ausschliesslich Zahl oder `-` liefert. Eine Datenlücke erscheint dort folglich als `K-` und ist von „geprüft, kein Wert“ **nicht unterscheidbar**.
+1. Die `?`-Form der Dreiteilung gibt es **nur** für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:`/`TH+:` — sie entsteht in `builder.py:126-127` (`_mk_metric`: `if value == "-" and has_gap: value = "?"`). Die Temperatur-Kürzel `N`/`K`/`D`/`FN`/`FK`/`FD` durchlaufen diesen Zweig nicht, sondern `render_temperature()`, das ausschliesslich Zahl oder `-` liefert. Eine Datenlücke erscheint dort folglich als `K-` und ist von „geprüft, kein Wert“ **nicht unterscheidbar**.
+
+> **Fix #1482 (2026-08-04):** Bis hierhin galten zwei zusätzliche Ist-Abweichungen bei `TH+:` — beide behoben. (a) `TH+:` hing an keinem Eintrag der Metrik-Bindung und erschien deshalb auch bei abgewählter Metrik „Gewitter“; es folgt jetzt derselben Bindung wie `TH:` über `SMS_MULTI_SYMBOLS_BY_METRIC["thunder"]` (s. Zeile „Forecast (Gewitter Folge-Etappe)“ oben). (b) `TH+:` konnte bei einer echten Datenlücke der Folge-Etappe nie `?` werden und zeigte stattdessen fälschlich die Entwarnung `TH+:-`; es zeigt jetzt `TH+:?`, wenn die Folge-Etappe existiert, ihre Gewitterdaten aber nicht beschaffbar waren. Unverändert bleibt `TH+:-`, wenn schlicht kein Folgetag existiert (letzte Etappe des Trips) — diese beiden Fälle dürfen nicht verwechselt werden (s. §3.2 und §4). `TH+:` nutzt außerdem denselben konfigurierten Gewitter-Schwellwert wie `TH:` (vorher hartkodierter Default). Details: `docs/specs/modules/fix_1482_th_plus_metrik_luecke.md`.
 
 ---
 
@@ -116,7 +117,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | `W{v}@{h}({max}@{h})` / `W-` | Wind km/h Threshold + Peak | Hourly `wind10m_kmh`, Threshold aus `config.wind_speed_threshold` | `W10@11(15@17)` |
 | `G{v}@{h}({max}@{h})` / `G-` | Böen km/h Threshold + Peak | Hourly `gust_kmh`, Threshold aus `config.wind_gust_threshold` | `G20@11(30@17)` |
 | `TH:{level}@{h}({max}@{h})` / `TH:-` | Gewitter der **berichteten** Etappe (L/M/H — seit Issue #1474 vierstufig, `L`="leicht" besetzt den vorher unerreichbaren Token-Platz, s. `docs/reference/decision_matrix.md`) | Hourly `dp.thunder_level` aus `seg.timeseries`, auf die Wanderzeit gefenstert | `TH:M@16(H@18)` (bzw. `TH:L@16` bei reinem „leicht") |
-| `TH+:{level}@{h}({max}@{h})` / `TH+:-` | Gewitter der Etappe **danach** | Folge-Etappe via `thunder_forecast["+1"]` (Level **und** Stunde) | `TH+:M@14(H@17)` |
+| `TH+:{level}@{h}({max}@{h})` / `TH+:-` / `TH+:?` | Gewitter der Etappe **danach**. `?` seit Fix #1482 (2026-08-04) bei einer echten Datenlücke (Folge-Etappe existiert, ihre Daten sind nicht beschaffbar) — `-` bleibt unverändert reserviert für „kein Folgetag“ (letzte Etappe des Trips), diese beiden Fälle dürfen nicht verwechselt werden | Folge-Etappe via `thunder_forecast["+1"]` (Level **und** Stunde) | `TH+:M@14(H@17)` bzw. `TH+:?` |
 
 **`N` ist report-type-abhängig (Issue #1319 Scheibe D, 2026-07-23):** anders als `D R PR W G TH: TH+:`
 hat `N` keine feste Sichtbarkeit — es erscheint ausschließlich im Abendbriefing. Wert-Quelle ist die
@@ -342,13 +343,13 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 | `FN` / `FK` / `FD` | `FN-` / `FK-` / `FD-` | **Nur** bei aktivierter Metrik „Gefühlte Temperatur“, wenn lediglich die Daten fehlen. Ist die Metrik nicht gewählt, erscheint gar nichts — auch keine Null-Form (Issue #1410) |
 | `R` / `PR` | `R-` / `PR-` | Bei fehlendem oder Sub-Threshold-Niederschlag |
 | `W` / `G` | `W-` / `G-` | Bei fehlendem oder Sub-Threshold-Wind |
-| `TH` / `TH+` | `TH:-` / `TH+:-` | Bei fehlendem oder Sub-Threshold-Gewitter |
+| `TH` / `TH+` | `TH:-` / `TH+:-` | Bei fehlendem oder Sub-Threshold-Gewitter — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
 | `HR` / `TH` (Vigilance) | `HR:-TH:-` | Bei keiner Vigilance-Warnung; immer paarweise |
 | `Z` / `M` (Fire) | komplett weglassen | Kein `Z:-`, einfach Block entfernen |
 | `SD`/`NS24+`/`SL`/`AV`/`WC` | komplett weglassen | Wintersport-Tokens nicht zwingend |
 | `DBG` | komplett weglassen | Nur Debug-Modus |
 
-**Zur `?`-Form (Issue #1328):** Bei einer Datenlücke im ausgewerteten Fenster wird die Null-Form `-` zu `?` („unbekannt“) — das gilt **ausschliesslich** für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:` des berichteten Tages (`builder.py:126-127`; nur dieser Aufruf reicht `has_gap` weiter). Weder die Temperatur-Kürzel `N`/`K`/`D`/`FN`/`FK`/`FD` noch `TH+:` (Folge-Etappe, Aufruf ohne `has_gap`) kennen ein `?` — sie zeigen auch bei fehlenden Daten `-` (bekannte Ist-Abweichung, s. §2).
+**Zur `?`-Form (Issue #1328, erweitert um `TH+:` durch Fix #1482, 2026-08-04):** Bei einer Datenlücke im ausgewerteten Fenster wird die Null-Form `-` zu `?` („unbekannt“) — das gilt für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:` des berichteten Tages (`builder.py:126-127`) sowie für `TH+:` der Folge-Etappe, wenn diese existiert, ihre Daten aber weder über den Trend-Pfad noch den Fallback-Fetch beschaffbar waren. Existiert schlicht kein Folgetag (letzte Etappe des Trips), bleibt es unverändert bei `TH+:-`, nie `TH+:?`. Die Temperatur-Kürzel `N`/`K`/`D`/`FN`/`FK`/`FD` kennen weiterhin kein `?` — sie zeigen auch bei fehlenden Daten `-` (bekannte Ist-Abweichung, s. §2).
 
 ---
 
@@ -535,7 +536,8 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.14 | 2026-08-01 | Schnee-Kürzel folgen dem Wetter-Register (Issue #1435 Etappe E3b) — Schneehöhe `SN`→`SD`, Neuschnee `SN24+`→`NS24+`, Schneefallgrenze `SFL`→`SL` (`metric_catalog.sms_code`). Grund: `SN` bezeichnete in derselben Zeile zugleich die **amtliche Schneewarnung** (§3.4c, `hazard_symbols.py`) — diese bleibt unverändert `SN`, kein Vorhersage-Token beginnt mehr so. Position im Format, Kürzungs-Rangfolge (§6) und die inverse Schwellwertlogik der Schneefallgrenze (#873) unverändert; gespeicherte Nutzereinstellungen liegen als `metric_id` vor und bleiben wirksam. `TH:` (Grammatik) und `WC`/`FN`/`FK`/`FD` bleiben bewusste Ausnahmen. Spec: `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md` |
 
 | 2.15 | 2026-08-03 | Gemessene Temperatur folgt der Metrik-Auswahl (Issue #1415, PO-Entscheidung) — `N`/`K`/`D` waren die letzten unbedingten Vorhersage-Token und erschienen auch bei abgewählter Metrik „Temperatur“ (Beleg aus einer echt zugestellten SMS: `E3: K13 D16 FK13 FD16 R12.2@20 …` mit ausgeschalteter Temperatur). Jetzt gilt für **jedes** Kürzel dieselbe Zweiteilung: geprüft, aber kein Wert ⇒ Null-Form (`K-`), abgewählt ⇒ Kürzel entfällt vollständig. Die dritte Stufe „nicht abrufbar ⇒ `R?`“ (#1328) gibt es unverändert nur bei den Schwellwert-Kürzeln; für die Temperatur-Kürzel existiert sie nicht (`render_temperature()` kennt nur Zahl oder `-`) — als bekannte Ist-Abweichung in §2 vermerkt, Entscheidung offen. Umsetzung über denselben Weg wie `FN`/`FK`/`FD` (#1410): die Mehrfach-Tabelle in `sms_trip.py`, umbenannt von `SMS_FELT_SYMBOLS_BY_METRIC` zu `SMS_MULTI_SYMBOLS_BY_METRIC` und um `"temperature": ("N", "K", "D")` ergänzt — kein zweiter Bindungsweg. §2 (Pflicht-Spalte), §3.2, §4 (Null-Formen), §7 (Pflicht-Token) und §10 entsprechend nachgezogen; die verbliebene Ist-Abweichung `TH+:` ist unter §2 ausdrücklich vermerkt. |
-| 2.16 | 2026-08-04 | Doku-Nachtrag (Issue #1474, ohne Codeänderung an dieser Datei) — `TH:`/`TH+:` sind seit der bereits gemergten Vorgänger-Scheibe (`860a3baf`, 2026-08-03) vierstufig: `L`("leicht") besetzt den vorher unerreichbaren Token-Platz neben `M`/`H` (`NONE<LOW<MED<HIGH`). §3.2 und §9 zeigten bis hierhin noch die alte Dreistufigkeit — nachgetragen im Zuge der Folge-Scheibe `fix-1474-gewitterschwelle-cockpit`, die dieselbe Ordinalskala für die Erwähnungsschwelle nutzt. Details: `docs/reference/decision_matrix.md` Abschnitt „Gewitter-Stufen". |
+| 2.16 | 2026-08-04 | Doku-Nachtrag (Issue #1474, ohne Codeänderung an dieser Datei) — `TH:`/`TH+:` sind seit der bereits gemergten Vorgänger-Scheibe (`860a3baf`, 2026-08-03) vierstufig: `L`("leicht") besetzt den vorher unerreichbaren Token-Platz neben `M`/`H` (`NONE<LOW<MED<HIGH`). §3.2 und §9 zeigten bis hierhin noch die alte Dreistufigkeit — nachgetragen im Zuge der Folge-Scheibe `fix-1474-gewitterschwelle-cockpit`, die dieselbe Ordinalskala für die Erwähnungsschwelle nutzt. Details: `docs/reference/decision_matrix.md` Abschnitt „Gewitter-Stufen“. |
+| 2.17 | 2026-08-04 | `TH+:` folgt jetzt exakt derselben Grundregel wie `TH:` (Fix #1482) — löst die beiden in v2.15 unter §2 vermerkten Ist-Abweichungen auf: (1) `TH+:` hängt jetzt an der Metrik-Bindung „Gewitter“ (`SMS_MULTI_SYMBOLS_BY_METRIC["thunder"]`) und verschwindet bei abgewählter Metrik, statt wie bisher immer zu erscheinen; (2) `TH+:` kann jetzt `TH+:?` zeigen, wenn die Folge-Etappe existiert, ihre Gewitterdaten aber nicht beschaffbar waren — vorher zeigte dieser Fall fälschlich die Entwarnung `TH+:-`. Unverändert: `TH+:-` bleibt reserviert für „kein Folgetag“ (letzte Etappe des Trips). Zusätzlich (PO-bestätigt bei Spec-Freigabe): `TH+:` nutzt jetzt denselben im Trip-Editor konfigurierten Gewitter-Schwellwert wie `TH:` statt eines hartkodierten Defaults. Betrifft §2 (Token-Tabelle, Grundregel-Absatz, Bekannte Ist-Abweichungen), §3.2 (`TH+:`-Zeile), §4 (Null-Repräsentation, `?`-Form-Hinweis). Spec: `docs/specs/modules/fix_1482_th_plus_metrik_luecke.md`. |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

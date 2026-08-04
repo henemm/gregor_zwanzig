@@ -265,6 +265,12 @@ class TripReportFormatter:
             for m in dc.metrics
             if m.metric_id in SMS_SYMBOL_BY_METRIC and m.sms_threshold is not None
         }
+        # Fix #1482 (AC-6): der Gewitter-Schwellwert gilt fuer BEIDE Kuerzel.
+        # SMS_SYMBOL_BY_METRIC bildet 1:1 ab und kennt nur 'TH:', deshalb fiel
+        # 'TH+:' bisher immer auf den hartkodierten Default (1.0) zurueck.
+        for m in dc.metrics:
+            if m.metric_id == "thunder" and m.sms_threshold is not None:
+                _sms_thr["TH+:"] = m.sms_threshold
         # Bug #944: SMS-Symbole ohne aktive Metrik als deaktivierte Specs führen,
         # damit SD/SL nicht erscheinen, wenn die Metrik im Trip nicht gewählt ist —
         # unabhängig davon, ob Schneedaten in der Vorhersage vorhanden sind.
