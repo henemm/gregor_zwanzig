@@ -520,6 +520,7 @@ class NotificationService:
         effective_channels: set[str],
         mail_sink: Optional[object] = None,
         location_positions: Optional[dict[str, int]] = None,
+        telegram_style: str = "rich",
     ) -> NotificationResult:
         """Gebündelter Deviation-Alert-Versand für MEHRERE gleichzeitig
         betroffene Orte EINES Compare-Presets (Issue #1170, Adversary F001).
@@ -535,6 +536,11 @@ class NotificationService:
         Position in `preset["location_ids"]`) ist NEU und defaultiert — nur
         der Ortsvergleich-Änderungspfad (`compare_alert.py`) setzt ihn und
         bekommt dadurch die Orts-Zahlenkodierung in der Kurznachricht.
+
+        Issue #1467 S2, Korrektur K-5: `telegram_style` ist ebenfalls NEU und
+        defaultiert auf `"rich"` — der Ortsvergleich-Änderungspfad reicht
+        damit den Kurzstil-Schalter (#1260) durch, der auf diesem Weg bisher
+        wirkungslos war. Aufrufer, die ihn nicht setzen, bleiben rich.
         """
         from utils.timezone import tz_for_coords
 
@@ -561,6 +567,7 @@ class NotificationService:
             target_name=target_name,
             radar_mode=False,
             alert_tz=alert_tz,
+            telegram_style=telegram_style,
             telegram_groups=groups,
             sms_location_positions=location_positions,
         )
@@ -1061,8 +1068,15 @@ class NotificationService:
         Issue #1260 S3: ist `telegram_style="kurzform"`, sendet der Telegram-
         Zweig den bereits gerenderten `sms_body` (Plaintext, `parse_mode=None`,
         keine Inline-Knöpfe) statt der reichen HTML-Bubble. Default `"rich"` —
-        Compare-Aufrufer (nicht im Scope) übergeben nichts und bleiben rich;
-        keine implizite Kopplung an ein Trip-Feld.
+        wer nichts übergibt, bleibt rich; keine implizite Kopplung an ein
+        Trip-Feld.
+
+        Issue #1467 S2, Korrektur K-6: der Kurzstil-Zweig steht VOR dem
+        `telegram_groups`-Fan-out. Der Ortsvergleich-Änderungsalarm setzt seit
+        AG3a immer `telegram_groups`; in der umgekehrten Reihenfolge käme sein
+        Kurzstil-Schalter nie zum Zug. Kurzform heißt genau EINE gemeinsame
+        Nachricht (PO-Entscheidung 2026-08-04) — die Ortsnummern ergeben nur
+        im gemeinsamen Text Sinn.
 
         Issue #1088: liegen `official_notices` vor, wird ein Text-Block an
         html/plain/telegram_body angehängt — SMS bewusst OHNE Zusatz
@@ -1158,7 +1172,24 @@ class NotificationService:
         if "telegram" in effective_channels and self._settings.can_send_telegram():
             sent_channels.append("telegram")
             try:
-                if telegram_groups:
+                if telegram_style == "kurzform":
+                    # Issue #1467 S2, Korrektur K-6 (PO-Entscheidung
+                    # 2026-08-04): der Kurzstil hat VORRANG vor dem Fan-out je
+                    # Ort. Der Ortsvergleich-Aenderungsalarm setzt seit AG3a
+                    # immer `telegram_groups` — stuende dieser Zweig weiterhin
+                    # hinter dem Fan-out, kaeme der Kurzstil auf diesem Weg
+                    # nie dran. Es geht EINE gemeinsame Nachricht raus: die
+                    # Kurznachricht fuehrt alle Orte als Zahl in EINEM Text,
+                    # je Ort aufgeteilt waeren die Ortsnummern sinnlos. Die
+                    # beiden anderen Kurzstil-Pfade (Trip-Alarm, amtlicher
+                    # Ortsvergleich-Alarm) senden ebenfalls genau eine.
+                    TelegramOutput(self._settings).send(
+                        subject=subject,
+                        body=sms_body,
+                        parse_mode=None,
+                        suppress_subject_line=True,
+                    )
+                elif telegram_groups:
                     # Issue #1467 S2 AG3a: EINE Sprechblase je Ort statt
                     # einer gebuendelten Nachricht (PO E2). `to_multi_point_
                     # alert_message()` mit GENAU einer Gruppe liefert
@@ -1208,13 +1239,6 @@ class NotificationService:
                         self._send_telegram_incomplete_hint(
                             SimpleNamespace(email_subject=subject), failed_count,
                         )
-                elif telegram_style == "kurzform":
-                    TelegramOutput(self._settings).send(
-                        subject=subject,
-                        body=sms_body,
-                        parse_mode=None,
-                        suppress_subject_line=True,
-                    )
                 else:
                     TelegramOutput(self._settings).send(
                         subject=subject,

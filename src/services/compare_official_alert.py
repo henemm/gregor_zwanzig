@@ -32,7 +32,10 @@ from output.renderers.alert.official_alerts import (
 )
 from services import alert_daily_limit, alert_log
 from services.alert_state import AlertStateService
-from services.compare_alert_channels import effective_compare_channels
+from services.compare_alert_channels import (
+    effective_compare_channels,
+    effective_compare_telegram_style,
+)
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.official_alerts import get_official_alerts_for_location
@@ -41,14 +44,15 @@ logger = logging.getLogger("compare_official_alert")
 
 
 def _effective_telegram_style(preset: dict) -> str:
-    """Feature #1260 S4: Kurzstil-Präferenz aus dem Compare-Preset auflösen.
+    """Duenner Wrapper auf den EINEN Aufloeser (Issue #1467 S2, K-5).
 
-    Liest ``preset["display_config"]["telegram_style"]`` mit Default ``"rich"``.
-    Fehlendes/None-``display_config`` und fehlender Key fallen sicher auf
-    ``"rich"`` zurück (kein Crash). Reine Darstellungs-Präferenz — beeinflusst
-    NICHT die Kanal-Auflösung (``_effective_channels``)."""
-    dc = preset.get("display_config") or {}
-    return dc.get("telegram_style", "rich") or "rich"
+    Die Fassung wohnt seit der Korrektur-Runde in
+    `compare_alert_channels.py` — dort, wo schon die Compare-Kanalregel aus
+    AG1 steht —, weil sie seither von BEIDEN Ortsvergleich-Alarmwegen
+    gebraucht wird (amtliche Warnung hier, Aenderungsalarm in
+    `compare_alert.py`). Dieser Name bleibt als Bestands-Einstiegspunkt
+    stehen; das Verhalten ist unveraendert."""
+    return effective_compare_telegram_style(preset)
 
 
 class CompareOfficialAlertService:

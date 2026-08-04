@@ -625,14 +625,19 @@ def render_sms(
     Issue #1467 S2 AG3b: `location_positions` ist NEU und defaultiert — ohne
     ihn bleibt die Ausgabe byte-identisch (AC-26-Zusicherung fuer SMS). Gesetzt
     wird er ausschliesslich vom Ortsvergleich-Änderungspfad; dort fuehrt er
-    (a) die Ortsposition als Zahl an jedem Ereignis-Token (`_sms_token`) und
-    (b) laesst den DOPPELTEN Ortslisten-Kopf entfallen: im Mehr-Orte-Fall
-    tragen `trip_short` UND `location_label` denselben `collective_label`
-    (`project.py:217-220`), die Ortsliste stand dadurch zweimal im Kopf. Sie
-    bleibt genau einmal stehen — als Schluessel, mit dem der Empfaenger die
-    Zahlen den Orten zuordnet — und zwar aus `location_label` (24-Zeichen-
-    Budget statt der 16 des `trip_short`, damit die Zuordnung nicht an einer
-    zu frueh abgeschnittenen Ortsliste scheitert).
+    die Ortsposition als Zahl an jedem Ereignis-Token (`_sms_token`).
+
+    Korrektur-Runde 2026-08-04 (K-1/K-2, PO-Entscheidung): ist der Parameter
+    gesetzt, entfaellt der Kopf VOLLSTAENDIG — kein Ortsname, keine
+    Ortsliste, kein Vergleichsname. DIE ZAHL IST DIE ORTSANGABE; ein Kopf,
+    der die Orte noch einmal ausschreibt, frisst genau das Laengenbudget, das
+    die Zahlenkodierung freischaufeln soll. Das gilt fuer BEIDE Kopf-Zweige:
+    im Mehr-Orte-Fall stand die Ortsliste doppelt (`trip_short` UND
+    `location_label` tragen denselben `collective_label`,
+    `project.py:217-220`), im Ein-Ort-Fall der Name zweimal hintereinander
+    (`'Graz Graz: '`). Aufrufer OHNE `location_positions` (Trip-Δ,
+    Trip-Radar, Compare-Radar, amtliche Warnungen) behalten ihren Kopf
+    byte-identisch.
     """
     if msg.source is not None:
         return _render_sms_onset(msg, limit)
@@ -641,13 +646,16 @@ def render_sms(
     evs = _sorted(msg)
     trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
     # Nur der gebuendelte Mehr-Orte-Fall traegt per-Event-`location_label`
-    # (`project.py:215`); der Ein-Ort-Fall bleibt dadurch byte-identisch — auch
-    # dann, wenn eine Zuordnung uebergeben wurde. Der Wegfall des doppelten
-    # Kopfes haengt bewusst NICHT an `location_positions`: die Ortsliste stand
-    # im Mehr-Orte-Fall immer schon zweimal da, unabhaengig davon, ob der
-    # Aufrufer eine Positions-Zuordnung kennt.
+    # (`project.py:215`) — er und der Ein-Ort-Fall sind zwei VERSCHIEDENE
+    # Kopf-Zweige; der Wegfall des Kopfes muss beide treffen (K-2).
     multi_location = any(e.location_label for e in evs)
-    if multi_location:
+    if location_positions is not None:
+        # Ortsvergleich-Aenderungspfad: gar kein Kopf. Bewusst `is not None`
+        # statt Wahrheitswert — auch eine leere Zuordnung (kein Ort mehr
+        # aufloesbar) kommt von genau diesem Pfad und darf den Kopf nicht
+        # zurueckbringen.
+        head = ""
+    elif multi_location:
         head = f"{_ascii(msg.location_label or msg.trip_short)[:24]}: "
     elif msg.location_label:
         head = f"{trip} {_ascii(msg.location_label)[:24]}: "

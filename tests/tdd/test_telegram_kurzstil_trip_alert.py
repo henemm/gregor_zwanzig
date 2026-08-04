@@ -394,9 +394,16 @@ class TestAC4OfficialAlertKurzstil:
 class TestGuardCompareDeviationUnaffected:
     def test_compare_deviation_defaults_to_rich(self, monkeypatch) -> None:
         """Der geteilte ``_dispatch_alert_message`` darf ``telegram_style`` NUR
-        aus seinem Parameter beziehen. Ein Compare-Aufrufer, der ihn nicht
-        setzt, muss den reichen HTML-Alarm behalten (keine Kopplung an ein
-        Trip-Feld)."""
+        aus seinem Parameter beziehen. Ein Aufrufer, der ihn nicht setzt, muss
+        den reichen HTML-Alarm behalten (keine Kopplung an ein Trip-Feld).
+
+        Stand 2026-08-04 (#1467 S2, K-5): ``send_multi_location_deviation_
+        alert()`` NIMMT ``telegram_style`` inzwischen entgegen — der
+        Ortsvergleich-Änderungsalarm reicht dort die Preset-Präferenz durch.
+        Dieser Aufruf hier lässt den Parameter bewusst weg und prüft damit
+        weiterhin dieselbe Zusicherung: der Default ist ``"rich"``, und ein
+        nicht gesetzter Schalter darf nie in den Kurzstil kippen (stiller
+        Parameter-Rückfall)."""
         tg_stub = _TelegramStub()
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)

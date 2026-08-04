@@ -1,40 +1,60 @@
-"""TDD RED — Issue #1467 Scheibe S2, Arbeitsgang AG3b: die Kurznachricht (SMS)
-eines gebuendelten Ortsvergleich-Aenderungsalarms fuehrt jeden Ort als ZAHL
-(1-basierte Position in `preset["location_ids"]`) statt ausgeschrieben — und
-der doppelte Ortslisten-Kopf entfaellt.
+"""TDD RED — Issue #1467 Scheibe S2, Arbeitsgang AG3b (Korrektur-Runde,
+PO-Beanstandung 2026-08-04): die Kurznachricht (SMS) eines
+Ortsvergleich-Aenderungsalarms enthaelt NUR NOCH DIE WERTE — jeder Ort als
+ZAHL (1-basierte Position in der AKTUELLEN Ortsliste des Vergleichs), gar
+kein Kopf, kein Ortsname, kein Vergleichsname.
 
 SPEC: docs/specs/modules/rework_1467_s2_aenderungsalarm.md — AC-7, Abschnitt
 "AG3 — Darstellung der Kurznachrichten".
 Kontext: docs/context/rework-1467-s2-ag3b-ag4.md
 
-GEMESSENER IST-STAND (HEAD 6b6ad80d, echte Messung ueber einen lokalen
-seven.io-Stub, nicht hergeleitet) — zwei Orte "Graz"/"Wien" mit je einer
-Niederschlags-Aenderung ergeben heute:
+WAS DIE AUSGELIEFERTE FASSSUNG (Commit 97ec3deb) FALSCH MACHT — alle drei
+Werte hier GEMESSEN (`render_sms()` ueber `to_multi_point_alert_message()`,
+kein hergeleiteter Text):
 
-    'Graz, Wien Graz, Wien: +R30 +R30'
+  | Fall       | heute                        | Ziel (PO)         |
+  |------------|------------------------------|-------------------|
+  | zwei Orte  | 'Graz, Wien: 2:+R45 1:+R30'  | '2:+R45 1:+R30'   |
+  | ein Ort    | 'Graz Graz: +R30'            | '+R30'            |
 
-Darin stecken BEIDE Haelften des Defekts:
+Begruendung des PO (er hatte den Kopf zuvor selbst als "Schluessel zu den
+Zahlen" verteidigt und diese Entscheidung ausdruecklich zurueckgenommen):
+DIE ZAHL IST DIE ORTSANGABE. Ein Kopf, der die Ortsliste noch einmal
+ausschreibt, frisst genau das Laengenbudget, das die Zahlenkodierung
+freischaufeln sollte — im Ein-Ort-Fall stand der Name sogar doppelt
+('Graz Graz'), weil `to_multi_point_alert_message()`
+(`src/output/renderers/alert/project.py:217-220`) denselben
+`collective_label` in `trip_short` UND `location_label` schreibt.
 
-(a) Die Ereignis-Token (`+R30 +R30`) sind byte-identisch — kein Token traegt
-    eine Ortszuordnung. `_sms_token()` (`src/output/renderers/alert/render.py:585-588`)
-    nutzt das per-Event gesetzte `location_label` gar nicht. Der Empfaenger
-    erfaehrt, DASS sich etwas geaendert hat, aber nicht WO.
-(b) Die Ortsliste steht ZWEIMAL im Kopf: `to_multi_point_alert_message()`
-    (`src/output/renderers/alert/project.py:217-220`) schreibt denselben
-    `collective_label` in `trip_short` UND `location_label`, und
-    `render_sms()` (`:604-617`) baut daraus `head = f"{trip} {location_label}: "`.
+Dritte Beanstandung — NACHRUECKEN IST RICHTIG: die ausgelieferte Fassung
+sichert zu, dass eine nicht aufloesbare Orts-Kennung ihren Platz behaelt
+(`compare_alert.py:190-203` Docstring + ein Test, der genau das festnagelte).
+PO: "die nummer soll immer die Reihenfolge darstellen. Wenn ein Ort geloescht
+wird, ruecken die anderen nach, das ist kein Fehler sondern fuer den User
+nachvollziehbares Verhalten." Die Position ist damit der 1-basierte Index in
+der AKTUELLEN (= aufloesbaren) Ortsliste; Luecken werden geschlossen.
 
-Ein Test, der nur (a) prueft, laesst (b) stehen — beide Haelften werden hier
-zusammen festgenagelt.
+WICHTIGE ABGRENZUNG (zwei verschiedene Arten von "Luecke"):
+  * Ort STEHT NOCH in der Liste, hat diesmal nur nicht ausgeloest → er zaehlt
+    mit, die Zahlen der folgenden Orte bleiben (`test_k3_position_numbers_*`).
+  * Ort ist WEG (Kennung nicht mehr aufloesbar) → er zaehlt NICHT mit, die
+    folgenden ruecken auf (`test_k4_deleted_location_*`).
+Diese beiden Tests widersprechen sich nicht — sie trennen "nicht getroffen"
+von "nicht mehr vorhanden".
 
 ROT/GRUEN-Aufteilung dieser Datei:
-- `test_ac7_*` (2 Tests): ROT. Sie beschreiben das Zielverhalten aus AG3b.
+- `test_k1_*`/`test_k2_*`/`test_k4_*`: ROT. Zielverhalten der Korrektur.
+- `test_k3_*`: GRUEN vor UND nach (die Positions-Quelle aendert sich nicht)
+  bis auf den weggefallenen Kopf im Goldstring — deshalb heute ROT im
+  Goldstring, gruen in allen Einzel-Zusicherungen.
 - `test_regression_*` (3 Tests): GRUEN vor UND nach dem Umbau. Sie nageln die
   drei anderen Alarmwege (Trip-Aenderung, Trip-Radar, Ortsvergleich-Radar)
   byte-identisch fest — ohne Orts-Positionszuordnung darf sich dort KEIN
   Zeichen aendern (Vorbild: AC-26 in
   `test_compare_alert_telegram_per_location.py`). Die Vergleichswerte sind
-  gemessene Goldstrings, keine Vermutungen.
+  gemessene Goldstrings, keine Vermutungen. K-3 der Korrektur-Runde ist die
+  wichtigste Zusicherung: wird einer dieser drei rot, ist das ein BEFUND —
+  kein Anlass, den Goldstring anzupassen.
 
 TESTPOLITIK (CLAUDE.md, Kern-Schicht): kein `Mock()`/`patch()`/`MagicMock`.
 Als Naht dient ein echter lokaler HTTP-Stub fuer die seven.io-SMS-API
@@ -276,10 +296,10 @@ def _trip() -> Trip:
     return Trip(id="trip-ag3b", name="ProbeTrip", stages=[stage])
 
 
-# ═══════════════════════════ AC-7 (RED) ══════════════════════════════════════
+# ═══════════════════════════ K-1 / K-2 (RED) ═════════════════════════════════
 
-def test_ac7_bundled_two_location_sms_encodes_locations_as_position_numbers():
-    """AC-7 (ROT) GIVEN ein Ortsvergleich mit ZWEI Orten — "Graz" auf
+def test_k1_bundled_two_location_sms_carries_only_the_values_no_head():
+    """K-1 (ROT) GIVEN ein Ortsvergleich mit ZWEI Orten — "Graz" auf
     Position 1 und "Wien" auf Position 2 der konfigurierten Ortsliste
     (`preset["location_ids"] == ["loc-graz", "loc-wien"]`) — mit je EINER
     Metrik-Aenderung (Niederschlag 2 -> 30 mm) und eingeschaltetem SMS-Versand
@@ -290,16 +310,16 @@ def test_ac7_bundled_two_location_sms_encodes_locations_as_position_numbers():
     THEN kommt an der SMS-Senke GENAU EINE Kurznachricht an, und in ihr gilt:
       (a) die beiden Ereignisse sind unterscheidbar und tragen ihre
           Ortsposition als ZAHL (1 und 2),
-      (b) die Ortsliste steht NICHT mehr doppelt im Kopf (jeder Ortsname
-          hoechstens einmal im gesamten Text),
+      (b) im gesamten Text steht KEIN Ortsname und KEIN Vergleichsname —
+          gar kein Kopf, nur die Werte,
       (c) die Gesamtlaenge bleibt <= 140 Zeichen.
 
-    ROT-Grund, gemessen an HEAD 6b6ad80d ueber genau diesen Weg:
-      * `compare_alert.py:272` verdrahtet `channels={"email"}` fest — heute
-        kommt an der SMS-Senke UEBERHAUPT NICHTS an (0 statt 1 Nachricht).
-      * Zwingt man den SMS-Kanal von Hand durch, lautet der Text
-        `'Graz, Wien Graz, Wien: +R30 +R30'`: doppelter Kopf (b verletzt) und
-        zwei byte-identische Token ohne jede Ortszuordnung (a verletzt).
+    ROT-Grund, an Commit 97ec3deb ueber genau diesen Weg GEMESSEN: der Text
+    lautet heute `'Graz, Wien: 2:+R45 1:+R30'`. Die Zahlen stimmen bereits
+    (AG3b), der Kopf `'Graz, Wien: '` ist die Beanstandung: er schreibt die
+    Ortsliste noch einmal aus, obwohl die Zahl bereits DIE Ortsangabe ist —
+    und frisst dabei genau das Laengenbudget, das die Zahlenkodierung
+    freischaufeln sollte. 12 von 25 Zeichen dieser Nachricht sind Kopf.
 
     Die Reihenfolge-Quelle ist ausdruecklich `preset["location_ids"]` und
     nicht etwa die Trefferreihenfolge: beide Orte loesen hier gleichzeitig
@@ -363,10 +383,8 @@ def test_ac7_bundled_two_location_sms_encodes_locations_as_position_numbers():
 
         texts = sms_stub.texts()
         assert len(texts) == 1, (
-            "AC-7: erwartet GENAU EINE gebuendelte Kurznachricht an der "
-            f"SMS-Senke, erhalten: {len(texts)} -- {texts!r}. Solange "
-            "compare_alert.py `channels={'email'}` fest verdrahtet, kommt hier "
-            "nichts an."
+            "K-1: erwartet GENAU EINE gebuendelte Kurznachricht an der "
+            f"SMS-Senke, erhalten: {len(texts)} -- {texts!r}"
         )
         text = texts[0]
 
@@ -379,7 +397,7 @@ def test_ac7_bundled_two_location_sms_encodes_locations_as_position_numbers():
 
         # (c) Laengenbudget.
         assert len(text) <= 140, (
-            f"AC-7c: die Kurznachricht muss <=140 Zeichen bleiben, gemessen "
+            f"K-1c: die Kurznachricht muss <=140 Zeichen bleiben, gemessen "
             f"{len(text)}: {text!r}"
         )
 
@@ -389,83 +407,174 @@ def test_ac7_bundled_two_location_sms_encodes_locations_as_position_numbers():
         # Gegen `reversed(location_ids)` in `_location_positions()` ist genau
         # das die wirksame Zusicherung.
         assert "1:+R30" in text, (
-            "AC-7a: Graz steht auf Position 1 von preset['location_ids'] "
+            "K-1a: Graz steht auf Position 1 von preset['location_ids'] "
             "(['loc-graz', 'loc-wien']) und traegt den Messwert +R30 -- "
             f"erwartet daher das Token '1:+R30' im Text {text!r}. Steht dort "
             "'2:+R30', stammt die Positionszahl nicht aus der konfigurierten "
             "Ortsliste."
         )
         assert "2:+R45" in text, (
-            "AC-7a: Wien steht auf Position 2 von preset['location_ids'] "
+            "K-1a: Wien steht auf Position 2 von preset['location_ids'] "
             "und traegt den Messwert +R45 -- erwartet daher das Token "
             f"'2:+R45' im Text {text!r}."
         )
 
-        # (b) Kein doppelter Ortslisten-Kopf mehr.
-        assert text.count("Graz") <= 1, (
-            "AC-7b: der Ortsname 'Graz' steht mehrfach im Text -- die "
-            "Ortsliste wird im Kopf doppelt gefuehrt (trip_short UND "
-            f"location_label tragen denselben collective_label): {text!r}"
+        # (b) GAR KEIN Kopf mehr -- kein Ortsname, kein Vergleichsname.
+        # PO-Entscheidung 2026-08-04: die ZAHL ist die Ortsangabe.
+        assert "Graz" not in text, (
+            "K-1b: der Ortsname 'Graz' darf in der Kurznachricht gar nicht "
+            "mehr vorkommen -- die Positionszahl 1 IST seine Ortsangabe. "
+            f"Gemessen: {text!r}"
         )
-        assert text.count("Wien") <= 1, (
-            "AC-7b: der Ortsname 'Wien' steht mehrfach im Text -- doppelter "
-            f"Ortslisten-Kopf: {text!r}"
+        assert "Wien" not in text, (
+            f"K-1b: der Ortsname 'Wien' darf nicht mehr vorkommen: {text!r}"
+        )
+        # Der Vergleich heisst hier wie seine Kennung (`_compare_preset()`
+        # setzt `name = preset_id`) -- also faellt auch ein Kopf auf, der
+        # statt der Ortsliste den Vergleichsnamen zeigen wuerde.
+        assert preset_id not in text, (
+            "K-1b: auch der Name des Vergleichs gehoert nicht in die "
+            f"Kurznachricht: {text!r}"
         )
 
         # Gemessener Goldstring des vollstaendigen Textes. Die Zahlen laufen
         # ABSTEIGEND (2 vor 1), weil Wien den groesseren Messwert hat und
         # dadurch vorne einsortiert wird -- die Positionszahl folgt also dem
         # ORT, nicht der Token-Reihenfolge.
-        assert text == "Graz, Wien: 2:+R45 1:+R30", (
-            "AC-7: vollstaendiger Goldstring der Kurznachricht, gemessen "
-            f"{text!r}"
+        assert text == "2:+R45 1:+R30", (
+            "K-1: vollstaendiger Goldstring der Kurznachricht -- nur die "
+            "Werte mit ihrer Ortsnummer, kein Kopf. Heute steht hier "
+            f"'Graz, Wien: 2:+R45 1:+R30'. Gemessen: {text!r}"
         )
     finally:
         sms_stub.stop()
         _clean_user(uid)
 
 
-def test_ac7_multi_location_sms_head_does_not_repeat_the_location_list():
-    """AC-7b isoliert auf der Renderer-Ebene (ROT) — unabhaengig davon, ob der
-    SMS-Kanal fuer den Ortsvergleich schon scharf geschaltet ist (AG4).
+def test_k1_multi_location_sms_has_no_head_at_all():
+    """K-1 isoliert auf der Renderer-Ebene (ROT) — schnelle, netzfreie
+    Gegenprobe zur Dienst-Ebene.
 
     GIVEN eine gebuendelte `AlertMessage` fuer zwei Orte, gebaut ueber genau
-    den produktiven Weg `to_multi_point_alert_message()`.
+    den produktiven Weg `to_multi_point_alert_message()`, und die
+    Positions-Zuordnung, die der Ortsvergleich-Aenderungspfad immer mitgibt.
     WHEN sie ueber `render_sms()` gerendert wird.
-    THEN taucht jeder Ortsname hoechstens EINMAL im Text auf.
+    THEN besteht der Text ausschliesslich aus den Werte-Token mit ihrer
+    Ortsnummer — kein Ortsname, kein Doppelpunkt-Kopf davor.
 
-    ROT-Grund (gemessen): `to_multi_point_alert_message()`
-    (`project.py:217-220`) setzt `trip_short` UND `location_label` auf
-    denselben `", ".join(...)`-String; `render_sms()` (`:612-614`) baut daraus
-    `head = f"{trip} {location_label}: "` -- Ergebnis heute:
-    `'Graz, Wien Graz, Wien: +R30 +R30'`, also 'Graz' und 'Wien' je zweimal.
+    ROT-Grund (gemessen): `render_sms()` (`render.py:650-651`) baut im
+    Mehr-Orte-Fall `head = f"{_ascii(msg.location_label or msg.trip_short)[:24]}: "`,
+    Ergebnis heute `'Graz, Wien: 2:+R45 1:+R30'`.
     """
     from output.renderers.alert.project import to_multi_point_alert_message
     from output.renderers.alert.render import render_sms
 
     groups = [
-        ("Graz", [_change()], _gpx(47.07, 15.44)),
-        ("Wien", [_change()], _gpx(48.21, 16.37)),
+        ("Graz", [_change(30.0)], _gpx(47.07, 15.44)),
+        ("Wien", [_change(45.0)], _gpx(48.21, 16.37)),
     ]
     msg = to_multi_point_alert_message(
         groups, tz=ZoneInfo("Europe/Vienna"), stand_at="04.08. 08:00",
     )
-    text = render_sms(msg)
+    text = render_sms(msg, location_positions={"Graz": 1, "Wien": 2})
 
-    assert text.count("Graz") <= 1, (
-        f"AC-7b: 'Graz' steht {text.count('Graz')}-mal in der Kurznachricht "
-        f"-- die Ortsliste wird im Kopf doppelt gefuehrt: {text!r}"
+    assert "Graz" not in text and "Wien" not in text, (
+        "K-1: in der Kurznachricht steht kein Ortsname mehr -- die Zahl IST "
+        f"die Ortsangabe. Gemessen: {text!r}"
     )
-    assert text.count("Wien") <= 1, (
-        f"AC-7b: 'Wien' steht {text.count('Wien')}-mal in der Kurznachricht "
-        f"-- doppelter Ortslisten-Kopf: {text!r}"
+    assert text == "2:+R45 1:+R30", (
+        f"K-1: Goldstring der gerenderten Kurznachricht, gemessen {text!r}"
     )
 
 
-def test_ac7_position_numbers_come_from_configured_list_not_from_hit_order():
-    """AC-7 (Fix-Loop, Mutation M3) — die Positionszahl stammt aus
+def test_k2_single_location_sms_carries_no_location_name():
+    """K-2 (ROT) GIVEN einen Ortsvergleich mit GENAU EINEM Ort ("Graz"), der
+    eine Niederschlags-Aenderung 2 -> 30 mm hat, mit eingeschaltetem
+    SMS-Versand.
+
+    WHEN `CompareAlertService.check_all_compare_presets()` laeuft.
+
+    THEN kommt an der SMS-Senke genau eine Kurznachricht an, die NUR den Wert
+    traegt: `'+R30'`. Kein Ortsname, kein Kopf.
+
+    ROT-Grund (gemessen an Commit 97ec3deb): der Text lautet heute
+    `'Graz Graz: +R30'` -- der Ortsname steht sogar ZWEIMAL, weil
+    `to_multi_point_alert_message()` (`project.py:217-220`) denselben
+    `collective_label` in `trip_short` UND `location_label` schreibt und
+    `render_sms()` (`render.py:652-653`) im Ein-Ort-Fall daraus
+    `head = f"{trip} {location_label}: "` baut. Von 15 Zeichen der Nachricht
+    sind 11 Kopf -- fuer eine Information, die der Empfaenger bereits kennt
+    (er hat genau einen Ort im Vergleich).
+
+    Der Ein-Ort-Fall laeuft ueber einen ANDEREN Kopf-Zweig als der
+    Mehr-Orte-Fall (`multi_location` ist hier False, weil
+    `to_multi_point_alert_message()` das per-Event-`location_label` bei genau
+    einer Gruppe bewusst auf None laesst, `project.py:215`). Ein Fix, der nur
+    den Mehr-Orte-Zweig anfasst, laesst diesen hier stehen -- deshalb ein
+    eigener Test statt einer Variante des K-1-Tests.
+    """
+    from app.loader import get_data_dir, save_location
+    from services.compare_alert import CompareAlertService
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+
+    uid = f"tdd-k2-single-{uuid.uuid4().hex[:6]}"
+    preset_id = f"cp-k2-single-{uuid.uuid4().hex[:6]}"
+    sms_stub = _SMSStub()
+    _clean_user(uid)
+    try:
+        import json
+
+        user_dir = get_data_dir(uid)
+        user_dir.mkdir(parents=True, exist_ok=True)
+        (user_dir / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+
+        save_location(
+            SavedLocation(id="loc-graz", name="Graz", lat=47.07, lon=15.44, elevation_m=353),
+            user_id=uid,
+        )
+        write_compare_briefings(DATA_ROOT / uid, [
+            _compare_preset(preset_id, ["loc-graz"], send_sms=True)
+        ])
+        CompareWeatherSnapshotService(user_id=uid).save(
+            preset_id, "loc-graz", _pwd("loc-graz", "Graz", 47.07, 15.44, 2.0)
+        )
+
+        mails: list[tuple[str, str]] = []
+        service = CompareAlertService(
+            settings=_settings_email_and_sms(sms_stub.port), user_id=uid,
+            weather_source=_ScriptedWeatherSource({"loc-graz": 30.0}),
+            mail_sink=lambda subject, body: mails.append((subject, body)),
+        )
+        service.check_all_compare_presets()
+
+        texts = sms_stub.texts()
+        assert len(texts) == 1, (
+            f"K-2: erwartet GENAU EINE Kurznachricht, erhalten {len(texts)}: "
+            f"{texts!r}"
+        )
+        text = texts[0]
+        assert "Graz" not in text, (
+            "K-2: der Ortsname darf auch im Ein-Ort-Fall nicht mehr in der "
+            f"Kurznachricht stehen, gemessen: {text!r}"
+        )
+        assert text == "+R30", (
+            "K-2: Goldstring der Ein-Ort-Kurznachricht -- nur der Wert. Heute "
+            f"steht hier 'Graz Graz: +R30'. Gemessen: {text!r}"
+        )
+    finally:
+        sms_stub.stop()
+        _clean_user(uid)
+
+
+def test_k3_position_numbers_come_from_configured_list_not_from_hit_order():
+    """K-3 (Fix-Loop, Mutation M3) — die Positionszahl stammt aus
     `preset["location_ids"]` und NICHT aus der Trefferreihenfolge, nicht aus
     der alphabetischen Ordnung und nicht aus einem Mitzaehler beim Rendern.
+
+    ABGRENZUNG ZU K-4: hier ist Zell NOCH VORHANDEN, er hat diesmal nur nicht
+    ausgeloest. Ein vorhandener Ort zaehlt IMMER mit — sonst zeigte dieselbe
+    Zahl von Lauf zu Lauf auf einen anderen Ort. Erst ein GELOESCHTER Ort
+    laesst die folgenden aufruecken (`test_k4_deleted_location_*`).
 
     GIVEN ein Ortsvergleich mit DREI konfigurierten Orten in der Reihenfolge
       1. "Bruck"  (Niederschlag 2 -> 30 mm  ⇒ loest aus, Token `+R30`)
@@ -592,31 +701,33 @@ def test_ac7_position_numbers_come_from_configured_list_not_from_hit_order():
         )
 
         assert len(text) <= 140, (
-            f"AC-7c: <=140 Zeichen, gemessen {len(text)}: {text!r}"
+            f"K-3: <=140 Zeichen, gemessen {len(text)}: {text!r}"
         )
 
         # Gemessener Goldstring: Zahlen ABSTEIGEND (3 vor 1) UND mit Luecke
         # (keine 2, weil Zell nicht ausgeloest hat). Weder die
         # Trefferreihenfolge noch die Token-Reihenfolge noch die
-        # alphabetische Ordnung koennen dieses Muster erzeugen.
-        assert text == "Bruck, Melk: 3:+R45 1:+R30", (
-            "Vollstaendiger Goldstring der Kurznachricht, gemessen "
-            f"{text!r}"
+        # alphabetische Ordnung koennen dieses Muster erzeugen. Der Kopf
+        # 'Bruck, Melk: ' faellt mit K-1 weg (heute steht er noch da).
+        assert text == "3:+R45 1:+R30", (
+            "Vollstaendiger Goldstring der Kurznachricht (ohne Kopf, K-1), "
+            f"gemessen {text!r}"
         )
     finally:
         sms_stub.stop()
         _clean_user(uid)
 
 
-def test_ac7_unresolvable_location_id_keeps_its_slot_and_does_not_shift_numbers():
-    """AC-7 (Fix-Loop) — eine Orts-Kennung im Preset, zu der es KEINEN
-    gespeicherten Ort (mehr) gibt, behaelt ihren Platz in der Zaehlung.
+def test_k4_deleted_location_lets_the_following_positions_move_up():
+    """K-4 (ROT) — faellt ein Ort weg, RUECKEN DIE FOLGENDEN AUF. Keine
+    Luecken, keine Platzhalter.
 
-    `_location_positions()` sichert das ausdruecklich zu ("Nicht aufloesbare
-    Orts-Kennungen behalten ihre Position (sie zaehlen in der Liste mit)",
-    `compare_alert.py:201-203`) — bis zu diesem Test war die Zusicherung
-    unbewacht: eine Fassung, die unaufloesbare Kennungen ueberspringt und
-    die Zahlen dadurch KOMPAKTIERT, blieb gruen.
+    PO-Entscheidung 2026-08-04, woertlich: "die nummer soll immer die
+    Reihenfolge darstellen. Wenn ein Ort geloescht wird, ruecken die anderen
+    nach, das ist kein Fehler sondern fuer den User nachvollziehbares
+    Verhalten." Die Zahl ist also der 1-basierte Index in der Liste, die der
+    Nutzer HEUTE vor sich sieht — nicht in einer historischen Fassung, von
+    der er nichts mehr weiss.
 
     GIVEN ein Preset mit drei Kennungen
       1. "loc-bruck"     -> Ort "Bruck", loest aus (+R30)
@@ -624,22 +735,28 @@ def test_ac7_unresolvable_location_id_keeps_its_slot_and_does_not_shift_numbers(
       3. "loc-melk"      -> Ort "Melk", loest aus (+R45)
 
     WHEN der Ortsvergleich laeuft.
-    THEN behaelt Melk die 3 — NICHT die 2.
+    THEN traegt Melk die 2 — die Zahl 3 wird gar nicht mehr vergeben, weil
+    der Vergleich nur noch ZWEI Orte hat.
 
-    Warum das nutzersichtbar zaehlt: die Zahl ist der Schluessel, mit dem der
-    Empfaenger die Kurznachricht seiner Ortsliste (und den Spalten der
-    Vergleichs-E-Mail) zuordnet. Wuerden geloeschte Kennungen die Zahlen
-    nachruecken lassen, zeigte dieselbe Zahl nach einer Loeschung auf einen
-    ANDEREN Ort — genau der Fehler, den die Positions-Kodierung verhindern
-    soll. Der erwartete Text ist deshalb IDENTISCH zu dem ohne geloeschte
-    Kennung: eine Loeschung darf die Zuordnung nicht verschieben.
+    ROT-Grund (gemessen an Commit 97ec3deb): `_location_positions()`
+    (`compare_alert.py:190-207`) zaehlt mit `enumerate(location_ids)` ueber
+    die ROHE Kennungsliste und laesst unaufloesbare Kennungen ihren Platz
+    behalten — Melk bekommt heute die 3, und im Text klafft eine Luecke, die
+    auf einen Ort zeigt, den es nicht mehr gibt. Der Docstring an dieser
+    Stelle sichert das sogar ausdruecklich zu; die Zusicherung ist mit dieser
+    Korrektur hinfaellig und muss ins Gegenteil.
+
+    ABGRENZUNG ZU K-3: dort steht Zell NOCH in der Ortsliste und hat nur
+    diesmal nicht ausgeloest — der behaelt seinen Platz, und Melk bleibt 3.
+    Hier ist der mittlere Ort WEG. "nicht getroffen" und "nicht mehr
+    vorhanden" sind zwei verschiedene Dinge.
     """
     from app.loader import get_data_dir, save_location
     from services.compare_alert import CompareAlertService
     from services.compare_weather_snapshot import CompareWeatherSnapshotService
 
-    uid = f"tdd-ag3b-gap-{uuid.uuid4().hex[:6]}"
-    preset_id = f"cp-ag3b-gap-{uuid.uuid4().hex[:6]}"
+    uid = f"tdd-k4-gap-{uuid.uuid4().hex[:6]}"
+    preset_id = f"cp-k4-gap-{uuid.uuid4().hex[:6]}"
     sms_stub = _SMSStub()
     _clean_user(uid)
     try:
@@ -683,29 +800,33 @@ def test_ac7_unresolvable_location_id_keeps_its_slot_and_does_not_shift_numbers(
         )
         text = texts[0]
 
-        assert "3:+R45" in text, (
-            "Melk steht auf Position 3 der konfigurierten Ortsliste; die "
-            "unaufloesbare Kennung auf Position 2 zaehlt mit. Erwartet "
-            f"'3:+R45' in {text!r}. Steht dort '2:+R45', ruecken geloeschte "
-            "Orte die Zahlen nach -- dieselbe Zahl bedeutet dann nach einer "
-            "Loeschung einen anderen Ort."
+        assert "2:+R45" in text, (
+            "K-4: der Vergleich hat nach der Loeschung nur noch zwei Orte -- "
+            "Melk ist der zweite davon und traegt +R45. Erwartet '2:+R45' in "
+            f"{text!r}. Steht dort '3:+R45', zaehlt die geloeschte Kennung "
+            "noch mit und der Empfaenger sucht in seiner Ortsliste nach einer "
+            "3, die es nicht gibt."
+        )
+        assert "3:" not in text, (
+            "K-4: keine Luecke, kein Platzhalter -- die Zahl 3 darf gar nicht "
+            f"mehr vergeben werden, gemessen: {text!r}"
         )
         assert "1:+R30" in text, (
-            f"Bruck bleibt auf Position 1: {text!r}"
+            f"K-4: Bruck bleibt auf Position 1: {text!r}"
         )
-        # Identisch zum Lauf ohne geloeschte Kennung: die Loeschung ist
-        # in der Zuordnung nicht sichtbar.
-        assert text == "Bruck, Melk: 3:+R45 1:+R30", (
-            "Goldstring: eine unaufloesbare Orts-Kennung darf die "
-            f"Kurznachricht um KEIN Zeichen veraendern, gemessen {text!r}"
+        # Goldstring: identisch zu einem Vergleich, der von Anfang an nur
+        # Bruck und Melk enthalten haette -- genau das ist die Zusicherung.
+        assert text == "2:+R45 1:+R30", (
+            "K-4: Goldstring nach dem Aufruecken. Heute steht hier "
+            f"'Bruck, Melk: 3:+R45 1:+R30'. Gemessen: {text!r}"
         )
     finally:
         sms_stub.stop()
         _clean_user(uid)
 
 
-def test_ac7_sms_token_binds_position_to_location_name_not_to_token_order():
-    """AC-7 (Fix-Loop) auf der Renderer-Ebene: `render_sms()` bindet die
+def test_k3_sms_token_binds_position_to_location_name_not_to_token_order():
+    """K-3 (Fix-Loop) auf der Renderer-Ebene: `render_sms()` bindet die
     Positionszahl an den ORTSNAMEN des Ereignisses (`location_label`), nicht
     an die Reihenfolge, in der die Token im Text stehen.
 
@@ -743,6 +864,10 @@ def test_ac7_sms_token_binds_position_to_location_name_not_to_token_order():
     )
     assert "2:" not in text, (
         f"Position 2 ist nicht vergeben -- keine 2 im Text: {text!r}"
+    )
+    assert text == "3:+R45 1:+R30", (
+        "K-1 auf der Renderer-Ebene: der Text besteht ausschliesslich aus den "
+        f"Werte-Token mit ihrer Ortsnummer, gemessen {text!r}"
     )
 
     # Ort ohne Eintrag in der Zuordnung: unnummeriert, aber nicht falsch

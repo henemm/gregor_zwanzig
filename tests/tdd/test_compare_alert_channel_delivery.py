@@ -49,6 +49,12 @@ um — auch dort, wo der Kanal stumm bleiben SOLL. Faellt die Implementierung
 falsch aus, landet die Nachricht am Stub und der Test schlaegt fehl; sie kann
 den Rechner nicht verlassen.
 
+KORREKTUR-RUNDE 2026-08-04 (Kriterien K-5/K-6, unterer Abschnitt): der
+Kurzstil-Schalter `display_config.telegram_style` (#1260) wirkt auf dem
+Ortsvergleich-AENDERUNGSalarm bisher gar nicht — genau auf dem Weg, den AG4
+oben gerade freigeschaltet hat. Die gemessene Kette und der ROT-Grund stehen
+im Abschnitts-Kommentar vor `test_k5_*`.
+
 Pfadregel #1409: der Prueflings-Datenpfad wird relativ zur Testdatei
 aufgeloest, nie ueber einen festen Hauptrepo-Pfad.
 """
@@ -276,15 +282,54 @@ def _setup_single_location_preset(
     )
 
 
-def _run_compare_alerts(user_id: str, settings: Settings, mails: list) -> int:
+def _setup_two_location_preset(
+    user_id: str, preset_id: str, **preset_extra
+) -> None:
+    """Zwei Orte ("Graz" auf Position 1, "Wien" auf Position 2), beide mit
+    einem Delta-Anker von 2 mm Niederschlag. Die Wetterquelle liefert spaeter
+    UNTERSCHIEDLICHE Werte (Graz 30, Wien 45) — damit sind die Kurznachricht
+    (`'2:+R45 1:+R30'`, Korrektur-Kriterium K-1) und die reichen Sprechblasen
+    je Ort eindeutig auseinanderzuhalten."""
+    from app.loader import save_location
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+
+    orte = [("loc-graz", "Graz", 47.07, 15.44), ("loc-wien", "Wien", 48.21, 16.37)]
+    for loc_id, name, lat, lon in orte:
+        save_location(
+            SavedLocation(id=loc_id, name=name, lat=lat, lon=lon, elevation_m=300),
+            user_id=user_id,
+        )
+    write_compare_briefings(
+        DATA_ROOT / user_id,
+        [_compare_preset(preset_id, [o[0] for o in orte], **preset_extra)],
+    )
+    snapshots = CompareWeatherSnapshotService(user_id=user_id)
+    for loc_id, name, lat, lon in orte:
+        snapshots.save(preset_id, loc_id, _pwd(loc_id, name, lat, lon, 2.0))
+
+
+def _run_compare_alerts(
+    user_id: str, settings: Settings, mails: list,
+    values: dict[str, float] | None = None,
+) -> int:
     from services.compare_alert import CompareAlertService
 
     service = CompareAlertService(
         settings=settings, user_id=user_id,
-        weather_source=_ScriptedWeatherSource({"loc-1": 30.0}),
+        weather_source=_ScriptedWeatherSource(
+            values if values is not None else {"loc-1": 30.0}
+        ),
         mail_sink=lambda subject, body: mails.append((subject, body)),
     )
     return service.check_all_compare_presets()
+
+
+_ZWEI_ORTE_WETTER = {"loc-graz": 30.0, "loc-wien": 45.0}
+# Gemessener Kurznachrichten-Text fuer diese Fixture nach der Korrektur
+# (Kriterium K-1: nur die Werte mit ihrer Ortsnummer, kein Kopf). Wien traegt
+# den groesseren Messwert und steht durch die severity-Sortierung vorne — die
+# Zahlen laufen absteigend.
+_KURZ_TEXT_ZWEI_ORTE = "2:+R45 1:+R30"
 
 
 def _load_alert_log(user_id: str) -> dict:
@@ -598,3 +643,216 @@ def test_ac13_alert_log_entry_reflects_email_and_telegram_delivery(monkeypatch):
         tg_stub.stop()
         sms_stub.stop()
         _clean_user(uid)
+
+
+# ═══════════════════ K-5 / K-6 — Kurzstil-Schalter (Korrektur) ═══════════════
+# Es gibt seit #1260 den Schalter `display_config.telegram_style` mit den
+# Werten "rich"/"kurzform"; bei "kurzform" geht der SMS-Text ueber Telegram
+# raus. Trip-Alarme (`trip_alert.py:990,1135`) und der amtliche
+# Ortsvergleich-Pfad (`compare_official_alert.py:43,135`) lesen ihn.
+#
+# GEMESSENE KETTE am funktionierenden Pfad (amtliche Warnung):
+#   preset["display_config"]["telegram_style"]
+#     -> `_effective_telegram_style(preset)`      compare_official_alert.py:43-51
+#     -> `send_multi_location_official_alert(..., telegram_style)`
+#                                                 notification_service.py:838
+#     -> `_dispatch_compare_official_telegram(..., telegram_style=...)`   :907
+#     -> `if telegram_style == "kurzform": TelegramOutput(...).send(
+#            body=<SMS-Text>, parse_mode=None, suppress_subject_line=True)` :953
+#
+# Der Ortsvergleich-AENDERUNGSalarm haengt an dieser Kette NICHT dran:
+# `compare_alert.py` erwaehnt `telegram_style` nirgends, und
+# `send_multi_location_deviation_alert()` (`notification_service.py:517-523`)
+# nimmt den Wert gar nicht entgegen — er kommt an
+# `_dispatch_alert_message()` (`:1051`) immer als Default "rich" an. Der
+# Schalter ist auf genau dem Weg wirkungslos, den AG4 gerade freigeschaltet
+# hat.
+#
+# Beide Tests pruefen AN DER TELEGRAM-SENKE (empfangene HTTP-Nutzlast), nicht
+# am Parameter: die Zusicherung wirkt dort, wo die Nachricht rausgeht.
+
+def test_k5_telegram_style_kurzform_delivers_the_short_message(monkeypatch):
+    """K-5 (ROT) GIVEN einen Ortsvergleich mit ZWEI Orten, `send_telegram:
+    true` und `display_config: {"telegram_style": "kurzform"}` — derselbe
+    Schalter, den der Nutzer im Editor umlegt und den der amtliche
+    Ortsvergleich-Pfad bereits befolgt.
+
+    WHEN `CompareAlertService.check_all_compare_presets()` laeuft.
+
+    THEN kommt an der Telegram-Senke GENAU EINE Nachricht an, und zwar die
+    Kurznachricht (`'2:+R45 1:+R30'`) als reiner Text — ohne `parse_mode`,
+    ohne HTML-Auszeichnung, ohne Ortsnamen.
+
+    Warum genau EINE: der Kurzstil ersetzt die ausfuehrliche Fassung, und die
+    ausfuehrliche Fassung ist seit AG3a die Auffaecherung in eine Sprechblase
+    JE ORT. Die Kurznachricht ist ihrem Wesen nach gebuendelt — sie fuehrt
+    alle Orte als Zahl in EINEM Text; sie je Ort aufzuteilen wuerde die
+    Ortsnummern sinnlos machen und dem Zweck des Kurzstils (ein knapper Blick
+    aufs Telefon) zuwiderlaufen. Der Kurzstil des Trip-Alarms und der des
+    amtlichen Ortsvergleich-Alarms senden ebenfalls genau eine Nachricht.
+
+    ROT-Grund (gemessen an Commit 97ec3deb): heute kommen ZWEI reiche
+    HTML-Sprechblasen an ("Graz ..." und "Wien ...", je `parse_mode="HTML"`),
+    weil der Fan-out-Zweig in `_dispatch_alert_message()` (`:1180`) vor dem
+    Kurzstil-Zweig (`:1211`) greift und `telegram_style` diesen Aufrufer
+    ueberhaupt nie erreicht.
+    """
+    uid = f"tdd-k5-kurz-{uuid.uuid4().hex[:6]}"
+    preset_id = f"cp-k5-kurz-{uuid.uuid4().hex[:6]}"
+    tg_stub = _TelegramStub()
+    sms_stub = _SMSStub()
+    _clean_user(uid)
+    try:
+        monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
+        _write_tier(uid, "standard")
+        _setup_two_location_preset(
+            uid, preset_id, send_telegram=True,
+            display_config={"telegram_style": "kurzform"},
+        )
+
+        mails: list[tuple[str, str]] = []
+        _run_compare_alerts(
+            uid, _settings_all_channels(sms_stub.port), mails, _ZWEI_ORTE_WETTER,
+        )
+
+        texts = tg_stub.texts()
+        assert len(texts) == 1, (
+            "K-5: im Kurzstil ersetzt EINE Kurznachricht die ausfuehrliche "
+            f"Fassung, erhalten: {len(texts)} Nachrichten -- {texts!r}. Zwei "
+            "Nachrichten bedeuten, dass der Fan-out je Ort weiterlaeuft und "
+            "der Kurzstil-Schalter diesen Versandweg nicht erreicht."
+        )
+        assert texts[0] == _KURZ_TEXT_ZWEI_ORTE, (
+            "K-5: zugestellt werden muss der Kurznachrichten-Text (dieselbe "
+            f"Fassung wie per SMS), erwartet {_KURZ_TEXT_ZWEI_ORTE!r}, "
+            f"gemessen {texts[0]!r}"
+        )
+        assert tg_stub.sent[0].get("parse_mode") is None, (
+            "K-5: der Kurzstil ist Plaintext -- `parse_mode` darf gar nicht "
+            f"gesetzt sein, gemessen: {tg_stub.sent[0].get('parse_mode')!r} "
+            "(so macht es der amtliche Ortsvergleich-Pfad, "
+            "notification_service.py:953)"
+        )
+        assert "<" not in texts[0] and "Graz" not in texts[0], (
+            "K-5: keine HTML-Auszeichnung, kein Ortsname -- sonst ist es die "
+            f"reiche Fassung: {texts[0]!r}"
+        )
+        assert len(mails) == 1, (
+            "K-5: die E-Mail bleibt unberuehrt und wird zugestellt (der "
+            f"Schalter betrifft nur Telegram), erhalten: {len(mails)} Sends"
+        )
+        assert sms_stub.texts() == [], (
+            "K-5: ohne `send_sms` darf trotz Kurzstil keine SMS rausgehen, "
+            f"erhalten: {sms_stub.texts()!r}"
+        )
+    finally:
+        tg_stub.stop()
+        sms_stub.stop()
+        _clean_user(uid)
+
+
+def test_k6_telegram_style_rich_or_absent_keeps_one_bubble_per_location(monkeypatch):
+    """K-6 (GRUEN vor UND nach) GIVEN ZWEI verschiedene, echte Nutzer mit
+    identisch ausloesendem Zwei-Orte-Vergleich und `send_telegram: true`:
+    Nutzer A hat `display_config: {"telegram_style": "rich"}` ausdruecklich
+    gesetzt, bei Nutzer B fehlt `display_config` GANZ.
+
+    WHEN fuer beide `check_all_compare_presets()` laeuft.
+
+    THEN bekommen BEIDE das unveraenderte Verhalten: je Ort eine eigene
+    reiche Sprechblase (zwei Nachrichten, `parse_mode="HTML"`, Ortsname im
+    Text) — das AG3a-Verhalten aus Commit 97ec3deb.
+
+    Dieser Test ist heute schon gruen. Er steht neben K-5, weil erst das Paar
+    beweist, dass der SCHALTER entscheidet: ohne ihn koennte eine
+    Implementierung den Kurzstil einfach immer senden und K-5 bestehen. Die
+    Zusicherung "ein fehlender/`rich`-Schalter aendert nichts" ist ausserdem
+    die Gegenprobe zum haeufigsten Fehlermuster dieses Projekts (stiller
+    Parameter-Rueckfall: ein nicht gesetzter Wert darf nie das neue Verhalten
+    ausloesen).
+
+    Mandantentrennung: zwei getrennte `user_id`-Werte, zwei getrennte Senken —
+    kein Rueckfall auf `"default"`.
+    """
+    uid_rich = f"tdd-k6-rich-{uuid.uuid4().hex[:6]}"
+    uid_absent = f"tdd-k6-absent-{uuid.uuid4().hex[:6]}"
+    preset_rich = f"cp-k6-rich-{uuid.uuid4().hex[:6]}"
+    preset_absent = f"cp-k6-absent-{uuid.uuid4().hex[:6]}"
+    tg_rich, tg_absent = _TelegramStub(), _TelegramStub()
+    sms_stub = _SMSStub()
+    _clean_user(uid_rich)
+    _clean_user(uid_absent)
+    try:
+        assert uid_rich != "default" and uid_absent != "default"
+
+        # ── Nutzer A: telegram_style ausdruecklich "rich" ────────────────────
+        monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_rich.base_url)
+        _write_tier(uid_rich, "standard")
+        _setup_two_location_preset(
+            uid_rich, preset_rich, send_telegram=True,
+            display_config={"telegram_style": "rich"},
+        )
+        mails_rich: list[tuple[str, str]] = []
+        _run_compare_alerts(
+            uid_rich, _settings_all_channels(sms_stub.port), mails_rich,
+            _ZWEI_ORTE_WETTER,
+        )
+
+        texts_rich = tg_rich.texts()
+        assert len(texts_rich) == 2, (
+            "K-6: bei `rich` bleibt es bei EINER Sprechblase je Ort (AG3a), "
+            f"erwartet 2 Nachrichten, erhalten {len(texts_rich)}: {texts_rich!r}"
+        )
+        assert any("Graz" in t for t in texts_rich), (
+            f"K-6: eine Sprechblase muss Graz nennen: {texts_rich!r}"
+        )
+        assert any("Wien" in t for t in texts_rich), (
+            f"K-6: eine Sprechblase muss Wien nennen: {texts_rich!r}"
+        )
+        assert all(p.get("parse_mode") == "HTML" for p in tg_rich.sent), (
+            "K-6: die reiche Fassung geht als HTML raus, gemessen: "
+            f"{[p.get('parse_mode') for p in tg_rich.sent]!r}"
+        )
+        assert all(t != _KURZ_TEXT_ZWEI_ORTE for t in texts_rich), (
+            "K-6: bei `rich` darf NIE die Kurznachricht rausgehen, gemessen: "
+            f"{texts_rich!r}"
+        )
+
+        # ── Nutzer B: `display_config` fehlt GANZ ────────────────────────────
+        monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_absent.base_url)
+        _write_tier(uid_absent, "standard")
+        _setup_two_location_preset(uid_absent, preset_absent, send_telegram=True)
+        raw = json.loads(
+            (DATA_ROOT / uid_absent / "briefings" / f"{preset_absent}.json").read_text()
+        )
+        assert "display_config" not in raw, (
+            "Setup-Kontrolle: das Preset von Nutzer B darf gar kein "
+            f"`display_config` haben, gefunden: {sorted(raw)}"
+        )
+
+        mails_absent: list[tuple[str, str]] = []
+        _run_compare_alerts(
+            uid_absent, _settings_all_channels(sms_stub.port), mails_absent,
+            _ZWEI_ORTE_WETTER,
+        )
+
+        texts_absent = tg_absent.texts()
+        assert len(texts_absent) == 2, (
+            "K-6: ein FEHLENDER Schalter darf nie den Kurzstil ausloesen -- "
+            f"erwartet 2 reiche Sprechblasen, erhalten {len(texts_absent)}: "
+            f"{texts_absent!r}"
+        )
+        assert all(p.get("parse_mode") == "HTML" for p in tg_absent.sent), (
+            "K-6: ohne Schalter bleibt es bei HTML, gemessen: "
+            f"{[p.get('parse_mode') for p in tg_absent.sent]!r}"
+        )
+        assert len(tg_rich.texts()) == 2, (
+            "Mandantentrennung: der Lauf von Nutzer B darf an der Senke von "
+            f"Nutzer A nichts hinzufuegen, gemessen: {tg_rich.texts()!r}"
+        )
+    finally:
+        tg_rich.stop()
+        tg_absent.stop()
+        sms_stub.stop()
+        _clean_user(uid_rich)
+        _clean_user(uid_absent)

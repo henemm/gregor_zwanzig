@@ -23,7 +23,10 @@ from app.loader import compare_preset_to_dict, load_all_locations, load_compare_
 from services import alert_daily_limit, alert_log
 from services.alert_preset import _PRESET_TABLE
 from services.alert_state import AlertStateService
-from services.compare_alert_channels import effective_compare_channels
+from services.compare_alert_channels import (
+    effective_compare_channels,
+    effective_compare_telegram_style,
+)
 from services.compare_location_weather_source import CompareLocationWeatherSource
 from services.compare_weather_snapshot import CompareWeatherSnapshotService
 from services.deviation_alert_engine import DeviationAlertEngine
@@ -164,6 +167,11 @@ class CompareAlertService:
                 effective_channels=config.channels,
                 mail_sink=self._mail_sink,
                 location_positions=self._location_positions(location_ids, all_locations),
+                # Issue #1467 S2, Korrektur K-5: der Kurzstil-Schalter (#1260)
+                # wirkte auf genau diesem Versandweg bisher gar nicht. Gelesen
+                # wird er ueber DENSELBEN Aufloeser wie beim amtlichen
+                # Ortsvergleich-Alarm (ADR-0021, keine zweite Fassung).
+                telegram_style=effective_compare_telegram_style(preset),
             )
             # Issue #1459: der Ortsvergleich protokollierte bisher gar nicht
             # (B1). Seit #1467 S1 traegt der Eintrag die Preset-Kennung im
@@ -198,14 +206,28 @@ class CompareAlertService:
         NICHT die Trefferreihenfolge — dieselbe Reihenfolge, in der die
         Vergleichs-E-Mail ihre Ortsspalten fuehrt. Die Zuordnung deckt ALLE
         Orte des Presets ab, auch die, die diesmal nicht ausgeloest haben:
-        sonst verschoeben sich die Zahlen von Lauf zu Lauf. Nicht aufloesbare
-        Orts-Kennungen behalten ihre Position (sie zaehlen in der Liste mit),
-        tragen aber keinen Namen bei."""
+        sonst verschoeben sich die Zahlen von Lauf zu Lauf.
+
+        Korrektur-Runde 2026-08-04 (K-4, PO woertlich): "die nummer soll
+        immer die Reihenfolge darstellen. Wenn ein Ort geloescht wird, ruecken
+        die anderen nach." Gezaehlt wird deshalb nur ueber die AUFLOESBAREN
+        Orte — eine Kennung ohne gespeicherten Ort (Nutzer hat ihn geloescht)
+        zaehlt NICHT mehr mit, die folgenden ruecken auf. Die fruehere
+        Zusicherung "nicht aufloesbare Kennungen behalten ihre Position" ist
+        damit hinfaellig: sie hinterliess eine Luecke, die auf einen Ort
+        zeigte, den der Empfaenger in seiner Liste gar nicht mehr findet.
+
+        Unveraendert bleibt die andere Art von Luecke: ein Ort, der NOCH in
+        der Liste steht und diesmal nur nicht ausgeloest hat, zaehlt mit —
+        seine Zahl bleibt vergeben, die folgenden ruecken NICHT auf."""
         positions: dict[str, int] = {}
-        for index, location_id in enumerate(location_ids, start=1):
+        index = 0
+        for location_id in location_ids:
             loc = all_locations.get(location_id)
-            if loc is not None:
-                positions[loc.name] = index
+            if loc is None:
+                continue
+            index += 1
+            positions[loc.name] = index
         return positions
 
     def _detect_triggered_locations(
