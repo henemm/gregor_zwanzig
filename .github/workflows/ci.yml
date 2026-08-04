@@ -62,6 +62,18 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install dependencies
         run: npm ci
+      # Die LIVE-Katalog-Drift-Waechter (#1351 F003, #1424 AC-2, corridorMark)
+      # lesen den echten Backend-Katalog via `uv run python3` — ohne uv+Sync
+      # scheiterten genau diese 6 Tests seit jeher nur auf dem Runner (#1196).
+      - name: Install uv (fuer LIVE-Katalog-Drift-Waechter)
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Set up Python + Projekt-Abhaengigkeiten
+        working-directory: .
+        run: |
+          uv python install 3.12
+          uv sync
       - name: Run frontend unit tests
         # Kurzliste der Fehlschlaege ans Log-ENDE — das 17k-Zeilen-TAP-Log
         # begraebt "not ok" sonst in der Mitte (#1196).
