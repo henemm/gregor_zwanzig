@@ -64,6 +64,16 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pendant_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pendant_gate.py\"; fi",
+            "timeout": 60
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit",
         "hooks": [
           {

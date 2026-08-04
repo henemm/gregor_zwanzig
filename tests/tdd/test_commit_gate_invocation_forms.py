@@ -191,6 +191,71 @@ def test_mail_gate_blockt_keine_blosse_erwaehnung(tmp_path):
 
 
 # --------------------------------------------------------------------- #
+# pendant_gate — Pendant-Sperre (#1481 B), gleiche Aufrufform-Zusicherung
+# --------------------------------------------------------------------- #
+
+def _pendant_repo(tmp_path: Path) -> Path:
+    """Git-Repo mit gestagter NEUER Datei im einseitigen Bereich, ohne Begruendung."""
+    repo = tmp_path / "pendantrepo"
+    einseitig = repo / "frontend" / "src" / "lib" / "components" / "compare"
+    einseitig.mkdir(parents=True)
+    _git(repo.parent, "init", "-q", str(repo))
+    _git(repo, "config", "user.email", "test@example.invalid")
+    _git(repo, "config", "user.name", "Test")
+    (repo / "README.md").write_text("Ausgangsstand\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "Ausgangsstand")
+    (einseitig / "Ortsliste.svelte").write_text('<script lang="ts">\n</script>\n')
+    _git(repo, "add", "-A")
+    return repo
+
+
+@pytest.mark.parametrize("template", [
+    # Vorspann-Programm — frueher liess `sudo` die Erkennung noch zu, `timeout` nicht
+    'sudo git commit -m "wip"',
+    'timeout 30 git commit -m "wip"',
+    # Adversary F001 aus #1431: Zeilenumbruch als Trenner
+    'echo start\ngit commit -m "wip"',
+    # Adversary F002 aus #1431: Trenner ohne umgebende Leerzeichen
+    'echo start&&git commit -m "wip"',
+])
+def test_pendant_gate_greift_bei_alternativer_aufrufform(tmp_path, template):
+    """Die Pendant-Sperre erkennt den Commit an der Aufrufform, nicht am Wortlaut (AC-11).
+
+    Ein Waechter, der auf `"git commit" in befehl` prueft, laesst sich ueber die
+    Schreibweise still umgehen — genau der Vorfall aus #1431.
+
+    Die Vorlagen nannten hier bis 2026-08-04 `git -C <pfad>`. Seit dem Rueckbau (F010)
+    ist ein `-C` das ausdrueckliche Zeichen dafuer, dass anderswo committet wird — der
+    Waechter laesst solche Aufrufe bewusst durch und sagt es. Fuer die Zusicherung dieses
+    Tests — greift die Sperre unabhaengig von der Schreibweise? — braucht es deshalb
+    Formen, bei denen der Commit HIER stattfindet. Die Zusicherung ist dieselbe
+    geblieben, nur die Beispiele passen jetzt zum Entwurf.
+    """
+    repo = _pendant_repo(tmp_path)
+    hook = _hookbin(tmp_path, "pendant_gate.py")
+    proc = _run_hook(hook, template, repo)
+    assert proc.returncode == 2, (
+        "Die Pendant-Sperre bleibt ueber die Aufrufform umgehbar: "
+        f"rc={proc.returncode} err={proc.stderr!r}"
+    )
+    assert "Ortsliste.svelte" in proc.stderr, (
+        "Exit 2 allein beweist nichts (ein fehlender Waechter liefert denselben Code) — "
+        f"die Meldung muss die gestagte Datei nennen: {proc.stderr!r}"
+    )
+
+
+def test_pendant_gate_blockt_keine_blosse_erwaehnung(tmp_path):
+    """Gegenprobe: ein `grep` nach der Zeichenfolge ist kein Commit und darf nicht blocken."""
+    repo = _pendant_repo(tmp_path)
+    hook = _hookbin(tmp_path, "pendant_gate.py")
+    proc = _run_hook(hook, 'grep -rn "git commit" .claude/hooks/', repo)
+    assert proc.returncode == 0, (
+        f"Blosse Erwaehnung blockiert: rc={proc.returncode} err={proc.stderr!r}"
+    )
+
+
+# --------------------------------------------------------------------- #
 # auto_restart_server — kein Neustart bei Diagnose-Kommandos
 # --------------------------------------------------------------------- #
 
