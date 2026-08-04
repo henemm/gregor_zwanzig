@@ -129,6 +129,17 @@ Gate. Der `email_spec_validator.py` ist für Trip-Briefing-Mails **nicht** zust�
 
 ## 3. `renderer_mail_gate.py` — Commit-Gate für Mail-Renderer (seit #811)
 
+> **„Un-überspringbar" ist eine überprüfbare Behauptung — und sie stimmte bis
+> 2026-08-04 nicht** (#1431). Das Gate entschied per Teilstring `"git commit"`, ob es
+> überhaupt prüft; jede Form mit etwas zwischen `git` und Unterbefehl
+> (`git -C /pfad commit`, `git -c k=v commit`, `git --no-pager commit`) umging es
+> **still**. Real passiert: ein Commit mit zwei gestagten Mail-Renderer-Dateien lief,
+> ohne dass das Gate startete — die Aufrufform war nicht absichtlich gewählt.
+> Seit #1431 entscheidet eine tokenbasierte Erkennung (`hook_utils.is_git_subcommand`,
+> agent-os-openspec ≥ 3.10.0) mit umgedrehter Frage: nicht „erkenne ich einen Aufruf?",
+> sondern „bin ich sicher, dass hier keiner drinsteckt?". Wer sich auf diese Zusicherung
+> stützt, prüft sie am laufenden Stand nach, statt sie zu glauben.
+
 Commit-Hook (PreToolUse→Bash-Kette nach `pre_commit_gate.py`). Macht die
 Validator-„PFLICHT" technisch **un-überspringbar**: Sobald ein `git commit` eine
 Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`,

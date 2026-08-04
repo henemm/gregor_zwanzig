@@ -163,6 +163,8 @@ Zwei Mail-Pfade, zwei Gates. Falscher Validator auf einen Pfad → strukturell n
 
 **Renderer-Commit-Gate (#811, un-überspringbar):** `renderer_mail_gate.py` blockiert jeden Commit, der eine Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`, `src/output/renderers/{trip_report,sms_trip,compact_summary}.py`, `src/output/renderers/alert/*.py`, `src/output/channels/email.py`), bis im aktiven Workflow **beide** frisch vorliegen: (1) `tests/tdd/test_issue_811_mode_matrix.py` grün, (2) erfolgreicher `briefing_mail_validator.py`-Lauf. Abhilfe bei Blockade: `uv run pytest tests/tdd/test_issue_811_mode_matrix.py` ausführen, dann Validator grün bekommen.
 
+**„Un-überspringbar" gilt erst seit #1431 (2026-08-04) wirklich.** Davor entschied dieses Gate — wie vier weitere — per Teilstring `"git commit"`, ob es überhaupt prüft; `git -C /pfad commit`, `git -c k=v commit` und `git --no-pager commit` umgingen es **still**, ohne Umgehungsabsicht und ohne Meldung. Seit #1431 entscheidet `hook_utils.is_git_subcommand` tokenbasiert (agent-os-openspec ≥ 3.10.0) mit umgedrehter Frage: nicht „erkenne ich einen Aufruf?", sondern „bin ich sicher, dass hier keiner drinsteckt?" — alles Unzerlegbare wird geprüft statt durchgelassen. **Merksatz für jede solche Zusicherung: nachmessen, nicht glauben.**
+
 Details (Plausibilitäts-Schwellen, Anti-Stale-Mechanik, Historie): **`docs/reference/mail_validators.md`**.
 
 ## Specs
