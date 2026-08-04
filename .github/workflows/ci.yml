@@ -216,23 +216,49 @@ jobs:
           rm -f /tmp/deploy_key
           exit $EXIT
 
+      # Commit-Message NIE per ${{ }} in den Shell-Text interpolieren:
+      # Anfuehrungszeichen in der Message (z.B. "Nachtrag 2", 4c9ad35)
+      # zerrissen die Zuweisung — beide Notify-Steps rot, Run rot, obwohl
+      # der Deploy durch war (Runs 1911–1913, 2026-08-04). Der env-Umweg
+      # entschaerft zugleich die Script-Injection ueber Commit-Messages;
+      # json.dumps macht jeden Inhalt transportsicher. Nur die erste
+      # Message-Zeile — mehr liest auf dem Handy niemand.
       - name: Telegram — Deploy erfolgreich (HENEMM Server)
         if: success()
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
+          SHA: ${{ github.sha }}
         run: |
-          SHA="${{ github.sha }}"
-          MSG="deployed: ${SHA:0:7} ${{ github.event.head_commit.message }}"
+          BODY=$(python3 - <<'EOF'
+          import json, os
+          lines = (os.environ.get("COMMIT_MSG") or "").splitlines()
+          first = lines[0] if lines else ""
+          sha = os.environ["SHA"][:7]
+          print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": "gregor20 deployed: %s %s" % (sha, first)}))
+          EOF
+          )
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\":\"${{ secrets.HENEMM_DEPLOY_CHAT_ID }}\",\"text\":\"gregor20 $MSG\"}" \
-            > /dev/null
+            -d "$BODY" > /dev/null
 
       - name: Telegram — Deploy fehlgeschlagen (HENEMM Server)
         if: failure()
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          SHA="${{ github.sha }}"
-          RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG="FEHLGESCHLAGEN: ${SHA:0:7} ${{ github.event.head_commit.message }} | $RUN"
+          BODY=$(python3 - <<'EOF'
+          import json, os
+          lines = (os.environ.get("COMMIT_MSG") or "").splitlines()
+          first = lines[0] if lines else ""
+          sha = os.environ["SHA"][:7]
+          text = "gregor20 FEHLGESCHLAGEN: %s %s | %s" % (sha, first, os.environ["RUN_URL"])
+          print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": text}))
+          EOF
+          )
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\":\"${{ secrets.HENEMM_DEPLOY_CHAT_ID }}\",\"text\":\"gregor20 $MSG\"}" \
-            > /dev/null
+            -d "$BODY" > /dev/null
