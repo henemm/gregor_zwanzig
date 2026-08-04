@@ -90,6 +90,11 @@ from providers.base import ProviderRequestError
 from providers.openmeteo import OpenMeteoProvider
 from providers.region_routing import direct_provider_for
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 # Muenchen (48.14, 11.57): SPEC-AC-1-Beispiel, aber innerhalb der AT-Router-
 # Box (die Alpenraum-Box umschliesst Sued-Bayern) — fuer AC-1 unerheblich,
 # da der isolierte `DwdDirectProvider` direkt (ohne Routing) aufgerufen wird.

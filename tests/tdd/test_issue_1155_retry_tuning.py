@@ -58,6 +58,11 @@ from app.models import NormalizedTimeseries
 from providers.base import ProviderRequestError
 from providers.openmeteo import RETRY_ATTEMPTS, OpenMeteoProvider
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 _ALL_MODEL_IDS = [
     "meteofrance_arome", "icon_d2", "metno_nordic", "icon_eu", "ecmwf_ifs04",
 ]

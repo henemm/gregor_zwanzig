@@ -56,6 +56,11 @@ from app.models import NormalizedTimeseries
 from providers.base import ProviderRequestError
 from providers.openmeteo import OpenMeteoProvider
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 # Bekannte Open-Meteo-Modell-Forecast-Endpoints (fuer Single-Contact-Asserts:
 # Air-Quality/Ensemble werden in den Tests gar nicht kontaktiert, da
 # start/end=None den UV-Call und enrich_ensemble=False den Ensemble-Call

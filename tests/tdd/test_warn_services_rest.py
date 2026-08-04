@@ -47,6 +47,11 @@ from services.official_alerts import (
     warn_egress,
 )
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
+
 # Zwei verschiedene französische Orte -> zwei verschiedene Départements (06/13),
 # beide vom Mapper auflösbar (siehe test_issue_1035_vigilance_source.py).
 NICE = (43.7102, 7.2620)

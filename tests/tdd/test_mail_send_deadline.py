@@ -44,6 +44,11 @@ import app.egress_guard as egress_guard
 from output.channels import email as email_module
 from output.channels.base import OutputError
 
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.email
+
 ABSENDER = "gregor_zwanzig@henemm.com"
 # Lokaler Empfaenger: der Nicht-Resend-Guard in send() (email.py:581-607)
 # laesst auf einem Nicht-Resend-Host nur @henemm.com-Adressen durch.

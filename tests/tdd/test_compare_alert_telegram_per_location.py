@@ -48,6 +48,13 @@ from app.trip import Stage, Trip, Waypoint
 from app.user import SavedLocation
 from services.notification_service import NotificationService, RadarAlertRequest
 from services.radar_service import NowcastResult
+import pytest
+
+
+# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
+# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
+# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
+pytestmark = pytest.mark.live
 
 
 # ---------------------------------------------------------------------------
