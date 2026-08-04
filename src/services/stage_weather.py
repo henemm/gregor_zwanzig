@@ -96,8 +96,15 @@ def _compute_one_stage(trip: "Trip", stage, segments: list, weather_list: list) 
 
     engine = RiskEngine()
     max_level = RiskLevel.LOW
+    # Issue #1474b: `get_max_risk_level()` liefert bei einer LEEREN
+    # Risikoliste ebenfalls RiskLevel.LOW -- "kein Risiko" und "Risiko der
+    # Stufe leicht" waeren ohne dieses Zusatzmerkmal nicht unterscheidbar.
+    has_any_risk = False
     for sw in ok:
-        level = engine.get_max_risk_level(engine.assess_segment(sw, exposed))
+        assessment = engine.assess_segment(sw, exposed)
+        if assessment.risks:
+            has_any_risk = True
+        level = engine.get_max_risk_level(assessment)
         if _LEVEL_ORDER[level] > _LEVEL_ORDER[max_level]:
             max_level = level
 
@@ -114,7 +121,16 @@ def _compute_one_stage(trip: "Trip", stage, segments: list, weather_list: list) 
         "wmo_code": summary.dominant_wmo_code,
         "is_day": _derive_is_day(ok, stage.date),
     }
-    return {"weather_summary": weather_summary, "risk": _RISK_TO_COLOR.get(max_level, "green")}
+    # Issue #1474b: `_RISK_TO_COLOR` allein kennt keinen "yellow"-Eintrag fuer
+    # RiskLevel.LOW (waere sonst mit "kein Risiko" verwechselbar, s. o.) --
+    # `has_any_risk` liefert genau die fehlende Unterscheidung nach.
+    if max_level == RiskLevel.HIGH:
+        risk_color = "red"
+    elif max_level == RiskLevel.MODERATE or has_any_risk:
+        risk_color = "yellow"
+    else:
+        risk_color = "green"
+    return {"weather_summary": weather_summary, "risk": risk_color}
 
 
 def compute_stage_weather(trip: "Trip", provider: "WeatherProvider") -> dict[str, Optional[dict]]:

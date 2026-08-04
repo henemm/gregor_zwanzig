@@ -151,17 +151,19 @@ def render_compact(
     metric_ids = resolve_trip_active_metrics(
         dc.metrics, altbestand=trip_metrics_altbestand,
     )
-    thresholds = {
-        mc.metric_id: mc.alert_threshold
+    # Issue #1474b: die Erwaehnungsschwelle (nicht die Alarm-Schwelle,
+    # ADR-0043 -- andere Achse) treibt die Mail-Pillen, SMS-identisch.
+    sms_mention_thresholds = {
+        mc.metric_id: mc.sms_threshold
         for mc in dc.metrics
-        if mc.alert_enabled and mc.alert_threshold is not None
+        if mc.sms_threshold is not None
     }
     # Issue #1357: gespeicherte Auswertungswahl je Groesse (sonst Katalog-Vorgabe).
     metric_aggregations = {
         mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
     }
     pills = build_metrics_summary_pills(
-        segments, metric_ids, thresholds, tz=tz,
+        segments, metric_ids, sms_mention_thresholds, tz=tz,
         night_weather=night_weather, has_gap=has_gap,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour,

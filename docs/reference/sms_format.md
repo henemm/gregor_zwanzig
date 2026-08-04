@@ -115,7 +115,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak (Issue #887: auch SMS via `pop_hourly` aus `agg.pop_max_pct` synthetisiert) | Hourly `pop_pct`, Threshold aus `config.rain_probability_threshold` | `PR20%@11(100%@17)` |
 | `W{v}@{h}({max}@{h})` / `W-` | Wind km/h Threshold + Peak | Hourly `wind10m_kmh`, Threshold aus `config.wind_speed_threshold` | `W10@11(15@17)` |
 | `G{v}@{h}({max}@{h})` / `G-` | Böen km/h Threshold + Peak | Hourly `gust_kmh`, Threshold aus `config.wind_gust_threshold` | `G20@11(30@17)` |
-| `TH:{level}@{h}({max}@{h})` / `TH:-` | Gewitter der **berichteten** Etappe (M/H) | Hourly `dp.thunder_level` aus `seg.timeseries`, auf die Wanderzeit gefenstert | `TH:M@16(H@18)` |
+| `TH:{level}@{h}({max}@{h})` / `TH:-` | Gewitter der **berichteten** Etappe (L/M/H — seit Issue #1474 vierstufig, `L`="leicht" besetzt den vorher unerreichbaren Token-Platz, s. `docs/reference/decision_matrix.md`) | Hourly `dp.thunder_level` aus `seg.timeseries`, auf die Wanderzeit gefenstert | `TH:M@16(H@18)` (bzw. `TH:L@16` bei reinem „leicht") |
 | `TH+:{level}@{h}({max}@{h})` / `TH+:-` | Gewitter der Etappe **danach** | Folge-Etappe via `thunder_forecast["+1"]` (Level **und** Stunde) | `TH+:M@14(H@17)` |
 
 **`N` ist report-type-abhängig (Issue #1319 Scheibe D, 2026-07-23):** anders als `D R PR W G TH: TH+:`
@@ -467,7 +467,7 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 | `PR` | `pop_pct` hourly | Threshold + MAX | ✅ vorhanden |
 | `W` | `wind10m_kmh` hourly | Threshold + MAX | ✅ vorhanden |
 | `G` | `gust_kmh` hourly | Threshold + MAX | ✅ vorhanden |
-| `TH` | `thunder_level` hourly | Threshold + MAX (NONE<MED<HIGH) | ✅ vorhanden |
+| `TH` | `thunder_level` hourly | Threshold + MAX (NONE<LOW<MED<HIGH, seit Issue #1474 vierstufig) | ✅ vorhanden |
 | `TH+` | Folgetag `thunder_level` | wie TH, aber +1 Tag | ✅ vorhanden |
 | `HR` (Vigilance) | Météo France `get_warning_full()` | offizielle Warnung | ⚠️ Provider TODO |
 | `TH` (Vigilance) | Météo France `get_warning_full()` | offizielle Warnung | ⚠️ Provider TODO |
@@ -535,6 +535,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.14 | 2026-08-01 | Schnee-Kürzel folgen dem Wetter-Register (Issue #1435 Etappe E3b) — Schneehöhe `SN`→`SD`, Neuschnee `SN24+`→`NS24+`, Schneefallgrenze `SFL`→`SL` (`metric_catalog.sms_code`). Grund: `SN` bezeichnete in derselben Zeile zugleich die **amtliche Schneewarnung** (§3.4c, `hazard_symbols.py`) — diese bleibt unverändert `SN`, kein Vorhersage-Token beginnt mehr so. Position im Format, Kürzungs-Rangfolge (§6) und die inverse Schwellwertlogik der Schneefallgrenze (#873) unverändert; gespeicherte Nutzereinstellungen liegen als `metric_id` vor und bleiben wirksam. `TH:` (Grammatik) und `WC`/`FN`/`FK`/`FD` bleiben bewusste Ausnahmen. Spec: `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md` |
 
 | 2.15 | 2026-08-03 | Gemessene Temperatur folgt der Metrik-Auswahl (Issue #1415, PO-Entscheidung) — `N`/`K`/`D` waren die letzten unbedingten Vorhersage-Token und erschienen auch bei abgewählter Metrik „Temperatur“ (Beleg aus einer echt zugestellten SMS: `E3: K13 D16 FK13 FD16 R12.2@20 …` mit ausgeschalteter Temperatur). Jetzt gilt für **jedes** Kürzel dieselbe Zweiteilung: geprüft, aber kein Wert ⇒ Null-Form (`K-`), abgewählt ⇒ Kürzel entfällt vollständig. Die dritte Stufe „nicht abrufbar ⇒ `R?`“ (#1328) gibt es unverändert nur bei den Schwellwert-Kürzeln; für die Temperatur-Kürzel existiert sie nicht (`render_temperature()` kennt nur Zahl oder `-`) — als bekannte Ist-Abweichung in §2 vermerkt, Entscheidung offen. Umsetzung über denselben Weg wie `FN`/`FK`/`FD` (#1410): die Mehrfach-Tabelle in `sms_trip.py`, umbenannt von `SMS_FELT_SYMBOLS_BY_METRIC` zu `SMS_MULTI_SYMBOLS_BY_METRIC` und um `"temperature": ("N", "K", "D")` ergänzt — kein zweiter Bindungsweg. §2 (Pflicht-Spalte), §3.2, §4 (Null-Formen), §7 (Pflicht-Token) und §10 entsprechend nachgezogen; die verbliebene Ist-Abweichung `TH+:` ist unter §2 ausdrücklich vermerkt. |
+| 2.16 | 2026-08-04 | Doku-Nachtrag (Issue #1474, ohne Codeänderung an dieser Datei) — `TH:`/`TH+:` sind seit der bereits gemergten Vorgänger-Scheibe (`860a3baf`, 2026-08-03) vierstufig: `L`("leicht") besetzt den vorher unerreichbaren Token-Platz neben `M`/`H` (`NONE<LOW<MED<HIGH`). §3.2 und §9 zeigten bis hierhin noch die alte Dreistufigkeit — nachgetragen im Zuge der Folge-Scheibe `fix-1474-gewitterschwelle-cockpit`, die dieselbe Ordinalskala für die Erwähnungsschwelle nutzt. Details: `docs/reference/decision_matrix.md` Abschnitt „Gewitter-Stufen". |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

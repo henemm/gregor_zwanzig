@@ -1,16 +1,17 @@
-"""TDD RED — Issue #1474 (S3 zu #1419), AC-3.
+"""Issue #1474 (S3 zu #1419), AC-3 -- angepasst durch Issue #1474b.
 
 SPEC: docs/specs/modules/feat_1474_gewitter_befund_stufen.md v2.3 Abschnitt 2
+(urspruengliche Bindung an MED), abgeloest durch
+docs/specs/modules/fix_1474b_gewitterschwelle_cockpit.md (PO-Entscheidung
+2026-08-03: die Prosa-Pille meldet am Standard-Trip jetzt schon ab "leicht").
 
-`email/helpers.py::_pill_for_metric(metric_id="thunder", ...)` bindet den Satz
-"Gewitter ab HH:00 · staerkste HH:00" heute an den Literal
-`thunder_ordinal(lvl) >= 1`. Nach der Skalenerweiterung (Ordinal 1 = LOW statt
-MED) muss dieser Literal an die benannte Stufe MED gebunden sein
-(`thunder_ordinal(lvl) >= thunder_ordinal(ThunderLevel.MED)`), sonst loest
-schon das schwaechste, unsicherste Signal ("leicht", nur ueber CAPE) einen
-konkreten Uhrzeit-Anspruch aus.
-
-RED-Ursache (heute): `ThunderLevel.LOW` existiert nicht -> AttributeError.
+`email/helpers.py::_pill_for_metric(metric_id="thunder", ...)` band den Satz
+"Gewitter ab HH:00 · staerkste HH:00" zunaechst an die benannte Stufe MED
+(`thunder_ordinal(lvl) >= thunder_ordinal(ThunderLevel.MED)`). Issue #1474b
+ersetzt das durch die konfigurierbare Erwaehnungsschwelle
+(`_sms_mention_threshold("thunder", configured)`), Standardwert weiterhin
+1.0 ("ab leicht") -- SMS-identisch. `test_ac3_mittel_loest_den_uhrzeit_satz_aus`
+bleibt unveraendert gruen (MED loest weiterhin aus).
 
 Keine Mocks: echte ForecastDataPoint-Reihe durch die echte Renderfunktion
 `_pill_for_metric()` (SSoT fuer die Mail-Pille), kein Netz.
@@ -47,20 +48,20 @@ def _dps_reaching_med() -> list:
     ]
 
 
-def test_ac3_nur_leicht_loest_den_uhrzeit_satz_nicht_aus():
-    """AC-3 (Gegenprobe-kritischer Fall): eine Etappe, deren Stundenreihe NUR
-    ThunderLevel.LOW traegt, darf den Satz "Gewitter ab HH:00 · staerkste
-    HH:00" NICHT zeigen. Bleibt der Literal `>= 1` unveraendert statt auf
-    `thunder_ordinal(ThunderLevel.MED)` gehaertet, loest bereits dieser reine
-    LOW-Fall aus (Ordinal von LOW ist neu 1) -- dieser Test muss das fangen."""
+def test_ac5_1474b_nur_leicht_loest_den_uhrzeit_satz_am_standard_trip_aus():
+    """Issue #1474b AC-5 (PO-Entscheidung 2026-08-03, ersetzt die alte
+    #1474-S3-Erwartung): ein Trip OHNE eigene Gewitter-Schwellen-Einstellung
+    zeigt den Satz "Gewitter ab HH:00 · staerkste HH:00" schon bei reinem
+    ThunderLevel.LOW ("leicht") -- die Pille liest die konfigurierbare
+    Erwaehnungsschwelle (Standard 1.0, SMS-identisch), nicht mehr fest MED."""
     from output.renderers.email.helpers import _pill_for_metric
 
     result = _pill_for_metric("thunder", {}, _dps_only_low(), tz=TZ)
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
-    assert "Gewitter ab" not in text, (
-        "Der Uhrzeit-Satz darf bei reinem 'leicht' (LOW, nur ueber CAPE "
-        f"gesetzt) nicht erscheinen. Erhalten: {text!r}"
+    assert "Gewitter ab" in text, (
+        "Der Uhrzeit-Satz muss am Standard-Trip schon bei reinem 'leicht' "
+        f"(LOW) erscheinen. Erhalten: {text!r}"
     )
 
 
