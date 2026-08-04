@@ -780,6 +780,15 @@ KNOWN_VIOLATIONS: dict[str, str] = {
         "Exception: continue ohne Log. Wer fünf GPX-Dateien hochlädt, bekommt "
         "bei einer kaputten vier Etappen und keinerlei Hinweis darauf."
     ),
+    "src/services/compare_alert.py::_location_positions::0": (
+        "BEWUSST (#1467 S2 AG3b, PO-Entscheidung 2026-08-04) — "
+        "_location_positions: eine nicht mehr aufloesbare Orts-Kennung wird "
+        "uebersprungen, die Positionsnummern ruecken nach. PO woertlich: 'die "
+        "nummer soll immer die Reihenfolge darstellen. Wenn ein Ort geloescht "
+        "wird, ruecken die anderen nach, das ist kein Fehler sondern fuer den "
+        "User nachvollziehbares Verhalten.' Rest-Randfall (falsy 0) als LOW "
+        "in #1199."
+    ),
 }
 
 

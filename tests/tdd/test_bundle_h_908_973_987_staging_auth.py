@@ -81,6 +81,10 @@ def _load_prod_selftest_module():
 
 
 def _load_validator_env() -> dict:
+    # Fehlende Datei (jede Maschine ausser dem Server) → {} statt
+    # FileNotFoundError; Muster wie tests/helpers/staging_auth.py (#1196).
+    if not _VALIDATOR_ENV.exists():
+        return {}
     env = {}
     for line in _VALIDATOR_ENV.read_text().splitlines():
         line = line.strip().removeprefix("export ").strip()

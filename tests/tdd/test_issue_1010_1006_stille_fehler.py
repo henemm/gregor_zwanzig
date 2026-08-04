@@ -40,6 +40,10 @@ _VALIDATOR_ENV = Path("/home/hem/gregor_zwanzig/.claude/validator.env")
 
 
 def _load_validator_env() -> dict:
+    # Fehlende Datei (jede Maschine ausser dem Server) → {} statt
+    # FileNotFoundError; Muster wie tests/helpers/staging_auth.py (#1196).
+    if not _VALIDATOR_ENV.exists():
+        return {}
     env = {}
     for line in _VALIDATOR_ENV.read_text().splitlines():
         line = line.strip().removeprefix("export ").strip()
@@ -50,6 +54,13 @@ def _load_validator_env() -> dict:
 
 
 _ENV = _load_validator_env()
+if "GZ_VALIDATOR_USER" not in _ENV:
+    # Ganzes Modul ist Staging-gebunden (pytestmark staging); ohne Credentials
+    # sauber ueberspringen statt die Collection mit KeyError zu brechen (#1196).
+    pytest.skip(
+        "Staging-Credentials (validator.env) fehlen — laeuft nur auf dem Server",
+        allow_module_level=True,
+    )
 BASE = _ENV.get("GZ_VALIDATION_URL", "https://staging.gregor20.henemm.com")
 _HTTP_CREDS = {
     "username": _ENV["GZ_VALIDATOR_USER"],

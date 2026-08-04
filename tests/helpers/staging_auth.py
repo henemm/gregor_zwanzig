@@ -14,6 +14,13 @@ _VALIDATOR_ENV = Path("/home/hem/gregor_zwanzig/.claude/validator.env")
 
 
 def _load_validator_env() -> dict:
+    """Fehlt die Datei (jede Maschine ausser dem Server), liefert {} statt zu
+    werfen: staging_base_url() faellt dann auf Env-Vars/Literal-Default,
+    httpx_auth() skippt den Test. Vorher brach der Read ueber Modulebenen-
+    Aufrufer (z.B. test_issue_1069:47) die Collection der GESAMTEN Suite auf
+    jedem Rechner ohne validator.env (#1196)."""
+    if not _VALIDATOR_ENV.exists():
+        return {}
     env = {}
     for line in _VALIDATOR_ENV.read_text().splitlines():
         line = line.strip().removeprefix("export ").strip()
@@ -39,9 +46,20 @@ def staging_base_url() -> str:
 
 
 def httpx_auth() -> tuple[str, str]:
-    """Basic-Auth-Tupel für httpx.get(url, auth=httpx_auth())."""
+    """Basic-Auth-Tupel für httpx.get(url, auth=httpx_auth()).
+
+    Ohne verfügbare Credentials wird der aufrufende Test uebersprungen statt
+    mit KeyError zu scheitern — Staging-Tests laufen nur auf dem Server."""
     env = _load_validator_env()
-    return (env["GZ_VALIDATOR_USER"], env["GZ_VALIDATOR_PASS"])
+    try:
+        return (env["GZ_VALIDATOR_USER"], env["GZ_VALIDATOR_PASS"])
+    except KeyError:
+        import pytest
+
+        pytest.skip(
+            "Staging-Basic-Auth nicht verfuegbar (validator.env fehlt) — "
+            "laeuft nur auf dem Server"
+        )
 
 
 def playwright_http_credentials() -> dict:

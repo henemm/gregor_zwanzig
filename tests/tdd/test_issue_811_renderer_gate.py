@@ -50,7 +50,17 @@ def _load_gate_module():
     return mod
 
 
-_gate = _load_gate_module()
+try:
+    _gate = _load_gate_module()
+except ImportError as exc:
+    # hook_utils ist ein Shim auf das installierte agent-os-openspec-Plugin;
+    # ohne Plugin (z.B. CI-Runner, Web-Sessions) sauber ueberspringen statt
+    # die Collection der gesamten Suite zu brechen (#1196).
+    pytest.skip(
+        f"renderer_mail_gate nicht ladbar ({exc}) — braucht das installierte "
+        "agent-os-openspec-Plugin",
+        allow_module_level=True,
+    )
 
 # Eine geschuetzte Mail-Inhalts-Datei (Spec: src/output/renderers/email/.*\.py$).
 _MAIL_FILE = "src/output/renderers/email/helpers.py"
