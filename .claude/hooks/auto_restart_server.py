@@ -14,6 +14,24 @@ import signal
 import subprocess
 import sys
 import time
+from pathlib import Path
+
+# Issue #1431: gemeinsame, tokenbasierte git-Aufrufform-Erkennung aus hook_utils.
+#
+# UEBERGANGS-RUECKFALL — NACH AUSLIEFERUNG DES PLUGINS ENTFERNEN (Issue #1431).
+# Der except-Zweig ist eine ZWEITFASSUNG GENAU DES DEFEKTS, den #1431 beseitigt:
+# er erkennt `git -C /pfad commit` nicht. Er existiert nur, solange eine
+# Plugin-Fassung OHNE `is_git_subcommand` installiert sein kann (der Shim
+# .claude/hooks/hook_utils.py laedt die ausgelieferte Cache-Fassung). Sobald die
+# neue Fassung ausgeliefert ist: try/except loeschen, Import direkt stellen.
+# Der Rueckfall ist hier bewusst ENGER als die frueheren Teilstring-Bedingungen
+# — er startet im Zweifel NICHT neu, statt faelschlich neu zu starten.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from hook_utils import is_git_subcommand
+except Exception:  # noqa: BLE001 — Plugin fehlt/veraltet: konservativ, kein Neustart
+    def is_git_subcommand(command: str, subcommand: str) -> bool:
+        return f"git {subcommand}" in command
 
 
 def main():
@@ -27,12 +45,11 @@ def main():
     if tool_name != "Bash":
         return
 
-    # Check if command was a git commit
-    # Handle both "git commit" and "git -C /path commit" patterns
+    # Issue #1431: Die frueheren zwei Teilstring-Bedingungen hatten keinen
+    # Positionsbezug — `git log --oneline | grep -c " commit "` erfuellte beide
+    # und loeste `sudo systemctl restart` des LIVE-Dienstes aus.
     command = hook_input.get("tool_input", {}).get("command", "")
-    has_git = "git " in command or "git\n" in command
-    has_commit = " commit " in command or " commit\n" in command or command.endswith(" commit")
-    if not (has_git and has_commit):
+    if not is_git_subcommand(command, "commit"):
         return
 
     # Check if commit clearly failed — restart is the default
