@@ -2,9 +2,9 @@
 entity_id: rework_1467_s2_aenderungsalarm
 type: refactor
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [alerts, trip, compare, epic-1458, issue-1467, s2]
 ---
 
@@ -159,7 +159,16 @@ einzelnen Token tragen keine Ortszuordnung.
   Zuordnung Name→Position wird vom Aufrufer (Compare-Alarm-Pfad, der die Ortsliste kennt)
   gebaut und der SMS-Renderfunktion als neuer optionaler Parameter mitgegeben — ohne diesen
   Parameter (alle anderen Aufrufer: Trip, Radar-Onset, amtlich) bleibt das bisherige Verhalten
-  unverändert. Der doppelte Ortslisten-Kopf entfällt für den Mehr-Orte-Fall.
+  unverändert. **Korrektur 2026-08-04 (PO, umgesetzt in `e9f23605`):** Der Ortsname entfällt
+  in der Alarm-Kurznachricht **vollständig** — nicht nur die Doppelung. Ist die
+  Positions-Zuordnung gesetzt, trägt der Text ausschließlich die Werte-Token
+  (`'2:+R45 1:+R30'`); das gilt auch für den Ein-Ort-Fall (`'+R30'` statt
+  `'Graz Graz: +R30'`), der über einen eigenen Kopf-Zweig läuft. Begründung: die
+  Positionszahl **ist** die Ortsangabe; ein Kopf, der die Namen wiederholt, verbraucht genau
+  das Zeichenbudget, das die Kodierung freischaufeln soll (gemessen: 12 von 25 Zeichen im
+  Mehr-Orte-Fall, 11 von 15 im Ein-Ort-Fall). Die Alarm-Kurznachricht ist **nicht** von
+  `docs/reference/sms_format.md` §2/§3.1 erfasst — der dort vorgeschriebene Header `{Name}:`
+  gilt für die Briefing-Token-Zeile, ein anderes Format.
 - **Telegram:** **eine Nachricht je Ort** (PO E2, „Sprechblase pro Ort") statt einer
   gebündelten. Der Renderer bekommt eine zweite Funktion, die bei mehreren
   Orts-Gruppen (`multi=True`-Fall aus `project.py:202`) je Ortsname eine eigene, in sich
@@ -404,6 +413,32 @@ dupliziert).
   ausgeschriebenen Ortsnamens, und die Gesamtlänge bleibt ≤140 Zeichen.
   - Test: `render_sms()` mit Positions-Mapping aufrufen, Text auf Ziffern statt Namen und
     Länge prüfen.
+  - **Verschärft 2026-08-04 (PO, `e9f23605`):** Der Text enthält **gar keinen** Ortsnamen
+    mehr — auch keinen Kopf mit der Ortsliste und keinen Vergleichsnamen. Gilt ebenso für den
+    Ein-Ort-Fall. Nachgewiesen durch `tests/tdd/test_alert_sms_location_positions.py`
+    (K-1/K-2) und live auf Staging am ausgelieferten Renderer.
+
+- **AC-7b (neu 2026-08-04, PO):** Given einen Ortsvergleich, dessen Ortsliste sich geändert
+  hat (ein Ort gelöscht), When der nächste Änderungsalarm gerendert wird, Then ist die
+  Positionszahl der 1-basierte Index in der **aktuellen** Liste — die folgenden Orte rücken
+  auf, es bleibt keine Lücke. Unverändert zählt ein Ort mit, der noch in der Liste steht und
+  nur diesmal nicht ausgelöst hat (sonst sprängen die Zahlen von Lauf zu Lauf).
+  PO wörtlich: *„die nummer soll immer die Reihenfolge darstellen. Wenn ein Ort gelöscht wird,
+  rücken die anderen nach, das ist kein Fehler sondern für den User nachvollziehbares
+  Verhalten."* Ersetzt die am 2026-08-03 eingeführte Gegen-Zusicherung.
+
+- **AC-7c (neu 2026-08-04, PO):** Given einen Ortsvergleich mit
+  `display_config.telegram_style="kurzform"` (#1260), When ein Änderungsalarm für mehrere Orte
+  ausgelöst wird, Then geht **EINE gemeinsame** Telegram-Nachricht mit dem Kurznachrichten-Text
+  raus — kein Fan-out je Ort. Bei `"rich"` oder fehlendem Wert bleibt es bei einer Sprechblase
+  je Ort (AC-8). Begründung: die Ortsnummer ergibt nur im gemeinsamen Text Sinn, und die beiden
+  anderen Kurzstil-Pfade (Trip, amtlich) senden ebenfalls genau eine.
+  🔴 **Der Schalter war auf diesem Pfad wirkungslos** — und blosses Durchreichen hätte nicht
+  gereicht: `if telegram_groups:` (`notification_service.py:1175`) steht **vor** dem
+  Kurzform-Zweig (`:1192`), und der Ortsvergleich-Änderungsalarm setzt `telegram_groups` seit
+  AG3a immer. Kurzform hat jetzt Vorrang. Die Stil-Auflösung liegt an EINER Stelle
+  (`compare_alert_channels.effective_compare_telegram_style`, ADR-0021);
+  `compare_official_alert.py` delegiert nur noch.
 
 - **AC-8:** Given ein gebündelter Änderungsalarm für drei Orte, When der Telegram-Versand über
   `NotificationService.send_multi_location_deviation_alert()` mit einem echten lokalen
@@ -565,3 +600,14 @@ dupliziert).
   `logger.warning` inkl. Ausnahmetyp protokolliert; (2) `except ValueError` allein reichte
   nicht — Nicht-String-Werte (Zahl, Liste, Bool, Dict) werfen `TypeError` und kamen weiterhin
   durch, jetzt `except Exception`.
+
+- 2026-08-04 (v1.1, `e9f23605`): **PO-Korrektur an AG3b.** (1) Der Ortsname entfaellt in der
+  Alarm-Kurznachricht vollstaendig statt nur der Doppelung — auch im Ein-Ort-Fall; die
+  Positionszahl IST die Ortsangabe (AC-7 verschaerft). (2) Beim Loeschen eines Ortes ruecken
+  die folgenden Nummern nach; die am 2026-08-03 eingefuehrte Gegen-Zusicherung
+  („unaufloesbare Kennung behaelt ihren Platz") faellt samt Test (AC-7b, ersetzt sie).
+  (3) `display_config.telegram_style="kurzform"` wirkt jetzt auch auf dem
+  Aenderungsalarm-Pfad und sendet EINE gemeinsame Nachricht; der Kurzform-Zweig hat Vorrang
+  vor dem Fan-out je Ort (AC-7c). Stil-Aufloesung DRY in `compare_alert_channels.py`.
+  Adversary VERIFIED, 7 von 7 Kern-Mutationen gefangen. Staging-Nachweis ueber
+  Telegram-Kurzform: 1 Nachricht bei „kurzform" gegen 2 bei „rich".
