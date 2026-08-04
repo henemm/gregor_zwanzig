@@ -6,8 +6,6 @@ Grenze zur Aussenwelt), die Erkennungslogik selbst laeuft echt gegen das Dateisy
 """
 import importlib.util
 import os
-import sys
-import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

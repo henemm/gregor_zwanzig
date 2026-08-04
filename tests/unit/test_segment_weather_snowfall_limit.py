@@ -30,6 +30,7 @@ from app.models import (
     MetricConfig,
     NormalizedTimeseries,
     Provider,
+    SegmentWeatherData,
     TripSegment,
     UnifiedWeatherDisplayConfig,
 )

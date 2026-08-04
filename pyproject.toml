@@ -48,6 +48,15 @@ line-length = 88
 "src/app/metric_catalog.py" = ["F821", "F401", "F402"]
 "src/core/segment_builder.py" = ["F401", "F402"]
 "src/output/renderers/email/helpers.py" = ["F401"]
+# html.py: E402 ist Absicht (dokumentierte `_ = render_official_alerts_html`-Bindung
+# zwischen den Import-Bloecken, Identitaetsbeweis test_issue_1087); F401
+# (format_trend_tokens) ist Alt-Rest — Entfernung nur in einer Renderer-Scheibe
+# moeglich (Commit-Gate #811 verlangt Staging-Mail-Nachweis), dort F401 hier streichen.
+"src/output/renderers/email/html.py" = ["E402", "F401"]
+# Dito #811-Gate: je 1 ungenutzter Import (MARK_BORDER bzw. tzinfo) — bei der
+# naechsten Renderer-Scheibe entfernen und diese beiden Zeilen streichen.
+"src/output/renderers/email/compare_html.py" = ["F401"]
+"src/output/renderers/email/outlook.py" = ["F401"]
 "src/services/daylight_service.py" = ["F401"]
 "src/services/weather_snapshot.py" = ["F401", "F841"]
 "src/services/wind_exposition.py" = ["F401", "F841"]

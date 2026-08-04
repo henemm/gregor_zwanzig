@@ -5,7 +5,6 @@ These tests MUST FAIL until TelegramOutput is implemented.
 Spec: docs/specs/modules/telegram_output.md
 GitHub Issue: #11
 """
-import json
 
 
 

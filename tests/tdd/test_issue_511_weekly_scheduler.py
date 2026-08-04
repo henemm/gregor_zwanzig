@@ -15,11 +15,10 @@ KEINE MOCKS — Projektkonvention (CLAUDE.md).
 """
 from __future__ import annotations
 
-import json
 import logging
 from datetime import date
 from pathlib import Path
-from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings
+from tests.helpers.compare_briefings import write_compare_briefings
 
 import pytest
 

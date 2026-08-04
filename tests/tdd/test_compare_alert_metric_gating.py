@@ -35,7 +35,6 @@ test_issue_1170_compare_alert_config.py übernommen.
 """
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 

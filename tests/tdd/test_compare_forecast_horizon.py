@@ -55,7 +55,7 @@ from tests.tdd.test_compare_preview_service import (
     _location as _pv_location,
     _preset as _pv_preset,
     _seed as _pv_seed,
-    compare_env,  # noqa: F401 - Fixture-Import, von pytest per Name aufgeloest
+    compare_env as compare_env,  # Fixture-Import, von pytest per Name aufgeloest
 )
 
 import pytest
@@ -114,7 +114,7 @@ class TestCompareForecastHorizonParity:
     """AC-2 (Vorschau == Versand) und AC-3 (Horizont deckt heute+3)."""
 
     def test_ac2_preview_and_dispatch_request_same_horizon(
-        self, compare_env, monkeypatch, tmp_path
+        self, compare_env, monkeypatch, tmp_path  # noqa: F811 - pytest loest die Fixture per Name auf
     ):
         """GIVEN dasselbe Ortsvergleichs-Preset (identische Konfiguration)
         WHEN einmal die Vorschau (ComparePreviewService) und einmal der
@@ -164,7 +164,7 @@ class TestCompareForecastHorizonParity:
         )
 
     def test_ac3_preview_horizon_covers_target_date_plus_3_days(
-        self, compare_env, monkeypatch
+        self, compare_env, monkeypatch  # noqa: F811 - pytest loest die Fixture per Name auf
     ):
         """GIVEN ein Ortsvergleichs-Preset mit Zieldatum heute+3 Tage
         WHEN die Vorschau aufgerufen und der tatsaechlich angeforderte

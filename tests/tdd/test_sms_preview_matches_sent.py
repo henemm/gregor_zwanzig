@@ -25,7 +25,6 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
 
-import pytest
 
 from app.loader import save_trip
 from app.trip import Stage, TimeWindow, Trip, Waypoint

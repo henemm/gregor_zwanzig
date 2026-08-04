@@ -246,7 +246,6 @@ def test_ac4_radar_alert_due_pure_logic():
 def test_ac4_check_radar_alerts_sends_once_then_throttles():
     """AC-4: Genau ein Alert + alert_log-Eintrag; zweiter Lauf throttelt."""
     import json
-    from pathlib import Path
 
     from services.radar_service import RadarNowcastService
     from services.trip_alert import TripAlertService

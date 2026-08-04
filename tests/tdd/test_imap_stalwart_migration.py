@@ -8,7 +8,6 @@ These tests MUST FAIL before the fix (hardcoded Gmail still present)
 and PASS after the fix.
 """
 
-import re
 from pathlib import Path
 
 import pytest

@@ -170,7 +170,6 @@ def test_ac3_derive_result_convective_label_and_text():
 def test_ac4_radar_alert_convective_marked_once_then_throttles():
     """AC-4: 1 Alert mit Gewitter-Kennzeichnung + alert_log HIGH; 2. Lauf throttelt."""
     import json
-    from pathlib import Path
 
     from output.channels.email import EmailOutput
     from services.radar_service import RadarNowcastService

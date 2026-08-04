@@ -21,9 +21,7 @@ import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
 
-from app.metric_catalog import get_metric
 from app.models import ForecastDataPoint
 from output.metric_format import severity_for
 from src.output.renderers.email.helpers import _pill_for_metric, ampel_level

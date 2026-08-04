@@ -40,7 +40,6 @@ import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
 
 import pytest
 

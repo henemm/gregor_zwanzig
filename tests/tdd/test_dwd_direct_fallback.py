@@ -70,11 +70,10 @@ import bz2
 import json
 import sys
 import threading
-import time
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 from urllib.parse import urlparse
 
 import pytest

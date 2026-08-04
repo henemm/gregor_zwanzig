@@ -28,8 +28,7 @@ faellig". `_daily_preset()` hat keine Slot-Felder → Migrations-Fallback
 Alle Aufrufe hier uebergeben deshalb explizit `hour=6`, damit die Tests
 deterministisch bleiben (statt von der aktuellen Wanduhrzeit abzuhaengen).
 """
-import json
-from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings
+from tests.helpers.compare_briefings import write_compare_briefings
 import logging
 import uuid
 

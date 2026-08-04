@@ -25,6 +25,7 @@ from validation.ground_truth import BergfexScraper
 if TYPE_CHECKING:
     from datetime import date
     from zoneinfo import ZoneInfo
+    from app.models import ForecastDataPoint
     from app.profile import ActivityProfile
     from app.config import Settings
 

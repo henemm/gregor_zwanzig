@@ -23,13 +23,12 @@ wird -- Vererbung, kein Verhalten vorgetaeuscht) bewiesen.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timezone
 
 import httpx
 import pytest
 
 from app.loader import get_data_root
-from providers.brightsky import RadarFrame
 from services.forecast_budget import ForecastBudgetGate
 from services.radar_service import NowcastResult, RadarNowcastService
 

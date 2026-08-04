@@ -28,7 +28,6 @@ SPEC: docs/specs/modules/issue_1041b_compare_radar_alert_service.md
 """
 from __future__ import annotations
 
-import json
 import re
 import shutil
 from datetime import datetime, timedelta, timezone

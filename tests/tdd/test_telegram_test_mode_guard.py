@@ -27,7 +27,6 @@ import json
 import smtplib
 import uuid
 from datetime import date, datetime
-from pathlib import Path
 
 import httpx
 import pytest

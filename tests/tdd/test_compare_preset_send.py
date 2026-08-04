@@ -18,7 +18,6 @@ RED-Erwartung (vor Fix):
   - ImportError: _send_compare_preset existiert nicht.
   - Endpoint fehlt → POST liefert kein 404 vom SOLL-Endpoint (Route fehlt).
 """
-import json
 
 import pytest
 from fastapi.testclient import TestClient

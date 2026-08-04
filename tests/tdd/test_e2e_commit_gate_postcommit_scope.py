@@ -24,7 +24,6 @@ import importlib.util
 import subprocess
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GATE_PATH = REPO_ROOT / ".claude" / "hooks" / "e2e_commit_gate.py"

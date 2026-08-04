@@ -112,7 +112,7 @@ def test_ac1_warn_block_before_tageslage_and_new_structure():
     # Der Tageslage-Anker existiert (compact_summary gesetzt).
     assert TAGESLAGE_MARKER in html, "Tageslage-Block fehlt trotz compact_summary"
     # Neue WarnBlock-Struktur: Eyebrow „Amtliche Warnung" + `.wb`-Markup.
-    assert 'class="wb' in html, f"kein .wb-WarnBlock im Trip-HTML: RED erwartet"
+    assert 'class="wb' in html, "kein .wb-WarnBlock im Trip-HTML: RED erwartet"
     assert "Amtliche Warnung" in html
     # Das Warn-Label ist im Body enthalten.
     assert ALERT_LABEL in html

@@ -36,7 +36,6 @@ import time
 import urllib.parse
 import uuid
 from datetime import datetime, timedelta, date, timezone
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import httpx

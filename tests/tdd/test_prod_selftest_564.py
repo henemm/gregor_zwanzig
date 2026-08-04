@@ -12,13 +12,11 @@ ACs abgedeckt:
   AC-6: Report-Format + <60s Laufzeit
 """
 
-import json
 import os
 import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 
 import pytest
 
