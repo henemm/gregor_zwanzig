@@ -284,13 +284,18 @@ describe('#1435 E1a-2 AC-7: der Touren-Zweig bleibt unberuehrt', () => {
 				[
 					'activeMetrics',
 					'context',
+					'existingChannelThresholds',
 					'existingChannels',
 					'metricLevels',
 					'onTripUpdate',
 					'saveController',
 					'trip'
 				],
-				'Die Attribut-Liste der Trip-Einbettung hat sich geaendert (AC-7).'
+				// Issue #1461 S3b-2a: legitime Erweiterung um
+				// `existingChannelThresholds` (Kanal-Schwelle, route-Speicherweg) --
+				// diese Zusicherung bewacht weiterhin, dass KEIN Katalog-Attribut
+				// (#1435-Scope) den Touren-Zweig erreicht.
+				'Die Attribut-Liste der Trip-Einbettung hat sich unerwartet geaendert (AC-7).'
 			);
 		}
 	});

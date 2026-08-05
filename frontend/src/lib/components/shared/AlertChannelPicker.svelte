@@ -17,18 +17,28 @@
 		ALERT_CHANNEL_ORDER,
 		NO_CHANNEL_WARNING,
 		channelWarningNeeded,
-		type AlertChannelState
+		CHANNEL_THRESHOLD_LEVELS,
+		CHANNEL_THRESHOLD_LABELS,
+		type AlertChannelState,
+		type AlertChannelThresholdState,
+		type ChannelKind,
+		type ChannelThreshold
 	} from './alarme-tab/alertChannelState.ts';
-
-	type ChannelKind = (typeof ALERT_CHANNEL_ORDER)[number];
 
 	interface Props {
 		channels: AlertChannelState;
 		onToggle: (kind: ChannelKind) => void;
 		targets?: Partial<Record<ChannelKind, string>>;
 		dense?: boolean;
+		// Issue #1461 S3b-2a: beide Props optional -- ohne sie bleibt die Zeile
+		// wie vor dieser Scheibe (statischer Beschreibungstext). Der Picker ist
+		// auf vier Flaechen eingebettet, davon drei im Vergleichs-Zweig, der
+		// noch keine eigene Wirkung bekommt (AC-11, Known Limitation).
+		thresholds?: AlertChannelThresholdState;
+		onThresholdChange?: (kind: ChannelKind, level: ChannelThreshold) => void;
 	}
-	let { channels, onToggle, targets, dense = false }: Props = $props();
+	let { channels, onToggle, targets, dense = false, thresholds, onThresholdChange }: Props =
+		$props();
 
 	const CHANNEL_LABELS: Record<ChannelKind, string> = {
 		telegram: 'Telegram',
@@ -49,6 +59,15 @@
 	function makeToggleHandler(kind: ChannelKind) {
 		return function doToggle() {
 			onToggle(kind);
+		};
+	}
+
+	// Issue #1461 S3b-2a — AC-10: je Kanal-Zeile eine Stufen-Auswahl an der
+	// Stelle, an der bisher nur statischer Beschreibungstext stand
+	// (CHANNEL_SUB). Factory-Pattern analog makeToggleHandler.
+	function makeThresholdHandler(kind: ChannelKind, level: ChannelThreshold) {
+		return function doSelectThreshold() {
+			onThresholdChange?.(kind, level);
 		};
 	}
 </script>
@@ -79,7 +98,30 @@
 					<span class="mono acp-kind">{CHANNEL_LABELS[kind]}</span>
 					<div class="acp-target">
 						<div class="mono acp-target-value">{targets?.[kind] ?? '—'}</div>
-						<div class="acp-sub">{CHANNEL_SUB[kind]}</div>
+						{#if thresholds}
+							<!-- Issue #1461 S3b-2a AC-10: Stufen-Auswahl statt statischem Text. -->
+							<div
+								class="acp-threshold"
+								data-testid="alert-channel-threshold-{kind}"
+								role="group"
+								aria-label="Dringlichkeits-Schwelle {CHANNEL_LABELS[kind]}"
+							>
+								{#each CHANNEL_THRESHOLD_LEVELS as level (level)}
+									<button
+										type="button"
+										class="acp-threshold-btn"
+										class:active={thresholds[kind] === level}
+										aria-pressed={thresholds[kind] === level}
+										data-testid="alert-channel-threshold-{kind}-{level}"
+										onclick={makeThresholdHandler(kind, level)}
+									>
+										{CHANNEL_THRESHOLD_LABELS[level]}
+									</button>
+								{/each}
+							</div>
+						{:else}
+							<div class="acp-sub">{CHANNEL_SUB[kind]}</div>
+						{/if}
 					</div>
 					<div data-testid="alert-channel-toggle-{kind}">
 						<Switch
@@ -155,5 +197,25 @@
 		font-size: 10px;
 		color: var(--g-ink-4);
 		margin-top: 2px;
+	}
+	/* Issue #1461 S3b-2a AC-10: Stufen-Auswahl je Kanal-Zeile. */
+	.acp-threshold {
+		display: flex;
+		gap: 4px;
+		margin-top: 3px;
+	}
+	.acp-threshold-btn {
+		font-size: 10px;
+		padding: 2px 7px;
+		border: 1px solid var(--g-rule-soft);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--g-ink-2, var(--g-ink-3));
+		cursor: pointer;
+	}
+	.acp-threshold-btn.active {
+		background: var(--g-accent, #2563eb);
+		border-color: var(--g-accent, #2563eb);
+		color: #ffffff;
 	}
 </style>

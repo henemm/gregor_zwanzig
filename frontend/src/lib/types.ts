@@ -340,6 +340,10 @@ export interface Trip {
 	// in TripAlertService._effective_alert_channels (all-or-nothing, alle
 	// drei Felder explizit).
 	alert_channels?: { email: boolean; telegram: boolean; sms: boolean };
+	// Issue #1461 S3b-2a — additives Geschwisterfeld zu alert_channels: je
+	// Kanal die Dringlichkeits-Schwelle ("LOW"|"MODERATE"|"HIGH"). undefined/
+	// fehlender Kanal-Key = Startwert "LOW".
+	alert_channel_thresholds?: { email?: string; telegram?: string; sms?: string };
 }
 
 export interface HealthResponse {

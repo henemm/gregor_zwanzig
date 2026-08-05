@@ -14,6 +14,7 @@ export interface AlertChannelState {
 
 // Anzeige-Reihenfolge lt. Design (corridor-editor.jsx:487-489).
 export const ALERT_CHANNEL_ORDER = ['telegram', 'sms', 'email'] as const;
+export type ChannelKind = (typeof ALERT_CHANNEL_ORDER)[number];
 
 // Design-Default (corridor-editor.jsx:470) — gilt NUR ohne uebergebenen
 // Bestands-State (Neuanlage, AC-11). Mit Bestand wird der Bestand
@@ -51,4 +52,60 @@ export const NO_CHANNEL_WARNING = 'kein Kanal — Alerts gehen nirgends hin';
 
 export function channelWarningNeeded(state: AlertChannelState): boolean {
 	return !state.telegram && !state.sms && !state.email;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Issue #1461 S3b-2a — Kanal-Schwelle (ab welcher Dringlichkeit ein Kanal
+// eine Alarm-Meldung erreicht). Geschwister-Zustand zu AlertChannelState,
+// NICHT darin (Backend-Geschwisterfeld trip.alert_channel_thresholds).
+// Diese Scheibe bedient nur den Trip-Speicherweg (`route`).
+// ─────────────────────────────────────────────────────────────────────────
+
+export type ChannelThreshold = 'LOW' | 'MODERATE' | 'HIGH';
+
+export interface AlertChannelThresholdState {
+	telegram: ChannelThreshold;
+	sms: ChannelThreshold;
+	email: ChannelThreshold;
+}
+
+export const CHANNEL_THRESHOLD_LEVELS: ChannelThreshold[] = ['LOW', 'MODERATE', 'HIGH'];
+
+export const CHANNEL_THRESHOLD_LABELS: Record<ChannelThreshold, string> = {
+	LOW: 'gering',
+	MODERATE: 'mittel',
+	HIGH: 'hoch'
+};
+
+// PO-Entscheidung 2026-08-05: Startwert je Kanal ist 'LOW' — es wird
+// nirgends stiller, bis der Nutzer selbst eine Schwelle hochsetzt (rote
+// Linie #638).
+const DEFAULT_CHANNEL_THRESHOLD: ChannelThreshold = 'LOW';
+
+function coerceThreshold(value: unknown): ChannelThreshold {
+	return value === 'MODERATE' || value === 'HIGH' ? value : DEFAULT_CHANNEL_THRESHOLD;
+}
+
+export function resolveAlertChannelThresholds(
+	existing?: Partial<Record<ChannelKind, string | null>> | null
+): AlertChannelThresholdState {
+	return {
+		telegram: coerceThreshold(existing?.telegram),
+		sms: coerceThreshold(existing?.sms),
+		email: coerceThreshold(existing?.email)
+	};
+}
+
+// Adversary F003: die eigentliche Aenderungs-Logik hinter einem Klick auf
+// eine Stufe (AlertChannelPicker.svelte -> AlarmeTab.svelte
+// handleThresholdChange) liegt HIER als reine, direkt testbare Funktion,
+// statt nur inline im Svelte-Handler zu stehen — node:test kann Svelte-
+// Komponenten nicht mounten (ADR-0020), eine reine Funktion aber echt mit
+// Ein-/Ausgabewerten pruefen ("kann diese Einstellung aendern", AC-10).
+export function applyThresholdChange(
+	state: AlertChannelThresholdState,
+	kind: ChannelKind,
+	level: ChannelThreshold
+): AlertChannelThresholdState {
+	return { ...state, [kind]: level };
 }

@@ -212,6 +212,11 @@ class Trip:
     # bool-Keys) = ersetzt NUR den geerbten Briefing-Anteil, rule.channels-
     # Overrides (#638) und das SMS-Tier-Gate bleiben unveraendert wirksam.
     alert_channels: Optional[dict] = None
+    # Issue #1461 S3b-2a: additives Geschwisterfeld zu alert_channels -- je
+    # Kanal die Dringlichkeits-Schwelle ("LOW"/"MODERATE"/"HIGH"), ab der eine
+    # Meldung diesen Kanal erreichen darf. Fehlender Kanal-Key -> Startwert
+    # "LOW" (services.alert_channel_threshold.split_by_threshold).
+    alert_channel_thresholds: Optional[dict] = None
     extra: Dict[str, Any] = field(default_factory=dict)  # #991: unmodellierte Top-Level-Keys, roundtrip-erhalten
     # Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder, beim Laden aus
     # `report_config` ABGELEITET (Dual-Read, s. app.loader._parse_trip). Nicht

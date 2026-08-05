@@ -185,35 +185,51 @@ def test_ac8_bubble_is_not_sms_shortened():
 
 
 # ---------------------------------------------------------------------------
-# AC-8 — gleicher Stufenfilter wie die SMS (hazard_symbols.MIN_SMS_LEVEL)
+# AC-8 — Stufenfilter aus demselben geteilten Katalog wie die SMS
+# (hazard_symbols.LEVEL_LETTERS). Seit #1461 S3b-2a ist die Trip-Kanal-
+# Schwelle der Startwert (kein `trip`-Kontext hier -> 'gering' == Stufe 2,
+# NICHT mehr das aeltere feste MIN_SMS_LEVEL == Stufe 3) — PO-Entscheidung
+# 2026-08-05: "Bericht bekommt mehr". Gruen (Stufe 1) bleibt gefiltert.
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("level", [1, 2])
-def test_ac8_yellow_and_green_warnings_produce_no_bubble(level: int):
-    """Nur gelbe/gruene Warnung -> Bubble-Liste bit-identisch zur Liste ohne Warnung."""
+def test_ac8_green_warning_produces_no_bubble():
+    """Gruene Warnung (Stufe 1) -> Bubble-Liste bit-identisch zur Liste ohne Warnung."""
     baseline = _bubbles()
-    texts = _bubbles([_alert("rain", level)])
+    texts = _bubbles([_alert("rain", 1)])
     assert not _warn_bubbles(texts, "Starkregen"), (
-        f"Warnung der Stufe {level} liegt unter dem Filter und darf in keiner "
-        f"Bubble erscheinen: {texts!r}"
+        f"Stufe 1 liegt unter dem Startwert-Filter und darf in keiner Bubble "
+        f"erscheinen: {texts!r}"
     )
     assert texts == baseline, (
         "Eine gefilterte Warnung darf die Bubble-Liste um kein Byte veraendern.\n"
-        f"ohne Warnung: {baseline!r}\nmit gelber Warnung: {texts!r}"
+        f"ohne Warnung: {baseline!r}\nmit gruener Warnung: {texts!r}"
+    )
+
+
+def test_ac8_yellow_warning_produces_bubble_at_trip_default():
+    """Issue #1461 S3b-2a: gelbe Warnung (Stufe 2) erreicht den Trip-Bericht
+    jetzt beim Startwert 'gering' -- vor dieser Scheibe war sie gefiltert."""
+    texts = _bubbles([_alert("rain", 2)])
+    assert _warn_bubbles(texts, "Starkregen"), (
+        f"Stufe 2 muss beim Startwert 'gering' eine Bubble erzeugen: {texts!r}"
     )
 
 
 def test_ac8_filter_threshold_comes_from_shared_catalog():
-    """Der Stufenfilter ist derselbe wie bei der SMS — eine Quelle, kein zweiter Wert."""
-    from output.tokens.hazard_symbols import MIN_SMS_LEVEL
+    """Der Stufenfilter ist derselbe geteilte Katalog wie bei der SMS — eine
+    Quelle, kein zweiter Wert (#1461 S3b-2a: `alert_urgency.
+    min_official_level_for_threshold`, nicht mehr das aeltere feste
+    `MIN_SMS_LEVEL` als Trip-Default)."""
+    from services.alert_urgency import min_official_level_for_threshold
 
-    below = _bubbles([_alert("wind_gust", MIN_SMS_LEVEL - 1)])
-    at = _bubbles([_alert("wind_gust", MIN_SMS_LEVEL)])
+    threshold = min_official_level_for_threshold("LOW")
+    below = _bubbles([_alert("wind_gust", threshold - 1)])
+    at = _bubbles([_alert("wind_gust", threshold)])
     assert not _warn_bubbles(below, "Sturm"), (
-        f"Stufe {MIN_SMS_LEVEL - 1} liegt unter MIN_SMS_LEVEL und darf keine "
-        f"Bubble erzeugen: {below!r}"
+        f"Stufe {threshold - 1} liegt unter dem Startwert-Filter und darf "
+        f"keine Bubble erzeugen: {below!r}"
     )
     assert _warn_bubbles(at, "Sturm"), (
-        f"Stufe {MIN_SMS_LEVEL} (== MIN_SMS_LEVEL) muss eine Bubble erzeugen: {at!r}"
+        f"Stufe {threshold} (== Startwert-Filter) muss eine Bubble erzeugen: {at!r}"
     )
 
 

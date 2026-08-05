@@ -58,3 +58,23 @@ def highest_urgency(*urgencies: str) -> str:
     if not urgencies:
         return "LOW"
     return max(urgencies, key=lambda u: _RANK.get(u, 0))
+
+
+def meets_or_exceeds(urgency: str, threshold: str) -> bool:
+    """Rangvergleich fuer die Kanal-Schwelle (#1461 S3b-2a): erreicht/uebertrifft
+    `urgency` den `threshold`? Nutzt dieselbe `_RANK`-Tabelle wie
+    `highest_urgency()` -- keine zweite Rangordnung (Wiederholungs-Klasse
+    #1481). Unbekannte Werte gelten konservativ als niedrigste Stufe."""
+    return _RANK.get(urgency, 0) >= _RANK.get(threshold, 0)
+
+
+def min_official_level_for_threshold(threshold: str) -> int:
+    """Kanal-Schwelle ('LOW'/'MODERATE'/'HIGH') -> niedrigste amtliche
+    Warnstufe, ab der eine Warnung diesen Kanal im SMS-/Telegram-Bericht
+    erreichen darf (#1461 S3b-2a, "MIN_SMS_LEVEL geht auf"). Ueber
+    `hazard_symbols.LEVEL_LETTERS` -- dieselbe Tabelle wie
+    `urgency_from_official_level()`, keine zweite Zahlenreihe. Unbekannter
+    Wert faellt konservativ auf `hazard_symbols.MIN_SMS_LEVEL` zurueck."""
+    letter = {v: k for k, v in _LETTER_TO_URGENCY.items()}.get(threshold)
+    inverse_levels = {v: k for k, v in hazard_symbols.LEVEL_LETTERS.items()}
+    return inverse_levels.get(letter, hazard_symbols.MIN_SMS_LEVEL)

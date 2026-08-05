@@ -137,18 +137,28 @@ _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
 
 def _official_alert_entries(
     segments: list[SegmentWeatherData], tz: ZoneInfo,
+    min_level: Optional[int] = None,
 ) -> tuple[tuple[str, str, Optional[int]], ...]:
     """Issue #1318/#1332: duenner Wrapper -- Segmente zu einer flachen
     Alert-Liste zusammenfassen, dann den geteilten Kern
     `official_alerts_to_sms_entries()` aufrufen (kein zweiter Katalog, keine
     duplizierte Filterlogik). Compare-SMS (`comparison.py::render_compare_sms`)
-    ruft denselben Kern mit `LocationResult.official_alerts` auf."""
+    ruft denselben Kern mit `LocationResult.official_alerts` auf.
+
+    Issue #1461 S3b-2a: `min_level=None` (kein Aufrufer hat eine Trip-
+    Kanal-Schwelle uebergeben) faellt auf den Trip-Startwert 'gering' (Stufe
+    2) zurueck -- NICHT auf `MIN_SMS_LEVEL` (Stufe 3), das bliebe nur der
+    Ortsvergleich (unveraendert, S3b-2b)."""
+    import services.alert_urgency as alert_urgency
+
+    if min_level is None:
+        min_level = alert_urgency.min_official_level_for_threshold("LOW")
     alerts = [
         alert
         for seg in segments
         for alert in (getattr(seg, "official_alerts", None) or [])
     ]
-    return official_alerts_to_sms_entries(alerts, tz)
+    return official_alerts_to_sms_entries(alerts, tz, min_level=min_level)
 
 
 def _segments_to_normalized_forecast(
@@ -160,6 +170,7 @@ def _segments_to_normalized_forecast(
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     report_type: str = "evening",
+    sms_alert_min_level: Optional[int] = None,
 ) -> NormalizedForecast:
     """Aggregate trip segments into a single-day NormalizedForecast.
 
@@ -366,7 +377,7 @@ def _segments_to_normalized_forecast(
     )
     return NormalizedForecast(
         days=(today,),
-        official_alerts=_official_alert_entries(segments, tz),
+        official_alerts=_official_alert_entries(segments, tz, sms_alert_min_level),
         official_alerts_unavailable=unavailable,
     )
 
@@ -394,6 +405,7 @@ class SMSTripFormatter:
         has_gap: bool = False,
         day_window_start_hour: int = DAY_WINDOW_START_HOUR,
         day_window_end_hour: int = DAY_WINDOW_END_HOUR,
+        sms_alert_min_level: Optional[int] = None,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -415,6 +427,12 @@ class SMSTripFormatter:
                 Ziel-Datenluecke, explizit durchgereicht statt hier aus
                 ``night_weather`` neu abgeleitet zu werden. Default False
                 (Vorschau/Tests ohne echten Versandpfad).
+            sms_alert_min_level: Issue #1461 S3b-2a — niedrigste amtliche
+                Warnstufe, die dieser Trip-Bericht zeigt (aus der Kanal-
+                Schwelle des Nutzers fuer SMS). ``None`` (kein Aufrufer hat
+                eine Trip-Einstellung, z.B. Vorschau/direkter Testaufruf)
+                faellt auf den Startwert 'gering' (Stufe 2) zurueck --
+                NICHT auf das aeltere ``MIN_SMS_LEVEL`` (Stufe 3).
 
         Returns:
             v2.0 wire-format string, ≤ max_length chars.
@@ -432,6 +450,7 @@ class SMSTripFormatter:
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,
             report_type=report_type,
+            sms_alert_min_level=sms_alert_min_level,
         )
 
         # Bug #874: TH+: immer als days[1] einbauen — TH+:- wenn kein Gewitter (Spec-Pflicht).

@@ -222,6 +222,12 @@ type tripUpdateRequest struct {
 	// bleibt erhalten). All-or-nothing: kein Feld-Level-Merge noetig, der
 	// Client sendet immer alle drei Kanaele explizit.
 	AlertChannels *model.AlertChannelsConfig `json:"alert_channels,omitempty"`
+	// AlertChannelThresholds — Issue #1461 S3b-2a, RMW-Kontrakt analog
+	// OfficialWarnings (nil = im Body nicht gesendet -> bestehender Wert
+	// bleibt erhalten) PLUS Feld-Level-Merge innerhalb des Unterobjekts
+	// (analog OfficialWarnings.Sources) -- fehlt im Body nur ein Kanal,
+	// bleibt dessen Bestandswert erhalten.
+	AlertChannelThresholds *model.AlertChannelThresholdsConfig `json:"alert_channel_thresholds,omitempty"`
 }
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
@@ -360,6 +366,23 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		// OfficialWarnings.Sources noetig).
 		if req.AlertChannels != nil {
 			existing.AlertChannels = req.AlertChannels
+		}
+		// Issue #1461 S3b-2a — ZWEI Ebenen Datenverlustschutz (Pflicht, kein
+		// Kann): Top-Level-nil-Erbe (dieses if) UND Feld-Level-Merge INNERHALB
+		// des Unterobjekts (die drei folgenden ifs, Muster OfficialWarnings.
+		// Sources F002) -- fehlt im Body nur ein Kanal, bleibt dessen
+		// Bestandswert erhalten statt dass das ganze Unterobjekt ersetzt wird.
+		if req.AlertChannelThresholds != nil {
+			if req.AlertChannelThresholds.Email == nil && existing.AlertChannelThresholds != nil {
+				req.AlertChannelThresholds.Email = existing.AlertChannelThresholds.Email
+			}
+			if req.AlertChannelThresholds.Telegram == nil && existing.AlertChannelThresholds != nil {
+				req.AlertChannelThresholds.Telegram = existing.AlertChannelThresholds.Telegram
+			}
+			if req.AlertChannelThresholds.Sms == nil && existing.AlertChannelThresholds != nil {
+				req.AlertChannelThresholds.Sms = existing.AlertChannelThresholds.Sms
+			}
+			existing.AlertChannelThresholds = req.AlertChannelThresholds
 		}
 		existing.ID = id
 

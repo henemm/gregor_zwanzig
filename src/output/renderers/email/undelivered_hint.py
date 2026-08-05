@@ -37,6 +37,8 @@ _REASON_LABELS = {
     "quiet_hours": "Ruhezeit",
     "daily_limit": "Tageslimit",
     "cooldown": "Sperrzeit",
+    # Issue #1461 S3b-2a: Kanal-Schwelle unterschreitet, Kanal war eingeschaltet.
+    "below_channel_threshold": "unter Schwelle",
 }
 
 _TRIGGER_LABELS = {
