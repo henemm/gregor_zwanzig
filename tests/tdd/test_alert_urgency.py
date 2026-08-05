@@ -692,6 +692,13 @@ def test_channel_dispatch_unaffected_by_severity_change(monkeypatch):
     import output.channels.telegram as tg_module
     from services.trip_alert import TripAlertService
 
+    # Herkunftssperre (#1476) auf 'production' gepinnt: gemessen wird die
+    # Kanalwahl-Neutralitaet von _send_alert; ohne Pin bricht die
+    # Herkunftsschicht den Telegram-Versand in jedem Nicht-Server-Checkout
+    # mangels Test-Chat-ID ab, bevor der lokale Stub etwas sieht (eigene
+    # Tests der Schicht: test_telegram_origin_guard.py).
+    monkeypatch.setattr(tg_module, "running_origin", lambda module_file: "production")
+
     settings = _settings_email_and_telegram()
 
     # Variante 1: Δ-Aenderung

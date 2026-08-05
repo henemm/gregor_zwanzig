@@ -18,7 +18,7 @@ Test umzubiegen, nicht um Verhalten vorzutaeuschen.
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -46,19 +46,27 @@ _TZ = ZoneInfo("Europe/Berlin")
 _VERBOTENE_WORTLISTE = ("Schutz suchen", "Vorsicht", "meiden")
 
 
-def _segment_mit_hail(hail_flag) -> SegmentWeatherData:
+def _segment_mit_hail(hail_flag, day: date | None = None) -> SegmentWeatherData:
     """Ein-Segment-Etappe, Gewitterstufe HIGH (damit der Hagel-Hinweis
-    ueberhaupt 'neben der Gewitterstufe' Sinn ergibt), variables hail_flag."""
+    ueberhaupt 'neben der Gewitterstufe' Sinn ergibt), variables hail_flag.
+
+    `day` steuert die Segment-/Datenpunkt-Daten: die Renderer-Tests (AC-1..6)
+    arbeiten datumsunabhaengig mit dem fixen Default; das GEWITTER-Kommando
+    (AC-7) matcht Segmente gegen SEIN 'heute' und braucht deshalb denselben
+    dynamischen Tag wie Trip-Etappe und Snapshot — mit dem fixen Datum war
+    der Test nur am Tag seiner Einfuehrung gruen (Datums-Ueberlauf 05.08.).
+    """
+    d = day or date(2026, 8, 4)
     seg = TripSegment(
         segment_id=1,
         start_point=GPXPoint(lat=42.0, lon=9.0, elevation_m=400.0),
         end_point=GPXPoint(lat=42.1, lon=9.1, elevation_m=900.0),
-        start_time=datetime(2026, 8, 4, 6, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 8, 4, 14, 0, tzinfo=timezone.utc),
+        start_time=datetime(d.year, d.month, d.day, 6, 0, tzinfo=timezone.utc),
+        end_time=datetime(d.year, d.month, d.day, 14, 0, tzinfo=timezone.utc),
         duration_hours=8.0, distance_km=12.0, ascent_m=500.0, descent_m=0.0,
     )
     data = [ForecastDataPoint(
-        ts=datetime(2026, 8, 4, h, 0, tzinfo=timezone.utc),
+        ts=datetime(d.year, d.month, d.day, h, 0, tzinfo=timezone.utc),
         t2m_c=15.0, wind10m_kmh=5.0, gust_kmh=10.0, precip_1h_mm=0.0,
         cloud_total_pct=50, thunder_level=ThunderLevel.HIGH, humidity_pct=55,
         hail_flag=hail_flag if h == 12 else None,
@@ -167,7 +175,7 @@ def gewitter_kommando_env(tmp_path: Path, monkeypatch):
     now = datetime.now(tz=timezone.utc)
     save_trip(_make_trip(now), _USER_ID)
     WeatherSnapshotService(_USER_ID).save(
-        _TRIP_ID, [_segment_mit_hail(True)], now.date(),
+        _TRIP_ID, [_segment_mit_hail(True, day=now.date())], now.date(),
     )
     return now
 

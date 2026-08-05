@@ -79,7 +79,17 @@ def _capture_send_kwargs(tmp_path) -> dict:
     from services.scheduler_dispatch_service import send_one_compare_preset
 
     user_id = f"test1124-{uuid.uuid4().hex[:8]}"
-    settings = Settings().with_user_profile(user_id)
+    # mail_to explizit setzen (#1452: der Dispatch liest AUSSCHLIESSLICH die
+    # Konto-Settings; `preset.empfaenger` ist inert) und _env_file=None, damit
+    # der Test nicht vom Zufallsinhalt einer lokalen .env abhaengt (#1477).
+    settings = Settings(
+        smtp_host="mail.henemm.com",
+        smtp_port=587,
+        smtp_user="dummy-user-1124",
+        smtp_pass="dummy-pass-1124",
+        mail_to="gregor-test@henemm.com",
+        _env_file=None,
+    ).with_user_profile(user_id)
     loc = _location("loc-1124-a")
     preset = _preset("cp-1124", "loc-1124-a")
 

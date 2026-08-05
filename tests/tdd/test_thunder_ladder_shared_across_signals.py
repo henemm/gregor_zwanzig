@@ -1,4 +1,4 @@
-"""TDD RED — Issue #1474c (letzter Restpunkt zu Epic #1419), AC-2.
+"""Issue #1474c (letzter Restpunkt zu Epic #1419), AC-2.
 
 SPEC: docs/specs/modules/feat_1474c_blitzpotenzial_stufen.md
 
@@ -7,100 +7,75 @@ Drei-Schwellen-Uebersetzung ueber DIESELBE geteilte Funktion
 `(wert, low_min, med_min, high_min) -> ThunderLevel` laufen lassen -- keine
 zweite, kopierte if/elif-Kette in `thunder_level_from_signals()`.
 
-RED-Ursache (heute): `thunder_level_from_signals()` enthaelt die
-Blitzdichte-Uebersetzung noch INLINE (kein Aufruf einer benannten Funktion)
-und kennt `lightning_potential_jkg` nicht -- der AST-Test findet keine
-Funktion, die zweimal aufgerufen wird, und der Verhaltens-Beleg wirft
-TypeError/AttributeError.
-
-Testart: struktureller AST-Test (nicht Textsuche) + ein Verhaltens-Beleg.
-Kein Netz, keine Mocks.
+Nachweisform: Laufzeit-Sentinel (Muster
+test_hail_flag_channel_rendering.py::test_ac7_..._rufen_denselben_helfer):
+die geteilte Leiter wird zur Laufzeit auf einen Sentinel umgebogen -- BEIDE
+Signalwege muessen ihn zeigen. Eine kopierte Kette wuerde ihn an mindestens
+einer Stelle NICHT zeigen. Ersetzt den frueheren AST-Quelltext-Test, den der
+Hygiene-Waechter (test_765_no_product_source_read) zu Recht blockiert:
+Programmtext-Lektuere ist kein Verhaltensnachweis (Test-Politik, CLAUDE.md).
+Kein Netz, kein Mock-Theater -- der Sentinel ersetzt nur die Leiter, nie die
+geprueften Fusions-Pfade selbst.
 """
 from __future__ import annotations
-
-import ast
-from pathlib import Path
-
-# Pfadregel #1409: relativ zur eigenen Testdatei aufloesen, NIE ueber einen
-# festen Hauptrepo-Pfad -- sonst prueft dieser Test aus einem Worktree die
-# unveraenderte Hauptrepo-Kopie und meldet falsches Gruen.
-_MODULE_PATH = (
-    Path(__file__).resolve().parents[2] / "src" / "output" / "metric_format.py"
-)
-
-
-def _modul_ast() -> ast.Module:
-    quelltext = _MODULE_PATH.read_text()
-    return ast.parse(quelltext, filename=str(_MODULE_PATH))
-
-
-def _top_level_funktionen(baum: ast.Module) -> dict:
-    return {
-        node.name: node
-        for node in baum.body
-        if isinstance(node, ast.FunctionDef)
-    }
-
-
-def _aufruf_zaehler(funktion_node: ast.FunctionDef, bekannte_namen: set) -> dict:
-    """Zaehlt je bekanntem Modul-Funktionsnamen, wie oft er INNERHALB von
-    `funktion_node` per einfachem Namen (kein Attribut-Zugriff) aufgerufen
-    wird."""
-    zaehler: dict = {}
-    for node in ast.walk(funktion_node):
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
-            name = node.func.id
-            if name in bekannte_namen:
-                zaehler[name] = zaehler.get(name, 0) + 1
-    return zaehler
 
 
 # ─────────────── AC-2 — genau EINE geteilte Leiter-Funktion ───────────────
 
-def test_ac2_ast_eine_geteilte_leiter_funktion_zwei_aufrufstellen():
-    """AC-2: `thunder_level_from_signals()` ruft die Schwellen-Uebersetzung
-    fuer Blitzdichte UND Blitzpotenzial ueber DIESELBE benannte Funktion auf
-    -- per AST gezaehlt, nicht per Textsuche. Erwartet genau EINE Funktion
-    im Modul, die von dort aus GENAU zweimal aufgerufen wird, mit einer
-    Vier-Parameter-Signatur (Wert, low_min, med_min, high_min).
-
-    Gegenprobe (Spec): fuegt die Implementierung eine zweite, kopierte
-    if/elif-Leiter fuer das Blitzpotenzial direkt in
-    `thunder_level_from_signals()` ein statt die geteilte Funktion zu
-    nutzen, bleibt die per AST gezaehlte Aufrufzahl der geteilten Funktion
-    bei 1 (nur Blitzdichte) -- der `kandidaten`-Check unten faengt das, weil
-    dann keine Funktion mit Aufrufzahl 2 existiert.
+def test_ac2_beide_signale_laufen_durch_dieselbe_leiter(monkeypatch):
+    """AC-2 DRY-Nachweis: GIVEN die geteilte Leiter ist auf einen Sentinel
+    umgebogen, der jeden Aufruf samt Schwellen aufzeichnet und stets HIGH
+    liefert / WHEN `thunder_level_from_signals()` einmal nur mit Blitzdichte
+    und einmal nur mit Blitzpotenzial laeuft (Werte UNTER jeder echten
+    Schwelle, sodass eine kopierte if/elif-Kette NONE liefern wuerde) / THEN
+    liefern BEIDE Pfade das Sentinel-HIGH, und die zwei aufgezeichneten
+    Aufrufe tragen jeweils die EIGENEN vier Schwellenwerte des Signals.
     """
-    baum = _modul_ast()
-    top_level = _top_level_funktionen(baum)
-    assert "thunder_level_from_signals" in top_level, (
-        "thunder_level_from_signals() nicht (mehr) als Top-Level-Funktion "
-        f"in {_MODULE_PATH} gefunden"
-    )
-    fusion_node = top_level["thunder_level_from_signals"]
-    bekannte_namen = set(top_level) - {"thunder_level_from_signals"}
-    zaehler = _aufruf_zaehler(fusion_node, bekannte_namen)
+    from output import metric_format as mf
 
-    kandidaten = {name: n for name, n in zaehler.items() if n == 2}
-    assert kandidaten, (
-        "Keine Funktion wird aus thunder_level_from_signals() GENAU "
-        f"zweimal aufgerufen (gezaehlte Aufrufe: {zaehler}) -- die "
-        "geteilte Leiter-Funktion fuer Blitzdichte UND Blitzpotenzial "
-        "fehlt, oder es existieren zwei unabhaengige Kopien statt einer "
-        "gemeinsamen Funktion"
+    aufrufe: list[tuple] = []
+
+    def _sentinel_leiter(value, low_min, med_min, high_min):
+        aufrufe.append((value, low_min, med_min, high_min))
+        return mf.ThunderLevel.HIGH
+
+    monkeypatch.setattr(mf, "_thunder_level_from_ladder", _sentinel_leiter)
+
+    dichte = mf.thunder_level_from_signals(
+        wettercode_level=None, lightning_density=0.0, cape_jkg=None,
     )
-    assert len(kandidaten) == 1, (
-        f"Mehr als eine Funktion wird zweimal aufgerufen: {kandidaten} -- "
-        "die geteilte Leiter-Funktion ist nicht eindeutig bestimmbar"
+    potenzial = mf.thunder_level_from_signals(
+        wettercode_level=None, lightning_density=None, cape_jkg=None,
+        lightning_potential_jkg=0.0,
     )
-    geteilte_funktion_name = next(iter(kandidaten))
-    geteilte_funktion_node = top_level[geteilte_funktion_name]
-    parameter = [a.arg for a in geteilte_funktion_node.args.args]
-    assert len(parameter) == 4, (
-        f"Die geteilte Funktion '{geteilte_funktion_name}' hat "
-        f"{len(parameter)} Parameter statt 4 (Wert, low_min, med_min, "
-        f"high_min) -- Signatur passt nicht zur in der Spec vorgeschlagenen "
-        "Leiter-Funktion"
+
+    assert dichte == mf.ThunderLevel.HIGH, (
+        "Blitzdichte-Pfad zeigt den Sentinel nicht -- "
+        "thunder_level_from_signals() uebersetzt die Blitzdichte nicht "
+        f"ueber die geteilte Leiter-Funktion (erhalten: {dichte!r})"
+    )
+    assert potenzial == mf.ThunderLevel.HIGH, (
+        "Blitzpotenzial-Pfad zeigt den Sentinel nicht -- entweder haelt "
+        "thunder_level_from_signals() eine eigene, kopierte if/elif-Kette "
+        "(#1481 DRY-Verstoss) oder kennt lightning_potential_jkg nicht "
+        f"(erhalten: {potenzial!r})"
+    )
+    assert len(aufrufe) == 2, (
+        f"Erwartet genau zwei Leiter-Aufrufe (Dichte + Potenzial), "
+        f"aufgezeichnet: {aufrufe!r}"
+    )
+    assert aufrufe[0][1:] == (
+        mf._LIGHTNING_LOW_MIN, mf._LIGHTNING_MED_MIN, mf._LIGHTNING_HIGH_MIN,
+    ), (
+        "Der Blitzdichte-Aufruf traegt nicht die Blitzdichte-Schwellen -- "
+        f"jedes Signal muss SEINE vier Schwellen mitbringen: {aufrufe[0]!r}"
+    )
+    assert aufrufe[1][1:] == (
+        mf._LIGHTNING_POTENTIAL_LOW_MIN, mf._LIGHTNING_POTENTIAL_MED_MIN,
+        mf._LIGHTNING_POTENTIAL_HIGH_MIN,
+    ), (
+        "Der Blitzpotenzial-Aufruf traegt nicht die Potenzial-Schwellen -- "
+        f"jedes Signal muss SEINE vier Schwellen mitbringen: {aufrufe[1]!r}"
     )
 
 

@@ -156,12 +156,17 @@ def test_matching_test_chat_id_still_sends(httpx_sink):
     assert calls[0]["payload"]["chat_id"] == TEST_CHAT_ID
 
 
-def test_non_test_mode_send_stays_untouched(httpx_sink):
+def test_non_test_mode_send_stays_untouched(httpx_sink, monkeypatch):
     """AC-6 (Flanke): is_test_mode=False (Prod-Normalbetrieb) bleibt vom
-    Guard unberuehrt — identisch zum E-Mail-Guard-Prinzip (Guard prueft
-    Zustand, nicht Herkunft). Bewusst schon heute GRUEN."""
+    hier geprueften Zustands-Guard (#1288) unberuehrt. Gemessen wird die
+    INNERE Guard-Schicht: die vorgelagerte Herkunftssperre (#1476) wird auf
+    'production' gepinnt (eigene Tests: test_telegram_origin_guard.py) —
+    ohne Pin greift sie in jedem Nicht-Server-Checkout zuerst und verdeckt
+    die Flanke."""
+    import output.channels.telegram as telegram_mod
     from output.channels.telegram import TelegramOutput
 
+    monkeypatch.setattr(telegram_mod, "running_origin", lambda module_file: "production")
     output = TelegramOutput(Settings(
         telegram_bot_token="fake:token",
         telegram_chat_id=PROD_CHAT_ID,
@@ -279,9 +284,15 @@ def _install_smtp_sink(monkeypatch):
     geht real durch EmailOutput inkl. Guards, nur der Draht ist ersetzt."""
     sent: list[tuple] = []
 
+    class _FakeSock:
+        # Issue #1448 S1: EmailOutput ruft server.sock.settimeout() vor
+        # jeder SMTP-Phase — ohne dieses Attribut bricht der Sink den Send.
+        def settimeout(self, timeout):
+            pass
+
     class _FakeSMTP:
         def __init__(self, host, port, *a, **k):
-            pass
+            self.sock = _FakeSock()
 
         def __enter__(self):
             return self

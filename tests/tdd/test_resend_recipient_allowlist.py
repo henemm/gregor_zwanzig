@@ -63,6 +63,17 @@ from output.channels.base import OutputConfigError  # noqa: E402
 from output.channels.email import EmailOutput  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _pin_origin_production(monkeypatch):
+    """Herkunftssperre (#1476) auf 'production' gepinnt: diese Datei misst
+    die INNERE Resend-Allowlist (#1219). Ohne Pin schaltet die
+    Herkunftsschicht in jedem Nicht-Server-Checkout die Empfaenger vorab auf
+    gregor-test@henemm.com um -- die gemessenen Faelle kommen nie beim
+    Allowlist-Guard an. Eigene Tests der Herkunftsschicht:
+    test_channel_origin_guard_parity.py."""
+    monkeypatch.setattr(email_module, "running_origin", lambda module_file: "production")
+
+
 def _write_user_profile(users_root: Path, user_id: str, **fields) -> None:
     """Legt ein Fixture-`user.json` unter `users_root/<user_id>/user.json` an.
 
