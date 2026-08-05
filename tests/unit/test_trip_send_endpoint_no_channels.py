@@ -166,6 +166,17 @@ def _patch_email_transport(monkeypatch) -> None:
     )
 
 
+def _patch_can_send_email(monkeypatch) -> None:
+    """Hermetik: der Router-Vorbedingungs-Riegel (`can_send_email()`,
+    api/routers/scheduler.py:183 -- prueft global konfigurierte SMTP-Zugangs-
+    daten, unabhaengig vom hier getesteten Trip) ist KEIN Teil der in diesem
+    Modul geprueften Zusicherung (AC-1/AC-3/AC-4). Ohne diesen Patch haengt
+    das Testergebnis davon ab, ob am Ausfuehrungsort eine .env mit SMTP-
+    Credentials existiert (lokal ja, auf dem CI-Runner nein) -- genau die
+    Umgebungsabhaengigkeit, die den Testfall sonst nicht hermetisch macht."""
+    monkeypatch.setattr("app.config.Settings.can_send_email", lambda self: True)
+
+
 def _client():
     from api.main import app
     from fastapi.testclient import TestClient
@@ -185,6 +196,7 @@ class TestAC1NoChannelsReturns422:
         obwohl send_email/send_telegram/send_sms alle False sind."""
         _patch_provider(monkeypatch)
         _patch_email_transport(monkeypatch)
+        _patch_can_send_email(monkeypatch)
 
         user_id, trip_id = trip_no_channels
         resp = _client().post(
@@ -210,6 +222,7 @@ class TestAC1NoChannelsReturns422:
         Fehlerfall unter keinem Feldnamen mehr auftauchen."""
         _patch_provider(monkeypatch)
         _patch_email_transport(monkeypatch)
+        _patch_can_send_email(monkeypatch)
 
         user_id, trip_id = trip_no_channels
         resp = _client().post(
@@ -273,6 +286,7 @@ class TestAC3ActiveChannelUnchanged:
     ):
         _patch_provider(monkeypatch)
         _patch_email_transport(monkeypatch)
+        _patch_can_send_email(monkeypatch)
 
         user_id, trip_id = trip_with_email_channel
         resp = _client().post(
@@ -331,6 +345,7 @@ class TestAC4ConfiguredButUnreachableChannel:
         unterscheidet ("nicht erreichbar")."""
         _patch_provider(monkeypatch)
         _patch_telegram_unreachable(monkeypatch)
+        _patch_can_send_email(monkeypatch)
 
         user_id, trip_id = trip_with_unreachable_telegram
         resp = _client().post(
