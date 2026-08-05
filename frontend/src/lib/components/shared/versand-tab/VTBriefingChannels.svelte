@@ -10,7 +10,7 @@
 	//
 	// Spec: docs/specs/modules/versand_tab_route.md (AC-2, AC-7)
 
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { Eyebrow, Card, Dot } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
@@ -70,7 +70,9 @@
 		sms_allowed?: boolean;
 		email_verified?: boolean;
 	}
-	let profile = $state<Profile | null>(profileOverride !== undefined ? profileOverride : null);
+	let profile = $state<Profile | null>(
+		untrack(() => (profileOverride !== undefined ? profileOverride : null))
+	);
 
 	let availableChannels = $derived({
 		email: !!profile?.mail_to,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import type { ReportConfig } from '$lib/types';
 	import { toHHMMSS } from '$lib/utils/time';
 	import { Checkbox } from '$lib/components/ui/checkbox';
@@ -95,7 +95,9 @@
 		sms_to?: string;
 		sms_allowed?: boolean;
 	}
-	let profile = $state<Profile | null>(profileOverride !== undefined ? profileOverride : null);
+	let profile = $state<Profile | null>(
+		untrack(() => (profileOverride !== undefined ? profileOverride : null))
+	);
 
 	let availableChannels = $derived({
 		email: !!profile?.mail_to,
