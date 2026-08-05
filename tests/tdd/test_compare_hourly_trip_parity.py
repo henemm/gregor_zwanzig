@@ -11,7 +11,7 @@ GETEILTEN ``format_value()``/``severity_for()`` aus ``output/metric_format.py``.
 Genau diese beiden Funktionen benutzt auch die Tour-Mail. Wer sie "passend fuer
 Compare" nachjustiert, aendert stillschweigend jede Tour-Mail mit.
 
-Drei Waechter, alle HEUTE BEREITS GRUEN — sie muessen es BLEIBEN:
+Zwei Waechter, beide HEUTE BEREITS GRUEN — sie muessen es BLEIBEN:
 
 1. Die geteilte Formel-Schicht liefert Zeichen fuer Zeichen dasselbe wie vor
    der Umstellung (aufgezeichnete Wertetabelle, `tests/fixtures/
@@ -21,10 +21,14 @@ Drei Waechter, alle HEUTE BEREITS GRUEN — sie muessen es BLEIBEN:
    (``dp_to_row``/``extract_hourly_rows``/``visible_cols`` aus
    ``email/helpers.py``) — geteilt ist die Formel, nicht die Aufrufsignatur
    (Spec Known Limitations). Geprueft am Syntaxbaum, nicht per Textsuche.
-3. Die aufgezeichneten Tour-Mail-Goldens (``tests/golden/email/``) bleiben
-   unangetastet. AC-7 verlangt ausdruecklich "bleibt gruen, OHNE dass das
-   Golden angepasst wird" — wer sie neu einfriert, um einen roten
-   Golden-Lauf loszuwerden, faellt hier auf.
+
+Ein dritter Waechter fror zusaetzlich die sha256 der 10 Tour-Mail-Goldens ein
+("wer sie neu einfriert, um einen roten Golden-Lauf loszuwerden, faellt hier
+auf"). Er ist mit Issue #1472 ENTFERNT (PO-Freigabe 2026-08-04): seine
+Zusicherung war ausdruecklich an #1406 Scheibe B gebunden, diese Scheibe ist
+geliefert, und er konnte eine bewusst freigegebene Aenderung der Tour-Mail
+nicht von einem Kollateralschaden unterscheiden. Die beiden verbleibenden
+Waechter sind nicht scheibengebunden und tragen dauerhaft.
 
 Kern-Schicht, deterministisch: kein Netz, keine Mocks/``patch()``.
 
@@ -40,7 +44,6 @@ from __future__ import annotations
 
 import ast
 import difflib
-import hashlib
 from pathlib import Path
 
 from app.metric_catalog import get_all_metrics
@@ -56,30 +59,8 @@ _GRID_FIXTURE = (
     _TESTS / "fixtures" / "shared_metric_format_parity"
     / "format_value_severity_grid.tsv"
 )
-_GOLDEN_DIR = _TESTS / "golden" / "email"
-
 # Wertegitter der Aufzeichnung — identisch zum Erzeugungslauf.
 GRID = [None, -12.5, 0, 0.4, 7.5, 42, 137.0, 1013.0, 20000]
-
-# sha256 der Tour-Mail-Goldens, aufgezeichnet vor Scheibe B (HEAD 1863e6c1).
-# Neu eingefroren 2026-08-04 (Issue #1491, PO-freigegeben): die
-# Gewitter-Spalte wurde von einem Text-/Emoji-Sonderfall zu einer regulaeren
-# 4-stufigen Ampel-Spalte (Kreis + Zell-Toenung wie Wind/Boeen/Regen). Ein
-# Diff gegen den Vorstand (c31f777c) zeigt: NUR die "Thdr"-Spalte weicht ab
-# (HTML-Zellen + Klartext-Label "kein"/"leicht"/"mittel"/"hoch" statt
-# "–"/"⚡ mögl."/"⚡⚡"), alles andere ist zeichengleich.
-GOLDEN_HASHES = {
-    "arlberg-winter-morning-html.txt": "f5190879c865d905ef15c87437871bc6d95eb86d95abb47f3b61e7fd6fa9c9c8",
-    "arlberg-winter-morning-plain.txt": "46b27784d1fbe579c0c6db7fd3b40fdb173159a941a5a44dfd063137c2793900",
-    "corsica-vigilance-html.txt": "65d4fe8145b24d778b42c63ec7cbaddf67ede7d3b0b5b78ef5b9e81b12af7555",
-    "corsica-vigilance-plain.txt": "5c5c13ee3186c6ff305eada602dfe01a0d9228710d28761ae8aee09e5a2e4e3a",
-    "gr20-spring-morning-html.txt": "63521106b5615deacc9f3f57f3fa1946349f97db0eda77bfc83f4d12c213b3b3",
-    "gr20-spring-morning-plain.txt": "59a5597273e07bcbaa97b29fe0608ca838d1b975459247efb123bd8166be3752",
-    "gr20-summer-evening-html.txt": "2ee2f16223152ba11113b3128e0d091200fb47af9b772c0604d7b581a292d43e",
-    "gr20-summer-evening-plain.txt": "41c513accb3a541a62efd0574cd345a4496da5229ca80853fac1b92ecd5f7c45",
-    "gr221-mallorca-evening-html.txt": "fb5cbd8428e96b4af5b3e9ed70246360bd3a200bb70b931b8811bc17a301cc43",
-    "gr221-mallorca-evening-plain.txt": "08fb942aa9c164713c415eef5378e3c35a49643249227185dbee2398de006b2f",
-}
 
 # Tour-Orchestrierung, die der Vergleich NICHT importieren darf (Spec Known
 # Limitations: sie erwartet ein volles UnifiedWeatherDisplayConfig).
@@ -164,20 +145,10 @@ def test_compare_renderer_does_not_import_the_trip_orchestration():
     )
 
 
-def test_trip_mail_goldens_are_not_re_recorded():
-    """AC-7 (3): Given die aufgezeichneten Tour-Mails sind der Beweis / When
-    diese Scheibe geliefert wird / Then ist keine einzige Golden-Datei neu
-    eingefroren worden."""
-    abweichend = []
-    for name, erwartet in sorted(GOLDEN_HASHES.items()):
-        pfad = _GOLDEN_DIR / name
-        assert pfad.exists(), f"Tour-Golden fehlt: {pfad}"
-        ist = hashlib.sha256(pfad.read_bytes()).hexdigest()
-        if ist != erwartet:
-            abweichend.append(f"{name}: {ist} statt {erwartet}")
-
-    assert len(GOLDEN_HASHES) == 10, "Aufzeichnung unvollstaendig."
-    assert not abweichend, (
-        "Tour-Mail-Golden wurde neu eingefroren statt gruen zu bleiben "
-        "(AC-7):\n" + "\n".join(abweichend)
-    )
+# Der dritte Waechter dieser Datei -- `test_trip_mail_goldens_are_not_
+# re_recorded`, der die sha256 der 10 Tour-Mail-Goldens festhielt -- wurde mit
+# Issue #1472 entfernt (PO-Freigabe 2026-08-04). Begruendung im Commit; kurz:
+# er war ausdruecklich an #1406 Scheibe B gebunden ("die Tour-Mail darf sich
+# DURCH #1406 Scheibe B nicht aendern"), diese Scheibe ist geliefert, und er
+# konnte eine bewusste, freigegebene Aenderung der Tour-Mail nicht von einem
+# Kollateralschaden unterscheiden.
