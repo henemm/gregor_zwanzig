@@ -167,9 +167,16 @@ def _install_smtp_sink(monkeypatch):
     laeuft real inkl. Empfaenger-Guards, nur der Netz-Draht ist ersetzt."""
     sent: list[tuple] = []
 
+    class _FakeSock:
+        # Issue #1448 S1: EmailOutput ruft server.sock.settimeout() vor
+        # jeder SMTP-Phase — ohne dieses Attribut bricht der Sink den Send.
+        def settimeout(self, timeout):
+            pass
+
     class _FakeSMTP:
         def __init__(self, host, port, *a, **k):
             self.host, self.port = host, port
+            self.sock = _FakeSock()
 
         def __enter__(self):
             return self

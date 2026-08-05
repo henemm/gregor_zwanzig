@@ -236,7 +236,15 @@ def test_guard_is_noop_in_production_mode(monkeypatch):
 
     RED: die Guard-Methode _guard_test_mode_sandbox_key existiert noch nicht
     auf SMSOutput — hasattr(...) schlaegt fehl, bevor irgendetwas anderes
-    geprueft wird."""
+    geprueft wird.
+
+    Herkunftssperre (#1476) auf 'production' gepinnt: gemessen wird der
+    Zustands-Guard (#1336); ohne Pin erzwingt die Herkunftsschicht in jedem
+    Nicht-Server-Checkout den Sandbox-Key und verdeckt die Prod-Flanke
+    (eigene Tests: test_channel_origin_guard_parity.py)."""
+    import output.channels.sms as sms_mod
+
+    monkeypatch.setattr(sms_mod, "running_origin", lambda module_file: "production")
     calls: list = []
     monkeypatch.setattr(httpx, "post", _make_sentinel(calls))
 

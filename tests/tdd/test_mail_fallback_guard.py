@@ -48,8 +48,21 @@ from pathlib import Path
 import pytest
 
 from app.config import Settings
+import output.channels.email as email_mod
 from output.channels.base import OutputConfigError
 from output.channels.email import EmailOutput
+
+
+@pytest.fixture(autouse=True)
+def _pin_origin_production(monkeypatch):
+    """Herkunftssperre (#1476) auf 'production' gepinnt: diese Datei misst
+    die INNERE Guard-/Fallback-Logik (#1412 S1). Ohne Pin schaltet die
+    Herkunftsschicht in jedem Nicht-Server-Checkout die Empfaenger vorab auf
+    gregor-test@henemm.com um -- die gemessenen Zustell-/Blockfaelle kommen
+    nie beim Guard an. Eigene Tests der Herkunftsschicht:
+    test_channel_origin_guard_parity.py / test_mail_recipient_parity.py."""
+    monkeypatch.setattr(email_mod, "running_origin", lambda module_file: "production")
+
 
 # Stalwart-artiger Fallback-Host — bewusst OHNE "resend" im Namen (Vorgabe
 # der Aufgabenstellung).
@@ -244,7 +257,10 @@ class TestAC2VerifiedExternalRecipientStillDeliveredViaFallback:
         output.send("S1 AC-2", "Testkoerper")
 
         assert calls == [
-            {"host": FALLBACK_HOST, "from": settings.mail_from, "to": (recipient,)}
+            # Envelope-From folgt der dokumentierten Aufloesung (email.py:
+            # `self._reply_to or self._from`, config.py get_inbound_address():
+            # inbound_address, ersatzweise smtp_user) — NICHT mail_from.
+            {"host": FALLBACK_HOST, "from": settings.get_inbound_address(), "to": (recipient,)}
         ], f"AC-2: Zustellversuch über den Ersatzweg erwartet, gesehen: {calls!r}"
 
 
@@ -283,7 +299,10 @@ class TestAC2bLocalRecipientStillDeliveredViaFallback:
         output.send("S1 AC-2b", "Testkoerper")
 
         assert calls == [
-            {"host": FALLBACK_HOST, "from": settings.mail_from, "to": (recipient,)}
+            # Envelope-From folgt der dokumentierten Aufloesung (email.py:
+            # `self._reply_to or self._from`, config.py get_inbound_address():
+            # inbound_address, ersatzweise smtp_user) — NICHT mail_from.
+            {"host": FALLBACK_HOST, "from": settings.get_inbound_address(), "to": (recipient,)}
         ], f"AC-2b: Zustellversuch über den Ersatzweg erwartet, gesehen: {calls!r}"
 
 
@@ -313,7 +332,10 @@ class TestAC6NormalOperationUnchanged:
         output.send("S1 AC-6", "Testkoerper")
 
         assert calls == [
-            {"host": FALLBACK_HOST, "from": settings.mail_from, "to": (recipient,)}
+            # Envelope-From folgt der dokumentierten Aufloesung (email.py:
+            # `self._reply_to or self._from`, config.py get_inbound_address():
+            # inbound_address, ersatzweise smtp_user) — NICHT mail_from.
+            {"host": FALLBACK_HOST, "from": settings.get_inbound_address(), "to": (recipient,)}
         ], (
             "AC-6: genau EIN Zustellversuch über den Primärhost erwartet, "
             f"gesehen: {calls!r}"

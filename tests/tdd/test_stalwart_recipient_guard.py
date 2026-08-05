@@ -25,8 +25,20 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from app.config import Settings  # noqa: E402
+import output.channels.email as email_mod  # noqa: E402
 from output.channels.email import EmailOutput  # noqa: E402
 from output.channels.base import OutputConfigError  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _pin_origin_production(monkeypatch):
+    """Herkunftssperre (#1476) auf 'production' gepinnt: diese Datei misst
+    den INNEREN Empfaenger-Guard des Stalwart-Pfads (#1235). Ohne Pin
+    schaltet die Herkunftsschicht in jedem Nicht-Server-Checkout die
+    Empfaenger vorab auf gregor-test@henemm.com um -- der gemessene Guard
+    bekommt die Block-Faelle nie zu sehen. Eigene Tests der
+    Herkunftsschicht: test_channel_origin_guard_parity.py."""
+    monkeypatch.setattr(email_mod, "running_origin", lambda module_file: "production")
 
 
 def _stalwart_output(mail_to: str = "gregor-test@henemm.com") -> EmailOutput:
