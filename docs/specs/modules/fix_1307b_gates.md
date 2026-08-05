@@ -309,8 +309,10 @@ einer bestehenden — kein zusätzliches Prüfdatum nötig.
 
 ## Architektur-Entscheidung (ADR)
 
-**Kein neues ADR erforderlich.** Die beiden Richtungsentscheidungen wenden bestehende,
-dokumentierte Muster an:
+- **ADR-Nr.:** keine — die beiden Richtungsentscheidungen wenden bestehende, dokumentierte
+  Muster an, sie weichen nicht davon ab.
+
+Im Einzelnen:
 
 - „Frage umdrehen statt Formen jagen" (Befund 4) — belegt in #1431, #1471 und
   #1307 Scheibe A, festgehalten in `CLAUDE.md` und
