@@ -49,12 +49,26 @@ export interface AlarmeChannelsState {
 	sms: boolean;
 }
 
+// Issue #1461 S3b-2a: Geschwister-Payload zu AlarmeChannelsState (bewusst
+// getrenntes Backend-Feld alert_channel_thresholds, s. alertChannelState.ts).
+export interface AlarmeChannelThresholdsState {
+	email: string;
+	telegram: string;
+	sms: string;
+}
+
 export interface AlarmeDeliveryState {
 	officialWarningsEnabled: boolean;
 	cooldownMinutes?: number;
 	quietFrom?: string;
 	quietTo?: string;
 	channels: AlarmeChannelsState;
+	// Issue #1461 S3b-2a: optional wie `metricLevels` (additiv) -- NUR wenn
+	// gesetzt, wird `alert_channel_thresholds` gesendet. So bleibt jeder
+	// bestehende Aufrufer, der dieses Feld (noch) nicht kennt, bit-identisch
+	// (kein stiller Zusatzkey in seiner Payload). AlarmeTab.svelte (route)
+	// setzt es immer.
+	channelThresholds?: AlarmeChannelThresholdsState;
 	metricLevels?: Record<string, string> | undefined;
 }
 
@@ -89,6 +103,17 @@ export function buildAlarmeDeliveryPayload(
 			sms: state.channels.sms
 		}
 	};
+	// Issue #1461 S3b-2a: nur gesetzt, wenn der Aufrufer die Kanal-Schwellen
+	// kennt (AlarmeTab.svelte route) -- alle drei Kanaele explizit (Muster
+	// alert_channels), der Go-Handler haelt Bestandswerte fuer Kanaele, die
+	// HIER fehlen, ueber den Feld-Level-Merge selbst (AC-7).
+	if (state.channelThresholds !== undefined) {
+		payload.alert_channel_thresholds = {
+			email: state.channelThresholds.email,
+			telegram: state.channelThresholds.telegram,
+			sms: state.channelThresholds.sms
+		};
+	}
 	if (state.metricLevels !== undefined) {
 		payload.display_config = {
 			...(currentDisplayConfig ?? {}),

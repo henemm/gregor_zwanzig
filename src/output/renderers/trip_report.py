@@ -43,6 +43,7 @@ from app.models import (
 )
 from app.profile import ActivityProfile
 from output.renderers.day_window import resolve_configured_window
+import services.alert_urgency as alert_urgency
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
 from output.renderers.email import render_email
@@ -305,6 +306,15 @@ class TripReportFormatter:
             for metric_id, syms in SMS_MULTI_SYMBOLS_BY_METRIC.items()
             for sym in syms
         ]
+        # Issue #1461 S3b-2a: SMS-Kanal-Schwelle des Trips -> niedrigste
+        # amtliche Warnstufe fuer den Kurznachrichten-Bericht (Startwert
+        # 'gering', s. SMSTripFormatter.format_sms Docstring).
+        _sms_threshold = (
+            (trip.alert_channel_thresholds or {}).get("sms") if trip else None
+        )
+        _sms_alert_min_level = alert_urgency.min_official_level_for_threshold(
+            _sms_threshold or "LOW"
+        )
         # Issue #868: SMS-Text immer erzeugen (max 160 Zeichen, Standard-SMS-Limit).
         sms_text = SMSTripFormatter().format_sms(
             segments,
@@ -319,6 +329,7 @@ class TripReportFormatter:
             has_gap=has_gap,
             day_window_start_hour=_dw_start,
             day_window_end_hour=_dw_end,
+            sms_alert_min_level=_sms_alert_min_level,
         )
 
         # Issue #1001 AC-10: telegram_kurzform ist wirkungslos (Kurzuebersicht-

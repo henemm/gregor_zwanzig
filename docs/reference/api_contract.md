@@ -1,7 +1,15 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-04 (Issue #1461 Scheibe S3a, `feat-1461-s3a-kanal-dringlichkeit` — die
+**Updated:** 2026-08-05 (Issue #1461 Scheibe S3b-2a, `feat-1461-s3b2-kanal-schwelle` — neues
+additives Geschwisterfeld `alert_channel_thresholds` auf `Trip` (`AlertChannelThresholdsConfig`,
+je Kanal `"LOW"`/`"MODERATE"`/`"HIGH"`, Startwert `"LOW"`): stellt je Alarm-Kanal (E-Mail ·
+Telegram · SMS) ein, ab welcher Dringlichkeit eine ausgelöste Alarm-Meldung diesen Kanal
+erreicht. Bewusst **neben** `alert_channels`, nicht darin — Top-Level-`nil`-Erbe **und**
+Feld-Level-Merge innerhalb des Unterobjekts (fehlender Kanal-Key im PUT-Body bewahrt dessen
+Bestandswert). Betrifft ausschließlich **Trips**; der Ortsvergleich bleibt bis zur Folgescheibe
+S3b-2b unverändert. Details Abschnitt „alert_channel_thresholds (Issue #1461 S3b-2a)“, ADR-0046,
+Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md`); 2026-08-04 (Issue #1461 Scheibe S3a, `feat-1461-s3a-kanal-dringlichkeit` — die
 Antworten von `GET /api/cockpit/status` (Feld `alerts[]`) und `GET /api/archive/stats`
 tragen je Alarm-Eintrag weiterhin ein Feld `severity` — **Form unverändert, Bedeutung
 korrigiert:** `severity` wird jetzt aus den tatsächlich vorliegenden Werten **abgeleitet**
@@ -719,6 +727,16 @@ type AlertChannelsConfig struct {
     Telegram bool `json:"telegram"`
     Sms      bool `json:"sms"`
 }
+
+// AlertChannelThresholdsConfig — Issue #1461 S3b-2a, additives Geschwister-
+// feld zu AlertChannelsConfig (NICHT darin). Je Kanal die Dringlichkeits-
+// Schwelle als String-Pointer, damit "Kanal fehlt im Body" (Feld-Level-Merge
+// bewahrt den Bestandswert) von "Kanal explizit gesetzt" unterscheidbar bleibt.
+type AlertChannelThresholdsConfig struct {
+    Email    *string `json:"email,omitempty"`    // "LOW"|"MODERATE"|"HIGH"
+    Telegram *string `json:"telegram,omitempty"`
+    Sms      *string `json:"sms,omitempty"`
+}
 ```
 
 ### alert_channels (Issue #1258)
@@ -735,6 +753,21 @@ Trip-weites Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche So
 | `alert_channels.email`/`.telegram`/`.sms` | bool | einzelne Kanal-Flags |
 
 Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten Trip-Anteil; das SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` (`AlertChannelsConfig`), Spec `docs/specs/_archive/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9.
+
+### alert_channel_thresholds (Issue #1461 S3b-2a)
+
+Additives Geschwisterfeld zu `alert_channels` (bewusst **nicht** darin — `alert_channels` wird beim Speichern als Ganzes ersetzt, all-or-nothing; ein Client ohne Kenntnis der Schwelle würde sie sonst still löschen): je Alarm-Kanal die Dringlichkeitsstufe, ab der eine ausgelöste Alarm-Meldung diesen Kanal erreichen darf.
+
+```json
+{"alert_channel_thresholds": {"email": "LOW", "telegram": "HIGH", "sms": "MODERATE"}}
+```
+
+| Feld | Typ | Semantik |
+|------|-----|----------|
+| `alert_channel_thresholds` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend:** kein Kanal hat eine Schwelle gesetzt — Startwert `"LOW"` je Kanal (Python-Vorgabewert, nicht persistiert). **Gesetzt:** je Kanal maßgeblich für den Versand-Filter |
+| `alert_channel_thresholds.email`/`.telegram`/`.sms` | `"LOW"`\|`"MODERATE"`\|`"HIGH"` \| fehlend | fehlender Kanal-Key im PUT-Body → **Feld-Level-Merge** bewahrt den Bestandswert (AC-7); ein GANZ fehlendes `alert_channel_thresholds` im Body bewahrt das ganze Unterobjekt (Top-Level-`nil`-Erbe, AC-6) |
+
+Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn ihre Dringlichkeit (`services.alert_urgency`, `LOW`/`MODERATE`/`HIGH`) die dort eingestellte Schwelle erreicht oder übertrifft (`services.alert_channel_threshold.split_by_threshold()`). Das an das Alarm-Protokoll übergebene Kanal-Set bleibt dabei das **rohe**, unveränderte Opt-in — nur der tatsächliche Versand wird gefiltert (ADR-0046). Vollständig unterdrückte Meldungen erscheinen im nächsten Briefing als nicht zugestellt (Grund `below_channel_threshold`, S3b-1-Sichtbarkeit). Gilt in dieser Scheibe **nur für Trips**; der Ortsvergleich folgt als S3b-2b unverändert. Quelle: `internal/model/trip.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md`.
 
 ### official_warnings (Issue #1258)
 
@@ -3053,7 +3086,7 @@ export interface AlertRule {
 |------|-----|------------|
 | id | string | Eindeutige Alert-ID (z.B. `alert-gust-1`) |
 | kind | enum | `"absolute"` (Schwellenwert überschritten) oder `"delta"` (Änderung größer als Schwelle) |
-| metric | enum | Gemessene Metrik (AlertMetric-Werte, klein): wind_gust, precipitation_sum, temperature_min/max, thunder_level, snow_line, temperature/wind/precipitation_change. Hinweis: `freezing_level` ist KEINE AlertMetric-Konstante, sondern eine Katalog-ID, die via `catalogIDToAlertMetrics` auf `snow_line` mappt (ADR-0019). Seit Issue #1435 Etappe E5 ist `catalogIDToAlertMetrics` (`internal/model/trip.go`) kein Go-Literal mehr, sondern wird per `go:embed` aus der generierten Datei `internal/model/alert_metric_mapping.generated.json` geladen, die wiederum aus der Python-Quelle `catalog_id_to_alert_metrics()` erzeugt wird (ADR-0045). |
+| metric | enum | Gemessene Metrik (AlertMetric-Werte, klein): wind_gust, precipitation_sum, temperature_min/max, thunder_level, snow_line, temperature/wind/precipitation_change. Hinweis: `freezing_level` ist KEINE AlertMetric-Konstante, sondern eine Katalog-ID, die via `catalogIDToAlertMetrics` auf `snow_line` mappt (ADR-0019). Seit Issue #1435 Etappe E5 ist `catalogIDToAlertMetrics` (`internal/model/trip.go`) kein Go-Literal mehr, sondern wird per `go:embed` aus der generierten Datei `internal/model/alert_metric_mapping.generated.json` geladen, die wiederum aus der Python-Quelle `catalog_id_to_alert_metrics()` erzeugt wird (ADR-0046). |
 | threshold | float | Schwellenwert (z.B. `50.0` für 50 km/h Wind-Böen) |
 | severity | enum | `"info"`, `"warning"`, `"critical"` — nur noch Label am Alert, **nicht mehr** für Versand-Filterung (behebt Severity-Falle: Info-Alerts werden nicht mehr still verschluckt) |
 | enabled | bool | Alert aktiv? (default: true) |

@@ -143,6 +143,12 @@ type Trip struct {
 	// TripAlertService._effective_alert_channels NUR den geerbten
 	// Briefing-Anteil (all-or-nothing, alle drei Felder explizit).
 	AlertChannels *AlertChannelsConfig `json:"alert_channels,omitempty"`
+	// AlertChannelThresholds — Issue #1461 S3b-2a, additives Geschwisterfeld
+	// zu AlertChannels (NICHT darin, s. AlertChannelThresholdsConfig-
+	// Docstring): nil = kein Kanal hat eine Schwelle gesetzt (Python-Startwert
+	// "LOW" je Kanal), gesetzt = Feld-Level-Merge innerhalb des Unterobjekts
+	// (Pflicht, s. internal/handler/trip.go).
+	AlertChannelThresholds *AlertChannelThresholdsConfig `json:"alert_channel_thresholds,omitempty"`
 	// Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder + EndDate,
 	// ABGELEITET aus ReportConfig/Stages bei jedem Load (store.normalizeTrip)
 	// — nicht autoritativ, ReportConfig bleibt die einzige Wahrheit fuer den
@@ -182,6 +188,21 @@ type AlertChannelsConfig struct {
 	Email    bool `json:"email"`
 	Telegram bool `json:"telegram"`
 	Sms      bool `json:"sms"`
+}
+
+// AlertChannelThresholdsConfig — Issue #1461 S3b-2a, additives Geschwister-
+// feld zu AlertChannelsConfig (bewusst NICHT darin -- AlertChannelsConfig
+// wird beim Speichern heute als Ganzes ersetzt, "all-or-nothing"; ein Client
+// ohne Kenntnis der Schwelle wuerde sie sonst bei jedem Speichern still
+// loeschen). Je Kanal die Dringlichkeits-Schwelle als String-Pointer
+// ("LOW"|"MODERATE"|"HIGH"), NICHT bool wie AlertChannelsConfig -- Pointer
+// statt Wert, damit "Kanal fehlt im Body" (nil, Feld-Level-Merge bewahrt den
+// Bestandswert) von "Kanal explizit auf einen Wert gesetzt" unterscheidbar
+// bleibt (internal/handler/trip.go).
+type AlertChannelThresholdsConfig struct {
+	Email    *string `json:"email,omitempty"`
+	Telegram *string `json:"telegram,omitempty"`
+	Sms      *string `json:"sms,omitempty"`
 }
 
 // AlertableMetrics are metrics that can receive an alert rule (delta-based since #817).

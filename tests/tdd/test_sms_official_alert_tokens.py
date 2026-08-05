@@ -217,13 +217,22 @@ def test_ac2_two_warnings_single_marker_severest_first():
 
 
 # ---------------------------------------------------------------------------
-# AC-3 — gelbe/gruene Warnung wird gefiltert
+# AC-3 — gruene Warnung wird gefiltert. Gelbe Warnung (Stufe 2) erscheint seit
+# #1461 S3b-2a beim Trip-Startwert 'gering' JETZT (PO-Entscheidung
+# 2026-08-05: "Bericht bekommt mehr") -- vor dieser Scheibe war sie gefiltert
+# (``MIN_SMS_LEVEL`` == Stufe 3 galt unbedingt).
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("level", [1, 2])
-def test_ac3_yellow_and_green_warnings_are_filtered(level: int):
-    sms = _sms([_alert("rain", level)])
+def test_ac3_green_warning_is_filtered():
+    sms = _sms([_alert("rain", 1)])
     assert "!" not in sms, (
-        f"Warnung der Stufe {level} darf nicht in der SMS erscheinen: {sms!r}"
+        f"Stufe 1 darf beim Startwert 'gering' nicht in der SMS erscheinen: {sms!r}"
+    )
+
+
+def test_ac3_yellow_warning_appears_at_trip_default():
+    sms = _sms([_alert("rain", 2)])
+    assert "!" in sms, (
+        f"Stufe 2 muss beim Startwert 'gering' in der SMS erscheinen: {sms!r}"
     )
 
 
@@ -456,11 +465,15 @@ def test_unknown_hazard_same_symbol_in_both_sms_paths():
     )
 
 
-def test_unknown_hazard_yellow_is_still_filtered():
-    """Der Stufenfilter bleibt wirksam — nur der Katalog-Filter faellt weg."""
-    sms = _sms([_alert("volcanic_ash", 2)])
+def test_unknown_hazard_green_is_still_filtered():
+    """Der Stufenfilter bleibt wirksam — nur der Katalog-Filter faellt weg.
+
+    Issue #1461 S3b-2a: der Trip-Startwert 'gering' zeigt jetzt auch gelbe
+    (Stufe 2) Warnungen (s. ``test_ac3_yellow_warning_appears_at_trip_default``)
+    -- Stufe 1 (gruen) bleibt darunter und damit weiterhin gefiltert."""
+    sms = _sms([_alert("volcanic_ash", 1)])
     assert "!" not in sms, (
-        f"Gelbe Warnung eines unbekannten Typs darf nicht erscheinen: {sms!r}"
+        f"Gruene Warnung eines unbekannten Typs darf nicht erscheinen: {sms!r}"
     )
 
 

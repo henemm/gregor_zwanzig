@@ -367,17 +367,23 @@ def _warn_hour(alert: "OfficialAlert", tz: "ZoneInfo") -> Optional[int]:
 
 def official_alerts_to_sms_entries(
     alerts: list["OfficialAlert"], tz: Optional["ZoneInfo"] = None,
+    min_level: int = MIN_SMS_LEVEL,
 ) -> tuple[tuple[str, str, Optional[int]], ...]:
     """Issue #1318/#1332: amtliche Warnungen -> Warn-Block-Tripel (Kuerzel,
     Stufenbuchstabe, Stunde). Dedup ueber die geteilte `dedupe_official_
-    alerts()` (kein eigener Dedup-Code), Filter auf Stufe >= orange
-    (`MIN_SMS_LEVEL`), Kuerzel aus dem einzigen Katalog `hazard_symbols.py`.
-    Sortierung: Stufe absteigend, bei Gleichstand Katalog-Reihenfolge --
-    deterministisch, unabhaengig von `valid_from`.
+    alerts()` (kein eigener Dedup-Code), Filter auf Stufe >= `min_level`
+    (Vorgabewert `MIN_SMS_LEVEL`, orange), Kuerzel aus dem einzigen Katalog
+    `hazard_symbols.py`. Sortierung: Stufe absteigend, bei Gleichstand
+    Katalog-Reihenfolge -- deterministisch, unabhaengig von `valid_from`.
 
     Geteilter Kern von Trip-SMS (`sms_trip.py::_official_alert_entries`, duenner
     Wrapper) UND Compare-SMS (`comparison.py::render_compare_sms`) -- kein
     zweiter Kuerzel-Katalog, keine abweichende Filterlogik (#1332 AC-4).
+
+    `min_level` (#1461 S3b-2a): Trip-Pfade uebergeben die per Kanal
+    eingestellte Schwelle (`alert_urgency.min_official_level_for_threshold`);
+    Compare-Pfade lassen den Parameter weg und bleiben beim Vorgabewert --
+    keine Scheibe veraendert Verhalten, das sie nicht besitzt (S3b-2b folgt).
 
     `tz=None` (Compare-Orte ohne hinterlegte `SavedLocation.timezone`): der
     Stunden-Teil entfaellt ersatzlos, kein Platzhalter -- analog der
@@ -385,7 +391,7 @@ def official_alerts_to_sms_entries(
     tagged = [(alert, []) for alert in alerts]
     rows = []
     for alert, _ in dedupe_official_alerts(tagged):
-        if alert.level < MIN_SMS_LEVEL:
+        if alert.level < min_level:
             continue
         symbol = sms_symbol_for(alert.hazard)
         if alert.hazard in LEVELLESS_HAZARDS:

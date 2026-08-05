@@ -47,6 +47,9 @@ REASON_DELIVERY_FAILED = "delivery_failed"
 REASON_QUIET_HOURS = "quiet_hours"
 REASON_DAILY_LIMIT = "daily_limit"
 REASON_COOLDOWN = "cooldown"
+# Issue #1461 S3b-2a: Kanal war eingeschaltet, die Meldung lag aber unter der
+# dort eingestellten Dringlichkeits-Schwelle.
+REASON_BELOW_THRESHOLD = "below_channel_threshold"
 
 # Ausloeser der Meldung selbst (`reason` des Eintrags).
 REASON_FORECAST_CHANGE = "forecast_change"
@@ -107,19 +110,26 @@ def hazards_from_official_alerts(alerts) -> list[str]:
     return sorted({a.hazard for a in alerts or [] if a.hazard})
 
 
-def _channels_not_sent(effective: set[str], delivered: list[str]) -> list[dict]:
-    """Je nicht zugestelltem Kanal ein Grund: war er eingeschaltet, ist er
-    technisch gescheitert; war er aus, hat der Nutzer ihn abgeschaltet."""
-    return [
-        {
-            "channel": channel,
-            "reason": (
-                REASON_DELIVERY_FAILED if channel in effective
-                else REASON_CHANNEL_DISABLED
-            ),
-        }
-        for channel in _ALL_CHANNELS if channel not in delivered
-    ]
+def _channels_not_sent(
+    effective: set[str], delivered: list[str], below_threshold: "set[str] | None" = None,
+) -> list[dict]:
+    """Je nicht zugestelltem Kanal ein Grund: unter der Kanal-Schwelle (#1461
+    S3b-2a) geht VOR technisch gescheitert, sonst wie bisher: eingeschaltet
+    und weder below-threshold noch zugestellt -> technisch gescheitert; war
+    er aus, hat der Nutzer ihn abgeschaltet."""
+    below_threshold = below_threshold or set()
+    result = []
+    for channel in _ALL_CHANNELS:
+        if channel in delivered:
+            continue
+        if channel in below_threshold:
+            reason = REASON_BELOW_THRESHOLD
+        elif channel in effective:
+            reason = REASON_DELIVERY_FAILED
+        else:
+            reason = REASON_CHANNEL_DISABLED
+        result.append({"channel": channel, "reason": reason})
+    return result
 
 
 def append_entry(
@@ -135,6 +145,7 @@ def append_entry(
     effective_channels: Iterable[str],
     sent_channels: Iterable[str],
     reachable_channels: Optional[Iterable[str]] = None,
+    below_threshold_channels: Optional[Iterable[str]] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -164,6 +175,12 @@ def append_entry(
     `sent_channels` traegt den tatsaechlichen Zustellerfolg und fuellt
     `channels_sent`/`channels_not_sent`. Ohne `reachable_channels` gilt
     `sent_channels` auch als Erreichbarkeits-Angabe (Direktaufrufer).
+
+    `below_threshold_channels` (#1461 S3b-2a): Teilmenge von
+    `effective_channels`, die wegen der Kanal-Schwelle NICHT angesteuert
+    wurde. `effective_channels` bleibt dabei das ROHE, unveraenderte Opt-in
+    des Nutzers -- die Schwelle filtert nur den tatsaechlichen Versand
+    (Aufrufer), nie das, was hier protokolliert wird (rote Linie #638).
 
     Read-Modify-Write ueber die volle Datei: Alt-Eintraege ohne die neuen
     Felder bleiben unveraendert erhalten (AC-14). `metrics` und `hazards`
@@ -196,7 +213,9 @@ def append_entry(
         "hazards": sorted(set(hazards or ())),
         "reason": reason,
         "channels_sent": delivered,
-        "channels_not_sent": _channels_not_sent(effective, delivered),
+        "channels_not_sent": _channels_not_sent(
+            effective, delivered, set(below_threshold_channels or ()),
+        ),
     }
 
     target = "entries" if reachable else "not_delivered"

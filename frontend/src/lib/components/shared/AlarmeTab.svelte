@@ -35,6 +35,12 @@
 		type AlarmeContext
 	} from './alarme-tab/alarmeTabSections.ts';
 	import { resolveAlertChannels, type AlertChannelState } from './alarme-tab/alertChannelState.ts';
+	import {
+		applyThresholdChange,
+		resolveAlertChannelThresholds,
+		type AlertChannelThresholdState,
+		type ChannelThreshold
+	} from './alarme-tab/alertChannelState.ts';
 	import { buildAlarmeDeliveryPayload } from './alarme-tab/alarmeDeliveryPayload.ts';
 	// Feature #1435 E1a-2: die Alarm-Zeilen kommen aus dem zentralen Register
 	// (Katalog-Feld `alertMetric`), nicht mehr aus der geloeschten Frontend-
@@ -70,6 +76,10 @@
 		// beide Kontexte
 		existingChannels?: Partial<AlertChannelState> | null;
 		onChannelToggle?: (kind: 'telegram' | 'sms' | 'email') => void;
+		// Issue #1461 S3b-2a: nur route liest/schreibt dieses Feld (Trip-
+		// Speicherweg). vergleich bekommt in dieser Scheibe noch keine Wirkung
+		// (Known Limitation, S3b-2b folgt).
+		existingChannelThresholds?: Partial<Record<'telegram' | 'sms' | 'email', string | null>> | null;
 	}
 	let {
 		context = 'route',
@@ -82,7 +92,8 @@
 		wiz,
 		catalog,
 		existingChannels,
-		onChannelToggle
+		onChannelToggle,
+		existingChannelThresholds
 	}: Props = $props();
 
 	const sections = $derived(alarmeTabSections(context));
@@ -192,6 +203,20 @@
 		onChannelToggle?.(kind);
 	}
 
+	// ── (d2) Kanal-Schwellen — Issue #1461 S3b-2a, NUR route ────────────────
+	// vergleich: der Picker bekommt keine `thresholds`-Prop (s. Markup unten)
+	// und rendert damit unveraendert den statischen Beschreibungstext -- kein
+	// eigener Zustand noetig (Known Limitation, S3b-2b folgt).
+	// svelte-ignore state_referenced_locally -- Prop wird bewusst nur einmal
+	// zur Initialisierung gelesen (Muster routeChannelState oben).
+	let routeChannelThresholds = $state<AlertChannelThresholdState>(
+		resolveAlertChannelThresholds(existingChannelThresholds)
+	);
+	function handleThresholdChange(kind: 'telegram' | 'sms' | 'email', level: ChannelThreshold) {
+		if (context === 'vergleich') return;
+		routeChannelThresholds = applyThresholdChange(routeChannelThresholds, kind, level);
+	}
+
 	// ── (e)/(f) Cooldown/Stille Stunden — route: lokaler State, vergleich: wiz.* ─
 	let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
 	let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
@@ -212,6 +237,7 @@
 				quietFrom,
 				quietTo,
 				channels: routeChannelState,
+				channelThresholds: routeChannelThresholds,
 				metricLevels: routeMetricLevels
 			},
 			trip?.display_config as Record<string, unknown> | undefined
@@ -222,12 +248,16 @@
 		};
 	}
 
+	// svelte-ignore state_referenced_locally -- Initialwert des Dirty-Check-
+	// Snapshots liest bewusst nur einmal (Issue #1461 S3b-2a fuegt
+	// routeChannelThresholds zur bestehenden Liste hinzu).
 	let _prevAlarmeJson = JSON.stringify({
 		officialWarningsEnabled,
 		cooldownMinutes,
 		quietFrom,
 		quietTo,
 		routeChannelState,
+		routeChannelThresholds,
 		routeMetricLevels
 	});
 	$effect(() => {
@@ -238,6 +268,7 @@
 			quietFrom,
 			quietTo,
 			routeChannelState,
+			routeChannelThresholds,
 			routeMetricLevels
 		});
 		if (currentJson === _prevAlarmeJson) return;
@@ -292,7 +323,16 @@
 					{/if}
 				{/if}
 			{:else if id === 'channels'}
-				<AlertChannelPicker channels={displayChannelState} onToggle={handleChannelToggle} />
+				<!-- Issue #1461 S3b-2a AC-10/AC-11: `thresholds`/`onThresholdChange`
+				     nur im route-Zweig -- der Vergleichs-Zweig bettet denselben,
+				     jetzt erweiterten Picker weiter ein, bekommt aber (noch) keine
+				     eigene Wirkung (Known Limitation, S3b-2b folgt). -->
+				<AlertChannelPicker
+					channels={displayChannelState}
+					onToggle={handleChannelToggle}
+					thresholds={context === 'route' ? routeChannelThresholds : undefined}
+					onThresholdChange={context === 'route' ? handleThresholdChange : undefined}
+				/>
 				{#if context === 'vergleich'}
 					<!-- Issue #1260 S5: geteilter Kurzstil-Schalter (DIESELBE Komponente
 					     wie im Trip-Versand-Tab). Bindet an display_config.telegram_style

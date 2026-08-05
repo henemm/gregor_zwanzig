@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
 from app.models import SegmentWeatherData, WeatherChange
-from services import alert_daily_limit, alert_log
+from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import (
@@ -139,6 +139,11 @@ class TripAlertService:
         self._radar_service = radar_service
         # Mail-body capture seam for AC-4/AC-6 testing (replaces SMTP when set)
         self._mail_sink = mail_sink
+        # Issue #1461 S3b-2a: Bruecke zwischen `_send_alert()` (bestimmt die
+        # Kanal-Schwellen-Unterdrueckung) und `check_and_send_alerts()`
+        # (protokolliert sie) -- wird bei jedem `_send_alert()`-Aufruf neu
+        # gesetzt, kein dauerhafter Zustand.
+        self._last_below_threshold_channels: set[str] = set()
 
     def check_and_send_alerts(
         self,
@@ -292,6 +297,7 @@ class TripAlertService:
             effective_channels=eval_config.channels,
             sent_channels=notif_result.delivered_channels,
             reachable_channels=notif_result.sent_channels,
+            below_threshold_channels=self._last_below_threshold_channels,
         )
         delivered = notif_result.sent
         if not delivered:
@@ -861,26 +867,36 @@ class TripAlertService:
                 logger.info(f"Radar alert: alle Kanäle auf Trip-Ebene deaktiviert, kein Recording für {trip.id}")
                 continue
 
+            # Issue #1461 S3b-2a: eigenstaendige Inline-Ableitung (Kontext-
+            # Risiko 5) -- ruft `_effective_alert_channels()` bewusst NICHT
+            # auf, muss die Kanal-Schwelle deshalb hier ERNEUT anwenden, sonst
+            # bleibt der Regenradar-Pfad dauerhaft ungefiltert.
+            _radar_urgency = alert_urgency.urgency_from_radar(
+                is_convective=_radar_request.is_convective,
+                intensity_label=_radar_request.intensity_label,
+            )
+            _radar_allowed, _radar_suppressed = alert_channel_threshold.split_by_threshold(
+                effective_channels, _radar_urgency, trip.alert_channel_thresholds,
+            )
+
             # Best-Effort-Zustellung über NotificationService (Issue #1023)
             result = self._notification_service.send_radar_alert(
                 trip=trip,
                 request=_radar_request,
                 source=radar_svc.source_label(result.source),
                 cooldown_display=cooldown_display,
-                effective_channels=effective_channels,
+                effective_channels=_radar_allowed,
                 mail_sink=self._mail_sink,
             )
             # Issue #1459: Protokoll VOR dem Zustellbarkeits-Guard; die
             # Ziel-Liste (`entries` vs. `not_delivered`) entscheidet
             # `append_entry()` selbst (D4). `result` traegt hier bereits die
             # NotificationResult — die Nowcast-Auswertung steckt im Request.
+            # `effective_channels` bleibt ROH (rote Linie #638).
             alert_log.append_entry(
                 self._user_id, entity_id=trip.id, entity_type="trip",
                 changes_count=1,
-                severity=alert_urgency.urgency_from_radar(
-                    is_convective=_radar_request.is_convective,
-                    intensity_label=_radar_request.intensity_label,
-                ),
+                severity=_radar_urgency,
                 metrics=alert_log.register_pairs_for_nowcast(
                     _radar_request.is_convective
                 ),
@@ -888,6 +904,7 @@ class TripAlertService:
                 effective_channels=effective_channels,
                 sent_channels=result.delivered_channels,
                 reachable_channels=result.sent_channels,
+                below_threshold_channels=_radar_suppressed,
             )
             delivered = result.sent
             if not delivered:
@@ -991,11 +1008,27 @@ class TripAlertService:
         # Issue #638: Effective channels — per-alert override beats briefing channels.
         effective_channels = self._effective_alert_channels(trip)
 
+        # Issue #1461 S3b-2a: die Kanal-Schwelle filtert NUR den tatsaechlichen
+        # Versand (allowed), nie das rohe Opt-in -- das bleibt fuer den
+        # Aufrufer (check_and_send_alerts -> alert_log.append_entry) unveraendert
+        # ueber `effective_channels` erreichbar (rote Linie #638).
+        urgency = alert_urgency.highest_urgency(
+            alert_urgency.urgency_from_changes(changes),
+            *[
+                alert_urgency.urgency_from_official_level(a.level)
+                for a, _segment_ids in (official_notices or [])
+            ],
+        )
+        allowed, suppressed = alert_channel_threshold.split_by_threshold(
+            effective_channels, urgency, trip.alert_channel_thresholds,
+        )
+        self._last_below_threshold_channels = suppressed
+
         result = self._notification_service.send_deviation_alert(
             trip=trip,
             weather=weather,
             changes=changes,
-            effective_channels=effective_channels,
+            effective_channels=allowed,
             official_notices=official_notices or [],
             mail_sink=self._mail_sink,
             telegram_style=_trip_telegram_style(trip),
@@ -1138,10 +1171,20 @@ class TripAlertService:
             return False
 
         effective_channels = self._effective_alert_channels(trip)
+        # Issue #1461 S3b-2a: dieselbe Naht wie in `_send_alert()` -- die
+        # Schwelle filtert nur den Versand, `effective_channels` bleibt ROH
+        # fuers Protokoll (rote Linie #638).
+        _official_urgency = alert_urgency.highest_urgency(*[
+            alert_urgency.urgency_from_official_level(a.level)
+            for a, _segment_ids in official_notices
+        ])
+        _official_allowed, _official_suppressed = alert_channel_threshold.split_by_threshold(
+            effective_channels, _official_urgency, trip.alert_channel_thresholds,
+        )
         result = self._notification_service.send_official_alert(
             trip=trip,
             notices=official_notices,
-            effective_channels=effective_channels,
+            effective_channels=_official_allowed,
             mail_sink=self._mail_sink,
             telegram_style=_trip_telegram_style(trip),
         )
@@ -1150,10 +1193,7 @@ class TripAlertService:
         alert_log.append_entry(
             self._user_id, entity_id=trip.id, entity_type="trip",
             changes_count=len(official_notices),
-            severity=alert_urgency.highest_urgency(*[
-                alert_urgency.urgency_from_official_level(a.level)
-                for a, _segment_ids in official_notices
-            ]),
+            severity=_official_urgency,
             hazards=alert_log.hazards_from_official_alerts(
                 [a for a, _segment_ids in official_notices]
             ),
@@ -1161,6 +1201,7 @@ class TripAlertService:
             effective_channels=effective_channels,
             sent_channels=result.delivered_channels,
             reachable_channels=result.sent_channels,
+            below_threshold_channels=_official_suppressed,
         )
         if result.sent:
             self._record_official_alert_state(trip.id, official_notices)

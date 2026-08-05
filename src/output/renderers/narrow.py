@@ -389,26 +389,34 @@ def _official_alert_bubble(
 
     Nutzt den GETEILTEN `render_official_alert_telegram` — kein zweiter
     Renderer, keine SMS-Kuerzel, keine Kappung (Telegram ist ausgeschrieben).
-    Gefiltert wird ueber dasselbe `MIN_SMS_LEVEL` wie die SMS: beide Kanaele
+    Gefiltert wird ueber dieselbe Schwelle wie die Trip-SMS: beide Kanaele
     zeigen dieselbe Teilmenge, nur unterschiedlich lang ausformuliert
     (ADR-0025). Ohne Warnung >= Filter -> `None` -> Bubble-Liste bleibt
     bit-identisch zum Stand vor #1318.
 
+    Issue #1461 S3b-2a: die Schwelle ist die per Telegram-Kanal eingestellte
+    Trip-Kanal-Schwelle (Startwert 'gering' == Stufe 2) statt des aelteren
+    festen `MIN_SMS_LEVEL` (Stufe 3, Ist-Verhalten bis hierhin).
+
     `trip` ist optional: fehlt es, faellt nur die "gesamte Route"-Verdichtung
-    des Umfangs weg — die Warnung selbst haengt an den Segmenten und darf nie
-    an einem fehlenden Kontext-Parameter scheitern.
+    des Umfangs UND die Trip-Kanal-Schwelle (-> Startwert 'gering') weg — die
+    Warnung selbst haengt an den Segmenten und darf nie an einem fehlenden
+    Kontext-Parameter scheitern.
     """
+    import services.alert_urgency as alert_urgency
     from output.renderers.alert.official_alerts import (
         build_official_alert_notices, official_alert_source_label,
         render_official_alert_telegram,
     )
-    from output.tokens.hazard_symbols import MIN_SMS_LEVEL
+
+    _threshold = (trip.alert_channel_thresholds or {}).get("telegram") if trip else None
+    _min_level = alert_urgency.min_official_level_for_threshold(_threshold or "LOW")
 
     tagged = [
         (alert, [str(sd.segment.segment_id)])
         for sd in segments
         for alert in (getattr(sd, "official_alerts", None) or [])
-        if alert.level >= MIN_SMS_LEVEL
+        if alert.level >= _min_level
     ]
     if not tagged:
         return None

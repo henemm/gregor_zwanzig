@@ -51,5 +51,6 @@
 		{activeMetrics}
 		{metricLevels}
 		{existingChannels}
+		existingChannelThresholds={trip.alert_channel_thresholds}
 	/>
 </div>
