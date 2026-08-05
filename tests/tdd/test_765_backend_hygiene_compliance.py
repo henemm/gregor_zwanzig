@@ -76,6 +76,12 @@ _SELF_EXEMPT = {
     # Kernlauf); geprueft wird Deckungsgleichheit zweier Listen, nicht das
     # Vorkommen eines Code-Strings. Spec: docs/specs/modules/egress_guard_go.md
     "test_egress_inventory_drift.py",
+    # #1364: user_id-Muster-Paritaet Python <-> Go. Liest
+    # internal/handler/passkey.go als DATEN, um das Go-Registrierungsmuster
+    # gegen app.loader.VALID_USER_ID_RE zu stellen (Go aus Python nur als
+    # Text erreichbar) — gleiche Werkzeug-Klasse wie
+    # test_egress_inventory_drift.py; # doc-compliance-test.
+    "test_user_id_pattern_parity.py",
     # #1412 S2a: Empfaenger-Regelwerk-Paritaet Python <-> Go. Zwei
     # Strukturregeln auf Quelltext-als-Daten — die Konstantenmengen aus
     # internal/mail/sender.go (Go aus Python nur als Text erreichbar) und eine
