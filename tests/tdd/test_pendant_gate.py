@@ -18,6 +18,7 @@ Worktree den Worktree-Stand prueft und nicht die Hauptrepo-Kopie.
 """
 from __future__ import annotations
 
+import importlib.util as _gz_ilu
 import json
 import os
 import re
@@ -31,6 +32,24 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 HOOKS = REPO / ".claude" / "hooks"
 GATE = HOOKS / "pendant_gate.py"
+
+# Plugin-Sonde (Muster der 9 Hook-Suiten aus #1196 Schnitt 2): pendant_gate.py
+# laeuft ueber hook_utils, einen Shim auf das installierte agent-os-openspec-
+# Plugin. Ohne Plugin (CI-Runner, Web-Sessions) meldet das Gate fail-open
+# "gestoert ... UNGEPRUEFT durchgelassen" (#1307/#1431) — die Block-Tests
+# waeren dann strukturell rot. Sauber ueberspringen statt rot; auf dem
+# Server (Plugin vorhanden) laeuft die Suite vollstaendig.
+_gz_hook_utils = HOOKS / "hook_utils.py"
+try:
+    _gz_spec = _gz_ilu.spec_from_file_location("_gz_hook_utils_probe", _gz_hook_utils)
+    _gz_mod = _gz_ilu.module_from_spec(_gz_spec)
+    _gz_spec.loader.exec_module(_gz_mod)
+except ImportError as _gz_exc:
+    pytest.skip(
+        f"agent-os-openspec-Plugin fehlt ({_gz_exc}) — Hook-Suite braucht die "
+        "installierten Server-Hooks (#1196)",
+        allow_module_level=True,
+    )
 
 FE = "frontend/src/lib/components"
 RENDERER = "src/output/renderers"
