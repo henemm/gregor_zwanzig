@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 import uuid
 from datetime import date
 from pathlib import Path
@@ -1059,13 +1060,28 @@ def get_data_root() -> Path:
     return Path(_root) if _root else Path("data")
 
 
+# Issue #1364: kanonisches Zulassungsmuster fuer Nutzer-Kennungen im
+# Python-Core. MUSS synchron bleiben mit der Go-Registrierung
+# (internal/handler/passkey.go, validUsernameRe) — Paritaets-Test:
+# tests/unit/test_user_id_pattern_parity.py. Zweite Verteidigungslinie
+# hinter dem Go-Proxy (der injiziert die Session-Kennung, proxy.go).
+VALID_USER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
 def get_data_dir(user_id: str = "default") -> Path:
     """Get the data directory for a user.
 
     Honors the module-level ``_DATA_ROOT`` override (used in tests) and,
     as a fallback, the ``GZ_DATA_DIR`` environment variable (Issue #1133).
     Priority: ``_DATA_ROOT`` > ``GZ_DATA_DIR`` > default ``data/users``.
+
+    Issue #1364: rejects any ``user_id`` that is not a plain directory name
+    (pattern above). Ohne Pruefung verliess der Pfad per ``../users/bob``
+    das eigene Nutzerverzeichnis — am GPX-Endpoint praktisch vorgefuehrt
+    (#1352). Zentral hier, damit alle Aufrufer gedeckt sind.
     """
+    if not VALID_USER_ID_RE.match(user_id):
+        raise ValueError(f"invalid user_id: {user_id!r}")
     return get_data_root() / "users" / user_id
 
 
