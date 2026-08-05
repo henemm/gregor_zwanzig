@@ -195,14 +195,26 @@ def _build_url(run: datetime, offset: int, param: str) -> str:
 def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[float]:
     """Entpackt eine `.grib2.bz2`-Antwort und liest den Pixelwert von Band 1
     an (lat, lon) — Muster meteofrance._read_point_value, ergänzt um den
-    `bz2.decompress`-Schritt (ICON-D2 liefert komprimiert, AROME-WCS nicht)."""
+    `bz2.decompress`-Schritt (ICON-D2 liefert komprimiert, AROME-WCS nicht).
+
+    #1354: Der Fuellwert ausserhalb des Modellgebiets wird hier ZENTRAL zu
+    `None` — sonst stuende er als echter Messwert in der Vorhersage. Quelle
+    der Wahrheit ist `dataset.nodata`; ist es nicht gesetzt, traegt der
+    bekannte Sentinel. Vergleich `>=`: echte Messwerte erreichen diese
+    Groessenordnung nie."""
     try:
         raw = bz2.decompress(compressed)
         with MemoryFile(raw) as memfile, memfile.open() as dataset:
             row, col = dataset.index(lon, lat)
             row = min(max(row, 0), dataset.height - 1)
             col = min(max(col, 0), dataset.width - 1)
-            return float(dataset.read(1)[row, col])
+            wert = float(dataset.read(1)[row, col])
+            sentinel = (
+                float(dataset.nodata)
+                if dataset.nodata is not None
+                else THUNDER_FILL_VALUE
+            )
+            return None if wert >= sentinel else wert
     except Exception:
         logger.warning("GRIB2-Parsing fehlgeschlagen", exc_info=True)
         return None
@@ -359,7 +371,8 @@ class DwdDirectProvider:
             wert = _read_point_value(raw, lat, lon)
             # AC-2: "keine Aussage" ist nicht "keine Gefahr" — der Fuellwert
             # ausserhalb des Modellgebiets wird NIE durchgereicht und NIE 0.
-            if wert is None or wert >= THUNDER_FILL_VALUE:
+            # Seit #1354 filtert ihn `_read_point_value` zentral zu None.
+            if wert is None:
                 return None
             return wert
 
