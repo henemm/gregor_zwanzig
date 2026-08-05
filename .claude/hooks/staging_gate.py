@@ -109,8 +109,16 @@ def _commit_e2e_path(sha: str | None = None) -> Path:
     return _e2e_paths.commit_e2e_path(_shared_repo_dir(), sha or _head_sha())
 
 
-def _scope_diff_base() -> str:
+def _scope_diff_base(head: str | None = None) -> str:
     """Diff-Basis für die Scope-Erkennung (Issue #916).
+
+    #1307 Scheibe B (AC-1): ``head`` wird vom Aufrufer durchgereicht, damit der
+    Commit-Stand pro write_verdict()-Lauf genau EINMAL ermittelt wird. Ohne
+    Argument (Direktaufruf) bleibt das Verhalten unverändert — der Stand wird
+    dann hier selbst frisch geholt. Bewusst KEIN Zwischenspeicher über
+    Aufrufgrenzen hinweg: tests/tdd/test_e2e_commit_namespacing.py:104-111 ruft
+    write_verdict() zweimal im selben Prozess mit einem Commit-Wechsel dazwischen
+    auf und verlangt je den eigenen Stand.
 
     Ist ein Gate-Marker vorhanden UND der SHA im Repo auflösbar → Marker-SHA
     (deckt ALLE Commits seit dem letzten erfolgreichen Gate-Lauf ab). Sonst
@@ -132,28 +140,21 @@ def _scope_diff_base() -> str:
     übernommen, nie ein gecachter Scope-WERT — der Scope wird weiterhin immer
     frisch aus dem echten git-diff berechnet (F001 bleibt unberührt).
     """
-    head = _head_sha()
+    head = head if head is not None else _head_sha()
     preflight_base = _e2e_paths.read_preflight_base(_shared_repo_dir(), head)
     if preflight_base is not None:
-        resolvable = subprocess.run(
-            ["git", "cat-file", "-e", preflight_base],
-            capture_output=True, text=True, cwd=str(_verified_repo_dir()),
-        )
-        if resolvable.returncode == 0:
+        if _e2e_paths.commit_exists(preflight_base, _verified_repo_dir()):
             return preflight_base
 
     marker_sha = _e2e_paths.read_last_gate_scope(_shared_repo_dir())
-    if marker_sha and marker_sha != _head_sha():
-        resolvable = subprocess.run(
-            ["git", "cat-file", "-e", marker_sha],
-            capture_output=True, text=True, cwd=str(_verified_repo_dir()),
-        )
-        if resolvable.returncode == 0:
+    if marker_sha and marker_sha != head:
+        if _e2e_paths.commit_exists(marker_sha, _verified_repo_dir()):
             return marker_sha
     return "HEAD~1"
 
 
-def _detect_committed_scope(expected_commit: str | None = None) -> str:
+def _detect_committed_scope(expected_commit: str | None = None,
+                            head: str | None = None) -> str:
     """Klassifiziert die Commits seit dem Gate-Marker (Fallback HEAD~1..HEAD).
 
     Issue #1096: läuft ein zweiter --check-Lauf auf demselben HEAD (z.B.
@@ -171,10 +172,16 @@ def _detect_committed_scope(expected_commit: str | None = None) -> str:
     Returns: frontend-only | backend | full-stack | docs-only
     """
     if expected_commit is None:
-        cached = _e2e_paths.cached_scope_for_sha(_shared_repo_dir(), _head_sha())
+        # #1307 Scheibe B (AC-1): durchgereichten Stand nutzen, sonst genau hier
+        # einmal frisch ermitteln und an _scope_diff_base() weitergeben. Bewusst
+        # IN diesem Zweig statt am Funktionsanfang: der Preflight-Zweig unten
+        # braucht HEAD nicht, und beim Beheben von "fragt zu oft" darf keine
+        # zusaetzliche Abfrage entstehen.
+        head = head if head is not None else _head_sha()
+        cached = _e2e_paths.cached_scope_for_sha(_shared_repo_dir(), head)
         if cached is not None:
             return cached
-        base, target = _scope_diff_base(), "HEAD"
+        base, target = _scope_diff_base(head), "HEAD"
     else:
         base, target = "HEAD", expected_commit
 
@@ -223,16 +230,11 @@ def _telegram_live_gate() -> int:
         _log(f"WARN: e2e_telegram_live nicht ladbar ({exc}) — Telegram-Gate übersprungen.", stream=sys.stderr)
         return 0
 
-    result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
-        capture_output=True, text=True, cwd=str(_verified_repo_dir()),
-    )
-    if result.returncode != 0:
-        # Fehlgeschlagener Diff (z.B. kein HEAD~1) -> konservativ als
-        # potenziell Telegram-relevant behandeln (Issue #1121, AC-5).
-        changed = None
-    else:
-        changed = [f.strip() for f in result.stdout.splitlines() if f.strip()]
+    # #1307 Scheibe B (AC-5): Datei-Diff ueber die gemeinsame Stelle statt eines
+    # eigenen Subprozesses. Semantik unveraendert — _git_diff_names() liefert
+    # None bei fehlgeschlagenem Diff (z.B. kein HEAD~1), was unten konservativ
+    # als potenziell Telegram-relevant behandelt wird (Issue #1121, AC-5).
+    changed = _e2e_paths._git_diff_names("HEAD~1", "HEAD", _verified_repo_dir())
     if changed is not None and not mod._scope_touches_telegram(changed):
         return 0
     if mod.gate(scope_touches_telegram=True, env=dict(os.environ)) != 0:
@@ -291,7 +293,7 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
         for f in findings
     ]
 
-    scope = scope_override or _detect_committed_scope()
+    scope = scope_override or _detect_committed_scope(head=sha)
     payload = {
         "verified_commit": sha,
         "staging_verdict": verdict,
@@ -396,6 +398,11 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
     # fälschlich "docs-only" → fail-open Exit 0 OHNE Attestations-Prüfung. Genau
     # das darf dieser Preflight nie: fail-closed VOR jeder Scope-/Skip-Logik.
     if preflight:
+        # Bewusst eigenstaendig (AC-7, #1307 Scheibe B): `rev-parse --verify`
+        # liefert die volle SHA auf stdout — das kann eine reine
+        # Existenzpruefung (_e2e_paths.commit_exists) nicht, und genau die
+        # volle SHA braucht die #1382-Normalisierung wenige Zeilen weiter unten.
+        # Deshalb NICHT an die gemeinsame Stelle delegiert.
         resolved = subprocess.run(
             ["git", "rev-parse", "--verify", "--quiet", f"{expected_commit}^{{commit}}"],
             capture_output=True, text=True, cwd=str(_verified_repo_dir()),
@@ -461,6 +468,9 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
         if not explicit_path:
             ancestor, _cdata = _e2e_paths._nearest_verified_ancestor(ref, git_dir, _shared_repo_dir())
         if ancestor is not None:
+            # Bewusst eigenstaendig (AC-7, #1307 Scheibe B): einzige
+            # Ancestor-Pruefung im Hook-Baum, kein Gegenstueck im gemeinsamen
+            # Modul — deshalb NICHT an die gemeinsame Stelle delegiert.
             is_anc = subprocess.run(
                 ["git", "merge-base", "--is-ancestor", ancestor, ref],
                 capture_output=True, text=True, cwd=str(git_dir),

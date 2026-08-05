@@ -6,6 +6,7 @@ Provides ground truth fetcher for TDD tests.
 
 import importlib.util as _importlib_util
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -124,6 +125,79 @@ def _init_evidence_free_repo(root: Path) -> str:
     return subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True
     ).stdout.strip()
+
+
+# ---------------------------------------------------------------------------
+# Aufgezeichnetes `gh` als PATH-Shim (#1307 Scheibe B, CI-Rot vom 2026-08-05)
+#
+# `pre_issue_close_design_gate.py` holt die Kennzeichen eines Issues per
+# `gh issue view <N> --json labels` und laeuft bei jedem gh-Fehler bewusst
+# fail-open (Exit 0). Auf dem Bauserver gibt es kein angemeldetes gh — dort
+# belegten die Waechter-Tests deshalb NICHTS: sie waeren auch dann gruen
+# geblieben, wenn der Waechter kaputt ist, sobald das Fail-open zufaellig zum
+# erwarteten Ergebnis passt.
+#
+# Gegenmittel ohne Mock-Theater: ein echtes ausfuehrbares Ersatzskript an
+# erster PATH-Stelle, das AUFGEZEICHNETE Antworten liefert (Muster: der
+# git-Shim in test_issue_668_head_sha_dedup.py). Echtes Skript, echter
+# Subprozess, deterministisch und netzfrei.
+# ---------------------------------------------------------------------------
+
+# Abgerufen am 2026-08-05 mit `gh -R henemm/gregor_zwanzig issue view <N>
+# --json labels`. #603 traegt design-compliance (der Waechter greift), #1
+# traegt gar kein Kennzeichen (der Waechter darf nicht greifen).
+RECORDED_ISSUE_LABELS = {
+    "603": ["type:rework", "frontend", "design-compliance"],
+    "1": [],
+}
+
+_GH_SHIM_TEMPLATE = '''#!{python}
+"""Aufgezeichnetes `gh` fuer Waechter-Tests — echtes Skript, kein Mock."""
+import json
+import sys
+
+RECORDED = {recorded}
+argv = sys.argv[1:]
+with open({log!r}, "a") as fh:
+    fh.write(" ".join(argv) + "\\n")
+if argv[:2] == ["issue", "view"] and "--json" in argv:
+    labels = RECORDED.get(argv[2])
+    if labels is None:
+        sys.stderr.write("gh-Ersatz: Issue %s ist nicht aufgezeichnet\\n" % argv[2])
+        sys.exit(1)
+    print(json.dumps({{"labels": [{{"name": n}} for n in labels]}}))
+    sys.exit(0)
+sys.stderr.write("gh-Ersatz: unerwarteter Aufruf: %r\\n" % (argv,))
+sys.exit(1)
+'''
+
+
+def gh_shim_call_log(shim_dir: Path) -> list[str]:
+    """Die Aufrufe, die das Ersatz-`gh` tatsaechlich gesehen hat.
+
+    Damit laesst sich pruefen, dass der Waechter die Kennzeichen wirklich
+    abgefragt hat — ein leeres Protokoll heisst, er ist vorher ausgestiegen.
+    """
+    log = shim_dir / "gh-calls.log"
+    return log.read_text().splitlines() if log.exists() else []
+
+
+def install_recorded_gh(shim_dir: Path) -> Path:
+    """Legt das Ersatz-`gh` in ``shim_dir`` an und gibt das Verzeichnis zurueck."""
+    shim_dir.mkdir(parents=True, exist_ok=True)
+    shim = shim_dir / "gh"
+    shim.write_text(_GH_SHIM_TEMPLATE.format(
+        python=sys.executable,
+        recorded=repr(RECORDED_ISSUE_LABELS),
+        log=str(shim_dir / "gh-calls.log"),
+    ))
+    shim.chmod(0o755)
+    return shim_dir
+
+
+def gh_shim_path(shim_dir: Path) -> str:
+    """PATH-Wert mit dem Ersatz-`gh` an erster Stelle."""
+    return f"{install_recorded_gh(shim_dir)}{os.pathsep}{os.environ.get('PATH', '')}"
 
 
 def pytest_configure(config: pytest.Config) -> None:

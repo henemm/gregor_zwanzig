@@ -162,6 +162,22 @@ def _git_diff_names(base, target, repo_dir) -> "list[str] | None":
     return [f.strip() for f in result.stdout.splitlines() if f.strip()]
 
 
+def commit_exists(sha, repo_dir) -> bool:
+    """Prüft per `git cat-file -e`, ob `sha` in repo_dir auflösbar ist.
+
+    Gemeinsame Stelle für die zuvor fünffach duplizierte Existenzprüfung
+    (#1307 Scheibe B, Befund 4): staging_gate._scope_diff_base() (2x) und
+    prod_selftest._scope_diff_base() (3x) setzten je einen eigenen Subprozess
+    ab. Verhalten unverändert übernommen: Rückgabecode 0 → True, sonst False
+    (der Aufrufer weicht dann auf seine nächste Basis aus).
+    """
+    result = subprocess.run(
+        ["git", "cat-file", "-e", sha],
+        capture_output=True, text=True, cwd=str(repo_dir),
+    )
+    return result.returncode == 0
+
+
 def _detect_scope_from_git_diff(base, target, repo_dir) -> str:
     """Scope-Klassifikation des Diffs base..target (Issue #1121).
 

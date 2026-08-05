@@ -614,31 +614,21 @@ def _scope_diff_base(repo_dir: Path = REPO_DIR) -> str:
         except (OSError, json.JSONDecodeError, ValueError):
             prod_deploy_data = {}
 
+        # #1307 Scheibe B (AC-5): Existenzpruefungen laufen ueber die gemeinsame
+        # Stelle _e2e_paths.commit_exists() statt je eigener git-Subprozesse.
         previous_commit = prod_deploy_data.get("previous_commit")
         if previous_commit and previous_commit != head:
-            resolvable = subprocess.run(
-                ["git", "cat-file", "-e", previous_commit],
-                capture_output=True, text=True, cwd=str(repo_dir),
-            )
-            if resolvable.returncode == 0:
+            if _e2e_paths.commit_exists(previous_commit, repo_dir):
                 return previous_commit
 
         deployed_commit = prod_deploy_data.get("deployed_commit")
         if deployed_commit and deployed_commit != head:
-            resolvable = subprocess.run(
-                ["git", "cat-file", "-e", deployed_commit],
-                capture_output=True, text=True, cwd=str(repo_dir),
-            )
-            if resolvable.returncode == 0:
+            if _e2e_paths.commit_exists(deployed_commit, repo_dir):
                 return deployed_commit
 
     marker_sha = _e2e_paths.read_last_gate_scope(repo_dir)
     if marker_sha and marker_sha != head:
-        resolvable = subprocess.run(
-            ["git", "cat-file", "-e", marker_sha],
-            capture_output=True, text=True, cwd=str(repo_dir),
-        )
-        if resolvable.returncode == 0:
+        if _e2e_paths.commit_exists(marker_sha, repo_dir):
             return marker_sha
     return "HEAD~1"
 

@@ -19,7 +19,11 @@ vs "UNKNOWN", kaputter .json-Name, fehlender Import).
 """
 
 import importlib.util
+import json
+import os
+import shutil
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -165,18 +169,248 @@ class TestCommitPathHardening:
 
 
 # ---------------------------------------------------------------------------
-# AC-5: Pfad-Logik nur noch im gemeinsamen Modul (doc-compliance-test)
+# AC-5 / AC-7 (#1307 Scheibe B): Delegation wird an ihrer WIRKUNG geprüft.
+#
+# Der frühere Test dieser Klasse suchte per `assert "rev-parse" not in src` im
+# Quelltext beider Hooks. Das war eine Formprüfung: durch `"rev-" + "parse"`
+# trivial umgehbar, blind für vier weitere direkte git-Aufrufe und zugleich
+# ein Fehlalarm auf `staging_gate.py:400` (eine legitime, bewusst
+# eigenständige Zeile). Ersetzt durch einen Delegations-Zähler gegen ein
+# echtes Temp-Repo.
+#
+# Messprinzip (kein Mock): ein echtes `git`-Ersatzskript im Suchpfad zählt die
+# tatsächlich ausgeführten Subprozesse; parallel zählt ein Wrapper um die
+# gemeinsame Funktion, wie viele davon INNERHALB eines Aufrufs dieser Funktion
+# passierten. Die echte Funktion läuft dabei unverändert weiter. Was übrig
+# bleibt (`outside`), lief an der gemeinsamen Stelle vorbei.
 # ---------------------------------------------------------------------------
-class TestPathLogicConsolidated:
-    @pytest.mark.xfail(reason="#1307: staging_gate umgeht Shared-Modul _e2e_paths (direkte git rev-parse-Aufrufe), bricht #665-Konsolidierung", strict=False)
-    def test_path_logic_only_in_shared_module(self):
-        # doc-compliance-test
-        """Beide Hooks importieren _e2e_paths und delegieren — keine duplizierte
-        git-rev-parse-Logik mehr in beiden Hook-Dateien."""
-        assert E2E_PATHS.exists(), "_e2e_paths.py muss existieren"
-        sg_src = STAGING_GATE.read_text()
-        ps_src = PROD_SELFTEST.read_text()
-        for src, name in ((sg_src, "staging_gate"), (ps_src, "prod_selftest")):
-            assert "_e2e_paths" in src, f"{name} importiert _e2e_paths nicht"
-            # git rev-parse darf nur noch im gemeinsamen Modul stehen, nicht im Hook.
-            assert "rev-parse" not in src, f"{name} enthält noch duplizierte rev-parse-Logik"
+
+_SHIM = """#!/usr/bin/env bash
+if [ "$1" = "cat-file" ] && [ "$2" = "-e" ]; then printf x >> "{catfile}"; fi
+if [ "$1" = "diff" ] && [ "$2" = "--name-only" ]; then printf x >> "{diff}"; fi
+if [ "$1" = "merge-base" ] && [ "$2" = "--is-ancestor" ]; then printf x >> "{mergebase}"; fi
+if [ "$1" = "rev-parse" ] && [ "$2" = "--verify" ]; then printf x >> "{revverify}"; fi
+exec "{real_git}" "$@"
+"""
+
+
+def _count(path: Path) -> int:
+    return len(path.read_text()) if path.exists() else 0
+
+
+class _GitProbe:
+    """Zählt echte git-Subprozesse (PATH-Shim) je Kommando-Art."""
+
+    def __init__(self, tmp_path: Path, monkeypatch):
+        self.catfile = tmp_path / "n_catfile"
+        self.diff = tmp_path / "n_diff"
+        self.mergebase = tmp_path / "n_mergebase"
+        self.revverify = tmp_path / "n_revverify"
+        real_git = shutil.which("git")
+        assert real_git, "echtes git nicht auf PATH"
+        shim_dir = tmp_path / "bin"
+        shim_dir.mkdir(exist_ok=True)
+        shim = shim_dir / "git"
+        shim.write_text(
+            _SHIM.format(
+                catfile=self.catfile, diff=self.diff, mergebase=self.mergebase,
+                revverify=self.revverify, real_git=real_git,
+            )
+        )
+        shim.chmod(0o755)
+        monkeypatch.setenv("PATH", f"{shim_dir}:{os.environ['PATH']}")
+
+    def reset(self) -> None:
+        for p in (self.catfile, self.diff, self.mergebase, self.revverify):
+            p.unlink(missing_ok=True)
+
+
+class _Delegation:
+    """Wrapper um eine gemeinsame Funktion: zählt Aufrufe UND die dabei
+    ausgelösten Subprozesse. Die echte Funktion bleibt aktiv (kein Mock,
+    kein verändertes Verhalten)."""
+
+    def __init__(self, counter: Path):
+        self.counter = counter
+        self.calls = 0
+        self.inside = 0
+
+    def wrap(self, module, attr: str) -> None:
+        orig = getattr(module, attr)
+
+        def wrapped(*args, **kwargs):
+            before = _count(self.counter)
+            try:
+                return orig(*args, **kwargs)
+            finally:
+                self.calls += 1
+                self.inside += _count(self.counter) - before
+
+        setattr(module, attr, wrapped)
+
+    @property
+    def outside(self) -> int:
+        return _count(self.counter) - self.inside
+
+
+def _init_repo_two_commits(root: Path) -> "tuple[str, str]":
+    """Echtes Repo mit zwei Commits — HEAD~1 muss auflösbar sein."""
+    _init_repo(root)
+    (root / "src" / "y.py").write_text("b = 2\n")
+    _git(["add", "-A"], root)
+    _git(["commit", "-qm", "c2"], root)
+    head = _git(["rev-parse", "HEAD"], root).stdout.strip()
+    prev = _git(["rev-parse", "HEAD~1"], root).stdout.strip()
+    return head, prev
+
+
+class TestSharedGitDelegation:
+    def test_commit_existence_checks_go_through_shared_module(self, monkeypatch, tmp_path):
+        """AC-5: Jede Prüfung 'existiert dieser Commit?' in staging_gate UND
+        prod_selftest läuft über `_e2e_paths.commit_exists()`.
+
+        RED heute: die gemeinsame Funktion existiert noch nicht; beide Hooks
+        setzen fünfmal ein eigenes `git cat-file -e` ab.
+        """
+        root = tmp_path / "repo"
+        root.mkdir()
+        head, prev = _init_repo_two_commits(root)
+
+        sg, ps = _both_hooks()
+        _patch_paths(monkeypatch, sg, root)
+        _patch_paths(monkeypatch, ps, root)
+        monkeypatch.setattr(ps, "REPO_DIR", root)
+
+        for mod, name in ((sg, "staging_gate"), (ps, "prod_selftest")):
+            assert hasattr(mod._e2e_paths, "commit_exists"), (
+                f"{name}: die gemeinsame Stelle _e2e_paths.commit_exists(sha, repo_dir) "
+                "fehlt — Commit-Existenzprüfungen sind noch je Hook dupliziert "
+                "(staging_gate.py:139/:148, prod_selftest.py:620/:629/:638)"
+            )
+
+        probe = _GitProbe(tmp_path, monkeypatch)
+        deleg = _Delegation(probe.catfile)
+        deleg.wrap(sg._e2e_paths, "commit_exists")
+        deleg.wrap(ps._e2e_paths, "commit_exists")
+
+        marker = root / ".claude" / "last_gate_scope.json"
+        preflight = root / ".claude" / "last_preflight_base.json"
+        prod_deploy = root / ".claude" / "last_prod_deploy.json"
+
+        # (1) staging_gate: hinterlegte Preflight-Basis
+        sg._e2e_paths.write_preflight_base(root, head, prev)
+        sg._scope_diff_base()
+        preflight.unlink(missing_ok=True)
+
+        # (2) staging_gate: Gate-Marker
+        sg._e2e_paths.write_last_gate_scope(root, prev)
+        sg._scope_diff_base()
+
+        # (3) prod_selftest: previous_commit aus last_prod_deploy.json
+        prod_deploy.write_text(json.dumps({"previous_commit": prev}))
+        ps._scope_diff_base(root)
+
+        # (4) prod_selftest: deployed_commit
+        prod_deploy.write_text(json.dumps({"deployed_commit": prev}))
+        ps._scope_diff_base(root)
+
+        # (5) prod_selftest: Gate-Marker
+        prod_deploy.unlink(missing_ok=True)
+        ps._scope_diff_base(root)
+
+        assert marker.exists(), "Marker-Datei muss für (2)/(5) wirksam sein"
+        assert deleg.calls >= 5, (
+            f"Nur {deleg.calls} Aufruf(e) der gemeinsamen Stelle beobachtet — der "
+            "Ablauf hat gar nicht geprüft, ob ein Commit existiert (der Test misst nichts)"
+        )
+        assert deleg.outside == 0, (
+            f"{deleg.outside} Commit-Existenzprüfung(en) liefen als direkter "
+            "git-Subprozess an _e2e_paths.commit_exists() vorbei"
+        )
+
+    def test_file_diff_lookups_go_through_shared_module(self, monkeypatch, tmp_path):
+        """AC-5: Jede Ermittlung 'welche Dateien haben sich geändert?' läuft
+        über `_e2e_paths._git_diff_names()`.
+
+        RED heute: `staging_gate._telegram_live_gate()` (:226-229) setzt ein
+        eigenes `git diff --name-only HEAD~1 HEAD` ab.
+        """
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo_two_commits(root)
+
+        sg, ps = _both_hooks()
+        _patch_paths(monkeypatch, sg, root)
+        _patch_paths(monkeypatch, ps, root)
+        monkeypatch.setattr(ps, "REPO_DIR", root)
+
+        probe = _GitProbe(tmp_path, monkeypatch)
+        deleg = _Delegation(probe.diff)
+        deleg.wrap(sg._e2e_paths, "_git_diff_names")
+        deleg.wrap(ps._e2e_paths, "_git_diff_names")
+
+        sg._telegram_live_gate()
+        sg._detect_committed_scope()
+        ps._detect_committed_scope(root)
+
+        assert deleg.calls > 0, (
+            "Kein Aufruf der gemeinsamen Stelle beobachtet — der Ablauf hat gar "
+            "keinen Datei-Diff ermittelt (der Test misst nichts)"
+        )
+        assert deleg.outside == 0, (
+            f"{deleg.outside} Datei-Diff(s) liefen als direkter git-Subprozess an "
+            "_e2e_paths._git_diff_names() vorbei"
+        )
+
+    def test_merge_base_and_rev_parse_verify_stay_outside_this_check(
+        self, monkeypatch, tmp_path
+    ):
+        """AC-7: `git merge-base --is-ancestor` (staging_gate.py:465) und
+        `git rev-parse --verify <ref>^{commit}` (:400) bleiben BEWUSST
+        eigenständig — für beide gibt es kein Gegenstück im gemeinsamen Modul
+        (`rev-parse --verify` liefert zusätzlich die volle SHA auf stdout, was
+        eine reine Existenzprüfung nicht kann; die Ancestor-Prüfung ist die
+        einzige Fundstelle im Hook-Baum). Der Delegations-Zähler darf deshalb
+        NICHT anschlagen, obwohl beide Kommandos hier nachweislich laufen.
+        """
+        root = tmp_path / "repo"
+        root.mkdir()
+        head, prev = _init_repo_two_commits(root)
+
+        sg, _ps = _both_hooks()
+        _patch_paths(monkeypatch, sg, root)
+
+        # VERIFIED-Nachweis für den Vorgänger → die Ancestor-Auflösung greift
+        # und löst `merge-base --is-ancestor` aus.
+        att = root / ".claude" / "e2e_verified" / f"{prev}.json"
+        att.parent.mkdir(parents=True, exist_ok=True)
+        att.write_text(json.dumps({
+            "verified_commit": prev,
+            "staging_verdict": "VERIFIED: ok",
+            "verified_at": datetime.now(timezone.utc).isoformat(),
+            "scope": "backend",
+        }))
+
+        probe = _GitProbe(tmp_path, monkeypatch)
+        catfile = _Delegation(probe.catfile)
+        diffs = _Delegation(probe.diff)
+        if hasattr(sg._e2e_paths, "commit_exists"):
+            catfile.wrap(sg._e2e_paths, "commit_exists")
+        diffs.wrap(sg._e2e_paths, "_git_diff_names")
+
+        sg.gate_check(None, "backend", expected_commit=head)
+
+        assert _count(probe.revverify) > 0, (
+            "rev-parse --verify lief gar nicht — der Test belegt nichts"
+        )
+        assert _count(probe.mergebase) > 0, (
+            "merge-base --is-ancestor lief gar nicht — der Test belegt nichts"
+        )
+        assert catfile.outside == 0, (
+            "Der Delegations-Zähler hat auf einen der beiden bewusst "
+            "eigenständigen Aufrufe angeschlagen (cat-file-Zähler)"
+        )
+        assert diffs.outside == 0, (
+            "Der Delegations-Zähler hat auf einen der beiden bewusst "
+            "eigenständigen Aufrufe angeschlagen (diff-Zähler)"
+        )

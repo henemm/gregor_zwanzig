@@ -6,10 +6,12 @@ PATH-Shim-`git` (echtes ausführbares Skript, das in eine Zählerdatei schreibt 
 an das echte git delegiert). REPO_DIR wird auf ein echtes temporäres Git-Repo
 gepatcht, damit der No-Override-Schreibpfad das Hauptrepo nicht verschmutzt.
 
-ACs:
-  AC-1: ohne --e2e-path-Override → genau 1× `git rev-parse HEAD` (vor Fix: 2)
-  AC-2: verified_commit == aktueller HEAD-SHA (Regressionsschutz)
-  AC-3: mit Override → Datei am Override-Pfad, verified_commit korrekt
+ACs (#1307 Scheibe B, AC-1/AC-2):
+  AC-1: ohne --e2e-path-Override → genau 1× `git rev-parse HEAD`
+        (a) ohne Marker-Datei   (deckt die Pfade :135, :174, :252)
+        (b) MIT Marker-Datei    (deckt zusätzlich den vierten Pfad :146)
+  AC-2 (#668, Regressionsschutz): verified_commit == aktueller HEAD-SHA
+  AC-2 (#1307): mit Override → Datei am Override-Pfad, ebenfalls genau 1×
 """
 
 import importlib.util
@@ -100,9 +102,58 @@ def patched_repo(tmp_path, monkeypatch):
     return {"repo": repo, "head": head, "findings": findings, "counter": counter}
 
 
-@pytest.mark.xfail(reason="#1307: staging_gate _head_sha() ruft git rev-parse HEAD 2x statt 1x (Ex-#1132-Wiedergaenger)", strict=False)
+@pytest.fixture
+def patched_repo_with_marker(patched_repo):
+    """patched_repo + vorhandene Marker-Datei `.claude/last_gate_scope.json`.
+
+    Warum eigens: `staging_gate._scope_diff_base()` fragt bei
+    `if marker_sha and marker_sha != _head_sha():` ein VIERTES Mal nach dem
+    Commit-Stand. Dieser Zweig feuert nur, wenn der Marker existiert UND auf
+    einen anderen Commit als HEAD zeigt. Im markerlosen Testrepo bleibt er
+    stumm — der bisherige AC-1-Test misst dadurch weniger, als der Fehler
+    gross ist (#1307 Befund 3).
+
+    Das Marker-Format wird NICHT nachgebaut, sondern über den echten Schreiber
+    `_e2e_paths.write_last_gate_scope()` erzeugt. Bewusst OHNE `scope`: mit
+    `gate_last_scope` würde `cached_scope_for_sha()` in
+    `_detect_committed_scope()` greifen und `_scope_diff_base()` gar nicht
+    erst aufrufen.
+    """
+    repo = patched_repo["repo"]
+    prev = subprocess.run(
+        ["git", "rev-parse", "HEAD~1"], cwd=repo, capture_output=True, text=True
+    ).stdout.strip()
+    assert prev and prev != patched_repo["head"], "HEAD~1 muss ein anderer Commit sein"
+
+    staging_gate._e2e_paths.write_last_gate_scope(repo, prev)
+    # Gegenprobe: der Marker ist wirklich wirksam (sonst misst der Test nichts).
+    assert staging_gate._e2e_paths.read_last_gate_scope(repo) == prev, (
+        "Marker-Datei .claude/last_gate_scope.json wurde nicht wirksam angelegt"
+    )
+    # Zähler auf 0 — der Fixture-Aufbau selbst soll nicht mitgezählt werden.
+    patched_repo["counter"].unlink(missing_ok=True)
+    patched_repo["marker_sha"] = prev
+    return patched_repo
+
+
+def test_ac1_head_sha_called_once_with_gate_scope_marker(patched_repo_with_marker):
+    """AC-1 (b): mit vorhandener Marker-Datei darf `git rev-parse HEAD` genau
+    1× laufen. Vor Fix: 4× (drei bekannte Pfade + `_scope_diff_base():146`,
+    der ohne Marker nie erreicht wird)."""
+    rc = staging_gate.write_verdict(
+        "VERIFIED: alle ACs grün", patched_repo_with_marker["findings"]
+    )
+    assert rc == 0
+    n = _count(patched_repo_with_marker["counter"])
+    assert n == 1, (
+        f"git rev-parse HEAD wurde {n}x ausgeführt, erwartet genau 1 "
+        "(vierter Aufrufpfad _scope_diff_base():146 zählt bei vorhandener "
+        "Marker-Datei mit)"
+    )
+
+
 def test_ac1_head_sha_called_once_without_override(patched_repo):
-    """AC-1: ohne Override darf `git rev-parse HEAD` nur 1× laufen (vor Fix: 2×)."""
+    """AC-1 (a): ohne Override darf `git rev-parse HEAD` nur 1× laufen (vor Fix: 3×)."""
     rc = staging_gate.write_verdict("VERIFIED: alle ACs grün", patched_repo["findings"])
     assert rc == 0
     n = _count(patched_repo["counter"])
@@ -119,7 +170,6 @@ def test_ac2_verified_commit_matches_head(patched_repo):
     assert data["verified_commit"] == head
 
 
-@pytest.mark.xfail(reason="#1307: staging_gate _head_sha() ruft git rev-parse HEAD 2x statt 1x (Ex-#1132-Wiedergaenger)", strict=False)
 def test_ac3_override_path_still_works(patched_repo, tmp_path):
     """AC-3: mit --e2e-path-Override wird dorthin geschrieben, SHA korrekt, 1× rev-parse."""
     override = tmp_path / "custom_e2e.json"

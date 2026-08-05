@@ -595,10 +595,41 @@ def test_ac6b_km_shown_when_start_is_zero_but_end_positive():
 # ═════════════════════════════ AC-7 ═════════════════════════════════════════
 # Header X-GZ-Mail-Type: deviation-alert + Validator-No-Op.
 
-@pytest.mark.xfail(reason="#1307: briefing_mail_validator liefert kein sauberes No-Op fuer X-GZ-Mail-Type: deviation-alert", strict=False)
-def test_ac7_header_set_and_validator_noop():
-    """AC-7: Die Mail trägt X-GZ-Mail-Type: deviation-alert und der
-    briefing_mail_validator macht für diesen Typ ein No-Op (ok=True).
+def _load_briefing_validator(tmp_path: Path, module_name: str):
+    """Isolierte Kopie des Briefing-Mail-Prüflings.
+
+    `_write_validation_log()` berechnet sein Log-Verzeichnis relativ zu seinem
+    eigenen `__file__` (Fallback ausserhalb eines Git-Repos) — die Kopie unter
+    tmp_path hält Test-Protokolle vom echten Repo fern. Prüfling ist die
+    Fassung DIESES Checkouts (Pfadregel #1409), nicht die Hauptrepo-Kopie.
+    """
+    import importlib.util
+    import shutil as _shutil
+
+    hooks_src = Path(__file__).resolve().parents[2] / ".claude" / "hooks"
+    hooks_copy = tmp_path / f"hooks_{module_name}"
+    hooks_copy.mkdir(parents=True, exist_ok=True)
+    _shutil.copy(hooks_src / "briefing_mail_validator.py",
+                 hooks_copy / "briefing_mail_validator.py")
+    spec = importlib.util.spec_from_file_location(
+        module_name, str(hooks_copy / "briefing_mail_validator.py")
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_ac7_header_set_and_validator_reports_not_responsible(tmp_path):
+    """AC-8 (#1307 Scheibe B, korrigiert die frühere AC-7-Erwartung):
+
+    Die Mail trägt `X-GZ-Mail-Type: deviation-alert` — und der
+    Briefing-Mail-Prüfer meldet dafür KEIN Bestehen, sondern weist sich per
+    Fehlereintrag als unzuständig aus.
+
+    Die frühere Fassung forderte hier `ok=True`. Das widersprach dem Beschluss
+    aus #1282: ein `ok=True` schriebe `passed: true` ins Protokoll, und das
+    Renderer-Commit-Gate (#811) würde diesen Leerlauf als echten Nachweis
+    werten. Von zwei einander widersprechenden Prüfungen weicht diese.
     """
     seg = _segment(1)
     seg_data = SegmentWeatherData(
@@ -612,19 +643,53 @@ def test_ac7_header_set_and_validator_noop():
         "Marker-Header X-GZ-Mail-Type: deviation-alert fehlt"
     )
 
-    # briefing_mail_validator muss für fremden Typ sauber No-Op machen (ok=True).
-    import importlib.util
-    validator_path = (
-        Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "briefing_mail_validator.py"
-    )
-    spec = importlib.util.spec_from_file_location("briefing_mail_validator", validator_path)
-    validator = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(validator)
+    validator = _load_briefing_validator(tmp_path, "briefing_validator_ac7_deviation")
 
-    ok, _errors = validator.validate_message(msg)
-    assert ok is True, (
-        "briefing_mail_validator muss für X-GZ-Mail-Type: deviation-alert No-Op "
-        "(ok=True) liefern — er ist nur für trip-briefing zuständig"
+    ok, errors = validator.validate_message(msg)
+    assert ok is False, (
+        "briefing_mail_validator darf für X-GZ-Mail-Type: deviation-alert KEIN "
+        "Bestehen melden — er hat nichts geprüft (#1282: No-Op ist kein Pass). "
+        f"ok={ok!r} errors={errors!r}"
+    )
+    assert any("uebersprungen" in str(e) for e in errors), (
+        "Der Fehlereintrag muss den Prüfer als unzuständig ausweisen (Marker "
+        "'uebersprungen') — daran erkennt _write_validation_log() den Leerlauf "
+        f"und trennt ihn vom echten Fehlschlag. errors={errors!r}"
+    )
+
+
+def test_ac9_deviation_alert_log_separates_failed_from_skipped(tmp_path):
+    """AC-9: Das geschriebene Prüfprotokoll trägt BEIDE Zustände getrennt —
+    'nicht bestanden' UND 'übersprungen'.
+
+    Ohne die Trennung wäre der Leerlauf im Protokoll nicht mehr von einem
+    echten Fehlschlag unterscheidbar (Diagnose) bzw. — bei `passed: true` —
+    ein falscher Erfolgsnachweis für das Renderer-Gate.
+    """
+    seg = _segment(1)
+    seg_data = SegmentWeatherData(
+        segment=seg, timeseries=None, aggregated=SegmentWeatherSummary(),
+        fetched_at=datetime.now(timezone.utc), provider="openmeteo",
+    )
+    change = _change("precip_sum_mm", 2.0, 18.0, 10.0, seg="1")
+    msg = _build_alert_mime(changes=[change], segments=[seg_data], trip_name="GR20")
+
+    validator = _load_briefing_validator(tmp_path, "briefing_validator_ac9_log")
+    ok, errors = validator.validate_message(msg)
+    validator._write_validation_log(ok, errors)
+
+    log_dir = (tmp_path / "hooks_briefing_validator_ac9_log").parent / "workflows" / "_log"
+    logs = list(log_dir.glob("*_briefing_validation.yaml"))
+    assert logs, f"_write_validation_log() muss ein Protokoll schreiben (log_dir={log_dir})"
+
+    import yaml as _yaml
+    data = _yaml.safe_load(logs[0].read_text())
+    assert data.get("passed") is False, (
+        f"Protokoll muss 'nicht bestanden' tragen (passed: false), ist: {data!r}"
+    )
+    assert data.get("skipped") is True, (
+        "Protokoll muss den Leerlauf zusätzlich als 'übersprungen' ausweisen "
+        f"(skipped: true), ist: {data!r}"
     )
 
 
