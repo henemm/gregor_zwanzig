@@ -84,21 +84,13 @@ _SELF_EXEMPT = {
     # den echten Guard auf (Sentinel statt SMTP) und haengt an keinem
     # Dateiinhalt. Spec: docs/specs/modules/fix_1412_s2a_regelwerk_paritaet.md
     "test_mail_recipient_parity.py",
-    # #1408 F005: KEIN Gate und KEINE Werkzeug-Klasse, sondern ein
-    # FEHLALARM der Heuristik oben — der Test liest ueberhaupt keinen
-    # Produkt-Quelltext. Seine `read_text()`-Ziele sind YAML-Protokolle unter
-    # `tmp_path`; die vier Produktpfade in `_GATE_CASES` sind reine NAMENS-
-    # Daten (der Test LEGT unter tmp_path gleichnamige Attrappen an und
-    # uebergibt den Namen an renderer_mail_gate). Weil ein `read_text()`-Ziel
-    # eine Schleifen-/Comprehension-Variable ist, erntet
-    # `_collect_listed_product_paths()` jedes Listen-/Tupel-Literal der Datei —
-    # auch solche, die gar keine Dateiliste sind. Die Heuristik gehoert
-    # praeziser gefasst (nur homogene Pfadlisten); das ist eine Aenderung AM
-    # GATE und bewusst nicht Teil dieser Lieferung (#1466 AP4, im Bericht
-    # benannt). Bis dahin steht die Datei hier — mit dem ausdruecklichen
-    # Vermerk, dass sie NICHT als Werkzeug-Klasse gilt.
-    "test_validator_log_unique_filenames.py",
 }
+# #1408 F005 / #1469: `test_validator_log_unique_filenames.py` stand hier als
+# ausdruecklicher FEHLALARM-Eintrag, weil `_collect_listed_product_paths()`
+# jedes Listen-/Tupel-Literal erntete. Seit die Heuristik nur homogene
+# Pfadlisten erntet, ist die Datei ohne Ausnahme konform — Eintrag entfernt,
+# damit ein echter Quelltext-Zugriff dort wieder gefangen wird
+# (Regressionstests: tests/unit/test_hygiene_gate_path_harvest.py).
 
 
 def _iter_test_files() -> list[Path]:
@@ -203,20 +195,31 @@ def _module_path_assignments(tree: ast.AST) -> dict:
 
 
 def _collect_listed_product_paths(tree: ast.AST) -> set[str]:
-    """Produkt-Pfade aus List-/Tuple-Literalen (z.B. `FILES = [REPO/"src/...", ...]`).
+    """Produkt-Pfade aus HOMOGENEN Pfadlisten (z.B. `FILES = [REPO/"src/...", ...]`).
 
     Deckt das `for f in FILES: f.read_text()`-Muster ab, bei dem das
     read_text-Ziel eine Schleifenvariable ist und nicht direkt auflösbar.
+
+    Geerntet wird ein List-/Tuple-Literal nur, wenn JEDES Element zu einem
+    existierenden Produkt-Pfad auflöst (#1469): Gemischte Literale — etwa
+    parametrize-Fälle, die Produktpfade als reine Namensdaten neben anderen
+    Werten führen — sind keine Dateilisten und lösten vorher Fehlalarme aus,
+    sobald irgendwo in der Datei ein nicht auflösbares read_text()-Ziel stand.
     """
     listed: set[str] = set()
     for node in ast.walk(tree):
-        if isinstance(node, (ast.List, ast.Tuple)):
-            for elt in node.elts:
-                segs = _flatten_path_expr(elt)
-                if segs:
-                    resolved = _resolve_product_path("/".join(segs))
-                    if resolved:
-                        listed.add(str(resolved.relative_to(_REPO)))
+        if not isinstance(node, (ast.List, ast.Tuple)) or not node.elts:
+            continue
+        resolved_elts: list[Path] = []
+        for elt in node.elts:
+            segs = _flatten_path_expr(elt)
+            resolved = _resolve_product_path("/".join(segs)) if segs else None
+            if resolved is None:
+                resolved_elts = []
+                break
+            resolved_elts.append(resolved)
+        for resolved in resolved_elts:
+            listed.add(str(resolved.relative_to(_REPO)))
     return listed
 
 
