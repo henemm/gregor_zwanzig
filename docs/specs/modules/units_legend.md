@@ -153,3 +153,29 @@ Reihenfolge: Katalog-Reihenfolge der ersten Metrik pro Gruppe.
 ## Changelog
 
 - 2026-02-17: Initial spec created
+
+---
+
+## Nachtrag #1472 (2026-08-05): zweite Legenden-Zeile daneben
+
+Diese Spec beschreibt die **Einheiten**-Zeile (`Einheiten: Temp, Feels °C · Wind km/h`). Sie ist
+unverändert in Kraft. Seit #1472 steht **darunter** eine zweite, eigenständige Zeile, die die
+Spaltenkürzel auflöst:
+
+```
+Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Thdr = Gewitter
+```
+
+Bewusst **zwei** Zeilen statt einer zusammengeführten: Einheiten beantworten „in welcher Einheit
+steht die Zahl", die Auflösung „was bedeutet das Kürzel" — und die Einheiten-Zeile bleibt so auch
+bei voller Metrik-Auswahl kurz.
+
+Beide Zeilen speisen sich aus denselben sichtbaren Spalten, aber aus **verschiedenen** Feldern:
+Einheit aus `MetricDefinition.display_unit`/`unit`, Auflösung aus dem ausgeschriebenen Namen.
+Deshalb konnte `format_units_legend()` die Auflösung nicht mitliefern — sie sieht den Namen nie.
+Gemeinsamer Formatierer daneben: `format_column_legend()` (`email/helpers.py`).
+
+Einheitenlose Größen (`Thdr`) erscheinen daher **nur** in der Spalten-Zeile, nie bei den Einheiten.
+
+Details, Abgrenzungsregel und verworfene Alternativen:
+`docs/specs/modules/fix_1472_spaltenkuerzel_legende.md`; Grundsatz: ADR-0042.

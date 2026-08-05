@@ -66,6 +66,24 @@ Stelle nachschlagen kann, wofür sie steht. Deshalb zeigt der Reiter *Wetter-Met
 Größe **alle drei Formen** nebeneinander: `Luftfeuchtigkeit · Humid · HU`. Ohne diese
 Auflösung wäre die Regel eine Zumutung; mit ihr ist sie eine Konvention.
 
+**Nachtrag #1472 (2026-08-05): die Bedingung gilt auch IN der Mail.** Der Editor half unterwegs
+nicht — gelesen wird die Mail am Berg, ohne App. Seither trägt jede Mail unter der Stundentabelle
+eine zweite Legenden-Zeile, die die **tatsächlich sichtbaren** Kürzel auflöst:
+
+```
+Einheiten: Temp, Feels °C · Wind km/h
+Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Thdr = Gewitter · Visib = Sichtweite
+```
+
+Regel: auflösen, **außer** Kürzel und ausgeschriebener Name sind identisch (`Wind`). Keine
+Pflegeliste — die Abgrenzung leitet sich aus den Daten ab. Gilt in allen vier Ausgaben (Trip und
+Ortsvergleich, je HTML und Klartext); das Kürzel stammt aus derselben Ableitung wie der
+Spaltenkopf, sonst erklärte die Legende ein Kürzel, das in der Tabelle nicht steht.
+
+Verworfen und nicht erneut vorschlagen: „auflösen, wenn das Kürzel kein **Präfix** des Langnamens
+ist" — trifft gemessen 24 von 27, weil die Kurzform englisch und der Name deutsch ist (genau die
+Regel dieses ADRs). Spec: `docs/specs/modules/fix_1472_spaltenkuerzel_legende.md`.
+
 ### Fachbegriffe bleiben unübersetzt
 
 `CAPE` und `UV` sind internationale Fachbegriffe ohne deutsche Entsprechung. Sie bleiben
