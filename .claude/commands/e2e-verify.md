@@ -6,13 +6,14 @@ tatsaechlich funktioniert. Sie ersetzt die fruehere lokale Prod-Verifikation
 
 ## Wann ausfuehren
 
-NACH `git push origin main` und VOR `deploy-gregor-prod.sh`.
+NACHDEM der PR gemergt ist (PR-Liefer-Workflow, PO-go 2026-08-05 — Direkt-Push
+auf `main` ist abgeschafft) und VOR `deploy-gregor-prod.sh`.
 
 **KEIN passives Warten!** Staging könnte bereits aktuell sein — sofort prüfen.
 Der Poll-Loop in Schritt 1 läuft so lang wie nötig (0 bis 150 Sek), kein manuelles "5 Minuten warten".
 
 Ablauf:
-1. `git push origin main`
+1. Branch pushen → PR mit grüner CI-Ampel mergen (`gh pr create --fill` … `gh pr merge --merge`)
 2. Sofort `/e2e-verify` starten — Schritt 1 prüft Staging-Status und wartet aktiv
 3. `deploy-gregor-prod.sh`
 

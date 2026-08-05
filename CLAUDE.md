@@ -217,7 +217,7 @@ bash .claude/tools/gz-workspace list         # alle Workspaces mit Branch + unco
 bash .claude/tools/gz-workspace clean <name> # entfernen (nur wenn sauber; --force erzwingt)
 ```
 
-**Regel:** jede Session liefert **unabhängig** aus, Integrationspunkt ist `origin/main`. Nur Staging-validiertes Grünes wird gepusht → `main` ist immer auslieferbar → Deploy (`deploy-gregor-prod.sh`, `flock`-serialisiert) darf aus jeder Session jederzeit laufen. **Verboten:** Deploy aufschieben „bis der Ordner sauber ist" — diese Pattsituation existiert nicht mehr.
+**Regel:** jede Session liefert **unabhängig** aus, Integrationspunkt ist `origin/main` — erreicht ausschließlich per PR mit grüner Ampel (Liefer-Workflow unten, PO-go 2026-08-05). Nur so wird gemergt → `main` ist immer auslieferbar → Deploy (`deploy-gregor-prod.sh`, `flock`-serialisiert) darf aus jeder Session jederzeit laufen. **Verboten:** Deploy aufschieben „bis der Ordner sauber ist" — diese Pattsituation existiert nicht mehr.
 
 Detailablauf, WIP-Sicherung beim Deploy: **`docs/reference/operations_playbook.md`**.
 
@@ -229,16 +229,22 @@ Globale Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
 - **Staging:** https://staging.gregor20.henemm.com — Systemd (`gregor-python-staging`, `gregor-api-staging`, `gregor-frontend-staging`)
 - **Infrastruktur-Repo:** `henemm/henemm-infra`
 
-### Post-Push-Workflow (PFLICHT)
+### Liefer-Workflow (PFLICHT — PR statt Direkt-Push, PO-go 2026-08-05)
+
+**Direkt-Push auf `main` ist abgeschafft.** `main` ändert sich nur noch per Pull Request mit vollständig grüner CI-Ampel (ersetzt den alten Schritt 1 „`git push origin main`" — Regel-Budget: Ersatz, kein Zusatz). Anlass: 2026-08-04/05 liefen vier Direkt-Pushes in Folge auf rote Ampel (37 test-Rote + Lint, PR #1508 musste fremde Befunde grün ziehen).
 
 | Schritt | Was |
 |---|---|
-| 1 | `git push origin main` |
+| 1 | Arbeitsbranch pushen: `git push -u origin <branch>` (nie direkt `main`; Server-Sessions: Themen-Branch oder `ws/<name>` aus gz-workspace) |
+| 1b | PR eröffnen (`gh pr create --fill`) und CI-Ampel abwarten — **alle 5 Checks grün** auf dem letzten Stand, sonst erst fixen (Merge-Regel unten) |
+| 1c | Mergen (`gh pr merge --merge`) — erst damit ist `main` aktualisiert |
 | 2 | Auto-Deploy auf Staging abwarten (~5 Min, Cron `*/5`) |
 | 3 | Staging-Validierung (s.u.) |
 | 4 | Prod-Deploy: `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
 | 4b | Post-Deploy-Selftest: `python3 .claude/hooks/prod_selftest.py` — nur Exit 0 fährt weiter |
 | 5 | `gh issue close <N>` — nur wenn 4b Exit 0 |
+
+Wird ein Push nach `main` von GitHub abgewiesen, ist das kein Fehler, sondern die Branch-Protection: Branch anlegen, PR nachziehen. Ein PR ersetzt NICHT die Staging-Validierung (Schritte 2–5 unverändert) — die Ampel bewacht Code-Gesundheit, Staging bewacht Verhalten.
 
 `systemctl restart` allein **reicht nie** — das Deploy-Script macht flock-Lock → hart auf `origin/main` syncen (Daten unberührt, WIP gesichert) → Go-Binary + Frontend bauen → alle 3 Services restarten → Smoke-Test. Ohne vollen Lauf entsteht Code-Drift, den `check-gregor20.sh` meldet (#113). Script ist **parallel-session-sicher** (`flock`) — Schritt 4 jederzeit aus jeder Session.
 
@@ -251,9 +257,9 @@ Globale Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
 Die 5 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test`) sind die **CI-Ampel**. Seit PR #1497 ist sie vollständig grün bei ehrlichem Umfang (`test`-Job: 5837 Tests inkl. `tests/tdd/` + pytest-socket-Egress-Wächter).
 
 - **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 5 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
-- **Wird `main` trotzdem rot** (z.B. Direkt-Push einer Server-Session): Drive-to-green hat Vorrang vor neuer Feature-Arbeit — wer es findet, fixt es oder ordnet es belegt zu.
+- **Wird `main` trotzdem rot** (Altbestand, Notfall-Push): Drive-to-green hat Vorrang vor neuer Feature-Arbeit — wer es findet, fixt es oder ordnet es belegt zu.
 - **tdd-Ratsche:** `.github/ci_tdd_excludes.txt` listet die offline-roten `tests/tdd/`-Dateien. Nur ENTFERNEN erlaubt (Datei grün gemacht → Zeile raus); neue tdd-Dateien laufen automatisch auf CI. Ergänzen einer Zeile nur mit Begründung im PR.
-- **Branch-Protection** (mechanisches Gate in den GitHub-Settings) ist geplant, aber ERST nach Umstellung aller Direkt-Push-Abläufe auf PRs — vorher einschalten bricht den dokumentierten Post-Push-Workflow der Server-Sessions. Umsetzung koordiniert der Tech-Lead mit dem PO; nicht eigenmächtig aktivieren.
+- **Branch-Protection ist beschlossen (PO-go 2026-08-05):** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow (oben). Den mechanischen Schalter (GitHub → Settings → Branches: PR-Pflicht + die 5 Status-Checks als required) setzt der PO; bis er gesetzt ist, gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
 
 *Regel-Budget: Prüfdatum 2026-11-02. Fang-Beleg bei Einführung: 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196, PRs #1494/#1496/#1497).*
 

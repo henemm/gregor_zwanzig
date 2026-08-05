@@ -12,10 +12,13 @@ abwarten. Kein Prod-Deploy ohne dieses `go`.
   AMBIGUOUS mit ausdruecklichem PO-OK)
 - Arbeitsbaum sauber, Branch auf `origin/main` (der Rebase-Waechter blockt sonst den Commit)
 
-## Schritt 1 — Push
+## Schritt 1 — Branch pushen, PR mergen (PO-go 2026-08-05: kein Direkt-Push auf main)
 
 ```bash
-git push origin HEAD:main
+git push -u origin HEAD:<themen-branch>
+gh pr create --fill
+# CI-Ampel abwarten: alle 5 Checks gruen auf dem letzten Stand, sonst erst fixen
+gh pr merge --merge
 ```
 
 ⚠️ Vorher `git fetch origin` und rebasen. **Nie `git stash`** (geteilter Stapel ueber alle

@@ -12,7 +12,8 @@ Die echte "funktioniert es wirklich"-Verifikation läuft **nach** dem Push gegen
 Staging-Umgebung (`https://staging.gregor20.henemm.com`) — **nie** durch einen lokalen
 Neustart des Live-Servers (auf dieser Maschine = Produktion). Siehe Issue #339.
 
-**Gesamtablauf:** `git push origin main` → ~5 Min Staging-Auto-Deploy abwarten →
+**Gesamtablauf:** Branch pushen → PR mit grüner CI-Ampel mergen (PO-go 2026-08-05,
+s. „Liefer-Workflow" unten) → ~5 Min Staging-Auto-Deploy abwarten →
 `/e2e-verify` (gegen Staging) → `deploy-gregor-prod.sh` → Post-Deploy-Selftest (Issue #564) → Issue close.
 
 **Schritte in `/e2e-verify`:**
@@ -83,13 +84,14 @@ technische Details.
 
 ---
 
-## Post-Push-Workflow — Detailablauf
+## Liefer-Workflow — Detailablauf (PR statt Direkt-Push, PO-go 2026-08-05)
 
-**Nach jedem `git push origin main`** in dieser Reihenfolge:
+**Direkt-Push auf `main` ist abgeschafft** — `main` ändert sich nur per Pull Request,
+dessen CI-Ampel (alle 5 Checks) auf dem letzten Stand grün ist. Danach in dieser Reihenfolge:
 
 | Schritt | Was | Wie |
 |---|---|---|
-| 1 | Push | `git push origin main` |
+| 1 | Branch + PR + Merge | `git push -u origin <branch>` → `gh pr create --fill` → Ampel grün → `gh pr merge --merge` |
 | 2 | Auto-Deploy auf Staging abwarten (~5 Min) | Cron `*/5` ruft `auto-deploy-gregor-staging.sh` |
 | 3 | Staging-Validierung | siehe Definition unten |
 | 4 | Prod-Deploy | `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
