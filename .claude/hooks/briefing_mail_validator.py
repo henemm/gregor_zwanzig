@@ -162,8 +162,22 @@ def _table_blocks(html: str) -> list[str]:
     Tabellen (Stundentabelle(n) je Etappe vs. 9-spaltige Trend-Tabelle) — der
     Guard `len(cells) == len(headers)` matchte dann gegen die GLOBALE Summe und
     keine reale Zeile passte mehr (stummer False-Negative).
+
+    Issue #1432: byte-identische Blöcke werden DEDUPLIZIERT. Der Renderer
+    stellt jede Stundentabelle zweimal ins HTML — Desktop-Fassung und
+    Handy-Fassung stammen aus demselben _render_html_table-Aufruf und sind
+    byte-gleich, nur die Wrapper-Divs unterscheiden sich. Ohne Dedup fiel
+    jede Spalten-SUMME exakt doppelt aus (Beleg: Pill 552 min vs. "Tabelle"
+    1104 min). Echte Mehr-Etappen-Tabellen unterscheiden sich immer in den
+    Zeitzellen und summieren unverändert.
     """
-    return _TABLE_RE.findall(html)
+    seen: set[str] = set()
+    blocks: list[str] = []
+    for block in _TABLE_RE.findall(html):
+        if block not in seen:
+            seen.add(block)
+            blocks.append(block)
+    return blocks
 
 
 def _mobile_header_tokens(html: str) -> list[str]:
@@ -229,6 +243,52 @@ def _column_hours_sum(html: str, *header_names: str) -> float | None:
     return total if found else None
 
 
+def _column_cells(html: str, *header_names: str) -> list[str]:
+    """Roh-Zelltexte (Tags gestrippt) der Spalte — für den Emoji-Pfad (#1432).
+
+    Gleiche Scoping-Regeln wie _column_values: pro (dedupliziertem)
+    <table>-Block, nur Zeilen mit passender Spaltenzahl.
+    """
+    cells: list[str] = []
+    for block in _table_blocks(html):
+        headers = _th_tokens(block)
+        idx = next((headers.index(h) for h in header_names if h in headers), None)
+        if idx is None:
+            continue
+        for row_html in _ROW_RE.findall(block):
+            row_cells = _TD_RE.findall(row_html)
+            if len(row_cells) != len(headers):
+                continue
+            cells.append(_strip_tags(row_cells[idx]))
+    return cells
+
+
+def _sun_capacity_minutes(html: str, *header_names: str) -> float | None:
+    """Obergrenze plausibler Sonnenminuten aus der Emoji-Sonne-Spalte (#1432).
+
+    Im Emoji-Modus trägt die Spalte keine 'X h'-Zahlen; exakt nachrechnen
+    lässt sich die Pill dann nicht. Was IMMER gilt: pro Stundenzeile höchstens
+    60 min Sonne. Zellen, die sicher (nahezu) keine Sonne bedeuten, senken
+    die Obergrenze — ☁️ heißt DNI<=0 (0 min; im DNI-losen Wolken-Fallback
+    <=6 min, daher 6), 🌙-Familie ist Nacht (0), '–'/'?' sind Leerwerte (0).
+    Alle übrigen Zellen (Sonnen- wie Niederschlags-Emojis — WMO-Codes können
+    sonnige DNI-Stunden überdecken) zählen konservativ mit 60 min.
+    None, wenn keine Sonne-Spalte gefunden wurde.
+    """
+    cells = _column_cells(html, *header_names)
+    if not cells:
+        return None
+    cap = 0.0
+    for cell in cells:
+        if cell in ("", "–", "-", "?") or cell.startswith("🌙"):
+            continue
+        if cell == "☁️":
+            cap += 6.0
+            continue
+        cap += 60.0
+    return cap
+
+
 def _column_num_sum(html: str, *header_names: str) -> float | None:
     """Summe numerischer Zellen der Spalte. None, wenn keiner der Header-Namen
     in irgendeiner Tabelle vorkommt.
@@ -281,7 +341,16 @@ def _check_metric_plausibility(html: str) -> list[str]:
         pill_min = int(m.group(1))
         sun_h = _column_hours_sum(html, "Sonne", "Sun")
         if sun_h is None:
-            continue  # Einfach-Modus (Emoji, keine Zahl) → überspringen
+            # Emoji-Modus (#1432): keine 'X h'-Zahlen — statt (wie früher)
+            # blind zu überspringen, greift die Obergrenzen-Prüfung: mehr
+            # Sonnenminuten als sonnenfähige Stundenzeilen kann es nicht geben.
+            cap = _sun_capacity_minutes(html, "Sonne", "Sun")
+            if cap is not None and pill_min > cap + _SONNE_TOL_MIN:
+                errors.append(
+                    f"FULL: Sonne-Widerspruch (Emoji-Modus) — Pill {pill_min} "
+                    f"min > Obergrenze {cap:.0f} min der Sonne-Spalte"
+                )
+            continue
         if abs(pill_min - sun_h * 60) > _SONNE_TOL_MIN:
             errors.append(
                 f"FULL: Sonne-Widerspruch — Pill {pill_min} min vs. Tabelle "
