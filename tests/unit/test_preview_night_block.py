@@ -43,23 +43,25 @@ def _dp(dt):
     )
 
 
-def _last_segment(arrival_hour: int = 15):
-    """Segment ankommend um ``arrival_hour`` UTC am 2026-07-20."""
+def _last_segment(arrival_hour: int = 15, base_date: date = date(2026, 7, 20)):
+    """Segment ankommend um ``arrival_hour`` UTC am ``base_date`` (Default:
+    2026-07-20, fest fuer die meisten Tests -- diese bauen ``night_weather``
+    direkt/synthetisch und sind vom Datum unabhaengig)."""
     seg = TripSegment(
         segment_id=1,
         start_point=GPXPoint(lat=42.0, lon=9.0, elevation_m=1500.0),
         end_point=GPXPoint(lat=42.1, lon=9.1, elevation_m=1800.0),
-        start_time=datetime(2026, 7, 20, arrival_hour - 4, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 7, 20, arrival_hour, 0, tzinfo=timezone.utc),
+        start_time=datetime.combine(base_date, datetime.min.time(), tzinfo=timezone.utc).replace(hour=arrival_hour - 4),
+        end_time=datetime.combine(base_date, datetime.min.time(), tzinfo=timezone.utc).replace(hour=arrival_hour),
         duration_hours=4.0, distance_km=8.0, ascent_m=400.0, descent_m=0.0,
     )
     ts = NormalizedTimeseries(meta=_meta(), data=[
-        _dp(datetime(2026, 7, 20, h, 0, tzinfo=timezone.utc)) for h in range(arrival_hour - 4, arrival_hour + 1)
+        _dp(datetime.combine(base_date, datetime.min.time(), tzinfo=timezone.utc).replace(hour=h)) for h in range(arrival_hour - 4, arrival_hour + 1)
     ])
     return SegmentWeatherData(
         segment=seg, timeseries=ts,
         aggregated=SegmentWeatherSummary(temp_min_c=5.0, temp_max_c=10.0),
-        fetched_at=datetime(2026, 7, 20, 6, 0, tzinfo=timezone.utc),
+        fetched_at=datetime.combine(base_date, datetime.min.time(), tzinfo=timezone.utc).replace(hour=6),
         provider="openmeteo",
     )
 
@@ -157,10 +159,16 @@ def test_fetch_night_weather_uses_injected_provider_not_live_openmeteo():
     uebergeben (Demo-Modus), MUSS ``fetch_night_weather`` GENAU diesen
     nutzen statt ``get_provider("openmeteo")`` (Live-API) -- garantiert
     durch den ``provider or get_provider(...)``-Kurzschluss. Beweis: der
-    Spy wird exakt einmal aufgerufen, kein Netzzugriff moeglich."""
+    Spy wird exakt einmal aufgerufen, kein Netzzugriff moeglich.
+
+    ``base_date`` = heutiges UTC-Datum: ``FixtureProvider`` stempelt seine
+    72 Fixpunkte immer ab dem aktuellen UTC-Tag (start/end werden ignoriert,
+    siehe ``providers/fixture.py``) -- ein fest kodiertes Vergangenheits-
+    datum wuerde nach dem Filtern auf das Nachtfenster leer laufen und
+    faelschlich als Providerfehler erscheinen (Fund bei Fix #1339)."""
     from services.segment_weather import fetch_night_weather
 
-    last_segment = _last_segment()
+    last_segment = _last_segment(base_date=datetime.now(timezone.utc).date())
     spy = _SpyProvider(str(_FIXTURE_DIR))
 
     result = fetch_night_weather(last_segment, provider=spy)

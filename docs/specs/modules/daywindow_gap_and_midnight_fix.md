@@ -88,6 +88,14 @@ Entwarnungs-Phrase + Anwesenheit eines Unsicherheitsmarkers).
 außen signalisieren zu lassen. Aus Empfängersicht kein Rendering-Unterschied (Teil a fängt
 Fehler wie legitim-leer gleichermaßen); reine interne Diagnose → Sammel-Eintrag #1199.
 
+**Korrektur (2026-08-05, Fix #1339):** Die obige Annahme „kein Rendering-Unterschied" war
+falsch. `_fetch_night_weather()` lieferte im Fehlerfall nicht `None` (legitim-leer), sondern
+fälschlich die Zeitreihe der letzten Etappe (Segment-Start-Geografie statt Zielort) — das sah
+für die Lückenerkennung wie vollständige Daten aus und führte zu einer positiven
+Fehl-Entwarnung fürs Nachtlager, statt wie hier angenommen zum selben Unsicherheitsmarker wie
+bei legitim fehlenden Daten. Behoben in `src/services/segment_weather.py`, Details:
+`docs/specs/modules/fix_1339_nachtwetter_fallback.md`.
+
 ## Acceptance Criteria
 
 - **AC-1:** Given eine Etappe über Mitternacht (Start 22:00 Tag 1 → Ende 02:00 Tag 2) und eine Zeitreihe mit vollen Tagen (48 h) / When `_aggregate_for_segment` das Aggregat bildet / Then fließen ausschließlich die Stunden 22:00, 23:00, 00:00, 01:00 der **korrekten** Tage ein, `temp_min_c`/`temp_max_c` stammen nur aus diesen vier Stunden, und Punkte gleicher Uhrzeit vom Vor- oder Folgetag sind ausgeschlossen.

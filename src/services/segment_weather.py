@@ -449,7 +449,4 @@ def fetch_night_weather(
         return night_data.timeseries
     except Exception as e:
         logger.warning(f"Failed to fetch night weather: {e}")
-        # Fallback: use last segment's timeseries (evening hours only)
-        if last_segment.timeseries and last_segment.timeseries.data:
-            return last_segment.timeseries
         return None
