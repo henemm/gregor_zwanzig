@@ -675,6 +675,7 @@ func (s *Scheduler) Status() map[string]any {
 		"timezone":            s.cron.Location().String(),
 		"briefing_health":     s.BriefingHealth(),
 		"warn_service_health": s.WarnServiceHealth(),
+		"forecast_budget":     s.ForecastBudgetHealth(),
 	}
 }
 
