@@ -90,6 +90,15 @@ _SELF_EXEMPT = {
     # den echten Guard auf (Sentinel statt SMTP) und haengt an keinem
     # Dateiinhalt. Spec: docs/specs/modules/fix_1412_s2a_regelwerk_paritaet.md
     "test_mail_recipient_parity.py",
+    # #1435 E5 AC-8: Doku-Konsistenz-Waechter liest die Kommentare in
+    # internal/model/trip.go und src/services/weather_change_detection.py als
+    # DATEN, um zu pruefen, dass sie den tatsaechlichen Generierungs-
+    # Mechanismus (Katalog-ID -> AlertMetric-Zuordnung als Single Source of
+    # Truth) korrekt beschreiben — kein Verhaltensnachweis auf Code-Strings,
+    # gleiche Werkzeug-Klasse wie test_api_contract_drift.py /
+    # test_egress_inventory_drift.py; # doc-compliance-test.
+    # Spec: docs/specs/modules/fix_1435_e5_alert_mapping_unify.md
+    "test_alert_metric_mapping_parity.py",
 }
 # #1408 F005 / #1469: `test_validator_log_unique_filenames.py` stand hier als
 # ausdruecklicher FEHLALARM-Eintrag, weil `_collect_listed_product_paths()`
