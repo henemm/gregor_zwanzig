@@ -250,11 +250,18 @@ Bis #1377 war sie bei jedem Nebelwert grün, weil die halb hinterlegte Schwelle 
 als „unbedenklich" gelesen wurde — ein Fehler, kein Feature. Der Unterschied ist konsistent:
 Die Zeile erscheint überhaupt nur bei einer Unterschreitung, sie kann also nicht dauergrün sein.
 
-### Implementierungs-Hinweis: „Roh ist Roh"
+### Implementierungs-Hinweis: Roh-Modus — Zahlen statt Ampeln, aber Zell-Tönung bleibt
 
-Im Roh-Modus gibt es **bei keiner Metrik** inline-Farb- oder Hintergrund-Markierungen
-(insbesondere nicht Gelb-Highlight bei CAPE oder Orange-Highlight bei Sicht).
-Alle Roh-Ausgaben sind numerisch/textlich ohne Styling.
+Im Roh-Modus sind alle Ausgaben numerisch/textlich: keine Ampel-Emojis/-Punkte und
+**keine inline-Highlights** (insbesondere nicht Gelb-Highlight bei CAPE oder
+Orange-Highlight bei Sicht — `highlight_color` war nie gewollt).
+
+**Die Zell-Hintergrund-Tönung (`cell_bg`) gilt dagegen IMMER** — unabhängig von
+Roh/Einfach-Modus (`html.py`, seit #911; als gewollte Invariante PO-approved,
+AC-2-Negativ-Test im Bundle #888/#896/#902: Roh-Zelle Wind=25 trägt `background:#fbeeb8`).
+Seit dem #888-Fix folgt die Tönung bei Ampel-Zellen dem Katalog-Ampel-Level, im
+Roh-Modus den bestehenden Legacy-Schwellen. Die frühere Absolutform „Roh ist Roh =
+gar kein Styling" ist damit überholt (Doku-Abgleich #985/#1198).
 
 ---
 
@@ -266,11 +273,13 @@ geschaltet werden:
 | Viewport | CSS-Klasse | Rendering | Display |
 |----------|-----------|-----------|---------|
 | Desktop (≥601px) | `.desktop-only` | `_render_html_table()` mit `html=True` | HTML-Tabelle mit Ampel-Emojis im Einfach-Modus |
-| Mobile (≤600px) | `.mobile-compact` | `_render_mobile_compact_rows()` mit `indicator_keys` (seit #831) | Einfach-Modus: HTML-Tabelle (identisch Desktop); Roh-Modus: Monospace-`<pre>`-Block |
+| Mobile (≤600px) | `.mobile-compact` | `_render_mobile_compact_rows()` → delegiert an `_render_html_table` | IMMER bordierte HTML-Tabelle (byte-identisch zur Desktop-Tabelle, in `overflow-x:auto` gewickelt) — auch im Roh-Modus |
 
-**Issue #831 — Mobile Einfach-Modus:** Der Mobile-Renderer (`_render_mobile_compact_rows`) respektiert
-jetzt den Einfach-Modus: wenn `indicator_keys` gesetzt ist (d.h. die Metriken sind mit `use_friendly_format=true`
-konfiguriert), delegiert er an `_render_html_table` und zeigt Ampel-Emojis (🟢🟡🟠🔴) — identisch zur Desktop-Ansicht.
-Im Roh-Modus (leere `indicator_keys`) verbleibt die Ausgabe im klassischen Monospace-`<pre>`-Block (Issue #636).
+**Mobile rendert IMMER als Tabelle** (fix-mobile-grid-decouple-ampel): `_render_mobile_compact_rows`
+delegiert in beiden Modi an `_render_html_table`; `indicator_keys` steuert nur noch die
+Ampel-FÄRBUNG innerhalb der Zellen, nicht mehr Tabelle-vs-Monospace. Der frühere
+Monospace-`<pre>`-Block im Roh-Modus (Issue #636) ist abgelöst — die frühere Fassung
+dieses Absatzes (#831) beschrieb ihn noch als aktuell (Doku-Abgleich #1198; Ist-Verhalten
+gemessen bei #1432: beide Fassungen jeder Stundentabelle sind `<table>`-Blöcke).
 
 **Resultat:** Kein Modus-Mismatch mehr zwischen Desktop- und Mobile-Ansicht derselben Nachricht.

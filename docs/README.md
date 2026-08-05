@@ -14,7 +14,7 @@
 | `adr/` | Architektur-Entscheidungen (nummeriert; Status beachten — einzelne sind superseded) |
 | `design-system/` | CHARTER, COMPONENTS, TOKENS, SCREENS |
 | `features/` | `architecture.md` (Systemarchitektur), `scope.md` (Vision), `openspec_workflow.md` (Workflow-Wegweiser) + aktive Epic-Dokumente |
-| `project/` | `known_issues.md` (Root-Cause-Archiv), `strategic-directions.md`, Architektur-Programm 2026-07 |
+| `project/` | `known_issues.md` (Root-Cause-Archiv), Architektur-Programm 2026-07. (`strategic-directions.md` 2026-08-05 aufgelöst, #1166 — strategische Entscheidungen leben in `docs/adr/`) |
 | `runbooks/` | Betriebsanleitungen (z. B. `telegram-webhook.md`) |
 
 ## Arbeits- und Wegwerf-Material
