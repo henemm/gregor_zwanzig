@@ -184,6 +184,34 @@ _SEV_TO_THUNDER_LEVEL: tuple[ThunderLevel, ...] = (
 )
 
 
+def _day_window_thunder_severity(
+    segments: list[SegmentWeatherData],
+    night_weather: Optional["NormalizedTimeseries"],
+    tz: ZoneInfo,
+    *,
+    start_hour: int = DAY_WINDOW_START_HOUR,
+    end_hour: int = DAY_WINDOW_END_HOUR,
+) -> int:
+    """Schlimmstes Gewitter-Ordinal über das geteilte Tagesfenster (#1498).
+
+    EINE Quelle für JEDE Gewitter-Aussage derselben Bubble: Fußzeile
+    (``_tg_day_footer``) und Kurzübersicht (``_overview_line``) lesen beide
+    dieses Ergebnis — vorher las die Kurzübersicht nur die Gehzeit-Reihen,
+    und ein Gewitter nach der Ankunft (#1317) machte die zwei Zeilen
+    widersprüchlich (``⚡ ?`` gegen ``⚡ leicht``, Issue #1498).
+    """
+    from output.renderers.day_window import build_day_window_points
+
+    worst = 0
+    for dp in build_day_window_points(
+        segments, night_weather, tz, start_hour=start_hour, end_hour=end_hour,
+    ):
+        sev = _thunder_severity(dp.thunder_level)
+        if sev > worst:
+            worst = sev
+    return worst
+
+
 def _tg_day_footer(
     segments: list[SegmentWeatherData],
     enabled_metric_ids: set[str] | list[str],
@@ -216,13 +244,10 @@ def _tg_day_footer(
     rep_freeze: Optional[int] = None
 
     if "thunder" in enabled:
-        for dp in build_day_window_points(
+        max_thunder_sev = _day_window_thunder_severity(
             segments, night_weather, tz,
             start_hour=day_window_start_hour, end_hour=day_window_end_hour,
-        ):
-            sev = _thunder_severity(dp.thunder_level)
-            if sev > max_thunder_sev:
-                max_thunder_sev = sev
+        )
 
     for sd in segments:
         agg = sd.aggregated
@@ -405,6 +430,7 @@ def _overview_line(
     hiking_temp_extrema: Optional[tuple[float, float, str]] = None,
     hiking_felt_extrema: Optional[tuple[float, float, str]] = None,
     has_gap: bool = False,
+    day_thunder_sev: Optional[int] = None,
 ) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -415,11 +441,19 @@ def _overview_line(
     angehaengt (``@{Stunde}``, gleiche Konvention wie die Peak-Token in
     ``format_trend_tokens()``/``render_threshold_peak_value()``) — die fuer
     Entscheidungen relevantere Spitze (z.B. Windboeen-Spitze). Fuer die
-    Gewitter-Metrik (``thunder``) wird analog zu ``_tg_day_footer()`` der
-    Tages-Schlimmstwert ueber ``_thunder_severity()`` ermittelt (Issue #1001
-    Adversary-Finding F001: sonst widerspricht sich diese Zeile mit der
-    Fusszeile derselben Bubble). Andere nicht-numerische Metriken zeigen
-    weiterhin den zuletzt beobachteten Wert ohne Uhrzeit.
+    Gewitter-Metrik (``thunder``) gilt seit #1498 DIESELBE Quelle wie fuer
+    die Fusszeile: ``day_thunder_sev`` traegt das vom Aufrufer ueber
+    ``_day_window_thunder_severity()`` (Tagesfenster 04-19 inkl.
+    ``night_weather``) ermittelte Schlimmst-Ordinal — vorher las dieser
+    Zweig nur die Gehzeit-Reihen (``seg_tables``) und ein Gewitter nach der
+    Ankunft (#1317) machte Kurzuebersicht und Fusszeile derselben Bubble
+    widerspruechlich (``⚡ ?`` gegen ``⚡ leicht``). Bewusste
+    Scheiben-Entscheidung (#1498): NUR Gewitter wechselt auf das
+    Tagesfenster; alle uebrigen Metriken behalten die Gehzeit als
+    Bezugsrahmen. Fehlt ``day_thunder_sev`` (None, z.B. Direktaufrufe ohne
+    Tagesfenster-Kontext), bleibt fail-soft der bisherige Gehzeit-Pfad.
+    Andere nicht-numerische Metriken zeigen weiterhin den zuletzt
+    beobachteten Wert ohne Uhrzeit.
 
     ``report_type``/``night_min_c``/``night_wind_chill_min_c``: abends steht
     fuer ``temperature``/``wind_chill`` der echte Nachtwert am Ziel als
@@ -484,15 +518,29 @@ def _overview_line(
             value = f"{lo}-{hi}@{peak_hour}" if peak_hour else f"{lo}-{hi}"
     except (TypeError, ValueError):
         if metric_id == "thunder":
-            worst_row = max(hits, key=lambda h: _thunder_severity(h.get(key)))
-            # Issue #1491 F001: schlimmster BEOBACHTETER Wert ist NONE, aber
-            # das Zielfenster ist (teilweise) unbeobachtet -- "kein" waere
-            # hier eine Fehl-Entwarnung ueber die Luecke hinweg (analog
-            # _tg_day_footer, Zeile ~242-248).
-            if _thunder_severity(worst_row.get(key)) == 0 and has_gap:
-                value = "?"
+            if day_thunder_sev is not None:
+                # #1498: identische Quelle UND identisches Wort wie die
+                # Fusszeile (THUNDER_LABEL_DE ueber die kanonische Ordnung,
+                # #1474) — die Bubble traegt genau EINE Gewitter-Aussage.
+                if day_thunder_sev == 0:
+                    value = ("?" if has_gap
+                             else THUNDER_LABEL_DE[ThunderLevel.NONE])
+                else:
+                    value = THUNDER_LABEL_DE[
+                        _SEV_TO_THUNDER_LEVEL[day_thunder_sev]
+                    ]
             else:
-                value = _cell(metric_id, worst_row, fkeys)
+                worst_row = max(
+                    hits, key=lambda h: _thunder_severity(h.get(key))
+                )
+                # Issue #1491 F001: schlimmster BEOBACHTETER Wert ist NONE,
+                # aber das Zielfenster ist (teilweise) unbeobachtet --
+                # "kein" waere hier eine Fehl-Entwarnung ueber die Luecke
+                # hinweg (analog _tg_day_footer).
+                if _thunder_severity(worst_row.get(key)) == 0 and has_gap:
+                    value = "?"
+                else:
+                    value = _cell(metric_id, worst_row, fkeys)
         else:
             value = _cell(metric_id, hits[-1], fkeys)
     return f"{label} {value}"
@@ -636,6 +684,15 @@ def render_telegram_bubbles(
 
     # 2. Kurzuebersicht-Bubble — ALLE konfigurierten Metriken (AC-3), immer
     # vorhanden, unabhaengig von telegram_kurzform (AC-10).
+    # #1498: EINE Tagesfenster-Berechnung fuer die Gewitter-Aussage, an die
+    # Kurzuebersicht durchgereicht — dieselbe Quelle (und Segment-Auswahl),
+    # aus der die Fusszeile unten liest. Kurzuebersicht und Fusszeile
+    # derselben Bubble koennen sich damit strukturell nicht mehr
+    # widersprechen (vorher: Gehzeit-Reihen vs. Tagesfenster).
+    _day_thunder_sev = _day_window_thunder_severity(
+        [sd for sd in segments if not sd.has_error], night_weather, tz,
+        start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+    )
     overview_lines: list[str] = ["Kurzübersicht"]
     for mid in dc.get_enabled_metric_ids():
         overview_lines.extend(_wrap(_esc(_overview_line(
@@ -645,6 +702,7 @@ def render_telegram_bubbles(
             hiking_temp_extrema=_hiking_temp,
             hiking_felt_extrema=_hiking_felt,
             has_gap=has_gap,
+            day_thunder_sev=_day_thunder_sev,
         )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus
