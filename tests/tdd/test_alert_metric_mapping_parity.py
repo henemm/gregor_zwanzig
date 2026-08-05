@@ -94,23 +94,23 @@ def test_forward_mapping_is_exact_inverse_of_backward_mapping():
 # ─────────────────────────────────────────────────────────────────────────────
 # Issue #1387: DRITTE Schicht — die Frontend-Bruecke.
 #
-# Dieselbe Abbildung (Katalog-ID -> alarmfaehige Metrik) existiert dreimal:
+# Dieselbe Abbildung (Katalog-ID -> alarmfaehige Metrik) existierte dreimal:
 # Python (catalog_id_to_alert_metrics oben), Go
 # (internal/model/trip.go::catalogIDToAlertMetrics) und Frontend
 # (ROUTE_CORRIDOR_CATALOG_IDS) — letztere entscheidet, welche Metriken der
 # Reiter "Wertebereiche" unter "+ Metrik" anbietet. Die Frontend-Kopie war
 # gedriftet (freezing_level fehlte -> Nullgradgrenze aktiviert, aber kein
-# Schneefallgrenzen-Bereich waehlbar). Ohne Waechter driftet sie wieder.
+# Schneefallgrenzen-Bereich waehlbar).
 #
-# Deckungsgrad, ehrlich benannt:
-#   - Python <-> Frontend: ab hier testgeprueft (die Tests unten).
-#   - Go: weiterhin eine VON HAND gespiegelte Kopie OHNE automatische Pruefung.
-#     Auch _ALERTABLE_METRIC_VALUES (Zeilen 31-39, Go-Vokabular AlertableMetrics)
-#     ist ein von Hand gespiegeltes Python-Literal — kein Test liest oder
-#     fuehrt Go-Quelltext aus. Aenderungen an der Go-Tabelle muessen weiterhin
-#     manuell hierher und ins Frontend nachgezogen werden.
+# Fix #1435 Etappe E5: es gibt keine dritte Handkopie mehr. Go bindet die
+# generierte Datei per `go:embed` ein (kein eigener Python-seitiger
+# Pruefschritt mehr noetig, s. Block weiter unten); das Frontend importiert
+# dieselbe generierte Datei direkt und zieht zwei benannte Ausnahmen ab.
+# Auch _ALERTABLE_METRIC_VALUES (Zeilen 31-39, Go-Vokabular AlertableMetrics)
+# bleibt bewusst ein von Hand gespiegeltes Python-Literal — anderes Vokabular,
+# nicht Teil dieser Etappe (s. Spec "Known Limitations").
 #
-# Geprueft wird die BEDEUTUNG: geparste Schluessel/Werte der TS-Konstante gegen
+# Geprueft wird die BEDEUTUNG: die generierte Datei (minus Ausnahmen) gegen
 # catalog_id_to_alert_metrics() — kein blosser String-Presence-Check.
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -211,27 +211,38 @@ def _read_ts_block(name: str) -> str:
 
 
 def _frontend_bridge() -> dict[str, set[str]]:
-    """ROUTE_CORRIDOR_CATALOG_IDS aus dem TS-Quelltext als Daten lesen.
+    """ROUTE_CORRIDOR_CATALOG_IDS nachbilden: generierte Datei minus Ausnahmen.
 
-    Schluessel duerfen mit ODER ohne Anfuehrungszeichen geschrieben sein
-    (`freezing_level:` wie `'freezing_level':`) — sonst wuerde eine spaetere
-    Prettier-/Lint-Regel den Waechter falsch-rot machen statt echte Drift zu
-    melden (Adversary-Befund F001, LOW).
+    Fix #1435 Etappe E5: `corridorEditorState.ts` parst die Zuordnung nicht
+    mehr als eigenes TS-Literal — sie importiert
+    `$lib/generated/alertMetricMapping.generated.json` (dieselbe Datei, die
+    auch Go per `go:embed` einbindet) und zieht die zwei benannten Ausnahmen
+    ab (Implementation Details Abschnitt 3). Diese Funktion bildet exakt
+    denselben Mechanismus in Python nach — kein Quelltext-Parsing mehr, weil
+    es keine Handkopie mehr gibt, die driften koennte.
     """
-    body = _read_ts_block("ROUTE_CORRIDOR_CATALOG_IDS")
-    parsed = {
-        key: set(re.findall(r"['\"]([^'\"]+)['\"]", values))
-        for key, values in re.findall(r"['\"]?(\w+)['\"]?\s*:\s*\[([^\]]*)\]", body)
+    import json
+
+    from scripts.generate_alert_metric_mapping import FRONTEND_JSON_PATH
+
+    raw = json.loads(FRONTEND_JSON_PATH.read_text(encoding="utf-8"))
+    assert raw, f"{FRONTEND_JSON_PATH} ist leer oder liess sich nicht parsen"
+    exceptions = _fe_bridge_exceptions()
+    return {
+        catalog_id: set(values)
+        for catalog_id, values in raw.items()
+        if catalog_id not in exceptions
     }
-    assert parsed, "ROUTE_CORRIDOR_CATALOG_IDS liess sich nicht parsen"
-    return parsed
 
 
 def test_frontend_bridge_matches_python_forward_mapping():
-    """Katalog-ID -> alarmfaehige Metrik: Frontend == Python, ID fuer ID.
+    """Katalog-ID -> alarmfaehige Metrik: Frontend-Ableitung == Python, ID fuer ID.
 
-    (Go bleibt eine handgespiegelte Kopie ohne automatische Pruefung — s.
-    Block-Kommentar oben.)
+    Fix #1435 Etappe E5: `_frontend_bridge()` liest dieselbe generierte Datei,
+    die auch `corridorEditorState.ts` importiert — Drift zwischen der
+    generierten Datei und der Python-Quelle faengt bereits
+    `test_generator_script_check_matches_python_source`; dieser Test bleibt
+    als zusaetzliche, ausnahme-bewusste Konsistenzpruefung bestehen.
     """
     exceptions = _fe_bridge_exceptions()
     expected = {
@@ -354,4 +365,154 @@ def test_thunder_exception_is_still_justified():
     assert catalog_id_to_alert_metrics()["thunder"] == {"thunder_level"}, (
         "Die Alarm-Seite fuehrt Gewitter nicht mehr unter 'thunder_level' — die "
         "Ausnahme ist damit zu breit und verdeckt eine echte Alarm-Drift."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fix #1435 Etappe E5: dritte handgepflegte Kopie (Go) verschwindet.
+#
+# Statt einer vierten Handkopie in Go bindet `internal/model/trip.go` kuenftig
+# ein generiertes Artefakt per `go:embed` ein, das
+# `scripts/generate_alert_metric_mapping.py` aus `catalog_id_to_alert_metrics()`
+# (der einzigen Python-Quelle) erzeugt. Das Skript existiert in Phase 5 (RED)
+# noch nicht — die drei Tests unten importieren es OHNE `pytest.raises`, damit
+# sie beim Ausfuehren (nicht beim Sammeln der Datei) mit
+# ModuleNotFoundError scheitern: nur diese drei Tests werden rot, die
+# uebrigen Tests dieser Datei bleiben unberuehrt kollektierbar. Nach der
+# Implementierung (Phase 6) lauten dieselben Assertions echt gegen
+# `check()` — kein Umbau der Testkoerper noetig, nur das Skript muss
+# existieren.
+#
+# Vertrag fuer `scripts/generate_alert_metric_mapping.py` (von diesen Tests
+# vorausgesetzt, Phase 6 muss ihn erfuellen):
+#   - Modulfunktion `check() -> list[str]`: leere Liste = keine Abweichung,
+#     sonst je Abweichung ein Text, der die betroffene Katalog-ID nennt.
+#     Liest bei jedem Aufruf frisch (kein Caching ueber Modul-Import hinweg).
+#   - Modul-Konstanten `MODEL_JSON_PATH` / `FRONTEND_JSON_PATH` (Path):
+#     Zielpfade der zwei generierten Dateien — ueber `monkeypatch.setattr`
+#     im Test umleitbar, damit AC-6 (Handbearbeitung) ohne Beruehren der
+#     echten eingecheckten Dateien geprueft werden kann.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_generator_script_check_matches_python_source():
+    """AC-1: scripts/generate_alert_metric_mapping.py::check() findet KEINE
+
+    Abweichung zwischen der frisch berechneten Python-Abbildung
+    (catalog_id_to_alert_metrics()) und den beiden eingecheckten generierten
+    Dateien — solange beide zueinander passen (Normalfall im Repo).
+
+    RED (Phase 5): `scripts.generate_alert_metric_mapping` existiert noch
+    nicht — der Import schlaegt beim Ausfuehren dieses Tests mit
+    ModuleNotFoundError fehl.
+    """
+    import scripts.generate_alert_metric_mapping as gen
+
+    diffs = gen.check()
+    assert diffs == [], (
+        "check() meldet eine Abweichung, obwohl Python-Quelle und beide "
+        f"generierten Dateien im Repo zueinander passen sollten: {diffs}"
+    )
+
+
+def test_generator_script_check_reports_python_source_mutation(monkeypatch):
+    """AC-2 (Mutations-Gegenprobe, PFLICHT), Fall 1: Python-Quelle geaendert,
+
+    OHNE das Erzeuger-Skript erneut laufen zu lassen. `check()` muss die
+    betroffene Katalog-ID ("gust") beim Namen nennen — kein stilles Gruen.
+
+    RED (Phase 5): Import von `scripts.generate_alert_metric_mapping`
+    schlaegt fehl, solange das Skript nicht existiert.
+    """
+    import scripts.generate_alert_metric_mapping as gen
+    import services.weather_change_detection as wcd
+
+    mutated = dict(wcd._ALERT_METRIC_TO_CATALOG_ID)
+    del mutated[AlertMetric.WIND_GUST]
+    monkeypatch.setattr(wcd, "_ALERT_METRIC_TO_CATALOG_ID", mutated)
+
+    diffs = gen.check()
+    assert diffs, (
+        "check() bleibt gruen, obwohl 'gust' lokal aus "
+        "_ALERT_METRIC_TO_CATALOG_ID entfernt wurde, ohne das Skript erneut "
+        "laufen zu lassen — die Ratsche faengt diese Drift nicht."
+    )
+    assert any("gust" in d for d in diffs), (
+        f"'gust' wird in keiner Abweichungs-Meldung genannt: {diffs}"
+    )
+
+
+def test_generator_script_check_reports_generated_file_mutation(monkeypatch, tmp_path):
+    """AC-6 (Mutations-Gegenprobe, PFLICHT), Fall 2: eine generierte Datei
+
+    wird direkt von Hand verfaelscht (Python-Quelle unveraendert). `check()`
+    muss dieselbe Abweichung erkennen wie in AC-2 — der Schutz gilt
+    unabhaengig von der Drift-Ursache. Arbeitet auf `tmp_path`-Kopien (per
+    `monkeypatch` auf die Modul-Pfad-Konstanten umgeleitet), damit die echten
+    eingecheckten Dateien unangetastet bleiben.
+
+    RED (Phase 5): Import von `scripts.generate_alert_metric_mapping`
+    schlaegt fehl, solange das Skript nicht existiert.
+    """
+    import json
+
+    import scripts.generate_alert_metric_mapping as gen
+
+    correct = {
+        cid: sorted(metrics) for cid, metrics in catalog_id_to_alert_metrics().items()
+    }
+    mutated = dict(correct)
+    del mutated["gust"]
+
+    model_path = tmp_path / "alert_metric_mapping.generated.json"
+    frontend_path = tmp_path / "alertMetricMapping.generated.json"
+    model_path.write_text(json.dumps(mutated, indent=2) + "\n", encoding="utf-8")
+    frontend_path.write_text(json.dumps(correct, indent=2) + "\n", encoding="utf-8")
+
+    monkeypatch.setattr(gen, "MODEL_JSON_PATH", model_path)
+    monkeypatch.setattr(gen, "FRONTEND_JSON_PATH", frontend_path)
+
+    diffs = gen.check()
+    assert diffs, (
+        "check() bleibt gruen, obwohl die generierte Datei von Hand um "
+        "'gust' verkuerzt wurde, waehrend die Python-Quelle unveraendert "
+        "ist — die Ratsche faengt Handbearbeitung nicht."
+    )
+    assert any("gust" in d for d in diffs), (
+        f"'gust' wird in keiner Abweichungs-Meldung genannt: {diffs}"
+    )
+
+
+def test_go_and_python_comments_describe_the_generated_artifact_mechanism():
+    # doc-compliance-test
+    """AC-8: Die Kommentare in trip.go und weather_change_detection.py
+    beschreiben den tatsaechlichen Mechanismus (generiertes, eingebettetes
+    Artefakt + Ratchet-Test) korrekt, statt fälschlich zu behaupten, der
+    bestehende Test decke die Go-Kopie inhaltlich ab bzw. Go rufe die
+    Python-Funktion direkt auf.
+
+    Reiner Doku-Compliance-Test (Datei-Inhalts-Assertion) — kein
+    Verhaltensnachweis.
+    """
+    go_src = (
+        _REPO / "internal" / "model" / "trip.go"
+    ).read_text(encoding="utf-8")
+    assert "go:embed" in go_src and "mustParseAlertMetricMapping" in go_src, (
+        "trip.go beschreibt den go:embed-Mechanismus nicht (mehr) — "
+        "catalogIDToAlertMetrics sollte aus der eingebetteten generierten "
+        "Datei geparst werden."
+    )
+    assert "kept in sync via\n// tests/tdd/test_alert_metric_mapping_parity.py" not in go_src, (
+        "trip.go behauptet weiterhin, der Paritaetstest halte die Go-Kopie "
+        "inhaltlich synchron — das stimmt seit E5 nicht mehr, es gibt keine "
+        "Go-Handkopie mehr, die driften koennte."
+    )
+
+    py_src = (
+        _REPO / "src" / "services" / "weather_change_detection.py"
+    ).read_text(encoding="utf-8")
+    assert "Go ruft sie NICHT zur Laufzeit auf" in py_src, (
+        "weather_change_detection.py::catalog_id_to_alert_metrics() erklaert "
+        "nicht (mehr), dass Go diese Funktion nicht direkt aufruft, sondern "
+        "eine generierte, eingebettete Kopie ihrer Ausgabe nutzt."
     )

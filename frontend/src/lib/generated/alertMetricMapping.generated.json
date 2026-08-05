@@ -1,0 +1,24 @@
+{
+  "freezing_level": [
+    "snow_line"
+  ],
+  "gust": [
+    "wind_gust"
+  ],
+  "precipitation": [
+    "precipitation_sum"
+  ],
+  "snowfall_limit": [
+    "snow_line"
+  ],
+  "temperature": [
+    "temperature_max",
+    "temperature_min"
+  ],
+  "temperature_cold": [
+    "temperature_min"
+  ],
+  "thunder": [
+    "thunder_level"
+  ]
+}

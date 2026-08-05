@@ -2,7 +2,10 @@ package model
 
 import (
 	"crypto/rand"
+	_ "embed"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -223,20 +226,45 @@ var DefaultAlertThreshold = map[AlertMetric]struct {
 	AlertMetricSnowLine:         {1500, "m", AlertSeverityInfo},
 }
 
-// catalogIDToAlertMetrics is the forward mapping from metric-catalog IDs
-// (src/app/metric_catalog.py, e.g. "gust", "temperature") to the AlertMetric
-// value(s) they activate. Issue #1257: exact inverse of the Python bridge
-// _ALERT_METRIC_TO_CATALOG_ID (src/services/weather_change_detection.py),
-// filtered to AlertableMetrics — kept in sync via
-// tests/tdd/test_alert_metric_mapping_parity.py.
-var catalogIDToAlertMetrics = map[string][]AlertMetric{
-	"gust":             {AlertMetricWindGust},
-	"precipitation":    {AlertMetricPrecipitationSum},
-	"thunder":          {AlertMetricThunderLevel},
-	"temperature":      {AlertMetricTemperatureMin, AlertMetricTemperatureMax},
-	"temperature_cold": {AlertMetricTemperatureMin},
-	"snowfall_limit":   {AlertMetricSnowLine},
-	"freezing_level":   {AlertMetricSnowLine},
+// alertMetricMappingJSON embeds the generated forward mapping from
+// metric-catalog IDs (src/app/metric_catalog.py, e.g. "gust", "temperature")
+// to the AlertMetric value(s) they activate. Fix #1435 Etappe E5: the single
+// source is `catalog_id_to_alert_metrics()`
+// (src/services/weather_change_detection.py); this file is produced by
+// scripts/generate_alert_metric_mapping.py and kept in sync via the
+// ratchet test tests/tdd/test_alert_metric_mapping_parity.py, which compares
+// the freshly computed Python mapping against this checked-in artifact. Go
+// no longer hand-maintains its own copy of the mapping — it just embeds and
+// parses it at package-init time.
+//
+//go:embed alert_metric_mapping.generated.json
+var alertMetricMappingJSON []byte
+
+// catalogIDToAlertMetrics is parsed once at package-init time from the
+// embedded generated JSON artifact (see alertMetricMappingJSON above).
+var catalogIDToAlertMetrics = mustParseAlertMetricMapping(alertMetricMappingJSON)
+
+// mustParseAlertMetricMapping decodes the embedded catalog-ID -> AlertMetric
+// mapping. It is a dedicated, testable function (not an anonymous var
+// initializer) so a Go test can call it directly with broken bytes without
+// touching the real embed (AC-4). It panics loudly on invalid JSON rather
+// than silently returning an empty map — an empty map would make
+// ActiveAlertableMetricIDs() quietly stop synchronizing any alert rule on
+// every trip save.
+func mustParseAlertMetricMapping(raw []byte) map[string][]AlertMetric {
+	var parsed map[string][]string
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		panic(fmt.Sprintf("internal/model: embedded alert_metric_mapping.generated.json is invalid: %v", err))
+	}
+	result := make(map[string][]AlertMetric, len(parsed))
+	for catalogID, metrics := range parsed {
+		vals := make([]AlertMetric, len(metrics))
+		for i, m := range metrics {
+			vals[i] = AlertMetric(m)
+		}
+		result[catalogID] = vals
+	}
+	return result
 }
 
 // ActiveAlertableMetricIDs reads display_config["metrics"], translates each

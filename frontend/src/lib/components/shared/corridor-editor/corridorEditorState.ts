@@ -17,6 +17,7 @@
 // erfuellt, da ROUTE_METRIC_DEFS eine fest verdrahtete Liste ist.
 
 import type { Corridor, SensLevel, WeatherConfigMetric } from '$lib/types';
+import rawAlertMetricMapping from '$lib/generated/alertMetricMapping.generated.json' with { type: 'json' };
 
 export interface RouteMetricDef {
 	metric: string;
@@ -90,40 +91,30 @@ export interface CorridorRowState {
 // verhindert, dass der Korridor "Schneefallgrenze" nach diesem Fix nie mehr
 // im Pool erscheinen kann.
 //
-// Issue #1387: Diese Tabelle ist die DRITTE Kopie derselben Abbildung — Go
-// (internal/model/trip.go::catalogIDToAlertMetrics) und Python
-// (weather_change_detection.py::catalog_id_to_alert_metrics) halten sie
-// ebenfalls. Beide bilden "freezing_level" (Nullgradgrenze) UND
-// "snowfall_limit" (Schneefallgrenze) auf snow_line ab; hier fehlte
-// "freezing_level" — Folge: wer nur die Nullgradgrenze aktiviert hatte, bekam
-// unter "+ Metrik" keinen Schneefallgrenzen-Bereich angeboten. Aenderungen hier
-// deshalb NUR gemeinsam mit den beiden anderen Schichten.
-// Abgesichert ist davon nur die Haelfte: diese Tabelle gegen Python erzwingt
-// der Drift-Waechter tests/tdd/test_alert_metric_mapping_parity.py (er parst
-// diese Konstante). Die Go-Tabelle bleibt eine von Hand gespiegelte Kopie ohne
-// automatische Pruefung — dort muss weiterhin manuell nachgezogen werden.
-// Einzige zugelassene Abweichung: "temperature_cold" (selectable=false im
-// Katalog, im Wetter-Metriken-Tab nie aktivierbar) fehlt hier bewusst.
-// Issue #1425 (S2 Teil 1): jetzt exportiert — compareMetricCatalogLoader.ts
-// leitet aus den SCHLUESSELN dieser Tabelle den Duplikat-Filter fuer die
-// Zusatz-Metriken aus dem zentralen Katalog ab (keine zweite, driftende
-// Kopie derselben Katalog-ID-Liste). Struktur/Inhalt bleiben unveraendert —
-// der Drift-Waechter test_alert_metric_mapping_parity.py parst sie weiterhin.
-// Issue #1425 (S2 Teil 2, Scheibe B): "thunder" ist hier ABSICHTLICH nicht
-// mehr gefuehrt — die Wertebereiche-Zeile fuer Gewitter zieht auf den ordinalen
-// Katalog-Eintrag `thunder_level_max` um und braucht keine Bruecke auf einen
-// fest verdrahteten Route-Key mehr. Die ALARM-Seite fuehrt Gewitter unveraendert
-// unter `thunder_level` (metric_alert_levels, seit #1371 von trip.corridors[]
-// entkoppelt) — beide Bruecken laufen hier bewusst auseinander, abgesichert
-// durch die benannte Ausnahme in tests/tdd/test_alert_metric_mapping_parity.py
-// (test_thunder_exception_is_still_justified).
-export const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = {
-	gust: ['wind_gust'],
-	precipitation: ['precipitation_sum'],
-	temperature: ['temperature_min', 'temperature_max'],
-	snowfall_limit: ['snow_line'],
-	freezing_level: ['snow_line'],
-};
+// Fix #1435 Etappe E5: Es gibt keine dritte Handkopie mehr. Diese Konstante
+// wird aus der generierten Datei `$lib/generated/alertMetricMapping.generated.json`
+// abgeleitet — derselbe eingecheckte Artefakt-Stand, den auch Go per
+// `go:embed` einbindet (`internal/model/trip.go::catalogIDToAlertMetrics`)
+// und den `scripts/generate_alert_metric_mapping.py` aus der alleinigen
+// Python-Quelle (`weather_change_detection.py::catalog_id_to_alert_metrics`)
+// erzeugt. Zwei benannte, bewachte Filter ziehen zwei Katalog-IDs aus der
+// vollstaendigen, ungefilterten Rohdatei heraus (die Rohdatei enthaelt beide
+// weiterhin, s. AC-7):
+//   - "temperature_cold" (selectable=false im Katalog, im Wetter-Metriken-Tab
+//     nie aktivierbar) — bewacht von test_frontend_exception_is_still_justified.
+//   - "thunder" (Issue #1425 S2 Teil 2, Scheibe B: die Wertebereiche-Zeile fuer
+//     Gewitter zieht auf den ordinalen Katalog-Eintrag `thunder_level_max` um;
+//     die ALARM-Seite fuehrt Gewitter unveraendert unter `thunder_level`) —
+//     bewacht von test_thunder_exception_is_still_justified.
+// Drift zwischen Python-Quelle, generierter Datei und dieser Ableitung faengt
+// der Ratchet-Test tests/tdd/test_alert_metric_mapping_parity.py.
+const FRONTEND_EXCLUDED_CATALOG_IDS = new Set(['temperature_cold', 'thunder']);
+
+export const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = Object.fromEntries(
+	Object.entries(rawAlertMetricMapping as Record<string, string[]>).filter(
+		([catalogId]) => !FRONTEND_EXCLUDED_CATALOG_IDS.has(catalogId)
+	)
+);
 
 /**
  * Issue #1425 (S2 Teil 2, Scheibe B): eine Grenze des alten Prozent-Gewitter-
