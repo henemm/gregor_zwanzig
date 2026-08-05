@@ -635,7 +635,8 @@ class TripReportSchedulerService:
             report_type: "morning" or "evening"
 
         Returns:
-            Outcome string: "sent" | "no_stage" | "no_weather" | "no_channels"
+            Outcome string: "sent" | "no_stage" | "no_weather" | "no_channels" |
+            "channels_unreachable"
 
         Raises:
             ValueError: If report_type is invalid
@@ -658,7 +659,8 @@ class TripReportSchedulerService:
             report_type: "morning" (heute) or "evening" (morgen)
 
         Returns:
-            Outcome string: "sent" | "no_stage" | "no_weather" | "no_channels"
+            Outcome string: "sent" | "no_stage" | "no_weather" | "no_channels" |
+            "channels_unreachable"
             (Issue #1007 Adversary-Fix F001/F002 — Outcome-Unterscheidung statt
             eines bloßen bool, damit der Aufrufer "keine Etappe" von "keine
             Wetterdaten" und von "kein Kanal aktiv" unterscheiden kann).
@@ -714,7 +716,9 @@ class TripReportSchedulerService:
         Returns:
             "no_stage" if no matching stage, "no_weather" if the weather
             fetch failed, "no_channels" if stage+weather were fine but no
-            channel is configured for the trip, "sent" otherwise.
+            channel is configured for the trip, "channels_unreachable" if a
+            channel was configured but none was actually reached (Issue
+            #1403 AC-4), "sent" otherwise.
 
         Raises:
             Exception: If weather fetch or email send fails
@@ -945,10 +949,29 @@ class TripReportSchedulerService:
         # Issue #393: Briefing-Log für Cockpit-Kachel "Was geht heute raus".
         # Issue #1007 Adversary-Fix F001: bei explizit konfiguriertem "kein
         # Kanal aktiv" wird KEIN Log-Eintrag mit channels=[] geschrieben.
-        if not result.no_channel_configured:
+        # Issue #1403: dieselbe Unterscheidung gilt für die Protokollzeile —
+        # "Trip report sent" nur bei tatsächlichem Versand, sonst eine
+        # abweichende Warnzeile, damit echter und ausgebliebener Versand im
+        # Protokoll unterscheidbar sind.
+        # Issue #1403 AC-4: ein Kanal kann konfiguriert, aber technisch nicht
+        # erreichbar sein (z.B. Telegram ohne gültige Bot-Verbindung) —
+        # result.sent_channels bleibt dann leer, obwohl no_channel_configured
+        # False ist (result.sent ist die ehrliche Zustellfähigkeits-Aussage,
+        # notification_service.py:408). Gleiche Konsequenz wie beim
+        # "kein Kanal aktiv"-Fall: kein briefing_log-Eintrag (sonst täuscht ein
+        # Eintrag mit channels=[] der Cockpit-Kachel #393/#1007 einen Versand
+        # vor), aber eine eigene, unterscheidbare Protokollzeile.
+        if result.no_channel_configured:
+            logger.warning(
+                f"Trip report NOT sent (no channel configured): {trip.name} ({report_type})"
+            )
+        elif not result.sent:
+            logger.warning(
+                f"Trip report NOT sent (configured channel unreachable): {trip.name} ({report_type})"
+            )
+        else:
             self._append_briefing_log(trip.id, report_type, result.sent_channels)
-
-        logger.info(f"Trip report sent: {trip.name} ({report_type})")
+            logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
         # 9. Issue #1012: Teilausfall-Marker (Service-Error-Mail wurde bereits
         # vom NotificationService verschickt, weil failed_segments im Request
@@ -992,7 +1015,14 @@ class TripReportSchedulerService:
             briefing_entity_type="trip",
         )
 
-        return "no_channels" if result.no_channel_configured else "sent"
+        if result.no_channel_configured:
+            return "no_channels"
+        if not result.sent:
+            # Issue #1403 AC-4: konfiguriert, aber kein Kanal tatsächlich
+            # betreten (z.B. Telegram ohne gültige Bot-Verbindung) — ehrlich
+            # unterscheidbar vom "no_channels"-Fall oben.
+            return "channels_unreachable"
+        return "sent"
 
     def _build_trip_report_request(
         self,

@@ -204,6 +204,34 @@ def send_test_trip_report(trip_id: str, user_id: str = "default", report_type: s
             status_code=422,
             detail=f"Kein Briefing für {report_type} — keine Wetterdaten für die gewählte Etappe verfügbar",
         )
+    # Issue #1403: "no_channels" bedeutet Etappe+Wetter waren da, aber E-Mail,
+    # Telegram und SMS sind alle deaktiviert — bisher fiel das fälschlich auf
+    # die Erfolgsantwort {"sent": true} durch. Analog zu "no_stage"/"no_weather"
+    # oben: eigener 422-Zweig mit sprechendem Grund statt stillem Erfolg.
+    if outcome == "no_channels":
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Kein Briefing für {report_type} versendet — kein "
+                "Versandweg aktiv (E-Mail, Telegram und SMS sind alle "
+                "deaktiviert)"
+            ),
+        )
+    # Issue #1403 AC-4: anderer Auslöser, gleiches Symptom — mindestens ein
+    # Versandweg war konfiguriert (send_telegram/send_sms/send_email=true),
+    # aber technisch nicht erreichbar (z.B. Telegram ohne gültige Bot-
+    # Verbindung), sodass kein einziger Kanal tatsächlich betreten wurde.
+    # Eigene Meldung, damit sie sich von "no_channels" (Konfiguration) und
+    # nicht mit ihr verwechseln lässt.
+    if outcome == "channels_unreachable":
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Kein Briefing für {report_type} versendet — Versandweg "
+                "konfiguriert, aber nicht einsatzbereit (Kanal technisch "
+                "nicht erreichbar)"
+            ),
+        )
     return {"status": "ok", "trip_id": trip_id, "report_type": report_type, "sent": True}
 
 

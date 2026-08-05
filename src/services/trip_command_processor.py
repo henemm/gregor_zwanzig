@@ -239,7 +239,8 @@ _DRILLDOWN_METRICS: dict[str, tuple] = {
 def _on_demand_failure_body(outcome: str, label: str, target_date: date) -> str:
     """Formatiert den Antworttext für einen nicht-erfolgreichen On-Demand-Versand.
 
-    outcome: "no_stage" | "no_weather" | "no_channels" (alles außer "sent").
+    outcome: "no_stage" | "no_weather" | "no_channels" | "channels_unreachable"
+    (alles außer "sent").
     """
     human_date = f"{target_date:%d.%m.%Y}"
     if outcome == "no_weather":
@@ -251,6 +252,15 @@ def _on_demand_failure_body(outcome: str, label: str, target_date: date) -> str:
         return (
             "Keine Versandkanäle für diesen Trip aktiv — Briefing nicht "
             "gesendet. Kanäle im Trip-Editor aktivieren."
+        )
+    # Issue #1403 AC-4: Versandweg konfiguriert, aber technisch nicht
+    # erreichbar (z.B. Telegram ohne gültige Bot-Verbindung) — eigene
+    # Meldung, damit sie sich nicht mit "no_channels" (Konfiguration)
+    # verwechseln lässt.
+    if outcome == "channels_unreachable":
+        return (
+            "Versandweg für diesen Trip konfiguriert, aber nicht erreichbar "
+            "— Briefing nicht gesendet. Verbindung prüfen."
         )
     # "no_stage" (Default/Fallback)
     return f"{label} ({human_date}): Keine Etappe geplant"
