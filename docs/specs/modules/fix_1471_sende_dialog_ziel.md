@@ -185,6 +185,10 @@ passiert. Diese Entscheidung ist Teil der Spec-Freigabe (siehe AC-3/AC-4).
   und `EditReportConfigSection.svelte:296,311,332` werden in diesem Zug **nicht** saniert (Umfang
   bewusst auf den Dialog begrenzt). `sendTargetLabel()` ist aber der Ort, an dem sie bei
   künftiger Aufräumarbeit zusammenlaufen können.
+- Nachtrag 2026-08-05: Mit #1510 wurde das nachgeholt — die sechs Duplikate sind in
+  `channelContactLabel()` (`shared/versand-tab/channelContactLabel.ts`) gebündelt; siehe
+  `docs/specs/modules/fix_1510_versand_ziel_dedupe.md`. `sendTargetLabel()` bleibt davon
+  unberührt (eigener Baustein, eigener Zweck).
 - Ein Sofort-Versand aus der Trip-Liste existiert heute nicht (gemessen, einziger Treffer ist
   `compare/+page.svelte`) — die neue Funktion liegt deshalb bewusst im geteilten
   `shared/versand-tab/`-Ordner, damit ein künftiger Trip-Sofortversand dieselbe Quelle nutzen kann,
@@ -208,3 +212,5 @@ passiert. Diese Entscheidung ist Teil der Spec-Freigabe (siehe AC-3/AC-4).
 ## Changelog
 
 - 2026-08-04: Initial spec created
+- 2026-08-05: „Offene Grenzen" um Nachtrag ergänzt — die sechs Duplikate wurden mit #1510
+  (`channelContactLabel()`) saniert

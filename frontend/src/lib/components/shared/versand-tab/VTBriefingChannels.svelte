@@ -10,11 +10,12 @@
 	//
 	// Spec: docs/specs/modules/versand_tab_route.md (AC-2, AC-7)
 
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { Eyebrow, Card, Dot } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 	import { channelConnectionStatus } from './channelConnectionStatus';
+	import { channelContactLabel } from './channelContactLabel';
 	import TelegramKurzstilToggle from '$lib/components/shared/TelegramKurzstilToggle.svelte';
 
 	interface Channels {
@@ -41,6 +42,12 @@
 		 * Kanaelen im Alarme-Tab (dieselbe geteilte Komponente). */
 		telegramStyle?: 'rich' | 'kurzform';
 		onTelegramStyleChange?: (style: 'rich' | 'kurzform') => void;
+		/** RED-Infrastruktur (#1510): optionaler SSR-Test-Override fuer `profile`.
+		 * Falls gesetzt (auch explizit `null`) wird `profile` daraus initialisiert
+		 * und der `onMount`-Fetch uebersprungen — `svelte/server`s `render()` fuehrt
+		 * `onMount` nicht aus, ohne diesen Override bliebe `profile` in SSR-Tests
+		 * immer `null`. Ohne Uebergabe unveraendertes Verhalten (Fetch in onMount). */
+		profileOverride?: Profile | null;
 	}
 	let {
 		context = 'route',
@@ -52,7 +59,8 @@
 		telegramTestid = 'channel-telegram',
 		smsTestid = 'channel-sms',
 		telegramStyle = 'rich',
-		onTelegramStyleChange
+		onTelegramStyleChange,
+		profileOverride
 	}: Props = $props();
 
 	interface Profile {
@@ -62,7 +70,9 @@
 		sms_allowed?: boolean;
 		email_verified?: boolean;
 	}
-	let profile = $state<Profile | null>(null);
+	let profile = $state<Profile | null>(
+		untrack(() => (profileOverride !== undefined ? profileOverride : null))
+	);
 
 	let availableChannels = $derived({
 		email: !!profile?.mail_to,
@@ -73,8 +83,10 @@
 	// Issue #1258 S6 (R5): ehrlicher Verbindungsstatus je Kanal (Dot + Label),
 	// additiv zu den bestehenden Checkboxen.
 	let connectionStatus = $derived(channelConnectionStatus(profile));
+	let contactLabel = $derived(channelContactLabel(profile));
 
 	onMount(() => {
+		if (profileOverride !== undefined) return;
 		fetch('/api/auth/profile', { credentials: 'same-origin' })
 			.then((r) => (r.ok ? r.json() : null))
 			.then((p) => {
@@ -105,8 +117,8 @@
 		<div class="vt-channels-body">
 			<div class="text-sm">
 				<span data-testid={emailTestid} class="inline-flex items-center gap-2">
-					<Checkbox checked={channels.email} disabled={!availableChannels.email} onchange={onEmailChange}
-						>E-Mail{profile?.mail_to ? ` (${profile.mail_to})` : ''}</Checkbox
+					<Checkbox checked={channels.email} disabled={connectionStatus.email.tone !== 'good'} onchange={onEmailChange}
+						>E-Mail{contactLabel.email}</Checkbox
 					>
 				</span>
 				<span data-testid="channel-status-email" class="vt-channel-status">
@@ -127,7 +139,7 @@
 						checked={channels.telegram}
 						disabled={!availableChannels.telegram}
 						onchange={onTelegramChange}
-						>Telegram{profile?.telegram_chat_id ? ` (${profile.telegram_chat_id})` : ''}</Checkbox
+						>Telegram{contactLabel.telegram}</Checkbox
 					>
 				</span>
 				<span data-testid="channel-status-telegram" class="vt-channel-status">
@@ -155,7 +167,7 @@
 			<div class="text-sm">
 				<span data-testid={smsTestid} class="inline-flex items-center gap-2">
 					<Checkbox checked={channels.sms} disabled={!availableChannels.sms} onchange={onSmsChange}
-						>SMS{profile?.sms_to ? ` (${profile.sms_to})` : ''}</Checkbox
+						>SMS{contactLabel.sms}</Checkbox
 					>
 				</span>
 				<span data-testid="channel-status-sms" class="vt-channel-status">

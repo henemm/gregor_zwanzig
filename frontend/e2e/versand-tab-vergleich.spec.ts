@@ -152,7 +152,10 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 				.locator('[data-testid="compare-step5-channel-email"]:visible')
 				.first()
 				.locator('input[type="checkbox"]');
-			if (await email.isChecked()) await email.uncheck();
+			// { force: true }: die per PUT gesetzte Adresse ist unbestätigt und sperrt
+			// die Checkbox seit #1510 real (AC-4) — dieser Test prüft weiterhin nur
+			// die Leerzustand-Anzeige bei "kein Kanal aktiv", nicht die Sperre selbst.
+			if (await email.isChecked()) await email.uncheck({ force: true });
 
 			await expect(
 				page.locator('[data-testid="briefings-channel-empty"]:visible').first()

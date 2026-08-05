@@ -1,10 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import type { ReportConfig } from '$lib/types';
 	import { toHHMMSS } from '$lib/utils/time';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import VTSchedulePlan from '../shared/versand-tab/VTSchedulePlan.svelte';
+	import { channelConnectionStatus } from '../shared/versand-tab/channelConnectionStatus';
+	import { channelContactLabel } from '../shared/versand-tab/channelContactLabel';
+	import { Dot } from '$lib/components/atoms';
 	import {
 		DEFAULT_DAILY_SUMMARY_METRICS,
 		CONTENT_MODULE_DESCRIPTIONS,
@@ -31,8 +34,14 @@
 		showSchedule?: boolean;
 		/** Issue #736: Callback bei Kanal-Toggle — für Auto-Save von display_config.channels. */
 		onChannelChange?: (channel: 'email' | 'telegram' | 'sms', value: boolean) => void;
+		/** RED-Infrastruktur (#1510): optionaler SSR-Test-Override fuer `profile`.
+		 * Falls gesetzt (auch explizit `null`) wird `profile` daraus initialisiert
+		 * und der `onMount`-Fetch uebersprungen — `svelte/server`s `render()` fuehrt
+		 * `onMount` nicht aus, ohne diesen Override bliebe `profile` in SSR-Tests
+		 * immer `null`. Ohne Uebergabe unveraendertes Verhalten (Fetch in onMount). */
+		profileOverride?: Profile | null;
 	}
-	let { reportConfig = $bindable(), mode = 'create', weatherChannels, showMailContent = true, showChannels = true, showSchedule = true, onChannelChange }: Props = $props();
+	let { reportConfig = $bindable(), mode = 'create', weatherChannels, showMailContent = true, showChannels = true, showSchedule = true, onChannelChange, profileOverride }: Props = $props();
 
 	// --- Original-Blob fuer Read-Modify-Write -----------------------------------
 	// Alle nicht UI-gepflegten Felder (insb. change_threshold_*, custom_unknown_*)
@@ -81,17 +90,25 @@
 	// --- Profile (Channel-Verfuegbarkeit) --------------------------------------
 	interface Profile {
 		mail_to?: string;
+		email_verified?: boolean;
 		telegram_chat_id?: string;
 		sms_to?: string;
 		sms_allowed?: boolean;
 	}
-	let profile = $state<Profile | null>(null);
+	let profile = $state<Profile | null>(
+		untrack(() => (profileOverride !== undefined ? profileOverride : null))
+	);
 
 	let availableChannels = $derived({
 		email: !!profile?.mail_to,
 		telegram: !!profile?.telegram_chat_id,
 		sms: !!profile?.sms_to && profile?.sms_allowed !== false
 	});
+
+	// Issue #1510: ehrlicher Verbindungsstatus + geteilte Kontakt-Beschriftung
+	// (analog VTBriefingChannels.svelte).
+	let connectionStatus = $derived(channelConnectionStatus(profile));
+	let contactLabel = $derived(channelContactLabel(profile));
 
 	// Issue #617: Wetter-Kanal-Gating (nur wenn weatherChannels gesetzt)
 	let weatherVisible = $derived(visibleChannels(weatherChannels));
@@ -172,10 +189,12 @@
 
 		// Profile laden (Channel-Verfuegbarkeit). Fail-soft: bei Fehler bleiben
 		// alle Channels disabled (mit Account-Link-Hinweis).
-		fetch('/api/auth/profile', { credentials: 'same-origin' })
-			.then((r) => (r.ok ? r.json() : null))
-			.then((p) => { profile = p as Profile | null; })
-			.catch(() => { profile = null; });
+		if (profileOverride === undefined) {
+			fetch('/api/auth/profile', { credentials: 'same-origin' })
+				.then((r) => (r.ok ? r.json() : null))
+				.then((p) => { profile = p as Profile | null; })
+				.catch(() => { profile = null; });
+		}
 	});
 
 	// --- Write-Back: Read-Modify-Write -----------------------------------------
@@ -291,9 +310,13 @@
 					<span data-testid="channel-email" class="inline-flex items-center gap-2">
 						<Checkbox
 							checked={send_email}
-							disabled={!availableChannels.email}
+							disabled={connectionStatus.email.tone !== 'good'}
 							onchange={(e) => { const v = (e.target as HTMLInputElement).checked; send_email = v; onChannelChange?.('email', v); }}
-						>E-Mail{profile?.mail_to ? ` (${profile.mail_to})` : ''}</Checkbox>
+						>E-Mail{contactLabel.email}</Checkbox>
+					</span>
+					<span data-testid="channel-status-email" class="rc-channel-status">
+						<Dot tone={connectionStatus.email.tone} size={7} />
+						<span class="rc-channel-status-label">{connectionStatus.email.label}</span>
 					</span>
 				</div>
 				{#if !availableChannels.email}
@@ -311,7 +334,11 @@
 							checked={send_telegram}
 							disabled={!availableChannels.telegram}
 							onchange={(e) => { const v = (e.target as HTMLInputElement).checked; send_telegram = v; onChannelChange?.('telegram', v); }}
-						>Telegram{profile?.telegram_chat_id ? ` (${profile.telegram_chat_id})` : ''}</Checkbox>
+						>Telegram{contactLabel.telegram}</Checkbox>
+					</span>
+					<span data-testid="channel-status-telegram" class="rc-channel-status">
+						<Dot tone={connectionStatus.telegram.tone} size={7} />
+						<span class="rc-channel-status-label">{connectionStatus.telegram.label}</span>
 					</span>
 				</div>
 				{#if !availableChannels.telegram}
@@ -329,7 +356,11 @@
 							checked={send_sms}
 							disabled={!availableChannels.sms}
 							onchange={(e) => { const v = (e.target as HTMLInputElement).checked; send_sms = v; onChannelChange?.('sms', v); }}
-						>SMS{profile?.sms_to ? ` (${profile.sms_to})` : ''}</Checkbox>
+						>SMS{contactLabel.sms}</Checkbox>
+					</span>
+					<span data-testid="channel-status-sms" class="rc-channel-status">
+						<Dot tone={connectionStatus.sms.tone} size={7} />
+						<span class="rc-channel-status-label">{connectionStatus.sms.label}</span>
 					</span>
 				</div>
 				{#if profile?.sms_allowed === false}
@@ -438,4 +469,22 @@
 	</Card.Root>
 	{/if}
 </div>
+
+<style>
+	/* Issue #1510: Verbindungsstatus-Dot + Mono-Label — 1:1 aus
+	   VTBriefingChannels.svelte (.vt-channel-status/-label), eigene Klassen hier
+	   weil EditReportConfigSection kein Tailwind-Utility dafuer hat. */
+	.rc-channel-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin-left: 10px;
+	}
+	.rc-channel-status-label {
+		font-family: var(--g-font-mono);
+		font-size: 11px;
+		letter-spacing: 0.04em;
+		color: var(--g-ink-3);
+	}
+</style>
 

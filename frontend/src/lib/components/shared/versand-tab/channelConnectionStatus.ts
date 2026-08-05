@@ -2,6 +2,10 @@
 // Leitet je Kanal einen ehrlichen Verbindungsstatus aus dem Profil ab
 // (Zustands-Matrix: Spec docs/specs/modules/issue_1258_alarme_tab_official_warnings.md
 // Abschnitt 12, AC-21). Pure Funktion, kein Netz-/DOM-Zugriff — node:testbar.
+//
+// Verwandte Bausteine im selben Ordner, die dieselbe ConnectionProfile-Datenbasis
+// konsumieren: sendTargetLabel.ts (#1471, Ziel-Satz im Bestätigungsdialog) und
+// channelContactLabel.ts (#1510, Kontakt-Suffixe für die Checkbox-Labels).
 
 export type ConnectionTone = 'good' | 'neutral';
 
