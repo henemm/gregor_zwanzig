@@ -1394,6 +1394,7 @@ def render_compare_html(
     corridors: list[Corridor] | None = None,
     outlook_enabled: bool = False,
     outlook_metrics: list[dict] | None = None,
+    undelivered: list | None = None,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
@@ -1511,6 +1512,17 @@ def render_compare_html(
         _per_location(loc, i) for i, loc in enumerate(locations)
     )
 
+    # Issue #1461 S3b-1: derselbe Baustein wie im Trip-Briefing (kein Nachbau,
+    # Teilungs-Invariante). Zeitbasis ist die Kopfzeilen-Zeitzone des
+    # erstgenannten Ortes -- `render_compare_html()` kennt keine eigene `tz`.
+    from output.renderers.email.undelivered_hint import (
+        has_undelivered, render_undelivered_html,
+    )
+    undelivered_html = (
+        render_undelivered_html(undelivered, tz=header_tz)
+        if has_undelivered(undelivered) else ""
+    )
+
     legend_html = _render_legend(hourly_metrics, hourly_enabled)
     abo_html = _render_abo_footer(preset_name, preset_schedule, preset_weekday, len(locations), sig)
     app_footer_html = _render_app_footer()
@@ -1521,7 +1533,7 @@ def render_compare_html(
         part for part in (
             header_html, warnings_html, warn_banner_html, unavailable_banner_html,
             overview_html, hourly_head_html, per_location_html,
-            legend_html, abo_html, app_footer_html,
+            undelivered_html, legend_html, abo_html, app_footer_html,
         ) if part
     )
 

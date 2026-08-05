@@ -81,6 +81,7 @@ class TripReportFormatter:
         render_options: Optional[ReportRenderOptions] = None,
         trip: Optional["Trip"] = None,
         has_gap: bool = False,
+        undelivered: Optional[list] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email.
 
@@ -224,6 +225,10 @@ class TripReportFormatter:
             # Zellen im HTML-Teil (Durchreichweg trip.py:193 -> render_email
             # -> render_html, geteilter Baustein mit dem Compare-Renderer).
             corridors=trip.corridors if trip is not None else None,
+            # Issue #1461 S3b-1: Vorfaelle als expliziter kwarg — der
+            # Renderer bleibt rein und laedt nichts nach (Spec §A1/§A5/§A6).
+            # Ohne den kwarg (Vorschau, Goldens, CLI) unveraendert.
+            undelivered=undelivered,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

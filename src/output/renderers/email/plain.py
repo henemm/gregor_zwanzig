@@ -39,6 +39,9 @@ from output.renderers.alert.official_alerts import (
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable, render_official_alerts_unavailable_plain,
 )
+from output.renderers.email.undelivered_hint import (
+    has_undelivered, render_undelivered_plain,
+)
 # Epic #1301 B4: geteilter Ausblick-Renderer (Trip/Compare-Teilungs-Invariante)
 from output.renderers.email.outlook import render_outlook_plain
 from output.renderers.email.outlook_state_hint import (
@@ -111,6 +114,7 @@ def render_plain(
     show_outlook: bool = True,
     day_comparison: Optional["DayComparison"] = None,
     trip_metrics_altbestand: bool = True,
+    undelivered: Optional[list] = None,
     **_ignored,
 ) -> str:
     """Render full plain-text e-mail body. Pure function.
@@ -312,6 +316,14 @@ def render_plain(
         # Aufrufer ohne `outlook_state` (Default None) bleiben unveraendert.
         lines.append("━━ Nächste Etappen ━━")
         lines.append(render_outlook_state_plain(outlook_state, outlook_horizon_days))
+        lines.append("")
+
+    # Issue #1461 S3b-1: was seit dem letzten Briefing einen Kanal NICHT
+    # erreicht hat. Geteilter Baustein (Trip + Ortsvergleich); ohne Vorfaelle
+    # erscheint gar nichts -> Zeichen-Gleichheit im Normalfall.
+    if has_undelivered(undelivered):
+        lines.append("")
+        lines.append(render_undelivered_plain(undelivered, tz=tz))
         lines.append("")
 
     # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz)

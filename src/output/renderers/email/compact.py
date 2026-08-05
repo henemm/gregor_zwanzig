@@ -30,6 +30,9 @@ from output.renderers.alert.official_alerts import (
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable, render_official_alerts_unavailable_plain,
 )
+from output.renderers.email.undelivered_hint import (
+    has_undelivered, render_undelivered_plain,
+)
 from output.renderers.email.outlook_state_hint import (
     OutlookState as _OutlookState, render_outlook_state_plain,
 )
@@ -108,6 +111,7 @@ def render_compact(
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     trip_metrics_altbestand: bool = True,
+    undelivered: Optional[list] = None,
     **_ignored,
 ) -> str:
     """Render compact plain-text e-mail body. Pure function.
@@ -237,6 +241,14 @@ def render_compact(
         lines.append("Naechste Etappen")
         lines.append(_ascii(render_outlook_state_plain(
             outlook_state, outlook_horizon_days, ascii_safe=True,
+        )))
+        lines.append("")
+
+    # Issue #1461 S3b-1: "E-Mail" heisst BEIDE Mail-Formate — das Kurzformat
+    # zeigt denselben Abschnitt (AC-9), ascii_safe wie der uebrige Body.
+    if has_undelivered(undelivered):
+        lines.append(_ascii(render_undelivered_plain(
+            undelivered, tz=tz, ascii_safe=True,
         )))
         lines.append("")
 

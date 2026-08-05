@@ -286,10 +286,20 @@ class NotificationService:
             start_hour=_dw_start, end_hour=_dw_end,
         )
 
+        # Issue #1461 S3b-1: was seit dem letzten Briefing dieses Trips einen
+        # Kanal nicht erreicht hat. Echte `user_id` (Mandantentrennung, nie
+        # "default") und die Protokoll-Kennung `trip.id`.
+        from services.alert_briefing_anchor import undelivered_since_last_briefing
+
+        undelivered = undelivered_since_last_briefing(
+            user_id=self._user_id, entity_id=request.trip.id, entity_type="trip",
+        )
+
         report = self._formatter.format_email(
             segments=request.segment_weather,
             trip_name=request.trip.name,
             trip=request.trip,
+            undelivered=undelivered,
             report_type=request.report_type,
             display_config=request.display_config,
             night_weather=request.night_weather,
