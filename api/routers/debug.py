@@ -24,7 +24,10 @@ def trigger_radar_alert(user_id: str = "default"):
     1. Staging-Guard (GZ_ENV=staging) -> sonst 404.
     2. Trips fuer user_id laden.
     3. Ersten Trip + Segment ableiten.
-    4. Nowcast abrufen (echter Call, kein Mock).
+    4. Nowcast-Ergebnis als deterministisches Fixture injizieren (source="test") —
+       KEIN echter Quellen-Abruf (#1190): geprueft wird nur die Alarm-Mechanik
+       (Throttle/Mail-Format/Cooldown), nicht die Provider-Kette. Fuer
+       Provider-/Source-Chain-Verifikation ungeeignet.
     5. Mail an gregor-test@henemm.com senden (mail_type=radar-alert).
     6. Kein radar_alert_due()-Check, kein Throttle-Eintrag (Test-Seam).
     """
