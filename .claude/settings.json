@@ -74,6 +74,16 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_issue_close_design_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_issue_close_design_gate.py\"; fi",
+            "timeout": 60
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit",
         "hooks": [
           {

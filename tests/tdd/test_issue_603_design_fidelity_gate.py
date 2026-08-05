@@ -44,6 +44,22 @@ SOLL_DIR = MAIN_REPO / "claude-code-handoff/current/soll"
 PILOT_SCREEN = "G-compare-uebersicht-kacheln"
 
 
+def _tool_env(workflow: str) -> dict:
+    """AC-14 für die Werkzeug-Läufe: Umgebung selbst gesetzt.
+
+    Der frühere Aufbau `{**os.environ, "GZ_ACTIVE_WORKFLOW": …}` liess die von
+    aussen gesetzte OPENSPEC_ACTIVE_WORKFLOW mitlaufen. Seit #1307 Scheibe B
+    loest auch das Werkzeug den Ordnernamen aus BEIDEN Schreibweisen auf, mit
+    OPENSPEC zuerst (gleiche Reihenfolge wie der Waechter, sonst kehrt der
+    Ordner-Bruch aus AC-12 zurueck). Der Test mass damit nicht mehr, was er zu
+    messen behauptet: er legte den Ordner A an und das Werkzeug schrieb nach B.
+    Beide Schreibweisen deshalb erst raus, dann genau eine gezielt rein.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in _WORKFLOW_ENV_VARS}
+    env["GZ_ACTIVE_WORKFLOW"] = workflow
+    return env
+
+
 class TestAC1DiffToolProducesReport:
     """AC-1: design_fidelity_diff.py erzeugt JSON-Report + Diff-PNG."""
 
@@ -93,7 +109,7 @@ class TestAC1DiffToolProducesReport:
         result = subprocess.run(
             [sys.executable, str(DIFF_TOOL), "--screen", PILOT_SCREEN],
             capture_output=True, text=True, cwd=str(MAIN_REPO),
-            env={**os.environ, "GZ_ACTIVE_WORKFLOW": workflow}
+            env=_tool_env(workflow)
         )
 
         assert report_path.exists(), (
@@ -122,7 +138,7 @@ class TestAC1DiffToolProducesReport:
         subprocess.run(
             [sys.executable, str(DIFF_TOOL), "--screen", PILOT_SCREEN],
             capture_output=True, text=True, cwd=str(MAIN_REPO),
-            env={**os.environ, "GZ_ACTIVE_WORKFLOW": workflow}
+            env=_tool_env(workflow)
         )
 
         assert diff_png.exists(), (
@@ -144,7 +160,7 @@ class TestAC1DiffToolProducesReport:
         result = subprocess.run(
             [sys.executable, str(DIFF_TOOL), "--screen", PILOT_SCREEN],
             capture_output=True, text=True, cwd=str(MAIN_REPO),
-            env={**os.environ, "GZ_ACTIVE_WORKFLOW": workflow}
+            env=_tool_env(workflow)
         )
 
         assert report_path.exists(), "JSON-Report muss existieren"
@@ -156,8 +172,67 @@ class TestAC1DiffToolProducesReport:
             assert result.returncode == 1, f"passed=false aber Exit {result.returncode}"
 
 
+# ---------------------------------------------------------------------------
+# AC-14 (#1307 Scheibe B): Die Gate-Prüfungen setzen ihre Umgebung SELBST.
+#
+# Der frühere Aufbau `{**os.environ, "GZ_ACTIVE_WORKFLOW": …}` liess die von
+# aussen gesetzte OPENSPEC_ACTIVE_WORKFLOW mitlaufen — und die gewinnt im Gate
+# (pre_issue_close_design_gate.py:50). Der Test mass damit nicht, was er zu
+# messen behauptete: das Gate suchte im Ordner des AKTIVEN Workflows statt in
+# dem, den der Test angelegt hatte.
+# ---------------------------------------------------------------------------
+
+_WORKFLOW_ENV_VARS = ("OPENSPEC_ACTIVE_WORKFLOW", "GZ_ACTIVE_WORKFLOW")
+_GATE_ISSUE = "603"          # trägt das Label design-compliance
+_PLAIN_ISSUE = "1"           # trägt es nicht
+
+
+def _gate_env(project_dir: Path, command: str, workflow: str | None,
+              var: str = "OPENSPEC_ACTIVE_WORKFLOW") -> dict:
+    """Vollständig selbst gesetzte Umgebung für einen Gate-Lauf.
+
+    Beide Schreibweisen der Workflow-Kennung werden zuerst ausdrücklich
+    entfernt, damit keine von aussen gesetzte Kennung durchschlägt.
+    `CLAUDE_PROJECT_DIR` hält die Artefakt-Ablage im Testverzeichnis (das echte
+    Repo bleibt unberührt), `GH_REPO` macht den `gh issue view`-Aufruf des
+    Gates unabhängig vom Arbeitsverzeichnis.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in _WORKFLOW_ENV_VARS}
+    env["CLAUDE_TOOL_INPUT"] = json.dumps({"command": command})
+    env["CLAUDE_PROJECT_DIR"] = str(project_dir)
+    env.setdefault("GH_REPO", "henemm/gregor_zwanzig")
+    if workflow:
+        env[var] = workflow
+    return env
+
+
+def _run_gate(env: dict) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(GATE_HOOK)],
+        capture_output=True, text=True, env=env, cwd=env["CLAUDE_PROJECT_DIR"],
+    )
+
+
+def _artefact_dir(project_dir: Path, workflow: str) -> Path:
+    d = project_dir / "docs" / "artifacts" / workflow
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _write_pass_artefact(project_dir: Path, workflow: str) -> Path:
+    path = _artefact_dir(project_dir, workflow) / f"design-diff-{PILOT_SCREEN}.json"
+    path.write_text(json.dumps({
+        "screen": PILOT_SCREEN,
+        "diff_pct": 7.3,
+        "passed": True,
+        "workflow": workflow,
+    }))
+    return path
+
+
 class TestAC2GateBlocksWithoutArtefact:
-    """AC-2: pre_issue_close_design_gate.py blockiert gh issue close ohne Pass-Artefakt."""
+    """AC-13/AC-14: pre_issue_close_design_gate.py lässt mit Nachweis durch und
+    blockiert ohne — in beiden Schreibweisen der Workflow-Kennung."""
 
     def test_gate_hook_file_exists(self):
         """
@@ -170,93 +245,136 @@ class TestAC2GateBlocksWithoutArtefact:
             "Implementierung fehlt noch (erwartetes RED)"
         )
 
-    @pytest.mark.xfail(reason="#1307: pre_issue_close_design_gate.py liefert Exit 0 statt Exit 2 bei fehlendem Pass-Artefakt (Gate blockt faelschlich NICHT)", strict=False)
-    def test_gate_blocks_issue_close_without_pass_artefact(self):
+    def test_gate_blocks_issue_close_without_pass_artefact(self, tmp_path):
         """
-        GIVEN: Issue #603 mit Label design-compliance, kein Pass-Artefakt im Workflow
+        AC-13 (Richtung 1)
+        GIVEN: Issue mit Label design-compliance, kein Pass-Artefakt im Workflow
         WHEN: Hook mit 'gh issue close 603' als CLAUDE_TOOL_INPUT aufgerufen
-        THEN: Exit-Code 2 (blockiert)
+        THEN: Exit-Code 2, und die Meldung benennt, was fehlt
         """
-        assert GATE_HOOK.exists(), (
-            f"pre_issue_close_design_gate.py nicht gefunden: {GATE_HOOK}\n"
-            "Implementierung fehlt noch (erwartetes RED)"
-        )
-        workflow = "issue-603-design-fidelity-gate"
-        # Artefakt-Verzeichnis leer halten
-        artefact_dir = MAIN_REPO / "docs/artifacts" / workflow
-        artefact_dir.mkdir(parents=True, exist_ok=True)
-        for f in artefact_dir.glob("design-diff-*.json"):
-            f.unlink()
+        workflow = "test-1307b-design-gate-blocks"
+        _artefact_dir(tmp_path, workflow)  # existiert, aber leer
 
-        env = {
-            **os.environ,
-            "CLAUDE_TOOL_INPUT": json.dumps({"command": "gh issue close 603"}),
-            "GZ_ACTIVE_WORKFLOW": workflow,
-        }
-        result = subprocess.run(
-            [sys.executable, str(GATE_HOOK)],
-            capture_output=True, text=True, env=env, cwd=str(MAIN_REPO)
-        )
+        env = _gate_env(tmp_path, f"gh issue close {_GATE_ISSUE}", workflow)
+        result = _run_gate(env)
+
         assert result.returncode == 2, (
             f"Gate muss bei fehlendem Pass-Artefakt Exit 2 liefern, "
             f"got Exit {result.returncode}\n"
             f"stdout: {result.stdout[:300]}\nstderr: {result.stderr[:300]}"
         )
+        combined = result.stdout + result.stderr
+        assert "design" in combined.lower() and _GATE_ISSUE in combined, (
+            "Die Blockade-Meldung muss benennen, um welches Issue es geht und "
+            f"welcher Nachweis fehlt. Ausgabe: {combined[:400]!r}"
+        )
 
-    def test_gate_allows_close_with_pass_artefact(self):
+    def test_gate_allows_close_with_pass_artefact(self, tmp_path):
         """
+        AC-13 (Richtung 2)
         GIVEN: Pass-Artefakt mit passed=true im Workflow-Artefaktordner
         WHEN: Hook mit 'gh issue close 603' aufgerufen
         THEN: Exit-Code 0 (erlaubt)
         """
-        workflow = "issue-603-design-fidelity-gate"
-        artefact_dir = MAIN_REPO / "docs/artifacts" / workflow
-        artefact_dir.mkdir(parents=True, exist_ok=True)
+        workflow = "test-1307b-design-gate-allows"
+        _write_pass_artefact(tmp_path, workflow)
 
-        # Valides Pass-Artefakt anlegen
-        pass_artefact = artefact_dir / "design-diff-G-compare-uebersicht-kacheln.json"
-        pass_artefact.write_text(json.dumps({
-            "screen": "G-compare-uebersicht-kacheln",
-            "diff_pct": 7.3,
-            "passed": True,
-            "workflow": workflow
-        }))
-
-        env = {
-            **os.environ,
-            "CLAUDE_TOOL_INPUT": json.dumps({"command": "gh issue close 603"}),
-            "GZ_ACTIVE_WORKFLOW": workflow,
-        }
-        result = subprocess.run(
-            [sys.executable, str(GATE_HOOK)],
-            capture_output=True, text=True, env=env, cwd=str(MAIN_REPO)
-        )
-
-        pass_artefact.unlink(missing_ok=True)
+        env = _gate_env(tmp_path, f"gh issue close {_GATE_ISSUE}", workflow)
+        result = _run_gate(env)
 
         assert result.returncode == 0, (
             f"Gate muss mit Pass-Artefakt Exit 0 liefern, "
             f"got Exit {result.returncode}\n"
-            f"stdout: {result.stdout[:300]}"
+            f"stdout: {result.stdout[:300]}\nstderr: {result.stderr[:300]}"
         )
 
-    def test_gate_ignores_non_design_compliance_issues(self):
+    def test_gate_reads_legacy_workflow_variable(self, tmp_path):
+        """
+        AC-13/AC-12 (Rückwärtskompatibilität)
+        GIVEN: nur die ältere Schreibweise GZ_ACTIVE_WORKFLOW ist gesetzt
+        WHEN: das Schliessen eines Design-Issues ohne Nachweis versucht wird
+        THEN: das Gate blockiert trotzdem (Exit 2)
+
+        Die Geschwister-Gates akzeptieren beide Schreibweisen
+        (prod_send_gate.py:305-309). Dieses Gate liest heute nur
+        OPENSPEC_ACTIVE_WORKFLOW und läuft bei der älteren Schreibweise still
+        ins Fail-open — es bewacht dann gar nichts.
+        """
+        workflow = "test-1307b-design-gate-legacy"
+        _artefact_dir(tmp_path, workflow)  # leer
+
+        env = _gate_env(tmp_path, f"gh issue close {_GATE_ISSUE}", workflow,
+                        var="GZ_ACTIVE_WORKFLOW")
+        result = _run_gate(env)
+
+        assert result.returncode == 2, (
+            "Gate muss auch bei gesetztem GZ_ACTIVE_WORKFLOW (ohne "
+            "OPENSPEC_ACTIVE_WORKFLOW) blockieren, wenn kein Nachweis vorliegt; "
+            f"got Exit {result.returncode}\n"
+            f"stdout: {result.stdout[:300]}\nstderr: {result.stderr[:300]}"
+        )
+
+    def test_gate_reads_legacy_workflow_variable_and_allows_with_artefact(self, tmp_path):
+        """AC-12/AC-13: derselbe Fall mit Nachweis — dann lässt das Gate durch.
+
+        Zusammen mit dem vorigen Fall belegt das, dass die ältere Schreibweise
+        wirklich AUFGELÖST wird und nicht bloss beide Male fail-open Exit 0
+        liefert.
+        """
+        workflow = "test-1307b-design-gate-legacy-pass"
+        _write_pass_artefact(tmp_path, workflow)
+
+        env = _gate_env(tmp_path, f"gh issue close {_GATE_ISSUE}", workflow,
+                        var="GZ_ACTIVE_WORKFLOW")
+        result = _run_gate(env)
+
+        assert result.returncode == 0, (
+            f"Gate muss mit Pass-Artefakt Exit 0 liefern, got Exit {result.returncode}\n"
+            f"stdout: {result.stdout[:300]}\nstderr: {result.stderr[:300]}"
+        )
+
+    def test_gate_environment_is_self_set_not_inherited(self, tmp_path, monkeypatch):
+        """
+        AC-14: Eine von aussen gesetzte Workflow-Kennung darf nicht durchschlagen.
+
+        Aufbau: im Prozess-Environment steht eine FREMDE Kennung, deren Ordner
+        einen bestandenen Nachweis enthält. Der Gate-Lauf bekommt eine eigene
+        Kennung ohne Nachweis. Läuft die fremde Kennung mit (der alte
+        `{**os.environ, …}`-Aufbau), findet das Gate den fremden Nachweis und
+        lässt durch — der Test wäre blind.
+        """
+        poison = "test-1307b-design-gate-poison"
+        _write_pass_artefact(tmp_path, poison)
+        monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", poison)
+        monkeypatch.setenv("GZ_ACTIVE_WORKFLOW", poison)
+
+        workflow = "test-1307b-design-gate-own"
+        _artefact_dir(tmp_path, workflow)  # leer
+
+        env = _gate_env(tmp_path, f"gh issue close {_GATE_ISSUE}", workflow)
+        assert env.get("OPENSPEC_ACTIVE_WORKFLOW") == workflow
+        assert "GZ_ACTIVE_WORKFLOW" not in env
+        result = _run_gate(env)
+
+        assert result.returncode == 2, (
+            "Gate muss blockieren — der bestandene Nachweis gehört zu einem "
+            f"FREMDEN Workflow ({poison}). Exit {result.returncode} bedeutet, dass "
+            "die ambient gesetzte Kennung durchgeschlagen ist.\n"
+            f"stdout: {result.stdout[:300]}\nstderr: {result.stderr[:300]}"
+        )
+
+    def test_gate_ignores_non_design_compliance_issues(self, tmp_path):
         """
         GIVEN: Issue ohne design-compliance Label
         WHEN: Hook mit 'gh issue close 1' aufgerufen (normales Issue)
         THEN: Exit-Code 0 (Gate greift nicht)
         """
-        env = {
-            **os.environ,
-            "CLAUDE_TOOL_INPUT": json.dumps({"command": "gh issue close 1"}),
-            "GZ_ACTIVE_WORKFLOW": "issue-603-design-fidelity-gate",
-        }
-        result = subprocess.run(
-            [sys.executable, str(GATE_HOOK)],
-            capture_output=True, text=True, env=env, cwd=str(MAIN_REPO)
-        )
+        env = _gate_env(tmp_path, f"gh issue close {_PLAIN_ISSUE}",
+                        "test-1307b-design-gate-plain")
+        result = _run_gate(env)
         assert result.returncode == 0, (
-            f"Gate darf normale Issues nicht blockieren, got Exit {result.returncode}"
+            f"Gate darf normale Issues nicht blockieren, got Exit {result.returncode}\n"
+            f"stderr: {result.stderr[:300]}"
         )
 
 

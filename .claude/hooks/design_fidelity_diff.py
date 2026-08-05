@@ -16,6 +16,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 SCREEN_URL_MAP = {
     # Home (D) — gleiche Route, verschiedene Cockpit-Varianten
@@ -142,15 +143,55 @@ SCREEN_PRE_ACTIONS: dict[str, list[tuple[str, str]]] = {
 
 
 def load_validator_env() -> None:
-    validator_env = Path(".claude/validator.env")
-    if not validator_env.exists():
-        return
-    for line in validator_env.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    """Zugangsdaten nachladen — ZWEI Quellen, zwei verschiedene Schranken:
+
+    - `.claude/validator.env` (GZ_VALIDATOR_*) → der vorgeschaltete
+      Basic-Auth-Schutz vor Staging.
+    - `.env` (GZ_AUTH_*) → die Anmeldung der Anwendung selbst.
+
+    Beides wurde frueher aus GZ_VALIDATOR_* bedient; die Anwendung lehnt diese
+    Daten ab (#1307 Scheibe B), wodurch das Werkzeug still die Anmeldemaske
+    fotografierte. Bereits gesetzte Umgebungsvariablen haben Vorrang.
+    """
+    for env_file in (Path(".claude/validator.env"), Path(".env")):
+        if not env_file.exists():
             continue
-        k, v = line.split("=", 1)
-        os.environ.setdefault(k.strip(), v.strip())
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+def unauthenticated_reason(final_url: str, has_password_field: bool) -> "str | None":
+    """Warum die aufgenommene Seite KEINE gueltige, angemeldete Zielseite ist.
+
+    Rueckgabe: Begruendung als Text, oder None wenn die Aufnahme gueltig ist.
+
+    Hintergrund (#1307 Scheibe B): Die Formular-Anmeldung scheitert LAUTLOS —
+    `page.fill`/`page.click` werfen keine Ausnahme, wenn die Anwendung die
+    Zugangsdaten ablehnt. Das Werkzeug lief weiter, fotografierte die
+    Anmeldemaske und schrieb einen Bericht mit `passed: true` (23,35 % bei
+    Schwelle 30 %). Ein Design-Waechter, der sich damit zufriedengibt, prueft
+    nichts. Diese Funktion prueft deshalb an der Stelle, an der es zaehlt:
+    unmittelbar vor der Aufnahme.
+
+    Zwei unabhaengige Merkmale, damit ein einzelner Umbau (umbenanntes Feld,
+    andere Rueckleitung) die Pruefung nicht still aushebelt.
+    """
+    path = urlparse(final_url).path
+    if path == "/login" or path.startswith("/login/"):
+        return (
+            f"die Seite steht nach der Anmeldung auf {final_url} — "
+            "zurueckgeleitet auf die Anmeldemaske"
+        )
+    if has_password_field:
+        return (
+            "auf der Zielseite ist noch ein Passwortfeld sichtbar — "
+            "die Anmeldung hat nicht gegriffen"
+        )
+    return None
 
 
 def take_screenshot(
@@ -167,21 +208,40 @@ def take_screenshot(
         print("playwright not available — skipping live screenshot", file=sys.stderr)
         return False
 
-    user = os.environ.get("GZ_VALIDATOR_USER", "")
-    password = os.environ.get("GZ_VALIDATOR_PASS", "")
+    # Zwei Schranken, zwei Zugangsdaten-Paare (#1307 Scheibe B):
+    #   basic_* → vorgeschalteter Basic-Auth-Schutz (nginx, realm "Staging")
+    #   app_*   → Anmeldung der Anwendung selbst
+    # Frueher bediente GZ_VALIDATOR_* beides. Die Anwendung lehnt diese Daten
+    # ab (gemessen: POST /api/auth/login → 401 "invalid credentials"), ohne
+    # dass page.fill/click eine Ausnahme werfen — deshalb blieb es still.
+    basic_user = os.environ.get("GZ_VALIDATOR_USER", "")
+    basic_pass = os.environ.get("GZ_VALIDATOR_PASS", "")
+    app_user = os.environ.get("GZ_AUTH_USER", "")
+    app_pass = os.environ.get("GZ_AUTH_PASS", "")
 
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            context = browser.new_context(viewport={"width": viewport[0], "height": viewport[1]})
+            # Staging liegt hinter einem vorgeschalteten Basic-Auth-Schutz
+            # (nginx, realm "Staging"): /login antwortet ohne Zugangsdaten mit
+            # 401 (gemessen 2026-08-05). Ohne http_credentials fotografiert das
+            # Werkzeug die Sperrseite statt der angeforderten Seite
+            # (#1307 Scheibe B, AC-11). Die Formular-Anmeldung unten bleibt
+            # davon unberuehrt — beide Schritte sind noetig.
+            context_kwargs = {"viewport": {"width": viewport[0], "height": viewport[1]}}
+            if basic_user and basic_pass:
+                context_kwargs["http_credentials"] = {
+                    "username": basic_user, "password": basic_pass,
+                }
+            context = browser.new_context(**context_kwargs)
             page = context.new_page()
 
-            if user and password:
+            if app_user and app_pass:
                 try:
                     page.goto(base + "/login", timeout=30000)
                     page.wait_for_load_state("networkidle", timeout=15000)
-                    page.fill("input[name='username']", user)
-                    page.fill("input[name='password']", password)
+                    page.fill("input[name='username']", app_user)
+                    page.fill("input[name='password']", app_pass)
                     page.click("button[type='submit']")
                     page.wait_for_load_state("networkidle", timeout=15000)
                 except Exception as e:
@@ -228,6 +288,26 @@ def take_screenshot(
                 # Modal-Render-Zeit
                 page.wait_for_timeout(800)
 
+            # Fail-closed VOR der Aufnahme (#1307 Scheibe B): ist die Anmeldung
+            # nicht gegriffen, wird NICHT fotografiert — sonst entsteht ein
+            # Bericht ueber die Anmeldemaske, der unter der Schwelle liegt und
+            # `passed: true` traegt. Genau so ist es passiert.
+            reason = unauthenticated_reason(
+                page.url,
+                page.query_selector("input[type='password']") is not None,
+            )
+            if reason is not None:
+                print(
+                    f"ERROR: keine gueltige Aufnahme — {reason}. "
+                    "Erwartet wird die angemeldete Zielseite; geprueft werden "
+                    "GZ_AUTH_USER/GZ_AUTH_PASS (Anwendung) und "
+                    "GZ_VALIDATOR_USER/GZ_VALIDATOR_PASS (vorgeschalteter "
+                    "Schutz). Kein Bericht geschrieben.",
+                    file=sys.stderr,
+                )
+                browser.close()
+                return False
+
             page.screenshot(path=str(ist_path), full_page=False)
             browser.close()
         return True
@@ -268,7 +348,15 @@ def main() -> None:
     parser.add_argument("--threshold", type=float, default=10.0, help="Max allowed diff %% (default: 10.0)")
     parser.add_argument(
         "--workflow",
-        default=os.environ.get("GZ_ACTIVE_WORKFLOW", "issue-603-design-fidelity-gate"),
+        # #1307 Scheibe B (AC-12): beide Schreibweisen der Workflow-Kennung,
+        # in DERSELBEN Reihenfolge wie pre_issue_close_design_gate.py — sonst
+        # legt das Werkzeug seinen Bericht in einem anderen Ordner ab als der
+        # Waechter durchsucht, und der frische Bericht wird nie gefunden.
+        default=(
+            os.environ.get("OPENSPEC_ACTIVE_WORKFLOW")
+            or os.environ.get("GZ_ACTIVE_WORKFLOW")
+            or "issue-603-design-fidelity-gate"
+        ),
         help="Workflow name for artifact directory",
     )
     args = parser.parse_args()
@@ -297,6 +385,12 @@ def main() -> None:
     ist_path = artifact_dir / f"design-diff-{screen}-ist.png"
     diff_path = artifact_dir / f"design-diff-{screen}-diff.png"
     report_path = artifact_dir / f"design-diff-{screen}.json"
+
+    # Ein frueherer, bestandener Bericht darf einen jetzt scheiternden Lauf
+    # nicht ueberleben (#1307 Scheibe B): der Waechter sucht per Glob nach
+    # IRGENDEINEM `passed: true` und wuerde sonst den alten Nachweis fuer den
+    # neuen Stand halten. Fail-closed: erst weg, dann neu belegen.
+    report_path.unlink(missing_ok=True)
 
     # Check soll-PNG
     if not soll_path.exists():

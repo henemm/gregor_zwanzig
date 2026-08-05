@@ -46,8 +46,17 @@ def main() -> None:
     if "design-compliance" not in labels:
         sys.exit(0)
 
-    # Need active workflow to find artefacts
-    workflow = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "")
+    # Need active workflow to find artefacts.
+    # #1307 Scheibe B (AC-13): beide Schreibweisen der Workflow-Kennung
+    # akzeptieren — dieselbe Fallback-Kette wie die Geschwister-Gates
+    # (prod_send_gate.py, staging_gate.py, prod_selftest.py). Die Reihenfolge
+    # muss mit design_fidelity_diff.py uebereinstimmen, sonst schreibt das
+    # Werkzeug in einen anderen Ordner als der Waechter durchsucht.
+    workflow = (
+        os.environ.get("OPENSPEC_ACTIVE_WORKFLOW")
+        or os.environ.get("GZ_ACTIVE_WORKFLOW")
+        or ""
+    ).strip()
     if not workflow:
         sys.exit(0)  # fail-open when no active workflow
 
