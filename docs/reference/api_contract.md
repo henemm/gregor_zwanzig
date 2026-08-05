@@ -3053,7 +3053,7 @@ export interface AlertRule {
 |------|-----|------------|
 | id | string | Eindeutige Alert-ID (z.B. `alert-gust-1`) |
 | kind | enum | `"absolute"` (Schwellenwert überschritten) oder `"delta"` (Änderung größer als Schwelle) |
-| metric | enum | Gemessene Metrik (AlertMetric-Werte, klein): wind_gust, precipitation_sum, temperature_min/max, thunder_level, snow_line, temperature/wind/precipitation_change. Hinweis: `freezing_level` ist KEINE AlertMetric-Konstante, sondern eine Katalog-ID, die via `catalogIDToAlertMetrics` auf `snow_line` mappt (trip.go:239, ADR-0019). |
+| metric | enum | Gemessene Metrik (AlertMetric-Werte, klein): wind_gust, precipitation_sum, temperature_min/max, thunder_level, snow_line, temperature/wind/precipitation_change. Hinweis: `freezing_level` ist KEINE AlertMetric-Konstante, sondern eine Katalog-ID, die via `catalogIDToAlertMetrics` auf `snow_line` mappt (ADR-0019). Seit Issue #1435 Etappe E5 ist `catalogIDToAlertMetrics` (`internal/model/trip.go`) kein Go-Literal mehr, sondern wird per `go:embed` aus der generierten Datei `internal/model/alert_metric_mapping.generated.json` geladen, die wiederum aus der Python-Quelle `catalog_id_to_alert_metrics()` erzeugt wird (ADR-0045). |
 | threshold | float | Schwellenwert (z.B. `50.0` für 50 km/h Wind-Böen) |
 | severity | enum | `"info"`, `"warning"`, `"critical"` — nur noch Label am Alert, **nicht mehr** für Versand-Filterung (behebt Severity-Falle: Info-Alerts werden nicht mehr still verschluckt) |
 | enabled | bool | Alert aktiv? (default: true) |

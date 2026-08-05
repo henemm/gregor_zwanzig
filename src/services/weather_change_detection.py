@@ -126,6 +126,16 @@ def catalog_id_to_alert_metrics() -> dict[str, set[str]]:
     Behebt Issue #1257: der Go-Persistenzpfad braucht diese Richtung, um
     Katalog-Metrik-IDs aus `display_config.metrics[]` in AlertMetric-IDs zu
     übersetzen, bevor `alert_rules` synchronisiert werden.
+
+    Fix #1435 Etappe E5: diese Funktion ist die EINZIGE Quelle der Zuordnung
+    — Go ruft sie NICHT zur Laufzeit auf. `scripts/generate_alert_metric_mapping.py`
+    liest ihre Ausgabe und schreibt sie deterministisch in zwei eingecheckte
+    JSON-Dateien; Go bindet seine Kopie per `go:embed`
+    (`internal/model/trip.go::catalogIDToAlertMetrics`) beim Kompilieren fest
+    ein, das Frontend importiert dieselbe generierte Datei direkt
+    (`corridorEditorState.ts::ROUTE_CORRIDOR_CATALOG_IDS`). Der Ratchet-Test
+    `tests/tdd/test_alert_metric_mapping_parity.py` erzwingt, dass beide
+    generierten Dateien stets zu dieser Funktion passen.
     """
     result: dict[str, set[str]] = {}
     for metric, catalog_ids in _ALERT_METRIC_TO_CATALOG_ID.items():
