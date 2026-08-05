@@ -20,7 +20,6 @@ tests/tdd/test_compare_sun_hours_full_day_window.py
 tests/tdd/test_corridor_migration.py
 tests/tdd/test_corridor_no_longer_triggers_alerts.py
 tests/tdd/test_day_comparison_service.py
-tests/tdd/test_dwd_eu_thunder_run_fallback.py
 tests/tdd/test_epic_140_preview_endpoints.py
 tests/tdd/test_feature_656_radar_nowcast.py
 tests/tdd/test_feature_660_convective_stage.py
@@ -47,7 +46,6 @@ tests/tdd/test_issue_833_gate.py
 tests/tdd/test_issue_883_acute_danger_override.py
 tests/tdd/test_issue_995_scheduler_pause.py
 tests/tdd/test_pytest_collection_and_timeout_safety.py
-tests/tdd/test_repo_path_hardcoding_ratchet.py
 tests/tdd/test_staging_gate.py
 tests/tdd/test_telegram_html_escaping.py
 tests/tdd/test_telegram_kurzstil_compare_official_alert.py
