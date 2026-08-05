@@ -246,6 +246,63 @@ def test_wintersport_profile_adds_snow_depth_token():
     )
 
 
+_WINTERSPORT_CONFIG = [
+    MetricSpec(symbol="SD", enabled=True),
+    MetricSpec(symbol="NS24+", enabled=True),
+    MetricSpec(symbol="SL", enabled=True),
+    MetricSpec(symbol="AV", enabled=True),
+    MetricSpec(symbol="WC", enabled=True),
+]
+
+
+def test_wintersport_never_shows_unknown_marker_on_gap():
+    """Issue #1483 AC-4 (Isolation, PFLICHT): der Fix fuer die Temperatur-
+    Kuerzel (N/K/D/FN/FK/FD) darf die Wintersport-Kuerzel NICHT beruehren.
+    ``_wintersport()`` kennt anders als ``_mk_metric()`` gar keine `-`-Null-
+    form -- ein fehlender Rohwert laesst das Kuerzel komplett verschwinden
+    (kein Token), ein vorhandener zeigt die Zahl. In BEIDEN Faellen darf
+    trotz ``has_data_gap=True`` niemals `?` erscheinen.
+
+    Direkter Aufruf von ``build_token_line()`` statt der SMS-Pipeline: die
+    bestehenden Segment-Fixtures in ``test_sms_unknown_on_missing_data.py``
+    populieren die Wintersport-Felder von ``DailyForecast`` gar nicht
+    (empirisch verifiziert), waehrend dieser Test die betroffenen Felder
+    direkt und praezise kontrolliert."""
+    today_missing = DailyForecast(has_data_gap=True)
+    line_missing = build_token_line(
+        NormalizedForecast(days=(today_missing,)),
+        _WINTERSPORT_CONFIG, report_type="evening", stage_name="E1",
+    )
+    rendered_missing = line_missing.render(300)
+    for sym in ("SD", "NS24+", "SL", "AV", "WC"):
+        assert f"{sym}?" not in rendered_missing, (
+            f"Wintersport-Kuerzel `{sym}` darf bei fehlendem Rohwert nie "
+            f"`?` zeigen (auch nicht bei Datenluecke).\n{rendered_missing!r}"
+        )
+        assert sym not in rendered_missing, (
+            f"Wintersport-Kuerzel `{sym}` ohne Rohwert muss komplett "
+            f"fehlen (keine `-`-Nullform in _wintersport()).\n"
+            f"{rendered_missing!r}"
+        )
+
+    today_present = DailyForecast(
+        has_data_gap=True, snow_depth_cm=180.0, snow_new_24h_cm=25.0,
+        snowfall_limit_m=1800.0, avalanche_level=3, wind_chill_c=-22.0,
+    )
+    line_present = build_token_line(
+        NormalizedForecast(days=(today_present,)),
+        _WINTERSPORT_CONFIG, report_type="evening", stage_name="E1",
+    )
+    rendered_present = line_present.render(300)
+    for sym in ("SD", "NS24+", "SL", "AV", "WC"):
+        assert f"{sym}?" not in rendered_present, (
+            f"Wintersport-Kuerzel `{sym}` darf bei vorhandenem Rohwert "
+            f"nie `?` zeigen, auch nicht bei Datenluecke.\n"
+            f"{rendered_present!r}"
+        )
+    assert "SD180" in rendered_present, f"Erwartet echten Wert SD180.\n{rendered_present!r}"
+
+
 def test_render_max_length_truncates():
     """
     A TokenLine whose unbounded render is >160 chars must be cut to <=160
