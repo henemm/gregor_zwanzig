@@ -40,14 +40,16 @@ def _trend_rows_for(target: date) -> list[dict]:
             "weekday": "Tag+1",
             "name": "Etappe target+1",
             "thunder": "HIGH",
-            "hourly_thunder": (HourlyValue(hour=5, value=2.0),),
+            # Issue #1474: Render-Skala {NONE:0, LOW:1, MED:2, HIGH:3} --
+            # HIGH traegt den Wert 3 (2.0 war die Vor-#1474-Skala).
+            "hourly_thunder": (HourlyValue(hour=5, value=3.0),),
         },
         {
             "date": target + timedelta(days=2),
             "weekday": "Tag+2",
             "name": "Etappe target+2",
             "thunder": "HIGH",
-            "hourly_thunder": (HourlyValue(hour=6, value=2.0),),
+            "hourly_thunder": (HourlyValue(hour=6, value=3.0),),
         },
     ]
 

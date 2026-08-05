@@ -1548,7 +1548,23 @@ class TripReportSchedulerService:
         beide Aufrufer (Versandpfad + Vorschau) übergeben immer eine echte,
         aus Koordinaten aufgeloeste Zone; Tests, die den Fail-soft-Pfad ohne
         aufloesbaren Ort pruefen, übergeben weiterhin bewusst `tz=None`.
+
+        Issue #1498 (Fall 2): beide Bauwege klemmen auf das geteilte
+        Tagesfenster (Default 04-19, pro Trip konfigurierbar) — vorher las
+        die Vorschau den vollen Kalendertag 00-23 und behauptete damit
+        Nachtstunden („ab 02:00"), fuer die die Nacht-Tabelle derselben
+        Mail mit eigener Quelle (`night_weather`) zustaendig ist; die zwei
+        Aussagen widersprachen sich an einer echt zugestellten Staging-Mail.
+        Die Vorschau ist eine TAGES-Aussage und nutzt dasselbe Fenster wie
+        SMS/Telegram/Fusszeile (ADR-0025).
         """
+        from app.day_window import resolve_configured_window
+
+        _rc = getattr(trip, "report_config", None)
+        win_start, win_end = resolve_configured_window(
+            getattr(_rc, "day_window_start_hour", None),
+            getattr(_rc, "day_window_end_hour", None),
+        )
         forecast: dict = {}
         trend_by_date = {
             row["date"]: row
@@ -1560,7 +1576,9 @@ class TripReportSchedulerService:
             fc_date = target_date + timedelta(days=offset)
             row = trend_by_date.get(fc_date)
             if row is not None:
-                forecast[key] = self._thunder_entry_from_trend_row(row, fc_date)
+                forecast[key] = self._thunder_entry_from_trend_row(
+                    row, fc_date, window_start=win_start, window_end=win_end,
+                )
             else:
                 missing_dates.add(fc_date)
 
@@ -1569,7 +1587,10 @@ class TripReportSchedulerService:
                 trip, target_date, wanted_dates=missing_dates,
             )
             fetched_fc = (
-                self._build_thunder_forecast(fetched, target_date, tz=tz)
+                self._build_thunder_forecast(
+                    fetched, target_date, tz=tz,
+                    window_start=win_start, window_end=win_end,
+                )
                 if fetched else None
             ) or {}
             for _offset, key in [(1, "+1"), (2, "+2")]:
@@ -1602,13 +1623,20 @@ class TripReportSchedulerService:
         self,
         row: dict,
         fc_date: date,
+        *,
+        window_start: Optional[int] = None,
+        window_end: Optional[int] = None,
     ) -> dict:
         """Map one ``multi_day_trend`` row to a thunder_forecast entry (#1275).
 
-        Level from ``row["thunder"]`` (name string), earliest "ab HH:MM" from
-        ``row["hourly_thunder"]`` (HourlyValue samples, already local hour). The
-        return format matches ``_build_thunder_forecast`` so all downstream
-        consumers (SMS/Telegram/E-Mail-Vorschau) stay unchanged.
+        Level und "ab HH:MM" aus den ``row["hourly_thunder"]``-Proben
+        (HourlyValue, bereits Ortszeit-Stunde) INNERHALB des Tagesfensters
+        ``window_start``..``window_end`` (#1498 Fall 2; ``None`` -> Default
+        4/19 via ``resolve_configured_window``). ``row["thunder"]``
+        (Kalendertags-Maximum) dient nur noch als Fail-soft, wenn keine
+        Stundenprobe im Fenster liegt. The return format matches
+        ``_build_thunder_forecast`` so all downstream consumers
+        (SMS/Telegram/E-Mail-Vorschau) stay unchanged.
 
         Issue #1402: der frühere ``tz``-Parameter wurde entfernt — er wurde
         nirgends im Funktionskörper gelesen (die Lokalisierung ist bereits
@@ -1623,19 +1651,44 @@ class TripReportSchedulerService:
         ``outlook.py::build_outlook_row``), also bleibt der Werte-Vergleich
         konsistent statt einer zweiten, driftenden Kopie.
         """
+        from app.day_window import hour_in_window, resolve_configured_window
         from app.models import ThunderLevel
-        from app.thunder_scale import thunder_label_value
+        from app.thunder_scale import thunder_label_value, thunder_ordinal
 
-        try:
-            level = ThunderLevel[row.get("thunder") or "NONE"]
-        except KeyError:
-            level = ThunderLevel.NONE
+        win_start, win_end = resolve_configured_window(window_start, window_end)
+        windowed = [
+            hv for hv in (row.get("hourly_thunder") or ())
+            if hour_in_window(int(hv.hour), win_start, win_end)
+        ]
+        if windowed:
+            # Issue #1498 (Fall 2): Level aus den Stundenproben IM Fenster,
+            # nicht aus dem Kalendertags-Maximum `row["thunder"]` — sonst
+            # setzt ein reines Nachtgewitter (02:00) die Tages-Vorschau.
+            # Rueckabbildung Sample-Wert -> Level ueber die geteilte
+            # Render-Skala selbst (#1474: keine Handkopie), Sortierung ueber
+            # thunder_ordinal (ADR-0025, Entscheidung 3: Skalen getrennt).
+            _value_to_level = {thunder_label_value(lv): lv for lv in ThunderLevel}
+            level = max(
+                (
+                    _value_to_level.get(int(hv.value), ThunderLevel.NONE)
+                    for hv in windowed
+                ),
+                key=thunder_ordinal,
+            )
+        else:
+            # Fail-soft (Known Limitation): ohne Stundenproben im Fenster
+            # keine Klemmung — Kalendertags-Maximum wie bisher, nie eine
+            # blinde Entwarnung ueber unbeobachtete Stunden (#1331-Lehre).
+            try:
+                level = ThunderLevel[row.get("thunder") or "NONE"]
+            except KeyError:
+                level = ThunderLevel.NONE
         when = None
         hour = None
         if level != ThunderLevel.NONE:
             hours = [
                 int(hv.hour)
-                for hv in (row.get("hourly_thunder") or ())
+                for hv in windowed
                 if hv.value == thunder_label_value(level)
             ]
             if hours:
@@ -1700,6 +1753,13 @@ class TripReportSchedulerService:
         """
         from providers.openmeteo import is_within_forecast_horizon
 
+        # #1498 (Fall 2, Beifang): ohne Trip-Objekt (Vorschau-Pfad, s.
+        # Fail-soft-Zusage oben und #1482-Guard im Aufrufer) gibt es keine
+        # Etappenliste — vorher stuerzte genau dieser Fall mit
+        # AttributeError, sobald der Trend einen Offset nicht abdeckte.
+        if trip is None:
+            return []
+
         collected: List[SegmentWeatherData] = []
         today = date.today()
         wanted = wanted_dates if wanted_dates is not None else {
@@ -1732,6 +1792,9 @@ class TripReportSchedulerService:
         segments,
         target_date: date,
         tz: Optional[ZoneInfo],
+        *,
+        window_start: Optional[int] = None,
+        window_end: Optional[int] = None,
     ) -> Optional[dict]:
         """
         Build thunder forecast for +1 and +2 days.
@@ -1792,6 +1855,14 @@ class TripReportSchedulerService:
             # UTC" (#1345). local_dt() geht ueber den zentralen Naiv-Guard.
             return local_dt(dt, tz) if tz else dt
 
+        # Issue #1498 (Fall 2): nur Stunden im geteilten Tagesfenster zaehlen
+        # — die Vorschau ist eine Tages-Aussage; Nachtstunden gehoeren der
+        # Nacht-Tabelle. Liegt im Fenster gar kein Datenpunkt, entsteht KEIN
+        # Eintrag — das greift in `_gap_offsets` (#1482) als ehrliche
+        # Datenluecke ("?") statt einer blinden Entwarnung (#1331-Lehre).
+        from app.day_window import hour_in_window, resolve_configured_window
+        win_start, win_end = resolve_configured_window(window_start, window_end)
+
         forecast = {}
         for offset, key in [(1, "+1"), (2, "+2")]:
             fc_date = target_date + timedelta(days=offset)
@@ -1801,6 +1872,7 @@ class TripReportSchedulerService:
                 if sw.timeseries and sw.timeseries.data
                 for dp in sw.timeseries.data
                 if _local(dp.ts).date() == fc_date and dp.thunder_level
+                and hour_in_window(_local(dp.ts).hour, win_start, win_end)
             ]
             if not thunder_dps:
                 continue
