@@ -144,7 +144,7 @@ def test_ac5a_email_html_gewitter_vorschau_zeigt_hagel_hinweis():
         f"'{_HAGEL_HINWEIS}' zeigen, bekam Ausschnitt: {html_true[:2000]!r}"
     )
     assert _HAGEL_HINWEIS not in html_unbekannt, (
-        f"HTML-Gewitter-Vorschau mit hail=None darf keinen Zusatz zeigen"
+        "HTML-Gewitter-Vorschau mit hail=None darf keinen Zusatz zeigen"
     )
 
 
