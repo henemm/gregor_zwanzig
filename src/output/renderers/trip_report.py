@@ -506,6 +506,10 @@ class TripReportFormatter:
         from services.weather_metrics import _WMO_SEVERITY
         wmo_vals = [dp.wmo_code for dp in dps if getattr(dp, 'wmo_code', None) is not None]
         row["_wmo_code"] = max(wmo_vals, key=lambda c: _WMO_SEVERITY.get(c, 0)) if wmo_vals else None
+        # Issue #1475 Nachbesserung (Punkt 2a): Hagel-Kennzeichen des Blocks
+        # ueber die geteilte Aggregation (ja > unbekannt > nein).
+        from output.metric_format import hail_priority
+        row["_hail_flag"] = hail_priority(getattr(dp, "hail_flag", None) for dp in dps)
 
         return row
 
@@ -537,6 +541,9 @@ class TripReportFormatter:
         from services.weather_metrics import WeatherMetricsService
         row["_sunny_hours"] = WeatherMetricsService.calculate_sunny_hours([dp])
         row["_wmo_code"] = getattr(dp, "wmo_code", None)
+        # Issue #1475 Nachbesserung (Punkt 2a): Seitenkanal fuer das Hagel-
+        # Kennzeichen der Stunde — Quelle des Doppelrings in der Gewitter-Spalte.
+        row["_hail_flag"] = getattr(dp, "hail_flag", None)
         return row
 
     # ------------------------------------------------------------------

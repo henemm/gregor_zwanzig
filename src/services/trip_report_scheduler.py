@@ -1659,6 +1659,11 @@ class TripReportSchedulerService:
             # SMS-Pfad sie nicht erfinden muss. None = keine Stunde bekannt.
             "hour": hour,
             "text": text,
+            # Issue #1475 Nachbesserung (Punkt 4a): auch der PRIMAERE Pfad
+            # (Trend-Zeile, Abend-Default) traegt das Hagel-Kennzeichen --
+            # sonst waere der Wurzelfix im Regelbetrieb wirkungslos und nur
+            # im Fallback-Fetch sichtbar. Quelle: build_outlook_row()["hail"].
+            "hail": row.get("hail"),
         }
 
     def _collect_future_stage_weather(
@@ -1765,6 +1770,13 @@ class TripReportSchedulerService:
         """
         from app.models import ThunderLevel
         from app.thunder_scale import thunder_ordinal
+        # Issue #1475 Nachbesserung (Punkt 4a): das Hagel-Aggregat kommt ueber
+        # den kanonischen Basis-Metrik-Weg (``summarize_points`` ->
+        # ``_compute_hail_flag`` -> ``hail_priority``) statt ueber einen
+        # direkten Renderer-Import — der Scheduler darf per Architektur-Wache
+        # (tests/unit/test_notification_service.py) nichts aus ``output``
+        # ziehen ausser dem einen erlaubten geteilten Baustein.
+        from services.weather_metrics import summarize_points
 
         # Back-compat: accept a single SegmentWeatherData. Duck-typed rather
         # than isinstance() to survive the app.models / src.app.models
@@ -1821,6 +1833,11 @@ class TripReportSchedulerService:
                 # im SMS-Renderer zu erfinden. Bei NONE gibt es keine Stunde.
                 "hour": None if level == ThunderLevel.NONE else earliest_local.hour,
                 "text": text,
+                # Issue #1475 Nachbesserung (Punkt 4a): Hagel-Kennzeichen der
+                # Vorschau — ueber DIESELBE thunder_dps-Menge, die auch
+                # level/hour liefert (kein zweiter Datenzugriff). Beeinflusst
+                # `level` an keiner Stelle (AC-10).
+                "hail": getattr(summarize_points(thunder_dps), "hail_flag", None),
             }
 
         return forecast if forecast else None

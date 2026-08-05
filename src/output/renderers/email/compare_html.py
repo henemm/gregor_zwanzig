@@ -204,11 +204,22 @@ def _fmt_visibility(v) -> str:
     return f"{v / 1000:.1f}" if v is not None else "—"
 
 
-def _fmt_thunder(v) -> str:
+def _fmt_thunder(v, hail: Optional[bool] = None) -> str:
+    """Gewitterstufen-Label des Ortsvergleichs.
+
+    Issue #1475 Nachbesserung (Punkt 5a): ``hail`` ist ADDITIV mit Default
+    ``None`` — Alt-Aufrufer mit EINEM Argument bleiben zeichengleich
+    (``format_hail_note(None)`` liefert nichts). Nur bei bestaetigtem Hagel
+    (``True``) haengt der rein deskriptive Zusatz an (ADR-0007, kein Rat).
+    Die Stufe ``v`` selbst wird davon NIE beeinflusst (AC-10).
+    """
     if v is None:
         return "—"
     key = v.value if hasattr(v, "value") else str(v)
-    return _THUNDER_LEVEL_LABEL.get(key, "—")
+    label = _THUNDER_LEVEL_LABEL.get(key, "—")
+    from output.metric_format import format_hail_note
+    note = format_hail_note(hail)
+    return f"{label} · {note}" if note else label
 
 
 def _sev_thunder(v):
@@ -632,6 +643,24 @@ def _metric_value(loc: LocationResult, key: str, summary=None):
     return getattr(summary, field, None) if summary is not None else None
 
 
+def loc_hail_flag(loc: LocationResult, summary=None) -> Optional[bool]:
+    """Issue #1475 Nachbesserung (Punkt 5b): DER EINE Weg, an das Hagel-
+    Kennzeichen eines verglichenen Ortes zu kommen — genutzt von der
+    HTML-Uebersicht, der Klartext-Fassung und den Ortsvergleich-Kanaelen
+    SMS/Telegram (#1481 DRY-Pflicht, keine Parallel-Logik je Kanal).
+
+    Reihenfolge wie bei ``_metric_value``: Engine-Wert am ``LocationResult``
+    hat Vorrang, sonst wird aus ``hourly_data`` live abgeleitet (kanonisch
+    ueber ``summarize_points``/``hail_priority``).
+    """
+    value = getattr(loc, "hail_flag", None)
+    if value is not None:
+        return value
+    if summary is None:
+        summary = _daily_summary(loc)
+    return getattr(summary, "hail_flag", None) if summary is not None else None
+
+
 def _fmt_metric(value, decimals, unit: str) -> str:
     if value is None:
         return "—"
@@ -674,7 +703,15 @@ def _render_overview_row(
             bg, fg = tone_css(_COMPARE_TO_LEVEL[sev_level])
             weight = "700"
         fmt_fn = m.get("fmt")
-        text = fmt_fn(value) if fmt_fn else _fmt_metric(value, m.get("decimals"), m.get("unit", ""))
+        if fmt_fn is _fmt_thunder:
+            # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 1): die
+            # Gewitter-Zeile bekommt zusaetzlich das Hagel-Kennzeichen DIESES
+            # Ortes durchgereicht — alle anderen Zeilen bleiben unveraendert.
+            text = fmt_fn(value, loc_hail_flag(loc, summaries.get(id(loc))))
+        elif fmt_fn:
+            text = fmt_fn(value)
+        else:
+            text = _fmt_metric(value, m.get("decimals"), m.get("unit", ""))
         marked = _is_marked(marks.get(m["key"]), value)
         cls = ' class="corridor-mark"' if marked else ""
         bg, extra_style = _mark_cell_style(bg, marked)
@@ -895,7 +932,15 @@ def _render_hour_row(
     cells = _hour_td(hh, fg=G_INK_MUTED, align="left")
     for m in visible:
         value = getattr(dp, m["key"], None)
-        text = m["fmt"](value)
+        # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 2 / AC-8): die
+        # Compare-Stundentabelle zeigt Gewitter als TEXT (kein Ampel-Kreis) --
+        # der Hagel-Zusatz haengt deshalb als Text an, NICHT als Doppelring
+        # (das ist ausschliesslich die Trip-Stundentabelle, Punkt 2). `dp` ist
+        # hier bereits im Scope, analog zum Windrichtungs-Muster unten.
+        if m["fmt"] is _fmt_thunder:
+            text = m["fmt"](value, getattr(dp, "hail_flag", None))
+        else:
+            text = m["fmt"](value)
         # Issue #1335 Scheibe 1 (AC-3): Windrichtung als Kompass-Text an die
         # Wind-Zelle angehaengt, analog Trip-Muster (helpers.py:648-651) --
         # keine eigene Spalte.

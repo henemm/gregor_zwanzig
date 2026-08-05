@@ -20,9 +20,10 @@ FORECAST_THP = "TH+:"
 # `TH:`-Token (KEIN eigenes Kuerzel, keine eigene Prioritaetsstufe) — es faellt
 # damit beim Kuerzen zusammen mit dem Gewitter-Token, das es beschreibt.
 # Sichtbar AUSSCHLIESSLICH bei `hail_flag is True`; "unbekannt"/"nein" lassen
-# die Zeile zeichengleich (Spec AC-6). `HG` kollidiert mit keinem Kuerzel des
+# die Zeile zeichengleich (Spec AC-6). `HL` kollidiert mit keinem Kuerzel des
 # amtlichen Warn-Katalogs (`tokens/hazard_symbols.py`).
-FORECAST_TH_HAIL_SUFFIX = "+HG"
+# Issue #1475 Nachbesserung AC-1: umbenannt `+HG` -> `+HL` (Konsistenz-Fix).
+FORECAST_TH_HAIL_SUFFIX = "+HL"
 VIGI_TH = "TH:"
 VIGI_HR = "HR:"
 
@@ -305,9 +306,14 @@ def build_token_line(
         # ohne diesen Parameter blieb die Gap->"?"-Logik (oben) fuer 'TH+:'
         # strukturell wirkungslos und eine fehlende Vorhersage sah wie eine
         # Entwarnung aus.
+        # Issue #1475 Nachbesserung AC-5c: derselbe Hagel-Suffix wie beim
+        # `TH:`-Token der berichteten Etappe, jetzt auch fuer den Folgetag.
+        tomorrow_suffix = (FORECAST_TH_HAIL_SUFFIX
+                           if tomorrow.hail_flag is True else "")
         tok = _mk_metric(FORECAST_THP, tomorrow.thunder_hourly, spec,
                          report_type, is_level=True,
-                         has_gap=tomorrow.has_data_gap)
+                         has_gap=tomorrow.has_data_gap,
+                         value_suffix=tomorrow_suffix)
         if tok:
             tokens.append(tok)
 

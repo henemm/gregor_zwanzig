@@ -118,6 +118,10 @@ def dp_to_row(dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig,
     from services.weather_metrics import WeatherMetricsService
     row["_sunny_hours"] = WeatherMetricsService.calculate_sunny_hours([dp])
     row["_wmo_code"] = getattr(dp, "wmo_code", None)
+    # Issue #1475 Nachbesserung (Punkt 2a): Seitenkanal fuer das Hagel-
+    # Kennzeichen der Stunde — die Gewitter-Spalte zeigt daraus den zweiten
+    # Ring (Ampel-Kreis) bzw. den Text-Zusatz (Roh-/Text-Modus).
+    row["_hail_flag"] = getattr(dp, "hail_flag", None)
     return row
 
 
@@ -209,6 +213,10 @@ def aggregate_night_block(dps: list[ForecastDataPoint],
     from services.weather_metrics import _WMO_SEVERITY
     wmo_vals = [dp.wmo_code for dp in dps if getattr(dp, 'wmo_code', None) is not None]
     row["_wmo_code"] = max(wmo_vals, key=lambda c: _WMO_SEVERITY.get(c, 0)) if wmo_vals else None
+    # Issue #1475 Nachbesserung (Punkt 2a): Hagel-Kennzeichen des Blocks ueber
+    # dieselbe geteilte Aggregation wie ueberall sonst (ja > unbekannt > nein).
+    from output.metric_format import hail_priority
+    row["_hail_flag"] = hail_priority(getattr(dp, "hail_flag", None) for dp in dps)
 
     return row
 
@@ -544,13 +552,29 @@ _AMPEL_DOT_COLORS = {
 }
 
 
-def _ampel_dot_css(level: str) -> str:
-    """CSS-Dot (Ring-Optik) fuer eine Ampelstufe — Vorbild `_risk_dot` (html.py)."""
+# Issue #1475 Nachbesserung (Punkt 2b): Farbe des zweiten, aeusseren Rings, der
+# ausschliesslich Hagel kennzeichnet. Bewusst Violett (G_ALERT_L4) — die einzige
+# Farbe der Palette, die in KEINER Ampelstufe vorkommt, damit der Zusatzring
+# nicht mit einer hoeheren Gewitterstufe verwechselt werden kann.
+_HAIL_RING_COLOR = "rgba(109,40,217,0.55)"
+
+
+def _ampel_dot_css(level: str, hail: bool = False) -> str:
+    """CSS-Dot (Ring-Optik) fuer eine Ampelstufe — Vorbild `_risk_dot` (html.py).
+
+    Issue #1475 Nachbesserung: bei ``hail=True`` bekommt der Punkt EINEN
+    zusaetzlichen, aeusseren box-shadow-Layer (Doppelring) — rein deskriptives
+    Hagel-Kennzeichen, ohne Handlungsempfehlung (ADR-0007). Bei ``hail=False``
+    bleibt die Ausgabe zeichengleich zum bisherigen Stand.
+    """
     fill, ring = _AMPEL_DOT_COLORS[level]
+    shadow = f"0 0 0 3px {ring}"
+    if hail:
+        shadow = f"{shadow}, 0 0 0 6px {_HAIL_RING_COLOR}"
     return (
         f'<span style="display:inline-block;width:10px;height:10px;'
         f'border-radius:50%;background:{fill};'
-        f'box-shadow:0 0 0 3px {ring};"></span>'
+        f'box-shadow:{shadow};"></span>'
     )
 
 
@@ -682,13 +706,23 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         # #1419). Die einfache HTML-Ansicht zeigt den Ampel-Kreis aus
         # derselben Quelle (thunder_ampel_band), die auch die Zell-Toenung
         # in html.py speist (EINE Quelle fuer Kreis und Toenung, #888).
-        from output.metric_format import THUNDER_LABEL_DE, thunder_ampel_band
+        # Issue #1475 Nachbesserung (Punkt 2c/2e): das Hagel-Kennzeichen der
+        # Stunde kommt aus dem Seitenkanal row["_hail_flag"] (Muster wie
+        # row["_wind_dir_deg"]) — als Doppelring im Ampel-Kreis-Modus, als
+        # Textzusatz im Roh-/Text-Modus. Die Gewitterstufe selbst bleibt davon
+        # UNBERUEHRT (Spec AC-10).
+        from output.metric_format import (
+            THUNDER_LABEL_DE, format_hail_note, thunder_ampel_band,
+        )
+        hail = (row.get("_hail_flag") is True) if row else False
         if mode == "raw" or not html:
-            return THUNDER_LABEL_DE.get(val, "–")
+            label = THUNDER_LABEL_DE.get(val, "–")
+            note = format_hail_note(row.get("_hail_flag") if row else None)
+            return f"{label} · {note}" if note else label
         band = thunder_ampel_band(val)
         if band is None:
             return "–"
-        return _ampel_dot_css(band)
+        return _ampel_dot_css(band, hail=hail)
     if key in ("temp", "felt", "dewpoint"):
         return f"{val:.1f}"
     if key in ("wind", "gust"):

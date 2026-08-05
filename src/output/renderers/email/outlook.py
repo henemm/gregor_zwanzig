@@ -167,6 +167,7 @@ def render_outlook_table(
     # Str-Enum-Hash-Aequivalenz (s. metric_format.py): der rohe String-Key
     # findet denselben Eintrag wie die ThunderLevel-Instanz.
     from output.metric_format import THUNDER_LABEL_DE as _THUNDER_LABEL_DE
+    from output.metric_format import format_hail_note as _format_hail_note
     _THUNDER_LEVEL_LABEL = {
         "LOW": _THUNDER_LABEL_DE["LOW"],
         "MED": _THUNDER_LABEL_DE["MED"],
@@ -203,6 +204,11 @@ def render_outlook_table(
             _at = _re.search(r"@(\d+)", t_tok) if t_tok and t_tok != "-" else None
             if _at:
                 gew_str += f" @{_at.group(1)}"
+            # Issue #1475 Nachbesserung (Punkt 4b): rein deskriptiver
+            # Hagel-Zusatz an der Gewitter-Zelle (ADR-0007, kein Rat).
+            _hail_note = _format_hail_note(stage.get("hail"))
+            if _hail_note:
+                gew_str += f" · {_hail_note}"
         else:
             gew_str = "–"
 
@@ -302,6 +308,12 @@ def render_outlook_plain(
             f"{weekday:<3} {name_field}{tok['temp_str']:<8} "
             f"{precip_str:<5} {tok['wind_str']:<5} {tok['thunder_plain']}"
         )
+        # Issue #1475 Nachbesserung (Punkt 4b): derselbe deskriptive
+        # Hagel-Zusatz wie in der HTML-Ausblick-Tabelle (geteilte Quelle).
+        from output.metric_format import format_hail_note
+        _note = format_hail_note(stage.get("hail"))
+        if _note:
+            line = f"{line} · {_note}"
         lines.append(line)
 
         note = stage.get("note")
@@ -401,6 +413,14 @@ def build_outlook_row(
 
     _sms = sms_thresholds or {}
     optional = {
+        # Issue #1475 Nachbesserung (Punkt 4b): Hagel-Kennzeichen der Etappe —
+        # Quelle fuer den Textzusatz in der Gewitter-Zelle von
+        # render_outlook_table()/render_outlook_plain(). Steht bewusst im
+        # None-gefilterten `optional`-Block: ohne bestaetigten Hagel bleibt das
+        # Row-Dict zeichengleich zum Stand vor dieser Spec (Paritaets-Test
+        # tests/tdd/test_trip_outlook_parity.py). `thunder` bleibt unberuehrt
+        # (AC-10).
+        "hail": getattr(summary, "hail_flag", None),
         "confidence_pct": _conf_pct,
         "rain_probability_pct": getattr(summary, "pop_max_pct", None),
         "sms_threshold_precip": _sms.get("precipitation"),
@@ -415,8 +435,15 @@ def build_outlook_row(
             format_outlook_value, outlook_columns,
         )
 
+        # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 4): der Hagel-Wert
+        # der Etappe/des Tages reist als Spalten-Eigenschaft mit, damit die
+        # Gewitter-Zelle des Ausblicks denselben Zusatz zeigt wie die
+        # Uebersichtstabelle derselben Mail.
+        _hail = getattr(summary, "hail_flag", None)
         row["cells"] = [
-            format_outlook_value(getattr(summary, col["field"], None), col)
+            format_outlook_value(
+                getattr(summary, col["field"], None), {**col, "hail": _hail},
+            )
             for col in outlook_columns(metrics)
         ]
 

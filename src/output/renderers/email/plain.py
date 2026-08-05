@@ -296,7 +296,13 @@ def render_plain(
             if key in thunder_forecast:
                 fc = thunder_forecast[key]
                 icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
-                _thunder_lines.append(f"  {fc['date']}: {icon}{fc['text']}")
+                # Issue #1475 Nachbesserung (Punkt 4b): Hagel-Kennzeichen der
+                # Vorschau-Etappe aus dem neuen "hail"-Feld (Wurzelfix in
+                # _build_thunder_forecast). Rein deskriptiv (ADR-0007).
+                from output.metric_format import format_hail_note
+                _note = format_hail_note(fc.get("hail"))
+                _suffix = f" · {_note}" if _note else ""
+                _thunder_lines.append(f"  {fc['date']}: {icon}{fc['text']}{_suffix}")
         if _thunder_lines:
             lines.append("━━ Gewitter-Vorschau ━━")
             lines.extend(_thunder_lines)

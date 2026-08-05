@@ -604,9 +604,22 @@ class TripCommandProcessor:
 
         from_time, hours, day_date, tz = self._day_window(trip, day_token, received_at)
 
-        res = WeatherExtractor(user_id).drilldown(
+        extractor = WeatherExtractor(user_id)
+        res = extractor.drilldown(
             trip.id, field, from_time=from_time, hours=hours
         )
+        # Issue #1475 Nachbesserung (Punkt 6/AC-9): fuer den Gewitter-Drilldown
+        # wird DIESELBE, unveraenderte (bereits metrik-generische) Methode ein
+        # zweites Mal gerufen — mit `hail_flag`. Der Merge geschieht ueber den
+        # Zeitstempel, weil beide Abrufe denselben Trip und dasselbe Zeitfenster
+        # betreffen. Die Gewitterstufe selbst wird davon nie veraendert (AC-10).
+        hail_by_ts: dict = {}
+        if field == "thunder_level":
+            hail_res = extractor.drilldown(
+                trip.id, "hail_flag", from_time=from_time, hours=hours,
+            )
+            if hail_res.available:
+                hail_by_ts = {pt.ts: pt.value for pt in hail_res.points}
         if not res.available:
             return CommandResult(
                 success=False,
@@ -619,7 +632,9 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
 
-        body = self._format_drilldown(res, header, fmt, tz, with_emoji=with_emoji)
+        body = self._format_drilldown(
+            res, header, fmt, tz, with_emoji=with_emoji, hail_by_ts=hail_by_ts,
+        )
         back = "tl_today" if day_token == "today" else "tl_tomorrow"
         markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
         return CommandResult(
@@ -798,16 +813,31 @@ class TripCommandProcessor:
         wp = stage.waypoints[0]
         return tz_for_coords(wp.lat, wp.lon)
 
-    def _format_drilldown(self, res, header: str, fmt, tz, with_emoji: bool = True) -> str:
+    def _format_drilldown(
+        self, res, header: str, fmt, tz, with_emoji: bool = True,
+        hail_by_ts: Optional[dict] = None,
+    ) -> str:
         """Formatiert DrilldownResult als stündliche Liste.
 
         ``tz`` ist Pflicht (Issue #1402): ein Default wuerde die Ortszeit
         wieder still gegen die Prozess-Zeitzone tauschen.
+
+        Issue #1475 Nachbesserung (Punkt 6): ``hail_by_ts`` ordnet je Zeitpunkt
+        das Hagel-Kennzeichen zu. Nur bei bestaetigtem Hagel (``True``) haengt
+        der deskriptive Zusatz an — Stunden mit ``None``/``False`` bleiben
+        zeichengleich (kein unbedingtes Anhaengen, ADR-0007 kein Rat).
         """
+        from output.metric_format import format_hail_note
+
+        hail_by_ts = hail_by_ts or {}
         lines = [f"{header} — stündlich"]
         for pt in res.points:
             time_str = local_fmt(pt.ts, tz)
-            lines.append(f"{time_str}  {fmt(pt.value, with_emoji=with_emoji)}")
+            line = f"{time_str}  {fmt(pt.value, with_emoji=with_emoji)}"
+            note = format_hail_note(hail_by_ts.get(pt.ts))
+            if note:
+                line = f"{line} · {note}"
+            lines.append(line)
         return "\n".join(lines)
 
     def _aggregate_day(self, timeline, target_date) -> Optional[dict]:

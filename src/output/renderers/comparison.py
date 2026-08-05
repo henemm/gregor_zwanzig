@@ -32,7 +32,7 @@ from output.renderers.email.compare_html import (
     _column_legend_text, _fmt_precip_type, _fmt_thunder,
     _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
     _units_legend_text, _visible_hour_metrics, derive_row_labels,
-    location_render_order,
+    loc_hail_flag, location_render_order,
 )
 from output.renderers.email.undelivered_hint import (
     has_undelivered, render_undelivered_plain,
@@ -237,7 +237,11 @@ def render_comparison_text(
         )
         for (metric_id, _de_label, fmt), row in zip(ordered, labelled):
             value = _metric_value(loc_result, metric_id)
-            lines.append(f"   {row['label']}: {fmt(value) if value is not None else '-'}")
+            cell = (
+                _fmt_overview_cell(fmt, value, loc_result)
+                if value is not None else "-"
+            )
+            lines.append(f"   {row['label']}: {cell}")
 
         # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
         # gemeinsamer Renderer statt Copy-Paste).
@@ -300,7 +304,16 @@ def render_comparison_text(
                 ts = local_fmt(dp.ts, tz) if hasattr(dp.ts, "astimezone") else str(dp.ts)
                 cells = []
                 for m in visible_hour_metrics:
-                    text = m["fmt"](getattr(dp, m["key"], None))
+                    # Issue #1475 Nachbesserung (AC-8, Klartext-Pendant der
+                    # Compare-Stundentabelle): Hagel als Text-Anhang, wie in
+                    # der HTML-Fassung -- nie als Ring (das ist nur Trip).
+                    if m["fmt"] is _fmt_thunder:
+                        text = m["fmt"](
+                            getattr(dp, m["key"], None),
+                            getattr(dp, "hail_flag", None),
+                        )
+                    else:
+                        text = m["fmt"](getattr(dp, m["key"], None))
                     if merge_wind_dir and m["key"] == "wind10m_kmh":
                         compass = degrees_to_compass(getattr(dp, "wind_direction_deg", None))
                         if compass:
@@ -464,6 +477,21 @@ _CHANNEL_METRICS: tuple[tuple[str, str], ...] = (
 # alte 6-Groessen-if-Kette (_format_channel_metric) fuer den Telegram-Pfad.
 _PLAIN_ROWS_BY_ID = {row[0]: row for row in _PLAIN_ROWS}
 
+
+def _fmt_overview_cell(fmt, value, loc_result: LocationResult) -> str:
+    """Issue #1475 Nachbesserung (Punkt 5b, Aufrufstellen 3/5/6): DIE EINE
+    Stelle, an der die Ortsvergleich-Kanaele Klartext, SMS und Telegram ihren
+    Uebersichtswert formatieren.
+
+    Fuer die Gewitter-Zeile wird zusaetzlich das Hagel-Kennzeichen DIESES
+    Ortes durchgereicht; alle uebrigen Zeilen bleiben zeichengleich. Ohne
+    diesen gemeinsamen Baustein haette jeder der drei Kanaele eine eigene
+    Kopie derselben Fallunterscheidung bekommen (#1481).
+    """
+    if fmt is _fmt_thunder:
+        return fmt(value, loc_hail_flag(loc_result))
+    return fmt(value)
+
 # Issue #1362 (Scheibe S5b): Compare-Renderer-ID -> zentrale Katalog-Metrik-ID
 # (wie von ``metric_catalog.get_sms_code()`` erwartet), abgeleitet aus den
 # ZWEI bestehenden Uebersetzungstabellen -- kein drittes, hier neu getipptes
@@ -535,6 +563,9 @@ def _sms_aggregation_sign(metric_id: str) -> str:
 _SMS_GSM7_UNSAFE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("°", ""),
     ("—", "-"),
+    # Issue #1475 Nachbesserung: `_fmt_thunder` haengt den Hagel-Hinweis mit
+    # einem Mittelpunkt an -- der ist wie der Geviertstrich nicht GSM-7.
+    ("·", "-"),
 )
 
 
@@ -573,7 +604,7 @@ def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
     if not code:
         return None
     code = f"{code}{_sms_aggregation_sign(metric_id)}"
-    return f"{code} {_sms_gsm7_safe(fmt(value))}"
+    return f"{code} {_sms_gsm7_safe(_fmt_overview_cell(fmt, value, loc_result))}"
 
 
 def _plain_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
@@ -588,7 +619,7 @@ def _plain_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None
     value = _metric_value(loc_result, metric_id)
     if value is None:
         return None
-    return f"{label} {fmt(value)}"
+    return f"{label} {_fmt_overview_cell(fmt, value, loc_result)}"
 
 
 def _channel_layout_for_metrics(channel: str, metric_ids: list[str]):

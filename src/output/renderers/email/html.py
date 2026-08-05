@@ -33,6 +33,7 @@ from utils.timezone import local_dt, local_fmt, tz_abbrev
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
+    _HAIL_RING_COLOR,
     ampel_level,
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_column_legend,
@@ -727,6 +728,10 @@ def _render_html_table(
     _td_grid = "border-right:1px solid #f0ece1;border-bottom:1px solid #f0ece1;"
 
     trs = []
+    # Issue #1475 Nachbesserung (Punkt 2d): zaehlt die TATSAECHLICH gerenderten
+    # Doppelringe — der Erklaerungssatz unter der Tabelle erscheint nur, wenn
+    # mindestens eine SICHTBARE Zeile ihn zeigt (kein unbedingtes Anhaengen).
+    hail_ring_rows = 0
     for r in rows:
         # AC-1 (#900): Time-Zelle trägt inline border für Outlook-Kompatibilität.
         # Issue #902: data-label-Datenzellen tragen jetzt ebenfalls die
@@ -744,6 +749,11 @@ def _render_html_table(
                                indicator_keys=indicator_keys)
             except (TypeError, ValueError):
                 cell = str(raw_val) if raw_val is not None else "–"
+
+            # Issue #1475 Nachbesserung (Punkt 2d): am ERGEBNIS gemessen, nicht
+            # an der Absicht — nur ein wirklich ausgegebener zweiter Ring zaehlt.
+            if _HAIL_RING_COLOR in cell:
+                hail_ring_rows += 1
 
             # AC-10 (#911): getönte Zell-Hintergründe je Warn-Level (Vorlage RISK_CELL).
             # fix-911-table-jsx AC-2 (PO-Entscheidung): KEINE farbigen Text-Spans mehr
@@ -845,11 +855,21 @@ def _render_html_table(
         )
         trs.append(f"<tr>{tds}</tr>")
 
+    # Issue #1475 Nachbesserung (Punkt 2d/AC-3): Legende genau EINMAL direkt
+    # unter dieser Tabelle — und nur, wenn oben mindestens ein Doppelring
+    # tatsaechlich gerendert wurde. Rein deskriptiv (ADR-0007).
+    hail_hint = (
+        f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">'
+        f'* Doppelring bei Gewitter = Hagel möglich</p>'
+        if hail_ring_rows else ""
+    )
+
     return (
         f'<table data-table="resp" style="width:100%;border-collapse:collapse;font-family:{FONT_DATA};">'
         + thead
         + f'<tbody>{"".join(trs)}</tbody>'
         + '</table>'
+        + hail_hint
     )
 
 
@@ -1300,7 +1320,12 @@ def render_html(
             if key in thunder_forecast:
                 fc = thunder_forecast[key]
                 icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
-                items.append(f"<li>{fc['date']}: {icon}{fc['text']}</li>")
+                # Issue #1475 Nachbesserung (Punkt 4b): identischer Hagel-Zusatz
+                # wie in der Klartext-Fassung (geteilte Quelle format_hail_note).
+                from output.metric_format import format_hail_note
+                _note = format_hail_note(fc.get("hail"))
+                _suffix = f" · {_note}" if _note else ""
+                items.append(f"<li>{fc['date']}: {icon}{fc['text']}{_suffix}</li>")
         if items:
             thunder_html = f"""
             <div class="section">

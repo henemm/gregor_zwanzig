@@ -120,14 +120,19 @@ def format_outlook_value(value: object, column: dict) -> str:
     Nicht-numerische Groessen nutzen DIESELBEN deutschen Labels wie die
     Uebersichtstabelle derselben Mail (``_fmt_thunder``/``_fmt_precip_type``)
     -- keine zweite Label-Tabelle. Der Compare-Katalog kennt genau einen
-    ordinalen (Gewitter) und genau einen Enum-Eintrag (Niederschlagsart)."""
+    ordinalen (Gewitter) und genau einen Enum-Eintrag (Niederschlagsart).
+
+    Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 4): traegt ``column``
+    den Schluessel ``"hail"``, wird er an ``_fmt_thunder`` durchgereicht --
+    ohne den Schluessel bleibt die Zelle zeichengleich zum bisherigen Stand.
+    """
     from output.renderers.email.compare_html import _fmt_precip_type, _fmt_thunder
 
     if value is None:
         return "–"
     kind = column.get("kind")
     if kind == "ordinal":
-        return _fmt_thunder(value)
+        return _fmt_thunder(value, column.get("hail"))
     if kind == "enum":
         return _fmt_precip_type(value)
     try:

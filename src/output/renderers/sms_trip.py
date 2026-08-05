@@ -459,6 +459,13 @@ class SMSTripFormatter:
             tomorrow_gap = "+1" in (thunder_forecast.get("_gap_offsets") or ())
         tomorrow_day = DailyForecast(
             thunder_hourly=tomorrow_thunder, has_data_gap=tomorrow_gap,
+            # Issue #1475 Nachbesserung (Punkt 4c): `today` trug das Hagel-
+            # Kennzeichen schon (s.o.), `tomorrow` blieb strukturell leer --
+            # die im Dict vorhandene Information wurde nie gerendert.
+            hail_flag=(
+                thunder_forecast.get("+1", {}).get("hail")
+                if thunder_forecast else None
+            ),
         )
         # `replace` statt Neubau: der Warn-Block (#1318) darf beim Anhaengen
         # des Folgetags nicht verlorengehen.

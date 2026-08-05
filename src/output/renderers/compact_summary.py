@@ -545,10 +545,20 @@ class CompactSummaryFormatter:
         # ADR-0025 Entscheidung 1: kein ungefenstertes Aggregat als Tor für
         # nutzersichtbare Kanal-Aussagen. Die gefensterten Stundenwerte selbst
         # entscheiden, ob Gewitter gemeldet wird (Issue #1275).
+        # Lokaler Import wie bei ``cloud_emoji`` oben — vermeidet den
+        # Zirkelbezug metric_format -> renderers -> compact_summary.
+        from output.metric_format import format_hail_note, hail_priority
+
         thunder_hours = []
+        # Issue #1475 Nachbesserung (Punkt 3/AC-4): das Hagel-Kennzeichen
+        # DERSELBEN gefensterten Gewitterstunden — echter Aufruf der geteilten
+        # Helfer (#1481), kein Parallel-Aggregat. Die Gewitterstufe selbst
+        # bleibt davon unberuehrt (AC-10).
+        hail_values = []
         for dp in hourly:
             if dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
                 thunder_hours.append(local_hour(dp.ts, self._tz))
+                hail_values.append(getattr(dp, "hail_flag", None))
 
         if not thunder_hours:
             return None
@@ -557,8 +567,11 @@ class CompactSummaryFormatter:
         end_h = max(thunder_hours) + 1
 
         if friendly:
-            return f"⚡ möglich {start_h}:00–{end_h}:00"
-        return f"Gewitter möglich {start_h}:00–{end_h}:00"
+            text = f"⚡ möglich {start_h}:00–{end_h}:00"
+        else:
+            text = f"Gewitter möglich {start_h}:00–{end_h}:00"
+        note = format_hail_note(hail_priority(hail_values))
+        return f"{text} · {note}" if note else text
 
     # ------------------------------------------------------------------
     # Stage name shortening
