@@ -21,7 +21,9 @@ OpenSpec-Workflow mit Adversary Verification (Commands sind zweistellig; Einstie
 | `/40-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
 | `/50-implement` | Implementieren (GREEN) + Adversary | — (läuft automatisch durch) |
 | `/60-validate` | Validieren vor Commit | — |
-| `/70-deploy` | Staging-Verifikation + Prod-Deploy (eigene Phase) | **Pflicht: Tech-Lead-Brief lesen + 'go' sagen** |
+| `/70-deploy` | Staging-Verifikation + Prod-Deploy (eigene Phase) | — (läuft autonom durch, **kein** Freigabe-Halt) |
+
+**Deploy läuft ohne Freigabe-Halt (PO-Vorgabe 2026-08-03, korrigiert 2026-08-05 via #1511).** Die frühere Zeile „Pflicht: Tech-Lead-Brief lesen + 'go' sagen" bei `/70-deploy` ist damit **abgelöst**: nach dem Merge zieht die Kette Staging-Poll → `/e2e-verify` → `deploy-gregor-prod.sh` → `prod_selftest.py` → Issue-Close **am Stück** durch. Der PO liest das Ergebnis danach, nicht vorher als Freigabe. Ein selbst formulierter „Tech-Lead-Brief" mit anschließender Bitte um 'go' ist dieselbe verbotene Prozessfrage, nur in Freitextform. Einzige erlaubte Unterbrechung: ein echtes Hard Gate scheitert (Staging-Verdict BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund. **Freigabepflichtig bleibt allein die Spec** (`/30-write-spec`, ACs auf Deutsch).
 
 **Adversary Verification:** Nach Implementation führt ein unabhängiger `implementation-validator` Agent (Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen. Tri-State Verdict: VERIFIED / BROKEN / AMBIGUOUS. Details: `docs/features/openspec_workflow.md`
 
