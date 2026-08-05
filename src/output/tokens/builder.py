@@ -117,6 +117,19 @@ def _spec_uses_friendly_token(spec: Optional[MetricSpec]) -> bool:
     return bool(spec.use_friendly_format)
 
 
+def _gap_or(value: str, has_gap: bool) -> str:
+    """Issue #1483: gemeinsame Gap->"?"-Regel fuer alle Kuerzel mit
+    "-"-Nullform — Schwellwerte (via _mk_metric) UND Temperaturen (via
+    build_token_line). Extrahiert aus der frueheren Inline-Zeile in
+    _mk_metric(), Semantik unveraendert.
+
+    Bewusst NICHT nach render_temperature()/render_int() gezogen:
+    _wintersport() ruft render_int() ebenfalls auf, dort darf nie ein "?"
+    entstehen (AC-4). Die Isolation ist damit strukturell (kein gemeinsamer
+    Aufrufpfad), nicht per Default-Parameter."""
+    return "?" if value == "-" and has_gap else value
+
+
 def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
                rt: ReportType, is_level: bool = False,
                has_gap: bool = False, value_suffix: str = "") -> Optional[Token]:
@@ -132,8 +145,9 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
         # Entwarnung "-" wird bei einer Datenluecke im Fenster zu "?"
         # ("unbekannt"), unabhaengig davon, ob unterschwellige Stichproben
         # vorlagen. Ein gefundener Wert (value != "-") wird nie ueberschrieben.
-        if value == "-" and has_gap:
-            value = "?"
+        # Issue #1483: die Regel steht jetzt in _gap_or() (geteilt mit den
+        # Temperatur-Token) — reines Refactoring, kein Verhaltenswechsel.
+        value = _gap_or(value, has_gap)
     return Token(
         symbol=symbol, value=f"{value}{value_suffix}", category="forecast",
         priority=PRIORITY.get(symbol, 5),
@@ -276,8 +290,14 @@ def build_token_line(
             continue
         if not _visible(spec, report_type):
             continue
+        # Issue #1483: dieselbe Gap->"?"-Regel wie bei R/PR/W/G/TH:/TH+: —
+        # ein fehlender Temperaturwert BEI Datenluecke ist "unbekannt", nicht
+        # "geprueft und unauffaellig". Ein gefundener Wert bleibt unberuehrt
+        # (render_temperature() liefert dann kein "-").
         tokens.append(Token(
-            symbol=sym, value=render_temperature(val), category="forecast",
+            symbol=sym,
+            value=_gap_or(render_temperature(val), today.has_data_gap),
+            category="forecast",
             priority=PRIORITY[sym],
             morning_visible=spec.morning_enabled if spec else True,
             evening_visible=spec.evening_enabled if spec else True,

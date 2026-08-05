@@ -123,11 +123,12 @@ def _regular_segment(
 # (FN/FK/FD/WC) fuer die Direktaufrufe unten. ``format_sms()`` ist die
 # Low-Level-API: sie kennt vertragsgemaess KEINE ``display_config``, die
 # Metrik-Auswahl wird ihr als ``disabled_specs`` uebergeben (genau so baut
-# ``trip_report.py:272-287`` sie aus der Nutzer-Konfiguration). Gegenstand
-# dieser Suite ist ausschliesslich die Datenluecken-Kennzeichnung
-# (`?` statt `-`) der Fenster-Symbole R/PR/W/G/TH: — die Temperatur-Token
-# gehoeren nicht dazu und werden deshalb abgewaehlt, statt den erwarteten
-# Text um sie zu verlaengern.
+# ``trip_report.py:272-287`` sie aus der Nutzer-Konfiguration). Fuer die
+# R/PR/W/G/TH:-Tests unten (#1328) gehoeren die Temperatur-Token nicht zum
+# Pruefgegenstand und werden deshalb abgewaehlt, statt den erwarteten Text
+# um sie zu verlaengern. Issue #1483 (weiter unten in dieser Datei) prueft
+# die Temperatur-Token selbst und baut dafuer eigene, gezielt aktivierte
+# ``MetricSpec``-Listen statt dieser Konstante.
 _TEMPERATURE_OFF: list[MetricSpec] = [
     MetricSpec(symbol=sym, enabled=False)
     for sym in ("N", "K", "D", "FN", "FK", "FD", "WC")
@@ -139,6 +140,7 @@ def _format(
     night_weather: NormalizedTimeseries | None = None,
     *,
     disabled_specs: list[MetricSpec] | None = None,
+    report_type: str = "morning",
 ) -> str:
     """Issue #1331/#1334 F008: die Ziel-Datenluecke wird nicht mehr in
     ``format_sms()`` selbst berechnet (einziger Berechnungspunkt ist jetzt
@@ -146,10 +148,13 @@ def _format(
     genau den echten Versandpfad nach, statt eine feste Konstante zu raten.
 
     ``disabled_specs`` reicht die Metrik-Auswahl durch (Default: keine
-    Abwahl, also alle Kuerzel, die der Renderer aus den Daten bilden kann)."""
+    Abwahl, also alle Kuerzel, die der Renderer aus den Daten bilden kann).
+    ``report_type`` (Issue #1483): Default bleibt "morning" (bit-identisches
+    Verhalten fuer alle bestehenden Aufrufer) -- "evening" wird gebraucht,
+    damit N/FN ueberhaupt sichtbar werden (sie sind evening_only)."""
     has_gap = compute_has_gap(segments, night_weather, _TZ)
     return SMSTripFormatter().format_sms(
-        segments, stage_name="E1", report_type="morning", tz=_TZ,
+        segments, stage_name="E1", report_type=report_type, tz=_TZ,
         night_weather=night_weather, has_gap=has_gap,
         disabled_specs=disabled_specs,
     )
@@ -297,5 +302,139 @@ class TestAC4LengthBudget:
     def test_sms_unknown_token_stays_within_length_budget(self):
         segments = [_error_segment(), _regular_segment()]
         sms = _format(segments)
+
+        assert len(sms) <= 160, f"SMS ueberschreitet 160 Zeichen ({len(sms)}).\nSMS: {sms}"
+
+
+# Issue #1483: dieselbe verschaerfte Regel wie oben (jede Entwarnung `-` wird
+# bei einer Datenluecke im Fenster zu `?`) gilt bisher NICHT fuer die sechs
+# Temperatur-Kuerzel N/K/D/FN/FK/FD -- sie durchlaufen render_temperature(),
+# das `has_gap` nicht kennt. Eigene, gezielt aktivierte MetricSpec-Listen
+# statt `_TEMPERATURE_OFF` (siehe Kommentar oben).
+_TEMPERATURE_ON: list[MetricSpec] = [
+    MetricSpec(symbol=sym, enabled=True)
+    for sym in ("N", "K", "D", "FN", "FK", "FD")
+]
+
+
+def _total_segment_failure() -> list[SegmentWeatherData]:
+    """Zwei ``_error_segment()``s ohne reguläres Segment dazwischen -- echter
+    Komplettausfall der Etappe. Anders als die Mischform (ein Error- + ein
+    Regular-Segment, wie ``TestAC1ShowsUnknownTokenOnSegmentError`` sie
+    nutzt) liefert diese Fixture fuer ALLE sechs Temperatur-Kuerzel `None`:
+    das Gehzeit-Fenster (``hiking_field_min_max()``, Quelle von N/K/D/FN/FK/
+    FD) hat dann keinerlei verwertbare Datenpunkte mehr, waehrend die
+    Mischform ueber das verbleibende Regular-Segment noch einen echten
+    Temperaturwert liefert (siehe die zweite Testklasse unten)."""
+    return [
+        _error_segment(start_h=4, end_h=9),
+        _error_segment(start_h=9, end_h=17),
+    ]
+
+
+class TestTemperatureShowsUnknownOnGap:
+    """Issue #1483: N/K/D/FN/FK/FD sollen bei einer Datenluecke im Fenster
+    dieselbe `?`-Kennzeichnung bekommen wie R/PR/W/G/TH: (#1328) -- bislang
+    zeigen sie faelschlich `-`, nicht unterscheidbar von "geprueft, nichts
+    vorhergesagt"."""
+
+    def test_all_six_show_unknown_on_total_segment_failure(self):
+        """AC-1: kompletter Etappenausfall -> alle sechs Kuerzel `?`."""
+        segments = _total_segment_failure()
+        sms = _format(segments, report_type="evening",
+                       disabled_specs=_TEMPERATURE_ON)
+
+        for sym in ("N", "K", "D", "FN", "FK", "FD"):
+            assert f"{sym}?" in sms, (
+                f"Erwartet `{sym}?` (unbekannt, kompletter Etappenausfall), "
+                f"stattdessen faelschliche Entwarnung.\nSMS: {sms}"
+            )
+        # Einzelner Gesamt-Check statt sechsfacher Substring-Subtraktion:
+        # "K-" ist z.B. Teilstring von "FK-", ein Ersetzen pro Symbol wuerde
+        # sich gegenseitig verfaelschen. Nach dem Fix darf keines der sechs
+        # Kuerzel mehr in seiner `-`-Form auftauchen.
+        for dash_form in ("N-", "K-", "D-", "FN-", "FK-", "FD-"):
+            assert dash_form not in sms, (
+                f"Fehl-Entwarnung `{dash_form}` darf bei Komplettausfall "
+                f"nicht erscheinen.\nSMS: {sms}"
+            )
+
+    def test_found_measured_value_survives_partial_gap_while_missing_felt_becomes_unknown(self):
+        """Ergaenzung zu AC-1 (Sicherheitsregel, analog
+        TestAC2KeepsFoundRiskDespiteGap): bei der Mischform (ein Error- + ein
+        Regular-Segment) liefert das Gehzeit-Fenster fuer N/K/D einen ECHTEN
+        Wert ueber das verbleibende Regular-Segment -- der darf trotz
+        `has_gap=True` NIE zu `?` werden. FN/FK/FD haben in der Test-Fixture
+        dagegen grundsaetzlich keine Windchill-Daten (`_dp()` setzt
+        `wind_chill_c` nie) und muessen deshalb bei vorliegender
+        Datenluecke zu `?` werden."""
+        segments = [_error_segment(), _regular_segment()]
+        sms = _format(segments, report_type="evening",
+                       disabled_specs=_TEMPERATURE_ON)
+
+        # Tokenweiser statt Substring-Vergleich: "N?" ist Teilstring von
+        # "FN?" (ebenso "K?"/"FK?", "D?"/"FD?") -- eine naive `in sms`-Pruefung
+        # wuerde sich an der eigenen Positiv-Erwartung fuer FN/FK/FD
+        # verschlucken. Der Kommentar bei ``TestTemperatureShowsUnknownOnGap.
+        # test_all_six_show_unknown_on_total_segment_failure`` beschreibt
+        # dieselbe Falle fuer die `-`-Form; hier gilt sie fuer `?`.
+        tokens = sms.split()
+        for sym in ("N", "K", "D"):
+            assert f"{sym}15" in sms, (
+                f"Erwartet den gefundenen Wert `{sym}15` aus dem "
+                f"verbleibenden Regular-Segment.\nSMS: {sms}"
+            )
+            assert f"{sym}?" not in tokens, (
+                f"Ein gefundener Temperaturwert darf nie durch `?` "
+                f"verschluckt werden.\nSMS: {sms}"
+            )
+        for sym in ("FN", "FK", "FD"):
+            assert f"{sym}?" in sms, (
+                f"Erwartet `{sym}?` (keine Windchill-Daten UND "
+                f"Datenluecke).\nSMS: {sms}"
+            )
+
+    def test_no_gap_missing_felt_temperature_stays_dash(self):
+        """AC-2 (Abgrenzung): ohne Datenluecke bleibt eine echt fehlende
+        gefuehlte Temperatur `-`, wird NICHT zu `?`."""
+        segments = [
+            _regular_segment(start_h=4, end_h=9),
+            _regular_segment(start_h=9, end_h=17),
+        ]
+        sms = _format(segments, night_weather=_complete_night_weather(),
+                       report_type="evening",
+                       disabled_specs=_TEMPERATURE_ON)
+
+        for sym in ("FN", "FK", "FD"):
+            assert f"{sym}-" in sms, (
+                f"Erwartet weiterhin `{sym}-` ohne Datenluecke.\nSMS: {sms}"
+            )
+            assert f"{sym}?" not in sms, (
+                f"Kein `?` ohne Datenluecke erwartet.\nSMS: {sms}"
+            )
+
+    def test_disabled_temperature_metrics_absent_despite_gap(self):
+        """AC-3 (Regressionsschutz #1415): abgewaehlte Temperatur-Metrik
+        bleibt bei Datenluecke komplett unsichtbar -- weder `-` noch `?`."""
+        segments = _total_segment_failure()
+        sms = _format(segments, report_type="evening",
+                       disabled_specs=_TEMPERATURE_OFF)
+
+        for sym in ("N", "K", "D", "FN", "FK", "FD"):
+            assert f"{sym}?" not in sms, (
+                f"Abgewaehltes Kuerzel `{sym}` darf auch bei Luecke nicht "
+                f"als `?` erscheinen.\nSMS: {sms}"
+            )
+            assert f"{sym}-" not in sms, (
+                f"Abgewaehltes Kuerzel `{sym}` darf auch bei Luecke nicht "
+                f"als `-` erscheinen.\nSMS: {sms}"
+            )
+
+    def test_unknown_marker_stays_within_length_budget(self):
+        """AC-5: `?` belegt genau die Wertstelle wie zuvor `-` -- SMS bleibt
+        innerhalb des 160-Zeichen-Budgets, auch mit allen sechs `?`."""
+        segments = _total_segment_failure()
+        sms = _format(segments, report_type="evening",
+                       disabled_specs=_TEMPERATURE_ON)
 
         assert len(sms) <= 160, f"SMS ueberschreitet 160 Zeichen ({len(sms)}).\nSMS: {sms}"
