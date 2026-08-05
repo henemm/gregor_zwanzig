@@ -394,6 +394,7 @@ class OpenMeteoProvider:
         "cape": "cape_jkg",
         "freezing_level_height": "freezing_level_m",
         "uv_index": "uv_index",
+        "weather_code": "wmo_code",
     }
 
     def _find_fallback_model(
@@ -420,12 +421,30 @@ class OpenMeteoProvider:
 
         return None
 
+    def _derive_thunder_fields(self, ts: "NormalizedTimeseries") -> None:
+        """Leitet thunder_level/hail_flag aus dem gemergten wmo_code nach.
+
+        Ueberschreib-Invariante: nur echte Luecken (Feld is None) werden
+        befuellt. ThunderLevel.NONE ist die geprueft Entwarnung, NICHT
+        Python None (Issue #1474 AC-4) -- bleibt unangetastet.
+        """
+        for dp in ts.data:
+            if dp.wmo_code is None:
+                continue
+            if dp.thunder_level is None:
+                dp.thunder_level = self._parse_thunder_level(dp.wmo_code)
+            if dp.hail_flag is None:
+                dp.hail_flag = self._parse_hail_flag(dp.wmo_code)
+
     def _merge_fallback(
         self, primary: "NormalizedTimeseries", fallback: "NormalizedTimeseries",
         missing_params: List[str]
     ) -> List[str]:
         """Thin-Wrapper. Vertrag lebt in providers/merge.py (Issue #1302, Epic #1301)."""
-        return merge_missing_fields(primary, fallback, missing_params, self._PARAM_TO_FIELD)
+        filled = merge_missing_fields(primary, fallback, missing_params, self._PARAM_TO_FIELD)
+        if "weather_code" in filled:
+            self._derive_thunder_fields(primary)
+        return filled
 
     def _enrich_snow(
         self, timeseries: "NormalizedTimeseries", lat: float, lon: float, enrich_snow: bool

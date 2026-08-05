@@ -243,7 +243,19 @@ if meta and meta.fallback_model and meta.fallback_metrics:
 - Zeitliche Aufloesung identisch (stuendlich) — kein Interpolationsbedarf
 - Wenn Probe-Cache fehlt oder abgelaufen, kein Fallback (graceful degradation)
 - ECMWF als Primaermodell hat keinen Fallback (ist selbst der letzte Fallback)
+- **`weather_code` ist der einzige Parameter mit Nachbearbeitung** (Issue #1492 S1,
+  s. u.): Die Zuordnung `param → field` ist strikt 1:1, aus dem Wettercode entstehen
+  beim regulaeren Parsen aber DREI Felder (`wmo_code`, `thunder_level`, `hail_flag`).
+  Gemergt wird nur der Rohcode `wmo_code`; `thunder_level` und `hail_flag` werden
+  danach in `_derive_thunder_fields` aus dem gemergten Rohcode nachgeleitet — fill-only,
+  ein vorhandener Wert wird nie ueberschrieben. Wer hier einen weiteren Parameter mit
+  mehreren Zielfeldern ergaenzt, braucht dieselbe Nachbearbeitung; die 1:1-Signatur von
+  `merge_missing_fields` bleibt bewusst unangetastet (sie traegt auch den Schnee-Merge).
 
 ## Changelog
 
+- 2026-08-05: Known Limitation zu `weather_code` ergaenzt — Sonderfall „ein Parameter,
+  drei Zielfelder" aus Issue #1492 Scheibe 1
+  (`docs/specs/modules/fix_1492_s1_wettercode_fallback.md`). Der Mechanismus dieser Spec
+  bleibt unveraendert.
 - 2026-02-16: Initial spec created (WEATHER-05b, Phase B)
