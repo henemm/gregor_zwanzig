@@ -210,7 +210,7 @@ def test_classify_origin_exact_roots_only():
 def test_checkout_root_derives_from_channel_module_depth():
     """`<wurzel>/src/output/channels/<datei>.py` -> `<wurzel>`."""
     assert checkout_root(
-        Path("/home/hem/gregor_zwanzig/src/output/channels/telegram.py")
+        Path("/home/hem/gregor_zwanzig/src/output/channels/telegram.py")  # gz-main-path: Beispiel-EINGABE fuer die Wurzel-Ableitung, kein Ladepfad — der echte Hauptrepo-Pfad ist hier bedeutungstragend, weil die naechste Zusicherung ihn gegen gregor_zwanzig_staging abgrenzt
     ) == Path("/home/hem/gregor_zwanzig")
     assert checkout_root(
         Path("/home/hem/gregor_zwanzig_staging/src/output/channels/email.py")
