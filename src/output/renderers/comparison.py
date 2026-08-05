@@ -34,6 +34,9 @@ from output.renderers.email.compare_html import (
     _units_legend_text, _visible_hour_metrics, derive_row_labels,
     location_render_order,
 )
+from output.renderers.email.undelivered_hint import (
+    has_undelivered, render_undelivered_plain,
+)
 from utils.geo import degrees_to_compass
 from utils.timezone import (
     local_fmt, local_stamp, location_tz, resolve_location_tz, tz_abbrev,
@@ -141,6 +144,7 @@ def render_comparison_text(
     outlook_metrics: list[dict] | None = None,
     hourly_metrics: list[str] | None = None,
     hourly_enabled: bool = True,
+    undelivered: list | None = None,
 ) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110).
@@ -172,6 +176,15 @@ def render_comparison_text(
             Stundenverlauf-Abschnitt (Ueberschrift + Tabellenzeilen) je Ort
             entfallen -- der 3-Tage-Ausblick haengt NICHT an dieser
             Bedingung und bleibt unveraendert sichtbar (Issue #1323).
+        undelivered: Issue #1461 S3b-1 (AC-17): Vorfaelle, die seit dem
+            letzten Briefing einen Kanal nicht erreicht haben. GLEICHER
+            geteilter Baustein wie HTML-Pfad und Trip-Briefing. Der
+            Klartext-Teil wird mitgesendet (`send_compare_report(...,
+            plain_text_body=text_body)`) und ist kein toter Pfad -- ein hier
+            fehlender Baustein wird von KEINEM Pflicht-Validator gefunden
+            (`email_spec_validator` liest nur den HTML-Body; genau so blieb
+            in #1366 `hourly_enabled` im Klartext monatelang wirkungslos).
+            ``None``/leer = kein Abschnitt, keine Ueberschrift.
 
     Returns:
         Klartext-String fuer die E-Mail.
@@ -330,6 +343,16 @@ def render_comparison_text(
             if _legend:
                 lines.append(_legend)
 
+    # Issue #1461 S3b-1 (AC-17): an derselben Stelle wie im HTML-Teil (vor
+    # Legende/Fuss) und ueber DENSELBEN Baustein wie Trip und Compare-HTML --
+    # keine zweite Fassung. Zeitbasis wie die Kopfzeile derselben Mail.
+    if has_undelivered(undelivered):
+        lines.append("")
+        lines.append(render_undelivered_plain(
+            undelivered, tz=location_tz(locations[0].location),
+        ))
+        lines.append("")
+
     lines.append("---")
     lines.append("Gregor Zwanzig")
 
@@ -350,6 +373,7 @@ def render_compare_email(
     corridors: list[Corridor] | None = None,
     outlook_enabled: bool = False,
     outlook_metrics: list[dict] | None = None,
+    undelivered: list | None = None,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -385,6 +409,8 @@ def render_compare_email(
         corridors=corridors,
         outlook_enabled=outlook_enabled,
         outlook_metrics=outlook_metrics,
+        # Issue #1461 S3b-1: geteilter Hinweis-Baustein, derselbe wie im Trip.
+        undelivered=undelivered,
     )
     text_body = render_comparison_text(
         result, profile=profile, enabled_metrics=enabled_metrics,
@@ -399,6 +425,11 @@ def render_compare_email(
         # unabhaengig von Auswahl/Schalter.
         hourly_metrics=hourly_metrics,
         hourly_enabled=hourly_enabled,
+        # Issue #1461 S3b-1 (AC-17): beide Fassungen der Mail werden
+        # zugestellt -- der Abschnitt gehoert in BEIDE, sonst waere der
+        # Ortsvergleich gegenueber dem Trip (`email/plain.py`) schlechter
+        # gestellt (Teilungs-Invariante).
+        undelivered=undelivered,
     )
     return html_body, text_body
 

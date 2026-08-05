@@ -19,7 +19,9 @@ from app.loader import (
     load_all_locations,
     load_compare_presets,
 )
-from services.alert_briefing_anchor import write_anchor_and_reset_memory
+from services.alert_briefing_anchor import (
+    undelivered_since_last_briefing, write_anchor_and_reset_memory,
+)
 from services.compare_alert_channels import effective_compare_channels
 
 logger = logging.getLogger("scheduler.dispatch")
@@ -371,8 +373,15 @@ def send_one_compare_preset(
     opts = resolve_compare_render_options(preset)
     # Issue #1110: Abo-Footer-Metadaten (Preset-Name/Schedule/Weekday) zusaetzlich
     # zu den #1104-Parametern durchreichen (Merge beider Feature-Branches).
+    # Issue #1461 S3b-1: die Vorfaelle haengen an der PROTOKOLL-Kennung
+    # (`preset_id`, so schreiben compare_alert.py/compare_official_alert.py) --
+    # NICHT an den Anker-Kennungen f"{preset_id}:{loc.id}" weiter unten.
+    undelivered = undelivered_since_last_briefing(
+        user_id=user_id, entity_id=preset_id, entity_type="compare",
+    )
     html_body, text_body = render_compare_email(
         result,
+        undelivered=undelivered,
         profile=profile,
         enabled_metrics=opts.enabled_metrics,
         hourly_metrics=opts.hourly_metrics,
@@ -415,6 +424,11 @@ def send_one_compare_preset(
         entity_ids=[f"{preset_id}:{loc.id}" for loc in locations],
         write_anchor=lambda: _write_compare_alert_snapshots(preset_id, locations, user_id),
         on_demand=on_demand,
+        # Issue #1461 S3b-1: der Briefing-Zeitstempel gehoert unter die
+        # Protokoll-Kennung `preset_id` — unter den Anker-Kennungen oben
+        # faende `read_undelivered()` nie einen Treffer.
+        briefing_entity_id=preset_id,
+        briefing_entity_type="compare",
     )
 
     save_compare_preset_status(user_id, preset_id, top_ort, data_root=data_root)

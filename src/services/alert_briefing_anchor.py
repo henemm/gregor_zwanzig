@@ -23,10 +23,92 @@ AC-14..AC-19 und AC-27.
 """
 from __future__ import annotations
 
+import json
 import logging
+from datetime import datetime, timezone
 from typing import Callable, Iterable, Optional
 
 logger = logging.getLogger("alert_briefing_anchor")
+
+# Eigene Ablage, bewusst NICHT als weiterer Top-Level-Schluessel in
+# `alert_log.json`: die Protokolldatei wird von `append_entry()` per
+# Read-Modify-Write ueber die volle Datei geschrieben, und Go liest sie
+# (`internal/store/log.go`). Ein zusaetzlicher Schluessel dort waere ein
+# Fremdkoerper im geteilten Schema — hier ist er strukturell folgenlos (D4).
+_BRIEFING_ANCHOR_FILE = "briefing_anchor.json"
+
+
+def _anchor_path(user_id: str):
+    from app.loader import get_data_dir
+
+    return get_data_dir(user_id) / _BRIEFING_ANCHOR_FILE
+
+
+def record_briefing_sent(
+    *, user_id: str, entity_id: str, entity_type: str,
+    at: Optional[datetime] = None,
+) -> None:
+    """Haelt fest, WANN zuletzt ein Briefing dieser Kennung rausging (#1461).
+
+    🔴 `entity_id` MUSS die **Protokoll**-Kennung sein — Trip: `trip.id`;
+    Ortsvergleich: `preset_id` (so schreibt `compare_alert.py` das Protokoll),
+    NICHT die Anker-Kennungen `f"{preset_id}:{loc.id}"`. Unter denen faende
+    `read_undelivered()` nie einen Treffer und der Hinweis bliebe beim
+    Ortsvergleich dauerhaft leer.
+
+    Fail-soft: ein Schreibfehler darf einen bereits versandten Report nicht
+    rueckwirkend zum Fehler machen.
+    """
+    moment = (at or datetime.now(tz=timezone.utc)).astimezone(timezone.utc)
+    path = _anchor_path(user_id)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = json.loads(path.read_text()) if path.exists() else {}
+        if not isinstance(data, dict):
+            data = {}
+        data.setdefault(entity_type, {})[entity_id] = moment.isoformat()
+        path.write_text(json.dumps(data, indent=2))
+    except (OSError, ValueError, AttributeError) as e:
+        logger.warning("Briefing-Zeitstempel fuer %s nicht schreibbar: %s", entity_id, e)
+
+
+def last_briefing_at(
+    *, user_id: str, entity_id: str, entity_type: str,
+) -> Optional[datetime]:
+    """Zeitpunkt des letzten Briefings dieser Kennung — `None`, wenn es noch
+    keins gab (Bestandsnutzer, erstes Briefing nach der Auslieferung)."""
+    path = _anchor_path(user_id)
+    try:
+        data = json.loads(path.read_text()) if path.exists() else {}
+        raw = (data.get(entity_type) or {}).get(entity_id)
+        if not raw:
+            return None
+        ts = datetime.fromisoformat(str(raw))
+    except (OSError, ValueError, AttributeError) as e:
+        logger.warning("Briefing-Zeitstempel fuer %s nicht lesbar: %s", entity_id, e)
+        return None
+    return ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+
+
+def undelivered_since_last_briefing(
+    *, user_id: str, entity_id: str, entity_type: str,
+) -> list:
+    """DIE Naht, aus der beide Briefing-Pfade den Hinweis speisen (#1461).
+
+    Ohne gespeicherten Zeitpunkt beginnt der Rueckblick **ab jetzt** — sonst
+    kippte beim ersten Briefing nach der Auslieferung die gesamte Historie in
+    die Mail (AC-7).
+    """
+    from services.alert_log import read_undelivered
+
+    since = last_briefing_at(
+        user_id=user_id, entity_id=entity_id, entity_type=entity_type,
+    )
+    if since is None:
+        return []
+    return read_undelivered(
+        user_id, entity_id=entity_id, entity_type=entity_type, since=since,
+    )
 
 
 def write_anchor_and_reset_memory(
@@ -36,6 +118,8 @@ def write_anchor_and_reset_memory(
     write_anchor: Callable[[], None],
     on_demand: bool = False,
     reset_memory: Optional[Callable[[str], None]] = None,
+    briefing_entity_id: Optional[str] = None,
+    briefing_entity_type: Optional[str] = None,
 ) -> None:
     """Schreibt den Δ-Anker und leert danach das Melde-Gedächtnis.
 
@@ -58,9 +142,23 @@ def write_anchor_and_reset_memory(
             muss). Diese Naht delegiert ihrerseits an `reset_alert_memory()`,
             es gibt also nur EINE Reset-Fassung. Ohne Angabe wird
             `reset_alert_memory()` direkt gerufen.
+        briefing_entity_id/briefing_entity_type: Kennung, unter der der
+            Briefing-Zeitstempel fortgeschrieben wird (#1461 S3b-1). Das ist
+            die PROTOKOLL-Kennung, die im Compare-Fall von `entity_ids`
+            abweicht (dort `preset_id` statt `f"{preset_id}:{loc.id}"`).
+            Ohne Angabe wird nichts fortgeschrieben (Bestandsaufrufer).
     """
     if on_demand:
         return
+
+    # Vor dem Anker: ein fehlgeschlagener Snapshot-Write darf den Zeitpunkt
+    # nicht verschlucken — sonst zeigte das naechste Briefing dieselben
+    # Vorfaelle erneut.
+    if briefing_entity_id and briefing_entity_type:
+        record_briefing_sent(
+            user_id=user_id, entity_id=briefing_entity_id,
+            entity_type=briefing_entity_type,
+        )
 
     write_anchor()
 

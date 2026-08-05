@@ -28,7 +28,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 from app.loader import get_data_dir
@@ -210,3 +211,137 @@ def append_entry(
     data.setdefault(target, [])
     data[target].append(entry)
     path.write_text(json.dumps(data, indent=2))
+
+
+# ---------------------------------------------------------------------------
+# Lesen: was hat einen Kanal NICHT erreicht (#1461 S3b-1)
+# ---------------------------------------------------------------------------
+
+# Ein Alarm-Lauf erzeugt bis zu drei Eintraege (Vorhersage-Aenderung, Radar,
+# amtliche Warnung sind drei getrennte `append_entry`-Aufrufe, Millisekunden
+# auseinander). Fuer den Nutzer ist das EIN Vorfall -- zusammengefasst wird
+# beim LESEN, nie im Protokoll (sonst kippt D4).
+DEDUP_WINDOW = timedelta(minutes=2)
+
+
+@dataclass(frozen=True)
+class UndeliveredIncident:
+    """Eine Nutzer-Meldung, die mindestens einen Kanal nicht erreicht hat."""
+    at: datetime
+    channels: tuple[str, ...]
+    reasons: tuple[str, ...]
+    metrics: tuple[tuple[str, str], ...]
+    hazards: tuple[str, ...]
+    trigger: str
+
+
+def _parse_ts(raw: object) -> Optional[datetime]:
+    try:
+        ts = datetime.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        return None
+    return ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+
+
+def _missed_channels(entry: dict) -> tuple[list[str], set[str]]:
+    """Kanaele + Gruende, die als Vorfall zaehlen.
+
+    `channel_disabled` faellt heraus: ein vom Nutzer ABGESCHALTETER Kanal ist
+    keine fehlgeschlagene Zustellung. `_channels_not_sent()` schreibt ihn bei
+    JEDEM erfolgreichen Alarm mit; wer ihn mitzaehlt, zeigt jedem
+    Ein-Kanal-Nutzer in JEDEM Briefing einen Abschnitt (Spec v1.1, AC-3).
+    Alle uebrigen Gruende -- auch die spaeter hinzukommenden (`quiet_hours`,
+    `daily_limit`, `cooldown`, "unter der Kanal-Schwelle" aus S3b-2) -- sind
+    ausdruecklich Vorfaelle.
+    """
+    channels, reasons = [], set()
+    for item in entry.get("channels_not_sent") or []:
+        if not isinstance(item, dict):
+            continue
+        reason = item.get("reason")
+        channel = item.get("channel")
+        if not channel or reason == REASON_CHANNEL_DISABLED:
+            continue
+        channels.append(channel)
+        reasons.add(reason or REASON_DELIVERY_FAILED)
+    return channels, reasons
+
+
+def read_undelivered(
+    user_id: str,
+    *,
+    entity_id: str,
+    entity_type: str,
+    since: Optional[datetime] = None,
+) -> list[UndeliveredIncident]:
+    """Meldungen EINER Kennung, die seit `since` einen Kanal nicht erreichten.
+
+    Reine Lesefunktion -- an `entries`/`not_delivered` wird nichts geschrieben
+    (Zusicherung D4: Cockpit-Kachel und Archiv-Statistik bleiben zahlgleich).
+    Beide Quellen: `entries[*].channels_not_sent` (Teilausfall) und die ganzen
+    Eintraege unter `not_delivered` (Totalausfall).
+
+    Fail-soft wie die Schreibseite: unlesbare Datei ⇒ leeres Ergebnis plus
+    Warnung, nie eine Ausnahme ins Briefing. `since=None` liest ohne
+    Zeitgrenze; die Entscheidung "ohne Anker gar nichts" trifft der Aufrufer
+    (`alert_briefing_anchor.undelivered_since_last_briefing`).
+
+    Rueckgabe: juengster Vorfall zuerst.
+    """
+    path = get_data_dir(user_id) / "alert_log.json"
+    try:
+        data = json.loads(path.read_text()) if path.exists() else {}
+    except (OSError, ValueError) as e:
+        logger.warning("alert_log: %s nicht lesbar (%s) -- kein Briefing-Hinweis", path, e)
+        return []
+    if not isinstance(data, dict):
+        return []
+
+    roh: list[tuple[datetime, list[str], set[str], dict]] = []
+    for key in ("entries", "not_delivered"):
+        for entry in data.get(key) or []:
+            if not isinstance(entry, dict):
+                continue
+            # Alt-Eintraege ohne die #1467-S1-Felder wie Go lesen
+            # (`internal/store/log.go LoadAlertLog()`).
+            if (entry.get("entity_id") or entry.get("trip_id")) != entity_id:
+                continue
+            if (entry.get("entity_type") or "trip") != entity_type:
+                continue
+            at = _parse_ts(entry.get("sent_at"))
+            if at is None or (since is not None and at < since):
+                continue
+            channels, reasons = _missed_channels(entry)
+            if channels:
+                roh.append((at, channels, reasons, entry))
+
+    roh.sort(key=lambda r: r[0], reverse=True)
+
+    vorfaelle: list[UndeliveredIncident] = []
+    gruppen: list[dict] = []
+    for at, channels, reasons, entry in roh:
+        if gruppen and gruppen[-1]["at"] - at <= DEDUP_WINDOW:
+            g = gruppen[-1]
+        else:
+            g = {"at": at, "channels": [], "reasons": set(),
+                 "metrics": [], "hazards": [], "trigger": entry.get("reason") or ""}
+            gruppen.append(g)
+        g["channels"] += [c for c in channels if c not in g["channels"]]
+        g["reasons"] |= reasons
+        g["metrics"] += [
+            (m.get("metric_id"), m.get("aggregation"))
+            for m in entry.get("metrics") or []
+            if (m.get("metric_id"), m.get("aggregation")) not in g["metrics"]
+        ]
+        g["hazards"] += [h for h in entry.get("hazards") or [] if h not in g["hazards"]]
+
+    for g in gruppen:
+        vorfaelle.append(UndeliveredIncident(
+            at=g["at"],
+            channels=tuple(c for c in _ALL_CHANNELS if c in g["channels"]),
+            reasons=tuple(sorted(g["reasons"])),
+            metrics=tuple(g["metrics"]),
+            hazards=tuple(g["hazards"]),
+            trigger=g["trigger"],
+        ))
+    return vorfaelle

@@ -120,6 +120,33 @@ def send_official_alert_mail(settings: Settings, token: str) -> bool:
 #     echten Renderer-Einstiegspunkt render_email() (segments tragen
 #     official_alerts, analog test_warn_block_trip_placement.py).
 # ---------------------------------------------------------------------------
+# Direktstrahlung (DNI) der Briefing-Fixture -- NICHT frei gegriffen, sondern
+# je Zeile aus der Bewoelkung DERSELBEN Zeile abgeleitet (Issue #1432):
+#
+#   dni_wm2 = round(clear_sky_dni(Ortsstunde) * (1 - cloud_total_pct/100 * 0.8))
+#
+# `clear_sky_dni` sind Groessenordnungen eines wolkenlosen 13.-Juli-Tages auf
+# ~46.6 N in 600-1200 m (Sonnenhoechststand ~13:20 Ortszeit): vormittags noch
+# im Anstieg, um die Mittagszeit am hoechsten, am spaeten Nachmittag wieder
+# fallend. Der Faktor 0.8 ist die uebliche Annahme, dass Bewoelkung die
+# DIREKTE Strahlung ueberproportional daempft (Diffusanteil faellt weg).
+# Damit gilt zeilenweise: mehr Wolken -> weniger Direktstrahlung.
+#
+# Warum es diese Werte ueberhaupt braucht: ohne `dni_wm2` bleibt die
+# Sonne-Spalte der Stundentabelle leer ('-'), waehrend die Sonne-Pille aus dem
+# Wolken-Rueckfall gefuellt wird -- ein Widerspruch, den der Briefing-Validator
+# seit #1432 zu Recht meldet. `is_day=1` gehoert dazu, weil der Emoji-Pfad
+# (get_weather_emoji) DNI nur bei bekanntem Tag-Flag auswertet; alle vier
+# Stunden liegen im Juli zwischen 10 und 16 Uhr Ortszeit, also am Tag.
+_BRIEFING_CLEAR_SKY_DNI = {8: 780.0, 10: 870.0, 12: 850.0, 14: 700.0}  # UTC-Stunde
+_BRIEFING_CLOUD_DIRECT_DAMPING = 0.8
+
+
+def _briefing_dni(hour_utc: int, cloud_pct: int) -> float:
+    return round(_BRIEFING_CLEAR_SKY_DNI[hour_utc]
+                 * (1.0 - cloud_pct / 100.0 * _BRIEFING_CLOUD_DIRECT_DAMPING))
+
+
 def _briefing_dps() -> list[ForecastDataPoint]:
     return [
         ForecastDataPoint(
@@ -127,6 +154,7 @@ def _briefing_dps() -> list[ForecastDataPoint]:
             t2m_c=t, wind10m_kmh=w, gust_kmh=w + 8, precip_1h_mm=p,
             pop_pct=15, cloud_total_pct=c, thunder_level=ThunderLevel.NONE,
             visibility_m=20000, freezing_level_m=3000,
+            is_day=1, dni_wm2=_briefing_dni(h, c),
         )
         for h, t, w, c, p in (
             (8, 14.0, 10.0, 30, 0.0),

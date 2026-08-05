@@ -65,6 +65,7 @@ def render_email(
     trip_url: Optional[str] = None,
     corridors: Optional[list[Corridor]] = None,
     trip_metrics_altbestand: bool = True,
+    undelivered: Optional[list] = None,
     **_ignored,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
@@ -122,6 +123,7 @@ def render_email(
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,
             trip_metrics_altbestand=trip_metrics_altbestand,
+            undelivered=undelivered,
         )
         return "", compact_text
 
@@ -167,6 +169,7 @@ def render_email(
         trip_url=trip_url,
         corridors=corridors,
         trip_metrics_altbestand=trip_metrics_altbestand,
+        undelivered=undelivered,
     )
     plain_body = render_plain(
         segments=segments,
@@ -197,6 +200,7 @@ def render_email(
         show_outlook=show_outlook,
         day_comparison=day_comparison,
         trip_metrics_altbestand=trip_metrics_altbestand,
+        undelivered=undelivered,
     )
     return html_body, plain_body
 

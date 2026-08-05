@@ -986,6 +986,10 @@ class TripReportSchedulerService:
             write_anchor=_write_briefing_anchor,
             on_demand=on_demand,
             reset_memory=self._reset_alert_state_after_briefing,
+            # Issue #1461 S3b-1: Briefing-Zeitstempel unter der PROTOKOLL-
+            # Kennung (hier deckungsgleich mit der Anker-Kennung).
+            briefing_entity_id=trip.id,
+            briefing_entity_type="trip",
         )
 
         return "no_channels" if result.no_channel_configured else "sent"

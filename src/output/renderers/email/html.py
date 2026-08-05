@@ -55,6 +55,9 @@ from output.renderers.alert.official_alerts import (
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable, render_official_alerts_unavailable_html,
 )
+from output.renderers.email.undelivered_hint import (
+    has_undelivered, render_undelivered_html,
+)
 from output.renderers.email.outlook_state_hint import (
     OutlookState as _OutlookState, render_outlook_state_html,
 )
@@ -957,6 +960,7 @@ def render_html(
     trip_url: Optional[str] = None,
     corridors: Optional[list[Corridor]] = None,
     trip_metrics_altbestand: bool = True,
+    undelivered: Optional[list] = None,
     **_ignored,
 ) -> str:
     """Render full HTML e-mail body. Pure function.
@@ -1584,6 +1588,14 @@ def render_html(
     if any_official_alerts_unavailable(segments):
         warn_block_html += render_official_alerts_unavailable_html()
 
+    # Issue #1461 S3b-1: was seit dem letzten Briefing einen Kanal NICHT
+    # erreicht hat — am Ende des Briefings, geteilter Baustein mit dem
+    # Ortsvergleich. Ohne Vorfaelle leer -> HTML byte-identisch wie bisher.
+    undelivered_html = (
+        render_undelivered_html(undelivered, tz=tz)
+        if has_undelivered(undelivered) else ""
+    )
+
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
     column_legend_text = build_column_legend(all_rows) if all_rows else ""
@@ -1692,7 +1704,7 @@ def render_html(
         {segments_html}
         {night_html}
         {thunder_html}
-        {trend_html}
+        {trend_html}{undelivered_html}
 
         {_render_kommandos_section()}
 
