@@ -29,6 +29,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.tdd.conftest import gh_shim_call_log, gh_shim_path
+
 # Prüflinge relativ zu DIESER Testdatei (Pfadregel #1409) — sonst prüft ein
 # Worktree-Lauf die unveränderte Hauptrepo-Kopie und meldet falsches Grün.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -44,13 +46,26 @@ _GATE_ISSUE = "603"
 _SCREEN = "test-1307b-kein-sollbild"
 
 
+def _shim_dir(project_dir: Path) -> Path:
+    return project_dir / "_bin"
+
+
 def _clean_env(project_dir: Path, workflow: str, var: str) -> dict:
     """Umgebung vollständig selbst gesetzt: beide Schreibweisen erst raus,
-    dann genau eine gezielt rein (AC-14-Muster)."""
+    dann genau eine gezielt rein (AC-14-Muster).
+
+    Zusätzlich liegt ein aufgezeichnetes `gh` an erster PATH-Stelle. Ohne das
+    hing dieser Test an einem angemeldeten gh: auf dem Bauserver gibt es keins,
+    der Wächter läuft dann fail-open (Exit 0) und der Test belegt nichts —
+    genau so wurde er am 2026-08-05 auf CI rot. Echtes Skript, echter
+    Subprozess, kein Mock (Muster: der git-Shim in
+    test_issue_668_head_sha_dedup.py).
+    """
     env = {k: v for k, v in os.environ.items() if k not in _WORKFLOW_ENV_VARS}
     env[var] = workflow
     env["CLAUDE_PROJECT_DIR"] = str(project_dir)
     env.setdefault("GH_REPO", "henemm/gregor_zwanzig")
+    env["PATH"] = gh_shim_path(_shim_dir(project_dir))
     return env
 
 
@@ -114,7 +129,16 @@ def test_tool_and_gate_resolve_the_same_artifact_dir(tmp_path, var):
     blocked = _run_gate(tmp_path, env)
     assert blocked.returncode == 2, (
         f"Wächter muss ohne Bericht blockieren (Exit 2), lieferte Exit "
-        f"{blocked.returncode} — vermutlich hat er die Workflow-Kennung {var} "
-        "gar nicht aufgelöst und ist still durchgelaufen.\n"
+        f"{blocked.returncode} — er hat die Workflow-Kennung {var} nicht "
+        "aufgelöst und ist still durchgelaufen.\n"
         f"stdout: {blocked.stdout[:300]}\nstderr: {blocked.stderr[:300]}"
+    )
+
+    # 4) Der Wächter muss die Kennzeichen wirklich abgefragt haben. Ein leeres
+    #    Aufruf-Protokoll hiesse: er ist schon vor der Label-Prüfung raus —
+    #    dann messen die Schritte 2 und 3 ein Fail-open statt eines Treffers.
+    calls = gh_shim_call_log(_shim_dir(tmp_path))
+    assert any(c.startswith(f"issue view {_GATE_ISSUE}") for c in calls), (
+        "Der Wächter hat die Kennzeichen des Issues nie abgefragt — die "
+        f"Aussage der Schritte 2/3 ist damit wertlos. Aufrufe: {calls!r}"
     )

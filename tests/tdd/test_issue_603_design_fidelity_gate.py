@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.tdd.conftest import gh_shim_call_log, gh_shim_path
+
 # #1307: design_fidelity_diff.py macht einen echten Playwright-Login-Versuch
 # gegen Staging; unter dem globalen 30s-Test-Timeout (#1210) reissen 4 von 5
 # vormals roten Tests rein durch Timeout, nicht durch echten Fehlschlag
@@ -187,6 +189,10 @@ _GATE_ISSUE = "603"          # trägt das Label design-compliance
 _PLAIN_ISSUE = "1"           # trägt es nicht
 
 
+def _shim_dir(project_dir: Path) -> Path:
+    return project_dir / "_bin"
+
+
 def _gate_env(project_dir: Path, command: str, workflow: str | None,
               var: str = "OPENSPEC_ACTIVE_WORKFLOW") -> dict:
     """Vollständig selbst gesetzte Umgebung für einen Gate-Lauf.
@@ -194,13 +200,19 @@ def _gate_env(project_dir: Path, command: str, workflow: str | None,
     Beide Schreibweisen der Workflow-Kennung werden zuerst ausdrücklich
     entfernt, damit keine von aussen gesetzte Kennung durchschlägt.
     `CLAUDE_PROJECT_DIR` hält die Artefakt-Ablage im Testverzeichnis (das echte
-    Repo bleibt unberührt), `GH_REPO` macht den `gh issue view`-Aufruf des
-    Gates unabhängig vom Arbeitsverzeichnis.
+    Repo bleibt unberührt).
+
+    Ein aufgezeichnetes `gh` liegt an erster PATH-Stelle: das Gate holt die
+    Kennzeichen des Issues per `gh issue view` und läuft bei jedem gh-Fehler
+    fail-open (Exit 0). Ohne angemeldetes gh — auf dem Bauserver der Normalfall
+    — belegten diese Prüfungen deshalb nichts. Echtes Ersatzskript, echter
+    Subprozess, kein Mock; Details in tests/tdd/conftest.py.
     """
     env = {k: v for k, v in os.environ.items() if k not in _WORKFLOW_ENV_VARS}
     env["CLAUDE_TOOL_INPUT"] = json.dumps({"command": command})
     env["CLAUDE_PROJECT_DIR"] = str(project_dir)
     env.setdefault("GH_REPO", "henemm/gregor_zwanzig")
+    env["PATH"] = gh_shim_path(_shim_dir(project_dir))
     if workflow:
         env[var] = workflow
     return env
@@ -210,6 +222,17 @@ def _run_gate(env: dict) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(GATE_HOOK)],
         capture_output=True, text=True, env=env, cwd=env["CLAUDE_PROJECT_DIR"],
+    )
+
+
+def _assert_labels_were_fetched(project_dir: Path, issue: str) -> None:
+    """Exit 0 ist mehrdeutig: es kann „Nachweis gefunden" heissen oder
+    „gh-Aufruf fehlgeschlagen, also fail-open". Das Aufruf-Protokoll des
+    Ersatz-`gh` trennt die beiden Fälle."""
+    calls = gh_shim_call_log(_shim_dir(project_dir))
+    assert any(c.startswith(f"issue view {issue}") for c in calls), (
+        "Das Gate hat die Kennzeichen nie abgefragt — ein Exit 0 belegt hier "
+        f"nichts. Aufrufe: {calls!r}"
     )
 
 
@@ -287,6 +310,7 @@ class TestAC2GateBlocksWithoutArtefact:
             f"got Exit {result.returncode}\n"
             f"stdout: {result.stdout[:300]}\nstderr: {result.stderr[:300]}"
         )
+        _assert_labels_were_fetched(tmp_path, _GATE_ISSUE)
 
     def test_gate_reads_legacy_workflow_variable(self, tmp_path):
         """
@@ -332,6 +356,7 @@ class TestAC2GateBlocksWithoutArtefact:
             f"Gate muss mit Pass-Artefakt Exit 0 liefern, got Exit {result.returncode}\n"
             f"stdout: {result.stdout[:300]}\nstderr: {result.stderr[:300]}"
         )
+        _assert_labels_were_fetched(tmp_path, _GATE_ISSUE)
 
     def test_gate_environment_is_self_set_not_inherited(self, tmp_path, monkeypatch):
         """
@@ -376,6 +401,7 @@ class TestAC2GateBlocksWithoutArtefact:
             f"Gate darf normale Issues nicht blockieren, got Exit {result.returncode}\n"
             f"stderr: {result.stderr[:300]}"
         )
+        _assert_labels_were_fetched(tmp_path, _PLAIN_ISSUE)
 
 
 class TestAC4PillowDependency:
