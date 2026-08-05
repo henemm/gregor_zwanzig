@@ -337,7 +337,6 @@ class WeatherChangeDetectionService:
         self,
         thresholds: Optional[dict[str, float]] = None,
         absolute_rules: Optional[list["AlertRule"]] = None,
-        severity_overrides: Optional[dict[str, AlertSeverity]] = None,
         absolute_seeded_fields: Optional[set[str]] = None,
         threshold_crossing_rules: Optional[list["AlertRule"]] = None,
         ordinal_levels: Optional[dict[str, str]] = None,
@@ -350,8 +349,6 @@ class WeatherChangeDetectionService:
                         If None, uses get_change_detection_map() defaults from MetricCatalog.
             absolute_rules: Issue #222 — Absolute AlertRules (kind=absolute, enabled=True).
                             Detected via comparison-direction (above/below) per metric.
-            severity_overrides: Issue #222 — Maps summary-field → AlertSeverity for delta
-                                detection, so rule.severity wins over ratio-based classify.
             absolute_seeded_fields: Issue #821 — Felder, deren Δ-Threshold ausschließlich
                                     durch den #816-setdefault-Seed einer ABSOLUTE-Regel
                                     entstanden ist (kein expliziter DELTA-Eintrag). Bei
@@ -368,9 +365,6 @@ class WeatherChangeDetectionService:
         else:
             self._thresholds = dict(thresholds)
         self._absolute_rules: list["AlertRule"] = list(absolute_rules) if absolute_rules else []
-        self._severity_overrides: dict[str, AlertSeverity] = (
-            dict(severity_overrides) if severity_overrides else {}
-        )
         # Issue #821: rein-geseedete Felder (ABSOLUTE-Seed ohne explizite DELTA-Regel)
         self._absolute_seeded_fields: set[str] = set(absolute_seeded_fields or set())
         # Issue #846: Threshold-Crossing-Regeln (Sichtweite: feuert nur beim erstmaligen Unterschreiten)
@@ -469,7 +463,6 @@ class WeatherChangeDetectionService:
 
         thresholds: dict[str, float] = {}
         absolute_rules: list["AlertRule"] = []
-        severity_overrides: dict[str, AlertSeverity] = {}
         # Issue #821: Set der rein-geseedeten Felder — gesetzt vom ABSOLUTE-Zweig,
         # entfernt wenn eine explizite DELTA-Regel dasselbe Feld belegt.
         absolute_seeded: set[str] = set()
@@ -533,7 +526,11 @@ class WeatherChangeDetectionService:
                         continue
                 for field_name in fields:
                     thresholds[field_name] = rule.threshold
-                    severity_overrides[field_name] = rule.severity
+                    # Issue #1503: Der Severity-Vorrang aus #222 entfaellt — die
+                    # Dringlichkeit folgt jetzt wieder aus dem Ausmass der
+                    # Aenderung (`_classify_severity`) bzw. aus dem erreichten
+                    # Niveau (`_ordinal_severity`). `rule.severity` traegt seit
+                    # #946 nur noch die Konstante WARNING und wird nicht gelesen.
                     # Issue #1460 (P1b): Gefahrenstufen-Groessen tragen die
                     # gewaehlte Empfindlichkeitsstufe mit — fuer diese Felder
                     # entscheidet das Niveau, nicht die Sprunggroesse.
@@ -547,7 +544,6 @@ class WeatherChangeDetectionService:
         return cls(
             thresholds=thresholds,
             absolute_rules=absolute_rules,
-            severity_overrides=severity_overrides,
             ordinal_levels=ordinal_levels,
             absolute_seeded_fields=absolute_seeded,
             threshold_crossing_rules=threshold_crossing_rules,
@@ -626,11 +622,14 @@ class WeatherChangeDetectionService:
                 triggered = abs(delta) > threshold
 
             if triggered:
-                # Issue #222: Rule-driven severity override (delta-rules from from_alert_rules)
-                if metric in self._severity_overrides:
-                    severity = _RULE_SEVERITY_TO_CHANGE_SEVERITY[
-                        self._severity_overrides[metric]
-                    ]
+                # Issue #1503: Die Dringlichkeit folgt dem Ausmass der Aenderung.
+                # Fuer Gefahrenstufen-Groessen ist der Ueberschreitungsfaktor das
+                # falsche Mass (Schwelle ist dort immer 1, ausgeloest wird ueber
+                # das Niveau) — dort entscheidet das gefaehrlichere der beiden
+                # beteiligten Niveaus. Bewusst HIER, solange `old_value`/
+                # `new_value` noch Ordinal-Ganzzahlen sind.
+                if level is not None:
+                    severity = self._ordinal_severity(old_value, new_value)
                 else:
                     severity = self._classify_severity(abs(delta), threshold)
                 direction = "increase" if delta > 0 else "decrease"
@@ -660,6 +659,30 @@ class WeatherChangeDetectionService:
         changes.extend(self._detect_threshold_crossing_changes(old_summary, new_summary, new_data))
 
         return changes
+
+    @staticmethod
+    def _ordinal_severity(old_value, new_value) -> ChangeSeverity:
+        """Issue #1503: Dringlichkeit einer Niveau-Aenderung (Gefahrenstufen).
+
+        Abgeleitet aus dem GEFAEHRLICHEREN der beiden beteiligten Niveaus —
+        symmetrisch fuer Verschaerfung und Entwarnung, wie #1460 es fuer die
+        Ausloesung bereits tut: die Entwarnung von der Hoechststufe ist genauso
+        meldenswert wie ihr Erreichen und darf nicht dadurch abgewertet werden,
+        dass der neue Wert harmlos ist.
+
+        HIGH → MAJOR, MED → MODERATE, LOW/NONE → MINOR. Die Ordinale entstehen
+        ueber ``thunder_ordinal()`` — keine rohen Zahlen (die haben sich mit
+        #1474 bereits einmal verschoben). Erwartet Ordinal-Ganzzahlen, wie sie
+        in ``detect_changes()`` vor dem Bau des ``WeatherChange`` vorliegen.
+        """
+        from app.models import ThunderLevel
+        from output.metric_format import thunder_ordinal
+
+        ordinal_to_severity = {
+            thunder_ordinal(ThunderLevel.HIGH): ChangeSeverity.MAJOR,
+            thunder_ordinal(ThunderLevel.MED): ChangeSeverity.MODERATE,
+        }
+        return ordinal_to_severity.get(max(old_value, new_value), ChangeSeverity.MINOR)
 
     @staticmethod
     def _ordinal_change_triggers(old_value, new_value, level: str) -> bool:
@@ -799,7 +822,14 @@ class WeatherChangeDetectionService:
 
         Returns:
             ChangeSeverity enum value
+
+        Issue #1503: `threshold <= 0` liefert konservativ MAJOR statt eines
+        `ZeroDivisionError` — eine Regel ohne sinnvollen Nenner feuert bei jeder
+        Aenderung, ihr Ergebnis darf nicht stiller sein als der Normalfall.
         """
+        if threshold <= 0:
+            return ChangeSeverity.MAJOR
+
         ratio = abs(delta) / threshold
 
         if ratio >= 2.0:

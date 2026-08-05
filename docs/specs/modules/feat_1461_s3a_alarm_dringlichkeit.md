@@ -477,6 +477,14 @@ Vorhersage-Änderungsalarme unterdrücken, weil sie ausnahmslos `MODERATE` trage
 darf nicht scharf gestellt werden, bevor dieser Punkt entschieden ist. Eigenes Ticket, weil
 nutzersichtbar (Cockpit-Farbe) **und** blockierend für die nächste Scheibe.
 
+🔴 **Aufgelöst durch #1503 (2026-08-05).** Der oben beschriebene `severity_overrides`-Vorrang
+in `weather_change_detection.py` ist entfernt; Δ-Alarme tragen wieder eine aus dem
+Überschreitungsfaktor abgestufte Dringlichkeit (`MINOR`/`MODERATE`/`MAJOR`, Schwellen 1,5/2,0)
+statt der Konstante `MODERATE`. Gefahrenstufen-Größen (`thunder_level_max`) leiten zusätzlich
+über `_ordinal_severity()` aus dem höheren beteiligten Niveau ab. Der Befund oben bleibt
+stehen, weil er erklärt, warum S3a den Δ-Pfad bewusst unangetastet ließ — die S3b-Blockade ist
+damit aufgehoben. Details: `docs/specs/modules/fix_1503_delta_dringlichkeit.md`.
+
 - **Numerische Regenrate verlässt `intensity_to_text()` nicht als Zahl.** Die Ableitung
   vergleicht weiterhin gegen ein deutsches Label, nicht gegen `max_rate` (mm/h,
   `radar_service.py:538`) selbst — jetzt aber gegen benannte Konstanten statt

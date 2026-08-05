@@ -220,16 +220,37 @@ class TestAbsoluteBelowDetection:
         assert service.detect_changes(old, new) == []
 
 
-# --- Delta + Severity Override (AC-3) ------------------------------------
+# --- Delta + Severity Override (AC-3) -- ENTFERNT (Issue #1503) -----------
+#
+# Hier stand ``TestDeltaRuleSeverityOverride`` mit dem Test
+# ``test_ac3_delta_rule_severity_from_rule_not_ratio``: Er sicherte zu, dass
+# eine Delta-Regel ihre Dringlichkeit aus der GESPEICHERTEN Regel-Severity
+# bezieht und nicht aus dem Ausmass der Aenderung (Vorrang der Regel).
+#
+# Der Test ist nicht vergessen, sondern gestrichen: Mit dem PO-Entscheid vom
+# 2026-08-04 (Issue #1503) folgt die Dringlichkeit dem AUSMASS der Aenderung;
+# der Severity-Vorrang der Regel ist abgeschafft. Die neue Zusicherung --
+# inklusive "persistierte Regel-Dringlichkeit bestimmt nichts mehr" -- wird in
+# ``tests/tdd/test_alert_change_urgency_grading.py`` geprueft.
 
-class TestDeltaRuleSeverityOverride:
-    """AC-3: Delta-Rule severity comes from rule, not from ratio."""
 
-    def test_ac3_delta_rule_severity_from_rule_not_ratio(self):
+# --- Delta-Regel: ein Feld, ein Change -----------------------------------
+
+class TestDeltaRuleNoDuplicateChanges:
+    """Eine reine Delta-Regel meldet dasselbe Feld nur einmal."""
+
+    def test_delta_rule_produces_single_change_per_field(self):
         """
-        AC-3: GIVEN delta TEMPERATURE_CHANGE threshold=5.0, severity=WARNING,
-        WHEN temp_max delta=6.0 (ratio 1.2 = MINOR ratio-based),
-        THEN WeatherChange has severity=MODERATE (rule-override, not ratio).
+        GIVEN nur eine Delta-Regel TEMPERATURE_CHANGE threshold=5.0 (keine
+        absolute Regel), WHEN temp_max sich um 6.0 aendert,
+        THEN entsteht fuer temp_max_c GENAU EIN WeatherChange -- kein Duplikat.
+
+        Herkunft: Diese Zusicherung stand als erste von zwei Assertions im
+        gestrichenen ``TestDeltaRuleSeverityOverride`` (s. Kommentarblock
+        oben). Sie ist sachlich unabhaengig von Issue #1503 -- dort ging es um
+        den abgeschafften Severity-Vorrang, hier um Dedup -- und waere sonst
+        als Beifang der Streichung verlorengegangen. Bewusst OHNE jeden
+        Severity-Bezug: geprueft wird nur die Anzahl.
         """
         service = WeatherChangeDetectionService.from_alert_rules(
             [_rule(AlertRuleKind.DELTA, AlertMetric.TEMPERATURE_CHANGE, 5.0,
@@ -242,7 +263,6 @@ class TestDeltaRuleSeverityOverride:
 
         temp_max_changes = [c for c in changes if c.metric == "temp_max_c"]
         assert len(temp_max_changes) == 1
-        assert temp_max_changes[0].severity == ChangeSeverity.MODERATE
 
 
 # --- Absolute THUNDER_LEVEL >= Comparison (AC-9, F003 fix-loop 1) --------
@@ -308,7 +328,7 @@ class TestMixedKinds:
         """
         AC-6: GIVEN absolute WIND_GUST=50 AND delta TEMPERATURE_CHANGE=5,
         WHEN gust=60 (above) AND temp_max delta=7 (above threshold),
-        THEN two changes, each with its rule-severity.
+        THEN beide Regeln feuern unabhaengig voneinander.
         """
         rules = [
             _rule(AlertRuleKind.ABSOLUTE, AlertMetric.WIND_GUST, 50.0,
@@ -329,7 +349,14 @@ class TestMixedKinds:
         assert by_metric["gust_max_kmh"].severity == ChangeSeverity.MODERATE
 
         assert "temp_max_c" in by_metric
-        assert by_metric["temp_max_c"].severity == ChangeSeverity.MAJOR
+        # Hier stand zusaetzlich eine Zusicherung auf die ChangeSeverity der
+        # DELTA-Aenderung (erwartet wurde die Regel-Severity CRITICAL ->
+        # ChangeSeverity.MAJOR). Ersatzlos gestrichen mit dem PO-Entscheid vom
+        # 2026-08-04 (Issue #1503): Die Dringlichkeit folgt jetzt dem AUSMASS
+        # der Aenderung, nicht mehr der gespeicherten Regel-Dringlichkeit. Die
+        # Abstufung wird in tests/tdd/test_alert_change_urgency_grading.py
+        # geprueft. Was dieser Test seinem Namen nach zusichert -- absolute UND
+        # Delta-Regel feuern im selben Lauf beide --, bleibt oben unveraendert.
 
 
 # --- Issue #821: Absolute/Δ-Dedup bei include_absolute=True ---------------
