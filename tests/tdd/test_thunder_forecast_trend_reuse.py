@@ -82,25 +82,30 @@ class TestTrendReuseNoDoubleFetch:
                trip=None
         WHEN:  thunder_forecast abgeleitet wird
         THEN:  +2 kommt korrekt aus der Zeile; +1 ist NICHT vorhanden
-               (kein Index-Fehlgriff, der die +2-Zeile fälschlich als +1 nähme)
-               — die fehlende +1-Etappe würde einen Fetch auslösen; mit
-               trip=None crasht das → wir prüfen, dass NUR +2 aus dem Trend kommt
-               und der +1-Fetch den erwarteten AttributeError wirft.
+               (kein Index-Fehlgriff, der die +2-Zeile fälschlich als +1 nähme).
+               Die fehlende +1-Etappe löst den Fallback-Fetch aus, der ohne
+               Trip-Objekt seit #1498 (Fall 2) fail-soft leer bleibt — vorher
+               diente dessen AttributeError-Crash als Sonde; die Eigenschaft
+               beweist sich jetzt direkt am Ergebnis.
         """
-        import pytest
-
         rest_day_trend = [
             {
                 "date": _TARGET + timedelta(days=2),
                 "weekday": "Fr",
                 "name": "Nach Ruhetag",
                 "thunder": "HIGH",
-                "hourly_thunder": (HourlyValue(hour=15, value=2.0),),
+                # Issue #1474: Render-Skala {NONE:0, LOW:1, MED:2, HIGH:3} --
+                # HIGH traegt den Wert 3 (2.0 war die Vor-#1474-Skala).
+                "hourly_thunder": (HourlyValue(hour=15, value=3.0),),
             },
         ]
-        # +1 fehlt im Trend → missing_dates={+1} → Fallback-Fetch auf trip=None
-        # crasht. Das beweist zugleich, dass +2 NICHT als +1 verwechselt wurde.
-        with pytest.raises(AttributeError):
-            TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-                None, _TARGET, tz=None, multi_day_trend=rest_day_trend,
-            )
+        fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+            None, _TARGET, tz=None, multi_day_trend=rest_day_trend,
+        )
+        assert "+1" not in fc, (
+            f"+2-Zeile wurde als +1 verwechselt (Index- statt Datums-Match): {fc!r}"
+        )
+        expected = (_TARGET + timedelta(days=2)).strftime("%d.%m.%Y")
+        assert fc["+2"]["date"] == expected
+        assert fc["+2"]["level"] == ThunderLevel.HIGH
+        assert fc["+2"]["hour"] == 15

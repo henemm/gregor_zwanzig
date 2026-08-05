@@ -225,19 +225,20 @@ class TestPeakTimeIndependentOfSegmentOrder:
     def test_earliest_peak_hour_wins_regardless_of_segment_order(self):
         """
         GIVEN: Zwei Segmente derselben Etappe, BEIDE HIGH — das ZUERST gelistete
-               spät (10:00), das zweite früher (02:00)
+               spät (15:00), das zweite früher (06:00; beide IM Tagesfenster
+               04-19 — seit #1498 Fall 2 zaehlen nur Fenster-Stunden)
         WHEN:  _build_thunder_forecast() die "+1"-Uhrzeit ableitet
-        THEN:  Text zeigt 'ab 02:00' (chronologisch früheste HIGH-Stunde),
-               NICHT 'ab 10:00' (Reihenfolge des ersten Segments)
+        THEN:  Text zeigt 'ab 06:00' (chronologisch früheste HIGH-Stunde),
+               NICHT 'ab 15:00' (Reihenfolge des ersten Segments)
         """
         seg_a_points = [
-            _dp(_TOMORROW, h, thunder=ThunderLevel.HIGH if h == 10 else ThunderLevel.NONE)
+            _dp(_TOMORROW, h, thunder=ThunderLevel.HIGH if h == 15 else ThunderLevel.NONE)
             for h in range(0, 24)
         ]
         seg_a = _segment(10, 47.30, 11.60, seg_a_points,
                          thunder_level_max=ThunderLevel.HIGH)
         seg_b_points = [
-            _dp(_TOMORROW, h, thunder=ThunderLevel.HIGH if h == 2 else ThunderLevel.NONE)
+            _dp(_TOMORROW, h, thunder=ThunderLevel.HIGH if h == 6 else ThunderLevel.NONE)
             for h in range(0, 24)
         ]
         seg_b = _segment(11, 47.32, 11.65, seg_b_points,
@@ -248,11 +249,11 @@ class TestPeakTimeIndependentOfSegmentOrder:
         )
 
         assert fc["+1"]["level"] == ThunderLevel.HIGH
-        assert "02:00" in fc["+1"]["text"], (
-            f"'ab HH:MM' muss die früheste HIGH-Stunde (02:00) zeigen, nicht die "
-            f"des zuerst gelisteten Segments (10:00): {fc['+1']['text']!r}"
+        assert "06:00" in fc["+1"]["text"], (
+            f"'ab HH:MM' muss die früheste HIGH-Stunde (06:00) zeigen, nicht die "
+            f"des zuerst gelisteten Segments (15:00): {fc['+1']['text']!r}"
         )
-        assert "10:00" not in fc["+1"]["text"]
+        assert "15:00" not in fc["+1"]["text"]
 
 
 class TestAC1RenderedOutputsAgree:
