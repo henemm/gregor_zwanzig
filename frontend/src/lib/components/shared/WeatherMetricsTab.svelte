@@ -1164,6 +1164,7 @@
 						{telegramKurzform}
 						{highlight}
 						{channel}
+						{context}
 					/>
 				{/snippet}
 			</LayoutTab>
@@ -1422,6 +1423,7 @@
 					{telegramKurzform}
 					{highlight}
 					channel={activeChannel}
+					{context}
 				/>
 			</div>
 		</Sheet>

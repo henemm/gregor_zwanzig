@@ -194,9 +194,13 @@ for i, bubble_text in enumerate(report.telegram_bubbles):
 | `api/routers/preview.py` | MODIFY (additiv) | `bubbles: list[str]` zusätzlich zu `body` in der JSON-Antwort |
 | `src/app/models.py` (frontend-seitiges Gegenstück) | — | `WeatherV2Kanaele.svelte` (Frontend, außerhalb Backend-Scope-Zählung): `telegram_kurzform`-Toggle entfernt oder deaktiviert — separater kleiner Edit, kein eigener Kern-Dateizähler |
 
-**Explizit NICHT in #1001:** `ChannelPreviewBlock.svelte`/`ChannelPreviewCard.svelte`
-(Frontend-Kanalvorschau, Folge-Ticket), `internal/handler/preview_proxy.go` (Go,
-unverändert), `src/outputs/telegram.py` (Versand-Methode selbst bleibt unverändert),
+**Explizit NICHT in #1001:** Frontend-Kanalvorschau (Folge-Ticket — Stand 2026-08-06:
+`ChannelPreviewBlock.svelte`/`ChannelPreviewCard.svelte` sind mit #923b gelöscht, die
+live gerenderte Kanalvorschau läuft seither über `WeatherV2MailPreview.svelte`
+(`frontend/src/lib/components/shared/weather-metrics-tab/`) — ein künftiges Folge-Ticket
+für die Multi-Bubble-Darstellung zielt auf diese Komponente, nicht mehr auf die
+gelöschten Dateien), `internal/handler/preview_proxy.go` (Go, unverändert),
+`src/outputs/telegram.py` (Versand-Methode selbst bleibt unverändert),
 `src/services/trip_alert.py` (eigenständiger Alert-Versandpfad, nicht Briefing-Format).
 
 ## Expected Behavior
@@ -294,10 +298,11 @@ unverändert), `src/outputs/telegram.py` (Versand-Methode selbst bleibt unverän
 
 ## Known Limitations
 
-- **Frontend-Kanalvorschau nicht umgebaut:** `ChannelPreviewBlock.svelte`/
-  `ChannelPreviewCard.svelte` zeigen weiterhin nur den zusammengefügten `body`-String,
-  nicht die einzelnen Bubbles. Multi-Bubble-Darstellung im Trip-Editor ist ein
-  Folge-Ticket.
+- **Frontend-Kanalvorschau nicht umgebaut:** Die Kanalvorschau zeigt weiterhin nur den
+  zusammengefügten `body`-String, nicht die einzelnen Bubbles. Multi-Bubble-Darstellung
+  im Trip-Editor ist ein Folge-Ticket (Stand 2026-08-06: die live gerenderte Komponente
+  ist `WeatherV2MailPreview.svelte`, `ChannelPreviewBlock.svelte`/`ChannelPreviewCard.svelte`
+  sind mit #923b gelöscht).
 - **#623/#640 bleiben draft:** Der fachliche Kern (mehrtägiger Trend) fließt in die
   Ausblick-Bubble ein, aber beide Ursprungs-Issues werden NICHT durch #1001 als
   eigenständige Spezifikation abgeschlossen — falls zusätzliche Anforderungen über die

@@ -9,9 +9,10 @@
 // rufen ausschließlich diese Funktion auf; keine eigene Kürzungs- oder
 // Fallback-Logik im catch-Zweig.
 //
-// gz-eigenstaendig: Kein Compare-Pendant vorhanden — die SMS-Fidelity-Vorschau
-// existiert bislang nur im Trip-Editor (#923), Compare ist ausdrücklich
-// out of scope (siehe docs/specs/modules/fix_923_sms_fidelity_backend.md).
+// gz-eigenstaendig: route-only Live-Anbindung ab #923b — im Wetter-Metriken-
+// Tab (WeatherV2MailPreview.svelte) blendet `context==='vergleich'` die
+// SMS-Kachel komplett aus, statt diese Utility aufzurufen (siehe
+// docs/specs/modules/fix_923b_wire_live_sms_preview.md, Known Limitations).
 
 export interface SmsFidelityPreview {
 	line: string;

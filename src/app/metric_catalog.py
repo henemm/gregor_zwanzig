@@ -136,6 +136,10 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("min",),
         compact_label="TN", col_key="temp_night", col_label="Nacht",
         providers={"openmeteo": True, "geosphere": True},
+        # Fix #923b AC-4: SMS_MULTI_SYMBOLS_BY_METRIC (sms_trip.py) fuehrt
+        # bereits das Symbol "N" fuer diese Metrik -- ohne sms_code erschien
+        # sie mit leerem Token in carried_ids der SMS-Fidelity-Vorschau.
+        sms_code="TN",
         decimals=0,
     ),
     MetricDefinition(

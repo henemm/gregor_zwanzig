@@ -89,3 +89,17 @@ der echte Versandpfad aufruft — analog zur bereits umgesetzten Alert-Vorschau
 (#918). Damit gilt Entscheidungspunkt 2 dieses ADR jetzt auch für die
 Briefing-SMS-Editor-Vorschau, nicht mehr nur für Alerts. Spec:
 `docs/specs/modules/fix_923_sms_fidelity_backend.md`.
+
+**Korrektur 2026-08-06 (#923b):** Die oben beschriebene Verdrahtung war korrekt
+gebaut, aber an die falschen Komponenten angeschlossen — `ChannelFidelitySMS.svelte`
+und `ChannelPreviewCard.svelte` wurden nie von einer Route importiert (nur über den
+Organisms-Barrel `organisms/index.ts` erreichbar), die Trip-Editor-Route rendert
+tatsächlich `WeatherV2MailPreview.svelte` mit einer eigenen, unverändert gebliebenen
+SMS-Simulation. Entscheidungspunkt 2 dieses ADR griff damit für die Briefing-SMS-
+Editor-Vorschau erst ab #923b tatsächlich live — nicht bereits ab #923. #923b schließt
+den Endpoint an `WeatherV2MailPreview.svelte` an (`context==='route'`) und löscht die
+fünf toten Komponenten (`ChannelFidelitySMS.svelte`, `ChannelPreviewCard.svelte`,
+`ChannelPreviewBlock.svelte`, `ChannelFidelityEmail.svelte`, `ChannelFidelityBubble.svelte`).
+Für den Ortsvergleich-Editor (`context==='vergleich'`) bleibt die SMS-Kachel bewusst
+ausgeblendet statt falsch zu simulieren — eine Mehrort-SMS-Vorschau ist ein eigenes,
+noch unspezifiziertes Vorhaben. Spec: `docs/specs/modules/fix_923b_wire_live_sms_preview.md`.
