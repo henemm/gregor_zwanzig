@@ -426,11 +426,10 @@ nicht: der Picker ist bereits geteilt, es ist keine neue Datei unter `compare*/`
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** [ADR-0046](../../adr/0046-alarm-kanal-schwelle.md) — Nachtrag zu
-  `docs/adr/0046-alarm-kanal-schwelle.md:106-108` (Scope-Zeile „S3b-2a: nur Trips" wird um den
-  jetzt erledigten Ortsvergleich-Teil ergänzt); zusätzlich Nachtrag zu
-  [ADR-0021](../../adr/0021-shared-deviation-alert-engine.md) `:91-94` (der Radar-Onset-Pfad ist
-  mit dieser Scheibe kein Trip-Sonderweg mehr).
+- **ADR-Nr.:** ADR-0046 (Nachtrag, kein neues ADR) — `docs/adr/0046-alarm-kanal-schwelle.md:106-108`
+  (Scope-Zeile „S3b-2a: nur Trips" wird um den jetzt erledigten Ortsvergleich-Teil ergänzt);
+  zusätzlich Nachtrag zu ADR-0021 `docs/adr/0021-shared-deviation-alert-engine.md:91-94`
+  (der Radar-Onset-Pfad ist mit dieser Scheibe kein Trip-Sonderweg mehr).
 - **Rationale:** Die Entscheidung selbst — Kanal-Schwelle als von der Empfindlichkeitsstufe
   unabhängiger Regler, rohes Kanal-Set ans Protokoll, gefiltertes an den Versand — ist mit
   ADR-0046 bereits getroffen und gilt unverändert für beide Entitäten (ADR-0021 `:85-94` schließt
