@@ -151,6 +151,26 @@ class ProviderNotImplementedError(ProviderError):
         super().__init__(provider, message)
 
 
+class ThunderSourceUnavailableError(Exception):
+    """Optionales Signal fuer ThunderSignalProvider-Implementierungen (#1492
+    S2a): wird geworfen, wenn ALLE tatsaechlich versuchten Abrufe eines
+    Aufrufs an einer Verbindungs-/Zeitueberschreitung scheiterten -- NICHT
+    bei einer erfolgreichen, aber leeren/ausserhalb-des-Gitters-Antwort und
+    NICHT bei nur TEILWEISE gescheiterten Punkten. Kein Provider MUSS ihn
+    werfen; ohne ihn gilt weiterhin das alte Fail-soft-Verhalten (leeres
+    Ergebnis). Der Vertrag von ThunderSignalProvider ("wirft NIE") bleibt
+    fuer den AEUSSEREN Aufrufer (enrich_thunder) unveraendert -- dieser Typ
+    wird ausschliesslich INNERHALB von thunder_enrichment abgefangen."""
+
+    def __init__(self, provider: str, attempted: int) -> None:
+        self.provider = provider
+        self.attempted = attempted
+        super().__init__(
+            f"[{provider}] Gewitterquelle nicht erreichbar "
+            f"({attempted} Punkt(e) versucht, alle gescheitert)"
+        )
+
+
 class ProviderRequestError(ProviderError):
     """Raised when a provider request fails.
 

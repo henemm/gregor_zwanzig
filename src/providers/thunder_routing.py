@@ -21,7 +21,7 @@ Import-Regel (Zyklus-Vermeidung, wie `region_routing`): dieses Modul darf
 """
 from __future__ import annotations
 
-from typing import NamedTuple, Optional
+from typing import Dict, NamedTuple, Optional
 
 
 class _ThunderRegion(NamedTuple):
@@ -79,3 +79,19 @@ def thunder_provider_for(lat: float, lon: float) -> Optional[str]:
                 and region.min_lon <= lon <= region.max_lon):
             return region.provider
     return None
+
+
+# Benannte Ersatzquelle bei ECHTEM Ausfall einer Direktquelle (#1492 S2a,
+# ADR-0047). Bewusst NEBEN `_REGIONS`/`thunder_provider_for`, nicht darin --
+# die Primaerauswahl (first-match-wins) bleibt unangetastet (AC-8-Schutz aus
+# `feat_1457_s2c_icon_eu_luekenfueller.md`).
+_VERTRETUNG: Dict[str, Optional[str]] = {
+    "de_direct": "eu_direct",
+    "fr_direct": "eu_direct",
+    "eu_direct": None,
+}
+
+
+def thunder_vertretung_for(quelle: str) -> Optional[str]:
+    """Benannte Ersatzquelle bei echtem Ausfall von `quelle`, oder None."""
+    return _VERTRETUNG.get(quelle)

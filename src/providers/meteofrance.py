@@ -57,7 +57,7 @@ from tenacity import (
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from providers import thunder_routing
-from providers.base import ProviderRequestError
+from providers.base import ProviderRequestError, ThunderSourceUnavailableError
 # Zustaendigkeit der GRUNDVORHERSAGE. Fuer die Gewitter-Anreicherung BEWUSST
 # NICHT mehr befragt (Spec AC-12): dort entscheidet `thunder_routing`, weil die
 # Zustaendigkeit groessenabhaengig ist (Oesterreich: Schnee von GeoSphere,
@@ -585,6 +585,13 @@ class MeteoFranceDirectProvider:
         if not zustaendig:
             return ergebnis
 
+        # #1492 S2a: ausserhalb des try/except definiert (Muster dwd.py), damit
+        # die Zaehllogik auch dann auswertbar bleibt, wenn im try-Block vor
+        # ihrer ersten Verwendung schon etwas scheitert. Ein
+        # Zwischenspeicher-Treffer (`speicher.get(...)` liefert nicht `None`)
+        # zaehlt NICHT als Versuch -- er ist keine frische Abfrage.
+        versucht = 0
+        fehlgeschlagen = 0
         try:
             now = datetime.now(timezone.utc)
             # `run` bleibt der 3h-Lauf (unveraendert) und damit der Nullpunkt
@@ -632,6 +639,7 @@ class MeteoFranceDirectProvider:
                             )
                             return ergebnis
                         while True:
+                            versucht += 1
                             try:
                                 raw = self._request_once(
                                     coverage_id, gruppe[0].latitude,
@@ -649,6 +657,7 @@ class MeteoFranceDirectProvider:
                                     and lauf_index < len(lauf_kandidaten) - 1
                                 )
                                 if not weiterer_kandidat:
+                                    fehlgeschlagen += 1
                                     logger.warning(
                                         "Blitzdichte +%dh nicht abrufbar: %s",
                                         offset, e,
@@ -679,6 +688,7 @@ class MeteoFranceDirectProvider:
                                     return ergebnis
                                 continue
                             except Exception as e:
+                                fehlgeschlagen += 1
                                 logger.warning(
                                     "Blitzdichte +%dh nicht abrufbar: %s",
                                     offset, e,
@@ -697,6 +707,13 @@ class MeteoFranceDirectProvider:
         except Exception:
             logger.warning("Blitzdichte-Abruf fehlgeschlagen", exc_info=True)
             return {schluessel: {} for schluessel in ergebnis}
+        # #1492 S2a Implementation Details Punkt 3: NACH dem try/except, damit
+        # der neue Ausnahmetyp nicht vom generischen `except Exception:`
+        # darueber verschluckt wird -- er soll zum Aufrufer (thunder_enrichment)
+        # durchschlagen. Die budgetbedingten Fruehausstiege oben (`return
+        # ergebnis`) pruefen bewusst NICHT auf Ausfall (Known Limitations 1).
+        if versucht > 0 and fehlgeschlagen == versucht:
+            raise ThunderSourceUnavailableError(self.name, versucht)
         return ergebnis
 
     def fetch_forecast(
@@ -736,7 +753,18 @@ class MeteoFranceDirectProvider:
         # muessen es die Gewitter-Offsets auch — sonst laege der Wert einer
         # Stunde an einer anderen. `start`/`end` wirken in dieser Klasse
         # ohnehin nicht auf den Zeitraster der Grundvorhersage.
-        thunder = self.fetch_thunder_signals(location) if enrich_thunder else {}
+        # #1492 S2a Adversary F001: `fetch_thunder_signals` delegiert an
+        # `fetch_thunder_signals_multi`, die seit dieser Scheibe bei
+        # Totalausfall der Gewitterquelle `ThunderSourceUnavailableError`
+        # wirft (s. Kommentar oben bei `raise ThunderSourceUnavailableError`).
+        # Vor #1492 S2a konnte dieser Aufruf nie werfen ("Best effort,
+        # fail-soft"). Ohne dieses Fangen wuerde die oben versprochene
+        # Zusage brechen und die GESAMTE Vorhersage (inkl. Grunddaten)
+        # verloren gehen, obwohl nur das Blitzfeld betroffen ist.
+        try:
+            thunder = self.fetch_thunder_signals(location) if enrich_thunder else {}
+        except ThunderSourceUnavailableError:
+            thunder = {}
 
         data_points: List[ForecastDataPoint] = []
         for offset in FORECAST_HOURS:

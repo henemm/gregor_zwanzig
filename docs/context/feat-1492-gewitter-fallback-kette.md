@@ -188,3 +188,65 @@ Zusammen deutlich über 250 LoC ⇒ **zwei getrennte Workflows**, nicht einer.
 - Kontingent-Steuerung für DWD/Météo-France-Abrufe: eigene Dienste, zählen **nicht** gegen das
   Open-Meteo-Budget (`forecast_budget.py`) — eine Vertretung erhöht die Last dort trotzdem
   messbar, gehört als Beobachtungs-AC in Scheibe 2, nicht als eigener Zähler.
+
+---
+
+# Scheibe 2 — PO-Entscheidungen 2026-08-06
+
+Scheibe 1 ist seit 2026-08-05 live (`e34d9bc9`). Ergänzend zu Abschnitt 7 wurden für Scheibe 2
+folgende Fragen entschieden:
+
+## E1 — Sichtbarkeit: Vertretung wird IMMER erwähnt
+
+Nicht nur intern vermerken. Der Nutzer soll erfahren, wenn die Gewitterdaten aus einer
+Ersatzquelle stammen.
+
+- **Kanäle: E-Mail + Telegram.** SMS bewusst **ausgenommen** — bei 160 Zeichen verdrängt ein
+  Herkunftshinweis echte Wetterinformation (vgl. `feedback_kurznachricht_nennt_keinen_ort`,
+  `feedback_sms_three_states_already_unambiguous`).
+- Anknüpfungspunkte existieren beidseitig: E-Mail-Fußzeile (`email/html.py:531-535`,
+  `email/plain.py:362-367`) und Telegram-Tagesfußzeile (`narrow.py:215 _tg_day_footer`).
+- ADR-0007 („Daten statt Empfehlungen") ist **nicht** berührt: eine Herkunftsangabe ist ein Fakt,
+  keine Handlungsempfehlung.
+
+## E2 — Formulierung wird verständlich, auch im Bestand
+
+Der heutige Hinweis lautet technisch `Fallback lightning: eu_direct`. Er wird in Klartext
+überführt (z.B. „Gewitterdaten von Ersatzquelle (DWD Europa, gröbere Auflösung)"). **Der
+bestehende Hinweis für die Hauptvorhersage wird mit umgestellt** — kein Nebeneinander von
+technischem und verständlichem Stil.
+
+⚠️ Folge: Damit ändert Scheibe 2 auch eine **bestehende, heute ausgelieferte Ausgabe**. Die
+zugehörige Zusicherung `TestFooterFallbackInfo` (`tests/unit/test_model_metric_fallback.py:179`)
+muss mitgezogen werden.
+
+## E3 — Auslöser: nur bei echtem Dienstfehler
+
+Die Vertretung springt **nicht** allein deshalb ein, weil Signale fehlen. Heute sind drei Fälle
+ununterscheidbar, weil `except Exception` alles schluckt:
+
+1. Dienst nicht erreichbar / Zeitüberschreitung ⇒ **Vertretung sinnvoll**
+2. Ort außerhalb des Modellgebiets ⇒ Vertretung sinnlos (Gebiet ändert sich nicht)
+3. Kein Gewitter in Sicht ⇒ Vertretung sinnlos (die Antwort ist korrekt leer)
+
+Die Fehlerbehandlung wird so nachgerüstet, dass (1) von (2) und (3) unterscheidbar wird.
+**Gemessen:** allein in `thunder_enrichment.py`, `dwd.py`, `dwd_eu.py` und `meteofrance.py`
+stehen **zehn** `except Exception`-Stellen.
+
+🔴 **Sicherheitsauflage:** Die fail-soft-Zusicherung darf dabei NICHT fallen — der Vertrag in
+`base.py` („wirft NIE; Ausfall der Gewitterquelle darf die Grundvorhersage nicht kippen") bleibt
+nach außen unverändert. Unterschieden wird **innerhalb** der Anreicherung, nicht durch
+Weiterreichen von Ausnahmen.
+
+## Umfangsfolge — Scheibe 2 zerfällt in 2a und 2b
+
+Zusammen deutlich über der 250-LoC-Grenze (grobe Schätzung: ~195 Zeilen Produktivcode plus
+Tests), und die beiden Hälften sind unabhängig prüfbar:
+
+| | Inhalt | Kernfrage |
+|---|---|---|
+| **2a** | Fehlerunterscheidung, Vertretungstabelle, Vertretungsaufruf, Herkunft in `ForecastMeta` festhalten, **ADR** | *Funktioniert die Vertretung?* |
+| **2b** | Klartext-Formulierung, E-Mail-Fußzeile umgestellt, Telegram-Fußzeile neu | *Sieht der Nutzer sie?* |
+
+2a ist ohne 2b sinnvoll auslieferbar (Vertretung wirkt, Herkunft ist im System nachvollziehbar);
+2b ist ohne 2a wirkungslos. Reihenfolge daher **2a zuerst**.

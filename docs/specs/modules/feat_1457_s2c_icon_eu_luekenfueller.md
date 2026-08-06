@@ -317,6 +317,19 @@ _SIGNAL_ZU_FELD-Tabelle) sind bereits vorhanden und ausreichend.
    Wert) bleibt intern über `thunder_routing.thunder_provider_for()`
    rekonstruierbar, falls später gebraucht. Diese Entscheidung ist mit
    dieser Spec getroffen, keine offene Frage mehr.
+
+   > **Nachtrag 2026-08-06 (#1492 Scheibe 2a, ADR-0047):** Die Rückrechnung
+   > allein aus der Position gilt **nicht mehr uneingeschränkt**. Fällt die
+   > primär zuständige Quelle wirklich aus (Verbindungsfehler auf allen
+   > Punkten), springt eine benannte Vertretung ein — `de_direct → eu_direct`
+   > bzw. `fr_direct → eu_direct`. Die Position sagt dann weiterhin, wer
+   > *zuständig* war, nicht mehr, wer tatsächlich *geliefert* hat.
+   > Maßgeblich für die tatsächliche Herkunft ist ab dann
+   > `ForecastMeta.fallback_model` / `fallback_reason`
+   > (`"thunder_source_unavailable"`) / `fallback_metrics`. ⚠️ Ist bereits
+   > ein Grundvorhersage-Fallback (#1115) vermerkt, bleibt `fallback_model`
+   > davon unberührt (Merge-Schutz) — der Gewitter-Wechsel ist dann **nur**
+   > in `fallback_metrics` sichtbar.
 5. **Eigenes Zeitbudget muss ins Gesamtbudget des Alarm-Laufs passen.**
    AC-4 verlangt die Herleitung aus tatsächlicher Abrufzahl × Latenz,
    aber ob die Summe aus drei parallel möglichen Provider-Zeitbudgets
