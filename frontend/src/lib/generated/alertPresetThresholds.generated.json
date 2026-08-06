@@ -1,0 +1,74 @@
+{
+  "cape": {
+    "entspannt": 1200,
+    "kind": "delta",
+    "sensibel": 200,
+    "standard": 600
+  },
+  "freezing_level": {
+    "entspannt": 600,
+    "kind": "delta",
+    "sensibel": 200,
+    "standard": 400
+  },
+  "fresh_snow": {
+    "entspannt": 20,
+    "kind": "delta",
+    "sensibel": 2,
+    "standard": 8
+  },
+  "precipitation_change": {
+    "entspannt": 15,
+    "kind": "delta",
+    "sensibel": 3,
+    "standard": 7
+  },
+  "precipitation_sum": {
+    "entspannt": 20,
+    "kind": "delta",
+    "sensibel": 5,
+    "standard": 10
+  },
+  "temperature_change": {
+    "entspannt": 14,
+    "kind": "delta",
+    "sensibel": 6,
+    "standard": 10
+  },
+  "temperature_max": {
+    "entspannt": 10,
+    "kind": "delta",
+    "sensibel": 4,
+    "standard": 6
+  },
+  "temperature_min": {
+    "entspannt": 8,
+    "kind": "delta",
+    "sensibel": 3,
+    "standard": 5
+  },
+  "thunder_level": {
+    "entspannt": 1,
+    "kind": "delta",
+    "sensibel": 1,
+    "standard": 1
+  },
+  "visibility": {
+    "entspannt": 500,
+    "kind": "threshold_crossing",
+    "sensibel": 3000,
+    "standard": 1000
+  },
+  "wind_change": {
+    "entspannt": 35,
+    "kind": "delta",
+    "sensibel": 15,
+    "standard": 25
+  },
+  "wind_gust": {
+    "entspannt": 35,
+    "kind": "delta",
+    "sensibel": 12,
+    "standard": 20
+  }
+}

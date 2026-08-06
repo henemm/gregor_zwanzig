@@ -15,6 +15,9 @@
 import type { AlertMetric, AlertRule, AlertSeverity, SensLevel } from '../../types.ts';
 import { DELTA_ONLY_METRICS } from '../alert-rules-editor/alertRuleDefaults.ts';
 import { ALERT_METRIC_LABELS } from '../../utils/alertMetricLabels.ts';
+// Fix #1435 Etappe E4: einzige Quelle der Preset-Schwellwerte, erzeugt von
+// scripts/generate_alert_preset_table.py aus src/services/alert_preset.py.
+import rawPresetThresholds from '../../generated/alertPresetThresholds.generated.json' with { type: 'json' };
 
 export const METRIC_DEFAULTS: Record<AlertMetric, number> = {
 	wind_gust: 50,
@@ -35,63 +38,43 @@ export const METRIC_DEFAULTS: Record<AlertMetric, number> = {
 	freezing_level: 200,
 };
 
-// Issue #846: Preset-Schwellwert-Tabelle (alle 13 Metriken × 3 Presets).
-// Wert null = Metrik im Preset "deaktiviert" nicht aktiv.
+// Issue #846 / Fix #1435 Etappe E4: Preset-Schwellwert-Tabelle wird aus der
+// generierten Datei abgeleitet (Quelle: `_PRESET_TABLE`,
+// `src/services/alert_preset.py` -- eingecheckte Kopie
+// `frontend/src/lib/generated/alertPresetThresholds.generated.json`,
+// erzeugt von `scripts/generate_alert_preset_table.py`). Nicht mehr als
+// Literal pflegen -- Werte aendern heisst: Python-Quelle aendern, Skript
+// erneut laufen lassen.
 export type PresetName = 'deaktiviert' | 'entspannt' | 'standard' | 'sensibel';
 
+type GeneratedPresetEntry = {
+	kind: 'delta' | 'threshold_crossing';
+	entspannt: number;
+	standard: number;
+	sensibel: number;
+};
+
+const _RAW_PRESETS = rawPresetThresholds as Record<string, GeneratedPresetEntry>;
+
+// Die generierte Quelle fuehrt nur die 12 tatsaechlich alarmfaehigen
+// Backend-Groessen (kein snow_line, kein humidity -- beide seit
+// ADR-0019/#889 tot bzw. abgeschafft) -- der Typ verlangt darum nicht mehr
+// alle 14 AlertMetric-Schluessel. `levelToThreshold()` behandelt einen
+// fehlenden Schluessel bereits korrekt (gibt null zurueck).
 export const METRIC_PRESETS: Record<
 	PresetName,
-	Record<AlertMetric, number> | null
+	Partial<Record<AlertMetric, number>> | null
 > = {
 	deaktiviert: null,
-	entspannt: {
-		wind_gust: 35,
-		precipitation_sum: 20,
-		thunder_level: 1,
-		snow_line: 600,
-		temperature_min: 8,
-		temperature_max: 10,
-		temperature_change: 14,
-		wind_change: 35,
-		precipitation_change: 15,
-		fresh_snow: 20,
-		cape: 1200,
-		visibility: 500,
-		humidity: 25,
-		freezing_level: 400,
-	},
-	standard: {
-		wind_gust: 20,
-		precipitation_sum: 10,
-		thunder_level: 1,
-		snow_line: 400,
-		temperature_min: 5,
-		temperature_max: 6,
-		temperature_change: 10,
-		wind_change: 25,
-		precipitation_change: 7,
-		fresh_snow: 8,
-		cape: 600,
-		visibility: 1000,
-		humidity: 15,
-		freezing_level: 200,
-	},
-	sensibel: {
-		wind_gust: 12,
-		precipitation_sum: 5,
-		thunder_level: 1,
-		snow_line: 200,
-		temperature_min: 3,
-		temperature_max: 4,
-		temperature_change: 6,
-		wind_change: 15,
-		precipitation_change: 3,
-		fresh_snow: 2,
-		cape: 200,
-		visibility: 3000,
-		humidity: 10,
-		freezing_level: 100,
-	},
+	entspannt: Object.fromEntries(
+		Object.entries(_RAW_PRESETS).map(([metric, entry]) => [metric, entry.entspannt]),
+	) as Partial<Record<AlertMetric, number>>,
+	standard: Object.fromEntries(
+		Object.entries(_RAW_PRESETS).map(([metric, entry]) => [metric, entry.standard]),
+	) as Partial<Record<AlertMetric, number>>,
+	sensibel: Object.fromEntries(
+		Object.entries(_RAW_PRESETS).map(([metric, entry]) => [metric, entry.sensibel]),
+	) as Partial<Record<AlertMetric, number>>,
 };
 
 // Anzeige-Reihenfolge der Zeilen — siehe Spec §Reihenfolge.
@@ -215,10 +198,14 @@ export const ALERTABLE_METRICS: readonly AlertMetric[] = [
 	'freezing_level',
 ];
 
-/** Metriken die THRESHOLD_CROSSING verwenden (absoluter Schwellwert, nicht Delta). */
-export const THRESHOLD_CROSSING_METRICS: ReadonlySet<AlertMetric> = new Set<AlertMetric>([
-	'visibility',
-]);
+/** Metriken die THRESHOLD_CROSSING verwenden (absoluter Schwellwert, nicht Delta).
+ * Fix #1435 Etappe E4: aus dem `kind`-Feld der generierten Datei abgeleitet
+ * statt als zweite Handkopie gepflegt. */
+export const THRESHOLD_CROSSING_METRICS: ReadonlySet<AlertMetric> = new Set(
+	Object.entries(_RAW_PRESETS)
+		.filter(([, entry]) => entry.kind === 'threshold_crossing')
+		.map(([metric]) => metric as AlertMetric),
+);
 
 const _METRIC_UNITS: Record<AlertMetric, string> = {
 	wind_gust: 'km/h',
