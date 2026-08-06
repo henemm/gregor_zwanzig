@@ -88,6 +88,14 @@ def presets_due_for_hour(presets: list, hour: int, today: date) -> list:
                 if date.fromisoformat(end_date_str) < today:
                     continue
 
+            # #511: weekly gate't auf den Versandtag (beide Slots) — sonst
+            # sendet ein Wochen-Abo taeglich. Fehlt `weekday` (Altbestand),
+            # verhaelt sich das Preset wie daily.
+            if preset.get("schedule") == "weekly":
+                weekday = preset.get("weekday")
+                if weekday is not None and int(weekday) != today.weekday():
+                    continue
+
             slots = resolve_preset_slots(preset)
         except (ValueError, TypeError) as e:
             logger.warning(
