@@ -49,7 +49,7 @@ const fs   = require('fs');
 
 const BASE_URL = 'https://staging.gregor20.henemm.com';
 const OUT_DIR  = path.join(__dirname, 'ist-screenshots');
-const CREDS    = { user: 'default', pass: 'ZfDOKJTre8udPtG' };
+const CREDS    = { user: 'default', pass: '<aus .env: GZ_AUTH_PASS>' };
 const TRIP_ID  = 'e2e-cockpit-test';
 const GPX_FILE = '/home/hem/gregor_zwanzig/frontend/e2e/fixtures/test-trip.gpx';
 ```
