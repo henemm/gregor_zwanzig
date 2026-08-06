@@ -46,8 +46,9 @@ func writeForecastBudgetFile(t *testing.T, tmpDir, contents string) {
 
 func TestForecastBudgetSnapshotValidFileReportsFieldsAndRatio(t *testing.T) {
 	tmpDir := t.TempDir()
+	today := time.Now().UTC().Format("2006-01-02")
 	writeForecastBudgetFile(t, tmpDir,
-		`{"date":"2026-08-05","calls":{"openmeteo":900},"cache_hits":10,"cache_misses":5}`)
+		`{"date":"`+today+`","calls":{"openmeteo":900},"cache_hits":10,"cache_misses":5}`)
 
 	snap := forecastBudgetSnapshot(filepath.Join(tmpDir, "diagnostics", "forecast_budget.json"))
 
@@ -107,8 +108,9 @@ func TestForecastBudgetSnapshotCorruptJSONIsUnavailable(t *testing.T) {
 
 func TestSchedulerStatusIncludesForecastBudgetKey(t *testing.T) {
 	tmpDir := t.TempDir()
+	today := time.Now().UTC().Format("2006-01-02")
 	writeForecastBudgetFile(t, tmpDir,
-		`{"date":"2026-08-05","calls":{"openmeteo":42},"cache_hits":1,"cache_misses":2}`)
+		`{"date":"`+today+`","calls":{"openmeteo":42},"cache_hits":1,"cache_misses":2}`)
 	sched := newForecastBudgetHealthTestScheduler(t, tmpDir)
 
 	status := sched.Status()
