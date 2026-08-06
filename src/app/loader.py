@@ -795,6 +795,24 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             sms_threshold=mc_data.get("sms_threshold"),
         ))
 
+    # Issue #1484 (Bestands-Ableitung): fehlt die Nachtgroesse im
+    # gespeicherten Config, erbt sie den Zustand von "temperature" — das
+    # heutige Verhalten (N haengt an der Temperatur) bleibt fuer Altbestand
+    # exakt erhalten; erst ein Editor-Save schreibt den expliziten Eintrag.
+    # Abgeleitet wird NUR, wenn ein "temperature"-Eintrag existiert: Laden
+    # erfindet sonst Eintraege (Roundtrip-Invarianz, s. Snow-AC-10), und eine
+    # leere Liste ist Altbestand Fall A (DEFAULT_TRIP_METRIC_IDS) und bleibt leer.
+    if not any(mc.metric_id == "temperature_night" for mc in metrics):
+        _temp_entries = [mc for mc in metrics if mc.metric_id == "temperature"]
+        if _temp_entries:
+            metrics.append(MetricConfig(
+                metric_id="temperature_night",
+                enabled=any(mc.enabled for mc in _temp_entries),
+                aggregations=[],
+                bucket="secondary",
+                derived=True,
+            ))
+
     # Issue #429/#1394 (T4): kanal-spezifische Layouts laden (optional,
     # backward-compat). Wenn channel_layouts fehlt → None, damit
     # get_metrics_for_channel auf die globale Liste zurückfällt. Eine
@@ -1272,7 +1290,8 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
         dc = location.display_config
         data["display_config"] = {
             "trip_id": dc.trip_id,
-            "metrics": [_metric_to_dict(mc) for mc in dc.metrics],
+            "metrics": [_metric_to_dict(mc) for mc in dc.metrics
+                        if not getattr(mc, "derived", False)],
             "show_night_block": dc.show_night_block,
             "night_interval_hours": dc.night_interval_hours,
             "thunder_forecast_days": dc.thunder_forecast_days,
@@ -1476,7 +1495,8 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
         dc = trip.display_config
         data["display_config"] = {
             "trip_id": dc.trip_id,
-            "metrics": [_metric_to_dict(mc) for mc in dc.metrics],
+            "metrics": [_metric_to_dict(mc) for mc in dc.metrics
+                        if not getattr(mc, "derived", False)],
             "show_night_block": dc.show_night_block,
             "night_interval_hours": dc.night_interval_hours,
             "thunder_forecast_days": dc.thunder_forecast_days,

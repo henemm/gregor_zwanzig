@@ -594,6 +594,11 @@ class MetricConfig:
     # Issue #624: Konfigurierter Schwellwert für SMS-/Telegram-Kurzform-Token.
     # None = bisheriger DEFAULTS-Fallback in builder.py (bit-identisch).
     sms_threshold: Optional[float] = None
+    # Issue #1484: True = Eintrag wurde beim Laden aus "temperature"
+    # abgeleitet (Bestands-Trip ohne temperature_night). Abgeleitete
+    # Eintraege werden NICHT zurueckgeschrieben — Laden erfindet keine
+    # Daten, erst ein bewusster Editor-Save materialisiert die Auswahl.
+    derived: bool = False
 
 
 def _filter_metrics_by_report_type(

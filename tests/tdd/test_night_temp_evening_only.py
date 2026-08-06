@@ -165,7 +165,13 @@ def _dc_temp_only() -> UnifiedWeatherDisplayConfig:
     Metriken (Regen/Wind/Gewitter wuerden sonst z.B. eigene '-'-Zeichen in
     Zeitfenster-Mustern einstreuen und die Temperatur-Zeile verschleiern)."""
     return UnifiedWeatherDisplayConfig(
-        trip_id="e7", metrics=[MetricConfig(metric_id="temperature", enabled=True)],
+        trip_id="e7",
+        metrics=[
+            MetricConfig(metric_id="temperature", enabled=True),
+            # #1484: N haengt an der eigenen Groesse — fuer die
+            # Nachtfenster-Semantik dieser Suite muss sie gewaehlt sein.
+            MetricConfig(metric_id="temperature_night", enabled=True),
+        ],
     )
 
 

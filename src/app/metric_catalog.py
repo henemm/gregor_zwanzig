@@ -121,6 +121,23 @@ _METRICS: list[MetricDefinition] = [
         sms_code="N", decimals=0, cmp="unter", alert_label="Temp",
         selectable=False,
     ),
+    # Issue #1484: Nacht-Tiefsttemperatur am Etappenziel als EIGENE waehlbare
+    # Groesse, getrennt von "temperature" (K/D). PO 2026-08-03: "N soll
+    # getrennt waehlbar sein." Traegt das N-Kuerzel der Trip-SMS (Bindung:
+    # sms_trip.SMS_MULTI_SYMBOLS_BY_METRIC), erscheint nur im Abend-Briefing.
+    # NICHT temperature_cold (Alarm-Pseudogroesse, #914, s.o.). Der Wert
+    # entsteht im Nachtfenster (day_window.night_temp_min_c), nicht aus einem
+    # Etappen-Aggregat -- deshalb keine summary_fields (= keine Auswertungs-
+    # Pills, keine Tabellenspalte) und keine Alarm-Deklaration (Kaeltealarm
+    # bleibt temperature_cold).
+    MetricDefinition(
+        id="temperature_night", label_de="Nacht-Tiefsttemperatur", unit="°C",
+        dp_field="t2m_c", category="temperature",
+        default_aggregations=("min",),
+        compact_label="TN", col_key="temp_night", col_label="Nacht",
+        providers={"openmeteo": True, "geosphere": True},
+        decimals=0,
+    ),
     MetricDefinition(
         id="wind_chill", label_de="Gefühlte Temperatur", unit="°C",
         dp_field="wind_chill_c", category="temperature",
@@ -682,7 +699,7 @@ WEATHER_TEMPLATES: dict[str, dict] = {
     "alpen-trekking": {
         "label": "Alpen-Trekking",
         "metrics": [
-            "temperature", "wind_chill", "wind", "gust", "precipitation",
+            "temperature", "temperature_night", "wind_chill", "wind", "gust", "precipitation",
             "thunder", "cape", "rain_probability", "snowfall_limit",
             "freezing_level", "cloud_total", "cloud_low", "visibility", "uv_index",
         ],
@@ -690,14 +707,14 @@ WEATHER_TEMPLATES: dict[str, dict] = {
     "wandern": {
         "label": "Wandern",
         "metrics": [
-            "temperature", "humidity", "wind", "gust", "precipitation",
+            "temperature", "temperature_night", "humidity", "wind", "gust", "precipitation",
             "rain_probability", "cloud_total", "sunshine", "uv_index",
         ],
     },
     "skitouren": {
         "label": "Skitouren",
         "metrics": [
-            "temperature", "wind_chill", "wind", "gust", "precipitation",
+            "temperature", "temperature_night", "wind_chill", "wind", "gust", "precipitation",
             "fresh_snow", "snow_depth", "snowfall_limit", "freezing_level",
             "cloud_total", "cloud_low", "visibility",
         ],
@@ -705,28 +722,28 @@ WEATHER_TEMPLATES: dict[str, dict] = {
     "wintersport": {
         "label": "Wintersport",
         "metrics": [
-            "temperature", "wind_chill", "wind", "gust", "precipitation",
+            "temperature", "temperature_night", "wind_chill", "wind", "gust", "precipitation",
             "fresh_snow", "snow_depth", "cloud_total", "sunshine", "visibility",
         ],
     },
     "radtour": {
         "label": "Radtour",
         "metrics": [
-            "temperature", "wind", "wind_direction", "gust", "precipitation",
+            "temperature", "temperature_night", "wind", "wind_direction", "gust", "precipitation",
             "rain_probability", "thunder", "cape", "cloud_total", "sunshine", "uv_index",
         ],
     },
     "wassersport": {
         "label": "Wassersport",
         "metrics": [
-            "temperature", "wind", "gust", "wind_direction", "precipitation",
+            "temperature", "temperature_night", "wind", "gust", "wind_direction", "precipitation",
             "rain_probability", "thunder", "cape", "cloud_total", "visibility",
         ],
     },
     "allgemein": {
         "label": "Allgemein",
         "metrics": [
-            "temperature", "wind", "gust", "precipitation",
+            "temperature", "temperature_night", "wind", "gust", "precipitation",
             "rain_probability", "cloud_total", "sunshine",
         ],
     },

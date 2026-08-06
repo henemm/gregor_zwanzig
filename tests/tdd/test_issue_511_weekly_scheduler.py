@@ -132,7 +132,10 @@ class TestWeeklyPresetDispatch:
         _write_presets(tmp_path, "default", [preset])
 
         with caplog.at_level(logging.WARNING):
-            result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
+            # hour=6 fixiert den Morgen-Slot — ohne feste Stunde ist das
+            # Preset ausserhalb von 06:00 Wien nie faellig und der Test
+            # prueft 23 von 24 Stunden nichts (leer-faellig gruen).
+            result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path), hour=6)
 
         assert result == (0, 0), "Nicht-fälliges weekly-Preset darf nicht in success_count zählen"
         assert not any("cp-weekly-tomorrow" in r.message for r in caplog.records), (
@@ -204,7 +207,8 @@ class TestWeeklyPresetDispatch:
         )
         _write_presets(tmp_path, "default", [preset])
 
-        result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
+        # hour=6 fixiert den Morgen-Slot (s.o. — sonst leer-faellig gruen).
+        result = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path), hour=6)
         assert result == (0, 0)
 
 

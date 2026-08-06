@@ -24,7 +24,12 @@ _FELT = ("FN", "FK", "FD")
 
 def _sms(report_type: str, *, felt_enabled: bool) -> str:
     """Echt gerenderte Trip-SMS — mit bzw. ohne aktivierte gefuehlte Temperatur."""
-    metrics = ("temperature", "wind_chill") if felt_enabled else ("temperature",)
+    # #1484: die Nachtgroesse ist eigenstaendig waehlbar — hier aktiv, damit
+    # die N-Assertions (Parallelitaet gemessen/gefuehlt) aussagekraeftig bleiben.
+    metrics = (
+        ("temperature", "temperature_night", "wind_chill") if felt_enabled
+        else ("temperature", "temperature_night")
+    )
     report = TripReportFormatter().format_email(
         [F.segment()],
         trip_name="Issue1410",

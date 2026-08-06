@@ -149,11 +149,15 @@ class TestLoaderDisplayConfigDefault:
         trip = load_trip_from_dict(data)
 
         assert trip.display_config is not None
-        assert len(trip.display_config.metrics) == 1, (
+        # #1484: abgeleitete Eintraege (derived=True) ausblenden — sie sind
+        # keine Ueberschreibung durch den Default, sondern die Bestands-
+        # Ableitung der Nachtgroesse.
+        explicit = [mc for mc in trip.display_config.metrics if not mc.derived]
+        assert len(explicit) == 1, (
             "Eigene Config darf nicht durch Default ueberschrieben werden"
         )
-        assert trip.display_config.metrics[0].metric_id == "temperature"
-        assert trip.display_config.metrics[0].alert_enabled is True
+        assert explicit[0].metric_id == "temperature"
+        assert explicit[0].alert_enabled is True
 
     def test_legacy_weather_config_still_takes_precedence_over_default(self):
         """GIVEN Trip mit Legacy weather_config

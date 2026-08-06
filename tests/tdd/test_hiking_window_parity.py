@@ -36,7 +36,9 @@ import pytest
 
 from tests.tdd import _hiking_window_fixtures as F
 
-_FELT = ("temperature", "wind_chill")
+# #1484: temperature_night mit dabei — der AC-7-Nachtwert haengt an der
+# eigenen Groesse; fuer die uebrigen (Morgen-/ohne-Nacht-)Faelle ist sie inert.
+_FELT = ("temperature", "temperature_night", "wind_chill")
 _NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
 
 

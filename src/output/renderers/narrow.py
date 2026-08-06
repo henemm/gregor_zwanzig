@@ -702,10 +702,24 @@ def render_telegram_bubbles(
         start_hour=day_window_start_hour, end_hour=day_window_end_hour,
     )
     overview_lines: list[str] = ["Kurzübersicht"]
+    # Issue #1484: die Nacht-Untergrenze der T-Zeile folgt der EIGENEN
+    # Groesse "temperature_night". Ohne aktive "temperature" bekommt sie
+    # abends eine eigene Zeile mit dem Register-Kuerzel (TN).
+    _enabled_ids = set(dc.get_enabled_metric_ids())
+    _night_selected = "temperature_night" in _enabled_ids
     for mid in dc.get_enabled_metric_ids():
+        if mid == "temperature_night":
+            if ("temperature" in _enabled_ids or report_type != "evening"
+                    or _night_min_c is None):
+                continue
+            from app.metric_catalog import get_metric
+            overview_lines.extend(_wrap(_esc(
+                f"{get_metric('temperature_night').compact_label} "
+                f"{_night_min_c:.1f}"), _TG_PROSE_WIDTH))
+            continue
         overview_lines.extend(_wrap(_esc(_overview_line(
             mid, seg_tables, fkeys, report_type=report_type,
-            night_min_c=_night_min_c,
+            night_min_c=_night_min_c if _night_selected else None,
             night_wind_chill_min_c=_night_felt_min_c,
             hiking_temp_extrema=_hiking_temp,
             hiking_felt_extrema=_hiking_felt,

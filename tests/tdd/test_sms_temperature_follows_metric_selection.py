@@ -161,11 +161,13 @@ class TestMeasuredTemperatureFollowsSelection:
             )
 
     def test_measured_tokens_present_when_temperature_selected(self):
-        """Nichtregression: gewaehlt -> K/D wie bisher, N nur abends."""
+        """Nichtregression: gewaehlt -> K/D wie bisher. ``N`` gehoert seit
+        #1484 zur eigenen Groesse "temperature_night" (eigene Suite:
+        test_night_temp_own_metric_selection.py)."""
         for report_type in ("morning", "evening"):
             sms = _sms(report_type, "temperature", "precipitation")
 
-            expected = {"K", "D"} | ({"N"} if report_type == "evening" else set())
+            expected = {"K", "D"}
             assert F.present_symbols(sms, _MEASURED) == expected, (
                 f"[{report_type}] Erwartet {sorted(expected)} bei aktivierter "
                 f"Temperatur.\nSMS: {sms}"
@@ -211,7 +213,7 @@ class TestSelectedButNoValueKeepsNullForm:
                 segment=_templess_segment(), night=_templess_night(),
             )
 
-            expected = {"K", "D"} | ({"N"} if report_type == "evening" else set())
+            expected = {"K", "D"}  # N: eigene Groesse seit #1484
             present = F.present_symbols(sms, _MEASURED)
             assert present == expected, (
                 f"[{report_type}] Erwartet {sorted(expected)} als Null-Form, "
@@ -240,8 +242,9 @@ class TestSelectedButNoValueKeepsNullForm:
             segment=_templess_segment(), night=_templess_night(),
         )
 
-        assert F.present_symbols(selected, _MEASURED) == {"N", "K", "D"}, (
-            f"Gewaehlt ohne Wert -> Null-Formen erwartet.\nSMS: {selected}"
+        assert F.present_symbols(selected, _MEASURED) == {"K", "D"}, (
+            f"Gewaehlt ohne Wert -> Null-Formen erwartet (N: eigene Groesse "
+            f"seit #1484).\nSMS: {selected}"
         )
         assert not F.present_symbols(deselected, _MEASURED), (
             f"Abgewaehlt -> gar keine Temperatur-Kuerzel erwartet.\n"

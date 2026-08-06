@@ -70,7 +70,10 @@ def _trip_dict(temperature_aggs, wind_chill_aggs) -> dict:
 
 
 def _aggs_by_id(trip) -> dict[str, list[str]]:
-    return {mc.metric_id: mc.aggregations for mc in trip.display_config.metrics}
+    # #1484: abgeleitete Eintraege (derived=True) sind keine explizite
+    # Auswahl und werden nie zurueckgeschrieben — hier ausblenden.
+    return {mc.metric_id: mc.aggregations
+            for mc in trip.display_config.metrics if not mc.derived}
 
 
 def _aggs_on_disk(path: Path) -> dict[str, list[str]]:

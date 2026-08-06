@@ -63,7 +63,9 @@ def test_flat_string_metrics_load_as_metricconfig():
     trip = load_trip(_flat_metrics_trip("gr20-flat"))
 
     assert trip is not None
-    metrics = trip.display_config.metrics
+    # #1484: abgeleitete Eintraege (derived=True) sind keine geladenen
+    # Nutzerdaten — fuer die Migrations-Assertions ausblenden.
+    metrics = [m for m in trip.display_config.metrics if not m.derived]
     assert [m.metric_id for m in metrics] == ["temperature", "wind_speed"], (
         "jeder Flach-String muss als MetricConfig.metric_id erscheinen (AC-1)"
     )
@@ -97,7 +99,8 @@ def test_flat_string_trip_survives_load_all_trips():
         "(vor Fix: 0 — Trip crasht und wird still verworfen, AC-2)"
     )
     assert result[0].id == trip_id
-    assert [m.metric_id for m in result[0].display_config.metrics] == [
+    assert [m.metric_id for m in result[0].display_config.metrics
+            if not m.derived] == [
         "temperature",
         "wind_speed",
     ]
@@ -150,8 +153,8 @@ def test_dict_metrics_roundtrip_field_identical():
     dict_out = _trip_to_dict(trip1)
     trip2 = load_trip(dict_out)
 
-    m1 = trip1.display_config.metrics
-    m2 = trip2.display_config.metrics
+    m1 = [m for m in trip1.display_config.metrics if not m.derived]
+    m2 = [m for m in trip2.display_config.metrics if not m.derived]
     assert len(m1) == len(m2) == 2
 
     fields = ("metric_id", "enabled", "aggregations", "bucket", "order",

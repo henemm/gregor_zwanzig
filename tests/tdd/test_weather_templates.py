@@ -67,14 +67,15 @@ class TestWeatherTemplatesRegistry:
     def test_alpen_trekking_has_14_metrics(self):
         """GIVEN alpen-trekking template
         WHEN counting metrics
-        THEN it has 14 metrics including freezing_level, cape, wind_chill.
+        THEN it has 15 metrics including freezing_level, cape, wind_chill.
 
-        Count angepasst (Bug #424): confidence entfernt 15 -> 14.
+        Count angepasst (Bug #424): confidence entfernt 15 -> 14;
+        #1484: temperature_night ergaenzt 14 -> 15.
         """
         from app.metric_catalog import WEATHER_TEMPLATES
 
         metrics = WEATHER_TEMPLATES["alpen-trekking"]["metrics"]
-        assert len(metrics) == 14
+        assert len(metrics) == 15
         assert "freezing_level" in metrics
         assert "cape" in metrics
         assert "wind_chill" in metrics
@@ -82,14 +83,15 @@ class TestWeatherTemplatesRegistry:
     def test_allgemein_has_7_metrics(self):
         """GIVEN allgemein template
         WHEN counting metrics
-        THEN it has 7 basic metrics.
+        THEN it has 8 basic metrics.
 
-        Count angepasst (Bug #424): confidence entfernt 8 -> 7.
+        Count angepasst (Bug #424): confidence entfernt 8 -> 7;
+        #1484: temperature_night ergaenzt 7 -> 8.
         """
         from app.metric_catalog import WEATHER_TEMPLATES
 
         metrics = WEATHER_TEMPLATES["allgemein"]["metrics"]
-        assert len(metrics) == 7
+        assert len(metrics) == 8
 
     def test_profile_metric_ids_removed(self):
         """GIVEN metric_catalog module
@@ -262,9 +264,10 @@ class TestTemplatesEndpoint:
     def test_endpoint_alpen_trekking_metrics(self):
         """GIVEN GET /templates response
         WHEN finding alpen-trekking
-        THEN it has 14 metrics including freezing_level.
+        THEN it has 15 metrics including freezing_level.
 
-        Count angepasst (Bug #424): confidence entfernt 15 -> 14.
+        Count angepasst (Bug #424): confidence entfernt 15 -> 14;
+        #1484: temperature_night ergaenzt 14 -> 15.
         """
         from fastapi.testclient import TestClient
         from api.main import app
@@ -272,5 +275,5 @@ class TestTemplatesEndpoint:
         client = TestClient(app)
         data = client.get("/templates").json()
         alpen = next(t for t in data if t["id"] == "alpen-trekking")
-        assert len(alpen["metrics"]) == 14
+        assert len(alpen["metrics"]) == 15
         assert "freezing_level" in alpen["metrics"]

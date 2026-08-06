@@ -20,7 +20,11 @@ _DASH = "–"  # En-Dash, wie in der bestehenden Abend-Spanne
 
 
 def _summary(report_type: str, *, felt_enabled: bool = False, with_night: bool = True) -> str:
-    metrics = ("temperature", "wind_chill") if felt_enabled else ("temperature",)
+    # #1484: die Abend-Untergrenze (Nachtwert) braucht die eigene Nachtgroesse.
+    metrics = (
+        ("temperature", "temperature_night", "wind_chill") if felt_enabled
+        else ("temperature", "temperature_night")
+    )
     return CompactSummaryFormatter().format_stage_summary(
         [F.segment()],
         F.STAGE_NAME,

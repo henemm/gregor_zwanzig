@@ -111,8 +111,13 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
 # nach Abwahl der Metrik "Gewitter" in der Kurzform stehen. SMS_SYMBOL_BY_METRIC
 # bildet 1:1 ab (nur 'TH:') und wird zusaetzlich fuer Schwellwerte gelesen
 # (#624) -- ein zweiter Eintrag dort wuerde das Schwellwert-Dict verfaelschen.
+# Fix #1484 (PO-Entscheidung 2026-08-03): 'N' wandert von "temperature" zur
+# eigenen waehlbaren Groesse "temperature_night" -- Tages- und Nachttemperatur
+# sind zwei unabhaengige Auswahl-Entscheidungen (Zelt vs. Huette). 'FN' bleibt
+# bewusst bei "wind_chill" (Spec-Abgrenzung 1, feat_1484_night_temp_metric.md).
 SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
-    "temperature": ("N", "K", "D"),
+    "temperature": ("K", "D"),
+    "temperature_night": ("N",),
     "wind_chill": ("FN", "FK", "FD", "WC"),
     "thunder": ("TH:", "TH+:"),
 }

@@ -231,3 +231,72 @@ def test_demo_preview_night_fetch_never_touches_live_openmeteo(monkeypatch):
         f"Nacht-Sektion fehlt trotz show_night_block=True + Nacht-Fixture-Daten:\n"
         f"{report.email_html[:2000]}"
     )
+
+
+def test_preview_night_fetch_follows_night_metric_selection(monkeypatch):
+    """#1484 AC-8 an der WIRKSTELLE (nicht nur am Praedikat): ist die
+    Nacht-Stundentabelle aus (``show_night_block=False``), aber die Groesse
+    "Nacht-Tiefsttemperatur" gewaehlt, beschafft die Vorschau trotzdem
+    Nachtdaten — sonst zeigt ``N`` dort still den Tageswert, waehrend der
+    Versand den echten Nachtwert traegt.
+
+    Muster wie die F001-Falle oben: die ECHTE ``fetch_night_weather`` wird
+    nur mit einem Aufruf-Rekorder umwickelt (kein Mock-Rueckgabewert) und
+    laeuft im Demo-Modus gegen den FixtureProvider — kein Netz.
+    """
+    import services.segment_weather as sw
+
+    calls: list[int] = []
+    real_fetch = sw.fetch_night_weather
+
+    def _recording_fetch(seg, provider=None):
+        calls.append(1)
+        return real_fetch(seg, provider=provider)
+
+    monkeypatch.setattr(sw, "fetch_night_weather", _recording_fetch)
+
+    target = date.today()
+    trip = _demo_trip_single_stage(target, show_night_block=False)
+    assert trip.display_config.is_metric_enabled("temperature_night"), (
+        "Vorbedingung: die Default-Konfiguration muss die Nachtgroesse "
+        "aktiviert haben (build_default_display_config, #1484)."
+    )
+
+    PreviewService()._build_report(trip, target, "evening", demo=True)
+
+    assert calls, (
+        "Die Vorschau beschafft KEINE Nachtdaten, obwohl die "
+        "Nacht-Tiefsttemperatur gewaehlt ist (#1484 AC-8) — N faellt dort "
+        "still auf den Tageswert zurueck."
+    )
+
+
+def test_preview_skips_night_fetch_when_neither_selected(monkeypatch):
+    """Gegenprobe zu AC-8: weder Nacht-Stundentabelle noch Nachtgroesse
+    gewaehlt -> die Vorschau beschafft keine Nachtdaten (kein unnoetiger
+    Provider-Aufruf)."""
+    import services.segment_weather as sw
+
+    calls: list[int] = []
+    real_fetch = sw.fetch_night_weather
+
+    def _recording_fetch(seg, provider=None):
+        calls.append(1)
+        return real_fetch(seg, provider=provider)
+
+    monkeypatch.setattr(sw, "fetch_night_weather", _recording_fetch)
+
+    target = date.today()
+    trip = _demo_trip_single_stage(target, show_night_block=False)
+    trip.display_config.metrics = [
+        dataclasses.replace(mc, enabled=False)
+        if mc.metric_id == "temperature_night" else mc
+        for mc in trip.display_config.metrics
+    ]
+
+    PreviewService()._build_report(trip, target, "evening", demo=True)
+
+    assert calls == [], (
+        "Die Vorschau beschafft Nachtdaten, obwohl weder Tabelle noch "
+        "Nachtgroesse gewaehlt sind."
+    )
