@@ -464,3 +464,39 @@ func CompareEmailPreviewProxyHandler(pythonURL string) http.HandlerFunc {
 		io.Copy(w, resp.Body)
 	}
 }
+
+// SmsFidelityPreviewProxyHandler proxies POST /api/_validator/sms-fidelity-preview.
+// Pure render endpoint — no user_id injection needed (no trip context).
+// Spec: docs/specs/modules/fix_923_sms_fidelity_backend.md.
+func SmsFidelityPreviewProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		url := pythonURL + "/api/_validator/sms-fidelity-preview"
+
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"proxy_error"}`))
+			return
+		}
+		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}

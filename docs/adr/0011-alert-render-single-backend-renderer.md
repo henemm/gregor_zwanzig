@@ -74,3 +74,18 @@ weil das Register dafür keine Größe führt.
 Der Status dieses ADR bleibt **Akzeptiert** und unverändert — E3b nimmt keine
 Entscheidung zurück, sondern erfüllt Ziel 3 vollständiger. Spec:
 `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
+
+## Nachtrag 2026-08-06 (#923)
+
+Der im Kontext-Abschnitt genannte dritte Fall der dreifachen SMS-Kürzel-Kopie
+(Frontend `ChannelFidelitySMS.SMS_TOK`) ist geschlossen. `ChannelFidelitySMS.svelte`
+und `ChannelPreviewCard.svelte` (Metrik-Editor-Vorschau für den SMS-Kanal)
+rendern nicht mehr über eine eigene, hartcodierte TypeScript-Simulation
+(`SMS_TOK`/`smsRender`), sondern konsumieren die fertig gerenderte Zeile über
+einen neuen zustandslosen Backend-Endpunkt `POST
+/api/_validator/sms-fidelity-preview` (`api/routers/validator.py`), der
+dieselben Funktionen (`build_token_line()`, `render_line_with_survivors()`) wie
+der echte Versandpfad aufruft — analog zur bereits umgesetzten Alert-Vorschau
+(#918). Damit gilt Entscheidungspunkt 2 dieses ADR jetzt auch für die
+Briefing-SMS-Editor-Vorschau, nicht mehr nur für Alerts. Spec:
+`docs/specs/modules/fix_923_sms_fidelity_backend.md`.

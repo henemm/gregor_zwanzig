@@ -3,7 +3,10 @@
 	// Statt einer Mini-Tabelle pro Karte zeigen die 4 Kacheln nun NUR die
 	// Konsequenz der aktuellen Konfiguration je Kanal: "wie viele rutschen
 	// raus?" Per Klick aktiviert der Nutzer Schicht 2 (Fidelity-Vorschau).
+	import { untrack } from 'svelte';
+	import { api } from '$lib/api';
 	import { applyChannel, type MetricEntry } from './metricsEditor.ts';
+	import { loadSmsFidelityPreview, type SmsFidelityPreview } from './smsFidelityPreview.ts';
 
 	interface Props {
 		channelId: 'email' | 'telegram' | 'sms';
@@ -15,50 +18,45 @@
 		metricById: Record<string, MetricEntry>;
 		active: boolean;
 		onSelect: () => void;
+		/** RED-Infrastruktur (#923): optionaler SSR-Test-Override fuer die
+		 * SMS-Server-Vorschau — Muster wie in ChannelFidelitySMS.svelte. Nur
+		 * fuer channelId === 'sms' relevant. */
+		previewOverride?: SmsFidelityPreview | null;
 	}
 	let {
 		channelId, label, glyph, maxCols, primary, secondary,
-		metricById, active, onSelect,
+		metricById, active, onSelect, previewOverride,
 	}: Props = $props();
 
-	// SMS-Token-Tabelle (entscheidungskritische Metriken) — gespiegelt aus
-	// ChannelFidelitySMS.svelte. Wird hier nur fuer den Zaehler verwendet.
-	const SMS_TOK: Record<string, string> = {
-		temperature: 'N8 D11',
-		precipitation: 'R3.2',
-		rain_probability: 'PR53%@12',
-		wind: 'W12@11(24@13)',
-		gust: 'G25@12(43@14)',
-		thunder: 'TH5%@12',
-	};
-	const SMS_PREFIX = 'KHW03:';
-	const SMS_TAIL = 'Z:WATCH:2447';
-	const SMS_MAX = 140;
-
-	function smsCounters(prim: string[], sec: string[]) {
-		const order = [...prim, ...sec];
-		const carried: string[] = [];
-		let tokens: string[] = [];
-		let dropped = 0;
-		const lenWith = (toks: string[]) =>
-			`${SMS_PREFIX} ${[...toks, SMS_TAIL].join(' ')}`.length;
-		for (const id of order) {
-			const tok = SMS_TOK[id];
-			if (!tok) { dropped++; continue; }
-			if (lenWith([...tokens, tok]) > SMS_MAX) { dropped++; continue; }
-			tokens.push(tok);
-			carried.push(id);
-		}
-		return { carried: carried.length, dropped, total: order.length };
-	}
+	let preview = $state<SmsFidelityPreview | null>(
+		untrack(() => (previewOverride !== undefined ? previewOverride : null))
+	);
 
 	const isSMS = $derived(channelId === 'sms');
+	const smsMetricIds = $derived([...primary, ...secondary]);
+
+	$effect(() => {
+		const ids = smsMetricIds;
+		if (!isSMS || previewOverride !== undefined) return;
+		loadSmsFidelityPreview(ids, (path, body) => api.post<SmsFidelityPreview>(path, body)).then(
+			(result) => {
+				preview = result.preview;
+			}
+		);
+	});
 
 	// Spaltenbasierte Kanäle (Email/Telegram): applyChannel teilt
 	// primary in inTable (passt rein) + überzählige primary werden in
 	// "detail" eingereiht. Anzahl der Demoteten = layout.demoted (number).
 	const layout = $derived(applyChannel(primary, secondary, maxCols));
-	const smsCount = $derived(smsCounters(primary, secondary));
+	// Issue #923: "X als Code" / "Y fallen weg" ausschliesslich aus der
+	// Serverantwort abgeleitet (carried_ids) — keine eigene Kürzungskopie
+	// mehr (PO-Entscheidung "Verlinken statt kopieren").
+	const smsCount = $derived({
+		carried: preview?.carried_ids.length ?? 0,
+		dropped: smsMetricIds.length - (preview?.carried_ids.length ?? 0),
+		total: smsMetricIds.length,
+	});
 
 	const bigNum = $derived(
 		isSMS ? smsCount.carried : layout.inTable.length,
