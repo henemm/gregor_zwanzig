@@ -36,6 +36,14 @@ if TYPE_CHECKING:
 # ───────────────────────── Schwellwert-Tabelle ──────────────────────────────
 
 # Jede Zeile: (metric, kind, threshold_entspannt, threshold_standard, threshold_sensibel)
+#
+# Fix #1435 Etappe E4: diese Tabelle ist die EINZIGE Quelle der Schwellwerte.
+# Das Frontend (`alertMetricTable.ts`, Alarme-Reiter) leitet seine
+# Anzeigewerte NICHT mehr per Handkopie, sondern aus der generierten Datei
+# `frontend/src/lib/generated/alertPresetThresholds.generated.json` ab.
+# Nach jeder Aenderung hier `scripts/generate_alert_preset_table.py`
+# ausfuehren -- sonst meldet die Frische-Ratsche
+# (`tests/tdd/test_alert_preset_table_parity.py`) die Abweichung.
 _PRESET_TABLE: Final[list[tuple]] = [
     (AlertMetric.WIND_GUST,            AlertRuleKind.DELTA,              35,    20,    12),
     (AlertMetric.PRECIPITATION_SUM,    AlertRuleKind.DELTA,              20,    10,     5),
