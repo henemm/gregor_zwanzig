@@ -48,8 +48,13 @@
 
 <div>
 	<Eyebrow style="margin-bottom: 4px;">Beispiel-Warnung</Eyebrow>
+	<!-- Issue #1462: der Wertebereich loest seit #1460 keinen Alarm mehr aus —
+	     Ausloeser sind Vorhersage-Aenderung, Nowcast und amtliche Warnung. Der
+	     alte Satz war dasselbe falsche Versprechen, das #1425 im Reiter
+	     *Wertebereiche* schon beseitigt hatte. Waechter:
+	     __tests__/vtAlertSampleCopy.test.ts -->
 	<p class="vt-sample-lead">
-		So sieht eine ausgelöste Warn-Mail aus, wenn ein Wert den Wertebereich verlässt.
+		So sieht eine ausgelöste Warn-Mail aus, wenn sich die Vorhersage deutlich ändert.
 	</p>
 	<div class="vt-sample-card" data-testid="versand-alert-sample">
 		<div class="vt-sample-head">
