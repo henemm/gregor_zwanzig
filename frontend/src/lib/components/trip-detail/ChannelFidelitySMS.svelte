@@ -1,85 +1,94 @@
 <script lang="ts">
-	// Issue #496 — Schicht 2 (SMS): Token-Stream + Mapping-Tabelle.
+	// Issue #496 — Schicht 2 (SMS): Token-Stream aus dem echten Backend-
+	// Renderer (Issue #923, ADR-0011 — kein zweiter Renderer im Frontend).
 	// SMS ist KEIN Spalten-Kanal — der Renderer uebersetzt nur
-	// entscheidungskritische Metriken in kompakte Tokens (sms_format.md v2.0).
+	// entscheidungskritische Metriken in kompakte Tokens (sms_format.md §6).
+	import { untrack } from 'svelte';
+	import { api } from '$lib/api';
 	import type { MetricEntry } from './metricsEditor.ts';
+	import { loadSmsFidelityPreview, type SmsFidelityPreview } from './smsFidelityPreview.ts';
 
 	interface Props {
 		primary: string[];
 		secondary: string[];
 		metricById: Record<string, MetricEntry>;
+		/** RED-Infrastruktur (#923, analog `profileOverride` in
+		 * VTBriefingChannels.svelte): optionaler SSR-Test-Override fuer die
+		 * Server-Vorschau. Falls gesetzt (auch explizit `null`) wird `preview`
+		 * daraus initialisiert und der Fetch uebersprungen — `svelte/server`s
+		 * `render()` fuehrt weder `onMount` noch `$effect` aus, ohne diesen
+		 * Override bliebe `preview` in SSR-Tests immer `null`. Ohne Uebergabe
+		 * unveraendertes Verhalten (Fetch bei Mount/Aenderung von
+		 * primary/secondary). */
+		previewOverride?: SmsFidelityPreview | null;
 	}
-	let { primary, secondary, metricById }: Props = $props();
+	let { primary, secondary, metricById, previewOverride }: Props = $props();
 
-	const SMS_TOK: Record<string, string> = {
-		temperature: 'N8 D11',
-		precipitation: 'R3.2',
-		rain_probability: 'PR53%@12',
-		wind: 'W12@11(24@13)',
-		gust: 'G25@12(43@14)',
-		thunder: 'TH5%@12',
-	};
-	const SMS_TOKEN_MEANING: Record<string, string> = {
-		temperature: 'N/D = Nacht-Tief / Tag-Hoch °C',
-		precipitation: 'R = Regen mm (R- = keiner)',
-		rain_probability: 'PR = Regen-Wahrsch. %@Stunde',
-		wind: 'W = Wind km/h@Std(Max@Std)',
-		gust: 'G = Böen km/h@Std(Max@Std)',
-		thunder: 'TH = Gewitter %@Stunde',
-	};
-	const SMS_PREFIX = 'KHW03:';
-	const SMS_TAIL = 'Z:WATCH:2447';
-	const SMS_MAX = 140;
+	let preview = $state<SmsFidelityPreview | null>(
+		untrack(() => (previewOverride !== undefined ? previewOverride : null))
+	);
+	let loading = $state(false);
+	let error = $state<string | null>(null);
 
-	function smsRender(prim: string[], sec: string[]) {
-		const order = [...prim, ...sec];
-		const carried: string[] = [];
-		const noCode: string[] = [];
-		const overflow: string[] = [];
-		let tokens: string[] = [];
-		const lenWith = (toks: string[]) =>
-			`${SMS_PREFIX} ${[...toks, SMS_TAIL].join(' ')}`.length;
-		for (const id of order) {
-			const tok = SMS_TOK[id];
-			if (!tok) { noCode.push(id); continue; }
-			if (lenWith([...tokens, tok]) > SMS_MAX) { overflow.push(id); continue; }
-			tokens.push(tok);
-			carried.push(id);
-		}
-		const line = `${SMS_PREFIX} ${[...tokens, SMS_TAIL].join(' ')}`;
-		return { line, carried, noCode, overflow, len: line.length };
-	}
+	const metricIds = $derived([...primary, ...secondary]);
+
+	$effect(() => {
+		const ids = metricIds;
+		if (previewOverride !== undefined) return;
+		loading = true;
+		error = null;
+		loadSmsFidelityPreview(ids, (path, body) => api.post<SmsFidelityPreview>(path, body)).then(
+			(result) => {
+				preview = result.preview;
+				error = result.error;
+				loading = false;
+			}
+		);
+	});
 
 	function labelOf(id: string): string {
 		return metricById[id]?.label ?? id;
 	}
 
-	const render = $derived(smsRender(primary, secondary));
-	const dropped = $derived([...render.noCode, ...render.overflow]);
-	const overLimit = $derived(render.len > SMS_MAX);
+	const carried = $derived(
+		metricIds.filter((id) => preview?.carried_ids.includes(id) ?? false)
+	);
+	const dropped = $derived(metricIds.filter((id) => !carried.includes(id)));
+	const line = $derived(preview?.line ?? '');
+	const charCount = $derived(preview?.char_count ?? 0);
+	const maxLength = $derived(preview?.max_length ?? 160);
+	const overLimit = $derived(charCount > maxLength);
 </script>
 
 <div class="fidelity" data-testid="channel-fidelity-sms">
 	<div class="chat">
 		<div class="bubble">
-			<pre class="mono line">{render.line}</pre>
+			<pre class="mono line">{line}</pre>
 		</div>
 	</div>
 
 	<div class="counter mono" class:over={overLimit}>
-		{render.len}/{SMS_MAX} Zeichen · gesendet 06:00
+		{#if loading && preview === null}
+			Lade Vorschau…
+		{:else}
+			{charCount}/{maxLength} Zeichen · gesendet 06:00
+		{/if}
 	</div>
+
+	{#if error !== null}
+		<p class="error">{error}</p>
+	{/if}
 
 	<div class="grid">
 		<div class="col">
-			<div class="col-head mono ok">✓ {render.carried.length} mit SMS-Code</div>
-			{#if render.carried.length === 0}
+			<div class="col-head mono ok">✓ {carried.length} mit SMS-Code</div>
+			{#if carried.length === 0}
 				<div class="empty mono">— keine —</div>
 			{:else}
-				{#each render.carried as id}
+				{#each carried as id}
 					<div class="row">
 						<span class="row-label">{labelOf(id)}</span>
-						<span class="row-token mono">{SMS_TOK[id]}</span>
+						<span class="row-token mono">{metricById[id]?.sms_code ?? ''}</span>
 					</div>
 				{/each}
 			{/if}
@@ -93,7 +102,7 @@
 					<div class="row">
 						<span class="row-label">{labelOf(id)}</span>
 						<span class="row-token mono muted">
-							{render.noCode.includes(id) ? 'kein Code' : 'Zeichenlimit'}
+							{metricById[id]?.sms_code ? 'Zeichenlimit' : 'kein Code'}
 						</span>
 					</div>
 				{/each}
@@ -104,14 +113,7 @@
 	<div class="banner">
 		SMS ist <strong>kein Spalten-Kanal</strong>: der Renderer uebersetzt nur
 		entscheidungskritische Metriken in kompakte Tokens. Alles, was keinen Code
-		hat oder die 140-Zeichen-Grenze sprengt, faellt heraus.
-	</div>
-
-	<div class="legend mono">
-		{#each render.carried as id}
-			<div>{SMS_TOKEN_MEANING[id]}</div>
-		{/each}
-		<div>Z = Ziel-Risiko:Höhe · '-' = kein Wert</div>
+		hat oder die {maxLength}-Zeichen-Grenze sprengt, faellt heraus.
 	</div>
 </div>
 
@@ -206,12 +208,9 @@
 		border-left: 3px solid var(--g-warning);
 		color: var(--g-ink);
 	}
-	.legend {
-		font-size: 10px;
-		line-height: 1.6;
-		color: var(--g-ink-muted);
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
+	.error {
+		margin: 0;
+		font-size: var(--g-text-xs);
+		color: var(--g-danger, #dc2626);
 	}
 </style>

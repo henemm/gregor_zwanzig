@@ -28,6 +28,7 @@ from services.trip_alert import TripAlertService
 from services.validator_render_service import (
     render_alert_preview,
     render_compare_email_preview,
+    render_sms_fidelity_preview,
 )
 
 router = APIRouter()
@@ -325,3 +326,22 @@ async def compare_email_preview(body: CompareEmailPreviewBody):
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     return {"html": html}
+
+
+# ---------------------------------------------------------------------------
+# Endpoint #6 — Briefing-SMS-Fidelity-Vorschau (Issue #923, ADR-0011).
+# ---------------------------------------------------------------------------
+
+class SmsFidelityPreviewBody(BaseModel):
+    metric_ids: list[str] = Field(default_factory=list)
+
+
+@router.post("/api/_validator/sms-fidelity-preview")
+async def sms_fidelity_preview(body: SmsFidelityPreviewBody):
+    """Rendert die SMS-Kurzform fuer die Metrik-Editor-Vorschau.
+
+    Spec: docs/specs/modules/fix_923_sms_fidelity_backend.md.
+    Zustandslos wie alert-preview/compare-email-preview (kein user_id,
+    keine Trip-/Nutzerdaten): beispielwertbasiert, kein Wetterdaten-Fetch.
+    """
+    return render_sms_fidelity_preview(body.metric_ids)

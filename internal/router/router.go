@@ -159,6 +159,7 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/_validator/detector-thresholds", handler.DetectorThresholdsProxyHandler(deps.Config.PythonCoreURL))
 	r.Get("/api/_validator/metrics-for-channel", handler.MetricsForChannelProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/_validator/compare-email-preview", handler.CompareEmailPreviewProxyHandler(deps.Config.PythonCoreURL))
+	r.Post("/api/_validator/sms-fidelity-preview", handler.SmsFidelityPreviewProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/trips/{id}/send", handler.SendTripReportProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/trips/{id}/alert-preview", handler.AlertPreviewProxyHandler(deps.Config.PythonCoreURL))
 	// Issue #140 / #189: Output-Vorschau Email + SMS

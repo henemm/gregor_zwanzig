@@ -1,7 +1,16 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-05 (Issue #1461 Scheibe S3b-2a, `feat-1461-s3b2-kanal-schwelle` — neues
+**Updated:** 2026-08-06 (Issue #923, `fix-923-sms-fidelity-backend` — neuer zustandsloser
+Endpoint `POST /api/_validator/sms-fidelity-preview` (Python-Core `api/routers/validator.py`)
+hinter neuer Go-Proxy-Route (`internal/router/router.go`, `SmsFidelityPreviewProxyHandler` in
+`internal/handler/proxy.go`): Browser → Go-API (`AuthMiddleware` greift, aber **kein**
+`user_id`-Durchreichen an den Python-Core, da zustandslos/beispielwertbasiert wie
+`alert-preview`/`compare-email-preview`) → Python-Core. Löst die Metrik-Editor-SMS-Vorschau
+(`ChannelFidelitySMS.svelte`, `ChannelPreviewCard.svelte`) von einer hartcodierten
+TypeScript-Simulation (`SMS_TOK`/`smsRender`) ab, analog zur bereits umgesetzten
+Alert-Vorschau (#918, ADR-0011). Spec: `docs/specs/modules/fix_923_sms_fidelity_backend.md`);
+2026-08-05 (Issue #1461 Scheibe S3b-2a, `feat-1461-s3b2-kanal-schwelle` — neues
 additives Geschwisterfeld `alert_channel_thresholds` auf `Trip` (`AlertChannelThresholdsConfig`,
 je Kanal `"LOW"`/`"MODERATE"`/`"HIGH"`, Startwert `"LOW"`): stellt je Alarm-Kanal (E-Mail ·
 Telegram · SMS) ein, ab welcher Dringlichkeit eine ausgelöste Alarm-Meldung diesen Kanal
@@ -73,6 +82,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/_validator/detector-thresholds` | GET |
 | `/api/_validator/format-metric` | GET |
 | `/api/_validator/metrics-for-channel` | GET |
+| `/api/_validator/sms-fidelity-preview` | POST |
 | `/api/archive/stats` | GET |
 | `/api/auth/account` | DELETE |
 | `/api/auth/forgot-password` | POST |

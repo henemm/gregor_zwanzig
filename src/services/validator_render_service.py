@@ -33,6 +33,10 @@ from output.renderers.alert.render import (
     render_telegram,
 )
 from output.renderers.email.compare_html import render_compare_html
+from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
+from output.tokens.builder import build_token_line
+from output.tokens.dto import DailyForecast, HourlyValue, MetricSpec, NormalizedForecast
+from output.tokens.render import render_line_with_survivors
 from utils.timezone import local_fmt, tz_for_coords
 
 
@@ -178,3 +182,113 @@ def render_compare_email_preview(body: Any) -> str:
         hourly_enabled=body.hourly_enabled,
         hourly_metrics=getattr(body, "hourly_metrics", None),
     )
+
+
+# ---------------------------------------------------------------------------
+# SMS-Fidelity-Vorschau (Issue #923, ADR-0011).
+# ---------------------------------------------------------------------------
+
+# Feste Beispiel-Vorhersage fuer die Metrik-Editor-SMS-Vorschau -- kein
+# Live-Wetter, keine Trip-Daten (siehe Source-Kommentar der Spec: zustandslos
+# wie alert-preview/compare-email-preview). Bewusst ein Extremsturm-Szenario
+# (Wind/Boeen/Niederschlag/Schnee ueber realistischen Spitzenwerten): nur so
+# ueberschreitet die volle Token-Zeile aller SMS-faehigen Metriken zusammen
+# die 160-Zeichen-Grenze und macht die §6-Kuerzung (AC-2) ueberhaupt sichtbar
+# -- mit rein realistischen Sturmwerten bleibt die kompakte Token-Zeile fuer
+# nur eine Etappe strukturell unter 160 Zeichen. Temperatur/gefuehlte
+# Temperatur bleiben in einem realistischen Bereich (weniger auffaellig fuer
+# Nutzer als Wind/Niederschlag/Schnee-Groessenordnungen).
+SMS_FIDELITY_SAMPLE_FORECAST = NormalizedForecast(
+    days=(
+        DailyForecast(
+            temp_min_c=-12.0, temp_max_c=28.0,
+            night_temp_min_c=-15.0,
+            wind_chill_min_c=-18.0, wind_chill_max_c=24.0,
+            night_wind_chill_min_c=-21.0,
+            wind_chill_c=-18.0,
+            rain_hourly=tuple(
+                HourlyValue(h, v) for h, v in zip(
+                    range(6, 18),
+                    (245.0, 318.0, 432.0, 555.0, 585.0, 625.0,
+                     670.0, 720.0, 845.0, 660.0, 445.0, 260.0),
+                )
+            ),
+            pop_hourly=tuple(
+                HourlyValue(h, v) for h, v in zip(
+                    range(6, 18), (15, 25, 35, 48, 60, 70, 82, 90, 98, 85, 60, 30),
+                )
+            ),
+            wind_hourly=tuple(
+                HourlyValue(h, v) for h, v in zip(
+                    range(6, 18),
+                    (850, 926, 938, 952, 970, 990, 1012, 1128, 1142, 1180, 1420, 1350),
+                )
+            ),
+            gust_hourly=tuple(
+                HourlyValue(h, v) for h, v in zip(
+                    range(6, 18),
+                    (1200, 1244, 1258, 1278, 1302, 1330, 1358, 1385, 1415, 1455, 2080, 1980),
+                )
+            ),
+            thunder_hourly=tuple(
+                HourlyValue(h, v) for h, v in zip(
+                    range(6, 18), (0, 0, 1, 1, 2, 2, 3, 3, 3, 2, 1, 0),
+                )
+            ),
+            snow_depth_cm=24500.0,
+            snowfall_limit_m=98000.0,
+            snow_new_24h_cm=18500.0,
+        ),
+        DailyForecast(thunder_hourly=(HourlyValue(10, 2.0),)),
+    ),
+)
+
+# metric_id -> SMS-Symbol(e), die diese Metrik in der Token-Zeile traegt.
+# SMS_MULTI_SYMBOLS_BY_METRIC hat Vorrang (deckt mehr Symbole ab, u.a.
+# 'thunder' -> ('TH:','TH+:') statt nur 'TH:' aus SMS_SYMBOL_BY_METRIC).
+def _symbols_for_metric(metric_id: str) -> tuple[str, ...]:
+    syms = SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id)
+    if syms is not None:
+        return syms
+    sym = SMS_SYMBOL_BY_METRIC.get(metric_id)
+    return (sym,) if sym else ()
+
+
+def build_sms_fidelity_specs(metric_ids: list[str]) -> list[MetricSpec]:
+    """Disabled-Specs fuer alle nicht angefragten SMS-Symbole -- Spiegel von
+    trip_report.py:283-307 (Bug #944/#1415), hier mit `metric_ids` (Editor-
+    Auswahl) statt `dc.metrics` (Trip-Konfiguration) als Aktivmenge."""
+    active_metric_ids = set(metric_ids)
+    specs: list[MetricSpec] = [
+        MetricSpec(symbol=sym, enabled=False)
+        for metric_id, sym in SMS_SYMBOL_BY_METRIC.items()
+        if metric_id not in active_metric_ids
+    ]
+    specs += [
+        MetricSpec(symbol=sym, enabled=metric_id in active_metric_ids)
+        for metric_id, syms in SMS_MULTI_SYMBOLS_BY_METRIC.items()
+        for sym in syms
+    ]
+    return specs
+
+
+def render_sms_fidelity_preview(metric_ids: list[str]) -> dict:
+    """Rendert die SMS-Kurzform fuer die Metrik-Editor-Vorschau ueber
+    dieselbe Pipeline wie der Versandpfad (build_token_line()+render_line()-
+    Familie) -- kein zweiter Renderer im Frontend (ADR-0011)."""
+    specs = build_sms_fidelity_specs(metric_ids)
+    token_line = build_token_line(
+        SMS_FIDELITY_SAMPLE_FORECAST, specs,
+        report_type="evening", stage_name="Etappe",
+    )
+    line, survivor_symbols = render_line_with_survivors(token_line, 160)
+    carried_ids = [
+        metric_id for metric_id in metric_ids
+        if any(sym in survivor_symbols for sym in _symbols_for_metric(metric_id))
+    ]
+    return {
+        "line": line,
+        "char_count": len(line),
+        "max_length": 160,
+        "carried_ids": carried_ids,
+    }

@@ -123,3 +123,17 @@ def render_line(line: TokenLine, max_length: int) -> str:
     truncated_tokens, was = _truncate(tokens, line.stage_name, max_length)
     object.__setattr__(line, "truncated", was)
     return _draw(line.stage_name, truncated_tokens)
+
+
+def render_line_with_survivors(line: TokenLine, max_length: int) -> tuple[str, set[str]]:
+    """Issue #923: wie render_line(), liefert zusaetzlich die nach der
+    §6-Kuerzung ueberlebenden Token-Symbole (fuer die SMS-Fidelity-Vorschau,
+    die daraus auf survivende metric_ids zurueckschliesst). Reine Nachbar-
+    funktion -- render_line() selbst bleibt unveraendert, kein Produktivpfad
+    (E-Mail/Telegram/SMS-Versand) importiert diese Funktion."""
+    tokens = list(line.tokens)
+    full = _draw(line.stage_name, tokens)
+    if len(full) <= max_length:
+        return full, {t.symbol for t in tokens}
+    truncated_tokens, _was = _truncate(tokens, line.stage_name, max_length)
+    return _draw(line.stage_name, truncated_tokens), {t.symbol for t in truncated_tokens}
