@@ -3,7 +3,7 @@ entity_id: feat_1484_night_temp_metric
 type: module
 created: 2026-08-06
 updated: 2026-08-06
-status: draft
+status: approved
 version: "1.0"
 tags: [metrics, sms, briefing, editor]
 ---
@@ -14,7 +14,7 @@ tags: [metrics, sms, briefing, editor]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-'go' 2026-08-06
 
 ## Purpose
 
