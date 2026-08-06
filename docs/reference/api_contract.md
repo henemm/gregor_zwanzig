@@ -1,7 +1,16 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-06 (Issue #1461 Scheibe S3b-2b, `feat-1461-s3b2b-compare-kanal-schwelle` —
+**Updated:** 2026-08-06 (Issue #923b, `fix-923b-wire-live-sms-preview` — Korrektur zu #923:
+der am selben Tag gebaute Endpoint `POST /api/_validator/sms-fidelity-preview` war korrekt,
+aber gegen tote Komponenten verdrahtet (`ChannelFidelitySMS.svelte`, `ChannelPreviewCard.svelte`
+— nie von einer Route importiert, nur über den Organisms-Barrel erreichbar). Live konsumiert
+wird der Endpoint erst ab #923b, über `WeatherV2MailPreview.svelte`
+(`frontend/src/lib/components/shared/weather-metrics-tab/`, eingebunden in
+`WeatherMetricsTab.svelte`), bei `context==='route'`. Bei `context==='vergleich'`
+(Ortsvergleich-Editor) bleibt die SMS-Kachel bewusst ausgeblendet — kein Aufruf. Die fünf toten
+Komponenten sind gelöscht. Spec: `docs/specs/modules/fix_923b_wire_live_sms_preview.md`);
+2026-08-06 (Issue #1461 Scheibe S3b-2b, `feat-1461-s3b2b-compare-kanal-schwelle` —
 `alert_channel_thresholds` (s. S3b-2a-Eintrag darunter) gilt jetzt auch für **Ortsvergleiche**:
 dasselbe additive Geschwisterfeld (`AlertChannelThresholdsConfig`, kein neuer Typ) auf
 `ComparePreset`, gleicher zweistufiger Datenverlustschutz (Objekt- **und** Feld-Ebene), gleiche
@@ -11,7 +20,8 @@ nur per E-Mail raus (unabhängig vom Telegram-/SMS-Opt-in) — jetzt über dense
 wie die anderen beiden Compare-Alarmwege. Und der `!`-Warn-Block-Filter des Compare-SMS-/
 Telegram-**Berichts** (nicht der Alarm-Versand) geht von der festen `MIN_SMS_LEVEL`-Schwelle auf
 die Startschwelle „gering" über (s. Abschnitt „alert_channel_thresholds" unten). Details ADR-0046,
-Spec `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md`); 2026-08-06 (Issue #923, `fix-923-sms-fidelity-backend` — neuer zustandsloser
+Spec `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md`);
+2026-08-06 (Issue #923, `fix-923-sms-fidelity-backend` — neuer zustandsloser
 Endpoint `POST /api/_validator/sms-fidelity-preview` (Python-Core `api/routers/validator.py`)
 hinter neuer Go-Proxy-Route (`internal/router/router.go`, `SmsFidelityPreviewProxyHandler` in
 `internal/handler/proxy.go`): Browser → Go-API (`AuthMiddleware` greift, aber **kein**

@@ -150,7 +150,7 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 
 ## 8 · Organisms (Atomic Design Level 3, Epic #471 + Issue #520)
 
-Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/components/organisms/index.ts` (9 Organisms: 4 aus Epic #471, 5 aus Issue #520):
+Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/components/organisms/index.ts` (7 Organisms: 4 aus Epic #471, 3 aus Issue #520):
 
 | Komponente | Import | Props | Was sie tut |
 |---|---|---|---|
@@ -158,9 +158,7 @@ Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/compo
 | `<TripWizardShell>` | `$lib/components/organisms` | `step: 1-4`, `onNext`, `onPrev`, `onClose`, Children | Wizard-Hülle für Trip-Erstellung/Bearbeitung (Stepper + Step-Content + Footer-Navigation). Physisch in `trip-wizard/TripWizardShell.svelte`. |
 | `<AlertRulesEditor>` | `$lib/components/organisms` | `rules: AlertRule[]`, `onChange`, `onAdd`, `onRemove` | Alert-Konfiguration: Alerttyp (Lightning, Rain, Terrain, etc.), Schwellwert, Aktivierung. Physisch in `alert-rules-editor/AlertRulesEditor.svelte`. |
 | `<OutputLayoutEditor>` | `$lib/components/organisms` | `layout: OutputLayout`, `onChange` | Konfigurationsoberfläche für die Briefing-Ausgabe-Formatierung (Kanal-Reihenfolge, Metrik-Anzahl pro Kanal). Physisch in `shared/OutputLayoutEditor.svelte` (Issue #475). |
-| `<WeatherMetricsTab>` | `$lib/components/organisms` | `trip`, `stage?` | Tab-Inhalt mit Wetter-Metrik-Auswahl. Physisch in `trip-detail/WeatherMetricsTab.svelte`. |
-| `<ChannelPreviewBlock>` | `$lib/components/organisms` | `channel`, `layout` | Vorschau-Block für einen Briefing-Kanal. Physisch in `trip-detail/ChannelPreviewBlock.svelte`. ⚠ C2-Verstoß (ui/card) — Folge-Issue offen. |
-| `<ChannelPreviewCard>` | `$lib/components/organisms` | `channel`, `content` | Card-Wrapper für Kanal-Vorschau. Physisch in `trip-detail/ChannelPreviewCard.svelte`. |
+| `<WeatherMetricsTab>` | `$lib/components/organisms` | `trip`, `stage?` | Tab-Inhalt mit Wetter-Metrik-Auswahl. Physisch in `trip-detail/WeatherMetricsTab.svelte`. Kanal-Vorschau (E-Mail/Telegram/SMS) läuft über die eingebettete `WeatherV2MailPreview.svelte` (`shared/weather-metrics-tab/`), nicht mehr über eigene `ChannelPreview*`-Organisms (entfernt mit #923b). |
 | `<MetricGroup>` | `$lib/components/organisms` | `group`, `metrics`, `onChange` | Gruppen-Sektion in der Metrik-Auswahl. Physisch in `trip-detail/MetricGroup.svelte`. |
 | `<MetricCheckbox>` | `$lib/components/organisms` | `metric`, `checked`, `onChange` | Metrik-Checkbox mit Horizon-Chip. Physisch in `trip-detail/MetricCheckbox.svelte`. ⚠ C2-Verstoß (ui/horizon-chip) — Folge-Issue offen. |
 

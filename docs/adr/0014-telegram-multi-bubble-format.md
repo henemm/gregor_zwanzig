@@ -77,8 +77,9 @@ zitierbare Nachrichten ("Bubbles") mit Inline-Keyboard statt Text-Befehls-Hinwei
   Vollständigkeits-um-jeden-Preis).
 - **Folgepflichten:** Issue #623/#640 (mehrtägiger Trend als eigenständiger Baustein)
   müssen NACH #1001 neu spezifiziert werden, nicht parallel dazu. Die
-  Frontend-Kanalvorschau (`ChannelPreviewBlock.svelte`/`ChannelPreviewCard.svelte`)
-  benötigt ein Folge-Ticket, um die Multi-Bubble-Struktur widerzuspiegeln — bis dahin
-  bleibt sie auf dem additiven `body`-Feld. Neue Callback-Namen (`act_*`) müssen bei
-  künftigen Telegram-Interaktions-Features (z.B. #704) konsistent von bestehenden
-  Präfixen (`dd_`, `tl_`) abgegrenzt bleiben.
+  Frontend-Kanalvorschau benötigt ein Folge-Ticket, um die Multi-Bubble-Struktur
+  widerzuspiegeln — bis dahin bleibt sie auf dem additiven `body`-Feld (Stand
+  2026-08-06: die live gerenderte Komponente ist `WeatherV2MailPreview.svelte`;
+  `ChannelPreviewBlock.svelte`/`ChannelPreviewCard.svelte` sind mit #923b gelöscht).
+  Neue Callback-Namen (`act_*`) müssen bei künftigen Telegram-Interaktions-Features
+  (z.B. #704) konsistent von bestehenden Präfixen (`dd_`, `tl_`) abgegrenzt bleiben.

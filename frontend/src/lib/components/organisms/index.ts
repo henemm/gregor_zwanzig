@@ -2,8 +2,7 @@
 //
 // Eine Quelle fuer alle Organisms:
 //   import { TripHeader, AlertRulesEditor, OutputLayoutEditor,
-//            WeatherMetricsTab, ChannelPreviewBlock, ChannelPreviewCard,
-//            MetricGroup, MetricCheckbox }
+//            WeatherMetricsTab, MetricGroup, MetricCheckbox }
 //     from '$lib/components/organisms';
 //
 // Barrel-Pattern: physische .svelte-Dateien verbleiben in ihren Feature-Ordnern.
@@ -18,8 +17,6 @@ export { default as OutputLayoutEditor } from '../shared/OutputLayoutEditor.svel
 
 // Issue #520 — trip-detail Organisms aufnehmen
 export { default as WeatherMetricsTab }   from '../shared/WeatherMetricsTab.svelte';
-export { default as ChannelPreviewBlock } from '../trip-detail/ChannelPreviewBlock.svelte';
-export { default as ChannelPreviewCard }  from '../trip-detail/ChannelPreviewCard.svelte';
 export { default as MetricGroup }         from '../trip-detail/MetricGroup.svelte';
 export { default as MetricCheckbox }      from '../trip-detail/MetricCheckbox.svelte';
 

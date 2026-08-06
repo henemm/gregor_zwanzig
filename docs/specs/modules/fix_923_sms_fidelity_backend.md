@@ -3,12 +3,21 @@ entity_id: fix_923_sms_fidelity_backend
 type: bugfix
 created: 2026-08-06
 updated: 2026-08-06
-status: implemented
+status: corrected
 version: "1.0"
 tags: [sms, validator, frontend, trip-detail, editor, issue-923, adr-0011]
 ---
 
 # Briefing-SMS-Fidelity über Backend-Feed (Issue #923)
+
+> **Korrektur (#923b, 2026-08-06):** Der hier beschriebene Endpoint war korrekt
+> gebaut, wurde aber gegen `ChannelFidelitySMS.svelte`/`ChannelPreviewCard.svelte`
+> verdrahtet — tote Komponenten, nie von einer Route importiert (nur über den
+> Organisms-Barrel erreichbar). Die Trip-Editor-Route rendert tatsächlich
+> `WeatherV2MailPreview.svelte`, die bis #923b weiterhin ihre eigene, veraltete
+> SMS-Simulation zeigte. Live wirksam ist die Backend-Anbindung erst ab #923b, das
+> den Endpoint an `WeatherV2MailPreview.svelte` anschließt und die fünf toten
+> Komponenten löscht. Details: `docs/specs/modules/fix_923b_wire_live_sms_preview.md`.
 
 ## Approval
 
@@ -290,6 +299,9 @@ siehe Known Limitations); `smsCount.carried`/`smsCount.dropped` werden aus
 
 ## Changelog
 
+- 2026-08-06: Status auf `corrected` gesetzt — die beschriebene Verdrahtung war
+  gegen tote Komponenten gebaut (nie live). Korrektur: #923b, Spec
+  `docs/specs/modules/fix_923b_wire_live_sms_preview.md`.
 - 2026-08-06: Go-Proxy-Route bestätigt gemergt (`SmsFidelityPreviewProxyHandler` in
   `internal/handler/proxy.go`, Route in `internal/router/router.go`), per
   End-to-End-Test gegen den vollen Produktions-Router (inkl. Auth-Pflicht)

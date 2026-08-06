@@ -6,11 +6,19 @@
 	// Issue #1232 Scheibe 3b: interner Kanal-State + .ch-tabs entfallen — der
 	// geteilte `LTChannelPicker` (LayoutTab) steuert den Kanal jetzt controlled
 	// über die neue `channel`-Prop.
+	// Fix #923b — SMS-Zweig ruft jetzt den echten Backend-Endpoint
+	// (loadSmsFidelityPreview, ADR-0011) statt einer eigenen SMS_TOK-
+	// Simulation. `context==='vergleich'` blendet die Kachel aus (PO-
+	// Entscheidung 2026-08-06, Ortsvergleich bekommt keine eigene Vorschau).
+	import { untrack } from 'svelte';
+	import { api } from '$lib/api';
 	import type { MetricEntry } from '../../trip-detail/metricsEditor.ts';
 	import { CHANNEL_COL_BUDGET } from '../../trip-detail/metricsEditor.ts';
 	import type { Highlight } from '../../trip-detail/metricsEditor.ts';
 	import { Eyebrow } from '$lib/components/atoms';
 	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
+	import { loadSmsFidelityPreview, type SmsFidelityPreview } from '../../trip-detail/smsFidelityPreview.ts';
+	import type { WeatherMetricsContext } from './weatherMetricsTabSections.ts';
 
 	interface Props {
 		primaryColumns: string[];
@@ -19,9 +27,28 @@
 		telegramKurzform: boolean;
 		highlight: Highlight | null;
 		channel: ChannelId;
+		/** Issue #1311: 'route' (Trip, Default) | 'vergleich' (Ortsvergleich). */
+		context?: WeatherMetricsContext;
+		/** RED-Infrastruktur (#923b, analog `profileOverride` in
+		 * VTBriefingChannels.svelte): optionaler SSR-Test-Override fuer die
+		 * Server-Vorschau. Falls gesetzt (auch explizit `null`) wird `preview`
+		 * daraus initialisiert und der Fetch uebersprungen — `svelte/server`s
+		 * `render()` fuehrt weder `onMount` noch `$effect` aus. Ohne Uebergabe
+		 * unveraendertes Verhalten (Fetch bei Mount/Aenderung von
+		 * primaryColumns). */
+		previewOverride?: SmsFidelityPreview | null;
 	}
 
-	let { primaryColumns, metricById, friendlyMap, telegramKurzform, highlight, channel }: Props = $props();
+	let {
+		primaryColumns,
+		metricById,
+		friendlyMap,
+		telegramKurzform,
+		highlight,
+		channel,
+		context = 'route',
+		previewOverride
+	}: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
 
@@ -127,20 +154,33 @@
 		)
 	);
 
-	// SMS line
-	const SMS_TOK: Record<string, string> = {
-		temperature: 'N8 D11', precipitation: 'R3.2', rain_probability: 'PR53%@12',
-		wind: 'W12@11(24@13)', gust: 'G25@12(43@14)', thunder: 'TH5%@12',
-	};
-	const smsLine = $derived((() => {
-		const tok = (id: string) => SMS_TOK[id];
-		const tokens: string[] = [];
-		for (const id of primaryColumns) {
-			const t = tok(id);
-			if (t) tokens.push(t);
-		}
-		return `BSPTOUR: ${[...tokens, 'Z:WATCH'].join(' ')}`;
-	})());
+	// SMS — echte Server-Vorschau (Fix #923b, ADR-0011: kein zweiter Renderer
+	// im Frontend). Nur bei context==='route' geladen; 'vergleich' rendert die
+	// Kachel gar nicht (s. u.), deshalb entfaellt der Aufruf dort vollstaendig.
+	let smsPreview = $state<SmsFidelityPreview | null>(
+		untrack(() => (previewOverride !== undefined ? previewOverride : null))
+	);
+	let smsLoading = $state(false);
+	let smsError = $state<string | null>(null);
+
+	$effect(() => {
+		const ids = primaryColumns;
+		if (context !== 'route') return;
+		if (previewOverride !== undefined) return;
+		smsLoading = true;
+		smsError = null;
+		loadSmsFidelityPreview(ids, (path, body) => api.post<SmsFidelityPreview>(path, body)).then(
+			(result) => {
+				smsPreview = result.preview;
+				smsError = result.error;
+				smsLoading = false;
+			}
+		);
+	});
+
+	const smsLine = $derived(smsPreview?.line ?? '');
+	const smsCharCount = $derived(smsPreview?.char_count ?? 0);
+	const smsMaxLength = $derived(smsPreview?.max_length ?? 160);
 </script>
 
 <div class="mail-preview" data-testid="wm2-mail-preview">
@@ -258,12 +298,21 @@
 			</div>
 
 		<!-- SMS Preview -->
-		{:else}
+		{:else if context === 'route'}
 			<div data-testid="wm2-sms-line">
 				<div class="sms-chat">
 					<div class="sms-bubble mono">{smsLine}</div>
-					<div class="mono sms-len">{smsLine.length}/140 Zeichen</div>
+					<div class="mono sms-len">
+						{#if smsLoading && smsPreview === null}
+							Lade Vorschau…
+						{:else}
+							{smsCharCount}/{smsMaxLength} Zeichen
+						{/if}
+					</div>
 				</div>
+				{#if smsError !== null}
+					<p class="sms-error">{smsError}</p>
+				{/if}
 				<div class="sms-note">
 					SMS kennt keine Spalten-Reihenfolge: nur entscheidungskritische Werte werden als Kurzcodes gesendet.
 				</div>
@@ -529,6 +578,11 @@
 		font-size: 10px;
 		color: #6b675c;
 		margin-top: 5px;
+	}
+	.sms-error {
+		margin: 5px 0 0;
+		font-size: 11px;
+		color: var(--g-bad, #dc2626);
 	}
 	.sms-note {
 		margin-top: 9px;
