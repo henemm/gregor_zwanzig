@@ -47,7 +47,10 @@ import services.alert_urgency as alert_urgency
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
 from output.renderers.email import render_email
-from output.renderers.email.helpers import build_friendly_keys
+from output.renderers.email.helpers import (
+    NO_HOURLY_COLUMN_METRIC_IDS,
+    build_friendly_keys,
+)
 from output.tokens.dto import MetricSpec, TokenLine
 
 
@@ -452,6 +455,10 @@ class TripReportFormatter:
                 continue
             if mc.metric_id == "wind_direction" and merge_wind_dir:
                 continue
+            # #1484: Nachtfenster-Skalar, keine Stundenspalte — EINE Quelle
+            # der Regel: email/helpers.NO_HOURLY_COLUMN_METRIC_IDS.
+            if mc.metric_id in NO_HOURLY_COLUMN_METRIC_IDS:
+                continue
             try:
                 metric_def = get_metric(mc.metric_id)
             except KeyError:
@@ -538,6 +545,10 @@ class TripReportFormatter:
                 continue
             if mc.metric_id == "wind_direction" and merge_wind_dir:
                 continue  # Merged into wind column below
+            # #1484: Nachtfenster-Skalar, keine Stundenspalte — EINE Quelle
+            # der Regel: email/helpers.NO_HOURLY_COLUMN_METRIC_IDS.
+            if mc.metric_id in NO_HOURLY_COLUMN_METRIC_IDS:
+                continue
             try:
                 metric_def = get_metric(mc.metric_id)
             except KeyError:

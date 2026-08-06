@@ -211,9 +211,12 @@ class PreviewService:
         # FixtureProvider durchreichen wie an _fetch_weather (Z.158-163) --
         # sonst loest die Demo-Vorschau einen echten Live-open-meteo-Call
         # fuer das Nacht-Segment aus und verletzt den Demo-Vertrag.
+        # Issue #1484 AC-8: auch die gewaehlte Nacht-Tiefsttemperatur
+        # braucht Nachtdaten, nicht nur die Nacht-Stundentabelle — geteilte
+        # Entscheidung night_weather_needed (Paritaet zum Versand).
+        from services.segment_weather import fetch_night_weather, night_weather_needed
         night_weather = None
-        if segment_weather and trip.display_config.show_night_block:
-            from services.segment_weather import fetch_night_weather
+        if segment_weather and night_weather_needed(trip.display_config):
             night_weather = fetch_night_weather(segment_weather[-1], provider=provider)
 
         # Issue #474: F12 Wetterlage-Label vor format_email berechnen.

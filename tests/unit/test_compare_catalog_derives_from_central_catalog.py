@@ -36,6 +36,20 @@ from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 AGGREGATION_CHECK_EXEMPTIONS: dict[str, str] = {}
 
 # ---------------------------------------------------------------------------
+# Deckungs-Ausnahme zu Pruefung (a) -- klein, benannt, DARF NUR SCHRUMPFEN.
+# Zentrale Groessen, deren Vergleichs-Aussage bereits ein ANDERER
+# Compare-Eintrag traegt: ein eigener Eintrag waere dieselbe Zahl unter
+# zweitem Namen (totes Bedienelement, #1372).
+# ---------------------------------------------------------------------------
+CENTRAL_METRICS_COVERED_ELSEWHERE: dict[str, str] = {
+    # #1484: Nacht-Tiefsttemperatur ist die Trip-Sicht auf das Nachtfenster
+    # am Etappenziel. Im Ortsvergleich (ganze Tage am festen Ort) ist das
+    # Tages-Minimum dieselbe Aussage -- Eintrag `temp_min_c`
+    # (temperature/min) deckt sie ab.
+    "temperature_night": "#1484 — deckungsgleich mit temp_min_c (temperature/min)",
+}
+
+# ---------------------------------------------------------------------------
 # Festnagelung fuer die Ausnahmen (F001): die Ausnahme betrifft AUSSCHLIESSLICH
 # den Abgleich gegen `summary_fields`. Die `aggregation` muss weiterhin eine der
 # zentralen `default_aggregations` sein -- und wo davon mehr als eine zur Wahl
@@ -76,8 +90,12 @@ def _central_metrics_without_compare_entry(
     Groessen erreicht der Compare-Katalog NICHT (sortiert, leer = in Ordnung).
     Herausgezogen, damit Produktions-Guard (echte Daten) und Wirkungsnachweis
     (reduzierte Kopie) DIESELBE Logik ausfuehren -- inklusive
-    `_compare_metric_ids()`."""
-    return sorted(set(central) - _compare_metric_ids(entries))
+    `_compare_metric_ids()`. Deckungs-Ausnahmen (s.
+    CENTRAL_METRICS_COVERED_ELSEWHERE) gelten in BEIDEN Laeufen."""
+    return sorted(
+        (set(central) - _compare_metric_ids(entries))
+        - set(CENTRAL_METRICS_COVERED_ELSEWHERE)
+    )
 
 
 def _aggregation_violations(

@@ -31,7 +31,10 @@ from app.metric_catalog import get_all_metrics, get_metric
 from app.models import ForecastDataPoint, ThunderLevel
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.comparison import render_compare_email, render_comparison_text
-from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
+from output.renderers.compare_hourly_metric_ids import (
+    HOURLY_EXCLUDED_METRIC_IDS,
+    resolve_hourly_metrics,
+)
 from output.renderers.compare_metric_ids import resolve_enabled_metrics
 from output.renderers.email.compare_html import (
     HOUR_METRICS, has_visible_hour_columns, render_compare_html,
@@ -333,22 +336,38 @@ def test_an_exempt_metric_never_produces_an_hour_column(metric_id):
     """
     metric = get_metric(metric_id)
 
-    assert metric.dp_field not in {m["key"] for m in HOUR_METRICS}, (
-        f"'{metric_id}' hat trotz Ausnahme einen Eintrag in der "
-        "Spaltenliste — sie wuerde als Spalte erscheinen."
-    )
+    # #1484: eine Ausnahme darf sich ein dp_field mit einer NICHT
+    # ausgenommenen Groesse teilen (temperature_night nutzt t2m_c wie die
+    # Temperatur) — dann gehoert die Spalte dem legitimen Eigentuemer und
+    # der Feld-Check waere ein Fehlalarm. Nur ohne solchen Eigentuemer muss
+    # das Feld komplett fehlen.
+    _owners = [
+        m for m in get_all_metrics()
+        if m.dp_field == metric.dp_field
+        and m.id not in HOURLY_EXCLUDED_METRIC_IDS
+    ]
+    if not _owners:
+        assert metric.dp_field not in {m["key"] for m in HOUR_METRICS}, (
+            f"'{metric_id}' hat trotz Ausnahme einen Eintrag in der "
+            "Spaltenliste — sie wuerde als Spalte erscheinen."
+        )
     assert resolve_hourly_metrics([metric_id]) == [], (
         f"Der Aufloeser laesst die ausgenommene Groesse '{metric_id}' durch: "
         f"{resolve_hourly_metrics([metric_id])}"
     )
 
-    html = render_compare_html(
-        _result(), hourly_metrics=["t2m_c", metric.dp_field],
-    )
-    assert _html_hour_header(html) == ["Zeit", get_metric("temperature").col_label], (
-        f"Die ausgenommene Groesse '{metric_id}' hat doch eine Spalte "
-        f"erzeugt: {_html_hour_header(html)}"
-    )
+    # Render-Nachweis nur fuer Ausnahmen mit EIGENEM Feld: bei geteiltem
+    # dp_field (temperature_night -> t2m_c) waere ["t2m_c", "t2m_c"] kein
+    # Nachweis ueber die Ausnahme, sondern nur ein Duplikat der
+    # Temperatur-Spalte. Der Aufloeser-Check oben deckt diesen Fall ab.
+    if not _owners:
+        html = render_compare_html(
+            _result(), hourly_metrics=["t2m_c", metric.dp_field],
+        )
+        assert _html_hour_header(html) == ["Zeit", get_metric("temperature").col_label], (
+            f"Die ausgenommene Groesse '{metric_id}' hat doch eine Spalte "
+            f"erzeugt: {_html_hour_header(html)}"
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -160,6 +160,15 @@ temperature	42	42°C	42	red
 temperature	137.0	137°C	137	red
 temperature	1013.0	1013°C	1013	red
 temperature	20000	20000°C	20000	red
+temperature_night	None	–	–	None
+temperature_night	-12.5	-12°C	-12	None
+temperature_night	0	0°C	0	None
+temperature_night	0.4	0°C	0	None
+temperature_night	7.5	8°C	8	None
+temperature_night	42	42°C	42	None
+temperature_night	137.0	137°C	137	None
+temperature_night	1013.0	1013°C	1013	None
+temperature_night	20000	20000°C	20000	None
 thunder	None	–	–	None
 thunder	-12.5	-12	-12	None
 thunder	0	0	0	None

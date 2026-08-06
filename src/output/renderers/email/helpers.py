@@ -90,6 +90,13 @@ def should_merge_wind_dir(dc: UnifiedWeatherDisplayConfig) -> bool:
 # Row extraction (per-segment hourly + per-night-block aggregation)
 # ----------------------------------------------------------------------
 
+# Issue #1484: Groessen ohne Stundenspalten-Semantik — der Nachtfenster-
+# Skalar erscheint als SMS-Token bzw. Abend-Untergrenze, nie als Spalte.
+# EINE Quelle fuer alle Trip-Zeilen-Bauer (Pendant der Compare-Seite:
+# compare_hourly_metric_ids.HOURLY_EXCLUDED_METRIC_IDS).
+NO_HOURLY_COLUMN_METRIC_IDS: frozenset[str] = frozenset({"temperature_night"})
+
+
 def dp_to_row(dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig,
               *, tz: ZoneInfo) -> dict:
     """Convert a single ForecastDataPoint → row dict via MetricCatalog."""
@@ -108,6 +115,8 @@ def dp_to_row(dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig,
         # z.B. confidence) werden beim Rendering still ignoriert — auch bei
         # Bestands-display_config mit enabled=True (AC-4).
         if not metric_def.selectable:
+            continue
+        if mc.metric_id in NO_HOURLY_COLUMN_METRIC_IDS:
             continue
         row[metric_def.col_key] = getattr(dp, metric_def.dp_field, None)
     if merge_wind_dir and "wind" in row:
@@ -163,6 +172,8 @@ def aggregate_night_block(dps: list[ForecastDataPoint],
         # Issue #710/#715 PO-Regel: nicht-wählbare Metriken (selectable=False)
         # werden beim Rendering still ignoriert (AC-4).
         if not metric_def.selectable:
+            continue
+        if mc.metric_id in NO_HOURLY_COLUMN_METRIC_IDS:
             continue
         values = [
             v for dp in dps
@@ -272,6 +283,8 @@ def visible_cols(rows_or_metrics: list[dict], horizon=_HORIZON_UNSET):
                 # werden auch im neuen Pfad still ignoriert (AC-4).
                 mdef = _METRICS_BY_ID.get(mid)
                 if mdef is not None and not mdef.selectable:
+                    continue
+                if mid in NO_HOURLY_COLUMN_METRIC_IDS:
                     continue
                 out.append(mid)
         return out

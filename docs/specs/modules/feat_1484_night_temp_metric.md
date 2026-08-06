@@ -50,9 +50,10 @@ wer die Hütte gebucht hat, umgekehrt.
   `src/output/renderers/trip_metric_ids.py` — Bestandsdaten-Ableitung (s.u.).
 - **Frontend:** KEINE neue Komponente. `WeatherMetricsTab` lädt den Katalog aus
   `GET /api/metrics` — der neue Eintrag erscheint automatisch als Checkbox in
-  „Welche Metriken ins Briefing?". Zu prüfen: Ausschlussliste
-  `corridorEditorState.ts:111` (`FRONTEND_EXCLUDED_CATALOG_IDS`) um
-  `temperature_night` ergänzen (keine Alarm-/Korridor-Funktion, s. Abgrenzung).
+  „Welche Metriken ins Briefing?". Geprüft (Adversary): die Ausschlussliste
+  `corridorEditorState.ts:111` braucht KEINEN Eintrag — ohne `alert_metrics`
+  taucht `temperature_night` im Alert-Mapping und damit im Korridor-Editor
+  gar nicht erst auf.
 - **Parität:** `internal/model/alert_metric_mapping.generated.json` regenerieren
   bzw. Paritätstest (`test_alert_metric_mapping_parity.py`) und Kürzel-Ratsche
   (`test_sms_token_symbol_register_ratchet.py`) bedienen.
@@ -75,9 +76,12 @@ Gespeicherte Trips kennen `temperature_night` nicht. Ableitungsregel beim Lesen
 
 Erst ein bewusster Editor-Save schreibt den expliziten Eintrag — über den
 bestehenden Merge-Pfad (`weather_config.go: mergeConfigMap`), nie Replace.
-Gleiches gilt für den Altbestands-Fallback `DEFAULT_TRIP_METRIC_IDS`
-(`trip_metric_ids.py`): dort zieht `temperature_night` mit ein, damit
-Alt-Trips ohne `display_config` das `N` behalten.
+Alt-Trips ganz **ohne** `display_config` brauchen keine Sonderbehandlung:
+sie erhalten `build_default_display_config[_for_profile]`, das
+`temperature_night` über den Katalog-Default (`default_enabled=True`)
+bereits mitführt. (`DEFAULT_TRIP_METRIC_IDS` bleibt unangetastet — der
+Adversary-Lauf hat belegt, dass ein Eintrag dort wirkungslos wäre;
+Finding F001, Sammel-Eintrag #1199.)
 
 ## Abgrenzungen (bewusst NICHT in dieser Scheibe)
 

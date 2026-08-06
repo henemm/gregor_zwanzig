@@ -392,6 +392,21 @@ class SegmentWeatherService:
             )
 
 
+def night_weather_needed(dc) -> bool:
+    """Braucht dieser Trip Nachtdaten? (#1484 AC-8)
+
+    Ja bei aktiver Nacht-Stundentabelle (``show_night_block``, bisheriges
+    Kriterium) ODER gewaehlter Nacht-Tiefsttemperatur — sonst zeigt die
+    Vorschau ein ``N``, das still auf den Tageswert zurueckfaellt, waehrend
+    der Versand den echten Nachtwert traegt. Geteilte Entscheidung fuer
+    preview_service; der Versand-Scheduler beschafft ohnehin immer.
+    """
+    return bool(
+        getattr(dc, "show_night_block", False)
+        or (dc is not None and dc.is_metric_enabled("temperature_night"))
+    )
+
+
 def fetch_night_weather(
     last_segment: SegmentWeatherData,
     provider: "Optional[WeatherProvider]" = None,

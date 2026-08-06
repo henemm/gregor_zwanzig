@@ -48,7 +48,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Block | Tokens | Pflicht? |
 |-------|--------|---------|
 | Header | `{Name}:` | immer |
-| Forecast (Nacht) | `N` | **nur Abendbriefing** (Issue #1319 Scheibe D) — im Morgenbriefing entfällt der Token komplett, nicht als `N-` — UND nur bei aktivierter Metrik „Temperatur“ (Issue #1415) |
+| Forecast (Nacht) | `N` | **nur Abendbriefing** (Issue #1319 Scheibe D) — im Morgenbriefing entfällt der Token komplett, nicht als `N-` — UND nur bei aktivierter Metrik „Nacht-Tiefsttemperatur“ (`temperature_night`, Issue #1484; bis dahin an „Temperatur“ gekoppelt, Issue #1415) |
 | Forecast (Tiefst unterwegs) | `K` | Morgen + Abend (Issue #1410) — kälteste Gehzeit-Stunde, von `N` unterschieden — nur bei aktivierter Metrik „Temperatur“ (Issue #1415) |
 | Forecast (gefühlt, Nacht) | `FN` | **nur Abendbriefing** UND nur bei aktivierter Metrik „Gefühlte Temperatur“ |
 | Forecast (gefühlt) | `FK FD` | Morgen + Abend, aber nur bei aktivierter Metrik „Gefühlte Temperatur“ |
@@ -67,7 +67,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 
 **Hinweis zu `N` (Issue #1319 Scheibe D, 2026-07-23):** Im Abendbriefing ist `N` das erste Forecast-Token wie oben dargestellt. Im Morgenbriefing entfällt `N` vollständig aus der Zeile (nicht `N-`) — die Reihenfolge rutscht entsprechend nach: `{Name}: K D FK FD R PR W G TH: TH+: ...`.
 
-**Hinweis zu `K`/`FK`/`FD`/`FN` (Issue #1410, 2026-07-28):** `K` ist die Tiefsttemperatur **unterwegs** (kälteste Gehzeit-Stunde) und steht unabhängig neben `N` (Nacht am Schlafplatz) — beide erscheinen abends gemeinsam, morgens nur `K`. Das `F`-Präfix bezeichnet die **gefühlte** Temperatur (`FN`/`FK`/`FD` als Parität zu `N`/`K`/`D`); diese drei erscheinen ausschliesslich, wenn die Metrik „Gefühlte Temperatur“ (`wind_chill`) im Trip aktiviert ist.
+**Hinweis zu `K`/`FK`/`FD`/`FN` (Issue #1410, 2026-07-28):** `K` ist die Tiefsttemperatur **unterwegs** (kälteste Gehzeit-Stunde) und steht unabhängig neben `N` (Nacht am Schlafplatz) — beide erscheinen abends gemeinsam (`N` seit Issue #1484 nur bei gewählter eigener Metrik „Nacht-Tiefsttemperatur“), morgens nur `K`. Das `F`-Präfix bezeichnet die **gefühlte** Temperatur (`FN`/`FK`/`FD` als Parität zu `N`/`K`/`D`); diese drei erscheinen ausschliesslich, wenn die Metrik „Gefühlte Temperatur“ (`wind_chill`) im Trip aktiviert ist.
 
 **Grundregel „gewählt / nicht gewählt” (PO-Entscheidung 2026-08-03, Issue #1415):** Für **jedes** Vorhersage-Kürzel gilt: geprüft, aber nichts über der Schwelle bzw. kein Wert ⇒ Null-Form (`R-`, `K-`); Metrik im Trip **abgewählt** ⇒ das Kürzel entfällt vollständig, auch die Null-Form. Eine dritte Stufe „Wert nicht abrufbar / Datenlücke im Fenster ⇒ `R?`” (#1328) gibt es bei den Schwellwert-Kürzeln `R`/`PR`/`W`/`G`/`TH:`/`TH+:` (`TH+:` seit Fix #1482, 2026-08-04) **und** seit Fix #1483 (2026-08-05, s. „Bekannte Ist-Abweichungen”) auch bei den Temperatur-Kürzeln `N`/`K`/`D`/`FN`/`FK`/`FD` (s. §4). Es gibt damit **keine unbedingten Vorhersage-Token** mehr: `N`/`K`/`D` (Metrik „Temperatur”) verhalten sich seit #1415 exakt wie `FN`/`FK`/`FD` (Metrik „Gefühlte Temperatur”), und `TH+:` verhält sich seit #1482 exakt wie `TH:`. Die Bindung Kürzel→Metrik liegt an genau einer Stelle: `SMS_MULTI_SYMBOLS_BY_METRIC` (mehrere Kürzel je Metrik) bzw. `SMS_SYMBOL_BY_METRIC` (1:1) in `src/output/renderers/sms_trip.py`, ausgewertet in `trip_report.py` (`disabled_specs` → `output/tokens/builder.py::_visible()`).
 
@@ -106,7 +106,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 
 | Token | Bedeutung | Quelle (DTO-Feld) | Beispiel |
 |-------|-----------|-------------------|----------|
-| `N{temp}` / `N-` (**nur Abendbriefing**, nur bei aktivierter Metrik „Temperatur“) | Nacht-Tiefsttemperatur °C am Schlafplatz, ganzzahlig — Fenster Ankunft→06:00 Folgetag am Etappenziel, NICHT das Tagessegment-Minimum. Im Morgenbriefing entfällt der Token komplett (kein `N-`). | `night_temp_min_c()` aus `night_weather` (Fallback: Tagessegment-`temp_min_c`, wenn `night_weather` fehlt/leer) | `N9` |
+| `N{temp}` / `N-` (**nur Abendbriefing**, nur bei aktivierter Metrik „Nacht-Tiefsttemperatur“, Issue #1484) | Nacht-Tiefsttemperatur °C am Schlafplatz, ganzzahlig — Fenster Ankunft→06:00 Folgetag am Etappenziel, NICHT das Tagessegment-Minimum. Im Morgenbriefing entfällt der Token komplett (kein `N-`). | `night_temp_min_c()` aus `night_weather` (Fallback: Tagessegment-`temp_min_c`, wenn `night_weather` fehlt/leer) | `N9` |
 | `K{temp}` / `K-` (nur bei aktivierter Metrik „Temperatur“) | Tiefsttemperatur **unterwegs** °C, ganzzahlig — kälteste Stunde der Gehzeit. Erscheint in BEIDEN Report-Typen und ist von `N` (Nacht am Schlafplatz) zu unterscheiden. | `day_window.collect_hiking_window_points()` → `hiking_field_min_max("t2m_c")`, MIN (Issue #1417) | `K3` |
 | `D{temp}` / `D-` (nur bei aktivierter Metrik „Temperatur“) | Tag-Max °C, ganzzahlig — genauer: Höchstwert **während der Gehzeit**, nicht der Kalendertag (s. Hinweis unter der Tabelle) | dieselbe Quelle wie `K`, MAX | `D24` |
 | `FN{temp}` / `FN-` (**nur Abendbriefing**, nur bei aktivierter Metrik) | **Gefühlte** Nacht-Tiefsttemperatur °C am Schlafplatz — Parität zu `N`, gleiches Fenster Ankunft→06:00 Folgetag. | `night_wind_chill_min_c()` aus `night_weather` (Fallback: Gehzeit-`wind_chill_min_c`) | `FN6` |
@@ -338,7 +338,7 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 
 | Token | Null-Form | Anmerkung |
 |-------|-----------|-----------|
-| `N` (nur Abend) | `N-` | Bei fehlender Nacht-Temperatur — **nur im Abendbriefing**; im Morgenbriefing fehlt der Token komplett (kein `N-`). **Nur** bei aktivierter Metrik „Temperatur“ (Issue #1415) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
+| `N` (nur Abend) | `N-` | Bei fehlender Nacht-Temperatur — **nur im Abendbriefing**; im Morgenbriefing fehlt der Token komplett (kein `N-`). **Nur** bei aktivierter Metrik „Nacht-Tiefsttemperatur“ (Issue #1484, vorher „Temperatur“ per #1415) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
 | `K` | `K-` | Bei fehlender Gehzeit-Tiefsttemperatur — **nur** bei aktivierter Metrik „Temperatur“ (Issue #1415) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
 | `D` | `D-` | Bei fehlender Tag-Temperatur — **nur** bei aktivierter Metrik „Temperatur“ (Issue #1415) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
 | `FN` / `FK` / `FD` | `FN-` / `FK-` / `FD-` | **Nur** bei aktivierter Metrik „Gefühlte Temperatur“, wenn lediglich die Daten fehlen. Ist die Metrik nicht gewählt, erscheint gar nichts — auch keine Null-Form (Issue #1410) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |

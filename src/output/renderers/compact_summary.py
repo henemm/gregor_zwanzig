@@ -169,11 +169,23 @@ class CompactSummaryFormatter:
 
         parts: list[str] = []
 
+        # Issue #1484: die Nacht-Untergrenze folgt der EIGENEN Groesse
+        # "temperature_night", nicht mehr "temperature".
+        night_selected = "temperature_night" in enabled
         if "temperature" in enabled:
             t = self._format_temperature(
                 summary, enabled["temperature"].use_friendly_format,
-                report_type=report_type, night_min_c=night_min_c,
+                report_type=report_type,
+                night_min_c=night_min_c if night_selected else None,
                 hiking_min_c=hiking_min_c, hiking_max_c=hiking_max_c,
+            )
+            if t:
+                parts.append(t)
+        elif night_selected:
+            # Nur die Nachtgroesse gewaehlt: abends ihr Wert als Einzelangabe
+            # (derselbe Formatierer, ohne Tages-Aggregat), morgens nichts.
+            t = self._format_temperature(
+                None, False, report_type=report_type, night_min_c=night_min_c,
             )
             if t:
                 parts.append(t)

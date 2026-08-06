@@ -56,7 +56,7 @@ for _legacy, _metric_id in FRONTEND_TO_HOURLY_METRIC_ID.items():
 # AC-11 (PO-Entscheid 2026-08-01): ausdruecklich vom Stundenverlauf
 # ausgenommene Groessen. BENANNTE Menge statt stillem Fehlen -- Bedienflaeche,
 # Aufloeser und Tests geben so dieselbe Auskunft.
-HOURLY_EXCLUDED_METRIC_IDS: frozenset[str] = frozenset({"sunshine"})
+HOURLY_EXCLUDED_METRIC_IDS: frozenset[str] = frozenset({"sunshine", "temperature_night"})
 
 # Begruendung, die die Bedienflaeche anzeigt (ueber die Katalogantwort, s.
 # compare_metric_catalog.get_compare_metric_catalog). Nennt den Grund UND die
@@ -66,6 +66,10 @@ HOURLY_EXCLUSION_REASON: dict[str, str] = {
         "Stuendlich nur als Einstrahlung (W/m²) verfuegbar, nicht als "
         "Sonnenstunden — die Bewölkung und der UV-Index beantworten dieselbe "
         "Frage stundengenau."
+    ),
+    "temperature_night": (
+        "Nachtfenster-Skalar (#1484), kein Stundenwert — stuendlich "
+        "beantwortet die Temperatur dieselbe Frage."
     ),
 }
 

@@ -154,7 +154,8 @@ def test_ac1_loader_roundtrip_preserves_flag_and_other_fields():
     # Merge/No-Loss: andere Felder unverändert übernommen
     assert dc.show_night_block is False
     assert dc.night_interval_hours == 3
-    assert len(dc.metrics) == 2
+    # #1484: abgeleitete Eintraege zaehlen nicht als geladene Nutzer-Auswahl.
+    assert len([mc for mc in dc.metrics if not mc.derived]) == 2
 
 
 # ---------------------------------------------------------------------------
