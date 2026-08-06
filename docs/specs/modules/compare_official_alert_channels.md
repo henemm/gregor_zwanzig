@@ -17,9 +17,33 @@ tags: [compare, official-alerts, sms, telegram, renderer, adr-0025]
 
 - [ ] Approved
 
+## Nachtrag (Issue #1461 S3b-2a/S3b-2b, 2026-08-06)
+
+🔴 **Die in dieser Spec beschriebene feste Schwelle `MIN_SMS_LEVEL` (orange) ist
+NICHT MEHR der aktuelle Stand.** Diese Spec dokumentiert #1332 (2026-07-23) und
+bleibt als historischer Nachweis für DIESEN Fix unverändert stehen — sie ist
+aber nicht mehr die Quelle der Wahrheit für den Vorgabewert des Filters. Seit
+Issue #1461 Scheibe S3b-2a (Trip) und S3b-2b (Ortsvergleich) geht die feste
+Schwelle in der **Startschwelle „gering"** auf: `comparison.py` ruft
+`official_alerts_to_sms_entries()` seit S3b-2b mit
+`min_official_level_for_threshold("LOW")` statt des überall unten in dieser
+Spec genannten `MIN_SMS_LEVEL` (orange) auf — gelbe (Stufe 2) amtliche
+Warnungen erscheinen dadurch jetzt in Compare-SMS **und** Compare-Telegram, wo
+sie zuvor gefiltert wurden. Alle Vorkommen von `MIN_SMS_LEVEL`/„ab orange" in
+den Abschnitten „Dependencies", „Implementation Details" und „Acceptance
+Criteria" unten beschreiben den **damaligen** Stand von #1332, nicht den
+heutigen. Aktuelle Quelle: `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md`
+(AC-17/AC-18), `docs/reference/sms_format.md` §2 „Filter".
+
+Unverändert aus #1332 gültig: der `!`-Kürzel-Marker (SMS) und der
+ausgeschriebene Warn-Block (Telegram, kein SMS-Kürzel) selbst, der geteilte
+Kürzel-Katalog `hazard_symbols.py`, die Frontend-Legende. Geändert hat sich
+ausschließlich, **ab welcher Stufe** gefiltert wird — nicht **wie** gefiltert
+wird.
+
 ## Purpose
 
-Der Ortsvergleich (Compare) meldet amtliche Warnungen heute anders als das
+Der Ortsvergleich (Compare) meldete zum Zeitpunkt dieser Spec (#1332) amtliche Warnungen anders als das
 Trip-Briefing: Compare-SMS zeigt sie **gar nicht**, Compare-Telegram zeigt sie
 **ungefiltert** (auch gelb/grün) und **ohne Kürzel/Stufe**. Dieser Fix bringt
 beide Compare-Kanäle auf denselben Sicherheits-Standard, den #1318 für den

@@ -1,7 +1,17 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-06 (Issue #923, `fix-923-sms-fidelity-backend` — neuer zustandsloser
+**Updated:** 2026-08-06 (Issue #1461 Scheibe S3b-2b, `feat-1461-s3b2b-compare-kanal-schwelle` —
+`alert_channel_thresholds` (s. S3b-2a-Eintrag darunter) gilt jetzt auch für **Ortsvergleiche**:
+dasselbe additive Geschwisterfeld (`AlertChannelThresholdsConfig`, kein neuer Typ) auf
+`ComparePreset`, gleicher zweistufiger Datenverlustschutz (Objekt- **und** Feld-Ebene), gleiche
+zwei Schreibwege (`PUT /api/compare/presets/{id}` und `PUT /api/briefings/{id}?kind=vergleich`).
+Zusätzlich zwei Verhaltensänderungen: der Compare-Regenradar-Alarm ging bisher hart verdrahtet
+nur per E-Mail raus (unabhängig vom Telegram-/SMS-Opt-in) — jetzt über denselben Kanal-Resolver
+wie die anderen beiden Compare-Alarmwege. Und der `!`-Warn-Block-Filter des Compare-SMS-/
+Telegram-**Berichts** (nicht der Alarm-Versand) geht von der festen `MIN_SMS_LEVEL`-Schwelle auf
+die Startschwelle „gering" über (s. Abschnitt „alert_channel_thresholds" unten). Details ADR-0046,
+Spec `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md`); 2026-08-06 (Issue #923, `fix-923-sms-fidelity-backend` — neuer zustandsloser
 Endpoint `POST /api/_validator/sms-fidelity-preview` (Python-Core `api/routers/validator.py`)
 hinter neuer Go-Proxy-Route (`internal/router/router.go`, `SmsFidelityPreviewProxyHandler` in
 `internal/handler/proxy.go`): Browser → Go-API (`AuthMiddleware` greift, aber **kein**
@@ -9,15 +19,15 @@ hinter neuer Go-Proxy-Route (`internal/router/router.go`, `SmsFidelityPreviewPro
 `alert-preview`/`compare-email-preview`) → Python-Core. Löst die Metrik-Editor-SMS-Vorschau
 (`ChannelFidelitySMS.svelte`, `ChannelPreviewCard.svelte`) von einer hartcodierten
 TypeScript-Simulation (`SMS_TOK`/`smsRender`) ab, analog zur bereits umgesetzten
-Alert-Vorschau (#918, ADR-0011). Spec: `docs/specs/modules/fix_923_sms_fidelity_backend.md`);
-2026-08-05 (Issue #1461 Scheibe S3b-2a, `feat-1461-s3b2-kanal-schwelle` — neues
+Alert-Vorschau (#918, ADR-0011). Spec: `docs/specs/modules/fix_923_sms_fidelity_backend.md`); 2026-08-05 (Issue #1461
+Scheibe S3b-2a, `feat-1461-s3b2-kanal-schwelle` — neues
 additives Geschwisterfeld `alert_channel_thresholds` auf `Trip` (`AlertChannelThresholdsConfig`,
 je Kanal `"LOW"`/`"MODERATE"`/`"HIGH"`, Startwert `"LOW"`): stellt je Alarm-Kanal (E-Mail ·
 Telegram · SMS) ein, ab welcher Dringlichkeit eine ausgelöste Alarm-Meldung diesen Kanal
 erreicht. Bewusst **neben** `alert_channels`, nicht darin — Top-Level-`nil`-Erbe **und**
 Feld-Level-Merge innerhalb des Unterobjekts (fehlender Kanal-Key im PUT-Body bewahrt dessen
-Bestandswert). Betrifft ausschließlich **Trips**; der Ortsvergleich bleibt bis zur Folgescheibe
-S3b-2b unverändert. Details Abschnitt „alert_channel_thresholds (Issue #1461 S3b-2a)“, ADR-0046,
+Bestandswert). Betraf zunächst ausschließlich **Trips**; der Ortsvergleich zog mit S3b-2b nach
+(s. Eintrag darüber). Details Abschnitt „alert_channel_thresholds (Issue #1461 S3b-2a)“, ADR-0046,
 Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md`); 2026-08-04 (Issue #1461 Scheibe S3a, `feat-1461-s3a-kanal-dringlichkeit` — die
 Antworten von `GET /api/cockpit/status` (Feld `alerts[]`) und `GET /api/archive/stats`
 tragen je Alarm-Eintrag weiterhin ein Feld `severity` — **Form unverändert, Bedeutung
@@ -764,9 +774,9 @@ Trip-weites Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche So
 
 Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten Trip-Anteil; das SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` (`AlertChannelsConfig`), Spec `docs/specs/_archive/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9.
 
-### alert_channel_thresholds (Issue #1461 S3b-2a)
+### alert_channel_thresholds (Issue #1461 S3b-2a Trip · S3b-2b Ortsvergleich)
 
-Additives Geschwisterfeld zu `alert_channels` (bewusst **nicht** darin — `alert_channels` wird beim Speichern als Ganzes ersetzt, all-or-nothing; ein Client ohne Kenntnis der Schwelle würde sie sonst still löschen): je Alarm-Kanal die Dringlichkeitsstufe, ab der eine ausgelöste Alarm-Meldung diesen Kanal erreichen darf.
+Additives Geschwisterfeld zu `alert_channels`/`send_telegram`+`send_sms` (bewusst **nicht** darin — der Kanal-Schalter wird beim Speichern als Ganzes ersetzt, all-or-nothing; ein Client ohne Kenntnis der Schwelle würde sie sonst still löschen): je Alarm-Kanal die Dringlichkeitsstufe, ab der eine ausgelöste Alarm-Meldung diesen Kanal erreichen darf. Identischer Vertrag auf `Trip` **und** `ComparePreset` — derselbe Go-Typ (`AlertChannelThresholdsConfig`), kein zweiter.
 
 ```json
 {"alert_channel_thresholds": {"email": "LOW", "telegram": "HIGH", "sms": "MODERATE"}}
@@ -775,9 +785,15 @@ Additives Geschwisterfeld zu `alert_channels` (bewusst **nicht** darin — `aler
 | Feld | Typ | Semantik |
 |------|-----|----------|
 | `alert_channel_thresholds` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend:** kein Kanal hat eine Schwelle gesetzt — Startwert `"LOW"` je Kanal (Python-Vorgabewert, nicht persistiert). **Gesetzt:** je Kanal maßgeblich für den Versand-Filter |
-| `alert_channel_thresholds.email`/`.telegram`/`.sms` | `"LOW"`\|`"MODERATE"`\|`"HIGH"` \| fehlend | fehlender Kanal-Key im PUT-Body → **Feld-Level-Merge** bewahrt den Bestandswert (AC-7); ein GANZ fehlendes `alert_channel_thresholds` im Body bewahrt das ganze Unterobjekt (Top-Level-`nil`-Erbe, AC-6) |
+| `alert_channel_thresholds.email`/`.telegram`/`.sms` | `"LOW"`\|`"MODERATE"`\|`"HIGH"` \| fehlend | fehlender Kanal-Key im PUT-Body → **Feld-Level-Merge** bewahrt den Bestandswert (AC-7 Trip / AC-10 Compare); ein GANZ fehlendes `alert_channel_thresholds` im Body bewahrt das ganze Unterobjekt (Top-Level-`nil`-Erbe, AC-6 Trip / AC-9 Compare) |
 
-Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn ihre Dringlichkeit (`services.alert_urgency`, `LOW`/`MODERATE`/`HIGH`) die dort eingestellte Schwelle erreicht oder übertrifft (`services.alert_channel_threshold.split_by_threshold()`). Das an das Alarm-Protokoll übergebene Kanal-Set bleibt dabei das **rohe**, unveränderte Opt-in — nur der tatsächliche Versand wird gefiltert (ADR-0046). Vollständig unterdrückte Meldungen erscheinen im nächsten Briefing als nicht zugestellt (Grund `below_channel_threshold`, S3b-1-Sichtbarkeit). Gilt in dieser Scheibe **nur für Trips**; der Ortsvergleich folgt als S3b-2b unverändert. Quelle: `internal/model/trip.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md`.
+Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn ihre Dringlichkeit (`services.alert_urgency`, `LOW`/`MODERATE`/`HIGH`) die dort eingestellte Schwelle erreicht oder übertrifft (`services.alert_channel_threshold.split_by_threshold()`). Das an das Alarm-Protokoll übergebene Kanal-Set bleibt dabei das **rohe**, unveränderte Opt-in — nur der tatsächliche Versand wird gefiltert (ADR-0046). Vollständig unterdrückte Meldungen erscheinen im nächsten Briefing als nicht zugestellt (Grund `below_channel_threshold`, S3b-1-Sichtbarkeit).
+
+**Ortsvergleich (S3b-2b), zwei Besonderheiten:**
+- Der Compare-Regenradar-Alarm (`compare_radar_alert.py`) war bis S3b-2b hart auf `{"email"}` verdrahtet — die Kanal-Schwelle greift dort seither über denselben Resolver (`effective_compare_channels()`) wie bei den beiden anderen Compare-Alarmwegen (Verhaltensänderung: Regenradar-Alarme erreichen jetzt auch Telegram/SMS).
+- Der Compare-SMS-/Telegram-**Bericht** (`comparison.py`, kein Alarm-Versand) zeigt amtliche Warnungen seit S3b-2b ab der Startschwelle „gering" statt der vormals festen `MIN_SMS_LEVEL` (orange) — unabhängig von einer je Kanal gesetzten Alarm-Schwelle desselben Ortsvergleichs (zwei getrennte Wirkungsorte, s. `docs/reference/sms_format.md`).
+
+Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md` (Trip), `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md` (Ortsvergleich).
 
 ### official_warnings (Issue #1258)
 

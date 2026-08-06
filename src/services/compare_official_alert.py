@@ -30,7 +30,7 @@ from output.renderers.alert.official_alerts import (
     dedupe_official_alerts,
     official_alert_state_key,
 )
-from services import alert_daily_limit, alert_log
+from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import (
@@ -139,9 +139,21 @@ class CompareOfficialAlertService:
 
         notification_service = self._notification_service_for(preset)
         effective_channels = self._effective_channels(preset)
+        # Issue #1461 S3b-2b: die Dringlichkeit wird VOR dem Versand
+        # hochgezogen (bisher entstand sie erst inline im `append_entry`-
+        # Argument, also NACH dem Versand) -- `split_by_threshold()` braucht
+        # sie davor. `effective_channels` bleibt fuers Protokoll ROH (rote
+        # Linie #638), nur der tatsaechliche Versand (`allowed`) wird gefiltert.
+        severity = alert_urgency.highest_urgency(*[
+            alert_urgency.urgency_from_official_level(a.level)
+            for a, _loc_ids in tagged_alerts
+        ])
+        allowed, suppressed = alert_channel_threshold.split_by_threshold(
+            effective_channels, severity, preset.get("alert_channel_thresholds"),
+        )
         result = notification_service.send_multi_location_official_alert(
             preset.get("name", preset_id), locs, tagged_alerts,
-            effective_channels,
+            allowed,
             _effective_telegram_style(preset),
             mail_sink=self._mail_sink, sms_sink=self._sms_sink,
             telegram_sink=self._telegram_sink,
@@ -150,10 +162,7 @@ class CompareOfficialAlertService:
         alert_log.append_entry(
             self._user_id, entity_id=preset_id, entity_type="compare",
             changes_count=len(tagged_alerts),
-            severity=alert_urgency.highest_urgency(*[
-                alert_urgency.urgency_from_official_level(a.level)
-                for a, _loc_ids in tagged_alerts
-            ]),
+            severity=severity,
             hazards=alert_log.hazards_from_official_alerts(
                 [a for a, _loc_ids in tagged_alerts]
             ),
@@ -161,6 +170,7 @@ class CompareOfficialAlertService:
             effective_channels=effective_channels,
             sent_channels=result.delivered_channels,
             reachable_channels=result.sent_channels,
+            below_threshold_channels=suppressed,
         )
         if not result.sent:
             return False

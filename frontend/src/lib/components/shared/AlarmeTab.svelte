@@ -76,9 +76,10 @@
 		// beide Kontexte
 		existingChannels?: Partial<AlertChannelState> | null;
 		onChannelToggle?: (kind: 'telegram' | 'sms' | 'email') => void;
-		// Issue #1461 S3b-2a: nur route liest/schreibt dieses Feld (Trip-
-		// Speicherweg). vergleich bekommt in dieser Scheibe noch keine Wirkung
-		// (Known Limitation, S3b-2b folgt).
+		// Issue #1461 S3b-2a (route) + S3b-2b (vergleich): route liest den
+		// Bestand ueber diese Prop (Trip-Speicherweg); vergleich liest/schreibt
+		// stattdessen direkt gegen `wiz.channelThresholds` (Muster
+		// metricAlertLevels/sendTelegram — kein zweiter Speicherweg noetig).
 		existingChannelThresholds?: Partial<Record<'telegram' | 'sms' | 'email', string | null>> | null;
 	}
 	let {
@@ -203,17 +204,41 @@
 		onChannelToggle?.(kind);
 	}
 
-	// ── (d2) Kanal-Schwellen — Issue #1461 S3b-2a, NUR route ────────────────
-	// vergleich: der Picker bekommt keine `thresholds`-Prop (s. Markup unten)
-	// und rendert damit unveraendert den statischen Beschreibungstext -- kein
-	// eigener Zustand noetig (Known Limitation, S3b-2b folgt).
+	// ── (d2) Kanal-Schwellen — Issue #1461 S3b-2a (route) + S3b-2b (vergleich) ─
+	// route: lokaler State, Bestand kommt ueber existingChannelThresholds-Prop.
+	// vergleich: bindet direkt an wiz.channelThresholds (Muster metricAlertLevels
+	// oben) — kein eigener lokaler State, keine eigene Persistenz-Logik hier.
+	// 🔴 Auflage (Spec „Implementation Details"): die Sichtbarkeit der
+	// Stufen-Auswahl darf NICHT vom WERT dieses Zustands abhaengen (Regress auf
+	// AC-10 aus S3b-2a) — `resolveAlertChannelThresholds()` liefert immer ein
+	// vollstaendiges Objekt (Startwert „gering" je Kanal), die Prop `thresholds`
+	// im Markup unten ist deshalb IMMER gesetzt, unabhaengig von `context`.
 	// svelte-ignore state_referenced_locally -- Prop wird bewusst nur einmal
 	// zur Initialisierung gelesen (Muster routeChannelState oben).
 	let routeChannelThresholds = $state<AlertChannelThresholdState>(
 		resolveAlertChannelThresholds(existingChannelThresholds)
 	);
+	const displayChannelThresholds = $derived<AlertChannelThresholdState>(
+		context === 'vergleich'
+			? resolveAlertChannelThresholds(wiz?.channelThresholds ?? null)
+			: routeChannelThresholds
+	);
 	function handleThresholdChange(kind: 'telegram' | 'sms' | 'email', level: ChannelThreshold) {
-		if (context === 'vergleich') return;
+		if (context === 'vergleich') {
+			if (wiz) {
+				const updated = applyThresholdChange(
+					resolveAlertChannelThresholds(wiz.channelThresholds ?? null),
+					kind,
+					level
+				);
+				wiz.channelThresholds = {
+					telegram: updated.telegram,
+					sms: updated.sms,
+					email: updated.email
+				};
+			}
+			return;
+		}
 		routeChannelThresholds = applyThresholdChange(routeChannelThresholds, kind, level);
 	}
 
@@ -323,15 +348,15 @@
 					{/if}
 				{/if}
 			{:else if id === 'channels'}
-				<!-- Issue #1461 S3b-2a AC-10/AC-11: `thresholds`/`onThresholdChange`
-				     nur im route-Zweig -- der Vergleichs-Zweig bettet denselben,
-				     jetzt erweiterten Picker weiter ein, bekommt aber (noch) keine
-				     eigene Wirkung (Known Limitation, S3b-2b folgt). -->
+				<!-- Issue #1461 S3b-2b: `thresholds`/`onThresholdChange` sind jetzt in
+				     BEIDEN Kontexten gesetzt -- alle vier Flaechen (Trip-Alarm-Reiter,
+				     Vergleichs-Hub, beide Compare-Anlege-Masken) zeigen die
+				     Stufen-Auswahl (PO-Entscheid 2026-08-06, Spec v1.3). -->
 				<AlertChannelPicker
 					channels={displayChannelState}
 					onToggle={handleChannelToggle}
-					thresholds={context === 'route' ? routeChannelThresholds : undefined}
-					onThresholdChange={context === 'route' ? handleThresholdChange : undefined}
+					thresholds={displayChannelThresholds}
+					onThresholdChange={handleThresholdChange}
 				/>
 				{#if context === 'vergleich'}
 					<!-- Issue #1260 S5: geteilter Kurzstil-Schalter (DIESELBE Komponente

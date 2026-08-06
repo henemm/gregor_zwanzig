@@ -90,6 +90,14 @@ type ComparePreset struct {
 	OfficialWarnings *OfficialWarningsConfig `json:"official_warnings,omitempty"`
 	SendTelegram     *bool                   `json:"send_telegram,omitempty"`
 	SendSms          *bool                   `json:"send_sms,omitempty"`
+	// AlertChannelThresholds — Issue #1461 S3b-2b, additives Geschwisterfeld
+	// (bewusst NICHT in AlertChannels/OfficialWarnings) fuer die je Kanal
+	// eingestellte Dringlichkeits-Schwelle. Bestehender Typ, selbes Package
+	// wie Trip (internal/model/trip.go:202) -- kein neuer Typ. nil = kein
+	// Kanal hat eine Schwelle gesetzt (Python-Startwert "LOW" je Kanal),
+	// gesetzt = Feld-Level-Merge innerhalb des Unterobjekts Pflicht
+	// (internal/handler/compare_preset.go).
+	AlertChannelThresholds *AlertChannelThresholdsConfig `json:"alert_channel_thresholds,omitempty"`
 	// Issue #1232 Scheibe 2a — Zwei-Slot-Zeitplan (additiv auf das Trip-
 	// Briefing-Modell uebertragen, docs/specs/modules/compare_preset_zeitplan.md).
 	// Pointer-Pattern wie OfficialAlertsEnabled: fehlt ein Feld im JSON

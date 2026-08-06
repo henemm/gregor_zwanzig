@@ -68,9 +68,9 @@ getrennt zu halten. Konkret bedeutet das für den Trip-Bericht (`sms_trip.py`,
 `narrow.py`): Startwert `LOW` ⇒ der Bericht zeigt künftig auch **gelbe**
 (Stufe 2) amtliche Warnungen, die er vorher nie zeigte, während der
 Alarm-**Versand** dadurch unverändert bleibt — „mehr Information ist nie ein
-Sicherheitsproblem, weniger schon". Gilt in dieser Scheibe nur für
-Trip-Berichtspfade; Ortsvergleichs-Berichte bleiben bis S3b-2b bei der
-festen Stufe 3.
+Sicherheitsproblem, weniger schon". Galt zunächst nur für Trip-Berichtspfade;
+Ortsvergleichs-Berichte zogen mit S3b-2b nach (s. Nachtrag unten) — auch dort
+gilt jetzt die Startschwelle „gering" statt der vormals festen Stufe 3.
 
 ## Verworfene Alternativen
 
@@ -106,3 +106,17 @@ festen Stufe 3.
 - **Scope dieser Scheibe (S3b-2a):** nur Trips. Der Ortsvergleich hat noch
   kein Pendant zum Datenfeld und folgt als S3b-2b — bis dahin ändert sich am
   Ortsvergleich nichts.
+- **Nachtrag (S3b-2b, 2026-08-06):** der Ortsvergleich hat nachgezogen —
+  dasselbe Datenfeld (`AlertChannelThresholdsConfig`, kein neuer Typ) jetzt
+  zusätzlich auf `ComparePreset`, an denselben drei Nahtstellen-Familien
+  (Δ-Änderungsalarm, amtliche Warnung, Regenradar). Der Regenradar-Alarm des
+  Ortsvergleichs war bis dahin hart auf `{"email"}` verdrahtet — diese
+  Scheibe stellt ihn auf denselben Kanal-Resolver um (Verhaltensänderung,
+  eigenes AC). **Zusätzlich geht auch beim Ortsvergleich die bisher feste
+  `MIN_SMS_LEVEL`-Berichtsschwelle (Stufe 3, orange) in der Startschwelle
+  „gering" auf** — derselbe Wechsel wie oben für den Trip-Bericht
+  beschrieben, jetzt auch für `comparison.py` (`render_compare_sms`/
+  `render_compare_telegram`); der Alarm-Versand bleibt davon unberührt (Details
+  `docs/reference/sms_format.md` §2). Damit ist die oben offengelassene
+  Scope-Lücke geschlossen; Issue #1461 ist mit S3b-2b vollständig
+  abgeschlossen. Spec: `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md`.

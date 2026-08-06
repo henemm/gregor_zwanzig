@@ -21,9 +21,10 @@ from typing import Optional
 
 from app.config import Settings
 from app.loader import compare_preset_to_dict, get_data_dir, load_all_locations, load_compare_presets
-from services import alert_log
+from services import alert_channel_threshold, alert_log
 import services.alert_urgency as alert_urgency
 from services.alert_state import AlertStateService
+from services.compare_alert_channels import effective_compare_channels
 from services.compare_alert_guard import is_silenced
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
@@ -123,12 +124,34 @@ class CompareRadarAlertService:
             return False
 
         notification_service = self._notification_service_for(preset)
+        # Issue #1461 S3b-2b (AC-5): die Kanalliste war hier hart auf
+        # `{"email"}` verdrahtet — unabhaengig vom Telegram-/SMS-Opt-in des
+        # Nutzers (verfallene Begruendung aus #1041 Slice 1b, s. Spec
+        # "Implementation Details" Punkt 3). Jetzt derselbe EINE Resolver wie
+        # bei den beiden anderen Compare-Alarmwegen (ADR-0021, kein
+        # Compare-eigener Filter).
+        effective_channels = effective_compare_channels(preset, self._settings, self._user_id)
+        # Die Dringlichkeit wird VOR dem Versand hochgezogen (bisher entstand
+        # sie erst inline im `append_entry`-Argument, also NACH dem Versand) --
+        # `split_by_threshold()` braucht sie davor. `effective_channels`
+        # bleibt fuers Protokoll ROH (rote Linie #638), nur der tatsaechliche
+        # Versand (`allowed`) wird gefiltert.
+        severity = alert_urgency.highest_urgency(*[
+            alert_urgency.urgency_from_radar(
+                is_convective=nowcast.is_convective,
+                intensity_label=nowcast.intensity_label,
+            )
+            for _name, _loc, nowcast in triggered
+        ])
+        allowed, suppressed = alert_channel_threshold.split_by_threshold(
+            effective_channels, severity, preset.get("alert_channel_thresholds"),
+        )
         # Issue #1383: Das Orts-Objekt MUSS mitgereicht werden — der Versand
         # leitet daraus die Ortszeit ab (vorher wurde `_loc` verworfen und die
         # Mail rendete alle Uhrzeiten in UTC).
         entities = list(triggered)
         notif_result = notification_service.send_multi_location_radar_alert(
-            entities=entities, effective_channels={"email"}, mail_sink=self._mail_sink,
+            entities=entities, effective_channels=allowed, mail_sink=self._mail_sink,
             cooldown_display=_format_cooldown_display(cooldown_minutes),
         )
         # Issue #1459: gemischt konvektive/nicht-konvektive Orte ergeben BEIDE
@@ -136,20 +159,15 @@ class CompareRadarAlertService:
         alert_log.append_entry(
             self._user_id, entity_id=preset_id, entity_type="compare",
             changes_count=len(triggered),
-            severity=alert_urgency.highest_urgency(*[
-                alert_urgency.urgency_from_radar(
-                    is_convective=nowcast.is_convective,
-                    intensity_label=nowcast.intensity_label,
-                )
-                for _name, _loc, nowcast in triggered
-            ]),
+            severity=severity,
             metrics=alert_log.register_pairs_for_nowcast(
                 [nowcast.is_convective for _name, _loc, nowcast in triggered]
             ),
             reason=alert_log.REASON_NOWCAST,
-            effective_channels={"email"},
+            effective_channels=effective_channels,
             sent_channels=notif_result.delivered_channels,
             reachable_channels=notif_result.sent_channels,
+            below_threshold_channels=suppressed,
         )
         if not notif_result.sent:
             return False

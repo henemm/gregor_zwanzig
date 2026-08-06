@@ -584,7 +584,14 @@
 			// Issue #1260: Kurzstil-Toggle im Snapshot, damit ein reiner
 			// Toggle-Klick (ohne andere Aenderung) als dirty erkannt wird und
 			// handleAlarmeCommit einen PUT ausloest.
-			telegramStyle: wizardState.telegramStyle
+			telegramStyle: wizardState.telegramStyle,
+			// Issue #1461 S3b-2b (Speicher-Bugfix): der Alarme-Reiter zeigt seit
+			// dieser Scheibe den Kanal-Picker (Telegram/SMS-Schalter + Schwelle) —
+			// ohne diese beiden Felder war eine dortige Aenderung weder als
+			// Snapshot-Differenz erkennbar noch im PUT-Body enthalten.
+			sendTelegram: wizardState.sendTelegram,
+			sendSms: wizardState.sendSms,
+			channelThresholds: wizardState.channelThresholds
 		});
 	}
 

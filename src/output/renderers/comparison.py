@@ -51,7 +51,7 @@ from output.renderers.alert.official_alerts import (
     render_official_alert_telegram,
     render_official_alerts_plain,
 )
-from output.tokens.hazard_symbols import MIN_SMS_LEVEL
+import services.alert_urgency as alert_urgency
 
 # Issue #1285: die fuenf bisher stillschweigend verworfenen Uebersichts-Zeilen
 # (Renderer-Metrik-ID, Label, Formatierung). Wert-Quelle und Formatierung sind
@@ -716,8 +716,7 @@ def render_compare_telegram(
             block.append("   " + _telegram_metric_notice(layout.demoted_count))
         if no_data_count > 0:
             block.append("   " + _telegram_no_data_notice(no_data_count))
-        # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter ab orange
-        # (`MIN_SMS_LEVEL`, wie Compare-SMS und der Trip-Pfad) + geteilte,
+        # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter + geteilte,
         # kontext-agnostische Bausteine (`build_official_alert_notices`/
         # `render_official_alert_telegram`, `trip=None` fuer den einzelnen
         # Ort) -- exakt dasselbe narrative Format wie das Trip-Telegram.
@@ -732,7 +731,14 @@ def render_compare_telegram(
         # "unbekannt" oder (ueber den Compare-Builder) "alle Orte" fuer genau
         # den einen Block -- daher `show_scope=False` statt eines zweiten
         # Builder-Aufrufs mit demselben Ergebnis.
-        filtered = [a for a in loc_result.official_alerts if a.level >= MIN_SMS_LEVEL]
+        # Issue #1461 S3b-2b (AC-17): der feste Vergleichswert `MIN_SMS_LEVEL`
+        # (orange) geht in der Startschwelle "gering" auf -- derselbe Wechsel
+        # wie beim Trip-Bericht (S3b-2a, `sms_trip.py::_official_alert_entries`).
+        # Kein Compare-Kanal-Schwellenparameter hier: der Bericht bleibt beim
+        # Startwert, unabhaengig von einer je Kanal eingestellten Alarm-Schwelle
+        # (Spec "Zwei Wirkungsorte" -- Bericht und Alarm-Versand sind getrennt).
+        _min_level = alert_urgency.min_official_level_for_threshold("LOW")
+        filtered = [a for a in loc_result.official_alerts if a.level >= _min_level]
         if filtered:
             notices = build_official_alert_notices(None, [(a, []) for a in filtered])
             sources = list(dict.fromkeys(
@@ -897,7 +903,14 @@ def _sms_location_part(
     if loc_result.error is not None:
         return f"{name} n/a"
     tz = resolve_location_tz(loc_result.location)
-    entries = official_alerts_to_sms_entries(loc_result.official_alerts, tz)
+    # Issue #1461 S3b-2b (AC-17): derselbe Wechsel wie im Compare-Telegram
+    # (oben) -- der Vorgabewert von `official_alerts_to_sms_entries()` faellt
+    # sonst auf `MIN_SMS_LEVEL` (orange) zurueck. `min_level` explizit auf die
+    # Startschwelle "gering" gesetzt, keine zweite Zahlenreihe.
+    entries = official_alerts_to_sms_entries(
+        loc_result.official_alerts, tz,
+        min_level=alert_urgency.min_official_level_for_threshold("LOW"),
+    )
     marker = _official_alert_sms_marker(entries)
 
     dedup_ids = list(dict.fromkeys(

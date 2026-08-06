@@ -1,9 +1,16 @@
 """Compare-SMS: amtliche Warnungen als `!`-Kuerzel-Marker pro Ort (#1332).
 
 SPEC: docs/specs/modules/compare_official_alert_channels.md — AC-1, AC-2
-Bug: `render_compare_sms()` liest `LocationResult.official_alerts` bislang
-GAR NICHT -- keine Warnung erscheint in der Compare-SMS, unabhaengig von der
-Stufe. Diese Tests MUESSEN vor dem Fix rot sein (kein `!`-Marker irgendwo).
+Ursprungs-Bug: `render_compare_sms()` las `LocationResult.official_alerts`
+GAR NICHT -- keine Warnung erschien in der Compare-SMS, unabhaengig von der
+Stufe.
+
+Issue #1461 S3b-2b (AC-17): der Vorgabewert ist seither die Startschwelle
+"gering" statt des vormals festen `MIN_SMS_LEVEL` (orange) -- eine gelbe
+Warnung (Stufe 2) traegt jetzt ebenfalls den `!`-Kuerzel-Marker. Der
+Stufenfilter wird wie in `test_telegram_official_alert_bubble.py:217`
+AUS DEM GETEILTEN KATALOG abgeleitet (`min_official_level_for_threshold`),
+nicht als Zahl wiederholt.
 
 Verhaltenstests -- KEINE Mocks. Echte `SavedLocation`/`LocationResult`/
 `OfficialAlert`-Objekte, echter Renderer-Aufruf (`render_compare_sms`).
@@ -14,6 +21,7 @@ from datetime import date, datetime, timezone
 
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.comparison import render_compare_sms
+from services.alert_urgency import min_official_level_for_threshold
 from services.official_alerts.models import OfficialAlert
 
 UTC = timezone.utc
@@ -64,30 +72,39 @@ def _location_part(sms: str, name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# AC-1 — nur der Ort mit Warnung >= orange traegt den `!`-Marker
+# AC-1 (bis #1461 S3b-2b: AC-17) — nur der Ort mit Warnung >= Startschwelle
+# ("gering") traegt den `!`-Marker; darunter bleibt er stumm.
 # ---------------------------------------------------------------------------
-def test_only_location_with_orange_or_red_alert_carries_marker():
-    ort_a = _loc_result("Aachen", alerts=[_alert("thunderstorm", 4)])  # rot
-    ort_b = _loc_result("Berg", alerts=[_alert("rain", 2)])  # gelb
+def test_only_location_at_or_above_threshold_carries_marker():
+    threshold = min_official_level_for_threshold("LOW")
+    ort_a = _loc_result("Aachen", alerts=[_alert("thunderstorm", 4)])  # rot, weit ueber der Schwelle
+    ort_b = _loc_result("Berg", alerts=[_alert("rain", threshold)])  # genau an der Startschwelle
     ort_c = _loc_result("Chur")  # keine Warnung
+    ort_d = _loc_result("Dorf", alerts=[_alert("fog", threshold - 1)])  # unter der Startschwelle
 
-    sms = render_compare_sms(_result([ort_a, ort_b, ort_c]))
+    sms = render_compare_sms(_result([ort_a, ort_b, ort_c, ort_d]))
 
     part_a = _location_part(sms, "Aachen")
     part_b = _location_part(sms, "Berg")
     part_c = _location_part(sms, "Chur")
+    part_d = _location_part(sms, "Dorf")
 
     assert "!TH:H" in part_a, (
         f"Ort mit roter amtlicher Warnung traegt keinen `!`-Kuerzel-Marker: "
         f"{sms!r} (Ortsteil: {part_a!r})"
     )
-    assert "!" not in part_b, (
-        f"Ort mit nur gelber Warnung darf keinen Marker tragen: "
-        f"{sms!r} (Ortsteil: {part_b!r})"
+    assert "!" in part_b, (
+        f"AC-17: eine Warnung GENAU an der Startschwelle ('gering', Stufe "
+        f"{threshold}) muss seit #1461 S3b-2b einen Marker tragen -- vorher "
+        f"war sie gefiltert: {sms!r} (Ortsteil: {part_b!r})"
     )
     assert "!" not in part_c, (
         f"Ort ohne Warnung darf keinen Marker tragen: "
         f"{sms!r} (Ortsteil: {part_c!r})"
+    )
+    assert "!" not in part_d, (
+        f"Eine Warnung UNTER der Startschwelle (Stufe {threshold - 1}) darf "
+        f"weiterhin keinen Marker tragen: {sms!r} (Ortsteil: {part_d!r})"
     )
 
 
