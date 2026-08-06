@@ -633,6 +633,9 @@ export interface ComparePreset {
 	// Default 4/19 (day_window.resolve_configured_window()).
 	day_window_start_hour?: number | null;
 	day_window_end_hour?: number | null;
+	// Issue #1461 S3b-2b — Kanal-Schwelle (analog Trip alert_channel_thresholds
+	// oben, :346), additives Geschwisterfeld zu send_telegram/send_sms.
+	alert_channel_thresholds?: { email?: string; telegram?: string; sms?: string };
 }
 
 // Issue #1068 — Nutzerlevel (Slice 1 aus Epic #1067).

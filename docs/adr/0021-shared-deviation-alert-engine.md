@@ -92,3 +92,12 @@ dieser Scheibe (Scheibe 2, #1169).
   bleiben vorerst Trip-spezifisch im Adapter (siehe „Known Limitations" der Spec) —
   eine Verallgemeinerung dieser Bausteine ist separat zu betrachten, falls Compare
   sie ebenfalls benötigt.
+- **Nachtrag (Issue #1461 S3b-2b, 2026-08-06):** der Radar-Onset-Pfad ist kein
+  Trip-Sonderweg mehr — `compare_radar_alert.py` löste seine Kanalliste bis
+  dahin hart auf `{"email"}` verdrahtet auf, unabhängig vom Kanal-Opt-in des
+  Nutzers (verfallene Begründung: „Compare-Presets besitzen keine
+  Telegram-/SMS-Empfänger-Zuordnung", überholt seit #1467 S2 AG1). Seit S3b-2b
+  nutzt auch dieser Pfad den einen Compare-Kanal-Resolver
+  (`effective_compare_channels()`) — derselbe Resolver wie die beiden anderen
+  Compare-Alarmwege. Tageslimit und Alert-Log bleiben unverändert Trip-spezifisch
+  im Adapter (kein Compare-Bedarf bekannt).

@@ -1,11 +1,17 @@
-"""Compare-Telegram: amtliche Warnungen gefiltert ab orange, ausgeschrieben
-wie das Trip-Telegram, OHNE SMS-Kuerzel (#1332).
+"""Compare-Telegram: amtliche Warnungen gefiltert ab Kanal-Schwelle,
+ausgeschrieben wie das Trip-Telegram, OHNE SMS-Kuerzel (#1332).
 
 SPEC: docs/specs/modules/compare_official_alert_channels.md — AC-2
-Bug: `render_compare_telegram()` rendert `LocationResult.official_alerts`
-heute UNGEFILTERT (auch gelb/gruen) ueber `render_official_alerts_plain()` --
-kein Sicherheits-Filter. Diese Tests MUESSEN vor dem Fix rot sein: die gelbe
-Warnung erscheint (sie darf nicht).
+Ursprungs-Bug: `render_compare_telegram()` renderte `LocationResult.
+official_alerts` UNGEFILTERT (auch gelb/gruen) ueber
+`render_official_alerts_plain()` -- kein Sicherheits-Filter.
+
+Issue #1461 S3b-2b (AC-17): der Vorgabewert ist seither die Startschwelle
+"gering" statt des vormals festen `MIN_SMS_LEVEL` (orange) -- eine gelbe
+Warnung (Stufe 2) zeigt jetzt ebenfalls einen ausgeschriebenen Warn-Block.
+Der Stufenfilter wird wie in `test_telegram_official_alert_bubble.py:217`
+AUS DEM GETEILTEN KATALOG abgeleitet (`min_official_level_for_threshold`),
+nicht als Zahl wiederholt.
 
 PO-Entscheidung (2026-07-23, final): Compare-Telegram sieht GENAU wie das
 Trip-Telegram aus (ausgeschrieben, `render_official_alert_telegram()`),
@@ -20,6 +26,7 @@ from datetime import date, datetime, timezone
 
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.comparison import render_compare_telegram
+from services.alert_urgency import min_official_level_for_threshold
 from services.official_alerts.models import OfficialAlert
 
 UTC = timezone.utc
@@ -58,7 +65,7 @@ def _result(locations: list[LocationResult]) -> ComparisonResult:
     )
 
 
-_LOCATION_NAMES = ("Aachen", "Berg", "Chur")
+_LOCATION_NAMES = ("Aachen", "Berg", "Chur", "Dorf")
 
 
 def _location_block(text: str, name: str) -> str:
@@ -76,21 +83,29 @@ def _location_block(text: str, name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# AC-2 — nur der Ort mit Stufe >= orange zeigt einen ausgeschriebenen
-# Warn-Block (wie das Trip-Telegram), NIE das SMS-Kuerzel
+# AC-2 (bis #1461 S3b-2b: AC-17) — nur der Ort mit Stufe >= Startschwelle
+# ("gering") zeigt einen ausgeschriebenen Warn-Block (wie das Trip-Telegram),
+# NIE das SMS-Kuerzel; darunter bleibt der Ort stumm.
 # ---------------------------------------------------------------------------
-def test_only_location_above_orange_shows_narrative_warn_block_no_sms_shortcode():
+def test_only_location_at_or_above_threshold_shows_narrative_warn_block_no_sms_shortcode():
+    threshold = min_official_level_for_threshold("LOW")
     ort_a = _loc_result(
         "Aachen", alerts=[_alert("thunderstorm", 4, label="Unwetter Gewitter")],
-    )  # rot
-    ort_b = _loc_result("Berg", alerts=[_alert("rain", 2, label="Starkregen")])  # gelb
+    )  # rot, weit ueber der Schwelle
+    ort_b = _loc_result(
+        "Berg", alerts=[_alert("rain", threshold, label="Starkregen")],
+    )  # genau an der Startschwelle
     ort_c = _loc_result("Chur")  # keine Warnung
+    ort_d = _loc_result(
+        "Dorf", alerts=[_alert("fog", threshold - 1, label="Nebel")],
+    )  # unter der Startschwelle
 
-    text = render_compare_telegram(_result([ort_a, ort_b, ort_c]))
+    text = render_compare_telegram(_result([ort_a, ort_b, ort_c, ort_d]))
 
     block_a = _location_block(text, "Aachen")
     block_b = _location_block(text, "Berg")
     block_c = _location_block(text, "Chur")
+    block_d = _location_block(text, "Dorf")
 
     assert "Warnstufe ROT" in block_a and "Unwetter Gewitter" in block_a, (
         f"Roter Ort zeigt keinen ausgeschriebenen Warn-Block (Trip-Format "
@@ -105,10 +120,15 @@ def test_only_location_above_orange_shows_narrative_warn_block_no_sms_shortcode(
         f"zeigen (#1332 F001, Ortsname steht bereits als Block-Ueberschrift): "
         f"{text!r} (Block: {block_a!r})"
     )
-    assert "Warnstufe" not in block_b and "⚠️" not in block_b, (
-        f"Gelbe Warnung darf im Compare-Telegram nicht mehr als Warn-Block "
-        f"erscheinen (Sicherheits-Filter ab orange): {text!r} (Block: {block_b!r})"
+    assert "Warnstufe" in block_b, (
+        f"AC-17: eine Warnung GENAU an der Startschwelle ('gering', Stufe "
+        f"{threshold}) muss seit #1461 S3b-2b einen ausgeschriebenen "
+        f"Warn-Block zeigen -- vorher war sie gefiltert: {text!r} (Block: {block_b!r})"
     )
     assert "Warnstufe" not in block_c and "⚠️" not in block_c, (
         f"Ort ohne Warnung darf keinen Warn-Block zeigen: {text!r} (Block: {block_c!r})"
+    )
+    assert "Warnstufe" not in block_d and "⚠️" not in block_d, (
+        f"Eine Warnung UNTER der Startschwelle (Stufe {threshold - 1}) darf "
+        f"weiterhin keinen Warn-Block zeigen: {text!r} (Block: {block_d!r})"
     )

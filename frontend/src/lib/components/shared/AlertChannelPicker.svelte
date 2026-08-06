@@ -30,10 +30,11 @@
 		onToggle: (kind: ChannelKind) => void;
 		targets?: Partial<Record<ChannelKind, string>>;
 		dense?: boolean;
-		// Issue #1461 S3b-2a: beide Props optional -- ohne sie bleibt die Zeile
-		// wie vor dieser Scheibe (statischer Beschreibungstext). Der Picker ist
-		// auf vier Flaechen eingebettet, davon drei im Vergleichs-Zweig, der
-		// noch keine eigene Wirkung bekommt (AC-11, Known Limitation).
+		// Issue #1461 S3b-2a/S3b-2b: beide Props optional -- ohne sie bleibt die
+		// Zeile wie vor S3b-2a (statischer Beschreibungstext). Der Picker ist auf
+		// vier Flaechen eingebettet (Trip-Alarm-Reiter, Vergleichs-Hub, beide
+		// Compare-Anlege-Masken); seit S3b-2b zeigen und bedienen alle vier die
+		// Stufen-Auswahl (kein Vergleichs-Zweig ohne eigene Wirkung mehr).
 		thresholds?: AlertChannelThresholdState;
 		onThresholdChange?: (kind: ChannelKind, level: ChannelThreshold) => void;
 	}

@@ -20,7 +20,7 @@ from typing import Optional
 
 from app.config import Settings
 from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
-from services import alert_daily_limit, alert_log
+from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
 from services.alert_preset import _PRESET_TABLE
 from services.alert_state import AlertStateService
@@ -88,11 +88,22 @@ class CompareAlertService:
 
         Issue #1170 (Adversary F001): ALLE gleichzeitig betroffenen Orte
         EINES Presets werden in EINER gebündelten Mail zusammengefasst statt
-        je Ort einzeln versendet.
+        je Ort einzeln versendet — unverändert für JEDEN Kanal, für den KEINE
+        Schwelle die Orte unterschiedlich behandelt (Normalfall).
+
+        Issue #1461 S3b-2b: hat ein Nutzer für einen Kanal eine Schwelle
+        gesetzt, die bei unterschiedlich dringlichen Orten NICHT alle Orte
+        gleich behandelt, teilt sich dieser eine Preset-Lauf in mehrere
+        Versand-Aufrufe — je Kanal-Gruppe mit IDENTISCHER Ortsliste einen.
+        Kanäle mit identischer Ortsliste bleiben weiterhin gebündelt (Team-
+        Lead-Korrektur: eine Gruppierung nach der Dringlichkeit selbst hätte
+        das ohne jede gesetzte Schwelle bereits verdoppelt — Regress-Test
+        `test_ac1_zwei_orte_unterschiedlicher_dringlichkeit_ohne_schwelle_bleibt_ein_versand`).
 
         Returns:
-            Anzahl der tatsächlich versendeten (gebündelten) Deviation-
-            Alert-Mails — EINE je Preset-Lauf mit ≥1 Treffer, nicht eine je Ort.
+            Anzahl der Preset-Läufe mit ≥1 tatsächlich zugestelltem Versand —
+            EINE je Preset-Lauf, unabhängig davon, wie viele Kanal-Gruppen
+            dieser Lauf intern erzeugt hat.
         """
         presets = self._load_presets()
         if not presets:
@@ -173,21 +184,77 @@ class CompareAlertService:
             # Warnung bei fehlendem `mail_to` gehört an die Stelle, an der ein
             # Versand tatsächlich anstünde (sonst Log-Rauschen je Leerlauf).
             notification_service = self._notification_service_for(preset)
-            entities = [(t["loc"].name, [t["fresh_point"]], t["changes"]) for t in triggered]
-            notif_result = notification_service.send_multi_location_deviation_alert(
-                entities=entities,
-                effective_channels=config.channels,
-                mail_sink=self._mail_sink,
-                location_positions=self._location_positions(location_ids, all_locations),
-                # Issue #1467 S2, Korrektur K-5: der Kurzstil-Schalter (#1260)
-                # wirkte auf genau diesem Versandweg bisher gar nicht. Gelesen
-                # wird er ueber DENSELBEN Aufloeser wie beim amtlichen
-                # Ortsvergleich-Alarm (ADR-0021, keine zweite Fassung).
-                telegram_style=effective_compare_telegram_style(preset),
-            )
+            location_positions = self._location_positions(location_ids, all_locations)
+            telegram_style = effective_compare_telegram_style(preset)
+            thresholds = preset.get("alert_channel_thresholds")
+
+            # Issue #1461 S3b-2b (AC-3, Schleifen-Falle — Team-Lead-Korrektur):
+            # das Kanal-Set (`config.channels`) entsteht einmal je PRESET,
+            # aber jeder Ort kann eine EIGENE Dringlichkeit ausloesen. Nicht
+            # nach Dringlichkeit gruppieren (das erzeugt einen zweiten Versand
+            # schon dann, wenn zwei Orte verschieden dringlich sind — auch
+            # OHNE gesetzte Schwelle, Regress auf AC-1: aus einer Mail werden
+            # zwei, ohne dass der Nutzer etwas eingestellt hat). Stattdessen:
+            # je KANAL die Ortsliste bestimmen, die dessen Schwelle (an der
+            # EIGENEN Dringlichkeit jedes Ortes gemessen) erreicht, dann
+            # Kanaele mit IDENTISCHER Ortsliste zu einem gemeinsamen Versand
+            # buendeln. Ohne gesetzte Schwelle haben alle Kanaele dieselbe
+            # (volle) Ortsliste -> genau EIN Aufruf mit allen Kanaelen, byte-
+            # identisch zum Verhalten vor dieser Scheibe.
+            entity_by_id = {t["entity_id"]: t for t in triggered}
+            below_threshold_all: set[str] = set()
+            ids_by_channel: dict[str, list[str]] = {c: [] for c in config.channels}
+            for t in triggered:
+                t_urgency = alert_urgency.urgency_from_changes(t["changes"])
+                allowed, suppressed = alert_channel_threshold.split_by_threshold(
+                    config.channels, t_urgency, thresholds,
+                )
+                below_threshold_all |= suppressed
+                for c in allowed:
+                    ids_by_channel[c].append(t["entity_id"])
+
+            # Kanaele mit identischer (Reihenfolge-unabhaengiger) Ortsliste
+            # teilen sich EINEN Versand-Aufruf.
+            groups_by_ids: dict[tuple, set[str]] = {}
+            for channel, ids in ids_by_channel.items():
+                if not ids:
+                    continue
+                key = tuple(sorted(ids))
+                groups_by_ids.setdefault(key, set()).add(channel)
+
+            delivered_all: set[str] = set()
+            reachable_all: set[str] = set()
+            any_sent = False
+            finalized_ids: set[str] = set()
+            for ids_key, channels in groups_by_ids.items():
+                group = [entity_by_id[eid] for eid in ids_key]
+                entities = [(t["loc"].name, [t["fresh_point"]], t["changes"]) for t in group]
+                notif_result = notification_service.send_multi_location_deviation_alert(
+                    entities=entities,
+                    effective_channels=channels,
+                    mail_sink=self._mail_sink,
+                    location_positions=location_positions,
+                    # Issue #1467 S2, Korrektur K-5: der Kurzstil-Schalter (#1260)
+                    # wirkte auf genau diesem Versandweg bisher gar nicht. Gelesen
+                    # wird er ueber DENSELBEN Aufloeser wie beim amtlichen
+                    # Ortsvergleich-Alarm (ADR-0021, keine zweite Fassung).
+                    telegram_style=telegram_style,
+                )
+                delivered_all |= set(notif_result.delivered_channels)
+                reachable_all |= set(notif_result.sent_channels)
+                if notif_result.sent:
+                    any_sent = True
+                    finalized_ids |= set(ids_key)
+            finalized = [entity_by_id[eid] for eid in finalized_ids]
+
             # Issue #1459: der Ortsvergleich protokollierte bisher gar nicht
             # (B1). Seit #1467 S1 traegt der Eintrag die Preset-Kennung im
             # gemeinsamen Feld `entity_id`, unterschieden durch `entity_type`.
+            # Issue #1461 S3b-2b: EIN Protokoll-Eintrag je Preset-Lauf (D1),
+            # unabhaengig davon wie viele Dringlichkeits-Gruppen oben gesendet
+            # wurden — `effective_channels` bleibt das ROHE Opt-in
+            # (`config.channels`), nur der tatsaechliche Versand wurde gefiltert
+            # (rote Linie #638).
             alle_changes = [c for t in triggered for c in t["changes"]]
             alert_log.append_entry(
                 self._user_id, entity_id=preset_id, entity_type="compare",
@@ -196,13 +263,14 @@ class CompareAlertService:
                 metrics=alert_log.register_pairs_from_changes(alle_changes),
                 reason=alert_log.REASON_FORECAST_CHANGE,
                 effective_channels=config.channels,
-                sent_channels=notif_result.delivered_channels,
-                reachable_channels=notif_result.sent_channels,
+                sent_channels=sorted(delivered_all),
+                reachable_channels=sorted(reachable_all),
+                below_threshold_channels=below_threshold_all,
             )
-            if not notif_result.sent:
+            if not any_sent:
                 continue
 
-            self._finalize_triggered_state(triggered)
+            self._finalize_triggered_state(finalized)
             self._throttle_store.record("compare_preset", preset_id, now)
             alert_daily_limit.increment(self._user_id, now)
             sent += 1

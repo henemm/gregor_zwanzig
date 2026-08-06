@@ -44,6 +44,11 @@ export interface CompareEditorEdits {
 	hourlyEnabled?: boolean;
 	// Issue #1170: Alarm-Konfiguration (Epic #1095 Scheibe 3/3). Optional → rückwärtskompatibel.
 	metricAlertLevels?: Record<string, string>;
+	// Issue #1461 S3b-2b: Kanal-Schwelle (analog metricAlertLevels), TOP-LEVEL
+	// Feld (Go-Model ComparePreset.AlertChannelThresholds, NICHT in
+	// display_config). Optional → rückwärtskompatibel (undefined = Feld nicht
+	// editiert → Round-Trip via `...original`).
+	channelThresholds?: Record<string, string>;
 	// Issue #1260 S5: Telegram-Kurzstil (display_config.telegram_style). Optional →
 	// rückwärtskompatibel; undefined = Feld nicht editiert → Round-Trip via `...original`.
 	telegramStyle?: 'rich' | 'kurzform';
@@ -204,7 +209,13 @@ export function buildComparePresetSavePayload(
 		...(edits.dayWindowStartHour !== undefined
 			? { day_window_start_hour: edits.dayWindowStartHour }
 			: {}),
-		...(edits.dayWindowEndHour !== undefined ? { day_window_end_hour: edits.dayWindowEndHour } : {})
+		...(edits.dayWindowEndHour !== undefined ? { day_window_end_hour: edits.dayWindowEndHour } : {}),
+		// Issue #1461 S3b-2b: analoges Round-Trip-Prinzip für die Kanal-Schwelle —
+		// TOP-LEVEL Feld (Go-Model ComparePreset.AlertChannelThresholds), NICHT in
+		// display_config verschachtelt (anders als metric_alert_levels oben).
+		...(edits.channelThresholds !== undefined
+			? { alert_channel_thresholds: edits.channelThresholds }
+			: {})
 	};
 
 	return { url, body };
@@ -261,6 +272,12 @@ export interface NewComparePresetFields {
 	// bisherigen sieben Spalten"), analog hourlyMetricKeys.
 	outlookMetricKeys?: string[] | null;
 	metricAlertLevels: Record<string, string>;
+	// Issue #1461 S3b-2b: Kanal-Schwelle beim Anlegen (PO-Entscheid 2026-08-06,
+	// Spec v1.3) — nur nicht-leere Werte werden gesendet (analog
+	// metricAlertLevels unten), Startwert "gering" bleibt implizit. Optional →
+	// rückwärtskompatibel (bestehende Aufrufer/Tests ohne das Feld funktionieren
+	// unverändert, der Wizard setzt es immer).
+	channelThresholds?: Record<string, string>;
 	telegramStyle: 'rich' | 'kurzform';
 }
 
@@ -315,6 +332,12 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		...(fields.alertQuietFrom !== undefined ? { alert_quiet_from: fields.alertQuietFrom } : {}),
 		...(fields.alertQuietTo !== undefined ? { alert_quiet_to: fields.alertQuietTo } : {}),
 		empfaenger: [],
+		// Issue #1461 S3b-2b: Kanal-Schwelle beim Anlegen — TOP-LEVEL Feld (Go-Model
+		// ComparePreset.AlertChannelThresholds), nur gesendet wenn mindestens ein
+		// Kanal vom Startwert "gering" abweicht (analog metric_alert_levels unten).
+		...(Object.keys(fields.channelThresholds ?? {}).length > 0
+			? { alert_channel_thresholds: fields.channelThresholds }
+			: {}),
 		// Issue #1231 Slice 4: Top-Level-Feld (analog Go-Model ComparePreset.Corridors).
 		corridors: fields.corridors,
 		display_config: {

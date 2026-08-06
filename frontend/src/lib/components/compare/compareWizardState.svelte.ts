@@ -68,6 +68,10 @@ export class CompareWizardState {
 	officialWarningsEnabled = $state(false);
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3), Trip-identische Keys.
 	metricAlertLevels = $state<Record<string, string>>({});
+	// Issue #1461 S3b-2b — Kanal-Schwelle (analog metricAlertLevels): je Kanal
+	// (telegram/sms/email) die Dringlichkeits-Schwelle, fehlende Keys = Startwert
+	// "gering" (Aufloesung ueber resolveAlertChannelThresholds, AlarmeTab.svelte).
+	channelThresholds = $state<Record<string, string>>({});
 	// Issue #1260 S5 — Telegram-Kurzstil fuer amtliche Compare-Warnungen
 	// (display_config.telegram_style). Default "rich".
 	telegramStyle = $state<'rich' | 'kurzform'>('rich');
@@ -139,6 +143,7 @@ export class CompareWizardState {
 			hourlyMetricKeys: this.hourlyMetricKeys,
 			outlookMetricKeys: this.outlookMetricKeys, // Issue #1361/#1368
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170
+			channelThresholds: this.channelThresholds, // Issue #1461 S3b-2b
 			telegramStyle: this.telegramStyle // Issue #1260 S5
 		});
 		try {
@@ -180,6 +185,7 @@ export class CompareWizardState {
 			outlookMetricKeys: this.outlookMetricKeys, // Issue #1361/#1368
 			outlookEnabled: this.outlookEnabled,
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170
+			channelThresholds: this.channelThresholds, // Issue #1461 S3b-2b
 			alertCooldownMinutes: this.alertCooldownMinutes,
 			alertQuietFrom: this.alertQuietFrom,
 			alertQuietTo: this.alertQuietTo,

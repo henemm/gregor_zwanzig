@@ -410,6 +410,25 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.SendSms == nil {
 			updated.SendSms = original.SendSms
 		}
+		// Issue #1461 S3b-2b: alert_channel_thresholds erhalten wenn Body es
+		// nicht traegt (nil nach Decode = Feld fehlte im Request), analog
+		// OfficialWarnings -- PLUS Feld-Level-Merge innerhalb des
+		// Unterobjekts (Muster OfficialWarnings.Sources, Fix-Loop F002 dort):
+		// ein PUT, das nur EINEN Kanal mitschickt, darf die anderen,
+		// unangetasteten Kanaele nicht loeschen.
+		if updated.AlertChannelThresholds == nil {
+			updated.AlertChannelThresholds = original.AlertChannelThresholds
+		} else if original.AlertChannelThresholds != nil {
+			if updated.AlertChannelThresholds.Email == nil {
+				updated.AlertChannelThresholds.Email = original.AlertChannelThresholds.Email
+			}
+			if updated.AlertChannelThresholds.Telegram == nil {
+				updated.AlertChannelThresholds.Telegram = original.AlertChannelThresholds.Telegram
+			}
+			if updated.AlertChannelThresholds.Sms == nil {
+				updated.AlertChannelThresholds.Sms = original.AlertChannelThresholds.Sms
+			}
+		}
 		// Issue #764: forecast_hours erhalten wenn Body es nicht trägt (0 = Feld fehlte im Body).
 		if updated.ForecastHours == 0 {
 			updated.ForecastHours = original.ForecastHours

@@ -112,6 +112,9 @@ export interface HubEdit {
 	// Issue #1361 Befund 2/#1368: Ausblick-Auswahl + Schalter.
 	outlookMetricKeys?: string[] | null;
 	outlookEnabled?: boolean;
+	// Issue #1461 S3b-2b: Kanal-Schwelle, TOP-LEVEL Feld (Go-Model
+	// ComparePreset.AlertChannelThresholds), analog metricAlertLevels.
+	channelThresholds?: Record<string, string>;
 }
 
 /**
@@ -143,6 +146,11 @@ export function buildHubPutPayload(
 		activeMetricKeys: edit.activeMetricKeys ?? normalizeStoredActiveMetrics(displayConfig.active_metrics) ?? undefined,
 		metricAlertLevels:
 			edit.metricAlertLevels ?? (displayConfig.metric_alert_levels as Record<string, string> | undefined),
+		// Issue #1461 S3b-2b: 1:1 Round-Trip wie alle anderen HubEdit-Felder,
+		// TOP-LEVEL (nicht in display_config), undefined bleibt undefined.
+		channelThresholds:
+			edit.channelThresholds ??
+			(preset.alert_channel_thresholds as Record<string, string> | undefined),
 		corridors: edit.corridors ?? preset.corridors,
 		// Issue #1256 Scheibe 7: Versand-Felder 1:1 durchreichen — undefined
 		// bleibt undefined (Round-Trip aus `preset` via buildComparePresetSavePayload),
@@ -445,6 +453,14 @@ export interface AlarmHydrationTarget {
 	// Issue #1260: Telegram-Kurzstil-Toggle im Hub-Alarme-Tab
 	// (display_config.telegram_style). Default "rich".
 	telegramStyle?: 'rich' | 'kurzform';
+	// Issue #1461 S3b-2b (bestaetigter Speicher-Fehler, s. Spec „Implementation
+	// Details"): sendTelegram/sendSms fehlten hier bisher komplett -- eine
+	// Kanal-Umschaltung im Alarme-Reiter war deshalb weder als Snapshot-Differenz
+	// erkennbar noch im PUT-Body enthalten (der Server-Bestand wurde beim
+	// naechsten Alarme-Save aktiv zurueckgeschrieben). Analog channelThresholds.
+	sendTelegram?: boolean;
+	sendSms?: boolean;
+	channelThresholds?: Record<string, string>;
 	// Issue #1320: activeMetricKeys wird sonst nur von den Hydrations-Effekten
 	// der Tabs "wetter-metriken"/"idealwerte" befuellt — fehlt Alarme als
 	// Erst-Tab (Deep-Link), zeigt AlarmeTab.svelte faelschlich "keine Metriken".
@@ -483,6 +499,12 @@ export function hydrateAlarmFieldsFromPreset(
 		preset.official_warnings?.enabled ?? preset.official_alert_triggers_enabled !== false;
 	state.radarAlertEnabled = preset.radar_alert_enabled ?? false;
 	state.metricAlertLevels = (displayConfig.metric_alert_levels as Record<string, string>) ?? {};
+	// Issue #1461 S3b-2b (Speicher-Bugfix): sendTelegram/sendSms UND die
+	// Kanal-Schwelle mit-hydrieren, damit eine Aenderung im Alarme-Reiter als
+	// Snapshot-Differenz erkennbar wird (s. AlarmHydrationTarget-Kommentar).
+	state.sendTelegram = preset.send_telegram ?? false;
+	state.sendSms = preset.send_sms ?? false;
+	state.channelThresholds = (preset.alert_channel_thresholds as Record<string, string>) ?? {};
 	state.alertCooldownMinutes = preset.alert_cooldown_minutes;
 	state.alertQuietFrom = preset.alert_quiet_from;
 	state.alertQuietTo = preset.alert_quiet_to;
@@ -515,6 +537,16 @@ export interface AlarmSnapshot {
 	// Issue #1260: Teil des Snapshots, damit ein reiner Kurzstil-Toggle-Klick im
 	// Hub-Alarme-Tab als "dirty" erkannt wird und einen PUT ausloest.
 	telegramStyle?: 'rich' | 'kurzform';
+	// Issue #1461 S3b-2b (Speicher-Bugfix): sendTelegram/sendSms UND die
+	// Kanal-Schwelle sind Teil DIESES Snapshots -- der Alarme-Reiter zeigt seit
+	// dieser Scheibe den Kanal-Picker (inkl. Telegram/SMS-Schalter), eine dort
+	// vorgenommene Aenderung muss deshalb wie jede andere Alarme-Aenderung als
+	// Snapshot-Differenz erkennbar sein UND im PUT-Body landen. Optional (wie
+	// alertCooldownMinutes u.a.) -- bestehende Snapshot-Fixtures ohne diese
+	// Felder bleiben gueltig, `undefined` bedeutet "nicht editiert" (Round-Trip).
+	sendTelegram?: boolean;
+	sendSms?: boolean;
+	channelThresholds?: Record<string, string>;
 }
 
 /**
@@ -559,7 +591,13 @@ export function flushPendingAlarmSave(
 		alertQuietTo: current.alertQuietTo,
 		// Issue #1260: Kurzstil in den PUT-Payload — landet via
 		// buildComparePresetSavePayload in display_config.telegram_style (RMW).
-		telegramStyle: current.telegramStyle
+		telegramStyle: current.telegramStyle,
+		// Issue #1461 S3b-2b (Speicher-Bugfix): ohne diese beiden Zeilen wurden
+		// die Server-Werte bei jedem Alarme-Save aktiv zurueckgeschrieben (s.
+		// AlarmSnapshot-Kommentar).
+		sendTelegram: current.sendTelegram,
+		sendSms: current.sendSms,
+		channelThresholds: current.channelThresholds
 	});
 }
 
@@ -597,7 +635,12 @@ export function rollbackAlarmSnapshot(
 		'alertQuietTo',
 		// Issue #1260: der Kurzstil-Toggle rollt bei PUT-Fehler diff-basiert
 		// zurueck wie die uebrigen Alarme-Snapshot-Felder.
-		'telegramStyle'
+		'telegramStyle',
+		// Issue #1461 S3b-2b (Speicher-Bugfix): rollen bei PUT-Fehler diff-basiert
+		// zurueck wie die uebrigen Alarme-Snapshot-Felder.
+		'sendTelegram',
+		'sendSms',
+		'channelThresholds'
 	];
 	const target = state as Record<string, unknown>;
 	for (const field of fields) {
