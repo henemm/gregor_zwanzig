@@ -165,6 +165,51 @@ def enrich_thunder(
     _fuse_thunder_levels(reihe.data)
 
 
+def _hole_eintraege(
+    quelle_name: str, location: "Location", von: datetime, bis: datetime,
+) -> list:
+    """Ruft `quelle_name` ab und liefert `[(Feld, Werte)]`. Frisch ermittelt
+    bei JEDEM Aufruf, ob die Quelle `fetch_thunder_signals_named`/`_multi`/die
+    Einzelwert-Methode anbietet -- eine Vertretung schreibt dadurch
+    strukturell in die Felder, die SIE SELBST benennt (#1492 S2a Spec
+    Implementation Details Punkt 4), kein Sonderfall-Code noetig. Kann
+    `providers.base.ThunderSourceUnavailableError` werfen (Vertrag des
+    Providers, s. dort) -- das faengt die aufrufende Stelle ab."""
+    from providers.base import ThunderSignalProvider, get_provider
+
+    provider = get_provider(quelle_name)
+    if not isinstance(provider, ThunderSignalProvider):
+        # Wer das Protokoll nicht erfuellt, liefert nichts — kein Fehler.
+        logger.debug("Quelle '%s' liefert keine Gewittersignale", quelle_name)
+        return []
+
+    # Benannter Abruf hat Vorrang (Spec AC-9, #1457 S2b): Quellen, die
+    # MEHRERE Signale getrennt liefern, sagen selbst, wie ihre Signale
+    # heissen; welches Modellfeld dazu gehoert, steht allein in der Tabelle
+    # oben. Wer den benannten Weg nicht hat, bleibt unveraendert auf dem
+    # Einzelwert-/Sammelweg vollwertig. Sammelabruf bevorzugt (Spec AC-9):
+    # Quellen, die mehrere Orte aus EINEM Abfragefenster bedienen koennen,
+    # werden auch hier darueber gerufen — auch bei nur einem Ort.
+    benannt = getattr(provider, "fetch_thunder_signals_named", None)
+    sammeln = getattr(provider, "fetch_thunder_signals_multi", None)
+    if callable(benannt):
+        benannte = benannt(location, von, bis) or {}
+        return [
+            (feld, benannte.get(signalname) or {})
+            for signalname, feld in _SIGNAL_ZU_FELD.items()
+        ]
+    if callable(sammeln):
+        gesammelt = sammeln([location], von, bis) or {}
+        # Ein Ort rein, ein Eintrag raus — der Schluessel gehoert der
+        # Quelle, deshalb wird er hier nicht nachgebaut.
+        signale: Dict[int, Optional[float]] = (
+            next(iter(gesammelt.values())) if len(gesammelt) == 1 else {}
+        )
+    else:
+        signale = provider.fetch_thunder_signals(location, von, bis)
+    return [(_EINZELWERT_FELD, signale or {})]
+
+
 def _fetch_lightning_density(
     reihe: "NormalizedTimeseries",
     location: "Location",
@@ -175,8 +220,15 @@ def _fetch_lightning_density(
     ``_SIGNAL_ZU_FELD`` (benannte Quelle, #1457 S2b). Extrahiert aus
     ``enrich_thunder()``, damit dessen frueher ``return`` bei fehlender
     Zustaendigkeit/leerer Antwort die nachfolgende Fusion
-    (``_fuse_thunder_levels``) nicht mehr uebersprungen wird."""
-    from providers.thunder_routing import thunder_provider_for
+    (``_fuse_thunder_levels``) nicht mehr uebersprungen wird.
+
+    #1492 S2a: faellt die Primaerquelle ECHT aus (`ThunderSourceUnavailableError`,
+    Spec ADR-0047), wird die benannte Vertretung (`thunder_vertretung_for`)
+    EINMAL nachgefragt -- mit ihrem eigenen vollen Zeitbudget, keine
+    Restzeit-Weitergabe (Known Limitations 1). Scheitert sie selbst auch,
+    propagiert die Ausnahme zum bestehenden aeusseren Fang in
+    ``enrich_thunder()`` (Spec AC-5)."""
+    from providers.thunder_routing import thunder_provider_for, thunder_vertretung_for
 
     quelle = thunder_provider_for(location.latitude, location.longitude)
     if quelle is None:
@@ -184,49 +236,23 @@ def _fetch_lightning_density(
     if quelle == bereits_befragt:
         return
 
-    from providers.base import ThunderSignalProvider, get_provider
-
-    provider = get_provider(quelle)
-    if not isinstance(provider, ThunderSignalProvider):
-        # Wer das Protokoll nicht erfuellt, liefert nichts — kein Fehler.
-        logger.debug("Quelle '%s' liefert keine Gewittersignale", quelle)
-        return
+    from providers.base import ThunderSourceUnavailableError
 
     basis = _bezugszeitpunkt(reihe)
     letzter = max(_naiv_utc(dp.ts) for dp in reihe.data)
     von = basis.replace(tzinfo=timezone.utc)
     bis = letzter.replace(tzinfo=timezone.utc)
-    # Sammelabruf bevorzugt (Spec AC-9): Quellen, die mehrere Orte aus EINEM
-    # gemeinsamen Abfragefenster bedienen koennen, werden auch hier darueber
-    # gerufen — auch bei nur einem Ort. So gibt es genau EINEN Abrufweg
-    # statt zweier, die auseinanderdriften. Wer den Sammelweg nicht hat,
-    # wird unveraendert einzeln gefragt; das bleibt Teil des Protokolls und
-    # nennt weiterhin keine Quelle beim Namen (AC-8).
-    #
-    # Benannter Abruf hat Vorrang (Spec AC-9, #1457 S2b): Quellen, die
-    # MEHRERE Signale getrennt liefern, sagen selbst, wie ihre Signale
-    # heissen; welches Modellfeld dazu gehoert, steht allein in der Tabelle
-    # oben. Wer den benannten Weg nicht hat, bleibt unveraendert auf dem
-    # Einzelwert-/Sammelweg vollwertig.
-    benannt = getattr(provider, "fetch_thunder_signals_named", None)
-    sammeln = getattr(provider, "fetch_thunder_signals_multi", None)
-    if callable(benannt):
-        benannte = benannt(location, von, bis) or {}
-        eintraege = [
-            (feld, benannte.get(signalname) or {})
-            for signalname, feld in _SIGNAL_ZU_FELD.items()
-        ]
-    else:
-        if callable(sammeln):
-            gesammelt = sammeln([location], von, bis) or {}
-            # Ein Ort rein, ein Eintrag raus — der Schluessel gehoert der
-            # Quelle, deshalb wird er hier nicht nachgebaut.
-            signale: Dict[int, Optional[float]] = (
-                next(iter(gesammelt.values())) if len(gesammelt) == 1 else {}
-            )
-        else:
-            signale = provider.fetch_thunder_signals(location, von, bis)
-        eintraege = [(_EINZELWERT_FELD, signale or {})]
+
+    aktive_quelle = quelle
+    try:
+        eintraege = _hole_eintraege(quelle, location, von, bis)
+    except ThunderSourceUnavailableError:
+        ersatz = thunder_vertretung_for(quelle)
+        if ersatz is None or ersatz == bereits_befragt:
+            return
+        aktive_quelle = ersatz
+        eintraege = _hole_eintraege(ersatz, location, von, bis)
+
     if not any(werte for _feld, werte in eintraege):
         return
 
@@ -241,7 +267,27 @@ def _fetch_lightning_density(
                 continue
             setattr(dp, feld, wert)
             gefuellt += 1
-    if gefuellt:
+    if not gefuellt:
+        return
+
+    if aktive_quelle == quelle:
         logger.info(
             "Gewittersignale von '%s': %d Zeitpunkte gefuellt", quelle, gefuellt
         )
+        return
+
+    # #1492 S2a AC-4: Herkunft vermerken. Merge-Schutz (Known Limitations 3):
+    # `fallback_model`/`fallback_reason` nur setzen, wenn noch unbesetzt --
+    # ein Grundvorhersage-Fallback (#1115) darf nicht ueberschrieben werden.
+    # `fallback_metrics` bleibt davon unberuehrt, immer append-faehig.
+    reihe.meta.fallback_metrics.extend(
+        sorted({feld for feld, werte in eintraege if werte})
+    )
+    if reihe.meta.fallback_model is None:
+        reihe.meta.fallback_model = aktive_quelle
+        reihe.meta.fallback_reason = "thunder_source_unavailable"
+    logger.warning(
+        "Gewittersignale von Ersatzquelle '%s' statt '%s' "
+        "(nicht erreichbar): %d Zeitpunkte gefuellt",
+        aktive_quelle, quelle, gefuellt,
+    )

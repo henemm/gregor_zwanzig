@@ -48,7 +48,7 @@ from tenacity import (
 )
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
-from providers.base import ProviderRequestError
+from providers.base import ProviderRequestError, ThunderSourceUnavailableError
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -341,6 +341,7 @@ class DwdDirectProvider:
             ttt = int((ziel - lauf).total_seconds() // 3600)
             if ttt < 0 or ttt > THUNDER_MAX_TIMESTEP:
                 return None
+            zustand["versucht"] = int(zustand["versucht"]) + 1
             try:
                 raw = self._request(_build_url(lauf, ttt, param))
             except httpx.HTTPStatusError as e:
@@ -350,6 +351,7 @@ class DwdDirectProvider:
                     and int(zustand["index"]) < len(kandidaten) - 1
                 )
                 if not weiterer_kandidat:
+                    zustand["fehlgeschlagen"] = int(zustand["fehlgeschlagen"]) + 1
                     logger.warning(
                         "Gewittersignal '%s' +%dh nicht abrufbar: %s",
                         param, ttt, e,
@@ -363,6 +365,7 @@ class DwdDirectProvider:
                 )
                 continue
             except Exception as e:
+                zustand["fehlgeschlagen"] = int(zustand["fehlgeschlagen"]) + 1
                 logger.warning(
                     "Gewittersignal '%s' +%dh nicht abrufbar: %s", param, ttt, e
                 )
@@ -400,6 +403,13 @@ class DwdDirectProvider:
         ergebnis: Dict[str, Dict[int, Optional[float]]] = {
             param: {} for param in THUNDER_PARAMS
         }
+        # #1492 S2a: ausserhalb des try/except definiert, damit die
+        # Zaehllogik auch dann auswertbar bleibt, wenn im try-Block VOR
+        # ihrer Zuweisung schon etwas scheitert -- sonst koennte ein
+        # UnboundLocalError den "wirft NIE"-Vertrag dieser Methode brechen.
+        zustand: Dict[str, object] = {
+            "index": 0, "bestaetigt": False, "versucht": 0, "fehlgeschlagen": 0,
+        }
         try:
             now = datetime.now(timezone.utc)
             # Nullpunkt der Offsets: das gewuenschte Zeitfenster, nie vor dem
@@ -410,7 +420,6 @@ class DwdDirectProvider:
             offsets = _thunder_offsets(base, end)
             kandidaten = _thunder_run_candidates(now)
             lat, lon = location.latitude, location.longitude
-            zustand: Dict[str, object] = {"index": 0, "bestaetigt": False}
             # Zeitgrenze fest, nicht rollend (Lehre #1448): EINMAL je Abruf
             # gebildet, dann vor JEDEM Einzel-Call geprueft.
             deadline_at = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
@@ -449,6 +458,14 @@ class DwdDirectProvider:
                     break
         except Exception:
             logger.warning("Gewitter-Abruf fehlgeschlagen", exc_info=True)
+        # #1492 S2a Implementation Details Punkt 3: NACH dem try/except, damit
+        # der neue Ausnahmetyp nicht vom generischen `except Exception:`
+        # darueber verschluckt wird -- er soll zum Aufrufer (thunder_enrichment)
+        # durchschlagen.
+        versucht = int(zustand["versucht"])
+        fehlgeschlagen = int(zustand["fehlgeschlagen"])
+        if versucht > 0 and fehlgeschlagen == versucht:
+            raise ThunderSourceUnavailableError(self.name, versucht)
         return ergebnis
 
     def fetch_thunder_signals(

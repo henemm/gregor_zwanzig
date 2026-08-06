@@ -109,3 +109,4 @@ bzw. in den Specs unter `docs/specs/`.
 | [0044](0044-kalendertage-folgen-der-ortszeit.md) | „Heute" und „morgen" bestimmen sich nach der Ortszeit der Tour, nicht nach Weltzeit — Dauern bleiben davon unberührt (ergänzt 0035, Issue #1470) | Akzeptiert |
 | [0045](0045-generiertes-eingebettetes-artefakt-fuer-cross-stack-abbildung.md) | Ein generiertes, kompilierzeit-eingebettetes Artefakt (`go:embed` + Erzeuger-Skript) löst Cross-Stack-Duplikate — nicht nur ein erweiterter Paritätstest (ergänzt 0015 Regel 3, Issue #1435 Etappe E5) | Akzeptiert |
 | [0046](0046-alarm-kanal-schwelle.md) | Kanal-Schwelle regelt AUF WELCHEM WEG eine Meldung ankommt — nicht OB (ergänzt 0043, Issue #1461 S3b-2a) | Akzeptiert |
+| [0047](0047-gewitter-vertretung-zwischen-direktquellen.md) | Gewitter-Vertretung zwischen Direktquellen bei echtem Dienstausfall — dehnt 0018 auf die Gewitter-Domäne aus, grenzt sich von 0025 ab (Issue #1492 Scheibe 2a) | Akzeptiert |
