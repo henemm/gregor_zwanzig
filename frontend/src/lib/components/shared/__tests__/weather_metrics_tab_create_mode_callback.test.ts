@@ -38,26 +38,47 @@ describe('AC-1/AC-2/AC-3 (Test 3): onWeatherMetricsChange-Rückkanal im Anlege-M
 		);
 	});
 
-	test('ein $effect ruft im createMode onWeatherMetricsChange mit buildWeatherPayload().metrics auf', () => {
+	test('ein $effect ruft im createMode+catalogLoaded onWeatherMetricsChange mit buildWeatherMetricsList() auf', () => {
 		// Bewusst NICHT nur "kommt der Text vor" — die Guard-Bedingung und der
 		// übergebene Ausdruck müssen exakt zusammenhängen (derselbe Effect-Block),
 		// sonst könnte ein leerer/falscher Callback-Aufruf denselben Text streuen.
+		//
+		// Fix-Loop 3 (Staging-Befund, effect_update_depth_exceeded trotz
+		// Fix-Loop 2): der Effect ruft jetzt buildWeatherMetricsList() (liest
+		// `trip` gar nicht) statt buildWeatherPayload().metrics, UND das Guard
+		// verlangt zusaetzlich catalogLoaded -- ohne dieses Gate ueberschreiben
+		// sich die zwei WeatherMetricsTab-Mounts (Desktop+Mobile,
+		// TripNewEditor.svelte) gegenseitig, solange eine der beiden Instanzen
+		// ihren eigenen Katalog noch nicht geladen hat (leere Liste schlaegt
+		// die laengst gueltige Liste der anderen Instanz tot -- Endlosschleife
+		// per Playwright reproduziert, docs/artifacts/fix-1552-neuanlage-
+		// metrikverlust/red_effect_loop_playwright.txt).
 		const effectMatch = code.match(
-			/\$effect\(\(\)\s*=>\s*\{\s*if\s*\(createMode\s*&&\s*onWeatherMetricsChange\)\s*\{\s*onWeatherMetricsChange\(buildWeatherPayload\(\)\.metrics\);/
+			/\$effect\(\(\)\s*=>\s*\{\s*if\s*\(createMode\s*&&\s*onWeatherMetricsChange\s*&&\s*catalogLoaded\)\s*\{\s*onWeatherMetricsChange\(buildWeatherMetricsList\(\)\);/
 		);
 		assert.ok(
 			effectMatch,
-			'Kein $effect gefunden, der bei createMode && onWeatherMetricsChange ' +
-				'onWeatherMetricsChange(buildWeatherPayload().metrics) aufruft — ' +
-				'die Auswahl aus dem Anlege-Dialog würde weiterhin nicht nach oben emittiert'
+			'Kein $effect gefunden, der bei createMode && onWeatherMetricsChange && ' +
+				'catalogLoaded onWeatherMetricsChange(buildWeatherMetricsList()) aufruft'
 		);
 	});
 
 	test('der neue Effect ist NICHT identisch mit dem bestehenden onChannelsChange-Effect (eigener Block)', () => {
 		const weatherEffectCount = (
-			code.match(/\$effect\(\(\)\s*=>\s*\{\s*if\s*\(createMode\s*&&\s*onWeatherMetricsChange\)/g) ?? []
+			code.match(/\$effect\(\(\)\s*=>\s*\{\s*if\s*\(createMode\s*&&\s*onWeatherMetricsChange\s*&&\s*catalogLoaded\)/g) ?? []
 		).length;
 		assert.equal(weatherEffectCount, 1, 'Der Wetter-Metrik-Rückkanal-Effect muss genau einmal vorkommen');
+	});
+
+	test('buildWeatherMetricsList() liest trip nicht (Fix-Loop 3, Root-Cause-Guard)', () => {
+		const fnMatch = code.match(/function buildWeatherMetricsList\(\)\s*\{[\s\S]*?\n\t\}/);
+		assert.ok(fnMatch, 'buildWeatherMetricsList() nicht gefunden');
+		assert.doesNotMatch(
+			fnMatch[0],
+			/trip[!?.]/,
+			'buildWeatherMetricsList() liest trip -- damit waere trip wieder eine ' +
+				'getrackte Abhaengigkeit des Rueckkanal-Effects (Fix-Loop-2-Regression)'
+		);
 	});
 });
 
