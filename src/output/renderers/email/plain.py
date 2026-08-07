@@ -24,6 +24,7 @@ from app.profile import ActivityProfile
 from utils.timezone import local_fmt
 
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
@@ -359,12 +360,15 @@ def render_plain(
     lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     model_name = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"
     lines.append(f"Data: {segments[0].provider} ({model_name})")
-    if segments[0].timeseries and segments[0].timeseries.meta.fallback_model:
-        fb = segments[0].timeseries.meta
-        if fb.fallback_metrics:
-            lines.append(f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}")
-        else:
-            lines.append(f"Fallback: {fb.fallback_model}")
+    # Issue #1492 S2b: Herkunfts-Vertretung in Klartext, aus dem geteilten
+    # Modul (R6) statt zweier gespiegelter Kopien hier und in html.py. Liefert
+    # 0-2 Zeilen (Gewitter- und/oder Wetterzeile, R1) — der frueher hier
+    # gebaute technische Wortlaut "Fallback {metrics}: {model}" verknuepfte
+    # beide Angaben ungeprueft und war im Kollisionsfall falsch (R5).
+    # Die Segmentauswahl ist GETEILT (`select_fallback_meta`) und durchsucht
+    # alle Etappen — `segments[0]` verschwieg eine Vertretung, die erst eine
+    # spaetere Etappe betraf.
+    lines.extend(build_fallback_lines(select_fallback_meta(segments)))
     # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile
     # (SSoT-Helper) -- Zeile 2 zeigt die echte Datenquelle
     # (`segments[0].provider`), nicht mehr den internen Renderer-Pfad.

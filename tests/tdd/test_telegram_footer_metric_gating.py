@@ -31,7 +31,12 @@ _TZ = ZoneInfo("Europe/Vienna")
 # ---------------------------------------------------------------------------
 
 
-def _make_segment():
+def _make_segment(*, fallback_model=None, fallback_metrics=None, fallback_reason=None):
+    """Issue #1492 S2b: optionale Fallback-Markierung auf `timeseries.meta`.
+
+    Default (alle drei None) reproduziert exakt das Bestandsverhalten der
+    #954-Tests — sie bleiben von der Erweiterung unberuehrt.
+    """
     from app.models import (
         ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
         SegmentWeatherData, SegmentWeatherSummary, ThunderLevel, TripSegment,
@@ -49,6 +54,9 @@ def _make_segment():
         run=datetime(2026, 7, 3, 0, 0, tzinfo=timezone.utc),
         grid_res_km=1.3, interp="point_grid",
     )
+    meta.fallback_model = fallback_model
+    meta.fallback_metrics = list(fallback_metrics or [])
+    meta.fallback_reason = fallback_reason
     ts = NormalizedTimeseries(meta=meta, data=[])
     agg = SegmentWeatherSummary(
         temp_min_c=12.0, temp_max_c=14.0, wind_max_kmh=8.0,
@@ -80,12 +88,26 @@ _ROW = {
 }
 
 
-def _overview_bubble_text(metric_ids: list[str]) -> str:
+def _overview_bubble_text(metric_ids: list[str], **fallback_kwargs) -> str:
     """Rendert die Bubbles und liefert den Text der Kurzübersicht-Bubble
     (die die Fußzeile trägt)."""
-    from output.renderers.narrow import render_telegram_bubbles
+    return _overview_bubble_und_fusszeile(metric_ids, **fallback_kwargs)[0]
 
-    seg = _make_segment()
+
+def _overview_bubble_und_fusszeile(
+    metric_ids: list[str], **fallback_kwargs
+) -> tuple[str, str | None]:
+    """Kurzübersicht-Bubble UND die ECHTE Tagesfußzeile aus derselben Eingabe.
+
+    F004: Die Fußzeile kommt hier aus `_tg_day_footer()` mit exakt den
+    Argumenten, die `render_telegram_bubbles()` intern verwendet. Nur so kann
+    sich eine Reihenfolge-Zusicherung an der ECHTEN Fußzeile verankern — das
+    Zeichen „⚡" allein taugt nicht als Anker, weil es zusätzlich in der
+    Pro-Metrik-Übersichtszeile OBERHALB der Fußzeile steht.
+    """
+    from output.renderers.narrow import _tg_day_footer, render_telegram_bubbles
+
+    seg = _make_segment(**fallback_kwargs)
     rows = [dict(_ROW), {**_ROW, "time": "09", "temp": 14}]
     dc = _make_dc(metric_ids)
     bubbles = render_telegram_bubbles(
@@ -95,7 +117,8 @@ def _overview_bubble_text(metric_ids: list[str]) -> str:
     assert bubbles, "render_telegram_bubbles() muss eine nicht-leere Liste liefern"
     matches = [b.text for b in bubbles if "Kurzübersicht" in b.text]
     assert matches, "Kurzübersicht-Bubble nicht gefunden"
-    return matches[0]
+    footer = _tg_day_footer([seg], dc.get_enabled_metric_ids(), tz=_TZ)
+    return matches[0], footer
 
 
 # ===========================================================================
@@ -139,3 +162,106 @@ def test_footer_complete_when_all_three_enabled():
     assert "⚡" in text, f"⚡-Teil fehlt trotz aktivierter thunder-Metrik:\n{text}"
     assert "Sicht" in text, f"Sicht-Teil fehlt trotz aktivierter visibility-Metrik:\n{text}"
     assert "0°C-Grenze" in text, f"0°C-Grenze-Teil fehlt trotz aktivierter freezing_level-Metrik:\n{text}"
+
+
+# ===========================================================================
+# Issue #1492 Scheibe 2b, AC-3: Fallback-Hinweis in der Telegram-Langform.
+# SPEC: docs/specs/modules/feat_1492_s2b_fallback_sichtbarkeit.md
+#
+# RED heute: `narrow.py` liest `segments[0].timeseries.meta.fallback_*` gar
+# nicht — die Kurzübersicht-Bubble zeigt 0 Treffer (Kontext-Doc „2 von 7
+# Ausgaben"). Der Text wird bei _TG_PROSE_WIDTH = 56 umgebrochen, deshalb
+# vergleichen die Tests auf whitespace-normalisierter Ebene: der Umbruch ist
+# Verpackung, nicht Wortlaut.
+# ===========================================================================
+
+
+def _norm(text: str) -> str:
+    """Zeilenumbruch/Einrückung falten — `_wrap()` bricht bei 56 Zeichen um."""
+    return " ".join(text.split())
+
+
+def test_overview_bubble_shows_thunder_fallback_line():
+    """AC-3: Given `fallback_metrics` trägt einen Gewitter-Feldnamen (2a hat
+    `eu_direct` als Ersatzquelle vermerkt), When die Kurzübersicht-Bubble
+    gerendert wird, Then erscheint die Gewitter-Klartextzeile UNTER der
+    bestehenden Tagesfußzeile (`⚡ …`)."""
+    text, fusszeile = _overview_bubble_und_fusszeile(
+        ["thunder", "visibility", "freezing_level"],
+        fallback_metrics=["lightning_potential_lpi_jkg"],
+        fallback_model="eu_direct",
+        fallback_reason="thunder_source_unavailable",
+    )
+    normalisiert = _norm(text)
+
+    erwartet = "Gewitterdaten von Ersatzquelle: DWD Europa (gröbere Auflösung)"
+    assert _norm(erwartet) in normalisiert, (
+        f"AC-3: Gewitter-Fallbackzeile fehlt in der Kurzübersicht-Bubble:\n{text}"
+    )
+    assert "eu_direct" not in text, f"AC-4: Rohkennung in der Bubble:\n{text}"
+
+    # Reihenfolge: die Zeile steht UNTER der Tagesfußzeile, nicht darüber.
+    #
+    # F004: Anker ist die ECHTE Fußzeile (`⚡ … · Sicht … · 0°C-Grenze … m`),
+    # NICHT das erste „⚡" im Text — das gehört zur Pro-Metrik-Übersichtszeile
+    # weiter oben. Gegen dieses erste Vorkommen verglichen blieb der Test auch
+    # dann grün, wenn die Fallbackzeile ÜBER die Fußzeile rutschte.
+    assert fusszeile, f"Vorbedingung: Tagesfußzeile fehlt:\n{text}"
+    fuss_norm = _norm(fusszeile)
+    assert fuss_norm in normalisiert, (
+        f"Vorbedingung: Tagesfußzeile {fuss_norm!r} nicht in der Bubble:\n{text}"
+    )
+    fuss_ende = normalisiert.index(fuss_norm) + len(fuss_norm)
+    assert normalisiert.index("Gewitterdaten von Ersatzquelle") > fuss_ende, (
+        f"AC-3: Fallbackzeile steht ÜBER der Tagesfußzeile {fuss_norm!r} statt "
+        f"darunter:\n{text}"
+    )
+
+
+def test_overview_bubble_shows_weather_fallback_line():
+    """AC-3/AC-4: Given ein Grundvorhersage-Fallback (`icon_eu`, `model_5xx`),
+    When die Kurzübersicht-Bubble gerendert wird, Then erscheint die
+    Wetter-Klartextzeile mit übersetzten Metriknamen — UNTER der bestehenden
+    Tagesfußzeile."""
+    text, fusszeile = _overview_bubble_und_fusszeile(
+        ["thunder", "visibility", "freezing_level"],
+        fallback_model="icon_eu",
+        fallback_reason="model_5xx",
+        fallback_metrics=["cape", "visibility"],
+    )
+    normalisiert = _norm(text)
+
+    erwartet = "Einzelne Wetterwerte von Ersatzmodell: DWD Europa (Gewitterenergie, Sicht)"
+    assert _norm(erwartet) in normalisiert, (
+        f"AC-3: Wetter-Fallbackzeile fehlt in der Kurzübersicht-Bubble:\n{text}"
+    )
+    assert "icon_eu" not in text, f"AC-4: Rohkennung in der Bubble:\n{text}"
+    assert "Fallback" not in text, f"AC-4: technisches Wort 'Fallback' in der Bubble:\n{text}"
+
+    # L1: dieselbe Reihenfolge-Zusicherung wie bei der Gewitterzeile. Ohne sie
+    # blieb ein Regress unbemerkt, der AUSSCHLIESSLICH die Wetterzeile über die
+    # Tagesfußzeile schiebt (die Gewitterzeile deckt ihn nicht mit ab — sie ist
+    # eine eigene, unabhängige Zeile, R1). Anker ist wieder das ENDE der ECHTEN
+    # Fußzeile, nicht das erste „⚡" im Text.
+    assert fusszeile, f"Vorbedingung: Tagesfußzeile fehlt:\n{text}"
+    fuss_norm = _norm(fusszeile)
+    assert fuss_norm in normalisiert, (
+        f"Vorbedingung: Tagesfußzeile {fuss_norm!r} nicht in der Bubble:\n{text}"
+    )
+    fuss_ende = normalisiert.index(fuss_norm) + len(fuss_norm)
+    assert normalisiert.index("Einzelne Wetterwerte von Ersatzmodell") > fuss_ende, (
+        f"AC-3: Wetter-Fallbackzeile steht ÜBER der Tagesfußzeile {fuss_norm!r} "
+        f"statt darunter:\n{text}"
+    )
+
+
+def test_overview_bubble_has_no_fallback_line_without_fallback():
+    """AC-6 GEGENPROBE: Given ein Segment ohne jeden Fallback, When die
+    Kurzübersicht-Bubble gerendert wird, Then erscheint KEINE zusätzliche
+    Ersatz-Zeile (kein leerer Rahmen, kein Restartefakt)."""
+    text = _overview_bubble_text(["thunder", "visibility", "freezing_level"])
+
+    assert "Ersatzquelle" not in text, f"AC-6: Gewitter-Ersatzzeile ohne Fallback:\n{text}"
+    assert "Ersatzmodell" not in text, f"AC-6: Wetter-Ersatzzeile ohne Fallback:\n{text}"
+    assert "Gewitterdaten von" not in text, f"AC-6: Fallbackzeile ohne Fallback:\n{text}"
+    assert "DWD Europa" not in text, f"AC-6: Quellen-Klartextname ohne Fallback:\n{text}"
