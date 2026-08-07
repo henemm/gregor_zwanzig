@@ -524,9 +524,34 @@
 	// (analog Kanal-Rückkanal oben). Ohne diesen Effekt verwirft der Anlege-
 	// Dialog die sichtbar angehakte Auswahl beim Speichern (kein PUT im
 	// createMode, s. handleSave()).
+	//
+	// Fix-Loop 2 (Staging-Befund, effect_update_depth_exceeded): ruft bewusst
+	// buildWeatherMetricsList() statt buildWeatherPayload() -- Letztere liest
+	// `trip!.display_config` und macht damit den `trip`-Prop zur getrackten
+	// Abhaengigkeit dieses Effects. buildWeatherMetricsList() liest `trip`
+	// gar nicht mehr.
+	//
+	// Fix-Loop 3 (Staging-Befund, Wiederauftreten trotz obigem Fix, per
+	// Playwright reproduziert und mit Instanz-Markierung isoliert): TripNew
+	// Editor.svelte mountet WeatherMetricsTab ZWEIMAL (Desktop + Mobile,
+	// Issue #941 -- beide immer im DOM, nur per CSS ausgeblendet). Beide
+	// Instanzen laden UNABHAENGIG voneinander ihren eigenen Katalog und
+	// schreiben in denselben Rueckkanal (`weatherMetrics` in TripNewEditor).
+	// Solange eine Instanz ihren Katalog noch nicht geladen hat, liefert ihr
+	// buildWeatherMetricsList() eine LEERE Liste -- die ueberschreibt die
+	// laengst gueltigen 25 Eintraege der anderen Instanz, was wiederum DEREN
+	// Effect erneut ausloest (die andere Instanz schreibt zurueck) usw.: die
+	// Gleichheitspruefung in handleWeatherMetricsChange (TripNewEditor.svelte)
+	// verhindert nur wiederholte IDENTISCHE Schreibvorgaenge EINER Instanz,
+	// nicht das Wechselspiel ZWEIER Instanzen mit UNTERSCHIEDLICHEM Inhalt.
+	// `catalogLoaded` gate schliesst das: eine Instanz, deren eigener Katalog
+	// noch nicht da ist, emittiert gar nichts -- sobald ihr Katalog laedt,
+	// berechnet sie denselben deterministischen Satz wie die andere Instanz
+	// (identischer Register-Stand), die Gleichheitspruefung erkennt dann
+	// Gleichheit und die Schreibkette kommt zur Ruhe.
 	$effect(() => {
-		if (createMode && onWeatherMetricsChange) {
-			onWeatherMetricsChange(buildWeatherPayload().metrics);
+		if (createMode && onWeatherMetricsChange && catalogLoaded) {
+			onWeatherMetricsChange(buildWeatherMetricsList());
 		}
 	});
 
@@ -642,9 +667,16 @@
 		}
 	}
 
-	function buildWeatherPayload() {
+	// Issue #1552 Fix-Loop 2 (Staging-Befund, effect_update_depth_exceeded):
+	// aus buildWeatherPayload() herausgezogen, damit der Rueckkanal-Effect
+	// unten NUR von der Metrik-Auswahl abhaengt, nicht vom `trip`-Prop. Liest
+	// bewusst NICHT `trip!.display_config` (das speiste im Payload ohnehin nur
+	// Felder AUSSER `metrics`, die hier ueberschrieben werden -- fuer die
+	// Metrik-Liste war der trip-Read nie noetig, nur ein zufaelliges
+	// Abhaengigkeits-Nebenprodukt).
+	function buildWeatherMetricsList() {
 		const baseMetrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog, aggregationsMap);
-		const metrics = baseMetrics.map((m) => {
+		return baseMetrics.map((m) => {
 			if (!SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id)) return m;
 			const rawThr = smsThresholds[m.metric_id];
 			const parsed = rawThr !== undefined && rawThr !== '' ? parseFloat(rawThr) : null;
@@ -653,9 +685,12 @@
 			}
 			return m;
 		});
+	}
+
+	function buildWeatherPayload() {
 		return {
 			...(trip!.display_config ?? {}),
-			metrics,
+			metrics: buildWeatherMetricsList(),
 			preset_name: selectedTemplate || undefined,
 			telegram_kurzform: telegramKurzform,
 		};

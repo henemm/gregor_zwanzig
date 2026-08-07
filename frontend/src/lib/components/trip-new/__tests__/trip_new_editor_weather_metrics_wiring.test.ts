@@ -25,11 +25,26 @@ const code = readFileSync(FILE, 'utf-8');
 
 describe('AC-1/AC-2/AC-3 (Test 4): handleWeatherMetricsChange schreibt weatherMetrics', () => {
 	test('ein handleWeatherMetricsChange-Handler existiert und schreibt weatherMetrics', () => {
+		// Fix-Loop 2: der Handler prueft jetzt zuerst auf Inhaltsgleichheit
+		// (JSON.stringify) und schreibt nur bei echter Aenderung -- die
+		// Zuweisung folgt deshalb nicht mehr direkt auf die oeffnende Klammer.
 		assert.match(
 			code,
-			/function handleWeatherMetricsChange\([^)]*\)\s*\{\s*weatherMetrics\s*=/,
+			/function handleWeatherMetricsChange\([^)]*\)\s*\{[\s\S]*?weatherMetrics\s*=/,
 			'Kein handleWeatherMetricsChange-Handler gefunden, der weatherMetrics schreibt — ' +
 				'ohne ihn bleibt weatherMetrics dauerhaft [] (Bug-Ursache #1552)'
+		);
+	});
+
+	test('handleWeatherMetricsChange ueberspringt inhaltsgleiche Aufrufe (Fix-Loop 2, Regressionsschutz)', () => {
+		const fnMatch = code.match(/function handleWeatherMetricsChange\([^)]*\)\s*\{[\s\S]*?\n\t\}/);
+		assert.ok(fnMatch, 'handleWeatherMetricsChange nicht gefunden');
+		assert.match(
+			fnMatch[0],
+			/JSON\.stringify\(m\)\s*===\s*JSON\.stringify\(weatherMetrics\)/,
+			'Kein Inhaltsgleichheits-Guard vor dem Schreiben -- zwei WeatherMetricsTab-' +
+				'Mounts (Desktop+Mobile) koennten sich sonst mit unterschiedlichem Inhalt ' +
+				'gegenseitig ueberschreiben (Fix-Loop-2/3-Regression, effect_update_depth_exceeded)'
 		);
 	});
 

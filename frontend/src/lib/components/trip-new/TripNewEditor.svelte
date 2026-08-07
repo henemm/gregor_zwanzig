@@ -300,6 +300,14 @@
 	// Rückkanal analog handleChannelsChange — ohne ihn verwirft der Anlege-
 	// Dialog die sichtbar angehakte Auswahl still beim Speichern.
 	function handleWeatherMetricsChange(m: WeatherConfigMetric[]) {
+		// Fix-Loop 2 (Staging-Befund effect_update_depth_exceeded): defensiv
+		// zusaetzlich zum Effect-Scope-Fix in WeatherMetricsTab.svelte --
+		// inhaltsgleicher Aufruf darf KEINE neue Array-Referenz erzeugen, sonst
+		// rechnet `stubTrip` ($derived) unnoetig neu und schleust eine neue
+		// `trip`-Prop-Referenz durch, die einen kuenftigen trip-lesenden Effect
+		// erneut ausloesen koennte. Schliesst die ganze Schleifen-Klasse aus,
+		// unabhaengig davon, was WeatherMetricsTab intern liest.
+		if (JSON.stringify(m) === JSON.stringify(weatherMetrics)) return;
 		weatherMetrics = [...m];
 	}
 
