@@ -401,6 +401,7 @@ def telegram_sink(monkeypatch):
 
     sink = _TelegramSink()
     monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", sink.base)
+    monkeypatch.setenv("GZ_TELEGRAM_TEST_CHAT_ID", "1070-fixture-test-chat")
     yield sink
     sink.stop()
 
@@ -714,3 +715,352 @@ def test_ac6_deviation_gate_passes_but_no_channel_delivered_leaves_counter_uncha
         )
     finally:
         _clean_user(uid)
+
+
+# ═══════════════════ Issue #1555: NowCast-Reserve im Tagesbudget ═════════════
+#
+# `alert_daily_limit.is_allowed()` bekommt einen optionalen `reason`-Parameter.
+# `reason="forecast_change"` UND endliches `limit` -> Prüfung gegen
+# `limit - RESERVE` (Free 2->1, Standard 4->2) statt gegen das volle `limit`.
+# `reason=None`/jeder andere Wert (u.a. "nowcast") -> unverändertes
+# Altverhalten (volles `limit`). Premium (`limit=None`) bleibt unbegrenzt.
+#
+# RED-Status je Test (Mutations-Gegenprobe-Vorgabe, Spec Abschnitt "Wo die
+# Zusicherung tatsächlich WIRKT"): AC-1/AC-4/AC-5 sind an ihrer eigenen
+# Grenze nicht diskriminierend (der Reserve-Effekt greift dort inhärent
+# nicht bzw. noch nicht) und bleiben deshalb sowohl heute als auch nach der
+# Implementierung GRÜN — sie sind Regressionsschutz, kein RED-Beweis (analog
+# AC-5/AC-6 in `test_compare_alert_quiet_hours_precedes_fetch.py`). AC-2,
+# AC-3 und AC-6 treffen exakt die Reserve-Grenze und sind heute ROT, weil
+# `trip_alert.py:221/761` und `compare_alert.py:145` `is_allowed()` noch
+# ohne `reason=` aufrufen (Altverhalten = volles Limit statt Reserve).
+
+_COMPARE_DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+# Pfadregel #1409: compare_alert.py::_load_presets() ruft load_compare_presets()
+# OHNE data_root auf -> Default "data" (bewusster Bypass der _DATA_ROOT-
+# Testisolation, dokumentiert in app.loader.get_data_root()). ComparePreset-
+# Dateien müssen deshalb -- anders als der Rest dieser Datei (get_data_dir(),
+# isolierte _DATA_ROOT) -- unter dem ECHTEN, relativ zu dieser Testdatei
+# aufgelösten "data/users/"-Baum liegen (Vorbild:
+# test_compare_alert_quiet_hours_precedes_fetch.py::DATA_ROOT).
+
+
+def _clean_compare_preset_dir(uid: str) -> None:
+    d = _COMPARE_DATA_ROOT / uid
+    if d.exists():
+        shutil.rmtree(d)
+
+
+def _compare_preset_active(preset_id: str, location_ids: list[str], empfaenger: list[str]) -> dict:
+    """Minimaler, aktiver (nicht stillgelegter) Compare-Preset-Dict --
+    1:1 aus `test_compare_alert_quiet_hours_precedes_fetch.py::_preset_multi`."""
+    return {
+        "id": preset_id, "name": preset_id, "user_id": "default",
+        "location_ids": location_ids, "schedule": "daily", "weekday": 4,
+        "profil": "ALLGEMEIN", "hour_from": 0, "hour_to": 23,
+        "empfaenger": empfaenger, "letzter_versand": None,
+        "top_ort_letzter_versand": None, "created_at": "2026-08-07T00:00:00Z",
+    }
+
+
+class _ScriptedComparePointSource:
+    """Kein Mock: echter `LocationWeatherSource`-Seam, liefert ein festes
+    `PointWeatherData` mit vorgegebenem `precip_sum_mm` ohne Netzzugriff."""
+
+    def __init__(self, precip_sum_mm: float) -> None:
+        self._precip = precip_sum_mm
+
+    def fetch(self, point_id: str, lat: float, lon: float):
+        from services.point_weather import PointWeatherData
+
+        return PointWeatherData(
+            id=point_id, name=point_id, lat=lat, lon=lon, timeseries=None,
+            aggregated=SegmentWeatherSummary(precip_sum_mm=self._precip),
+            fetched_at=datetime.now(timezone.utc), provider="test-scripted",
+        )
+
+
+def test_ac1_1555_free_tier_first_forecast_change_alert_delivered_at_reduced_boundary(
+    telegram_sink,
+):
+    """AC-1 (#1555): Free-Nutzer (`limit=2`) ohne Alarm heute (`count=0`) --
+    ein `forecast_change`-Alarm wird zugestellt, weil `count=0 < 1` (reduzierte
+    Obergrenze). GRÜN heute wie nach der Implementierung (Regressionsschutz):
+    bei `count=0` liefert sowohl das volle Limit (0<2) als auch die reduzierte
+    Obergrenze (0<1) `True` -- diese Grenze ist an sich nicht diskriminierend,
+    RED-Beweis kommt von AC-2/AC-3/AC-6 weiter unten."""
+    from services.alert_daily_limit import load
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-1555-ac1-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    try:
+        _write_user_tier(uid, "free")
+
+        dev_trip = _deviation_trip(f"trip-dev-{uid}")
+        cached = [_weather_data(precip_sum_mm=2.0)]
+        fresh = [_weather_data(precip_sum_mm=18.0)]
+
+        svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=uid)
+        result = svc.check_and_send_alerts(dev_trip, cached, fresh_weather=fresh)
+
+        assert result is True, (
+            f"AC-1: erster forecast_change-Alarm bei count=0 muss zugestellt werden, got {result}"
+        )
+        assert telegram_sink.send_count() == 1, "AC-1: Telegram-Sink muss genau 1 Versand zeigen"
+        assert load(uid, datetime.now(timezone.utc)) == 1, "AC-1: Zähler muss auf 1 steigen"
+    finally:
+        _clean_user(uid)
+
+
+def test_ac2_1555_free_tier_forecast_change_suppressed_but_nowcast_still_delivered():
+    """AC-2 (#1555, RED heute): Free-Nutzer mit `count=1` -- ein weiterer
+    `forecast_change`-Alarm wird unterdrückt (Reserve: `count=1` ist nicht
+    `< 1`), aber ein `nowcast`-Alarm im selben Zustand wird trotzdem
+    zugestellt (`count=1 < 2`, volles Limit).
+
+    RED-Grund (heute): `trip_alert.py:221` ruft `is_allowed(uid, now)` OHNE
+    `reason=` auf -- bei count=1/Limit=2 ist 1<2=True, der Deviation-Alarm
+    wird heute FÄLSCHLICH zugestellt statt unterdrückt.
+    """
+    from services.alert_daily_limit import load
+    from services.radar_service import RadarNowcastService
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-1555-ac2-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    try:
+        _write_user_tier(uid, "free")
+        _seed_daily_counter(uid, 1)
+
+        # forecast_change (Deviation, Telegram) -- muss unterdrückt bleiben.
+        # Kein telegram_sink-Fixture noetig: TripAlertService versendet ohne
+        # erreichbaren TELEGRAM_API_BASE nicht wirklich, aber `is_allowed()`
+        # entscheidet VOR dem Versandversuch -- ein unterdrückter Alarm ruft
+        # den Kanal gar nicht erst auf.
+        dev_trip = _deviation_trip(f"trip-dev-{uid}")
+        cached = [_weather_data(precip_sum_mm=2.0)]
+        fresh = [_weather_data(precip_sum_mm=18.0)]
+        dev_svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=uid)
+        dev_result = dev_svc.check_and_send_alerts(dev_trip, cached, fresh_weather=fresh)
+
+        assert dev_result is False, (
+            f"AC-2: forecast_change muss bei count=1 (Reserve-Grenze 1) "
+            f"unterdrückt werden, got {dev_result}"
+        )
+        assert load(uid, datetime.now(timezone.utc)) == 1, (
+            "AC-2: Zähler darf durch den unterdrückten forecast_change-Alarm nicht steigen"
+        )
+
+        # nowcast (Radar, E-Mail) -- muss trotzdem noch zugestellt werden.
+        trip_id = f"trip-radar-{uid}"
+        radar_trip = _make_trip(trip_id, send_email=True, send_telegram=False)
+        _save_trip(radar_trip, uid)
+        mail_calls: list = []
+        radar_svc = TripAlertService(
+            settings=_make_settings_with_email(),
+            throttle_hours=0,
+            user_id=uid,
+            radar_service=RadarNowcastService(frame_source=_wet_frames),
+            mail_sink=lambda subject, body: mail_calls.append((subject, body)),
+        )
+        radar_result = radar_svc.check_radar_alerts()
+
+        assert radar_result == 1, (
+            f"AC-2: nowcast muss bei count=1 gegen das volle Limit (2) noch "
+            f"erlaubt sein, got {radar_result}"
+        )
+        assert len(mail_calls) == 1, "AC-2: nowcast-Alarm muss tatsächlich versendet werden"
+        assert load(uid, datetime.now(timezone.utc)) == 2, "AC-2: Zähler muss nach nowcast auf 2 steigen"
+    finally:
+        _clean_user(uid)
+
+
+def test_ac3_1555_standard_tier_forecast_change_suppressed_but_nowcast_still_delivered():
+    """AC-3 (#1555, RED heute): Standard-Nutzer (`limit=4`) mit `count=2` --
+    ein dritter `forecast_change`-Alarm wird unterdrückt (Reserve: `count=2`
+    ist nicht `< 2`), aber ein `nowcast`-Alarm wird trotzdem zugestellt
+    (`count=2 < 4`).
+
+    RED-Grund: analog AC-2 -- `is_allowed(uid, now)` ohne `reason=` prüft
+    heute 2<4=True, der Deviation-Alarm wird fälschlich zugestellt.
+    """
+    from services.alert_daily_limit import load
+    from services.radar_service import RadarNowcastService
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-1555-ac3-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    try:
+        _write_user_tier(uid, "standard")
+        _seed_daily_counter(uid, 2)
+
+        dev_trip = _deviation_trip(f"trip-dev-{uid}")
+        cached = [_weather_data(precip_sum_mm=2.0)]
+        fresh = [_weather_data(precip_sum_mm=18.0)]
+        dev_svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=uid)
+        dev_result = dev_svc.check_and_send_alerts(dev_trip, cached, fresh_weather=fresh)
+
+        assert dev_result is False, (
+            f"AC-3: forecast_change muss bei count=2 (Standard, Reserve-Grenze 2) "
+            f"unterdrückt werden, got {dev_result}"
+        )
+        assert load(uid, datetime.now(timezone.utc)) == 2, (
+            "AC-3: Zähler darf durch den unterdrückten forecast_change-Alarm nicht steigen"
+        )
+
+        trip_id = f"trip-radar-{uid}"
+        radar_trip = _make_trip(trip_id, send_email=True, send_telegram=False)
+        _save_trip(radar_trip, uid)
+        mail_calls: list = []
+        radar_svc = TripAlertService(
+            settings=_make_settings_with_email(),
+            throttle_hours=0,
+            user_id=uid,
+            radar_service=RadarNowcastService(frame_source=_wet_frames),
+            mail_sink=lambda subject, body: mail_calls.append((subject, body)),
+        )
+        radar_result = radar_svc.check_radar_alerts()
+
+        assert radar_result == 1, (
+            f"AC-3: nowcast muss bei count=2 gegen das volle Limit (4) noch "
+            f"erlaubt sein, got {radar_result}"
+        )
+        assert len(mail_calls) == 1, "AC-3: nowcast-Alarm muss tatsächlich versendet werden"
+        assert load(uid, datetime.now(timezone.utc)) == 3, "AC-3: Zähler muss nach nowcast auf 3 steigen"
+    finally:
+        _clean_user(uid)
+
+
+def test_ac4_1555_premium_tier_unlimited_for_both_forecast_change_and_nowcast(telegram_sink):
+    """AC-4 (#1555): Premium-Nutzer (`limit=None`) mit `count=6` -- sowohl
+    `forecast_change` als auch `nowcast` werden zugestellt, kein Deckel
+    greift. GRÜN heute wie nach der Implementierung (Regressionsschutz):
+    Premium kurzschließt `is_allowed()` unabhängig von `reason` immer auf
+    `True` (Spec: "keine Reserve, is_allowed liefert weiterhin sofort True
+    ohne Zähler-Load") -- dieses Verhalten ist per Definition der AC in
+    keinem der beiden Regime unterscheidbar."""
+    from services.alert_daily_limit import load
+    from services.radar_service import RadarNowcastService
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-1555-ac4-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    try:
+        _write_user_tier(uid, "premium")
+        _seed_daily_counter(uid, 6)
+
+        dev_trip = _deviation_trip(f"trip-dev-{uid}")
+        cached = [_weather_data(precip_sum_mm=2.0)]
+        fresh = [_weather_data(precip_sum_mm=18.0)]
+        dev_svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=uid)
+        dev_result = dev_svc.check_and_send_alerts(dev_trip, cached, fresh_weather=fresh)
+
+        assert dev_result is True, f"AC-4: Premium forecast_change trotz count=6 muss zugestellt werden, got {dev_result}"
+        assert telegram_sink.send_count() == 1
+        assert load(uid, datetime.now(timezone.utc)) == 7, "AC-4: Zähler steigt weiter (kein Deckel)"
+
+        trip_id = f"trip-radar-{uid}"
+        radar_trip = _make_trip(trip_id, send_email=True, send_telegram=False)
+        _save_trip(radar_trip, uid)
+        mail_calls: list = []
+        radar_svc = TripAlertService(
+            settings=_make_settings_with_email(),
+            throttle_hours=0,
+            user_id=uid,
+            radar_service=RadarNowcastService(frame_source=_wet_frames),
+            mail_sink=lambda subject, body: mail_calls.append((subject, body)),
+        )
+        radar_result = radar_svc.check_radar_alerts()
+
+        assert radar_result == 1, f"AC-4: Premium nowcast trotz count=7 muss zugestellt werden, got {radar_result}"
+        assert len(mail_calls) == 1
+        assert load(uid, datetime.now(timezone.utc)) == 8
+    finally:
+        _clean_user(uid)
+
+
+def test_ac5_1555_is_allowed_without_reason_argument_uses_full_limit_backward_compat():
+    """AC-5 (#1555): ein bestehender Aufruf `is_allowed(user_id, now)` OHNE
+    `reason`-Argument verhält sich exakt wie vor dieser Änderung -- geprüft
+    gegen das volle `limit`, nicht gegen die reduzierte `forecast_change`-
+    Obergrenze. GRÜN heute wie danach (das IST die Rückwärtskompatibilitäts-
+    Garantie, keine RED-Grenze): bei count=1/Free ist 1<2=True unabhängig
+    von der Implementierung dieses Fixes. Der bestehende Wiring-Vorbild-Test
+    `test_ac5_cross_path_daily_limit_shared_between_radar_and_deviation`
+    (oben in dieser Datei) bleibt unverändert grün und verankert dieselbe
+    Garantie an der Aufrufstelle."""
+    from services.alert_daily_limit import is_allowed
+
+    uid = f"tdd-1555-ac5-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    try:
+        _write_user_tier(uid, "free")
+        _seed_daily_counter(uid, 1)
+        now = datetime.now(timezone.utc)
+
+        assert is_allowed(uid, now) is True, (
+            "AC-5: is_allowed(uid, now) ohne reason muss bei count=1/Free "
+            "gegen das volle Limit (2) prüfen -> True, nicht gegen die "
+            "reduzierte forecast_change-Obergrenze (1)"
+        )
+    finally:
+        _clean_user(uid)
+
+
+def test_ac6_1555_compare_forecast_change_suppressed_at_reserve_boundary():
+    """AC-6 (#1555, RED heute): Compare-Pfad im selben Zählerstand wie AC-2
+    (Free, `count=1`) -- ein weiterer Compare-`forecast_change`-Alarm wird
+    ebenso unterdrückt wie im Trip-Pfad, dieselbe Reserve-Regel gilt
+    identisch für Compare.
+
+    RED-Grund (heute): `compare_alert.py:145` ruft `is_allowed(uid, now)`
+    OHNE `reason=` auf -- bei count=1/Limit=2 ist 1<2=True, der Alarm wird
+    heute FÄLSCHLICH zugestellt statt unterdrückt.
+    """
+    from app.loader import save_location
+    from app.user import SavedLocation
+    from services import alert_daily_limit
+    from services.compare_alert import CompareAlertService
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+
+    from tests.helpers.compare_briefings import write_compare_briefings
+
+    uid = f"tdd-1555-ac6-{uuid.uuid4().hex[:6]}"
+    preset_id = f"cp-1555-ac6-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    _clean_compare_preset_dir(uid)
+    try:
+        _write_user_tier(uid, "free")
+        _seed_daily_counter(uid, 1)
+
+        loc = SavedLocation(id="loc-1555", name="ReserveOrt", lat=46.9, lon=10.9, elevation_m=900)
+        save_location(loc, user_id=uid)
+        write_compare_briefings(
+            _COMPARE_DATA_ROOT / uid,
+            [_compare_preset_active(preset_id, ["loc-1555"], ["gregor-test@henemm.com"])],
+        )
+        CompareWeatherSnapshotService(user_id=uid).save(
+            preset_id, "loc-1555",
+            _ScriptedComparePointSource(2.0).fetch("loc-1555", loc.lat, loc.lon),
+        )
+
+        sent_subjects: list[str] = []
+        svc = CompareAlertService(
+            settings=_make_settings_with_email(), user_id=uid,
+            weather_source=_ScriptedComparePointSource(30.0),  # Δ=28, weit über jeder Schwelle
+            mail_sink=lambda subject, body: sent_subjects.append(subject),
+        )
+        sent = svc.check_all_compare_presets()
+
+        assert sent == 0, (
+            f"AC-6: Reserve muss den 2. Compare-forecast_change-Alarm bei "
+            f"count=1 (Free, Reserve-Grenze 1) unterdrücken, got sent={sent}"
+        )
+        assert sent_subjects == [], "AC-6: mail_sink wurde trotz Reserve aufgerufen"
+        assert alert_daily_limit.load(uid, datetime.now(timezone.utc)) == 1, (
+            "AC-6: Zähler darf bei unterdrücktem Compare-Alarm nicht steigen"
+        )
+    finally:
+        _clean_user(uid)
+        _clean_compare_preset_dir(uid)

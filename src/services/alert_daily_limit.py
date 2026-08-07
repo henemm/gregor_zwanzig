@@ -50,12 +50,28 @@ def load(user_id: str, now: datetime) -> int:
     return int(data.get("count", 0))
 
 
-def is_allowed(user_id: str, now: datetime) -> bool:
-    """Return True if another alert may be sent today for this user."""
+# Issue #1555: feste Reserve-Tabelle je endlichem `limit`-Wert. Reserviert
+# einen Mindestanteil des geteilten Tagesbudgets ausschließlich für
+# `reason="nowcast"` -- `reason="forecast_change"` prüft gegen `limit -
+# RESERVE` statt gegen das volle `limit`. Nur `2`/`4` sind heute über
+# `user_tier.daily_alert_limit` erreichbar (s. Spec "Known Limitations").
+_FORECAST_CHANGE_RESERVE = {2: 1, 4: 2}
+
+
+def is_allowed(user_id: str, now: datetime, reason: str | None = None) -> bool:
+    """Return True if another alert may be sent today for this user.
+
+    `reason="forecast_change"` prüft bei endlichem `limit` gegen eine um die
+    NowCast-Reserve reduzierte Obergrenze (#1555). Jeder andere `reason`
+    (inkl. `None`) prüft unverändert gegen das volle `limit`.
+    """
     limit = daily_alert_limit(user_id)
     if limit is None:
         return True
-    return load(user_id, now) < limit
+    effective_limit = limit
+    if reason == "forecast_change":
+        effective_limit = limit - _FORECAST_CHANGE_RESERVE.get(limit, 0)
+    return load(user_id, now) < effective_limit
 
 
 def increment(user_id: str, now: datetime) -> None:

@@ -142,7 +142,8 @@ class CompareAlertService:
 
             # Issue #1213 (AC-6): Compare an dieselbe Tageslimit-Prüfung
             # anbinden wie der Trip-Pfad (Epic #1067 Slice 3, #1070).
-            if not alert_daily_limit.is_allowed(self._user_id, now):
+            # Issue #1555: reason="forecast_change" reserviert einen Anteil für NowCast.
+            if not alert_daily_limit.is_allowed(self._user_id, now, reason="forecast_change"):
                 logger.debug(f"Compare-Alert suppressed: daily limit reached for preset {preset_id}")
                 continue
 

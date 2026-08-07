@@ -218,7 +218,8 @@ class TripAlertService:
             return False
 
         # 1c. Issue #1070: Tages-Obergrenze nach Nutzerlevel (Free/Standard/Premium)
-        if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc)):
+        # Issue #1555: reason="forecast_change" reserviert einen Anteil für NowCast.
+        if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc), reason="forecast_change"):
             logger.debug(f"Alert suppressed: daily limit reached for trip {trip.id}")
             return False
 
@@ -758,7 +759,8 @@ class TripAlertService:
                 continue
 
             # Issue #1070: Tages-Obergrenze nach Nutzerlevel (Free/Standard/Premium)
-            if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc)):
+            # Issue #1555: reason="nowcast" prüft gegen das volle Limit (Reserve-Nutznießer).
+            if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc), reason="nowcast"):
                 logger.debug(f"Radar alert suppressed: daily limit reached for trip {trip.id}")
                 continue
 

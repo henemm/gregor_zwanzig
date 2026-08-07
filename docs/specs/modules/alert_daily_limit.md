@@ -155,6 +155,31 @@ betroffen (PO-Entscheidung 2026-07-07).
   `user_tier.py`-Fassade neben `sms_allowed()` ein. Es entsteht kein
   strukturell neues Architekturmuster, das eine ADR rechtfertigen würde.
 
+## Ergänzung: NowCast-Reserve im geteilten Tagesbudget (#1555)
+
+Seit #1555 kennt `is_allowed(user_id, now, reason=None)` einen optionalen
+dritten Parameter `reason`. Details, Motivation und Acceptance Criteria:
+`docs/specs/modules/fix_1555_nowcast_alert_priority.md`.
+
+- `reason is None` oder `reason != "forecast_change"` (inkl. `"nowcast"`,
+  `"official_alert"`, unbekannte Werte): unverändertes Altverhalten — Prüfung
+  gegen das volle `limit`. Rückwärtskompatibel zu jedem Aufruf ohne `reason`.
+- `reason == "forecast_change"` UND `limit` endlich: Prüfung gegen `limit -
+  RESERVE` statt `limit`, feste Tabelle: `limit=2` → Obergrenze `1`,
+  `limit=4` → Obergrenze `2`.
+- `reason == "forecast_change"` UND `limit is None` (Premium): unverändert
+  sofort `True`, keine Reserve.
+- `load()`/`increment()` unverändert — derselbe flache `{"date", "count"}`-
+  Zähler für alle `reason`-Werte, kein getrennter Zählerstand.
+
+Aufrufstellen mit `reason=`: `trip_alert.py` Deviation-Pfad
+(`"forecast_change"`) und Radar/NowCast-Pfad (`"nowcast"`),
+`compare_alert.py` Compare-Deviation (`"forecast_change"`). Official-Pfade
+(`trip_alert.py` Official-Only, `compare_official_alert.py`) bleiben
+unverändert ohne Reserve (PO-Entscheidung, s. Known Limitations in
+`fix_1555_nowcast_alert_priority.md`).
+
 ## Changelog
 
 - 2026-07-07: Initial spec created
+- 2026-08-07: NowCast-Reserve (#1555) additiv ergänzt
