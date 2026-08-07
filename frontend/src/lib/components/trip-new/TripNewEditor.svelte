@@ -296,6 +296,13 @@
 		channels = { ...c };
 	}
 
+	// ── Wetter-Metrik-Änderung aus WeatherMetricsTab (Issue #1552) ────────────
+	// Rückkanal analog handleChannelsChange — ohne ihn verwirft der Anlege-
+	// Dialog die sichtbar angehakte Auswahl still beim Speichern.
+	function handleWeatherMetricsChange(m: WeatherConfigMetric[]) {
+		weatherMetrics = [...m];
+	}
+
 	// ── Speichern ─────────────────────────────────────────────────────────────
 	async function buildAndSave(): Promise<string | null> {
 		if (!ready || saving || savedTripId) return null;
@@ -777,7 +784,7 @@
 		<!-- Issue #941 — WeatherMetricsTab IMMER gemountet (per display ausgeblendet),
 		     damit isDirty/buckets/savedSnapshot bei Tab-Wechseln nicht verloren gehen. -->
 		<div style:display={activeTab === 'metriken' ? '' : 'none'}>
-			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
+			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} />
 		</div>
 		</div><!-- /.tn-desktop -->
 
@@ -1002,7 +1009,7 @@
 			<!-- Issue #941 — WeatherMetricsTab IMMER gemountet (per display ausgeblendet),
 			     damit isDirty/buckets/savedSnapshot bei Tab-Wechseln nicht verloren gehen. -->
 			<div style:display={activeTab === 'metriken' ? '' : 'none'}>
-				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
+				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} />
 			</div>
 
 			<!-- Lock-Toast (2s bei Tap auf gesperrten Tab) -->

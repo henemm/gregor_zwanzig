@@ -162,6 +162,9 @@ export interface MetricEntry {
 	unit: string;
 	category: string;
 	default_enabled: boolean;
+	/** Issue #1552: Trip-Anlege-Vorbelegung — eigener Marker, unabhaengig von
+	 *  default_enabled (das weiterhin Orte/Abonnements versorgt). */
+	trip_default_enabled: boolean;
 	has_friendly_format: boolean;
 	/** Issue #435: erlaubte Format-Modi pro Metrik (raw/scale/simplified/symbol). */
 	format_modes?: string[];

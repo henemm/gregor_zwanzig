@@ -21,9 +21,16 @@ from __future__ import annotations
 
 from typing import Sequence
 
-DEFAULT_TRIP_METRIC_IDS: tuple[str, ...] = (
-    "temperature", "wind", "gust", "precipitation",
-    "thunder", "freezing_level", "visibility",
+from app.metric_catalog import get_all_metrics
+
+# Issue #1552: aus dem Register abgeleitet (trip_default_rank), statt als
+# Literal gefuehrt -- eine Quelle fuer "was ist Trip-Anlege-Standard"
+# (Register + Frontend-Vorbelegung lesen denselben Marker).
+DEFAULT_TRIP_METRIC_IDS: tuple[str, ...] = tuple(
+    m.id for m in sorted(
+        (m for m in get_all_metrics() if m.trip_default_rank is not None),
+        key=lambda m: m.trip_default_rank,
+    )
 )
 
 

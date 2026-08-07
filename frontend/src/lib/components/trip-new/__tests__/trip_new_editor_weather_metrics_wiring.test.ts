@@ -1,0 +1,73 @@
+// Issue #1552 — TripNewEditor verwirft die Wetter-Metrik-Auswahl still.
+//
+// Spec: docs/specs/modules/fix_1552_neuanlage_metrikauswahl.md § Test 4
+//
+// Source-Inspection-Muster (kein Mount möglich, s. shared/__tests__/
+// weather_metrics_tab_create_mode_callback.test.ts): beweist, dass
+// `weatherMetrics` einen echten Schreibpfad aus WeatherMetricsTab bekommt
+// (vorher: 0 Schreibstellen, Bug-Ursache aus der Spec) UND dass beide Mounts
+// (Desktop/Mobile) ihn verdrahten — ein Duplizierungsfehler haette sonst nur
+// eine Ansicht repariert.
+//
+// Ausführung:
+//   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
+//     --test src/lib/components/trip-new/__tests__/trip_new_editor_weather_metrics_wiring.test.ts
+
+import { test, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
+import { buildCreateTripPayload, type CreateTripState } from '../tripNewLogic.ts';
+
+const FILE = join(dirname(fileURLToPath(import.meta.url)), '..', 'TripNewEditor.svelte');
+const code = readFileSync(FILE, 'utf-8');
+
+describe('AC-1/AC-2/AC-3 (Test 4): handleWeatherMetricsChange schreibt weatherMetrics', () => {
+	test('ein handleWeatherMetricsChange-Handler existiert und schreibt weatherMetrics', () => {
+		assert.match(
+			code,
+			/function handleWeatherMetricsChange\([^)]*\)\s*\{\s*weatherMetrics\s*=/,
+			'Kein handleWeatherMetricsChange-Handler gefunden, der weatherMetrics schreibt — ' +
+				'ohne ihn bleibt weatherMetrics dauerhaft [] (Bug-Ursache #1552)'
+		);
+	});
+
+	test('beide WeatherMetricsTab-Mounts (Desktop+Mobile) uebergeben onWeatherMetricsChange', () => {
+		const mounts = code.match(/<WeatherMetricsTab\b[^>]*\/>/g) ?? [];
+		assert.equal(mounts.length, 2, `Erwartet genau 2 WeatherMetricsTab-Mounts, gefunden: ${mounts.length}`);
+		for (const [i, m] of mounts.entries()) {
+			assert.match(
+				m,
+				/onWeatherMetricsChange=\{handleWeatherMetricsChange\}/,
+				`Mount #${i + 1} uebergibt onWeatherMetricsChange nicht — ` +
+					`nur eine Ansicht (Desktop ODER Mobile) waere repariert`
+			);
+			// Regression: der bestehende Kanal-Ruckkanal darf nicht verloren gehen.
+			assert.match(m, /onChannelsChange=\{handleChannelsChange\}/, `Mount #${i + 1} verliert onChannelsChange`);
+		}
+	});
+});
+
+describe('Test 4 (Ende-zu-Ende der Anlage): buildCreateTripPayload uebernimmt eine geaenderte Auswahl', () => {
+	// Beweist die Kehrseite: SOBALD weatherMetrics tatsaechlich befuellt ist
+	// (was der oben bewiesene Handler jetzt leistet), landet die geaenderte
+	// Auswahl unveraendert im POST-Payload -- nicht die anfaengliche [].
+	test('eine im Dialog abgewaehlte Groesse (enabled=false) bleibt im Payload erhalten', () => {
+		const state: CreateTripState = {
+			name: 'Testtour',
+			startDate: '2026-06-15',
+			stages: [{ id: 1, name: 'Etappe 1', waypoints: [] }],
+			weatherMetrics: [
+				{ metric_id: 'temperature', enabled: true },
+				{ metric_id: 'wind', enabled: false },
+			],
+			channels: { email: true, telegram: true, sms: false },
+		};
+		const payload = buildCreateTripPayload(state);
+		assert.deepEqual(payload.display_config!.metrics, [
+			{ metric_id: 'temperature', enabled: true },
+			{ metric_id: 'wind', enabled: false },
+		]);
+	});
+});
