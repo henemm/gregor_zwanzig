@@ -217,15 +217,17 @@ class TestCompareMetricCatalogEndpoint:
             else:
                 pytest.fail(f"{entry['key']}: unbekannter kind {entry['kind']!r}")
 
-    def test_thunder_level_max_is_ordinal_with_three_labels(self, client: TestClient) -> None:
-        """AC-2 (Sonderfall): thunder_level_max ist 'ordinal' mit den drei sichtbaren
-        Editor-Labels (PO-Entscheidung 2026-07-12, nicht 'enum' wie im rohen
-        ALL_METRICS-Eintrag)."""
+    def test_thunder_level_max_is_ordinal_with_four_labels(self, client: TestClient) -> None:
+        """AC-2 (Sonderfall): thunder_level_max ist 'ordinal' mit den vier sichtbaren
+        Editor-Labels. Urspruenglich drei Labels (PO-Entscheidung 2026-07-12);
+        seit Issue #1474 (S3 zu #1419) vier Stufen — LOW 'leicht' besetzt den
+        vorher unerreichbaren Render-Platz L, und der Frontend-Schieberegler
+        leitet seinen Bereich aus len(ordinalLabels) ab."""
         response = client.get("/api/compare/metrics")
         metrics = {m["key"]: m for m in response.json()["metrics"]}
         thunder = metrics["thunder_level_max"]
         assert thunder["kind"] == "ordinal"
-        assert thunder["ordinalLabels"] == ["kein", "mittel", "hoch"]
+        assert thunder["ordinalLabels"] == ["kein", "leicht", "mittel", "hoch"]
 
     def test_precip_type_dominant_stays_enum(self, client: TestClient) -> None:
         """AC-2 (Sonderfall): precip_type_dominant bleibt 'enum' mit den vier
