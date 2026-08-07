@@ -404,6 +404,11 @@ Fusion (`_fuse_thunder_levels`) oder an irgendeinem Renderer/Kanal.
    Folge-Issue („Health-Signal für Gewitter-Direktquellen"), nicht Teil
    von 2a/2b. Diese Vertagung ist eine bewusste Entscheidung, die der PO
    bei der Freigabe sieht — kein Versehen.
+   ✅ **Nachgetragen 2026-08-07: als #1581 erfasst.** Das hier
+   vorgeschlagene Folge-Issue war in 2a **und** 2b vertagt und trotzdem
+   nie angelegt worden — aufgefallen erst beim Doku-Durchgang zu #1579.
+   Merkposten: ein „Vorschlag: eigenes Folge-Issue" in einer Spec ist
+   **keine** Buchung; erst die Nummer im Text ist eine.
 3. **`fallback_model`/`fallback_reason` sind Singularfelder — Kollision
    mit dem bestehenden WEATHER-05b-Mechanismus möglich, mit Konsequenz für
    2b.** Erleidet DIESELBE Zeitreihe zusätzlich einen

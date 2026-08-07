@@ -132,8 +132,12 @@ wirkte dieses ADR wie ein Bruch von ADR-0025 — das ist es nicht.
   - Neue degradierbare Gewitter-Pfade (z. B. eine vierte Direktquelle) erben dieselbe
     Fehlerunterscheidungs- und Markierungspflicht, sofern sie eine eigene Vertretung haben.
   - Das in ADR-0018 geforderte wachsende Health-Signal für andauernde Ausfälle ist für die
-    Gewitter-Domäne **noch nicht** nachgezogen — bewusst vertagt auf ein eigenes Folge-Issue
-    (Spec Known Limitations Punkt 2), keine offene Lücke innerhalb dieser Scheibe.
+    Gewitter-Domäne **noch nicht** nachgezogen — bewusst vertagt, keine offene Lücke innerhalb
+    dieser Scheibe. **Seit 2026-08-07 als #1581 erfasst** (zuvor zweimal vertagt und nie
+    gebucht — gefunden beim Doku-Durchgang zu #1579). Beim Umsetzen zu beachten: die
+    Gewitterquelle gehört **nicht** ungeprüft in `coreBriefingSources`, weil Anreicherung dort
+    seit #1115 F002 bewusst ausgeklammert ist; ob eigener Kanal oder zweite Stufe, ist im
+    Issue als offene Designfrage markiert.
   - ~~Sichtbarkeit im Briefing (E-Mail-/Telegram-Fußzeile) ist eigene Folgescheibe 2b; 2a hält die
     Herkunft nur intern fest.~~ **Erledigt mit #1492 Scheibe 2b (live seit 2026-08-07,
     `35b41753`).** Die Vertretung erscheint in Klartext in der Trip-Briefing-Mail (Vollversion
