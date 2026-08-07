@@ -789,11 +789,22 @@
 
 		<!-- Wetter-Tab: reuse WeatherMetricsTab im createMode -->
 		<!-- Issue #932 — Aktivitätstyp-Dropdown lebt jetzt im Route-Tab. -->
-		<!-- Issue #941 — WeatherMetricsTab IMMER gemountet (per display ausgeblendet),
-		     damit isDirty/buckets/savedSnapshot bei Tab-Wechseln nicht verloren gehen. -->
+		<!-- Issue #941 — WeatherMetricsTab bleibt beim Tab-Wechsel gemountet (per
+		     display ausgeblendet), damit isDirty/buckets/savedSnapshot erhalten
+		     bleiben. Fix-Loop 4 (Staging-Befund #1552, effect_update_depth_exceeded
+		     bei jedem Checkbox-Klick): NEU per isMobileViewport-Gate (Vorbild
+		     activity-dropdown, Issue #932) nur EINE Instanz im DOM -- Desktop UND
+		     Mobile hielten sonst je eine EIGENE Kopie von buckets/friendlyMap/... und
+		     schrieben unabhaengig in denselben Rueckkanal (weatherMetrics); nach einem
+		     Klick auf NUR einer Seite blieben beide Kopien dauerhaft verschieden und
+		     ueberschrieben sich gegenseitig unbegrenzt. catalogLoaded-Gate und
+		     Inhaltsgleichheitspruefung (Fix-Loop 2/3) bleiben als Zusatzschutz
+		     bestehen (Resize-Grenzfall: Tab kann kurzzeitig neu mounten). -->
+		{#if !isMobileViewport}
 		<div style:display={activeTab === 'metriken' ? '' : 'none'}>
 			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} />
 		</div>
+		{/if}
 		</div><!-- /.tn-desktop -->
 
 		<!-- ══════════════════════════════════════════════════════
@@ -1014,11 +1025,14 @@
 
 			<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
 			<!-- Issue #932 — Aktivitätstyp-Dropdown lebt jetzt im Route-Tab. -->
-			<!-- Issue #941 — WeatherMetricsTab IMMER gemountet (per display ausgeblendet),
-			     damit isDirty/buckets/savedSnapshot bei Tab-Wechseln nicht verloren gehen. -->
+			<!-- Issue #941 — WeatherMetricsTab bleibt beim Tab-Wechsel gemountet (per
+			     display ausgeblendet). Fix-Loop 4 (s. Desktop-Mount oben): per
+			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
+			{#if isMobileViewport}
 			<div style:display={activeTab === 'metriken' ? '' : 'none'}>
 				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} />
 			</div>
+			{/if}
 
 			<!-- Lock-Toast (2s bei Tap auf gesperrten Tab) -->
 			{#if lockToastMsg}
