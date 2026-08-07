@@ -9,7 +9,7 @@
 	// Spec: docs/specs/modules/issue_587_weather_tab_v2.md
 	// Spec: docs/specs/modules/issue_618_mobile_weather_tab.md
 	import { api } from '$lib/api.js';
-	import type { Trip, MetricPreset, Horizons, ReportConfig } from '$lib/types';
+	import type { Trip, MetricPreset, Horizons, ReportConfig, WeatherConfigMetric } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms';
 	// Issue #1311 (C1, Fix-Loop 1 / F001): private Sub-Komponenten von
@@ -115,6 +115,10 @@
 		/** Issue #622: Create-Modus — kein PUT; Kanäle per onChannelsChange nach oben emittieren */
 		createMode?: boolean;
 		onChannelsChange?: (c: ChannelConfig) => void;
+		/** Issue #1552: Create-Modus — Wetter-Metrik-Auswahl per Rückkanal nach
+		 *  oben emittieren (analog onChannelsChange), da im Anlege-Modus kein
+		 *  PUT möglich ist. */
+		onWeatherMetricsChange?: (metrics: WeatherConfigMetric[]) => void;
 		/** Issue #694: Trip-State in +page.svelte nach erfolgreichem PUT aktualisieren */
 		onTripUpdate?: (t: Trip) => void;
 		/** Issue #758: SaveStatus controller — wenn gesetzt, entfällt der explizite Speichern-Button. */
@@ -138,7 +142,7 @@
 		 *  Stundenverlauf). Reine Weiterreichung an CompareOutlookLayoutControls. */
 		onOutlookCommit?: () => void;
 	}
-	let { context = 'route', trip, createMode = false, onChannelsChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit, onOutlookCommit }: Props = $props();
+	let { context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit, onOutlookCommit }: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
 	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
@@ -334,7 +338,10 @@
 			const activeIds = savedMetrics.filter((m) => m.enabled).map((m) => m.metric_id);
 			b = autoAssign(activeIds, catalog);
 		} else {
-			const activeIds = allCatalogIds().filter((id) => metricById[id]?.default_enabled);
+			// Issue #1552: Vorbelegung im Anlege-Dialog folgt dem wirksamen
+			// Siebener-Satz (trip_default_enabled), nicht mehr default_enabled
+			// (das speist weiterhin Orte/Abonnements, AC-7 unberührt).
+			const activeIds = allCatalogIds().filter((id) => metricById[id]?.trip_default_enabled);
 			b = autoAssign(activeIds, catalog);
 		}
 
@@ -510,6 +517,16 @@
 	$effect(() => {
 		if (createMode && onChannelsChange) {
 			onChannelsChange({ ...channels });
+		}
+	});
+
+	// Issue #1552: Create-Modus — Wetter-Metrik-Auswahl nach oben propagieren
+	// (analog Kanal-Rückkanal oben). Ohne diesen Effekt verwirft der Anlege-
+	// Dialog die sichtbar angehakte Auswahl beim Speichern (kein PUT im
+	// createMode, s. handleSave()).
+	$effect(() => {
+		if (createMode && onWeatherMetricsChange) {
+			onWeatherMetricsChange(buildWeatherPayload().metrics);
 		}
 	});
 

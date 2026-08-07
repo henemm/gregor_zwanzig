@@ -105,3 +105,54 @@ class TestGefuellteAuswahlUnabhaengigVonAltbestand:
         ]
         result = resolve_trip_active_metrics(metrics, altbestand=False)
         assert result == ["visibility", "temperature", "gust"]
+
+
+class TestDefaultTripMetricIdsIstAusDemRegisterAbgeleitet:
+    """Issue #1552: DEFAULT_TRIP_METRIC_IDS muss aus dem Register (`trip_default_
+    rank`) abgeleitet sein, nicht als Literal gefuehrt werden -- sonst laeuft das
+    Register (Frontend-Vorbelegung liest `trip_default_enabled`) und der Server-
+    Rueckfall (`DEFAULT_TRIP_METRIC_IDS`) irgendwann auseinander (zwei Quellen
+    statt einer, s. Spec § B).
+
+    Mutations-Falle (CLAUDE.md, Regel-Budget-Familie "Ableitung durch das alte
+    Literal ersetzen"): weil der heutige Registerstand zufaellig dieselbe
+    Reihenfolge/Menge liefert wie die frueher hartkodierte Liste, wuerde ein Test,
+    der nur den RESULTIERENDEN Wert prueft (wie die Klasse oben), eine
+    Ruecksubstitution durch das alte Literal NICHT bemerken. Dieser Test stoert
+    stattdessen echt die Registerdaten (kein Mock -- eine reale Kopie der
+    `_METRICS`-Liste mit einem echten zusaetzlichen `MetricDefinition`-Objekt) und
+    erzwingt einen frischen Import, um zu beweisen, dass die Ableitung tatsaechlich
+    zur Laufzeit aus dem Register liest.
+    """
+
+    def test_derivation_tracks_a_real_registry_change(self, monkeypatch):
+        import importlib
+
+        from app import metric_catalog
+        from output.renderers import trip_metric_ids as tmi_module
+
+        extra = dataclasses_replace_temperature_with_rank_eight(metric_catalog)
+        monkeypatch.setattr(
+            metric_catalog, "_METRICS", metric_catalog._METRICS + [extra],
+        )
+        try:
+            reloaded = importlib.reload(tmi_module)
+            assert reloaded.DEFAULT_TRIP_METRIC_IDS[-1] == "trip_1552_mutation_probe", (
+                "DEFAULT_TRIP_METRIC_IDS reagiert nicht auf eine echte "
+                "Registeraenderung -- das ist nur moeglich, wenn die Liste (wieder) "
+                "hartkodiert ist statt aus get_all_metrics() abgeleitet zu werden"
+            )
+        finally:
+            importlib.reload(tmi_module)  # Modul-Cache fuer alle Folgetests bereinigen
+
+
+def dataclasses_replace_temperature_with_rank_eight(metric_catalog):
+    """Baut ein echtes zusaetzliches MetricDefinition-Objekt (Rang 8) -- kein
+    Mock, reale Dataclass-Instanz aus dem Produktivtyp."""
+    temperature = metric_catalog.get_metric("temperature")
+    import dataclasses
+    return dataclasses.replace(
+        temperature,
+        id="trip_1552_mutation_probe",
+        trip_default_rank=8,
+    )

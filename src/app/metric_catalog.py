@@ -76,6 +76,11 @@ class MetricDefinition:
     # für Katalog-Vollständigkeit, lösen aber KEINEN Abweichungs-Alert aus.
     # from_display_config() und from_alert_rules() ignorieren is_precursor=True.
     is_precursor: bool = False
+    # Issue #1552: reine Zusatz-Markierung "gehoert zum Trip-Anlege-Standard",
+    # unabhaengig von default_enabled (das Orte/Abonnements weiter versorgt).
+    # Gesetzt auf genau 7 Groessen mit expliziter Rangfolge (Reihenfolge der
+    # Sieben-ID-Liste in DEFAULT_TRIP_METRIC_IDS, trip_metric_ids.py).
+    trip_default_rank: Optional[int] = None
 
     @property
     def has_friendly_format(self) -> bool:
@@ -106,6 +111,7 @@ _METRICS: list[MetricDefinition] = [
             "yellow_lt": 0.0, "orange_lt": -5.0, "red_lt": -15.0,
         },
         sms_code="D", decimals=0, cmp="über", alert_label="Temp",
+        trip_default_rank=1,  # Issue #1552: Trip-Anlege-Standard, Rang 1
     ),
     # Issue #914: Internal-only entry for AlertMetric.TEMPERATURE_MIN (Kältealarm).
     # cmp="unter" because cold alarm fires when temp_min_c FALLS BELOW threshold.
@@ -212,6 +218,7 @@ _METRICS: list[MetricDefinition] = [
         format_modes=("raw", "simplified"),
         default_format_mode="raw",
         sms_code="W", decimals=0, cmp="über", alert_label="Wind",
+        trip_default_rank=2,  # Issue #1552: Trip-Anlege-Standard, Rang 2
     ),
     MetricDefinition(
         id="gust", label_de="Böen", unit="km/h",
@@ -232,6 +239,7 @@ _METRICS: list[MetricDefinition] = [
         format_modes=("raw", "simplified"),
         default_format_mode="raw",
         sms_code="G", decimals=0, cmp="über", alert_label="Böen",
+        trip_default_rank=3,  # Issue #1552: Trip-Anlege-Standard, Rang 3
     ),
     MetricDefinition(
         id="wind_direction", label_de="Windrichtung", unit="°",
@@ -264,6 +272,7 @@ _METRICS: list[MetricDefinition] = [
         format_modes=("raw", "simplified"),
         default_format_mode="raw",
         sms_code="R", decimals=1, cmp="über", alert_label="Niedersch",
+        trip_default_rank=4,  # Issue #1552: Trip-Anlege-Standard, Rang 4
     ),
     MetricDefinition(
         id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
@@ -314,6 +323,7 @@ _METRICS: list[MetricDefinition] = [
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
         sms_code="TH", decimals=0, cmp="über", alert_label="Gewitter",
+        trip_default_rank=5,  # Issue #1552: Trip-Anlege-Standard, Rang 5
     ),
     MetricDefinition(
         id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
@@ -449,6 +459,7 @@ _METRICS: list[MetricDefinition] = [
         format_modes=("raw",),
         default_format_mode="raw",
         sms_code="VS", decimals=1, cmp="unter", alert_label="Sicht",
+        trip_default_rank=7,  # Issue #1552: Trip-Anlege-Standard, Rang 7
     ),
     MetricDefinition(
         # #1401 A1: "Sonnenstunden" benennt die Einheit (h) korrekt (PO-Freigabe).
@@ -514,6 +525,7 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=200,
         alert_metrics={"min": "freezing_level"},  # #1435 E1a
         sms_code="NL", decimals=0, cmp="unter", alert_label="Nullgradgrenze",
+        trip_default_rank=6,  # Issue #1552: Trip-Anlege-Standard, Rang 6
     ),
     MetricDefinition(
         id="snow_depth", label_de="Schneehöhe", unit="cm",

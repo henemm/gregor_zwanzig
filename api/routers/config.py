@@ -72,6 +72,9 @@ def get_metrics():
             "unit": m.display_unit if m.display_unit else m.unit,
             "category": m.category,
             "default_enabled": m.default_enabled,
+            # Issue #1552: eigene Trip-Anlege-Vorbelegung, unabhaengig von
+            # default_enabled (das Orte/Abonnements weiter versorgt).
+            "trip_default_enabled": m.trip_default_rank is not None,
             "has_friendly_format": m.has_friendly_format,
             # Issue #435: Format-Modi pro Metrik (raw/scale/simplified/symbol)
             "format_modes": list(m.format_modes),

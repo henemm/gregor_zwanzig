@@ -271,6 +271,109 @@ class TestEndToEndVersandpfad:
 
 
 # ===========================================================================
+# Issue #1552 AC-1/AC-3: der Payload, wie ihn der reparierte Anlege-Flow
+# TATSAECHLICH erzeugt (WeatherMetricsTab.buildWeatherConfigMetrics() emittiert
+# JEDE Katalog-ID genau einmal, kein leeres Feld, keine Nur-7-Teilmenge) --
+# weder Fall A (leere Liste) noch Fall B (nur 7 Eintraege) oben bilden diese
+# Form ab. Adversary-Befund F001: AC-1/AC-3 verlangen woertlich ein
+# gerendertes Briefing, kein Register-/Ableitungs-/Payload-Assert.
+# ===========================================================================
+
+
+def _create_flow_dc(*, seven_enabled: bool) -> UnifiedWeatherDisplayConfig:
+    """Baut dc.metrics so, wie es der Anlege-Flow nach dem Fix persistiert:
+    eine vollstaendige Katalogliste (eine MetricConfig je selektierbarer
+    Groesse), mit `enabled=True` genau fuer die sieben Standardgroessen
+    (AC-1, `seven_enabled=True`) bzw. fuer KEINE Groesse (AC-3, bewusste
+    Komplett-Abwahl, `seven_enabled=False`).
+
+    Liest die Vorbelegung ueber den ECHTEN `/api/metrics`-Endpoint
+    (`api.routers.config.get_metrics()`), nicht ueber `DEFAULT_TRIP_METRIC_IDS`
+    direkt -- das spiegelt exakt den Lesepfad, den `WeatherMetricsTab.svelte`
+    (`metricById[id]?.trip_default_enabled`) im Anlege-Modus nutzt (Spec § B).
+    Ohne das neue Feld `trip_default_enabled` schlaegt dieser Aufbau mit
+    KeyError fehl (RED-Beweis vor dem API-Fix, s. Testbericht)."""
+    from api.routers.config import get_metrics
+
+    catalog = get_metrics()
+    metrics = [
+        MetricConfig(
+            metric_id=m["id"],
+            enabled=seven_enabled and m["trip_default_enabled"],
+        )
+        for entries in catalog.values()
+        for m in entries
+    ]
+    return UnifiedWeatherDisplayConfig(trip_id="create-flow", metrics=metrics)
+
+
+class TestCreateFlowPayloadRendersExactlySevenDefaults:
+    """AC-1/AC-3 ueber den echten Versandpfad (TripReportFormatter, wie
+    TestEndToEndVersandpfad oben) -- diesmal mit der vollstaendigen
+    Katalogliste als dc.metrics, nicht mit den kuenstlichen Fall-A/Fall-B-
+    Kurzformen."""
+
+    def _format(self, report_type, dc):
+        from output.renderers.trip_report import TripReportFormatter
+        return TripReportFormatter().format_email(
+            segments=_build_segments(), trip_name="GR20 Test",
+            report_type=report_type, display_config=dc, tz=TZ,
+        )
+
+    # Issue #1552 Nachbesserung (Adversary-Befund Fix-Loop 1): die Mail hat
+    # eine feste Kommando-/Einheiten-Legende ("Einheiten: Temp °C · Wind, Gust
+    # km/h ...", "Spalten: ... Gust = Böen ... Visib = Sichtweite ...",
+    # Kommando "GEWITTER"), die UNABHAENGIG von den Pillen immer im Text
+    # steht. Bloss "°C"/"Wind"/"Böen"/"Gewitter"/"Sicht" waeren dort false-
+    # positive gruen -- deshalb die vollen, nur in der Pillen-Zeile
+    # vorkommenden Textformen (mit der fixen Fixture deterministisch, s.
+    # _build_segments()/oben).
+    _PILL_MARKERS = (
+        ("°C · Max", "temperature"),
+        ("Wind >10 km/h", "wind"),
+        ("Böen >20 km/h", "gust"),
+        ("Regen ab 09:00", "precipitation"),
+        ("Gewitter ab 08:00", "thunder"),
+        ("0°-Linie 2.500 m", "freezing_level"),
+        ("Sicht <2 km", "visibility"),
+    )
+
+    def test_ac1_seven_enabled_shows_exactly_the_seven_target_metrics(self):
+        report = self._format("morning", _create_flow_dc(seven_enabled=True))
+        plain = report.email_plain
+        assert "Metriken-Überblick" in plain, (
+            "AC-1: der aus buildCreateTripPayload()-aehnlichem Payload "
+            "gerenderte Briefing-Teil zeigt keinen Ueberblicksblock."
+        )
+        for marker, name in self._PILL_MARKERS:
+            assert marker in plain, f"AC-1: Pille fuer {name} ({marker!r}) fehlt im Briefing"
+        # Gegenprobe "genau diese 7, nicht irgendwelche": rain_probability
+        # hat im Fixture ebenfalls Rohdaten (pop_pct), ist aber NICHT in
+        # DEFAULT_TRIP_METRIC_IDS -- ihr eigenes Label "Regen-W." darf trotz
+        # vorhandener Daten nicht erscheinen, weil enabled=False.
+        assert "Regen-W." not in plain, (
+            "AC-1: rain_probability (nicht Teil der 7 Standardgroessen) "
+            "erscheint trotzdem -- der Payload wird nicht auf die 7 begrenzt."
+        )
+
+    def test_ac3_all_disabled_shows_no_overview_block_and_no_default_fallback(self):
+        report = self._format("morning", _create_flow_dc(seven_enabled=False))
+        plain = report.email_plain
+        assert "Metriken-Überblick" not in plain, (
+            "AC-3: bewusste Komplett-Abwahl (alle enabled=False in der vollen "
+            "Katalogliste) muss den Ueberblicksblock vollstaendig entfernen."
+        )
+        # Kein stiller Rueckfall auf die sieben Standardgroessen (das waere
+        # das #1552-Symptom in neuer Form): keine der sieben Pillen-Textformen
+        # darf auftauchen, obwohl dieselben Rohdaten wie oben vorliegen.
+        for marker, name in self._PILL_MARKERS:
+            assert marker not in plain, (
+                f"AC-3: Pille fuer {name} ({marker!r}) erscheint trotz "
+                "bewusster Leerauswahl -- stiller Rueckfall auf den Standardsatz"
+            )
+
+
+# ===========================================================================
 # AC-4/AC-5: Vortagszeile summarize_day_comparison()
 # ===========================================================================
 
