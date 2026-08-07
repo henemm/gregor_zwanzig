@@ -3,7 +3,7 @@ entity_id: fix_1555_nowcast_alert_priority
 type: bugfix
 created: 2026-08-07
 updated: 2026-08-07
-status: draft
+status: implemented
 workflow: fix-1555-nowcast-alert-priority
 version: "1.0"
 tags: [issue-1555, alerts, epic-1067, follow-up-1070]
@@ -13,7 +13,7 @@ tags: [issue-1555, alerts, epic-1067, follow-up-1070]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
@@ -229,3 +229,4 @@ ein vergessenes `reason=` an der Aufrufstelle nicht sehen.
 ## Changelog
 
 - 2026-08-07: Initial spec created
+- 2026-08-07: Implemented, Adversary VERIFIED, live in Prod (`939e8c54`, PR #1565), Issue #1555 geschlossen
