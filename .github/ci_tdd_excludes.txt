@@ -20,6 +20,12 @@
 # gueltige 4-Stufen-Skala (NONE/LOW/MED/HIGH) angeglichen; die 3-Stufen-
 # Erwartung war Ueberstand aus der PO-Entscheidung 2026-07-12.
 #
+# Batch 4 (2026-08-07): test_feature_656_radar_nowcast +
+# test_feature_660_convective_stage — Radar-Throttle-Tests. Zwei Driften:
+# (a) can_send_email() nur mit Host-.env True → Dummy-SMTP-Settings +
+# mail_sink/DI-Naht im Test; (b) alert_log schreibt seit #1467 S1
+# entity_id statt trip_id — Testfilter angeglichen.
+#
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
 # verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
@@ -36,8 +42,6 @@ tests/tdd/test_bundle_e_gate_tooling.py
 tests/tdd/test_compare_official_alert.py
 tests/tdd/test_compare_sun_hours_full_day_window.py
 tests/tdd/test_corridor_no_longer_triggers_alerts.py
-tests/tdd/test_feature_656_radar_nowcast.py
-tests/tdd/test_feature_660_convective_stage.py
 tests/tdd/test_issue_1040_alerts_toggle.py
 tests/tdd/test_issue_1088_official_alert_triggers.py
 tests/tdd/test_issue_1104_compare_config_foundation.py

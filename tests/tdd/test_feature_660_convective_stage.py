@@ -186,7 +186,7 @@ def test_ac4_radar_alert_convective_marked_once_then_throttles():
     log_path = get_data_dir(user_id) / "alert_log.json"
     if log_path.exists():
         data = json.loads(log_path.read_text())
-        data["entries"] = [e for e in data.get("entries", []) if e.get("trip_id") != _TRIP_ID]
+        data["entries"] = [e for e in data.get("entries", []) if e.get("entity_id") != _TRIP_ID]  # #1467 S1: entity_id statt trip_id
         log_path.write_text(json.dumps(data, indent=2))
 
     # Echte Aufzeichnung der gebauten Alert-Nachricht (kein Mock — normale Funktion,
@@ -200,7 +200,18 @@ def test_ac4_radar_alert_convective_marked_once_then_throttles():
 
     EmailOutput.send = _recording_send
     try:
-        svc = TripAlertService(user_id=user_id, radar_service=radar_service)
+        # #1196 Batch 4: Kanal explizit konfigurieren — ohne Settings baut der
+        # Service Settings() aus der Umgebung, und can_send_email() ist nur mit
+        # Host-.env True (Grund des offline/CI-Rotseins: "No channel
+        # configured; skipping radar alert"). Dummy-Werte genuegen; der
+        # gepatchte EmailOutput.send faengt den Versand ab.
+        from app.config import Settings
+
+        settings = Settings(
+            smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+            mail_to="empfaenger@example.com",
+        )
+        svc = TripAlertService(user_id=user_id, radar_service=radar_service, settings=settings)
         svc.clear_radar_throttle(_TRIP_ID)
         sent_first = svc.check_radar_alerts()
         sent_second = svc.check_radar_alerts()
@@ -209,7 +220,7 @@ def test_ac4_radar_alert_convective_marked_once_then_throttles():
         assert sent_second == 0  # Throttle greift
 
         entries = json.loads(log_path.read_text()).get("entries", [])
-        radar_entries = [e for e in entries if e.get("trip_id") == _TRIP_ID]
+        radar_entries = [e for e in entries if e.get("entity_id") == _TRIP_ID]  # #1467 S1: entity_id statt trip_id
         assert len(radar_entries) == 1
         assert radar_entries[0].get("severity") == "HIGH"
 

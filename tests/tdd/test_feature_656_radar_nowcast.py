@@ -264,20 +264,37 @@ def test_ac4_check_radar_alerts_sends_once_then_throttles():
     log_path = get_data_dir(user_id) / "alert_log.json"
     if log_path.exists():
         data = json.loads(log_path.read_text())
-        data["entries"] = [e for e in data.get("entries", []) if e.get("trip_id") != _TRIP_ID]
+        data["entries"] = [e for e in data.get("entries", []) if e.get("entity_id") != _TRIP_ID]  # #1467 S1: entity_id statt trip_id
         log_path.write_text(json.dumps(data, indent=2))
 
     try:
-        svc = TripAlertService(user_id=user_id, radar_service=radar_service)
+        # #1196 Batch 4: Kanal explizit konfigurieren — ohne Settings baut der
+        # Service Settings() aus der Umgebung, und can_send_email() ist nur mit
+        # Host-.env True (Grund des offline/CI-Rotseins: "No channel
+        # configured; skipping radar alert"). Dummy-SMTP + mail_sink (DI-Naht,
+        # ersetzt den echten SMTP-Versand) machen den Test deterministisch.
+        from app.config import Settings
+
+        settings = Settings(
+            smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+            mail_to="empfaenger@example.com",
+        )
+        sent_mails: list = []
+        svc = TripAlertService(
+            user_id=user_id, radar_service=radar_service,
+            settings=settings,
+            mail_sink=lambda subject, body: sent_mails.append((subject, body)),
+        )
         svc.clear_radar_throttle(_TRIP_ID)
         sent_first = svc.check_radar_alerts()
         sent_second = svc.check_radar_alerts()
 
         assert sent_first == 1
         assert sent_second == 0  # Throttle greift
+        assert len(sent_mails) == 1  # genau ein Versand, der zweite Lauf throttelt
 
         entries = json.loads(log_path.read_text()).get("entries", [])
-        radar_entries = [e for e in entries if e.get("trip_id") == _TRIP_ID]
+        radar_entries = [e for e in entries if e.get("entity_id") == _TRIP_ID]  # #1467 S1: entity_id statt trip_id
         assert len(radar_entries) == 1
         assert radar_entries[0].get("severity") == "HIGH"
     finally:
