@@ -1,0 +1,18 @@
+{
+  "description": "AC-9 Deckungsgleichheit (Fix #1544/#1545): EIN Trip-Zustand, ausgewertet auf beiden Seiten gegen die jeweils eigene Produktivrealitaet. `expected_alert_identities` wurde NICHT geschaetzt, sondern am 2026-08-07 mit dem echten Backend-Regel-Erzeuger erzeugt: `src/services/alert_preset.py::expand_per_metric_levels(metric_alert_levels, display_config)` -- siehe `tests/unit/services/test_deviation_alert_engine_matches_frontend_derivation.py`, der dieselbe Menge am selben Zustand nachrechnet und pruefend belegt. Der TS-Test (trip_active_alert_metrics_derivation.test.ts, Describe-Block AC-9) liest DIESE Datei und vergleicht die Ausgabe der neuen Frontend-Ableitung dagegen -- kein Mock, keine RPC, ein gemeinsamer, checked-in Fixpunkt.",
+  "metrics": [
+    { "metric_id": "temperature", "enabled": true },
+    { "metric_id": "gust", "enabled": true },
+    { "metric_id": "humidity", "enabled": true },
+    { "metric_id": "cape", "enabled": false }
+  ],
+  "metric_alert_levels": {
+    "wind_gust": "sensibel"
+  },
+  "expected_alert_identities": [
+    "temperature_change",
+    "temperature_max",
+    "temperature_min",
+    "wind_gust"
+  ]
+}
