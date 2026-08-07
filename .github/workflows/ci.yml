@@ -40,6 +40,12 @@ jobs:
         #
         # 3) tests/red/ bleibt draussen: RED-Artefakt-Ablage des TDD-
         #    Workflows, kein Kern-Bestand.
+        #
+        # 4) Log-Volumen (2026-08-06): kein -v mehr — das waren ~6.700
+        #    Zeilen "PASSED" pro Lauf, die jede Fehleranalyse (Mensch wie
+        #    KI-Agent) durchkaemmen musste. addopts liefert -q; dazu:
+        #    --tb=short (kompakte Tracebacks) und -rfE (Fehlschlag-Kurzliste
+        #    ans Log-ENDE). Bei Bedarf volles Log lokal reproduzierbar.
         run: |
           TDD_EXCLUDES=$(grep -v '^#' .github/ci_tdd_excludes.txt | sed 's/^/--ignore=/' | tr '\n' ' ')
           uv run pytest \
@@ -47,7 +53,7 @@ jobs:
             --allow-hosts=127.0.0.1,::1,localhost \
             --ignore=tests/red/ \
             $TDD_EXCLUDES \
-            -v
+            --tb=short -rfE
 
   go-test:
     runs-on: ubuntu-latest
@@ -88,13 +94,20 @@ jobs:
           uv python install 3.12
           uv sync
       - name: Run frontend unit tests
-        # Kurzliste der Fehlschlaege ans Log-ENDE — das 17k-Zeilen-TAP-Log
-        # begraebt "not ok" sonst in der Mitte (#1196).
+        # Log-Volumen (2026-08-06): TAP-Volllog (~17k Zeilen) NICHT mehr auf
+        # stdout — bei Erfolg nur die Summary, bei Fehlschlag die Kurzliste
+        # der "not ok"-Zeilen mit Kontext. Das Volllog bleibt im Schritt
+        # reproduzierbar (npm test lokal), die CI-Analyse liest nur noch das
+        # Wesentliche (#1196-Folge).
         run: |
-          set -o pipefail
-          npm test 2>&1 | tee /tmp/fe-test.log || {
+          npm test > /tmp/fe-test.log 2>&1 && {
+            echo "=== OK — Summary ==="
+            grep -E "^# (pass|fail|tests|duration)" /tmp/fe-test.log || tail -5 /tmp/fe-test.log
+          } || {
             echo "=== FEHLGESCHLAGENE TESTS (Kurzliste) ==="
             grep -nE "^\s*not ok" /tmp/fe-test.log | head -40
+            echo "=== Kontext (letzte 60 Zeilen) ==="
+            tail -60 /tmp/fe-test.log
             exit 1
           }
 

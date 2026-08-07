@@ -1,29 +1,35 @@
 # CI-Ausschlussliste tests/tdd/ (Ratsche: darf nur SCHRUMPFEN — Issue #1196, PR #1497)
 #
-# Vermessung 2026-08-04 offline (--disable-socket --allow-unix-socket):
-# 5472 Tests in tests/tdd/, davon 469 rot (403 failed / 66 errors, 931 Socket-
-# Blocks) in den 115 Dateien unten — Mehrheit braucht Netz/Live-Dienste oder
-# Server-Umgebung. Alle NICHT gelisteten tdd-Dateien laufen auf CI mit.
+# Nachvermessung 2026-08-06/07, ZWEISTUFIG (lokal + CI-Runner als Schiedsrichter,
+# PR #1551): 34 der 48 Eintraege wurden testweise entfernt. Der Runner zeigte:
+# 28 davon sind dort rot (haengen an Server-Umgebung/.env/Creds — lokal im
+# Haupt-Checkout kaschiert das der Host-Zustand) und stehen wieder unten.
+# 6 Dateien sind verbindlich gruen und bleiben entfernt:
+# test_briefing_mail_inhalt, test_bug305_mobile_email, test_corridor_migration,
+# test_fix_911_visual_table, test_issue_733_briefing_mail_validator,
+# test_touched_tests_gate.
+#
+# WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
+# (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
+# verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
+# docs/analysis/1196-tdd-excludes-sanierung-2026-08-06.md
+#
 # Eine Datei entfernen = sie laeuft ab dann auf CI; neue Dateien laufen
 # automatisch (kein Eintrag noetig). Bestandssanierung: #1196.
 tests/tdd/test_622_fidelity_pre_actions.py
 tests/tdd/test_952_onset_alert_fidelity.py
 tests/tdd/test_alert_run_deadline.py
 tests/tdd/test_alert_tenancy_two_users.py
-tests/tdd/test_briefing_mail_inhalt.py
-tests/tdd/test_bug305_mobile_email.py
 tests/tdd/test_bundle_791_847_844_alerts.py
 tests/tdd/test_bundle_e_gate_tooling.py
 tests/tdd/test_compare_metric_catalog_endpoint.py
 tests/tdd/test_compare_official_alert.py
 tests/tdd/test_compare_sun_hours_full_day_window.py
-tests/tdd/test_corridor_migration.py
 tests/tdd/test_corridor_no_longer_triggers_alerts.py
 tests/tdd/test_day_comparison_service.py
 tests/tdd/test_epic_140_preview_endpoints.py
 tests/tdd/test_feature_656_radar_nowcast.py
 tests/tdd/test_feature_660_convective_stage.py
-tests/tdd/test_fix_911_visual_table.py
 tests/tdd/test_issue_1040_alerts_toggle.py
 tests/tdd/test_issue_1088_official_alert_triggers.py
 tests/tdd/test_issue_1104_compare_config_foundation.py
@@ -37,7 +43,6 @@ tests/tdd/test_issue_649_compare_daily_dedup.py
 tests/tdd/test_issue_650_telegram_foundation.py
 tests/tdd/test_issue_685_selftest_menu_gate.py
 tests/tdd/test_issue_695_test_briefing_send.py
-tests/tdd/test_issue_733_briefing_mail_validator.py
 tests/tdd/test_issue_764_compare_forecast_hours_consume.py
 tests/tdd/test_issue_816_alert_deviation.py
 tests/tdd/test_issue_818_radar_briefing_integration.py
@@ -52,5 +57,4 @@ tests/tdd/test_telegram_kurzstil_compare_official_alert.py
 tests/tdd/test_telegram_kurzstil_parse_mode.py
 tests/tdd/test_telegram_kurzstil_trip_alert.py
 tests/tdd/test_telegram_kurzstil_trip_briefing.py
-tests/tdd/test_touched_tests_gate.py
 tests/tdd/test_trip_report_test_send_past_stage_clamp.py
