@@ -31,6 +31,7 @@ echten `ThrottleStore`-/`alert_daily_limit`-Dateien.
 """
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -57,6 +58,18 @@ def _clean_user(user_id: str) -> None:
     d = DATA_ROOT / user_id
     if d.exists():
         shutil.rmtree(d)
+
+
+def _write_user_tier(uid: str, tier: str) -> None:
+    """Setzt den Tarif eines Test-Nutzers — Vorbild: `test_issue_1070_daily_
+    alert_limit.py:75-78`. Nutzt bewusst `app.loader.get_data_dir()` statt der
+    lokalen `DATA_ROOT`-Konstante dieser Datei, sonst greift die #1133-
+    Testisolation nicht."""
+    from app.loader import get_data_dir
+
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
 
 
 def _settings_email_capable_dummy() -> Settings:
@@ -467,6 +480,7 @@ def test_f001_broken_quiet_value_does_not_abort_other_presets_same_user():
     preset_id_broken = f"cp-f001-broken-{uuid.uuid4().hex[:6]}"
     preset_id_healthy = f"cp-f001-healthy-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _write_user_tier(uid, "premium")
     try:
         from services.compare_weather_snapshot import CompareWeatherSnapshotService
 
@@ -606,6 +620,7 @@ def test_f003_non_string_quiet_value_does_not_abort_other_presets_same_user():
     preset_id_broken = f"cp-f003-broken-{uuid.uuid4().hex[:6]}"
     preset_id_healthy = f"cp-f003-healthy-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
+    _write_user_tier(uid, "premium")
     try:
         from services.compare_weather_snapshot import CompareWeatherSnapshotService
 
