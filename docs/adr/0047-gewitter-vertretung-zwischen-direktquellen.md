@@ -134,9 +134,18 @@ wirkte dieses ADR wie ein Bruch von ADR-0025 — das ist es nicht.
   - Das in ADR-0018 geforderte wachsende Health-Signal für andauernde Ausfälle ist für die
     Gewitter-Domäne **noch nicht** nachgezogen — bewusst vertagt auf ein eigenes Folge-Issue
     (Spec Known Limitations Punkt 2), keine offene Lücke innerhalb dieser Scheibe.
-  - Sichtbarkeit im Briefing (E-Mail-/Telegram-Fußzeile) ist eigene Folgescheibe 2b; 2a hält die
-    Herkunft nur intern fest. 2b darf sich dabei NICHT allein auf `fallback_model` stützen (s.
-    Spec Known Limitations Punkt 3), sondern muss auch `fallback_metrics` auswerten.
+  - ~~Sichtbarkeit im Briefing (E-Mail-/Telegram-Fußzeile) ist eigene Folgescheibe 2b; 2a hält die
+    Herkunft nur intern fest.~~ **Erledigt mit #1492 Scheibe 2b (live seit 2026-08-07,
+    `35b41753`).** Die Vertretung erscheint in Klartext in der Trip-Briefing-Mail (Vollversion
+    und Kompakt) sowie in der Telegram-Langform; SMS und Telegram-Kurzform bleiben bewusst
+    ausgenommen (160-Zeichen-Budget). Formulierung zentral in
+    `src/output/renderers/fallback_notice.py`, Spec
+    `docs/specs/modules/feat_1492_s2b_fallback_sichtbarkeit.md`. Die Auflage aus Known
+    Limitations Punkt 3 ist eingehalten: die Gewitterzeile erkennt die Vertretung an
+    `fallback_metrics`, **nicht** an `fallback_model`, und nennt im Kollisionsfall bewusst
+    keinen Quellennamen, statt den Namen des Grundvorhersage-Ersatzmodells zu führen.
+    **Offen bleibt allein die Ortsvergleichs-Mail** (mehrere Orte mit je eigener Herkunft) —
+    eigenes Folge-Issue **#1563**.
 
 ## Changelog
 
