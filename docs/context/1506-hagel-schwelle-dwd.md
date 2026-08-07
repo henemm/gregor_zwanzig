@@ -160,3 +160,62 @@ Spec-/Issue-Historie) haben übereinstimmend bestätigt:
 Analyse abgeschlossen, aber mit offener PFLICHT-Frage. **Vor `/30-write-spec`:** PO-Entscheidung
 zur Schwellenquelle einholen (siehe Open Questions) — Beleg im Issue #1506, nicht nur Chat
 (Memory-Konvention: Freigabe nur im Chat zählt nicht als Freigabe).
+
+---
+
+# 🔴 NACHTRAG 2026-08-07 — dieses Dokument ist ab hier überholt
+
+Der oben beschriebene Weg ist **endgültig tot**, und zwar aus einem Grund, den die Analyse vom
+2026-08-05 noch nicht kannte. Wer nur den Teil oben liest, wiederholt eine Sackgasse.
+Vollständige Nachrecherche mit allen Quellen:
+[#1506 Kommentar vom 2026-08-07](https://github.com/henemm/gregor_zwanzig/issues/1506#issuecomment-5217506098).
+
+**Der strukturelle Grund:** Das operationelle ICON-D2, aus dem wir über `de_direct` beziehen,
+fährt ein **Ein-Momenten-Mikrophysikschema** mit fünf Teilchenklassen — Wolkenwasser, Regen,
+Wolkeneis, Schnee, Graupel. **Hagel ist keine davon.** Nachgemessen an der Parameterliste
+`opendata.dwd.de/weather/nwp/icon-d2/grib/00/`: 139 Größen, **keine einzige** mit `hail`. Die
+gesuchte Schwelle sollte also zwischen zwei Dingen übersetzen, von denen eines im Modell nicht
+existiert.
+
+**Die Optionen (b)/(c)/(d) oben sind damit gegenstandslos** — insbesondere (d): ein
+`grau_gsp == 0` sagt nichts über Hagel aus, weil das Modell Hagel gar nicht führt und
+physikalisch am Boden Hagel ankommt, nicht Graupel.
+
+**🟢 Stattdessen neu gefunden:** Seit 2024-07-12 läuft **ICON-D2-RUC** operationell mit einem
+Zwei-Momenten-Schema **inklusive prognostischer Hagelkategorie**, und die Daten liegen **frei**
+auf dem DWD-Server — unter einem anderen Pfadbaum, weshalb sie bisher niemandem aufgefallen sind:
+
+`https://opendata.dwd.de/weather/nwp/v1/m/icon-d2-ruc/p/`
+
+Dort u.a. **`DEMAX_HAIL_S`** (geschätzter maximaler Hagelkorn-**Durchmesser** am Boden),
+`HAIL_GSP` (Hagel-Bodenniederschlag), `KE_HAIL_S`. Das verschiebt die Frage grundlegend: für
+**Durchmesser** hat der DWD eine veröffentlichte Grenze — Wetterlexikon, **> 5 mm = Hagel**,
+darunter Graupel. Größe und Kriterium passen erstmals zusammen, statt über eine Analogie
+verbunden zu werden.
+
+Befüllt sind die Felder tatsächlich (gemessen am Lauf `2026-08-07T12:00`: die komprimierte
+Größe von `HAIL_GSP` wächst über die Vorhersagezeit stetig, 72 → 105 kB, im selben Muster wie
+`GRAU_GSP`). ⚠️ Die **physikalischen Zahlenwerte** konnten nicht ausgelesen werden — Dreiecksgitter
+und CCSDS-Packung (GRIB2-Template 5.42) brauchen `eccodes`/`aec`.
+
+**Preis einer Nutzung, ehrlich:** anderer Pfadbaum, Dreiecksgitter statt Lat-Lon (unser
+DWD-Abruf liest heute reguläre Gitter), CCSDS-Dekodierung, Vorhersagehorizont nur 27 statt 48
+Stunden, Gebiet weiterhin nur Deutschland/Alpen — für Korsika und Mallorca ändert sich nichts.
+Das ist **Datenquellen-Erschließung, keine Schwellendefinition** — ein anderer Zuschnitt als
+der, für den #1506 angelegt wurde.
+
+**Und eine Warnung, die bleibt:** Selbst radarbasierte Verfahren, die den realen Sturm sehen,
+haben publizierte Falschalarm-Raten von 0,3 bis 0,7. Der DWD selbst schreibt in Warntexten nie
+„kein Hagel", sondern „Hagel nicht ausgeschlossen". Ein belastbares Nein bleibt schwierig, auch
+mit der besseren Quelle.
+
+## Zwei Messungen zu `grau_gsp`, die unabhängig davon gelten
+
+- **Kumuliert bestätigt.** Die Gebietssumme steigt über die Vorhersagezeit monoton — die
+  Rückrechnung im Code ist korrekt. Die GDAL-Bezeichnung „GPRATE, kg/(m²·s)" beim Lesen der
+  GRIB-Datei ist ein Etikettierungs-Artefakt der Bibliothek, **kein** Fehler bei uns.
+- **Exakt null ist ein sauberes Signal, kein Rauschen.** Im 48-Stunden-Lauf sind 99,99 % der
+  Zellen im Modellgebiet exakt `0.0` (754 766 von 754 862); nur 96 Zellen tragen überhaupt
+  Graupel, dort 3·10⁻⁵ bis 1,56 kg/m². In frühen Vorhersagestunden tritt allerdings numerisches
+  Rauschen um 10⁻¹⁶ auf — ein Nullvergleich bräuchte eine Rauschgrenze, aber keine
+  meteorologische Kalibrierung.
