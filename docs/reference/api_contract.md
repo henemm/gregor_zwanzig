@@ -1116,7 +1116,11 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
         "last_skipped_at": "2026-08-01T13:00:00Z"
       }
     }
-  ]
+  ],
+  "tier_request_health": {
+    "open_count": 1,
+    "oldest_open_age_hours": 192.4
+  }
 }
 ```
 
@@ -1137,6 +1141,9 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 | jobs[].overlap | object \| null (Issue #1447 S2a) | Present **only** when at least one tick has been skipped since the last executed run of this job, because the previous run of the same job ID was still in progress (`sync.Mutex.TryLock()` in `recordRun`). Absent field means no overlap is occurring — never an error signal. |
 | jobs[].overlap.skipped_since_last_run | int | Number of consecutive ticks skipped since the last executed run; resets to 0 (and the `overlap` field disappears) the next time the job actually runs, regardless of outcome |
 | jobs[].overlap.last_skipped_at | datetime | ISO-8601 UTC timestamp of the most recently skipped tick |
+| tier_request_health | object (Issue #1555) | Privacy-safe aggregate of open tier-change requests (`POST /api/auth/tier-change-request`, Issue #1071) across ALL users. Purely numeric — the endpoint is public, so no `user_id`, `display_name` or e-mail ever appears here (#252). A request counts as **done** when `requested_tier` is empty OR equals the effective `tier`; only otherwise it is **open**. |
+| tier_request_health.open_count | int | Number of currently open tier-change requests across all users. `0` when none are pending. |
+| tier_request_health.oldest_open_age_hours | float | Age in hours of the **oldest** open request (from its `requested_at`); `0.0` when `open_count` is 0 or no open request carries a `requested_at`. Raw hours only — the 7-day overdue threshold is evaluated by the external monitor (`check-gregor20.sh`), not here, analogous to `briefing_health`. |
 
 **Error Responses:**
 

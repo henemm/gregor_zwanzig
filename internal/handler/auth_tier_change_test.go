@@ -102,6 +102,73 @@ func TestRequestTierChange_AlreadyCurrentTier(t *testing.T) {
 	}
 }
 
+// Issue #1555: Bestandskonten (in Produktion z.B. "steffi", "default") haben
+// gar kein tier-Feld. Ihr faktisches Level ist "free" — ein Antrag auf "free"
+// muss deshalb genauso als already_current_tier abgelehnt werden wie bei einem
+// explizit gespeicherten "free". Sonst entsteht ein wirkungsloser offener
+// Antrag, den tier_request_health anschliessend als Rueckstand meldet.
+//
+// Bewacht model.EffectiveTier(user.Tier) in RequestTierChangeHandler: mit
+// rohem user.Tier ("") liefe der Antrag auf 200 durch.
+func TestRequestTierChange_EmptyTierCountsAsFree(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.SaveUser(model.User{ID: "steffi"}); err != nil {
+		t.Fatalf("SaveUser failed: %v", err)
+	}
+
+	h := RequestTierChangeHandler(s, config.Config{PoEmail: "po@example.com"})
+
+	body, _ := json.Marshal(map[string]string{"requested_tier": "free"})
+	req := httptest.NewRequest("POST", "/api/auth/tier-change-request", bytes.NewReader(body))
+	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "steffi"))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 400 {
+		t.Fatalf("expected 400 for free-request of a user without tier field, got %d: %s", w.Code, w.Body.String())
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte("already_current_tier")) {
+		t.Errorf("expected error 'already_current_tier', got: %s", w.Body.String())
+	}
+
+	// Kein Antrag darf persistiert worden sein.
+	user, err := s.LoadUser("steffi")
+	if err != nil {
+		t.Fatalf("LoadUser failed: %v", err)
+	}
+	if user.RequestedTier != "" {
+		t.Errorf("expected no persisted request, got %q", user.RequestedTier)
+	}
+}
+
+// Gegenstueck: ein Konto ohne tier-Feld darf sehr wohl "standard" beantragen —
+// die Normalisierung darf nicht pauschal jeden Antrag blockieren.
+func TestRequestTierChange_EmptyTierCanRequestStandard(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.SaveUser(model.User{ID: "steffi"}); err != nil {
+		t.Fatalf("SaveUser failed: %v", err)
+	}
+
+	h := RequestTierChangeHandler(s, config.Config{PoEmail: "po@example.com"})
+
+	body, _ := json.Marshal(map[string]string{"requested_tier": "standard"})
+	req := httptest.NewRequest("POST", "/api/auth/tier-change-request", bytes.NewReader(body))
+	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "steffi"))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	user, err := s.LoadUser("steffi")
+	if err != nil {
+		t.Fatalf("LoadUser failed: %v", err)
+	}
+	if user.RequestedTier != "standard" {
+		t.Errorf("expected persisted request 'standard', got %q", user.RequestedTier)
+	}
+}
+
 func TestRequestTierChange_TwoUsersIsolated(t *testing.T) {
 	s := newTestStore(t)
 	if err := s.SaveUser(model.User{ID: "user_a", Tier: "free"}); err != nil {
