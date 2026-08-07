@@ -1,7 +1,10 @@
 #!/bin/bash
-# Load env from project root for E2E tests
+# Issue #1289: gezielter statt blanket Env-Load — .env.e2e ist secret-frei
+# (git-getrackt, öffentliches Repo!) und wird weiter komplett gesourced;
+# aus der Haupt-.env werden NUR GZ_SESSION_SECRET + GZ_GOOGLE_CLIENT_ID
+# gezogen (siehe e2e-env.sh) statt aller 41 Schlüssel dort.
+source "$(dirname "$0")/e2e-env.sh"
 set -a
-source "$(dirname "$0")/../../.env"
 [ -f "$(dirname "$0")/../../.env.e2e" ] && source "$(dirname "$0")/../../.env.e2e"
 set +a
 export NODE_ENV=test
