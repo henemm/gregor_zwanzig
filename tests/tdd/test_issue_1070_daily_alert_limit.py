@@ -401,6 +401,7 @@ def telegram_sink(monkeypatch):
 
     sink = _TelegramSink()
     monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", sink.base)
+    monkeypatch.setenv("GZ_TELEGRAM_TEST_CHAT_ID", "1070-fixture-test-chat")
     yield sink
     sink.stop()
 
