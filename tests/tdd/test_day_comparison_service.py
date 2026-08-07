@@ -174,7 +174,8 @@ class TestAC3_ThunderOrdinal:
         """
         GIVEN gestern ThunderLevel.HIGH, heute ThunderLevel.NONE
         WHEN compare()
-        THEN direction=BETTER, delta=-2 (ordinal)
+        THEN direction=BETTER, delta=-3 (ordinal, 4-stufig seit #1474:
+        NONE=0, LOW=1, MED=2, HIGH=3)
         """
         from app.models import ThunderLevel
         from services.day_comparison import ComparisonDirection, DayComparisonService
@@ -185,13 +186,13 @@ class TestAC3_ThunderOrdinal:
         entry = DayComparisonService().compare(today, yesterday).entries[0]
 
         assert entry.thunder.direction == ComparisonDirection.BETTER
-        assert entry.thunder.delta == -2
+        assert entry.thunder.delta == -3
 
     def test_thunder_none_to_med_is_worse(self):
         """
         GIVEN gestern ThunderLevel.NONE, heute ThunderLevel.MED
         WHEN compare()
-        THEN direction=WORSE, delta=+1
+        THEN direction=WORSE, delta=+2 (4-stufige Ordinal seit #1474)
         """
         from app.models import ThunderLevel
         from services.day_comparison import ComparisonDirection, DayComparisonService
@@ -202,7 +203,7 @@ class TestAC3_ThunderOrdinal:
         entry = DayComparisonService().compare(today, yesterday).entries[0]
 
         assert entry.thunder.direction == ComparisonDirection.WORSE
-        assert entry.thunder.delta == 1
+        assert entry.thunder.delta == 2
 
     def test_thunder_same_level_is_equal(self):
         """

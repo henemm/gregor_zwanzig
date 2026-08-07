@@ -15,6 +15,11 @@
 # (altes ADR-Dateinamen-Literal aus Spec-Doku entfernt) sind saniert und
 # laufen wieder mit.
 #
+# Batch 2 (2026-08-07): test_compare_metric_catalog_endpoint +
+# test_day_comparison_service — Thunder-Ordinal-Tests an die seit #1474
+# gueltige 4-Stufen-Skala (NONE/LOW/MED/HIGH) angeglichen; die 3-Stufen-
+# Erwartung war Ueberstand aus der PO-Entscheidung 2026-07-12.
+#
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
 # verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
@@ -28,11 +33,9 @@ tests/tdd/test_alert_run_deadline.py
 tests/tdd/test_alert_tenancy_two_users.py
 tests/tdd/test_bundle_791_847_844_alerts.py
 tests/tdd/test_bundle_e_gate_tooling.py
-tests/tdd/test_compare_metric_catalog_endpoint.py
 tests/tdd/test_compare_official_alert.py
 tests/tdd/test_compare_sun_hours_full_day_window.py
 tests/tdd/test_corridor_no_longer_triggers_alerts.py
-tests/tdd/test_day_comparison_service.py
 tests/tdd/test_feature_656_radar_nowcast.py
 tests/tdd/test_feature_660_convective_stage.py
 tests/tdd/test_issue_1040_alerts_toggle.py
