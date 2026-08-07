@@ -163,8 +163,15 @@ export interface MetricEntry {
 	category: string;
 	default_enabled: boolean;
 	/** Issue #1552: Trip-Anlege-Vorbelegung — eigener Marker, unabhaengig von
-	 *  default_enabled (das weiterhin Orte/Abonnements versorgt). */
-	trip_default_enabled: boolean;
+	 *  default_enabled (das weiterhin Orte/Abonnements versorgt). Optional wie
+	 *  die anderen additiven Katalog-Felder unten: die echte Serverantwort
+	 *  liefert es immer (s. api/routers/config.py::get_metrics(),
+	 *  test_metrics_endpoint_trip_default_field.py), aber bestehende
+	 *  Test-/Mock-Kataloge in diesem Repo bauen MetricEntry-Literale ohne
+	 *  jedes Feld nachzuruesten — als Pflichtfeld waeren sie strukturell
+	 *  unvollstaendig, ohne dass sich an ihrem getesteten Verhalten etwas
+	 *  aendert (CI-Regression svelte-check 36->94, #1554 Fix-Loop). */
+	trip_default_enabled?: boolean;
 	has_friendly_format: boolean;
 	/** Issue #435: erlaubte Format-Modi pro Metrik (raw/scale/simplified/symbol). */
 	format_modes?: string[];
