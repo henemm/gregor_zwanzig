@@ -13,24 +13,27 @@ zeigt: **Der Bestand hat sich seither stark verbessert — die Liste war zu 75 %
 Dieses Dokument belegt die Entfernung der 36 überholten Einträge und legt für die
 verbleibenden 12 Dateien Ursache und Sanierungsweg fest.
 
-## Ergebnis vorweg
+## Ergebnis vorweg — mit Runner-Urteil (PR #1551, 2026-08-07)
 
-- **48 → 14 Dateien.** 34 Einträge laufen offline grün (oder werden per Marker
-  `live`/`email` ohnehin deselektiert) und wurden aus der Liste entfernt. Der CI-Lauf
-  des zugehörigen PRs ist der verbindliche Beleg — läuft eine entfernte Datei auf dem
-  Runner doch rot (Host-Abhängigkeit), ist das ein Ein-Zeilen-Revert.
-- **38 rote Tests in 14 Dateien** sind der reale Restbestand (Vermessung 2026-08-04: 469).
-- **24 der 38 Fehler** sitzen in einer einzigen Datei (`test_epic_140_preview_endpoints.py`)
-  und haben eine einzige, mechanisch behebbare Ursache (fehlende Daten-Isolation, #1133).
-- **Messumgebung entscheidet:** Die 12 „fachlich roten" Dateien sind in beiden Umgebungen
-  rot. `test_622`/`test_952` sind nur im frischen Checkout **ohne `.env`** rot (CI-ähnlich),
-  im Haupt-Checkout mit `.env` grün → host-abhängig, bleiben vorerst excludiert.
-- **Test-Pollution beobachtet:** `test_issue_1014_live_optin` (nie excludiert) fällt nur
-  im Volllauf um, wenn bestimmte re-aktivierte Dateien mitlaufen (Env-Mutation ohne
-  Aufräumen) — isoliert grün. Das ist die in `fix_1196_s1_testnetz_entrauschen.md`
-  beschriebene Baustelle und grenzt ein, welche Re-Aktivierungen sofort ungefährlich sind.
+- **48 → 42 Dateien (netto).** 34 Einträge wurden testweise entfernt; der CI-Runner
+  zeigte 28 davon rot (71 failed / 6.713 passed) → zurück in die Liste.
+  **6 Dateien sind verbindlich grün und bleiben entfernt:** `test_briefing_mail_inhalt`,
+  `test_bug305_mobile_email`, `test_corridor_migration`, `test_fix_911_visual_table`,
+  `test_issue_733_briefing_mail_validator`, `test_touched_tests_gate`.
+- **Zentrale Lektion:** Lokale Offline-Läufe im Haupt-Checkout sind **kein** Beleg für
+  CI-Grün — `.env` und die befüllten `data/users/`-Daten des Hosts kaschieren
+  Umgebungs-Abhängigkeiten. Auch ein frischer Worktree-Checkout bildet den Runner nur
+  teilweise ab. Einzig verbindliche Vermessung ist der CI-Lauf selbst; die
+  Ratschen-Mechanik (entfernen → PR → bei Rot Ein-Zeilen-Revert) hat genau dafür
+  funktioniert.
+- Die 14 lokal roten Dateien (Tabelle unten) sind eine **Teilmenge** der 42 — ihre
+  Ursachenanalyse bleibt gültig; die übrigen 28 hängen mehrheitlich an
+  Server-Umgebung/Creds (Telegram, Staging-Gate, Alert-Versand mit echtem Datenbestand).
+- **24 der 38 lokal roten Tests** sitzen in einer einzigen Datei
+  (`test_epic_140_preview_endpoints.py`) mit einer mechanisch behebbaren Ursache
+  (fehlende Daten-Isolation, #1133).
 
-## Die 14 verbleibenden Dateien nach Ursache
+## Die 14 lokal roten Dateien nach Ursache (Teilmenge der 42 Runner-roten)
 
 | Datei | Fehler | Grundursache (Beleg) | Sanierungsweg |
 |---|---|---|---|
@@ -72,12 +75,11 @@ verbleibenden 12 Dateien Ursache und Sanierungsweg fest.
 - Lauf 6 (Subset der alphabetischen Vorgänger von 1014 im Worktree): dort zeigen
   re-aktivierte Dateien (`test_alert_run_deadline`, `test_alert_tenancy_two_users`,
   `test_bundle_791_847_844_alerts`) Alert-Versand-Assertions rot, die im Volllauf
-  grün waren — d.h. das Testnetz ist **in beide Richtungen instabil**
-  (reihenfolge-, datums- und hostabhängig). Lokale Läufe können die CI-Wirkung
-  einer Listen-Entfernung daher nicht abschließend beweisen.
-- Konsequenz: Der **PR-Lauf auf dem CI-Runner ist der einzige verbindliche
-  Beleg** (Workflow läuft auf `pull_request`, main ist geschützt). Fällt eine
-  re-aktivierte Datei dort auf: Ein-Zeilen-Revert (Eintrag zurück in die Liste)
-  und die Datei wandert in Batch 6/7 dieser Liste. Die mittelfristige Lösung
-  ist die Spec `fix_1196_s1_testnetz_entrauschen.md`, nicht weitere lokale
-  Mehrfachvermessung.
+  grün waren — d.h. das Testnetz ist lokal **in beide Richtungen instabil**
+  (reihenfolge-, datums- und hostabhängig).
+- Lauf 7 (**CI-Runner, PR #1551**): 71 failed / 6.713 passed; 28 der 34 re-aktivierten
+  Dateien rot → zurück in die Liste (42 Einträge). 6 Dateien runner-verifiziert grün.
+- Konsequenz: Der CI-Runner ist der einzige verbindliche Beleg. Weitere
+  Verkleinerungen der Liste nur noch nach echter Sanierung (Batches oben), jede mit
+  eigenem PR-Lauf — nicht durch lokale Neuvermessung. Die mittelfristige Lösung
+  ist die Spec `fix_1196_s1_testnetz_entrauschen.md`.
