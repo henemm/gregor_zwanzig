@@ -831,7 +831,19 @@ class TripAlertService:
             # Issue #952 (reopened): kurzes Intensitäts-Label (kein format_now_text-Satz
             # mehr — der Renderer haengt selbst "ab {onset_time}" an). Briefing-Kontext
             # wandert in ein eigenes Feld (4. Datenblock-Zeile, nur E-Mail).
-            _briefing_context = "bereits angekündigt" if _briefing_announced else "nicht angekündigt"
+            # Issue #1310 (AC-4 aus #883 Slice 4): der Override-Fall braucht einen
+            # eigenen dritten Zustand. "bereits angekündigt" allein ist zwar wahr,
+            # verschweigt aber die Zuspitzung, wegen der überhaupt gesendet wurde --
+            # angekündigter Regen, der laut Radar konvektiv (Gewitter/Hagel) wird.
+            # Ohne Konvektion kommt der Zweig hier gar nicht an (oben `continue`);
+            # die Fallunterscheidung bleibt trotzdem explizit, damit die Aussage
+            # auch dann richtig ist, wenn die Unterdrückung oben je gelockert wird.
+            if _briefing_announced and result.is_convective:
+                _briefing_context = "bereits angekündigt — jetzt akut"
+            elif _briefing_announced:
+                _briefing_context = "bereits angekündigt"
+            else:
+                _briefing_context = "nicht angekündigt"
             # F002: Anzeige-Kontext mitten im Satz ("leichter Regen") -- erstes
             # Zeichen kleinschreiben; intensity_to_text() selbst bleibt Title-Case
             # (andere Caller nutzen es am Satzanfang). Alle Labels beginnen mit

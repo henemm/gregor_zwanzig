@@ -316,7 +316,6 @@ def test_ac3_override_respects_cooldown():
 # AC-4: Override-Mail-Wording — nicht "im Briefing nicht angekündigt"
 # --------------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="#1310: Akut-Override ('jetzt akut'-Hinweis) nie implementiert (nie implementierte Alt-Spec)", strict=False)
 def test_ac4_override_mail_wording_not_unannounced():
     """AC-4: Im Override-Fall darf der Body NICHT "im Briefing nicht angekündigt"
     enthalten (das wäre falsch — der Regen WAR angekündigt) sondern den Akut-Hinweis.
@@ -346,6 +345,46 @@ def test_ac4_override_mail_wording_not_unannounced():
         )
         assert "jetzt akut" in body, (
             f"AC-4: Override-Body muss den Akut-Hinweis 'jetzt akut' enthalten.\nBody:\n{body}"
+        )
+    finally:
+        _clean_user(uid)
+
+
+def test_ac4b_unannounced_convective_keeps_plain_wording():
+    """GEGENPROBE zu AC-4 (Issue #1310): konvektiv, aber das Briefing hat NICHTS
+    angekündigt → die Briefing-Zeile bleibt "nicht angekündigt" und bekommt KEIN
+    "jetzt akut".
+
+    Ohne diesen Test wäre AC-4 auch mit einem bedingungslosen "jetzt akut" grün —
+    dann stünde der Akut-Hinweis auf JEDER Radar-Mail und sagte nichts mehr aus.
+    Der Unterschied zum AC-4-Fall ist allein der fehlende Briefing-Regen im
+    Schnappschuss.
+    """
+    uid = f"tdd-883-ac4b-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    _ensure_real_user_dir(uid)
+    try:
+        trip_id = f"tdd-883-ac4b-{uuid.uuid4().hex[:6]}"
+        _save_trip_direct(_make_active_trip(trip_id), uid)
+        # Briefing kündigt NICHTS an (0.0 mm < 0.5 mm Schwelle).
+        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={_onset_hour(): 0.0})
+
+        captured: list = []
+        _new_service(uid, _convective_frames, captured).check_radar_alerts()
+
+        assert len(captured) >= 1, (
+            "Gegenprobe: unangekündigter konvektiver Regen muss erst recht einen "
+            "Alert erzeugen."
+        )
+        body = captured[0][1]
+        assert "nicht angekündigt" in body, (
+            f"Gegenprobe: ohne Briefing-Ankündigung muss die Briefing-Zeile "
+            f"'nicht angekündigt' lauten.\nBody:\n{body}"
+        )
+        assert "jetzt akut" not in body, (
+            f"Gegenprobe: 'jetzt akut' beschreibt die Zuspitzung einer BEREITS "
+            f"angekündigten Lage. Hier war nichts angekündigt — der Hinweis waere "
+            f"sinnlos und entwertete ihn in den Faellen, wo er zaehlt.\nBody:\n{body}"
         )
     finally:
         _clean_user(uid)

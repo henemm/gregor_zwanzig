@@ -2,9 +2,9 @@
 entity_id: issue_883_acute_danger_override
 type: feature
 created: 2026-06-25
-updated: 2026-06-25
-status: draft
-version: "1.0"
+updated: 2026-08-07
+status: implemented
+version: "1.1"
 tags: [alert, radar, nowcast, convective, safety-override, briefing-suppression, epic-813, slice-4]
 ---
 
@@ -12,7 +12,7 @@ tags: [alert, radar, nowcast, convective, safety-override, briefing-suppression,
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO 2026-07-22 Umsetzung, 2026-08-07 Wortlaut)
 
 ## Purpose
 
@@ -66,22 +66,30 @@ if _briefing_announced and not result.is_convective:
 - Greift erst **nach** `radar_alert_due(...)` (Onset ≤20 Min) und **nach** dem QuietHours- und Throttle-Check — diese bleiben also wirksam.
 - Der Doppel-Alert-Guard (≈691-709) bleibt **unverändert** aktiv: hat ein Forecast-Alert für dasselbe Segment innerhalb des Cooldowns gefeuert, wird auch der Override unterdrückt (max. eine Meldung).
 
-### Mail-Wording fallabhängig (≈ trip_alert.py:734-735)
+### Mail-Wording fallabhängig
 
-Heute fix:
-```
-onset_text += ", im Briefing nicht angekündigt"
-```
+**Umgesetzt 2026-08-07 unter #1310 — an anderer Stelle als hier ursprünglich geplant.**
+Der Entwurf hängte den Hinweis an `onset_text` an. Seit **#952** trägt die Alarm-Mail dafür
+eine eigene Datenzeile „Briefing" (`renderers/alert/render.py:235-236`), gespeist aus
+`RadarAlertRequest.briefing_context`. Der Hinweis sitzt deshalb dort — der Renderer bleibt
+unverändert, wie im Entwurf beabsichtigt.
 
-Neu:
-```
-if _briefing_announced:
-    onset_text += ", jetzt akut"          # Override: Regen WAR angekündigt, ist jetzt Gewitter
+Ist-Stand (`trip_alert.py`, Zustand der Zeile „Briefing"):
+
+```python
+if _briefing_announced and result.is_convective:
+    _briefing_context = "bereits angekündigt — jetzt akut"   # Override
+elif _briefing_announced:
+    _briefing_context = "bereits angekündigt"
 else:
-    onset_text += ", im Briefing nicht angekündigt"
+    _briefing_context = "nicht angekündigt"
 ```
 
-Begründung: Im Override-Fall wäre "im Briefing nicht angekündigt" eine Falschaussage. `src/outputs/radar_alert.py` (Body-/Subject-Builder) bleibt unverändert — nur der eingespeiste `onset_text` ändert sich.
+Wortlaut PO-freigegeben 2026-08-07 (#1310). Begründung unverändert: Im Override-Fall wäre
+„nicht angekündigt" eine Falschaussage — der Regen **war** angekündigt, neu ist die
+Zuspitzung. Bewacht durch `test_ac4_override_mail_wording_not_unannounced` **und** die
+Gegenprobe `test_ac4b_unannounced_convective_keeps_plain_wording`; letztere verhindert, dass
+ein bedingungsloses „jetzt akut" den Hinweis entwertet.
 
 ### Unverändert (Invarianten)
 
