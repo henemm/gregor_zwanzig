@@ -21,8 +21,7 @@
 
 | Ort | Charakter |
 |---|---|
-| `specs/modules/` u. a. | Specs: thematische Modul-Specs + Specs OFFENER Issues. Template: `specs/_template.md` |
-| `specs/_archive/` | Wegwerf-Specs GESCHLOSSENER Issues (2026-07-21 archiviert; durchsuchbar, nicht maßgeblich) |
+| `specs/modules/`, `specs/fast/`, `specs/_archive/` | **Datierte Umsetzungs-Berichte: was wann gebaut wurde — kein Ist-Stand.** Verlässlich ist allein `created`/`updated` im Kopf. Weder der Ordner noch das `status:`-Feld sagen, ob eine Spec noch gilt: gemessen 2026-08-07 liegen 115 von 140 issue-benannten Specs zu **geschlossenen** Issues in `modules/`, und 297 von 367 Dateien stehen auf `status: draft`, obwohl längst live. Wer wissen will, wie das System **heute** arbeitet, liest `reference/` und `adr/` (oben) — nie eine Spec. Template: `specs/_template.md` |
 | `artifacts/` | Workflow-Artefakte laufender Vorgänge — Ordner abgeschlossener Workflows werden gelöscht (Git-Historie bewahrt sie) |
 | `analysis/` | Punktuelle Analysen (datiert, nicht gepflegt) |
 | `design-requests/`, `claude-design-queue/`, `design/` | Design-Austausch-Artefakte (Momentaufnahmen) |
