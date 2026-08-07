@@ -631,6 +631,32 @@ def _filter_metrics_by_report_type(
     return result
 
 
+# Issue #1575: Bucket-Rangfolge fuer die Spalten-/Zeilenreihenfolge.
+_BUCKET_RANK = {"primary": 0, "secondary": 1}
+
+
+def _sorted_by_layout(metrics: list["MetricConfig"]) -> list["MetricConfig"]:
+    """Sortiert nach der im Editor eingestellten Position (Issue #1575).
+
+    primary vor secondary, innerhalb des Buckets nach ``order`` -- exakt die
+    Semantik, die ``channel_layout.render_for_channel`` fuer Telegram und den
+    Ortsvergleich schon anwendet. Ohne diese Sortierung liest der Mail-Renderer
+    ``dc.metrics`` in Array-Reihenfolge (``email/html.py`` ``_col_order``), und
+    die Array-Reihenfolge ist die Katalog-Reihenfolge -- die im Editor gezogene
+    Position blieb damit wirkungslos.
+
+    Beide Buckets zaehlen ihre Positionen ab 0; eine Sortierung allein nach
+    ``order`` wuerde sie verschraenken -- daher der Bucket-Rang zuerst.
+
+    ``sorted()`` ist stabil: Altbestand, dessen Eintraege alle ``order = 0``
+    tragen, behaelt exakt seine bisherige Reihenfolge.
+    """
+    return sorted(
+        metrics,
+        key=lambda mc: (_BUCKET_RANK.get(mc.bucket, len(_BUCKET_RANK)), mc.order),
+    )
+
+
 @dataclass
 class UnifiedWeatherDisplayConfig:
     """
@@ -706,6 +732,10 @@ class UnifiedWeatherDisplayConfig:
         2. per_channel_layouts[channel] (Issue #429) — zweite Stufe.
            Leere Liste = expliziter User-Wunsch, kein Fallback.
         3. globale Liste via get_metrics_for_report_type(report_type) — Fallback.
+
+        Issue #1575: JEDE Ebene laeuft durch dieselbe Sortierung nach der im
+        Editor eingestellten Position — sonst verhielte sich ein Trip mit
+        kanal-eigenen Listen anders als einer ohne.
         """
         # Ebene 1 (#434): per_report_layouts[report_type][channel]
         if (
@@ -716,7 +746,9 @@ class UnifiedWeatherDisplayConfig:
             report_channel_metrics = self.per_report_layouts[report_type][channel]
             if len(report_channel_metrics) == 0:
                 return []
-            return _filter_metrics_by_report_type(report_channel_metrics, report_type)
+            return _sorted_by_layout(
+                _filter_metrics_by_report_type(report_channel_metrics, report_type),
+            )
 
         # Ebene 2 (#429): per_channel_layouts[channel]
         if (
@@ -726,10 +758,12 @@ class UnifiedWeatherDisplayConfig:
             channel_metrics = self.per_channel_layouts[channel]
             if len(channel_metrics) == 0:
                 return []
-            return _filter_metrics_by_report_type(channel_metrics, report_type)
+            return _sorted_by_layout(
+                _filter_metrics_by_report_type(channel_metrics, report_type),
+            )
 
         # Ebene 3: globaler Fallback
-        return self.get_metrics_for_report_type(report_type)
+        return _sorted_by_layout(self.get_metrics_for_report_type(report_type))
 
 
 # --- Ausblick-Zustand (Fix #1486) ---
