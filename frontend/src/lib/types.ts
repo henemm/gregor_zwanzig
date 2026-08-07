@@ -189,8 +189,17 @@ export interface MetricEntry {
 	aggregation_label?: string;
 	/** Issue #1357: berechenbare Tagesauswertungen dieser Groesse, aus dem
 	 *  zentralen Katalog (`metric_catalog.available_aggregations`). Weniger als
-	 *  zwei Eintraege ⇒ der Editor zeigt keine Auswahl (AC-5). */
-	aggregations?: { id: string; label: string }[];
+	 *  zwei Eintraege ⇒ der Editor zeigt keine Auswahl (AC-5).
+	 *  Fix #1544/#1545: `alert_metric` ist die Alarm-Identitaet dieser
+	 *  Auswertung aus dem zentralen Register (`null` = nicht alarmfaehig).
+	 *  `GET /api/metrics` liefert sie laengst (api/routers/config.py:98-105),
+	 *  nur der Frontend-Typ nahm sie bisher nicht auf. */
+	aggregations?: { id: string; label: string; alert_metric?: string | null }[];
+	/** Fix #1544/#1545: Alarm-Identitaet der Aenderungsrate dieser Groesse
+	 *  (z.B. `temperature_change`) — haengt am Eintrag, nicht an einer
+	 *  Auswertung, und ist damit die zweite noetige Quelle neben
+	 *  `aggregations[].alert_metric` (api/routers/config.py:89). */
+	change_alert_metric?: string | null;
 }
 
 export interface WeatherConfigMetric {

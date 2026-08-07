@@ -229,7 +229,7 @@
 						<CorridorEditor {trip} {onTripUpdate} {saveController} />
 					{/if}
 				{:else if tab.value === 'alarme' && trip}
-					<AlarmeScheduleTab {trip} {onTripUpdate} {saveController} />
+					<AlarmeScheduleTab {trip} {onTripUpdate} {saveController} {metricsCatalog} />
 				{:else if tab.value === 'briefings' && trip}
 					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
 				{:else if tab.value === 'preview' && trip}
