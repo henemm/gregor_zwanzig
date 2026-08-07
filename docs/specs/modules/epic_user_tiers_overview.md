@@ -33,6 +33,14 @@ Tages-Obergrenzen mit Mitternachts-Reset, KEIN reiner Mindestabstand — ein Nut
 einem Tag maximal N Alerts/Updates, unabhängig vom zeitlichen Abstand dazwischen. Premium bleibt
 ein reiner Mindestabstand (Intervall-Semantik von „alle 15 Minuten"), ohne Tageszähler.
 
+**Ergänzung #1555 (2026-08-07):** Innerhalb der Free-/Standard-Obergrenze ist das Budget seit
+`fix_1555_nowcast_alert_priority.md` nicht mehr rein first-come-first-served — ein Anteil
+(Free 1 von 2, Standard 2 von 4) bleibt ausschließlich für akute NowCast-Gefahr
+(`reason="nowcast"`) reserviert, reine Vorhersage-Abweichungs-Alarme (`reason="forecast_change"`)
+können diesen Anteil nicht mehr belegen. Grund: system-weit wurde vorher **kein einziger**
+NowCast-Alarm je zugestellt, weil Abweichungs-Alarme das Budget faktisch immer zuerst
+verbrauchten. Details, Reserve-Tabelle und Adversary-Nachweis: siehe verlinkte Spec.
+
 ## Bestehende Systeme, die wir nutzen (Befund)
 
 - **Nutzerverwaltung existiert bereits, keine neue Persistenz nötig.** Ein Nutzer ist ein
