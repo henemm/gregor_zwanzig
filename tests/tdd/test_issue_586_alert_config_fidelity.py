@@ -27,6 +27,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
+pytestmark = pytest.mark.staging
+
 ARTIFACT_DIR = Path("docs/artifacts/issue-586-fidelity-gate")
 LIVE_PNG = ARTIFACT_DIR / "live-alert-config.png"
 REFERENCE_PNG = ARTIFACT_DIR / "reference-alert-config.png"

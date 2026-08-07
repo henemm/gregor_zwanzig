@@ -38,10 +38,12 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _PYPROJECT = _REPO_ROOT / "pyproject.toml"
 
-# Fix-Loop 1 (F001/F002, Adversary): 9 Dateien tragen weiterhin einen
-# vollstaendigen Modul-Marker (jeder Test dialt); 1147/684 sind jetzt
+# Fix-Loop 1 (F001/F002, Adversary): 10 Dateien tragen weiterhin einen
+# vollstaendigen Modul-Marker (jeder Test dialt); 1147 ist jetzt
 # GEMISCHT -- nur die real dialenden Tests/Klassen tragen `@pytest.mark.email`,
 # die restlichen Guard-Tests bleiben im Standardlauf.
+# 684 traegt seit der #1196-Vermessung bewusst modul-weit `pytestmark =
+# pytest.mark.email` (gehoert per Marker in den /e2e-verify-Lauf).
 _FULL_B1_FILES = (
     "tests/tdd/test_issue_1113_partial_outage_guard.py",
     "tests/tdd/test_issue_1007_heute_voll_briefing.py",
@@ -52,10 +54,10 @@ _FULL_B1_FILES = (
     "tests/tdd/test_issue_1087_trip_official_alerts.py",
     "tests/tdd/test_issue_1169_compare_alert_consumer.py",
     "tests/tdd/test_issue_972_974_975_tooling.py",
+    "tests/tdd/test_issue_684_alert_email_guard.py",
 )
 _MIXED_B1_FILES = (
     "tests/tdd/test_issue_1147_resend_recipient_invariant.py",
-    "tests/tdd/test_issue_684_alert_email_guard.py",
 )
 _B1_FILES = _FULL_B1_FILES + _MIXED_B1_FILES
 _FRIENDLY_FORMAT_FOOTGUN = "tests/e2e/test_e2e_friendly_format_config.py"
@@ -202,7 +204,7 @@ def staging_collect() -> subprocess.CompletedProcess:
 
 @pytest.fixture(scope="module")
 def mixed_total_collect() -> subprocess.CompletedProcess:
-    """Marker-neutrale Collection NUR der 2 gemischten Dateien (`-o addopts=`
+    """Marker-neutrale Collection NUR der gemischten Datei(en) (`-o addopts=`
     schaltet die Marker-Filterung komplett ab) -- liefert den Gesamt-Count je
     Datei fuer den Partitionsnachweis (kein Test darf verloren gehen/doppelt
     zaehlen)."""
@@ -236,10 +238,10 @@ def c2_split_total_collect() -> subprocess.CompletedProcess:
 def test_default_selection_excludes_b1_live_leak_files(
     default_collect, email_collect, mixed_total_collect,
 ):
-    """GIVEN 9 vollstaendig markierte B1-Dateien + 2 gemischt markierte
-    (1147/684 -- nur real dialende Tests/Klassen) WHEN Standardlauf ohne `-m`
-    sammelt THEN fehlen die 9 vollen Dateien komplett UND die 2 gemischten
-    partitionieren sich exakt in (Standardlauf-Rest, `-m email`-Dialer) --
+    """GIVEN 10 vollstaendig markierte B1-Dateien + 1 gemischt markierte
+    (1147 -- nur real dialende Tests/Klassen) WHEN Standardlauf ohne `-m`
+    sammelt THEN fehlen die 10 vollen Dateien komplett UND die gemischte
+    partitioniert sich exakt in (Standardlauf-Rest, `-m email`-Dialer) --
     beide Teile nicht-leer, zusammen == marker-neutraler Gesamt-Count (AC-2)."""
     assert default_collect.returncode == 0, default_collect.stderr
     default_counts = _collected_counts(default_collect.stdout)

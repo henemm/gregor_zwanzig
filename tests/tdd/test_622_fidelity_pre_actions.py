@@ -147,6 +147,7 @@ class TestAC4WizardStep2EtappenPreAction:
             f"Gefundener Block: {after_step2[:200]}"
         )
 
+    @pytest.mark.staging
     def test_ac4_step2_diff_passes_with_pre_action(self):
         """
         AC-4 RED: Mit korrektem Pre-Action (Etappen-Tab-Klick) muss diff_pct < 10%.
@@ -257,6 +258,7 @@ class TestAC5WizardStep3WegpunktePreAction:
             f"Gefundener Block: {after_step3[:200]}"
         )
 
+    @pytest.mark.staging
     def test_ac5_step3_diff_passes_with_pre_action(self):
         """
         AC-5 RED: Mit korrektem Pre-Action (Wegpunkte-Tab-Klick) muss diff_pct < 10%.

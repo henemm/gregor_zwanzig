@@ -532,6 +532,7 @@ class TestF002IntensityLabelLowercaseViaRealMapping:
 
 
 class TestAC6SmsOnlyRadarDispatch:
+    @pytest.mark.live
     def test_sms_only_trip_is_not_skipped_and_receives_alert(self):
         uid = "tdd-952-ac6"
         trip_id = "trip-952-ac6"
@@ -597,6 +598,7 @@ class TestAC6SmsOnlyRadarDispatch:
 
 
 class TestAC4TelegramOutputHtmlParseMode:
+    @pytest.mark.live
     def test_send_with_new_params_has_html_parse_mode_and_no_subject_prefix(
         self, fake_telegram_bot,
     ):
@@ -618,6 +620,7 @@ class TestAC4TelegramOutputHtmlParseMode:
 
 
 class TestAC5TelegramOutputBackwardCompatible:
+    @pytest.mark.live
     def test_send_without_new_params_is_bit_identical_to_legacy_behavior(
         self, fake_telegram_bot,
     ):

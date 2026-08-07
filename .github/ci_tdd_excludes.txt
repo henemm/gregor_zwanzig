@@ -26,6 +26,20 @@
 # mail_sink/DI-Naht im Test; (b) alert_log schreibt seit #1467 S1
 # entity_id statt trip_id — Testfilter angeglichen.
 #
+# Batch 6/7 (2026-08-07): 6 Dateien, alle roten Tests sind
+# Umgebungs-Artefakte (kein funktionaler Defekt) und bekommen den
+# passenden Marker statt Listenplatz:
+# - test_issue_586_alert_config_fidelity: modul-weit staging
+#   (Staging-Screenshot-Artefakte)
+# - test_issue_603_design_fidelity_gate: 3 Diff-Tool-Tests staging
+# - test_622_fidelity_pre_actions: 2 Diff-Artefakt-Tests staging
+# - test_bundle_e_gate_tooling: 1 Test live (connectet Prod-IP)
+# - test_952_onset_alert_fidelity: 3 Sende-Schicht-Tests live
+#   (seven.io/Telegram-Herkunftssperre #1476)
+# - test_pytest_collection_and_timeout_safety: Meta-Test repariert —
+#   test_issue_684_alert_email_guard traegt seit der #1196-Vermessung
+#   modul-weit pytest.mark.email und gehoert auf die Voll-Marker-Liste.
+#
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
 # verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
@@ -33,12 +47,9 @@
 #
 # Eine Datei entfernen = sie laeuft ab dann auf CI; neue Dateien laufen
 # automatisch (kein Eintrag noetig). Bestandssanierung: #1196.
-tests/tdd/test_622_fidelity_pre_actions.py
-tests/tdd/test_952_onset_alert_fidelity.py
 tests/tdd/test_alert_run_deadline.py
 tests/tdd/test_alert_tenancy_two_users.py
 tests/tdd/test_bundle_791_847_844_alerts.py
-tests/tdd/test_bundle_e_gate_tooling.py
 tests/tdd/test_compare_official_alert.py
 tests/tdd/test_compare_sun_hours_full_day_window.py
 tests/tdd/test_corridor_no_longer_triggers_alerts.py
@@ -47,8 +58,6 @@ tests/tdd/test_issue_1088_official_alert_triggers.py
 tests/tdd/test_issue_1104_compare_config_foundation.py
 tests/tdd/test_issue_1107_compare_sections.py
 tests/tdd/test_issue_1168_alert_engine_extract.py
-tests/tdd/test_issue_586_alert_config_fidelity.py
-tests/tdd/test_issue_603_design_fidelity_gate.py
 tests/tdd/test_issue_638_alerts_redesign.py
 tests/tdd/test_issue_649_compare_daily_dedup.py
 tests/tdd/test_issue_650_telegram_foundation.py
@@ -61,7 +70,6 @@ tests/tdd/test_issue_822_radar_nowcast_segment.py
 tests/tdd/test_issue_833_gate.py
 tests/tdd/test_issue_883_acute_danger_override.py
 tests/tdd/test_issue_995_scheduler_pause.py
-tests/tdd/test_pytest_collection_and_timeout_safety.py
 tests/tdd/test_staging_gate.py
 tests/tdd/test_telegram_html_escaping.py
 tests/tdd/test_telegram_kurzstil_compare_official_alert.py
