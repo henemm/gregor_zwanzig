@@ -18,6 +18,7 @@ from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt
 
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
     _AMPEL_STAGE_TONES, build_confidence_hint, build_metrics_summary_pills,
@@ -257,6 +258,13 @@ def render_compact(
     lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     model_name = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"
     lines.append(f"Data: {segments[0].provider} ({model_name})")
+
+    # Issue #1492 S2b AC-2: Herkunfts-Vertretung war in der Kompakt-Mail
+    # bisher gar nicht sichtbar (0 von 7 Ausgaben) — dieselben Zeilen wie in
+    # Vollversion und Telegram, aus dem geteilten Modul (R6). Steht VOR
+    # _ascii(), das Umlaute faltet. Segmentauswahl GETEILT ueber alle vier
+    # Ausgaben (`select_fallback_meta`) — sie durchsucht alle Etappen.
+    lines.extend(build_fallback_lines(select_fallback_meta(segments)))
 
     # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile VOR
     # _ascii() (faltet '·' → '-', kurz halten wegen 2048-Byte-Limit des

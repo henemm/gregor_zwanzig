@@ -27,6 +27,7 @@ from app.models import SegmentWeatherData, StabilityResult, ThunderLevel, Unifie
 from utils.timezone import local_fmt, local_hour
 
 from output.renderers.alert.render import _esc
+from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.channel_layout import render_for_channel
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
@@ -740,6 +741,15 @@ def render_telegram_bubbles(
     if footer:
         overview_lines.append("")
         overview_lines.extend(_wrap(_esc(footer), _TG_PROSE_WIDTH))
+    # Issue #1492 S2b AC-3: Herkunfts-Vertretung als eigene Zeile(n) UNTER der
+    # Tagesfußzeile, in derselben Kurzübersicht-Bubble. Wortlaut aus dem
+    # geteilten Modul (R6) — identisch zu Voll- und Kompakt-Mail (AC-10). Die
+    # Telegram-KURZFORM erreicht diesen Renderer nicht (sie sendet
+    # `report.sms_text`), deshalb bleibt das SMS-Budget unberührt (AC-7).
+    # Segmentauswahl GETEILT mit den drei Mail-Renderern
+    # (`select_fallback_meta`) — keine kanal-eigene Auswahlregel mehr.
+    for _fb_line in build_fallback_lines(select_fallback_meta(segments)):
+        overview_lines.extend(_wrap(_esc(_fb_line), _TG_PROSE_WIDTH))
     vortag_line = _tg_vortag_line(day_comparison, report_type)
     if vortag_line:
         overview_lines.append("")

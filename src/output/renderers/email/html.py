@@ -31,6 +31,7 @@ from app.profile import ActivityProfile
 from utils.timezone import local_dt, local_fmt, tz_abbrev
 
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
     _HAIL_RING_COLOR,
@@ -525,18 +526,18 @@ def _render_footer(
         + '</div>'
     )
 
-    # #1153: Provider-Fallback-Hinweis spiegelt plain.py (ADR-0018 Nicht-Kaschieren).
-    fallback_row = ""
-    _meta = segments[0].timeseries.meta if segments[0].timeseries else None
-    if _meta and _meta.fallback_model:
-        if _meta.fallback_metrics:
-            _fb_text = f"Fallback {', '.join(_meta.fallback_metrics)}: {_meta.fallback_model}"
-        else:
-            _fb_text = f"Fallback: {_meta.fallback_model}"
-        fallback_row = (
-            f'<div style="font-family:{FONT_DATA};font-size:10px;color:#9a978d;'
-            f'margin-top:6px;">{_fb_text}</div>'
-        )
+    # #1153 Provider-Fallback-Hinweis (ADR-0018 Nicht-Kaschieren), seit #1492
+    # S2b in Klartext und aus dem GETEILTEN Modul statt als Kopie von plain.py
+    # (R6). 0-2 Zeilen -> je eine eigene <div> in derselben Optik; bei null
+    # Zeilen bleibt der Block leer (kein leerer Rahmen, AC-6). Die
+    # Segmentauswahl ist GETEILT und durchsucht alle Etappen — `segments[0]`
+    # verschwieg eine Vertretung, die erst eine spaetere Etappe betraf.
+    _meta = select_fallback_meta(segments)
+    fallback_row = "".join(
+        f'<div style="font-family:{FONT_DATA};font-size:10px;color:#9a978d;'
+        f'margin-top:6px;">{_fb_line}</div>'
+        for _fb_line in build_fallback_lines(_meta)
+    )
 
     extras = ""
     # Issue #1472: Einheiten-Zeile UND die neue Spalten-Zeile, die die

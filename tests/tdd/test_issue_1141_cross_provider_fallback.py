@@ -435,27 +435,37 @@ def test_plain_email_footer_no_leading_colon_on_empty_metrics():
     "Fallback: at_direct" OHNE fuehrendes Leerzeichen-vor-Doppelpunkt-
     Artefakt ("Fallback : at_direct").
 
-    RED heute: `src/output/renderers/email/plain.py` Zeile 288 rendert
-    `f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}"` — bei
-    leerer `fallback_metrics`-Liste ergibt das "Fallback : at_direct" (Leer-
-    zeichen VOR dem Doppelpunkt statt direkt danach) — die Ziel-Assertion
-    "Fallback: at_direct" ist im gerenderten Text heute NICHT enthalten.
+    Issue #1492 Scheibe 2b (Wortlaut mitgezogen): der technische Hinweis
+    "Fallback: at_direct" ist durch die deutsche Klartextzeile
+    "Einzelne Wetterwerte von Ersatzmodell: GeoSphere Österreich" ersetzt.
+    Die BEWACHTE ZUSICHERUNG bleibt dieselbe: bei leerer `fallback_metrics`
+    entfaellt die Klammer ersatzlos (R4) und es entsteht kein
+    Leerzeichen-vor-Doppelpunkt-Artefakt (#1145).
+
+    RED heute: `plain.py:362-367` rendert weiterhin den technischen Wortlaut
+    `f"Fallback {', '.join(...)}: {model}"` — die deutsche Zielzeile ist im
+    gerenderten Text NICHT enthalten.
     """
     from output.renderers.trip_report import TripReportFormatter
 
     seg = _make_segment_data(fallback_model="at_direct", fallback_metrics=[])
     formatter = TripReportFormatter()
     report = formatter.format_email([seg], "Test Trip", "morning")
+    plain = report.email_plain
 
-    assert "Fallback: at_direct" in report.email_plain, (
-        "AC-4: Footer muss 'Fallback: at_direct' (kein fuehrendes "
-        "Doppelpunkt-Leerzeichen-Artefakt) enthalten — gerenderter Text:\n"
-        f"{report.email_plain}"
+    assert "Einzelne Wetterwerte von Ersatzmodell: GeoSphere Österreich" in plain, (
+        "AC-4: Footer muss die Herkunft in deutschem Klartext nennen "
+        f"(Rohkennung 'at_direct' uebersetzt) — gerenderter Text:\n{plain}"
     )
-    assert "Fallback : at_direct" not in report.email_plain, (
-        "AC-4: Footer darf NICHT das Artefakt 'Fallback : at_direct' "
-        "(Leerzeichen vor dem Doppelpunkt bei leeren fallback_metrics) "
-        f"enthalten — gerenderter Text:\n{report.email_plain}"
+    assert "at_direct" not in plain, (
+        f"AC-4: Rohkennung 'at_direct' bleibt sichtbar — gerenderter Text:\n{plain}"
+    )
+    assert " : " not in plain, (
+        "AC-4/#1145: Leerzeichen-vor-Doppelpunkt-Artefakt bei leeren "
+        f"fallback_metrics — gerenderter Text:\n{plain}"
+    )
+    assert "GeoSphere Österreich ()" not in plain, (
+        f"AC-4/R4: leere Klammer bei leeren fallback_metrics:\n{plain}"
     )
 
 
