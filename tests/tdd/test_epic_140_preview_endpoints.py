@@ -9,16 +9,44 @@ werden im Test toleriert (HTTP 200 bei Erfolg, HTTP 503 bei API-Fehler — beide
 
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-# Issue #1133: die gesamte Datei liest das echte, committete Trip-Fixture
-# data/users/default/trips/gr221-mallorca.json über PreviewService (echter
-# get_trips_dir()-Pfad) — bewusstes Opt-out aus der autouse-Isolation für
-# das gesamte Modul statt pro Test (Datei-Docstring: "Echte Trip-Fixtures aus
-# data/users/default").
-pytestmark = pytest.mark.real_data_root
+# Issue #1133/#1196: KEIN Opt-out mehr aus der autouse-Isolation
+# (frueher pytest.mark.real_data_root). Die Isolation lenkt app.loader._DATA_ROOT
+# auf eine tmp-Wurzel um; das committete Trip-Fixture wird dorthin kopiert
+# (autouse-Fixture unten). Grund: Das Laden loest die #1250-Cutover-Migration
+# aus und SCHREIBT briefings/gr221-mallorca.json — im echten Baum fuehrte das
+# je nach Host-Rechten zu PermissionError (u. a. genau das offline-Rot, das
+# die Datei auf die CI-Exclude-Liste brachte).
+
+
+@pytest.fixture(autouse=True)
+def _seed_trip_fixture(_isolate_data_root):
+    """Kopiert das committete Trip-Fixture in die isolierte Datenwurzel.
+
+    Ziel ist ``briefings/`` (seit #1250 S7a die einzige Lese-Wahrheit fuer
+    Trips, ADR-0023) — nicht das Legacy-``trips/``, das der Loader nicht
+    mehr liest. Die Abhaengigkeit auf ``_isolate_data_root`` (conftest,
+    #1133) erzwingt die Reihenfolge: erst Redirect der Datenwurzel, dann Seed.
+    """
+    from app import loader
+
+    repo_root = Path(__file__).resolve().parents[2]
+    src = repo_root / "data/users/default/trips/gr221-mallorca.json"
+    dst = (
+        Path(loader._DATA_ROOT)
+        / "users"
+        / "default"
+        / "briefings"
+        / "gr221-mallorca.json"
+    )
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
 
 
 @pytest.fixture
@@ -224,11 +252,11 @@ class TestT5SmsTokenPipeline:
             after_prefix = token_line.split(": ", 1)[1] if ": " in token_line else ""
             has_forecast = any(
                 after_prefix.startswith(tok)
-                for tok in ("N", "D", "R", "PR", "W", "G", "TH", "C")
+                for tok in ("N", "K", "D", "FN", "FK", "FD", "R", "PR", "W", "G", "TH", "C")
             )
             assert has_forecast, (
                 f"Nach dem Stage-Prefix muss ein Forecast-Token stehen "
-                f"(N/D/R/PR/W/G/TH/C), Rest war: {after_prefix!r}"
+                f"(N/K/D/FN/FK/FD/R/PR/W/G/TH/C, sms_format.md §2), Rest war: {after_prefix!r}"
             )
 
     def test_ac2_token_line_max_160_chars_via_service(self, service):

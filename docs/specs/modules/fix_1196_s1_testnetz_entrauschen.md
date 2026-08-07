@@ -238,7 +238,7 @@ Selbstzitate), keine Erwartung wurde gelockert.
 
 **Lebend-Gegenprobe (durchgeführt, schärfer als eine bloße Behauptung):**
 eine zusätzliche Datei `docs/specs/_archive/modules/zz_gegenprobe_1196.md`
-mit echtem `0013-node-test-frontend-unit-runner.md`-Verweis lässt
+mit echtem Verweis auf den alten ADR-Dateinamen (`0013-…`-Literal) lässt
 `test_no_adr_0013_reference_in_node_test_context` sofort wieder anschlagen
 (`AssertionError`); nach Entfernen der Gegenprobe-Datei ist der Test wieder
 grün. Der Wächter bleibt also außerhalb der zwei benannten Meta-Dokumente
@@ -490,7 +490,7 @@ Kein AC in dieser Spec; eigenes Ticket je nach Messergebnis.
   pauschaler `_archive/`-Ausschluss) / Then ist
   `test_no_adr_0013_reference_in_node_test_context` grün, UND eine
   Lebend-Gegenprobe (eine zusätzliche Datei mit echtem
-  `0013-node-test-frontend-unit-runner.md`-Verweis außerhalb der zwei
+  Verweis auf das `0013-…`-Literal außerhalb der zwei
   benannten Ausnahmen) lässt den Test weiterhin anschlagen, solange sie
   vorhanden ist, und wird nach Entfernen wieder grün.
   - Test: `uv run pytest tests/tdd/test_issue_1165_adr_index_cleanup.py` war
