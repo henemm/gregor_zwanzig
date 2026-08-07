@@ -676,6 +676,7 @@ func (s *Scheduler) Status() map[string]any {
 		"briefing_health":     s.BriefingHealth(),
 		"warn_service_health": s.WarnServiceHealth(),
 		"forecast_budget":     s.ForecastBudgetHealth(),
+		"tier_request_health": s.TierRequestHealth(),
 	}
 }
 

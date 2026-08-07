@@ -487,10 +487,8 @@ func toProfileResponse(u *model.User) profileResponse {
 	// Default-Fallback nur am Lesezeitpunkt — kein Schreibpfad setzt "free"
 	// zurück in die user.json (Read-Modify-Write-Prinzip, Issue #1068).
 	// Issue #1074: auch ungültige Werte (Tippfehler, Legacy-Daten) normalisieren.
-	tier := u.Tier
-	if tier != "free" && tier != "standard" && tier != "premium" {
-		tier = "free"
-	}
+	// Issue #1555: eine Quelle für alle Leser — model.EffectiveTier().
+	tier := model.EffectiveTier(u.Tier)
 	return profileResponse{
 		ID:             u.ID,
 		Email:          u.Email,
@@ -762,15 +760,6 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 	}
 }
 
-// effectiveTier normalisiert den gespeicherten Tier-Wert am Lesezeitpunkt auf
-// free/standard/premium — identischer Fallback wie in toProfileResponse().
-func effectiveTier(tier string) string {
-	if tier != "free" && tier != "standard" && tier != "premium" {
-		return "free"
-	}
-	return tier
-}
-
 // RequestTierChangeHandler nimmt einen Level-Änderungs-Antrag entgegen (Issue
 // #1071). Der Antrag wird per Read-Modify-Write in der user.json vermerkt
 // (requested_tier/requested_at) und löst asynchron eine Benachrichtigungsmail
@@ -803,7 +792,7 @@ func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFun
 			return
 		}
 
-		currentTier := effectiveTier(user.Tier)
+		currentTier := model.EffectiveTier(user.Tier)
 		if req.RequestedTier == currentTier {
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"already_current_tier"}`))

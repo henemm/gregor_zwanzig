@@ -19,7 +19,10 @@ func BuildTierChangeRequestMail(username, currentTier, requestedTier string) Mai
 			"Aktuelles Level: %s\n"+
 			"Gewuenschtes Level: %s\n"+
 			"Beantragt am: %s\n\n"+
-			"Zum Freigeben das tier-Feld in der user.json dieses Nutzers manuell setzen.\n",
+			"Zum Freigeben in der user.json dieses Nutzers BEIDE Schritte ausfuehren:\n"+
+			"1. das Feld tier manuell auf das gewuenschte Level setzen\n"+
+			"2. das Feld requested_tier entfernen (loeschen)\n\n"+
+			"Bleibt requested_tier stehen, gilt der Antrag weiterhin als offen.\n",
 		username, currentTier, requestedTier, ts,
 	)
 	htmlBody := fmt.Sprintf(
@@ -31,7 +34,10 @@ func BuildTierChangeRequestMail(username, currentTier, requestedTier string) Mai
 			`<tr><td style="padding:2px 12px 2px 0"><b>Gew&uuml;nschtes Level</b></td><td>%s</td></tr>`+
 			`<tr><td style="padding:2px 12px 2px 0"><b>Beantragt am</b></td><td>%s</td></tr>`+
 			`</table>`+
-			`<p style="color:#888;font-size:0.85em">Zum Freigeben das <code>tier</code>-Feld in der user.json dieses Nutzers manuell setzen.</p>`+
+			`<p style="color:#888;font-size:0.85em">Zum Freigeben in der user.json dieses Nutzers <b>beide</b> Schritte ausf&uuml;hren: `+
+			`1. das Feld <code>tier</code> manuell auf das gew&uuml;nschte Level setzen, `+
+			`2. das Feld <code>requested_tier</code> entfernen (l&ouml;schen). `+
+			`Bleibt <code>requested_tier</code> stehen, gilt der Antrag weiterhin als offen.</p>`+
 			`</body></html>`,
 		html.EscapeString(username), html.EscapeString(currentTier),
 		html.EscapeString(requestedTier), ts,
