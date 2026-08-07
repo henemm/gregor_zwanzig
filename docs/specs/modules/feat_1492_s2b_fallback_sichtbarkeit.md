@@ -17,9 +17,14 @@ workflow: feat-1492-s2b-fallback-sichtbarkeit
   Kommentar an Issue #1492). Freigegeben: die zehn Acceptance Criteria auf
   Deutsch, der Ausgaben-Umfang (Trip-Mail Vollversion + Kompakt + Telegram-
   Langform; **ohne** Ortsvergleich, Alarm-Mails, SMS, Telegram-Kurzform), der
-  Wortlaut-Stil „Quelle in Klartext + Folge in Klammern", sowie
+  Wortlaut-Stil „Quelle in Klartext + Folge in Klammern", sowie zunächst
   `loc_limit_override = 400` mit der ausdrücklichen Auflage, den Testumfang
   dafür **nicht** zu kürzen.
+- [x] **Nachtrag PO-Freigabe 2026-08-07:** `loc_limit_override` auf **700**
+  angehoben, nachdem die geschriebenen Tests allein +538 Zeilen ergaben (drei
+  Ausgabewege einzeln geprüft, fünf Bestandstests mitgezogen). Die Auflage
+  „Testumfang nicht kürzen" wurde dabei ausdrücklich bekräftigt; die
+  Alternative „Scheibe erneut teilen" wurde vom PO verworfen.
 
 ## Purpose
 
@@ -89,6 +94,16 @@ im Kollisionsfall aus zwei unabhängigen Mechanismen stammen können. Issue
   knapp über dem Standard-Limit von 250 LoC/Workflow. Ob ein
   `loc_limit_override` nötig wird, entscheidet der PO nach Prüfung des
   tatsächlichen Diffs — hier keine Vorfestlegung.
+- **Tatsächlich geliefert (2026-08-07, Commit `70adfce8`):** Produktivcode
+  **271 Zeilen** (`fallback_notice.py` 230 neu, plus 41 Zeilen Verpackung in
+  den vier Ausgaben) — die Schätzung von 110–130 lag zu niedrig, weil zwei
+  Adversary-Runden zusätzliche Fälle nötig machten (Etappen-Auswahl über alle
+  Segmente, Import-Entkopplung, Kollision bei nicht ermittelbaren
+  Gewitter-Feldnamen). Tests **rund 1 090 Zeilen** über vier Dateien.
+  Zusammen deutlich über der Erstschätzung; PO-Freigabe auf 700 (s. Approval).
+  **Lehre für künftige Schätzungen:** der Testumfang skaliert nicht mit dem
+  Produktivcode, sondern mit der **Zahl der Ausgabewege × Zahl der
+  Fehlerlagen** — hier vier Ausgaben × sechs Zustände.
 
 ## Dependencies
 

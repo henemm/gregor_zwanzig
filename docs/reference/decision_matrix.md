@@ -143,6 +143,29 @@ ist die Landkarte der Gewittersignal-Beschaffung aus #1419 Schritt S2 vollständ
 (#1457). Fehlt ein Wert, bleibt das Feld `None` — „keine Aussage" ist nicht „keine
 Gefahr".
 
+**Vertretung bei echtem Ausfall (#1492 S2a, ADR-0047).** Neben der obigen
+Primärauswahl existiert eine **zweite, getrennte** Tabelle
+`thunder_routing.thunder_vertretung_for`: `de_direct → eu_direct`,
+`fr_direct → eu_direct`, `eu_direct → keine`. Sie greift **ausschließlich**, wenn
+alle tatsächlich versuchten Abrufe an Verbindungsfehlern scheiterten
+(`ThunderSourceUnavailableError`) — eine erfolgreiche, aber leere Antwort
+(Gitterrand, kein Gewitter) löst sie nicht aus. Die first-match-wins-Reihenfolge
+der Primärauswahl bleibt davon **unangetastet**; „Die Reihenfolge ist tragend"
+gilt unverändert. Der Ersatzwert landet strukturell im Feld der *Ersatzquelle*,
+nie in dem der Primärquelle — bei `fr_direct → eu_direct` wechselt damit die
+Messgröße von Blitz**dichte** auf Blitz**potenzial** (verschiedene Skalen, je
+eigene Schwellentabelle).
+
+Jede Vertretung wird markiert (`ForecastMeta.fallback_model` /
+`fallback_reason="thunder_source_unavailable"` / `fallback_metrics`) und **seit
+#1492 S2b im Briefing angezeigt** — E-Mail (Vollversion + Kompakt) und
+Telegram-Langform, in Klartext („Gewitterdaten von Ersatzquelle: DWD Europa
+(gröbere Auflösung)"), Formulierung zentral in
+`src/output/renderers/fallback_notice.py`. ⚠️ `fallback_model` überschreibt
+einen bereits vorhandenen Grundvorhersage-Fallback (#1115) **nicht**
+(Merge-Schutz) — wer eine Gewitter-Vertretung zuverlässig erkennen will, prüft
+`fallback_metrics` auf die Gewitter-Feldnamen, nicht den Modellnamen.
+
 ## Kontingent-Regeln (Open-Meteo)
 
 Der Radar-Pfad dominiert den API-Verbrauch (#1329): geteilter Forecast-Cache +
