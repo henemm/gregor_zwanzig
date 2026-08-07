@@ -9,6 +9,12 @@
 # test_fix_911_visual_table, test_issue_733_briefing_mail_validator,
 # test_touched_tests_gate.
 #
+# Batch 1 der Sanierung (2026-08-07): test_epic_140_preview_endpoints
+# (Daten-Isolation #1133 statt real_data_root-Opt-out + Token-Alphabet an
+# sms_format.md §2 angeglichen) und test_issue_1165_adr_index_cleanup
+# (altes ADR-Dateinamen-Literal aus Spec-Doku entfernt) sind saniert und
+# laufen wieder mit.
+#
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
 # verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
@@ -27,14 +33,12 @@ tests/tdd/test_compare_official_alert.py
 tests/tdd/test_compare_sun_hours_full_day_window.py
 tests/tdd/test_corridor_no_longer_triggers_alerts.py
 tests/tdd/test_day_comparison_service.py
-tests/tdd/test_epic_140_preview_endpoints.py
 tests/tdd/test_feature_656_radar_nowcast.py
 tests/tdd/test_feature_660_convective_stage.py
 tests/tdd/test_issue_1040_alerts_toggle.py
 tests/tdd/test_issue_1088_official_alert_triggers.py
 tests/tdd/test_issue_1104_compare_config_foundation.py
 tests/tdd/test_issue_1107_compare_sections.py
-tests/tdd/test_issue_1165_adr_index_cleanup.py
 tests/tdd/test_issue_1168_alert_engine_extract.py
 tests/tdd/test_issue_586_alert_config_fidelity.py
 tests/tdd/test_issue_603_design_fidelity_gate.py
