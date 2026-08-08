@@ -101,6 +101,17 @@ Staging läuft danach wieder normal.
 
 ## Known Limitations
 
+### Restrisiken des Werkzeugs (Adversary Runde 3, real getestet)
+
+- **RR-1 (MEDIUM) — Abbruch beim Verschieben über Dateisystemgrenzen.** Liegen Quelle und Ziel auf **derselben** Partition, ist der Umzug ein einziger `os.rename`-Aufruf: atomar, kein Zwischenzustand möglich. Auf **verschiedenen** Partitionen fällt `shutil.move` auf Kopieren+Löschen zurück; ein Abbruch mittendrin hinterlässt eine Teilkopie am Ziel. Danach scheitern sowohl ein erneuter `switch` als auch `rollback` mit `FileExistsError`, bis die Teilkopie von Hand entfernt wird — **AC-6 ist in diesem Fall nicht automatisch erfüllt.** Die Vorbedingung „gleiche Partition" ist im Code weder geprüft noch dokumentiert.
+- **RR-2 (LOW) — Hardlinks im selben Fall.** Über Dateisystemgrenzen gehen Hardlink-Verbindungen durch den Kopier-Fallback verloren: stiller Mehrverbrauch an Platz, kein Datenverlust. Auf derselben Partition bleiben sie erhalten (verifiziert über `nlink`).
+
+**Warum das VERIFIED und kein Blocker ist:** Beide Fälle scheitern **laut** (`FileExistsError`) — anders als die behobenen Befunde F001/F004 sehen sie bei Eintritt nicht erfolgreich aus. Und die Vorbedingung liegt nicht vor: Repo-Verzeichnis und `/var/lib` liegen auf diesem Server auf derselben Platte (`/dev/sda1`, gemessen 2026-08-08).
+
+**Folgeaufgabe für S3:** Ein `os.stat(...).st_dev`-Vergleich vor dem Umzug verwandelt beide Restrisiken präventiv in einen lauten Abbruch. Bewusst **nicht** mehr in S1 nachgezogen — die Prüfung ist abgeschlossen, und Code nach einem VERIFIED nachzuschieben entwertet dessen Aussage. S3 legt den Zielort ohnehin fest; dort gehört die Vorbedingungsprüfung hin.
+
+### Grenzen des Messverfahrens
+
 - **Die Messung sieht nur, was läuft.** Selten genutzte Pfade außerhalb der Auslöse-Liste bleiben unentdeckt. Die Liste ist aus den bekannten Fundstellen abgeleitet — für eine Stelle, die weder in der Inventur steht noch von einem gelisteten Vorgang berührt wird, gibt es in dieser Scheibe keinen Nachweis. Das ist die verbleibende Unschärfe; sie wird durch den befristeten Symlink in S4 abgefedert, nicht durch S1.
 - Staging hat einen anderen Datenbestand als Produktion (Testnutzer, keine echten Alarm-Historien). Ein Pfad, der nur bei bestimmten Produktivdaten durchlaufen wird, kann hier fehlen.
 - Stufe B macht Staging **absichtlich** kurzzeitig unbenutzbar.
@@ -114,3 +125,4 @@ Diese Scheibe trifft keine Architektur-Entscheidung. Das ADR zum Zielort (`/var/
 | Datum | Version | Änderung |
 |---|---|---|
 | 2026-08-08 | 1.0 | Erstfassung (Scheibe 1 von 5 zu #1595) |
+| 2026-08-08 | 1.1 | Known Limitations um RR-1/RR-2 aus Adversary Runde 3 ergänzt. Keine Änderung an den freigegebenen Acceptance Criteria — nur Offenlegung gemessener Grenzen vor dem ersten echten Lauf. |
