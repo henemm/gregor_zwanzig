@@ -195,10 +195,12 @@ class Szenario:
         self.preset_id = f"cp-1584c-{uuid.uuid4().hex[:6]}"
         self.location_id = "loc-1"
 
-        # Der Compare-Preset-Loader liest ``data/users/...`` cwd-relativ
-        # (``loader.load_compare_presets(data_root="data")``) — ohne chdir
-        # landete die Fixture im echten Repo-Baum und der #1265-Waechter aus
-        # tests/conftest.py wuerde den Test failen.
+        # Issue #1595: der Compare-Preset-Loader liest NICHT mehr cwd-relativ,
+        # sondern ueber ``get_data_root()``. Die Fixture wird deshalb unter der
+        # aufgeloesten Wurzel abgelegt (s.u.); das chdir bleibt als zweite
+        # Sicherung gegen versehentlich relative Schreibzugriffe, die sonst im
+        # echten Repo-Baum landen und den #1265-Waechter aus tests/conftest.py
+        # ausloesen wuerden.
         monkeypatch.chdir(tmp_path)
         # tests/conftest.py::_use_fixture_provider setzt diese Variable fuer
         # jeden Test; sie haette in ``get_provider()`` Vorrang vor der
@@ -231,7 +233,9 @@ class Szenario:
         if fenster is not None:
             preset["day_window_start_hour"] = fenster[0]
             preset["day_window_end_hour"] = fenster[1]
-        write_compare_briefings(tmp_path / "data" / "users" / self.user_id, [preset])
+        from app.loader import get_data_root
+
+        write_compare_briefings(get_data_root() / "users" / self.user_id, [preset])
         # Fuer den Versandpfad-Test (F001): dasselbe Preset-Dict, das auch auf
         # der Platte liegt — `send_one_compare_preset()` bekommt es direkt.
         self.preset = preset
