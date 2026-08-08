@@ -542,16 +542,36 @@ für Italien. Gewitter erscheint dort als `hazard="thunderstorm"`.
 Warndienst, wir binden ihn nicht an. Wer in Deutschland unterwegs ist, bekommt also
 Gewitterwarnungen der Behörde nicht — anders als in Frankreich, Italien und Österreich.
 
-**Der einfachste Weg dorthin (E6)** ist nicht der DWD-Einzelanschluss, sondern der
-**Meteoalarm-Feed**: EUMETNET betreibt damit die fertige EU-weite Harmonisierung — jeder
-nationale Dienst mappt seine Warnungen **selbst** auf Gelb/Orange/Rot, Awareness-Type
-**3 = Thunderstorm**. Maschinenzugang kostenlos über CAP-Feeds (`feeds.meteoalarm.org`) und die
-OGC-EDR-API (`api.meteoalarm.org`, GeoJSON, auch historisch), CC BY 4.0.
+**Für E6 gibt es bereits Tickets — kein neues anlegen** (geprüft 2026-08-08):
 
-⇒ **Nicht selbst mappen — das offizielle Mapping konsumieren.** Das deckt Deutschland und alle
-übrigen Zielgebiete in einem Schritt ab. Einzige Verluststelle: DWD-Stufen 3 und 4 fallen bei
-Meteoalarm beide auf Rot zusammen. Wer die feinere DWD-Abstufung braucht, nimmt zusätzlich den
-DWD-CAP-Feed (auch über BrightSky `/alerts` erreichbar).
+| Issue | Inhalt | Stand |
+|---|---|---|
+| **#1440** | DWD-CAP-Warnungen als `OfficialAlertSource` (Deutschland) | PO-beauftragt 2026-07-31, `needs-po-approval`, `priority:low` |
+| #1442 | MeteoAlarm-Ländererweiterung (CH → Skandinavien → Rest-EU) | hängt am Budget-Refactor #1397 |
+| **#1445** | MeteoAlarm via MQTT statt REST-Polling | 🔴 `priority:critical`, `status:deferred` |
+
+**Zwei Wege, mit unterschiedlichen Haken:**
+
+*Der harmonisierte Weg* wäre der **Meteoalarm-Feed** — EUMETNET betreibt damit die fertige
+EU-weite Harmonisierung, jeder nationale Dienst mappt selbst auf Gelb/Orange/Rot, Awareness-Type
+**3 = Thunderstorm**, CC BY 4.0. Grundsatz: **nicht selbst mappen, das offizielle Mapping
+konsumieren.**
+
+🔴 **Aber der Zugang ist verkontingentiert.** Laut #1445 ist die MeteoAlarm-REST-API seit
+30.04.2025 auf **100 Requests/Tag** begrenzt (gemessen ~160 im rollierenden 24-h-Fenster,
+Kurzzeitbremse ~1 req/4 s, 429 ohne `Retry-After`), und eine Länder-Index-Auffrischung kostet
+durch Pagination **40–160 Calls** allein für AT+IT. Eine Ausweitung auf Deutschland über diesen
+Weg ist damit **nicht** der billige Schritt, als der er zunächst erscheint — deshalb steht
+#1445 auf `priority:critical`. Ob die **statischen CAP-Feeds** (`feeds.meteoalarm.org`)
+demselben Limit unterliegen wie die Archiv-REST-API, ist **ungeprüft** und vor einer
+Entscheidung zu klären.
+
+*Der direkte Weg* ist **#1440**: der DWD-CAP-Feed, auch über BrightSky `/alerts` erreichbar.
+Deckt nur Deutschland, hat dafür kein Kontingentproblem und liefert die **feinere Abstufung** —
+bei Meteoalarm fallen DWD-Stufe 3 und 4 beide auf Rot zusammen.
+
+⇒ **Empfehlung: #1440 zuerst** (löst die konkrete Lücke ohne Kontingentrisiko), Meteoalarm-
+Ausweitung erst nach #1445.
 
 Auch hier gilt: **Die amtliche Warnung ist mit der berechneten Stufe nicht verknüpft.** In
 `official_alerts.py` (1919 Zeilen) kommt `thunder_level` kein einziges Mal vor. Die beiden
@@ -647,7 +667,7 @@ Eine Wettermetrik hat in diesem Produkt **diverse Ausgabeorte, alle müssen bedi
 | **E3** | Darf die Radar-Beobachtung die Stufe anheben? | **Ja.** Beobachtung hebt die Stufe — auch wenn die Vorhersage schweigt. Beseitigt den Widerspruch aus Abschnitt 5 |
 | **E4** | Bleibt es bei EINER sichtbaren Gewitter-Metrik? | **Ja**, bis eine flächige publizierte Wahrscheinlichkeitsquelle existiert |
 | **E5** | Die drei getrennten Gewitter-Alarme zusammenführen? | **Teilweise: amtliche Warnung und Änderungsalarm werden zusammengeführt, der Radar-Nowcast bleibt getrennt.** Fachlich stimmig — die beiden ersten beruhen auf Vorhersage und teilen den Zeithorizont; der Nowcast ist eine akute Beobachtung mit eigener Dringlichkeit und darf nicht in einer Sammelnachricht untergehen |
-| **E6** | DWD-Warndienst für Deutschland anbinden? | **Ja.** Schließt die Lücke, dass Deutschland als einziges Zielgebiet ohne amtliche Warnungen dasteht |
+| **E6** | DWD-Warndienst für Deutschland anbinden? | **Ja.** Ticket existiert bereits: **#1440**. Meteoalarm-Ausweitung (#1442) erst nach dem Kontingent-Problem #1445 |
 | **E7** | Ausfallsichtbarkeit für den Radar-Pfad? | **Nein**, vorerst nicht. Bleibt als bekannte Schwachstelle dokumentiert (Abschnitt 5) |
 | **E1** | Umgang mit der ortsabhängigen Bedeutung der Stufe? | **Je Quelle eichen + Herkunft mitführen.** Eigene Schwellen je Modell, geeicht auf gleiche Häufigkeit (Prinzip der Wetterdienste); zusätzlich trägt die Stufe sichtbar, worauf sie beruht |
 | **E1b** | Eigene Schwellenleiter für das ICON-EU-Stundenmaximum? | **Ja** — Faktor 235 gemessen (4.2). Sofort wirksam ohne Kalibrierung: gleiche Statistik verwenden (`lpi_max`), das nimmt Faktor 5 heraus |
@@ -688,7 +708,7 @@ CAPE-Deckelung zu ersetzen. #1531 ist damit **nicht** eine spätere Scheibe, son
 | **7** | **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max`, kalibriert auf gleiche Überschreitungshäufigkeit | Braucht mehrere Wochen Daten über verschiedene Wetterlagen — fällt mit Rang 1 an | ✅ E1b, Daten offen |
 | **8** | **`sdi_2` einhängen** | Publizierte DWD-Schwelle vorhanden; erst sinnvoll, wenn die Skala geeicht ist | nach Rang 7 |
 | **9** | **Amtliche Warnung + Änderungsalarm zusammenführen** (E5); Radar-Nowcast bleibt eigener Kanal | Unabhängig von der Signalkette | ✅ E5 |
-| **10** | **DWD-Warndienst anbinden** (E6) | Deutschland ist das einzige Zielgebiet ohne amtliche Warnungen | ✅ E6 |
+| **10** | **DWD-Warndienst anbinden** — **#1440** (nicht neu anlegen) | Deutschland ist das einzige Zielgebiet ohne amtliche Warnungen. Meteoalarm-Weg erst nach #1445 (REST-Limit 100/Tag) | ✅ E6 |
 
 **Nicht geplant:** Gewitter-Wahrscheinlichkeit (keine Quelle, Abschnitt 2.1),
 `dbz_cmax`/`echotop` (falsch kalibriert bzw. falsche Größe), Ausfallsichtbarkeit im Radar-Pfad
