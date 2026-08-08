@@ -188,6 +188,17 @@ spec_validation:
 # Override erzwangen, bei ~250 Zeilen echter Arbeit. Das ist die Angleichung
 # der Config an die dokumentierte Regel, keine Aufweichung: max_loc_delta
 # bleibt 250, Code zählt unverändert voll.
+#
+# data/-Ausschluss (#1613, 2026-08-08): data/ enthaelt ausschliesslich
+# Laufzeit-Nutzerdaten und Test-Fixtures, nie Anwendungscode -- war nie als
+# Workflow-Scope gemeint. Fehlender Ausschluss fiel auf, weil im
+# Hauptrepo-Checkout data/ auf claude-gregor:claude-gregor gehaertet ist
+# (Schutz vor #-Vorfall mit Besitzerwechsel-Ausfall) und `git diff` dort
+# unlesbare, aber getrackte Fixture-Dateien als vollstaendig geloescht
+# liest -- das blaehte den gemessenen Delta pro betroffenem Workflow um
+# mehrere tausend Phantom-Zeilen auf und blockierte jeden Developer-Agent-
+# Edit unabhaengig vom tatsaechlichen Scope. Keine Aufweichung: echte
+# Code-Aenderungen in src/api/internal/frontend zaehlen unveraendert voll.
 scope_guard:
   max_loc_delta: 250
   loc_exclude_patterns:
@@ -203,6 +214,7 @@ scope_guard:
     - "^docs/"
     - "\\.md$"
     - "^\\.gitignore$"
+    - "^data/"
 
 # Bash Gate — Projekt-spezifische Whitelist
 # Tools die legitimate Artefakte schreiben (nicht Workflow-State)
