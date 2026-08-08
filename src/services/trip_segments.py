@@ -14,6 +14,7 @@ import math
 from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, List, Optional
 
+from app.day_window import resolve_configured_window
 from app.models import GPXPoint, TripSegment
 from utils.geo import haversine_km
 from utils.timezone import tz_for_coords
@@ -240,6 +241,54 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         arrival_time = segments[-1].end_time
         elev = float(last_wp.elevation_m) if last_wp.elevation_m else 0.0
 
+        # Issue #1584: Das Ziel-Segment endete bisher hart bei
+        # arrival_time + 2 h. Beide Alarmpfade (weather_change_detection,
+        # Radar-/NowCast-Check in trip_alert) und die Aggregation
+        # (segment_weather) lesen ausschliesslich segment.end_time — die
+        # Gefahren-Ueberwachung fuer das Tagesziel war damit strukturell zwei
+        # Stunden nach Ankunft abgeschaltet. Das Ende folgt jetzt derselben
+        # Tagesfenster-Quelle wie Anzeige und Bewertung (ADR-0035), damit es
+        # KEINEN zweiten Zeitbegriff gibt.
+        # PO-Entscheidung 2026-08-08: Ein Tagesfenster ueber Mitternacht
+        # (start_hour > end_hour, seit #1361 gueltig) wird hier BEWUSST nicht
+        # abgebildet — ein solches Fenster hat ein Loch (z. B. 2-22 Uhr), das
+        # ein einzelnes zusammenhaengendes Segment nicht darstellen kann. Es
+        # greift dann der Randfall-Guard unten (Mindestfenster). Deshalb wird
+        # start_hour hier nicht gebraucht. Details: Known Limitations der Spec.
+        _rc = getattr(trip, "report_config", None)
+        _, end_hour = resolve_configured_window(
+            getattr(_rc, "day_window_start_hour", None) if _rc else None,
+            getattr(_rc, "day_window_end_hour", None) if _rc else None,
+        )
+        dest_tz = tz_for_coords(last_wp.lat, last_wp.lon)
+        # Der Kalendertag ist der LOKALE Ankunftstag am Ziel, nicht der
+        # UTC-Tag: bei einem Ziel westlich von Greenwich faellt die Ankunft
+        # in UTC schon auf den Folgetag, waehrend es am Ziel noch derselbe
+        # Tag ist — der UTC-Tag wuerde das Fenster um 24 h verschieben.
+        arrival_local_date = arrival_time.astimezone(dest_tz).date()
+        window_end = (
+            datetime.combine(arrival_local_date, time(end_hour))
+            .replace(tzinfo=dest_tz)
+            .astimezone(timezone.utc)
+        )
+
+        if window_end <= arrival_time:
+            # Ankunft liegt bereits nach day_window_end_hour (Spaetankunft,
+            # z. B. 20:30 bei Fenster bis 19:00) — oder das Fenster laeuft
+            # ueber Mitternacht (s. o.). Anders als der Mitternachts-
+            # Guard oben wird hier NICHT uebersprungen: ein fehlendes
+            # Ziel-Segment laesst den Trip still aus der Ueberwachung fallen
+            # (genau der Fehler aus #1584). Stattdessen ein minimales, aber
+            # gueltiges Fenster.
+            logger.warning(
+                f"Ziel-Segment: Ankunft {arrival_time.isoformat()} liegt nach "
+                f"dem Tagesfenster-Ende ({end_hour}:00 Ortszeit) — minimales "
+                "Fenster von 1 h wird verwendet"
+            )
+            dest_end_time = arrival_time + timedelta(hours=1)
+        else:
+            dest_end_time = window_end
+
         destination_segment = TripSegment(
             segment_id="Ziel",
             start_point=GPXPoint(
@@ -255,8 +304,8 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
                 distance_from_start_km=cumulative_dist_km,
             ),
             start_time=arrival_time,
-            end_time=arrival_time + timedelta(hours=2),
-            duration_hours=2.0,
+            end_time=dest_end_time,
+            duration_hours=(dest_end_time - arrival_time).total_seconds() / 3600,
             distance_km=0.0,
             ascent_m=0.0,
             descent_m=0.0,

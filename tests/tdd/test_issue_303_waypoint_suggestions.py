@@ -194,6 +194,20 @@ class TestLoaderNewFields:
 # AC-7 + AC-9 — Scheduler: arrival_override Prioritätskette
 # ---------------------------------------------------------------------------
 
+def _local_times(segments) -> list:
+    """Segment-Zeitstempel (UTC) in die Ortszeit der Fixture-Koordinaten.
+
+    ``arrival_calculated``/``arrival_override`` sind Ortszeit-Angaben — nur in
+    Ortszeit sind die Fixture-Werte ("13:30", "14:00") ueberhaupt vergleichbar.
+    """
+    from utils.timezone import tz_for_coords
+
+    tz = tz_for_coords(47.1, 11.1)  # Fixture-Wegpunkte, Europe/Vienna
+    return [s.start_time.astimezone(tz) for s in segments] + [
+        s.end_time.astimezone(tz) for s in segments
+    ]
+
+
 class TestSchedulerArrivalPriority:
     """_convert_trip_to_segments bevorzugt arrival_override vor arrival_calculated."""
 
@@ -241,7 +255,15 @@ class TestSchedulerArrivalPriority:
         # Flexibler Check: Startzeit des Segments, das von W1→W2 geht.
         # Je nach Scheduler-Internals kann der Zeitpunkt am end oder start liegen.
         # Kernforderung: kein Segment darf 13:30:00 als W2-Ankunft verwenden.
-        all_times = [s.start_time for s in segments] + [s.end_time for s in segments]
+        #
+        # #1584: "14:00"/"13:30" sind ORTSZEIT-Angaben aus der Fixture; die
+        # Segment-Zeitstempel sind UTC. Frueher verglich dieser Test die
+        # Ortszeit-Ziffern direkt mit UTC-Stunden und war nur durch einen
+        # Zufall gruen — das hartcodierte 2-h-Ziel-Fenster war genau so lang
+        # wie der CEST-Versatz (+2 h), sodass ausgerechnet das ZIEL-Segment-
+        # Ende die gesuchte Ziffernfolge traf. Mit den echten Ankunftszeiten
+        # hatte das nichts zu tun. Jetzt wird in Ortszeit verglichen.
+        all_times = _local_times(segments)
         has_override_time = any(
             t.hour == 14 and t.minute == 0 for t in all_times
         )
@@ -267,7 +289,8 @@ class TestSchedulerArrivalPriority:
         target = date(2026, 5, 26)
         segments = svc._convert_trip_to_segments(trip, target)
 
-        all_times = [s.start_time for s in segments] + [s.end_time for s in segments]
+        # #1584: Vergleich in Ortszeit — s. Begruendung im Test oben.
+        all_times = _local_times(segments)
         has_calculated_time = any(
             t.hour == 13 and t.minute == 30 for t in all_times
         )
