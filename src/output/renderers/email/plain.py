@@ -40,6 +40,7 @@ from output.renderers.alert.official_alerts import (
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable, render_official_alerts_unavailable_plain,
 )
+from output.renderers.email.starkregen_hint import render_starkregen_hint_plain
 from output.renderers.email.undelivered_hint import (
     has_undelivered, render_undelivered_plain,
 )
@@ -116,6 +117,7 @@ def render_plain(
     day_comparison: Optional["DayComparison"] = None,
     trip_metrics_altbestand: bool = True,
     undelivered: Optional[list] = None,
+    starkregen_hint_text: Optional[str] = None,
     **_ignored,
 ) -> str:
     """Render full plain-text e-mail body. Pure function.
@@ -250,6 +252,11 @@ def render_plain(
     # echten Warnungen, nur bei gesetztem Ausfall-Flag (Byte-Gleichheit sonst).
     if any_official_alerts_unavailable(segments):
         lines.append(f"  {render_official_alerts_unavailable_plain()}")
+        lines.append("")
+
+    # Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad).
+    if starkregen_hint_text:
+        lines.append(f"  {render_starkregen_hint_plain(starkregen_hint_text)}")
         lines.append("")
 
     for seg_data, rows in zip(segments, seg_tables):

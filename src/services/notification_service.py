@@ -100,6 +100,11 @@ class TripReportRequest:
     # Issue #1208: aufgeloeste render-wirksame Optionen (einziger Ableitungsweg
     # von report_config zu format_email); None → interner Resolver-Fallback.
     render_options: Optional["ReportRenderOptions"] = None
+    # Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad) — Rohdaten
+    # (intensity_label, onset_minutes) vom Scheduler ermittelt (kein Renderer-
+    # Import dort, Architektur-Grenze). None = kein Treffer/Guard aktiv.
+    # Die Textformatierung passiert hier im NotificationService.
+    starkregen_nowcast: tuple[str, int] | None = None
 
 
 @dataclass
@@ -295,6 +300,18 @@ class NotificationService:
             user_id=self._user_id, entity_id=request.trip.id, entity_type="trip",
         )
 
+        # Issue #1439: Starkregen-Kurzfristhinweis — der Scheduler liefert nur
+        # Rohdaten (Architektur-Grenze), die Textformatierung (Renderer-Aufruf)
+        # passiert hier.
+        starkregen_hint_text = None
+        if request.starkregen_nowcast is not None:
+            from output.renderers.email.starkregen_hint import format_starkregen_hint
+
+            _intensity_label, _onset_minutes = request.starkregen_nowcast
+            starkregen_hint_text = format_starkregen_hint(
+                _intensity_label, _onset_minutes, tz=request.trip_tz,
+            )
+
         report = self._formatter.format_email(
             segments=request.segment_weather,
             trip_name=request.trip.name,
@@ -320,6 +337,7 @@ class NotificationService:
             trip_url=request.trip_url,
             render_options=request.render_options,
             has_gap=has_gap,
+            starkregen_hint_text=starkregen_hint_text,
         )
 
         self._apply_prefixes(report, request)

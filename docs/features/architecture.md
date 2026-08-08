@@ -270,6 +270,7 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      - `AlertMessage.cooldown_display` trägt den dynamischen Cooldown-Text (z.B. „2 Stunden")
      - `src/outputs/radar_alert.py` ist gelöscht — kein separater Inline-Body-Bau mehr
    - **Throttle-Semantik unverändert** (Issue #773): `radar_alert_throttle.json` + `alert_log` auch bei Best-Effort-Versandfehlern
+   - **Zweiter Schreiber seit Issue #1439:** Der planmäßige Briefing-Versand (`_send_briefing_report()`, s. Datenfluss unten) kann denselben Throttle-Eintrag (`ThrottleStore`, Scope `"radar"`) schreiben, wenn er einen Starkregen-Kurzfristhinweis versendet — dieselbe Cooldown-Prüfung in `check_radar_alerts` unterdrückt dadurch einen widersprüchlichen Folge-Alert im Cooldown-Fenster, ohne dass diese Stelle selbst geändert wurde.
 
 6. **Konvektiver Sicherheits-Override (Issue #883, Epic #813 Slice 4)**
    - Der Radar-Wächter unterdrückt einen Alert normalerweise, wenn das Briefing den Regen für die Onset-Stunde bereits angekündigt hatte (`_briefing_precip >= 0.5` → kein Alert).
@@ -323,6 +324,8 @@ check_radar_alerts(user_id)  [Issue #822 + #919]
 _send_briefing_report() [trip_report_scheduler.py]
   ↓ WeatherSnapshotService.save(snapshot)
   ↓ AlertStateService.reset(trip_id)
+  ↓ _build_starkregen_hint() → Nähe-Guard (60 Min) + Budget-Gate ("nowcast") → get_nowcast() [Issue #1439]
+  ↓ bei Treffer: Hinweiszeile in E-Mail/Telegram + ThrottleStore("radar").record(trip_id) (s. Punkt 5 oben)
 
 check_all_compare_presets(user_id)  [CompareAlertService, Issue #1169]
   ↓ pro Preset × Ort: compare_weather_snapshot.load(preset_id, location_id)  (Anker, ggf. leer)

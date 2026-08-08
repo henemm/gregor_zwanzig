@@ -57,6 +57,7 @@ from output.renderers.alert.official_alerts import (
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable, render_official_alerts_unavailable_html,
 )
+from output.renderers.email.starkregen_hint import render_starkregen_hint_html
 from output.renderers.email.undelivered_hint import (
     has_undelivered, render_undelivered_html,
 )
@@ -982,6 +983,7 @@ def render_html(
     corridors: Optional[list[Corridor]] = None,
     trip_metrics_altbestand: bool = True,
     undelivered: Optional[list] = None,
+    starkregen_hint_text: Optional[str] = None,
     **_ignored,
 ) -> str:
     """Render full HTML e-mail body. Pure function.
@@ -1613,6 +1615,11 @@ def render_html(
     # gesetztem Flag -> Byte-Gleichheit im "keine Warnungen, alle Quellen ok"-Fall.
     if any_official_alerts_unavailable(segments):
         warn_block_html += render_official_alerts_unavailable_html()
+
+    # Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad) — bereits
+    # als fertig formatierte Zeile vom Scheduler ermittelt (Guards/Fetch dort).
+    if starkregen_hint_text:
+        warn_block_html += render_starkregen_hint_html(starkregen_hint_text)
 
     # Issue #1461 S3b-1: was seit dem letzten Briefing einen Kanal NICHT
     # erreicht hat — am Ende des Briefings, geteilter Baustein mit dem

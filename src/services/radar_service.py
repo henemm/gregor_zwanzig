@@ -59,6 +59,9 @@ _ICON_D2_LON_MAX = 19.0
 
 # Onset threshold: frames within 60 min from now considered "nowcast"
 _NOWCAST_HORIZON_MIN = 60
+# Issue #1439: oeffentlicher Alias, damit der Scheduler-Zeitfenster-Guard
+# dieselbe Zahl referenziert statt eine zweite Kopie zu pflegen.
+NOWCAST_HORIZON_MIN = _NOWCAST_HORIZON_MIN
 _DRY_THRESHOLD_MM_H = 0.1
 
 # Issue #1461 S3a: benannte Intensitaets-Label-Konstanten statt Inline-Strings
