@@ -79,11 +79,28 @@ def effective_cape_model_id(meta: "ForecastMeta") -> Optional[str]:
 # Forecast API, Konvektionssaison April-September 2025 (letzte vollstaendige
 # Saison, wortgetreu nach Spec Abschnitt 1). Regel je Eintrag: max(95.
 # Perzentil, 300.0 J/kg). Gebiete = `providers.thunder_routing._REGIONS`
-# (FR, DE_ALPEN, EU_REST) -- KEIN zweites Raster. Fehlende Kombinationen
-# (z. B. icon_d2 x FR: das ICON-D2-Gitter deckt Korsika nicht ab;
-# metno_nordic: die Historical Forecast API liefert fuer dieses Modell
-# durchgaengig kein CAPE) haben BEWUSST keinen Eintrag -- das ist "nicht
-# belegt", kein Fehler.
+# (FR, DE_ALPEN, EU_REST) -- KEIN zweites Raster.
+#
+# Je Gebiet fuehrt das Skript eine GEORDNETE LISTE von Referenzpunkten
+# (Issue #1592 Scheibe C2); der erste Punkt, an dem ein Modell Werte
+# liefert, eicht die Kombination. FR: Korsika (42.22, 9.07) zuerst, dann
+# franzoesische Alpen (45.00, 6.50); DE_ALPEN und EU_REST je ein Punkt.
+# Der Eintrag ("icon_d2", "FR") stammt vom zweiten FR-Punkt -- Korsika liegt
+# ausserhalb des ICON-D2-Gitters. Alle uebrigen zehn Werte stammen
+# unveraendert vom jeweils ersten Punkt (Regressionsschutz, C2 AC-2).
+#
+# Die verbliebenen zwei fehlenden Kombinationen haben BEWUSST keinen Eintrag
+# -- das ist "nicht belegt", kein Fehler, und in beiden Faellen eine
+# gemessene leere Menge, keine offene Luecke:
+# - `icon_d2 x EU_REST`: die einzige Flaeche, auf der ICON-D2-Gitter und
+#   EU_REST-Gebiet zusammenfallen, liegt unterhalb 43,17 Grad N (darueber
+#   beginnt laut `thunder_routing._REGIONS` das Gebiet DE_ALPEN); an vier
+#   dort geprueften Punkten liefert ICON-D2 ueberall 0 Werte. Ein weiterer
+#   Referenzpunkt wuerde nichts eichen, was der Produktivpfad je erreicht.
+# - `metno_nordic x *`: der Produktiv-Endpunkt `/v1/metno` liefert
+#   ueberhaupt kein CAPE (Stockholm, Jotunheimen, Tromsoe je 0 Werte;
+#   Gegenprobe `/v1/dwd-icon` am selben Ort: 48 Werte). Wo nie ein Wert
+#   ankommt, fehlt keine Schwelle.
 #
 # WICHTIG (PO-Korrektur 2026-08-08): `meteofrance_arome` wird ueber die
 # benannte Variante `meteofrance_seamless` geeicht, NICHT
@@ -105,6 +122,7 @@ CAPE_THRESHOLDS_JKG: Dict[Tuple[str, str], float] = {
     ("meteofrance_arome", "DE_ALPEN"): 380.0,
     ("meteofrance_arome", "EU_REST"): 310.0,
     ("icon_d2", "DE_ALPEN"): 300.0,
+    ("icon_d2", "FR"): 300.0,
     ("icon_eu", "FR"): 850.0,
     ("icon_eu", "DE_ALPEN"): 360.0,
     ("icon_eu", "EU_REST"): 300.0,

@@ -178,21 +178,11 @@ class TestRiskEngineAssessSegment:
         assessment = RiskEngine().assess_segment(seg)
         assert len(assessment.risks) == 0
 
-    def test_cape_high(self):
-        """CAPE >= 2000 → Risk(THUNDERSTORM, HIGH)."""
-        seg = _make_segment_weather(cape_max_jkg=2500)
-        assessment = RiskEngine().assess_segment(seg)
-        thunder = [r for r in assessment.risks if r.type == RiskType.THUNDERSTORM]
-        assert len(thunder) == 1
-        assert thunder[0].level == RiskLevel.HIGH
-
-    def test_cape_moderate(self):
-        """CAPE >= 1000 but < 2000 → Risk(THUNDERSTORM, MODERATE)."""
-        seg = _make_segment_weather(cape_max_jkg=1500)
-        assessment = RiskEngine().assess_segment(seg)
-        thunder = [r for r in assessment.risks if r.type == RiskType.THUNDERSTORM]
-        assert len(thunder) == 1
-        assert thunder[0].level == RiskLevel.MODERATE
+    # test_cape_high / test_cape_moderate ENTFERNT (Issue #1592 Scheibe C2):
+    # sie pruegten genau das Fehlverhalten -- die zweite, ungedeckelte
+    # CAPE-Zaehlung gegen die Katalogleiter 1000/2000 J/kg, die die
+    # Deckelung aus ADR-0048 unterlief. Der Ersatz steht in
+    # tests/integration/test_cape_no_double_count.py (AC-3/AC-4/AC-5).
 
 
 class TestRiskEngineAssessSegments:
