@@ -73,7 +73,7 @@ das schärfste vorhandene Ergebnis (`max_thunder()`).
 | Signal | leicht | mittel | hoch | Gebiet | Quelle der Schwellen |
 |---|---|---|---|---|---|
 | Blitzdichte `lightning_density_per_km2_3h` | > 0,003 | ≥ 0,015 | ≥ 0,075 | FR/Korsika | ECMWF Forecast User Guide 8.1.13 (0,1 bzw. 0,5 Blitze/100 km²/h über 3 h) — 🔴 **die oberste Grenze ist NICHT publiziert**, dokumentierte Fortschreibung |
-| Gewitterenergie `cape_jkg` | ≥ 1000 | — **deckelt** | — | überall | `metric_catalog.py` `risk_thresholds["cape"]["medium"]`, deckt sich mit der NWS-Grenze zur „mäßigen Instabilität" |
+| Gewitterenergie `cape_jkg` | **je Modell × Gebiet** (300–850) | — **deckelt** | — | überall, wo die Herkunft bekannt ist | ✅ **geeicht seit #1592** (ADR-0048): `CAPE_THRESHOLDS_JKG` in `src/app/model_registry.py`, 95. Perzentil der Modellklimatologie einer Konvektionssaison (April–September), mindestens 300 J/kg |
 | Wettercode (WMO 95/96/99) | — | — | ✓ | überall | unverändert |
 | **DWD-Blitzpotenzial `lpi`** (J/kg) | **≥ 5** | **≥ 20** | **≥ 50** | DE/Alpen/AT + Rest-Europa (`eu_direct`) | ✅ **angebunden seit #1474c**. 5 J/kg = betrieblicher DWD-Schwellenwert (Blitz-ja/nein), 50 J/kg = oberes Ende der publizierten Verifikationsspanne (~90 % Blitzwahrscheinlichkeit) — [ASR 19, 29 (2022)](https://asr.copernicus.org/articles/19/29/2022/), [DWD ICON-Bericht 2022/10](https://www.dwd.de/EN/ourservices/reports_on_icon/pdf_einzelbaende/2022_10.pdf). 🔴 20 J/kg ("leicht"→"mittel") ist NICHT publiziert, sondern innerhalb der belegten Spanne interpoliert (PO-freigegeben 2026-08-04) |
 
@@ -81,6 +81,29 @@ das schärfste vorhandene Ergebnis (`max_thunder()`).
 Ereignis — ohne Auslöser passiert trotz hoher Werte nichts. „mittel"/„hoch" bleiben
 Signalen vorbehalten, die tatsächliche Blitzaktivität vorhersagen. CAPE ist zugleich die
 einzige Größe, die „leicht" **außerhalb Frankreichs** überhaupt erreichbar macht.
+
+🔴 **Die CAPE-Schwelle ist modellabhängig — eine Zahl für alle Quellen war ein Fehler
+(#1592, ADR-0048).** CAPE ist ein modellabhängiges Konstrukt, kein Messwert: ICON liefert
+Mixed-Layer, Météo-France Most-Unstable, GFS Surface-Based. Die frühere feste Grenze von
+1000 J/kg löste in Frankreich (AROME) in **0 %** aller Stunden aus und bei ECMWF in **65 %**
+— auf dem GR20 war das Signal damit strukturell stumm. Gültige Werte (Stand 2026-08-08):
+
+| Modell | FR/Korsika | DE/Alpen | Rest-Europa |
+|---|---|---|---|
+| `meteofrance_arome` | 300 | 380 | 310 |
+| `icon_d2` | *keine Abdeckung* | 300 | — |
+| `icon_eu` | 850 | 360 | 300 |
+| `ecmwf_ifs04` | 710 | 650 | 420 |
+
+**Ist die Modell-Herkunft unbekannt, trägt CAPE KEIN Signal bei** — auch kein
+`ThunderLevel.NONE`. „Keine Aussage" ist nicht „geprüft, unauffällig". Betroffen sind
+dauerhaft der Ortsvergleich (`model="aggregate"`) und der Schnappschuss-Reload
+(`model="snapshot"`), die strukturell keine Herkunft führen.
+
+⚠️ **Nur die Fusion ist umgestellt.** Der RiskEngine-Pfad (`risk_engine.py`, CAPE →
+`Risk(THUNDERSTORM, MODERATE|HIGH)`, dort **ungedeckelt**) und die Δ-Alarm-Schwellen
+(`alert_preset.py`) prüfen weiterhin gegen die feste, unbelegte 1000 bzw. 500/1200/600/200.
+Scheiben C2 und C3 unter #1592.
 
 **Für jede weitere Quelle (z. B. Hagel, S5/#1475):** Eine neue Größe dockt mit **einer
 Tabellenzeile** an — Provider füllt nur Felder, die Einstufung liest nur Felder (Konzept

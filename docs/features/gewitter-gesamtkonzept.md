@@ -173,7 +173,7 @@ Superzellenlagen erreicht wird, ist offen. Zudem nennt der DWD den Index selbst 
 
 ⇒ Deshalb: **erst Felder befüllen und mitlaufen lassen, dann einstufen.** Nicht umgekehrt.
 
-### 3.4b 🔴 CAPE ≠ CAPE — eine Schwelle auf unvergleichbare Werte (gemessen 2026-08-08, → #1592)
+### 3.4b ✅ CAPE ≠ CAPE — eine Schwelle auf unvergleichbare Werte (gemessen 2026-08-08, → #1592, BEHOBEN für die Fusion)
 
 **CAPE ist ein modellabhängiges Konstrukt, kein Messwert.** Die Modelle unterscheiden sich in
 der Parcel-Wahl: ICON liefert **Mixed-Layer**-CAPE (`CAPE_ML`), Météo-France **Most-Unstable**
@@ -206,6 +206,27 @@ diesem Konzept zu beheben:
 
 Dieselbe Falle gilt für jede künftige Modellgröße: **Feste Schwellen nie über Modellgrenzen
 tragen.**
+
+> **✅ Stand 2026-08-08 — für die Fusion behoben und live** (#1592 Scheibe B0+C0+C1, ADR-0048).
+> Gewählt wurde der zweite Weg, aber als **Perzentil-Eichung** statt geratener Einzelwerte:
+> Schwelle je Modell × Gebiet = 95. Perzentil der CAPE-Klimatologie dieses Modells in diesem
+> Gebiet über eine Konvektionssaison (April–September), mindestens 300 J/kg. Die Werte stehen
+> als statische Tabelle in `src/app/model_registry.py`; erzeugt von
+> `scripts/eichung_cape_schwelle.py` gegen die Historical Forecast API — einmalig, keine
+> Laufzeit-Abhängigkeit. Auf dem GR20 gilt jetzt **300 statt 1000**, ein realer AROME-Wert von
+> 840 J/kg ergibt dort „leicht" statt „kein Gewitter".
+>
+> **Beim Eichen fiel eine zweite Ebene desselben Fehlers auf:** Unser Code ruft Open-Meteo über
+> **Endpunkte** ab, nicht über benannte Modellvarianten. `/v1/meteofrance` liefert
+> `meteofrance_seamless`, nicht `arome_france_hd` — ein erster Eichlauf gegen die falsche
+> Variante hätte für Rest-Europa **gar keinen Eintrag** erzeugt und CAPE dort dauerhaft stumm
+> gelassen. Die Zuordnung Endpunkt → Variante ist deshalb empirisch ermittelt (Wert-für-Wert-
+> Vergleich) und im Eichskript dokumentiert. **Wer neu eicht, prüft sie zuerst nach.**
+>
+> ⚠️ **Nur die Fusion.** Der RiskEngine-Pfad und die Δ-Alarm-Schwellen prüfen weiterhin gegen
+> die feste, unbelegte Zahl — Scheiben C2 und C3 unter #1592. Ortsvergleich und
+> Schnappschuss-Reload führen strukturell keine Modell-Herkunft, dort trägt CAPE dauerhaft
+> nicht bei.
 
 ### 3.5 Die CAPE-Deckelung ist belegt ersetzbar (Recherche 2026-08-08)
 
@@ -716,7 +737,7 @@ CAPE-Deckelung zu ersetzen. #1531 ist damit **nicht** eine spätere Scheibe, son
 
 | Rang | Scheibe | Warum hier | Stand |
 |---|---|---|---|
-| **0** | 🔴 **CAPE-Schwelle modellabhängig machen** (3.4b, **#1592**) | **Laufender Fehler**: In Frankreich löst die 1000-J/kg-Schwelle **nie** aus, bei ECMWF in 65 % der Stunden. Ein Viertel der Fusionssignale ist dort tot. Unabhängig von allem anderen | sofort |
+| **0** | ✅ **CAPE-Schwelle modellabhängig gemacht** (3.4b, **#1592**, ADR-0048) | **Fusion erledigt und live seit 2026-08-08**: Schwelle je Modell × Gebiet, geeicht am 95. Perzentil der Modellklimatologie (mind. 300 J/kg). Auf dem GR20 gilt jetzt 300 statt 1000 — CAPE trägt dort erstmals bei. **Offen: C2** (RiskEngine, dort noch ungedeckelt bis `HIGH` gegen die feste 1000) **und C3** (Δ-Alarme) | teils erledigt |
 | **1** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg. Spec liegt fertig vor | Spec fertig, Freigabe offen |
 | **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ E1 |
 | **3** | **Gleiche Statistik**: `lpi_max` statt `lpi` gegen `lpi_con_max` | Nimmt allein **Faktor 5** aus dem Gebietsbruch — ohne jede Kalibrierung | ✅ E1 |
