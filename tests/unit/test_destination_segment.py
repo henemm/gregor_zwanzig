@@ -99,6 +99,19 @@ class TestSchedulerDestinationSegment:
         assert abs(dest[0].start_point.lat - 39.7662) < 0.01
 
     def test_destination_segment_time_window(self):
+        """Issue #1584: Das Ziel-Segment endet am Tagesfenster-Ende in ORTSZEIT
+        am Ziel, nicht mehr hart bei Ankunft + 2 h.
+
+        Der alte Vertrag (``+ timedelta(hours=2)``) schaltete die Gefahren-
+        Ueberwachung fuer das Tagesziel zwei Stunden nach Ankunft ab und ist
+        mit ``fix_1584_alarm_zeitfenster`` ungueltig geworden. Die Erwartung
+        wird hier UNABHAENGIG vom Prueflings-Code aus der Fixture gebildet:
+        ``gr221-mallorca.json`` setzt kein ``day_window_end_hour``, also gilt
+        der dokumentierte Default 19 Uhr (``app.day_window``), aufgeloest in
+        der Zeitzone des letzten Wegpunkts.
+        """
+        from zoneinfo import ZoneInfo
+
         segments = self._load_trip_and_get_segments()
         normal_segments = [s for s in segments if s.segment_id != "Ziel"]
         dest = [s for s in segments if s.segment_id == "Ziel"]
@@ -106,7 +119,26 @@ class TestSchedulerDestinationSegment:
 
         last_normal_end = max(s.end_time for s in normal_segments)
         assert dest[0].start_time == last_normal_end
-        assert dest[0].end_time == last_normal_end + datetime.timedelta(hours=2)
+
+        tz = ZoneInfo("Europe/Madrid")  # Mallorca, Ziel des GR221
+        arrival_local = last_normal_end.astimezone(tz)
+        expected_end = (
+            datetime.datetime.combine(
+                arrival_local.date(), datetime.time(19, 0)
+            )
+            .replace(tzinfo=tz)
+            .astimezone(datetime.timezone.utc)
+        )
+        assert dest[0].end_time == expected_end, (
+            "Ziel-Segment muss bis 19:00 Ortszeit (Default-Tagesfenster) "
+            f"reichen, erwartet {expected_end.isoformat()}, tatsaechlich "
+            f"{dest[0].end_time.isoformat()}"
+        )
+        # Ankunft 12:20 Ortszeit -> deutlich mehr als die alten fixen 2 h.
+        assert dest[0].duration_hours > 2.0
+        assert dest[0].duration_hours == (
+            expected_end - last_normal_end
+        ).total_seconds() / 3600
 
 
 class TestFormatterDestinationRendering:

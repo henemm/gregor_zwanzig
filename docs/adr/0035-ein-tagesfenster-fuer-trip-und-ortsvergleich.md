@@ -80,3 +80,12 @@ die Stundentabelle zeigte durchgehend 24 Zeilen.
   müssen sich verhalten wie bisher; die bestehenden Trip-Tagesfenster-Tests sind
   die Regressionsgrenze. Was eine **leere Metrik-Auswahl** bedeutet, ist hiervon
   unberührt und wird gesondert entschieden (Etappe S3, #1366).
+- **Konsument Ziel-Segment (#1584):** Das Ziel-Segment einer Etappe
+  (`src/services/trip_segments.py::convert_trip_to_segments()`) nutzt seit #1584
+  die ortszeit-aufgelöste `day_window_end_hour` statt `arrival_time + 2 Stunden`.
+  Damit ziehen die Alarmpfade (`weather_change_detection.py`, `trip_alert.py`)
+  und die Aggregation (`segment_weather.py`) denselben Zeitbegriff wie Anzeige
+  und Bewertung — die Folgepflicht wird auf diesen Konsumenten angewandt.
+  **Grenze:** Tagesfenster über Mitternacht (`start_hour > end_hour`) werden am
+  Zielsegment nicht abgebildet; dort greift ein Mindestfenster von einer Stunde
+  (PO-Entscheidung 2026-08-08, Spec `docs/specs/modules/fix_1584_alarm_zeitfenster.md`).
