@@ -85,6 +85,24 @@ Specs verwenden `docs/specs/_template.md` und müssen enthalten:
 - Artifact-Dateien müssen > 0 Bytes sein.
 - Frontend-Änderungen brauchen Screenshots oder UI-Test-Output.
 
+## Test-Namens- und Ablagekonvention
+
+Synk zu `CLAUDE.md` („Namensregel", dort für Claude Code hart durchgesetzt via
+`.claude/hooks/test_naming_gate.py`) — für Kimi gilt sie organisatorisch:
+
+- Testdateien nach **Verhalten** benennen (`test_alert_throttle.py`), **nie** nach
+  Issue-Nummer (`test_issue_1234.py`). Der Issue-Nummern-Korpus (Bestand ~260
+  Dateien, überwiegend in `tests/tdd/`) wächst nicht weiter.
+- `tests/tdd/` ist temporärer Red-Phase-Ort: nach dem Fix graduiert der Repro-Test
+  in die passende Modul-Suite (`tests/unit/`, `tests/integration/`) oder wird
+  gelöscht.
+- **Keine Massen-Umbenennung des Bestands** (kein Big-Bang-Reorg): Testpfade sind
+  hart verdrahtet in `.github/ci_tdd_excludes.txt`, den Collection-Meta-Tests
+  (`tests/tdd/test_pytest_collection_and_timeout_safety.py`) und Ratschen wie
+  `test_repo_path_hardcoding_ratchet.py`. Bestand nur opportunistisch konsolidieren
+  (wer eine Datei ohnehin anfasst) oder themenweise mit eigenem PR, in dem alle
+  Referenzen mitgezogen werden.
+
 ## Scope Guard
 
 - Max. `max_loc_delta: 250` Zeilen Änderung pro Iteration.
