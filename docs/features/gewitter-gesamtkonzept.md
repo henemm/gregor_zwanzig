@@ -1,6 +1,8 @@
 # Gewitter — Gesamtkonzept
 
-**Stand:** 2026-08-08 · **Status:** Entwurf, PO-Entscheidungen offen (Abschnitt 10)
+**Stand:** 2026-08-08 · **Status:** **Final** — alle Grundsatzentscheidungen (E1–E9) vom PO
+getroffen und in Abschnitt 10 eingetragen. Änderungen an den Entscheidungsflächen erfordern
+künftig ein ADR, keine stille Anpassung.
 
 Dieses Dokument beschreibt Gewitter in Gregor Zwanzig **Ende zu Ende**: was der Nutzer bekommt,
 woraus es entsteht, was gemessen belegt ist und was nicht, und in welcher Reihenfolge gebaut
@@ -32,12 +34,17 @@ Drei Leitsätze, die alles Weitere binden:
 
 ## 2. Was der Nutzer sieht — die Antwort
 
-**Genau zwei Größen erreichen den Nutzer.** Alles andere ist Zutat und bleibt unsichtbar.
+**Genau zwei gewitter-eigene Größen erreichen den Nutzer.** Alle Zutaten der Berechnung bleiben
+unsichtbar.
 
 | Größe | Frage | Werte | Status |
 |---|---|---|---|
 | **Gewitter-Stärke** (`thunder`) | Wie stark? | kein · leicht · mittel · hoch | existiert; wird heute **unvollständig** berechnet |
 | **Hagel** (`hail_flag`) | Hagel dabei? | ja · unbekannt | existiert; eigenes Kennzeichen, **keine** Metrik (#1475) |
+
+Davon zu unterscheiden sind **Böen** und **Starkregen**: Sie sind eigenständige Wettermetriken,
+die auch ohne Gewitter existieren, und bleiben es (E9). Sie erscheinen also ebenfalls, aber
+nicht als Gewitteraussage — die vollständige Liste steht in 2.1b.
 
 ### 2.1 Die Wahrscheinlichkeit entfällt — gemessen, nicht vermutet
 
@@ -123,7 +130,7 @@ eine Stufe und nimmt dann **das schärfste**. Sind alle leer, ist das Ergebnis l
 |---|---|---|---|
 | 1 | WMO-Wettercode | 95 / 96 / 99 | vom Anbieter geliefert |
 | 2 | Blitzdichte (Blitze/km²/3 h) | 0,003 / 0,015 / **0,075** | ECMWF-Leitfaden; **0,075 nicht publiziert** |
-| 3 | Blitzpotenzial LPI (J/kg) | 5 / **20** / 50 | DWD/Copernicus; **20 interpoliert** |
+| 3 | Blitzpotenzial LPI (J/kg) | 5 / **20** / 50 | DWD/Copernicus; **20 interpoliert** ⇒ ersetzbar durch 1/30/50, s. 3.5b |
 | 4 | CAPE (J/kg) | ≥ 1000 → nur „leicht", **deckelt** | Katalog-Risikoschwelle |
 
 ### 3.2 Die Annahmen darin — offen ausgesprochen
@@ -267,7 +274,7 @@ solches gekennzeichnet bleiben.
 
 ---
 
-## 3.7 🎯 Das Zielverfahren — wie alle Zutaten zusammenwirken
+### 3.7 🎯 Das Zielverfahren — wie alle Zutaten zusammenwirken
 
 Dies ist die vollständige Rechenvorschrift, wenn alles aus diesem Konzept umgesetzt ist. Sie
 ersetzt die heutige Fassung aus 3.1.
