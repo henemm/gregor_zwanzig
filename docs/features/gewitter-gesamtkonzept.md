@@ -170,13 +170,57 @@ herrscht, sondern weil anders gemessen wird.
 Gegenläufig wirkt die Auflösung: ICON-EU (6,5 km) mittelt stärker als ICON-D2 (2,2 km) und
 dämpft Spitzenwerte. Welcher Effekt überwiegt, ist **nicht bekannt**.
 
-> **Messstand:** Am identischen Ausschnitt (DE/Alpen, 1020 Gitterpunkte, +15 h) war die
-> Stichprobe an einem ruhigen Tag zu klein für eine Quantifizierung — nur 2 Punkte trugen
-> überhaupt Werte, beide nur in ICON-EU. Die Richtung stimmt, der Betrag ist **offen**. Der
-> strukturelle Befund folgt aus der Definition der Statistik, nicht aus dieser Messung.
+### 4.2 Der Bruch ist vermessen — und größer als erwartet
 
-⇒ Zu klären ist, ob `lpi_con_max` eine eigene Schwellenleiter braucht oder ein eigenes Feld.
-Solange beides offen ist, ist die Stufe zwischen DWD-Gebieten nicht sauber vergleichbar.
+Messung 2026-08-08, ICON-D2-Gebiet, Zeitschritte +15/16/17 h, 3,77 Mio. bzw. 459 Tsd.
+Gitterwerte. Anteil der Punkte, die die **gemeinsame** Schwellenleiter überschreiten:
+
+| Schwelle | ICON-D2 `lpi` | ICON-EU `lpi_con_max` | Faktor |
+|---|---|---|---|
+| ≥ 5 („leicht") | 0,007 % | 1,72 % | **235×** |
+| ≥ 20 („mittel") | 0,003 % | 0,47 % | **137×** |
+| ≥ 50 („hoch") | 0,001 % | 0,053 % | **57×** |
+
+An 5631 Punkten der Vereinigungsmenge (mindestens eine Quelle mit Signal) trug ICON-D2 nur in
+**5 %** der Fälle einen Wert > 0, ICON-EU in **97 %**; ICON-EU war an **96 %** der Punkte größer.
+
+⇒ **Ein Ort im ICON-EU-Gebiet bekommt bei gleicher Wetterlage rund zweihundertmal häufiger die
+Stufe „leicht" als einer im ICON-D2-Gebiet.** Das ist keine Feinheit, das ist ein struktureller
+Fehler mit direkter Alarmwirkung.
+
+### 4.3 Zwei Ursachen — eine davon ist behebbar
+
+**Ursache 1: verschiedene Statistik.** `lpi` ist ein Momentanwert, `lpi_con_max` ein
+Stundenmaximum. Vergleicht man stattdessen `lpi_max` (ICON-D2 bietet es an, wird mit #1531
+ohnehin geholt) mit `lpi_con_max`, also **Maximum gegen Maximum**, schrumpft der Bruch um
+Faktor 5:
+
+| Schwelle | Momentan ↔ Maximum | Maximum ↔ Maximum |
+|---|---|---|
+| ≥ 5 | 235× | **51×** |
+| ≥ 20 | 137× | **27×** |
+| ≥ 50 | 57× | **8,7×** |
+
+**Ursache 2: verschiedene Physik — nicht behebbar, nur berücksichtigbar.** Der Rest steckt im
+Namen: `lpi_**con**_max`. ICON-EU (6,5 km) **parametrisiert** Konvektion, ICON-D2 (2,2 km)
+**löst sie explizit auf**. Das sind zwei grundverschiedene Darstellungen desselben Vorgangs. Die
+Annahme im Code, es sei „fachlich dieselbe Größe" (`dwd_eu.py:90-95`), trifft damit nicht zu.
+
+### 4.4 Warum ein reiner Häufigkeits-Abgleich hier nicht reicht
+
+Das naheliegende Verfahren — nicht die Zahl übertragen, sondern die **Seltenheit** (so hat der
+US-Dienst SPC 2019 feste Schwellen durch Perzentile ersetzt) — wurde gerechnet und liefert für
+ICON-EU eine „leicht"-Schwelle von **155 J/kg**, während der DWD 5 J/kg als Grenze für „blitzt
+es überhaupt" nennt. Die drei geeichten Werte lägen zudem eng beieinander (155 / 176 / 208) —
+ein sicheres Zeichen, dass im dünnen Ausläufer der Verteilung gerechnet wurde.
+
+**Der Grund ist die Datenbasis, nicht das Verfahren:** eine einzelne, ruhige Wetterlage ist
+keine Klimatologie. Für eine belastbare Eichung braucht es mehrere Wochen über verschiedene
+Lagen — was mit dem laufenden Abruf (Rang 4) ohnehin anfällt.
+
+⇒ **Antwort auf E1b: ja, ICON-EU braucht eine eigene Leiter** — aber sie wird nicht geraten,
+sondern aus gesammelten Daten geeicht. Bis dahin darf die ICON-EU-Stufe nicht so behandelt
+werden, als wäre sie mit der ICON-D2-Stufe gleichbedeutend.
 
 **Optionen** (Entscheidung offen, s. Abschnitt 10):
 - **(a) Hinnehmen und benennen** — die Stufe bleibt „bestes verfügbares Urteil vor Ort", und der
@@ -311,20 +355,25 @@ Eine Wettermetrik hat in diesem Produkt **diverse Ausgabeorte, alle müssen bedi
 
 ---
 
-## 10. Offene Entscheidungen (PO)
+## 10. Entscheidungen
 
-| # | Frage | Empfehlung |
+### 10.1 Getroffen (PO, 2026-08-08)
+
+| # | Frage | **Entscheidung** |
 |---|---|---|
-| E1 | Umgang mit der gebietsabhängigen Bedeutung der Stufe (Abschnitt 4) | **(a) hinnehmen + im Vergleich benennen** — (b) verschenkt die guten Signale, (c) ist teuer |
-| E1b | Bekommt `lpi_con_max` eine eigene Schwellenleiter (Abschnitt 4.1)? | **Ja, sobald messbar** — vorher an ein paar echten Gewitterlagen den Versatz bestimmen; ohne Beleg keine erfundene Leiter |
-| E2 | Wird CAPE unsichtbar, obwohl die Wahrscheinlichkeit als Ersatz entfällt? | **Ja** — die Begründung („Zutat ist nicht Antwort") gilt unabhängig; die Stärke bleibt als Antwort |
-| E3 | Darf die Radar-Beobachtung die Stufe anheben (Abschnitt 5)? | **Ja** — sonst bleibt der Widerspruch „Radar sieht Gewitter, Stufe sagt kein Gewitter" bestehen. Regel liegt in #1419 §4 |
-| E4 | Bleibt es dauerhaft bei EINER Gewitter-Metrik? | Ja, bis eine flächige publizierte Wahrscheinlichkeitsquelle existiert |
-| E5 | Drei getrennte Gewitter-Alarme zusammenführen (Abschnitt 7.2)? | **Ja, mindestens entkoppeln** — für einen Wanderer mit knapper Verbindung sind drei Nachrichten zu einer Gefahr zu viel |
-| E6 | DWD-Warndienst für Deutschland anbinden (Abschnitt 6)? | **Ja** — Frankreich, Italien und Österreich haben amtliche Warnungen, Deutschland nicht |
-| E7 | Ausfallsichtbarkeit auch für den Radar-Pfad (Abschnitt 5)? | **Ja** — für die Vorhersagequellen ist es gebaut, für Radar fehlt es |
+| **E2** | CAPE unsichtbar, obwohl die Wahrscheinlichkeit als Ersatz entfällt? | **Ja.** `selectable=False`. Die Begründung „Zutat ist nicht Antwort" gilt unabhängig davon, ob je ein Ersatz kommt |
+| **E3** | Darf die Radar-Beobachtung die Stufe anheben? | **Ja.** Beobachtung hebt die Stufe — auch wenn die Vorhersage schweigt. Beseitigt den Widerspruch aus Abschnitt 5 |
+| **E4** | Bleibt es bei EINER sichtbaren Gewitter-Metrik? | **Ja**, bis eine flächige publizierte Wahrscheinlichkeitsquelle existiert |
+| **E5** | Die drei getrennten Gewitter-Alarme zusammenführen? | **Teilweise: amtliche Warnung und Änderungsalarm werden zusammengeführt, der Radar-Nowcast bleibt getrennt.** Fachlich stimmig — die beiden ersten beruhen auf Vorhersage und teilen den Zeithorizont; der Nowcast ist eine akute Beobachtung mit eigener Dringlichkeit und darf nicht in einer Sammelnachricht untergehen |
+| **E6** | DWD-Warndienst für Deutschland anbinden? | **Ja.** Schließt die Lücke, dass Deutschland als einziges Zielgebiet ohne amtliche Warnungen dasteht |
+| **E7** | Ausfallsichtbarkeit für den Radar-Pfad? | **Nein**, vorerst nicht. Bleibt als bekannte Schwachstelle dokumentiert (Abschnitt 5) |
 
----
+### 10.2 Offen — hängen an der Schwellen-Recherche
+
+| # | Frage | Stand |
+|---|---|---|
+| **E1** | Wie umgehen mit der ortsabhängigen Bedeutung der Stufe (Abschnitt 4)? | Wird erst entschieden, wenn geklärt ist, ob sich die Größen seriös aufeinander eichen lassen. Bei brauchbaren Zuordnungen wird aus „hinnehmen und benennen" ein „richtig eichen" |
+| **E1b** | Eigene Schwellenleiter für das ICON-EU-Stundenmaximum (Abschnitt 4.1)? | dito |
 
 ## 11. Umsetzung in Scheiben
 
@@ -334,12 +383,19 @@ Problem, statt es zu lösen.
 
 | Rang | Scheibe | Warum hier | Vorbedingung |
 |---|---|---|---|
-| **1** | **Eichung klären** (E1, E1b): Bedeutet „mittel" überall dasselbe? Braucht `lpi_con_max` eine eigene Leiter? | Fundament. Ohne das ist jede weitere Größe Rauschen auf schiefer Skala | PO-Entscheid |
-| **2** | **CAPE unsichtbar** (`selectable=False`) | Klein, unabhängig, beendet den historischen Zufall. Im Kern ein Katalog-Kwarg — die Render-Pfade prüfen `selectable` bereits generisch | E2 |
-| **3** | **Radar hebt die Stufe an** | Größter Nutzen ohne neue Quelle; beseitigt den Widerspruch aus Abschnitt 5 | E3 |
+| **1** | 🔴 **Eichung** (E1, E1b) — **jetzt, PO-Vorgabe 2026-08-08: vor jedem größeren Umbau.** Bedeutet „mittel" überall dasselbe? Braucht das ICON-EU-Stundenmaximum eine eigene Leiter? | Fundament. Ohne das ist jede weitere Größe Rauschen auf schiefer Skala | Schwellen-Recherche |
+| **2** | **CAPE unsichtbar** (`selectable=False`) | Klein, unabhängig, beendet den historischen Zufall. Im Kern ein Katalog-Kwarg — die Render-Pfade prüfen `selectable` bereits generisch | ✅ E2 |
+| **3** | **Radar hebt die Stufe an** | Größter Nutzen ohne neue Quelle; beseitigt den Widerspruch aus Abschnitt 5 | ✅ E3 |
 | **4** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, mitlaufen lassen, **nicht** einstufen | Datensammlung als Voraussetzung für Rang 5. Spec liegt fertig vor | — |
-| **5** | **Einstufung nachziehen**: `sdi_2` (publizierte Schwelle), `cin_ml` statt CAPE-Deckelung | Erst wenn Rang 4 echte Messwerte geliefert hat | Rang 4 + belegte Schwellen |
-| **6** | **Alarme entkoppeln** (E5), **DWD-Warnungen** (E6), **Radar-Ausfallsichtbarkeit** (E7) | Unabhängig von der Signalkette, jederzeit einschiebbar | E5–E7 |
+| **5** | **Einstufung nachziehen**: `sdi_2`, `cin_ml` statt CAPE-Deckelung | Erst wenn Rang 1 die Skala geeicht und Rang 4 Messwerte geliefert hat | Rang 1 + 4 |
+| **6** | **Amtliche Warnung + Änderungsalarm zusammenführen** (E5); Radar-Nowcast bleibt eigener Kanal | Unabhängig von der Signalkette | ✅ E5 |
+| **7** | **DWD-Warndienst anbinden** (E6) | Deutschland ist das einzige Zielgebiet ohne amtliche Warnungen | ✅ E6 |
 
-**Nicht geplant:** Gewitter-Wahrscheinlichkeit (keine Quelle, Abschnitt 2.1), `uh_max`-Einstufung
-(keine übertragbare Zahl), `dbz_cmax`/`echotop` (falsch kalibriert bzw. falsche Größe).
+**Nicht geplant:** Gewitter-Wahrscheinlichkeit (keine Quelle, Abschnitt 2.1),
+`dbz_cmax`/`echotop` (falsch kalibriert bzw. falsche Größe), Ausfallsichtbarkeit im Radar-Pfad
+(E7 zurückgestellt).
+
+**In Prüfung, entscheidet Rang 1:** Ob sich die Signale seriös auf die vier groben Stufen
+abbilden lassen. Die bisherige Haltung „keine exakt publizierte Schwelle, also gar keine
+Einstufung" war womöglich zu streng — eine vierstufige Skala braucht keine
+Präzisionskalibrierung, sondern eine belastbare Zuordnung „ab hier wird es ernst".
