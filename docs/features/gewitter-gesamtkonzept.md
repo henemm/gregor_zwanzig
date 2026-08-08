@@ -67,7 +67,7 @@ Damit nichts durchs Raster fällt — das Produkt kennt **elf** Größen mit Gew
 | **Starkregen** `precipitation` | Sturzbäche | ✅ **sichtbar**, eigene Metrik — **bewusst nicht verrechnet** (E9) | überall |
 | CAPE | Energie | Zutat ⇒ unsichtbar (E2) | überall |
 | Konvektionshemmung `cin_ml` | hält der Deckel? | Zutat, ersetzt die CAPE-Notbremse | DWD-Gebiet |
-| Blitzdichte | Blitzaktivität (FR) | Zutat | nur FR/Korsika |
+| Blitzdichte | Blitzaktivität (FR) | Zutat | nur Frankreich inkl. Korsika |
 | Blitzpotenzial `lpi`/`lpi_max`/`lpi_con_max` | Blitzaktivität (DWD) | Zutat | DWD-Gebiete |
 | **Superzellen-Index** `sdi_2` | gefährlichste Form | **Zutat** (E8) — hebt die Stufe, kein eigenes Kennzeichen | nur ICON-D2 |
 | Updraft-Helizität `uh_max*` | Rotation | Zutat, vorerst ohne Schwelle | nur ICON-D2 |
@@ -79,10 +79,10 @@ aus unserer Berechnung (Abschnitt 6).
 
 **E8 — Superzellen bleiben Zutat, kein eigenes Kennzeichen.** Fachlich wäre ein Kennzeichen
 konsistent zu Hagel (beide beantworten „was für ein Gewitter", nicht „wie stark"). Ausschlag
-gab die Verfügbarkeit: Den Index gibt es **nur im ICON-D2-Gebiet**. Auf dem GR20 — dem
-Kernzielgebiet — erschiene er strukturell nie, und „kein Hinweis" läse sich dort als „keine
-Superzelle". Als Zutat hebt er die Stufe, ohne ein Schweigen zu erzeugen, das nach Entwarnung
-aussieht.
+gab die Verfügbarkeit: Den Index gibt es **nur im ICON-D2-Gebiet**. In **ganz Frankreich**
+— und damit auf dem GR20 — erschiene er strukturell nie, und „kein Hinweis" läse sich dort als
+„keine Superzelle". Als Zutat hebt er die Stufe, ohne ein Schweigen zu erzeugen, das nach
+Entwarnung aussieht.
 
 **E9 — Böen und Starkregen bleiben getrennte Metriken.** Der DWD stuft Gewitter zwar genau nach
 diesen Größen ein, aber er warnt **wirkungsbasiert**, wir beschreiben **Wetter**. Eine
@@ -243,7 +243,7 @@ ersetzt die heutige Fassung aus 3.1.
 | Zutat | kein | leicht | mittel | hoch | Beleg |
 |---|---|---|---|---|---|
 | **WMO-Wettercode** | < 95 | 95 | 96 | 99 | Anbieter |
-| **Blitzdichte** (FR/Korsika, Blitze/km²/3 h) | < 0,003 | ≥ 0,003 | ≥ 0,015 | ≥ 0,075 | ECMWF; **oberste Grenze interpoliert** |
+| **Blitzdichte** (Frankreich inkl. Korsika, Blitze/km²/3 h) | < 0,003 | ≥ 0,003 | ≥ 0,015 | ≥ 0,075 | ECMWF; **oberste Grenze interpoliert** |
 | **Blitzpotenzial ICON-D2** (J/kg) | < 1 | ≥ 1 | ≥ 30 | ≥ 50 | Bína et al., COSMO-D2 — **alle drei belegt** |
 | **Blitzpotenzial ICON-EU** (J/kg) | eigene Leiter — **zu eichen** (Rang 7), bis dahin nicht gleichwertig | | | | Faktor 235 gemessen |
 | **CAPE, gepaart mit Hemmung** | s. Schritt 2 | | | | NWS/SPC + Penn State |
@@ -294,20 +294,35 @@ nebeneinanderzustellen, die vergleichbar aussehen und es nicht sind.
 
 ### Was das je Gebiet konkret bedeutet
 
-| | **FR / Korsika (GR20)** | **DE / Alpen / AT** | **Übriges Europa** |
+Die Gebietsgrenzen sind **ganze Länderregionen**, nicht einzelne Touren: „FR" umfasst
+41,3–51,1° N / −5,2–9,7° O, also **ganz Frankreich einschließlich Korsika**
+(`thunder_routing.py:63-67`).
+
+| | **Frankreich inkl. Korsika** | **DE / Alpen / AT** | **Übriges Europa** |
 |---|---|---|---|
-| Wettercode | ✅ | ✅ | ✅ |
+| **Auflösung der Grundvorhersage** | **AROME 1,3 km — die feinste im System** | ICON-D2 2,0–2,2 km | ICON-EU / global, ab 6,5 km |
+| Wettercode (überall wirksam) | ✅ aus dem feinsten Modell | ✅ | ✅ |
 | Blitzsignal | Blitz**dichte** | Blitz**potenzial** (2,2 km) | Blitzpotenzial (6,5 km, eigene Leiter) |
 | CAPE + Hemmung | CAPE ja, **Hemmung nein** ⇒ bleibt gedeckelt | ✅ beides | ✅ beides |
 | Superzellen | ❌ nicht verfügbar | ✅ | ❌ |
 | Hagel-Kennzeichen | ❌ (→ #1507) | ✅ | ❌ |
 | Radar | ✅ (Radar-DPC) | ✅ | ✅ (global) |
 
-🔴 **Das Zielbild ist ehrlich, nicht schön:** Der GR20 — das Kernzielgebiet — bekommt die
-**schwächste** Signallage. Kein Superzellen-Index, kein Hagel-Kennzeichen, keine Hemmung, und
-das einzige Blitzsignal hat die am schlechtesten belegte Schwellenleiter. Wer das ändern will,
-muss bei Météo-France ansetzen (#1507 für Hagel, Energiegrößen offen) — dort kostet jede Größe
-allerdings einen Abruf **je Stunde**, anders als beim kostenlosen DWD.
+⚠️ **Signalanzahl ist nicht Vorhersagegüte — die beiden bitte nicht verwechseln.** Frankreich
+und Korsika haben die **wenigsten Zusatzsignale**, aber die **feinste Grundvorhersage**:
+AROME läuft mit 1,3 km und steht im Modellkatalog auf Priorität 1
+(`openmeteo.py:118-126`), feiner als ICON-D2 (2,0 km) und mehr als viermal feiner als ICON-EU.
+Der WMO-Wettercode — das einzige Signal, das überall wirkt und in der Fusion unmittelbar eine
+Stufe setzt — kommt dort also aus dem besten verfügbaren Modell, und bei 1,3 km wird Konvektion
+feiner aufgelöst als anderswo. Praxiserfahrung des PO aus dem Vorgängerprojekt bestätigt hohe
+Trefferqualität für Korsika.
+
+**Was für Frankreich/Korsika wirklich fehlt**, ist enger gefasst: die **Zusatz**signale
+(Superzellen-Index, Hagel-Kennzeichen, Konvektionshemmung) und eine belegte oberste Schwelle
+für die Blitzdichte. Wer das schließen will, muss bei Météo-France ansetzen (#1507 für Hagel,
+Energiegrößen offen) — dort kostet jede Größe allerdings einen Abruf **je Stunde**, anders als
+beim kostenlosen DWD. Die Kosten-Nutzen-Abwägung ist deshalb eine andere als beim DWD, und sie
+ist offen.
 
 ---
 
@@ -319,7 +334,7 @@ Gewittersignale kommen je Gebiet aus verschiedenen Quellen mit **verschiedenen G
 
 | Gebiet | Quelle | Signale, die ankommen |
 |---|---|---|
-| Frankreich/Korsika (**GR20**) | Météo-France AROME | Wettercode + **Blitzdichte** |
+| **Frankreich inkl. Korsika** (Region FR: 41,3–51,1 N / −5,2–9,7 O) | Météo-France AROME, **1,3 km** | Wettercode + **Blitzdichte** |
 | Deutschland/Alpen/Österreich | DWD ICON-D2 | Wettercode + **Blitzpotenzial** + Hagel |
 | Übriges Europa | DWD ICON-EU | Wettercode + **Blitzpotenzial**, kein Hagel |
 
