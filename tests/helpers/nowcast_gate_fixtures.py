@@ -15,10 +15,15 @@ Prod-``.env`` des Arbeitsverzeichnisses zurueck — genau so gingen am
 
 Pfadregel #1409: alles wird relativ zu DIESER Datei bzw. ueber
 ``app.loader.get_data_dir()`` aufgeloest, nie ueber einen festen
-Hauptrepo-Pfad. Einzige bewusste Ausnahme ist ``PRESET_ROOT``: der
-Vergleichs-Loader liest Presets cwd-relativ
-(``load_compare_presets(data_root="data")``) — die in CLAUDE.md ausgenommene
-"geteilte Ablage" (Vorbild ``tests/helpers/alert_log_fixtures.py``).
+Hauptrepo-Pfad.
+
+Issue #1595: die frueher hier dokumentierte Ausnahme ``PRESET_ROOT`` (fester
+Hauptrepo-Pfad, begruendet mit ``load_compare_presets(data_root="data")``)
+ist ENTFALLEN. Der Vergleichs-Loader liest die Datenwurzel jetzt ueber
+``get_data_root()``, also ueber dieselbe Basis wie ``get_data_dir()``. Ein
+fester Pfad schriebe seither dorthin, wo der Pruefling NICHT liest. Deshalb
+``preset_root()`` als Funktion: der Wert faellt beim Aufruf, nach der
+#1133-Fixture, nicht beim Import davor.
 """
 from __future__ import annotations
 
@@ -38,8 +43,15 @@ from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
 
-# s. Modul-Docstring: cwd-relative Ablage des Vergleichs-Preset-Loaders.
-PRESET_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def preset_root() -> Path:
+    """Nutzer-Wurzel der Vergleichs-Preset-Ablage, s. Modul-Docstring.
+
+    Funktion statt Konstante (#1595): ``get_data_root()`` liefert erst zur
+    Laufzeit die von der #1133-Fixture gesetzte Basis.
+    """
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 VIENNA = ZoneInfo("Europe/Vienna")
 
@@ -69,7 +81,7 @@ def fresh_uid(prefix: str) -> str:
 def clean_uid(user_id: str) -> None:
     """Beide Ablagen: die isolierte ``get_data_dir()``-Basis UND das
     cwd-relative Preset-Verzeichnis."""
-    for d in (PRESET_ROOT / user_id, get_data_dir(user_id)):
+    for d in (preset_root() / user_id, get_data_dir(user_id)):
         if d.exists():
             shutil.rmtree(d, ignore_errors=True)
 
@@ -146,7 +158,7 @@ def radar_preset(
 
 
 def write_presets(user_id: str, presets: list[dict]) -> Path:
-    return write_compare_briefings(PRESET_ROOT / user_id, presets)
+    return write_compare_briefings(preset_root() / user_id, presets)
 
 
 # ─────────────────────────────── Radar-Naht ─────────────────────────────────

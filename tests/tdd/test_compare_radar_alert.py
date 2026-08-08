@@ -40,14 +40,25 @@ from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
 
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def _data_root_users() -> Path:
+    """Nutzer-Wurzel der Compare-Preset-Ablage.
+
+    Funktion statt Konstante (#1595): der Compare-Loader loest die
+    Datenwurzel seit dem Umzug nach ``/var/lib/gregor`` ueber
+    ``get_data_root()`` auf. Eine Modul-Konstante waere beim Import gebunden,
+    also VOR der #1133-Fixture -- die Tests schrieben dann dorthin, wo der
+    Pruefling nicht liest, und waren gruen, ohne etwas zu bewachen.
+    """
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 
 # ───────────────────────── Fixtures & Builder ───────────────────────────────
 
 
 def _clean_user(user_id: str) -> None:
-    d = DATA_ROOT / user_id
+    d = _data_root_users() / user_id
     if d.exists():
         shutil.rmtree(d)
 
@@ -111,7 +122,7 @@ def _radar_preset(
 
 def _write_preset_file(user_id: str, presets: list[dict]) -> Path:
     # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
-    return write_compare_briefings(DATA_ROOT / user_id, presets)
+    return write_compare_briefings(_data_root_users() / user_id, presets)
 
 
 class _CoordFrameSource:
@@ -710,12 +721,12 @@ def test_two_users_isolated_locations_and_recipients():
             "Cross-User-Datenleck A→B in der Sperrzeit-Ablage"
         )
 
-        b_dir = DATA_ROOT / user_b
+        b_dir = _data_root_users() / user_b
         if b_dir.exists():
             for p in b_dir.rglob("*"):
                 if p.is_file():
                     assert preset_a_id not in p.name, f"Cross-User-Datenleck A→B in {p}"
-        a_dir = DATA_ROOT / user_a
+        a_dir = _data_root_users() / user_a
         for p in a_dir.rglob("*"):
             if p.is_file():
                 assert preset_b_id not in p.name, f"Cross-User-Datenleck B→A in {p}"

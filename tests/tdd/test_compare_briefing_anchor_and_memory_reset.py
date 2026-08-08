@@ -60,6 +60,7 @@ from pathlib import Path
 import pytest
 
 from app.config import Settings
+from app.loader import get_data_root
 from app.models import ForecastDataPoint, SegmentWeatherSummary, ThunderLevel
 from app.user import SavedLocation
 
@@ -312,16 +313,24 @@ def _install_shared_anchor_spy(monkeypatch) -> list[dict]:
 
 @pytest.fixture
 def compare_env(tmp_path, monkeypatch):
-    """Isoliertes Arbeitsverzeichnis: `load_compare_presets()` loest seinen
-    `data_root` relativ zum Arbeitsverzeichnis auf ("data"). Durch das
-    `chdir` landet nichts im echten Repo-Baum (#1265)."""
+    """Isoliertes Arbeitsverzeichnis.
+
+    Issue #1595: `load_compare_presets()` loest seinen `data_root` NICHT mehr
+    relativ zum Arbeitsverzeichnis auf, sondern ueber `get_data_root()` — das
+    `chdir` allein wuerde die Presets also nicht mehr dorthin legen, wo der
+    Pruefling sie liest. Geschrieben wird deshalb unter der aufgeloesten
+    Wurzel (s. `_write_presets`); das `chdir` bleibt als zweite Sicherung, damit
+    ein versehentlich relativer Schreibzugriff nicht im echten Repo-Baum
+    landet (#1265)."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "data" / "users").mkdir(parents=True, exist_ok=True)
     return tmp_path
 
 
 def _write_presets(tmp_path: Path, user_id: str, presets: list[dict]) -> None:
-    write_compare_briefings(tmp_path / "data" / "users" / user_id, presets)
+    from app.loader import get_data_root
+
+    write_compare_briefings(get_data_root() / "users" / user_id, presets)
 
 
 def _memory_keys(user_id: str, entity_id: str) -> list[str]:
@@ -813,7 +822,7 @@ def test_ac19_handversand_laesst_anker_und_gedaechtnis_unberuehrt(compare_env, m
     monkeypatch.setattr(sds_mod, "Settings", _NoTransportSettings)
     _assert_no_live_channel(_NoTransportSettings())
 
-    result = sds_mod.send_compare_preset(uid, preset_id, str(compare_env / "data"))
+    result = sds_mod.send_compare_preset(uid, preset_id, str(get_data_root()))
     assert result.get("status") == "ok", f"Der Handversand ist nicht durchgelaufen: {result!r}"
     assert len(_RecordingEmailOutput.calls) == 1, (
         f"Der Handversand muss genau eine Mail zustellen, erhalten: "
@@ -1035,7 +1044,7 @@ def test_handversand_delegiert_mit_on_demand_kennzeichen(compare_env, monkeypatc
     monkeypatch.setattr(sds_mod, "Settings", _NoTransportSettings)
     calls = _install_shared_anchor_spy(monkeypatch)
 
-    sds_mod.send_compare_preset(uid, preset_id, str(compare_env / "data"))
+    sds_mod.send_compare_preset(uid, preset_id, str(get_data_root()))
 
     assert len(calls) == 1, (
         f"Auch der Handversand laeuft ueber den geteilten Baustein — erwartet "

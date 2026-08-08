@@ -43,7 +43,13 @@ from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
 
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def _data_root_users() -> Path:
+    """Nutzer-Wurzel der Compare-Preset-Ablage — Funktion statt Konstante
+    (#1595): ``get_data_root()`` liefert erst zur Laufzeit die von der
+    #1133-Fixture gesetzte Basis, eine Konstante waere beim Import gebunden."""
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 
 # ───────────────────────── Helfer (mock-frei) ──────────────────────────────
@@ -51,7 +57,7 @@ DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 def _clean_user(user_id: str) -> None:
     import shutil
 
-    d = DATA_ROOT / user_id
+    d = _data_root_users() / user_id
     if d.exists():
         shutil.rmtree(d)
 
@@ -129,7 +135,7 @@ def _preset_with_active_metrics(
 
 def _write_preset_file(user_id: str, presets: list[dict]) -> Path:
     # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
-    return write_compare_briefings(DATA_ROOT / user_id, presets)
+    return write_compare_briefings(_data_root_users() / user_id, presets)
 
 
 def _run_scenario(

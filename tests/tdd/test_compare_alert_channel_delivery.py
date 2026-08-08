@@ -89,7 +89,13 @@ pytestmark = pytest.mark.live
 # (`src/app/loader.py:318`) und laeuft damit an der data-root-Isolation der
 # conftest vorbei — die Preset-Dateien muessen deshalb genau hier liegen und
 # werden im `finally` restlos wieder entfernt.
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def _data_root_users() -> Path:
+    """Nutzer-Wurzel der Compare-Preset-Ablage — Funktion statt Konstante
+    (#1595): ``get_data_root()`` liefert erst zur Laufzeit die von der
+    #1133-Fixture gesetzte Basis, eine Konstante waere beim Import gebunden."""
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 
 # ---------------------------------------------------------------------------
@@ -255,7 +261,7 @@ def _compare_preset(preset_id: str, location_ids: list[str], **extra) -> dict:
 
 
 def _clean_user(user_id: str) -> None:
-    d = DATA_ROOT / user_id
+    d = _data_root_users() / user_id
     if d.exists():
         shutil.rmtree(d)
 
@@ -285,7 +291,7 @@ def _setup_single_location_preset(
         user_id=user_id,
     )
     write_compare_briefings(
-        DATA_ROOT / user_id, [_compare_preset(preset_id, [loc_id], **preset_extra)]
+        _data_root_users() / user_id, [_compare_preset(preset_id, [loc_id], **preset_extra)]
     )
     CompareWeatherSnapshotService(user_id=user_id).save(
         preset_id, loc_id, _pwd(loc_id, location_name, 47.07, 15.44, 2.0)
@@ -310,7 +316,7 @@ def _setup_two_location_preset(
             user_id=user_id,
         )
     write_compare_briefings(
-        DATA_ROOT / user_id,
+        _data_root_users() / user_id,
         [_compare_preset(preset_id, [o[0] for o in orte], **preset_extra)],
     )
     snapshots = CompareWeatherSnapshotService(user_id=user_id)
@@ -453,7 +459,7 @@ def test_ac11_missing_send_telegram_key_stays_email_only_while_optin_user_gets_t
         # Gegenprobe am geschriebenen Rohdict: der Schluessel darf wirklich
         # nicht existieren (sonst prueft der Test einen anderen Fall).
         raw_a = json.loads(
-            (DATA_ROOT / uid_a / "briefings" / f"{preset_a}.json").read_text()
+            (_data_root_users() / uid_a / "briefings" / f"{preset_a}.json").read_text()
         )
         assert "send_telegram" not in raw_a, (
             "Setup-Kontrolle: das Preset von Nutzer A darf den Schluessel "
@@ -833,7 +839,7 @@ def test_k6_telegram_style_rich_or_absent_keeps_one_bubble_per_location(monkeypa
         _write_tier(uid_absent, "standard")
         _setup_two_location_preset(uid_absent, preset_absent, send_telegram=True)
         raw = json.loads(
-            (DATA_ROOT / uid_absent / "briefings" / f"{preset_absent}.json").read_text()
+            (_data_root_users() / uid_absent / "briefings" / f"{preset_absent}.json").read_text()
         )
         assert "display_config" not in raw, (
             "Setup-Kontrolle: das Preset von Nutzer B darf gar kein "

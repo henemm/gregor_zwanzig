@@ -236,7 +236,7 @@ def _is_local_mail_domain(addr: str) -> bool:
     return domain in LOCAL_MAIL_DOMAINS
 
 
-def _load_resend_allowlist(data_dir: str = "data") -> frozenset[str]:
+def _load_resend_allowlist(data_dir: str | None = None) -> frozenset[str]:
     """Issue #1219 Scheibe 1: positive Empfänger-Allowlist, Eignungskriterium
     umgestellt von der Namens-Heuristik (`is_test_user_id`) auf das explizite
     Profilfeld `email_verified_at`.
@@ -256,6 +256,13 @@ def _load_resend_allowlist(data_dir: str = "data") -> frozenset[str]:
     betroffene Profil — nie ein Crash des Sendepfads.
     """
     allowed: set[str] = set()
+    if data_dir is None:
+        # Lokaler Import wie beim Aufrufer weiter unten (Adversary F002,
+        # #1219): NICHT direkt GZ_DATA_DIR lesen — get_data_root() honoriert
+        # zuerst app.loader._DATA_ROOT und damit die Test-Isolation (#1133).
+        from app.loader import get_data_root
+
+        data_dir = str(get_data_root())
     users_root = Path(data_dir) / "users"
     try:
         user_ids = [d.name for d in users_root.iterdir() if d.is_dir()]

@@ -6,10 +6,16 @@ die vorhandenen DI-Naehte (``mail_sink``/``radar_service``).
 
 Pfadregel #1409: alle Pruefling-Pfade laufen ueber ``get_data_dir()`` bzw.
 werden relativ zur Testdatei aufgeloest -- nie ueber einen festen
-Hauptrepo-Pfad. Einzige bewusste Ausnahme ist ``COMPARE_DATA_ROOT``: der
-Compare-Loader liest Presets ueber den cwd-relativen Pfad ``data/users/...``
-(``loader.load_compare_presets(data_root="data")``), also ueber das ``cwd``
-des Pruefling -- das ist die in CLAUDE.md ausgenommene "geteilte Ablage".
+Hauptrepo-Pfad.
+
+Issue #1595: die frueher hier dokumentierte Ausnahme ``COMPARE_DATA_ROOT``
+(fester Hauptrepo-Pfad, begruendet mit ``load_compare_presets(data_root=
+"data")``) ist ENTFALLEN. Der Compare-Loader loest die Datenwurzel jetzt
+ueber ``get_data_root()`` auf, also ueber dieselbe Basis wie
+``get_data_dir()``. Ein fester Pfad wuerde seither dorthin schreiben, wo der
+Pruefling NICHT liest -- die Tests waren gruen, ohne etwas zu bewachen.
+Deshalb ``compare_data_root()`` als Funktion: der Wert faellt beim Aufruf,
+nach der #1133-Fixture, nicht beim Import davor.
 """
 from __future__ import annotations
 
@@ -37,8 +43,15 @@ from app.trip import Stage, Trip, Waypoint
 
 LAT, LON = 47.0, 11.0
 
-# s. Modul-Docstring: cwd-relative Ablage des Compare-Preset-Loaders.
-COMPARE_DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def compare_data_root() -> Path:
+    """Nutzer-Wurzel fuer die Compare-Preset-Ablage, s. Modul-Docstring.
+
+    Funktion statt Konstante (#1595): ``get_data_root()`` liefert erst zur
+    Laufzeit die von der #1133-Fixture gesetzte Basis.
+    """
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 
 def fresh_user(prefix: str) -> str:
@@ -46,7 +59,7 @@ def fresh_user(prefix: str) -> str:
 
 
 def clean_compare_user(user_id: str) -> None:
-    d = COMPARE_DATA_ROOT / user_id
+    d = compare_data_root() / user_id
     if d.exists():
         shutil.rmtree(d, ignore_errors=True)
 

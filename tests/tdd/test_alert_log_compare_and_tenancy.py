@@ -23,7 +23,7 @@ from app.models import SegmentWeatherSummary
 from app.user import SavedLocation
 
 from tests.helpers.alert_log_fixtures import (
-    COMPARE_DATA_ROOT, LAT, LON, clean_compare_user, fresh_user, gust_alert_trip,
+    LAT, LON, clean_compare_user, compare_data_root, fresh_user, gust_alert_trip,
     read_log, settings_email_only, weather,
 )
 from tests.helpers.compare_briefings import write_compare_briefings
@@ -90,7 +90,7 @@ def _setup_compare_user(uid: str) -> None:
         SavedLocation(id="loc-a", name="Vergleichsort", lat=LAT, lon=LON, elevation_m=1000),
         user_id=uid,
     )
-    write_compare_briefings(COMPARE_DATA_ROOT / uid, [{
+    write_compare_briefings(compare_data_root() / uid, [{
         "id": _PRESET_ID, "name": "Vergleich 1459", "user_id": uid,
         "location_ids": ["loc-a"], "schedule": "daily", "weekday": 4,
         "profil": "ALLGEMEIN", "hour_from": 9, "hour_to": 16,

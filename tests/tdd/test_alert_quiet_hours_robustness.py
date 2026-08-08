@@ -53,10 +53,13 @@ fehlenden Feldern still auf die Prod-``.env`` im Worktree zurueck, und ein
 Pfadregel #1409: Prueflings-Pfade werden relativ zu DIESER Testdatei
 aufgeloest (``Path(__file__).resolve().parents[2]``), nie ueber einen festen
 Hauptrepo-Pfad — sonst pruefte der Lauf aus dem Worktree die unveraenderte
-Hauptrepo-Kopie und meldete falsches Gruen. Einzige bewusste Ausnahme ist die
-geteilte Ablage ``COMPARE_DATA_ROOT``: der Compare-Preset-Loader liest
-cwd-relativ ueber ``load_compare_presets(data_root="data")``, also ueber das
-``cwd`` des Prueflings.
+Hauptrepo-Kopie und meldete falsches Gruen.
+
+Issue #1595: die frueher hier dokumentierte Ausnahme ``COMPARE_DATA_ROOT``
+(geteilte Ablage, begruendet mit ``load_compare_presets(data_root="data")``)
+ist ENTFALLEN. Der Compare-Preset-Loader liest nicht mehr cwd-relativ,
+sondern ueber ``get_data_root()``. ``compare_data_root()`` loest deshalb beim
+Aufruf auf, nach der #1133-Fixture, statt beim Import davor.
 """
 from __future__ import annotations
 
@@ -78,8 +81,18 @@ from app.user import SavedLocation
 from tests.helpers.compare_briefings import write_compare_briefings
 
 _REPO = Path(__file__).resolve().parents[2]
-COMPARE_DATA_ROOT = _REPO / "data" / "users"
 SERVICES_DIR = _REPO / "src" / "services"
+
+
+def compare_data_root() -> Path:
+    """Nutzer-Wurzel der Compare-Preset-Ablage, s. Modul-Docstring.
+
+    Funktion statt Konstante (#1595): ``get_data_root()`` liefert erst zur
+    Laufzeit die von der #1133-Fixture gesetzte Basis.
+    """
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 # Island (UTC+0 ganzjaehrig, kein Sommerzeit-Sprung) — haelt die
 # Segment-Zeitfenster der Trip-Fixtures frei von DST-Ueberraschungen.
@@ -98,7 +111,7 @@ def _uid(tag: str) -> str:
 
 
 def _clean_compare_user(user_id: str) -> None:
-    d = COMPARE_DATA_ROOT / user_id
+    d = compare_data_root() / user_id
     if d.exists():
         shutil.rmtree(d, ignore_errors=True)
 
@@ -146,7 +159,7 @@ def _compare_preset(
 
 
 def _write_compare_presets(user_id: str, presets: list[dict]) -> None:
-    write_compare_briefings(COMPARE_DATA_ROOT / user_id, presets)
+    write_compare_briefings(compare_data_root() / user_id, presets)
 
 
 class _FakeOfficialAlertSource:

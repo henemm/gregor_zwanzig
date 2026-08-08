@@ -35,7 +35,13 @@ from services.official_alerts.models import OfficialAlert
 
 from tests.helpers.compare_briefings import write_compare_briefings
 
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def _data_root_users() -> Path:
+    """Nutzer-Wurzel der Compare-Preset-Ablage — Funktion statt Konstante
+    (#1595): ``get_data_root()`` liefert erst zur Laufzeit die von der
+    #1133-Fixture gesetzte Basis, eine Konstante waere beim Import gebunden."""
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 LAT_A, LON_A = 46.62, 13.68  # Hermagor
 
@@ -50,7 +56,7 @@ _VALID_TO = _NOW + timedelta(hours=11)
 
 
 def _clean_user(user_id: str) -> None:
-    d = DATA_ROOT / user_id
+    d = _data_root_users() / user_id
     if d.exists():
         shutil.rmtree(d, ignore_errors=True)
 
@@ -84,7 +90,7 @@ def _preset(preset_id: str, official_warnings: dict, **extra) -> dict:
 
 def _write_presets(user_id: str, presets: list[dict]) -> None:
     # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
-    write_compare_briefings(DATA_ROOT / user_id, presets)
+    write_compare_briefings(_data_root_users() / user_id, presets)
 
 
 class _FixedSourceAlertSource:

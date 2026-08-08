@@ -39,7 +39,7 @@ from app.trip import Trip
 from app.user import SavedLocation
 
 from tests.helpers.alert_log_fixtures import (
-    COMPARE_DATA_ROOT, LAT, LON, clean_compare_user, fresh_user, gust_alert_trip,
+    LAT, LON, clean_compare_user, compare_data_root, fresh_user, gust_alert_trip,
     read_log, settings_email_only, weather,
 )
 from tests.helpers.compare_briefings import write_compare_briefings
@@ -450,7 +450,7 @@ def test_compare_radar_two_locations_convective_and_moderate_logs_highest():
     clean_compare_user(uid)
     try:
         loc_a, loc_b = _setup_two_locations(uid)
-        write_compare_briefings(COMPARE_DATA_ROOT / uid, [{
+        write_compare_briefings(compare_data_root() / uid, [{
             "id": "cp-ac12", "name": "Vergleich AC12", "user_id": uid,
             "location_ids": [loc_a, loc_b], "schedule": "daily", "weekday": 4,
             "profil": "ALLGEMEIN", "hour_from": 9, "hour_to": 16,
@@ -505,7 +505,7 @@ def test_compare_radar_two_non_convective_locations_logs_the_higher_one():
     clean_compare_user(uid)
     try:
         loc_a, loc_b = _setup_two_locations(uid)
-        write_compare_briefings(COMPARE_DATA_ROOT / uid, [{
+        write_compare_briefings(compare_data_root() / uid, [{
             "id": "cp-ac12b", "name": "Vergleich AC12b", "user_id": uid,
             "location_ids": [loc_a, loc_b], "schedule": "daily", "weekday": 4,
             "profil": "ALLGEMEIN", "hour_from": 9, "hour_to": 16,
@@ -567,7 +567,7 @@ def test_compare_official_two_warnings_logs_highest():
     try:
         loc_a, loc_b = _setup_two_locations(uid)
         register_official_alert_source(_TwoLevelSource())
-        write_compare_briefings(COMPARE_DATA_ROOT / uid, [{
+        write_compare_briefings(compare_data_root() / uid, [{
             "id": "cp-ac13", "name": "Vergleich AC13", "user_id": uid,
             "location_ids": [loc_a, loc_b], "schedule": "daily", "weekday": 4,
             "profil": "ALLGEMEIN", "hour_from": 9, "hour_to": 16,

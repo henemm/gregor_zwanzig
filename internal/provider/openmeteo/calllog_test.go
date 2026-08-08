@@ -155,6 +155,110 @@ func TestCallLog_UVFetch_AppendsGoUVLine(t *testing.T) {
 }
 
 // =============================================================================
+// Issue #1595: die Datenwurzel wird ZUR LAUFZEIT gelesen, nicht beim Import
+// =============================================================================
+//
+// Vorher stand der Diagnose-Pfad in einer Paket-Variablen mit Initialisierer.
+// Der lief beim Import des Pakets — also vor jeder Konfiguration — und zeigte
+// dauerhaft auf das relative "data" im Projektordner. Nach dem Umzug der
+// Produktivdaten nach /var/lib/gregor schrieb er damit in einen toten Ordner.
+//
+// Dass die Aufloesung jetzt spaet faellt, laesst sich durch Lesen des Codes
+// NICHT beweisen: eine Konstante und ein Funktionsaufruf sehen an der
+// Aufrufstelle gleich aus. Beweisen kann es nur ein Test, der die Variable
+// NACH dem Import setzt — genau das tut t.Setenv hier. Waere der Pfad noch
+// frueh gebunden, kaeme das Setzen zu spaet und der Test wuerde rot.
+
+// initialDiagnosticsGoPath haelt den Wert fest, den die Paket-Variable BEIM
+// LADEN des Pakets hatte — Paket-Variablen der Testdatei werden zusammen mit
+// denen des Prueflings initialisiert, also bevor irgendein Test sie umsetzt.
+// Ohne diese Kopie waere der Nachweis unten von der Test-Reihenfolge abhaengig.
+var initialDiagnosticsGoPath = diagnosticsGoPath
+
+func TestDiagnosticsPath_NothingIsBoundAtPackageInit(t *testing.T) {
+	// Das ist der eigentliche Waechter. Der Test darunter setzt die Variable
+	// selbst auf "" und kann eine frueh gebundene Zuweisung deshalb gar nicht
+	// sehen — er wuerde auch gruen bleiben, wenn der Initialisierer zurueckkaeme.
+	// Hier wird stattdessen geprueft, was beim Import passiert ist: nichts.
+	if initialDiagnosticsGoPath != "" {
+		t.Fatalf("die Paket-Variable trug beim Import bereits %q — damit steht der "+
+			"Diagnose-Pfad wieder vor jeder Konfiguration fest und ignoriert GZ_DATA_DIR",
+			initialDiagnosticsGoPath)
+	}
+}
+
+func TestDiagnosticsPath_ReadsEnvAtCallTime_NotAtPackageInit(t *testing.T) {
+	// GIVEN: eine Datenwurzel, die es beim Laden des Pakets noch nicht gab.
+	// Das Arbeitsverzeichnis wird mitverlegt, damit der relative Pfad "data"
+	// unten wirklich LEER ist. Ohne das schlaegt die Gegenprobe auf Rueckstaende
+	// frueherer Laeufe im Paketordner an und meldet Rot ohne Befund.
+	t.Chdir(t.TempDir())
+	root := t.TempDir()
+	t.Setenv("GZ_DATA_DIR", root)
+
+	// Kein Test-Override aktiv — sonst wuerde der die Aufloesung kurzschliessen
+	// und der Test bewiese nichts ueber GZ_DATA_DIR.
+	old := diagnosticsGoPath
+	diagnosticsGoPath = ""
+	defer func() { diagnosticsGoPath = old }()
+
+	// WHEN: eine Diagnose-Zeile geschrieben wird.
+	logAPICall("https://api.open-meteo.com/v1/forecast?lat=47", 200, "")
+
+	// THEN: sie liegt unter der NEUEN Wurzel.
+	want := filepath.Join(root, "diagnostics", "openmeteo_calls_go.jsonl")
+	lines := readGoCallLog(t, want)
+	if len(lines) != 1 {
+		t.Fatalf("erwartet 1 Zeile unter %s, gefunden %d — der Pfad wurde offenbar "+
+			"beim Paket-Import festgelegt und ignoriert GZ_DATA_DIR", want, len(lines))
+	}
+
+	// Und ausdruecklich NICHT am alten, relativen Ort. Ohne diese Haelfte waere
+	// der Test auch gruen, wenn zusaetzlich weiter nach "data" geschrieben wuerde.
+	if _, err := os.Stat(filepath.Join("data", "diagnostics", "openmeteo_calls_go.jsonl")); err == nil {
+		t.Errorf("es wurde zusaetzlich in den alten relativen Pfad data/diagnostics geschrieben")
+	}
+}
+
+func TestDiagnosticsPath_FallsBackToData_WhenEnvUnset(t *testing.T) {
+	// Gegenprobe: ohne gesetzte Variable muss der Rueckfall auf "data" greifen.
+	// Ohne diesen Test waere der obige auch dann gruen, wenn die Aufloesung
+	// kaputt waere und IMMER die Umgebungsvariable braeuchte — das Verhalten
+	// ohne GZ_DATA_DIR soll aber unveraendert bleiben (AC-2).
+	//
+	// Geprueft wird der aufgeloeste Pfad, nicht ein Schreibvorgang: schreiben
+	// wuerde hier eine Datei im Projektordner anlegen, also genau die
+	// Verschmutzung erzeugen, die diese Scheibe abschafft.
+	t.Setenv("GZ_DATA_DIR", "")
+
+	old := diagnosticsGoPath
+	diagnosticsGoPath = ""
+	defer func() { diagnosticsGoPath = old }()
+
+	got := diagnosticsGoLogPath()
+	want := filepath.Join("data", "diagnostics", "openmeteo_calls_go.jsonl")
+	if got != want {
+		t.Errorf("Rueckfall ohne GZ_DATA_DIR: erwartet %q, bekommen %q", want, got)
+	}
+}
+
+func TestDiagnosticsPath_TestOverrideWinsOverEnv(t *testing.T) {
+	// Der Vorrang des Test-Overrides ist die Zusicherung, auf der die drei
+	// bestehenden Tests dieser Datei aufbauen. Faellt sie still weg, wuerden
+	// die auf einmal in den echten Datenbaum schreiben.
+	t.Setenv("GZ_DATA_DIR", t.TempDir())
+
+	override := filepath.Join(t.TempDir(), "eigener.jsonl")
+	old := diagnosticsGoPath
+	diagnosticsGoPath = override
+	defer func() { diagnosticsGoPath = old }()
+
+	if got := diagnosticsGoLogPath(); got != override {
+		t.Errorf("Test-Override muss GZ_DATA_DIR schlagen: erwartet %q, bekommen %q", override, got)
+	}
+}
+
+// =============================================================================
 // AC-5: nicht-beschreibbares Diagnose-Ziel → logAPICall schluckt Fehler,
 // kein Panic, doRequest/FetchForecast liefern unverändert.
 // =============================================================================
