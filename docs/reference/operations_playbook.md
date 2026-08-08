@@ -80,6 +80,49 @@ Feld `frontend_pages_checked` mit den geprüften Pfaden.
 **Notausgang:** bestehender Mechanismus `GZ_SKIP_E2E_GATE=1` (laut, geloggt) — kein eigener,
 zweiter Ausgang für dieses Gate.
 
+### Zugangsdaten: DREI Quellen, nicht zwei (2026-08-08)
+
+**Bei einer Blockade zuerst hier nachsehen — nicht in der `.env` des Arbeitsordners.**
+Die Staging-Instanz hat **eigene** Anmeldedaten der Anwendung: gleicher Benutzername,
+anderes Passwort. Gemessen gegen `POST /api/auth/login`: die `.env` des Arbeitsordners
+liefert **401** `invalid credentials`, die Staging-`.env` **200** mit `gz_session`-Cookie.
+Genau daran blockierte das Gate am 2026-08-08 **jede** Frontend-Auslieferung.
+
+| Ebene | Variablen | Quelle |
+|---|---|---|
+| vorgeschaltete nginx-Schranke | `GZ_VALIDATOR_*` | `.claude/validator.env` |
+| Anmeldung der Anwendung, Ziel **Staging** | `GZ_AUTH_*` | `/home/hem/gregor_zwanzig_staging/.env` |
+| Anmeldung der Anwendung, sonst | `GZ_AUTH_*` | lokale `.env` |
+
+Der Staging-Pfad steht als Modul-Attribut `e2e_frontend_browser_gate.STAGING_ENV_PATH`
+und ist per Umgebungsvariable **`GZ_STAGING_ENV_PATH`** überschreibbar. Rangfolge:
+bereits gesetzte Umgebungsvariable > Staging-`.env` (nur bei Staging-Ziel) >
+`.claude/validator.env`/lokale `.env`. Dieselbe Quelle nennen die Playwright-Staging-Specs
+(`frontend/e2e/issue-1093-compare-layout-crash.spec.ts:21-22`).
+
+### Blockade lesen: die Meldung sagt, wo das Problem liegt
+
+Vier unterscheidbare Ausgänge. **„Anmeldung abgelehnt" ist etwas anderes als
+„zurückgeleitet auf die Anmeldemaske"** — wer beides gleichsetzt, hält einen generell
+kaputten Anmeldeweg für den Beleg, dass ein falsches Passwort erkannt wurde (dieser
+Fehlschluss ist am 2026-08-08 passiert):
+
+| Meldung | Wo suchen |
+|---|---|
+| „Zugangsdaten fehlen (…)" | Variablen nicht gesetzt — `.claude/validator.env` bzw. Staging-`.env` |
+| „Anmeldung nicht durchführbar — …" | technisch: Staging langsam/unerreichbar, Anmeldemaske umgebaut |
+| „Anmeldung abgelehnt — … (HTTP 401 auf /login)" | **falsches Passwort**: Staging-`.env` gegen die Anwendung abgleichen |
+| „keine angemeldete Kernseite — … Anmeldemaske" | Sitzung greift nicht durch (Cookie, Weiterleitung) |
+
+Die Ablehnung kommt im Browser als `POST 401` auf die Route **`/login`**
+(SvelteKit-Form-Action), **nicht** auf `/api/auth/login` — Letzteres ist der Weg der
+Go-API und blieb als fest verdrahteter Wächter still. Erkannt wird deshalb allgemein
+jede fehlgeschlagene POST-Antwort während der Anmeldung.
+
+**Was die Tests NICHT bewachen:** sie belegen die *Quelle* der Anmeldedaten, nicht ihre
+*Gültigkeit*. Wird das Staging-Passwort gedreht, ohne die Datei nachzuziehen, bleibt die
+Kern-Suite grün und das Gate blockiert trotzdem — sichtbar nur an „Anmeldung abgelehnt".
+
 Details, Acceptance Criteria, Grenzen: Spec `docs/specs/modules/feat_1558_frontend_browser_gate.md`.
 
 ---
