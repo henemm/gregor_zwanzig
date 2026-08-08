@@ -85,7 +85,7 @@ festen Karte.
 
 | Baustein | Herkunft |
 |---|---|
-| Credentials beider Ebenen laden | `design_fidelity_diff.py:145–164` (`load_validator_env()`) |
+| Credentials beider Ebenen laden | `design_fidelity_diff.py:145–164` (`load_validator_env()`), erweitert um die Staging-Quelle (s.u.) |
 | „Sind wir wirklich angemeldet auf der Zielseite?" | `design_fidelity_diff.py:167–194` (`unauthenticated_reason()`) — prüft Redirect auf `/login` **und** sichtbares Passwortfeld |
 | Modul-Import ohne Package | `staging_gate.py:45–53` (`importlib.util.spec_from_file_location`) |
 | Struktur des Gate-Moduls | `e2e_telegram_live.py` |
@@ -102,6 +102,51 @@ prüfbar gewesen wären. Die Implementierung muss ihnen folgen:
 | `gate()` bewertet **ausschließlich das übergebene `env`-Mapping** und lädt keine Zugangsdaten nach | `os.environ.setdefault` in `load_validator_env()` würde die Testbedingung „Zugangsdaten fehlen" wieder aufheben. Das Nachladen gehört in `_frontend_browser_gate()`. |
 
 Feldname im Attestations-Payload für AC-7: **`frontend_pages_checked`**.
+
+## Zugangsdaten: DREI Quellen, nicht zwei (Nachtrag 2026-08-08)
+
+Die erste Fassung nahm die Anwendungs-Anmeldedaten aus der `.env` des
+Arbeitsordners. Damit blockierte das ausgelieferte Gate **jede**
+Frontend-Auslieferung: alle sechs Kernseiten meldeten „zurückgeleitet auf die
+Anmeldemaske". **Die Staging-Instanz hat eigene Anmeldedaten** — gleicher
+Benutzername, anderes Passwort. Gemessen gegen `POST /api/auth/login`:
+
+| Quelle | Antwort |
+|---|---|
+| `.env` im Arbeitsordner | **401** `invalid credentials` |
+| `/home/hem/gregor_zwanzig_staging/.env` | **200**, `gz_session`-Cookie |
+
+| Ebene | Variablen | Quelle |
+|---|---|---|
+| vorgeschaltete nginx-Schranke | `GZ_VALIDATOR_*` | `.claude/validator.env` |
+| Anmeldung der Anwendung, Ziel Staging | `GZ_AUTH_*` | `STAGING_ENV_PATH`, Vorgabe `/home/hem/gregor_zwanzig_staging/.env`, überschreibbar per `GZ_STAGING_ENV_PATH` |
+| Anmeldung der Anwendung, sonst | `GZ_AUTH_*` | lokale `.env` |
+
+**Rangfolge:** bereits gesetzte Umgebungsvariable > Staging-`.env` (nur bei
+Staging-Ziel) > `.claude/validator.env`/lokale `.env`. Umgesetzt über die
+Reihenfolge — `os.environ.setdefault` macht den ersten Schreiber maßgeblich.
+Dieselbe Quelle nennen die bestehenden Playwright-Staging-Specs
+(`frontend/e2e/issue-1093-compare-layout-crash.spec.ts:21-22`).
+
+## Vier unterscheidbare Anmelde-Ausgänge (Nachtrag 2026-08-08)
+
+Der erste Staging-Nachweis für „falsches Passwort wird erkannt" war grün **aus
+dem falschen Grund**: Er meldete Fehlschlag, weil die Anmeldung *generell*
+kaputt war, nicht wegen des falschen Passworts. Damit sich dieser Fehlschluss
+nicht wiederholt, sind die Ausgänge benannt und unterscheidbar:
+
+| Meldung | Bedeutung | Ort |
+|---|---|---|
+| „Zugangsdaten fehlen" | Variablen nicht gesetzt | `gate()` |
+| „Anmeldung nicht durchführbar" | technisch (Zeitüberschreitung, Feld weg) | `_login()` |
+| „Anmeldung abgelehnt" | die Anwendung weist die Daten zurück, mit HTTP-Status und Route | `_login()` |
+| „keine angemeldete Kernseite" | Zielseite steht auf `/login` bzw. zeigt ein Passwortfeld | `_visit()` |
+
+**Gemessen, nicht angenommen:** Die Ablehnung kommt im Browser als `POST 401`
+auf die Route **`/login`** (SvelteKit-Form-Action) — *nicht* auf
+`/api/auth/login`. Ein auf diesen Endpunkt fest verdrahteter Wächter blieb im
+Versuch still. Erkannt wird deshalb allgemein: während der Anmeldung ist jede
+fehlgeschlagene POST-Antwort die abgelehnte Anmeldung.
 
 ## Acceptance Criteria
 
@@ -207,6 +252,16 @@ Freifahrtschein wäre es genau das Sicherheits-Theater, das dieses Ticket abscha
   plus einmal Anmelden bleiben im Sekundenbereich, in einem Schritt, der einmal je Auslieferung läuft.
 - **Nicht geprüft:** ob der Hook-Kontext dieselben Netzwerkrechte hat wie eine interaktive Sitzung.
   Fällt das durch, greift AC-8 zweiter Teil (blockieren) — dann wäre nachzubessern.
+  *Erledigt 2026-08-08:* gemessen, der Zugriff steht (sechs Kernseiten in 6,1 s).
+- **Die Tests bewachen die QUELLE der Anmeldedaten, nicht ihre GÜLTIGKEIT.**
+  `test_app_credentials_for_staging_come_from_the_staging_env` belegt, dass
+  `GZ_AUTH_*` bei Staging-Ziel aus `STAGING_ENV_PATH` stammt — nicht, dass das
+  dort hinterlegte Passwort noch stimmt. Wird es auf Staging gedreht, ohne die
+  Datei nachzuziehen, bleibt die Kern-Suite grün und das Gate blockiert
+  trotzdem jede Frontend-Auslieferung. Sichtbar wird das erst im Staging-Lauf,
+  und zwar an der Meldung „Anmeldung abgelehnt" (nicht an „zurückgeleitet auf
+  die Anmeldemaske"). Ohne echtes Staging ist diese Lücke nicht ehrlich
+  schließbar; ein Kern-Test dafür wäre der Nachbau der eigenen Annahme.
 
 ## Regel-Budget
 

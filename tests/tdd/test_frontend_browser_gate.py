@@ -34,6 +34,7 @@ http.server auf 127.0.0.1, echtes Chromium. Lauf:
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -366,4 +367,110 @@ def test_unauthenticated_page_without_console_error_is_not_a_passed_page(
     )
     assert any(w in joined for w in ("anmeld", "login", "passwort")), (
         f"{path}: Meldung nennt den Anmeldegrund nicht: {messages}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Feldbefund 2026-08-08: das ausgelieferte Gate blockierte JEDE
+# Frontend-Auslieferung. Ursache: es nahm die Anwendungs-Anmeldedaten aus der
+# .env des Arbeitsordners. Staging hat eigene — gleicher Benutzername, anderes
+# Passwort (gemessen an POST /api/auth/login: lokal 401 "invalid credentials",
+# Staging-.env 200 mit gz_session-Cookie). Fuer die gesamte Kern-Suite war das
+# unsichtbar, weil dort nie echte Zugangsdaten im Spiel sind.
+# ---------------------------------------------------------------------------
+
+def test_app_credentials_for_staging_come_from_the_staging_env(tmp_path, monkeypatch):
+    """Zeigt der Lauf auf Staging, muessen die ANWENDUNGS-Daten aus der
+    Staging-.env stammen — die nginx-Schranke weiterhin aus validator.env.
+
+    Echte Dateien, echte Funktion. Isoliert wird nur der Prozess-Umgebungsblock,
+    damit der Lauf keine Variablen in andere Tests traegt."""
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "validator.env").write_text(
+        "GZ_VALIDATION_URL=https://staging.gregor20.henemm.com\n"
+        "GZ_VALIDATOR_USER=nginx-benutzer\nGZ_VALIDATOR_PASS=nginx-geheim\n")
+    (tmp_path / ".env").write_text(
+        "GZ_AUTH_USER=gast\nGZ_AUTH_PASS=passwort-arbeitsordner\n")
+    staging_env = tmp_path / "staging.env"
+    staging_env.write_text("GZ_AUTH_USER=gast\nGZ_AUTH_PASS=passwort-staging\n")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(os, "environ", {})  # Wegwerf-Umgebung, kein Leck
+    g = _gate_mod()
+    monkeypatch.setattr(g, "STAGING_ENV_PATH", staging_env)
+    g.load_validator_env()
+
+    assert os.environ.get("GZ_AUTH_PASS") == "passwort-staging", (
+        "Das Gate meldet sich bei Staging mit dem Passwort des Arbeitsordners an "
+        f"(bekam {os.environ.get('GZ_AUTH_PASS')!r}). Gemessen 2026-08-08 "
+        "antwortet die Anwendung darauf mit 401 — das Gate blockiert dann JEDE "
+        "Frontend-Auslieferung."
+    )
+    assert os.environ.get("GZ_VALIDATOR_USER") == "nginx-benutzer", (
+        "die vorgeschaltete nginx-Schranke muss weiter aus .claude/validator.env kommen"
+    )
+
+    # Die Wahl muss ueberschreibbar bleiben: gesetzte Variablen behalten Vorrang.
+    monkeypatch.setattr(os, "environ", {"GZ_AUTH_PASS": "vom-aufrufer"})
+    g.load_validator_env()
+    assert os.environ.get("GZ_AUTH_PASS") == "vom-aufrufer", (
+        "eine bereits gesetzte Umgebungsvariable wurde ueberschrieben"
+    )
+
+
+_LOGINFORM = ("<!doctype html><html><body><form method='post' action='/login'>"
+              "<input name='username'><input type='password' name='password'>"
+              "<button type='submit'>Anmelden</button></form></body></html>")
+
+
+@pytest.fixture
+def rejecting_site():
+    """Lokale Anwendung, die die Anmeldung ABLEHNT — nachgebaut nach dem am
+    2026-08-08 an Staging gemessenen Verhalten: das Formular auf '/login'
+    schickt per POST an '/login' und bekommt 401 (SvelteKit-Form-Action, NICHT
+    '/api/auth/login' — ein fest verdrahteter Endpunkt fand hier still nichts)."""
+    class H(BaseHTTPRequestHandler):
+        def _send(self, code, body):
+            b = body.encode()
+            self.send_response(code)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
+
+        def do_POST(self):  # noqa: N802
+            self._send(401, _LOGINFORM)
+
+        def do_GET(self):  # noqa: N802
+            self._send(200, _LOGINFORM if self.path == "/login" else _CLEAN)
+
+        def log_message(self, *a):  # stumm
+            pass
+
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{srv.server_port}"
+    srv.shutdown()
+    srv.server_close()
+
+
+def test_rejected_login_is_named_as_rejection_not_as_redirect(rejecting_site):
+    """AC-6 unterscheidbar: "Anmeldung abgelehnt" ist etwas anderes als "steht
+    noch auf der Anmeldemaske". Ohne diesen Unterschied gilt ein generell
+    kaputter Anmeldeweg als Beleg dafuer, dass ein falsches Passwort erkannt
+    wurde — genau dieser Fehlschluss ist am 2026-08-08 passiert.
+
+    Die Zielseite '/trips' ist hier bewusst sauber und ohne Passwortfeld: die
+    Sperre kann also NUR aus der Ablehnungs-Erkennung kommen."""
+    pytest.importorskip("playwright.sync_api")
+    env = {"GZ_AUTH_USER": "gast", "GZ_AUTH_PASS": "falsch"}
+    rc, messages = _gate_mod().check_pages(rejecting_site, ["/trips"], env)
+    joined = " ".join(messages).lower()
+
+    assert rc != 0, f"abgelehnte Anmeldung blieb folgenlos: {messages}"
+    assert "abgelehnt" in joined, f"Meldung nennt die Ablehnung nicht: {messages}"
+    assert "401" in joined, f"Meldung nennt den HTTP-Status nicht: {messages}"
+    assert "anmeldemaske" not in joined, (
+        f"die Sperre kam aus der Rueckleitungs-Pruefung statt aus der Ablehnung — "
+        f"dann sind die beiden Faelle weiterhin nicht unterscheidbar: {messages}"
     )
