@@ -55,6 +55,45 @@ tragfähige Quelle.** Alle vier Wege wurden live geprüft:
 niemand — das ist eine bewusste Lücke, keine vergessene. Sollte je eine flächige, publizierte
 Quelle auftauchen, ist das Feld `thunder_probability_pct` bereits vorbereitet.
 
+### 2.1b Alle gewitterbezogenen Größen im Überblick
+
+Damit nichts durchs Raster fällt — das Produkt kennt **elf** Größen mit Gewitterbezug:
+
+| Größe | Beantwortet | Status | Verfügbar |
+|---|---|---|---|
+| **Gewitter-Stärke** `thunder` | wie stark | ✅ **sichtbar** | überall |
+| **Hagel** `hail_flag` | Hagel dabei? | ✅ **sichtbar**, eigenes Kennzeichen | nur DWD-Gebiet |
+| **Böen** `gust` | Sturm im Gewitter | ✅ **sichtbar**, eigene Metrik — **bewusst nicht verrechnet** (E9) | überall |
+| **Starkregen** `precipitation` | Sturzbäche | ✅ **sichtbar**, eigene Metrik — **bewusst nicht verrechnet** (E9) | überall |
+| CAPE | Energie | Zutat ⇒ unsichtbar (E2) | überall |
+| Konvektionshemmung `cin_ml` | hält der Deckel? | Zutat, ersetzt die CAPE-Notbremse | DWD-Gebiet |
+| Blitzdichte | Blitzaktivität (FR) | Zutat | nur FR/Korsika |
+| Blitzpotenzial `lpi`/`lpi_max`/`lpi_con_max` | Blitzaktivität (DWD) | Zutat | DWD-Gebiete |
+| **Superzellen-Index** `sdi_2` | gefährlichste Form | **Zutat** (E8) — hebt die Stufe, kein eigenes Kennzeichen | nur ICON-D2 |
+| Updraft-Helizität `uh_max*` | Rotation | Zutat, vorerst ohne Schwelle | nur ICON-D2 |
+| Gewitter-Wahrscheinlichkeit | wie sicher | **entfällt** — keine Quelle (2.1) | — |
+
+Dazu kommt `thunder_squall` als **amtlicher Warntyp** aus den Wetterdienst-Meldungen
+(Gewitterböe) — eine Aussage, die es bereits gibt, aber aus der Behördenmeldung stammt, nicht
+aus unserer Berechnung (Abschnitt 6).
+
+**E8 — Superzellen bleiben Zutat, kein eigenes Kennzeichen.** Fachlich wäre ein Kennzeichen
+konsistent zu Hagel (beide beantworten „was für ein Gewitter", nicht „wie stark"). Ausschlag
+gab die Verfügbarkeit: Den Index gibt es **nur im ICON-D2-Gebiet**. Auf dem GR20 — dem
+Kernzielgebiet — erschiene er strukturell nie, und „kein Hinweis" läse sich dort als „keine
+Superzelle". Als Zutat hebt er die Stufe, ohne ein Schweigen zu erzeugen, das nach Entwarnung
+aussieht.
+
+**E9 — Böen und Starkregen bleiben getrennte Metriken.** Der DWD stuft Gewitter zwar genau nach
+diesen Größen ein, aber er warnt **wirkungsbasiert**, wir beschreiben **Wetter**. Eine
+kombinierte Gefahrenstufe wäre bereits Bewertung und verstieße gegen ADR-0007 („Daten statt
+Empfehlungen"). Der Nutzer sieht beide Zahlen und kombiniert selbst — das ist die Zielgruppe.
+
+⚠️ Zu beachten: **Unsere Böen-Schwellen sind bewusst schärfer als die amtlichen.** Wir werten ab
+60 km/h „rot", der DWD beginnt seine Warnstufe 1 bei 50 und Stufe 2 erst bei 65 km/h. Richtig
+so — die Zielgruppe steht auf einem Grat, nicht in der Fußgängerzone. Es heißt aber auch: Eine
+Eichung „wie der DWD" wäre für dieses Produkt zu lasch.
+
 ### 2.2 Warum die Zutaten unsichtbar bleiben
 
 CAPE, Konvektionshemmung, Blitzdichte, Blitzpotenzial, Superzellen-Index sind **Zutaten** der
@@ -191,6 +230,84 @@ veröffentlicht seine Vigilance-Kriterien gar nicht.
 ⇒ Die heutigen Blitzdichte-Schwellen (0,003 / 0,015 / 0,075) bleiben teilweise interpoliert.
 Das ist keine Nachlässigkeit, sondern der Stand der Veröffentlichungen — es muss aber als
 solches gekennzeichnet bleiben.
+
+---
+
+## 3.7 🎯 Das Zielverfahren — wie alle Zutaten zusammenwirken
+
+Dies ist die vollständige Rechenvorschrift, wenn alles aus diesem Konzept umgesetzt ist. Sie
+ersetzt die heutige Fassung aus 3.1.
+
+### Schritt 1 — Jede Zutat wird für sich in eine Stufe übersetzt
+
+| Zutat | kein | leicht | mittel | hoch | Beleg |
+|---|---|---|---|---|---|
+| **WMO-Wettercode** | < 95 | 95 | 96 | 99 | Anbieter |
+| **Blitzdichte** (FR/Korsika, Blitze/km²/3 h) | < 0,003 | ≥ 0,003 | ≥ 0,015 | ≥ 0,075 | ECMWF; **oberste Grenze interpoliert** |
+| **Blitzpotenzial ICON-D2** (J/kg) | < 1 | ≥ 1 | ≥ 30 | ≥ 50 | Bína et al., COSMO-D2 — **alle drei belegt** |
+| **Blitzpotenzial ICON-EU** (J/kg) | eigene Leiter — **zu eichen** (Rang 7), bis dahin nicht gleichwertig | | | | Faktor 235 gemessen |
+| **CAPE, gepaart mit Hemmung** | s. Schritt 2 | | | | NWS/SPC + Penn State |
+| **Superzellen-Index** (Betrag, 1/s) | < 0,0003 | — | ≥ 0,0003 | ≥ 0,003 | DWD publiziert |
+| **Radar-Beobachtung** | nicht konvektiv | — | konvektiv | — | #1419 §4 |
+| **Updraft-Helizität** | trägt vorerst **nichts** bei — keine übertragbare Schwelle | | | | — |
+
+Der Superzellen-Index kennt bewusst **kein „leicht"**: Der DWD nennt ihn ein experimentelles
+Produkt mit zwei Schwellen; eine dritte zu erfinden wäre Eigenkalibrierung.
+
+### Schritt 2 — CAPE zählt nur so weit, wie die Hemmung es zulässt
+
+Heute wird CAPE pauschal auf „leicht" gedeckelt, weil die Gegengröße fehlt. Künftig entscheidet
+die Konvektionshemmung, **wie viel** von der Energie überhaupt zählt:
+
+| Hemmung (CIN) | Bedeutung | CAPE darf höchstens |
+|---|---|---|
+| 0 bis −25 J/kg | schwacher Deckel | **voll wirken** — Leiter 1000 / 2500 / 4000 J/kg |
+| −25 bis −50 | moderat | **eine Stufe weniger** |
+| −50 bis −100 | großer Deckel | **höchstens „leicht"** (heutiges Verhalten) |
+| unter −100 | Deckel hält | **kein Beitrag** |
+| Hemmung unbekannt | keine Aussage | **höchstens „leicht"** — die heutige Notbremse bleibt als sicherer Rückfall |
+
+⚠️ **Ausdrücklich:** Die Hemmung ist ein **Auslöse-Filter**, kein Schweremaß. Rasmussen &
+Blanchard (1998) zeigen, dass CIN die Schwere nur schwach vorhersagt — sie darf die Stufe
+deshalb **dämpfen, aber nie anheben**.
+
+### Schritt 3 — Fusion: das schärfste Signal gewinnt
+
+Unverändert. Alle vorhandenen Einzelstufen werden verglichen, die höchste zählt. Sind **alle**
+Zutaten leer, ist das Ergebnis leer — „keine Aussage", nicht „keine Gefahr".
+
+Bewusst **keine** Mittelung und **keine** Gewichtung: Ein Signal, das Gefahr meldet, wiegt
+schwerer als drei, die schweigen. Der Preis ist bekannt — ein einzelner Ausreißer hebt die
+Stufe.
+
+### Schritt 4 — Beobachtung darf anheben, nie senken
+
+Meldet das Radar für die Etappenzeit Konvektion, wird die Stufe auf mindestens „mittel"
+gehoben (E3). Umgekehrt gilt es nicht: Ein ruhiges Radarbild senkt eine hohe Vorhersagestufe
+**nicht** — das Gewitter kann noch entstehen.
+
+### Schritt 5 — Die Stufe trägt ihre Herkunft mit
+
+Jede Stufe merkt sich, **welche Zutat sie ausgelöst hat** (E1). Im Ortsvergleich wird damit
+erkennbar, dass Korsika und die Alpen auf verschiedenen Größen fußen — statt zwei Zahlen
+nebeneinanderzustellen, die vergleichbar aussehen und es nicht sind.
+
+### Was das je Gebiet konkret bedeutet
+
+| | **FR / Korsika (GR20)** | **DE / Alpen / AT** | **Übriges Europa** |
+|---|---|---|---|
+| Wettercode | ✅ | ✅ | ✅ |
+| Blitzsignal | Blitz**dichte** | Blitz**potenzial** (2,2 km) | Blitzpotenzial (6,5 km, eigene Leiter) |
+| CAPE + Hemmung | CAPE ja, **Hemmung nein** ⇒ bleibt gedeckelt | ✅ beides | ✅ beides |
+| Superzellen | ❌ nicht verfügbar | ✅ | ❌ |
+| Hagel-Kennzeichen | ❌ (→ #1507) | ✅ | ❌ |
+| Radar | ✅ (Radar-DPC) | ✅ | ✅ (global) |
+
+🔴 **Das Zielbild ist ehrlich, nicht schön:** Der GR20 — das Kernzielgebiet — bekommt die
+**schwächste** Signallage. Kein Superzellen-Index, kein Hagel-Kennzeichen, keine Hemmung, und
+das einzige Blitzsignal hat die am schlechtesten belegte Schwellenleiter. Wer das ändern will,
+muss bei Météo-France ansetzen (#1507 für Hagel, Energiegrößen offen) — dort kostet jede Größe
+allerdings einen Abruf **je Stunde**, anders als beim kostenlosen DWD.
 
 ---
 
@@ -461,13 +578,19 @@ Eine Wettermetrik hat in diesem Produkt **diverse Ausgabeorte, alle müssen bedi
 | **E5** | Die drei getrennten Gewitter-Alarme zusammenführen? | **Teilweise: amtliche Warnung und Änderungsalarm werden zusammengeführt, der Radar-Nowcast bleibt getrennt.** Fachlich stimmig — die beiden ersten beruhen auf Vorhersage und teilen den Zeithorizont; der Nowcast ist eine akute Beobachtung mit eigener Dringlichkeit und darf nicht in einer Sammelnachricht untergehen |
 | **E6** | DWD-Warndienst für Deutschland anbinden? | **Ja.** Schließt die Lücke, dass Deutschland als einziges Zielgebiet ohne amtliche Warnungen dasteht |
 | **E7** | Ausfallsichtbarkeit für den Radar-Pfad? | **Nein**, vorerst nicht. Bleibt als bekannte Schwachstelle dokumentiert (Abschnitt 5) |
+| **E1** | Umgang mit der ortsabhängigen Bedeutung der Stufe? | **Je Quelle eichen + Herkunft mitführen.** Eigene Schwellen je Modell, geeicht auf gleiche Häufigkeit (Prinzip der Wetterdienste); zusätzlich trägt die Stufe sichtbar, worauf sie beruht |
+| **E1b** | Eigene Schwellenleiter für das ICON-EU-Stundenmaximum? | **Ja** — Faktor 235 gemessen (4.2). Sofort wirksam ohne Kalibrierung: gleiche Statistik verwenden (`lpi_max`), das nimmt Faktor 5 heraus |
+| **E8** | Superzellen: Zutat oder eigenes Kennzeichen? | **Zutat.** Hebt die Stufe, bleibt unsichtbar — weil es den Index nur im DWD-Gebiet gibt und ein Schweigen auf dem GR20 wie Entwarnung aussähe (2.1b) |
+| **E9** | Böen und Starkregen in die Gewitterstufe einrechnen? | **Nein, getrennt lassen.** Eine kombinierte Gefahrenstufe wäre Bewertung statt Beschreibung (ADR-0007) |
 
-### 10.2 Offen — hängen an der Schwellen-Recherche
+### 10.2 Offen
 
-| # | Frage | Stand |
-|---|---|---|
-| **E1** | Wie umgehen mit der ortsabhängigen Bedeutung der Stufe (Abschnitt 4)? | Wird erst entschieden, wenn geklärt ist, ob sich die Größen seriös aufeinander eichen lassen. Bei brauchbaren Zuordnungen wird aus „hinnehmen und benennen" ein „richtig eichen" |
-| **E1b** | Eigene Schwellenleiter für das ICON-EU-Stundenmaximum (Abschnitt 4.1)? | dito |
+Keine offenen Grundsatzfragen mehr. Was bleibt, ist **Arbeit, nicht Entscheidung**:
+
+| Was | Braucht |
+|---|---|
+| Feineichung der Schwellen je Quelle (E1b, Rang 7) | mehrere Wochen Messdaten über verschiedene Wetterlagen — fällt mit Rang 1 an |
+| Einstufung des Superzellen-Index (Rang 8) | Beobachtung, wie oft er überhaupt anschlägt |
 
 ## 11. Umsetzung in Scheiben
 
@@ -477,13 +600,23 @@ Problem, statt es zu lösen.
 
 | Rang | Scheibe | Warum hier | Vorbedingung |
 |---|---|---|---|
-| **1** | 🔴 **Eichung** (E1, E1b) — **jetzt, PO-Vorgabe 2026-08-08: vor jedem größeren Umbau.** Bedeutet „mittel" überall dasselbe? Braucht das ICON-EU-Stundenmaximum eine eigene Leiter? | Fundament. Ohne das ist jede weitere Größe Rauschen auf schiefer Skala | Schwellen-Recherche |
-| **2** | **CAPE unsichtbar** (`selectable=False`) | Klein, unabhängig, beendet den historischen Zufall. Im Kern ein Katalog-Kwarg — die Render-Pfade prüfen `selectable` bereits generisch | ✅ E2 |
-| **3** | **Radar hebt die Stufe an** | Größter Nutzen ohne neue Quelle; beseitigt den Widerspruch aus Abschnitt 5 | ✅ E3 |
-| **4** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, mitlaufen lassen, **nicht** einstufen | Datensammlung als Voraussetzung für Rang 5. Spec liegt fertig vor | — |
-| **5** | **Einstufung nachziehen**: `sdi_2`, `cin_ml` statt CAPE-Deckelung | Erst wenn Rang 1 die Skala geeicht und Rang 4 Messwerte geliefert hat | Rang 1 + 4 |
-| **6** | **Amtliche Warnung + Änderungsalarm zusammenführen** (E5); Radar-Nowcast bleibt eigener Kanal | Unabhängig von der Signalkette | ✅ E5 |
-| **7** | **DWD-Warndienst anbinden** (E6) | Deutschland ist das einzige Zielgebiet ohne amtliche Warnungen | ✅ E6 |
+🔴 **Umstellung 2026-08-08:** Die Eichung (E1) braucht genau die Größen, die #1531 holt —
+`lpi_max`, um gleiche Statistik gegen gleiche Statistik zu stellen, und `cin_ml`, um die
+CAPE-Deckelung zu ersetzen. #1531 ist damit **nicht** eine spätere Scheibe, sondern die
+**Voraussetzung** der Eichung.
+
+| Rang | Scheibe | Warum hier | Stand |
+|---|---|---|---|
+| **1** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). Ohne diese Daten ist keine Eichung möglich. Spec liegt fertig vor | Spec fertig, Freigabe offen |
+| **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ E1 |
+| **3** | **Gleiche Statistik**: `lpi_max` statt `lpi` gegen `lpi_con_max` | Nimmt allein **Faktor 5** aus dem Gebietsbruch — ohne jede Kalibrierung | ✅ E1 |
+| **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | ✅ E1 |
+| **5** | **CAPE unsichtbar** (`selectable=False`) | Klein, unabhängig. Im Kern ein Katalog-Kwarg — die Render-Pfade prüfen `selectable` bereits generisch | ✅ E2 |
+| **6** | **Radar hebt die Stufe an** | Beseitigt den Widerspruch aus Abschnitt 5 | ✅ E3 |
+| **7** | **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max`, kalibriert auf gleiche Überschreitungshäufigkeit | Braucht mehrere Wochen Daten über verschiedene Wetterlagen — fällt mit Rang 1 an | ✅ E1b, Daten offen |
+| **8** | **`sdi_2` einhängen** | Publizierte DWD-Schwelle vorhanden; erst sinnvoll, wenn die Skala geeicht ist | nach Rang 7 |
+| **9** | **Amtliche Warnung + Änderungsalarm zusammenführen** (E5); Radar-Nowcast bleibt eigener Kanal | Unabhängig von der Signalkette | ✅ E5 |
+| **10** | **DWD-Warndienst anbinden** (E6) | Deutschland ist das einzige Zielgebiet ohne amtliche Warnungen | ✅ E6 |
 
 **Nicht geplant:** Gewitter-Wahrscheinlichkeit (keine Quelle, Abschnitt 2.1),
 `dbz_cmax`/`echotop` (falsch kalibriert bzw. falsche Größe), Ausfallsichtbarkeit im Radar-Pfad
