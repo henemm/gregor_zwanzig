@@ -14,6 +14,7 @@ from typing import List, Optional
 import math
 
 from app.debug import DebugBuffer
+from app.model_registry import effective_cape_model_id
 from app.models import NormalizedTimeseries, PrecipType, SegmentWeatherSummary, ThunderLevel
 
 
@@ -795,6 +796,10 @@ class WeatherMetricsService:
             freezing_level_m=freezing_level,
             pop_max_pct=pop_max,
             cape_max_jkg=cape_max,
+            # Issue #1592 C0: normalisierte Modell-Herkunft des CAPE-Werts,
+            # fuer die C1-Fusion (thunder_enrichment) EINMAL ueber
+            # `model_registry.effective_cape_model_id` aufgeloest.
+            cape_model_id=effective_cape_model_id(timeseries.meta),
             # New metrics (v2.3)
             uv_index_max=uv_index_max,
             snow_new_sum_cm=fresh_snow_sum,
@@ -819,6 +824,17 @@ class WeatherMetricsService:
                 "freezing_level_m": "avg",
                 "pop_max_pct": "max",
                 "cape_max_jkg": "max",
+                # Issue #1592 F003 (Adversary-Befund): ohne diesen Eintrag
+                # faellt `cape_model_id` bei der Etappen-Aggregation
+                # (`aggregate_stage()`) stillschweigend heraus (generischer
+                # `else: values[0]`-Fallback bei unbekannter Regel) --
+                # C2/C3 wuerden dann UEBERALL ueber den Abstain-Pfad laufen,
+                # ohne dass ein Test anschlaegt. "agreement": stimmen alle
+                # bekannten Herkuenfte ueberein, gilt sie; bei Uneinigkeit
+                # (verschiedene Modelle in verschiedenen Segmenten derselben
+                # Etappe) `None` -- niemals "irgendeine davon" (s.
+                # `aggregate_stage()`).
+                "cape_model_id": "agreement",
                 "uv_index_max": "max",
                 "snow_new_sum_cm": "sum",
                 "wind_direction_avg_deg": "avg",
@@ -1177,6 +1193,14 @@ def aggregate_stage(
         elif agg_rule == "max_wmo_severity":
             # WMO code aggregation: pick most severe code by _WMO_SEVERITY ranking
             result_fields[field_name] = max(values, key=lambda c: _WMO_SEVERITY.get(c, 0))
+        elif agg_rule == "agreement":
+            # Issue #1592 F003: `cape_model_id` -- stimmen alle bekannten
+            # Herkuenfte (Nones bereits oben herausgefiltert) ueberein,
+            # gilt sie; bei Uneinigkeit `None`, NIEMALS "irgendeine davon"
+            # (Reihenfolge-Zufall waere sonst entscheidend, s.
+            # `hail_priority`-Vorbild fuer denselben Gedanken).
+            eindeutige = set(values)
+            result_fields[field_name] = values[0] if len(eindeutige) == 1 else None
         elif agg_rule == "min":
             result_fields[field_name] = min(values)
         elif agg_rule == "sum":

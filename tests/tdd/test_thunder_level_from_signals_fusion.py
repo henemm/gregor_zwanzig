@@ -54,8 +54,12 @@ def _fusion(*args, **kwargs):
     ],
 )
 def test_ac5_blitzdichte_dreiteilung(lightning_density, expected):
+    # Issue #1592 C1: `cape_threshold_jkg` ist keyword-only ohne Default.
+    # `cape_jkg=None` hier -- die Schwelle spielt fuer das Ergebnis keine
+    # Rolle, `None` ist der mechanische Wert "keine Herkunft im Spiel".
     result = _fusion(
         wettercode_level=None, lightning_density=lightning_density, cape_jkg=None,
+        cape_threshold_jkg=None,
     )
     assert result == expected, (
         f"Blitzdichte {lightning_density} muss {expected.name} liefern, "
@@ -64,6 +68,15 @@ def test_ac5_blitzdichte_dreiteilung(lightning_density, expected):
 
 
 # ─────────────────────────────── AC-6 — CAPE ──────────────────────────────
+
+# Issue #1592 C1: `thunder_level_from_signals()` bewertet CAPE nicht mehr
+# gegen die feste Katalog-1000, sondern gegen eine explizit uebergebene,
+# geeichte Schwelle. Diese Bestandstests kennen keine Modell-Herkunft --
+# um ihre (unveraenderten) Erwartungswerte 500->NONE / 1200->LOW / 2630->LOW
+# zu erhalten, wird hier weiterhin die alte, alleinstehend belegte Katalog-
+# Schwelle explizit uebergeben, statt sich auf einen Default zu verlassen.
+_ALTE_KATALOG_SCHWELLE_JKG = 1000.0
+
 
 @pytest.mark.parametrize(
     "cape_jkg, expected",
@@ -76,7 +89,10 @@ def test_ac5_blitzdichte_dreiteilung(lightning_density, expected):
     ],
 )
 def test_ac6_cape_gedeckelt_bei_leicht(cape_jkg, expected):
-    result = _fusion(wettercode_level=None, lightning_density=None, cape_jkg=cape_jkg)
+    result = _fusion(
+        wettercode_level=None, lightning_density=None, cape_jkg=cape_jkg,
+        cape_threshold_jkg=_ALTE_KATALOG_SCHWELLE_JKG,
+    )
     assert result == expected, (
         f"CAPE {cape_jkg} J/kg muss {expected.name} liefern (NIE hoeher, auch "
         f"nicht bei hohem CAPE), erhalten {result!r}"
@@ -87,7 +103,10 @@ def test_ac6_gegenprobe_hohes_cape_eskaliert_nicht_auf_med_oder_high():
     """AC-6 Gegenprobe: der reale Hochwert 2630 J/kg darf NICHT MED/HIGH
     liefern -- selbst wenn die Implementierung faelschlich
     risk_thresholds['cape']['high']=2000 als Eskalationsschwelle liest."""
-    result = _fusion(wettercode_level=None, lightning_density=None, cape_jkg=2630.0)
+    result = _fusion(
+        wettercode_level=None, lightning_density=None, cape_jkg=2630.0,
+        cape_threshold_jkg=_ALTE_KATALOG_SCHWELLE_JKG,
+    )
     assert result not in (MED, HIGH), (
         f"CAPE allein darf nie ueber 'leicht' hinaus ausloesen, erhalten {result!r}"
     )
@@ -96,7 +115,10 @@ def test_ac6_gegenprobe_hohes_cape_eskaliert_nicht_auf_med_oder_high():
 # ──────────────────────── AC-7 — keine Aussage != keine Gefahr ────────────
 
 def test_ac7_alle_drei_signale_none_liefert_none():
-    result = _fusion(wettercode_level=None, lightning_density=None, cape_jkg=None)
+    result = _fusion(
+        wettercode_level=None, lightning_density=None, cape_jkg=None,
+        cape_threshold_jkg=None,
+    )
     assert result is None, (
         f"Sind ALLE drei Signale None (keine Aussage), muss die Fusion None "
         f"liefern, erhalten {result!r}"
@@ -107,7 +129,10 @@ def test_ac7_ein_geprueftes_unauffaelliges_signal_liefert_none_level():
     """Mindestens ein Signal ist aktiv geprueft und unauffaellig (Wettercode
     NONE), die anderen beiden None -> die Fusion liefert ThunderLevel.NONE
     (geprueft, unauffaellig), NICHT die Python-None 'keine Aussage'."""
-    result = _fusion(wettercode_level=NONE, lightning_density=None, cape_jkg=None)
+    result = _fusion(
+        wettercode_level=NONE, lightning_density=None, cape_jkg=None,
+        cape_threshold_jkg=None,
+    )
     assert result == NONE, (
         f"Ein geprueftes, unauffaelliges Signal muss ThunderLevel.NONE liefern "
         f"(nicht die Python-None 'keine Aussage'), erhalten {result!r}"
@@ -118,9 +143,13 @@ def test_ac7_gegenprobe_die_beiden_faelle_unterscheiden_sich():
     """AC-7 Gegenprobe: vertauscht die Implementierung 'kein Signal' und
     'ein unauffaelliges Signal', muessen sich die beiden Rueckgaben
     unterscheiden -- sonst ist die Fusion blind fuer 'keine Aussage'."""
-    kein_signal = _fusion(wettercode_level=None, lightning_density=None, cape_jkg=None)
+    kein_signal = _fusion(
+        wettercode_level=None, lightning_density=None, cape_jkg=None,
+        cape_threshold_jkg=None,
+    )
     ein_unauffaelliges_signal = _fusion(
         wettercode_level=NONE, lightning_density=None, cape_jkg=None,
+        cape_threshold_jkg=None,
     )
     assert kein_signal is not ein_unauffaelliges_signal or kein_signal != ein_unauffaelliges_signal, (
         "'kein Signal' (None) und 'ein unauffaelliges Signal' (NONE) muessen "
@@ -134,7 +163,10 @@ def test_ac7_gegenprobe_die_beiden_faelle_unterscheiden_sich():
 
 def test_ac8_zwei_vorhandene_signale_schaerferes_gewinnt():
     """Wettercode NONE, Blitzdichte 0,02 (MED), CAPE None -> MED gewinnt."""
-    result = _fusion(wettercode_level=NONE, lightning_density=0.02, cape_jkg=None)
+    result = _fusion(
+        wettercode_level=NONE, lightning_density=0.02, cape_jkg=None,
+        cape_threshold_jkg=None,
+    )
     assert result == MED, (
         f"Das schaerfere der zwei vorhandenen Signale (MED) muss gewinnen, "
         f"erhalten {result!r}"
@@ -143,7 +175,10 @@ def test_ac8_zwei_vorhandene_signale_schaerferes_gewinnt():
 
 def test_ac8_wettercode_gewinnt_gegen_schwaechere_blitzdichte():
     """Wettercode HIGH, Blitzdichte 0,004 (LOW) -> HIGH gewinnt, weil schaerfer."""
-    result = _fusion(wettercode_level=HIGH, lightning_density=0.004, cape_jkg=None)
+    result = _fusion(
+        wettercode_level=HIGH, lightning_density=0.004, cape_jkg=None,
+        cape_threshold_jkg=None,
+    )
     assert result == HIGH, (
         f"Wettercode HIGH muss gegen die schwaechere Blitzdichte LOW gewinnen, "
         f"erhalten {result!r}"

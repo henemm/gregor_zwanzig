@@ -312,25 +312,16 @@ def _thunder_level_from_ladder(
     return ThunderLevel.NONE
 
 
-def _cape_low_min_jkg() -> float:
-    """CAPE-Schwelle fuer die Fusion — bewusst ENTKOPPELT von
-    ``display_thresholds["cape"]`` (Anzeige-Ampel, Berg-kalibriert). Liest
-    ``risk_thresholds["cape"]["medium"]`` (metric_catalog.py, bereits
-    produktentschieden) direkt aus dem Katalog statt den Wert zu duplizieren
-    -- dieselbe Schwelle, die bereits von der allgemeinen Risiko-Uebersicht
-    (``RiskEngine._check_thunder``) genutzt wird.
-    """
-    return get_metric("cape").risk_thresholds["medium"]
-
-
 def thunder_level_from_signals(
     wettercode_level: Optional[ThunderLevel],
     lightning_density: Optional[float],
     cape_jkg: Optional[float],
     lightning_potential_jkg: Optional[float] = None,
+    *,
+    cape_threshold_jkg: Optional[float],
 ) -> Optional[ThunderLevel]:
     """Fusioniert Gewittersignale zu EINEM ``ThunderLevel`` (Issue #1474 Abschnitt 3,
-    erweitert um Issue #1474c).
+    erweitert um Issue #1474c, #1592 C1).
 
     Jedes Signal wird EIGENSTAENDIG uebersetzt (keine Sonderlogik fuer die
     Blitzdichte, damit ein kuenftiges Signal mit derselben Struktur andockt).
@@ -338,8 +329,18 @@ def thunder_level_from_signals(
     ueber die NICHT-``None``-Einzelsignale). Sind ALLE vier Signale ``None``,
     liefert sie ``None`` ("keine Aussage" != "keine Gefahr", Spec AC-7).
 
+    ``cape_threshold_jkg`` ist die geeichte, modell-/gebietsabhaengige
+    Schwelle (``app.model_registry.cape_threshold_jkg()``) -- KEYWORD-ONLY
+    OHNE DEFAULT (Issue #1592 C1): ein Aufrufer, der die Modell-Herkunft
+    nicht aufloest und den Parameter vergisst, bricht mit ``TypeError``
+    statt still auf Bestandsverhalten zurueckzufallen (kein Anschein von
+    "geprueft", wo nichts geprueft wurde). Ist sie ``None`` (Herkunft
+    unbekannt ODER keine Kalibrierung fuer die Kombination), traegt CAPE
+    KEIN Signal zur Fusion bei -- unabhaengig von seinem Wert ("keine
+    Aussage" statt "geprueft, unauffaellig", Spec Abschnitt 3).
+
     CAPE ist bei ``LOW`` gedeckelt und eskaliert NIE auf ``MED``/``HIGH``
-    (misst Energie, kein Ereignis, Spec AC-6).
+    (misst Energie, kein Ereignis, Spec AC-6/AC-8).
 
     Das Blitzpotenzial (DWD ICON-D2/ICON-EU LPI, J/kg) ist das vierte Signal
     seit Issue #1474c -- eigene Schwellentabelle (5/20/50 J/kg), weil es eine
@@ -356,8 +357,8 @@ def thunder_level_from_signals(
             lightning_density, _LIGHTNING_LOW_MIN, _LIGHTNING_MED_MIN, _LIGHTNING_HIGH_MIN,
         ))
 
-    if cape_jkg is not None:
-        signals.append(ThunderLevel.LOW if cape_jkg >= _cape_low_min_jkg() else ThunderLevel.NONE)
+    if cape_jkg is not None and cape_threshold_jkg is not None:
+        signals.append(ThunderLevel.LOW if cape_jkg >= cape_threshold_jkg else ThunderLevel.NONE)
 
     if lightning_potential_jkg is not None:
         signals.append(_thunder_level_from_ladder(

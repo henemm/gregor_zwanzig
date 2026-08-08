@@ -74,7 +74,7 @@ Schwellen-Bestimmung, keine Bedienoberfläche.
 | ADR-0025 | bindende Vorgabe | Genau eine Rohdatenquelle der Gewitteraussage (`dp.thunder_level`); `thunder_level_from_signals()` bleibt der einzige Fusionsort |
 | ADR-0047 | Vorbild | Gebiets-/Quellenraster über first-match-wins-Tabelle (`thunder_routing._REGIONS`) — dasselbe Muster liefert hier das Gebietsraster für die Eichung |
 | `feat_1474_gewitter_befund_stufen.md` AC-6/AC-7 | Regressionsanker, wird hier PRÄZISIERT | AC-6 ("CAPE gedeckelt bei LOW, eskaliert nie") bleibt gültig, jetzt mit variabler statt fester Schwelle. AC-7 ("keine Aussage" ≠ "geprüft unauffällig") wird durch diese Scheibe auf CAPE bei unbekannter Modell-Herkunft ausgeweitet |
-| `feat_1474c_blitzpotenzial_stufen.md` AC-7 | Regressionsanker | Bestandstests in `test_thunder_level_from_signals_fusion.py` — durch die Signaturänderung MÜSSEN die CAPE-bezogenen Fälle angepasst werden (kein `= None`-Rückfall mehr möglich), die blitzpotenzial-/blitzdichtebezogenen Fälle bleiben unverändert |
+| `feat_1474c_blitzpotenzial_stufen.md` AC-7 | Regressionsanker | Bestandstests in `test_thunder_level_from_signals_fusion.py` — **gemessen 2026-08-08 in der RED-Phase: ALLE 8 Fälle brechen**, nicht nur die CAPE-bezogenen. Weil der neue Parameter keyword-only **ohne Default** ist, bricht jeder Aufruf ohne ihn mit `TypeError` — auch die reinen Blitzdichte-/Blitzpotenzial-Fälle mit `cape_jkg=None`. Die frühere Fassung dieser Zeile („die blitzpotenzialbezogenen Fälle bleiben unverändert") war eine Vermutung und ist widerlegt. **Anpassung ist mechanisch und gewollt:** jeder Aufruf nennt die Schwelle künftig ausdrücklich (`cape_threshold_jkg=None`, wo keine Herkunft im Spiel ist). Genau das ist der Zweck des fehlenden Defaults — kein Aufrufer kann die Herkunft stillschweigend übergehen. Die **Erwartungswerte** der 8 Fälle bleiben unverändert; AC-7 aus feat_1474c gilt inhaltlich fort |
 | `tests/unit/test_configurable_thresholds.py::test_cape_risk_thresholds`, `tests/integration/test_risk_engine.py::test_cape_high`/`::test_cape_moderate` | **unverändert grün zu halten** | Familie 2 (RiskEngine) liest die Katalogschwelle direkt (`get_metric("cape").risk_thresholds`), nicht über `thunder_level_from_signals()` — diese Scheibe fasst RiskEngine nicht an, diese Tests dürfen sich nicht bewegen |
 | Open-Meteo Historical Forecast API (`historical-forecast-api.open-meteo.com`) | externe Datenquelle | liefert die Modellklimatologie für B0 ohne eigenes Archiv; gemessen 2026-08-08, Antwort in Sekunden |
 | `weather_snapshot.py::_deserialize_summary` | bestehender Schutzmechanismus | filtert Unbekanntes über `dataclasses.fields()` — macht das neue additive Feld `cape_model_id` schnappschuss-sicher, ohne Migration |
@@ -111,7 +111,11 @@ relativ zur Modellklimatologie, nicht Absolutwert).
    fehlende Kombination verhält sich am Lookup-Ort identisch zu unbekannter Herkunft (Abschnitt
    3), also Abstain statt eines geratenen Werts.
 5. Ergebnis wird als statisches Python-Literal `CAPE_THRESHOLDS_JKG:
-   dict[tuple[str, str], float]` in `src/app/model_registry.py` committed. Eine erneute
+   dict[tuple[str, str], float]` in `src/app/model_registry.py` committed. **Die
+   Schlüsselreihenfolge ist verbindlich `(model_id, region)`** — dieselbe Reihenfolge wie die
+   Parameter von `cape_threshold_jkg(model_id, region)`. Ohne diese Festlegung schlägt der
+   Nachschlag bei vertauschter Reihenfolge mit `KeyError` fehl, und die Tests zu AC-1/AC-7/AC-8
+   blieben aus dem falschen Grund rot. Eine erneute
    Eichung (neue Saison, geändertes Modellgitter) ist ein manueller, bewusster Schritt — kein
    automatischer Cronjob, keine Laufzeit-Abhängigkeit von der Historical Forecast API.
 
@@ -233,12 +237,16 @@ Parameter mehr, kein neuer Mechanismus — wie in der Analyse vorgezeichnet).
   ausnahmslos mindestens 300 J/kg betragen — auch dort, wo das rohe 95. Perzentil niedriger
   läge, greift die Untergrenze.
   - Test: die committete Tabelle wird OHNE Netzabruf gegen ihre eigene Konstruktionsregel
-    geprüft (jeder Wert ≥ 300,0). Zwei Einträge belegen, dass die Untergrenze eine Untergrenze
-    ist und keine pauschale Klemmung: das AROME-Gebiet (Korsika/Frankreich) landet gemessen bei
-    **exakt 300** — dort greift die Untergrenze, weil das rohe 95. Perzentil mit ~260 J/kg
-    darunter liegt; das ICON-Gebiet (Deutschland/Alpen) landet gemessen bei einem Wert
-    **strikt zwischen 300 und 1000** (~460 J/kg) — dort greift sie nicht. Wäre die Untergrenze
-    fälschlich als fester Wert implementiert, wären beide Einträge 300 und der Test fällt durch.
+    geprüft (jeder Wert ≥ 300,0). Zusätzlich muss **mindestens ein** Eintrag **exakt 300,0**
+    betragen (dort greift die Untergrenze, weil das rohe 95. Perzentil darunter liegt) **und
+    mindestens ein** Eintrag **strikt zwischen 300 und 1000** liegen (dort greift sie nicht).
+    Wäre die Untergrenze fälschlich als fester Wert implementiert, wären ALLE Einträge 300 und
+    der Test fällt durch.
+  - Bewusst **nicht** an ein bestimmtes Modell × Gebiet-Paar gebunden: welcher Eintrag auf der
+    Grenze landet, hängt vom Eichzeitraum ab und verschiebt sich bei einer Neueichung. Eine
+    frühere Fassung dieses Tests nannte `icon_d2 × DE_ALPEN` als Beispiel für „strikt dazwischen";
+    mit dem spezifizierten Zeitraum April–September landet gerade dieser Eintrag selbst auf 300
+    (rohes P95 ≈ 280). Die Zusicherung gilt der **Regel**, nicht einem Zahlenpaar.
 
 - **AC-2 (normalisierte Herkunft landet additiv im Aggregat, alte Daten bleiben unberührt):**
   Given eine reguläre Trip-Vorhersage für einen Ort im AROME-Gebiet (GR20/Korsika) / When das

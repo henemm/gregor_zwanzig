@@ -41,12 +41,16 @@ def test_ac2_beide_signale_laufen_durch_dieselbe_leiter(monkeypatch):
 
     monkeypatch.setattr(mf, "_thunder_level_from_ladder", _sentinel_leiter)
 
+    # Issue #1592 C1: `cape_threshold_jkg` ist keyword-only ohne Default;
+    # `cape_jkg=None` hier -- die Schwelle spielt fuer diese Leiter-Tests
+    # keine Rolle.
     dichte = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=0.0, cape_jkg=None,
+        cape_threshold_jkg=None,
     )
     potenzial = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=None, cape_jkg=None,
-        lightning_potential_jkg=0.0,
+        lightning_potential_jkg=0.0, cape_threshold_jkg=None,
     )
 
     assert dichte == mf.ThunderLevel.HIGH, (
@@ -91,11 +95,12 @@ def test_ac2_beide_signale_liefern_an_der_unteren_schwelle_uebereinstimmend_low(
 
     blitzdichte_low = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=mf._LIGHTNING_LOW_MIN,
-        cape_jkg=None,
+        cape_jkg=None, cape_threshold_jkg=None,
     )
     blitzpotenzial_low = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=None, cape_jkg=None,
         lightning_potential_jkg=mf._LIGHTNING_POTENTIAL_LOW_MIN,
+        cape_threshold_jkg=None,
     )
 
     assert blitzdichte_low == mf.ThunderLevel.LOW, (
