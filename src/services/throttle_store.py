@@ -36,8 +36,20 @@ _LEGACY_RADAR_FILE = "radar_alert_throttle.json"
 class ThrottleStore:
     """Ein State-File pro Nutzer für alle Cooldown-Scopes.
 
-    Scopes: ``trip``, ``radar``, ``compare_preset``. Struktur der Datei:
-    ``{scope: {key: iso_timestamp}}``.
+    Scopes und ihr Schlüsselraum:
+
+    * ``trip`` — Trip-Kennung, Vorhersage-Änderungsalarm
+    * ``radar`` — Trip-Kennung, Trip-Nowcast
+    * ``compare_preset`` — Preset-Kennung, Vergleichs-Änderungsalarm
+    * ``compare_radar`` — Preset-Kennung, Vergleichs-Nowcast (Issue #1467 S3).
+      Bewusst ein EIGENER Scope: ``radar`` ist ausschließlich mit Trip-Kennungen
+      belegt (seit dem #1250-Cutover liegen Trips und Ortsvergleiche im selben
+      Verzeichnis und tragen frei gewählte Slugs — Kollision real möglich), und
+      ``compare_preset`` ist vom Änderungsalarm auf demselben Preset-Schlüssel
+      belegt; eine Wiederverwendung ließe die beiden Alarmarten einander
+      gegenseitig unterdrücken.
+
+    Struktur der Datei: ``{scope: {key: iso_timestamp}}``.
     """
 
     def __init__(self, user_id: str, data_dir: Optional[Path] = None) -> None:

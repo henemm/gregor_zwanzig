@@ -421,6 +421,17 @@ keinem Aufrufer gesetzt — bewusste Entscheidung, s.u.
 
 ### O3 — Wo genau greift die Protokollierung? (zentrale Frage)
 
+> ⚠️ **Fuer die beiden Nowcast-Pfade geschlossen seit Issue #1467 Scheibe S3**
+> (2026-08-08). `src/services/alert_gate.py::check_nowcast_gate()` protokolliert
+> Ruhezeit/Cooldown/Tageslimit-Unterdrueckungen jetzt fuer Tour-Radar UND
+> Vergleichs-Nowcast ueber `alert_log.append_suppressed_entry()`
+> (`REASON_QUIET_HOURS`/`REASON_COOLDOWN`/`REASON_DAILY_LIMIT`, Ziel-Liste
+> `not_delivered`, D4 bleibt gewahrt). Fuer Vorhersage-Aenderungsalarm und
+> amtliche Warnung (die vier uebrigen Zeilen der Tabelle unten) bleibt die
+> Luecke **unveraendert offen** — dort ist weiterhin die Vorziehung der
+> Auswertung aus Epic #1458 Scheibe 2 die Voraussetzung. Massgeblich:
+> `docs/specs/modules/rework_1467_s3_nowcast.md`.
+
 **Befund:** Ruhezeiten/Cooldown/Tageslimit laufen an **fast allen** Aufrufstellen VOR der
 eigentlichen Auswertung (Δ-Erkennung/Korridor-Check/Nowcast-Abruf) — zum Zeitpunkt, an dem
 das Gate greift, ist noch **gar nicht bekannt**, ob ueberhaupt eine Meldung faellig
@@ -434,6 +445,11 @@ gewesen waere:
 | Vergleich Δ (`compare_alert.py:112/:118`) | — (kein Ruhezeit-Gate) | vor `_detect_triggered_locations()` | vor Detect | **nein** |
 | Vergleich Radar (`compare_radar_alert.py:92/:103`) | nach `_detect_triggered_locations()` | vor Detect | — (kein Tageslimit-Gate) | gemischt |
 | Vergleich amtlich (`compare_official_alert.py:107/:125`) | vor `_detect()` | — (kein Cooldown, s. Docstring) | nach `_detect()` | gemischt |
+
+Zeile „Vergleich Radar" beschreibt den Stand vor #1467 S3: seit dieser Scheibe laufen
+Ruhezeit/Sperrzeit/Tageslimit dort — wie bei „Tour Radar" — VOR `_detect_triggered_locations()`
+ueber den geteilten `alert_gate.check_nowcast_gate()`, und ein Tageslimit-Gate existiert
+jetzt ebenfalls. Die uebrigen vier Zeilen (Δ/amtlich, Tour wie Vergleich) sind unveraendert.
 
 **Entscheidung:** In dieser Scheibe wird **nur** die Nicht-Zustellung „Auslöser war
 bekannt, aber kein Kanal hat sie erreicht" protokolliert — das ist an **allen sechs**
@@ -707,12 +723,17 @@ entscheidet ueber Ziel-Liste bzw. Auslassen (s.o.).
 
 ## Known Limitations
 
-- **Ruhezeit/Cooldown/Tageslimit bleiben unprotokolliert** (O3): Diese drei Gates laufen
-  an fast allen Aufrufstellen VOR der Auswertung — der Ausloeser ist zum Zeitpunkt der
-  Unterdrueckung strukturell noch nicht bekannt. Eine vollstaendige Abdeckung braucht die
-  Vorziehung der Auswertung, die Scheibe 2 des Epic #1458 ohnehin umsetzt. Bis dahin bleibt
-  eine Luecke: Eine durch Ruhezeit/Cooldown/Tageslimit unterdrueckte, aber tatsaechlich
-  faellige Meldung erscheint nicht im Protokoll (auch nicht in `not_delivered`).
+- **Ruhezeit/Cooldown/Tageslimit bleiben unprotokolliert** (O3) — **fuer den
+  Vorhersage-Aenderungsalarm und die amtliche Warnung weiterhin.** Diese beiden Gates
+  laufen VOR der Auswertung — der Ausloeser ist zum Zeitpunkt der Unterdrueckung
+  strukturell noch nicht bekannt. Eine vollstaendige Abdeckung braucht die Vorziehung der
+  Auswertung, die Scheibe 2 des Epic #1458 ohnehin umsetzt. Bis dahin bleibt eine Luecke:
+  eine durch Ruhezeit/Cooldown/Tageslimit unterdrueckte, aber tatsaechlich faellige Meldung
+  erscheint dort nicht im Protokoll (auch nicht in `not_delivered`). **Fuer die beiden
+  Nowcast-Pfade (Tour-Radar, Vergleichs-Nowcast) ist diese Luecke seit Issue #1467
+  Scheibe S3 geschlossen** — `alert_gate.check_nowcast_gate()` kennt den Ausloeser bereits
+  vor der Datenbeschaffung und protokolliert die Unterdrueckung ueber
+  `alert_log.append_suppressed_entry()`, s. O3.
 - **Die Warn-Ausgabe bei unaufloesbarer Mehrdeutigkeit ist im Betrieb nur schwach
   sichtbar.** `metric_and_aggregation_for_field()` meldet den Fall per `logger.warning` und
   liefert `None` (fail-soft, bewusst keine Exception — eine echte Gewitter- oder
@@ -762,6 +783,12 @@ entscheidet ueber Ziel-Liste bzw. Auslassen (s.o.).
 
 ## Changelog
 
+- 2026-08-08: O3-Hinweis praezisiert (Issue #1467 Scheibe S3, Doku-Nachzug) — die
+  Nicht-Protokollierung von Ruhezeit/Cooldown/Tageslimit ist fuer die beiden
+  Nowcast-Pfade (Tour-Radar, Vergleichs-Nowcast) geschlossen (`alert_gate.py`,
+  `alert_log.append_suppressed_entry()`). Fuer Vorhersage-Aenderungsalarm und amtliche
+  Warnung bleibt die Luecke unveraendert offen. Kein Code in dieser Spec geaendert,
+  Vorbehalt (Epic #1458 Scheibe 2) bleibt bestehen.
 - 2026-08-02: Initial spec created (Issue #1459, Epic #1458 Scheibe 1)
 - 2026-08-02: D4 ergaenzt (Nachbesserung Team-Lead/PO) — zweiter Top-Level-Key
   `not_delivered` verhindert, dass komplette Nicht-Zustellungen die Cockpit-Kachel oder

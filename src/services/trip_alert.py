@@ -18,6 +18,7 @@ from app.config import Settings
 from app.models import SegmentWeatherData, WeatherChange
 from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
+from services.alert_gate import check_nowcast_gate, record_nowcast_sent
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import (
     NotificationResult,
@@ -42,6 +43,11 @@ logger = logging.getLogger("trip_alert")
 # 90s Reserve gegenueber diesen 120s, analog FETCH_DEADLINE_SECONDS in
 # providers/meteofrance.py und providers/dwd.py.
 ALERT_RUN_DEADLINE_SECONDS = 90.0
+
+# Sperrzeit-Scope des Trip-Nowcast im geteilten `ThrottleStore` (#1213).
+# Ausschliesslich mit Trip-Kennungen belegt — der Vergleichs-Nowcast bekam mit
+# #1467 S3 deshalb einen eigenen Scope (`compare_radar`) statt diesen hier.
+_RADAR_THROTTLE_SCOPE = "radar"
 
 # Issue #1460 (P1a, loest #1444 S1 ab): der Wertebereich (`corridors[].notify`)
 # ist KEIN Alarm-Ausloeser mehr -- eine absolute Grenze widerspricht ADR-0009
@@ -655,19 +661,32 @@ class TripAlertService:
             self._radar_service = RadarNowcastService()
         return self._radar_service
 
-    def _is_radar_throttled(self, trip_id: str, cooldown_min: int = 120) -> bool:
-        """Return True if radar alert was sent within cooldown window (Issue #818 AC-6).
-
-        Issue #1213: liest jetzt aus dem gemeinsamen ThrottleStore statt aus
-        dem alert_state-Key `radar_throttle` (nur noch Migrationsquelle).
-        """
-        return self._throttle_store.is_throttled(
-            "radar", trip_id, cooldown_min, datetime.now(timezone.utc)
-        )
-
     def clear_radar_throttle(self, trip_id: str) -> None:
         """Clear radar throttle for a trip (test helper)."""
-        self._throttle_store.clear("radar", trip_id)
+        self._throttle_store.clear(_RADAR_THROTTLE_SCOPE, trip_id)
+
+    def _radar_effective_channels(self, trip: "Trip") -> set[str]:
+        """Kanal-Set des Radar-Alarms (Issue #1023): globale Faehigkeit UND
+        Trip-Opt-in, bei SMS zusaetzlich das Tier-Gate.
+
+        Issue #1467 S3 aus der Inline-Ableitung herausgezogen — die
+        Unterdrueckungs-Protokollierung braucht dieselbe Liste bereits am
+        Gate, also vor der Erkennung. Reine Ableitung ohne Seiteneffekt, das
+        Ergebnis ist an beiden Stellen identisch; eine zweite Fassung waere
+        genau die Duplikat-Falle, die diese Scheibe beseitigt.
+        """
+        config = trip.report_config
+        channels: set[str] = set()
+        if self._settings.can_send_email() and (not config or getattr(config, "send_email", True)):
+            channels.add("email")
+        if self._settings.can_send_telegram() and config and getattr(config, "send_telegram", False):
+            channels.add("telegram")
+        if (
+            self._settings.can_send_sms() and config
+            and getattr(config, "send_sms", False) and sms_allowed(self._user_id)
+        ):
+            channels.add("sms")
+        return channels
 
     def _briefing_precip_for_onset(
         self,
@@ -744,24 +763,49 @@ class TripAlertService:
                     )
                     continue
 
-            # QuietHours check (reuse existing)
-            if self._is_quiet_hours(trip, now_utc):
-                logger.debug(f"Radar alert suppressed (quiet hours) for trip {trip.id}")
-                continue
-
             cooldown_min = (
                 trip.alert_cooldown_minutes
                 if trip.alert_cooldown_minutes is not None
                 else self._throttle_hours * 60
             )
-            if self._is_radar_throttled(trip.id, cooldown_min=cooldown_min):
-                logger.debug(f"Radar alert throttled for trip {trip.id}")
-                continue
-
-            # Issue #1070: Tages-Obergrenze nach Nutzerlevel (Free/Standard/Premium)
-            # Issue #1555: reason="nowcast" prüft gegen das volle Limit (Reserve-Nutznießer).
-            if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc), reason="nowcast"):
-                logger.debug(f"Radar alert suppressed: daily limit reached for trip {trip.id}")
+            # Issue #1467 S3: dieselbe Kette wie bisher (Ruhezeit -> Sperrzeit
+            # -> Tages-Obergrenze, #1070/#1555), jetzt aus dem geteilten
+            # Baustein, den auch der Vergleichs-Nowcast benutzt. Reihenfolge,
+            # Scope (`radar`), Schluessel (`trip.id`) und Zustellverhalten
+            # bleiben unveraendert — neu ist allein der Protokoll-Eintrag.
+            gate = check_nowcast_gate(
+                user_id=self._user_id,
+                throttle_scope=_RADAR_THROTTLE_SCOPE,
+                throttle_key=trip.id,
+                cooldown_minutes=cooldown_min,
+                quiet_from=trip.alert_quiet_from,
+                quiet_to=trip.alert_quiet_to,
+                context_label=trip.id,
+                now=now_utc,
+                throttle_store=self._throttle_store,
+            )
+            if not gate.allowed:
+                logger.debug(
+                    f"Radar alert suppressed ({gate.reason}) for trip {trip.id}"
+                )
+                # Absicherung je Trip, nicht um den Stapellauf: scheitert der
+                # Protokoll-Eintrag EINES Trips, verlieren sonst ALLE weiteren
+                # Trips dieses Nutzers ihren Radar-Alarm (Muster `fix_1479`).
+                # Breite Klausel + laute Meldung mit Kennung, wie beim
+                # Nowcast-Abruf ein paar Zeilen weiter unten.
+                try:
+                    alert_log.append_suppressed_entry(
+                        self._user_id, entity_id=trip.id, entity_type="trip",
+                        reason=alert_log.REASON_NOWCAST, gate_reason=gate.reason,
+                        effective_channels=self._radar_effective_channels(trip),
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Radar alert: Unterdrueckungs-Protokoll fuer Trip %s "
+                        "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), "
+                        "nur der Protokoll-Eintrag fehlt.",
+                        trip.id, e, gate.reason,
+                    )
                 continue
 
             # Genau EIN get_nowcast-Call pro Trip an Segment-Startpunkt
@@ -865,17 +909,9 @@ class TripAlertService:
                 tz=tz,
             )
 
-            config = trip.report_config
-
             # Issue #1023: Kanal-Set für NotificationService bauen; der Service prüft
             # selbst can_send_*(). Trip-Ebene darf Kanäle explizit deaktivieren.
-            effective_channels: set[str] = set()
-            if can_email and (not config or getattr(config, "send_email", True)):
-                effective_channels.add("email")
-            if can_telegram and config and getattr(config, "send_telegram", False):
-                effective_channels.add("telegram")
-            if can_sms and config and getattr(config, "send_sms", False) and sms_allowed(self._user_id):
-                effective_channels.add("sms")
+            effective_channels = self._radar_effective_channels(trip)
 
             if not effective_channels:
                 logger.info(f"Radar alert: alle Kanäle auf Trip-Ebene deaktiviert, kein Recording für {trip.id}")
@@ -927,12 +963,17 @@ class TripAlertService:
 
             # Recording nach Best-Effort-Zustellung (F001-Semantik)
             # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
-            alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
-            # Issue #1213: alleinige Radar-Throttle-Quelle ist jetzt der Store —
-            # der alert_state-Key `radar_throttle` und die Legacy-Datei
+            # Issue #1213: alleinige Radar-Throttle-Quelle ist der Store — der
+            # alert_state-Key `radar_throttle` und die Legacy-Datei
             # `radar_alert_throttle.json` werden nicht mehr geschrieben (nur
             # noch als Migrationsquellen gelesen).
-            self._throttle_store.record("radar", trip.id, datetime.now(timezone.utc))
+            # Issue #1467 S3: beide Buchungen buendelt jetzt der geteilte
+            # Baustein — unveraendert erst NACH der Zustellung.
+            record_nowcast_sent(
+                user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
+                throttle_key=trip.id, now=datetime.now(timezone.utc),
+                throttle_store=self._throttle_store,
+            )
             sent += 1
 
         return sent

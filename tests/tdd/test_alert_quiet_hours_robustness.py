@@ -982,9 +982,18 @@ _QUIET_CALL_NAMES = {"is_quiet_hours", "_is_quiet_hours"}
 # genau die geforderte Selbst-Erledigung. Ein spaeterer Rueckfall in die vom
 # PO verworfene Kopier-Loesung (eigenes try/except je Aufrufstelle) faellt
 # dann in allen vier Dateien auf.
+#
+# Issue #1467 S3: `compare_radar_alert.py` ist hier durch `alert_gate.py`
+# ERSETZT, nicht gestrichen — die Ruhezeit-Aufrufstelle des Vergleichs-Nowcast
+# ist mit dieser Scheibe in den geteilten Freigabe-Baustein umgezogen (dort
+# liegt sie jetzt fuer BEIDE Nowcast-Pfade). Der Waechter zieht mit dem Aufruf
+# um; bliebe der alte Eintrag stehen, liefe er in einer Datei ohne Aufruf ins
+# Leere und die Sicherung 1 unten (mindestens eine Aufrufstelle gefunden)
+# wuerde ihn zu Recht als Testfehler melden. `trip_alert.py` bleibt in der
+# Liste: dort rufen der Aenderungs- und der amtliche Pfad weiterhin selbst.
 _GUARDED_FILES = [
     "compare_official_alert.py",
-    "compare_radar_alert.py",
+    "alert_gate.py",
     "trip_alert.py",
     "compare_alert.py",
 ]

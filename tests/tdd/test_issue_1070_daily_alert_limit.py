@@ -339,10 +339,34 @@ def test_ac1_radar_alert_suppressed_when_free_daily_limit_reached():
             f"AC-1: Zähler darf bei unterdrücktem Alert nicht erhöht werden, got {data}"
         )
 
+        # Issue #1467 S3: Messpunkt geschärft. Seither protokolliert der
+        # Nowcast-Pfad, WARUM unterdrückt wurde — der Eintrag landet in
+        # `not_delivered` (von Go nie gelesen, D4). Die hier gemeinte
+        # Zusicherung ist unverändert: es entsteht KEIN Zustellungs-Eintrag,
+        # Cockpit-Kachel und Archiv-Statistik bleiben zahlgleich. Zusätzlich
+        # festgenagelt: der Unterdrückungs-Eintrag nennt das Tageslimit als
+        # Grund und behauptet keine Zustellung.
+        from services import alert_log
+
         alert_log_path = get_data_dir(uid) / "alert_log.json"
-        assert not alert_log_path.exists(), (
-            "AC-1: alert_log.json wurde geschrieben, obwohl das Tageslimit erreicht war"
+        log = json.loads(alert_log_path.read_text()) if alert_log_path.exists() else {}
+        assert log.get("entries", []) == [], (
+            f"AC-1: trotz erreichtem Tageslimit wurde ein Zustellungs-Eintrag "
+            f"geschrieben: {log.get('entries')!r}"
         )
+        gruende = {
+            item.get("reason")
+            for eintrag in log.get("not_delivered", [])
+            for item in eintrag.get("channels_not_sent", [])
+        }
+        assert gruende == {alert_log.REASON_DAILY_LIMIT}, (
+            f"AC-1: der Unterdrückungs-Eintrag muss ausschließlich das "
+            f"Tageslimit als Grund nennen, nennt aber {gruende!r}"
+        )
+        assert all(
+            eintrag.get("channels_sent") == []
+            for eintrag in log.get("not_delivered", [])
+        ), "AC-1: ein unterdrückter Alarm darf keinen zugestellten Kanal führen"
     finally:
         _clean_user(uid)
 

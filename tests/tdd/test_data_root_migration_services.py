@@ -71,15 +71,39 @@ def test_ac2_daily_alert_limit_reads_tier_from_isolated_root():
     assert user_tier.daily_alert_limit(uid) == 4
 
 
-# --- AC-3: CompareRadarAlertService-Throttle zeigt unter die isolierte Wurzel ---
+# --- AC-3: Compare-Radar-Sperrzeit zeigt unter die isolierte Wurzel ---
 def test_ac3_radar_alert_throttle_file_under_isolated_root():
-    from services.compare_radar_alert import CompareRadarAlertService
+    """Messpunkt gewandert (Issue #1467 S3): der Vergleichs-Nowcast fuehrt
+    seine Sperrzeit nicht mehr in der eigenen Datei
+    `compare_radar_alert_throttle.json`, sondern im geteilten `ThrottleStore`
+    (`throttle_state.json`, Scope `compare_radar`).
+
+    Die gepruefte Zusicherung ist unveraendert: die Sperrzeit-Ablage des
+    Vergleichs-Nowcast liegt unter der ISOLIERTEN `get_data_dir()`-Wurzel,
+    nicht unter einem hartkodierten `data/users/...`. Gemessen wird jetzt am
+    tatsaechlichen Schreibvorgang der Produktionsfunktion statt an einem
+    Attribut — schaerfer als vorher. Dass der Service genau diesen Scope und
+    diesen Schluessel benutzt, haelt
+    `tests/tdd/test_compare_radar_alert_shared_throttle.py` fest.
+    """
+    from services.alert_gate import record_nowcast_sent
+    from services.compare_radar_alert import _THROTTLE_SCOPE, CompareRadarAlertService
 
     uid = _uid()
-    service = CompareRadarAlertService(settings=Settings(), user_id=uid)
+    preset_id = "cp-datenwurzel"
+    CompareRadarAlertService(settings=Settings(), user_id=uid)  # muss anlegbar bleiben
 
-    expected = get_data_dir(uid) / "compare_radar_alert_throttle.json"
-    assert service._throttle_file == expected
+    record_nowcast_sent(
+        user_id=uid, throttle_scope=_THROTTLE_SCOPE, throttle_key=preset_id,
+        now=datetime.now(timezone.utc),
+    )
+
+    expected = get_data_dir(uid) / "throttle_state.json"
+    assert expected.exists(), (
+        f"Sperrzeit-Ablage {expected} fehlt unter der isolierten Wurzel — "
+        "der Vergleichs-Nowcast schreibt an ihr vorbei"
+    )
+    assert preset_id in json.loads(expected.read_text()).get(_THROTTLE_SCOPE, {})
 
 
 # --- AC-4: CompareWeatherSnapshotService save/load-Roundtrip unter isolierter Wurzel ---
