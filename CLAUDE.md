@@ -152,6 +152,8 @@ Verifikation läuft **nach** dem Push gegen Staging (`https://staging.gregor20.h
 
 Detailablauf, Verdict-Ableitung PASS/PARTIAL/FAIL/SKIP, Rollback: **`docs/reference/operations_playbook.md`**. Kern: **Issue-Close nur bei Selftest-Exit 0**.
 
+**Frontend-Browser-Gate (#1558, seit 2026-08-08):** Berührt der committete Scope `frontend-only` oder `full-stack`, lädt `staging_gate.py --write-verdict` **selbst** die sechs Kernseiten (`/`, `/trips`, `/trips/new`, `/compare`, `/compare/new`, `/locations`) in einem echten Chromium gegen Staging und sammelt `console(type=error)` sowie `pageerror` — Warnungen zählen nicht. Schlägt das fehl, entsteht **keine** Attestation, der Prod-Deploy bleibt blockiert. **Fail-Grenze:** lässt sich das Gate-Modul selbst nicht laden (Import-/Syntaxfehler), läuft der Aufruf mit Warnung durch — ein kaputter Wächter darf nie die Ursache sein, dass niemand mehr ausliefert. Fehlt dagegen Playwright, ist Staging nicht erreichbar, scheitert die Anmeldung oder fehlen Zugangsdaten, wird **blockiert** — das ist „Nachweis nicht erbringbar", nicht „Gate kaputt". Notausgang für echte Ausfälle: `GZ_SKIP_E2E_GATE=1` (laut, geloggt — kein zweiter, stiller Ausgang). Bei bestandenem Lauf trägt die Attestation zusätzlich das Feld `frontend_pages_checked`. *Regel-Budget: Prüfdatum 2026-11-05. Fang-Beleg: #1552 (Kernseite auf Staging unbedienbar bei 5837 grünen Tests, Adversary VERIFIED, alle CI-Checks grün). Am Prüfdatum mitzubewerten: ob `ui_screenshot_gate.py` dadurch ganz oder teilweise entbehrlich wird.*
+
 ## Mail-Validatoren & Renderer-Gate (ZWINGEND)
 
 Zwei Mail-Pfade, zwei Gates. Falscher Validator auf einen Pfad → strukturell nie bestehbar → Gate-Erosion. Dispatch:

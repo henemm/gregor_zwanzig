@@ -60,6 +60,11 @@ REPO_DIR = _DEFAULT_REPO_DIR
 STALE_HOURS = _e2e_paths.STALE_HOURS
 # Issue #666: max. behaltene commit-getaggte Attestationen (analog .backups/-Pattern)
 ATTESTATION_RETENTION = 20
+# Issue #1558: Pfad des Frontend-Browser-Gates bewusst als MODUL-Attribut (nicht
+# inline im Funktionsrumpf wie beim Telegram-Vorbild, Z. 224) — nur so kann ein
+# Test auf eine ECHT kaputte Datei zeigen und damit einen realen Importfehler
+# ausloesen statt eines gemockten (verbotenes Mock-Theater).
+FRONTEND_GATE_PATH = Path(__file__).resolve().parent / "e2e_frontend_browser_gate.py"
 
 
 def _log(msg: str, stream=sys.stdout) -> None:
@@ -248,6 +253,56 @@ def _telegram_live_gate() -> int:
     return 0
 
 
+def _frontend_browser_gate(scope: str, checked: list | None = None) -> int:
+    """Issue #1558: Beruehrt der Aenderungssatz das Frontend, muessen die
+    Kernseiten in einem echten Browser fehlerfrei laden — sonst kein Verdict.
+
+    Konsumiert bewusst den bereits berechneten ``scope`` statt eines eigenen
+    git-Diffs: das Telegram-Gate oben diefft fest HEAD~1..HEAD und uebersieht
+    dadurch alles, was weiter zurueckliegt als der letzte Commit (AC-5).
+
+    Fail-Grenze (AC-8): laesst sich das Gate-Modul SELBST nicht laden, laeuft
+    der Aufruf mit Warnung durch — ein kaputtes Gate darf nie der Grund sein,
+    dass niemand mehr ausliefert. Ist dagegen der NACHWEIS nicht erbringbar
+    (Playwright fehlt, Staging tot, Anmeldung scheitert, Zugangsdaten fehlen,
+    Konsolenfehler), blockiert es; das entscheidet das Gate-Modul selbst.
+
+    ``checked`` nimmt — nur bei bestandenem Lauf — die geprueften Seiten auf.
+    Returns: 0 = durchlassen, 1 = blocken.
+    """
+    if scope not in ("frontend-only", "full-stack"):
+        return 0
+
+    import importlib.util
+
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_e2e_frontend_browser_gate", str(FRONTEND_GATE_PATH)
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    except Exception as exc:  # noqa: BLE001 — fail-soft NUR beim Laden des Gates
+        _log(f"WARN: Browser-Gate e2e_frontend_browser_gate nicht ladbar ({exc}) — "
+             "Frontend-Browserlauf uebersprungen.", stream=sys.stderr)
+        return 0
+
+    # Zugangsdaten gehoeren HIER nachgeladen, nicht in gate(): dort wuerde
+    # os.environ.setdefault die Bedingung "Zugangsdaten fehlen" wieder aufheben
+    # und damit unpruefbar machen.
+    mod.load_validator_env()
+    if mod.gate(scope, dict(os.environ)) != 0:
+        _log(
+            f"FEHLER: Scope '{scope}' beruehrt das Frontend, aber der Browserlauf "
+            "ueber die Kernseiten wurde nicht bestanden (Issue #1558). Verdict "
+            "verweigert.",
+            stream=sys.stderr,
+        )
+        return 1
+    if checked is not None:
+        checked.extend(mod.CORE_PAGES)
+    return 0
+
+
 def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None,
                   scope_override: str | None = None) -> int:
     """Mode A: Verdict in die commit-getaggte Nachweis-Datei schreiben."""
@@ -294,6 +349,11 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     ]
 
     scope = scope_override or _detect_committed_scope(head=sha)
+    # Issue #1558: NACH der Scope-Berechnung — nicht oben beim Telegram-Gate,
+    # wo `scope` noch gar nicht existiert.
+    frontend_pages: list[str] = []
+    if _frontend_browser_gate(scope, frontend_pages) != 0:
+        return 1
     payload = {
         "verified_commit": sha,
         "staging_verdict": verdict,
@@ -302,6 +362,8 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
         "scope": scope,
         "environment": "staging",
     }
+    if frontend_pages:
+        payload["frontend_pages_checked"] = frontend_pages
     # Issue #1197: Blind-Overwrite bei zwei Workflows auf demselben HEAD
     # vermeiden. Traegt eine bestehende Attestation denselben verified_commit,
     # werden die findings verlustfrei vereinigt (dedup ueber stabile
