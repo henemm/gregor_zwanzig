@@ -38,10 +38,12 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _PYPROJECT = _REPO_ROOT / "pyproject.toml"
 
-# Fix-Loop 1 (F001/F002, Adversary): 9 Dateien tragen weiterhin einen
-# vollstaendigen Modul-Marker (jeder Test dialt); 1147/684 sind jetzt
+# Fix-Loop 1 (F001/F002, Adversary): 10 Dateien tragen weiterhin einen
+# vollstaendigen Modul-Marker (jeder Test dialt); 1147 ist jetzt
 # GEMISCHT -- nur die real dialenden Tests/Klassen tragen `@pytest.mark.email`,
 # die restlichen Guard-Tests bleiben im Standardlauf.
+# 684 traegt seit der #1196-Vermessung bewusst modul-weit `pytestmark =
+# pytest.mark.email` (gehoert per Marker in den /e2e-verify-Lauf).
 _FULL_B1_FILES = (
     "tests/tdd/test_issue_1113_partial_outage_guard.py",
     "tests/tdd/test_issue_1007_heute_voll_briefing.py",
@@ -52,10 +54,10 @@ _FULL_B1_FILES = (
     "tests/tdd/test_issue_1087_trip_official_alerts.py",
     "tests/tdd/test_issue_1169_compare_alert_consumer.py",
     "tests/tdd/test_issue_972_974_975_tooling.py",
+    "tests/tdd/test_issue_684_alert_email_guard.py",
 )
 _MIXED_B1_FILES = (
     "tests/tdd/test_issue_1147_resend_recipient_invariant.py",
-    "tests/tdd/test_issue_684_alert_email_guard.py",
 )
 _B1_FILES = _FULL_B1_FILES + _MIXED_B1_FILES
 _FRIENDLY_FORMAT_FOOTGUN = "tests/e2e/test_e2e_friendly_format_config.py"
@@ -202,7 +204,7 @@ def staging_collect() -> subprocess.CompletedProcess:
 
 @pytest.fixture(scope="module")
 def mixed_total_collect() -> subprocess.CompletedProcess:
-    """Marker-neutrale Collection NUR der 2 gemischten Dateien (`-o addopts=`
+    """Marker-neutrale Collection NUR der gemischten Datei(en) (`-o addopts=`
     schaltet die Marker-Filterung komplett ab) -- liefert den Gesamt-Count je
     Datei fuer den Partitionsnachweis (kein Test darf verloren gehen/doppelt
     zaehlen)."""
@@ -236,10 +238,10 @@ def c2_split_total_collect() -> subprocess.CompletedProcess:
 def test_default_selection_excludes_b1_live_leak_files(
     default_collect, email_collect, mixed_total_collect,
 ):
-    """GIVEN 9 vollstaendig markierte B1-Dateien + 2 gemischt markierte
-    (1147/684 -- nur real dialende Tests/Klassen) WHEN Standardlauf ohne `-m`
-    sammelt THEN fehlen die 9 vollen Dateien komplett UND die 2 gemischten
-    partitionieren sich exakt in (Standardlauf-Rest, `-m email`-Dialer) --
+    """GIVEN 10 vollstaendig markierte B1-Dateien + 1 gemischt markierte
+    (1147 -- nur real dialende Tests/Klassen) WHEN Standardlauf ohne `-m`
+    sammelt THEN fehlen die 10 vollen Dateien komplett UND die gemischte
+    partitioniert sich exakt in (Standardlauf-Rest, `-m email`-Dialer) --
     beide Teile nicht-leer, zusammen == marker-neutraler Gesamt-Count (AC-2)."""
     assert default_collect.returncode == 0, default_collect.stderr
     default_counts = _collected_counts(default_collect.stdout)
@@ -320,22 +322,29 @@ def test_default_selection_excludes_staging_dialers(default_collect):
     assert not leaked, f"Staging-Dialer duerfen im Standardlauf nicht erscheinen: {leaked}"
 
 
+@pytest.mark.staging
 def test_staging_marker_run_still_collects_dialers(staging_collect):
     """GIVEN `-m staging` wird bewusst aufgerufen WHEN alle 22 Dialer aus
     Liste A markiert sind THEN erscheint jede Datei mit mindestens einem
     gesammelten Test -- der Marker verschiebt sie nur, loescht keinen Test
-    (AC-2). Schlaegt heute fehl, weil der Marker noch fehlt (0 gesammelt)."""
+    (AC-2). Schlaegt heute fehl, weil der Marker noch fehlt (0 gesammelt).
+    Host-gebunden (#1196 Batch 6/7): 1010_1006 skippt modul-weit ohne
+    validator.env -- die Invariante gilt nur auf dem Server (Staging-Lane)."""
     assert staging_collect.returncode == 0, staging_collect.stderr
     staging_counts = _collected_counts(staging_collect.stdout)
     missing = sorted(f for f in _STAGING_DIALER_FILES if staging_counts.get(f, 0) == 0)
     assert not missing, f"Staging-Dialer fehlen unter `-m staging`: {missing}"
 
 
+@pytest.mark.staging
 def test_offline_files_remain_in_default_selection(default_collect):
     """GIVEN 6 Offline-Kern-Dateien aus Liste C (kein echter Netzcall) WHEN
     die Standard-Selektion sammelt THEN bleiben alle 6 weiterhin gesammelt --
     keine wird versehentlich mit-markiert (AC-3). Regressions-Waechter --
-    darf schon heute gruen sein (analog AC-8 im Bestand)."""
+    darf schon heute gruen sein (analog AC-8 im Bestand).
+    Host-gebunden (#1196 Batch 6/7): 1148 skippt modul-weit, wenn das
+    Hook-Plugin nicht importierbar ist -- die Invariante gilt nur auf dem
+    Server (Staging-Lane)."""
     assert default_collect.returncode == 0, default_collect.stderr
     default_counts = _collected_counts(default_collect.stdout)
     missing = sorted(f for f in _OFFLINE_KEEP_FILES if default_counts.get(f, 0) == 0)
@@ -436,10 +445,13 @@ def test_geosphere_and_providers_base_pass_in_default_selection():
     assert "skipped" not in res.stdout, res.stdout[-800:]
 
 
+@pytest.mark.staging
 def test_811_gate_test_skips_when_hook_missing(tmp_path):
     """GIVEN `.claude/hooks/renderer_mail_gate.py` ist nicht auffindbar (z. B.
     Plugin unter anderem OS-Nutzer unsichtbar) WHEN test_issue_811_renderer_gate.py
-    gesammelt wird THEN kein Collection-Error, sondern erkennbarer Skip (AC-4)."""
+    gesammelt wird THEN kein Collection-Error, sondern erkennbarer Skip (AC-4).
+    Host-gebunden (#1196 Batch 6/7): die Gegenprobe setzt einen importierbaren
+    Hook voraus -- der ist nur auf dem Server gegeben (Staging-Lane)."""
     src = _REPO_ROOT / "tests" / "tdd" / "test_issue_811_renderer_gate.py"
     target_dir = tmp_path / "tests" / "tdd"
     target_dir.mkdir(parents=True)

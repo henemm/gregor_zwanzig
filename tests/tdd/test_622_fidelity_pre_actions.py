@@ -90,6 +90,7 @@ class TestAC4WizardStep2EtappenPreAction:
             f"design_fidelity_diff.py nicht gefunden: {DIFF_TOOL}"
         )
 
+    @pytest.mark.staging
     def test_soll_png_step2_exists(self):
         """SOLL-PNG für I-wizard-step2-etappen muss existieren."""
         assert SOLL_STEP2.exists(), (
@@ -147,6 +148,7 @@ class TestAC4WizardStep2EtappenPreAction:
             f"Gefundener Block: {after_step2[:200]}"
         )
 
+    @pytest.mark.staging
     def test_ac4_step2_diff_passes_with_pre_action(self):
         """
         AC-4 RED: Mit korrektem Pre-Action (Etappen-Tab-Klick) muss diff_pct < 10%.
@@ -201,6 +203,7 @@ class TestAC5WizardStep3WegpunktePreAction:
     GREEN: Eintrag mit ("click", 'button:has-text("Wegpunkte")') vorhanden.
     """
 
+    @pytest.mark.staging
     def test_soll_png_step3_exists(self):
         """SOLL-PNG für I-wizard-step3-wetter muss existieren."""
         assert SOLL_STEP3.exists(), (
@@ -257,6 +260,7 @@ class TestAC5WizardStep3WegpunktePreAction:
             f"Gefundener Block: {after_step3[:200]}"
         )
 
+    @pytest.mark.staging
     def test_ac5_step3_diff_passes_with_pre_action(self):
         """
         AC-5 RED: Mit korrektem Pre-Action (Wegpunkte-Tab-Klick) muss diff_pct < 10%.

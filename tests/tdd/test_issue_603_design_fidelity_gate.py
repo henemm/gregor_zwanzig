@@ -76,6 +76,7 @@ class TestAC1DiffToolProducesReport:
             "Implementierung fehlt noch (erwartetes RED)"
         )
 
+    @pytest.mark.staging
     def test_diff_tool_exit_code_zero_or_one_only(self):
         """
         GIVEN: Soll-PNG für G-compare-uebersicht-kacheln existiert
@@ -95,6 +96,7 @@ class TestAC1DiffToolProducesReport:
             f"stderr: {result.stderr[:500]}"
         )
 
+    @pytest.mark.staging
     def test_diff_tool_produces_json_report(self):
         """
         GIVEN: Tool läuft mit --screen G-compare-uebersicht-kacheln
@@ -125,6 +127,7 @@ class TestAC1DiffToolProducesReport:
         assert "screen" in report, f"screen fehlt in Report: {report}"
         assert report["screen"] == PILOT_SCREEN
 
+    @pytest.mark.staging
     def test_diff_tool_produces_diff_image(self):
         """
         GIVEN: Tool läuft erfolgreich
@@ -148,6 +151,7 @@ class TestAC1DiffToolProducesReport:
         )
         assert diff_png.stat().st_size > 1000, "Diff-PNG ist leer / zu klein"
 
+    @pytest.mark.staging
     def test_diff_tool_exit_matches_passed_field(self):
         """
         GIVEN: JSON-Report mit passed=true/false

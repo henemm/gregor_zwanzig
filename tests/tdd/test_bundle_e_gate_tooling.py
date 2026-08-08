@@ -134,6 +134,7 @@ def test_ac3_docs_only_scope_skips_despite_stale_attestation(selftest, tmp_path)
     assert rc == 0
 
 
+@pytest.mark.live
 def test_ac4_backend_scope_does_not_early_skip(selftest, tmp_path):
     """AC-4: scope=backend skippt NICHT vorzeitig; nicht-existenter Pfad trifft
     den regulären 'Attestation fehlt'-Pfad (return 0) — beweist, dass der
