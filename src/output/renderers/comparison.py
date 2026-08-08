@@ -34,6 +34,9 @@ from output.renderers.email.compare_html import (
     _units_legend_text, _visible_hour_metrics, derive_row_labels,
     loc_hail_flag, location_render_order,
 )
+from output.renderers.email.outlook_state_hint import (
+    OutlookState, render_outlook_state_plain,
+)
 from output.renderers.email.undelivered_hint import (
     has_undelivered, render_undelivered_plain,
 )
@@ -281,7 +284,16 @@ def render_comparison_text(
             _build_location_outlook_rows(loc_result, outlook_metrics)
             if outlook_enabled and loc_result.outlook_hourly_data else []
         )
-        if not have_hourly and not outlook_rows:
+        # Fix #1505 (AC-4): bei eingeschaltetem Ausblick ohne Zeilen (weder
+        # Rohdaten noch etwas nach der Metrik-Filterung) stand hier bisher
+        # NICHTS -- der Ort fiel unten sogar ganz aus dem Abschnitt. Jetzt
+        # tritt derselbe benannte Zustand an die Stelle wie im HTML-Teil
+        # (geteilter Baustein aus #1486, keine zweite Formulierung).
+        outlook_state_text = (
+            render_outlook_state_plain(OutlookState.UNAVAILABLE)
+            if outlook_enabled and not outlook_rows else None
+        )
+        if not have_hourly and not outlook_rows and not outlook_state_text:
             continue
         # Issue #1378 (AC-3): dieselbe Ortszeit-Auflösung wie im HTML-Pfad --
         # der Pflicht-Validator liest nur HTML, der Klartext braucht die
@@ -295,9 +307,12 @@ def render_comparison_text(
         # abgeschaltetem Stundenverlauf also der des Ausblicks, nicht der
         # ungenutzten `hourly_data` (seit #1366/9ae845d8 ein realer Fall).
         _points = loc_result.hourly_data if have_hourly else loc_result.outlook_hourly_data
-        _ref = _points[0].ts
+        # Fix #1505: ohne jeden Datenpunkt (nur Zustandstext) gibt es keinen
+        # Referenzzeitpunkt -- dann steht der Ortsname ohne angeschriebene
+        # Zeitbasis da, statt eine erfundene zu behaupten (oder zu crashen).
         section_lines.append(
-            f"{loc_result.location.name} ({tz_abbrev(_ref, tz)})"
+            f"{loc_result.location.name} ({tz_abbrev(_points[0].ts, tz)})"
+            if _points else loc_result.location.name
         )
         if have_hourly:
             for dp in loc_result.hourly_data:
@@ -332,6 +347,11 @@ def render_comparison_text(
                 outlook_rows, show_acc=False, metrics=outlook_metrics,
                 heading=OUTLOOK_HEADING, show_name=False,
             ).strip("\n"))
+        elif outlook_state_text:
+            # Fix #1505 (AC-4): benannter Zustand an derselben Stelle wie
+            # sonst die Ausblick-Tabelle, unter derselben Ueberschrift.
+            section_lines.append(OUTLOOK_HEADING)
+            section_lines.append(f"   {outlook_state_text}")
         section_lines.append("")
 
     if section_lines:
