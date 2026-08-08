@@ -1,5 +1,7 @@
 # ensures the 'src' directory is on sys.path for imports like 'from app import ...'
+import json
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -35,6 +37,58 @@ def _use_fixture_provider(request):
 
 
 _REPO_DATA_USERS = root / "data" / "users"
+
+# Issue #1624: die frueher unter ``<repo>/data/users`` COMMITTETEN
+# Referenz-Fixtures (gr221-mallorca, validator-issue110, GPX-Dateien) sind
+# nach ``tests/fixtures/data_root/users/...`` umgezogen -- ``data/`` im
+# Arbeitsbaum muss vollstaendig UNTRACKED bleiben (der Prod-Deploy scheiterte
+# an genau diesen 13 getrackten Dateien: ``git stash create``/``reset
+# --hard`` konnten sie wegen abweichender Verzeichnis-Rechte nicht
+# handhaben; ``data/users/*`` ist seit #1602 ohnehin gitignored).
+_REAL_DATA_FIXTURE_SRC = root / "tests" / "fixtures" / "data_root"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _materialize_real_data_root_fixtures() -> None:
+    """Rematerialisiert die umgezogenen Referenz-Fixtures additiv (nie
+    ueberschreibend) in den echten, gitignoreten ``<repo>/data/users``-Baum.
+
+    ``@pytest.mark.real_data_root``-Tests (und mehrere Alt-Tests mit
+    hartkodierten ``Path("data/users")``-Referenzen, u.a.
+    ``test_alert_rules_model.py``, ``test_gpx_proxy.py``) lesen bewusst den
+    ECHTEN Baum -- diese Session-Fixture stellt sicher, dass die Dateien dort
+    trotz des Umzugs weiterhin physisch vorhanden sind. Laeuft als
+    autouse-Session-Fixture in der ROOT-conftest, damit sie garantiert vor
+    dem allerersten Test der gesamten Suite fertig ist (auch fuer
+    tests/tdd/ und tests/unit/, nicht nur tests/integration/).
+
+    Zusaetzlich additiv gespiegelt: ``briefings/<id>.json`` aus jeder
+    ``trips/<id>.json`` (Issue #1250 Scheibe 7a Cutover, ADR-0023) --
+    ``load_trip``/``load_all_trips``/``get_briefings_dir`` lesen
+    ausschliesslich ``briefings/``, nie ``trips/`` direkt. Ersetzt die
+    fruehere, gleichwertige Fixture in ``tests/integration/conftest.py``
+    (deren Quell-Glob nach dem Umzug leer gelaufen waere).
+    """
+    for src_file in sorted(_REAL_DATA_FIXTURE_SRC.rglob("*")):
+        if not src_file.is_file():
+            continue
+        target = root / "data" / src_file.relative_to(_REAL_DATA_FIXTURE_SRC)
+        if target.exists():
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src_file, target)
+
+    for trips_json in sorted(_REPO_DATA_USERS.glob("*/trips/*.json")):
+        briefings_dir = trips_json.parent.parent / "briefings"
+        briefings_target = briefings_dir / trips_json.name
+        if briefings_target.exists():
+            continue
+        trip = json.loads(trips_json.read_text(encoding="utf-8"))
+        trip.setdefault("kind", "route")
+        briefings_dir.mkdir(parents=True, exist_ok=True)
+        briefings_target.write_text(
+            json.dumps(trip, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
 
 
 def _snapshot_repo_data_users() -> dict[str, int]:
@@ -72,6 +126,12 @@ def _isolate_data_root(request, tmp_path_factory):
 
     Tests marked ``@pytest.mark.real_data_root`` or ``@pytest.mark.live``
     opt out — they deliberately read/write the real tree (contract tests).
+    Issue #1624: die dafuer benoetigten, frueher direkt hier committeten
+    Referenz-Fixtures (gr221-mallorca, validator-issue110, GPX-Dateien) sind
+    nach ``tests/fixtures/data_root`` umgezogen (``data/`` bleibt so
+    vollstaendig untracked) und werden von der Session-Fixture
+    ``_materialize_real_data_root_fixtures`` oben additiv wieder in diesen
+    Baum kopiert -- fuer den echten Baum selbst aendert sich dadurch nichts.
 
     Issue #1265 Teil C (Verursacher-Befund): die Redirect-Fixture allein
     schützt nur Code-Pfade, die tatsächlich über ``app.loader`` gehen --

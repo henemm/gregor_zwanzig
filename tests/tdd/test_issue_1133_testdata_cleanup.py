@@ -237,6 +237,13 @@ def test_ac2_marked_test_opts_out_of_data_root_override(tmp_path):
     Parameter heissen `request` und `tmp_path_factory`; die Fixture setzt
     `loader._DATA_ROOT` NICHT, wenn `request.node.get_closest_marker(
     "real_data_root")` einen Treffer liefert.
+
+    Issue #1624: dieser Vertrag gilt unveraendert fort. Die frueher hier
+    direkt committeten Referenz-Fixtures (gr221-mallorca, validator-issue110)
+    sind nach tests/fixtures/data_root umgezogen und werden von der
+    Session-Fixture ``_materialize_real_data_root_fixtures`` (tests/
+    conftest.py) additiv wieder in den echten Baum kopiert -- fuer diesen
+    Opt-out-Vertrag selbst aendert sich dadurch nichts.
     """
     import app.loader as loader
 
