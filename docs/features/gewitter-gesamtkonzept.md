@@ -96,6 +96,8 @@ eine Stufe und nimmt dann **das schärfste**. Sind alle leer, ist das Ergebnis l
 - **Zwei von acht Schwellen sind interpoliert**, nicht publiziert (0,075 und 20). Das ist
   faktisch Eigenkalibrierung im Bestand — dieselbe Sache, die als Verbot die Schließung von
   #1456 begründet hat. Beide stehen ehrlich als Kommentar im Code.
+  ⇒ Für die LPI-Zwischenstufe gibt es inzwischen Ersatz: **30 J/kg ist publiziert**
+  (s. 3.5b), die interpolierte 20 kann entfallen.
 - **CAPE ist gedeckelt, weil die Gegengröße fehlt.** Viel Energie unter einem Deckel heißt: es
   passiert nichts. Da die Konvektionshemmung nie abgerufen wurde, wird CAPE vorsorglich nie
   höher als „leicht" gewertet. Das ist eine **Notbremse, kein Modell**.
@@ -104,7 +106,7 @@ eine Stufe und nimmt dann **das schärfste**. Sind alle leer, ist das Ergebnis l
 
 | Signal | Nutzen | Belegte Schwelle? | Verfügbar? |
 |---|---|---|---|
-| **Konvektionshemmung** `cin_ml` | macht CAPE erst verwertbar, ersetzt die Deckelung | ❌ keine publizierte Paarungsregel | ✅ ICON-D2 + ICON-EU |
+| **Konvektionshemmung** `cin_ml` | macht CAPE erst verwertbar, ersetzt die Deckelung | ✅ **50 J/kg belegt** (s. 3.5) | ✅ ICON-D2 + ICON-EU |
 | **Superzellen-Index** `sdi_2` | einziges Signal für die gefährlichste Gewitterform | ✅ **DWD: 0,0003 / 0,003 1/s** | ✅ nur ICON-D2 |
 | **Updraft-Helizität** `uh_max*` | Rotationsstärke | ❌ US-Werte 2019 vom Betreiber selbst verworfen | ✅ nur ICON-D2, drei Schichten |
 | **Blitzpotenzial-Maximum** `lpi_max` | Spitzenwert statt Momentanwert | wie LPI | ✅ ICON-D2 |
@@ -124,6 +126,71 @@ Superzellenlagen erreicht wird, ist offen. Zudem nennt der DWD den Index selbst 
 (2,8 km) — die Übertragung auf ICON-D2 (2,2 km, feiner) ist plausibel, aber nicht validiert.
 
 ⇒ Deshalb: **erst Felder befüllen und mitlaufen lassen, dann einstufen.** Nicht umgekehrt.
+
+### 3.5 Die CAPE-Deckelung ist belegt ersetzbar (Recherche 2026-08-08)
+
+Die heutige Notbremse („CAPE eskaliert nie über *leicht*") existiert nur, weil uns die
+Gegengröße fehlt. Für die CIN-Grenze gibt es einen über mehrere unabhängige Quellen
+konsistenten Korridor, darunter zwei Primärquellen:
+
+| Quelle | Aussage | Kategorie |
+|---|---|---|
+| **Penn State / COMET-Lehrmaterial** | „rank CIN values between 0 and minus 25 … as **weak** inhibition" · „between minus 25 and minus 50 … **moderate**" · „minus 50 … minus 100 …, think **large** inhibition" | belegt |
+| **SPC (NOAA)**, STP-Formel | CIN-Term `((mlCIN + 200) / 150)`, gedeckelt: bei CIN schwächer als **−50** kein Malus, bei **−200** fällt der Beitrag auf **null** | belegt |
+| **SPC**, Effective Inflow Layer | Schichten mit CIN unter **−250 J/kg** fallen ganz aus der Betrachtung | belegt |
+| **ECMWF** Forecast User Guide | ab **50 J/kg** wird CAPE auf Karten grau maskiert — eine **Darstellungs**schwelle, keine Kausalregel | belegt |
+| **DWD** | „Je größer die CIN-Werte sind, desto unwahrscheinlicher ist die Auslöse von Gewittern" — **ohne Zahl** | qualitativ |
+
+⇒ Belegte Eckpunkte sind **−25 / −50 / −100 / −200 J/kg**. Vorschlag für die Paarung:
+schwächer als −25 → CAPE zählt voll · −25 bis −50 → leicht gedämpft · −50 bis −100 → stark
+gedämpft, nur mit kräftigem Auslöser · unter −100 → kein Beitrag.
+
+🔴 **Korrektur einer verbreiteten Angabe:** Die kursierenden Werte „CIN > −10 = frei
+auslösbar" und „genau −50 als Schaltschwelle" sind **so nicht belegt** — sie klingen präzise,
+haben aber keine Quelle. Die tatsächlich belegten Grenzen sind die vier oben.
+
+🔴 **Gegenbefund, der mitgeschrieben gehört:** Rasmussen & Blanchard (1998), die
+meistzitierte Klimatologie dazu, findet **CIN als eigenständigen Schwere-Prädiktor nur schwach**
+— der stärkste Diskriminator war die LCL-Höhe. Für unseren Zweck trägt es trotzdem: Wir
+brauchen CIN als **Auslöse-Filter** („wird die Energie überhaupt abgerufen"), nicht als
+Schweremaß. Diese Unterscheidung muss in der Spec stehen, sonst wird daraus stillschweigend
+ein Schwere-Signal.
+
+### 3.5b Zwei weitere Leitern lassen sich belegen statt raten
+
+**LPI — die interpolierte Zwischenstufe wird überflüssig.** Bína et al. (Atmospheric Research
+2022 und ASR/Copernicus 2022, COSMO-D2, 2,2 km — dieselbe Modellfamilie wie ICON-D2):
+
+> „for 2-moment cloud microphysics a skilful forecast was reached at scales around 90 km for
+> LPI thresholds **30, 40 and 50 J/kg**" · als Nachweisschwelle: **„LPI > 1 J/kg"**
+
+⇒ Statt der heutigen Leiter **5 / 20 / 50** (mit interpolierter 20) ist **1 / 30 / 50**
+durchgehend belegt. Zu prüfen: ob die untere Grenze auf 1 sinken soll (mehr Meldungen) oder
+die operative DWD-Zahl 5 bleibt.
+
+**CAPE — es gibt eine echte Leiter, wir nutzen nur eine Stufe.** Mehrfach unabhängig bei NWS
+und SPC: „Weak instability: less than 1000 J/kg · Moderate: 1000 to 2500 · Strong: 2500–4000 ·
+Extreme: greater than 4000". Heute wertet das Produkt CAPE nur binär (≥ 1000 → „leicht",
+gedeckelt). Zusammen mit der Hemmung aus 3.5 könnte CAPE eine vollwertige, belegte Leiter
+tragen — **1000 / 2500 / 4000 J/kg**.
+
+### 3.6 Wo es weiterhin nichts gibt: Blitzdichte
+
+Für die Blitz**dichte pro km²** — die Korsika-Größe — existiert **keine publizierte
+Stufenskala** (mehrfach gesucht, deutsch und englisch). Gefunden wurden nur:
+zellbezogene Blitzraten (Lightning-Jump-Verfahren: 5/10/15 Blitze/min, aber **relativ** zum
+Zellverlauf, keine feste Stufe) und die LAL-Skala der US-Feuerwehrbehörden (1–2 / 2–3 / > 3
+Erdblitze/min) — Beobachtungsgrößen aus dem Feuerwetter-Kontext, nicht auf Modell-Blitzdichte
+je km² übertragbar.
+
+Auch die **Wetterdienste selbst quantifizieren Blitz nicht**: Der DWD führt Gewitter in seinen
+Warnkriterien nur qualitativ als „elektrische Entladung"; die Stufen 2–4 hängen an Böen
+(105–140 km/h), Starkregen (25–40 l/m²/h) und Hagelkorngröße — **keine Blitzrate**. Météo-France
+veröffentlicht seine Vigilance-Kriterien gar nicht.
+
+⇒ Die heutigen Blitzdichte-Schwellen (0,003 / 0,015 / 0,075) bleiben teilweise interpoliert.
+Das ist keine Nachlässigkeit, sondern der Stand der Veröffentlichungen — es muss aber als
+solches gekennzeichnet bleiben.
 
 ---
 
@@ -222,6 +289,30 @@ Lagen — was mit dem laufenden Abruf (Rang 4) ohnehin anfällt.
 sondern aus gesammelten Daten geeicht. Bis dahin darf die ICON-EU-Stufe nicht so behandelt
 werden, als wäre sie mit der ICON-D2-Stufe gleichbedeutend.
 
+### 4.5 Die Lösung steht bei den Wetterdiensten — Bedeutung harmonisieren, nicht Zahlen
+
+Genau dieses Problem haben die europäischen Wetterdienste bei ihren Warnstufen, und sie lösen
+es nicht durch einheitliche Zahlen. EMMA/Meteoalarm-Konferenzpapier (ECMWF 2008, ZAMG-Autoren):
+
+> „4-level matrix for impact, advice, return periods and meteorological thresholds.
+> **The meteorological thresholds differ from region to region due to the climatology of
+> extreme events.**"
+
+Harmonisiert sind **Farbcode, Bedeutungsebene und Verhaltensempfehlung**. Die Zahlenschwellen
+legt jeder nationale Dienst selbst fest, kalibriert über **Wiederkehrperioden** auf seine
+Klimatologie. Unabhängig bestätigt die LPI-Verifikationsliteratur dasselbe Prinzip für unsere
+Größe: die verlässliche LPI-Schwelle hängt von Auflösung und akzeptiertem räumlichen
+Toleranzradius ab (ASR 2022, COSMO-D2 2,2 km — dort **LPI > 1 J/kg** als Nachweisschwelle).
+
+⚠️ **Grenze dieses Vorbilds:** Übernommen wird das **Prinzip**, nicht die Methode. Die
+Wetterdienste stufen **wirkungsbasiert** ein (Böen in km/h, Regen in l/m², Hagelkorngröße) und
+kalibrieren über Wiederkehrperioden extremer Ereignisse. Wir stufen **modellparameterbasiert**
+ein. Eine „wie der DWD"-Rechtfertigung für unsere vier Stufen gibt es also nicht — der DWD
+stuft nach Wirkung, nicht nach CAPE oder Blitzpotenzial.
+
+⇒ **Leitlinie: je Quelle eine eigene Schwellenleiter, geeicht auf dieselbe Bedeutung.** Nicht
+dieselbe Zahl überall. Das ist kein Notbehelf, sondern der Stand der Praxis.
+
 **Optionen** (Entscheidung offen, s. Abschnitt 10):
 - **(a) Hinnehmen und benennen** — die Stufe bleibt „bestes verfügbares Urteil vor Ort", und der
   Vergleich weist aus, dass die Grundlage je Ort verschieden ist.
@@ -229,6 +320,9 @@ werden, als wäre sie mit der ICON-D2-Stufe gleichbedeutend.
   (praktisch: nur der Wettercode). Vergleichbar, aber deutlich schwächer.
 - **(c) Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht (z. B. „hoch,
   Blitzdichte" vs. „hoch, Blitzpotenzial+Superzelle").
+- **(d) Je Quelle eichen** *(neu, nach dem Meteoalarm-Vorbild)* — eigene Schwellen je
+  Modell/Auflösung, kalibriert auf gleiche Überschreitungshäufigkeit. Braucht mehrere Wochen
+  Daten (fällt mit Rang 4 ohnehin an) und ist mit (c) kombinierbar.
 
 ---
 
