@@ -49,33 +49,21 @@ node_modules/
 # Data (runtime / user-uploaded)
 data/cache/
 data/*.gpx
-# Non-default users: real user data, not tracked
-data/users/henning/
-data/users/default/user.json
-data/users/default/weather_snapshots/
-data/users/default/alert_throttle.json
-data/users/default/alert_log.json
-data/users/default/alert_daily_count.json
-data/users/default/alert_state/
-data/users/default/radar_alert_throttle.json
-data/users/default/command_log.json
-data/users/default/password_reset.json
-data/users/default/gpx/
-data/users/default/locations/
-data/users/__test_*/
-data/users/test_*/
-data/users/csrf_test_*/
-data/users/val_test_*/
-# E2E-Test-Trips (Playwright erzeugt sie via request.post, kein Repo-Inhalt)
-data/users/default/trips/e2e-*.json
-data/users/default/trips/hero-nb-*.json
-data/users/default/trips/nb-*.json
-data/users/valtest_*/
-data/users/validator_test/
-data/users/design_*/
-data/users/usability-test/
-data/users/viz_test/
-data/users/admin/
+# Nutzerdaten (Issue #1602): REGEL statt Aufzählung.
+#
+# Bis 2026-08-08 standen hier 26 einzelne Zeilen, über vier Stellen der Datei
+# verteilt und nach jedem Vorfall nachgezogen. Damit war jeder NEUE Nutzer und
+# jede neue Dateiart standardmäßig NICHT ausgenommen: `data/users/steffi/`
+# fehlte, also lagen Kennwort-Hash, Mailadresse und Telefonnummer einer realen
+# Person ungeschützt im Arbeitsbaum eines öffentlichen Repos. Nur weil niemand
+# je ein pauschales `git add` ausgeführt hat, ist nichts nach außen gelangt.
+#
+# `data/users/` sind Laufzeitdaten des Servers und gehören grundsätzlich nicht
+# ins Repo. Die wenigen bewusst versionierten Fixtures (13 Dateien unter
+# default/gpx, default/trips/gr221-mallorca.json und validator-issue110/) sind
+# bereits getrackt und bleiben es — .gitignore wirkt nicht auf getrackte
+# Dateien. Eine neue Fixture aufzunehmen erfordert bewusst `git add -f`.
+data/users/*
 
 # Go binaries
 gregor-api
@@ -102,8 +90,7 @@ test-results/
 .env.backup.*
 .env.bak-*
 
-# bug89 test sandbox data
-data/users/__*/
+# bug89 test sandbox data — durch die Regel `data/users/*` oben abgedeckt (#1602)
 *.zip
 !tests/fixtures/dpc/*.zip
 
@@ -112,15 +99,7 @@ data/users/__*/
 .claude/stop_lock.json
 data/diagnostics/
 
-# Test-Residuen: pytest-Läufe erzeugen Wegwerf-User (is_test_user_id, #1013).
-# Nie committen — echte Nutzerdaten liegen unter data/users/<user_id>/ auf dem Server.
-data/users/tdd-*/
-data/users/test*/
-data/users/tg-live-e2e/
-data/users/userA/
-data/users/userB/
-data/users/bug*/
-data/users/issue*/
-
-# S7a: briefings/ wird per-Host von der Migration befuellt (service-verwaltet), nie committet
-data/users/*/briefings/
+# Test-Residuen (pytest-Wegwerf-User, #1013) und briefings/ (per-Host von der
+# Migration befüllt, service-verwaltet): beides durch die Regel `data/users/*`
+# weiter oben abgedeckt (#1602). Die frühere Einzelaufzählung war der Grund,
+# warum echte Nutzerdaten durch das Raster fielen.
