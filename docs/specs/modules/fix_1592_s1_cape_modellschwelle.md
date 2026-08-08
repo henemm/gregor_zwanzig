@@ -214,7 +214,8 @@ Parameter mehr, kein neuer Mechanismus — wie in der Analyse vorgezeichnet).
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** neu anzulegen (nächste freie Nummer laut Index: 0048).
+- **ADR-Nr.:** **ADR-0048** — `docs/adr/0048-modellabhaengige-schwellen-statt-einer-zahl.md`,
+  Status „Akzeptiert", angelegt 2026-08-08, im Index eingetragen.
 - **Rationale:** Im gesamten Repo gibt es bisher **keine** modell-/quellenabhängige numerische
   Schwelle — weder RiskEngine noch `weather_metrics` lesen `meta.model` oder `grid_res_km` für
   Schwellenlogik. Diese Scheibe führt genau dieses Muster ein (Tabelle Modell × Gebiet statt
