@@ -3,8 +3,12 @@
 Ersetzt das generische `70-deploy`-Template des Plugins (Vercel/Heroku/AWS-Beispiele), das
 mit diesem Projekt nichts zu tun hat. Der Ablauf hier ist der einzige gueltige.
 
-**PO-Freigabe ist Pflicht:** vor Schritt 4 den Tech-Lead-Brief vorlegen und ein `go`
-abwarten. Kein Prod-Deploy ohne dieses `go`.
+**Läuft autonom, ohne Freigabe-Halt (PO-Vorgabe 2026-08-03, korrigiert 2026-08-05 via #1511).**
+Die Kette Staging-Poll → `/e2e-verify` → Schritt 4 (Prod-Deploy) → Schritt 4b (Selftest) →
+Issue-Close zieht **am Stück** durch, ohne auf ein `go` zu warten. Ein selbst formulierter
+„Tech-Lead-Brief" mit anschließender Bitte um `go` ist eine verbotene Prozessfrage, nur in
+Freitextform. Einzige erlaubte Unterbrechung: ein echtes Hard Gate scheitert (Staging-Verdict
+BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund statt weiterzumachen.
 
 ## Voraussetzungen
 
@@ -47,16 +51,6 @@ nicht.
 **Ausnahme reine Doku-/Werkzeug-Aenderungen** (nur `.md`/`docs/`/`.claude/`/`.gitignore`, kein
 Code in `src/`/`api/`/`internal/`/`frontend/`/`cmd/`): Schritt 2+3 entfaellt, Schritt 4
 ebenfalls, solange der Drift-Monitor ruhig ist. Im Zweifel trotzdem ausliefern.
-
-## Schritt 3b — Tech-Lead-Brief + PO-`go`
-
-Dem PO vorlegen, in einfacher Sprache:
-- was live geht und **was der Nutzer davon merkt** (vorher/nachher)
-- was auf Staging **tatsaechlich gesehen** wurde
-- was **ehrlich offen** bleibt und warum (SKIP-Befunde nicht verschweigen, nicht schoenreden)
-- Risiko-Einschaetzung und ob der Schritt zuruecknehmbar ist
-
-Dann `go` abwarten.
 
 ## Schritt 4 — Prod-Deploy
 
@@ -102,7 +96,9 @@ ActiveEnterTimestamp`, `/api/health`.
 
 ## Verboten
 
-- Prod-Deploy ohne PO-`go` · ohne bestandenen, frischen Nachweis fuer den Zielstand
+- Prod-Deploy ohne bestandenen, frischen Nachweis fuer den Zielstand
+- Einen eigenen Freigabe-Halt einbauen (Tech-Lead-Brief + `go` abwarten o.ae.) — die Kette
+  laeuft autonom durch, ausser ein echtes Hard Gate scheitert
 - Die Nachweis-Datei von Hand schreiben oder ihren Inhalt selbst formulieren, ohne gemessen
   zu haben
 - Den lokalen Live-Server stoppen/neu starten · in laufende Systemd-Prozesse eingreifen
