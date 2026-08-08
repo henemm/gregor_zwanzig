@@ -32,6 +32,11 @@
 	// bisherige `.v2-layout`-Grid für den Ausgabe-Teil (Reihenfolge + Vorschau).
 	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
 	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
+	// Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (nur context="route").
+	import {
+		mergeChannelLayoutsForSave, startChannelOverride, channelOverrideFromMetrics,
+		type ChannelOverride,
+	} from './weather-metrics-tab/channelMetricLayouts.ts';
 	import ThresholdMetricRow from './weather-metrics-tab/ThresholdMetricRow.svelte';
 	// Issue #1357: Auswertungswahl je Wettergroesse (Mail-Kachelzeile).
 	import AggregationMetricRow from './weather-metrics-tab/AggregationMetricRow.svelte';
@@ -224,6 +229,20 @@
 	// View-State (analog Scheibe 3a im Compare-Editor), NIE in snapshot()/isDirty.
 	let activeChannel = $state<ChannelId>('email');
 
+	// Issue #1575 Scheibe 3: kanal-eigene Auswahl/Reihenfolge/Modus. `null` =
+	// kein eigener Eintrag -> der Reiter zeigt die globale Auswahl (copy-on-write,
+	// spiegelt die Backend-Kaskade). Wird ausschliesslich in route-Codepfaden
+	// gelesen und geschrieben; der vergleich-Zweig hat eigene Handler
+	// (onCompareRemove/onCompareDndReorder/noopMode) und beruehrt das nie.
+	let channelBuckets = $state<Record<ChannelId, ChannelOverride | null>>({
+		email: null, telegram: null, sms: null,
+	});
+
+	// Effektive Sicht eines Kanals: eigener Eintrag, sonst die globale Auswahl.
+	function channelView(ch: ChannelId): ChannelOverride {
+		return channelBuckets[ch] ?? { buckets, friendlyMap };
+	}
+
 	// AC-2 Diff-Highlight: 2,5s Aufleuchten nach jeder Änderung.
 	let highlight: Highlight | null = $state(null);
 	let highlightTimer: ReturnType<typeof setTimeout> | null = null;
@@ -246,8 +265,11 @@
 		};
 	}
 
-	function applyDiff(nextCols: string[], nextMode: Record<string, boolean>, nextPresetId: string) {
-		const prev = prevSnapshot();
+	function applyDiff(
+		nextCols: string[], nextMode: Record<string, boolean>, nextPresetId: string,
+		prevOverride: WeatherSnapshot | null = null,
+	) {
+		const prev = prevOverride ?? prevSnapshot();
 		const next: WeatherSnapshot = {
 			columns: nextCols,
 			mode: Object.fromEntries(nextCols.map(id => [id, nextMode[id] === true ? 'indicator' : 'raw'])) as Record<string, 'raw' | 'indicator'>,
@@ -285,16 +307,21 @@
 	// Issue #1357: aggregationsMap gehoert in Dirty-Vergleich UND Snapshot — sonst
 	// bleibt die Auswertungswahl unspeicherbar (der Dirty-Check sieht nur, was im
 	// Snapshot steht).
+	// Issue #1575 Scheibe 3: channelBuckets gehoert in Dirty-Vergleich UND
+	// Snapshot — sonst bliebe ein Kanal-Edit unspeicherbar. Der reine
+	// Kanal-WECHSEL veraendert channelBuckets nicht und bleibt damit clean
+	// (AC-1); erst ein Edit-Callback legt einen Eintrag an (AC-2).
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, aggregationsMap, reportConfig, officialAlertsEnabled }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, aggregationsMap, reportConfig, officialAlertsEnabled, channelBuckets }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
 		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean,
-		ag: Record<string, string[]> = aggregationsMap
+		ag: Record<string, string[]> = aggregationsMap,
+		cb: Record<ChannelId, ChannelOverride | null> = channelBuckets
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, aggregationsMap: ag, reportConfig: rc ?? {}, officialAlertsEnabled: oae });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, aggregationsMap: ag, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb });
 	}
 
 	function allCatalogIds(): string[] {
@@ -376,7 +403,16 @@
 		// Issue #774: reportConfig in snapshot aufnehmen.
 		smsThresholds = thrMap;
 		aggregationsMap = aggMap;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, aggMap);
+		// Issue #1575 Scheibe 3: gespeicherte Kanal-Layouts zurueckbauen, damit ein
+		// editierter Reiter nach dem Reload seine eigene Auswahl zeigt.
+		const savedLayouts = trip!.display_config?.channel_layouts;
+		const cb: Record<ChannelId, ChannelOverride | null> = { email: null, telegram: null, sms: null };
+		for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
+			const layout = savedLayouts?.[ch];
+			if (layout) cb[ch] = channelOverrideFromMetrics(layout, allCatalogIds(), fMap);
+		}
+		channelBuckets = cb;
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, aggMap, cb);
 	}
 
 	// Issue #1332 F003 (Fix-Loop 2): eigener, idempotenter Ladepfad fuer die
@@ -590,11 +626,31 @@
 		pendingPreset = null;
 	}
 
+	// Issue #1575 Scheibe 3: die drei Edit-Callbacks der Reihenfolge-Karte
+	// (Modus, Entfernen, Drag&Drop) wirken auf den AKTIVEN Kanal. Beim ersten
+	// Edit entsteht der Eintrag als Kopie der globalen Auswahl (copy-on-write).
+	function editActiveChannel(
+		mutate: (view: ChannelOverride) => ChannelOverride,
+	) {
+		const base = channelBuckets[activeChannel] ?? startChannelOverride(buckets, friendlyMap);
+		const prev: WeatherSnapshot = {
+			columns: [...base.buckets.primary],
+			mode: Object.fromEntries(
+				base.buckets.primary.map((id) => [id, base.friendlyMap[id] === true ? 'indicator' : 'raw'])
+			) as Record<string, 'raw' | 'indicator'>,
+			presetId: selectedTemplate,
+		};
+		const next = mutate(base);
+		applyDiff(next.buckets.primary, next.friendlyMap, selectedTemplate, prev);
+		channelBuckets = { ...channelBuckets, [activeChannel]: next };
+	}
+
 	function onMode(id: string, useIndicator: boolean) {
 		userTouched = true;
-		const newFriendly = { ...friendlyMap, [id]: useIndicator };
-		applyDiff(buckets.primary, newFriendly, selectedTemplate);
-		friendlyMap = newFriendly;
+		editActiveChannel((view) => ({
+			buckets: view.buckets,
+			friendlyMap: { ...view.friendlyMap, [id]: useIndicator },
+		}));
 		scheduleAutoSave();
 	}
 
@@ -621,12 +677,13 @@
 		scheduleAutoSave();
 	}
 
-	// Aus Abschnitt 3 entfernen (→ off).
+	// Aus Abschnitt 3 entfernen (→ off) — kanal-eigen (#1575 Scheibe 3).
 	function onRemove(id: string) {
 		userTouched = true;
-		const newBuckets = move(buckets, id, 'primary', 'off');
-		applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
-		buckets = newBuckets;
+		editActiveChannel((view) => ({
+			buckets: move(view.buckets, id, 'primary', 'off'),
+			friendlyMap: view.friendlyMap,
+		}));
 		if (selectedTemplate) selectedTemplate = '';
 		scheduleAutoSave();
 	}
@@ -636,9 +693,10 @@
 	// aus (fromId, toId) entfaellt.
 	function onDndReorder(newOrder: string[]) {
 		userTouched = true;
-		const newBuckets = { ...buckets, primary: newOrder };
-		applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
-		buckets = newBuckets;
+		editActiveChannel((view) => ({
+			buckets: { ...view.buckets, primary: newOrder },
+			friendlyMap: view.friendlyMap,
+		}));
 		scheduleAutoSave();
 	}
 
@@ -656,6 +714,9 @@
 			reportConfig = snap.reportConfig ?? {};
 			// Issue #1117: officialAlertsEnabled wiederherstellen (Konsistenz-Vollständigkeit).
 			officialAlertsEnabled = snap.officialAlertsEnabled ?? true;
+			// Issue #1575 Scheibe 3: Kanal-Eintraege mit zuruecknehmen, sonst bleibt
+			// der Tab nach dem Verwerfen dirty.
+			channelBuckets = snap.channelBuckets ?? { email: null, telegram: null, sms: null };
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
@@ -688,9 +749,23 @@
 	}
 
 	function buildWeatherPayload() {
+		// Issue #1575 Scheibe 3: `config_merge.go` ersetzt `channel_layouts`
+		// komplett — deshalb geht IMMER der vollstaendige Stand aller bereits
+		// editierten Kanaele mit, nicht nur der aktive (AC-3, Datenverlust-Schutz).
+		const override = channelBuckets[activeChannel];
+		const nextLayouts = mergeChannelLayoutsForSave(
+			trip!.display_config?.channel_layouts,
+			activeChannel,
+			override
+				? buildWeatherConfigMetrics(
+					override.buckets, override.friendlyMap, horizonsMap, catalog, aggregationsMap,
+				)
+				: null,
+		);
 		return {
 			...(trip!.display_config ?? {}),
 			metrics: buildWeatherMetricsList(),
+			channel_layouts: nextLayouts,
 			preset_name: selectedTemplate || undefined,
 			telegram_kurzform: telegramKurzform,
 		};
@@ -1188,18 +1263,21 @@
 			     Metriken-Zählung, sonst weicht der Overflow-Chip von Cut-Line
 			     und Vorschau-Hinweis ab. -->
 			{#if sections.includes('reihenfolge')}
+			<!-- Issue #1575 Scheibe 3: Reihenfolge-Karte UND Vorschau zeigen die
+			     EFFEKTIVE Auswahl des aktiven Kanals (eigener Eintrag, sonst die
+			     globale) — ohne das bliebe der Reiter eine reine Vorschau-Umschaltung. -->
 			<LayoutTab
 				context="route"
 				bind:channel={activeChannel}
-				colCount={buckets.primary.length}
+				colCount={channelView(activeChannel).buckets.primary.length}
 				subjectLabel="Metriken"
 			>
 				{#snippet editor({ channel })}
 					<Card padding={0}>
 						<WeatherV2Reihenfolge
-							primaryColumns={buckets.primary}
+							primaryColumns={channelView(channel).buckets.primary}
 							{metricById}
-							{friendlyMap}
+							friendlyMap={channelView(channel).friendlyMap}
 							activeChannel={channel}
 							{highlight}
 							onRemove={onRemove}
@@ -1210,9 +1288,9 @@
 				{/snippet}
 				{#snippet preview({ channel })}
 					<WeatherV2MailPreview
-						primaryColumns={buckets.primary}
+						primaryColumns={channelView(channel).buckets.primary}
 						{metricById}
-						{friendlyMap}
+						friendlyMap={channelView(channel).friendlyMap}
 						{telegramKurzform}
 						{highlight}
 						{channel}
@@ -1469,9 +1547,9 @@
 		<Sheet open={mailSheetOpen} onClose={() => (mailSheetOpen = false)} title="So kommt es an">
 			<div data-testid="mobile-mail-sheet" style="padding: 4px 16px 24px;">
 				<WeatherV2MailPreview
-					primaryColumns={buckets.primary}
+					primaryColumns={channelView(activeChannel).buckets.primary}
 					{metricById}
-					{friendlyMap}
+					friendlyMap={channelView(activeChannel).friendlyMap}
 					{telegramKurzform}
 					{highlight}
 					channel={activeChannel}
