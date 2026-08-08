@@ -49,6 +49,13 @@
 # validator.env bzw. importierbares Hook-Plugin voraus — nur auf dem
 # Server gegeben, also Staging-Lane).
 #
+# Produkt-Bug: Service liefert korrekt no_weather, Router hat den 422-
+# Zweig seit #1325. Das Rot war Test-Isolation: (a) geteilter Wetter-Cache
+# bediente AC-3 aus AC-1s Eintrag (gleiches geklemmtes Fenster) →
+# reset_shared_weather_cache_for_tests() als autouse-Fixture (Muster:
+# test_compare_alert_day_window); (b) Router baut Settings() aus der
+# Umgebung → Dummy-SMTP-Env (Muster: Batch 4).
+#
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
 # verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
@@ -85,4 +92,3 @@ tests/tdd/test_telegram_kurzstil_compare_official_alert.py
 tests/tdd/test_telegram_kurzstil_parse_mode.py
 tests/tdd/test_telegram_kurzstil_trip_alert.py
 tests/tdd/test_telegram_kurzstil_trip_briefing.py
-tests/tdd/test_trip_report_test_send_past_stage_clamp.py

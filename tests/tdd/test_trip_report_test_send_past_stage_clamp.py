@@ -151,6 +151,20 @@ def _patch_email_transport(monkeypatch) -> None:
     )
 
 
+@pytest.fixture(autouse=True)
+def _isolated_weather_cache():
+    """#1557: Der geteilte Wetter-Cache matcht ueber „Fenster deckt ab" —
+    ohne Reset bedient AC-3 (genuiner Ausfall) still aus dem Cache-Eintrag,
+    den AC-1 fuer dasselbe geklemmte Fenster geschrieben hat, und der Test
+    sieht 'sent' statt 'no_weather' (Muster: test_compare_alert_day_window).
+    Reset auch NACH dem Test, damit diese Datei keine spaeteren Suiten
+    desselben CI-Laufs kontaminiert."""
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+    reset_shared_weather_cache_for_tests()
+    yield
+    reset_shared_weather_cache_for_tests()
+
+
 # ---------------------------------------------------------------------------
 # AC-1: Test-Fallback-Pfad klemmt die vergangene Etappe auf heute -> "sent"
 # ---------------------------------------------------------------------------
@@ -259,6 +273,15 @@ class TestAC3GenuineNoWeatherHonestOutcome:
         user_id, trip_id, _ = past_only_trip
         _patch_provider(monkeypatch, fail_for_today=True)
         _patch_email_transport(monkeypatch)
+        # #1557: Der Router baut Settings() aus der Umgebung — ohne Host-.env
+        # (CI-Runner) ist can_send_email() False und der Request endet mit 422
+        # "SMTP not configured", BEVOR der Service die ehrliche No-Weather-
+        # Meldung liefern kann. Dummy-SMTP-Env macht den Test deterministisch
+        # (Muster: #1196 Batch 4); der echte Versand ist oben per
+        # Netzgrenze-Substitut ersetzt.
+        monkeypatch.setenv("GZ_SMTP_HOST", "test.invalid")
+        monkeypatch.setenv("GZ_SMTP_USER", "u")
+        monkeypatch.setenv("GZ_SMTP_PASS", "p")
 
         client = TestClient(app)
         resp = client.post(
