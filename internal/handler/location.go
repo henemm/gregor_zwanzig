@@ -210,6 +210,12 @@ func PatchLocationHandler(s *store.Store) http.HandlerFunc {
 			existing.GroupID = v
 		}
 
+		// Issue #1398: Kennung auf den URL-Parameter setzen, exakt wie
+		// UpdateLocationHandler. SaveLocation schreibt nach loc.ID — weicht die
+		// INNERE Kennung vom Dateinamen ab, landete die Aenderung sonst in
+		// einem FREMDEN Ort, waehrend der angefragte unveraendert blieb. Der
+		// Nutzer bekam trotzdem 200.
+		existing.ID = id
 		if err := s.SaveLocation(*existing); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
