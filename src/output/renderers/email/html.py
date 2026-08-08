@@ -41,7 +41,7 @@ from output.renderers.email.helpers import (
     build_segment_label, build_units_legend,
     derive_horizon, fmt_val, format_change_line, format_km_range,
     format_trend_tokens, pill_html,
-    render_origin_footer_html,
+    render_origin_footer_html, resolve_metric_col_order,
     shorten_stage_name, visible_cols,
 )
 # Issue #1306: Profil-Signatur (Akzentfarbe/Icon/Eyebrow) fuer den Header —
@@ -1017,16 +1017,8 @@ def render_html(
 
     # AC-3 (#911): Spalten-Reihenfolge aus konfiguriertem dc.metrics (links→rechts).
     # Zeit/Temp bleiben implizit vorn; col_order bestimmt nur Metrik-Spalten.
-    _col_order: list[str] = []
-    for _mc in dc.metrics:
-        if not _mc.enabled:
-            continue
-        try:
-            _mdef = get_metric(_mc.metric_id)
-            if _mdef.selectable:
-                _col_order.append(_mdef.col_key)
-        except KeyError:
-            continue
+    # Fix #1575 Scheibe 2: geteilter Helper mit plain.py (helpers.py).
+    _col_order = resolve_metric_col_order(dc)
     sub_header = stage_name or ""
 
     # Issue #884 AC-1: zweispaltiger Header mit G_HEADER_BG + Stats-Grid
