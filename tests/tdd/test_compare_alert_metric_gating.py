@@ -88,7 +88,10 @@ class _ScriptedSource:
     def __init__(self, values: dict[str, dict]) -> None:
         self._values = {k: dict(v) for k, v in values.items()}
 
-    def fetch(self, point_id: str, lat: float, lon: float):
+    def fetch(
+        self, point_id: str, lat: float, lon: float,
+        start_hour: int | None = None, end_hour: int | None = None,
+    ):
         return _point_full(point_id, point_id, lat, lon, **self._values.get(point_id, {}))
 
 

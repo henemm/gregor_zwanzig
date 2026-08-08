@@ -15,7 +15,7 @@ SPEC: docs/specs/modules/issue_1169_compare_alert_consumer.md
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import Settings
@@ -34,6 +34,7 @@ from services.compare_weather_snapshot import CompareWeatherSnapshotService
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.point_weather import AlertEvaluationConfig
+from services.report_config_resolver import resolve_compare_time_window
 from services.throttle_store import ThrottleStore
 
 logger = logging.getLogger("compare_alert")
@@ -42,6 +43,10 @@ logger = logging.getLogger("compare_alert")
 # expand_preset("standard") / expand_per_metric_levels(..., display_config=None).
 _STANDARD_METRIC_LEVELS: dict[str, str] = {row[0].value: "standard" for row in _PRESET_TABLE}
 _DEFAULT_COOLDOWN_MINUTES = 120
+# Issue #1584 Scheibe C: Hoechstalter des Δ-Ankers. Ohne aktuellen
+# Briefing-Stand gibt es keinen validen Vergleichspunkt (ADR-0009) — ein
+# aelterer Anker vergleicht gegen eine Vorhersage von vorgestern.
+_MAX_ANCHOR_AGE = timedelta(hours=26)
 
 # Bug #1191: Summary-Key (Compare-Editor `display_config.active_metrics`) →
 # Alarm-Katalog-ID (`display_config.metrics[].metric_id`, wie #961-Filter sie prüft).
@@ -175,8 +180,15 @@ class CompareAlertService:
                 logger.debug(f"Compare-Alert quiet hours active for preset {preset_id}")
                 continue
 
+            # Issue #1584 Scheibe C: das Tagesfenster dieses Presets kommt aus
+            # DERSELBEN Quelle wie Anzeige und Versand (ADR-0035) und wird an
+            # den Wetterabruf durchgereicht — der Frisch-Abruf bekommt damit
+            # denselben Zuschnitt wie der beim Report-Versand geschriebene
+            # Δ-Anker (`scheduler_dispatch_service._write_compare_alert_snapshots`).
+            day_window = resolve_compare_time_window(preset)
+
             triggered = self._detect_triggered_locations(
-                preset_id, location_ids, all_locations, config
+                preset_id, location_ids, all_locations, config, day_window
             )
             if not triggered:
                 continue
@@ -312,7 +324,8 @@ class CompareAlertService:
         return positions
 
     def _detect_triggered_locations(
-        self, preset_id: str, location_ids: list[str], all_locations: dict, config
+        self, preset_id: str, location_ids: list[str], all_locations: dict, config,
+        day_window: tuple[int, int],
     ) -> list[dict]:
         """Wertet jeden Ort des Presets gegen den Δ-Anker aus (Detect-Phase,
         kein Versand). Sammelt alle Treffer für den nachfolgenden gebündelten
@@ -326,7 +339,9 @@ class CompareAlertService:
                 )
                 continue
             try:
-                entry = self._evaluate_one_location(preset_id, location_id, loc, config)
+                entry = self._evaluate_one_location(
+                    preset_id, location_id, loc, config, day_window
+                )
             except Exception as e:
                 logger.error(f"Compare-Alert check failed for {preset_id}/{location_id}: {e}")
                 continue
@@ -335,13 +350,19 @@ class CompareAlertService:
         return triggered
 
     def _evaluate_one_location(
-        self, preset_id: str, location_id: str, loc, config
+        self, preset_id: str, location_id: str, loc, config,
+        day_window: tuple[int, int],
     ) -> Optional[dict]:
         """Δ-Auswertung für EINEN Ort — reine Detect-Logik ohne Versand/
         State-Update (das übernimmt `_finalize_triggered_state()` NUR für
         tatsächlich versendete Treffer, Issue #1170)."""
         cached = self._snapshot_service.load(preset_id, location_id)
-        fresh_point = self._weather_source.fetch(location_id, loc.lat, loc.lon)
+        if cached and self._anchor_too_old(cached[0], preset_id, location_id):
+            return None
+        start_hour, end_hour = day_window
+        fresh_point = self._weather_source.fetch(
+            location_id, loc.lat, loc.lon, start_hour, end_hour
+        )
 
         entity_id = f"{preset_id}:{location_id}"
         state_svc = AlertStateService(user_id=self._user_id)
@@ -362,6 +383,37 @@ class CompareAlertService:
             "state_svc": state_svc,
             "alert_state": alert_state,
         }
+
+    @staticmethod
+    def _anchor_too_old(anchor, preset_id: str, location_id: str) -> bool:
+        """Issue #1584 Scheibe C: ein Δ-Anker aelter als 26 h taugt nicht mehr
+        als Vergleichspunkt (ADR-0009 — kein Vergleichsanker ohne Briefing).
+
+        Der Anker wird dabei BEWUSST nicht neu geschrieben (das verkuerzte die
+        Δ-Wache auf den Alarm-Takt); der naechste regulaere Report-Versand
+        stellt ihn ueber `_write_compare_alert_snapshots()` wieder her. Ebenso
+        bewusst wird WEDER `alert_state` NOCH der Cooldown angefasst — sonst
+        gaelte die Aenderung als gemeldet und aus der zeitweiligen
+        Unterdrueckung wuerde Dauerstille (Spec AC-7).
+
+        Die Pruefung sitzt hier und nicht in der geteilten
+        `DeviationAlertEngine`: die Anker-Frische haengt am Versandrhythmus des
+        jeweiligen Ortsvergleichs, ist also Compare-eigene Politik (ADR-0021).
+        """
+        fetched_at = anchor.fetched_at
+        if fetched_at.tzinfo is None:
+            # Hausnorm #1345: naive Zeitstempel sind UTC.
+            fetched_at = fetched_at.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - fetched_at
+        if age <= _MAX_ANCHOR_AGE:
+            return False
+        logger.warning(
+            "Compare-Alert: Delta-Anker fuer Preset %s / Ort %s ist %.1f h alt "
+            "(Grenze %.0f h) — kein Aenderungsalarm bis zum naechsten Briefing-Versand",
+            preset_id, location_id,
+            age.total_seconds() / 3600, _MAX_ANCHOR_AGE.total_seconds() / 3600,
+        )
+        return True
 
     def _finalize_triggered_state(self, triggered: list[dict]) -> None:
         """Alert-State-Update nach ERFOLGREICHEM gebündeltem Versand — pro

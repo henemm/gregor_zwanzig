@@ -770,7 +770,10 @@ class _ScriptedComparePointSource:
     def __init__(self, precip_sum_mm: float) -> None:
         self._precip = precip_sum_mm
 
-    def fetch(self, point_id: str, lat: float, lon: float):
+    def fetch(
+        self, point_id: str, lat: float, lon: float,
+        start_hour: int | None = None, end_hour: int | None = None,
+    ):
         from services.point_weather import PointWeatherData
 
         return PointWeatherData(

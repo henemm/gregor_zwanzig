@@ -70,9 +70,21 @@ class LocationWeatherSource(Protocol):
     Künftige Consumer (z. B. Compare) implementieren dieses Protocol, um
     frische `PointWeatherData` für einen Ort zu beschaffen — analog zu dem,
     was `TripSegmentWeatherAdapter` heute für Trip-Segmente leistet.
+
+    Issue #1584 Scheibe C: `start_hour`/`end_hour` sind das Tagesfenster
+    (Ortszeit am Ort), über das die Beschaffung aggregiert. `None` heisst
+    „Default 4/19 über den geteilten Auflöser" (ADR-0035) — es gibt bewusst
+    keinen zweiten Fensterbegriff je Implementierung.
     """
 
-    def fetch(self, point_id: str, lat: float, lon: float) -> PointWeatherData:
+    def fetch(
+        self,
+        point_id: str,
+        lat: float,
+        lon: float,
+        start_hour: Optional[int] = None,
+        end_hour: Optional[int] = None,
+    ) -> PointWeatherData:
         ...
 
 

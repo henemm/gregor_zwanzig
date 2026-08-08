@@ -422,7 +422,9 @@ def send_one_compare_preset(
     write_anchor_and_reset_memory(
         user_id=user_id,
         entity_ids=[f"{preset_id}:{loc.id}" for loc in locations],
-        write_anchor=lambda: _write_compare_alert_snapshots(preset_id, locations, user_id),
+        write_anchor=lambda: _write_compare_alert_snapshots(
+            preset_id, locations, user_id, preset,
+        ),
         on_demand=on_demand,
         # Issue #1461 S3b-1: der Briefing-Zeitstempel gehoert unter die
         # Protokoll-Kennung `preset_id` — unter den Anker-Kennungen oben
@@ -472,21 +474,36 @@ def send_compare_preset(
     return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
 
 
-def _write_compare_alert_snapshots(preset_id: str, locations: list, user_id: str) -> None:
+def _write_compare_alert_snapshots(
+    preset_id: str, locations: list, user_id: str, preset: dict,
+) -> None:
     """Issue #1169 (A1/B1): schreibt je Ort den Δ-Anker-Snapshot über denselben
     `CompareLocationWeatherSource`-Impl, der auch der 15-Min-Alert-Check fuer
     das fresh-Wetter nutzt (Form-/Provider-Mismatch strukturell ausgeschlossen).
     Fail-soft je Ort — ein einzelner Fetch-Fehler darf die anderen Orte nicht
     verhindern und den bereits erfolgten Report-Versand nicht beeintraechtigen.
+
+    Issue #1584 Scheibe C: das Tagesfenster des Presets wird durchgereicht,
+    damit Anker und Frisch-Abruf (`compare_alert.py`) DENSELBEN Zuschnitt
+    haben — sonst vergleicht der Alarm zwei verschiedene Tageszeiten. Quelle
+    ist derselbe Aufloeser wie fuer Versand und Vorschau (ADR-0035).
+
+    `preset` ist bewusst PFLICHT ohne Default (Adversary-Finding F001): mit
+    `= None` waere ein vergessenes Argument still auf den Default 4/19
+    zurueckgefallen und haette den Anker wieder im falschen Fenster
+    geschrieben — dieselbe Fehlerklasse wie der stille Parameter-Rueckfall.
+    Jetzt ist es ein sofortiger `TypeError`.
     """
     from services.compare_location_weather_source import CompareLocationWeatherSource
     from services.compare_weather_snapshot import CompareWeatherSnapshotService
+    from services.report_config_resolver import resolve_compare_time_window
 
+    start_hour, end_hour = resolve_compare_time_window(preset)
     source = CompareLocationWeatherSource()
     snapshot_service = CompareWeatherSnapshotService(user_id=user_id)
     for loc in locations:
         try:
-            point = source.fetch(loc.id, loc.lat, loc.lon)
+            point = source.fetch(loc.id, loc.lat, loc.lon, start_hour, end_hour)
             snapshot_service.save(preset_id, loc.id, point)
         except Exception as e:
             logger.warning(
