@@ -72,7 +72,6 @@ import threading
 import urllib.parse
 import uuid
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 
 from app.config import Settings
 from app.loader import save_location
