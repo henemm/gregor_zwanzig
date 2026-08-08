@@ -173,7 +173,7 @@ Superzellenlagen erreicht wird, ist offen. Zudem nennt der DWD den Index selbst 
 
 ⇒ Deshalb: **erst Felder befüllen und mitlaufen lassen, dann einstufen.** Nicht umgekehrt.
 
-### 3.4b 🔴 CAPE ≠ CAPE — eine Schwelle auf unvergleichbare Werte (gemessen 2026-08-08)
+### 3.4b 🔴 CAPE ≠ CAPE — eine Schwelle auf unvergleichbare Werte (gemessen 2026-08-08, → #1592)
 
 **CAPE ist ein modellabhängiges Konstrukt, kein Messwert.** Die Modelle unterscheiden sich in
 der Parcel-Wahl: ICON liefert **Mixed-Layer**-CAPE (`CAPE_ML`), Météo-France **Most-Unstable**
@@ -678,7 +678,7 @@ CAPE-Deckelung zu ersetzen. #1531 ist damit **nicht** eine spätere Scheibe, son
 
 | Rang | Scheibe | Warum hier | Stand |
 |---|---|---|---|
-| **0** | 🔴 **CAPE-Schwelle modellabhängig machen** (3.4b) | **Laufender Fehler**: In Frankreich löst die 1000-J/kg-Schwelle **nie** aus, bei ECMWF in 65 % der Stunden. Ein Viertel der Fusionssignale ist dort tot. Unabhängig von allem anderen | sofort |
+| **0** | 🔴 **CAPE-Schwelle modellabhängig machen** (3.4b, **#1592**) | **Laufender Fehler**: In Frankreich löst die 1000-J/kg-Schwelle **nie** aus, bei ECMWF in 65 % der Stunden. Ein Viertel der Fusionssignale ist dort tot. Unabhängig von allem anderen | sofort |
 | **1** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg. Spec liegt fertig vor | Spec fertig, Freigabe offen |
 | **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ E1 |
 | **3** | **Gleiche Statistik**: `lpi_max` statt `lpi` gegen `lpi_con_max` | Nimmt allein **Faktor 5** aus dem Gebietsbruch — ohne jede Kalibrierung | ✅ E1 |
