@@ -166,6 +166,40 @@ Superzellenlagen erreicht wird, ist offen. Zudem nennt der DWD den Index selbst 
 
 ⇒ Deshalb: **erst Felder befüllen und mitlaufen lassen, dann einstufen.** Nicht umgekehrt.
 
+### 3.4b 🔴 CAPE ≠ CAPE — eine Schwelle auf unvergleichbare Werte (gemessen 2026-08-08)
+
+**CAPE ist ein modellabhängiges Konstrukt, kein Messwert.** Die Modelle unterscheiden sich in
+der Parcel-Wahl: ICON liefert **Mixed-Layer**-CAPE (`CAPE_ML`), Météo-France **Most-Unstable**
+(`CAPE_INS`), GFS **Surface-Based**. Open-Meteo reicht die native Variable je Modell durch —
+**ohne zu harmonisieren und ohne es zu dokumentieren**.
+
+Unser Code holt `cape_jkg` über Open-Meteo (`openmeteo.py:870`) und prüft es gegen **eine**
+Schwelle von 1000 J/kg (`metric_format.py::_cape_low_min_jkg`), unabhängig vom Modell. Gemessen
+am selben Ort, zur selben Stunde:
+
+| Südfrankreich | CAPE-Maximum | P90 | Anteil Stunden ≥ 1000 J/kg |
+|---|---|---|---|
+| **AROME** (unser Modell für Frankreich, Priorität 1) | 840 | 460 | **0,0 %** |
+| ICON-D2 | 1730 | 1340 | 17,3 % |
+| ICON-EU | 2560 | 1850 | 31,9 % |
+| ECMWF | 3670 | 3520 | **65,3 %** |
+| GFS | 2530 | 2130 | 40,3 % |
+
+Dieselbe Schwelle löst je nach Modell **nie** oder in **zwei Dritteln** aller Stunden aus. Auch
+auf Korsika erreicht AROME an keiner Stunde 1000 J/kg, während ICON-EU dort 29 % meldet.
+
+⇒ **Das CAPE-Signal ist in der Gewitterfusion für Frankreich faktisch wirkungslos.** Eines der
+vier Signale trägt dort nichts bei — nicht weil keine Energie da wäre, sondern weil eine
+Schwelle aus einer anderen Modellwelt angelegt wird. Das ist unabhängig von allem anderen in
+diesem Konzept zu beheben:
+
+- entweder **Perzentil- statt Absolutschwelle** („CAPE > 95. Perzentil **dieses** Modells"),
+- oder **je Modell eine eigene Schwelle**, geeicht wie in 4.5 beschrieben,
+- oder CAPE nur dort werten, wo die Schwelle belegt gilt.
+
+Dieselbe Falle gilt für jede künftige Modellgröße: **Feste Schwellen nie über Modellgrenzen
+tragen.**
+
 ### 3.5 Die CAPE-Deckelung ist belegt ersetzbar (Recherche 2026-08-08)
 
 Die heutige Notbremse („CAPE eskaliert nie über *leicht*") existiert nur, weil uns die
@@ -414,8 +448,12 @@ es überhaupt" nennt. Die drei geeichten Werte lägen zudem eng beieinander (155
 ein sicheres Zeichen, dass im dünnen Ausläufer der Verteilung gerechnet wurde.
 
 **Der Grund ist die Datenbasis, nicht das Verfahren:** eine einzelne, ruhige Wetterlage ist
-keine Klimatologie. Für eine belastbare Eichung braucht es mehrere Wochen über verschiedene
-Lagen — was mit dem laufenden Abruf (Rang 4) ohnehin anfällt.
+keine Klimatologie. Nötig ist mindestens **eine Konvektionssaison (April–September)**.
+
+🟢 **Und dafür braucht es kein eigenes Archiv:** Open-Meteo stellt mit der **Historical
+Forecast API / Previous Runs API** genau diese historischen Modellläufe bereit. Die Eichung ist
+damit **sofort rechenbar** und nicht, wie zuvor angenommen, durch wochenlanges Sammeln
+blockiert. Das verschiebt die Feineichung (Rang 7) nach vorn.
 
 ⇒ **Antwort auf E1b: ja, ICON-EU braucht eine eigene Leiter** — aber sie wird nicht geraten,
 sondern aus gesammelten Daten geeicht. Bis dahin darf die ICON-EU-Stufe nicht so behandelt
@@ -496,6 +534,17 @@ für Italien. Gewitter erscheint dort als `hazard="thunderstorm"`.
 🔴 **Für Deutschland ist kein Warndienst registriert.** Der DWD betreibt einen amtlichen
 Warndienst, wir binden ihn nicht an. Wer in Deutschland unterwegs ist, bekommt also
 Gewitterwarnungen der Behörde nicht — anders als in Frankreich, Italien und Österreich.
+
+**Der einfachste Weg dorthin (E6)** ist nicht der DWD-Einzelanschluss, sondern der
+**Meteoalarm-Feed**: EUMETNET betreibt damit die fertige EU-weite Harmonisierung — jeder
+nationale Dienst mappt seine Warnungen **selbst** auf Gelb/Orange/Rot, Awareness-Type
+**3 = Thunderstorm**. Maschinenzugang kostenlos über CAP-Feeds (`feeds.meteoalarm.org`) und die
+OGC-EDR-API (`api.meteoalarm.org`, GeoJSON, auch historisch), CC BY 4.0.
+
+⇒ **Nicht selbst mappen — das offizielle Mapping konsumieren.** Das deckt Deutschland und alle
+übrigen Zielgebiete in einem Schritt ab. Einzige Verluststelle: DWD-Stufen 3 und 4 fallen bei
+Meteoalarm beide auf Rot zusammen. Wer die feinere DWD-Abstufung braucht, nimmt zusätzlich den
+DWD-CAP-Feed (auch über BrightSky `/alerts` erreichbar).
 
 Auch hier gilt: **Die amtliche Warnung ist mit der berechneten Stufe nicht verknüpft.** In
 `official_alerts.py` (1919 Zeilen) kommt `thunder_level` kein einziges Mal vor. Die beiden
@@ -622,7 +671,8 @@ CAPE-Deckelung zu ersetzen. #1531 ist damit **nicht** eine spätere Scheibe, son
 
 | Rang | Scheibe | Warum hier | Stand |
 |---|---|---|---|
-| **1** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). Ohne diese Daten ist keine Eichung möglich. Spec liegt fertig vor | Spec fertig, Freigabe offen |
+| **0** | 🔴 **CAPE-Schwelle modellabhängig machen** (3.4b) | **Laufender Fehler**: In Frankreich löst die 1000-J/kg-Schwelle **nie** aus, bei ECMWF in 65 % der Stunden. Ein Viertel der Fusionssignale ist dort tot. Unabhängig von allem anderen | sofort |
+| **1** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg. Spec liegt fertig vor | Spec fertig, Freigabe offen |
 | **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ E1 |
 | **3** | **Gleiche Statistik**: `lpi_max` statt `lpi` gegen `lpi_con_max` | Nimmt allein **Faktor 5** aus dem Gebietsbruch — ohne jede Kalibrierung | ✅ E1 |
 | **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | ✅ E1 |
