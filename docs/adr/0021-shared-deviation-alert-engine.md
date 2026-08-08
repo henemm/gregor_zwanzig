@@ -101,3 +101,19 @@ dieser Scheibe (Scheibe 2, #1169).
   (`effective_compare_channels()`) — derselbe Resolver wie die beiden anderen
   Compare-Alarmwege. Tageslimit und Alert-Log bleiben unverändert Trip-spezifisch
   im Adapter (kein Compare-Bedarf bekannt).
+- **Nachtrag (Issue #1467 S3, 2026-08-08):** der letzte Satz des vorigen
+  Nachtrags ist überholt. Die **Tages-Obergrenze gilt seit dieser Scheibe
+  gemeinsam** für den Trip- und den Ortsvergleich-Nowcast — beide laufen über
+  den geteilten Freigabe-Baustein `services/alert_gate.py` mit der festen
+  Reihenfolge Ruhezeit → Sperrzeit → Tages-Obergrenze. Der Ortsvergleich hatte
+  bis dahin **gar keine** Tages-Obergrenze (die Bremse gegen Meldungsfluten
+  fehlte vollständig) und führte seine Sperrzeit in einer eigenen, ungesicherten
+  Datei; beides ist auf die geteilten Bausteine gezogen (`ThrottleStore`, neuer
+  Scope `compare_radar`). Das **Alert-Log** ist ebenfalls kein Trip-Sonderweg
+  mehr: beide Nowcast-Pfade protokollieren jetzt auch, WARUM eine Meldung
+  unterdrückt wurde (`REASON_QUIET_HOURS`/`REASON_COOLDOWN`/
+  `REASON_DAILY_LIMIT`) — Änderungs- und amtlicher Alarm bewusst weiterhin
+  nicht (offene Lücke O3 in `feat_1459_alert_protokoll.md`). Kein neues
+  Architekturprinzip: das bestehende aus diesem ADR wird auf den letzten noch
+  abweichenden Pfad angewandt. Details:
+  `docs/specs/modules/rework_1467_s3_nowcast.md`.

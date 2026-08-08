@@ -14,19 +14,18 @@ SPEC: docs/specs/modules/issue_1041b_compare_radar_alert_service.md
 """
 from __future__ import annotations
 
-import json
 import logging
 from datetime import datetime, timezone
 from typing import Optional
 
 from app.config import Settings
-from app.loader import compare_preset_to_dict, get_data_dir, load_all_locations, load_compare_presets
+from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
 from services import alert_channel_threshold, alert_log
 import services.alert_urgency as alert_urgency
+from services.alert_gate import check_nowcast_gate, record_nowcast_sent
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import effective_compare_channels
 from services.compare_alert_guard import is_silenced
-from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.trip_alert import radar_alert_due
 
@@ -34,6 +33,13 @@ logger = logging.getLogger("compare_radar_alert")
 
 _RADAR_ONSET_THRESHOLD_MIN = 20
 _DEFAULT_COOLDOWN_MINUTES = 120
+# Issue #1467 S3: eigener Sperrzeit-Scope im geteilten `ThrottleStore`.
+# NICHT `radar` (dort liegen Trip-Kennungen; seit dem #1250-Cutover sind Trip-
+# und Vergleichs-Kennungen frei gewaehlte Slugs im selben Verzeichnis, eine
+# Kollision ist real moeglich) und NICHT `compare_preset` (den belegt der
+# Aenderungsalarm auf demselben Preset-Schluessel — ein gemeinsamer Scope
+# liesse die beiden Alarmarten einander gegenseitig unterdruecken).
+_THROTTLE_SCOPE = "compare_radar"
 
 
 def _format_cooldown_display(cooldown_minutes: int) -> str:
@@ -64,8 +70,6 @@ class CompareRadarAlertService:
         self._user_id = user_id
         self._radar_service = radar_service
         self._mail_sink = mail_sink
-        self._throttle_file = get_data_dir(user_id) / "compare_radar_alert_throttle.json"
-        self._last_alert_times: dict[str, datetime] = self._load_throttle_times()
 
     def check_all_compare_presets(self) -> int:
         """Prüft alle Compare-Presets dieses Nutzers und versendet gebündelte
@@ -102,35 +106,65 @@ class CompareRadarAlertService:
             return False
 
         cooldown_minutes = preset.get("alert_cooldown_minutes", _DEFAULT_COOLDOWN_MINUTES)
-        last_alert = self._last_alert_times.get(preset_id)
-        if DeviationAlertEngine.is_cooldown_active(
-            datetime.now(timezone.utc), last_alert, cooldown_minutes
-        ):
-            logger.debug(f"Compare-Radar-Alert cooldown active for preset {preset_id}")
-            return False
-
-        triggered = self._detect_triggered_locations(preset_id, location_ids, all_locations)
-        if not triggered:
-            return False
-
-        # AC-5: Onset ist bereits erkannt — Ruhezeit unterdrückt erst hier den Versand.
-        if DeviationAlertEngine.is_quiet_hours(
-            datetime.now(timezone.utc),
-            preset.get("alert_quiet_from"),
-            preset.get("alert_quiet_to"),
-            context_label=preset_id,
-        ):
-            logger.debug(f"Compare-Radar-Alert quiet hours active for preset {preset_id}")
-            return False
-
-        notification_service = self._notification_service_for(preset)
         # Issue #1461 S3b-2b (AC-5): die Kanalliste war hier hart auf
         # `{"email"}` verdrahtet — unabhaengig vom Telegram-/SMS-Opt-in des
         # Nutzers (verfallene Begruendung aus #1041 Slice 1b, s. Spec
         # "Implementation Details" Punkt 3). Jetzt derselbe EINE Resolver wie
         # bei den beiden anderen Compare-Alarmwegen (ADR-0021, kein
         # Compare-eigener Filter).
+        # Issue #1467 S3: die Aufloesung steht VOR der Freigabe-Pruefung — der
+        # Protokoll-Eintrag einer Abweisung braucht die Kanaele des Nutzers.
+        # Die Funktion ist rein (liest nur Preset/Settings/Tier), das Vorziehen
+        # aendert am Versandverhalten nichts.
         effective_channels = effective_compare_channels(preset, self._settings, self._user_id)
+
+        # Issue #1467 S3: Ruhezeit -> Sperrzeit -> Tages-Obergrenze aus dem
+        # geteilten Baustein, VOR jedem Nowcast-Abruf. Ersetzt den frueheren
+        # eigenen Cooldown (presetseigene Datei `compare_radar_alert_throttle.json`)
+        # und die Ruhezeit-Pruefung NACH der Erkennung; die Tages-Obergrenze
+        # fehlte hier bisher vollstaendig.
+        gate = check_nowcast_gate(
+            user_id=self._user_id,
+            throttle_scope=_THROTTLE_SCOPE,
+            throttle_key=preset_id,
+            cooldown_minutes=cooldown_minutes,
+            quiet_from=preset.get("alert_quiet_from"),
+            quiet_to=preset.get("alert_quiet_to"),
+            context_label=preset_id,
+            now=datetime.now(timezone.utc),
+        )
+        if not gate.allowed:
+            # Die Protokollierung darf den Stapellauf NIE mitreissen: ein
+            # Ortsvergleich, dessen Eintrag scheitert, kostet sonst ALLE
+            # uebrigen Ortsvergleiche dieses Nutzers ihren Alarm — genau das
+            # Muster aus `fix_1479` (dort riss ein kaputter Ruhezeit-Wert den
+            # ganzen Lauf mit), und es widerspricht dem Leitsatz „der
+            # gefaehrlichste Fehler ist der ausbleibende Alarm".
+            # Bewusst breit auf `Exception` (Muster des Nowcast-Abrufs in
+            # `_detect_triggered_locations`): der Schaden einer zu engen
+            # Klausel ist der Totalausfall, der einer zu breiten eine
+            # Protokollzeile. Still verschluckt wird nichts — die Kennung
+            # steht namentlich in der Meldung.
+            try:
+                alert_log.append_suppressed_entry(
+                    self._user_id, entity_id=preset_id, entity_type="compare",
+                    reason=alert_log.REASON_NOWCAST, gate_reason=gate.reason,
+                    effective_channels=effective_channels,
+                )
+            except Exception as e:
+                logger.error(
+                    "Compare-Radar-Alert: Unterdrueckungs-Protokoll fuer Preset "
+                    "%s fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), "
+                    "nur der Protokoll-Eintrag fehlt.",
+                    preset_id, e, gate.reason,
+                )
+            return False
+
+        triggered = self._detect_triggered_locations(preset_id, location_ids, all_locations)
+        if not triggered:
+            return False
+
+        notification_service = self._notification_service_for(preset)
         # Die Dringlichkeit wird VOR dem Versand hochgezogen (bisher entstand
         # sie erst inline im `append_entry`-Argument, also NACH dem Versand) --
         # `split_by_threshold()` braucht sie davor. `effective_channels`
@@ -173,8 +207,12 @@ class CompareRadarAlertService:
             return False
 
         self._finalize_triggered_state(preset_id, triggered)
-        self._last_alert_times[preset_id] = datetime.now(timezone.utc)
-        self._save_throttle_times()
+        # Issue #1467 S3: Tageszaehler + Sperrzeit im geteilten Speicher, erst
+        # NACH erfolgreicher Zustellung (F001-Semantik, unveraendert).
+        record_nowcast_sent(
+            user_id=self._user_id, throttle_scope=_THROTTLE_SCOPE,
+            throttle_key=preset_id, now=datetime.now(timezone.utc),
+        )
         return True
 
     def _detect_triggered_locations(
@@ -241,21 +279,3 @@ class CompareRadarAlertService:
     def _load_presets(self) -> list[dict]:
         # Issue #1250 Scheibe 1: zentraler Loader statt rohem json.loads.
         return [compare_preset_to_dict(p) for p in load_compare_presets(user_id=self._user_id)]
-
-    def _load_throttle_times(self) -> dict[str, datetime]:
-        if not self._throttle_file.exists():
-            return {}
-        try:
-            data = json.loads(self._throttle_file.read_text())
-            return {k: datetime.fromisoformat(v) for k, v in data.items()}
-        except (json.JSONDecodeError, ValueError, OSError) as e:
-            logger.warning(f"Failed to load compare radar alert throttle file: {e}")
-            return {}
-
-    def _save_throttle_times(self) -> None:
-        try:
-            self._throttle_file.parent.mkdir(parents=True, exist_ok=True)
-            data = {k: v.isoformat() for k, v in self._last_alert_times.items()}
-            self._throttle_file.write_text(json.dumps(data, indent=2))
-        except OSError as e:
-            logger.error(f"Failed to save compare radar alert throttle file: {e}")

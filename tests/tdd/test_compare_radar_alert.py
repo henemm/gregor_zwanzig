@@ -28,6 +28,7 @@ SPEC: docs/specs/modules/issue_1041b_compare_radar_alert_service.md
 """
 from __future__ import annotations
 
+import json
 import re
 import shutil
 from datetime import datetime, timedelta, timezone
@@ -684,13 +685,30 @@ def test_two_users_isolated_locations_and_recipients():
             "Cross-User-Datenleck B→A in der Alarm-Mail von Nutzer A"
         )
 
-        # Datei-Isolation: nur A hat einen Throttle-Store, B (nie ausgelöst) nicht.
+        # Datei-Isolation: nur A hat einen Throttle-Eintrag, B (nie ausgelöst) nicht.
         # Der Service schreibt den Throttle-Store über get_data_dir() (isolierter
         # Root, #1133/#1265) — die Assertion muss demselben Pfad folgen.
-        a_throttle = get_data_dir(user_a) / "compare_radar_alert_throttle.json"
-        b_throttle = get_data_dir(user_b) / "compare_radar_alert_throttle.json"
-        assert a_throttle.exists(), "Throttle-Store für Nutzer A fehlt nach erfolgtem Alarm"
-        assert not b_throttle.exists(), "Nutzer B hat einen Throttle-Eintrag trotz Δ=trocken"
+        # Issue #1467 S3: Messpunkt gewandert — die Sperrzeit liegt seither im
+        # geteilten `throttle_state.json` (Scope `compare_radar`) statt in der
+        # presetseigenen `compare_radar_alert_throttle.json`. Die geprüfte
+        # Zusicherung (Mandantentrennung der Sperrzeit) ist unverändert.
+        from services.compare_radar_alert import _THROTTLE_SCOPE
+
+        def _throttled_presets(uid: str) -> dict:
+            path = get_data_dir(uid) / "throttle_state.json"
+            if not path.exists():
+                return {}
+            return json.loads(path.read_text()).get(_THROTTLE_SCOPE, {})
+
+        assert preset_a_id in _throttled_presets(user_a), (
+            "Sperrzeit-Eintrag für Nutzer A fehlt nach erfolgtem Alarm"
+        )
+        assert _throttled_presets(user_b) == {}, (
+            "Nutzer B hat einen Throttle-Eintrag trotz Δ=trocken"
+        )
+        assert preset_a_id not in _throttled_presets(user_b), (
+            "Cross-User-Datenleck A→B in der Sperrzeit-Ablage"
+        )
 
         b_dir = DATA_ROOT / user_b
         if b_dir.exists():

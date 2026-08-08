@@ -218,7 +218,11 @@ def append_entry(
         ),
     }
 
-    target = "entries" if reachable else "not_delivered"
+    _append(user_id, "entries" if reachable else "not_delivered", entry)
+
+
+def _append(user_id: str, target: str, entry: dict) -> None:
+    """Read-Modify-Write der ganzen Datei; Alt-Eintraege bleiben unangetastet."""
     path = get_data_dir(user_id) / "alert_log.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -230,6 +234,82 @@ def append_entry(
     data.setdefault(target, [])
     data[target].append(entry)
     path.write_text(json.dumps(data, indent=2))
+
+
+def append_suppressed_entry(
+    user_id: str,
+    *,
+    entity_id: str,
+    entity_type: str,
+    reason: str,
+    gate_reason: str,
+    effective_channels: Iterable[str],
+) -> None:
+    """Haengt GENAU EINEN Eintrag fuer eine VOR dem Versand abgewiesene
+    Meldung an (#1467 S3, Aenderung (d)).
+
+    Zweiter, schlanker Schreibpfad neben `append_entry()`: der ist auf
+    tatsaechliche Zustellversuche zugeschnitten (`changes_count`, `severity`,
+    Kanal-Aufschluesselung NACH dem Versand). Bei einer Abweisung durch die
+    Freigabe-Steuerung ist zu diesem Zeitpunkt strukturell noch nichts davon
+    bekannt — die Erkennung laeuft erst nach dem Gate.
+
+    Ziel-Liste ist immer `not_delivered`: kein Kanal wurde erreicht. Go liest
+    diese Liste nicht (D4), Cockpit-Kachel und Archiv-Statistik aendern sich
+    dadurch um keine Zahl. Jeder eingeschaltete Kanal bekommt denselben
+    `gate_reason` als Nicht-Zustellungs-Grund; `reason` bleibt der AUSLOESER
+    der Meldung (`REASON_NOWCAST`), damit die beiden Angaben nicht
+    verschmelzen.
+
+    Ohne eingeschalteten Kanal entsteht — wie in `append_entry()` — gar kein
+    Eintrag: der Nutzer hat Alarme dort bewusst abgeschaltet.
+
+    Geltungsbereich sind ausschliesslich die beiden Nowcast-Pfade. Der
+    Vorhersage-Aenderungsalarm und die amtliche Warnung protokollieren ihre
+    Unterdrueckungen weiterhin NICHT (offene Luecke O3 in
+    `feat_1459_alert_protokoll.md`).
+
+    `gate_reason` ist PFLICHT und muss gefuellt sein: ein leerer Wert wuerde
+    von `_missed_channels()` beim LESEN still zu `REASON_DELIVERY_FAILED`
+    umgedeutet — das Protokoll behauptete dann "Zustellung fehlgeschlagen", wo
+    in Wahrheit gar keine Sperre vorlag. Genau das hebt den Zweck dieser
+    Aenderung auf (das Protokoll soll wahrheitsgemaess beantworten, WARUM kein
+    Alarm kam), deshalb scheitert die Funktion hier laut statt still etwas
+    Falsches zu schreiben. Der Fall ist heute unerreichbar — beide Aufrufer
+    rufen nur bei `GateResult.allowed is False`, und dann traegt `reason`
+    immer eine der drei Konstanten; die Zusicherung steht an der Stelle, an
+    der sie WIRKT, nicht nur dort, wo sie heute zufaellig eingehalten wird.
+    Ein lautes Scheitern ist an dieser Stelle vertretbar: sie wird
+    ausschliesslich betreten, wenn ohnehin kein Alarm rausgeht.
+    """
+    if not gate_reason or not str(gate_reason).strip():
+        raise ValueError(
+            "append_suppressed_entry: gate_reason ist leer "
+            f"({gate_reason!r}) — ein Unterdrueckungs-Eintrag ohne Grund wird "
+            "beim Lesen still als 'Zustellung fehlgeschlagen' gedeutet und "
+            f"wuerde das Protokoll fuer {entity_type}/{entity_id} verfaelschen."
+        )
+    effective = set(effective_channels or ())
+    if not effective:
+        return
+    _append(user_id, "not_delivered", {
+        "entity_id": entity_id,
+        "entity_type": entity_type,
+        "sent_at": datetime.now(tz=timezone.utc).isoformat(),
+        # Zum Gate-Zeitpunkt ist noch nichts erkannt: keine Aenderungszahl,
+        # kein Schweregrad, keine Groesse. Die Felder bleiben im Schema
+        # (einheitlicher Aufbau), aber leer statt erfunden.
+        "changes_count": 0,
+        "severity": "",
+        "metrics": [],
+        "hazards": [],
+        "reason": reason,
+        "channels_sent": [],
+        "channels_not_sent": [
+            {"channel": channel, "reason": gate_reason}
+            for channel in _ALL_CHANNELS if channel in effective
+        ],
+    })
 
 
 # ---------------------------------------------------------------------------
