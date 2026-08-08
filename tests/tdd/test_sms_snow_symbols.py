@@ -540,7 +540,11 @@ def test_ac7_official_snow_warning_is_the_only_sn_token():
 # ---------------------------------------------------------------------------
 
 def test_ac8_sms_symbols_endpoint_serves_register_symbols():
-    """AC-8: das Frontend zieht die Kuerzel zur Laufzeit -> SD/SL."""
+    """AC-8: das Frontend zieht die Kuerzel zur Laufzeit -> SD/SL.
+
+    Fix #1613: der Endpoint liefert je Metrik jetzt ein Array `sms_symbols`
+    statt eines einzelnen `sms_symbol`-Strings (Mehrfach-Kuerzel-Metriken).
+    """
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
@@ -551,7 +555,7 @@ def test_ac8_sms_symbols_endpoint_serves_register_symbols():
     resp = TestClient(app).get("/sms-symbols")
     assert resp.status_code == 200, resp.text
 
-    by_metric = {e["metric_id"]: e["sms_symbol"] for e in resp.json()["metrics"]}
+    by_metric = {e["metric_id"]: e["sms_symbols"][0] for e in resp.json()["metrics"]}
 
     assert by_metric.get("snow_depth") == "SD", (
         "AC-8: /api/sms-symbols liefert fuer snow_depth "
@@ -566,7 +570,13 @@ def test_ac8_sms_symbols_endpoint_serves_register_symbols():
 
 
 def test_ac8_sms_symbols_endpoint_keeps_official_snow_hazard():
-    """AC-8/AC-7: der Gefahren-Teil derselben Antwort behaelt 'SN'."""
+    """AC-8/AC-7: der Gefahren-Teil derselben Antwort behaelt 'SN'.
+
+    Fix #1613 aendert nur das `metrics`-Array-Format, NICHT `hazards` (dort
+    bleibt `sms_symbol` ein einzelner String -- keine Metrik traegt in
+    HAZARD_SMS_SYMBOLS mehrere Kuerzel). Dieser Test bleibt unveraendert
+    gruen als Regressionsschutz gegen das Gegenteil.
+    """
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
@@ -580,6 +590,126 @@ def test_ac8_sms_symbols_endpoint_keeps_official_snow_hazard():
     assert by_hazard.get("snow") == "SN", (
         "AC-8: die amtliche Schneewarnung muss 'SN' bleiben, gefunden "
         f"{by_hazard.get('snow')!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fix #1613 — Mehrfach-Symbol-Metriken (wind_chill/temperature/temperature_night)
+# fehlen strukturell im /api/sms-symbols-Endpoint
+# ---------------------------------------------------------------------------
+
+def test_ac1_wind_chill_reports_all_four_symbols():
+    """AC-1: wind_chill fehlt heute strukturell -- nach dem Fix liefert der
+    Endpoint alle vier Kuerzel in der dokumentierten Reihenfolge.
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.routers import config as config_router
+
+    app = FastAPI()
+    app.include_router(config_router.router)
+    metrics = TestClient(app).get("/sms-symbols").json()["metrics"]
+
+    entries = [m for m in metrics if m["metric_id"] == "wind_chill"]
+    assert len(entries) == 1, (
+        f"AC-1: erwarte genau einen wind_chill-Eintrag, gefunden {len(entries)}: "
+        f"{entries!r}"
+    )
+    assert entries[0]["sms_symbols"] == ["FN", "FK", "FD", "WC"], (
+        "AC-1: wind_chill liefert "
+        f"{entries[0]['sms_symbols']!r}, erwartet ['FN','FK','FD','WC']"
+    )
+
+
+def test_ac2_thunder_appears_once_with_two_symbols_no_duplicate():
+    """AC-2: thunder steht in SMS_SYMBOL_BY_METRIC UND
+    SMS_MULTI_SYMBOLS_BY_METRIC -- der Merge darf keinen Duplikat-Eintrag
+    aus SMS_SYMBOL_BY_METRIC erzeugen.
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.routers import config as config_router
+
+    app = FastAPI()
+    app.include_router(config_router.router)
+    metrics = TestClient(app).get("/sms-symbols").json()["metrics"]
+
+    thunder_entries = [m for m in metrics if m["metric_id"] == "thunder"]
+    assert len(thunder_entries) == 1, (
+        "AC-2: 'thunder' darf nur EINMAL im metrics-Array stehen (kein "
+        f"Duplikat aus SMS_SYMBOL_BY_METRIC), gefunden {len(thunder_entries)}: "
+        f"{thunder_entries!r}"
+    )
+    assert thunder_entries[0]["sms_symbols"] == ["TH", "TH+"], (
+        "AC-2: thunder liefert "
+        f"{thunder_entries[0]['sms_symbols']!r}, erwartet ['TH','TH+']"
+    )
+
+
+def test_ac3_single_symbol_metrics_unchanged_in_array_format():
+    """AC-3: die sieben Nicht-thunder-Metriken aus SMS_SYMBOL_BY_METRIC
+    liefern weiterhin genau dasselbe Kuerzel wie vor der Umstellung --
+    jetzt als einelementiges Array (Regressionsschutz, u.a. #1435 E3b).
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.routers import config as config_router
+
+    app = FastAPI()
+    app.include_router(config_router.router)
+    metrics = TestClient(app).get("/sms-symbols").json()["metrics"]
+    by_metric = {m["metric_id"]: m["sms_symbols"] for m in metrics}
+
+    expected = {
+        "precipitation": ["R"],
+        "rain_probability": ["PR"],
+        "wind": ["W"],
+        "gust": ["G"],
+        "snow_depth": ["SD"],
+        "snowfall_limit": ["SL"],
+        "fresh_snow": ["NS24+"],
+    }
+    for metric_id, expected_symbols in expected.items():
+        assert by_metric.get(metric_id) == expected_symbols, (
+            f"AC-3: {metric_id} liefert {by_metric.get(metric_id)!r}, "
+            f"erwartet {expected_symbols!r}"
+        )
+
+
+def test_ac6_endpoint_reports_eleven_metrics_total():
+    """AC-6/Regression: 8 Register-Metriken + 3 neue (temperature,
+    temperature_night, wind_chill) = 11 Eintraege, kein Wertverlust durch
+    die Typumstellung string -> string[].
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.routers import config as config_router
+
+    app = FastAPI()
+    app.include_router(config_router.router)
+    metrics = TestClient(app).get("/sms-symbols").json()["metrics"]
+
+    assert len(metrics) == 11, (
+        f"AC-6: erwarte 11 Metrik-Eintraege (8 Register + 3 neue, thunder "
+        f"nur einmal gezaehlt), gefunden {len(metrics)}: {metrics!r}"
+    )
+    by_metric = {m["metric_id"]: m["sms_symbols"] for m in metrics}
+    assert by_metric.get("temperature") == ["K", "D"], (
+        f"AC-6: temperature liefert {by_metric.get('temperature')!r}, "
+        "erwartet ['K','D']"
+    )
+    assert by_metric.get("temperature_night") == ["N"], (
+        f"AC-6: temperature_night liefert {by_metric.get('temperature_night')!r}, "
+        "erwartet ['N']"
+    )
+    assert by_metric.get("wind") == ["W"], (
+        "AC-6: 'wind' (bestehende ThresholdMetricRow-Call-Site) muss nach "
+        f"der Typumstellung weiterhin ['W'] liefern, gefunden "
+        f"{by_metric.get('wind')!r} -- kein Wertverlust durch metricSymbols[id]?.[0]"
     )
 
 

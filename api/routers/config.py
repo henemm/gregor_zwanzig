@@ -40,13 +40,27 @@ def get_sms_symbols():
     `sms_trip.py` (Metriken) — das Frontend fuehrt keine zweite Liste.
     """
     from output.renderers.alert.official_alerts import _HAZARD_LABELS
-    from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
+    from output.renderers.sms_trip import (
+        SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
+    )
     from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
+
+    def _symbols_for(metric_id: str) -> list[str]:
+        # SMS_MULTI_SYMBOLS_BY_METRIC hat Vorrang (deckt z.B. "thunder"
+        # bereits vollstaendig ab -> kein Duplikat-Eintrag aus
+        # SMS_SYMBOL_BY_METRIC). Fix #1613.
+        if metric_id in SMS_MULTI_SYMBOLS_BY_METRIC:
+            return [s.rstrip(":") for s in SMS_MULTI_SYMBOLS_BY_METRIC[metric_id]]
+        return [SMS_SYMBOL_BY_METRIC[metric_id].rstrip(":")]
+
+    all_metric_ids = list(SMS_SYMBOL_BY_METRIC.keys()) + [
+        mid for mid in SMS_MULTI_SYMBOLS_BY_METRIC if mid not in SMS_SYMBOL_BY_METRIC
+    ]
 
     return {
         "metrics": [
-            {"metric_id": mid, "sms_symbol": sym.rstrip(":")}
-            for mid, sym in SMS_SYMBOL_BY_METRIC.items()
+            {"metric_id": mid, "sms_symbols": _symbols_for(mid)}
+            for mid in all_metric_ids
         ],
         "hazards": [
             {"hazard": h, "sms_symbol": sym, "label": _HAZARD_LABELS.get(h, h)}
