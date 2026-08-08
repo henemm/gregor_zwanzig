@@ -68,9 +68,13 @@ FINDING_SHARED = {
 
 @pytest.fixture(autouse=True)
 def _no_telegram_gate(monkeypatch):
-    """Ehrlicher Boundary-Seam eines UNBETEILIGTEN Gates: kein echter
-    Telegram-/Netz-Aufruf während des Merge-Tests."""
+    """Ehrliche Boundary-Seams UNBETEILIGTER Gates: kein echter Telegram-/Netz-
+    und kein Browser-Aufruf während des Merge-Tests. Das Frontend-Browser-Gate
+    (#1558) greift beim hier verwendeten Scope 'backend' ohnehin nicht — die
+    Neutralisierung hält den Merge-Test aber auch dann frei von fremden
+    Nebenwirkungen, wenn ein Fall später mit Frontend-Scope dazukommt."""
     monkeypatch.setattr(mod, "_telegram_live_gate", lambda: 0)
+    monkeypatch.setattr(mod, "_frontend_browser_gate", lambda scope, checked=None: 0)
 
 
 def _write_findings(tmp_path: Path, findings: list) -> Path:

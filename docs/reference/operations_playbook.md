@@ -51,6 +51,39 @@ oder `staging_verdict` nicht mit `VERIFIED` beginnt (Issue #521).
 
 ---
 
+## Frontend-Browser-Gate (Issue #1558) — Detailablauf
+
+Berührt der committete Scope `frontend-only` oder `full-stack`, ruft `staging_gate.py
+--write-verdict` selbst `.claude/hooks/e2e_frontend_browser_gate.py` auf (Modul-Pfad
+`staging_gate.FRONTEND_GATE_PATH`) — nach der Scope-Berechnung, aber **bevor** die Attestation
+geschrieben wird. Ohne diesen bestandenen Lauf entsteht keine Datei in `.claude/e2e_verified/`.
+
+**Was passiert:** die sechs Kernseiten `/`, `/trips`, `/trips/new`, `/compare`, `/compare/new`,
+`/locations` werden in einem echten Chromium (Playwright, headless) gegen die übergebene
+Basis-URL (`GZ_VALIDATION_URL`, Default Staging) geladen. Gesammelt werden ausschließlich
+`console(type == "error")` und `pageerror` — Warnungen zählen nicht. Eine erreichte
+Anmeldemaske gilt NICHT als bestandene Kernseite (`unauthenticated_reason()`, Fix #1307).
+
+**Bei Fehlschlag:** keine Attestation, `write_verdict()` endet mit Exit 1 — kein Prod-Deploy
+für diesen Stand.
+
+**Fail-Grenze** — bewusst zwei verschiedene Ausgänge:
+- Gate-Modul selbst nicht ladbar (Import-/Syntaxfehler) → Warnung, der Aufruf läuft durch — ein
+  kaputter Wächter darf nie die Ursache sein, dass niemand mehr ausliefern kann.
+- Nachweis nicht erbringbar (Playwright fehlt, Staging nicht erreichbar, Anmeldung scheitert,
+  Zugangsdaten `GZ_VALIDATOR_USER`/`GZ_VALIDATOR_PASS`/`GZ_AUTH_USER`/`GZ_AUTH_PASS` fehlen,
+  Konsolenfehler auf einer Kernseite) → blockiert.
+
+**Attestation:** bei bestandenem Lauf trägt `.claude/e2e_verified/<sha>.json` zusätzlich das
+Feld `frontend_pages_checked` mit den geprüften Pfaden.
+
+**Notausgang:** bestehender Mechanismus `GZ_SKIP_E2E_GATE=1` (laut, geloggt) — kein eigener,
+zweiter Ausgang für dieses Gate.
+
+Details, Acceptance Criteria, Grenzen: Spec `docs/specs/modules/feat_1558_frontend_browser_gate.md`.
+
+---
+
 ## Post-Deploy-Selftest (Issue #564) — Detailablauf
 
 Nach jedem Prod-Deploy erfolgt eine automatische Nachverifikation gegen Produktion — ohne
