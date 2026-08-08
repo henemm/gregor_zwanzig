@@ -145,6 +145,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secret_output_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secret_output_gate.py\"; fi",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }
