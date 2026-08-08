@@ -65,6 +65,15 @@ ATTESTATION_RETENTION = 20
 # Test auf eine ECHT kaputte Datei zeigen und damit einen realen Importfehler
 # ausloesen statt eines gemockten (verbotenes Mock-Theater).
 FRONTEND_GATE_PATH = Path(__file__).resolve().parent / "e2e_frontend_browser_gate.py"
+# Issue #1558 (Nachtrag 2026-08-08): EIGENER Notausgang fuer den Browserlauf.
+# GZ_SKIP_E2E_GATE wirkt nur in gate_check() (Deploy-Check) — im write_verdict()-
+# Pfad gab es bis hierher gar keinen. Bewusst eine zweite Variable statt einer
+# Ausweitung der ersten: gate_check() ueberspringt eine FLUECHTIGE Pruefung (ein
+# Deploy), hier entsteht dagegen ein DAUERHAFTES Artefakt. Wer nur deployen will,
+# soll nicht nebenbei eine Attestation erzeugen, die einen nie gefuehrten
+# Nachweis behauptet. Damit das Artefakt nicht luegt, vermerkt write_verdict()
+# den uebersprungenen Lauf im Payload.
+SKIP_FRONTEND_GATE_VAR = "GZ_SKIP_FRONTEND_BROWSER_GATE"
 
 
 def _log(msg: str, stream=sys.stdout) -> None:
@@ -273,6 +282,17 @@ def _frontend_browser_gate(scope: str, checked: list | None = None) -> int:
     if scope not in ("frontend-only", "full-stack"):
         return 0
 
+    # Notausgang: exakt "1", damit er nicht versehentlich greift.
+    if os.environ.get(SKIP_FRONTEND_GATE_VAR) == "1":
+        _log(
+            f"WARN: {SKIP_FRONTEND_GATE_VAR}=1 — der PFLICHT-Nachweis 'Browserlauf "
+            "ueber die Kernseiten' wurde UEBERSPRUNGEN (Notfall-Override, #1558). "
+            "Fuer diesen Stand ist NICHT belegt, dass das Frontend laedt; die "
+            "Attestation wird entsprechend markiert.",
+            stream=sys.stderr,
+        )
+        return 0
+
     import importlib.util
 
     try:
@@ -291,10 +311,14 @@ def _frontend_browser_gate(scope: str, checked: list | None = None) -> int:
     # und damit unpruefbar machen.
     mod.load_validator_env()
     if mod.gate(scope, dict(os.environ)) != 0:
+        # Den Notausgang HIER nennen, nicht nur in der Doku: wer ihn braucht,
+        # sucht ihn genau in diesem Moment und findet ihn sonst nicht.
         _log(
             f"FEHLER: Scope '{scope}' beruehrt das Frontend, aber der Browserlauf "
             "ueber die Kernseiten wurde nicht bestanden (Issue #1558). Verdict "
-            "verweigert.",
+            f"verweigert. Echter Notfall (Staging tot o.ae.): {SKIP_FRONTEND_GATE_VAR}=1 "
+            "setzen — laut, geloggt, und die Attestation wird als ungeprueft markiert. "
+            "GZ_SKIP_E2E_GATE wirkt hier NICHT (nur im Deploy-Check).",
             stream=sys.stderr,
         )
         return 1
@@ -364,6 +388,15 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     }
     if frontend_pages:
         payload["frontend_pages_checked"] = frontend_pages
+    elif scope in ("frontend-only", "full-stack"):
+        # Das Artefakt darf einen nie gefuehrten Nachweis nicht verschweigen:
+        # ohne diesen Vermerk sieht eine uebersprungene Attestation genauso aus
+        # wie eine aus der Zeit vor dem Gate.
+        payload["frontend_browser_gate"] = (
+            f"UEBERSPRUNGEN via {SKIP_FRONTEND_GATE_VAR}=1"
+            if os.environ.get(SKIP_FRONTEND_GATE_VAR) == "1"
+            else "NICHT GELAUFEN (Gate-Modul nicht ladbar)"
+        )
     # Issue #1197: Blind-Overwrite bei zwei Workflows auf demselben HEAD
     # vermeiden. Traegt eine bestehende Attestation denselben verified_commit,
     # werden die findings verlustfrei vereinigt (dedup ueber stabile

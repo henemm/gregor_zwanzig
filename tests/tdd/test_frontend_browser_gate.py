@@ -333,6 +333,51 @@ def test_missing_playwright_blocks_instead_of_skipping(monkeypatch, local_site):
     assert g.gate("frontend-only", creds) != 0, "Gate muss blocken statt zu ueberspringen"
 
 
+def test_emergency_override_passes_loudly_and_marks_the_attestation(
+    tmp_path, hostile, monkeypatch, capsys
+):
+    """Notausgang (#1558, Nachtrag): GZ_SKIP_E2E_GATE wirkt nur im Deploy-Check
+    (gate_check), im write_verdict-Pfad gab es gar keinen — der Waechter war
+    defekt und niemand konnte sich behelfen.
+
+    Drei Zusicherungen: er wirkt, er ist LAUT, und die Attestation behauptet
+    keinen Nachweis, den es nie gab."""
+    monkeypatch.setenv(sg.SKIP_FRONTEND_GATE_VAR, "1")
+    e2e_path = tmp_path / "attestation.json"
+
+    rc = _verdict(tmp_path, "frontend-only", e2e_path)
+
+    assert rc == 0 and e2e_path.exists(), "Notausgang wirkt nicht"
+    err = capsys.readouterr().err
+    assert "WARN" in err and sg.SKIP_FRONTEND_GATE_VAR in err, (
+        f"Notausgang muss laut sein und sich benennen: {err!r}"
+    )
+    data = json.loads(e2e_path.read_text())
+    assert "frontend_pages_checked" not in data, (
+        "ohne Browserlauf darf die Attestation keine geprueften Seiten behaupten"
+    )
+    assert "UEBERSPRUNGEN" in data.get("frontend_browser_gate", ""), (
+        f"der uebersprungene Pflicht-Nachweis ist im Artefakt nicht vermerkt: {data}"
+    )
+
+
+@pytest.mark.parametrize("wert", ["0", "true", "ja", ""])
+def test_emergency_override_needs_exactly_one_and_does_not_trigger_by_accident(
+    tmp_path, hostile, monkeypatch, wert
+):
+    """Ein Notausgang, der bei jedem beliebigen Wert aufgeht, ist kein
+    Notausgang, sondern ein offenes Tor."""
+    monkeypatch.setenv(sg.SKIP_FRONTEND_GATE_VAR, wert)
+    e2e_path = tmp_path / "attestation.json"
+
+    rc = _verdict(tmp_path, "frontend-only", e2e_path)
+
+    assert rc == 1 and not e2e_path.exists(), (
+        f"{sg.SKIP_FRONTEND_GATE_VAR}={wert!r} hat das Gate geoeffnet — nur "
+        "exakt '1' darf das"
+    )
+
+
 def test_ambiguous_verdict_is_gated_like_verified(tmp_path, hostile):
     """Spec-Festlegung "Auch bei AMBIGUOUS? Ja": ein AMBIGUOUS-Verdict wird
     abgelegt und kann spaeter als Vorgaenger dienen — die Luecke waere sonst
@@ -410,11 +455,59 @@ def test_app_credentials_for_staging_come_from_the_staging_env(tmp_path, monkeyp
         "die vorgeschaltete nginx-Schranke muss weiter aus .claude/validator.env kommen"
     )
 
-    # Die Wahl muss ueberschreibbar bleiben: gesetzte Variablen behalten Vorrang.
-    monkeypatch.setattr(os, "environ", {"GZ_AUTH_PASS": "vom-aufrufer"})
+    # Ausweg fuer bewusste Abweichung: eine ANDERE Datei benennen. Das ist eine
+    # Absichtserklaerung — im Gegensatz zu einem Wert in os.environ, der still
+    # geerbt sein kann (s. der Test darunter).
+    anderer = tmp_path / "woanders.env"
+    anderer.write_text("GZ_AUTH_USER=gast\nGZ_AUTH_PASS=passwort-woanders\n")
+    monkeypatch.setattr(os, "environ", {"GZ_STAGING_ENV_PATH": str(anderer)})
     g.load_validator_env()
-    assert os.environ.get("GZ_AUTH_PASS") == "vom-aufrufer", (
-        "eine bereits gesetzte Umgebungsvariable wurde ueberschrieben"
+    assert os.environ.get("GZ_AUTH_PASS") == "passwort-woanders", (
+        "GZ_STAGING_ENV_PATH muss die Quelle umlenken koennen"
+    )
+
+
+def test_inherited_local_password_does_not_beat_the_staging_env(tmp_path, monkeypatch):
+    """Der Fall, an dem die erste Fassung gescheitert ist (2026-08-08).
+
+    Im echten Pfad ist os.environ NICHT sauber: conftest/Settings haben die
+    lokale .env laengst geladen, GZ_AUTH_PASS steht also schon drin — mit dem
+    falschen Passwort fuer Staging. Die erste Fassung nutzte os.environ
+    .setdefault und liess diesen geerbten Wert gewinnen; der Staging-Wert kam
+    nie an und das Gate blockierte JEDE Frontend-Auslieferung.
+
+    Meine Direktmessung konnte das nicht sehen, weil sie in einem frischen
+    Prozess mit leerem os.environ lief — dort ist setdefault zufaellig richtig.
+    Genau diese Vorbedingung stellt dieser Test her: die Umgebung traegt bereits
+    einen abweichenden Wert.
+
+    os.environ ist keine Absichtserklaerung — ein Wert darin kann still geerbt
+    sein (Muster #1477: eine still nachgeladene .env loeste echten Versand an
+    den Produktiv-Chat aus). Fuer Staging ist deshalb die Staging-.env
+    massgeblich."""
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "validator.env").write_text(
+        "GZ_VALIDATION_URL=https://staging.gregor20.henemm.com\n"
+        "GZ_VALIDATOR_USER=nginx-benutzer\nGZ_VALIDATOR_PASS=nginx-geheim\n")
+    (tmp_path / ".env").write_text(
+        "GZ_AUTH_USER=gast\nGZ_AUTH_PASS=passwort-arbeitsordner\n")
+    staging_env = tmp_path / "staging.env"
+    staging_env.write_text("GZ_AUTH_USER=gast\nGZ_AUTH_PASS=passwort-staging\n")
+
+    monkeypatch.chdir(tmp_path)
+    # Die entscheidende Vorbedingung: die Umgebung traegt den geerbten Wert
+    # BEVOR das Gate laedt — so wie unter pytest im echten Lauf.
+    monkeypatch.setattr(os, "environ", {"GZ_AUTH_USER": "gast",
+                                        "GZ_AUTH_PASS": "passwort-arbeitsordner"})
+    g = _gate_mod()
+    monkeypatch.setattr(g, "STAGING_ENV_PATH", staging_env)
+    g.load_validator_env()
+
+    assert os.environ.get("GZ_AUTH_PASS") == "passwort-staging", (
+        "Ein aus einer lokalen .env geerbtes Passwort hat den Staging-Wert "
+        f"verdraengt (bekam {os.environ.get('GZ_AUTH_PASS')!r}). Genau so "
+        "blockierte das Gate am 2026-08-08 jede Frontend-Auslieferung: die "
+        "Anwendung antwortet auf das lokale Passwort mit HTTP 401."
     )
 
 

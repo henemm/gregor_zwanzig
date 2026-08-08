@@ -85,9 +85,20 @@ def load_validator_env() -> None:
     Passwort und liefert dort 401. Die vorgeschaltete nginx-Schranke
     (GZ_VALIDATOR_*) bleibt unveraendert aus .claude/validator.env.
 
-    Rangfolge: bereits gesetzte Umgebungsvariablen > Staging-.env (nur bei
-    Staging-Ziel) > .claude/validator.env und lokale .env. Umgesetzt ueber die
-    Reihenfolge: setdefault macht den ersten Schreiber massgeblich.
+    Fuer Staging ist die Staging-.env MASSGEBLICH: sie ueberschreibt, was in
+    os.environ steht. Die erste Fassung nutzte setdefault und liess damit einen
+    vorhandenen Wert gewinnen — im echten Pfad war GZ_AUTH_PASS aber laengst
+    aus einer lokalen .env in der Umgebung gelandet (conftest/Settings, Muster
+    #1477), sodass der Staging-Wert nie ankam und das Gate JEDE
+    Frontend-Auslieferung blockierte. Der Grund dahinter: **os.environ ist
+    keine Absichtserklaerung** — ein Wert darin kann still geerbt sein.
+
+    Wer bewusst abweichen will, hat zwei Wege, die beide eine Absicht
+    ausdruecken und nicht aus Versehen entstehen koennen:
+      - GZ_STAGING_ENV_PATH auf eine andere Datei zeigen lassen, oder
+      - gate()/check_pages() ein eigenes ``env``-Mapping uebergeben — das
+        bewertet ausschliesslich den Parameter und laedt gar nichts nach
+        (diesen Weg nutzt der AC-6-Test mit dem falschen Passwort).
     """
     base = (os.environ.get("GZ_VALIDATION_URL")
             or _read_env_file(Path(".claude/validator.env")).get("GZ_VALIDATION_URL", "")
@@ -97,7 +108,7 @@ def load_validator_env() -> None:
         app = _read_env_file(staging_env)
         for key in APP_CREDENTIALS:
             if app.get(key):
-                os.environ.setdefault(key, app[key])
+                os.environ[key] = app[key]  # bewusst NICHT setdefault, s.o.
     _design_fidelity().load_validator_env()
 
 

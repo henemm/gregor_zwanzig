@@ -245,9 +245,19 @@ Freifahrtschein wäre es genau das Sicherheits-Theater, das dieses Ticket abscha
 
 - **Der Eingriff sitzt im gemeinsamen Auslieferungspfad**, den jede Sitzung durchläuft. Greift die
   Scope-Prüfung falsch, blockiert das auch Backend-Deploys — AC-3 bewacht genau das.
-- **Staging wird zum Nadelöhr** für Frontend-Deploys. Bewusst in Kauf genommen; ein Notausgang für
-  echte Ausfälle existiert bereits (`GZ_SKIP_E2E_GATE=1`, `staging_gate.py:383–385`) — laut und
-  geloggt. Ein zweiter, stiller wird nicht gebaut.
+- **Staging wird zum Nadelöhr** für Frontend-Deploys. Bewusst in Kauf genommen — aber der
+  Notausgang, den diese Zeile ursprünglich behauptete, **existierte nicht**. `GZ_SKIP_E2E_GATE=1`
+  sitzt in `gate_check()` (Mode B, Deploy-Check); das Browser-Gate hängt in `write_verdict()`
+  (Mode A) und wurde davon nie erreicht. Die Annahme war aus Plausibilität abgeleitet
+  („es gibt ja einen Override"), nicht nachgemessen — und fiel genau dann auf, als der Wächter
+  defekt war und jede Frontend-Auslieferung blockierte.
+  **Tatsächlich gilt seit 2026-08-08:** eigener Notausgang **`GZ_SKIP_FRONTEND_BROWSER_GATE=1`**
+  (exakt `1`), laut auf stderr. Bewusst eine zweite Variable: `gate_check()` überspringt eine
+  *flüchtige* Prüfung (ein Deploy), hier entsteht ein *dauerhaftes* Artefakt. Damit dieses
+  Artefakt nicht lügt, trägt es dann `frontend_browser_gate: "UEBERSPRUNGEN via …"` statt
+  `frontend_pages_checked`; dasselbe Feld markiert den Fall „Gate-Modul nicht ladbar".
+  Die Blockade-Meldung nennt die Variable selbst — wer sie braucht, sucht sie in genau
+  diesem Moment und nicht in der Doku.
 - **Laufzeit:** gemessen 1,0 s je Seitenaufruf inkl. Browser-Start und Basic-Auth. Sechs Seiten
   plus einmal Anmelden bleiben im Sekundenbereich, in einem Schritt, der einmal je Auslieferung läuft.
 - **Nicht geprüft:** ob der Hook-Kontext dieselben Netzwerkrechte hat wie eine interaktive Sitzung.

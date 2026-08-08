@@ -77,8 +77,31 @@ für diesen Stand.
 **Attestation:** bei bestandenem Lauf trägt `.claude/e2e_verified/<sha>.json` zusätzlich das
 Feld `frontend_pages_checked` mit den geprüften Pfaden.
 
-**Notausgang:** bestehender Mechanismus `GZ_SKIP_E2E_GATE=1` (laut, geloggt) — kein eigener,
-zweiter Ausgang für dieses Gate.
+**Notausgang: `GZ_SKIP_FRONTEND_BROWSER_GATE=1`** (exakt `1`, sonst greift er nicht).
+
+Zwei Gates, zwei Schalter — das ist Absicht, keine Redundanz:
+
+| Variable | wirkt auf | Folge |
+|---|---|---|
+| `GZ_SKIP_E2E_GATE=1` | `gate_check()` (Mode B, **Deploy**-Check) | flüchtig: ein Deploy geht durch |
+| `GZ_SKIP_FRONTEND_BROWSER_GATE=1` | `write_verdict()` (Mode A, **Browserlauf**) | dauerhaft: es entsteht eine Attestation |
+
+`GZ_SKIP_E2E_GATE` wirkt auf den Browserlauf **nicht**. Bis 2026-08-08 stand hier das Gegenteil —
+eine aus Plausibilität abgeleitete, nie nachgemessene Annahme. Aufgefallen ist sie, als der
+Wächter defekt war und jede Frontend-Auslieferung blockierte, also im schlechtesten Moment.
+
+Wer den Browserlauf überspringt, erzeugt ein **dauerhaftes** Artefakt. Damit es keinen Nachweis
+behauptet, den es nie gab, trägt die Attestation dann statt `frontend_pages_checked` das Feld:
+
+```json
+"frontend_browser_gate": "UEBERSPRUNGEN via GZ_SKIP_FRONTEND_BROWSER_GATE=1"
+```
+
+Dasselbe Feld markiert den Fall „Gate-Modul nicht ladbar" (`NICHT GELAUFEN`). Eine Attestation
+ohne beide Felder und ohne `frontend_pages_checked` stammt aus der Zeit vor dem Gate.
+
+Die Blockade-Meldung des Gates nennt die Variable selbst — im Notfall muss die Antwort dort
+stehen, wo man sie sucht, nicht in diesem Dokument.
 
 ### Zugangsdaten: DREI Quellen, nicht zwei (2026-08-08)
 
