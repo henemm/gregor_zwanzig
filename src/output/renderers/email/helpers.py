@@ -296,6 +296,22 @@ def visible_cols(rows_or_metrics: list[dict], horizon=_HORIZON_UNSET):
     return [(k, label) for k, label, _ in get_col_defs() if k in keys]
 
 
+def resolve_metric_col_order(dc: UnifiedWeatherDisplayConfig) -> list[str]:
+    """Spaltenreihenfolge aus dc.metrics (AC-3/#911), geteilt von HTML und
+    Plain (Fix #1575 Scheibe 2). Nur enabled+selectable Metriken zaehlen."""
+    order: list[str] = []
+    for mc in dc.metrics:
+        if not mc.enabled:
+            continue
+        try:
+            mdef = get_metric(mc.metric_id)
+            if mdef.selectable:
+                order.append(mdef.col_key)
+        except KeyError:
+            continue
+    return order
+
+
 def derive_horizon(report_date: date, etappe_date: date) -> str | None:
     """Issue #342 §5: Etappen-Startdatum -> Horizont-Schluessel.
 

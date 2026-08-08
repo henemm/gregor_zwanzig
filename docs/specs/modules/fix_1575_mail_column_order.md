@@ -93,13 +93,16 @@ unverändert; ausschließlich die Reihenfolge folgt der Einstellung.
   Mail-Inhalts-Datei: `renderer_mail_gate.py` verlangt dafür einen frischen
   `briefing_mail_validator.py`-Lauf gegen eine **echt zugestellte Staging-Mail** per
   IMAP. Diese Session hat weder IMAP-Zugang noch Staging-Zugriff. → Folge-Scheibe für
-  eine Session mit Staging-Zugang.
+  eine Session mit Staging-Zugang. **Erledigt:** `fix_1575_plain_column_order.md`
+  (Scheibe 2, AC-1 bis AC-3/AC-7).
 - **Divergenz HTML ↔ Plain (Zusatzbefund).** Schon heute unterscheiden sich beide
   Hälften: `TmpMin` steht im Plain-Teil an Position 2, im HTML-Teil an vorletzter
   Stelle. Ursache gemessen: `temperature_cold.selectable = False`, dadurch fällt die
   Größe in `html.py:1024` aus `_col_order` heraus und landet über den
   `remaining`-Zweig am Ende, während der Plain-Teil sie nach Katalog einsortiert. Das
   ist ein Trip-seitiges Geschwister von #1356 und gehört in dieselbe Folge-Scheibe.
+  **Erledigt:** `fix_1575_plain_column_order.md` (Scheibe 2, AC-5) — Plain gleicht
+  sich an die bereits produktive HTML-Position an.
 - **Symptom B aus #1575 (Kanal-Trennung im Editor).** Eigene Spec, eigener Workflow —
   braucht eine PO-Entscheidung zum Bedienkonzept (pro Kanal eigene Auswahl vs. Reiter
   ehrlich als reine Vorschau beschriften).
@@ -149,3 +152,10 @@ Zusicherung dort geprüft, wo sie wirkt?").
 | AC-4 | Konfiguration über beide Buckets → primary-Block vollständig vor secondary-Block |
 | AC-5 | `render_for_channel("telegram", …)` und Compare-Pfad vor/nach identisch |
 | AC-6 | Konfiguration mit `per_channel_layouts` → Auswahl unverändert, Reihenfolge sortiert |
+
+## Changelog
+
+- 2026-08-07: Initial spec created
+- 2026-08-08: „Nicht in dieser Scheibe" ergänzt um Verweis auf die jetzt
+  existierende Folge-Scheibe `fix_1575_plain_column_order.md` (Scheibe 2) — Plain-
+  Text-Lücke und HTML↔Plain-`TmpMin`-Divergenz sind dort behoben.

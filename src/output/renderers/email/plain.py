@@ -31,7 +31,8 @@ from output.renderers.email.helpers import (
     build_segment_label,
     build_column_legend,
     build_units_legend, fmt_val, format_change_line, format_km_range,
-    render_origin_footer_text, tone_symbol, visible_cols,
+    render_origin_footer_text, resolve_metric_col_order, tone_symbol,
+    visible_cols,
 )
 from output.renderers.email.profile_signature import profile_signature
 from output.renderers.alert.official_alerts import (
@@ -52,11 +53,19 @@ from output.renderers.email.outlook_state_hint import (
 
 
 def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
-                       format_modes: Optional[dict[str, str]] = None) -> str:
+                       format_modes: Optional[dict[str, str]] = None,
+                       col_order: Optional[list[str]] = None) -> str:
     """Plain-text table from row dicts."""
     if not rows:
         return "  (keine Daten)"
     cols = visible_cols(rows)
+    if col_order:
+        # Fix #1575 Scheibe 2: dieselbe ordered+remaining-Merge-Logik wie
+        # html.py:664-682 (geteilter col_order aus resolve_metric_col_order).
+        col_map = {k: label for k, label in cols}
+        ordered = [(k, col_map[k]) for k in col_order if k in col_map]
+        remaining = [(k, label) for k, label in cols if k not in col_order]
+        cols = ordered + remaining
     headers = [("Time", "time")] + [(label, key) for key, label in cols]
     widths = []
     for label, key in headers:
@@ -130,6 +139,9 @@ def render_plain(
     False) — s. ``render_html`` fuer die Begruendung.
     """
     sig = profile_signature(profile)
+    # Fix #1575 Scheibe 2: einmal berechnen, an beide Aufrufstellen von
+    # _render_text_table() durchreichen (Segment- UND Nacht-Tabelle, AC-7).
+    _col_order = resolve_metric_col_order(dc)
     lines = []
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
@@ -277,14 +289,17 @@ def render_plain(
                 seg.end_point.distance_from_start_km,
             )
             lines.append(f"━━ Segment {seg.segment_id}: {_km_range} | {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {elev_arrow}{s_elev}m → {e_elev}m ━━")
-        lines.append(_render_text_table(rows, friendly_keys=friendly_keys, format_modes=format_modes))
+        lines.append(_render_text_table(rows, friendly_keys=friendly_keys,
+                                         format_modes=format_modes,
+                                         col_order=_col_order))
         lines.append("")
 
     if night_rows:
         last_seg = segments[-1].segment
         lines.append(f"━━ Nacht am Ziel ({int(last_seg.end_point.elevation_m or 0)}m) ━━")
         lines.append(f"Ankunft {local_fmt(last_seg.end_time, tz)} → Morgen 06:00")
-        lines.append(_render_text_table(night_rows, friendly_keys=friendly_keys))
+        lines.append(_render_text_table(night_rows, friendly_keys=friendly_keys,
+                                         col_order=_col_order))
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
             lines.append("  * Temperatur/Nullgradgrenze: Minimum im 2h-Block")
         lines.append("")
