@@ -225,6 +225,23 @@ uns taeglich fuer 24 h aus; amtliche Warnungen waren dadurch den groessten Teil 
 veraltet — bei einem Sicherheitswerkzeug fuer Weitwanderungen nicht hinnehmbar. Der Feed liefert
 zusaetzlich eine laengere Rueckschau (5,8 Tage statt 23 h) und deutschsprachige Texte fuer AT.
 
+#### Antrag #3 (Nachtrag): Open-Meteo `minutely_15` — Radar-Nowcast
+
+**Datum:** 2026-08-07
+**Status:** ✅ APPROVED (Nachtrag — bereits seit #656 produktiv genutzt)
+**Antragsteller:** Claude (Issue #1439, Governance-Nachtrag zu Issue #656)
+**Spec:** `docs/specs/modules/feat_1439_starkregen_kurzfristhinweis.md`
+
+**Zusammenfassung:** `minutely_15` (Open-Meteo, Parameter `precipitation`/`weather_code`) ist der
+globale Fallback des bereits produktiven `RadarNowcastService` (Issue #656, `src/services/radar_service.py`)
+fuer den 60-Minuten-Regen-/Gewitter-Nowcast — ausserhalb der RADOLAN/INCA/DPC/AROME-Bounding-Boxen sowie
+als Sidecar-Quelle fuer den Konvektions-Check. War in dieser Spec bisher nicht eingetragen; kein neuer
+Parameter, reiner Nachtrag.
+
+| Daten | Status | Bemerkung |
+|-------|--------|-----------|
+| `minutely_15` (precipitation, weather_code) | approved (Nachtrag) | Open-Meteo, seit #656 produktiv im Nowcast-Pfad (Fallback + Konvektions-Sidecar) |
+
 #### Antrag #1: Open-Meteo Wetter-Parameter (Regional Models)
 
 **Datum:** 2026-01-24

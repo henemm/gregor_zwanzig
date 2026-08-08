@@ -39,6 +39,7 @@ from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
     render_official_alerts_unavailable_plain,
 )
+from output.renderers.email.starkregen_hint import render_starkregen_hint_plain
 from output.renderers.email.outlook_state_hint import (
     OutlookState as _OutlookState, render_outlook_state_plain,
 )
@@ -623,6 +624,7 @@ def render_telegram_bubbles(
     has_gap: bool = False,
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
+    starkregen_hint_text: Optional[str] = None,
 ) -> list[TelegramBubble]:
     """Render die Telegram-Briefing-Bubble-Liste (Issue #1001). Pure function.
 
@@ -683,6 +685,13 @@ def render_telegram_bubbles(
     if any_official_alerts_unavailable(segments):
         bubbles.append(TelegramBubble(
             text=_esc(render_official_alerts_unavailable_plain(ascii_safe=False))
+        ))
+
+    # Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad) — direkt
+    # nach dem Kopf, weil zeitkritisch.
+    if starkregen_hint_text:
+        bubbles.append(TelegramBubble(
+            text=_esc(render_starkregen_hint_plain(starkregen_hint_text))
         ))
 
     # 1b. Amtliche Warnungen (#1318 AC-8) — direkt nach dem Kopf, weil

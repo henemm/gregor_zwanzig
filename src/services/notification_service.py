@@ -100,6 +100,9 @@ class TripReportRequest:
     # Issue #1208: aufgeloeste render-wirksame Optionen (einziger Ableitungsweg
     # von report_config zu format_email); None → interner Resolver-Fallback.
     render_options: Optional["ReportRenderOptions"] = None
+    # Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad), vom
+    # Scheduler ermittelt — None = kein Treffer/Guard aktiv, Briefing unveraendert.
+    starkregen_hint_text: str | None = None
 
 
 @dataclass
@@ -320,6 +323,7 @@ class NotificationService:
             trip_url=request.trip_url,
             render_options=request.render_options,
             has_gap=has_gap,
+            starkregen_hint_text=request.starkregen_hint_text,
         )
 
         self._apply_prefixes(report, request)

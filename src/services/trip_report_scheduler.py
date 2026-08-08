@@ -29,6 +29,7 @@ from app.models import (
     StabilityResult,
     TripSegment,
 )
+from services import alert_daily_limit
 from services.alert_briefing_anchor import reset_alert_memory, write_anchor_and_reset_memory
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
@@ -919,6 +920,14 @@ class TripReportSchedulerService:
                 logger.warning(f"Vortag-Vergleich übersprungen für {trip.id}: {e}")
                 day_comparison = None
 
+        # 7c. Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad) —
+        # Segment-Auswahl/Naehe-Guard/Budget-Gate/Fetch laufen VOR dem Bau des
+        # TripReportRequest, damit ein zu weit entferntes Segment oder ein
+        # ausgeschoepftes Tagesbudget keinen Nowcast-Call verursacht.
+        starkregen_hint_text = self._build_starkregen_hint(
+            trip, segments, trip_tz, datetime.now(timezone.utc),
+        )
+
         # 8. NotificationService: render + send (Issue #1022).
         # Der Scheduler liefert nur noch ein DTO; Renderer-/Transport-Imports
         # bleiben im NotificationService.
@@ -942,9 +951,20 @@ class TripReportSchedulerService:
             catchup_prefix=catchup_prefix,
             partial_outage_hint=partial_outage_hint,
             render_options=render_options,
+            starkregen_hint_text=starkregen_hint_text,
         )
         result = self._notification_service.send_trip_report(request)
         errors = request.failed_segments
+
+        # Issue #1439 AC-6: ein erfolgreich versendeter Kurzfristhinweis
+        # schreibt denselben Radar-Cooldown, den ein echter Radar-Alert nach
+        # Versand ohnehin schreibt (trip_alert.py:935) — Wiederverwendung des
+        # bestehenden Throttles statt eines neuen State-Mechanismus. Der
+        # naechste 15-Minuten-Poll ist dadurch an seiner ERSTEN Pruefung
+        # bereits blockiert (kein widerspruechlicher Folge-Alert).
+        if starkregen_hint_text and result.sent:
+            from services.throttle_store import ThrottleStore
+            ThrottleStore(self._user_id).record("radar", trip.id, datetime.now(timezone.utc))
 
         # Issue #393: Briefing-Log für Cockpit-Kachel "Was geht heute raus".
         # Issue #1007 Adversary-Fix F001: bei explizit konfiguriertem "kein
@@ -1046,6 +1066,7 @@ class TripReportSchedulerService:
         catchup_prefix: str | None,
         partial_outage_hint: str | None = None,
         render_options: Optional["ReportRenderOptions"] = None,
+        starkregen_hint_text: str | None = None,
     ) -> TripReportRequest:
         """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
 
@@ -1086,7 +1107,70 @@ class TripReportSchedulerService:
             failed_segments=errors,
             on_demand=on_demand,
             render_options=render_options,
+            starkregen_hint_text=starkregen_hint_text,
         )
+
+    def _build_starkregen_hint(
+        self,
+        trip: "Trip",
+        segments: List[TripSegment],
+        tz: ZoneInfo,
+        now_utc: datetime,
+    ) -> Optional[str]:
+        """Starkregen-Kurzfristhinweis (Issue #1439): Nachrichtenzeile fuer das
+        planmaessige Briefing, wenn der bereits produktive `RadarNowcastService`
+        (#656) fuer den Startpunkt des aktiven/naechsten Segments Starkregen
+        innerhalb von `NOWCAST_HORIZON_MIN` erkennt.
+
+        Segment-Auswahl identisch zu `TripAlertService.check_radar_alerts()`
+        (trip_alert.py:730-745). Naehe-Guard und Budget-Gate laufen VOR dem
+        Fetch — ein zu weit entferntes Segment oder ausgeschoepftes Tagesbudget
+        verursacht keinen Nowcast-Call (AC-1/AC-2). Fail-soft bei Fetch-Fehlern
+        (ADR-0018, AC-4).
+        """
+        if not segments:
+            return None
+
+        active = None
+        for seg in segments:
+            if seg.start_time <= now_utc <= seg.end_time:
+                active = seg
+                break
+        if active is None:
+            if now_utc < segments[0].start_time:
+                active = segments[0]
+            else:
+                return None
+
+        from services.radar_service import NOWCAST_HORIZON_MIN
+
+        if active.start_time > now_utc:
+            minutes_until_start = (active.start_time - now_utc).total_seconds() / 60.0
+            if minutes_until_start > NOWCAST_HORIZON_MIN:
+                return None
+
+        if not alert_daily_limit.is_allowed(self._user_id, now_utc, reason="nowcast"):
+            return None
+
+        from services.radar_service import INTENSITY_HEAVY, RadarNowcastService
+
+        lat = active.start_point.lat
+        lon = active.start_point.lon
+        try:
+            radar_svc = RadarNowcastService()
+            # Issue #1329 C2: der Scheduler ist ein Hintergrund-/Cron-Prozess
+            # wie der 15-Minuten-Alarm-Poll, kein direkter Nutzerklick.
+            result = radar_svc.get_nowcast(lat, lon, priority="polling")
+        except Exception as e:
+            logger.warning(f"Starkregen-Kurzfristhinweis: Nowcast fehlgeschlagen fuer {trip.id}: {e}")
+            return None
+
+        if result.onset_minutes is None or result.intensity_label != INTENSITY_HEAVY:
+            return None
+
+        from output.renderers.email.starkregen_hint import format_starkregen_hint
+
+        return format_starkregen_hint(result.intensity_label, result.onset_minutes, tz=tz)
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:
         """Issue #816 (B): Alert-Melde-Gedächtnis nach Briefing-Versand löschen.

@@ -86,6 +86,7 @@ class TripReportFormatter:
         trip: Optional["Trip"] = None,
         has_gap: bool = False,
         undelivered: Optional[list] = None,
+        starkregen_hint_text: Optional[str] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email.
 
@@ -233,6 +234,7 @@ class TripReportFormatter:
             # Renderer bleibt rein und laedt nichts nach (Spec §A1/§A5/§A6).
             # Ohne den kwarg (Vorschau, Goldens, CLI) unveraendert.
             undelivered=undelivered,
+            starkregen_hint_text=starkregen_hint_text,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(
@@ -266,6 +268,7 @@ class TripReportFormatter:
             has_gap=has_gap,
             day_window_start_hour=_dw_start,
             day_window_end_hour=_dw_end,
+            starkregen_hint_text=starkregen_hint_text,
         )
         telegram_bubbles = [b.text for b in telegram_bubbles_result]
         telegram_actions_markup = (
