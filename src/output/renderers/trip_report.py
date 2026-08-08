@@ -126,6 +126,10 @@ class TripReportFormatter:
         # alle enabled=False) unterscheidet. Die Kollabierung unten filtert
         # in beiden Faellen auf eine leere Liste (Kritischer Befund, Spec).
         _trip_metrics_altbestand = len(dc.metrics) == 0
+        # Issue #1575 Scheibe 3: die SMS-Auswahl muss VOR der Email-Kollabierung
+        # gezogen werden -- danach traegt ``dc.metrics`` nur noch die
+        # Email-Auswahl und die SMS koennte strukturell nie eine eigene haben.
+        _dc_uncollapsed = dc
         if report_type in ("morning", "evening"):
             # Issue #434: kanal-bewusste Auflösung (per_report > per_channel > global).
             active_metrics = dc.get_metrics_for_channel("email", report_type)
@@ -278,22 +282,37 @@ class TripReportFormatter:
         from output.renderers.sms_trip import (
             SMSTripFormatter, SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
         )
+        # Issue #1575 Scheibe 3: die MENGE der SMS-Metriken kommt aus der
+        # SMS-eigenen Kaskade (per_report > per_channel > global), der
+        # SCHWELLWERT je Metrik bleibt eine globale Groesse (KL-4) -- die vom
+        # Editor geschriebenen Kanal-Layouts fuehren kein ``sms_threshold``.
+        sms_metric_ids = {
+            m.metric_id
+            for m in _dc_uncollapsed.get_metrics_for_channel("sms", report_type)
+        }
+        _global_metrics = {m.metric_id: m for m in _dc_uncollapsed.metrics}
         # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
         _sms_thr = {
-            SMS_SYMBOL_BY_METRIC[m.metric_id]: m.sms_threshold
-            for m in dc.metrics
-            if m.metric_id in SMS_SYMBOL_BY_METRIC and m.sms_threshold is not None
+            SMS_SYMBOL_BY_METRIC[mid]: _global_metrics[mid].sms_threshold
+            for mid in sms_metric_ids
+            if mid in SMS_SYMBOL_BY_METRIC
+            and mid in _global_metrics
+            and _global_metrics[mid].sms_threshold is not None
         }
         # Fix #1482 (AC-6): der Gewitter-Schwellwert gilt fuer BEIDE Kuerzel.
         # SMS_SYMBOL_BY_METRIC bildet 1:1 ab und kennt nur 'TH:', deshalb fiel
         # 'TH+:' bisher immer auf den hartkodierten Default (1.0) zurueck.
-        for m in dc.metrics:
-            if m.metric_id == "thunder" and m.sms_threshold is not None:
-                _sms_thr["TH+:"] = m.sms_threshold
+        _thunder_global = _global_metrics.get("thunder")
+        if (
+            "thunder" in sms_metric_ids
+            and _thunder_global is not None
+            and _thunder_global.sms_threshold is not None
+        ):
+            _sms_thr["TH+:"] = _thunder_global.sms_threshold
         # Bug #944: SMS-Symbole ohne aktive Metrik als deaktivierte Specs führen,
         # damit SD/SL nicht erscheinen, wenn die Metrik im Trip nicht gewählt ist —
         # unabhängig davon, ob Schneedaten in der Vorhersage vorhanden sind.
-        active_metric_ids = {m.metric_id for m in dc.metrics}
+        active_metric_ids = sms_metric_ids
         _disabled_sms_specs = [
             MetricSpec(symbol=sym, enabled=False)
             for metric_id, sym in SMS_SYMBOL_BY_METRIC.items()

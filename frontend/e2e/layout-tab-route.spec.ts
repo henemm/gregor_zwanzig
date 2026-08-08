@@ -368,3 +368,98 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 		});
 	});
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #1575 Scheibe 3: die Kanal-Reiter tragen eigene Daten. Ergaenzt die
+// AC-6-Garantie oben (reiner Kanal-WECHSEL bleibt clean) um ihre zweite
+// Haelfte — ein Kanal-EDIT macht dirty und schreibt NUR den aktiven Kanal.
+// Spec: docs/specs/modules/fix_1575_channel_metric_selection.md § AC-2/AC-3
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CHANNEL_TRIP_ID = 'e2e-1575-channel-metrics';
+
+const PRE_EMAIL_LAYOUT = [
+	{ metric_id: 'temperature', enabled: true, use_friendly_format: true, bucket: 'primary', order: 0 },
+	{ metric_id: 'wind', enabled: true, use_friendly_format: true, bucket: 'primary', order: 1 }
+];
+const PRE_TELEGRAM_LAYOUT = [
+	{ metric_id: 'precipitation', enabled: true, use_friendly_format: true, bucket: 'primary', order: 0 }
+];
+
+test.describe('Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (context="route")', () => {
+	test.beforeEach(async ({ page }) => {
+		await login(page);
+		await page.setViewportSize({ width: 1440, height: 900 });
+	});
+
+	test.beforeAll(async ({ request }) => {
+		await createTrip(request, CHANNEL_TRIP_ID, [
+			{ metric_id: 'temperature', order: 0 },
+			{ metric_id: 'wind', order: 1 },
+			{ metric_id: 'precipitation', order: 2 }
+		]);
+		// Vorbelegte, unterschiedliche Kanal-Layouts (AC-3-Ausgangslage).
+		await request.put(`/api/trips/${CHANNEL_TRIP_ID}/weather-config`, {
+			data: {
+				metrics: [
+					{ metric_id: 'temperature', enabled: true, bucket: 'primary', order: 0 },
+					{ metric_id: 'wind', enabled: true, bucket: 'primary', order: 1 },
+					{ metric_id: 'precipitation', enabled: true, bucket: 'primary', order: 2 }
+				],
+				channel_layouts: { email: PRE_EMAIL_LAYOUT, telegram: PRE_TELEGRAM_LAYOUT }
+			}
+		});
+	});
+
+	test.afterAll(async ({ request }) => {
+		await request.delete(`/api/trips/${CHANNEL_TRIP_ID}`).catch(() => {});
+	});
+
+	test('AC-2/AC-3: SMS-Edit wirkt nur auf SMS und laesst email/telegram unveraendert', async ({
+		page,
+		request
+	}) => {
+		const tab = await openMetricsTab(page, CHANNEL_TRIP_ID);
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle');
+
+		// SMS-Reiter startet ohne eigenen Eintrag → globale Auswahl (3 Metriken).
+		await tab.getByTestId('channel-tab-sms').click();
+		const rows = tab.locator('[data-testid="wm2-reihenfolge-row"]');
+		await expect(rows).toHaveCount(3);
+
+		// Copy-on-write: der erste Edit legt den SMS-Eintrag als Kopie an (AC-2).
+		await tab
+			.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]')
+			.getByRole('button', { name: 'Aus' })
+			.click();
+		await expect(rows).toHaveCount(2);
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
+			timeout: 10_000
+		});
+
+		// AC-3: die gespeicherten Layouts der anderen Kanaele ueberleben den Save.
+		const trip = await (await request.get(`/api/trips/${CHANNEL_TRIP_ID}`)).json();
+		const layouts = trip.display_config?.channel_layouts ?? {};
+		expect(
+			layouts.email?.filter((m: { enabled: boolean }) => m.enabled).map((m: { metric_id: string }) => m.metric_id)
+		).toEqual(['temperature', 'wind']);
+		expect(
+			layouts.telegram?.filter((m: { enabled: boolean }) => m.enabled).map((m: { metric_id: string }) => m.metric_id)
+		).toEqual(['precipitation']);
+		expect(
+			layouts.sms?.filter((m: { enabled: boolean }) => m.enabled).map((m: { metric_id: string }) => m.metric_id)
+		).not.toContain('wind');
+
+		// AC-4/AC-5-Vorstufe: nach dem Reload zeigt jeder Reiter seinen Stand.
+		await page.reload();
+		await page.getByTestId('trip-detail-tab-weather').click();
+		const reloaded = page.getByTestId('weather-metrics-tab');
+		await reloaded.getByTestId('channel-tab-email').click();
+		await expect(reloaded.locator('[data-testid="wm2-reihenfolge-row"]')).toHaveCount(2);
+		await reloaded.getByTestId('channel-tab-sms').click();
+		await expect(reloaded.locator('[data-testid="wm2-reihenfolge-row"]')).toHaveCount(2);
+		await expect(
+			reloaded.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]')
+		).toHaveCount(0);
+	});
+});

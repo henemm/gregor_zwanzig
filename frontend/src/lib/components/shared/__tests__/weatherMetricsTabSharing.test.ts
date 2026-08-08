@@ -191,3 +191,46 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 		}
 	);
 });
+
+// Issue #1575 Scheibe 3, AC-8: die kanal-eigene Metrik-Auswahl ist Trip-only
+// (#1351 haelt `channel_layouts` bewusst aus dem Ortsvergleich heraus). Geprueft
+// wird die STELLE im Quelltext, nicht die blosse Anwesenheit eines Wortes:
+// jedes Vorkommen der neuen Kanal-Ableitung im Markup muss hinter dem `{:else}`
+// des `{#if context === 'vergleich'}`-Blocks liegen, und keiner der
+// vergleich-eigenen Handler darf sie aufrufen.
+describe('AC-8 (#1575): Kanal-eigene Auswahl bleibt strukturell aus dem vergleich-Zweig heraus', () => {
+	const compareHandlers = [
+		'onCompareDndReorder', 'onCompareRemove', 'noopMode', 'onToggleVergleichOfficialAlerts',
+	];
+
+	test('channelView()/channelBuckets stehen im Markup nur im route-Zweig', { skip: !sharedExists() }, () => {
+		const code = readFileSync(SHARED_FILE, 'utf-8');
+		const markupStart = code.indexOf("{#if context === 'vergleich'}");
+		const routeStart = code.indexOf('\n{:else}', markupStart);
+		assert.ok(markupStart > 0 && routeStart > markupStart, 'Markup-Verzweigung nicht gefunden');
+
+		for (const m of code.matchAll(/channelView\(|channelBuckets/g)) {
+			if (m.index! < markupStart) continue; // <script>-Teil: Definition + route-Handler
+			assert.ok(
+				m.index! > routeStart,
+				`AC-8 FAIL: "${m[0]}" steht im vergleich-Zweig des Markups (Position ${m.index}, ` +
+					`vergleich-Block ${markupStart}..${routeStart}) — der Ortsvergleich bekommt ` +
+					'laut #1351 keine Kanal-Persistenz'
+			);
+		}
+	});
+
+	test('kein vergleich-Handler ruft die neuen Kanal-Funktionen', { skip: !sharedExists() }, () => {
+		const code = readFileSync(SHARED_FILE, 'utf-8');
+		for (const name of compareHandlers) {
+			const start = code.indexOf(`function ${name}(`);
+			assert.ok(start > 0, `${name} nicht gefunden — Test ist blind geworden`);
+			const body = code.slice(start, code.indexOf('\n\t}', start));
+			assert.doesNotMatch(
+				body,
+				/editActiveChannel|channelBuckets|channelView\(|mergeChannelLayoutsForSave|startChannelOverride/,
+				`AC-8 FAIL: ${name} (vergleich-Zweig) greift auf die kanal-eigene Auswahl zu`
+			);
+		}
+	});
+});
