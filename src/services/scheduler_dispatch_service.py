@@ -16,6 +16,7 @@ from app.loader import (
     LoaderError,
     _parse_activity_profile,
     compare_preset_to_dict,
+    get_data_root,
     load_all_locations,
     load_compare_presets,
 )
@@ -145,7 +146,7 @@ def run_compare_presets_daily(
     unveraendert (AC-3).
     """
     if data_root is None:
-        data_root = "data"
+        data_root = str(get_data_root())
     if hour is None:
         from zoneinfo import ZoneInfo
 
@@ -171,7 +172,7 @@ def save_compare_preset_status(
     und load_compare_presets sichtbar bleibt.
     """
     if data_root is None:
-        data_root = "data"
+        data_root = str(get_data_root())
 
     path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
     if not path.exists():
@@ -223,7 +224,7 @@ def save_compare_preset_pause(
     Replace (BUG-DATALOSS-GR221) — alle anderen Felder bleiben erhalten.
     """
     if data_root is None:
-        data_root = "data"
+        data_root = str(get_data_root())
     if now_iso is None:
         now_iso = _datetime.utcnow().isoformat() + "Z"
 
@@ -453,7 +454,7 @@ def send_compare_preset(
     Vergleichspunkt und der naechste echte Ausschlag ginge still verloren.
     """
     if data_root is None:
-        data_root = "data"
+        data_root = str(get_data_root())
 
     # Issue #1250 Scheibe 1 (Adversary-Fix F001): strict=True, damit korrupte
     # Dateien wie vor der Umstellung als KeyError mit Original-Parse-Fehler

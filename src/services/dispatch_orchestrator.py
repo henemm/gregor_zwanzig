@@ -23,6 +23,7 @@ import time as time_module
 from typing import TYPE_CHECKING
 
 from app.config import Settings
+from app.loader import get_data_root
 
 if TYPE_CHECKING:
     from services.trip_report_scheduler import TripReportSchedulerService
@@ -97,7 +98,7 @@ class CompareDispatchStrategy:
     def __init__(self, settings: Settings, user_id: str, data_root: str | None = None) -> None:
         self._settings = settings
         self._user_id = user_id
-        self._data_root = data_root or "data"
+        self._data_root = data_root or str(get_data_root())
         self._presets: list = []
         self._all_locations = None
         self._success = 0

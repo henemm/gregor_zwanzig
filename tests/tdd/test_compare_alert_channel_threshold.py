@@ -44,9 +44,10 @@ und lokalem HTTP-Stub auf 127.0.0.1 umgelenkt — Muster 1:1 aus
 ``tests/tdd/test_alert_channel_threshold.py`` (Trip-Vorlage, S3b-2a).
 
 Pfadregel #1409: keine Datei dieses Moduls referenziert einen festen
-Hauptrepo-Pfad für den Prüfling — ``DATA_ROOT`` ist die im ganzen
-Ortsvergleichs-Testbestand dokumentierte, bewusste Ausnahme (cwd-relative
-Compare-Preset-Ablage, s.o.), keine Prüflings-Kopie aus dem Hauptrepo.
+Hauptrepo-Pfad für den Prüfling. Die früher hier dokumentierte Ausnahme
+``DATA_ROOT`` (cwd-relative Compare-Preset-Ablage) ist mit #1595 entfallen —
+der Compare-Loader löst die Datenwurzel jetzt über ``get_data_root()`` auf,
+also über dieselbe Basis wie die #1133-Testisolation.
 
 Fallen, die die Tests unten gezielt bewachen (Team-Lead-Auftrag):
   1. AC-3 — Schleifen-Falle: das Kanal-Set entsteht je PRESET, der Split muss
@@ -116,7 +117,9 @@ from tests.tdd.test_compare_radar_alert import (
     _write_preset_file,
 )
 
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+# (#1595) Die frühere Konstante DATA_ROOT ist entfallen — die Presets legt
+# ``_write_preset_file`` aus test_compare_radar_alert.py ab, das die Wurzel
+# über ``get_data_root()`` auflöst.
 
 
 # ═══════════════════════════ Transport-Stubs (echtes 127.0.0.1) ═══════════

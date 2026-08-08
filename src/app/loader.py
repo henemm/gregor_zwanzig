@@ -291,7 +291,7 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
 
 def load_compare_presets(
     user_id: str,
-    data_root: Union[str, Path] = "data",
+    data_root: Optional[Union[str, Path]] = None,
     strict: bool = False,
 ) -> List[ComparePreset]:
     """Zentraler Lade-Pfad fuer ComparePresets (Issue #1250).
@@ -316,6 +316,8 @@ def load_compare_presets(
     (HTTP-404-Detail bzw. ERROR-Log) bewahren; die 3 Alert-Services bleiben
     beim partial-toleranten Default.
     """
+    if data_root is None:
+        data_root = get_data_root()
     briefings_dir = Path(data_root) / "users" / user_id / "briefings"
     if not briefings_dir.exists():
         return []
@@ -1139,11 +1141,11 @@ def get_snapshots_dir(user_id: str = "default") -> Path:
     return get_data_dir(user_id) / "weather_snapshots"
 
 
-def list_all_user_ids(data_dir: str = "data") -> list[str]:
+def list_all_user_ids(data_dir: str | None = None) -> list[str]:
     """Return all user IDs found under data/users/, real users first (Issue #1013).
 
     Args:
-        data_dir: Root data directory (default: "data")
+        data_dir: Root data directory (default: get_data_root())
 
     Returns:
         Sorted list of user_id strings (excludes entries starting with 'test' or '_'),
@@ -1153,6 +1155,8 @@ def list_all_user_ids(data_dir: str = "data") -> list[str]:
     """
     from app.config import is_test_user_id
 
+    if data_dir is None:
+        data_dir = str(get_data_root())
     users_root = Path(data_dir) / "users"
     if not users_root.exists():
         return []
@@ -1167,16 +1171,18 @@ def list_all_user_ids(data_dir: str = "data") -> list[str]:
     return real + test
 
 
-def lookup_user_by_email(email: str, data_dir: str = "data") -> str | None:
+def lookup_user_by_email(email: str, data_dir: str | None = None) -> str | None:
     """Find user_id whose mail_to matches the given email address (case-insensitive).
 
     Args:
         email: Sender email address to match against user profiles
-        data_dir: Root data directory (default: "data")
+        data_dir: Root data directory (default: get_data_root())
 
     Returns:
         Matching user_id or None if no match found
     """
+    if data_dir is None:
+        data_dir = str(get_data_root())
     for uid in list_all_user_ids(data_dir):
         profile_path = Path(data_dir) / "users" / uid / "user.json"
         if profile_path.exists():
@@ -1189,16 +1195,18 @@ def lookup_user_by_email(email: str, data_dir: str = "data") -> str | None:
     return None
 
 
-def lookup_user_by_telegram_chat_id(chat_id: str, data_dir: str = "data") -> str | None:
+def lookup_user_by_telegram_chat_id(chat_id: str, data_dir: str | None = None) -> str | None:
     """Find user_id whose telegram_chat_id matches the given chat_id (int/str-tolerant).
 
     Args:
         chat_id: Telegram chat ID to match (compared as strings)
-        data_dir: Root data directory (default: "data")
+        data_dir: Root data directory (default: get_data_root())
 
     Returns:
         Matching user_id or None if no match found
     """
+    if data_dir is None:
+        data_dir = str(get_data_root())
     for uid in list_all_user_ids(data_dir):
         profile_path = Path(data_dir) / "users" / uid / "user.json"
         if profile_path.exists():

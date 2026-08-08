@@ -34,7 +34,13 @@ import pytest
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def _data_root_users() -> Path:
+    """Nutzer-Wurzel der Compare-Preset-Ablage — Funktion statt Konstante
+    (#1595): ``get_data_root()`` liefert erst zur Laufzeit die von der
+    #1133-Fixture gesetzte Basis, eine Konstante waere beim Import gebunden."""
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 # Island: UTC+0 ganzjährig (kein DST) → arrival_calculated-Zeiten = UTC-Zeiten
 # Vereinfacht Timezone-Arithmetik: keine Offset-Korrektur nötig.
@@ -175,7 +181,7 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
 
 
 def _clean_user(uid: str) -> None:
-    d = DATA_ROOT / uid
+    d = _data_root_users() / uid
     if d.exists():
         shutil.rmtree(d)
 
@@ -187,7 +193,7 @@ def _ensure_real_user_dir(uid: str) -> None:
     Existenz des Nutzerverzeichnisses voraus. Vor der #1133-Isolation legte
     _save_trip_direct dieses Verzeichnis als Nebeneffekt im echten Baum an.
     """
-    (DATA_ROOT / uid).mkdir(parents=True, exist_ok=True)
+    (_data_root_users() / uid).mkdir(parents=True, exist_ok=True)
 
 
 # --------------------------------------------------------------------------
@@ -517,7 +523,7 @@ def test_ac7_mandantentrennung_isolated():
         _save_trip_direct(_make_active_trip(trip_id_b), uid_b)
 
         # Snapshot der Dateien unter uid_b VOR Lauf von uid_a
-        dir_b = DATA_ROOT / uid_b
+        dir_b = _data_root_users() / uid_b
         files_before = {p: p.stat().st_mtime for p in dir_b.rglob("*") if p.is_file()}
 
         # Lauf unter uid_a
@@ -534,12 +540,12 @@ def test_ac7_mandantentrennung_isolated():
             if p not in files_before:
                 pytest.fail(
                     f"AC-7: Neue Datei unter uid_b nach Lauf von uid_a: "
-                    f"{p.relative_to(DATA_ROOT)}"
+                    f"{p.relative_to(_data_root_users())}"
                 )
             if p.stat().st_mtime != files_before[p]:
                 pytest.fail(
                     f"AC-7: Datei unter uid_b verändert nach Lauf von uid_a: "
-                    f"{p.relative_to(DATA_ROOT)}"
+                    f"{p.relative_to(_data_root_users())}"
                 )
     finally:
         _clean_user(uid_a)

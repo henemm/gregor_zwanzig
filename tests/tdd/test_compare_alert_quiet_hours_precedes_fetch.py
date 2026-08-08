@@ -45,7 +45,13 @@ from tests.helpers.compare_briefings import write_compare_briefings
 # Pfadregel #1409: Prüfling relativ zur Testdatei auflösen, nie über einen
 # festen Hauptrepo-Pfad — sonst würde ein Worktree gegen die unveränderte
 # Hauptrepo-Kopie prüfen und faelschlich gruen melden.
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def _data_root_users() -> Path:
+    """Nutzer-Wurzel der Compare-Preset-Ablage — Funktion statt Konstante
+    (#1595): ``get_data_root()`` liefert erst zur Laufzeit die von der
+    #1133-Fixture gesetzte Basis, eine Konstante waere beim Import gebunden."""
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 VIENNA = ZoneInfo("Europe/Vienna")
 
@@ -55,16 +61,16 @@ VIENNA = ZoneInfo("Europe/Vienna")
 def _clean_user(user_id: str) -> None:
     import shutil
 
-    d = DATA_ROOT / user_id
+    d = _data_root_users() / user_id
     if d.exists():
         shutil.rmtree(d)
 
 
 def _write_user_tier(uid: str, tier: str) -> None:
     """Setzt den Tarif eines Test-Nutzers — Vorbild: `test_issue_1070_daily_
-    alert_limit.py:75-78`. Nutzt bewusst `app.loader.get_data_dir()` statt der
-    lokalen `DATA_ROOT`-Konstante dieser Datei, sonst greift die #1133-
-    Testisolation nicht."""
+    alert_limit.py:75-78`. Nutzt `app.loader.get_data_dir()`; seit #1595 liegt
+    das auf derselben Basis wie `_data_root_users()` — beide folgen der
+    #1133-Testisolation."""
     from app.loader import get_data_dir
 
     d = get_data_dir(uid)
@@ -194,7 +200,7 @@ def _preset_with_quiet_hours(
 
 def _write_preset_file(user_id: str, presets: list[dict]) -> Path:
     # Issue #1250 S7b Cutover: per-Datei briefings/<id>.json (kind="vergleich").
-    return write_compare_briefings(DATA_ROOT / user_id, presets)
+    return write_compare_briefings(_data_root_users() / user_id, presets)
 
 
 # ═══════════════════════════════ AC-4 ════════════════════════════════════════

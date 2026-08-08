@@ -48,7 +48,13 @@ from tests.helpers.compare_briefings import write_compare_briefings
 
 # Issue #1409: Pruefling relativ zur Testdatei aufloesen, nie ueber den
 # festen Hauptrepo-Pfad (sonst falsches Gruen aus einem Worktree heraus).
-DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+def _data_root_users() -> Path:
+    """Nutzer-Wurzel der Compare-Preset-Ablage — Funktion statt Konstante
+    (#1595): ``get_data_root()`` liefert erst zur Laufzeit die von der
+    #1133-Fixture gesetzte Basis, eine Konstante waere beim Import gebunden."""
+    from app.loader import get_data_root
+
+    return get_data_root() / "users"
 
 SETTINGS_MAIL = "konto-settings@example.invalid"
 PRESET_MAIL = "fremde-adresse@example.com"
@@ -62,7 +68,7 @@ def _uid(suffix: str) -> str:
 
 
 def _clean_user(user_id: str) -> None:
-    d = DATA_ROOT / user_id
+    d = _data_root_users() / user_id
     if d.exists():
         shutil.rmtree(d, ignore_errors=True)
 
@@ -178,7 +184,7 @@ def _run_deviation_alert(uid: str, presets: list[dict], settings: Settings):
 
     loc = _location("loc-x", "Vergleichsort", 47.0, 11.0)
     save_location(loc, user_id=uid)
-    write_compare_briefings(DATA_ROOT / uid, presets)
+    write_compare_briefings(_data_root_users() / uid, presets)
     for preset in presets:
         CompareWeatherSnapshotService(user_id=uid).save(
             preset["id"], "loc-x",
@@ -266,7 +272,7 @@ def _run_official_alert(uid: str, preset: dict, settings: Settings, **sinks):
     from services.official_alerts import register_official_alert_source
 
     save_location(_location("loc-a", "Hermagor", 46.62, 13.68), user_id=uid)
-    write_compare_briefings(DATA_ROOT / uid, [preset])
+    write_compare_briefings(_data_root_users() / uid, [preset])
     register_official_alert_source(_FakeOfficialAlertSource(46.62, 13.68, [_official_alert()]))
     with _recorded_settings(co_mod) as recorded:
         sent = CompareOfficialAlertService(
@@ -318,7 +324,7 @@ def test_ac2_radar_alert_mail_goes_to_settings_not_preset_empfaenger():
     _clean_user(uid)
     try:
         save_location(_location("loc-r", "Zermatt", 46.0207, 7.7491), user_id=uid)
-        write_compare_briefings(DATA_ROOT / uid, [
+        write_compare_briefings(_data_root_users() / uid, [
             _preset("cp-1452-ac2r", ["loc-r"], radar_alert_enabled=True),
         ])
         frames = [RadarFrame(

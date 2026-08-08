@@ -29,10 +29,10 @@ Persistenz ueber die pytest-isolierte ``app.loader.get_data_dir()``-Basis
 
 Pfadregel #1409: alle Pruefling-Pfade laufen ueber ``get_data_dir()`` bzw.
 werden relativ zu DIESER Testdatei aufgeloest -- nie ueber einen festen
-Hauptrepo-Pfad. Einzige bewusste Ausnahme ist ``COMPARE_DATA_ROOT`` aus
-``tests/helpers/alert_log_fixtures.py``: der Compare-Preset-Loader liest
-cwd-relativ (``load_compare_presets(data_root="data")``) -- die in CLAUDE.md
-ausgenommene „geteilte Ablage".
+Hauptrepo-Pfad. Die frueher hier genannte Ausnahme ``COMPARE_DATA_ROOT`` ist
+mit #1595 entfallen: der Compare-Preset-Loader liest nicht mehr cwd-relativ,
+sondern ueber ``get_data_root()``. An ihre Stelle tritt die Funktion
+``compare_data_root()`` aus ``tests/helpers/alert_log_fixtures.py``.
 """
 from __future__ import annotations
 
@@ -57,10 +57,10 @@ from app.trip import Stage, Trip, Waypoint
 from app.user import SavedLocation
 
 from tests.helpers.alert_log_fixtures import (
-    COMPARE_DATA_ROOT,
     LAT,
     LON,
     clean_compare_user,
+    compare_data_root,
     read_log,
     settings_email_only,
     weather,
@@ -465,7 +465,7 @@ def _setup_compare_user(uid: str, anker: dict) -> None:
         SavedLocation(id="loc-a", name="Vergleichsort", lat=LAT, lon=LON, elevation_m=1000),
         user_id=uid,
     )
-    write_compare_briefings(COMPARE_DATA_ROOT / uid, [{
+    write_compare_briefings(compare_data_root() / uid, [{
         "id": _COMPARE_PRESET_ID, "name": "Vergleich 1503", "user_id": uid,
         "location_ids": ["loc-a"], "schedule": "daily", "weekday": 4,
         "profil": "ALLGEMEIN", "hour_from": 9, "hour_to": 16,

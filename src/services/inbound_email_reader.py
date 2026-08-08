@@ -217,19 +217,21 @@ class InboundEmailReader:
         return ""
 
     def _resolve_settings_for_sender(
-        self, from_addr: str, base_settings: Settings, data_dir: str = "data"
+        self, from_addr: str, base_settings: Settings, data_dir: str | None = None
     ) -> tuple[str, Settings]:
         """Resolve user_id and user-scoped Settings for an incoming sender address.
 
         Args:
             from_addr: Sender email address (lowercase expected)
             base_settings: Base Settings object to derive user profile from
-            data_dir: Root data directory (default: "data")
+            data_dir: Root data directory (default: get_data_root())
 
         Returns:
             (user_id, user_scoped_settings) — user_id is "default" if no match
         """
-        from app.loader import lookup_user_by_email
+        from app.loader import get_data_root, lookup_user_by_email
+        if data_dir is None:
+            data_dir = str(get_data_root())
         user_id = lookup_user_by_email(from_addr, data_dir=data_dir) or "default"
         return user_id, base_settings.with_user_profile(user_id)
 
