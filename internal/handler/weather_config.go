@@ -177,6 +177,12 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1159: Feld-Level-Merge statt Blind-Replace — behebt aktiven
 		// Datenverlust (BUG-DATALOSS-GR221, s. mergeConfigMap-Doku).
 		loc.DisplayConfig = mergeConfigMap(loc.DisplayConfig, cfg)
+		// Issue #1398: Kennung auf den URL-Parameter setzen, exakt wie
+		// UpdateLocationHandler (und wie PutTripWeatherConfigHandler seit
+		// #1395 S2). SaveLocation schreibt nach loc.ID — weicht die INNERE
+		// Kennung vom Dateinamen ab, landete die Aenderung sonst in einem
+		// FREMDEN Ort, waehrend der angefragte unveraendert blieb.
+		loc.ID = id
 		if err := s.SaveLocation(*loc); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
