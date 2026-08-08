@@ -38,6 +38,9 @@
 		type ChannelOverride,
 	} from './weather-metrics-tab/channelMetricLayouts.ts';
 	import ThresholdMetricRow from './weather-metrics-tab/ThresholdMetricRow.svelte';
+	// Fix #1613: Mehrfach-Symbol-Metriken (temperature/temperature_night/wind_chill)
+	// haben keinen Schwellwert -- eigene, schlanke Zeile ohne Segmented-Control.
+	import MultiSymbolMetricRow from './weather-metrics-tab/MultiSymbolMetricRow.svelte';
 	// Issue #1357: Auswertungswahl je Wettergroesse (Mail-Kachelzeile).
 	import AggregationMetricRow from './weather-metrics-tab/AggregationMetricRow.svelte';
 	import {
@@ -105,7 +108,7 @@
 
 	interface SmsSymbolEntry {
 		metric_id: string;
-		sms_symbol: string;
+		sms_symbols: string[];
 	}
 	interface SmsSymbolCatalog {
 		metrics: SmsSymbolEntry[];
@@ -162,7 +165,7 @@
 	let smsSymbols = $state<SmsSymbolCatalog | null>(null);
 	const metricSymbols = $derived(
 		Object.fromEntries(
-			(smsSymbols?.metrics ?? []).map((m: SmsSymbolEntry) => [m.metric_id, m.sms_symbol])
+			(smsSymbols?.metrics ?? []).map((m: SmsSymbolEntry) => [m.metric_id, m.sms_symbols])
 		)
 	);
 	let templates: Template[] = $state([]);
@@ -1357,7 +1360,7 @@
 								{#if !buckets.off.includes('wind')}
 								<ThresholdMetricRow
 									metricId="wind"
-									smsSymbol={metricSymbols['wind']}
+									smsSymbol={metricSymbols['wind']?.[0]}
 									label="Wind (km/h)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 15 },
@@ -1371,7 +1374,7 @@
 								{#if !buckets.off.includes('gust')}
 								<ThresholdMetricRow
 									metricId="gust"
-									smsSymbol={metricSymbols['gust']}
+									smsSymbol={metricSymbols['gust']?.[0]}
 									label="Böen (km/h)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 30 },
@@ -1385,7 +1388,7 @@
 								{#if !buckets.off.includes('precipitation')}
 								<ThresholdMetricRow
 									metricId="precipitation"
-									smsSymbol={metricSymbols['precipitation']}
+									smsSymbol={metricSymbols['precipitation']?.[0]}
 									label="Niederschlag (mm)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 0.3 },
@@ -1399,7 +1402,7 @@
 								{#if !buckets.off.includes('rain_probability')}
 								<ThresholdMetricRow
 									metricId="rain_probability"
-									smsSymbol={metricSymbols['rain_probability']}
+									smsSymbol={metricSymbols['rain_probability']?.[0]}
 									label="Regenwahrsch. (%)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 25 },
@@ -1413,7 +1416,7 @@
 								{#if !buckets.off.includes('thunder')}
 								<ThresholdMetricRow
 									metricId="thunder"
-									smsSymbol={metricSymbols['thunder']}
+									smsSymbol={metricSymbols['thunder']?.[0]}
 									label="Gewitter"
 									levels={[
 										{ id: 'leicht', label: 'Leicht', float: 1.0 },
@@ -1427,7 +1430,7 @@
 								{#if !buckets.off.includes('snow_depth')}
 								<ThresholdMetricRow
 									metricId="snow_depth"
-									smsSymbol={metricSymbols['snow_depth']}
+									smsSymbol={metricSymbols['snow_depth']?.[0]}
 									label="Schneehöhe (cm)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 5 },
@@ -1441,7 +1444,7 @@
 								{#if !buckets.off.includes('snowfall_limit')}
 								<ThresholdMetricRow
 									metricId="snowfall_limit"
-									smsSymbol={metricSymbols['snowfall_limit']}
+									smsSymbol={metricSymbols['snowfall_limit']?.[0]}
 									label="Schneefallgrenze (m)"
 									levels={[
 										{ id: 'sensibel', label: 'Sensibel', float: 2000 },
@@ -1450,6 +1453,28 @@
 									]}
 									currentFloat={smsThresholds['snowfall_limit'] !== undefined && smsThresholds['snowfall_limit'] !== '' ? parseFloat(smsThresholds['snowfall_limit']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, ['snowfall_limit']: String(f) }; scheduleAutoSave(); }}
+								/>
+								{/if}
+								<!-- Fix #1613: Mehrfach-Symbol-Metriken ohne Schwellwert (kein onChange/levels). -->
+								{#if !buckets.off.includes('temperature')}
+								<MultiSymbolMetricRow
+									metricId="temperature"
+									label={metricById['temperature']?.label ?? 'Temperatur'}
+									symbols={metricSymbols['temperature'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('temperature_night')}
+								<MultiSymbolMetricRow
+									metricId="temperature_night"
+									label={metricById['temperature_night']?.label ?? 'Nacht-Tiefsttemperatur'}
+									symbols={metricSymbols['temperature_night'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('wind_chill')}
+								<MultiSymbolMetricRow
+									metricId="wind_chill"
+									label={metricById['wind_chill']?.label ?? 'Gefühlte Temperatur'}
+									symbols={metricSymbols['wind_chill'] ?? []}
 								/>
 								{/if}
 							</tbody>
