@@ -923,9 +923,11 @@ class TripReportSchedulerService:
         # 7c. Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad) —
         # Segment-Auswahl/Naehe-Guard/Budget-Gate/Fetch laufen VOR dem Bau des
         # TripReportRequest, damit ein zu weit entferntes Segment oder ein
-        # ausgeschoepftes Tagesbudget keinen Nowcast-Call verursacht.
-        starkregen_hint_text = self._build_starkregen_hint(
-            trip, segments, trip_tz, datetime.now(timezone.utc),
+        # ausgeschoepftes Tagesbudget keinen Nowcast-Call verursacht. Liefert
+        # nur Rohdaten (intensity_label, onset_minutes) — die Textformatierung
+        # (Renderer-Aufruf) passiert im NotificationService (Architektur-Grenze).
+        starkregen_nowcast = self._build_starkregen_hint(
+            trip, segments, datetime.now(timezone.utc),
         )
 
         # 8. NotificationService: render + send (Issue #1022).
@@ -951,7 +953,7 @@ class TripReportSchedulerService:
             catchup_prefix=catchup_prefix,
             partial_outage_hint=partial_outage_hint,
             render_options=render_options,
-            starkregen_hint_text=starkregen_hint_text,
+            starkregen_nowcast=starkregen_nowcast,
         )
         result = self._notification_service.send_trip_report(request)
         errors = request.failed_segments
@@ -962,7 +964,7 @@ class TripReportSchedulerService:
         # bestehenden Throttles statt eines neuen State-Mechanismus. Der
         # naechste 15-Minuten-Poll ist dadurch an seiner ERSTEN Pruefung
         # bereits blockiert (kein widerspruechlicher Folge-Alert).
-        if starkregen_hint_text and result.sent:
+        if starkregen_nowcast and result.sent:
             from services.throttle_store import ThrottleStore
             ThrottleStore(self._user_id).record("radar", trip.id, datetime.now(timezone.utc))
 
@@ -1066,7 +1068,7 @@ class TripReportSchedulerService:
         catchup_prefix: str | None,
         partial_outage_hint: str | None = None,
         render_options: Optional["ReportRenderOptions"] = None,
-        starkregen_hint_text: str | None = None,
+        starkregen_nowcast: Optional[Tuple[str, int]] = None,
     ) -> TripReportRequest:
         """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
 
@@ -1107,20 +1109,25 @@ class TripReportSchedulerService:
             failed_segments=errors,
             on_demand=on_demand,
             render_options=render_options,
-            starkregen_hint_text=starkregen_hint_text,
+            starkregen_nowcast=starkregen_nowcast,
         )
 
     def _build_starkregen_hint(
         self,
         trip: "Trip",
         segments: List[TripSegment],
-        tz: ZoneInfo,
         now_utc: datetime,
-    ) -> Optional[str]:
-        """Starkregen-Kurzfristhinweis (Issue #1439): Nachrichtenzeile fuer das
-        planmaessige Briefing, wenn der bereits produktive `RadarNowcastService`
+    ) -> Optional[Tuple[str, int]]:
+        """Starkregen-Kurzfristhinweis (Issue #1439): liefert die Rohdaten
+        (``intensity_label``, ``onset_minutes``) fuer den planmaessigen
+        Briefing-Pfad, wenn der bereits produktive `RadarNowcastService`
         (#656) fuer den Startpunkt des aktiven/naechsten Segments Starkregen
         innerhalb von `NOWCAST_HORIZON_MIN` erkennt.
+
+        Architektur-Grenze (`tests/unit/test_notification_service.py::
+        test_scheduler_has_no_output_imports`): der Scheduler liefert nur ein
+        DTO, KEINEN Renderer-Aufruf — die Textformatierung
+        (`format_starkregen_hint()`) passiert in `notification_service.py`.
 
         Segment-Auswahl identisch zu `TripAlertService.check_radar_alerts()`
         (trip_alert.py:730-745). Naehe-Guard und Budget-Gate laufen VOR dem
@@ -1168,9 +1175,7 @@ class TripReportSchedulerService:
         if result.onset_minutes is None or result.intensity_label != INTENSITY_HEAVY:
             return None
 
-        from output.renderers.email.starkregen_hint import format_starkregen_hint
-
-        return format_starkregen_hint(result.intensity_label, result.onset_minutes, tz=tz)
+        return (result.intensity_label, result.onset_minutes)
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:
         """Issue #816 (B): Alert-Melde-Gedächtnis nach Briefing-Versand löschen.
