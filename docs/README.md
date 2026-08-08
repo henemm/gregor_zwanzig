@@ -13,7 +13,7 @@
 | `reference/` | Technische Referenz: `api_contract.md` (DTOs, SSOT — driftgesichert via `tests/test_api_contract_drift.py`), `decision_matrix.md` (Provider-Ist-Stand), `operations_playbook.md` (Deploy/E2E/Rollback), `mail_validators.md`, `navigation.md` (URL-Modell), `frontend_components.md` (Konzepte, kein Inventar), `design_system.md`, `critical_lessons.md` (Regeln ohne anderen Wächter) |
 | `adr/` | Architektur-Entscheidungen (nummeriert; Status beachten — einzelne sind superseded) |
 | `design-system/` | CHARTER, COMPONENTS, TOKENS, SCREENS |
-| `features/` | `architecture.md` (Systemarchitektur), `scope.md` (Vision), `openspec_workflow.md` (Workflow-Wegweiser) + aktive Epic-Dokumente |
+| `features/` | `architecture.md` (Systemarchitektur), `scope.md` (Vision), **`gewitter-gesamtkonzept.md`** (Gewitter Ende zu Ende: was der Nutzer sieht, wie die Stufe entsteht, Eichung, Fahrplan — führend gegenüber den Einzel-Specs), `openspec_workflow.md` (Workflow-Wegweiser) + aktive Epic-Dokumente |
 | `project/` | `known_issues.md` (Root-Cause-Archiv), Architektur-Programm 2026-07. (`strategic-directions.md` 2026-08-05 aufgelöst, #1166 — strategische Entscheidungen leben in `docs/adr/`) |
 | `runbooks/` | Betriebsanleitungen (z. B. `telegram-webhook.md`) |
 
