@@ -90,6 +90,7 @@ class TestAC4WizardStep2EtappenPreAction:
             f"design_fidelity_diff.py nicht gefunden: {DIFF_TOOL}"
         )
 
+    @pytest.mark.staging
     def test_soll_png_step2_exists(self):
         """SOLL-PNG für I-wizard-step2-etappen muss existieren."""
         assert SOLL_STEP2.exists(), (
@@ -202,6 +203,7 @@ class TestAC5WizardStep3WegpunktePreAction:
     GREEN: Eintrag mit ("click", 'button:has-text("Wegpunkte")') vorhanden.
     """
 
+    @pytest.mark.staging
     def test_soll_png_step3_exists(self):
         """SOLL-PNG für I-wizard-step3-wetter muss existieren."""
         assert SOLL_STEP3.exists(), (

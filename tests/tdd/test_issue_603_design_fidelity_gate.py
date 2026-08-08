@@ -76,6 +76,7 @@ class TestAC1DiffToolProducesReport:
             "Implementierung fehlt noch (erwartetes RED)"
         )
 
+    @pytest.mark.staging
     def test_diff_tool_exit_code_zero_or_one_only(self):
         """
         GIVEN: Soll-PNG für G-compare-uebersicht-kacheln existiert

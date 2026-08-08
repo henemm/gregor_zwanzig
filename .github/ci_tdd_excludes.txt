@@ -39,6 +39,15 @@
 # - test_pytest_collection_and_timeout_safety: Meta-Test repariert —
 #   test_issue_684_alert_email_guard traegt seit der #1196-Vermessung
 #   modul-weit pytest.mark.email und gehoert auf die Voll-Marker-Liste.
+# Nachmessung auf dem Runner (2026-08-08, PR #1586): 6 weitere Tests
+# sind host-gebunden und wurden ebenfalls staging-markiert —
+# 622: test_soll_png_step2/step3_exists; 603: test_diff_tool_exit_code_
+# zero_or_one_only (SOLL-PNGs unter hartkodiertem /home/hem/gregor_zwanzig-
+# Pfad); collection_and_timeout_safety: test_staging_marker_run_still_
+# collects_dialers, test_offline_files_remain_in_default_selection,
+# test_811_gate_test_skips_when_hook_missing (Invarianten setzen
+# validator.env bzw. importierbares Hook-Plugin voraus — nur auf dem
+# Server gegeben, also Staging-Lane).
 #
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
