@@ -444,6 +444,15 @@ class SegmentWeatherSummary:
     # verdeckt werden. Semantik identisch zu ForecastDataPoint.hail_flag.
     hail_flag: Optional[bool] = None
 
+    # Issue #1592 C0: normalisierte Modell-Herkunft des CAPE-Werts
+    # (`app.model_registry.normalize_model_id`), NICHT der Rohwert aus
+    # `meta.model`. `None` heisst "keine Herkunft" -- Ortsvergleichs-
+    # Aggregat (`model="aggregate"`), Schnappschuss-Reload
+    # (`model="snapshot"`) und alte Schnappschuesse ohne dieses Feld.
+    # Additiv, schnappschuss-sicher (`weather_snapshot._deserialize_summary`
+    # filtert Unbekanntes bereits ueber `dataclasses.fields()`).
+    cape_model_id: Optional[str] = None
+
     # Metadata
     aggregation_config: dict[str, str] = field(default_factory=dict)
 

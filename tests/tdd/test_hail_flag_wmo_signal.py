@@ -203,8 +203,10 @@ def test_ac3_hail_flag_liefert_keinen_beitrag_zur_thunder_stufen_fusion():
         ts=ts, thunder_level=ThunderLevel.LOW, hail_flag=True,
     )]
 
-    _fuse_thunder_levels(ohne_hagel)
-    _fuse_thunder_levels(mit_hagel)
+    # Issue #1592 C1: `cape_threshold_jkg` ist Pflichtparameter ohne
+    # Default. `None` hier -- keine der beiden Reihen traegt CAPE.
+    _fuse_thunder_levels(ohne_hagel, None)
+    _fuse_thunder_levels(mit_hagel, None)
 
     assert ohne_hagel[0].thunder_level == mit_hagel[0].thunder_level, (
         f"Gesetztes hail_flag veraendert thunder_level "

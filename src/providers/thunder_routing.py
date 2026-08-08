@@ -67,6 +67,23 @@ _REGIONS: tuple[_ThunderRegion, ...] = (
 )
 
 
+def thunder_region_for(lat: float, lon: float) -> Optional[str]:
+    """Name des Gewitter-Zustaendigkeitsgebiets fuer (lat, lon), oder None.
+
+    Issue #1592 C1: nutzt DASSELBE ``_REGIONS``-Raster (first-match-wins)
+    wie ``thunder_provider_for()`` -- liefert aber den Gebietsnamen statt
+    des Provider-Namens. KEIN zweites Raster (Vorgabe der Spec). ``None``
+    ist hier strukturell unerreichbar, solange die letzte Zeile des
+    Rasters die ganze Welt abdeckt -- bleibt trotzdem explizit typisiert,
+    falls sich das Raster kuenftig aendert.
+    """
+    for region in _REGIONS:
+        if (region.min_lat <= lat <= region.max_lat
+                and region.min_lon <= lon <= region.max_lon):
+            return region.name
+    return None
+
+
 def thunder_provider_for(lat: float, lon: float) -> Optional[str]:
     """Name der fuer Gewittersignale zustaendigen Quelle, oder None.
 

@@ -362,8 +362,10 @@ def test_ac6_hagel_liefert_keinen_eigenen_beitrag_zur_fusion():
         lightning_potential_lpi_jkg=None,
     )]
 
-    _fuse_thunder_levels(ohne_hagel)
-    _fuse_thunder_levels(mit_hagel)
+    # Issue #1592 C1: `cape_threshold_jkg` ist Pflichtparameter ohne
+    # Default. `None` hier -- keine der beiden Reihen traegt CAPE.
+    _fuse_thunder_levels(ohne_hagel, None)
+    _fuse_thunder_levels(mit_hagel, None)
 
     assert ohne_hagel[0].thunder_level == mit_hagel[0].thunder_level, (
         f"Gesetztes Hagelfeld veraendert thunder_level "
@@ -404,7 +406,9 @@ def test_f001_kein_signal_laesst_thunder_level_am_produktionspfad_unveraendert()
         lightning_potential_lpi_jkg=None,
     )
 
-    _fuse_thunder_levels([dp])
+    # Issue #1592 C1: `cape_threshold_jkg` ist Pflichtparameter ohne
+    # Default. `None` hier -- `dp.cape_jkg` ist None (kein CAPE-Signal).
+    _fuse_thunder_levels([dp], None)
 
     assert dp.thunder_level is None, (
         "dp.thunder_level wurde veraendert, obwohl ALLE vier Signale None "
@@ -432,7 +436,9 @@ def test_f001_blitzpotenzial_null_komma_null_setzt_stufe_none_am_produktionspfad
         lightning_potential_lpi_jkg=0.0,
     )
 
-    _fuse_thunder_levels([dp])
+    # Issue #1592 C1: `cape_threshold_jkg` ist Pflichtparameter ohne
+    # Default. `None` hier -- `dp.cape_jkg` ist None (kein CAPE-Signal).
+    _fuse_thunder_levels([dp], None)
 
     assert dp.thunder_level == ThunderLevel.NONE, (
         f"dp.thunder_level ist {dp.thunder_level!r} statt ThunderLevel.NONE "

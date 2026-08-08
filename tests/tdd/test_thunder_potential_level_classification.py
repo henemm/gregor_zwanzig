@@ -27,8 +27,12 @@ HIGH = ThunderLevel.HIGH
 
 def _fusion(**kwargs):
     from output.metric_format import thunder_level_from_signals
+    # Issue #1592 C1: `cape_threshold_jkg` ist keyword-only ohne Default.
+    # `cape_jkg=None` hier -- die Schwelle spielt fuer diese Tests (nur
+    # Blitzpotenzial) keine Rolle.
     return thunder_level_from_signals(
-        wettercode_level=None, lightning_density=None, cape_jkg=None, **kwargs
+        wettercode_level=None, lightning_density=None, cape_jkg=None,
+        cape_threshold_jkg=None, **kwargs
     )
 
 

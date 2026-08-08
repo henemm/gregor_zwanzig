@@ -63,8 +63,12 @@ def test_ac10_thunder_level_from_signals_bleibt_unbeeinflusst_von_hail_flag():
     ohne_hagel = [ForecastDataPoint(ts=ts, thunder_level=ThunderLevel.LOW, hail_flag=None)]
     mit_hagel = [ForecastDataPoint(ts=ts, thunder_level=ThunderLevel.LOW, hail_flag=True)]
 
-    _fuse_thunder_levels(ohne_hagel)
-    _fuse_thunder_levels(mit_hagel)
+    # Issue #1592 C1: `cape_threshold_jkg` ist Pflichtparameter ohne
+    # Default (kein stiller Rueckfall auf der ganzen Kette). `None` hier --
+    # keine der beiden Reihen traegt CAPE, die Schwelle spielt fuer diesen
+    # Hagel-Mutationsschutz keine Rolle.
+    _fuse_thunder_levels(ohne_hagel, None)
+    _fuse_thunder_levels(mit_hagel, None)
 
     assert ohne_hagel[0].thunder_level == mit_hagel[0].thunder_level, (
         f"AC-10: hail_flag darf die Gewitterstufen-Fusion nicht beeinflussen "
