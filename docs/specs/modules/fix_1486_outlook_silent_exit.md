@@ -282,6 +282,8 @@ Changelog dort).
   wiederverwendbar — `comparison_engine.py`/`compare_html.py` werden in DIESEM Workflow jedoch
   NICHT angefasst (Scope-Treue zu #1486, LoC-Budget). Der Compare-Bug ist nutzersichtbares
   Fehlverhalten und bekommt laut Nebenbefund-Triage ein eigenes Issue — nicht Teil dieses Fixes.
+  **Nachtrag (2026-08-08):** Der Compare-Pfad ist inzwischen in #1505 behoben —
+  `docs/specs/modules/fix_1505_compare_outlook_silent_exit.md`.
 - **`tests/test_output_timezone_guard.py:517-518`:** Nennt `_build_stage_trend` mit
   Zeilennummern-Historie in Ausnahme-Schlüsseln. Die Rückgabetyp-Änderung selbst berührt diesen
   Wächter nicht (er prüft Zeitzonen-Handling, nicht den Rückgabetyp), aber die

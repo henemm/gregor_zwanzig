@@ -1112,6 +1112,35 @@ def _build_location_outlook_rows(
 OUTLOOK_HEADING = "3-Tages-Ausblick"
 
 
+def _render_outlook_unavailable(
+    loc: LocationResult, index: int, with_location: bool = False,
+) -> str:
+    """Fix #1505: benannter Ausblick-Zustand statt stillem ``""``.
+
+    Derselbe Block-Rahmen wie die Erfolgstabelle (Padding-`div` + Kopf mit
+    Eyebrow "AUSBLICK"), damit der Zustandstext an genau der Stelle steht, an
+    der sonst die Tabelle stuende. Der Zustandstext selbst kommt aus dem
+    geteilten Baustein ``outlook_state_hint`` (#1486) -- keine
+    Compare-eigene Kopie, keine neuen ``OutlookState``-Werte.
+
+    Kein Referenzzeitpunkt (``ref_ts=None``): ohne Datenpunkte gibt es keine
+    Zeitbasis, die man ehrlich anschreiben koennte."""
+    from output.renderers.email.outlook_state_hint import (
+        OutlookState, render_outlook_state_html,
+    )
+
+    title = (
+        f"{loc.location.name} · {OUTLOOK_HEADING}" if with_location
+        else OUTLOOK_HEADING
+    )
+    header = _location_heading(loc, None, eyebrow="AUSBLICK", title=title)
+    hint = render_outlook_state_html(OutlookState.UNAVAILABLE)
+    return (
+        f'<div style="padding:{20 if index else 14}px 24px 0;">'
+        f'{header}{hint}</div>'
+    )
+
+
 def _render_location_outlook(
     loc: LocationResult, index: int,
     outlook_metrics: list[dict] | None = None,
@@ -1124,12 +1153,18 @@ def _render_location_outlook(
     Issue #1368: eigene Ueberschrift "3-Tages-Ausblick" statt des ein
     zweites Mal wiederholten Ortsnamens. ``with_location=True`` stellt den
     Ortsnamen voran -- noetig, wenn der Stundenblock desselben Ortes (der
-    ihn sonst nennt) nicht gerendert wird."""
+    ihn sonst nennt) nicht gerendert wird.
+
+    Fix #1505: die drei stillen Ausstiege (Fehler, leere Rohdaten, leere
+    Zeilen nach Metrik-Filterung) sahen fuer den Empfaenger alle gleich aus
+    -- eine unerklaerte Leerstelle. Sie liefern jetzt alle denselben
+    benannten Zustand (``OutlookState.UNAVAILABLE``) ueber den geteilten
+    Baustein aus #1486 (kein Compare-eigener Nachbau)."""
     if loc.error is not None or not loc.outlook_hourly_data:
-        return ""
+        return _render_outlook_unavailable(loc, index, with_location)
     rows = _build_location_outlook_rows(loc, outlook_metrics)
     if not rows:
-        return ""
+        return _render_outlook_unavailable(loc, index, with_location)
     # Issue #1378: dieselbe angeschriebene Zeitbasis wie beim Stundenblock
     # (geteilter Kopfbau, kein zweiter) — auch die Ausblick-Tageszeilen
     # und ihre @-Stunden-Tokens stehen in dieser Zeitbasis.

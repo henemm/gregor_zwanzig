@@ -130,6 +130,16 @@ class ComparisonEngine:
                 raw_result = fetch_forecast_for_location(loc, forecast_hours)
 
                 if raw_result.get("error"):
+                    # Fix #1505 (AC-1): der Fetch-Fehler blieb bisher komplett
+                    # unprotokolliert -- der Ausblick des Ortes verschwand in
+                    # der Mail wortlos UND im Log stand nichts davon. Genau
+                    # EINE Meldung je Ort und Lauf: sie entsteht hier in der
+                    # Datenschicht, NICHT in den Renderern (die laufen fuer
+                    # dieselbe Mail zweimal, HTML + Klartext -- Spec §4).
+                    logger.warning(
+                        "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",
+                        loc.name, raw_result["error"],
+                    )
                     results.append(LocationResult(
                         location=loc,
                         error=raw_result["error"],
@@ -167,6 +177,16 @@ class ComparisonEngine:
                 outlook_hourly_data = [
                     dp for dp, d in _by_local_day if d in _outlook_days
                 ]
+                if not outlook_hourly_data:
+                    # Fix #1505 (AC-2): erfolgreicher Fetch, aber kein
+                    # Datenpunkt in den drei Ausblickstagen (z.B. erschoepfter
+                    # Vorhersagehorizont). Bisher fiel der Ausblick des Ortes
+                    # dafuer wortlos aus der Mail; der Empfaenger sah eine
+                    # unerklaerte Leerstelle, das Log gar nichts.
+                    logger.warning(
+                        "Ort %s: kein Ausblick — keine Daten in den naechsten "
+                        "3 Tagen", loc.name,
+                    )
 
                 # Filter by target date and time window (Issue #1361/#1372
                 # S1b: inkl. Mitternachts-Uebergang, AC-3).
@@ -347,6 +367,14 @@ class ComparisonEngine:
                 ))
 
             except Exception as e:
+                # Fix #1505 (AC-1): zweiter, bisher ebenfalls unprotokollierter
+                # Weg zu `LocationResult(error=...)` -- gleiche Meldung wie beim
+                # strukturierten Fetch-Fehler, damit beide Ursachen im Log
+                # gleich aussehen.
+                logger.warning(
+                    "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",
+                    loc.name, e,
+                )
                 results.append(LocationResult(
                     location=loc,
                     error=str(e),
