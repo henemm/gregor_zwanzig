@@ -454,21 +454,12 @@ class TestRiskPopCape:
             fetched_at=datetime.now(timezone.utc), provider="openmeteo",
         )
 
-    def test_extreme_cape_high_risk(self):
-        """GIVEN cape=2500, WHEN risk determined, THEN high risk."""
-        seg = self._make_seg_with_risk(cape=2500.0)
-        formatter = TripReportFormatter()
-        level, label = formatter._determine_risk(seg)
-        assert level == "high"
-        assert "Thunder" in label
-
-    def test_moderate_cape_medium_risk(self):
-        """GIVEN cape=1200, WHEN risk determined, THEN moderate risk."""
-        seg = self._make_seg_with_risk(cape=1200.0)
-        formatter = TripReportFormatter()
-        level, label = formatter._determine_risk(seg)
-        assert level == "moderate"
-        assert "Thunder" in label
+    # test_extreme_cape_high_risk und test_moderate_cape_medium_risk entfernt
+    # (#1592 C2, 2026-08-08): sie setzten thunder_level_max=ThunderLevel.NONE
+    # (Fusion sagt "geprueft, kein Gewitter") und erwarteten trotzdem, dass CAPE
+    # allein ein hohes bzw. maessiges Gewitterrisiko erzeugt -- genau das
+    # Fehlverhalten, das C2 behebt. Ersatznachweis:
+    # tests/integration/test_cape_no_double_count.py
 
     def test_high_pop_medium_risk(self):
         """GIVEN pop=85, WHEN risk determined, THEN moderate risk."""

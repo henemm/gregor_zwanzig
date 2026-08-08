@@ -345,7 +345,9 @@ _METRICS: list[MetricDefinition] = [
         # (separate Metrik-Bedeutung).
         display_thresholds={"yellow": 300.0, "orange": 800.0, "red": 1500.0},
         highlight_threshold=1000.0,
-        risk_thresholds={"medium": 1000.0, "high": 2000.0},
+        # risk_thresholds bewusst NICHT gesetzt (Issue #1592 Scheibe C2,
+        # AC-7): die Leiter 1000/2000 J/kg war unbelegt und wurde nur von
+        # der gestrichenen CAPE-Regel der RiskEngine gelesen.
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
         sms_code="CP", decimals=0, cmp="über", alert_label="CAPE",

@@ -102,9 +102,16 @@ class TestCatalogPopulation:
         assert md.display_thresholds == {"yellow": 300.0, "orange": 800.0, "red": 1500.0}
 
     def test_cape_risk_thresholds(self) -> None:
-        """CAPE risk: medium >= 1000, high >= 2000."""
+        """CAPE hat KEINE risk_thresholds mehr (Issue #1592 Scheibe C2).
+
+        Die frueheren Werte (medium 1000, high 2000 J/kg) waren eine
+        unbelegte Katalogleiter und wurden nur von der zweiten CAPE-Zaehlung
+        der RiskEngine gelesen. Diese Regel ist gestrichen -- CAPE geht
+        ausschliesslich ueber die geeichte Fusion (`thunder_level_max`, auf
+        LOW gedeckelt) in die Bewertung ein.
+        """
         md = get_metric("cape")
-        assert md.risk_thresholds == {"medium": 1000.0, "high": 2000.0}
+        assert not md.risk_thresholds
 
     def test_visibility_display_thresholds(self) -> None:
         """Visibility: vollstaendige invertierte Dreier-Staffel (< 2000/1000/500m).

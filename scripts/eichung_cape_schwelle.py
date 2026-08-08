@@ -18,9 +18,11 @@ waehlbaren IDs. GFS ist NICHT dabei -- Gregor Zwanzig waehlt es nie aus.
 
 Gebiete: dieselben Gewitter-Zustaendigkeitsgebiete wie
 `providers.thunder_routing._REGIONS` (FR, DE_ALPEN, EU_REST) -- KEIN zweites
-Raster. Je Gebiet EIN fest verdrahteter Referenzpunkt:
-- FR: GR20/Korsika (42.22, 9.05) -- derselbe Punkt wie in der
-  Analyse-Messung und in der Orientierungs-Abfrage des Auftrags.
+Raster. Je Gebiet eine GEORDNETE LISTE fest verdrahteter Referenzpunkte
+(Issue #1592 Scheibe C2; vorher genau ein Punkt je Gebiet):
+- FR: (1) GR20/Korsika (42.22, 9.07) -- derselbe Punkt wie in der
+  Analyse-Messung und in der Orientierungs-Abfrage des Auftrags;
+  (2) franzoesische Alpen (45.00, 6.50).
 - DE_ALPEN: Muenchen-Raum (48.14, 11.58) -- derselbe Punkt wie in der
   Analyse-Messung, bereits kanonischer Referenzpunkt im Repo
   (`tests/unit/test_openmeteo_endpoint_routing.py`).
@@ -46,9 +48,10 @@ Modelle vom REGIONAL_MODELS-`id` ab -- s. Kommentar an `_MODEL_ARCHIVE_ID`
 unten fuer die empirische Herleitung (Endpunkt-vs-benannte-Variante-
 Vergleich, PO-Korrektur 2026-08-08).
 
-Liefert die API fuer eine (Modell, Gebiet)-Kombination keine oder eine
-durchgaengig leere ("null") Reihe, entsteht KEIN Tabelleneintrag (Spec
-Abschnitt 1 Punkt 4) -- kein Fehler, sondern "nicht abgedeckt".
+Liefert KEIN Punkt der Liste eines Gebiets fuer eine (Modell, Gebiet)-
+Kombination Werte (jede Reihe leer bzw. durchgaengig "null"), entsteht KEIN
+Tabelleneintrag (Spec Abschnitt 1 Punkt 4) -- kein Fehler, sondern "nicht
+abgedeckt".
 """
 from __future__ import annotations
 
@@ -65,6 +68,20 @@ SEASON_END = "2025-09-30"
 
 # Untergrenze der Eichregel (NWS/SPC-Leiter, Gesamtkonzept 3.5b).
 MIN_THRESHOLD_JKG = 300.0
+
+# Mindestzahl stuendlicher Werte, damit ein Referenzpunkt ueberhaupt als
+# "abgedeckt" zaehlt (Adversary-Fund Issue #1592 C2: `statistics.quantiles()`
+# wirft `StatisticsError`, sobald ein Punkt genau EINEN Nicht-Null-Wert
+# liefert -- die alte Pruefung `if not values` deckte nur die leere Liste
+# ab). Eine volle Woche Stundenwerte (24 * 7) ist die Untergrenze, ab der
+# ein 95. Perzentil ueberhaupt eine Aussage ueber die Verteilung sein kann:
+# bei P95 wird statistisch nur jeder zwanzigste Wert erwartet, der ueber der
+# Schwelle liegt -- mit weniger als 168 Werten waere das rechnerische P95
+# nicht mehr aus Verteilung, sondern aus wenigen Einzelwerten abgeleitet,
+# also Rauschen statt Klimatologie. Zu wenige Werte gelten deshalb wie die
+# leere Liste als "keine Abdeckung" -- das Skript geht zum naechsten Punkt
+# der Liste weiter statt abzustuerzen.
+MIN_SAMPLE_SIZE = 24 * 7
 
 # REGIONAL_MODELS-id -> Historical-Forecast-API-Bezeichner.
 #
@@ -101,13 +118,38 @@ _MODEL_ARCHIVE_ID = {
     "ecmwf_ifs04": "ecmwf_ifs025",
 }
 
-# Gebiet -> Referenzpunkt (lat, lon). Dieselben Gebietsnamen wie
-# `thunder_routing._REGIONS`. FR: GR20 Refuge de Petra Piana -- derselbe
-# Punkt wie `tests/tdd/test_cape_model_threshold.py::_KORSIKA`.
-_REGION_REFERENCE_POINTS = {
-    "FR": (42.22, 9.07),
-    "DE_ALPEN": (48.14, 11.58),
-    "EU_REST": (59.33, 18.06),
+# Gebiet -> GEORDNETE Liste von Referenzpunkten [(lat, lon), ...].
+# Dieselben Gebietsnamen wie `thunder_routing._REGIONS`.
+#
+# `calibrate()` probiert die Punkte eines Gebiets der Reihe nach; der ERSTE
+# Punkt, an dem das Modell tatsaechlich CAPE-Werte liefert, bestimmt die
+# Eichung dieser (Modell, Gebiet)-Kombination.
+#
+# FR, Punkt 1: GR20 Refuge de Petra Piana -- derselbe Punkt wie
+# `tests/tdd/test_cape_model_threshold.py::_KORSIKA`. Korsika steht BEWUSST
+# zuerst: jedes bisher belegte FR-Modell liefert dort Werte, damit bleiben
+# alle in Scheibe B0 erhobenen FR-Schwellen beim Umstieg auf Punktlisten
+# unveraendert (Regressionsschutz, Spec C2 AC-2). Wuerde ein anderer Punkt
+# zuerst geprueft, verschoeben sich bestehende Werte.
+#
+# FR, Punkt 2: franzoesische Alpen (45.00, 6.50) -- noetig, weil Korsika
+# ausserhalb des ICON-D2-Gitters liegt (dort 0 Werte) und `icon_d2 x FR`
+# deshalb in B0 keinen Eintrag bekam, obwohl ICON-D2 in Frankreich real als
+# AROME-Fallback zum Zug kommt. Gewaehlt wurden die Alpen und NICHT das
+# Rhone-Tal (44.50, 4.80), obwohl beide ICON-D2-Werte liefern: die Alpen
+# sind dieselbe Landschaftsart wie der erste FR-Punkt (Gebirge) und passen
+# zur Zielgruppe, die im Gebirge unterwegs ist. Das Rhone-Tal wuerde eine
+# Flachland-Klimatologie auf Bergetappen anwenden -- derselbe Fehler, den
+# Issue #1592 behebt, nur eine Ebene tiefer. Die Punktwahl entscheidet ueber
+# die Zahl: Alpen P95=230 -> Schwelle 300.0 (Untergrenze greift),
+# Rhone-Tal P95=390 -> Schwelle 390.0.
+#
+# DE_ALPEN (Muenchen-Raum) und EU_REST (Stockholm) behalten je genau einen
+# Punkt -- dort ist keine Eichluecke gemessen worden.
+_REGION_REFERENCE_POINTS: dict[str, list[tuple[float, float]]] = {
+    "FR": [(42.22, 9.07), (45.00, 6.50)],
+    "DE_ALPEN": [(48.14, 11.58)],
+    "EU_REST": [(59.33, 18.06)],
 }
 
 
@@ -142,18 +184,28 @@ def calibrate() -> dict:
     liefert `{(model_id, region): threshold_jkg}`."""
     table: dict = {}
     for model_id, archive_id in _MODEL_ARCHIVE_ID.items():
-        for region, (lat, lon) in _REGION_REFERENCE_POINTS.items():
-            values = _fetch_hourly_cape(archive_id, lat, lon)
-            if not values:
-                print(f"  {model_id:20s} x {region:9s} -> keine Abdeckung (0 Werte)")
-                continue
-            p95 = statistics.quantiles(values, n=100)[94]
-            threshold = max(p95, MIN_THRESHOLD_JKG)
-            table[(model_id, region)] = round(threshold, 1)
-            print(
-                f"  {model_id:20s} x {region:9s} -> P95={p95:.1f} "
-                f"J/kg -> Schwelle={threshold:.1f} J/kg ({len(values)} Werte)"
-            )
+        for region, points in _REGION_REFERENCE_POINTS.items():
+            # Punkte der Reihe nach; der ERSTE mit GENUG Werten eicht die
+            # Kombination. Liefert keiner genug Werte -> kein Tabelleneintrag.
+            for lat, lon in points:
+                values = _fetch_hourly_cape(archive_id, lat, lon)
+                if len(values) < MIN_SAMPLE_SIZE:
+                    continue
+                p95 = statistics.quantiles(values, n=100)[94]
+                threshold = max(p95, MIN_THRESHOLD_JKG)
+                table[(model_id, region)] = round(threshold, 1)
+                print(
+                    f"  {model_id:20s} x {region:9s} -> P95={p95:.1f} "
+                    f"J/kg -> Schwelle={threshold:.1f} J/kg ({len(values)} "
+                    f"Werte, Punkt {lat}/{lon})"
+                )
+                break
+            else:
+                print(
+                    f"  {model_id:20s} x {region:9s} -> keine Abdeckung "
+                    f"(kein Punkt von {len(points)} lieferte mindestens "
+                    f"{MIN_SAMPLE_SIZE} Werte)"
+                )
     return table
 
 

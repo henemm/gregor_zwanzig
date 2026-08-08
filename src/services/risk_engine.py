@@ -54,10 +54,15 @@ class RiskEngine:
         # Rule 1: Thunder (enum-based)
         self._check_thunder(agg, risks)
 
-        # Rule 2: CAPE (thunderstorm energy)
-        self._check_catalog_metric(
-            agg, "cape", agg.cape_max_jkg, RiskType.THUNDERSTORM, risks
-        )
+        # Rule 2 (CAPE) wurde ersatzlos gestrichen -- Issue #1592 Scheibe C2.
+        # NICHT wieder einbauen: CAPE ist ueber die Fusion
+        # (`thunder_level_from_signals`, geeichte Modell-/Gebietsschwelle,
+        # auf `ThunderLevel.LOW` gedeckelt) bereits in `thunder_level_max`
+        # enthalten und wird von Regel 1 (`_check_thunder`) ausgewertet.
+        # Eine zweite Zaehlung gegen die Katalogleiter unterlief die
+        # Deckelung aus ADR-0048 / feat_1474 AC-6 ("CAPE misst Energie, kein
+        # Ereignis"), weil `_deduplicate()` je RiskType die hoechste Stufe
+        # behaelt und die ungedeckelte Zaehlung dort gewann.
 
         # Rule 3: Wind
         self._check_catalog_metric(
