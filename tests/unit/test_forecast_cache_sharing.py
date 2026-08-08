@@ -472,10 +472,26 @@ def test_end_to_end_real_call_paths_trip_alert_and_compare_share_cache_with_own_
     now_hour = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
 
     # Platzhalter fuer "cached_weather" (nur .segment wird von
-    # _fetch_fresh_weather ausgewertet) -- Fenster deckt Compares implizites
-    # [jetzt, jetzt+1h) mit ab, wie ein echtes 4h-Trip-Segment.
+    # _fetch_fresh_weather ausgewertet).
+    #
+    # Issue #1584 Scheibe C: der Compare-Alarmpfad fragt nicht mehr
+    # [jetzt, jetzt+1h) ab, sondern das TAGESFENSTER des laufenden lokalen
+    # Kalendertags am Ort (ADR-0035) — ein 4h-Trip-Segment ab `jetzt` deckt
+    # das nicht mehr ab, und die "covers"-Regel des Caches greift dann
+    # (korrekterweise) nicht. Damit dieser Test weiterhin PRUEFT, wofuer er
+    # da ist (EIN geteilter Eintrag statt eines zweiten Compare-Fetch),
+    # bekommt das Trip-Segment ein bewusst grosszuegiges Fenster von +/-24 h
+    # um `jetzt`: es schliesst das Compare-Tagesfenster in JEDER Zeitzone
+    # ein, ohne dessen Herleitung hier nachzubauen.
+    #
+    # Gemessene Nebenwirkung, bewusst nicht verdeckt: ein Compare-Abruf kann
+    # sich seit #1584 C NICHT mehr an einen ENGEREN Trip-Cache-Eintrag
+    # derselben Koordinate anhaengen. Die Zahl der Abrufe je Compare-Lauf
+    # bleibt unveraendert (einer je Ort); es entfaellt nur die Mitnahme,
+    # wenn zufaellig ein Trip dieselbe Koordinate enger abgefragt hat.
     trip_placeholder_segment = _segment(
-        "trip-real-leg-3h", lat, lon, now_hour, duration_hours=4.0
+        "trip-real-leg-3h", lat, lon, now_hour - timedelta(hours=24),
+        duration_hours=48.0,
     )
     trip_placeholder = SegmentWeatherData(
         segment=trip_placeholder_segment,

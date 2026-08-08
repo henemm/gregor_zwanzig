@@ -207,7 +207,10 @@ class _ScriptedWeatherSource:
     def __init__(self, values: dict[str, float]) -> None:
         self._values = dict(values)
 
-    def fetch(self, point_id: str, lat: float, lon: float):
+    def fetch(
+        self, point_id: str, lat: float, lon: float,
+        start_hour: int | None = None, end_hour: int | None = None,
+    ):
         return _point(point_id, point_id, lat, lon, precip_sum_mm=self._values.get(point_id, 0.0))
 
     def set_value(self, point_id: str, precip_sum_mm: float) -> None:

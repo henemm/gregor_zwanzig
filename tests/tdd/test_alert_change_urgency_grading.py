@@ -442,7 +442,10 @@ class _ScriptedSource:
     def __init__(self, **summary) -> None:
         self._summary = summary
 
-    def fetch(self, point_id: str, lat: float, lon: float):
+    def fetch(
+        self, point_id: str, lat: float, lon: float,
+        start_hour: int | None = None, end_hour: int | None = None,
+    ):
         from services.point_weather import PointWeatherData
 
         return PointWeatherData(
