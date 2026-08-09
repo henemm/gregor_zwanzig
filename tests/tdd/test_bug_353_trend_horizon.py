@@ -38,16 +38,17 @@ def _count_trend_calls() -> int:
     """Anzahl der Open-Meteo-Abrufe mit Quelle ``"trend"`` im Diagnose-JSONL.
 
     Mock-frei: liest den echten Call-Counter (#338,
-    ``providers.call_log.DIAGNOSTICS_PATH``). Datei evtl. nicht vorhanden → 0.
+    ``providers.call_log.diagnostics_path()``). Datei evtl. nicht vorhanden → 0.
     """
     import json
 
-    from providers.call_log import DIAGNOSTICS_PATH
+    from providers.call_log import diagnostics_path
 
-    if not DIAGNOSTICS_PATH.exists():
+    pfad = diagnostics_path()
+    if not pfad.exists():
         return 0
     count = 0
-    with DIAGNOSTICS_PATH.open() as fh:
+    with pfad.open() as fh:
         for line in fh:
             line = line.strip()
             if not line:

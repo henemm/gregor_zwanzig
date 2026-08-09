@@ -74,8 +74,9 @@ ENSEMBLE_TIMEOUT = 15.0  # Issue #121: shorter timeout for ensemble (best-effort
 FETCH_DEADLINE_SECONDS = 60.0
 
 # Issue #338: Diagnose-Zähler — append-only JSONL für jeden ausgehenden Abruf.
-# Reine Observability, fail-soft. In .gitignore (data/diagnostics/).
-DIAGNOSTICS_PATH = Path("data/diagnostics/openmeteo_calls.jsonl")
+# Reine Observability, fail-soft. Issue #1633: Test-Override oder None; ohne
+# Override gilt der über `call_log.diagnostics_path()` aufgelöste Pfad.
+DIAGNOSTICS_PATH: Optional[Path] = None
 
 
 def compute_confidence_pct(
@@ -201,8 +202,19 @@ def _stamp_snow(timeseries: NormalizedTimeseries, snow_depth_cm, swe_kgm2) -> Li
 
 
 # Metric Availability Probe (WEATHER-05a)
-AVAILABILITY_CACHE_PATH = Path("data/cache/model_availability.json")
+# Issue #1633: Test-Override oder None — Auflösung bei jedem Zugriff, siehe
+# `availability_cache_path()`.
+AVAILABILITY_CACHE_PATH: Optional[Path] = None
 AVAILABILITY_CACHE_TTL_DAYS = 7
+
+
+def availability_cache_path() -> Path:
+    """Zielpfad des Modell-Verfügbarkeits-Caches, bei jedem Zugriff aufgelöst."""
+    if AVAILABILITY_CACHE_PATH is not None:
+        return Path(AVAILABILITY_CACHE_PATH)
+    from app.loader import get_data_root
+
+    return Path(get_data_root()) / "cache" / "model_availability.json"
 
 PROBE_PARAMS = [
     "temperature_2m", "apparent_temperature", "relative_humidity_2m",
@@ -299,10 +311,11 @@ class OpenMeteoProvider:
 
     def _load_availability_cache(self) -> Optional[dict]:
         """Load availability cache, return None if expired or missing."""
-        if not AVAILABILITY_CACHE_PATH.exists():
+        pfad = availability_cache_path()
+        if not pfad.exists():
             return None
         try:
-            data = json.loads(AVAILABILITY_CACHE_PATH.read_text())
+            data = json.loads(pfad.read_text())
             probe_date = date.fromisoformat(data["probe_date"])
             if (date.today() - probe_date).days >= AVAILABILITY_CACHE_TTL_DAYS:
                 return None
@@ -312,8 +325,9 @@ class OpenMeteoProvider:
 
     def _save_availability_cache(self, result: dict) -> None:
         """Save probe result as JSON cache."""
-        AVAILABILITY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        AVAILABILITY_CACHE_PATH.write_text(json.dumps(result, indent=2))
+        pfad = availability_cache_path()
+        pfad.parent.mkdir(parents=True, exist_ok=True)
+        pfad.write_text(json.dumps(result, indent=2))
 
     def probe_model_availability(self) -> dict:
         """
@@ -369,7 +383,7 @@ class OpenMeteoProvider:
                 logger.warning("  %s: probe failed (%s), skipping", model_id, e)
 
         self._save_availability_cache(result)
-        logger.info("Probe complete. Cache saved to %s", AVAILABILITY_CACHE_PATH)
+        logger.info("Probe complete. Cache saved to %s", availability_cache_path())
         return result
 
     # --- Model-Metric-Fallback (WEATHER-05b) ---
@@ -550,12 +564,19 @@ class OpenMeteoProvider:
         Issue #338: Thin-Wrapper auf call_log.log_api_call() (fail-soft).
 
         Die bestehenden Tests konfigurieren providers.openmeteo.DIAGNOSTICS_PATH
-        um; damit diese Umkonfiguration weiter greift, wird der hier gültige
-        DIAGNOSTICS_PATH vor dem Delegieren an call_log gespiegelt. Verhalten
-        unverändert gegenüber bd8e1e2.
+        um; damit diese Umkonfiguration weiter greift, wird ein hier gesetzter
+        DIAGNOSTICS_PATH vor dem Delegieren an call_log gespiegelt.
+
+        Issue #1633: gespiegelt wird nur ein TATSAECHLICH gesetzter Override.
+        Ohne Override (Normalfall, beide ``None``) löst `call_log` selbst über
+        die Datenwurzel auf; ein call_log-eigener Test-Override bleibt dann
+        stehen, statt still überschrieben zu werden.
         """
         import providers.openmeteo as _om
 
+        if _om.DIAGNOSTICS_PATH is None:
+            call_log.log_api_call(endpoint, status, error)
+            return
         prev = call_log.DIAGNOSTICS_PATH
         call_log.DIAGNOSTICS_PATH = _om.DIAGNOSTICS_PATH
         try:

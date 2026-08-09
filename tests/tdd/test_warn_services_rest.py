@@ -291,7 +291,7 @@ def test_zaehler_service_name(cfg, monkeypatch, tmp_path):
     mod = cfg["mod"]
     monkeypatch.setenv("GZ_METEOFRANCE_APIKEY", "dummy-test-token-ac4")
     jsonl = tmp_path / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", jsonl)
     cfg["reset"](mod)
     with _local_server(200) as srv:
         monkeypatch.setattr(mod, cfg["url_attr"], cfg["local_url"](srv.server_port))

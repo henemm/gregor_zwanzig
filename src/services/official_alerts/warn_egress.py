@@ -96,8 +96,19 @@ def observe_fetch_failure() -> Iterator[dict]:
         _fetch_failure_sink.reset(token)
 
 # Append-only JSONL für jeden Warn-Dienst-Egress (Cache-Hit wie echter Call).
-# Verzeichnis `data/diagnostics/` ist in .gitignore.
-WARN_CALLS_PATH = Path("data/diagnostics/warn_service_calls.jsonl")
+# Issue #1633: Test-Override (Path) oder None. Der frühere Modul-Konstanten-Name
+# `WARN_CALLS_PATH` steuert NICHTS mehr — er band beim Import einen
+# repo-relativen Pfad und hat den Datenwurzel-Umzug (#1595) ausgehebelt.
+WARN_CALLS_PATH_OVERRIDE: Optional[Path] = None
+
+
+def warn_calls_path() -> Path:
+    """Zielpfad des Warn-Dienst-Journals, bei jedem Zugriff aufgelöst."""
+    if WARN_CALLS_PATH_OVERRIDE is not None:
+        return Path(WARN_CALLS_PATH_OVERRIDE)
+    from app.loader import get_data_root
+
+    return Path(get_data_root()) / "diagnostics" / "warn_service_calls.jsonl"
 
 
 def _parse_retry_after(headers: Any) -> Optional[float]:
@@ -221,7 +232,7 @@ def log_warn_service_call(
     """Einen Warn-Dienst-Egress protokollieren (fail-soft, analog ``log_api_call``).
 
     Hängt eine JSONL-Zeile (``ts, service, host, status, cache_hit, retry_after,
-    ok, self_throttled``) an ``WARN_CALLS_PATH`` an. Jeder Fehler wird geschluckt
+    ok, self_throttled``) an ``warn_calls_path()`` an. Jeder Fehler wird geschluckt
     — Observability darf den Abruf NIE beeinträchtigen.
 
     ``ok`` (Issue #1422 S1) trägt den TATSAECHLICHEN Ausgang: ``True`` bei
@@ -236,7 +247,7 @@ def log_warn_service_call(
     ``cache_hit``) bleiben unberuehrt.
     """
     try:
-        path = WARN_CALLS_PATH
+        path = warn_calls_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         line = json.dumps({
             "ts": datetime.now(timezone.utc).isoformat(),
@@ -267,7 +278,7 @@ def log_zone_drift(service: str, zone_code: str, has_warning: bool, drift: str) 
     Details Punkt 3). Jeder Fehler beim Schreiben wird geschluckt -- Beobachtung
     darf den Abruf nie beeintraechtigen (analog ``log_warn_service_call``)."""
     try:
-        path = WARN_CALLS_PATH
+        path = warn_calls_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         line = json.dumps({
             "ts": datetime.now(timezone.utc).isoformat(),

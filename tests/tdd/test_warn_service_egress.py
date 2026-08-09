@@ -73,7 +73,7 @@ def test_cache_hit_within_ttl_makes_no_real_call(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
     cache = {
         "AT": {
@@ -107,7 +107,7 @@ def test_cache_miss_after_ttl_triggers_real_call(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
     calls: list[int] = []
 
@@ -149,7 +149,7 @@ def test_429_with_retry_after_sets_backoff(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
 
     def _request() -> httpx.Response:
@@ -183,7 +183,7 @@ def test_429_without_retry_after_defaults_to_success_ttl(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
 
     def _request() -> httpx.Response:
@@ -218,7 +218,7 @@ def test_429_logs_loudly(caplog, tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
 
     def _request() -> httpx.Response:
@@ -257,7 +257,7 @@ def test_real_call_appends_jsonl_line(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     jsonl = tmp_path / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", jsonl)
 
     def _request() -> httpx.Response:
         return httpx.Response(200, json={"features": []})
@@ -294,7 +294,7 @@ def test_cache_hit_appends_jsonl_line_without_call(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     jsonl = tmp_path / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", jsonl)
 
     cache = {
         "AT": {
@@ -334,7 +334,7 @@ def test_429_marked_in_jsonl(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     jsonl = tmp_path / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", jsonl)
 
     # (1) 429 MIT Retry-After -> retry_after gefüllt.
     warn_egress.cached_fetch(
@@ -389,7 +389,7 @@ def test_429_retry_with_ratelimit_reset_succeeds_no_partial_outage(tmp_path, mon
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
     responses = [
         httpx.Response(429, headers={"x-ratelimit-reset": "1000"}),
@@ -438,7 +438,7 @@ def test_429_exhaustion_all_attempts_stays_unavailable(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
     calls: list[int] = []
 
@@ -485,7 +485,7 @@ def test_429_retry_attempts_each_append_jsonl_line(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     jsonl = tmp_path / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", jsonl)
 
     def _request() -> httpx.Response:
         return httpx.Response(429, headers={"x-ratelimit-reset": "1000"})
@@ -561,7 +561,7 @@ def test_429_without_rate_limit_retry_param_stays_unchanged_for_other_services(
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
     calls: list[int] = []
 
@@ -639,7 +639,7 @@ def test_long_lived_429_wird_nicht_wiederholt(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
     calls: list[int] = []
 
@@ -683,7 +683,7 @@ def test_long_lived_429_backoff_wird_gedeckelt(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
 
     def _request() -> httpx.Response:
@@ -718,7 +718,7 @@ def test_long_lived_429_counter_zeigt_reset_zeitpunkt(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     jsonl = tmp_path / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", jsonl)
 
     def _request() -> httpx.Response:
         return httpx.Response(429, headers={"x-ratelimit-reset": "87399"})
@@ -761,7 +761,7 @@ def test_not_covered_status_is_success_not_failure(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
 
     def _request() -> httpx.Response:
@@ -798,7 +798,7 @@ def test_not_covered_status_does_not_set_failure_marker(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
 
     with warn_egress.observe_fetch_failure() as status:
@@ -825,7 +825,7 @@ def test_not_covered_status_egress_line_keeps_real_status_code(tmp_path, monkeyp
     from services.official_alerts import warn_egress
 
     jsonl = tmp_path / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", jsonl)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", jsonl)
 
     warn_egress.cached_fetch(
         cache={},
@@ -853,7 +853,7 @@ def test_not_covered_cache_hit_stays_success_on_second_call(tmp_path, monkeypatc
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
     cache = {
         "AT": {"data": {}, "fetched_at": 1000.0, "ttl": warn_egress.WARN_NOT_COVERED_TTL}
@@ -882,7 +882,7 @@ def test_other_statuses_stay_real_failures_with_not_covered_param_set(tmp_path, 
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
     cache: dict = {}
     with warn_egress.observe_fetch_failure() as status:
@@ -908,7 +908,7 @@ def test_without_not_covered_param_404_stays_a_failure_like_before(tmp_path, mon
     from services.official_alerts import warn_egress
 
     monkeypatch.setattr(
-        warn_egress, "WARN_CALLS_PATH", tmp_path / "warn_service_calls.jsonl"
+        warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "warn_service_calls.jsonl"
     )
     cache: dict = {}
     with warn_egress.observe_fetch_failure() as status:

@@ -176,7 +176,8 @@ class TestProbeErrorHandling:
 
     def test_cache_path_constant_exists(self) -> None:
         """AVAILABILITY_CACHE_PATH must be defined."""
-        from providers.openmeteo import AVAILABILITY_CACHE_PATH
+        from providers.openmeteo import availability_cache_path
 
-        assert isinstance(AVAILABILITY_CACHE_PATH, Path)
-        assert "model_availability" in str(AVAILABILITY_CACHE_PATH)
+        pfad = availability_cache_path()
+        assert isinstance(pfad, Path)
+        assert "model_availability" in str(pfad)

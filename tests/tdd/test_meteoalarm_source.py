@@ -392,8 +392,8 @@ def test_ac5b_kaputtes_index_json_liefert_leere_liste(monkeypatch, tmp_path):
     THEN liefert fetch() [] ohne Exception."""
     from services.official_alerts import meteoalarm
 
-    # WARN_CALLS_PATH-Umlenkung erfolgt global via conftest-Autouse-Fixture
-    # ``_isolate_warn_calls_path`` (Issue #1348) — kein Per-Test-Monkeypatch nötig.
+    # Das Journal liegt unter der isolierten Datenwurzel (conftest-Autouse
+    # ``_isolate_data_root``, #1133/#1633) — kein Per-Test-Monkeypatch nötig.
     server = http.server.HTTPServer(("127.0.0.1", 0), _BrokenJSONHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -503,8 +503,8 @@ def test_leerer_index_204_ist_kein_fehler(monkeypatch, caplog, tmp_path):
     loggt KEIN WARNING."""
     from services.official_alerts import meteoalarm
 
-    # WARN_CALLS_PATH-Umlenkung erfolgt global via conftest-Autouse-Fixture
-    # ``_isolate_warn_calls_path`` (Issue #1348) — kein Per-Test-Monkeypatch nötig.
+    # Das Journal liegt unter der isolierten Datenwurzel (conftest-Autouse
+    # ``_isolate_data_root``, #1133/#1633) — kein Per-Test-Monkeypatch nötig.
     server = http.server.HTTPServer(("127.0.0.1", 0), _EmptyBody204Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -918,8 +918,8 @@ def test_429_lokaler_server_retry_after_respektiert(monkeypatch, caplog, tmp_pat
     explizit "429"."""
     from services.official_alerts import meteoalarm
 
-    # WARN_CALLS_PATH-Umlenkung erfolgt global via conftest-Autouse-Fixture
-    # ``_isolate_warn_calls_path`` (Issue #1348) — kein Per-Test-Monkeypatch nötig.
+    # Das Journal liegt unter der isolierten Datenwurzel (conftest-Autouse
+    # ``_isolate_data_root``, #1133/#1633) — kein Per-Test-Monkeypatch nötig.
     server = http.server.HTTPServer(("127.0.0.1", 0), _Http429RetryAfterHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

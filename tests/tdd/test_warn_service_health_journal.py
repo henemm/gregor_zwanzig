@@ -52,7 +52,7 @@ def journal(tmp_path, monkeypatch):
     from services.official_alerts import warn_egress
 
     path = tmp_path / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", path)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", path)
     return path
 
 

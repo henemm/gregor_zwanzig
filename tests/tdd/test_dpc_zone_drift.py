@@ -24,7 +24,7 @@ implementiert ist -- zu bestaetigen/anzupassen in Phase 6):
   ``warn_egress.mark_fetch_incomplete()`` (kein neuer Mechanismus, s. Spec
   Dependencies) an der ``row is None``-Stelle in ``dpc.fetch()``.
 - Pfad A schreibt additiv eine EIGENE Ereigniszeile in dieselbe Datei
-  ``warn_egress.WARN_CALLS_PATH`` (``data/diagnostics/warn_service_calls.jsonl``),
+  ``warn_egress.warn_calls_path()`` (``<Datenwurzel>/diagnostics/warn_service_calls.jsonl``),
   OHNE das Feld ``ok`` (damit die bestehende Go-Aggregation
   ``entry.Ok == nil -> continue`` sie automatisch ueberspringt). Angenommene
   Feldnamen: ``service="dpc"``, ``zone_code=<Code>``, ``has_warning=<bool>``
@@ -308,7 +308,7 @@ def test_ac3_unbekannter_zonencode_mit_warnung_unterscheidbar_von_ohne_warnung(m
     Verlust) und 'Zzzz-2' mit NESSUNA (harmlos) -- WHEN das Bulletin
     verarbeitet wird (ausgeloest durch einen Abruf fuer einen beliebigen,
     gueltig zugeordneten Ort), THEN ist der Fall MIT Warnung in den
-    Betriebsdaten (``warn_egress.WARN_CALLS_PATH``) als tatsaechlicher
+    Betriebsdaten (``warn_egress.warn_calls_path()``) als tatsaechlicher
     Verlust erkennbar und vom Fall OHNE Warnung unterscheidbar.
 
     Geprueft wird die GESCHRIEBENE Journal-Zeile, nicht der Logger."""
@@ -317,7 +317,7 @@ def test_ac3_unbekannter_zonencode_mit_warnung_unterscheidbar_von_ohne_warnung(m
     from services.official_alerts import warn_egress
 
     journal_path = tmp_path / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", journal_path)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", journal_path)
 
     today_rows = [
         {"Zona_all": "Abru-A", "Nome_zona": "Bacini Tordino Vomano",
@@ -388,7 +388,7 @@ def test_ac4_journal_schreibfehler_beeintraechtigt_abruf_nicht(monkeypatch, tmp_
     blocking_file = tmp_path / "not_a_directory"
     blocking_file.write_text("blockiert das Diagnose-Verzeichnis")
     unwritable_journal = blocking_file / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", unwritable_journal)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", unwritable_journal)
 
     today_rows = [
         {"Zona_all": "Tren-A", "Nome_zona": "Alto Adige",
@@ -457,7 +457,7 @@ def test_ac4b_journal_schreibfehler_im_driftfall_bricht_nichts_ab(monkeypatch, t
     blocking_file = tmp_path / "not_a_directory"
     blocking_file.write_text("blockiert das Diagnose-Verzeichnis")
     unwritable_journal = blocking_file / "warn_service_calls.jsonl"
-    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", unwritable_journal)
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", unwritable_journal)
 
     # Bulletin fuehrt Abru-A (ruhig, NICHT-driftende Kontroll-Zone) und den
     # unbekannten Zonencode Zzzz-1 (Pfad A, GIALLA -- has_warning=True) --
