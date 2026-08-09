@@ -333,7 +333,8 @@ ausschließlich innerhalb von `EmailOutput._dial_and_send`.
   Primär- und Ersatzweg wird **bewusst nicht** vorgenommen (Entscheidung
   E2) — der zusammengesetzte Defekt (Ersatzweg alles-oder-nichts plus
   stiller Erfolg bei Totalablehnung am Primärweg) ist als **#1426** erfasst
-  und wird erst nach dieser Scheibe behoben.
+  worden und wurde nach dieser Scheibe behoben (Status: `done`; siehe
+  `docs/specs/bugfix/collect_send_recipient_isolation.md`).
 - Die Guard-Prüfung wird durch S3a **nicht** in den Transport verlegt
   (Entscheidung, R-A/R-B in der Analyse) — die strengere Form (Prüfung
   immer im gemeinsamen Weg) ist Sache von S4, wo der Empfängervertrag über
