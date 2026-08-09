@@ -462,7 +462,6 @@ class EmailOutput:
         recipients: list[str],
         msg,
         from_addr: str,
-        isolate_per_recipient: bool,
         deadline_at: float,
     ) -> None:
         """Issue #1412 S3a: der EINE Ort, an dem eine SMTP-Verbindung entsteht.
@@ -471,11 +470,11 @@ class EmailOutput:
         Retry-Schleife (Spec, Entscheidung E1: `_dial_and_send` hat genau
         einen Aufrufer-Kontext, der bereits einmal prüft).
 
-        `isolate_per_recipient` konserviert die heutige Asymmetrie zwischen
-        Primär- und Ersatzweg (Spec, Entscheidung E2): nur der Primärweg fasst
-        jeden Empfänger einzeln ein, beide Ersatzwege brechen beim ersten
-        abgelehnten Empfänger ab. Der zusammengesetzte Defekt dahinter ist als
-        #1426 erfasst und wird NACH dieser Scheibe behoben.
+        Issue #1426: alle drei Versandwege (Primärweg und beide Ersatzwege)
+        fassen jeden Empfänger einzeln ein — die frühere Asymmetrie
+        (`isolate_per_recipient`, #1412 S3a E2) ist damit aufgelöst. Lehnt der
+        Postausgang ALLE Empfänger ab, wird `OutputError` geworfen; vorher
+        meldete `send()` in diesem Fall fälschlich Erfolg.
 
         Issue #1448 S1: `deadline_at` (`time.monotonic()`-Zeitpunkt) begrenzt
         jede Phase -- Verbindungsaufbau samt Begrüßung, `starttls()`,
@@ -495,33 +494,38 @@ class EmailOutput:
                 server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
                 server.sendmail(from_addr, recipients, msg.as_string())
             else:
+                fehler: list[tuple[str, Exception]] = []
                 for recipient in recipients:
                     server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
-                    if isolate_per_recipient:
-                        try:
-                            server.sendmail(from_addr, [recipient], msg.as_string())
-                        except smtplib.SMTPServerDisconnected:
-                            # Adversary-Fund F001 zu #1448 S1: ein
-                            # Transportabbruch (z.B. weil die neue
-                            # Zeitgrenze waehrend DIESES sendmail()
-                            # zuschlaegt, s. `_phase_timeout_or_raise()`)
-                            # ist KEIN empfaengerspezifisches Problem wie
-                            # `SMTPRecipientsRefused` -- der Socket ist tot,
-                            # ein weiterer Versuch beim naechsten Empfaenger
-                            # waere sinnlos und wuerde denselben Fehler
-                            # erneut (still) verschlucken. Deshalb NICHT wie
-                            # eine Empfaenger-Ablehnung schlucken, sondern
-                            # durchreichen -- landet in send()s eigenem
-                            # `SMTPServerDisconnected`-Zweig (Retry +
-                            # Ersatzweg, s.u.). Muss VOR dem generischen
-                            # `SMTPException`-Zweig stehen (dessen Oberklasse).
-                            raise
-                        except smtplib.SMTPException as exc:
-                            logger.error(
-                                "SMTP-Fehler für Empfänger %s: %s", recipient, exc
-                            )
-                    else:
+                    try:
                         server.sendmail(from_addr, [recipient], msg.as_string())
+                    except smtplib.SMTPServerDisconnected:
+                        # Adversary-Fund F001 zu #1448 S1: ein
+                        # Transportabbruch (z.B. weil die neue
+                        # Zeitgrenze waehrend DIESES sendmail()
+                        # zuschlaegt, s. `_phase_timeout_or_raise()`)
+                        # ist KEIN empfaengerspezifisches Problem wie
+                        # `SMTPRecipientsRefused` -- der Socket ist tot,
+                        # ein weiterer Versuch beim naechsten Empfaenger
+                        # waere sinnlos und wuerde denselben Fehler
+                        # erneut (still) verschlucken. Deshalb NICHT wie
+                        # eine Empfaenger-Ablehnung schlucken, sondern
+                        # durchreichen -- landet in send()s eigenem
+                        # `SMTPServerDisconnected`-Zweig (Retry +
+                        # Ersatzweg, s.u.). Muss VOR dem generischen
+                        # `SMTPException`-Zweig stehen (dessen Oberklasse).
+                        raise
+                    except smtplib.SMTPException as exc:
+                        logger.error(
+                            "SMTP-Fehler für Empfänger %s: %s", recipient, exc
+                        )
+                        fehler.append((recipient, exc))
+                if len(fehler) == len(recipients):
+                    raise OutputError(
+                        "email",
+                        f"Alle {len(recipients)} Empfaenger abgelehnt: "
+                        f"{[str(e) for _, e in fehler]}",
+                    )
 
     def _handle_transient_dial_failure(
         self,
@@ -583,7 +587,6 @@ class EmailOutput:
                     recipients,
                     msg,
                     from_addr,
-                    isolate_per_recipient=False,
                     # Issue #1448 S1: eigene, garantierte Deadline statt des
                     # (evtl. bereits aufgebrauchten) Rests des Primärbudgets.
                     deadline_at=time.monotonic() + FALLBACK_RESERVE_SECONDS,
@@ -833,7 +836,6 @@ class EmailOutput:
                     recipients,
                     msg,
                     from_addr,
-                    isolate_per_recipient=True,
                     deadline_at=primaer_deadline,
                 )
 
@@ -897,7 +899,6 @@ class EmailOutput:
                                 recipients,
                                 msg,
                                 from_addr,
-                                isolate_per_recipient=False,
                                 # Issue #1448 S1: eigene, garantierte Deadline
                                 # statt des (evtl. bereits aufgebrauchten)
                                 # Rests des Primärbudgets.

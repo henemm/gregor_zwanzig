@@ -1,7 +1,11 @@
-"""Charakterisierung des E-Mail-Transports (#1412 Scheibe S3a).
+"""Charakterisierung des E-Mail-Transports (#1412 Scheibe S3a) und ab #1426
+zugleich Verhaltensnachweis fuer die vereinheitlichte Empfaenger-Isolierung.
 
 Spec: docs/specs/modules/fix_1412_s3a_transport_kapselung_mail.md
-      (AC-1, AC-2, AC-3, AC-9)
+      (AC-1, AC-2, AC-9)
+Spec: docs/specs/bugfix/collect_send_recipient_isolation.md
+      (AC-1, AC-2, AC-3, AC-4 -- vormals hier als "AC-3" (S3a-Spec) das
+      GEGENTEIL festgehalten, s. Historie unten)
 
 S3a ist verhaltensneutral: die drei abgeschriebenen Verbindungsbloecke in
 `EmailOutput.send()` (email.py:589 Primaerweg, :638/:682 Ersatzwege) werden zu
@@ -10,12 +14,15 @@ Verhalten am Transportrand fest, damit der Umbau beweisbar nichts verschiebt --
 sie ist deshalb schon VOR dem Umbau gruen und wuerde rot, wenn er etwas
 veraendert. Das ist ihr ganzer Zweck.
 
-Ausdruecklich mitgeschrieben wird die ASYMMETRIE (Analyse, Befund 1): nur der
-Primaerweg fasst jeden Empfaenger einzeln ein (`isolate_per_recipient=True`),
-beide Ersatzwege brechen beim ersten abgelehnten Empfaenger ab. Der
-zusammengesetzte Defekt dahinter ist als #1426 erfasst und wird NACH S3a
-behoben -- diese Datei schreibt bis dahin den Ist-Zustand fest, nicht den
-Wunschzustand.
+**Historie der Asymmetrie (Analyse, Befund 1, S3a):** nur der Primaerweg fasste
+jeden Empfaenger einzeln ein (`isolate_per_recipient=True`), beide Ersatzwege
+brachen beim ersten abgelehnten Empfaenger ab. Der zusammengesetzte Defekt
+dahinter war als #1426 erfasst -- diese Datei hielt bis zum #1426-Fix den
+damaligen Ist-Zustand fest (nicht den Wunschzustand). Mit #1426 entfaellt
+`isolate_per_recipient` ersatzlos: alle drei Versandwege behandeln Empfaenger
+jetzt einheitlich einzeln, UND ein zentraler Erfolgs-Check wirft `OutputError`,
+wenn kein einziger Empfaenger zugestellt wurde (vorher: stiller Erfolg bei
+Totalablehnung, Defekt B).
 
 Nachweisform: echte Attrappe am Transportrand (kein Mock, kein MagicMock), die
 jeden Schritt in der Reihenfolge aufzeichnet und gezielt ablehnen kann.
@@ -88,6 +95,18 @@ def _installiere_transport(
     `verbindungsfehler` wirft beim Verbindungsaufbau zum jeweiligen Host,
     `sendefehler` bei der Zustellung an den jeweiligen Empfaenger -- jeweils
     eine FRISCHE Ausnahme je Versuch (die Retry-Schleife laeuft bis zu 4x).
+
+    RED-Fund (#1426, unabhaengig vom eigentlichen Fix): `running_origin()`
+    (Herkunftssperre #1476) klassifiziert JEDEN Checkout, der nicht exakt
+    PROD_ROOT/STAGING_ROOT ist -- also auch diesen Worktree -- als "test" und
+    ersetzt in `send()` alle Empfaenger durch eine einzelne feste Adresse,
+    BEVOR `_dial_and_send()` sie sieht. Diese Datei prueft den Transport mit
+    den EMPFAENGER-Adressen als Identitaet (Reihenfolge, welcher abgelehnt
+    wird) -- ohne Neutralisierung wuerden alle adress-basierten Assertions
+    hier unabhaengig vom eigentlichen Testfall fehlschlagen. Betrifft auch
+    die bereits bestehenden AC-1/AC-2/F001-Tests (nicht nur die #1426-neuen)
+    -- vermutlich unbemerkt seit #1476, weil diese ganze Datei per
+    `pytest.mark.email` von der Standard-Kernschicht ausgenommen ist.
     """
     verlauf: list[tuple] = []
     verbindungsfehler = dict(verbindungsfehler or {})
@@ -149,6 +168,11 @@ def _installiere_transport(
     # es wird nichts weggeprueft, nur die Wanduhr.
     wartezeiten: list[float] = []
     monkeypatch.setattr(email_module.time, "sleep", wartezeiten.append)
+    # s. Docstring oben: Herkunftssperre (#1476) neutralisieren, damit die
+    # EMPFAENGER-Adressen unveraendert am Transport ankommen -- gemessen wird
+    # hier der Transport, nicht die Herkunftssperre (dafuer gibt es eigene
+    # Tests, z.B. tests/tdd/test_telegram_origin_guard.py).
+    monkeypatch.setattr(email_module, "running_origin", lambda _module_file: "production")
     return verlauf
 
 
@@ -229,7 +253,8 @@ def test_ac2_primaerweg_stellt_trotz_einer_ablehnung_an_die_uebrigen_zu(
 
 
 # -----------------------------------------------------------------------
-# AC-3 -- Ersatzwege brechen beim ersten abgelehnten Empfaenger ab
+# #1426 AC-1/AC-2 -- Ersatzwege stellen trotz einer Ablehnung an die
+# uebrigen Empfaenger zu (bis hierher galt das GEGENTEIL, s. Datei-Historie)
 # -----------------------------------------------------------------------
 
 
@@ -240,18 +265,94 @@ def test_ac2_primaerweg_stellt_trotz_einer_ablehnung_an_die_uebrigen_zu(
         ("ersatzweg-2-netzfehler", lambda: OSError("Namensaufloesung fehlgeschlagen")),
     ],
 )
-def test_ac3_ersatzweg_bricht_beim_ersten_abgelehnten_empfaenger_ab(
+def test_ersatzweg_stellt_trotz_einer_ablehnung_an_die_uebrigen_zu(
     monkeypatch, weg, primaerfehler
 ):
-    """AC-3: drei Empfaenger auf dem Ersatzweg, genau einer wird abgelehnt --
-    kein Zustellversuch nach dem gescheiterten, und send() wirft. Beide
-    Ersatzwege (nach 4xx bzw. nach Netzfehler) sind getrennter Code und werden
-    getrennt geprueft."""
+    """#1426 AC-1/AC-2 (docs/specs/bugfix/collect_send_recipient_isolation.md):
+    drei Empfaenger auf dem Ersatzweg, genau einer wird abgelehnt -- die
+    beiden anderen bekommen die Mail trotzdem zugestellt, und send() wirft
+    NICHT. Beide Ersatzwege (nach 4xx bzw. nach Netzfehler) sind getrennter
+    Code und werden getrennt geprueft.
+
+    Bis zum #1426-Fix galt hier das Gegenteil (Defekt A): ein abgelehnter
+    Empfaenger riss die restliche Ersatzweg-Schleife mit, die uebrigen
+    Empfaenger bekamen nichts."""
     verlauf = _installiere_transport(
         monkeypatch,
         verbindungsfehler={PRIMAER_HOST: primaerfehler},
         sendefehler={
             EMPFAENGER[1]: lambda: smtplib.SMTPException("Ersatzweg lehnt ab")
+        },
+    )
+
+    _sende(_postausgang(fallback_host=ERSATZ_HOST), EMPFAENGER)
+
+    assert _zustellungen(verlauf, ERSATZ_HOST) == [
+        (EMPFAENGER[0],),
+        (EMPFAENGER[1],),
+        (EMPFAENGER[2],),
+    ], f"{weg}: alle drei Empfaenger werden einzeln versucht, auch nach der Ablehnung"
+    zugestellt = [
+        e[2][0]
+        for e in verlauf
+        if e[0] == "sendmail" and e[1] == ERSATZ_HOST and e[3] == "zugestellt"
+    ]
+    assert zugestellt == [EMPFAENGER[0], EMPFAENGER[2]], (
+        f"{weg}: Empfaenger 1 und 3 werden trotz Ablehnung von Empfaenger 2 zugestellt"
+    )
+    assert ("dial", ERSATZ_HOST, ERSATZ_PORT) in verlauf
+    assert len([e for e in verlauf if e[0] == "dial" and e[1] == PRIMAER_HOST]) == 4, (
+        f"{weg}: der Ersatzweg ist erst nach vier gescheiterten Versuchen dran"
+    )
+
+
+# -----------------------------------------------------------------------
+# #1426 AC-3/AC-4 -- Totalablehnung wirft OutputError statt stillen Erfolg
+# zu melden (Defekt B)
+# -----------------------------------------------------------------------
+
+
+def test_primaerweg_totalablehnung_wirft_outputerror(monkeypatch):
+    """#1426 AC-3: lehnt der Primaerweg ALLE Empfaenger ab, muss send()
+    OutputError werfen statt normal zurueckzukehren. Vorher wurde jede
+    Ablehnung nur geloggt, ohne Pruefung ob ueberhaupt ein Empfaenger
+    erreicht wurde -- send() meldete faelschlich Erfolg."""
+    verlauf = _installiere_transport(
+        monkeypatch,
+        sendefehler={
+            e: (lambda e=e: smtplib.SMTPException(f"{e} abgelehnt"))
+            for e in EMPFAENGER
+        },
+    )
+
+    with pytest.raises(OutputError):
+        _sende(_postausgang(), EMPFAENGER)
+
+    assert _zustellungen(verlauf, PRIMAER_HOST) == [
+        (EMPFAENGER[0],),
+        (EMPFAENGER[1],),
+        (EMPFAENGER[2],),
+    ], "jeder Empfaenger wird einzeln versucht, auch wenn am Ende alle abgelehnt werden"
+    assert [e for e in verlauf if e[0] == "dial"] == [
+        ("dial", PRIMAER_HOST, PRIMAER_PORT)
+    ], "eine Totalablehnung ist kein Transportfehler -- kein Neuversuch, kein Ersatzweg"
+
+
+def test_ersatzweg_totalablehnung_wirft_outputerror(monkeypatch):
+    """#1426 AC-4: schlaegt der Primaerweg komplett fehl (Netzfehler) und
+    lehnt der Ersatzweg anschliessend ALLE Empfaenger ab, muss send()
+    OutputError werfen. Vorher kehrte `_dial_and_send()` fuer den Ersatzweg
+    implizit mit None zurueck, und der Ersatzweg-Aufruf in
+    `_handle_transient_dial_failure()` meldete faelschlich Erfolg
+    (`return True`)."""
+    verlauf = _installiere_transport(
+        monkeypatch,
+        verbindungsfehler={
+            PRIMAER_HOST: lambda: OSError("Namensaufloesung fehlgeschlagen")
+        },
+        sendefehler={
+            e: (lambda e=e: smtplib.SMTPException(f"{e} abgelehnt"))
+            for e in EMPFAENGER
         },
     )
 
@@ -261,11 +362,8 @@ def test_ac3_ersatzweg_bricht_beim_ersten_abgelehnten_empfaenger_ab(
     assert _zustellungen(verlauf, ERSATZ_HOST) == [
         (EMPFAENGER[0],),
         (EMPFAENGER[1],),
-    ], f"{weg}: nach dem abgelehnten Empfaenger darf kein weiterer folgen"
-    assert ("dial", ERSATZ_HOST, ERSATZ_PORT) in verlauf
-    assert len([e for e in verlauf if e[0] == "dial" and e[1] == PRIMAER_HOST]) == 4, (
-        f"{weg}: der Ersatzweg ist erst nach vier gescheiterten Versuchen dran"
-    )
+        (EMPFAENGER[2],),
+    ], "auch auf dem Ersatzweg wird jeder Empfaenger einzeln versucht, bevor Totalablehnung gemeldet wird"
 
 
 # -----------------------------------------------------------------------
