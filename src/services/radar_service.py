@@ -90,6 +90,12 @@ class NowcastResult:
                                     # Pure observability signal -- radar_alert_due()
                                     # treats onset_minutes=None identically either way
                                     # (safe: a missed poll beats a quota outage).
+    data_unavailable: bool = False  # True when no frames due to a real upstream
+                                     # failure (HTTP error/timeout), distinct from
+                                     # both "genuinely dry" and `throttled`
+                                     # (Issue #1628 S1). Pure observability signal --
+                                     # radar_alert_due() treats onset_minutes=None
+                                     # identically either way.
 
 
 def _offline_fixture_active() -> bool:
@@ -245,8 +251,17 @@ class RadarNowcastService:
         lines: list[str] = []
 
         if result.onset_minutes is None:
-            lines.append(result.intensity_label + ".")
-            lines.append("In den nächsten 2 Stunden kein Regen erwartet.")
+            if result.data_unavailable:
+                # Issue #1628 S3: bei einem echten Fetch-Fehler ist
+                # `intensity_label` (frames=[] -> "Kein Niederschlag") und der
+                # Folgesatz gleichermassen eine falsche Entwarnung -- beide
+                # Zeilen werden durch einen ehrlichen "nicht geprueft"-Hinweis
+                # ersetzt, statt zu behaupten es sei trocken (R5).
+                lines.append("Regen-Kurzfristprüfung aktuell nicht möglich.")
+                lines.append("Bitte selbst beobachten.")
+            else:
+                lines.append(result.intensity_label + ".")
+                lines.append("In den nächsten 2 Stunden kein Regen erwartet.")
         else:
             now = datetime.now(tz=timezone.utc)
             onset_time = now + timedelta(minutes=result.onset_minutes)
@@ -562,6 +577,18 @@ class RadarNowcastService:
         # onset_minutes=None ohnehin gleich (kein Alarm bei Drosselung).
         throttled = bool(getattr(self, "_budget_throttled_this_call", False)) and not frames
 
+        # Issue #1628 S1: data_unavailable=True nur bei einem ECHTEN
+        # Fetch-Fehlschlag (HTTP-Fehlerstatus, Timeout, Verbindungsfehler) --
+        # ausdruecklich NICHT bei einer reinen Budget-Drosselung (die setzt
+        # _openmeteo_unavailable_this_call zusaetzlich als
+        # Doppelverbrauch-Sperre, s. _fetch_openmeteo_15:431-433), sonst
+        # waeren Drosselung und echter Ausfall vermengt (AC-5, R4).
+        data_unavailable = (
+            bool(getattr(self, "_openmeteo_unavailable_this_call", False))
+            and not bool(getattr(self, "_budget_throttled_this_call", False))
+            and not frames
+        )
+
         return NowcastResult(
             onset_minutes=onset_minutes,
             intensity_label=intensity_label,
@@ -570,6 +597,7 @@ class RadarNowcastService:
             is_convective=is_convective,
             convective_checked=self._convective_checked,
             throttled=throttled,
+            data_unavailable=data_unavailable,
         )
 
 

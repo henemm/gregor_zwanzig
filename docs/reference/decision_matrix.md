@@ -201,6 +201,24 @@ Budget-/Prioritätssteuerung sind aktiv. Bei Änderungen an Abruf-Pfaden immer
 den Kontingent-Effekt mitdenken; Verbrauchslog: `openmeteo_calls.jsonl`
 (erfasst den Radar-Pfad NICHT).
 
+**Gemessene Lastspitze zu `:00`/`:30` (#1628, 9-Tage-Fenster 2026-08-01 bis
+08-09):** Radar-Fehlschläge kommen ausschließlich als HTTP 503 mit
+Open-Meteos eigenem Antworttext `{"error":true,"reason":"The service is
+overloaded"}` — **kein einziger HTTP 429** im gesamten Fenster, das schließt
+die eigene Kontingent-Bremse als Ursache aus. Die Fehlerquote häuft sich
+scharf auf die Minuten `:00`/`:30` (~60 %) gegenüber `:15`/`:45` (~3 %), bei
+gleichmäßig verteilter Anfragezahl über alle vier Zeitpunkte — also eine
+externe, zyklische Lastspitze bei Open-Meteo, kein Zählartefakt. Als
+Betriebsmaßnahme laufen die beiden Radar-Cron-Jobs (`radar_alert_checks`,
+`compare_radar_alert_checks`, `internal/scheduler/scheduler.go`) seither auf
+`7,22,37,52 * * * *` statt `*/15 * * * *` — versetzt zu den gemessenen
+Spitzenminuten. Alle übrigen Scheduler-Jobs bleiben unverändert. **Der
+Versatz umgeht die Lastspitze, er behebt sie nicht** — die Restfehlerquote
+(~3 %) bleibt bestehen; dafür sorgt `NowcastResult.data_unavailable`
+(`src/services/radar_service.py`), das einen echten Abruf-Fehlschlag von
+"echt geprüft, trocken" unterscheidet, siehe
+`docs/specs/modules/fix_1628_nowcast_datenluecke.md`.
+
 ## Kontingent-Regeln (Météo-France)
 
 Rate-Limit **100 Anfragen/Minute pro API und pro Benutzerkonto** (seit Januar
