@@ -7,8 +7,8 @@ Python-Ausgangspunkte (OpenMeteoProvider + GeoSphereProvider) denselben Zähler
 befüllen (DRY). Reine Observability, fail-soft — Diagnose darf einen Abruf NIE
 beeinträchtigen.
 
-Append-only JSONL nach DIAGNOSTICS_PATH. Verzeichnis `data/diagnostics/` ist in
-.gitignore.
+Append-only JSONL nach `diagnostics_path()` — `<Datenwurzel>/diagnostics/`,
+aufgelöst über `app.loader.get_data_root()` (#1633).
 """
 from __future__ import annotations
 
@@ -17,8 +17,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-# Append-only JSONL für jeden ausgehenden Python-Open-Meteo-Abruf.
-DIAGNOSTICS_PATH = Path("data/diagnostics/openmeteo_calls.jsonl")
+# Test-Override (Path) oder None. Issue #1633: der Pfad wird bei JEDEM Zugriff
+# über `diagnostics_path()` aufgelöst, nie beim Import — eine Modul-Konstante mit
+# Initialisierer bindet vor jeder Testfixture und ignoriert `GZ_DATA_DIR`.
+DIAGNOSTICS_PATH: Optional[Path] = None
+
+
+def diagnostics_path() -> Path:
+    """Zielpfad des Open-Meteo-Diagnosejournals, bei jedem Zugriff aufgelöst."""
+    if DIAGNOSTICS_PATH is not None:
+        return Path(DIAGNOSTICS_PATH)
+    from app.loader import get_data_root
+
+    return Path(get_data_root()) / "diagnostics" / "openmeteo_calls.jsonl"
 
 # Mapping Aufrufer-Funktionsname (im Stack) -> Diagnose-Quelle.
 # Reihenfolge = Priorität (äußerste/spezifischste Quelle zuerst).
@@ -60,11 +71,11 @@ def log_api_call(
     Issue #338: Einen ausgehenden Open-Meteo-Abruf protokollieren (fail-soft).
 
     Hängt eine JSONL-Zeile (ts, endpoint, status, source, error) an
-    DIAGNOSTICS_PATH an. Jeder Fehler wird geschluckt — Diagnose darf den
+    `diagnostics_path()` an. Jeder Fehler wird geschluckt — Diagnose darf den
     Abruf NIE beeinträchtigen.
     """
     try:
-        path = DIAGNOSTICS_PATH
+        path = diagnostics_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         line = json.dumps({
             "ts": datetime.now(timezone.utc).isoformat(),

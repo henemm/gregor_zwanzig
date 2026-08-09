@@ -27,8 +27,15 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-DEFAULT_PATH = Path("data/diagnostics/openmeteo_calls.jsonl")
 GO_FILENAME = "openmeteo_calls_go.jsonl"
+
+
+def _default_path() -> Path:
+    """Issue #1633: Journal an der Datenwurzel suchen, nicht im Programmordner."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+    from providers.call_log import diagnostics_path
+
+    return diagnostics_path()
 
 
 def _load(path: Path) -> list[dict]:
@@ -118,7 +125,7 @@ def analyze(path: Path) -> int:
 
 
 def main(argv: list[str]) -> int:
-    path = Path(argv[1]) if len(argv) > 1 else DEFAULT_PATH
+    path = Path(argv[1]) if len(argv) > 1 else _default_path()
     return analyze(path)
 
 

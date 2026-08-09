@@ -231,36 +231,49 @@ def _egress_guard(request):
 
 
 @pytest.fixture(autouse=True)
-def _isolate_warn_calls_path(tmp_path_factory):
+def _isolate_warn_calls_path(request, tmp_path_factory):
     """Issue #1348: die vom Warn-Egress-Zähler geschriebene JSONL-Datei
-    ``services.official_alerts.warn_egress.WARN_CALLS_PATH`` (real
-    ``data/diagnostics/warn_service_calls.jsonl``) für JEDEN Test auf eine
+    ``services.official_alerts.warn_egress`` (real
+    ``<Datenwurzel>/diagnostics/warn_service_calls.jsonl``) für JEDEN Test auf eine
     Wegwerf-Datei im tmp-Bereich umlenken, damit KEIN Test die echte
     Diagnose-Datei verschmutzt.
 
     Vorbild: ``_isolate_data_root`` oben (Save/Redirect/Restore). Der Zähler
     wird u.a. indirekt über ``get_official_alerts_for_location`` /
     ``MeteoAlarmSource.fetch`` aus vielen Suiten ausgelöst, nicht nur aus den
-    beiden #1348-Testdateien — deshalb greift die Umlenkung global und
-    unbedingt (auch für ``live``/``staging``: die reale Diagnose-Datei soll
-    NIE aus Tests wachsen).
+    beiden #1348-Testdateien — deshalb greift die Umlenkung global.
+
+    Issue #1633: Seit der Pfad über ``warn_calls_path()`` zur LAUFZEIT aus
+    ``app.loader.get_data_root()`` folgt, schützt bereits ``_isolate_data_root``
+    oben jeden normalen Test. Diese Umlenkung ist dort nicht mehr nötig — und
+    schädlich, weil sie verdecken würde, ob die Datenwurzel überhaupt beachtet
+    wird. Sie bleibt genau für die Fälle, in denen ``_isolate_data_root``
+    aussteigt (``real_data_root``/``live``): dort soll die reale Diagnose-Datei
+    trotzdem NIE aus Tests wachsen.
 
     Wichtig für die Rücklese-Tests (AC-7/8/9 in
     ``test_warn_service_egress.py`` sowie die MeteoAlarm-Suite): setzen diese
-    ihren EIGENEN ``monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH", ...)``,
+    ihren EIGENEN ``monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", ...)``,
     so läuft dieser Per-Test-Override IM Test-Body — also NACH dieser
     Fixture-Einrichtung — und gewinnt. Nach dem Test stellt monkeypatch auf
     den hier gesetzten tmp-Wert zurück, diese Fixture danach auf das Original.
     """
     from services.official_alerts import warn_egress
 
-    before = warn_egress.WARN_CALLS_PATH
+    if not (
+        request.node.get_closest_marker("real_data_root")
+        or request.node.get_closest_marker("live")
+    ):
+        yield  # Datenwurzel-Isolation oben genügt (#1633)
+        return
+
+    before = warn_egress.WARN_CALLS_PATH_OVERRIDE
     throwaway = tmp_path_factory.mktemp("warn_calls") / "warn_service_calls.jsonl"
-    warn_egress.WARN_CALLS_PATH = throwaway
+    warn_egress.WARN_CALLS_PATH_OVERRIDE = throwaway
     try:
         yield
     finally:
-        warn_egress.WARN_CALLS_PATH = before
+        warn_egress.WARN_CALLS_PATH_OVERRIDE = before
 
 
 @pytest.fixture(autouse=True)

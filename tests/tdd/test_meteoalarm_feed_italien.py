@@ -316,9 +316,9 @@ def _drift_zeilen_anzahl(warn_egress) -> int:
     """``point_unmapped``-Zeilen des Feed-Dienstes im (append-only)
     Diagnose-Journal -- VOR und NACH einem Aufruf gemessen, damit Zeilen
     frueherer Tests derselben Sitzung nicht mitzaehlen."""
-    if not warn_egress.WARN_CALLS_PATH.exists():
+    if not warn_egress.warn_calls_path().exists():
         return 0
-    zeilen = warn_egress.WARN_CALLS_PATH.read_text(encoding="utf-8").splitlines()
+    zeilen = warn_egress.warn_calls_path().read_text(encoding="utf-8").splitlines()
     eintraege = [json.loads(z) for z in zeilen if '"drift"' in z]
     return len([e for e in eintraege if e.get("service") == "meteoalarm_feed"
                 and e.get("drift") == "point_unmapped"])
@@ -477,8 +477,8 @@ def test_ac1_aktuell_gueltige_warnung_erscheint_ohne_edr_journal_eintrag(monkeyp
             f"die aktuell gueltige Hitzewarnung (orange, Stufe 3) fuer Lazio muss "
             f"erscheinen. Erhalten: {alerts}"
         )
-        journal = warn_egress.WARN_CALLS_PATH.read_text(encoding="utf-8") \
-            if warn_egress.WARN_CALLS_PATH.exists() else ""
+        journal = warn_egress.warn_calls_path().read_text(encoding="utf-8") \
+            if warn_egress.warn_calls_path().exists() else ""
         assert '"host": "api.meteoalarm.org"' not in journal, (
             f"kein Abruf gegen den bisherigen kontingentierten Warndienst darf "
             f"verzeichnet sein. Journal:\n{journal}"

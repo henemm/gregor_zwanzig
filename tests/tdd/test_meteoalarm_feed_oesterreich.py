@@ -841,8 +841,8 @@ def test_ac4_mehrere_punkte_loesen_nur_einen_feedabruf_und_keine_zusaetzlichen_z
             f"ausloesen (Spec Implementation Details Punkt 4). Gemessen: "
             f"{zamg.zaehler.treffer} echte ZAMG-Treffer"
         )
-        journal = warn_egress.WARN_CALLS_PATH.read_text(encoding="utf-8") \
-            if warn_egress.WARN_CALLS_PATH.exists() else ""
+        journal = warn_egress.warn_calls_path().read_text(encoding="utf-8") \
+            if warn_egress.warn_calls_path().exists() else ""
         assert '"host": "api.meteoalarm.org"' not in journal, (
             f"kein Abruf gegen den bisherigen kontingentierten Warndienst darf "
             f"verzeichnet sein. Journal:\n{journal}"
