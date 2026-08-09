@@ -88,7 +88,7 @@ ActiveEnterTimestamp`, `/api/health`.
 
 ## Schritt 5 — Abschluss
 
-1. `workflow.py write-log success`, dann `workflow.py complete`
+1. `workflow.py write-log success`, dann `workflow.py finish`
 2. Ergebnis-Kommentar ans Issue: was live ist, was nachgewiesen wurde, **was offen blieb**,
    abgeleitete Meldungen
 3. `gh issue close <N>` — **nur** wenn 4b Exit 0 lieferte **und** wirklich alles erledigt ist.

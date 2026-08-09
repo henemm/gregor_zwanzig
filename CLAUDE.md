@@ -38,7 +38,7 @@ OpenSpec-Workflow mit Adversary Verification (Commands sind zweistellig; Einstie
 | Was | Befehl / Pflicht |
 |-----|------------------|
 | **AC-N-Format in Specs** | Jede Spec `created >= 2026-05-11` braucht `## Acceptance Criteria` mit `**AC-1:** Given.../When.../Then...` (>=30 Zeichen). Vorbild: `docs/specs/modules/epic_191_state_migration.md`. Ohne AC-N blockt `workflow_gate` Phase 6. |
-| **Execution-Log vor `complete`** | `python3 .claude/hooks/workflow.py write-log success` schreibt YAML (Phasen, Laufzeiten, Token-Verbrauch, Issue #829) nach `.claude/workflows/_log/`, dann `workflow.py complete`. Ohne Log blockt der Hook. |
+| **Execution-Log vor `finish`** | `python3 .claude/hooks/workflow.py write-log success` schreibt YAML (Phasen, Laufzeiten, Token-Verbrauch, Issue #829) nach `.claude/workflows/_log/`, dann `workflow.py finish`. Ohne Log blockt der Hook. |
 | **Token-Tracking (#829)** | Stop-Hook `track_token_usage.py` summiert Transcript-Tokens ins Workflow-State, kumulativ über Sessions. Kein `GZ_ACTIVE_WORKFLOW` → fail-safe. |
 | **LoC-Limit 250/Workflow** | `workflow.py status` zeigt `LoC-Delta: +N/250`. Überschritten → `workflow.py set-field loc_limit_override 500`. Generierte Dateien + `docs/`/`*.md`/`.gitignore` zählen nicht. |
 | **Adversary-Verdict Gating** | Nach phase6b: `AMBIGUOUS` → `workflow.py override-ambiguous "<Grund>"` (TTL 1h); `None`/`BROKEN` → `qa_gate.py` aufrufen. Commit blockt ohne Verdict. |
