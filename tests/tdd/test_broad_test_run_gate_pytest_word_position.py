@@ -10,6 +10,18 @@ Kein Mock-Theater: `_pytest_invocations()` wird direkt mit echten Token-Listen
 geprueft (Unit-Ebene), der volle Gate-Pfad ueber einen echten Subprozess mit
 JSON-Payload auf stdin (End-to-End-Ebene, identisches Muster wie
 tests/tdd/test_fix_853_842_837_tooling_gates.py).
+
+Modul-Import ueber `pytest.importorskip` statt eines harten `import`: der
+Hook laedt transitiv `hook_utils.py`, einen Shim, der das echte Modul aus dem
+INSTALLIERTEN agent-os-openspec-Plugin nachlaedt. Auf CI-Runnern (kein
+Plugin installiert) waere ein hartes `import` ein COLLECTION-FEHLER, kein
+sauberer Skip -- das bricht `tests/tdd/test_pytest_collection_and_timeout_
+safety.py`s interne `pytest --collect-only`-Subprozesse (laufen OHNE die
+`.github/ci_tdd_excludes.txt`-Ausschluesse), die eine fehlerfreie Voll-
+Collection erwarten (Issue #1478 Teil 1, gemessen: CI-Lauf mit hartem Import
+riss 21 Tests in voellig unabhaengigen Dateien mit). `importorskip` macht
+denselben Zustand zu einem sauberen SKIP (kein Collection-Fehler), lokal mit
+installiertem Plugin laeuft die Datei unveraendert durch.
 """
 
 import json
@@ -17,10 +29,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / ".claude" / "hooks"))
 
-import broad_test_run_gate as gate  # noqa: E402
+gate = pytest.importorskip("broad_test_run_gate")
 
 
 def _run_gate(command: str) -> subprocess.CompletedProcess:
