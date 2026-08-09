@@ -6,7 +6,8 @@
     "allow": [
       "Bash",
       "WebSearch",
-      "WebFetch"
+      "WebFetch",
+      "Monitor"
     ],
     "deny": [],
     "ask": []
