@@ -1,6 +1,7 @@
 """TDD RED — Issue #1348-Rest: Briefing-Hinweis "amtliche Warnungen nicht abrufbar".
 
 SPEC: docs/specs/modules/warn_unavailable_hint.md (AC-1 … AC-6)
+SPEC: docs/specs/modules/fix_1348_warn_kompensation.md (AC-1 … AC-7, Klasse TestUnavailableSignal)
 
 Diese Tests schlagen JETZT absichtlich fehl — das Feature existiert noch nicht:
 - `services.official_alerts.base.get_official_alerts_with_status` -> AttributeError
@@ -17,9 +18,16 @@ Codepfad laufen. Kein `Mock()`/`patch()`/`MagicMock`. Kein Live-Netz — die
 
 Vorbild-Muster: tests/tdd/test_issue_1034_official_alerts_foundation.py.
 
-PO-Entscheid 2026-07-23 (STRENG): `unavailable = (es gibt abdeckende Quellen)
-AND (mindestens EINE davon ist beim Fetch fehlgeschlagen)` — NICHT "alle
-fehlgeschlagen". Der Mischfall-Test unten ist der Kern dieser Entscheidung.
+PO-Entscheid 2026-07-30 (loest die STRENGE Regel vom 2026-07-23 ab, Issue
+#1348 Restpunkt): `unavailable = (es gibt abdeckende Quellen) AND (ALLE
+davon sind beim Fetch fehlgeschlagen)`. Kompensation durch eine andere
+erfolgreiche, ebenfalls zustaendige Quelle zaehlt -- ein Sicherheitshinweis,
+der auch ohne echte Luecke erscheint, wird ueberlesen (Beleg: Trip "KHW 403",
+30.07., GeoSphere lieferte durchgehend erfolgreich, nur MeteoAlarm war
+gesperrt, der Hinweis erschien trotzdem). Bei GENAU EINER zustaendigen
+Quelle bleibt das Verhalten unveraendert streng (`failed >= covering` ist
+dort aequivalent zu `failed >= 1`). Der Mischfall-Test unten ist der Kern
+dieser Entscheidung.
 """
 from __future__ import annotations
 
@@ -162,14 +170,17 @@ class TestUnavailableSignal:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup)
 
-    def test_mischfall_streng_one_fail_one_empty_is_unavailable(self):
-        """KERN DER PO-ENTSCHEIDUNG (STRENG): eine deckende Quelle wirft, eine
-        deckende Quelle liefert erfolgreich [] -> unavailable=True.
+    def test_mischfall_kompensiert_one_fail_one_success_is_available(self):
+        """KERN DER PO-KORREKTUR (2026-07-30): eine deckende Quelle wirft, eine
+        andere deckende Quelle liefert erfolgreich [] -> unavailable=False.
 
-        Schon EINE ausgefallene abdeckende Quelle genuegt — sie haette eine
-        Warnung tragen koennen, die die andere Quelle nicht abdeckt. Die frueher
-        diskutierte "alle muessen fehlschlagen"-Variante wuerde hier faelschlich
-        unavailable=False liefern; genau das schliesst dieser Test aus.
+        Die erfolgreiche zustaendige Quelle KOMPENSIERT die ausgefallene --
+        genau der am 30.07. gemeldete Fehlalarm-Fall (GeoSphere ok, nur
+        MeteoAlarm gesperrt, Hinweis erschien trotzdem faelschlich). Die
+        fruehere STRENGE Variante ("eine ausgefallene Quelle genuegt") ist
+        damit abgeloest; dieser Test war vor der Korrektur GRUEN mit
+        `unavailable is True` und wird durch den Formel-Fix (`failed >=
+        covering` statt `failed >= 1`) auf `unavailable is False` umgedreht.
         """
         import services.official_alerts.base as oa_base
         from services.official_alerts.base import get_official_alerts_with_status
@@ -184,14 +195,226 @@ class TestUnavailableSignal:
                 f"Nur die (werfende) Fail-Quelle deckt ab; die Empty-Quelle liefert "
                 f"[] -> Gesamt-Alertliste leer, war {alerts!r}"
             )
-            assert unavailable is True, (
-                "STRENG (PO-Entscheid 2026-07-23): eine ausgefallene abdeckende "
-                "Quelle genuegt fuer unavailable=True, auch wenn eine andere "
-                "abdeckende Quelle erfolgreich [] liefert."
+            assert unavailable is False, (
+                "PO-Entscheid 2026-07-30: eine erfolgreiche zustaendige Quelle "
+                "kompensiert eine ausgefallene zustaendige Quelle am selben Ort "
+                "-> unavailable=False, kein Fehlalarm mehr."
             )
         finally:
             oa_base._REGISTERED_SOURCES.clear()
             oa_base._REGISTERED_SOURCES.extend(backup)
+
+    def test_beide_covering_quellen_fallen_aus_is_unavailable(self):
+        """AC-2: zwei zustaendige Quellen, BEIDE fallen beim Fetch aus ->
+        unavailable=True. Keine Kompensation moeglich, wenn nichts uebrig
+        bleibt, das kompensieren koennte -- Gegenprobe zu AC-1, damit die
+        Formel nicht versehentlich auf 'irgendeine Quelle deckt ab' entartet."""
+        import services.official_alerts.base as oa_base
+        from services.official_alerts.base import get_official_alerts_with_status
+
+        class _SecondCoveringFailSource:
+            @property
+            def name(self) -> str:
+                return "test-covering-fail-2"
+
+            def covers(self, lat: float, lon: float) -> bool:
+                return True
+
+            def fetch(self, lat: float, lon: float):
+                raise RuntimeError("zweite simulierte Quelle faellt ebenfalls aus")
+
+        backup = list(oa_base._REGISTERED_SOURCES)
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            oa_base._REGISTERED_SOURCES.append(_AllCoveringFailSource())
+            oa_base._REGISTERED_SOURCES.append(_SecondCoveringFailSource())
+            alerts, unavailable = get_official_alerts_with_status(_LAT, _LON)
+            assert alerts == []
+            assert unavailable is True, (
+                "Fallen ALLE zustaendigen Quellen aus, bleibt kein Kompensations-"
+                "Partner uebrig -> unavailable=True bleibt bestehen."
+            )
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
+
+    def test_realpath_at_geosphere_erfolg_kompensiert_meteoalarm_blockiert(self):
+        """AC-5 REAL-PFAD (PO-Vorfall 30.07., Trip "KHW 403"): die HEUTE in
+        Prod registrierten AT-Quellen `GeoSphereWarnSource` (erfolgreich,
+        via genuinem Cache-Treffer -- kein Live-Netz) und
+        `MeteoAlarmFeedSource("AT")` (real geblockt, `feeds.meteoalarm.org`
+        steht im Egress-Waechter auf BLOCKED) fuer einen oesterreichischen
+        Punkt -> unavailable=False. Genau der Fehlalarm, den die PO-Korrektur
+        beheben sollte, jetzt mit den ECHTEN Quellklassen nachgestellt.
+
+        Kein Mock-Theater, kein Live-Netz: `GeoSphereWarnSource` bekommt einen
+        echten, aber MANUELL VORGEFUELLTEN Cache-Treffer (identisches Muster
+        zu `tests/tdd/test_warn_services_rest.py::test_cache_hit_kein_call`)
+        -- ihr `fetch()` laeuft dadurch ueber den echten Cache-Hit-Zweig von
+        `warn_egress.cached_fetch()`, ohne jemals `request_fn()` aufzurufen.
+        `MeteoAlarmFeedSource("AT")` faellt ueber den bereits bestehenden,
+        real geblockten Host aus (identischer Mechanismus wie im
+        Regressionswaechter oben)."""
+        import time as time_module
+
+        import services.official_alerts.base as oa_base
+        from services.official_alerts.base import get_official_alerts_with_status
+        from services.official_alerts.geosphere_warn import (
+            GeoSphereWarnSource, _cache as _geosphere_cache, _round_coord,
+            CACHE_TTL as _GEOSPHERE_CACHE_TTL,
+        )
+        from services.official_alerts.meteoalarm_feed import (
+            MeteoAlarmFeedSource, _cache as _meteoalarm_feed_cache,
+        )
+
+        # Innsbruck -- in der GeoSphere-/INCA-Bbox (covers=True fuer beide Quellen).
+        at_lat, at_lon = 47.26, 11.39
+
+        backup = list(oa_base._REGISTERED_SOURCES)
+        oa_base._REGISTERED_SOURCES.clear()
+        _geosphere_cache.clear()
+        _meteoalarm_feed_cache.clear()
+        try:
+            geosphere = GeoSphereWarnSource()
+            meteoalarm_at = MeteoAlarmFeedSource("AT")
+            assert geosphere.covers(at_lat, at_lon) is True
+            assert meteoalarm_at.covers(at_lat, at_lon) is True
+
+            # Echter Cache-Treffer: GeoSphere "hat gerade erfolgreich leer
+            # geantwortet" -- keine Warnungen fuer Innsbruck, ohne Netz.
+            # WICHTIG: ``gemeindenr`` MUSS gesetzt sein (formgueltig, laut
+            # ``_ist_auswertbare_gemeindenr``) -- ``_zone_for_point_at()``
+            # liest dasselbe GeoSphere-Cache-Objekt weiter, um die AT-EMMA-
+            # Zone aufzuloesen. OHNE ``gemeindenr`` waere die Zone ``None``
+            # ("nicht zustaendig", Fall 1) und ``MeteoAlarmFeedSource("AT")``
+            # wuerde ``_get_cached_feed("AT")`` NIE aufrufen -- der geblockte
+            # Host bliebe unerreicht, der Test wuerde faelschlich SCHON VOR
+            # dem Fix gruen sein (genau dieser Fehler flog beim ersten
+            # Testlauf auf: 0 statt 1 ausgefallene Quelle).
+            _geosphere_cache[_round_coord(at_lat, at_lon)] = {
+                "data": {
+                    "properties": {
+                        "location": {
+                            "properties": {
+                                "name": "Innsbruck (Test)",
+                                "gemeindenr": "70101",
+                            }
+                        },
+                        "warnings": [],
+                    }
+                },
+                "fetched_at": time_module.monotonic(),
+                "ttl": _GEOSPHERE_CACHE_TTL,
+            }
+
+            oa_base._REGISTERED_SOURCES.append(geosphere)
+            oa_base._REGISTERED_SOURCES.append(meteoalarm_at)
+
+            alerts, unavailable = get_official_alerts_with_status(at_lat, at_lon)
+            assert alerts == [], (
+                f"Beide Quellen liefern keine aktiven Warnungen, war {alerts!r}"
+            )
+            assert unavailable is False, (
+                "GeoSphere liefert erfolgreich (auch leer), MeteoAlarm ist "
+                "geblockt -> die erfolgreiche Quelle kompensiert -> "
+                "unavailable=False. Der 30.07.-Fehlalarm ist damit behoben."
+            )
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
+            _geosphere_cache.clear()
+            _meteoalarm_feed_cache.clear()
+
+    def test_realpath_suedtirol_dpc_erfolg_kompensiert_meteoalarm_blockiert(self):
+        """AC-6 REAL-PFAD (reale heutige Quellenlage, PO-Entscheid 2026-08-09):
+        das im urspruenglichen PO-Kommentar (30.07.) genannte Beispiel
+        "fuer Suedtirol ist MeteoAlarm die einzige Quelle" ist seit
+        `DpcSource` (2026-07-31, #1427 S2) ueberholt -- ein Suedtirol-Punkt
+        wird HEUTE von ZWEI Quellen abgedeckt: `MeteoAlarmFeedSource("IT")`
+        und `DpcSource`. Faellt nur MeteoAlarm aus (real geblockter Host),
+        kompensiert DpcSource -> unavailable=False.
+
+        Kein Mock-Theater, kein Live-Netz: der DPC-Zonencode fuer den
+        Testpunkt wird ueber die ECHTE Zonen-Geometrie (`_zone_at`)
+        ermittelt (kein geratener/hartkodierter Code), der Bulletin-Cache
+        wird mit einem minimalen, aber vollstaendig REALISTISCH GEFORMTEN
+        "NESSUNA ALLERTA"-Datensatz fuer genau diese Zone vorgefuellt
+        (identisches Zeilenformat wie `tests/fixtures/dpc`-Fixtures) --
+        `DpcSource.fetch()` laeuft dadurch ueber den echten Cache-Hit-Zweig,
+        ohne Netz. `MeteoAlarmFeedSource("IT")` faellt ueber den bereits
+        bestehenden, real geblockten `feeds.meteoalarm.org`-Host aus."""
+        import time as time_module
+        from datetime import datetime, timezone
+
+        import services.official_alerts.base as oa_base
+        from services.official_alerts.base import get_official_alerts_with_status
+        from services.official_alerts.dpc import (
+            DpcSource, _cache as _dpc_cache, _CACHE_KEY as _DPC_CACHE_KEY,
+            _zone_at, CACHE_TTL as _DPC_CACHE_TTL,
+        )
+        from services.official_alerts.meteoalarm_feed import (
+            MeteoAlarmFeedSource, _cache as _meteoalarm_feed_cache,
+        )
+
+        # Bozen/Bolzano -- Suedtirol, sicher innerhalb der DPC-Bbox.
+        st_lat, st_lon = 46.4983, 11.3548
+
+        backup = list(oa_base._REGISTERED_SOURCES)
+        oa_base._REGISTERED_SOURCES.clear()
+        _dpc_cache.clear()
+        _meteoalarm_feed_cache.clear()
+        try:
+            dpc = DpcSource()
+            meteoalarm_it = MeteoAlarmFeedSource("IT")
+            assert dpc.covers(st_lat, st_lon) is True
+            assert meteoalarm_it.covers(st_lat, st_lon) is True
+
+            zone_code = _zone_at(st_lat, st_lon)
+            assert zone_code is not None, (
+                "Suedtirol muss ueber die echte DPC-Zonen-Geometrie eine "
+                "zustaendige Zone finden -- sonst deckt DpcSource den Punkt "
+                "gar nicht ab und der Testaufbau ist falsch."
+            )
+
+            today = datetime.now(timezone.utc).date()
+            _dpc_cache[_DPC_CACHE_KEY] = {
+                "data": {
+                    "bulletin_date": today,
+                    "by_day": {
+                        "today": {
+                            zone_code: {
+                                "Zona_all": zone_code,
+                                "Nome_zona": "Test-Zone (Suedtirol)",
+                                "Temporali": "1/NESSUNA ALLERTA",
+                                "Idrogeo": "1/NESSUNA ALLERTA",
+                                "Idraulico": "1/NESSUNA ALLERTA",
+                            }
+                        }
+                    },
+                },
+                "fetched_at": time_module.monotonic(),
+                "ttl": _DPC_CACHE_TTL,
+            }
+
+            oa_base._REGISTERED_SOURCES.append(dpc)
+            oa_base._REGISTERED_SOURCES.append(meteoalarm_it)
+
+            alerts, unavailable = get_official_alerts_with_status(st_lat, st_lon)
+            assert alerts == [], (
+                f"Beide Quellen liefern keine aktiven Warnungen, war {alerts!r}"
+            )
+            assert unavailable is False, (
+                "DpcSource liefert erfolgreich (auch leer), MeteoAlarm ist "
+                "geblockt -> DpcSource kompensiert -> unavailable=False. "
+                "Reflektiert die REALE heutige Zwei-Quellen-Lage fuer "
+                "Suedtirol, nicht das seit 2026-07-31 ueberholte "
+                "Einzelquellen-Beispiel aus dem PO-Kommentar vom 30.07."
+            )
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
+            _dpc_cache.clear()
+            _meteoalarm_feed_cache.clear()
 
     def test_real_failsoft_empty_from_blocked_source_is_unavailable(self):
         """REAL-PFAD-REGRESSIONSWAECHTER (Issue #1348 Fix-Loop, der eigentliche

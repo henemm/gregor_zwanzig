@@ -98,11 +98,22 @@ def get_official_alerts_with_status(
     """Wie ``get_official_alerts_for_location``, liefert zusaetzlich einen
     ``unavailable``-Status (Issue #1348).
 
-    ``unavailable = covering > 0 and failed >= 1`` (PO-Entscheid 2026-07-23,
-    STRENG): schon EINE abdeckende, beim Fetch ausgefallene Quelle genuegt —
-    sie haette eine Warnung tragen koennen, die die anderen Quellen nicht
-    abdecken. Fehlt Coverage ganz (``covering == 0``) oder liefern ALLE
-    abdeckenden Quellen erfolgreich (auch leer), ist ``unavailable = False``.
+    ``unavailable = covering > 0 and failed >= covering`` (PO-Entscheid
+    2026-07-30, KOMPENSATION — loest die STRENGE Regel vom 2026-07-23 ab):
+    der Hinweis entsteht nur bei einer ECHTEN Luecke, also wenn ALLE fuer den
+    Punkt zustaendigen Quellen ausgefallen sind. Antwortet auch nur EINE
+    zustaendige Quelle erfolgreich (auch leer), kompensiert sie die
+    ausgefallenen -> ``unavailable = False``. Fehlt Coverage ganz
+    (``covering == 0``), ist ``unavailable = False`` (kein Fehlalarm ohne
+    Zustaendigkeit).
+
+    Bei GENAU EINER zustaendigen Quelle ist ``failed >= covering`` aequivalent
+    zu ``failed >= 1`` — dort bleibt das Verhalten unveraendert streng, es gibt
+    keinen Kompensationspartner. Erst ab zwei zustaendigen Quellen wirkt die
+    Kompensation. Grund der Korrektur: ein Sicherheitshinweis, der auch ohne
+    echte Luecke erscheint, wird ueberlesen (Beleg: Trip "KHW 403", 30.07.,
+    GeoSphere lieferte durchgehend erfolgreich, nur MeteoAlarm war gesperrt,
+    der Hinweis erschien trotzdem).
 
     "Ausgefallen" umfasst ZWEI Faelle (Issue #1348 Fix-Loop): (a) ``fetch()``
     wirft eine Exception; (b) ``fetch()`` liefert fail-soft ``[]``, obwohl ein
@@ -143,7 +154,7 @@ def get_official_alerts_with_status(
         # die Quelle lieferte fail-soft [], war aber real nicht abrufbar.
         if fetch_status["failed"]:
             failed += 1
-    unavailable = covering > 0 and failed >= 1
+    unavailable = covering > 0 and failed >= covering
 
     if now is None:
         now = datetime.now(timezone.utc)
