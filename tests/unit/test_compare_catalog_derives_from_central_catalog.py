@@ -47,6 +47,12 @@ CENTRAL_METRICS_COVERED_ELSEWHERE: dict[str, str] = {
     # Tages-Minimum dieselbe Aussage -- Eintrag `temp_min_c`
     # (temperature/min) deckt sie ab.
     "temperature_night": "#1484 — deckungsgleich mit temp_min_c (temperature/min)",
+    # #1660 Scheibe A: dieselbe Begruendung fuer die gefuehlte Seite --
+    # gefuehlte Nacht-Tiefsttemperatur am Etappenziel ist im Ortsvergleich
+    # (ganze Tage am festen Ort) dieselbe Aussage wie das Tages-Minimum der
+    # gefuehlten Temperatur -- Eintrag `wind_chill_min_c` (wind_chill/min)
+    # deckt sie ab (Spec-Abgrenzung 4: keine Ortsvergleich-Sonderbehandlung).
+    "wind_chill_night": "#1660 — deckungsgleich mit wind_chill_min_c (wind_chill/min)",
 }
 
 # ---------------------------------------------------------------------------

@@ -192,12 +192,27 @@ class CompactSummaryFormatter:
 
         # Issue #1410 (F2): der gefuehlte Temperaturteil steht direkt neben dem
         # gemessenen -- nur wenn die Metrik im Trip aktiviert ist.
+        # Issue #1660 Scheibe A: die gefuehlte Nacht-Untergrenze folgt der
+        # EIGENEN Groesse "wind_chill_night", nicht mehr unbedingt
+        # "wind_chill" (Muster der gemessenen Seite, Zeile 172-191).
+        felt_night_selected = "wind_chill_night" in enabled
         if "wind_chill" in enabled:
             ft = self._format_felt_temperature(
                 summary, report_type=report_type,
-                night_wind_chill_min_c=night_wind_chill_min_c,
+                night_wind_chill_min_c=(
+                    night_wind_chill_min_c if felt_night_selected else None
+                ),
                 hiking_felt_min_c=hiking_felt_min_c,
                 hiking_felt_max_c=hiking_felt_max_c,
+            )
+            if ft:
+                parts.append(ft)
+        elif felt_night_selected:
+            # Nur die gefuehlte Nachtgroesse gewaehlt: abends ihr Wert als
+            # Einzelangabe (derselbe Formatierer, ohne Tages-Aggregat).
+            ft = self._format_felt_temperature(
+                None, report_type=report_type,
+                night_wind_chill_min_c=night_wind_chill_min_c,
             )
             if ft:
                 parts.append(ft)

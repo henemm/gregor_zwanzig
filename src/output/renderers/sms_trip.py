@@ -113,12 +113,16 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
 # (#624) -- ein zweiter Eintrag dort wuerde das Schwellwert-Dict verfaelschen.
 # Fix #1484 (PO-Entscheidung 2026-08-03): 'N' wandert von "temperature" zur
 # eigenen waehlbaren Groesse "temperature_night" -- Tages- und Nachttemperatur
-# sind zwei unabhaengige Auswahl-Entscheidungen (Zelt vs. Huette). 'FN' bleibt
-# bewusst bei "wind_chill" (Spec-Abgrenzung 1, feat_1484_night_temp_metric.md).
+# sind zwei unabhaengige Auswahl-Entscheidungen (Zelt vs. Huette).
+# Fix #1660 Scheibe A: dieselbe Trennung jetzt auch auf der gefuehlten Seite --
+# 'FN' wandert von "wind_chill" zur eigenen waehlbaren Groesse
+# "wind_chill_night". 'WC' (Wintersport-Tageskennzahl) bleibt bewusst bei
+# "wind_chill" (Regression #1450, Spec-Abgrenzung 1).
 SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
     "temperature": ("K", "D"),
     "temperature_night": ("N",),
-    "wind_chill": ("FN", "FK", "FD", "WC"),
+    "wind_chill": ("FK", "FD", "WC"),
+    "wind_chill_night": ("FN",),
     "thunder": ("TH:", "TH+:"),
 }
 

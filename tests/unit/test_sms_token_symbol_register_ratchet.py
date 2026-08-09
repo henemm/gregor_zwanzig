@@ -55,10 +55,12 @@ EXEMPT_FORECAST_FIELDS: dict[str, str] = {
     # Groesse (keine Katalog-Metrik), also gibt es kein Soll-Kuerzel.
     "avalanche_level": "AV: Lawinenstufe, kein Registereintrag",
     # 'WC' — gefuehlte Temperatur. Eine Groesse (Register: 'TF') traegt im
-    # SMS-Format VIER Kuerzel (WC/FN/FK/FD, Nacht/Tiefst/Hoechst +
-    # Zusammenfassung) und ist damit strukturell nicht aus einem einzelnen
-    # sms_code-Feld ableitbar. Bewusster Sonderfall, s. Known Limitations.
-    "wind_chill_c": "WC: vier Kuerzel fuer eine Groesse (Register: TF)",
+    # SMS-Format DREI Kuerzel (WC/FK/FD, Tageskennzahl/Tiefst/Hoechst) und
+    # ist damit strukturell nicht aus einem einzelnen sms_code-Feld
+    # ableitbar. Bewusster Sonderfall, s. Known Limitations. Fix #1660
+    # Scheibe A: 'FN' (Nacht) ist zur eigenen Groesse "wind_chill_night"
+    # gewandert (vorher vier Kuerzel).
+    "wind_chill_c": "WC: drei Kuerzel fuer eine Groesse (Register: TF)",
 }
 
 # metric_id -> Begruendung. Ausnahmen der Register-Herrschaft ueber

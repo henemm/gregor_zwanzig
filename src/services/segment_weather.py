@@ -396,10 +396,11 @@ def night_weather_needed(dc) -> bool:
     """Braucht dieser Trip Nachtdaten? (#1484 AC-8)
 
     Ja bei aktiver Nacht-Stundentabelle (``show_night_block``, bisheriges
-    Kriterium) ODER gewaehlter Nacht-Tiefsttemperatur — sonst zeigt die
-    Vorschau ein ``N``, das still auf den Tageswert zurueckfaellt, waehrend
-    der Versand den echten Nachtwert traegt. Geteilte Entscheidung fuer
-    preview_service; der Versand-Scheduler beschafft ohnehin immer.
+    Kriterium) ODER gewaehlter Nacht-Tiefsttemperatur (gemessen ODER
+    gefuehlt, #1660 Scheibe A) — sonst zeigt die Vorschau ein ``N``/``FN``,
+    das still auf den Tageswert zurueckfaellt, waehrend der Versand den
+    echten Nachtwert traegt. Geteilte Entscheidung fuer preview_service; der
+    Versand-Scheduler beschafft ohnehin immer.
 
     Issue #1651: ODER aktive Gewitter-Metrik — ab dieser Scheibe speisen die
     Nachtdaten zusaetzlich den Nacht-Zusatz des Vorschau-Satzes („nachts
@@ -415,6 +416,7 @@ def night_weather_needed(dc) -> bool:
         return False
     return bool(
         dc.is_metric_enabled("temperature_night")
+        or dc.is_metric_enabled("wind_chill_night")
         or dc.is_metric_enabled("thunder")
     )
 

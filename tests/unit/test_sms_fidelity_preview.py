@@ -42,21 +42,24 @@ from output.tokens.render import render_line
 # (output.renderers.sms_trip) ein eigenes SMS-Token-Symbol tragen.
 # Issue #1484: "N" (Nacht-Tiefsttemperatur) hängt jetzt an der eigenen
 # metric_id "temperature_night", nicht mehr an "temperature".
+# Issue #1660 Scheibe A: dieselbe Trennung jetzt auch auf der gefuehlten
+# Seite -- "FN" haengt an der eigenen metric_id "wind_chill_night".
 ALL_SMS_METRIC_IDS = [
-    "temperature", "temperature_night", "wind_chill", "precipitation",
-    "rain_probability", "wind", "gust", "thunder", "snow_depth",
-    "snowfall_limit", "fresh_snow",
+    "temperature", "temperature_night", "wind_chill", "wind_chill_night",
+    "precipitation", "rain_probability", "wind", "gust", "thunder",
+    "snow_depth", "snowfall_limit", "fresh_snow",
 ]
 
 # metric_id -> SMS-Symbol(e), die bei Auswahl im gerenderten Text vorkommen
 # müssen. Gespiegelt aus output.renderers.sms_trip.SMS_SYMBOL_BY_METRIC /
-# SMS_MULTI_SYMBOLS_BY_METRIC (§624/§1410/§1435/§1484). Bewusst hier
+# SMS_MULTI_SYMBOLS_BY_METRIC (§624/§1410/§1435/§1484/§1660). Bewusst hier
 # dupliziert (nicht importiert), damit der Test unabhängig von der internen
 # Ableitung bleibt und wirklich das SICHTBARE Symbol im Rendertext prüft.
 METRIC_TO_SYMBOLS = {
     "temperature": ("K", "D"),
     "temperature_night": ("N",),
-    "wind_chill": ("FN", "FK", "FD", "WC"),
+    "wind_chill": ("FK", "FD", "WC"),
+    "wind_chill_night": ("FN",),
     "precipitation": ("R",),
     "rain_probability": ("PR",),
     "wind": ("W",),

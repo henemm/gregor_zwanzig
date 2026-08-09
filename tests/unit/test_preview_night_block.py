@@ -296,9 +296,13 @@ def test_preview_skips_night_fetch_when_neither_selected(monkeypatch):
 
     target = date.today()
     trip = _demo_trip_single_stage(target, show_night_block=False)
+    # Issue #1660 Scheibe A: "wind_chill_night" ist ein eigener, per Default
+    # aktivierter Katalogeintrag (analog "temperature_night") -- fuer die
+    # "keiner der Gruende"-Gegenprobe muss auch sie abgewaehlt sein.
     trip.display_config.metrics = [
         dataclasses.replace(mc, enabled=False)
-        if mc.metric_id in ("temperature_night", "thunder") else mc
+        if mc.metric_id in ("temperature_night", "thunder", "wind_chill_night")
+        else mc
         for mc in trip.display_config.metrics
     ]
 
@@ -306,5 +310,6 @@ def test_preview_skips_night_fetch_when_neither_selected(monkeypatch):
 
     assert calls == [], (
         "Die Vorschau beschafft Nachtdaten, obwohl weder Nacht-Tabelle noch "
-        "Nacht-Tiefsttemperatur noch Gewitter-Metrik gewaehlt sind."
+        "Nacht-Tiefsttemperatur (gemessen/gefuehlt) noch Gewitter-Metrik "
+        "gewaehlt sind."
     )

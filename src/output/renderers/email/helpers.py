@@ -90,11 +90,13 @@ def should_merge_wind_dir(dc: UnifiedWeatherDisplayConfig) -> bool:
 # Row extraction (per-segment hourly + per-night-block aggregation)
 # ----------------------------------------------------------------------
 
-# Issue #1484: Groessen ohne Stundenspalten-Semantik — der Nachtfenster-
-# Skalar erscheint als SMS-Token bzw. Abend-Untergrenze, nie als Spalte.
-# EINE Quelle fuer alle Trip-Zeilen-Bauer (Pendant der Compare-Seite:
-# compare_hourly_metric_ids.HOURLY_EXCLUDED_METRIC_IDS).
-NO_HOURLY_COLUMN_METRIC_IDS: frozenset[str] = frozenset({"temperature_night"})
+# Issue #1484/#1660 Scheibe A: Groessen ohne Stundenspalten-Semantik — die
+# Nachtfenster-Skalare erscheinen als SMS-Token bzw. Abend-Untergrenze, nie
+# als Spalte. EINE Quelle fuer alle Trip-Zeilen-Bauer (Pendant der
+# Compare-Seite: compare_hourly_metric_ids.HOURLY_EXCLUDED_METRIC_IDS).
+NO_HOURLY_COLUMN_METRIC_IDS: frozenset[str] = frozenset(
+    {"temperature_night", "wind_chill_night"}
+)
 
 
 def dp_to_row(dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig,
