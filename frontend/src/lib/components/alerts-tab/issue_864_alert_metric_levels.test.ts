@@ -72,9 +72,9 @@ test('levelToThreshold > precipitation_sum standard → "Δ ≥ 10 mm"', () => {
 	assert.equal(result, 'Δ ≥ 10 mm');
 });
 
-test('levelToThreshold > cape standard → "Δ ≥ 600 J/kg"', () => {
+test('levelToThreshold > cape standard → "Δ ≥ ~600 J/kg" (Richtwert seit #1592 C3, Δ bleibt erhalten)', () => {
 	const result = levelToThreshold('cape' as AlertMetric, 'standard');
-	assert.equal(result, 'Δ ≥ 600 J/kg');
+	assert.equal(result, 'Δ ≥ ~600 J/kg');
 });
 
 // ─── AC-3: THRESHOLD_CROSSING_METRICS ─────────────────────────────────────

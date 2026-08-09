@@ -100,10 +100,15 @@ Mixed-Layer, Météo-France Most-Unstable, GFS Surface-Based. Die frühere feste
 dauerhaft der Ortsvergleich (`model="aggregate"`) und der Schnappschuss-Reload
 (`model="snapshot"`), die strukturell keine Herkunft führen.
 
-⚠️ **Nur die Fusion ist umgestellt.** Der RiskEngine-Pfad (`risk_engine.py`, CAPE →
-`Risk(THUNDERSTORM, MODERATE|HIGH)`, dort **ungedeckelt**) und die Δ-Alarm-Schwellen
-(`alert_preset.py`) prüfen weiterhin gegen die feste, unbelegte 1000 bzw. 500/1200/600/200.
-Scheiben C2 und C3 unter #1592.
+✅ **Fusion, RiskEngine und Δ-Alarme sind inzwischen alle umgestellt** (Vollzugsvermerk in
+ADR-0048). Der RiskEngine-Pfad (`risk_engine.py`) zählte CAPE bis Scheibe C2 ein zweites Mal
+gegen die feste, unbelegte 1000/2000 — obendrauf zur bereits gedeckelten Fusion; diese zweite
+Regel ist gestrichen, die Deckelung auf „leicht" wirkt jetzt ungestört. Die Δ-Alarm-Schwellen
+(`weather_change_detection.py`, `alert_preset.py`) rechneten bis Scheibe C3 die nominale
+Empfindlichkeitsstufe (1200/600/200, ADR-0043) unverändert gegen jedes Modell; sie übersetzen
+die Stufe seither in dieselbe Modellwelt wie die Fusion
+(`wirksame Δ-Schwelle = nominale Stufe × cape_threshold_jkg(modell, gebiet) / 1000`). Beide
+Scheiben unter #1592.
 
 **Für jede weitere Quelle (z. B. Hagel, S5/#1475):** Eine neue Größe dockt mit **einer
 Tabellenzeile** an — Provider füllt nur Felder, die Einstufung liest nur Felder (Konzept

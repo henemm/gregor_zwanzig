@@ -238,7 +238,31 @@ export function levelToThreshold(metric: AlertMetric, level: SensLevel): string 
 	if (THRESHOLD_CROSSING_METRICS.has(metric)) {
 		return unit ? `< ${value} ${unit}` : `< ${value}`;
 	}
+	// Issue #1592 Scheibe C3 (AC-9): die CAPE-Delta-Schwelle wird seit C3
+	// modell-/gebietsabhängig umgerechnet (Backend:
+	// `app.model_registry.cape_delta_threshold_jkg`) -- die Zahl bleibt aber
+	// eine ÄNDERUNGSschwelle ("Δ ≥"), kein absoluter Grenzwert (das würde sie
+	// optisch mit THRESHOLD_CROSSING-Metriken wie Sicht verwechselbar machen).
+	// Die Tilde markiert die Näherung; die Erklärung sitzt im `title`-Attribut
+	// der Zelle (s. `thresholdTitle()`), nicht im knappen Zellentext selbst.
+	// Nur CAPE, alle anderen Metriken unverändert.
+	if (metric === 'cape') {
+		return unit ? `Δ ≥ ~${value} ${unit}` : `Δ ≥ ~${value}`;
+	}
 	return unit ? `Δ ≥ ${value} ${unit}` : `Δ ≥ ${value}`;
+}
+
+/**
+ * Erklärender `title`-Hinweis für die Schwellenzelle -- aktuell nur für CAPE
+ * (Issue #1592 Scheibe C3, AC-9): die angezeigte Zahl ist ein Richtwert, der
+ * je Wettermodell und Gebiet umgerechnet wird. Alle anderen Metriken haben
+ * KEIN `title` (Regressions-Invariante, s. AlertMetricLevelRow.svelte).
+ */
+export function thresholdTitle(metric: AlertMetric): string | undefined {
+	if (metric === 'cape') {
+		return 'Richtwert — wird je Wettermodell und Gebiet umgerechnet';
+	}
+	return undefined;
 }
 
 /**

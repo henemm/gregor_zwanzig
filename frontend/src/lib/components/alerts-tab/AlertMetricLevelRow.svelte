@@ -2,7 +2,7 @@
 	// Issue #864/#859 — Eine Metrik-Zeile im Alerts-Tab: Segmented-Control (4 Stufen)
 	// + Schwellwert-Anzeige. Spec: docs/specs/modules/feat_864_859_alert_presets.md
 	import type { AlertMetric, SensLevel } from '$lib/types';
-	import { levelToThreshold } from './alertMetricTable.ts';
+	import { levelToThreshold, thresholdTitle } from './alertMetricTable.ts';
 
 	interface Props {
 		metric: AlertMetric;
@@ -28,6 +28,9 @@
 	};
 
 	const threshold = $derived(levelToThreshold(metric, level));
+	// Issue #1592 Scheibe C3 (AC-9): Erklärung fuer den Richtwert-Hinweis
+	// (aktuell nur CAPE) -- sitzt im `title`, nicht im knappen Zellentext.
+	const title = $derived(thresholdTitle(metric));
 	const isDimmed = $derived(level === 'off');
 </script>
 
@@ -52,7 +55,7 @@
 			</button>
 		{/each}
 	</td>
-	<td class="threshold" data-testid="alert-threshold-{metric}">{threshold ?? '—'}</td>
+	<td class="threshold" data-testid="alert-threshold-{metric}" title={title}>{threshold ?? '—'}</td>
 </tr>
 
 <style>

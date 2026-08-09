@@ -95,6 +95,43 @@ Ereignis** und eskaliert nie über `LOW`. Die Schwelle wird variabel, die Deckel
   - Die Herkunft muss auf jedem Weg mitlaufen, auf dem sie gebraucht wird. Ortsvergleich
     (`model="aggregate"`) und Schnappschuss-Reload (`model="snapshot"`) haben sie strukturell
     nicht; dort abstiniert CAPE dauerhaft, bis ein Folgeticket sie durchreicht.
-  - Die Familien RiskEngine (C2) und Δ-Alarme (C3) sind in dieser Scheibe **noch nicht**
-    umgestellt und verwenden weiterhin die feste Zahl. Sie folgen in eigenen Scheiben unter
-    demselben Issue.
+  - Die Familien RiskEngine (C2) und Δ-Alarme (C3) waren in dieser Scheibe **noch nicht**
+    umgestellt und verwendeten zunächst weiterhin die feste Zahl. Sie folgten in eigenen
+    Scheiben unter demselben Issue — Stand siehe **Vollzugsvermerk** unten.
+
+## Vollzugsvermerk
+
+Die Entscheidung selbst bleibt unverändert — dieser Vermerk hält nur fest, dass ihr
+Geltungsbereich inzwischen vollständig umgesetzt ist. Betroffen waren vier Stellen, an denen
+CAPE ursprünglich gegen die feste, unbelegte 1000 (bzw. abgeleitet 500/1200/600/200) geprüft
+wurde:
+
+- **Familie 1 (Fusion, `thunder_level_from_signals`):** umgestellt mit dieser Scheibe selbst
+  (B0+C0+C1, 2026-08-08) — die im Titel benannte Entscheidung.
+- **Familie 2 (RiskEngine, `risk_engine.py`):** geschlossen mit Scheibe C2
+  (`ac1343e1`, 2026-08-08, Spec `fix_1592_c2_cape_riskengine.md`). Die zweite, ungedeckelte
+  CAPE-Zählung in `_check_catalog_metric()` entfällt ersatzlos — `_check_thunder` trägt die in
+  dieser ADR zugesicherte Deckelung auf `LOW` jetzt allein, ohne dass eine parallele Regel sie
+  unterläuft. C2 schließt zugleich die eine offene Eichlücke `("icon_d2", "FR")`: das Gebiet FR
+  bekommt einen zweiten, geordneten Referenzpunkt (französische Alpen, 45,00/6,50), den das
+  Eichskript befragt, wenn der erste (Korsika) keine Werte liefert — Regel 4 dieser ADR
+  ("Eichung vermisst genau die Reihe, die der Produktivcode bezieht") bleibt dabei unverändert
+  in Kraft, nur die Punktwahl je Gebiet wird von einem Einzelpunkt zu einer geordneten Liste.
+- **Familie 3 (Δ-Alarme, `weather_change_detection.py`/`alert_preset.py`):** geschlossen mit
+  Scheibe C3 (Spec `fix_1592_c3_cape_delta_alarme.md`, PO-„Go" 2026-08-08). Anders als Familie 1
+  bekommt Familie 3 **keine eigene Eichung** — sie **rechnet** die bestehende
+  Empfindlichkeitsleiter (1200/600/200, ADR-0043, unverändert der einzige Regler) in die
+  Modellwelt des liefernden Modells um: `wirksame Δ-Schwelle = nominale Stufe ×
+  cape_threshold_jkg(modell, gebiet) / 1000`. Die 1000 im Nenner ist die Referenzwelt, für die
+  die Leiter ursprünglich geschrieben wurde — dieselbe Zahl, die vor Scheibe C1 überall galt,
+  jetzt als benannte Konstante `CAPE_REFERENZ_NIVEAU_JKG`. Regel 5 dieser ADR gilt unverändert:
+  fehlt die Eichung für Modell × Gebiet, entsteht **kein** Alarm, nicht „unauffällig".
+- **Familie 4 (Anzeige/Metrik-Auswahl):** entfällt ersatzlos mit #1585 — CAPE ist seither
+  `selectable=false`, es gibt keine per-Etappe wählbare CAPE-Spalte mehr, die eine Schwelle
+  anzeigen müsste. Diese ADR musste dafür nichts umsetzen.
+
+Damit prüft keine Stelle im Produktivcode mehr eine feste, modellübergreifende CAPE-Zahl als
+Auslöseschwelle. Die einzige verbliebene feste Zahl ist die nominale Empfindlichkeitsleiter
+selbst (1200/600/200) — die bleibt laut ADR-0043 bewusst die Einstellung, nicht die wirksame
+Schwelle, und wird von Familie 1–3 vor der Prüfung jeweils in die passende Modellwelt
+übersetzt.

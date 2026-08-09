@@ -223,10 +223,13 @@ tragen.**
 > gelassen. Die Zuordnung Endpunkt → Variante ist deshalb empirisch ermittelt (Wert-für-Wert-
 > Vergleich) und im Eichskript dokumentiert. **Wer neu eicht, prüft sie zuerst nach.**
 >
-> ⚠️ **Nur die Fusion.** Der RiskEngine-Pfad und die Δ-Alarm-Schwellen prüfen weiterhin gegen
-> die feste, unbelegte Zahl — Scheiben C2 und C3 unter #1592. Ortsvergleich und
-> Schnappschuss-Reload führen strukturell keine Modell-Herkunft, dort trägt CAPE dauerhaft
-> nicht bei.
+> ✅ **Auch RiskEngine und Δ-Alarme sind inzwischen umgestellt** (Scheiben C2/C3 unter #1592,
+> Vollzugsvermerk in ADR-0048). Der RiskEngine-Pfad zählte CAPE bis C2 ein zweites Mal gegen
+> die feste 1000/2000 — obendrauf zur bereits gedeckelten Fusion; diese zweite Regel ist
+> gestrichen. Die Δ-Alarm-Schwellen rechneten bis C3 die nominale Empfindlichkeitsstufe
+> (1200/600/200) unverändert gegen jedes Modell; sie übersetzen die Stufe seither in dieselbe
+> Modellwelt wie die Fusion. Ortsvergleich und Schnappschuss-Reload führen weiterhin strukturell
+> keine Modell-Herkunft, dort trägt CAPE dauerhaft nicht bei — das bleibt unverändert.
 
 ### 3.5 Die CAPE-Deckelung ist belegt ersetzbar (Recherche 2026-08-08)
 
@@ -737,7 +740,7 @@ CAPE-Deckelung zu ersetzen. #1531 ist damit **nicht** eine spätere Scheibe, son
 
 | Rang | Scheibe | Warum hier | Stand |
 |---|---|---|---|
-| **0** | ✅ **CAPE-Schwelle modellabhängig gemacht** (3.4b, **#1592**, ADR-0048) | **Fusion erledigt und live seit 2026-08-08**: Schwelle je Modell × Gebiet, geeicht am 95. Perzentil der Modellklimatologie (mind. 300 J/kg). Auf dem GR20 gilt jetzt 300 statt 1000 — CAPE trägt dort erstmals bei. **Offen: C2** (RiskEngine, dort noch ungedeckelt bis `HIGH` gegen die feste 1000) **und C3** (Δ-Alarme) | teils erledigt |
+| **0** | ✅ **CAPE-Schwelle modellabhängig gemacht** (3.4b, **#1592**, ADR-0048) | **Fusion, RiskEngine und Δ-Alarme erledigt und live**: Schwelle je Modell × Gebiet, geeicht am 95. Perzentil der Modellklimatologie (mind. 300 J/kg). Auf dem GR20 gilt jetzt 300 statt 1000 — CAPE trägt dort erstmals bei. RiskEngine zählt CAPE nicht mehr doppelt (C2), Δ-Alarme rechnen die Empfindlichkeitsstufe in dieselbe Modellwelt um (C3). Vollzugsvermerk: ADR-0048 | ✅ erledigt |
 | **1** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg. Spec liegt fertig vor | Spec fertig, Freigabe offen |
 | **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ E1 |
 | **3** | **Gleiche Statistik**: `lpi_max` statt `lpi` gegen `lpi_con_max` | Nimmt allein **Faktor 5** aus dem Gebietsbruch — ohne jede Kalibrierung | ✅ E1 |
