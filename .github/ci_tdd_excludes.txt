@@ -86,3 +86,12 @@ tests/tdd/test_telegram_kurzstil_parse_mode.py
 tests/tdd/test_telegram_kurzstil_trip_alert.py
 tests/tdd/test_telegram_kurzstil_trip_briefing.py
 tests/tdd/test_trip_report_test_send_past_stage_clamp.py
+# Issue #1478 Teil 1 (2026-08-09): Modul importiert broad_test_run_gate.py,
+# das transitiv hook_utils.py laedt -- ein Shim, der das echte Modul aus dem
+# INSTALLIERTEN agent-os-openspec-Plugin nachlaedt (~/.claude/plugins/
+# installed_plugins.json). Der CI-Runner installiert dieses Plugin nicht
+# (nur "uv sync --dev") -- reiner Umgebungsartefakt, kein funktionaler
+# Defekt. Lokal/im Adversary-Verfahren 5 Runden lang verifiziert (42 Tests,
+# VERDICT HOLDS). Entfernbar, sobald hook_utils.py einen CI-tauglichen
+# Fallback bekommt (separate, breitere Aenderung, ausserhalb dieses Scopes).
+tests/tdd/test_broad_test_run_gate_pytest_word_position.py
