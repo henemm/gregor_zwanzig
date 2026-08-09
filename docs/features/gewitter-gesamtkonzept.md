@@ -230,6 +230,12 @@ tragen.**
 > (1200/600/200) unverändert gegen jedes Modell; sie übersetzen die Stufe seither in dieselbe
 > Modellwelt wie die Fusion. Ortsvergleich und Schnappschuss-Reload führen weiterhin strukturell
 > keine Modell-Herkunft, dort trägt CAPE dauerhaft nicht bei — das bleibt unverändert.
+>
+> ✅ **#1601 (2026-08-09): Modellwechsel zwischen zwei Läufen löst keinen CAPE-Änderungsalarm
+> mehr aus.** Wechselt das liefernde Modell zwischen dem gespeicherten Anker und dem frischen
+> Wert (`cape_model_id` alt ≠ neu, `None` zählt als Abweichung), unterbleibt der Alarm — die
+> Modellwelt-Umrechnung aus C3 gilt nur innerhalb derselben Modellwelt. Betrifft beide
+> Alarmwege (Trip, Ortsvergleich) über die geteilte `DeviationAlertEngine`.
 
 ### 3.5 Die CAPE-Deckelung ist belegt ersetzbar (Recherche 2026-08-08)
 

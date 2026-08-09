@@ -110,6 +110,14 @@ die Stufe seither in dieselbe Modellwelt wie die Fusion
 (`wirksame Δ-Schwelle = nominale Stufe × cape_threshold_jkg(modell, gebiet) / 1000`). Beide
 Scheiben unter #1592.
 
+✅ **Modellwechsel zwischen zwei Läufen unterdrückt den CAPE-Änderungsalarm (#1601).** Die
+Modellwelt-Umrechnung oben setzt voraus, dass Alt- und Neu-Wert aus derselben Modellwelt
+stammen. Stimmen `cape_model_id` von altem und neuem Stand nicht überein (`None` auf der
+Alt-Seite zählt als Abweichung), entsteht **kein** Alarm — sonst würde ein reiner
+Modellwechsel (z. B. AROME→ICON beim Open-Meteo-Fallback) als Wetteränderung gemeldet, obwohl
+sich am Wetter nichts geändert hat. Guard sitzt in `weather_change_detection.py`, wirkt über
+`DeviationAlertEngine` auf Trip- und Ortsvergleich-Alarme gleichermaßen.
+
 **Für jede weitere Quelle (z. B. Hagel, S5/#1475):** Eine neue Größe dockt mit **einer
 Tabellenzeile** an — Provider füllt nur Felder, die Einstufung liest nur Felder (Konzept
 #1419 Abschnitt 5), wie beim Blitzpotenzial in #1474c geschehen. **Keine eigene

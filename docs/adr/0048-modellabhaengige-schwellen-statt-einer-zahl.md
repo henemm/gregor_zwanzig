@@ -126,6 +126,14 @@ wurde:
   die Leiter ursprünglich geschrieben wurde — dieselbe Zahl, die vor Scheibe C1 überall galt,
   jetzt als benannte Konstante `CAPE_REFERENZ_NIVEAU_JKG`. Regel 5 dieser ADR gilt unverändert:
   fehlt die Eichung für Modell × Gebiet, entsteht **kein** Alarm, nicht „unauffällig".
+  **Ergänzt mit #1601 (2026-08-09):** Die Umrechnung in die Modellwelt setzt voraus, dass Alt-
+  und Neu-Wert überhaupt aus derselben Modellwelt stammen. Wechselt zwischen zwei Läufen das
+  liefernde Modell (`old_summary.cape_model_id != new_summary.cape_model_id` in
+  `weather_change_detection.py`), entsteht **kein** CAPE-Änderungsalarm — der Sprung wäre sonst
+  allein dem Modellwechsel zuzuschreiben, nicht dem Wetter. `None` auf der Alt-Seite zählt dabei
+  als Abweichung (Regel a der zugehörigen Spec), konsistent mit Regel 5: unbelegte Herkunft ist
+  „keine Aussage", nicht „unauffällig". Wirkt auf beide Alarmwege (Trip, Ortsvergleich), weil
+  beide dieselbe `DeviationAlertEngine` nutzen.
 - **Familie 4 (Anzeige/Metrik-Auswahl):** entfällt ersatzlos mit #1585 — CAPE ist seither
   `selectable=false`, es gibt keine per-Etappe wählbare CAPE-Spalte mehr, die eine Schwelle
   anzeigen müsste. Diese ADR musste dafür nichts umsetzen.
