@@ -16,6 +16,22 @@ uebernommen. -->
 
 # #1651 — Gewitter außerhalb des Tagesfensters wird in der Mail genannt, mit Uhrzeit
 
+> **Scheiben-Schnitt, PO-Entscheidung 2026-08-09 (nach dem TDD-RED).** Diese Spec
+> deckt nur noch die **morgendliche „⚡ Gewitter-Vorschau"** ab. Der abendliche
+> **Mehrtages-Ausblick** ist herausgelöst nach **#1653**, weil seine Gewitter-Zelle
+> erst drei eigene, gemessene Fehler loswerden muss (Wort und Uhrzeit aus
+> verschiedenen Zeiträumen; Tag oder Nacht verschwindet; rohe Programmnamen),
+> bevor eine Nacht-Angabe sinnvoll darauf passt. Die rohen Programmnamen
+> (`⚡MED`/`⚡HIGH` statt „mittel"/„hoch") laufen als eigene kleine Lieferung
+> unter **#1654**. **AC-2 und AC-10 sind damit hierher nicht mehr anwendbar** —
+> sie stehen unten als verschoben markiert und werden in #1653 neu gefasst.
+>
+> **Korrektur zu einer Annahme dieser Spec:** Der Satz „Telegram (rich) erfüllt die
+> Vorgabe bereits" gilt **nicht allgemein**. Gemessen: Telegram zeigt den stärksten
+> Wert über 24 Stunden mit dessen Uhrzeit und verschweigt dabei den jeweils
+> schwächeren — bei Tag „mittel" 14:00 + Nacht „hoch" 00:00 erscheint `⚡hoch@0`,
+> das Tagesgewitter fehlt. Behandelt in #1653.
+
 ## Approval
 
 - [ ] Approved
@@ -24,11 +40,11 @@ uebernommen. -->
 
 Ein Gewitter **außerhalb** des konfigurierten Tagesfensters (Default 04–19 Uhr
 Ortszeit) soll in der Trip-Mail **genannt werden, mit exakter Uhrzeit** — statt
-wie heute verschwiegen zu werden. Betroffen sind zwei Stellen derselben Mail:
-die morgendliche „⚡ Gewitter-Vorschau" (Fließtext-Satz) und die abendliche
-„Mehrtages-Ausblick"-Tabelle (Spalte „Gew"). SMS zeigt die Angabe weiterhin
-nicht (Platzgrund, PO-Vorgabe); Telegram (rich) erfüllt die Vorgabe bereits
-und bleibt unverändert.
+wie heute verschwiegen zu werden. Betroffen ist in dieser Scheibe **eine** Stelle:
+die morgendliche „⚡ Gewitter-Vorschau" (Fließtext-Satz), sichtbar in HTML **und**
+Klartext. SMS zeigt die Angabe weiterhin nicht (Platzgrund, PO-Vorgabe).
+Die abendliche „Mehrtages-Ausblick"-Tabelle und Telegram sind nach **#1653**
+herausgelöst.
 
 PO-Wortlaut (Kommentar 2 an Issue #1651, 2026-08-09):
 
@@ -53,8 +69,8 @@ sicher, dass die neue Nacht-Angabe für die Stunden, die auch die
   Hauptablauf (`generate_and_send`, Zeile ~875–902)
 - **File:** `src/services/preview_service.py` — Reihenfolge der
   Nachtwetter-Beschaffung
-- **File:** `src/output/renderers/email/outlook.py` —
-  `render_outlook_table()`, `render_outlook_plain()`
+(`src/output/renderers/email/outlook.py` war in Version 2.0 vorgesehen und ist
+mit dem Scheiben-Schnitt nach #1653 herausgelöst.)
 
 Schicht: **Python-Core** (`src/app/`, `src/services/`,
 `src/output/renderers/`). Kein Go-, kein Frontend-Code betroffen.
@@ -80,7 +96,7 @@ Schicht: **Python-Core** (`src/app/`, `src/services/`,
 | `src/app/day_window.py` | MODIFY | Neue Funktion, die aus zwei Stundenreihen (eigene Etappen-Zeitreihe + optional Nacht-Zeitreihe) die außerhalb des Fensters liegenden Stunden bestimmt und daraus Level+früheste Stunde ableitet (Implementation Details) |
 | `src/services/trip_report_scheduler.py` | MODIFY | Neuer optionaler `night_weather`-Parameter an `_build_thunder_forecast_from_trend_or_fetch()`, `_thunder_entry_from_trend_row()`, `_build_thunder_forecast()`; Suffix-Anhängen an `text`; `_build_stage_trend()` bekommt denselben optionalen Parameter und setzt `row["night_thunder"]`; Hauptablauf reicht das bereits vorhandene `night_weather` an beide Aufrufe durch |
 | `src/services/preview_service.py` | MODIFY | Nachtwetter-Beschaffung (aktuell nach dem Trend-/Vorschau-Aufbau) nach vorne verschoben, analog zum Versandpfad, damit sie beim Bau von Trend und Vorschau bereits vorliegt |
-| `src/output/renderers/email/outlook.py` | MODIFY | `render_outlook_table()`/`render_outlook_plain()` hängen die Nacht-Angabe an die „Gew"-Zelle an, wenn `stage.get("night_thunder")` gesetzt ist |
+| ~~`src/output/renderers/email/outlook.py`~~ | — | **verschoben nach #1653** |
 | `tests/unit/test_thunder_forecast_day_window.py` | MODIFY | Bestehende Tests zur Fenster-Klemmung um die neue Nacht-Angabe ergänzen |
 | `tests/tdd/test_thunder_forecast_low_level.py` | MODIFY | dito für die LOW-Stufe |
 | `tests/tdd/test_briefing_parity_night_thunder.py` | MODIFY | Bereits vorhandene Fixtures (`_thunder_forecast()`, `_night_weather()`, `_night_dp()`) sind direkt wiederverwendbar — neue Tests für die Kombination Vorschau + Nacht-Tabelle in derselben Mail |
@@ -175,7 +191,11 @@ Hauptablauf (`generate_and_send`): `night_weather` ist an Zeile ~876–878
 bereits vorhanden — wird unverändert an `_build_thunder_forecast_from_trend_or_fetch()`
 (Zeile ~900) sowie an `_build_stage_trend()` (Zeile ~889, s.u.) durchgereicht.
 
-### 4. Integration Ausblick-Tabelle (Abend-Default)
+### 4. Integration Ausblick-Tabelle (Abend-Default) — VERSCHOBEN NACH #1653
+
+Der folgende Abschnitt ist mit dem Scheiben-Schnitt vom 2026-08-09 nicht mehr
+Teil dieser Spec. Er bleibt als Vorarbeit stehen, ist aber in #1653 neu zu
+fassen — die dort gemessenen Altfehler der Zelle ändern den Entwurf.
 
 `_build_stage_trend()` bekommt denselben optionalen `night_weather`-Parameter.
 Nach dem Bau jeder Zeile über `build_outlook_row()` (die bereits ungefilterte
@@ -270,9 +290,10 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
   Fenster, HIGH um 00:00 in `night_weather` WHEN der Vorschau-Eintrag gebaut
   wird THEN lautet `entry["text"]` „Kein Gewitter erwartet, nachts starkes
   Gewitter ab 00:00").
-- [ ] Test 2 (Kernszenario Abend, GIVEN derselbe Fall WHEN die
+- [x] ~~Test 2 (Kernszenario Abend)~~ — **verschoben nach #1653**.
+  ~~(GIVEN derselbe Fall WHEN die
   Ausblick-Tabelle für denselben Tag gebaut wird THEN zeigt die
-  „Gew"-Zelle „nachts hoch 00:00" statt „–"/„⚡–").
+  „Gew"-Zelle „nachts hoch 00:00" statt „–"/„⚡–".)~~
 - [ ] Test 3 (Konsistenz mit Nacht-Tabelle, GIVEN dieselbe zugestellte Mail
   WHEN sowohl die Nacht-Tabellen-Zeile 00:00 als auch die neue Nacht-Angabe
   gelesen werden THEN nennen beide dieselbe Stunde und dasselbe Level).
@@ -306,11 +327,12 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
   starkes Gewitter ab 00:00" statt der bisherigen reinen Entwarnung ohne
   Nacht-Hinweis.
 
-- **AC-2 (Kernszenario Abend):** Given derselbe Trip und Tag wie AC-1 / When
+- **AC-2 — VERSCHOBEN NACH #1653, in dieser Scheibe nicht anwendbar.**
+  ~~Given derselbe Trip und Tag wie AC-1 / When
   die abendliche Trip-Mail mit aktivem Mehrtages-Ausblick erzeugt wird /
   Then zeigt die Spalte „Gew" für diesen Tag „nachts hoch 00:00" (HTML) bzw.
   „⚡ nachts hoch 00:00" (Klartext) statt der bisherigen Entwarnung „–"/„⚡–" —
-  in beiden Mail-Teilen (HTML und Klartext) derselben Mail.
+  in beiden Mail-Teilen (HTML und Klartext) derselben Mail.~~
 
 - **AC-3 (Konsistenz mit der Nacht-Tabelle — zentrale #1498-Zusicherung):**
   Given ein Trip, dessen „Nacht am Ziel"-Tabelle für 00:00 des Folgetags ein
@@ -371,41 +393,40 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
   der Vorschau-Pfad greift auf dieselbe Nacht-Zeitreihe zu wie der Versand,
   statt still auf eine andere Quelle auszuweichen.
 
-- **AC-10 (Telegram rich bleibt unverändert):** Given ein Trip mit
+- **AC-10 — VERSCHOBEN NACH #1653, in dieser Scheibe nicht anwendbar.**
+  Die Annahme dahinter ist zudem widerlegt: Telegram zeigt den 24-Stunden-
+  Höchstwert und verschweigt den jeweils schwächeren von Tag und Nacht.
+  ~~Given ein Trip mit
   Nachtgewitter außerhalb des Fensters / When die Telegram-„Ausblick"-Bubble
   gerendert wird / Then bleibt ihre Darstellung (z.B. „⚡H@2") gegenüber
   dem Stand vor dieser Scheibe unverändert — sie zeigt Nachtgewitter bereits
-  heute über ihre eigene, ungefilterte Quelle.
+  heute über ihre eigene, ungefilterte Quelle.~~
 
 ## Umfang
 
-**Die ehrliche Schätzung überschreitet das 250-Zeilen-Workflow-Limit.**
+**Neu bemessen nach dem TDD-RED und dem Scheiben-Schnitt vom 2026-08-09.**
 
-- Produktivcode: `app/day_window.py` (~35 LoC neue Funktion) +
-  `trip_report_scheduler.py` (~100 LoC: vier Methoden-Signaturen erweitert,
-  Merge-Aufruf, Suffix-Bau, Zeilen-Augmentierung) +
-  `preview_service.py` (~20 LoC Umstellung) + `outlook.py` (~30 LoC) ≈
-  **~185 LoC**.
-- Tests: zehn ACs über mindestens sieben bestehende Testdateien plus eine
-  neue gezielte Testdatei für die Helper-Funktion, plus vier
-  Golden-Snapshot-Aktualisierungen (zählen laut CLAUDE.md nicht mit) ≈
-  geschätzt **~150–220 LoC**.
-- **Gesamt geschätzt: ~335–405 LoC.**
+Die Schätzung der Version 2.0 (~335–405 Zeilen) war um etwa das Dreifache zu
+niedrig: der Entwickler brauchte für die elf Kriterien **994 Zeilen Testcode**,
+weil die beiden Paritäts-Prüfungen (AC-9, AC-11) den echten Versand- **und** den
+echten Vorschau-Pfad fahren statt einen nachgebauten. Zusammen mit dem
+Produktivcode lag der Workflow bei rund **1180 Zeilen** — weit über den vom PO
+freigegebenen 500.
 
-✅ **PO-Entscheidung 2026-08-09: Limit auf 500 angehoben, Lieferung in einem
-Zug.** `loc_limit_override = 500` ist im Workflow gesetzt. Die unten
-skizzierte Zweiteilung wird damit **nicht** gefahren und ist nur noch als
-Rückfalloption dokumentiert.
+**Folge (PO-Entscheidung):** Der Abend-Teil ist nach #1653 herausgelöst, die
+rohen Programmnamen nach #1654. In dieser Scheibe verbleiben:
 
-**Sauberste Trennung in zwei Scheiben** (nicht gewählt, nur als Rückfall):
+| Teil | geschätzt |
+|---|---|
+| Produktivcode (`day_window.py`, `trip_report_scheduler.py`, `preview_service.py`) | ~150 |
+| Tests: `test_thunder_night_addendum.py` + `test_thunder_night_addendum_parity.py` | ~713 |
+| entfällt: `test_outlook_night_thunder_cell.py` (281 Z.) | → #1653 |
 
-| Scheibe | Inhalt | Enthält |
-|---|---|---|
-| **A — Vorschau-Satz (Morgen)** | AC-1, AC-3 (Teilaspekt Vorschau), AC-4, AC-5, AC-6, AC-7, AC-8, AC-9 | `app/day_window.py`-Helper (geteilte Grundlage für beide Scheiben), `trip_report_scheduler.py`-Forecast-Methoden, `preview_service.py`-Umstellung |
-| **B — Ausblick-Tabelle (Abend)** | AC-2, AC-3 (Teilaspekt Tabelle), AC-10 | `_build_stage_trend()`-Zeilen-Augmentierung (baut auf Scheibe A's Helper auf), `outlook.py`-Rendering |
-
-Scheibe A trägt den Helper und ist damit die natürliche erste Scheibe;
-Scheibe B ist ohne A nicht sinnvoll umsetzbar (gemeinsame Funktion).
+Damit bleibt der Workflow weiterhin über 250, aber innerhalb der bereits
+gesetzten Grenze von 500 nur bei den Produktivzeilen — der Testanteil überschreitet
+sie. **Das ist bewusst so und vom PO getragen:** die Paritäts-Prüfungen sind der
+eigentliche Schutz gegen einen Rückfall in #1498 und werden nicht gekürzt.
+Reicht das Limit beim Commit nicht, wird es angehoben, nicht der Test gekürzt.
 
 ## Nicht in dieser Scheibe
 
