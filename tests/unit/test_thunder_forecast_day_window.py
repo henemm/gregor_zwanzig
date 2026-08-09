@@ -13,6 +13,13 @@ das geteilte Tagesfenster (Default 04-19, pro Trip konfigurierbar,
 Fusszeile, ADR-0025). Nachtstunden gehoeren der Nacht-Tabelle; die beiden
 Aussagen ueberlappen sich nicht mehr.
 
+#1651 (additiv): dieselbe TAGES-Aussage (``level``/``hour``) bleibt
+geklemmt, der Fliesstext nennt das Gewitter ausserhalb des Fensters aber
+seit dieser Scheibe zusaetzlich mit Uhrzeit — verschwiegen wird es nicht
+mehr. Die Erwartungstexte unten tragen den angehaengten Halbsatz deshalb
+mit; die eigentliche #1498-Zusicherung sitzt unveraendert in den
+``level``/``hour``-Aussagen.
+
 KEINE Mocks: reale Model-Objekte, echte Scheduler-Methoden. Der Stub-Trip
 in den Konfigurations-Tests ist ein einfaches Datenobjekt (echte Attribute,
 kein Mock()/patch()).
@@ -92,7 +99,12 @@ def test_fallback_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
     assert entry["level"] == ThunderLevel.NONE, (
         f"Nacht-LOW (02:00) darf die Tages-Vorschau nicht setzen: {entry!r}"
     )
-    assert entry["text"] == "Kein Gewitter erwartet", entry["text"]
+    assert entry["hour"] is None, entry
+    # #1651: die TAGES-Aussage bleibt die Entwarnung, das Nachtgewitter wird
+    # nun aber angehaengt genannt statt verschwiegen.
+    assert entry["text"] == (
+        "Kein Gewitter erwartet, nachts leichtes Gewitter ab 02:00"
+    ), entry["text"]
 
 
 def test_fallback_ab_stunde_kommt_aus_dem_fenster():
@@ -109,7 +121,11 @@ def test_fallback_ab_stunde_kommt_aus_dem_fenster():
     entry = (fc or {}).get("+1")
     assert entry is not None
     assert entry["level"] == ThunderLevel.LOW
-    assert entry["text"] == "Leichtes Gewitter möglich ab 04:00", entry["text"]
+    # #1651: "ab 04:00" ist und bleibt die Tages-Aussage; die 02:00 erscheinen
+    # ausschliesslich im angehaengten Nacht-Halbsatz.
+    assert entry["text"] == (
+        "Leichtes Gewitter möglich ab 04:00, nachts leichtes Gewitter ab 02:00"
+    ), entry["text"]
     assert entry["hour"] == 4, entry
 
 
@@ -143,7 +159,10 @@ def test_trend_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
     assert entry["level"] == ThunderLevel.NONE, (
         f"Nacht-LOW (02:00) darf die Tages-Vorschau nicht setzen: {entry!r}"
     )
-    assert entry["text"] == "Kein Gewitter erwartet", entry["text"]
+    assert entry["hour"] is None, entry
+    assert entry["text"] == (
+        "Kein Gewitter erwartet, nachts leichtes Gewitter ab 02:00"
+    ), entry["text"]
 
 
 def test_trend_ab_stunde_kommt_aus_dem_fenster():
@@ -158,7 +177,9 @@ def test_trend_ab_stunde_kommt_aus_dem_fenster():
     entry = (fc or {}).get("+1")
     assert entry is not None
     assert entry["level"] == ThunderLevel.LOW
-    assert entry["text"] == "Leichtes Gewitter möglich ab 19:00", entry["text"]
+    assert entry["text"] == (
+        "Leichtes Gewitter möglich ab 19:00, nachts leichtes Gewitter ab 02:00"
+    ), entry["text"]
 
 
 # ===========================================================================
@@ -195,7 +216,11 @@ def test_konfiguriertes_fenster_wird_beachtet():
     entry = (fc or {}).get("+1")
     assert entry is not None
     assert entry["level"] == ThunderLevel.NONE, entry
-    assert entry["text"] == "Kein Gewitter erwartet", entry["text"]
+    # #1651: das KONFIGURIERTE Fenster bestimmt auch, was "ausserhalb" ist --
+    # 05:00 liegt vor Fensterbeginn 06:00 und wird deshalb angehaengt genannt.
+    assert entry["text"] == (
+        "Kein Gewitter erwartet, nachts leichtes Gewitter ab 05:00"
+    ), entry["text"]
 
 
 def test_mitternachts_fenster_wrap_zaehlt_nachtstunden():

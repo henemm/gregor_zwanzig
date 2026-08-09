@@ -272,9 +272,17 @@ def test_preview_night_fetch_follows_night_metric_selection(monkeypatch):
 
 
 def test_preview_skips_night_fetch_when_neither_selected(monkeypatch):
-    """Gegenprobe zu AC-8: weder Nacht-Stundentabelle noch Nachtgroesse
-    gewaehlt -> die Vorschau beschafft keine Nachtdaten (kein unnoetiger
-    Provider-Aufruf)."""
+    """Gegenprobe zu AC-8: ist KEINER der Gruende gegeben, die Nachtdaten
+    noetig machen -> die Vorschau beschafft keine (kein unnoetiger
+    Provider-Aufruf).
+
+    #1651 hat die Liste dieser Gruende um die Gewitter-Metrik erweitert: ab
+    dieser Scheibe speisen Nachtdaten auch den Nacht-Zusatz des
+    Vorschau-Satzes ("nachts starkes Gewitter ab HH:MM"), und ohne sie
+    divergierte die Vorschau vom Versand (AC-11). Der Test schaltet sie
+    deshalb mit ab -- er bewacht weiterhin, dass kein PAUSCHALER Zusatz-Abruf
+    fuer jeden Trip entsteht, jetzt gegen den vollstaendigen Bedingungssatz.
+    """
     import services.segment_weather as sw
 
     calls: list[int] = []
@@ -290,13 +298,13 @@ def test_preview_skips_night_fetch_when_neither_selected(monkeypatch):
     trip = _demo_trip_single_stage(target, show_night_block=False)
     trip.display_config.metrics = [
         dataclasses.replace(mc, enabled=False)
-        if mc.metric_id == "temperature_night" else mc
+        if mc.metric_id in ("temperature_night", "thunder") else mc
         for mc in trip.display_config.metrics
     ]
 
     PreviewService()._build_report(trip, target, "evening", demo=True)
 
     assert calls == [], (
-        "Die Vorschau beschafft Nachtdaten, obwohl weder Tabelle noch "
-        "Nachtgroesse gewaehlt sind."
+        "Die Vorschau beschafft Nachtdaten, obwohl weder Nacht-Tabelle noch "
+        "Nacht-Tiefsttemperatur noch Gewitter-Metrik gewaehlt sind."
     )

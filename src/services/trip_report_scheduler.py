@@ -90,6 +90,26 @@ def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
     return " · ".join(notes) if notes else None
 
 
+def _night_thunder_hours(night_weather, fc_date: date, to_local):
+    """``night_weather`` -> ``(Ortszeit-Stunde, ThunderLevel)`` fuer EINEN Tag.
+
+    Issue #1651: die Nacht-Zeitreihe (Ankunft heute -> 06:00 morgen) ist fuer
+    die Stunden, die sie abdeckt, die massgebliche Quelle des Nacht-Zusatzes
+    -- dieselbe, aus der auch die „Nacht am Ziel"-Tabelle derselben Mail
+    entsteht. ``None`` (keine Reihe, keine Punkte am Zieltag) heisst: keine
+    Gegenquelle, es gilt allein die eigene Etappen-Reihe.
+    """
+    data = getattr(night_weather, "data", None)
+    if not data:
+        return None
+    hours = [
+        (to_local(dp.ts).hour, dp.thunder_level)
+        for dp in data
+        if dp.thunder_level is not None and to_local(dp.ts).date() == fc_date
+    ]
+    return hours or None
+
+
 def _parse_hhmm(value: str) -> Optional[time]:
     """Parse 'HH:MM' to a time; returns None on malformed input.
 
@@ -897,8 +917,12 @@ class TripReportSchedulerService:
         #    (evening default) its rows are REUSED — no second weather fetch.
         #    Only offsets not covered by the trend fall back to a dedicated
         #    single-stage fetch (typically morning, where the trend is off).
+        #    Issue #1651: `night_weather` (Schritt 4, oben) wird durchgereicht,
+        #    damit der Satz ein Gewitter ausserhalb des Tagesfensters nennt --
+        #    aus DERSELBEN Reihe, die daneben als Nacht-Tabelle steht.
         thunder_forecast = self._build_thunder_forecast_from_trend_or_fetch(
             trip, target_date, tz=trip_tz, multi_day_trend=multi_day_trend,
+            night_weather=night_weather,
         )
 
         # 7b. Vortag-Vergleich (Issue #750): gestrigen Snapshot laden + Deltas
@@ -1673,6 +1697,7 @@ class TripReportSchedulerService:
         target_date: date,
         tz: Optional[ZoneInfo],
         multi_day_trend=None,
+        night_weather=None,
     ) -> Optional[dict]:
         """Issue #1275: derive the +1/+2 thunder forecast from the SAME data as
         the E-Mail-Outlook table.
@@ -1698,8 +1723,20 @@ class TripReportSchedulerService:
         Aussagen widersprachen sich an einer echt zugestellten Staging-Mail.
         Die Vorschau ist eine TAGES-Aussage und nutzt dasselbe Fenster wie
         SMS/Telegram/Fusszeile (ADR-0025).
+
+        Issue #1651: ``night_weather`` (dieselbe Reihe, die auch die
+        „Nacht am Ziel"-Tabelle speist) laesst den Satz ein Gewitter
+        AUSSERHALB des Fensters zusaetzlich nennen -- angehaengt an ``text``,
+        die Tages-Aussage (``level``/``hour``) bleibt geklemmt. Beide
+        Aufrufer (Versand und Vorschau) reichen sie durch; genau das traegt
+        die Paritaet aus AC-9/AC-11.
         """
         from app.day_window import resolve_configured_window
+
+        def _local(dt):
+            # #1402: nie .astimezone(tz) auf einem naiven ts -- local_dt geht
+            # ueber den zentralen Naiv-Guard (Hausnorm "naiv = UTC", #1345).
+            return local_dt(dt, tz) if tz else dt
 
         _rc = getattr(trip, "report_config", None)
         win_start, win_end = resolve_configured_window(
@@ -1719,6 +1756,12 @@ class TripReportSchedulerService:
             if row is not None:
                 forecast[key] = self._thunder_entry_from_trend_row(
                     row, fc_date, window_start=win_start, window_end=win_end,
+                    # "+2" liegt jenseits der Nacht-Reihe (endet 06:00 morgen)
+                    # -- dort gibt es keine Gegenquelle (Spec, Punkt 4).
+                    night_hourly=(
+                        _night_thunder_hours(night_weather, fc_date, _local)
+                        if offset == 1 else None
+                    ),
                 )
             else:
                 missing_dates.add(fc_date)
@@ -1731,6 +1774,7 @@ class TripReportSchedulerService:
                 self._build_thunder_forecast(
                     fetched, target_date, tz=tz,
                     window_start=win_start, window_end=win_end,
+                    night_weather=night_weather,
                 )
                 if fetched else None
             ) or {}
@@ -1767,6 +1811,7 @@ class TripReportSchedulerService:
         *,
         window_start: Optional[int] = None,
         window_end: Optional[int] = None,
+        night_hourly=None,
     ) -> dict:
         """Map one ``multi_day_trend`` row to a thunder_forecast entry (#1275).
 
@@ -1791,24 +1836,35 @@ class TripReportSchedulerService:
         Skala (auch ``hourly_thunder`` selbst wird darüber gebaut, s.
         ``outlook.py::build_outlook_row``), also bleibt der Werte-Vergleich
         konsistent statt einer zweiten, driftenden Kopie.
+
+        Issue #1651: ``night_hourly`` (optional, ``(Stunde, ThunderLevel)``-
+        Paare aus ``night_weather``) laesst den Satz ein Gewitter AUSSERHALB
+        des Fensters zusaetzlich NENNEN. Rein additiv -- ``level``/``hour``
+        (die Tages-Aussage, aus der SMS und Ampel lesen) bleiben geklemmt,
+        nur ``text`` waechst um den Halbsatz.
         """
-        from app.day_window import hour_in_window, resolve_configured_window
+        from app.day_window import (
+            format_night_addendum, hour_in_window, night_addendum,
+            resolve_configured_window,
+        )
         from app.models import ThunderLevel
         from app.thunder_scale import thunder_label_value, thunder_ordinal
 
         win_start, win_end = resolve_configured_window(window_start, window_end)
+        # Rueckabbildung Sample-Wert -> Level ueber die geteilte Render-Skala
+        # selbst (#1474: keine Handkopie).
+        _value_to_level = {thunder_label_value(lv): lv for lv in ThunderLevel}
+        all_hourly = tuple(row.get("hourly_thunder") or ())
         windowed = [
-            hv for hv in (row.get("hourly_thunder") or ())
+            hv for hv in all_hourly
             if hour_in_window(int(hv.hour), win_start, win_end)
         ]
         if windowed:
             # Issue #1498 (Fall 2): Level aus den Stundenproben IM Fenster,
             # nicht aus dem Kalendertags-Maximum `row["thunder"]` — sonst
             # setzt ein reines Nachtgewitter (02:00) die Tages-Vorschau.
-            # Rueckabbildung Sample-Wert -> Level ueber die geteilte
-            # Render-Skala selbst (#1474: keine Handkopie), Sortierung ueber
-            # thunder_ordinal (ADR-0025, Entscheidung 3: Skalen getrennt).
-            _value_to_level = {thunder_label_value(lv): lv for lv in ThunderLevel}
+            # Sortierung ueber thunder_ordinal (ADR-0025, Entscheidung 3:
+            # Skalen getrennt).
             level = max(
                 (
                     _value_to_level.get(int(hv.value), ThunderLevel.NONE)
@@ -1846,6 +1902,17 @@ class TripReportSchedulerService:
                 f"Starkes Gewitter erwartet ab {when}"
                 if when else "Starkes Gewitter erwartet"
             )
+        # Issue #1651: das Gewitter AUSSERHALB des Fensters wird angehaengt
+        # genannt. Quelle sind dieselben, ohnehin vorliegenden Stundenproben
+        # der Zeile -- fuer 00:00-06:00 des Folgetags schlaegt `night_hourly`
+        # sie, weil dieselbe Reihe daneben als Nacht-Tabelle steht.
+        own_hourly = [
+            (int(hv.hour), _value_to_level.get(int(hv.value), ThunderLevel.NONE))
+            for hv in all_hourly
+        ]
+        add = night_addendum(own_hourly, night_hourly, win_start, win_end)
+        if add:
+            text += format_night_addendum(*add)
         return {
             "date": fc_date.strftime("%d.%m.%Y"),
             "level": level,
@@ -1936,6 +2003,7 @@ class TripReportSchedulerService:
         *,
         window_start: Optional[int] = None,
         window_end: Optional[int] = None,
+        night_weather=None,
     ) -> Optional[dict]:
         """
         Build thunder forecast for +1 and +2 days.
@@ -2001,19 +2069,29 @@ class TripReportSchedulerService:
         # Nacht-Tabelle. Liegt im Fenster gar kein Datenpunkt, entsteht KEIN
         # Eintrag — das greift in `_gap_offsets` (#1482) als ehrliche
         # Datenluecke ("?") statt einer blinden Entwarnung (#1331-Lehre).
-        from app.day_window import hour_in_window, resolve_configured_window
+        from app.day_window import (
+            format_night_addendum, hour_in_window, night_addendum,
+            resolve_configured_window,
+        )
         win_start, win_end = resolve_configured_window(window_start, window_end)
 
         forecast = {}
         for offset, key in [(1, "+1"), (2, "+2")]:
             fc_date = target_date + timedelta(days=offset)
-            thunder_dps = [
+            # Issue #1651: der volle Kalendertag wird zuerst gesammelt, damit
+            # die Stunden AUSSERHALB des Fensters fuer den Nacht-Zusatz zur
+            # Verfuegung stehen. `thunder_dps` -- die Tages-Aussage -- bleibt
+            # unveraendert auf das Fenster geklemmt (#1498 Fall 2).
+            day_dps = [
                 dp
                 for sw in segments
                 if sw.timeseries and sw.timeseries.data
                 for dp in sw.timeseries.data
                 if _local(dp.ts).date() == fc_date and dp.thunder_level
-                and hour_in_window(_local(dp.ts).hour, win_start, win_end)
+            ]
+            thunder_dps = [
+                dp for dp in day_dps
+                if hour_in_window(_local(dp.ts).hour, win_start, win_end)
             ]
             if not thunder_dps:
                 continue
@@ -2039,6 +2117,18 @@ class TripReportSchedulerService:
                 text = f"Gewitter möglich ab {when}"
             else:
                 text = f"Starkes Gewitter erwartet ab {when}"
+            # Issue #1651: Nacht-Zusatz, wortgleich zum Trend-Weg (eine
+            # Wortlaut-Quelle: format_night_addendum). `night_weather` reicht
+            # nur bis 06:00 des Folgetags und ist deshalb allein fuer "+1"
+            # eine Gegenquelle; "+2" traegt ausschliesslich seine eigene Reihe.
+            add = night_addendum(
+                [(_local(dp.ts).hour, dp.thunder_level) for dp in day_dps],
+                _night_thunder_hours(night_weather, fc_date, _local)
+                if offset == 1 else None,
+                win_start, win_end,
+            )
+            if add:
+                text += format_night_addendum(*add)
             forecast[key] = {
                 "date": fc_date.strftime("%d.%m.%Y"),
                 "level": level,

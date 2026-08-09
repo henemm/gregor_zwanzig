@@ -42,9 +42,6 @@ _UTC = ZoneInfo("UTC")
 _TODAY = date.today()
 _TOMORROW = _TODAY + timedelta(days=1)
 
-# FixtureProvider verankert seine 72 Punkte am aktuellen UTC-Tag.
-_IDX_TOMORROW_00 = 24
-
 # Zwei WEIT auseinanderliegende Orte, damit der FixtureProvider fuer die
 # Nachtquelle (Ankunft heute, Innsbruck) und die Folgeetappe (Zillertal)
 # VERSCHIEDENE Dateien waehlt (providers/fixture.py::_nearest). Nur so ist
@@ -53,6 +50,30 @@ _TODAY_COORDS = [(47.2692, 11.4041), (47.2700, 11.4100)]      # -> innsbruck.jso
 _TOMORROW_COORDS = [(47.2190, 11.8767), (47.2200, 11.8800)]   # -> zillertal.json
 
 _EXPECTED_ADDENDUM = ", nachts starkes Gewitter ab 00:00"
+
+
+def _idx_tomorrow_local_midnight() -> int:
+    """Fixture-Index der Stunde "morgen 00:00 ORTSZEIT" am Ankunftsort.
+
+    Der FixtureProvider verankert seine 72 Punkte am aktuellen **UTC**-Tag
+    (``providers/fixture.py``), der Pruefling rechnet dagegen in der aus den
+    Koordinaten aufgeloesten Ortszeit. Ein fest verdrahteter Index 24 traefe
+    in Innsbruck 02:00 Ortszeit -- der Test pruefte dann ein anderes Szenario
+    als das gemessene aus #1651 (Gewitter um MITTERNACHT, dieselbe Stunde,
+    die auch die Nacht-Tabelle zeigt). Der Offset wird deshalb gemessen statt
+    angenommen; das haelt den Test auch ueber den Sommerzeit-Wechsel hinweg.
+    """
+    from utils.timezone import tz_for_coords
+
+    base = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    tz = tz_for_coords(*_TODAY_COORDS[-1])
+    for i in range(24, 0, -1):
+        local = (base + timedelta(hours=i)).astimezone(tz)
+        if local.date() == _TOMORROW and local.hour == 0:
+            return i
+    raise AssertionError("Fixture-Fehler: keine Stunde 'morgen 00:00 Ortszeit'")
 
 
 def _fixture_points(thunder_by_index: dict) -> list[dict]:
@@ -82,7 +103,9 @@ def _write_split_fixture_dir(tmp_path):
     fixture_dir = tmp_path / "openmeteo"
     fixture_dir.mkdir(parents=True, exist_ok=True)
     (fixture_dir / "innsbruck.json").write_text(
-        json.dumps({"data": _fixture_points({_IDX_TOMORROW_00: "HIGH"})})
+        json.dumps({
+            "data": _fixture_points({_idx_tomorrow_local_midnight(): "HIGH"})
+        })
     )
     for name in ("zillertal.json", "stubai.json"):
         (fixture_dir / name).write_text(json.dumps({"data": _fixture_points({})}))

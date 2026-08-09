@@ -191,18 +191,6 @@ class PreviewService:
         # (trip_report_scheduler.py:878-887) — `.rows` bleibt der bisherige
         # Wert, `.state`/`.horizon_days` werden zusaetzlich durchgereicht.
         # Jede Abweichung hier liesse die Vorschau wieder divergieren (AC-6).
-        multi_day_trend = None
-        outlook_state = None
-        outlook_horizon_days = None
-        if segment_weather and render_options.show_multi_day_trend:
-            trend_result = scheduler._build_stage_trend(trip, target, tz=trip_tz)
-            multi_day_trend = trend_result.rows
-            outlook_state = trend_result.state
-            outlook_horizon_days = trend_result.horizon_days
-        thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
-            trip, target, tz=trip_tz, multi_day_trend=multi_day_trend,
-        )
-
         # Issue #1315: Nacht-Wetter fuer BEIDE report_types (#1313-Semantik),
         # ueber dieselbe geteilte Funktion wie der Versand (kein Duplikat).
         # Nur beschaffen, wenn der Trip die Sektion ueberhaupt zeigen wuerde
@@ -214,10 +202,27 @@ class PreviewService:
         # Issue #1484 AC-8: auch die gewaehlte Nacht-Tiefsttemperatur
         # braucht Nachtdaten, nicht nur die Nacht-Stundentabelle — geteilte
         # Entscheidung night_weather_needed (Paritaet zum Versand).
+        # Issue #1651: die Beschaffung steht VOR dem Bau von Trend und
+        # Vorschau-Eintrag (vorher danach) — sonst faehrt der Vorschau-Pfad
+        # den Vorschau-Satz ohne die Nacht-Reihe und divergiert vom Versand
+        # (AC-9). Reine Umstellung, kein zusaetzlicher Abruf.
         from services.segment_weather import fetch_night_weather, night_weather_needed
         night_weather = None
         if segment_weather and night_weather_needed(trip.display_config):
             night_weather = fetch_night_weather(segment_weather[-1], provider=provider)
+
+        multi_day_trend = None
+        outlook_state = None
+        outlook_horizon_days = None
+        if segment_weather and render_options.show_multi_day_trend:
+            trend_result = scheduler._build_stage_trend(trip, target, tz=trip_tz)
+            multi_day_trend = trend_result.rows
+            outlook_state = trend_result.state
+            outlook_horizon_days = trend_result.horizon_days
+        thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
+            trip, target, tz=trip_tz, multi_day_trend=multi_day_trend,
+            night_weather=night_weather,
+        )
 
         # Issue #474: F12 Wetterlage-Label vor format_email berechnen.
         try:

@@ -400,10 +400,22 @@ def night_weather_needed(dc) -> bool:
     Vorschau ein ``N``, das still auf den Tageswert zurueckfaellt, waehrend
     der Versand den echten Nachtwert traegt. Geteilte Entscheidung fuer
     preview_service; der Versand-Scheduler beschafft ohnehin immer.
+
+    Issue #1651: ODER aktive Gewitter-Metrik — ab dieser Scheibe speisen die
+    Nachtdaten zusaetzlich den Nacht-Zusatz des Vorschau-Satzes („nachts
+    starkes Gewitter ab HH:MM"). Ohne diese Bedingung haette ein Trip OHNE
+    Nacht-Tabelle im Versand die Nacht-Reihe und in der Vorschau nicht —
+    beide bildeten den Satz aus verschiedenen Quellen (AC-11). Die eine
+    geteilte Entscheidung waechst mit, statt dass der Vorschau-Pfad eine
+    eigene Sonderregel bekommt.
     """
+    if getattr(dc, "show_night_block", False):
+        return True
+    if dc is None:
+        return False
     return bool(
-        getattr(dc, "show_night_block", False)
-        or (dc is not None and dc.is_metric_enabled("temperature_night"))
+        dc.is_metric_enabled("temperature_night")
+        or dc.is_metric_enabled("thunder")
     )
 
 

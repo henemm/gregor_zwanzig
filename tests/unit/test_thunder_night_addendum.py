@@ -60,18 +60,27 @@ def _trend_row(thunder_by_hour, level_max, fc_date: date = _TOMORROW):
     return row
 
 
-def _night_series(thunder_by_hour, night_of: date = _TOMORROW):
+def _night_series(thunder_by_hour, night_of: date = _TOMORROW, evening_by_hour=None):
     """``night_weather`` wie ``segment_weather.fetch_night_weather()`` es
     liefert: Ankunft am Vortag 15:00 bis 06:00 des ``night_of``-Tages.
 
     ``thunder_by_hour`` bezieht sich auf die Stunden NACH Mitternacht, also
     auf ``night_of`` selbst -- genau die Stunden, fuer die auch die
     "Nacht am Ziel"-Tabelle derselben Mail zustaendig ist.
+
+    ``evening_by_hour`` (optional) belegt dagegen die Abendstunden des
+    ANKUNFTSTAGS (15:00-23:00, also den Tag VOR ``night_of``). Die Reihe
+    deckt beide Kalendertage ab -- wer sie ohne Datumsbezug auswertet,
+    verwechselt sie (siehe ``test_nachtquelle_vom_ankunftstag_...``).
     """
     from app.models import ForecastMeta, NormalizedTimeseries, Provider
 
+    evening_by_hour = evening_by_hour or {}
     arrival_day = night_of - timedelta(days=1)
-    data = [_dp(arrival_day, h) for h in range(15, 24)]
+    data = [
+        _dp(arrival_day, h, evening_by_hour.get(h, ThunderLevel.NONE))
+        for h in range(15, 24)
+    ]
     data += [
         _dp(night_of, h, thunder_by_hour.get(h, ThunderLevel.NONE))
         for h in range(0, 7)
@@ -290,6 +299,118 @@ def test_ac7_nachtquelle_hat_vorrang_vor_der_eigenen_reihe():
     assert entry["text"] == "Kein Gewitter erwartet, nachts starkes Gewitter ab 02:00", (
         "Die Vorschau folgt der eigenen Etappen-Reihe statt der Nacht-Quelle -- "
         f"sie widerspricht damit der Nacht-Tabelle derselben Mail: {entry['text']!r}"
+    )
+
+
+def test_ac7_nachtquelle_hat_vorrang_auch_wenn_sie_ENTWARNT():
+    """AC-7/AC-3, Gegenrichtung zum Test darueber (Adversary F001): die
+    Nacht-Quelle gewinnt BEDINGUNGSLOS, nicht nur wenn sie das hoehere Level
+    meldet.
+
+    Hier behauptet die eigene Etappen-Reihe HIGH um 02:00 (z. B. aus einem
+    aelteren Modelllauf), die maessgebliche Nacht-Reihe dagegen LOW. Genannt
+    werden muss "leichtes" -- denn genau diese Nacht-Reihe steht als
+    "Nacht am Ziel"-Tabelle daneben in derselben Mail und zeigt dort LOW.
+
+    Ohne diesen Test bliebe die Autoritaetsregel halb bewacht: ein
+    Maximum-Merge (Nacht gewinnt nur bei >=) liesse alle uebrigen Tests
+    gruen und wuerde die Vorschau der Tabelle widersprechen lassen -- der
+    #1498-Fehler, in der Richtung, die diese Scheibe verhindern soll.
+    """
+    row = _trend_row({2: ThunderLevel.HIGH}, ThunderLevel.HIGH)
+    entry = _entry_from_trend(
+        row, night_weather=_night_series({2: ThunderLevel.LOW}),
+    )
+    assert entry is not None
+    assert entry["text"] == "Kein Gewitter erwartet, nachts leichtes Gewitter ab 02:00", (
+        "Die eigene Etappen-Reihe ueberstimmt die Nacht-Quelle nach OBEN -- "
+        "die Vorschau behauptet ein staerkeres Gewitter, als die "
+        f"Nacht-Tabelle derselben Mail zeigt: {entry['text']!r}"
+    )
+    assert "starkes" not in entry["text"], entry["text"]
+
+
+# ===========================================================================
+# Datums-Zuordnung der Nacht-Quelle (Adversary F002/F003)
+# ===========================================================================
+
+
+def test_nachtquelle_vom_ankunftstag_gilt_nicht_fuer_morgen():
+    """Adversary F002: die Nacht-Reihe deckt ZWEI Kalendertage ab (Ankunft
+    heute 15:00 bis 06:00 morgen). Ein Gewitter am ANKUNFTSABEND (heute
+    20:00) gehoert zu HEUTE und darf im Vorschau-Satz fuer MORGEN nicht
+    auftauchen.
+
+    Wird die Reihe nur nach Stunde-des-Tages statt nach Datum ausgewertet,
+    wandert das heutige Abendgewitter in die morgige Vorschau -- eine
+    Aussage ueber einen Tag aus den Daten eines anderen. Das ist exakt die
+    Fehlerklasse aus #1498, in genau der Funktion, die sie verhindern soll.
+
+    Alles andere ist hier bewusst ruhig: morgen weder im noch ausserhalb des
+    Fensters ein Gewitter, die Nachtstunden 00-06 ebenfalls nicht. Ein
+    Zusatz KANN damit nur aus der falsch zugeordneten Stunde stammen.
+    """
+    row = _trend_row({}, ThunderLevel.NONE)
+    entry = _entry_from_trend(
+        row,
+        night_weather=_night_series({}, evening_by_hour={20: ThunderLevel.HIGH}),
+    )
+    assert entry is not None
+    assert entry["text"] == "Kein Gewitter erwartet", (
+        "Das Gewitter vom HEUTIGEN Abend (20:00) erscheint im Vorschau-Satz "
+        f"fuer MORGEN: {entry['text']!r}"
+    )
+
+
+def test_trend_plus2_ignoriert_die_nachtquelle():
+    """Adversary F003 (Trend-Weg): fuer "+2" ist die eigene Zeitreihe die
+    ALLEINIGE Quelle -- die Nacht-Reihe gilt dort nicht.
+
+    Begruendung aus der Spec (Punkt 4): zu "+2" gibt es in derselben Mail
+    keine "Nacht am Ziel"-Tabelle, also auch keine Gegenquelle, der zu
+    folgen waere. Hier traegt die Nacht-Reihe (hypothetisch bis in den
+    uebernaechsten Tag reichend) HIGH um 00:00, die eigene "+2"-Reihe LOW um
+    23:00. Genannt werden muss die eigene Angabe.
+
+    Ohne diesen Test ist der ``offset == 1``-Waechter unbewacht: in allen
+    uebrigen Fixtures endet die Nacht-Reihe vor "+2", der Datumsfilter
+    maskiert ihn also.
+    """
+    row = _trend_row({23: ThunderLevel.LOW}, ThunderLevel.LOW, fc_date=_DAY_AFTER)
+    entry = _entry_from_trend(
+        row,
+        night_weather=_night_series({0: ThunderLevel.HIGH}, night_of=_DAY_AFTER),
+        key="+2",
+    )
+    assert entry is not None, "Vorschau-Eintrag fuer uebermorgen fehlt ganz"
+    assert entry["text"] == "Kein Gewitter erwartet, nachts leichtes Gewitter ab 23:00", (
+        'Die Nacht-Reihe wurde auch fuer "+2" herangezogen, obwohl es dort '
+        f"keine Nacht-Tabelle als Gegenquelle gibt: {entry['text']!r}"
+    )
+
+
+def test_fetch_plus2_ignoriert_die_nachtquelle():
+    """Adversary F003 (Fetch-Weg): derselbe Waechter am zweiten Bauweg.
+
+    Der ``offset == 1``-Vorbehalt steht in BEIDEN Bauwegen als eigene Zeile
+    (trip_report_scheduler.py) -- eine Kopie, die getrennt brechen kann. Ein
+    Test auf nur einem der beiden Wege liesse die andere Zeile unbewacht.
+    """
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    seg = _segment(
+        _day_points(_DAY_AFTER, {23: ThunderLevel.LOW}),
+        thunder_level_max=ThunderLevel.LOW,
+    )
+    fc = TripReportSchedulerService()._build_thunder_forecast(
+        seg, _TODAY, tz=_UTC,
+        night_weather=_night_series({0: ThunderLevel.HIGH}, night_of=_DAY_AFTER),
+    )
+    entry = (fc or {}).get("+2")
+    assert entry is not None, "Vorschau-Eintrag fuer uebermorgen fehlt ganz"
+    assert entry["text"] == "Kein Gewitter erwartet, nachts leichtes Gewitter ab 23:00", (
+        'Fetch-Weg: die Nacht-Reihe wurde auch fuer "+2" herangezogen: '
+        f"{entry['text']!r}"
     )
 
 

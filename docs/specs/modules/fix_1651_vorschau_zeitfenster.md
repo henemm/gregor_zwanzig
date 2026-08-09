@@ -94,15 +94,17 @@ Schicht: **Python-Core** (`src/app/`, `src/services/`,
 | File | Change Type | Description |
 |---|---|---|
 | `src/app/day_window.py` | MODIFY | Neue Funktion, die aus zwei Stundenreihen (eigene Etappen-Zeitreihe + optional Nacht-Zeitreihe) die außerhalb des Fensters liegenden Stunden bestimmt und daraus Level+früheste Stunde ableitet (Implementation Details) |
-| `src/services/trip_report_scheduler.py` | MODIFY | Neuer optionaler `night_weather`-Parameter an `_build_thunder_forecast_from_trend_or_fetch()`, `_thunder_entry_from_trend_row()`, `_build_thunder_forecast()`; Suffix-Anhängen an `text`; `_build_stage_trend()` bekommt denselben optionalen Parameter und setzt `row["night_thunder"]`; Hauptablauf reicht das bereits vorhandene `night_weather` an beide Aufrufe durch |
+| `src/services/trip_report_scheduler.py` | MODIFY | Neuer optionaler `night_weather`-Parameter an `_build_thunder_forecast_from_trend_or_fetch()`, `_thunder_entry_from_trend_row()`, `_build_thunder_forecast()`; Suffix-Anhängen an `text`; Hauptablauf reicht das bereits vorhandene `night_weather` durch. **Umsetzungs-Abweichung 2026-08-09:** `_build_stage_trend()` bleibt unangetastet — der Parameter hätte in dieser Scheibe keinen Leser, `row["night_thunder"]` braucht nur die nach #1653 herausgelöste Ausblick-Tabelle. Ein Parameter ohne Leser ist ein Versprechen ohne Deckung. |
 | `src/services/preview_service.py` | MODIFY | Nachtwetter-Beschaffung (aktuell nach dem Trend-/Vorschau-Aufbau) nach vorne verschoben, analog zum Versandpfad, damit sie beim Bau von Trend und Vorschau bereits vorliegt |
 | ~~`src/output/renderers/email/outlook.py`~~ | — | **verschoben nach #1653** |
+| `src/services/segment_weather.py` | MODIFY | `night_weather_needed()` liefert auch bei aktiver Gewitter-Metrik `True` — die geteilte Entscheidung beider Pfade (AC-11, Spec §5b) |
 | `tests/unit/test_thunder_forecast_day_window.py` | MODIFY | Bestehende Tests zur Fenster-Klemmung um die neue Nacht-Angabe ergänzen |
 | `tests/tdd/test_thunder_forecast_low_level.py` | MODIFY | dito für die LOW-Stufe |
 | `tests/tdd/test_briefing_parity_night_thunder.py` | MODIFY | Bereits vorhandene Fixtures (`_thunder_forecast()`, `_night_weather()`, `_night_dp()`) sind direkt wiederverwendbar — neue Tests für die Kombination Vorschau + Nacht-Tabelle in derselben Mail |
 | `tests/tdd/test_bug_874_th_plus_sms.py` | MODIFY | Regressionsnachweis: SMS-Token unverändert trotz Nacht-Angabe im `text`-Feld |
 | `tests/unit/test_trip_report_formatter_v2.py` | MODIFY | Erwarteter Vorschau-Text ggf. anpassen, falls dort ein Nachtgewitter-Fixture verwendet wird |
-| `tests/golden/email/corsica-vigilance-html.txt`, `corsica-vigilance-plain.txt`, `gr20-spring-morning-html.txt`, `gr20-spring-morning-plain.txt` | MODIFY | Golden-Snapshots neu ziehen, sofern der Fixture-Trip ein Nachtgewitter zeigt |
+| ~~`tests/golden/email/*`~~ | — | **nicht nötig, gemessen:** die Fixture-Trips haben kein Gewitter außerhalb des Fensters, `test_email_html_golden.py` bleibt grün |
+| `tests/unit/test_preview_night_block.py` | MODIFY | **nachträglich ergänzt:** `test_preview_skips_night_fetch_when_neither_selected` wurde durch AC-11 rot (Fixture ließ `thunder` aktiv). Gegenprobe nachgezogen statt entwertet — schaltet jetzt auch `thunder` ab und bewacht weiter, dass kein pauschaler Zusatzabruf entsteht |
 | neue Testdatei (Name nach Verhalten, z.B. `tests/unit/test_thunder_night_addendum.py`) | CREATE | Gezielte Tests für die neue Helper-Funktion in `app/day_window.py` (Merge-Logik, Mehrere-Nachtstunden-Regel, +2 ohne Nacht-Tabelle) |
 
 ### Estimated Changes
