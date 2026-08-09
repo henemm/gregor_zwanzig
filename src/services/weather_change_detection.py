@@ -633,6 +633,28 @@ class WeatherChangeDetectionService:
                     continue
                 threshold = effective_threshold
 
+                # Issue #1601: Der Delta-Anker und der frische Wert muessen aus
+                # DERSELBEN Modellwelt stammen -- sonst springt die Zahl allein
+                # durch den Modellwechsel, ohne dass sich das Wetter geaendert
+                # hat. `None` auf der Alt-Seite zaehlt als Abweichung: ein
+                # Vergleichspunkt ohne Herkunft ist mit einem belegten frischen
+                # Wert nicht vergleichbar (Abstain, wie ueberall im Delta-Pfad).
+                #
+                # Platzierung NACH dem Abstain oben ist heute verhaltensneutral:
+                # `detect_changes()` hat kein Begruendungs-Tracking pro Metrik,
+                # beide Reihenfolgen erzeugen byte-identische Ausgabe -- per
+                # Mutation gemessen (Adversary F001, kein Test wird rot, wenn
+                # der Guard vor den Abstain-Block wandert). Die Reihenfolge ist
+                # trotzdem sachlich richtig: nach dem Abstain ist
+                # `new_summary.cape_model_id` garantiert belegt, der Vergleich
+                # hier prueft also nur noch die Alt-Seite -- genau der Fall,
+                # den dieser Guard beschreiben will. Wer je eine
+                # Begruendungs-Ausgabe ergaenzt ("unterdrueckt wegen X"), muss
+                # diese Reihenfolge beibehalten -- dann wird sie
+                # verhaltensrelevant.
+                if old_summary.cape_model_id != new_summary.cape_model_id:
+                    continue
+
             # Convert enum values to ordinals for delta calculation.
             # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
             if isinstance(old_value, Enum):

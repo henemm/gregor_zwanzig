@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.model_registry import cape_threshold_jkg
+from app.model_registry import cape_delta_threshold_jkg, cape_threshold_jkg
 from app.models import (
     ChangeSeverity,
     GPXPoint,
@@ -52,6 +52,17 @@ assert cape_threshold_jkg("meteofrance_arome", "FR") == 300.0, (
     "geändert (erwartet 300.0) — die hartcodierten Erwartungswerte 180.0 in "
     "AC-1/2/5/6 dieser Datei sind davon abgeleitet und müssen nachgezogen werden."
 )
+# Issue #1601 braucht ein ZWEITES, ebenfalls für FR geeichtes Modell, damit ein
+# Modellwechsel geprüft werden kann, ohne dass der C3-Abstain (unbelegte
+# Kombination) die Aussage überdeckt. icon_d2xFR ist geeicht und ergibt — wie
+# meteofrance_arome x FR — die wirksame Schwelle 600*300/1000 = 180.0.
+assert cape_threshold_jkg("icon_d2", "FR") == 300.0, (
+    "Testannahme verletzt: icon_d2xFR muss geeicht sein (erwartet 300.0) — "
+    "sonst greift bei den #1601-Fällen der C3-Abstain statt des "
+    "Herkunfts-Vergleichs, und sie würden aus dem falschen Grund grün."
+)
+assert cape_delta_threshold_jkg(600.0, "icon_d2", "FR") == 180.0
+assert cape_delta_threshold_jkg(600.0, "meteofrance_arome", "FR") == 180.0
 
 # EU_REST-Koordinaten, die NICHT in FR (lat 41.3-51.1 / lon -5.2-9.7) und
 # NICHT in DE_ALPEN (lat 43.17-58.09 / lon -3.95-20.35) fallen — Ostsee-Raum.
@@ -85,25 +96,54 @@ def _segment(lat: float, lon: float) -> TripSegment:
     )
 
 
+_UNSET = object()  # unterscheidet "nicht angegeben" von der gültigen Angabe None
+
+
 def _cape_pair(
-    *, old_cape: float, new_cape: float, cape_model_id, lat: float, lon: float
+    *,
+    old_cape: float,
+    new_cape: float,
+    cape_model_id=_UNSET,
+    lat: float,
+    lon: float,
+    old_model_id=_UNSET,
+    new_model_id=_UNSET,
 ) -> tuple[SegmentWeatherData, SegmentWeatherData]:
     """Baut ein (old_data, new_data)-Paar mit ausschließlich CAPE + Herkunft
     belegt — alle anderen Felder bleiben None (werden vom Detektor übersprungen,
-    s. `detect_changes()`: `old_value is None or new_value is None` → `continue`)."""
+    s. `detect_changes()`: `old_value is None or new_value is None` → `continue`).
+
+    Issue #1601: Alt- und Neu-Seite können jetzt UNTERSCHIEDLICHE Herkunft
+    tragen (`old_model_id`/`new_model_id`). Bewusst der bestehende Helfer
+    erweitert statt eines zweiten daneben: die #1592-C3-Fälle und die
+    #1601-Fälle müssen ihre DTOs auf demselben Weg bauen, sonst kann ein
+    künftiger Umbau die eine Bauart ändern und die andere unbemerkt zurück-
+    lassen — dann prüften beide Testgruppen verschiedene Objekte. `_UNSET`
+    hält die 9 bestehenden Aufrufstellen (`cape_model_id=...`, inkl.
+    `cape_model_id=None` in AC-3) unverändert gültig.
+    """
+    if old_model_id is _UNSET:
+        old_model_id = cape_model_id
+    if new_model_id is _UNSET:
+        new_model_id = cape_model_id
+    if old_model_id is _UNSET or new_model_id is _UNSET:
+        raise TypeError(
+            "_cape_pair: entweder `cape_model_id` (beide Seiten) oder "
+            "`old_model_id`+`new_model_id` angeben."
+        )
     segment = _segment(lat, lon)
     fetched_at = datetime(2026, 8, 8, 6, 0, tzinfo=timezone.utc)
     old_data = SegmentWeatherData(
         segment=segment,
         timeseries=None,
-        aggregated=SegmentWeatherSummary(cape_max_jkg=old_cape, cape_model_id=cape_model_id),
+        aggregated=SegmentWeatherSummary(cape_max_jkg=old_cape, cape_model_id=old_model_id),
         fetched_at=fetched_at,
         provider="test-scripted",
     )
     new_data = SegmentWeatherData(
         segment=segment,
         timeseries=None,
-        aggregated=SegmentWeatherSummary(cape_max_jkg=new_cape, cape_model_id=cape_model_id),
+        aggregated=SegmentWeatherSummary(cape_max_jkg=new_cape, cape_model_id=new_model_id),
         fetched_at=fetched_at,
         provider="test-scripted",
     )
@@ -456,3 +496,231 @@ def test_ac8_untouched_metrics_stay_byte_identical():
             f"AC-8 Regression: {field}.severity muss unverändert MAJOR "
             f"bleiben (2.5x Schwelle) — war {change.severity!r}."
         )
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# Issue #1601 — Modellwechsel zwischen Δ-Anker und frischem Wert darf allein
+# KEINEN Änderungsalarm auslösen.
+#
+# Spec: docs/specs/modules/fix_1601_modellwechsel_alarm.md
+#
+# Wirksame Schwelle in allen Fällen unten: Preset "standard" (nominal 600)
+# × cape_threshold_jkg(<modell>, "FR") 300 / 1000 = 180.0 J/kg (oben per
+# Sanity-Assert festgenagelt, für BEIDE beteiligten Modelle identisch — der
+# Sprung ist also nicht durch eine andere Schwelle erklärbar, sondern nur
+# durch die Herkunft).
+# ═════════════════════════════════════════════════════════════════════════
+
+
+def _cape_point_pair(
+    *, old_cape: float, new_cape: float, old_model_id, new_model_id
+):
+    """Wie `_cape_pair`, aber für den Engine-Pfad: `DeviationAlertEngine`
+    arbeitet auf `PointWeatherData` (kein `TripSegment`), deshalb ein
+    eigener Bauweg — nicht aus Bequemlichkeit, sondern weil der DTO-Typ ein
+    anderer ist. Muster übernommen aus
+    `test_ac7_compare_path_via_deviation_alert_engine_inherits_conversion`."""
+    from services.point_weather import PointWeatherData
+
+    fetched_at = datetime(2026, 8, 8, 6, 0, tzinfo=timezone.utc)
+    old_point = PointWeatherData(
+        id="corse-test", name="Korsika-Testort", lat=CORSICA_LAT, lon=CORSICA_LON,
+        timeseries=None,
+        aggregated=SegmentWeatherSummary(cape_max_jkg=old_cape, cape_model_id=old_model_id),
+        fetched_at=fetched_at, provider="test-scripted",
+    )
+    fresh_point = PointWeatherData(
+        id="corse-test", name="Korsika-Testort", lat=CORSICA_LAT, lon=CORSICA_LON,
+        timeseries=None,
+        aggregated=SegmentWeatherSummary(cape_max_jkg=new_cape, cape_model_id=new_model_id),
+        fetched_at=fetched_at, provider="test-scripted",
+    )
+    return old_point, fresh_point
+
+
+def test_modellwechsel_unterdrueckt_cape_aenderungsalarm():
+    """
+    GIVEN ein CAPE-Δ-Paar auf Korsika (FR), Δ-Anker vom Modell
+          `meteofrance_arome`, frischer Wert vom Modell `icon_d2`
+    WHEN  das CAPE-Maximum um 1000 J/kg springt (500 -> 1500) — weit über
+          der wirksamen Schwelle 180 (und sogar über der nominalen 600)
+    THEN  entsteht KEIN WeatherChange für cape_max_jkg, weil der Sprung
+          allein durch den Modellwechsel erklärbar ist.
+
+    RED heute: `detect_changes()` vergleicht die Herkunft der beiden Seiten
+    nicht und feuert (1000 > 180) -> Alarm, obwohl sich das Wetter nicht
+    geändert haben muss. (AC-1)
+    """
+    old_data, new_data = _cape_pair(
+        old_cape=500.0, new_cape=1500.0,
+        old_model_id="meteofrance_arome", new_model_id="icon_d2",
+        lat=CORSICA_LAT, lon=CORSICA_LON,
+    )
+    service = WeatherChangeDetectionService(thresholds={"cape_max_jkg": 600.0})
+    changes = service.detect_changes(old_data, new_data)
+
+    assert _cape_changes(changes) == [], (
+        "AC-1: Δ-Anker (meteofrance_arome) und frischer Wert (icon_d2) "
+        "stammen aus verschiedenen Modellwelten — der Sprung ist allein "
+        "dadurch erklärbar und darf KEIN cape_max_jkg-Ereignis erzeugen."
+    )
+
+
+def test_anker_ohne_modellherkunft_unterdrueckt_cape_aenderungsalarm():
+    """
+    GIVEN ein Δ-Anker ohne Herkunft (`cape_model_id=None` — Altbestand vor
+          #1592 C0 oder eine Etappe mit uneiniger Modellherkunft) und ein
+          frischer Wert mit belegter Herkunft (`icon_d2`)
+    WHEN  das CAPE-Maximum um 1000 J/kg springt (500 -> 1500)
+    THEN  entsteht KEIN WeatherChange für cape_max_jkg — `None` zählt als
+          Abweichung, die beiden Seiten sind nicht vergleichbar.
+
+    RED heute: der C3-Abstain schaut nur auf die NEU-Seite (dort belegt),
+    die Alt-Seite bleibt ungeprüft -> Alarm entsteht. (AC-2)
+    """
+    old_data, new_data = _cape_pair(
+        old_cape=500.0, new_cape=1500.0,
+        old_model_id=None, new_model_id="icon_d2",
+        lat=CORSICA_LAT, lon=CORSICA_LON,
+    )
+    service = WeatherChangeDetectionService(thresholds={"cape_max_jkg": 600.0})
+    changes = service.detect_changes(old_data, new_data)
+
+    assert _cape_changes(changes) == [], (
+        "AC-2: ein Δ-Anker ohne Herkunft (None) ist mit einem belegten "
+        "frischen Wert nicht vergleichbar — kein cape_max_jkg-Ereignis."
+    )
+
+
+def test_gleiches_modell_ueber_schwelle_loest_weiterhin_aus():
+    """
+    GIVEN Δ-Anker und frischer Wert mit IDENTISCHER, belegter Herkunft
+          (beide `icon_d2`, Korsika/FR, wirksame Schwelle 180)
+    WHEN  das CAPE-Maximum um 250 J/kg springt (500 -> 750)
+    THEN  entsteht weiterhin ein WeatherChange für cape_max_jkg mit
+          threshold 180.0.
+
+    Diese Gegenprobe ist der wichtigste Testfall der Scheibe: sie ist HEUTE
+    schon grün und bewacht, dass der kommende Herkunfts-Guard nicht mehr
+    unterdrückt als vorgesehen. Der Sprung liegt bewusst zwischen der
+    umgerechneten (180) und der nominalen (600) Schwelle — er kann also nur
+    dann grün sein, wenn die C3-Umrechnung weiter greift. (AC-3)
+    """
+    old_data, new_data = _cape_pair(
+        old_cape=500.0, new_cape=750.0,
+        cape_model_id="icon_d2", lat=CORSICA_LAT, lon=CORSICA_LON,
+    )
+    service = WeatherChangeDetectionService(thresholds={"cape_max_jkg": 600.0})
+    changes = service.detect_changes(old_data, new_data)
+
+    cape_changes = _cape_changes(changes)
+    assert cape_changes, (
+        "AC-3: bei identischer Herkunft (beide icon_d2) muss ein Sprung von "
+        "250 J/kg über der wirksamen Schwelle 180 weiterhin ein "
+        "cape_max_jkg-Ereignis erzeugen — der Herkunfts-Guard darf den "
+        "gewollten Alarmweg nicht mitunterdrücken."
+    )
+    assert cape_changes[0].threshold == 180.0
+
+
+def test_gleiches_modell_unter_schwelle_bleibt_still():
+    """
+    GIVEN Δ-Anker und frischer Wert mit identischer, belegter Herkunft
+          (beide `icon_d2`, Korsika/FR, wirksame Schwelle 180)
+    WHEN  das CAPE-Maximum nur um 150 J/kg springt (500 -> 650)
+    THEN  entsteht KEIN WeatherChange für cape_max_jkg.
+
+    Normalfall, heute schon grün — belegt, dass ein Schweigen in den Fällen
+    AC-1/AC-2 nicht einfach das Schweigen aller kleinen Sprünge ist. (AC-4)
+    """
+    old_data, new_data = _cape_pair(
+        old_cape=500.0, new_cape=650.0,
+        cape_model_id="icon_d2", lat=CORSICA_LAT, lon=CORSICA_LON,
+    )
+    service = WeatherChangeDetectionService(thresholds={"cape_max_jkg": 600.0})
+    changes = service.detect_changes(old_data, new_data)
+
+    assert _cape_changes(changes) == [], (
+        "AC-4: 150 J/kg liegen unter der wirksamen Schwelle 180 — "
+        "unverändert kein Ereignis."
+    )
+
+
+def test_engine_modellwechsel_ergibt_kein_ausgeloestes_ergebnis():
+    """
+    GIVEN dieselbe Modellwechsel-Situation wie AC-1 (`meteofrance_arome` ->
+          `icon_d2`, Sprung 1000 J/kg), aber ausgewertet über den einzigen
+          live erreichbaren Aufrufer `DeviationAlertEngine.evaluate()`
+          (Trip über trip_alert.py:265, Ortsvergleich über
+          compare_alert.py:371-374)
+    WHEN  die Auswertung läuft
+    THEN  ist `EvaluationResult.triggered is False`.
+
+    Prüfort = Wirkort: ein Nachweis nur über den direkten `detect_changes()`-
+    Aufruf würde den seit #1168 toten Pfad genauso grün zeigen wie den
+    echten. RED heute: die Engine meldet triggered=True. (AC-5)
+    """
+    from services.deviation_alert_engine import DeviationAlertEngine
+    from services.point_weather import AlertEvaluationConfig
+
+    old_point, fresh_point = _cape_point_pair(
+        old_cape=500.0, new_cape=1500.0,
+        old_model_id="meteofrance_arome", new_model_id="icon_d2",
+    )
+    config = AlertEvaluationConfig(
+        cooldown_minutes=0, quiet_from=None, quiet_to=None,
+        metric_alert_levels={"cape": "standard"}, channels={"email"},
+    )
+    engine = DeviationAlertEngine()
+    result = engine.evaluate(
+        [old_point], [fresh_point], config, alert_state={},
+        now=datetime(2026, 8, 8, 10, 0, tzinfo=timezone.utc),
+    )
+
+    assert result.triggered is False, (
+        f"AC-5: am Wirkort (DeviationAlertEngine.evaluate) darf ein reiner "
+        f"Modellwechsel meteofrance_arome -> icon_d2 keinen Alarm auslösen — "
+        f"war triggered={result.triggered!r} mit changes="
+        f"{[(c.metric, c.delta, c.threshold) for c in result.changes]!r}."
+    )
+    assert _cape_changes(result.changes) == []
+
+
+def test_engine_gleiches_modell_loest_weiterhin_aus():
+    """
+    GIVEN dieselbe Situation wie AC-3 (beide Seiten `icon_d2`, Sprung
+          250 J/kg über der wirksamen Schwelle 180), ausgewertet über
+          `DeviationAlertEngine.evaluate()`
+    WHEN  die Auswertung läuft
+    THEN  ist `EvaluationResult.triggered is True` mit einem
+          cape_max_jkg-Change.
+
+    Gegenprobe am Wirkort, heute schon grün — bewacht, dass der Guard den
+    bestehenden, gewollten Alarmweg auch über die Engine nicht
+    mitunterdrückt. (AC-5, zweite Hälfte)
+    """
+    from services.deviation_alert_engine import DeviationAlertEngine
+    from services.point_weather import AlertEvaluationConfig
+
+    old_point, fresh_point = _cape_point_pair(
+        old_cape=500.0, new_cape=750.0,
+        old_model_id="icon_d2", new_model_id="icon_d2",
+    )
+    config = AlertEvaluationConfig(
+        cooldown_minutes=0, quiet_from=None, quiet_to=None,
+        metric_alert_levels={"cape": "standard"}, channels={"email"},
+    )
+    engine = DeviationAlertEngine()
+    result = engine.evaluate(
+        [old_point], [fresh_point], config, alert_state={},
+        now=datetime(2026, 8, 8, 10, 0, tzinfo=timezone.utc),
+    )
+
+    assert result.triggered is True, (
+        f"AC-5 Gegenprobe: bei identischer Herkunft muss die Engine weiter "
+        f"auslösen — war triggered={result.triggered!r} suppressed_reason="
+        f"{result.suppressed_reason!r}."
+    )
+    cape_changes = _cape_changes(result.changes)
+    assert cape_changes, "AC-5 Gegenprobe: cape_max_jkg-Ereignis fehlt im Engine-Pfad."
+    assert cape_changes[0].threshold == 180.0
