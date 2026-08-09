@@ -29,12 +29,16 @@ _NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
 
 
 def _report(report_type: str):
+    # #1660 Scheibe A: die abendliche Untergrenze der TF-Zeile haengt jetzt
+    # an der eigenen Groesse "wind_chill_night" -- ohne sie faellt sie still
+    # auf den Gehzeit-Tiefstwert zurueck (F.dc() baut MetricConfig direkt,
+    # ohne die Bestandsableitung des Ladepfads).
     return TripReportFormatter().format_email(
         [F.segment()],
         trip_name="Issue1410",
         report_type=report_type,
         night_weather=F.night_weather(),
-        display_config=F.dc("temperature", "wind_chill"),
+        display_config=F.dc("temperature", "wind_chill", "wind_chill_night"),
         stage_name=F.STAGE_NAME,
         tz=F.TZ,
     )

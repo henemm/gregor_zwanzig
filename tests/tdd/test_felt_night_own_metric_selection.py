@@ -29,8 +29,6 @@ import json
 from pathlib import Path
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 from output.renderers.compact_summary import CompactSummaryFormatter
 from output.renderers.trip_report import TripReportFormatter
