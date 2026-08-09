@@ -76,10 +76,22 @@ for source in _REGISTERED_SOURCES:
         results.extend(source.fetch(lat, lon))
     except Exception:
         logger.warning(...); failed += 1
-unavailable = covering > 0 and failed >= 1   # PO-Entscheid 2026-07-23: STRENG —
-# schon EINE ausgefallene abdeckende Quelle genügt (eine ausgefallene Quelle
-# hätte eine Warnung tragen können, die die anderen nicht abdecken).
+unavailable = covering > 0 and failed >= covering   # PO-Entscheid 2026-07-30:
+# KOMPENSATION — der Hinweis erscheint nur bei einer ECHTEN Lücke, also wenn
+# ALLE zuständigen Quellen ausgefallen sind. Eine erfolgreiche zuständige
+# Quelle (auch leer) kompensiert die ausgefallenen.
 ```
+
+> **Korrektur (PO-Entscheid 2026-07-30, umgesetzt 2026-08-09):** Die
+> ursprünglich hier stehende STRENGE Formel `unavailable = covering > 0 and
+> failed >= 1` (PO-Entscheid 2026-07-23) ist **abgelöst**. Sie erzeugte
+> Fehlalarme, sobald EINE von mehreren zuständigen Quellen ausfiel, obwohl
+> eine andere erfolgreich antwortete (Beleg: Trip „KHW 403", 30.07. —
+> GeoSphere lieferte durchgehend, nur MeteoAlarm war gesperrt, der Hinweis
+> erschien trotzdem). Bei genau EINER zuständigen Quelle ist
+> `failed >= covering` äquivalent zu `failed >= 1`, das strenge Verhalten
+> bleibt dort unverändert. Maßgebliche Spec der Korrektur:
+> `docs/specs/modules/fix_1348_warn_kompensation.md`.
 
 `get_official_alerts_for_location()` wird zum duennen Wrapper
 (`alerts, _ = get_official_alerts_with_status(...); return alerts`) — Vertrag
@@ -217,13 +229,13 @@ echte Objekte statt Mock/patch):
 - **Orts-Vergleich (Compare-Mail) ist NICHT Teil dieser Scheibe.**
   `PointWeatherData`/`compare_html.py`/`comparison.py` bekommen das
   `unavailable`-Flag hier nicht — Folge-Issue, falls PO das priorisiert.
-- **Partial-Failure gilt als "unavailable" (PO-Entscheid 2026-07-23, STRENG):**
-  schon EINE ausgefallene abdeckende Quelle löst den Hinweis aus — auch wenn
-  eine andere abdeckende Quelle für denselben Ort gleichzeitig erfolgreich
-  (auch leer) antwortet. Begründung: die ausgefallene Quelle hätte eine
-  Warnung tragen können, die die andere nicht abdeckt; „konnten wir nicht
-  prüfen" ist die sichere Aussage. Nur wenn ALLE abdeckenden Quellen erfolgreich
-  antworten, erscheint kein Hinweis.
+- **Partial-Failure-Formel korrigiert (PO-Entscheid 2026-07-30, umgesetzt
+  2026-08-09):** die Ableitung von "unavailable" aus den Quellenstatus ist
+  nicht mehr Teil dieser Spec, sondern maßgeblich in
+  `docs/specs/modules/fix_1348_warn_kompensation.md` dokumentiert
+  (Kompensation: eine erfolgreiche zuständige Quelle kompensiert eine
+  ausgefallene; der Hinweis erscheint nur, wenn ALLE zuständigen Quellen
+  ausgefallen sind).
 - **Segment-Dedup-Verhalten unveraendert:** `trip_report_scheduler.py` fetcht
   amtliche Warnungen nur einmal je eindeutiger Segment-Koordinate
   (`seen_coords`); das neue Flag wird nur auf dem zuerst gefetchten Segment
@@ -244,3 +256,6 @@ echte Objekte statt Mock/patch):
 ## Changelog
 
 - 2026-07-23: Initial spec created
+- 2026-08-09: Known-Limitations-Absatz zur Partial-Failure-Formel korrigiert
+  (Verweis auf `fix_1348_warn_kompensation.md` statt veraltete STRENGE Regel
+  als aktuell darzustellen)
