@@ -44,7 +44,7 @@ SA_ORANGE_TO = datetime(2026, 7, 11, 20, 0, tzinfo=UTC)
 
 # Bestands-Code-Tokens (design_tokens.py G_ALERT_L2/L3/L4) — DIESE müssen im
 # Output stehen (AC-13).
-TOKEN_L2, TOKEN_L3, TOKEN_L4 = "#9a6f00", "#c8482a", "#6d28d9"
+TOKEN_L2, TOKEN_L3, TOKEN_L4 = "#8a6300", "#c8482a", "#6d28d9"  # #1614 WCAG-AA
 # Design-Vorlage-Hex (`.stufe`/`.meter`/`.dot`-Klassen) — DIESE dürfen NICHT im
 # Output erscheinen (AC-13).
 DESIGN_HEX_GELB, DESIGN_HEX_ORANGE, DESIGN_HEX_ROT = "#e8b81f", "#e07a1e", "#c43030"

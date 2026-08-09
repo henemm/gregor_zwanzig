@@ -29,7 +29,7 @@ SA_ORANGE_TO = datetime(2026, 7, 11, 20, 0, tzinfo=UTC)
 # Design-Vorlage-Hex (`.wb`-Klassen) — DIESE dürfen NICHT im Output erscheinen.
 DESIGN_HEX = ("#e8b81f", "#e07a1e", "#c43030")
 # Bestands-Code-Tokens (design_tokens.py) — DIESE tragen die Severity-Farbe.
-TOKEN_L2, TOKEN_L3, TOKEN_L4 = "#9a6f00", "#c8482a", "#6d28d9"
+TOKEN_L2, TOKEN_L3, TOKEN_L4 = "#8a6300", "#c8482a", "#6d28d9"  # #1614 WCAG-AA
 
 
 def _alert(level: int, hazard: str, label: str, vf, vt, region="Hermagor", url=None):

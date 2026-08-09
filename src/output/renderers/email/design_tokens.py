@@ -29,7 +29,7 @@ G_INFO = '#2a6cb3'             # Compact-Summary-Akzent
 G_WX_THUNDER = '#c43a2a'       # Gewitterwarnung — Gefahr-Rot, konsistent mit G_DANGER (#b33a2a)
 
 # --- Amtliche-Warnung-Stufenskala (Issue #1056 v2.0, additiv) ---
-G_ALERT_L2 = '#9a6f00'         # Stufe 2 gelb (4,11:1 auf G_PAPER)
+G_ALERT_L2 = '#8a6300'         # Stufe 2 gelb (4,94:1 auf G_PAPER, #1614 WCAG-AA)
 G_ALERT_L3 = '#c8482a'         # Stufe 3 orange->rot (4,32:1)
 G_ALERT_L4 = '#6d28d9'         # Stufe 4 violett = hoechste Stufe (6,46:1)
 
