@@ -76,9 +76,17 @@ def _segment(segment_id: int | str = 1) -> TripSegment:
     )
 
 
-def _data(segment_id: int | str = 1, **summary_kwargs) -> SegmentWeatherData:
+def _data(
+    segment_id: int | str = 1,
+    *,
+    segment: TripSegment | None = None,
+    **summary_kwargs,
+) -> SegmentWeatherData:
+    """Mit `segment` (#1656) wird das ECHTE Etappensegment des Schedulers
+    uebernommen statt eines an `datetime.now()` haengenden Fixture-Segments —
+    Briefing-Fenster und spaeteres Alarm-Fenster sind dann dieselbe Spanne."""
     return SegmentWeatherData(
-        segment=_segment(segment_id),
+        segment=segment if segment is not None else _segment(segment_id),
         timeseries=NormalizedTimeseries(
             meta=ForecastMeta(provider=Provider.OPENMETEO, model="test", grid_res_km=1.0),
             data=[],
@@ -95,9 +103,9 @@ def _save_cached(user_id: str, trip_id: str, cached: list[SegmentWeatherData]) -
     WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date.today(), cached)
 
 
-def _trip(trip_id: str, *, with_levels: bool = False) -> Trip:
+def _trip(trip_id: str, *, with_levels: bool = False, stage_date: date | None = None) -> Trip:
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=stage_date or date.today(),
         waypoints=[
             Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0),
             Waypoint(id="G2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=1500.0),
@@ -128,7 +136,7 @@ class _FixedOfficialAlertSource:
         self._lat, self._lon, self._alert = lat, lon, alert
         self.fetch_calls = 0
 
-    property
+    @property
     def name(self) -> str:
         return "tdd-1460-p2-source"
 
@@ -563,7 +571,11 @@ def _fixture_scheduler_class_1614():
 
     class _FixtureScheduler(TripReportSchedulerService):
         def _fetch_weather(self, segments, provider=None):
-            return [_data(s.segment_id, gust_max_kmh=20.0) for s in segments]
+            # #1656: die ECHTEN Segmente durchreichen. Vorher baute die Fixture
+            # eigene, an `datetime.now()` haengende Segmente — der spaetere
+            # Alarm-Lauf prueft dann ein ANDERES Zeitfenster als das Briefing,
+            # und ab 18:00 UTC fiel die Warnung aus dem Briefing-Fenster.
+            return [_data(s.segment_id, segment=s, gust_max_kmh=20.0) for s in segments]
 
     return _FixtureScheduler
 
@@ -583,14 +595,35 @@ def _install_fake_email_send_1614(monkeypatch) -> list:
     return sent
 
 
-def _official_alert_1614(hazard: str, level: int, *, region: str = "Gailtal"):
+# #1656: Das Abend-Briefing zielt auf die Etappe von MORGEN. Ein Etappentag
+# liegt zu JEDER Tageszeit vollstaendig in der Zukunft — anders als "heute",
+# dessen Etappenfenster (06:00-17:00 UTC) am Abend vorbei ist.
+def _stage_date_1614() -> date:
+    return date.today() + timedelta(days=1)
+
+
+def _official_alert_1614(hazard: str, level: int, *, region: str = "Gailtal",
+                         day: date | None = None):
+    """`day` gesetzt (#1656): die Warnung gilt fuer den GANZEN Etappentag
+    (00:00 UTC bis 00:00 UTC des Folgetags). Sie ueberlappt damit jedes
+    Etappenfenster dieses Tages, egal wann der Test laeuft, und ihr
+    State-Schluessel (er enthaelt valid_from/valid_to) bleibt ueber mehrere
+    Aufrufe hinweg IDENTISCH — nur so prueft die Eskalations-Gegenprobe
+    wirklich den Level-Vergleich und nicht bloss einen neuen Schluessel.
+
+    Ohne `day` bleibt das bisherige, an `jetzt` haengende Fenster."""
     from services.official_alerts import OfficialAlert
 
-    now = datetime.now(timezone.utc)
+    if day is not None:
+        valid_from = datetime(day.year, day.month, day.day, tzinfo=timezone.utc)
+        valid_to = valid_from + timedelta(days=1)
+    else:
+        now = datetime.now(timezone.utc)
+        valid_from, valid_to = now - timedelta(hours=1), now + timedelta(hours=8)
     return OfficialAlert(
         source="tdd-1614", hazard=hazard, level=level,
         label=f"{hazard}-Warnung (#1614)", region_label=region,
-        valid_from=now - timedelta(hours=1), valid_to=now + timedelta(hours=8),
+        valid_from=valid_from, valid_to=valid_to,
     )
 
 
@@ -606,7 +639,13 @@ def test_briefing_meldet_unveraenderte_amtliche_warnung_danach_nicht_erneut(monk
 
     RED (heute): der Briefing-Pfad schreibt das Melde-Gedaechtnis nirgends,
     der Checker haelt X weiterhin fuer neu -> `again` ist nicht leer.
+
+    #1656: Abend-Briefing auf die Etappe von MORGEN. Das Etappenfenster liegt
+    damit zu jeder Tageszeit in der Zukunft; die beiden Vorbedingungen unten
+    verhindern, dass die leere Erwartung `again == []` still dadurch erfuellt
+    wird, dass gar nichts mehr geprueft wurde.
     """
+    from services.alert_state import OFFICIAL_ALERT_KEY_PREFIX, AlertStateService
     from services.official_alerts import register_official_alert_source
     from services.trip_alert import TripAlertService
 
@@ -615,19 +654,37 @@ def test_briefing_meldet_unveraenderte_amtliche_warnung_danach_nicht_erneut(monk
     b, backup = _sources_backup()
     b._REGISTERED_SOURCES.clear()
     try:
-        trip = _trip("trip-1614-t1")
+        stage_date = _stage_date_1614()
+        trip = _trip("trip-1614-t1", stage_date=stage_date)
         sent = _install_fake_email_send_1614(monkeypatch)
-        alert = _official_alert_1614("thunderstorm", 2)
-        register_official_alert_source(_FixedOfficialAlertSource(LAT, LON, alert))
+        alert = _official_alert_1614("thunderstorm", 2, day=stage_date)
+        source = _FixedOfficialAlertSource(LAT, LON, alert)
+        register_official_alert_source(source)
 
         scheduler = _fixture_scheduler_class_1614()(
             settings=_settings_no_transport_1614(), user_id=user_id,
         )
-        outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
+        outcome = scheduler._send_trip_report_outcome(trip, "evening", on_demand=False)
         assert outcome == "sent", f"Vorbedingung: der Versand muss gelingen ({outcome!r})"
         assert sent, "Vorbedingung: die Briefing-Mail wurde tatsaechlich gerendert"
 
+        # Vorbedingung A: die Warnung lag wirklich IM Briefing und wurde
+        # vermerkt. Ohne diese Pruefung waere `again == []` auch dann erfuellt,
+        # wenn die Warnung nie im Briefing-Fenster gelandet waere.
+        state_after_briefing = AlertStateService(user_id=user_id).load(trip.id)
+        assert [k for k in state_after_briefing if k.startswith(OFFICIAL_ALERT_KEY_PREFIX)], (
+            "Vorbedingung: das Briefing muss die amtliche Warnung ins "
+            f"Melde-Gedaechtnis geschrieben haben, vorhanden: {sorted(state_after_briefing)!r}"
+        )
+
+        fetches_before = source.fetch_calls
         again = TripAlertService(user_id=user_id).check_official_alert_triggers(trip)
+        # Vorbedingung B: der Alarm-Lauf hat die Quelle ueberhaupt befragt —
+        # sonst liefert er trivial [] (kein Wetter im Cache, Etappe vorbei).
+        assert source.fetch_calls > fetches_before, (
+            "Vorbedingung: der Alarm-Lauf muss die Quelle befragt haben, sonst "
+            "ist die leere Erwartung wertlos"
+        )
         assert again == [], (
             "Dieselbe amtliche Warnung darf nach einem erfolgreichen Briefing nicht "
             f"erneut als neu gemeldet werden (Doppelversand #1614), erhalten: {again!r}"
@@ -653,6 +710,11 @@ def test_eskalierte_warnung_wird_trotz_bereits_gemeldeter_unveraenderter_warnung
     RED (heute): ohne Doppelversand-Schutz erscheint "thunderstorm" (die
     unveraenderte Warnung) ebenfalls wieder -> die Menge der gemeldeten
     Gefahren ist nicht `{"flood"}`, sondern `{"flood", "thunderstorm"}`.
+
+    #1656: Abend-Briefing auf die Etappe von MORGEN (Etappenfenster liegt zu
+    jeder Tageszeit in der Zukunft). Die Erwartung `{"flood"}` ist beidseitig
+    scharf: sie faellt, wenn die unveraenderte Warnung erneut auftaucht, UND
+    sie faellt, wenn ueberhaupt nichts mehr geprueft wird.
     """
     from services.official_alerts import register_official_alert_source
     from services.trip_alert import TripAlertService
@@ -662,21 +724,27 @@ def test_eskalierte_warnung_wird_trotz_bereits_gemeldeter_unveraenderter_warnung
     b, backup = _sources_backup()
     b._REGISTERED_SOURCES.clear()
     try:
-        trip = _trip("trip-1614-t2")
+        stage_date = _stage_date_1614()
+        trip = _trip("trip-1614-t2", stage_date=stage_date)
         _install_fake_email_send_1614(monkeypatch)
 
-        unchanged = _official_alert_1614("thunderstorm", 2)
+        unchanged = _official_alert_1614("thunderstorm", 2, day=stage_date)
         register_official_alert_source(_FixedOfficialAlertSource(LAT, LON, unchanged))
-        escalating_source = _FixedOfficialAlertSource(LAT, LON, _official_alert_1614("flood", 2))
+        escalating_source = _FixedOfficialAlertSource(
+            LAT, LON, _official_alert_1614("flood", 2, day=stage_date),
+        )
         register_official_alert_source(escalating_source)
 
         scheduler = _fixture_scheduler_class_1614()(
             settings=_settings_no_transport_1614(), user_id=user_id,
         )
-        outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
+        outcome = scheduler._send_trip_report_outcome(trip, "evening", on_demand=False)
         assert outcome == "sent", f"Vorbedingung: der Versand muss gelingen ({outcome!r})"
 
-        escalating_source._alert = _official_alert_1614("flood", 3)
+        # Gleicher Zeitraum, hoeherer Level -> gleicher State-Schluessel: der
+        # Checker muss den Level-Vergleich anstellen, nicht bloss einen neuen
+        # Schluessel sehen.
+        escalating_source._alert = _official_alert_1614("flood", 3, day=stage_date)
 
         triggered = TripAlertService(user_id=user_id).check_official_alert_triggers(trip)
         hazards = {a.hazard for a, _seg in triggered}
@@ -705,6 +773,13 @@ def test_ad_hoc_abruf_schreibt_das_melde_gedaechtnis_amtlicher_warnungen_nicht(m
     RED (heute): `record_official_alerts_reported` existiert noch nicht auf
     `services.alert_briefing_anchor` -> `monkeypatch.setattr(..., raising=True)`
     wirft AttributeError.
+
+    #1656: Abend-Briefing auf die Etappe von MORGEN, dazu die positive
+    Gegenprobe am Ende. Ohne sie war die leere Erwartung ab 18:00 UTC
+    wertlos -- die Warnung fiel dann aus dem Briefing-Fenster, und der Test
+    bestand auch dann noch, wenn die Ad-hoc-Ausnahme ganz entfernt wurde
+    (gemessen: `if result.sent and not on_demand:` -> `if result.sent:` faellt
+    um 09:00, um 19:00 nicht).
     """
     import services.alert_briefing_anchor as anchor_mod_1614
     from services.alert_state import AlertStateService
@@ -715,10 +790,13 @@ def test_ad_hoc_abruf_schreibt_das_melde_gedaechtnis_amtlicher_warnungen_nicht(m
     b, backup = _sources_backup()
     b._REGISTERED_SOURCES.clear()
     try:
-        trip = _trip("trip-1614-t3")
+        stage_date = _stage_date_1614()
+        trip = _trip("trip-1614-t3", stage_date=stage_date)
         _install_fake_email_send_1614(monkeypatch)
         register_official_alert_source(
-            _FixedOfficialAlertSource(LAT, LON, _official_alert_1614("thunderstorm", 2))
+            _FixedOfficialAlertSource(
+                LAT, LON, _official_alert_1614("thunderstorm", 2, day=stage_date),
+            )
         )
 
         calls: list = []
@@ -733,7 +811,7 @@ def test_ad_hoc_abruf_schreibt_das_melde_gedaechtnis_amtlicher_warnungen_nicht(m
         scheduler = _fixture_scheduler_class_1614()(
             settings=_settings_no_transport_1614(), user_id=user_id,
         )
-        outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=True)
+        outcome = scheduler._send_trip_report_outcome(trip, "evening", on_demand=True)
         assert outcome in ("sent", "no_channels", "channels_unreachable"), (
             f"Der Ad-hoc-Lauf ist vorzeitig abgebrochen: {outcome!r}"
         )
@@ -743,6 +821,22 @@ def test_ad_hoc_abruf_schreibt_das_melde_gedaechtnis_amtlicher_warnungen_nicht(m
         )
         after = AlertStateService(user_id=user_id).load(trip.id)
         assert after == before, "Das Melde-Gedaechtnis darf sich durch einen Ad-hoc-Abruf nicht aendern"
+
+        # Positive Gegenprobe (Muster test_ac23): derselbe Lauf OHNE Ad-hoc-
+        # Kennzeichen ruft die Record-Funktion sehr wohl. Sonst waere die leere
+        # Erwartung oben auch dadurch erfuellt, dass die Warnung gar nicht erst
+        # im Briefing landete.
+        regular = _fixture_scheduler_class_1614()(
+            settings=_settings_no_transport_1614(), user_id=user_id,
+        )
+        regular_outcome = regular._send_trip_report_outcome(trip, "evening", on_demand=False)
+        assert regular_outcome == "sent", (
+            f"Gegenprobe: der regulaere Versand muss gelingen ({regular_outcome!r})"
+        )
+        assert len(calls) == 1, (
+            "Gegenprobe: der REGULAERE Briefing-Lauf muss die Warnung genau einmal "
+            f"vermerken, erhalten: {calls!r}"
+        )
     finally:
         b._REGISTERED_SOURCES.clear()
         b._REGISTERED_SOURCES.extend(backup)
@@ -761,22 +855,33 @@ def test_fehlgeschlagener_versand_schreibt_das_melde_gedaechtnis_nicht(monkeypat
 
     RED (heute): `record_official_alerts_reported` existiert noch nicht ->
     `monkeypatch.setattr(..., raising=True)` wirft AttributeError.
+
+    #1656: Abend-Briefing auf die Etappe von MORGEN, dazu die positive
+    Gegenprobe VOR der eigentlichen Pruefung -- ein GELINGENDER Versand mit
+    demselben Aufbau muss vermerken. Ohne sie war die leere Erwartung ab
+    18:00 UTC wertlos (gemessen: entfernt man die Zustellpruefung
+    `result.sent`, faellt der Test um 09:00, um 19:00 nicht).
     """
     import services.alert_briefing_anchor as anchor_mod_1614
     from services.official_alerts import register_official_alert_source
     from tests.helpers.alert_log_fixtures import settings_email_and_failing_telegram
 
     user_id = _fresh_user("t1614-4")
+    control_user = _fresh_user("t1614-4-kontrolle")
     _clean_user(user_id)
+    _clean_user(control_user)
     b, backup = _sources_backup()
     b._REGISTERED_SOURCES.clear()
     try:
-        trip = _trip("trip-1614-t4")
+        stage_date = _stage_date_1614()
+        trip = _trip("trip-1614-t4", stage_date=stage_date)
         trip.report_config = TripReportConfig(
             trip_id=trip.id, send_email=False, send_telegram=True, send_sms=False,
         )
         register_official_alert_source(
-            _FixedOfficialAlertSource(LAT, LON, _official_alert_1614("thunderstorm", 2))
+            _FixedOfficialAlertSource(
+                LAT, LON, _official_alert_1614("thunderstorm", 2, day=stage_date),
+            )
         )
 
         calls: list = []
@@ -786,10 +891,27 @@ def test_fehlgeschlagener_versand_schreibt_das_melde_gedaechtnis_nicht(monkeypat
 
         monkeypatch.setattr(anchor_mod_1614, "record_official_alerts_reported", _fake_record)
 
+        # Positive Gegenprobe: gleicher Aufbau, gleiche Warnung, aber der
+        # Versand GELINGT (eigener Nutzer, E-Mail-Transport gefakt) -- dann
+        # wird vermerkt. Erst damit ist die leere Erwartung unten aussagekraeftig.
+        _install_fake_email_send_1614(monkeypatch)
+        control_trip = _trip("trip-1614-t4-kontrolle", stage_date=stage_date)
+        control_outcome = _fixture_scheduler_class_1614()(
+            settings=_settings_no_transport_1614(), user_id=control_user,
+        )._send_trip_report_outcome(control_trip, "evening", on_demand=False)
+        assert control_outcome == "sent", (
+            f"Gegenprobe: der gelingende Versand muss 'sent' liefern ({control_outcome!r})"
+        )
+        assert len(calls) == 1, (
+            "Gegenprobe: ein GELUNGENER Versand muss die Warnung vermerken, sonst "
+            f"prueft der eigentliche Fall unten nichts: {calls!r}"
+        )
+        calls.clear()
+
         scheduler = _fixture_scheduler_class_1614()(
             settings=settings_email_and_failing_telegram(), user_id=user_id,
         )
-        outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
+        outcome = scheduler._send_trip_report_outcome(trip, "evening", on_demand=False)
         assert outcome == "channels_unreachable", (
             f"Vorbedingung: der Versand muss ehrlich als nicht zugestellt gelten ({outcome!r})"
         )
@@ -800,6 +922,7 @@ def test_fehlgeschlagener_versand_schreibt_das_melde_gedaechtnis_nicht(monkeypat
         b._REGISTERED_SOURCES.clear()
         b._REGISTERED_SOURCES.extend(backup)
         _clean_user(user_id)
+        _clean_user(control_user)
 
 
 def test_record_official_alert_state_wrapper_liefert_denselben_eintrag_wie_die_neue_funktion():
