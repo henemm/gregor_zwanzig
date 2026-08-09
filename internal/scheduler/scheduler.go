@@ -146,10 +146,13 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)", nil},
 		// Issue #637: inbound_telegram_poll entfernt — Telegram-Eingang läuft jetzt
 		// push-basiert über den Webhook (POST /api/webhooks/telegram/{secret}).
-		{"*/15 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (every 15 min)", nil},
+		// Issue #1628 S0: 7/22/37/52 statt */15 (= 0/15/30/45) -- weicht der
+		// gemessenen Open-Meteo-Lastspitze auf :00/:30 zeitlich aus. NUR
+		// diese zwei Radar-Jobs; alle anderen */15-Jobs bleiben unveraendert.
+		{"7,22,37,52 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (offset 7/22/37/52 min)", nil},
 		{"*/15 * * * *", s.dataWriteSelftest, "data_write_selftest", "Data Write Selftest (every 15 min)", nil},
 		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)", nil},
-		{"*/15 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (every 15 min)", nil},
+		{"7,22,37,52 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (offset 7/22/37/52 min)", nil},
 		{"*/15 * * * *", s.compareOfficialAlertChecks, "compare_official_alert_checks", "Compare Official Alert Checks (every 15 min)", nil},
 	}
 	for _, j := range jobs {
