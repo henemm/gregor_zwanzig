@@ -56,7 +56,7 @@ def test_ac4_alert_level_tokens_present_issue_1056():
     from src.output.renderers.email.design_tokens import (
         G_ALERT_L2, G_ALERT_L3, G_ALERT_L4,
     )
-    assert G_ALERT_L2 == "#9a6f00"
+    assert G_ALERT_L2 == "#8a6300"  # #1614 WCAG-AA-Anhebung
     assert G_ALERT_L3 == "#c8482a"
     assert G_ALERT_L4 == "#6d28d9"
 

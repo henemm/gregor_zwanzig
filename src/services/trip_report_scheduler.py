@@ -1025,6 +1025,24 @@ class TripReportSchedulerService:
             except Exception as e:
                 logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
 
+        # Issue #1614 Teil 1: eine amtliche Warnung, die bereits erfolgreich im
+        # Trip-Briefing gemeldet wurde, darf der unabhaengige 15-Minuten-
+        # Alarm-Checker nicht bis zu 15 Minuten spaeter nochmal als eigene,
+        # redundante Nachricht verschicken. Beide Bedingungen sind zwingend:
+        # result.sent (sonst waere eine NIE zugestellte Warnung faelschlich
+        # als "gemeldet" markiert, AC-4) UND not on_demand (Ad-hoc-Abruf
+        # bleibt read-only, #1007, AC-3). VOR write_anchor_and_reset_memory,
+        # damit ein Exception-Pfad dort das Record nicht verschluckt.
+        if result.sent and not on_demand:
+            all_official_alerts = [
+                a for sw in segment_weather for a in (sw.official_alerts or [])
+            ]
+            if all_official_alerts:
+                from services.alert_briefing_anchor import record_official_alerts_reported
+                record_official_alerts_reported(
+                    user_id=self._user_id, entity_id=trip.id, alerts=all_official_alerts,
+                )
+
         write_anchor_and_reset_memory(
             user_id=self._user_id,
             entity_ids=[trip.id],
@@ -1200,6 +1218,10 @@ class TripReportSchedulerService:
             "sent_at": datetime.now(tz=timezone.utc).isoformat(),
             "channels": channels,
         })
+        # Issue #1614: ein frischer Nutzer ohne jedes vorherige Datenverzeichnis
+        # (kein Trip-Snapshot, kein Alert-State) hatte hier noch kein
+        # Zielverzeichnis — path.write_text() scheiterte mit FileNotFoundError.
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2))
 
     def _convert_trip_to_segments(

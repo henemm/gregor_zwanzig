@@ -23,7 +23,7 @@ from services.official_alerts.models import OfficialAlert
 
 # Amtstreue 4-Stufen-Palette (Spec #1056 v2.0)
 GREEN = "#3a7d44"        # Stufe 1 (= G_SUCCESS, unverändert)
-YELLOW = "#9a6f00"       # Stufe 2 (neu G_ALERT_L2)
+YELLOW = "#8a6300"       # Stufe 2 (G_ALERT_L2, #1614 WCAG-AA-Anhebung)
 ORANGE_RED = "#c8482a"   # Stufe 3 (neu G_ALERT_L3)
 VIOLET = "#6d28d9"       # Stufe 4 (neu G_ALERT_L4)
 

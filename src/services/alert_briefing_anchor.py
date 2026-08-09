@@ -169,6 +169,36 @@ def write_anchor_and_reset_memory(
             reset_alert_memory(user_id=user_id, entity_id=entity_id)
 
 
+def record_official_alerts_reported(
+    *, user_id: str, entity_id: str, alerts: list,
+) -> None:
+    """Vermerkt amtliche Warnungen als 'im Briefing gemeldet' — DIE geteilte
+    Schreib-Logik fürs Melde-Gedächtnis (`official_alert:`-Namensraum).
+
+    Issue #1614 Teil 1: verhindert, dass eine bereits im Trip-Briefing
+    gezeigte, unveränderte amtliche Warnung bis zu 15 Minuten später vom
+    unabhängigen Alarm-Checker nochmal als eigene Nachricht verschickt wird.
+
+    Übernommen aus `TripAlertService._record_official_alert_state` — DIE
+    geteilte Fassung, `_record_official_alert_state` delegiert seit dem
+    Refactor hierher (Verhalten unverändert, siehe AC-5).
+
+    Fail-soft bei leerer `alerts`-Liste: No-Op.
+    """
+    if not alerts:
+        return
+    from output.renderers.alert.official_alerts import official_alert_state_key
+    from services.alert_state import AlertStateService
+
+    state_svc = AlertStateService(user_id=user_id)
+    state = state_svc.load(entity_id)
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for a in alerts:
+        key = official_alert_state_key(a)
+        state[key] = {"last_reported_value": float(a.level), "reported_at": now_iso}
+    state_svc.save(entity_id, state)
+
+
 def reset_alert_memory(*, user_id: str, entity_id: str) -> None:
     """DER Reset-Weg für das Melde-Gedächtnis — Trip UND Ortsvergleich.
 

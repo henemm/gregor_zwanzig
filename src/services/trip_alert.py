@@ -1193,19 +1193,20 @@ class TripAlertService:
 
     def _record_official_alert_state(self, trip_id: str, official_notices: list) -> None:
         """Issue #1088/#1200: alert_state nach erfolgreichem Versand fortschreiben
-        (Dedupe). `official_notices` sind `(OfficialAlert, segment_ids)`-Tupel."""
+        (Dedupe). `official_notices` sind `(OfficialAlert, segment_ids)`-Tupel.
+
+        Issue #1614 Teil 1: dünner Wrapper um die geteilte Schreib-Logik in
+        `services.alert_briefing_anchor.record_official_alerts_reported` —
+        Verhalten unverändert (AC-5), Segment-IDs werden hier nicht gebraucht.
+        """
         if not official_notices:
             return
-        from output.renderers.alert.official_alerts import official_alert_state_key
-        from services.alert_state import AlertStateService
+        from services.alert_briefing_anchor import record_official_alerts_reported
 
-        state_svc = AlertStateService(user_id=self._user_id)
-        state = state_svc.load(trip_id)
-        now_iso = datetime.now(timezone.utc).isoformat()
-        for a, _segment_ids in official_notices:
-            key = official_alert_state_key(a)
-            state[key] = {"last_reported_value": float(a.level), "reported_at": now_iso}
-        state_svc.save(trip_id, state)
+        record_official_alerts_reported(
+            user_id=self._user_id, entity_id=trip_id,
+            alerts=[a for a, _segment_ids in official_notices],
+        )
 
     def _send_official_alert_only(self, trip: "Trip", official_notices: list) -> bool:
         """Issue #1088: Standalone-Versand einer amtlichen Warnung ohne Wetter-Delta.
