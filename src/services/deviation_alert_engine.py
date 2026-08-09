@@ -22,7 +22,7 @@ from datetime import datetime, time as time_type, timedelta, timezone
 from typing import List, Optional, Set
 from zoneinfo import ZoneInfo
 
-from app.models import ChangeSeverity, WeatherChange
+from app.models import ChangeSeverity, GPXPoint, WeatherChange
 from services.point_weather import AlertEvaluationConfig, PointWeatherData
 from services.weather_change_detection import WeatherChangeDetectionService
 
@@ -45,18 +45,24 @@ class EvaluationResult:
 class _SegmentIdShim:
     """Interner Adapter: gibt `WeatherChangeDetectionService.detect_changes()`
     (unverändert, liest `.segment.segment_id`/`.start_time`/`.end_time` für
-    `_peak_occurred_at()`) etwas mit diesem Attribut-Shape, ohne
-    `PointWeatherData` selbst an `TripSegment` zu koppeln. `start_time`/
-    `end_time` werden aus der Zeitreihe selbst abgeleitet (erster/letzter
-    Zeitstempel) — das reproduziert den bestehenden Peak-Zeit-Fensterfilter
-    ohne echtes `TripSegment`."""
+    `_peak_occurred_at()`, seit Issue #1592 Scheibe C3 zusaetzlich
+    `.start_point.lat`/`.lon` fuer die CAPE-Gebietsbestimmung) etwas mit
+    diesem Attribut-Shape, ohne `PointWeatherData` selbst an `TripSegment` zu
+    koppeln. `start_time`/`end_time` werden aus der Zeitreihe selbst
+    abgeleitet (erster/letzter Zeitstempel) — das reproduziert den
+    bestehenden Peak-Zeit-Fensterfilter ohne echtes `TripSegment`.
+    `start_point` ist ein echtes `GPXPoint` mit den Punkt-Koordinaten
+    (`PointWeatherData.lat`/`.lon`) -- derselbe Typ, den `TripSegment`
+    traegt, damit `detect_changes()` beide Aufrufer-Formen ohne
+    Fallunterscheidung bedient."""
 
-    __slots__ = ("segment_id", "start_time", "end_time")
+    __slots__ = ("segment_id", "start_time", "end_time", "start_point")
 
     def __init__(self, point: PointWeatherData) -> None:
         self.segment_id = point.id
         ts_values = [dp.ts for dp in point.timeseries.data] if point.timeseries else []
         self.start_time = ts_values[0] if ts_values else None
+        self.start_point = GPXPoint(lat=point.lat, lon=point.lon)
         self.end_time = ts_values[-1] if ts_values else None
 
 

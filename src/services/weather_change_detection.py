@@ -610,6 +610,29 @@ class WeatherChangeDetectionService:
             if old_value is None or new_value is None:
                 continue
 
+            # Issue #1592 Scheibe C3: CAPE-Aenderungsalarme rechnen die
+            # nominale Empfindlichkeitsstufe (`threshold`) in die Modellwelt
+            # des liefernden Modells um -- Sonderpfad analog `_ordinal_levels`
+            # oben. `cape_delta_threshold_jkg()` liefert None bei unbekannter
+            # Herkunft ODER einer Modell x Gebiet-Kombination ohne Eichwert:
+            # "keine Aussage", kein Alarm (Abstain, wie C1/C2). Die so
+            # bestimmte Schwelle ist ab hier die EINE Wahrheit -- sie
+            # entscheidet ueber `triggered`, geht in `_classify_severity()`
+            # und wird unten als `WeatherChange.threshold` mitgegeben.
+            if metric == "cape_max_jkg":
+                from app.model_registry import cape_delta_threshold_jkg
+                from providers.thunder_routing import thunder_region_for
+                region = thunder_region_for(
+                    new_data.segment.start_point.lat,
+                    new_data.segment.start_point.lon,
+                )
+                effective_threshold = cape_delta_threshold_jkg(
+                    threshold, new_summary.cape_model_id, region,
+                )
+                if effective_threshold is None:
+                    continue
+                threshold = effective_threshold
+
             # Convert enum values to ordinals for delta calculation.
             # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
             if isinstance(old_value, Enum):

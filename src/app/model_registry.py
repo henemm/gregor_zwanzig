@@ -140,3 +140,30 @@ def cape_threshold_jkg(model_id: Optional[str], region: Optional[str]) -> Option
     if model_id is None or region is None:
         return None
     return CAPE_THRESHOLDS_JKG.get((model_id, region))
+
+
+# Issue #1592 Scheibe C3: kein neu gesetzter Wert -- die bis Scheibe C1
+# ueberall gueltige, modellblinde CAPE-Schwelle. Genau fuer DIESE Welt wurde
+# die Empfindlichkeitsleiter der CAPE-Aenderungsalarme (1200/600/200,
+# `services.alert_preset._PRESET_TABLE`) geschrieben. Als benannte Konstante
+# abgelegt, damit sie nirgends als nackte 1000 im Code auftaucht.
+CAPE_REFERENZ_NIVEAU_JKG = 1000.0
+
+
+def cape_delta_threshold_jkg(
+    nominal: float, model_id: Optional[str], region: Optional[str]
+) -> Optional[float]:
+    """Rechnet eine nominale Delta-Schwelle (aus der Empfindlichkeitsleiter)
+    in die Modellwelt von (``model_id``, ``region``) um:
+
+        wirksame Schwelle = nominal * cape_threshold_jkg(model_id, region)
+                             / CAPE_REFERENZ_NIVEAU_JKG
+
+    ``None``, wenn ``cape_threshold_jkg()`` ``None`` liefert (unbekannte
+    Herkunft ODER Kombination ohne Eichwert) -- "nicht belegt" heisst hier
+    identisch zu jedem anderen Nachschlag in diesem Modul (Spec Abschnitt
+    2/3). Kein Rueckfall auf ``nominal``."""
+    geeicht = cape_threshold_jkg(model_id, region)
+    if geeicht is None:
+        return None
+    return nominal * geeicht / CAPE_REFERENZ_NIVEAU_JKG

@@ -43,11 +43,11 @@ from app.models import (
 _NOW = datetime(2026, 3, 15, 10, 0, tzinfo=timezone.utc)
 
 
-def _make_segment(segment_id: int = 1) -> TripSegment:
+def _make_segment(segment_id: int = 1, lat: float = 47.0, lon: float = 11.0) -> TripSegment:
     return TripSegment(
         segment_id=segment_id,
-        start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000.0),
-        end_point=GPXPoint(lat=47.1, lon=11.1, elevation_m=1200.0),
+        start_point=GPXPoint(lat=lat, lon=lon, elevation_m=1000.0),
+        end_point=GPXPoint(lat=lat + 0.1, lon=lon + 0.1, elevation_m=1200.0),
         start_time=_NOW,
         end_time=_NOW + timedelta(hours=2),
         duration_hours=2.0,
@@ -120,6 +120,7 @@ def _make_summary(
     uv_index_max: float | None = None,
     freezing_level: float = 2500.0,
     snow_depth: float = 0.0,
+    cape_model_id: str | None = None,
 ) -> SegmentWeatherSummary:
     return SegmentWeatherSummary(
         temp_min_c=temp_max - 5,
@@ -130,6 +131,11 @@ def _make_summary(
         precip_sum_mm=precip_sum,
         cloud_avg_pct=cloud_avg,
         cape_max_jkg=cape_max,
+        # Issue #1592 Scheibe C3: Default bleibt None (keine Herkunft) --
+        # bestehende Aufrufer, die CAPE nicht ausdrücklich prüfen, bleiben
+        # unverändert. Tests, die einen CAPE-Δ-Alarm erwarten, müssen seit
+        # C3 eine echte Herkunft übergeben (sonst greift der AC-3-Abstain).
+        cape_model_id=cape_model_id,
         visibility_min_m=visibility_min,
         thunder_level_max=thunder_max,
         humidity_avg_pct=humidity_avg,
@@ -147,8 +153,10 @@ def _make_segment_weather(
     segment_id: int = 1,
     summary: SegmentWeatherSummary | None = None,
     dp_kwargs: dict | None = None,
+    lat: float = 47.0,
+    lon: float = 11.0,
 ) -> SegmentWeatherData:
-    seg = _make_segment(segment_id)
+    seg = _make_segment(segment_id, lat=lat, lon=lon)
     dp = _make_dp(**(dp_kwargs or {}))
     ts = NormalizedTimeseries(meta=_make_meta(), data=[dp])
     agg = summary or _make_summary()
@@ -620,21 +628,40 @@ class TestAlertChangeDetectionSimulated:
         assert changes[0].severity == ChangeSeverity.MAJOR
 
     def test_cape_change_detected_with_custom_threshold(self):
-        """CAPE change with custom lower threshold → detected."""
+        """CAPE change with custom lower threshold → detected.
+
+        Issue #1592 Scheibe C3: `_make_summary()`/`_make_segment_weather()`
+        setzen standardmäßig KEINE Modell-Herkunft (`cape_model_id=None`) und
+        liegen im Gebiet DE_ALPEN (47.0/11.0) -- ohne Herkunft greift der
+        AC-3-Abstain (kein Alarm bei unbekannter Herkunft), die alte, jetzt
+        modellblinde Erwartung wäre also nicht mehr gültig. Dieser Test
+        setzt deshalb ausdrücklich eine echte Herkunft (meteofrance_arome)
+        und ein geeichtes Gebiet (Korsika/FR): Faktor 0.30
+        (`app.model_registry.CAPE_THRESHOLDS_JKG[("meteofrance_arome","FR")]
+        == 300.0`) -- nominal 200 -> wirksam 60. Der Sprung (+400) bleibt
+        weit darüber.
+        """
         from services.weather_change_detection import WeatherChangeDetectionService
 
         cached = _make_segment_weather(
-            summary=_make_summary(cape_max=200.0))
+            summary=_make_summary(cape_max=200.0, cape_model_id="meteofrance_arome"),
+            lat=42.22, lon=9.05)
         fresh = _make_segment_weather(
-            summary=_make_summary(cape_max=600.0))  # +400
+            summary=_make_summary(cape_max=600.0, cape_model_id="meteofrance_arome"),  # +400
+            lat=42.22, lon=9.05)
 
-        # Custom threshold: 200 (instead of catalog default 500)
+        # Custom threshold: 200 (instead of catalog default 500) -> umgerechnet
+        # (Faktor 0.30, meteofrance_arome x FR) auf 60.
         service = WeatherChangeDetectionService(
             thresholds={"cape_max_jkg": 200.0})
         changes = service.detect_changes(cached, fresh)
 
         assert len(changes) == 1
         assert changes[0].metric == "cape_max_jkg"
+        assert changes[0].threshold == pytest.approx(60.0), (
+            "Wirksame Schwelle muss die auf meteofrance_arome x FR umgerechnete "
+            "Zahl sein (200 * 300/1000 = 60), nicht die nominale 200."
+        )
 
     def test_uv_index_change_detected(self):
         """UV-Index change from 2 to 8 (threshold 3.0) → detected."""
@@ -909,6 +936,12 @@ class TestAlertFlowWithSimulatedData:
         """
         Simulate approaching storm: temp drops, wind spikes, precipitation
         increases, CAPE rises, thunder appears. All at once.
+
+        Issue #1592 Scheibe C3: CAPE braucht seit dieser Scheibe eine echte
+        Modell-Herkunft, sonst greift der AC-3-Abstain (kein Alarm bei
+        unbekannter Herkunft) -- die Segmente liegen deshalb ausdrücklich auf
+        Korsika/FR mit Herkunft meteofrance_arome (Faktor 0.30, s.
+        `app.model_registry.CAPE_THRESHOLDS_JKG`).
         """
         from services.weather_change_detection import WeatherChangeDetectionService
 
@@ -918,16 +951,18 @@ class TestAlertFlowWithSimulatedData:
             gust_max=25.0,
             precip_sum=0.0,
             cape_max=100.0,
+            cape_model_id="meteofrance_arome",
             thunder_max=ThunderLevel.NONE,
-        ))
+        ), lat=42.22, lon=9.05)
         fresh = _make_segment_weather(summary=_make_summary(
             temp_max=14.0,      # -8 → detected
             wind_max=45.0,      # +30 → detected
             gust_max=70.0,      # +45 → detected
             precip_sum=20.0,    # +20 → detected
-            cape_max=1800.0,    # +1700 → detected
+            cape_max=1800.0,    # +1700 → detected (wirksame Schwelle 150, s.u.)
+            cape_model_id="meteofrance_arome",
             thunder_max=ThunderLevel.HIGH,  # 0→2 → detected
-        ))
+        ), lat=42.22, lon=9.05)
 
         service = WeatherChangeDetectionService(thresholds={
             "temp_max_c": 5.0,
