@@ -128,20 +128,96 @@ def _tokens(command: str) -> list[str] | None:
         return None
 
 
+_SEGMENT_SEPARATORS = {"&&", "||", ";", "|", "&"}
+_TEXT_MATCH_COMMANDS = {
+    "grep", "egrep", "fgrep", "rgrep", "zgrep", "pgrep", "rg", "ag", "ack",
+}
+_LAUNCHER_COMMANDS = {
+    "env", "nice", "nohup", "sudo", "doas", "setsid", "timeout", "xargs",
+    "time", "ionice", "chrt",
+}
+_PYTHON_LAUNCHER_RE = re.compile(r"^python3?(\.\d+)?$")
+
+
+def _basename(token: str) -> str:
+    """Letztes Pfadsegment -- 'pytest'-Erkennung soll pfad-qualifizierte
+    Launcher (/usr/bin/python3, .venv/bin/python3) genauso treffen wie
+    nackte Namen (Issue #1478 Teil 1, Adversary-Runde 3, Finding F007)."""
+    return token.rsplit("/", 1)[-1]
+
+
+def _nearest_non_flag_predecessor(tokens: list[str], index: int) -> "str | None":
+    """Naechstes Token VOR `index` im selben Segment, das keine Flag
+    (fuehrendes '-') ist. None am Segmentanfang (Trenner erreicht oder
+    Listenanfang) -- dann gibt es kein Kommando, das 'pytest' als
+    Suchmuster konsumiert haben koennte."""
+    j = index - 1
+    while j >= 0:
+        tok = tokens[j]
+        if tok in _SEGMENT_SEPARATORS:
+            return None
+        if not tok.startswith("-"):
+            return tok
+        j -= 1
+    return None
+
+
 def _pytest_invocations(tokens: list[str]) -> list[int]:
-    """Indizes, an denen ein pytest-Lauf beginnt."""
-    hits = []
+    """Indizes, an denen ein pytest-Lauf beginnt.
+
+    Default: JEDES 'pytest'-/'*/pytest'-Token zaehlt als Aufrufbeginn.
+    Zwei Faelle:
+
+    1. Unmittelbar vorangehendes Flag-Token (fuehrendes '-'): der Vorgaenger
+       HINTER ALLEN Flags wird ermittelt (`_nearest_non_flag_predecessor`
+       ueberspringt beliebig viele Flags). Ist dieser Vorgaenger ein
+       bekannter Prozess-Launcher (`_LAUNCHER_COMMANDS`) oder ein
+       Python-Interpreter (`_PYTHON_LAUNCHER_RE` auf den Basename) ->
+       'pytest' IST ein Aufruf, egal wie viele Flags dazwischen liegen
+       (Issue #1478 Teil 1, Adversary-Runde 3, Finding F006: 'sudo -E
+       pytest', 'nice -n10 pytest', 'xargs -I{} pytest' MUESSEN weiterhin
+       blockiert werden). Sonst (Vorgaenger ist ein gewoehnliches Wort wie
+       'commit', 'log', 'grep') ist 'pytest' dessen Freitext-Flag-Wert,
+       kein eigener Aufruf (Finding F005: 'git commit -m pytest', 'git log
+       --grep pytest', 'grep -m pytest').
+    2. Kein vorangehendes Flag: der naechste Nicht-Flag-Vorgaenger im
+       selben Segment wird direkt gegen `_TEXT_MATCH_COMMANDS` geprueft
+       (Basename) -- 'pytest' ist dessen Suchmuster (grep -n "pytest"
+       datei, pgrep -af "pytest"), sonst Default "ist ein Aufruf" (z.B.
+       jeder bare Launcher: 'sudo pytest tests/', F001/AC-6).
+    """
+    hits: list[int] = []
     for i, tok in enumerate(tokens):
-        if tok == "pytest" or tok.endswith("/pytest"):
-            hits.append(i)
-        elif tok == "-m" and i + 1 < len(tokens) and tokens[i + 1] == "pytest":
-            hits.append(i + 1)
+        if tok != "pytest" and not tok.endswith("/pytest"):
+            continue
+        if i > 0 and tokens[i - 1].startswith("-"):
+            launcher = _nearest_non_flag_predecessor(tokens, i)
+            launcher_base = _basename(launcher) if launcher is not None else None
+            if launcher_base in _LAUNCHER_COMMANDS or (
+                launcher_base is not None and _PYTHON_LAUNCHER_RE.match(launcher_base)
+            ):
+                hits.append(i)
+            continue
+        predecessor = _nearest_non_flag_predecessor(tokens, i)
+        predecessor_base = _basename(predecessor) if predecessor is not None else None
+        if predecessor_base in _TEXT_MATCH_COMMANDS:
+            continue
+        hits.append(i)
     return hits
 
 
 def _args_after(tokens: list[str], start: int) -> list[str]:
-    """Argumente nach dem pytest-Token bis zum naechsten Kommando-Trenner."""
-    stop = {"&&", "||", ";", "|", ">", ">>"}
+    """Argumente nach dem pytest-Token bis zum naechsten Kommando-Trenner.
+
+    Nutzt dieselbe Trenner-Menge wie `_nearest_non_flag_predecessor()`
+    (`_SEGMENT_SEPARATORS`, seit Runde 2 inkl. '&') statt eines eigenen,
+    unsynchronisierten Sets -- sonst erkennt `_pytest_invocations()` einen
+    Aufruf korrekt an einer Segmentgrenze, aber `_args_after()` sammelt
+    Tokens ueber genau diese Grenze hinweg ein (Issue #1478 Teil 1,
+    Adversary-Runde 4, Finding F-ADV1: 'pytest tests/ & x.py' lief
+    unblockiert durch, weil 'x.py' aus dem NAECHSTEN Segment faelschlich
+    als benannte Testdatei des ERSTEN Aufrufs galt)."""
+    stop = _SEGMENT_SEPARATORS | {">", ">>"}
     out = []
     for tok in tokens[start + 1:]:
         if tok in stop:
