@@ -25,6 +25,7 @@ Subprocess-Start, bis die Fixture-Funktionen implementiert sind.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import subprocess
 import sys
@@ -78,18 +79,50 @@ def _clean_subprocess_env() -> dict:
 # ---------------------------------------------------------------------------
 
 
-def test_without_optin_all_live_tests_skip_and_env_unchanged(monkeypatch):
+# Opt-in-relevante Schluessel — die einzigen, deren blosse Anwesenheit etwas
+# ueber ein (unbeabsichtigtes) Opt-in aussagt. Andere GZ_TELEGRAM_*-Variablen
+# (z.B. GZ_TELEGRAM_TEST_BOT_TOKEN) duerfen gesetzt sein, ohne den Test rot zu
+# machen — #1535.
+_OPT_IN_RELEVANT_KEYS = (
+    "GZ_TELEGRAM_LIVE",
+    "GZ_TELEGRAM_BOT_TOKEN",
+    "GZ_TELEGRAM_CHAT_ID",
+    "GZ_TELEGRAM_TEST_CHAT_ID",
+)
+
+
+def _masked_telegram_env_snapshot() -> dict:
+    """Maskiertes Abbild von os.environ (GZ_TELEGRAM_*): Schluesselname +
+    SHA-256-Kurz-Hash (12 Zeichen) statt Wert. Ein Diff bleibt aussagekraeftig,
+    druckt aber nie einen echten Zugang (#1535)."""
+    return {
+        k: hashlib.sha256(v.encode()).hexdigest()[:12]
+        for k, v in os.environ.items()
+        if k.startswith("GZ_TELEGRAM_")
+    }
+
+
+def test_live_telegram_enabled_does_not_touch_environ(monkeypatch):
     # -- Teil A: direkter In-Process-Beweis für live_telegram_enabled() --
     for key in ("GZ_TELEGRAM_LIVE", "GZ_TELEGRAM_BOT_TOKEN", "GZ_TELEGRAM_TEST_CHAT_ID", "GZ_TELEGRAM_CHAT_ID"):
         monkeypatch.delenv(key, raising=False)
 
-    before = {k: v for k, v in os.environ.items() if k.startswith("GZ_TELEGRAM_")}
+    before = _masked_telegram_env_snapshot()
     assert live_telegram_enabled() is False
-    after = {k: v for k, v in os.environ.items() if k.startswith("GZ_TELEGRAM_")}
-    assert before == after == {}, (
-        "live_telegram_enabled() darf ohne GZ_TELEGRAM_LIVE=1 os.environ nicht veraendern"
+    after = _masked_telegram_env_snapshot()
+    assert before == after, (
+        "live_telegram_enabled() darf ohne GZ_TELEGRAM_LIVE=1 os.environ nicht "
+        "veraendern (maskiertes Abbild: Schluesselname + SHA-256-Kurz-Hash, kein Wert)"
     )
 
+    set_opt_in_keys = [k for k in _OPT_IN_RELEVANT_KEYS if k in os.environ]
+    assert not set_opt_in_keys, (
+        "Opt-in-relevante Schluessel duerfen ohne bewusstes Opt-in nicht gesetzt "
+        f"sein: {set_opt_in_keys}"
+    )
+
+
+def test_without_optin_all_live_tests_skip_and_env_unchanged():
     # -- Teil B: isolierter Subprocess-pytest-Lauf ueber alle 6 Live-Dateien --
     env = _clean_subprocess_env()
     result = subprocess.run(
