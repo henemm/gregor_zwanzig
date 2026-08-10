@@ -374,6 +374,12 @@ _METRICS: list[MetricDefinition] = [
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
         sms_code="CP", decimals=0, cmp="über", alert_label="CAPE",
+        # Issue #1585 (PO-Regel 2026-08-10, Muster ADR-0005/#710): CAPE ist
+        # fachlich nur eine Zutat der Gewitterstufen-Fusion, keine fuer sich
+        # entscheidungsrelevante Groesse. Die Definition bleibt vollstaendig
+        # erhalten -- die interne Berechnung (thunder_level_from_signals,
+        # CAPE-Delta-Alarm #1592) liest cape_jkg direkt aus den Rohdaten.
+        selectable=False,
     ),
     MetricDefinition(
         id="snowfall_limit", label_de="Schneefallgrenze", unit="m",
@@ -741,7 +747,7 @@ WEATHER_TEMPLATES: dict[str, dict] = {
         "label": "Alpen-Trekking",
         "metrics": [
             "temperature", "temperature_night", "wind_chill", "wind", "gust", "precipitation",
-            "thunder", "cape", "rain_probability", "snowfall_limit",
+            "thunder", "rain_probability", "snowfall_limit",
             "freezing_level", "cloud_total", "cloud_low", "visibility", "uv_index",
         ],
     },
@@ -771,14 +777,14 @@ WEATHER_TEMPLATES: dict[str, dict] = {
         "label": "Radtour",
         "metrics": [
             "temperature", "temperature_night", "wind", "wind_direction", "gust", "precipitation",
-            "rain_probability", "thunder", "cape", "cloud_total", "sunshine", "uv_index",
+            "rain_probability", "thunder", "cloud_total", "sunshine", "uv_index",
         ],
     },
     "wassersport": {
         "label": "Wassersport",
         "metrics": [
             "temperature", "temperature_night", "wind", "gust", "wind_direction", "precipitation",
-            "rain_probability", "thunder", "cape", "cloud_total", "visibility",
+            "rain_probability", "thunder", "cloud_total", "visibility",
         ],
     },
     "allgemein": {
@@ -797,9 +803,19 @@ def get_all_templates() -> list[dict]:
     Returns:
         List of {"id": str, "label": str, "metrics": list[str]}
         in insertion order (alpen-trekking first, allgemein last).
+
+    Issue #1585: nicht waehlbare Groessen (``selectable=False``) fallen aus den
+    Profil-Listen heraus. ``WEATHER_TEMPLATES`` nennt ``cape`` zwar bereits
+    nicht mehr -- der Filter bleibt als strukturelle Sicherung, damit die
+    naechste ``selectable=False``-Groesse hier nicht erneut vergessen wird.
     """
+    selectable_ids = {m.id for m in get_all_metrics()}
     return [
-        {"id": tid, "label": tdata["label"], "metrics": tdata["metrics"]}
+        {
+            "id": tid,
+            "label": tdata["label"],
+            "metrics": [m for m in tdata["metrics"] if m in selectable_ids],
+        }
         for tid, tdata in WEATHER_TEMPLATES.items()
     ]
 
@@ -846,6 +862,11 @@ def get_change_detection_map() -> dict[str, float]:
         # default_change_threshold für Katalog-Vollständigkeit (sms_code),
         # sind aber NICHT Teil der Change-Detection-Map.
         if m.is_precursor:
+            continue
+        # Issue #1585: eine zentral nicht wählbare Größe (cape) darf keinen
+        # Änderungs-Alarm mehr auslösen — sonst bliebe cape_max_jkg als
+        # Schwelle stehen, obwohl die Größe nirgends mehr wählbar ist.
+        if not m.selectable:
             continue
         for summary_field in m.summary_fields.values():
             result[summary_field] = m.default_change_threshold

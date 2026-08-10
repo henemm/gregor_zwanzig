@@ -75,7 +75,9 @@ _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
     ("visibility_min", "Sicht min", _fmt_visibility_overview),
     # Issue #1296, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
     # _metric_value -> _daily_summary, analog den fuenf #1285-Zeilen).
-    ("cape_max", "CAPE", lambda v: f"{v:.0f} J/kg"),
+    # Issue #1585: die cape_max-Zeile ist hier ersatzlos entfallen -- sie muss
+    # mit CV2_METRICS (compare_html.py) synchron bleiben, `derive_row_labels`
+    # schlaegt sie ueber `_CV2_BY_KEY` nach und wirft sonst KeyError.
     ("freezing_level", "Nullgradgrenze", lambda v: f"{v:.0f} m"),
     # Issue #1324, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
     # _metric_value -> _daily_summary). HTML-Parität: dieselben Werte.

@@ -59,6 +59,7 @@ from datetime import date, datetime
 from app.models import ForecastDataPoint, PrecipType, ThunderLevel
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.comparison import render_compare_sms
+from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from services.official_alerts.models import OfficialAlert
 from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
@@ -66,7 +67,17 @@ from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
 TARGET_DATE = date(2026, 7, 30)
 CREATED_AT = datetime(2026, 7, 30, 8, 0)
 
-ALL_26_RENDERER_IDS = list(dict.fromkeys(FRONTEND_TO_RENDERER_METRIC_ID.values()))
+# Issue #1585: Quelle ist die AUSGELIEFERTE Katalogantwort, nicht mehr die rohe
+# Uebersetzungstabelle. `FRONTEND_TO_RENDERER_METRIC_ID` fuehrt `cape_max_jkg`
+# bewusst weiter (Modul-Import-Assert des Katalogs), CAPE erreicht den SMS-Pfad
+# aber nicht mehr -- der Vollstaendigkeits-Anspruch dieses Waechters gilt nur
+# fuer Groessen, die tatsaechlich ausgeliefert werden.
+_AUSGELIEFERTE_KEYS = {e["key"] for e in get_compare_metric_catalog()}
+ALL_RENDERER_IDS = list(dict.fromkeys(
+    renderer_id
+    for key, renderer_id in FRONTEND_TO_RENDERER_METRIC_ID.items()
+    if key in _AUSGELIEFERTE_KEYS
+))
 
 # ---------------------------------------------------------------------------
 # GSM 03.38 Default Alphabet + Extension Table (3GPP TS 23.038) -- der volle
@@ -232,7 +243,7 @@ def test_every_compare_metric_renders_unclipped_and_gsm7_clean():
         checked.add(metric_id)
 
     loc_default = _loc_result("Innsbruck")
-    for metric_id in ALL_26_RENDERER_IDS:
+    for metric_id in ALL_RENDERER_IDS:
         if metric_id in ("thunder_max", "precip_type"):
             continue  # unten mit allen Enum-Zustaenden geprueft
         _check_one(loc_default, metric_id, "Standardzustand")
@@ -252,7 +263,7 @@ def test_every_compare_metric_renders_unclipped_and_gsm7_clean():
         loc = _loc_result("Innsbruck", precip_type=precip_type)
         _check_one(loc, "precip_type", f"precip_type={precip_type.value}")
 
-    missing = set(ALL_26_RENDERER_IDS) - checked
+    missing = set(ALL_RENDERER_IDS) - checked
     assert not missing, (
         f"Vollstaendigkeits-Anspruch verletzt: {sorted(missing)} wurden NIE "
         "ungekuerzt geprueft -- dieser Waechter deckt dann nicht mehr alle "
@@ -300,7 +311,7 @@ def test_sms_location_and_metric_overflow_stay_gsm7_clean():
     loc_a = _loc_result("Andermatt Talstation")
     loc_b = _loc_result("Zermatt")
     sms = render_compare_sms(
-        _result([loc_a, loc_b]), enabled_metrics=ALL_26_RENDERER_IDS,
+        _result([loc_a, loc_b]), enabled_metrics=ALL_RENDERER_IDS,
     )
     assert_gsm7_clean(sms, "SMS (Orts- + Metrik-Ueberlauf gleichzeitig)")
 
@@ -311,7 +322,7 @@ def test_sms_degenerate_long_name_truncation_stays_gsm7_clean():
     zeichen."""
     long_name = "Sankt" + "Wolfgangimsalzkammergut" * 20
     loc = _loc_result(long_name)
-    sms = render_compare_sms(_result([loc]), enabled_metrics=ALL_26_RENDERER_IDS)
+    sms = render_compare_sms(_result([loc]), enabled_metrics=ALL_RENDERER_IDS)
     assert_gsm7_clean(sms, "SMS (Degenerationsfall, extrem langer Ortsname)")
 
 

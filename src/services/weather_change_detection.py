@@ -207,12 +207,31 @@ def is_alert_metric_active(
       - mindestens eine gemappte ID enabled=True → aktiv
       - sonst                                → inaktiv
 
+    Issue #1585: Eine Alarm-Größe, deren gemappte Katalog-Größen ALLE nicht
+    mehr wählbar sind (`selectable=False`, z.B. `CAPE` → `("cape",)`), gilt nie
+    mehr als aktiv — auch nicht über die F002-Nachsicht für Alt-Trips. Geprüft
+    wird das Tupel als Ganzes, NICHT Glied für Glied: `TEMPERATURE_MIN` mappt
+    auf `("temperature_cold", "temperature")`, und die synthetische
+    `temperature_cold` ist selbst nicht wählbar, trägt im Compare-Pfad
+    (`compare_alert.py`) aber den tatsächlichen Aktivierungsstatus der
+    Min-Temperatur. Ein Filter pro Glied hätte den Min-Temp-Alarm verstummen
+    lassen.
+
     None-safe: fehlende display_config oder unbekannter AlertMetric → False.
     """
     if display_config is None:
         return False
     catalog_ids = _ALERT_METRIC_TO_CATALOG_ID.get(alert_metric)
     if not catalog_ids:
+        return False
+    from app.metric_catalog import _METRICS_BY_ID
+
+    # Unbekannte Kennungen zählen als wählbar (kein neues Fehlverhalten für
+    # synthetische IDs ohne Katalog-Eintrag).
+    if not any(
+        cid not in _METRICS_BY_ID or _METRICS_BY_ID[cid].selectable
+        for cid in catalog_ids
+    ):
         return False
     # Finding F002: komplett leeres metrics[] = Trip hat den Wetter-Tab nie
     # angefasst → konservativ aktiv (kein stiller Alarmverlust für Alt-Trips).

@@ -6,7 +6,6 @@ die display_config korrekt im HTML-Output ankommt.
 
 Tested:
 - Visibility friendly=ON -> "good/fair/poor/fog" | friendly=OFF -> numerisch ("69k")
-- Cape friendly=ON -> Emoji | friendly=OFF -> Zahl
 - Cloud friendly=ON -> Emoji | friendly=OFF -> Zahl
 - alert_enabled steuert WeatherChangeDetectionService Thresholds
 
@@ -190,45 +189,13 @@ def check_visib_numeric(html):
 
 
 # =====================================================================
-# Test 3: Cape friendly=ON -> Emoji
+# Test 3+4 (Cape friendly=ON/OFF) entfallen mit Issue #1585
+#
+# CAPE ist zentral nicht mehr waehlbar und hat in der Trip-Mail keine
+# Spalte mehr -- `extract_column_values(html, "CAPE")` liefe ins Leere.
+# Die Friendly-Format-Mechanik selbst bleibt in dieser Datei durch die
+# Visibility- und Cloud-Szenarien abgedeckt.
 # =====================================================================
-
-def setup_cape_on():
-    modify_metric_config("cape", use_friendly_format=True)
-
-
-def check_cape_friendly(html):
-    vals = extract_column_values(html, "CAPE")
-    emojis = ["\U0001f7e2", "\U0001f7e1", "\U0001f7e0", "\U0001f534"]
-    has_emoji = any(any(e in v for e in emojis) for v in vals)
-    has_numeric = any(re.match(r"^\d+$", v.strip()) for v in vals)
-
-    if has_emoji:
-        return True, f"Emoji-Werte gefunden: {vals}"
-    if has_numeric:
-        return False, f"Numerische Werte statt Emoji: {vals}"
-    return False, f"Unerwartete Werte: {vals}"
-
-
-# =====================================================================
-# Test 4: Cape friendly=OFF -> Zahl
-# =====================================================================
-
-def setup_cape_off():
-    modify_metric_config("cape", use_friendly_format=False)
-
-
-def check_cape_numeric(html):
-    vals = extract_column_values(html, "CAPE")
-    emojis = ["\U0001f7e2", "\U0001f7e1", "\U0001f7e0", "\U0001f534"]
-    has_emoji = any(any(e in v for e in emojis) for v in vals)
-    has_numeric = any(re.search(r"\d+", v) for v in vals)
-
-    if has_numeric and not has_emoji:
-        return True, f"Numerische Werte gefunden: {vals}"
-    if has_emoji:
-        return False, f"Emoji-Werte obwohl OFF: {vals}"
-    return False, f"Unerwartete Werte: {vals}"
 
 
 # =====================================================================
@@ -287,8 +254,13 @@ def test_alert_enabled():
     import importlib
     import app.loader
 
-    # A: cape alert=true, wind alert=false
-    modify_metric_config("cape", alert_enabled=True)
+    # Issue #1585: Traeger-Groesse von "cape" auf "gust" gewechselt -- CAPE
+    # ist zentral nicht mehr waehlbar, `get_change_detection_map()` fuehrt
+    # seine Schwelle nicht mehr, und `is_alert_metric_active()` meldet es nie
+    # mehr als aktiv. Die Aussage des Tests (alert_enabled steuert die
+    # Schwellenmenge) ist unveraendert.
+    # A: gust alert=true, wind alert=false
+    modify_metric_config("gust", alert_enabled=True)
     modify_metric_config("wind", alert_enabled=False)
     importlib.reload(app.loader)
     from app.loader import load_all_trips
@@ -308,17 +280,17 @@ def test_alert_enabled():
         )
 
     svc_a = WeatherChangeDetectionService.from_display_config(trip.display_config)
-    cape_keys = [k for k in svc_a._thresholds if "cape" in k]
+    gust_keys = [k for k in svc_a._thresholds if "gust" in k]
     wind_keys = [k for k in svc_a._thresholds if "wind_max" in k]
 
-    print("  Config A: cape alert=true, wind alert=false")
-    print(f"    Cape in thresholds: {bool(cape_keys)} ({cape_keys})")
+    print("  Config A: gust alert=true, wind alert=false")
+    print(f"    Gust in thresholds: {bool(gust_keys)} ({gust_keys})")
     print(f"    Wind in thresholds: {bool(wind_keys)} ({wind_keys})")
 
-    a_pass = bool(cape_keys) and not bool(wind_keys)
+    a_pass = bool(gust_keys) and not bool(wind_keys)
 
-    # B: cape alert=false, wind alert=true
-    modify_metric_config("cape", alert_enabled=False)
+    # B: gust alert=false, wind alert=true
+    modify_metric_config("gust", alert_enabled=False)
     modify_metric_config("wind", alert_enabled=True)
     importlib.reload(app.loader)
     from app.loader import load_all_trips as lat2
@@ -326,14 +298,14 @@ def test_alert_enabled():
     trip2 = next(t for t in trips2 if t.id == "gr221-mallorca")
 
     svc_b = WeatherChangeDetectionService.from_display_config(trip2.display_config)
-    cape_keys_b = [k for k in svc_b._thresholds if "cape" in k]
+    gust_keys_b = [k for k in svc_b._thresholds if "gust" in k]
     wind_keys_b = [k for k in svc_b._thresholds if "wind_max" in k]
 
-    print("  Config B: cape alert=false, wind alert=true")
-    print(f"    Cape in thresholds: {bool(cape_keys_b)} ({cape_keys_b})")
+    print("  Config B: gust alert=false, wind alert=true")
+    print(f"    Gust in thresholds: {bool(gust_keys_b)} ({gust_keys_b})")
     print(f"    Wind in thresholds: {bool(wind_keys_b)} ({wind_keys_b})")
 
-    b_pass = not bool(cape_keys_b) and bool(wind_keys_b)
+    b_pass = not bool(gust_keys_b) and bool(wind_keys_b)
 
     passed = a_pass and b_pass
     status = "PASS" if passed else "FAIL"
@@ -357,8 +329,6 @@ if __name__ == "__main__":
     try:
         run_test("Visibility friendly=ON", setup_visib_on, check_visib_friendly)
         run_test("Visibility friendly=OFF", setup_visib_off, check_visib_numeric)
-        run_test("Cape friendly=ON", setup_cape_on, check_cape_friendly)
-        run_test("Cape friendly=OFF", setup_cape_off, check_cape_numeric)
         run_test("Cloud friendly=ON", setup_cloud_on, check_cloud_friendly)
         run_test("Cloud friendly=OFF", setup_cloud_off, check_cloud_numeric)
         test_alert_enabled()

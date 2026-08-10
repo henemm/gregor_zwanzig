@@ -230,20 +230,6 @@ class TestEmailFriendlyVsRawFormatting:
         # Raw percentage should NOT be in the table
         # (but may appear in highlights, so just check emoji exists)
 
-    def test_all_friendly_cape_emoji_in_html(self):
-        """CAPE 1200 J/kg → orangefarbener CSS-Dot when friendly ON (Workflow
-        fix-briefing-grid-and-summary: Berg-Kalibrierung, orange-Schwelle 800,
-        < red 1500 — vormals lag 1200 zwischen der Flachland-Skala yellow:1000/
-        orange:2500 und war damit gelb; die neuen Bergschwellen stufen hoeher.
-
-        #911 AC-11: Emoji-Ampel-Legende im Footer entfernt → dieser Test prüft jetzt
-        echt die Datenzelle. Issue #1222: Kreis-Emoji durch gestylten CSS-Dot ersetzt.
-        """
-        dc = self._make_config(True, True, True)
-        report = self._generate_report(dc, cape=1200.0)
-        assert "border-radius:50%" in report.email_html
-        assert "#c2410c" in report.email_html  # orange fill (Issue #1222 SSoT)
-
     def test_all_friendly_visibility_level_in_html(self):
         """Visibility 5000m → km-Zahl auch im Einfach-Modus (Issue #814 AC-5: kein Wort/Ampel)."""
         dc = self._make_config(True, True, True)
@@ -303,27 +289,13 @@ class TestEmailFriendlyVsRawFormatting:
 
     # --- Edge cases ---
 
-    def test_cape_extreme_raw_html_highlighted(self):
-        """CAPE >= 1000 gets HTML highlighting when raw."""
-        dc = self._make_config(False, False, False)
-        report = self._generate_report(dc, cape=1500.0)
-        html = report.email_html
-        assert "1500" in html
-        assert "background" in html  # Has highlighting span
-
-    def test_cape_extreme_friendly_shows_red(self):
-        """CAPE 2600 → roter CSS-Dot when friendly ON (Workflow
-        fix-briefing-grid-and-summary: Berg-Kalibrierung, red-Schwelle 1500 —
-        vormals lag 2600 zwischen der Flachland-Skala orange:2500/red:3500 und
-        war damit orange; die neuen Bergschwellen stufen hoeher.
-
-        #911 AC-11: Emoji-Ampel-Legende im Footer entfernt → dieser Test prüft jetzt
-        echt die Datenzelle. Issue #1222: Kreis-Emoji durch gestylten CSS-Dot ersetzt.
-        """
-        dc = self._make_config(False, True, False)
-        report = self._generate_report(dc, cape=2600.0)
-        assert "border-radius:50%" in report.email_html
-        assert "#b91c1c" in report.email_html  # red fill (Issue #1222 SSoT)
+    # Issue #1585: die drei CAPE-Tests dieser Klasse
+    # (test_all_friendly_cape_emoji_in_html, test_cape_extreme_raw_html_highlighted,
+    # test_cape_extreme_friendly_shows_red) sind entfallen. CAPE ist zentral nicht
+    # mehr waehlbar und wird nicht mehr gerendert -- sie haetten nichts mehr
+    # geprueft. Die Mechanik selbst (Ampel-Punkt, Roh-Hervorhebung) bewachen
+    # unveraendert die Nachbartests fuer Bewoelkung/Sichtweite sowie u.a.
+    # test_ampel_css_dots.py und test_issue_759_email_ampel.py.
 
     def test_visibility_fog_raw_html_highlighted(self):
         """Visibility < 500m gets HTML highlighting when raw (now in km)."""

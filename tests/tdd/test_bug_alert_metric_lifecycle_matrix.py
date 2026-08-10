@@ -88,7 +88,9 @@ METRIC_TABLE: dict[str, tuple[tuple[str, ...], str, tuple[str, ...] | None]] = {
     "wind_change":          (("wind",),        "delta",    ("wind_max_kmh", "gust_max_kmh")),
     "precipitation_change": (("precipitation",), "delta",  ("precip_sum_mm",)),
     "fresh_snow":           (("fresh_snow",),  "delta",    ("snow_new_sum_cm",)),
-    "cape":                 (("cape",),        "delta",    ("cape_max_jkg",)),
+    # Issue #1585: "cape" entfallen — CAPE ist zentral nicht mehr waehlbar und
+    # gilt nie mehr als alarmfaehig (AC-9). Die Zeile wuerde sonst fuer JEDEN
+    # Zustand "feuert=False" liefern und damit nichts mehr unterscheiden.
     "visibility":           (("visibility",),  "crossing", None),
 }
 

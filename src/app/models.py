@@ -610,6 +610,46 @@ class MetricConfig:
     derived: bool = False
 
 
+# Issue #1585: Groessen, die zwar ``selectable=False`` sind, deren Auftreten in
+# der Mail aber ein AUSDRUECKLICH festgehaltener Bestand ist. Klein, benannt,
+# DARF NUR SCHRUMPFEN -- ein neuer Eintrag hier ist ein Befund, kein
+# Schleichweg (Muster: AGGREGATION_CHECK_EXEMPTIONS in
+# tests/unit/test_compare_catalog_derives_from_central_catalog.py).
+#
+# ``temperature_cold`` (col_label "TmpMin", selectable=False seit #914, mit
+# #1585 nicht verwandt): faellt aus ``resolve_metric_col_order`` heraus und
+# wird vom ``remaining``-Zweig (email/html.py:681) hinten angehaengt. Diese
+# Abweichung ist Bestand und gehoert zu einer eigenen, noch nicht begonnenen
+# Scheibe -- festgehalten in tests/unit/test_mail_column_order.py::
+# test_legacy_config_without_order_keeps_catalog_order. Ohne diese Ausnahme
+# haette #1585 die Spalte still entfernt und damit fremder Arbeit vorgegriffen.
+_SELECTABLE_GATE_EXEMPT: frozenset[str] = frozenset({"temperature_cold"})
+
+
+def _is_selectable(metric_id: str) -> bool:
+    """Issue #1585: kennt der zentrale Katalog die Groesse und ist sie dort
+    ``selectable=False`` (cape, confidence), gehoert sie in keine
+    Kanal-Ausgabe -- auch nicht, wenn ein Bestandstrip sie noch
+    ``enabled=True`` gespeichert hat.
+
+    Geprueft wird generisch gegen ``MetricDefinition.selectable``, NICHT gegen
+    eine Kennung: der naechste ``selectable=False``-Fall wirkt hier ohne
+    weiteren Eingriff (Adversary F001).
+
+    Unbekannte Kennungen bleiben unveraendert durch: eine inzwischen entfernte
+    Katalog-ID in Alt-Daten soll hier kein neues Fehlverhalten bekommen.
+    Der lokale Import vermeidet einen Zyklus (metric_catalog importiert
+    models fuer build_default_display_config_for_profile).
+    """
+    if metric_id in _SELECTABLE_GATE_EXEMPT:
+        return True
+
+    from app.metric_catalog import _METRICS_BY_ID
+
+    definition = _METRICS_BY_ID.get(metric_id)
+    return definition is None or definition.selectable
+
+
 def _filter_metrics_by_report_type(
     metrics: list["MetricConfig"], report_type: str,
 ) -> list["MetricConfig"]:
@@ -617,9 +657,15 @@ def _filter_metrics_by_report_type(
 
     Shared zwischen get_metrics_for_report_type() und get_metrics_for_channel()
     (Issue #429), damit beide Pfade dieselbe Filter-Semantik haben.
+
+    Issue #1585: zusaetzlich faellt jede zentral nicht waehlbare Groesse
+    heraus (s. _is_selectable) -- dieser Choke-Point speist E-Mail, SMS und
+    Telegram gemeinsam.
     """
     result: list[MetricConfig] = []
     for mc in metrics:
+        if not _is_selectable(mc.metric_id):
+            continue
         if report_type == "morning":
             if mc.morning_enabled is True:
                 result.append(mc)

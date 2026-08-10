@@ -95,7 +95,8 @@ EXPECTED_OVERVIEW_LABELS = [
     "Neuschnee",
     "Temperatur Minimum",
     "Böen",
-    "Gewitterenergie (CAPE)",
+    # Issue #1585: "Gewitterenergie (CAPE)" entfallen -- CAPE ist zentral nicht
+    # mehr waehlbar und hat keine Uebersichtszeile mehr.
     "Nullgradgrenze",
     "Windrichtung",
     "Gefühlte Temperatur Minimum",

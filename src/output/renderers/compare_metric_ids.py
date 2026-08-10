@@ -122,6 +122,25 @@ def _to_key(item: object) -> str | None:
     return None
 
 
+def _non_selectable_keys() -> frozenset[str]:
+    """Compare-Schluessel, deren zentrale Groesse nicht waehlbar ist (#1585).
+
+    Abgeleitet aus `MetricDefinition.selectable`, NICHT aus einer getippten
+    Kennungsliste -- die naechste `selectable=False`-Groesse verschwindet damit
+    ohne weiteren Eingriff auch aus einer gespeicherten Auswahl.
+
+    Import in der Funktion aus demselben Grund wie in `_to_key`: auf
+    Modulebene waere es ein Zyklus."""
+    from app.metric_catalog import get_metric
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+
+    return frozenset(
+        entry["key"]
+        for entry in COMPARE_METRIC_CATALOG
+        if not get_metric(entry["metric_id"]).selectable
+    )
+
+
 def resolve_enabled_metrics(
     active_metrics: list[str | dict] | None,
 ) -> list[str] | None:
@@ -151,22 +170,28 @@ def resolve_enabled_metrics(
     if not isinstance(active_metrics, list):
         return None
     normalized = [(item, _to_key(item)) for item in active_metrics]
-    unmapped = [
-        item
-        for item, key in normalized
-        if key is None or key not in FRONTEND_TO_RENDERER_METRIC_ID
-    ]
+    non_selectable = _non_selectable_keys()
+
+    def _resolvable(key: str | None) -> bool:
+        return (
+            key is not None
+            and key in FRONTEND_TO_RENDERER_METRIC_ID
+            and key not in non_selectable
+        )
+
+    unmapped = [item for item, key in normalized if not _resolvable(key)]
     if unmapped:
         # Issue #1296: struktureller Guard (AC-6) -- sichtbares Signal statt
         # stiller Verwerfung, damit sich der #1285/#1296-Bug-Typ nicht ein
         # drittes Mal wiederholt.
         logger.warning(
-            "resolve_enabled_metrics: %s ohne Renderer-Mapping — Auswahl "
-            "wird ignoriert statt angezeigt (vgl. #1285/#1296)", unmapped,
+            "resolve_enabled_metrics: %s ohne Renderer-Mapping oder zentral "
+            "nicht waehlbar — Auswahl wird ignoriert statt angezeigt "
+            "(vgl. #1285/#1296, #1585)", unmapped,
         )
     resolved = list(dict.fromkeys(
         FRONTEND_TO_RENDERER_METRIC_ID[key]
         for _item, key in normalized
-        if key is not None and key in FRONTEND_TO_RENDERER_METRIC_ID
+        if _resolvable(key)
     ))
     return resolved

@@ -431,7 +431,6 @@ export const _COMPARE_DEFAULTS: Record<string, { defaultMin: number | null; defa
 	thunder_level_max: { defaultMin: null, defaultMax: 0 }, // NONE
 	visibility_min_m: { defaultMin: 2000, defaultMax: 10000 },
 	snow_new_sum_cm: { defaultMin: 5, defaultMax: 50 },
-	cape_max_jkg: { defaultMin: null, defaultMax: 500 },
 	freezing_level_m: { defaultMin: 1500, defaultMax: null },
 	snow_depth_cm: { defaultMin: 30, defaultMax: 200 }, // WINTERSPORT-Default
 	cloud_avg_pct: { defaultMin: 0, defaultMax: 60 }, // WINTERSPORT-Default
@@ -475,7 +474,10 @@ export const _COMPARE_DEFAULTS: Record<string, { defaultMin: number | null; defa
 export const COMPARE_METRIC_KEYS: string[] = [
 	'temp_max_c', 'wind_max_kmh', 'precip_sum_mm', 'pop_max_pct', 'thunder_level_max',
 	'sunny_hours_h', 'cloud_avg_pct', 'uv_index_max', 'visibility_min_m', 'snow_depth_cm',
-	'snow_new_sum_cm', 'temp_min_c', 'gust_max_kmh', 'cape_max_jkg', 'freezing_level_m',
+	// Issue #1585: cape_max_jkg ist hier ersatzlos entfallen — CAPE ist zentral
+	// nicht mehr waehlbar (metric_catalog.py), der Katalog-Endpoint liefert die
+	// Zeile nicht mehr aus.
+	'snow_new_sum_cm', 'temp_min_c', 'gust_max_kmh', 'freezing_level_m',
 	'wind_direction_deg', 'wind_chill_min_c', 'wind_chill_max_c', 'cloud_low_avg_pct',
 	'cloud_mid_avg_pct', 'cloud_high_avg_pct', 'humidity_avg_pct', 'dewpoint_avg_c',
 	'pressure_avg_hpa', 'precip_type_dominant', 'snowfall_limit_m',

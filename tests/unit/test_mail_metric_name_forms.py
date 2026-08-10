@@ -81,7 +81,9 @@ EXPECTED_OVERVIEW_LABELS = [
     "Temperatur Maximum", "Wind", "Niederschlag", "Regenwahrscheinlichkeit",
     "Gewitter", "Sonnenstunden", "Bewölkung", "UV-Index", "Sichtweite",
     "Schneehöhe", "Neuschnee", "Temperatur Minimum", "Böen",
-    "Gewitterenergie (CAPE)", "Nullgradgrenze", "Windrichtung",
+    # Issue #1585: "Gewitterenergie (CAPE)" entfallen -- zentral nicht mehr
+    # waehlbar, keine Uebersichtszeile mehr.
+    "Nullgradgrenze", "Windrichtung",
     "Gefühlte Temperatur Minimum", "Gefühlte Temperatur Maximum",
     "Tiefe Wolken", "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchtigkeit",
     "Taupunkt", "Luftdruck", "Niederschlagsart", "Schneefallgrenze",
@@ -407,39 +409,15 @@ def test_two_evaluations_of_the_same_quantity_get_the_german_evaluation_word():
 
 
 # ===========================================================================
-# AC-5 -- CAPE bleibt CAPE
+# AC-5 -- entfallen mit Issue #1585
+#
+# Der frühere `test_cape_column_keeps_its_international_short_form` bewachte
+# die Schreibweise der CAPE-Spalte in Stunden- und Uebersichtstabelle des
+# Ortsvergleichs. CAPE ist seit #1585 zentral nicht mehr waehlbar und
+# erscheint in keiner der beiden Tabellen mehr -- der Test hat keinen
+# Gegenstand mehr. Die Abwesenheit selbst ist in
+# tests/tdd/test_cape_not_selectable.py geprueft.
 # ===========================================================================
-
-
-def test_cape_column_keeps_its_international_short_form():
-    """AC-5: GIVEN die Stundentabelle zeigt die Gewitterenergie / WHEN die Mail
-    gerendert wird / THEN heisst die Spalte unveraendert "CAPE" -- kein
-    Uebersetzungsversuch.
-
-    ACHTUNG, Spec-Spannung (im RED-Bericht ausgewiesen): AC-5 spricht von
-    "Uebersichtstabelle ODER Stundentabelle". Fuer die Stundentabelle ist die
-    Forderung eindeutig und wird hier woertlich geprueft. In der Uebersicht
-    fordert AC-3 den ausgeschriebenen Registernamen, und der lautet
-    "Gewitterenergie (CAPE)" -- der Fachbegriff bleibt darin erhalten, die
-    Form wechselt aber (wie bei jeder anderen Zeile auch). Der Test verlangt
-    fuer die Uebersicht deshalb nur, dass der Begriff nicht verschwindet;
-    festgenagelt ist der genaue Wortlaut in AC-3.
-    """
-    result = _result()
-
-    stunde = _html_hour_header(render_compare_html(
-        result,
-        enabled_metrics=resolve_enabled_metrics(["cape_max_jkg"]),
-        hourly_metrics=["cape_jkg"],
-    ))
-    assert stunde == ["Zeit", "CAPE"], stunde
-
-    uebersicht = _html_overview_labels(render_compare_html(
-        result, enabled_metrics=resolve_enabled_metrics(["cape_max_jkg"]),
-    ))
-    assert any("CAPE" in label for label in uebersicht), (
-        f"Der Fachbegriff CAPE ist aus der Uebersicht verschwunden: {uebersicht}"
-    )
 
 
 # ===========================================================================

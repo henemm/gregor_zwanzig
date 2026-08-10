@@ -1445,13 +1445,13 @@ Returns catalog of all available weather metrics with format mode options and de
 
 | Field | Type | Description |
 |-------|------|-------------|
-| metrics[] | array | List of available metrics (only selectable ones — meta-metrics like `confidence` are excluded) |
+| metrics[] | array | List of available metrics (only selectable ones — meta-metrics like `confidence` and `cape` (#1585) are excluded) |
 | metrics[].id | string | Metric identifier (e.g., `wind_direction`, `cloud_total`) |
 | metrics[].name | string | Human-readable metric name |
 | metrics[].unit | string | Unit of measurement |
 | metrics[].format_modes | string[] | Supported format modes for this metric (`raw`, `scale`, `simplified`, `symbol`) |
 | metrics[].default_format_mode | string | Recommended default format mode (must be in `format_modes`) |
-| metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metric (`confidence`) has `selectable=false` (Issue #710) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints (UI-Auswahl heißt heute Editor-Metrik-Auswahl, kein Wizard) |
+| metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metrics have `selectable=false`: `confidence` (Issue #710) and, since 2026-08-10, `cape` (Issue #1585, precedent-following the confidence pattern per ADR-0005) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints resp. thunderstorm-level fusion (UI-Auswahl heißt heute Editor-Metrik-Auswahl, kein Wizard) |
 | metrics[].trip_default_enabled | bool | **Neu Issue #1552.** Ob die Größe zur Vorbelegung eines **neu angelegten Trips** gehört — unabhängig von `default_enabled` (das weiterhin die Orte-/Abonnement-Konfiguration über `build_default_display_config()` versorgt; vor #1552 zeigte der Anlege-Dialog `default_enabled` als Vorbelegung an, während der Versand eines nie eingestellten Trips tatsächlich einem anderen Siebener-Satz folgte — Überschneidung nur 5 von 10). Quelle: `MetricDefinition.trip_default_rank is not None` (`metric_catalog.py`). Genau sieben Größen tragen einen Rang: `temperature`(1), `wind`(2), `gust`(3), `precipitation`(4), `thunder`(5), `freezing_level`(6), `visibility`(7) — dieselbe Rangfolge, aus der `DEFAULT_TRIP_METRIC_IDS` (`src/output/renderers/trip_metric_ids.py`) jetzt abgeleitet wird, statt sie hart zu listen |
 | metrics[].sms_code | string | GSM-7-safe short token for the metric in SMS/Subject/Telegram alert tokens (e.g., `W`, `G`, `R`, `PR`, `TH`, `CP`, `SL`, `VS`, `HU`). Single source for alert renderers (Issue #914 Slice 1); the metric catalog is the only place these are defined |
 | metrics[].decimals | int \| null | Rounding precision for display (e.g., `precipitation: 1`, `visibility: 1`, most metrics `0`). `null` ⇒ fall back to the unit-based heuristic in `format_metric_value()` |

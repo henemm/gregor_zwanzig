@@ -138,7 +138,17 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # genau EINE zusaetzliche Zeile -- sonst nichts. Alter Digest adc39a43….
 # Der Waechter bleibt in Kraft; nur der Anker ist auf den neuen Sollstand
 # gesetzt.
-_EXPECTED_SHA256 = "142624b11edfcf19bc63c89d375b79bb8227dbc49992101d22803c25f5a6e235"
+#
+# #1585 (2026-08-10): die Trip-Mail verliert ABSICHTLICH ihre CAPE-Spalte --
+# CAPE ist zentral nicht mehr waehlbar (AC-2), die Fixture aktiviert sie zwar
+# weiter (s. `_ENABLED_METRICS`), `dp_to_row`/`resolve_metric_col_order`
+# ignorieren sie aber. Der Warnsatz oben ("diese Scheibe darf den
+# Trip-Renderer NICHT beruehren") gilt fuer #1425, nicht hier. NACHGEMESSEN
+# statt angenommen: ein Beweislauf hat `cape` zur Laufzeit wieder auf
+# `selectable=True` gesetzt und erhielt EXAKT den alten Digest
+# (142624b1…) zurueck -- die CAPE-Spalte ist nachweislich der einzige
+# Unterschied.
+_EXPECTED_SHA256 = "5a453eaa5ce82c0b560b51600baf2ae2daf386121b268d974a1aa213566ffa42"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

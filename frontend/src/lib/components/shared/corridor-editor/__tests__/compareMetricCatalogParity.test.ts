@@ -71,7 +71,10 @@ const ENDPOINT_FIXTURE = {
 		{ key: 'thunder_level_max', label: 'Gewitter', aggregation_label: 'Maximum', unit: '', decimals: 0, higherIsBetter: false, kind: 'ordinal', ordinalLabels: ['kein', 'leicht', 'mittel', 'hoch'], alarmCapable: true },
 		{ key: 'temp_min_c', label: 'Temperatur', aggregation_label: 'Minimum', unit: '°C', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, alarmCapable: true },
 		{ key: 'gust_max_kmh', label: 'Böen', aggregation_label: 'Maximum', unit: 'km/h', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 150, step: 5, alarmCapable: true },
-		{ key: 'cape_max_jkg', label: 'Gewitterenergie (CAPE)', aggregation_label: 'Maximum', unit: 'J/kg', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100, alarmCapable: true },
+		// Issue #1585: cape_max_jkg ist hier entfallen — CAPE ist zentral nicht
+		// mehr waehlbar, get_compare_metric_catalog() liefert die Zeile nicht
+		// mehr aus. Die Fixture bildet den echten Katalog ab (s. Kommentar oben),
+		// also faellt sie hier mit.
 		{ key: 'freezing_level_m', label: 'Nullgradgrenze', aggregation_label: 'Minimum', unit: 'm', decimals: 0, higherIsBetter: true, kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, alarmCapable: true },
 		{ key: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', aggregation_label: 'Maximum', unit: '%', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, alarmCapable: false },
 		{ key: 'wind_direction_deg', label: 'Windrichtung', aggregation_label: 'Mittel', unit: '°', decimals: 0, higherIsBetter: false, kind: 'range', rangeMin: 0, rangeMax: 360, step: 10, alarmCapable: false },
@@ -123,7 +126,7 @@ const GOLDEN_DEFS: Array<{
 	{ metric: 'thunder_level_max', label: 'Gewitter', unit: '', scale: [0, 3], step: 1, kind: 'ordinal', ordinalLabels: ['kein', 'leicht', 'mittel', 'hoch'], defaultMin: null, defaultMax: 0, alarmCapable: true },
 	{ metric: 'temp_min_c', label: 'Temperatur', unit: '°C', scale: [-30, 30], step: 1, kind: 'range', defaultMin: -5, defaultMax: null, alarmCapable: true },
 	{ metric: 'gust_max_kmh', label: 'Böen', unit: 'km/h', scale: [0, 150], step: 5, kind: 'range', defaultMin: null, defaultMax: 70, alarmCapable: true },
-	{ metric: 'cape_max_jkg', label: 'Gewitterenergie (CAPE)', unit: 'J/kg', scale: [0, 3000], step: 100, kind: 'range', defaultMin: null, defaultMax: 500, alarmCapable: true },
+	// Issue #1585: cape_max_jkg entfallen (s. ENDPOINT_FIXTURE oben).
 	{ metric: 'freezing_level_m', label: 'Nullgradgrenze', unit: 'm', scale: [0, 5000], step: 100, kind: 'range', defaultMin: 1500, defaultMax: null, alarmCapable: true },
 	// Issue #1424: die zehn PO-freigegebenen Startwerte (vorher ueberall
 	// null,null) + AC-3-Entfernung von precip_type_dominant/wind_direction_deg
@@ -194,7 +197,7 @@ describe('AC-2: compareMetricCatalogLoader.ts existiert und exportiert buildComp
 // GOLDEN_DEFS) deckt die Paritaet jetzt vollstaendig ab, dieser Block entfaellt.
 
 describe('AC-2 (Charakterisierung, Parität): buildCompareMetricDefs(endpointFixture) === GOLDEN_DEFS', () => {
-	test('liefert 24 CompareMetricDef-Objekte (Katalog 26 minus 2 aus AC-3), feldweise bitgleich zur Golden-Fixture', async () => {
+	test('liefert 23 CompareMetricDef-Objekte (Katalog 25 minus 2 aus AC-3), feldweise bitgleich zur Golden-Fixture', async () => {
 		let mod: typeof import('../compareMetricCatalogLoader.ts');
 		try {
 			mod = await import(MODULE_SPECIFIER);
@@ -209,8 +212,8 @@ describe('AC-2 (Charakterisierung, Parität): buildCompareMetricDefs(endpointFix
 
 		assert.equal(
 			result.length,
-			24,
-			`AC-2 FAIL: erwartet 24 CompareMetricDef-Objekte (Katalog bleibt bei 26, AC-3 filtert precip_type_dominant + wind_direction_deg), erhalten ${result.length}`
+			23,
+			`AC-2 FAIL: erwartet 23 CompareMetricDef-Objekte (Katalog liefert seit #1585 25 aus, AC-3 filtert precip_type_dominant + wind_direction_deg), erhalten ${result.length}`
 		);
 		GOLDEN_DEFS.forEach((expected, i) => {
 			assertDefMatches(
@@ -223,7 +226,7 @@ describe('AC-2 (Charakterisierung, Parität): buildCompareMetricDefs(endpointFix
 });
 
 describe('AC-1 (SSoT-Kern): ein synthetischer neuer Katalog-Eintrag erscheint im Pool ohne Frontend-Code-Änderung', () => {
-	test('erweiterte Endpoint-Fixture -> Zusatz-Def erscheint zusätzlich zu den 24 bekannten', async () => {
+	test('erweiterte Endpoint-Fixture -> Zusatz-Def erscheint zusätzlich zu den 23 bekannten', async () => {
 		let mod: typeof import('../compareMetricCatalogLoader.ts');
 		try {
 			mod = await import(MODULE_SPECIFIER);
@@ -254,12 +257,12 @@ describe('AC-1 (SSoT-Kern): ein synthetischer neuer Katalog-Eintrag erscheint im
 
 		assert.equal(
 			result.length,
-			25,
-			'AC-1 FAIL: der synthetische neue Eintrag muss zusätzlich zu den 24 bekannten erscheinen — ' +
+			24,
+			'AC-1 FAIL: der synthetische neue Eintrag muss zusätzlich zu den 23 bekannten erscheinen — ' +
 				'ohne jede Frontend-Code-Änderung (SSoT-Eigenschaft)'
 		);
 		assertDefMatches(
-			result[24] as unknown as Record<string, unknown>,
+			result[GOLDEN_DEFS.length] as unknown as Record<string, unknown>,
 			{
 				metric: 'foo_new_metric',
 				label: 'Testmetrik Neu',
@@ -271,7 +274,7 @@ describe('AC-1 (SSoT-Kern): ein synthetischer neuer Katalog-Eintrag erscheint im
 				defaultMax: null,
 				alarmCapable: false
 			},
-			'AC-1[24] (foo_new_metric)'
+			`AC-1[${GOLDEN_DEFS.length}] (foo_new_metric)`
 		);
 	});
 });

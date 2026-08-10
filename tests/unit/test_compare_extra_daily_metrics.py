@@ -217,21 +217,17 @@ def test_selected_gust_max_metric_appears_in_overview_matrix():
     )
 
 
-def test_selected_cape_metric_appears_in_overview_matrix():
-    """AC-3 (rot vor Fix): Nutzer waehlt Gewitter-Energie (CAPE) -> keine
-    Zeile. ``summarize_points()`` liefert heute kein ``cape_max_jkg``
-    (Klasse B, s. AC-5)."""
+def test_selected_cape_metric_no_longer_appears_in_overview_matrix():
+    """Issue #1585 (umgekehrt gegenueber #1296 AC-3): CAPE ist zentral nicht
+    mehr waehlbar. Eine gespeicherte Auswahl mit ``cape_max_jkg`` (Bestandsdaten)
+    erzeugt deshalb KEINE Uebersichtszeile mehr -- sie wird bei der Aufloesung
+    verworfen und hat auch keine Renderzeile mehr in ``CV2_METRICS``."""
     result = _result()
     enabled = resolve_enabled_metrics(["cape_max_jkg"])
 
     html = render_compare_html(result, enabled_metrics=enabled)
-    row = _assert_row_with_values(html, _IS_CAPE, "CAPE")
-
-    svc = WeatherMetricsService()
-    expected = svc._compute_cape(_timeseries(_hourly()))
-    assert _number(row["cells"][0]) == expected, (
-        f"CAPE-Tageswert stimmt nicht mit dem Trip-Pfad-Aggregat ueberein: "
-        f"{row['cells'][0]!r} != {expected}"
+    assert _find_row(html, _IS_CAPE) is None, (
+        f"CAPE erscheint weiterhin in der Uebersichts-Matrix: {_labels(html)}"
     )
 
 
@@ -288,11 +284,15 @@ def test_summarize_points_yields_cape_and_freezing_level():
 # Klartext-Pendant — HTML/Text-Asymmetrie waere sonst die Folge (Purpose)
 # ===========================================================================
 
-def test_plaintext_shows_all_four_new_rows():
+def test_plaintext_shows_the_three_remaining_new_rows():
     """Klartext-Pendant zu AC-1 bis AC-4 (rot vor Fix): Waehlt ein Nutzer
-    alle vier neuen Metriken, zeigt ``render_comparison_text()`` heute fuer
-    KEINE der vier eine Zeile -- weder ``_DAILY_PLAIN_ROWS`` noch direkte
-    Zeilen kennen ``temp_min``/``gust_max``/``cape_max``/``freezing_level``.
+    alle neuen Metriken, zeigt ``render_comparison_text()`` heute fuer
+    KEINE eine Zeile -- weder ``_DAILY_PLAIN_ROWS`` noch direkte
+    Zeilen kennen ``temp_min``/``gust_max``/``freezing_level``.
+
+    Issue #1585: ``cape_max_jkg`` ist aus der Auswahl herausgefallen (zentral
+    nicht mehr waehlbar) -- aus vier Zeilen werden drei, und die Abwesenheit
+    der CAPE-Zeile wird hier ausdruecklich mitgeprueft.
     """
     result = _result()
     enabled = resolve_enabled_metrics([
@@ -306,7 +306,6 @@ def test_plaintext_shows_all_four_new_rows():
     basis = svc.compute_basis_metrics(ts)
     expected_temp_min = basis.temp_min_c
     expected_gust_max = basis.gust_max_kmh
-    expected_cape = svc._compute_cape(ts)
     expected_freezing = svc._compute_freezing_level(ts)
 
     temp_min_line = _plain_value(text, "Temperatur")
@@ -323,12 +322,10 @@ def test_plaintext_shows_all_four_new_rows():
     )
     assert _number(gust_line) == expected_gust_max
 
-    cape_line = _plain_value(text, "Gewitterenergie (CAPE)")
-    assert cape_line is not None, (
-        f"Klartext hat keine 'CAPE'-Zeile, obwohl cape_max_jkg gewaehlt "
-        f"ist:\n{text}"
+    assert _plain_value(text, "Gewitterenergie (CAPE)") is None, (
+        f"Klartext zeigt weiterhin eine CAPE-Zeile, obwohl CAPE zentral nicht "
+        f"mehr waehlbar ist (#1585):\n{text}"
     )
-    assert _number(cape_line) == expected_cape
 
     freezing_line = _plain_value(text, "Nullgradgrenze")
     assert freezing_line is not None, (

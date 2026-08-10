@@ -91,12 +91,14 @@ def _crossing_metrics(detector) -> set:
 @pytest.mark.parametrize(
     "case_id, weather_tab_enabled, catalog_ids, alert_metric_key, threshold_field",
     [
+        # Issue #1585: die beiden CAPE-Faelle sind entfallen — CAPE ist zentral
+        # nicht mehr waehlbar und gilt nie mehr als alarmfaehig (AC-9), der
+        # Weather-Tab-Zustand entscheidet dort gar nichts mehr. Der Aus-Fall
+        # waere sonst als stiller Schein-Gruenling stehen geblieben.
         # Positiv-Kontrolle: Metrik ist auf dem Weather-Tab AN → Alarm MUSS feuern.
-        ("cape_an",            True,  ["cape"],  "cape",      "cape_max_jkg"),
         ("boeen_an",           True,  ["gust"],  "wind_gust", "gust_max_kmh"),
         ("nullgradgrenze_an",  True,  ["snowfall_limit", "freezing_level"], "snow_line", "freezing_level_m"),
         # Bug-Fall: Metrik ist auf dem Weather-Tab AUS → Alarm darf NICHT feuern.
-        ("cape_aus",           False, ["cape"],  "cape",      "cape_max_jkg"),
         ("boeen_aus",          False, ["gust"],  "wind_gust", "gust_max_kmh"),
         ("nullgradgrenze_aus", False, ["snowfall_limit", "freezing_level"], "snow_line", "freezing_level_m"),
     ],

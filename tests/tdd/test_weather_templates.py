@@ -67,17 +67,18 @@ class TestWeatherTemplatesRegistry:
     def test_alpen_trekking_has_14_metrics(self):
         """GIVEN alpen-trekking template
         WHEN counting metrics
-        THEN it has 15 metrics including freezing_level, cape, wind_chill.
+        THEN it has 14 metrics including freezing_level, wind_chill.
 
         Count angepasst (Bug #424): confidence entfernt 15 -> 14;
-        #1484: temperature_night ergaenzt 14 -> 15.
+        #1484: temperature_night ergaenzt 14 -> 15;
+        #1585: cape ist keine waehlbare Metrik mehr 15 -> 14.
         """
         from app.metric_catalog import WEATHER_TEMPLATES
 
         metrics = WEATHER_TEMPLATES["alpen-trekking"]["metrics"]
-        assert len(metrics) == 15
+        assert len(metrics) == 14
         assert "freezing_level" in metrics
-        assert "cape" in metrics
+        assert "cape" not in metrics
         assert "wind_chill" in metrics
 
     def test_allgemein_has_7_metrics(self):
@@ -264,10 +265,11 @@ class TestTemplatesEndpoint:
     def test_endpoint_alpen_trekking_metrics(self):
         """GIVEN GET /templates response
         WHEN finding alpen-trekking
-        THEN it has 15 metrics including freezing_level.
+        THEN it has 14 metrics including freezing_level, but not cape.
 
         Count angepasst (Bug #424): confidence entfernt 15 -> 14;
-        #1484: temperature_night ergaenzt 14 -> 15.
+        #1484: temperature_night ergaenzt 14 -> 15;
+        #1585: cape ist keine waehlbare Metrik mehr 15 -> 14.
         """
         from fastapi.testclient import TestClient
         from api.main import app
@@ -275,5 +277,6 @@ class TestTemplatesEndpoint:
         client = TestClient(app)
         data = client.get("/templates").json()
         alpen = next(t for t in data if t["id"] == "alpen-trekking")
-        assert len(alpen["metrics"]) == 15
+        assert len(alpen["metrics"]) == 14
         assert "freezing_level" in alpen["metrics"]
+        assert "cape" not in alpen["metrics"]

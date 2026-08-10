@@ -335,7 +335,8 @@ _OUT_OF_RANGE_VALUES: dict[str, str] = {
     "Schneehöhe": "1200 cm",                # Bereich 0..1000
     "Neuschnee": "350 cm",                  # Bereich 0..300
     "Böen": "350 km/h",                     # Bereich 0..300
-    "Gewitterenergie (CAPE)": "20000 J/kg",  # Bereich 0..10000
+    # Issue #1585: "Gewitterenergie (CAPE)" entfallen -- die Zeile wird nicht
+    # mehr gerendert, also gibt es dafuer auch keinen Plausibilitaetsbereich.
     "Nullgradgrenze": "6500 m",             # Bereich 0..6000
     "Windrichtung": "400 °",                # Bereich 0..360
     "Gefühlte Temperatur Minimum": "65°C",  # Bereich -50..50

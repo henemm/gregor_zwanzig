@@ -466,8 +466,12 @@ class TestFormatEmailStoresFriendlyKeys:
         dc = UnifiedWeatherDisplayConfig(
             trip_id="test",
             metrics=[
-                MetricConfig(metric_id="cloud_total", use_friendly_format=False),
-                MetricConfig(metric_id="cape", use_friendly_format=True),
+                # Issue #1585: Traeger-Groessen getauscht -- vormals trug "cape"
+                # die Friendly-AN-Seite. CAPE ist zentral nicht mehr waehlbar
+                # und erreicht `_friendly_keys` nicht mehr; der Pruefgegenstand
+                # (AN landet im Set, AUS nicht) ist unveraendert.
+                MetricConfig(metric_id="cloud_total", use_friendly_format=True),
+                MetricConfig(metric_id="visibility", use_friendly_format=False),
             ],
         )
 
@@ -511,5 +515,5 @@ class TestFormatEmailStoresFriendlyKeys:
 
         # After format_email, _friendly_keys should be set
         assert hasattr(f, '_friendly_keys')
-        assert "cape" in f._friendly_keys       # cape with use_friendly_format=True
-        assert "cloud" not in f._friendly_keys   # cloud with use_friendly_format=False
+        assert "cloud" in f._friendly_keys           # cloud_total, friendly=True
+        assert "visibility" not in f._friendly_keys  # visibility, friendly=False

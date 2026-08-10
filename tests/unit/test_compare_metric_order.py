@@ -382,7 +382,10 @@ class TestAC7LegacyDefaultOrderUnchanged:
         "Tiefe Wolken", "Mittelhohe Wolken", "Hohe Wolken",
         "Niederschlag", "Regenwahrscheinlichkeit", "Gewitter", "UV-Index",
         "Sichtweite",
-        "Gewitterenergie (CAPE)", "Nullgradgrenze", "Luftfeuchtigkeit",
+        # Issue #1585: "Gewitterenergie (CAPE)" entfallen -- zentral nicht mehr
+        # waehlbar, keine Uebersichtszeile mehr. Die Reihenfolge der uebrigen
+        # Zeilen ist unveraendert eingefroren.
+        "Nullgradgrenze", "Luftfeuchtigkeit",
         "Taupunkt",
         "Luftdruck", "Niederschlagsart", "Schneefallgrenze",
         "Sonnenstunden", "Bewölkung", "Schneehöhe", "Neuschnee",
@@ -401,7 +404,7 @@ class TestAC7LegacyDefaultOrderUnchanged:
         "Regenwahrscheinlichkeit", "Gewitter", "Sonnenstunden", "Bewölkung",
         "UV-Index",
         "Sichtweite", "Schneehöhe", "Neuschnee", "Temperatur Minimum", "Böen",
-        "Gewitterenergie (CAPE)",
+        # Issue #1585: "Gewitterenergie (CAPE)" entfallen (s. FROZEN_PLAIN_ORDER).
         "Nullgradgrenze", "Windrichtung", "Gefühlte Temperatur Minimum",
         "Gefühlte Temperatur Maximum", "Tiefe Wolken", "Mittelhohe Wolken",
         "Hohe Wolken",

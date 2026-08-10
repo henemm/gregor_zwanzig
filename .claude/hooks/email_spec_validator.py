@@ -670,11 +670,12 @@ _OVERVIEW_METRIC_CHECKS = {
     "Schneehöhe": (re.compile(r'^\d+ cm$'), (0, 1000)),
     "Neuschnee": (re.compile(r'^\d+ cm$'), (0, 300)),
     "Schneefallgrenze": (re.compile(r'^\d+ m$'), (0, 5000)),
-    # CAPE: Obergrenze bewusst weit (#1404 PO-Vorgabe). Extreme
-    # Superzellen-Umgebungen erreichen 6000+ J/kg -- eine engere Grenze wuerde
-    # einen ECHTEN Extremwert als unplausibel melden. Diese Schwelle soll
-    # Tippfehler und Einheitenfehler fangen, keine Gewitterlage bewerten.
-    "Gewitterenergie (CAPE)": (re.compile(r'^\d+ J/kg$'), (0, 10000)),
+    # Issue #1585: die CAPE-Zeile ist ersatzlos entfallen -- CAPE ist zentral
+    # nicht mehr waehlbar und wird in der Uebersicht nicht mehr gerendert. Ein
+    # Eintrag hier waere ab jetzt ein Pruefer fuer eine Zeile, die es nicht
+    # gibt; genau das faengt test_ac4_exemption_set_is_declared_and_complete
+    # (Mengengleichung gegen die tatsaechliche Renderer-Ausgabe). Fuer jede
+    # verbleibende Zeile prueft der Validator unveraendert.
     "Nullgradgrenze": (re.compile(r'^\d+ m$'), (0, 6000)),
     # Windchill unterschreitet die Lufttemperatur -> untere Grenze weiter als
     # bei der Lufttemperatur.

@@ -155,9 +155,6 @@ def _sev_visibility(v: float) -> str:
     return _to_compare(severity_for("visibility", v))
 
 
-def _sev_cape(v: float) -> str:
-    return _to_compare(severity_for("cape", v))
-
 
 _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
@@ -317,8 +314,7 @@ CV2_METRICS = [
      "unit": "cm"},
     # Issue #1296: vier weitere bis 2026-07-17 STILL verworfene Zeilen (analog
     # #1285). freezing_level ohne "sev" (kein AC verlangt Faerbung, s. Spec
-    # Known Limitations). cape_max bekam mit Issue #1298 (B2) eine
-    # Ampel-Faerbung ueber _sev_cape. Issue #1377 Scheibe B2: temp_min bekommt
+    # Known Limitations). Issue #1377 Scheibe B2: temp_min bekommt
     # jetzt ebenfalls "sev" (_sev_temp) -- der Katalog fuehrt fuer
     # "temperature" seit Scheibe A beidseitige Schwellen (Hitze UND Kaelte),
     # `severity_for` wertet beide Richtungen aus und liefert fuer einen
@@ -328,8 +324,9 @@ CV2_METRICS = [
      "unit": "°C", "sev": _sev_temp},
     {"key": "gust_max", "metric_id": "gust", "aggregation": "max",
      "unit": "km/h", "sev": _sev_gust},
-    {"key": "cape_max", "metric_id": "cape", "aggregation": "max",
-     "unit": "J/kg", "sev": _sev_cape},
+    # Issue #1585: die cape_max-Zeile ist ersatzlos entfallen. Ohne das zeigte
+    # ein Alt-Vergleich ohne gespeicherte `active_metrics` (= kein Filter)
+    # weiterhin eine CAPE-Zeile -- am Renderer gemessen, nicht vermutet.
     {"key": "freezing_level", "metric_id": "freezing_level", "aggregation": "min",
      "unit": "m"},
     # Issue #1324: zehn weitere additive Zeilen (keine Severity-Faerbung, s.
