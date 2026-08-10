@@ -34,6 +34,8 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 
+from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 
@@ -191,12 +193,13 @@ def test_ac1_radar_alert_onset_in_local_time():
     _clean_user(uid)
     _ensure_real_user_dir(uid)
     try:
-        today = now_utc.date()
-        wp0 = _make_waypoint("WP0", lat, lon,
-                             (now_utc - timedelta(hours=1)).astimezone(tz).strftime("%H:%M"))
-        wp1 = _make_waypoint("WP1", lat + 0.1, lon + 0.1,
-                             (now_utc + timedelta(hours=3)).astimezone(tz).strftime("%H:%M"))
-        stage = Stage(id="S1", name="Etappe 1", date=today, waypoints=[wp0, wp1])
+        # #1667 S1: wanduhr-robustes Ankunftsfenster (Helfer) statt roher
+        # now-1h/now+3h-Arithmetik. Der Helfer liefert bereits Ortszeit,
+        # das frueher noetige .astimezone(tz) entfaellt damit.
+        arr0, arr1 = active_window_offsets(lat, lon, -60, 180)
+        wp0 = _make_waypoint("WP0", lat, lon, arr0)
+        wp1 = _make_waypoint("WP1", lat + 0.1, lon + 0.1, arr1)
+        stage = Stage(id="S1", name="Etappe 1", date=stage_date(), waypoints=[wp0, wp1])
         trip_id = f"tdd-791-trip-{uuid.uuid4().hex[:6]}"
         trip = Trip(id=trip_id, name="GR20 Test", stages=[stage])
         trip.report_config = TripReportConfig(

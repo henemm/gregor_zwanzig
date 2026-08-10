@@ -66,6 +66,7 @@ from tests.helpers.alert_log_fixtures import (
     read_log,
     weather,
 )
+from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 
 # ═══════════════════════════ Telegram-Stub (echtes 127.0.0.1) ═════════════
 #
@@ -214,17 +215,18 @@ def _ac4_trip(trip_id: str) -> Trip:
 def _radar_trip(trip_id: str) -> Trip:
     """Tour im aktiven Segmentfenster JETZT — Vorbild
     ``test_issue_827_radar_throttle_recording.py::_make_trip``."""
-    today = date.today()
-    now_utc = datetime.now(timezone.utc)
+    # #1667 S1: wanduhr-robustes Ankunftsfenster statt roher now+Nh-Arithmetik
+    # (ab 22:00 UTC lief die +2h/+4h-Folge steigend ueber Mitternacht).
+    arr0, arr1 = active_window_offsets(LAT, LON, 120, 240)
     wp0 = Waypoint(
         id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=500.0,
-        arrival_calculated=(now_utc + timedelta(hours=2)).strftime("%H:%M"),
+        arrival_calculated=arr0,
     )
     wp1 = Waypoint(
         id="WP1", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=600.0,
-        arrival_calculated=(now_utc + timedelta(hours=4)).strftime("%H:%M"),
+        arrival_calculated=arr1,
     )
-    stage = Stage(id="S1", name="Tag 1", date=today, waypoints=[wp0, wp1])
+    stage = Stage(id="S1", name="Tag 1", date=stage_date(), waypoints=[wp0, wp1])
     trip = Trip(id=trip_id, name="AC3 Radar-Trip", stages=[stage])
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=True, send_sms=False,

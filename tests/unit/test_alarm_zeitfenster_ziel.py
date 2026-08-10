@@ -283,7 +283,7 @@ def _persist_trip(trip, user_id: str) -> None:
     (briefings / f"{trip.id}.json").write_text(json.dumps(payload, indent=2))
 
 
-def radar_fixture_window(arrival_utc: datetime) -> tuple[int, int]:
+def radar_fixture_window(arrival_utc: datetime, heute: date | None = None) -> tuple[int, int]:
     """Tagesfenster-Grenzen fuer die Radar-Fixture — REINE Funktion, damit die
     Tageszeit-Unabhaengigkeit deterministisch pruefbar ist (s.
     ``test_radar_fixture_ist_zu_jeder_tageszeit_kein_mitternachtsfenster``).
@@ -301,31 +301,54 @@ def radar_fixture_window(arrival_utc: datetime) -> tuple[int, int]:
     nicht wrappen; noetig ist dann nur noch ``end_hour >= 1``, worum sich
     ``radar_fixture_ort()`` kuemmert.
     """
-    return 0, arrival_utc.astimezone(radar_fixture_tz(arrival_utc)).hour
+    return 0, arrival_utc.astimezone(radar_fixture_tz(arrival_utc, heute)).hour
 
 
-def radar_fixture_tz(arrival_utc: datetime):
+def _island_taugt(arrival_utc: datetime, heute: date) -> bool:
+    """Traegt Reykjavik diese Ankunft — oder muss die Fixture ausweichen?
+
+    Zwei Bedingungen, beide zwingend (s. ``radar_fixture_ort``):
+    Ortsstunde >= 1 und Ortsdatum == ``heute``.
+    """
+    from zoneinfo import ZoneInfo
+
+    lokal = arrival_utc.astimezone(ZoneInfo("Atlantic/Reykjavik"))
+    return lokal.hour >= 1 and lokal.date() == heute
+
+
+def radar_fixture_tz(arrival_utc: datetime, heute: date | None = None):
     """Zeitzone des Zielorts fuer die Radar-Fixture — s. ``radar_fixture_ort``."""
     from zoneinfo import ZoneInfo
 
-    if arrival_utc.hour >= 1:
+    heute = heute if heute is not None else date.today()
+    if _island_taugt(arrival_utc, heute):
         return ZoneInfo("Atlantic/Reykjavik")
     return ZoneInfo("Pacific/Auckland")
 
 
-def radar_fixture_ort(arrival_utc: datetime) -> tuple[float, float]:
+def radar_fixture_ort(arrival_utc: datetime, heute: date | None = None) -> tuple[float, float]:
     """Zielkoordinate der Radar-Fixture — REINE Funktion (s. Invarianten-Test).
 
     Standard ist Reykjavik (``Atlantic/Reykjavik``, ganzjaehrig UTC+0 OHNE
     Sommerzeit): Ortszeit == UTC, keine Offset-Rechnung, kein DST-Flattern.
     Die Ortsstunde ist dort gleich der UTC-Stunde — und muss >= 1 sein, damit
-    ``start_hour = 0`` echt kleiner als ``end_hour`` ist. Verletzt ist das nur
-    in der UTC-Stunde 0; dann weicht die Fixture nach Auckland (UTC+12/+13)
-    aus, wo dieselbe UTC-Zeit auf 12:xx bzw. 13:xx Ortszeit faellt — und wo
-    das Ortsdatum in dieser UTC-Stunde weiterhin dem UTC-Datum entspricht
-    (fuer ``date.today()`` in ``check_radar_alerts()`` zwingend).
+    ``start_hour = 0`` echt kleiner als ``end_hour`` ist.
+
+    Ausgewichen wird nach Auckland (UTC+12/+13), wenn eine der beiden
+    Bedingungen verletzt ist:
+
+    * **Ortsstunde 0** — dann waere ``end_hour == 0`` und ``start_hour = 0``
+      nicht mehr echt kleiner.
+    * **Ortsdatum != ``heute``** — ``check_radar_alerts()`` sucht die Etappe
+      ueber ``date.today()``; liegt die Ankunft (``jetzt`` minus drei Minuten)
+      noch vor UTC-Mitternacht, waehrend ``date.today()`` schon auf dem neuen
+      Tag steht, faende es die Etappe nicht. #1667 S1: genau dafuer stand hier
+      bis 2026-08-10 ein ``pytest.skip`` fuer die ersten drei Minuten des
+      UTC-Tages. In Auckland faellt dieselbe absolute Zeit auf 11:5x bzw.
+      12:5x Ortszeit DES NEUEN TAGES — Datum und Stunde stimmen also beide.
     """
-    if arrival_utc.hour >= 1:
+    heute = heute if heute is not None else date.today()
+    if _island_taugt(arrival_utc, heute):
         return ISLAND_LAT, ISLAND_LON
     return AUCKLAND_LAT, AUCKLAND_LON
 
@@ -346,17 +369,15 @@ def _radar_mails_fuer_spaetankunft() -> list:
 
     now = datetime.now(timezone.utc)
     arrival = now - timedelta(minutes=3)
-    if arrival.date() != date.today():
-        pytest.skip(
-            "Fixture nicht konstruierbar: 'jetzt minus 3 Minuten' liegt vor "
-            "UTC-Mitternacht, waehrend check_radar_alerts() bereits den neuen "
-            "date.today() verwendet. Betrifft nur die ersten 3 Minuten des "
-            "UTC-Tages."
-        )
-
-    dest_lat, dest_lon = radar_fixture_ort(arrival)
-    dest_tz = radar_fixture_tz(arrival)
-    start_hour, end_hour = radar_fixture_window(arrival)
+    # #1667 S1: Der frueher hier stehende ``pytest.skip`` fuer die ersten drei
+    # Minuten des UTC-Tages ist entfallen. Die Ortswahl bekommt jetzt
+    # ``date.today()`` uebergeben und weicht selbst nach Auckland aus, wenn die
+    # Ankunft noch vor UTC-Mitternacht liegt — dann stimmt das ORTSdatum
+    # wieder mit dem Etappendatum ueberein (s. ``radar_fixture_ort``).
+    heute = date.today()
+    dest_lat, dest_lon = radar_fixture_ort(arrival, heute)
+    dest_tz = radar_fixture_tz(arrival, heute)
+    start_hour, end_hour = radar_fixture_window(arrival, heute)
     arrival_local = arrival.astimezone(dest_tz)
     start_local = (arrival - timedelta(hours=4)).astimezone(dest_tz)
 
@@ -463,14 +484,25 @@ def test_radar_fixture_ist_zu_jeder_tageszeit_kein_mitternachtsfenster():
       2. ``end_hour`` == Ortsstunde der Ankunft -> das Fensterende (HH:00)
          liegt vor der Ankunft (HH:MM), der Randfall-Guard greift
 
-    Zusaetzlich wird geprueft, dass das Ortsdatum dem UTC-Datum entspricht —
-    ``check_radar_alerts()`` sucht die Etappe ueber ``date.today()`` (UTC).
+    Zusaetzlich wird geprueft, dass das Ortsdatum dem ETAPPENdatum entspricht —
+    ``check_radar_alerts()`` sucht die Etappe ueber ``date.today()``.
+
+    #1667 S1: Der Durchlauf deckt jetzt auch die drei Minuten VOR
+    UTC-Mitternacht ab, in denen die Ankunft (``jetzt`` minus drei Minuten)
+    noch auf dem Vortag liegt, waehrend ``date.today()`` schon auf dem neuen
+    Tag steht. Fuer sie stand hier bis 2026-08-10 ein ``pytest.skip``; sie sind
+    der Grund, warum das Etappendatum als Parameter hereinkommt statt aus
+    ``arrival.date()`` abgeleitet zu werden.
     """
     basis = datetime(2026, 8, 8, tzinfo=timezone.utc)
-    for minute in range(24 * 60):
-        arrival = basis + timedelta(minutes=minute)
-        tz = radar_fixture_tz(arrival)
-        start_hour, end_hour = radar_fixture_window(arrival)
+    faelle = [(basis + timedelta(minutes=m), (basis + timedelta(minutes=m)).date())
+              for m in range(24 * 60)]
+    # Ankunft kurz vor UTC-Mitternacht, Etappendatum bereits der Folgetag.
+    faelle += [(basis - timedelta(minutes=m), basis.date()) for m in (1, 2, 3)]
+
+    for arrival, heute in faelle:
+        tz = radar_fixture_tz(arrival, heute)
+        start_hour, end_hour = radar_fixture_window(arrival, heute)
         lokal = arrival.astimezone(tz)
 
         assert start_hour < end_hour, (
@@ -485,10 +517,10 @@ def test_radar_fixture_ist_zu_jeder_tageszeit_kein_mitternachtsfenster():
             f"{lokal.hour} bei {arrival.isoformat()} — das Fensterende laege "
             "nicht vor der Ankunft und der Randfall-Guard griefe nicht."
         )
-        assert lokal.date() == arrival.date(), (
-            f"F004: Ortsdatum {lokal.date()} != UTC-Datum {arrival.date()} bei "
+        assert lokal.date() == heute, (
+            f"F004: Ortsdatum {lokal.date()} != Etappendatum {heute} bei "
             f"{arrival.isoformat()} ({tz}) — check_radar_alerts() sucht die "
-            "Etappe ueber date.today() in UTC und faende sie nicht."
+            "Etappe ueber date.today() und faende sie nicht."
         )
 
 

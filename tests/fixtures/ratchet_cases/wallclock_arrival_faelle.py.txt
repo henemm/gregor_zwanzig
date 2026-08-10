@@ -1,0 +1,231 @@
+# Fixture-Quelltexte fuer tests/tdd/test_fixture_wallclock_ratchet.py.
+#
+# Bewusst KEINE .py-Endung: der Waechter scannt tests/**/*.py, und diese Datei
+# enthaelt absichtlich echte Verstoesse. Laege sie als .py hier, meldete der
+# Waechter seine eigenen Fixtures. Vorbild fuer Form und Begruendung:
+# tests/fixtures/ratchet_cases/faelle.py.txt (#1409 Lieferung B).
+#
+# Format: `# === <fall> ===` trennt die Faelle. Der Text bis zum naechsten
+# Trenner wird 1:1 als Testdatei nach tmp_path geschrieben.
+
+# === roh-unclamped ===
+from datetime import datetime, timedelta, timezone
+
+
+def _save_radar_trip(user_id, trip_id):
+    now = datetime.now(timezone.utc)
+    stage = {
+        "date": now.date().isoformat(),
+        "waypoints": [
+            {"id": "W0", "arrival_calculated": (now + timedelta(hours=1)).strftime("%H:%M")},
+            {"id": "W1", "arrival_calculated": (now + timedelta(hours=4)).strftime("%H:%M")},
+        ],
+    }
+    return stage
+
+# === sauber-geklemmt ===
+from datetime import datetime, timedelta, timezone
+
+
+def _active_window(tz):
+    """Vorbild aus tests/tdd/test_952_onset_alert_fidelity.py — auf 02:00-22:00
+    Ortszeit geklemmt, deshalb steigt die Folge innerhalb EINES Kalendertags."""
+    now_local = datetime.now(tz)
+    start = now_local + timedelta(hours=1)
+    end = now_local + timedelta(hours=4)
+    tag_start = now_local.replace(hour=2, minute=0, second=0, microsecond=0)
+    tag_ende = now_local.replace(hour=22, minute=0, second=0, microsecond=0)
+    if start < tag_start:
+        start = tag_start
+    if end > tag_ende:
+        end = tag_ende
+    return start.strftime("%H:%M"), end.strftime("%H:%M")
+
+
+def _save_radar_trip(user_id, trip_id):
+    now = datetime.now(timezone.utc)
+    arr0, arr1 = _active_window(timezone.utc)
+    return {
+        "date": now.date().isoformat(),
+        "waypoints": [
+            {"id": "W0", "arrival_calculated": arr0},
+            {"id": "W1", "arrival_calculated": arr1},
+        ],
+    }
+
+# === nur-uhrzeit-ohne-datum ===
+from datetime import datetime, timedelta, timezone
+
+
+def _quiet_window_now():
+    """Ruhezeitfenster um jetzt herum — KEIN Etappen-Datum im Spiel, also auch
+    kein Mitternachts-Rollover eines Segments. Muster aus
+    tests/helpers/nowcast_gate_fixtures.py::quiet_window_now."""
+    now = datetime.now(timezone.utc)
+    return (
+        (now - timedelta(minutes=30)).strftime("%H:%M"),
+        (now + timedelta(minutes=30)).strftime("%H:%M"),
+    )
+
+# === astimezone-dazwischen ===
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+
+def test_ac1_radar_alert_onset_in_local_time():
+    tz = ZoneInfo("Europe/Paris")
+    now_utc = datetime.now(timezone.utc)
+    stage = {
+        "date": now_utc.date().isoformat(),
+        "waypoints": [
+            {"arrival_calculated": (now_utc - timedelta(hours=1)).astimezone(tz).strftime("%H:%M")},
+            {"arrival_calculated": (now_utc + timedelta(hours=3)).astimezone(tz).strftime("%H:%M")},
+        ],
+    }
+    assert stage
+
+# === bypass-zwischenvariable ===
+from datetime import datetime, timedelta, timezone
+
+
+def _save_radar_trip(user_id, trip_id):
+    """Der generische Bypass (Adversary-Finding F004 zu #1667 S1): identisches
+    Anti-Muster, aber die Rechnung steht in einer Zwischenvariablen. Bis zur
+    Namensaufloesung meldete der Scanner hier NULL Funde — ein trivialer,
+    voellig plausibler Refactoring-Schritt haette die Ratsche entwertet."""
+    now = datetime.now(timezone.utc)
+    ankunft_start = now + timedelta(hours=1)
+    ankunft_ziel = now + timedelta(hours=4)
+    return {
+        "date": now.date().isoformat(),
+        "waypoints": [
+            {"id": "W0", "arrival_calculated": ankunft_start.strftime("%H:%M")},
+            {"id": "W1", "arrival_calculated": ankunft_ziel.strftime("%H:%M")},
+        ],
+    }
+
+# === bypass-zwischenvariable-mit-astimezone ===
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+
+def _save_radar_trip(user_id, trip_id):
+    """Zweistufige Kette: rohe Rechnung -> Name -> .astimezone(...) -> Name.
+    Das Muster aus tests/unit/test_alarm_zeitfenster_ziel.py, das die Spec als
+    "strukturell nicht erfassbar" beschrieb."""
+    now = datetime.now(timezone.utc)
+    ankunft = now - timedelta(minutes=3)
+    ankunft_lokal = ankunft.astimezone(ZoneInfo("Atlantic/Reykjavik"))
+    return {
+        "date": now.date().isoformat(),
+        "waypoints": [
+            {"id": "W0", "arrival_calculated": ankunft_lokal.strftime("%H:%M")},
+        ],
+    }
+
+# === bypass-liste ===
+from datetime import datetime, timedelta, timezone
+
+
+def _save_radar_trip(user_id, trip_id):
+    """Adversary-Finding F007: die Uhrzeiten landen in einer LISTE statt direkt
+    in einem dict-Wert oder Aufruf-Argument. Die erste Fassung der
+    Fluss-Erkennung zaehlte nur dict und Call auf und schwieg hier."""
+    now = datetime.now(timezone.utc)
+    zeiten = [
+        (now + timedelta(hours=1)).strftime("%H:%M"),
+        (now + timedelta(hours=4)).strftime("%H:%M"),
+    ]
+    return {
+        "date": now.date().isoformat(),
+        "waypoints": [{"arrival_calculated": z} for z in zeiten],
+    }
+
+# === bypass-tupel-rueckgabe ===
+from datetime import date, datetime, timedelta, timezone
+
+
+def _fenster():
+    """Adversary-Finding F007, zweite Form: Rueckgabe als Tupel. Weder dict
+    noch Aufruf-Argument — und trotzdem dasselbe Anti-Muster."""
+    now = datetime.now(timezone.utc)
+    ankunft_start = now + timedelta(hours=2)
+    return date.today(), (
+        ankunft_start.strftime("%H:%M"),
+        (now + timedelta(hours=4)).strftime("%H:%M"),
+    )
+
+# === erwartungswert-nur-verglichen ===
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+
+def test_onset_wird_in_ortszeit_gerendert():
+    """Gegenprobe zur Fluss-Erkennung: eine wanduhr-abgeleitete Uhrzeit, die
+    NUR verglichen wird — das Muster aus
+    tests/tdd/test_bundle_791_847_844_alerts.py. Kein Wegpunkt, kein Fund.
+
+    Ohne diese Unterscheidung erzwaenge die Ratsche Aenderungen an voellig
+    gesunden Tests."""
+    tz = ZoneInfo("Europe/Paris")
+    now_utc = datetime.now(timezone.utc)
+    onset_utc = now_utc + timedelta(minutes=5)
+    expected_local_hhmm = onset_utc.astimezone(tz).strftime("%H:%M")
+    utc_hhmm = onset_utc.strftime("%H:%M")
+    body = _irgendeine_mail(date_hint=now_utc.date().isoformat())
+    assert expected_local_hhmm in body
+    assert utc_hhmm not in body, f"UTC-Zeit {utc_hhmm} darf nicht erscheinen"
+
+
+def _irgendeine_mail(date_hint):
+    return date_hint
+
+# === sauber-geklemmt-ueber-namen ===
+from datetime import datetime, timedelta, timezone
+
+
+def _active_window(tz):
+    """Dasselbe Gegenmuster wie `sauber-geklemmt`, aber der Aufrufer legt die
+    Rueckgabe in eigene Namen und ruft strftime erst dort auf.
+
+    Der Scanner muss hier schweigen, obwohl am strftime ein Name steht: `start`
+    wird in den Klemm-Zweigen NEU gebunden, ist also nicht ausschliesslich aus
+    roher Wanduhr-Arithmetik gebunden. Ohne diesen Beleg waere unklar, ob die
+    Namensaufloesung das erprobte Muster mitfaengt und die Ratsche
+    unpassierbar macht — genau der Zielkonflikt, an dem der RED-Agent die
+    Namensaufloesung verworfen hatte."""
+    now_local = datetime.now(tz)
+    start = now_local + timedelta(hours=1)
+    end = now_local + timedelta(hours=4)
+    tag_start = now_local.replace(hour=2, minute=0, second=0, microsecond=0)
+    tag_ende = now_local.replace(hour=22, minute=0, second=0, microsecond=0)
+    if start < tag_start:
+        start = tag_start
+    if end > tag_ende:
+        end = tag_ende
+    return start, end
+
+
+def _save_radar_trip(user_id, trip_id):
+    now = datetime.now(timezone.utc)
+    start, end = _active_window(timezone.utc)
+    return {
+        "date": now.date().isoformat(),
+        "waypoints": [
+            {"id": "W0", "arrival_calculated": start.strftime("%H:%M")},
+            {"id": "W1", "arrival_calculated": end.strftime("%H:%M")},
+        ],
+    }
+
+# === datum-aus-date-today ===
+from datetime import date, datetime, timedelta, timezone
+
+
+def _make_trip():
+    now_utc = datetime.now(timezone.utc)
+    return {
+        "date": date.today().isoformat(),
+        "waypoints": [
+            {"arrival_calculated": (now_utc + timedelta(hours=2)).strftime("%H:%M")},
+        ],
+    }

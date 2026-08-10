@@ -27,6 +27,8 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 
+from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+
 _USER_A = "tdd-995-usera"
 _USER_B = "tdd-995-userb"
 _USER_AC8 = "tdd-995-ac8"
@@ -174,21 +176,21 @@ class TestAC9AlertDispatchUnaffected:
         from services.trip_alert import TripAlertService
         from services.radar_service import RadarNowcastService
         from providers.brightsky import RadarFrame
-        from utils.timezone import tz_for_coords
 
         trip_id = "ac9-paused-trip"
         now = datetime.now(timezone.utc)
         lat, lon = 47.0, 11.0
-        offset = now.astimezone(tz_for_coords(lat, lon)).utcoffset()
-        arr1 = (now - timedelta(hours=1) + offset).strftime("%H:%M")
-        arr2 = (now + timedelta(hours=2) + offset).strftime("%H:%M")
+        # #1667 S1: der Helfer rechnet die Ortszeit selbst aus (der frühere
+        # manuelle utcoffset-Aufschlag entfällt) und klemmt das Fenster auf den
+        # Etappentag, statt roh über Mitternacht zu laufen.
+        arr1, arr2 = active_window_offsets(lat, lon, -60, 120)
 
         trips_dir = get_briefings_dir(_USER_AC9)
         trips_dir.mkdir(parents=True, exist_ok=True)
         data = {
             "id": trip_id, "name": "AC9 Trip",
             "stages": [{
-                "id": "S1", "name": "Tag 1", "date": now.date().isoformat(),
+                "id": "S1", "name": "Tag 1", "date": stage_date().isoformat(),
                 "waypoints": [
                     {"id": "WP0", "name": "WP0", "lat": lat, "lon": lon, "elevation_m": 1000,
                      "arrival_calculated": arr1},

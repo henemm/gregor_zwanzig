@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import shutil
 import uuid
-from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -35,14 +34,30 @@ import pytest
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
+from tests.helpers.arrival_window_fixtures import (
+    active_window_offsets,
+    past_window_offsets,
+    stage_date,
+)
+
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 # Zwei klar voneinander abweichende Koordinatenpaare.
 # WP0: waypoints[0] (alter Ist-Code-Pfad in check_radar_alerts).
 # SEG: start_point des aktiven Segments (Ziel-Zustand nach #822).
-WP0_LAT, WP0_LON = 44.10, 9.10    # Ligurien — waypoints[0] (alter Pfad)
-SEG_LAT, SEG_LON = 44.20, 9.25    # Start-Punkt aktives Segment (neuer Pfad)
-SEG_END_LAT, SEG_END_LON = 44.30, 9.40
+#
+# #1667 S1: Die Koordinaten lagen bis 2026-08-10 in Ligurien (UTC+1/+2). Sie
+# sind nach Neuseeland (UTC+12) gewandert, weil test_ac3 ein Segment braucht,
+# das JETZT SCHON VORBEI ist (wp0 = jetzt-2h). Alle Wegpunktzeiten liegen als
+# Ortszeit auf dem Etappentag; westlich von der Datumsgrenze ist "zwei Stunden
+# vor jetzt" kurz nach Ortszeit-Mitternacht schlicht nicht darstellbar, das
+# geklemmte Fenster rutschte nach vorn und Segment 1 war noch aktiv. In
+# UTC+12 liegt der Etappentag zu JEDER UTC-Uhrzeit mindestens zwoelf Stunden
+# zurueck. Die Pruefaussage haengt nicht am Ort, nur an der Verschiedenheit
+# der drei Punkte.
+WP0_LAT, WP0_LON = -41.29, 174.78   # Wellington — waypoints[0] (alter Pfad)
+SEG_LAT, SEG_LON = -41.19, 174.93   # Start-Punkt aktives Segment (neuer Pfad)
+SEG_END_LAT, SEG_END_LON = -41.09, 175.08
 
 
 # --------------------------------------------------------------------------
@@ -167,21 +182,24 @@ def test_ac1_segment_helper_roundtrip_bit_identical():
     from app.config import Settings
 
     # Trip mit 3 Waypoints und arrival_calculated (Innsbruck-Region)
-    now_utc = datetime.now(timezone.utc)
+    # #1667 S1: die drei Ankunftszeiten kommen aus dem wanduhr-robusten Helfer
+    # (er nimmt beliebig viele Versaetze), statt roh ueber Mitternacht zu
+    # rechnen. Die Bit-Identitaets-Aussage dieses Tests haengt nicht an
+    # konkreten Uhrzeiten, sehr wohl aber an monoton steigenden Zeiten:
+    # kollabierte Segmente wuerden auf beiden Seiten uebersprungen und der
+    # Vergleich waere leer gegen leer.
     lat, lon = 47.05, 11.40
-    wp0 = _make_waypoint("WP0", lat, lon,
-                         (now_utc - timedelta(hours=4)).strftime("%H:%M"))
-    wp1 = _make_waypoint("WP1", lat + 0.1, lon + 0.1,
-                         (now_utc - timedelta(hours=2)).strftime("%H:%M"))
-    wp2 = _make_waypoint("WP2", lat + 0.2, lon + 0.2,
-                         (now_utc + timedelta(hours=2)).strftime("%H:%M"))
+    arr0, arr1, arr2 = active_window_offsets(lat, lon, -240, -120, 120)
+    wp0 = _make_waypoint("WP0", lat, lon, arr0)
+    wp1 = _make_waypoint("WP1", lat + 0.1, lon + 0.1, arr1)
+    wp2 = _make_waypoint("WP2", lat + 0.2, lon + 0.2, arr2)
     stage = Stage(
         id="S1", name="Tag 1",
-        date=now_utc.date(),
+        date=stage_date(),
         waypoints=[wp0, wp1, wp2],
     )
     trip = Trip(id="tdd-822-ac1-trip", name="AC1 Trip", stages=[stage])
-    target_date = now_utc.date()
+    target_date = stage_date()
 
     svc = TripReportSchedulerService(settings=Settings())
     expected = svc._convert_trip_to_segments(trip, target_date)
@@ -230,22 +248,16 @@ def test_ac2_segment_selection_by_time():
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
-    today = date_type.today()
-    now = datetime.now(timezone.utc)
+    today = stage_date()
     lat_base, lon_base = 51.50, 0.00  # lon=0 → Europe/London, BST=UTC+1 in summer
 
-    # Ermittle echten UTC-Offset für lat_base/lon_base via tz_for_coords.
-    from utils.timezone import tz_for_coords as _tz_fc
-    tz_loc = _tz_fc(lat_base, lon_base)
-    now_local_tz = now.astimezone(tz_loc)
-    tz_off = now_local_tz.utcoffset()  # e.g. timedelta(hours=1) für BST
-
     # --- Fall (a): aktives Segment ---
-    # Lokale Zeiten so berechnen, dass nach UTC-Konvertierung gilt:
-    # Seg 1: [now-2h, now-1h] UTC → vorbei; Seg 2: [now-1h, now+1h] UTC → aktiv
-    local_minus2h = (now - timedelta(hours=2) + tz_off).strftime("%H:%M")
-    local_minus1h = (now - timedelta(hours=1) + tz_off).strftime("%H:%M")
-    local_plus1h = (now + timedelta(hours=1) + tz_off).strftime("%H:%M")
+    # Seg 1: [now-2h, now-1h] → vorbei; Seg 2: [now-1h, now+1h] → aktiv.
+    # #1667 S1: der Helfer rechnet die Ortszeit selbst (der frühere manuelle
+    # utcoffset-Aufschlag entfällt) und klemmt das Fenster auf den Etappentag.
+    local_minus2h, local_minus1h, local_plus1h = active_window_offsets(
+        lat_base, lon_base, -120, -60, 60
+    )
 
     wp0 = _make_waypoint("WP0", lat_base, lon_base, local_minus2h)
     wp1 = _make_waypoint("WP1", lat_base + 0.10, lon_base + 0.10, local_minus1h)
@@ -299,8 +311,22 @@ def test_ac2_segment_selection_by_time():
         )
 
         # --- Fall (c): alle Segmente bereits vorbei → kein Alert ---
-        local_minus4h = (now - timedelta(hours=4) + tz_off).strftime("%H:%M")
-        local_minus2h_c = (now - timedelta(hours=2) + tz_off).strftime("%H:%M")
+        # #1667 S1: Wegpunkte aus dem Vergangenheits-Helfer statt aus roher
+        # now-Nh-Arithmetik.
+        # ⚠️ Diese Fixture legt NUR die Wegpunkte in die Vergangenheit. Seit
+        # Issue #1584 endet das Ziel-Segment am Tagesfenster-Ende (19:00
+        # Ortszeit), nicht mehr bei "Ankunft + 2 h" — der Trip ist damit
+        # tagsüber gar nicht "vorbei". Dass die Zusicherung trotzdem hält,
+        # liegt an send_email=False/send_telegram=False unten: ohne offenen
+        # Kanal zählt check_radar_alerts() nach #827 ohnehin nichts. Der Fall
+        # prüft hier also nicht, was seine Überschrift behauptet; das ist ein
+        # Altbefund, den S1 nicht repariert (S1 ändert keinen Produktivcode
+        # und keine Zusicherung). Das saubere Gegenstück steht in
+        # test_issue_818_radar_briefing_integration.py::
+        # test_ac5_past_segment_no_alert_guard_test.
+        local_minus4h, local_minus2h_c = past_window_offsets(
+            lat_base, lon_base, -240, -120
+        )
         wp_p0 = _make_waypoint("P0", lat_base, lon_base, local_minus4h)
         wp_p1 = _make_waypoint("P1", lat_base + 0.05, lon_base + 0.05, local_minus2h_c)
         stage_past = Stage(id="S1", name="Tag 1", date=today,
@@ -357,9 +383,9 @@ def test_ac3_nowcast_called_at_segment_coordinates():
     Nachweis: recorded_coords[0] muss (SEG_LAT, SEG_LON) sein, NICHT (WP0_LAT, WP0_LON).
     Genau 1 get_nowcast-Call pro Trip-Lauf.
 
-    Hinweis: _save_trip_direct umgeht Naismith Compute-on-Save (Issue #802),
-    WP0_LAT/WP0_LON liegen in Ligurien (lon≈9) → tz_for_coords gibt Europe/Rome (CEST=UTC+2).
-    Lokale Zeiten = UTC+2, daher +2h auf UTC-Zeiten addieren.
+    Hinweis: _save_trip_direct umgeht Naismith Compute-on-Save (Issue #802).
+    Die Ortszeit-Umrechnung macht seit #1667 S1 der Helfer; die Koordinaten
+    liegen seither in Neuseeland (Begründung an der Konstanten-Definition).
     """
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
@@ -368,21 +394,16 @@ def test_ac3_nowcast_called_at_segment_coordinates():
     _clean_user(uid)
     _ensure_real_user_dir(uid)
     try:
-        now = datetime.now(timezone.utc)
-        today = now.date()
+        today = stage_date()
 
-        # Ermittle echten UTC-Offset für WP0 via tz_for_coords (kann Etc/GMT-N sein).
-        from utils.timezone import tz_for_coords as _tz_fc
-        tz_wp0 = _tz_fc(WP0_LAT, WP0_LON)
-        now_local = now.astimezone(tz_wp0)
-        tz_offset = now_local.utcoffset()  # e.g. timedelta(hours=1) für Etc/GMT-1
-
-        # Lokale Ankunftszeiten so berechnen, dass nach UTC-Rückkonvertierung gilt:
-        # Seg 1: [now-2h, now-30m] UTC → nur sicher wenn now.hour >= 2
-        # Seg 2: [now-30m, now+90m] UTC → aktiv
-        local_minus2h = (now - timedelta(hours=2) + tz_offset).strftime("%H:%M")
-        local_minus30m = (now - timedelta(minutes=30) + tz_offset).strftime("%H:%M")
-        local_plus90m = (now + timedelta(hours=1, minutes=30) + tz_offset).strftime("%H:%M")
+        # Seg 1: [now-2h, now-30m] → vorbei; Seg 2: [now-30m, now+90m] → aktiv.
+        # #1667 S1: der Helfer rechnet die Ortszeit selbst (der frühere manuelle
+        # utcoffset-Aufschlag entfällt) und klemmt das Fenster auf den
+        # Etappentag — damit entfällt auch die alte Einschränkung "nur sicher
+        # wenn now.hour >= 2".
+        local_minus2h, local_minus30m, local_plus90m = active_window_offsets(
+            WP0_LAT, WP0_LON, -120, -30, 90
+        )
 
         wp0 = _make_waypoint("WP0", WP0_LAT, WP0_LON, local_minus2h)
         wp1 = _make_waypoint("WP1", SEG_LAT, SEG_LON, local_minus30m)
@@ -460,8 +481,8 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
         today = now.date()
         lat, lon = 51.50, 0.00  # lon=0 → tz_for_coords returns Europe/London (BST in summer)
         lat1, lon1 = lat + 0.10, lon + 0.10
-        from utils.timezone import tz_for_coords as _tz_fc4
-        tz_off4 = now.astimezone(_tz_fc4(lat, lon)).utcoffset()
+        # #1667 S1: Ortszeit-Umrechnung und Tagesgrenzen-Klemmung im Helfer.
+        arr0, arr1 = active_window_offsets(lat, lon, -60, 60)
 
         # Haversine-Distanz WP0→WP1 (für km-Plausibilitäts-Check)
         R = 6371.0
@@ -470,10 +491,8 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
         a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat)) * math.cos(math.radians(lat1)) * math.sin(dlon / 2) ** 2
         expected_km = R * 2 * math.asin(math.sqrt(a))  # ≈ 13.1 km
 
-        wp0 = _make_waypoint("WP0", lat, lon,
-                             (now - timedelta(hours=1) + tz_off4).strftime("%H:%M"))
-        wp1 = _make_waypoint("WP1", lat1, lon1,
-                             (now + timedelta(hours=1) + tz_off4).strftime("%H:%M"))
+        wp0 = _make_waypoint("WP0", lat, lon, arr0)
+        wp1 = _make_waypoint("WP1", lat1, lon1, arr1)
         stage = Stage(id="S1", name="Tag 1", date=today, waypoints=[wp0, wp1])
         trip_id = f"tdd-822-ac4-trip-{uuid.uuid4().hex[:6]}"
         trip = Trip(id=trip_id, name="AC4 Trip", stages=[stage])
@@ -597,17 +616,14 @@ def test_ac6_cooldown_display_reflects_trip_setting():
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
-    now = datetime.now(timezone.utc)
-    today = now.date()
+    today = stage_date()
     lat, lon = 51.50, 0.00  # lon=0 → tz_for_coords returns e.g. Europe/London
-    from utils.timezone import tz_for_coords as _tz_fc6
-    tz_off6 = now.astimezone(_tz_fc6(lat, lon)).utcoffset()
+    # #1667 S1: Ortszeit-Umrechnung und Tagesgrenzen-Klemmung im Helfer.
+    arr0, arr1 = active_window_offsets(lat, lon, -60, 60)
 
     def _make_active_trip(trip_id: str, cooldown: int | None) -> Trip:
-        wp0 = _make_waypoint("WP0", lat, lon,
-                             (now - timedelta(hours=1) + tz_off6).strftime("%H:%M"))
-        wp1 = _make_waypoint("WP1", lat + 0.10, lon + 0.10,
-                             (now + timedelta(hours=1) + tz_off6).strftime("%H:%M"))
+        wp0 = _make_waypoint("WP0", lat, lon, arr0)
+        wp1 = _make_waypoint("WP1", lat + 0.10, lon + 0.10, arr1)
         stage = Stage(id="S1", name="Tag 1", date=today, waypoints=[wp0, wp1])
         t = Trip(id=trip_id, name="AC6 Trip", stages=[stage])
         if cooldown is not None:
@@ -701,19 +717,17 @@ def test_ac7_throttle_recording_unchanged():
     _clean_user(uid)
     _ensure_real_user_dir(uid)
     try:
-        now = datetime.now(timezone.utc)
-        today = now.date()
+        today = stage_date()
 
         # Aktives Segment: [now-1h, now+1h]
-        # Island (lat=64, lon=-22): UTC+0 ganzjährig (kein DST) → arrival_calculated
-        # als UTC-String direkt korrekt, kein Offset-Versatz.
+        # Island (lat=64, lon=-22): UTC+0 ganzjährig (kein DST).
         # _save_trip_direct nötig: save_trip recomputes arrival_calculated via Naismith
         # und würde die Zeiten überschreiben.
+        # #1667 S1: Zeiten aus dem wanduhr-robusten Helfer.
         lat, lon = 64.0, -22.0
-        wp0 = _make_waypoint("WP0", lat, lon,
-                             (now - timedelta(hours=1)).strftime("%H:%M"))
-        wp1 = _make_waypoint("WP1", lat + 0.05, lon + 0.05,
-                             (now + timedelta(hours=1)).strftime("%H:%M"))
+        arr0, arr1 = active_window_offsets(lat, lon, -60, 60)
+        wp0 = _make_waypoint("WP0", lat, lon, arr0)
+        wp1 = _make_waypoint("WP1", lat + 0.05, lon + 0.05, arr1)
         stage = Stage(id="S1", name="Tag 1", date=today, waypoints=[wp0, wp1])
         trip_id = "tdd-822-ac7-trip"
         trip = Trip(id=trip_id, name="AC7 Trip", stages=[stage])
@@ -792,15 +806,14 @@ def test_ac8_mandantentrennung_isolated():
     _clean_user(uid_b)
     _ensure_real_user_dir(uid_b)
     try:
-        now = datetime.now(timezone.utc)
-        today = now.date()
+        today = stage_date()
         lat, lon = 51.5, 0.0  # UTC-Zone
+        # #1667 S1: Zeiten aus dem wanduhr-robusten Helfer.
+        arr0, arr1 = active_window_offsets(lat, lon, -60, 60)
 
         def _make_trip_for(uid: str, trip_id: str) -> Trip:
-            wp0 = _make_waypoint("WP0", lat, lon,
-                                 (now - timedelta(hours=1)).strftime("%H:%M"))
-            wp1 = _make_waypoint("WP1", lat + 0.05, lon + 0.05,
-                                 (now + timedelta(hours=1)).strftime("%H:%M"))
+            wp0 = _make_waypoint("WP0", lat, lon, arr0)
+            wp1 = _make_waypoint("WP1", lat + 0.05, lon + 0.05, arr1)
             s = Stage(id="S1", name="Tag 1", date=today, waypoints=[wp0, wp1])
             t = Trip(id=trip_id, name=f"AC8 {uid}", stages=[s])
             t.report_config = TripReportConfig(
