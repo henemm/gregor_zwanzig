@@ -119,7 +119,10 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
 }
 
 
-def build_extended_metric_specs(active_metric_ids: set[str]) -> list[MetricSpec]:
+def build_extended_metric_specs(
+    active_metric_ids: set[str],
+    position_by_metric: Optional[dict[str, int]] = None,
+) -> list[MetricSpec]:
     """#1660 B Fix-Loop: MetricSpecs fuer die 14 erweiterten Metriken in BEIDEN
     Faellen (Muster #1410, wie schon SMS_MULTI_SYMBOLS_BY_METRIC unten fuer
     die Temperatur-Trios) -- nur so erreicht die Null-Form (§9 der Spec) den
@@ -127,11 +130,18 @@ def build_extended_metric_specs(active_metric_ids: set[str]) -> list[MetricSpec]
     14 bisher ausschliesslich in der disabled-only-Schleife (Bug #944), eine
     aktive Metrik ohne Daten bekam dadurch NIE eine Spec und builder.py's
     `if spec is None and not samples: continue`-Gate liess sie komplett
-    entfallen statt '{symbol}-' zu rendern."""
+    entfallen statt '{symbol}-' zu rendern.
+
+    Issue #1677 DEC-2: ``position_by_metric`` ist additiv (Default None ->
+    leeres Dict, jedes Symbol bekommt ``position=None``, byte-identisch zum
+    Vorzustand). Der Aufrufer (trip_report.py) uebergibt nur dann Werte,
+    wenn eine SMS-spezifische Kaskadenebene aktiv ist (Aktivierungs-Gate)."""
+    position_by_metric = position_by_metric or {}
     return [
         MetricSpec(
             symbol=SMS_SYMBOL_BY_METRIC[metric_id],
             enabled=metric_id in active_metric_ids,
+            position=position_by_metric.get(metric_id),
         )
         for metric_id in SMS_NULLFORM_METRIC_IDS
     ]
@@ -740,8 +750,31 @@ class SMSTripFormatter:
         # regulär wie jeder andere Metrik-Block -- ohne diesen Eintrag würden
         # sie bei vorhandenen Schneedaten erscheinen. _visible(spec_with_
         # enabled_false) -> False unterdrückt sie genau wie jede andere Metrik.
+        # Issue #1677 Fix-Loop F001 (Adversary CRITICAL): `disabled_specs`
+        # traegt seit #1677 auch die Nutzer-`position` fuer AKTIVE Kern-/
+        # Wintersport-Symbole (trip_report.py). Ein Symbol mit konfiguriertem
+        # `sms_threshold` (#624) belegt sein Symbol aber bereits VORHER in
+        # `config` (Schleife oben) -- OHNE position. Der reine "nur wenn
+        # Symbol fehlt"-Filter (`s.symbol not in existing_syms`) verwarf die
+        # positionstragende Spec aus `disabled_specs` dadurch STILL, sobald
+        # beide Features (#624 + #1677) fuer dieselbe Metrik kombiniert
+        # wurden. Jetzt wird bei Symbol-Kollision `position` NACHGETRAGEN
+        # (Feld-Merge, exakt wie der bestehende threshold-Merge oben) statt
+        # die zweite Spec zu verwerfen -- EIN Config-Eintrag pro Symbol
+        # bleibt Invariante, aber keines seiner additiven Felder geht mehr
+        # verloren.
         if disabled_specs:
             existing_syms = {s.symbol for s in config}
+            position_by_sym = {
+                s.symbol: s.position for s in disabled_specs if s.position is not None
+            }
+            if position_by_sym:
+                config = [
+                    replace(s, position=position_by_sym[s.symbol])
+                    if s.symbol in position_by_sym and s.position is None
+                    else s
+                    for s in config
+                ]
             config.extend(s for s in disabled_specs if s.symbol not in existing_syms)
 
         token_line = build_token_line(

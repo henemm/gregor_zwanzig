@@ -148,16 +148,15 @@ def _determine_cascade_source(
     Ermittelt welche Kaskadenstufe aktiv ist: per_report → per_channel → global.
     Eine leere Liste auf Stufe 1/2 ist expliziter User-Wunsch — kein Fallback
     auf die nächste Stufe. Spec: docs/specs/modules/issue_448_validator_metrics_for_channel.md.
+
+    Issue #1677 AC-9: delegiert an ``UnifiedWeatherDisplayConfig.
+    cascade_source_for_channel()`` -- dem models.py-Helfer, den auch das
+    Aktivierungs-Gate der Trip-Kurzform (trip_report.py) nutzt. Kein zweiter,
+    unabhaengig gepflegter Ableitungsweg mehr.
     """
     if dc is None:
         return "global"
-    per_report = (dc.per_report_layouts or {}).get(report_type, {})
-    if channel in per_report:
-        return "per_report"
-    per_channel = dc.per_channel_layouts or {}
-    if channel in per_channel:
-        return "per_channel"
-    return "global"
+    return dc.cascade_source_for_channel(channel, report_type)
 
 
 # ---------------------------------------------------------------------------

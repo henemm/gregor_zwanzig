@@ -102,6 +102,13 @@ POS_INDEX = {key: i for i, key in enumerate(POSITIONAL)}
 OFFICIAL_ALERT_POS = POS_INDEX[(VIGI_TH, "vigilance")] + 0.5
 STD_SYMBOLS = {s for s, _ in POSITIONAL}
 
+# Issue #1677 DEC-4/Known Limitation 2: nur diese beiden Kategorien gehoeren
+# zur waehlbaren Metrik-Kaskade und duerfen ueber MetricSpec.position sortiert
+# werden. Vigilance teilt sich das Symbol 'TH:' mit 'forecast' (Adversary-
+# Hinweis 2, AC-4) -- die Kategorie-Pruefung verhindert, dass eine
+# Vorhersage-Position auf den Vigilance-Token durchschlaegt.
+_POSITION_SORTABLE_CATEGORIES = {"forecast", "wintersport"}
+
 DEFAULTS = {"R": 0.2, "PR": 20.0, "W": 10.0, "G": 20.0,
             FORECAST_TH: 1.0, FORECAST_THP: 1.0}
 
@@ -462,10 +469,26 @@ def build_token_line(
             "debug", PRIORITY["DBG"],
         ))
 
-    tokens.sort(key=lambda t: (
-        OFFICIAL_ALERT_POS if t.category == "official_alert"
-        else POS_INDEX.get((t.symbol, t.category), 99)
-    ))
+    # Issue #1677: zweistufige Sortierung. Bucket 0 = Token, deren MetricSpec
+    # eine Nutzer-Position traegt (nur 'forecast'/'wintersport' -- die
+    # waehlbare Metrik-Kaskade; Vigilance/amtliche Warnungen/Fire/W?/DBG
+    # sind strukturell nicht sortierbar, DEC-4/Known Limitation 2), sortiert
+    # nach dieser Position. Bucket 1 = alle uebrigen Token, unveraendert nach
+    # der bisherigen POS_INDEX-Reihenfolge. Ohne jede Position (kein
+    # SMS-Kanal-Layout aktiv) fallen ausnahmslos alle Token in Bucket 1 --
+    # die Sortierung ist dann identisch zur bisherigen einstufigen
+    # POS_INDEX-Sortierung (Byte-Identitaet, AC-2).
+    def _sort_key(t: Token) -> tuple[int, float]:
+        spec = by_sym.get(t.symbol) if t.category in _POSITION_SORTABLE_CATEGORIES else None
+        if spec is not None and spec.position is not None:
+            return (0, spec.position)
+        fallback = (
+            OFFICIAL_ALERT_POS if t.category == "official_alert"
+            else POS_INDEX.get((t.symbol, t.category), 99)
+        )
+        return (1, fallback)
+
+    tokens.sort(key=_sort_key)
     return TokenLine(
         stage_name=_sanitize_stage_name(stage_name), report_type=report_type,
         tokens=tuple(tokens), truncated=False, full_length=0,

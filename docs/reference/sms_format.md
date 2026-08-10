@@ -1,7 +1,7 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.22"
+version: "2.23"
 status: active
 created: 2025-12-27
 updated: 2026-08-10
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.22)
+# SMS / Kompakt-Format Specification (v2.23)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -77,6 +77,8 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 > **Fix #1482 (2026-08-04):** Bis hierhin galten zwei zusätzliche Ist-Abweichungen bei `TH+:` — beide behoben. (a) `TH+:` hing an keinem Eintrag der Metrik-Bindung und erschien deshalb auch bei abgewählter Metrik „Gewitter”; es folgt jetzt derselben Bindung wie `TH:` über `SMS_MULTI_SYMBOLS_BY_METRIC[“thunder”]` (s. Zeile „Forecast (Gewitter Folge-Etappe)” oben). (b) `TH+:` konnte bei einer echten Datenlücke der Folge-Etappe nie `?` werden und zeigte stattdessen fälschlich die Entwarnung `TH+:-`; es zeigt jetzt `TH+:?`, wenn die Folge-Etappe existiert, ihre Gewitterdaten aber nicht beschaffbar waren. Unverändert bleibt `TH+:-`, wenn schlicht kein Folgetag existiert (letzte Etappe des Trips) — diese beiden Fälle dürfen nicht verwechselt werden (s. §3.2 und §4). `TH+:` nutzt außerdem denselben konfigurierten Gewitter-Schwellwert wie `TH:` (vorher hartkodierter Default). Details: `docs/specs/modules/fix_1482_th_plus_metrik_luecke.md`.
 
 > **Fix #1483 (2026-08-05):** Bis hierhin gab es die `?`-Form nur für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:`/`TH+:`. Die Temperatur-Kürzel `N`/`K`/`D`/`FN`/`FK`/`FD` durchliefen stattdessen `render_temperature()`, das ausschliesslich Zahl oder `-` lieferte — eine Datenlücke erschien dort folglich als `K-` und war von „geprüft, kein Wert” nicht unterscheidbar. Jetzt nutzen beide Pfade denselben gemeinsamen Helfer `_gap_or()` (`builder.py:120-130`): `_mk_metric()` (Zeile 150, Schwellwert-Kürzel) UND die Temperatur-Schleife in `build_token_line()` (Zeile 299). `_wintersport()` (Schneehöhe/Neuschnee/Schneefallgrenze/Lawinenstufe/Windchill) bleibt bewusst unverändert und zeigt weiterhin nie `?` — es ruft `render_int()` über einen eigenen Pfad auf, der mit `_gap_or()` nichts zu tun hat. Details: `docs/specs/modules/fix_1483_temp_gap_marker.md`.
+
+> **Fix #1677 (2026-08-10, v2.23):** Die in §2 gezeigte Token-Reihenfolge ist ab jetzt der **Default** — sie gilt unverändert, solange für den Kanal `sms` keine kanal-eigene Kaskadenebene aktiv ist (weder `per_report_layouts[report_type].sms` noch `per_channel_layouts.sms`, geprüft über `UnifiedWeatherDisplayConfig.cascade_source_for_channel("sms", report_type)`). Ist eine dieser beiden Ebenen gesetzt, bestimmt die dort im SMS-Kanal-Tab des Trip-Editors per Drag&Drop gezogene Reihenfolge die Anzeigefolge der **Vorhersage-** (`R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL K D FK FD N FN`) und **Wintersport-Token** (`SD NS24+ SL AV WC`) — jede Metrik ist dabei EIN Anker: bei Mehrfach-Symbol-Metriken (`temperature`→`K D`, `temperature_night`→`N`, `wind_chill`→`FK FD WC`, `wind_chill_night`→`FN`, `thunder`→`TH: TH+:`) erben alle zugehörigen Symbole dieselbe Nutzer-Position, ihre interne Reihenfolge (z.B. `K` vor `D`) bleibt fix. **Unverändert fix, unabhängig von jeder Nutzer-Reihenfolge:** die Vigilance-Adjazenz `HR:TH:` (§3.3, ohne Leerzeichen), der amtliche Warn-Block, Fire (`Z: M:`), `W?` und `DBG` — diese System-Blöcke stehen immer hinter dem sortierbaren Block, in ihrer bisherigen relativen Reihenfolge (sie sind nicht Teil der wählbaren Metrik-Kaskade). Die Kürzung bei Überlänge (§6) bleibt unverändert prioritätsbasiert — die Anzeige-Position beeinflusst NICHT, welches Token zuerst fällt. Details: `docs/specs/modules/fix_1677_sms_reihenfolge.md`.
 
 ---
 

@@ -287,10 +287,23 @@ class TripReportFormatter:
         # SMS-eigenen Kaskade (per_report > per_channel > global), der
         # SCHWELLWERT je Metrik bleibt eine globale Groesse (KL-4) -- die vom
         # Editor geschriebenen Kanal-Layouts fuehren kein ``sms_threshold``.
-        sms_metric_ids = {
-            m.metric_id
-            for m in _dc_uncollapsed.get_metrics_for_channel("sms", report_type)
-        }
+        # Issue #1677: die Kaskade liefert eine bereits sortierte LISTE
+        # (nicht laenger sofort in ein Set kollabiert) -- daraus wird
+        # weiterhin die Menge (sms_metric_ids, fuer die Abwahl-/Schwellwert-
+        # Ableitungen darunter unveraendert) UND zusaetzlich eine
+        # metric_id -> Index-Zuordnung fuer die Nutzer-Position abgeleitet.
+        _sms_metrics_ordered = _dc_uncollapsed.get_metrics_for_channel("sms", report_type)
+        sms_metric_ids = {m.metric_id for m in _sms_metrics_ordered}
+        # Aktivierungs-Gate (DEC-2): position wird NUR gesetzt, wenn eine
+        # SMS-spezifische Kaskadenebene antwortet -- bei 'global' bleibt
+        # jede Spec ohne position, der Builder faellt vollstaendig auf die
+        # bisherige POSITIONAL-Sortierung zurueck (Byte-Identitaet, AC-2).
+        _sms_cascade_source = _dc_uncollapsed.cascade_source_for_channel("sms", report_type)
+        _sms_position_by_metric: dict[str, int] = (
+            {m.metric_id: i for i, m in enumerate(_sms_metrics_ordered)}
+            if _sms_cascade_source in ("per_report", "per_channel")
+            else {}
+        )
         _global_metrics = {m.metric_id: m for m in _dc_uncollapsed.metrics}
         # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
         _sms_thr = {
@@ -313,23 +326,40 @@ class TripReportFormatter:
         # Bug #944: SMS-Symbole ohne aktive Metrik als deaktivierte Specs führen,
         # damit SD/SL nicht erscheinen, wenn die Metrik im Trip nicht gewählt ist —
         # unabhängig davon, ob Schneedaten in der Vorhersage vorhanden sind.
+        # Issue #1677: die Schleife deckt jetzt BEIDE Faelle ab (aktiv UND
+        # abgewaehlt), nicht mehr nur die Abwahl -- vorher entstand fuer
+        # AKTIVE Kern-/Wintersport-Symbole (R/PR/W/G/SD/SL/NS24+) gar keine
+        # Spec (Builder nutzte den spec=None-Default-Zweig), also auch keine
+        # Stelle, an der eine Nutzer-Position haengen konnte. enabled/disabled
+        # bleibt dabei exakt die bisherige Bug-#944-Logik.
         active_metric_ids = sms_metric_ids
         _disabled_sms_specs = [
-            MetricSpec(symbol=sym, enabled=False)
+            MetricSpec(
+                symbol=sym,
+                enabled=metric_id in active_metric_ids,
+                position=_sms_position_by_metric.get(metric_id),
+            )
             for metric_id, sym in SMS_SYMBOL_BY_METRIC.items()
-            if metric_id not in active_metric_ids
-            # Fix-Loop #1660 B: die 14 erweiterten Metriken sind hier
-            # AUSGENOMMEN -- sie bekommen unten ueber build_extended_metric_
-            # specs() eine Spec in BEIDEN Faellen (aktiv UND abgewaehlt), nicht
-            # nur bei Abwahl. Ohne diese Ausnahme entstuenden doppelte Specs
-            # fuer dasselbe Symbol.
-            and metric_id not in SMS_NULLFORM_METRIC_IDS
+            if (
+                # Fix-Loop #1660 B: die 14 erweiterten Metriken sind hier
+                # AUSGENOMMEN -- sie bekommen unten ueber build_extended_metric_
+                # specs() eine Spec in BEIDEN Faellen (aktiv UND abgewaehlt), nicht
+                # nur bei Abwahl. Ohne diese Ausnahme entstuenden doppelte Specs
+                # fuer dasselbe Symbol.
+                metric_id not in SMS_NULLFORM_METRIC_IDS
+                # 'thunder' bekommt seine Spec(s) ausschliesslich ueber die
+                # SMS_MULTI_SYMBOLS_BY_METRIC-Schleife unten (TH:/TH+:) --
+                # sonst entstuende ein zweiter, konkurrierender 'TH:'-Eintrag.
+                and metric_id != "thunder"
+            )
         ]
         # Root-Cause-Fix (Adversary/Staging-E2E #1660 B, Prod-Bug): vorher
         # bekamen aktive der 14 Metriken KEINE Spec -> builder.py's
         # `if spec is None and not samples: continue` liess sie bei fehlenden
         # Daten komplett entfallen statt die Null-Form (§9) zu rendern.
-        _disabled_sms_specs += build_extended_metric_specs(active_metric_ids)
+        _disabled_sms_specs += build_extended_metric_specs(
+            active_metric_ids, _sms_position_by_metric,
+        )
         # Issue #1410 §6: die Temperatur-Token erscheinen NUR bei aktivierter
         # Metrik -- dasselbe Pruefmuster wie oben fuer SD/SL. Anders als dort
         # wird die Spec in BEIDEN Faellen mitgegeben: nur so kann der Builder
@@ -338,8 +368,14 @@ class TripReportFormatter:
         # Issue #1415: gilt jetzt auch fuer die GEMESSENE Temperatur (N/K/D);
         # sie war bis dahin unbedingt und blieb als einzige Groesse auch nach
         # Abwahl in der SMS stehen.
+        # Issue #1677 DEC-5: alle Symbole EINER Mehrfach-Symbol-Metrik
+        # erben dieselbe position (EIN Metrik-Anker, kein Pro-Symbol-Drift).
         _disabled_sms_specs += [
-            MetricSpec(symbol=sym, enabled=metric_id in active_metric_ids)
+            MetricSpec(
+                symbol=sym,
+                enabled=metric_id in active_metric_ids,
+                position=_sms_position_by_metric.get(metric_id),
+            )
             for metric_id, syms in SMS_MULTI_SYMBOLS_BY_METRIC.items()
             for sym in syms
         ]
