@@ -62,6 +62,14 @@ def _trip_dict(**stage_overrides) -> dict:
             "send_email": True,
             "send_sms": True,
             "send_telegram": False,
+            # Issue #1676 S2a: vierter Kanal. Steht hier, weil dieses Fixture
+            # laut Docstring VOLLSTAENDIG ist — `send_premium_sms` wird wie
+            # seine drei Geschwister immer serialisiert (bewusst kein
+            # omitempty, sonst bliebe beim Datei-Merge ein alter Plattenwert
+            # stehen, #1250 Scheibe 4 F002). Fehlte der Schluessel hier, waere
+            # er ein "hinzugekommener Schluessel mit echtem Wert" und der
+            # Roundtrip-Test unten rot, ohne dass etwas verloren geht.
+            "send_premium_sms": False,
             "alert_on_changes": True,
             "change_threshold_temp_c": 5.0,
             "change_threshold_wind_kmh": 20.0,

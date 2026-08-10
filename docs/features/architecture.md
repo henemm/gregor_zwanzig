@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-08-10 (Issue #1676 Scheibe S1 — neuer Premium-SMS-Rückkanal: `InboundSmsReader` pollt das seven.io-Journal auf Garmin-inReach-Antworten und lernt die Rückadresse über den neuen internen Go-Endpoint `POST /api/internal/premium-sms-learn`; kein Trip-Befehlskanal, kein Frontend); 2026-08-03 (Issue #1460 Teil 1, ADR-0043 löst ADR-0040 ab — Wertebereich (`corridors[].notify`) fällt als Alarm-Auslöser weg, Empfindlichkeitsstufe bleibt einziger Regler und wirkt bei Gewitter über das erreichte Niveau statt die Sprunggröße, symmetrisch für Verschärfung und Entwarnung; Melde-Gedächtnis-Reset löscht beim Briefing nur noch den Änderungs-Raum, der amtliche Raum bleibt erhalten); 2026-07-21 (Doku-Audit #1341 — Frontend-Sektionen auf Ist-Stand: Wizards entfernt, Organisms-Barrel korrigiert, /api/subscriptions → /api/compare/presets + /api/briefings); 2026-07-03 (Issue #1001 — Telegram-Ausgabe neu gebaut: `render_telegram_bubbles()` ersetzt `render_narrow()` für den Telegram-Kanal, Multi-Bubble-Versand statt Prosa-Nachricht, echte Monospace-Segment-Tabellen, Inline-Keyboard-Aktionen-Bubble); 2026-06-30 (Issue #919 — Radar-Alert auf kanonischen Renderer migriert: `OnsetEvent`-Datenklasse + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `check_radar_alerts` baut jetzt `AlertMessage(OnsetEvent(...))`, `src/outputs/radar_alert.py` gelöscht); 2026-06-26 (Issue #887 — SMS/Telegram Report-Konsistenz: SMS `pop_hourly` aus `agg.pop_max_pct`, Telegram Detail-Zeile mit config-gesteuerten Metriken; Issue #884 — HTML-Mail Fidelity: 8-Sektion-Layout mit zweispaltigem Header + Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer); 2026-06-15 (Issue #822 — Radar-/Regen-Nowcast-Alert segmentbewusst: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text); 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-08-10 (Issue #1676 Scheibe S2a — Premium-SMS wird vierter Versandkanal `premium_sms`, ausschließlich fürs Trip-Briefing: fester Absender `4916092172595`, Empfänger die in S1 gelernte Rückadresse aus `user.json`, Verfall nach 30 Tagen ohne Nachlernen, fail-closed mit auswertbarem Grund statt stillem Ausbleiben, eigenes Tier-Gate nur `premium`; ADR-0049 schreibt ADR-0004 fort — Kanalliste jetzt E-Mail · Telegram · SMS · Premium-SMS; Alarm-/Vergleichspfad und Oberfläche folgen erst mit S2b/#1701 bzw. S3); 2026-08-10 (Issue #1676 Scheibe S1 — neuer Premium-SMS-Rückkanal: `InboundSmsReader` pollt das seven.io-Journal auf Garmin-inReach-Antworten und lernt die Rückadresse über den neuen internen Go-Endpoint `POST /api/internal/premium-sms-learn`; kein Trip-Befehlskanal, kein Frontend); 2026-08-03 (Issue #1460 Teil 1, ADR-0043 löst ADR-0040 ab — Wertebereich (`corridors[].notify`) fällt als Alarm-Auslöser weg, Empfindlichkeitsstufe bleibt einziger Regler und wirkt bei Gewitter über das erreichte Niveau statt die Sprunggröße, symmetrisch für Verschärfung und Entwarnung; Melde-Gedächtnis-Reset löscht beim Briefing nur noch den Änderungs-Raum, der amtliche Raum bleibt erhalten); 2026-07-21 (Doku-Audit #1341 — Frontend-Sektionen auf Ist-Stand: Wizards entfernt, Organisms-Barrel korrigiert, /api/subscriptions → /api/compare/presets + /api/briefings); 2026-07-03 (Issue #1001 — Telegram-Ausgabe neu gebaut: `render_telegram_bubbles()` ersetzt `render_narrow()` für den Telegram-Kanal, Multi-Bubble-Versand statt Prosa-Nachricht, echte Monospace-Segment-Tabellen, Inline-Keyboard-Aktionen-Bubble); 2026-06-30 (Issue #919 — Radar-Alert auf kanonischen Renderer migriert: `OnsetEvent`-Datenklasse + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `check_radar_alerts` baut jetzt `AlertMessage(OnsetEvent(...))`, `src/outputs/radar_alert.py` gelöscht); 2026-06-26 (Issue #887 — SMS/Telegram Report-Konsistenz: SMS `pop_hourly` aus `agg.pop_max_pct`, Telegram Detail-Zeile mit config-gesteuerten Metriken; Issue #884 — HTML-Mail Fidelity: 8-Sektion-Layout mit zweispaltigem Header + Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer); 2026-06-15 (Issue #822 — Radar-/Regen-Nowcast-Alert segmentbewusst: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text); 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und einem Dual-Stack-Backend (Go + Python):
@@ -8,7 +8,9 @@ Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und 
 - **Go-API:** REST-API (Port 8090), Auth/Sessions, Mandantentrennung, Persistenz/Store, Proxy zum Python-Core
 - **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, Scheduler, Alerts, Inbound-Handler (FastAPI, Port 8000)
 - **Frontend:** SvelteKit Web-UI für Trip-Management, Konfiguration und Orts-Vergleiche
-- **Channels:** E-Mail (SMTP), Telegram, SMS (seven.io)
+- **Channels:** E-Mail (SMTP), Telegram, SMS (seven.io), Premium-SMS (seven.io, Garmin
+  inReach — seit Issue #1676 S2a **nur im Trip-Briefing** verdrahtet, nicht im Alarmpfad und
+  nicht im Ortsvergleich; siehe ADR-0049)
 - **Abo-Objekte:** Briefing-Subscriptions für Trips (ADR-0023) und Compare-Presets für Orts-Vergleiche — getrennte Domänenobjekte, keine gemeinsame „Subscription“-Abstraktion mehr
 
 Siehe `docs/adr/0015-dual-stack-zielarchitektur.md` für die verbindliche Zuständigkeitsgrenze.
@@ -71,6 +73,17 @@ Die folgenden Komponenten leben im Python-Core:
      den öffentlichen Methoden; `_post` wertet keine Statuscodes aus.
      Spec: `docs/specs/modules/telegram_send_pacing.md`.
    - **SMS** (`src/output/channels/sms.py`) – SMS-Versand via seven.io
+   - **Premium-SMS** (`src/output/channels/premium_sms.py`, `PremiumSmsOutput`,
+     `name == "premium_sms"`, seit Issue #1676 S2a) – **nur Trip-Briefing**, kein Alarm-
+     und kein Ortsvergleich-Pfad (folgt frühestens mit #1701). Fester Absender
+     `4916092172595` (unabhängig von `sms_from`), Empfänger ausschließlich die in S1
+     gelernte Rückadresse aus `user.json` (nie `sms_to`), Fail-Closed bei fehlender oder
+     >30 Tage alter Rückadresse mit auswertbarem Grund in `NotificationResult.blocked_channels`,
+     eigenes Tier-Gate (`premium_sms_allowed()`, ausschließlich Tier `premium`). Teilt sich
+     mit `SMSOutput` die Basisklasse `SevenIoChannelBase` (Sicherheitssperren + HTTP-Transport
+     genau einmal statt zweimal). Kein eigener Render-Pfad — Text kommt unverändert aus
+     `report.sms_text`. Kein Frontend-Schalter (folgt mit S3). Details: ADR-0049,
+     `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`.
 
 ### Datenfluss (Produktiv)
 
@@ -96,7 +109,7 @@ Channel Renderers
   ├─→ render_sms() → Wire-Format ≤160 Zeichen
   └─→ DebugBuffer
   ↓
-Channel (E-Mail / Telegram / SMS / Console)
+Channel (E-Mail / Telegram / SMS / Premium-SMS [nur Trip-Briefing] / Console)
 ```
 
 **Report-Config-Resolver (Issue #1208, Scheibe A):** Für Trip-Briefings löst
@@ -180,7 +193,17 @@ Reader nicht (Sandbox-Key liefert auf dem Lesepfad dasselbe Produktiv-Journal
 wie der Prod-Key — siehe `docs/specs/modules/egress_guard_sms.md` → Known
 Limitations), außer der Trockenlauf-Schalter `GZ_PREMIUM_SMS_POLL_DRYRUN=1`
 ist gesetzt. Details: `docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md`.
-Kein Frontend, keine Befehlsausführung, kein Versandkanal (folgt in S2/S3).
+Kein Frontend, keine Befehlsausführung. Der Versand über diese gelernte
+Rückadresse ist seit Scheibe S2a live (s. u.) — **nur fürs Trip-Briefing**.
+
+### Premium-SMS als Versandkanal (Issue #1676, Scheibe S2a — nur Trip-Briefing)
+
+Aufbauend auf der gelernten Rückadresse aus S1 ist Premium-SMS seit S2a ein
+vierter, eigenständiger Versandkanal `premium_sms` (s. „Channels" oben und
+ADR-0049). Bewusst **nicht** verdrahtet: Alarmpfad und Ortsvergleich (folgen
+frühestens mit #1701), Oberfläche (folgt mit S3). `send_premium_sms` ist bis
+dahin nur über den freien `report_config`-Schlüssel setzbar, noch kein
+Go-Flach-Feld analog `send_sms`/`send_telegram`.
 
 ### Telegram Bot-Menü (Automatisches Setup)
 

@@ -13,18 +13,44 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
+# Issue #1676 S2a (ADR-0049): die gelernte Premium-SMS-Rueckadresse und ihr
+# Zeitstempel duerfen NIE aus der Umgebung kommen -- nur aus user.json.
+_PREMIUM_SMS_ENV_VARS = ("GZ_PREMIUM_SMS_REPLY_TO", "GZ_PREMIUM_SMS_REPLY_AT")
+_PREMIUM_SMS_FIELDS = ("premium_sms_reply_to", "premium_sms_reply_at")
+
 
 def _in_pytest() -> bool:
     """True, wenn der aktuelle Prozess ein pytest-Lauf ist (Issue #1122)."""
     return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules
+
+
+def _parse_learned_timestamp(raw: Any) -> Optional[datetime]:
+    """RFC3339-Zeitstempel aus `user.json` als zeitzonenbehaftetes datetime.
+
+    Der Go-Schreiber (`internal/handler/premium_sms_connect.go`) legt UTC mit
+    `Z`-Endung ab, das `fromisoformat` aelterer Python-Versionen kennt nur
+    `+00:00`. Ohne Zeitzone gelesene Werte gelten als UTC — ein naiver
+    Zeitstempel wuerde beim Fristvergleich je nach Serverzeit um Stunden
+    verrutschen. Unlesbares ergibt `None` (fail-closed beim Aufrufer).
+    """
+    if isinstance(raw, datetime):
+        return raw if raw.tzinfo else raw.replace(tzinfo=timezone.utc)
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
 def is_test_user_id(user_id: str, data_dir: str = "data") -> bool:
@@ -161,6 +187,21 @@ class Settings(BaseSettings):
     sms_from: Optional[str] = Field(default=None, description="SMS sender ID or number")
     sms_to: Optional[str] = Field(default=None, description="SMS recipient phone number")
 
+    # Premium-SMS (Garmin inReach, Issue #1676 S2a, ADR-0049): die von S1
+    # gelernte Rueckadresse des Geraets und der Zeitpunkt, zu dem sie gelernt
+    # wurde. Einzige Quelle ist user.json (with_user_profile); als Settings-
+    # Feld deklariert, weil extra="ignore" undeklarierte Werte lautlos
+    # verschluckt -- der Profilwert waere sonst spurlos verschwunden. Ein
+    # GZ_-Override ist per _premium_sms_reply_env_deny gesperrt.
+    premium_sms_reply_to: Optional[str] = Field(
+        default=None,
+        description="Gelernte Garmin-Rueckadresse — NUR aus user.json (nie GZ_*)",
+    )
+    premium_sms_reply_at: Optional[datetime] = Field(
+        default=None,
+        description="Zeitpunkt, zu dem die Rueckadresse gelernt wurde (30-Tage-Frist)",
+    )
+
     # Telegram settings (for telegram channel via Bot API)
     telegram_bot_token: str = Field(default="", description="Telegram Bot API token from @BotFather")
     telegram_chat_id: str = Field(default="", description="Telegram chat ID of recipient")
@@ -190,6 +231,42 @@ class Settings(BaseSettings):
                     "Wartezeit vor dem einen Wiederholversuch "
                     "(env: GZ_TELEGRAM_RETRY_AFTER_CAP_SECONDS)",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _premium_sms_reply_env_deny(cls, data: Any) -> Any:
+        """Issue #1676 S2a (AC-9, ADR-0049): die gelernte Rueckadresse und ihr
+        Alter sind per Umgebungsvariable NICHT setzbar.
+
+        Abbruch statt Umlenkung (anders als `_resend_default_deny` darunter):
+        die Vorgabe lautet „niemals editierbar" — ein stiller Reroute waere
+        hier selbst der Verstoss. Ein Override von
+        `GZ_PREMIUM_SMS_REPLY_AT` wuerde ausserdem die 30-Tage-Frist
+        kuenstlich auffrischen und damit den Versand an eine laengst neu
+        vergebene Fremdnummer freigeben; eine Frist, die man mit einer
+        Umgebungsvariable abschalten kann, ist keine.
+
+        `mode="before"` statt `mode="after"`, gemessen und nicht geraten:
+        pydantic haengt an eine im Validator geworfene `ValueError` den
+        Eingabewert an (`input_value={...}`). In einem `after`-Validator ist
+        das die Quell-Zuordnung MIT der injizierten Rufnummer — die
+        Fehlermeldung wuerde die Nummer unmaskiert ausplaudern (S1: nur
+        maskiert protokollieren). Hier werden die beiden Werte deshalb VOR dem
+        Abbruch aus der Zuordnung entfernt; die Meldung nennt nur die
+        verbotene Variable.
+        """
+        offenders = [name for name in _PREMIUM_SMS_ENV_VARS if os.environ.get(name)]
+        if not offenders:
+            return data
+        if isinstance(data, dict):
+            for field_name in _PREMIUM_SMS_FIELDS:
+                data.pop(field_name, None)
+        raise ValueError(
+            "Premium-SMS-Rueckadresse ist nicht konfigurierbar (Issue #1676, "
+            f"ADR-0049): {', '.join(offenders)} im Prozess-Environment gesetzt. "
+            "Die gelernte Rueckadresse und ihr Zeitstempel kommen "
+            "ausschliesslich aus user.json — Variable entfernen.",
+        )
 
     @model_validator(mode="after")
     def _resend_default_deny(self) -> "Settings":
@@ -311,6 +388,16 @@ class Settings(BaseSettings):
             overrides["telegram_chat_id"] = profile["telegram_chat_id"]
         if profile.get("sms_to"):
             overrides["sms_to"] = profile["sms_to"]
+        # Issue #1676 S2a: gelernte Premium-SMS-Rueckadresse (S1 schreibt sie
+        # hier hinein). Der Zeitstempel wird zu einem zeitzonenbehafteten
+        # datetime aufgeloest — model_copy() unten umgeht die Feld-Validierung,
+        # ein roher Text kaeme sonst beim Fristvergleich an. Laesst er sich
+        # nicht lesen, bleibt das Feld leer und der Kanal blockt fail-closed.
+        if profile.get("premium_sms_reply_to"):
+            overrides["premium_sms_reply_to"] = profile["premium_sms_reply_to"]
+        reply_at = _parse_learned_timestamp(profile.get("premium_sms_reply_at"))
+        if reply_at is not None:
+            overrides["premium_sms_reply_at"] = reply_at
 
         if not overrides:
             return base
@@ -325,6 +412,15 @@ class Settings(BaseSettings):
             self.sms_to,
         ])
 
+    # Issue #1676 S2a, Adversary-Fund F003: hier stand ein
+    # `can_send_premium_sms()`. Es ist ENTFERNT und kommt nicht zurueck, solange
+    # es keinen Wirkort hat: Die Sendebereitschaft des Premium-Kanals
+    # entscheidet ausschliesslich `PremiumSmsOutput._resolve_recipient()` zur
+    # Sendezeit (Spec D3) — nur dort ist die 30-Tage-Frist pruefbar und nur von
+    # dort kommt der sichtbare Grund (Spec D4). Eine zweite, namentlich an
+    # `can_send_sms()`/`can_send_telegram()` erinnernde Bereitschaftsfrage
+    # (die im Versandzweig SEHR WOHL vorgeschaltet sind) laedt dazu ein, sie
+    # fuer den wirksamen Schutz zu halten und den echten zu entfernen.
     def can_send_telegram(self) -> bool:
         """Check if Telegram configuration is complete."""
         return bool(self.telegram_bot_token and self.telegram_chat_id)
@@ -332,6 +428,9 @@ class Settings(BaseSettings):
     _SENSITIVE_FIELDS = {
         "smtp_pass", "imap_pass", "test_smtp_pass", "test_imap_pass",
         "seven_api_key", "telegram_bot_token",
+        # Issue #1676: die gelernte Geraete-Rufnummer gehoert nach S1-Vorgabe
+        # nur maskiert in Protokolle — repr(settings) landet in Logzeilen.
+        "premium_sms_reply_to",
     }
 
     def __repr__(self) -> str:

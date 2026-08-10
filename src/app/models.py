@@ -970,6 +970,9 @@ class TripReportConfig:
     send_email: bool = True
     send_sms: bool = False
     send_telegram: bool = False
+    # Issue #1676 S2a (ADR-0049): vierter Kanal, unabhaengig von send_sms
+    # schaltbar. Startwert AUS — der Kanal kostet und braucht Premium-Tier.
+    send_premium_sms: bool = False
 
     # Alerts
     alert_on_changes: bool = True

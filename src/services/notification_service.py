@@ -30,6 +30,7 @@ from output.renderers.email.design_tokens import (
 )
 from output.channels.base import OutputConfigError
 from output.channels.email import EmailOutput
+from output.channels.premium_sms import PremiumSmsOutput
 from output.channels.sms import SMSOutput
 from output.channels.telegram import TelegramOutput
 from services.trip_command_processor import CommandResult
@@ -87,6 +88,8 @@ class TripReportRequest:
     send_email: bool = True
     send_sms: bool = False
     send_telegram: bool = False
+    # Issue #1676 S2a (ADR-0049): vierter Kanal, unabhaengig von send_sms.
+    send_premium_sms: bool = False
     # Hinweise / Präfixe
     test_prefix: bool = False
     on_demand_prefix: bool = False
@@ -120,11 +123,42 @@ class NotificationResult:
     # `failed_channels` haelt zusaetzlich fest, welche davon technisch NICHT
     # angekommen sind, ohne diese bewusste Semantik zu veraendern.
     failed_channels: list[str] = field(default_factory=list)
+    # Issue #1676 S2a (Spec D4): Kanal -> Grund, warum NICHTS hinausging.
+    # `failed_channels` haelt gescheiterte Transporte fest; hier steht der
+    # Fall davor — der Kanal wurde bewusst nicht betreten (z.B. keine oder
+    # veraltete gelernte Rueckadresse). Ein Ergebnisfeld statt einer
+    # Logzeile, weil eine Logzeile kein Nachweis ist.
+    blocked_channels: dict[str, str] = field(default_factory=dict)
+    # Issue #1676 S2a (Spec D10), Adversary-Fund F002: derselbe Sperrfall
+    # zusaetzlich als maschinenlesbare Kennung (`ChannelBlockedError.
+    # reason_code`). Der Prosatext oben ist fuer Menschen; wer Faelle
+    # unterscheiden oder buchen will, vergleicht die Kennung. Ein FEHLENDER
+    # Eintrag heisst: das war keine bewusste Sperre, sondern ein Transport-
+    # oder Programmfehler. Genau diese Unterscheidung ist am Prosatext allein
+    # nicht moeglich — ein Absturztext sieht dort aus wie eine Sperrmeldung.
+    blocked_reason_codes: dict[str, str] = field(default_factory=dict)
 
     @property
     def delivered_channels(self) -> list[str]:
         """Kanaele, die den Versand ohne Fehler abgeschlossen haben."""
         return [c for c in self.sent_channels if c not in self.failed_channels]
+
+
+def _record_block_reason_code(
+    codes: dict[str, str], channel: str, exc: BaseException,
+) -> None:
+    """Traegt die Kennung einer BEWUSSTEN Sperre ein — sonst nichts.
+
+    Issue #1676 S2a (Spec D10). Bewusst per ``getattr``: der umgebende
+    ``except`` faengt jede Ausnahme (Kanalunabhaengigkeit, #1662), also auch
+    Transport- und Programmfehler. Die tragen keinen ``reason_code`` und
+    bekommen hier auch keinen erfunden — ihr Fehlen IST die Aussage
+    „das war keine Sperre". Ein Ersatzwert wuerde genau die Unterscheidung
+    zerstoeren, um die es geht.
+    """
+    code = getattr(exc, "reason_code", None)
+    if isinstance(code, str) and code.strip():
+        codes[channel] = code
 
 
 @dataclass
@@ -346,9 +380,14 @@ class NotificationService:
             not request.send_email
             and not request.send_sms
             and not request.send_telegram
+            # Issue #1676 S2a: ein Trip, der NUR Premium-SMS bekommt, ist
+            # konfiguriert — sonst gaelte der Lauf als "kein Kanal".
+            and not request.send_premium_sms
         )
 
         sent_channels: list[str] = []
+        blocked_channels: dict[str, str] = {}
+        blocked_reason_codes: dict[str, str] = {}
 
         # E-Mail — Issue #1662 (Punkt 8): Zustellbilanz statt Kanalreihenfolge.
         # Bisher war E-Mail der einzige Kanal ohne `try`; ein SMTP-/Guard-Fehler
@@ -375,6 +414,26 @@ class NotificationService:
                 sent_channels.append("sms")
             except Exception as e:
                 logger.error(f"SMS send failed for {request.trip.name}: {e}")
+
+        # Premium-SMS (Garmin inReach, Issue #1676 S2a, ADR-0049).
+        # Bewusst OHNE vorgeschaltete `can_send_*`-Bedingung: ob eine gelernte
+        # Rueckadresse vorliegt und frisch genug ist, entscheidet der Kanal
+        # selbst (Spec D3) und liefert den Grund als Ausnahme zurueck. Eine
+        # Bedingung davor wuerde dieselbe Pruefung doppeln und den Grund
+        # verschlucken — genau das, was `blocked_channels` verhindert.
+        if request.send_premium_sms:
+            try:
+                PremiumSmsOutput(self._settings).send(
+                    subject=report.email_subject,
+                    body=report.sms_text or report.email_plain,
+                )
+                sent_channels.append("premium_sms")
+            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                blocked_channels["premium_sms"] = str(e)
+                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                logger.error(
+                    f"Premium-SMS nicht versendet für {request.trip.name}: {e}"
+                )
 
         # Telegram
         if request.send_telegram and self._settings.can_send_telegram():
@@ -457,6 +516,8 @@ class NotificationService:
             sent_channels=sent_channels,
             telegram_fully_sent=telegram_fully_sent,
             no_channel_configured=no_channel_configured,
+            blocked_channels=blocked_channels,
+            blocked_reason_codes=blocked_reason_codes,
         )
 
     def _send_telegram_incomplete_hint(self, report, missing_count: int) -> None:
@@ -485,14 +546,24 @@ class NotificationService:
         send_email: bool = True,
         send_sms: bool = False,
         send_telegram: bool = False,
+        send_premium_sms: bool = False,
     ) -> NotificationResult:
-        """Kurzer Hinweis bei komplettem Wetterdaten-Ausfall (Issue #1012)."""
+        """Kurzer Hinweis bei komplettem Wetterdaten-Ausfall (Issue #1012).
+
+        Issue #1676 S2a: `send_premium_sms` ist hier kein Beiwerk — der
+        Scheduler entscheidet den Kanal an derselben Stelle wie fuer das
+        Briefing. Ein Flag, das ankommt und nichts tut, waere ein stilles
+        Loch: der Nutzer haette den Kanal gewaehlt und nie erfahren, dass er
+        die Ausfallmeldung nicht bekommt.
+        """
         subject = f"[{trip.name}] Wetterdaten nicht verfügbar"
         text = (
             "Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter "
             "und liefern das Briefing nach, sobald Daten verfügbar sind."
         )
         sent_channels: list[str] = []
+        blocked_channels: dict[str, str] = {}
+        blocked_reason_codes: dict[str, str] = {}
 
         if send_email:
             try:
@@ -508,6 +579,15 @@ class NotificationService:
             except Exception as e:
                 logger.error(f"No-data hint SMS failed for {trip.name}: {e}")
 
+        if send_premium_sms:
+            try:
+                PremiumSmsOutput(self._settings).send(subject=subject, body=text)
+                sent_channels.append("premium_sms")
+            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                blocked_channels["premium_sms"] = str(e)
+                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                logger.error(f"No-data hint Premium-SMS blockiert für {trip.name}: {e}")
+
         if send_telegram and self._settings.can_send_telegram():
             try:
                 TelegramOutput(self._settings).send(subject=subject, body=text)
@@ -515,7 +595,12 @@ class NotificationService:
             except Exception as e:
                 logger.error(f"No-data hint Telegram failed for {trip.name}: {e}")
 
-        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+        return NotificationResult(
+            sent=bool(sent_channels),
+            sent_channels=sent_channels,
+            blocked_channels=blocked_channels,
+            blocked_reason_codes=blocked_reason_codes,
+        )
 
     def send_deviation_alert(
         self,
