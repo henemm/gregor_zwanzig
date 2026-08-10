@@ -161,6 +161,17 @@ Ausgaben erscheint. Das ist keine Lücke in einem Test, sondern eine Blindstelle
 `get_all_metrics()`) und die Wirkung strukturell: sie repariert die Aussagekraft
 jeder künftigen Achse mit.*
 
+**✅ Erledigt (2026-08-10, Epic #1703 Scheibe 3):** Wächter in
+`tests/tdd/test_channel_metric_matrix.py` (`test_ac1_confidence_absent_from_mail_telegram_compare`
+bis `test_ac8_non_selectable_metrics_stay_out_unless_exempt`) — parametrisiert über `_METRICS` +
+`_SELECTABLE_GATE_EXEMPT`, deckt `confidence`/`cape`/`temperature_cold` einzeln ab plus generisch
+jede künftige `selectable=False`-Metrik mit Ausgabefeld. Spec:
+`docs/specs/modules/fix_1703_s3_selectable_metrics.md`. Adversary VERIFIED (Finding F001 zu AC-3
+korrigiert — der Kältealarm bleibt nicht wegen der Exemption aktiv, sondern über den OR-Tupel-
+Mechanismus in `is_alert_metric_active()`, s. Spec-Korrekturabschnitt). Nebenbefund (kein Fix
+dieser Scheibe): `temperature_cold` erscheint als echte Dublette „TmpMin"/„Temp" in der
+Stundentabelle (AC-6, Charakterisierung).
+
 ### 4.2 Priorität 2 und 3
 
 | # | Unbewachte Fläche | Ort | Prio | Bemerkung |
@@ -261,7 +272,7 @@ beiden Mail-Pfaden (`email/outlook.py:149`, `:343`, `:522`).
 *Risiko: mittel. Größe: mittel–groß — zwei Produktflächen, eine geteilte
 Spaltenquelle, deshalb eine Assertion-Familie für beide.* Deckt Fläche 2.
 
-### Scheibe 3 — Nicht-wählbare Register-Metriken
+### Scheibe 3 — Nicht-wählbare Register-Metriken ✅ ERLEDIGT (2026-08-10)
 
 Ein kleiner Test, der über `_METRICS` statt `get_all_metrics()`
 (`metric_catalog.py:695`) iteriert und für jede nicht-wählbare Metrik mit
@@ -269,6 +280,11 @@ Ausgabefeldern (`sms_code`, `alert_label`, …) prüft, dass sie dort ankommt, w
 das Feld sie hinschickt — heute betrifft das `temperature_cold`.
 *Risiko: niedrig. Größe: klein.* **Sollte zuerst laufen** — sie repariert die
 Aussagekraft aller anderen Achsen mit. Deckt Fläche 3.
+
+Umgesetzt als 8 ACs (AC-1 bis AC-8) in `tests/tdd/test_channel_metric_matrix.py`, gemessen
+gegen den echten Renderpfad (`TripReportFormatter().format_email()`, nicht die produktiv
+ungenutzte `email/helpers.py::dp_to_row()`). Details, Sollzustand je Metrik, Mutations-
+Gegenprobe: `docs/specs/modules/fix_1703_s3_selectable_metrics.md`.
 
 ### Scheibe 4 — Kurzform-Mail, Kompaktzeilen, Kompakt-Zusammenfassung, Telegram-Kurzform
 

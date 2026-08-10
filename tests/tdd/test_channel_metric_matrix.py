@@ -23,6 +23,15 @@ AC-Zuordnung:
 E-Mail/Telegram sind bewusste GRUEN-Ausnahmen (Bestandsfunktion, hier nur
 strukturell abgesichert) -- der SMS-Kurzform-Reihenfolge-Teil ist der
 einzige neue, heute rote Anteil dieser Datei.
+
+Epic #1703 Scheibe 3 (AC-1 bis AC-8, unten): schliesst die
+get_all_metrics()-vs-_METRICS-Blindstelle (docs/reference/metric_output_matrix.md
+Flaeche 3) -- Vollstaendigkeitstests wie AC-13/14/15 oben iterieren ueber
+get_all_metrics() und koennen selectable=False-Groessen (confidence, cape,
+temperature_cold) daher strukturell nie sehen. SPEC:
+docs/specs/modules/fix_1703_s3_selectable_metrics.md. Kein Produktivcode-Fix
+-- Charakterisierungstest fuer bereits korrektes, bisher unbewachtes
+Verhalten (alle 8 ACs laufen heute bereits GRUEN).
 """
 from __future__ import annotations
 
@@ -31,12 +40,15 @@ import re
 
 import pytest
 
-from app.metric_catalog import get_all_metrics, get_metric
-from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+from app.metric_catalog import _METRICS, build_default_display_config, get_all_metrics, get_metric
+from app.models import AlertMetric, MetricConfig, UnifiedWeatherDisplayConfig, _SELECTABLE_GATE_EXEMPT
 from output.renderers.channel_layout import render_for_channel
+from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
+from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
 from output.renderers.email.helpers import resolve_metric_col_order
 from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC, SMS_MULTI_SYMBOLS_BY_METRIC
 from output.renderers.trip_report import TripReportFormatter
+from services.weather_change_detection import is_alert_metric_active
 
 from tests.tdd import _min_temp_felt_fixtures as F
 
@@ -242,3 +254,311 @@ def test_ac15_sms_kurzform_selection_deselection_and_order(metric_id):
     # bleibt der Bezugspunkt, kein RED.
     sms_default = _render_sms(_two_metric_dc(metric_id, partner_id))
     assert _first_index_starting_with(sms_default, symbol) is not None
+
+
+# ---------------------------------------------------------------------------
+# Epic #1703 Scheibe 3 (AC-1 bis AC-8): die get_all_metrics()-vs-_METRICS-
+# Blindstelle schliessen (docs/reference/metric_output_matrix.md Flaeche 3).
+# SPEC: docs/specs/modules/fix_1703_s3_selectable_metrics.md.
+#
+# Kein Produktivcode-Fix -- Charakterisierungstest fuer bereits korrektes,
+# bisher unbewachtes Verhalten. Iterationsbasis fuer AC-8 ist _METRICS
+# (NICHT get_all_metrics()) + _SELECTABLE_GATE_EXEMPT direkt aus app.models
+# -- keine zweite Kopie der Ausnahmeliste.
+# ---------------------------------------------------------------------------
+
+
+def _mail_table(
+    dc: UnifiedWeatherDisplayConfig, report_type: str = "evening",
+) -> tuple[list[str], list[list[str]]]:
+    """Kopfzeile + Datenzeilen der ECHTEN Trip-Mail-Stundentabelle (Pruefort =
+    Wirkort -- s. Korrektur-Abschnitt der Spec: eine isolierte Pruefung von
+    resolve_metric_col_order() haette hier nachweislich die falsche Funktion
+    getroffen, s. AC-2/AC-5)."""
+    report = TripReportFormatter().format_email(
+        [_matrix_segment()], trip_name="Issue1703Matrix", report_type=report_type,
+        night_weather=F.night_weather(), display_config=dc,
+        stage_name=F.STAGE_NAME, tz=F.TZ,
+    )
+    head = re.search(r"<thead><tr>(.*?)</tr></thead>", report.email_html, re.S)
+    assert head, "Stundentabelle ohne Kopfzeile gerendert"
+    headers = [
+        re.sub(r"<[^>]+>", "", th).strip()
+        for th in re.findall(r"<th[^>]*>.*?</th>", head.group(1), re.S)
+    ]
+    body = re.search(r"<tbody>(.*?)</tbody>", report.email_html, re.S)
+    assert body, "Stundentabelle ohne Datenzeilen gerendert"
+    rows = [
+        [
+            re.sub(r"<[^>]+>", "", td).strip()
+            for td in re.findall(r"<td[^>]*>.*?</td>", tr, re.S)
+        ]
+        for tr in re.findall(r"<tr>(.*?)</tr>", body.group(1), re.S)
+    ]
+    return headers, rows
+
+
+def _row_by_time(headers: list[str], rows: list[list[str]], time_label: str) -> dict[str, str]:
+    time_idx = headers.index("Time")
+    for row in rows:
+        if row[time_idx] == time_label:
+            return dict(zip(headers, row))
+    raise AssertionError(f"keine Zeile mit Time={time_label!r} gefunden: {rows}")
+
+
+# --- AC-1: confidence -- nirgends, trotz summary_fields --------------------
+
+
+def test_ac1_confidence_absent_from_mail_telegram_compare():
+    """AC-1: confidence (selectable=False, default_enabled=False, KEIN
+    sms_code, KEIN alert_label, aber summary_fields={'min':
+    'confidence_pct_min'}) erscheint an keiner der drei Choke-Points -- die
+    drei erlaubten Erscheinungsorte (E-Mail-Textblock build_confidence_hint(),
+    SMS-Symbol C+/C~/C?, interne Aggregation confidence_pct_min) sind NICHT
+    Gegenstand dieses Tests, bleiben unberuehrt."""
+    metric = get_metric("confidence")
+    assert metric.selectable is False
+    assert metric.sms_code == "" and metric.alert_label == ""
+    assert metric.summary_fields == {"min": "confidence_pct_min"}
+
+    partner_id = _partner_of("confidence")
+    dc = _two_metric_dc("confidence", partner_id)
+
+    headers, _ = _mail_table(dc)
+    assert metric.col_label not in headers, (
+        f"AC-1: 'confidence' (Spaltenlabel {metric.col_label!r}) erscheint in "
+        f"der echten Trip-Mail-Kopfzeile: {headers}"
+    )
+    assert get_metric(partner_id).col_label in headers, (
+        "AC-1: Partner-Groesse muss trotzdem erscheinen (kein Kollateralschaden)"
+    )
+
+    cells = _telegram_cells(dc)
+    assert "confidence" not in cells, (
+        f"AC-1: 'confidence' erscheint in der Telegram-rich Tabelle/Detailzeile: {cells}"
+    )
+    assert partner_id in cells, "AC-1: Partner-Groesse muss in Telegram-rich erscheinen"
+
+    compare_ids = {e["metric_id"] for e in get_compare_metric_catalog()}
+    assert "confidence" not in compare_ids, (
+        f"AC-1: 'confidence' erscheint im Compare-Katalog: {compare_ids}"
+    )
+
+
+# --- AC-2: cape -- nirgends, TROTZ sms_code="CP"/alert_label="CAPE" --------
+# (Mutations-Gegenprobe-Ziel, s. "Pruefhinweis fuer den Adversary")
+
+
+def test_ac2_cape_absent_from_mail_telegram_compare_and_alert():
+    """AC-2: cape (selectable=False, default_enabled=False, MIT sms_code='CP'
+    UND alert_label='CAPE') erscheint an denselben drei Stellen wie AC-1
+    NICHT, UND is_alert_metric_active(CAPE, ...) bleibt False trotz
+    enabled=True.
+
+    Mutations-Gegenprobe-Ziel: die Mail-Header-Assertion prueft den ECHTEN
+    <thead> (nicht nur resolve_metric_col_order() isoliert) -- wuerde
+    _SELECTABLE_GATE_EXEMPT versehentlich um 'cape' erweitert, ueberlebt cape
+    die Kanal-Kollabierung (trip_report.py:135) und erschiene ueber den
+    remaining-Fallback (email/html.py:678-682) am Tabellenende, OBWOHL
+    resolve_metric_col_order() selbst (roher .selectable-Check, KEINE
+    Exemption-Kenntnis) unveraendert bliebe -- dasselbe Pruefort=Wirkort-Muster
+    wie bei AC-5/AC-6."""
+    metric = get_metric("cape")
+    assert metric.selectable is False
+    assert metric.sms_code == "CP" and metric.alert_label == "CAPE"
+
+    partner_id = _partner_of("cape")
+    dc = _two_metric_dc("cape", partner_id)
+
+    headers, _ = _mail_table(dc)
+    assert metric.col_label not in headers, (
+        f"AC-2: 'CAPE' erscheint in der echten Trip-Mail-Kopfzeile: {headers}"
+    )
+    assert "cape" not in resolve_metric_col_order(dc), (
+        "AC-2: 'cape' col_key erscheint in resolve_metric_col_order()"
+    )
+
+    cells = _telegram_cells(dc)
+    assert "cape" not in cells, (
+        f"AC-2: 'cape' erscheint in der Telegram-rich Tabelle/Detailzeile: {cells}"
+    )
+
+    compare_ids = {e["metric_id"] for e in get_compare_metric_catalog()}
+    assert "cape" not in compare_ids, (
+        f"AC-2: 'cape' erscheint im Compare-Katalog: {compare_ids}"
+    )
+
+    cape_dc = _single_metric_dc("cape", enabled=True)
+    assert is_alert_metric_active(AlertMetric.CAPE, cape_dc) is False, (
+        "AC-2: is_alert_metric_active(CAPE, ...) liefert True trotz "
+        "enabled=True -- CAPE darf trotz Bestandskonfiguration nie "
+        "alarmfaehig gelten"
+    )
+
+
+# --- AC-3: temperature_cold -- Kaeltealarm MUSS aktiv bleiben (Trip-Pfad) --
+
+
+def test_ac3_temperature_cold_cold_alarm_stays_active():
+    """AC-3: ein Trip mit temperature_cold in Default-Konfiguration
+    (Dataclass-Default enabled=True, kein explizites default_enabled gesetzt
+    -- s. build_default_display_config()) haelt den Kaeltealarm aktiv, obwohl
+    temperature_cold.selectable=False ist. Korrektur (Adversary-Finding F001,
+    2026-08-10): NICHT die Exemption in _SELECTABLE_GATE_EXEMPT bewirkt das --
+    is_alert_metric_active() liest _SELECTABLE_GATE_EXEMPT an keiner Stelle.
+    Ursache ist die OR-Tupel-Abbildung _ALERT_METRIC_TO_CATALOG_ID[TEMPERATURE_MIN]
+    = ("temperature_cold", "temperature") (weather_change_detection.py:85):
+    das mitgemappte, selbst selectable=True/enabled=True Glied "temperature"
+    traegt das Ergebnis per any(...) (weather_change_detection.py:224-234).
+    Die Exemption-Wirkung fuer temperature_cold wird stattdessen von AC-5
+    bewiesen (Mail-Spalte ueber den remaining-Fallback -- dort IST die
+    Exemption die entscheidende Variable, per Mutation bestaetigt)."""
+    dc = build_default_display_config()
+    assert dc.is_metric_enabled("temperature_cold") is True, (
+        "Vorbedingung verletzt: temperature_cold muss in der Default-"
+        "Konfiguration enabled=True sein (Dataclass-Default, kein "
+        "explizites default_enabled)"
+    )
+    assert is_alert_metric_active(AlertMetric.TEMPERATURE_MIN, dc) is True, (
+        "AC-3: Kaeltealarm (TEMPERATURE_MIN) darf trotz "
+        "temperature_cold.selectable=False nicht inaktiv sein -- Ursache ist "
+        "die OR-Tupel-Abbildung auf die mitgemappte, selbst waehlbare Groesse "
+        "'temperature' (_ALERT_METRIC_TO_CATALOG_ID), NICHT die Exemption in "
+        "_SELECTABLE_GATE_EXEMPT (die wird hier nicht gelesen, s. AC-5 fuer "
+        "den Test, der die Exemption-Wirkung tatsaechlich belegt)"
+    )
+
+
+# --- AC-4 (Regression-Baseline, KEIN neuer Test): temperature_cold --------
+# Compare-Aktivierung MUSS wirken. Bereits gedeckt von
+# tests/tdd/test_compare_alert_metric_gating.py::
+# test_f002_guard_temp_min_active_min_temp_delta_fires (bleibt gruen, kein
+# redundanter Test). Die generische Parametrisierung in AC-8 verankert
+# denselben Choke-Point zusaetzlich zukunftssichernd.
+
+
+# --- AC-5: temperature_cold -- Mail-Spaltenreihenfolge ueber den ----------
+# remaining-Fallback (Pruefort = Wirkort)
+
+
+def test_ac5_temperature_cold_mail_column_via_remaining_fallback():
+    """AC-5: ein Trip mit Default-Konfiguration (temperature_cold.enabled=True,
+    keine eigene order) zeigt die Spalte 'TmpMin' im ECHTEN <thead> an
+    letzter Position (remaining-Fallback, email/html.py:678-682), OBWOHL
+    resolve_metric_col_order(dc) selbst 'temp_cold' NICHT fuehrt
+    (dokumentierte Bestands-Abweichung, models.py:619-625)."""
+    dc = build_default_display_config()
+
+    assert "temp_cold" not in resolve_metric_col_order(dc), (
+        "Vorbedingung: resolve_metric_col_order() fuehrt 'temp_cold' bewusst "
+        "NICHT (Bestand, s. models.py _SELECTABLE_GATE_EXEMPT-Kommentar)"
+    )
+
+    headers, _ = _mail_table(dc)
+    metric_cols = [h for h in headers if h not in {"Time", "Risk"}]
+    assert "TmpMin" in metric_cols, (
+        f"AC-5: 'TmpMin' fehlt in der echten Trip-Mail-Kopfzeile: {headers}"
+    )
+    assert metric_cols[-1] == "TmpMin", (
+        f"AC-5: 'TmpMin' muss ueber den remaining-Fallback an letzter "
+        f"Position stehen: {metric_cols}"
+    )
+
+
+# --- AC-6: temperature_cold -- Stundentabelle: GEMESSENE Dublette ---------
+# (Charakterisierung, KEINE Fixierung dieser Scheibe -- s. Known
+# Limitations Punkt 2 der Spec)
+
+
+def test_ac6_temperature_cold_hourly_duplicate_characterization():
+    """AC-6: die Stundenzeilen der Trip-Mail zeigen HEUTE (gemessen
+    2026-08-10) eine eigene Spalte 'TmpMin' NEBEN 'Temp', mit fuer dieselbe
+    Stunde IDENTISCHEM Zahlenwert (beide lesen dp_field='t2m_c') -- eine
+    echte Dublette. Reine Charakterisierung, kein Bug-Fix-Test."""
+    dc = build_default_display_config()
+    headers, rows = _mail_table(dc)
+    assert "Temp" in headers and "TmpMin" in headers
+
+    row = _row_by_time(headers, rows, f"{F.COLD_HOUR:02d}")
+    assert row["Temp"] == row["TmpMin"], (
+        f"AC-6 (Charakterisierung): 'Temp' und 'TmpMin' sollten fuer "
+        f"dieselbe Stunde identisch gerendert sein (Dublette) -- gemessen "
+        f"Temp={row['Temp']!r} TmpMin={row['TmpMin']!r}"
+    )
+
+
+# --- AC-7: temperature_cold -- Compare-Katalog bleibt strukturell leer ----
+
+
+def test_ac7_temperature_cold_absent_from_compare_catalog():
+    """AC-7: weder das rohe COMPARE_METRIC_CATALOG noch
+    get_compare_metric_catalog() fuehren einen Eintrag mit
+    metric_id=='temperature_cold' -- nicht weil ein .selectable-Filter ihn
+    entfernt, sondern weil COMPARE_METRIC_CATALOG ihn nie enthalten hat
+    (reine Trip-Alarm-Pseudogroesse ohne Compare-Entsprechung)."""
+    raw_ids = {e["metric_id"] for e in COMPARE_METRIC_CATALOG}
+    filtered_ids = {e["metric_id"] for e in get_compare_metric_catalog()}
+    assert "temperature_cold" not in raw_ids, (
+        f"AC-7: 'temperature_cold' erscheint im rohen COMPARE_METRIC_CATALOG: {raw_ids}"
+    )
+    assert "temperature_cold" not in filtered_ids, (
+        f"AC-7: 'temperature_cold' erscheint in get_compare_metric_catalog(): {filtered_ids}"
+    )
+
+
+# --- AC-8 (generisch, zukunftssichernd): die eigentliche Blindstellen- ----
+# Reparatur. Iterationsbasis ist _METRICS (NICHT get_all_metrics()),
+# Verzweigung ueber _SELECTABLE_GATE_EXEMPT direkt aus app.models -- keine
+# zweite Kopie der Ausnahmeliste.
+
+_NON_SELECTABLE_METRIC_IDS = [m.id for m in _METRICS if not m.selectable]
+
+
+@pytest.mark.parametrize("metric_id", _NON_SELECTABLE_METRIC_IDS)
+def test_ac8_non_selectable_metrics_stay_out_unless_exempt(metric_id):
+    """AC-8: fuer JEDE NICHT in _SELECTABLE_GATE_EXEMPT gelistete
+    selectable=False-Groesse gilt dieselbe Grundregel aus AC-1/AC-2 an den
+    ID-verankerten Choke-Points (resolve_metric_col_order()-Rueckgabe,
+    get_compare_metric_catalog()-Metrik-IDs, resolve_enabled_metrics()-
+    Ergebnis sofern ein Compare-Katalog-Eintrag existiert, is_alert_metric_
+    active() sofern ein alert_metrics-Eintrag existiert). Fuer eine gelistete
+    Groesse (heute: temperature_cold) gilt die Regel NICHT -- s. AC-3 bis
+    AC-7."""
+    if metric_id in _SELECTABLE_GATE_EXEMPT:
+        pytest.skip(
+            f"{metric_id!r} ist ueber _SELECTABLE_GATE_EXEMPT ausgenommen -- "
+            "der Sollzustand steht in AC-3 bis AC-7, nicht in dieser "
+            "generischen Regel"
+        )
+
+    metric = get_metric(metric_id)
+    dc = _single_metric_dc(metric_id, enabled=True)
+
+    col_order = resolve_metric_col_order(dc)
+    assert metric.col_key not in col_order, (
+        f"AC-8: {metric_id!r} (col_key {metric.col_key!r}) erscheint in "
+        f"resolve_metric_col_order(): {col_order}"
+    )
+
+    compare_ids = {e["metric_id"] for e in get_compare_metric_catalog()}
+    assert metric_id not in compare_ids, (
+        f"AC-8: {metric_id!r} erscheint im Compare-Katalog: {compare_ids}"
+    )
+
+    for entry in COMPARE_METRIC_CATALOG:
+        if entry["metric_id"] != metric_id:
+            continue
+        resolved = resolve_enabled_metrics([entry["key"]]) or []
+        renderer_id = FRONTEND_TO_RENDERER_METRIC_ID.get(entry["key"])
+        assert renderer_id not in resolved, (
+            f"AC-8: {metric_id!r} (Compare-Key {entry['key']!r}) erscheint "
+            f"im Ergebnis von resolve_enabled_metrics(): {resolved}"
+        )
+
+    for alert_value in metric.alert_metrics.values():
+        alert_metric = AlertMetric(alert_value)
+        assert is_alert_metric_active(alert_metric, dc) is False, (
+            f"AC-8: is_alert_metric_active({alert_metric!r}, ...) liefert "
+            f"True fuer die nicht waehlbare Groesse {metric_id!r}, obwohl "
+            "enabled=True"
+        )
