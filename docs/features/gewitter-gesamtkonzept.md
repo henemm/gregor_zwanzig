@@ -739,10 +739,18 @@ Problem, statt es zu lösen.
 
 | Rang | Scheibe | Warum hier | Vorbedingung |
 |---|---|---|---|
-🔴 **Umstellung 2026-08-08:** Die Eichung (E1) braucht genau die Größen, die #1531 holt —
-`lpi_max`, um gleiche Statistik gegen gleiche Statistik zu stellen, und `cin_ml`, um die
-CAPE-Deckelung zu ersetzen. #1531 ist damit **nicht** eine spätere Scheibe, sondern die
-**Voraussetzung** der Eichung.
+🔴 **Korrektur 2026-08-10 (gemessen, nicht nur gelesen):** Die Zeilen unten markierten
+Ränge 2/3/4/5/7/10 als „✅" — das Kürzel verweist aber auf die **Entscheidung** (Abschnitt
+10.1), nicht auf eine geprüfte Umsetzung. Direkter Codeabgleich (2026-08-10) zeigt: `cape`
+hat weiterhin kein `selectable=False` (Rang 5), `lpi_max` wird nirgends abgerufen (Rang 3),
+die LPI-Schwellen stehen weiterhin auf 5/20/50 statt der belegten 1/30/50 (Rang 2), keine
+Herkunfts-Kennzeichnung der Stufe gefunden (Rang 4), `MeteoAlarmFeedSource("DE")` existiert
+nicht (Rang 10) — nur Rang 0 ist tatsächlich im Code verifiziert. Diese Tabelle braucht eine
+vollständige Nachmessung, bevor ihr wieder vertraut wird.
+
+Zur Eichung selbst (Rang 7): Abschnitt 4.4 stellt bereits richtig, dass die Historical
+Forecast API die Eichung **sofort rechenbar** macht — kein wochenlanges Sammeln nötig, keine
+Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
 
 | Rang | Scheibe | Warum hier | Stand |
 |---|---|---|---|
@@ -753,7 +761,7 @@ CAPE-Deckelung zu ersetzen. #1531 ist damit **nicht** eine spätere Scheibe, son
 | **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | ✅ E1 |
 | **5** | **CAPE unsichtbar** (`selectable=False`) | Klein, unabhängig. Im Kern ein Katalog-Kwarg — die Render-Pfade prüfen `selectable` bereits generisch | ✅ E2 |
 | **6** | **Radar hebt die Stufe an** | Beseitigt den Widerspruch aus Abschnitt 5 | ✅ E3 |
-| **7** | **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max`, kalibriert auf gleiche Überschreitungshäufigkeit | Braucht mehrere Wochen Daten über verschiedene Wetterlagen — fällt mit Rang 1 an | ✅ E1b, Daten offen |
+| **7** | **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max`, kalibriert auf gleiche Überschreitungshäufigkeit | Sofort rechenbar über die Historical Forecast API (4.4) — unabhängig von #1531 | 🔴 offen, Ticket **#1678** |
 | **8** | **`sdi_2` einhängen** | Publizierte DWD-Schwelle vorhanden; erst sinnvoll, wenn die Skala geeicht ist | nach Rang 7 |
 | **9** | **Amtliche Warnung + Änderungsalarm zusammenführen** (E5); Radar-Nowcast bleibt eigener Kanal | Unabhängig von der Signalkette | ✅ E5 |
 | **10** | **Deutschland an den Meteoalarm-Feed** — `MeteoAlarmFeedSource("DE")` | Der Weg läuft produktiv für IT/AT und ist kontingentfrei. Offen: Punkt→Zone-Auflösung für DE, und 13,5 MB je Abruf ohne gzip | ✅ E6 |
