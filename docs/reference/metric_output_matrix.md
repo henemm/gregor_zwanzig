@@ -315,30 +315,26 @@ entfällt diese Scheibe und Scheibe 7 wird auf Trip-Kanäle beschränkt.
 **Abhängigkeitsbild:** 3 → (1, 2, 4, 5 parallel) · 6 jederzeit parallel ·
 7 nach 7a · 8 nur bei 7a = ja.
 
-## 7. PO-Entscheidungsvorlage
+## 7. PO-Entscheidungsvorlage — ENTSCHIEDEN (PO, 2026-08-10)
 
-Drei Fragen sind **offen** und werden in diesem Dokument bewusst nicht
-beantwortet. Wo eine Empfehlung existiert, ist sie als Empfehlung
-gekennzeichnet — sie ist keine getroffene Entscheidung.
+Alle drei Fragen sind vom PO entschieden (Issue #1514). Die ursprüngliche
+Abwägung bleibt zur Nachvollziehbarkeit stehen.
 
-- [ ] PO-Entscheidung (a) **Compare-Kanal-Tabs — ja oder nein?** Heute führt der
+- [x] PO-Entscheidung (a) **Compare-Kanal-Tabs: JA.** Der Compare-Editor bekommt
+      Kanal-Layouts wie der Trip-Editor (Scheibe 8 ist damit beauftragt,
+      Scheibe 7 deckt Trip UND Compare). Ursprüngliche Abwägung: Heute führt der
       Compare-Editor eine globale Metrik-Liste (`wiz.activeMetricKeys`), der
-      Trip-Editor Layouts je Kanal (`channel_layouts`). Das widerspricht der
-      Trip/Compare-Teilungsvorgabe, ist aber ein größerer Umbau (Scheibe 8).
-      *Konsequenz eines „nein": Scheibe 8 entfällt, Scheibe 7 deckt nur Trip.*
-      Keine Empfehlung — das ist eine Produktentscheidung, keine technische.
+      Trip-Editor Layouts je Kanal (`channel_layouts`) — der Umbau stellt die
+      Trip/Compare-Teilungsvorgabe auch hier her.
 
-- [ ] PO-Entscheidung (b) **Form-Dimension als eigene Achse bestätigen?**
-      Empfehlung ist: ja — Form (Aggregation, `format_mode`, Symbol-Grammatik)
-      wird separat geführt (Scheibe 6), nicht in die Hauptmatrix gemischt, weil
-      `SMS_MULTI_SYMBOLS_BY_METRIC` (S6) 1:n ist. *Konsequenz eines „nein": die
-      Hauptmatrix müsste 1:n-fähig werden — deutlich teurer, und jede Zelle
-      bekäme eine Sonderfallbehandlung.*
+- [x] PO-Entscheidung (b) **Form-Dimension als eigene Achse: JA** (Empfehlung
+      bestätigt). Form (Aggregation, `format_mode`, Symbol-Grammatik) wird
+      separat geführt (Scheibe 6), nicht in die Hauptmatrix gemischt, weil
+      `SMS_MULTI_SYMBOLS_BY_METRIC` (S6) 1:n ist.
 
-- [ ] PO-Entscheidung (c) **Folge-Scheiben als Epic bündeln oder Einzel-Issues?**
-      Acht Scheiben mit Abhängigkeiten (3 vor 1/2/4/5; 7 nach 7a). Ein Epic hält
-      die Reihenfolge sichtbar; Einzel-Issues sind leichter parallel zu vergeben.
-      Keine Empfehlung — das hängt daran, wie viel parallel laufen soll.
+- [x] PO-Entscheidung (c) **Folge-Scheiben als EPIC gebündelt: Epic #1703.**
+      Acht Scheiben mit Abhängigkeiten (3 vor 1/2/4/5; 8 vor 7; 6 parallel)
+      laufen unter Epic #1703, das die Reihenfolge sichtbar hält.
 
 ## 8. Anti-Veraltungs-Mechanik
 
