@@ -72,13 +72,14 @@ from app.models import (
     UnifiedWeatherDisplayConfig,
 )
 from app.trip import Stage, Trip, Waypoint
+from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 
 # Pfadregel #1409: Pruefling relativ zur Testdatei aufloesen, nie ueber einen
 # festen Hauptrepo-Pfad — sonst pruefte dieser Test aus dem Worktree die
 # unveraenderte Hauptrepo-Kopie und meldete falsches Gruen.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-LAT, LON = 47.0, 11.0
+LAT, LON = 64.13, -21.90
 
 # Alle Transport-Felder ausdruecklich unbrauchbar: `Settings()` faellt bei
 # fehlenden Feldern still auf die Prod-`.env` im Worktree zurueck (#1477).
@@ -173,13 +174,20 @@ def _trip(trip_id: str, *, with_levels: bool = False,
     ein Vermerk mit gestrigem Zieltag pruefen, ohne dass er schon an der
     bestehenden "keine Segmente"-Regel (`:392-395`) verfaellt.
     """
+    # #1667 S1 / #1697: wanduhr-robuste Ankunftszeit + Ortstag statt roher
+    # date.today() ohne arrival_calculated — sonst greift ab ~17:00 UTC der
+    # Naismith-Default 08:00 und das Ziel-Segment endet am Tagesfenster-Ende
+    # (19:00 Ortszeit) VOR dem Testlauf.
+    heute = stage_date(LAT, LON)
+    arr0, arr1 = active_window_offsets(LAT, LON, -60, 120)
     stages = [
         Stage(
-            id=f"T{i + 1}", name=f"Tag {i + 1}", date=date.today() + timedelta(days=off),
+            id=f"T{i + 1}", name=f"Tag {i + 1}", date=heute + timedelta(days=off),
             waypoints=[
-                Waypoint(id=f"G{i}1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0),
+                Waypoint(id=f"G{i}1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
+                         arrival_calculated=arr0),
                 Waypoint(id=f"G{i}2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1,
-                         elevation_m=1500.0),
+                         elevation_m=1500.0, arrival_calculated=arr1),
             ],
         )
         for i, off in enumerate(stage_offsets)
