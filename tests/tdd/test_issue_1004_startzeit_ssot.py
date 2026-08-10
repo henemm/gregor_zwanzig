@@ -33,10 +33,15 @@ from app.trip import Stage, TimeWindow, Trip, Waypoint
 from services.trip_segments import convert_trip_to_segments
 from utils.timezone import tz_for_coords
 
-# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
-# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
-# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
-pytestmark = pytest.mark.live
+# KEIN Modul-Marker (#1667 S2, Messung 2026-08-10): frueher trug diese Datei
+# ``pytestmark = pytest.mark.live`` -- damit lief KEINE der 12 Funktionen im
+# Kern-Lauf oder in der CI-Ampel, obwohl 11 davon offline und ohne Netz gruen
+# sind (``-m "" --disable-socket``: 11 passed, 1 failed). Rot war allein
+# ``test_ac1_...`` wegen fehlender Bestandsdaten. Nebenwirkung: die autouse-
+# Fixture ``_isolate_data_root`` (conftest, #1133) steigt bei ``live`` aus --
+# der Modul-Marker liess die ``save_trip``-Tests in den ECHTEN ``data/users/``-
+# Baum schreiben. Der Marker sitzt deshalb jetzt an genau der einen Funktion,
+# die ihn braucht, mit Begruendung an Ort und Stelle.
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 # Kein Bug (#1409, Klasse C): nur FALLBACK nach _REPO_ROOT (s. Schleife unten) --
@@ -82,6 +87,13 @@ def _imported_tw(hhmm: str) -> TimeWindow:
 # AC-1 — Bestandstrip: konfigurierte Startzeit gewinnt OHNE Migration
 # ---------------------------------------------------------------------------
 
+# Bleibt live: liest den echten Bestands-Trip
+# ``data/users/henning/trips/74de939c.json`` aus dem Datenbaum der laufenden
+# Instanz. Der liegt weder im Repo noch im Worktree; gemessen 2026-08-10 fehlt
+# er inzwischen auch im Hauptrepo-``data/`` (Datenwurzel per systemd-Env, #1633).
+# Ohne diese Datei ist der Test nicht ausfuehrbar -- er gehoert damit in den
+# /e2e-verify-Lauf gegen eine Instanz mit echten Daten, nicht in die Kern-Schicht.
+@pytest.mark.live
 def test_ac1_bestandstrip_rendert_konfigurierte_startzeit():
     """AC-1: echter VOR dem Fix gespeicherter Trip (74de939c.json,
     Etappe 'nach Sassenberg', start_time=14:00, Import-Zeiten 07:00/09:00/11:00)
@@ -204,15 +216,25 @@ def test_ac4_arrival_override_bleibt_massgeblich():
 
 
 # ---------------------------------------------------------------------------
-# AC-5 — Mitternachts-Klemme: kein stiller Totalausfall der Etappe
+# AC-5 — Etappe über Mitternacht: alle Segmente bleiben erhalten
 # ---------------------------------------------------------------------------
 
-def test_ac5_spaete_startzeit_kein_totalausfall(caplog):
-    """AC-5: start_time=22:00 + lange Etappe → Naismith klemmt Folge-
-    Ankünfte auf 23:59. Erstes Segment bleibt erhalten (Start 22:00),
-    geklemmte Folgesegmente kollabieren geloggt — Liste nie leer."""
+def test_ac5_spaete_startzeit_alle_segmente_erhalten(caplog):
+    """AC-5: start_time=22:00 + lange Etappe → Naismith wickelt die Folge-
+    Ankünfte über Mitternacht (#1667 S2, vorher: Klemme auf 23:59).
+
+    Erwartung seit S2 fundamental gedreht: früher kollabierten die geklemmten
+    Folgesegmente (nur das erste überlebte, mit Warnung); jetzt entstehen ALLE
+    Wegpunkt-Paar-Segmente und es gibt KEINE Kollaps-Warnung mehr. Das erste
+    Segment beginnt weiterhin um 22:00 (importierte time_window 07:00 verliert
+    gegen die konfigurierte Startzeit) — das war und bleibt der Kern von AC-5.
+
+    Ankünfte hergeleitet am echten Code (compute_stage_arrivals, 3 × ~12,2 km
+    flach ÷ 4 km/h ≈ 3 h 2 min je Schenkel):
+    ['22:00', '01:02', '04:04', '07:06'] — drei Wegpunkt-Paare, alle distinkt.
+    """
     trip_date = date(2026, 8, 3)
-    # ~12 km Abstände → Ankünfte weit nach Mitternacht → Clamp auf 23:59
+    # ~12 km Abstände → Ankünfte weit nach Mitternacht → Wrap statt Klemme
     coords = [(47.0, 11.0), (47.0, 11.16), (47.0, 11.32), (47.0, 11.48)]
     tws = ["07:00", "09:00", "11:00", "13:00"]
     waypoints = [
@@ -242,9 +264,17 @@ def test_ac5_spaete_startzeit_kein_totalausfall(caplog):
         f"Segment 1 beginnt {first} statt der konfigurierten 22:00 "
         f"(importierte time_window 07:00 gewinnt weiterhin)"
     )
-    # Geklemmte Folgesegmente kollabieren → muss nachvollziehbar geloggt sein.
-    assert any(r.levelno >= logging.WARNING for r in caplog.records), (
-        "Kollabierte (geklemmte) Folgesegmente wurden ohne Warnung verworfen"
+    ankuenfte = [wp.arrival_calculated for wp in reloaded.stages[0].waypoints]
+    paar_segmente = [s for s in segments if s.segment_id != "Ziel"]
+    assert len(paar_segmente) == len(waypoints) - 1, (
+        f"{len(paar_segmente)} statt {len(waypoints) - 1} Wegpunkt-Paar-Segmenten — "
+        f"nach dem Wrap darf keins mehr am Kollaps-Guard verworfen werden; "
+        f"Ankünfte={ankuenfte}"
+    )
+    kollaps = [r.getMessage() for r in caplog.records if "kollabiert" in r.getMessage()]
+    assert kollaps == [], (
+        f"Kollaps-Warnungen trotz Wrap über Mitternacht: {kollaps} — "
+        f"Ankünfte={ankuenfte}"
     )
 
 

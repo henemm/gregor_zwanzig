@@ -82,17 +82,21 @@ func parseStartMinutes(startTime *string) int {
 }
 
 // formatHHMM formatiert Minuten ab Mitternacht als "HH:MM".
-// F001: Stunden werden auf <=23 begrenzt (Clamp auf "23:59" ab >=24*60 min).
-// Grund: Die Python-Gegenseite (_parse_hhmm) kann einen Stunden-Teil >23 nicht
-// konsumieren und fällt sonst still auf die divergente Interpolation zurück —
-// das untergräbt das Ziel "Editor-Zeit == Wetterabruf-Zeit". Der Clamp hält den
-// Wert cross-layer konsistent. Eine >24h-Etappe ist ohnehin Known Limitation
-// (siehe Spec §2, Etappen sind Tagesabschnitte).
+// F001: Stunden bleiben <=23 — ab >=24*60 min wird über Mitternacht GEWICKELT
+// (Wrap, Modulo), nicht mehr auf "23:59" geklemmt (Issue #1667 S2).
+// Grund für die Bereichsgrenze gilt unverändert: Die Python-Gegenseite
+// (_parse_hhmm) kann einen Stunden-Teil >23 nicht konsumieren und fällt sonst
+// still auf die divergente Interpolation zurück — das untergräbt das Ziel
+// "Editor-Zeit == Wetterabruf-Zeit". Der Wrap ERFÜLLT diese Bedingung (Ausgabe
+// weiterhin nur 00:00-23:59), statt sie zu umgehen; die frühere Klemme tat das
+// zwar auch, ließ aber mehrere Wegpunkte auf denselben Wert "23:59" fallen, so
+// dass der wp_days-Rollover den Tageswechsel nicht mehr erkannte und Segmente
+// samt Wetterüberwachung verworfen wurden.
+// Kein negativsicherer Modulo (((x%m)+m)%m) nötig: totalMin ist konstruktiv >= 0
+// (Startzeit >= 0 plus kumulierte, nie negative Naismith-Minuten). Bitte nicht
+// "sicherheitshalber" umbauen.
 func formatHHMM(totalMin int) string {
-	const maxMin = 24*60 - 1 // "23:59"
-	if totalMin > maxMin {
-		totalMin = maxMin
-	}
+	totalMin %= 24 * 60
 	return fmt.Sprintf("%02d:%02d", totalMin/60, totalMin%60)
 }
 
