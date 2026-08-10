@@ -136,16 +136,119 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 		}
 	}
 
-	return map[string]any{
-		"open_pending_briefings":       openCount,
-		"degraded_segments_total":      degradedTotal,
-		"oldest_pending_age_hours":     oldestAgeHours,
-		"last_provider_error_at":       lastProviderErrorAt,
-		"provider_error_streak_since":  providerErrorStreakSince,
-		"provider_errors_recent_count": providerErrorsRecentCount,
-		"corrupt_trips_total":          corruptTripsTotal,
-		"corrupt_trips_last_run_at":    corruptTripsLastRunAt,
+	// Issue #1629 AC-8: derselbe Bauart-Zwilling für den bislang unerfassten
+	// Ausfallpfad "Versand wirft eine Ausnahme" (am 08.08. ein ganzer Tag ohne
+	// Abweichungs-Alarm, sichtbar nur als Zeile im Dauerrauschen). Namens- und
+	// Formelanalogie zu provider_error_* ist Absicht: die externe Eskalation
+	// rechnet unverändert now - <streak_since>.
+	var dispatchErrorStreakSince any
+	dispatchErrorsRecentCount := 0
+	if s.store != nil {
+		if since, recent := analyzeBriefingDispatchErrors(s.store.DataDir, time.Now().UTC()); since != "" || recent > 0 {
+			if since != "" {
+				dispatchErrorStreakSince = since
+			}
+			dispatchErrorsRecentCount = recent
+		}
 	}
+
+	return map[string]any{
+		"open_pending_briefings":                openCount,
+		"degraded_segments_total":               degradedTotal,
+		"oldest_pending_age_hours":              oldestAgeHours,
+		"last_provider_error_at":                lastProviderErrorAt,
+		"provider_error_streak_since":           providerErrorStreakSince,
+		"provider_errors_recent_count":          providerErrorsRecentCount,
+		"corrupt_trips_total":                   corruptTripsTotal,
+		"corrupt_trips_last_run_at":             corruptTripsLastRunAt,
+		"briefing_dispatch_error_streak_since":  dispatchErrorStreakSince,
+		"briefing_dispatch_errors_recent_count": dispatchErrorsRecentCount,
+	}
+}
+
+// dispatchErrorStreakGapThreshold is the maximum gap between two consecutive
+// briefing DISPATCH failures that still counts as one contiguous outage.
+//
+// Deliberately NOT providerErrorStreakGapThreshold (2h): provider calls happen
+// many times per briefing run, dispatch happens once per briefing SLOT —
+// morning and evening, i.e. roughly every 12h, for some users only once a day.
+// With a 2h threshold every failure would be a streak of exactly one entry and
+// the forward check against now would erase the signal two hours after the
+// failure — precisely the "Kaschieren" ADR-0018 forbids. 26h covers a daily
+// rhythm plus slack, so a genuinely ongoing outage keeps growing, while a
+// single failure followed by a successful briefing (which writes no line at
+// all) lets the streak lapse on its own.
+const dispatchErrorStreakGapThreshold = 26 * time.Hour
+
+// dispatchFailureEntry mirrors one line of
+// users/<uid>/diagnostics/briefing_dispatch_failures.jsonl, written by
+// src/services/alert_briefing_anchor.py's record_briefing_dispatch_failure
+// (Issue #1629). Privacy (#252): only the timestamp is decoded — never
+// entity_id, kind or the error text.
+type dispatchFailureEntry struct {
+	Ts string `json:"ts"`
+}
+
+// analyzeBriefingDispatchErrors scans every user's dispatch-failure journal and
+// derives the same two signals as analyzeBriefingProviderErrors, for Issue
+// #1629 AC-8:
+//   - streakSince: earliest timestamp (RFC3339) of the current contiguous
+//     failure streak (adjacent failures no more than
+//     dispatchErrorStreakGapThreshold apart), so now-streakSince GROWS with the
+//     outage. Empty once the streak has lapsed — a successful dispatch writes
+//     no line, so the forward gap against now is what ends a series.
+//   - recentCount: dispatch failures within the last 24h.
+//
+// Fail-soft: missing/corrupt files or lines are skipped, never a panic.
+func analyzeBriefingDispatchErrors(dataDir string, now time.Time) (string, int) {
+	var failureTimes []time.Time
+	matches, _ := filepath.Glob(filepath.Join(dataDir, "users", "*", "diagnostics", "briefing_dispatch_failures.jsonl"))
+	for _, match := range matches {
+		f, err := os.Open(match)
+		if err != nil {
+			continue // fail-soft: one unreadable user must not break the aggregate
+		}
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var entry dispatchFailureEntry
+			if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+				continue // skip corrupt line, keep scanning
+			}
+			ts, err := time.Parse(time.RFC3339, entry.Ts)
+			if err != nil {
+				continue
+			}
+			failureTimes = append(failureTimes, ts)
+		}
+		f.Close()
+	}
+	if len(failureTimes) == 0 {
+		return "", 0
+	}
+
+	sort.Slice(failureTimes, func(i, j int) bool { return failureTimes[i].Before(failureTimes[j]) })
+
+	recentCount := 0
+	cutoff := now.Add(-24 * time.Hour)
+	for _, ts := range failureTimes {
+		if ts.After(cutoff) {
+			recentCount++
+		}
+	}
+
+	newest := failureTimes[len(failureTimes)-1]
+	if now.Sub(newest) > dispatchErrorStreakGapThreshold {
+		return "", recentCount
+	}
+
+	streakStart := newest
+	for i := len(failureTimes) - 1; i > 0; i-- {
+		if failureTimes[i].Sub(failureTimes[i-1]) > dispatchErrorStreakGapThreshold {
+			break
+		}
+		streakStart = failureTimes[i-1]
+	}
+	return streakStart.Format(time.RFC3339), recentCount
 }
 
 // corruptTripsDiagnostics mirrors one users/<uid>/diagnostics/corrupt_trips.json

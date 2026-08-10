@@ -38,10 +38,56 @@ logger = logging.getLogger("alert_briefing_anchor")
 _BRIEFING_ANCHOR_FILE = "briefing_anchor.json"
 
 
+# Diagnose-Spur gescheiterter Briefing-Versände (#1629). Eine Zeile je
+# Fehlschlag, JSONL wie `openmeteo_calls.jsonl` — Leser ist
+# `analyzeBriefingDispatchErrors` (internal/scheduler/briefing_health.go), das
+# daraus das mit der Ausfalldauer wachsende Signal am Status-Endpunkt bildet.
+_DISPATCH_FAILURE_FILE = "briefing_dispatch_failures.jsonl"
+
+
 def _anchor_path(user_id: str):
     from app.loader import get_data_dir
 
     return get_data_dir(user_id) / _BRIEFING_ANCHOR_FILE
+
+
+def record_briefing_dispatch_failure(
+    *, user_id: str, kind: str, entity_id: str, error: object,
+) -> None:
+    """Hält einen gescheiterten Briefing-Versand als Diagnose-Spur fest (#1629).
+
+    Args:
+        user_id: echte Nutzer-Kennung (Mandantentrennung, nie `"default"`).
+        kind: `"route"` (Trip) oder `"vergleich"` (Ortsvergleich).
+        entity_id: Trip- bzw. Preset-Kennung.
+        error: die gefangene Ausnahme (als Freitext festgehalten).
+
+    Der Pfad wird über die zentrale Datenwurzel aufgelöst (`get_data_dir`),
+    nie repo-relativ — ein fest verdrahteter `data/`-Pfad hat zuletzt die
+    gesamte Überwachung blind gemacht (#1633).
+
+    Fail-soft (AC-7): ein Fehler hier darf die eigentliche Versandausnahme
+    weder verhindern noch überdecken — deshalb wird JEDE Ausnahme gefangen und
+    nur geloggt.
+    """
+    try:
+        from app.loader import get_data_dir
+
+        path = get_data_dir(user_id) / "diagnostics" / _DISPATCH_FAILURE_FILE
+        path.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps({
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "kind": kind,
+            "entity_id": entity_id,
+            "error": str(error),
+        }, ensure_ascii=False)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except Exception as e:  # noqa: BLE001 — fail-soft, AC-7
+        logger.warning(
+            "Diagnose-Spur zum gescheiterten Versand (%s) nicht schreibbar: %s: %s",
+            entity_id, type(e).__name__, e,
+        )
 
 
 def record_briefing_sent(
