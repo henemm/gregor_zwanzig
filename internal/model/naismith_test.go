@@ -157,13 +157,18 @@ func TestComputeStageArrivals_Monotonic(t *testing.T) {
 	}
 }
 
-// TestFormatHHMM_ClampsOverflow prüft F001: kumulierte Zeit >= 24 h darf nie
-// einen Stunden-Teil >23 ausgeben, sondern wird auf "23:59" geclamped. Grund:
-// Python `_parse_hhmm` kann ">23h" nicht lesen und fällt sonst still auf die
-// divergente Interpolation zurück. ~100 km flach ÷ 4 km/h = 25 h → würde
-// ungeclamped "33:00" ergeben.
-func TestFormatHHMM_ClampsOverflow(t *testing.T) {
-	// 0.036° lat ≈ 4 km; 0.9° lat ≈ 100 km → 25 h ab 08:00 = 33:00 ungeclamped.
+// TestFormatHHMM_WrapsPastMidnight prüft F001: kumulierte Zeit >= 24 h darf nie
+// einen Stunden-Teil >23 ausgeben, sondern wird über Mitternacht GEWICKELT
+// (Wrap, #1667 S2 — vorher: auf "23:59" geclamped). Grund für die
+// Bereichsgrenze unverändert: Python `_parse_hhmm` kann ">23h" nicht lesen und
+// fällt sonst still auf die divergente Interpolation zurück. Der Wrap erfüllt
+// das genauso wie die alte Klemme, verliert dabei aber nicht die Information,
+// welcher Wegpunkt wann erreicht wird. ~100 km flach ÷ 4 km/h = 25 h → würde
+// ungewickelt "33:01" ergeben.
+// Erwartungswert hergeleitet: 100,0756 km ÷ 4 km/h = 25,0189 h = 1501,13 min,
+// gerundet 1501; 08:00 = 480 min; 480 + 1501 = 1981; 1981 % 1440 = 541 → "09:01".
+func TestFormatHHMM_WrapsPastMidnight(t *testing.T) {
+	// 0.036° lat ≈ 4 km; 0.9° lat ≈ 100 km → 25 h ab 08:00 = 33:01 ungewickelt.
 	stage := &Stage{
 		ID: "S1", Name: "Mega-Etappe", Date: "2026-05-23",
 		StartTime: strPtr("08:00"),
@@ -175,11 +180,11 @@ func TestFormatHHMM_ClampsOverflow(t *testing.T) {
 	ComputeStageArrivals(stage, ActivitySpeed(""))
 
 	if stage.Waypoints[1].ArrivalCalculated == nil {
-		t.Fatal("wp[1] ArrivalCalculated == nil, want geclampten Wert")
+		t.Fatal("wp[1] ArrivalCalculated == nil, want gewickelten Wert")
 	}
 	got := *stage.Waypoints[1].ArrivalCalculated
-	if got != "23:59" {
-		t.Fatalf("wp[1] arrival = %q, want 23:59 (Clamp >=24h)", got)
+	if got != "09:01" {
+		t.Fatalf("wp[1] arrival = %q, want 09:01 (Wrap >=24h)", got)
 	}
 	// Stunden-Teil muss <= 23 sein (cross-layer mit Python `_parse_hhmm`).
 	h := hhmmToMinutes(t, got) / 60

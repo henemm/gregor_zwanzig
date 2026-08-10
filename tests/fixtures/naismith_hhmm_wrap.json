@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Gemeinsame Paritaets-Fixture fuer die drei formatHHMM-Kopien (Python src/core/naismith.py, Go internal/model/naismith.go, TS frontend/src/lib/utils/naismith.ts). Issue #1667 S2, AC-3. Alle drei Sprachtests lesen DIESE Datei -- keine gespiegelten Listen.",
+  "faelle": [
+    {
+      "id": "letzte-minute-vor-mitternacht",
+      "total_min": 1439,
+      "expected_hhmm": "23:59",
+      "kommentar": "Unveraendert gegenueber der alten Klemme -- Inertheits-Randfall."
+    },
+    {
+      "id": "erste-minute-nach-mitternacht",
+      "total_min": 1440,
+      "expected_hhmm": "00:00",
+      "kommentar": "Die Klemme lieferte hier faelschlich 23:59 -- Kern des Defekts."
+    },
+    {
+      "id": "eine-minute-nach-mitternacht",
+      "total_min": 1441,
+      "expected_hhmm": "00:01",
+      "kommentar": "Klemme: 23:59."
+    },
+    {
+      "id": "zwei-tage-minus-eine-minute",
+      "total_min": 2879,
+      "expected_hhmm": "23:59",
+      "kommentar": "Prueft den Umlauf ueber MEHRERE Tageslaengen, nicht nur den ersten."
+    }
+  ]
+}

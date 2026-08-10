@@ -4,7 +4,8 @@
 // Konstanten + Formel gespiegelt aus:
 //   - src/app/models.py EtappenConfig (Single Source: speed_flat_kmh=4.0,
 //     speed_ascent_mh=300.0, speed_descent_mh=500.0)
-//   - internal/model/naismith.go (naismithHours, ComputeStageArrivals, Clamp 23:59)
+//   - internal/model/naismith.go (naismithHours, ComputeStageArrivals, Wrap über
+//     Mitternacht statt Clamp 23:59 — #1667 S2)
 // Bei Änderung dort: hier nachziehen, damit Editor-Anzeige (vor Save) ==
 // persistierter Wert (nach Save) == Pipeline-Zeit.
 //
@@ -18,7 +19,7 @@ const SPEED_ASCENT_MH = 300.0;
 const SPEED_DESCENT_MH = 500.0;
 
 const DEFAULT_START_TIME = '08:00';
-const MAX_MINUTES = 24 * 60 - 1; // "23:59" — Clamp analog naismith.go::formatHHMM
+const DAY_MINUTES = 24 * 60; // Wrap-Modul analog naismith.go::formatHHMM (#1667 S2)
 
 /**
  * Liefert die Flachgeschwindigkeit (km/h) für eine Aktivität.
@@ -59,11 +60,29 @@ function parseStartMinutes(startTime?: string): number {
 	return dh * 60 + dm;
 }
 
-/** Formatiert Minuten ab Mitternacht als "HH:MM", Clamp auf "23:59". (naismith.go::formatHHMM) */
-function formatHHMM(totalMin: number): string {
-	const clamped = totalMin > MAX_MINUTES ? MAX_MINUTES : totalMin;
-	const h = Math.floor(clamped / 60);
-	const m = clamped % 60;
+/**
+ * Formatiert Minuten ab Mitternacht als "HH:MM", Wrap über Mitternacht.
+ * (naismith.go::formatHHMM)
+ *
+ * Issue #1667 S2: bis dahin Klemme auf "23:59". Der Grund für die
+ * Bereichsgrenze gilt unverändert — die Python-Gegenseite (_parse_hhmm) kann
+ * einen Stunden-Teil >23 nicht konsumieren und fällt sonst still auf die
+ * divergente Interpolation zurück. Der Wrap ERFÜLLT das (Ausgabe weiterhin nur
+ * 00:00–23:59), statt es zu umgehen; die Klemme ließ dagegen mehrere Wegpunkte
+ * auf denselben Wert "23:59" fallen und zerstörte damit das Signal, an dem der
+ * Tageswechsel erkannt wird.
+ *
+ * Kein negativsicherer Modulo (((x % m) + m) % m) nötig: totalMin ist
+ * konstruktiv >= 0 (Startzeit >= 0 plus kumulierte, nie negative
+ * Naismith-Minuten). Bitte nicht "sicherheitshalber" umbauen.
+ *
+ * `export` seit #1667 S2 für den Cross-Language-Paritätstest
+ * (naismith_wrap_parity.test.ts), der die drei Kopien gegeneinander prüft.
+ */
+export function formatHHMM(totalMin: number): string {
+	const wrapped = totalMin % DAY_MINUTES;
+	const h = Math.floor(wrapped / 60);
+	const m = wrapped % 60;
 	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 

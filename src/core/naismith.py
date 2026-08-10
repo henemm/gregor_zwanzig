@@ -52,11 +52,24 @@ def _parse_start_minutes(start_time: "str | None") -> int:
 
 
 def _format_hhmm(total_min: int) -> str:
-    """Formatiert Minuten ab Mitternacht als "HH:MM", Clamp auf 23:59.
+    """Formatiert Minuten ab Mitternacht als "HH:MM", Wrap ueber Mitternacht.
 
     Spiegelt Go formatHHMM.
+
+    Issue #1667 S2: bis dahin wurde auf 23:59 geklemmt. Der Grund dafuer bleibt
+    gueltig — `_parse_hhmm` (und die Go-/TS-Gegenseiten) koennen einen
+    Stunden-Teil >23 nicht konsumieren und fielen sonst still auf die divergente
+    Interpolation zurueck. Der Modulo ERFUELLT diese Bedingung, statt sie zu
+    umgehen: die Ausgabe bleibt im Bereich 00:00-23:59. Er behebt zugleich den
+    Defekt der Klemme — mehrere Wegpunkte fielen auf denselben Wert "23:59",
+    wodurch der wp_days-Rollover in trip_segments.py den Tageswechsel nicht
+    mehr erkannte und Segmente samt Wetterueberwachung verworfen wurden.
+
+    Kein negativsicherer Modulo (((x % m) + m) % m) noetig: total_min ist
+    konstruktiv >= 0 (Startzeit >= 0 plus kumulierte, nie negative
+    Naismith-Minuten). Bitte nicht "sicherheitshalber" umbauen.
     """
-    total_min = min(total_min, 24 * 60 - 1)
+    total_min = total_min % (24 * 60)
     return f"{total_min // 60:02d}:{total_min % 60:02d}"
 
 

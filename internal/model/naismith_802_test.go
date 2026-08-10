@@ -9,7 +9,7 @@ package model
 // Erwartete Werte (AC-3 Wertekontrakt):
 //   A: fahrrad_20, [500,1100,1100,500] → ["08:00","09:00","09:00","09:36"]
 //   B: fahrrad_20, [500,505]            → ["08:00","08:01"]
-//   C: fahrrad_20, [500,10500]          → ["08:00","23:59"]
+//   C: fahrrad_20, [500,10500]          → ["08:00","00:40"]
 //   W: "",         [500,800,300]        → ["08:00","09:00","10:00"]
 
 import "testing"
@@ -74,12 +74,16 @@ func TestNaismith802_B(t *testing.T) {
 	}
 }
 
-// TestNaismith802_C: fahrrad_20, [500,10500] → ["08:00","23:59"] (Clamp 23:59)
+// TestNaismith802_C: fahrrad_20, [500,10500] → ["08:00","00:40"] (Wrap über
+// Mitternacht, #1667 S2 — vorher Clamp "23:59").
+// Herleitung: 10000 m Anstieg / 600 m/h = 16⅔ h = 1000 min; 08:00 = 480 min;
+// 480 + 1000 = 1480 min; 1480 % 1440 = 40 → "00:40". Bit-identisch zum
+// Python-Kontrakt tests/tdd/test_issue_802_fahrrad_segment_zeit.py::_CONTRACT["C"].
 func TestNaismith802_C(t *testing.T) {
 	stage := fixture802Stage("C", "08:00", "fahrrad_20", []int{500, 10500})
 	ComputeStageArrivals(stage, ActivitySpeed("fahrrad_20"))
 	got := arrivals802(stage)
-	want := []string{"08:00", "23:59"}
+	want := []string{"08:00", "00:40"}
 	if !sliceEq(got, want) {
 		t.Fatalf("Fixture C: got %v, want %v", got, want)
 	}

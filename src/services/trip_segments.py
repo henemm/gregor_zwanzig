@@ -192,14 +192,21 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         )
 
         if end_dt <= start_dt:
-            # Issue #1004/AC-5: haeufigste Ursache ist die Mitternachts-Klemme
-            # in core/naismith.py (_format_hhmm clamped auf 23:59) — bei sehr
-            # spaeter stage.start_time kollabieren geklemmte Folgesegmente auf
-            # denselben Zeitpunkt. Sie werden hier bewusst uebersprungen statt
-            # die komplette Etappe stumm zum Verschwinden zu bringen.
+            # Issue #1004/AC-5: Wegpunkt-Paare mit nicht vorwaerts laufender
+            # Zeit werden bewusst uebersprungen, statt die komplette Etappe
+            # stumm verschwinden zu lassen.
+            # Die frueher haeufigste Ursache — die Mitternachts-Klemme in
+            # core/naismith.py (_format_hhmm klemmte auf 23:59, wodurch mehrere
+            # Wegpunkte auf denselben Zeitpunkt fielen) — EXISTIERT SEIT
+            # Issue #1667 S2 NICHT MEHR: _format_hhmm wickelt jetzt per Modulo
+            # ueber Mitternacht. Der Guard bleibt trotzdem bestehen, weil er
+            # weiterhin gleiche/rueckwaerts laufende Zeiten aus der
+            # Interpolation und aus manuellen arrival_override-Werten faengt
+            # (#1091). Greift er heute, ist das ein echter Befund und keine
+            # Formatierungs-Nebenwirkung mehr.
             logger.warning(
                 f"Segment {wp1.id}->{wp2.id} kollabiert (wp1_start={wp1_start}, "
-                f"wp2_start={wp2_start}) — vermutlich Mitternachts-Klemme (23:59), "
+                f"wp2_start={wp2_start}) — Zeit laeuft nicht vorwaerts, "
                 "wird uebersprungen"
             )
             continue
