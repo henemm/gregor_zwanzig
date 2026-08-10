@@ -64,11 +64,12 @@ nie „vorbei".
 
 Bezugstag
 ---------
-``stage_date()`` liefert dieselbe Quelle, die ``trip_alert.py`` fuer
-``convert_trip_to_segments`` benutzt (``date.today()``). Fixturen sollten das
-Etappendatum daraus nehmen statt aus ``datetime.now(timezone.utc).date()``:
-laeuft die Systemzeitzone nicht auf UTC (oder faellt der Testlauf genau auf
-den Datumssprung), zeigen die beiden sonst auf verschiedene Tage und
+``stage_date(lat, lon)`` liefert dieselbe Formel, die ``trip_alert.py`` seit
+Issue #1697 fuer ``convert_trip_to_segments`` benutzt (Ortstag der Tour ueber
+``trip_local_today``, ADR-0044, nicht mehr ``date.today()``). Fixturen
+nehmen das Etappendatum daraus statt aus
+``datetime.now(timezone.utc).date()``: sonst zeigen Etappendatum und
+Ankunftszeiten in der 22:00-00:00-UTC-Randzeit auf verschiedene Tage und
 ``get_stage_for_date()`` findet nichts.
 
 Kein Mock: die Funktionen rechnen mit echten Zeitzonen ueber
@@ -82,7 +83,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
 
-from utils.timezone import tz_for_coords
+from utils.timezone import local_dt, tz_for_coords
 
 __all__ = [
     "MINUTEN_PRO_TAG",
@@ -152,15 +153,24 @@ def fenster_minuten(minuten_jetzt: int, *offsets_min: int) -> tuple[int, ...]:
     return tuple(minuten)
 
 
-def stage_date() -> date:
+def stage_date(lat: float, lon: float) -> date:
     """Etappendatum, das zur Segmentauswahl in ``trip_alert.py`` passt.
 
-    Dort steht ``today = date_type.today()``; ``convert_trip_to_segments``
-    sucht die Etappe ueber ``get_stage_for_date(today)``. Eine Fixture, die
-    ihr Etappendatum aus ``datetime.now(timezone.utc).date()`` nimmt, trifft
-    das nur, solange die Systemzeitzone UTC ist.
+    Issue #1697: ``check_radar_alerts()`` sucht die Etappe seither ueber
+    ``trip_local_today(trip, now_utc)`` (Ortstag der Tour, ADR-0044) statt
+    ueber ``date.today()`` (Serverdatum). ``lat``/``lon`` sind deshalb
+    PFLICHT (kein Default) — jeder Aufrufer muss bewusst dieselben
+    Koordinaten uebergeben, die er auch fuer
+    ``active_window_offsets``/``past_window_offsets`` benutzt, sonst laufen
+    Etappendatum und Ankunftszeiten in der 22:00-00:00-UTC-Randzeit
+    auseinander (exakt die Fehlerklasse, die #1697 in Produktion behebt).
+
+    Bewusst NICHT ``services.trip_day.trip_local_today`` — die Fixture kennt
+    ihre Koordinaten bereits direkt (keine Henne-Ei-Falle, kein Trip zum
+    Nachschlagen), sie bleibt bei der einfacheren Formel mit den bereits
+    importierten Bausteinen.
     """
-    return date.today()
+    return local_dt(datetime.now(timezone.utc), tz_for_coords(lat, lon)).date()
 
 
 def active_window_offsets(lat: float, lon: float, *offsets_min: int) -> tuple[str, ...]:
@@ -202,7 +212,7 @@ def _tagesbezug(lat: float, lon: float) -> tuple[datetime, int]:
     (``datetime.combine(target_date, wp_time).replace(tzinfo=seg_tz)``).
     """
     tz = tz_for_coords(lat, lon)
-    tagesbeginn = datetime.combine(stage_date(), time(0, 0)).replace(tzinfo=tz)
+    tagesbeginn = datetime.combine(stage_date(lat, lon), time(0, 0)).replace(tzinfo=tz)
     jetzt = datetime.now(timezone.utc)
     return tagesbeginn, int((jetzt - tagesbeginn).total_seconds() // 60)
 
@@ -235,7 +245,7 @@ def past_window_offsets(lat: float, lon: float, *offsets_min: int) -> tuple[str,
         )
 
     tz = tz_for_coords(lat, lon)
-    tag = stage_date()
+    tag = stage_date(lat, lon)
     tagesbeginn = datetime.combine(tag, time(0, 0)).replace(tzinfo=tz)
     jetzt = datetime.now(timezone.utc)
     minuten_jetzt = int((jetzt - tagesbeginn).total_seconds() // 60)

@@ -466,7 +466,7 @@ def test_ac5_past_segment_no_alert_guard_test():
             elevation_m=200.0,
             arrival_calculated=arr1,
         )
-        stage = Stage(id="S1", name="Tag 1", date=stage_date(), waypoints=[wp0, wp1])
+        stage = Stage(id="S1", name="Tag 1", date=stage_date(past_lat, past_lon), waypoints=[wp0, wp1])
         trip_id = f"tdd-818-ac5-{uuid.uuid4().hex[:6]}"
         trip = Trip(id=trip_id, name="AC5 Past Trip", stages=[stage])
         trip.report_config = TripReportConfig(

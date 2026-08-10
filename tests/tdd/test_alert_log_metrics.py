@@ -125,7 +125,7 @@ def _save_radar_trip(user_id: str, trip_id: str) -> None:
     (briefings / f"{trip_id}.json").write_text(json.dumps({
         "id": trip_id, "name": "Radar-Trip",
         "stages": [{
-            "id": "S1", "name": "Tag 1", "date": stage_date().isoformat(),
+            "id": "S1", "name": "Tag 1", "date": stage_date(LAT, LON).isoformat(),
             "waypoints": [
                 {"id": "W0", "name": "Start", "lat": LAT, "lon": LON,
                  "elevation_m": 1000.0,

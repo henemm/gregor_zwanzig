@@ -195,11 +195,11 @@ def test_ac1_segment_helper_roundtrip_bit_identical():
     wp2 = _make_waypoint("WP2", lat + 0.2, lon + 0.2, arr2)
     stage = Stage(
         id="S1", name="Tag 1",
-        date=stage_date(),
+        date=stage_date(lat, lon),
         waypoints=[wp0, wp1, wp2],
     )
     trip = Trip(id="tdd-822-ac1-trip", name="AC1 Trip", stages=[stage])
-    target_date = stage_date()
+    target_date = stage_date(lat, lon)
 
     svc = TripReportSchedulerService(settings=Settings())
     expected = svc._convert_trip_to_segments(trip, target_date)
@@ -248,8 +248,8 @@ def test_ac2_segment_selection_by_time():
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
-    today = stage_date()
     lat_base, lon_base = 51.50, 0.00  # lon=0 → Europe/London, BST=UTC+1 in summer
+    today = stage_date(lat_base, lon_base)
 
     # --- Fall (a): aktives Segment ---
     # Seg 1: [now-2h, now-1h] → vorbei; Seg 2: [now-1h, now+1h] → aktiv.
@@ -394,7 +394,7 @@ def test_ac3_nowcast_called_at_segment_coordinates():
     _clean_user(uid)
     _ensure_real_user_dir(uid)
     try:
-        today = stage_date()
+        today = stage_date(WP0_LAT, WP0_LON)
 
         # Seg 1: [now-2h, now-30m] → vorbei; Seg 2: [now-30m, now+90m] → aktiv.
         # #1667 S1: der Helfer rechnet die Ortszeit selbst (der frühere manuelle
@@ -616,8 +616,8 @@ def test_ac6_cooldown_display_reflects_trip_setting():
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
-    today = stage_date()
     lat, lon = 51.50, 0.00  # lon=0 → tz_for_coords returns e.g. Europe/London
+    today = stage_date(lat, lon)
     # #1667 S1: Ortszeit-Umrechnung und Tagesgrenzen-Klemmung im Helfer.
     arr0, arr1 = active_window_offsets(lat, lon, -60, 60)
 
@@ -717,14 +717,13 @@ def test_ac7_throttle_recording_unchanged():
     _clean_user(uid)
     _ensure_real_user_dir(uid)
     try:
-        today = stage_date()
-
         # Aktives Segment: [now-1h, now+1h]
         # Island (lat=64, lon=-22): UTC+0 ganzjährig (kein DST).
         # _save_trip_direct nötig: save_trip recomputes arrival_calculated via Naismith
         # und würde die Zeiten überschreiben.
         # #1667 S1: Zeiten aus dem wanduhr-robusten Helfer.
         lat, lon = 64.0, -22.0
+        today = stage_date(lat, lon)
         arr0, arr1 = active_window_offsets(lat, lon, -60, 60)
         wp0 = _make_waypoint("WP0", lat, lon, arr0)
         wp1 = _make_waypoint("WP1", lat + 0.05, lon + 0.05, arr1)
@@ -806,8 +805,8 @@ def test_ac8_mandantentrennung_isolated():
     _clean_user(uid_b)
     _ensure_real_user_dir(uid_b)
     try:
-        today = stage_date()
         lat, lon = 51.5, 0.0  # UTC-Zone
+        today = stage_date(lat, lon)
         # #1667 S1: Zeiten aus dem wanduhr-robusten Helfer.
         arr0, arr1 = active_window_offsets(lat, lon, -60, 60)
 

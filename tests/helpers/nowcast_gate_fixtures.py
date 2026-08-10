@@ -335,30 +335,64 @@ def entries_for(user_id: str, entity_id: str, *, bucket: str) -> list[dict]:
 # ─────────────────────────────── Trip-Bausteine ─────────────────────────────
 
 
+def trip_stage(
+    stage_id: str, day: date_type, lat: float, lon: float,
+    *, arrival_start: str = "00:00", arrival_end: str = "23:59",
+    wp_prefix: str = "WP",
+) -> Stage:
+    """Zwei-Wegpunkt-Etappe (Start/Ende) — der Baustein, aus dem
+    :func:`make_trip` seine Etappe baut. Additiv exportiert (Issue #1697),
+    damit Aufrufer, die eine ZWEITE Etappe (z.B. Folgetag) brauchen, sie
+    NICHT selbst aus ``Stage``/``Waypoint`` zusammensetzen — Teilungsregel
+    statt Nachbau.
+    """
+    wp0 = Waypoint(
+        id=f"{wp_prefix}0", name="Start", lat=lat, lon=lon, elevation_m=500.0,
+        arrival_calculated=arrival_start,
+    )
+    wp1 = Waypoint(
+        id=f"{wp_prefix}1", name="Ende", lat=lat + 0.1, lon=lon + 0.1, elevation_m=600.0,
+        arrival_calculated=arrival_end,
+    )
+    return Stage(id=stage_id, name="Tag 1", date=day, waypoints=[wp0, wp1])
+
+
 def make_trip(
     trip_id: str,
     *,
     cooldown_minutes: int = 120,
     quiet_from: str | None = None,
     quiet_to: str | None = None,
+    stage_date: date_type | None = None,
+    lat: float = TRIP_LAT,
+    lon: float = TRIP_LON,
+    arrival_start: str = "00:00",
+    arrival_end: str = "23:59",
+    extra_stages: list[Stage] | None = None,
 ) -> Trip:
     """Trip mit einer heute aktiven Etappe (Segment-Auswahl in
     ``check_radar_alerts()`` braucht ``arrival_calculated``).
 
-    Die Etappe spannt bewusst den GANZEN Tag (00:00–23:59 Ortszeit = UTC, s.
-    ``TRIP_LAT``): so ist zu jeder Tageszeit ein Segment aktiv und der Test
-    misst die Freigabe-Stufen, nicht die Segment-Auswahl.
+    Die Etappe spannt standardmaessig den GANZEN Tag (00:00–23:59 Ortszeit =
+    UTC, s. ``TRIP_LAT``): so ist zu jeder Tageszeit ein Segment aktiv und
+    der Test misst die Freigabe-Stufen, nicht die Segment-Auswahl.
+
+    Issue #1697: ``stage_date``/``lat``/``lon``/``arrival_start``/
+    ``arrival_end``/``extra_stages`` sind ADDITIV — alle Defaults sind
+    bit-identisch zum bisherigen Verhalten (``date.today()``,
+    ``TRIP_LAT``/``TRIP_LON``, 00:00–23:59, keine zweite Etappe). Bestehende
+    Aufrufer (``test_nowcast_suppression_logging.py``,
+    ``test_trip_radar_nowcast_gate_migration.py``) bleiben unveraendert
+    gruen (belegt per Testlauf, s. Commit-Historie). Die neuen Parameter
+    dienen Faellen, die eine ANDERE Etappe/einen zweiten Tag brauchen (z.B.
+    #1697 AC-1/AC-3/AC-5: Ortsdatum weicht vom Serverdatum ab).
     """
-    wp0 = Waypoint(
-        id="WP0", name="Start", lat=TRIP_LAT, lon=TRIP_LON, elevation_m=500.0,
-        arrival_calculated="00:00",
+    day = stage_date if stage_date is not None else date_type.today()
+    stage = trip_stage(
+        "S1", day, lat, lon, arrival_start=arrival_start, arrival_end=arrival_end,
     )
-    wp1 = Waypoint(
-        id="WP1", name="Ende", lat=TRIP_LAT + 0.1, lon=TRIP_LON + 0.1, elevation_m=600.0,
-        arrival_calculated="23:59",
-    )
-    stage = Stage(id="S1", name="Tag 1", date=date_type.today(), waypoints=[wp0, wp1])
-    trip = Trip(id=trip_id, name="S3 Nowcast-Trip", stages=[stage])
+    stages = [stage] + list(extra_stages or [])
+    trip = Trip(id=trip_id, name="S3 Nowcast-Trip", stages=stages)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=False,
     )

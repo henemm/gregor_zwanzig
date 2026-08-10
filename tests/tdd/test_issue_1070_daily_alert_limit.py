@@ -229,12 +229,15 @@ def _wet_frames(lat: float, lon: float) -> list:
 def _make_trip(trip_id: str, send_email: bool, send_telegram: bool) -> Trip:
     # #1667 S1: wanduhr-robustes Ankunftsfenster statt roher now+Nh-Arithmetik
     # (ab 22:00 UTC lief die +2h/+4h-Folge steigend ueber Mitternacht).
-    arr0, arr1 = active_window_offsets(LAT, LON, 120, 240)
+    # #1697 AC-4: Segment muss JETZT aktiv sein (nicht erst in 2h beginnen),
+    # sonst greift der neue Horizont-Guard (NOWCAST_HORIZON_MIN=60) und
+    # unterdrueckt den Nowcast-Abruf, den diese Tests messen wollen.
+    arr0, arr1 = active_window_offsets(LAT, LON, -60, 120)
     wp0 = Waypoint(id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=500.0,
                    arrival_calculated=arr0)
     wp1 = Waypoint(id="WP1", name="End", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=600.0,
                    arrival_calculated=arr1)
-    stage = Stage(id="S1", name="Tag 1", date=stage_date(), waypoints=[wp0, wp1])
+    stage = Stage(id="S1", name="Tag 1", date=stage_date(LAT, LON), waypoints=[wp0, wp1])
     trip = Trip(id=trip_id, name="1070 Test", stages=[stage])
     trip.report_config = TripReportConfig(
         trip_id=trip_id,

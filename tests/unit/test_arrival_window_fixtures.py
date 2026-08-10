@@ -233,7 +233,7 @@ def _trip_aus_helfer(lat: float, lon: float, versaetze: tuple[int, ...]) -> Trip
                  lon=lon + i * 0.05, elevation_m=1000.0, arrival_calculated=z)
         for i, z in enumerate(zeiten)
     ]
-    stage = Stage(id="S1", name="Tag 1", date=stage_date(), waypoints=waypoints)
+    stage = Stage(id="S1", name="Tag 1", date=stage_date(lat, lon), waypoints=waypoints)
     trip = Trip(id="wanduhr-probe", name="Wanduhr-Probe", stages=[stage])
     trip.report_config = TripReportConfig(trip_id="wanduhr-probe", send_email=False)
     return trip
@@ -257,7 +257,7 @@ def test_segment_liegt_nie_vollstaendig_in_der_vergangenheit(
         jetzt = datetime.now(timezone.utc)
         for versaetze in FAMILIEN:
             trip = _trip_aus_helfer(lat, lon, versaetze)
-            segmente = convert_trip_to_segments(trip, stage_date())
+            segmente = convert_trip_to_segments(trip, stage_date(lat, lon))
             assert segmente, (
                 f"{ortsname} @ {zeitpunkt}, Versaetze {versaetze}: leere "
                 "Segmentliste — die Etappe wurde gar nicht gefunden oder alle "
@@ -285,7 +285,7 @@ def test_wegpunktzeiten_ergeben_echt_wachsende_segmentgrenzen(zeitpunkt):
         for ortsname, lat, lon in ORTE:
             for versaetze in FAMILIEN:
                 trip = _trip_aus_helfer(lat, lon, versaetze)
-                segmente = convert_trip_to_segments(trip, stage_date())
+                segmente = convert_trip_to_segments(trip, stage_date(lat, lon))
                 # Wegpunkte minus 1 Verbindungssegmente, plus das Ziel-Segment.
                 erwartet = len(versaetze)
                 assert len(segmente) == erwartet, (
@@ -298,6 +298,47 @@ def test_wegpunktzeiten_ergeben_echt_wachsende_segmentgrenzen(zeitpunkt):
                         f"{ortsname} @ {zeitpunkt}: Segment {s.segment_id} "
                         "endet nicht nach seinem Anfang"
                     )
+
+
+# ══════════ AC-9 (#1697): stage_date() folgt der Ortszeit, nicht dem Serverdatum ══════════
+
+# Atlantic/Reykjavik: UTC+0 ganzjaehrig — "UTC-neutrale" Koordinate, deren
+# Ortsdatum in der Randzeit 22:00-00:00 UTC NIE vom Serverdatum abweicht.
+ISLAND_STAGE_DATE_LAT, ISLAND_STAGE_DATE_LON = 64.1466, -21.9426
+# Korsika (Europe/Paris, UTC+2 im Sommer) — weicht in genau diesem Fenster ab.
+KORSIKA_STAGE_DATE_LAT, KORSIKA_STAGE_DATE_LON = 42.20, 9.10
+
+
+def test_ac9_stage_date_folgt_der_ortszeit_in_der_randzeit():
+    """#1697 AC-9 ("Zweiter Fund"): ``stage_date()`` ist heute NILADISCH und
+    liefert wörtlich ``date.today()`` (Serverdatum) — unabhängig von jeder
+    Koordinate. Nach der Umstellung auf ``stage_date(lat, lon)`` MUSS eine
+    Korsika-Koordinate um 22:30 UTC den FOLGETAG liefern (Ortszeit 00:30),
+    waehrend eine UTC-neutrale Koordinate beim Serverdatum bleibt — dieselbe
+    Formel, die ``trip_alert.py`` nach #1697 fuer die Etappenauswahl benutzt.
+
+    RED heute: ``stage_date()`` nimmt keine Argumente entgegen ->
+    ``TypeError`` bei ``stage_date(lat, lon)``.
+    """
+    with freeze_time("2026-08-10T22:30:00+00:00"):
+        serverdatum = date(2026, 8, 10)
+        folgetag = date(2026, 8, 11)
+
+        korsika_datum = stage_date(KORSIKA_STAGE_DATE_LAT, KORSIKA_STAGE_DATE_LON)
+        island_datum = stage_date(ISLAND_STAGE_DATE_LAT, ISLAND_STAGE_DATE_LON)
+
+    assert korsika_datum == folgetag, (
+        f"AC-9: stage_date(Korsika) lieferte {korsika_datum}, erwartet "
+        f"{folgetag} (00:30 Ortszeit des Folgetags um 22:30 UTC)"
+    )
+    assert island_datum == serverdatum, (
+        f"AC-9: stage_date(Island) lieferte {island_datum}, erwartet "
+        f"{serverdatum} (UTC-neutrale Koordinate — Ortsdatum == Serverdatum)"
+    )
+    assert korsika_datum != island_datum, (
+        "AC-9: Korsika- und Island-Ortsdatum muessen in dieser Randzeit "
+        "auseinanderlaufen, sonst ist der Test nicht diskriminierend"
+    )
 
 
 def test_freeze_time_stellt_die_uhr_wirklich():

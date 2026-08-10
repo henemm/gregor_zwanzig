@@ -199,7 +199,7 @@ def test_ac1_radar_alert_onset_in_local_time():
         arr0, arr1 = active_window_offsets(lat, lon, -60, 180)
         wp0 = _make_waypoint("WP0", lat, lon, arr0)
         wp1 = _make_waypoint("WP1", lat + 0.1, lon + 0.1, arr1)
-        stage = Stage(id="S1", name="Etappe 1", date=stage_date(), waypoints=[wp0, wp1])
+        stage = Stage(id="S1", name="Etappe 1", date=stage_date(lat, lon), waypoints=[wp0, wp1])
         trip_id = f"tdd-791-trip-{uuid.uuid4().hex[:6]}"
         trip = Trip(id=trip_id, name="GR20 Test", stages=[stage])
         trip.report_config = TripReportConfig(

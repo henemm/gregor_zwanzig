@@ -20,7 +20,8 @@ from typing import Optional
 
 from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip
-from utils.timezone import UTC, local_dt, local_fmt, local_hour, tz_for_coords
+from services.trip_day import anchor_tz, display_tz
+from utils.timezone import UTC, local_dt, local_fmt, local_hour
 
 logger = logging.getLogger(__name__)
 
@@ -750,78 +751,28 @@ class TripCommandProcessor:
         kurz vor Mitternacht still auf Minuten zusammenschrumpfen — eine
         Produktaenderung, die niemand bestellt hat.
 
-        Reihenfolge-Falle: ``_display_tz(trip, day_date)`` braucht den Tag,
+        Reihenfolge-Falle: ``display_tz(trip, day_date)`` braucht den Tag,
         aber welcher Tag "heute" ist, entscheidet erst die Zone. Aufgeloest in
-        zwei Schritten — die Zone des WELTZEIT-Tages (``_anchor_tz``) bestimmt
-        den Kalendertag, die etappengenaue Zone genau dieses Tages danach
-        Fensterbeginn UND Beschriftung. ``tz`` wird ZURUECKGEGEBEN und vom
-        Aufrufer durchgereicht, nicht dort ein zweites Mal geholt: so koennen
-        Fenstergrenze und Uhrzeitspalte konstruktiv nicht auseinanderlaufen
-        (AC-4).
+        zwei Schritten (``services.trip_day``, #1697 — verschoben aus #1470,
+        Verhalten bit-identisch) — die Zone des WELTZEIT-Tages (``anchor_tz``)
+        bestimmt den Kalendertag, die etappengenaue Zone genau dieses Tages
+        danach Fensterbeginn UND Beschriftung. ``tz`` wird ZURUECKGEGEBEN und
+        vom Aufrufer durchgereicht, nicht dort ein zweites Mal geholt: so
+        koennen Fenstergrenze und Uhrzeitspalte konstruktiv nicht
+        auseinanderlaufen (AC-4).
 
         Rueckgabe: ``(from_time, hours, day_date, tz)``.
         """
-        local_now = local_dt(received_at, self._anchor_tz(trip, received_at))
+        local_now = local_dt(received_at, anchor_tz(trip, received_at))
         if day_token == "today":
             day_date = local_now.date()
-            return received_at, 12, day_date, self._display_tz(trip, day_date)
+            return received_at, 12, day_date, display_tz(trip, day_date)
         day_date = (local_now + timedelta(days=1)).date()
         next_date = day_date + timedelta(days=1)
-        tz = self._display_tz(trip, day_date)
+        tz = display_tz(trip, day_date)
         from_time = _local_midnight(day_date, tz)
         hours = _hours_between(from_time, _local_midnight(next_date, tz))
         return from_time, hours, day_date, tz
-
-    def _anchor_tz(self, trip: Trip, received_at: datetime):
-        """Zone, die entscheidet WELCHER Kalendertag gerade ist (#1470 F003).
-
-        Genommen wird die Etappe des WELTZEIT-Tages. Der liegt hoechstens
-        einen Tag neben dem Ortstag, trifft also praktisch immer die Etappe,
-        auf der der Nutzer gerade steht. Der frueher benutzte Anker "erste
-        Etappe der Tour" war bei einer Tour ueber mehrere Zonen grob daneben:
-        gemessen an einer Tour Neuseeland -> Korsika lag der Tageswechsel
-        ZEHN Stunden falsch (12:00-22:00 UTC meldete bereits den Folgetag,
-        waehrend es am Ort erst 14:00-23:00 war). Mit diesem Anker bleibt als
-        Restfehler nur die Zonendifferenz zweier BENACHBARTER Etappen — null,
-        ausser der Wanderer wechselt an genau diesem Tag die Zone.
-
-        ``local_dt(..., UTC)`` statt ``received_at.date()``: der Weltzeit-Tag
-        soll aus der Weltzeit kommen, auch wenn ein Aufrufer den Zeitstempel
-        einmal in einer anderen Zone hereinreicht.
-        """
-        return self._display_tz(trip, local_dt(received_at, UTC).date())
-
-    def _trip_tz(self, trip: Trip):
-        """Ortszone der Tour OHNE Tagesbezug — erste Etappe, die Wegpunkte hat.
-
-        Beantwortet allein die Frage "welcher Kalendertag ist gerade?"
-        (#1470). Es ist derselbe Weg, den ``_display_tz`` schon als Rueckfall
-        geht, nur ohne das Tagesargument — keine zweite Aufloesung. Ohne
-        Wegpunkt bleibt die importierte UTC-Konstante (Hausnorm #1345), nie
-        ein hartverdrahtetes ``ZoneInfo("UTC")``.
-        """
-        stage = next((s for s in trip.stages if s.waypoints), None)
-        if stage is None:
-            return UTC
-        wp = stage.waypoints[0]
-        return tz_for_coords(wp.lat, wp.lon)
-
-    def _display_tz(self, trip: Trip, day_date: date):
-        """Anzeige-Zeitzone = ORTSzeit des Wegpunkts, nicht Prozess-Zeitzone.
-
-        Issue #1402: ein naiver Zeitstempel ist per Hausnorm (#1345) UTC. Ein
-        argumentloses ``.astimezone()`` deutet ihn als PROZESS-Zeitzone — auf
-        dem UTC-Server zufaellig unauffaellig, auf jedem anderen Host falsch.
-        Deshalb dieselbe Aufloesung wie im ``/jetzt``-Pfad weiter unten:
-        Koordinaten des Wegpunkts -> Zone. Ohne Wegpunkt bleibt nur UTC (die
-        Zeitstempel SIND UTC) — dann stimmt die Anzeige wenigstens mit den
-        Daten ueberein, statt die Serverzone zu raten.
-        """
-        stage = trip.get_stage_for_date(day_date)
-        if stage is None or not stage.waypoints:
-            return self._trip_tz(trip)
-        wp = stage.waypoints[0]
-        return tz_for_coords(wp.lat, wp.lon)
 
     def _format_drilldown(
         self, res, header: str, fmt, tz, with_emoji: bool = True,
