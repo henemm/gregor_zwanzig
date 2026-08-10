@@ -38,7 +38,7 @@ from services.alert_briefing_anchor import (
 )
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
-from services.user_tier import sms_allowed
+from services.user_tier import premium_sms_allowed, sms_allowed
 from utils.geo import haversine_km
 from utils.timezone import local_dt, tz_for_coords
 
@@ -964,6 +964,13 @@ class TripReportSchedulerService:
                     send_email=not config or config.send_email,
                     send_sms=config is not None and config.send_sms and sms_allowed(self._user_id),
                     send_telegram=config is not None and config.send_telegram,
+                    # Issue #1676 S2a: eigenes Tier-Gate (nur premium), NICHT
+                    # sms_allowed() -- das laesst standard durch (Spec D7).
+                    send_premium_sms=(
+                        config is not None
+                        and config.send_premium_sms
+                        and premium_sms_allowed(self._user_id)
+                    ),
                 )
                 self._write_pending_marker(
                     trip, report_type, target_date,
@@ -1301,6 +1308,13 @@ class TripReportSchedulerService:
             trip_url=f"https://gregor20.henemm.com/trips/{trip.id}",
             send_email=not config or config.send_email,
             send_sms=config is not None and config.send_sms and sms_allowed(self._user_id),
+            # Issue #1676 S2a: eigenes Tier-Gate (nur premium), NICHT
+            # sms_allowed() -- das laesst standard durch (Spec D7).
+            send_premium_sms=(
+                config is not None
+                and config.send_premium_sms
+                and premium_sms_allowed(self._user_id)
+            ),
             send_telegram=config is not None and config.send_telegram,
             test_prefix=allow_test_fallback,
             on_demand_prefix=on_demand,

@@ -46,6 +46,12 @@ CHANNEL_LIMITS = {
     "email":    {"max_table_cols": None, "max_chars": None},   # unbegrenzt
     "telegram": {"max_table_cols": 8,    "max_chars": 4096},
     "sms":      {"max_table_cols": 0,    "max_chars": 153},
+    # Issue #1676 S2a (ADR-0049): Vorsorge, kein Bestandteil des
+    # Briefing-Pfads — der uebergibt `max_length=160` fest (trip_report.py).
+    # Ohne diesen Eintrag fiele ein kuenftiger Aufrufer (S3, Vergleichspfad)
+    # unten still auf die TELEGRAM-Grenzen zurueck: 4096 Zeichen und eine
+    # Tabelle in einer Satelliten-SMS.
+    "premium_sms": {"max_table_cols": 0, "max_chars": 153},
 }
 
 

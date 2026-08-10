@@ -111,3 +111,4 @@ bzw. in den Specs unter `docs/specs/`.
 | [0046](0046-alarm-kanal-schwelle.md) | Kanal-Schwelle regelt AUF WELCHEM WEG eine Meldung ankommt — nicht OB (ergänzt 0043, Issue #1461 S3b-2a) | Akzeptiert |
 | [0047](0047-gewitter-vertretung-zwischen-direktquellen.md) | Gewitter-Vertretung zwischen Direktquellen bei echtem Dienstausfall — dehnt 0018 auf die Gewitter-Domäne aus, grenzt sich von 0025 ab (Issue #1492 Scheibe 2a) | Akzeptiert |
 | [0048](0048-modellabhaengige-schwellen-statt-einer-zahl.md) | Feste Schwellen werden nie über Modellgrenzen getragen — CAPE-Schwelle je Modell × Gebiet, geeicht am 95. Perzentil der Modellklimatologie (mind. 300 J/kg); unbekannte Herkunft heißt „keine Aussage" (Issue #1592 Scheiben B0+C0+C1) | Akzeptiert |
+| [0049](0049-premium-sms-vierter-kanal.md) | Premium-SMS (Garmin inReach) ist ein vierter, eigenständiger Kanal `premium_sms` — kein SMS-Sonderfall (schreibt 0004 fort, Issue #1676 S2a) | Akzeptiert |

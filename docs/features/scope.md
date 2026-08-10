@@ -1,13 +1,16 @@
 # Gregor Zwanzig – Scope & Vision
 
-> Stand: 2026-07-21 (Doku-Audit #1341). Ersetzt die MVP-/CLI-Ära-Fassung
-> (Git-Historie). Offene Arbeit steht ausschließlich in GitHub Issues.
+> Stand: 2026-07-21 (Doku-Audit #1341), 2026-08-10 (Issue #1676 S2a — Premium-SMS
+> ergänzt). Ersetzt die MVP-/CLI-Ära-Fassung (Git-Historie). Offene Arbeit steht
+> ausschließlich in GitHub Issues.
 
 ## Produkt
 
 Wetter-Risiko-Briefings für Weitwanderungen und Orts-Vergleiche — als
 Multi-User-Webprodukt (SvelteKit-Frontend) mit automatischem Versand über
-E-Mail, Telegram und SMS (seven.io). Signal wurde entfernt (#610).
+E-Mail, Telegram und SMS (seven.io), seit Issue #1676 S2a zusätzlich
+Premium-SMS (Garmin inReach, ADR-0049) — **ausschließlich fürs Trip-Briefing**,
+nicht für Alarme oder Orts-Vergleiche. Signal wurde entfernt (#610).
 
 ## Nutzer & Kontext
 
@@ -28,7 +31,9 @@ tauglich, unterwegs steuerbar (Inbound-Kommandos), kontextbezogen (Profil).
 ## Was das Produkt heute leistet
 
 - **Trip-Briefings:** Abend-/Morgen-Briefings pro Etappe (E-Mail full/compact,
-  Telegram-Bubbles, SMS ≤160 Zeichen), Zeitpläne pro Nutzer.
+  Telegram-Bubbles, SMS ≤160 Zeichen, seit #1676 S2a zusätzlich Premium-SMS
+  für Garmin-inReach-Nutzer mit Premium-Tier, kein UI bislang), Zeitpläne pro
+  Nutzer.
 - **Orts-Vergleich:** Vergleichsmatrix über ≥2 Orte mit Idealbereichen,
   Winner-Logik, eigenem Mail-Template, Zeitplan-Versand.
 - **Alerts als Abweichungs-Wächter:** Nowcast/aktueller Forecast vs. letztes

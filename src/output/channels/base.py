@@ -63,6 +63,36 @@ class OutputConfigError(OutputError):
     pass
 
 
+class ChannelBlockedError(OutputConfigError):
+    """Sperre mit maschinenlesbarem Grund: Prosatext UND stabiler Kurzschluessel.
+
+    Warum an der Ausnahme und nicht als weiteres Ergebnisfeld beim Aufrufer:
+    ein Aufrufer, der den Sperrgrund WEITERBUCHEN muss — das Alarm-Protokoll
+    (`services/alert_log.py`, `channels_not_sent`) — sieht ausschliesslich die
+    Ausnahme des Kanals; ein Feld an `NotificationResult` erreicht ihn nie.
+    Und er darf den Fall nicht am deutschen Prosatext erkennen muessen: ein
+    solcher Vergleich bricht still beim ersten Umformulieren.
+
+    `reason_code` ist deshalb PFLICHT (keyword-only, ohne Vorgabewert) — eine
+    Sperre ohne Kurzschluessel soll beim Erzeugen auffallen, nicht spaeter
+    beim Auswerten leer sein. Die Werte folgen dem Vokabular der bestehenden
+    Kurzschluessel in `alert_log.py` (`channel_disabled`, `delivery_failed`,
+    `below_channel_threshold`) und stehen als Konstanten beim jeweiligen Kanal.
+
+    `OutputError`/`OutputConfigError` bleiben unveraendert: bestehende
+    `except OutputConfigError`-Zweige fangen diese Unterklasse mit, `str(exc)`
+    liefert weiter den Prosatext, und Kanaele ohne Kurzschluessel aendern sich
+    nicht. Auslesen deshalb einheitlich und gefahrlos auch fuer Ausnahmen
+    ohne Kurzschluessel:
+
+        >>> code = getattr(exc, "reason_code", None)
+    """
+
+    def __init__(self, channel: str, message: str, *, reason_code: str) -> None:
+        self.reason_code = reason_code
+        super().__init__(channel, message)
+
+
 def get_channel(name: str, settings: "Settings") -> OutputChannel:
     """
     Factory function to create output channel instances.
@@ -93,6 +123,11 @@ def get_channel(name: str, settings: "Settings") -> OutputChannel:
     elif name == "sms":
         from output.channels.sms import SMSOutput
         return SMSOutput(settings)
+    elif name == "premium_sms":
+        # Issue #1676 S2a (ADR-0049): vierter Kanal, damit die CLI ihn
+        # genauso ansprechen kann wie die drei bestehenden.
+        from output.channels.premium_sms import PremiumSmsOutput
+        return PremiumSmsOutput(settings)
     elif name == "telegram":
         from output.channels.telegram import TelegramOutput
         return TelegramOutput(settings)

@@ -64,6 +64,9 @@ RENDER_NEUTRAL: dict[str, str] = {
     "send_email": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",
     "send_sms": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",
     "send_telegram": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",
+    # Issue #1676 S2a (ADR-0049): vierter Kanal, gleiche Begruendung wie die
+    # drei darueber — der Premium-SMS-Text ist unveraendert `report.sms_text`.
+    "send_premium_sms": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",
     # Alert-Pfad
     "alert_on_changes": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",
     "change_threshold_temp_c": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",

@@ -576,6 +576,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | timezone                        | str         | Zeitzone (default: "Europe/Vienna")                    |
 | send_email                      | bool        | E-Mail senden? (default: true)                         |
 | send_sms                        | bool        | SMS senden? (default: false)                           |
+| send_premium_sms                | bool        | Premium-SMS (Garmin inReach) senden? (default: false, Issue #1676 S2a) — eigenständiger vierter Kanal `premium_sms`, **nur Trip-Briefing** (Alarmpfad/Ortsvergleich erst mit #1701, s. ADR-0049); Empfänger ist ausschließlich die in Scheibe S1 gelernte Rückadresse aus `user.json`, nie `sms_to`. Lebt aktuell nur im freien `report_config`-Schlüssel (kein eigenes Go-Struct-Feld analog `send_sms`/`send_telegram`, folgt erst mit S3). |
 | alert_on_changes                | bool        | Alerts bei Änderungen? (default: true)                 |
 | change_threshold_temp_c         | float       | Temp-Änderungs-Schwelle [°C] (default: 5.0)            |
 | change_threshold_wind_kmh       | float       | Wind-Änderungs-Schwelle [km/h] (default: 20.0)         |
@@ -3415,6 +3416,15 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-10: Issue #1676 Scheibe S2a (ADR-0049) — `TripReportConfig.send_premium_sms`
+  (bool, default `false`) macht Premium-SMS (Garmin inReach) zum vierten, eigenständigen
+  Versandkanal `premium_sms` — **ausschließlich fürs Trip-Briefing**. Fester Absender
+  `4916092172595` (unabhängig von `sms_from`), Empfänger ausschließlich die in Scheibe S1
+  gelernte Rückadresse aus `user.json` (nie `sms_to`), Verfall nach 30 Tagen, fail-closed mit
+  auswertbarem Grund. Lebt bislang nur im freien `report_config`-Schlüssel, kein eigenes
+  Go-Struct-Feld analog `send_sms`/`send_telegram` (folgt erst mit S3). **Ausdrücklich nicht
+  betroffen:** `AlertChannelsConfig`/`AlertChannelThresholdsConfig` — Premium-SMS ist bis
+  #1701 kein Alarm-Kanal.
 - 2026-08-09: Issue #1517 — `POST /api/auth/register` prüft die Existenz des Usernamens
   (`s.UserExists`) jetzt VOR der #1226-E-Mail-Pflichtprüfung; Reihenfolge der reinen
   Format-Validierungen (Username-Länge/-Regex, Passwort-Länge) bleibt unverändert davor.

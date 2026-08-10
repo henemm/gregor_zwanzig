@@ -86,6 +86,13 @@ func TestUpdateTrip_PartialReportConfig_MergesFields(t *testing.T) {
 			"enabled":      true,
 			"email_format": "full",
 			"send_email":   true,
+			// Issue #1676 S2a: der vierte Kanal liegt als FREIER Schluessel in
+			// report_config (kein Struct-Feld). Die heutige Oberflaeche sendet
+			// ihn beim Speichern nicht mit — dann darf er auch nicht
+			// verschwinden. Gegenstueck: alert_channels wird als Ganzobjekt
+			// ersetzt (trip.go, AlertChannels), dort waere genau das ein
+			// stiller Kanal-Abschalter.
+			"send_premium_sms": true,
 		},
 	}
 	if err := s.SaveTrip(&trip); err != nil {
@@ -119,6 +126,11 @@ func TestUpdateTrip_PartialReportConfig_MergesFields(t *testing.T) {
 	}
 	if got.ReportConfig["send_email"] != true {
 		t.Errorf("report_config.send_email lost/changed: got %v", got.ReportConfig["send_email"])
+	}
+	if got.ReportConfig["send_premium_sms"] != true {
+		t.Errorf("report_config.send_premium_sms lost/changed: got %v — ein "+
+			"Speichervorgang ohne das Flag hat den kostenpflichtigen Kanal "+
+			"still abgeschaltet", got.ReportConfig["send_premium_sms"])
 	}
 }
 

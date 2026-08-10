@@ -6,7 +6,8 @@
 
 - **Zielgruppe:** Weitwanderer (z.B. GR20), eingeschraenkte Konnektivitaet
 - **Stack:** Python, uv, pytest
-- **Channels:** E-Mail (MVP), Telegram, SMS. (Signal 2026-06-06 app-weit entfernt, Issue #610 — s.u.)
+- **Channels:** E-Mail, Telegram, SMS, **Premium-SMS** (Garmin inReach, #1676 — seit 2026-08-10 im Trip-Briefing, ADR-0049). (Signal 2026-06-06 app-weit entfernt, Issue #610 — s.u.)
+- **🔴 Alle vier Kanäle sind gleichrangig relevant — kein Kanal ersetzt einen anderen.** PO-Vorgabe, mehrfach bekräftigt (zuletzt 2026-08-10): Auf dem Karnischen Höhenweg gibt es **auf der Hütte nur Satellit** — und das ist genau die Zeit, zu der Briefings verschickt werden, weshalb dort **nur Premium-SMS** ankommt. **Auf dem Pass gibt es normalen Handyempfang, dort sind E-Mail und Telegram relevant** und werden gelesen. Wer daraus „E-Mail/Telegram sind für die Tour nachrangig" folgert, liegt falsch — dieser Fehlschluss stand bereits einmal in einer Notiz und musste vom PO korrigiert werden. Alarme müssen **alle** Kanäle erreichen (#1701).
 - **Multi-User-Produkt:** Gregor Zwanzig ist **mandantenfähig** — jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger und Settings. Persistenz pro Nutzer unter `data/users/<user_id>/`. Isolation **konsequent** über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT bei jedem nutzerbezogenen Endpoint:** echte `user_id` aus Auth-Kontext durchreichen, **niemals** auf `"default"` zurückfallen — das ist ein Cross-User-Datenleck. Jeder neue datenbewegende Endpoint MUSS mit **zwei verschiedenen Nutzern** getestet werden. Es gibt kein systemseitiges „an mich" — „senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers".
 
 ## Workflow
@@ -306,7 +307,9 @@ Beide Wächter lassen bei **eigener** Störung immer durch und sagen es — ein 
 
 ## Signal als Channel — ENTFERNT (2026-06-06, Issue #610)
 
-Kanäle sind nur noch **E-Mail · Telegram · SMS**. Kein `SignalOutput`/`signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`. Wiedereinführung müsste neu spezifiziert werden. (Callmebot bleibt serverseitig für andere Dienste.)
+Signal ist entfernt: kein `SignalOutput`/`signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`. Wiedereinführung müsste neu spezifiziert werden. (Callmebot bleibt serverseitig für andere Dienste.)
+
+**Die Kanal-Liste lautet seit 2026-08-10 vier, nicht drei:** E-Mail · Telegram · SMS · Premium-SMS. Hier stand bis dahin „Kanäle sind nur noch E-Mail · Telegram · SMS" — das war nach der Signal-Entfernung richtig und ist seit #1676 S2a (ADR-0049, schreibt ADR-0004 fort) überholt. Premium-SMS ist heute nur im **Trip-Briefing** verdrahtet; Alarm- und Vergleichspfad folgen mit #1701, die Oberfläche mit S3. Zur Gleichrangigkeit der vier Kanäle siehe „Projekt-Ueberblick" oben.
 
 ## Confidence (Vorhersage-Verlässlichkeit) — NICHT wählbar als Metrik (2026-06-10, Issue #710)
 
