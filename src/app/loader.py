@@ -815,6 +815,21 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                 derived=True,
             ))
 
+    # Issue #1660 Scheibe A: baugleicher Ableitungsblock fuer die gefuehlte
+    # Seite -- fehlt "wind_chill_night" im gespeicherten Config, erbt sie den
+    # Zustand von "wind_chill". Abgeleitet wird NUR, wenn ein
+    # "wind_chill"-Eintrag existiert (Roundtrip-Invarianz).
+    if not any(mc.metric_id == "wind_chill_night" for mc in metrics):
+        _felt_entries = [mc for mc in metrics if mc.metric_id == "wind_chill"]
+        if _felt_entries:
+            metrics.append(MetricConfig(
+                metric_id="wind_chill_night",
+                enabled=any(mc.enabled for mc in _felt_entries),
+                aggregations=[],
+                bucket="secondary",
+                derived=True,
+            ))
+
     # Issue #429/#1394 (T4): kanal-spezifische Layouts laden (optional,
     # backward-compat). Wenn channel_layouts fehlt → None, damit
     # get_metrics_for_channel auf die globale Liste zurückfällt. Eine

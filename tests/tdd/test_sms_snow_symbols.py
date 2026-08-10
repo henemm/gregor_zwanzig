@@ -601,6 +601,11 @@ def test_ac8_sms_symbols_endpoint_keeps_official_snow_hazard():
 def test_ac1_wind_chill_reports_all_four_symbols():
     """AC-1: wind_chill fehlt heute strukturell -- nach dem Fix liefert der
     Endpoint alle vier Kuerzel in der dokumentierten Reihenfolge.
+
+    Issue #1660 Scheibe A: 'FN' ist zur eigenen waehlbaren Groesse
+    "wind_chill_night" gewandert (SMS_MULTI_SYMBOLS_BY_METRIC-Aufteilung) --
+    "wind_chill" liefert seitdem drei statt vier Kuerzel, 'FN' erscheint
+    unter eigenem metric_id-Eintrag.
     """
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -616,9 +621,19 @@ def test_ac1_wind_chill_reports_all_four_symbols():
         f"AC-1: erwarte genau einen wind_chill-Eintrag, gefunden {len(entries)}: "
         f"{entries!r}"
     )
-    assert entries[0]["sms_symbols"] == ["FN", "FK", "FD", "WC"], (
+    assert entries[0]["sms_symbols"] == ["FK", "FD", "WC"], (
         "AC-1: wind_chill liefert "
-        f"{entries[0]['sms_symbols']!r}, erwartet ['FN','FK','FD','WC']"
+        f"{entries[0]['sms_symbols']!r}, erwartet ['FK','FD','WC']"
+    )
+
+    night_entries = [m for m in metrics if m["metric_id"] == "wind_chill_night"]
+    assert len(night_entries) == 1, (
+        f"AC-1/#1660: erwarte genau einen wind_chill_night-Eintrag, "
+        f"gefunden {len(night_entries)}: {night_entries!r}"
+    )
+    assert night_entries[0]["sms_symbols"] == ["FN"], (
+        "AC-1/#1660: wind_chill_night liefert "
+        f"{night_entries[0]['sms_symbols']!r}, erwartet ['FN']"
     )
 
 
@@ -680,9 +695,14 @@ def test_ac3_single_symbol_metrics_unchanged_in_array_format():
 
 
 def test_ac6_endpoint_reports_eleven_metrics_total():
-    """AC-6/Regression: 8 Register-Metriken + 3 neue (temperature,
-    temperature_night, wind_chill) = 11 Eintraege, kein Wertverlust durch
-    die Typumstellung string -> string[].
+    """AC-6/Regression: 8 Register-Metriken + 4 neue (temperature,
+    temperature_night, wind_chill, wind_chill_night) = 12 Eintraege, kein
+    Wertverlust durch die Typumstellung string -> string[].
+
+    Issue #1660 Scheibe A: "wind_chill_night" ist eine vierte neue,
+    eigenstaendig waehlbare Groesse (SMS_MULTI_SYMBOLS_BY_METRIC-Aufteilung)
+    -- Zaehlung von 11 auf 12 erhoeht (Testname bleibt aus Historiengruenden
+    stehen, s. AC-6-Zaehlweise in der Docstring).
     """
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -693,8 +713,8 @@ def test_ac6_endpoint_reports_eleven_metrics_total():
     app.include_router(config_router.router)
     metrics = TestClient(app).get("/sms-symbols").json()["metrics"]
 
-    assert len(metrics) == 11, (
-        f"AC-6: erwarte 11 Metrik-Eintraege (8 Register + 3 neue, thunder "
+    assert len(metrics) == 12, (
+        f"AC-6: erwarte 12 Metrik-Eintraege (8 Register + 4 neue, thunder "
         f"nur einmal gezaehlt), gefunden {len(metrics)}: {metrics!r}"
     )
     by_metric = {m["metric_id"]: m["sms_symbols"] for m in metrics}

@@ -38,7 +38,10 @@ from tests.tdd import _hiking_window_fixtures as F
 
 # #1484: temperature_night mit dabei — der AC-7-Nachtwert haengt an der
 # eigenen Groesse; fuer die uebrigen (Morgen-/ohne-Nacht-)Faelle ist sie inert.
-_FELT = ("temperature", "temperature_night", "wind_chill")
+# #1660 Scheibe A: dieselbe Eigenstaendigkeit jetzt auch fuer die gefuehlte
+# Nachtgroesse ("wind_chill_night") -- sonst faellt der AC-7-Nachwert der
+# gefuehlten Seite still auf den Gehzeit-Tiefstwert zurueck.
+_FELT = ("temperature", "temperature_night", "wind_chill", "wind_chill_night")
 _NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
 
 

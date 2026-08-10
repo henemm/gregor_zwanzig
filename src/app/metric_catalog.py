@@ -171,6 +171,29 @@ _METRICS: list[MetricDefinition] = [
         # neue Abkuerzungsregel, s. Spec compare_kanal_metriken.md Punkt 3).
         sms_code="TF",
     ),
+    # Issue #1660 Scheibe A: gefuehlte Nacht-Tiefsttemperatur am Etappenziel
+    # als EIGENE waehlbare Groesse, getrennt von "wind_chill" (FK/FD).
+    # Exakt nach dem Muster von "temperature_night" (#1484, s.o.) -- nur auf
+    # der gefuehlten Seite. Traegt das FN-Kuerzel der Trip-SMS (Bindung:
+    # sms_trip.SMS_MULTI_SYMBOLS_BY_METRIC), erscheint nur im Abend-Briefing.
+    # Der Wert entsteht im Nachtfenster (day_window.night_wind_chill_min_c),
+    # nicht aus einem Etappen-Aggregat -- deshalb keine summary_fields (=
+    # keine Auswertungs-Pill, keine Tabellenspalte) und keine
+    # Alarm-Deklaration (Kaeltealarm bleibt temperature_cold, der gefuehlte
+    # Risikowert bleibt bei "wind_chill"). "WC" (Wintersport-Tageskennzahl)
+    # bleibt bewusst bei "wind_chill" (Regression #1450, Spec-Abgrenzung 1).
+    MetricDefinition(
+        id="wind_chill_night", label_de="Gefühlte Nacht-Tiefsttemperatur",
+        unit="°C", dp_field="wind_chill_c", category="temperature",
+        default_aggregations=("min",),
+        compact_label="TFN", col_key="felt_night", col_label="NachtF",
+        providers={"openmeteo": True, "geosphere": True},
+        # sms_code = "FN": identisch mit dem SMS-Token-Symbol, das die
+        # Groesse traegt (#1435 E3b Registerkonformitaet) -- kollisionsfrei
+        # geprueft gegen alle heutigen sms_code-Werte des Katalogs.
+        sms_code="FN",
+        decimals=0,
+    ),
     MetricDefinition(
         id="humidity", label_de="Luftfeuchtigkeit", unit="%",
         dp_field="humidity_pct", category="temperature",

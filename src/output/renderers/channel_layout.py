@@ -82,10 +82,11 @@ def render_for_channel(
     Liste (Fallback) liefert.
     """
     enabled = dc.get_metrics_for_channel(channel, report_type)
-    # #1484: Nachtfenster-Skalar — nie eine Tabellenspalte/Detail-Zeile;
-    # den Wert tragen SMS-Token bzw. die Abend-Untergrenzen der
+    # #1484/#1660 Scheibe A: Nachtfenster-Skalare — nie eine Tabellenspalte/
+    # Detail-Zeile; den Wert tragen SMS-Token bzw. die Abend-Untergrenzen der
     # Kurzzusammenfassung/Telegram-Kurzuebersicht.
-    enabled = [m for m in enabled if m.metric_id != "temperature_night"]
+    _NIGHT_SCALAR_IDS = {"temperature_night", "wind_chill_night"}
+    enabled = [m for m in enabled if m.metric_id not in _NIGHT_SCALAR_IDS]
     primary = sorted(
         [m for m in enabled if m.bucket == "primary"], key=lambda m: m.order,
     )

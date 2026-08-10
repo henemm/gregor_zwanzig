@@ -56,7 +56,7 @@ Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 | `N` | Nacht-Tief-Temperatur °C am Schlafplatz | `N8`, `N-12` | nur abends (Issue #1319 Scheibe D) — im Morgenbriefing entfällt der Token komplett |
 | `K` | Tiefst-Temperatur °C **unterwegs** (kälteste Gehzeit-Stunde) — beantwortet eine andere Frage als `N` | `K6`, `K-12`, `K-` | ja (Issue #1410, morgens **und** abends) |
 | `D` | Tag-/Höchst-Temperatur °C | `D24`, `D-` | ja |
-| `FN` | **Gefühlte** Nacht-Tief-Temperatur °C am Schlafplatz | `FN6`, `FN-` | nur abends, nur wenn die Wettergröße „Gefühlte Temperatur" im Trip aktiviert ist (Issue #1410) |
+| `FN` | **Gefühlte** Nacht-Tief-Temperatur °C am Schlafplatz | `FN6`, `FN-` | nur abends, nur wenn die eigene Wettergröße „Gefühlte Nacht-Tiefsttemperatur" im Trip aktiviert ist (`wind_chill_night`, Issue #1660; vorher an „Gefühlte Temperatur" gekoppelt, Issue #1410) |
 | `FK` | **Gefühlte** Tiefst-Temperatur °C unterwegs | `FK4`, `FK-` | nur wenn „Gefühlte Temperatur" aktiviert ist |
 | `FD` | **Gefühlte** Höchst-Temperatur °C | `FD13`, `FD-` | nur wenn „Gefühlte Temperatur" aktiviert ist |
 | `R` | Regen (mm) | `R0.2@6(1.4@16)` / `R-` | ja |

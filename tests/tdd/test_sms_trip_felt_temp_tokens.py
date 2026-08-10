@@ -26,9 +26,13 @@ def _sms(report_type: str, *, felt_enabled: bool) -> str:
     """Echt gerenderte Trip-SMS — mit bzw. ohne aktivierte gefuehlte Temperatur."""
     # #1484: die Nachtgroesse ist eigenstaendig waehlbar — hier aktiv, damit
     # die N-Assertions (Parallelitaet gemessen/gefuehlt) aussagekraeftig bleiben.
+    # #1660 Scheibe A: dieselbe Eigenstaendigkeit jetzt auch auf der
+    # gefuehlten Seite ("wind_chill_night") — ohne expliziten Eintrag bleibt
+    # FN abgewaehlt (F.dc() baut MetricConfig direkt, ohne die
+    # Bestandsableitung des Ladepfads).
     metrics = (
-        ("temperature", "temperature_night", "wind_chill") if felt_enabled
-        else ("temperature", "temperature_night")
+        ("temperature", "temperature_night", "wind_chill", "wind_chill_night")
+        if felt_enabled else ("temperature", "temperature_night")
     )
     report = TripReportFormatter().format_email(
         [F.segment()],

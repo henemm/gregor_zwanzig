@@ -214,6 +214,15 @@ wind_chill	42	42°C	42	red
 wind_chill	137.0	137°C	137	red
 wind_chill	1013.0	1013°C	1013	red
 wind_chill	20000	20000°C	20000	red
+wind_chill_night	None	–	–	None
+wind_chill_night	-12.5	-12°C	-12	None
+wind_chill_night	0	0°C	0	None
+wind_chill_night	0.4	0°C	0	None
+wind_chill_night	7.5	8°C	8	None
+wind_chill_night	42	42°C	42	None
+wind_chill_night	137.0	137°C	137	None
+wind_chill_night	1013.0	1013°C	1013	None
+wind_chill_night	20000	20000°C	20000	None
 wind_direction	None	–	–	None
 wind_direction	-12.5	-12 °	-12	None
 wind_direction	0	0 °	0	None

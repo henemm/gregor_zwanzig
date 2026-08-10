@@ -21,9 +21,13 @@ _DASH = "–"  # En-Dash, wie in der bestehenden Abend-Spanne
 
 def _summary(report_type: str, *, felt_enabled: bool = False, with_night: bool = True) -> str:
     # #1484: die Abend-Untergrenze (Nachtwert) braucht die eigene Nachtgroesse.
+    # #1660 Scheibe A: dieselbe Eigenstaendigkeit jetzt auch auf der
+    # gefuehlten Seite ("wind_chill_night") — ohne expliziten Eintrag bleibt
+    # die gefuehlte Abend-Untergrenze beim Gehzeit-Tiefstwert (F.dc() baut
+    # MetricConfig direkt, ohne die Bestandsableitung des Ladepfads).
     metrics = (
-        ("temperature", "temperature_night", "wind_chill") if felt_enabled
-        else ("temperature", "temperature_night")
+        ("temperature", "temperature_night", "wind_chill", "wind_chill_night")
+        if felt_enabled else ("temperature", "temperature_night")
     )
     return CompactSummaryFormatter().format_stage_summary(
         [F.segment()],
