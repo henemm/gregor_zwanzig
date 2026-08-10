@@ -130,13 +130,20 @@ class CompareDispatchStrategy:
         from app.loader import load_all_locations
         from services.scheduler_dispatch_service import _dispatch_due_preset
 
-        preset, target_date = item
+        # Issue #1661 (Adversary-Finding F003): `collect_due` liefert den
+        # Tagesbezug in BEIDEN Formen — absoluter Zieltag UND Versatz gegen den
+        # Ortstag, beide aus derselben Zeitabfrage. Der Versatz wird hier
+        # durchgereicht statt spaeter aus einer zweiten `date.today()`-
+        # Auswertung rekonstruiert; zwischen `collect_due` und diesem Aufruf
+        # liegen Wetterabruf, Rendering und die 2s-Warteschlange je
+        # vorangehendem Preset, und damit moeglicherweise eine Mitternacht.
+        preset, target_date, tage_ab_ortstag = item
         # Lazy: erst laden, wenn ein faelliges Preset zu verarbeiten ist (#649).
         if self._all_locations is None:
             self._all_locations = load_all_locations(user_id=self._user_id)
         if _dispatch_due_preset(
             preset, target_date, self._settings, self._user_id, self._data_root,
-            self._all_locations,
+            self._all_locations, tage_ab_ortstag=tage_ab_ortstag,
         ):
             self._success += 1
         else:

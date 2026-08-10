@@ -271,6 +271,9 @@ class TestSunHoursThroughDispatch:
                     user_id,
                     str(tmp_path),
                     target_date=TARGET_DATE,
+                    # #1661 (F003): Zieltag und Versatz gehoeren zusammen und
+                    # kommen aus derselben Zeitabfrage — hier Morgen-Slot, 0.
+                    tage_ab_ortstag=0,
                     all_locations_cache=[loc],
                 )
             result = exc.value.result

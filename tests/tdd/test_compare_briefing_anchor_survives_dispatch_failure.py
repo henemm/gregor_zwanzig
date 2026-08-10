@@ -94,7 +94,13 @@ class _ScriptedWeatherSource:
         self.fetch_calls: list[str] = []
 
     def fetch(self, point_id: str, lat: float, lon: float,
-              start_hour: int | None = None, end_hour: int | None = None):
+              start_hour: int | None = None, end_hour: int | None = None,
+              target_date=None, tage_ab_ortstag=None):
+        # `target_date`/`tage_ab_ortstag` (Issue #1661 Teil B): der
+        # Versandpfad reicht den gebriefeten Tag als VERSATZ gegen den Ortstag
+        # bis zum Δ-Anker durch, der Δ-Check spaeter den aufgeloesten absoluten
+        # Tag; die Attrappe nimmt beides entgegen, statt an einem TypeError zu
+        # scheitern.
         self.fetch_calls.append(point_id)
         return _point(point_id, self._names.get(point_id, point_id), lat, lon,
                       precip_sum_mm=self.values.get(point_id, 0.0))
@@ -238,6 +244,7 @@ def test_ac2_versandfehler_schreibt_fuer_alle_orte_trotzdem_den_vergleichs_snaps
             _preset(preset_id, [loc.id for loc in locations]),
             settings, uid, str(compare_env / "data"),
             all_locations_cache=list(locations), target_date=TARGET_DATE,
+        tage_ab_ortstag=0,
         )
     assert "Incomplete SMTP configuration" in str(excinfo.value), (
         "Vorbedingung: die durchgereichte Ausnahme muss die des ECHTEN "
@@ -320,6 +327,7 @@ def test_versandfehler_des_ortsvergleichs_hinterlaesst_diagnose_spur_als_verglei
             _preset(preset_id, [loc.id for loc in locations]),
             settings, uid, str(compare_env / "data"),
             all_locations_cache=list(locations), target_date=TARGET_DATE,
+        tage_ab_ortstag=0,
         )
 
     journal = _dispatch_failure_journal(uid)

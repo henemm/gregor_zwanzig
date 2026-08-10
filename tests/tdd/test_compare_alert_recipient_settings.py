@@ -434,7 +434,7 @@ def test_ac3_dispatch_sends_to_settings_mail_to_not_preset_empfaenger(dispatch_e
         send_one_compare_preset(
             _preset("cp-1452-ac3", ["loc-d"]), _settings(), user_id, str(tmp_path),
             all_locations_cache=[_location("loc-d", "Innsbruck", 47.27, 11.39)],
-            target_date=TARGET_DATE, mail_sink=lambda **kw: None,
+            target_date=TARGET_DATE, tage_ab_ortstag=0, mail_sink=lambda **kw: None,
         )
 
     assert recorded, "send_compare_report wurde nie aufgerufen"
@@ -458,7 +458,7 @@ def test_ac3_dispatch_raises_valueerror_when_mail_to_missing(dispatch_env):
             _preset("cp-1452-ac3b", ["loc-d"]), _settings(mail_to=None), user_id,
             str(tmp_path),
             all_locations_cache=[_location("loc-d", "Innsbruck", 47.27, 11.39)],
-            target_date=TARGET_DATE, mail_sink=lambda **kw: None,
+            target_date=TARGET_DATE, tage_ab_ortstag=0, mail_sink=lambda **kw: None,
         )
 
 

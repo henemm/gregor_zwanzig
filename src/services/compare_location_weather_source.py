@@ -20,6 +20,7 @@ SPEC: docs/specs/modules/fix_1584c_compare_alarm_zeitfenster.md (Tagesfenster)
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -52,6 +53,8 @@ class CompareLocationWeatherSource:
         lon: float,
         start_hour: Optional[int] = None,
         end_hour: Optional[int] = None,
+        target_date: Optional[date] = None,
+        tage_ab_ortstag: Optional[int] = None,
     ) -> PointWeatherData:
         """Issue #1584 Scheibe C: das synthetische Segment deckt das
         TAGESFENSTER des laufenden lokalen Kalendertags am Ort ab, nicht mehr
@@ -64,7 +67,39 @@ class CompareLocationWeatherSource:
         `resolve_compare_time_window(preset)` (ADR-0035, EINE Fensterquelle für
         Anzeige und Bewertung). `None` faellt ueber denselben geteilten
         Aufloeser auf den Default 4/19 zurueck.
+
+        Issue #1661 (B1): Der KALENDERTAG des Fensters laesst sich auf ZWEI
+        Arten vorgeben — und die beiden bedeuten bewusst Verschiedenes:
+
+        * `tage_ab_ortstag` (SCHREIBSEITE, Δ-Anker): ein VERSATZ in Tagen
+          gegenueber dem ortslokalen Tag (Morgen-Slot 0, Abend-Slot +1). Der
+          Kalendertag entsteht dadurch weiterhin aus der ORTSZEIT — genau wie
+          vor dieser Scheibe. Ein absoluter Tag vom Aufrufer waere hier
+          falsch: der Dispatch-Loop bildet ihn aus `date.today()`
+          (Systemzeit = UTC auf dem Server), und fuer jeden Ort ab UTC+6
+          oestlich bzw. UTC-7 westlich zeigt dieser UTC-Tag zur Slot-Zeit auf
+          einen anderen Ortstag (Adversary-Finding F002).
+        * `target_date` (LESESEITE, 15-Minuten-Δ-Check): ein bereits
+          aufgeloester, ABSOLUTER Tag, den der Anker traegt. Er muss exakt so
+          getroffen werden, damit Anker und Frisch-Abruf denselben Tag
+          beschreiben.
+
+        Ohne beides verhaelt sich `fetch()` exakt wie vor #1661 — laufender
+        lokaler Tag am Ort, kein Tagesstempel am Ergebnis. Beides gleichzeitig
+        ist ein Programmierfehler und scheitert laut (`ValueError`), statt
+        still einen der beiden Wege gewinnen zu lassen.
+
+        Der AUFGELOESTE Tag wird auf das Ergebnis gestempelt, damit der
+        15-Minuten-Frisch-Abruf spaeter DENSELBEN Tag holen kann.
         """
+        if target_date is not None and tage_ab_ortstag is not None:
+            raise ValueError(
+                "CompareLocationWeatherSource.fetch: `target_date` (absoluter "
+                "Tag, Leseseite) und `tage_ab_ortstag` (Versatz gegen den "
+                "Ortstag, Schreibseite) schliessen einander aus — es gibt "
+                f"sonst zwei Wahrheiten ueber den Kalendertag (Ort {point_id}, "
+                f"target_date={target_date}, tage_ab_ortstag={tage_ab_ortstag})."
+            )
         from app.day_window import resolve_configured_window
         from providers.base import get_provider
         from utils.timezone import tz_for_coords
@@ -79,11 +114,18 @@ class CompareLocationWeatherSource:
         # sonst verschoebe sich das Fenster bei jedem Ort mit UTC-Versatz
         # (analog `trip_segments.py:264-268`).
         local_today = now.astimezone(tz).date()
-        window_start = _window_bound(local_today, start_hour, tz)
+        # Issue #1661 (B1): der angeforderte Tag gewinnt gegen den laufenden.
+        # Der Versatz wird gegen den ORTSTAG gerechnet (F002) — nie gegen den
+        # Systemtag des Aufrufers.
+        if tage_ab_ortstag is not None:
+            window_day = local_today + timedelta(days=tage_ab_ortstag)
+        else:
+            window_day = target_date or local_today
+        window_start = _window_bound(window_day, start_hour, tz)
         # Obergrenze EXKLUSIV: `end_hour = 19` heisst Fensterende um 19:00,
         # Stunde 19 liegt draussen — genau wie `segment_weather.py` filtert
         # (`< end_floor`, Bug #806) und wie der Trip-Alarmpfad rechnet.
-        window_end = _window_bound(local_today, end_hour, tz)
+        window_end = _window_bound(window_day, end_hour, tz)
 
         if window_end <= window_start:
             # Tagesfenster ueber Mitternacht (`start > end`, seit #1361
@@ -118,4 +160,11 @@ class CompareLocationWeatherSource:
             enrich_snow=False,
             priority="alert_check",  # Issue #1329 Teil 2
         )
-        return TripSegmentWeatherAdapter.to_points([segment_weather])[0]
+        point = TripSegmentWeatherAdapter.to_points([segment_weather])[0]
+        # Issue #1661 (B1): den AUFGELOESTEN Tagesbezug mitgeben, wenn einer
+        # angefordert wurde — beim Versatz ist das der ortslokal gebildete Tag,
+        # nicht der Versatz selbst. Ohne Angabe bleibt das Feld `None`
+        # (Bestandsverhalten, Altbestand-Anker, Trip-Pfad).
+        if target_date is None and tage_ab_ortstag is None:
+            return point
+        return replace(point, target_date=window_day)

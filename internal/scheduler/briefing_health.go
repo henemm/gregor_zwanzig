@@ -152,6 +152,23 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 		}
 	}
 
+	// Issue #1661 AC-11/AC-12: derselbe Bauart-Zwilling für den bislang
+	// unerfassten Ausfallpfad "Alarm-Anker vom falschen Tag / zu alt / fehlt".
+	// Am 08.08.2026 lief die Abweichungs-Wache einer laufenden Tour dadurch
+	// ~16 h ins Leere, ohne dass es irgendwo sichtbar wurde. Namens- und
+	// Formelanalogie zu provider_error_*/briefing_dispatch_error_* ist Absicht:
+	// die externe Eskalation rechnet unverändert now - <streak_since>.
+	var anchorRejectedStreakSince any
+	anchorRejectedRecentCount := 0
+	if s.store != nil {
+		if since, recent := analyzeAlertAnchorRejections(s.store.DataDir, time.Now().UTC()); since != "" || recent > 0 {
+			if since != "" {
+				anchorRejectedStreakSince = since
+			}
+			anchorRejectedRecentCount = recent
+		}
+	}
+
 	return map[string]any{
 		"open_pending_briefings":                openCount,
 		"degraded_segments_total":               degradedTotal,
@@ -163,7 +180,93 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 		"corrupt_trips_last_run_at":             corruptTripsLastRunAt,
 		"briefing_dispatch_error_streak_since":  dispatchErrorStreakSince,
 		"briefing_dispatch_errors_recent_count": dispatchErrorsRecentCount,
+		"alert_anchor_rejected_streak_since":    anchorRejectedStreakSince,
+		"alert_anchor_rejected_recent_count":    anchorRejectedRecentCount,
 	}
+}
+
+// alertAnchorRejectedGapThreshold is the maximum gap between two consecutive
+// alert-anchor rejections that still counts as one contiguous outage.
+//
+// Deliberately NEITHER dispatchErrorStreakGapThreshold (26h) NOR
+// providerErrorStreakGapThreshold (2h): the deviation alert runs every 15
+// minutes, so a rejection that repeats has at most a quarter-hour spacing. With
+// 26h the very failure this signal exists for would stay invisible for days
+// (that is exactly how the 08.08.2026 outage went unnoticed for ~16h), with 2h
+// it would still be silent for eight consecutive blind runs. An hour without a
+// new rejection means an anchor became usable again — the series is over.
+const alertAnchorRejectedGapThreshold = 60 * time.Minute
+
+// anchorRejectedEntry mirrors one line of
+// users/<uid>/diagnostics/alert_anchor_rejected.jsonl, written by
+// src/services/alert_briefing_anchor.py's record_alert_anchor_rejected
+// (Issue #1661). Privacy (#252): only the timestamp is decoded — NEVER
+// entity_id or reason. Both are present in the file (they are what makes the
+// journal useful on the Python side) and must not cross this boundary.
+type anchorRejectedEntry struct {
+	Ts string `json:"ts"`
+}
+
+// analyzeAlertAnchorRejections scans every user's anchor-rejection journal and
+// derives the same two signals as analyzeBriefingDispatchErrors, for Issue
+// #1661 AC-11/AC-12:
+//   - streakSince: earliest timestamp (RFC3339) of the current contiguous
+//     rejection streak (adjacent rejections no more than
+//     alertAnchorRejectedGapThreshold apart), so now-streakSince GROWS with the
+//     outage. Empty once the streak has lapsed — a usable anchor writes no line,
+//     so the forward gap against now is what ends a series.
+//   - recentCount: rejections within the last 24h.
+//
+// Fail-soft: missing/corrupt files or lines are skipped, never a panic.
+func analyzeAlertAnchorRejections(dataDir string, now time.Time) (string, int) {
+	var rejectionTimes []time.Time
+	matches, _ := filepath.Glob(filepath.Join(dataDir, "users", "*", "diagnostics", "alert_anchor_rejected.jsonl"))
+	for _, match := range matches {
+		f, err := os.Open(match)
+		if err != nil {
+			continue // fail-soft: one unreadable user must not break the aggregate
+		}
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var entry anchorRejectedEntry
+			if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+				continue // skip corrupt line, keep scanning
+			}
+			ts, err := time.Parse(time.RFC3339, entry.Ts)
+			if err != nil {
+				continue
+			}
+			rejectionTimes = append(rejectionTimes, ts)
+		}
+		f.Close()
+	}
+	if len(rejectionTimes) == 0 {
+		return "", 0
+	}
+
+	sort.Slice(rejectionTimes, func(i, j int) bool { return rejectionTimes[i].Before(rejectionTimes[j]) })
+
+	recentCount := 0
+	cutoff := now.Add(-24 * time.Hour)
+	for _, ts := range rejectionTimes {
+		if ts.After(cutoff) {
+			recentCount++
+		}
+	}
+
+	newest := rejectionTimes[len(rejectionTimes)-1]
+	if now.Sub(newest) > alertAnchorRejectedGapThreshold {
+		return "", recentCount
+	}
+
+	streakStart := newest
+	for i := len(rejectionTimes) - 1; i > 0; i-- {
+		if rejectionTimes[i].Sub(rejectionTimes[i-1]) > alertAnchorRejectedGapThreshold {
+			break
+		}
+		streakStart = rejectionTimes[i-1]
+	}
+	return streakStart.Format(time.RFC3339), recentCount
 }
 
 // dispatchErrorStreakGapThreshold is the maximum gap between two consecutive

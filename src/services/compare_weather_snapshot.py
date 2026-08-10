@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
 from typing import List
@@ -62,6 +62,12 @@ class CompareWeatherSnapshotService:
                 "provider": point.provider,
                 "aggregated": _serialize_summary(point.aggregated),
             }
+            # Issue #1661 (B1): additiv — nur geschrieben, wenn gesetzt.
+            # Dateiname und Ablageort bleiben unveraendert, es entsteht kein
+            # neues Schema und keine Migration; Altbestand ohne das Feld
+            # verhaelt sich exakt wie vorher.
+            if point.target_date is not None:
+                entry["target_date"] = point.target_date.isoformat()
             if point.timeseries is not None:
                 hourly = []
                 for dp in point.timeseries.data:
@@ -87,12 +93,25 @@ class CompareWeatherSnapshotService:
             data = json.loads(path.read_text())
             provider = data.get("provider", "unknown")
             timeseries = _deserialize_timeseries(data, provider)
+            # Issue #1661 (B1): fehlendes Feld -> None (Altbestand). Ein
+            # unlesbarer Wert darf den Anker nicht wertlos machen, deshalb
+            # ebenfalls None statt Ausnahme.
+            raw_target_date = data.get("target_date")
+            try:
+                target_date = date.fromisoformat(str(raw_target_date)) if raw_target_date else None
+            except ValueError:
+                logger.warning(
+                    "Unlesbares target_date im Compare-Anker %s/%s: %r",
+                    preset_id, location_id, raw_target_date,
+                )
+                target_date = None
             point = PointWeatherData(
                 id=data["id"], name=data["name"], lat=data["lat"], lon=data["lon"],
                 timeseries=timeseries,
                 aggregated=_deserialize_summary(data["aggregated"]),
                 fetched_at=datetime.fromisoformat(data["fetched_at"]),
                 provider=provider,
+                target_date=target_date,
             )
             return [point]
         except (json.JSONDecodeError, ValueError, KeyError, OSError) as e:

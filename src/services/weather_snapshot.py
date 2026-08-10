@@ -165,6 +165,34 @@ class WeatherSnapshotService:
             except OSError as e:
                 logger.warning(f"Failed to prune dated snapshot {old_file}: {e}")
 
+    def load_target_date(self, trip_id: str) -> Optional[date]:
+        """Den beschriebenen Tag des UNDATIERTEN Snapshots lesen (Issue #1661).
+
+        Liest ausschliesslich das `target_date`-Feld aus `{trip_id}.json` —
+        derselben Datei, die `load()` liest — und rekonstruiert bewusst KEINE
+        Segmente: der Alarm-Pfad braucht hier nur die Tagesfrage.
+
+        Bewusst eine EIGENE Methode statt eines geaenderten Rueckgabewerts von
+        `load()` (Spec A1): `load()` hat drei Aufrufer, zwei davon
+        (`weather_extractor.py:84,127`) sind reine Anzeigepfade der
+        `/heute`-/`/morgen`-Kommandos, die bewusst "was auch immer da ist"
+        zeigen sollen. Ein geaenderter Rueckgabetyp haette deren Semantik still
+        mitveraendert.
+
+        Returns:
+            Den geparsten Tag — oder `None`, wenn die Datei fehlt, das JSON
+            korrupt ist, das Feld fehlt oder der Wert unlesbar ist (dasselbe
+            fail-soft-Muster wie `load()`/`load_dated()`). Was ein fehlender
+            Tag bedeutet, entscheidet der Aufrufer; dort greift das Altersnetz.
+        """
+        filepath = self._snapshots_dir / f"{trip_id}.json"
+        try:
+            data = json.loads(filepath.read_text())
+            return date.fromisoformat(str(data["target_date"]))
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError, OSError) as e:
+            logger.debug(f"No readable target_date in snapshot {trip_id}: {e}")
+            return None
+
     def load(self, trip_id: str) -> Optional[List[SegmentWeatherData]]:
         """Load aggregated weather snapshot from JSON file."""
         filepath = self._snapshots_dir / f"{trip_id}.json"

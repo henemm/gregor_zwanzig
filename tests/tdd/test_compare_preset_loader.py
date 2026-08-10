@@ -236,12 +236,16 @@ def test_ac5_presets_due_for_hour_identical_via_raw_dict_and_new_loader(tmp_path
         [compare_preset_to_dict(p) for p in loaded], hour, today
     )
 
-    ids_old = sorted((p.get("id"), td) for p, td in due_old)
-    ids_new = sorted((p.get("id"), td) for p, td in due_new)
+    # Issue #1661 (Adversary-Finding F003): `presets_due_for_hour` liefert
+    # seither ein Tripel (preset, target_date, tage_ab_ortstag). Der
+    # Golden-Vergleich zieht den Versatz mit — liefen die beiden Lesewege im
+    # Tagesbezug auseinander, faellt es hier auf.
+    ids_old = sorted((p.get("id"), td, versatz) for p, td, versatz in due_old)
+    ids_new = sorted((p.get("id"), td, versatz) for p, td, versatz in due_new)
 
     assert ids_old == ids_new
     # Nur das taeglich-morgens-aktive Preset ist faellig, das pausierte nicht.
-    assert ids_old == [("preset-1", today)]
+    assert ids_old == [("preset-1", today, 0)]
 
 
 def test_compare_preset_to_dict_roundtrips_raw_input_including_unknown_field(tmp_path):

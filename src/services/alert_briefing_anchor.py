@@ -44,6 +44,57 @@ _BRIEFING_ANCHOR_FILE = "briefing_anchor.json"
 # daraus das mit der Ausfalldauer wachsende Signal am Status-Endpunkt bildet.
 _DISPATCH_FAILURE_FILE = "briefing_dispatch_failures.jsonl"
 
+# Diagnose-Spur verworfener/fehlender Alarm-Anker (#1661). BEWUSST eine eigene
+# Datei statt eines weiteren Grundes in `_DISPATCH_FAILURE_FILE`: dort ist die
+# Lücken-Schwelle auf den Briefing-Takt kalibriert (1-2x/Tag, 26 h), der
+# Abweichungs-Alarm läuft alle 15 Minuten. Zwei Kadenzen in einem Zähler
+# verfälschen beide Aussagen (Spec C1). Leser ist
+# `analyzeAlertAnchorRejections` (internal/scheduler/briefing_health.go).
+_ANCHOR_REJECTED_FILE = "alert_anchor_rejected.jsonl"
+
+
+def record_alert_anchor_rejected(
+    *, user_id: str, entity_id: str, reason: str,
+) -> None:
+    """Hält einen verworfenen oder fehlenden Δ-Anker als Diagnose-Spur fest (#1661).
+
+    Args:
+        user_id: echte Nutzer-Kennung (Mandantentrennung, nie `"default"`).
+        entity_id: Trip- bzw. Preset-Kennung.
+        reason: `"wrong_day"` (Anker beschreibt einen anderen Tag),
+            `"too_old"` (kein lesbarer Tag UND jenseits der Altersgrenze) oder
+            `"missing"` (laufende Tour ohne jeden Anker).
+
+    Warum überhaupt: bis hierher wurde ein unbrauchbarer Anker kommentarlos
+    benutzt oder kommentarlos verworfen. Am 08.08.2026 lief die Wache einer
+    laufenden Tour dadurch rund 16 Stunden ins Leere, ohne dass es irgendwo
+    sichtbar wurde (ADR-0018: nicht kaschieren).
+
+    Der Pfad wird über die zentrale Datenwurzel aufgelöst (`get_data_dir`), nie
+    repo-relativ — ein fest verdrahteter `data/`-Pfad hat zuletzt die gesamte
+    Überwachung blind gemacht (#1633).
+
+    Fail-soft (AC-15): ein defekter Diagnose-Schreiber darf den Alarm-Lauf nie
+    zusätzlich abbrechen — deshalb wird JEDE Ausnahme gefangen und nur geloggt.
+    """
+    try:
+        from app.loader import get_data_dir
+
+        path = get_data_dir(user_id) / "diagnostics" / _ANCHOR_REJECTED_FILE
+        path.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps({
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "entity_id": entity_id,
+            "reason": reason,
+        }, ensure_ascii=False)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except Exception as e:  # noqa: BLE001 — fail-soft, AC-15
+        logger.warning(
+            "Diagnose-Spur zum verworfenen Alarm-Anker (%s, %s) nicht schreibbar: %s: %s",
+            entity_id, reason, type(e).__name__, e,
+        )
+
 
 def _anchor_path(user_id: str):
     from app.loader import get_data_dir

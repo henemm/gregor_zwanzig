@@ -9,9 +9,10 @@ Reine Funktionen (kein IO, kein globaler State):
   die Migrations-Fallback-Tabelle aus der Spec (abhaengig vom Alt-Wert von
   `schedule`).
 - `presets_due_for_hour(presets, hour, today)` liefert je faelligem Preset
-  ein `(preset, target_date)`-Tupel (Morgen-Slot -> today, Abend-Slot ->
-  today+1), inkl. Pause- (`schedule == "manual"`), Archiv- (`archived_at`)
-  und Laufzeit-Guard (`end_date`).
+  ein `DuePreset(preset, target_date, tage_ab_ortstag)` (Morgen-Slot -> today
+  bzw. Versatz 0, Abend-Slot -> today+1 bzw. Versatz +1), inkl. Pause-
+  (`schedule == "manual"`), Archiv- (`archived_at`) und Laufzeit-Guard
+  (`end_date`).
 """
 from __future__ import annotations
 
@@ -29,6 +30,47 @@ class PresetSlots(NamedTuple):
     morning_time: dt_time
     evening_enabled: bool
     evening_time: dt_time
+
+
+# Slot -> Tagesversatz gegen den Sammeltag. Der Morgen-Slot briefed ueber den
+# laufenden Tag, der Abend-Slot ueber den Folgetag (#1232 Scheibe 2a).
+MORGEN_SLOT_VERSATZ = 0
+ABEND_SLOT_VERSATZ = 1
+
+
+class DuePreset(NamedTuple):
+    """Ein faelliges Preset mit seinem Tagesbezug in BEIDEN Formen.
+
+    Issue #1661 (Adversary-Finding F003): der Tagesbezug wird hier — an der
+    einzigen Stelle, die den Slot kennt — EINMAL aus `today` gebildet und in
+    beiden Formen weitergereicht, statt spaeter aus einer zweiten
+    `date.today()`-Auswertung rekonstruiert zu werden:
+
+    * `target_date` — der absolute Zieltag (LESESEITE: Mail-Betreff,
+      Vergleichs-Engine).
+    * `tage_ab_ortstag` — derselbe Tag als VERSATZ (SCHREIBSEITE: Δ-Anker).
+      Er wird erst am Ort gegen die ORTSZEIT aufgeloest
+      (`compare_location_weather_source.fetch`), damit der Anker nicht am
+      UTC-Tag des Servers haengt (Adversary-Finding F002).
+
+    Beide entstehen aus DERSELBEN Zeitabfrage. Faellt zwischen Sammeln und
+    Schreiben eine Mitternacht, bleibt der Versatz dadurch richtig; die
+    fruehere Differenzbildung `(target_date - date.today()).days` lag dann
+    still um einen Tag daneben (F003).
+    """
+
+    preset: dict
+    target_date: date
+    tage_ab_ortstag: int
+
+
+def _due(preset: dict, today: date, tage_ab_ortstag: int) -> DuePreset:
+    """Baut den Faelligkeits-Eintrag aus dem Versatz — EINE Quelle fuer beide
+    Formen, damit `target_date` und `tage_ab_ortstag` nicht auseinanderlaufen
+    koennen."""
+    return DuePreset(
+        preset, today + timedelta(days=tage_ab_ortstag), tage_ab_ortstag,
+    )
 
 
 def _parse_time(value: str) -> dt_time:
@@ -58,7 +100,8 @@ def resolve_preset_slots(preset: dict) -> PresetSlots:
 
 
 def presets_due_for_hour(presets: list, hour: int, today: date) -> list:
-    """Liefert je faelligem Preset ein `(preset, target_date)`-Tupel.
+    """Liefert je faelligem Preset ein `DuePreset`-Tripel
+    `(preset, target_date, tage_ab_ortstag)`.
 
     Guards (in dieser Reihenfolge): stillgelegt laut
     `compare_alert_guard.is_silenced` — `paused_at` gesetzt ODER
@@ -107,7 +150,7 @@ def presets_due_for_hour(presets: list, hour: int, today: date) -> list:
             continue
 
         if slots.morning_enabled and slots.morning_time.hour == hour:
-            due.append((preset, today))
+            due.append(_due(preset, today, MORGEN_SLOT_VERSATZ))
         if slots.evening_enabled and slots.evening_time.hour == hour:
-            due.append((preset, today + timedelta(days=1)))
+            due.append(_due(preset, today, ABEND_SLOT_VERSATZ))
     return due

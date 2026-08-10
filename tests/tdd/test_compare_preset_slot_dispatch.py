@@ -10,9 +10,15 @@ Getestet wird ein noch nicht existierendes, rein deterministisches Modul
   Liest die 5 neuen Slot-Felder aus einem rohen Preset-Dict, wendet bei
   fehlendem `morning_time` (Nil-Check-Marker "Altdaten, nie migriert") die
   Migrations-Fallback-Tabelle aus der Spec an.
-- `presets_due_for_hour(presets, hour, today) -> list[tuple[dict, date]]`
-  Liefert je faelligem Preset das Zieldatum (Morgen-Slot -> heute,
-  Abend-Slot -> morgen), inkl. Pause-/Archiv-/Laufzeit-Guards.
+- `presets_due_for_hour(presets, hour, today) -> list[DuePreset]`
+  Liefert je faelligem Preset den Tagesbezug in BEIDEN Formen — Zieldatum
+  (Morgen-Slot -> heute, Abend-Slot -> morgen) UND Versatz gegen den Ortstag
+  (0 bzw. +1) —, inkl. Pause-/Archiv-/Laufzeit-Guards.
+  Der Versatz kam mit #1661 (Adversary-Finding F003) hinzu: er wird von hier
+  bis zum Δ-Anker durchgereicht, statt spaeter aus einer zweiten
+  `date.today()`-Auswertung rekonstruiert zu werden. Jeder Faelligkeits-Assert
+  unten pinnt ihn deshalb mit — ein vertauschter oder fest verdrahteter
+  Versatz faellt hier auf.
 
 RED-Zustand (jetzt): `services.compare_slot_scheduler` existiert nicht
   -> ModuleNotFoundError bei Collection, alle Tests unten sind rot.
@@ -73,7 +79,7 @@ def test_ac4_morning_slot_due_at_configured_hour_not_outside():
     due_at_7 = presets_due_for_hour([preset], hour=7, today=TODAY)
     due_at_8 = presets_due_for_hour([preset], hour=8, today=TODAY)
 
-    assert due_at_7 == [(preset, TODAY)]
+    assert due_at_7 == [(preset, TODAY, 0)]
     assert due_at_8 == []
 
 
@@ -91,7 +97,7 @@ def test_ac5_evening_slot_due_targets_next_day():
     due_at_18 = presets_due_for_hour([preset], hour=18, today=TODAY)
     due_at_17 = presets_due_for_hour([preset], hour=17, today=TODAY)
 
-    assert due_at_18 == [(preset, TODAY + timedelta(days=1))]
+    assert due_at_18 == [(preset, TODAY + timedelta(days=1), 1)]
     assert due_at_17 == []
 
 
@@ -195,7 +201,7 @@ def test_ac7_end_date_today_still_due():
 
     due = presets_due_for_hour([preset], hour=7, today=TODAY)
 
-    assert due == [(preset, TODAY)]
+    assert due == [(preset, TODAY, 0)]
 
 
 def test_ac7_end_date_none_unbounded_still_due():
@@ -210,7 +216,7 @@ def test_ac7_end_date_none_unbounded_still_due():
 
     due = presets_due_for_hour([preset], hour=7, today=TODAY)
 
-    assert due == [(preset, TODAY)]
+    assert due == [(preset, TODAY, 0)]
 
 
 # --- AC-8: archived_at ------------------------------------------------------
@@ -244,7 +250,7 @@ def test_kl5_same_hour_for_morning_and_evening_yields_two_entries():
 
     due = presets_due_for_hour([preset], hour=9, today=TODAY)
 
-    assert due == [(preset, TODAY), (preset, TODAY + timedelta(days=1))]
+    assert due == [(preset, TODAY, 0), (preset, TODAY + timedelta(days=1), 1)]
 
 
 # --- KL-2: Minuten-Granularitaet wird ignoriert ---------------------------
@@ -262,7 +268,7 @@ def test_kl2_morning_time_minutes_are_ignored_for_due_check():
     due = presets_due_for_hour([preset], hour=7, today=TODAY)
     _, morning_time, _, _ = resolve_preset_slots(preset)
 
-    assert due == [(preset, TODAY)]
+    assert due == [(preset, TODAY, 0)]
     assert morning_time.hour == 7
     assert morning_time.minute == 45
 
@@ -286,7 +292,7 @@ def test_explicit_slot_fields_override_schedule_fallback():
     due_evening_hour = presets_due_for_hour([preset], hour=20, today=TODAY)
 
     assert due_morning_hour == []
-    assert due_evening_hour == [(preset, TODAY + timedelta(days=1))]
+    assert due_evening_hour == [(preset, TODAY + timedelta(days=1), 1)]
 
 
 # --- AC-11: Reine Funktion, keine Vermischung zwischen Nutzer-Listen ------
@@ -314,8 +320,8 @@ def test_ac11_two_user_preset_lists_evaluated_independently():
     result_b = presets_due_for_hour([preset_user_b], hour=7, today=TODAY)
     combined = presets_due_for_hour([preset_user_a, preset_user_b], hour=7, today=TODAY)
 
-    assert result_a == [(preset_user_a, TODAY)]
-    assert result_b == [(preset_user_b, TODAY + timedelta(days=1))]
+    assert result_a == [(preset_user_a, TODAY, 0)]
+    assert result_b == [(preset_user_b, TODAY + timedelta(days=1), 1)]
     assert combined == result_a + result_b
 
 
@@ -366,4 +372,44 @@ def test_f002_corrupt_end_date_skips_only_that_preset():
 
     due = presets_due_for_hour([corrupt_preset, valid_preset], hour=7, today=TODAY)
 
-    assert due == [(valid_preset, TODAY)]
+    assert due == [(valid_preset, TODAY, 0)]
+
+
+# --- Adversary-Fund F003 (#1661): Versatz kommt von hier, nicht von spaeter --
+
+def test_f003_slot_versatz_und_zieldatum_stammen_aus_derselben_zeitabfrage():
+    """GIVEN ein Preset mit aktivem Morgen- UND Abend-Slot zur selben Stunde
+    WHEN `presets_due_for_hour` laeuft
+    THEN traegt jeder Eintrag den Versatz gegen den Sammeltag (Morgen 0,
+    Abend +1) UND es gilt `target_date == today + tage_ab_ortstag` — beide
+    Formen stammen aus derselben, EINEN Zeitabfrage.
+
+    Warum das hier gepinnt gehoert: `presets_due_for_hour` ist die einzige
+    Stelle im ganzen Weg, die den Slot KENNT. Bis #1661 Runde 2 wurde der
+    Versatz stattdessen spaeter im Schreibpfad als
+    `(target_date - date.today()).days` rekonstruiert — aus einer zweiten
+    Zeitabfrage zu einem anderen Realzeitpunkt. Fiel dazwischen Mitternacht,
+    lag der Δ-Anker still einen Tag daneben (Adversary-Finding F003).
+
+    Der Test faengt beide naheliegenden Verfaelschungen: Morgen-/Abend-Versatz
+    vertauscht, und Versatz fest auf einen Wert verdrahtet.
+    """
+    preset = _preset(
+        morning_enabled=True, morning_time="09:00:00",
+        evening_enabled=True, evening_time="09:45:00",
+    )
+
+    due = presets_due_for_hour([preset], hour=9, today=TODAY)
+
+    versaetze = [eintrag.tage_ab_ortstag for eintrag in due]
+    assert versaetze == [0, 1], (
+        "Der Morgen-Slot briefed ueber den laufenden Tag (Versatz 0), der "
+        f"Abend-Slot ueber den Folgetag (Versatz +1). Gefunden: {versaetze!r}"
+    )
+    for eintrag in due:
+        assert eintrag.target_date == TODAY + timedelta(days=eintrag.tage_ab_ortstag), (
+            "Zieldatum und Versatz muessen denselben Tag meinen — sonst "
+            "beschreiben Mail-Betreff und Δ-Anker verschiedene Kalendertage. "
+            f"Gefunden: target_date={eintrag.target_date}, "
+            f"tage_ab_ortstag={eintrag.tage_ab_ortstag}, today={TODAY}"
+        )
