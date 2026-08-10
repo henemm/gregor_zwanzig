@@ -2371,15 +2371,18 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 - `password`: ≥8 characters
 - `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing, no uniqueness check)
 
+**Check order (Issue #1517):** format checks (username length/regex, password length) → existence check (`s.UserExists`) → email presence/format. The existence check runs **before** the email checks, so a request for an already-registered username returns 409 regardless of whether `email` is set — previously a missing `email` on an existing username produced a misleading 400 `validation failed`.
+
 **Error Responses:**
 
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"error":"invalid request"}` | JSON malformed (`internal/handler/auth.go:36`) |
-| 400 | `{"error":"validation failed"}` | username/password/email missing or too short (auth.go:43-67) |
-| 400 | `{"error":"invalid_email"}` | `email` present but without `@` (auth.go:73) |
-| 409 | `{"error":"user already exists"}` | User with this ID already registered (auth.go:80 — Klartext mit Leerzeichen, KEIN snake_case) |
-| 500 | `{"error":"internal error"}` / `{"error":"store_error"}` | Hashing-/Persistenz-Fehler (auth.go:88,101) |
+| 400 | `{"error":"validation failed"}` | username/password missing, too short, or wrong format (auth.go:43-56) |
+| 409 | `{"error":"user already exists"}` | User with this ID already registered (auth.go:62-67 — Klartext mit Leerzeichen, KEIN snake_case; checked before email validation) |
+| 400 | `{"error":"validation failed"}` | `email` missing (auth.go:75-79) |
+| 400 | `{"error":"invalid_email"}` | `email` present but without `@` (auth.go:81-85) |
+| 500 | `{"error":"internal error"}` / `{"error":"store_error"}` | Hashing-/Persistenz-Fehler (auth.go:88-93,102-106) |
 
 Since Issue #1226, a valid `email` also triggers the existing `dispatchVerificationMail` helper (from #1219) after account creation — same Double-Opt-In flow as profile email changes. Google-OAuth account creation (`createOAuthUser`) and passkey-public account creation (`PasskeyRegisterPublicFinishHandler`) trigger the same dispatch on first-time account creation (not on existing-user login).
 
@@ -3395,6 +3398,14 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-09: Issue #1517 — `POST /api/auth/register` prüft die Existenz des Usernamens
+  (`s.UserExists`) jetzt VOR der #1226-E-Mail-Pflichtprüfung; Reihenfolge der reinen
+  Format-Validierungen (Username-Länge/-Regex, Passwort-Länge) bleibt unverändert davor.
+  Bug: ein Register-Aufruf ohne `email`-Feld gegen einen bereits existierenden Username
+  lieferte fälschlich 400 `validation failed` statt 409 `user already exists` — brach u.a.
+  `scripts/setup-validator-user.sh`, das nie ein `email`-Feld sendet. Kein neues Feld, keine
+  DTO-Änderung, nur Prüfreihenfolge in `internal/handler/auth.go`. Siehe
+  `docs/specs/modules/fix_1517_validator_register_order.md`.
 - 2026-08-07: Issue #1552 — `GET /api/metrics` liefert je Größe zusätzlich
   `trip_default_enabled` (bool), gesetzt aus dem neuen Registerfeld
   `trip_default_rank` (`src/app/metric_catalog.py`). Es markiert die
