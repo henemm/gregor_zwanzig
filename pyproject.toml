@@ -86,4 +86,5 @@ dev = [
     "ruff>=0.8.0",
     "playwright>=1.57.0",
     "pytest-socket>=0.8.0",
+    "freezegun>=1.5.0",
 ]

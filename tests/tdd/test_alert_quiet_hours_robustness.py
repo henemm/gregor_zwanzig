@@ -78,6 +78,7 @@ from app.config import Settings
 from app.loader import get_briefings_dir, save_location
 from app.user import SavedLocation
 
+from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 from tests.helpers.compare_briefings import write_compare_briefings
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -234,21 +235,23 @@ def _save_trip_direct(
     ``get_briefings_dir()`` folgt dem pytest-isolierten Daten-Wurzelpfad
     (#1133) — demselben Pfad, aus dem ``load_all_trips()`` liest.
     """
-    now = datetime.now(timezone.utc)
     briefings = get_briefings_dir(user_id)
     briefings.mkdir(parents=True, exist_ok=True)
+    # #1667 S1: wanduhr-robustes Ankunftsfenster (Helfer) statt roher
+    # now-1h/now+2h-Arithmetik mit Etappendatum aus der Wanduhr.
+    arr0, arr1 = active_window_offsets(lat, lon, -60, 120)
     data: dict = {
         "id": trip_id,
         "name": name,
         "stages": [{
-            "id": "S1", "name": "Tag 1", "date": now.date().isoformat(),
+            "id": "S1", "name": "Tag 1", "date": stage_date().isoformat(),
             "waypoints": [
                 {"id": "WP0", "name": "Start", "lat": lat, "lon": lon,
                  "elevation_m": 100.0,
-                 "arrival_calculated": (now - timedelta(hours=1)).strftime("%H:%M")},
+                 "arrival_calculated": arr0},
                 {"id": "WP1", "name": "Ziel", "lat": lat + 0.05,
                  "lon": lon + 0.05, "elevation_m": 200.0,
-                 "arrival_calculated": (now + timedelta(hours=2)).strftime("%H:%M")},
+                 "arrival_calculated": arr1},
             ],
         }],
         "report_config": {

@@ -23,6 +23,8 @@ from datetime import datetime, timedelta, timezone
 from app.loader import get_briefings_dir, get_data_dir
 from app.models import Corridor, ThunderLevel
 
+from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+
 from tests.helpers.alert_log_fixtures import (
     LAT, LON, fresh_user, gust_alert_trip, read_log, settings_email_only, weather,
 )
@@ -115,18 +117,22 @@ def test_ac2_beide_korridor_namensraeume_liefern_dasselbe_register_paar():
 def _save_radar_trip(user_id: str, trip_id: str) -> None:
     briefings = get_briefings_dir(user_id)
     briefings.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc)
+    # #1667 S1: Ankunftszeiten aus dem wanduhr-robusten Helfer statt aus roher
+    # now+Nh-Arithmetik — sonst laeuft die Folge ab 23:00 UTC steigend ueber
+    # Mitternacht, der Rollover wird nicht erkannt und das Segment landet
+    # 23 h in der Vergangenheit ("alle Segmente vorbei" -> 0 Alarme).
+    arr0, arr1 = active_window_offsets(LAT, LON, 60, 240)
     (briefings / f"{trip_id}.json").write_text(json.dumps({
         "id": trip_id, "name": "Radar-Trip",
         "stages": [{
-            "id": "S1", "name": "Tag 1", "date": now.date().isoformat(),
+            "id": "S1", "name": "Tag 1", "date": stage_date().isoformat(),
             "waypoints": [
                 {"id": "W0", "name": "Start", "lat": LAT, "lon": LON,
                  "elevation_m": 1000.0,
-                 "arrival_calculated": (now + timedelta(hours=1)).strftime("%H:%M")},
+                 "arrival_calculated": arr0},
                 {"id": "W1", "name": "Ziel", "lat": LAT + 0.1, "lon": LON + 0.1,
                  "elevation_m": 1500.0,
-                 "arrival_calculated": (now + timedelta(hours=4)).strftime("%H:%M")},
+                 "arrival_calculated": arr1},
             ],
         }],
         "report_config": {"trip_id": trip_id, "send_email": True, "send_telegram": False},

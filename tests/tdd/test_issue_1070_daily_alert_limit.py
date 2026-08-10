@@ -60,6 +60,8 @@ from app.models import (
 from app.loader import get_data_dir
 from app.trip import Stage, Trip, Waypoint
 
+from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+
 # Koordinaten im GR20-Gebiet (Korsika) — identisch zu test_issue_827
 LAT, LON = 42.20, 9.10
 
@@ -225,14 +227,14 @@ def _wet_frames(lat: float, lon: float) -> list:
 
 
 def _make_trip(trip_id: str, send_email: bool, send_telegram: bool) -> Trip:
-    today = date_type.today()
-    now_utc = datetime.now(timezone.utc)
-    arrival_now = (now_utc + timedelta(hours=2)).strftime("%H:%M")
+    # #1667 S1: wanduhr-robustes Ankunftsfenster statt roher now+Nh-Arithmetik
+    # (ab 22:00 UTC lief die +2h/+4h-Folge steigend ueber Mitternacht).
+    arr0, arr1 = active_window_offsets(LAT, LON, 120, 240)
     wp0 = Waypoint(id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=500.0,
-                   arrival_calculated=arrival_now)
+                   arrival_calculated=arr0)
     wp1 = Waypoint(id="WP1", name="End", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=600.0,
-                   arrival_calculated=(now_utc + timedelta(hours=4)).strftime("%H:%M"))
-    stage = Stage(id="S1", name="Tag 1", date=today, waypoints=[wp0, wp1])
+                   arrival_calculated=arr1)
+    stage = Stage(id="S1", name="Tag 1", date=stage_date(), waypoints=[wp0, wp1])
     trip = Trip(id=trip_id, name="1070 Test", stages=[stage])
     trip.report_config = TripReportConfig(
         trip_id=trip_id,

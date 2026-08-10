@@ -34,6 +34,8 @@ import pytest
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
+from tests.helpers.arrival_window_fixtures import past_window_offsets, stage_date
+
 def _data_root_users() -> Path:
     """Nutzer-Wurzel der Compare-Preset-Ablage — Funktion statt Konstante
     (#1595): ``get_data_root()`` liefert erst zur Laufzeit die von der
@@ -121,6 +123,15 @@ def _save_trip_direct(trip: Trip, user_id: str) -> None:
             "trip_id": trip.id, "send_email": True, "send_telegram": False,
         },
     }
+    # #1667 S1: Das Tagesfenster muss mit auf die Platte. Es wurde bisher
+    # stillschweigend verworfen — ein Trip, dessen Fixture ein eigenes Fenster
+    # setzt, las nach dem Neuladen wieder den Default 4-19 Uhr. Seit #1584
+    # entscheidet genau dieses Fenster, wann das Ziel-Segment endet.
+    _rc = getattr(trip, "report_config", None)
+    for _feld in ("day_window_start_hour", "day_window_end_hour"):
+        _wert = getattr(_rc, _feld, None) if _rc else None
+        if _wert is not None:
+            data["report_config"][_feld] = _wert
     (trips_dir / f"{trip.id}.json").write_text(json.dumps(data, indent=2))
 
 
@@ -142,22 +153,30 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     now_utc = datetime.now(timezone.utc)
 
+    # #1667 S1: Die Stundenraster laufen ueber ZWEI Tage, nicht ueber einen.
+    # Die Aufrufer schluesseln nach der UTC-Stunde des Onsets (``now + 5 min``);
+    # in den letzten fuenf Minuten des UTC-Tages ist das Stunde 0 des FOLGE-
+    # tages, waehrend hier nur der heutige Tag geschrieben wurde. Der Snapshot
+    # traf den Onset-Zeitpunkt dann nicht mehr und die Tests
+    # ``test_ac1_...``/``test_ac4_...`` wurden zwischen 23:55 und 24:00 UTC
+    # reproduzierbar rot (nachgemessen unter freeze_time: gruen bis 23:54:59,
+    # rot ab 23:55:00). Der Kommentar am Aufruf ("onset_h statt now_h vermeidet
+    # Race Condition bei XX:55-XX:59") beschrieb die Absicht, die Ablage hier
+    # zog aber nicht mit.
+    tagesbeginn = now_utc.replace(hour=0, minute=0, second=0, microsecond=0,
+                                  tzinfo=None)
     hourly = []
-    for h in range(24):
+    for stunde in range(48):
         # Naive UTC-Zeitstempel (kein tzinfo) — so serialisiert WeatherSnapshotService
-        ts_naive = now_utc.replace(hour=h, minute=0, second=0, microsecond=0, tzinfo=None)
+        ts_naive = tagesbeginn + timedelta(hours=stunde)
         hourly.append({
             "ts": ts_naive.strftime("%Y-%m-%dT%H:%M:%S"),
-            "precip_1h_mm": float(hourly_precip.get(h, 0.0)),
+            "precip_1h_mm": float(hourly_precip.get(ts_naive.hour, 0.0)),
         })
 
-    snapshot = {
-        "trip_id": trip_id,
-        "target_date": today.isoformat(),
-        "snapshot_at": now_utc.isoformat(),
-        "provider": "openmeteo",
-        "segments": [{
-            "segment_id": segment_id,
+    def _segment_eintrag(sid) -> dict:
+        return {
+            "segment_id": sid,
             "start_time": (now_utc - timedelta(hours=1)).isoformat(),
             "end_time": (now_utc + timedelta(hours=2)).isoformat(),
             "start_lat": LAT,
@@ -174,7 +193,21 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
             "duration_hours": 3.0,
             "aggregated": {"t2m_c_max": 20.0, "t2m_c_min": 15.0},
             "hourly": hourly,
-        }],
+        }
+
+    # #1667 S1: Der Snapshot deckt zusaetzlich das ZIEL-Segment ab. Die
+    # Etappe von `_make_active_trip` laeuft bis 23:59 Ortszeit; danach ist
+    # nicht mehr Segment 1 aktiv, sondern das Ziel-Segment (segment_id
+    # "Ziel", vergeben in src/services/trip_segments.py). Der Snapshot kannte
+    # nur segment_id=1, die Regen-Ankuendigung wurde dort nicht gefunden und
+    # der Alarm feuerte trotzdem — nachgemessen: gruen um 23:59:00, rot ab
+    # 23:59:30. Eigene Ursache, unabhaengig vom Stundenraster oben.
+    snapshot = {
+        "trip_id": trip_id,
+        "target_date": today.isoformat(),
+        "snapshot_at": now_utc.isoformat(),
+        "provider": "openmeteo",
+        "segments": [_segment_eintrag(segment_id), _segment_eintrag("Ziel")],
     }
     filepath = snapshots_dir / f"{trip_id}_{today.isoformat()}.json"
     filepath.write_text(json.dumps(snapshot, indent=2))
@@ -386,40 +419,62 @@ def test_ac4_double_alert_guard_suppresses_radar_when_forecast_recent():
 def test_ac5_past_segment_no_alert_guard_test():
     """AC-5: REGRESSION-GUARD aus #822 — alle Segmente vorbei → kein Alert.
 
-    Nachweis-Test für bereits implementierten Filter in check_radar_alerts Z. 616-631.
-    Kann vor Implementierung bereits grün sein.
+    Nachweis-Test für bereits implementierten Filter in check_radar_alerts.
 
-    Setup: wp1 = now-2h → Destination-Segment end = now-2h+2h = now (Vergangenheit
-    bei Ausführung nach einem Bruchteil der Setup-Zeit, analog zu 822 AC-2(c)).
-    Mindestens 4 Stunden nach Mitternacht erforderlich (kein Mitternachts-Wrap).
+    #1667 S1 — zwei Dinge am Setup mussten sich ändern, damit der Test zu
+    JEDER Wanduhrzeit trägt (vorher stand hier ein
+    ``pytest.skip`` für die ersten vier Stunden des UTC-Tages):
+
+    1. **Die Ankunftszeiten kommen aus** ``past_window_offsets`` statt aus
+       roher ``now - N h``-Arithmetik. Sonst rutschte die Uhrzeit-Folge über
+       Mitternacht und das Etappendatum passte nicht mehr zur Segmentauswahl.
+    2. **Der Trip bekommt ein eigenes Tagesfenster** (0–1 Uhr Ortszeit) und
+       Wegpunkte weit östlich von Greenwich. Grund: seit Issue #1584 endet das
+       Ziel-Segment nicht mehr bei „Ankunft + 2 h", sondern am Ende des
+       konfigurierten Tagesfensters (Default 19:00 Ortszeit). Mit dem Default
+       wäre das Ziel-Segment bis 19:00 Ortszeit offen — der Trip wäre bis dahin
+       eben NICHT „vorbei", und der Test prüfte gar nicht mehr, was seine
+       Überschrift behauptet. Die im Docstring bis 2026-08-10 behauptete
+       Rechnung „Destination-End = now-2h+2h = now" beschreibt den Stand vor
+       #1584. Mit einem Fensterende vor der Ankunft greift der Randfall-Guard
+       in ``trip_segments.py`` und das Ziel-Segment endet eine Stunde nach
+       Ankunft — erst damit ist „alle Segmente vorbei" überhaupt herstellbar.
+
+    Die östliche Zeitzone ist nötig, weil der Etappentag am Ort schon weit
+    fortgeschritten sein muss, damit überhaupt Platz für ein vergangenes
+    Fenster ist; die Prüfaussage (``count == 0``) hängt nicht am Ort.
     """
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
-    now = datetime.now(timezone.utc)
-    if now.hour < 4:
-        pytest.skip("AC-5 benötigt >=4h nach Mitternacht (UTC) um Zeitumbruch zu vermeiden")
+    # Neuseeland (UTC+12): der lokale Etappentag liegt zu jeder UTC-Uhrzeit
+    # mindestens zwölf Stunden zurück, es ist also immer Platz fuer ein
+    # vergangenes Fenster.
+    past_lat, past_lon = -41.29, 174.78
 
     uid = f"tdd-818-ac5-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
     _ensure_real_user_dir(uid)
     try:
-        # wp1 = now-2h → alle Segmente zeitlich vorbei (Destination-End ≈ now)
-        # Analog zu test_issue_822 AC-2(c) — dort getestet und grün.
+        arr0, arr1 = past_window_offsets(past_lat, past_lon, -240, -120)
         wp0 = Waypoint(
-            id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=100.0,
-            arrival_calculated=(now - timedelta(hours=4)).strftime("%H:%M"),
+            id="WP0", name="Start", lat=past_lat, lon=past_lon, elevation_m=100.0,
+            arrival_calculated=arr0,
         )
         wp1 = Waypoint(
-            id="WP1", name="Ziel", lat=LAT + 0.05, lon=LON + 0.05, elevation_m=200.0,
-            arrival_calculated=(now - timedelta(hours=2)).strftime("%H:%M"),
+            id="WP1", name="Ziel", lat=past_lat + 0.05, lon=past_lon + 0.05,
+            elevation_m=200.0,
+            arrival_calculated=arr1,
         )
-        stage = Stage(id="S1", name="Tag 1", date=now.date(), waypoints=[wp0, wp1])
+        stage = Stage(id="S1", name="Tag 1", date=stage_date(), waypoints=[wp0, wp1])
         trip_id = f"tdd-818-ac5-{uuid.uuid4().hex[:6]}"
         trip = Trip(id=trip_id, name="AC5 Past Trip", stages=[stage])
         trip.report_config = TripReportConfig(
             trip_id=trip_id, send_email=True, send_telegram=False,
             alert_on_changes=False,
+            # s. Punkt 2 im Docstring: Fensterende VOR der Ankunft, damit das
+            # Ziel-Segment eine Stunde nach Ankunft schliesst.
+            day_window_start_hour=0, day_window_end_hour=1,
         )
         _save_trip_direct(trip, uid)
 

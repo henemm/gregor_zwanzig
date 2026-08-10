@@ -39,6 +39,8 @@ import pytest
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
+from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 # Island: UTC+0 ganzjährig (kein DST) → arrival_calculated-Zeiten = UTC-Zeiten.
@@ -74,17 +76,23 @@ def _nonconvective_frames(lat: float, lon: float) -> list:
 # --------------------------------------------------------------------------
 
 def _make_active_trip(trip_id: str, quiet_from: str | None = None, quiet_to: str | None = None) -> Trip:
-    """2-Waypoint-Trip mit aktivem Segment (now-1h … now+2h), UTC+0 (Island)."""
-    now = datetime.now(timezone.utc)
+    """2-Waypoint-Trip mit aktivem Segment (now-1h … now+2h), UTC+0 (Island).
+
+    #1667 S1: die Zeiten kommen aus dem wanduhr-robusten Helfer. Diese
+    -1h/+2h-Familie hat keine Rollover-Kippkante (die Folge faellt), wohl aber
+    ein Datumsproblem an der UTC-Mitternacht: das Etappendatum muss aus
+    derselben Quelle stammen wie die Segmentauswahl in trip_alert.py.
+    """
+    arr0, arr1 = active_window_offsets(LAT, LON, -60, 120)
     wp0 = Waypoint(
         id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=100.0,
-        arrival_calculated=(now - timedelta(hours=1)).strftime("%H:%M"),
+        arrival_calculated=arr0,
     )
     wp1 = Waypoint(
         id="WP1", name="Ziel", lat=LAT + 0.05, lon=LON + 0.05, elevation_m=200.0,
-        arrival_calculated=(now + timedelta(hours=2)).strftime("%H:%M"),
+        arrival_calculated=arr1,
     )
-    stage = Stage(id="S1", name="Tag 1", date=now.date(), waypoints=[wp0, wp1])
+    stage = Stage(id="S1", name="Tag 1", date=stage_date(), waypoints=[wp0, wp1])
     trip = Trip(id=trip_id, name=f"Test {trip_id}", stages=[stage])
     trip.alert_quiet_from = quiet_from
     trip.alert_quiet_to = quiet_to
@@ -146,12 +154,22 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     now_utc = datetime.now(timezone.utc)
 
+    # #1667 S1: Stundenraster ueber ZWEI Tage. Die Aufrufer schluesseln nach
+    # ``_onset_hour()`` (``jetzt + 5 min``); in den letzten fuenf Minuten des
+    # UTC-Tages ist das Stunde 0 des FOLGEtages, waehrend hier nur der heutige
+    # Tag geschrieben wurde. Nachgemessen (A/B gegen den Fixture-Stand vor
+    # dieser Scheibe, beide Seiten identisch): ``test_ac2_...`` und
+    # ``test_ac4_...`` waren zwischen 23:55:00 und 24:00:00 UTC rot, um
+    # 23:54:00 gruen — der Befund ist aelter als S1 und hat mit den
+    # Ankunftszeiten nichts zu tun.
+    tagesbeginn = now_utc.replace(hour=0, minute=0, second=0, microsecond=0,
+                                  tzinfo=None)
     hourly = []
-    for h in range(24):
-        ts_naive = now_utc.replace(hour=h, minute=0, second=0, microsecond=0, tzinfo=None)
+    for stunde in range(48):
+        ts_naive = tagesbeginn + timedelta(hours=stunde)
         hourly.append({
             "ts": ts_naive.strftime("%Y-%m-%dT%H:%M:%S"),
-            "precip_1h_mm": float(hourly_precip.get(h, 0.0)),
+            "precip_1h_mm": float(hourly_precip.get(ts_naive.hour, 0.0)),
         })
 
     snapshot = {
