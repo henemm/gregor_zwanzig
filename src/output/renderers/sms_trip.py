@@ -63,18 +63,14 @@ if TYPE_CHECKING:
 # app-freie Formatschicht `output/tokens/` darf es nicht und führt die Kürzel
 # dort weiterhin als Literale (Schichtgrenze, abgesichert durch die Ratsche
 # tests/unit/test_sms_token_symbol_register_ratchet.py).
-_SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
-    "precipitation",
-    "rain_probability",
-    "wind",
-    "gust",
-    "thunder",
-    "snow_depth",
-    "snowfall_limit",
-    "fresh_snow",
-    # Issue #1660 Scheibe B: 14 waehlbare Metriken, bisher ohne SMS-Token.
-    # Alle 1:1 (kein Kuerzel-Mehrfach wie wind_chill) -> gehoeren in diese
-    # Register-Ableitung, NICHT in SMS_MULTI_SYMBOLS_BY_METRIC (DEC-1).
+# Issue #1660 Scheibe B Fix-Loop (Muster #1410, DEC-1): die 14 waehlbaren
+# Metriken als eigene, benannte Konstante -- Single Source fuer
+# _SMS_SYMBOL_METRIC_IDS UNTEN und fuer build_extended_metric_specs() (s.
+# dort). Vorher standen dieselben 14 Ids literal in _SMS_SYMBOL_METRIC_IDS
+# UND in trip_report.py's disabled-only-Schleife -- das Auseinanderdriften
+# war genau die Ursache des Fix-Loop-Bugs (Root-Cause: aktive Metriken
+# bekamen NIE eine MetricSpec, nur abgewaehlte).
+SMS_NULLFORM_METRIC_IDS: tuple[str, ...] = (
     "humidity",
     "dewpoint",
     "wind_direction",
@@ -89,6 +85,21 @@ _SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
     "uv_index",
     "pressure",
     "freezing_level",
+)
+
+_SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
+    "precipitation",
+    "rain_probability",
+    "wind",
+    "gust",
+    "thunder",
+    "snow_depth",
+    "snowfall_limit",
+    "fresh_snow",
+    # Issue #1660 Scheibe B: 14 waehlbare Metriken, bisher ohne SMS-Token.
+    # Alle 1:1 (kein Kuerzel-Mehrfach wie wind_chill) -> gehoeren in diese
+    # Register-Ableitung, NICHT in SMS_MULTI_SYMBOLS_BY_METRIC (DEC-1).
+    *SMS_NULLFORM_METRIC_IDS,
 )
 
 # Benannte Ausnahme von der Register-Ableitung: 'TH:' ist Grammatikform (der
@@ -106,6 +117,25 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
     metric_id: _SMS_SYMBOL_GRAMMAR.get(metric_id) or get_sms_code(metric_id)
     for metric_id in _SMS_SYMBOL_METRIC_IDS
 }
+
+
+def build_extended_metric_specs(active_metric_ids: set[str]) -> list[MetricSpec]:
+    """#1660 B Fix-Loop: MetricSpecs fuer die 14 erweiterten Metriken in BEIDEN
+    Faellen (Muster #1410, wie schon SMS_MULTI_SYMBOLS_BY_METRIC unten fuer
+    die Temperatur-Trios) -- nur so erreicht die Null-Form (§9 der Spec) den
+    Produktionspfad. Root-Cause des Fix-Loop-Bugs: trip_report.py fuehrte die
+    14 bisher ausschliesslich in der disabled-only-Schleife (Bug #944), eine
+    aktive Metrik ohne Daten bekam dadurch NIE eine Spec und builder.py's
+    `if spec is None and not samples: continue`-Gate liess sie komplett
+    entfallen statt '{symbol}-' zu rendern."""
+    return [
+        MetricSpec(
+            symbol=SMS_SYMBOL_BY_METRIC[metric_id],
+            enabled=metric_id in active_metric_ids,
+        )
+        for metric_id in SMS_NULLFORM_METRIC_IDS
+    ]
+
 
 # Issue #1410: metric_id -> MEHRERE SMS-Kuerzel derselben Metrik. Eigene
 # Zuordnung, weil eine Metrik hier mehrere Symbole traegt (Nacht/Tiefst/
