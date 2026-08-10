@@ -30,7 +30,11 @@ from app.models import (
     TripSegment,
 )
 from services import alert_daily_limit
-from services.alert_briefing_anchor import reset_alert_memory, write_anchor_and_reset_memory
+from services.alert_briefing_anchor import (
+    record_briefing_dispatch_failure,
+    reset_alert_memory,
+    write_anchor_and_reset_memory,
+)
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
 from services.user_tier import sms_allowed
@@ -979,7 +983,63 @@ class TripReportSchedulerService:
             render_options=render_options,
             starkregen_nowcast=starkregen_nowcast,
         )
-        result = self._notification_service.send_trip_report(request)
+        # 8b. Issue #1467 S2 AG5: Anker und Melde-Gedächtnis hängen an EINER
+        # Bedingung, in EINEM geteilten Baustein, den auch der Ortsvergleich
+        # benutzt. Beides steht HIER oben, weil der Fehlerpfad des Versands
+        # (unten) exakt denselben Aufruf braucht (#1629) — zwei Fassungen
+        # dürften auseinanderlaufen, dieser eine darf es nicht.
+        # Issue #1007: On-Demand-Abruf (heute/morgen-Kommando) ist read-only
+        # gegenüber Snapshot-/Alert-Zustand — Baseline bleibt das letzte
+        # reguläre Briefing. Ein On-Demand-Abruf für nur EINEN Zieltag würde
+        # sonst die kombinierte Momentaufnahme (heute+morgen) mit dem einen
+        # Zieltag überschreiben und Alerts/Vortag-Vergleich für den jeweils
+        # anderen Tag verfälschen (`write_anchor_and_reset_memory` steigt bei
+        # on_demand=True aus, hier wird nichts nachgebaut).
+        # Issue #816 (B): Briefing = neue, stabile Alert-Referenz → das
+        # Melde-Gedächtnis des Trips zurücksetzen, damit der nächste Alert
+        # wieder gegen das frische Briefing vergleicht.
+        def _write_briefing_anchor() -> None:
+            try:
+                from services.weather_snapshot import WeatherSnapshotService
+                _snapshot_svc = WeatherSnapshotService(self._user_id)
+                _snapshot_svc.save(trip.id, segment_weather, target_date)
+                _snapshot_svc.save_dated(trip.id, target_date, segment_weather)
+            except Exception as e:
+                logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
+
+        def _anchor_and_reset() -> None:
+            write_anchor_and_reset_memory(
+                user_id=self._user_id,
+                entity_ids=[trip.id],
+                write_anchor=_write_briefing_anchor,
+                on_demand=on_demand,
+                reset_memory=self._reset_alert_state_after_briefing,
+                # Issue #1461 S3b-1: Briefing-Zeitstempel unter der PROTOKOLL-
+                # Kennung (hier deckungsgleich mit der Anker-Kennung).
+                briefing_entity_id=trip.id,
+                briefing_entity_type="trip",
+            )
+
+        # Issue #1629: Wirft der Versand (E-Mail propagiert, SMS/Telegram sind
+        # fail-soft), fiel bisher alles darunter aus — insbesondere der Anker.
+        # Ergebnis am 08.08.: ein ganzer Tag ohne Abweichungs-Alarm. Ein bloß
+        # nicht zustellbares Briefing (`result.sent == False`) schreibt ihn seit
+        # jeher; hier wird nur Gleichbehandlung hergestellt. Bewusst
+        # `except Exception` — Auslöser war der Empfänger-Schutz, es kann jeder
+        # Kanalfehler sein. Der Block umschließt AUSSCHLIESSLICH den
+        # Versandaufruf: über dem Wetterabruf entstünde ein Anker aus
+        # unvollständigen Daten, also eine Referenz, die nie ein Briefing war
+        # (AC-10).
+        try:
+            result = self._notification_service.send_trip_report(request)
+        except Exception as exc:
+            record_briefing_dispatch_failure(
+                user_id=self._user_id, kind="route", entity_id=trip.id, error=exc,
+            )
+            _anchor_and_reset()
+            # Unverändert weiterreichen: `dispatch_orchestrator` zählt den Lauf
+            # weiterhin als fehlgeschlagen und protokolliert ihn (AC-3).
+            raise
         errors = request.failed_segments
 
         # Issue #1439 AC-6: ein erfolgreich versendeter Kurzfristhinweis
@@ -1028,27 +1088,9 @@ class TripReportSchedulerService:
                 failed_segment_ids=[str(s.segment.segment_id) for s in errors],
             )
 
-        # 10. Save weather snapshot for alert comparison
-        # Issue #1007: On-Demand-Abruf (heute/morgen-Kommando) ist read-only
-        # gegenüber Snapshot-/Alert-Zustand — Baseline bleibt das letzte
-        # reguläre Briefing. Ein On-Demand-Abruf für nur EINEN Zieltag würde
-        # sonst die kombinierte Momentaufnahme (heute+morgen) mit dem einen
-        # Zieltag überschreiben und Alerts/Vortag-Vergleich für den jeweils
-        # anderen Tag verfälschen.
-        # Issue #816 (B): Briefing = neue, stabile Alert-Referenz → das
-        # Melde-Gedächtnis des Trips zurücksetzen, damit der nächste Alert
-        # wieder gegen das frische Briefing vergleicht.
-        # Issue #1467 S2 AG5: Anker und Gedächtnis hängen an EINER Bedingung,
-        # in EINEM geteilten Baustein, den auch der Ortsvergleich benutzt.
-        def _write_briefing_anchor() -> None:
-            try:
-                from services.weather_snapshot import WeatherSnapshotService
-                _snapshot_svc = WeatherSnapshotService(self._user_id)
-                _snapshot_svc.save(trip.id, segment_weather, target_date)
-                _snapshot_svc.save_dated(trip.id, target_date, segment_weather)
-            except Exception as e:
-                logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
-
+        # 10. Save weather snapshot for alert comparison — der Anker-Aufruf
+        # selbst steht bei 8b (siehe dort), damit Erfolgs- und Fehlerpfad des
+        # Versands nachweislich denselben benutzen (#1629).
         # Issue #1614 Teil 1: eine amtliche Warnung, die bereits erfolgreich im
         # Trip-Briefing gemeldet wurde, darf der unabhaengige 15-Minuten-
         # Alarm-Checker nicht bis zu 15 Minuten spaeter nochmal als eigene,
@@ -1067,17 +1109,7 @@ class TripReportSchedulerService:
                     user_id=self._user_id, entity_id=trip.id, alerts=all_official_alerts,
                 )
 
-        write_anchor_and_reset_memory(
-            user_id=self._user_id,
-            entity_ids=[trip.id],
-            write_anchor=_write_briefing_anchor,
-            on_demand=on_demand,
-            reset_memory=self._reset_alert_state_after_briefing,
-            # Issue #1461 S3b-1: Briefing-Zeitstempel unter der PROTOKOLL-
-            # Kennung (hier deckungsgleich mit der Anker-Kennung).
-            briefing_entity_id=trip.id,
-            briefing_entity_type="trip",
-        )
+        _anchor_and_reset()
 
         if result.no_channel_configured:
             return "no_channels"

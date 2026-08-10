@@ -21,7 +21,9 @@ from app.loader import (
     load_compare_presets,
 )
 from services.alert_briefing_anchor import (
-    undelivered_since_last_briefing, write_anchor_and_reset_memory,
+    record_briefing_dispatch_failure,
+    undelivered_since_last_briefing,
+    write_anchor_and_reset_memory,
 )
 from services.compare_alert_channels import effective_compare_channels
 
@@ -394,45 +396,61 @@ def send_one_compare_preset(
         outlook_enabled=opts.outlook_enabled,
         outlook_metrics=opts.outlook_metrics,
     )
-    # TODO(#1207): wird durch den Versand-Orchestrator generalisiert
-    # Issue #1270 (KB-3): Kanal-Fan-out ueber den geteilten NotificationService
-    # statt EmailOutput direkt — die gespeicherten Opt-ins send_telegram/
-    # send_sms wirken damit endlich auch im Briefing-Pfad.
-    NotificationService(settings, user_id).send_compare_report(
-        subject=subject,
-        html_body=html_body,
-        text_body=text_body,
-        telegram_text=render_compare_telegram(
-            result, enabled_metrics=opts.enabled_metrics, preset_name=name,
-        ),
-        sms_text=render_compare_sms(result, enabled_metrics=opts.enabled_metrics),
-        recipients=empfaenger,
-        effective_channels=_effective_compare_channels(preset, settings, user_id),
-        compare_hourly_enabled=opts.hourly_enabled,
-        mail_sink=mail_sink,
-        sms_sink=sms_sink,
-        telegram_sink=telegram_sink,
-    )
-
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
     # gemeldeten Stand). Best-effort: ein fehlgeschlagener Snapshot-Write darf
     # den bereits erfolgten Report-Versand nicht rückwirkend als Fehler zaehlen.
     # Issue #1467 S2 AG5: Anker und Melde-Gedaechtnis haengen an EINER Bedingung,
     # im selben geteilten Baustein, den auch der Trip benutzt. Der Reset laeuft
     # ueber ALLE Orte des Presets (R3), nicht nur die getriggerten.
-    write_anchor_and_reset_memory(
-        user_id=user_id,
-        entity_ids=[f"{preset_id}:{loc.id}" for loc in locations],
-        write_anchor=lambda: _write_compare_alert_snapshots(
-            preset_id, locations, user_id, preset,
-        ),
-        on_demand=on_demand,
-        # Issue #1461 S3b-1: der Briefing-Zeitstempel gehoert unter die
-        # Protokoll-Kennung `preset_id` — unter den Anker-Kennungen oben
-        # faende `read_undelivered()` nie einen Treffer.
-        briefing_entity_id=preset_id,
-        briefing_entity_type="compare",
-    )
+    # Issue #1629: steht VOR dem Versand, weil dessen Fehlerpfad exakt denselben
+    # Aufruf braucht — zwei Fassungen duerften auseinanderlaufen.
+    def _anchor_and_reset() -> None:
+        write_anchor_and_reset_memory(
+            user_id=user_id,
+            entity_ids=[f"{preset_id}:{loc.id}" for loc in locations],
+            write_anchor=lambda: _write_compare_alert_snapshots(
+                preset_id, locations, user_id, preset,
+            ),
+            on_demand=on_demand,
+            # Issue #1461 S3b-1: der Briefing-Zeitstempel gehoert unter die
+            # Protokoll-Kennung `preset_id` — unter den Anker-Kennungen oben
+            # faende `read_undelivered()` nie einen Treffer.
+            briefing_entity_id=preset_id,
+            briefing_entity_type="compare",
+        )
+
+    # TODO(#1207): wird durch den Versand-Orchestrator generalisiert
+    # Issue #1270 (KB-3): Kanal-Fan-out ueber den geteilten NotificationService
+    # statt EmailOutput direkt — die gespeicherten Opt-ins send_telegram/
+    # send_sms wirken damit endlich auch im Briefing-Pfad.
+    # Issue #1629: dieselbe Bruchstelle wie beim Trip — wirft der Versand, fiel
+    # der Anker fuer JEDEN Ort des Presets aus. Der Block umschliesst
+    # ausschliesslich den Versandaufruf (AC-10), danach fliegt die Ausnahme
+    # unveraendert weiter.
+    try:
+        NotificationService(settings, user_id).send_compare_report(
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            telegram_text=render_compare_telegram(
+                result, enabled_metrics=opts.enabled_metrics, preset_name=name,
+            ),
+            sms_text=render_compare_sms(result, enabled_metrics=opts.enabled_metrics),
+            recipients=empfaenger,
+            effective_channels=_effective_compare_channels(preset, settings, user_id),
+            compare_hourly_enabled=opts.hourly_enabled,
+            mail_sink=mail_sink,
+            sms_sink=sms_sink,
+            telegram_sink=telegram_sink,
+        )
+    except Exception as exc:
+        record_briefing_dispatch_failure(
+            user_id=user_id, kind="vergleich", entity_id=preset_id, error=exc,
+        )
+        _anchor_and_reset()
+        raise
+
+    _anchor_and_reset()
 
     save_compare_preset_status(user_id, preset_id, top_ort, data_root=data_root)
     logger.info("Compare preset %s sent to %s (top_ort=%s)", preset_id, empfaenger, top_ort)
