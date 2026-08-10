@@ -109,6 +109,10 @@ class MetricSpec:
     # When set to "symbol" or "scale", the builder emits a friendly token
     # bit-identical to legacy use_friendly_format=True (Backward-Compat).
     format_mode: Optional[str] = None
+    # Issue #1677: additive Nutzer-Anzeigeposition (SMS-Kanal-Layout-Index).
+    # None (Default) -> Bestandsaufrufer bleiben byte-identisch, builder.py
+    # sortiert dann ausschliesslich nach der bisherigen POSITIONAL-Tabelle.
+    position: Optional[int] = None
 
 
 @dataclass(frozen=True)

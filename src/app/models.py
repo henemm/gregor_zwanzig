@@ -643,6 +643,33 @@ def _filter_metrics_by_report_type(
 # Issue #1575: Bucket-Rangfolge fuer die Spalten-/Zeilenreihenfolge.
 _BUCKET_RANK = {"primary": 0, "secondary": 1}
 
+CascadeSource = Literal["per_report", "per_channel", "global"]
+
+
+def _cascade_source_for_channel(
+    per_report_layouts: Optional[dict[str, dict[str, list["MetricConfig"]]]],
+    per_channel_layouts: Optional[dict[str, list["MetricConfig"]]],
+    channel: str,
+    report_type: str,
+) -> CascadeSource:
+    """Issue #1677 DEC-2/AC-9: geteilte Bedingungsprüfung, welche Kaskaden-
+    ebene für ``channel``/``report_type`` antwortet -- EXAKT dieselben drei
+    Bedingungen wie ``UnifiedWeatherDisplayConfig.get_metrics_for_channel()``.
+    Genutzt von ``UnifiedWeatherDisplayConfig.cascade_source_for_channel()``
+    UND (indirekt) von ``api/routers/validator.py::_determine_cascade_source``
+    -- damit gibt es fuer diese Frage nur EINEN Ableitungsweg, keine zweite,
+    unabhaengig gepflegte Kopie der drei if-Zweige.
+    """
+    if (
+        per_report_layouts is not None
+        and report_type in per_report_layouts
+        and channel in per_report_layouts[report_type]
+    ):
+        return "per_report"
+    if per_channel_layouts is not None and channel in per_channel_layouts:
+        return "per_channel"
+    return "global"
+
 
 def _sorted_by_layout(metrics: list["MetricConfig"]) -> list["MetricConfig"]:
     """Sortiert nach der im Editor eingestellten Position (Issue #1575).
@@ -745,26 +772,24 @@ class UnifiedWeatherDisplayConfig:
         Issue #1575: JEDE Ebene laeuft durch dieselbe Sortierung nach der im
         Editor eingestellten Position — sonst verhielte sich ein Trip mit
         kanal-eigenen Listen anders als einer ohne.
+
+        Issue #1677 DEC-2: die Ebenen-ERKENNUNG teilt sich mit
+        ``cascade_source_for_channel()`` den Helfer ``_cascade_source_for_
+        channel()`` -- kein zweiter Ableitungsweg fuer dieselbe Frage.
         """
-        # Ebene 1 (#434): per_report_layouts[report_type][channel]
-        if (
-            self.per_report_layouts is not None
-            and report_type in self.per_report_layouts
-            and channel in self.per_report_layouts[report_type]
-        ):
-            report_channel_metrics = self.per_report_layouts[report_type][channel]
+        source = _cascade_source_for_channel(
+            self.per_report_layouts, self.per_channel_layouts, channel, report_type,
+        )
+        if source == "per_report":
+            report_channel_metrics = self.per_report_layouts[report_type][channel]  # type: ignore[index]
             if len(report_channel_metrics) == 0:
                 return []
             return _sorted_by_layout(
                 _filter_metrics_by_report_type(report_channel_metrics, report_type),
             )
 
-        # Ebene 2 (#429): per_channel_layouts[channel]
-        if (
-            self.per_channel_layouts is not None
-            and channel in self.per_channel_layouts
-        ):
-            channel_metrics = self.per_channel_layouts[channel]
+        if source == "per_channel":
+            channel_metrics = self.per_channel_layouts[channel]  # type: ignore[index]
             if len(channel_metrics) == 0:
                 return []
             return _sorted_by_layout(
@@ -773,6 +798,20 @@ class UnifiedWeatherDisplayConfig:
 
         # Ebene 3: globaler Fallback
         return _sorted_by_layout(self.get_metrics_for_report_type(report_type))
+
+    def cascade_source_for_channel(self, channel: str, report_type: str) -> CascadeSource:
+        """Issue #1677 AC-9: auf welcher Kaskadenebene antwortet
+        ``get_metrics_for_channel()`` fuer diesen Kanal/Report-Typ?
+
+        Teilt sich die Bedingungsprüfung mit ``get_metrics_for_channel()``
+        (``_cascade_source_for_channel()``) -- der Validator-Spiegel
+        ``api/routers/validator.py::_determine_cascade_source`` ruft diese
+        Methode ebenfalls auf, statt eine eigene Kopie der drei if-Zweige zu
+        pflegen.
+        """
+        return _cascade_source_for_channel(
+            self.per_report_layouts, self.per_channel_layouts, channel, report_type,
+        )
 
 
 # --- Ausblick-Zustand (Fix #1486) ---
