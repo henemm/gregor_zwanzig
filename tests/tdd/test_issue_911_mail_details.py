@@ -1015,7 +1015,13 @@ class TestAC13PipelineRainProbAndThunderPct:
         from src.output.tokens.dto import HourlyValue
         stage = _trend_stage(weekday="Mi", name="E-Gewitter", confidence_pct=70)
         stage["thunder"] = "MED"
-        stage["hourly_thunder"] = (HourlyValue(hour=14, value=1.0),)
+        # value ist das Ordinal aus thunder_label_value(): NONE=0, LOW=1,
+        # MED=2, HIGH=3. Stand hier bis #1653/F002 auf 1.0 — seit der
+        # LOW-Erweiterung (#1474) ist das LOW, passte also nicht mehr zum
+        # `thunder="MED"` daneben. Unentdeckt blieb das, weil die Zelle ihr
+        # Wort aus dem Aggregat nahm statt aus der Stundenreihe; genau diese
+        # zweite Quelle ist jetzt weg.
+        stage["hourly_thunder"] = (HourlyValue(hour=14, value=2.0),)
         html = _render(trend=[stage])
         assert "mittel" in html, (
             "Gew-Spalte muss 'mittel' zeigen bei ThunderLevel.MED. "

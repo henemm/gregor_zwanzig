@@ -20,6 +20,23 @@ WICHTIG fuer die GREEN-Phase: die Golden-Dateien sind der Beweis. Sie werden
 NICHT neu erzeugt, wenn dieser Test rot wird — ein roter Lauf hier heisst, dass
 die Trip-Mail sich veraendert hat.
 
+NACHGEFUEHRTE ZELLEN (#1653, 2026-08-10) — vollstaendige Liste mit Begruendung
+in `tests/fixtures/outlook_trip_parity/README.md`:
+
+  * F002, HTML, Zeile "Di", Spalte "Gew": "–" -> "mittel @16"
+  * F004, Klartext, Zeile "Mo": "⚡MED" -> "⚡mittel"
+  * F004, Klartext, Zeile "Di": "⚡–"   -> "⚡mittel"
+
+Beide Eingabezeilen tragen `hourly_thunder` mit "mittel" um 16 Uhr (im
+Tagesfenster 4-19), waehrend das Aggregat `thunder` einmal "MED" und einmal
+"NONE" sagt — zwei gegenlaeufige Quellen. Die alten Werte "–"/"⚡–" sind genau
+Fehler 1 aus Issue #1653: Wort und Uhrzeit stammten aus verschiedenen
+Zeitraeumen, weshalb das Tagesgewitter verschwand. AC-1 der freigegebenen Spec
+verlangt woertlich eine Uhrzeit, "die nachweislich aus demselben Tagesfenster
+stammt wie das Wort" — das Wort kommt seither aus `thunder_day_token`, in HTML
+UND Klartext. Beabsichtigte Verhaltensaenderung, kein Aufweichen des
+Waechters: alle uebrigen Zellen sind unveraendert byte-gleich geblieben.
+
 Kern-Schicht, deterministisch: keine Mocks, kein Netz, echte
 SegmentWeatherSummary-/ForecastDataPoint-/HourlyValue-Objekte.
 """

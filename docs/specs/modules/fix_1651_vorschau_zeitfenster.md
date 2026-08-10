@@ -330,6 +330,8 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
   Nacht-Hinweis.
 
 - **AC-2 — VERSCHOBEN NACH #1653, in dieser Scheibe nicht anwendbar.**
+  (#1653 ist abgeschlossen, Status `implemented`, Adversary-Verdict VERIFIED
+  — siehe `docs/specs/modules/fix_1653_ausblick_tag_nacht_trennung.md`.)
   ~~Given derselbe Trip und Tag wie AC-1 / When
   die abendliche Trip-Mail mit aktivem Mehrtages-Ausblick erzeugt wird /
   Then zeigt die Spalte „Gew" für diesen Tag „nachts hoch 00:00" (HTML) bzw.
@@ -396,6 +398,8 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
   statt still auf eine andere Quelle auszuweichen.
 
 - **AC-10 — VERSCHOBEN NACH #1653, in dieser Scheibe nicht anwendbar.**
+  (#1653 ist abgeschlossen, Status `implemented`, Adversary-Verdict VERIFIED
+  — siehe `docs/specs/modules/fix_1653_ausblick_tag_nacht_trennung.md`.)
   Die Annahme dahinter ist zudem widerlegt: Telegram zeigt den 24-Stunden-
   Höchstwert und verschweigt den jeweils schwächeren von Tag und Nacht.
   ~~Given ein Trip mit
@@ -468,6 +472,9 @@ das ab.
 
 ## Changelog
 
+- 2026-08-10: Statusverweis ergänzt — #1653 (Ausblick-Tabelle Tag/Nacht-
+  Trennung, hierhin verschobene AC-2/AC-10) ist abgeschlossen (Adversary
+  VERIFIED nach 4 Runden). Keine inhaltliche Änderung dieser Spec.
 - 2026-08-09: Version 2.0 — vollständige Neufassung nach PO-Entscheidung
   (Kommentar 2 an Issue #1651): Nachtgewitter wird GENANNT statt das
   Zeitfenster nur beschriftet. Ersetzt Version 1.0 (Suffix-Ansatz)

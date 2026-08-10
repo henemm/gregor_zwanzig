@@ -89,6 +89,14 @@ Gewitter = Farb-Quadrat (8×8px) + Wort-Text.
 | MED  | `#c08a1a` | MED  | `#8c3e1a` | `⚡MED` |
 | HIGH | `#a83232` | HIGH | `#a83232` | `⚡HIGH` |
 
+**Ergänzung (Fix #1653, 2026-08-10):** Die Gewitter-Zelle zeigt seither Tag-
+und Nachtgewitter **getrennt** statt eines einzelnen 24h-Peak-Werts
+(`thunder_day_token`/`thunder_night_token`), inklusive Spitzenwert-Zusatz
+bei Eskalation innerhalb eines Fensters, z.B. „leicht @6 (hoch @14) ·
+nachts mittel @22". Die obige Tabelle beschreibt den einwertigen
+Ausgangszustand vor #1653 und wird hier bewusst nicht überschrieben —
+aktueller Ist-Stand: `docs/specs/modules/fix_1653_ausblick_tag_nacht_trennung.md`.
+
 ## HTML-Struktur (table-only, inline styles)
 
 - Wrapper: `background:#f6f4ee; border-top:2px solid #1a1a18; padding:22px 28px 24px`
@@ -137,3 +145,6 @@ Gewitter = Farb-Quadrat (8×8px) + Wort-Text.
 - 2026-08-04 (Fix #1486): v5.0 — AC-3/C5 umgekehrt — PO-Entscheidung, Ausblick benennt seinen
   Zustand statt zu schweigen. Vormals implizite Stille war fünf nicht unterscheidbare stille
   Ausstiege, siehe #1486.
+- 2026-08-10 (Fix #1653): Gewitter-Ampel-Sektion um Hinweis auf die neue
+  Tag/Nacht-Trennung der Zelle ergänzt (nicht neu geschrieben) — Details:
+  `docs/specs/modules/fix_1653_ausblick_tag_nacht_trennung.md`.

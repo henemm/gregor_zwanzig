@@ -14,3 +14,28 @@ Default-Parameter abgeschirmte Erweiterungen.
 **Diese Dateien werden NICHT neu erzeugt.** Wird
 `tests/tdd/test_trip_outlook_parity.py` rot, hat sich die Trip-Mail veraendert
 — das ist der Befund, nicht ein veralteter Referenzstand.
+
+## Nachgefuehrte Zellen
+
+| Datum | Datei | Zelle | Alt | Neu | Grund |
+|---|---|---|---|---|---|
+| 2026-08-10 | `...html` | Zeile "Di", Spalte "Gew" | `–` | `mittel @16` | #1653/F002 |
+| 2026-08-10 | `...txt` | Zeile "Mo", Gewitter-Feld | `⚡MED` | `⚡mittel` | #1653/F004 |
+| 2026-08-10 | `...txt` | Zeile "Di", Gewitter-Feld | `⚡–` | `⚡mittel` | #1653/F004 |
+
+Beide Eingabezeilen tragen `hourly_thunder` mit "mittel" um 16 Uhr — im
+Tagesfenster 4-19 —, waehrend das Aggregat `thunder` einmal `MED` und einmal
+`NONE` sagt. Die Di-Zeile ist damit dieselbe gegenlaeufige Konstellation in
+beiden Kanaelen: der alte Wert (`–` im HTML, `⚡–` im Klartext) schrieb Fehler 1
+aus Issue #1653 fest (Wort und Uhrzeit aus verschiedenen Zeitraeumen, das
+Tagesgewitter verschwand). AC-1 der freigegebenen Spec verlangt beides aus
+demselben Tagesfenster; das Wort kommt seither aus `thunder_day_token`. Die
+Mo-Zeile aendert nur die Schreibweise mit: das Tagestoken fuehrt die deutschen
+Stufenwoerter (`leicht`/`mittel`/`hoch`) statt der Programmnamen des Aggregats
+— unvermeidliche Folge des Quellenwechsels, kein eigener Eingriff (#1654
+bleibt fuer die uebrigen Fundstellen zustaendig). Der Rest beider Dateien ist
+unveraendert.
+
+Eine Nachfuehrung ist nur unter diesen Bedingungen zulaessig: der neue Wert
+folgt aus einem freigegebenen AC, die Aenderung ist auf die davon betroffenen
+Zellen begrenzt, und sie wird hier mit Grund eingetragen.

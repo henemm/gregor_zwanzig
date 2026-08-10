@@ -1691,9 +1691,21 @@ class TripReportSchedulerService:
                         if mc.sms_threshold is not None:
                             _sms_thr[mc.metric_id] = mc.sms_threshold
 
+                # Issue #1653: konfiguriertes Tagesfenster durchreichen, damit
+                # die Gewitter-Zelle des Ausblicks Tag und Nacht am selben
+                # Fenster trennt wie die Gewitter-Vorschau (#1651).
+                from app.day_window import resolve_configured_window
+
+                _rc = getattr(trip, "report_config", None)
+                _win_start, _win_end = resolve_configured_window(
+                    getattr(_rc, "day_window_start_hour", None),
+                    getattr(_rc, "day_window_end_hour", None),
+                )
                 row = build_outlook_row(
                     agg, _flat_points, WEEKDAYS_DE[stage.date.weekday()], _tz,
                     sms_thresholds=_sms_thr,
+                    day_window_start_hour=_win_start,
+                    day_window_end_hour=_win_end,
                 )
                 # Issue #1275: explicit calendar date so the thunder forecast
                 # can reuse this row (matched by date, gap-safe) instead of
