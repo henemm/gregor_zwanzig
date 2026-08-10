@@ -92,7 +92,7 @@ def _make_active_trip(trip_id: str, quiet_from: str | None = None, quiet_to: str
         id="WP1", name="Ziel", lat=LAT + 0.05, lon=LON + 0.05, elevation_m=200.0,
         arrival_calculated=arr1,
     )
-    stage = Stage(id="S1", name="Tag 1", date=stage_date(), waypoints=[wp0, wp1])
+    stage = Stage(id="S1", name="Tag 1", date=stage_date(LAT, LON), waypoints=[wp0, wp1])
     trip = Trip(id=trip_id, name=f"Test {trip_id}", stages=[stage])
     trip.alert_quiet_from = quiet_from
     trip.alert_quiet_to = quiet_to

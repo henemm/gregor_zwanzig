@@ -190,7 +190,7 @@ class TestAC9AlertDispatchUnaffected:
         data = {
             "id": trip_id, "name": "AC9 Trip",
             "stages": [{
-                "id": "S1", "name": "Tag 1", "date": stage_date().isoformat(),
+                "id": "S1", "name": "Tag 1", "date": stage_date(lat, lon).isoformat(),
                 "waypoints": [
                     {"id": "WP0", "name": "WP0", "lat": lat, "lon": lon, "elevation_m": 1000,
                      "arrival_calculated": arr1},

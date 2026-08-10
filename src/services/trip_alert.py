@@ -29,6 +29,7 @@ from services.notification_service import (
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
 from services.throttle_store import ThrottleStore
+from services.trip_day import trip_local_today
 from services.user_tier import sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import tz_for_coords
@@ -379,11 +380,13 @@ class TripAlertService:
             und uebersprungenen Touren, Gesamtlaufzeit und ob die
             Zeitobergrenze den Lauf beendet hat.
         """
-        from datetime import date as date_type
-
         from app.loader import load_all_trips
 
-        today = date_type.today()
+        # Issue #1697: "heute" bestimmt sich je Trip aus der ORTSzeit der
+        # Tour, nicht der Serveruhr (ADR-0044). now_utc bleibt fuer den
+        # gesamten Lauf gleich, damit kein Trip eine andere "Jetzt"-Sekunde
+        # sieht als der naechste.
+        now_utc = datetime.now(timezone.utc)
         alerts_sent = 0
         checked = 0
         hit_deadline = False
@@ -396,6 +399,9 @@ class TripAlertService:
                 hit_deadline = True
                 break
             checked += 1
+            # Issue #1697: Ortstag dieses Trips — die Zone haengt vom Trip ab,
+            # deshalb erst HIER (je Trip), nicht einmal vor der Schleife.
+            today = trip_local_today(trip, now_utc)
             # Issue #222 W1: Trips with active alert_rules must be checked even if
             # report_config is missing or alert_on_changes=False — alert_rules is the
             # new source-of-truth (disable via rule.enabled=False).
@@ -443,13 +449,15 @@ class TripAlertService:
                 continue
 
             # Δ-Anker: hier ist ein Anker DESSELBEN Tages Pflicht (#1661).
-            cached = self._get_cached_weather(trip, tagesgleicher_anker_noetig=True)
+            cached = self._get_cached_weather(
+                trip, tagesgleicher_anker_noetig=True, now_utc=now_utc,
+            )
 
             # Issue #1088: amtliche Warnungen zusätzlich zum Wetter-Delta prüfen —
             # fail-soft, darf den Zyklus für andere Trips nicht abbrechen.
             official_notices: list = []
             try:
-                official_notices = self.check_official_alert_triggers(trip)
+                official_notices = self.check_official_alert_triggers(trip, now_utc=now_utc)
             except Exception as e:
                 logger.error(f"Official alert trigger check failed for trip {trip.id}: {e}")
 
@@ -507,7 +515,8 @@ class TripAlertService:
         )
 
     def _get_cached_weather(
-        self, trip: "Trip", *, tagesgleicher_anker_noetig: bool
+        self, trip: "Trip", *, tagesgleicher_anker_noetig: bool,
+        now_utc: Optional[datetime] = None,
     ) -> Optional[List[SegmentWeatherData]]:
         """
         Get cached weather data for a trip from the weather snapshot.
@@ -558,6 +567,12 @@ class TripAlertService:
         Args:
             trip: Trip to get cached weather for
             tagesgleicher_anker_noetig: True nur fuer den Abweichungs-Alarm.
+            now_utc: Issue #1697 — "Jetzt" fuer die Ortstag-Aufloesung
+                (`trip_local_today`). Optional mit Default auf die echte
+                Wanduhr: anders als `tagesgleicher_anker_noetig` ist das
+                eine reine "wie spaet ist es"-Frage, kein Verhaltensschalter
+                (Begruendung: Spec-Abschnitt "Bewusste Abweichung vom
+                'kein Default'-Muster").
 
         Returns:
             Cached weather data or None if not available/not trustworthy
@@ -566,7 +581,7 @@ class TripAlertService:
             from services.weather_snapshot import WeatherSnapshotService
 
             svc = WeatherSnapshotService(user_id=self._user_id)
-            today = date.today()
+            today = trip_local_today(trip, now_utc or datetime.now(timezone.utc))
             dated = svc.load_dated(trip.id, today)
             if dated is not None:
                 return dated
@@ -874,15 +889,16 @@ class TripAlertService:
 
         Returns the number of radar alerts triggered.
         """
-        from datetime import date as date_type
         from app.loader import load_all_trips
         from services.trip_segments import convert_trip_to_segments
 
-        today = date_type.today()
         now_utc = datetime.now(timezone.utc)
         sent = 0
 
         for trip in load_all_trips(user_id=self._user_id):
+            # Issue #1697: Ortstag dieses Trips statt Serverdatum (ADR-0044) —
+            # je Trip, die Zone haengt vom Trip ab.
+            today = trip_local_today(trip, now_utc)
             # Segment-Auswahl (Issue #822 — ersetzt stage.waypoints[0])
             segments = convert_trip_to_segments(trip, today)
             if not segments:
@@ -902,6 +918,29 @@ class TripAlertService:
                     # Alle Segmente zeitlich vorbei → kein Alert (Option Y der Spec)
                     logger.debug(
                         f"Radar alert skipped: alle Segmente vorbei fuer {trip.id}"
+                    )
+                    continue
+
+            # Issue #1697 AC-4: Horizont-Guard — Vorbild
+            # `trip_report_scheduler.py::_build_starkregen_hint`. Ein Segment,
+            # das erst weit in der Zukunft beginnt, loest keinen Nowcast-Abruf
+            # aus (Horizont ~60 min); ohne diesen Guard riefe die neue
+            # Ortstag-Etappenwahl in der 22:00-00:00-UTC-Randzeit jede Nacht
+            # einen fachlich sinnlosen Nowcast fuer die morgige Etappe ab.
+            if active.start_time > now_utc:
+                from services.radar_service import NOWCAST_HORIZON_MIN
+
+                minutes_until_start = (active.start_time - now_utc).total_seconds() / 60.0
+                if minutes_until_start > NOWCAST_HORIZON_MIN:
+                    # #1405-Linie: WAS uebersprungen wird, wird benannt, nicht
+                    # nur DASS uebersprungen wird — der Startzeitpunkt macht
+                    # die Meldung zu einer Aussage ueber das Segment selbst
+                    # (pruefbar, betrieblich brauchbar), statt nur ueber die
+                    # Distanz in Minuten.
+                    logger.debug(
+                        f"Radar alert skipped: Segment beginnt erst in "
+                        f"{minutes_until_start:.0f} min (>{NOWCAST_HORIZON_MIN} min "
+                        f"Horizont, Start={active.start_time.isoformat()}) fuer {trip.id}"
                     )
                     continue
 
@@ -1241,7 +1280,9 @@ class TripAlertService:
 
         return result
 
-    def check_official_alert_triggers(self, trip: "Trip") -> list:
+    def check_official_alert_triggers(
+        self, trip: "Trip", now_utc: Optional[datetime] = None,
+    ) -> list:
         """Issue #1088/#1200: liefert amtliche Warnungen, die NEU sind oder deren
 
         Level gestiegen ist ggü. dem letzten gemeldeten Stand (alert_state),
@@ -1252,6 +1293,10 @@ class TripAlertService:
         get_official_alerts_for_location() pro Quelle abgefangen. Schreibt
         KEINEN alert_state — das übernimmt der Aufrufer erst nach
         erfolgreichem Versand (Konsistenz mit dem Wetter-Delta-Pfad).
+
+        Issue #1697: `now_utc` reicht die "Jetzt"-Sekunde des Laufs an
+        `_get_cached_weather` durch (Default: echte Wanduhr, s. dortiger
+        Docstring).
         """
         # Issue #1258: official_warnings.enabled loest das Legacy-Feld ab.
         # official_warnings is None -> Trip noch nicht migriert -> Fallback auf
@@ -1271,7 +1316,9 @@ class TripAlertService:
         # `cached` dient hier nur als Routen-Geometrie mit absoluten Zeiten; der
         # feinere Zeitfilter pro Etappe steht unten (`end_time < now_utc`).
         # Begruendung ausfuehrlich im Docstring von `_get_cached_weather`.
-        cached = self._get_cached_weather(trip, tagesgleicher_anker_noetig=False)
+        cached = self._get_cached_weather(
+            trip, tagesgleicher_anker_noetig=False, now_utc=now_utc,
+        )
         if not cached:
             return []
 

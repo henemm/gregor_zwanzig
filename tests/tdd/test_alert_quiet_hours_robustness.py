@@ -244,7 +244,7 @@ def _save_trip_direct(
         "id": trip_id,
         "name": name,
         "stages": [{
-            "id": "S1", "name": "Tag 1", "date": stage_date().isoformat(),
+            "id": "S1", "name": "Tag 1", "date": stage_date(lat, lon).isoformat(),
             "waypoints": [
                 {"id": "WP0", "name": "Start", "lat": lat, "lon": lon,
                  "elevation_m": 100.0,

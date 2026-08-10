@@ -217,7 +217,11 @@ def _radar_trip(trip_id: str) -> Trip:
     ``test_issue_827_radar_throttle_recording.py::_make_trip``."""
     # #1667 S1: wanduhr-robustes Ankunftsfenster statt roher now+Nh-Arithmetik
     # (ab 22:00 UTC lief die +2h/+4h-Folge steigend ueber Mitternacht).
-    arr0, arr1 = active_window_offsets(LAT, LON, 120, 240)
+    # #1697 AC-4: Segment muss JETZT aktiv sein (nicht erst in 2h beginnen,
+    # s. Docstring oben "im aktiven Segmentfenster JETZT"), sonst greift der
+    # neue Horizont-Guard (NOWCAST_HORIZON_MIN=60) und unterdrueckt den
+    # Nowcast-Abruf, den dieser Test misst.
+    arr0, arr1 = active_window_offsets(LAT, LON, -60, 120)
     wp0 = Waypoint(
         id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=500.0,
         arrival_calculated=arr0,
@@ -226,7 +230,7 @@ def _radar_trip(trip_id: str) -> Trip:
         id="WP1", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=600.0,
         arrival_calculated=arr1,
     )
-    stage = Stage(id="S1", name="Tag 1", date=stage_date(), waypoints=[wp0, wp1])
+    stage = Stage(id="S1", name="Tag 1", date=stage_date(LAT, LON), waypoints=[wp0, wp1])
     trip = Trip(id=trip_id, name="AC3 Radar-Trip", stages=[stage])
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=True, send_sms=False,
