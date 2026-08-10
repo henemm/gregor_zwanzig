@@ -280,7 +280,8 @@ class TripReportFormatter:
         )
 
         from output.renderers.sms_trip import (
-            SMSTripFormatter, SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
+            SMSTripFormatter, SMS_MULTI_SYMBOLS_BY_METRIC, SMS_NULLFORM_METRIC_IDS,
+            SMS_SYMBOL_BY_METRIC, build_extended_metric_specs,
         )
         # Issue #1575 Scheibe 3: die MENGE der SMS-Metriken kommt aus der
         # SMS-eigenen Kaskade (per_report > per_channel > global), der
@@ -317,7 +318,18 @@ class TripReportFormatter:
             MetricSpec(symbol=sym, enabled=False)
             for metric_id, sym in SMS_SYMBOL_BY_METRIC.items()
             if metric_id not in active_metric_ids
+            # Fix-Loop #1660 B: die 14 erweiterten Metriken sind hier
+            # AUSGENOMMEN -- sie bekommen unten ueber build_extended_metric_
+            # specs() eine Spec in BEIDEN Faellen (aktiv UND abgewaehlt), nicht
+            # nur bei Abwahl. Ohne diese Ausnahme entstuenden doppelte Specs
+            # fuer dasselbe Symbol.
+            and metric_id not in SMS_NULLFORM_METRIC_IDS
         ]
+        # Root-Cause-Fix (Adversary/Staging-E2E #1660 B, Prod-Bug): vorher
+        # bekamen aktive der 14 Metriken KEINE Spec -> builder.py's
+        # `if spec is None and not samples: continue` liess sie bei fehlenden
+        # Daten komplett entfallen statt die Null-Form (§9) zu rendern.
+        _disabled_sms_specs += build_extended_metric_specs(active_metric_ids)
         # Issue #1410 §6: die Temperatur-Token erscheinen NUR bei aktivierter
         # Metrik -- dasselbe Pruefmuster wie oben fuer SD/SL. Anders als dort
         # wird die Spec in BEIDEN Faellen mitgegeben: nur so kann der Builder
