@@ -28,7 +28,7 @@ from output.renderers.email.compact import _ascii as _ascii_hint
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
-from output.channels.base import OutputConfigError, OutputError
+from output.channels.base import OutputConfigError
 from output.channels.email import EmailOutput
 from output.channels.sms import SMSOutput
 from output.channels.telegram import TelegramOutput
@@ -350,10 +350,19 @@ class NotificationService:
 
         sent_channels: list[str] = []
 
-        # E-Mail
+        # E-Mail — Issue #1662 (Punkt 8): Zustellbilanz statt Kanalreihenfolge.
+        # Bisher war E-Mail der einzige Kanal ohne `try`; ein SMTP-/Guard-Fehler
+        # verliess die Funktion sofort und riss SMS und Telegram mit, obwohl die
+        # funktioniert haetten. Der Fehler wird jetzt festgehalten und erst am
+        # Funktionsende ausgewertet (siehe dort) — verschluckt wird er nie.
+        email_error: Optional[BaseException] = None
         if request.send_email:
-            self._send_email(report)
-            sent_channels.append("email")
+            try:
+                self._send_email(report)
+                sent_channels.append("email")
+            except Exception as e:  # noqa: BLE001 — Zustellbilanz, s. Funktionsende
+                email_error = e
+                logger.error(f"E-Mail send failed for {request.trip.name}: {e}")
 
         # SMS
         telegram_fully_sent = True
@@ -383,7 +392,7 @@ class NotificationService:
                         suppress_subject_line=True,
                     )
                     sent_channels.append("telegram")
-                except OutputError as e:
+                except Exception as e:  # noqa: BLE001 — #1662 AC-9, s. unten
                     logger.error(
                         f"Telegram kurzform send failed for {request.trip.name}: {e}"
                     )
@@ -405,7 +414,10 @@ class NotificationService:
                             parse_mode="HTML",
                             suppress_subject_line=True,
                         )
-                    except OutputError as e:
+                    except Exception as e:  # noqa: BLE001 — #1662 AC-9
+                        # Auch eine unerwartete Stoerung (nicht nur OutputError)
+                        # zaehlt wie jeder andere Kanalfehler in die
+                        # Zustellbilanz, statt den ganzen Lauf abzubrechen.
                         logger.error(
                             f"Telegram bubble {i + 1}/{len(bubbles)} send failed for {request.trip.name}: {e}"
                         )
@@ -421,6 +433,24 @@ class NotificationService:
         # WEATHER-04: Service-E-Mail bei SMS-only + Fehler
         if request.failed_segments:
             self._send_service_error_email(request)
+
+        # Issue #1662 (Punkt 8) — tragende Invariante: nach oben durchgereicht
+        # wird ein Versandfehler genau dann, wenn NICHTS zugestellt wurde. Dann
+        # greift der Fehlerpfad in `trip_report_scheduler` unveraendert
+        # (Diagnose-Zeile, Anker (#1629) und neu der Nachliefer-Vermerk).
+        # Hat mindestens ein Kanal zugestellt, waere eine Nachlieferung eine
+        # Dopplung des funktionierenden Kanals — der Ausfall bleibt trotzdem
+        # sichtbar: ueber die Diagnose-Spur und ueber sein Fehlen in
+        # `sent_channels`.
+        if email_error is not None:
+            if not sent_channels:
+                raise email_error
+            from services.alert_briefing_anchor import record_briefing_dispatch_failure
+
+            record_briefing_dispatch_failure(
+                user_id=self._user_id, kind="route",
+                entity_id=request.trip.id, error=email_error,
+            )
 
         return NotificationResult(
             sent=bool(sent_channels),
@@ -812,11 +842,13 @@ class NotificationService:
 
         Fail-soft je Kanal (AC-5): Telegram-/SMS-Fehler werden geloggt, reissen
         aber die anderen Kanaele nicht mit. Der E-Mail-Pfad propagiert Fehler
-        unveraendert — identisch zum Bestandsverhalten von `send_trip_report`
-        (`self._send_email(report)` ohne try/except) und zum bisherigen
-        Compare-Versand (`EmailOutput(settings).send(...)` in
-        `scheduler_dispatch_service`), damit ein SMTP-Ausfall weiterhin als
-        Fehler des Preset-Versands sichtbar bleibt.
+        unveraendert — wie der bisherige Compare-Versand
+        (`EmailOutput(settings).send(...)` in `scheduler_dispatch_service`),
+        damit ein SMTP-Ausfall weiterhin als Fehler des Preset-Versands
+        sichtbar bleibt. `send_trip_report` entscheidet das seit #1662 NICHT
+        mehr ueber die Kanalreihenfolge, sondern ueber die Zustellbilanz; der
+        Ortsvergleich hat bis heute keinen Nachhol-Mechanismus und bleibt
+        deshalb bewusst beim Bestandsverhalten.
 
         `mail_sink`/`sms_sink`/`telegram_sink`: deterministische Transport-Naht
         (Vorbild `send_multi_location_official_alert`) — kein Netz, kein SMTP.

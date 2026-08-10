@@ -25,8 +25,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Callable, Iterable, Optional
+from datetime import date, datetime, timezone
+from typing import Callable, Iterable, Optional, Union
 
 logger = logging.getLogger("alert_briefing_anchor")
 
@@ -88,6 +88,42 @@ def record_briefing_dispatch_failure(
             "Diagnose-Spur zum gescheiterten Versand (%s) nicht schreibbar: %s: %s",
             entity_id, type(e).__name__, e,
         )
+
+
+def briefing_target_day_is_current(
+    target_date: Union[date, str, None], *, today: Optional[date] = None,
+) -> bool:
+    """Ist der Zieltag eines Nachliefer-Vermerks noch aktuell? (#1662, Punkt 4)
+
+    Reine Entscheidungsfunktion ohne I/O — Datum rein, Bool raus. Sie kapselt
+    die Verfallsregel an EINER Stelle, statt sie im Scheduler zu verstreuen,
+    und liegt bewusst hier, weil an diesem Baustein Trip UND Ortsvergleich
+    einhaken (Teilungsregel): ein künftiger Compare-Nachhol-Mechanismus
+    benutzt dieselbe Regel.
+
+    Begrenzt wird über den Zieltag, nicht über einen Zähler und nicht über den
+    Fehlertyp: ein Morgen-Briefing von gestern ist heute wertlos, und der
+    nominell „dauerhafte" Fehlertyp heilte beim einzigen echten Vorfall nach
+    rund 13 Stunden von selbst.
+
+    Args:
+        target_date: Zieltag des Vermerks (`date` oder ISO-Zeichenkette).
+        today: Vergleichstag; ohne Angabe der heutige Tag.
+
+    Returns:
+        True, solange der Zieltag heute oder in der Zukunft liegt. Ein
+        unlesbarer Zieltag gilt als abgelaufen — ein Vermerk, dessen Zieltag
+        niemand bestimmen kann, darf nicht stündlich weitergeschleppt werden.
+    """
+    heute = today or date.today()
+    if isinstance(target_date, date):
+        tag = target_date
+    else:
+        try:
+            tag = date.fromisoformat(str(target_date))
+        except (TypeError, ValueError):
+            return False
+    return tag >= heute
 
 
 def record_briefing_sent(
