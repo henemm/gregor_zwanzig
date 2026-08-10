@@ -10,7 +10,7 @@
 | Ort | Inhalt |
 |---|---|
 | `CLAUDE.md` (Repo-Root) | Arbeitsregeln, Workflow, Deploy, Pflicht-Gates |
-| `reference/` | Technische Referenz: `api_contract.md` (DTOs, SSOT — driftgesichert via `tests/test_api_contract_drift.py`), `decision_matrix.md` (Provider-Ist-Stand), `operations_playbook.md` (Deploy/E2E/Rollback), `mail_validators.md`, `navigation.md` (URL-Modell), `frontend_components.md` (Konzepte, kein Inventar), `design_system.md`, `critical_lessons.md` (Regeln ohne anderen Wächter) |
+| `reference/` | Technische Referenz: `api_contract.md` (DTOs, SSOT — driftgesichert via `tests/test_api_contract_drift.py`), `decision_matrix.md` (Provider-Ist-Stand), `operations_playbook.md` (Deploy/E2E/Rollback), `mail_validators.md`, `metric_output_matrix.md` (Metrik×Kanal-Ausgabeorte-Matrix, #1514), `navigation.md` (URL-Modell), `frontend_components.md` (Konzepte, kein Inventar), `design_system.md`, `critical_lessons.md` (Regeln ohne anderen Wächter) |
 | `adr/` | Architektur-Entscheidungen (nummeriert; Status beachten — einzelne sind superseded) |
 | `design-system/` | CHARTER, COMPONENTS, TOKENS, SCREENS |
 | `features/` | `architecture.md` (Systemarchitektur), `scope.md` (Vision), **`gewitter-gesamtkonzept.md`** (Gewitter Ende zu Ende: was der Nutzer sieht, wie die Stufe entsteht, Eichung, Fahrplan — führend gegenüber den Einzel-Specs), `openspec_workflow.md` (Workflow-Wegweiser) + aktive Epic-Dokumente |
