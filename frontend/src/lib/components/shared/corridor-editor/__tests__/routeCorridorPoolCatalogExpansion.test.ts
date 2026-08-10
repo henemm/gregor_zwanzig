@@ -79,7 +79,8 @@ const CATALOG_ENTRIES_FIXTURE: Array<Record<string, unknown>> = [
 	{ key: 'temp_min_c', label: 'Temperatur', unit: '°C', kind: 'range', rangeMin: -30, rangeMax: 30, step: 1, metric_id: 'temperature' },
 	// Duplikat: "gust".
 	{ key: 'gust_max_kmh', label: 'Böen', unit: 'km/h', kind: 'range', rangeMin: 0, rangeMax: 150, step: 5, metric_id: 'gust' },
-	{ key: 'cape_max_jkg', label: 'Gewitterenergie (CAPE)', unit: 'J/kg', kind: 'range', rangeMin: 0, rangeMax: 3000, step: 100, metric_id: 'cape' },
+	// Issue #1585: cape_max_jkg entfallen — CAPE ist zentral nicht mehr waehlbar,
+	// der Katalog-Endpoint liefert die Zeile nicht mehr aus.
 	// Duplikat: "freezing_level".
 	{ key: 'freezing_level_m', label: 'Nullgradgrenze', unit: 'm', kind: 'range', rangeMin: 0, rangeMax: 5000, step: 100, metric_id: 'freezing_level' },
 	{ key: 'pop_max_pct', label: 'Regenwahrscheinlichkeit', unit: '%', kind: 'range', rangeMin: 0, rangeMax: 100, step: 5, metric_id: 'rain_probability' },
@@ -104,7 +105,7 @@ const CATALOG_ENTRIES_FIXTURE: Array<Record<string, unknown>> = [
 // von der Trip-eigenen Prozent-Definition auf den Katalog-Eintrag um).
 const EXPECTED_NEW_KEYS = [
 	'snow_depth_cm', 'snow_new_sum_cm', 'sunny_hours_h', 'wind_max_kmh', 'cloud_avg_pct',
-	'visibility_min_m', 'uv_index_max', 'thunder_level_max', 'cape_max_jkg', 'pop_max_pct',
+	'visibility_min_m', 'uv_index_max', 'thunder_level_max', 'pop_max_pct',
 	'wind_chill_min_c', 'wind_chill_max_c', 'humidity_avg_pct', 'dewpoint_avg_c',
 	'cloud_low_avg_pct', 'cloud_mid_avg_pct', 'cloud_high_avg_pct', 'pressure_avg_hpa',
 ];
@@ -149,7 +150,7 @@ describe('AC-1/AC-2/AC-3: buildRouteMetricDefsFromCatalog() existiert und filter
 		assert.deepEqual(
 			result.map((d) => d.metric),
 			EXPECTED_NEW_KEYS,
-			'AC-1 FAIL: erwartet exakt die 18 neuen Metriken in Katalog-Reihenfolge'
+			'AC-1 FAIL: erwartet exakt die 17 neuen Metriken in Katalog-Reihenfolge'
 		);
 	});
 
@@ -505,14 +506,18 @@ describe('Scheibe B / AC-2: der Zeilenzustand traegt kind + ordinalLabels (Ordin
 
 	test('eine gewoehnliche Zahlen-Groesse bekommt KEIN kind="ordinal" (Gegenprobe)', async () => {
 		const extraDefs = await routeExtraDefs();
+		// Issue #1585: Traeger-Groesse von cape_max_jkg auf humidity_avg_pct
+		// gewechselt — CAPE ist zentral nicht mehr waehlbar und erreicht den
+		// Pool nicht mehr. Der Pruefgegenstand (Zahlen-Groesse bekommt kein
+		// kind="ordinal") ist unveraendert.
 		const { rows } = buildRoutePool(
-			[{ metric: 'cape_max_jkg', range: [1000, null], notify: false, mark: true }],
+			[{ metric: 'humidity_avg_pct', range: [30, null], notify: false, mark: true }],
 			undefined,
 			extraDefs
 		);
-		const row = rows.find((r) => r.metric === 'cape_max_jkg');
+		const row = rows.find((r) => r.metric === 'humidity_avg_pct');
 		assert.ok(row);
-		assert.notEqual(row!.kind, 'ordinal', 'CAPE ist eine Zahlen-Groesse und darf keine Stufen-Buttons bekommen');
+		assert.notEqual(row!.kind, 'ordinal', 'Luftfeuchtigkeit ist eine Zahlen-Groesse und darf keine Stufen-Buttons bekommen');
 	});
 
 	test('addRow uebernimmt kind/ordinalLabels ebenfalls (frisch hinzugefuegte Zeile)', async () => {

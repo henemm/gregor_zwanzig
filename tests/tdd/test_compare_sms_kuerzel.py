@@ -38,7 +38,7 @@ from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.comparison import (
     _PLAIN_ROWS_BY_ID, _sms_aggregation_sign, _sms_gsm7_safe, render_compare_sms,
 )
-from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import _metric_value
 
@@ -61,19 +61,28 @@ SMS_LIMIT = CHANNEL_LIMITS["sms"]["max_chars"]
 # Quelltabellen jemals eine Compare-ID entfernt, auf die sich diese Datei
 # stuetzt.
 # ---------------------------------------------------------------------------
+#
+# Issue #1585: Quelle ist die AUSGELIEFERTE Katalogantwort
+# (`get_compare_metric_catalog()`), NICHT mehr der rohe `COMPARE_METRIC_CATALOG`.
+# Der Rohkatalog behaelt seine `cape_max_jkg`-Zeile bewusst (Modul-Import-Assert
+# gegen `FRONTEND_TO_RENDERER_METRIC_ID`), liefert sie aber nicht mehr aus --
+# wer ihn hier laese, versuchte eine Groesse zu rendern, die nirgends mehr
+# ankommt (`KeyError: 'cape_max'`). Ueber die Auslieferung faellt sie
+# automatisch heraus, ohne hartkodierte Ausnahme.
 _METRIC_ID_BY_FRONTEND_KEY = {
-    entry["key"]: entry["metric_id"] for entry in COMPARE_METRIC_CATALOG
+    entry["key"]: entry["metric_id"] for entry in get_compare_metric_catalog()
 }
 RENDERER_TO_METRIC_ID: dict[str, str] = {
     renderer_id: _METRIC_ID_BY_FRONTEND_KEY[frontend_key]
     for frontend_key, renderer_id in FRONTEND_TO_RENDERER_METRIC_ID.items()
+    if frontend_key in _METRIC_ID_BY_FRONTEND_KEY
 }
-ALL_26_RENDERER_IDS = tuple(RENDERER_TO_METRIC_ID)
-assert len(ALL_26_RENDERER_IDS) == 26, (
-    f"Erwartet 26 Compare-Renderer-IDs (Spec: '26 Compare-Groessen'), "
-    f"gefunden {len(ALL_26_RENDERER_IDS)} -- Testgrundlage fuer AC-8 pruefen "
-    "(compare_metric_ids.FRONTEND_TO_RENDERER_METRIC_ID / "
-    "compare_metric_catalog.COMPARE_METRIC_CATALOG)."
+ALL_RENDERER_IDS = tuple(RENDERER_TO_METRIC_ID)
+assert len(ALL_RENDERER_IDS) == 25, (
+    f"Erwartet 25 ausgelieferte Compare-Renderer-IDs (26 Katalogzeilen minus "
+    f"cape_max_jkg, #1585), gefunden {len(ALL_RENDERER_IDS)} -- Testgrundlage "
+    "fuer AC-8 pruefen (compare_metric_ids.FRONTEND_TO_RENDERER_METRIC_ID / "
+    "compare_metric_catalog.get_compare_metric_catalog)."
 )
 
 
@@ -200,20 +209,25 @@ def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
     name = "Andermatt Talstation"
     loc = LocationResult(
         location=_loc("a", name),
-        temp_max=16.4, wind_max=15.0, gust_max=20.0, snow_depth_cm=20.0,
-        snow_new_cm=4.0, precip_sum_mm=5.0, pop_max_pct=30,
+        temp_max=16.4, temp_min=6.2, wind_max=15.0, gust_max=20.0,
+        snow_depth_cm=20.0, snow_new_cm=4.0, precip_sum_mm=5.0, pop_max_pct=30,
         thunder_level_max=ThunderLevel.MED, visibility_min_m=8000,
-        uv_index_max=5.0,
+        uv_index_max=5.0, cloud_avg=55, sunny_hours=4.5,
         hourly_data=_daily_points(
-            humidity_pct=70, cape_jkg=1500.0, freezing_level_m=1200,
+            humidity_pct=70, freezing_level_m=1200,
             snowfall_limit_m=1300, dewpoint_c=8.0, pressure_msl_hpa=1013.0,
         ),
     )
     enabled = [
-        "temp_max", "wind_max", "gust_max", "precip_sum", "pop_max",
+        # Issue #1585: "cape_max" entfaellt (nicht mehr ausgeliefert). Damit die
+        # Auswahl den SMS-Ueberlauf weiterhin ERZWINGT -- der eigentliche
+        # Pruefgegenstand von AC-3 --, treten "temp_min", "cloud_avg" und
+        # "sunny_hours" an seine Stelle; ohne Ersatz waere die volle
+        # Darstellung nur noch 150 Zeichen lang und der Test liefe leer.
+        "temp_max", "temp_min", "wind_max", "gust_max", "precip_sum", "pop_max",
         "thunder_max", "visibility_min", "uv_max", "snow_depth_cm",
-        "snow_new_cm", "humidity_avg", "cape_max", "freezing_level",
-        "snowfall_limit", "dewpoint_avg", "pressure_avg",
+        "snow_new_cm", "humidity_avg", "freezing_level", "cloud_avg",
+        "sunny_hours", "snowfall_limit", "dewpoint_avg", "pressure_avg",
     ]
     cells = [c for c in (_sms_cell_text(loc, mid) for mid in enabled) if c is not None]
     assert len(cells) == len(enabled), (
@@ -298,7 +312,9 @@ def test_metric_overflow_and_location_overflow_are_both_present_and_distinguisha
     enabled = [
         "temp_max", "wind_max", "gust_max", "precip_sum", "pop_max",
         "thunder_max", "visibility_min", "uv_max", "snow_depth_cm",
-        "snow_new_cm", "humidity_avg", "cape_max", "freezing_level",
+        # Issue #1585: "cape_max" entfaellt -- die Groesse wird nicht mehr
+        # ausgeliefert und hat im SMS-Pfad keine Zelle mehr.
+        "snow_new_cm", "humidity_avg", "freezing_level",
         "snowfall_limit",
     ]
     cells = [c for c in (_sms_cell_text(loc_a, mid) for mid in enabled) if c is not None]
@@ -573,14 +589,18 @@ def test_max_and_min_of_same_metric_carry_distinguishing_sign():
 
 def test_single_aggregation_metrics_carry_no_sign():
     """Regressionsschutz: Groessen mit GENAU EINER Auswertung im Ortsvergleich
-    (z.B. UV-Index, Regensumme, CAPE) bleiben ohne Zeichen -- dort ist nichts
-    mehrdeutig, jedes Zeichen kostet SMS-Budget."""
+    (z.B. UV-Index, Regensumme, Nullgradgrenze) bleiben ohne Zeichen -- dort
+    ist nichts mehrdeutig, jedes Zeichen kostet SMS-Budget.
+
+    Issue #1585: Traeger-Groesse von "cape_max" auf "freezing_level"
+    gewechselt -- CAPE wird nicht mehr ausgeliefert. Beide haben genau eine
+    Auswertung, der Pruefgegenstand ist unveraendert."""
     name = "Andermatt"
     loc = LocationResult(
         location=_loc("a", name), uv_index_max=7.0, precip_sum_mm=0.3,
-        hourly_data=_daily_points(cape_jkg=820.0),
+        hourly_data=_daily_points(freezing_level_m=1200),
     )
-    enabled = ["uv_max", "precip_sum", "cape_max"]
+    enabled = ["uv_max", "precip_sum", "freezing_level"]
     cells = [_sms_cell_text(loc, mid) for mid in enabled]
     assert all(cells), f"Testaufbau defekt: erwartet Werte fuer alle drei Groessen ({cells!r})"
 

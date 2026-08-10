@@ -81,8 +81,8 @@ EXPECTED_METRICS: list[dict] = [
      "kind": "range", "rangeMin": -30, "rangeMax": 30},
     {"key": "gust_max_kmh", "label": "Böen", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 150},
-    {"key": "cape_max_jkg", "label": "Gewitterenergie (CAPE)", "higherIsBetter": False,
-     "kind": "range", "rangeMin": 0, "rangeMax": 3000},
+    # Issue #1585: cape_max_jkg entfallen -- CAPE ist zentral nicht mehr
+    # waehlbar, get_compare_metric_catalog() liefert die Zeile nicht mehr aus.
     {"key": "freezing_level_m", "label": "Nullgradgrenze", "higherIsBetter": True,
      "kind": "range", "rangeMin": 0, "rangeMax": 5000},
     {"key": "pop_max_pct", "label": "Regenwahrscheinlichkeit", "higherIsBetter": False,
@@ -112,7 +112,10 @@ EXPECTED_METRICS: list[dict] = [
      "kind": "range", "rangeMin": 950, "rangeMax": 1050},
 ]
 
-assert len(EXPECTED_METRICS) == 26, "Paritaets-Fixture muss exakt 26 Eintraege haben (#1351: +wind_chill_max_c)"
+assert len(EXPECTED_METRICS) == 25, (
+    "Paritaets-Fixture muss exakt 25 Eintraege haben "
+    "(#1351: +wind_chill_max_c; #1585: -cape_max_jkg)"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +158,6 @@ EXPECTED_METRIC_ORIGIN: dict[str, tuple[str, str | None]] = {
     "thunder_level_max": ("thunder", "max"),
     "temp_min_c": ("temperature", "min"),
     "gust_max_kmh": ("gust", "max"),
-    "cape_max_jkg": ("cape", "max"),
     "freezing_level_m": ("freezing_level", "min"),
     "pop_max_pct": ("rain_probability", "max"),
     "wind_direction_deg": ("wind_direction", "avg"),
@@ -173,7 +175,7 @@ EXPECTED_METRIC_ORIGIN: dict[str, tuple[str, str | None]] = {
 
 assert set(EXPECTED_METRIC_ORIGIN) == {m["key"] for m in EXPECTED_METRICS}, (
     "Herkunfts-Fixture (#1373 AC-6) und Paritaets-Fixture beschreiben nicht "
-    "dieselben 26 Keys"
+    "dieselben 25 Keys"
 )
 
 
@@ -192,7 +194,7 @@ class TestCompareMetricCatalogEndpoint:
         response = client.get("/api/compare/metrics")
         data = response.json()
         assert "metrics" in data
-        assert len(data["metrics"]) == 26
+        assert len(data["metrics"]) == 25
 
     def test_each_entry_has_fields_matching_its_kind(self, client: TestClient) -> None:
         """AC-2: jeder Eintrag traegt key/label/unit/decimals/higherIsBetter/kind plus
@@ -273,13 +275,18 @@ class TestCompareMetricCatalogEndpoint:
                 f"{entry['key']}: alarmCapable muss bool sein, ist {entry['alarmCapable']!r}"
             )
 
-    def test_alarm_capable_true_for_exactly_the_ten_alarm_keys(self, client: TestClient) -> None:
-        """AC-3 (Teil 3, KERN): `alarmCapable=True` fuer genau die 10 Keys aus
-        compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID, sonst False."""
+    def test_alarm_capable_true_for_exactly_the_nine_alarm_keys(self, client: TestClient) -> None:
+        """AC-3 (Teil 3, KERN): `alarmCapable=True` fuer genau die Keys aus
+        compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID, sonst False.
+
+        Issue #1585: `cape_max_jkg` faellt heraus -- die Zeile wird nicht mehr
+        ausgeliefert, also kann sie hier auch keine Alarmfaehigkeit tragen.
+        Der CAPE-Delta-Alarm (#1592) ist davon unberuehrt, er ist ein eigener
+        Alarmtyp und haengt nicht am Compare-Katalog."""
         expected_alarm_keys = {
             "temp_max_c", "temp_min_c", "wind_max_kmh", "gust_max_kmh",
             "precip_sum_mm", "thunder_level_max", "visibility_min_m",
-            "snow_new_sum_cm", "cape_max_jkg", "freezing_level_m",
+            "snow_new_sum_cm", "freezing_level_m",
         }
         response = client.get("/api/compare/metrics")
         metrics = response.json()["metrics"]
@@ -313,7 +320,7 @@ class TestCompareMetricOrigin:
         `key` aus, Scheibe B)."""
         response = client.get("/api/compare/metrics")
         metrics = response.json()["metrics"]
-        assert len(metrics) == 26
+        assert len(metrics) == 25
 
         for entry in metrics:
             assert "key" in entry and entry["key"], "Eintrag ohne `key`"
@@ -422,7 +429,7 @@ class TestCompareMetricLabelsComeFromCentralRegister:
         der zentralen Wettergroesse -- heute ROT, der Compare-Katalog tippt
         seine Namen selbst ("Temperatur max", "Windspitzen", "Wolken tief")."""
         metrics = client.get("/api/compare/metrics").json()["metrics"]
-        assert len(metrics) == 26
+        assert len(metrics) == 25
         abweichungen = [
             (e["key"], e.get("label"), get_metric(e["metric_id"]).label_de)
             for e in metrics
@@ -449,7 +456,7 @@ class TestCompareMetricLabelsComeFromCentralRegister:
         bildet die Auswertung korrekt ab (max->Maximum, min->Minimum,
         avg->Mittel, sum->Summe)."""
         metrics = client.get("/api/compare/metrics").json()["metrics"]
-        assert len(metrics) == 26
+        assert len(metrics) == 25
         fehlend = [e["key"] for e in metrics if "aggregation_label" not in e]
         assert not fehlend, (
             f"Eintraege ohne `aggregation_label`: {fehlend} -- die Auswertung "
@@ -509,7 +516,7 @@ class TestUnknownMetricIdFailsVisibly:
 
     def test_real_catalog_resolves_completely(self) -> None:
         """AC-4 (Gegenprobe): der echte Katalog laeuft ohne Ausnahme durch."""
-        assert len(get_compare_metric_catalog()) == 26
+        assert len(get_compare_metric_catalog()) == 25
 
 
 def test_the_eight_approved_names() -> None:

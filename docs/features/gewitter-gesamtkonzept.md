@@ -112,10 +112,11 @@ Spalten bekommen:
 - **Unvereinbare Skalen** — Blitzdichte liegt bei ~0,2, Blitzpotenzial bei ~88. Nebeneinander
   in einer Stundentabelle sind sie nicht lesbar, in einer SMS (≤ 160 Zeichen) gar nicht.
 
-Heute ist genau **eine** Zutat sichtbar: CAPE — nicht weil das entschieden wurde, sondern weil
-sie historisch zuerst im Katalog stand. ⇒ **CAPE wird unsichtbar** (`selectable=False`), aus
-demselben Grund wie alle anderen Zutaten. Sie bleibt intern Teil der Berechnung.
-Präzedenz: `confidence` (ADR-0005). Bestandsdaten laden still weiter, keine Migration.
+Bis 2026-08-10 war genau **eine** Zutat sichtbar: CAPE — nicht weil das entschieden wurde,
+sondern weil sie historisch zuerst im Katalog stand. ⇒ **CAPE ist seit #1585 (2026-08-10,
+adversary-verifiziert) unsichtbar** (`selectable=False`), aus demselben Grund wie alle anderen
+Zutaten. Sie bleibt intern Teil der Berechnung. Präzedenz: `confidence` (ADR-0005).
+Bestandsdaten laden still weiter, keine Migration.
 
 ---
 
@@ -748,6 +749,12 @@ Herkunfts-Kennzeichnung der Stufe gefunden (Rang 4), `MeteoAlarmFeedSource("DE")
 nicht (Rang 10) — nur Rang 0 ist tatsächlich im Code verifiziert. Diese Tabelle braucht eine
 vollständige Nachmessung, bevor ihr wieder vertraut wird.
 
+✅ **Nachtrag, noch 2026-08-10:** Rang 5 ist inzwischen tatsächlich umgesetzt — Issue **#1585**,
+adversary-VERIFIED, Spec `docs/specs/modules/feat_1585_cape_selectable_false.md`. Damit ist der
+Unterschied zwischen „✅ E2" (nur Entscheidung, Stand des Korrektur-Fundes oben) und „✅ erledigt"
+(geprüfte Umsetzung, s. Stand-Spalte unten) an Rang 5 selbst nachvollziehbar. Die übrigen hier
+genannten Lücken (Rang 2/3/4/7/10) sind davon unberührt und bleiben offen.
+
 Zur Eichung selbst (Rang 7): Abschnitt 4.4 stellt bereits richtig, dass die Historical
 Forecast API die Eichung **sofort rechenbar** macht — kein wochenlanges Sammeln nötig, keine
 Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
@@ -759,7 +766,7 @@ Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
 | **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ E1 |
 | **3** | **Gleiche Statistik**: `lpi_max` statt `lpi` gegen `lpi_con_max` | Nimmt allein **Faktor 5** aus dem Gebietsbruch — ohne jede Kalibrierung | ✅ E1 |
 | **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | ✅ E1 |
-| **5** | **CAPE unsichtbar** (`selectable=False`) | Klein, unabhängig. Im Kern ein Katalog-Kwarg — die Render-Pfade prüfen `selectable` bereits generisch | ✅ E2 |
+| **5** | ✅ **CAPE unsichtbar gemacht** (`selectable=False`, **#1585**) | **Umgesetzt und live** (2026-08-10): CAPE (`cape_jkg`) ist an jeder Nutzerkontakt-Stelle unsichtbar (Trip-Editor, E-Mail, SMS, Ortsvergleich inkl. Alt-Vergleich, Aktivitäts-Vorlagen, Wertebereichs-Korridor, jede Alarmwirkung inkl. #1592 Delta-Alarm) und bleibt ausschließlich interne Zutat der Fusion. Adversary-VERIFIED | ✅ erledigt |
 | **6** | **Radar hebt die Stufe an** | Beseitigt den Widerspruch aus Abschnitt 5 | ✅ E3 |
 | **7** | **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max`, kalibriert auf gleiche Überschreitungshäufigkeit | Sofort rechenbar über die Historical Forecast API (4.4) — unabhängig von #1531 | 🔴 offen, Ticket **#1678** |
 | **8** | **`sdi_2` einhängen** | Publizierte DWD-Schwelle vorhanden; erst sinnvoll, wenn die Skala geeicht ist | nach Rang 7 |

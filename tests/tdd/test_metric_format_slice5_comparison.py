@@ -41,7 +41,10 @@ from output.metric_format import format_value
 #   => "Erstellt: 12.07.2026 11:00 (CEST)"
 #
 # GOLDEN neu verankert: #1285 (Regen/Gewitter/Sicht/UV/pop) + #1296
-# (temp_min/gust/cape/freezing) erweitern die Klartext-Uebersicht. Die
+# (temp_min/gust/cape/freezing) erweitern die Klartext-Uebersicht.
+# Issue #1585: die CAPE-Zeile ist wieder entfallen (zentral nicht mehr
+# waehlbar) -- der Unterschied zum Vorstand ist GENAU diese eine Zeile je
+# Ort, sichtbar im Zeilen-Diff des Tests selbst. Die
 # Fixture setzt weder temp_min/gust_max noch hourly_data, darum zeigen alle
 # neuen Zeilen "-" (Wert fehlt) statt eines Messwerts — manuell gegen den
 # echten render_comparison_text(_fixture_result())-Output geprueft (Fix-Loop
@@ -69,7 +72,6 @@ GOLDEN = (
     "   Gewitter: -\n"
     "   UV-Index: -\n"
     "   Sichtweite: -\n"
-    "   Gewitterenergie (CAPE): -\n"
     "   Nullgradgrenze: -\n"
     "   Luftfeuchtigkeit: -\n"
     "   Taupunkt: -\n"
@@ -97,7 +99,6 @@ GOLDEN = (
     "   Gewitter: -\n"
     "   UV-Index: -\n"
     "   Sichtweite: -\n"
-    "   Gewitterenergie (CAPE): -\n"
     "   Nullgradgrenze: -\n"
     "   Luftfeuchtigkeit: -\n"
     "   Taupunkt: -\n"

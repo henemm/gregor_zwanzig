@@ -71,7 +71,8 @@ EXPECTED_OVERVIEW_LABELS = [
     "Temperatur Maximum", "Wind", "Niederschlag", "Regenwahrscheinlichkeit",
     "Gewitter", "Sonnenstunden", "Bewölkung", "UV-Index",
     "Sichtweite", "Schneehöhe", "Neuschnee", "Temperatur Minimum", "Böen",
-    "Gewitterenergie (CAPE)", "Nullgradgrenze", "Windrichtung",
+    # Issue #1585: "Gewitterenergie (CAPE)" entfallen.
+    "Nullgradgrenze", "Windrichtung",
     "Gefühlte Temperatur Minimum", "Gefühlte Temperatur Maximum",
     "Tiefe Wolken", "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchtigkeit",
     "Taupunkt", "Luftdruck", "Niederschlagsart", "Schneefallgrenze",

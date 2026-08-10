@@ -269,45 +269,65 @@ class TestTripMailCorridorMarkWiring:
 # ===========================================================================
 
 class TestTripMailCatalogMetricCorridorMark:
-    def test_ac1_cape_korridor_markiert_cape_zelle(self):
+    def test_ac1_uv_korridor_markiert_uv_zelle(self):
         """AC-1 (Extremum-Vertreter, Audit-Fall aus dem Issue-Kommentar
-        2026-07-31): Korridor cape_max_jkg [1000, offen] + aktive CAPE-Spalte
-        + Stundenwert 1500 J/kg. RED: die Zelle wird gerendert, traegt aber
-        keine Marken-Signatur -- 'cape_max_jkg' fehlt in
+        2026-07-31): Korridor uv_index_max [6, offen] + aktive UV-Spalte
+        + Stundenwert 8. RED: die Zelle wird gerendert, traegt aber
+        keine Marken-Signatur -- der Katalog-Schluessel fehlt in
         TRIP_CORRIDOR_METRIC_TO_COL_KEY, mark_lookup_multi() ueberspringt den
-        Korridor still (corridor_mark.py:43)."""
-        dp = _dp(t2m_c=10.0, cape_jkg=1500.0)
-        corridors = [Corridor(metric="cape_max_jkg", range=[1000, None], mark=True)]
-        html = _render(corridors=corridors, enabled={"temperature", "cape"}, dp=dp)
+        Korridor still (corridor_mark.py:43).
 
-        cell = _cell(html, "CAPE")
+        Issue #1585: Traeger-Groesse von cape_max_jkg auf uv_index_max
+        gewechselt -- CAPE ist zentral nicht mehr waehlbar, sein Korridor
+        loest zu None auf und markiert nichts mehr (AC-10). Der
+        Pruefgegenstand (Katalog-Groesse ausserhalb der 5 alten Route-Keys
+        markiert korrekt) ist unveraendert; die Abwesenheit der
+        CAPE-Markierung sichert test_ac10_cape_korridor_markiert_nicht_mehr."""
+        dp = _dp(t2m_c=10.0, uv_index=8.0)
+        corridors = [Corridor(metric="uv_index_max", range=[6, None], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "uv_index"}, dp=dp)
+
+        cell = _cell(html, "UV")
         assert _MARK in cell, (
-            "1500 J/kg liegt in [1000, offen] -- die CAPE-Zelle muss die "
+            "8 liegt in [6, offen] -- die UV-Zelle muss die "
             "Marken-Signatur tragen (heute wirkungsloser Schalter)"
         )
-        assert _MARK_STYLE in cell, "CAPE-Zelle muss den sichtbaren gruenen Border-Balken tragen"
+        assert _MARK_STYLE in cell, "UV-Zelle muss den sichtbaren gruenen Border-Balken tragen"
 
-    def test_ac1_cape_korridor_ausserhalb_markiert_nicht(self):
-        """Gegenprobe zu AC-1: 500 J/kg liegt UNTER der Untergrenze 1000 --
+    def test_ac1_uv_korridor_ausserhalb_markiert_nicht(self):
+        """Gegenprobe zu AC-1: 3 liegt UNTER der Untergrenze 6 --
         die Zelle darf nicht markiert werden. Verhindert, dass die
         GREEN-Implementierung pauschal jede Zelle einer Korridor-Spalte
         markiert."""
-        dp = _dp(t2m_c=10.0, cape_jkg=500.0)
+        dp = _dp(t2m_c=10.0, uv_index=3.0)
+        corridors = [Corridor(metric="uv_index_max", range=[6, None], mark=True)]
+        html = _render(corridors=corridors, enabled={"temperature", "uv_index"}, dp=dp)
+
+        cell = _cell(html, "UV")
+        assert _MARK not in cell, "3 liegt ausserhalb [6, offen] -- keine Markierung"
+        assert _MARK_STYLE not in cell, "3 darf keinen Border-Balken tragen"
+
+    def test_ac1_uv_korridor_mit_mark_false_markiert_nichts(self):
+        """Gegenprobe zu AC-1: derselbe Korridor als reiner Alarm-Korridor
+        (mark=False) darf auch nach der Katalog-Aufloesung nichts markieren."""
+        dp = _dp(t2m_c=10.0, uv_index=8.0)
+        corridors = [Corridor(metric="uv_index_max", range=[6, None], notify=True, mark=False)]
+        html = _render(corridors=corridors, enabled={"temperature", "uv_index"}, dp=dp)
+
+        assert _MARK not in html, "mark=False (notify-only) darf keine Markierung erzeugen"
+
+    def test_ac10_cape_korridor_markiert_nicht_mehr(self):
+        """Issue #1585 AC-10: ein Bestands-Korridor auf cape_max_jkg markiert
+        nichts mehr -- CAPE hat keine Spalte mehr, und
+        resolve_corridor_summary_field() loest den Schluessel zu None auf.
+        Kein Crash, keine Markierung, kein Rest der frueheren CAPE-Zelle."""
+        dp = _dp(t2m_c=10.0, cape_jkg=1500.0)
         corridors = [Corridor(metric="cape_max_jkg", range=[1000, None], mark=True)]
         html = _render(corridors=corridors, enabled={"temperature", "cape"}, dp=dp)
 
-        cell = _cell(html, "CAPE")
-        assert _MARK not in cell, "500 J/kg liegt ausserhalb [1000, offen] -- keine Markierung"
-        assert _MARK_STYLE not in cell, "500 J/kg darf keinen Border-Balken tragen"
-
-    def test_ac1_cape_korridor_mit_mark_false_markiert_nichts(self):
-        """Gegenprobe zu AC-1: derselbe Korridor als reiner Alarm-Korridor
-        (mark=False) darf auch nach der Katalog-Aufloesung nichts markieren."""
-        dp = _dp(t2m_c=10.0, cape_jkg=1500.0)
-        corridors = [Corridor(metric="cape_max_jkg", range=[1000, None], notify=True, mark=False)]
-        html = _render(corridors=corridors, enabled={"temperature", "cape"}, dp=dp)
-
-        assert _MARK not in html, "mark=False (notify-only) darf keine Markierung erzeugen"
+        assert isinstance(html, str) and html
+        assert "CAPE" not in html, "CAPE hat keine Spalte mehr (#1585)"
+        assert _MARK not in html, "ein CAPE-Korridor darf nichts mehr markieren"
 
     def test_ac2_humidity_korridor_markiert_humidity_zelle(self):
         """AC-2 (Mittelwert-Vertreter): Korridor {metric='humidity_avg_pct',
@@ -415,16 +435,18 @@ class TestTripMailCatalogMetricCorridorMark:
     def test_ac5_unbekannte_metrik_id_neben_katalog_korridor(self):
         """AC-5 fuer den NEUEN Aufloesungsweg (RED bis Scheibe A steht): auch
         neben einer unbekannten Metrik-ID muss ein Katalog-Korridor
-        (cape_max_jkg) markieren -- der Ueberspring-Pfad darf die Aufloesung
-        nicht abbrechen."""
-        dp = _dp(t2m_c=10.0, cape_jkg=1500.0)
+        markieren -- der Ueberspring-Pfad darf die Aufloesung nicht abbrechen.
+
+        Issue #1585: Traeger-Groesse von cape_max_jkg auf uv_index_max
+        gewechselt (s. test_ac1_uv_korridor_markiert_uv_zelle)."""
+        dp = _dp(t2m_c=10.0, uv_index=8.0)
         corridors = [
             Corridor(metric="voellig_unbekannte_groesse_xyz", range=[0, 1], mark=True),
-            Corridor(metric="cape_max_jkg", range=[1000, None], mark=True),
+            Corridor(metric="uv_index_max", range=[6, None], mark=True),
         ]
-        html = _render(corridors=corridors, enabled={"temperature", "cape"}, dp=dp)
+        html = _render(corridors=corridors, enabled={"temperature", "uv_index"}, dp=dp)
 
-        cell = _cell(html, "CAPE")
+        cell = _cell(html, "UV")
         assert _MARK in cell, "Katalog-Korridor muss auch neben einer unbekannten Metrik-ID markieren"
 
 

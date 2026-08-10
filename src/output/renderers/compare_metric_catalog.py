@@ -269,13 +269,21 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
     for entry in source:
         metric_id = entry["metric_id"]
         try:
-            label = get_metric(metric_id).label_de
+            definition = get_metric(metric_id)
         except KeyError as exc:
             raise KeyError(
                 f"Compare-Katalogzeile {entry.get('key')!r} nennt die zentral "
                 f"unbekannte Groesse {metric_id!r} -- der Anzeigename ist nicht "
                 "ableitbar (src/app/metric_catalog.py)"
             ) from exc
+        # Issue #1585: zentral nicht waehlbare Groessen (cape) werden NICHT
+        # ausgeliefert. Der Roheintrag in COMPARE_METRIC_CATALOG bleibt
+        # bestehen -- der Modul-Import-Assert unten prueft ihn gegen
+        # FRONTEND_TO_RENDERER_METRIC_ID, ein geloeschter Eintrag liesse den
+        # Import scheitern und riesse den gesamten Ortsvergleich mit.
+        if not definition.selectable:
+            continue
+        label = definition.label_de
         aggregation = entry["aggregation"]
         # #1435 E1a: die Alarm-Identitaet kommt aus dem zentralen Register
         # (Paar Groesse+Auswertung); `alarmCapable` ist ab jetzt nur noch ihre

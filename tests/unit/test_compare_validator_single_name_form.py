@@ -47,17 +47,23 @@ VALIDATOR_PATH = (
 
 LOCATIONS = ("Andermatt", "Kufstein", "Lienz")
 
-# Die sechs Uebersichtszeilen, deren deutscher Registername am staerksten von
-# dem abweicht, was der Pruefer bis heute fuehrt ("Temp max", "Sonne",
-# "Wolken", "Taupunkt Ø", "Luftdruck Ø" bzw. die englische A2b-Gegenform).
+# Die Uebersichtszeilen, deren deutscher Registername am staerksten von dem
+# abweicht, was der Pruefer bis heute fuehrt ("Temp max", "Sonne", "Wolken",
+# "Taupunkt Ø", "Luftdruck Ø" bzw. die englische A2b-Gegenform).
 # Werte in renderer-typischer Schreibweise.
+#
+# Issue #1585: "Gewitterenergie (CAPE)" ist hier entfallen (vormals sechs
+# Zeilen). CAPE ist zentral nicht mehr waehlbar, erscheint in keiner
+# Uebersichtstabelle mehr und wird deshalb auch nicht mehr geprueft --
+# `_OVERVIEW_METRIC_CHECKS` im Pruefer fuehrt die Zeile nicht mehr. Als
+# STUNDENspalte bleibt "CAPE" unberuehrt (s. Kommentar bei
+# ALTE_UEBERSICHTSFORMEN unten).
 NEUE_FORM: dict[str, str] = {
     "Temperatur Maximum": "21°C",
     "Sonnenstunden": "5.0 h",
     "Bewölkung": "30%",
     "Taupunkt": "8°C",
     "Luftdruck": "1013 hPa",
-    "Gewitterenergie (CAPE)": "1200 J/kg",
 }
 
 # Alte Formen, die nach dem Rueckbau KEINE gueltige Uebersichtsbeschriftung

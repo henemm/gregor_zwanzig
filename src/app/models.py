@@ -610,6 +610,23 @@ class MetricConfig:
     derived: bool = False
 
 
+def _is_selectable(metric_id: str) -> bool:
+    """Issue #1585: kennt der zentrale Katalog die Groesse und ist sie dort
+    ``selectable=False`` (cape, confidence, temperature_cold), gehoert sie in
+    keine Kanal-Ausgabe -- auch nicht, wenn ein Bestandstrip sie noch
+    ``enabled=True`` gespeichert hat.
+
+    Unbekannte Kennungen bleiben unveraendert durch: eine inzwischen entfernte
+    Katalog-ID in Alt-Daten soll hier kein neues Fehlverhalten bekommen.
+    Der lokale Import vermeidet einen Zyklus (metric_catalog importiert
+    models fuer build_default_display_config_for_profile).
+    """
+    from app.metric_catalog import _METRICS_BY_ID
+
+    definition = _METRICS_BY_ID.get(metric_id)
+    return definition is None or definition.selectable
+
+
 def _filter_metrics_by_report_type(
     metrics: list["MetricConfig"], report_type: str,
 ) -> list["MetricConfig"]:
@@ -617,9 +634,15 @@ def _filter_metrics_by_report_type(
 
     Shared zwischen get_metrics_for_report_type() und get_metrics_for_channel()
     (Issue #429), damit beide Pfade dieselbe Filter-Semantik haben.
+
+    Issue #1585: zusaetzlich faellt jede zentral nicht waehlbare Groesse
+    heraus (s. _is_selectable) -- dieser Choke-Point speist E-Mail, SMS und
+    Telegram gemeinsam.
     """
     result: list[MetricConfig] = []
     for mc in metrics:
+        if not _is_selectable(mc.metric_id):
+            continue
         if report_type == "morning":
             if mc.morning_enabled is True:
                 result.append(mc)

@@ -69,15 +69,16 @@ def test_compare_metrics_endpoint_delivers_the_alert_identity(client: TestClient
     """AC-7: der Ortsvergleichs-Katalog nennt die Identitaet je Auswahl-Key —
     Boeen und Wind entkreuzt, Luftfeuchtigkeit und reine Vergleichsgroessen null."""
     entries = {e["key"]: e for e in client.get("/api/compare/metrics").json()["metrics"]}
+    # Issue #1585: cape_max_jkg wird nicht mehr ausgeliefert und kann hier
+    # deshalb keine Identitaet mehr tragen.
     keys = (
-        "gust_max_kmh", "wind_max_kmh", "temp_min_c", "cape_max_jkg",
+        "gust_max_kmh", "wind_max_kmh", "temp_min_c",
         "freezing_level_m", "humidity_avg_pct", "cloud_avg_pct",
     )
     assert {k: entries[k].get("alertMetric", MISSING) for k in keys} == {
         "gust_max_kmh": "wind_gust",
         "wind_max_kmh": "wind_change",
         "temp_min_c": "temperature_min",
-        "cape_max_jkg": "cape",
         "freezing_level_m": "freezing_level",
         "humidity_avg_pct": None,
         "cloud_avg_pct": None,
@@ -85,18 +86,36 @@ def test_compare_metrics_endpoint_delivers_the_alert_identity(client: TestClient
     assert entries["humidity_avg_pct"]["alarmCapable"] is False
 
 
-def test_alarm_capable_derived_from_register_matches_todays_ten_keys():
+def test_alarm_capable_derived_from_register_matches_the_selectable_alarm_keys():
     """AC-6 (Kern des Regressionsnachweises): ``alarmCapable`` wird ab jetzt aus
     der Register-Identitaet abgeleitet — und ergibt exakt dieselbe Menge wie die
-    heutige, alarmausloesende Compare-Crosswalk."""
+    heutige, alarmausloesende Compare-Crosswalk.
+
+    Issue #1585: die Crosswalk selbst bleibt unveraendert (sie ist die
+    Auswerteseite, s. test_alarm_evaluation_crosswalks_stay_untouched). Der
+    Katalog liefert zentral nicht waehlbare Groessen aber nicht mehr aus — die
+    Erwartung wird deshalb aus der Crosswalk ABGELEITET statt getippt, sonst
+    waere sie beim naechsten ``selectable=False``-Fall erneut falsch."""
+    from app.metric_catalog import get_metric
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+
     catalog = get_compare_metric_catalog()
     absent = [e["key"] for e in catalog if "alertMetric" not in e]
     assert not absent, f"Katalogzeilen ohne 'alertMetric'-Feld: {absent}"
 
+    # Massgeblich ist die Groesse der KATALOGZEILE, nicht der Wert der
+    # Crosswalk: `temp_min_c` zeigt dort auf die reine Alarm-Groesse
+    # `temperature_cold` (selbst nicht waehlbar), seine Katalogzeile haengt
+    # aber an `temperature` und wird weiterhin ausgeliefert.
+    metric_id_by_key = {e["key"]: e["metric_id"] for e in COMPARE_METRIC_CATALOG}
+    expected = {
+        key for key in _SUMMARY_KEY_TO_CATALOG_ID
+        if get_metric(metric_id_by_key[key]).selectable
+    }
     derived = {e["key"] for e in catalog if e["alertMetric"] is not None}
-    assert derived == set(_SUMMARY_KEY_TO_CATALOG_ID), (
-        f"nur abgeleitet: {sorted(derived - set(_SUMMARY_KEY_TO_CATALOG_ID))}, "
-        f"nur heute alarmfaehig: {sorted(set(_SUMMARY_KEY_TO_CATALOG_ID) - derived)}"
+    assert derived == expected, (
+        f"nur abgeleitet: {sorted(derived - expected)}, "
+        f"nur heute alarmfaehig: {sorted(expected - derived)}"
     )
     assert derived == {e["key"] for e in catalog if e["alarmCapable"]}
 

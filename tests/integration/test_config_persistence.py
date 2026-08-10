@@ -373,13 +373,20 @@ class TestLocationConfigRoundtrip:
         )
 
     def test_location_roundtrip_alert_enabled(self) -> None:
-        """alert_enabled=True mit alert_threshold ueberlebt save/load fuer SavedLocation."""
+        """alert_enabled=True mit alert_threshold ueberlebt save/load fuer SavedLocation.
+
+        Issue #1585: Traeger-Groesse von "cape" auf "wind" gewechselt --
+        `build_default_display_config_for_profile()` legt fuer zentral nicht
+        waehlbare Groessen keinen Eintrag mehr an, die alte Traegerwahl liesse
+        den Test ins Leere laufen. Der Pruefgegenstand (Alarm-Einstellung
+        ueberlebt save/load) ist unveraendert.
+        """
         from app.loader import save_location, load_all_locations
 
-        def set_cape_alert(mc):
-            if mc.metric_id == "cape":
+        def set_wind_alert(mc):
+            if mc.metric_id == "wind":
                 return MetricConfig(
-                    metric_id="cape",
+                    metric_id="wind",
                     enabled=True,
                     aggregations=mc.aggregations,
                     alert_enabled=True,
@@ -387,7 +394,7 @@ class TestLocationConfigRoundtrip:
                 )
             return mc
 
-        loc = self._build_test_location("__bug89_alert__", set_cape_alert)
+        loc = self._build_test_location("__bug89_alert__", set_wind_alert)
         save_location(loc, user_id="__bug89_loc_alert__")
 
         loaded = load_all_locations(user_id="__bug89_loc_alert__")
@@ -395,11 +402,11 @@ class TestLocationConfigRoundtrip:
         assert target is not None
         assert target.display_config is not None
 
-        cape_mc = next(
-            mc for mc in target.display_config.metrics if mc.metric_id == "cape"
+        wind_mc = next(
+            mc for mc in target.display_config.metrics if mc.metric_id == "wind"
         )
-        assert cape_mc.alert_enabled is True
-        assert cape_mc.alert_threshold == 750.0
+        assert wind_mc.alert_enabled is True
+        assert wind_mc.alert_threshold == 750.0
 
     def test_location_roundtrip_morning_enabled(self) -> None:
         """morning_enabled=False ueberlebt save/load fuer SavedLocation."""

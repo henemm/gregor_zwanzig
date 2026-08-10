@@ -64,7 +64,10 @@ class TestAC1AlertMetricSMSCodes:
         assert by_id["gust"].sms_code == "G", "established code gust→G"
 
         # --- Assert new codes ---
-        assert by_id["cape"].sms_code == "CP", "new code cape→CP"
+        # Issue #1585: "cape" ist keine alarmfaehige Groesse mehr (zentral
+        # nicht waehlbar) und taucht in `alert_metrics` nicht mehr auf -- die
+        # frueher hier gepruefte Zusicherung cape→CP hat keinen Gegenstand
+        # mehr. Das Kuerzel selbst bleibt in der MetricDefinition erhalten.
         # PO-Korrektur 2026-07-29 (Issue #1362 S5b-Adversary): "SN" kollidierte
         # semantisch mit dem Trip-SMS-Symbol fuer Schneehoehe (sms_trip.py,
         # tokens/builder.py) -- Neuschnee bekommt jetzt "NS" (= bestehender

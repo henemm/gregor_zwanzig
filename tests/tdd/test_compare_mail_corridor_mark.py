@@ -335,8 +335,15 @@ class TestCorridorScoreIndependence:
 # Alte Summen (HTML db0991d9…, Klartext 6971eab4…). Der Waechter bleibt in
 # Kraft und bewacht weiterhin, dass eine TRIP-Aenderung die Vergleichs-Mail
 # nicht anfasst.
-_COMPARE_HTML_SHA256_BEFORE = "a6bd956e592e32d210e5012c776ed3b17481ea24d2951374b6204ce6c1e76902"
-_COMPARE_TEXT_SHA256_BEFORE = "b7d76e21e6569040d3d020a9de12f1753f0ab9c384033d26f8559d4814b58926"
+# Issue #1585: erneut fortgeschrieben — CAPE ist zentral nicht mehr waehlbar,
+# die Uebersichtszeile "Gewitterenergie (CAPE)" faellt in HTML UND Klartext
+# weg (AC-5). Die Fortschreibung ist NACHGEMESSEN, nicht angenommen: ein
+# Beweislauf hat die zwei gestrichenen Stellen (CV2_METRICS, _PLAIN_ROWS/
+# _DAILY_PLAIN_ROWS) zur Laufzeit wieder eingesetzt und erhielt EXAKT die
+# beiden alten Summen zurueck (HTML a6bd956e…, Klartext b7d76e21…) -- die
+# CAPE-Zeile ist damit nachweislich der einzige Unterschied.
+_COMPARE_HTML_SHA256_BEFORE = "2ea4e178875aefc206da1253fabe5629e9a366b03d54e258e8cced245e22365f"
+_COMPARE_TEXT_SHA256_BEFORE = "54f2982ccec411d91d7de9b0c6c13a4d3e80ac9e64e49fa8db9893827ee6311e"
 
 
 def _byte_identity_fixture():

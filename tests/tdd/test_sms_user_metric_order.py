@@ -276,17 +276,24 @@ def test_ac5_position_applies_per_metric_anchor_not_per_symbol():
 
 
 def test_ac6_drop_order_ignores_display_position():
-    """CAPE (CP) an Nutzer-Position 0 faellt bei Ueberlaenge trotzdem VOR den
-    sicherheitsrelevanten Vorhersage-Token weg (DROP_ORDER-Prioritaet 2,
-    unveraendert) -- Anzeige-Position != Ueberlebensrang. Die ueberlebenden
+    """Der Taupunkt (DP) an Nutzer-Position 0 faellt bei Ueberlaenge trotzdem
+    VOR den sicherheitsrelevanten Vorhersage-Token weg (fruehe DROP_ORDER-
+    Position, unveraendert) -- Anzeige-Position != Ueberlebensrang.
+
+    Issue #1585: Traeger-Groesse von "cape" auf "dewpoint" gewechselt. CAPE ist
+    zentral nicht mehr waehlbar und erscheint im SMS-Pfad gar nicht mehr -- die
+    Gegenprobe "ohne Kuerzungsdruck bleibt das Token stehen" waere sonst aus
+    dem falschen Grund rot. DP steht in DROP_ORDER (render.py) auf Index 2 und
+    damit VOR dem frueheren CP (Index 4): faellt CP unter diesem Druck, faellt
+    DP erst recht. Der Pruefgegenstand ist unveraendert. Die ueberlebenden
     Kern-Token behalten dabei die vom Nutzer gesetzte Reihenfolge (G vor W
     vor R, NICHT Default R/W/G) -- das macht die Zusicherung erst
     RED-faehig, sonst waere sie schon heute (ohne jede Aenderung) erfuellt."""
     order = [
-        "cape", "gust", "wind", "precipitation", "rain_probability", "thunder",
+        "dewpoint", "gust", "wind", "precipitation", "rain_probability", "thunder",
         "snow_depth", "snowfall_limit", "fresh_snow",
         "temperature", "temperature_night", "wind_chill", "wind_chill_night",
-        "humidity", "dewpoint", "wind_direction", "precip_type", "cloud_total",
+        "humidity", "wind_direction", "precip_type", "cloud_total",
         "cloud_low", "cloud_mid", "cloud_high", "visibility", "sunshine",
         "uv_index", "pressure", "freezing_level",
     ]
@@ -311,8 +318,8 @@ def test_ac6_drop_order_ignores_display_position():
     )
     sms_full = report.sms_text
     assert len(sms_full) <= 160
-    assert F.sms_token_value(sms_full, "CP") is None, (
-        f"CP muss bei Ueberlaenge weichen (DROP_ORDER-Prioritaet 2), "
+    assert F.sms_token_value(sms_full, "DP") is None, (
+        f"DP muss bei Ueberlaenge weichen (fruehe DROP_ORDER-Position), "
         f"unabhaengig von Position 0: {sms_full!r}"
     )
     i_g, i_w, i_r = _token_index(sms_full, "G"), _token_index(sms_full, "W"), _token_index(sms_full, "R")
@@ -321,12 +328,12 @@ def test_ac6_drop_order_ignores_display_position():
         f"behalten, nicht die Default-Reihenfolge: {sms_full!r}"
     )
 
-    # Gegenprobe: ohne Kuerzungsdruck bleibt CP stehen (CP ist generell
+    # Gegenprobe: ohne Kuerzungsdruck bleibt DP stehen (DP ist generell
     # wirksam verdrahtet, nicht grundsaetzlich unterdrueckt).
-    dc_small = _sms_layout_dc(["cape", "gust"])
+    dc_small = _sms_layout_dc(["dewpoint", "gust"])
     sms_small = _render_sms(dc_small)
-    assert F.sms_token_value(sms_small, "CP") is not None, (
-        f"Ohne Kuerzungsdruck muss CP (Position 0) stehen: {sms_small!r}"
+    assert F.sms_token_value(sms_small, "DP") is not None, (
+        f"Ohne Kuerzungsdruck muss DP (Position 0) stehen: {sms_small!r}"
     )
 
 
@@ -405,8 +412,12 @@ def test_ac9_cascade_source_helper_matches_validator_and_couples_to_order_effect
 def test_ac10_two_permutations_same_metric_set_different_order():
     """Zwei disjunkte Permutationen derselben Metrik-MENGE -> dieselbe
     Symbol-Menge, aber zwei nachweisbar verschiedene Reihenfolgen."""
-    metric_ids = ["gust", "wind", "precipitation", "cape", "humidity"]
-    symbols = ["G", "W", "R", "CP", "HU"]
+    # Issue #1585: "cape" -> "dewpoint" (CAPE ist zentral nicht mehr waehlbar
+    # und erscheint im SMS-Pfad nicht mehr). Der Pruefgegenstand -- dieselbe
+    # Metrik-MENGE in zwei Reihenfolgen ergibt zwei Token-Folgen -- ist
+    # unveraendert.
+    metric_ids = ["gust", "wind", "precipitation", "dewpoint", "humidity"]
+    symbols = ["G", "W", "R", "DP", "HU"]
     order_a = metric_ids
     order_b = list(reversed(metric_ids))
 
@@ -422,8 +433,8 @@ def test_ac10_two_permutations_same_metric_set_different_order():
 
     appearance_a = sorted(symbols, key=lambda s: _token_index(sms_a, s))
     appearance_b = sorted(symbols, key=lambda s: _token_index(sms_b, s))
-    assert appearance_a == ["G", "W", "R", "CP", "HU"], f"Reihenfolge A falsch: {sms_a!r}"
-    assert appearance_b == ["HU", "CP", "R", "W", "G"], f"Reihenfolge B falsch: {sms_b!r}"
+    assert appearance_a == ["G", "W", "R", "DP", "HU"], f"Reihenfolge A falsch: {sms_a!r}"
+    assert appearance_b == ["HU", "DP", "R", "W", "G"], f"Reihenfolge B falsch: {sms_b!r}"
     assert appearance_a != appearance_b, (
         f"Dieselbe Menge in zwei Reihenfolgen muss zwei verschiedene "
         f"Token-Folgen ergeben, ergab aber beide Male {appearance_a}."

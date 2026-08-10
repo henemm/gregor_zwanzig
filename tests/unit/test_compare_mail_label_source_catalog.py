@@ -54,7 +54,9 @@ EXPECTED_OVERVIEW_LABELS = [
     "Amtliche Warnungen",
     "Temperatur", "Wind", "Niederschlag", "Regenwahrscheinlichkeit",
     "Gewitter", "Sonnenstunden", "Bewölkung", "UV-Index", "Sichtweite",
-    "Schneehöhe", "Neuschnee", "Böen", "Gewitterenergie (CAPE)",
+    # Issue #1585: "Gewitterenergie (CAPE)" entfallen -- zentral nicht mehr
+    # waehlbar, keine Uebersichtszeile mehr.
+    "Schneehöhe", "Neuschnee", "Böen",
     "Nullgradgrenze", "Windrichtung", "Gefühlte Temperatur", "Tiefe Wolken",
     "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchtigkeit", "Taupunkt",
     "Luftdruck", "Niederschlagsart", "Schneefallgrenze",

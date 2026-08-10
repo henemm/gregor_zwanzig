@@ -31,7 +31,9 @@ _AMPEL_EMOJIS = ("🟢", "🟡", "🟠", "🔴")
 # Volle aktivierte Metrik-Liste, damit jede fmt_val-Verzweigung greift.
 _ENABLED = {
     "temperature", "wind", "gust", "precipitation",
-    "rain_probability", "cloud_total", "sunshine", "cape",
+    # Issue #1585: "cape" entfaellt -- zentral nicht mehr waehlbar, erzeugt
+    # keine Spalte mehr (s. test_cape_has_no_column_in_any_mode).
+    "rain_probability", "cloud_total", "sunshine",
     "visibility",
 }
 
@@ -260,60 +262,24 @@ def test_einfach_full_html_metric_has_ampel(metric_id, alert):
 # AC-4: CAPE harmonisiert
 # ---------------------------------------------------------------------------
 
-def test_cape_plain_einfach_is_number_not_emoji():
-    """AC-4 RED: CAPE Plain-Einfach Stundentabelle zeigt numerischen Wert, kein Ampel-Emoji.
+def test_cape_has_no_column_in_any_mode():
+    """Issue #1585 (ersetzt die drei frueheren AC-4-CAPE-Tests): CAPE ist
+    zentral nicht mehr waehlbar und bekommt in der Trip-Stundentabelle in
+    KEINEM Modus eine Spalte -- weder Einfach noch Roh.
 
-    Heute: use_friendly=True → symbol-Modus → Emoji in der Stundentabellen-Zeile (FAIL).
-    Die Pruefung erfolgt nur auf Stundentabellen-Zeilen (header/summary sind legitim non-ASCII).
-    """
-    _html, plain = _render_one_metric("cape", raw=False)
-    table_rows = _plain_table_rows(plain)
-    assert table_rows, (
-        f"AC-4: Plain muss Stundentabellen-Zeilen haben. plain={plain[:300]!r}"
-    )
-    for row in table_rows:
-        assert not _has_ampel(row), (
-            f"AC-4 RED: CAPE Plain-Stundentabelle darf KEIN Ampel-Emoji enthalten. "
-            f"Zeile: {row!r}"
+    Die drei Vorgaenger (`..._plain_einfach_is_number_not_emoji`,
+    `..._roh_html_no_yellow_span`, `..._einfach_html_has_ampel`) bewachten die
+    Darstellungsform dieser Spalte. Zwei davon waeren nach #1585 mangels
+    CAPE-Zelle GRUEN geblieben, ohne noch irgendetwas zu pruefen -- deshalb
+    ersetzt EIN Test, der die Abwesenheit direkt zusichert, alle drei."""
+    for raw in (False, True):
+        html, plain = _render_one_metric("cape", raw=raw)
+        assert "CAPE" not in html, (
+            f"CAPE-Spalte erscheint weiterhin im HTML (raw={raw})"
         )
-        assert row.isascii(), (
-            f"AC-4 RED: CAPE Plain-Stundentabelle muss ASCII sein. Zeile: {row!r}"
+        assert "CAPE" not in plain, (
+            f"CAPE-Spalte erscheint weiterhin im Klartext (raw={raw})"
         )
-
-
-def test_cape_roh_html_no_yellow_span():
-    """AC-4 RED: CAPE Roh-HTML zeigt nackte Zahl ohne Gelb-Hintergrund-Span.
-
-    Heute: fmt_val('cape', 1500, use_friendly=False, html=True) erzeugt
-    <span style='background:#fff9c4;...'> (FAIL).
-    """
-    html, _plain = _render_one_metric("cape", raw=True)
-    cells = _data_cells(html)
-    assert cells, "CAPE Roh muss Daten-Zellen haben"
-    for cell in cells:
-        assert "background" not in cell, (
-            f"AC-4 RED: CAPE Roh-HTML darf KEINEN background-Style enthalten. "
-            f"Zelle: {cell!r}"
-        )
-        assert "<span" not in cell, (
-            f"AC-4 RED: CAPE Roh-HTML darf KEINEN <span>-Tag enthalten. "
-            f"Zelle: {cell!r}"
-        )
-
-
-def test_cape_einfach_html_has_ampel():
-    """AC-4 GREEN-Sicherung: CAPE Einfach-HTML zeigt Ampel-Emoji.
-
-    cape_jkg=1500 → 🟡 gemaess Schwellen 1000/2500/3500.
-    """
-    html, _plain = _render_one_metric("cape", raw=False)
-    cells = _data_cells(html)
-    assert cells, "CAPE Einfach muss Daten-Zellen haben"
-    ampel_cells = [c for c in cells if _has_ampel(c)]
-    assert ampel_cells, (
-        f"AC-4: CAPE Einfach-HTML muss Ampel-Emoji zeigen "
-        f"(cape_jkg=1500 >= yellow=1000). Daten-Zellen: {cells!r}"
-    )
 
 
 # ---------------------------------------------------------------------------

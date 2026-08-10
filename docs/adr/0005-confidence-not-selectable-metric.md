@@ -43,3 +43,13 @@ Spalte, keine Vorschau-Werte).
   Render-Ignorierung für Alt-Trips) muss dauerhaft bestehen bleiben.
 - **Folgepflichten:** **PO-Entscheidung, final.** Kein Fix und kein Feature darf `confidence` wieder
   selektierbar machen. Bei Berührung der Metrik-Auswahl ist diese Regel zu prüfen.
+- **Vertrags-Umfang, nachgewiesen durch den zweiten Fall (#1585, 2026-08-10):** Bei der
+  `confidence`-Erstimplementierung (#710/#715) deckte `selectable=False` nur `GET /api/metrics`
+  und die Render-Ignorierung ab. Issue #1585 (CAPE als zweite `selectable=False`-Metrik) zeigte,
+  dass derselbe Vertrag **weitere** Stellen umfassen muss, damit eine Metrik wirklich überall
+  unsichtbar ist: die SMS-Kanal-Kaskade (`_filter_metrics_by_report_type()` in
+  `src/app/models.py`), den Ortsvergleich (`get_compare_metric_catalog()` /
+  `resolve_enabled_metrics()` in `src/output/renderers/`) sowie die Alarm-Aktivitätsprüfung
+  (`is_alert_metric_active()` in `src/services/weather_change_detection.py`). Ein künftiger
+  dritter `selectable=False`-Fall sollte diese Stellen als Checkliste verwenden, statt sie erneut
+  selbst zu entdecken.
