@@ -127,7 +127,7 @@ def test_dated_snapshot_preferred_over_undated(clean_user_dirs):
 
     trip = _two_day_trip(trip_id, today)
     alert_svc = TripAlertService(settings=None, user_id=user_id)
-    result = alert_svc._get_cached_weather(trip)
+    result = alert_svc._get_cached_weather(trip, tagesgleicher_anker_noetig=True)
 
     assert result is not None, "Snapshot nicht geladen"
     assert len(result) == 1
@@ -156,7 +156,7 @@ def test_undated_fallback_when_no_dated_exists(clean_user_dirs):
 
     trip = _two_day_trip(trip_id, today)
     alert_svc = TripAlertService(settings=None, user_id=user_id)
-    result = alert_svc._get_cached_weather(trip)
+    result = alert_svc._get_cached_weather(trip, tagesgleicher_anker_noetig=True)
 
     assert result is not None, "Fallback auf undatierten Snapshot schlug fehl"
     assert result[0].aggregated.precip_sum_mm == pytest.approx(5.0)
@@ -200,7 +200,9 @@ def test_evening_briefing_stale_snapshot_does_not_trigger_false_alert(clean_user
     trip = _two_day_trip(trip_id, today)
     trip.alert_cooldown_minutes = 0
 
-    cached = TripAlertService(settings=settings, user_id=user_id)._get_cached_weather(trip)
+    cached = TripAlertService(
+        settings=settings, user_id=user_id,
+    )._get_cached_weather(trip, tagesgleicher_anker_noetig=True)
     assert cached is not None
 
     alert_svc = TripAlertService(settings=settings, user_id=user_id)

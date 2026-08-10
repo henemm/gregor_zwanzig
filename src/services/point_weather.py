@@ -14,7 +14,7 @@ SPEC: docs/specs/modules/issue_1168_alert_engine_extract.md
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional, Protocol, Set
 
 if TYPE_CHECKING:
@@ -41,6 +41,13 @@ class PointWeatherData:
     fetched_at: datetime
     provider: str
     official_alerts: List["OfficialAlert"] = field(default_factory=list)
+    # Issue #1661 (B1): der beschriebene KALENDERTAG, additiv und optional.
+    # `fetched_at` ist der Schreibzeitpunkt — das ist etwas anderes: der
+    # Abend-Versand eines Ortsvergleichs informiert über MORGEN, schrieb den
+    # Δ-Anker aber ohne jeden Tagesbezug. `None` heisst "kein Tagesbezug" und
+    # verhält sich exakt wie vor dieser Scheibe (Altbestand, Trip-Pfad, der
+    # sein eigenes Datums-Schema über Dateinamen hat).
+    target_date: Optional[date] = None
 
 
 @dataclass
@@ -75,6 +82,19 @@ class LocationWeatherSource(Protocol):
     (Ortszeit am Ort), über das die Beschaffung aggregiert. `None` heisst
     „Default 4/19 über den geteilten Auflöser" (ADR-0035) — es gibt bewusst
     keinen zweiten Fensterbegriff je Implementierung.
+
+    Issue #1661 (B2): Implementierungen DÜRFEN zusätzlich zwei optionale
+    Schlüsselwort-Argumente annehmen, die denselben KALENDERTAG auf zwei
+    verschiedene Arten vorgeben — und die sich gegenseitig ausschliessen:
+    `target_date` (absoluter, bereits aufgelöster Tag; so liest der
+    15-Minuten-Δ-Check den Tag aus dem Anker) und `tage_ab_ortstag` (Versatz
+    gegen den lokalen Tag AM ORT; so schreibt der Briefing-Versand den Anker,
+    weil sein eigener „heute"-Begriff aus der Server-Zeitzone stammt und für
+    Orte mit UTC-Versatz auf einen anderen Ortstag zeigt). Die
+    Protocol-Signatur bleibt bewusst ohne beide Argumente: Aufrufer reichen sie
+    nur durch, wenn ein Tagesbezug tatsächlich vorliegt — eine bedingungslose
+    Übergabe würde jede bestehende Implementierung ohne fachlichen Gewinn
+    brechen.
     """
 
     def fetch(

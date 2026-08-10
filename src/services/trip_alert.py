@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, List, Optional
 from app.config import Settings
 from app.models import SegmentWeatherData, WeatherChange
 from services import alert_channel_threshold, alert_daily_limit, alert_log
+from services.alert_briefing_anchor import record_alert_anchor_rejected
 import services.alert_urgency as alert_urgency
 from services.alert_gate import check_nowcast_gate, record_nowcast_sent
 from services.deviation_alert_engine import DeviationAlertEngine
@@ -48,6 +49,16 @@ ALERT_RUN_DEADLINE_SECONDS = 90.0
 # Ausschliesslich mit Trip-Kennungen belegt — der Vergleichs-Nowcast bekam mit
 # #1467 S3 deshalb einen eigenen Scope (`compare_radar`) statt diesen hier.
 _RADAR_THROTTLE_SCOPE = "radar"
+
+# Issue #1661: Hoechstalter des UNDATIERTEN Rueckfall-Ankers. Auffangnetz, das
+# NUR greift, wenn die Datei kein lesbares `target_date` traegt — ein
+# vorhandener, aber falscher Tag wird vom Datumsabgleich erledigt; ein
+# Altersnetz wuerde dort ein inhaltlich falsches Datum durchwinken, solange es
+# frisch geschrieben ist. Derselbe Zahlenwert wie beim Ortsvergleich
+# (`compare_alert._MAX_ANCHOR_AGE`) und aus demselben Grund (Briefings laufen
+# 1-2x/Tag) — geteilt wird der WERT, nicht der Code: die Trip-Seite hat mit
+# `target_date` ein schaerferes Kriterium als der Ortsvergleich (Spec A2/A3).
+_MAX_UNDATED_ANCHOR_AGE = timedelta(hours=26)
 
 # Issue #1460 (P1a, loest #1444 S1 ab): der Wertebereich (`corridors[].notify`)
 # ist KEIN Alarm-Ausloeser mehr -- eine absolute Grenze widerspricht ADR-0009
@@ -431,10 +442,8 @@ class TripAlertService:
                 logger.debug(f"Skipping expired trip {trip.id} (ended {trip.end_date})")
                 continue
 
-            # Skip if no cached weather available
-            cached = self._get_cached_weather(trip)
-            if not cached:
-                continue
+            # Δ-Anker: hier ist ein Anker DESSELBEN Tages Pflicht (#1661).
+            cached = self._get_cached_weather(trip, tagesgleicher_anker_noetig=True)
 
             # Issue #1088: amtliche Warnungen zusätzlich zum Wetter-Delta prüfen —
             # fail-soft, darf den Zyklus für andere Trips nicht abbrechen.
@@ -443,6 +452,22 @@ class TripAlertService:
                 official_notices = self.check_official_alert_triggers(trip)
             except Exception as e:
                 logger.error(f"Official alert trigger check failed for trip {trip.id}: {e}")
+
+            # #1661 Spec-Korrektur 2026-08-10: ein fehlender oder verworfener
+            # Δ-Anker legt NUR den Abweichungs-Alarm still. Stuende dieses Tor
+            # wie frueher VOR dem amtlichen Check, wuerde ein Anker vom falschen
+            # Tag auch die Unwetterwarnung verschlucken — genau in den Tagen vor
+            # dem Aufbruch, in denen sie am meisten zaehlt.
+            # Fail-soft wie der Zweig darunter: ein Fehler bei EINER Tour darf
+            # den Lauf fuer alle folgenden nicht abbrechen.
+            if not cached:
+                if official_notices:
+                    try:
+                        if self._send_official_alert_only(trip, official_notices):
+                            alerts_sent += 1
+                    except Exception as e:
+                        logger.error(f"Official alert send failed for trip {trip.id}: {e}")
+                continue
 
             try:
                 weather_sent = self.check_and_send_alerts(
@@ -481,7 +506,9 @@ class TripAlertService:
             hit_deadline=hit_deadline,
         )
 
-    def _get_cached_weather(self, trip: "Trip") -> Optional[List[SegmentWeatherData]]:
+    def _get_cached_weather(
+        self, trip: "Trip", *, tagesgleicher_anker_noetig: bool
+    ) -> Optional[List[SegmentWeatherData]]:
         """
         Get cached weather data for a trip from the weather snapshot.
 
@@ -491,11 +518,49 @@ class TripAlertService:
         evening briefing snapshot, which has target_date=tomorrow and would cause the
         alert to compare today's nowcast against tomorrow's stage. (Issue #823)
 
+        Issue #1661: der undatierte Rueckfall wurde bis hierher UNGEPRUEFT
+        zurueckgegeben, obwohl in der Datei steht, welchen Tag sie beschreibt.
+        Er ist zudem kein Ausnahmefall, sondern der REGULAERE Nachtpfad —
+        zwischen Mitternacht und dem ersten erfolgreichen Tageslauf greift
+        `load_dated(trip, heute)` grundsaetzlich ins Leere. Faellt EIN
+        Abend-Briefing aus, beschreibt der Rueckfall die ganze folgende Nacht
+        und den Vormittag ueber den falschen Tag (Produktivfall 08.08.2026:
+        ~16 h blinde Wache, ~28 stille Laeufe).
+
+        Pruefung, Log und Eskalation sitzen bewusst HIER und nicht im
+        Speicher-Layer (Pruefort = Wirkort, Spec A2): sie hat `trip` bereits
+        als Parameter.
+
+        WELCHER Aufrufer die Tages-Pruefung bekommt, entscheidet der
+        PFLICHT-Parameter `tagesgleicher_anker_noetig` — kein Default, damit
+        eine neue Aufrufstelle sich bewusst entscheiden MUSS statt still in die
+        falsche Variante zu fallen (Spec-Korrektur 2026-08-10, Phase 6):
+
+        * ``True`` — Abweichungs-Alarm (`check_all_trips` -> `check_and_send_alerts`).
+          Der Δ-Vergleich braucht einen Referenzwert DESSELBEN Tages; ein Anker
+          vom falschen Tag ist hier schlimmer als gar keiner.
+        * ``False`` — amtliche Warnungen (`check_official_alert_triggers`).
+          Dieser Pfad nutzt `cached` NICHT als Δ-Vergleichspunkt, sondern nur
+          als Routen-Geometrie mit absoluten Zeiten, und ueberspringt vergangene
+          Etappen bereits EINZELN (`end_time < now_utc: continue`). Er ist gegen
+          einen veralteten Anker also selbst abgesichert und prueft bewusst die
+          gesamte Restroute mit Tagen Vorlauf (#1460 P4). Wuerde die
+          Tages-Pruefung auch hier greifen, verstummten amtliche Warnungen fuer
+          bereits gebriefte, aber noch nicht gestartete Touren (deren undatierter
+          Anker traegt `target_date = Starttag`) — schwerer als der behobene
+          Schaden. Zwei Anforderungen, zwei Pruefungen.
+
+        Verwerfen heisst genau: `None` zurueckgeben (Spec A4). Weder
+        `alert_state` noch Cooldown werden angefasst, der Anker wird NICHT neu
+        geschrieben — sonst wuerde aus zeitweiliger Unterdrueckung Dauerstille
+        (Lehre `fix_1584c` AC-7).
+
         Args:
             trip: Trip to get cached weather for
+            tagesgleicher_anker_noetig: True nur fuer den Abweichungs-Alarm.
 
         Returns:
-            Cached weather data or None if not available
+            Cached weather data or None if not available/not trustworthy
         """
         try:
             from services.weather_snapshot import WeatherSnapshotService
@@ -506,10 +571,87 @@ class TripAlertService:
             if dated is not None:
                 return dated
             # Fallback: undated snapshot (may be stale after evening briefing)
-            return svc.load(trip.id)
+            undated = svc.load(trip.id)
+            anchor_date = (
+                svc.load_target_date(trip.id)
+                if undated and tagesgleicher_anker_noetig
+                else None
+            )
         except Exception as e:
             logger.debug(f"No cached weather for trip {trip.id}: {e}")
             return None
+
+        # AC-13/AC-14 gelten fuer BEIDE Aufrufer: "gar kein Anker" laesst auch
+        # die Geometrie-Auswertung leerlaufen.
+        if not undated:
+            self._report_missing_anchor(trip, today)
+            return None
+        if not tagesgleicher_anker_noetig:
+            # Amtliche Warnungen: Geometrie genuegt, s. Docstring.
+            return undated
+        if anchor_date == today:
+            return undated
+
+        if anchor_date is None:
+            # Altersnetz (A3): NUR bei fehlendem/unlesbarem Datum. Ein fehlender
+            # Schreibzeitpunkt ist ebenso wenig vertrauenswuerdig wie ein zu
+            # alter — beides taugt nicht als Vergleichspunkt (ADR-0009).
+            fetched_at = _as_aware_utc(undated[0].fetched_at)
+            age = (datetime.now(timezone.utc) - fetched_at) if fetched_at else None
+            if age is not None and age <= _MAX_UNDATED_ANCHOR_AGE:
+                return undated
+            reason = "too_old"
+            detail = (
+                f"ohne lesbares target_date und {age.total_seconds() / 3600:.1f} h alt "
+                f"(Grenze {_MAX_UNDATED_ANCHOR_AGE.total_seconds() / 3600:.0f} h)"
+                if age is not None else "ohne lesbares target_date und ohne Zeitstempel"
+            )
+        else:
+            reason = "wrong_day"
+            detail = (
+                f"falscher Tag: target_date={anchor_date.isoformat()}, "
+                f"heute ist {today.isoformat()}"
+            )
+
+        logger.warning(
+            "Alarm-Anker fuer Trip %s verworfen (%s) — %s. Kein Abweichungsalarm "
+            "bis zum naechsten Briefing-Versand.", trip.id, reason, detail,
+        )
+        record_alert_anchor_rejected(
+            user_id=self._user_id, entity_id=trip.id, reason=reason,
+        )
+        return None
+
+    def _report_missing_anchor(self, trip: "Trip", today: date) -> None:
+        """Issue #1661 (Teil C, C2): „gar kein Anker" ist zwei verschiedene Dinge.
+
+        Bei einer Tour, deren Laufzeitraum noch nicht begonnen hat, ist das der
+        harmlose Normalfall (es lief schlicht noch kein Briefing) — dort nur
+        eine DEBUG-Zeile, KEIN Diagnose-Eintrag, sonst erzeugte jede geplante
+        Tour taeglich Dauerrauschen (#1199-Muster).
+
+        Laeuft die Tour dagegen bereits, ist die Wache komplett blind, und
+        genau das soll auffallen: WARNUNG UND Diagnose-Eintrag.
+        """
+        laeuft = (
+            trip.start_date is not None and trip.end_date is not None
+            and trip.start_date <= today <= trip.end_date
+        )
+        if not laeuft:
+            logger.debug(
+                "Kein Alarm-Anker fuer Trip %s — Laufzeitraum %s bis %s hat noch "
+                "nicht begonnen bzw. ist unbekannt; das ist der Normalfall vor "
+                "dem ersten Briefing.", trip.id, trip.start_date, trip.end_date,
+            )
+            return
+        logger.warning(
+            "Kein Alarm-Anker fuer Trip %s, obwohl die Tour laeuft (%s bis %s) — "
+            "die Abweichungs-Wache ist blind bis zum naechsten Briefing-Versand.",
+            trip.id, trip.start_date, trip.end_date,
+        )
+        record_alert_anchor_rejected(
+            user_id=self._user_id, entity_id=trip.id, reason="missing",
+        )
 
     def _is_quiet_hours(self, trip: "Trip", now: datetime) -> bool:
         """Check if current time falls within the trip's configured quiet hours.
@@ -1125,7 +1267,11 @@ class TripAlertService:
         from services.alert_state import AlertStateService
         from services.official_alerts import get_official_alerts_for_location
 
-        cached = self._get_cached_weather(trip)
+        # #1661 Spec-Korrektur 2026-08-10: KEINE Tages-Pruefung auf diesem Pfad.
+        # `cached` dient hier nur als Routen-Geometrie mit absoluten Zeiten; der
+        # feinere Zeitfilter pro Etappe steht unten (`end_time < now_utc`).
+        # Begruendung ausfuehrlich im Docstring von `_get_cached_weather`.
+        cached = self._get_cached_weather(trip, tagesgleicher_anker_noetig=False)
         if not cached:
             return []
 

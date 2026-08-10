@@ -360,9 +360,25 @@ class CompareAlertService:
         if cached and self._anchor_too_old(cached[0], preset_id, location_id):
             return None
         start_hour, end_hour = day_window
-        fresh_point = self._weather_source.fetch(
-            location_id, loc.lat, loc.lon, start_hour, end_hour
-        )
+        # Issue #1661 (B2): traegt der Anker einen Tagesbezug, holt der
+        # Frisch-Abruf DENSELBEN Kalendertag — sonst misst das Δ den
+        # Tagesunterschied statt der Vorhersage-Aenderung (Abend-Slot-Preset:
+        # Anker beschreibt morgen, der Check laeuft heute). Die Weitergabe ist
+        # bewusst KONDITIONAL: ohne Anker-Datum (Morgen-Slot, Altbestand) gibt
+        # es nichts abzugleichen, und eine bedingungslose Uebergabe braeche
+        # jede Quelle ohne dieses Schluesselwort ohne fachlichen Gewinn.
+        # `_anchor_too_old` laeuft unveraendert davor (B3) — Alter und
+        # Tagesbezug sind zwei unabhaengige Fragen.
+        anchor_target_date = cached[0].target_date if cached else None
+        if anchor_target_date is not None:
+            fresh_point = self._weather_source.fetch(
+                location_id, loc.lat, loc.lon, start_hour, end_hour,
+                target_date=anchor_target_date,
+            )
+        else:
+            fresh_point = self._weather_source.fetch(
+                location_id, loc.lat, loc.lon, start_hour, end_hour
+            )
 
         entity_id = f"{preset_id}:{location_id}"
         state_svc = AlertStateService(user_id=self._user_id)

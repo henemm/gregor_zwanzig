@@ -96,6 +96,8 @@ def _dispatch_due_preset(
     user_id: str,
     data_root: str,
     all_locations_cache: list,
+    *,
+    tage_ab_ortstag: int,
 ) -> bool:
     """Sendet EIN faelliges Compare-Preset; liefert True bei Erfolg.
 
@@ -103,6 +105,12 @@ def _dispatch_due_preset(
     durch `CompareDispatchStrategy.dispatch_one()` -- Fehler-Isolation
     unveraendert (ValueError -> Warn-Log + Skip, sonstige Exception ->
     Error-Log + Skip, kein Abbruch der uebrigen Presets).
+
+    Issue #1661 (Adversary-Finding F003): `tage_ab_ortstag` ist PFLICHT und
+    keyword-only, ohne Default. Beide Tagesformen stammen aus DERSELBEN
+    Zeitabfrage im Slot-Scheduler (`DuePreset`); ein vergessenes Argument
+    scheitert hier sofort mit `TypeError`, statt still auf eine zweite
+    `date.today()`-Auswertung zurueckzufallen.
     """
     preset_id = preset.get("id", "")
     try:
@@ -113,6 +121,7 @@ def _dispatch_due_preset(
             data_root,
             all_locations_cache=all_locations_cache,
             target_date=target_date,
+            tage_ab_ortstag=tage_ab_ortstag,
         )
         return True
     except ValueError as e:
@@ -301,6 +310,7 @@ def send_one_compare_preset(
     data_root: str,
     all_locations_cache=None,
     target_date: date | None = None,
+    tage_ab_ortstag: int | None = None,
     mail_sink=None,
     sms_sink=None,
     telegram_sink=None,
@@ -309,18 +319,39 @@ def send_one_compare_preset(
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
 
     Gemeinsame Versandlogik fuer Daily-Loop und Einzelversand (#627).
-    `target_date` (#1232 Scheibe 2a): Default `date.today()` fuer
-    Rueckwaertskompatibilitaet mit dem Einzelversand-Pfad
-    (`send_compare_preset`, ignoriert `schedule`); der Abend-Slot des
-    Daily-Loops uebergibt heute+1.
+    `target_date` (#1232 Scheibe 2a): der absolute Zieltag (Betreff,
+    Vergleichs-Engine). `tage_ab_ortstag` (#1661, Adversary-Finding F003):
+    DERSELBE Tag als Versatz gegen den Ortstag, fuer den Δ-Anker. Beide kommen
+    aus derselben Zeitabfrage im Slot-Scheduler (`DuePreset`) und muessen
+    deshalb GEMEINSAM uebergeben werden — nur eines von beiden ist ein
+    Programmierfehler und scheitert laut mit `ValueError`, statt den anderen
+    Wert aus einer zweiten `date.today()`-Auswertung zu rekonstruieren (genau
+    daran lag der Anker nach einem Tagessprung still um einen Tag daneben).
+    Ohne beides (Einzelversand-Pfad `send_compare_preset`, der `schedule`
+    ignoriert) gilt „heute, Versatz 0" — EINE Zeitabfrage, kein Auseinander-
+    laufen moeglich.
     `mail_sink`/`sms_sink`/`telegram_sink` (#1270): deterministische
     Transport-Naht, 1:1 durchgereicht an `NotificationService.send_compare_report`.
     `on_demand` (#1467 S2 AG5): Handversand — dann bleiben Δ-Anker UND
     Melde-Gedaechtnis unangetastet, genau wie beim Trip-Ad-hoc-Abruf (#1007).
     Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
     """
+    if (target_date is None) != (tage_ab_ortstag is None):
+        raise ValueError(
+            "send_one_compare_preset: `target_date` (absoluter Zieltag) und "
+            "`tage_ab_ortstag` (Versatz gegen den Ortstag) gehoeren zusammen "
+            "und muessen aus DERSELBEN Zeitabfrage stammen — entweder beide "
+            "oder keines von beiden. Das fehlende aus `date.today()` "
+            "nachzurechnen laege nach einem Tagessprung zwischen Sammel- und "
+            "Schreibzeitpunkt still um einen Tag daneben (Preset "
+            f"{preset.get('id', '?')}, target_date={target_date}, "
+            f"tage_ab_ortstag={tage_ab_ortstag})."
+        )
     if target_date is None:
+        # Kein Slot-Kontext (Einzelversand): EINE Zeitabfrage, aus der beide
+        # Formen ohne Differenzbildung hervorgehen.
         target_date = date.today()
+        tage_ab_ortstag = 0
     from output.renderers.comparison import (
         render_compare_email, render_compare_sms, render_compare_telegram,
     )
@@ -404,12 +435,26 @@ def send_one_compare_preset(
     # ueber ALLE Orte des Presets (R3), nicht nur die getriggerten.
     # Issue #1629: steht VOR dem Versand, weil dessen Fehlerpfad exakt denselben
     # Aufruf braucht — zwei Fassungen duerften auseinanderlaufen.
+    # Issue #1661 (F002): der Δ-Anker bekommt den Slot-Tag RELATIV, nicht
+    # absolut. Gegen den ORTSTAG aufgeloest wird er erst in `fetch()`; wuerde
+    # der absolute (auf dem Server UTC-)Tag durchgereicht, traefe er fuer Orte
+    # ab UTC+6 oestlich bzw. UTC-7 westlich den falschen Ortstag.
+    #
+    # Issue #1661 (F003): der Versatz wird NICHT mehr hier errechnet. Bis
+    # Runde 2 stand hier `(target_date - date.today()).days` — eine Differenz
+    # aus ZWEI `date.today()`-Auswertungen zu zwei verschiedenen
+    # Realzeitpunkten (Sammeln im Orchestrator, Schreiben hier, dazwischen
+    # Wetterabruf, Rendering und 2s je vorangehendem Preset). Fiel dazwischen
+    # Mitternacht, lag der Versatz still um einen Tag daneben. Er kommt
+    # deshalb jetzt von der Stelle, die ihn KENNT: `presets_due_for_hour`
+    # (Morgen-Slot 0, Abend-Slot +1), durchgereicht ueber `DuePreset`.
+
     def _anchor_and_reset() -> None:
         write_anchor_and_reset_memory(
             user_id=user_id,
             entity_ids=[f"{preset_id}:{loc.id}" for loc in locations],
             write_anchor=lambda: _write_compare_alert_snapshots(
-                preset_id, locations, user_id, preset,
+                preset_id, locations, user_id, preset, tage_ab_ortstag,
             ),
             on_demand=on_demand,
             # Issue #1461 S3b-1: der Briefing-Zeitstempel gehoert unter die
@@ -495,6 +540,7 @@ def send_compare_preset(
 
 def _write_compare_alert_snapshots(
     preset_id: str, locations: list, user_id: str, preset: dict,
+    tage_ab_ortstag: int,
 ) -> None:
     """Issue #1169 (A1/B1): schreibt je Ort den Δ-Anker-Snapshot über denselben
     `CompareLocationWeatherSource`-Impl, der auch der 15-Min-Alert-Check fuer
@@ -512,6 +558,24 @@ def _write_compare_alert_snapshots(
     zurueckgefallen und haette den Anker wieder im falschen Fenster
     geschrieben — dieselbe Fehlerklasse wie der stille Parameter-Rueckfall.
     Jetzt ist es ein sofortiger `TypeError`.
+
+    Issue #1661 (Teil B): `tage_ab_ortstag` ist aus DEMSELBEN Grund PFLICHT
+    ohne Default. Es traegt den VERSATZ zu dem Tag, ueber den das Briefing
+    tatsaechlich informiert (Morgen-Slot 0, Abend-Slot +1,
+    `compare_slot_scheduler.DuePreset`); ein stiller `= None`-Rueckfall wuerde
+    den Abendanker wieder mit dem Schreibtag statt dem gebriefeten Tag
+    beschriften — exakt der Fehler, den diese Scheibe behebt.
+
+    Der Wert wird DURCHGEREICHT, nie berechnet (Adversary-Finding F003):
+    Quelle ist die einzige Stelle, die den Slot kennt, und deren einmalige
+    Zeitabfrage. Jede Rekonstruktion aus einem spaeteren `date.today()` liegt
+    nach einem Tagessprung still um einen Tag daneben.
+
+    Bewusst ein VERSATZ und kein absoluter Tag (Adversary-Finding F002): den
+    Kalendertag bildet `fetch()` weiterhin aus der ORTSZEIT am jeweiligen Ort.
+    Der absolute Tag des Dispatch-Loops stammt aus `date.today()`
+    (Systemzeit = UTC auf dem Server) und zeigt zur Slot-Zeit fuer Orte ab
+    UTC+6 oestlich bzw. UTC-7 westlich auf einen anderen Ortstag.
     """
     from services.compare_location_weather_source import CompareLocationWeatherSource
     from services.compare_weather_snapshot import CompareWeatherSnapshotService
@@ -522,7 +586,10 @@ def _write_compare_alert_snapshots(
     snapshot_service = CompareWeatherSnapshotService(user_id=user_id)
     for loc in locations:
         try:
-            point = source.fetch(loc.id, loc.lat, loc.lon, start_hour, end_hour)
+            point = source.fetch(
+                loc.id, loc.lat, loc.lon, start_hour, end_hour,
+                tage_ab_ortstag=tage_ab_ortstag,
+            )
             snapshot_service.save(preset_id, loc.id, point)
         except Exception as e:
             logger.warning(

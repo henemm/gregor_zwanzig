@@ -395,9 +395,18 @@ def test_f001_versandpfad_reicht_das_preset_fenster_an_den_anker_durch(
     echte_quelle = quelle_mod.CompareLocationWeatherSource
 
     class SpionierendeQuelle(echte_quelle):
-        def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None):
+        # `target_date`/`tage_ab_ortstag` (Issue #1661 Teil B): der
+        # Versandpfad reicht den Tag, ueber den gebrieft wird, bis zum Δ-Anker
+        # durch — als VERSATZ gegen den Ortstag (Schreibseite), der Δ-Check
+        # spaeter als absoluten Tag (Leseseite). Die Attrappe nimmt beides
+        # entgegen und gibt es weiter, statt hier an einem TypeError zu
+        # scheitern — geprueft wird in DIESEM Test weiterhin nur das Fenster.
+        def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
+                  target_date=None, tage_ab_ortstag=None):
             aufgezeichnete_fenster.append((start_hour, end_hour))
-            return super().fetch(point_id, lat, lon, start_hour, end_hour)
+            return super().fetch(point_id, lat, lon, start_hour, end_hour,
+                                 target_date=target_date,
+                                 tage_ab_ortstag=tage_ab_ortstag)
 
     # `_write_compare_alert_snapshots` importiert die Klasse erst zur Laufzeit
     # aus ihrem Heimatmodul — dort ist die Naht.
@@ -561,6 +570,14 @@ def test_ac5_check_um_22_uhr_bleibt_beim_fenster_des_laufenden_tages(monkeypatch
     an Tag D, Vorhersage fuer Tag D unveraendert, Vorhersage fuer Tag D+1
     bewusst ANDERS (30 mm Regen um 12:00 an D+1) / When der Check um 22:00
     Ortszeit noch an Tag D laeuft / Then bleibt der Alarm aus.
+
+    Neu gefasst mit Issue #1661 (PO-Entscheidung E3): die Zusicherung lautet
+    nicht mehr „Anker und Frisch-Abruf bleiben beim Fenster des laufenden
+    Tages", sondern „Anker und Frisch-Abruf beschreiben DENSELBEN Tag —
+    naemlich den, ueber den zuletzt gebrieft wurde". Fuer diesen Test ist das
+    derselbe Tag und derselbe Assert: das Preset hier hat keinen aktivierten
+    Abend-Slot, der Anker traegt also keinen bzw. den laufenden Tagesbezug.
+    Nur die Formulierung war zu eng — die Wirkung ist unveraendert.
 
     Anker und Frisch-Abruf sehen exakt dieselbe Zeitreihe — es hat sich nichts
     geaendert; unterschiedlich sind nur die beiden KALENDERTAGE darin.

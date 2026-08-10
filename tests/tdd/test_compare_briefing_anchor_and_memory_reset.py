@@ -188,7 +188,13 @@ class _ScriptedWeatherSource:
     def fetch(
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
+        target_date=None, tage_ab_ortstag=None,
     ):
+        # `target_date`/`tage_ab_ortstag` (Issue #1661 Teil B): der
+        # Versandpfad reicht den gebriefeten Tag als VERSATZ gegen den Ortstag
+        # bis zum Δ-Anker durch, der Δ-Check spaeter den aufgeloesten absoluten
+        # Tag; die Attrappe nimmt beides entgegen, statt an einem TypeError zu
+        # scheitern.
         self.fetch_calls.append(point_id)
         return _point(
             point_id, self._names.get(point_id, point_id), lat, lon,
@@ -412,6 +418,7 @@ def test_ac14_unveraenderter_wert_meldet_nach_dem_briefing_nicht(compare_env, mo
     send_one_compare_preset(
         _preset(preset_id, [loc.id]), settings, uid, str(compare_env / "data"),
         all_locations_cache=[loc], target_date=TARGET_DATE,
+        tage_ab_ortstag=0,
         mail_sink=lambda subject, body: mail_calls.append(subject),
     )
 
@@ -489,6 +496,7 @@ def test_ac15_starker_ausschlag_nach_dem_briefing_wird_zugestellt(compare_env, m
     send_one_compare_preset(
         _preset(preset_id, [loc.id]), settings, uid, str(compare_env / "data"),
         all_locations_cache=[loc], target_date=TARGET_DATE,
+        tage_ab_ortstag=0,
         mail_sink=lambda subject, body: None,
     )
 
@@ -577,6 +585,7 @@ def test_ac16_briefing_setzt_das_gedaechtnis_aller_drei_orte_zurueck(compare_env
     send_one_compare_preset(
         _preset(preset_id, location_ids), settings, uid, str(compare_env / "data"),
         all_locations_cache=locs, target_date=TARGET_DATE,
+        tage_ab_ortstag=0,
         mail_sink=lambda subject, body: None,
     )
 
@@ -668,6 +677,7 @@ def test_ac17_amtlicher_eintrag_ueberlebt_den_briefing_reset(compare_env, monkey
     send_one_compare_preset(
         _preset(preset_id, [loc.id]), settings, uid, str(compare_env / "data"),
         all_locations_cache=[loc], target_date=TARGET_DATE,
+        tage_ab_ortstag=0,
         mail_sink=lambda subject, body: None,
     )
 
@@ -744,6 +754,7 @@ def test_ac18_briefing_von_nutzer_a_laesst_nutzer_b_unberuehrt(compare_env, monk
     send_one_compare_preset(
         _preset(preset_id, [loc.id]), settings, uid_a, str(compare_env / "data"),
         all_locations_cache=[loc], target_date=TARGET_DATE,
+        tage_ab_ortstag=0,
         mail_sink=lambda subject, body: None,
     )
 
@@ -910,6 +921,7 @@ def test_ortsvergleich_delegiert_an_den_geteilten_baustein(compare_env, monkeypa
     send_one_compare_preset(
         _preset(preset_id, location_ids), settings, uid, str(compare_env / "data"),
         all_locations_cache=locs, target_date=TARGET_DATE,
+        tage_ab_ortstag=0,
         mail_sink=lambda subject, body: None,
     )
 

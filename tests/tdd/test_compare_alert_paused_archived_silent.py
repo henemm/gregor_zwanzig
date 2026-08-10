@@ -988,7 +988,9 @@ def test_active_preset_with_same_fixture_is_due_for_regular_compare_briefing():
 
     due = presets_due_for_hour([active], hour=7, today=BRIEFING_TODAY)
 
-    assert due == [(active, BRIEFING_TODAY)], (
+    # Tripel seit #1661 (F003): (preset, target_date, tage_ab_ortstag) —
+    # Morgen-Slot briefed ueber den laufenden Tag, Versatz 0.
+    assert due == [(active, BRIEFING_TODAY, 0)], (
         "Aktiver Ortsvergleich (identische Fixture, nur ohne paused_at) muss "
         f"sein regulaeres Briefing bekommen — erhalten: {due!r}, erwartet "
         f"[(preset, {BRIEFING_TODAY})]. Ein zu breiter Riegel wuerde hier "
@@ -1046,7 +1048,8 @@ def test_active_preset_is_due_for_evening_compare_briefing():
     due = presets_due_for_hour([active], hour=18, today=BRIEFING_TODAY)
 
     expected_date = BRIEFING_TODAY + timedelta(days=1)
-    assert due == [(active, expected_date)], (
+    # Tripel seit #1661 (F003): der Abend-Slot briefed den Folgetag, Versatz +1.
+    assert due == [(active, expected_date, 1)], (
         "Aktiver Ortsvergleich mit Abend-Slot (identische Fixture, nur ohne "
         f"paused_at) muss sein regulaeres Briefing bekommen — erhalten: {due!r}, "
         f"erwartet [(preset, {expected_date})]. Ein zu breiter Riegel wuerde "
