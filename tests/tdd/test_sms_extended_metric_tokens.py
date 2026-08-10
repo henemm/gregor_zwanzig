@@ -35,7 +35,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
 
 from app.models import (
     ForecastDataPoint,
