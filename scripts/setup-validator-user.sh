@@ -18,6 +18,7 @@ USER="${GZ_VALIDATOR_USER:?GZ_VALIDATOR_USER muss gesetzt sein}"
 PASS="${GZ_VALIDATOR_PASS:?GZ_VALIDATOR_PASS muss gesetzt sein}"
 
 HTTP_CODE=$(curl -s -o /tmp/validator-setup.out -w "%{http_code}" -X POST "$URL/api/auth/register" \
+    -u "$USER:$PASS" \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"$USER\",\"password\":\"$PASS\"}")
 
@@ -29,6 +30,7 @@ case "$HTTP_CODE" in
         echo "Test-User '$USER' existiert bereits auf $URL (HTTP $HTTP_CODE) — Login wird verifiziert..."
         LOGIN_CODE=$(curl -s -o /tmp/validator-login.json -w "%{http_code}" \
             -X POST "$URL/api/auth/login" \
+            -u "$USER:$PASS" \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"$USER\",\"password\":\"$PASS\"}")
         if [ "$LOGIN_CODE" = "200" ]; then
