@@ -34,7 +34,7 @@ from output.renderers.day_window import (
     hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
 )
 from output.metric_format import THUNDER_LABEL_DE
-from output.renderers.email.helpers import fmt_val, format_trend_tokens
+from output.renderers.email.helpers import _THUNDER_MAP, fmt_val, format_trend_tokens
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
     render_official_alerts_unavailable_plain,
@@ -574,10 +574,27 @@ def _outlook_lines(multi_day_trend: list[dict]) -> list[str]:
     for stage in multi_day_trend:
         tok = format_trend_tokens(stage)
         weekday = stage.get("weekday", "")
-        pt, wt, tt = tok["precip_token"], tok["wind_token"], tok["thunder_token"]
+        pt, wt = tok["precip_token"], tok["wind_token"]
         precip_part = f"R{pt}" if pt != "-" else (tok["precip_str"] if tok["precip_str"] != "–" else "R–")
         wind_part = f"W{wt}" if wt != "-" else tok["wind_str"]
-        thunder_part = f"⚡{tt}" if tt != "-" else tok["thunder_plain"]
+        # Issue #1653: Tag/Nacht getrennt statt 24h-Peak -- Fall B zeigte
+        # bisher nur das staerkere Nachtgewitter, das Tagesgewitter kam nie
+        # durch.
+        # F004: dasselbe Tageswort-Kriterium wie in HTML- und Klartext-Mail --
+        # liegt eine Stundenreihe vor, entscheidet ausschliesslich das
+        # Tagesfenster. Vorher fiel dieser Zweig auf `thunder_plain` (das auf
+        # die Gehzeit geklemmte Aggregat) zurueck und schrieb "⚡HIGH · nachts
+        # hoch@0" -- ein Tagesgewitter, das es im Tagesfenster nicht gab.
+        dt = tok.get("thunder_day_token", "-")
+        nt = tok.get("thunder_night_token", "-")
+        if dt != "-":
+            thunder_part = f"⚡{dt}"
+        elif stage.get("hourly_thunder"):
+            thunder_part = _THUNDER_MAP["NONE"]["plain"]
+        else:
+            thunder_part = tok["thunder_plain"]
+        if nt != "-":
+            thunder_part += f" · nachts {nt}"
         trend_line = f"{weekday}  {tok['temp_str']}  {precip_part}  {wind_part}  {thunder_part}"
         lines.extend(_wrap(trend_line, _TG_PROSE_WIDTH))
         note = stage.get("note")

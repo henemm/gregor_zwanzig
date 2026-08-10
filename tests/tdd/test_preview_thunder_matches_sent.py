@@ -325,12 +325,18 @@ def test_ac6_email_preview_shows_thunder_outlook():
     Abendbriefing MIT gefuelltem `multi_day_trend` -> der Mehrtages-Ausblick
     ist aktiv (`outlook_active=True`), daher entfaellt die separate Sektion
     "⚡ Gewitter-Vorschau" jetzt bewusst (Dopplung, #1313). Der Gewitterhinweis
-    bleibt sichtbar - er wandert in die Ausblick-Tabelle ("⚡HIGH" bei der
+    bleibt sichtbar - er wandert in die Ausblick-Tabelle ("⚡hoch" bei der
     Folgeetappe). Frueher (vor #1313) stand hier "Gewitter-Vorschau in
     sent.email_plain" als Vorbedingung; das ist mit dem neuen Spec-Verhalten
     fuer aktiven Ausblick falsch geworden und wurde durch die aequivalente
     Pruefung auf die Ausblick-Tabelle ersetzt. Die eigentliche Prüfung (Vorschau
     == Versand) bleibt unveraendert bestehen.
+
+    Schreibweise nachgezogen (#1653/F004, 2026-08-10): die Marke lautet jetzt
+    "⚡hoch" statt "⚡HIGH" — das Tageswort der Ausblick-Zeile stammt seither aus
+    `thunder_day_token` (nach Tagesfenster gefilterte Stundenreihe) statt aus
+    dem Aggregat `stage["thunder"]`, und dieses Token fuehrt die deutschen
+    Stufenwoerter. Gleiche Stufe, gleiche Strenge, andere Schreibweise.
     """
     ctx = build_thunder_scenario()
     sent = send_report(*ctx)
@@ -340,14 +346,14 @@ def test_ac6_email_preview_shows_thunder_outlook():
     # Gewitter-Vorschau-Sektion, der Gewitterhinweis bleibt ueber die
     # Ausblick-Tabelle sichtbar.
     assert "Gewitter-Vorschau" not in sent.email_plain
-    assert "⚡HIGH" in sent.email_plain
+    assert "⚡hoch" in sent.email_plain
 
     # AC-6: die Vorschau zeigt exakt dasselbe Bild wie der Versand.
     assert "Gewitter-Vorschau" not in preview.email_plain, (
         "E-Mail-Vorschau zeigt die Gewitter-Vorschau-Sektion trotz aktivem "
         "Ausblick — sie divergiert von der versendeten E-Mail (#1313 E1)."
     )
-    assert "⚡HIGH" in preview.email_plain, (
+    assert "⚡hoch" in preview.email_plain, (
         f"E-Mail-Vorschau nennt den Gewitterhinweis der Folgeetappe nicht.\n"
         f"email_plain:\n{preview.email_plain}"
     )

@@ -35,6 +35,30 @@ from output.renderers.email.design_tokens import FONT_DATA
 from utils.geo import degrees_to_compass
 
 
+_THUNDER_TOKEN_RE = _re.compile(
+    r"^([a-zA-Zäöü]+)@(\d+)(?:\(([a-zA-Zäöü]+)@(\d+)\))?"
+)
+
+
+def _thunder_token_parts(token: Optional[str]):
+    """Zerlegt einen Gewitter-Token in (Erst-Wort, Erst-Stunde, Peak-Zusatz).
+
+    Issue #1653 (F005): ``render_threshold_peak_value`` haengt den
+    Spitzenwert als ``leicht@5(hoch@15)`` an, wenn Erst-Ueberschreitung und
+    Spitze im selben Fenster auseinanderfallen -- der meteorologische
+    Normalfall eines ueber den Nachmittag eskalierenden Gewitters. Wer nur
+    die erste Gruppe liest, unterschlaegt genau die Stufe, vor der der
+    Report warnen soll. Der Peak-Zusatz ist "" (leer), wenn Erst == Peak.
+    """
+    if not token or token == "-":
+        return None
+    m = _THUNDER_TOKEN_RE.match(token)
+    if not m:
+        return None
+    peak_suffix = f" ({m.group(3)} @{m.group(4)})" if m.group(3) else ""
+    return m.group(1), m.group(2), peak_suffix
+
+
 # ---------------------------------------------------------------------------
 # render_outlook_table — extrahiert aus html.py (Z.1116-1271, AC-1/AC-2)
 # ---------------------------------------------------------------------------
@@ -198,19 +222,47 @@ def render_outlook_table(
                         for g in hourly_gust if g is not None), default=None)
         # F002: Gew = Stufe + Uhrzeit (kein Fake-%), Hintergrund nach Level
         thunder_level = (stage.get("thunder", "NONE") or "NONE").upper()
-        if thunder_level in ("LOW", "MED", "HIGH"):
-            gew_str = _THUNDER_LEVEL_LABEL[thunder_level]
-            t_tok = tokens.get("thunder_token", "-")
-            _at = _re.search(r"@(\d+)", t_tok) if t_tok and t_tok != "-" else None
-            if _at:
-                gew_str += f" @{_at.group(1)}"
+        # Issue #1653: Tag- und Nachtanteil getrennt, damit ein Nachtgewitter
+        # nicht mehr hinter dem staerkeren Tageswert verschwindet -- oder
+        # umgekehrt. Wort UND Uhrzeit des Tagesteils stammen aus demselben
+        # Token und damit aus demselben Fenster; vorher kam das Wort aus
+        # `stage["thunder"]` (auf die Gehzeit geklemmtes Aggregat) und nur die
+        # Uhrzeit aus dem Tagesfenster -- zwei Rechnungen, die nur meist
+        # uebereinstimmten: sagte das Aggregat "NONE", waehrend im Tagesfenster
+        # ein Gewitter lag, verschwand der Tagesteil ganz.
+        day_part = None
+        d_tok = tokens.get("thunder_day_token", "-")
+        _d = _thunder_token_parts(d_tok)
+        if _d:
+            day_part = f"{_d[0]} @{_d[1]}{_d[2]}"
+        elif not (stage.get("hourly_thunder") or ()) and thunder_level in (
+            "LOW", "MED", "HIGH",
+        ):
+            # Ohne jede Stundenreihe kann der Split nichts sagen -- dann wie
+            # bisher die Stufe des Aggregats ohne Uhrzeit (Alt-Fixtures).
+            day_part = _THUNDER_LEVEL_LABEL[thunder_level]
+
+        night_part = None
+        n_tok = tokens.get("thunder_night_token", "-")
+        _m = _thunder_token_parts(n_tok)
+        if _m:
+            night_part = f"nachts {_m[0]} @{_m[1]}{_m[2]}"
+
+        if day_part and night_part:
+            gew_str = f"{day_part} · {night_part}"
+        elif day_part:
+            gew_str = day_part
+        elif night_part:
+            gew_str = night_part
+        else:
+            gew_str = "–"
+
+        if gew_str != "–":
             # Issue #1475 Nachbesserung (Punkt 4b): rein deskriptiver
             # Hagel-Zusatz an der Gewitter-Zelle (ADR-0007, kein Rat).
             _hail_note = _format_hail_note(stage.get("hail"))
             if _hail_note:
                 gew_str += f" · {_hail_note}"
-        else:
-            gew_str = "–"
 
         n_str = f"{temp_min:.0f}°" if temp_min is not None else "–"
         d_str = f"{temp_max:.0f}°" if temp_max is not None else "–"
@@ -303,11 +355,39 @@ def render_outlook_plain(
         # Precip str — zero decision from format_trend_tokens
         precip_str = tok["precip_str"]
 
+        # Issue #1653: das Tageswort stammt aus derselben Quelle wie in der
+        # HTML-Zelle -- `thunder_day_token` (nach Tagesfenster gefilterte
+        # Stundenreihe), nicht mehr aus `stage["thunder"]` ueber
+        # `tok['thunder_plain']` (auf die Gehzeit geklemmtes Aggregat). Zwei
+        # Rechnungen, die nur meist uebereinstimmten: sagte das Aggregat
+        # "NONE", waehrend im Tagesfenster ein Gewitter lag, verschwand es
+        # hier ganz -- und umgekehrt behauptete die Zeile ein Tagesgewitter,
+        # wenn das Aggregat eine Stufe trug, die Stundenreihe im Tagesfenster
+        # aber leer war.
+        from output.renderers.email.helpers import _THUNDER_MAP
+        thunder_word = tok["thunder_plain"]
+        _d_tok = tok.get("thunder_day_token", "-")
+        _dm = _thunder_token_parts(_d_tok)
+        if _dm:
+            thunder_word = f"⚡{_dm[0]}{_dm[2]}"
+        elif stage.get("hourly_thunder"):
+            # Stundenreihe da, im Tagesfenster aber kein Gewitter.
+            thunder_word = _THUNDER_MAP["NONE"]["plain"]
+        # Ohne jede Stundenreihe (Alt-Aufrufer, Compare) bleibt es beim
+        # Aggregatwort -- der Split kann dort nichts sagen.
+
         name_field = f"{name:<26} " if show_name else ""
         line = (
             f"{weekday:<3} {name_field}{tok['temp_str']:<8} "
-            f"{precip_str:<5} {tok['wind_str']:<5} {tok['thunder_plain']}"
+            f"{precip_str:<5} {tok['wind_str']:<5} {thunder_word}"
         )
+        # Issue #1653: Nacht-Zusatz mit Uhrzeit -- die Klartext-Zeile zeigte
+        # bisher ausschliesslich das Tageswort, ein Nachtgewitter erschien
+        # dort nie.
+        _n_tok = tok.get("thunder_night_token", "-")
+        _nm = _thunder_token_parts(_n_tok)
+        if _nm:
+            line += f" · nachts {_nm[0]} @{_nm[1]}{_nm[2]}"
         # Issue #1475 Nachbesserung (Punkt 4b): derselbe deskriptive
         # Hagel-Zusatz wie in der HTML-Ausblick-Tabelle (geteilte Quelle).
         from output.metric_format import format_hail_note
@@ -335,6 +415,8 @@ def build_outlook_row(
     *,
     sms_thresholds: Optional[dict] = None,
     metrics: Optional[list] = None,
+    day_window_start_hour: Optional[int] = None,
+    day_window_end_hour: Optional[int] = None,
 ) -> dict:
     """Baut ein Ausblick-Row-Dict aus einer SegmentWeatherSummary + Punktliste.
 
@@ -427,6 +509,11 @@ def build_outlook_row(
         "sms_threshold_wind": _sms.get("wind"),
         "sms_threshold_gust": _sms.get("gust"),
         "sms_threshold_thunder": _sms.get("thunder"),
+        # Issue #1653: konfiguriertes Tagesfenster fuer die Tag/Nacht-Trennung
+        # der Gewitter-Zelle. Ebenfalls None-gefiltert -- Aufrufer ohne Fenster
+        # (Compare, Bestandstests) erhalten ein zeichengleiches Row-Dict.
+        "day_window_start_hour": day_window_start_hour,
+        "day_window_end_hour": day_window_end_hour,
     }
     row.update({k: v for k, v in optional.items() if v is not None})
 

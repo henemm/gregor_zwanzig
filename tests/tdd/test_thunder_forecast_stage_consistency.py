@@ -321,7 +321,10 @@ class TestAC1RenderedOutputsAgree:
             f"SMS darf NICHT 'TH+:-' zeigen (Widerspruch zur E-Mail, Bug #1275): "
             f"{sms!r}"
         )
-        assert ("⚡HIGH" in email) or ("Starkes Gewitter" in email), (
+        # Schreibweise nachgezogen (#1653/F004, 2026-08-10): das Tageswort der
+        # Ausblick-Zeile stammt seither aus `thunder_day_token` und lautet
+        # deshalb "hoch" statt "HIGH". Gleiche Stufe, gleiche Strenge.
+        assert ("⚡hoch" in email) or ("Starkes Gewitter" in email), (
             f"E-Mail-Outlook/Vorschau muss HIGH-Gewitter für morgen ausdrücken "
             f"(Übereinstimmung mit der SMS): {email!r}"
         )

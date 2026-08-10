@@ -23,6 +23,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from app.day_window import hour_in_window
 from app.metric_catalog import (
     get_col_defs, get_metric, get_metric_by_col_key,
 )
@@ -989,6 +990,27 @@ def format_trend_tokens(stage: dict) -> dict:
         "TH", hourly_thunder, threshold=thunder_thr, is_level=True,
         level_labels=_TREND_THUNDER_LABELS,
     )
+    # Issue #1653: Tag und Nacht getrennt auswerten. Dieselbe Reihe, zwei
+    # Teilmengen -- der 24h-Peak oben verschluckte bisher das jeweils
+    # schwaechere der beiden Ereignisse und paarte ein Tageswort mit einer
+    # Nachtstunde. `thunder_token` bleibt unveraendert (eigenstaendige
+    # Groesse, von Bestandstests bewacht).
+    _win_start = stage.get("day_window_start_hour", DAY_WINDOW_START_HOUR)
+    _win_end = stage.get("day_window_end_hour", DAY_WINDOW_END_HOUR)
+    _day_samples = tuple(
+        s for s in hourly_thunder if hour_in_window(s.hour, _win_start, _win_end)
+    )
+    _night_samples = tuple(
+        s for s in hourly_thunder if not hour_in_window(s.hour, _win_start, _win_end)
+    )
+    thunder_day_token = render_threshold_peak_value(
+        "TH", _day_samples, threshold=thunder_thr, is_level=True,
+        level_labels=_TREND_THUNDER_LABELS,
+    )
+    thunder_night_token = render_threshold_peak_value(
+        "TH", _night_samples, threshold=thunder_thr, is_level=True,
+        level_labels=_TREND_THUNDER_LABELS,
+    )
 
     return {
         "temp_str": temp_str,
@@ -1007,6 +1029,9 @@ def format_trend_tokens(stage: dict) -> dict:
         "wind_token": wind_token,
         "gust_token": gust_token,
         "thunder_token": thunder_token,
+        # Issue #1653: Tag/Nacht getrennt (additiv)
+        "thunder_day_token": thunder_day_token,
+        "thunder_night_token": thunder_night_token,
     }
 
 
