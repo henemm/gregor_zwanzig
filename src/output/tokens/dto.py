@@ -47,6 +47,26 @@ class DailyForecast:
     # Default None -> jeder Bestandsaufruf bleibt zeichengleich. NUR `True`
     # erzeugt ueberhaupt ein sichtbares Zeichen (Suffix am `TH:`-Token).
     hail_flag: Optional[bool] = None
+    # Issue #1660 Scheibe B: 14 additive Felder (Muster #1410/#1475) fuer
+    # bisher waehlbare, aber wirkungslose Metriken. Alle mit Default (leeres
+    # Tupel bzw. None) -> jeder Bestandsaufruf bleibt zeichengleich (AC-11).
+    # Klasse (a) Threshold-Peak, Stunden-Samples:
+    humidity_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    dewpoint_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    cape_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    uv_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    cloud_total_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    cloud_low_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    cloud_mid_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    cloud_high_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    # Klasse (b) Invers-Min, Stunden-Samples:
+    visibility_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    freezing_level_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    # Klasse (c) Tageswert ohne Stunde:
+    wind_direction_sector: Optional[str] = None   # 8-Sektor-Kompasswert (WD)
+    precip_type_dominant: Optional[str] = None    # Ein-Buchstaben-Code G/S/M/R (PT)
+    sunshine_hours: Optional[float] = None        # unrunde Sonnenstunden (SU)
+    pressure_avg_hpa: Optional[float] = None      # Tagesmittel hPa (HP)
 
 
 @dataclass(frozen=True)

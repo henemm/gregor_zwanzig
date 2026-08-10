@@ -11,6 +11,7 @@ from output.tokens.dto import (
 )
 from output.tokens.metrics import (
     render_temperature, render_threshold_peak_value, render_int,
+    render_inverse_min_value,
 )
 
 FORECAST_TH = "TH:"
@@ -56,6 +57,11 @@ PRIORITY = {
     "FD": 4, "FK": 4, "FN": 4,
     "D": 6, "N": 6, "K": 6, "R": 7,
     "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, FORECAST_TH: 10,
+    # Issue #1660 Scheibe B: 14 waehlbare Metriken ohne bisherigen SMS-Token,
+    # gleiche Prioritaetsstufe wie die Wintersport-Token (DEC-4). Pflicht,
+    # weil `PRIORITY[sym]` an mehreren Stellen ungeschuetzt gelesen wird.
+    "HU": 2, "DP": 2, "WD": 2, "CP": 2, "PT": 2, "CT": 2, "CL": 2, "CM": 2,
+    "CH": 2, "VS": 2, "SU": 2, "UV": 2, "HP": 2, "NL": 2,
 }
 
 # Issue #1318: amtliche Warnungen faellen beim Kuerzen ZULETZT — hoeher als
@@ -77,6 +83,12 @@ POSITIONAL = [
     ("R", "forecast"),
     ("PR", "forecast"), ("W", "forecast"), ("G", "forecast"),
     (FORECAST_TH, "forecast"), (FORECAST_THP, "forecast"),
+    # Issue #1660 Scheibe B: eigener Block, Katalog-Reihenfolge (DEC-4).
+    ("HU", "forecast"), ("DP", "forecast"), ("WD", "forecast"),
+    ("CP", "forecast"), ("PT", "forecast"), ("CT", "forecast"),
+    ("CL", "forecast"), ("CM", "forecast"), ("CH", "forecast"),
+    ("VS", "forecast"), ("SU", "forecast"), ("UV", "forecast"),
+    ("HP", "forecast"), ("NL", "forecast"),
     (VIGI_HR, "vigilance"), (VIGI_TH, "vigilance"),
     ("Z:", "fire"), ("MAX", "fire"), ("M:", "fire"),
     # Issue #1435 E3b: Register-Kuerzel, Reihenfolge unveraendert.
@@ -150,6 +162,27 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
         value = _gap_or(value, has_gap)
     return Token(
         symbol=symbol, value=f"{value}{value_suffix}", category="forecast",
+        priority=PRIORITY.get(symbol, 5),
+        morning_visible=spec.morning_enabled if spec else True,
+        evening_visible=spec.evening_enabled if spec else True,
+    )
+
+
+def _mk_inverse_min_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
+                           rt: ReportType, has_gap: bool = False,
+                           unit_factor: float = 1.0, decimals: int = 0) -> Optional[Token]:
+    """Klasse (b) — Invers-Min (VS/NL). Issue #1660 Scheibe B, DEC-2b."""
+    if not _visible(spec, rt):
+        return None
+    if spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
+        value = f"\x00{spec.friendly_label}"
+    else:
+        thr = spec.threshold if (spec and spec.threshold is not None) else None
+        value = render_inverse_min_value(symbol, samples, thr,
+                                          unit_factor=unit_factor, decimals=decimals)
+        value = _gap_or(value, has_gap)
+    return Token(
+        symbol=symbol, value=value, category="forecast",
         priority=PRIORITY.get(symbol, 5),
         morning_visible=spec.morning_enabled if spec else True,
         evening_visible=spec.evening_enabled if spec else True,
@@ -319,6 +352,70 @@ def build_token_line(
                           has_gap=today.has_data_gap, value_suffix=suffix)
         if tok:
             tokens.append(tok)
+
+    # Issue #1660 Scheibe B, Klasse (a) Threshold-Peak — 8 bisher wirkungslose
+    # Metriken. Eigener Block statt Erweiterung der obigen Kernschleife: ohne
+    # MetricSpec UND ohne Daten entsteht KEIN Token (needs_spec-Muster der
+    # gefuehlten Trios, sonst brechen die Byte-Identitaets-Goldens AC-11 --
+    # anders als R/PR/W/G/TH:, die als Kernmetriken IMMER eine Spec tragen).
+    for sym, samples in (
+        ("HU", today.humidity_hourly), ("DP", today.dewpoint_hourly),
+        ("CP", today.cape_hourly), ("UV", today.uv_hourly),
+        ("CT", today.cloud_total_hourly), ("CL", today.cloud_low_hourly),
+        ("CM", today.cloud_mid_hourly), ("CH", today.cloud_high_hourly),
+    ):
+        spec = by_sym.get(sym)
+        if spec is None and not samples:
+            continue
+        tok = _mk_metric(sym, samples, spec, report_type, is_level=False,
+                          has_gap=today.has_data_gap)
+        if tok:
+            tokens.append(tok)
+
+    # Issue #1660 Scheibe B, Klasse (b) Invers-Min — VS/NL (Tages-Tiefstwert).
+    for sym, samples, unit_factor, decimals in (
+        ("VS", today.visibility_hourly, 0.001, 1),
+        ("NL", today.freezing_level_hourly, 1.0, 0),
+    ):
+        spec = by_sym.get(sym)
+        if spec is None and not samples:
+            continue
+        tok = _mk_inverse_min_metric(sym, samples, spec, report_type,
+                                      has_gap=today.has_data_gap,
+                                      unit_factor=unit_factor, decimals=decimals)
+        if tok:
+            tokens.append(tok)
+
+    # Issue #1660 Scheibe B, Klasse (c) Tageswert ohne Stunde — WD/PT (Text-
+    # Code) und SU/HP (ganzzahliger Wert via render_int).
+    for sym, str_val in (
+        ("WD", today.wind_direction_sector), ("PT", today.precip_type_dominant),
+    ):
+        spec = by_sym.get(sym)
+        if spec is None and str_val is None:
+            continue
+        if not _visible(spec, report_type):
+            continue
+        tokens.append(Token(
+            symbol=sym, value=_gap_or(str_val or "-", today.has_data_gap),
+            category="forecast", priority=PRIORITY.get(sym, 5),
+            morning_visible=spec.morning_enabled if spec else True,
+            evening_visible=spec.evening_enabled if spec else True,
+        ))
+    for sym, num_val in (
+        ("SU", today.sunshine_hours), ("HP", today.pressure_avg_hpa),
+    ):
+        spec = by_sym.get(sym)
+        if spec is None and num_val is None:
+            continue
+        if not _visible(spec, report_type):
+            continue
+        tokens.append(Token(
+            symbol=sym, value=_gap_or(render_int(num_val), today.has_data_gap),
+            category="forecast", priority=PRIORITY.get(sym, 5),
+            morning_visible=spec.morning_enabled if spec else True,
+            evening_visible=spec.evening_enabled if spec else True,
+        ))
 
     if tomorrow is not None:
         spec = by_sym.get(FORECAST_THP) or by_sym.get("TH+")

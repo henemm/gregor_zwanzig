@@ -72,3 +72,26 @@ def render_temperature(value: Optional[float]) -> str:
 
 
 render_int = render_temperature
+
+
+def render_inverse_min_value(
+    symbol: str, samples: tuple[HourlyValue, ...],
+    threshold: Optional[float], *, unit_factor: float = 1.0, decimals: int = 0,
+) -> str:
+    """Klasse (b) — Invers-Min: Tages-Tiefstwert im Fenster mit Stunde, kein
+    Peak-Klammer-Zusatz (`{min}@{h}`). Issue #1660 Scheibe B, DEC-2b.
+
+    '-' bei fehlenden Samples ODER wenn eine konfigurierte Schwelle NICHT
+    unterschritten wird (Invers-Gate: nur `min <= threshold` zeigt einen
+    Wert). Ohne Schwelle immer sichtbar. `unit_factor`/`decimals` erlauben
+    eine Anzeige-Einheit ungleich dem DTO-Feld (VS: Meter -> km, §7 Known
+    Limitations 7).
+    """
+    if not samples:
+        return "-"
+    lowest = min(samples, key=lambda s: (s.value, s.hour))
+    converted = lowest.value * unit_factor
+    if threshold is not None and converted > threshold:
+        return "-"
+    val_str = f"{converted:.{decimals}f}" if decimals else f"{int(round(converted))}"
+    return f"{val_str}@{lowest.hour}"

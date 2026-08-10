@@ -21,9 +21,11 @@ from zoneinfo import ZoneInfo
 
 from app.metric_catalog import get_sms_code
 from app.models import (
-    ExposedSection, NormalizedTimeseries, RiskLevel, RiskType, SegmentWeatherData,
+    ExposedSection, NormalizedTimeseries, PrecipType, RiskLevel, RiskType,
+    SegmentWeatherData,
 )
 from services.risk_engine import RiskEngine
+from services.weather_metrics import WeatherMetricsService
 from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt, local_hour
 from output.metric_format import hail_priority, thunder_label_value
@@ -70,6 +72,23 @@ _SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
     "snow_depth",
     "snowfall_limit",
     "fresh_snow",
+    # Issue #1660 Scheibe B: 14 waehlbare Metriken, bisher ohne SMS-Token.
+    # Alle 1:1 (kein Kuerzel-Mehrfach wie wind_chill) -> gehoeren in diese
+    # Register-Ableitung, NICHT in SMS_MULTI_SYMBOLS_BY_METRIC (DEC-1).
+    "humidity",
+    "dewpoint",
+    "wind_direction",
+    "cape",
+    "precip_type",
+    "cloud_total",
+    "cloud_low",
+    "cloud_mid",
+    "cloud_high",
+    "visibility",
+    "sunshine",
+    "uv_index",
+    "pressure",
+    "freezing_level",
 )
 
 # Benannte Ausnahme von der Register-Ableitung: 'TH:' ist Grammatikform (der
@@ -170,6 +189,59 @@ def _official_alert_entries(
     return official_alerts_to_sms_entries(alerts, tz, min_level=min_level)
 
 
+# Issue #1660 Scheibe B, Klasse (c): 8-Sektor-Kompass (Sektorbreite 45deg,
+# zentriert auf den Sektor-Namen) und Niederschlagsart-Rang. Eigene, kleine
+# Ableitungen statt eines Imports der NormalizedTimeseries-gebundenen
+# WeatherMetricsService._compute_precip_type() (DEC-2c/Spec §3).
+_COMPASS_SECTORS = ["N", "NO", "O", "SO", "S", "SW", "W", "NW"]
+
+_PRECIP_TYPE_SEVERITY = {
+    PrecipType.RAIN: 0,
+    PrecipType.MIXED: 1,
+    PrecipType.SNOW: 2,
+    PrecipType.FREEZING_RAIN: 3,
+}
+_PRECIP_TYPE_CODE = {
+    PrecipType.RAIN: "R",
+    PrecipType.MIXED: "M",
+    PrecipType.SNOW: "S",
+    PrecipType.FREEZING_RAIN: "G",
+}
+
+
+def _sector_for_degrees(deg: float) -> str:
+    idx = int(((deg % 360) + 22.5) // 45) % 8
+    return _COMPASS_SECTORS[idx]
+
+
+def _dominant_wind_sector(samples: list[tuple[int, float, float]]) -> Optional[str]:
+    """``samples``: (Stunde, Windrichtung Grad, Windgeschwindigkeit km/h).
+    Haeufigster 8-Sektor; bei Gleichstand entscheidet der Sektor zur Stunde
+    des Wind-Peaks (DEC-2c)."""
+    if not samples:
+        return None
+    from collections import Counter
+    sectors = [(_sector_for_degrees(deg), hour, speed) for hour, deg, speed in samples]
+    counts = Counter(s for s, _, _ in sectors)
+    max_count = max(counts.values())
+    winners = {s for s, c in counts.items() if c == max_count}
+    if len(winners) == 1:
+        return next(iter(winners))
+    peak = max(sectors, key=lambda t: (t[2], t[1]))
+    return peak[0]
+
+
+def _dominant_precip_type_code(types: list[PrecipType]) -> Optional[str]:
+    """Schwerster Typ nach Rang FREEZING_RAIN > SNOW > MIXED > RAIN, bei
+    Gleichstand nach Haeufigkeit (DEC-2c)."""
+    if not types:
+        return None
+    from collections import Counter
+    counts = Counter(types)
+    winner = max(counts, key=lambda t: (counts[t], _PRECIP_TYPE_SEVERITY.get(t, 0)))
+    return _PRECIP_TYPE_CODE.get(winner)
+
+
 def _segments_to_normalized_forecast(
     segments: list[SegmentWeatherData],
     *,
@@ -260,6 +332,24 @@ def _segments_to_normalized_forecast(
     pop_samples: list[HourlyValue] = []
     thunder_samples: list[HourlyValue] = []
     hail_values: list[Optional[bool]] = []
+    # Issue #1660 Scheibe B, Klasse (a): 8 Stunden-Sample-Listen (nur > 0,
+    # analog rain/wind/gust — Known Limitations Punkt 8 zu DP).
+    humidity_samples: list[HourlyValue] = []
+    dewpoint_samples: list[HourlyValue] = []
+    cape_samples: list[HourlyValue] = []
+    uv_samples: list[HourlyValue] = []
+    cloud_total_samples: list[HourlyValue] = []
+    cloud_low_samples: list[HourlyValue] = []
+    cloud_mid_samples: list[HourlyValue] = []
+    cloud_high_samples: list[HourlyValue] = []
+    # Klasse (b): OHNE > 0-Filter (DEC-2b) — auch kleine/negative Werte gueltig.
+    visibility_samples: list[HourlyValue] = []
+    freezing_level_samples: list[HourlyValue] = []
+    # Klasse (c): Rohdaten fuer die Tageswert-Ableitung nach der Schleife.
+    wind_direction_samples: list[tuple[int, float, float]] = []  # (h, deg, speed)
+    precip_types: list[PrecipType] = []
+    pressure_values: list[float] = []
+    window_points: list = []  # fuer WeatherMetricsService.calculate_sunny_hours
 
     # Bug #925: Stunden-Token aus der ECHTEN Stunden-Zeitreihe (Ortszeit)
     # ableiten — deckungsgleich mit der E-Mail-Tabelle. Onset@h(Peak@h) statt
@@ -269,6 +359,7 @@ def _segments_to_normalized_forecast(
         start_hour=day_window_start_hour, end_hour=day_window_end_hour,
     ):
         lh = local_hour(dp.ts, tz)
+        window_points.append(dp)
         if dp.precip_1h_mm is not None and dp.precip_1h_mm > 0:
             rain_samples.append(HourlyValue(lh, float(dp.precip_1h_mm)))
         if dp.wind10m_kmh is not None and dp.wind10m_kmh > 0:
@@ -288,6 +379,35 @@ def _segments_to_normalized_forecast(
         # Zeitreihe wie die Gewitterstufe -- die ROHEN Werte inkl. `None`
         # ("unbekannt") sammeln, die Prioritaet entscheidet unten.
         hail_values.append(getattr(dp, "hail_flag", None))
+        # Issue #1660 Scheibe B: dieselbe gefensterte Zeitreihe speist die 14
+        # neuen Metriken (§3 der Spec).
+        if dp.humidity_pct is not None and dp.humidity_pct > 0:
+            humidity_samples.append(HourlyValue(lh, float(dp.humidity_pct)))
+        if dp.dewpoint_c is not None and dp.dewpoint_c > 0:
+            dewpoint_samples.append(HourlyValue(lh, float(dp.dewpoint_c)))
+        if dp.cape_jkg is not None and dp.cape_jkg > 0:
+            cape_samples.append(HourlyValue(lh, float(dp.cape_jkg)))
+        if dp.uv_index is not None and dp.uv_index > 0:
+            uv_samples.append(HourlyValue(lh, float(dp.uv_index)))
+        if dp.cloud_total_pct is not None and dp.cloud_total_pct > 0:
+            cloud_total_samples.append(HourlyValue(lh, float(dp.cloud_total_pct)))
+        if dp.cloud_low_pct is not None and dp.cloud_low_pct > 0:
+            cloud_low_samples.append(HourlyValue(lh, float(dp.cloud_low_pct)))
+        if dp.cloud_mid_pct is not None and dp.cloud_mid_pct > 0:
+            cloud_mid_samples.append(HourlyValue(lh, float(dp.cloud_mid_pct)))
+        if dp.cloud_high_pct is not None and dp.cloud_high_pct > 0:
+            cloud_high_samples.append(HourlyValue(lh, float(dp.cloud_high_pct)))
+        if dp.visibility_m is not None:
+            visibility_samples.append(HourlyValue(lh, float(dp.visibility_m)))
+        if dp.freezing_level_m is not None:
+            freezing_level_samples.append(HourlyValue(lh, float(dp.freezing_level_m)))
+        if dp.wind_direction_deg is not None:
+            speed = float(dp.wind10m_kmh) if dp.wind10m_kmh is not None else 0.0
+            wind_direction_samples.append((lh, float(dp.wind_direction_deg), speed))
+        if dp.precip_type is not None:
+            precip_types.append(dp.precip_type)
+        if dp.pressure_msl_hpa is not None:
+            pressure_values.append(float(dp.pressure_msl_hpa))
 
     # Fail-soft: Segmente ohne Stunden-Zeitreihe (Provider-Fehler) → Etappen-
     # Aggregat am Etappen-Start als Rückfall (Bug #398-Verhalten). Bleibt
@@ -322,11 +442,41 @@ def _segments_to_normalized_forecast(
                 best[s.hour] = s.value
         return tuple(HourlyValue(h, best[h]) for h in sorted(best))
 
+    # Issue #1660 Scheibe B, Klasse (b): Dedup behaelt den TIEFSTwert je
+    # Stunde (invers zu obigem _dedup_by_hour, DEC-2b).
+    def _dedup_by_hour_min(samples: list[HourlyValue]) -> tuple[HourlyValue, ...]:
+        best: dict[int, float] = {}
+        for s in samples:
+            if s.hour not in best or s.value < best[s.hour]:
+                best[s.hour] = s.value
+        return tuple(HourlyValue(h, best[h]) for h in sorted(best))
+
     rain_samples_d = _dedup_by_hour(rain_samples)
     wind_samples_d = _dedup_by_hour(wind_samples)
     gust_samples_d = _dedup_by_hour(gust_samples)
     pop_samples_d = _dedup_by_hour(pop_samples)
     thunder_samples_d = _dedup_by_hour(thunder_samples)
+    humidity_samples_d = _dedup_by_hour(humidity_samples)
+    dewpoint_samples_d = _dedup_by_hour(dewpoint_samples)
+    cape_samples_d = _dedup_by_hour(cape_samples)
+    uv_samples_d = _dedup_by_hour(uv_samples)
+    cloud_total_samples_d = _dedup_by_hour(cloud_total_samples)
+    cloud_low_samples_d = _dedup_by_hour(cloud_low_samples)
+    cloud_mid_samples_d = _dedup_by_hour(cloud_mid_samples)
+    cloud_high_samples_d = _dedup_by_hour(cloud_high_samples)
+    visibility_samples_d = _dedup_by_hour_min(visibility_samples)
+    freezing_level_samples_d = _dedup_by_hour_min(freezing_level_samples)
+
+    # Klasse (c): Tageswerte nach der Schleife (§3 der Spec).
+    wind_direction_sector = _dominant_wind_sector(wind_direction_samples)
+    precip_type_dominant = _dominant_precip_type_code(precip_types)
+    sunshine_hours = (
+        WeatherMetricsService.calculate_sunny_hours(window_points)
+        if window_points else None
+    )
+    pressure_avg_hpa = (
+        sum(pressure_values) / len(pressure_values) if pressure_values else None
+    )
 
     # Issue #121: worst-case daily confidence aggregation over segments.
     confs = [s.aggregated.confidence_pct_min for s in segments
@@ -377,6 +527,21 @@ def _segments_to_normalized_forecast(
         # Werte -- der EINE geteilte Aggregations-Helfer (kein zweiter
         # Rechenweg neben `weather_metrics._compute_hail_flag`).
         hail_flag=hail_priority(hail_values),
+        # Issue #1660 Scheibe B: 14 additive Felder, additiv-DTO (DEC-5).
+        humidity_hourly=humidity_samples_d,
+        dewpoint_hourly=dewpoint_samples_d,
+        cape_hourly=cape_samples_d,
+        uv_hourly=uv_samples_d,
+        cloud_total_hourly=cloud_total_samples_d,
+        cloud_low_hourly=cloud_low_samples_d,
+        cloud_mid_hourly=cloud_mid_samples_d,
+        cloud_high_hourly=cloud_high_samples_d,
+        visibility_hourly=visibility_samples_d,
+        freezing_level_hourly=freezing_level_samples_d,
+        wind_direction_sector=wind_direction_sector,
+        precip_type_dominant=precip_type_dominant,
+        sunshine_hours=sunshine_hours,
+        pressure_avg_hpa=pressure_avg_hpa,
     )
     # Issue #1349: Flag ueber die Segmente aggregieren (Muster identisch zum
     # E-Mail-Renderer, output/renderers/email/unavailable_hint.py) — die
