@@ -49,11 +49,11 @@ func TestBriefingDispatch_UnifiedSingleCronEntry(t *testing.T) {
 	entries := sched.cron.Entries()
 	// Nach der Vereinheitlichung kollabieren die zwei "0 * * * *"-Briefing-
 	// Einträge (trip_reports_hourly, compare_presets_daily) zu einem
-	// briefing_dispatch-Eintrag → 9 - 1 = 8 Cron-Einträge insgesamt.
-	// AKTUELL (vor Implementierung): 9 Einträge → dieser Test ist RED.
-	if len(entries) != 8 {
-		t.Fatalf("expected 8 cron entries after unifying briefing jobs into "+
-			"briefing_dispatch, got %d", len(entries))
+	// briefing_dispatch-Eintrag. Issue #1676 S1 hat seither einen weiteren
+	// eigenstaendigen Cron-Eintrag (premium_sms_poll) ergaenzt → 8 + 1 = 9.
+	if len(entries) != 9 {
+		t.Fatalf("expected 9 cron entries after unifying briefing jobs into "+
+			"briefing_dispatch (+premium_sms_poll, #1676 S1), got %d", len(entries))
 	}
 
 	status := sched.Status()
@@ -61,11 +61,11 @@ func TestBriefingDispatch_UnifiedSingleCronEntry(t *testing.T) {
 	if !ok {
 		t.Fatalf("Status jobs should be a slice, got %T", status["jobs"])
 	}
-	// Verhaltensneutral nach außen: weiterhin 9 logische Job-Zeilen im Status,
-	// auch wenn intern nur noch 8 Cron-Einträge existieren.
-	if len(jobs) != 9 {
-		t.Fatalf("expected Status() to still expose 9 job rows (unified cron "+
-			"entry expands into 2 logical rows), got %d", len(jobs))
+	// Verhaltensneutral nach außen: weiterhin 9 logische Job-Zeilen aus dem
+	// Vor-#1676-Bestand plus 1 neue (premium_sms_poll) = 10.
+	if len(jobs) != 10 {
+		t.Fatalf("expected Status() to expose 10 job rows (unified cron "+
+			"entry expands into 2 logical rows, +premium_sms_poll), got %d", len(jobs))
 	}
 
 	var sawTripReports, sawComparePresets bool

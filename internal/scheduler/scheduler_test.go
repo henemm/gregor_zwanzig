@@ -196,8 +196,8 @@ func TestStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("Status jobs should be a slice, got %T", status["jobs"])
 	}
-	if len(jobs) != 9 {
-		t.Fatalf("Expected 9 jobs, got %d", len(jobs))
+	if len(jobs) != 10 {
+		t.Fatalf("Expected 10 jobs, got %d", len(jobs))
 	}
 
 	// Each job should have id, name, next_run, last_run

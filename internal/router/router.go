@@ -70,6 +70,9 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/auth/telegram-link", handler.GetTelegramLinkHandler(deps.Store, deps.TelegramTokenStore))
 	r.Get("/api/auth/telegram-status", handler.GetTelegramStatusHandler(deps.Store))
 	r.Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(deps.Store, deps.TelegramTokenStore))
+	// Issue #1676 Scheibe S1: Premium-SMS-Rueckkanal — lernt die von Garmin
+	// vergebene Rueckadresse (localhost-only, aufgerufen vom Python-Core).
+	r.Post("/api/internal/premium-sms-learn", handler.PostPremiumSmsLearnHandler(deps.Store))
 	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected)
 	r.Post("/api/webhooks/telegram/{secret}", handler.TelegramWebhookHandler(deps.Config.PythonCoreURL))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(deps.Config))

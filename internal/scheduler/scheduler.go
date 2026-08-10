@@ -154,6 +154,10 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)", nil},
 		{"7,22,37,52 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (offset 7/22/37/52 min)", nil},
 		{"*/15 * * * *", s.compareOfficialAlertChecks, "compare_official_alert_checks", "Compare Official Alert Checks (every 15 min)", nil},
+		// Issue #1676 Scheibe S1: Premium-SMS-Rueckkanal — pollt das seven.io-
+		// Journal auf eingehende Garmin-Nachrichten (globaler Job, kein
+		// Nutzer-Fan-out, analog inboundCommands()).
+		{"*/5 * * * *", s.premiumSmsPoll, "premium_sms_poll", "Premium SMS Poll (every 5min)", nil},
 	}
 	for _, j := range jobs {
 		eid, _ := s.cron.AddFunc(j.expr, j.fn)
@@ -166,7 +170,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
-	log.Printf("[scheduler] Started: 8 cron entries (9 jobs), timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: 9 cron entries (10 jobs), timezone %s", s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.
@@ -380,6 +384,64 @@ func (s *Scheduler) inboundCommands() {
 	s.recordRun("inbound_command_poll", func() error {
 		return s.triggerGlobalEndpoint("/api/scheduler/inbound-commands")
 	})
+}
+
+// premiumSmsPoll triggert den seven.io-Journal-Abruf des Python-Core (Issue
+// #1676 S1). Globaler Job (kein Nutzer-Fan-out) — der Python-Reader iteriert
+// selbst ueber das Journal, analog inboundCommands().
+//
+// Fix F002: bewusst NICHT ueber triggerGlobalEndpoint() (das wertet nur den
+// HTTP-Statuscode aus) -- der Python-Endpunkt meldet einen Lernfehlschlag
+// mit HTTP 200 UND `failed`/`status` im Antwortkoerper (Hausnorm der
+// Nachbar-Endpunkte trigger_trip_reports/trigger_compare_presets_daily,
+// Issue #766/#1290). triggerPremiumSmsPollEndpoint() wertet diesen Koerper
+// aus, damit ein dauerhafter Fehlschlag in /api/scheduler/status sichtbar
+// wird -- ein voruebergehender heilt sich durch den Zeiger-Fix (Fix F001,
+// Python-Seite) im naechsten Lauf von selbst.
+func (s *Scheduler) premiumSmsPoll() {
+	s.recordRun("premium_sms_poll", func() error {
+		return s.triggerPremiumSmsPollEndpoint()
+	})
+}
+
+// triggerPremiumSmsPollEndpoint ruft POST /api/scheduler/inbound-sms auf und
+// wertet den Antwortkoerper wie triggerEndpointForUser() aus: failed > 0 ist
+// ein harter Fehler, status == "partial" (ohne failed) ein Teilerfolg.
+// Lokal fuer diesen Job -- triggerGlobalEndpoint() bleibt unveraendert, weil
+// inbound_command_poll und weitere Jobs daran haengen, die dieses Verhalten
+// nicht wollen.
+func (s *Scheduler) triggerPremiumSmsPollEndpoint() error {
+	url := s.pythonURL + "/api/scheduler/inbound-sms"
+	resp, err := s.client.Post(url, "application/json", nil)
+	if err != nil {
+		return fmt.Errorf("HTTP error: %w", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	var parsed triggerResponseBody
+	if jsonErr := json.Unmarshal(body, &parsed); jsonErr == nil {
+		if parsed.Failed > 0 {
+			return fmt.Errorf(
+				"/api/scheduler/inbound-sms reported %d failed learn call(s) "+
+					"(status=%s, count=%d): %s",
+				parsed.Failed, parsed.Status, parsed.Count, string(body),
+			)
+		}
+		if parsed.Status == "partial" {
+			return &partialRunError{msg: fmt.Sprintf(
+				"/api/scheduler/inbound-sms reported partial status (count=%d): %s",
+				parsed.Count, string(body),
+			)}
+		}
+	}
+
+	log.Printf("[scheduler] /api/scheduler/inbound-sms → %d", resp.StatusCode)
+	return nil
 }
 
 // comparePresetsDaily triggert den Ortsvergleich-Slot-Check. Der Heartbeat-

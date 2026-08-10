@@ -2,9 +2,9 @@
 entity_id: egress_guard_sms
 type: module
 created: 2026-07-24
-updated: 2026-07-24
+updated: 2026-08-10
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [egress, isolation, sms, staging]
 workflow: fix-1336-sms-egress
 ---
@@ -211,6 +211,15 @@ aus beiden Dateien parst und vergleicht.
   Spec, ggf. Sammel-Eintrag #1199 bei Bedarf.
 - Der `debug`-Request-Parameter von seven.io ist bewusst NICHT Teil dieser Lösung (laut
   Anbieter deprecated) — Isolation läuft ausschließlich über den separaten Sandbox-Key.
+- **Der Sandbox-Key isoliert nachweislich nur den Sendepfad, nicht den Lesepfad
+  (gemessen 2026-08-10, Issue #1676 Scheibe S1).** `GET /api/journal/inbound` liefert mit
+  `GZ_SEVEN_SANDBOX_KEY` dieselben Daten wie mit dem Produktiv-Key — es gibt keinen
+  sicheren Ersatzschlüssel fürs Lesen. Der neue Inbound-Reader
+  (`src/services/inbound_sms_reader.py`, `docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md`)
+  behilft sich deshalb mit einer eigenen Herkunftssperre (`origin_guard.classify_origin`):
+  außerhalb Produktion kein Journal-Abruf, außer ein expliziter Trockenlauf-Schalter ist
+  gesetzt. Dieser Channel-Guard (`_guard_test_mode_sandbox_key`) selbst bleibt unverändert —
+  die Lücke betrifft nur den neuen Lesepfad, nicht `SMSOutput.send()`.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -232,3 +241,6 @@ neues Prüfdatum nötig.
 ## Changelog
 
 - 2026-07-24: Initial spec erstellt — Issue #1336, Scheibe B von #1337
+- 2026-08-10: Known Limitations ergänzt — Sandbox-Key isoliert nur den Sendepfad, nicht
+  `GET /api/journal/inbound` (gemessen bei Issue #1676 Scheibe S1, die daraus einen eigenen
+  Herkunfts-Guard im neuen Inbound-Reader baut). Kein Code in dieser Spec geändert.

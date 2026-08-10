@@ -124,6 +124,34 @@ def trigger_inbound():
     return {"status": "ok", "count": count}
 
 
+@router.post("/inbound-sms")
+def trigger_inbound_sms():
+    """Trigger Premium-SMS-Rueckkanal-Polling (Issue #1676 Scheibe S1).
+
+    Fix F001 (Adversary-Fund): der Status wird aus dem tatsaechlichen
+    Fehlschlag-Zaehler abgeleitet (Hausnorm run_briefing_dispatch(),
+    dispatch_orchestrator.py:157), nicht mehr bedingungslos "ok" gemeldet --
+    sonst bleibt ein wiederholter Lernfehler (z.B. Go-API-Neustart waehrend
+    des Polls) unsichtbar, obwohl die Garmin-Rueckadresse verloren geht.
+
+    HTTP bleibt bei 200 -- Hausnorm der Nachbar-Endpunkte
+    `trigger_trip_reports` (Issue #766) und `trigger_compare_presets_daily`
+    (Issue #1290), beide melden `status: "partial"` ebenfalls mit HTTP 200:
+    die Anfrage wurde ordentlich bearbeitet, ein 503 waere eine falsche
+    Aussage ueber die HTTP-Ebene. Die Sichtbarkeit fuer den Zeitplaner
+    entsteht stattdessen ueber den Antwortkoerper -- ausgewertet in
+    `internal/scheduler/scheduler.go::premiumSmsPoll()` (Fix F002).
+    """
+    from services.inbound_sms_reader import InboundSmsReader
+
+    settings = Settings()
+    reader = InboundSmsReader()
+    count = reader.poll_and_process(settings)
+    failed = reader.last_failed_count
+    status = "partial" if failed > 0 else "ok"
+    return {"status": status, "count": count, "failed": failed}
+
+
 @router.post("/inbound-telegram")
 def trigger_inbound_telegram():
     """Trigger Telegram Bot polling."""
