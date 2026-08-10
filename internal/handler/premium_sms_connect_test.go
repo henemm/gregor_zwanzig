@@ -72,6 +72,12 @@ func newLearnRequest(remoteAddr string, body map[string]any) *http.Request {
 	return req
 }
 
+func newLearnRequestWithHeader(remoteAddr, headerName, headerValue string, body map[string]any) *http.Request {
+	req := newLearnRequest(remoteAddr, body)
+	req.Header.Set(headerName, headerValue)
+	return req
+}
+
 // ---------------------------------------------------------------------------
 // AC-4 UND AC-1 (Persistenz-Haelfte): genau ein Premium-Kandidat ohne
 // gespeicherten Treffer -> lernt tatsaechlich am persistierten user.json.
@@ -245,6 +251,60 @@ func TestLearnRejectsNonLocalhostCaller(t *testing.T) {
 	premium := mustLoadUser(t, s, "premium-user")
 	if premium.PremiumSmsReplyTo != "" {
 		t.Error("Nicht-Localhost-Aufruf darf NIE etwas persistieren")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Sicherheitsfix (Team-Lead-Befund, 2026-08-10): RemoteAddr allein reicht
+// nicht -- nginx proxyt auf denselben Host, RemoteAddr ist dann IMMER
+// 127.0.0.1. Eine Anfrage mit Proxy-Header ist zwangslaeufig durch nginx
+// gelaufen und muss abgelehnt werden, auch wenn RemoteAddr Loopback vortaeuscht.
+// ---------------------------------------------------------------------------
+
+func TestLearnRejectsRequestWithForwardedForHeaderEvenWithUniqueCandidate(t *testing.T) {
+	s := learnTestStore(t)
+	mustSaveUser(t, s, model.User{ID: "premium-user", Tier: "premium"})
+
+	h := PostPremiumSmsLearnHandler(s)
+	// Genau EIN Premium-Kandidat -- ohne den Proxy-Header waere das ein
+	// eindeutiger Treffer (AC-4). Der Header allein muss trotzdem ablehnen:
+	// die Mehrdeutigkeitsregel darf nicht die einzige Schutzschicht sein.
+	req := newLearnRequestWithHeader("127.0.0.1:54321", "X-Forwarded-For", "203.0.113.5",
+		map[string]any{"from": garminFromA})
+	rr := httptest.NewRecorder()
+	h(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("erwartet 403 bei X-Forwarded-For trotz eindeutigem Kandidaten, bekam %d, body=%s",
+			rr.Code, rr.Body.String())
+	}
+
+	premium := mustLoadUser(t, s, "premium-user")
+	if premium.PremiumSmsReplyTo != "" {
+		t.Error("proxierte Anfrage darf NIE etwas persistieren, auch nicht bei eindeutigem Kandidaten")
+	}
+}
+
+func TestLearnRejectsRequestWithRealIPOrForwardedProtoHeader(t *testing.T) {
+	for _, headerName := range []string{"X-Real-IP", "X-Forwarded-Proto"} {
+		t.Run(headerName, func(t *testing.T) {
+			s := learnTestStore(t)
+			mustSaveUser(t, s, model.User{ID: "premium-user", Tier: "premium"})
+
+			h := PostPremiumSmsLearnHandler(s)
+			req := newLearnRequestWithHeader("127.0.0.1:54321", headerName, "https",
+				map[string]any{"from": garminFromA})
+			rr := httptest.NewRecorder()
+			h(rr, req)
+
+			if rr.Code != http.StatusForbidden {
+				t.Fatalf("erwartet 403 bei %s, bekam %d, body=%s", headerName, rr.Code, rr.Body.String())
+			}
+			premium := mustLoadUser(t, s, "premium-user")
+			if premium.PremiumSmsReplyTo != "" {
+				t.Errorf("proxierte Anfrage (%s) darf NIE etwas persistieren", headerName)
+			}
+		})
 	}
 }
 

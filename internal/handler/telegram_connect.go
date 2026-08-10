@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -171,9 +170,7 @@ func GetTelegramStatusHandler(s *store.Store) http.HandlerFunc {
 // Resolves the one-time token to a user_id and saves the chat_id.
 func PostTelegramConnectHandler(s *store.Store, ts *TelegramTokenStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		remoteHost := r.RemoteAddr
-		if !strings.HasPrefix(remoteHost, "127.0.0.1:") && !strings.HasPrefix(remoteHost, "[::1]:") {
-			http.Error(w, "forbidden", http.StatusForbidden)
+		if !requireLocalOnly(w, r) {
 			return
 		}
 
