@@ -4,7 +4,7 @@ type: module
 created: 2026-08-10
 updated: 2026-08-10
 status: draft
-version: "1.3"
+version: "1.5"
 tags: [sms, inbound, premium, garmin, seven-io, dual-stack]
 ---
 
@@ -59,6 +59,8 @@ Frontend (folgt in S2/S3).
 | `internal/store/store.go::ListUserIDs/LoadUser/SaveUser` | module | Nutzer-Iteration + Read-Modify-Write mit Merge (Go bleibt einziger Schreiber von `user.json`) |
 | `internal/handler/telegram_connect.go` | Vorbild | localhost-only-Sperre, Handler-Aufbau |
 | `internal/handler/localhost_guard.go` | NEU (v1.4) | `requireLocalOnly()` — wirksame Loopback-Sperre, s.u. |
+| `GZ_SKIP_FRONTEND_BROWSER_GATE` (Konvention, `staging_gate.py`) | Vorbild | lauter, exakter Env-Var-Schalter mit stderr-Meldung — Muster für `GZ_PREMIUM_SMS_POLL_DRYRUN` |
+| `docs/adr/0015-dual-stack-zielarchitektur.md` | ADR | Zuständigkeitsgrenze Python-Core (Fachlogik, Polling) vs. Go-API (Persistenz, `user.json`) |
 
 > **Sicherheitsnachtrag v1.4 (2026-08-10, bei der Staging-Verifikation gemessen):** Die vom Vorbild
 > uebernommene „localhost-only"-Sperre prueft nur `r.RemoteAddr` und **wirkt nicht** — nginx laeuft
@@ -71,8 +73,6 @@ Frontend (folgt in S2/S3).
 > Proxy-Kopfzeile (`X-Forwarded-For`/`X-Real-IP`/`X-Forwarded-Proto`) anliegt — die setzt nginx bei
 > jeder Durchleitung, der lokale Python-Kern keine. Gilt auch fuer `telegram_connect.go` (dieselbe
 > Luecke, aelter). Eine Sperre auf nginx-Ebene ist zusaetzlich bei `henemm-infra` angefragt.
-| `GZ_SKIP_FRONTEND_BROWSER_GATE` (Konvention, `staging_gate.py`) | Vorbild | lauter, exakter Env-Var-Schalter mit stderr-Meldung — Muster für `GZ_PREMIUM_SMS_POLL_DRYRUN` |
-| `docs/adr/0015-dual-stack-zielarchitektur.md` | ADR | Zuständigkeitsgrenze Python-Core (Fachlogik, Polling) vs. Go-API (Persistenz, `user.json`) |
 
 ## Implementation Details
 
@@ -87,8 +87,16 @@ Frontend (folgt in S2/S3).
 2. seven_api_key fehlt -> return 0.
 3. last_seen_id aus diagnostics/premium_sms_inbound.json laden (Default 0).
 4. GET journal/inbound?limit=100, Header X-Api-Key (kein date_from, s.u.).
+   **Die Antwort liefert `id` als ZEICHENKETTE** (z.B. `"5283665"`), nicht
+   als Zahl (gemessen 2026-08-10, s. Fix F004 unten) -- diese Annahme war in
+   v1.0-v1.4 falsch und liess den Cron-Job produktiv alle 5 Minuten mit
+   `TypeError` abbrechen.
 5. Fehler (HTTP/Netzwerk) -> loggen, return 0, last_seen_id unveraendert.
 6. Nachrichten mit id > last_seen_id aufsteigend sortieren (aeltest zuerst).
+   `id` wird dafuer je Eintrag robust nach `int` umgewandelt (Fix F004); ein
+   Eintrag, dessen `id` sich nicht umwandeln laesst, wird uebersprungen (mit
+   Warnung) statt den ganzen Journal-Lauf abzubrechen -- Fail-soft je
+   Eintrag, nicht Fail-hard fuer das Fenster.
 7. Je Nachricht ohne Garmin-Kennzeichen: last_seen_id-Kandidat auf
    max(bisher, msg.id) anheben (sonst Dauer-Reevaluation). Fuer eine
    Nachricht MIT Kennzeichen entscheidet Schritt 9 ueber das Anheben --
@@ -148,6 +156,30 @@ AC-5 — abschliessende Entscheidung, Zeiger wandert weiter, sonst warnt das
 System alle 5 Minuten ueber etwas, das sich von selbst nicht aendert). Die
 ACs bleiben woertlich unveraendert; betroffen ist ausschliesslich das interne
 Ablaufdetail in Schritt 7/9/11 und der Trigger-Endpoint.
+
+**Fix F004 (v1.5, Produktionsfehler #1676, gemessen 2026-08-10):** v1.0-v1.4
+nahmen an, `id` im Journal-Eintrag sei eine Zahl (Fixtures verwendeten
+`3001` usw.) — die echte seven.io-API liefert `id` jedoch als ZEICHENKETTE
+(`"5283665"`, gemessene Antwort s.u.). Der Vergleich `id > last_seen_id`
+brach deshalb produktiv alle 5 Minuten mit `TypeError: '>' not supported
+between instances of 'str' and 'int'` ab, ohne dass ein Test das fing — die
+Fixtures bildeten eine erfundene, nicht die gemessene Wirklichkeit ab. Die
+Korrektur wandelt `id` robust nach `int` um (Schritt 6); eine einzelne nicht
+umwandelbare `id` überspringt NUR diesen Eintrag statt den ganzen Lauf
+abzubrechen. Gemessene Journal-Antwort (Rufnummern maskiert, Struktur
+original):
+
+```json
+[{"id":"5283665","from":"49150000000x","to":"4916092172595","text":"...",
+  "timestamp":"2026-08-10 09:19:31","reply_to_message_id":null,"price":0.01}]
+```
+
+Von den übrigen Feldern liest der Reader nur `text` und `from` — beide sind
+in Fixtures wie gemessener Antwort bereits korrekt als Zeichenkette
+typisiert. `timestamp`, `reply_to_message_id` und `price` werden vom Reader
+nicht gelesen (s. „Zeitstempel"-Punkt unter Known Limitations), ihr Typ ist
+für diese Scheibe irrelevant. Die ACs bleiben wörtlich unverändert; betroffen
+ist ausschließlich die interne Typumwandlung in Schritt 6.
 
 Schritt 1 kennt — anders als `sms.py`s Sandbox-Guard — keinen
 Sandbox-Key-Sonderfall: der Journal-**Lesepfad** ist gemessen NICHT isoliert
@@ -243,10 +275,13 @@ unverändert mit leerem Wert).
 
 Analog `forecast_budget.py:44-50` (Verzeichnis `diagnostics/` unter
 `get_data_root()`, NICHT `data/last_sms_id.txt` wie im veralteten
-Vorlagecode). Fail-open beim Lesen (kaputte/fehlende Datei -> 0), atomarer
-Write beim Schreiben. Der Zeiger wird auch im Dry-Run fortgeschrieben —
-er ist globaler Diagnose-State, kein Nutzerdatensatz, und verhindert, dass
-derselbe Dry-Run jeden Poll dieselben Nachrichten erneut protokolliert.
+Vorlagecode). Fail-open beim Lesen (kaputte/fehlende Datei ODER nicht
+umwandelbarer `last_seen_id`-Wert -> 0, Fix F004), atomarer Write beim
+Schreiben — die Zeigerdatei selbst speichert `last_seen_id` weiterhin als
+Zahl (der Reader wandelt beim Lesen um). Der Zeiger wird auch im Dry-Run
+fortgeschrieben — er ist globaler Diagnose-State, kein Nutzerdatensatz, und
+verhindert, dass derselbe Dry-Run jeden Poll dieselben Nachrichten erneut
+protokolliert.
 
 ## Expected Behavior
 
@@ -306,6 +341,8 @@ derselbe Dry-Run jeden Poll dieselben Nachrichten erneut protokolliert.
   - `test_dryrun_switch_polls_journal_but_writes_nothing` (AC-10)
   - `test_dryrun_switch_warns_loudly_on_stderr` (Vorbild `GZ_SKIP_FRONTEND_BROWSER_GATE`)
   - `test_fetch_uses_x_api_key_header_and_limit_param` (Abruf-Vertrag: `X-Api-Key`, `limit`, kein `date_from`)
+  - `test_string_ids_are_processed_and_deduplicated_across_runs` (Fix F004: Zeichenketten-`id` wie die echte API, Dedup über Läufe hinweg)
+  - `test_unparseable_id_is_skipped_without_aborting_the_run` (Fix F004: nicht umwandelbare `id` überspringt nur den Eintrag)
 - `internal/handler/premium_sms_connect_test.go` (Go, mit echtem Store gegen temporäres Testverzeichnis, zwei Nutzer wie von CLAUDE.md für datenbewegende Endpoints gefordert):
   - `TestLearnSetsReplyAddressForSoleUnambiguousPremiumUser` (AC-4)
   - `TestLearnRejectsWhenTwoPremiumUsersAndNoStoredMatch` (AC-5, kein Cross-User-Leck)
@@ -350,3 +387,15 @@ derselbe Dry-Run jeden Poll dieselben Nachrichten erneut protokolliert.
   `recordRun()`, sichtbar in `/api/scheduler/status`.
   `triggerGlobalEndpoint()` selbst bleibt unangetastet (daran hängen
   `inbound_command_poll` u. a.). ACs wörtlich unverändert.
+- 2026-08-10: v1.5 — Fix F004 (Produktionsfehler, live gemessen): die echte
+  seven.io-API liefert `id` im Journal-Eintrag als ZEICHENKETTE, nicht als
+  Zahl, wie v1.0–v1.4 fälschlich annahmen (Fixtures verwendeten erfundene
+  Zahlen-IDs statt der gemessenen Wirklichkeit). Der Vergleich
+  `id > last_seen_id` brach dadurch produktiv alle 5 Minuten mit `TypeError`
+  ab (`/api/scheduler/status` meldete `premium_sms_poll` dauerhaft als HTTP
+  500). Schritt 4/6 und die Dedup-Zeiger-Sektion korrigiert: `id` wird robust
+  nach `int` umgewandelt, eine einzelne nicht umwandelbare `id` überspringt
+  nur diesen Eintrag statt den ganzen Journal-Lauf abzubrechen. Fixtures in
+  `tests/unit/test_inbound_sms_reply_learning.py` liefern `id` jetzt als
+  Zeichenkette, exakt wie die gemessene API-Antwort. ACs wörtlich
+  unverändert.

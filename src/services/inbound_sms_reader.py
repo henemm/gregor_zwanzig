@@ -26,7 +26,15 @@ Rueckadressen, AC-7-Vertrag unveraendert); die Fehlschlagzahl liegt danach im
 Instanzfeld `last_failed_count` fuer den Trigger-Endpunkt (Team-Lead-Entscheid
 #1676 S1 Fix-Loop, s. `api/routers/scheduler.py::trigger_inbound_sms`).
 
-SPEC: docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md v1.2
+Fix F004 (Produktionsfehler, gemessen 2026-08-10): die echte seven.io-API
+liefert `id` im Journal-Eintrag als ZEICHENKETTE (`"5283665"`), nicht als
+Zahl -- der Vergleich `id > last_seen_id` brach deshalb mit `TypeError` ab
+und legte den Cron-Job alle 5 Minuten lahm. `_coerce_message_id()` wandelt
+jede `id` robust in eine ganze Zahl um; eine einzelne nicht umwandelbare `id`
+ueberspringt NUR diese Nachricht (mit Warnung), bricht aber nicht den ganzen
+Lauf ab -- Fail-soft je Eintrag, nicht Fail-hard fuer das ganze Journal.
+
+SPEC: docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md v1.5
 """
 from __future__ import annotations
 
@@ -130,16 +138,26 @@ class InboundSmsReader:
         if messages is None:
             return 0, 0  # Netz-/HTTP-Fehler -- last_seen_id bleibt unveraendert
 
-        new_messages = sorted(
-            (m for m in messages if m.get("id", 0) > last_seen_id),
-            key=lambda m: m.get("id", 0),
-        )
+        parsed: list[tuple[int, dict]] = []
+        for m in messages:
+            raw_id = m.get("id", 0)
+            msg_id = _coerce_message_id(raw_id)
+            if msg_id is None:
+                logger.warning(
+                    "journal/inbound Eintrag mit nicht umwandelbarer id %r "
+                    "wird uebersprungen (Fix F004), Rest des Journal-Fensters "
+                    "wird weiterverarbeitet.", raw_id,
+                )
+                continue
+            if msg_id > last_seen_id:
+                parsed.append((msg_id, m))
+
+        new_messages = sorted(parsed, key=lambda pair: pair[0])
 
         learned = 0
         failed = 0
         max_seen = last_seen_id
-        for message in new_messages:
-            msg_id = message.get("id", 0)
+        for msg_id, message in new_messages:
             text = message.get("text", "") or ""
             if GARMIN_MARKER not in text:
                 max_seen = max(max_seen, msg_id)
@@ -214,13 +232,14 @@ class InboundSmsReader:
             return None
 
     def _load_last_seen_id(self, data_root: Path) -> int:
-        """Fail-open: kaputte/fehlende Zeigerdatei -> 0."""
+        """Fail-open: kaputte/fehlende Zeigerdatei ODER nicht umwandelbarer
+        `last_seen_id`-Wert -> 0 (Fix F004)."""
         path = data_root / "diagnostics" / _DEDUP_POINTER_NAME
         try:
             data = json.loads(path.read_text())
-            return int(data.get("last_seen_id", 0))
         except Exception:
             return 0
+        return _coerce_message_id(data.get("last_seen_id", 0)) or 0
 
     def _save_last_seen_id(self, data_root: Path, last_seen_id: int) -> None:
         """Atomarer Write (tempfile + os.rename), auch im Dry-Run (Spec:
@@ -239,6 +258,18 @@ class InboundSmsReader:
                 os.remove(tmp_path)
             except OSError:
                 pass
+
+
+def _coerce_message_id(raw) -> int | None:
+    """Wandelt eine Journal-`id` robust in eine ganze Zahl um (Fix F004): die
+    echte seven.io-API liefert `id` als Zeichenkette (`"5283665"`), unsere
+    aeltesten Fixtures nahmen faelschlich eine Zahl an. `None` bei jedem Wert,
+    der sich nicht umwandeln laesst -- der Aufrufer ueberspringt dann NUR
+    diesen einen Eintrag, statt den ganzen Journal-Lauf abzubrechen."""
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
 
 
 def _mask(number: str) -> str:

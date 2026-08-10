@@ -25,7 +25,13 @@ verfaelschte R3-Regel im Fake liess KEINEN Python-Test rot werden). Der
 Alle Rufnummern sind erfunden (`491700000000x`), einzige echte Nummer ist die
 im Issue oeffentliche Dienst-Nummer `4916092172595` als `to`-Feld.
 
-SPEC: docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md v1.1
+Fix F004 (Produktionsfehler, gemessen 2026-08-10): die echte seven.io-API
+liefert `id` als ZEICHENKETTE (`"5283665"`), nicht als Zahl. Die
+Fixture-Helfer unten geben `id` deshalb als `str(msg_id)` weiter, exakt wie
+die gemessene Antwort -- Zahlen-IDs in Fixtures haetten den Fehler nicht
+gefangen (Team-Lead-Befund: kein Test bewachte den echten Datentyp).
+
+SPEC: docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md v1.5
 """
 from __future__ import annotations
 
@@ -45,7 +51,7 @@ class AssertedNetworkTouch(Exception):
 
 def _garmin_message(msg_id: int, sender: str, text_suffix: str = "g-0Ab1Cd2Ef") -> dict:
     return {
-        "id": msg_id,
+        "id": str(msg_id),  # Fix F004: echte API liefert id als Zeichenkette
         "from": sender,
         "to": SERVICE_NUMBER,
         "text": f"Test ueber App inreachlink.com/{text_suffix}... (51.9956, 7.7136)",
@@ -57,7 +63,7 @@ def _garmin_message(msg_id: int, sender: str, text_suffix: str = "g-0Ab1Cd2Ef") 
 
 def _private_message(msg_id: int, sender: str) -> dict:
     return {
-        "id": msg_id,
+        "id": str(msg_id),  # Fix F004: echte API liefert id als Zeichenkette
         "from": sender,
         "to": SERVICE_NUMBER,
         "text": "Hallo, bist du morgen da?",
@@ -593,3 +599,83 @@ def test_router_reports_partial_when_learn_failures_occurred(monkeypatch):
         f"ein Fehlschlag darf NICHT als 'ok' gemeldet werden, bekam {response!r}"
     )
     assert response["failed"] == 1
+
+
+# =============================================================================
+# Fix F004 (Produktionsfehler, gemessen 2026-08-10): die echte seven.io-API
+# liefert `id` als Zeichenkette -- der Vergleich `id > last_seen_id` brach
+# deshalb mit TypeError ab und legte den Cron-Job alle 5 Minuten lahm.
+# =============================================================================
+
+def test_string_ids_are_processed_and_deduplicated_across_runs(monkeypatch):
+    """Fix F004: Given das Journal liefert `id` als Zeichenkette (exakt wie
+    die echte seven.io-API) / When der Poll zweimal laeuft (zweiter Lauf mit
+    derselben plus einer neuen, hoeheren id) / Then wird die Nachricht im
+    ersten Lauf korrekt verarbeitet, der Dedup-Zeiger wandert ueber
+    Laeufe hinweg weiter, und der zweite Lauf verarbeitet NUR die neue id --
+    ohne diesen Fix bricht bereits der erste Lauf mit TypeError ab."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    fake_post = _LearnCallRecorder()
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    # Lauf 1: einzige Nachricht mit String-id "9001" (wie die echte API).
+    fake_get_1 = _FakeJournalEndpoint([[_garmin_message(9001, GARMIN_FROM_A)]])
+    monkeypatch.setattr(httpx, "get", fake_get_1)
+    reader = reader_mod.InboundSmsReader()
+    result_1 = reader.poll_and_process(_settings())
+    assert result_1 == 1, f"erwartet 1 gelernte Rueckadresse, bekam {result_1!r}"
+    assert len(fake_post.calls) == 1
+    assert fake_post.calls[0]["json"]["from"] == GARMIN_FROM_A
+
+    # Lauf 2: dieselbe Nachricht (id "9001") plus eine neue (id "9002").
+    fake_get_2 = _FakeJournalEndpoint(
+        [[_garmin_message(9001, GARMIN_FROM_A), _garmin_message(9002, GARMIN_FROM_B)]]
+    )
+    monkeypatch.setattr(httpx, "get", fake_get_2)
+    result_2 = reader.poll_and_process(_settings())
+    assert result_2 == 1, (
+        f"Lauf 2 darf NUR die neue id \"9002\" lernen, bekam {result_2!r}"
+    )
+    assert len(fake_post.calls) == 2, (
+        f"Fix F004: id \"9001\" darf im Lauf 2 NICHT erneut gelernt werden "
+        f"(Dedup ueber Zeichenketten-IDs hinweg), gesehen: {fake_post.calls!r}"
+    )
+    assert fake_post.calls[1]["json"]["from"] == GARMIN_FROM_B
+
+
+def test_unparseable_id_is_skipped_without_aborting_the_run(monkeypatch):
+    """Fix F004: Given das Journal-Fenster enthaelt einen Eintrag mit
+    NICHT umwandelbarer `id` (`"abc"`) zwischen zwei gueltigen Garmin-
+    Nachrichten / When der Poll laeuft / Then werden die beiden gueltigen
+    Nachrichten trotzdem verarbeitet -- der kaputte Eintrag wird
+    uebersprungen, der Lauf bricht NICHT ab."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    broken_entry = _garmin_message(0, GARMIN_FROM_A)
+    broken_entry["id"] = "abc"
+    journal = [
+        _garmin_message(9101, GARMIN_FROM_A),
+        broken_entry,
+        _garmin_message(9102, GARMIN_FROM_B),
+    ]
+    fake_get = _FakeJournalEndpoint([journal])
+    fake_post = _LearnCallRecorder()
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    reader = reader_mod.InboundSmsReader()
+    result = reader.poll_and_process(_settings())
+
+    assert result == 2, (
+        f"beide gueltigen Nachrichten muessen trotz kaputter id verarbeitet "
+        f"werden, bekam {result!r}"
+    )
+    assert len(fake_post.calls) == 2, (
+        f"der kaputte Eintrag darf den Lauf NICHT abbrechen, gesehen: {fake_post.calls!r}"
+    )
+    assert {c["json"]["from"] for c in fake_post.calls} == {GARMIN_FROM_A, GARMIN_FROM_B}
