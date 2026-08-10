@@ -100,6 +100,116 @@ func TestRegisterHandlerDuplicateUser(t *testing.T) {
 	}
 }
 
+// TDD Regression — Issue #1517: RegisterHandler prüfte die E-Mail-Pflicht
+// (#1226) VOR der Existenzprüfung. Ein Register-Aufruf ohne email gegen
+// einen bereits existierenden User lieferte dadurch 400 statt der
+// erwarteten 409 — bricht scripts/setup-validator-user.sh (sendet nie ein
+// email-Feld). SPEC: docs/specs/modules/fix_1517_validator_register_order.md AC-1
+func TestRegisterHandler_ExistingUserWithoutEmail_Returns409_AC1(t *testing.T) {
+	s := newTestStore(t)
+	dir := filepath.Join(s.DataDir, "users", "alice")
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, "user.json"), []byte(`{"id":"alice"}`), 0644)
+
+	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
+
+	// WHEN: Registering same username WITHOUT email (wie
+	// scripts/setup-validator-user.sh es tut)
+	body := `{"username":"alice","password":"geheim123"}`
+	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	// THEN: 409 Conflict (nicht 400 "validation failed")
+	if w.Code != 409 {
+		t.Fatalf("expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]string
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["error"] != "user already exists" {
+		t.Errorf("expected error 'user already exists', got %q", resp["error"])
+	}
+}
+
+// TDD Regression — Issue #1517 Adversary F001: Format-Validierungen
+// (Username-Länge/-Regex, Passwort-Länge) müssen VOR s.UserExists bleiben,
+// sonst würde ein zu kurzes Passwort gegen einen existierenden Username
+// fälschlich 409 liefern und damit die Existenz preisgeben (Enumeration-Leak,
+// den die Spec unter "Known Limitations" bewusst begrenzt sehen will). Die
+// bestehenden AC-4-Tests nutzen einen leeren Store, in dem UserExists
+// ohnehin immer false liefert — dieser Test prüft die Reihenfolge dort, wo
+// sie beobachtbar wird: mit einem bereits existierenden User.
+// SPEC: docs/specs/modules/fix_1517_validator_register_order.md AC-4
+func TestRegisterHandler_ExistingUserShortPassword_Returns400NotEnumeration(t *testing.T) {
+	s := newTestStore(t)
+	dir := filepath.Join(s.DataDir, "users", "alice")
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, "user.json"), []byte(`{"id":"alice"}`), 0644)
+
+	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
+
+	// WHEN: Registering same username with a too-short password
+	body := `{"username":"alice","password":"short","email":"alice@beispiel.de"}`
+	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	// THEN: 400 "validation failed" (NICHT 409 — das wäre der Enumeration-Leak)
+	if w.Code != 400 {
+		t.Fatalf("expected 400 for short password against existing user, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]string
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["error"] != "validation failed" {
+		t.Errorf("expected error 'validation failed', got %q", resp["error"])
+	}
+}
+
+// TDD Regression — Issue #1517 Adversary F002: strukturell identisch zu F001,
+// aber für Username-Länge und Username-Regex statt Passwort-Länge. Der
+// existierende Store-Eintrag wird bewusst direkt als Datei geschrieben (statt
+// über den Handler angelegt) — genau dieser Bypass ermöglicht einen
+// gespeicherten Username, der die aktuellen Format-Regeln verletzt, und macht
+// so die Reihenfolge beobachtbar: bliebe s.UserExists vor den
+// Format-Validierungen, würde ein Request mit exakt diesem (ungültigen)
+// Username fälschlich 409 statt 400 liefern.
+// SPEC: docs/specs/modules/fix_1517_validator_register_order.md AC-4
+func TestRegisterHandler_ExistingUserInvalidUsernameFormat_Returns400NotEnumeration(t *testing.T) {
+	cases := []struct {
+		name     string
+		username string
+	}{
+		{"too short (< 3 chars)", "ab"},
+		{"invalid characters", "ali$ce"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newTestStore(t)
+			dir := filepath.Join(s.DataDir, "users", tc.username)
+			os.MkdirAll(dir, 0755)
+			os.WriteFile(filepath.Join(dir, "user.json"), []byte(`{"id":"`+tc.username+`"}`), 0644)
+
+			h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
+
+			body := `{"username":"` + tc.username + `","password":"geheim123","email":"user@beispiel.de"}`
+			req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, req)
+
+			// THEN: 400 "validation failed" (NICHT 409 — das wäre der Enumeration-Leak)
+			if w.Code != 400 {
+				t.Fatalf("expected 400 for invalid username against existing user, got %d: %s", w.Code, w.Body.String())
+			}
+			var resp map[string]string
+			json.Unmarshal(w.Body.Bytes(), &resp)
+			if resp["error"] != "validation failed" {
+				t.Errorf("expected error 'validation failed', got %q", resp["error"])
+			}
+		})
+	}
+}
+
 func TestRegisterHandlerShortUsername(t *testing.T) {
 	s := newTestStore(t)
 	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())

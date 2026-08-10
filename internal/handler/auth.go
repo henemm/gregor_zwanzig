@@ -55,6 +55,17 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 			w.Write([]byte(`{"error":"validation failed"}`))
 			return
 		}
+		// Issue #1517: Existenzprüfung wandert VOR die E-Mail-Pflichtprüfung —
+		// ein Register-Aufruf ohne email gegen einen bereits existierenden User
+		// muss 409 liefern, nicht fälschlich 400 (bricht sonst
+		// scripts/setup-validator-user.sh, das nie ein email-Feld sendet).
+		if s.UserExists(req.Username) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(409)
+			w.Write([]byte(`{"error":"user already exists"}`))
+			return
+		}
+
 		// Issue #1226: E-Mail ist ab jetzt Pflichtfeld — nur mit gesetzter,
 		// formal gültiger Adresse kann der Verifikations-Dispatch (Double-Opt-In)
 		// überhaupt greifen. Leeres Feld → generischer "validation failed"; Feld
@@ -71,13 +82,6 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"invalid_email"}`))
-			return
-		}
-
-		if s.UserExists(req.Username) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(409)
-			w.Write([]byte(`{"error":"user already exists"}`))
 			return
 		}
 
