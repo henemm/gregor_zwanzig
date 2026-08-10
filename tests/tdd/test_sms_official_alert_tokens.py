@@ -35,11 +35,25 @@ from app.models import (
     SegmentWeatherData, SegmentWeatherSummary, ThunderLevel, TripSegment,
 )
 from output.renderers.sms_trip import SMSTripFormatter
+from output.tokens.dto import MetricSpec
 from services.official_alerts.models import OfficialAlert
 
 UTC = timezone.utc
 _TZ = ZoneInfo("UTC")
 _YEAR, _MONTH, _DAY = 2026, 7, 15
+
+# Issue #1660 Scheibe B: die 14 neuen Metriken sind ohne Trip-Kontext (kein
+# `disabled_specs` aus trip_report.py's Register-Ableitung, s. dort ~L316)
+# "gewaehlt", sobald Daten vorhanden sind (DEC-1/DEC-2c) -- diese Suite
+# testet den Warn-Block (#1318), nicht die 14 neuen Token, deshalb hier
+# explizit abgewaehlt (spiegelt exakt die reale Pipeline, die JEDE nicht
+# aktive Metrik als disabled_specs-Eintrag fuehrt).
+_DISABLE_NEW_14 = [
+    MetricSpec(symbol=sym, enabled=False) for sym in (
+        "HU", "DP", "WD", "CP", "PT", "CT", "CL", "CM", "CH", "VS", "SU",
+        "UV", "HP", "NL",
+    )
+]
 
 # Warn-Zeitraeume: 14:00-18:00 (stundengenau) bzw. ganztaegig (00:00-23:59).
 WARN_FROM = datetime(_YEAR, _MONTH, _DAY, 14, 0, tzinfo=UTC)
@@ -165,6 +179,7 @@ def _segment(
 
 def _sms(alerts: list[OfficialAlert] | None = None, **kwargs) -> str:
     seg = _segment(alerts)
+    kwargs.setdefault("disabled_specs", _DISABLE_NEW_14)
     return SMSTripFormatter().format_sms(
         [seg], stage_name="Etappe 5", tz=_TZ, **kwargs
     )
@@ -273,7 +288,9 @@ def test_ac4_wet_day_without_alerts_is_bit_identical():
     hourly[16] = _dp(16, rain=2.5, wind=28.0, gust=45.0, pop=80.0,
                      thunder=ThunderLevel.MED)
     seg = _segment([], hourly=hourly)
-    sms = SMSTripFormatter().format_sms([seg], stage_name="Etappe 5", tz=_TZ)
+    sms = SMSTripFormatter().format_sms(
+        [seg], stage_name="Etappe 5", tz=_TZ, disabled_specs=_DISABLE_NEW_14,
+    )
     assert sms == GOLDEN_WET_NO_ALERTS, (
         "Token-Zeile (Regentag) ohne amtliche Warnung hat sich veraendert.\n"
         f"  erwartet: {GOLDEN_WET_NO_ALERTS!r}\n  erhalten: {sms!r}"
@@ -373,8 +390,14 @@ def test_ac12_warning_of_user_a_does_not_leak_into_user_b():
     seg_b = _segment([], segment_id=2)
     night = _complete_night_weather()
 
-    sms_a = formatter.format_sms([seg_a], stage_name="Etappe 5", tz=_TZ, night_weather=night)
-    sms_b = formatter.format_sms([seg_b], stage_name="Etappe 5", tz=_TZ, night_weather=night)
+    sms_a = formatter.format_sms(
+        [seg_a], stage_name="Etappe 5", tz=_TZ, night_weather=night,
+        disabled_specs=_DISABLE_NEW_14,
+    )
+    sms_b = formatter.format_sms(
+        [seg_b], stage_name="Etappe 5", tz=_TZ, night_weather=night,
+        disabled_specs=_DISABLE_NEW_14,
+    )
 
     assert "!TH:H@14" in sms_a, f"Nutzer A ohne Warn-Block: {sms_a!r}"
     assert "!" not in sms_b, (

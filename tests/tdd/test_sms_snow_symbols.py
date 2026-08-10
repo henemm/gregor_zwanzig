@@ -472,19 +472,25 @@ def test_ac6_truncation_drops_snow_tokens_in_unchanged_order():
 
 
 def test_ac6_drop_order_positions_of_snow_symbols_unchanged():
-    """AC-6: die Schnee-Kuerzel behalten ihre Plaetze in DROP_ORDER (3/4/5) —
-    nur die Namen aendern sich, nicht die Rangfolge."""
+    """AC-6: die Schnee-Kuerzel behalten ihre RELATIVE Reihenfolge in
+    DROP_ORDER (WC vor AV vor SL vor NS24+ vor SD vor Z: vor MAX vor M:) —
+    nur die Namen aendern sich, nicht die Rangfolge untereinander.
+
+    Issue #1660 Scheibe B (DEC-4): 14 neue Symbole werden zwischen 'DBG' und
+    'WC' eingefuegt -- die urspruenglichen ABSOLUTEN Indizes (3/4/5) sind
+    dadurch bewusst verschoben, die RELATIVE Reihenfolge der hier geprueften
+    Bestandssymbole bleibt aber unangetastet.
+    """
     from output.tokens.render import DROP_ORDER
 
-    assert DROP_ORDER[:3] == ["DBG", "WC", "AV"], (
+    assert DROP_ORDER[0] == "DBG", (
         f"AC-6: Kopf der Drop-Reihenfolge veraendert: {DROP_ORDER!r}"
     )
-    assert DROP_ORDER[3:6] == ["SL", "NS24+", "SD"], (
-        "AC-6: die drei Schnee-Kuerzel muessen auf den Plaetzen 3-5 der "
-        f"Drop-Reihenfolge stehen (SL, NS24+, SD): {DROP_ORDER!r}"
-    )
-    assert DROP_ORDER[6:] == ["Z:", "MAX", "M:"], (
-        f"AC-6: Schwanz der Drop-Reihenfolge veraendert: {DROP_ORDER!r}"
+    tail_symbols = ["WC", "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:"]
+    tail_indices = [DROP_ORDER.index(sym) for sym in tail_symbols]
+    assert tail_indices == sorted(tail_indices), (
+        "AC-6: die relative Kuerzungs-Reihenfolge der Bestandssymbole hat "
+        f"sich veraendert: {DROP_ORDER!r}"
     )
 
 
@@ -695,14 +701,16 @@ def test_ac3_single_symbol_metrics_unchanged_in_array_format():
 
 
 def test_ac6_endpoint_reports_eleven_metrics_total():
-    """AC-6/Regression: 8 Register-Metriken + 4 neue (temperature,
-    temperature_night, wind_chill, wind_chill_night) = 12 Eintraege, kein
-    Wertverlust durch die Typumstellung string -> string[].
+    """AC-6/Regression: 8 Register-Metriken + 14 neue (Issue #1660 Scheibe B)
+    + 4 Mehrfach-Kuerzel-Groessen (temperature, temperature_night,
+    wind_chill, wind_chill_night) = 26 Eintraege, kein Wertverlust durch die
+    Typumstellung string -> string[].
 
     Issue #1660 Scheibe A: "wind_chill_night" ist eine vierte neue,
-    eigenstaendig waehlbare Groesse (SMS_MULTI_SYMBOLS_BY_METRIC-Aufteilung)
-    -- Zaehlung von 11 auf 12 erhoeht (Testname bleibt aus Historiengruenden
-    stehen, s. AC-6-Zaehlweise in der Docstring).
+    eigenstaendig waehlbare Groesse (SMS_MULTI_SYMBOLS_BY_METRIC-Aufteilung).
+    Issue #1660 Scheibe B: 14 weitere 1:1-Metriken (HU/DP/WD/CP/PT/CT/CL/CM/
+    CH/VS/SU/UV/HP/NL) erhoehen die Zaehlung von 12 auf 26 (Testname bleibt
+    aus Historiengruenden stehen, s. AC-6-Zaehlweise in der Docstring).
     """
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -713,9 +721,10 @@ def test_ac6_endpoint_reports_eleven_metrics_total():
     app.include_router(config_router.router)
     metrics = TestClient(app).get("/sms-symbols").json()["metrics"]
 
-    assert len(metrics) == 12, (
-        f"AC-6: erwarte 12 Metrik-Eintraege (8 Register + 4 neue, thunder "
-        f"nur einmal gezaehlt), gefunden {len(metrics)}: {metrics!r}"
+    assert len(metrics) == 26, (
+        f"AC-6: erwarte 26 Metrik-Eintraege (8 Register + 14 neue + 4 "
+        f"Mehrfach-Kuerzel, thunder nur einmal gezaehlt), gefunden "
+        f"{len(metrics)}: {metrics!r}"
     )
     by_metric = {m["metric_id"]: m["sms_symbols"] for m in metrics}
     assert by_metric.get("temperature") == ["K", "D"], (

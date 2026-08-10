@@ -9,7 +9,14 @@ from output.tokens.dto import Token, TokenLine
 # §6 removal order (one symbol at a time, repeated until budget met).
 # Issue #1435 E3b: Schnee-Kuerzel folgen dem Wetter-Register (SL/NS24+/SD);
 # die Rangfolge selbst ist unveraendert.
-DROP_ORDER = ["DBG", "WC", "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:"]
+# Issue #1660 Scheibe B (DEC-4): die 14 neuen Symbole fallen direkt nach
+# 'DBG' -- als erste Fachtoken, noch vor den Wintersport-Groessen.
+DROP_ORDER = [
+    "DBG",
+    "HU", "DP", "WD", "CP", "PT", "CT", "CL", "CM", "CH", "VS", "SU", "UV",
+    "HP", "NL",
+    "WC", "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:",
+]
 
 
 def _fuse(tokens: list[Token]) -> list[str]:

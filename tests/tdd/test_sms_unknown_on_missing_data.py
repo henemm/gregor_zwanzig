@@ -134,6 +134,18 @@ _TEMPERATURE_OFF: list[MetricSpec] = [
     for sym in ("N", "K", "D", "FN", "FK", "FD", "WC")
 ]
 
+# Issue #1660 Scheibe B: dieselbe Abwahl-Notwendigkeit fuer die 14 neuen
+# Metriken -- ohne Trip-Kontext (kein `display_config`) sind sie "gewaehlt",
+# sobald `_dp()` zufaellig unrelated Felder (humidity_pct/cloud_total_pct)
+# traegt (DEC-1/DEC-2c). Fuer die Byte-Identitaets-Assertion unten (#1328)
+# gehoeren sie nicht zum Pruefgegenstand.
+_NEW_14_OFF: list[MetricSpec] = [
+    MetricSpec(symbol=sym, enabled=False) for sym in (
+        "HU", "DP", "WD", "CP", "PT", "CT", "CL", "CM", "CH", "VS", "SU",
+        "UV", "HP", "NL",
+    )
+]
+
 
 def _format(
     segments: list[SegmentWeatherData],
@@ -188,7 +200,7 @@ class TestAC1ShowsUnknownTokenOnSegmentError:
         sms = _format(
             segments,
             night_weather=_complete_night_weather(),
-            disabled_specs=_TEMPERATURE_OFF,
+            disabled_specs=_TEMPERATURE_OFF + _NEW_14_OFF,
         )
 
         assert "TH:?" in sms, (
