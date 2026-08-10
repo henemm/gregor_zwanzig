@@ -384,21 +384,24 @@ class TestWeatherChangeDetectionService:
 class TestMetricCatalogIntegration:
     """v2.0: Test catalog-driven thresholds and from_trip_config()."""
 
-    def test_get_change_detection_map_returns_14_entries(self):
+    def test_get_change_detection_map_returns_13_entries(self):
         """
         GIVEN: MetricCatalog mit threshold=None für die 6 Vorboten-Metriken
         WHEN: get_change_detection_map()
-        THEN: Returns exactly 14 entries.
+        THEN: Returns exactly 13 entries.
 
         Issue #889 / ADR-0010: humidity, dewpoint, rain_probability, cloud_total,
         pressure und wind_chill tragen default_change_threshold=None und fallen
         damit aus der Change-Detection-Map (vormals 19 Einträge). Issue #1391:
         snowfall_limit trägt jetzt `summary_fields` -- die Schwelle (200.0)
         entsteht erstmals wirklich (vormals 13 Einträge trotz gesetzter
-        Schwelle, weil summary_fields fehlte).
+        Schwelle, weil summary_fields fehlte). Issue #1585: cape ist zentral
+        nicht mehr waehlbar und faellt damit ebenfalls heraus (14 -> 13) --
+        eine Groesse, die niemand mehr waehlen kann, darf auch keinen
+        Aenderungs-Alarm mehr tragen.
         """
         detection_map = get_change_detection_map()
-        assert len(detection_map) == 14
+        assert len(detection_map) == 13
 
     def test_get_change_detection_map_values_match_v2(self):
         """
@@ -414,7 +417,6 @@ class TestMetricCatalogIntegration:
             "gust_max_kmh": 20.0,
             "precip_sum_mm": 10.0,
             "visibility_min_m": 1000,
-            "cape_max_jkg": 500.0,
             "snow_depth_cm": 10.0,
             "freezing_level_m": 200,
             "uv_index_max": 3.0,
@@ -502,7 +504,6 @@ class TestMetricCatalogIntegration:
         defaults = get_change_detection_map()
 
         # These should NOT be affected by TripReportConfig overrides
-        assert service._thresholds["cape_max_jkg"] == defaults["cape_max_jkg"]
         assert service._thresholds["visibility_min_m"] == defaults["visibility_min_m"]
         assert service._thresholds["snow_depth_cm"] == defaults["snow_depth_cm"]
         assert service._thresholds["freezing_level_m"] == defaults["freezing_level_m"]
