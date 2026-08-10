@@ -58,6 +58,19 @@ Frontend (folgt in S2/S3).
 | `internal/model/tier.go::EffectiveTier` | module | Premium-Kandidaten-Filter, serverseitige zweite Verteidigungslinie (R3) |
 | `internal/store/store.go::ListUserIDs/LoadUser/SaveUser` | module | Nutzer-Iteration + Read-Modify-Write mit Merge (Go bleibt einziger Schreiber von `user.json`) |
 | `internal/handler/telegram_connect.go` | Vorbild | localhost-only-Sperre, Handler-Aufbau |
+| `internal/handler/localhost_guard.go` | NEU (v1.4) | `requireLocalOnly()` — wirksame Loopback-Sperre, s.u. |
+
+> **Sicherheitsnachtrag v1.4 (2026-08-10, bei der Staging-Verifikation gemessen):** Die vom Vorbild
+> uebernommene „localhost-only"-Sperre prueft nur `r.RemoteAddr` und **wirkt nicht** — nginx laeuft
+> auf demselben Host, also ist `RemoteAddr` bei jeder aus dem Internet hereingeholten Anfrage
+> `127.0.0.1`. Beleg: ein Aufruf von aussen gegen Staging erreichte die Fachlogik (HTTP 409 aus der
+> Mehrdeutigkeitsregel, nicht 403 aus der Sperre); auf Produktion antwortete der Geschwister-Endpunkt
+> `/api/internal/telegram-connect` mit 422 statt 403. Bei genau einem Premium-Nutzer haette ein
+> unauthentifizierter Aufrufer damit die Garmin-Rueckadresse auf eine fremde Nummer setzen koennen.
+> Behoben durch `requireLocalOnly()`: zusaetzlich zur Loopback-Pruefung wird abgelehnt, sobald eine
+> Proxy-Kopfzeile (`X-Forwarded-For`/`X-Real-IP`/`X-Forwarded-Proto`) anliegt — die setzt nginx bei
+> jeder Durchleitung, der lokale Python-Kern keine. Gilt auch fuer `telegram_connect.go` (dieselbe
+> Luecke, aelter). Eine Sperre auf nginx-Ebene ist zusaetzlich bei `henemm-infra` angefragt.
 | `GZ_SKIP_FRONTEND_BROWSER_GATE` (Konvention, `staging_gate.py`) | Vorbild | lauter, exakter Env-Var-Schalter mit stderr-Meldung — Muster für `GZ_PREMIUM_SMS_POLL_DRYRUN` |
 | `docs/adr/0015-dual-stack-zielarchitektur.md` | ADR | Zuständigkeitsgrenze Python-Core (Fachlogik, Polling) vs. Go-API (Persistenz, `user.json`) |
 

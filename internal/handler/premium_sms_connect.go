@@ -30,9 +30,7 @@ import (
 // PostPremiumSmsLearnHandler baut den Handler mit injiziertem Store.
 func PostPremiumSmsLearnHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		remoteHost := r.RemoteAddr
-		if !strings.HasPrefix(remoteHost, "127.0.0.1:") && !strings.HasPrefix(remoteHost, "[::1]:") {
-			http.Error(w, "forbidden", http.StatusForbidden)
+		if !requireLocalOnly(w, r) {
 			return
 		}
 
