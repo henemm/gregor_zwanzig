@@ -31,6 +31,7 @@ from app.models import (
 )
 from services import alert_daily_limit
 from services.alert_briefing_anchor import (
+    briefing_target_day_is_current,
     record_briefing_dispatch_failure,
     reset_alert_memory,
     write_anchor_and_reset_memory,
@@ -368,6 +369,12 @@ class TripReportSchedulerService:
           Briefing mit Hinweis-Präfix nachliefern, Marker entfernen (AC-6).
         - Weiterhin fehlende Daten -> kein Re-Send, attempts += 1 (Lärmschutz).
 
+        Issue #1662: Ein Versandfehler-Marker (`reason == "dispatch_error"`)
+        weicht an zwei Stellen ab — er verfällt, sobald sein Zieltag vorbei
+        ist, und er überlebt die reguläre Fälligkeit, bis der reguläre Versand
+        dieser Stunde tatsächlich gelungen ist. Die Segment-Schnittmenge wird
+        für ihn übersprungen (`failed_segment_ids` ist per Definition leer).
+
         Returns:
             Anzahl erfolgreich nachgelieferter Briefings (zählt als 'sent').
         """
@@ -382,9 +389,34 @@ class TripReportSchedulerService:
         for entry in entries:
             trip_id = entry.get("trip_id")
             trip = all_trips.get(trip_id)
+            # Issue #1662: Versandfehler-Vermerke gehen einen eigenen Weg —
+            # `failed_segment_ids` ist bei ihnen per Definition leer, die
+            # Segment-Schnittmenge unten waere also immer leer und zoege den
+            # sachlich falschen Schluss "jetzt liegen vollstaendige Daten vor".
+            is_dispatch_error = entry.get("reason") == "dispatch_error"
 
-            if trip is None or trip_id in due_trip_ids_now:
+            if trip is None:
                 self._remove_pending_marker(trip_id)
+                continue
+
+            # Issue #1662 AC-4: Verfall ueber den Zieltag (geteilte, reine
+            # Entscheidungsfunktion) — ein Morgen-Briefing von gestern ist
+            # heute wertlos und wird nicht mehr zugestellt.
+            if is_dispatch_error and not briefing_target_day_is_current(entry.get("date")):
+                self._remove_pending_marker(trip_id)
+                continue
+
+            if trip_id in due_trip_ids_now:
+                # Issue #1662 AC-5/AC-6 (Punkt 6): Ein Versandfehler-Vermerk
+                # verfaellt hier NICHT mehr blind. Der regulaere Versand dieser
+                # Stunde ist der "letzte Versuch" — gelingt er, raeumt
+                # `_send_trip_report_outcome` den Vermerk weg; scheitert er
+                # erneut, schreibt derselbe Fehlerpfad einen frischen. Ein
+                # zusaetzlicher Catch-up-Versand hier erzeugte dagegen eine
+                # zweite, fast inhaltsgleiche Nachricht wenige Minuten vor dem
+                # regulaeren Briefing.
+                if not is_dispatch_error:
+                    self._remove_pending_marker(trip_id)
                 continue
 
             target_date = date.fromisoformat(entry["date"])
@@ -392,6 +424,22 @@ class TripReportSchedulerService:
             segments = self._convert_trip_to_segments(trip, target_date)
             if not segments:
                 self._remove_pending_marker(trip_id)
+                continue
+
+            if is_dispatch_error:
+                # Issue #1662 AC-3: eigener Text — bei einem Versandfehler
+                # waren die Daten nie das Problem, und der Nutzer hat kein
+                # "Vorher", das aktualisiert wuerde. Kein Technikjargon.
+                prefix = (
+                    f"Nachgeliefert — die Zustellung um "
+                    f"{entry.get('slot_hour')}:00 ist fehlgeschlagen"
+                )
+                self._remove_pending_marker(trip_id)
+                outcome = self._send_trip_report_outcome(
+                    trip, report_type, catchup_prefix=prefix,
+                )
+                if outcome == "sent":
+                    delivered += 1
                 continue
 
             segment_weather = self._fetch_weather(segments)
@@ -438,11 +486,17 @@ class TripReportSchedulerService:
         report_type: str,
         target_date: date,
         failed_segment_ids: List[str],
+        reason: Optional[str] = None,
     ) -> None:
         """Issue #1012 (b2): Schreibt/ersetzt den Nachliefer-Marker eines Trips.
 
         Read-Modify-Write auf data/users/<uid>/pending_briefings.json —
         ersetzt einen ggf. bestehenden Marker desselben Trips (keine Duplikate).
+
+        `reason` (Issue #1662): `"dispatch_error"` kennzeichnet einen
+        Versandfehler-Vermerk (leere `failed_segment_ids`). Ohne Angabe bleibt
+        das Feld weg — Bestandsmarker (Wetterfehler) sind unveraendert, es ist
+        keine Migration noetig (Go ignoriert unbekannte Felder).
         """
         path = get_data_dir(self._user_id) / "pending_briefings.json"
         data = _load_pending_entries(path)
@@ -451,7 +505,7 @@ class TripReportSchedulerService:
             self._get_morning_hour(trip) if report_type == "morning"
             else self._get_evening_hour(trip)
         )
-        entries.append({
+        marker = {
             "trip_id": trip.id,
             "report_type": report_type,
             "date": target_date.isoformat(),
@@ -459,8 +513,57 @@ class TripReportSchedulerService:
             "failed_segment_ids": failed_segment_ids,
             "attempts": 0,
             "created_at": datetime.now(tz=timezone.utc).isoformat(),
-        })
+        }
+        if reason is not None:
+            marker["reason"] = reason
+        entries.append(marker)
         data["entries"] = entries
+        _write_pending_data(path, data)
+
+    def _mark_briefing_undelivered(
+        self, trip: "Trip", report_type: str, target_date: date, *, on_demand: bool,
+    ) -> None:
+        """Issue #1662 AC-1: Vermerkt ein Briefing, das NIEMAND bekommen hat.
+
+        EINE Stelle fuer beide Ausgaenge eines vollstaendig gescheiterten
+        Versands, damit sie nicht auseinanderlaufen (dieselbe Erwaegung, aus der
+        #1629 den Anker in `_anchor_and_reset` gebuendelt hat): der Versand
+        wirft (E-Mail-Pfad) ODER er wirft nicht, aber die Zustellbilanz ist leer
+        (SMS-/Telegram-Fehler sind fail-soft). Haenge der Vermerk nur am ersten
+        Fall, waere ein Briefing genau dann still verloren, wenn E-Mail gar
+        nicht konfiguriert ist (Adversary-Befund F001 — betrifft den geplanten
+        Premium-SMS-Weg auf ein Garmin inReach).
+
+        Kein betroffener Wetterabschnitt: bei einem Versandfehler waren die
+        Daten nie das Problem. Ad-hoc-Abruf bleibt gegenueber gespeichertem
+        Zustand wirkungslos (#1007, AC-7).
+        """
+        if on_demand:
+            return
+        self._write_pending_marker(
+            trip, report_type, target_date,
+            failed_segment_ids=[], reason="dispatch_error",
+        )
+
+    def _clear_dispatch_error_marker(self, trip_id: str) -> None:
+        """Issue #1662 AC-5: Ein gelungener Versand macht den
+        Versandfehler-Vermerk dieses Trips gegenstandslos.
+
+        Entfernt ausschliesslich Versandfehler-Vermerke (RMW) —
+        Wetterfehler-Vermerke (#1012) bleiben unberuehrt, sie haengen an einer
+        anderen Bedingung (Segment-Schnittmenge).
+        """
+        path = get_data_dir(self._user_id) / "pending_briefings.json"
+        if not path.exists():
+            return
+        data = _load_pending_entries(path)
+        rest = [
+            e for e in data.get("entries", [])
+            if not (e.get("trip_id") == trip_id and e.get("reason") == "dispatch_error")
+        ]
+        if len(rest) == len(data.get("entries", [])):
+            return
+        data["entries"] = rest
         _write_pending_data(path, data)
 
     def _remove_pending_marker(self, trip_id: str) -> None:
@@ -1037,6 +1140,14 @@ class TripReportSchedulerService:
                 user_id=self._user_id, kind="route", entity_id=trip.id, error=exc,
             )
             _anchor_and_reset()
+            # Issue #1662: Hier ist laut Zustellbilanz KEIN Kanal durchgekommen
+            # (sonst wäre die Ausnahme gar nicht bis hierher gelangt) — das
+            # Briefing wird zur Nachlieferung vorgemerkt, statt ersatzlos
+            # verloren zu gehen. Zweiter Aufrufer derselben Stelle: der
+            # ausnahmefreie Weg unten (`not result.sent`).
+            self._mark_briefing_undelivered(
+                trip, report_type, target_date, on_demand=on_demand,
+            )
             # Unverändert weiterreichen: `dispatch_orchestrator` zählt den Lauf
             # weiterhin als fehlgeschlagen und protokolliert ihn (AC-3).
             raise
@@ -1079,6 +1190,12 @@ class TripReportSchedulerService:
             self._append_briefing_log(trip.id, report_type, result.sent_channels)
             logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
+        # 8c. Issue #1662 AC-5: Der gelungene Versand macht einen offenen
+        # Versandfehler-Vermerk gegenstandslos — der Nutzer hat sein Briefing
+        # auf dem regulären Weg bekommen, eine Nachlieferung würde doppeln.
+        if result.sent and not on_demand:
+            self._clear_dispatch_error_marker(trip.id)
+
         # 9. Issue #1012: Teilausfall-Marker (Service-Error-Mail wurde bereits
         # vom NotificationService verschickt, weil failed_segments im Request
         # mitgeliefert wurden).
@@ -1112,11 +1229,20 @@ class TripReportSchedulerService:
         _anchor_and_reset()
 
         if result.no_channel_configured:
+            # Kein Vermerk: hier ist nichts ausgefallen, es war nichts
+            # vorgesehen (#1662 — Abgrenzung zum Zweig darunter).
             return "no_channels"
         if not result.sent:
             # Issue #1403 AC-4: konfiguriert, aber kein Kanal tatsächlich
             # betreten (z.B. Telegram ohne gültige Bot-Verbindung) — ehrlich
             # unterscheidbar vom "no_channels"-Fall oben.
+            # Issue #1662 AC-1: Auch hier hat NIEMAND das Briefing bekommen —
+            # nur eben ohne Ausnahme (SMS/Telegram sind fail-soft). Deshalb
+            # derselbe Vermerk wie im `except`-Zweig; "unerreichbar" bleibt
+            # dabei ein Ergebnis und wird KEINE Ausnahme.
+            self._mark_briefing_undelivered(
+                trip, report_type, target_date, on_demand=on_demand,
+            )
             return "channels_unreachable"
         return "sent"
 

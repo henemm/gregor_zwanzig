@@ -24,6 +24,9 @@ Marker-Format-Kontrakt (von der Spec nicht auf Container-Ebene festgelegt,
 hier als Testkontrakt festgeschrieben, analog `briefing_log.json`):
 `data/users/<uid>/pending_briefings.json` == `{"entries": [ {trip_id,
 report_type, date, slot_hour, failed_segment_ids, attempts, created_at}, ... ]}`.
+Optionales Feld `reason` (#1662): auf `"dispatch_error"` gesetzt bei einem
+Vermerk aus einem gescheiterten Versand, fehlend bei den hier getesteten
+Wetterfehler-Vermerken aus #1012.
 
 SPEC: docs/specs/modules/issue_1012_briefing_no_data_guard.md (AC-1..AC-7)
 """
