@@ -30,6 +30,12 @@ type User struct {
 	// nicht, ein Zero-Value würde als "0001-01-01T00:00:00Z" serialisiert
 	// statt als "fehlt" (unverifiziert).
 	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
+	// Issue #1676 Scheibe S1 — Premium-SMS Rueckkanal: von Garmin je Gespraech
+	// neu vergebene Rueckadresse. Pointer bei PremiumSmsReplyAt aus demselben
+	// Grund wie RequestedAt/EmailVerifiedAt (omitempty greift bei
+	// time.Time-Structs nicht).
+	PremiumSmsReplyTo string     `json:"premium_sms_reply_to,omitempty"`
+	PremiumSmsReplyAt *time.Time `json:"premium_sms_reply_at,omitempty"`
 }
 
 type PasswordResetToken struct {

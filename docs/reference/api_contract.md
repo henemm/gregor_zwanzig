@@ -2824,6 +2824,8 @@ type User struct {
     Tier               string                 `json:"tier,omitempty"`  // NEW (Issue #1068, Slice 1 of Epic #1067) — free/standard/premium; empty defaults to "free" at read time
     RequestedTier      string                 `json:"requested_tier,omitempty"`  // NEW (Issue #1071, Slice 4 of Epic #1067) — pending level-change request
     RequestedAt        *time.Time             `json:"requested_at,omitempty"`  // NEW (Issue #1071) — pointer type: plain time.Time's omitempty doesn't work, would serialize as zero-value "0001-01-01T00:00:00Z" instead of being omitted
+    PremiumSmsReplyTo  string                 `json:"premium_sms_reply_to,omitempty"`  // NEW (Issue #1676, Scheibe S1) — vom Garmin inReach zuletzt gelernte Rückadresse (seven.io-Journal, Kennzeichen `inreachlink.com`); einziger Schreiber ist der interne Endpoint `POST /api/internal/premium-sms-learn`; kein Frontend, keine Auth-Profile-Ausgabe in dieser Scheibe
+    PremiumSmsReplyAt  *time.Time             `json:"premium_sms_reply_at,omitempty"`  // NEW (Issue #1676, Scheibe S1) — Empfangszeitpunkt des Go-Endpoints (nicht der seven.io-`timestamp`); pointer-Muster analog RequestedAt
 }
 
 type WebAuthnCredential struct {

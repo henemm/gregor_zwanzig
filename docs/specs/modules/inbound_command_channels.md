@@ -2,9 +2,9 @@
 entity_id: inbound_command_channels
 type: module
 created: 2026-02-17
-updated: 2026-06-12
+updated: 2026-08-10
 status: draft
-version: "1.2"
+version: "1.3"
 tags: [f6, inbound, email, sms, imap, polling, channel, shortcode]
 ---
 
@@ -355,6 +355,16 @@ class InboundSmsReader:
 Beide Reader nutzen denselben `TripCommandProcessor` und dieselben DTOs.
 Der einzige Unterschied: Polling-Quelle und Reply-Output.
 
+> **Hinweis (Issue #1676, Scheibe S1, 2026-08-10):** Der oben skizzierte
+> `InboundSmsReader` ist NICHT der inzwischen gebaute. Der reale
+> `src/services/inbound_sms_reader.py` (Spec:
+> `docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md`) verarbeitet
+> **keine Trip-Befehle** und ruft `TripCommandProcessor` nicht auf — er pollt
+> das seven.io-Journal ausschließlich, um für Premium-Nutzer die Garmin-
+> inReach-Rückadresse (Kennzeichen `inreachlink.com`) zu lernen und in
+> `user.json` zu speichern. Ein SMS-Befehlskanal nach diesem Vorbild
+> (F1-Erweiterbarkeit) ist damit weiterhin **nicht** implementiert.
+
 ## Configuration
 
 | Parameter | Quelle | Beschreibung |
@@ -492,6 +502,10 @@ Kein Fehler darf den APScheduler-Thread zum Absturz bringen.
 
 ## Changelog
 
+- 2026-08-10: v1.3 HINWEIS: Abschnitt 9 (SMS-Channel Future) um Klarstellung
+  ergänzt — der reale `InboundSmsReader` aus Issue #1676 Scheibe S1 ist kein
+  Trip-Befehlskanal, sondern lernt ausschließlich die Garmin-inReach-
+  Rückadresse für Premium-Nutzer. Kein Code in dieser Spec geändert.
 - 2026-04-12: v1.2 BUGFIX (BUG-IMAP-01): `inbound_email_reader.py` nutzt jetzt `imap_user`/`imap_pass` aus config statt `smtp_user`/`smtp_pass`. `config.py` und `scheduler.py` entsprechend angepasst. Siehe `docs/project/known_issues.md` → BUG-IMAP-01.
 - 2026-02-19: v1.1 BUGFIX: Fehler-Antworten statt stiller Verwerfung bei fehlendem [Trip Name] und unbekanntem Trip. Filterlogik-Tabelle aktualisiert. Bestaetigungen auch bei Processor-Fehlern (success=False) senden.
 - 2026-02-17: v1.0 Initial spec — Email-Channel mit Reply-Bestaetigung, SMS vorbereitet
