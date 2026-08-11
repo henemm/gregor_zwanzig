@@ -54,6 +54,11 @@ Testpolitik (CLAUDE.md "Test-Politik: Zwei Schichten"):
 - Uhr: ``freeze_time`` (freezegun). Isolation: ``tests/conftest.py::
   _isolate_data_root`` (autouse, #1133) — keine manuelle Aufraeumung noetig.
 
+Erweitert 2026-08-11 (Issue #1667 Scheibe S3, SPEC:
+docs/specs/modules/fix_1667_s3_tagesuebergreifende_segmente.md) um die
+tagesuebergreifende Segment-Auswahl — eigener Abschnitt am Dateiende, dieselben
+Helfer, dieselbe Nachweis-Strategie (Koordinaten statt Alarm-Zaehler).
+
 Ausfuehrung:
     uv run pytest tests/tdd/test_radar_alert_follows_ortstag.py -v \
         --disable-socket --allow-hosts=127.0.0.1
@@ -68,8 +73,9 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from freezegun import freeze_time
 
+from app.trip import Trip
 from services.trip_alert import TripAlertService
-from services.trip_segments import convert_trip_to_segments
+from services.trip_segments import convert_trip_to_segments, resolve_current_segment
 
 from tests.helpers.nowcast_gate_fixtures import (
     CountingFrameSource,
@@ -753,3 +759,300 @@ def test_f002_ablauf_filter_prueft_den_letzten_ortstag_noch(caplog):
         "D-1) darf NICHT als 'laufend' behandelt werden — sonst ist der "
         f"Ablauf-Filter selbst wirkungslos. Log:\n{log_abgelaufen}"
     )
+
+
+# ════════ Issue #1667 S3 — tagesuebergreifende Segment-Auswahl (AC-1…AC-5) ═══════
+#
+# SPEC: docs/specs/modules/fix_1667_s3_tagesuebergreifende_segmente.md
+#
+# ``check_radar_alerts()`` fragt genau EINEN Kalendertag ab (``trip_alert.py:911-913``).
+# Eine Etappe mit Abendstart und Ankunft nach Mitternacht hat seit S2 ein
+# Ziel-Segment bis ins Tagesfenster-Ende des FOLGETAGS — ``get_stage_for_date``
+# loest aber strikt per ``==`` auf. Folge: Ein-Etappen-Trip -> ``[]`` ->
+# ``continue`` (bis zu 11 h 50 min ohne Ueberwachung); Mehr-Etappen-Trip ->
+# Vorschau auf die Folgeetappe, also die FALSCHE Koordinate, solange deren Start
+# <= ``NOWCAST_HORIZON_MIN`` (60 min) entfernt ist (darueber unterdrueckt der
+# Horizont-Guard aus #1697 bereits alles).
+#
+# Alle Zusicherungen zielen auf die abgefragten KOORDINATEN
+# (``frame_source.calls``), nie auf einen Alarm-Zaehler — an einem Zaehler waere
+# die Falsch-Ortung jahrelang vorbeigelaufen. Uhr durchgehend ``freeze_time``.
+# Reykjavik (UTC+0) dort, wo Zonenversatz nur Rechenrauschen waere; Korsika
+# (UTC+2) fuer den realistischen 60-Minuten-Fall.
+
+
+def _radar_lauf(uid: str, trip, *, mails: list | None = None):
+    """Ein ``check_radar_alerts()``-Lauf gegen eine frische Zaehl-Naht; liefert
+    ``(frame_source, Anzahl Alarme)``. ``reset_radar_cache()`` ist Pflicht
+    (Modul-Docstring: Prozess-Singleton, TTL 300 s, eingefroren nie ablaufend)."""
+    reset_radar_cache()
+    frame_source = CountingFrameSource(onset_minutes=10)
+    save_trip(trip, uid)
+    svc = TripAlertService(
+        settings=settings_email_only(), user_id=uid, throttle_hours=2,
+        radar_service=radar_service(frame_source),
+        mail_sink=(lambda subject, body: mails.append((subject, body)))
+        if mails is not None else None,
+    )
+    return frame_source, svc.check_radar_alerts()
+
+
+def _nacht_trip(trip_id: str, tag: date_type, *, folgeetappe=None):
+    """Etappe 22:00->02:00 Ortszeit (Reykjavik, UTC+0): der Modulo-Wrap aus S2
+    legt das Ziel-Segment auf ``tag+1``, 02:00 bis Tagesfenster-Ende 19:00."""
+    return make_trip(
+        trip_id, stage_date=tag, lat=REYKJAVIK_LAT, lon=REYKJAVIK_LON,
+        arrival_start="22:00", arrival_end="02:00",
+        extra_stages=[folgeetappe] if folgeetappe is not None else None,
+    )
+
+
+ZIEL_GESTERN = (REYKJAVIK_LAT + 0.1, REYKJAVIK_LON + 0.1)
+
+
+def test_heutiges_segment_gewinnt_gegen_noch_aktives_vortagssegment():
+    """S3 AC-1 (Vorrangkette): Bei echter Ueberlappung gewinnt das HEUTIGE
+    Segment; ist heute nichts aktiv, gewinnt das noch laufende gestrige.
+
+    Fixture: Etappe 10.8. 22:00->02:00 (Ziel-Segment 11.8. 02:00-19:00 UTC),
+    Folgeetappe 11.8. 03:00->12:00 UTC, 1 Grad noerdlich versetzt.
+
+    Beide Haelften noetig, keine ist fuer sich diskriminierend:
+    - 04:00 UTC (Ueberlappung) ist heute schon gruen — solange heute etwas aktiv
+      ist, ist S3 laut Spec bitgleich. Faengt die falsche Umsetzung
+      "zusammengefuehrte Liste", in der das gestrige Ziel-Segment vorn stuende.
+    - 01:00 UTC (Gegenprobe) ist die ROTE Haelfte: heute nichts aktiv, gestern
+      laeuft seg1 noch. Heute waehlt der Code die Vorschau auf die 03:00-Etappe,
+      der Horizont-Guard (120 min > 60) unterdrueckt sie -> 0 Abrufe.
+    """
+    heute = date_type(2026, 8, 11)
+    heute_lat = REYKJAVIK_LAT + 1.0
+
+    def _trip(trip_id: str):
+        return _nacht_trip(
+            trip_id, heute - timedelta(days=1),
+            folgeetappe=trip_stage(
+                "S2", heute, heute_lat, REYKJAVIK_LON,
+                arrival_start="03:00", arrival_end="12:00", wp_prefix="S2WP",
+            ),
+        )
+
+    with freeze_time("2026-08-11T04:00:00+00:00"):
+        fs_ueberlappung, _ = _radar_lauf(fresh_uid("s3ac1-ueber"), _trip("trip-s3ac1-a"))
+    assert fs_ueberlappung.calls == pytest.approx([(heute_lat, REYKJAVIK_LON)]), (
+        f"S3 AC-1: abgefragt wurde {fs_ueberlappung.calls!r}, erwartet war genau "
+        f"ein Abruf am HEUTIGEN Segment ({heute_lat}, {REYKJAVIK_LON}) — das "
+        f"ebenfalls aktive gestrige Ziel {ZIEL_GESTERN!r} darf nicht gewinnen."
+    )
+
+    with freeze_time("2026-08-11T01:00:00+00:00"):
+        fs_nur_gestern, _ = _radar_lauf(fresh_uid("s3ac1-gestern"), _trip("trip-s3ac1-b"))
+    assert fs_nur_gestern.calls == pytest.approx([(REYKJAVIK_LAT, REYKJAVIK_LON)]), (
+        "S3 AC-1 (Gegenprobe): um 01:00 UTC laeuft nur noch seg1 der GESTRIGEN "
+        f"Etappe ({REYKJAVIK_LAT}, {REYKJAVIK_LON}) — genau dort steht der "
+        f"Wanderer. Abgefragt wurde {fs_nur_gestern.calls!r}. RED: der Code kennt "
+        "nur den heutigen Kalendertag; seine Vorschau auf die 03:00-Etappe faellt "
+        "in den Horizont-Guard."
+    )
+
+
+def test_aktives_vortagsziel_schlaegt_die_bald_startende_folgeetappe():
+    """S3 AC-2 (verengtes Falsch-Ortungs-Fenster): Startet die heutige
+    Folgeetappe INNERHALB von ``NOWCAST_HORIZON_MIN``, greift der Guard nicht —
+    abgefragt werden muss trotzdem das noch aktive GESTRIGE Ziel-Segment.
+
+    Fixture (Korsika, UTC+2): Etappe 10.8. 22:00->02:00 Ortszeit -> Ziel-Segment
+    11.8. 00:00-17:00 UTC (aktiv); Folgeetappe 11.8. 08:00-16:00 Ortszeit ->
+    Start 06:00 UTC. Pruefzeitpunkt 05:30 UTC = 30 min davor.
+
+    RED heute: die Vorschau-Regel waehlt ``segments[0]`` der Folgeetappe und
+    ``get_nowcast`` laeuft real mit deren Koordinaten, waehrend der Wanderer nach
+    der Ankunft um 02:00 noch am Vortagesziel steht.
+    """
+    heute = date_type(2026, 8, 11)
+    ziel_gestern = (CORSICA_LAT + 0.1, CORSICA_LON + 0.1)
+    start_folgeetappe = (CORSICA_LAT + 0.5, CORSICA_LON + 0.5)
+
+    with freeze_time("2026-08-11T05:30:00+00:00"):
+        trip = make_trip(
+            f"trip-s3ac2-{uuid.uuid4().hex[:8]}", stage_date=heute - timedelta(days=1),
+            lat=CORSICA_LAT, lon=CORSICA_LON, arrival_start="22:00", arrival_end="02:00",
+            extra_stages=[trip_stage(
+                "S2", heute, *start_folgeetappe,
+                arrival_start="08:00", arrival_end="16:00", wp_prefix="S2WP",
+            )],
+        )
+        frame_source, _ = _radar_lauf(fresh_uid("s3ac2"), trip)
+
+    assert frame_source.calls == pytest.approx([ziel_gestern]), (
+        f"S3 AC-2: abgefragt wurde {frame_source.calls!r}, erwartet war das noch "
+        f"aktive GESTRIGE Ziel-Segment {ziel_gestern!r}. RED: abgefragt wird der "
+        f"Start der Folgeetappe {start_folgeetappe!r} — sie beginnt in 30 min, "
+        "der Horizont-Guard greift dort nicht."
+    )
+
+
+def test_schnappschuss_wird_unter_dem_datum_des_gewaehlten_segments_gelesen():
+    """S3 AC-3: Stammt das gewaehlte Segment von gestern, muss der
+    Briefing-Schnappschuss unter dem SEGMENT-Datum gelesen werden, nicht unter
+    ``today`` (``trip_alert.py:1020`` ``load_dated(trip.id, today)``).
+
+    Ein-Etappen-Trip mit Nacht-Wrap (10.8. 22:00->02:00), Pruefzeitpunkt 11.8.
+    03:00 UTC -> gewaehlt wird das Ziel-Segment (``segment_id="Ziel"``) vom 10.8.
+    Schnappschuss unter dem Segment-Datum -> Alarm unterdrueckt; derselbe
+    Schnappschuss nur unter dem heutigen Datum -> er darf NICHT gefunden werden,
+    der Alarm feuert. Ohne diese Kopplung waere S3 in genau dem Fall wirkungslos,
+    fuer den es gebaut wird.
+
+    RED heute: ``today`` = 11.8. findet die Etappe vom 10.8. nicht -> 0 Alarme in
+    BEIDEN Haelften. Die Unterdrueckungs-Haelfte ist damit zufaellig gruen, die
+    Gegenprobe ist die rote.
+    """
+    segment_tag = date_type(2026, 8, 10)
+    heute = date_type(2026, 8, 11)
+
+    def _run(*, unter_segmentdatum: bool) -> int:
+        uid = fresh_uid("s3ac3-seg" if unter_segmentdatum else "s3ac3-heute")
+        trip_id = f"trip-s3ac3-{uuid.uuid4().hex[:8]}"
+        with freeze_time("2026-08-11T03:00:00+00:00"):
+            trip = _nacht_trip(trip_id, segment_tag)
+            onset_hour_naive = (datetime.now(timezone.utc) + timedelta(minutes=10)).replace(
+                minute=0, second=0, microsecond=0, tzinfo=None,
+            )
+            _write_briefing_snapshot(
+                uid, trip_id, segment_tag if unter_segmentdatum else heute,
+                segment_id="Ziel", onset_hour_naive=onset_hour_naive, precip_mm=1.2,
+            )
+            _, count = _radar_lauf(uid, trip, mails=[])
+        return count
+
+    unterdrueckt = _run(unter_segmentdatum=True)
+    assert unterdrueckt == 0, (
+        f"S3 AC-3: der Schnappschuss liegt unter dem Datum des gewaehlten "
+        f"Segments ({segment_tag}) und kuendigt 1.2 mm Regen an — der Alarm "
+        f"haette unterdrueckt werden muessen, war count={unterdrueckt}. "
+        "Vermutlich wird weiter unter `today` gesucht."
+    )
+
+    feuert = _run(unter_segmentdatum=False)
+    assert feuert >= 1, (
+        f"S3 AC-3 (Gegenprobe): derselbe Schnappschuss liegt nur unter dem "
+        f"heutigen Datum ({heute}), das gewaehlte Segment stammt vom "
+        f"{segment_tag} — er darf dort NICHT gefunden werden, der Alarm haette "
+        f"feuern muessen, war count={feuert}. RED: die Etappe vom {segment_tag} "
+        "wird gar nicht gefunden, es entsteht ueberhaupt kein Alarm."
+    )
+
+
+def test_ein_etappen_trip_bleibt_nach_mitternacht_im_zielfenster_ueberwacht():
+    """S3 AC-4 (Kernmotivation): Ein Trip mit genau EINER Etappe, deren Gehzeit
+    ueber Mitternacht reicht, wird nach Mitternacht weiter ueberwacht — aber nur
+    innerhalb des berechneten Ziel-Segment-Fensters (11.8. 02:00-19:00 UTC).
+
+    - 03:00 UTC (innerhalb): Abruf an der Ziel-Koordinate. RED heute:
+      ``convert_trip_to_segments(trip, 11.8.)`` liefert ``[]`` -> ``continue``
+      -> 0 Abrufe, bis zu 11 h 50 min ohne jede Ueberwachung.
+    - 20:00 UTC (nach ``window_end``): weiterhin 0 Abrufe — heute schon gruen,
+      haelt die Rueckwaerts-Suche davon ab, ein abgelaufenes Fenster
+      wiederzubeleben. Bewusst der ``window_end``-Fall statt "vor Start": ein
+      Zeitpunkt vor 22:00 wuerde den Horizont-Guard messen, nicht das Fenster.
+    """
+    tag = date_type(2026, 8, 10)
+
+    with freeze_time("2026-08-11T03:00:00+00:00"):
+        fs_innen, _ = _radar_lauf(
+            fresh_uid("s3ac4-innen"), _nacht_trip(f"trip-s3ac4-i-{uuid.uuid4().hex[:8]}", tag),
+        )
+    assert fs_innen.calls == pytest.approx([ZIEL_GESTERN]), (
+        f"S3 AC-4: um 03:00 UTC laeuft das Ziel-Segment der Etappe vom {tag} "
+        f"(02:00-19:00 UTC) — erwartet war genau ein Abruf an {ZIEL_GESTERN!r}, "
+        f"war {fs_innen.calls!r}. RED: der heutige Kalendertag traegt keine "
+        "Etappe, der Trip wird per `continue` uebersprungen."
+    )
+
+    with freeze_time("2026-08-11T20:00:00+00:00"):
+        fs_aussen, _ = _radar_lauf(
+            fresh_uid("s3ac4-aussen"), _nacht_trip(f"trip-s3ac4-a-{uuid.uuid4().hex[:8]}", tag),
+        )
+    assert fs_aussen.calls == [], (
+        "S3 AC-4 (Zeitfenster-Nachweis): um 20:00 UTC ist auch das Ziel-Segment "
+        f"vorbei (Ende 19:00 UTC) — es darf kein Abruf erfolgen, war "
+        f"{fs_aussen.calls!r}."
+    )
+
+
+def test_rueckgriff_endet_beim_unmittelbaren_vortag():
+    """S3 AC-5: Die Vorrangkette schaut GENAU einen Tag zurueck.
+
+    Gleiche Fixture, nur das Etappendatum verschoben, Pruefzeitpunkt jeweils
+    11.8. 03:00 UTC:
+    - Etappe am 10.8.: Ziel-Segment laeuft bis 11.8. 19:00 -> Abruf. RED heute
+      (0 Abrufe), die diskriminierende Haelfte.
+    - Etappe am 9.8.: dazwischen ein vollstaendiger Tag ohne Etappe, das
+      Ziel-Segment endete am 10.8. 19:00 -> weiterhin KEIN Abruf. Ohne die erste
+      Haelfte erfuellte das auch eine Implementierung, die gar nichts tut.
+    """
+    with freeze_time("2026-08-11T03:00:00+00:00"):
+        fs_gestern, _ = _radar_lauf(
+            fresh_uid("s3ac5-gestern"),
+            _nacht_trip(f"trip-s3ac5-g-{uuid.uuid4().hex[:8]}", date_type(2026, 8, 10)),
+        )
+        fs_vorgestern, _ = _radar_lauf(
+            fresh_uid("s3ac5-vorgestern"),
+            _nacht_trip(f"trip-s3ac5-v-{uuid.uuid4().hex[:8]}", date_type(2026, 8, 9)),
+        )
+
+    assert fs_gestern.calls == pytest.approx([ZIEL_GESTERN]), (
+        "S3 AC-5 (Grenze innen): die Etappe von GESTERN hat ein noch laufendes "
+        f"Ziel-Segment — erwartet war ein Abruf dort, war {fs_gestern.calls!r}. "
+        "RED: der Vortags-Rueckgriff existiert noch nicht."
+    )
+    assert fs_vorgestern.calls == [], (
+        "S3 AC-5 (Grenze aussen): die letzte Etappe endete vor ZWEI Tagen — die "
+        "Kette darf nicht weiter als einen Tag zurueckschauen, es darf kein "
+        f"Abruf erfolgen. War {fs_vorgestern.calls!r}."
+    )
+
+
+class _DatumsSpion(Trip):
+    """Echter ``Trip``, der jede Datums-Abfrage mitschreibt und unveraendert
+    weiterreicht (Muster ``CountingFrameSource``: echte Aufrufe protokollieren,
+    nichts faelschen). ``convert_trip_to_segments`` ruft als ERSTE Anweisung
+    ``trip.get_stage_for_date(target_date)`` — das Protokoll ist damit die Liste
+    der wirklich abgefragten Kalendertage."""
+
+    abgefragte_daten: list
+
+    def get_stage_for_date(self, d):
+        self.abgefragte_daten.append(d)
+        return super().get_stage_for_date(d)
+
+
+def test_rueckgriff_fragt_genau_zwei_kalendertage_ab():
+    """S3 AC-5, Tiefe am WIRKORT gemessen (Adversary-F001): abgefragt werden
+    genau heute und heute-1, kein dritter Tag.
+
+    ``test_rueckgriff_endet_beim_unmittelbaren_vortag`` misst nur die WIRKUNG
+    und blieb gemessen auch bei zwei Tagen Tiefe und bei 29-Tage-Suche gruen —
+    durch die Fensterkappung (#1584) ist alles aelter als gestern ohnehin
+    abgelaufen. Fixture deshalb ohne Treffer an beiden Tagen (Etappe vor zwei
+    Tagen): die Kette laeuft bis zum Ende, jede Zusatzstufe wird sichtbar."""
+    heute = date_type(2026, 8, 11)
+    vorlage = _nacht_trip("trip-s3ac5-tiefe", heute - timedelta(days=2))
+    spion = _DatumsSpion(id=vorlage.id, name=vorlage.name, stages=vorlage.stages)
+    spion.abgefragte_daten = []
+
+    ergebnis = resolve_current_segment(
+        spion, datetime(2026, 8, 11, 3, 0, tzinfo=timezone.utc), heute
+    )
+
+    assert spion.abgefragte_daten == [heute, heute - timedelta(days=1)], (
+        f"S3 AC-5 (Tiefe): erlaubt sind genau {heute} und "
+        f"{heute - timedelta(days=1)}, abgefragt wurde "
+        f"{spion.abgefragte_daten!r} — ein dritter Eintrag heisst: der "
+        "Rueckgriff geht tiefer als einen Tag."
+    )
+    assert ergebnis is None, (
+        f"S3 AC-5: kein Tag traegt ein aktives Segment, erwartet None: {ergebnis!r}"
+    )
+

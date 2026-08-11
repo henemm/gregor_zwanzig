@@ -900,7 +900,7 @@ class TripAlertService:
         Returns the number of radar alerts triggered.
         """
         from app.loader import load_all_trips
-        from services.trip_segments import convert_trip_to_segments
+        from services.trip_segments import resolve_current_segment
 
         now_utc = datetime.now(timezone.utc)
         sent = 0
@@ -909,27 +909,23 @@ class TripAlertService:
             # Issue #1697: Ortstag dieses Trips statt Serverdatum (ADR-0044) —
             # je Trip, die Zone haengt vom Trip ab.
             today = trip_local_today(trip, now_utc)
-            # Segment-Auswahl (Issue #822 — ersetzt stage.waypoints[0])
-            segments = convert_trip_to_segments(trip, today)
-            if not segments:
+            # Segment-Auswahl (Issue #822 — ersetzt stage.waypoints[0]),
+            # seit Issue #1667 S3 tagesuebergreifend: aktiv heute -> aktiv
+            # gestern -> Vorschau heute[0] -> nichts. Eine Etappe mit
+            # Abendstart und Ankunft nach Mitternacht traegt ihr Ziel-Segment
+            # bis in den Folgetag; der heutige Kalendertag allein fand es
+            # nicht (`get_stage_for_date` loest strikt per `==` auf).
+            # `segment_date` ist das Datum, dem das gewaehlte Segment
+            # ENTSTAMMT — nicht zwingend `today`, s. Schnappschuss unten.
+            _resolved = resolve_current_segment(trip, now_utc, today)
+            if _resolved is None:
+                # Keine Etappe an beiden Tagen oder alle Segmente zeitlich
+                # vorbei → kein Alert (Option Y der Spec)
+                logger.debug(
+                    f"Radar alert skipped: kein aktives/naechstes Segment fuer {trip.id}"
+                )
                 continue
-
-            # Aktives Segment: erstes mit start_time <= now_utc <= end_time
-            active = None
-            for seg in segments:
-                if seg.start_time <= now_utc <= seg.end_time:
-                    active = seg
-                    break
-
-            if active is None:
-                if now_utc < segments[0].start_time:
-                    active = segments[0]   # vor allen Segmenten → erstes
-                else:
-                    # Alle Segmente zeitlich vorbei → kein Alert (Option Y der Spec)
-                    logger.debug(
-                        f"Radar alert skipped: alle Segmente vorbei fuer {trip.id}"
-                    )
-                    continue
+            active, segment_date = _resolved
 
             # Issue #1697 AC-4: Horizont-Guard — Vorbild
             # `trip_report_scheduler.py::_build_starkregen_hint`. Ein Segment,
@@ -1016,8 +1012,14 @@ class TripAlertService:
                 continue
 
             # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)
+            # Issue #1667 S3: gelesen wird unter dem Datum, dem das GEWAEHLTE
+            # Segment entstammt — nicht unter `today`. Stammt es vom Vortag
+            # (Nacht-Ankunft), liegt sein Briefing-Schnappschuss auch unter
+            # dem Vortag; mit `today` fiele der Vergleich ins Leere und ein
+            # gerade gewonnener Alarm bliebe unbegruendet unterdrueckt bzw.
+            # der angekuendigte Regen unerkannt.
             from services.weather_snapshot import WeatherSnapshotService
-            _snapshot = WeatherSnapshotService(self._user_id).load_dated(trip.id, today)
+            _snapshot = WeatherSnapshotService(self._user_id).load_dated(trip.id, segment_date)
             _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
             _briefing_precip = self._briefing_precip_for_onset(_snapshot, active.segment_id, _onset_dt)
             _briefing_announced = (_briefing_precip is not None and _briefing_precip >= 0.5)

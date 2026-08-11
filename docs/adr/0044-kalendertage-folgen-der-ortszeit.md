@@ -92,11 +92,18 @@ ist ein Regelverstoß — genau das war der Zustand vor #1697.
 - **Drilldown** (#1470) — der ursprüngliche Anlass dieses ADR.
 - **Alarm-Pfad** (#1697, live 2026-08-11): `src/services/trip_alert.py` an allen drei
   Stellen, die einen Kalendertag bestimmen (`:404` Ablauf-Filter, `:584` Schnappschuss-
-  Anker, `:901` Segmentwahl). Dieser Pfad stand in der Restliste unten **nie drin** und war
+  Anker, `:911` Segmentwahl). Dieser Pfad stand in der Restliste unten **nie drin** und war
   trotzdem der schwerwiegendste Verstoß: nicht eine falsche Anzeige, sondern **ausbleibende
   Alarme**. Gemessen für eine gewöhnliche Etappe 08:00–19:00 Ortszeit — Neuseeland verlor
   die ersten ~4 von 11 Stunden *jedes* Etappentags, Kalifornien die letzten ~2, Mitteleuropa
   zwei Stunden jede Nacht.
+  **Hinweis, kein neuer Haken (Issue #1667 S3, live 2026-08-11):** Die Segmentwahl (`:911`)
+  ruft seither `trip_segments.py::resolve_current_segment()` und fällt additiv auf das
+  Ziel-Segment des unmittelbaren Vortags zurück, wenn heute nichts aktiv ist. Das ändert
+  **nicht** die Zonen-Auflösung dieses ADR — `today`/`gestern` bleiben beide über
+  `trip_local_today()` bestimmt —, sondern nur die Tages-**Tiefe** der Suche (ein Tag
+  zusätzlich statt nur der eine bereits aufgelöste Ortstag). Details:
+  `docs/specs/modules/fix_1667_s3_tagesuebergreifende_segmente.md`.
 
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,
