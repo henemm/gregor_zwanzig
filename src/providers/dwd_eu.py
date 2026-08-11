@@ -63,6 +63,12 @@ from tenacity import (
     wait_exponential,
 )
 
+# #1531 Adversary F001: `CIN_ML_LOWER_SENTINEL` ist in `dwd.py` definiert und
+# wird hier NUR importiert (keine eigene Kopie) -- derselbe Fehlwert-Marker,
+# dieselbe Groesse (`cin_ml`), gemeinsame Quelle der Wahrheit statt zweier
+# Konstanten, die auseinanderlaufen koennten.
+from providers.dwd import CIN_ML_LOWER_SENTINEL
+
 if TYPE_CHECKING:
     from app.config import Location
 
@@ -85,7 +91,10 @@ FORECAST_HOURS: List[int] = list(range(1, 25))
 # liest, statt ihn zu wiederholen — genau diese Naht fehlte bei S2a, wo
 # `LITOTA3` beim Dienst gar nicht existierte und trotzdem 24 aufgezeichnete
 # Tests gruen blieben.
-THUNDER_PARAMS = ("lpi_con_max",)
+# #1531: drei Energiegroessen ergaenzt (Spec Implementation Details Punkt 2)
+# -- `cape_con` wird abgerufen, aber bewusst KEINEM Modellfeld zugeordnet
+# (kein Eintrag in `thunder_enrichment._SIGNAL_ZU_FELD`).
+THUNDER_PARAMS = ("lpi_con_max", "cape_ml", "cape_con", "cin_ml")
 
 # Abrufname beim Dienst -> INTERNER Signalname des gemeinsamen Protokolls.
 # `lpi_con_max` ist der externe Parametername; nach aussen liefert dieser
@@ -93,7 +102,14 @@ THUNDER_PARAMS = ("lpi_con_max",)
 # fachlich dieselbe Groesse (Blitzpotenzial in J/kg) ist. Dadurch greift die
 # bestehende Zeile in `thunder_enrichment._SIGNAL_ZU_FELD` unveraendert und
 # der gemeinsame Anschluss muss fuer S2c NICHT angefasst werden (Spec AC-9).
-_SIGNAL_KEYS: Dict[str, str] = {"lpi_con_max": "lpi"}
+# `cape_ml`/`cape_con`/`cin_ml` behalten ihren Abrufnamen 1:1 als Signalname
+# -- keine Umbenennung noetig, weil es dieselben Groessen wie bei ICON-D2 sind.
+_SIGNAL_KEYS: Dict[str, str] = {
+    "lpi_con_max": "lpi",
+    "cape_ml": "cape_ml",
+    "cape_con": "cape_con",
+    "cin_ml": "cin_ml",
+}
 
 # Eigenes Zeitbudget der Gewitter-Anreicherung (Spec AC-4). HERGELEITET,
 # nicht von den Nachbarn uebernommen (ICON-D2 90 s, Meteo-France 45 s):
@@ -202,11 +218,13 @@ def _build_url(run: datetime, offset: int, param: str) -> str:
     )
 
 
-def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[float]:
+def _read_point_value(
+    compressed: bytes, lat: float, lon: float, param: Optional[str] = None,
+) -> Optional[float]:
     """Entpackt eine `.grib2.bz2`-Antwort und liest den Bildpunkt von Band 1
     an (lat, lon).
 
-    Drei Faelle ergeben ausdruecklich `None` statt einer Zahl (Spec AC-2 —
+    Vier Faelle ergeben ausdruecklich `None` statt einer Zahl (Spec AC-2 —
     "keine Aussage" ist nicht "keine Gefahr"):
 
     1. Der Ort liegt AUSSERHALB des gelieferten Gitters. Anders als
@@ -220,6 +238,13 @@ def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[flo
        9999.0 hierher zu uebernehmen waere der dritte Analogieschluss in
        Folge, der sich als falsch erweist.
     3. Der Wert ist NaN.
+    4. #1531 Adversary F001: `cin_ml` traegt (wie bei ICON-D2) den zweiten
+       Fehlwert-Marker -999,9 (Spec Known Limitations Punkt 4: "Fuer ICON-EU
+       wird derselbe Schutz vorsorglich mitgefuehrt", live gemessen an
+       `icon_eu_abruzzen_cin_ml_2026081100_000.grib2.bz2`: 38,6 % der
+       Gitterpunkte). Die Pruefung ist JE PARAMETER gefuehrt, nicht global
+       (Spec Implementation Details Punkt 3) -- ein anderer Parameter mit
+       einem echten Wert um -999,9 waere sonst faelschlich verworfen.
     """
     try:
         raw = bz2.decompress(compressed)
@@ -232,6 +257,8 @@ def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[flo
             if math.isnan(wert):
                 return None
             if nodata is not None and not math.isnan(nodata) and wert == nodata:
+                return None
+            if param == "cin_ml" and wert <= CIN_ML_LOWER_SENTINEL:
                 return None
             return wert
     except Exception:
@@ -329,7 +356,7 @@ class DwdEuDirectProvider:
                 )
                 return None
             zustand["bestaetigt"] = True
-            return _read_point_value(raw, lat, lon)
+            return _read_point_value(raw, lat, lon, param)
 
     def fetch_thunder_signals_named(
         self,

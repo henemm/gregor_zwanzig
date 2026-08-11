@@ -160,6 +160,23 @@ class ForecastDataPoint:
     lightning_potential_lpi_jkg: Optional[float] = None
     hail_potential_grau_gsp: Optional[float] = None
 
+    # Gewittergroessen DWD ICON-D2/ICON-EU (#1531, Fortfuehrung #1457 S2):
+    # sieben Groessen, die Epic #1419 Abs. 2a/3.2 je Gebiet vorsieht, bisher
+    # aber nicht abgerufen wurden. Je Groesse ein eigenes Feld -- die drei
+    # Updraft-Varianten tragen VERSCHIEDENE Werte (gemessen: uh_max rund
+    # siebenmal groesser als die Schichtvarianten am selben Punkt) und teilen
+    # sich deshalb keine Spalte. `cape_ml` bekommt bewusst KEIN gemeinsames
+    # Feld mit `cape_jkg` -- unterschiedliche Quellen, nicht mehr zuordenbar.
+    # Diese Scheibe reicht nur Rohwerte durch -- keine Einstufung (Scope-
+    # Abgrenzung der Spec).
+    supercell_index_sdi2_1s: Optional[float] = None          # 1/s, vorzeichenbehaftet
+    convective_inhibition_jkg: Optional[float] = None        # J/kg
+    cape_ml_jkg: Optional[float] = None                       # J/kg, ICON-D2/EU
+    lightning_potential_max_lpi_jkg: Optional[float] = None
+    updraft_helicity_max_m2s2: Optional[float] = None        # m^2/s^2, Gesamtsaeule
+    updraft_helicity_max_med_m2s2: Optional[float] = None    # m^2/s^2, mittlere Schicht (2-5 km)
+    updraft_helicity_max_low_m2s2: Optional[float] = None    # m^2/s^2, untere Schicht
+
     # Gewitter-Wahrscheinlichkeit (Issue #1474 Abschnitt 5, getrennte Achse von
     # thunder_level/"Staerke"): vorbereitetes, in dieser Scheibe von KEINER
     # Quelle befuelltes Feld, kein Renderer-Anschluss. Befuellung ist #1419 S6

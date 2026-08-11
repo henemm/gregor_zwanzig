@@ -36,6 +36,17 @@ logger = logging.getLogger("thunder_enrichment")
 _SIGNAL_ZU_FELD: Dict[str, str] = {
     "lpi": "lightning_potential_lpi_jkg",
     "grau_gsp": "hail_potential_grau_gsp",
+    # #1531: sieben neue Signale (ICON-D2 + ICON-EU-Energiegroessen). Je
+    # Groesse ein eigenes Feld (Spec Implementation Details Punkt 4).
+    # `cape_con` (ICON-EU) bekommt BEWUSST keinen Eintrag -- wird abgerufen,
+    # aber keinem Feld zugeordnet (Spec Scope-Abgrenzung).
+    "sdi_2": "supercell_index_sdi2_1s",
+    "cin_ml": "convective_inhibition_jkg",
+    "cape_ml": "cape_ml_jkg",
+    "lpi_max": "lightning_potential_max_lpi_jkg",
+    "uh_max": "updraft_helicity_max_m2s2",
+    "uh_max_med": "updraft_helicity_max_med_m2s2",
+    "uh_max_low": "updraft_helicity_max_low_m2s2",
 }
 
 # Feld der bestehenden Einzelwert-Quelle (S2a). Es steht NICHT in der Tabelle

@@ -183,10 +183,14 @@ Die sieben neuen Paare kommen in `_SIGNAL_ZU_FELD`. Der bestehende Weg
     und der Test rot.
 
 - **AC-6:** Given ein Ort im ICON-EU-Gebiet / When die Anreicherung läuft / Then werden
-  `cape_ml`, `cape_con` und `cin_ml` befüllt, und `sdi_2` sowie alle drei `uh_max*`-Varianten bleiben `None`, weil ICON-EU
-  sie nicht anbietet.
-  - Test: Ort außerhalb des D2-Gebiets (z.B. Mallorca); die drei Energiefelder tragen Werte,
-    die vier anderen sind `None`.
+  `cape_ml` und `cin_ml` am Datenpunkt befüllt und `cape_con` providerintern abgerufen (ohne
+  eigenes Modellfeld, siehe Implementation Details Punkt 1), und `sdi_2` sowie alle drei
+  `uh_max*`-Varianten bleiben `None`, weil ICON-EU sie nicht anbietet. **Klargestellt
+  2026-08-11 nach Adversary-Finding F002 (PO-Entscheid): „befüllt" bezog sich auf den
+  Abruf, nicht zwingend auf ein sichtbares Modellfeld — `cape_con` bekommt bewusst keins.**
+  - Test: Ort außerhalb des D2-Gebiets (z.B. Mallorca); `cape_ml`/`cin_ml` tragen Werte am
+    Datenpunkt, die vier D2-exklusiven Felder sind `None`. `cape_con` wird auf Provider-Ebene
+    (Rohwert-Dict) geprüft, nicht am Datenpunkt.
 
 - **AC-7:** Given das Zeitbudget der Anreicherung (150 s) wird erschöpft / When der Abbruch
   greift / Then sind `lpi`, `grau_gsp` und `cin_ml` bereits abgerufen, weil sie in der
