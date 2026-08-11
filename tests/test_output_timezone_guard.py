@@ -79,13 +79,28 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC = REPO_ROOT / "src"
 
-# Ausgabepfad: das komplette src/output/-Baumwerk (Renderer, Kanäle, Tokens)
-# + die "nachrichtenerzeugenden Services" aus der #1402-Bestandsaufnahme, die
-# selbst Uhrzeiten für Mail/SMS/Telegram/CLI formatieren, aber außerhalb von
-# src/output/ liegen. NICHT gescannt wird der zentrale Aufloeser/Naiv-Guard
-# selbst (``utils/timezone.py``) — der darf ``.astimezone()`` aufrufen, das
-# ist seine Aufgabe.
+# Scanflaeche, zwei Schichten (Issue #1723 hat die zweite ergaenzt):
+#
+# 1. AUSGABE — das komplette src/output/-Baumwerk (Renderer, Kanäle, Tokens)
+#    + die "nachrichtenerzeugenden Services" aus der #1402-Bestandsaufnahme,
+#    die selbst Uhrzeiten für Mail/SMS/Telegram/CLI formatieren, aber
+#    außerhalb von src/output/ liegen.
+# 2. ENTSCHEIDUNG — das komplette src/services/- und api/-Baumwerk: welcher
+#    Kalendertag gemeint ist, ob ein Versand fällig ist, ob Ruhezeit gilt.
+#    Dort greifen die beiden Fundarten der Entscheidungs-Schicht (Muster A/B,
+#    s. _KIND_*-Konstanten unten).
+#
+# Sechs der sieben _MESSAGING_SERVICE_FILES liegen bereits unter
+# src/services/ und sind damit doppelt erfasst — _scan_files() fuehrt die
+# Kombination deshalb ueber eine MENGE. Der siebte Eintrag (src/app/cli.py)
+# ist der einzige, den die neue Flaeche nicht mitbringt.
+#
+# NICHT gescannt wird der zentrale Aufloeser/Naiv-Guard selbst
+# (``utils/timezone.py``) — der darf ``.astimezone()`` aufrufen, das ist
+# seine Aufgabe.
 _OUTPUT_DIR = SRC / "output"
+_SERVICES_DIR = SRC / "services"
+_API_DIR = REPO_ROOT / "api"
 _MESSAGING_SERVICE_FILES = [
     # Issue #1465: stand hier als SRC/"app"/... — diesen Pfad gibt es nicht,
     # die Datei liegt unter services/. `_scan_files()` filtert mit
@@ -111,11 +126,40 @@ _TZ_NAMES = {"tz", "_tz", "alert_tz"}
 # gleich zu lesen ist.
 _MODULE_SCOPE = "<module>"
 
+# Namen der beiden Fundarten der Entscheidungs-Schicht (Issue #1723, Epic
+# #1722 S1). Sie stehen hier als VERTRAG: die roten Wirkungsnachweise unten
+# prüfen den `kind`-Wert wörtlich gegen diese Konstanten, damit ein lautlos
+# leerlaufender Detektor nicht in einer Summe über beide Muster verschwindet
+# (AC-7).
+#   Muster A — Umgebungsuhr: ``date.today()`` / ``datetime.now()`` ohne
+#   ``tz``-Argument. ``.utcnow()`` gehoert NICHT dazu (E2).
+#   Muster B — festes Nicht-UTC-Zonen-Literal: ``ZoneInfo("Europe/Vienna")``
+#   und Verwandte. ``ZoneInfo("UTC")`` gehoert NICHT dazu (E1).
+_KIND_AMBIENT_CLOCK = "ambient_clock"
+_KIND_HARDCODED_NON_UTC_ZONE = "hardcoded_non_utc_zone"
+
+# Attributnamen der Umgebungsuhr (Muster A). ``utcnow`` steht bewusst NICHT
+# hier: es liefert AUSDRUECKLICH Weltzeit, waehrend ``now``/``today`` STILL
+# Prozess-Lokalzeit liefern — andere Fehlerklasse (E1/E2 der Spec). Ein
+# Ausschluss-Sonderfall waere nur eine zweite Stelle, die dasselbe sagt.
+_AMBIENT_CLOCK_ATTRS = {"now", "today"}
+
 
 def _scan_files() -> list[Path]:
-    files = sorted(_OUTPUT_DIR.rglob("*.py"))
-    files += [p for p in _MESSAGING_SERVICE_FILES if p.exists()]
-    return files
+    """Ausgabe- UND Entscheidungs-Schicht, ueber eine MENGE gefuehrt.
+
+    Die Mengenbildung ist keine Kosmetik: sechs der sieben
+    ``_MESSAGING_SERVICE_FILES`` liegen unter ``src/services/`` und kaemen mit
+    ``+=`` zweimal in die Liste (Issue #1723).
+    """
+    return sorted(
+        {
+            *_OUTPUT_DIR.rglob("*.py"),
+            *(p for p in _MESSAGING_SERVICE_FILES if p.exists()),
+            *_SERVICES_DIR.rglob("*.py"),
+            *_API_DIR.rglob("*.py"),
+        }
+    )
 
 
 def _is_zoneinfo_utc_call(node: ast.AST) -> bool:
@@ -336,6 +380,25 @@ def _find_violations(path: Path) -> dict[str, str]:
                 record(node, node.lineno, "silent_tz_ternary")
             elif _is_tz_like(node.orelse) and _is_utc_ish(node.body):
                 record(node, node.lineno, "silent_tz_ternary")
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in _AMBIENT_CLOCK_ATTRS
+        ):
+            # Muster A (#1723) — Umgebungsuhr. ``date.today()`` kennt keine
+            # Zone und ist deshalb IMMER ein Fund; ``datetime.now()`` nur
+            # ohne Zonenargument (``now(zone)`` positional wie ``now(tz=zone)``
+            # als Keyword sind die richtige Schreibweise).
+            has_tz_arg = bool(node.args) or any(kw.arg == "tz" for kw in node.keywords)
+            if node.func.attr == "today" or not has_tz_arg:
+                record(node, node.lineno, _KIND_AMBIENT_CLOCK)
+        elif _is_hardcoded_zoneinfo_call(node) and not _is_zoneinfo_utc_call(node):
+            # Muster B (#1723) — festes Nicht-UTC-Zonen-Literal, in JEDER
+            # Ausdrucksform (Modulebene-Zuweisung, Funktionsargument,
+            # Rueckfallausdruck), nicht nur in den Mid-Body-Rueckfallformen
+            # oberhalb. ``ZoneInfo("UTC")`` ist nach Hausnorm #1345 die
+            # richtige Schreibweise und faellt hier bewusst heraus (E1).
+            record(node, node.lineno, _KIND_HARDCODED_NON_UTC_ZONE)
 
     return _number_findings(raw)
 
@@ -515,7 +578,79 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/output/renderers/alert/official_alerts.py::render_official_alert_sms::0": "Aufrufseite abgesichert (vormals :1690) — render_official_alert_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
     "src/services/radar_service.py::format_now_text::0": "Aufrufseite abgesichert (vormals :219) — format_now_text (Wächter: test_production_callsites_pass_tz_explicitly).",
     "src/services/trip_report_scheduler.py::_build_stage_trend::0": "Aufrufseite abgesichert (vormals :1365) — _build_stage_trend (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/services/trip_report_scheduler.py::_build_stage_trend::1": "Aufrufseite abgesichert (vormals :1427) — Ternary-Rückfall zum Default von _build_stage_trend, daran gekoppelt.",
+    # ORDINAL-VERSCHIEBUNG (#1723): Muster A findet in _build_stage_trend ein
+    # `date.today()` (:1812) VOR dem Ternary (:1869) — der Ternary rutscht
+    # dadurch von ::1 auf ::2. Dieselben zwei Codestellen wie bisher, plus der
+    # neue Fund dazwischen; nichts gestrichen.
+    "src/services/trip_report_scheduler.py::_build_stage_trend::1": "Muster A (:1812) — `today = date.today()` datiert den Etappen-Trend auf die Serveruhr statt auf die Ortszeit der Etappe (#1726).",
+    "src/services/trip_report_scheduler.py::_build_stage_trend::2": "Aufrufseite abgesichert (vormals :1427, jetzt :1869) — Ternary-Rückfall zum Default von _build_stage_trend, daran gekoppelt.",
+    # -----------------------------------------------------------------------
+    # ENTSCHEIDUNGS-SCHICHT (Issue #1723, Epic #1722 S1) — Bestandsaufnahme
+    # von `src/services/**` + `api/**`, gemessen am 2026-08-11 gegen
+    # origin/main `0db5eec6` (nach #1724, das zwei Europe/Vienna-Stellen
+    # entfernt hat). 53 Einträge, ausschliesslich per AST-Scan erhoben, nicht
+    # per grep gezaehlt. Sie sind AUFGENOMMEN, nicht entschuldigt: diese
+    # Lieferung blockt nur Neuzugaenge, die Behebung traegt #1726 (S4).
+    # -----------------------------------------------------------------------
+    # --- Muster A: Umgebungsuhr (`date.today()` / `datetime.now()` ohne tz) ---
+    "api/routers/compare.py::run_comparison::0": "Muster A (:53) — Sofort-Vergleich nimmt die Serveruhr als 'jetzt' (#1726).",
+    "api/routers/compare.py::run_comparison::1": "Muster A (:55) — Zieltag 'heute' vom Server, nicht vom Ort (#1726).",
+    "api/routers/compare.py::run_comparison::2": "Muster A (:58) — Zieltag 'morgen' vom Server, nicht vom Ort (#1726).",
+    "api/routers/debug.py::trigger_radar_alert::0": "Muster A (:61) — Debug-Ausloeser datiert auf die Serveruhr (#1726).",
+    "src/output/renderers/email/compare_html.py::_compute_next_send::0": "Muster A (:1377) — naechste Sendezeit gegen den Servertag geprueft (#1726).",
+    "src/services/alert_briefing_anchor.py::briefing_target_day_is_current::0": "Muster A (:169) — Briefing-Anker faellt auf den Servertag zurueck (#1726).",
+    "src/services/compare_preview_service.py::_resolve_target_date::0": "Muster A (:250) — Vorschau-Zieltag vom Server (#1726).",
+    "src/services/comparison_engine.py::dict_to_comparison_result::0": "Muster A (:407) — Zieltag beim Einlesen vom Server (#1726).",
+    "src/services/gpx_processing.py::compute_default_start_date::0": "Muster A (:189) — GPX-Vorgabestart vom Servertag (#1726).",
+    "src/services/gpx_processing.py::compute_default_start_date::1": "Muster A (:193) — zweiter Rueckfall auf den Servertag (#1726).",
+    "src/services/gpx_processing.py::gpx_to_stage_data::0": "Muster A (:223) — Etappendatum faellt auf den Servertag zurueck (#1726).",
+    "src/services/inbound_telegram_reader.py::_find_active_trip::0": "Muster A (:358) — 'aktive Tour heute' gegen den Servertag (#1726).",
+    "src/services/notification_service.py::_target_date_from_report::0": "Muster A (:1676) — Zieltag des Berichts vom Server (#1726).",
+    "src/services/official_alerts/massif_closure.py::_do_request::0": "Muster A (:102) — Abfrage-Datum der franzoesischen Quelle vom Server (#1726).",
+    "src/services/official_alerts/massif_closure.py::fetch::0": "Muster A (:127) — Zeitstempel fuer `last_run` ohne Zone (#1726).",
+    "src/services/official_alerts/meteo_forets.py::covers::0": "Muster A (:130) — Saison-Fenster gegen den Servermonat (#1726).",
+    "src/services/preview_service.py::_resolve_target_date::0": "Muster A (:94) — Vorschau-Zieltag vom Server (#1726).",
+    "src/services/scheduler_dispatch_service.py::_auto_pause_expired_presets::0": "Muster A (:79) — Ablauf eines Presets gegen den Servertag (#1726).",
+    "src/services/scheduler_dispatch_service.py::send_one_compare_preset::0": "Muster A (:368) — Zieltag des Vergleichs-Versands vom Server (#1726).",
+    "src/services/trip_command_processor.py::_show_now::0": "Muster A (:1227) — '/jetzt' datiert auf den Servertag (#1726).",
+    "src/services/trip_command_processor.py::_show_status::0": "Muster A (:1076) — '/status' datiert auf den Servertag (#1726).",
+    "src/services/trip_report_scheduler.py::_clamp_segments_to_today::0": "Muster A (:1497) — Segment-Beschnitt gegen den Servertag (#1726).",
+    "src/services/trip_report_scheduler.py::_collect_future_stage_weather::0": "Muster A (:2205) — 'zukuenftige Etappen' ab Servertag (#1726).",
+    "src/services/trip_report_scheduler.py::_send_trip_report_outcome::0": "Muster A (:932) — Test-Rueckfall vergleicht Zieltag mit Servertag (#1726).",
+    "src/services/trip_report_scheduler.py::select_test_stage::0": "Muster A (:765) — Test-Etappenwahl ab Servertag (#1726).",
+    # --- Muster B: festes Nicht-UTC-Zonen-Literal (namentlich #1726/S4) ---
+    "src/services/alert_daily_limit.py::<module>::0": "Muster B (:23) — `VIENNA = ZoneInfo('Europe/Vienna')` als Tagesgrenze des Alarm-Kontingents; ADR-0051, Behebung #1726.",
+    "src/services/deviation_alert_engine.py::<module>::0": "Muster B (:31) — `VIENNA = ZoneInfo('Europe/Vienna')` als Ruhezeit-Zone; ADR-0051, Behebung #1726.",
+    # --- Bestehende Fundart `raw_astimezone` auf der NEU hinzugekommenen
+    # Flaeche: kein neuer Detektor, nur groesserer Geltungsbereich. Viele davon
+    # sind Umrechnungen NACH UTC (nach Hausnorm #1345 unauffaellig) — der
+    # Scanner unterscheidet das strukturell nicht, deshalb gelistet statt
+    # ausgenommen.
+    "src/services/alert_briefing_anchor.py::record_briefing_sent::0": "raw_astimezone (:195) — Normalisierung des Sendezeitpunkts nach UTC.",
+    "src/services/alert_daily_limit.py::_vienna_date_str::0": "raw_astimezone (:32) — Tagesgrenze ueber die feste VIENNA-Zone, an Muster B oben gekoppelt (#1726).",
+    "src/services/compare_location_weather_source.py::_window_bound::0": "raw_astimezone (:39) — Fenstergrenze aus lokalem Tag + Stunde.",
+    "src/services/compare_location_weather_source.py::fetch::0": "raw_astimezone (:116) — lokaler Tag des Vergleichsorts.",
+    "src/services/compare_official_alert.py::_day_window_end::0": "raw_astimezone (:271) — lokales 'jetzt' des Vergleichsorts.",
+    "src/services/compare_official_alert.py::_day_window_end::1": "raw_astimezone (:275) — Fensterende zurueck nach UTC.",
+    "src/services/deviation_alert_engine.py::is_quiet_hours::0": "raw_astimezone (:112) — Ruhezeit gegen die feste VIENNA-Zone, an Muster B oben gekoppelt (#1726).",
+    "src/services/forecast_budget.py::_today_utc::0": "raw_astimezone (:130) — Kontingent-Tag bewusst in UTC (Zaehlwerk, kein Nutzerdatum).",
+    "src/services/official_alerts/meteoalarm_budget.py::_now_ts::0": "raw_astimezone (:167) — Kontingent-Zeitstempel bewusst in UTC.",
+    "src/services/official_alerts/meteoalarm_budget.py::_today_utc::0": "raw_astimezone (:176) — Kontingent-Tag bewusst in UTC.",
+    "src/services/scheduler_dispatch_service.py::run_compare_presets_daily::0": "raw_astimezone (:179) — Faelligkeit in der Ortszone des Presets (#1724).",
+    "src/services/segment_weather.py::_aggregate_for_segment::0": "raw_astimezone (:254) — Segmentbeginn auf volle UTC-Stunde.",
+    "src/services/segment_weather.py::_aggregate_for_segment::1": "raw_astimezone (:257) — Segmentende auf volle UTC-Stunde.",
+    "src/services/stage_weather.py::_to_utc_date::0": "raw_astimezone (:62) — Etappendatum in UTC.",
+    "src/services/trip_alert.py::_briefing_precip_for_onset::0": "raw_astimezone (:872) — Einsetzstunde auf volle UTC-Stunde.",
+    "src/services/trip_alert.py::check_radar_alerts::0": "raw_astimezone (:1092) — Einsetzzeit in der Ortszone ausgegeben.",
+    "src/services/trip_segments.py::convert_trip_to_segments::0": "raw_astimezone (:184) — Segmentstart aus Etappentag + Startstunde.",
+    "src/services/trip_segments.py::convert_trip_to_segments::1": "raw_astimezone (:189) — Segmentende aus Folgetag + Startstunde.",
+    "src/services/trip_segments.py::convert_trip_to_segments::2": "raw_astimezone (:275) — Ankunftstag in der Zielortzone.",
+    "src/services/trip_segments.py::convert_trip_to_segments::3": "raw_astimezone (:277) — Tagesende aus Ankunftstag + Endstunde.",
+    "src/services/weather_cache.py::get::0": "raw_astimezone (:126) — Cache-Schluessel Fensterbeginn in UTC.",
+    "src/services/weather_cache.py::get::1": "raw_astimezone (:127) — Cache-Schluessel Fensterende in UTC.",
+    "src/services/weather_cache.py::put::0": "raw_astimezone (:177) — Cache-Ablage Fensterbeginn in UTC.",
+    "src/services/weather_cache.py::put::1": "raw_astimezone (:178) — Cache-Ablage Fensterende in UTC.",
+    "src/services/weather_extractor.py::_to_naive_utc::0": "raw_astimezone (:32) — Naiv-Guard nach Hausnorm #1345 (naiv == UTC).",
 }
 
 
@@ -700,3 +835,282 @@ def test_scanner_ignores_zone_abbreviation_mentioned_only_in_docstring(tmp_path)
     )
     found = _find_violations(docstring_file)
     assert not found, f"Docstring-Erwähnung faelschlich als Verstoß gezaehlt: {found}"
+
+
+# ---------------------------------------------------------------------------
+# Entscheidungs-Schicht (Issue #1723, Epic #1722 S1)
+#
+# Der Wächter oben bewacht die DARSTELLUNG einer Uhrzeit. Die wiederkehrenden
+# Zeitzonen-Bugs sitzen aber in der ENTSCHEIDUNG — welcher Kalendertag gemeint
+# ist, ob ein Versand fällig ist, ob Ruhezeit gilt. Die Tests unten dehnen den
+# Nachweis auf `src/services/**` + `api/**` aus (Scanfläche, AC-1) und auf die
+# beiden dort greifenden Fundarten (Muster A/B, AC-2/AC-3/AC-9) inklusive der
+# beiden bewussten Nicht-Fänge (E1/E2, AC-4/AC-5).
+#
+# Die synthetischen Dateien liegen bewusst unter `src/services/`- bzw.
+# `api/`-artigen Pfaden in `tmp_path` — genau die Bäume, die `src/output/**`
+# NICHT enthält.
+# ---------------------------------------------------------------------------
+
+
+def _scope_of(key: str) -> str:
+    """Funktionsanteil aus einem Fundschlüssel ``"pfad::funktion::ordinal"``."""
+    return key.split("::")[-2]
+
+
+def test_scan_scope_includes_services_and_api_and_is_not_empty():
+    """GIVEN die Entscheidungs-Schicht `src/services/**` + `api/**`
+    WHEN `_scan_files()` die Scanfläche aufzählt
+    THEN liegt JEDE `.py`-Datei beider Bäume darin, die Fläche ist nicht leer,
+    kein Eintrag doppelt und keiner ausserhalb der (alten + neuen) Fläche.
+
+    Bauform von `test_scan_scope_excludes_go_internal_tree` in
+    `tests/test_success_status_guard.py`: eine Scanfläche, die nichts ansieht,
+    ist immer grün (#1465). Die Doppelt-Prüfung sichert zusätzlich, dass die
+    Kombination über eine MENGE geführt wird — sechs der sieben
+    `_MESSAGING_SERVICE_FILES` liegen bereits unter `src/services/` und würden
+    sonst zweimal gescannt.
+    """
+    services_dir = SRC / "services"
+    api_dir = REPO_ROOT / "api"
+    services_files = set(services_dir.rglob("*.py"))
+    api_files = set(api_dir.rglob("*.py"))
+    assert services_files and api_files, (
+        "Vorbedingung verletzt: src/services/ oder api/ enthaelt keine .py-"
+        "Datei — dann prueft dieser Test nichts."
+    )
+
+    scanned = _scan_files()
+    assert scanned, "_scan_files() liefert eine LEERE Scanflaeche."
+    assert len(scanned) == len(set(scanned)), (
+        "Scanflaeche enthaelt Dateien doppelt — die Kombination aus "
+        "src/output/**, _MESSAGING_SERVICE_FILES, src/services/** und api/** "
+        "muss ueber eine Menge gefuehrt werden (sorted({*...}), nicht +=): "
+        f"{sorted(str(p) for p in scanned if scanned.count(p) > 1)}"
+    )
+
+    scanned_set = set(scanned)
+    missing_services = sorted(
+        p.relative_to(REPO_ROOT).as_posix() for p in services_files - scanned_set
+    )
+    assert not missing_services, (
+        "Diese Dateien aus src/services/ liegen NICHT in der Scanflaeche — die "
+        "Entscheidungs-Schicht ist damit unbewacht (Issue #1723): "
+        f"{missing_services}"
+    )
+    missing_api = sorted(
+        p.relative_to(REPO_ROOT).as_posix() for p in api_files - scanned_set
+    )
+    assert not missing_api, (
+        "Diese Dateien aus api/ liegen NICHT in der Scanflaeche — die "
+        "Entscheidungs-Schicht ist damit unbewacht (Issue #1723): "
+        f"{missing_api}"
+    )
+
+    allowed = (
+        set(_OUTPUT_DIR.rglob("*.py"))
+        | set(_MESSAGING_SERVICE_FILES)
+        | services_files
+        | api_files
+    )
+    outside = sorted(str(p) for p in scanned_set - allowed)
+    assert not outside, (
+        "Scanflaeche greift ueber die vereinbarte Flaeche hinaus "
+        f"(src/output/**, _MESSAGING_SERVICE_FILES, src/services/**, api/**): {outside}"
+    )
+
+
+def test_scanner_detects_ambient_clock_in_synthetic_services_file(tmp_path):
+    """GIVEN eine synthetische Datei unter einem `src/services/`-artigen Pfad
+    mit `date.today()` und `datetime.now()` OHNE `tz`-Argument
+    WHEN der Scanner laeuft
+    THEN meldet er genau diese zwei Stellen als `ambient_clock` — und die
+    beiden `datetime.now(...)`-Aufrufe MIT Zone nicht.
+
+    Wirkungsnachweis fuer Muster A, ausserhalb von `src/output/`. Der
+    `kind`-Wert wird woertlich geprueft (AC-7): eine blosse `assert found`-
+    Summe wuerde einen lautlos leerlaufenden Muster-A-Detektor verdecken,
+    solange Muster B noch Funde liefert.
+    """
+    services_like = tmp_path / "src" / "services"
+    services_like.mkdir(parents=True)
+    bad_file = services_like / "synthetic_decision_clock.py"
+    bad_file.write_text(
+        "from datetime import date, datetime\n"
+        "\n"
+        "def faellig_heute():\n"
+        "    return date.today()\n"
+        "\n"
+        "def naechster_lauf():\n"
+        "    return datetime.now()\n"
+        "\n"
+        "def mit_zone_keyword(zone):\n"
+        "    return datetime.now(tz=zone)\n"
+        "\n"
+        "def mit_zone_positional(zone):\n"
+        "    return datetime.now(zone)\n",
+        encoding="utf-8",
+    )
+    found = _find_violations(bad_file)
+    assert len(found) == 2, (
+        f"erwartete 2 Funde (date.today() + datetime.now() ohne tz), gefunden "
+        f"{len(found)}: {found}"
+    )
+    assert set(found.values()) == {_KIND_AMBIENT_CLOCK}, (
+        f"erwartete ausschliesslich Fundart {_KIND_AMBIENT_CLOCK!r}, "
+        f"gefunden: {sorted(set(found.values()))}"
+    )
+    assert {_scope_of(k) for k in found} == {"faellig_heute", "naechster_lauf"}, (
+        "Muster A haengt an den falschen Funktionen — erwartet "
+        f"faellig_heute + naechster_lauf, gefunden: {sorted(found)}"
+    )
+
+
+def test_scanner_detects_hardcoded_non_utc_zone_in_synthetic_api_file(tmp_path):
+    """GIVEN eine synthetische Datei unter einem `api/`-artigen Pfad mit
+    `ZoneInfo("Europe/Vienna")`
+    WHEN der Scanner laeuft
+    THEN meldet er die Stelle als `hardcoded_non_utc_zone`.
+
+    Wirkungsnachweis fuer Muster B, ausserhalb von `src/output/` und
+    ausserhalb der bisherigen Mid-Body-Rueckfallformen (BoolOp/getattr/If/
+    IfExp): eine schlichte Zuweisung im Funktionsrumpf ist bislang unsichtbar.
+    Auch hier wird der `kind`-Wert woertlich geprueft (AC-7).
+    """
+    api_like = tmp_path / "api" / "routers"
+    api_like.mkdir(parents=True)
+    bad_file = api_like / "synthetic_decision_zone.py"
+    bad_file.write_text(
+        "from zoneinfo import ZoneInfo\n"
+        "\n"
+        "def fensterbeginn():\n"
+        "    zone = ZoneInfo('Europe/Vienna')\n"
+        "    return zone\n",
+        encoding="utf-8",
+    )
+    found = _find_violations(bad_file)
+    assert len(found) == 1, (
+        f"erwartete 1 Fund (ZoneInfo('Europe/Vienna')), gefunden {len(found)}: {found}"
+    )
+    assert set(found.values()) == {_KIND_HARDCODED_NON_UTC_ZONE}, (
+        f"erwartete Fundart {_KIND_HARDCODED_NON_UTC_ZONE!r}, "
+        f"gefunden: {sorted(set(found.values()))}"
+    )
+    assert {_scope_of(k) for k in found} == {"fensterbeginn"}, (
+        f"Muster B haengt an der falschen Funktion: {sorted(found)}"
+    )
+
+
+def test_scanner_ignores_utc_zone_literal_but_still_flags_the_guessed_zone(tmp_path):
+    """GIVEN eine synthetische Datei, die BEIDES enthaelt — ein geratenes
+    Nicht-UTC-Zonen-Literal und ein `ZoneInfo("UTC")`
+    WHEN der Scanner laeuft
+    THEN meldet er genau EINEN Fund, und zwar das geratene Literal.
+
+    Gegenprobe zu E1 als DIFFERENZ, nicht als blosses "UTC wird nicht
+    gefangen": letzteres waere heute schon gruen, weil ueberhaupt nichts
+    gefangen wird — ein unfehlbarer Test. Nach Hausnorm #1345 ist ein naiver
+    Zeitstempel UTC; bekaempft wird die GERATENE Ortszone, nicht UTC.
+    """
+    api_like = tmp_path / "api" / "routers"
+    api_like.mkdir(parents=True)
+    mixed_file = api_like / "synthetic_utc_vs_guessed.py"
+    mixed_file.write_text(
+        "from zoneinfo import ZoneInfo\n"
+        "\n"
+        "def geratene_zone():\n"
+        "    return ZoneInfo('Europe/Rome')\n"
+        "\n"
+        "def ehrliche_weltzeit():\n"
+        "    return ZoneInfo('UTC')\n",
+        encoding="utf-8",
+    )
+    found = _find_violations(mixed_file)
+    assert len(found) == 1, (
+        "erwartete genau 1 Fund (nur das geratene Nicht-UTC-Literal), gefunden "
+        f"{len(found)}: {found}"
+    )
+    assert {_scope_of(k) for k in found} == {"geratene_zone"}, (
+        "der einzige Fund muss das GERATENE Literal sein, nicht ZoneInfo('UTC'): "
+        f"{sorted(found)}"
+    )
+    assert set(found.values()) == {_KIND_HARDCODED_NON_UTC_ZONE}, (
+        f"erwartete Fundart {_KIND_HARDCODED_NON_UTC_ZONE!r}, "
+        f"gefunden: {sorted(set(found.values()))}"
+    )
+
+
+def test_scanner_ignores_utcnow_but_still_flags_the_naive_now(tmp_path):
+    """GIVEN eine synthetische Datei, die BEIDES enthaelt — `datetime.now()`
+    ohne Zone und `datetime.utcnow()`
+    WHEN der Scanner laeuft
+    THEN meldet er genau EINEN Fund, und zwar `datetime.now()`.
+
+    Gegenprobe zu E2 als DIFFERENZ (s. Test darueber). `.utcnow()` liefert
+    AUSDRUECKLICH Weltzeit, `.now()`/`.today()` liefern STILL Prozess-
+    Lokalzeit — eine andere Fehlerklasse. Dass `.utcnow()` seit Python 3.12
+    veraltet ist, ist Modernisierungsarbeit, kein Zeitzonen-Bug.
+    """
+    services_like = tmp_path / "src" / "services"
+    services_like.mkdir(parents=True)
+    mixed_file = services_like / "synthetic_now_vs_utcnow.py"
+    mixed_file.write_text(
+        "from datetime import datetime\n"
+        "\n"
+        "def prozess_lokalzeit():\n"
+        "    return datetime.now()\n"
+        "\n"
+        "def ausdrueckliche_weltzeit():\n"
+        "    return datetime.utcnow()\n",
+        encoding="utf-8",
+    )
+    found = _find_violations(mixed_file)
+    assert len(found) == 1, (
+        "erwartete genau 1 Fund (nur datetime.now() ohne tz), gefunden "
+        f"{len(found)}: {found}"
+    )
+    assert {_scope_of(k) for k in found} == {"prozess_lokalzeit"}, (
+        "der einzige Fund muss datetime.now() sein, nicht datetime.utcnow(): "
+        f"{sorted(found)}"
+    )
+    assert set(found.values()) == {_KIND_AMBIENT_CLOCK}, (
+        f"erwartete Fundart {_KIND_AMBIENT_CLOCK!r}, "
+        f"gefunden: {sorted(set(found.values()))}"
+    )
+
+
+def test_module_level_zone_literal_finding_names_the_module_scope(tmp_path):
+    """GIVEN ein `VIENNA = ZoneInfo("Europe/Vienna")` auf MODULEBENE, ausserhalb
+    jeder Funktion, unter einem `src/services/`-artigen Pfad
+    WHEN der Scanner laeuft
+    THEN traegt der Fundschlüssel `_MODULE_SCOPE` als Funktionsanteil, im
+    selben Format `"pfad::funktion::ordinal"` wie jeder andere Fund.
+
+    Analog `test_timezone_guard_finding_names_the_enclosing_function` im
+    Meta-Waechter: ein Fund, der seinen Ort nicht benennen kann, ist beim
+    Eintragen in KNOWN_VIOLATIONS nicht wiederzufinden (#1466 AP2).
+    """
+    services_like = tmp_path / "src" / "services"
+    services_like.mkdir(parents=True)
+    module_level_file = services_like / "synthetic_module_level_zone.py"
+    module_level_file.write_text(
+        "from zoneinfo import ZoneInfo\n"
+        "\n"
+        "VIENNA = ZoneInfo('Europe/Vienna')\n"
+        "\n"
+        "def fenster():\n"
+        "    return VIENNA\n",
+        encoding="utf-8",
+    )
+    found = _find_violations(module_level_file)
+    assert len(found) == 1, (
+        f"erwartete 1 Modulebene-Fund, gefunden {len(found)}: {found}"
+    )
+    key = next(iter(found))
+    assert key.endswith(f"::{_MODULE_SCOPE}::0"), (
+        f"Modulebene-Fund traegt den falschen Funktionsanteil: {key!r} — "
+        f"erwartet wurde '…::{_MODULE_SCOPE}::0'"
+    )
+    assert found[key] == _KIND_HARDCODED_NON_UTC_ZONE, (
+        f"erwartete Fundart {_KIND_HARDCODED_NON_UTC_ZONE!r}, gefunden: {found[key]!r}"
+    )

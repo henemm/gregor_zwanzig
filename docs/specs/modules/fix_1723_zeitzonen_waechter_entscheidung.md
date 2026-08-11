@@ -164,7 +164,7 @@ dieser Test braucht dafür keine Änderung, muss aber nach der Erweiterung nachw
 - **AC-5:** Given ein neu eingefügtes `datetime.utcnow()` in derselben synthetischen Datei / When der Wächter läuft / Then bleibt der Test grün — E2 ist damit nicht nur behauptet, sondern gegengeprobt
   - Test: synthetischer Gegenprobe-Wirkungsnachweis (Mutations-Pflicht 5, zweite Hälfte).
 
-- **AC-6:** Given ein `KNOWN_VIOLATIONS`-Eintrag der neuen Fläche, dessen Fundstelle im Code noch existiert, wird aus der Liste entfernt / When der bestehende Shrink-Test (`test_known_violations_only_shrink`) läuft / Then schlägt er fehl, weil der Scanner die Stelle weiterhin findet, die Liste sie aber nicht mehr trägt
+- **AC-6:** Given ein `KNOWN_VIOLATIONS`-Eintrag der neuen Fläche, dessen Fundstelle im Code noch existiert, wird aus der Liste entfernt / When der Wächter läuft / Then schlägt `test_no_unlisted_output_timezone_violations` fehl, weil der Scanner die Stelle weiterhin findet, die Liste sie aber nicht mehr trägt
   - Test: Mutations-Pflicht 3, ausgeführt als String-Ersetzung mit externer Sicherungskopie (Repo-Konvention) gegen einen frisch aus der neuen Fläche gemessenen Eintrag, NICHT `git checkout/stash/reset`.
 
 - **AC-7:** Given je ein eigener synthetischer Wirkungsnachweis für Muster A und für Muster B / When einer der beiden Detektoren durch ein invertiertes Prädikat (z. B. `and has_tz_kw` statt `and not has_tz_kw`) lautlos leerläuft, während der jeweils andere weiter Funde liefert / Then wird genau dieser Ausfall sichtbar — eine reine Summenprüfung über beide Muster hinweg würde ihn verdecken
@@ -210,9 +210,11 @@ anderer Sessions (`main` ändert sich durch andere PRs).
 - **AC-4/AC-5:** dieselbe synthetische Datei zusätzlich um ein `ZoneInfo("UTC")` bzw.
   `datetime.utcnow()` ergänzen, erneut scannen, Fundzahl unverändert.
 - **AC-6:** String-Ersetzung mit externer Sicherungskopie: einen frisch gemessenen
-  `KNOWN_VIOLATIONS`-Eintrag der neuen Fläche temporär entfernen, `test_known_violations_only_shrink`
+  `KNOWN_VIOLATIONS`-Eintrag der neuen Fläche temporär entfernen, `test_no_unlisted_output_timezone_violations`
   laufen lassen, roten Fehlertext gegen den erwarteten Schlüssel prüfen, Sicherungskopie
-  zurückspielen.
+  zurückspielen. (Der Shrink-Test `test_known_violations_only_shrink` fängt den umgekehrten
+  Fall — einen Eintrag **ohne** Fundstelle; er bleibt beim Entfernen grün, weil Entfernen ein
+  Schrumpfen ist. Adversary-Finding F001, 2026-08-11.)
 - **AC-8/AC-11:** vollständiger Lauf von `tests/test_output_timezone_guard.py -v` gegen den
   finalen Commit-Stand — Exit 0 ist der Nachweis, kein separater Test.
 - **AC-9:** synthetische Datei mit `VIENNA = ZoneInfo('Europe/Vienna')` auf Modulebene unter einem
@@ -251,6 +253,19 @@ anderer Sessions (`main` ändert sich durch andere PRs).
    Kombination MUSS deshalb über eine Menge geführt werden (s. Implementation Details).
 8. **Der Meta-Wächter kann den Prüfträger wechseln (AC-10), ohne dass das ein Fehler ist** — er
    wählt zur Laufzeit die fundreichste Datei der (jetzt größeren) Scanfläche neu aus.
+9. **🔴 Die Flächenerweiterung wirkt auch auf einen BESTEHENDEN Detektor** — das war beim
+   Schreiben dieser Spec nicht bedacht und wurde erst bei der Umsetzung gemessen (2026-08-11).
+   Von den 53 neuen `KNOWN_VIOLATIONS`-Einträgen stammen nur 27 aus den beiden neuen Mustern;
+   **25 kommen aus `raw_astimezone`**, das durch die größere Scanfläche erstmals
+   `src/services/**` + `api/**` sieht (die vier übrigen Altmuster feuern dort nicht — vom
+   Adversary nachgerechnet, nicht angenommen). Folge: Wer künftig in der Entscheidungs-Schicht
+   eine `.astimezone()`-Umrechnung schreibt, muss sie eintragen — auch wenn sie nach Hausnorm
+   #1345 korrekt ist (Umrechnung *nach* UTC). Das ist **dieselbe Reibung, die seit #1402 in
+   `src/output/**` gilt und dort akzeptiert wurde**, keine neue Fehlerklasse und keine
+   Funktionsblockade: der Eintrag ist möglich, der Code bleibt lieferbar. Bewusst NICHT als
+   Ausnahmeregel gebaut — eine solche Regel stünde in keiner freigegebenen Spec und würde die
+   Fundmenge nach Fachlichkeit statt nach Struktur schneiden. Wird die Reibung in der Praxis
+   lästig, ist das eine eigene Scheibe, kein Nachtrag hier. (Adversary-Finding F002, LOW.)
 
 ## Architektur-Entscheidung (ADR)
 
