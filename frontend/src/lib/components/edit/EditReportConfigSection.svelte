@@ -5,8 +5,12 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import VTSchedulePlan from '../shared/versand-tab/VTSchedulePlan.svelte';
-	import { channelConnectionStatus } from '../shared/versand-tab/channelConnectionStatus';
+	import {
+		channelConnectionStatus,
+		type ConnectionProfile
+	} from '../shared/versand-tab/channelConnectionStatus';
 	import { channelContactLabel } from '../shared/versand-tab/channelContactLabel';
+	import { premiumSmsChannelState } from '../shared/versand-tab/premiumSmsChannelState';
 	import { Dot } from '$lib/components/atoms';
 	import {
 		DEFAULT_DAILY_SUMMARY_METRICS,
@@ -60,10 +64,19 @@
 	let multi_day_trend_morning = $state(false);
 	let multi_day_trend_evening = $state(true);
 
-	// Channels
-	let send_email = $state(true);
-	let send_telegram = $state(false);
-	let send_sms = $state(false);
+	// Channels — Issue #1717 S3: alle vier BEIM ERZEUGEN aus der Prop
+	// initialisiert (untrack, wie `profile` unten) und nicht erst in onMount.
+	// onMount laeuft serverseitig nie, und ein Wert, der erst nach der ersten
+	// Ausgabe erscheint, ist einen Wimpernschlag falsch; ausserdem waere der
+	// Zeitplan-Leerzustand (hasActiveChannel unten) beim Rendern sonst nicht
+	// erreichbar und damit nicht pruefbar. Semantik wie in onMount: E-Mail
+	// Default an, alles andere Default aus.
+	let send_email = $state(untrack(() => reportConfig?.send_email !== false));
+	let send_telegram = $state(untrack(() => reportConfig?.send_telegram === true));
+	let send_sms = $state(untrack(() => reportConfig?.send_sms === true));
+	// Der gespeicherte Anhak-Zustand von Premium-SMS muss schon beim Rendern
+	// stehen (AC-10).
+	let send_premium_sms = $state(untrack(() => reportConfig?.send_premium_sms === true));
 
 	// Bestandsdaten-Erhalt: diese States werden nicht mehr im UI gezeigt,
 	// aber weiterhin für den Read-Modify-Write im merged-Objekt benötigt.
@@ -88,13 +101,10 @@
 	let show_yesterday_comparison = $state(true);
 
 	// --- Profile (Channel-Verfuegbarkeit) --------------------------------------
-	interface Profile {
-		mail_to?: string;
-		email_verified?: boolean;
-		telegram_chat_id?: string;
-		sms_to?: string;
-		sms_allowed?: boolean;
-	}
+	/** Issue #1717 S3: EINE kanonische Profilform (channelConnectionStatus.ts)
+	 * statt einer lokalen Kopie je Komponente — sonst muesste jedes neue
+	 * Profilfeld an drei Stellen nachgezogen werden. */
+	type Profile = ConnectionProfile;
 	let profile = $state<Profile | null>(
 		untrack(() => (profileOverride !== undefined ? profileOverride : null))
 	);
@@ -109,6 +119,9 @@
 	// (analog VTBriefingChannels.svelte).
 	let connectionStatus = $derived(channelConnectionStatus(profile));
 	let contactLabel = $derived(channelContactLabel(profile));
+	// Issue #1717 S3: derselbe geteilte Zustands-Helfer wie in
+	// VTBriefingChannels.svelte — keine zweite Kopie der Logik (AC-2).
+	let premiumSms = $derived(premiumSmsChannelState(profile));
 
 	// Issue #617: Wetter-Kanal-Gating (nur wenn weatherChannels gesetzt)
 	let weatherVisible = $derived(visibleChannels(weatherChannels));
@@ -124,7 +137,13 @@
 	// gar nicht erst gerendert, solange der Kanal-Gating-Leerzustand aktiv ist
 	// — die beiden Leerzustände schließen sich dadurch gegenseitig aus (AC-9).
 	let scheduleGatingEmpty = $derived(weatherChannels !== undefined && weatherEmpty);
-	let hasActiveChannel = $derived(send_email || send_telegram || send_sms);
+	// Issue #1717 S3: Premium-SMS zaehlt mit — wer nur diesen Kanal einschaltet,
+	// bekommt ein echtes Briefing, und ein Leerzustand "Kein Kanal aktiv" waere
+	// eine Anzeige, die der Wirklichkeit widerspricht. Zweite Fassung derselben
+	// Zaehlung: VersandTab.svelte (activeChannelCount, /trips/[id]) — beide
+	// werden im selben Testfall gegeneinander gemessen
+	// (shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts).
+	let hasActiveChannel = $derived(send_email || send_telegram || send_sms || send_premium_sms);
 
 	// --- Initial-Load ----------------------------------------------------------
 	onMount(() => {
@@ -152,6 +171,10 @@
 			if (typeof c.send_email === 'boolean') send_email = c.send_email;
 			if (typeof c.send_telegram === 'boolean') send_telegram = c.send_telegram;
 			if (typeof c.send_sms === 'boolean') send_sms = c.send_sms;
+			// Issue #1717 S3: zusaetzlich zur Initialisierung beim Erzeugen (oben) —
+			// deckt den Fall ab, dass reportConfig erst nach dem Erzeugen der
+			// Komponente eintrifft.
+			if (typeof c.send_premium_sms === 'boolean') send_premium_sms = c.send_premium_sms;
 
 			if (typeof c.show_compact_summary === 'boolean') show_compact_summary = c.show_compact_summary;
 			wind_exposition_min_elevation_m = typeof c.wind_exposition_min_elevation_m === 'number'
@@ -215,6 +238,8 @@
 			send_email,
 			send_telegram,
 			send_sms,
+			// Issue #1717 S3 — vierter Briefing-Kanal, gleicher Write-Back-Pfad.
+			send_premium_sms,
 			multi_day_trend_morning,
 			multi_day_trend_evening,
 			multi_day_trend_reports,
@@ -373,13 +398,32 @@
 					</div>
 				{/if}
 
-				<!-- Premium-SMS (Garmin inReach) — informativer, dauerhaft deaktivierter Slot (Issue #1069) -->
+				<!-- Premium-SMS (Garmin inReach) — Issue #1717 S3: aus dem dauerhaft
+				     deaktivierten Slot (#1069) wird ein echter, schaltbarer Kanal.
+				     Zustand/Texte kommen aus demselben geteilten Helfer wie in
+				     VTBriefingChannels.svelte (Trip-Detail) — dieselben Worte fuer
+				     dieselbe Lage, egal auf welcher Seite (AC-2). -->
 				<div class="text-sm">
 					<span data-testid="channel-premium-sms" class="inline-flex items-center gap-2">
-						<Checkbox checked={false} disabled={true}>Premium-SMS (Garmin inReach)</Checkbox>
+						<Checkbox
+							checked={send_premium_sms}
+							disabled={premiumSms.disabled}
+							onchange={(e) => { send_premium_sms = (e.target as HTMLInputElement).checked; }}
+						>Premium-SMS (Garmin inReach){premiumSms.contactLabel}</Checkbox>
+					</span>
+					<span data-testid="channel-status-premium-sms" class="rc-channel-status">
+						<Dot tone={premiumSms.tone} size={7} />
+						<span class="rc-channel-status-label">{premiumSms.statusLabel}</span>
 					</span>
 				</div>
-				<div class="pl-6 text-xs text-muted-foreground">bald verfügbar</div>
+				<p data-testid="channel-premium-sms-hint" class="pl-6 text-xs rc-channel-hint">
+					{premiumSms.hint}
+				</p>
+				{#if premiumSms.reportedAtLabel}
+					<p data-testid="channel-premium-sms-reported-at" class="rc-premium-reported-at pl-6">
+						{premiumSms.reportedAtLabel}
+					</p>
+				{/if}
 			{/if}
 		{/if}
 	</Card.Root>
@@ -485,6 +529,23 @@
 		font-size: 11px;
 		letter-spacing: 0.04em;
 		color: var(--g-ink-3);
+	}
+	/* Issue #1717 S3 (AC-9): Meldedatum der gelernten Rueckadresse ist ein
+	   DATEN-Label, keine Fussnote — --g-ink-3 wie der Verbindungsstatus, nie
+	   --g-ink-4 (2,85:1 auf Weiss, strikt Platzhalter/Disabled vorbehalten).
+	   1:1 zu .vt-premium-reported-at in VTBriefingChannels.svelte. */
+	.rc-premium-reported-at {
+		font-family: var(--g-font-mono);
+		font-size: 11px;
+		color: var(--g-ink-3);
+		margin: 2px 0 0;
+	}
+	/* Hinweistext des Premium-SMS-Blocks: eigene Klasse statt
+	   text-muted-foreground, damit die Farbe nicht in der Utility-Kette
+	   verschwindet — derselbe Kontrast-Grund wie oben. */
+	.rc-channel-hint {
+		color: var(--g-ink-3);
+		margin: 2px 0 0;
 	}
 </style>
 

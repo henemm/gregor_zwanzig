@@ -238,6 +238,9 @@ export interface ReportConfig {
 	send_email?: boolean;
 	send_telegram?: boolean;
 	send_sms?: boolean;
+	// Issue #1717 S3 — vierter Briefing-Kanal (Premium-SMS, Garmin inReach).
+	// Backend seit #1676 S2a live; report_config bleibt die autoritative Quelle.
+	send_premium_sms?: boolean;
 	alert_on_changes?: boolean;
 	change_threshold_temp_c?: number;
 	change_threshold_wind_kmh?: number;
@@ -349,6 +352,9 @@ export interface Trip {
 	send_email?: boolean;
 	send_sms?: boolean;
 	send_telegram?: boolean;
+	// Issue #1717 S3 — viertes abgeleitetes Kanal-Feld (Premium-SMS),
+	// Go-Pendant: model.Trip.SendPremiumSms.
+	send_premium_sms?: boolean;
 	end_date?: string;
 	// Issue #1258 S1 — scharfes Feld, loest official_alert_triggers_enabled ab
 	// (Legacy-Feld bleibt fuer Rollback erhalten, wird nicht mehr gelesen/geschrieben).

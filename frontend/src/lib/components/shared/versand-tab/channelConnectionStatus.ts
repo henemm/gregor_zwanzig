@@ -26,6 +26,14 @@ export interface ConnectionProfile {
 	telegram_chat_id?: string;
 	sms_to?: string;
 	sms_allowed?: boolean;
+	/** Issue #1717 S3 — Premium-SMS (Garmin inReach). Vier lesende Felder aus
+	 * GET /api/auth/profile (Go: profileResponse). Hier und NICHT in den lokalen
+	 * `interface Profile`-Kopien der Komponenten, damit es eine kanonische
+	 * Profilform gibt; ausgewertet von premiumSmsChannelState(). */
+	premium_sms_allowed?: boolean;
+	premium_sms_reply_to?: string;
+	premium_sms_reply_at?: string;
+	premium_sms_reply_state?: 'none' | 'stale' | 'fresh';
 }
 
 const NOT_CONNECTED: ChannelConnectionInfo = { tone: 'neutral', label: 'nicht verbunden' };
