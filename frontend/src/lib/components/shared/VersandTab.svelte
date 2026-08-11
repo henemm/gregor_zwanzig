@@ -10,7 +10,7 @@
 	// Design-Quelle (1:1): claude-code-handoff/current/jsx/versand-tab.jsx
 	// Spec: docs/specs/modules/versand_tab_route.md
 
-	import { onMount, type Snippet } from 'svelte';
+	import { onMount, untrack, type Snippet } from 'svelte';
 	import { api } from '$lib/api.js';
 	import { toHHMMSS } from '$lib/utils/time';
 	import type { Trip, ReportConfig } from '$lib/types';
@@ -65,9 +65,24 @@
 	let evening_time = $state('18:00');
 	let multi_day_trend_morning = $state(false);
 	let multi_day_trend_evening = $state(false);
-	let send_email = $state(true);
-	let send_telegram = $state(false);
-	let send_sms = $state(false);
+	// Issue #1717 S3: die vier Briefing-Kanal-Flags stehen schon BEIM ERZEUGEN
+	// aus report_config (untrack, Muster EditReportConfigSection.svelte:76) und
+	// nicht erst in onMount. Zwei Gruende: der erste Rahmen zeigte sonst
+	// "E-Mail an" auch fuer einen Trip, der gar keine E-Mail schickt — und der
+	// Zeitplan-Leerzustand unten (activeChannelCount) waere ohne diese
+	// Initialisierung beim Rendern gar nicht erreichbar, also auch nicht
+	// pruefbar. Die Zuweisungen in onMount bleiben (Nachladen), Semantik
+	// identisch: E-Mail Default an, alles andere Default aus.
+	let send_email = $state(untrack(() => reportConfig?.send_email !== false));
+	let send_telegram = $state(untrack(() => reportConfig?.send_telegram === true));
+	let send_sms = $state(untrack(() => reportConfig?.send_sms === true));
+	// Issue #1717 S3: vierter Briefing-Kanal (Premium-SMS, Garmin inReach).
+	// Ohne State/Hydration/Write-Back hier bliebe ein Klick in
+	// VTBriefingChannels auf /trips/[id] folgenlos — dies ist die
+	// Persistenz-Schicht dieser Seite (bind:reportConfig aus
+	// BriefingScheduleTab). Nur route: im vergleich-Zweig ist Premium-SMS kein
+	// Kanal (ADR-0049).
+	let send_premium_sms = $state(untrack(() => reportConfig?.send_premium_sms === true));
 	// Issue #1260 S5: Trip-Kurzstil-Schalter (report_config.telegram_style).
 	// EIN Trip-Feld regelt Briefing UND Alarme — der Schalter erscheint einmal
 	// hier im Versand-Tab.
@@ -91,6 +106,7 @@
 			if (typeof c.send_email === 'boolean') send_email = c.send_email;
 			if (typeof c.send_telegram === 'boolean') send_telegram = c.send_telegram;
 			if (typeof c.send_sms === 'boolean') send_sms = c.send_sms;
+			if (typeof c.send_premium_sms === 'boolean') send_premium_sms = c.send_premium_sms;
 			if (c.telegram_style === 'kurzform' || c.telegram_style === 'rich') {
 				telegram_style = c.telegram_style;
 			}
@@ -121,6 +137,8 @@
 			send_email,
 			send_telegram,
 			send_sms,
+			// Issue #1717 S3 — derselbe Write-Back-Pfad wie die drei darueber.
+			send_premium_sms,
 			telegram_style,
 			multi_day_trend_morning,
 			multi_day_trend_evening,
@@ -129,8 +147,15 @@
 		reportConfig = merged as ReportConfig;
 	});
 
+	// Issue #1717 S3: Premium-SMS zaehlt mit. Wer NUR Premium-SMS einschaltet,
+	// bekommt ein echtes Briefing — ein Leerzustand "Kein Kanal aktiv" waere
+	// dann eine Anzeige, die der Wirklichkeit widerspricht (und sie sperrt die
+	// Zeitplan-Optionen weg, VTSchedulePlan.svelte:77). Dieselbe Zaehlung steht
+	// in EditReportConfigSection.svelte (hasActiveChannel, /trips/new); beide
+	// Fassungen werden im selben Testfall gegeneinander gemessen
+	// (versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts).
 	const activeChannelCount = $derived(
-		[send_email, send_telegram, send_sms].filter(Boolean).length
+		[send_email, send_telegram, send_sms, send_premium_sms].filter(Boolean).length
 	);
 
 	// Issue #1232 Scheibe 2b: vergleich-Zweig — Kanal-Zähler direkt aus wiz.*
@@ -147,6 +172,15 @@
 			else if (channel === 'telegram') send_telegram = v;
 			else send_sms = v;
 			onChannelChange?.(channel, v);
+		};
+	}
+	// Issue #1717 S3: eigener Factory-Handler statt Erweiterung von
+	// makeChannelChangeHandler — dessen onChannelChange-Rueckruf synchronisiert
+	// display_config.channels (#736), und das kennt nur die drei Wetter-Kanaele.
+	// Premium-SMS dort mitzumelden waere ein Feld, das der Empfaenger nicht hat.
+	function makePremiumSmsChangeHandler() {
+		return function doChange(e: Event) {
+			send_premium_sms = (e.target as HTMLInputElement).checked;
 		};
 	}
 	// Issue #1232 Scheibe 2b: vergleich-Zweig — schreibt direkt in wiz.* statt
@@ -203,12 +237,18 @@
 	<div class="versand-tab" data-testid="versand-tab">
 		<VTBriefingChannels
 			{context}
-			channels={{ email: send_email, telegram: send_telegram, sms: send_sms }}
+			channels={{
+				email: send_email,
+				telegram: send_telegram,
+				sms: send_sms,
+				premium_sms: send_premium_sms
+			}}
 			onEmailChange={makeChannelChangeHandler('email')}
 			onTelegramChange={makeChannelChangeHandler('telegram')}
 			onSmsChange={makeChannelChangeHandler('sms')}
 			telegramStyle={telegram_style}
 			onTelegramStyleChange={(s) => (telegram_style = s)}
+			onPremiumSmsChange={makePremiumSmsChangeHandler()}
 		/>
 
 		<VTSchedulePlan

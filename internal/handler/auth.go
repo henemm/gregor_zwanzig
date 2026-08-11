@@ -444,24 +444,41 @@ func LogoutHandler() http.HandlerFunc {
 // profileResponse is the public view of a User (no password_hash, no public_key).
 // Issue #450 adds the Passkey-summary fields.
 type profileResponse struct {
-	ID             string                `json:"id"`
-	Email          string                `json:"email,omitempty"`
-	DisplayName    string                `json:"display_name,omitempty"`
-	MailTo         string                `json:"mail_to,omitempty"`
-	SmsTo          string                `json:"sms_to,omitempty"`
-	TelegramChatID string                `json:"telegram_chat_id,omitempty"`
-	Tier           string                `json:"tier"`
-	SmsAllowed     bool                  `json:"sms_allowed"`
+	ID             string `json:"id"`
+	Email          string `json:"email,omitempty"`
+	DisplayName    string `json:"display_name,omitempty"`
+	MailTo         string `json:"mail_to,omitempty"`
+	SmsTo          string `json:"sms_to,omitempty"`
+	TelegramChatID string `json:"telegram_chat_id,omitempty"`
+	Tier           string `json:"tier"`
+	SmsAllowed     bool   `json:"sms_allowed"`
 	// Issue #1258 S6 (R1) — aus EmailVerifiedAt abgeleitet, NIE der Zeitstempel
 	// selbst (AC-20).
-	EmailVerified  bool                  `json:"email_verified"`
+	EmailVerified bool `json:"email_verified"`
 	// Issue #1071 — offener Level-Änderungs-Antrag. Fehlt im JSON, solange kein
 	// Antrag vorliegt (omitempty bzw. nil-Pointer).
-	RequestedTier  string                `json:"requested_tier,omitempty"`
-	RequestedAt    *time.Time            `json:"requested_at,omitempty"`
-	CreatedAt      string                `json:"created_at"`
-	HasPasskey     bool                  `json:"has_passkey"`
-	Passkeys       []passkeyProfileEntry `json:"passkeys,omitempty"`
+	RequestedTier string     `json:"requested_tier,omitempty"`
+	RequestedAt   *time.Time `json:"requested_at,omitempty"`
+	// Issue #1717 S3 — Premium-SMS (Garmin inReach) in der Oberflaeche. REIN
+	// LESEND: die Rueckadresse lernt ausschliesslich der interne Rueckkanal
+	// (S1), UpdateProfileHandler nimmt die Felder nicht entgegen (AC-7).
+	//
+	// Rohwerte, Muster RequestedAt (hier IST der Zeitstempel die Nutzinformation
+	// — anders als EmailVerifiedAt, das nie ausgegeben wird): fehlen im JSON,
+	// solange das Geraet sich nie gemeldet hat. Pointer, weil omitempty bei
+	// time.Time-Werten nicht greift.
+	PremiumSmsReplyTo string     `json:"premium_sms_reply_to,omitempty"`
+	PremiumSmsReplyAt *time.Time `json:"premium_sms_reply_at,omitempty"`
+	// Abgeleiteter Zustand ("none"|"stale"|"fresh"), Muster EmailVerified —
+	// die Verfallsfrist bleibt serverseitig, damit die Oberflaeche keine zweite
+	// 30-Tage-Konstante braucht. Immer vorhanden.
+	PremiumSmsReplyState string `json:"premium_sms_reply_state"`
+	// Eigenes Tarif-Gate (nur premium), NICHT von SmsAllowed abgeleitet —
+	// Muster SmsAllowed. Immer vorhanden.
+	PremiumSmsAllowed bool                  `json:"premium_sms_allowed"`
+	CreatedAt         string                `json:"created_at"`
+	HasPasskey        bool                  `json:"has_passkey"`
+	Passkeys          []passkeyProfileEntry `json:"passkeys,omitempty"`
 }
 
 // passkeyProfileEntry exposes a registered Passkey to the client WITHOUT the
@@ -505,9 +522,14 @@ func toProfileResponse(u *model.User) profileResponse {
 		EmailVerified:  u.EmailVerifiedAt != nil,
 		RequestedTier:  u.RequestedTier,
 		RequestedAt:    u.RequestedAt,
-		CreatedAt:      u.CreatedAt.Format(time.RFC3339),
-		HasPasskey:     len(u.PasskeyCredentials) > 0,
-		Passkeys:       passkeys,
+		// Issue #1717 S3: Rohwerte durchgereicht, Zustand + Tarif-Gate abgeleitet.
+		PremiumSmsReplyTo:    u.PremiumSmsReplyTo,
+		PremiumSmsReplyAt:    u.PremiumSmsReplyAt,
+		PremiumSmsReplyState: model.DerivePremiumSmsReplyState(u.PremiumSmsReplyTo, u.PremiumSmsReplyAt),
+		PremiumSmsAllowed:    model.PremiumSmsAllowed(tier),
+		CreatedAt:            u.CreatedAt.Format(time.RFC3339),
+		HasPasskey:           len(u.PasskeyCredentials) > 0,
+		Passkeys:             passkeys,
 	}
 }
 

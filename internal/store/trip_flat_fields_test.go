@@ -203,3 +203,136 @@ func TestLoadTrip_EndDateNotStaleWhenStagesClearedToEmpty(t *testing.T) {
 		t.Errorf("SendSms nach Reload = %v, want nil (stale von Platte gelesen!)", *reloaded.SendSms)
 	}
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Issue #1717 (Scheibe S3): Premium-SMS in der Oberflaeche — AC-8.
+// Spec: docs/specs/modules/feat_1717_s3_premium_sms_ui.md.
+//
+// Herkunft: in der RED-Phase lagen die beiden Funktionen ausserhalb von
+// internal/ und wurden per `go test -overlay` eingespielt (der edit_gate laesst
+// in phase5_tdd_red nur Test-Verzeichnisse zu). Seit Phase 6 stehen sie hier
+// neben ihren Vorbildern — Assertions unveraendert.
+//
+// RED war: `model.Trip` hatte kein Feld `SendPremiumSms` und `deriveFlatFields`
+// leitete es nicht ab — das Paket uebersetzte nicht.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// AC-8, erste Haelfte: das Flach-Feld wird aus report_config abgeleitet, und die
+// Ableitung veraendert report_config nicht (sie bleibt die einzige Wahrheit fuer
+// den Versand).
+func TestLoadTrip_DerivesSendPremiumSmsFromReportConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := New(tmpDir, "test")
+
+	trip := model.Trip{
+		ID:   "premium-sms-trip",
+		Name: "Premium-SMS Trip",
+		Stages: []model.Stage{
+			{ID: "S1", Name: "Etappe 1", Date: "2026-08-10"},
+		},
+		ReportConfig: map[string]interface{}{
+			"trip_id":          "premium-sms-trip",
+			"enabled":          true,
+			"morning_time":     "07:00:00",
+			"send_email":       true,
+			"send_sms":         false,
+			"send_telegram":    false,
+			"send_premium_sms": true,
+		},
+	}
+	if err := s.SaveTrip(&trip); err != nil {
+		t.Fatalf("SaveTrip failed: %v", err)
+	}
+
+	loaded, err := s.LoadTrip("premium-sms-trip")
+	if err != nil {
+		t.Fatalf("LoadTrip failed: %v", err)
+	}
+	if loaded == nil {
+		t.Fatal("expected trip, got nil")
+	}
+	if loaded.SendPremiumSms == nil || *loaded.SendPremiumSms != true {
+		t.Errorf("SendPremiumSms = %v, want true (abgeleitet aus report_config.send_premium_sms)",
+			loaded.SendPremiumSms)
+	}
+	// Gegenprobe: `false` muss von "nicht gesetzt" (nil) unterscheidbar bleiben.
+	if loaded.SendSms == nil || *loaded.SendSms != false {
+		t.Errorf("SendSms = %v, want false — Pointer-Semantik (nil != false) muss erhalten bleiben",
+			loaded.SendSms)
+	}
+
+	// report_config bleibt unveraendert auf Platte.
+	written, err := os.ReadFile(filepath.Join(tmpDir, "users", "test", "briefings", "premium-sms-trip.json"))
+	if err != nil {
+		t.Fatalf("read written: %v", err)
+	}
+	var onDisk map[string]interface{}
+	if err := json.Unmarshal(written, &onDisk); err != nil {
+		t.Fatalf("unmarshal written: %v", err)
+	}
+	rc, ok := onDisk["report_config"].(map[string]interface{})
+	if !ok {
+		t.Fatal("report_config fehlt oder falscher Typ im geschriebenen File")
+	}
+	if rc["send_premium_sms"] != true {
+		t.Errorf("report_config.send_premium_sms wurde durch die Ableitung veraendert: %v", rc)
+	}
+}
+
+// AC-8, zweite Haelfte: verschwindet die Quelle, verschwindet der abgeleitete
+// Wert — in-memory UND nach dem Reload von Platte. Mutation, die hier rot werden
+// MUSS: die Reset-Zeile `trip.SendPremiumSms = nil` im Reset-Block von
+// deriveFlatFields (internal/store/trip.go:63-70) weglassen. Ohne sie bleibt ein
+// stiller Altwert stehen (Fix-Loop F001 aus #1250 S4) — die Oberflaeche zeigt
+// dann einen kostenpflichtigen Kanal als aktiv, den niemand mehr konfiguriert hat.
+func TestLoadTrip_SendPremiumSmsResetToNilWhenReportConfigMissing(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := New(tmpDir, "test")
+
+	trip := model.Trip{
+		ID:   "premium-sms-stale-trip",
+		Name: "Premium-SMS Stale Trip",
+		Stages: []model.Stage{
+			{ID: "S1", Name: "Etappe 1", Date: "2026-08-10"},
+		},
+		ReportConfig: map[string]interface{}{
+			"trip_id":          "premium-sms-stale-trip",
+			"enabled":          true,
+			"send_premium_sms": true,
+		},
+	}
+	if err := s.SaveTrip(&trip); err != nil {
+		t.Fatalf("SaveTrip (befuellt) failed: %v", err)
+	}
+
+	loaded, err := s.LoadTrip("premium-sms-stale-trip")
+	if err != nil {
+		t.Fatalf("LoadTrip (befuellt) failed: %v", err)
+	}
+	if loaded == nil || loaded.SendPremiumSms == nil || *loaded.SendPremiumSms != true {
+		t.Fatalf("Sanity: SendPremiumSms nach befuelltem Save/Load = %v, want true", loaded)
+	}
+
+	// Quelle entziehen (Trip ohne Report-Konfiguration) und speichern.
+	loaded.ReportConfig = nil
+	if err := s.SaveTrip(loaded); err != nil {
+		t.Fatalf("SaveTrip (geleert) failed: %v", err)
+	}
+
+	if loaded.SendPremiumSms != nil {
+		t.Errorf("In-memory SendPremiumSms nach Entfernen von report_config = %v, want nil (stale!)",
+			*loaded.SendPremiumSms)
+	}
+
+	reloaded, err := s.LoadTrip("premium-sms-stale-trip")
+	if err != nil {
+		t.Fatalf("LoadTrip (geleert) failed: %v", err)
+	}
+	if reloaded == nil {
+		t.Fatal("expected trip, got nil")
+	}
+	if reloaded.SendPremiumSms != nil {
+		t.Errorf("SendPremiumSms nach Reload = %v, want nil (stale von Platte gelesen!)",
+			*reloaded.SendPremiumSms)
+	}
+}
