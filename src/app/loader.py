@@ -838,7 +838,11 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
     # get_metrics_for_channel auf die globale Liste zurückfällt. Eine
     # bewusst vollstaendig geleerte Kanal-Konfiguration (alle Kanal-Listen
     # []) wird seit #1394 NICHT mehr auf None zurueckgefallen (AC-7,
-    # models.py:603-606 dokumentiert diesen Vertrag bereits).
+    # models.py:603-606 dokumentiert diesen Vertrag bereits). Ist eine
+    # Kanal-Ebene vorhanden, ERSETZT sie die globale Liste HIER beim Laden
+    # NICHT -- sie wird erst beim Lesen ueber get_metrics_for_channel() gegen
+    # das globale Maximum geschnitten (ADR-0050, Issue #1719 Scheibe 2); hier
+    # wird nur roh geparst.
     per_channel_layouts: Optional[Dict[str, List[MetricConfig]]] = None
     raw_channel_layouts = data.get("channel_layouts")
     if (

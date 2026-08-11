@@ -253,11 +253,37 @@ class TripReportFormatter:
 
         # Issue #1001: Multi-Bubble-Telegram-Rendering (ersetzt #360-Narrow-Body).
         # Reine Zusatzberechnung — email_plain bleibt unveraendert.
+        # Issue #1719 Scheibe 2 (K2): Telegram folgt ohne eigene Kanal-Ebene
+        # der GRUNDAUSWAHL, nicht der kollabierten E-Mail-Auswahl (analog dem
+        # _dc_uncollapsed-Muster fuer SMS, #1575). seg_tables (oben, Z. 146)
+        # bleibt fuer die E-Mail unveraendert (AC-6) -- Telegram bekommt eine
+        # EIGENE, aus derselben unverfaelschten Basis gebaute Zeilenmenge,
+        # sonst blieben Telegram-Zellen leer ("-"), weil _dp_to_row() nur
+        # Metriken eintraegt, die in der uebergebenen dc enabled sind.
+        _telegram_active_metrics = [
+            dataclasses.replace(mc, enabled=True)
+            for mc in _dc_uncollapsed.get_metrics_for_channel("telegram", report_type)
+        ]
+        _dc_telegram = dataclasses.replace(_dc_uncollapsed, metrics=_telegram_active_metrics)
+        seg_tables_telegram = [self._extract_hourly_rows(s, _dc_telegram) for s in segments]
+        # Adversary F004 (S2-Fix-Runde): dc=_dc_telegram statt dc=_dc_uncollapsed
+        # -- render_telegram_bubbles() liest dc NICHT nur fuer die
+        # Spalten-/Zeilenermittlung (render_for_channel(), idempotent gegen
+        # eine bereits kaskadierte dc), sondern narrow.py:735/741/776 lesen
+        # dc.get_enabled_metric_ids() DIREKT, ohne durch get_metrics_for_channel()
+        # zu gehen. Mit _dc_uncollapsed (der rohen, ungefilterten Grundauswahl)
+        # blieb die Telegram-Kurzuebersicht + Fusszeile (Sicht/0°C-Grenze/
+        # Gewitter) vom D1-D4-Schnitt UNBERUEHRT -- eine Metrik mit
+        # evening_enabled=False erschien dort trotzdem (als "-"-Geisterzeile
+        # bzw., mit passenden Segment-Aggregaten, mit echtem Zahlenwert).
+        # _dc_telegram traegt bereits die report-typ- UND kanal-kaskadierte
+        # Menge (Z. 266-270 oben) -- EINE Quelle fuer Tabellenspalten,
+        # Kurzuebersicht UND Fusszeile.
         from output.renderers.narrow import render_telegram_bubbles
         telegram_bubbles_result = render_telegram_bubbles(
             segments=segments,
-            seg_tables=seg_tables,
-            dc=dc,
+            seg_tables=seg_tables_telegram,
+            dc=_dc_telegram,
             report_type=report_type,
             tz=self._tz,
             trip_name=trip_name,

@@ -83,7 +83,14 @@ def trip_global():
 
 @pytest.fixture
 def trip_per_channel():
-    """AC-2: Trip mit channel_layouts["email"], kein per_report."""
+    """AC-2: Trip mit channel_layouts["email"], kein per_report.
+
+    Issue #1719 Scheibe 2 (ADR-0050): die globale Liste ist seit dieser
+    Scheibe das Maximum, gegen das channel_layouts geschnitten wird -- sie
+    muss deshalb precipitation/humidity fuehren (sonst schneidet der
+    per_channel-Zweig sie jetzt weg, obwohl der Trip sie im Email-Layout
+    fuehrt).
+    """
     user_id = f"test_issue_448_{uuid.uuid4().hex[:8]}"
     trip_id = "trip-per-channel"
     _write_trip(user_id, trip_id, {
@@ -95,6 +102,8 @@ def trip_per_channel():
             "metrics": [
                 {"metric_id": "temperature", "enabled": True},
                 {"metric_id": "wind_speed", "enabled": True},
+                {"metric_id": "precipitation", "enabled": True},
+                {"metric_id": "humidity", "enabled": True},
             ],
             "channel_layouts": {
                 "email": [
@@ -113,6 +122,10 @@ def trip_per_report_and_channel():
     """AC-3: Trip mit per_report_layouts["morning"]["email"] UND channel_layouts["email"].
 
     per_report muss per_channel schlagen.
+
+    Issue #1719 Scheibe 2 (ADR-0050): die globale Liste ist das Maximum --
+    wind_speed (per_channel) und sunshine_hours (per_report) muessen deshalb
+    auch global gefuehrt werden, sonst schneidet der Schnitt sie weg.
     """
     user_id = f"test_issue_448_{uuid.uuid4().hex[:8]}"
     trip_id = "trip-per-report-and-channel"
@@ -124,6 +137,8 @@ def trip_per_report_and_channel():
             "trip_id": trip_id,
             "metrics": [
                 {"metric_id": "temperature", "enabled": True},
+                {"metric_id": "wind_speed", "enabled": True},
+                {"metric_id": "sunshine_hours", "enabled": True},
             ],
             "channel_layouts": {
                 "email": [

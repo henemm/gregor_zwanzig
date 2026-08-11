@@ -255,6 +255,28 @@ unangetastet (s. AC-6).
   - Test: `report.telegram_bubbles`-Text parsen (Vorbild
     `_narrow_table`-Zeilenformat), Zellwert der Zielmetrik gegen den erwarteten
     numerischen Wert aus `F.segment()` prüfen — NICHT nur Spalten-Präsenz.
+  - **Nachbesserung (Adversary F001, Fix-Runde nach BROKEN-Verdict):** die
+    ursprüngliche Zielmetrik `humidity` ist global AN — der Pflicht-
+    Mutationsprobe (a) unten ("Schnitt aus D1 weglassen") blieb damit für
+    AC-5 wirkungslos, weil `humidity` auch OHNE D1-Schnitt sichtbar bliebe.
+    AC-5 führt deshalb eine ZWEITE, unabhängige Zielmetrik (Muster AC-1:
+    global AUS, in der eigenen Telegram-Ebene AN), die AUSSCHLIESSLICH über
+    D1 aus dem Ergebnis fällt — erst damit fängt AC-5 beides: den Ausfall von
+    D1 (Metrik erscheint überhaupt in der Kanal-Auswahl) UND den Ausfall von
+    D5 (Metrik zeigt „–" statt Wert). Gemessen (Mutationsprobe, s. u.):
+    `test_kaskade_ac7_...` (AC-1) und `test_kaskade_s2_ac5_...` (AC-5)
+    schlagen unter Mutation (a) jetzt BEIDE fehl.
+  - **Nachbesserung (Adversary F003, eigener Test):** der Force-Enable-Schritt
+    in der D5-Konstruktion (`dataclasses.replace(mc, enabled=True)`,
+    `trip_report.py`) war bis zur Fix-Runde unbewacht. Neuer Test
+    `test_kaskade_s2_ac5b_evening_override_forces_real_telegram_value`: ein
+    globaler Eintrag mit `enabled: false` + `evening_enabled: true`, KEINE
+    eigene Telegram-Ebene (Kaskade fällt auf `global`) — die Telegram-Spalte
+    erscheint (D2 lässt sie über `evening_enabled` durch), muss aber den
+    ECHTEN Messwert zeigen, nicht „–". Gemessen (Mutationsprobe): wird der
+    Force-Enable-Schritt entfernt, bleibt die Spalte erhalten, aber jede
+    Zelle zeigt „–" — genau das fängt dieser Test, AC-3/AC-4/AC-5 bleiben
+    davon unberührt.
 
 - **AC-6 (E-Mail bleibt unverändert, insbesondere Etappen ab Tag 4):** Given
   ein Trip ohne Kanal-Widerspruch (E-Mail-Kanal-Ebene fehlt oder ist mit der
@@ -397,14 +419,46 @@ unangetastet (s. AC-6).
     (`trip_report.py:295-296`) — das ist der korrekte Wirkort für diese
     Zusicherung.
 
+- **AC-13 (Adversary F004 — Telegram-Kurzübersicht/Fußzeile respektieren
+  `evening_enabled` auch OHNE eigene Telegram-Ebene):** Given eine Metrik ist
+  global AN, `evening_enabled: false`, OHNE eigene `channel_layouts.telegram`
+  (Kaskade fällt auf `global`) / When der ECHTE Renderpfad (`format_email()` →
+  `report.telegram_bubbles`) für `report_type="evening"` läuft / Then
+  erscheint die Metrik NICHT in der Telegram-Kurzübersicht-Bubble — weder als
+  Wertzeile noch als Geisterzeile mit „–". Grund (gemessen, ersetzt die
+  frühere Known Limitation 1): `render_telegram_bubbles()` bekam bis zu dieser
+  Fix-Runde `dc=_dc_uncollapsed` (die ungefilterte Grundauswahl); die
+  Kurzübersicht-Schleife UND die Fußzeilen-Gates (Sicht/0°C-Grenze/Gewitter,
+  `narrow.py:296-307`) lesen `dc.get_enabled_metric_ids()` DIREKT, ohne durch
+  `get_metrics_for_channel()` zu gehen, und blieben dadurch vom D1-D4-Schnitt
+  strukturell unberührt. Fix: `render_telegram_bubbles()` bekommt
+  `dc=_dc_telegram` (D5, bereits report-typ-/kanal-kaskadiert) — EINE Quelle
+  für Tabellenspalten, Kurzübersicht UND Fußzeile. Der innere Aufruf
+  `render_for_channel("telegram", dc, report_type)` (`narrow.py:661`) bleibt
+  dabei idempotent (gemessen: AC-3/AC-4/AC-5 unverändert grün) — er ruft
+  intern erneut `get_metrics_for_channel()` auf, das gegen eine bereits
+  kaskadierte `dc` denselben Ergebnis-Satz liefert, keinen zweiten Verlust.
+  - Test: `test_kaskade_s2_ac13_telegram_overview_respects_evening_enabled_without_own_layer`
+    — `report.telegram_bubbles`-Kurzübersichtstext auf Abwesenheit des
+    Metrik-Kürzels prüfen (Vorbild AC-4/AC-5, NICHT `render_for_channel()`
+    direkt).
+
 ## Known Limitations
 
-1. **Bestehende Kaskaden-Umgehung bleibt bestehen:** die Telegram-
-   Kurzübersicht (`narrow.py:735/741/776`) liest `dc.get_enabled_metric_ids()`
-   statt der Kanal-Kaskade und bleibt damit an die (nach D5 weiterhin
-   kollabierte) E-Mail-Auswahl gekoppelt. Durch S2 wird das nicht schlimmer
-   (bereits in S1 als „Adversary Angriff 5" benannt) — Behebung ist nicht Teil
-   dieser Scheibe.
+1. ~~Bestehende Kaskaden-Umgehung bleibt bestehen~~ **Behoben in dieser
+   Fix-Runde (Adversary F004, s. AC-13).** Ursprünglicher Text (nachweislich
+   falsch, s. u.): „die Telegram-Kurzübersicht liest `dc.get_enabled_metric_ids()`
+   statt der Kanal-Kaskade und bleibt damit an die kollabierte E-Mail-Auswahl
+   gekoppelt — durch S2 wird das nicht schlimmer." Gemessen (Adversary-Dialog
+   nach dem ersten Implementierungsdurchgang): das stimmte nicht — S2 baute
+   mit `_dc_telegram`/`seg_tables_telegram` bereits die korrekt kaskadierte
+   Zeilenmenge, reichte sie aber NICHT an `render_telegram_bubbles()` als
+   `dc` durch (dort stand weiterhin `dc=_dc_uncollapsed`). Die
+   Kurzübersicht/Fußzeile war damit schlimmer dran als vor S2 in dem Sinn,
+   dass die Tabellenspalten bereits korrekt gefiltert waren, während
+   Kurzübersicht/Fußzeile derselben Bubble die ungefilterte Grundauswahl
+   zeigten — ein sichtbarer Widerspruch INNERHALB derselben Bubble. Fix:
+   `dc=_dc_telegram` (s. AC-13).
 2. **`dataclasses.replace(dc, metrics=…)` bleibt bestehen** — die Wurzel, dass
    `dc` nach der E-Mail-Kollabierung über ihre eigene Grundauswahl „lügt",
    wird nicht aufgelöst. D5 umschifft die Auswirkung für Telegram gezielt
@@ -422,9 +476,9 @@ unangetastet (s. AC-6).
 - **Frontend** (Editor-Zustandsanzeige „Aus ist ein Zustand" statt Löschung,
   `CHANNEL_COL_BUDGET.sms`-Korrektur, ADR-0050 Regel 4) — Scheibe S3.
 - **Legende/Erklärtext zur Kaskade im UI** — Scheibe S4.
-- **Telegram-Kurzübersicht** (`narrow.py:735/741/776`) — bleibt an die
-  E-Mail-Kollabierung gekoppelt, ausdrücklich unverändert durch diese Scheibe
-  (s. Known Limitations 1).
+- ~~Telegram-Kurzübersicht bleibt an die E-Mail-Kollabierung gekoppelt~~ **Doch
+  in dieser Scheibe behoben** (Adversary F004, s. AC-13 + Known Limitations 1)
+  — die ursprüngliche Abgrenzung war nachweislich falsch, s. Korrektur oben.
 - **Auflösung der `dataclasses.replace`-Kollabierung als Ganzes** (drei
   E-Mail-Renderer von `dc.metrics` entkoppeln) — Folgearbeit, nicht S2.
 - **Datenmigration für Bestandstrips** — D6, begründet verzichtet.
@@ -468,12 +522,22 @@ MÜSSEN über den echten End-zu-End-Pfad (`report.telegram_bubbles`) laufen.
   sie ausschließt.
 - **(c) `if not self.metrics`-Schutz (D4) entfernen** ⇒ AC-7 (Leerauswahl)
   MUSS rot werden — die SMS-Kanal-Ebene würde auf `[]` kollabieren.
-- **(d) `dc=_dc_uncollapsed` an `render_telegram_bubbles` zurückdrehen** (Z.
-  260 wieder `dc=dc`) ⇒ AC-4 MUSS rot werden (K2-Regression: Telegram folgt
-  wieder der kollabierten E-Mail-Auswahl statt der Grundauswahl). AC-3 bleibt
-  davon UNBERÜHRT, weil `per_channel_layouts`/`per_report_layouts` von
-  `dataclasses.replace` nicht verändert werden (Kontext-Dokument Abschnitt 2)
-  — AC-3 prüft ausschließlich den Fall MIT eigener Telegram-Ebene.
+- **(d) `dc=_dc_telegram` an `render_telegram_bubbles` auf `dc=_dc_uncollapsed`
+  zurückdrehen** ⇒ **korrigiert (Adversary F004, gemessen statt der
+  urspruenglichen Erwartung):** AC-4 bleibt davon entgegen der ersten Fassung
+  dieser Zeile UNBERÜHRT (grün) — AC-4 prüft `table_text` (aus
+  `seg_tables_telegram`, unabhängig vom `dc=`-Parameter von
+  `render_telegram_bubbles`) und `cells` (über `_kaskade_telegram_cells()`,
+  ruft `render_for_channel()` auf einer frisch geladenen `dc` auf, geht nie
+  durch `render_telegram_bubbles`). AC-13 fängt diese Mutation stattdessen —
+  sie prüft exakt die Stelle, die vom `dc=`-Parameter abhängt:
+  `dc.get_enabled_metric_ids()` in der Kurzübersicht-Schleife
+  (`narrow.py:735/741/776`). AC-3 bleibt ebenfalls UNBERÜHRT, weil
+  `per_channel_layouts`/`per_report_layouts` von `dataclasses.replace` nicht
+  verändert werden (Kontext-Dokument Abschnitt 2) — AC-3 prüft ausschließlich
+  den Fall MIT eigener Telegram-Ebene. Mutationsprobe durchgeführt (Fix-Runde
+  nach BROKEN-Verdict): `pytest -k "s2_ac13 or s2_ac3 or s2_ac4 or s2_ac5"`
+  unter der zurückgedrehten Mutation → genau AC-13 rot, AC-3/AC-4/AC-5 grün.
 - **(e) die eigene Telegram-Zeilenmenge (D5, zweite Hälfte) zurückdrehen**
   (Telegram bekommt wieder die aus der kollabierten `dc` gebaute `seg_tables`,
   während `dc=_dc_uncollapsed` für die Spaltenermittlung korrekt bleibt) ⇒
@@ -483,6 +547,13 @@ MÜSSEN über den echten End-zu-End-Pfad (`report.telegram_bubbles`) laufen.
   belegt, dass AC-3 und AC-5 unterschiedliche Dinge bewachen — ein Fix, der
   nur die Spalten-Hälfte von D5 umsetzt, muss trotzdem als unvollständig
   auffallen.
+- **(f) Force-Enable-Schritt der D5-Konstruktion entfernen** (Adversary F003:
+  `dataclasses.replace(mc, enabled=True)` beim Bau von `_telegram_active_metrics`
+  auf ein reines Durchreichen ohne Force-Enable zurückdrehen) ⇒
+  `test_kaskade_s2_ac5b_evening_override_forces_real_telegram_value` MUSS rot
+  werden — die Telegram-Spalte bleibt (D2 lässt die Metrik über
+  `evening_enabled` durch), aber jede Zelle zeigt „–" statt des echten
+  Messwerts. AC-3/AC-4/AC-5 bleiben davon UNBERÜHRT (geprüft, gemessen).
 - **Verwechslungsprobe (Vorbild S1):** in AC-9/AC-10 versehentlich dieselbe
   Ziel-Metrik-ID wie AC-1/AC-7 verwenden — muss an der jeweiligen
   Vorbedingungs-Assertion (global aktiv vs. global inaktiv) erkennbar
@@ -526,3 +597,14 @@ nicht zu verwässern.
 - 2026-08-11: Initial spec created (Issue #1719, Scheibe 2). Grundlage:
   `docs/context/fix-1719-s2-kaskade-verfeinerung.md` (gemessen, Basis-Commit
   `32b781ed` = Merge PR #1735, Scheibe 1).
+- 2026-08-11: Fix-Runde nach Adversary-Verdict BROKEN. F004 (CRITICAL):
+  `render_telegram_bubbles` bekommt `dc=_dc_telegram` statt `dc=_dc_uncollapsed`
+  — Known Limitations 1 und der zugehörige „Nicht in dieser Scheibe"-Eintrag
+  waren nachweislich falsch (die Telegram-Kurzübersicht/Fußzeile ist jetzt
+  Teil des Fixes, s. neuer AC-13). F001: AC-5 um eine zweite, D1-sensitive
+  Zielmetrik erweitert (Mutationsprobe (a) fängt jetzt AC-1 UND AC-5). F003:
+  neuer Test `test_kaskade_s2_ac5b_...` für den bis dahin unbewachten
+  Force-Enable-Schritt der D5-Konstruktion. Mutationsprobe (d) korrigiert
+  (gemessen: AC-13 fängt sie, nicht AC-4 wie ursprünglich angenommen), neue
+  Mutationsprobe (f) für F003 ergänzt. F002 (vorbestehende Lücke,
+  `loader.py:777`) bewusst NICHT behoben — separat gebucht.

@@ -58,13 +58,37 @@ def _legacy_trip_data() -> dict[str, Any]:
 
 
 def _per_channel_trip_data() -> dict[str, Any]:
-    """Neuer Trip MIT `channel_layouts` — Email und Telegram haben eigene Listen."""
+    """Neuer Trip MIT `channel_layouts` — Email und Telegram haben eigene Listen.
+
+    Issue #1719 Scheibe 2 (ADR-0050): eine Kanal-Ebene darf die globale
+    Grundauswahl nur noch verfeinern (schneiden), nicht mehr ergaenzen — die
+    globale Liste muss deshalb JEDE Metrik-ID fuehren, die irgendeine
+    Kanal-Ebene unten benutzt (sonst schneidet get_metrics_for_channel() sie
+    jetzt weg). "metric_0".."metric_9" sind reine Struktur-Test-IDs ohne
+    Katalog-Eintrag (AC-5, Telegram-Slot-Limit) und werden hier bewusst
+    ebenfalls global gefuehrt, damit sie den Schnitt ueberleben. Alle
+    Ergaenzungen bewusst als "primary" mit steigendem `order` -- AC-4
+    vergleicht get_metrics_for_channel() (sortiert) gegen
+    get_metrics_for_report_type() (unsortiert) auf ID-Gleichheit; ein
+    "secondary"-Eintrag dazwischen wuerde die beiden Reihenfolgen
+    auseinanderlaufen lassen, ohne dass das etwas mit dieser Scheibe zu tun
+    haette.
+    """
     return {
         "trip_id": "per-channel-trip",
         "metrics": [
-            # Globale Fallback-Liste — wird für Kanäle ohne Eintrag verwendet (Signal, SMS).
+            # Globale Fallback-Liste — wird für Kanäle ohne Eintrag verwendet (Signal, SMS)
+            # UND ist seit #1719 S2 das Maximum fuer email/telegram unten.
             {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
             {"metric_id": "wind", "enabled": True, "bucket": "primary", "order": 1},
+            {"metric_id": "wind_chill", "enabled": True, "bucket": "primary", "order": 2},
+            {"metric_id": "gust", "enabled": True, "bucket": "primary", "order": 3},
+            {"metric_id": "precipitation", "enabled": True, "bucket": "primary", "order": 4},
+            {"metric_id": "cloud_total", "enabled": True, "bucket": "primary", "order": 5},
+            *[
+                {"metric_id": f"metric_{i}", "enabled": True, "bucket": "primary", "order": 6 + i}
+                for i in range(10)
+            ],
         ],
         "channel_layouts": {
             "email": [
