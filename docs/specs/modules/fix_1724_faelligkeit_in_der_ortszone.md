@@ -6,7 +6,7 @@ updated: 2026-08-11
 status: draft
 workflow: fix-1724-faelligkeit-in-der-ortszone
 version: "1.1"
-tags: [issue-1724, epic-1722, timezone, adr-0049, adr-0044, scheduler, briefing]
+tags: [issue-1724, epic-1722, timezone, adr-0051, adr-0044, scheduler, briefing]
 ---
 
 # Fix #1724 — Briefing-Fälligkeit je Trip in seiner Ortszone
@@ -41,14 +41,14 @@ Zwei getrennte Fehler in einer Kette: die **Uhrzeit** stammt aus Wien, der **Kal
 Prozess-Zeitzone (`Etc/UTC`). Auf dem PCT trifft das „Morgenbriefing" um 22:00 des Vortages ein
 und trägt den Inhalt des folgenden Weltzeit-Tages.
 
-Umgesetzt wird Regel 2 aus **ADR-0049**: die Zone gehört an die Daten. Die Frage kehrt sich um —
+Umgesetzt wird Regel 2 aus **ADR-0051**: die Zone gehört an die Daten. Die Frage kehrt sich um —
 statt „es ist 07:00 in Wien, welche Trips passen?" gilt „für jeden Trip: wie spät ist es in
 *seiner* Zone?".
 
 ## Source
 
 - Epic #1722, Analyse `docs/analysis/zeitzonen-architektur-2026-08.md`
-- ADR-0049 (drei Zeitbegriffe, Zone an den Daten), ADR-0044 (Kalendertag folgt der Ortszeit)
+- ADR-0051 (drei Zeitbegriffe, Zone an den Daten), ADR-0044 (Kalendertag folgt der Ortszeit)
 - Offener Rest aus #1697: `_get_target_date`, `_get_active_trips`, `save_dated`
 
 ## Affected Files
@@ -148,7 +148,7 @@ Standard-Rahmen von 250 reicht; Testcode zählt nicht.
 ## Nachweis-Strategie
 
 Kern-Schicht, deterministisch: kein Netz, keine echten Postfächer. Zeit wird als Parameter
-hereingereicht (Regel 3 aus ADR-0049), nicht per Patch auf die Systemuhr — die Tests bewachen
+hereingereicht (Regel 3 aus ADR-0051), nicht per Patch auf die Systemuhr — die Tests bewachen
 damit dieselbe Eigenschaft, die der Produktivcode zusichert.
 
 **Mutations-Gegenprobe ist Pflicht** und hier besonders wichtig: #1697 fand dreimal in Folge
@@ -191,7 +191,7 @@ CLAUDE.md: ein grüner Testlauf beweist nur, dass die Tests durchlaufen.
 
 ## Architektur-Entscheidung (ADR)
 
-ADR-0049 (Regel 2: Zone an den Daten), ADR-0044 (Kalendertag folgt der Ortszeit). Diese Spec
+ADR-0051 (Regel 2: Zone an den Daten), ADR-0044 (Kalendertag folgt der Ortszeit). Diese Spec
 führt beide im Briefing-Pfad aus, ohne von ihnen abzuweichen.
 
 ## Changelog

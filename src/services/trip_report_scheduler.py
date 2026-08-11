@@ -310,7 +310,7 @@ class TripReportSchedulerService:
         bekam eine in `Europe/Vienna` vorberechnete Stunde. Der Name war Teil
         des Fehlers -- "die Stunde" gibt es nicht, es gibt nur die Stunde
         EINER Zone. Uebergeben wird jetzt der Zeitpunkt; die Stunde entsteht je
-        Trip (ADR-0049 Regel 2).
+        Trip (ADR-0051 Regel 2).
 
         Issue #766: Sammelt alle fälligen Mails, sendet sie mit 2s Pause
         zwischen aufeinanderfolgenden Versendungen (Rate-Limit-Schutz) und
@@ -359,7 +359,7 @@ class TripReportSchedulerService:
         werden VOR dem Versand gesammelt, damit das Inter-Mail-Delay über
         beide Slots hinweg greift.
 
-        Issue #1724 (ADR-0049 Regel 2): der Parameter ist ein ZEITPUNKT, keine
+        Issue #1724 (ADR-0051 Regel 2): der Parameter ist ein ZEITPUNKT, keine
         vorberechnete Stunde. Eine Stunde traegt immer die Zone dessen, der sie
         ausgerechnet hat -- frueher `Europe/Vienna`, eine Konstante ohne
         fachliche Herleitung. Die Stunde entsteht jetzt je Trip aus DESSEN
@@ -645,7 +645,7 @@ class TripReportSchedulerService:
             report_type: "morning" or "evening"
             now_utc: Zeitpunkt des Laufs. Pflichtparameter -- ein Default auf
                 die Systemuhr wuerde genau die Umgebungsuhr wieder einfuehren,
-                die ADR-0049 Regel 3 verbietet.
+                die ADR-0051 Regel 3 verbietet.
 
         Returns:
             List of active Trip objects

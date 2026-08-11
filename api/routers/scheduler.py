@@ -31,7 +31,7 @@ def trigger_trip_reports(at: Optional[str] = None, user_id: str = Query(...)):
     `Europe/Vienna` -- einer Konstante ohne fachliche Herleitung. Ein Trip in
     Auckland wurde dadurch faellig, wenn es in Wien 07:00 war (dort 17:00).
     Uebergeben wird jetzt ein ZEITPUNKT; welche Stunde das ist, entscheidet
-    jeder Trip in seiner eigenen Zone (ADR-0049 Regel 2).
+    jeder Trip in seiner eigenen Zone (ADR-0051 Regel 2).
 
     `at` ist optional und dient dem manuellen Ausloesen (ISO-8601). Ohne
     Zeitzonen-Angabe gilt UTC -- Hausnorm #1345, nicht die Prozess-Zeitzone.

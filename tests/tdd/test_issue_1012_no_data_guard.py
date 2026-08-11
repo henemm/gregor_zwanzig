@@ -78,7 +78,7 @@ def _zeitpunkt_fuer_ortsstunde(stunde: int, coords=_INNSBRUCK) -> datetime:
     """UTC-Zeitpunkt, zu dem es an `coords` `stunde` Uhr Ortszeit ist (#1724).
 
     Der Sendelauf nimmt seit #1724 einen Zeitpunkt statt einer vorberechneten
-    Stunde -- die Stunde entsteht je Trip aus dessen Ortszeit (ADR-0049).
+    Stunde -- die Stunde entsteht je Trip aus dessen Ortszeit (ADR-0051).
     """
     from utils.timezone import tz_for_coords
 

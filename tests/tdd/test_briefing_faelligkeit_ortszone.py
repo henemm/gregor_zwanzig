@@ -1,7 +1,7 @@
 """TDD RED — #1724: Briefing-Fälligkeit je Trip in seiner Ortszone.
 
 Spec: docs/specs/modules/fix_1724_faelligkeit_in_der_ortszone.md
-ADR-0049 (Zone an den Daten), ADR-0044 (Kalendertag folgt der Ortszeit)
+ADR-0051 (Zone an den Daten), ADR-0044 (Kalendertag folgt der Ortszeit)
 
 RED-Ursache vor dem Fix: `_collect_due_trips(current_hour: int)` vergleicht die
 konfigurierte Stunde gegen eine GLOBAL vorberechnete Stunde
@@ -10,7 +10,7 @@ Ein Trip in Auckland ist damit fällig, wenn es in Wien 07:00 ist — dort ist e
 dann 17:00. Nach dem Fix nimmt die Funktion einen ZEITPUNKT und löst die Stunde
 je Trip in dessen eigener Zone auf.
 
-Zeit wird durchgehend als Parameter hereingereicht (Regel 3 aus ADR-0049) —
+Zeit wird durchgehend als Parameter hereingereicht (Regel 3 aus ADR-0051) —
 kein Patch auf die Systemuhr. Die Tests bewachen damit dieselbe Eigenschaft,
 die der Produktivcode zusichert.
 

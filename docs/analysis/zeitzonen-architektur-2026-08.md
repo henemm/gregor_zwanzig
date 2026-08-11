@@ -3,7 +3,7 @@
 - **Datum:** 2026-08-11
 - **Anlass:** PO-Auftrag — „Das Thema ist schon eine Million mal gelöst worden. Recherchiere das."
 - **Bezug:** ADR-0044, Issues #21, #400/#401, #856, #1280, #1345, #1378, #1383, #1399, #1402, #1470, #1667, #1697
-- **Status:** Recherche-Ergebnis. Entscheidungsteil als **ADR-0049** (Status `Vorgeschlagen`),
+- **Status:** Recherche-Ergebnis. Entscheidungsteil als **ADR-0051** (Status `Vorgeschlagen`),
   Umsetzung als Epic **#1722** mit den Scheiben #1723–#1727.
 
 ## Der Befund in einem Satz
