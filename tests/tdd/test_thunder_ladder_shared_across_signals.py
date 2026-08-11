@@ -51,14 +51,20 @@ def test_ac2_beide_signale_laufen_durch_dieselbe_leiter(monkeypatch):
     # Issue #1592 C1: `cape_threshold_jkg` ist keyword-only ohne Default;
     # `cape_jkg=None` hier -- die Schwelle spielt fuer diese Leiter-Tests
     # keine Rolle.
+    # Issue #1679 (CIN-Teil): CAPE-Leiter und `cin_jkg` sind keyword-only ohne
+    # Default. `None` hier -- CAPE darf in diesem DRY-Test kein Signal und
+    # damit auch keinen dritten Leiter-Aufruf beitragen.
     dichte = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=0.0, cape_jkg=None,
-        cape_threshold_jkg=None,
+        cape_threshold_jkg=None, cape_med_min=None, cape_high_min=None,
+        cin_jkg=None,
         lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
     )
     potenzial = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=None, cape_jkg=None,
-        lightning_potential_jkg=0.0, cape_threshold_jkg=None,
+        lightning_potential_jkg=0.0,
+        cape_threshold_jkg=None, cape_med_min=None, cape_high_min=None,
+        cin_jkg=None,
         lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
     )
 
@@ -104,13 +110,16 @@ def test_ac2_beide_signale_liefern_an_der_unteren_schwelle_uebereinstimmend_low(
 
     blitzdichte_low = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=mf._LIGHTNING_LOW_MIN,
-        cape_jkg=None, cape_threshold_jkg=None,
+        cape_jkg=None,
+        cape_threshold_jkg=None, cape_med_min=None, cape_high_min=None,
+        cin_jkg=None,
         lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
     )
     blitzpotenzial_low = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=None, cape_jkg=None,
         lightning_potential_jkg=lpi_low,
-        cape_threshold_jkg=None,
+        cape_threshold_jkg=None, cape_med_min=None, cape_high_min=None,
+        cin_jkg=None,
         lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
     )
 

@@ -401,6 +401,13 @@ Spalte, kein Token, keine Mail-Erwähnung) und **keine** Summary-/Aggregations-G
     `MED`/`HIGH` liefert. Gegenprobe: Liest die Funktion `risk_thresholds["cape"]["high"] =
     2000` als Eskalationsschwelle, liefert der 2630er-Fall fälschlich `MED` oder `HIGH` — der
     Test muss das fangen.
+  - 🔴 **Revidiert durch Issue #1679 (CIN-Teil, `feat_1679_cin_paarung_cape_leiter.md`,
+    2026-08-11):** Der pauschale Fall ohne Konvektionshemmung (CIN unbekannt, wie in diesem
+    AC — Wettercode/Blitzdichte `None` sagt nichts über CIN) bleibt weiterhin bei `LOW`
+    gedeckelt, **AC-6 gilt für diesen Fall unverändert fort**. Ist CIN dagegen bekannt UND
+    schwach (Konvektionshemmung gering, „schwacher Deckel"), kann CAPE seit #1679 bis
+    `MED`/`HIGH` eskalieren — das ist eine bewusste, dokumentierte Erweiterung dieses AC,
+    keine stille Aufhebung. Referenz: ADR-0048.
 
 - **AC-7 („keine Aussage" ≠ „keine Gefahr" in der Fusion):** Given alle drei Signale sind
   `None` / When `thunder_level_from_signals()` aufgerufen wird / Then liefert sie `None`.

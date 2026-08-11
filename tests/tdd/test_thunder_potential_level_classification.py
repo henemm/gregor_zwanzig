@@ -40,9 +40,13 @@ def _fusion(**kwargs):
     kwargs.setdefault("lpi_low_min", lpi_low)
     kwargs.setdefault("lpi_med_min", lpi_med)
     kwargs.setdefault("lpi_high_min", lpi_high)
+    # Issue #1679 (CIN-Teil): CAPE-Leiter und `cin_jkg` sind keyword-only ohne
+    # Default. `None` hier -- diese Datei prueft ausschliesslich das
+    # Blitzpotenzial, CAPE soll (wie bisher) kein Signal beitragen.
     return thunder_level_from_signals(
         wettercode_level=None, lightning_density=None, cape_jkg=None,
-        cape_threshold_jkg=None, **kwargs
+        cape_threshold_jkg=None, cape_med_min=None, cape_high_min=None,
+        cin_jkg=None, **kwargs
     )
 
 
