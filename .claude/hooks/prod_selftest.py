@@ -437,7 +437,8 @@ def _render_fail_health(workflow: str, head: str, health_msg: str) -> str:
 
 
 def _render_full_report(
-    workflow: str, head: str, health_msg: str, verdict: str, probes: list[dict]
+    workflow: str, head: str, health_msg: str, verdict: str, probes: list[dict],
+    unusable_findings: list | None = None,
 ) -> str:
     lines = [
         f"# Prod-Selftest — {workflow}",
@@ -461,6 +462,17 @@ def _render_full_report(
         lines.append(
             f"| {ac} | {staging} | {prod_url} | {prod_http} | {prod_status} |"
         )
+
+    # Fix #1689 (AC-5/AC-6): unverwertbare (Nicht-Dict-)Findings sichtbar
+    # ausweisen statt sie stillschweigend zu verwerfen.
+    if unusable_findings:
+        lines += ["", "## Unverwertbare Findings", ""]
+        lines.append(
+            f"{len(unusable_findings)} Eintrag/Einträge im findings-Array waren "
+            "keine Dicts und konnten nicht geprobt werden:"
+        )
+        for f in unusable_findings:
+            lines.append(f"- `{f!r}`")
 
     lines += ["", "## Fazit", ""]
     if verdict == "PASS":
@@ -492,6 +504,12 @@ def _render_full_report(
     elif verdict == "FAIL":
         lines.append(
             "FAIL: Regression in Produktion (Bot-Menü oder AC). Issue NICHT schließen."
+        )
+    elif verdict == "FAIL_UNUSABLE_FINDINGS":
+        lines.append(
+            "FAIL: Das findings-Array enthielt ausschließlich unverwertbare "
+            "(Nicht-Dict-)Einträge — kein einziger Nachweis konnte geprobt "
+            "werden. Issue NICHT schließen."
         )
     else:  # PARTIAL
         fails = [p for p in probes if p.get("status") == "PASS" and p.get("prod_status") == "FAIL"]
@@ -686,7 +704,10 @@ def run_selftest(
             _log(f"FEHLER: Nachweis-Datei {e2e_path} nicht lesbar: {exc}", stream=sys.stderr)
             return 1
 
-    if exact_data is not None and exact_data.get("verified_commit") == head:
+    # Fix #1689 (AC-10): valides, aber NICHT-Dict Top-Level-JSON wird wie "kein
+    # exakter Treffer" behandelt -- die bestehende Ancestor-Suche greift
+    # automatisch, statt mit AttributeError abzustuerzen (weich, Leseseite).
+    if isinstance(exact_data, dict) and exact_data.get("verified_commit") == head:
         verified = exact_data
         verdict = verified.get("staging_verdict", "")
         if not verdict.startswith("VERIFIED"):
@@ -745,9 +766,18 @@ def run_selftest(
         return 1
 
     # Phase 3: AC-Attestation (concurrent)
-    findings = verified.get("findings", [])
-    if not findings:
-        # Leer → als PASS werten (durch staging_gate eigentlich blockiert)
+    raw_findings = verified.get("findings", [])
+    # Fix #1689 (AC-5/AC-6): vor pool.map partitionieren -- ab hier fliessen in
+    # pool.map/_derive_verdict/_render_full_report garantiert nur noch Dicts.
+    # Ein findings-Feld, das selbst keine Liste ist, wird vollstaendig als
+    # unverwertbar behandelt (_e2e_paths.partition_findings).
+    findings, unusable_findings = _e2e_paths.partition_findings(raw_findings)
+    if not raw_findings:
+        # Leer (und OHNE unverwertbare Eintraege) → als PASS werten (durch
+        # staging_gate eigentlich blockiert). Greift NUR bei einer von Anfang
+        # an leeren rohen Liste -- eine nach der Partitionierung leere
+        # Probe-Liste bei vorhandenen unverwertbaren Eintraegen faellt NICHT
+        # hierher (siehe AC-7-Regel unten).
         _write_report(
             report_path,
             _render_full_report(workflow, head, health_msg, "PASS", []),
@@ -758,7 +788,15 @@ def run_selftest(
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         probes = list(pool.map(_probe_ac, findings))
 
-    verdict = _derive_verdict(probes)
+    # Fix #1689 (AC-7, Kern): waren unverwertbare Eintraege vorhanden und blieb
+    # KEIN einziges gueltiges Finding uebrig, ist das Ergebnis ausdruecklich
+    # KEIN Erfolg -- unabhaengig davon, dass _derive_verdict([]) fuer eine
+    # leere Probe-Liste sonst PASS liefern wuerde (Z. 553-556). Kein stiller
+    # Erfolg fuer einen unbrauchbaren Nachweis.
+    if unusable_findings and not probes:
+        verdict = "FAIL_UNUSABLE_FINDINGS"
+    else:
+        verdict = _derive_verdict(probes)
 
     # Phase 4: Bot-Menü-Check (additiv, gated)
     menu_finding = _check_bot_menu_prod()
@@ -769,7 +807,9 @@ def run_selftest(
     if menu_finding["status"] == "FAIL":
         verdict = "FAIL"
 
-    report_content = _render_full_report(workflow, head, health_msg, verdict, probes) + menu_line
+    report_content = _render_full_report(
+        workflow, head, health_msg, verdict, probes, unusable_findings
+    ) + menu_line
     _write_report(report_path, report_content)
 
     _log(f"Verdict={verdict} (Bericht: {report_path})")

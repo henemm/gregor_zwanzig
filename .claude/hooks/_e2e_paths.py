@@ -15,6 +15,31 @@ from pathlib import Path
 STALE_HOURS = 24
 
 
+def partition_findings(raw) -> "tuple[list, list]":
+    """Trennt ein aus JSON geladenes Findings-Array in (gueltige, unverwertbare).
+
+    Fix #1689: einziger Ort, der die Form eines Findings kennt — sowohl
+    staging_gate.py (Schreibseite, hart) als auch prod_selftest.py (Leseseite,
+    weich) rufen ausschließlich diese Funktion auf, statt je eigene
+    isinstance-Prüfungen zu bauen (das war bereits der fünfte reaktive Guard
+    an demselben Objektgraphen).
+
+    ``raw`` ist ein beliebiger, bereits aus JSON geladener Wert. Ist ``raw``
+    selbst keine Liste (z.B. ein Objekt/dict, eine Zahl oder ``None``), gilt
+    der GESAMTE Wert als unverwertbar: ``gueltige`` bleibt leer, ``raw``
+    landet als einziger Eintrag in ``unverwertbare``. Ist ``raw`` eine Liste,
+    wird elementweise nach ``isinstance(f, dict)`` getrennt — beide
+    Teillisten behalten die ursprüngliche Reihenfolge.
+
+    Reine Funktion: keine Seiteneffekte, kein Zugriff auf Dateisystem/Zeit.
+    """
+    if not isinstance(raw, list):
+        return [], [raw]
+    gueltige = [f for f in raw if isinstance(f, dict)]
+    unverwertbare = [f for f in raw if not isinstance(f, dict)]
+    return gueltige, unverwertbare
+
+
 def last_gate_scope_path(repo_dir) -> Path:
     """Marker-Pfad für die Gate-Scope-Basis (Issue #916):
     <repo_dir>/.claude/last_gate_scope.json.

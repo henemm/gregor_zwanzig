@@ -355,9 +355,32 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
         return 1
 
     try:
-        findings = json.loads(findings_path.read_text()) if findings_path.exists() else []
+        raw_findings = json.loads(findings_path.read_text()) if findings_path.exists() else []
     except (json.JSONDecodeError, OSError) as exc:
         _log(f"Findings-Datei nicht lesbar: {exc}", stream=sys.stderr)
+        return 1
+
+    # Fix #1689 (AC-2/AC-3): hart pruefen, BEVOR irgendein Artefakt entsteht —
+    # analog zur Verdict-Praefix-Pruefung oben (#1327). --findings-json muss
+    # eine Liste sein, und jedes Element ein Dict; sonst kein Artefakt.
+    if not isinstance(raw_findings, list):
+        _log(
+            f"--findings-json muss eine JSON-Liste sein, gefunden: "
+            f"{type(raw_findings).__name__} statt list. Attestation unveraendert "
+            "(kein Artefakt geschrieben).",
+            stream=sys.stderr,
+        )
+        return 1
+    findings, unusable_findings = _e2e_paths.partition_findings(raw_findings)
+    if unusable_findings:
+        first_idx = next(i for i, f in enumerate(raw_findings) if not isinstance(f, dict))
+        _log(
+            f"--findings-json enthaelt unverwertbare (Nicht-Dict-)Elemente: Index "
+            f"{first_idx} hat Typ {type(raw_findings[first_idx]).__name__} statt dict "
+            f"({len(unusable_findings)} von {len(raw_findings)} Elementen betroffen). "
+            "Attestation unveraendert (kein Artefakt geschrieben).",
+            stream=sys.stderr,
+        )
         return 1
 
     # Issue #1327 (AC-3): Findings tragen ihren Urheber-Workflow, damit der
@@ -367,10 +390,7 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
         or os.environ.get("GZ_ACTIVE_WORKFLOW")
         or "unknown"
     ).strip() or "unknown"
-    findings = [
-        {**f, "workflow": workflow} if isinstance(f, dict) else f
-        for f in findings
-    ]
+    findings = [{**f, "workflow": workflow} for f in findings]
 
     scope = scope_override or _detect_committed_scope(head=sha)
     # Issue #1558: NACH der Scope-Berechnung — nicht oben beim Telegram-Gate,
@@ -407,8 +427,22 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
             existing = json.loads(e2e_path.read_text())
         except (json.JSONDecodeError, OSError):
             existing = None
-        if existing is not None and existing.get("verified_commit") == sha:
+        # Fix #1689 (AC-8): ein valides, aber NICHT-Dict Top-Level-JSON wird wie
+        # eine kaputte Attestation behandelt (isinstance-Guard VOR .get()) —
+        # kein AttributeError, regulaeres Ueberschreiben bleibt moeglich.
+        if isinstance(existing, dict) and existing.get("verified_commit") == sha:
             existing_findings = existing.get("findings") or []
+            # Fix #1689 (AC-4): Nicht-Dict-Altlasten (z.B. aus einer frueheren
+            # Objekt-statt-Liste-Fehlform, #1653/#1677) werden VOR dem
+            # Workflow-Filter verworfen — jeder reguläre Folge-Schreibvorgang
+            # heilt damit ein bereits verschmutztes Artefakt.
+            existing_findings, existing_unusable = _e2e_paths.partition_findings(existing_findings)
+            if existing_unusable:
+                _log(
+                    f"{len(existing_unusable)} unverwertbare (Nicht-Dict-)Altlast-"
+                    "Eintraege beim Merge verworfen.",
+                    stream=sys.stderr,
+                )
             # Issue #1327 (AC-4): Einträge DIESES Workflows werden ersetzt statt
             # additiv angehängt — sonst überleben korrigierte Fassungen neben den
             # fehlerhaften und erzeugen dauerhaft False-FAILs. Fremde Workflows
@@ -547,6 +581,19 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
         except (json.JSONDecodeError, OSError) as exc:
             _log(f"FEHLER: Nachweis-Datei {e2e_path} nicht lesbar: {exc}", stream=sys.stderr)
             return 1
+
+    # Fix #1689 (AC-9): valides, aber NICHT-Dict Top-Level-JSON wird FAIL-CLOSED
+    # geblockt — anders als der Merge-Lesepfad (weich), weil dies der
+    # Exakt-Match-Zweig des echten Prod-Deploy-Gates ist. NICHT wie `data is
+    # None` behandeln (das würde in die Ancestor-Relaxierung rutschen).
+    if data is not None and not isinstance(data, dict):
+        _log(
+            f"FEHLER: Nachweis-Datei {e2e_path} enthält kein Dict auf oberster "
+            f"Ebene (gefundener Typ: {type(data).__name__}) — Gate fail-closed "
+            "blockiert.",
+            stream=sys.stderr,
+        )
+        return 1
 
     verified_commit = data.get("verified_commit", "") if data is not None else ""
 
