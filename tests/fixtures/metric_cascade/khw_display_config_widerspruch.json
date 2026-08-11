@@ -1,0 +1,612 @@
+{
+  "trip_id": "cascade-fixture-widerspruch",
+  "metrics": [
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "temperature",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "temperature_night",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "wind_chill",
+      "order": 14,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "wind_chill_night",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "humidity",
+      "order": 11,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "dewpoint",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "wind",
+      "order": 0,
+      "sms_threshold": 15,
+      "use_friendly_format": false
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "gust",
+      "order": 5,
+      "use_friendly_format": false
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "wind_direction",
+      "order": 1,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "precipitation",
+      "order": 2,
+      "sms_threshold": 0.8,
+      "use_friendly_format": false
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "rain_probability",
+      "order": 3,
+      "sms_threshold": 40,
+      "use_friendly_format": false
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "thunder",
+      "order": 4,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "snowfall_limit",
+      "order": 9,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "precip_type",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "cloud_total",
+      "order": 8,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "cloud_low",
+      "order": 7,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "cloud_mid",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "cloud_high",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "visibility",
+      "order": 6,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "sunshine",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "uv_index",
+      "order": 10,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "pressure",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "freezing_level",
+      "order": 12,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "snow_depth",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "enabled": false,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "fresh_snow",
+      "order": 0,
+      "use_friendly_format": true
+    },
+    {
+      "bucket": "primary",
+      "enabled": true,
+      "horizons": {
+        "day_after": true,
+        "today": true,
+        "tomorrow": true
+      },
+      "metric_id": "cape",
+      "order": 13,
+      "use_friendly_format": true
+    }
+  ],
+  "channel_layouts": {
+    "sms": [
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "temperature",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "temperature_night",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "wind_chill",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "wind_chill_night",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "humidity",
+        "order": 11,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "dewpoint",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "wind",
+        "order": 0,
+        "use_friendly_format": false
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "gust",
+        "order": 5,
+        "use_friendly_format": false
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "wind_direction",
+        "order": 1,
+        "use_friendly_format": true
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "precipitation",
+        "order": 2,
+        "use_friendly_format": false
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "rain_probability",
+        "order": 3,
+        "use_friendly_format": false
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "thunder",
+        "order": 4,
+        "use_friendly_format": true
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "snowfall_limit",
+        "order": 9,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "precip_type",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "cloud_total",
+        "order": 8,
+        "use_friendly_format": true
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "cloud_low",
+        "order": 7,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "cloud_mid",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "cloud_high",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "visibility",
+        "order": 6,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "sunshine",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "uv_index",
+        "order": 10,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "pressure",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "bucket": "primary",
+        "enabled": true,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "freezing_level",
+        "order": 12,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "snow_depth",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "fresh_snow",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "cape",
+        "order": 0,
+        "use_friendly_format": true
+      }
+    ]
+  }
+}
