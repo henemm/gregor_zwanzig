@@ -285,6 +285,86 @@ def _official_alert() -> OfficialAlert:
     )
 
 
+# ═══════════════════ Schritt 0: der Radar-Bereitschafts-Guard ═════════════
+# Spec-Nachtrag 2026-08-11 (RED-Phase) -- die ACHTE Ansatzstelle. Die drei
+# AC-1/AC-5-Radar-Tests unten setzen ``sms_gateway_url``/``sms_to`` immer
+# mit und laufen deshalb AM GUARD VORBEI (``can_send_sms()`` wird zufaellig
+# ``True``). Dieser Test ist der einzige in der Datei, der ALLE drei
+# Bestandskanaele technisch unerreichbar macht -- genau der PO-Fall
+# (Huette = nur Satellit, #1667/#1701).
+
+
+def _settings_premium_sms_only(port: int, user_id: str) -> Settings:
+    """Settings mit ALLEN drei Bestandskanaelen technisch unerreichbar --
+    kein SMTP, kein Telegram-Bot, kein ``sms_to`` -- NUR Premium-SMS
+    (geteiltes ``sms_gateway_url``) ist konfiguriert. Jedes Feld ausdruecklich
+    gesetzt (#1477), kein stiller Ruecksprung auf die Prod-.env."""
+    update = {
+        "smtp_host": None, "smtp_user": None, "smtp_pass": None, "mail_to": None,
+        "telegram_bot_token": None, "telegram_chat_id": None,
+        "sms_to": None,
+        "sms_gateway_url": f"http://127.0.0.1:{port}/api/sms",
+        "seven_api_key": "test-stub-key",
+        "seven_sandbox_key": "test-stub-key",
+        "sms_from": None,
+    }
+    return Settings().with_user_profile(user_id).model_copy(update=update)
+
+
+def test_radar_alert_reaches_premium_sms_when_no_other_channel_configured(monkeypatch):
+    """Schritt 0 (Spec-Nachtrag): Given ein Trip hat AUSSCHLIESSLICH
+    Premium-SMS konfiguriert -- keine SMS- (``sms_to`` leer), keine
+    Telegram-, keine E-Mail-Konfiguration / When ein Regenradar-Alarm
+    ausgeloest wird / Then geht der Alarm trotzdem per Premium-SMS hinaus --
+    der Radar-Bereitschafts-Guard darf einen funktionsfaehigen Kanal nicht
+    verwerfen, nur weil die DREI ANDEREN Kanaele technisch unerreichbar sind.
+
+    ROT-Grund (gemessen, ``trip_alert.py:1043-1049``):
+    ``check_radar_alerts()`` prueft VOR jeder Kanal-Set-Aufloesung
+    ``can_send_email() or can_send_telegram() or can_send_sms()`` -- alle
+    drei sind hier bewusst False (kein `sms_to`, kein Telegram-Bot, kein
+    SMTP). Der Alarm wird mit ``continue`` verworfen, BEVOR
+    ``_radar_effective_channels()`` (das den Premium-Zweig kennen wird)
+    ueberhaupt aufgerufen wird -- unabhaengig davon, wie vollstaendig die
+    uebrigen sieben Ansatzstellen umgesetzt sind.
+    """
+    import app.loader as loader
+    from services.radar_service import RadarNowcastService
+    from services.trip_alert import TripAlertService
+
+    uid = _uid("step0-radar-only")
+    _write_profile(uid, tier="premium", reply_to=LEARNED_REPLY_TO)
+    trip = _radar_trip(f"trip-step0-{uuid.uuid4().hex[:6]}", send_premium_sms=True)
+    monkeypatch.setattr(loader, "load_all_trips", lambda **kw: [trip])
+
+    stub = _SevenIoStub()
+    try:
+        settings = _settings_premium_sms_only(stub.port, uid)
+        assert not settings.can_send_email(), "Testvoraussetzung: E-Mail unerreichbar"
+        assert not settings.can_send_telegram(), "Testvoraussetzung: Telegram unerreichbar"
+        assert not settings.can_send_sms(), "Testvoraussetzung: SMS unerreichbar"
+
+        svc = TripAlertService(
+            settings=settings, user_id=uid, throttle_hours=0,
+            radar_service=RadarNowcastService(frame_source=_light_wet_frames),
+            mail_sink=lambda subject, body: None,
+        )
+        sent = svc.check_radar_alerts()
+    finally:
+        stub.stop()
+
+    assert sent >= 1, (
+        f"Schritt 0: der Radar-Alarm muss trotz drei unerreichbarer "
+        f"Bestandskanaele ausgeloest werden, sent={sent}"
+    )
+    hits = stub.to(LEARNED_REPLY_TO)
+    assert len(hits) == 1, (
+        "Schritt 0: erwartet GENAU EINE Premium-SMS an die gelernte "
+        f"Rueckadresse trotz technisch unerreichbarer E-Mail/Telegram/SMS, "
+        f"erhalten: {hits!r} (voller Stub: {stub.received!r})"
+    )
+
+
 # ═══════════════════════════════ AC-1 ═════════════════════════════════════
 
 def test_deviation_alert_reaches_premium_sms_when_opted_in():

@@ -130,6 +130,62 @@ func TestUpdateTripHandler_AlertChannelThresholdsFieldLevelMergePreservesUntouch
 	}
 }
 
+// AC-7 fuer Premium-SMS (#1701 S2b, D6): vierter Schwellenwert-Fall,
+// identisches Muster wie TestUpdateTripHandler_AlertChannelThresholdsField
+// LevelMergePreservesUntouchedChannel oben, nur fuer das neue Geschwister-
+// feld PremiumSms statt Email/Telegram/Sms.
+func TestUpdateTripHandler_AlertChannelThresholdsPremiumSmsFieldLevelMerge(t *testing.T) {
+	s := newTestStore(t)
+	trip := model.Trip{
+		ID:   "trip-1701-thr-premium",
+		Name: "PremiumSms-Threshold-Test",
+		Stages: []model.Stage{{
+			ID: "S1", Name: "D1", Date: "2026-07-15",
+			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
+		}},
+		AlertChannelThresholds: &model.AlertChannelThresholdsConfig{
+			Email: strPtr("MODERATE"), PremiumSms: strPtr("HIGH"),
+		},
+	}
+	if err := s.SaveTrip(&trip); err != nil {
+		t.Fatalf("SaveTrip: %v", err)
+	}
+
+	// PUT aendert NUR email, premium_sms fehlt im Unterobjekt komplett.
+	body := map[string]interface{}{
+		"alert_channel_thresholds": map[string]interface{}{"email": "LOW"},
+	}
+	buf, _ := json.Marshal(body)
+
+	r := chi.NewRouter()
+	r.Put("/api/trips/{id}", UpdateTripHandler(s))
+	req := httptest.NewRequest(http.MethodPut, "/api/trips/trip-1701-thr-premium", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "test")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	loaded, err := s.LoadTrip("trip-1701-thr-premium")
+	if err != nil {
+		t.Fatalf("LoadTrip: %v", err)
+	}
+	if loaded.AlertChannelThresholds == nil || loaded.AlertChannelThresholds.Email == nil ||
+		*loaded.AlertChannelThresholds.Email != "LOW" {
+		t.Fatalf("expected email=LOW applied, got %+v", loaded.AlertChannelThresholds)
+	}
+	if loaded.AlertChannelThresholds.PremiumSms == nil ||
+		*loaded.AlertChannelThresholds.PremiumSms != "HIGH" {
+		t.Errorf(
+			"premium_sms erased by email-only PUT, expected HIGH (unangetastet), got %+v",
+			loaded.AlertChannelThresholds.PremiumSms,
+		)
+	}
+}
+
 // Gegenprobe: ein neu angelegter Trip ohne alert_channel_thresholds bleibt
 // nil (Startwert "LOW" je Kanal wird von Python code-seitig angenommen,
 // nicht hier persistiert).

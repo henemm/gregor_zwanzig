@@ -237,6 +237,9 @@ class CompareAlertService:
 
             delivered_all: set[str] = set()
             reachable_all: set[str] = set()
+            # Issue #1701 (S2b, D5): ueber alle Dringlichkeits-Gruppen hinweg
+            # gesammelt, analog `delivered_all`/`reachable_all`.
+            blocked_reason_codes_all: dict[str, str] = {}
             any_sent = False
             finalized_ids: set[str] = set()
             for ids_key, channels in groups_by_ids.items():
@@ -255,6 +258,7 @@ class CompareAlertService:
                 )
                 delivered_all |= set(notif_result.delivered_channels)
                 reachable_all |= set(notif_result.sent_channels)
+                blocked_reason_codes_all.update(notif_result.blocked_reason_codes)
                 if notif_result.sent:
                     any_sent = True
                     finalized_ids |= set(ids_key)
@@ -279,6 +283,7 @@ class CompareAlertService:
                 sent_channels=sorted(delivered_all),
                 reachable_channels=sorted(reachable_all),
                 below_threshold_channels=below_threshold_all,
+                blocked_reason_codes=blocked_reason_codes_all,
             )
             if not any_sent:
                 continue

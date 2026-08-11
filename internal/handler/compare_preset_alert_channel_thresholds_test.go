@@ -188,6 +188,75 @@ func TestUpdateComparePreset_AlertChannelThresholdsFieldLevelMergePreservesUntou
 	}
 }
 
+// Issue #1701 (S2b, D6): vierter Schwellenwert-Fall fuer den Ortsvergleich
+// -- identisches Feld-Level-Merge-Muster wie oben, jetzt fuer PremiumSms.
+func TestUpdateComparePreset_AlertChannelThresholdsPremiumSmsFieldLevelMerge(t *testing.T) {
+	s := newTestStore(t)
+
+	original := model.ComparePreset{
+		ID:          "cp-1701-thr-premium",
+		Name:        "PremiumSms-Threshold-Test",
+		UserID:      "user1",
+		LocationIDs: []string{"loc-a"},
+		Schedule:    "manual",
+		Profil:      "SUMMER_TREKKING",
+		HourFrom:    8,
+		HourTo:      17,
+		Empfaenger:  []string{"a@example.com"},
+		AlertChannelThresholds: &model.AlertChannelThresholdsConfig{
+			Email:      alertThresholdStrPtr("MODERATE"),
+			PremiumSms: alertThresholdStrPtr("HIGH"),
+		},
+		CreatedAt: time.Now().UTC(),
+	}
+	if err := s.WithUser("user1").SaveComparePresets([]model.ComparePreset{original}); err != nil {
+		t.Fatalf("SaveComparePresets: %v", err)
+	}
+
+	// PUT aendert NUR email, premium_sms fehlt im Unterobjekt komplett.
+	body := map[string]interface{}{
+		"name":         "PremiumSms-Threshold-Test",
+		"schedule":     "manual",
+		"profil":       "SUMMER_TREKKING",
+		"hour_from":    8,
+		"hour_to":      17,
+		"location_ids": []string{"loc-a"},
+		"empfaenger":   []string{"a@example.com"},
+		"alert_channel_thresholds": map[string]interface{}{
+			"email": "LOW",
+		},
+	}
+	buf, _ := json.Marshal(body)
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest(http.MethodPut, "/api/compare/presets/cp-1701-thr-premium", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	loaded, err := s.WithUser("user1").LoadComparePresets()
+	if err != nil {
+		t.Fatalf("LoadComparePresets: %v", err)
+	}
+	p := loaded[0]
+	if p.AlertChannelThresholds == nil || p.AlertChannelThresholds.Email == nil ||
+		*p.AlertChannelThresholds.Email != "LOW" {
+		t.Fatalf("expected email=LOW applied, got %+v", p.AlertChannelThresholds)
+	}
+	if p.AlertChannelThresholds.PremiumSms == nil || *p.AlertChannelThresholds.PremiumSms != "HIGH" {
+		t.Errorf(
+			"premium_sms erased by email-only PUT, expected HIGH (unangetastet), got %+v",
+			p.AlertChannelThresholds.PremiumSms,
+		)
+	}
+}
+
 // F002 (Adversary HIGH, Fix-Loop 1): der bestehende AC-10-Test oben deckt nur
 // eine Merge-Richtung ab (Body traegt telegram, prueft dass email erhalten
 // bleibt) — Email und Sms als Preserve-Zeilen (compare_preset.go:425-430)

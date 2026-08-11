@@ -56,7 +56,7 @@ REASON_FORECAST_CHANGE = "forecast_change"
 REASON_NOWCAST = "nowcast"
 REASON_OFFICIAL_ALERT = "official_alert"
 
-_ALL_CHANNELS = ("email", "telegram", "sms")
+_ALL_CHANNELS = ("email", "telegram", "sms", "premium_sms")
 
 
 def _norm_pairs(pairs: Iterable) -> list[tuple[str, str]]:
@@ -112,17 +112,22 @@ def hazards_from_official_alerts(alerts) -> list[str]:
 
 def _channels_not_sent(
     effective: set[str], delivered: list[str], below_threshold: "set[str] | None" = None,
+    blocked_reason_codes: "dict[str, str] | None" = None,
 ) -> list[dict]:
-    """Je nicht zugestelltem Kanal ein Grund: unter der Kanal-Schwelle (#1461
-    S3b-2a) geht VOR technisch gescheitert, sonst wie bisher: eingeschaltet
+    """Je nicht zugestelltem Kanal ein Grund: ein spezifischer, gebuchter
+    Sperrgrund (D5, #1701) geht VOR der Kanal-Schwelle (#1461 S3b-2a), die
+    wiederum VOR technisch gescheitert geht, sonst wie bisher: eingeschaltet
     und weder below-threshold noch zugestellt -> technisch gescheitert; war
     er aus, hat der Nutzer ihn abgeschaltet."""
     below_threshold = below_threshold or set()
+    blocked_reason_codes = blocked_reason_codes or {}
     result = []
     for channel in _ALL_CHANNELS:
         if channel in delivered:
             continue
-        if channel in below_threshold:
+        if channel in blocked_reason_codes:
+            reason = blocked_reason_codes[channel]
+        elif channel in below_threshold:
             reason = REASON_BELOW_THRESHOLD
         elif channel in effective:
             reason = REASON_DELIVERY_FAILED
@@ -146,6 +151,7 @@ def append_entry(
     sent_channels: Iterable[str],
     reachable_channels: Optional[Iterable[str]] = None,
     below_threshold_channels: Optional[Iterable[str]] = None,
+    blocked_reason_codes: Optional[dict[str, str]] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -182,6 +188,13 @@ def append_entry(
     des Nutzers -- die Schwelle filtert nur den tatsaechlichen Versand
     (Aufrufer), nie das, was hier protokolliert wird (rote Linie #638).
 
+    `blocked_reason_codes` (D5, #1701): Kanal -> spezifische Sperr-Kennung
+    (z.B. `premium_sms_no_reply_address`), aus
+    `NotificationResult.blocked_reason_codes` durchgereicht. Ersetzt fuer den
+    betroffenen Kanal den generischen `REASON_DELIVERY_FAILED` in
+    `channels_not_sent` -- ein Kanal OHNE eigenen Eintrag bleibt unveraendert
+    beim generischen Grund (Bestandsinvariante).
+
     Read-Modify-Write ueber die volle Datei: Alt-Eintraege ohne die neuen
     Felder bleiben unveraendert erhalten (AC-14). `metrics` und `hazards`
     werden IMMER beide serialisiert (leer, wenn nicht zutreffend) -- ein
@@ -215,6 +228,7 @@ def append_entry(
         "channels_sent": delivered,
         "channels_not_sent": _channels_not_sent(
             effective, delivered, set(below_threshold_channels or ()),
+            blocked_reason_codes,
         ),
     }
 

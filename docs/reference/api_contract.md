@@ -752,51 +752,56 @@ type OfficialWarningsConfig struct {
 }
 
 // AlertChannelsConfig — Issue #1258 Scheibe S3, additives Trip-Kanal-Set fuer
-// die Alert-Zustellung. All-or-nothing: Client sendet immer alle drei Felder.
+// die Alert-Zustellung. Seit Issue #1701 (S2b, D3) VIER Felder, alle *bool
+// mit Feld-Level-Merge (die fruehere All-or-nothing-Praemisse ist abgeloest —
+// ein PUT ohne ein Feld laesst dessen Bestandswert unangetastet).
 type AlertChannelsConfig struct {
-    Email    bool `json:"email"`
-    Telegram bool `json:"telegram"`
-    Sms      bool `json:"sms"`
+    Email      *bool `json:"email,omitempty"`
+    Telegram   *bool `json:"telegram,omitempty"`
+    Sms        *bool `json:"sms,omitempty"`
+    PremiumSms *bool `json:"premium_sms,omitempty"` // Issue #1701 S2b
 }
 
 // AlertChannelThresholdsConfig — Issue #1461 S3b-2a, additives Geschwister-
 // feld zu AlertChannelsConfig (NICHT darin). Je Kanal die Dringlichkeits-
 // Schwelle als String-Pointer, damit "Kanal fehlt im Body" (Feld-Level-Merge
 // bewahrt den Bestandswert) von "Kanal explizit gesetzt" unterscheidbar bleibt.
+// PremiumSms (Issue #1701 S2b, D6) ist das vierte Geschwisterfeld.
 type AlertChannelThresholdsConfig struct {
-    Email    *string `json:"email,omitempty"`    // "LOW"|"MODERATE"|"HIGH"
-    Telegram *string `json:"telegram,omitempty"`
-    Sms      *string `json:"sms,omitempty"`
+    Email      *string `json:"email,omitempty"`    // "LOW"|"MODERATE"|"HIGH"
+    Telegram   *string `json:"telegram,omitempty"`
+    Sms        *string `json:"sms,omitempty"`
+    PremiumSms *string `json:"premium_sms,omitempty"`
 }
 ```
 
-### alert_channels (Issue #1258)
+### alert_channels (Issue #1258, seit #1701 S2b vier Kanäle)
 
 Trip-weites Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche Sofort-Alerts), Pointer-Feld analog `official_warnings`:
 
 ```json
-{"alert_channels": {"email": true, "telegram": false, "sms": false}}
+{"alert_channels": {"email": true, "telegram": false, "sms": false, "premium_sms": true}}
 ```
 
 | Feld | Typ | Semantik |
 |------|-----|----------|
-| `alert_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend (Legacy-Verhalten):** Alert-Kanäle erben die aktiven Briefing-Kanäle aus `report_config` (`send_email`/`send_telegram`/`send_sms`) — kein Verhaltenswechsel für Bestand. **Gesetzt:** ersetzt beim Alert-Versand den geerbten Briefing-Anteil (all-or-nothing, alle drei Felder explizit) |
-| `alert_channels.email`/`.telegram`/`.sms` | bool | einzelne Kanal-Flags |
+| `alert_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend (Legacy-Verhalten):** Alert-Kanäle erben die aktiven Briefing-Kanäle aus `report_config` (`send_email`/`send_telegram`/`send_sms`/`send_premium_sms`) — kein Verhaltenswechsel für Bestand. **Gesetzt:** ersetzt beim Alert-Versand den geerbten Briefing-Anteil, seit #1701 (D3) mit **Feld-Level-Merge**: ein PUT, das ein Feld nicht mitschickt (z. B. ein älterer Frontend-Build ohne `premium_sms`), lässt dessen Bestandswert unverändert statt ihn auf `false` zurückzusetzen |
+| `alert_channels.email`/`.telegram`/`.sms`/`.premium_sms` | bool | einzelne Kanal-Flags; `premium_sms` gated zusätzlich über `premium_sms_allowed()` (Tier-Gate, NICHT `sms_allowed()`) |
 
-Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten Trip-Anteil; das SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` (`AlertChannelsConfig`), Spec `docs/specs/_archive/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9.
+Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten Trip-Anteil; das SMS-/Premium-SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` (`AlertChannelsConfig`), Spec `docs/specs/_archive/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9, Spec `docs/specs/modules/feat_1701_alarm_premium_sms.md` (vierter Kanal, D3).
 
-### alert_channel_thresholds (Issue #1461 S3b-2a Trip · S3b-2b Ortsvergleich)
+### alert_channel_thresholds (Issue #1461 S3b-2a Trip · S3b-2b Ortsvergleich · #1701 S2b vierter Kanal)
 
-Additives Geschwisterfeld zu `alert_channels`/`send_telegram`+`send_sms` (bewusst **nicht** darin — der Kanal-Schalter wird beim Speichern als Ganzes ersetzt, all-or-nothing; ein Client ohne Kenntnis der Schwelle würde sie sonst still löschen): je Alarm-Kanal die Dringlichkeitsstufe, ab der eine ausgelöste Alarm-Meldung diesen Kanal erreichen darf. Identischer Vertrag auf `Trip` **und** `ComparePreset` — derselbe Go-Typ (`AlertChannelThresholdsConfig`), kein zweiter.
+Additives Geschwisterfeld zu `alert_channels`/`send_telegram`+`send_sms`+`send_premium_sms`: je Alarm-Kanal die Dringlichkeitsstufe, ab der eine ausgelöste Alarm-Meldung diesen Kanal erreichen darf. Identischer Vertrag auf `Trip` **und** `ComparePreset` — derselbe Go-Typ (`AlertChannelThresholdsConfig`), kein zweiter.
 
 ```json
-{"alert_channel_thresholds": {"email": "LOW", "telegram": "HIGH", "sms": "MODERATE"}}
+{"alert_channel_thresholds": {"email": "LOW", "telegram": "HIGH", "sms": "MODERATE", "premium_sms": "HIGH"}}
 ```
 
 | Feld | Typ | Semantik |
 |------|-----|----------|
 | `alert_channel_thresholds` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend:** kein Kanal hat eine Schwelle gesetzt — Startwert `"LOW"` je Kanal (Python-Vorgabewert, nicht persistiert). **Gesetzt:** je Kanal maßgeblich für den Versand-Filter |
-| `alert_channel_thresholds.email`/`.telegram`/`.sms` | `"LOW"`\|`"MODERATE"`\|`"HIGH"` \| fehlend | fehlender Kanal-Key im PUT-Body → **Feld-Level-Merge** bewahrt den Bestandswert (AC-7 Trip / AC-10 Compare); ein GANZ fehlendes `alert_channel_thresholds` im Body bewahrt das ganze Unterobjekt (Top-Level-`nil`-Erbe, AC-6 Trip / AC-9 Compare) |
+| `alert_channel_thresholds.email`/`.telegram`/`.sms`/`.premium_sms` | `"LOW"`\|`"MODERATE"`\|`"HIGH"` \| fehlend | fehlender Kanal-Key im PUT-Body → **Feld-Level-Merge** bewahrt den Bestandswert (AC-7 Trip / AC-10 Compare); ein GANZ fehlendes `alert_channel_thresholds` im Body bewahrt das ganze Unterobjekt (Top-Level-`nil`-Erbe, AC-6 Trip / AC-9 Compare) |
 
 Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn ihre Dringlichkeit (`services.alert_urgency`, `LOW`/`MODERATE`/`HIGH`) die dort eingestellte Schwelle erreicht oder übertrifft (`services.alert_channel_threshold.split_by_threshold()`). Das an das Alarm-Protokoll übergebene Kanal-Set bleibt dabei das **rohe**, unveränderte Opt-in — nur der tatsächliche Versand wird gefiltert (ADR-0046). Vollständig unterdrückte Meldungen erscheinen im nächsten Briefing als nicht zugestellt (Grund `below_channel_threshold`, S3b-1-Sichtbarkeit).
 
@@ -1848,6 +1853,7 @@ type ComparePreset struct {
     AlertQuietTo         *string                `json:"alert_quiet_to,omitempty"`              // Issue #1170
     SendTelegram         *bool                  `json:"send_telegram,omitempty"`               // Issue #1216 Slice 2b: Alarm-Kanal-Opt-in (Default falsy = E-Mail-only)
     SendSms              *bool                  `json:"send_sms,omitempty"`                    // Issue #1216 Slice 2b
+    SendPremiumSms       *bool                  `json:"send_premium_sms,omitempty"`            // Issue #1701 S2b (D8): eigenes Feld statt alert_channels-Sub-Objekt (Ortsvergleich hat keins)
     Kind                 string                 `json:"kind,omitempty"`                        // ADR-0023-Diskriminator ("vergleich"); nur Migration schreibt ihn
     CreatedAt            time.Time              `json:"created_at"`
 }
@@ -3416,6 +3422,19 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-11: Issue #1701 Scheibe S2b — Premium-SMS wird vierter Kanal im
+  Alarm- UND Ortsvergleich-Pfad (Vorgänger: S2a #1676, ausschließlich
+  Trip-Briefing). `AlertChannelsConfig` bekommt `PremiumSms *bool` — dabei
+  entfällt die frühere „All-or-nothing"-Prämisse: alle vier Felder (Email/
+  Telegram/Sms/PremiumSms) sind jetzt `*bool` mit **Feld-Level-Merge**
+  (Vorbild `AlertChannelThresholdsConfig`), ein PUT ohne ein Feld lässt
+  dessen Bestandswert unangetastet statt ihn auf `false` zurückzusetzen.
+  `AlertChannelThresholdsConfig` bekommt `PremiumSms *string` als viertes
+  Geschwisterfeld (ADR-0046-Pflicht). `ComparePreset.SendPremiumSms *bool`
+  neu (eigenes Feld, kein `alert_channels`-Sub-Objekt im Ortsvergleich).
+  Tier-Gate `premium_sms_allowed()` (NICHT `sms_allowed()`) an allen drei
+  Alarmpfaden (Änderung/Radar/amtlich) und beiden Kontexten (Trip/Compare).
+  Siehe `docs/specs/modules/feat_1701_alarm_premium_sms.md`.
 - 2026-08-10: Issue #1676 Scheibe S2a (ADR-0049) — `TripReportConfig.send_premium_sms`
   (bool, default `false`) macht Premium-SMS (Garmin inReach) zum vierten, eigenständigen
   Versandkanal `premium_sms` — **ausschließlich fürs Trip-Briefing**. Fester Absender

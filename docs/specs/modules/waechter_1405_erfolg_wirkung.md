@@ -477,8 +477,8 @@ Scan-Ergebnis):
 | `src/services/compare_official_alert.py::check_all_compare_presets` | 1 |
 | `src/services/scheduler_dispatch_service.py::send_compare_preset` | 1 |
 | `api/routers/scheduler.py::_ping_heartbeat_compare` | 1 |
-| `src/services/notification_service.py::send_official_alert` | **3** |
-| `src/services/notification_service.py::_dispatch_alert_message` | **3** |
+| `src/services/notification_service.py::send_official_alert` | **4** |
+| `src/services/notification_service.py::_dispatch_alert_message` | **4** |
 | `src/services/notification_service.py::_dispatch_compare_official_email` | 1 |
 | `src/services/notification_service.py::_dispatch_compare_official_telegram` | 1 |
 | `src/services/notification_service.py::_dispatch_compare_official_sms` | 1 |
@@ -793,3 +793,9 @@ B15–B17-Aufnahme trotz totem Code).
   AC-18) — 20 ACs statt 16. Größenschätzung auf 2400–2800 LoC angehoben
   (vorher 1600–2200) — Freigabe erneut beim PO einzuholen. Approval
   zurückgesetzt.
+- 2026-08-11 (Nachzug Issue #1701, S2b): Premium-SMS wird vierter
+  Versandkanal in `send_official_alert` (B14a) und `_dispatch_alert_message`
+  (B14c) — die Mindest-Trefferzahl beider Funktionsschlüssel steigt von 3
+  auf 4 (Tabelle oben), `SPEC_LISTED_FINDINGS`-Summe von 40 auf 42.
+  Funktionsschlüssel-Zahl (33) unverändert. Dies ist genau die in „Offene
+  Punkte" 2 vorgesehene, hier beschlossene Korrektur.

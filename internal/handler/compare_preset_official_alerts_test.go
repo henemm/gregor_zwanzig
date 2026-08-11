@@ -448,6 +448,87 @@ func TestUpdateComparePreset_ChannelTogglesRoundtrip(t *testing.T) {
 	}
 }
 
+// Issue #1701 (S2b, D8): send_premium_sms ist ein neues, eigenes Kanal-Opt-
+// in-Feld (kein alert_channels-Sub-Objekt im Ortsvergleich) — Roundtrip UND
+// RMW-Erhalt, wenn ein spaeterer PUT das Feld nicht mitschickt.
+func TestUpdateComparePreset_SendPremiumSmsRoundtripAndPreserved(t *testing.T) {
+	s := newTestStore(t)
+
+	original := model.ComparePreset{
+		ID:          "cp-premium-sms-1",
+		Name:        "PremiumSms-Test",
+		UserID:      "user1",
+		LocationIDs: []string{"loc-a"},
+		Schedule:    "manual",
+		Profil:      "SUMMER_TREKKING",
+		HourFrom:    8,
+		HourTo:      17,
+		Empfaenger:  []string{"a@example.com"},
+		CreatedAt:   time.Now().UTC(),
+	}
+	if err := s.WithUser("user1").SaveComparePresets([]model.ComparePreset{original}); err != nil {
+		t.Fatalf("SaveComparePresets: %v", err)
+	}
+
+	// Erster PUT: send_premium_sms explizit gesetzt.
+	firstBody := map[string]interface{}{
+		"name": "PremiumSms-Test", "schedule": "manual", "profil": "SUMMER_TREKKING",
+		"hour_from": 8, "hour_to": 17, "location_ids": []string{"loc-a"},
+		"empfaenger": []string{"a@example.com"}, "send_premium_sms": true,
+	}
+	firstBuf, _ := json.Marshal(firstBody)
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	firstReq := httptest.NewRequest(http.MethodPut, "/api/compare/presets/cp-premium-sms-1", bytes.NewReader(firstBuf))
+	firstReq.Header.Set("Content-Type", "application/json")
+	firstReq = addUserToContext(firstReq, "user1")
+	firstW := httptest.NewRecorder()
+	r.ServeHTTP(firstW, firstReq)
+	if firstW.Code != http.StatusOK {
+		t.Fatalf("expected 200 on first PUT, got %d: %s", firstW.Code, firstW.Body.String())
+	}
+
+	afterFirst, err := s.WithUser("user1").LoadComparePresets()
+	if err != nil {
+		t.Fatalf("LoadComparePresets after first PUT: %v", err)
+	}
+	if afterFirst[0].SendPremiumSms == nil || *afterFirst[0].SendPremiumSms != true {
+		t.Fatalf("expected send_premium_sms=true persisted, got %v", afterFirst[0].SendPremiumSms)
+	}
+
+	// Zweiter PUT: send_premium_sms fehlt im Body -- der Bestandswert (true)
+	// muss erhalten bleiben (RMW-Kontrakt, kein Replace).
+	secondBody := map[string]interface{}{
+		"name": "PremiumSms-Test (umbenannt)", "schedule": "manual", "profil": "SUMMER_TREKKING",
+		"hour_from": 8, "hour_to": 17, "location_ids": []string{"loc-a"},
+		"empfaenger": []string{"a@example.com"},
+	}
+	secondBuf, _ := json.Marshal(secondBody)
+	secondReq := httptest.NewRequest(http.MethodPut, "/api/compare/presets/cp-premium-sms-1", bytes.NewReader(secondBuf))
+	secondReq.Header.Set("Content-Type", "application/json")
+	secondReq = addUserToContext(secondReq, "user1")
+	secondW := httptest.NewRecorder()
+	r.ServeHTTP(secondW, secondReq)
+	if secondW.Code != http.StatusOK {
+		t.Fatalf("expected 200 on second PUT, got %d: %s", secondW.Code, secondW.Body.String())
+	}
+
+	loaded, err := s.WithUser("user1").LoadComparePresets()
+	if err != nil {
+		t.Fatalf("LoadComparePresets after second PUT: %v", err)
+	}
+	if loaded[0].SendPremiumSms == nil || *loaded[0].SendPremiumSms != true {
+		t.Errorf(
+			"RMW leak: send_premium_sms erased by a PUT that omitted the field, "+
+				"expected true (unangetastet), got %v", loaded[0].SendPremiumSms,
+		)
+	}
+	if loaded[0].Name != "PremiumSms-Test (umbenannt)" {
+		t.Errorf("expected name updated, got %q", loaded[0].Name)
+	}
+}
+
 // AC-5 (T3): Partieller PUT (nur official_alert_triggers_enabled) erhaelt
 // alert_cooldown_minutes UND die beiden anderen neuen Felder (RMW-Merge).
 func TestUpdateComparePreset_PartialPutPreservesTriggerAndChannelsAndCooldown(t *testing.T) {

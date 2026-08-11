@@ -182,27 +182,35 @@ type OfficialWarningsConfig struct {
 
 // AlertChannelsConfig — Issue #1258 Scheibe S3 (D2), additives Trip-Kanal-
 // Set fuer die Alert-Zustellung (Pointer-Feld-Pattern analog
-// OfficialWarningsConfig). All-or-nothing: alle drei Felder werden vom
-// Client immer explizit gesendet (kein Feld-Level-Merge noetig).
+// OfficialWarningsConfig).
+//
+// Issue #1701 (S2b, D3): die fruehere "All-or-nothing"-Praemisse ("alle drei
+// Felder werden vom Client immer explizit gesendet, kein Feld-Level-Merge
+// noetig") entfaellt mit dem VIERTEN Feld PremiumSms -- die Oberflaeche
+// (S3) kennt es noch gar nicht, ein PUT eines alten Frontend-Builds wuerde
+// es sonst bei JEDEM Speichern als Zero-Value stillschweigend abschalten
+// (Muster BUG-DATALOSS-GR221, #102). Alle vier Felder sind deshalb `*bool`
+// und werden im Handler feld-weise gemergt (Vorbild
+// AlertChannelThresholdsConfig direkt darunter, internal/handler/trip.go).
 type AlertChannelsConfig struct {
-	Email    bool `json:"email"`
-	Telegram bool `json:"telegram"`
-	Sms      bool `json:"sms"`
+	Email      *bool `json:"email,omitempty"`
+	Telegram   *bool `json:"telegram,omitempty"`
+	Sms        *bool `json:"sms,omitempty"`
+	PremiumSms *bool `json:"premium_sms,omitempty"`
 }
 
 // AlertChannelThresholdsConfig — Issue #1461 S3b-2a, additives Geschwister-
-// feld zu AlertChannelsConfig (bewusst NICHT darin -- AlertChannelsConfig
-// wird beim Speichern heute als Ganzes ersetzt, "all-or-nothing"; ein Client
-// ohne Kenntnis der Schwelle wuerde sie sonst bei jedem Speichern still
-// loeschen). Je Kanal die Dringlichkeits-Schwelle als String-Pointer
-// ("LOW"|"MODERATE"|"HIGH"), NICHT bool wie AlertChannelsConfig -- Pointer
-// statt Wert, damit "Kanal fehlt im Body" (nil, Feld-Level-Merge bewahrt den
-// Bestandswert) von "Kanal explizit auf einen Wert gesetzt" unterscheidbar
-// bleibt (internal/handler/trip.go).
+// feld zu AlertChannelsConfig. Je Kanal die Dringlichkeits-Schwelle als
+// String-Pointer ("LOW"|"MODERATE"|"HIGH") -- Pointer statt Wert, damit
+// "Kanal fehlt im Body" (nil, Feld-Level-Merge bewahrt den Bestandswert)
+// von "Kanal explizit auf einen Wert gesetzt" unterscheidbar bleibt
+// (internal/handler/trip.go). PremiumSms (Issue #1701 S2b, ADR-0046-
+// Pflicht D6): viertes Geschwisterfeld, identisches Merge-Muster.
 type AlertChannelThresholdsConfig struct {
-	Email    *string `json:"email,omitempty"`
-	Telegram *string `json:"telegram,omitempty"`
-	Sms      *string `json:"sms,omitempty"`
+	Email      *string `json:"email,omitempty"`
+	Telegram   *string `json:"telegram,omitempty"`
+	Sms        *string `json:"sms,omitempty"`
+	PremiumSms *string `json:"premium_sms,omitempty"`
 }
 
 // AlertableMetrics are metrics that can receive an alert rule (delta-based since #817).

@@ -30,7 +30,7 @@ from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdap
 from services.corridor_threshold import CorridorHit
 from services.throttle_store import ThrottleStore
 from services.trip_day import trip_local_today
-from services.user_tier import sms_allowed
+from services.user_tier import premium_sms_allowed, sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import tz_for_coords
 
@@ -317,6 +317,7 @@ class TripAlertService:
             sent_channels=notif_result.delivered_channels,
             reachable_channels=notif_result.sent_channels,
             below_threshold_channels=self._last_below_threshold_channels,
+            blocked_reason_codes=notif_result.blocked_reason_codes,
         )
         delivered = notif_result.sent
         if not delivered:
@@ -843,6 +844,15 @@ class TripAlertService:
             and getattr(config, "send_sms", False) and sms_allowed(self._user_id)
         ):
             channels.add("sms")
+        if (
+            config and getattr(config, "send_premium_sms", False)
+            and premium_sms_allowed(self._user_id)
+        ):
+            # Bewusst OHNE can_send_*()-Bereitschaftsfrage (D2/Spec-Nachtrag
+            # 2026-08-11): Premium-SMS hat keine feste Rufnummer, die
+            # Sendebereitschaft entscheidet ausschliesslich
+            # `PremiumSmsOutput._resolve_recipient()` zur Sendezeit.
+            channels.add("premium_sms")
         return channels
 
     def _briefing_precip_for_onset(
@@ -1040,11 +1050,13 @@ class TripAlertService:
                 logger.debug(f"Radar alert suppressed by double-alert guard for {trip.id}")
                 continue
 
-            # Kein Kanal konfiguriert → kein Alert (nichts zu recorden)
-            can_email = self._settings.can_send_email()
-            can_telegram = self._settings.can_send_telegram()
-            can_sms = self._settings.can_send_sms()
-            if not can_email and not can_telegram and not can_sms:
+            # Kein Kanal konfiguriert → kein Alert (nichts zu recorden).
+            # Spec-Nachtrag 2026-08-11 (#1701, "die achte Stelle"): bewusst
+            # gegen das effektive Kanal-Set gefuehrt statt gegen eine vierte
+            # can_send_*()-Bereitschaftsfrage -- ein Trip mit ausschliesslich
+            # Premium-SMS hat kein `sms_to`, `can_send_sms()` waere False,
+            # obwohl ein funktionsfaehiger Kanal konfiguriert ist.
+            if not self._radar_effective_channels(trip):
                 logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
                 continue
 
@@ -1136,6 +1148,7 @@ class TripAlertService:
                 sent_channels=result.delivered_channels,
                 reachable_channels=result.sent_channels,
                 below_threshold_channels=_radar_suppressed,
+                blocked_reason_codes=result.blocked_reason_codes,
             )
             delivered = result.sent
             if not delivered:
@@ -1451,6 +1464,7 @@ class TripAlertService:
             sent_channels=result.delivered_channels,
             reachable_channels=result.sent_channels,
             below_threshold_channels=_official_suppressed,
+            blocked_reason_codes=result.blocked_reason_codes,
         )
         if result.sent:
             self._record_official_alert_state(trip.id, official_notices)
@@ -1490,7 +1504,8 @@ class TripAlertService:
             # (auch wenn alle drei Kanäle aus sind — bewusst kein {"email"}-Default,
             # der Nutzer hat explizit konfiguriert).
             inherited = {
-                ch for ch in ("email", "telegram", "sms") if trip.alert_channels.get(ch)
+                ch for ch in ("email", "telegram", "sms", "premium_sms")
+                if trip.alert_channels.get(ch)
             }
         else:
             # Legacy-Pfad: E-Mail-Default gilt NUR wenn report_config None ist
@@ -1510,6 +1525,8 @@ class TripAlertService:
 
         if "sms" in channels and not sms_allowed(self._user_id):
             channels = channels - {"sms"}
+        if "premium_sms" in channels and not premium_sms_allowed(self._user_id):
+            channels = channels - {"premium_sms"}
         return channels
 
     @staticmethod
@@ -1524,4 +1541,6 @@ class TripAlertService:
             channels.add("telegram")
         if getattr(config, "send_sms", False):
             channels.add("sms")
+        if getattr(config, "send_premium_sms", False):
+            channels.add("premium_sms")
         return channels

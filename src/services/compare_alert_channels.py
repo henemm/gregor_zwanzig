@@ -22,17 +22,27 @@ nur noch ein duenner Wrapper auf diese Funktion.
 from __future__ import annotations
 
 from app.config import Settings
-from services.user_tier import sms_allowed
+from services.user_tier import premium_sms_allowed, sms_allowed
 
 
 def effective_compare_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
     """E-Mail immer; Telegram/SMS nur bei Preset-Opt-in UND globaler
-    User-Faehigkeit (bei SMS zusaetzlich Tier-Gate ueber `sms_allowed`)."""
+    User-Faehigkeit (bei SMS zusaetzlich Tier-Gate ueber `sms_allowed`).
+
+    Issue #1701 (S2b, D2): Premium-SMS bewusst OHNE
+    `settings.can_send_premium_sms()` — diese Methode wurde in S2a nach
+    Adversary-Fund F003 entfernt und darf nicht zurueckkehren. Nur Opt-in
+    (`send_premium_sms`) UND Tier-Gate (`premium_sms_allowed`) entscheiden;
+    die Sendebereitschaft selbst prueft ausschliesslich der Kanal zur
+    Sendezeit (Spec D3 der Vorgaenger-Scheibe).
+    """
     channels = {"email"}
     if preset.get("send_telegram") and settings.can_send_telegram():
         channels.add("telegram")
     if preset.get("send_sms") and settings.can_send_sms() and sms_allowed(user_id):
         channels.add("sms")
+    if preset.get("send_premium_sms") and premium_sms_allowed(user_id):
+        channels.add("premium_sms")
     return channels
 
 

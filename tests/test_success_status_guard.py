@@ -1553,6 +1553,14 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/notification_service.py::send_official_alert::2": (
         "B14a (#1405/#684) — send_official_alert: dito, SMS."
     ),
+    # Issue #1701 (S2b, D7): vierter Kanal Premium-SMS (Garmin inReach) --
+    # bewusste Ratschen-Anhebung 3->4, NICHT die Buchung hinter den `try`
+    # verschoben (s. Spec D7). `sent_channels`="versucht" bleibt getrennt von
+    # `reachable_channels`="erreichbar" -- dieselbe Marker-vor-der-Tat-Semantik
+    # wie die drei Bestandskanaele.
+    "src/services/notification_service.py::send_official_alert::3": (
+        "B14a (#1405/#684, #1701 D7) — send_official_alert: dito, Premium-SMS."
+    ),
     # --- B14b ENTFERNT (#1459, 2026-08-02): die drei Compare-Versandhelfer
     # _dispatch_compare_official_{email,telegram,sms} hatten keine Rückmeldung —
     # der Aufrufer buchte den Erfolg auf den bloßen Umstand, dass er sie
@@ -1584,6 +1592,11 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     ),
     "src/services/notification_service.py::_dispatch_alert_message::2": (
         "B14c (#1405/#684) — _dispatch_alert_message: dito, SMS."
+    ),
+    # Issue #1701 (S2b, D7): vierter Kanal Premium-SMS, dieselbe Begruendung
+    # wie bei send_official_alert::3 oben.
+    "src/services/notification_service.py::_dispatch_alert_message::3": (
+        "B14c (#1405/#684, #1701 D7) — _dispatch_alert_message: dito, Premium-SMS."
     ),
     "src/services/notification_service.py::send_command_reply_email::0": (
         "B21 (#1405) — send_command_reply_email: EmailOutput, keine Rückmeldung."
@@ -1788,10 +1801,15 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "src/services/scheduler_dispatch_service.py::send_compare_preset": 1,
     # B13 entfernt (#1407) — toter Compare-Heartbeat wurde geloescht statt
     # angeschlossen, der Scanner findet dort nichts mehr.
-    # B14a — sent_channels.append() vor dem try, DREI Kanäle (email/telegram/sms)
-    "src/services/notification_service.py::send_official_alert": 3,
-    # B14c — dito, DREI Kanäle; genutzt von Änderungs-, Radar- und amtlichen Alarmen
-    "src/services/notification_service.py::_dispatch_alert_message": 3,
+    # B14a — sent_channels.append() vor dem try, jetzt VIER Kanäle
+    # (email/telegram/sms/premium_sms). Issue #1701 (S2b, D7): von 3 auf 4
+    # angehoben, NICHT die Buchung hinter den `try` verschoben — die Spec
+    # trifft diese Entscheidung ausdrücklich (Nachzugpflicht dieses
+    # Kommentars).
+    "src/services/notification_service.py::send_official_alert": 4,
+    # B14c — dito, jetzt VIER Kanäle; genutzt von Änderungs-, Radar- und
+    # amtlichen Alarmen. Issue #1701 (S2b, D7).
+    "src/services/notification_service.py::_dispatch_alert_message": 4,
     # B14b entfernt (#1459, 2026-08-02) — die drei Helfer
     # _dispatch_compare_official_{email,telegram,sms} liefern jetzt `bool`, und
     # send_compare_official_alert() WERTET den Rueckgabewert aus (fuellt daraus
@@ -1878,15 +1896,21 @@ def test_scanner_finds_every_spec_listed_finding():
     WHEN der Wächter über die Scanfläche läuft
     THEN schlägt er in JEDER der 33 zugehörigen Funktionen mindestens so oft
     an wie in der Mindestzahl-Tabelle festgelegt (30 Funktionen mit 1, 2
-    Funktionen mit 3, 1 Funktion mit 4), Summe 40.
+    Funktionen mit 4, 1 Funktion mit 4), Summe 42.
+
+    Issue #1701 (S2b, D7): der vierte Versandkanal Premium-SMS hebt die
+    beiden Kanal-Vorkommen in ``send_official_alert`` und
+    ``_dispatch_alert_message`` von je drei auf je vier Treffer an (die
+    Spec-Nachzugpflicht aus Version 1.2 dieses Dokuments) — Summe damit 42
+    statt 40, Funktionsschlüssel-Zahl unverändert 33.
 
     Gemessen an SPEC_LISTED_FINDINGS — einer fest verdrahteten Erwartung aus
     der Spec (``pfad::funktion`` → Mindest-Trefferzahl), NICHT aus
     KNOWN_VIOLATIONS abgeleitet (AC-1 und AC-3 dürfen nicht dieselbe Quelle
     benutzen, sonst prüft der Wächter sich selbst). Gezählt wird im ROHEN
-    Scan-Ergebnis, wo der Zeilenbezug noch vorhanden ist: die drei
+    Scan-Ergebnis, wo der Zeilenbezug noch vorhanden ist: die vier
     Kanal-Vorkommen in ``send_official_alert`` und ``_dispatch_alert_message``
-    sind je drei Treffer, die vier Zweige in ``_handle_query`` je vier — eine
+    sind je vier Treffer, die vier Zweige in ``_handle_query`` je vier — eine
     reine Mengenprüfung bliebe grün, wenn der Scanner davon welche verlöre.
 
     **AC-17 (B18, dateiweites Muster) und AC-18 (B19/B20, Inbound-Reader)
@@ -1903,10 +1927,11 @@ def test_scanner_finds_every_spec_listed_finding():
     # gekürzte Tabelle würde sonst hinter einem grünen Scan verschwinden,
     # und genau das ist der Weg, auf dem Wächter still ihre Schärfe
     # verlieren (Test-Politik: Schwellen nie anpassen, damit etwas grün wird).
-    assert len(SPEC_LISTED_FINDINGS) == 33 and sum(SPEC_LISTED_FINDINGS.values()) == 40, (
+    assert len(SPEC_LISTED_FINDINGS) == 33 and sum(SPEC_LISTED_FINDINGS.values()) == 42, (
         "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 33 "
-        "Funktionsschlüssel, Summe 40 — Version 1.2 minus B13, #1407, minus "
-        "B2, #1447, minus B14b (drei Schlüssel), #1459). Ist: "
+        "Funktionsschlüssel, Summe 42 — Version 1.2 minus B13, #1407, minus "
+        "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
+        "den vierten Kanal Premium-SMS, #1701 D7). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )

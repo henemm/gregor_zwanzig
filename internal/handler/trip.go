@@ -219,8 +219,10 @@ type tripUpdateRequest struct {
 	OfficialWarnings *model.OfficialWarningsConfig `json:"official_warnings,omitempty"`
 	// AlertChannels — Issue #1258 Scheibe S3 (D2), RMW-Kontrakt analog
 	// OfficialWarnings (nil = im Body nicht gesendet -> bestehender Wert
-	// bleibt erhalten). All-or-nothing: kein Feld-Level-Merge noetig, der
-	// Client sendet immer alle drei Kanaele explizit.
+	// bleibt erhalten) PLUS Feld-Level-Merge innerhalb des Unterobjekts seit
+	// Issue #1701 (S2b, D3) -- die fruehere All-or-nothing-Praemisse ist mit
+	// dem vierten Feld PremiumSms abgeloest (fehlt ein Feld im Body, bleibt
+	// dessen Bestandswert erhalten statt geloescht zu werden).
 	AlertChannels *model.AlertChannelsConfig `json:"alert_channels,omitempty"`
 	// AlertChannelThresholds — Issue #1461 S3b-2a, RMW-Kontrakt analog
 	// OfficialWarnings (nil = im Body nicht gesendet -> bestehender Wert
@@ -360,18 +362,34 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			}
 			existing.OfficialWarnings = req.OfficialWarnings
 		}
-		// Issue #1258 Scheibe S3 (D2) — RMW-Merge analog OfficialWarnings.
-		// All-or-nothing: der Client sendet immer alle drei Kanaele explizit,
-		// daher genuegt der Pointer-Ersatz (kein Feld-Level-Merge wie bei
-		// OfficialWarnings.Sources noetig).
+		// Issue #1258 Scheibe S3 (D2), Issue #1701 (S2b, D3) — RMW-Merge
+		// analog OfficialWarnings. Die fruehere All-or-nothing-Praemisse
+		// entfaellt mit dem vierten Feld PremiumSms: Feld-Level-Merge
+		// INNERHALB des Unterobjekts (Muster AlertChannelThresholds direkt
+		// darunter) -- fehlt im Body ein Feld, bleibt dessen Bestandswert
+		// erhalten statt dass das ganze Unterobjekt ersetzt wird (AC-7).
 		if req.AlertChannels != nil {
+			if req.AlertChannels.Email == nil && existing.AlertChannels != nil {
+				req.AlertChannels.Email = existing.AlertChannels.Email
+			}
+			if req.AlertChannels.Telegram == nil && existing.AlertChannels != nil {
+				req.AlertChannels.Telegram = existing.AlertChannels.Telegram
+			}
+			if req.AlertChannels.Sms == nil && existing.AlertChannels != nil {
+				req.AlertChannels.Sms = existing.AlertChannels.Sms
+			}
+			if req.AlertChannels.PremiumSms == nil && existing.AlertChannels != nil {
+				req.AlertChannels.PremiumSms = existing.AlertChannels.PremiumSms
+			}
 			existing.AlertChannels = req.AlertChannels
 		}
 		// Issue #1461 S3b-2a — ZWEI Ebenen Datenverlustschutz (Pflicht, kein
 		// Kann): Top-Level-nil-Erbe (dieses if) UND Feld-Level-Merge INNERHALB
-		// des Unterobjekts (die drei folgenden ifs, Muster OfficialWarnings.
+		// des Unterobjekts (die vier folgenden ifs, Muster OfficialWarnings.
 		// Sources F002) -- fehlt im Body nur ein Kanal, bleibt dessen
 		// Bestandswert erhalten statt dass das ganze Unterobjekt ersetzt wird.
+		// PremiumSms (Issue #1701 S2b, D6): viertes Geschwisterfeld,
+		// identisches Muster.
 		if req.AlertChannelThresholds != nil {
 			if req.AlertChannelThresholds.Email == nil && existing.AlertChannelThresholds != nil {
 				req.AlertChannelThresholds.Email = existing.AlertChannelThresholds.Email
@@ -381,6 +399,9 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			}
 			if req.AlertChannelThresholds.Sms == nil && existing.AlertChannelThresholds != nil {
 				req.AlertChannelThresholds.Sms = existing.AlertChannelThresholds.Sms
+			}
+			if req.AlertChannelThresholds.PremiumSms == nil && existing.AlertChannelThresholds != nil {
+				req.AlertChannelThresholds.PremiumSms = existing.AlertChannelThresholds.PremiumSms
 			}
 			existing.AlertChannelThresholds = req.AlertChannelThresholds
 		}
