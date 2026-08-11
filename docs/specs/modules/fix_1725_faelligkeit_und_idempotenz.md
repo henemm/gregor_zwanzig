@@ -187,6 +187,26 @@ Es entsteht `data/users/<uid>/briefing_slots.json`, Schema
   `kind` (= Slot) trägt, dessen `sent_at` in den aktuellen Ortstag fällt. Das verhindert den
   einzigen realistischen Doppelversand-Fall: ein Deploy mitten im Nachhol-Fenster.
 
+### Schnittstelle (in der RED-Phase festgelegt, für GREEN verbindlich)
+
+`services.briefing_slots.BriefingSlotStore(user_id)`, Datei
+`get_data_dir(uid)/briefing_slots.json`, Sperr-Sidecar `briefing_slots.json.lock`.
+
+| Methode | Vertrag |
+|---|---|
+| `is_recorded(trip_id, slot, local_day, zone=None)` | liegt ein Vermerk vor? |
+| `reserve(trip_id, slot, local_day, zone=None) -> bool` | **True nur bei frischer Reservierung** — False sowohl bei bestehendem Vermerk als auch bei **nicht erhaltener Sperre** (fail-closed) |
+| `record_outcome(trip_id, slot, local_day, outcome)` | Ausgang festhalten |
+| `release(trip_id, slot, local_day)` | Rücknahme bei `channels_unreachable` / Ausnahme |
+
+- **Abweichung von der ursprünglichen Fassung:** der optionale `zone`-Parameter. Die
+  Rückwärts-Ableitung braucht die Ortszone, um zu entscheiden, ob `sent_at` aus
+  `briefing_log.json` in den Ortstag fällt; ohne ihn wird gegen UTC ausgewertet.
+- `_dispatch_due_item(trip, report_type, local_day) -> str | None`; `None` bedeutet **kein
+  Versandversuch**. Eine Ausnahme aus dem Versand wird nach dem `release` **weitergereicht**,
+  nicht geschluckt — `dispatch_one` fängt sie wie bisher.
+- `LOCK_TIMEOUT_SECONDS` als Modul-Attribut zur Laufzeit lesen (Begründung s. Known Limitations).
+
 ### Vermerk je Outcome
 
 | Outcome | Vermerk | Begründung |
@@ -357,15 +377,15 @@ beobachtbar (T4), deshalb ist T4 der einzige Test, der beide Fenstergrenzen zugl
 |---|---|---|---|
 | T1 | AC-1 | Europe/Paris, `morning=02:00`, 2026-03-29 → genau 1 | `>=` zurück auf `==` → 0 Treffer |
 | T2 | AC-2 | dito 2026-10-25 (Doppelstunde) → genau 1 | Vermerk-Filter entfernen → 2 Treffer |
-| T3 | AC-3 | Normaler Tag, jede einzelne Ortsstunde gezählt → nur Stunde 07 trifft | Fälligkeit auf `<=` drehen → 8 Treffer |
+| T3 | AC-3 | Normaler Tag, jede einzelne Ortsstunde gezählt → nur Stunde 07 trifft | Fälligkeit auf `<=` drehen → der Treffer wandert auf Ortsstunde 00. **Korrektur zur RED-Phase:** hier stand „→ 8 Treffer"; das gilt nur **ohne** wirksamen Vermerk. Mit Vermerk liefert auch die verdrehte Bedingung genau **einen** Treffer — der Test muss deshalb die **Stunde** des Treffers prüfen, nicht deren Anzahl |
 | T4 | AC-4 | Stunde H ausgelassen → H+1 fällig, H+3 nicht mehr | Fenster 3→1 macht ersten Teil rot, 3→„bis Tagesende" macht zweiten Teil rot |
-| T5 | AC-5 | `morning=07:00` und `evening=07:00` → beide fällig | `slot` aus dem Schlüssel entfernen → nur einer feuert |
+| T5 | AC-5 | `morning=07:00` und `evening=07:00` → **zwei Versandversuche** | `slot` aus dem Schlüssel entfernen → nur einer feuert. **Präzisierung zur RED-Phase:** gemessen werden Versandversuche, **nicht** gesammelte Zeilen — beide Elemente fallen in *derselben* Sammlung an und der Vermerk entsteht erst danach, an der Sammlung wäre die Mutation unsichtbar |
 | T6 | AC-6 | Zwei aufeinanderfolgende Ortstage → an beiden fällig | `local_day` aus dem Schlüssel entfernen → Tag 2 bleibt stumm |
-| T7 | AC-7 | Zwei Trips, gleiche Zone, gleiche Stunde → beide fällig | `trip_id` aus dem Schlüssel entfernen → nur einer feuert |
+| T7 | AC-7 | Zwei Trips, gleiche Zone, gleiche Stunde → **zwei Versandversuche** | `trip_id` aus dem Schlüssel entfernen → nur einer feuert (gemessen wie T5 an Versandversuchen) |
 | T8 | AC-8 | Outcome-Matrix: vier setzen Vermerk, `channels_unreachable` nicht | `channels_unreachable` in die Vermerk-Menge schieben → nächste Stunde bleibt still, Test rot |
 | T9 | AC-9 | `briefing_slots.json` fehlt, `briefing_log.json` trägt passenden Eintrag im Ortstag → nicht fällig | Rückwärts-Ableitung entfernen → fällig (Doppelversand beim Deploy) |
 | T10 | AC-10 | Trip mit Etappe heute, `morning=07:00`, erstmals um Ortsstunde 20 ausgewertet → nicht fällig | Fenster auf „bis Tagesende" → fällig |
-| T11 | AC-11 | `CompareDispatchStrategy.collect_due` über 24 h unverändert | Filter ins geteilte Skelett verschieben → Compare-Zahl ändert sich |
+| T11 | AC-11 | Compare über 24 h unverändert, gemessen über **`run_briefing_dispatch`** statt über `collect_due` allein — ein Hook im geteilten Skelett wäre an `collect_due` unsichtbar | Filter ins geteilte Skelett verschieben oder gemeinsame Basisklasse → Compare-Verhalten ändert sich |
 | T12 | AC-12 | Nach `send_on_demand_report` ist der reguläre Slot zur Stunde H weiterhin fällig | Vermerk in `_send_trip_report_outcome` statt im Wrapper setzen → rot |
 | T13 | AC-13 | Sperre nicht erhältlich → kein Versand statt Versand ohne Vermerk | fail-open wie `throttle_store:139-150` → rot |
 | T14 | AC-14 | `Australia/Lord_Howe`: Ortsstundenfolge ohne Loch und ohne Dopplung → unauffällig | schließt die bisher unbelegte Repo-Lücke |
@@ -396,12 +416,18 @@ Skelett verschieben, Vermerk nach `_send_trip_report_outcome` statt in den Wrapp
 
 ## Known Limitations
 
-- **T13 (fail-closed bei Sperren-Timeout) ist als machbar eingeschätzt, aber nicht
-  verifiziert.** Ein mockfreier Aufbau (gehaltener `flock`-Filedescriptor im selben Prozess,
-  verkürztes `LOCK_TIMEOUT_SECONDS` für den Testlauf) gilt als plausibel, ist aber nicht vorab
-  gebaut worden. Sollte er sich als unverhältnismäßig teuer erweisen, ist das im PR explizit zu
-  benennen — die Fehlerrichtung selbst bleibt die sicherheitskritischste Einzelentscheidung
-  des Vorhabens und darf nicht ungeprüft bleiben.
+- **T13 (fail-closed bei Sperren-Timeout): Lücke in der RED-Phase geschlossen.** Der mockfreie
+  Aufbau ist gebaut und die tragende Prämisse nachgemessen — zwei `os.open` derselben Datei im
+  **selben** Prozess kollidieren bei `flock` real (`BlockingIOError`). Auflage an die
+  Umsetzung: `LOCK_TIMEOUT_SECONDS` muss zur Laufzeit als **Modul-Attribut** gelesen werden
+  (`briefing_slots.LOCK_TIMEOUT_SECONDS`), nicht per `from … import` in eine lokale Konstante
+  gebunden — sonst kann der Test die Frist nicht verkürzen und wartet die vollen 2 s.
+- 🔴 **Die Fangkraft-Angaben in der Nachweis-Tabelle sind hergeleitet, nicht gemessen.** Ein
+  Wegwerf-Prüfstand mit Referenz-Implementierung und Mutationen war in der RED-Phase nicht
+  baubar (`edit_gate` lässt dort keine Code-Datei zu, auch nicht außerhalb des Repos; das Gate
+  wurde nicht umgangen). **Konsequenz:** die Mutations-Gegenprobe in Phase 6b muss vollständig
+  laufen — insbesondere für die sieben Tests, die ohne den Fix zufällig grün wären (T3, T5, T6,
+  T7, T10, T11, T14).
 - **`fold` wird bewusst nicht gebraucht.** Es wird nie eine mehrdeutige Wanduhrzeit
   konstruiert — die Ortsstunde entsteht immer aus einem eindeutigen UTC-Zeitpunkt
   (`trip_day.py:74`). Die Doppelstunde im Herbst erscheint als zwei unterscheidbare
