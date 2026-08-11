@@ -12,7 +12,7 @@ tags: [frontend, metrik-kaskade, editor, adr-0050, issue-1719]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-11 („go"). Schließt die Anhebung des LoC-Limits auf 2600 ein.
 
 ## Purpose
 
