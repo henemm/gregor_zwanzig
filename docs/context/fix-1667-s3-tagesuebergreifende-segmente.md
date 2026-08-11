@@ -219,7 +219,7 @@ sondern die Wiederherstellung einer Zusicherung, die #822 bereits gegeben hat.
 | Behauptung | Ergebnis |
 |---|---|
 | Ein-Etappen-Trip 02:00 UTC ⇒ null Radar-Alarme | **hält** — `get_stage_for_date` strikt `==` (`src/app/trip.py:268-272`) |
-| Mehr-Etappen-Trip ⇒ echter Radar-Abruf für den falschen Ort | **hält** — zwischen Auswahl (`trip_alert.py:749-758`) und `get_nowcast` (`:812-819`) liegt **kein** Horizont-/Näheguard. `NOWCAST_HORIZON_MIN` kommt in `trip_alert.py` nicht vor; der Guard sitzt nur in der Schwesterfunktion `trip_report_scheduler.py:1352-1357` |
+| Mehr-Etappen-Trip ⇒ echter Radar-Abruf für den falschen Ort | 🔴 **ÜBERHOLT durch #1697 — siehe Delta-Abschnitt am Dateiende.** Der damalige Befund („zwischen Auswahl und `get_nowcast` liegt **kein** Horizont-/Näheguard, `NOWCAST_HORIZON_MIN` kommt in `trip_alert.py` nicht vor") stimmt seit #1697 nicht mehr: der Guard sitzt jetzt bei `trip_alert.py:940-955`. Der falsche Abruf findet nur noch im **letzten 60-Minuten-Fenster vor dem Start der Folgeetappe** statt |
 | Ziel-Segment von gestern läuft real bis ~19:00 Ortszeit heute | **hält für den Normalfall** — `arrival_local_date` = Folgetag, `09:21 < 19:00` ⇒ regulärer Zweig, kein Mindestfenster (`trip_segments.py:275-297`). **Nicht** für Etappen, deren Ankunft nach dem Folgetags-Fensterende liegt (Gehzeit > 21 h ab 22:00-Start) — dort greift weiter das 1-h-Mindestfenster |
 | `corridor_threshold.py` ohne Produktions-Aufrufer | **hält** — nur Definition + 2 Tests; `trip_alert.py:29` importiert nur das Dataclass `CorridorHit`, passend zu `trip_alert.py:52-56` („#1460 P1a: KEIN Alarm-Auslöser mehr"). Dokumentiert in `docs/specs/modules/rework_1460_t1_relevanzfilter.md:45` |
 | Die zwei „alle Segmente vorbei"-Wächter laufen nicht in CI | **hält** — `.github/ci_tdd_excludes.txt:77-78`. Kein CI-laufender Ersatz gefunden: `test_alarm_zeitfenster_ziel.py` und `test_arrival_window_fixtures.py` konstruieren ihre Fixtures bewusst so, dass Ortsdatum == Etappendatum bleibt, prüfen den datumsübergreifenden Fall also gerade nicht |
@@ -363,3 +363,134 @@ nach #1697 unverändert aufgenommen. Kein Rework, keine Abhängigkeit außer der
 
 ### Open Questions
 *(keine offenen — S3 ist analysiert und wartet auf #1697)*
+
+---
+
+## Delta-Messung 2026-08-11 — Wiederaufnahme nach #1697
+
+Basis neu: `origin/main` `e21f4f48`. Zwischenzeitlich ausgeliefert: **#1697** (Ortstag statt
+Serverdatum im Alarm-Pfad, Merge `596a7cd8`) und **#1724** (Briefing-Fälligkeit folgt der
+Ortszone). Jede Aussage unten am aktuellen Code gemessen.
+
+### Was unverändert trägt
+
+| Analyse-Aussage | Fundort heute |
+|---|---|
+| Es wird genau **ein** Kalendertag abgefragt — Kernbefund | `trip_alert.py:911` `today = trip_local_today(trip, now_utc)`, `:913` `convert_trip_to_segments(trip, today)` |
+| Aktiv-Auswahl mit `continue` bei „alle vorbei" | `trip_alert.py:917-932` (vorher `:749-764`) |
+| Zweite Kopie im Scheduler | `trip_report_scheduler.py:1401-1413`; **veralteter Docstring-Verweis** „trip_alert.py:730-745" jetzt bei `:1395-1396` |
+| Dritte Kopie, Staging-Debug | `api/routers/debug.py:61` — weiterhin `date_type.today()`, von #1697 **nicht** umgestellt. Bleibt aus dem Scope |
+| Schnappschuss-Pfad | `load_dated(trip.id, today)` jetzt `:1020`; `_briefing_precip_for_onset` `:858`, `segment_id`-Match `:874`; Guard-Schlüssel `precip:{segment_id}` `:1037` |
+| `corridor_threshold.evaluate_corridor_thresholds` ohne Produktions-Aufrufer | `:68` + zwei Testdateien, sonst nichts |
+| Die zwei Altwächter laufen nicht in CI | `.github/ci_tdd_excludes.txt:77-78` |
+
+Ebenfalls unverändert gültig: die Vorrangkette und die Begründung „heute gewinnt bei echter
+Überlappung". Präzisierung: „gestern" heißt `today - 1` relativ zu dem bereits
+ortstag-korrigierten `today` aus `trip_local_today` (`trip_day.py:90-96`), nicht relativ zu
+einem Serverdatum. Der Satz „aus gestern wird nie eine Vorschau genommen" ist strukturell
+ohnehin unverletzbar: `get_stage_for_date` löst strikt per `==` auf (`trip.py:268-273`), ein
+Segment von `today - 1` kann bei `now_utc` nie in der Zukunft liegen.
+
+### 🔴 Was überholt ist — der Horizont-Guard existiert jetzt
+
+#1697 hat bei `trip_alert.py:940-955` einen Horizont-Guard eingebaut: beginnt das gewählte
+Segment mehr als `NOWCAST_HORIZON_MIN` (60 min) in der Zukunft, wird kein Nowcast abgerufen.
+
+**Folge für den zweiten Kernbefund (stille Falsch-Ortung):** Er ist **nicht entkräftet, aber
+auf ein Zeitfenster verengt**. Im ursprünglich gemessenen Beispiel (02:00 UTC, Folgeetappe
+startet 06:00 UTC) greift der Guard — 240 min > 60 ⇒ kein Abruf, reiner Überwachungsverlust.
+Sobald der Start der Folgeetappe aber **≤ 60 min** entfernt ist, greift der Guard nicht und
+`get_nowcast` läuft mit den Koordinaten der Folgeetappe, während der Wanderer nach einer
+Ankunft nach Mitternacht real noch an der Vortages-Koordinate steht.
+
+Das verschiebt die Beweislast: Ein AC darf nicht zeigen wollen, dass „kein Abruf für den
+falschen Ort" passiert — das erledigt der Guard in den meisten Fällen schon. Es muss zeigen,
+dass **in genau diesem ≤60-Minuten-Fenster die richtige (gestrige, noch aktive) Koordinate**
+abgefragt wird.
+
+### 🔴 Neu vorhanden: ein CI-laufender Nachbar-Wächter
+
+`tests/tdd/test_radar_alert_follows_ortstag.py` (755 Zeilen) entstand mit #1697 und steht
+**nicht** auf der CI-Ausnahmeliste. Gegengemessen: 28/28 grün
+(`--disable-socket --allow-hosts=127.0.0.1`).
+
+**Kollisionsprüfung — kein Test dieser Datei bricht durch S3:**
+
+- **AC-3** (`:264-391`) ist der einzige Kandidat: Uhr 22:30 UTC, Korsika, Ortstag = Folgetag,
+  `assert not frame_source.calls`. Nachgerechnet an `trip_segments.py:265-297` +
+  `day_window.py:20ff.`: Ankunft 16:00 Ortszeit < Fensterende 19:00 ⇒ Mindestfenster-Zweig
+  greift nicht ⇒ `dest_end_time = 17:00 UTC`. Um 22:30 UTC ist auch das Ziel-Segment des
+  Vortags seit 5,5 h vorbei ⇒ Stufe (2) der Vorrangkette greift nicht, Stufe (3) liefert
+  unverändert die Folgetags-Etappe. **Bleibt grün.**
+- **AC-1, AC-2, AC-4, AC-5, F001, F002** bauen alle **Ein-Etappen-Trips** — es gibt keinen
+  Vortag, auf den zurückgegriffen werden könnte.
+
+**Die Kehrseite:** Genau deshalb exerziert **keiner** dieser sieben Tests den S3-Kernfall. Der
+Nachweis muss vollständig neu gebaut werden; Regressionsgefahr gegen diese Datei besteht nicht.
+
+### Konsequenz für den Test-Zuschnitt — Ablage geändert
+
+Die ursprüngliche Empfehlung `tests/unit/test_tagesuebergreifende_segmentauswahl.py` beruhte
+darauf, dass `tests/tdd/` teilweise CI-ausgeschlossen ist. Der eigentliche Punkt war „nicht auf
+der Excludeliste landen", nicht „unit statt tdd" — und `test_radar_alert_follows_ortstag.py`
+belegt, dass eine `tests/tdd/`-Datei sehr wohl CI-laufend sein kann.
+
+**Neue Empfehlung:** den Nachweis als weiteres AC in `test_radar_alert_follows_ortstag.py`
+bauen (oder als Geschwisterdatei daneben). Begründung: Er braucht genau die Helfer, die dort
+schon liegen — `make_trip`, `trip_stage`, `CountingFrameSource`, `reset_radar_cache` aus
+`tests/helpers/nowcast_gate_fixtures.py`, bereits für mehrstufige Trips mit exakten
+Ankunftszeiten erweitert. Eine neue `tests/unit/`-Datei müsste denselben Helfer importieren
+(dann ist „unit" irreführend) oder ihn duplizieren (LoC gegen das 250er-Limit).
+`freeze_time` statt `_now_fn`-Naht bleibt gültig — die Datei nutzt genau dieses Muster bereits.
+
+### Schnappschuss-Datum: AC-5 wird präzisiert, nicht gebrochen
+
+`:1020` lädt `load_dated(trip.id, today)` mit der Anker-Variable aus `:911`, unabhängig davon,
+aus welchem Tag das gewählte Segment stammt; `_briefing_precip_for_onset` matcht nur auf
+`segment_id` (`:873-874`), nicht auf ein Datum. Stammt `active` von gestern, trifft der
+Vergleich den gleichnamigen Eintrag des heutigen Schnappschusses und unterdrückt den gerade
+gewonnenen Alarm still.
+
+AC-5 (`:461-524`) sichert heute zu, dass Segmentwahl und Schnappschuss **denselben Ortstag**
+lesen — bewiesen aber nur am Ein-Etappen-Trip ohne Gestern-Verzweigung. Die Zusicherung muss
+lauten: *dasselbe Datum wie das, dem das tatsächlich gewählte Segment entstammt*. Umsetzung:
+`resolve_current_segment` gibt `tuple[TripSegment, date]` zurück, `:1020` nutzt das
+Segment-Datum. AC-5s eigene Fixture bleibt davon unberührt.
+
+### Briefing-Pfad: ausdrücklich KEIN Vortags-Fallback
+
+Die in der Analyse offen gelassene Frage ist entschieden — **ausschließen**, mit Begründung:
+
+- `_get_target_date` (`trip_report_scheduler.py:689-713`) ist strikt vorwärtsgerichtet:
+  morgens Ortstag, abends `today + 1`.
+- `_build_starkregen_hint` bekommt Segmente, die für `target_date` gebaut wurden (`:907`,
+  `:1483`); Kopfdaten kommen aus `trip.get_stage_for_date(target_date)` (`:1054-1056`). Ein
+  Vortags-Fallback dort erzeugte ein Briefing mit heutiger Etappe im Kopf und gestriger
+  Koordinate im Regenhinweis — ein **neuer** Inkonsistenzfehler, keine Reparatur.
+- Live-Überwachung eines noch laufenden Vortagssegments ist Aufgabe von `check_radar_alerts`
+  (alle ~15 min), nicht der zweimal täglichen Briefing-Erzeugung.
+
+Im Scheduler bleibt damit nur die Docstring-Korrektur `:1395-1396` (und optional die
+Deduplizierung über den geteilten `select_active_segment`-Baustein, falls das LoC-Limit es
+hergibt).
+
+### Risiken — gemessen, gegenüber der Analyse präzisiert
+
+- **`alert_daily_limit`** (`:61-74`) ist **user-scoped**, nicht trip-scoped, mit Reset nach
+  Wiener Kalendertag (unabhängig vom Ortstag — eigene Altlast, nicht S3). Ein Wrap-Trip, der
+  bisher nichts verbrauchte, kann jetzt das geteilte Tagesbudget belegen. Gewollt, zu benennen.
+- **Provider-Last:** unverändert **ein** `get_nowcast` pro Trip pro Lauf — die Vorrangkette
+  liefert höchstens ein Segment.
+- **Doppel-Aktivierung:** kein Risiko bei sequenzieller Kette mit Kurzschluss. Der
+  Throttle-Schlüssel ist ohnehin `trip.id` (`alert_gate.py:71-111`), nicht das Segment.
+- **`check_nowcast_gate` (#1467 S3):** unberührt — S3 ändert nur, *ob* ein Segment in die
+  Gate-Prüfung eintritt, nicht die Gate-Logik.
+
+### Zuschnitt-Fazit
+
+Der technische Ansatz der Analyse trägt unverändert. Geändert haben sich: die **Begründung**
+des zweiten Kernbefunds (verengtes 60-Minuten-Fenster statt durchgängiger Falsch-Ortung), die
+**Test-Ablage** (CI-laufende `tests/tdd/`-Datei statt neuer `tests/unit/`-Datei) und die
+**Entscheidung zum Briefing-Pfad** (ausgeschlossen statt offen). Scope-Schätzung ~190 LoC
+bleibt plausibel, eher am unteren Rand, weil #1697 den Horizont-Guard in beiden Kopien und
+`trip_local_today` als geteilten Baustein bereits mitgebracht hat.
