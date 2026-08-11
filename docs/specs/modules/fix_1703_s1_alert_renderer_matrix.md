@@ -41,9 +41,16 @@ Frontend-Berührung.
 
 ## Estimated Scope
 
-- **LoC:** ~195 (+192 Test/Doku, −3 Produktivcode)
+- **LoC:** ~531 (+529 Test, −2 Produktivcode; `docs/` zählt nicht ins Limit)
 - **Files:** 4
 - **Effort:** medium
+
+> **Korrigiert 2026-08-11 nach der RED-Phase.** Die ursprüngliche Schätzung (~195) lag um
+> Faktor 2,75 daneben: die Prüftiefe wuchs durch die drei Korrekturen (s. Abschnitt
+> „Korrekturen aus der RED-Phase") — gerechnete Soll-Menge mit zwei zusätzlichen
+> Absicherungen, Vereinigungs-Prüfung bei den Einheiten, Präfix-Gegenprobe bei den
+> Kurznachrichten. Der **Produktiv**-Zähler bleibt bei 0/250; ausschließlich Testzeilen.
+> PO-Freigabe für `test_loc_limit_override 600` am 2026-08-11 eingeholt.
 
 ## Dependencies
 
@@ -171,6 +178,46 @@ parametrisierten Funktion.
     unterscheiden können und allein das Kurznachrichten-Kürzel (`D` gegen `N`) sie trennt.
     Kein Überspringen — der Zweig prüft, was dort tatsächlich gilt.
 
+## Korrekturen aus der RED-Phase (2026-08-11, gemessen)
+
+Drei Zusagen dieser Spec trugen in der ursprünglichen Fassung nicht. Gefunden beim
+Schreiben der Tests, hier nachgezogen — die ACs bleiben inhaltlich unverändert, die
+Prüfungen werden strenger.
+
+1. **AC-3s Vakuum-Schutz allein hätte nicht angeschlagen.** Der Prüfhinweis unten nannte
+   „eine ID aus der Soll-Menge entfernen → Vakuum-Schutz muss anschlagen". Gemessen
+   falsch: 11 minus 1 ergibt 10, die Größenschranke (≥ 8) feuert nicht. AC-3 prüft
+   deshalb zusätzlich (i) die parametrisierte Konstante gegen eine frische Ableitung aus
+   dem Produktivmodul (fängt eine Mutation im Test) und (ii) dass
+   `{m.id for m in _METRICS if m.alert_metrics and not m.is_precursor}` Teilmenge der
+   Soll-Menge ist (fängt eine Entfernung auf Produktivseite). **Restlücke, im Test
+   benannt:** `snowfall_limit`, `temperature_cold` und `wind` deklarieren im Katalog kein
+   `alert_metrics` und hängen allein an der Rückwärts-Abbildung — für diese drei kann
+   kein Test eine Entfernung aus dem Mapping bemerken.
+
+2. **Der Gewitter-Fix bricht DREI Bestands-Assertions, nicht zwei.** Neben
+   `test_978_deviation_line_readability.py:218` und `:232` auch `:350`
+   (`"Böen 80, Gewitter 55%, Regen% 55%"`). Die Datei steht **nicht** in
+   `.github/ci_tdd_excludes.txt`, läuft also auf CI — ohne Nachzug kippt der `test`-Job.
+   **Zusätzlich mitzuziehen:** der Modul-Docstring derselben Datei (Zeilen 25–32) hält
+   den Widerspruch als bewusste #978-Entscheidung fest („die GREEN-Phase muss diesen
+   Katalog/Vorlage-Widerspruch auflösen, z. B. Sonderfall für `metric_id=='thunder'`").
+   Diese Begründung ist mit #1585 überholt; bleibt sie stehen, widerspricht die
+   Dokumentation hinterher dem Code. Der Sonderfall war also eine dokumentierte
+   Entscheidung, keine Nachlässigkeit — er wird bewusst abgelöst, nicht still entfernt.
+
+3. **AC-4 wörtlich genommen hätte einen Listeneintrag ungeprüft gelassen.** „Für jede im
+   Katalog vorkommende Einheit" erfasst `km` nicht — `km` steht in `_HANDLED_UNITS`, ist
+   aber keine Katalog-`unit` (nur `display_unit` von `visibility`). Geprüft wird deshalb
+   die **Vereinigung** aus Katalog-Einheiten und Whitelist-Einträgen (12 Fälle, heute
+   deckungsgleich).
+
+Ebenfalls gemessen und in den Tests berücksichtigt: Eine pauschale Prozentzeichen-Prüfung
+wäre unehrlich, weil der Renderer legitim eine Änderungs-Prozentzahl („+100 %") aus
+`delta_pct()` ausgibt. Die Gewitter-Fixture nutzt deshalb `0.0 → 2.0` (Stufe 0–3, für die
+`delta_pct()` definitionsgemäß `None` liefert) — jedes verbleibende `%` ist dann
+zwangsläufig eine Einheit.
+
 ## Known Limitations
 
 1. **Der Wertebereichs-Alarm (`CorridorEvent`) bleibt außen vor.** Er trägt zwar eine
@@ -200,6 +247,20 @@ parametrisierten Funktion.
    erscheint, beweist nicht, dass der Zahlenwert stimmt. Zellwert-Vollständigkeit ist
    ausdrücklich Scheibe 5 des Epics.
 
+6. **Ein katalogbasierter Wächter kann Katalogfehler prinzipiell nicht sehen**
+   (Adversary-Finding F001, MEDIUM, gemessen 2026-08-11). Der von dieser Spec
+   vorgeschriebene Grundsatz „Soll aus dem Katalog rechnen, nie im Test tippen" (AC-3)
+   hat eine strukturelle Kehrseite: Prüfling und Maßstab lesen dieselbe Quelle. Vertauscht
+   jemand die SMS-Kürzel `D` und `N` **im Katalog selbst**, wandern Soll und Ist gemeinsam
+   mit der Mutation, und **kein** Test dieser Scheibe wird rot. Gefangen wird der Fall
+   allein von `tests/tdd/test_issue_917_alert_renderer.py::TestAC6CatalogSmsCodes` — einem
+   vorbestehenden Test aus #917, der die Literale `"D"`/`"N"` bewusst hart schreibt.
+   Diese Abhängigkeit ist im Test von AC-7 als Kommentar vermerkt, damit sie bei einer
+   künftigen Löschung jener Datei nicht unbemerkt verlorengeht. **Verallgemeinert:** Wo
+   ein Wächter sein Soll aus derselben Quelle bezieht wie der Prüfling, braucht die
+   *Korrektheit* dieser Quelle einen zweiten, bewusst redundanten Wächter mit getippten
+   Werten — „nie tippen" gilt für die Soll-*Menge*, nicht für die Soll-*Zuordnung*.
+
 ## Prüfhinweis für den Adversary
 
 **Die Mutations-Gegenprobe hat hier eine bekannte blinde Stelle.** `temperature` und
@@ -210,7 +271,10 @@ erstgenannten Kanäle mutiert und grün bleibt, hat **nicht** bewiesen, dass der
 wirkt. Belastbare Mutationen für diese Scheibe:
 
 - `_unit_display()`s `thunder`-Zweig wieder einsetzen → AC-5 muss rot werden
-- eine ID aus der Soll-Menge entfernen → AC-3s Vakuum-Schutz muss anschlagen
+- eine ID aus der Soll-Menge entfernen → **nicht** der Größen-Vakuumschutz fängt das
+  (11−1 = 10 liegt über der Schranke, s. Korrektur 1), sondern der Abgleich gegen die
+  frische Ableitung bzw. die Teilmengen-Prüfung. Für `snowfall_limit`,
+  `temperature_cold` und `wind` fängt es **gar nichts** — bekannte, benannte Restlücke.
 - eine Einheit zu `_HANDLED_UNITS` hinzufügen, die der Katalog nicht anhängt (z. B. `cm`)
   → AC-4 muss rot werden
 - in der SMS-Prüfung die Token-Grammatik durch eine reine Teilstring-Suche ersetzen →
