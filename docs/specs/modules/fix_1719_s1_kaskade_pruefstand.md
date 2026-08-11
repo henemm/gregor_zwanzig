@@ -139,10 +139,28 @@ aufgerufene Funktion (kein Duplikat-Rendering, Vorbild AC-1/AC-2 in
 - **Telegram-rich:** `render_for_channel("telegram", dc, report_type)` →
   `table_columns + detail_metrics`
 - **SMS:** `TripReportFormatter().format_email(...).sms_text`
-- **Premium-SMS:** kein eigener Render-Aufruf — Charakterisierungs-AC
-  (AC-11) belegt stattdessen per Code-Referenz, dass Premium-SMS
-  `report.sms_text` unverändert übernimmt (`premium_sms.py:19`) und über
-  denselben Kaskadenschlüssel `"sms"` läuft (`trip_report.py:295`).
+- **Premium-SMS:** kein eigener Render-Aufruf. AC-11 sichert
+  verhaltensbasiert zu, dass die geladene Konfiguration **keine eigene
+  `premium_sms`-Kaskadenebene** trägt — es existiert also kein zweiter
+  Auswahlweg, der von der SMS-Auswahl abweichen könnte. Die inhaltliche
+  Gleichheit des Textes ist am Wirkort über
+  `test_kaskade_f002_sms_global_fallback_is_not_restricted_by_email_layout`
+  gedeckt (echter gerenderter SMS-Text).
+
+  > **Korrektur 2026-08-11 (CI-Befund, nach dem Adversary).** Die erste
+  > Fassung von AC-11 prüfte zwei **Quelltext-Strings** — einen Modul-Docstring
+  > in `premium_sms.py:19` und eine Codezeile in `trip_report.py:295` — und war
+  > als `# doc-compliance-test` markiert. `test_765_no_product_source_read` hat
+  > sie im CI-Lauf zu Recht abgelehnt: Ein Kommentar im Fremdmodul belegt kein
+  > Verhalten, und die Doku-Ausnahme deckt Doku-Konsistenz, nicht das Ersetzen
+  > eines fehlenden Verhaltenstests.
+  >
+  > **Das ist bemerkenswert, weil es exakt die Fehlerklasse ist, gegen die diese
+  > Scheibe antritt** — geprüft wurde dort, wo der Code *steht*, nicht wo er
+  > *wirkt*. Weder Spec-Autor noch Adversary haben es beanstandet (der Adversary
+  > nannte es „nur ein String-Match", ohne daraus ein Finding zu machen); erst
+  > ein bestehender Hygiene-Wächter im vollen CI-Lauf hat es gefangen. Belegt,
+  > dass ein Gate mehr wert ist als drei sorgfältige Leser.
 
 Wetterdaten kommen unverändert aus `F.segment()`/`F.night_weather()`
 (`tests/tdd/_min_temp_felt_fixtures.py`) — ohne die künstliche

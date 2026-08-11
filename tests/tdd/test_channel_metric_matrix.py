@@ -903,18 +903,32 @@ def test_kaskade_ac10_target_metrics_are_not_no_token_exceptions():
 # --- AC-11: Premium-SMS-Charakterisierung -- kein eigener Render-Aufruf noetig ---
 
 
-# doc-compliance-test
-def test_kaskade_ac11_premium_sms_shares_sms_cascade_key():
-    premium_sms_src = (_REPO_ROOT / "src" / "output" / "channels" / "premium_sms.py").read_text()
-    assert "Der Nachrichtentext ist unveraendert" in premium_sms_src, (
-        "AC-11: premium_sms.py dokumentiert nicht mehr, dass der Text unveraendert report.sms_text ist"
-    )
-    trip_report_src = (_REPO_ROOT / "src" / "output" / "renderers" / "trip_report.py").read_text()
-    assert (
-        '_sms_metrics_ordered = _dc_uncollapsed.get_metrics_for_channel("sms", report_type)'
-        in trip_report_src
-    ), "AC-11: trip_report.py liest die SMS-Kaskade nicht mehr unter dem Schluessel 'sms'"
+def test_kaskade_ac11_premium_sms_has_no_own_cascade_level():
+    """AC-11: Premium-SMS hat KEINE eigene Kaskaden-Ebene und erbt deshalb die
+    SMS-Auswahl.
 
+    **Fassung 2 (CI-Befund 2026-08-11).** Die erste Fassung pruefte zwei
+    Quelltext-Strings (einen Modul-Docstring in ``premium_sms.py``, eine
+    Codezeile in ``trip_report.py``) und war als ``# doc-compliance-test``
+    markiert. ``test_765_no_product_source_read`` hat sie zu Recht abgelehnt:
+    ein Kommentar im Fremdmodul belegt kein Verhalten, und die Ausnahme deckt
+    Doku-Konsistenz, nicht die Umgehung eines fehlenden Verhaltenstests. Die
+    Fehlerklasse ist genau die, gegen die diese Scheibe antritt -- geprueft
+    wurde, wo der Code STEHT, nicht wo er WIRKT.
+
+    Was hier verhaltensbasiert bleibt: solange die geladene Konfiguration
+    keine eigene ``premium_sms``-Ebene traegt, gibt es keinen zweiten
+    Auswahlweg, der von der SMS-Auswahl abweichen koennte. Die inhaltliche
+    Gleichheit des Textes selbst (Premium-SMS versendet ``report.sms_text``,
+    ADR-0049/Spec D5) ist am Wirkort durch
+    ``test_kaskade_f002_sms_global_fallback_is_not_restricted_by_email_layout``
+    gedeckt -- der prueft den tatsaechlich gerenderten SMS-Text, nicht seine
+    Herkunft im Quelltext.
+
+    Bekannte Grenze: entsteht spaeter eine eigene ``premium_sms``-Kaskadenebene
+    (offene Frage der Spec), schlaegt dieser Test an und erzwingt einen echten
+    eigenen Renderpfad-Test.
+    """
     dc = _load_cascade_dc()
     assert "premium_sms" not in (dc.per_channel_layouts or {}), (
         "AC-11: es existiert bereits eine eigene Kaskaden-Ebene fuer premium_sms -- "
