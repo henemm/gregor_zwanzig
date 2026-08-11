@@ -65,7 +65,9 @@ WARN_HOSTS = [
 WEATHER_RADAR_HOSTS = [
     "dataset.api.hub.geosphere.at",
     "api.brightsky.dev",
-    "radar-api.protezionecivile.it",
+    # Issue #1648: `radar-api.protezionecivile.it` ist ersatzlos entfernt --
+    # der Host steht nicht mehr im INVENTORY, ein Zugriff darauf waere ein
+    # KeyError, keine Aussage.
 ]
 
 # Wahre Original-Referenz, VOR jeglicher Manipulation eingefangen.

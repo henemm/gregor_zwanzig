@@ -385,7 +385,7 @@ Die Gebietsgrenzen sind **ganze Länderregionen**, nicht einzelne Touren: „FR"
 | CAPE + Hemmung | CAPE ja, **Hemmung nein** ⇒ bleibt gedeckelt | ✅ beides | ✅ beides |
 | Superzellen | ❌ nicht verfügbar | ✅ | ❌ |
 | Hagel-Kennzeichen | ❌ (→ #1507) | ✅ | ❌ |
-| Radar | ✅ (Radar-DPC) | ✅ | ✅ (global) |
+| Radar | ⚠️ nur Modell (ARPAE ICON-2I, seit #1648 kein echtes Radar mehr für IT/Korsika) | ✅ | ✅ (global) |
 
 ⚠️ **Signalanzahl ist nicht Vorhersagegüte — die beiden bitte nicht verwechseln.** Frankreich
 und Korsika haben die **wenigsten Zusatzsignale**, aber die **feinste Grundvorhersage**:
@@ -545,7 +545,8 @@ dieselbe Zahl überall. Das ist kein Notbehelf, sondern der Stand der Praxis.
 
 Das Produkt weiß auch, was **gerade** passiert: Ein Radar-Nowcast ist angebunden, mit eigener
 Quellenkette je Gebiet (`radar_service.py:280-313`): RADOLAN/BrightSky für Deutschland, INCA für
-Österreich, Radar-DPC für Italien **inklusive Korsika**, AROME-HD für Frankreich, ICON-D2 für die
+Österreich, ARPAE ICON-2I für Italien **inklusive Korsika** (seit #1648 — der frühere Radar-DPC
+war ersatzlos zu streichen, er lieferte nur Vergangenheitsbilder), AROME-HD für Frankreich, ICON-D2 für die
 Alpen, `minutely_15` als globaler Rückfall. Ob es gewittert, kommt aus dem WMO-Code 95/96/99 je
 Einzelbild (`radar_service.py:151-153`).
 

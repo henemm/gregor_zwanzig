@@ -10,6 +10,20 @@ tags: [providers, alerts, weather, nowcast, radar, italy, dpc, protezione-civile
 
 # Radar-DPC: Regen-Nowcast für Italien (Issue #1162)
 
+> ⛔ **ABGELÖST — die hier beschriebene Quelle existiert nicht mehr.**
+> Radar-DPC ist mit **Issue #1648** (2026-08-11) **ersatzlos entfernt**:
+> `src/providers/radar_dpc.py`, `RadarNowcastService._fetch_radar_dpc`, die
+> Registrierung `register_provider("radar_dpc", …)`, das Quellen-Label `"DPC"`
+> und der Egress-Eintrag `radar-api.protezionecivile.it` sind gelöscht. Grund:
+> der 3-Schritt-SRI-Ablauf lieferte immer genau **ein** Bild aus der
+> Vergangenheit; `_derive_result` zählt nur Frames mit `timestamp >= now` und
+> verwarf es deshalb strukturell **immer** — der Italien-Zweig konnte faktisch
+> nie einen Alarm auslösen. Der Italien-Zweig läuft seither direkt auf ARPAE
+> ICON-2I. Nachfolge-Spec: `docs/specs/modules/fix_1648_radar_dpc_entfernen.md`.
+> **Nicht betroffen:** die amtliche DPC-Warnquelle (`DpcSource`,
+> `src/services/official_alerts/dpc.py`, #1427) — andere Datenquelle, anderer
+> Host, unverändert in Betrieb.
+
 ## Approval
 
 - [ ] Approved
