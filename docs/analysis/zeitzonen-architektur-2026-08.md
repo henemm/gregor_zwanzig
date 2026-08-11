@@ -16,8 +16,8 @@ die nächste Aufrufstelle beginnt die Debatte von vorn.
 | Uhr | Wo verdrahtet | Was sie entscheidet |
 |---|---|---|
 | `Europe/Vienna` | `internal/config/config.go:20`, `api/routers/scheduler.py:34`, `scheduler_dispatch_service.py:164`, `alert_daily_limit.py:23`, `deviation_alert_engine.py:31`, `frontend/.../account/+page.svelte:269` | Wann ein Briefing fällig ist · wann Ruhezeit gilt · wann der Tageszähler kippt |
-| `Etc/UTC` (Prozess-Zeitzone) | 40 × `date.today()`, 10 × `datetime.now()` ohne Zone | Welcher Tag der Tour gemeint ist |
-| Ortszone der Tour | `services/trip_day.py` (ADR-0044) | Nur im Alarm-Pfad, seit #1697 |
+| `Etc/UTC` (Prozess-Zeitzone) | 40 × `date.today()`, 10 × `datetime.now()` ohne Zone | Welcher Tag des Trips gemeint ist |
+| Ortszone des Trips | `services/trip_day.py` (ADR-0044) | Nur im Alarm-Pfad, seit #1697 |
 | Browser-Zone | Frontend | Anzeige — dort ebenfalls auf Wien festgenagelt |
 
 Wien ist die Heimatzone des Betreibers. Sie steht im Code, weil der Betreiber dort wohnt, nicht
@@ -28,7 +28,7 @@ konfiguriert ist — `date.today()` nennt keine Zone, es erbt die des Prozesses.
 
 Nutzer stellt „Morgenbriefing 07:00" ein. Gemessen für den 20.08.2026:
 
-| Zone | Tour | Ankunft Ortszeit | Versatz | Inhalt-Tag | Ortstag |
+| Zone | Trip | Ankunft Ortszeit | Versatz | Inhalt-Tag | Ortstag |
 |---|---|---|---|---|---|
 | Europe/Paris | Korsika / GR20 | 07:00 | ±0 h | 2026-08-20 | 2026-08-20 |
 | Atlantic/Canary | La Palma | 06:00 | −1 h | 2026-08-20 | 2026-08-20 |
@@ -93,7 +93,7 @@ mir", nicht „05:00 in Greenwich". Das Produkt speichert `morning_time: "07:00"
 wertet es dann in einer fremden Zone aus, was die Regel wieder aufhebt.
 
 **Regel 2 — Die Zone gehört an die Daten, nicht an den Server.**
-Zuständig ist die Zone des Gegenstands, über den geredet wird: bei einer Tour die des Wegpunkts,
+Zuständig ist die Zone des Gegenstands, über den geredet wird: bei einem Trip die des Wegpunkts,
 bei einem Ort die des Orts. `SavedLocation` hat bereits ein `Timezone`-Feld; `Trip`/`Stage` haben
 keins und lösen über Koordinaten auf (`trip_day.py`). Eine Server- oder Betreiberzone ist in
 keiner fachlichen Frage die richtige Antwort.
@@ -110,14 +110,14 @@ ganzen Lauf. Es gilt nur nirgends verbindlich.
 
 Heute (`trip_report_scheduler.py:345-358`) fragt der Versand:
 
-> Es ist 07:00 **in Wien** — welche Touren haben 07:00 konfiguriert?
+> Es ist 07:00 **in Wien** — welche Trips haben 07:00 konfiguriert?
 
-Eine globale Uhr, N Touren. Richtig wäre die Umkehrung:
+Eine globale Uhr, N Trips. Richtig wäre die Umkehrung:
 
-> Für jede Tour: wie spät ist es **in ihrer** Zone — passt das zu ihrer Konfiguration?
+> Für jeden Trip: wie spät ist es **in seiner** Zone — passt das zu seiner Konfiguration?
 
 Der Cron tickt weiter stündlich; er liefert nur noch einen Zeitpunkt, keine Stunde mehr. Die
-Schleife über die Touren existiert bereits (`_collect_due_trips`) — der Stundenvergleich wandert
+Schleife über die Trips existiert bereits (`_collect_due_trips`) — der Stundenvergleich wandert
 hinein, und die Zone kommt aus derselben Quelle, die der Alarm-Pfad seit #1697 benutzt
 (`trip_day.trip_local_today` / `display_tz`). Das **löscht** die Wien-Konstante, statt einen
 weiteren Sonderfall danebenzustellen.
@@ -175,7 +175,7 @@ beiden aufhalten.
 |---|---|---|
 | **S0** | ADR: die drei Regeln beschließen, ADR-0044 als Spezialfall darunter einordnen | Ohne beschlossene Regel bleibt jede Scheibe Geschmacksfrage |
 | **S1** | Wächter-Ausweitung, Muster 1+2, Bestand als `KNOWN_VIOLATIONS` | Stoppt den Zuwachs sofort, ohne eine Zeile Produktivcode zu bewegen |
-| **S2** | Fälligkeit umkehren: Stundenvergleich je Tour in ihrer Zone; Wien-Konstante fällt | Der eine Umbau mit der größten Nutzerwirkung |
+| **S2** | Fälligkeit umkehren: Stundenvergleich je Trip in seiner Zone; Wien-Konstante fällt | Der eine Umbau mit der größten Nutzerwirkung |
 | **S3** | Gleichheit → Fälligkeit + Idempotenz-Schlüssel `(trip, ortstag, slot)` | Setzt S2 voraus; ohne S2 gibt es keinen Ortstag |
 | **S4** | Ruhezeit, Tageszähler, Ortsvergleichs-Slots auf die Ortszone | Gleiche Wurzel, eigene Nutzerwirkung, eigener Nachweis |
 | **S5** | Restliche `date.today()`-Fundstellen; `KNOWN_VIOLATIONS` schrumpft auf null | Aufräumen, wenn die Regel schon trägt |
@@ -186,12 +186,12 @@ Einzelbehebung.
 
 ## Was bewusst offen bleibt
 
-**Touren über mehrere Zeitzonen.** ADR-0044 hat das entschieden (Anker = Etappe des
+**Trips über mehrere Zeitzonen.** ADR-0044 hat das entschieden (Anker = Etappe des
 Weltzeit-Tages, Restfehler = Zonendifferenz zweier benachbarter Etappen). Dieses Papier ändert
 daran nichts.
 
 **Eine Nutzer-Zeitzonen-Einstellung.** ADR-0044 hat sie verworfen: der Wanderer ist unterwegs,
-nicht zu Hause. Bleibt verworfen — die Zone kommt aus den Wegpunkten. Für Touren **ohne**
+nicht zu Hause. Bleibt verworfen — die Zone kommt aus den Wegpunkten. Für Trips **ohne**
 Wegpunkte bleibt der bestehende UTC-Rückfall, sichtbar gekennzeichnet (`local_stamp`).
 
 **Anzeige im Frontend.** Die Wien-Verdrahtung in `account/+page.svelte` ist derselbe Fehler, aber
