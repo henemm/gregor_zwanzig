@@ -616,6 +616,83 @@ def test_standard_tier_never_reaches_premium_sms_via_alerts(monkeypatch):
     )
 
 
+# ═══════════════════ Adversary F001 (#1701, trip_alert.py:847-850) ═══════
+
+def test_standard_tier_never_reaches_premium_sms_via_radar_path(monkeypatch):
+    """F001 (HIGH, Adversary-Fund #1701): Given ZWEI Nutzer haben identisch
+    konfiguriertes Premium-SMS-Opt-in im Regenradar-Pfad -- Nutzer A Tier
+    'standard', Nutzer B (Kontrolle) Tier 'premium' / When bei BEIDEN
+    derselbe Regenradar-Alarm ausgeloest wird / Then bleibt Premium-SMS bei
+    Nutzer A inaktiv, waehrend Nutzer B sie bekommt --
+    ``premium_sms_allowed()`` (NICHT ``sms_allowed()``, das 'standard'
+    durchlaesst) muss auch am RADAR-Ansatzpunkt (``_radar_effective_
+    channels()``, trip_alert.py:844) entscheiden.
+
+    Deckungsluecke des vorhandenen AC-5-Tests: der deckt nur den
+    Abweichungs- und den amtlichen Pfad ab -- der Radar-Pfad
+    (``check_radar_alerts()``) hatte bislang KEINE Abdeckung mit einem
+    'standard'-Tarif-Nutzer. Tauscht man ``premium_sms_allowed()`` gegen
+    ``sms_allowed()`` aus, wurde bisher KEIN Test rot (Mutations-
+    Gegenprobe, s. Fix-Loop-Bericht).
+    """
+    import app.loader as loader
+    from services.radar_service import RadarNowcastService
+    from services.trip_alert import TripAlertService
+    from services.user_tier import premium_sms_allowed, sms_allowed
+
+    uid = _uid("f001-radar")
+    uid_control = _uid("f001-radar-control")
+    _write_profile(uid, tier="standard", reply_to=LEARNED_REPLY_TO)
+    _write_profile(uid_control, tier="premium", reply_to=_CONTROL_REPLY_TO)
+    assert sms_allowed(uid) is True and premium_sms_allowed(uid) is False, (
+        "Testvoraussetzung: 'standard' darf normale SMS, aber NICHT Premium-SMS"
+    )
+    assert premium_sms_allowed(uid_control) is True, (
+        "Testvoraussetzung Kontrolle: 'premium' darf Premium-SMS"
+    )
+
+    trip = _radar_trip(f"trip-f001-radar-{uuid.uuid4().hex[:6]}", send_premium_sms=True)
+    trip_control = _radar_trip(
+        f"trip-f001-radar-control-{uuid.uuid4().hex[:6]}", send_premium_sms=True,
+    )
+    trips_by_user = {uid: [trip], uid_control: [trip_control]}
+    monkeypatch.setattr(
+        loader, "load_all_trips", lambda **kw: trips_by_user.get(kw.get("user_id"), []),
+    )
+
+    stub = _SevenIoStub()
+    try:
+        svc = TripAlertService(
+            settings=_settings(stub.port, uid), user_id=uid, throttle_hours=0,
+            radar_service=RadarNowcastService(frame_source=_light_wet_frames),
+            mail_sink=lambda subject, body: None,
+        )
+        svc.check_radar_alerts()
+
+        svc_control = TripAlertService(
+            settings=_settings(stub.port, uid_control), user_id=uid_control, throttle_hours=0,
+            radar_service=RadarNowcastService(frame_source=_light_wet_frames),
+            mail_sink=lambda subject, body: None,
+        )
+        svc_control.check_radar_alerts()
+    finally:
+        stub.stop()
+
+    hits_standard = stub.to(LEARNED_REPLY_TO)
+    hits_control = stub.to(_CONTROL_REPLY_TO)
+    assert hits_standard == [], (
+        "F001: ein Nutzer mit Tier 'standard' darf im Radar-Pfad KEINE "
+        f"Premium-SMS bekommen, erhalten: {hits_standard!r}"
+    )
+    assert len(hits_control) >= 1, (
+        "F001 (Kontrolle): ein Nutzer mit Tier 'premium' MUSS im identisch "
+        "konfigurierten Radar-Pfad Premium-SMS bekommen -- sonst beweist die "
+        "stumme Seite oben nur, dass Premium-SMS im Radar-Pfad ueberhaupt "
+        f"nicht verdrahtet ist. Erhalten: {hits_control!r} "
+        f"(voller Stub: {stub.received!r})"
+    )
+
+
 # ═══════════════════════════════ AC-6 ═════════════════════════════════════
 
 def test_failed_premium_sms_does_not_abort_remaining_channels(monkeypatch):
@@ -687,4 +764,119 @@ def test_failed_premium_sms_does_not_abort_remaining_channels(monkeypatch):
         f"blocked_channels stehen, gefunden: {result.blocked_channels!r} -- "
         "heute wird 'premium_sms' in effective_channels ueberhaupt nicht "
         "erkannt, deshalb bleibt das Feld leer."
+    )
+
+
+# ═══════════════ Adversary F002 (#1701, trip_alert.py:320 + :1151) ════════
+#
+# Beide Stellen reichen `blocked_reason_codes=notif_result.blocked_reason_
+# codes` bzw. `result.blocked_reason_codes` an `alert_log.append_entry()`
+# weiter. Der bestehende AC-9-Test (`test_alert_log_channels.py`) ruft
+# `append_entry()` DIREKT mit einem selbstgebauten Dict auf -- er prueft die
+# Funktion, nicht die Verdrahtung, die ein echter Alarmlauf benutzt. Die
+# beiden Tests hier gehen bewusst ueber die ECHTEN Dispatcher
+# (`check_and_send_alerts()` / `check_radar_alerts()`) und lesen danach das
+# tatsaechlich geschriebene `alert_log.json`.
+
+def _settings_email_and_premium_sms(uid: str) -> Settings:
+    """E-Mail echt konfigurierbar (dummy-SMTP, NIE tatsaechlich kontaktiert
+    -- der Versand laeuft ueber ``mail_sink``), Premium-SMS technisch
+    erreichbar aber ohne gelernte Rueckadresse gesperrt. Jedes
+    versandrelevante Feld ausdruecklich gesetzt (#1477), kein stiller
+    Ruecksprung auf die Prod-.env des Worktrees."""
+    from app.config import Settings as _Settings
+
+    update = {
+        "smtp_host": "dummy.invalid", "smtp_user": "dummy", "smtp_pass": "dummy",
+        "mail_to": "dummy@example.com",
+        "telegram_bot_token": "", "telegram_chat_id": "",
+        "sms_to": None,
+        # Nie tatsaechlich kontaktiert: die Sperre (keine Rueckadresse)
+        # greift in PremiumSmsOutput._resolve_recipient() VOR jedem
+        # Netzzugriff (s. Modul-Docstring premium_sms.py).
+        "sms_gateway_url": "http://127.0.0.1:1/api/sms",
+        "seven_api_key": "test-stub-key", "seven_sandbox_key": "test-stub-key",
+        "sms_from": None,
+    }
+    return _Settings().with_user_profile(uid).model_copy(update=update)
+
+
+def test_deviation_alarm_run_logs_specific_premium_sms_block_reason():
+    """F002 (MEDIUM-HIGH, Abweichungspfad, trip_alert.py:320): Ein
+    VOLLSTAENDIGER Alarmlauf ueber ``check_and_send_alerts()`` -- der echte
+    Dispatcher, kein direkter Aufruf von ``alert_log.append_entry()`` --
+    protokolliert bei fehlender gelernter Rueckadresse den SPEZIFISCHEN
+    Sperrgrund ``premium_sms_no_reply_address`` statt des generischen
+    ``delivery_failed``.
+
+    Entfernt man an der Aufrufstelle ``blocked_reason_codes=notif_result.
+    blocked_reason_codes``, wird bisher KEIN Test rot (Mutations-Gegenprobe,
+    s. Fix-Loop-Bericht).
+    """
+    from services.trip_alert import TripAlertService
+    from tests.helpers.alert_log_fixtures import gust_alert_trip, read_log, reason_for_channel, weather
+
+    uid = _uid("f002-dev")
+    _write_profile(uid, tier="premium", reply_to=None)  # keine Rueckadresse -> Sperre
+    trip_id = f"trip-f002-dev-{uuid.uuid4().hex[:6]}"
+    trip = gust_alert_trip(trip_id, alert_channels={"email": True, "premium_sms": True})
+
+    mails: list = []
+    svc = TripAlertService(
+        settings=_settings_email_and_premium_sms(uid), user_id=uid, throttle_hours=0,
+        mail_sink=lambda subject, body: mails.append((subject, body)),
+    )
+    sent = svc.check_and_send_alerts(
+        trip, [weather(1, gust_max_kmh=20.0)], fresh_weather=[weather(1, gust_max_kmh=60.0)],
+    )
+
+    assert sent is True, f"Voraussetzung: der Boeen-Alarm muss ausgeloest worden sein, sent={sent}"
+    assert mails, "Voraussetzung: E-Mail muss trotz gesperrtem Premium-Versand ankommen"
+    log = read_log(uid)
+    entries = [e for e in log["entries"] if e.get("entity_id") == trip_id]
+    assert len(entries) == 1, f"Erwartet genau einen Eintrag fuer {trip_id!r}: {log!r}"
+    entry = entries[0]
+    assert reason_for_channel(entry, "premium_sms") == "premium_sms_no_reply_address", (
+        "F002: der spezifische Sperrgrund muss aus der echten Verdrahtung "
+        "(check_and_send_alerts -> append_entry) im Protokoll stehen, "
+        f"erhalten: {reason_for_channel(entry, 'premium_sms')!r} (Eintrag: {entry!r})"
+    )
+
+
+def test_radar_alarm_run_logs_specific_premium_sms_block_reason(monkeypatch):
+    """F002 (MEDIUM-HIGH, Radar-Pfad, trip_alert.py:1151): derselbe
+    Nachweis fuer den strukturell getrennten Radar-Dispatcher
+    (``check_radar_alerts()``).
+
+    Entfernt man an der Aufrufstelle ``blocked_reason_codes=result.
+    blocked_reason_codes``, wird bisher KEIN Test rot (Mutations-Gegenprobe,
+    s. Fix-Loop-Bericht).
+    """
+    import app.loader as loader
+    from services.radar_service import RadarNowcastService
+    from services.trip_alert import TripAlertService
+    from tests.helpers.alert_log_fixtures import read_log, reason_for_channel
+
+    uid = _uid("f002-radar")
+    _write_profile(uid, tier="premium", reply_to=None)  # keine Rueckadresse -> Sperre
+    trip_id = f"trip-f002-radar-{uuid.uuid4().hex[:6]}"
+    trip = _radar_trip(trip_id, send_premium_sms=True)
+    monkeypatch.setattr(loader, "load_all_trips", lambda **kw: [trip])
+
+    svc = TripAlertService(
+        settings=_settings_email_and_premium_sms(uid), user_id=uid, throttle_hours=0,
+        radar_service=RadarNowcastService(frame_source=_light_wet_frames),
+        mail_sink=lambda subject, body: None,
+    )
+    sent = svc.check_radar_alerts()
+
+    assert sent >= 1, f"Voraussetzung: der Radar-Alarm muss ausgeloest worden sein, sent={sent}"
+    log = read_log(uid)
+    entries = [e for e in log["entries"] if e.get("entity_id") == trip_id]
+    assert len(entries) == 1, f"Erwartet genau einen Eintrag fuer {trip_id!r}: {log!r}"
+    entry = entries[0]
+    assert reason_for_channel(entry, "premium_sms") == "premium_sms_no_reply_address", (
+        "F002: der spezifische Sperrgrund muss aus der echten Verdrahtung "
+        "(check_radar_alerts -> append_entry) im Protokoll stehen, "
+        f"erhalten: {reason_for_channel(entry, 'premium_sms')!r} (Eintrag: {entry!r})"
     )
