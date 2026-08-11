@@ -16,10 +16,12 @@ tags: [metrics, outlook, compare, matrix-test, epic-1703, aggregation]
 
 ## Approval
 
-- [ ] Approved — ACs auf Deutsch vorgelegt, PO-Freigabe ausstehend.
-  Mitfreizugeben: (a) Zuschnitt **Compare-only** statt „Trip + Compare" (s. Purpose),
-  (b) Produktivfix an `summarize_points()` in dieser Scheibe (s. AC-4/AC-5),
-  (c) `loc_limit_override 600`.
+- [x] Approved — PO-Freigabe 2026-08-11 („go — alles drei freigegeben"), AC-1 bis AC-8 auf
+  Deutsch vorgelegt und bestätigt. Mitfreigegeben: (a) Zuschnitt **Compare-only** statt
+  „Trip + Compare" (s. Purpose), (b) Produktivfix an `summarize_points()` in dieser
+  Scheibe (s. AC-4/AC-5), (c) `loc_limit_override 600`.
+- AC-8 (Browser-Nachweis) wurde auf PO-Nachfrage nach Frontend-Tests ergänzt, bevor die
+  Freigabe erteilt wurde.
 
 ## Purpose
 
