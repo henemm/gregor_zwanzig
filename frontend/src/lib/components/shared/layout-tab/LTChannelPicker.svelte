@@ -8,7 +8,7 @@
 	//
 	// Spec: docs/specs/modules/layout_tab_vergleich.md (Implementation Details §1)
 
-	import { LT_CHANNELS, ltBadge, type ChannelId } from './ltChannels';
+	import { LT_CHANNELS, ltBadgeForLimit, type ChannelId } from './ltChannels';
 
 	interface Props {
 		channel: ChannelId;
@@ -36,7 +36,7 @@
 			onclick={makeSelectHandler(ch.id)}
 		>
 			<span class="lt-ch-label">{ch.label}</span>
-			<span class="lt-ch-badge mono">{ltBadge(ch.max)}</span>
+			<span class="lt-ch-badge mono">{ltBadgeForLimit(ch.limit)}</span>
 			{#if overflow[ch.id]}
 				<span class="lt-ch-overflow mono">−{overflow[ch.id]}</span>
 			{/if}

@@ -11,6 +11,14 @@
 	// wuerde `dndzone` sie aus dem DOM entfernen.
 	// Issue #1232 Scheibe 3b: Cut-Line-Markup durch geteiltes Primitiv
 	// `LTCutLine` ersetzt (KL-1 aus Scheibe 3a wird hiermit aufgelöst).
+	// Issue #1719 Scheibe S3 (ADR-0050 Regel 4): "Aus in diesem Kanal"-Gruppe
+	// unter der sortierbaren Liste — eine im Kanal abgewählte Metrik bleibt
+	// sichtbar und wieder einschaltbar, statt aus der Liste zu verschwinden.
+	// Nur der Trip-Kanal-Reiter (WeatherMetricsTab.svelte) übergibt
+	// `offColumns`/`onRestore` — die drei Vergleichs-Einbettungen (Übersicht,
+	// Ausblick, Stundenverlauf) haben ein anderes Datenmodell (flaches Array,
+	// bereits ein funktionierender Rückweg über eine Checkbox darüber) und
+	// bleiben unverändert (Spec Abschnitt 1/4, AC-13 Lackmustest).
 	import type { MetricEntry } from '../../trip-detail/metricsEditor.ts';
 	import { indicatorCapable, CHANNEL_COL_BUDGET } from '../../trip-detail/metricsEditor.ts';
 	import type { Highlight } from '../../trip-detail/metricsEditor.ts';
@@ -28,9 +36,18 @@
 		onRemove: (id: string) => void;
 		onDndReorder: (newOrder: string[]) => void;
 		onMode: (id: string, useIndicator: boolean) => void;
+		/** Issue #1719 S3: `undefined` = Bauteil verhält sich EXAKT wie bisher
+		 *  (keine Aus-Gruppe). Verzweigung auf ANWESENHEIT, nicht auf `.length`
+		 *  — ein leeres Array heißt "übergeben, aktuell nichts Aus", das ist
+		 *  etwas anderes als "nicht übergeben" (kein Default-Wert hier). */
+		offColumns?: string[];
+		onRestore?: (id: string) => void;
 	}
 
-	let { primaryColumns, metricById, friendlyMap, activeChannel, highlight, onRemove, onDndReorder, onMode }: Props = $props();
+	let {
+		primaryColumns, metricById, friendlyMap, activeChannel, highlight, onRemove, onDndReorder, onMode,
+		offColumns, onRestore,
+	}: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
 	const showCutLine = $derived(activeChannel === 'telegram');
@@ -117,6 +134,49 @@
 			</div>
 		{/snippet}
 	</SortableList>
+	{#if offColumns !== undefined}
+		<div class="aus-gruppe" data-testid="wm2-aus-gruppe">
+			<div class="section-subhead aus-subhead">Aus in diesem Kanal</div>
+			{#each offColumns as id (id)}
+				{@const m = metricById[id]}
+				<div class="row aus-row" data-testid="wm2-aus-row" data-metric-id={id}>
+					<div class="label-cell">
+						{#if m}
+							<span class="metric-label">{m.label}</span>
+							{#if m.unit}
+								<span class="metric-unit mono">{m.unit}</span>
+							{/if}
+							{#if m.aggregation_label}
+								<span class="aggregation-badge" data-testid="wm2-aggregation-badge">{m.aggregation_label}</span>
+							{/if}
+							{#if m.col_label}
+								<span class="col-badge mono" title="Kurzform in der Mail-Stundentabelle">
+									{m.col_label}
+								</span>
+							{/if}
+							{#if m.sms_code}
+								<span class="sms-badge mono" title="Kürzel in der SMS">
+									SMS {m.sms_code}
+								</span>
+							{/if}
+						{:else}
+							<span class="metric-label">{id}</span>
+						{/if}
+					</div>
+					<div class="controls">
+						<button
+							type="button"
+							class="btn-ein"
+							onclick={() => onRestore?.(id)}
+							title="Wieder ins Briefing aufnehmen"
+						>
+							Ein
+						</button>
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -247,6 +307,38 @@
 	}
 	.btn-aus:hover {
 		background: rgba(168, 50, 50, 0.06);
+	}
+	/* Issue #1719 S3: "Aus in diesem Kanal"-Gruppe — nicht sortierbar, daher
+	   ohne Positionsnummer/Ziehgriff (die würden nichts bedeuten, das
+	   Datenmodell kennt für Aus-Metriken keine Reihenfolge). */
+	.aus-gruppe {
+		border-top: 1px solid var(--g-rule-soft);
+	}
+	.aus-subhead {
+		padding: 12px 16px 6px;
+		font-size: 12.5px;
+		font-weight: 600;
+		color: var(--g-ink-3);
+	}
+	.row.aus-row {
+		grid-template-columns: 1fr auto;
+		cursor: default;
+		opacity: 0.75;
+	}
+	.btn-ein {
+		padding: 5px 9px;
+		font-size: 11.5px;
+		font-family: inherit;
+		font-weight: 500;
+		border: 1px solid rgba(61, 107, 58, 0.35);
+		border-radius: 3px;
+		background: var(--g-card);
+		color: var(--g-good);
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.btn-ein:hover {
+		background: rgba(61, 107, 58, 0.06);
 	}
 	@media (max-width: 899px) {
 		.metric-label {

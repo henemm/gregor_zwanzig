@@ -1,11 +1,15 @@
 <script lang="ts">
 	// LTCapNote — Issue #1232 Scheibe 3a: geteilter Kappungs-Hinweis unter der
-	// Reihenfolge/dem Bucket-Editor des LayoutTab-Organism. 1:1-Text-Logik aus
-	// claude-code-handoff/current/jsx/layout-tab.jsx (LT_CapNote).
+	// Reihenfolge/dem Bucket-Editor des LayoutTab-Organism.
 	//
-	// Spec: docs/specs/modules/layout_tab_vergleich.md (Implementation Details §1)
+	// Issue #1719 Scheibe S3 (AC-4/AC-5): Text-/Grenzwert-Logik nach
+	// ltChannels.ts::ltCapNoteText ausgelagert (reine Funktion, testbar ohne
+	// Svelte-Renderharness) — keine Wertung mehr, SMS traegt eine Zeichen-
+	// statt einer Spaltengrenze.
+	//
+	// Spec: docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md (Abschnitt 5, AC-5)
 
-	import { LT_CH_BY_ID, type ChannelId } from './ltChannels';
+	import { ltLimitForChannel, ltCapNoteText, SMS_TRIP_CHAR_LIMIT, type ChannelId } from './ltChannels';
 
 	interface Props {
 		channel: ChannelId;
@@ -16,24 +20,28 @@
 		 * Fresh-Eyes-Fund #1232-3b: `colCount` zählt im vergleich-Kontext Orte
 		 * PLUS eine Label-Spalte (Orte-als-Spalten-Vorschau) — im route-Kontext
 		 * zählt `colCount` dagegen reine Metriken (die Trip-Kappung in
-		 * `WeatherV2Reihenfolge`/`WeatherV2MailPreview` zählt ausschließlich
-		 * Metriken, keine Label-Spalte). Default `true` erhält den bisherigen
-		 * vergleich-Wortlaut unverändert; route übergibt `false`.
+		 * `WeatherV2Reihenfolge` zählt ausschließlich Metriken, keine
+		 * Label-Spalte). Default `true` erhält den bisherigen vergleich-Wortlaut
+		 * unverändert; route übergibt `false`.
 		 */
 		hasLabelColumn?: boolean;
+		/** Issue #1719 S3 Abschnitt 5: der SMS-Zeichenwert kommt vom AUFRUFER
+		 *  (Trip 160 / Vergleich 153) — Default ist der Trip-Wert, da diese
+		 *  Komponente heute nur ueber LayoutTab im route-Kontext eingebettet ist. */
+		smsCharLimit?: number;
 	}
-	let { channel, colCount, subject, dense = false, hasLabelColumn = true }: Props = $props();
+	let {
+		channel,
+		colCount,
+		subject,
+		dense = false,
+		hasLabelColumn = true,
+		smsCharLimit = SMS_TRIP_CHAR_LIMIT
+	}: Props = $props();
 
-	const ch = $derived(LT_CH_BY_ID[channel]);
-	const warn = $derived(ch.max !== Infinity && ch.max !== 0 && colCount > ch.max);
-	const text = $derived.by(() => {
-		if (ch.max === Infinity) return 'Email zeigt alles · keine Begrenzung';
-		if (ch.max === 0) return 'SMS hat keine Tabelle — nur Fließtext, entscheidungskritische Werte';
-		const fits = colCount <= ch.max;
-		const fitText = fits ? `passt (max ${ch.max})` : `zu breit — max ${ch.max}, weiter vorne = sicherer`;
-		const countLabel = hasLabelColumn ? `${colCount} Spalten (Label + ${subject})` : `${colCount} ${subject}`;
-		return `${ch.label}: ${countLabel} · ${fitText}`;
-	});
+	const limit = $derived(ltLimitForChannel(channel, smsCharLimit));
+	const warn = $derived(limit.kind === 'columns' && colCount > limit.value);
+	const text = $derived(ltCapNoteText({ channel, limit, colCount, subject, hasLabelColumn }));
 </script>
 
 <div class="lt-cap-note mono" class:warn class:dense data-testid="lt-cap-note">

@@ -145,6 +145,15 @@ async function openMetricsTab(page: Page, id: string): Promise<Locator> {
 	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
 	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
 	await expect(panel).toBeVisible({ timeout: 10_000 });
+	// Issue #1719 S3 (Adversary-Fund F001): "Aus ist ein Zustand" (ADR-0050
+	// Regel 4) gilt NUR für den Trip-Kanal-Reiter — diese Vergleichs-
+	// Übersichts-Einbettung von WeatherV2Reihenfolge bekommt bewusst KEIN
+	// `offColumns` durchgereicht (Naht = Prop-Anwesenheit, kein
+	// `context`-String). Eine Aus-Gruppe darf hier nie entstehen.
+	await expect(
+		panel.getByTestId('wm2-aus-gruppe'),
+		'AC-13 FAIL: eine "Aus in diesem Kanal"-Gruppe darf im Ortsvergleich nicht entstehen'
+	).toHaveCount(0);
 	return panel;
 }
 

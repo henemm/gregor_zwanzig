@@ -417,6 +417,26 @@ describe('AC-5 [REGRESSIONSSCHUTZ, bereits GRUEN]: Reihenfolge-/„Aus"-Block (W
 			onDndReorderAttr && attributeReferencesIdentifier(onDndReorderAttr, 'handleOutlookDndReorder'),
 			'REGRESSION: `onDndReorder` des WeatherV2Reihenfolge-Aufrufs wurde veraendert (AC-5 Nicht-Umfang-Verstoss).'
 		);
+		// Issue #1719 S3 (Adversary-Fund F001, BROKEN): "Aus ist ein Zustand"
+		// gilt NUR fuer den Trip-Kanal-Reiter (WeatherMetricsTab.svelte, route-
+		// Kontext) — diese Einbettung arbeitet auf einem flachen Array ohne
+		// Kanal-Ebene und hat bereits einen funktionierenden Rueckweg (Checkbox
+		// darueber). `offColumns`/`onRestore` sind OPTIONALE Props ohne
+		// Vorgabewert — die Naht ist die PROP-ANWESENHEIT (Spec Abschnitt 1),
+		// nicht ein `context`-String. Werden sie hier durchgereicht, entsteht
+		// eine ungewollte Aus-Gruppe im Ortsvergleich (AC-13-Verstoss).
+		assert.equal(
+			findAttr(row, 'offColumns'),
+			undefined,
+			'AC-13 FAIL: der Ausblick-Aufruf von WeatherV2Reihenfolge uebergibt jetzt `offColumns` — ' +
+				'das erzeugt eine Aus-Gruppe im Ortsvergleich, wo ADR-0050 Regel 4 nicht gilt.'
+		);
+		assert.equal(
+			findAttr(row, 'onRestore'),
+			undefined,
+			'AC-13 FAIL: der Ausblick-Aufruf von WeatherV2Reihenfolge uebergibt jetzt `onRestore` — ' +
+				'siehe offColumns-Befund oben, dieselbe Naht.'
+		);
 	});
 });
 

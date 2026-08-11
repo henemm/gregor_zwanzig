@@ -1,7 +1,18 @@
 // TDD — Issue #1232 Scheibe 3a: LayoutTab-Primitiva ltChannels.ts
 //
 // Reine Verhaltenstests (KEIN Mock, KEINE Dateiinhalt-Prüfung) auf
-// LT_CHANNELS-Ableitung, ltBadge und ltOverflow.
+// LT_CHANNELS-Ableitung, ltBadgeForLimit und ltOverflowForLimit.
+//
+// Issue #1719 Scheibe S3 (GREEN, Bestandstest umgedreht): das Budget-Modell
+// wechselt von einer einzigen Spaltenzahl je Kanal (`max: number`) auf eine
+// EINHEIT je Kanal (`limit: LtLimit`) — Telegram sinkt von 8 auf 7
+// Metrik-Spalten (die 8. Spalte ist die Uhrzeit), SMS trägt eine
+// Zeichengrenze statt des Spalten-Sentinels 0. Vier Assertions auf `8` und
+// eine auf `ltBadge(0) === '—'` kodierten das ALTE, falsche Modell — hier
+// auf das neue umgestellt statt gelöscht (das Verhalten "SMS hat kein
+// Spalten-Raster" gilt weiterhin, nur nicht mehr über eine Spaltenzahl).
+//
+// Spec: docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md (Abschnitt 5, 6)
 //
 // Ausführung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
@@ -10,23 +21,35 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { LT_CHANNELS, LT_CH_BY_ID, ltBadge, ltOverflow } from './ltChannels.ts';
+import {
+	LT_CHANNELS,
+	LT_CH_BY_ID,
+	ltBadgeForLimit,
+	ltOverflowForLimit,
+	ltOverflowAcrossChannels,
+	TELEGRAM_METRIC_COLUMNS,
+	SMS_TRIP_CHAR_LIMIT
+} from './ltChannels.ts';
 import { CHANNEL_COL_BUDGET } from '../../trip-detail/metricsEditor.ts';
 
-describe('LT_CHANNELS — Ableitung aus CHANNEL_COL_BUDGET (einzige Kappungs-Quelle)', () => {
-	test('email.max === Infinity (identisch zu CHANNEL_COL_BUDGET.email)', () => {
-		assert.equal(LT_CH_BY_ID.email.max, Infinity);
-		assert.equal(LT_CH_BY_ID.email.max, CHANNEL_COL_BUDGET.email);
+describe('LT_CHANNELS — Ableitung aus CHANNEL_COL_BUDGET / dem LtLimit-Modell', () => {
+	test('email.limit === { kind: "none" } (identisch zu CHANNEL_COL_BUDGET.email === Infinity)', () => {
+		assert.deepEqual(LT_CH_BY_ID.email.limit, { kind: 'none' });
+		assert.equal(CHANNEL_COL_BUDGET.email, Infinity);
 	});
 
-	test('telegram.max === 8 (identisch zu CHANNEL_COL_BUDGET.telegram)', () => {
-		assert.equal(LT_CH_BY_ID.telegram.max, 8);
-		assert.equal(LT_CH_BY_ID.telegram.max, CHANNEL_COL_BUDGET.telegram);
+	test('telegram.limit === { kind: "columns", value: 7 } (Issue #1719 S3: von 8 auf 7 korrigiert)', () => {
+		assert.deepEqual(LT_CH_BY_ID.telegram.limit, { kind: 'columns', value: 7 });
+		assert.equal(
+			TELEGRAM_METRIC_COLUMNS,
+			CHANNEL_COL_BUDGET.telegram,
+			'TELEGRAM_METRIC_COLUMNS muss aus CHANNEL_COL_BUDGET.telegram abgeleitet sein — keine zweite Zahl'
+		);
 	});
 
-	test('sms.max === 0 (identisch zu CHANNEL_COL_BUDGET.sms — keine eigene Zahl)', () => {
-		assert.equal(LT_CH_BY_ID.sms.max, 0);
-		assert.equal(LT_CH_BY_ID.sms.max, CHANNEL_COL_BUDGET.sms);
+	test('sms.limit === { kind: "chars", value: SMS_TRIP_CHAR_LIMIT } (KEINE Spaltenzahl mehr — SMS hat kein Raster)', () => {
+		assert.deepEqual(LT_CH_BY_ID.sms.limit, { kind: 'chars', value: SMS_TRIP_CHAR_LIMIT });
+		assert.equal(SMS_TRIP_CHAR_LIMIT, 160);
 	});
 
 	test('genau 3 Kanäle in fester Reihenfolge email/telegram/sms', () => {
@@ -37,33 +60,51 @@ describe('LT_CHANNELS — Ableitung aus CHANNEL_COL_BUDGET (einzige Kappungs-Que
 	});
 });
 
-describe('ltBadge — Anzeige-Chip je Kappungswert', () => {
-	test('Infinity → "∞"', () => {
-		assert.equal(ltBadge(Infinity), '∞');
+describe('ltBadgeForLimit — Anzeige-Chip je Kappungswert', () => {
+	test("{kind:'none'} → '∞'", () => {
+		assert.equal(ltBadgeForLimit({ kind: 'none' }), '∞');
 	});
 
-	test('0 → "—"', () => {
-		assert.equal(ltBadge(0), '—');
+	test("{kind:'chars', value:160} → '160' (NICHT '—' — AC-4: SMS zeigt die Zeichenzahl)", () => {
+		assert.equal(ltBadgeForLimit({ kind: 'chars', value: 160 }), '160');
 	});
 
-	test('8 → "8"', () => {
-		assert.equal(ltBadge(8), '8');
+	test("{kind:'columns', value:7} → '7'", () => {
+		assert.equal(ltBadgeForLimit({ kind: 'columns', value: 7 }), '7');
 	});
 });
 
-describe('ltOverflow — überschreitende Spaltenzahl je Kanal', () => {
-	test('ltOverflow(10) enthält { telegram: 2 } und KEINEN email/sms-Schlüssel', () => {
-		const result = ltOverflow(10);
+describe('ltOverflowForLimit — überschreitende Spaltenzahl (NUR für kind:columns)', () => {
+	test("{kind:'columns', value:7}, 9 → 2 (AC-3: 9 aktive Metriken, Telegram-Budget 7)", () => {
+		assert.equal(ltOverflowForLimit({ kind: 'columns', value: 7 }, 9), 2);
+	});
+
+	test("{kind:'columns', value:7}, 5 → undefined (unter dem Budget)", () => {
+		assert.equal(ltOverflowForLimit({ kind: 'columns', value: 7 }, 5), undefined);
+	});
+
+	test("{kind:'columns', value:7}, 7 → undefined (exakt am Budget — >, nicht >=)", () => {
+		assert.equal(ltOverflowForLimit({ kind: 'columns', value: 7 }, 7), undefined);
+	});
+
+	test("{kind:'chars', value:160}, 999 → undefined (AC-4: für SMS wird kein Überlauf berechnet)", () => {
+		assert.equal(ltOverflowForLimit({ kind: 'chars', value: 160 }, 999), undefined);
+	});
+
+	test("{kind:'none'}, 999 → undefined (Email ist unbegrenzt)", () => {
+		assert.equal(ltOverflowForLimit({ kind: 'none' }, 999), undefined);
+	});
+});
+
+describe('ltOverflowAcrossChannels — Überlauf-Chip über alle Kanal-Tabs für denselben colCount', () => {
+	test('ltOverflowAcrossChannels(9, 160) enthält { telegram: 2 } und KEINEN email/sms-Schlüssel', () => {
+		const result = ltOverflowAcrossChannels(9, SMS_TRIP_CHAR_LIMIT);
 		assert.equal(result.telegram, 2);
 		assert.equal('email' in result, false);
-		assert.equal('sms' in result, false);
+		assert.equal('sms' in result, false, 'SMS (kind:chars) darf keinen Überlauf-Eintrag bekommen');
 	});
 
-	test('ltOverflow(5) ist leer (unter dem Telegram-Budget von 8)', () => {
-		assert.deepEqual(ltOverflow(5), {});
-	});
-
-	test('ltOverflow(8) ist leer (exakt am Budget — >, nicht >=)', () => {
-		assert.deepEqual(ltOverflow(8), {});
+	test('ltOverflowAcrossChannels(5, 160) ist leer (unter dem Telegram-Budget von 7)', () => {
+		assert.deepEqual(ltOverflowAcrossChannels(5, SMS_TRIP_CHAR_LIMIT), {});
 	});
 });

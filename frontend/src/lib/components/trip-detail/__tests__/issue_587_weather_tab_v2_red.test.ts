@@ -2,9 +2,15 @@
 //
 // Spec: docs/specs/modules/issue_587_weather_tab_v2.md
 // Modell-Entscheidung (PO Henning 2026-06-06): keine Detail-Zeile (secondary entfällt),
-// jede ausgewählte Metrik ist Spalte oder aus; Telegram-Budget = 8.
+// jede ausgewählte Metrik ist Spalte oder aus.
 //
-// Diese Tests sind ABSICHTLICH ROT solange das alte secondary-Modell / telegram=7 gilt.
+// Issue #1719 S3 (CI-Fund, 2026-08-11): Telegram-Budget von 8 auf 7 korrigiert
+// — die 8. vom Backend gerenderte Telegram-Spalte ist die Uhrzeit, keine
+// Metrik (src/output/renderers/channel_layout.py:110, metric_slots = limit - 1).
+// Diese Datei stand nicht auf der Liste der umzudrehenden Bestandstests und
+// schrieb die alte, falsche 8 weiter fest — von CI (`frontend-test`) gefangen.
+//
+// Diese Tests sind ABSICHTLICH ROT solange das alte secondary-Modell gilt.
 // Sie prüfen NUR den deterministischen Modell-Vertrag (mock-frei, echte Funktionen).
 // Die UI-ACs (4-Abschnitte-Tab, Live-Mail, Diff-Highlight, Schnittlinie, Pixel-Diff)
 // werden via Playwright gegen Staging in /e2e-verify abgenommen.
@@ -24,14 +30,15 @@ import {
 } from '../metricsEditor.ts';
 
 // ============================================================================
-// AC-5: Telegram-Budget = 8 (war 7, Signal-Budget entfallen)
+// AC-5: Telegram-Budget = 7 (Issue #1719 S3: 8 → 7 korrigiert — die 8. Spalte
+// ist die Uhrzeit, keine Metrik; channel_layout.py:110)
 // ============================================================================
 
-test('#587 AC-5: CHANNEL_COL_BUDGET.telegram ist 8', () => {
+test('#587 AC-5: CHANNEL_COL_BUDGET.telegram ist 7', () => {
 	assert.equal(
 		CHANNEL_COL_BUDGET.telegram,
-		8,
-		`Telegram-Budget muss 8 sein, war: ${CHANNEL_COL_BUDGET.telegram}`,
+		7,
+		`Telegram-Budget muss 7 sein, war: ${CHANNEL_COL_BUDGET.telegram}`,
 	);
 });
 
