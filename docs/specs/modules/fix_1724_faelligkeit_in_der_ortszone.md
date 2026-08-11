@@ -191,8 +191,9 @@ CLAUDE.md: ein grüner Testlauf beweist nur, dass die Tests durchlaufen.
 
 ## Architektur-Entscheidung (ADR)
 
-ADR-0051 (Regel 2: Zone an den Daten), ADR-0044 (Kalendertag folgt der Ortszeit). Diese Spec
-führt beide im Briefing-Pfad aus, ohne von ihnen abzuweichen.
+- **ADR-Nr.:** ADR-0051, ADR-0044
+- **Rationale:** ADR-0051 (Regel 2: Zone an den Daten), ADR-0044 (Kalendertag folgt der
+  Ortszeit). Diese Spec führt beide im Briefing-Pfad aus, ohne von ihnen abzuweichen.
 
 ## Changelog
 
