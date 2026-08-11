@@ -332,7 +332,11 @@ class TestThunderFusionUnaffectedByCapeSelectable:
             lightning_density=None,
             cape_jkg=1500.0,
             lightning_potential_jkg=None,
-            cape_threshold_jkg=1000.0,
+            # Issue #1679 (CIN-Teil): rohe NWS-Leiter zur unveraenderten
+            # Katalog-Schwelle 1000; `cin_jkg=None` (unbekannte Hemmung) haelt
+            # die Deckelung auf LOW aufrecht, unter der AC-8 formuliert wurde.
+            cape_threshold_jkg=1000.0, cape_med_min=2500.0, cape_high_min=4000.0,
+            cin_jkg=None,
             lpi_low_min=None, lpi_med_min=None, lpi_high_min=None,
         )
         assert level == ThunderLevel.LOW, (
@@ -345,7 +349,8 @@ class TestThunderFusionUnaffectedByCapeSelectable:
             lightning_density=None,
             cape_jkg=500.0,
             lightning_potential_jkg=None,
-            cape_threshold_jkg=1000.0,
+            cape_threshold_jkg=1000.0, cape_med_min=2500.0, cape_high_min=4000.0,
+            cin_jkg=None,
             lpi_low_min=None, lpi_med_min=None, lpi_high_min=None,
         )
         assert level_below == ThunderLevel.NONE, (
