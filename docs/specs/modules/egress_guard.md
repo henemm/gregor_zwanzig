@@ -144,7 +144,7 @@ vollständige bekannte Host-Set mit konservativer Default-Isolationsart
 | `dataset.api.hub.geosphere.at` | TEST_ACCESS |
 | `warnungen.zamg.at` | BLOCKED (Scheibe 2b #1348) |
 | `api.brightsky.dev` | TEST_ACCESS |
-| `radar-api.protezionecivile.it` | TEST_ACCESS |
+| ~~`radar-api.protezionecivile.it`~~ | seit #1648 aus beiden Inventaren entfernt (Radar-DPC ersatzlos gestrichen) |
 | `api.meteoalarm.org` | BLOCKED (Scheibe 2b #1348) |
 | `public-api.meteofrance.fr` | BLOCKED (Scheibe 2b #1348) |
 | `www.risque-prevention-incendie.fr` | BLOCKED (Scheibe 2b #1348) |

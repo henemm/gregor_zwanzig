@@ -12,8 +12,8 @@ EXPLIZIT (Spec-Vorgabe, macht die Bedingung sichtbar statt implizit zu
 verlassen).
 
 Tripwire-Technik (kein Mock-Theater -- CLAUDE.md): sowohl `httpx.Client`
-als auch die drei Provider-Konstruktoren (`BrightSkyProvider`,
-`GeoSphereProvider`, `RadarDPCProvider`) werden per `monkeypatch` (pytest-
+als auch die beiden verbliebenen Provider-Konstruktoren (`BrightSkyProvider`,
+`GeoSphereProvider`) werden per `monkeypatch` (pytest-
 Bordmittel) durch Stubs ersetzt, die einen VERSUCH aufzeichnen statt
 sofort zu werfen -- `radar_service.py` faengt Exceptions an diesen Stellen
 grundsaetzlich breit ab (Fail-soft-Fetch), ein sofortiges `raise` wuerde
@@ -32,9 +32,8 @@ from services.radar_service import RadarNowcastService
 
 # Reale, eindeutig einer einzelnen Quellen-Bounding-Box zugeordnete
 # Koordinaten (siehe radar_service.py:27-56).
-_RADOLAN_ONLY_LAT, _RADOLAN_ONLY_LON = 52.5, 13.4     # Berlin: RADOLAN, ausserhalb INCA/DPC
+_RADOLAN_ONLY_LAT, _RADOLAN_ONLY_LON = 52.5, 13.4     # Berlin: RADOLAN, ausserhalb INCA
 _INCA_ONLY_LAT, _INCA_ONLY_LON = 46.5, 13.0           # AT: INCA, ausserhalb RADOLAN
-_DPC_ONLY_LAT, _DPC_ONLY_LON = 44.0, 11.0             # IT: DPC, ausserhalb RADOLAN/INCA
 # Ausserhalb aller Bounding-Boxen -> reiner open-meteo-Pfad (identisch zu
 # test_feature_734_arome_france_nowcast.py).
 _PURE_OPENMETEO_LAT, _PURE_OPENMETEO_LON = 35.0, -40.0
@@ -96,16 +95,12 @@ def _explicit_offline_mode_and_tripwires(monkeypatch):
 
     import providers.brightsky as brightsky_module
     import providers.geosphere as geosphere_module
-    import providers.radar_dpc as radar_dpc_module
 
     monkeypatch.setattr(
         brightsky_module, "BrightSkyProvider", _tripwire_provider_class("BrightSkyProvider")
     )
     monkeypatch.setattr(
         geosphere_module, "GeoSphereProvider", _tripwire_provider_class("GeoSphereProvider")
-    )
-    monkeypatch.setattr(
-        radar_dpc_module, "RadarDPCProvider", _tripwire_provider_class("RadarDPCProvider")
     )
     yield
     _NETWORK_ATTEMPTS.clear()
@@ -157,7 +152,10 @@ def test_pure_openmeteo_path_fixture_result_has_dry_onset():
 
 
 # ---------------------------------------------------------------------------
-# AC-11: RADOLAN/INCA/DPC werden im Offline-Modus NICHT kontaktiert.
+# AC-11: RADOLAN/INCA werden im Offline-Modus NICHT kontaktiert.
+# (Issue #1648: der Italien-Zweig hat keinen eigenen Provider mehr -- er
+# laeuft ueber den bereits fixture-gestuetzten `_fetch_openmeteo_15`-Funnel,
+# dessen Offline-Garantie die beiden AC-10-Tests oben abdecken.)
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize(
@@ -165,7 +163,6 @@ def test_pure_openmeteo_path_fixture_result_has_dry_onset():
     [
         (_RADOLAN_ONLY_LAT, _RADOLAN_ONLY_LON, "BrightSkyProvider"),
         (_INCA_ONLY_LAT, _INCA_ONLY_LON, "GeoSphereProvider"),
-        (_DPC_ONLY_LAT, _DPC_ONLY_LON, "RadarDPCProvider"),
     ],
 )
 def test_provider_source_not_contacted_in_offline_mode(lat, lon, label):
@@ -182,7 +179,7 @@ def test_provider_source_not_contacted_in_offline_mode(lat, lon, label):
         f"konstruiert werden duerfen, tatsaechlich: "
         f"{_PROVIDER_CONSTRUCTION_ATTEMPTS}"
     )
-    assert result.source not in ("radar", "INCA", "DPC"), (
+    assert result.source not in ("radar", "INCA"), (
         f"AC-11: source darf im Offline-Modus nie die Primaerquelle sein "
         f"(war: {result.source!r})"
     )

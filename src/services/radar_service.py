@@ -7,7 +7,7 @@ Provides short-term precipitation forecasts ("fängt es in den nächsten
 Sources (coordinate-based, automatic):
 - BrightSky (RADOLAN) for Germany
 - GeoSphere INCA for Austria
-- Radar-DPC (Protezione Civile) for Italy (incl. Corsica coverage)
+- ARPAE ICON-2I (via Open-Meteo) for Italy (incl. Corsica coverage)
 - Météo-France AROME-HD (via Open-Meteo) for France/Benelux
 - Open-Meteo minutely_15 for global/fallback
 
@@ -44,11 +44,12 @@ _AROME_FR_LAT_MAX = 51.5
 _AROME_FR_LON_MIN = -5.5
 _AROME_FR_LON_MAX = 10.0
 
-# Radar-DPC bounding box (IT — Protezione Civile national radar, Issue #1162)
-_DPC_LAT_MIN = 36.0
-_DPC_LAT_MAX = 47.5
-_DPC_LON_MIN = 6.5
-_DPC_LON_MAX = 19.0
+# Italien-Radar bounding box (IT — Zustaendigkeitsgebiet, kein Anbietername:
+# Werte aus #1162 uebernommen, seit #1648 bedient von ARPAE ICON-2I)
+_ITALY_RADAR_LAT_MIN = 36.0
+_ITALY_RADAR_LAT_MAX = 47.5
+_ITALY_RADAR_LON_MIN = 6.5
+_ITALY_RADAR_LON_MAX = 19.0
 
 # ICON-D2 bounding box (Central Europe / Alps — DWD ICON-D2 ~2 km, Issue #761)
 # Conservative rectangle; exact (rotated) grid fidelity comes from the all-None guard.
@@ -215,7 +216,6 @@ class RadarNowcastService:
     _SOURCE_LABELS: dict[str, str] = {
         "radar": "Radar (DWD)",
         "INCA": "INCA (GeoSphere AT)",
-        "DPC": "Radar-DPC (Protezione Civile IT)",
         "AROME-FR": "Météo-France AROME (1,5 km)",
         "ICON-D2": "DWD ICON-D2 (2 km)",
         "ARPAE-2I": "ARPAE ICON-2I (2 km, Italien)",
@@ -309,10 +309,7 @@ class RadarNowcastService:
             if frames:
                 return frames, "INCA"
 
-        if _within_dpc(lat, lon):
-            frames = self._fetch_radar_dpc(lat, lon)
-            if frames:
-                return frames, "DPC"
+        if _within_italy_radar(lat, lon):
             frames = self._fetch_italy_arpae(lat, lon)
             if frames:
                 return frames, "ARPAE-2I"
@@ -384,29 +381,6 @@ class RadarNowcastService:
             if abs(nearest.timestamp - frame.timestamp) <= tolerance:
                 frame.is_convective = nearest.is_convective
 
-    def _fetch_radar_dpc(self, lat: float, lon: float) -> list:
-        if _offline_fixture_active():
-            # Issue #1329 C2 Abschnitt 8: kein Netz zu Radar-DPC im Offline-Modus
-            # (auch der Sidecar-open-meteo-Call unten wird dadurch nie erreicht).
-            return []
-        try:
-            from providers.radar_dpc import RadarDPCProvider
-            frames = RadarDPCProvider().fetch_nowcast(lat, lon)
-            if not frames:
-                return []
-            # Convective sidecar: SRI carries no thunderstorm/hail field, so reuse the
-            # global Open-Meteo best_match nowcast solely for the is_convective flag.
-            sidecar = self._fetch_openmeteo_15(lat, lon)
-            if sidecar:
-                self._merge_convective(frames, sidecar)
-            else:
-                # ADR-0018: do not silently pass a failed check off as "no thunderstorm".
-                self._convective_checked = False
-            return frames
-        except Exception as e:
-            logger.warning(f"Radar-DPC failed, falling back: {e}")
-            return []
-
     def _fetch_openmeteo_minutely15(self, lat: float, lon: float) -> list:
         return self._fetch_openmeteo_15(lat, lon)
 
@@ -429,7 +403,7 @@ class RadarNowcastService:
 
         Issue #1329 C2: EINZIGER Funnel, durch den JEDER open-meteo-Zweig
         laeuft (AROME-FR, ICON-D2, ARPAE, finaler minutely_15-Fallback, UND
-        beide Sidecar-Aufrufe aus _fetch_geosphere_inca/_fetch_radar_dpc) --
+        der INCA-Sidecar-Aufruf aus _fetch_geosphere_inca) --
         ein Gate-Einbau hier deckt Budget UND Doppelverbrauch-Fix UND
         Offline-Fixture fuer den gesamten open-meteo-Anteil ab.
         """
@@ -615,10 +589,10 @@ def _within_inca(lat: float, lon: float) -> bool:
     )
 
 
-def _within_dpc(lat: float, lon: float) -> bool:
+def _within_italy_radar(lat: float, lon: float) -> bool:
     return (
-        _DPC_LAT_MIN <= lat <= _DPC_LAT_MAX
-        and _DPC_LON_MIN <= lon <= _DPC_LON_MAX
+        _ITALY_RADAR_LAT_MIN <= lat <= _ITALY_RADAR_LAT_MAX
+        and _ITALY_RADAR_LON_MIN <= lon <= _ITALY_RADAR_LON_MAX
     )
 
 
@@ -659,8 +633,8 @@ def _region_bucket(lat: float, lon: float) -> str:
         return "radolan"
     if _within_inca(lat, lon):
         return "inca"
-    if _within_dpc(lat, lon):
-        return "dpc"
+    if _within_italy_radar(lat, lon):
+        return "italy_radar"
     if _within_arome_france(lat, lon):
         return "arome_france"
     if _within_icon_d2(lat, lon):

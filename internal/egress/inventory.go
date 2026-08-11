@@ -30,7 +30,6 @@ var Inventory = map[string]Kind{
 	// Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
 	"warnungen.zamg.at":             Blocked,
 	"api.brightsky.dev":             TestAccess,
-	"radar-api.protezionecivile.it": TestAccess,
 	// Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
 	"api.meteoalarm.org": Blocked,
 	// Issue #1445 S1: derselbe Anbieter, kontingentfreier Feed-Transport --
