@@ -33,28 +33,47 @@ docs/specs/modules/fix_1703_s3_selectable_metrics.md. Kein Produktivcode-Fix
 -- Charakterisierungstest fuer bereits korrektes, bisher unbewachtes
 Verhalten (alle 8 ACs laufen heute bereits GRUEN).
 
-Epic #1703 Scheibe 1 (AC-S1-1 bis AC-S1-7, ganz unten): Alarm-Renderer x alle
+Epic #1703 Scheibe 1 (AC-S1-1 bis AC-S1-7, weiter unten): Alarm-Renderer x alle
 alarmfaehigen Metriken (docs/reference/metric_output_matrix.md Flaeche 1) --
 die vier Alarm-Renderer waren fuer 8 von 11 produktiv erreichbaren
 Alarm-Groessen ungeprueft. SPEC:
 docs/specs/modules/fix_1703_s1_alert_renderer_matrix.md. EINZIGER roter
 Anteil dieser Achse: AC-S1-5 im gebuendelten Fall (Gewitter-Prozentzeichen).
+
+Epic #1703 Scheibe 2 (AC-S2-1 bis AC-S2-7, ganz unten): Ausblick-Tabelle des
+Ortsvergleichs x alle 25 waehlbaren Katalog-Paare
+(docs/reference/metric_output_matrix.md Flaeche 2) -- bewacht war bisher nur
+das Auswahl-PRINZIP mit zwei fest getippten Auswahlen
+(test_compare_outlook_metric_selection.py), nicht die Katalog-DECKUNG. SPEC:
+docs/specs/modules/fix_1703_s2_ausblick_matrix.md. Compare-only (die drei
+Trip-Aufrufstellen des geteilten Ausblick-Renderers uebergeben kein
+``metrics``-Argument, s. Spec "Korrektur der Scheiben-Praemisse"). ROTER
+Anteil: AC-S2-4 (fuenf dauerhaft leere Spalten) und AC-S2-5 (die beiden
+Tages-Aggregationspfade sind auseinandergelaufen).
 """
 from __future__ import annotations
 
 import dataclasses
 import json
 import re
+from collections import Counter
+from datetime import date, datetime, timedelta, timezone
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
+from bs4 import BeautifulSoup
 
 from app.loader import _parse_display_config
 from app.metric_catalog import (
     _METRICS, build_default_display_config, format_metric_value, get_all_metrics,
     get_alert_label, get_cmp, get_metric, get_sms_code,
 )
-from app.models import AlertMetric, MetricConfig, UnifiedWeatherDisplayConfig, _SELECTABLE_GATE_EXEMPT
+from app.models import (
+    AlertMetric, ForecastDataPoint, ForecastMeta, MetricConfig, NormalizedTimeseries,
+    PrecipType, Provider, ThunderLevel, UnifiedWeatherDisplayConfig,
+    _SELECTABLE_GATE_EXEMPT,
+)
 from output.renderers.alert.model import AlertEvent, AlertMessage, side_label
 from output.renderers.alert.render import (
     _HANDLED_UNITS, render_email, render_sms, render_subject, render_telegram,
@@ -63,11 +82,17 @@ from output.channels.premium_sms import PremiumSmsOutput
 from output.renderers.channel_layout import render_for_channel
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
+from output.renderers.comparison import render_compare_email
 from output.renderers.email.helpers import resolve_metric_col_order
 from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC, SMS_MULTI_SYMBOLS_BY_METRIC
 from output.renderers.trip_report import TripReportFormatter
 from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID, is_alert_metric_active
+from services.weather_metrics import WeatherMetricsService, summarize_points
 
+from tests.helpers.outlook_columns import (
+    assert_soll_menge_ist_plausibel, compare_outlook_soll_paare,
+    compare_outlook_soll_spalten,
+)
 from tests.tdd import _min_temp_felt_fixtures as F
 # Issue #1719 S2 AC-11: geteilter Premium-SMS-Stub (echter lokaler HTTP-
 # Server, kein Mock) -- Vorbild-Fixture wiederverwendet statt kopiert (Muster
@@ -2098,3 +2123,547 @@ def test_ac_s1_7_gleichnamige_groessen_trennt_nur_die_kurznachricht(label, metri
         f"AC-S1-7: allein die Kurznachricht trennt die gleichnamigen Groessen "
         f"{list(metric_ids)} -- hier tut sie es nicht: {kuerzel}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Epic #1703 Scheibe 2 (AC-S2-1 bis AC-S2-7): Ausblick-Tabelle des
+# Ortsvergleichs x alle waehlbaren Katalog-Paare
+# (docs/reference/metric_output_matrix.md Flaeche 2).
+# SPEC: docs/specs/modules/fix_1703_s2_ausblick_matrix.md.
+#
+# Eigene AC-Nummerierung (AC-S2-n), damit sie weder mit AC-13/14/15 (#1677 B)
+# noch mit AC-1..AC-8 (Scheibe 3) oder AC-S1-n (Scheibe 1) kollidiert.
+#
+# Compare-only: die drei Trip-Aufrufstellen des geteilten Ausblick-Renderers
+# (email/html.py:1357, email/plain.py:338, trip_report_scheduler.py:1844)
+# uebergeben KEIN ``metrics``-Argument und laufen im festen Legacy-Spaltenpfad
+# -- der Trip-Ausblick hat keine waehlbaren Spalten und damit keine
+# Metrik-x-Kanal-Flaeche (Spec "Korrektur der Scheiben-Praemisse"). Sein Schutz
+# ist der Byte-Golden tests/tdd/test_trip_outlook_parity.py.
+#
+# Pruefort = Wirkort: alle Ist-Werte stammen aus ``render_compare_email()`` --
+# EIN Aufruf liefert HTML UND Klartext, damit ist der Klartext-blinde Fleck des
+# Pflicht-Mail-Validators mit abgedeckt (#1366). Nie an ``outlook_columns()``
+# isoliert gemessen; der Massstab kommt aus dem Katalog (tests/helpers/
+# outlook_columns.py), nicht aus derselben Funktion.
+#
+# ABHAENGIGKEIT, die nicht weggeraeumt werden darf (AC-S2-7): die einzelne
+# Streichung einer Katalog-Zeile faengt diese Achse NICHT -- ihre Soll-Menge
+# schrumpft dann einfach mit. Sie faengt der unabhaengige, GETIPPTE
+# Groessenanker tests/tdd/test_compare_metric_catalog_endpoint.py::
+# TestUnknownMetricIdFailsVisibly::test_real_catalog_resolves_completely
+# (``len(get_compare_metric_catalog()) == 25``, Zeile 519). Wird jene Zeile bei
+# einer kuenftigen Aufraeumaktion als "hartcodiert, unschoen" entfernt, faellt
+# diese Deckung ersatzlos weg (Lehre aus Scheibe 1, Finding F001).
+# ---------------------------------------------------------------------------
+
+# Zwei Striche, die im Terminal gleich aussehen und NICHT gleichgesetzt werden
+# duerfen (Spec "Die Fehlzeichen-Falle"):
+_S2_FEHLZEICHEN = "–"      # – format_outlook_value(None, ...): Wert FEHLT
+_S2_KEINE_ANGABE = "—"     # — Gewitterstufe "keine" / Niederschlagsart unbekannt
+
+# Eindeutiger Marker der Ausblick-Tabelle (nur auf dieser einen Tabelle
+# gesetzt, identisch zu test_compare_outlook_metric_selection.py:27).
+_S2_TABELLEN_MARKER = "border-top:2px solid #1d1c1a"
+_S2_KLARTEXT_UEBERSCHRIFT = "3-Tages-Ausblick"
+
+_S2_SOLL = compare_outlook_soll_spalten()
+_S2_SOLL_PAARE = compare_outlook_soll_paare()
+_S2_SOLL_IDS = [f"{s['metric_id']}:{s['aggregation']}" for s in _S2_SOLL]
+
+_S2_STARTTAG = date(2026, 7, 20)
+_S2_TAGE = ((6.0, 18.0), (9.0, 27.0), (11.0, 23.0))
+
+# Die fuenf Tagesfelder, deren Ausblick-Zelle vor dem Fix dauerhaft das
+# Fehlzeichen trug (gemessen 2026-08-11 an der echten Vergleichs-Mail, HTML wie
+# Klartext, an jedem der drei Tage) -- der ROTE Anteil von AC-S2-4. Die Liste
+# bleibt nach dem Fix stehen: sie begrenzt die Charakterisierung in AC-S2-6 auf
+# die 20 bereits gefuellten Zellen und bleibt der Beleg des roten Anteils.
+_S2_DEFEKTE_FELDER = frozenset({
+    "snow_depth_cm", "snow_new_sum_cm", "wind_direction_avg_deg",
+    "wind_chill_min_c", "wind_chill_max_c",
+})
+
+
+def _s2_punkt(tag: date, stunde: int, temp: float, thunder) -> ForecastDataPoint:
+    """Ein REICH besetzter Stundenpunkt: jedes Quellfeld, aus dem eine der 25
+    Ausblick-Spalten ihren Tageswert zieht, traegt einen Wert. Nur so heisst
+    eine Strichzelle "der Aggregationspfad fuellt das Feld nicht" statt
+    "der Test hat nichts hineingelegt" (AC-S2-4)."""
+    return ForecastDataPoint(
+        ts=datetime(tag.year, tag.month, tag.day, stunde, 0, tzinfo=timezone.utc),
+        t2m_c=temp, wind10m_kmh=15.0, wind_direction_deg=210, gust_kmh=25.0,
+        precip_1h_mm=1.1, precip_rate_mmph=1.1, cloud_total_pct=50,
+        thunder_level=thunder, cape_jkg=400.0, pop_pct=55,
+        pressure_msl_hpa=1013.0, humidity_pct=70, dewpoint_c=5.0, uv_index=4.0,
+        snow_depth_cm=30.0, snow_new_24h_cm=4.0, snowfall_limit_m=2200,
+        precip_type=PrecipType.RAIN, freezing_level_m=3000,
+        wind_chill_c=temp - 2.0, visibility_m=20000,
+        cloud_low_pct=30, cloud_mid_pct=40, cloud_high_pct=20,
+        wmo_code=61, is_day=1, dni_wm2=300.0, confidence_pct=80, hail_flag=False,
+    )
+
+
+def _s2_punkte(thunder) -> list[ForecastDataPoint]:
+    """Drei Kalendertage a vier Stundenpunkte (UTC 02/08/14/20 = Ortszeit
+    04/10/16/22 in Europe/Vienna -- derselbe Kalendertag, kein Tagesuebergang)."""
+    punkte: list[ForecastDataPoint] = []
+    for versatz, (tief, hoch) in enumerate(_S2_TAGE):
+        tag = _S2_STARTTAG + timedelta(days=versatz)
+        for stunde, temp in zip((2, 8, 14, 20), (tief, (tief + hoch) / 2, hoch, (tief + hoch) / 2)):
+            punkte.append(_s2_punkt(tag, stunde, temp, thunder))
+    return punkte
+
+
+@lru_cache(maxsize=None)
+def _s2_mail(thunder_name: str = "MED") -> tuple[str, str]:
+    """Die ECHTE Vergleichs-Mail mit ALLEN waehlbaren Ausblick-Groessen.
+    Gecacht, weil jede parametrisierte Achse dieselbe Mail liest."""
+    from app.user import ComparisonResult, LocationResult, SavedLocation
+
+    punkte = _s2_punkte(ThunderLevel[thunder_name])
+    heute = [p for p in punkte if p.ts.date() == _S2_STARTTAG]
+    ort = LocationResult(
+        location=SavedLocation(
+            id="innsbruck", name="Innsbruck", lat=47.27, lon=11.40,
+            elevation_m=574, timezone="Europe/Vienna",
+        ),
+        score=50, hourly_data=heute, outlook_hourly_data=punkte,
+    )
+    ergebnis = ComparisonResult(
+        locations=[ort], time_window=(9, 16), target_date=_S2_STARTTAG,
+        created_at=datetime(2026, 7, 20, 4, 1),
+    )
+    return render_compare_email(
+        ergebnis, outlook_enabled=True, outlook_metrics=list(_S2_SOLL_PAARE),
+    )
+
+
+def _s2_html_ausblick(html: str) -> tuple[list[str], list[list[str]]]:
+    """Kopfzeile + Tageszeilen der Ausblick-Tabelle der echten HTML-Mail."""
+    soup = BeautifulSoup(html, "html.parser")
+    tabellen = [t for t in soup.find_all("table")
+                if _S2_TABELLEN_MARKER in str(t.get("style", ""))]
+    assert len(tabellen) == 1, (
+        f"Erwartet genau eine Ausblick-Tabelle (Marker {_S2_TABELLEN_MARKER!r}), "
+        f"gefunden {len(tabellen)}"
+    )
+    kopf = [th.get_text(strip=True) for th in tabellen[0].find_all("th")]
+    zeilen = [[td.get_text(strip=True) for td in tr.find_all("td")]
+              for tr in tabellen[0].find("tbody").find_all("tr")]
+    return kopf, zeilen
+
+
+def _s2_klartext_ausblick(text: str) -> list[dict[str, str]]:
+    """Je Tageszeile des Klartext-Ausblicks eine Zuordnung Ueberschrift -> Wert.
+
+    Der Renderer schreibt ``f"{Wochentag:<3} " + "  ".join(f"{Label} {Wert}")``
+    (email/outlook.py:344-350) -- die Paare trennen ZWEI Leerzeichen, Label und
+    Wert eines. Beide enthalten selbst Leerzeichen ("Temperatur Maximum",
+    "15 km/h"), deshalb wird je Token die LAENGSTE passende Soll-Ueberschrift
+    abgespalten: "Wind" ist echter Wortanfang von "Windrichtung".
+    """
+    ueberschriften = sorted((s["ueberschrift"] for s in _S2_SOLL), key=len, reverse=True)
+    zeilen = text.split("\n")
+    start = next(
+        (i for i, z in enumerate(zeilen) if z.strip() == _S2_KLARTEXT_UEBERSCHRIFT),
+        None,
+    )
+    assert start is not None, (
+        f"Im Klartext derselben Mail ist kein Ausblick-Block auffindbar "
+        f"(gesucht: {_S2_KLARTEXT_UEBERSCHRIFT!r}).\n{text}"
+    )
+    ergebnis: list[dict[str, str]] = []
+    for zeile in zeilen[start + 1:]:
+        if not zeile.strip():
+            break
+        zellen: dict[str, str] = {}
+        for token in zeile.split("  ")[1:]:
+            token = token.strip()
+            treffer = next((u for u in ueberschriften if token.startswith(u)), None)
+            assert treffer is not None, (
+                f"Klartext-Ausblick fuehrt den Abschnitt {token!r}, der zu "
+                f"keiner Soll-Ueberschrift passt: {zeile!r}"
+            )
+            zellen[treffer] = token[len(treffer):].strip()
+        ergebnis.append(zellen)
+    return ergebnis
+
+
+def _s2_zelle_ist_fehlwert(zellentext: str) -> bool:
+    """NUR das Fehlzeichen U+2013 zaehlt als "Wert fehlt".
+
+    Der Gedankenstrich U+2014 ist eine INHALTLICHE Aussage (Gewitterstufe
+    "keine", unbekannte Niederschlagsart) und ausdruecklich KEIN Verstoss --
+    s. test_ac_s2_4_keine_gewitterstufe_ist_kein_fehlwert. Wer beide gleichsetzt,
+    macht aus einem gewitterfreien Tag faelschlich einen Fehler; wer den
+    Unterschied ganz aufgibt, uebersieht den echten Fehlwert.
+    """
+    return zellentext.strip() == _S2_FEHLZEICHEN
+
+
+# --- AC-S2-1: jede waehlbare Groesse ergibt genau eine Spalte -------------
+
+
+@pytest.mark.parametrize("soll", _S2_SOLL, ids=_S2_SOLL_IDS)
+def test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte(soll):
+    """AC-S2-1: waehlt der Nutzer alle im Vergleich waehlbaren Ausblick-Groessen,
+    traegt der Ausblick fuer JEDE genau eine Spalte -- in der HTML-Tabelle UND
+    im Klartext derselben Mail. Die erwartete Ueberschrift kommt aus dem
+    Katalog (label + aggregation_label), nicht aus ``outlook_columns()``."""
+    html, text = _s2_mail()
+    kopf, _ = _s2_html_ausblick(html)
+    erwartet = soll["ueberschrift"]
+
+    assert kopf.count(erwartet) == 1, (
+        f"AC-S2-1: die HTML-Kopfzeile fuehrt die Ueberschrift {erwartet!r} "
+        f"({soll['key']}) {kopf.count(erwartet)}x statt genau einmal: {kopf}"
+    )
+    for nummer, zellen in enumerate(_s2_klartext_ausblick(text), start=1):
+        assert erwartet in zellen, (
+            f"AC-S2-1: Tageszeile {nummer} des KLARTEXT-Ausblicks fuehrt keine "
+            f"Spalte {erwartet!r} ({soll['key']}), obwohl das HTML sie zeigt -- "
+            f"vorhanden: {sorted(zellen)}"
+        )
+
+
+def test_ac_s2_1_html_und_klartext_zeigen_dieselbe_spaltenmenge():
+    """AC-S2-1 (Gegenrichtung): keine Groesse darf im Klartext fehlen, die im
+    HTML steht -- und keine darf dort ZUSAETZLICH stehen. Ohne diese Richtung
+    bliebe eine ueberzaehlige Spalte unbemerkt."""
+    html, text = _s2_mail()
+    kopf, zeilen = _s2_html_ausblick(html)
+    erwartet = [s["ueberschrift"] for s in _S2_SOLL]
+
+    assert kopf == ["Tag"] + erwartet, (
+        f"AC-S2-1: die HTML-Kopfzeile weicht von der Katalog-Soll-Menge ab.\n"
+        f"Ist:      {kopf}\nErwartet: {['Tag'] + erwartet}"
+    )
+    assert len(zeilen) == len(_S2_TAGE), (
+        f"AC-S2-1: erwartet {len(_S2_TAGE)} Ausblick-Tageszeilen, erhalten "
+        f"{len(zeilen)}"
+    )
+    for zeile in zeilen:
+        assert len(zeile) == len(erwartet) + 1, (
+            f"AC-S2-1: Tageszeile traegt {len(zeile)} Zellen statt "
+            f"{len(erwartet) + 1} (Tag + {len(erwartet)} Groessen): {zeile}"
+        )
+    klartext = _s2_klartext_ausblick(text)
+    assert len(klartext) == len(_S2_TAGE), (
+        f"AC-S2-1: der Klartext-Ausblick hat {len(klartext)} Tageszeilen statt "
+        f"{len(_S2_TAGE)}"
+    )
+    for nummer, zellen in enumerate(klartext, start=1):
+        assert sorted(zellen) == sorted(erwartet), (
+            f"AC-S2-1: Tageszeile {nummer} des Klartexts zeigt andere Spalten "
+            f"als der Katalog verlangt.\nNur im Klartext: "
+            f"{sorted(set(zellen) - set(erwartet))}\nFehlt im Klartext: "
+            f"{sorted(set(erwartet) - set(zellen))}"
+        )
+
+
+# --- AC-S2-2: Soll-Menge gerechnet, nie getippt (Vakuum-Schutz) -----------
+
+
+def test_ac_s2_2_soll_menge_wird_gerechnet_und_ist_plausibel():
+    """AC-S2-2: die geprueften Groessen stammen ausschliesslich aus
+    ``get_compare_metric_catalog()``. Der Plausibilitaets-Waechter schlaegt an,
+    wenn die Menge leer ist, unter die Mindestgroesse faellt, die Rechnung
+    "roh minus nicht-waehlbar = ausgeliefert" nicht aufgeht oder ein Paar kein
+    ``SegmentWeatherSummary``-Feld aufloest. Die parametrisierte Konstante ist
+    der Mutations-Ort, die Neuberechnung hier der unabhaengige Pruefort."""
+    frisch = assert_soll_menge_ist_plausibel()
+
+    assert [s["key"] for s in frisch] == [s["key"] for s in _S2_SOLL], (
+        f"Die parametrisierte Soll-Menge {[s['key'] for s in _S2_SOLL]} weicht "
+        f"vom Katalog {[s['key'] for s in frisch]} ab -- eine im Test "
+        "aufgezaehlte oder gekuerzte Liste ist genau das, was AC-S2-2 verbietet"
+    )
+    # Zweite Aufloesungsbedingung: ``outlook_columns()`` verlangt NEBEN dem
+    # Katalog-Treffer ein ``summary_field_for()``-Ergebnis
+    # (compare_outlook_metric_ids.py:98-100). Beide Bedingungen sind heute
+    # deckungsgleich, aber nicht per Konstruktion -- genau deshalb geprueft.
+    from output.renderers.compare_outlook_metric_ids import resolve_outlook_metrics
+
+    aufgeloest = resolve_outlook_metrics(list(_S2_SOLL_PAARE))
+    assert aufgeloest is not None and len(aufgeloest) == len(_S2_SOLL), (
+        f"AC-S2-2: ``resolve_outlook_metrics()`` verwirft "
+        f"{len(_S2_SOLL) - len(aufgeloest or [])} der {len(_S2_SOLL)} "
+        "Katalog-Paare -- Katalog-Zugehoerigkeit und Feld-Aufloesung sind "
+        "auseinandergelaufen, die verworfenen Groessen haetten gar keine Spalte"
+    )
+    kinds = Counter(s["kind"] for s in _S2_SOLL)
+    assert kinds["ordinal"] >= 1 and kinds["enum"] >= 1 and kinds["range"] >= 1, (
+        f"AC-S2-2: die Soll-Menge belegt nicht mehr alle drei Formzweige von "
+        f"``format_outlook_value()`` (gemessen 2026-08-11: 1 ordinal, 1 enum, "
+        f"23 range) -- gezaehlt: {dict(kinds)}"
+    )
+
+
+# --- AC-S2-3: keine zwei Spalten mit derselben Beschriftung ---------------
+
+
+def test_ac_s2_3_keine_zwei_spalten_mit_gleicher_beschriftung():
+    """AC-S2-3: bei voller Auswahl traegt keine zwei Spalten dieselbe
+    Beschriftung. Die Unterscheidung entsteht dadurch, dass die Auswertung
+    angehaengt wird, sobald derselbe Name mehrfach vorkommt -- die
+    Vakuum-Gegenprobe stellt sicher, dass dieser Zweig ueberhaupt greift
+    (sonst prueft der Test eine Regel, die nie zur Anwendung kommt)."""
+    mehrfach = [n for n, anzahl in Counter(s["label"] for s in _S2_SOLL).items()
+                if anzahl > 1]
+    assert mehrfach, (
+        "Vakuum: keine Groesse kommt im Ausblick-Katalog mehrfach vor -- die "
+        "Auswertungs-Unterscheidung waere nie aktiv und dieser Test bewachte "
+        "nichts (gemessen 2026-08-11: 'Temperatur' und 'Gefuehlte Temperatur')"
+    )
+
+    html, _ = _s2_mail()
+    kopf, _ = _s2_html_ausblick(html)
+    doppelt = [n for n, anzahl in Counter(kopf).items() if anzahl > 1]
+    assert not doppelt, (
+        f"AC-S2-3: die Ausblick-Tabelle traegt mehrfach dieselbe Spalten-"
+        f"beschriftung {doppelt} -- zwei ununterscheidbare Spalten: {kopf}"
+    )
+
+
+# --- AC-S2-4: jede Zelle traegt einen Wert (DER rote Anteil) --------------
+
+
+@pytest.mark.parametrize("soll", _S2_SOLL, ids=_S2_SOLL_IDS)
+def test_ac_s2_4_jede_zelle_traegt_einen_wert(soll):
+    """AC-S2-4: enthalten die Stundendaten fuer eine gewaehlte Groesse Werte,
+    zeigt die zugehoerige Zelle einen Wert und NICHT das Fehlzeichen -- in HTML
+    und Klartext, an jedem der drei Ausblickstage.
+
+    HEUTE ROT fuer fuenf Groessen (Schneehoehe, Neuschnee, Windrichtung,
+    Gefuehlte Temperatur Minimum/Maximum): ``summarize_points()``
+    (weather_metrics.py:1071) verdrahtet die zugehoerigen ``_compute_*``-Regeln
+    nicht, obwohl sie existieren und im Trip-Pfad angeschlossen sind -- s.
+    AC-S2-5."""
+    html, text = _s2_mail()
+    kopf, zeilen = _s2_html_ausblick(html)
+    spalte = kopf.index(soll["ueberschrift"])
+
+    for nummer, zeile in enumerate(zeilen, start=1):
+        assert not _s2_zelle_ist_fehlwert(zeile[spalte]), (
+            f"AC-S2-4: die HTML-Zelle der Spalte {soll['ueberschrift']!r} "
+            f"({soll['key']} -> SegmentWeatherSummary.{soll['summary_field']}) "
+            f"zeigt am Ausblickstag {nummer} das Fehlzeichen "
+            f"{_S2_FEHLZEICHEN!r}, obwohl die Stundendaten den Wert hergeben "
+            "-- der Tages-Aggregationspfad des Vergleichs fuellt das Feld nicht"
+        )
+    for nummer, zellen in enumerate(_s2_klartext_ausblick(text), start=1):
+        assert not _s2_zelle_ist_fehlwert(zellen[soll["ueberschrift"]]), (
+            f"AC-S2-4: die KLARTEXT-Zelle der Spalte {soll['ueberschrift']!r} "
+            f"({soll['key']} -> SegmentWeatherSummary.{soll['summary_field']}) "
+            f"zeigt am Ausblickstag {nummer} das Fehlzeichen "
+            f"{_S2_FEHLZEICHEN!r}"
+        )
+
+
+def test_ac_s2_4_keine_gewitterstufe_ist_kein_fehlwert():
+    """AC-S2-4 (Pflicht-Gegenprobe): ein Tag OHNE Gewitter zeigt in der
+    Gewitter-Zelle den Gedankenstrich U+2014 -- eine inhaltliche Aussage
+    ("keine Stufe"), KEIN fehlender Wert. Verkuerzt man die Unterscheidung in
+    ``_s2_zelle_ist_fehlwert()`` auf "irgendein Strich", muss dieser Test rot
+    werden; bliebe er gruen, prueft AC-S2-4 die Zellen nicht wirklich."""
+    gewitter = next((s for s in _S2_SOLL if s["kind"] == "ordinal"), None)
+    assert gewitter is not None, (
+        "Vakuum: der Compare-Katalog fuehrt keine ordinale Groesse mehr -- die "
+        "Gegenprobe haette keinen Gegenstand"
+    )
+
+    html, _ = _s2_mail("NONE")
+    kopf, zeilen = _s2_html_ausblick(html)
+    zelle = zeilen[0][kopf.index(gewitter["ueberschrift"])]
+
+    assert zelle == _S2_KEINE_ANGABE, (
+        f"Vorbedingung: ohne Gewitter erwartet die Zelle {_S2_KEINE_ANGABE!r} "
+        f"(U+2014, inhaltlich 'keine Stufe'), gemessen: {zelle!r}"
+    )
+    assert not _s2_zelle_ist_fehlwert(zelle), (
+        f"AC-S2-4 (Gegenprobe): {zelle!r} (U+2014) wird als fehlender Wert "
+        f"gewertet -- U+2014 und das Fehlzeichen {_S2_FEHLZEICHEN!r} (U+2013) "
+        "sind zwei verschiedene Aussagen und duerfen nicht gleichgesetzt werden"
+    )
+
+
+# --- AC-S2-5: die beiden Tages-Aggregationspfade decken sich --------------
+
+# Namentlich gefuehrte, bewusste Abweichungen der beiden Pfade (gemessen
+# 2026-08-11 auf demselben Stundensatz). Eine NICHT gelistete Abweichung ist
+# ein Befund -- genau daran ist die Fuenferluecke aus AC-S2-4 entstanden.
+_S2_NUR_TRIP_ERLAUBT = {
+    "confidence_pct_min": (
+        "Vorhersage-Verlaesslichkeit ist keine waehlbare Vergleichs-Groesse "
+        "(confidence.selectable=False, ADR-0005/#710) und hat im Ausblick "
+        "keine Spalte -- eine Verdrahtung in summarize_points() waere "
+        "Scope-Zuwachs ohne Nutzerwirkung"
+    ),
+}
+_S2_NUR_COMPARE_ERLAUBT = {
+    "hail_flag": (
+        "``compute_extended_metrics()`` baut ein NEUES Summary und kopiert "
+        "hail_flag nicht aus dem Basis-Aggregat mit (weather_metrics.py:774ff, "
+        "gesetzt wird es in compute_basis_metrics:459) -- eigener Befund an "
+        "derselben Naht, nicht Gegenstand dieser Scheibe"
+    ),
+}
+
+
+def _s2_aggregat_felder(summary) -> set[str]:
+    return {
+        f.name for f in dataclasses.fields(summary)
+        if f.name != "aggregation_config" and getattr(summary, f.name) is not None
+    }
+
+
+def test_ac_s2_5_beide_tagesaggregationen_fuellen_dieselben_felder():
+    """AC-S2-5: auf DEMSELBEN Stundensatz fuellt der Vergleichspfad
+    (``summarize_points()``) jedes Tagesfeld, das der Trip-Pfad
+    (``compute_extended_metrics()``) fuellt -- und umgekehrt. Abweichungen sind
+    nur zulaessig, wenn sie oben namentlich gefuehrt sind.
+
+    Beide Seiten laufen mit DERSELBEN neutralen Provider-Kennung
+    (``model="aggregate"``, wie ``summarize_points()`` sie selbst setzt), damit
+    das rein metadaten-abgeleitete ``cape_model_id`` keine Schein-Abweichung
+    erzeugt.
+
+    HEUTE ROT: fuenf Felder fehlen dem Vergleichspfad -- dieselben fuenf, deren
+    Ausblick-Zellen in AC-S2-4 das Fehlzeichen tragen. Damit faellt die naechste
+    Drift der beiden handgepflegten Listen auf, statt erneut als Strichspalte
+    beim Nutzer zu landen (#1324/#1391/#1392 sind drei Flicken an derselben
+    Naht)."""
+    punkte = [p for p in _s2_punkte(ThunderLevel.MED) if p.ts.date() == _S2_STARTTAG]
+    dienst = WeatherMetricsService()
+    reihe = NormalizedTimeseries(
+        meta=ForecastMeta(provider=Provider.OPENMETEO, model="aggregate", grid_res_km=0.0),
+        data=list(punkte),
+    )
+    trip = _s2_aggregat_felder(
+        dienst.compute_extended_metrics(reihe, dienst.compute_basis_metrics(reihe))
+    )
+    vergleich = _s2_aggregat_felder(summarize_points(punkte))
+
+    assert trip and vergleich, (
+        f"Vakuum: ein Pfad liefert gar keine Felder (Trip {len(trip)}, "
+        f"Vergleich {len(vergleich)}) -- der Mengenvergleich waere sinnlos"
+    )
+    fehlt_im_vergleich = sorted(trip - vergleich - set(_S2_NUR_TRIP_ERLAUBT))
+    assert not fehlt_im_vergleich, (
+        f"AC-S2-5: der Vergleichspfad ``summarize_points()`` fuellt "
+        f"{fehlt_im_vergleich} nicht, der Trip-Pfad ``compute_extended_metrics()`` "
+        "schon. Jedes dieser Felder ist im Ausblick des Ortsvergleichs eine "
+        "dauerhaft leere Spalte. Entweder die fehlende ``_compute_*``-Regel "
+        "verdrahten oder die Abweichung in _S2_NUR_TRIP_ERLAUBT begruenden."
+    )
+    fehlt_im_trip = sorted(vergleich - trip - set(_S2_NUR_COMPARE_ERLAUBT))
+    assert not fehlt_im_trip, (
+        f"AC-S2-5 (Gegenrichtung): der Trip-Pfad fuellt {fehlt_im_trip} nicht, "
+        "der Vergleichspfad schon -- dieselbe Drift, nur spiegelbildlich "
+        "(so entstand #1391). Ohne diese Richtung bliebe eine gestrichene Zeile "
+        "in ``compute_extended_metrics()`` unbemerkt."
+    )
+    unnoetig = sorted((set(_S2_NUR_TRIP_ERLAUBT) & vergleich)
+                      | (set(_S2_NUR_COMPARE_ERLAUBT) & trip))
+    assert not unnoetig, (
+        f"AC-S2-5: die Ausnahmen {unnoetig} sind gegenstandslos geworden -- "
+        "beide Pfade fuellen die Felder inzwischen. Eintraege streichen, sonst "
+        "deckt die Ausnahmeliste kuenftige Drift zu."
+    )
+
+
+# --- AC-S2-6: der Fix schiesst nicht ueber sein Ziel hinaus ---------------
+
+# Die 20 Zellen, die schon VOR dem Fix einen Wert trugen -- gemessen
+# 2026-08-11 am ersten Ausblickstag der Mail aus ``_s2_mail()``. Schluessel ist
+# der ``SegmentWeatherSummary``-Feldname (stabiler als die Beschriftung, die
+# AC-S2-1 ohnehin bewacht).
+_S2_UNVERAENDERTE_ZELLEN = {
+    "sunny_hours": "4.0 h", "wind_max_kmh": "15 km/h", "cloud_avg_pct": "50 %",
+    "visibility_min_m": "20000 m", "precip_sum_mm": "4.4 mm", "uv_index_max": "4",
+    "temp_max_c": "18 °C", "thunder_level_max": "mittel", "temp_min_c": "6 °C",
+    "gust_max_kmh": "25 km/h", "freezing_level_m": "3000 m", "pop_max_pct": "55 %",
+    "humidity_avg_pct": "70 %", "dewpoint_avg_c": "5 °C",
+    "snowfall_limit_m": "2200 m", "precip_type_dominant": "Regen",
+    "cloud_low_avg_pct": "30 %", "cloud_mid_avg_pct": "40 %",
+    "cloud_high_avg_pct": "20 %", "pressure_avg_hpa": "1013 hPa",
+}
+
+
+def test_ac_s2_6_bereits_gefuellte_zellen_behalten_ihre_werte():
+    """AC-S2-6: der Fix an der Vergleichs-Aggregation darf ueber sein Ziel nicht
+    hinausschiessen -- die 20 heute bereits gefuellten Ausblick-Zellen behalten
+    Wert und Schreibweise. (Die Trip-Mail schuetzt zusaetzlich der Byte-Golden
+    tests/tdd/test_trip_outlook_parity.py; ``summarize_points()`` ist nicht der
+    Trip-Aggregator, ein Bruch dort waere ein Signal, kein Nachziehgrund.)"""
+    alle_felder = {s["summary_field"] for s in _S2_SOLL}
+    assert set(_S2_UNVERAENDERTE_ZELLEN) | set(_S2_DEFEKTE_FELDER) == alle_felder, (
+        "Die Charakterisierung deckt den Katalog nicht mehr ab.\nNicht "
+        f"charakterisiert: {sorted(alle_felder - set(_S2_UNVERAENDERTE_ZELLEN) - set(_S2_DEFEKTE_FELDER))}\n"
+        f"Nicht mehr im Katalog: {sorted(set(_S2_UNVERAENDERTE_ZELLEN) | set(_S2_DEFEKTE_FELDER) - alle_felder)}"
+    )
+
+    html, _ = _s2_mail()
+    kopf, zeilen = _s2_html_ausblick(html)
+    for soll in _S2_SOLL:
+        erwartet = _S2_UNVERAENDERTE_ZELLEN.get(soll["summary_field"])
+        if erwartet is None:
+            continue
+        ist = zeilen[0][kopf.index(soll["ueberschrift"])]
+        assert ist == erwartet, (
+            f"AC-S2-6: die Zelle {soll['ueberschrift']!r} ({soll['key']}) des "
+            f"ersten Ausblickstags zeigt {ist!r} statt {erwartet!r} -- der Fix "
+            "an der Vergleichs-Aggregation hat einen bereits korrekten Wert "
+            "veraendert"
+        )
+
+
+# --- AC-S2-7: Streichungen aus dem Katalog fallen auf ---------------------
+
+
+def test_ac_s2_7_mindestgroesse_faengt_groessere_streichungen():
+    """AC-S2-7 (erste Haelfte): der Vakuum-Schutz aus AC-S2-2 schlaegt an, wenn
+    der Katalog deutlich schrumpft. Geprueft ueber DIESELBE Funktion, die der
+    echte Waechter aufruft (injizierte Katalogkopie statt Monkeypatch) -- eine
+    im Test nachgebaute Pruflogik bewiese nichts."""
+    gekuerzt = COMPARE_METRIC_CATALOG[:len(COMPARE_METRIC_CATALOG) // 2]
+    with pytest.raises(AssertionError) as fehler:
+        assert_soll_menge_ist_plausibel(entries=gekuerzt)
+    assert "Vakuum-Schutz" in str(fehler.value), (
+        f"AC-S2-7: der Plausibilitaets-Waechter scheitert an einem halbierten "
+        f"Katalog aus dem falschen Grund: {fehler.value}"
+    )
+
+
+def test_ac_s2_7_groessenanker_faengt_die_einzelne_streichung():
+    """AC-S2-7 (zweite Haelfte): eine EINZELNE gestrichene Katalog-Zeile faengt
+    diese Achse nicht -- ihre Soll-Menge schruempfte lautlos mit. Sie faengt der
+    unabhaengige, getippte Groessenanker in
+    ``test_compare_metric_catalog_endpoint.py`` (``== 25``, Zeile 519).
+
+    Dieser Test macht die Abhaengigkeit pruefbar statt nur behauptet: wird der
+    Anker bei einer kuenftigen Aufraeumaktion als "hartcodiert, unschoen"
+    entfernt, faellt HIER auf, dass die Deckung ersatzlos weg ist (Lehre aus
+    Scheibe 1, Finding F001 -- dort verwies der Kommentar auf einen Anker, den
+    niemand gegen Loeschung sicherte)."""
+    try:
+        from tests.tdd import test_compare_metric_catalog_endpoint as anker
+    except ImportError as exc:  # pragma: no cover - Datei geloescht
+        raise AssertionError(
+            "AC-S2-7: das Ankermodul tests/tdd/"
+            "test_compare_metric_catalog_endpoint.py ist nicht mehr importierbar "
+            f"-- die einzelne Katalog-Streichung ist damit unbewacht: {exc}"
+        ) from exc
+
+    klasse = getattr(anker, "TestUnknownMetricIdFailsVisibly", None)
+    pruefung = getattr(klasse, "test_real_catalog_resolves_completely", None)
+    assert pruefung is not None, (
+        "AC-S2-7: der getippte Groessenanker "
+        "TestUnknownMetricIdFailsVisibly::test_real_catalog_resolves_completely "
+        "existiert nicht mehr. Er ist die EINZIGE Stelle, die das Streichen "
+        "einer einzelnen Compare-Katalog-Zeile bemerkt -- diese Achse rechnet "
+        "ihr Soll aus demselben Katalog und schrumpft stillschweigend mit. "
+        "Ersatz schaffen, bevor der Anker verschwindet."
+    )
+    pruefung(klasse())
