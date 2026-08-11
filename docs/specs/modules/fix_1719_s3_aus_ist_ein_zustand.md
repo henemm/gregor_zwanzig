@@ -210,10 +210,23 @@ Spalte: `preview: Snippet<…>` (`:28`) ist heute
   - Test: Playwright-Klickpfad liest Chip und Hinweistext; Unit-Test auf das Limit-Modell.
 
 - **AC-5:** Given einen beliebigen Kanal-Reiter / When der Nutzer die Hinweistexte liest /
-  Then enthält keiner davon eine Wertung darüber, welche Werte wichtig sind
-  („entscheidungskritisch", „nur das Wesentliche", „nur Fließtext"), und keiner behauptet, SMS
-  kenne keine Reihenfolge.
-  - Test: Unit-Test über die erzeugten Texte aller drei Kanäle gegen eine Verbotsliste.
+  Then enthält keiner davon eine **Wertung** darüber, welche Werte wichtig sind, und keiner
+  eine **unwahre Behauptung** über die Fähigkeiten des Kanals.
+  - Test: Unit-Test über die erzeugten Texte aller drei Kanäle gegen zwei getrennte Listen.
+  - **Verboten (Wertung):** „entscheidungskritisch", „nur das Wesentliche", „nur die
+    wichtigsten", „läuft flach"/„wird flach".
+  - **Verboten (unwahr):** „140" als Zeichengrenze, „kennt keine Spalten-Reihenfolge",
+    „keine Reihenfolge", „max 8 Spalten" für Telegram.
+  - **Ausdrücklich ERLAUBT:** „kein Raster", „keine Tabelle", „Fließtext", „160 Zeichen",
+    „max 7 Spalten". Das sind gemessene Tatsachen, keine Bevormundung.
+
+  > 🔴 **Spec-Korrektur nach RED-Befund (2026-08-11).** Die Erstfassung führte „kein Raster"
+  > und „nur Fließtext" als verbotene Wendungen. Beides ist **wahr**
+  > (`src/output/renderers/channel_layout.py:48`, `max_table_cols = 0`) — das Verbot hätte eine
+  > korrekte, neutrale Formulierung unmöglich gemacht. Die PO-Regel lautet wörtlich:
+  > *„Platzgrenzen nennen ist erlaubt …, Wertungen nicht."* Getrennt wird also nach
+  > **Wertung** und **Unwahrheit**, nicht nach Wortklang. Gefunden vom Developer in der
+  > RED-Phase.
 
 - **AC-6:** Given den Ortsvergleich / When der Nutzer Versand-Reiter, Alarme-Reiter und
   SMS-Vorschau öffnet / Then nennen auch dort die Kanal-Hinweise die echte Zeichengrenze und
@@ -312,6 +325,22 @@ Test nachträglich passend zu machen.
 Die ACs 1, 2, 3, 4, 6, 7, 8, 9, 10, 11 werden über **echte Browserläufe mit Klickpfad** unter
 `frontend/e2e/` nachgewiesen. Das Deploy-Gate #1558 lädt sechs Seiten und prüft
 Konsolenfehler — es klickt keinen AC durch und genügt **nicht**.
+
+**Zuordnung der Klickpfad-Bündel** (je `*.staging.spec.ts` + `*.staging.setup.ts` +
+`playwright.*.staging.config.ts`):
+
+| Bündel | ACs |
+|---|---|
+| `wetter-metriken-vorschau-entfernt` | AC-1, AC-2 |
+| `kanal-grenzen-und-hinweise` | AC-3, AC-4, AC-8 (Trip) |
+| `kanal-grenzen-ortsvergleich` | AC-6 (`VTBriefingChannels`, `AlertChannelPicker`, `CompareSmsPreview`) |
+| `kanal-abwahl-bleibt-reversibel` | AC-7, AC-9, AC-11 |
+| `metrik-abwahl-schreibt-alle-kanaele-durch` | AC-10 |
+
+> 🔴 **Nachgetragen nach RED-Befund (2026-08-11).** Die Erstfassung nannte die
+> Playwright-Pflicht für AC-3, AC-4, AC-6 und AC-8 im Abschnitt „Testauflage", ohne dass die
+> AC-Einträge selbst ein Bündel benannten — die Lücke wäre erst beim Adversary aufgefallen.
+> Gefunden vom Developer in der RED-Phase.
 
 **Bewusst umzudrehende Bestandstests** (sie kodieren das von ADR-0050 verworfene Verhalten):
 `e2e/layout-tab-route.spec.ts:239-255` (AC-5) und `:418-464` (AC-2/AC-3) erwarten heute
