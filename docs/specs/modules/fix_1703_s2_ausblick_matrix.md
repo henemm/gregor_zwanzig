@@ -214,6 +214,19 @@ bemerkt, statt still eine Strichspalte zu erzeugen.
     Docstring der neuen Achse vermerkt, damit der Anker bei einer künftigen Aufräumaktion
     nicht unbemerkt als „hartcodiert, unschön" verschwindet (Lehre aus Scheibe 1, F001).
 
+- **AC-8:** Gegeben der Fix läuft auf Staging, wenn die Vergleichs-Mail-Vorschau im
+  **echten Browser** für einen Vergleich geöffnet wird, in dem eine der fünf betroffenen
+  Größen für den Ausblick gewählt ist, dann zeigt die Spalte einen Wert statt des
+  Fehlzeichens — und die Browser-Konsole bleibt fehlerfrei.
+  - Test: Playwright gegen Staging, angemeldete Ansicht, Vorschau-Iframe geladen
+    (`frontend/src/lib/components/preview/EmailIframe.svelte` rendert das hier geänderte
+    HTML), Konsolenfehler und `pageerror` eingesammelt, Screenshot als Beleg.
+  - **Begründung, warum das trotz Backend-Scope hierher gehört:** Der Änderungssatz
+    berührt keine Datei unter `frontend/**`, die Wirkung ist aber an der Oberfläche
+    sichtbar. Ein reiner Backend-Nachweis (gerenderte Mail im Test) belegt nicht, dass der
+    Nutzer den Wert auch in der Vorschau sieht. Deploy-Scope trotzdem `--scope backend`
+    setzen — `docs-only` wäre fail-open.
+
 ## Known Limitations
 
 - **Zuordnung bleibt unbewacht.** Ein Wächter, der sein Soll aus demselben Katalog liest
@@ -244,8 +257,10 @@ bemerkt, statt still eine Strichspalte zu erzeugen.
 
 ## Definition of Done
 
-- [ ] AC-1 bis AC-7 grün
+- [ ] AC-1 bis AC-8 grün
 - [ ] Adversary-Verdict VERIFIED, alle drei Pflicht-Mutationen gefangen
+- [ ] Browser-Beleg zu AC-8 im Änderungssatz (Playwright gegen Staging, angemeldete
+      Ansicht, Screenshot + Konsolenprotokoll)
 - [ ] `docs/reference/metric_output_matrix.md`: Fläche 2 (§4.1) auf den neuen Wächter
       umgetragen, Scheibe 2 (§6) auf erledigt, Compare-only-Korrektur vermerkt
 - [ ] Issue #1703 Scheiben-Checkbox gesetzt, Ergebnis kommentiert
