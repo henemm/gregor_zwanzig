@@ -71,14 +71,63 @@ diesem Tag die Zone, kann die Etappe des Weltzeit-Tages eine andere Zone tragen 
 Ortstages. Der Fehler ist dann die Differenz zweier benachbarter Etappen — in aller Regel
 null. Eine Tour dieser Spannweite hat ohnehin keinen eindeutigen „Kalendertag".
 
-**Noch nicht umgesetzt (Stand 2026-08-03).** Der Drilldown folgt der Regel; vier Stellen in
-`src/services/trip_command_processor.py` tun es noch nicht:
+### Wo die Zonen-Auflösung liegt (Stand 2026-08-11, Issue #1697)
+
+Die drei Bausteine waren ursprünglich **private Methoden** auf `TripCommandProcessor`. Seit
+#1697 liegen sie als Modulfunktionen in **`src/services/trip_day.py`** und werden von dort
+geteilt:
+
+| Funktion | Aufgabe |
+|---|---|
+| `trip_tz(trip)` | Rückfall 2: erste Etappe mit Wegpunkten |
+| `display_tz(trip, day_date)` | Zone der Etappe dieses Tages, sonst `trip_tz` |
+| `anchor_tz(trip, now_utc)` | Auflösung der Henne-Ei-Falle: Zone der Etappe des **Weltzeit**-Tages |
+| `trip_local_today(trip, now_utc)` | **der Ortstag der Tour** — das, was `date.today()` ersetzt |
+
+Wer diese Regel anwendet, ruft `trip_local_today()`. Eine eigene Kopie der Zonen-Auflösung
+ist ein Regelverstoß — genau das war der Zustand vor #1697.
+
+### Umgesetzt
+
+- **Drilldown** (#1470) — der ursprüngliche Anlass dieses ADR.
+- **Alarm-Pfad** (#1697, live 2026-08-11): `src/services/trip_alert.py` an allen drei
+  Stellen, die einen Kalendertag bestimmen (`:404` Ablauf-Filter, `:584` Schnappschuss-
+  Anker, `:901` Segmentwahl). Dieser Pfad stand in der Restliste unten **nie drin** und war
+  trotzdem der schwerwiegendste Verstoß: nicht eine falsche Anzeige, sondern **ausbleibende
+  Alarme**. Gemessen für eine gewöhnliche Etappe 08:00–19:00 Ortszeit — Neuseeland verlor
+  die ersten ~4 von 11 Stunden *jedes* Etappentags, Kalifornien die letzten ~2, Mitteleuropa
+  zwei Stunden jede Nacht.
+
+**Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
+eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,
+sucht vorher nach `date.today()`/`datetime.now().date()` im ganzen Produktivcode, statt nur
+die Datei zu nennen, in der er gerade gearbeitet hat.
+
+### Noch nicht umgesetzt (Stand 2026-08-11)
+
+**Briefing-/Versand-Pfad** (`src/services/trip_report_scheduler.py`) — die größte offene
+Fläche, gleiche Ursache, andere Wirkung („Briefing für den falschen Tag" statt „kein Alarm"):
 
 | Ort | Wirkung |
 |---|---|
-| `_handle_query` (`:449-450`) | Auslöser für `/heute`, `/morgen`, `/glance` — **löst einen Versand aus**, nicht nur eine Anzeige. Eigene Abwägung nötig. |
-| `command_date` (`:379`) | Bezugstag für `### ruhetag` |
-| `_show_status` (`:974`), `_show_now` (`:1125`) | `date.today()` = **Prozess**-Zeitzone; auf dem UTC-Server zufällig richtig |
+| `_get_target_date` | Zieltag des Briefings, morgens `date.today()` / abends `+1` |
+| `_get_active_trips` | entscheidet, ob ein Trip überhaupt ein Briefing bekommt |
+| `save_dated` | Schlüssel des Wetter-Schnappschusses — **Schreiber und Leser müssen zusammen umgestellt werden**, sonst findet der Alarm-Pfad den Anker nicht mehr |
+
+**Anzeige, Vorschau, Werkzeuge:** vier Stellen in `src/services/trip_command_processor.py`
+(`_handle_query` — **löst einen Versand aus**, nicht nur eine Anzeige, eigene Abwägung nötig;
+`command_date` für `### ruhetag`; `_show_status` und `_show_now`), dazu
+`inbound_telegram_reader.py`, `preview_service.py`, `api/routers/debug.py` und
+`tools/weather_validation.py`. Zeilennummern bewusst weggelassen — sie waren in der
+Vorfassung dieser Liste binnen Tagen veraltet.
+
+**Bewusst NICHT betroffen** (feste Zone ist dort Absicht, kein Verstoß):
+`forecast_budget._today_utc` und `meteoalarm_budget._today_utc` (Kontingent-Tageswechsel in
+UTC), `alert_daily_limit` und `deviation_alert_engine` (fest `Europe/Vienna`),
+Slot-Stunde im Versand-Orchestrator.
+
+Vollständige Fundstellen-Karte nach Wirkung sortiert:
+`docs/context/fix-1697-ortstag-statt-servertag.md`.
 
 Sie sind bewusst ausgegrenzt, nicht vergessen. Wer sie anfasst, richtet sich nach diesem ADR.
 
