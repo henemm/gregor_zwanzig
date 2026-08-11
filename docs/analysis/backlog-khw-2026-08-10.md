@@ -112,7 +112,8 @@ ankommen sollen, ist das die falsche Einstellung.
 | **#1685** + **#1594** | Alarm-Rauschen: Meldungen, die eine Stunde später das Briefing wiederholt. Auf einem kostenpflichtigen Satellitenkanal ist Rauschen nicht kosmetisch. #1685 ist die Regel, #1594 die Bündelung am Ruhezeit-Ende — gehören zusammen gedacht. |
 | **#1654** | Rohe Programmnamen `MED`/`HIGH` in der Abend-Mail statt „mittel"/„hoch". Kleiner Fix, direkt sichtbar. |
 | **#1670** | Formatdetails Trip-Mail (mobil). Der PO liest die Mail unterwegs auf dem Telefon. |
-| **#1667** / **#1697** | Beide gefixt und gemergt (`a93a33e`, `233a101`). **Vor dem Aufbruch schließen oder den Restumfang benennen** — offene Issues zu erledigter Arbeit verstellen in zehn Tagen die Sicht. |
+| **#1667 S3** | *(korrigiert, s. Abschnitt 6)* Nicht erledigt, sondern zurückgestellt hinter #1697. Enthält die stille Falsch-Ortung: um 02:00 UTC fragt die Segment-Auswahl bei einem Mehr-Etappen-Trip Radar für den **Ort der nächsten Etappe** ab. Trifft den KHW als Mehr-Etappen-Trip. |
+| **#1697** Briefing-Pfad | *(korrigiert, s. Abschnitt 6)* Der Alarm-Pfad folgt seit `233a101` dem Ortstag, der Briefing-Pfad noch nicht. Für AT/IT (UTC+2) ist die Abweichung klein, aber nicht null: betroffen ist das Fenster 22:00–00:00 UTC. |
 | **#1596** | Stiller Rückfall `premium → free` senkt das Alarm-Tageslimit auf 2. Tritt nur bei unlesbarer `user.json` auf — geringe Wahrscheinlichkeit, aber unterwegs nicht diagnostizierbar. |
 | **#1445** (nur der Sofort-Hebel) | AT aus der MeteoAlarm-Länderliste nehmen, weil `GeoSphereWarnSource` Österreich ohnehin abdeckt. Halbiert den REST-Verbrauch für genau die Länder dieser Tour, ohne eine Zeile Code. Der MQTT-Umbau selbst bleibt P2. |
 
@@ -157,15 +158,24 @@ Begründungen für die weniger offensichtlichen Zuordnungen:
 
 ## 6. Dubletten und Schließ-Kandidaten
 
-| Issue | Empfehlung |
-|---|---|
-| **#1707 / #1708** | **Dublette.** Zwei Sitzungen haben denselben Befund im Abstand von fünf Minuten aufgeschrieben. #1708 ist reicher (nennt die vier Fehlwirkungen, die Code-Stellen und die bereits ausgeführte Sofortmaßnahme). Vorschlag: #1707 als Dublette von #1708 schließen, den Dublettenzähler (14 von 14, alle divergent) vorher nach #1708 übernehmen. |
-| **#1697** | Gefixt und gemergt (`233a101`, PR #1705). Schließen. |
-| **#1667** | S1 und S2 gemergt (`70faaa6`, `a93a33e`). Prüfen, ob Restumfang offen ist — sonst schließen. |
-| **#18** | „F9: Satellite Messenger (Garmin inReach)", `status:deferred`. #1676 sagt ausdrücklich: „bleibt deferred — der Premium-SMS-Weg ersetzt die native Integration." Ein Issue, das durch ein anderes ersetzt wurde, gehört geschlossen (`not planned`), nicht aufbewahrt. |
-| **#735** | „SMS-Inbound" überschneidet sich mit #1676 S1, und S1 ist geliefert (`04cabd8`). Entweder schließen oder auf den Restumfang (Kommando-Verarbeitung statt nur Rückadresse) zusammenstreichen. |
+Nach PO-Freigabe am 2026-08-11 geprüft und ausgeführt. **Drei der fünf Kandidaten haben die
+Prüfung nicht überstanden** — sie tragen ausdrücklich dokumentierten offenen Umfang und bleiben
+offen. Das ist der Grund, warum „gemergt" und „fertig" getrennt zu messen sind.
 
-Ich habe **keins** dieser Issues geschlossen — das ist eine PO-Entscheidung.
+| Issue | Geprüft | Ergebnis |
+|---|---|---|
+| **#1707** | Inhaltsvergleich mit #1708 | ✅ **Geschlossen** als Dublette von #1708. Der einzige exklusive Inhalt — die Dubletten-Zählung (14 von 14, keine inhaltsgleich) und die Forderung, die 14 Dateien auch zu *löschen* statt nur umzubenennen — ist vorher nach #1708 übernommen. |
+| **#18** | Ablösung durch #1676 | ✅ **Geschlossen** (`not planned`). Die native E-Mail-Bridge wird nicht gebaut; der Premium-SMS-Weg erfüllt dasselbe Ziel und ist über #1676/#1701/#1702/#1533 vollständig abgebildet. |
+| **#1697** | Kommentar vom 2026-08-11 | ❌ **Bleibt offen.** Trägt wörtlich „🔴 Dieses Issue bleibt offen — der Briefing-Pfad ist noch nicht umgestellt". `_get_target_date`, `_get_active_trips` und `save_dated` im Scheduler rechnen weiter mit dem Servertag, dazu die gesamte „Kette B" (Anzeige, Vorschau, Werkzeuge). Der Alarm-Pfad ist behoben, das Issue nicht. |
+| **#1667** | Kommentare S1/S2 | ❌ **Bleibt offen.** Ausdrückliche PO-Auflage: „🔴 Dieses Issue bleibt bis S3 offen. S1 schließt es nicht — sonst wird aus ‚Tests grün' stillschweigend ‚Lücke zu'." S3 (tagesübergreifende Segment-Auswahl) ist zurückgestellt hinter #1697. Ohne S3 verliert ein Wanderer mit Abendstart bis zu **11 h 50 min** Radar-Überwachung. |
+| **#735** | `inbound_sms_reader.py` am Code gemessen | ❌ **Bleibt offen**, Umfang aber eingegrenzt und im Issue notiert. Der Transport steht (#1676 S1: Nummer gemietet, Polling auf `journal/inbound`, Dedup). Die Funktion fehlt: der Leser hat **null** Verweise auf `TripCommandProcessor` — gegen 6 im Telegram- und 3 im E-Mail-Leser. Er lernt die Rückadresse und wirft den Nachrichtentext weg. |
+
+**Für den KHW folgt daraus eine Korrektur an Abschnitt 4:** #1697 und #1667 standen dort als
+P1-Aufräumposten („schließen oder Restumfang benennen"). Beide sind stattdessen **echte offene
+Arbeit am Alarm-Pfad**. #1667 S3 ist dabei der gewichtigere: eine Etappe, die über Mitternacht
+geht, ist auf einer Hüttenwanderung zwar untypisch — aber der zweite dort gemessene Effekt
+trifft jeden Mehr-Etappen-Trip: um 02:00 UTC greift die Auswahl auf das erste Segment der
+*nächsten* Etappe zu und fragt Radar für den **falschen Ort** ab.
 
 ---
 
