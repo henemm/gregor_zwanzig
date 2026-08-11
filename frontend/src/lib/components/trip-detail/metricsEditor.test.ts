@@ -377,25 +377,27 @@ test('F001: move mit ID die NICHT in `from` liegt ist No-Op (keine Phantom-ID)',
 
 // ---------- AC-5: channelOverflow / CHANNEL_COL_BUDGET ------------------------
 
-// #587: Telegram-Budget von 7→8 angehoben (Signal entfernt).
-test('AC-5: CHANNEL_COL_BUDGET — telegram 8, sms 0, email unbegrenzt (#610: kein signal)', () => {
-	assert.equal(editor.CHANNEL_COL_BUDGET.telegram, 8);
+// Issue #1719 S3 (GREEN, Bestandstest umgedreht): Telegram-Budget von 8 auf 7
+// korrigiert — die 8. vom Backend gerenderte Telegram-Spalte ist die
+// Uhrzeit, keine Metrik (channel_layout.py:110, metric_slots = limit - 1).
+test('AC-5: CHANNEL_COL_BUDGET — telegram 7, sms 0, email unbegrenzt (#610: kein signal)', () => {
+	assert.equal(editor.CHANNEL_COL_BUDGET.telegram, 7);
 	assert.equal(editor.CHANNEL_COL_BUDGET.sms, 0);
 	assert.equal(editor.CHANNEL_COL_BUDGET.email, Infinity);
 	assert.ok(!('signal' in editor.CHANNEL_COL_BUDGET), 'signal darf nicht in CHANNEL_COL_BUDGET sein');
 });
 
-// #587: Budget=8, daher erst ab 9 Spalten überschritten.
-test('AC-5: channelOverflow bei 9 primary → Telegram überschritten', () => {
-	const ov = editor.channelOverflow(9);
-	assert.equal(ov.telegram, true, 'Telegram-Budget 8 überschritten bei 9 Spalten');
+// Issue #1719 S3: Budget=7, daher erst ab 8 Spalten überschritten.
+test('AC-5: channelOverflow bei 8 primary → Telegram überschritten', () => {
+	const ov = editor.channelOverflow(8);
+	assert.equal(ov.telegram, true, 'Telegram-Budget 7 überschritten bei 8 Spalten');
 	assert.equal(ov.email, false, 'Email-Budget unbegrenzt');
 	assert.ok(!('signal' in ov), 'signal darf nicht in channelOverflow sein');
 });
 
-test('AC-5: channelOverflow bei 8 primary → Telegram exakt am Limit (nicht überschritten)', () => {
-	const ov = editor.channelOverflow(8);
-	assert.equal(ov.telegram, false, '8 == Budget ist noch ok');
+test('AC-5: channelOverflow bei 7 primary → Telegram exakt am Limit (nicht überschritten)', () => {
+	const ov = editor.channelOverflow(7);
+	assert.equal(ov.telegram, false, '7 == Budget ist noch ok');
 	assert.equal(ov.email, false);
 });
 
@@ -574,11 +576,13 @@ test('AC-1: applyChannel mit Budget 5 kappt inTable, demoted==overflow', () => {
 	assert.equal(r.demoted, 1);
 });
 
-// #587: Budget=8, daher passt genau 8 in inTable ohne Demote.
-test('AC-1: applyChannel Telegram (8) kappt erst ab der 9. Spalte', () => {
-	const primary = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']; // genau 8
+// Issue #1719 S3 (GREEN, Bestandstest umgedreht): Budget=7 (von 8 korrigiert,
+// die 8. Telegram-Spalte war die Uhrzeit), daher passt genau 7 in inTable
+// ohne Demote.
+test('AC-1: applyChannel Telegram (7) kappt erst ab der 8. Spalte', () => {
+	const primary = ['a', 'b', 'c', 'd', 'e', 'f', 'g']; // genau 7
 	const r = editor.applyChannel(primary, [], editor.CHANNEL_COL_BUDGET.telegram);
-	assert.equal(r.inTable.length, 8);
+	assert.equal(r.inTable.length, 7);
 	assert.equal(r.demoted, 0);
 });
 

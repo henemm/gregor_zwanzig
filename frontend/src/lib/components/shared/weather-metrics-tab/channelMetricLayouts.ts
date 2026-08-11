@@ -77,3 +77,53 @@ export function startChannelOverride(
 		friendlyMap: { ...friendlyMap }
 	};
 }
+
+/**
+ * Issue #1719 Scheibe S3 (AC-8/AC-12, ADR-0050 Regel 1/2): teilt die
+ * Kanal-Reihenfolge in "aktiv" (sortierbar) und "aus" (wieder einschaltbar).
+ *
+ * `active` wird defensiv gegen `globalPrimary` gefiltert — eine Metrik, die
+ * global nicht (mehr) aktiv ist, darf über einen stale Kanal-Override nicht
+ * als "aktiv" zurückkommen. `off` = `globalPrimary` MINUS `active`
+ * (Reihenfolge wie in `globalPrimary`). Eine global abgewählte Metrik
+ * erscheint damit in KEINER der beiden Listen — ein Kanal kann sie nicht
+ * zurückholen, es gibt für sie gar keinen Kanal-Eintrag.
+ */
+export function splitChannelMetricsForDisplay(
+	globalPrimary: string[],
+	channelPrimary: string[]
+): { active: string[]; off: string[] } {
+	const globalSet = new Set(globalPrimary);
+	const active = channelPrimary.filter((id) => globalSet.has(id));
+	const activeSet = new Set(active);
+	const off = globalPrimary.filter((id) => !activeSet.has(id));
+	return { active, off };
+}
+
+/**
+ * Issue #1719 Scheibe S3 (AC-10, Persistenz-Fix — "der wichtigste Test der
+ * Scheibe"): serialisiert JEDEN nicht-`null`-Eintrag aus `channelBuckets`,
+ * nicht nur einen ausgezeichneten "aktiven" Kanal. Ohne diesen Fix geht eine
+ * Durchschreibung (globale Abwahl -> alle Kanal-Overrides) beim Speichern
+ * verloren, sobald der Nutzer nicht im editierten Kanal-Reiter steht
+ * (Kontext-Dokument Abschnitt 10.1) — eine neue ADR-0050-Regel-3-Verletzung,
+ * eingebaut von der Scheibe, die sie beheben soll.
+ *
+ * `channelBuckets[ch] === null` (nie editierter Kanal) lässt den Wert aus
+ * `prevLayouts` unverändert — der Datenverlust-Schutz aus #1575 bleibt
+ * gewahrt (`config_merge.go` ersetzt `channel_layouts` als GANZES, es gehen
+ * also MEHR Kanäle mit, nie weniger). Mutiert `prevLayouts` nicht.
+ */
+export function mergeAllChannelLayoutsForSave(
+	prevLayouts: ChannelLayouts | undefined,
+	channelBuckets: Record<ChannelId, ChannelOverride | null>,
+	buildMetrics: (override: ChannelOverride) => WeatherConfigMetric[]
+): ChannelLayouts {
+	let next: ChannelLayouts = { ...(prevLayouts ?? {}) };
+	for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
+		const override = channelBuckets[ch];
+		if (override === null) continue;
+		next = { ...next, [ch]: buildMetrics(override) };
+	}
+	return next;
+}

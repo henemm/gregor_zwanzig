@@ -21,20 +21,25 @@
 	// eingefuehrt; sie umzuziehen haette CompareEditor.svelte (Legacy) beruehrt,
 	// was ausserhalb des C1-Scopes liegt (CLAUDE.md: "NICHT anfassen").
 	import SavePresetDialog from './weather-metrics-tab/SavePresetDialog.svelte';
-	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	// v2 Sub-Komponenten (neu, standalone, keine Abhängigkeit von OutputLayoutEditor)
 	import WeatherV2PresetBar from './weather-metrics-tab/WeatherV2PresetBar.svelte';
 	import WeatherV2Grundauswahl from './weather-metrics-tab/WeatherV2Grundauswahl.svelte';
 	import WeatherV2Reihenfolge from './weather-metrics-tab/WeatherV2Reihenfolge.svelte';
 	// WeatherV2Kanaele entfernt in Issue #736 (Kanal-Config → Versand-Reiter)
-	import WeatherV2MailPreview from './weather-metrics-tab/WeatherV2MailPreview.svelte';
+	// Issue #1719 Scheibe S3: WeatherV2MailPreview ("So kommt es an") ist
+	// ersatzlos entfernt (PO-Entscheid) — samt Mobile-FAB/Sheet weiter unten.
 	// Issue #1232 Scheibe 3b: geteilter Layout-Organism (Scheibe 3a) ersetzt das
-	// bisherige `.v2-layout`-Grid für den Ausgabe-Teil (Reihenfolge + Vorschau).
+	// bisherige `.v2-layout`-Grid für den Ausgabe-Teil (Reihenfolge).
 	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
 	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
 	// Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (nur context="route").
+	// Issue #1719 Scheibe S3: splitChannelMetricsForDisplay (aktiv/Aus-Gruppe,
+	// AC-8/AC-12) + mergeAllChannelLayoutsForSave (Persistenz-Fix, AC-10) —
+	// `mergeChannelLayoutsForSave` bleibt als Funktion bestehen (eigener Test,
+	// #1575), wird hier aber nicht mehr aufgerufen.
 	import {
-		mergeChannelLayoutsForSave, startChannelOverride, channelOverrideFromMetrics,
+		startChannelOverride, channelOverrideFromMetrics,
+		splitChannelMetricsForDisplay, mergeAllChannelLayoutsForSave,
 		type ChannelOverride,
 	} from './weather-metrics-tab/channelMetricLayouts.ts';
 	import ThresholdMetricRow from './weather-metrics-tab/ThresholdMetricRow.svelte';
@@ -218,7 +223,6 @@
 	let aggregationsMap = $state<Record<string, string[]>>({});
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
-	let mailSheetOpen = $state(false);
 	let pendingPreset: string | null = $state(null);
 	let profile = $state<{ mail_to?: string; telegram_chat_id?: string; sms_to?: string } | null>(null);
 	// Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
@@ -244,6 +248,14 @@
 	// Effektive Sicht eines Kanals: eigener Eintrag, sonst die globale Auswahl.
 	function channelView(ch: ChannelId): ChannelOverride {
 		return channelBuckets[ch] ?? { buckets, friendlyMap };
+	}
+
+	// Issue #1719 S3 (AC-8/AC-12): "aktiv" (sortierbar) vs. "Aus in diesem
+	// Kanal" (wieder einschaltbar) — aktiv wird defensiv gegen die globale
+	// Grundauswahl gefiltert, aus = globale Grundauswahl MINUS aktiv. Eine
+	// global abgewählte Metrik erscheint damit in keiner der beiden Listen.
+	function channelListSections(ch: ChannelId): { active: string[]; off: string[] } {
+		return splitChannelMetricsForDisplay(buckets.primary, channelView(ch).buckets.primary);
 	}
 
 	// AC-2 Diff-Highlight: 2,5s Aufleuchten nach jeder Änderung.
@@ -667,6 +679,25 @@
 			const newBuckets = move(buckets, id, from, to);
 			applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
 			buckets = newBuckets;
+			// Issue #1719 S3 (ADR-0050 Regel 3): eine globale ABWAHL wirkt SOFORT
+			// in allen bereits vorhandenen Kanal-Overrides — die Zeile verschwindet
+			// dort aus der aktiven Liste. Die EINWAHL-Richtung schreibt bewusst
+			// NICHT durch (Grundsatz "keine Bevormundung", Spec Abschnitt 4): die
+			// Zeile ist ab S3 im Kanal-Reiter selbst sichtbar (Aus-Gruppe), der
+			// Nutzer entscheidet dort, ob er sie dort auch wieder aktiviert.
+			if (wasOn) {
+				const nextChannelBuckets = { ...channelBuckets };
+				for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
+					const override = nextChannelBuckets[ch];
+					if (override === null || !override.buckets.primary.includes(id)) continue;
+					const updatedOverride: ChannelOverride = {
+						buckets: move(override.buckets, id, 'primary', 'off'),
+						friendlyMap: override.friendlyMap,
+					};
+					nextChannelBuckets[ch] = updatedOverride;
+				}
+				channelBuckets = nextChannelBuckets;
+			}
 		}
 		if (selectedTemplate) selectedTemplate = '';
 		scheduleAutoSave();
@@ -685,6 +716,20 @@
 		userTouched = true;
 		editActiveChannel((view) => ({
 			buckets: move(view.buckets, id, 'primary', 'off'),
+			friendlyMap: view.friendlyMap,
+		}));
+		if (selectedTemplate) selectedTemplate = '';
+		scheduleAutoSave();
+	}
+
+	// Issue #1719 S3 (AC-7, ADR-0050 Regel 4): aus der "Aus in diesem
+	// Kanal"-Gruppe wieder aktivieren (→ primary) — kanal-eigen, Gegenstück
+	// zu onRemove. Wirkt NUR auf den aktiven Kanal, nie auf die Grundauswahl
+	// oder andere Kanäle (keine Durchschreibung in dieser Richtung).
+	function onRestoreMetric(id: string) {
+		userTouched = true;
+		editActiveChannel((view) => ({
+			buckets: move(view.buckets, id, 'off', 'primary'),
 			friendlyMap: view.friendlyMap,
 		}));
 		if (selectedTemplate) selectedTemplate = '';
@@ -752,18 +797,20 @@
 	}
 
 	function buildWeatherPayload() {
-		// Issue #1575 Scheibe 3: `config_merge.go` ersetzt `channel_layouts`
-		// komplett — deshalb geht IMMER der vollstaendige Stand aller bereits
-		// editierten Kanaele mit, nicht nur der aktive (AC-3, Datenverlust-Schutz).
-		const override = channelBuckets[activeChannel];
-		const nextLayouts = mergeChannelLayoutsForSave(
+		// Issue #1575 Scheibe 3 / #1719 Scheibe S3 (AC-10, Persistenz-Fix):
+		// `config_merge.go` ersetzt `channel_layouts` komplett — deshalb geht
+		// IMMER der vollstaendige Stand ALLER bereits editierten Kanaele mit,
+		// nicht nur der aktive (Datenverlust-Schutz #1575). Bis S2 wurde nur
+		// `activeChannel` serialisiert — eine Durchschreibung (Regel 3) in einen
+		// NICHT aktiven Kanal ging dadurch beim Speichern verloren (Kontext-
+		// Dokument Abschnitt 10.1). `mergeAllChannelLayoutsForSave` serialisiert
+		// jeden nicht-null Eintrag aus `channelBuckets`.
+		const nextLayouts = mergeAllChannelLayoutsForSave(
 			trip!.display_config?.channel_layouts,
-			activeChannel,
-			override
-				? buildWeatherConfigMetrics(
-					override.buckets, override.friendlyMap, horizonsMap, catalog, aggregationsMap,
-				)
-				: null,
+			channelBuckets,
+			(override) => buildWeatherConfigMetrics(
+				override.buckets, override.friendlyMap, horizonsMap, catalog, aggregationsMap,
+			),
 		);
 		return {
 			...(trip!.display_config ?? {}),
@@ -1261,24 +1308,22 @@
 			<!-- Fresh-Eyes-Fund #1232-3b: colCount zählt reine Metriken (ohne "+1"
 			     Label-Spalte, die aus dem vergleich-Kontext stammt und dort
 			     Orte-als-Spalten korrekt mitzählt) — die Trip-Kappung
-			     (WeatherV2Reihenfolge/WeatherV2MailPreview: tgBudget = Anzahl
-			     Metriken, Zeitspalte zählt nicht mit) erwartet dieselbe reine
-			     Metriken-Zählung, sonst weicht der Overflow-Chip von Cut-Line
-			     und Vorschau-Hinweis ab. -->
+			     (WeatherV2Reihenfolge: tgBudget = Anzahl Metriken, Zeitspalte
+			     zählt nicht mit) erwartet dieselbe reine Metriken-Zählung, sonst
+			     weicht der Überlauf-Chip von der Kapplinie ab. -->
 			{#if sections.includes('reihenfolge')}
-			<!-- Issue #1575 Scheibe 3: Reihenfolge-Karte UND Vorschau zeigen die
-			     EFFEKTIVE Auswahl des aktiven Kanals (eigener Eintrag, sonst die
-			     globale) — ohne das bliebe der Reiter eine reine Vorschau-Umschaltung. -->
+			<!-- Issue #1575 Scheibe 3: Reihenfolge-Karte zeigt die EFFEKTIVE
+			     Auswahl des aktiven Kanals (eigener Eintrag, sonst die globale). -->
 			<LayoutTab
 				context="route"
 				bind:channel={activeChannel}
-				colCount={channelView(activeChannel).buckets.primary.length}
+				colCount={channelListSections(activeChannel).active.length}
 				subjectLabel="Metriken"
 			>
 				{#snippet editor({ channel })}
 					<Card padding={0}>
 						<WeatherV2Reihenfolge
-							primaryColumns={channelView(channel).buckets.primary}
+							primaryColumns={channelListSections(channel).active}
 							{metricById}
 							friendlyMap={channelView(channel).friendlyMap}
 							activeChannel={channel}
@@ -1286,19 +1331,10 @@
 							onRemove={onRemove}
 							onDndReorder={onDndReorder}
 							{onMode}
+							offColumns={channelListSections(channel).off}
+							onRestore={onRestoreMetric}
 						/>
 					</Card>
-				{/snippet}
-				{#snippet preview({ channel })}
-					<WeatherV2MailPreview
-						primaryColumns={channelView(channel).buckets.primary}
-						{metricById}
-						friendlyMap={channelView(channel).friendlyMap}
-						{telegramKurzform}
-						{highlight}
-						{channel}
-						{context}
-					/>
 				{/snippet}
 			</LayoutTab>
 			{/if}
@@ -1564,24 +1600,8 @@
 			</div>
 		</div>
 
-		<!-- Mobile: fixierter "So kommt es an"-Button → Mail-Vorschau als Bottom-Sheet (#618) -->
-		<button class="mobile-mail-fab" data-testid="mobile-mail-fab" onclick={() => (mailSheetOpen = true)}>
-			<span>So kommt es an</span>
-			<span class="mobile-mail-fab__badge">{buckets.primary.length + (buckets.secondary?.length ?? 0)} Metriken</span>
-		</button>
-		<Sheet open={mailSheetOpen} onClose={() => (mailSheetOpen = false)} title="So kommt es an">
-			<div data-testid="mobile-mail-sheet" style="padding: 4px 16px 24px;">
-				<WeatherV2MailPreview
-					primaryColumns={channelView(activeChannel).buckets.primary}
-					{metricById}
-					friendlyMap={channelView(activeChannel).friendlyMap}
-					{telegramKurzform}
-					{highlight}
-					channel={activeChannel}
-					{context}
-				/>
-			</div>
-		</Sheet>
+		<!-- Issue #1719 Scheibe S3 (PO-Entscheid): der Mobile-FAB "So kommt es an"
+		     + Bottom-Sheet (#618) ist mit der Live-Vorschau ersatzlos entfernt. -->
 
 		<!-- Dialoge & Overlays -->
 		<SavePresetDialog
@@ -1627,10 +1647,6 @@
 	.load-error-msg {
 		color: var(--g-danger);
 		font-size: var(--g-text-sm);
-	}
-	/* Issue #618: FAB auf Desktop versteckt */
-	.mobile-mail-fab {
-		display: none;
 	}
 	.save-bar {
 		display: flex;
@@ -1726,48 +1742,6 @@
 		}
 		.save-bar {
 			padding: var(--g-s-3) var(--g-s-4);
-		}
-		/* Inline-Vorschau auf Mobil verstecken (kommt stattdessen als Sheet, #618).
-		   Ersetzt das bisherige .preview-col{display:none} — jetzt die
-		   LayoutTab-eigene Vorschau-Spalte (KL-1). */
-		:global(.layout-tab[data-context='route'] .lt-col-preview) {
-			display: none;
-		}
-		/* Issue #618: Floating FAB mobil.
-		   F001 (Staging-Adversary #1232-3b): z-index:20/bottom:16px lag HINTER
-		   der globalen BottomNav (z-index:50, 64px + safe-area, BottomNav.svelte
-		   Z.27/28) — echte Klicks trafen den Nav-Link statt den FAB. Fix nach
-		   etabliertem Muster (SaveIndicator.svelte Z.74-78: „Mobile: über
-		   BottomNav (64px Höhe + safe-area)"): bottom-Offset über die Nav-Höhe
-		   heben, z-index über 50 (unter Sheet.svelte 60/61, damit der FAB beim
-		   offenen Bottom-Sheet dahinter bleibt). */
-		.mobile-mail-fab {
-			position: fixed;
-			bottom: calc(64px + env(safe-area-inset-bottom) + 16px);
-			left: 14px;
-			right: 14px;
-			z-index: 55;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			gap: 10px;
-			padding: 14px;
-			border: none;
-			border-radius: var(--g-r-pill);
-			background: var(--g-ink);
-			color: var(--g-paper);
-			font-size: 14px;
-			font-weight: 600;
-			cursor: pointer;
-			box-shadow: 0 4px 20px rgba(26, 26, 24, 0.25);
-		}
-		.mobile-mail-fab__badge {
-			font-family: var(--g-font-mono);
-			font-size: 11px;
-			opacity: 0.7;
-			background: rgba(255, 255, 255, 0.15);
-			padding: 2px 8px;
-			border-radius: 999px;
 		}
 	}
 	/* Issue #1311 (C1): Vergleich-Grundauswahl — schlanke Checkbox-Liste. */

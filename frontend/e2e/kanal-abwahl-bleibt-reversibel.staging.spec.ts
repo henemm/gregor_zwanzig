@@ -170,8 +170,23 @@ test.describe('Issue #1719 S3 Block C: "Aus" ist ein Zustand', () => {
 		const tab = await openMetricsTab(page, TRIP_AC9);
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle');
 
-		// SMS-Reiter öffnen -> copy-on-write legt die Kanal-Kopie an, "precipitation" ist dort aktiv.
+		// SMS-Reiter öffnen und EDITIEREN ("wind" dort abwählen) -> erst eine
+		// echte Editier-Geste (nicht der bloße Tab-Wechsel) löst das
+		// Copy-on-write aus (editActiveChannel) und legt die SMS-Kanal-Kopie an
+		// — "precipitation" bleibt darin aktiv. 🔴 Mutations-Gegenprobe-Fund
+		// (GREEN-Phase, 2026-08-11): ein bloßer Tab-Klick erzeugt KEINE
+		// Kanal-Kopie (channelBuckets.sms bliebe null) — die Durchschreibung
+		// (Regel 3), die dieser Test eigentlich prüfen soll, würde dann nie
+		// ausgeführt, weil es nichts durchzuschreiben gäbe (die Anzeige wäre
+		// über den Null-Fallback auf die globale Auswahl trotzdem "zufällig"
+		// korrekt — ohne die Durchschreibung je zu testen).
 		await tab.getByTestId('channel-tab-sms').click();
+		const windRowAc9 = tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]');
+		await expect(windRowAc9).toBeVisible();
+		await windRowAc9.getByRole('button', { name: 'Aus' }).click();
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
+			timeout: 10_000
+		});
 		await expect(
 			tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]')
 		).toBeVisible();

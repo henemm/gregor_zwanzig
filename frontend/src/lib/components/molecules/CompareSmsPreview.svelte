@@ -2,7 +2,10 @@
 	// Issue #578 — CompareSmsPreview-Molecule.
 	// Kanonische Quelle: molecules.jsx::CompareSmsPreview
 	//
-	// Token-Format ≤ 140 Zeichen. Warn-Farbe #f0a060 bei Überschreitung.
+	// Token-Format ≤ 153 Zeichen (Issue #1719 S3: von der falschen 140 auf den
+	// gemessenen Vergleichspfad-Wert korrigiert — GSM-7/UDH-Rechnung
+	// floor((140-6)*8/7), src/output/renderers/channel_layout.py:45-54).
+	// Warn-Farbe #f0a060 bei Überschreitung.
 	//
 	// Issue #1270 (ADR-0011): reine ANZEIGE-HÜLLE. Die Komponente baut den
 	// SMS-Text nicht mehr selbst (kein Rang, keine Punktzahl — #1110) und kappt
@@ -12,7 +15,9 @@
 	// preview/SmsPhoneFrame.svelte:24,59,64 (fetch → token_line/char_count zeigen).
 	// Visuelle Chrome (Farben, Bubble-Optik, Zeichenzähler) bleibt unverändert.
 
-	const COMPARE_SMS_MAX = 140;
+	import { SMS_COMPARE_CHAR_LIMIT } from '$lib/components/shared/layout-tab/ltChannels';
+
+	const COMPARE_SMS_MAX = SMS_COMPARE_CHAR_LIMIT;
 
 	interface Props {
 		/** Fertig gerenderter SMS-Text aus dem Backend. */

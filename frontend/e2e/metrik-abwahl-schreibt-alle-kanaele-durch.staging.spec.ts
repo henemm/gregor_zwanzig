@@ -73,7 +73,8 @@ async function createTrip(request: APIRequestContext) {
 			display_config: {
 				metrics: [
 					{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 },
-					{ metric_id: 'precipitation', enabled: true, bucket: 'primary', order: 1 }
+					{ metric_id: 'precipitation', enabled: true, bucket: 'primary', order: 1 },
+					{ metric_id: 'temperature', enabled: true, bucket: 'primary', order: 2 }
 				]
 			},
 			stages: [
@@ -113,12 +114,19 @@ test.describe('Issue #1719 S3 AC-10: globale Abwahl im E-Mail-Reiter schreibt au
 			timeout: 10_000
 		});
 
-		// SMS-Reiter öffnen -> copy-on-write legt die Kanal-Kopie an ("gust" bleibt
-		// darin aktiv). Diese Kopie existiert danach eigenständig in channelBuckets.sms.
+		// SMS-Reiter öffnen und EDITIEREN ("precipitation" dort abwählen) -> erst
+		// eine echte Editier-Geste (nicht der bloße Tab-Wechsel) löst das
+		// Copy-on-write aus (editActiveChannel, WeatherMetricsTab.svelte) und legt
+		// die SMS-Kanal-Kopie an ("gust" bleibt darin aktiv, "precipitation" wird
+		// SMS-eigen abgewählt). Diese Kopie existiert danach eigenständig in
+		// channelBuckets.sms — Vorbild: metrik-grundauswahl-schneidet-kanal.staging.spec.ts (S2).
 		await tab.getByTestId('channel-tab-sms').click();
-		await expect(
-			tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]')
-		).toBeVisible();
+		const precipRow = tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]');
+		await expect(precipRow).toBeVisible();
+		await precipRow.getByRole('button', { name: 'Aus' }).click();
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
+			timeout: 10_000
+		});
 
 		// Zurück zum E-Mail-Reiter -- HIER steht der Nutzer beim Abwählen (AC-10-Kern:
 		// activeChannel ist "email", NICHT "sms").
@@ -131,6 +139,31 @@ test.describe('Issue #1719 S3 AC-10: globale Abwahl im E-Mail-Reiter schreibt au
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});
+
+		// 🔴 Mutations-Gegenprobe M1 (Fund aus der GREEN-Phase, 2026-08-11): der
+		// RAW gespeicherte Stand muss geprüft werden, NICHT nur die Anzeige. Das
+		// Frontend filtert die Kanal-Anzeige defensiv gegen die aktuelle globale
+		// Auswahl (channelListSections/splitChannelMetricsForDisplay) — diese
+		// Filterung würde einen kaputten Persistenz-Fix (M1: buildWeatherPayload
+		// serialisiert wieder nur activeChannel) an der ANZEIGE vollständig
+		// maskieren, weil "gust" ohnehin schon über die globale Metrik-Liste
+		// herausgefiltert wird. Der einzige Ort, an dem M1 sichtbar wird, ist der
+		// GESPEICHERTE `channel_layouts.sms`-Stand selbst — deshalb hier direkt
+		// per API prüfen, bevor überhaupt reloaded wird (Vorbild:
+		// layout-tab-route.spec.ts:453-463, #1575-Bestandstest).
+		const savedTrip = await (await request.get(`/api/trips/${TRIP_ID}`)).json();
+		const savedSmsLayout = savedTrip.display_config?.channel_layouts?.sms ?? [];
+		const savedSmsActiveIds = savedSmsLayout
+			.filter((m: { enabled: boolean }) => m.enabled)
+			.map((m: { metric_id: string }) => m.metric_id);
+		expect(
+			savedSmsActiveIds,
+			'AC-10 FAIL (M1): der GESPEICHERTE SMS-Kanal-Layout-Stand enthält "gust" noch als aktiv — ' +
+				'buildWeatherPayload hat beim Speichern (Nutzer stand im E-Mail-Reiter) nicht den vollständigen ' +
+				'channelBuckets-Stand serialisiert, nur den aktiven Kanal. Die Editor-ANZEIGE würde das durch ' +
+				'defensive Filterung gegen die globale Auswahl trotzdem korrekt zeigen — nur der gespeicherte ' +
+				'Stand verrät den Fehler.'
+		).not.toContain('gust');
 
 		// Reload -> der SMS-Reiter (NICHT der zuletzt aktive E-Mail-Reiter) zeigt
 		// "gust" weder aktiv noch in der Aus-Gruppe (AC-8: global abgewählt heisst

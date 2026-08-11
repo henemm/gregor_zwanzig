@@ -224,6 +224,18 @@ Spalte: `preview: Snippet<…>` (`:28`) ist heute
   Spaltengrenze für SMS.
   - Test: Playwright-Klickpfad liest Chip und Hinweistext; Unit-Test auf das Limit-Modell.
 
+- **AC-5a:** Given den **Versand-Reiter eines Trips** / When der Nutzer den SMS-Hinweis liest
+  / Then enthält `CTX_LEAD.route` (`VTBriefingChannels.svelte:118`) keine Wertung.
+  - Test: Unit-Test gegen dieselbe `BANNED_WERTUNG`-Liste, angewandt auf
+    `VTBriefingChannels` statt auf `ltCapNoteText`.
+
+  > 🔴 **Nachgetragen nach Adversary-Befund F002 (2026-08-11).** Die Zeile wurde von „SMS
+  > läuft flach" bereinigt, aber **kein** Test im Repo deckt sie ab:
+  > `channelHintTextNoJudgement.test.ts` prüft laut eigenem Kopfkommentar ausschließlich
+  > `ltCapNoteText`, und der einzige Playwright-Test auf „läuft flach" ist auf den
+  > **Ortsvergleich** gescoped. Ausgerechnet der Trip-Versand-Reiter — die Stelle, an der
+  > die Bevormundung ursprünglich stand — hätte nach dieser Lieferung keinen Wächter.
+
 - **AC-5:** Given einen beliebigen Kanal-Reiter / When der Nutzer die Hinweistexte liest /
   Then enthält keiner davon eine **Wertung** darüber, welche Werte wichtig sind, und keiner
   eine **unwahre Behauptung** über die Fähigkeiten des Kanals.
@@ -296,25 +308,62 @@ Spalte: `preview: Snippet<…>` (`:28`) ist heute
 - **AC-13:** Given die drei Vergleichs-Einbettungen der Reihenfolge-Liste (Übersicht,
   Ausblick, Stundenverlauf) / When dort „Aus" geklickt wird / Then verhält sich die Liste
   **exakt wie vor dieser Scheibe** — die Zeile verschwindet, es entsteht keine Aus-Gruppe.
-  - Test: `compare-outlook-metric-selection.staging.spec.ts:421-429` und `:608` bleiben
-    **unverändert** grün. Das ist der Lackmustest der Abgrenzung.
+  - Test: **AST-Strukturwächter** `compare_outlook_metric_selection_structure.test.ts` und
+    `compare_hourly_layout_controls_structure.test.ts` prüfen, dass am
+    `WeatherV2Reihenfolge`-Aufruf **kein** `offColumns`- und **kein** `onRestore`-Attribut
+    hängt. Zusätzlich: `wm2-aus-gruppe` hat im Vergleichs-Kontext `toHaveCount(0)`.
+    `compare-outlook-metric-selection.staging.spec.ts:421-429` und `:608` bleiben
+    **unverändert** grün — als Regressionsschutz, **nicht** als Nachweis der Abgrenzung.
+
+  > 🔴 **Vierte Spec-Korrektur nach Adversary-Befund F001 (2026-08-11).** Die Erstfassung
+  > nannte `compare-outlook-metric-selection.staging.spec.ts:421-429/:608` den „Lackmustest
+  > der Abgrenzung". **Das war falsch, und der Adversary hat es nachgestellt:** beide
+  > Assertions zählen ausschließlich `wm2-reihenfolge-row`. Reicht man `offColumns` an eine
+  > Vergleichs-Einbettung durch, bleibt diese Zählung korrekt — die zusätzliche Aus-Gruppe
+  > erscheint im DOM, ohne dass eine Assertion sie bemerkt. Die Mutation lief gegen **34**
+  > einschlägige Tests grün.
+  >
+  > Die AST-Wächter sind der bessere Ort: sie prüfen die **Aufrufer-Signatur**, laufen
+  > **offline** (kein Staging nötig) und hätten M5 sofort gefangen. Merksatz, in dieser
+  > Scheibe zum zweiten Mal: *Ein benannter Wächter ist kein Nachweis, solange niemand die
+  > Mutation gegen ihn laufen ließ.*
 
 ## Mutations-Gegenproben (PFLICHT)
 
 | # | Verfälschung | MUSS rot werden |
 |---|---|---|
 | M1 | in `buildWeatherPayload` wieder nur `activeChannel` serialisieren | **AC-10** (und nur AC-10) |
-| M2 | Durchschreibung bei Abwahl entfernen | AC-9 **und** AC-10 |
+| M2 | Durchschreibung bei Abwahl entfernen | **AC-10** — *nicht* AC-9, s. Korrektur 3 |
 | M3 | Durchschreibung auch bei **Anwahl** ausführen | AC-11 |
 | M4 | Aus-Gruppe aus der Grundauswahl statt aus dem globalen Maximum speisen | AC-8 |
-| M5 | `offColumns` an einer Vergleichs-Einbettung durchreichen | **AC-13** |
+| M5 | `offColumns` an einer Vergleichs-Einbettung durchreichen | **AC-13** — über die **AST-Wächter**, nicht über die Zeilen-Zählung (s. Korrektur 4) |
 | M6 | Telegram-Limit zurück auf 8 | AC-3 |
 | M7 | Kapplinie zählt Aus-Zeilen mit | AC-12 |
+
+> 🔴 **Dritte Spec-Korrektur nach GREEN-Befund (2026-08-11).** Die Erstfassung verlangte
+> „M2 ⇒ AC-9 **und** AC-10". **AC-9 kann M2 architektonisch nicht sehen**, und das ist kein
+> Testfehler, sondern eine Folge bewusst doppelter Absicherung: die Aus-Gruppe filtert in
+> `splitChannelMetricsForDisplay` **immer** gegen die aktuelle Grundauswahl (nötig für Regel
+> 1/2). Die Anzeige ist damit auch dann richtig, wenn die Durchschreibung ausbleibt — nur der
+> **gespeicherte** Stand verrät ihr Fehlen. AC-9 bleibt als Anzeige-Zusicherung bestehen und
+> ist wertvoll; den Nachweis der Durchschreibung trägt allein AC-10 über seinen
+> Rohdaten-Abruf. Vom Developer gemeldet statt umgangen.
+>
+> **Was die Durchschreibung dann überhaupt bewirkt:** Datenhygiene, nicht Anzeige. Ohne sie
+> schriebe der Editor weiterhin den von ADR-0050 verbotenen Zustand in die Trip-Datei — der
+> Backend-Schnitt aus S2 räumt ihn beim *Lesen* weg, aber die gespeicherten Daten blieben in
+> sich widersprüchlich. Genau dieser Widerspruch war der Ausgangsbefund von S1.
 
 Wird eine Verfälschung von **keinem** Test gefangen, ist das ein Befund — kein Grund, den
 Test nachträglich passend zu machen.
 
 ## Known Limitations
+
+- **M1 und M2 sind bislang nur am Code nachverfolgt, nicht gemessen.** Beide werden allein von
+  AC-10 gefangen, und AC-10 ist ein Playwright-Klickpfad, der gegen Staging laufen muss.
+  Solange der Lauf aussteht, ist die Zusicherung „der Persistenz-Fix ist bewacht"
+  **begründet, aber unbelegt**. Sie wird erst mit dem Staging-Lauf zur Messung — vorher darf
+  sie niemand als erbracht zitieren.
 
 - **Eine wieder eingeschaltete Metrik landet am Ende der Reihenfolge**, nicht an ihrer
   früheren Position. `buckets.off` ist ungeordnet und `buildWeatherConfigMetrics` schreibt
