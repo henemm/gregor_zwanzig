@@ -130,7 +130,14 @@ func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 		}
 
 		user, err := s.LoadUser(req.Username)
-		if err != nil || user == nil {
+		if err != nil {
+			log.Printf("login: user.json unreadable/corrupt for %s: %v", req.Username, err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(401)
+			w.Write([]byte(`{"error":"invalid credentials"}`))
+			return
+		}
+		if user == nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(401)
 			w.Write([]byte(`{"error":"invalid credentials"}`))

@@ -273,7 +273,14 @@ def _load_resend_allowlist(data_dir: str | None = None) -> frozenset[str]:
         profile_path = users_root / user_id / "user.json"
         try:
             profile = json.loads(profile_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+        except FileNotFoundError:
+            # #1596 AC-4: gar keine user.json ist der legitime Normalfall
+            # (Profil noch nicht angelegt) und bleibt bewusst still.
+            continue
+        except (OSError, ValueError) as exc:
+            logger.warning(
+                "user.json unreadable/corrupt for %s at %s: %s", user_id, profile_path, exc
+            )
             continue
         # Adversary F001: gültiges JSON, das aber kein Objekt ist (z.B. `[]`
         # oder `null`), darf NICHT crashen — .get() existiert nur auf dict.
