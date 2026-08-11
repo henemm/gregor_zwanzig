@@ -331,12 +331,19 @@ Produkt mit zwei Schwellen; eine dritte zu erfinden wäre Eigenkalibrierung.
 Heute wird CAPE pauschal auf „leicht" gedeckelt, weil die Gegengröße fehlt. Künftig entscheidet
 die Konvektionshemmung, **wie viel** von der Energie überhaupt zählt:
 
+🔴 **Korrektur 2026-08-11 (Umsetzung #1679 CIN-Teil):** Die Grenzen unten waren beim Schreiben
+absichtlich unscharf formuliert ("0 bis −25" ohne Klarheit, welche Seite den Randwert bekommt).
+Implementierung und die freigegebenen Acceptance Criteria (`feat_1679_cin_paarung_cape_leiter.md`
+AC-4/AC-5/AC-6, adversary-VERIFIED per Mutationsprobe) legen den Randwert jeweils ins **stärker
+dämpfende** Band — Tabelle unten entsprechend präzisiert, an der fachlichen Bedeutung ändert sich
+nichts.
+
 | Hemmung (CIN) | Bedeutung | CAPE darf höchstens |
 |---|---|---|
-| 0 bis −25 J/kg | schwacher Deckel | **voll wirken** — Leiter 1000 / 2500 / 4000 J/kg |
-| −25 bis −50 | moderat | **eine Stufe weniger** |
-| −50 bis −100 | großer Deckel | **höchstens „leicht"** (heutiges Verhalten) |
-| unter −100 | Deckel hält | **kein Beitrag** |
+| über −25 J/kg (d. h. `cin > -25`) | schwacher Deckel | **voll wirken** — Leiter 1000 / 2500 / 4000 J/kg |
+| −50 bis −25 J/kg (d. h. `-50 < cin <= -25`) | moderat | **eine Stufe weniger** |
+| −100 bis −50 J/kg (d. h. `-100 <= cin <= -50`) | großer Deckel | **höchstens „leicht"** (heutiges Verhalten) |
+| unter −100 J/kg (d. h. `cin < -100`) | Deckel hält | **kein Beitrag** |
 | Hemmung unbekannt | keine Aussage | **höchstens „leicht"** — die heutige Notbremse bleibt als sicherer Rückfall |
 
 ⚠️ **Ausdrücklich:** Die Hemmung ist ein **Auslöse-Filter**, kein Schweremaß. Rasmussen &
@@ -771,8 +778,8 @@ Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
 | Rang | Scheibe | Warum hier | Stand |
 |---|---|---|---|
 | **0** | ✅ **CAPE-Schwelle modellabhängig gemacht** (3.4b, **#1592**, ADR-0048) | **Fusion, RiskEngine und Δ-Alarme erledigt und live**: Schwelle je Modell × Gebiet, geeicht am 95. Perzentil der Modellklimatologie (mind. 300 J/kg). Auf dem GR20 gilt jetzt 300 statt 1000 — CAPE trägt dort erstmals bei. RiskEngine zählt CAPE nicht mehr doppelt (C2), Δ-Alarme rechnen die Empfindlichkeitsstufe in dieselbe Modellwelt um (C3). Vollzugsvermerk: ADR-0048 | ✅ erledigt |
-| **1** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg. Spec liegt fertig vor | Spec fertig, Freigabe offen |
-| **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | 🟡 **LPI-Teil ✅ erledigt** (**#1679**, adversary-VERIFIED); CAPE-Ladder + CIN-Paarung offen |
+| **1** | ✅ **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg | ✅ **erledigt** (2026-08-11, live) |
+| **2** | ✅ **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ **erledigt** — LPI-Teil **#1679** (adversary-VERIFIED); CAPE-Ladder + CIN-Paarung ebenfalls **#1679** (`feat_1679_cin_paarung_cape_leiter.md`, 2026-08-11, adversary-VERIFIED für AC-3/AC-5 mit Mutationsprobe, restliche ACs durch 24 RED-Tests grün) |
 | **3** | **Gleiche Statistik**: `lpi_max` statt `lpi` gegen `lpi_con_max` | Nimmt allein **Faktor 5** aus dem Gebietsbruch — ohne jede Kalibrierung | ✅ E1 |
 | **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | ✅ E1 |
 | **5** | ✅ **CAPE unsichtbar gemacht** (`selectable=False`, **#1585**) | **Umgesetzt und live** (2026-08-10): CAPE (`cape_jkg`) ist an jeder Nutzerkontakt-Stelle unsichtbar (Trip-Editor, E-Mail, SMS, Ortsvergleich inkl. Alt-Vergleich, Aktivitäts-Vorlagen, Wertebereichs-Korridor, jede Alarmwirkung inkl. #1592 Delta-Alarm) und bleibt ausschließlich interne Zutat der Fusion. Adversary-VERIFIED | ✅ erledigt |

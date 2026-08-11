@@ -43,6 +43,16 @@ def _fusion(*args, **kwargs):
     # Signal beitragen.
     for schluessel in ("lpi_low_min", "lpi_med_min", "lpi_high_min"):
         kwargs.setdefault(schluessel, None)
+    # Issue #1679 (CIN-Teil): CAPE laeuft ueber eine dreisprossige Leiter,
+    # `cin_jkg` ist ebenso keyword-only ohne Default. Die beiden oberen
+    # Sprossen entsprechen der rohen NWS-Leiter zur unveraenderten
+    # Katalog-Schwelle 1000 unten; `cin_jkg=None` (unbekannte Hemmung) haelt
+    # die AC-6-Deckelung auf LOW aufrecht, unter der diese Testfamilie
+    # geschrieben wurde.
+    for schluessel, wert in (
+        ("cape_med_min", 2500.0), ("cape_high_min", 4000.0), ("cin_jkg", None),
+    ):
+        kwargs.setdefault(schluessel, wert)
     return thunder_level_from_signals(*args, **kwargs)
 
 
@@ -82,6 +92,12 @@ def test_ac5_blitzdichte_dreiteilung(lightning_density, expected):
 # um ihre (unveraenderten) Erwartungswerte 500->NONE / 1200->LOW / 2630->LOW
 # zu erhalten, wird hier weiterhin die alte, alleinstehend belegte Katalog-
 # Schwelle explizit uebergeben, statt sich auf einen Default zu verlassen.
+#
+# Issue #1679 (CIN-Teil): "CAPE eskaliert nie ueber LOW" gilt seitdem NICHT
+# mehr unbedingt, sondern nur bei grosser oder unbekannter Konvektionshemmung.
+# Diese Testfamilie laeuft ueber `_fusion()` mit `cin_jkg=None` und prueft
+# damit genau diesen (unveraenderten) Fall -- die Eskalation bei schwacher
+# Hemmung prueft `test_cape_cin_pairing.py`.
 _ALTE_KATALOG_SCHWELLE_JKG = 1000.0
 
 

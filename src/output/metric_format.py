@@ -306,6 +306,41 @@ def _thunder_level_from_ladder(
     return ThunderLevel.NONE
 
 
+# Umkehrung der kanonischen Ordnung (thunder_scale.thunder_ordinal) --
+# abgeleitet statt handgeschrieben, damit eine kuenftige fuenfte Stufe nicht
+# an zwei Stellen gepflegt werden muss.
+_THUNDER_JE_ORDINAL = {thunder_ordinal(stufe): stufe for stufe in ThunderLevel}
+
+
+def _gedaempft_durch_cin(
+    basis: ThunderLevel, cin_jkg: Optional[float]
+) -> ThunderLevel:
+    """Daempft eine CAPE-Stufe anhand der Konvektionshemmung CIN (Issue #1679).
+
+    Vier belegte Baender (Penn State/COMET, SPC -- Gesamtkonzept 3.7 Schritt 2):
+    schwacher Deckel (> -25) laesst die Leiter voll zaehlen, moderat
+    (-50 < cin <= -25) nimmt genau eine Stufe, grosser Deckel
+    (-100 <= cin <= -50) deckelt auf LOW, darunter traegt CAPE nichts mehr bei.
+    Ein Grenzwert gehoert dabei immer ins staerker daempfende Band.
+
+    Unbekanntes CIN (``None``, strukturell der Fall bei Meteo-France/AROME)
+    faellt auf die Bestands-Notbremse "hoechstens LOW" zurueck -- NICHT auf
+    "kein Deckel": eine fehlende Hemmungsangabe ist keine schwache Hemmung.
+
+    CIN ist Ausloese-Filter, kein Schweremass (Rasmussen & Blanchard 1998) --
+    diese Funktion daempft deshalb ausschliesslich und hebt nie an.
+    """
+    if cin_jkg is None:
+        return min(basis, ThunderLevel.LOW, key=thunder_ordinal)
+    if cin_jkg > -25:
+        return basis
+    if cin_jkg > -50:
+        return _THUNDER_JE_ORDINAL[max(thunder_ordinal(basis) - 1, 0)]
+    if cin_jkg >= -100:
+        return min(basis, ThunderLevel.LOW, key=thunder_ordinal)
+    return ThunderLevel.NONE
+
+
 def thunder_level_from_signals(
     wettercode_level: Optional[ThunderLevel],
     lightning_density: Optional[float],
@@ -313,6 +348,9 @@ def thunder_level_from_signals(
     lightning_potential_jkg: Optional[float] = None,
     *,
     cape_threshold_jkg: Optional[float],
+    cape_med_min: Optional[float],
+    cape_high_min: Optional[float],
+    cin_jkg: Optional[float],
     lpi_low_min: Optional[float],
     lpi_med_min: Optional[float],
     lpi_high_min: Optional[float],
@@ -336,8 +374,19 @@ def thunder_level_from_signals(
     KEIN Signal zur Fusion bei -- unabhaengig von seinem Wert ("keine
     Aussage" statt "geprueft, unauffaellig", Spec Abschnitt 3).
 
-    CAPE ist bei ``LOW`` gedeckelt und eskaliert NIE auf ``MED``/``HIGH``
-    (misst Energie, kein Ereignis, Spec AC-6/AC-8).
+    Seit Issue #1679 (CIN-Teil) laeuft CAPE ueber die dreisprossige Leiter
+    ``cape_threshold_jkg``/``cape_med_min``/``cape_high_min``
+    (``model_registry.cape_ladder_thresholds_jkg()``) und wird anschliessend
+    durch die Konvektionshemmung ``cin_jkg`` gedaempft
+    (``_gedaempft_durch_cin()``). Alle drei sind ebenso KEYWORD-ONLY OHNE
+    DEFAULT; fehlt EINE der drei Sprossen, traegt CAPE KEIN Signal bei --
+    dieselbe Alles-oder-nichts-Regel wie beim Blitzpotenzial, kein stiller
+    Rueckfall auf eine binaere Ersatzpruefung.
+
+    Damit ist die fruehere pauschale Deckelung "CAPE erreicht hoechstens
+    ``LOW``, eskaliert NIE" (Issue #1474, ``feat_1474`` AC-6) auf die beiden
+    CIN-Baender "grosser Deckel" und "unbekannt" eingeschraenkt: bei
+    schwacher oder moderater Hemmung erreicht CAPE jetzt ``MED``/``HIGH``.
 
     Das Blitzpotenzial (DWD ICON-D2/ICON-EU LPI, J/kg) ist das vierte Signal
     seit Issue #1474c -- eigene Schwellenleiter, weil es eine andere Groesse
@@ -359,8 +408,16 @@ def thunder_level_from_signals(
             lightning_density, _LIGHTNING_LOW_MIN, _LIGHTNING_MED_MIN, _LIGHTNING_HIGH_MIN,
         ))
 
-    if cape_jkg is not None and cape_threshold_jkg is not None:
-        signals.append(ThunderLevel.LOW if cape_jkg >= cape_threshold_jkg else ThunderLevel.NONE)
+    if (cape_jkg is not None
+            and cape_threshold_jkg is not None
+            and cape_med_min is not None
+            and cape_high_min is not None):
+        signals.append(_gedaempft_durch_cin(
+            _thunder_level_from_ladder(
+                cape_jkg, cape_threshold_jkg, cape_med_min, cape_high_min,
+            ),
+            cin_jkg,
+        ))
 
     if (lightning_potential_jkg is not None
             and lpi_low_min is not None
