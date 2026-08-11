@@ -3,7 +3,7 @@ entity_id: fix_1725_faelligkeit_und_idempotenz
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: approved
 workflow: fix-1725-faelligkeit-idempotenz
 version: "1.0"
 tags: [issue-1725, epic-1722, timezone, adr-0051, adr-0044, scheduler, briefing, idempotenz]
@@ -13,7 +13,7 @@ tags: [issue-1725, epic-1722, timezone, adr-0051, adr-0044, scheduler, briefing,
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-08-11 („go"), inklusive Nachhol-Fenster von 3 Stunden
 
 ## Purpose
 
