@@ -596,7 +596,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | timezone                        | str         | Zeitzone (default: "Europe/Vienna")                    |
 | send_email                      | bool        | E-Mail senden? (default: true)                         |
 | send_sms                        | bool        | SMS senden? (default: false)                           |
-| send_premium_sms                | bool        | Premium-SMS (Garmin inReach) senden? (default: false, Issue #1676 S2a) — eigenständiger vierter Kanal `premium_sms`, **nur Trip-Briefing** (Alarmpfad/Ortsvergleich erst mit #1701, s. ADR-0049); Empfänger ist ausschließlich die in Scheibe S1 gelernte Rückadresse aus `user.json`, nie `sms_to`. Lebt aktuell nur im freien `report_config`-Schlüssel (kein eigenes Go-Struct-Feld analog `send_sms`/`send_telegram`, folgt erst mit S3). |
+| send_premium_sms                | bool        | Premium-SMS (Garmin inReach) senden? (default: false, Issue #1676 S2a) — eigenständiger vierter Kanal `premium_sms`, **nur Trip-Briefing** (Alarmpfad/Ortsvergleich erst mit #1701, s. ADR-0049); Empfänger ist ausschließlich die in Scheibe S1 gelernte Rückadresse aus `user.json`, nie `sms_to`. Seit #1717 S3 auch in der Oberfläche schaltbar (Trip-Anlage + Trip-Detail) und als abgeleitetes Go-Struct-Feld `Trip.SendPremiumSms` vorhanden — `report_config.send_premium_sms` bleibt die autoritative Quelle. |
 | alert_on_changes                | bool        | Alerts bei Änderungen? (default: true)                 |
 | change_threshold_temp_c         | float       | Temp-Änderungs-Schwelle [°C] (default: 5.0)            |
 | change_threshold_wind_kmh       | float       | Wind-Änderungs-Schwelle [km/h] (default: 20.0)         |
@@ -761,6 +761,7 @@ type Trip struct {
     SendEmail               *bool                  `json:"send_email,omitempty"`
     SendSms                 *bool                  `json:"send_sms,omitempty"`
     SendTelegram            *bool                  `json:"send_telegram,omitempty"`
+    SendPremiumSms          *bool                  `json:"send_premium_sms,omitempty"`        // Issue #1717 S3 — vierter Kanal (Premium-SMS)
     EndDate                 *string                `json:"end_date,omitempty"`                // max(stage.date), ISO
     Kind                    string                 `json:"kind,omitempty"`                    // ADR-0023-Diskriminator ("route"); nur Migration schreibt ihn
 }
@@ -2725,6 +2726,10 @@ Returns authenticated user profile (requires valid session cookie).
   "sms_allowed": false,
   "requested_tier": "standard",
   "requested_at": "2026-07-07T14:00:00Z",
+  "premium_sms_allowed": false,
+  "premium_sms_reply_state": "none",
+  "premium_sms_reply_to": "15551234567",
+  "premium_sms_reply_at": "2026-08-05T12:00:00Z",
   "has_passkey": true,
   "passkeys": [
     {
@@ -2758,6 +2763,10 @@ Returns authenticated user profile (requires valid session cookie).
 | sms_allowed | bool | Whether SMS channel is available for this user (Issue #1069, Slice 2 of Epic #1067); `true` if `tier` is `standard` or `premium`, `false` for `free`; determines server-side channel-gating in report-dispatch and alert-dispatch |
 | requested_tier | string | Level change requested by the user via `POST /api/auth/tier-change-request` (Issue #1071, Slice 4 of Epic #1067); `omitempty` — absent/empty if no request is pending. Does not change `tier` itself; only the PO setting `tier` manually clears the pending state (once `requested_tier == tier`, the frontend Pending-hint disappears) |
 | requested_at | string (RFC3339) | Timestamp of the pending tier-change request set alongside `requested_tier`; pointer type server-side so it is omitted entirely (not a zero-value timestamp) when no request is pending |
+| premium_sms_allowed | bool | Whether the Premium-SMS channel (Garmin inReach) is available (Issue #1717 S3); **always present**. Own tariff gate `model.PremiumSmsAllowed` — `true` **only** for `tier == "premium"`, deliberately NOT derived from `sms_allowed` (which also lets `standard` through). Otherwise a `standard` user could tick a channel the dispatch path blocks anyway (#1676 S2a AC-8) |
+| premium_sms_reply_state | string | Server-derived state of the learned reply address (Issue #1717 S3): `none` (device never reported), `stale` (reported but past the expiry), `fresh` (valid); **always present**. Derived from `PremiumSmsReplyTo`/`PremiumSmsReplyAt` via `model.DerivePremiumSmsReplyState` against `model.PremiumSmsReplyTTL` (30 days, Go pendant of `PREMIUM_SMS_REPLY_TTL` in `src/output/channels/premium_sms.py`; drift guard: `tests/test_premium_sms_ttl_drift.py`). The UI follows this field only and never recomputes the deadline — otherwise a third copy of the number would exist |
+| premium_sms_reply_to | string | The learned Garmin reply address (Issue #1717 S3, raw value); `omitempty` — absent while the device has never reported. Read-only: the sole writer is the internal endpoint `POST /api/internal/premium-sms-learn` (#1676 S1), `PUT /api/auth/profile` does **not** accept it |
+| premium_sms_reply_at | string (RFC3339) | When that address was learned (Issue #1717 S3, raw value — here the timestamp *is* the payload, unlike `email_verified_at` which is never exposed); pointer server-side so it is omitted entirely instead of a zero-value timestamp. Same read-only rule as `premium_sms_reply_to` |
 | has_passkey | bool | Whether user has registered any passkeys |
 | passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
 
@@ -2788,6 +2797,13 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 - `mail_to`: Optional, any non-empty string (no format validation)
 - `sms_to`: Optional, any non-empty string (no format validation; validation happens during send via SMS provider)
 - Empty strings allowed (unset field)
+- **Not accepted (Issue #1717 S3, AC-7):** `premium_sms_reply_to`, `premium_sms_reply_at`,
+  `premium_sms_reply_state`, `premium_sms_allowed`. The decode struct does not contain them, so
+  sending them is silently a no-op — the learned reply address stays writable **only** by the
+  internal learning endpoint (#1676 S1). Were it editable, the S2a promise "recipient is
+  exclusively the learned reply address, never configuration" would collapse: a user could enter a
+  foreign number and have paid Premium-SMS delivered there. Guarded by
+  `internal/handler/profile_test.go::TestUpdateProfileHandlerIgnoresPremiumSmsReplyFields`
 
 **Error Responses:**
 
@@ -2855,7 +2871,7 @@ type User struct {
     Tier               string                 `json:"tier,omitempty"`  // NEW (Issue #1068, Slice 1 of Epic #1067) — free/standard/premium; empty defaults to "free" at read time
     RequestedTier      string                 `json:"requested_tier,omitempty"`  // NEW (Issue #1071, Slice 4 of Epic #1067) — pending level-change request
     RequestedAt        *time.Time             `json:"requested_at,omitempty"`  // NEW (Issue #1071) — pointer type: plain time.Time's omitempty doesn't work, would serialize as zero-value "0001-01-01T00:00:00Z" instead of being omitted
-    PremiumSmsReplyTo  string                 `json:"premium_sms_reply_to,omitempty"`  // NEW (Issue #1676, Scheibe S1) — vom Garmin inReach zuletzt gelernte Rückadresse (seven.io-Journal, Kennzeichen `inreachlink.com`); einziger Schreiber ist der interne Endpoint `POST /api/internal/premium-sms-learn`; kein Frontend, keine Auth-Profile-Ausgabe in dieser Scheibe
+    PremiumSmsReplyTo  string                 `json:"premium_sms_reply_to,omitempty"`  // NEW (Issue #1676, Scheibe S1) — vom Garmin inReach zuletzt gelernte Rückadresse (seven.io-Journal, Kennzeichen `inreachlink.com`); einziger Schreiber bleibt der interne Endpoint `POST /api/internal/premium-sms-learn`. REVIDIERT durch #1717 S3: `GET /api/auth/profile` gibt den Wert seither LESEND aus (`premium_sms_reply_to` + abgeleitetes `premium_sms_reply_state`), damit die Oberfläche zeigen kann, wohin gesendet wird und ob die Adresse noch gilt — `PUT /api/auth/profile` nimmt ihn weiterhin NICHT an (AC-7)
     PremiumSmsReplyAt  *time.Time             `json:"premium_sms_reply_at,omitempty"`  // NEW (Issue #1676, Scheibe S1) — Empfangszeitpunkt des Go-Endpoints (nicht der seven.io-`timestamp`); pointer-Muster analog RequestedAt
 }
 
@@ -3442,6 +3458,17 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-11: Issue #1717 Scheibe S3 — Premium-SMS in der Oberfläche. `GET /api/auth/profile`
+  liefert vier neue, **rein lesende** Felder: `premium_sms_reply_to`/`premium_sms_reply_at`
+  (Rohwerte, `omitempty`), `premium_sms_reply_state` (`none`/`stale`/`fresh`, immer vorhanden,
+  serverseitig aus `model.PremiumSmsReplyTTL` abgeleitet) und `premium_sms_allowed` (immer
+  vorhanden, eigenes Tarif-Gate `model.PremiumSmsAllowed` — nur `premium`, NICHT von
+  `sms_allowed` abgeleitet). `PUT /api/auth/profile` nimmt keins davon an (AC-7) — die gelernte
+  Rückadresse bleibt allein durch den internen Lernpfad (#1676 S1) schreibbar. `Trip` bekommt
+  das vierte abgeleitete Flach-Feld `send_premium_sms` (nicht autoritativ, aus
+  `report_config.send_premium_sms` bei jedem Load neu abgeleitet und zuvor auf `nil` zurückgesetzt).
+  Die Verfallsfrist existiert damit zwangsläufig zweimal (Python-Sendepfad + Go-Ableitung) und wird
+  von `tests/test_premium_sms_ttl_drift.py` gegeneinander bewacht.
 - 2026-08-11: Issue #1701 Scheibe S2b — Premium-SMS wird vierter Kanal im
   Alarm- UND Ortsvergleich-Pfad (Vorgänger: S2a #1676, ausschließlich
   Trip-Briefing). `AlertChannelsConfig` bekommt `PremiumSms *bool` — dabei

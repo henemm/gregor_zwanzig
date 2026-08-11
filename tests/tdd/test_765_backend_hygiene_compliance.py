@@ -99,6 +99,20 @@ _SELF_EXEMPT = {
     # test_egress_inventory_drift.py; # doc-compliance-test.
     # Spec: docs/specs/modules/fix_1435_e5_alert_mapping_unify.md
     "test_alert_metric_mapping_parity.py",
+    # #1717 S3 AC-11 (Tech-Lead-Freigabe 2026-08-11): Frist-Drift-Waechter der
+    # gelernten Premium-SMS-Rueckadresse. Liest internal/model/premium_sms.go
+    # als DATEN, um die Go-Konstante PremiumSmsReplyTTL gegen das per echtem
+    # Import geladene PREMIUM_SMS_REPLY_TTL (src/output/channels/premium_sms.py)
+    # zu stellen — eine Go-Konstante ist aus Python nur als Text erreichbar
+    # (kein Go-Toolchain-Aufruf im Kernlauf). Geprueft wird Deckungsgleichheit
+    # zweier Fristen, nicht das Vorkommen eines Code-Strings; gleiche
+    # Werkzeug-Klasse wie test_egress_inventory_drift.py, traegt
+    # # doc-compliance-test seit seiner Einfuehrung.
+    # Berechtigung endet mit der Doppelung: sobald die Frist nur noch an EINER
+    # Stelle deklariert ist (Go-Ableitung oder Python-Sendepfad faellt weg),
+    # gehoert dieser Eintrag wieder raus.
+    # Spec: docs/specs/modules/feat_1717_s3_premium_sms_ui.md
+    "test_premium_sms_ttl_drift.py",
 }
 # #1408 F005 / #1469: `test_validator_log_unique_filenames.py` stand hier als
 # ausdruecklicher FEHLALARM-Eintrag, weil `_collect_listed_product_paths()`
