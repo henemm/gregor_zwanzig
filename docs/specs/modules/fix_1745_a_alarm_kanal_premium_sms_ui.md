@@ -19,7 +19,9 @@ tags: [sms, premium, garmin, alarm, channel, frontend, compare]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-11 („approved", Klartext). Freigegeben wurde der Wortlaut inklusive
+  der vom Orchestrierer nachgetragenen AC-13/AC-14 und der vier zusätzlichen Bestands-Testdateien;
+  ausdrücklich mit freigegeben ist die Zeilen-Ausnahme (`loc_limit_override 650`).
 
 ## Purpose
 
