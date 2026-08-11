@@ -44,13 +44,25 @@ def _legacy_trip_data() -> dict[str, Any]:
 
 
 def _per_report_trip_data() -> dict[str, Any]:
-    """Trip MIT channel_layouts_per_report — Morning und Evening haben verschiedene Email-Listen."""
+    """Trip MIT channel_layouts_per_report — Morning und Evening haben verschiedene Email-Listen.
+
+    Issue #1719 Scheibe 2 (ADR-0050): die globale Liste ist das Maximum, gegen
+    das jede Kanal-/Report-Ebene unten geschnitten wird -- sie muss deshalb
+    jede unten verwendete Metrik-ID fuehren (precipitation, gust, wind_chill
+    kamen sonst nur in channel_layouts/channel_layouts_per_report vor). Alle
+    Ergaenzungen bewusst "primary" mit steigendem `order` -- AC-4 vergleicht
+    den (sortierten) globalen Fallback von get_metrics_for_channel() gegen
+    das (unsortierte) get_metrics_for_report_type() auf ID-Gleichheit.
+    """
     return {
         "trip_id": "per-report-trip-434",
         "metrics": [
             # Globale Fallback-Liste
             {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
             {"metric_id": "wind", "enabled": True, "bucket": "primary", "order": 1},
+            {"metric_id": "precipitation", "enabled": True, "bucket": "primary", "order": 2},
+            {"metric_id": "gust", "enabled": True, "bucket": "primary", "order": 3},
+            {"metric_id": "wind_chill", "enabled": True, "bucket": "primary", "order": 4},
         ],
         "channel_layouts": {
             # Per-Kanal-Fallback (#429)
