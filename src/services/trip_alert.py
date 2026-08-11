@@ -1291,8 +1291,13 @@ class TripAlertService:
         in der Standalone-Alert-Mail).
         Fail-soft: Toggle-Gate zuerst, Quellenfehler werden bereits von
         get_official_alerts_for_location() pro Quelle abgefangen. Schreibt
-        KEINEN alert_state — das übernimmt der Aufrufer erst nach
-        erfolgreichem Versand (Konsistenz mit dem Wetter-Delta-Pfad).
+        nach erfolgreichem Versand KEINEN alert_state selbst — das übernimmt
+        der Aufrufer (Konsistenz mit dem Wetter-Delta-Pfad). Ausnahme (Issue
+        #1685): bei einer stillen Fenster-Revision (Warnung derselben
+        Identität+Gefahr, echte Überlappung, keine Eskalation/Vorverlegung
+        ≥2h) schreibt diese Methode das Melde-Gedächtnis SOFORT fort — sonst
+        vergleicht ein drittes Kettenglied gegen das veraltete, erste Fenster
+        und meldet fälschlich erneut.
 
         Issue #1697: `now_utc` reicht die "Jetzt"-Sekunde des Laufs an
         `_get_cached_weather` durch (Default: echte Wanduhr, s. dortiger
@@ -1372,16 +1377,27 @@ class TripAlertService:
         from output.renderers.alert.official_alerts import (
             dedupe_official_alerts,
             official_alert_state_key,
+            official_alert_revision_verdict,
         )
         tagged_alerts = dedupe_official_alerts(tagged_alerts)
 
-        state = AlertStateService(user_id=self._user_id).load(trip.id)
+        state_svc = AlertStateService(user_id=self._user_id)
+        state = state_svc.load(trip.id)
         new_or_escalated = []
+        state_changed = False
         for a, segment_ids in tagged_alerts:
-            key = official_alert_state_key(a)
-            prev = state.get(key)
-            if prev is None or a.level > prev.get("last_reported_value", 0):
+            should_report, stale_key, merged_entry = official_alert_revision_verdict(a, state)
+            if should_report:
                 new_or_escalated.append((a, segment_ids))
+            elif merged_entry is not None:
+                # Issue #1685: stille Fenster-Revision -- Fortschreibung sofort,
+                # sonst vergleicht ein drittes Kettenglied gegen das veraltete,
+                # erste Fenster und meldet faelschlich erneut.
+                del state[stale_key]
+                state[official_alert_state_key(a)] = merged_entry
+                state_changed = True
+        if state_changed:
+            state_svc.save(trip.id, state)
         return new_or_escalated
 
     def _record_official_alert_state(self, trip_id: str, official_notices: list) -> None:

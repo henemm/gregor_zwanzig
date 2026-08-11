@@ -28,6 +28,8 @@ from app.config import Settings
 from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
 from output.renderers.alert.official_alerts import (
     dedupe_official_alerts,
+    official_alert_revision_verdict,
+    official_alert_state_entry,
     official_alert_state_key,
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
@@ -215,23 +217,33 @@ class CompareOfficialAlertService:
             raw = [(alert, loc_ids) for alert, loc_ids in raw if alert.source in sources]
         deduped = dedupe_official_alerts(raw)
 
+        state_svc_by_loc = {loc.id: AlertStateService(user_id=self._user_id) for loc in locs}
         state_by_loc = {
-            loc.id: AlertStateService(user_id=self._user_id).load(f"{preset_id}:{loc.id}")
-            for loc in locs
+            loc_id: svc.load(f"{preset_id}:{loc_id}") for loc_id, svc in state_svc_by_loc.items()
         }
 
         new_or_escalated: list = []
         per_location_new: dict = {}
+        changed_locs: set = set()
         for alert, loc_ids in deduped:
-            key = official_alert_state_key(alert)
             is_new = False
             for loc_id in loc_ids:
-                prev = state_by_loc[loc_id].get(key)
-                if prev is None or alert.level > prev.get("last_reported_value", 0):
+                should_report, stale_key, merged_entry = official_alert_revision_verdict(
+                    alert, state_by_loc[loc_id]
+                )
+                if should_report:
                     is_new = True
                     per_location_new.setdefault(loc_id, []).append(alert)
+                elif merged_entry is not None:
+                    # Issue #1685: stille Fenster-Revision -- Fortschreibung
+                    # sofort, identisch zum Trip-Pfad (check_official_alert_triggers).
+                    del state_by_loc[loc_id][stale_key]
+                    state_by_loc[loc_id][official_alert_state_key(alert)] = merged_entry
+                    changed_locs.add(loc_id)
             if is_new:
                 new_or_escalated.append((alert, loc_ids))
+        for loc_id in changed_locs:
+            state_svc_by_loc[loc_id].save(f"{preset_id}:{loc_id}", state_by_loc[loc_id])
         return new_or_escalated, per_location_new
 
     def _day_window_end(self, preset_id: str, loc, now: datetime) -> datetime:
@@ -269,7 +281,7 @@ class CompareOfficialAlertService:
             state = state_svc.load(entity_id)
             for alert in alerts:
                 key = official_alert_state_key(alert)
-                state[key] = {"last_reported_value": float(alert.level), "reported_at": now_iso}
+                state[key] = official_alert_state_entry(alert, now_iso)
             state_svc.save(entity_id, state)
 
     def _effective_channels(self, preset: dict) -> set[str]:

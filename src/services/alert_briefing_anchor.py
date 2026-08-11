@@ -320,7 +320,10 @@ def record_official_alerts_reported(
     """
     if not alerts:
         return
-    from output.renderers.alert.official_alerts import official_alert_state_key
+    from output.renderers.alert.official_alerts import (
+        official_alert_state_entry,
+        official_alert_state_key,
+    )
     from services.alert_state import AlertStateService
 
     state_svc = AlertStateService(user_id=user_id)
@@ -328,7 +331,7 @@ def record_official_alerts_reported(
     now_iso = datetime.now(timezone.utc).isoformat()
     for a in alerts:
         key = official_alert_state_key(a)
-        state[key] = {"last_reported_value": float(a.level), "reported_at": now_iso}
+        state[key] = official_alert_state_entry(a, now_iso)
     state_svc.save(entity_id, state)
 
 

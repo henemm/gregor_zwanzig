@@ -16,7 +16,7 @@ from __future__ import annotations
 import html as _html
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
@@ -421,6 +421,141 @@ def official_alert_state_key(alert: "OfficialAlert") -> str:
     vf = alert.valid_from.isoformat() if alert.valid_from else "none"
     vt = alert.valid_to.isoformat() if alert.valid_to else "none"
     return f"official_alert:{ident}:{alert.hazard}:{vf}:{vt}"
+
+
+def _identity_hazard_prefix(alert: "OfficialAlert") -> str:
+    """Issue #1685: Praefix OHNE Zeitraum, gleiche Praezedenz wie
+    `official_alert_state_key` (`dedup_id` > `region_label` > `label`).
+    Damit lassen sich alle Bestandsschluessel derselben Identitaet+Gefahr per
+    `str.startswith` finden, ohne die ISO-Zeitstempel aus dem Schluessel-
+    String zu parsen (der Zeitraum wird stattdessen aus dem Eintrags-Wert
+    gelesen, s. `official_alert_state_entry`).
+
+    Adversary F003 (#1685 Fix-Loop, LOW, widerlegt): das `:`-Trennzeichen ist
+    NICHT maskiert -- theoretisch koennte ein eingebetteter Doppelpunkt in
+    `region_label`/`label` (z.B. "Kartitsch:" vs. "Kartitsch" mit Suffix
+    "Sued") zwei verschiedene Identitaeten auf denselben Praefix kollabieren
+    lassen. Unter realen Quelldaten nicht konstruierbar: der Vermutungsfall
+    "Kartitsch" vs. "Kartitsch Sued" traegt vor dem `:`-Trenner ein
+    Leerzeichen, das den Praefix-Treffer bereits verhindert -- eine Kollision
+    braucht einen eingebetteten Doppelpunkt, der exakt auf einen der festen
+    `hazard`-Werte trifft."""
+    if alert.dedup_id:
+        ident = f"id:{alert.dedup_id}"
+    elif alert.region_label:
+        ident = f"region:{alert.region_label}"
+    else:
+        ident = f"label:{alert.label}"
+    return f"official_alert:{ident}:{alert.hazard}:"
+
+
+def official_alert_revision_verdict(
+    alert: "OfficialAlert", state: dict,
+) -> tuple[bool, Optional[str], Optional[dict]]:
+    """Issue #1685: Melde-Entscheidung fuer eine amtliche Warnung, die eine
+    reine Fenster-Revision einer bereits gemeldeten Warnung derselben
+    Identitaet+Gefahr sein kann (PO-Entscheidung 2026-08-10).
+
+    Liefert `(should_report, stale_key, merged_entry)`.
+    - `should_report=True`: melden -- entweder der klassische exakte
+      Schluessel-Treffer (Ist-Verhalten #1245) oder eine Eskalation/
+      Vorverlegung >=2h innerhalb einer echten Ueberlappung. `stale_key` und
+      `merged_entry` sind dann `None`.
+    - `should_report=False` mit gesetztem `merged_entry`: stille Revision --
+      der Aufrufer MUSS `stale_key` aus dem State entfernen, `merged_entry`
+      unter dem NEUEN Schluessel (`official_alert_state_key(alert)`)
+      ablegen und sofort persistieren (`state_svc.save`).
+
+    Fail-soft: fehlt `alert.valid_from`/`valid_to`, oder traegt kein
+    Bestandseintrag der gleichen Identitaet+Gefahr eigene `valid_from`/
+    `valid_to`-Felder (Alt-Eintrag vor diesem Fix), entscheidet ausschliesslich
+    der exakte Schluesseltreffer -- wie vor dieser Spec, kein Interval-
+    Vergleich.
+
+    Adversary F001 (#1685 Fix-Loop, CRITICAL): manche Quellen liefern naive
+    (tz-lose) `valid_from`/`valid_to` (vigilance/meteoalarm, s.
+    `services.official_alerts.base._as_aware_utc`). Ein Vergleich naiv-vs-
+    aware wirft sonst `TypeError` -- und der Aufrufer `check_official_alert_
+    triggers` faengt das NICHT ab, sodass der Trip fuer den Lauf ALLE amtlichen
+    Warnungen verliert. Deshalb werden hier ALLE verglichenen Zeitpunkte --
+    Kandidat UND `alert` selbst -- vor jedem Vergleich normalisiert, und der
+    Vergleich steht im selben geschuetzten Block wie das Parsen."""
+    from services.official_alerts.base import _as_aware_utc
+
+    key = official_alert_state_key(alert)
+    prev = state.get(key)
+
+    def _exact_match_verdict() -> tuple[bool, Optional[str], Optional[dict]]:
+        should_report = prev is None or alert.level > prev.get("last_reported_value", 0)
+        return should_report, None, None
+
+    if alert.valid_from is None or alert.valid_to is None:
+        return _exact_match_verdict()
+
+    alert_vf = _as_aware_utc(alert.valid_from)
+    alert_vt = _as_aware_utc(alert.valid_to)
+
+    prefix = _identity_hazard_prefix(alert)
+    candidates: list[tuple[str, dict, datetime]] = []
+    for cand_key, entry in state.items():
+        if not cand_key.startswith(prefix):
+            continue
+        vf_raw, vt_raw = entry.get("valid_from"), entry.get("valid_to")
+        if vf_raw is None or vt_raw is None:
+            continue
+        try:
+            cand_vf = _as_aware_utc(datetime.fromisoformat(vf_raw))
+            cand_vt = _as_aware_utc(datetime.fromisoformat(vt_raw))
+            if alert_vf < cand_vt and cand_vf < alert_vt:
+                candidates.append((cand_key, entry, cand_vf))
+        except (TypeError, ValueError):
+            continue
+
+    if not candidates:
+        return _exact_match_verdict()
+
+    stale_key, kandidat, kandidat_vf = max(
+        candidates,
+        key=lambda c: (c[1].get("last_reported_value", 0), c[1].get("reported_at") or ""),
+    )
+    kandidat_level = kandidat.get("last_reported_value", 0)
+    if alert.level > kandidat_level or (kandidat_vf - alert_vf) >= timedelta(hours=2):
+        return True, None, None
+
+    merged_entry = {
+        "last_reported_value": max(kandidat_level, float(alert.level)),
+        # Adversary F002 (#1685 Fix-Loop, HIGH): `.get(..., "")` griff nur bei
+        # fehlendem Schluessel, nicht bei explizit gespeichertem `None` -- ein
+        # zweiter gleichrangiger Kandidat mit `reported_at: null` liess den
+        # Tie-Break oben `None` mit `str` vergleichen (TypeError). Ausserdem
+        # darf nie wieder ein `None` ins Melde-Gedaechtnis geschrieben werden.
+        # Adversary F007 (#1685 Fix-Loop Runde 2, MEDIUM): der Ersatzwert darf
+        # NICHT `datetime.now(...)` sein -- `reported_at` ist genau das
+        # Tie-Break-Kriterium oben (Zeile 519, "bei Gleichstand: spaetester
+        # reported_at gewinnt"). Ein erfundenes "jetzt" gewinnt damit
+        # systematisch gegen echte, aeltere Zeitstempel und verzerrt kuenftige
+        # Tie-Breaks. `""` ist konsistent mit der Lese-Normalisierung
+        # `.get("reported_at") or ""` in Zeile 519 und verliert -- statt zu
+        # gewinnen.
+        "reported_at": kandidat.get("reported_at") or "",
+        "valid_from": alert.valid_from.isoformat(),
+        "valid_to": alert.valid_to.isoformat(),
+    }
+    return False, stale_key, merged_entry
+
+
+def official_alert_state_entry(alert: "OfficialAlert", reported_at_iso: str) -> dict:
+    """Issue #1685: Schema-Builder fuer Melde-Gedaechtnis-Eintraege -- ersetzt
+    die bisher zwei unabhaengig duplizierten Inline-Dicts in
+    `record_official_alerts_reported` und `CompareOfficialAlertService.
+    _record_state`. Neu ggue. dem Ist-Zustand: `valid_from`/`valid_to`, damit
+    `official_alert_revision_verdict` spaeter echte Ueberlappung pruefen kann."""
+    return {
+        "last_reported_value": float(alert.level),
+        "reported_at": reported_at_iso,
+        "valid_from": alert.valid_from.isoformat() if alert.valid_from else None,
+        "valid_to": alert.valid_to.isoformat() if alert.valid_to else None,
+    }
 
 
 def _bundle_by_hazard_level(
