@@ -21,9 +21,11 @@ die nächste Aufrufstelle beginnt die Debatte von vorn.
 | Ortszone des Trips | `services/trip_day.py` (ADR-0044) | Nur im Alarm-Pfad, seit #1697 |
 | Browser-Zone | Frontend | Anzeige — dort ebenfalls auf Wien festgenagelt |
 
-Wien ist die Heimatzone des Betreibers. Sie steht im Code, weil der Betreiber dort wohnt, nicht
-weil eine fachliche Frage sie verlangt. `Etc/UTC` steht im Code, weil der Server zufällig so
-konfiguriert ist — `date.today()` nennt keine Zone, es erbt die des Prozesses.
+`Europe/Vienna` ist eine feste Konstante ohne fachliche Herleitung — keine Stelle im Code leitet
+sie aus einer Eigenschaft des Trips, des Orts oder des Nutzers ab. Sie deckt sich **zufällig** mit
+der Zone des Betreibers; das macht sie nicht richtig, es erklärt nur, warum der Fehler bisher
+niemandem auffiel. `Etc/UTC` steht im Code, weil der Server zufällig so konfiguriert ist —
+`date.today()` nennt keine Zone, es erbt die des Prozesses.
 
 ### Was das für den Nutzer heißt
 

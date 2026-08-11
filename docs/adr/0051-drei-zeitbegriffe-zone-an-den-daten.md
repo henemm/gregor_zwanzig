@@ -20,9 +20,11 @@ sondern **vier nebeneinander laufende Uhren** ohne Zuständigkeitsregel:
 | Ortszone des Trips (`services/trip_day.py`) | nur der Alarm-Pfad, seit #1697 |
 | Browser-Zone | Anzeige — dort ebenfalls auf Wien festgenagelt |
 
-Wien ist die Heimatzone des Betreibers und steht im Code, weil der Betreiber dort wohnt.
-`Etc/UTC` steht im Code, weil der Server zufällig so konfiguriert ist. Beide beantworten keine
-fachliche Frage.
+`Europe/Vienna` ist eine feste Konstante ohne fachliche Herleitung — keine Stelle leitet sie aus
+einer Eigenschaft des Trips, des Orts oder des Nutzers ab. Sie deckt sich zufällig mit der Zone
+des Betreibers; das macht sie nicht richtig, es erklärt nur, warum der Fehler lange unbemerkt
+blieb. `Etc/UTC` steht im Code, weil der Server zufällig so konfiguriert ist. Beide beantworten
+keine fachliche Frage.
 
 Wirkung, gemessen für ein auf 07:00 gestelltes Morgen-Briefing am 20.08.2026: Korsika 07:00
 (richtig), Neuseeland 17:00, PCT 22:00 **am Vorabend** mit dem Inhalt des folgenden
