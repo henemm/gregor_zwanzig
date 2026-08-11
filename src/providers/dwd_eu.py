@@ -63,6 +63,12 @@ from tenacity import (
     wait_exponential,
 )
 
+# #1531 Adversary F001: `CIN_ML_LOWER_SENTINEL` ist in `dwd.py` definiert und
+# wird hier NUR importiert (keine eigene Kopie) -- derselbe Fehlwert-Marker,
+# dieselbe Groesse (`cin_ml`), gemeinsame Quelle der Wahrheit statt zweier
+# Konstanten, die auseinanderlaufen koennten.
+from providers.dwd import CIN_ML_LOWER_SENTINEL
+
 if TYPE_CHECKING:
     from app.config import Location
 
@@ -212,11 +218,13 @@ def _build_url(run: datetime, offset: int, param: str) -> str:
     )
 
 
-def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[float]:
+def _read_point_value(
+    compressed: bytes, lat: float, lon: float, param: Optional[str] = None,
+) -> Optional[float]:
     """Entpackt eine `.grib2.bz2`-Antwort und liest den Bildpunkt von Band 1
     an (lat, lon).
 
-    Drei Faelle ergeben ausdruecklich `None` statt einer Zahl (Spec AC-2 —
+    Vier Faelle ergeben ausdruecklich `None` statt einer Zahl (Spec AC-2 —
     "keine Aussage" ist nicht "keine Gefahr"):
 
     1. Der Ort liegt AUSSERHALB des gelieferten Gitters. Anders als
@@ -230,6 +238,13 @@ def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[flo
        9999.0 hierher zu uebernehmen waere der dritte Analogieschluss in
        Folge, der sich als falsch erweist.
     3. Der Wert ist NaN.
+    4. #1531 Adversary F001: `cin_ml` traegt (wie bei ICON-D2) den zweiten
+       Fehlwert-Marker -999,9 (Spec Known Limitations Punkt 4: "Fuer ICON-EU
+       wird derselbe Schutz vorsorglich mitgefuehrt", live gemessen an
+       `icon_eu_abruzzen_cin_ml_2026081100_000.grib2.bz2`: 38,6 % der
+       Gitterpunkte). Die Pruefung ist JE PARAMETER gefuehrt, nicht global
+       (Spec Implementation Details Punkt 3) -- ein anderer Parameter mit
+       einem echten Wert um -999,9 waere sonst faelschlich verworfen.
     """
     try:
         raw = bz2.decompress(compressed)
@@ -242,6 +257,8 @@ def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[flo
             if math.isnan(wert):
                 return None
             if nodata is not None and not math.isnan(nodata) and wert == nodata:
+                return None
+            if param == "cin_ml" and wert <= CIN_ML_LOWER_SENTINEL:
                 return None
             return wert
     except Exception:
@@ -339,7 +356,7 @@ class DwdEuDirectProvider:
                 )
                 return None
             zustand["bestaetigt"] = True
-            return _read_point_value(raw, lat, lon)
+            return _read_point_value(raw, lat, lon, param)
 
     def fetch_thunder_signals_named(
         self,

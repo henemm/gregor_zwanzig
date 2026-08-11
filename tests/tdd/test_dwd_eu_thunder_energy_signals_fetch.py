@@ -46,9 +46,10 @@ _SRC = Path(__file__).resolve().parents[2] / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
+from app.config import Location  # noqa: E402
 from tests.tdd._dwd_eu_fixtures import (  # noqa: E402
     ABRUZZEN, FIXTURE, FIXTURE_CAPE_CON, FIXTURE_CAPE_ML, FIXTURE_CIN_ML,
-    dwd_eu, eu_server, rohwert_an,
+    dwd_eu, eu_server, kunst_raster, rohwert_an,
 )
 
 pytestmark = pytest.mark.live
@@ -153,4 +154,101 @@ def test_ac6_icon_eu_liefert_nur_die_drei_energiegroessen_kein_sdi2_kein_uh_max(
     assert {"cape_ml", "cape_con", "cin_ml"} <= set(params), (
         f"THUNDER_PARAMS des ICON-EU-Providers {params} deckt nicht alle drei "
         "erwarteten Energiegroessen ab"
+    )
+
+
+# ---------------------------------------------------------------------------
+# #1531 Adversary F001 -- der zweite Fehlwert-Marker (-999,9) fuer `cin_ml`
+# gilt auch bei ICON-EU (Spec Known Limitations Punkt 4: "Fuer ICON-EU wird
+# derselbe Schutz vorsorglich mitgefuehrt"). VOR dem Fix filterte
+# `dwd_eu._read_point_value` nur den `nodata`-Marker und NaN, nicht -999,9 --
+# live gemessen an `icon_eu_abruzzen_cin_ml_2026081100_000.grib2.bz2`: 38,6 %
+# der Gitterpunkte tragen -999,9 unveraendert durch statt `None`.
+# ---------------------------------------------------------------------------
+
+# Gitterpunkt der ECHTEN Aufzeichnung mit dem -999,9-Marker (gemessen: row=0,
+# col=59 des `FIXTURE_CIN_ML`-Rasters) -- kein erfundener Ort, der Marker
+# steht so in der Aufzeichnung.
+_CIN_ML_MARKER_ORT = Location(
+    latitude=70.5, longitude=-19.8125, name="cin_ml-Marker-Punkt (ICON-EU)",
+)
+
+
+def test_f001_cin_ml_marker_minus_999_9_wird_nie_durchgereicht_gegenprobe_echter_wert(
+    monkeypatch,
+):
+    """F001: Given einen Gitterpunkt der ICON-EU-`cin_ml`-Aufzeichnung mit dem
+    Marker -999,9, When der Wert gelesen wird, Then bleibt das Feld `None` --
+    UND an Abruzzen (echter Wert, gemessen ~104,5 J/kg) bleibt der Wert
+    erhalten. Analog `test_dwd_thunder_new_signals_fetch.py::
+    test_ac2_cin_ml_marker_minus_999_9_wird_nie_durchgereicht_gegenprobe_echter_wert`
+    fuer ICON-D2."""
+    roh_marker = rohwert_an(
+        FIXTURE_CIN_ML.read_bytes(),
+        _CIN_ML_MARKER_ORT.latitude, _CIN_ML_MARKER_ORT.longitude,
+    )
+    assert roh_marker <= -999.9, (
+        f"Aufzeichnung traegt an diesem Punkt {roh_marker} statt <= -999,9 -- "
+        "der Test wuerde nichts pruefen"
+    )
+    roh_echt = rohwert_an(FIXTURE_CIN_ML.read_bytes(), ABRUZZEN.latitude, ABRUZZEN.longitude)
+    assert roh_echt > 1, "Kein echter cin_ml-Wert an Abruzzen -- Gegenprobe untauglich"
+
+    start = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    with eu_server(monkeypatch, fixtures=_fixtures_dict()):
+        marker_ergebnis = dwd_eu().DwdEuDirectProvider().fetch_thunder_signals_named(
+            _CIN_ML_MARKER_ORT, start, start + timedelta(hours=3),
+        )
+        echt_ergebnis = dwd_eu().DwdEuDirectProvider().fetch_thunder_signals_named(
+            ABRUZZEN, start, start + timedelta(hours=3),
+        )
+
+    marker_werte = list(marker_ergebnis.get("cin_ml", {}).values())
+    assert marker_werte, "Kein Eintrag fuer cin_ml am Marker-Punkt -- nichts geprueft"
+    assert all(v is None for v in marker_werte), (
+        f"cin_ml am Marker-Punkt traegt {marker_werte} statt durchgaengig None -- "
+        "der Marker -999,9 wurde als echter Wert durchgereicht"
+    )
+    echt_werte = [v for v in echt_ergebnis.get("cin_ml", {}).values() if v is not None]
+    assert echt_werte and any(abs(v - roh_echt) < 0.001 for v in echt_werte), (
+        f"cin_ml an Abruzzen traegt {echt_werte} statt {roh_echt} -- ein Filter, "
+        "der pauschal alles auf None setzt, waere sonst ebenfalls gruen"
+    )
+
+
+# ---------------------------------------------------------------------------
+# #1531 Adversary F003 (LOW) -- der -999,9-Filter gilt JE PARAMETER, nicht
+# global (Spec Implementation Details Punkt 3). Mutations-Gegenprobe: wuerde
+# der Filter global gemacht (jeder Parameter <= -999,9 -> None), bliebe
+# dieser Test der einzige, der rot wuerde.
+# ---------------------------------------------------------------------------
+
+def test_f003_minus_999_9_filter_gilt_nur_fuer_cin_ml_nicht_fuer_andere_parameter(
+    monkeypatch,
+):
+    """F003: Given ein ANDERER Parameter (`cape_ml`) traegt an GENAU demselben
+    Gitterpunkt wie der `cin_ml`-Marker synthetisch ebenfalls den Wert -999,9,
+    When der Wert gelesen wird, Then bleibt er als ECHTER Wert erhalten --
+    waehrend `cin_ml` am selben Punkt weiterhin `None` wird. Derselbe Punkt
+    fuer beide Signale schliesst aus, dass ein zufaellig unauffaelliger Ort
+    das eigentliche Verhalten verdeckt."""
+    fixtures = _fixtures_dict()
+    fixtures["cape_ml"] = kunst_raster(-999.9)  # ueberall -999.9, auch hier
+
+    start = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    with eu_server(monkeypatch, fixtures=fixtures):
+        ergebnis = dwd_eu().DwdEuDirectProvider().fetch_thunder_signals_named(
+            _CIN_ML_MARKER_ORT, start, start + timedelta(hours=3),
+        )
+
+    cape_werte = [v for v in ergebnis.get("cape_ml", {}).values() if v is not None]
+    assert cape_werte, "Kein Eintrag fuer cape_ml -- nichts geprueft"
+    assert all(abs(v - (-999.9)) < 0.01 for v in cape_werte), (
+        f"cape_ml-Werte {cape_werte} wurden gefiltert, obwohl cape_ml NICHT "
+        "cin_ml ist -- der -999,9-Filter darf nicht global gelten"
+    )
+    cin_werte = list(ergebnis.get("cin_ml", {}).values())
+    assert cin_werte and all(v is None for v in cin_werte), (
+        f"cin_ml am Marker-Punkt traegt {cin_werte} statt durchgaengig None -- "
+        "Testvoraussetzung verletzt, die Gegenprobe waere ohne Aussage"
     )
