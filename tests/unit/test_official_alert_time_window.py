@@ -22,6 +22,8 @@ beweist, keine eigene Verhaltensannahme zurueckspiegelt).
 """
 from __future__ import annotations
 
+import datetime as _dt
+
 from datetime import date, datetime, timedelta, timezone
 
 from services.official_alerts.models import OfficialAlert
@@ -323,7 +325,10 @@ class TestAC7BriefingPassesExactSegmentWindow:
         trip = load_trip_from_dict(trip_dict)
 
         svc = TripReportSchedulerService(user_id=user_id)
-        target_date = svc._get_target_date("morning")
+        # #1724: Zieltag haengt am Trip (dessen Ortszeit) und am Zeitpunkt.
+        target_date = svc._get_target_date(
+            "morning", trip, _dt.datetime.now(_dt.timezone.utc),
+        )
         segments = svc._convert_trip_to_segments(trip, target_date)
         assert segments, "Testvoraussetzung: Etappe muss mindestens 1 Segment liefern"
         expected_start = segments[0].start_time

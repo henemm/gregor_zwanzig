@@ -158,14 +158,29 @@ def run_compare_presets_daily(
     """
     if data_root is None:
         data_root = str(get_data_root())
+
+    from datetime import timezone as _timezone
+
+    from services.dispatch_orchestrator import CompareDispatchStrategy, run_briefing_dispatch
+
+    # Issue #1724: der Orchestrator nimmt jetzt einen ZEITPUNKT statt einer
+    # Stunde -- welche Stunde das ist, entscheidet der jeweilige Versandweg.
+    # Der Ortsvergleich bleibt dabei bewusst auf seiner festen Zone (#1726),
+    # das Verhalten ist unveraendert.
     if hour is None:
+        now_utc = _datetime.now(_timezone.utc)
+    else:
+        # Manuelles Ausloesen mit ausdruecklicher Stunde: Zeitpunkt bilden,
+        # dessen Stunde in der Vergleichs-Zone genau `hour` ist -- damit
+        # bleibt der bestehende Endpunkt-Vertrag (`?hour=`) erhalten.
         from zoneinfo import ZoneInfo
 
-        hour = _datetime.now(ZoneInfo("Europe/Vienna")).hour
+        zone = ZoneInfo(CompareDispatchStrategy.NOCH_NICHT_ORTSZEIT_SIEHE_1726)
+        now_utc = _datetime.now(zone).replace(
+            hour=hour, minute=0, second=0, microsecond=0,
+        ).astimezone(_timezone.utc)
 
-    from services.dispatch_orchestrator import run_briefing_dispatch
-
-    return run_briefing_dispatch("vergleich", user_id, hour, data_root=data_root)
+    return run_briefing_dispatch("vergleich", user_id, now_utc, data_root=data_root)
 
 
 def save_compare_preset_status(

@@ -278,7 +278,10 @@ class TripReportSchedulerService:
             logger.error("SMTP not configured, cannot send trip reports")
             return 0
 
-        active_trips = self._get_active_trips(report_type)
+        # Issue #1724 AC-9: EIN "Jetzt" fuer den ganzen Lauf -- kein Trip
+        # darf eine andere Sekunde sehen als der naechste.
+        now_utc = datetime.now(timezone.utc)
+        active_trips = self._get_active_trips(report_type, now_utc)
         logger.info(f"Found {len(active_trips)} active trips for {report_type} reports")
 
         sent_count = 0
@@ -296,12 +299,18 @@ class TripReportSchedulerService:
         logger.info(f"Sent {sent_count}/{len(active_trips)} {report_type} reports")
         return sent_count
 
-    def send_reports_for_hour(self, current_hour: int) -> Tuple[int, int]:
+    def send_due_reports(self, now_utc: datetime) -> Tuple[int, int]:
         """
-        Send reports for trips whose configured time matches current_hour.
+        Send reports for trips whose configured time matches their LOCAL hour.
 
         Called hourly by the scheduler. Checks both morning and evening
-        times per trip against the current hour.
+        times per trip against the hour in that trip's own timezone.
+
+        Issue #1724: hiess bis dahin `send_reports_for_hour(current_hour)` und
+        bekam eine in `Europe/Vienna` vorberechnete Stunde. Der Name war Teil
+        des Fehlers -- "die Stunde" gibt es nicht, es gibt nur die Stunde
+        EINER Zone. Uebergeben wird jetzt der Zeitpunkt; die Stunde entsteht je
+        Trip (ADR-0051 Regel 2).
 
         Issue #766: Sammelt alle fälligen Mails, sendet sie mit 2s Pause
         zwischen aufeinanderfolgenden Versendungen (Rate-Limit-Schutz) und
@@ -319,7 +328,7 @@ class TripReportSchedulerService:
         so nicht mehr stillschweigend verworfen.
 
         Args:
-            current_hour: Current hour (0-23) in Europe/Vienna
+            now_utc: Zeitpunkt des Laufs (zeitzonenbehaftet, UTC).
 
         Returns:
             Tuple (sent, failed): Anzahl erfolgreich versendeter und
@@ -339,27 +348,45 @@ class TripReportSchedulerService:
         from services.dispatch_orchestrator import run_briefing_dispatch
 
         return run_briefing_dispatch(
-            "route", self._user_id, current_hour, settings=self._settings,
+            "route", self._user_id, now_utc, settings=self._settings,
         )
 
-    def _collect_due_trips(self, current_hour: int) -> List[Tuple["Trip", str]]:
-        """Sammelt alle (trip, report_type)-Paare, die zur gegebenen Stunde fällig sind.
+    def _collect_due_trips(self, now_utc: datetime) -> List[Tuple["Trip", str]]:
+        """Sammelt alle (trip, report_type)-Paare, die JETZT fällig sind.
 
-        Issue #1207: Extrahiert aus `send_reports_for_hour` fuer Delegation
-        durch `TripDispatchStrategy.collect_due()` -- Morgen- UND
-        Abend-Fälligkeit werden VOR dem Versand gesammelt, damit das
-        Inter-Mail-Delay über beide Slots hinweg greift.
+        Issue #1207: Extrahiert aus dem Sendelauf fuer Delegation durch
+        `TripDispatchStrategy.collect_due()` -- Morgen- UND Abend-Fälligkeit
+        werden VOR dem Versand gesammelt, damit das Inter-Mail-Delay über
+        beide Slots hinweg greift.
+
+        Issue #1724 (ADR-0051 Regel 2): der Parameter ist ein ZEITPUNKT, keine
+        vorberechnete Stunde. Eine Stunde traegt immer die Zone dessen, der sie
+        ausgerechnet hat -- frueher `Europe/Vienna`, eine Konstante ohne
+        fachliche Herleitung. Die Stunde entsteht jetzt je Trip aus DESSEN
+        Ortszeit, damit ein auf 07:00 gestelltes Briefing ueberall um 07:00
+        Ortszeit ankommt statt um 17:00 (Auckland) oder 22:00 des Vortages
+        (PCT).
         """
         due: List[Tuple["Trip", str]] = []
-        for trip in self._get_active_trips("morning"):
-            if self._get_morning_hour(trip) == current_hour:
+        for trip in self._get_active_trips("morning", now_utc):
+            if self._get_morning_hour(trip) == self._trip_local_hour(trip, now_utc):
                 due.append((trip, "morning"))
-        for trip in self._get_active_trips("evening"):
-            if self._get_evening_hour(trip) == current_hour:
+        for trip in self._get_active_trips("evening", now_utc):
+            if self._get_evening_hour(trip) == self._trip_local_hour(trip, now_utc):
                 due.append((trip, "evening"))
         return due
 
-    def _process_pending_markers(self, current_hour: int, due_trip_ids_now: set) -> int:
+    def _trip_local_hour(self, trip: "Trip", now_utc: datetime) -> int:
+        """Die Stunde, die der Wanderer dieses Trips gerade auf der Uhr hat.
+
+        Issue #1724. Zone aus `trip_day` -- derselbe Aufloeser, den der
+        Alarm-Pfad seit #1697 benutzt, kein zweiter Weg.
+        """
+        from services.trip_day import trip_local_now
+
+        return trip_local_now(trip, now_utc).hour
+
+    def _process_pending_markers(self, now_utc: datetime, due_trip_ids_now: set) -> int:
         """Issue #1012 (b2): Verarbeitet offene Nachliefer-Marker VOR den
         regulären Slots. Für jeden Marker:
         - Trip regulär JETZT fällig (beliebiger report_type) -> Marker
@@ -600,25 +627,34 @@ class TripReportSchedulerService:
             return trip.report_config.evening_time.hour
         return 18
 
-    def _get_active_trips(self, report_type: str) -> List["Trip"]:
+    def _get_active_trips(self, report_type: str, now_utc: datetime) -> List["Trip"]:
         """
         Get trips that are active for the given report type.
 
         - morning: Trips with a stage for today
         - evening: Trips with a stage for tomorrow
 
+        Issue #1724: "heute" ist der ORTStag DIESES Trips (ADR-0044), nicht
+        das Datum der Serveruhr. Der Zieltag wird deshalb IN der Schleife je
+        Trip bestimmt -- vorher stand er davor und galt fuer alle gleich. In
+        Auckland lag er dadurch bis zu zwoelf Stunden am Tag daneben, und
+        `get_stage_for_date` vergleicht strikt: kein Treffer heisst, der Trip
+        wird still uebersprungen.
+
         Args:
             report_type: "morning" or "evening"
+            now_utc: Zeitpunkt des Laufs. Pflichtparameter -- ein Default auf
+                die Systemuhr wuerde genau die Umgebungsuhr wieder einfuehren,
+                die ADR-0051 Regel 3 verbietet.
 
         Returns:
             List of active Trip objects
         """
         all_trips = load_all_trips(user_id=self._user_id)
-        target_date = self._get_target_date(report_type)
-        now_utc = datetime.now(timezone.utc)
 
         active = []
         for trip in all_trips:
+            target_date = self._get_target_date(report_type, trip, now_utc)
             if trip.get_stage_for_date(target_date) is None:
                 continue
             # Issue #995: Trip-Detail-Pause-Button (Go-Feld paused_at) unterdrückt
@@ -647,20 +683,30 @@ class TripReportSchedulerService:
                     continue
             active.append(trip)
 
-        logger.debug(f"Active trips for {target_date}: {[t.id for t in active]}")
+        logger.debug(f"Active trips ({report_type}): {[t.id for t in active]}")
         return active
 
-    def _get_target_date(self, report_type: str) -> date:
+    def _get_target_date(self, report_type: str, trip: "Trip", now_utc: datetime) -> date:
         """
         Get the target date for the report type.
 
+        Issue #1724 (ADR-0044): "heute" ist der Ortstag DIESES Trips. Vorher
+        stand hier `date.today()` -- das Datum der Prozess-Zeitzone, auf dem
+        Server `Etc/UTC`. Das war der in #1697 ausdruecklich offen gelassene
+        Briefing-Pfad.
+
         Args:
             report_type: "morning" or "evening"
+            trip: Trip, dessen Ortszeit den Kalendertag bestimmt
+            now_utc: Zeitpunkt des Laufs (Pflichtparameter, s.
+                `_get_active_trips`)
 
         Returns:
-            date object (today for morning, tomorrow for evening)
+            date object (Ortstag fuer morning, Ortstag+1 fuer evening)
         """
-        today = date.today()
+        from services.trip_day import trip_local_today
+
+        today = trip_local_today(trip, now_utc)
         if report_type == "morning":
             return today
         else:  # evening
@@ -854,7 +900,10 @@ class TripReportSchedulerService:
         logger.info(f"Generating {report_type} report for trip: {trip.name}")
 
         # 1. Convert trip to segments
-        target_date = self._get_target_date(report_type)
+        # Issue #1724: Zieltag aus der Ortszeit DIESES Trips (ADR-0044).
+        target_date = self._get_target_date(
+            report_type, trip, datetime.now(timezone.utc),
+        )
         segments = self._convert_trip_to_segments(trip, target_date)
 
         # Issue #768: Test-Pfad-Fallback — wenn am regulären Zieldatum keine

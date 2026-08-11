@@ -66,7 +66,14 @@ def _set_paused_at(user_id: str, trip_id: str, iso_value: str | None) -> None:
 
 def _active_ids(user_id: str, report_type: str) -> list[str]:
     from services.trip_report_scheduler import TripReportSchedulerService
-    return [t.id for t in TripReportSchedulerService(user_id=user_id)._get_active_trips(report_type)]
+    # #1724: die Auswahl braucht den Zeitpunkt — "heute" ist der Ortstag
+    # des jeweiligen Trips, nicht das Datum der Serveruhr.
+    from datetime import datetime, timezone
+    return [
+        t.id for t in TripReportSchedulerService(user_id=user_id)._get_active_trips(
+            report_type, datetime.now(timezone.utc),
+        )
+    ]
 
 
 @pytest.fixture(autouse=True)

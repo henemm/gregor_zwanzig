@@ -440,7 +440,9 @@ class TestSchedulerIntegration:
         from services.trip_report_scheduler import TripReportSchedulerService
         service = TripReportSchedulerService()
 
-        active = service._get_active_trips("morning")
+        # #1724: die Auswahl braucht den Zeitpunkt (Ortstag je Trip).
+        from datetime import datetime as _dt2, timezone as _tz2
+        active = service._get_active_trips("morning", _dt2.now(_tz2.utc))
         active_ids = [t.id for t in active]
         assert TEST_TRIP_ID in active_ids, (
             f"Test trip not found in active trips: {active_ids}"
