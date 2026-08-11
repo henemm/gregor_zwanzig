@@ -457,8 +457,8 @@ Verhalten, nicht nach Issue-Nummer.
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** **0049** — `docs/adr/0049-premium-sms-vierter-kanal.md`
-  (nächste freie Nummer, gemessen: höchster Bestand ist 0048).
+- **ADR-Nr.:** ADR-0049 — `docs/adr/0049-premium-sms-vierter-kanal.md`
+  (nächste freie Nummer, gemessen: höchster Bestand war 0048).
 - **Rationale:** ADR-0004 legt fest: „Die unterstützten Kanäle sind nur noch
   E-Mail · Telegram · SMS." Die PO-Vorgabe verlangt Premium-SMS als eigenen,
   vierten Kanal `premium_sms` — nach CLAUDE.md-Regel „Abweichung ⇒ neues
