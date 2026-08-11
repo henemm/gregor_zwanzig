@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.23)
+# SMS / Kompakt-Format Specification (v2.24)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -331,13 +331,30 @@ Wenn keine relevanten Zonen/Massifs aktiv sind: **Block komplett weglassen** (ke
 
 Nur ausgeben wenn der Trip als Wintersport markiert ist (`trip.profile == "wintersport"`). Details siehe `docs/specs/wintersport_extension.md`.
 
-> **`WC` ist im Produktivpfad nicht erreichbar (Klarstellung v2.12, Issue #1410 §4).**
-> `profile="wintersport"` wird ausschliesslich von der Legacy-CLI
-> (`src/app/cli.py`) gesetzt; kein Briefing-Versandweg erzeugt es. `WC`
-> ist damit seit Einführung faktisch tot und NICHT die gefühlte
-> Temperatur des Trip-Briefings — dafür stehen seit v2.12 `FN`/`FK`/`FD`
-> (§3.2). Der Token bleibt aus Rückwärtskompatibilität im Code, wird hier
-> aber nicht länger als regulär verfügbare Option geführt.
+> 🔴 **KORREKTUR 2026-08-11: `WC` IST im Produktivpfad erreichbar — und ist eine
+> Wert-Dublette von `FK`.** Hier stand bis dahin das Gegenteil („im Produktivpfad
+> nicht erreichbar … seit Einführung faktisch tot", Klarstellung v2.12, Issue
+> #1410 §4). Das war zum Zeitpunkt der Formulierung richtig und ist seit
+> **#1660 B** (2026-08-10) überholt: `SMS_MULTI_SYMBOLS_BY_METRIC["wind_chill"]
+> = ("FK", "FD", "WC")` (`sms_trip.py:183`) erzeugt alle drei Symbole, sobald
+> die Metrik `wind_chill` gewählt ist — unabhängig von `profile`.
+>
+> **Zweimal am laufenden Code gemessen** (2026-08-11): die reale Briefing-SMS
+> des Trips KHW enthielt `FK10 … WC10`, eine Gegenprobe über
+> `TripReportFormatter().format_email(...).sms_text` lieferte `FK1 … WC1`.
+> **Beide Male trägt `WC` denselben Wert wie `FK`** (Quelle `day.wind_chill_c`,
+> `builder.py:259`) — in einer auf 160 Zeichen gekürzten Nachricht verbraucht
+> derselbe Messwert also zweimal Platz. Entscheidung dazu: `WC` fällt mit
+> **#1728** ersatzlos weg, es trägt keine eigene Information.
+>
+> Unverändert richtig bleibt: `WC` ist **nicht** die gefühlte Temperatur des
+> Trip-Briefings im Sinne der Auswahl — dafür stehen `FN`/`FK`/`FD` (§3.2).
+>
+> **Fehlerklasse, zur Warnung:** eine Aussage über den eigenen Code, die stimmte,
+> dann durch eine Änderung überholt wurde und die niemand prüft. Dieselbe Klasse
+> traf am selben Tag den Editor-Hinweis „SMS kennt keine Spalten-Reihenfolge"
+> (seit #1677 falsch). Kein Test hält Dokumentationstexte gegen das tatsächliche
+> Verhalten.
 
 ### 3.7 Debug-Token
 
@@ -497,7 +514,7 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 | `Z`/`M` | `risque-prevention-incendie.fr` | tagesaktueller JSON | ⚠️ Provider TODO |
 | `SD`/`NS24+`/`SL` | GeoSphere/SLF | siehe Wintersport-Spec | ⚠️ teilweise vorhanden |
 | `AV` | `AvalancheReport.danger.level` | aus Lawinenbericht | ⚠️ Provider TODO |
-| `WC` | `wind_chill_c` | berechnet | ⚠️ nur Legacy-CLI (`profile="wintersport"`), im Produktivpfad nie erreichbar — s. §3.6 |
+| `WC` | `wind_chill_c` | berechnet | 🔴 **erreichbar, sobald `wind_chill` gewählt ist** (seit #1660 B) und **wertgleich mit `FK`** — zweimal gemessen 2026-08-11. Fällt mit #1728 ersatzlos weg. Die frühere Angabe „nur Legacy-CLI, nie erreichbar" war überholt — s. §3.6 |
 | `FN` / `FK` / `FD` | `night_wind_chill_min_c` / `wind_chill_min_c` / `wind_chill_max_c` | Open-Meteo `apparent_temperature`, GeoSphere | ✅ vorhanden (Issue #1410) |
 | `K` | `temp_min_c` (Gehzeit-Fenster) | Provider | ✅ vorhanden (Issue #1410) |
 | `HU` | `humidity_pct` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
@@ -575,6 +592,8 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.20 | 2026-08-06 | Folgescheibe S3b-2b: der `!`-Warn-Block-Filter des **Ortsvergleichs** (`comparison.py`) geht ebenfalls auf die Startschwelle „gering" über — `render_compare_sms`/`render_compare_telegram` rufen den geteilten Kern jetzt mit `min_official_level_for_threshold("LOW")` statt des vormals festen `MIN_SMS_LEVEL` (orange). Der Compare-SMS-/Telegram-Bericht zeigt künftig auch **gelbe** (Stufe 2) amtliche Warnungen, die vorher nie erschienen. Anders als beim Trip gibt es dafür keinen eigenen, je Kanal einstellbaren Bericht-Parameter — die neue Alarm-Kanal-Schwelle des Ortsvergleichs (`ComparePreset.alert_channel_thresholds`) regelt ausschließlich den Alarm-**Versand**, nicht diesen Bericht (derselbe Zielkonflikt wie beim Trip, gleiche Auflösung). §2 (Token-Tabelle) und §3.4c entsprechend präzisiert. ADR-0046, Spec: `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md`. |
 | 2.21 | 2026-08-09 | Temperatur-Trennung Scheibe A (Issue #1660): (1) `FN` hängt nicht mehr an „Gefühlte Temperatur" (`wind_chill`), sondern an der neuen eigenen wählbaren Metrik „Gefühlte Nacht-Tiefsttemperatur" (`wind_chill_night`) — exakt analog zu `N`/`temperature_night` seit #1484; `FK`/`FD`/`WC` bleiben bei `wind_chill`. (2) Die seit #1357 vorhandene Auswertungswahl (Spanne/Tiefstwert/Höchstwert/Mittelwert je Metrik) wirkt jetzt auch in der SMS: `K` nur bei gewähltem „Tiefstwert", `D` nur bei „Höchstwert" (Metrik „Temperatur"); `FK`/`FD` analog bei „Gefühlte Temperatur"; „Nur Mittelwert" entfernt beide Token der jeweiligen Größe ersatzlos, kein Rückfall auf die Spanne. `N`/`FN` sind von der Auswertungswahl unberührt (eigene Metriken ohne Auswertungswahl). Betrifft §2 (Token-Reihenfolge-Tabelle, Hinweis zu `K`/`FK`/`FD`/`FN`), §3.2 (`FN`-Zeile), §4 (Null-Repräsentation). Spec: `docs/specs/modules/fix_1660a_temp_trennung.md`. |
 | 2.22 | 2026-08-10 | SMS-Token-Verdrahtung Scheibe B (Issue #1660): 14 bisher wählbare, aber wirkungslose Metriken bekommen ein Kürzel — `HU`/`DP`/`WD`/`CP`/`PT`/`CT`/`CL`/`CM`/`CH`/`VS`/`SU`/`UV`/`HP`/`NL` (Kürzel unverändert `metric_catalog.sms_code`, kein neuer Katalogeintrag). Drei Wertegrammatik-Klassen: Threshold-Peak (HU/DP/CP/UV/CT/CL/CM/CH, wie `R`/`W`/`G`), Invers-Min mit Stunde (VS/NL, wie `SL` aber mit `{min}@{h}` statt reinem Tageswert und Null-Form statt Weglassen), Tageswert ohne Stunde (WD/PT/SU/HP). Position: eigener Block nach `TH+:`, vor `C`/Vigilance (§2); Kürzungsrang direkt nach `DBG`, vor den Wintersport-Token (§6, DROP_ORDER). Erscheinen in Morgen- und Abendbriefing gleich (kein Nacht-Sonderfall). Betrifft §2, neuer §3.2a, §4, §6, §9. Spec: `docs/specs/modules/fix_1660b_sms_token_wiring.md`. |
+
+| 2.24 | 2026-08-11 | 🔴 **Korrektur einer Falschaussage, keine Formatänderung.** §3.6 und §9 behaupteten, `WC` sei „im Produktivpfad nie erreichbar" und „seit Einführung faktisch tot" (v2.12, #1410 §4). Das stimmte damals und ist seit **#1660 B** (2026-08-10) überholt: `SMS_MULTI_SYMBOLS_BY_METRIC["wind_chill"] = ("FK","FD","WC")` erzeugt alle drei Symbole, sobald `wind_chill` gewählt ist — unabhängig von `profile`. Zweimal am laufenden Code gemessen (reale KHW-Briefing-SMS `FK10 … WC10`; Gegenprobe über `format_email(...).sms_text` → `FK1 … WC1`): **`WC` trägt denselben Wert wie `FK`**, verbraucht in der 160-Zeichen-Grenze also doppelt Platz. `WC` fällt mit **#1728** ersatzlos weg. Fehlerklasse: eine Aussage über den eigenen Code, die durch eine spätere Änderung überholt wurde und die kein Test gegen das Verhalten hält — dieselbe Klasse traf am selben Tag den Editor-Hinweis „SMS kennt keine Spalten-Reihenfolge" (seit #1677 falsch, →#1719 S3). |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:
