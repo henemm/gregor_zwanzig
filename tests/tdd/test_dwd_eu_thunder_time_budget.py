@@ -96,25 +96,28 @@ def test_ac4_erschoepftes_gewitterbudget_bricht_nur_die_anreicherung_ab(monkeypa
 
 def test_ac4_das_budget_ist_hergeleitet_und_nicht_von_den_nachbarn_uebernommen():
     """AC-4, Herleitungs-Haelfte: Given die gemessene Abrufzahl von ICON-EU
-    (EIN Signal, kein Hagel, kein Kumulations-Anker — also hoechstens die
-    Haelfte der ICON-D2-Abrufe), When das eigene Zeitbudget festgelegt wird,
-    Then ist es kleiner als das von ICON-D2 und weder mit diesem noch mit dem
-    von Meteo-France identisch.
+    (#1531: vier Signale -- `lpi_con_max`, `cape_ml`, `cape_con`, `cin_ml`,
+    kein Hagel, kein Kumulations-Anker -- also weiterhin deutlich weniger als
+    die neun ICON-D2-Signale aus #1531), When das eigene Zeitbudget
+    festgelegt wird, Then ist es kleiner als das von ICON-D2 und weder mit
+    diesem noch mit dem von Meteo-France identisch.
 
-    Beide Nachbarwerte (90 s fuer bis zu 48 ICON-D2-Abrufe, 45 s fuer 24
-    Meteo-France-Abrufe) waeren bequem zu uebernehmen. Genau das verbietet die
-    Spec: die Zahl muss aus der eigenen Abrufzahl mal der eigenen gemessenen
-    Latenz kommen. Dieser Waechter kann eine falsche Herleitung nicht
-    beweisen, aber die beiden naheliegenden Kopien ausschliessen.
+    Beide Nachbarwerte (150 s fuer bis zu 216 ICON-D2-Abrufe seit #1531,
+    45 s fuer 24 Meteo-France-Abrufe) waeren bequem zu uebernehmen. Genau
+    das verbietet die Spec: die Zahl muss aus der eigenen Abrufzahl mal der
+    eigenen gemessenen Latenz kommen. Dieser Waechter kann eine falsche
+    Herleitung nicht beweisen, aber die beiden naheliegenden Kopien
+    ausschliessen.
     """
     eigen = dwd_eu().THUNDER_FETCH_DEADLINE_SECONDS
     assert isinstance(eigen, (int, float)) and eigen > 0, (
         f"Das Gewitter-Zeitbudget ist {eigen!r} — kein brauchbarer Wert"
     )
-    assert len(tuple(dwd_eu().THUNDER_PARAMS)) == 1, (
-        f"ICON-EU liefert gemessen genau EIN Gewittersignal, der Provider "
-        f"fuehrt aber {tuple(dwd_eu().THUNDER_PARAMS)} — dann traegt die "
-        "Herleitung 'halb so viele Abrufe wie ICON-D2' nicht mehr"
+    assert len(tuple(dwd_eu().THUNDER_PARAMS)) < len(tuple(dwd.THUNDER_PARAMS)), (
+        f"ICON-EU fuehrt {tuple(dwd_eu().THUNDER_PARAMS)}, ICON-D2 "
+        f"{tuple(dwd.THUNDER_PARAMS)} — ICON-EU sollte weiterhin deutlich "
+        "weniger Signale abrufen, sonst traegt die Herleitung 'weniger "
+        "Abrufe als ICON-D2' nicht mehr"
     )
     assert eigen != dwd.THUNDER_FETCH_DEADLINE_SECONDS, (
         f"Das Budget ist mit {eigen} identisch zu ICON-D2 — uebernommen statt "

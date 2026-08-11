@@ -43,7 +43,7 @@ from providers import dwd  # noqa: E402
 
 
 @pytest.mark.live
-@pytest.mark.parametrize("param_index", [0, 1])
+@pytest.mark.parametrize("param_index", range(len(dwd.THUNDER_PARAMS)))
 def test_ac6_hinterlegte_gewitter_parameter_existieren_beim_echten_dienst(param_index):
     """AC-6: Given die im Produktivcode hinterlegten DWD-Parameternamen fuer
     Blitzpotenzial und Hagel, When gegen das echte Verzeichnis auf
@@ -134,13 +134,23 @@ def test_ac8_mutations_gegenprobe_erfundener_parameter_an_letzter_position_wird_
     """
     dwd_pfad = _SRC / "providers" / "dwd.py"
     original_quelltext = dwd_pfad.read_text(encoding="utf-8")
-    alte_zeile = 'THUNDER_PARAMS = ("lpi", "grau_gsp")'
+    alte_zeile = (
+        'THUNDER_PARAMS = (\n'
+        '    "lpi", "grau_gsp", "cin_ml", "sdi_2", "cape_ml", "lpi_max",\n'
+        '    "uh_max_med", "uh_max", "uh_max_low",\n'
+        ')'
+    )
     assert alte_zeile in original_quelltext, (
         "Die erwartete THUNDER_PARAMS-Zeile wurde in dwd.py nicht gefunden -- "
         "die Mutation kann nicht angesetzt werden. KEINE Aenderung vorgenommen."
     )
     fake_param = "erfundener_gewitterparameter_1531_ac8"
-    neue_zeile = f'THUNDER_PARAMS = ("lpi", "grau_gsp", "{fake_param}")'
+    neue_zeile = (
+        'THUNDER_PARAMS = (\n'
+        '    "lpi", "grau_gsp", "cin_ml", "sdi_2", "cape_ml", "lpi_max",\n'
+        f'    "uh_max_med", "uh_max", "uh_max_low", "{fake_param}",\n'
+        ')'
+    )
     mutierter_quelltext = original_quelltext.replace(alte_zeile, neue_zeile, 1)
     assert mutierter_quelltext != original_quelltext, "Mutation griff nicht"
 

@@ -36,13 +36,15 @@ from tests.tdd._dwd_eu_fixtures import dwd_eu  # noqa: E402
 
 
 @pytest.mark.live
-def test_ac6_hinterlegter_parameter_existiert_beim_echten_dienst():
-    """AC-6: Given den im Produktivcode hinterlegten ICON-EU-Parameternamen
-    fuer Blitzpotenzial, When gegen `opendata.dwd.de` geprueft wird, Then
-    existiert die erwartete Datei tatsaechlich (HTTP 200) — kein lautloser 404.
+@pytest.mark.parametrize("param_index", range(len(dwd_eu().THUNDER_PARAMS)))
+def test_ac6_hinterlegter_parameter_existiert_beim_echten_dienst(param_index):
+    """AC-6: Given die im Produktivcode hinterlegten ICON-EU-Parameternamen
+    (#1531: vier statt einem), When gegen `opendata.dwd.de` geprueft wird,
+    Then existiert die erwartete Datei tatsaechlich (HTTP 200) — kein
+    lautloser 404, fuer JEDEN Eintrag, nicht nur den ersten.
     """
     modul = dwd_eu()
-    param = tuple(modul.THUNDER_PARAMS)[0]
+    param = tuple(modul.THUNDER_PARAMS)[param_index]
     lauf = modul._thunder_run_candidates(datetime.now(timezone.utc))[0]
     url = modul._build_url(lauf, 1, param)
     assert url.startswith("https://opendata.dwd.de/"), (
@@ -116,13 +118,16 @@ def test_ac8_mutations_gegenprobe_erfundener_parameter_an_letzter_position_wird_
     """
     dwd_eu_pfad = _SRC / "providers" / "dwd_eu.py"
     original_quelltext = dwd_eu_pfad.read_text(encoding="utf-8")
-    alte_zeile = 'THUNDER_PARAMS = ("lpi_con_max",)'
+    alte_zeile = 'THUNDER_PARAMS = ("lpi_con_max", "cape_ml", "cape_con", "cin_ml")'
     assert alte_zeile in original_quelltext, (
         "Die erwartete THUNDER_PARAMS-Zeile wurde in dwd_eu.py nicht gefunden "
         "-- die Mutation kann nicht angesetzt werden. KEINE Aenderung vorgenommen."
     )
     fake_param = "erfundener_gewitterparameter_1531_ac8"
-    neue_zeile = f'THUNDER_PARAMS = ("lpi_con_max", "{fake_param}")'
+    neue_zeile = (
+        'THUNDER_PARAMS = ("lpi_con_max", "cape_ml", "cape_con", "cin_ml", '
+        f'"{fake_param}")'
+    )
     mutierter_quelltext = original_quelltext.replace(alte_zeile, neue_zeile, 1)
     assert mutierter_quelltext != original_quelltext, "Mutation griff nicht"
 

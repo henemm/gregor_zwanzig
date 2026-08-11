@@ -85,7 +85,10 @@ FORECAST_HOURS: List[int] = list(range(1, 25))
 # liest, statt ihn zu wiederholen — genau diese Naht fehlte bei S2a, wo
 # `LITOTA3` beim Dienst gar nicht existierte und trotzdem 24 aufgezeichnete
 # Tests gruen blieben.
-THUNDER_PARAMS = ("lpi_con_max",)
+# #1531: drei Energiegroessen ergaenzt (Spec Implementation Details Punkt 2)
+# -- `cape_con` wird abgerufen, aber bewusst KEINEM Modellfeld zugeordnet
+# (kein Eintrag in `thunder_enrichment._SIGNAL_ZU_FELD`).
+THUNDER_PARAMS = ("lpi_con_max", "cape_ml", "cape_con", "cin_ml")
 
 # Abrufname beim Dienst -> INTERNER Signalname des gemeinsamen Protokolls.
 # `lpi_con_max` ist der externe Parametername; nach aussen liefert dieser
@@ -93,7 +96,14 @@ THUNDER_PARAMS = ("lpi_con_max",)
 # fachlich dieselbe Groesse (Blitzpotenzial in J/kg) ist. Dadurch greift die
 # bestehende Zeile in `thunder_enrichment._SIGNAL_ZU_FELD` unveraendert und
 # der gemeinsame Anschluss muss fuer S2c NICHT angefasst werden (Spec AC-9).
-_SIGNAL_KEYS: Dict[str, str] = {"lpi_con_max": "lpi"}
+# `cape_ml`/`cape_con`/`cin_ml` behalten ihren Abrufnamen 1:1 als Signalname
+# -- keine Umbenennung noetig, weil es dieselben Groessen wie bei ICON-D2 sind.
+_SIGNAL_KEYS: Dict[str, str] = {
+    "lpi_con_max": "lpi",
+    "cape_ml": "cape_ml",
+    "cape_con": "cape_con",
+    "cin_ml": "cin_ml",
+}
 
 # Eigenes Zeitbudget der Gewitter-Anreicherung (Spec AC-4). HERGELEITET,
 # nicht von den Nachbarn uebernommen (ICON-D2 90 s, Meteo-France 45 s):
