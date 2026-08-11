@@ -1109,6 +1109,17 @@ def summarize_points(points: list) -> Optional[SegmentWeatherSummary]:
     summary.cloud_low_avg_pct = svc._compute_cloud_low(ts)
     summary.cloud_mid_avg_pct = svc._compute_cloud_mid(ts)
     summary.cloud_high_avg_pct = svc._compute_cloud_high(ts)
+    # Issue #1703 S2: GEGENRICHTUNG zu #1391 -- dort fehlte die
+    # Schneefallgrenze im Trip-Pfad, obwohl der Vergleich sie setzte; hier
+    # fehlten diese fuenf im Vergleichspfad, obwohl compute_extended_metrics()
+    # sie laengst fuellt (:752-760). Folge waren fuenf dauerhaft leere
+    # Ausblick-Spalten des Ortsvergleichs. Kanonische Trip-Regeln, keine
+    # eigene Rechenvorschrift.
+    summary.snow_depth_cm = svc._compute_snow_depth(ts)
+    summary.snow_new_sum_cm = svc._compute_fresh_snow(ts)
+    summary.wind_direction_avg_deg = svc._compute_wind_direction(ts)
+    summary.wind_chill_min_c = svc._compute_wind_chill(ts)
+    summary.wind_chill_max_c = svc._compute_wind_chill_max(ts)
     return summary
 
 
