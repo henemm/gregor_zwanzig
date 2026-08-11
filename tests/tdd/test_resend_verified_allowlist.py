@@ -47,6 +47,7 @@ deterministisch rot, ohne echten Mailversand oder Resend-Kontingent-Verbrauch.
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -400,6 +401,63 @@ class TestF001BrokenNonObjectProfileIsFailSoft:
         assert "healthy@gmail.com" in allowlist, (
             f"F001: ein kaputtes Profil ({broken_content!r}) darf das "
             f"Laden anderer gueltiger Profile nicht verhindern: {allowlist}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# #1596 AC-3 + Abgrenzung: eine VORHANDENE, aber kaputte user.json muss beim
+# Uebersprungen-Werden geloggt werden; ein Nutzerverzeichnis OHNE user.json
+# (legitimer Normalfall, z.B. waehrend der Registrierung) bleibt weiterhin
+# still.
+# ---------------------------------------------------------------------------
+
+
+class TestIssue1596CorruptProfileLogsButMissingFileStaysQuiet:
+    def test_corrupt_profile_logs_warning_healthy_profile_still_loaded(self, tmp_path, caplog):
+        """AC-3: GIVEN ein user.json mit ungueltigem JSON (kein Objekt, kein
+        valider JSON-Text) neben einem gueltigen, verifizierten Profil /
+        WHEN _load_resend_allowlist() aufgerufen wird / THEN wird das
+        gesunde Profil normal geladen, das kaputte Profil uebersprungen
+        (wie bisher), UND es erscheint ein Warn-Log-Eintrag mit der
+        User-ID des kaputten Profils."""
+        users_root = tmp_path / "users"
+        broken_dir = users_root / "broken-profile-1596"
+        broken_dir.mkdir(parents=True, exist_ok=True)
+        (broken_dir / "user.json").write_text("{not valid json", encoding="utf-8")
+        _write_user_profile(
+            users_root,
+            "healthy-profile-1596",
+            mail_to="healthy1596@gmail.com",
+            email_verified_at="2026-07-10T12:00:00Z",
+        )
+
+        with caplog.at_level(logging.WARNING):
+            allowlist = email_module._load_resend_allowlist(data_dir=str(tmp_path))
+
+        assert "healthy1596@gmail.com" in allowlist, (
+            f"Ein kaputtes Profil darf das Laden anderer gueltiger Profile "
+            f"nicht verhindern: {allowlist}"
+        )
+        assert "broken-profile-1596" in caplog.text, (
+            f"AC-3: ein uebersprungenes kaputtes Profil muss eine Warnung mit "
+            f"der User-ID loggen, Log-Ausgabe war: {caplog.text!r}"
+        )
+
+    def test_missing_user_json_file_stays_quiet(self, tmp_path, caplog):
+        """Abgrenzung (analog AC-4): GIVEN ein Nutzerverzeichnis OHNE
+        user.json (legitimer Normalfall, keine Korruption) / WHEN
+        _load_resend_allowlist() aufgerufen wird / THEN wird das Profil wie
+        bisher stillschweigend uebersprungen, OHNE Log-Eintrag."""
+        users_root = tmp_path / "users"
+        no_file_dir = users_root / "no-userjson-1596"
+        no_file_dir.mkdir(parents=True, exist_ok=True)  # Verzeichnis da, user.json fehlt
+
+        with caplog.at_level(logging.WARNING):
+            email_module._load_resend_allowlist(data_dir=str(tmp_path))
+
+        assert "no-userjson-1596" not in caplog.text, (
+            f"Ein Nutzerverzeichnis ohne user.json ist der legitime Normalfall "
+            f"und darf NICHT geloggt werden, Log-Ausgabe war: {caplog.text!r}"
         )
 
 
