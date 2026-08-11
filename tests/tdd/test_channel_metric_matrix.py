@@ -2667,3 +2667,177 @@ def test_ac_s2_7_groessenanker_faengt_die_einzelne_streichung():
         "Ersatz schaffen, bevor der Anker verschwindet."
     )
     pruefung(klasse())
+
+
+# --- AC-S2-8: die fuenf neuen Zellen tragen den RICHTIGEN Wert ------------
+
+# Adversary-Finding F001 (Scheibe 2, HIGH): AC-S2-4 prueft "die Zelle traegt
+# nicht das Fehlzeichen", AC-S2-5 "welche Felder sind ueberhaupt befuellt" --
+# KEINER von beiden prueft, WELCHER Wert drinsteht. Vertauscht man in
+# ``summarize_points()`` (weather_metrics.py:1121-1122) die Zuweisungen
+# ``wind_chill_min_c`` und ``wind_chill_max_c`` gegeneinander, bleibt diese
+# ganze Achse gruen -- und repo-weit prueft kein Test die Zahlenwerte dieser
+# fuenf Felder. Genau dort ist ein Vertauscher am wahrscheinlichsten: es sind
+# die einzigen zwei der fuenf mit nahezu gleichnamigen Helferfunktionen
+# (``_compute_wind_chill`` / ``_compute_wind_chill_max``), und beide Zellen
+# zeigen danach einen plausiblen Wert -- der Fehler ist unsichtbar.
+#
+# Massstab: die Erwartung wird aus den STUNDENWERTEN der Fixture gerechnet --
+# weder aus ``_compute_*`` noch aus der Ausgabe von ``summarize_points()``.
+# Beides hielte die Ausgabe gegen sich selbst und fiele auf denselben
+# Vertauscher erneut herein.
+_S2_NEUE_FELDER_REGEL = {
+    "snow_depth_cm": "MAXIMUM ueber die Stundenwerte snow_depth_cm",
+    "snow_new_sum_cm": "SUMME ueber die Stundenwerte snow_new_24h_cm",
+    "wind_direction_avg_deg": "Tagesmittel ueber die Stundenwerte wind_direction_deg",
+    "wind_chill_min_c": "MINIMUM ueber die Stundenwerte wind_chill_c",
+    "wind_chill_max_c": "MAXIMUM ueber die Stundenwerte wind_chill_c",
+}
+
+_S2_ZELLENZAHL = re.compile(r"^-?\d+(?:[.,]\d+)?")
+
+
+def _s2_erwartete_tageswerte(tagespunkte: list[ForecastDataPoint]) -> dict[str, float]:
+    """Die fuenf Tageswerte, aus den Stundenwerten GERECHNET (Regeln oben).
+
+    Die Windrichtung wird bewusst NICHT als Kreismittel nachgebaut: die Fixture
+    haelt sie ueber den Tag konstant, und der Tageswert einer konstanten Reihe
+    ist genau dieser Wert -- unabhaengig von der Mittelungsvorschrift. Ein hier
+    nachgebautes ``atan2`` waere eine Kopie der Implementierung, kein
+    unabhaengiger Massstab.
+    """
+    richtungen = {p.wind_direction_deg for p in tagespunkte}
+    assert len(richtungen) == 1, (
+        f"Vorbedingung: die Fixture haelt die Windrichtung ueber den Tag "
+        f"konstant, gemessen {sorted(richtungen)} -- ohne Konstanz traegt die "
+        f"vorschriftsfreie Erwartung fuer wind_direction_avg_deg nicht"
+    )
+    return {
+        "snow_depth_cm": max(p.snow_depth_cm for p in tagespunkte),
+        "snow_new_sum_cm": sum(p.snow_new_24h_cm for p in tagespunkte),
+        "wind_direction_avg_deg": float(richtungen.pop()),
+        "wind_chill_min_c": min(p.wind_chill_c for p in tagespunkte),
+        "wind_chill_max_c": max(p.wind_chill_c for p in tagespunkte),
+    }
+
+
+def _s2_erwartungen_je_ausblickstag() -> list[tuple[date, dict[str, float]]]:
+    """Je Ausblickstag der Mail ein Paar (Tag, gerechnete Soll-Werte)."""
+    punkte = _s2_punkte(ThunderLevel.MED)
+    tage = sorted({p.ts.date() for p in punkte})
+    return [
+        (tag, _s2_erwartete_tageswerte([p for p in punkte if p.ts.date() == tag]))
+        for tag in tage
+    ]
+
+
+def _s2_erwartungen_sind_unterscheidbar(
+    erwartungen: list[tuple[date, dict[str, float]]],
+) -> None:
+    """Vakuum-Gegenprobe: eine Wert-Zusicherung faengt eine Vertauschung nur,
+    wenn die vertauschten Werte ueberhaupt verschieden sind. Sind sie gleich,
+    ist AC-S2-8 blind -- dann muss der Test scheitern und das sagen, statt
+    stillschweigend nichts zu bewachen."""
+    for tag, werte in erwartungen:
+        if werte["wind_chill_min_c"] == werte["wind_chill_max_c"]:
+            pytest.fail(
+                f"Vakuum: am Ausblickstag {tag} liefert die Fixture fuer "
+                f"wind_chill_min_c und wind_chill_max_c denselben Wert "
+                f"({werte['wind_chill_min_c']!r}) -- eine Vertauschung der "
+                "beiden Zuweisungen in summarize_points() waere damit "
+                "unsichtbar und AC-S2-8 blind. Die Stundenreihe des Tages "
+                "braucht eine Temperaturspreizung."
+            )
+    felder = list(_S2_NEUE_FELDER_REGEL)
+    for nummer, eins in enumerate(felder):
+        for zwei in felder[nummer + 1:]:
+            if all(werte[eins] == werte[zwei] for _, werte in erwartungen):
+                pytest.fail(
+                    f"Vakuum: {eins} und {zwei} tragen an JEDEM Ausblickstag "
+                    "denselben Soll-Wert. Waeren ihre Zuweisungen in "
+                    "summarize_points() vertauscht oder beide auf dieselbe "
+                    "``_compute_*``-Regel gelegt, bliebe AC-S2-8 gruen -- die "
+                    "Fixture muss die fuenf Felder unterscheidbar machen."
+                )
+
+
+def test_ac_s2_8_die_fuenf_neuen_felder_tragen_den_gerechneten_wert():
+    """AC-S2-8: ``summarize_points()`` liefert fuer die fuenf mit dieser Scheibe
+    verdrahteten Tagesfelder GENAU den Wert, den die Stundenwerte hergeben --
+    nicht nur "kein Fehlzeichen" (AC-S2-4) und nicht nur "ueberhaupt befuellt"
+    (AC-S2-5). Schliesst Adversary-Finding F001: die Zuweisungen duerfen weder
+    vertauscht noch auf die falsche ``_compute_*``-Regel gelegt sein."""
+    erwartungen = _s2_erwartungen_je_ausblickstag()
+    _s2_erwartungen_sind_unterscheidbar(erwartungen)
+    punkte = _s2_punkte(ThunderLevel.MED)
+
+    for tag, soll in erwartungen:
+        aggregat = summarize_points([p for p in punkte if p.ts.date() == tag])
+        ist = {feld: getattr(aggregat, feld) for feld in _S2_NEUE_FELDER_REGEL}
+        for feld, regel in _S2_NEUE_FELDER_REGEL.items():
+            assert ist[feld] == soll[feld], (
+                f"AC-S2-8: ``summarize_points()`` liefert am Ausblickstag {tag} "
+                f"fuer {feld} den Wert {ist[feld]!r}; aus den Stundenwerten "
+                f"gerechnet ({regel}) sind es {soll[feld]!r}.\n"
+                f"Ist:  {ist}\nSoll: {soll}\n"
+                "Haeufigster Grund: in weather_metrics.py sind zwei Zuweisungen "
+                "VERTAUSCHT -- bei wind_chill_min_c/wind_chill_max_c "
+                "(``_compute_wind_chill`` vs. ``_compute_wind_chill_max``) "
+                "faellt das sonst nirgends auf, weil danach beide Zellen einen "
+                "plausiblen Wert zeigen."
+            )
+
+
+def _s2_zellenzahl(zelle: str) -> float:
+    """Die fuehrende Zahl eines Ausblick-Zellentexts ("16 cm" -> 16.0).
+
+    Geprueft wird der WERT, nicht die Schreibweise -- Einheit und
+    Nachkommastellen bewacht AC-S2-6.
+    """
+    treffer = _S2_ZELLENZAHL.match(zelle.strip())
+    assert treffer is not None, (
+        f"AC-S2-8: die Ausblick-Zelle {zelle!r} beginnt nicht mit einer Zahl -- "
+        "ohne Zahl ist der Wert nicht pruefbar"
+    )
+    return float(treffer.group().replace(",", "."))
+
+
+def test_ac_s2_8_ausblick_zelle_zeigt_den_gerechneten_wert():
+    """AC-S2-8 (Wirkort): derselbe gerechnete Tageswert steht in der Zelle der
+    ECHTEN Vergleichs-Mail -- HTML UND Klartext, an jedem der drei Tage. Der
+    Nachweis an ``summarize_points()`` allein zeigte nur, dass das Aggregat
+    stimmt, nicht dass der Nutzer den richtigen Wert sieht (Pruefort =
+    Wirkort)."""
+    erwartungen = _s2_erwartungen_je_ausblickstag()
+    _s2_erwartungen_sind_unterscheidbar(erwartungen)
+    nach_feld = {s["summary_field"]: s for s in _S2_SOLL}
+    dezimalen = {e["key"]: e.get("decimals") or 0 for e in get_compare_metric_catalog()}
+
+    html, text = _s2_mail()
+    kopf, zeilen = _s2_html_ausblick(html)
+    klartext = _s2_klartext_ausblick(text)
+    assert len(zeilen) == len(klartext) == len(erwartungen), (
+        f"AC-S2-8: {len(zeilen)} HTML-Tageszeilen, {len(klartext)} "
+        f"Klartext-Tageszeilen, {len(erwartungen)} Ausblickstage in den "
+        "Stundendaten -- ohne 1:1-Zuordnung ist kein Tageswert pruefbar"
+    )
+
+    for nummer, (tag, soll) in enumerate(erwartungen):
+        for feld, regel in _S2_NEUE_FELDER_REGEL.items():
+            spalte = nach_feld[feld]
+            erwartet = round(soll[feld], dezimalen[spalte["key"]])
+            for form, zelle in (
+                ("HTML", zeilen[nummer][kopf.index(spalte["ueberschrift"])]),
+                ("KLARTEXT", klartext[nummer][spalte["ueberschrift"]]),
+            ):
+                assert _s2_zellenzahl(zelle) == erwartet, (
+                    f"AC-S2-8: die {form}-Zelle der Spalte "
+                    f"{spalte['ueberschrift']!r} ({spalte['key']} -> "
+                    f"SegmentWeatherSummary.{feld}) zeigt am Ausblickstag {tag} "
+                    f"{zelle!r}; aus den Stundenwerten gerechnet ({regel}) "
+                    f"gehoert dort {erwartet!r} hin.\nSoll des Tages: {soll}\n"
+                    "Haeufigster Grund: vertauschte Zuweisungen in "
+                    "summarize_points() -- bei Gefuehlter Temperatur "
+                    "Minimum/Maximum zeigen dann beide Spalten einen "
+                    "plausiblen, aber getauschten Wert."
+                )

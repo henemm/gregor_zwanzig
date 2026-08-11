@@ -125,6 +125,12 @@ Aufzählung — `compute_basis_metrics()` plus elf namentlich verdrahtete `_comp
 Gegengemessen, dass der Fix trägt: auf dem Compare-Eingang liefern alle fünf korrekte
 Werte (30.0 · 16.0 · 210 · 5.0 · 23.0).
 
+> Diese fünf Zahlen stammen aus der **Analyse-Sonde** vom 2026-08-11, nicht aus der
+> Test-Fixture — sie gelten für den dort verwendeten Stundensatz. Die Fixture der Achse
+> rechnet mit anderen Eingangswerten (Wind-Chill 4.0/16.0). Beides ist richtig, aber es
+> sind **nicht** dieselben Erwartungswerte; wer sie verwechselt, baut einen Test gegen die
+> falsche Zahl. Aufgefallen im Adversary-Lauf (F001).
+
 **Kein dokumentierter Vorsatz.** Der Kommentar `:763-765` hält die *spiegelbildliche*
 Lücke fest (#1391: Schneefallgrenze fehlte im Trip-Pfad, obwohl der Vergleich sie setzte).
 #1324 und #1392 sind weitere Flicken an derselben Naht — zwei Listen, die deckungsgleich
@@ -231,10 +237,22 @@ bemerkt, statt still eine Strichspalte zu erzeugen.
 
 ## Known Limitations
 
-- **Zuordnung bleibt unbewacht.** Ein Wächter, der sein Soll aus demselben Katalog liest
-  wie der Prüfling, sieht Fehler *in* diesem Katalog nicht: Vertauschte man Einheit oder
-  Auswertung zweier Einträge, bliebe diese Achse grün. „Rechnen statt tippen" gilt für die
-  Soll-**Menge**, nicht für die Soll-**Zuordnung** (Scheibe 1, Finding F001).
+- **Zuordnung bleibt unbewacht — an ZWEI Stellen, nicht einer.** Ein Wächter, der sein Soll
+  aus demselben Katalog liest wie der Prüfling, sieht Fehler *in* diesem Katalog nicht:
+  Vertauschte man Einheit oder Auswertung zweier Einträge, bliebe diese Achse grün.
+  „Rechnen statt tippen" gilt für die Soll-**Menge**, nicht für die Soll-**Zuordnung**
+  (Scheibe 1, Finding F001).
+
+  **Nachtrag 2026-08-11 (Adversary-Finding F001 dieser Scheibe):** Dieselbe Lücke bestand
+  eine Ebene tiefer, **im Fix selbst**. AC-4 prüft „Zelle trägt nicht das Fehlzeichen",
+  AC-5 prüft „welche Felder sind befüllt" — keiner prüfte, **welcher Wert** darin steht.
+  Vertauschte man in `summarize_points()` die Zuweisungen von `wind_chill_min_c` und
+  `wind_chill_max_c` (die einzigen zwei der fünf neuen Felder mit nahezu gleichnamigen
+  Rechenregeln), blieben alle 58 Tests der Achse grün; repo-weit prüfte kein Test die
+  Zahlenwerte dieser Felder. Die ursprüngliche Fassung dieses Abschnitts benannte nur
+  Katalog-interne Vertauschungen und war damit zu eng. **Geschlossen** durch eine
+  Wert-Zusicherung mit unabhängig aus den Stundendaten gerechneten Erwartungswerten
+  (s. Abschnitt „Nachbesserung F001").
 - **`temperature` + `avg`** ist zentral auflösbar (`temp_avg_c`), im Vergleichs-Katalog
   aber nicht vertreten. Ohne Nutzerwirkung (nicht wählbar), daher hier nur vermerkt.
 - **Der Fix wirkt über den Ausblick hinaus:** `summarize_points()` speist auch die
