@@ -84,7 +84,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
 - Einheiten im Feldnamen: `*_c`, `*_kmh`, `*_mmph`, `*_mm`, `*_pct`, `*_hpa`, `*_jkg`, `*_m`, `*_cm`
-- Provider (Ist-Stand, s. `docs/reference/decision_matrix.md`): `openmeteo` (Standard) | `geosphere` | `brightsky` | `radar_dpc` | `at_direct`/`de_direct`/`fr_direct` (Fallback)
+- Provider (Ist-Stand, s. `docs/reference/decision_matrix.md`): `openmeteo` (Standard) | `geosphere` | `brightsky` | `at_direct`/`de_direct`/`fr_direct` (Fallback) — `radar_dpc` seit #1648 ersatzlos entfernt
 
 ---
 

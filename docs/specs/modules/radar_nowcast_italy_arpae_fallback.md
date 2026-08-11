@@ -10,6 +10,18 @@ tags: [providers, alerts, weather, nowcast, italy, europe, arpae, fallback]
 
 # Nowcast: ARPAE-ICON-2I-Modell-Rückfall unter Radar-DPC für Italien (Issue #1186)
 
+> ⛔ **ABGELÖST — die hier beschriebene Architektur existiert nicht mehr.**
+> Diese Spec beschreibt ARPAE ICON-2I als Rückfall **UNTER** Radar-DPC. Mit
+> **Issue #1648** (2026-08-11) ist Radar-DPC ersatzlos entfernt: ARPAE ist die
+> **alleinige** Italien-Quelle, es gibt keine Ebene mehr darüber. Die hier
+> beschriebene "Zwei-Ebenen-Absicherung" war faktisch eine Ein-Ebenen-Sperre —
+> DPC lieferte immer Frames (genau ein Vergangenheitsbild), sodass
+> `if frames: return frames, "DPC"` den ARPAE-Zweig darunter **nie** erreichte.
+> Gültig bleibt allein das ARPAE-Verhalten selbst (`_fetch_italy_arpae`,
+> transparentes Label "ARPAE ICON-2I (2 km, Italien)", fail-soft auf
+> `minutely_15`). Nachfolge-Spec:
+> `docs/specs/modules/fix_1648_radar_dpc_entfernen.md`.
+
 ## Approval
 
 - [ ] Approved
