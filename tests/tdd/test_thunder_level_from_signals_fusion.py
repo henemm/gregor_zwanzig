@@ -36,6 +36,13 @@ LOW = getattr(ThunderLevel, "LOW", None)
 
 def _fusion(*args, **kwargs):
     from output.metric_format import thunder_level_from_signals
+
+    # Issue #1679: die drei LPI-Schwellen sind keyword-only ohne Default.
+    # `None` hier -- diese Testfamilie prueft ausschliesslich
+    # Blitzdichte/CAPE/"keine Aussage", das Blitzpotenzial soll dabei kein
+    # Signal beitragen.
+    for schluessel in ("lpi_low_min", "lpi_med_min", "lpi_high_min"):
+        kwargs.setdefault(schluessel, None)
     return thunder_level_from_signals(*args, **kwargs)
 
 

@@ -755,6 +755,15 @@ Unterschied zwischen „✅ E2" (nur Entscheidung, Stand des Korrektur-Fundes ob
 (geprüfte Umsetzung, s. Stand-Spalte unten) an Rang 5 selbst nachvollziehbar. Die übrigen hier
 genannten Lücken (Rang 2/3/4/7/10) sind davon unberührt und bleiben offen.
 
+🟡 **Zweiter Nachtrag, ebenfalls 2026-08-10:** Der LPI-Teil von Rang 2 ist inzwischen ebenfalls
+umgesetzt — Issue **#1679**, adversary-VERIFIED, Spec
+`docs/specs/modules/feat_1679_lpi_schwellen_region_tabelle.md`: `app.model_registry.LPI_THRESHOLDS_JKG`
+liefert DE_ALPEN (ICON-D2) jetzt die belegte 1/30/50-Leiter (Bína et al.), EU_REST (ICON-EU)
+bleibt bewusst auf dem Interim-Wert 5/20/50 bis #1678. Die beiden ANDEREN Teile von Rang 2 — CAPE-
+Ladder 1000/2500/4000 statt binär und die CIN-Paarung −25/−50/−100/−200 — sind davon NICHT
+betroffen und bleiben offen (CIN hängt zusätzlich an #1531). Rang 2 ist damit nur **teilweise**
+erledigt — die weiterhin offenen Ränge sind 2 (CAPE-Ladder/CIN-Rest), 3, 4, 7, 10.
+
 Zur Eichung selbst (Rang 7): Abschnitt 4.4 stellt bereits richtig, dass die Historical
 Forecast API die Eichung **sofort rechenbar** macht — kein wochenlanges Sammeln nötig, keine
 Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
@@ -763,7 +772,7 @@ Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
 |---|---|---|---|
 | **0** | ✅ **CAPE-Schwelle modellabhängig gemacht** (3.4b, **#1592**, ADR-0048) | **Fusion, RiskEngine und Δ-Alarme erledigt und live**: Schwelle je Modell × Gebiet, geeicht am 95. Perzentil der Modellklimatologie (mind. 300 J/kg). Auf dem GR20 gilt jetzt 300 statt 1000 — CAPE trägt dort erstmals bei. RiskEngine zählt CAPE nicht mehr doppelt (C2), Δ-Alarme rechnen die Empfindlichkeitsstufe in dieselbe Modellwelt um (C3). Vollzugsvermerk: ADR-0048 | ✅ erledigt |
 | **1** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg. Spec liegt fertig vor | Spec fertig, Freigabe offen |
-| **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ E1 |
+| **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | 🟡 **LPI-Teil ✅ erledigt** (**#1679**, adversary-VERIFIED); CAPE-Ladder + CIN-Paarung offen |
 | **3** | **Gleiche Statistik**: `lpi_max` statt `lpi` gegen `lpi_con_max` | Nimmt allein **Faktor 5** aus dem Gebietsbruch — ohne jede Kalibrierung | ✅ E1 |
 | **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | ✅ E1 |
 | **5** | ✅ **CAPE unsichtbar gemacht** (`selectable=False`, **#1585**) | **Umgesetzt und live** (2026-08-10): CAPE (`cape_jkg`) ist an jeder Nutzerkontakt-Stelle unsichtbar (Trip-Editor, E-Mail, SMS, Ortsvergleich inkl. Alt-Vergleich, Aktivitäts-Vorlagen, Wertebereichs-Korridor, jede Alarmwirkung inkl. #1592 Delta-Alarm) und bleibt ausschließlich interne Zutat der Fusion. Adversary-VERIFIED | ✅ erledigt |

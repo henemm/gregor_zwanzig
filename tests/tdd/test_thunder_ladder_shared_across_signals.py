@@ -31,7 +31,14 @@ def test_ac2_beide_signale_laufen_durch_dieselbe_leiter(monkeypatch):
     liefern BEIDE Pfade das Sentinel-HIGH, und die zwei aufgezeichneten
     Aufrufe tragen jeweils die EIGENEN vier Schwellenwerte des Signals.
     """
+    from app.model_registry import lpi_thresholds_jkg
     from output import metric_format as mf
+
+    # Issue #1679: die Blitzpotenzial-Schwellen sind keine Modul-Konstanten
+    # mehr, sondern kommen gebietsabhaengig aus der Tabelle. Fuer diesen rein
+    # strukturellen DRY-Test ist die Region beliebig -- EU_REST haelt die
+    # Werte am naechsten am bisherigen Stand.
+    lpi_low, lpi_med, lpi_high = lpi_thresholds_jkg("EU_REST")
 
     aufrufe: list[tuple] = []
 
@@ -47,10 +54,12 @@ def test_ac2_beide_signale_laufen_durch_dieselbe_leiter(monkeypatch):
     dichte = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=0.0, cape_jkg=None,
         cape_threshold_jkg=None,
+        lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
     )
     potenzial = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=None, cape_jkg=None,
         lightning_potential_jkg=0.0, cape_threshold_jkg=None,
+        lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
     )
 
     assert dichte == mf.ThunderLevel.HIGH, (
@@ -74,10 +83,7 @@ def test_ac2_beide_signale_laufen_durch_dieselbe_leiter(monkeypatch):
         "Der Blitzdichte-Aufruf traegt nicht die Blitzdichte-Schwellen -- "
         f"jedes Signal muss SEINE vier Schwellen mitbringen: {aufrufe[0]!r}"
     )
-    assert aufrufe[1][1:] == (
-        mf._LIGHTNING_POTENTIAL_LOW_MIN, mf._LIGHTNING_POTENTIAL_MED_MIN,
-        mf._LIGHTNING_POTENTIAL_HIGH_MIN,
-    ), (
+    assert aufrufe[1][1:] == (lpi_low, lpi_med, lpi_high), (
         "Der Blitzpotenzial-Aufruf traegt nicht die Potenzial-Schwellen -- "
         f"jedes Signal muss SEINE vier Schwellen mitbringen: {aufrufe[1]!r}"
     )
@@ -91,16 +97,21 @@ def test_ac2_beide_signale_liefern_an_der_unteren_schwelle_uebereinstimmend_low(
     uebereinstimmend LOW -- Beweis, dass beide ueber denselben
     Vergleichsoperator (`>=`) laufen, nicht nur ueber zwei gleich benannte,
     aber unabhaengig implementierte Ketten."""
+    from app.model_registry import lpi_thresholds_jkg
     from output import metric_format as mf
+
+    lpi_low, lpi_med, lpi_high = lpi_thresholds_jkg("EU_REST")
 
     blitzdichte_low = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=mf._LIGHTNING_LOW_MIN,
         cape_jkg=None, cape_threshold_jkg=None,
+        lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
     )
     blitzpotenzial_low = mf.thunder_level_from_signals(
         wettercode_level=None, lightning_density=None, cape_jkg=None,
-        lightning_potential_jkg=mf._LIGHTNING_POTENTIAL_LOW_MIN,
+        lightning_potential_jkg=lpi_low,
         cape_threshold_jkg=None,
+        lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
     )
 
     assert blitzdichte_low == mf.ThunderLevel.LOW, (
@@ -109,7 +120,7 @@ def test_ac2_beide_signale_liefern_an_der_unteren_schwelle_uebereinstimmend_low(
     )
     assert blitzpotenzial_low == blitzdichte_low, (
         f"Blitzpotenzial an SEINER unteren Schwelle "
-        f"({mf._LIGHTNING_POTENTIAL_LOW_MIN} J/kg) liefert "
+        f"({lpi_low} J/kg) liefert "
         f"{blitzpotenzial_low!r} statt {blitzdichte_low!r} -- beide Signale "
         "muessen an der jeweils unteren Schwelle uebereinstimmend LOW "
         "liefern, wenn sie ueber denselben Vergleichsoperator (>=) laufen"

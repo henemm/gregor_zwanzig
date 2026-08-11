@@ -142,6 +142,31 @@ def cape_threshold_jkg(model_id: Optional[str], region: Optional[str]) -> Option
     return CAPE_THRESHOLDS_JKG.get((model_id, region))
 
 
+# Blitzpotenzial-Schwellen je Gebiet (Issue #1679). Belegt: Bina et al.,
+# Atmospheric Research 2022 / ASR Copernicus 2022, COSMO-D2 (2,2 km,
+# dieselbe Modellfamilie wie ICON-D2): "skilful forecast ... for LPI
+# thresholds 30, 40 and 50 J/kg", Nachweisschwelle "LPI > 1 J/kg".
+# EU_REST: UNVERAENDERTER Interim-Wert (5/20/50) -- ICON-EU (lpi_con_max)
+# liefert strukturell deutlich hoehere Werte als ICON-D2 (Faktor 51x am
+# unteren Ende, Issue #1678); eine eigene, eingemessene Leiter folgt dort.
+# FR bekommt bewusst KEINEN Eintrag -- AROME liefert dort Blitzdichte,
+# kein LPI (thunder_routing._REGIONS).
+LPI_THRESHOLDS_JKG: Dict[str, Tuple[float, float, float]] = {
+    "DE_ALPEN": (1.0, 30.0, 50.0),
+    "EU_REST": (5.0, 20.0, 50.0),
+}
+
+
+def lpi_thresholds_jkg(region: Optional[str]) -> Optional[Tuple[float, float, float]]:
+    """(low, med, high)-Schwellenleiter fuer Blitzpotenzial (LPI, J/kg) je
+    Gebiet. ``None``, wenn ``region`` ``None`` ist oder keine Kalibrierung
+    fuer das Gebiet vorliegt (z.B. FR) -- beide Faelle identisch "nicht
+    belegt" (analog ``cape_threshold_jkg()``)."""
+    if region is None:
+        return None
+    return LPI_THRESHOLDS_JKG.get(region)
+
+
 # Issue #1592 Scheibe C3: kein neu gesetzter Wert -- die bis Scheibe C1
 # ueberall gueltige, modellblinde CAPE-Schwelle. Genau fuer DIESE Welt wurde
 # die Empfindlichkeitsleiter der CAPE-Aenderungsalarme (1200/600/200,

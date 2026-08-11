@@ -26,10 +26,20 @@ HIGH = ThunderLevel.HIGH
 
 
 def _fusion(**kwargs):
+    from app.model_registry import lpi_thresholds_jkg
     from output.metric_format import thunder_level_from_signals
     # Issue #1592 C1: `cape_threshold_jkg` ist keyword-only ohne Default.
     # `cape_jkg=None` hier -- die Schwelle spielt fuer diese Tests (nur
     # Blitzpotenzial) keine Rolle.
+    # Issue #1679: die LPI-Leiter kommt jetzt gebietsabhaengig aus der
+    # Tabelle. EU_REST traegt die bis dahin globale 5/20/50-Leiter
+    # unveraendert weiter -- damit ist diese Datei der AC-3-Regressionsanker:
+    # dieselben Pruefwerte, dieselben Erwartungen, nur die Herkunft der
+    # Schwellen hat sich geaendert.
+    lpi_low, lpi_med, lpi_high = lpi_thresholds_jkg("EU_REST")
+    kwargs.setdefault("lpi_low_min", lpi_low)
+    kwargs.setdefault("lpi_med_min", lpi_med)
+    kwargs.setdefault("lpi_high_min", lpi_high)
     return thunder_level_from_signals(
         wettercode_level=None, lightning_density=None, cape_jkg=None,
         cape_threshold_jkg=None, **kwargs

@@ -333,6 +333,7 @@ class TestThunderFusionUnaffectedByCapeSelectable:
             cape_jkg=1500.0,
             lightning_potential_jkg=None,
             cape_threshold_jkg=1000.0,
+            lpi_low_min=None, lpi_med_min=None, lpi_high_min=None,
         )
         assert level == ThunderLevel.LOW, (
             f"AC-8: CAPE >= Schwelle muss weiterhin mindestens LOW ergeben, war: {level}"
@@ -345,6 +346,7 @@ class TestThunderFusionUnaffectedByCapeSelectable:
             cape_jkg=500.0,
             lightning_potential_jkg=None,
             cape_threshold_jkg=1000.0,
+            lpi_low_min=None, lpi_med_min=None, lpi_high_min=None,
         )
         assert level_below == ThunderLevel.NONE, (
             f"AC-8: CAPE < Schwelle darf kein Signal liefern, war: {level_below}"

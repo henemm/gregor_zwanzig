@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -81,7 +81,11 @@ def _bezugszeitpunkt(reihe: "NormalizedTimeseries") -> datetime:
     return max(erster, jetzt_volle_stunde) - timedelta(hours=1)
 
 
-def _fuse_thunder_levels(data: list, cape_threshold_jkg: Optional[float]) -> None:
+def _fuse_thunder_levels(
+    data: list,
+    cape_threshold_jkg: Optional[float],
+    lpi_thresholds: Optional[Tuple[float, float, float]],
+) -> None:
     """Issue #1474 Abschnitt 3: ergaenzt ``dp.thunder_level`` je Datenpunkt um
     Blitzdichte-, CAPE- und Blitzpotenzial-Signale (``thunder_level_from_signals()``,
     ``metric_format.py`` -- dort wohnt die Skala, ADR-0025). Blitzpotenzial
@@ -97,20 +101,53 @@ def _fuse_thunder_levels(data: list, cape_threshold_jkg: Optional[float]) -> Non
     Test, der nur die Blitzdichte-/Blitzpotenzial-/Hagel-Fusion pruefen
     will, muss den Parameter ausdruecklich nennen.
 
+    ``lpi_thresholds`` -- die gebietsabhaengige (low, med, high)-Leiter des
+    Blitzpotenzials (Issue #1679, ``model_registry.lpi_thresholds_jkg()``),
+    ebenso EINMAL je Reihe aufgeloest und BEWUSST OHNE Default, aus demselben
+    Grund. ``None`` (Gebiet unbekannt oder ohne Kalibrierung, z.B. FR) heisst
+    "kein LPI-Signal", nicht "Ersatzschwelle".
+
     Ueberschreibt NUR, wenn die Fusion ein Ergebnis liefert -- liefert sie
     ``None`` ("keine Aussage"), bleibt ein bereits vorhandener Wert an
     ``dp.thunder_level`` erhalten (s. Spec Abschnitt 3, letzter Absatz).
     """
     from output.metric_format import thunder_level_from_signals
 
+    lpi_low, lpi_med, lpi_high = lpi_thresholds or (None, None, None)
     for dp in data:
         fused = thunder_level_from_signals(
             dp.thunder_level, dp.lightning_density_per_km2_3h, dp.cape_jkg,
             dp.lightning_potential_lpi_jkg,
             cape_threshold_jkg=cape_threshold_jkg,
+            lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
         )
         if fused is not None:
             dp.thunder_level = fused
+
+
+def _schwellen_fuer_reihe(
+    reihe: "NormalizedTimeseries", location: "Location",
+) -> Tuple[Optional[float], Optional[Tuple[float, float, float]]]:
+    """Loest die beiden gebietsabhaengigen Schwellen der Fusion EINMAL je
+    Reihe auf: die geeichte CAPE-Schwelle (Issue #1592 C1, Modell x Gebiet)
+    und die Blitzpotenzial-Leiter (Issue #1679, Gebiet). BEIDE haengen am
+    SELBEN Gebiets-Nachschlag -- kein zweiter Aufloesungs-Ort.
+
+    Wohnt bewusst NEBEN ``enrich_thunder()`` statt darin: der Kern-Dispatch
+    dort darf keinen einzelnen Signalnamen im Quelltext tragen (Waechter
+    ``test_thunder_named_signals_enrichment.py::test_ac9_...``, #1457 S2b
+    AC-9), und der Name der Nachschlag-Funktion traegt ihn.
+    """
+    from app.model_registry import (
+        cape_threshold_jkg, effective_cape_model_id, lpi_thresholds_jkg,
+    )
+    from providers.thunder_routing import thunder_region_for
+
+    region = thunder_region_for(location.latitude, location.longitude)
+    return (
+        cape_threshold_jkg(effective_cape_model_id(reihe.meta), region),
+        lpi_thresholds_jkg(region),
+    )
 
 
 def enrich_thunder(
@@ -169,22 +206,12 @@ def enrich_thunder(
     except Exception:
         logger.warning("Gewitter-Anreicherung fehlgeschlagen", exc_info=True)
 
-    # Issue #1592 C1: die Modell-Herkunft (fuer CAPE) und das
-    # Zustaendigkeitsgebiet (fuer die Eichtabelle) werden EINMAL je Reihe
-    # aufgeloest -- kein neuer Mechanismus, nur ein Parameter mehr an die
-    # Fusion. ``reihe.meta`` und ``location`` sind hier bereits im Zugriff.
-    from app.model_registry import cape_threshold_jkg, effective_cape_model_id
-    from providers.thunder_routing import thunder_region_for
-
-    schwelle = cape_threshold_jkg(
-        effective_cape_model_id(reihe.meta),
-        thunder_region_for(location.latitude, location.longitude),
-    )
+    schwelle, potenzial_leiter = _schwellen_fuer_reihe(reihe, location)
 
     # Laeuft IMMER (auch ausserhalb eines Zustaendigkeitsgebiets oder bei
     # Abruf-Fehlschlag) -- CAPE steht unabhaengig von der Blitzdichte-Quelle
     # an jedem Datenpunkt und kann allein schon "leicht" ausloesen.
-    _fuse_thunder_levels(reihe.data, schwelle)
+    _fuse_thunder_levels(reihe.data, schwelle, potenzial_leiter)
 
 
 def _hole_eintraege(

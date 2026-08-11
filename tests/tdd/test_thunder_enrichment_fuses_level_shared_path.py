@@ -364,8 +364,8 @@ def test_ac6_hagel_liefert_keinen_eigenen_beitrag_zur_fusion():
 
     # Issue #1592 C1: `cape_threshold_jkg` ist Pflichtparameter ohne
     # Default. `None` hier -- keine der beiden Reihen traegt CAPE.
-    _fuse_thunder_levels(ohne_hagel, None)
-    _fuse_thunder_levels(mit_hagel, None)
+    _fuse_thunder_levels(ohne_hagel, None, None)
+    _fuse_thunder_levels(mit_hagel, None, None)
 
     assert ohne_hagel[0].thunder_level == mit_hagel[0].thunder_level, (
         f"Gesetztes Hagelfeld veraendert thunder_level "
@@ -396,6 +396,7 @@ def test_f001_kein_signal_laesst_thunder_level_am_produktionspfad_unveraendert()
     Fusion liefert dann `ThunderLevel.NONE` statt `None` und ueberschreibt
     `dp.thunder_level` -- dieser Test muss das fangen.
     """
+    from app.model_registry import lpi_thresholds_jkg
     from app.models import ForecastDataPoint
     from providers.thunder_enrichment import _fuse_thunder_levels
 
@@ -408,7 +409,10 @@ def test_f001_kein_signal_laesst_thunder_level_am_produktionspfad_unveraendert()
 
     # Issue #1592 C1: `cape_threshold_jkg` ist Pflichtparameter ohne
     # Default. `None` hier -- `dp.cape_jkg` ist None (kein CAPE-Signal).
-    _fuse_thunder_levels([dp], None)
+    # Issue #1679: die LPI-Leiter wird AUFGELOEST hereingereicht (EU_REST,
+    # unveraendert 5/20/50) -- mit `None` waere das LPI-Signal generell
+    # abgeschaltet und die Gegenprobe (Mutation 5) liefe ins Leere.
+    _fuse_thunder_levels([dp], None, lpi_thresholds_jkg("EU_REST"))
 
     assert dp.thunder_level is None, (
         "dp.thunder_level wurde veraendert, obwohl ALLE vier Signale None "
@@ -426,6 +430,7 @@ def test_f001_blitzpotenzial_null_komma_null_setzt_stufe_none_am_produktionspfad
     Zusicherung WIRKT (`_fuse_thunder_levels()`), nicht nur am isolierten
     Aufruf von `thunder_level_from_signals()`.
     """
+    from app.model_registry import lpi_thresholds_jkg
     from app.models import ForecastDataPoint
     from providers.thunder_enrichment import _fuse_thunder_levels
 
@@ -438,7 +443,10 @@ def test_f001_blitzpotenzial_null_komma_null_setzt_stufe_none_am_produktionspfad
 
     # Issue #1592 C1: `cape_threshold_jkg` ist Pflichtparameter ohne
     # Default. `None` hier -- `dp.cape_jkg` ist None (kein CAPE-Signal).
-    _fuse_thunder_levels([dp], None)
+    # Issue #1679: "aktiv geprueft" setzt eine aufgeloeste LPI-Leiter voraus
+    # -- EU_REST traegt unveraendert die 5.0er LOW-Schwelle, auf die sich der
+    # Docstring bezieht.
+    _fuse_thunder_levels([dp], None, lpi_thresholds_jkg("EU_REST"))
 
     assert dp.thunder_level == ThunderLevel.NONE, (
         f"dp.thunder_level ist {dp.thunder_level!r} statt ThunderLevel.NONE "
