@@ -23,7 +23,12 @@ def trigger_radar_alert(user_id: str = "default"):
     Ablauf (analog check_radar_alerts(), ohne Throttle-Check):
     1. Staging-Guard (GZ_ENV=staging) -> sonst 404.
     2. Trips fuer user_id laden.
-    3. Ersten Trip + Segment ableiten.
+    3. Ersten Trip + Segment ableiten — eigene Kopie der Basisregel (nur
+       heutiges Datum, aktives-oder-erstes Segment), KEIN Vortags-Rueckgriff.
+       Anders als `TripAlertService.check_radar_alerts()` seit Issue #1667 S3
+       geht diese Debug-Route NICHT ueber `resolve_current_segment` — eine
+       Etappe mit Ankunft nach Mitternacht, die nur gestern eine aktive
+       Etappe hatte, liefert hier `no_segment` statt eines Segments.
     4. Nowcast-Ergebnis als deterministisches Fixture injizieren (source="test") —
        KEIN echter Quellen-Abruf (#1190): geprueft wird nur die Alarm-Mechanik
        (Throttle/Mail-Format/Cooldown), nicht die Provider-Kette. Fuer

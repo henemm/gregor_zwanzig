@@ -7,8 +7,13 @@ Radar-Nowcast geprüft; bei Regen-Onset ≤ 20 Min (konvektive Gefahr steuert
 nur das Label) wird EINE gebündelte E-Mail an die Preset-Empfänger
 versendet. Eigener Parallelpfad neben `CompareAlertService` (Metrik-
 Abweichungs-Alarme) — Struktur-Vorbild ist `CompareAlertService`
-(`compare_alert.py`), Auslöse-/Fetch-Logik ist 1:1 vom Trip-Radar-Pfad
-übernommen (`TripAlertService.check_radar_alerts()`, `trip_alert.py:628`).
+(`compare_alert.py`), Auslöse-/Fetch-Logik (Nowcast-Abruf +
+`radar_alert_due()`-Schwelle) ist vom Trip-Radar-Pfad übernommen
+(`TripAlertService.check_radar_alerts()`, `trip_alert.py:887`). Diese
+Übernahme betrifft NICHT die tagesübergreifende Segment-Auswahl seit
+Issue #1667 S3 (`resolve_current_segment`, `trip_segments.py`) — Compare-
+Presets arbeiten direkt auf `location_ids`, es gibt hier keine Etappen/
+Segmente und damit auch keinen Vortags-Rückgriff.
 
 SPEC: docs/specs/modules/issue_1041b_compare_radar_alert_service.md
 """

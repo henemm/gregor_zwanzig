@@ -1392,8 +1392,18 @@ class TripReportSchedulerService:
         DTO, KEINEN Renderer-Aufruf — die Textformatierung
         (`format_starkregen_hint()`) passiert in `notification_service.py`.
 
-        Segment-Auswahl identisch zu `TripAlertService.check_radar_alerts()`
-        (trip_alert.py:730-745). Naehe-Guard und Budget-Gate laufen VOR dem
+        Segment-Auswahl nach derselben Grundregel wie
+        `TripAlertService.check_radar_alerts()` (trip_alert.py:917-955):
+        aktives Segment, sonst Vorschau auf das erste. Den tagesuebergreifenden
+        Vortags-Rueckgriff des Alarm-Pfads (Issue #1667 S3) hat dieser Pfad
+        BEWUSST nicht — `_get_target_date` ist strikt vorwaertsgerichtet
+        (morgens `today`, abends `today+1`) und die Briefing-Kopfdaten stammen
+        aus `trip.get_stage_for_date(target_date)`; ein Vortags-Rueckgriff
+        erzeugte hier ein Briefing mit heutiger Etappe im Kopf und gestriger
+        Koordinate im Regenhinweis. Die Live-Ueberwachung eines noch laufenden
+        Vortagssegments ist Aufgabe von `check_radar_alerts()` (alle ~15 min),
+        nicht der zweimal taeglichen Briefing-Erzeugung.
+        Naehe-Guard und Budget-Gate laufen VOR dem
         Fetch — ein zu weit entferntes Segment oder ausgeschoepftes Tagesbudget
         verursacht keinen Nowcast-Call (AC-1/AC-2). Fail-soft bei Fetch-Fehlern
         (ADR-0018, AC-4).

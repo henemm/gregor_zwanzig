@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import math
 from datetime import date, datetime, time, timedelta, timezone
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from app.day_window import resolve_configured_window
 from app.models import GPXPoint, TripSegment
@@ -320,3 +320,74 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         segments.append(destination_segment)
 
     return segments
+
+
+def select_active_segment(
+    segments: List[TripSegment], now_utc: datetime
+) -> Optional[TripSegment]:
+    """Das gerade massgebliche Segment EINES Tages (Issue #822, 1:1
+    extrahiert aus ``TripAlertService.check_radar_alerts``).
+
+    Reihenfolge: erstes zeitlich aktives Segment; sonst — wenn ``now_utc``
+    noch vor allen Segmenten liegt — das erste als Vorschau; sonst ``None``
+    (alle Segmente vorbei).
+    """
+    for seg in segments:
+        if seg.start_time <= now_utc <= seg.end_time:
+            return seg
+    if segments and now_utc < segments[0].start_time:
+        return segments[0]
+    return None
+
+
+def resolve_current_segment(
+    trip: "Trip", now_utc: datetime, today: date
+) -> Optional[Tuple[TripSegment, date]]:
+    """Tagesuebergreifende Segment-Auswahl (Issue #1667 S3).
+
+    Vorrangkette, erste zutreffende Stufe gewinnt:
+
+    1. AKTIVES Segment von ``today``           -> ``(segment, today)``
+    2. AKTIVES Segment von ``today - 1 Tag``   -> ``(segment, gestern)``
+    3. Vorschau auf ``heute[0]`` (nur wenn ``now_utc`` davor liegt)
+                                               -> ``(segment, today)``
+    4. sonst ``None``
+
+    Warum "heute schlaegt gestern": das Ziel-Segment von gestern ist ein
+    ortsfestes Fenster an der Unterkunft — laeuft heute ein Segment, ist der
+    Wanderer in Bewegung und dessen Koordinate die informativere. Solange
+    heute etwas aktiv ist, ist das Ergebnis bitgleich zum Zustand vor S3.
+
+    Aus GESTERN wird nie eine Vorschau genommen (Stufe 2 nimmt ausschliesslich
+    ein aktives Segment) — ein Segment von ``today - 1`` kann bei ``now_utc``
+    ohnehin nicht in der Zukunft liegen. Der Rueckgriff endet beim
+    unmittelbaren Vortag, es gibt keine mehrtaegige Rueckwaertssuche.
+
+    Bewusst KEINE zusammengefuehrte Liste (``gestern + heute``): die
+    degradierte die Vorrangregel zu "Listenreihenfolge + break", in der das
+    gestrige Ziel-Segment bei echter Ueberlappung faelschlich gewaenne.
+
+    Der Vortagsbau ist LAZY — ``convert_trip_to_segments(trip, gestern)``
+    laeuft nur, wenn heute kein aktives Segment liefert.
+
+    Zurueck kommt das Segment MIT dem Datum, dem es entstammt; Aufrufer
+    duerfen dieses Datum nicht durch ``today`` ersetzen (der
+    Briefing-Schnappschuss wird darunter gelesen, ``trip_alert.py``).
+    """
+    segments_today = convert_trip_to_segments(trip, today)
+    active_today = next(
+        (s for s in segments_today if s.start_time <= now_utc <= s.end_time), None
+    )
+    if active_today is not None:
+        return (active_today, today)
+
+    yesterday = today - timedelta(days=1)
+    segments_yesterday = convert_trip_to_segments(trip, yesterday)
+    active_yesterday = next(
+        (s for s in segments_yesterday if s.start_time <= now_utc <= s.end_time), None
+    )
+    if active_yesterday is not None:
+        return (active_yesterday, yesterday)
+
+    preview = select_active_segment(segments_today, now_utc)
+    return (preview, today) if preview is not None else None
