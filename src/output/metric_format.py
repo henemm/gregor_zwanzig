@@ -281,16 +281,10 @@ _LIGHTNING_LOW_MIN = 0.003
 _LIGHTNING_MED_MIN = 0.015
 _LIGHTNING_HIGH_MIN = 0.075
 
-# Blitzpotenzial-Schwellen (DWD ICON-D2/ICON-EU LPI, J/kg). Aeussere Grenzen
-# BELEGT: 5 J/kg = betrieblicher DWD-Schwellenwert (Blitz-ja/nein), 50 J/kg
-# = oberes Ende der publizierten Verifikationsspanne (dort ~90% Blitz-
-# wahrscheinlichkeit). Quellen: https://asr.copernicus.org/articles/19/29/2022/
-# und https://www.dwd.de/EN/ourservices/reports_on_icon/pdf_einzelbaende/2022_10.pdf
-# 20 J/kg ("leicht"->"mittel") ist NICHT publiziert, sondern innerhalb der
-# belegten Spanne interpoliert -- s. Spec Known Limitations.
-_LIGHTNING_POTENTIAL_LOW_MIN = 5.0
-_LIGHTNING_POTENTIAL_MED_MIN = 20.0
-_LIGHTNING_POTENTIAL_HIGH_MIN = 50.0
+# Blitzpotenzial-Schwellen: seit Issue #1679 region-abhaengig, siehe
+# `app.model_registry.LPI_THRESHOLDS_JKG`/`lpi_thresholds_jkg()`. Keine
+# globale Konstante mehr hier -- ein Aufrufer ohne aufgeloeste Region
+# bekommt bewusst KEIN Signal statt einer falschen Schwelle.
 
 
 def _thunder_level_from_ladder(
@@ -319,6 +313,9 @@ def thunder_level_from_signals(
     lightning_potential_jkg: Optional[float] = None,
     *,
     cape_threshold_jkg: Optional[float],
+    lpi_low_min: Optional[float],
+    lpi_med_min: Optional[float],
+    lpi_high_min: Optional[float],
 ) -> Optional[ThunderLevel]:
     """Fusioniert Gewittersignale zu EINEM ``ThunderLevel`` (Issue #1474 Abschnitt 3,
     erweitert um Issue #1474c, #1592 C1).
@@ -343,9 +340,14 @@ def thunder_level_from_signals(
     (misst Energie, kein Ereignis, Spec AC-6/AC-8).
 
     Das Blitzpotenzial (DWD ICON-D2/ICON-EU LPI, J/kg) ist das vierte Signal
-    seit Issue #1474c -- eigene Schwellentabelle (5/20/50 J/kg), weil es eine
-    andere Groesse auf einer anderen Skala ist als die Blitzdichte (#1419
-    Abs. 3.1, ADR-0025).
+    seit Issue #1474c -- eigene Schwellenleiter, weil es eine andere Groesse
+    auf einer anderen Skala ist als die Blitzdichte (#1419 Abs. 3.1,
+    ADR-0025). Seit Issue #1679 kommt diese Leiter gebietsabhaengig aus
+    ``app.model_registry.lpi_thresholds_jkg()`` und wird als
+    ``lpi_low_min``/``lpi_med_min``/``lpi_high_min`` hereingereicht --
+    KEYWORD-ONLY OHNE DEFAULT, exakt wie ``cape_threshold_jkg``. Ist auch
+    nur eine der drei ``None`` (Gebiet unbekannt ODER keine Kalibrierung,
+    z.B. FR), traegt das Blitzpotenzial KEIN Signal zur Fusion bei.
     """
     signals: list[ThunderLevel] = []
 
@@ -360,10 +362,12 @@ def thunder_level_from_signals(
     if cape_jkg is not None and cape_threshold_jkg is not None:
         signals.append(ThunderLevel.LOW if cape_jkg >= cape_threshold_jkg else ThunderLevel.NONE)
 
-    if lightning_potential_jkg is not None:
+    if (lightning_potential_jkg is not None
+            and lpi_low_min is not None
+            and lpi_med_min is not None
+            and lpi_high_min is not None):
         signals.append(_thunder_level_from_ladder(
-            lightning_potential_jkg, _LIGHTNING_POTENTIAL_LOW_MIN,
-            _LIGHTNING_POTENTIAL_MED_MIN, _LIGHTNING_POTENTIAL_HIGH_MIN,
+            lightning_potential_jkg, lpi_low_min, lpi_med_min, lpi_high_min,
         ))
 
     if not signals:

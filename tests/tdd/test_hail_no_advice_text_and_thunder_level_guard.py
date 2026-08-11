@@ -67,8 +67,8 @@ def test_ac10_thunder_level_from_signals_bleibt_unbeeinflusst_von_hail_flag():
     # Default (kein stiller Rueckfall auf der ganzen Kette). `None` hier --
     # keine der beiden Reihen traegt CAPE, die Schwelle spielt fuer diesen
     # Hagel-Mutationsschutz keine Rolle.
-    _fuse_thunder_levels(ohne_hagel, None)
-    _fuse_thunder_levels(mit_hagel, None)
+    _fuse_thunder_levels(ohne_hagel, None, None)
+    _fuse_thunder_levels(mit_hagel, None, None)
 
     assert ohne_hagel[0].thunder_level == mit_hagel[0].thunder_level, (
         f"AC-10: hail_flag darf die Gewitterstufen-Fusion nicht beeinflussen "

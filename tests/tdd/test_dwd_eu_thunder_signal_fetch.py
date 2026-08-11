@@ -357,10 +357,13 @@ def test_ac10_icon_eu_blitzpotenzial_wirkt_ueber_dieselbe_schwellenleiter_wie_ic
     unterhalb der LOW-Schwelle bleibt) um den Ende-zu-Ende-Weg fuer den
     Fall, dass die Stufe sich sehr wohl aendert.
     """
-    from output.metric_format import (
-        _LIGHTNING_POTENTIAL_HIGH_MIN, _LIGHTNING_POTENTIAL_LOW_MIN,
-        _LIGHTNING_POTENTIAL_MED_MIN, _thunder_level_from_ladder,
-    )
+    # Issue #1679: die Blitzpotenzial-Schwellen sind keine Modul-Konstanten
+    # mehr, sondern kommen gebietsabhaengig aus der Tabelle. ICON-EU beliefert
+    # das Gebiet EU_REST, dessen Leiter unveraendert 5/20/50 J/kg traegt.
+    from app.model_registry import lpi_thresholds_jkg
+    from output.metric_format import _thunder_level_from_ladder
+
+    lpi_low, lpi_med, lpi_high = lpi_thresholds_jkg("EU_REST")
 
     with hauptquelle_laeuft(monkeypatch, ABRUZZEN), eu_server(monkeypatch):
         mit = om.OpenMeteoProvider().fetch_forecast(ABRUZZEN, enrich_ensemble=False)
@@ -381,18 +384,17 @@ def test_ac10_icon_eu_blitzpotenzial_wirkt_ueber_dieselbe_schwellenleiter_wie_ic
     treffer = [
         dp for dp in mit.data
         if dp.lightning_potential_lpi_jkg is not None
-        and dp.lightning_potential_lpi_jkg >= _LIGHTNING_POTENTIAL_LOW_MIN
+        and dp.lightning_potential_lpi_jkg >= lpi_low
     ]
     assert treffer, (
         "Kein Datenpunkt traegt ein Blitzpotenzial ueber der LOW-Schwelle "
-        f"({_LIGHTNING_POTENTIAL_LOW_MIN} J/kg) -- die Aufzeichnung traegt "
+        f"({lpi_low} J/kg) -- die Aufzeichnung traegt "
         "an dieser Koordinate ein echtes Gewitter (lpi 217,8), der Test "
         "kann sonst nichts pruefen"
     )
     for dp in treffer:
         erwartete_stufe = _thunder_level_from_ladder(
-            dp.lightning_potential_lpi_jkg, _LIGHTNING_POTENTIAL_LOW_MIN,
-            _LIGHTNING_POTENTIAL_MED_MIN, _LIGHTNING_POTENTIAL_HIGH_MIN,
+            dp.lightning_potential_lpi_jkg, lpi_low, lpi_med, lpi_high,
         )
         assert dp.thunder_level == erwartete_stufe, (
             f"Blitzpotenzial {dp.lightning_potential_lpi_jkg} J/kg (ICON-EU) "

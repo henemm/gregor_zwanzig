@@ -344,6 +344,13 @@ ein, das Hagelsignal bleibt weiterhin außen vor."
 ## Changelog
 
 - 2026-08-04: Initial spec created (Issue #1474, letzter Restpunkt zu Epic #1419).
+- 2026-08-10: Nachtrag (Issue #1679) — die hier eingeführten Modul-Konstanten
+  `_LIGHTNING_POTENTIAL_LOW_MIN`/`_LIGHTNING_POTENTIAL_MED_MIN`/`_LIGHTNING_POTENTIAL_HIGH_MIN`
+  (globale 5/20/50-Leiter) sind im Code entfernt und durch die gebietsabhängige Tabelle
+  `app.model_registry.LPI_THRESHOLDS_JKG`/`lpi_thresholds_jkg()` ersetzt (DE_ALPEN 1/30/50
+  belegt, EU_REST 5/20/50 unverändert als Interim). Details:
+  `docs/specs/modules/feat_1679_lpi_schwellen_region_tabelle.md`. Die Implementierungs-Snippets
+  oben bleiben als historischer Stand zum Zeitpunkt dieser Spec unverändert.
 - 2026-08-04: Regressions-Nachtrag — S2c AC-10 (ICON-EU) fällt ebenfalls mit dieser Scheibe,
   war in der Erstfassung übersehen; Docstring-Formulierung darf keine `lpi`/`grau_gsp`-
   Teilzeichenketten enthalten (S2a AC-8/S2c AC-9-Wächter in `enrich_thunder()`).
