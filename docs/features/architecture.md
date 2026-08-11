@@ -259,14 +259,32 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
 
 2. **Melde-Gedächtnis (`alert_state`)**
    - Persistenz: `data/users/<user_id>/alert_state/<trip_id>.json`
-   - Schema: `{ "<metric>:<segment_id>": { "last_reported_value": float, "reported_at": ISO-8601 } }`
-   - **Re-Alert-Logik:**
+   - Eine Datei, **zwei Schlüsselräume**:
+     - Änderungs-Raum: `{ "<metric>:<segment_id>": { "last_reported_value": float, "reported_at": ISO-8601 } }`
+     - Amtlicher Raum: `{ "official_alert:<ident>:<hazard>:<valid_from>:<valid_to>": { "last_reported_value": float, "reported_at": ISO-8601, "valid_from": ISO-8601|null, "valid_to": ISO-8601|null } }`
+       — Schlüsselbildung `official_alert_state_key()`, `ident` nach Präzedenz `dedup_id` >
+       `region_label` > `label`; Präfix-Konstante `OFFICIAL_ALERT_KEY_PREFIX` in
+       `services/alert_state.py`. Die Felder `valid_from`/`valid_to` kamen mit **#1685**;
+       Bestandseinträge ohne sie bleiben gültig (Read-Modify-Write mit Merge).
+   - **Re-Alert-Logik (Änderungs-Raum):**
      - Neu (kein Eintrag): Alert sent, Eintrag angelegt
      - Stagnation (`|current - last| < threshold`): unterdrückt
      - Eskalation (`|current - last| >= threshold`): erneut Alert, Wert aktualisiert
+   - **Re-Alert-Logik (amtlicher Raum) seit #1685 (2026-08-11):** entscheidet
+     `official_alert_revision_verdict()` in `output/renderers/alert/official_alerts.py` —
+     **geteilt** von Trip (`trip_alert.check_official_alert_triggers`) und Ortsvergleich
+     (`compare_official_alert._detect`). Überlappt das Gültigkeitsfenster einer Warnung **echt**
+     mit dem eines gemeldeten Eintrags gleicher Identität + Gefahr, bleibt sie **still**;
+     Ausnahmen: Stufe gestiegen ODER Beginn **≥ 2 h früher** (PO-Entscheidung: ein früher
+     eintretendes Ereignis zwingt zum Umplanen). Aneinandergrenzende Fenster sind **keine**
+     Überlappung und bleiben zwei Warnungen — präzisiert #1245 AC-4 zu „T2 überlappt T1 nicht".
+     Bei stiller Revision wird fortgeschrieben (alter Schlüssel entfällt, `reported_at` bleibt
+     das Datum der tatsächlichen Meldung); ohne diese Fortschreibung meldete das dritte Glied
+     einer Revisionskette fälschlich erneut. Die **Anzeige** (`dedupe_official_alerts`) ist davon
+     unberührt — beide Perioden bleiben in der Mail sichtbar.
    - **Reset seit #1460 T1 (2026-08-03, ADR-0043):** beim Briefing-Versand wird nur noch der
-     Änderungs-Raum (`<feld>:<segment>`) gelöscht — der amtliche Raum (Präfix `official_alert:`,
-     s. u.) überlebt den Reset, damit dessen Entprellung nicht bei jedem Briefing verlorengeht.
+     Änderungs-Raum (`<feld>:<segment>`) gelöscht — der amtliche Raum überlebt den Reset, damit
+     dessen Entprellung nicht bei jedem Briefing verlorengeht.
      Vorher löschte `AlertStateService.reset()` die komplette Datei.
 
 3. **Symmetrische Δ-Erkennung**
