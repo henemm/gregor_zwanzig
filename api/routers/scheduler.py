@@ -24,20 +24,36 @@ _telegram_reader = None
 
 
 @router.post("/trip-reports")
-def trigger_trip_reports(hour: Optional[int] = None, user_id: str = Query(...)):
-    """Trigger trip reports for current or specified hour."""
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
+def trigger_trip_reports(at: Optional[str] = None, user_id: str = Query(...)):
+    """Trigger trip reports for the current (or a given) point in time.
+
+    Issue #1724: nahm bis dahin eine Stunde entgegen und deutete sie in
+    `Europe/Vienna` -- einer Konstante ohne fachliche Herleitung. Ein Trip in
+    Auckland wurde dadurch faellig, wenn es in Wien 07:00 war (dort 17:00).
+    Uebergeben wird jetzt ein ZEITPUNKT; welche Stunde das ist, entscheidet
+    jeder Trip in seiner eigenen Zone (ADR-0049 Regel 2).
+
+    `at` ist optional und dient dem manuellen Ausloesen (ISO-8601). Ohne
+    Zeitzonen-Angabe gilt UTC -- Hausnorm #1345, nicht die Prozess-Zeitzone.
+    """
+    from datetime import datetime, timezone
 
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    tz = ZoneInfo("Europe/Vienna")
-    current_hour = hour if hour is not None else datetime.now(tz).hour
+    if at is None:
+        now_utc = datetime.now(timezone.utc)
+    else:
+        try:
+            now_utc = datetime.fromisoformat(at)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Unlesbarer Zeitpunkt: {at!r}")
+        if now_utc.tzinfo is None:
+            now_utc = now_utc.replace(tzinfo=timezone.utc)
 
     service = TripReportSchedulerService(user_id=user_id)
     # Issue #766: (sent, failed) — bei Teilfehlern status="partial" zurückgeben,
     # damit das externe Monitoring 452-Rate-Limit-Ausfälle erkennen kann.
-    sent, failed = service.send_reports_for_hour(current_hour)
+    sent, failed = service.send_due_reports(now_utc)
     status = "partial" if failed > 0 else "ok"
     return {"status": status, "count": sent, "failed": failed}
 

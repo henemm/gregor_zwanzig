@@ -38,7 +38,7 @@ import json
 import os
 import shutil
 import time as time_mod
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from email.header import decode_header
 from pathlib import Path
 
@@ -72,6 +72,22 @@ _REAL_FIXTURES_DIR = str(_REPO_ROOT / "fixtures" / "openmeteo")
 # providers/fixture.py::_FIXTURE_LOCATIONS) — exakte Koordinaten garantieren
 # das nearest-neighbor-Matching auf einen bestimmten Standort/Dateinamen.
 _INNSBRUCK = (47.2692, 11.4041)
+
+
+def _zeitpunkt_fuer_ortsstunde(stunde: int, coords=_INNSBRUCK) -> datetime:
+    """UTC-Zeitpunkt, zu dem es an `coords` `stunde` Uhr Ortszeit ist (#1724).
+
+    Der Sendelauf nimmt seit #1724 einen Zeitpunkt statt einer vorberechneten
+    Stunde -- die Stunde entsteht je Trip aus dessen Ortszeit (ADR-0049).
+    """
+    from utils.timezone import tz_for_coords
+
+    zone = tz_for_coords(*coords)
+    heute = datetime.now(zone).date()
+    return datetime(
+        heute.year, heute.month, heute.day, stunde, tzinfo=zone,
+    ).astimezone(timezone.utc)
+
 _STUBAI = (47.1015, 11.2958)
 
 
@@ -371,7 +387,7 @@ def test_partial_failure_sends_on_time_with_labels_and_marker(tmp_path, monkeypa
 # AC-4 — Job-Zählung + API (zwei Test-Funktionen laut Testplan)
 # ---------------------------------------------------------------------------
 
-def test_send_reports_for_hour_counts_all_failed_as_failed(tmp_path, monkeypatch):
+def test_send_due_reports_counts_all_failed_as_failed(tmp_path, monkeypatch):
     user_id = "tdd-1012-ac4"
     name_fail = "TDD1012 AC4 AllFailed"
     name_ok = "TDD1012 AC4 Healthy"
@@ -386,12 +402,12 @@ def test_send_reports_for_hour_counts_all_failed_as_failed(tmp_path, monkeypatch
                [_INNSBRUCK, _INNSBRUCK])
 
     service = TripReportSchedulerService(user_id=user_id)
-    sent, failed = service.send_reports_for_hour(7)
+    sent, failed = service.send_due_reports(_zeitpunkt_fuer_ortsstunde(7))
 
     assert (sent, failed) == (1, 1), (
         f"Erwartet (sent=1, failed=1) bei einem All-Failed- und einem gesunden "
         f"Trip zur selben fälligen Stunde, war (sent={sent}, failed={failed}) — "
-        f"send_reports_for_hour zählt All-Failed-Trips heute fälschlich als 'sent'"
+        f"send_due_reports zählt All-Failed-Trips heute fälschlich als 'sent'"
     )
 
 
@@ -437,7 +453,7 @@ def test_pending_marker_written_and_briefing_delivered_on_recovery(tmp_path, mon
                        [_INNSBRUCK, _INNSBRUCK])
 
     service = TripReportSchedulerService(user_id=user_id)
-    sent1, failed1 = service.send_reports_for_hour(7)
+    sent1, failed1 = service.send_due_reports(_zeitpunkt_fuer_ortsstunde(7))
     assert (sent1, failed1) == (0, 1), (
         f"Erster Lauf (All-Failed) soll (sent=0, failed=1) liefern, war "
         f"(sent={sent1}, failed={failed1})"
@@ -454,7 +470,7 @@ def test_pending_marker_written_and_briefing_delivered_on_recovery(tmp_path, mon
     # Catch-up-Mechanismus (nicht der reguläre Due-Check) darf hier etwas tun.
     monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", _REAL_FIXTURES_DIR)
     baseline_uid = _max_uid()
-    sent2, failed2 = service.send_reports_for_hour(10)
+    sent2, failed2 = service.send_due_reports(_zeitpunkt_fuer_ortsstunde(10))
 
     assert sent2 == 1, (
         f"Nachlieferung nach Erholung soll als 'sent' zählen, war sent={sent2}"
@@ -496,7 +512,7 @@ def test_partial_marker_redelivers_updated_briefing_on_recovery(tmp_path, monkey
     # reines Catch-up).
     monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", _REAL_FIXTURES_DIR)
     baseline_uid = _max_uid()
-    sent2, failed2 = service.send_reports_for_hour(10)
+    sent2, failed2 = service.send_due_reports(_zeitpunkt_fuer_ortsstunde(10))
 
     assert sent2 == 1, (
         f"Nachlieferung nach Teil-Erholung soll 'sent' zählen, war sent={sent2}"
@@ -528,7 +544,7 @@ def test_no_resend_while_segments_still_failing(tmp_path, monkeypatch):
                        [_INNSBRUCK, _INNSBRUCK])
 
     service = TripReportSchedulerService(user_id=user_id)
-    service.send_reports_for_hour(7)  # 1. Lauf: All-Failed, erzeugt Marker
+    service.send_due_reports(_zeitpunkt_fuer_ortsstunde(7))  # 1. Lauf: All-Failed, erzeugt Marker
 
     markers = _pending_markers(user_id)
     entry = next((m for m in markers if m.get("trip_id") == trip.id), None)
@@ -537,7 +553,7 @@ def test_no_resend_while_segments_still_failing(tmp_path, monkeypatch):
 
     baseline_uid = _max_uid()
     # 2. Lauf: Fixture-Dir bleibt leer -> weiterhin All-Failed -> kein Re-Send.
-    sent2, failed2 = service.send_reports_for_hour(10)
+    sent2, failed2 = service.send_due_reports(_zeitpunkt_fuer_ortsstunde(10))
 
     assert sent2 == 0, (
         f"Ohne Erholung darf keine Nachlieferung als 'sent' zählen, war sent={sent2}"
@@ -575,7 +591,7 @@ def test_pending_marker_expires_at_next_regular_slot_no_double_briefing(tmp_path
     trip = _make_trip_two_stages(user_id, "tdd-1012-ac7-trip", trip_name, today, tomorrow)
 
     service = TripReportSchedulerService(user_id=user_id)
-    sent1, failed1 = service.send_reports_for_hour(7)  # Morning (heute), All-Failed
+    sent1, failed1 = service.send_due_reports(_zeitpunkt_fuer_ortsstunde(7))  # Morning (heute), All-Failed
     assert (sent1, failed1) == (0, 1), (
         f"Vorbedingung verletzt: Morning-Lauf war (sent={sent1}, failed={failed1})"
     )
@@ -589,7 +605,7 @@ def test_pending_marker_expires_at_next_regular_slot_no_double_briefing(tmp_path
     # Nächster regulärer Termin desselben Trips: Evening (morgen) — mit
     # funktionierendem Provider.
     monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", _REAL_FIXTURES_DIR)
-    sent2, failed2 = service.send_reports_for_hour(18)
+    sent2, failed2 = service.send_due_reports(_zeitpunkt_fuer_ortsstunde(18))
 
     assert sent2 == 1, (
         f"Regulärer Evening-Versand soll genau 1x 'sent' zählen, war sent={sent2}"
@@ -619,7 +635,7 @@ def test_corrupt_pending_file_does_not_block_regular_send(tmp_path, monkeypatch)
     """Root Cause: `_process_pending_markers()` liest pending_briefings.json via
     ungeschütztem `json.loads(path.read_text())`. Eine kaputte Datei (z.B.
     abgebrochener Schreibvorgang) wirft eine ungefangene JSONDecodeError, die
-    `send_reports_for_hour()` VOR dem regulären Versand crasht -> HTTP 500,
+    `send_due_reports()` VOR dem regulären Versand crasht -> HTTP 500,
     KEIN Trip des Users bekommt ein Briefing in diesem Lauf."""
     from fastapi.testclient import TestClient
 

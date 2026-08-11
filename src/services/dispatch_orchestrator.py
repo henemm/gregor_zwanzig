@@ -2,7 +2,7 @@
 
 SPEC: docs/specs/modules/dispatch_orchestrator.md
 
-Duenner geteilter Seam: `run_briefing_dispatch(kind, user_id, hour)` kapselt
+Duenner geteilter Seam: `run_briefing_dispatch(kind, user_id, now_utc)` kapselt
 das gemeinsame Skelett (Settings-Laden, Faelligkeits-/Delay-/Tally-Schleife)
 und delegiert alles Kind-spezifische an eine Strategie (`TripDispatchStrategy`
 fuer `kind="route"`, `CompareDispatchStrategy` fuer `kind="vergleich"`). Die
@@ -26,6 +26,8 @@ from app.config import Settings
 from app.loader import get_data_root
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from services.trip_report_scheduler import TripReportSchedulerService
 
 logger = logging.getLogger("dispatch_orchestrator")
@@ -54,14 +56,14 @@ class TripDispatchStrategy:
     def empty_result(self) -> tuple[int, int]:
         return (0, 0)
 
-    def collect_due(self, hour: int) -> list:
-        return self._service._collect_due_trips(hour)
+    def collect_due(self, now_utc: "datetime") -> list:
+        return self._service._collect_due_trips(now_utc)
 
-    def pre_pass(self, hour: int, due: list) -> None:
+    def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1012 (b2): Catch-up ZUERST, offene Nachliefer-Marker vor den
         # regulaeren faelligen Slots abarbeiten (AC-6/AC-7).
         due_trip_ids_now = {trip.id for trip, _ in due}
-        self._sent += self._service._process_pending_markers(hour, due_trip_ids_now)
+        self._sent += self._service._process_pending_markers(now_utc, due_trip_ids_now)
 
     def dispatch_one(self, item) -> None:
         trip, report_type = item
@@ -107,19 +109,32 @@ class CompareDispatchStrategy:
     def empty_result(self) -> tuple[int, int]:
         return (0, 0)
 
-    def collect_due(self, hour: int) -> list:
-        from datetime import date
+    #: Issue #1726 (offen): der Ortsvergleich entscheidet Faelligkeit weiterhin
+    #: an dieser festen Zone. Sie steht hier SICHTBAR statt versteckt, weil die
+    #: zugehoerige Produktfrage offen ist -- welche Zone gilt bei einem
+    #: Vergleich ueber Orte in mehreren Zonen? Das ist eine Entscheidung, keine
+    #: Ableitung, und wird nicht nebenbei in #1724 getroffen.
+    NOCH_NICHT_ORTSZEIT_SIEHE_1726 = "Europe/Vienna"
+
+    def collect_due(self, now_utc: "datetime") -> list:
+        from zoneinfo import ZoneInfo
 
         from services.compare_slot_scheduler import presets_due_for_hour
         from services.scheduler_dispatch_service import _load_presets_for_dispatch
+        from utils.timezone import local_dt
 
         presets = _load_presets_for_dispatch(self._user_id, self._data_root)
         if presets is None:
             return []
         self._presets = presets
-        return presets_due_for_hour(presets, hour, date.today())
+        # Verhaltensgleich zum Stand vor #1724: Stunde UND Kalendertag aus
+        # derselben festen Zone -- vorher kam die Stunde vom Aufrufer und der
+        # Tag aus `date.today()` (Prozess-Zeitzone). Beide jetzt aus EINER
+        # Ableitung, damit sie an der Tagesgrenze nicht auseinanderfallen.
+        vor_ort = local_dt(now_utc, ZoneInfo(self.NOCH_NICHT_ORTSZEIT_SIEHE_1726))
+        return presets_due_for_hour(presets, vor_ort.hour, vor_ort.date())
 
-    def pre_pass(self, hour: int, due: list) -> None:
+    def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1250 Scheibe 3 (AC-10/AC-11/AC-12): Auto-Pause fuer Presets
         # mit ueberschrittenem end_date -- unabhaengig vom Faelligkeits-Slot.
         from services.scheduler_dispatch_service import _auto_pause_expired_presets
@@ -163,7 +178,7 @@ _STRATEGY = {
 
 
 def run_briefing_dispatch(
-    kind: str, user_id: str, hour: int, data_root: str | None = None,
+    kind: str, user_id: str, now_utc: "datetime", data_root: str | None = None,
     settings: Settings | None = None,
 ):
     """Gemeinsamer Versand-Einstieg fuer Trip (`route`) und Vergleich (`vergleich`).
@@ -191,8 +206,8 @@ def run_briefing_dispatch(
     if strategy.smtp_guard and not settings.can_send_email():
         return strategy.empty_result()
 
-    due = strategy.collect_due(hour)
-    strategy.pre_pass(hour, due)
+    due = strategy.collect_due(now_utc)
+    strategy.pre_pass(now_utc, due)
 
     for i, item in enumerate(due):
         strategy.dispatch_one(item)

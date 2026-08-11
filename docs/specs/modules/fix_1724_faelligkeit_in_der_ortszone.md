@@ -5,7 +5,7 @@ created: 2026-08-11
 updated: 2026-08-11
 status: draft
 workflow: fix-1724-faelligkeit-in-der-ortszone
-version: "1.0"
+version: "1.1"
 tags: [issue-1724, epic-1722, timezone, adr-0049, adr-0044, scheduler, briefing]
 ---
 
@@ -13,7 +13,7 @@ tags: [issue-1724, epic-1722, timezone, adr-0049, adr-0044, scheduler, briefing]
 
 ## Approval
 
-- [ ] Approved — PO-Freigabe der Akzeptanzkriterien steht aus.
+- [x] Approved — **PO Henning, 2026-08-11, wörtlich: „go"** (Freigabe der neun ACs).
 
 ## Purpose
 
@@ -112,11 +112,16 @@ Standard-Rahmen von 250 reicht; Testcode zählt nicht.
   Zieltag. (Ausnahme und Teil der Behebung: bei Konfig-Stunden 00:00 und 01:00 weicht der Zieltag
   jetzt ab, weil er vorher falsch war.)
 
-- **AC-5 (Keine geratene Zone mehr im Briefing-Pfad):** Given der Produktivcode nach dieser
-  Änderung / When `api/routers/scheduler.py`, `trip_report_scheduler.py` und der Trip-Zweig von
-  `dispatch_orchestrator.py` durchsucht werden / Then enthält keine dieser Stellen ein festes
-  Zonen-Literal, und `send_reports_for_hour` nimmt keine vorberechnete Stunde mehr entgegen.
-  - Test: AST-Prüfung, kein Datei-Inhalts-`assert 'xyz' in read_text()`.
+- **AC-5 (Keine vorberechnete Stunde mehr im Briefing-Pfad):** Given der Produktivcode nach
+  dieser Änderung / When die Fälligkeitssammlung geprüft wird / Then nimmt sie einen Zeitpunkt
+  statt einer Stunde, und die festen Zonen-Literale in `api/routers/scheduler.py` und
+  `scheduler_dispatch_service.py` sind entfallen.
+  - **Bei der Umsetzung geändert:** ursprünglich stand hier zusätzlich ein AST-Scan über die
+    Quelldateien. Der verletzt `test_765_backend_hygiene_compliance.py` (kein `read_text()` auf
+    Produkt-Quelltext) — und die Regel hat recht: dass keine geratene Zone mehr *wirkt*, weisen
+    AC-1/AC-2 am Verhalten nach. Die dauerhafte Ratsche gegen NEUE Zonen-Literale gehört in den
+    bestehenden Zeitzonen-Wächter und ist **#1723**. Geblieben ist die Signatur-Prüfung per
+    `inspect` (Introspektion des lebenden Objekts, kein Dateiinhalt).
 
 - **AC-6 (Trip ohne Wegpunkte fällt sichtbar zurück):** Given ein Trip ohne Wegpunkte (Zone nicht
   auflösbar) / When der Versandlauf läuft / Then wird er nach dem dokumentierten UTC-Rückfall aus
@@ -155,6 +160,27 @@ Code steht?**
 Testdatei nach Verhalten benannt: `tests/tdd/test_briefing_faelligkeit_ortszone.py` (keine
 Issue-Nummer im Dateinamen, `test_naming_gate.py`).
 
+### Ergebnis der Mutations-Gegenprobe
+
+Fünf gezielte Verfälschungen, erster Durchgang:
+
+| Mutation | Reaktion (1. Durchgang) |
+|---|---|
+| M1 Ortsstunde → Serverstunde | 26 Tests rot — gefangen |
+| M2 Ortstag → Serverdatum | 2 Tests rot — gefangen |
+| M3 Zieltag einmal für alle statt je Trip | **0 rot — NICHT gefangen** |
+| M4 Vergleichs-Kalendertag zurück auf `date.today()` | **0 rot — NICHT gefangen** |
+| M5 Zone aus erster Etappe statt Weltzeit-Tag-Anker | **0 rot — NICHT gefangen** |
+
+Drei von fünf Verfälschungen ließen alle 31 Tests grün. Ursachen: M3 war mit Testdaten geprüft,
+die an mehreren Tagen eine Etappe tragen (der falsche Zieltag findet dann zufällig auch eine);
+M4 hatte überhaupt keinen Test (AC-8 war formuliert, aber nicht umgesetzt); M5 war mit Trips
+geprüft, deren Etappen alle dieselbe Zone tragen.
+
+Drei zusätzliche Wächter nachgezogen (Abschnitt „Wächter aus der Mutations-Gegenprobe" in der
+Testdatei), danach **alle fünf Mutationen gefangen**. Der Befund bestätigt die Leitfrage aus
+CLAUDE.md: ein grüner Testlauf beweist nur, dass die Tests durchlaufen.
+
 ## Known Limitations
 
 - **Trips über mehrere Zeitzonen.** Restfehler = Zonendifferenz zweier benachbarter Etappen
@@ -170,4 +196,6 @@ führt beide im Briefing-Pfad aus, ohne von ihnen abzuweichen.
 
 ## Changelog
 
-- 1.0 (2026-08-11) — Erstfassung, Freigabe ausstehend.
+- 1.1 (2026-08-11) — AC-5 bei der Umsetzung geändert (AST-Scan → #1723);
+  Ergebnis der Mutations-Gegenprobe aufgenommen.
+- 1.0 (2026-08-11) — Erstfassung, PO-Freigabe „go".

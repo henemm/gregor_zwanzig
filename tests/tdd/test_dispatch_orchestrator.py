@@ -4,7 +4,7 @@ SPEC: docs/specs/modules/dispatch_orchestrator.md (AC-1..AC-5)
 CONTEXT: docs/context/rework-1207-versand-orchestrator.md
 
 RED-Phase: `src/services/dispatch_orchestrator.py` existiert noch nicht.
-`run_briefing_dispatch(kind, user_id, hour)` + Strategy-Adapter
+`run_briefing_dispatch(kind, user_id, now_utc)` + Strategy-Adapter
 `TripDispatchStrategy`/`CompareDispatchStrategy` sowie die Registry
 `_STRATEGY` fehlen komplett -> jeder Import schlaegt mit ImportError fehl.
 
@@ -21,8 +21,15 @@ import ast
 import inspect
 import json
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 import pytest
+
+
+def _jetzt() -> datetime:
+    """Zeitpunkt statt Stunde (#1724): `run_briefing_dispatch` entscheidet die
+    Faelligkeit seit dieser Aenderung je Versandweg in dessen eigener Zone."""
+    return datetime.now(timezone.utc)
 
 
 # Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
@@ -171,7 +178,7 @@ def test_compare_pauses_between_presets_but_not_after_the_last():
     original = mod._STRATEGY["vergleich"]
     mod._STRATEGY["vergleich"] = _Capturing
     try:
-        mod.run_briefing_dispatch("vergleich", user_id, 7)
+        mod.run_briefing_dispatch("vergleich", user_id, _jetzt())
         returned = time.monotonic()
     finally:
         mod._STRATEGY["vergleich"] = original
@@ -205,7 +212,7 @@ def test_route_dispatch_returns_trip_tally_format():
     user_id = _fresh_user_id("route")
     _make_isolated_user(user_id)
 
-    result = run_briefing_dispatch("route", user_id, 7)
+    result = run_briefing_dispatch("route", user_id, _jetzt())
 
     assert result == (0, 0)
     assert isinstance(result, tuple)
@@ -225,7 +232,7 @@ def test_vergleich_dispatch_returns_compare_count_format():
     user_id = _fresh_user_id("vergleich")
     _make_isolated_user(user_id)
 
-    result = run_briefing_dispatch("vergleich", user_id, 7)
+    result = run_briefing_dispatch("vergleich", user_id, _jetzt())
 
     assert result == (0, 0)
     assert isinstance(result, tuple)
@@ -235,19 +242,19 @@ def test_vergleich_dispatch_returns_compare_count_format():
 
 
 def test_entry_points_delegate_to_orchestrator():  # doc-compliance-test
-    """AC-1: `send_reports_for_hour` (Trip) UND `run_compare_presets_daily`
+    """AC-1: `send_due_reports` (Trip) UND `run_compare_presets_daily`
     (Compare) referenzieren im Quelltext `run_briefing_dispatch` — Delegation
     an den gemeinsamen Orchestrator statt zweier unabhaengiger Codepfade.
     Jetzt rot: keine der beiden Funktionen kennt den Namen."""
     from services import scheduler_dispatch_service, trip_report_scheduler
 
     trip_src = inspect.getsource(
-        trip_report_scheduler.TripReportSchedulerService.send_reports_for_hour
+        trip_report_scheduler.TripReportSchedulerService.send_due_reports
     )
     compare_src = inspect.getsource(scheduler_dispatch_service.run_compare_presets_daily)
 
     assert "run_briefing_dispatch" in trip_src, (
-        "send_reports_for_hour delegiert noch nicht an run_briefing_dispatch"
+        "send_due_reports delegiert noch nicht an run_briefing_dispatch"
     )
     assert "run_briefing_dispatch" in compare_src, (
         "run_compare_presets_daily delegiert noch nicht an run_briefing_dispatch"
@@ -292,8 +299,8 @@ def test_orchestrator_config_only_via_resolver():  # doc-compliance-test
 # --- Adversary Fix-Loop F002: injiziertes Settings bleibt erhalten --------
 
 
-def test_send_reports_for_hour_uses_injected_settings_not_fresh_reload(caplog):
-    """F002: `TripReportSchedulerService.send_reports_for_hour` muss das per
+def test_send_due_reports_uses_injected_settings_not_fresh_reload(caplog):
+    """F002: `TripReportSchedulerService.send_due_reports` muss das per
     Konstruktor injizierte `self._settings` an `run_briefing_dispatch`
     weiterreichen -- NICHT still ein frisches `Settings().with_user_profile()`
     laden (das den Konstruktor-Override verwirft).
@@ -335,11 +342,11 @@ def test_send_reports_for_hour_uses_injected_settings_not_fresh_reload(caplog):
     service = TripReportSchedulerService(settings=injected, user_id=user_id)
 
     caplog.set_level(logging_module.DEBUG, logger="trip_report_scheduler")
-    result = service.send_reports_for_hour(7)
+    result = service.send_due_reports(_jetzt())
 
     assert result == (0, 0)
     assert not any("Active trips for" in rec.message for rec in caplog.records), (
         "Guard griff nicht -- injiziertes Settings wurde verworfen "
-        "(send_reports_for_hour laedt still ein frisches Settings statt "
+        "(send_due_reports laedt still ein frisches Settings statt "
         "self._settings durchzureichen)"
     )
