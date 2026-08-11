@@ -75,7 +75,7 @@ der drei Alarmpfade den Kanal heute strukturell nicht kennt.
     SMS-Zweig (`:1405-1411`), `_log_error()` (`:1299-1305`) Label-Dict gehärtet.
   - `send_official_alert()` (`:794-899`): vierter Kanal-Zweig nach dem SMS-Zweig
     (`:881-894`).
-  - `send_compare_official_alert()` (`:995-1081`) + neue Hilfsfunktion
+  - `send_multi_location_official_alert()` (`:995-1081`) + neue Hilfsfunktion
     `_dispatch_compare_official_premium_sms()` (Vorbild `_dispatch_compare_official_sms`,
     `:1140-1157`).
   - Alle sechs `alert_log.append_entry(...)`-Aufrufstellen (s.u.) reichen zusätzlich
@@ -114,7 +114,7 @@ der drei Alarmpfade den Kanal heute strukturell nicht kennt.
   indexbasierte Ratsche für `send_official_alert` (`:1547-1554`, `:1792`) und
   `_dispatch_alert_message` (`:1579-1586`, `:1794`) wird von **3** auf **4** angehoben
   (D7), plus ein Nachzug-Eintrag für die neue Fundstelle
-  `send_compare_official_alert::3` (falls der Scanner sie dort listet — am Bestand
+  `send_multi_location_official_alert::3` (falls der Scanner sie dort listet — am Bestand
   nachzumessen, s. „Known Limitations").
 - **File:** `docs/specs/modules/waechter_1405_erfolg_wirkung.md` (MODIFY, Doku) —
   Pflicht-Nachzug der neuen Ratschen-Zahlen (dort wörtlich verlangt).
@@ -259,7 +259,7 @@ Optional[dict[str, str]] = None` (Kanal → `reason_code`, z.B.
 `premium_sms_no_reply_address`). `_channels_not_sent()` prüft ihn VOR den bisherigen drei
 Fällen: hat ein nicht zugestellter Kanal einen Eintrag in `blocked_reason_codes`, wird dessen
 Wert als Grund übernommen statt `REASON_DELIVERY_FAILED`. Alle drei Alarm-Dispatcher
-(`_dispatch_alert_message`, `send_official_alert`, `send_compare_official_alert`) füllen
+(`_dispatch_alert_message`, `send_official_alert`, `send_multi_location_official_alert`) füllen
 `NotificationResult.blocked_reason_codes` für Premium-SMS über `_record_block_reason_code()`
 (bereits aus S2a vorhanden, unverändert wiederverwendet) — für die drei Bestandskanäle bleibt
 das Feld leer, ihr Verhalten ändert sich nicht.
@@ -288,7 +288,7 @@ zerstören. Richtiger Zug: die erwartete Zahl in `test_success_status_guard.py` 
 anheben, mit Pflicht-Nachzug in `docs/specs/modules/waechter_1405_erfolg_wirkung.md`
 (dort steht wörtlich, Ratschen-Zahlen würden „IN DER SPEC beschlossen und dort nachgezogen").
 
-**Offen für die Implementierung:** ob `send_compare_official_alert()` (die neue
+**Offen für die Implementierung:** ob `send_multi_location_official_alert()` (die neue
 `_dispatch_compare_official_premium_sms`-Erweiterung) vom selben Scanner überhaupt als
 Fundstelle erkannt wird — die Funktion `sent_channels.append("email")` UNBEDINGT vor dem
 `if not self._dispatch_compare_official_email(...)`-Aufruf ist strukturell dieselbe Klasse,
@@ -332,7 +332,7 @@ Nachbarfelder (`handler/compare_preset.go:407-411`).
   - Test: `tests/unit/test_alert_channel_premium_sms.py::test_official_trip_alert_reaches_premium_sms`
 
 - **AC-4:** Given ein Ortsvergleich-Preset hat `send_premium_sms=true` (Nutzer ist Premium-Tier) / When ein Änderungs-, Regenradar- oder amtlicher Alarm für einen betroffenen Vergleichsort ausgelöst wird / Then wird der Ort in allen drei Fällen zusätzlich per Premium-SMS gemeldet — nicht nur bei E-Mail/Telegram/SMS, wie es heute für alle drei Ortsvergleichs-Alarmpfade gilt.
-  - Prüfort: HTTP-Stub gegen `compare_alert.py`, `compare_radar_alert.py`, `compare_official_alert.py` (bzw. `send_compare_official_alert()` direkt), je ein Fall pro Alarmart.
+  - Prüfort: HTTP-Stub gegen `compare_alert.py`, `compare_radar_alert.py`, `compare_official_alert.py` (bzw. `send_multi_location_official_alert()` direkt), je ein Fall pro Alarmart.
   - Test: `tests/unit/test_compare_alert_premium_sms.py::test_compare_deviation_alert_reaches_premium_sms`, `::test_compare_radar_alert_reaches_premium_sms`, `::test_compare_official_alert_reaches_premium_sms`
 
 - **AC-5:** Given ein Nutzer mit Tier `standard` hat (fälschlich oder testweise) `alert_channels.premium_sms=true` bzw. `send_premium_sms=true` im Ortsvergleich gesetzt / When ein Alarm für Trip oder Ortsvergleich ausgelöst wird / Then bleibt der Premium-SMS-Kanal in allen drei Alarmpfaden inaktiv — dasselbe strenge Tier-Gate (`premium_sms_allowed`) wie im Trip-Briefing, nicht das schwächere `sms_allowed`, das `standard` durchlässt.
@@ -363,7 +363,7 @@ Nachbarfelder (`handler/compare_preset.go:407-411`).
 
 - Die drei bestehenden Kanäle (E-Mail, Telegram, SMS) verhalten sich in allen drei
   Alarm-Dispatchern (`_dispatch_alert_message`, `send_official_alert`,
-  `send_compare_official_alert`) byte-identisch zu vorher — keine der bestehenden
+  `send_multi_location_official_alert`) byte-identisch zu vorher — keine der bestehenden
   Testsuiten für diese Kanäle darf sich ändern müssen.
 - `alert_log.append_entry()` bleibt für alle Bestandsaufrufe ohne `blocked_reason_codes`
   (Default `None`) exakt beim heutigen Verhalten: generischer `delivery_failed`.
@@ -414,9 +414,53 @@ Implementierung zu messen, nicht anzunehmen.
 | AC-9 | `_channels_not_sent()`: `blocked_reason_codes`-Vorrang entfernt | `test_blocked_premium_sms_reason_is_specific_not_generic` |
 | AC-10 | Ratschen-Zahl nicht angehoben (bleibt 3) ODER Buchung hinter `try` verschoben | `test_success_status_guard.py`-Ratschentests selbst (rot bzw. — bei verschobener Buchung — eine der Alarm-Tests, die `sent_channels` vs. `reachable_channels` unterscheiden) |
 
+## Nachtrag 2026-08-11 (RED-Phase): die ACHTE Stelle — der Radar-Bereitschafts-Guard
+
+**Gefunden vom Developer in der RED-Phase, vom Orchestrierer am Bestand nachgemessen.**
+Diese Spec kannte sieben Ansatzstellen. Es sind acht.
+
+`src/services/trip_alert.py:1043-1049` (`check_radar_alerts`) bricht den Radar-Alarm ab,
+**bevor** irgendein Kanal-Set aufgelöst wird:
+
+```python
+can_email = self._settings.can_send_email()
+can_telegram = self._settings.can_send_telegram()
+can_sms = self._settings.can_send_sms()
+if not can_email and not can_telegram and not can_sms:
+    continue   # "No channel configured; skipping radar alert"
+```
+
+**Warum das genau den PO-Fall trifft:** `can_send_sms()` verlangt `sms_gateway_url` UND
+`seven_api_key` UND **`sms_to`** (`src/app/config.py:407-413`). Premium-SMS hat aber
+konstruktionsbedingt **keine feste Empfängernummer** — die Rückadresse wird gelernt
+(ADR-0049, [[reference_garmin_inreach_hat_keine_feste_nummer]]). Ein Nutzer, der auf der
+Hütte **nur** Satellit hat und deshalb ausschließlich Premium-SMS konfiguriert, hat kein
+`sms_to` ⇒ `can_send_sms()` ist `False` ⇒ **der Radar-Alarm wird verworfen, obwohl ein
+funktionsfähiger Kanal konfiguriert ist.** Alle übrigen sieben Stellen wären dann korrekt
+umgesetzt und der Alarm käme trotzdem nie an.
+
+**Das ist kein Nebenbefund für #1199.** Ohne diese Stelle ist das freigegebene **AC-1**
+(„Abweichungs- **oder Regenradar**-Alarm geht an das Gerät") für die reale Konfiguration
+nicht erfüllt. Es wird in dieser Scheibe mitgelöst — die ACs ändern sich dadurch nicht.
+
+**Richtung für die Umsetzung:** Den Guard NICHT um eine vierte
+`can_send_*()`-Bereitschaftsfrage erweitern — ein `can_send_premium_sms()` wurde in S2a
+bewusst entfernt (Adversary-Fund F003) und darf nicht zurückkehren. Stattdessen den Guard
+gegen das **bereits daneben liegende effektive Kanal-Set** führen
+(`_radar_effective_channels(trip)` leer ⇒ Abbruch). Das ist die Quelle, die ohnehin
+maßgeblich ist, und beseitigt die Doppelung, statt sie zu vergrößern.
+
+**🔴 Prüfort = Wirkort, Pflicht für den Nachweis:** Die RED-Tests der Radar-ACs setzen
+derzeit `sms_gateway_url`/`sms_to` mit, damit `can_send_sms()` zufällig `True` wird — sie
+laufen also **am Guard vorbei** und würden diesen Defekt nicht bemerken. Es braucht
+mindestens einen Test mit einem Trip, der **ausschließlich** Premium-SMS konfiguriert hat
+(keine SMS-, keine Telegram-, keine E-Mail-Konfiguration), der beweist, dass der
+Radar-Alarm trotzdem hinausgeht. Ohne diesen Test ist AC-1 formal grün und praktisch
+wirkungslos — dieselbe Falle, die in diesem Projekt bereits dreimal zugeschlagen hat.
+
 ## Known Limitations
 
-- **Ratschen-Reichweite für `send_compare_official_alert` ungeklärt (D7).** Ob der
+- **Ratschen-Reichweite für `send_multi_location_official_alert` ungeklärt (D7).** Ob der
   Scanner diese Funktion als eigene B14a-artige Fundstelle listet, ist vor der
   Implementierung zu messen (aktuell nur `send_compare_preset` als B12 gelistet, ein
   strukturell anderes Muster). Fällt sie darunter, braucht auch sie eine
