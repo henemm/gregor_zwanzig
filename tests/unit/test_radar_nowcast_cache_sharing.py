@@ -342,7 +342,7 @@ def test_boundary_coordinates_do_not_share_cache_across_region_change(monkeypatc
     anstossen -- kein falscher Cache-Treffer ueber die Grenze hinweg.
 
     Netzfrei durch echten Methodenaustausch (Muster
-    `test_issue_1161_inca_convective.py`/`test_issue_1162_radar_dpc.py`):
+    `test_issue_1161_inca_convective.py`):
     `_fetch_brightsky`/`_fetch_geosphere_inca` werden durch echte,
     zaehlende Python-Funktionen ersetzt, die sofort nicht-leere Frames
     liefern -- die Kette bricht dadurch direkt nach dem ersten Treffer ab,
