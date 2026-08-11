@@ -32,6 +32,13 @@ temperature_cold) daher strukturell nie sehen. SPEC:
 docs/specs/modules/fix_1703_s3_selectable_metrics.md. Kein Produktivcode-Fix
 -- Charakterisierungstest fuer bereits korrektes, bisher unbewachtes
 Verhalten (alle 8 ACs laufen heute bereits GRUEN).
+
+Epic #1703 Scheibe 1 (AC-S1-1 bis AC-S1-7, ganz unten): Alarm-Renderer x alle
+alarmfaehigen Metriken (docs/reference/metric_output_matrix.md Flaeche 1) --
+die vier Alarm-Renderer waren fuer 8 von 11 produktiv erreichbaren
+Alarm-Groessen ungeprueft. SPEC:
+docs/specs/modules/fix_1703_s1_alert_renderer_matrix.md. EINZIGER roter
+Anteil dieser Achse: AC-S1-5 im gebuendelten Fall (Gewitter-Prozentzeichen).
 """
 from __future__ import annotations
 
@@ -43,15 +50,22 @@ from pathlib import Path
 import pytest
 
 from app.loader import _parse_display_config
-from app.metric_catalog import _METRICS, build_default_display_config, get_all_metrics, get_metric
+from app.metric_catalog import (
+    _METRICS, build_default_display_config, format_metric_value, get_all_metrics,
+    get_alert_label, get_cmp, get_metric, get_sms_code,
+)
 from app.models import AlertMetric, MetricConfig, UnifiedWeatherDisplayConfig, _SELECTABLE_GATE_EXEMPT
+from output.renderers.alert.model import AlertEvent, AlertMessage, side_label
+from output.renderers.alert.render import (
+    _HANDLED_UNITS, render_email, render_sms, render_subject, render_telegram,
+)
 from output.renderers.channel_layout import render_for_channel
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
 from output.renderers.email.helpers import resolve_metric_col_order
 from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC, SMS_MULTI_SYMBOLS_BY_METRIC
 from output.renderers.trip_report import TripReportFormatter
-from services.weather_change_detection import is_alert_metric_active
+from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID, is_alert_metric_active
 
 from tests.tdd import _min_temp_felt_fixtures as F
 
@@ -1023,4 +1037,532 @@ def test_kaskade_ac12_sms_order_is_applied_not_positional():
     )
     assert ib_first is not None and ib_second is not None and ib_second < ib_first, (
         f"AC-12: Reihenfolge B ({second_id} vor {first_id}) nicht umgesetzt: {sms_ba!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Epic #1703 Scheibe 1 (AC-S1-1 bis AC-S1-7): Alarm-Renderer x alle
+# alarmfaehigen Metriken (docs/reference/metric_output_matrix.md Flaeche 1).
+# SPEC: docs/specs/modules/fix_1703_s1_alert_renderer_matrix.md.
+#
+# Eigene AC-Nummerierung (AC-S1-n), damit sie weder mit AC-13/14/15 (#1677 B)
+# noch mit AC-1..AC-8 (Scheibe 3) kollidiert.
+#
+# EINZIGER roter Anteil: AC-S1-5 im gebuendelten Fall. _unit_display()
+# (render.py:75-86) haengt fuer 'thunder' hart ein '%' an, obwohl der
+# Alarmwert eine STUFE ist (alert_metrics={'max': 'thunder_level'},
+# metric_catalog.py:340) -- PO-Entscheidung #1585 (genau zwei
+# Gewitter-Metriken: 'thunder' = Staerke, 'thunder_probability' =
+# Wahrscheinlichkeit) loest die aeltere Design-Vorlage aus #978 ab.
+#
+# ZWEI Assertion-Familien statt einer (Kontext-Dokument, Tabelle "Welcher
+# Renderer welchen Helfer nutzt"): Betreff/E-Mail/Telegram beziehen die
+# Beschriftung ueber _label() -> get_alert_label(); render_sms kennt weder
+# Beschriftung noch Einheit, nur _code() -> get_sms_code(). Geprueft wird
+# ausschliesslich an den vier ECHTEN Renderern (Pruefort = Wirkort) -- nie an
+# _val()/_unit_display() isoliert, denn das pruefte den Helfer statt die
+# Verdrahtung (s. Korrektur-Abschnitt der Scheibe-3-Spec).
+# ---------------------------------------------------------------------------
+
+
+def _alarm_soll_ids() -> set[str]:
+    """Die alarmfaehigen Katalog-Kennungen -- GERECHNET aus dem Produktivmodul
+    (``_ALERT_METRIC_TO_CATALOG_ID``, weather_change_detection.py:82-99), nie
+    im Test aufgezaehlt (AC-S1-3). Wer ueber diese Menge iteriert, braucht
+    keine Ausnahmeliste: humidity/rain_probability (is_precursor) und
+    uv_index/snow_depth (kein Mapping-Eintrag) fallen strukturell heraus."""
+    return {cid for ids in _ALERT_METRIC_TO_CATALOG_ID.values() for cid in ids}
+
+
+_ALARM_SOLL_IDS = sorted(_alarm_soll_ids())
+
+# Vakuum-Schutz-Untergrenze (Muster tests/helpers/hourly_columns.py:130-158):
+# ein Waechter, der ueber eine leere oder stark geschrumpfte Menge iteriert,
+# ist immer gruen und bewacht nichts. Gemessen 2026-08-11: 11 Kennungen.
+_ALARM_SOLL_MINDESTGROESSE = 8
+
+# Gewitter-Kennung aus dem Produktivmodul gelesen statt getippt.
+_GEWITTER_ID = _ALERT_METRIC_TO_CATALOG_ID[AlertMetric.THUNDER_LEVEL][0]
+
+_UNIT_PROBE_VALUE = 12.0
+_EINHEITEN_UNTER_BEOBACHTUNG = sorted({m.unit for m in _METRICS} | set(_HANDLED_UNITS))
+
+# Alarm-SMS-Tokengrammatik (render.py:596-601 ``_sms_token``,
+# render.py:136-137 ``_sms_corridor_token``): {Vorzeichen}{Kuerzel}{Wert}[@HH],
+# optional mit vorangestellter Ortsposition "{n}:". Eine reine Teilstring-Suche
+# waere hier unbrauchbar -- 'N' (temperature_cold) ist Wortanfang von 'NL'
+# (freezing_level) und 'NS' (fresh_snow), s. AC-S1-2-Gegenprobe.
+_ALERT_SMS_TOKEN = re.compile(r"^(?:\d+:)?[+\-!]([A-Za-z][A-Za-z/]*)-?\d+(?:@\d+)?$")
+
+
+def _alert_sms_codes(sms: str) -> list[str]:
+    """Die Kuerzel einer Alarm-Kurznachricht in Token-Reihenfolge -- Token fuer
+    Token zerlegt, nie per Teilstring gesucht."""
+    body = sms.split(": ", 1)[1] if ": " in sms else sms
+    codes = []
+    for token in body.split(" "):
+        hit = _ALERT_SMS_TOKEN.match(token)
+        if hit:
+            codes.append(hit.group(1))
+    return codes
+
+
+def _alarm_kontroll_id(metric_id: str) -> str:
+    """Fremd-Groesse fuer die Verwechslungs-Gegenprobe: ihre Beschriftung darf
+    in der Ausgabe NICHT vorkommen. 'Wind'/'Boeen' sind mit keiner anderen
+    Alarm-Beschriftung teilstring-verwandt; dass beide zur Soll-Menge gehoeren,
+    prueft AC-S1-3."""
+    return "wind" if metric_id != "wind" else "gust"
+
+
+def _alert_event(
+    metric_id: str, *, value_from: float = 10.0, value_to: float = 20.0,
+    threshold: float = 5.0,
+) -> AlertEvent:
+    """Ein Abweichungs-Ereignis. ``cmp`` kommt aus dem Katalog (get_cmp), damit
+    der Test die Richtung nicht erfindet."""
+    return AlertEvent(
+        metric_id=metric_id, value_from=value_from, value_to=value_to,
+        threshold=threshold, cmp=get_cmp(metric_id), occurred_at="09:00",
+        km_from=0.0, km_to=5.0,
+    )
+
+
+def _alert_message(*events: AlertEvent) -> AlertMessage:
+    return AlertMessage(trip_short="T1703S1", stand_at="08:00", events=tuple(events))
+
+
+def _label_kanaele(msg: AlertMessage) -> dict[str, str]:
+    """Die drei Ausgaben, die die Beschriftung fuehren -- ECHTE Renderer.
+    Der sichtbare HTML-Text entsteht durch Entfernen der Tags: Auszeichnung wie
+    ``width="100%"`` ist keine Ausgabe (relevant fuer AC-S1-5)."""
+    html, plain = render_email(msg)
+    return {
+        "Betreff": render_subject(msg),
+        "E-Mail (Klartext)": plain,
+        "E-Mail (HTML-Text)": re.sub(r"<[^>]+>", "", html),
+        "Telegram": render_telegram(msg),
+    }
+
+
+# --- AC-S1-1: Beschriftung in Betreff/E-Mail/Telegram ---------------------
+
+
+@pytest.mark.parametrize("metric_id", _ALARM_SOLL_IDS)
+def test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram(metric_id):
+    """AC-S1-1: ein Alarm zu genau einer alarmfaehigen Groesse nennt sie in
+    Betreff, E-Mail UND Telegram mit der Katalog-Beschriftung -- gelesen aus
+    get_alert_label(), nie im Test getippt. Die Gegenprobe (Beschriftung einer
+    fremden Groesse darf NICHT erscheinen) macht die Zusicherung
+    mutationsempfindlich; fuer das gleichnamige Paar temperature/
+    temperature_cold gilt sie nur eingeschraenkt -- das haelt AC-S1-7 fest."""
+    label = get_alert_label(metric_id)
+    kontroll_label = get_alert_label(_alarm_kontroll_id(metric_id))
+    ausgaben = _label_kanaele(_alert_message(_alert_event(metric_id)))
+
+    for kanal, text in ausgaben.items():
+        assert label in text, (
+            f"AC-S1-1: {kanal} nennt die Groesse {metric_id!r} nicht mit ihrer "
+            f"Katalog-Beschriftung {label!r}: {text!r}"
+        )
+        assert kontroll_label not in text, (
+            f"AC-S1-1 (Gegenprobe): {kanal} traegt die Beschriftung "
+            f"{kontroll_label!r} einer gar nicht alarmierten Groesse: {text!r}"
+        )
+
+
+# --- AC-S1-2: SMS-Kuerzel als abgegrenzter Token --------------------------
+
+
+@pytest.mark.parametrize("metric_id", _ALARM_SOLL_IDS)
+def test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token(metric_id):
+    """AC-S1-2: die Kurznachricht traegt das Kuerzel der Groesse als
+    eigenstaendigen Token. Geprueft wird mit Token-Grammatik statt
+    Teilstring-Suche, und es darf KEIN fremdes Kuerzel mitgelesen werden."""
+    code = get_sms_code(metric_id)
+    assert code, (
+        f"Vorbedingung: {metric_id!r} hat kein sms_code -- _code() fiele auf "
+        "die metric_id zurueck (render.py:89-90), der Test pruefte dann etwas "
+        "anderes als das Kuerzel"
+    )
+    sms = render_sms(_alert_message(_alert_event(metric_id)))
+    codes = _alert_sms_codes(sms)
+
+    assert code in codes, (
+        f"AC-S1-2: Kurznachricht fuehrt fuer {metric_id!r} keinen Token mit "
+        f"dem Kuerzel {code!r}: {sms!r} (erkannte Kuerzel: {codes})"
+    )
+    fremde = {get_sms_code(other) for other in _ALARM_SOLL_IDS if other != metric_id}
+    mitgelesen = sorted(fremde & set(codes) - {code})
+    assert not mitgelesen, (
+        f"AC-S1-2: Kurznachricht zu {metric_id!r} fuehrt zusaetzlich fremde "
+        f"Kuerzel {mitgelesen}: {sms!r}"
+    )
+
+
+def _sms_praefix_kollisionen() -> list[tuple[str, str]]:
+    """Paare (kurz, lang) aus der Soll-Menge, bei denen ein Kuerzel echter
+    Wortanfang eines anderen ist -- gerechnet, nicht getippt. Gemessen
+    2026-08-11: N/NL (temperature_cold vs. freezing_level) und N/NS
+    (temperature_cold vs. fresh_snow)."""
+    return [
+        (kurz_id, lang_id)
+        for kurz_id in _ALARM_SOLL_IDS
+        for lang_id in _ALARM_SOLL_IDS
+        if get_sms_code(kurz_id)
+        and get_sms_code(lang_id)
+        and get_sms_code(kurz_id) != get_sms_code(lang_id)
+        and get_sms_code(lang_id).startswith(get_sms_code(kurz_id))
+    ]
+
+
+_SMS_PRAEFIX_KOLLISIONEN = _sms_praefix_kollisionen()
+
+
+@pytest.mark.parametrize("kurz_id,lang_id", _SMS_PRAEFIX_KOLLISIONEN)
+def test_ac_s1_2_sms_praefix_gegenprobe(kurz_id, lang_id):
+    """AC-S1-2 (Pflicht-Gegenprobe): ein Alarm, der NUR die Groesse mit dem
+    laengeren Kuerzel traegt, darf fuer das kuerzere KEINEN Treffer liefern.
+    Genau hier schluege eine Teilstring-Suche falsch an -- ersetzt man die
+    Token-Grammatik in ``_alert_sms_codes()`` durch ``code in sms``, muss
+    dieser Test rot werden."""
+    kurz, lang = get_sms_code(kurz_id), get_sms_code(lang_id)
+    sms = render_sms(_alert_message(_alert_event(lang_id)))
+    codes = _alert_sms_codes(sms)
+
+    assert lang in codes, (
+        f"Vorbedingung: {lang_id!r} muss sein eigenes Kuerzel {lang!r} tragen "
+        f"(sonst prueft die Gegenprobe ins Leere): {sms!r}"
+    )
+    assert kurz not in codes, (
+        f"AC-S1-2 (Gegenprobe): das Kuerzel {kurz!r} ({kurz_id!r}) wird in "
+        f"einer Kurznachricht mitgelesen, die nur {lang_id!r} ({lang!r}) "
+        f"enthaelt: {sms!r}"
+    )
+
+
+# --- AC-S1-3: Soll-Menge stammt aus dem Produktivmodul (Vakuum-Schutz) ----
+
+
+def test_ac_s1_3_soll_menge_wird_gerechnet_und_ist_plausibel():
+    """AC-S1-3: die geprueften Groessen stammen ausschliesslich aus
+    ``_ALERT_METRIC_TO_CATALOG_ID``. Der Plausibilitaets-Waechter schlaegt an,
+    wenn die Menge leer ist, unter die Mindestgroesse faellt oder von der
+    parametrisierten Konstante abweicht -- die Konstante ist der Mutations-Ort
+    (sie speist alle parametrize-Achsen), die Neuberechnung hier ist der
+    unabhaengige Pruefort."""
+    frisch = {cid for ids in _ALERT_METRIC_TO_CATALOG_ID.values() for cid in ids}
+
+    assert frisch, (
+        "Vakuum: das Produktivmodul fuehrt keine einzige alarmfaehige "
+        "Katalog-Kennung -- jede Achse dieser Scheibe liefe ueber null Faelle"
+    )
+    assert len(frisch) >= _ALARM_SOLL_MINDESTGROESSE, (
+        f"Vakuum-Schutz: nur {len(frisch)} alarmfaehige Kennungen "
+        f"({sorted(frisch)}) -- erwartet mindestens "
+        f"{_ALARM_SOLL_MINDESTGROESSE}. Entweder ist das Mapping geschrumpft "
+        "oder die Soll-Rechnung greift daneben."
+    )
+    assert set(_ALARM_SOLL_IDS) == frisch, (
+        f"Die parametrisierte Soll-Menge {sorted(_ALARM_SOLL_IDS)} weicht vom "
+        f"Produktivmodul {sorted(frisch)} ab -- eine im Test aufgezaehlte oder "
+        "gekuerzte Liste ist genau das, was AC-S1-3 verbietet"
+    )
+
+    katalog_ids = {m.id for m in _METRICS}
+    assert frisch <= katalog_ids, (
+        f"Kennungen ohne Katalog-Eintrag: {sorted(frisch - katalog_ids)}"
+    )
+    # Unabhaengige Gegenrichtung: der Katalog kennt die Alarmfaehigkeit selbst
+    # (alert_metrics, ohne die is_precursor-Vorboten). Faellt eine solche
+    # Groesse aus dem Mapping, schrumpfen sonst BEIDE Seiten gemeinsam und
+    # keine Assertion oben wuerde anschlagen. Grenze, bewusst: die drei
+    # Groessen, die nur ueber die Rueckwaerts-Abbildung erreichbar sind
+    # (snowfall_limit/temperature_cold via OR-Tupel, wind via WIND_CHANGE),
+    # deklarieren im Katalog kein alert_metrics und sind so nicht abgedeckt.
+    katalog_alarmfaehig = {
+        m.id for m in _METRICS if m.alert_metrics and not m.is_precursor
+    }
+    assert katalog_alarmfaehig <= frisch, (
+        f"Der Katalog fuehrt {sorted(katalog_alarmfaehig - frisch)} als "
+        "alarmfaehig (alert_metrics gesetzt, kein Vorbote), das Produktivmodul "
+        "_ALERT_METRIC_TO_CATALOG_ID kennt die Kennung(en) aber nicht -- "
+        "entweder ist das Mapping geschrumpft oder der Katalog ist gewachsen, "
+        "ohne dass die Alarm-Renderer-Achse davon erfaehrt"
+    )
+    ohne_kuerzel = sorted(cid for cid in frisch if not get_sms_code(cid))
+    assert not ohne_kuerzel, (
+        f"Alarmfaehige Groessen ohne sms_code: {ohne_kuerzel} -- _code() faellt "
+        "dort auf die metric_id zurueck, AC-S1-2 pruefte dann das Falsche"
+    )
+    ohne_beschriftung = sorted(cid for cid in frisch if get_alert_label(cid) == cid)
+    assert not ohne_beschriftung, (
+        f"Alarmfaehige Groessen ohne Katalog-Beschriftung: {ohne_beschriftung} "
+        "-- get_alert_label() gibt dort die Kennung selbst zurueck"
+    )
+
+    kontroll_ids = {_alarm_kontroll_id(cid) for cid in _ALARM_SOLL_IDS}
+    assert kontroll_ids <= frisch, (
+        f"Kontroll-Groessen ausserhalb der Soll-Menge: "
+        f"{sorted(kontroll_ids - frisch)} -- die Gegenprobe in AC-S1-1 haette "
+        "keine Grundlage"
+    )
+    assert _SMS_PRAEFIX_KOLLISIONEN, (
+        "Keine Praefix-Kollision mehr unter den Kuerzeln -- dann laeuft die "
+        "AC-S1-2-Gegenprobe ueber null Faelle und bewacht nichts"
+    )
+    assert _GEWITTER_ID in frisch, (
+        f"Die Gewitter-Kennung {_GEWITTER_ID!r} steht nicht in der Soll-Menge "
+        "-- AC-S1-5/AC-S1-6 haetten keinen Gegenstand"
+    )
+    assert _HANDLED_UNITS and len(_EINHEITEN_UNTER_BEOBACHTUNG) >= 8, (
+        f"Vakuum-Schutz AC-S1-4: {len(_EINHEITEN_UNTER_BEOBACHTUNG)} Einheiten "
+        f"unter Beobachtung, _HANDLED_UNITS={_HANDLED_UNITS}"
+    )
+
+
+# --- AC-S1-4: _HANDLED_UNITS deckt sich mit der Katalog-Formatierung ------
+
+
+def _katalog_haengt_einheit_an(unit: str) -> bool:
+    """Gemessen statt behauptet: haengt ``format_metric_value()`` diese Einheit
+    tatsaechlich an den Wert an? Der else-Zweig (metric_catalog.py:1025-1026)
+    liefert ``str(value)`` ganz ohne Einheit."""
+    if not unit:
+        return False
+    return format_metric_value(unit, _UNIT_PROBE_VALUE).endswith(" " + unit)
+
+
+@pytest.mark.parametrize(
+    "unit", _EINHEITEN_UNTER_BEOBACHTUNG, ids=lambda u: u or "ohne-einheit",
+)
+def test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung(unit):
+    """AC-S1-4: ``_HANDLED_UNITS`` (render.py:35) ist eine wortgleiche Kopie
+    der Einheiten, die ``format_metric_value()`` mit Suffix formatiert. Diese
+    Doppelung driftet lautlos: waechst die eine Liste ohne die andere, faellt
+    der Alarm-Renderer still in den Ersatzpfad (render.py:51-52) und verliert
+    dort die deutsche Zahlformatierung. Geprueft wird in BEIDE Richtungen --
+    Katalog-Einheiten und Listen-Einheiten stehen gemeinsam in der Achse."""
+    haengt_an = _katalog_haengt_einheit_an(unit)
+    gelistet = unit in _HANDLED_UNITS
+    assert haengt_an == gelistet, (
+        f"AC-S1-4: Einheit {unit!r} -- Katalog haengt sie "
+        f"{'an' if haengt_an else 'NICHT an'} "
+        f"(format_metric_value({unit!r}, {_UNIT_PROBE_VALUE}) = "
+        f"{format_metric_value(unit, _UNIT_PROBE_VALUE)!r}), _HANDLED_UNITS "
+        f"fuehrt sie {'' if gelistet else 'NICHT '}-- die beiden Listen sind "
+        "auseinandergelaufen"
+    )
+
+
+# --- AC-S1-5: Gewitter ohne Prozentzeichen (DER rote Anteil) --------------
+
+
+def _gewitter_event() -> AlertEvent:
+    """value_from=0.0 -> ``delta_pct()`` ist definitionsgemaess None
+    (model.py:92-96), die Ausgabe traegt also KEINE Aenderungs-Prozentzahl.
+    Jedes verbleibende '%' ist damit zwangslaeufig eine EINHEIT -- genau das
+    misst AC-S1-5. Werte 0->2 bilden die Gewitter-STUFE ab (0-3)."""
+    return _alert_event(_GEWITTER_ID, value_from=0.0, value_to=2.0, threshold=1.0)
+
+
+def _alle_vier_ausgaben(msg: AlertMessage) -> dict[str, str]:
+    ausgaben = _label_kanaele(msg)
+    ausgaben["Kurznachricht"] = render_sms(msg)
+    return ausgaben
+
+
+def test_ac_s1_5_gewitter_allein_ohne_prozentzeichen():
+    """AC-S1-5 (Einzel-Alarm): heute bereits gruen -- der Einzelpfad liest
+    ``get_metric().unit`` direkt (render.py:47, :365) und umgeht damit den
+    ``_unit_display()``-Sonderfall."""
+    assert get_metric(_GEWITTER_ID).unit == "", (
+        f"Vorbedingung: der Katalog fuehrt {_GEWITTER_ID!r} ohne Einheit "
+        "(Stufe 0-3, metric_catalog.py:333) -- sonst waere ein Einheiten-"
+        "Suffix keine Fehlanzeige"
+    )
+    msg = _alert_message(_gewitter_event())
+    ausgaben = _alle_vier_ausgaben(msg)
+
+    assert get_alert_label(_GEWITTER_ID) in ausgaben["Betreff"], (
+        "Vorbedingung: der Betreff muss den Gewitter-Alarm ueberhaupt nennen"
+    )
+    assert get_sms_code(_GEWITTER_ID) in _alert_sms_codes(ausgaben["Kurznachricht"]), (
+        "Vorbedingung: die Kurznachricht muss den Gewitter-Token tragen"
+    )
+    for kanal, text in ausgaben.items():
+        assert "%" not in text, (
+            f"AC-S1-5: {kanal} haengt an den Gewitter-Wert ein Prozentzeichen "
+            f"an -- Gewitter ist eine STUFE (alert_metrics="
+            "{'max': 'thunder_level'}), die Prozent-Achse waere "
+            f"'thunder_probability' (PO-Entscheidung #1585): {text!r}"
+        )
+
+
+def test_ac_s1_5_gewitter_gebuendelt_ohne_prozentzeichen():
+    """AC-S1-5 (Buendel-Alarm): DER rote Anteil dieser Scheibe. Der
+    Mehr-Metrik-Pfad nutzt ``_unit_display()`` (render.py:75-86), das fuer
+    'thunder' hart '%' liefert -- gemessen 2026-08-11: 'Gewitter 10->20%'."""
+    partner_id = _alarm_kontroll_id(_GEWITTER_ID)
+    assert get_metric(partner_id).unit != "%", (
+        f"Vorbedingung: die Partner-Groesse {partner_id!r} darf selbst keine "
+        "Prozent-Einheit tragen -- sonst waere nicht zuzuordnen, woher ein "
+        "'%' stammt"
+    )
+    msg = _alert_message(
+        _gewitter_event(),
+        _alert_event(partner_id, value_from=0.0, value_to=30.0, threshold=10.0),
+    )
+    ausgaben = _alle_vier_ausgaben(msg)
+
+    assert get_alert_label(_GEWITTER_ID) in ausgaben["Betreff"], (
+        "Vorbedingung: der Betreff muss den Gewitter-Alarm ueberhaupt nennen"
+    )
+    for kanal, text in ausgaben.items():
+        assert "%" not in text, (
+            f"AC-S1-5: {kanal} haengt im gebuendelten Alarm an den "
+            "Gewitter-Wert ein Prozentzeichen an -- Gewitter ist eine STUFE, "
+            "keine Prozentzahl (PO-Entscheidung #1585; der Sonderfall in "
+            f"_unit_display() stammt aus der aelteren #978-Vorlage): {text!r}"
+        )
+
+
+# --- AC-S1-6: der Fix schiesst nicht ueber sein Ziel hinaus ---------------
+
+
+def _buendel_zeile(plain: str, label: str) -> str:
+    zeilen = [z for z in plain.splitlines() if z.startswith(f"{label} · ")]
+    assert len(zeilen) == 1, (
+        f"Erwartet genau eine Datenzeile zur Beschriftung {label!r}, gefunden "
+        f"{len(zeilen)}: {zeilen}"
+    )
+    return zeilen[0]
+
+
+@pytest.mark.parametrize("metric_id", _ALARM_SOLL_IDS)
+def test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit(metric_id):
+    """AC-S1-6: im gebuendelten Alarm traegt jede uebrige Groesse weiterhin
+    genau ihre Katalog-Einheit -- der Gewitter-Fix darf sie nicht mitreissen.
+    Fuer Gewitter selbst greift ein umgekehrter Zweig (kein pytest.skip,
+    Muster ``_TELEGRAM_NIGHT_SCALAR_EXCEPTIONS`` weiter oben): dort gilt die
+    Regel dieses Tests gerade NICHT, der Sollzustand steht in AC-S1-5."""
+    if metric_id == _GEWITTER_ID:
+        assert get_metric(metric_id).unit == "", (
+            f"Umgekehrter Zweig: {metric_id!r} traegt im Katalog bewusst keine "
+            "Einheit -- daraus folgt der Sollzustand aus AC-S1-5 (keine "
+            "Prozent-Ausgabe). Traegt der Katalog hier ploetzlich eine "
+            "Einheit, ist die Grundlage beider ACs weg."
+        )
+        return
+
+    unit = get_metric(metric_id).unit
+    ereignis = _alert_event(metric_id, value_from=0.0, value_to=20.0)
+    _, plain = render_email(_alert_message(ereignis, _gewitter_event()))
+    zeile = _buendel_zeile(plain, get_alert_label(metric_id))
+    erwartetes_ende = f"{unit} {side_label(ereignis)}"
+
+    assert zeile.endswith(erwartetes_ende), (
+        f"AC-S1-6: die Datenzeile zu {metric_id!r} endet nicht auf ihre "
+        f"Katalog-Einheit ({erwartetes_ende!r}): {zeile!r}"
+    )
+
+
+def test_ac_s1_6_prozentzeichen_bleibt_wo_die_einheit_es_verlangt():
+    """AC-S1-6: Groessen, deren Katalog-Einheit tatsaechlich '%' ist (Feuchte
+    und Regenwahrscheinlichkeit -- beide is_precursor und daher NICHT in der
+    Soll-Menge, als AlertEvent aber sehr wohl renderbar), behalten ihr
+    Prozentzeichen. Ein Fix, der ``_unit_display()`` pauschal entschaerft
+    statt nur den thunder-Sonderfall zu entfernen, wird hier rot."""
+    prozent_ids = [m.id for m in _METRICS if m.unit == "%" and m.alert_label]
+    assert prozent_ids, (
+        "Vakuum: der Katalog fuehrt keine Prozent-Groesse mit Alarm-"
+        "Beschriftung -- dieser Test bewachte nichts"
+    )
+    partner_id = _alarm_kontroll_id(_GEWITTER_ID)
+
+    for metric_id in prozent_ids:
+        ereignis = _alert_event(metric_id, value_from=0.0, value_to=80.0, threshold=20.0)
+        _, plain = render_email(_alert_message(
+            ereignis,
+            _alert_event(partner_id, value_from=0.0, value_to=30.0, threshold=10.0),
+        ))
+        zeile = _buendel_zeile(plain, get_alert_label(metric_id))
+        assert zeile.endswith(f"% {side_label(ereignis)}"), (
+            f"AC-S1-6: {metric_id!r} hat die Katalog-Einheit '%' verloren: "
+            f"{zeile!r}"
+        )
+
+
+# --- AC-S1-7: gleiche Beschriftung -- Doppeldeutigkeit ausdruecklich ------
+
+
+def _beschriftungs_kollisionen() -> dict[str, tuple[str, ...]]:
+    """Gruppen von Soll-Groessen, die sich EINE Alarm-Beschriftung teilen --
+    gerechnet, nicht getippt. Gemessen 2026-08-11: {'Temp': ('temperature',
+    'temperature_cold')}."""
+    nach_label: dict[str, list[str]] = {}
+    for metric_id in _ALARM_SOLL_IDS:
+        nach_label.setdefault(get_alert_label(metric_id), []).append(metric_id)
+    return {lab: tuple(ids) for lab, ids in nach_label.items() if len(ids) > 1}
+
+
+_BESCHRIFTUNGS_KOLLISIONEN = sorted(_beschriftungs_kollisionen().items())
+
+
+def test_ac_s1_7_doppeldeutige_beschriftung_ist_benannt():
+    """AC-S1-7: die Doppeldeutigkeit wird ausdruecklich festgehalten statt
+    stillschweigend uebergangen. Wird sie eines Tages aufgeloest (eigene
+    Beschriftung fuer temperature_cold), muss dieser Zweig bewusst entfernt
+    werden -- er verschwindet nicht von selbst."""
+    assert _BESCHRIFTUNGS_KOLLISIONEN, (
+        "Keine gleichnamigen Alarm-Groessen mehr -- der umgekehrte Pruefzweig "
+        "AC-S1-7 laeuft dann ueber null Faelle. Entweder ist die "
+        "Doppeldeutigkeit behoben (dann diesen Zweig samt Begruendung "
+        "entfernen) oder die Soll-Menge ist kaputt."
+    )
+
+
+@pytest.mark.parametrize("label,metric_ids", _BESCHRIFTUNGS_KOLLISIONEN)
+def test_ac_s1_7_gleichnamige_groessen_trennt_nur_die_kurznachricht(label, metric_ids):
+    """AC-S1-7 (umgekehrter Pruefzweig): fuer gleichnamige Groessen gilt die
+    Zusicherung aus AC-S1-1 nur eingeschraenkt -- Betreff, E-Mail und Telegram
+    sind byte-identisch und koennen sie NICHT unterscheiden. Allein das
+    Kurznachrichten-Kuerzel trennt sie. Wer eine Mutation nur an diesen drei
+    Kanaelen misst, hat nichts bewiesen (s. Pruefhinweis der Spec).
+
+    Adversary-Finding F001, #1703 S1: dieser Test (wie auch
+    test_ac_s1_7_doppeldeutige_beschriftung_ist_benannt oben) beweist nur,
+    dass sich die Kuerzel fuer 'temperature' und 'temperature_cold'
+    UNTERSCHEIDEN -- er kann NICHT beweisen, dass sie richtig herum
+    zugeordnet sind (also 'D' zu temperature, 'N' zu temperature_cold),
+    denn Pruefling (get_sms_code ueber _alert_sms_codes/render_sms) und
+    Massstab (_ALARM_SOLL_IDS/get_alert_label, ebenfalls aus dem Katalog)
+    lesen hier denselben Katalog. Eine Vertauschung der beiden sms_code-
+    Werte direkt im Katalog wuerde Soll und Ist gemeinsam mitwandern lassen
+    und bliebe hier gruen. Die Zuordnung selbst sichert stattdessen
+    tests/tdd/test_issue_917_alert_renderer.py::TestAC6CatalogSmsCodes ab,
+    die die Kuerzel 'D' und 'N' hart als Literal schreibt (Zeile 465ff).
+    Wird jene Klasse geloescht, faellt diese Deckung ersatzlos weg und muss
+    hier (oder an vergleichbarer Stelle) ersetzt werden."""
+    ausgaben = [_label_kanaele(_alert_message(_alert_event(mid))) for mid in metric_ids]
+    for mid, weitere in zip(metric_ids[1:], ausgaben[1:]):
+        for kanal, text in ausgaben[0].items():
+            assert weitere[kanal] == text, (
+                f"AC-S1-7: {kanal} unterscheidet {metric_ids[0]!r} und {mid!r} "
+                f"doch -- der Waechter geht davon aus, dass beide unter der "
+                f"Beschriftung {label!r} ununterscheidbar sind. Wenn das jetzt "
+                "nicht mehr stimmt, ist die Doppeldeutigkeit behoben und "
+                f"dieser Zweig gehoert entfernt.\n{text!r}\n{weitere[kanal]!r}"
+            )
+
+    kuerzel = []
+    for mid in metric_ids:
+        codes = _alert_sms_codes(render_sms(_alert_message(_alert_event(mid))))
+        assert len(codes) == 1, (
+            f"Vorbedingung: genau ein Token erwartet fuer {mid!r}, erkannt: {codes}"
+        )
+        kuerzel.append(codes[0])
+    assert len(set(kuerzel)) == len(kuerzel), (
+        f"AC-S1-7: allein die Kurznachricht trennt die gleichnamigen Groessen "
+        f"{list(metric_ids)} -- hier tut sie es nicht: {kuerzel}"
     )

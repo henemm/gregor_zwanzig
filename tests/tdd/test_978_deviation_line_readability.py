@@ -22,14 +22,17 @@ tests/tdd/test_952_alert_mail_design_fidelity.py,
 tests/tdd/test_952_onset_alert_fidelity.py::TestAC8RendererParity,
 tests/tdd/test_957_alert_mail_literal_structure.py::TestSingleEventVerdictAndDatablock.
 
-Bekannte Katalog-Randbedingung (nicht Teil dieser RED-Tests, aber
-GREEN-relevant): `metric_catalog.get_metric("thunder").unit == ""` (nicht
-"%"), obwohl die Design-Vorlage Gewitter-Werte mit "%" zeigt
-(Zeilen 208/220-233/281). AC-3/AC-4 unten prüfen daher exakt die von der
-Spec vorgegebenen Literale inkl. "Gewitter 55%" — die GREEN-Phase muss diesen
-Katalog/Vorlage-Widerspruch auflösen (z.B. Sonderfall für metric_id=="thunder"
-im neuen `_num()`-Helper), da ein reiner `unit=="%"`-Check laut aktuellem
-Katalogstand nicht greift.
+Katalog-Randbedingung, seit 2026-08-11 aufgelöst: `get_metric("thunder").unit`
+ist "" (nicht "%"). Die Design-Vorlage zu #978 zeigte Gewitter-Werte mit "%"
+(Zeilen 208/220-233/281), weshalb `_unit_display()` fuer "thunder" hart ein
+"%" anhaengte und AC-3/AC-4 dieses "%" als SOLL festschrieben. Diese
+Entscheidung ist mit PO-Entscheidung #1585 (2026-08-07: genau zwei
+Gewitter-Metriken — "thunder" = Staerke, "thunder_probability" =
+Wahrscheinlichkeit) ueberholt: der Alarmwert von "thunder" ist eine STUFE
+(0-3, alert_metrics={"max": "thunder_level"}), keine Prozentzahl. Issue #1703
+Scheibe 1 hat den Sonderfall ersatzlos entfernt; die Literale unten fuehren
+Gewitter-Werte deshalb OHNE "%". Das "%" bei "Regen%" bleibt — das ist der
+Name der Metrik rain_probability, ihre Einheit ist tatsaechlich Prozent.
 """
 import sys
 
@@ -215,7 +218,7 @@ class TestAC2RoundingNoiseAndThousandSeparator:
 class TestAC3SubjectTop3JustNumbers:
     def test_subject_top3_exact_literal(self):
         subject = render_subject(_multi_msg())
-        assert "Niedersch 30, Gewitter 90%, Böen 80" in subject, (
+        assert "Niedersch 30, Gewitter 90, Böen 80" in subject, (
             f"Betreff-Top3 nicht im SOLL-Format (PO-Nachtrag 2026-07-02: "
             f"kritischster zuerst, severity-absteigend): {subject!r}"
         )
@@ -229,7 +232,7 @@ class TestAC3SubjectTop3JustNumbers:
 class TestAC4TelegramMultiLineNoUnitsExceptPercent:
     def test_telegram_multiline_exact_literal(self):
         tg = render_telegram(_multi_msg())
-        assert "Niedersch 2→30 · Gewitter 20→90% · Böen 20→80" in tg, (
+        assert "Niedersch 2→30 · Gewitter 20→90 · Böen 20→80" in tg, (
             f"Telegram-Multi-Zeile nicht im SOLL-Format (PO-Nachtrag "
             f"2026-07-02: kritischster zuerst, severity-absteigend): {tg!r}"
         )
@@ -347,7 +350,7 @@ class TestMixedOverUnderOrdering:
 
     def test_subject_top3_excludes_under_threshold_event(self):
         subject = render_subject(_mixed_over_under_msg())
-        assert "Böen 80, Gewitter 55%, Regen% 55%" in subject, (
+        assert "Böen 80, Gewitter 55, Regen% 55%" in subject, (
             f"Top-3 muss die drei über-Schwelle-Events severity-absteigend "
             f"zeigen: {subject!r}"
         )

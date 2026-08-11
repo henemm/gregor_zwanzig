@@ -145,6 +145,42 @@ fremder Einheit **still** auf einen Ersatzpfad aus — das Ergebnis ist eine
 plausibel aussehende, inhaltlich falsche Alarmmeldung statt eines Fehlers.
 *Priorität 1, weil Alarme sicherheitsrelevant sind und der Fehlermodus lautlos ist.*
 
+**✅ Erledigt (2026-08-11, Epic #1703 Scheibe 1):** Wächter in
+`tests/tdd/test_channel_metric_matrix.py` (`test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram`,
+`test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token` + `…_sms_praefix_gegenprobe`,
+`test_ac_s1_3_soll_menge_wird_gerechnet_und_ist_plausibel`,
+`test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung`,
+`test_ac_s1_5_gewitter_allein_/_gebuendelt_ohne_prozentzeichen`,
+`test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit` + `…_prozentzeichen_bleibt_wo_die_einheit_es_verlangt`,
+`test_ac_s1_7_doppeldeutige_beschriftung_ist_benannt` + `…_gleichnamige_groessen_trennt_nur_die_kurznachricht`).
+Parametrisiert über die **gemessene Soll-Menge von 11** alarmfähigen Katalog-Kennungen —
+gerechnet aus dem Produktivmodul (`_ALERT_METRIC_TO_CATALOG_ID`,
+`weather_change_detection.py:82-99`), nie im Test aufgezählt: `cape`, `freezing_level`,
+`fresh_snow`, `gust`, `precipitation`, `snowfall_limit`, `temperature`, `temperature_cold`,
+`thunder`, `visibility`, `wind`. Auch die `_HANDLED_UNITS`-Whitelist ist jetzt gegen das
+tatsächliche Formatierungsverhalten des Katalogs gehalten (beide Richtungen, 12 Fälle über
+die Vereinigung aus Katalog-Einheiten und Whitelist-Einträgen). Mitrepariert: der
+Gewitter-Sonderfall in `_unit_display()` hängte im **gebündelten** Alarm ein Prozentzeichen
+an eine Stufe (0–3) — ersatzlos entfernt, PO-Entscheidung #1585 löst die ältere
+#978-Design-Vorlage ab; die drei Bestands-Assertions in
+`tests/tdd/test_978_deviation_line_readability.py` (:218, :232, :350) und der dortige
+Modul-Docstring sind nachgezogen. Spec:
+`docs/specs/modules/fix_1703_s1_alert_renderer_matrix.md`.
+
+**Grenzen dieses Wächters (benannt, nicht behoben):**
+- `CorridorEvent` (Wertebereichs-Alarm) bleibt unbewacht — toter Pfad:
+  `evaluate_corridor_thresholds()` (`corridor_threshold.py:68`) hat keinen Aufrufer in
+  `src/`/`api/`, und der produktive `_send_alert()` (`trip_alert.py:296`) übergibt
+  `corridor_hits` nicht.
+- `OnsetEvent` (Radar-Beginn) bleibt unbewacht — strukturell metrik-los: die
+  Datenstruktur hat kein `metric_id`-Feld (`alert/model.py:30-46`), der Renderer
+  verzweigt binär über `is_convective` mit festen Wörtern.
+- Für `snowfall_limit`, `temperature_cold` und `wind` kann **kein** Test bemerken, wenn
+  sie aus der Rückwärts-Abbildung entfernt werden: sie deklarieren im Katalog kein
+  `alert_metrics` und hängen allein an `_ALERT_METRIC_TO_CATALOG_ID`. Die
+  Größenschranke des Vakuum-Schutzes (≥ 8) fängt eine einzelne Entfernung nicht
+  (11 − 1 = 10).
+
 **Fläche 2 — Alle Metriken × Ausblick-Tabelle.** `outlook_columns()`
 (`compare_outlook_metric_ids.py:78`), genutzt von Trip-Mail **und** Compare-Mail
 (`email/outlook.py:149`, `:343`, `:522`).
@@ -256,7 +292,7 @@ entscheidende Unterschied zu Option B und der Grund für die Empfehlung.
 Acht issue-fähige Einträge. **Keiner davon ist in dem Workflow umgesetzt, der
 dieses Dokument erzeugt hat** — er hat ausschließlich diese Datei angelegt.
 
-### Scheibe 1 — Alarm-Renderer × alle `_METRICS`
+### Scheibe 1 — Alarm-Renderer × alle `_METRICS` ✅ ERLEDIGT (2026-08-11)
 
 Matrix-Achse für `render_subject`/`render_email`/`render_telegram`/`render_sms`
 (`alert/render.py:292/448/549/617`) über das volle `_METRICS`. Der Test muss
@@ -264,6 +300,16 @@ zusätzlich erzwingen, dass keine alarmfähige Metrik in den `_HANDLED_UNITS`-
 Ersatzpfad (`alert/render.py:49`) fällt, ohne dort namentlich als Ausnahme zu stehen.
 *Risiko: hoch (sicherheitsrelevant, lautloser Fehlermodus). Größe: mittel — vier
 Renderer, aber gleichförmige Assertions.* Deckt Fläche 1.
+
+Umgesetzt als 7 ACs (AC-S1-1 bis AC-S1-7) in `tests/tdd/test_channel_metric_matrix.py`,
+parametrisiert über die gemessene Soll-Menge von **11** alarmfähigen Kennungen — gerechnet
+aus `_ALERT_METRIC_TO_CATALOG_ID`, nicht über `_METRICS` iteriert: die vier Metriken mit
+`alert_label`, aber ohne produktiven Alarmweg (`humidity`/`rain_probability` als
+Vorboten-Größen, `uv_index`/`snow_depth` ohne Mapping-Eintrag) müssten sonst sofort
+wieder ausgenommen werden. Gemessen an den vier echten Renderern, nicht an
+`_val()`/`_unit_display()` isoliert. Mitrepariert: Gewitter-Prozentzeichen im gebündelten
+Alarm (PO-Entscheidung #1585 löst die #978-Vorlage ab). Details, Soll-Menge, Grenzen und
+Mutations-Gegenprobe: `docs/specs/modules/fix_1703_s1_alert_renderer_matrix.md`.
 
 ### Scheibe 2 — Ausblick-Tabelle Trip + Compare
 

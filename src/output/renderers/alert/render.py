@@ -73,16 +73,18 @@ def _num(e: AlertEvent, value: float) -> str:
 
 
 def _unit_display(e: AlertEvent) -> str:
-    """Einheit fuer die Multi-Metrik-Zeile (Issue #978).
+    """Einheit fuer die Multi-Metrik-Zeile (Issue #978) -- immer aus dem Katalog.
 
-    Sonderfall thunder: Katalog fuehrt die Metrik mit unit="" (historisch
-    level-basiert), die Design-Vorlage zeigt Gewitter-Werte aber als
-    Prozent (Vorschlaege.html:208/220-233/281). Lokaler Sonderfall statt
-    Katalog-Aenderung, da eine Katalog-Anpassung ein geteilter Eingriff
-    ausserhalb des Scopes dieses Fixes waere.
+    Frueher hing hier ein Sonderfall fuer 'thunder', der ein '%' anhaengte
+    (Design-Vorlage zu #978, Vorschlaege.html:208/220-233/281). Er ist mit
+    Issue #1703 Scheibe 1 ersatzlos entfallen: 'thunder' traegt
+    alert_metrics={"max": "thunder_level"} (metric_catalog.py:340), der
+    Alarmwert ist also eine STUFE (0-3), keine Prozentzahl. PO-Entscheidung
+    #1585 (2026-08-07, genau zwei Gewitter-Metriken: 'thunder' = Staerke,
+    'thunder_probability' = Wahrscheinlichkeit) hat die Vorlage abgeloest;
+    die Abloesung wurde am 2026-08-11 vom PO bestaetigt. Der Einzel-Event-Pfad
+    (:47, :365) las ohnehin schon die Katalog-Einheit ("").
     """
-    if e.metric_id == "thunder":
-        return "%"
     return get_metric(e.metric_id).unit
 
 
