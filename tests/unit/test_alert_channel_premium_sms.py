@@ -178,13 +178,23 @@ def _write_profile(
 
 def _settings(port: int, user_id: str, *, telegram_port: int | None = None) -> Settings:
     """JEDES versandrelevante Feld ausdruecklich gesetzt (#1477) -- kein
-    stiller Ruecksprung auf die Prod-.env des Worktrees."""
+    stiller Ruecksprung auf die Prod-.env des Worktrees.
+
+    E-Mail-Felder sind dummy, aber gesetzt (Vorbild
+    ``_settings_email_and_premium_sms`` unten): NIE tatsaechlich kontaktiert,
+    weil jeder Aufrufer hier ``mail_sink`` uebergibt -- ohne ``smtp_host``/
+    ``mail_to`` liefert ``can_send_email()`` lokal (echte ``.env`` im
+    Worktree) etwas anderes als auf dem CI-Runner (keine ``.env``), und
+    genau diese Diskrepanz liess AC-6 lokal gruen und auf CI rot laufen.
+    """
     update = {
         "sms_gateway_url": f"http://127.0.0.1:{port}/api/sms",
         "seven_api_key": "test-stub-key",
         "seven_sandbox_key": "test-stub-key",
         "sms_to": CONFIG_SMS_TO,
         "sms_from": None,
+        "smtp_host": "dummy.invalid", "smtp_user": "dummy", "smtp_pass": "dummy",
+        "mail_to": "dummy@example.com",
     }
     if telegram_port is not None:
         # Test-Modus-Guards (#1288/#1363): im Test-Modus (via tdd-Praefix in
@@ -560,7 +570,6 @@ def test_standard_tier_never_reaches_premium_sms_via_alerts(monkeypatch):
     zu pruefen. Erst die Kontroll-Seite (Nutzer B, MUSS mindestens einmal
     ankommen) macht den Test scharf und damit heute ROT.
     """
-    import app.loader as loader
     from services.trip_alert import TripAlertService
     from services.user_tier import premium_sms_allowed, sms_allowed
 
