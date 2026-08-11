@@ -36,6 +36,7 @@ from services.alert_briefing_anchor import (
     reset_alert_memory,
     write_anchor_and_reset_memory,
 )
+from services.briefing_slots import BriefingSlotStore
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
 from services.user_tier import premium_sms_allowed, sms_allowed
@@ -67,6 +68,27 @@ FETCH_RETRY_BACKOFF_SECONDS = 1
 _TRANSIENT_FETCH_ERROR_MARKERS = (
     "502", "503", "504", "timeout", "timed out", "overloaded",
 )
+
+# Issue #1725: Ausgaenge, die den Slot fuer diesen Ortstag abschliessen.
+# `channels_unreachable` fehlt bewusst -- dort hat per Definition
+# (`sent = bool(sent_channels)`) niemand etwas bekommen, das ist der einzige
+# beabsichtigte Nachholfall. `no_weather` steht dagegen drin: ohne Vermerk
+# gaebe es eine stuendliche "keine Daten"-Mail plus stuendlichen vollen
+# Wetterabruf gegen das Kontingent (#1329), waehrend der #1012-Pending-Marker
+# die Nachlieferung bereits abdeckt.
+VERMERK_AUSGAENGE = frozenset({"sent", "no_stage", "no_weather", "no_channels"})
+
+# Issue #1725: Breite des Faelligkeitsfensters in Ortsstunden.
+# `konfigurierte_stunde <= ortsstunde < konfigurierte_stunde + 3`. Drei
+# Stunden decken den an Umstellungstagen ausfallenden Cron-Tick (1 Stunde,
+# `robfig/cron/v3`) mit Reserve fuer einen gescheiterten, nicht wiederholten
+# HTTP-Post (`scheduler.go:547`). Eine Deckelung am Tagesende ist nicht
+# noetig: fuer Slot 22 sind es die Ortsstunden 22 und 23, ab Ortsmitternacht
+# wechselt der Ortstag und `0 >= 22` ist falsch. Die Alternative „bis
+# Tagesende" wurde verworfen, weil sie neu angelegte oder aus `paused_until`
+# zurueckkehrende Trips RUECKWIRKEND feuern liesse (AC-10) --
+# `_get_active_trips` prueft nur die Etappe, nicht das Anlagedatum.
+NACHHOL_FENSTER_STUNDEN = 3
 
 
 def _is_transient_fetch_error(exc: Exception) -> bool:
@@ -351,8 +373,8 @@ class TripReportSchedulerService:
             "route", self._user_id, now_utc, settings=self._settings,
         )
 
-    def _collect_due_trips(self, now_utc: datetime) -> List[Tuple["Trip", str]]:
-        """Sammelt alle (trip, report_type)-Paare, die JETZT fällig sind.
+    def _collect_due_trips(self, now_utc: datetime) -> List[Tuple["Trip", str, date]]:
+        """Sammelt alle (trip, report_type, ortstag)-Tripel, die JETZT fällig sind.
 
         Issue #1207: Extrahiert aus dem Sendelauf fuer Delegation durch
         `TripDispatchStrategy.collect_due()` -- Morgen- UND Abend-Fälligkeit
@@ -366,25 +388,94 @@ class TripReportSchedulerService:
         Ortszeit, damit ein auf 07:00 gestelltes Briefing ueberall um 07:00
         Ortszeit ankommt statt um 17:00 (Auckland) oder 22:00 des Vortages
         (PCT).
-        """
-        due: List[Tuple["Trip", str]] = []
-        for trip in self._get_active_trips("morning", now_utc):
-            if self._get_morning_hour(trip) == self._trip_local_hour(trip, now_utc):
-                due.append((trip, "morning"))
-        for trip in self._get_active_trips("evening", now_utc):
-            if self._get_evening_hour(trip) == self._trip_local_hour(trip, now_utc):
-                due.append((trip, "evening"))
-        return due
 
-    def _trip_local_hour(self, trip: "Trip", now_utc: datetime) -> int:
-        """Die Stunde, die der Wanderer dieses Trips gerade auf der Uhr hat.
+        Issue #1725: Faelligkeit ist ein FENSTER, keine Stundengleichheit --
+        `konfigurierte_stunde <= ortsstunde < konfigurierte_stunde +
+        NACHHOL_FENSTER_STUNDEN`, kombiniert mit dem Vermerk-Filter unten.
+        Ein Ortstag hat nicht immer 24 Stunden: am Fruehjahrs-Umstellungstag
+        fehlt eine Ortsstunde ersatzlos (ein auf 02:00 gestelltes Briefing
+        entfiel), am Herbsttag existiert sie zweimal (es ging zweimal raus).
+        Das Fenster faengt zusaetzlich den Cron-Tick auf, der an genau diesen
+        Tagen weltweit fuer ALLE Nutzer ausfaellt (`scheduler.go:112`).
+        Erst der Vermerk macht das Fenster gefahrlos -- ohne ihn waere `>=`
+        stuendlicher Serienversand.
 
-        Issue #1724. Zone aus `trip_day` -- derselbe Aufloeser, den der
-        Alarm-Pfad seit #1697 benutzt, kein zweiter Weg.
+        Drittes Element ist der ORTSTAG DES LAUFS -- zusammen mit
+        Trip-Kennung und Slot der Idempotenz-Schluessel. Ausdruecklich NICHT
+        `target_date`: das Abend-Briefing berichtet ueber morgen, gehoert aber
+        zum heutigen Slot. Ortstag und Ortsstunde entstehen aus EINER
+        Zonen-Aufloesung (`trip_local_now`) -- zwei koennen an der Tagesgrenze
+        auseinanderfallen (#1697).
+
+        Der Vermerk-Filter sitzt HIER und nicht erst im Versand (Pruefort =
+        Wirkort): `_process_pending_markers` (`:445-448`) raeumt den
+        #1012-Nachliefer-Marker weg, sobald der Trip in `due_trip_ids_now`
+        steht -- eine unehrlich lange Liste legte den Nachliefermechanismus
+        lautlos still. Und er sitzt NACH `_get_active_trips`, weil dort
+        `skip_next` bei jedem Sammellauf konsumiert wird (`:678-683`),
+        unabhaengig von der Faelligkeit.
         """
         from services.trip_day import trip_local_now
 
-        return trip_local_now(trip, now_utc).hour
+        store = BriefingSlotStore(self._user_id)
+        due: List[Tuple["Trip", str, date]] = []
+        for report_type, slot_stunde in (
+            ("morning", self._get_morning_hour),
+            ("evening", self._get_evening_hour),
+        ):
+            for trip in self._get_active_trips(report_type, now_utc):
+                vor_ort = trip_local_now(trip, now_utc)
+                stunde = slot_stunde(trip)
+                if not stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN:
+                    continue
+                ortstag = vor_ort.date()
+                if store.is_recorded(
+                    trip.id, report_type, ortstag, zone=vor_ort.tzinfo,
+                ):
+                    continue
+                due.append((trip, report_type, ortstag))
+        return due
+
+    def _dispatch_due_item(
+        self, trip: "Trip", report_type: str, local_day: date,
+    ) -> Optional[str]:
+        """Versand EINES faelligen Slots, abgesichert durch den Vermerk (#1725).
+
+        Reserve-then-release: der Vermerk entsteht VOR dem Versandversuch und
+        wird nur bei `channels_unreachable` oder einer Ausnahme wieder
+        zurueckgenommen. Stirbt der Prozess mitten im Versand, bleibt er
+        stehen -- nie doppelt, im schlimmsten Fall ein ausgelassener Slot.
+
+        Ausschliesslich `TripDispatchStrategy.dispatch_one` ruft diese Methode.
+        Dadurch bleiben die On-Demand-Pfade (Test-Knopf, Inbound-Kommandos,
+        Legacy-CLI) vom Vermerk unberuehrt, ohne dass ein zusaetzliches Flag
+        noetig waere (AC-12) -- sie rufen `_send_trip_report_outcome` direkt.
+
+        Returns:
+            Den Ausgang des Versandversuchs -- oder `None`, wenn gar keiner
+            stattfand (Slot bereits vermerkt oder Sperre nicht zu bekommen,
+            fail-closed, AC-13). Eine Ausnahme aus dem Versand wird nach dem
+            `release` WEITERGEREICHT, nicht geschluckt.
+        """
+        from services.trip_day import trip_tz
+
+        store = BriefingSlotStore(self._user_id)
+        if not store.reserve(trip.id, report_type, local_day, zone=trip_tz(trip)):
+            logger.warning(
+                "Slot %s/%s am %s nicht reservierbar -- kein Versandversuch",
+                trip.id, report_type, local_day,
+            )
+            return None
+        try:
+            outcome = self._send_trip_report_outcome(trip, report_type)
+        except Exception:
+            store.release(trip.id, report_type, local_day)
+            raise
+        if outcome in VERMERK_AUSGAENGE:
+            store.record_outcome(trip.id, report_type, local_day, outcome)
+        else:
+            store.release(trip.id, report_type, local_day)
+        return outcome
 
     def _process_pending_markers(self, now_utc: datetime, due_trip_ids_now: set) -> int:
         """Issue #1012 (b2): Verarbeitet offene Nachliefer-Marker VOR den

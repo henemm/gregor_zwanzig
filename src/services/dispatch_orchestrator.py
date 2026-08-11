@@ -62,13 +62,24 @@ class TripDispatchStrategy:
     def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1012 (b2): Catch-up ZUERST, offene Nachliefer-Marker vor den
         # regulaeren faelligen Slots abarbeiten (AC-6/AC-7).
-        due_trip_ids_now = {trip.id for trip, _ in due}
+        # Issue #1725: `collect_due` liefert (trip, report_type, ortstag).
+        due_trip_ids_now = {trip.id for trip, _, _ in due}
         self._sent += self._service._process_pending_markers(now_utc, due_trip_ids_now)
 
     def dispatch_one(self, item) -> None:
-        trip, report_type = item
+        trip, report_type, local_day = item
         try:
-            outcome = self._service._send_trip_report_outcome(trip, report_type)
+            # Issue #1725: NICHT direkt `_send_trip_report_outcome` -- der
+            # Wrapper reserviert zuerst den Vermerk (trip_id, ortstag, slot)
+            # und gibt ihn je nach Ausgang frei. Er ist bewusst die EINZIGE
+            # Stelle, die den Vermerk anfasst: die On-Demand-Pfade rufen
+            # weiterhin `_send_trip_report_outcome` und bleiben unberuehrt.
+            outcome = self._service._dispatch_due_item(trip, report_type, local_day)
+            if outcome is None:
+                # Kein Versandversuch (Slot bereits vermerkt oder Sperre nicht
+                # zu bekommen). Weder gesendet noch technisch fehlgeschlagen --
+                # der Wrapper hat den Grund bereits protokolliert.
+                return
             # Issue #1012 (c): "no_weather" (kompletter Ausfall) zaehlt als
             # failed statt sent -- alle anderen Outcomes bleiben sent.
             if outcome == "no_weather":

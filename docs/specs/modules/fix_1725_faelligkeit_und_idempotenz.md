@@ -264,6 +264,20 @@ Weil Commit A den Vermerk bereits scharf schaltet, bevor Commit B die Fensteröf
 ist jeder Zwischenstand auslieferbar — ein Revert oder ein Bisect zwischen den beiden Commits
 landet nie im gefährlichen Zustand „offenes Fenster ohne Schutz".
 
+**Nachtrag aus der Umsetzung (2026-08-11): die Trennung fand statt, aber als zwei
+Arbeitsschritte, nicht als zwei Commits.** Schritt A wurde vollständig gebaut und **gemessen**,
+bevor B begann — und hat dabei zwei Befunde zutage gefördert, die sonst untergegangen wären
+(der Aufbaufehler in T2 und der On-Demand-Nebeneffekt der Rückwärts-Ableitung). Abgelegt wird
+das Ergebnis als **ein** Commit. Begründung:
+
+- Der Sicherheitszweck ist damit **strenger** erfüllt als geplant: Wo kein Zwischenstand
+  existiert, kann auch keiner den gefährlichen Zustand tragen.
+- Der Messwert aus Schritt A ist protokolliert: `due_A ⊆ due_alt` gilt strukturell (die
+  Stundenbedingung war unverändert `==`, der Filter kann eine Zeile nur entfernen), gemessen
+  wurde genau eine Reduktion — die beabsichtigte Herbst-Doppelstunde 2 → 1.
+- Ein nachträgliches Auseinanderschneiden des fertigen Arbeitsbaums wäre **Rekonstruktion**
+  eines Zwischenstands, der so nie getestet wurde — mehr Risiko als Nutzen.
+
 ## Acceptance Criteria
 
 - **AC-1 (Frühjahrs-Umstellung — Slot fällt nicht mehr aus):** Given ein Trip in

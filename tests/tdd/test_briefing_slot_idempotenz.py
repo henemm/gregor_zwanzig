@@ -339,7 +339,15 @@ def test_t2_herbst_doppelstunde_sendet_nur_einmal():
     assert _ortsstunde(treffer[0], PARIS) == 2, (
         f"Erwartet Ortsstunde 02, gefunden {_ortsstunde(treffer[0], PARIS)}"
     )
-    assert len(scheduler.versandversuche) == 1, (
+    # Gemessen wird ausschliesslich der MORGEN-Slot — AC-2 sagt die
+    # Doppelstunde dieses Slots zu. `_trip_json(evening=None)` schaltet den
+    # Abend-Slot NICHT ab: `loader.py:573` setzt `evening_time` per Default
+    # auf 18:00, und dieser Lauf schreitet den vollen Ortstag ab, also faellt
+    # der Abend-Slot um 18:00 Ortszeit an. Das ist unveraendertes
+    # Bestandsverhalten und gehoert nicht zu dieser Zusicherung — wer hier
+    # wieder auf `len(versandversuche)` zurueckbaut, misst den Abend-Slot mit.
+    morgens = [v for v in scheduler.versandversuche if v[1] == "morning"]
+    assert morgens == [("korsika", "morning")], (
         "Genau ein Versandversuch — der Vermerk muss den zweiten Durchlauf "
         f"der Doppelstunde stoppen, gefunden {scheduler.versandversuche}"
     )
