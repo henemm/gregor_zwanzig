@@ -63,9 +63,13 @@ Datenmigration (D6, begründet).
 
 ## Estimated Scope
 
-- **LoC:** ~+110/-25 (Limit 250) — 3 Produktivcode-Dateien + Docstring-Korrekturen,
-  4 Testdateien (1 neuer Abschnitt + 4 Fixture-Reparaturen).
-- **Files:** 7 (3 Produktivcode, 4 Tests) — siehe Affected Files.
+- **LoC:** ~+170/-25 (Limit 250) — 3 Produktivcode-Dateien + Docstring-Korrekturen,
+  4 Python-Testdateien (1 neuer Abschnitt + 4 Fixture-Reparaturen) und 1 neuer
+  Playwright-Klickpfad inkl. Staging-Setup (~60 Zeilen nach Bestandsmuster).
+- **Files:** 8 (3 Produktivcode, 5 Tests davon 1 Browser-Klickpfad) — siehe
+  Affected Files.
+- **Deploy-Folge:** Durch den Klickpfad gegen Staging ist der Scope **nicht**
+  `docs-only`; die Auslieferung durchläuft die volle Staging-Verifikation.
 - **Effort:** medium-high. Der Schnitt selbst ist klein; das Risiko liegt in
   der Wechselwirkung mit der E-Mail-Kollabierung (Kontext-Dokument, Risiko 1)
   — Produktivpfad aller vier Kanäle (E-Mail, Telegram, SMS, Premium-SMS).
@@ -81,6 +85,7 @@ Datenmigration (D6, begründet).
 | `tests/fixtures/metric_cascade/khw_display_config_widerspruch.json` | WIRD WIEDERVERWENDET | Basis-Fixture; neue Ein-/Mehrfeld-Varianten (u. a. `channel_layouts.email`/`.telegram`, `per_report_layouts`) nach dem in Scheibe 1 etablierten Muster |
 | `docs/reference/metric_output_matrix.md` | REFERENZ | Ausgabeorte je Metrik (#1514) |
 | `tests/tdd/test_issue_429_channel_layouts.py`, `test_issue_434_per_report_layouts.py`, `tests/integration/test_issue_448_validator_metrics_for_channel.py` | WIRD REPARIERT | Fünf bekannt rot werdende Bestandstests, s. eigener Abschnitt unten |
+| `frontend/e2e/metrik-grundauswahl-schneidet-kanal.staging.spec.ts` (+ Staging-Setup/Config nach Bestandsmuster) | NEU | **Pflicht-Klickpfad zu AC-10** (PO-Leitplanke #1719): die Editor-Sequenz wird geklickt, nicht konstruiert. Einzige Frontend-Datei dieser Scheibe — sie ändert das Frontend nicht, sie bedient es |
 
 ## Implementation Details
 
@@ -321,10 +326,36 @@ unangetastet (s. AC-6).
   Kontext-Dokument: SMS-Tab öffnen → zurück zur Grundauswahl → dort abwählen →
   speichern) / When alle drei Kanal-Renderpfade laufen / Then verschwindet die
   Metrik auch aus dem SMS-Kanal.
-  - Test: zweistufig konstruierte Fixture-Variante (erst Kanal-Ebene =
-    Kopie der Grundauswahl, dann NUR der globale Eintrag geändert) — ergänzt
-    AC-1 um den Nachweis, dass auch der über den Editor real erreichbare
-    Entstehungsweg (nicht nur die vorgefundene Ist-Fixture) abgesichert ist.
+  - Test A (Kern-Suite): zweistufig konstruierte Fixture-Variante (erst
+    Kanal-Ebene = Kopie der Grundauswahl, dann NUR der globale Eintrag
+    geändert) — ergänzt AC-1 um den Nachweis, dass auch der über den Editor
+    real erreichbare Entstehungsweg abgesichert ist.
+  - **Test B (PFLICHT — echter Browser-Klickpfad, PO-Leitplanke aus #1719):**
+    Test A konstruiert die Datenlage von Hand und belegt damit **nicht**,
+    dass der Editor sie tatsächlich so erzeugt — eine Aussage über den
+    Editor ohne den Editor. Deshalb zusätzlich ein Playwright-Klickpfad
+    unter `frontend/e2e/` gegen Staging, der die Sequenz **klickt**:
+    Trip-Editor öffnen → Reiter „Wetterwerte" → **SMS-Kanal anwählen**
+    (erzeugt die Kanal-Kopie, `WeatherMetricsTab.svelte:638`) → zurück zur
+    **Grundauswahl** → dort die Ziel-Metrik abwählen → speichern → danach
+    die **zugestellte Ausgabe** prüfen (Test-Briefing bzw.
+    Kurzform-Vorschau des echten Versandwegs): die Metrik darf im SMS-Text
+    nicht mehr vorkommen.
+    Bewusst **kein** Deploy-Gate-Ersatz: das Frontend-Browser-Gate (#1558)
+    lädt sechs Seiten und sammelt Konsolenfehler — es klickt keinen AC durch
+    und genügt hier nicht.
+    Namensregel: nach Verhalten benennen (z. B.
+    `frontend/e2e/metrik-grundauswahl-schneidet-kanal.staging.spec.ts`),
+    nicht nach Issue-Nummer. Vorbilder für Aufbau und Staging-Setup:
+    `frontend/e2e/weather-metrics-tab-autosave.spec.ts`,
+    `frontend/e2e/issue-776-metrics-toggle.spec.ts`,
+    `frontend/e2e/layout-tab-route.spec.ts`.
+    **Wichtig für die Erwartung:** Der Klickpfad beweist die Zusicherung von
+    S2 (die zugestellte Ausgabe folgt der Grundauswahl), NICHT das
+    Editor-Verhalten aus ADR-0050 Regel 4 („Aus ist ein Zustand") — das ist
+    S3. Er läuft daher bewusst gegen den **unveränderten** Editor: dass der
+    Editor eine widersprüchliche Datenlage schreibt, ist hier
+    Versuchsaufbau, nicht Fehler.
 
 - **AC-11 (SMS/Premium-SMS erben ohne eigene Änderung am Versandpfad):**
   Given `output/channels/premium_sms.py` sendet `report.sms_text` unverändert
