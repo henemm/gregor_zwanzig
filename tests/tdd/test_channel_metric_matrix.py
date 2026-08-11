@@ -74,7 +74,7 @@ from tests.tdd import _min_temp_felt_fixtures as F
 # bereits etabliert: pytest erkennt eine importierte @pytest.fixture-Funktion
 # auch im importierenden Modul).
 from tests.tdd.test_channel_origin_guard_parity import (
-    _prod_style_premium_sms_settings, premium_sms_stub,
+    _prod_style_premium_sms_settings, premium_sms_stub,  # noqa: F401 - pytest loest die Fixture per Name auf
 )
 
 _ALL_METRIC_IDS = [m.id for m in get_all_metrics()]
@@ -1471,7 +1471,9 @@ def test_kaskade_s2_ac10_editor_sequence_global_deselect_after_channel_snapshot(
 # --- S2 AC-11: Premium-SMS am ECHTEN Versandweg gemessen, nicht als Struktur-Behauptung ---
 
 
-def test_kaskade_s2_ac11_premium_sms_forwards_the_cut_sms_text(premium_sms_stub):
+def test_kaskade_s2_ac11_premium_sms_forwards_the_cut_sms_text(
+    premium_sms_stub,  # noqa: F811 - pytest loest die Fixture per Name auf
+):
     """S2 AC-11 (D7 -- Premium-SMS hat keine eigene Kaskaden-Ebene): am
     echten lokalen HTTP-Empfaenger gemessen (Muster premium_sms_stub aus
     test_channel_origin_guard_parity.py), nicht per String-Vergleich im
