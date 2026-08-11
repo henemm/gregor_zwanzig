@@ -15,7 +15,7 @@ tags: [tests, guard, ratchet, zeitzone, epic-1722, issue-1723]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-08-11 („go"), inkl. LoC-Budget 500
 
 ## Purpose
 
