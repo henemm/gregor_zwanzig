@@ -3,7 +3,8 @@
 - **Datum:** 2026-08-11
 - **Anlass:** PO-Auftrag — „Das Thema ist schon eine Million mal gelöst worden. Recherchiere das."
 - **Bezug:** ADR-0044, Issues #21, #400/#401, #856, #1280, #1345, #1378, #1383, #1399, #1402, #1470, #1667, #1697
-- **Status:** Recherche-Ergebnis, noch keine Entscheidung. Der Entscheidungsteil gehört in ein ADR.
+- **Status:** Recherche-Ergebnis. Entscheidungsteil als **ADR-0049** (Status `Vorgeschlagen`),
+  Umsetzung als Epic **#1722** mit den Scheiben #1723–#1727.
 
 ## Der Befund in einem Satz
 
@@ -173,12 +174,12 @@ beiden aufhalten.
 
 | Scheibe | Inhalt | Warum in dieser Reihenfolge |
 |---|---|---|
-| **S0** | ADR: die drei Regeln beschließen, ADR-0044 als Spezialfall darunter einordnen | Ohne beschlossene Regel bleibt jede Scheibe Geschmacksfrage |
-| **S1** | Wächter-Ausweitung, Muster 1+2, Bestand als `KNOWN_VIOLATIONS` | Stoppt den Zuwachs sofort, ohne eine Zeile Produktivcode zu bewegen |
-| **S2** | Fälligkeit umkehren: Stundenvergleich je Trip in seiner Zone; Wien-Konstante fällt | Der eine Umbau mit der größten Nutzerwirkung |
-| **S3** | Gleichheit → Fälligkeit + Idempotenz-Schlüssel `(trip, ortstag, slot)` | Setzt S2 voraus; ohne S2 gibt es keinen Ortstag |
-| **S4** | Ruhezeit, Tageszähler, Ortsvergleichs-Slots auf die Ortszone | Gleiche Wurzel, eigene Nutzerwirkung, eigener Nachweis |
-| **S5** | Restliche `date.today()`-Fundstellen; `KNOWN_VIOLATIONS` schrumpft auf null | Aufräumen, wenn die Regel schon trägt |
+| **S0** (#1722) | ADR: die drei Regeln beschließen, ADR-0044 als Spezialfall darunter einordnen | Ohne beschlossene Regel bleibt jede Scheibe Geschmacksfrage |
+| **S1** (#1723) | Wächter-Ausweitung, Muster 1+2, Bestand als `KNOWN_VIOLATIONS` | Stoppt den Zuwachs sofort, ohne eine Zeile Produktivcode zu bewegen |
+| **S2** (#1724) | Fälligkeit umkehren: Stundenvergleich je Trip in seiner Zone; Wien-Konstante fällt | Der eine Umbau mit der größten Nutzerwirkung |
+| **S3** (#1725) | Gleichheit → Fälligkeit + Idempotenz-Schlüssel `(trip, ortstag, slot)` | Setzt S2 voraus; ohne S2 gibt es keinen Ortstag |
+| **S4** (#1726) | Ruhezeit, Tageszähler, Ortsvergleichs-Slots auf die Ortszone | Gleiche Wurzel, eigene Nutzerwirkung, eigener Nachweis |
+| **S5** (#1727) | Restliche `date.today()`-Fundstellen; `KNOWN_VIOLATIONS` schrumpft auf null | Aufräumen, wenn die Regel schon trägt |
 
 Der offene Briefing-Pfad aus #1697 (`_get_target_date`, `_get_active_trips`, `save_dated`) ist
 Teil von S2/S5 — er sollte **nicht** vorher einzeln behoben werden, sonst entsteht die zwölfte
