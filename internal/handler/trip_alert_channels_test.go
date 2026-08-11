@@ -18,6 +18,8 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 )
 
+func boolPtr(b bool) *bool { return &b }
+
 // AC-26: PUT nur mit alert_channels persistiert das Feld UND laesst uebrige
 // Trip-Felder (Name, Stages, ReportConfig, Corridors) unangetastet.
 func TestUpdateTripHandler_AlertChannelsRMW(t *testing.T) {
@@ -62,9 +64,9 @@ func TestUpdateTripHandler_AlertChannelsRMW(t *testing.T) {
 	}
 
 	if loaded.AlertChannels == nil ||
-		loaded.AlertChannels.Email != false ||
-		loaded.AlertChannels.Telegram != true ||
-		loaded.AlertChannels.Sms != false {
+		loaded.AlertChannels.Email == nil || *loaded.AlertChannels.Email != false ||
+		loaded.AlertChannels.Telegram == nil || *loaded.AlertChannels.Telegram != true ||
+		loaded.AlertChannels.Sms == nil || *loaded.AlertChannels.Sms != false {
 		t.Fatalf("expected alert_channels={email:false,telegram:true,sms:false}, got %+v", loaded.AlertChannels)
 	}
 
@@ -94,7 +96,9 @@ func TestUpdateTripHandler_AlertChannelsPreservedWhenBodyOmitsIt(t *testing.T) {
 			ID: "S1", Name: "D1", Date: "2026-07-15",
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
 		}},
-		AlertChannels: &model.AlertChannelsConfig{Email: false, Telegram: true, Sms: false},
+		AlertChannels: &model.AlertChannelsConfig{
+			Email: boolPtr(false), Telegram: boolPtr(true), Sms: boolPtr(false),
+		},
 	}
 	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("SaveTrip: %v", err)
@@ -119,11 +123,99 @@ func TestUpdateTripHandler_AlertChannelsPreservedWhenBodyOmitsIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadTrip: %v", err)
 	}
-	if loaded.AlertChannels == nil || loaded.AlertChannels.Email != false ||
-		loaded.AlertChannels.Telegram != true || loaded.AlertChannels.Sms != false {
+	if loaded.AlertChannels == nil ||
+		loaded.AlertChannels.Email == nil || *loaded.AlertChannels.Email != false ||
+		loaded.AlertChannels.Telegram == nil || *loaded.AlertChannels.Telegram != true ||
+		loaded.AlertChannels.Sms == nil || *loaded.AlertChannels.Sms != false {
 		t.Errorf("alert_channels erased by PUT without field: expected {email:false,telegram:true,sms:false}, got %+v", loaded.AlertChannels)
 	}
 	if loaded.Name != "AlertChannels-Preserve-Test (umbenannt)" {
 		t.Errorf("expected name updated, got %q", loaded.Name)
+	}
+}
+
+// AC-7 (#1701 S2b): PUT eines aelteren Frontend-Builds ohne das vierte Feld
+// "premium_sms" darf einen zuvor gesetzten Premium-SMS-Wert NICHT auf false
+// zuruecksetzen -- Feld-Level-Merge INNERHALB von AlertChannelsConfig
+// (Muster AlertChannelThresholds, D3 der Spec). Zwei aufeinanderfolgende
+// PUTs: der erste setzt alle vier Felder, der zweite schickt nur drei.
+func TestUpdateTripHandler_AlertChannels_FourthFieldMissingInBody_PreservesExistingValue(t *testing.T) {
+	s := newTestStore(t)
+	trip := model.Trip{
+		ID:   "trip-1701-ac7",
+		Name: "AC7-1701-Test",
+		Stages: []model.Stage{{
+			ID: "S1", Name: "D1", Date: "2026-07-15",
+			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
+		}},
+	}
+	if err := s.SaveTrip(&trip); err != nil {
+		t.Fatalf("SaveTrip: %v", err)
+	}
+
+	r := chi.NewRouter()
+	r.Put("/api/trips/{id}", UpdateTripHandler(s))
+
+	// Erster PUT: alle vier Felder explizit gesetzt, inkl. premium_sms=true.
+	firstBody := map[string]interface{}{
+		"alert_channels": map[string]interface{}{
+			"email": true, "telegram": false, "sms": true, "premium_sms": true,
+		},
+	}
+	firstBuf, _ := json.Marshal(firstBody)
+	firstReq := httptest.NewRequest(http.MethodPut, "/api/trips/trip-1701-ac7", bytes.NewReader(firstBuf))
+	firstReq.Header.Set("Content-Type", "application/json")
+	firstReq = addUserToContext(firstReq, "test")
+	firstW := httptest.NewRecorder()
+	r.ServeHTTP(firstW, firstReq)
+	if firstW.Code != http.StatusOK {
+		t.Fatalf("expected 200 on first PUT, got %d: %s", firstW.Code, firstW.Body.String())
+	}
+
+	afterFirst, err := s.LoadTrip("trip-1701-ac7")
+	if err != nil {
+		t.Fatalf("LoadTrip after first PUT: %v", err)
+	}
+	if afterFirst.AlertChannels == nil || afterFirst.AlertChannels.PremiumSms == nil ||
+		*afterFirst.AlertChannels.PremiumSms != true {
+		t.Fatalf("expected premium_sms=true after first PUT, got %+v", afterFirst.AlertChannels)
+	}
+
+	// Zweiter PUT: wie ein aelteres Frontend-Build — nur drei Felder, kein
+	// premium_sms im Body.
+	secondBody := map[string]interface{}{
+		"alert_channels": map[string]interface{}{
+			"email": false, "telegram": true, "sms": false,
+		},
+	}
+	secondBuf, _ := json.Marshal(secondBody)
+	secondReq := httptest.NewRequest(http.MethodPut, "/api/trips/trip-1701-ac7", bytes.NewReader(secondBuf))
+	secondReq.Header.Set("Content-Type", "application/json")
+	secondReq = addUserToContext(secondReq, "test")
+	secondW := httptest.NewRecorder()
+	r.ServeHTTP(secondW, secondReq)
+	if secondW.Code != http.StatusOK {
+		t.Fatalf("expected 200 on second PUT, got %d: %s", secondW.Code, secondW.Body.String())
+	}
+
+	loaded, err := s.LoadTrip("trip-1701-ac7")
+	if err != nil {
+		t.Fatalf("LoadTrip after second PUT: %v", err)
+	}
+	// Die drei explizit gesendeten Felder wurden uebernommen.
+	if loaded.AlertChannels == nil ||
+		loaded.AlertChannels.Email == nil || *loaded.AlertChannels.Email != false ||
+		loaded.AlertChannels.Telegram == nil || *loaded.AlertChannels.Telegram != true ||
+		loaded.AlertChannels.Sms == nil || *loaded.AlertChannels.Sms != false {
+		t.Fatalf("expected the three explicitly sent fields applied, got %+v", loaded.AlertChannels)
+	}
+	// AC-7: premium_sms fehlte im zweiten Body -- der Bestandswert (true)
+	// MUSS erhalten bleiben, NICHT still auf false zurueckgesetzt werden.
+	if loaded.AlertChannels.PremiumSms == nil || *loaded.AlertChannels.PremiumSms != true {
+		t.Errorf(
+			"AC-7: premium_sms erased by a PUT that omitted the fourth field "+
+				"(simulating an older frontend build) -- expected true (unangetastet), got %+v",
+			loaded.AlertChannels.PremiumSms,
+		)
 	}
 }

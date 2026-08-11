@@ -410,12 +410,18 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.SendSms == nil {
 			updated.SendSms = original.SendSms
 		}
+		// Issue #1701 (S2b, D8): drittes Kanal-Opt-in-Feld, identisches
+		// Muster wie SendTelegram/SendSms daneben.
+		if updated.SendPremiumSms == nil {
+			updated.SendPremiumSms = original.SendPremiumSms
+		}
 		// Issue #1461 S3b-2b: alert_channel_thresholds erhalten wenn Body es
 		// nicht traegt (nil nach Decode = Feld fehlte im Request), analog
 		// OfficialWarnings -- PLUS Feld-Level-Merge innerhalb des
 		// Unterobjekts (Muster OfficialWarnings.Sources, Fix-Loop F002 dort):
 		// ein PUT, das nur EINEN Kanal mitschickt, darf die anderen,
-		// unangetasteten Kanaele nicht loeschen.
+		// unangetasteten Kanaele nicht loeschen. PremiumSms (Issue #1701
+		// S2b): viertes Geschwisterfeld, identisches Muster.
 		if updated.AlertChannelThresholds == nil {
 			updated.AlertChannelThresholds = original.AlertChannelThresholds
 		} else if original.AlertChannelThresholds != nil {
@@ -427,6 +433,9 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			}
 			if updated.AlertChannelThresholds.Sms == nil {
 				updated.AlertChannelThresholds.Sms = original.AlertChannelThresholds.Sms
+			}
+			if updated.AlertChannelThresholds.PremiumSms == nil {
+				updated.AlertChannelThresholds.PremiumSms = original.AlertChannelThresholds.PremiumSms
 			}
 		}
 		// Issue #764: forecast_hours erhalten wenn Body es nicht trägt (0 = Feld fehlte im Body).

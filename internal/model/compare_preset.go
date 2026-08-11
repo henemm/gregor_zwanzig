@@ -90,6 +90,11 @@ type ComparePreset struct {
 	OfficialWarnings *OfficialWarningsConfig `json:"official_warnings,omitempty"`
 	SendTelegram     *bool                   `json:"send_telegram,omitempty"`
 	SendSms          *bool                   `json:"send_sms,omitempty"`
+	// SendPremiumSms — Issue #1701 (S2b, D8): Premium-SMS-Kanal-Opt-in fuer
+	// den Ortsvergleich, eigenes Feld statt Wiederverwendung (der Ortsvergleich
+	// hat kein alert_channels-Sub-Objekt wie der Trip, die Kanaele sind flache
+	// Top-Level-Felder). Pointer-Pattern wie SendTelegram/SendSms daneben.
+	SendPremiumSms *bool `json:"send_premium_sms,omitempty"`
 	// AlertChannelThresholds — Issue #1461 S3b-2b, additives Geschwisterfeld
 	// (bewusst NICHT in AlertChannels/OfficialWarnings) fuer die je Kanal
 	// eingestellte Dringlichkeits-Schwelle. Bestehender Typ, selbes Package

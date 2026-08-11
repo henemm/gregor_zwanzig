@@ -171,6 +171,7 @@ class CompareOfficialAlertService:
             sent_channels=result.delivered_channels,
             reachable_channels=result.sent_channels,
             below_threshold_channels=suppressed,
+            blocked_reason_codes=result.blocked_reason_codes,
         )
         if not result.sent:
             return False

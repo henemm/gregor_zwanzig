@@ -202,6 +202,7 @@ class CompareRadarAlertService:
             sent_channels=notif_result.delivered_channels,
             reachable_channels=notif_result.sent_channels,
             below_threshold_channels=suppressed,
+            blocked_reason_codes=notif_result.blocked_reason_codes,
         )
         if not notif_result.sent:
             return False
