@@ -135,11 +135,26 @@ type LtLimit =
 |---|---|---|
 | E-Mail | `{kind:'none'}` | `src/output/renderers/channel_layout.py:46` |
 | Telegram | `{kind:'columns', value: 7}` | `src/output/renderers/channel_layout.py:110` `metric_slots = limit - 1` |
-| SMS | `{kind:'chars', value: …}` | `src/output/renderers/trip_report.py:446` (160, Trip) / `src/output/renderers/channel_layout.py:48` (153, Vergleich) |
+| SMS | `{kind:'chars', value: …}` | **drei Werte, siehe unten** |
 
-Der Zeichenwert kommt **vom Aufrufer**, nicht aus der Konstante — genau wie `hasLabelColumn`
-bei `LTCapNote.svelte:23`. Eine einzige geteilte Zahl wäre in einer der beiden Richtungen
-nachweislich falsch.
+**🔴 Es gibt DREI SMS-Zeichengrenzen, nicht zwei — je nach Ausgabeweg:**
+
+| Ausgabeweg | Grenze | Beleg | Oberfläche |
+|---|---|---|---|
+| Trip-Briefing | **160** | `src/output/renderers/trip_report.py:446` (Literal) | `ltChannels.ts`, `VTBriefingChannels` im **Trip** |
+| Vergleichs-Briefing | **153** | `src/output/renderers/channel_layout.py:48` (GSM-7/UDH) | `VTBriefingChannels` im **Vergleich**, `CompareSmsPreview` |
+| **Alarm** | **140** | `src/output/renderers/alert/render.py:621` (Vorgabe), am Versandaufruf `src/services/notification_service.py:1318` **nicht** überschrieben | `AlertChannelPicker` |
+
+Der Zeichenwert kommt deshalb **vom Aufrufer**, nicht aus der Konstante — genau wie
+`hasLabelColumn` bei `LTCapNote.svelte:23`. Eine einzige geteilte Zahl wäre in mindestens
+zwei der drei Richtungen nachweislich falsch.
+
+> 🔴 **Zweite Spec-Korrektur nach RED-Befund (2026-08-11).** Die Erstfassung kannte nur zwei
+> Werte und erklärte „140" pauschal zur Unwahrheit. Am Alarm-Pfad ist **140 der gemessene
+> Wert** — `AlertChannelPicker.svelte:51` („sofort · ≤ 140 Z.") ist dort **korrekt**. Der
+> RED-Test hätte die Oberfläche gezwungen, an dieser Stelle eine **falsche** Zahl (153)
+> anzuzeigen — genau die Fehlerklasse, die dieses Issue behebt. Ausgelöst durch den
+> Zusatzbefund des Developers zu `AlertChannelPicker`, nachgemessen am Versandaufruf.
 
 **Überlauf für `kind:'chars'` wird ausdrücklich NICHT berechnet.** Dafür bräuchte der Editor
 die fertig gebaute SMS-Zeile; die Kürzel sind 2–17 Zeichen lang und die Kürzung arbeitet
@@ -215,10 +230,15 @@ Spalte: `preview: Snippet<…>` (`:28`) ist heute
   - Test: Unit-Test über die erzeugten Texte aller drei Kanäle gegen zwei getrennte Listen.
   - **Verboten (Wertung):** „entscheidungskritisch", „nur das Wesentliche", „nur die
     wichtigsten", „läuft flach"/„wird flach".
-  - **Verboten (unwahr):** „140" als Zeichengrenze, „kennt keine Spalten-Reihenfolge",
-    „keine Reihenfolge", „max 8 Spalten" für Telegram.
-  - **Ausdrücklich ERLAUBT:** „kein Raster", „keine Tabelle", „Fließtext", „160 Zeichen",
-    „max 7 Spalten". Das sind gemessene Tatsachen, keine Bevormundung.
+  - **Verboten (unwahr):** „kennt keine Spalten-Reihenfolge", „keine Reihenfolge",
+    „max 8 Spalten" für Telegram, und **„140" auf einer BRIEFING-Oberfläche** (dort gilt
+    160 bzw. 153).
+  - **Ausdrücklich ERLAUBT:** „kein Raster", „keine Tabelle", „Fließtext", „max 7 Spalten",
+    und die je Ausgabeweg **gemessene** Zeichenzahl — 160 (Trip-Briefing), 153
+    (Vergleichs-Briefing), **140 (Alarm)**. Das sind Tatsachen, keine Bevormundung.
+  - **Prüfregel:** Eine Zahl ist nur dort verboten, wo sie dem Code des **jeweiligen**
+    Ausgabewegs widerspricht. Ein Test, der eine Zahl pauschal verbietet, zwingt eine der
+    Oberflächen in eine Unwahrheit.
 
   > 🔴 **Spec-Korrektur nach RED-Befund (2026-08-11).** Die Erstfassung führte „kein Raster"
   > und „nur Fließtext" als verbotene Wendungen. Beides ist **wahr**
@@ -229,10 +249,14 @@ Spalte: `preview: Snippet<…>` (`:28`) ist heute
   > RED-Phase.
 
 - **AC-6:** Given den Ortsvergleich / When der Nutzer Versand-Reiter, Alarme-Reiter und
-  SMS-Vorschau öffnet / Then nennen auch dort die Kanal-Hinweise die echte Zeichengrenze und
-  keine Wertung.
-  - Test: Playwright-Klickpfad im Ortsvergleich über `VTBriefingChannels`,
-    `AlertChannelPicker`, `CompareSmsPreview`.
+  SMS-Vorschau öffnet / Then nennt jede Oberfläche die Zeichengrenze **ihres eigenen
+  Ausgabewegs** und keine Wertung.
+  - Test: Playwright-Klickpfad im Ortsvergleich.
+  - `VTBriefingChannels` → **153** (Vergleichs-Briefing); dieselbe Komponente im **Trip**
+    → **160**. Die Zahl ist kontextabhängig, die Komponente ist geteilt.
+  - `CompareSmsPreview` → **153**.
+  - `AlertChannelPicker` → **140**. Diese Zahl ist heute schon **richtig** und darf nicht
+    geändert werden; zu prüfen ist allein, dass die Wertung verschwindet.
 
 ### Block C — „Aus" ist ein Zustand
 
