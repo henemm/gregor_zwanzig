@@ -83,11 +83,8 @@ from output.renderers.channel_layout import render_for_channel
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
 from output.renderers.comparison import render_compare_email
-from output.renderers.email.compact import render_compact
 from output.renderers.email.helpers import resolve_metric_col_order
 from output.renderers.email.html import _render_mobile_compact_rows
-from output.renderers.compact_summary import CompactSummaryFormatter
-from output.renderers.narrow import render_telegram_bubbles
 from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC, SMS_MULTI_SYMBOLS_BY_METRIC
 from output.renderers.trip_metric_ids import DEFAULT_TRIP_METRIC_IDS
 from output.renderers.trip_report import TripReportFormatter
