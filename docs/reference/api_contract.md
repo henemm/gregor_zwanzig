@@ -3465,6 +3465,18 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-11: Issue #1745 Scheibe A — Premium-SMS als vierter Kanal in der Alarm-Kanal-Auswahl
+  (Alarme-Reiter, Trip UND Ortsvergleich). **Keine DTO-/Feld-Änderung** — `alert_channels.premium_sms`
+  und `alert_channel_thresholds.premium_sms` (s. Abschnitte unten) existieren bereits seit #1701 S2b;
+  diese Scheibe macht sie erstmals über die Oberfläche bedienbar (vierte Kanalzeile „Premium-SMS
+  (Garmin inReach)" direkt unter SMS, gesperrt mit Hinweis unter Tarif `standard`, eigene
+  Dringlichkeits-Schwelle). Reines Frontend (`frontend/src/lib/components/shared/AlarmeTab.svelte`
+  u.a.), kein Go-/Python-Code geändert. Klarstellung, da leicht zu verwechseln: das gilt nur für den
+  **Alarm**-Pfad — der **Versand**-Pfad (`send_premium_sms`, Trip-Briefing) bleibt seit #1676 S2a
+  bewusst auf Trips beschränkt, kein Ortsvergleich-Versand; die Alarm-Kanal-Auswahl war schon seit
+  #1701 ausdrücklich auch für den Vergleich vorgesehen (#1701 AC-4) und ist das jetzt auch in der
+  Oberfläche. Regen-/Radar-Alarme lesen weiterhin nur das Briefing-Flag, unverändert durch diese
+  Scheibe (Scheibe B, #1752, offen). Spec: `docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md`.
 - 2026-08-11: Issue #1717 Scheibe S3 — Premium-SMS in der Oberfläche. `GET /api/auth/profile`
   liefert vier neue, **rein lesende** Felder: `premium_sms_reply_to`/`premium_sms_reply_at`
   (Rohwerte, `omitempty`), `premium_sms_reply_state` (`none`/`stale`/`fresh`, immer vorhanden,
