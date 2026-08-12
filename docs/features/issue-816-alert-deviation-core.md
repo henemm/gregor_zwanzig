@@ -151,12 +151,19 @@ Betreff: [GR20] Wetter ändert sich seit dem Briefing
 
 Wetter ändert sich seit dem Briefing
 
-Regen      2 → 18 mm     (Etappe 3, km 12–18, 14–16 Uhr)
-Böen      25 → 48 km/h   (Etappe 3, km 12–18, 14–16 Uhr)
-Temp      22 → 16 °C     (Etappe 3, km 18–24, 16–18 Uhr)
+Regen      2 → 18 mm     (Segment 3, 14–16 Uhr)
+Böen      25 → 48 km/h   (Segment 3, 14–16 Uhr)
+Temp      22 → 16 °C     (Segment 4, 16–18 Uhr)
 
 Stand: heute 13:30 · verglichen mit dem letzten Briefing
 ```
+
+> **Hinweis (#1744 A1, 2026-08-12):** Der Ortsbezug lautet seit dieser Änderung
+> `Segment N` bzw. `🏁 Ziel` statt einer km-Spanne — dieselbe Sprache, die die
+> amtliche Warnung spricht; die km-Spanne bleibt der Rückfall für Etappen ohne
+> Kennung. Die obige Beispiel-Mail ist im Übrigen eine **Entwurfsskizze aus #816**
+> und bildet den heutigen Renderer nicht zeilengetreu ab (real: Datenzeilen mit
+> „Wo & wann"). Maßgeblich ist der Renderer, nicht diese Skizze.
 
 **km-Erweiterung:** `build_segment_label()` in `helpers.py` wird um km erweitert:
 - Neu: `"Etappe N, km X–Y, HH:MM–HH:MM"`

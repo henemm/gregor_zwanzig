@@ -3,10 +3,15 @@ entity_id: fix_1744_alarm_format_angleichen
 type: module
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
-version: "1.0"
+status: partial
+version: "1.1"
 tags: [alerts, renderer, email, subject]
 ---
+
+> **Liefer-Stand 2026-08-12:** Scheibe **A1** (AC-1 bis AC-7) ist ausgeliefert und live —
+> PR #1781, Merge `942fc778`, in Produktion über `0861a9a8`. Adversary VERIFIED nach vier
+> Runden (drei Findings behoben), Staging VERIFIED 7/7 an echt zugestellten Mails.
+> Scheibe **A2** (AC-8 bis AC-12, Mail-Körper) ist **offen**. #1744 bleibt deshalb offen.
 
 # Alarm-Format angleichen: eine Ortssprache für alle Trip-Alarme (#1744 Scheibe A)
 
