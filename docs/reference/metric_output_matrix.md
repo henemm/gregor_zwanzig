@@ -213,6 +213,14 @@ Modul-Docstring sind nachgezogen. Spec:
 >
 > Grenzen: Telegram (`narrow.py:571`) und Kompakt-Mail (`email/compact.py:227`) haben eigene
 > Ausblick-Implementierungen, die `outlook.py` nicht importieren → Scheibe 4.
+>
+> **Nachtrag (2026-08-12, Scheibe 4 abgeschlossen):** dieser Trend-/Ausblick-Pfad
+> (`narrow.py:571` `_outlook_lines()`, `email/compact.py` "Naechste Etappen"-Block —
+> beide über `format_trend_tokens()`) ist NICHT Teil dessen, was Scheibe 4 bewacht.
+> Deren vier Ausgabeorte (s. Abschnitt 6) sind die Metrik-Übersichts-/Kurzform-Pfade
+> (Pillen, mobile Zeilen, Fließtext-Zusammenfassung, Telegram-Kurzübersicht), nicht
+> dieser separate Trend-Block. Der „→ Scheibe 4"-Verweis ist damit nur teilweise
+> eingelöst; der Trend-/Ausblick-Pfad in Telegram und Kompakt-Mail bleibt unbewacht.
 
 **Fläche 3 — Nicht-wählbare Register-Metriken.** `metric_catalog.py:695` —
 `get_all_metrics()` gibt `[m for m in _METRICS if m.selectable]` zurück. Jeder
@@ -241,8 +249,8 @@ Stundentabelle (AC-6, Charakterisierung).
 |---|---|---|---|---|
 | 4 | Compare-Übersichtstabelle: **Zellwert** je Metrik | `compare_html.py:294`, `comparison.py:70/100` | 2 | nur Zeilen-Existenz ist bewacht; ein falscher Wert in der Zelle bleibt grün |
 | 5 | **Reihenfolge** in allen Kanälen außer E-Mail und Telegram-rich | `tokens/builder.py:78`, `comparison.py:237` | 2 | Compare-Klartext nutzt die Nutzer-Reihenfolge nur als Sichtbarkeitsfilter (#1356) |
-| 6 | Kurzform-Mail, mobile Kompaktzeilen und Kompakt-Zusammenfassung | `email/compact.py:96`, `email/html.py:878`, `compact_summary.py:567` | 2 | **drei** verschiedene Orte, die alle „compact" heißen und regelmäßig verwechselt werden: `render_compact()` ist das eigene Kurzformat, `_render_mobile_compact_rows()` sitzt **in** der Vollmail, `CompactSummaryFormatter` erzeugt den Fließtext-Block ebendort. Nur der dritte hat überhaupt einen Test — und nur für Gewitter/Hagel |
-| 7 | **Telegram-Kurzform** als eigener Ausgabeort | `narrow.py:346`, `:528–532`, `:586–597` | 2 | taucht in keiner Matrix auf, obwohl es der Prüfweg für die SMS-Grammatik ist |
+| 6 | Kurzform-Mail, mobile Kompaktzeilen und Kompakt-Zusammenfassung | `email/compact.py:96`, `email/html.py:878`, `compact_summary.py:567` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): **drei** verschiedene Orte, die alle „compact" heißen und regelmäßig verwechselt werden — `render_compact()` ist das eigene Kurzformat, `_render_mobile_compact_rows()` sitzt **in** der Vollmail, `CompactSummaryFormatter` erzeugt den Fließtext-Block ebendort — jetzt einzeln bewacht: `tests/tdd/test_channel_metric_matrix.py` AC-S4-1/2/3 (Ort 1), AC-S4-5 (Ort 2), AC-S4-6/6b/7/8-10 (Ort 3). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
+| 7 | **Telegram-Kurzform** als eigener Ausgabeort | `narrow.py:346`, `:528–532`, `:586–597` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S4-12/13/14 (Auswahl/Abwahl generisch über alle wählbaren Metriken, Resolver-Divergenz zu Ort 1 als Charakterisierung, confidence-Absenz). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
 | 8 | Einheiten und Nachkommastellen je Kanal | `metric_catalog.get_decimals()`, `compare_html.py:384` | 3 | nur die Compare-Legende ist bewacht |
 | 9 | **Frontend** ohne Metrik×Kanal-Matrix | `WeatherMetricsTab.svelte:411`, `compareMetricDefs.ts` | 3 | das Frontend führt eigene Register; Drift zum Backend fällt erst im Betrieb auf |
 | 10 | **Trip-SMS liest die Kaskade nicht** | `sms_trip.py:606` `format_sms()` — kein Aufruf von `get_metrics_for_channel()`/`cascade_source_for_channel()`; Ersatz-Verdrahtung `trip_report.py:301` | 2 | dokumentiert in `fix_1575_channel_metric_selection.md`; Folge-Issue #1689 (`format_sms`-Merge verschluckt Spec-Felder) |
@@ -374,13 +382,44 @@ gegen den echten Renderpfad (`TripReportFormatter().format_email()`, nicht die p
 ungenutzte `email/helpers.py::dp_to_row()`). Details, Sollzustand je Metrik, Mutations-
 Gegenprobe: `docs/specs/modules/fix_1703_s3_selectable_metrics.md`.
 
-### Scheibe 4 — Kurzform-Mail, Kompaktzeilen, Kompakt-Zusammenfassung, Telegram-Kurzform
+### Scheibe 4 — Kurzform-Mail, Kompaktzeilen, Kompakt-Zusammenfassung, Telegram-Kurzform ✅ ERLEDIGT (2026-08-12)
 
 Vier bisher namenlose Ausgabeorte als eigene Matrix-Spalten aufnehmen:
 `email/compact.py:96`, `email/html.py:878`, `compact_summary.py:567`,
 `narrow.py:346/586–597`. Die Verwechslung der ersten drei ist selbst ein
 wiederkehrender Fehler und sollte in den Testnamen aufgelöst werden.
 *Risiko: mittel. Größe: mittel.* Deckt Flächen 6 und 7.
+
+Umgesetzt als 15 ACs (AC-S4-1 bis AC-S4-15, teils als kombinierte
+Positiv-/Negativ-Assertion in einer parametrisierten Testfunktion
+zusammengefasst) in `tests/tdd/test_channel_metric_matrix.py`, gemessen
+gegen den echten Renderpfad (`TripReportFormatter().format_email()`,
+`email_format="compact"` bzw. Telegram-Pfad) statt isolierter
+Direktaufrufe — dieselbe Prüfort-=-Wirkort-Pflicht wie in Scheibe 3.
+Reine Charakterisierung, **kein Produktivcode-Fix**, auch dort nicht, wo
+die Recherche eine strukturelle Eigenheit aufdeckte: Resolver-Divergenz
+Ort 1 (`resolve_trip_active_metrics()`, Fallback auf
+`DEFAULT_TRIP_METRIC_IDS` bei leerer Auswahl) vs. Ort 5
+(`get_enabled_metric_ids()`, kein Fallback) — als Nebenbefund in #1199
+gebucht (Eintrag 2026-08-12), kein Fix hier; Positivliste von
+`format_stage_summary()` bleibt akzeptierter Dauerzustand (PO-Anschluss
+an #1214 Scheibe 5c). Ort 4 (`format_location_summary()`,
+Compare-Wrapper) bleibt ohne Test — totes Gleis seit #1300. **Nicht
+Gegenstand dieser Scheibe:** die eigenen Ausblick-/Trend-Implementierungen
+in `narrow.py:571` (`_outlook_lines()`) und `email/compact.py`
+("Naechste Etappen"-Block), die `outlook.py` nicht importieren (s.
+Fläche 2 Grenzen, Nachtrag oben) — Scheibe 4 deckt die
+Metrik-Übersichts-/Kurzform-Pfade, nicht diesen separaten Trend-Block.
+
+**Adversary-Finding F001 (geschlossen):** die ursprüngliche Spec-Fassung
+behauptete für AC-S4-3 (Ort 1) und AC-S4-8 (Ort 3), dieselbe zentrale
+`_is_selectable()`-Gate-Wirkung greife wie an Ort 5. Die
+Mutations-Gegenprobe widerlegte das — Ort 1 und Ort 3 sind durch lokale,
+gate-unabhängige Mechanismen geschützt (Pillen-Katalog-Whitelist
+`_PILL_CATALOG_ORDER` bzw. fehlender `confidence`-Zweig in
+`compact_summary.py`); nur AC-S4-14 (Telegram) belegt die Gate-Wirkung
+tatsächlich. Spec entsprechend korrigiert (Docstrings + AC-Wortlaut).
+Details: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md`.
 
 ### Scheibe 5 — Compare-Zellwert-Vollständigkeit
 
