@@ -39,7 +39,7 @@ const src = readFileSync(WEATHER_METRICS_TAB, 'utf-8');
  * im Quelltext — der erste liegt im vergleich-Zweig weiter oben und bindet
  * an `wiz`, nicht an `reportConfig`). */
 function routeDayWindowCardBlock(): string {
-	const start = src.lastIndexOf('<DayWindowCard', src.indexOf('reportConfig.day_window_start_hour'));
+	const start = src.lastIndexOf('<DayWindowCard', src.lastIndexOf('reportConfig.day_window_start_hour'));
 	const end = src.indexOf('/>', start) + 2;
 	assert.ok(start >= 0 && end > start, 'route-DayWindowCard-Block nicht gefunden');
 	return src.slice(start, end);
@@ -86,7 +86,7 @@ describe('AC-4/AC-5 (Trip, context=route): DayWindowCard loest den Speicherversu
 
 	test('die DayWindowCard fuer den Trip liegt AUSSERHALB des report-config-touch-scope (der Grund, warum der ausdrueckliche Weg noetig ist)', () => {
 		const touchScopeStart = src.indexOf('class="report-config-touch-scope"');
-		const dayWindowIdx = src.indexOf('reportConfig.day_window_start_hour');
+		const dayWindowIdx = src.lastIndexOf('reportConfig.day_window_start_hour');
 		assert.ok(touchScopeStart >= 0 && dayWindowIdx >= 0, 'Referenzstellen nicht gefunden');
 		assert.ok(
 			dayWindowIdx < touchScopeStart,

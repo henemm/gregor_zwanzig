@@ -82,6 +82,97 @@ describe('AC-1/AC-2/AC-3 (Test 3): onWeatherMetricsChange-Rückkanal im Anlege-M
 	});
 });
 
+describe('AC-1/AC-2/AC-3 (Test 1-3, Issue #1775): onDayWindowChange-Rückkanal im Anlege-Modus', () => {
+	// Spec: docs/specs/modules/fix_1775_tagesfenster_anlegen.md § Test 1, Test 2, Test 3
+	//
+	// Analoges Muster zu onWeatherMetricsChange oben (#1552): kein Mount-/DOM-Test
+	// moeglich (kein jsdom, $effect ist per SSR nie sichtbar) -- Source-Inspection
+	// auf Guard-Bedingung UND uebergebenen Ausdruck im selben Match.
+
+	test('Props-Interface hat eine onDayWindowChange-Prop mit dem erwarteten Objekt-Typ', () => {
+		assert.match(
+			code,
+			/onDayWindowChange\??\s*:\s*\(\s*w\s*:\s*\{\s*day_window_start_hour\s*:\s*number\s*;\s*day_window_end_hour\s*:\s*number\s*\}\s*\)\s*=>\s*void/,
+			'Keine onDayWindowChange-Prop vom erwarteten Typ gefunden'
+		);
+	});
+
+	test('onDayWindowChange wird aus den Props destrukturiert', () => {
+		assert.match(
+			code,
+			/let\s*\{[^}]*onDayWindowChange[^}]*\}\s*:\s*Props\s*=\s*\$props\(\)/,
+			'onDayWindowChange fehlt in der Props-Destrukturierung'
+		);
+	});
+
+	test('ein $effect ruft im createMode onDayWindowChange mit den aktuellen reportConfig-Werten (Default 4/19) auf', () => {
+		// Guard-Bedingung UND uebergebener Ausdruck muessen im selben Block
+		// zusammenhaengen (Muster wie beim Wetter-Metrik-Rueckkanal oben) --
+		// sonst koennte ein leerer/falscher Callback-Aufruf denselben Text streuen.
+		const effectMatch = code.match(
+			/\$effect\(\(\)\s*=>\s*\{\s*if\s*\(createMode\s*&&\s*onDayWindowChange\)\s*\{\s*onDayWindowChange\(\{\s*day_window_start_hour:\s*reportConfig\.day_window_start_hour\s*\?\?\s*4,\s*day_window_end_hour:\s*reportConfig\.day_window_end_hour\s*\?\?\s*19,?\s*\}\);/
+		);
+		assert.ok(
+			effectMatch,
+			'Kein $effect gefunden, der bei createMode && onDayWindowChange ' +
+				'onDayWindowChange({ day_window_start_hour: reportConfig.day_window_start_hour ?? 4, ' +
+				'day_window_end_hour: reportConfig.day_window_end_hour ?? 19 }) aufruft'
+		);
+	});
+
+	test('die sichtbare DayWindowCard (Trip-Template) zeigt denselben Default 4/19 an, den der $effect nach oben meldet', () => {
+		// Adversary-Finding F002 (Fix-Loop 1): der obige Test prueft nur den Wert,
+		// der ueber den $effect NACH OBEN emittiert wird -- nicht den Wert, den der
+		// Nutzer im Anlege-Dialog tatsaechlich SIEHT (startHour/endHour-Props der
+		// sichtbaren <DayWindowCard>). Isoliert hier gezielt den Trip-Block im
+		// Template (letztes Vorkommen von reportConfig.day_window_start_hour, davor
+		// rueckwaerts das zugehoerige <DayWindowCard>-Tag -- analog dem reparierten
+		// Helfer in weatherMetricsTabDayWindowSave.test.ts), damit ein verfaelschter
+		// sichtbarer Default (z.B. andere Zahl oder falsches Property) NICHT
+		// unbemerkt bliebe, nur weil der $effect-Wert separat geprueft ist.
+		const dayWindowStart = code.lastIndexOf(
+			'<DayWindowCard',
+			code.lastIndexOf('reportConfig.day_window_start_hour')
+		);
+		assert.ok(dayWindowStart >= 0, 'Trip-DayWindowCard-Block (Template) nicht gefunden');
+		const dayWindowEnd = code.indexOf('/>', dayWindowStart) + 2;
+		const dayWindowBlock = code.slice(dayWindowStart, dayWindowEnd);
+
+		assert.match(
+			dayWindowBlock,
+			/startHour=\{reportConfig\.day_window_start_hour\s*\?\?\s*4\}/,
+			'Die sichtbare DayWindowCard (Trip) muss startHour={reportConfig.day_window_start_hour ?? 4} zeigen'
+		);
+		assert.match(
+			dayWindowBlock,
+			/endHour=\{reportConfig\.day_window_end_hour\s*\?\?\s*19\}/,
+			'Die sichtbare DayWindowCard (Trip) muss endHour={reportConfig.day_window_end_hour ?? 19} zeigen'
+		);
+	});
+
+	test('die Tagesfenster-Karte ist nicht mehr auf !createMode gegated (Regressionsschutz)', () => {
+		// AC-1: die Sichtbarkeits-Bedingung des Trip-Tagesfenster-Blocks muss
+		// weiterhin sections.includes('tagesfenster') pruefen, aber OHNE ein
+		// vorangestelltes !createMode-Gate -- sonst bleibt die Karte im
+		// Anlege-Dialog unsichtbar.
+		const gatedMatch = code.match(
+			/\{#if\s*!createMode\s*&&\s*sections\.includes\('tagesfenster'\)\}/
+		);
+		assert.equal(
+			gatedMatch,
+			null,
+			'Der Tagesfenster-Block ist noch !createMode-gegated -- im Anlege-Dialog ' +
+				'bliebe die Karte unsichtbar (AC-1)'
+		);
+		assert.match(
+			code,
+			/\{#if\s*sections\.includes\('tagesfenster'\)\}\s*\n\s*<div data-testid="weather-metrics-tagesfenster">\s*\n\s*<!--[\s\S]*?-->\s*\n\s*<DayWindowCard/,
+			'Der Tagesfenster-Block (Trip-Haelfte) ist nicht mehr auffindbar oder nicht ' +
+				'mehr ungegated sichtbar'
+		);
+	});
+});
+
 describe('Test 5: Vorbelegungs-Fallback liest trip_default_enabled statt default_enabled', () => {
 	test('der createMode-Fallback-Zweig (keine gespeicherten Metriken) filtert nach trip_default_enabled', () => {
 		// Zielt gezielt auf den else-Zweig in initFromTrip() (Fall "savedMetrics
