@@ -21,6 +21,12 @@ die nächste Aufrufstelle beginnt die Debatte von vorn.
 | Ortszone des Trips | `services/trip_day.py` (ADR-0044) | Nur im Alarm-Pfad, seit #1697 |
 | Browser-Zone | Frontend | Anzeige — dort ebenfalls auf Wien festgenagelt |
 
+**Nachtrag (Stand 2026-08-12):** Diese Tabelle zeigt den Stand vor der Umsetzung. Mit
+S2/S3 (#1724/#1725) entscheidet für die Briefing-Fälligkeit der Trips nicht mehr
+`Europe/Vienna`, sondern die Ortszone des Trips (`services/trip_day.py`) — Details in
+„Übertragung auf Gregor Zwanzig" unten. Ruhezeit, Tageszähler und Ortsvergleich hängen
+unverändert an `Europe/Vienna` (offen: S4/#1726).
+
 `Europe/Vienna` ist eine feste Konstante ohne fachliche Herleitung — keine Stelle im Code leitet
 sie aus einer Eigenschaft des Trips, des Orts oder des Nutzers ab. Sie deckt sich **zufällig** mit
 der Zone des Betreibers; das macht sie nicht richtig, es erklärt nur, warum der Fehler bisher
@@ -109,9 +115,9 @@ ganzen Lauf. Es gilt nur nirgends verbindlich.
 
 ## Übertragung auf Gregor Zwanzig
 
-### Der eine Umbau, der die Wien-Konstante entfernt
+### Der eine Umbau, der die Wien-Konstante entfernt (umgesetzt — S2/#1724, live 2026-08-11)
 
-Heute (`trip_report_scheduler.py:345-358`) fragt der Versand:
+Bis dahin fragte der Versand (`trip_report_scheduler.py`):
 
 > Es ist 07:00 **in Wien** — welche Trips haben 07:00 konfiguriert?
 
@@ -120,9 +126,9 @@ Eine globale Uhr, N Trips. Richtig wäre die Umkehrung:
 > Für jeden Trip: wie spät ist es **in seiner** Zone — passt das zu seiner Konfiguration?
 
 Der Cron tickt weiter stündlich; er liefert nur noch einen Zeitpunkt, keine Stunde mehr. Die
-Schleife über die Trips existiert bereits (`_collect_due_trips`) — der Stundenvergleich wandert
-hinein, und die Zone kommt aus derselben Quelle, die der Alarm-Pfad seit #1697 benutzt
-(`trip_day.trip_local_today` / `display_tz`). Das **löscht** die Wien-Konstante, statt einen
+Schleife über die Trips existierte bereits (`_collect_due_trips`) — der Stundenvergleich ist
+mit S2 dorthinein gewandert, und die Zone kommt aus derselben Quelle, die der Alarm-Pfad seit
+#1697 benutzt (`trip_day.trip_local_now`). Das **löscht** die Wien-Konstante, statt einen
 weiteren Sonderfall danebenzustellen.
 
 Dasselbe gilt unverändert für Ruhezeit (`deviation_alert_engine`), Tageszähler
@@ -153,14 +159,17 @@ Die übliche Lösung ersetzt Gleichheit durch **Fälligkeit plus Idempotenz-Schl
 - nach Versand wird genau dieser Schlüssel vermerkt.
 
 Ein Mechanismus deckt damit vier Fälle ab: fehlende Stunde (nachgeholt), doppelte Stunde (nur
-einmal), ausgefallener Tick, Scheduler-Neustart. Die „pending marker" im Scheduler sind bereits
-die Hälfte davon — es fehlt der Ortstag im Schlüssel.
+einmal), ausgefallener Tick, Scheduler-Neustart. Die „pending marker" im Scheduler deckten
+bereits die Hälfte davon ab — es fehlte der Ortstag im Schlüssel. **Umgesetzt mit S3/#1725,
+live 2026-08-12:** eigener Vermerk-Speicher `services/briefing_slots.py` mit genau diesem
+Schlüssel `(trip_id, ortstag, slot)`, neben den bestehenden „pending markern" (die weiterhin
+Wetterausfälle behandeln, ein anderer Zweck).
 
-### Der Wächter muss von der Darstellung in die Entscheidung wandern
+### Der Wächter muss von der Darstellung in die Entscheidung wandern (Muster 1+2 umgesetzt — S1/#1723, live 2026-08-11)
 
 `tests/test_output_timezone_guard.py` ist die richtige Bauform (AST-Ratsche, `KNOWN_VIOLATIONS`
-darf nur schrumpfen). Zu erweitern ist der Geltungsbereich auf `src/services/**` und `api/**`,
-mit diesen Fundmustern:
+darf nur schrumpfen). Der Geltungsbereich ist inzwischen auf `src/services/**` und `api/**`
+erweitert, mit diesen Fundmustern:
 
 1. `date.today()` und `datetime.now()` ohne `tz`-Argument — die Umgebungsuhr;
 2. `ZoneInfo("Europe/Vienna")` (und jede feste Zone) außerhalb von Testdateien und
@@ -168,24 +177,23 @@ mit diesen Fundmustern:
 3. `.hour` / `.date()` auf einem Zeitstempel, der nicht nachweislich durch eine Zonen-Auflösung
    gegangen ist — der eigentliche Fehler von #1470 und #1697.
 
-Muster 1 und 2 sind heute ohne Kontextwissen entscheidbar. Muster 3 ist die interessante und
-die teuerste Prüfung; sie sollte einer eigenen Scheibe vorbehalten bleiben, nicht die ersten
-beiden aufhalten.
+Muster 1 und 2 sind mit S1 umgesetzt; die gefundenen Verstöße stehen als `KNOWN_VIOLATIONS`
+im Wächter, größtenteils Fundstellen für #1726/#1727. Muster 3 bleibt die interessante und
+teuerste Prüfung — weiterhin einer eigenen Scheibe vorbehalten, nicht Teil von S1.
 
 ## Vorgeschlagene Schnittfolge
 
 | Scheibe | Inhalt | Warum in dieser Reihenfolge |
 |---|---|---|
 | **S0** (#1722) | ADR: die drei Regeln beschließen, ADR-0044 als Spezialfall darunter einordnen | Ohne beschlossene Regel bleibt jede Scheibe Geschmacksfrage |
-| **S1** (#1723) | Wächter-Ausweitung, Muster 1+2, Bestand als `KNOWN_VIOLATIONS` | Stoppt den Zuwachs sofort, ohne eine Zeile Produktivcode zu bewegen |
-| **S2** (#1724) | Fälligkeit umkehren: Stundenvergleich je Trip in seiner Zone; Wien-Konstante fällt | Der eine Umbau mit der größten Nutzerwirkung |
-| **S3** (#1725) | Gleichheit → Fälligkeit + Idempotenz-Schlüssel `(trip, ortstag, slot)` | Setzt S2 voraus; ohne S2 gibt es keinen Ortstag |
+| ✅ **S1** (#1723), live 2026-08-11 | Wächter-Ausweitung, Muster 1+2, Bestand als `KNOWN_VIOLATIONS` | Stoppt den Zuwachs sofort, ohne eine Zeile Produktivcode zu bewegen |
+| ✅ **S2** (#1724), live 2026-08-11 | Fälligkeit umkehren: Stundenvergleich je Trip in seiner Zone; Wien-Konstante fällt | Der eine Umbau mit der größten Nutzerwirkung |
+| ✅ **S3** (#1725), live 2026-08-12 | Gleichheit → Fälligkeit + Idempotenz-Schlüssel `(trip, ortstag, slot)` | Setzt S2 voraus; ohne S2 gibt es keinen Ortstag |
 | **S4** (#1726) | Ruhezeit, Tageszähler, Ortsvergleichs-Slots auf die Ortszone | Gleiche Wurzel, eigene Nutzerwirkung, eigener Nachweis |
 | **S5** (#1727) | Restliche `date.today()`-Fundstellen; `KNOWN_VIOLATIONS` schrumpft auf null | Aufräumen, wenn die Regel schon trägt |
 
-Der offene Briefing-Pfad aus #1697 (`_get_target_date`, `_get_active_trips`, `save_dated`) ist
-Teil von S2/S5 — er sollte **nicht** vorher einzeln behoben werden, sonst entsteht die zwölfte
-Einzelbehebung.
+Der zuvor offene Briefing-Pfad aus #1697 (`_get_target_date`, `_get_active_trips`,
+`save_dated`) ist mit S2 (#1724) behoben — Details in ADR-0044.
 
 ## Was bewusst offen bleibt
 

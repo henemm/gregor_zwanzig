@@ -71,21 +71,24 @@ diesem Tag die Zone, kann die Etappe des Weltzeit-Tages eine andere Zone tragen 
 Ortstages. Der Fehler ist dann die Differenz zweier benachbarter Etappen — in aller Regel
 null. Eine Tour dieser Spannweite hat ohnehin keinen eindeutigen „Kalendertag".
 
-### Wo die Zonen-Auflösung liegt (Stand 2026-08-11, Issue #1697)
+### Wo die Zonen-Auflösung liegt (Stand 2026-08-12, Issue #1697, #1724)
 
 Die drei Bausteine waren ursprünglich **private Methoden** auf `TripCommandProcessor`. Seit
 #1697 liegen sie als Modulfunktionen in **`src/services/trip_day.py`** und werden von dort
-geteilt:
+geteilt; #1724 hat `trip_local_now` ergänzt:
 
 | Funktion | Aufgabe |
 |---|---|
 | `trip_tz(trip)` | Rückfall 2: erste Etappe mit Wegpunkten |
 | `display_tz(trip, day_date)` | Zone der Etappe dieses Tages, sonst `trip_tz` |
 | `anchor_tz(trip, now_utc)` | Auflösung der Henne-Ei-Falle: Zone der Etappe des **Weltzeit**-Tages |
-| `trip_local_today(trip, now_utc)` | **der Ortstag der Tour** — das, was `date.today()` ersetzt |
+| `trip_local_now(trip, now_utc)` | Ortstag UND Ortsstunde der Tour aus EINER Zonen-Auflösung |
+| `trip_local_today(trip, now_utc)` | **der Ortstag der Tour** — das, was `date.today()` ersetzt; dünne Sicht auf `trip_local_now` |
 
-Wer diese Regel anwendet, ruft `trip_local_today()`. Eine eigene Kopie der Zonen-Auflösung
-ist ein Regelverstoß — genau das war der Zustand vor #1697.
+Wer nur den Kalendertag braucht, ruft `trip_local_today()`; wer zusätzlich die Ortsstunde
+braucht — etwa eine Fälligkeitsprüfung wie in #1725 —, ruft `trip_local_now()` direkt, damit
+Tag und Stunde aus derselben Auflösung kommen. Eine eigene Kopie der Zonen-Auflösung ist ein
+Regelverstoß — genau das war der Zustand vor #1697.
 
 ### Umgesetzt
 
@@ -104,22 +107,24 @@ ist ein Regelverstoß — genau das war der Zustand vor #1697.
   `trip_local_today()` bestimmt —, sondern nur die Tages-**Tiefe** der Suche (ein Tag
   zusätzlich statt nur der eine bereits aufgelöste Ortstag). Details:
   `docs/specs/modules/fix_1667_s3_tagesuebergreifende_segmente.md`.
+- **Briefing-/Versand-Pfad** (#1724, live 2026-08-11; Fälligkeitsfenster + Idempotenz #1725,
+  live 2026-08-12): `_get_target_date` und `_get_active_trips` in
+  `src/services/trip_report_scheduler.py` bestimmen den Zieltag jetzt über `trip_local_today`
+  statt `date.today()`; `save_dated`/`load_dated` schreiben und lesen denselben
+  Ortstag-Schlüssel, Schreiber und Leser sind also zusammen umgestellt. #1725 löst zusätzlich
+  die in ADR-0051 beschriebene Stundengleichheits-Falle: Fälligkeit ist jetzt ein Fenster von
+  drei Ortsstunden ab der konfigurierten Stunde, gegen Doppelversand abgesichert über den
+  Vermerk-Speicher `services/briefing_slots.py` (Schlüssel `(trip_id, ortstag, slot)`).
 
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,
 sucht vorher nach `date.today()`/`datetime.now().date()` im ganzen Produktivcode, statt nur
 die Datei zu nennen, in der er gerade gearbeitet hat.
 
-### Noch nicht umgesetzt (Stand 2026-08-11)
+### Noch nicht umgesetzt (Stand 2026-08-12)
 
-**Briefing-/Versand-Pfad** (`src/services/trip_report_scheduler.py`) — die größte offene
-Fläche, gleiche Ursache, andere Wirkung („Briefing für den falschen Tag" statt „kein Alarm"):
-
-| Ort | Wirkung |
-|---|---|
-| `_get_target_date` | Zieltag des Briefings, morgens `date.today()` / abends `+1` |
-| `_get_active_trips` | entscheidet, ob ein Trip überhaupt ein Briefing bekommt |
-| `save_dated` | Schlüssel des Wetter-Schnappschusses — **Schreiber und Leser müssen zusammen umgestellt werden**, sonst findet der Alarm-Pfad den Anker nicht mehr |
+Der zuvor hier gelistete Briefing-/Versand-Pfad (`_get_target_date`, `_get_active_trips`,
+`save_dated`) ist umgesetzt — s. „Umgesetzt" oben (#1724/#1725).
 
 **Anzeige, Vorschau, Werkzeuge:** vier Stellen in `src/services/trip_command_processor.py`
 (`_handle_query` — **löst einen Versand aus**, nicht nur eine Anzeige, eigene Abwägung nötig;

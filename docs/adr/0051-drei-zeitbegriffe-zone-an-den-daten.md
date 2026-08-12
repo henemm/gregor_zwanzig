@@ -94,6 +94,16 @@ Idempotenz-Schlüssel**: fällig, wenn die Ortsstunde die konfigurierte erreicht
 hat und für `(trip_id, ortstag, slot)` noch nichts vermerkt ist. Ein Mechanismus deckt damit
 fehlende Stunde, doppelte Stunde, ausgefallenen Tick und Scheduler-Neustart ab.
 
+**Umsetzungsvermerk (#1724 live 2026-08-11, #1725 live 2026-08-12):** Der Briefing-Versandpfad
+(`src/services/trip_report_scheduler.py`, `services/briefing_slots.py`) setzt „Die
+Fälligkeitsfrage wird umgekehrt" und „Fälligkeit plus Idempotenz-Schlüssel" für den
+Trip-Versand bereits um — der Cron liefert einen Zeitpunkt, jeder Trip prüft seine eigene
+Ortsstunde gegen ein Fenster von drei Stunden ab der konfigurierten, abgesichert über den
+Schlüssel `(trip_id, ortstag, slot)`. Der Compare-Versandpfad (`CompareDispatchStrategy`)
+ist davon unberührt und prüft weiterhin auf Stundengleichheit. Die übrigen Regeln dieses ADR
+(drei Zeitbegriffe, Regel 1–3, Wächter-Ausdehnung) sind von diesem Vermerk unberührt und
+bleiben Gegenstand der noch offenen PO-Entscheidung über den ADR-Status.
+
 ## Verworfene Alternativen
 
 - **Alles bei Weltzeit lassen.** Konsistent und umstellungs-immun, für den Nutzer aber falsch —
