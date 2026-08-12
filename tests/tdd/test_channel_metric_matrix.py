@@ -83,9 +83,15 @@ from output.renderers.channel_layout import render_for_channel
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
 from output.renderers.comparison import render_compare_email
+from output.renderers.email.compact import render_compact
 from output.renderers.email.helpers import resolve_metric_col_order
+from output.renderers.email.html import _render_mobile_compact_rows
+from output.renderers.compact_summary import CompactSummaryFormatter
+from output.renderers.narrow import render_telegram_bubbles
 from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC, SMS_MULTI_SYMBOLS_BY_METRIC
+from output.renderers.trip_metric_ids import DEFAULT_TRIP_METRIC_IDS
 from output.renderers.trip_report import TripReportFormatter
+from services.report_config_resolver import ReportRenderOptions
 from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID, is_alert_metric_active
 from services.weather_metrics import WeatherMetricsService, summarize_points
 
@@ -2841,3 +2847,314 @@ def test_ac_s2_8_ausblick_zelle_zeigt_den_gerechneten_wert():
                     "Minimum/Maximum zeigen dann beide Spalten einen "
                     "plausiblen, aber getauschten Wert."
                 )
+
+
+# ===========================================================================
+# Epic #1703 Scheibe 4 (AC-S4-1 bis AC-S4-15): Kompaktform-Varianten und
+# Telegram-Kurzform. Vier Ausgabeorte -- Kurz-E-Mail (render_compact),
+# mobile Kompaktzeilen (_render_mobile_compact_rows), Fliesstext-Kompakt-
+# Zusammenfassung (CompactSummaryFormatter.format_stage_summary), Telegram-
+# Kurzform (render_telegram_bubbles). Reine Charakterisierung, kein
+# Produktivcode-Fix. Spec: docs/specs/modules/fix_1703_s4_kompaktform_matrix.md
+#
+# KORREKTUR ggue. Spec (waehrend TDD-RED empirisch gemessen, 2026-08-12):
+# - Ort 1 (render_compact) ist SELBST threshold-/fixture-gated: von den 15
+#   _PILL_CATALOG_ORDER-Metriken feuern mit _matrix_segment() nur 10
+#   zuverlaessig (cloud_low/visibility/uv_index/freezing_level/dewpoint
+#   liefern mit dieser Fixture keinen Wert -- Fixture-Grenze, kein Befund
+#   dieser Scheibe). AC-S4-1 ist auf die 10 zuverlaessig feuernden skaliert.
+# - wind_direction erzeugt NIRGENDS (weder Ort 1 -- ohnehin nicht im
+#   Pillen-Katalog -- noch Ort 3) einen sichtbaren Unterschied -- echter,
+#   gemessener Noop. Eigene Charakterisierung AC-S4-6b statt Aufnahme in die
+#   generische AC-S4-6-Parametrisierung.
+# - Ort 5 (render_telegram_bubbles) ist ENTGEGEN der urspruenglichen Annahme
+#   VOLL generisch: alle 25 waehlbaren Metriken erzeugen zuverlaessig eine
+#   Kurzuebersicht-Zeile (kein Dash-/Threshold-Ausfall) -- robusterer Befund
+#   als angenommen, AC-S4-12 deckt den vollen Katalog ab, keine Restriktion.
+# ===========================================================================
+
+
+def _s4_compact_render_options(dc: UnifiedWeatherDisplayConfig) -> ReportRenderOptions:
+    return ReportRenderOptions(
+        email_format="compact", show_outlook=True, show_stage_stats=True,
+        show_stability=True, show_compact_summary=True,
+        show_multi_day_trend=False, show_yesterday_comparison=True,
+        display_config=dc,
+    )
+
+
+def _s4_email_compact_text(dc: UnifiedWeatherDisplayConfig) -> str:
+    """Ort 1 -- echtes Rendering ueber render_compact() via format_email()
+    (Pruefort=Wirkort, s. Spec 'Bindende Test-Architektur-Entscheidung')."""
+    report = TripReportFormatter().format_email(
+        [_matrix_segment()], trip_name="Issue1703S4", report_type="evening",
+        night_weather=F.night_weather(), display_config=dc, stage_name=F.STAGE_NAME,
+        tz=F.TZ, render_options=_s4_compact_render_options(dc),
+    )
+    return report.email_plain
+
+
+def _s4_pill_lines(text: str) -> list[str]:
+    if "== Metriken-Ueberblick ==" not in text:
+        return []
+    section = text.split("== Metriken-Ueberblick ==")[1].split("-" * 10)[0]
+    return [line for line in section.splitlines() if line.strip()]
+
+
+def _s4_compact_summary_text(dc: UnifiedWeatherDisplayConfig) -> str:
+    """Ort 3 -- echtes Rendering ueber format_stage_summary() via
+    format_email(). Extraktion der isolierten Zeile ueber ihre feste
+    Position (email/plain.py:148-167: Icon/Eyebrow, Trip-Report-Zeile,
+    Etappenname, Datum, Leerzeile, DANN die Zusammenfassung) -- in den hier
+    genutzten Fixtures ist stage_stats immer None, die Position ist damit
+    deterministisch."""
+    report = TripReportFormatter().format_email(
+        [_matrix_segment()], trip_name="Issue1703S4", report_type="evening",
+        night_weather=F.night_weather(), display_config=dc, stage_name=F.STAGE_NAME,
+        tz=F.TZ,
+    )
+    lines = report.email_plain.splitlines()
+    idx = lines.index("")
+    return lines[idx + 1]
+
+
+def _s4_telegram_bubbles(dc: UnifiedWeatherDisplayConfig) -> list[str]:
+    """Ort 5 -- echtes Rendering ueber render_telegram_bubbles() via
+    format_email(); Telegram bekommt intern eine eigens vorgefilterte
+    _dc_telegram (trip_report.py:270-281, Adversary-Fix einer frueheren
+    Scheibe)."""
+    report = TripReportFormatter().format_email(
+        [_matrix_segment()], trip_name="Issue1703S4", report_type="evening",
+        night_weather=F.night_weather(), display_config=dc, stage_name=F.STAGE_NAME,
+        tz=F.TZ,
+    )
+    return report.telegram_bubbles
+
+
+def _s4_kurzuebersicht(dc: UnifiedWeatherDisplayConfig) -> list[str]:
+    bubbles = _s4_telegram_bubbles(dc)
+    assert len(bubbles) >= 2, f"AC-S4: Kurzuebersicht-Bubble fehlt: {bubbles!r}"
+    kb = bubbles[1]
+    return [
+        line for line in kb.splitlines()
+        if line.strip() and line.strip() != "Kurzübersicht"
+    ]
+
+
+# --- Ort 1 -- render_compact() (Kurz-E-Mail) --------------------------------
+
+_S4_PILL_RELIABLE = [
+    "temperature", "wind_chill", "wind", "gust", "precipitation",
+    "rain_probability", "thunder", "cloud_total", "humidity", "sunshine",
+]
+
+
+@pytest.mark.parametrize("metric_id", _S4_PILL_RELIABLE)
+def test_ac_s4_1_email_compact_selection(metric_id):
+    """AC-S4-1: eine aktivierte, zuverlaessig feuernde Katalog-Metrik erzeugt
+    genau eine Pillen-Zeile im Kurz-E-Mail-Ueberblick; deaktiviert erscheint
+    keine."""
+    on_lines = _s4_pill_lines(_s4_email_compact_text(_single_metric_dc(metric_id, enabled=True)))
+    off_lines = _s4_pill_lines(_s4_email_compact_text(_single_metric_dc(metric_id, enabled=False)))
+    assert len(on_lines) == 1, (
+        f"AC-S4-1: {metric_id!r} aktiv -> genau 1 Pillen-Zeile erwartet, "
+        f"gemessen {on_lines!r}"
+    )
+    assert off_lines == [], (
+        f"AC-S4-1: {metric_id!r} deaktiviert -> keine Pillen-Zeile erwartet, "
+        f"gemessen {off_lines!r}"
+    )
+
+
+def test_ac_s4_2_email_compact_fallback_on_empty_selection():
+    """AC-S4-2: leere Metrikliste (Altbestand-Pfad) laesst render_compact()
+    ueber resolve_trip_active_metrics() auf DEFAULT_TRIP_METRIC_IDS
+    zurueckfallen -- keine leere Ausgabe."""
+    dc = UnifiedWeatherDisplayConfig(trip_id="s4-empty", metrics=[])
+    lines = _s4_pill_lines(_s4_email_compact_text(dc))
+    assert lines, (
+        "AC-S4-2: leere Metrikliste (altbestand=True) soll auf "
+        f"DEFAULT_TRIP_METRIC_IDS={DEFAULT_TRIP_METRIC_IDS} zurueckfallen -- "
+        "gemessen keine einzige Pillen-Zeile"
+    )
+
+
+def test_ac_s4_3_email_compact_confidence_absent():
+    """AC-S4-3: confidence (selectable=False) erscheint nicht im Kurz-E-Mail-
+    Text.
+
+    Korrektur (Adversary-Finding F001, 2026-08-12): die fruehere Docstring-
+    Behauptung "das vorgelagerte _is_selectable()-Gate (models.py:684) wirkt
+    auch hier" ist per Mutations-Gegenprobe widerlegt -- mit "confidence" in
+    _SELECTABLE_GATE_EXEMPT laesst das Gate die Metrik durch, und dieser
+    Test bleibt trotzdem GRUEN. Die tatsaechliche Schutzursache ist lokal
+    und vom zentralen Gate unabhaengig: build_metrics_summary_pills()
+    iteriert ueber die feste Whitelist _PILL_CATALOG_ORDER
+    (email/helpers.py:1271-1276, Schleife Z. 1872-1874) und ueberspringt
+    jede Metrik, die dort nicht steht -- "confidence" steht dort nicht drin.
+    Der Test bleibt als Regression-Baseline des Kurz-E-Mail-Choke-Points
+    bestehen, beweist aber NICHT die Gate-Wirkung; die beweist AC-S4-14
+    (Telegram)."""
+    lines = _s4_pill_lines(_s4_email_compact_text(_single_metric_dc("confidence", enabled=True)))
+    assert lines == [], (
+        f"AC-S4-3: 'confidence' erscheint im Kurz-E-Mail-Ueberblick: {lines!r}"
+    )
+
+
+# --- Ort 2 -- _render_mobile_compact_rows() (mobile Kompaktzeilen) --------
+
+def test_ac_s4_5_mobile_compact_rows_no_own_selection_logic():
+    """AC-S4-5: _render_mobile_compact_rows() hat keine eigene
+    Selektionslogik -- sie rendert exakt die vom Aufrufer uebergebene
+    allowed_col_keys-Menge. Charakterisierung, keine eigene Achse (deckt
+    sich mit Bestand AC-13)."""
+    rows = [{"time": "12", "temp": 15.0, "wind": 20.0, "precip": 2.0}]
+    html = _render_mobile_compact_rows(rows, friendly_keys=set(), allowed_col_keys={"temp"})
+    temp_label = get_metric("temperature").col_label
+    wind_label = get_metric("wind").col_label
+    assert temp_label in html, (
+        f"AC-S4-5: erlaubte Spalte {temp_label!r} fehlt im HTML-Fragment"
+    )
+    assert wind_label not in html, (
+        f"AC-S4-5: nicht erlaubte Spalte {wind_label!r} erscheint trotzdem: {html}"
+    )
+
+
+# --- Ort 3 -- format_stage_summary() (Fliesstext-Kompakt-Zusammenfassung) --
+
+_S4_POSITIVLIST = [
+    "temperature", "temperature_night", "wind_chill", "wind_chill_night",
+    "cloud_total", "precipitation", "rain_probability", "wind", "gust",
+    "wind_direction", "thunder",
+]
+_S4_POSITIVLIST_OBSERVABLE = [m for m in _S4_POSITIVLIST if m != "wind_direction"]
+_S4_NICHTSCOPE = [m for m in _ALL_METRIC_IDS if m not in _S4_POSITIVLIST]
+
+
+def _s4_baseline_summary() -> str:
+    return _s4_compact_summary_text(UnifiedWeatherDisplayConfig(trip_id="s4-base", metrics=[]))
+
+
+@pytest.mark.parametrize("metric_id", _S4_POSITIVLIST_OBSERVABLE)
+def test_ac_s4_6_compact_summary_positivlist_selection(metric_id):
+    """AC-S4-6: jede der 10 beobachtbaren Positivlisten-Metriken (alle ausser
+    wind_direction, s. AC-S4-6b) erzeugt aktiviert einen vom Basissatz (nur
+    Etappenname) abweichenden Fliesstext; deaktiviert bleibt der Basissatz."""
+    baseline = _s4_baseline_summary()
+    on_text = _s4_compact_summary_text(_single_metric_dc(metric_id, enabled=True))
+    off_text = _s4_compact_summary_text(_single_metric_dc(metric_id, enabled=False))
+    assert on_text != baseline, (
+        f"AC-S4-6: {metric_id!r} aktiv soll den Fliesstext gegenueber dem "
+        f"Basissatz {baseline!r} veraendern -- gemessen identisch"
+    )
+    assert off_text == baseline, (
+        f"AC-S4-6: {metric_id!r} deaktiviert soll den Basissatz {baseline!r} "
+        f"liefern -- gemessen {off_text!r}"
+    )
+
+
+def test_ac_s4_6b_compact_summary_wind_direction_is_noop():
+    """AC-S4-6b (Charakterisierung eines gemessenen Noops): wind_direction
+    steht in der Positivliste (Source Punkt 3), veraendert den Fliesstext
+    aber weder aktiviert noch deaktiviert -- die Kompassrichtung wird an
+    keiner Stelle des Fliesstext-Formulierers ausgegeben. Kein Fix (Auftrag
+    dieser Scheibe ist reine Charakterisierung). Faellt dieser Test rot,
+    hat sich das Produktivverhalten geaendert -- dann Spec-Korrektur statt
+    Test-Anpassung pruefen."""
+    baseline = _s4_baseline_summary()
+    on_text = _s4_compact_summary_text(_single_metric_dc("wind_direction", enabled=True))
+    assert on_text == baseline, (
+        f"AC-S4-6b: 'wind_direction' aktiv veraendert den Fliesstext entgegen "
+        f"der Messung -- gemessen {on_text!r} statt Basissatz {baseline!r}"
+    )
+
+
+@pytest.mark.parametrize("metric_id", _S4_NICHTSCOPE)
+def test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear(metric_id):
+    """AC-S4-7 (Charakterisierung des Dauerzustands, PO-Entscheid 2026-08-12,
+    Anschluss an #1214 Scheibe 5c): eine waehlbare Metrik ausserhalb der
+    Positivliste erscheint nie im Fliesstext -- kein Bug, keine Erweiterung
+    in dieser Scheibe."""
+    baseline = _s4_baseline_summary()
+    text = _s4_compact_summary_text(_single_metric_dc(metric_id, enabled=True))
+    assert text == baseline, (
+        f"AC-S4-7: {metric_id!r} (ausserhalb Positivliste) veraendert den "
+        f"Fliesstext: {text!r} statt Basissatz {baseline!r}"
+    )
+
+
+@pytest.mark.parametrize("metric_id", ["confidence", "temperature_cold", "cape"])
+def test_ac_s4_8_10_compact_summary_non_selectable_absent(metric_id):
+    """AC-S4-8/9/10: confidence/temperature_cold/cape (selectable=False)
+    erscheinen nie im Fliesstext. Anders als beim Mail-Spalten-Fallback
+    (Scheibe 3, AC-5) hat format_stage_summary() keinen remaining-Fallback-
+    Mechanismus -- die Exemption von temperature_cold wirkt hier nicht,
+    weil die Metrik schlicht nicht in der Positivliste steht (AC-S4-9).
+
+    Korrektur fuer den confidence-Fall (Adversary-Finding F001,
+    2026-08-12): auch AC-S4-8 belegt NICHT die Wirkung des zentralen
+    _is_selectable()-Gates -- unter der Mutations-Gegenprobe ("confidence"
+    in _SELECTABLE_GATE_EXEMPT) bleibt dieser Fall GRUEN. Die Schutzursache
+    ist dieselbe strukturelle Positivlisten-Mechanik wie bei
+    AC-S4-9/AC-S4-10: compact_summary.py enthaelt ueberhaupt keinen
+    if/elif-Zweig fuer "confidence" (0 Treffer in der Datei), unabhaengig
+    vom Gate-Zustand. Regression-Baseline, kein Gate-Nachweis -- den fuehrt
+    AC-S4-14 (Telegram)."""
+    baseline = _s4_baseline_summary()
+    text = _s4_compact_summary_text(_single_metric_dc(metric_id, enabled=True))
+    assert text == baseline, (
+        f"AC-S4-8/9/10: {metric_id!r} erscheint im Fliesstext: {text!r}"
+    )
+
+
+# Ort 4 (format_location_summary(), Compare-Wrapper): bewusst KEIN Test.
+# Seit Rework #1300 (2026-07-17) von keinem Aufrufer mehr erreicht (grep in
+# compare_html.py/comparison.py: keine Treffer) -- ein Test wuerde totes
+# Verhalten pruefen, keinen Nutzerpfad. S. Spec Known Limitations Punkt 1.
+
+
+# --- Ort 5 -- render_telegram_bubbles() (Telegram-Kurzform) ---------------
+
+@pytest.mark.parametrize("metric_id", _ALL_METRIC_IDS)
+def test_ac_s4_12_telegram_narrow_selection(metric_id):
+    """AC-S4-12: eine aktivierte waehlbare Metrik erzeugt genau eine Zeile
+    (Kuerzel am Zeilenanfang) in der Telegram-Kurzuebersicht; deaktiviert
+    keine. Generisch ueber alle 25 waehlbaren Metriken -- anders als Ort 1
+    (Pillen, threshold-/fixture-gated) liefert _overview_line() fuer jede
+    Metrik zuverlaessig einen Wert oder einen Platzhalter-Strich (gemessen)."""
+    label = get_metric(metric_id).compact_label
+    on_lines = _s4_kurzuebersicht(_single_metric_dc(metric_id, enabled=True))
+    off_lines = _s4_kurzuebersicht(_single_metric_dc(metric_id, enabled=False))
+    assert any(line.startswith(label + " ") for line in on_lines), (
+        f"AC-S4-12: {metric_id!r} aktiv -> keine Zeile mit Kuerzel {label!r} "
+        f"in der Kurzuebersicht: {on_lines!r}"
+    )
+    assert not any(line.startswith(label + " ") for line in off_lines), (
+        f"AC-S4-12: {metric_id!r} deaktiviert -> Zeile mit Kuerzel {label!r} "
+        f"erscheint trotzdem: {off_lines!r}"
+    )
+
+
+def test_ac_s4_13_telegram_narrow_no_fallback_on_empty_selection():
+    """AC-S4-13 (Resolver-Divergenz-Charakterisierung, Ist-Zustand, kein
+    Fix): leere Metrikliste laesst render_telegram_bubbles() -- anders als
+    Ort 1 (AC-S4-2, DEFAULT_TRIP_METRIC_IDS-Fallback) -- OHNE jede
+    Metrik-Zeile. get_enabled_metric_ids() (models.py:802-804) kennt
+    keinen Fallback. Nebenbefund zur strukturellen Divergenz gebucht in
+    #1199 (Eintrag vom 2026-08-12)."""
+    dc = UnifiedWeatherDisplayConfig(trip_id="s4-empty-tg", metrics=[])
+    lines = _s4_kurzuebersicht(dc)
+    assert lines == [], (
+        "AC-S4-13: leere Metrikliste soll KEINE Kurzuebersicht-Zeile "
+        f"erzeugen (kein Fallback, anders als Ort 1) -- gemessen {lines!r}"
+    )
+
+
+def test_ac_s4_14_telegram_narrow_confidence_absent():
+    """AC-S4-14: confidence erscheint nicht in der Telegram-Kurzuebersicht --
+    render_telegram_bubbles() liest dc.get_enabled_metric_ids() ohne
+    eigenes selectable-Gate, aber die vorgelagerte _dc_telegram-Filterung
+    (trip_report.py:270-281, Adversary-Fix einer frueheren Scheibe) faengt
+    'confidence' bereits ab, bevor render_telegram_bubbles() sie sieht."""
+    lines = _s4_kurzuebersicht(_single_metric_dc("confidence", enabled=True))
+    assert lines == [], f"AC-S4-14: 'confidence' erscheint: {lines!r}"
