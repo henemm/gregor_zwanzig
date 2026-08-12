@@ -44,6 +44,7 @@ const REIHENFOLGE = join(SHARED, 'weather-metrics-tab', 'WeatherV2Reihenfolge.sv
 // Pfadregel #1409: alles relativ zur eigenen Testdatei — nie ueber einen festen
 // Hauptrepo-Pfad, sonst prueft der Test aus dem Worktree die unveraenderte
 // Hauptrepo-Kopie und meldet falsches Gruen.
+const LIB = resolve(here, '..', '..', '..');
 const FRONTEND = resolve(here, '..', '..', '..', '..', '..');
 
 /** Testids, unter denen die beiden Marken auffindbar sein muessen. Sie sind
@@ -118,50 +119,93 @@ function findeMarke(ast: any, testid: string): { knoten: Knoten; eltern: Knoten[
 	return treffer;
 }
 
+/** Die Bauteile, die ein Editor unmittelbar rendert: er selbst plus jede
+ *  direkt eingebundene Svelte-Komponente. Mehr Tiefe braucht es nicht — was
+ *  der Nutzer in diesem Reiter sieht, haengt entweder im Reiter selbst oder in
+ *  einem Bauteil, das er unmittelbar einbindet (Muster aus dem Bestands-
+ *  waechter weather_metric_name_forms_visible.test.ts).
+ *
+ *  Wichtig fuer AC-7: die Frage lautet "zeigt DIESE Flaeche beide Marken?",
+ *  nicht "steht irgendwo im Repo eine Datei, die sie zeigt". Baut jemand fuer
+ *  den Vergleich ein eigenes Zeilen-Bauteil (Verstoss gegen die Trip/Compare-
+ *  Teilungs-Invariante), faellt das hier auf, statt still durchzugehen. */
+function anzeigeflaechen(datei: string): string[] {
+	const pfad = join(SHARED, datei);
+	const ast = parseComponent(pfad);
+	const pfade = [pfad];
+	for (const stmt of (ast?.instance?.content?.body as any[]) ?? []) {
+		if (stmt.type !== 'ImportDeclaration') continue;
+		const quelle = String(stmt.source?.value ?? '');
+		if (!quelle.endsWith('.svelte')) continue;
+		pfade.push(
+			quelle.startsWith('$lib/')
+				? join(LIB, quelle.slice('$lib/'.length))
+				: resolve(dirname(pfad), quelle)
+		);
+	}
+	return pfade;
+}
+
+/** Sucht eine Marke in einer Menge von Anzeigeflaechen. */
+function findeMarkeInFlaechen(
+	pfade: string[],
+	testid: string
+): { pfad: string; knoten: Knoten; eltern: Knoten[] } | null {
+	for (const pfad of pfade) {
+		let ast: any;
+		try {
+			ast = parseComponent(pfad);
+		} catch {
+			continue; // nicht aufloesbarer Import: fuer diese Frage unerheblich
+		}
+		const treffer = findeMarke(ast, testid);
+		if (treffer) return { pfad, ...treffer };
+	}
+	return null;
+}
+
+/** Die eine Zusicherung hinter AC-5 UND AC-7: die Flaeche traegt beide Marken,
+ *  unter auffindbarer Testid und mit sichtbarer Beschriftung. Beide ACs
+ *  verlangen wortgleich dasselbe ("tragen die Zeilen ebenfalls beide Marken")
+ *  — deshalb EINE Pruefung, an verschiedenen Flaechen angewandt, statt zweier
+ *  Formulierungen, die auseinanderlaufen koennen. */
+function pruefeBeideMarken(pfade: string[], kontext: string, ac: string): void {
+	for (const [testid, beschriftung, zweck] of [
+		[MAIL_BADGE, 'Mail', 'die englische Fachkurzform der Mail-Stundentabelle (z.B. "Feels")'],
+		[KURZFORM_BADGE, 'Kurzform', 'alle Kuerzel, die der Kanal dieser Flaeche sendet']
+	] as const) {
+		const marke = findeMarkeInFlaechen(pfade, testid);
+		assert.ok(
+			marke,
+			`${ac} FAIL (RED): ${kontext} zeigt keine Marke mit data-testid="${testid}" ` +
+				`— ${zweck}. Durchsucht: ${JSON.stringify(pfade.map((p) => p.split('/').pop()))}. ` +
+				`Heute traegt die Zeile zwei Marken ohne Testid und ohne sichtbare ` +
+				`Beschriftung (nur title-Attribut, WeatherV2Reihenfolge.svelte:102-111). ` +
+				`Ohne stabilen Anker kann auch der Browser-Nachweis (AC-10/AC-13: fuenf ` +
+				`Sichtbarkeits-Bedingungen in 14 Aufloesungen) nichts messen.`
+		);
+		const eigenerText = textVon(marke.knoten);
+		const eltern = marke.eltern[marke.eltern.length - 1];
+		const umfeld = eltern ? textVon(eltern.fragment ?? eltern) : '';
+		assert.ok(
+			eigenerText.includes(beschriftung) || umfeld.includes(beschriftung),
+			`${ac} FAIL (RED): ${kontext} — die Marke "${testid}" traegt nirgends die ` +
+				`sichtbare Beschriftung "${beschriftung}" (eigener Text ` +
+				`${JSON.stringify(eigenerText)}, Umfeld ${JSON.stringify(umfeld)}). Ein ` +
+				`Kuerzel ohne Beschriftung ist nicht aufloesbar — der Nutzer weiss nicht, ` +
+				`ob "TF" in seiner Mail oder in seiner SMS steht.`
+		);
+	}
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // AC-5 — zwei beschriftete Marken je Zeile
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-5: die Zeile traegt zwei beschriftete, auffindbare Marken', () => {
-	for (const [testid, beschriftung, zweck] of [
-		[MAIL_BADGE, 'Mail', 'die englische Fachkurzform der Mail-Stundentabelle (z.B. "Feels")'],
-		[KURZFORM_BADGE, 'Kurzform', 'alle Kuerzel, die SMS und Telegram senden (z.B. "FK FD WC")']
-	] as const) {
-		test(`Marke "${beschriftung}" ist unter data-testid="${testid}" auffindbar`, () => {
-			const ast = parseComponent(REIHENFOLGE);
-			const marke = findeMarke(ast, testid);
-			assert.ok(
-				marke,
-				`AC-5 FAIL (RED): WeatherV2Reihenfolge.svelte hat kein Element mit ` +
-					`data-testid="${testid}" — ${zweck}. Ohne stabilen Anker kann der ` +
-					`Browser-Nachweis (AC-10: fuenf Sichtbarkeits-Bedingungen in 14 ` +
-					`Aufloesungen) die Marke nicht messen. Heute traegt die Zeile zwei ` +
-					`Marken ohne Testid und ohne sichtbare Beschriftung (nur ` +
-					`title-Attribut, WeatherV2Reihenfolge.svelte:102-111).`
-			);
-		});
-
-		test(`Marke "${beschriftung}" ist sichtbar beschriftet, nicht nur per title`, () => {
-			const ast = parseComponent(REIHENFOLGE);
-			const marke = findeMarke(ast, testid);
-			assert.ok(
-				marke,
-				`AC-5 FAIL (RED): keine Marke "${testid}" — ohne sie gibt es auch keine ` +
-					`Beschriftung zu pruefen (Ursache s. Test darueber).`
-			);
-			const eigenerText = textVon(marke.knoten);
-			const eltern = marke.eltern[marke.eltern.length - 1];
-			const umfeld = eltern ? textVon(eltern.fragment ?? eltern) : '';
-			assert.ok(
-				eigenerText.includes(beschriftung) || umfeld.includes(beschriftung),
-				`AC-5 FAIL (RED): die Marke "${testid}" traegt nirgends die sichtbare ` +
-					`Beschriftung "${beschriftung}". Gefunden: eigener Text ${JSON.stringify(eigenerText)}, ` +
-					`Umfeld ${JSON.stringify(umfeld)}. Ein Kuerzel ohne Beschriftung ist ` +
-					`nicht aufloesbar — der Nutzer weiss nicht, ob "TF" in seiner Mail ` +
-					`oder in seiner SMS steht.`
-			);
-		});
-	}
+describe('AC-5: die Zeile des Touren-Editors traegt zwei beschriftete Marken', () => {
+	test('beide Marken sind auffindbar und sichtbar beschriftet', () => {
+		pruefeBeideMarken([REIHENFOLGE], 'der Touren-Editor', 'AC-5');
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -288,25 +332,46 @@ describe('AC-6: der Touren-Editor speist die Kurzform-Marke aus /api/sms-symbols
 	});
 });
 
-describe('AC-7: die drei Vergleichs-Editoren speisen die Marke aus dem Register', () => {
-	for (const [name, datei, waehle] of [
-		[
-			'Vergleichs-Uebersicht',
-			'WeatherMetricsTab.svelte',
-			(attrs: Set<string>) => !attrs.has('offColumns')
-		],
-		['Vergleichs-Stundenverlauf', 'CompareHourlyLayoutControls.svelte', () => true],
-		['Vergleichs-Ausblick', 'CompareOutlookLayoutControls.svelte', () => true]
-	] as const) {
+// AC-7 hat ZWEI Halbsaetze, und der erste ist der, der die Arbeit bewacht:
+// "Then tragen die Zeilen ebenfalls BEIDE MARKEN, und die Kurzform-Marke zeigt
+// das Register-Kuerzel". Ein Test, der nur den zweiten prueft (erreicht die
+// Flaeche `sms_code`?), ist heute schon gruen — `compare_metric_catalog.py:309`
+// reicht das Feld seit #1453 durch — und kann die Umstellung nicht bewachen.
+const VERGLEICHSFLAECHEN = [
+	[
+		'Vergleichs-Uebersicht',
+		'WeatherMetricsTab.svelte',
+		(attrs: Set<string>) => !attrs.has('offColumns')
+	],
+	['Vergleichs-Stundenverlauf', 'CompareHourlyLayoutControls.svelte', () => true],
+	['Vergleichs-Ausblick', 'CompareOutlookLayoutControls.svelte', () => true]
+] as const;
+
+describe('AC-7: die drei Vergleichs-Editoren tragen ebenfalls beide Marken', () => {
+	for (const [name, datei] of VERGLEICHSFLAECHEN) {
+		test(`${name}: die Zeile traegt beide beschrifteten Marken`, () => {
+			// Dieselbe Zusicherung wie AC-5 fuer den Touren-Editor — angewandt auf
+			// die Bauteile, die GENAU DIESE Flaeche rendert.
+			pruefeBeideMarken(anzeigeflaechen(datei), name, 'AC-7');
+		});
+	}
+});
+
+describe('AC-7: die Kurzform-Marke des Vergleichs speist sich aus dem Register', () => {
+	for (const [name, datei, waehle] of VERGLEICHSFLAECHEN) {
 		test(`${name}: die Zeile erreicht das Register-Kuerzel (sms_code)`, () => {
+			// INVARIANTEN-WAECHTER, heute gruen und absichtlich so: die Datengrundlage
+			// steht seit #1453. Er bewacht, dass die Umstellung sie nicht mitreisst —
+			// eine flaechenblinde Korrektur auf die Trip-SMS-Kuerzel wuerde den
+			// Vergleich falsch machen (er sendet aus `get_sms_code()`, comparison.py).
+			// KEIN Nachweis, dass AC-7 erfuellt ist; das leistet der Test darueber.
 			const erreicht = erreichteNamen(join(SHARED, datei), waehle);
 			assert.ok(erreicht, `${name}: WeatherV2Reihenfolge-Einbettung nicht gefunden`);
 			assert.ok(
 				erreicht!.has('sms_code'),
-				`AC-7 FAIL: ${name} erreicht kein \`sms_code\`. Die Vergleichs-SMS ` +
-					`rendert aus \`get_sms_code()\` (comparison.py) — eine Zeile ohne ` +
-					`diese Quelle koennte nur ein Kuerzel zeigen, das der Vergleich nie ` +
-					`sendet. Erreichbar: ${JSON.stringify([...erreicht!].sort())}`
+				`AC-7 FAIL: ${name} erreicht kein \`sms_code\`. Eine Zeile ohne diese ` +
+					`Quelle koennte nur ein Kuerzel zeigen, das der Vergleich nie sendet. ` +
+					`Erreichbar: ${JSON.stringify([...erreicht!].sort())}`
 			);
 		});
 	}

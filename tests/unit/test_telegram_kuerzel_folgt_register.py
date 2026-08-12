@@ -349,12 +349,19 @@ def test_kein_telegram_kuerzel_weicht_unbegruendet_von_der_sms_ab():
     ],
 )
 def test_waechter_faengt_einen_neuen_katalogeintrag(ausnahmen, soll_rot, warum):
-    """AC-2, Zaehne des Waechters: ein KUENSTLICHER Katalog-Eintrag mit
-    abweichendem `compact_label` und ohne begruendete Ausnahme macht ihn rot.
+    """WERKZEUG-SELBSTTEST, KEIN AC-2-NACHWEIS — bitte nicht verwechseln.
 
-    Ohne diese Gegenprobe waere `test_kein_telegram_kuerzel_weicht_...` nur
-    eine Momentaufnahme des heutigen Bestands: gruen, sobald jemand einmal
-    aufgeraeumt hat, und blind fuer den naechsten Eintrag."""
+    Geprueft wird ``pruefe_kuerzel`` (oben in DIESER Datei definiert), nicht
+    der Produktivcode: ein KUENSTLICHER Katalog-Eintrag mit abweichendem
+    `compact_label` und ohne begruendete Ausnahme muss den Waechter rot machen.
+    Deshalb ist dieser Test heute gruen und bleibt es — er belegt kein
+    Produktivverhalten.
+
+    Sein Zweck ist die Gegenprobe zum eigentlichen AC-2-Waechter
+    (``test_kein_telegram_kuerzel_weicht_unbegruendet_von_der_sms_ab``, rot):
+    ohne ihn waere jener nur eine Momentaufnahme des heutigen Bestands — gruen,
+    sobald jemand einmal aufgeraeumt hat, und blind fuer den naechsten Eintrag.
+    Ein Waechter, der nur auf dem heutigen Bestand gruen ist, bewacht nichts."""
     kuenstlich = [("nebelbank", "NB", "FG")]
     verstoesse = pruefe_kuerzel(kuenstlich, ausnahmen)
     assert bool(verstoesse) is soll_rot, (
