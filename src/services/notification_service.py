@@ -409,6 +409,17 @@ class NotificationService:
                 logger.error(f"E-Mail send failed for {request.trip.name}: {e}")
 
         # SMS
+        #
+        # Issue #1680 S2 (nur Hinweis, keine Logikaenderung): der Rueckfall
+        # `sms_text or email_plain` ist der EINZIGE Weg, auf dem die
+        # Gewitter-Herkunft ("… · CAPE", Teil der Kurzzusammenfassung in
+        # `email_plain`) doch noch in SMS/Premium-SMS landen koennte — beide
+        # Kanaele tragen sie laut PO-Entscheidung ausdruecklich NICHT.
+        # `sms_text` wird seit #868 immer erzeugt (`trip_report.py:441`), der
+        # Zweig ist also praktisch tot; "praktisch tot" ist aber keine
+        # Unmoeglichkeit. Bewacht wird er am erzeugten Text (Spec AC-8:
+        # `sms_text` nicht-leer UND ohne jede Zutat-Bezeichnung), nicht durch
+        # die Annahme, er sei unerreichbar.
         telegram_fully_sent = True
         if request.send_sms and self._settings.can_send_sms():
             try:
@@ -426,6 +437,8 @@ class NotificationService:
         # selbst (Spec D3) und liefert den Grund als Ausnahme zurueck. Eine
         # Bedingung davor wuerde dieselbe Pruefung doppeln und den Grund
         # verschlucken — genau das, was `blocked_channels` verhindert.
+        # Zum Rueckfall `sms_text or email_plain` s. den Hinweis beim
+        # SMS-Block oben (Issue #1680 S2, Herkunft gehoert hier nicht hin).
         if request.send_premium_sms:
             try:
                 PremiumSmsOutput(self._settings).send(
