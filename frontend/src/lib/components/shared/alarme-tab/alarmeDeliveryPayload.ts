@@ -47,6 +47,10 @@ export interface AlarmeChannelsState {
 	email: boolean;
 	telegram: boolean;
 	sms: boolean;
+	// Issue #1745 A (D7): PFLICHTFELD wie die drei Geschwister — kein stiller
+	// Default. Folge: der erste Alarm-Save eines Bestandstrips schreibt
+	// premium_sms explizit als false, statt den Schluessel fehlen zu lassen.
+	premium_sms: boolean;
 }
 
 // Issue #1461 S3b-2a: Geschwister-Payload zu AlarmeChannelsState (bewusst
@@ -55,6 +59,8 @@ export interface AlarmeChannelThresholdsState {
 	email: string;
 	telegram: string;
 	sms: string;
+	// Issue #1745 A: Schwelle des vierten Kanals (ADR-0046 gilt je Kanal).
+	premium_sms: string;
 }
 
 export interface AlarmeDeliveryState {
@@ -85,11 +91,16 @@ export function buildAlarmeDeliveryPayload(
 	if (
 		typeof state.channels?.email !== 'boolean' ||
 		typeof state.channels?.telegram !== 'boolean' ||
-		typeof state.channels?.sms !== 'boolean'
+		typeof state.channels?.sms !== 'boolean' ||
+		// Issue #1745 A (D7): premium_sms ist der VIERTE Pflichtwert — ein
+		// dreifeldiger Alt-Aufruf wuerde den Kanal sonst still weglassen und der
+		// Haken waere sichtbar und wirkungslos.
+		typeof state.channels?.premium_sms !== 'boolean'
 	) {
 		throw new Error(
 			'buildAlarmeDeliveryPayload: channels fehlt oder enthaelt einen Nicht-boolean-Wert — ' +
-				'alert_channels wird IMMER mit allen drei expliziten Werten gesendet, kein stiller Default (F001).'
+				'alert_channels wird IMMER mit allen vier expliziten Werten gesendet ' +
+				'(email/telegram/sms/premium_sms), kein stiller Default (F001, #1745 D7).'
 		);
 	}
 	const payload: Record<string, unknown> = {
@@ -100,7 +111,8 @@ export function buildAlarmeDeliveryPayload(
 		alert_channels: {
 			email: state.channels.email,
 			telegram: state.channels.telegram,
-			sms: state.channels.sms
+			sms: state.channels.sms,
+			premium_sms: state.channels.premium_sms
 		}
 	};
 	// Issue #1461 S3b-2a: nur gesetzt, wenn der Aufrufer die Kanal-Schwellen
@@ -111,7 +123,8 @@ export function buildAlarmeDeliveryPayload(
 		payload.alert_channel_thresholds = {
 			email: state.channelThresholds.email,
 			telegram: state.channelThresholds.telegram,
-			sms: state.channelThresholds.sms
+			sms: state.channelThresholds.sms,
+			premium_sms: state.channelThresholds.premium_sms
 		};
 	}
 	if (state.metricLevels !== undefined) {

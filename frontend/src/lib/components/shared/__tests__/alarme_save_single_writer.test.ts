@@ -60,7 +60,7 @@ test('#1258 S3 F001: buildAlarmeDeliveryPayload konsolidiert Kanaele + Cooldown 
 			cooldownMinutes: 30,
 			quietFrom: '21:00',
 			quietTo: '07:00',
-			channels: { email: false, telegram: true, sms: false },
+			channels: { email: false, telegram: true, sms: false, premium_sms: false },
 			metricLevels: { wind_gust: 'sensibel' }
 		},
 		{ ideal_ranges: { temp: [10, 20] }, region: 'gr20' }
@@ -71,7 +71,12 @@ test('#1258 S3 F001: buildAlarmeDeliveryPayload konsolidiert Kanaele + Cooldown 
 	assert.equal(payload.alert_cooldown_minutes, 30);
 
 	// Kanaele — NEU Teil derselben Payload (F001-Fix).
-	assert.deepEqual(payload.alert_channels, { email: false, telegram: true, sms: false });
+	assert.deepEqual(payload.alert_channels, {
+		email: false,
+		telegram: true,
+		sms: false,
+		premium_sms: false
+	});
 
 	// Metrik-Level — NEU Teil derselben Payload, als RMW-Spread ueber
 	// currentDisplayConfig (fremde Keys wie ideal_ranges/region bleiben erhalten,
@@ -86,7 +91,7 @@ test('#1258 S3 F001: buildAlarmeDeliveryPayload konsolidiert Kanaele + Cooldown 
 test('#1258 S3 F001: ohne metricLevels bleibt display_config komplett aus der Payload draussen (kein leerer Overwrite)', () => {
 	const payload = buildAlarmeDeliveryPayload({
 		officialWarningsEnabled: true,
-		channels: { email: true, telegram: false, sms: false }
+		channels: { email: true, telegram: false, sms: false, premium_sms: false }
 	}) as Record<string, unknown>;
 	assert.equal('display_config' in payload, false);
 });
@@ -95,7 +100,12 @@ test('#1258 S3 F001: channels ist Pflicht — Nicht-boolean-Kanalwert wirft (Gua
 	assert.throws(() => {
 		buildAlarmeDeliveryPayload({
 			officialWarningsEnabled: true,
-			channels: { email: true, telegram: 'true' as unknown as boolean, sms: false }
+			channels: {
+				email: true,
+				telegram: 'true' as unknown as boolean,
+				sms: false,
+				premium_sms: false
+			}
 		});
 	}, /channels/);
 });
@@ -105,7 +115,7 @@ test('#1258 S3 F001: zwei rasch aufeinanderfolgende Aenderungen (Kanal, dann Met
 	const afterChannelToggle = buildAlarmeDeliveryPayload({
 		officialWarningsEnabled: false,
 		cooldownMinutes: 15,
-		channels: { email: true, telegram: true, sms: false },
+		channels: { email: true, telegram: true, sms: false, premium_sms: false },
 		metricLevels: { wind_gust: 'standard' }
 	}) as Record<string, unknown>;
 
@@ -116,7 +126,7 @@ test('#1258 S3 F001: zwei rasch aufeinanderfolgende Aenderungen (Kanal, dann Met
 	const afterMetricChange = buildAlarmeDeliveryPayload({
 		officialWarningsEnabled: false,
 		cooldownMinutes: 15,
-		channels: { email: true, telegram: true, sms: false },
+		channels: { email: true, telegram: true, sms: false, premium_sms: false },
 		metricLevels: { wind_gust: 'sensibel' }
 	}) as Record<string, unknown>;
 

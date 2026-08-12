@@ -135,7 +135,7 @@ describe('#1544/#1545 AC-6 Ebene 1: gesendete Payload behaelt die Stufe der deak
 		// NICHT aendern darf.
 		const payload = buildAlarmeDeliveryPayload({
 			officialWarningsEnabled: false,
-			channels: { email: true, telegram: false, sms: false },
+			channels: { email: true, telegram: false, sms: false, premium_sms: false },
 			metricLevels: persistierteStufen
 		}) as { display_config?: { metric_alert_levels?: Record<string, string> } };
 
@@ -348,7 +348,7 @@ describe('#1544/#1545 AC-6 Ebene 3: die Kette bis zur gesendeten Nutzlast, zur L
 		// Fuge 3: dieselben Werte durch die ECHTE Payload-Funktion.
 		const payload = buildAlarmeDeliveryPayload({
 			officialWarningsEnabled: false,
-			channels: { email: true, telegram: false, sms: false },
+			channels: { email: true, telegram: false, sms: false, premium_sms: false },
 			metricLevels
 		}) as { display_config?: { metric_alert_levels?: Record<string, string> } };
 		assert.equal(

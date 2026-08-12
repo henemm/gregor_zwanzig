@@ -25,7 +25,7 @@ describe('D2 AC-2/AC-5: Alarm-Payload schreibt official_alerts_enabled nicht meh
 			cooldownMinutes: 45,
 			quietFrom: '22:00',
 			quietTo: '06:00',
-			channels: { email: true, telegram: false, sms: false }
+			channels: { email: true, telegram: false, sms: false, premium_sms: false }
 		} as never);
 		assert.ok(
 			!Object.prototype.hasOwnProperty.call(payload, 'official_alerts_enabled'),
@@ -38,7 +38,7 @@ describe('D2 AC-2/AC-5: Alarm-Payload schreibt official_alerts_enabled nicht meh
 		assert.doesNotThrow(() => {
 			buildAlarmeDeliveryPayload({
 				officialWarningsEnabled: true,
-				channels: { email: true, telegram: false, sms: false }
+				channels: { email: true, telegram: false, sms: false, premium_sms: false }
 			} as never);
 		}, 'officialAlertsEnabled ist kein Payload-Feld des Alarm-Tabs mehr — kein Guard-Wurf.');
 	});
@@ -48,7 +48,7 @@ describe('D2 AC-2/AC-5: Alarm-Payload schreibt official_alerts_enabled nicht meh
 			() =>
 				buildAlarmeDeliveryPayload({
 					officialWarningsEnabled: 'true' as unknown as boolean,
-					channels: { email: true, telegram: false, sms: false }
+					channels: { email: true, telegram: false, sms: false, premium_sms: false }
 				} as never),
 			/officialWarningsEnabled/
 		);
@@ -71,12 +71,17 @@ describe('D2 AC-2/AC-5: Alarm-Payload schreibt official_alerts_enabled nicht meh
 			cooldownMinutes: 30,
 			quietFrom: '23:00',
 			quietTo: '07:00',
-			channels: { email: true, telegram: true, sms: false }
+			channels: { email: true, telegram: true, sms: false, premium_sms: false }
 		} as never) as Record<string, unknown>;
 		assert.deepEqual(payload.official_warnings, { enabled: true });
 		assert.equal(payload.alert_cooldown_minutes, 30);
 		assert.equal(payload.alert_quiet_from, '23:00');
 		assert.equal(payload.alert_quiet_to, '07:00');
-		assert.deepEqual(payload.alert_channels, { email: true, telegram: true, sms: false });
+		assert.deepEqual(payload.alert_channels, {
+			email: true,
+			telegram: true,
+			sms: false,
+			premium_sms: false
+		});
 	});
 });

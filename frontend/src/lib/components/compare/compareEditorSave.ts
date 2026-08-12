@@ -60,6 +60,9 @@ export interface CompareEditorEdits {
 	officialAlertTriggersEnabled?: boolean;
 	sendTelegram?: boolean;
 	sendSms?: boolean;
+	// Issue #1745 A: vierter Alarm-Kanal (Premium-SMS). Optional →
+	// rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
+	sendPremiumSms?: boolean;
 	// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + editierbare Laufzeit
 	// (VersandTab context="vergleich"). Optional → rückwärtskompatibel.
 	// endDate: undefined = unangetastet (Round-Trip), null = "bis auf Weiteres"
@@ -188,6 +191,8 @@ export function buildComparePresetSavePayload(
 			: {}),
 		...(edits.sendTelegram !== undefined ? { send_telegram: edits.sendTelegram } : {}),
 		...(edits.sendSms !== undefined ? { send_sms: edits.sendSms } : {}),
+		// Issue #1745 A: analoges Round-Trip-Prinzip für den vierten Alarm-Kanal.
+		...(edits.sendPremiumSms !== undefined ? { send_premium_sms: edits.sendPremiumSms } : {}),
 		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + End-Datum-Lösch-Sentinel.
 		...(edits.morningEnabled !== undefined ? { morning_enabled: edits.morningEnabled } : {}),
 		...(edits.morningTime !== undefined ? { morning_time: toHHMMSS(edits.morningTime) } : {}),
@@ -244,6 +249,9 @@ export interface NewComparePresetFields {
 	officialAlertTriggersEnabled: boolean;
 	sendTelegram: boolean;
 	sendSms: boolean;
+	// Issue #1745 A (AC-11): Pflichtfeld wie seine beiden Geschwister-Booleans —
+	// ein weggelassener Schlüssel überliesse den Default dem Server.
+	sendPremiumSms: boolean;
 	officialWarningsEnabled: boolean;
 	morningEnabled: boolean;
 	morningTime: string;
@@ -309,6 +317,8 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		official_alert_triggers_enabled: fields.officialAlertTriggersEnabled,
 		send_telegram: fields.sendTelegram,
 		send_sms: fields.sendSms,
+		// Issue #1745 A (AC-11): unconditional wie die beiden Geschwister oben.
+		send_premium_sms: fields.sendPremiumSms,
 		// Issue #1258 S4 (AC-27/E3): unconditional wie die Geschwister-Booleans
 		// oben — Neuanlagen tragen immer official_warnings.enabled (F1-Default
 		// false), kein sources-Feld (FE schreibt sources nie).

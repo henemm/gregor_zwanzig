@@ -439,3 +439,160 @@ describe('#1260 Hub-Alarme Kurzstil-Toggle: Hydration + PUT-Persistenz (F001)', 
 		);
 	});
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TDD RED — Issue #1745 Scheibe A (AC-9): der vierte Kanal muss die GESAMTE
+// Bridge-Kette des Ortsvergleichs-Hubs überleben — Hydration, PUT-Aufbau,
+// Flush und Fehler-Rollback. Spec:
+//   docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md (AC-9, Landmine 3)
+//
+// Landmine 3: `buildHubPutPayload` kodiert die Feldliste ein ZWEITES Mal neben
+// `buildComparePresetSavePayload` (compareHubWizardBridge.ts:125-195). Eine
+// vergessene Stelle erzeugt einen sichtbaren, aber wirkungslosen Haken — der
+// gemeldete Bug in neuer Form.
+//
+// RED HEUTE: `sendPremiumSms` ist weder in `AlarmHydrationTarget`, noch in
+// `HubEdit`, noch in `AlarmSnapshot`, noch in der Rollback-Feldliste bekannt.
+// Mutation (Spec): buildHubPutPayload() reicht `edit.sendPremiumSms` nicht an
+// buildComparePresetSavePayload durch.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', () => {
+	function makeAlarmSnapshot(overrides: Record<string, unknown> = {}): AlarmSnapshot {
+		return {
+			officialAlertsEnabled: true,
+			officialWarningsEnabled: true,
+			radarAlertEnabled: false,
+			metricAlertLevels: {},
+			alertCooldownMinutes: 30,
+			alertQuietFrom: '22:00',
+			alertQuietTo: '07:00',
+			sendTelegram: true,
+			sendSms: false,
+			sendPremiumSms: false,
+			...overrides
+		} as AlarmSnapshot;
+	}
+
+	test('Glied 1 — Hydration: send_premium_sms aus dem Preset landet in state.sendPremiumSms', () => {
+		const preset = makePreset({ send_premium_sms: true } as Partial<ComparePreset>);
+		const state: Record<string, unknown> = {};
+
+		hydrateAlarmFieldsFromPreset(state, preset);
+
+		assert.strictEqual(
+			state.sendPremiumSms,
+			true,
+			'Ohne diese Hydration zeigte der Alarme-Reiter einen gespeicherten Premium-SMS-Haken ' +
+				'dauerhaft als „aus" — und der nächste Alarme-Save schriebe den Server-Bestand aktiv ' +
+				'zurück (dieselbe Fehlerklasse wie #1461 S3b-2b für Telegram/SMS).'
+		);
+	});
+
+	test('Glied 1b — Hydration-Default: fehlt send_premium_sms im Preset, ist der Kanal aus (D1)', () => {
+		const preset = makePreset({ send_premium_sms: undefined } as Partial<ComparePreset>);
+		const state: Record<string, unknown> = {};
+
+		hydrateAlarmFieldsFromPreset(state, preset);
+
+		assert.strictEqual(state.sendPremiumSms, false, 'Kostenkanal — Default ist AUS, nicht undefined.');
+	});
+
+	test('Glied 2 — buildHubPutPayload: der Teil-Edit landet als send_premium_sms im Body (Landmine 3)', () => {
+		const preset = makePreset({ send_premium_sms: false } as Partial<ComparePreset>);
+
+		const { body } = buildHubPutPayload(preset, {
+			sendPremiumSms: true
+		} as Parameters<typeof buildHubPutPayload>[1]);
+
+		assert.strictEqual(
+			(body as unknown as Record<string, unknown>).send_premium_sms,
+			true,
+			'buildHubPutPayload reicht sendPremiumSms nicht an buildComparePresetSavePayload durch — ' +
+				'der Haken ginge beim nächsten Hub-Speichern verloren (Landmine 3). Erhalten: ' +
+				JSON.stringify((body as unknown as Record<string, unknown>).send_premium_sms)
+		);
+	});
+
+	test('Glied 2b — Round-Trip: ohne Edit-Feld bleibt der Preset-Bestand unverändert', () => {
+		const preset = makePreset({ send_premium_sms: true } as Partial<ComparePreset>);
+		const { body } = buildHubPutPayload(preset, { corridors: preset.corridors });
+		assert.strictEqual(
+			(body as unknown as Record<string, unknown>).send_premium_sms,
+			true,
+			'Ein Edit an einem ANDEREN Reiter darf den gespeicherten Premium-SMS-Haken nicht löschen.'
+		);
+	});
+
+	test('Glied 3 — flushPendingAlarmSave: ein reiner Premium-SMS-Klick löst einen PUT MIT dem Feld aus', () => {
+		const preset = makePreset({ send_premium_sms: false } as Partial<ComparePreset>);
+		const before = makeAlarmSnapshot({ sendPremiumSms: false });
+		const current = makeAlarmSnapshot({ sendPremiumSms: true });
+
+		const result = flushPendingAlarmSave(preset, current, before);
+
+		assert.ok(
+			result,
+			'Ein reiner Premium-SMS-Toggle-Klick muss als Snapshot-Differenz erkannt werden und einen ' +
+				'PUT liefern (nicht null) — sonst bleibt der Klick folgenlos.'
+		);
+		assert.strictEqual(
+			(result!.body as unknown as Record<string, unknown>).send_premium_sms,
+			true,
+			`der geklickte Kanal muss im PUT-Body stehen — erhalten: ${JSON.stringify(result!.body.send_premium_sms)}`
+		);
+	});
+
+	test('Glied 3b — ein Save aus einem anderen Grund sendet den Premium-SMS-Stand unverändert mit', () => {
+		// Ohne dieses Mitsenden schriebe der nächste Cooldown-Save den
+		// Server-Bestand still zurück (der bestätigte #1461-S3b-2b-Fehler).
+		const preset = makePreset({ send_premium_sms: true } as Partial<ComparePreset>);
+		const result = flushPendingAlarmSave(
+			preset,
+			makeAlarmSnapshot({ sendPremiumSms: true, alertCooldownMinutes: 60 }),
+			makeAlarmSnapshot({ sendPremiumSms: true, alertCooldownMinutes: 30 })
+		);
+
+		assert.ok(result);
+		assert.strictEqual((result!.body as unknown as Record<string, unknown>).send_premium_sms, true);
+	});
+
+	test('Glied 4 — rollbackAlarmSnapshot: der eigene gescheiterte Klick rollt zurück', () => {
+		const before = makeAlarmSnapshot({ sendPremiumSms: false });
+		const attempted = makeAlarmSnapshot({ sendPremiumSms: true });
+		const state: Record<string, unknown> = { ...makeAlarmSnapshot({ sendPremiumSms: true }) };
+
+		rollbackAlarmSnapshot(state, before, attempted);
+
+		assert.strictEqual(
+			state.sendPremiumSms,
+			false,
+			'Nach einem fehlgeschlagenen PUT muss die Oberfläche wieder deckungsgleich mit dem Server ' +
+				'sein — sonst zeigt sie einen Haken, den niemand gespeichert hat.'
+		);
+	});
+
+	test('Glied 4b — rollbackAlarmSnapshot bleibt diff-basiert: der eigene Klick rollt zurück, ein paralleler Fremd-Edit nicht', () => {
+		// S5 Fix-Loop 1/F001: ein pauschales „alles auf before" würde einen Edit,
+		// den ein Nachbar-Reiter WÄHREND des in-flight PUTs gemacht hat, still
+		// überschreiben. Beide Aussagen in EINEM Lauf, damit der neue vierte
+		// Kanal nicht versehentlich als Pauschal-Rollback nachgezogen wird.
+		const before = makeAlarmSnapshot({ sendPremiumSms: false, alertCooldownMinutes: 30 });
+		const attempted = makeAlarmSnapshot({ sendPremiumSms: true, alertCooldownMinutes: 30 });
+		const state: Record<string, unknown> = {
+			...makeAlarmSnapshot({ sendPremiumSms: true, alertCooldownMinutes: 60 })
+		};
+
+		rollbackAlarmSnapshot(state, before, attempted);
+
+		assert.strictEqual(
+			state.sendPremiumSms,
+			false,
+			'der eigene, gescheiterte Premium-SMS-Klick muss zurückgerollt werden'
+		);
+		assert.strictEqual(
+			state.alertCooldownMinutes,
+			60,
+			'der parallele Versand-Reiter-Edit (60) darf vom Alarme-Rollback nicht überschrieben werden'
+		);
+	});
+});

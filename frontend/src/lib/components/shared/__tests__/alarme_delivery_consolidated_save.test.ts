@@ -34,14 +34,14 @@ test('#1258 AC-12a: buildAlarmeDeliveryPayload konsolidiert mehrere geänderte F
 		cooldownMinutes: 45,
 		quietFrom: '22:00',
 		quietTo: '06:00',
-		channels: { email: true, telegram: false, sms: false }
+		channels: { email: true, telegram: false, sms: false, premium_sms: false }
 	});
 	assert.deepEqual(payload, {
 		official_warnings: { enabled: false },
 		alert_cooldown_minutes: 45,
 		alert_quiet_from: '22:00',
 		alert_quiet_to: '06:00',
-		alert_channels: { email: true, telegram: false, sms: false }
+		alert_channels: { email: true, telegram: false, sms: false, premium_sms: false }
 	});
 });
 
@@ -49,7 +49,7 @@ test('#1258 AC-12a: official_warnings enthält NUR "enabled", KEINEN sources-Key
 	const payload = buildAlarmeDeliveryPayload({
 		officialWarningsEnabled: true,
 		cooldownMinutes: 30,
-		channels: { email: true, telegram: false, sms: false }
+		channels: { email: true, telegram: false, sms: false, premium_sms: false }
 	}) as { official_warnings: Record<string, unknown> };
 	assert.deepEqual(Object.keys(payload.official_warnings), ['enabled']);
 	assert.equal('sources' in payload.official_warnings, false);
@@ -62,7 +62,7 @@ test('#1258 AC-12a/F002: buildAlarmeDeliveryPayload wirft bei fehlendem official
 	assert.throws(() => {
 		buildAlarmeDeliveryPayload({
 			officialWarningsEnabled: undefined as unknown as boolean,
-			channels: { email: true, telegram: false, sms: false }
+			channels: { email: true, telegram: false, sms: false, premium_sms: false }
 		});
 	}, /officialWarningsEnabled/);
 });
@@ -71,7 +71,7 @@ test('#1258 AC-12a/F002: buildAlarmeDeliveryPayload wirft bei Nicht-boolean offi
 	assert.throws(() => {
 		buildAlarmeDeliveryPayload({
 			officialWarningsEnabled: 'true' as unknown as boolean,
-			channels: { email: true, telegram: false, sms: false }
+			channels: { email: true, telegram: false, sms: false, premium_sms: false }
 		});
 	}, /officialWarningsEnabled/);
 });
@@ -82,7 +82,7 @@ test('#1258 AC-12a: fehlende Cooldown/Quiet-Werte werden zu null (Vorbild alertD
 		cooldownMinutes: undefined,
 		quietFrom: undefined,
 		quietTo: undefined,
-		channels: { email: true, telegram: false, sms: false }
+		channels: { email: true, telegram: false, sms: false, premium_sms: false }
 	}) as Record<string, unknown>;
 	assert.equal(payload.alert_cooldown_minutes, null);
 	assert.equal(payload.alert_quiet_from, null);
@@ -95,14 +95,14 @@ test('#1258 AC-12a: zwei rasch aufeinanderfolgende Änderungen ergeben je eine P
 		cooldownMinutes: undefined,
 		quietFrom: undefined,
 		quietTo: undefined,
-		channels: { email: true, telegram: false, sms: false }
+		channels: { email: true, telegram: false, sms: false, premium_sms: false }
 	}) as Record<string, unknown>;
 	const afterSecondChange = buildAlarmeDeliveryPayload({
 		officialWarningsEnabled: false,
 		cooldownMinutes: 45,
 		quietFrom: undefined,
 		quietTo: undefined,
-		channels: { email: true, telegram: false, sms: false }
+		channels: { email: true, telegram: false, sms: false, premium_sms: false }
 	}) as Record<string, unknown>;
 	// Die zweite (finale) Payload enthält weiterhin den ersten Änderungspfad
 	// (officialWarningsEnabled) UND die neuen Werte (cooldownMinutes) — genau
@@ -186,7 +186,7 @@ test(
 			lastPayload = buildAlarmeDeliveryPayload({
 				officialWarningsEnabled: false,
 				cooldownMinutes: undefined,
-				channels: { email: true, telegram: false, sms: false }
+				channels: { email: true, telegram: false, sms: false, premium_sms: false }
 			});
 		});
 
@@ -199,7 +199,7 @@ test(
 			lastPayload = buildAlarmeDeliveryPayload({
 				officialWarningsEnabled: false,
 				cooldownMinutes: 45,
-				channels: { email: true, telegram: false, sms: false }
+				channels: { email: true, telegram: false, sms: false, premium_sms: false }
 			});
 		});
 
