@@ -415,6 +415,51 @@ def test_ortsvergleich_radaralarm_bleibt_unveraendert():
 
 
 # ---------------------------------------------------------------------------
+# AC-3/AC-4 — die RANGFOLGE selbst, nicht nur ihre heutigen Auswirkungen
+# ---------------------------------------------------------------------------
+
+def test_ortsname_schlaegt_die_segment_kennung():
+    """Die Aufloesungsreihenfolge lautet `location_label` -> Segment -> km.
+    Dieser Test prueft die ERSTE Stufe an der Stelle, an der sie WIRKT.
+
+    Warum er noetig ist (Adversary-Befund F002, 2026-08-12): vertauscht man in
+    `segments.format_alert_location` die beiden ersten Stufen, wird KEIN
+    anderer Test rot — weil heute kein einziger Aufrufer beide Felder
+    gleichzeitig setzt (`to_alert_message` setzt nur die Segment-Kennung,
+    `to_multi_point_alert_message` nur den Ortsnamen). Die Regel stand damit im
+    Code und in der Spec, war aber unbewacht: eine Verfaelschung waere durch
+    alle 24 Zusicherungen dieser Datei hindurchgelaufen.
+
+    Die Kombination ist deshalb bewusst am Renderer-Modell gebaut und nicht
+    ueber eine Projektion — es GIBT heute keine, die sie erzeugt. Genau das ist
+    die Luecke: die Rangfolge entscheidet erst, wenn ein kuenftiger Aufrufer
+    beides mitgibt (z.B. ein Vergleichs-Ort mit Etappenbezug). Bis dahin haelt
+    dieser Test die Entscheidung fest, statt sie dem Zufall der naechsten
+    Erweiterung zu ueberlassen.
+    """
+    from output.renderers.alert.model import AlertEvent, AlertMessage
+    from output.renderers.alert.render import render_email, render_subject
+
+    event = AlertEvent(
+        metric_id="gust", value_from=50.0, value_to=80.0, threshold=20.0,
+        cmp="über", occurred_at="16:00", km_from=4.0, km_to=6.0,
+        location_label="Toulon", segment_id="3",
+    )
+    msg = AlertMessage(
+        trip_short="Toulon", stand_at="10:00", events=(event,),
+        location_label="Toulon",
+    )
+
+    assert _location_slot(render_subject(msg)) == "Toulon", (
+        "Segment-Kennung verdraengt den Ortsnamen im Betreff — Stufe 1 der "
+        "Aufloesungsreihenfolge greift nicht"
+    )
+    assert _wo_ort(render_email(msg)[1]) == "Toulon", (
+        "Segment-Kennung verdraengt den Ortsnamen im Mailkoerper"
+    )
+
+
+# ---------------------------------------------------------------------------
 # AC-5 — Kurznachricht nennt keinen Ort und bleibt <= 140 Zeichen
 # ---------------------------------------------------------------------------
 
