@@ -194,6 +194,15 @@ class ForecastDataPoint:
     #                          S5b/S5c (DWD-Schwelle bzw. Meteo-France AROME)
     hail_flag: Optional[bool] = None
 
+    # Issue #1680 S1: WELCHE Zutaten die fusionierte `thunder_level` dieser
+    # Stunde tragen (Schluessel aus `metric_format.THUNDER_SIGNAL_LABEL_DE`).
+    # BEWUSST `list[str]`, nie `list[ThunderLevel]` oder `set`: die
+    # Schnappschuss-Serialisierung behandelt nur SKALARE Enums, alles andere
+    # bricht `json.dumps` -- und der Fehler wird dort still geschluckt
+    # (`weather_snapshot.py`), der Schnappschuss waere weg. `None` heisst
+    # "keine Aussage", eine leere Liste "keine tragende Zutat".
+    thunder_level_signals: Optional[list[str]] = None
+
     # Issue #435: Test-helper alias — some test helpers init with
     # `wind_dir_deg=` instead of `wind_direction_deg=`. We accept both;
     # __post_init__ canonicalises to wind_direction_deg.
@@ -414,6 +423,11 @@ class SegmentWeatherSummary:
     cloud_avg_pct: Optional[int] = None
     humidity_avg_pct: Optional[int] = None
     thunder_level_max: Optional[ThunderLevel] = None
+    # Issue #1680 S1: Vereinigung der Zutaten ALLER Stunden, die
+    # `thunder_level_max` erreichen (Aggregationsregel
+    # "union_of_max_carriers"). Feldtyp `list[str]` aus demselben Grund wie
+    # `ForecastDataPoint.thunder_level_signals` -- s. dort.
+    thunder_level_max_signals: Optional[list[str]] = None
     visibility_min_m: Optional[int] = None
 
     # Extended metrics (Feature 2.2b) - ALL None for Feature 2.1

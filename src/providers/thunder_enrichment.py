@@ -126,22 +126,29 @@ def _fuse_thunder_levels(
     Ueberschreibt NUR, wenn die Fusion ein Ergebnis liefert -- liefert sie
     ``None`` ("keine Aussage"), bleibt ein bereits vorhandener Wert an
     ``dp.thunder_level`` erhalten (s. Spec Abschnitt 3, letzter Absatz).
+
+    Issue #1680 S1: zusaetzlich wird festgehalten, WELCHE Zutaten die Stufe
+    tragen (``dp.thunder_level_signals``) -- aus DEMSELBEN Argumentsatz und
+    unter DERSELBEN Ueberschreib-Bedingung, damit Stufe und Herkunft nie aus
+    zwei verschiedenen Rechnungen stammen koennen.
     """
-    from output.metric_format import thunder_level_from_signals
+    from output.metric_format import thunder_level_from_signals, thunder_signal_carriers
 
     cape_low, cape_med, cape_high = cape_ladder or (None, None, None)
     lpi_low, lpi_med, lpi_high = lpi_thresholds or (None, None, None)
     for dp in data:
-        fused = thunder_level_from_signals(
-            dp.thunder_level, dp.lightning_density_per_km2_3h, dp.cape_jkg,
-            dp.lightning_potential_lpi_jkg,
+        werte = (dp.thunder_level, dp.lightning_density_per_km2_3h, dp.cape_jkg,
+                 dp.lightning_potential_lpi_jkg)
+        leitern = dict(
             cape_threshold_jkg=cape_low,
             cape_med_min=cape_med, cape_high_min=cape_high,
             cin_jkg=dp.convective_inhibition_jkg,
             lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
         )
+        fused = thunder_level_from_signals(*werte, **leitern)
         if fused is not None:
             dp.thunder_level = fused
+            dp.thunder_level_signals = thunder_signal_carriers(*werte, **leitern)
 
 
 def _schwellen_fuer_reihe(

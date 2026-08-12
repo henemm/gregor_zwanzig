@@ -457,6 +457,26 @@ Mutationen ausschließlich per String-Ersetzung mit externer Sicherungskopie
    (Hinzufügen ist sicher), aber ein künftiges Entfernen des Feldes bräuchte
    eine explizite Migration.
 
+7. 🔴 **`aggregate_stage()` kennt die Regel `union_of_max_carriers` nicht**
+   (`src/services/weather_metrics.py`, generischer `else`-Zweig ⇒ `values[0]`).
+   Auf **Etappen**-Ebene gewönne damit die Herkunft des **ersten** Segments,
+   während `thunder_level_max` per MAX über alle Segmente aggregiert — Stufe
+   und Herkunft könnten dort aus verschiedenen Segmenten stammen.
+   **Heute nicht erreichbar** (Adversary Runde 3, vollständige Grep-Analyse
+   aller Lesestellen): der einzige Produktiv-Lesepunkt ist
+   `compare_html.py` → `loc_thunder_signals()` → `_daily_summary()` →
+   `summarize_points()`, der `aggregate_stage()` strukturell umgeht; die drei
+   Aufrufer von `aggregate_stage()` lesen die Trägerliste nicht, und
+   `trip_alert.py`/`compare_alert.py` nutzen ausschließlich
+   `thunder_level_max`.
+   **Tech-Lead-Entscheid 2026-08-12: dokumentieren statt bauen.** Ein
+   Aggregations-Zweig für einen Verbraucher, den es nicht gibt, wäre Code
+   ohne Wirkort — und ein Test darauf bewachte nichts. ⚠️ **Die Scheibe, die
+   die Herkunft auf die Trip-Seite bringt, MUSS das zuerst lösen** — dort
+   entsteht der zweite Verbraucher. Präzedenz derselben Fehlerklasse im
+   selben `else`-Zweig: #1592 F003 (`cape_model_id`), dort war der zweite
+   Verbraucher bereits da und der Befund echt.
+
 ## Nicht in dieser Scheibe
 
 - **Compare-Stundentabelle** (HTML `_render_hour_row`, Z. 937-938; Klartext

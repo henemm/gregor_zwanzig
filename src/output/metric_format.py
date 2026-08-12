@@ -366,6 +366,124 @@ def _gedaempft_durch_cin(
     return ThunderLevel.NONE
 
 
+# Die vier Zutaten der Fusion, deutsch beschriftet (Issue #1680 S1). Die
+# Einfuegereihenfolge in `_signal_levels()` ist zugleich die Nenn-Reihenfolge
+# der Herkunft -- deterministisch, ohne zweites Sortier-Vokabular.
+# NICHT zu verwechseln mit `thunder_enrichment._SIGNAL_ZU_FELD`: das ist das
+# Rohwert-Routing der Quellen (`"lpi"`, `"cin_ml"`, ...), eine andere Ebene.
+THUNDER_SIGNAL_LABEL_DE: dict[str, str] = {
+    "wettercode": "Wettercode",
+    "blitzdichte": "Blitzdichte",
+    "cape": "CAPE",
+    "blitzpotenzial": "Blitzpotenzial",
+}
+
+
+def thunder_signal_label(name: str) -> str:
+    """Deutsche Beschriftung EINER Fusions-Zutat (Issue #1680 S1).
+
+    Exakt-Treffer zuerst, sonst der rohe Name selbst -- nie ein erfundener
+    Ersatztext (Muster ``official_alert_source_label``, ADR-0007). Ohne
+    Heuristik-Stufe, weil die Signalmenge geschlossen ist (vier feste
+    Schluessel, kein Namensraum mit Praefix-Varianten).
+    """
+    return THUNDER_SIGNAL_LABEL_DE.get(name, name)
+
+
+def _signal_levels(
+    wettercode_level: Optional[ThunderLevel],
+    lightning_density: Optional[float],
+    cape_jkg: Optional[float],
+    lightning_potential_jkg: Optional[float] = None,
+    *,
+    cape_threshold_jkg: Optional[float],
+    cape_med_min: Optional[float],
+    cape_high_min: Optional[float],
+    cin_jkg: Optional[float],
+    lpi_low_min: Optional[float],
+    lpi_med_min: Optional[float],
+    lpi_high_min: Optional[float],
+) -> dict[str, ThunderLevel]:
+    """Die EINZELsignale der Fusion, je Zutat unter festem Schluessel
+    (Issue #1680 S1). Ein Signal, das nichts beitraegt (Wert fehlt ODER seine
+    Leiter ist unkalibriert), erscheint GAR NICHT -- "keine Aussage" ist kein
+    Eintrag mit Stufe ``NONE``.
+
+    Ausgelagert aus ``thunder_level_from_signals()``, damit die Stufe UND ihre
+    Herkunft aus EINER Rechnung stammen (keine zweite Fusionsregel neben der
+    kanonischen, ADR-0025).
+    """
+    levels: dict[str, ThunderLevel] = {}
+
+    if wettercode_level is not None:
+        levels["wettercode"] = wettercode_level
+
+    if lightning_density is not None:
+        levels["blitzdichte"] = _thunder_level_from_ladder(
+            lightning_density, _LIGHTNING_LOW_MIN, _LIGHTNING_MED_MIN, _LIGHTNING_HIGH_MIN,
+        )
+
+    if (cape_jkg is not None
+            and cape_threshold_jkg is not None
+            and cape_med_min is not None
+            and cape_high_min is not None):
+        levels["cape"] = _gedaempft_durch_cin(
+            _thunder_level_from_ladder(
+                cape_jkg, cape_threshold_jkg, cape_med_min, cape_high_min,
+            ),
+            cin_jkg,
+        )
+
+    if (lightning_potential_jkg is not None
+            and lpi_low_min is not None
+            and lpi_med_min is not None
+            and lpi_high_min is not None):
+        levels["blitzpotenzial"] = _thunder_level_from_ladder(
+            lightning_potential_jkg, lpi_low_min, lpi_med_min, lpi_high_min,
+        )
+
+    return levels
+
+
+def thunder_signal_carriers(
+    wettercode_level: Optional[ThunderLevel],
+    lightning_density: Optional[float],
+    cape_jkg: Optional[float],
+    lightning_potential_jkg: Optional[float] = None,
+    *,
+    cape_threshold_jkg: Optional[float],
+    cape_med_min: Optional[float],
+    cape_high_min: Optional[float],
+    cin_jkg: Optional[float],
+    lpi_low_min: Optional[float],
+    lpi_med_min: Optional[float],
+    lpi_high_min: Optional[float],
+) -> list[str]:
+    """Die Zutaten, die die fusionierte Stufe TRAGEN (Issue #1680 S1).
+
+    Dieselben Argumente wie ``thunder_level_from_signals()`` -- absichtlich
+    eine zweite Funktion statt eines Rueckgabetyp-Wechsels, damit die Signatur
+    der Fusion unveraendert bleibt.
+
+    Genannt wird JEDE Zutat, die die Hoechststufe erreicht (PO-Entscheidung
+    (ii)): es wird kein Gewinner gekuert, die interne Pruefreihenfolge ist
+    damit keine Produktaussage. ``NONE`` liefert eine LEERE Liste -- "kein
+    Gewitter" hat keine Herkunft ("— · CAPE" waere ein Widerspruch, Spec AC-3).
+    """
+    levels = _signal_levels(
+        wettercode_level, lightning_density, cape_jkg, lightning_potential_jkg,
+        cape_threshold_jkg=cape_threshold_jkg, cape_med_min=cape_med_min,
+        cape_high_min=cape_high_min, cin_jkg=cin_jkg, lpi_low_min=lpi_low_min,
+        lpi_med_min=lpi_med_min, lpi_high_min=lpi_high_min,
+    )
+    if not levels:
+        return []
+    top = max_thunder(levels.values())
+    if top == ThunderLevel.NONE:
+        return []
+    return [name for name, stufe in levels.items() if stufe == top]
+
+
 def thunder_level_from_signals(
     wettercode_level: Optional[ThunderLevel],
     lightning_density: Optional[float],
@@ -422,39 +540,20 @@ def thunder_level_from_signals(
     KEYWORD-ONLY OHNE DEFAULT, exakt wie ``cape_threshold_jkg``. Ist auch
     nur eine der drei ``None`` (Gebiet unbekannt ODER keine Kalibrierung,
     z.B. FR), traegt das Blitzpotenzial KEIN Signal zur Fusion bei.
+
+    Issue #1680 S1: die Einzelsignale entstehen seither in ``_signal_levels()``
+    -- gleiche Regeln, gleicher Rueckgabewert, nur zusaetzlich unter ihrem
+    Signalnamen abrufbar (``thunder_signal_carriers()``).
     """
-    signals: list[ThunderLevel] = []
-
-    if wettercode_level is not None:
-        signals.append(wettercode_level)
-
-    if lightning_density is not None:
-        signals.append(_thunder_level_from_ladder(
-            lightning_density, _LIGHTNING_LOW_MIN, _LIGHTNING_MED_MIN, _LIGHTNING_HIGH_MIN,
-        ))
-
-    if (cape_jkg is not None
-            and cape_threshold_jkg is not None
-            and cape_med_min is not None
-            and cape_high_min is not None):
-        signals.append(_gedaempft_durch_cin(
-            _thunder_level_from_ladder(
-                cape_jkg, cape_threshold_jkg, cape_med_min, cape_high_min,
-            ),
-            cin_jkg,
-        ))
-
-    if (lightning_potential_jkg is not None
-            and lpi_low_min is not None
-            and lpi_med_min is not None
-            and lpi_high_min is not None):
-        signals.append(_thunder_level_from_ladder(
-            lightning_potential_jkg, lpi_low_min, lpi_med_min, lpi_high_min,
-        ))
-
+    signals = _signal_levels(
+        wettercode_level, lightning_density, cape_jkg, lightning_potential_jkg,
+        cape_threshold_jkg=cape_threshold_jkg, cape_med_min=cape_med_min,
+        cape_high_min=cape_high_min, cin_jkg=cin_jkg, lpi_low_min=lpi_low_min,
+        lpi_med_min=lpi_med_min, lpi_high_min=lpi_high_min,
+    )
     if not signals:
         return None
-    return max_thunder(signals)
+    return max_thunder(signals.values())
 
 
 # ---------------------------------------------------------------------------

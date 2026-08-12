@@ -40,13 +40,18 @@ ALLE_ZUTATEN = ("Wettercode", "Blitzdichte", "CAPE", "Blitzpotenzial")
 _TD = re.compile(r"<td[^>]*>(.*?)</td>", re.S)
 
 
-def _dp(h: int, *, cape=None, cin=None, lpi=None, dichte=None, hail=None):
-    """Ein Stunden-Datenpunkt mit ROHWERTEN -- die Stufe rechnet die Fusion."""
+def _dp(h: int, *, cape=None, cin=None, lpi=None, dichte=None, hail=None, code=None):
+    """Ein Stunden-Datenpunkt mit ROHWERTEN -- die Stufe rechnet die Fusion.
+
+    ``code`` ist die Wettercode-Stufe dieser Stunde (``dp.thunder_level``, das
+    Signal "wettercode" der Fusion) -- die EINZIGE Zutat, die schon als Stufe
+    hereinkommt statt als Rohwert.
+    """
     return ForecastDataPoint(
         ts=datetime(2026, 8, 6, h, 0, tzinfo=timezone.utc), t2m_c=20.0,
         cape_jkg=cape, convective_inhibition_jkg=cin,
         lightning_potential_lpi_jkg=lpi, lightning_density_per_km2_3h=dichte,
-        hail_flag=hail,
+        hail_flag=hail, thunder_level=code,
     )
 
 
@@ -167,6 +172,27 @@ def test_ac2_beide_tragenden_zutaten_werden_genannt():
                          [_dp(14, cape=1500.0, cin=5.0, lpi=60.0)]))
     assert _teile(_html_zellen(html)[0]) == ("hoch", {"CAPE", "Blitzpotenzial"}), (
         f"Beide Traeger der Hoechststufe muessen erscheinen: {_html_zellen(html)[0]!r}")
+
+
+def test_ac2_eine_schwaechere_zutat_derselben_stunde_wird_nicht_mitgenannt():
+    """AC-2/AC-10 (Gegenrichtung): Given DIESELBE Stunde traegt zwei Zutaten
+    auf UNTERSCHIEDLICHEN Stufen -- Wettercode nur "leicht", CAPE dagegen
+    "hoch" --, When die Gewitter-Zeile gerendert wird, Then wird NUR die
+    tragende Zutat genannt.
+
+    "Genannt wird JEDE Zutat, die die HOECHSTSTUFE erreicht" ist die
+    Zusicherung; ohne diese Fixture belegt keine Fixture den zweiten Teil des
+    Satzes: alle uebrigen tragen entweder genau ein Signal oder zwei Signale
+    auf DERSELBEN Hoechststufe. Faellt der Filter in
+    ``thunder_signal_carriers()`` weg, wuerde hier zusaetzlich "Wettercode"
+    erscheinen und dem Leser eine Zutat als tragend ausweisen, die die Stufe
+    gar nicht hergibt.
+    """
+    html, _ = _mail(_ort("Mischort", 47.0, 12.0,
+                         [_dp(14, code=ThunderLevel.LOW, cape=1500.0, cin=5.0)]))
+    assert _html_zellen(html)[0] == "hoch · CAPE", (
+        f"Nur die Zutat AUF der Hoechststufe darf erscheinen -- der "
+        f"Wettercode traegt hier nur 'leicht': {_html_zellen(html)[0]!r}")
 
 
 def test_ac3_stufe_kein_bekommt_keinen_herkunfts_zusatz():

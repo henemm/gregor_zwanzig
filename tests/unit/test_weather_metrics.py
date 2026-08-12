@@ -126,14 +126,17 @@ class TestWeatherMetricsServiceKnownValues:
         """
         GIVEN: Timeseries
         WHEN: compute_basis_metrics(timeseries)
-        THEN: aggregation_config has 13 entries with correct functions
+        THEN: aggregation_config has 14 entries with correct functions
 
         Issue #1475 S5a: 12 -> 13 Eintraege — `hail_flag` ("hail_priority")
         ist als Tages-/Etappen-Aggregat hinzugekommen (Spec AC-4).
+        Issue #1680 S1: 13 -> 14 Eintraege — `thunder_level_max_signals`
+        ("union_of_max_carriers") haelt fest, WELCHE Zutaten das
+        Gewitter-Tagesmaximum tragen (Spec AC-10).
         """
         result = service.compute_basis_metrics(known_timeseries)
 
-        assert len(result.aggregation_config) == 13
+        assert len(result.aggregation_config) == 14
         assert result.aggregation_config["temp_min_c"] == "min"
         assert result.aggregation_config["temp_max_c"] == "max"
         assert result.aggregation_config["temp_avg_c"] == "avg"
@@ -147,6 +150,12 @@ class TestWeatherMetricsServiceKnownValues:
         assert result.aggregation_config["dominant_wmo_code"] == "max_wmo_severity"
         assert result.aggregation_config["dni_avg_wm2"] == "avg"
         assert result.aggregation_config["hail_flag"] == "hail_priority"
+        # Issue #1680 S1: ohne diesen Eintrag faellt die Herkunft der
+        # Gewitterstufe bei der Etappen-Aggregation (aggregate_stage())
+        # stillschweigend heraus — ein reiner Zaehltest waere hier blind
+        # fuer "falscher Schluessel drin, thunder_level_max_signals fehlt".
+        assert (result.aggregation_config["thunder_level_max_signals"]
+                == "union_of_max_carriers")
 
 
 class TestWeatherMetricsServiceTemperature:
