@@ -275,8 +275,12 @@ für `ComparePreset`-Orte auf, ohne die Auswertungslogik zu duplizieren. Wetter-
 `compare_weather_snapshot.py` persistiert (`data/users/<user_id>/compare_weather_snapshots/`)
 und beim Report-Versand (`send_one_compare_preset()`) aktualisiert; der 15-Minuten-Check liest
 nur. Versand ohne Trip-Bindung über `NotificationService.send_location_deviation_alert()`; der
-geteilte Alert-Renderer zeigt bei gesetztem `AlertMessage.location_label` den Ortsnamen statt
-der (bei einem Punkt sinnlosen) km-Spanne. Alarmkonfiguration ist in Scheibe 2 hartkodiert
+geteilte Alert-Renderer löst den Ortsbezug seit #1744 A1 in **einer** Funktion
+(`renderers/alert/segments.py::format_alert_location`) über drei Stufen auf: gesetztes
+`location_label` → Ortsname (Ortsvergleich), sonst Segment-Kennung über
+`format_segment_reference` (`Segment 3–5`, `🏁 Ziel` — dieselbe Sprache wie die amtliche
+Warnung), sonst km-Spanne als Rückfall. Die Kurznachricht (SMS/Premium-SMS) nennt bewusst
+weiterhin keinen Ortsbezug. Alarmkonfiguration ist in Scheibe 2 hartkodiert
 (Default-Sensitivität „standard", 120 Min Cooldown, nur E-Mail) — editierbare UI folgt in
 Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cron-Job
 `compare_alert_checks` (`*/15 * * * *`, 7. registrierter Job). Details:
