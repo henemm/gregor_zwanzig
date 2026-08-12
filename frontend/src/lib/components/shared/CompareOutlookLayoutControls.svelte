@@ -74,6 +74,15 @@
 		return map;
 	});
 
+	// Issue #1719 S4: Kurzform-Marke = Register-Kuerzel (`sms_code`) — die
+	// Vergleichs-SMS rendert aus `get_sms_code()`, nicht aus den
+	// Trip-SMS-Tabellen.
+	const outlookKuerzelById = $derived.by(() => {
+		const map: Record<string, string[]> = {};
+		for (const e of catalog) if (e.sms_code) map[e.metric] = [e.sms_code];
+		return map;
+	});
+
 	function onOutlookRemove(key: string): void {
 		makeOutlookMetricHandler(key)();
 		onOutlookCommit?.();
@@ -160,6 +169,7 @@
 			onRemove={onOutlookRemove}
 			onDndReorder={handleOutlookDndReorder}
 			onMode={noopOutlookMode}
+			kuerzelById={outlookKuerzelById}
 		/>
 	</Card>
 {/if}

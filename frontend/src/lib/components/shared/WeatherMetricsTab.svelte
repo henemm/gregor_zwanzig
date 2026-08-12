@@ -1025,6 +1025,16 @@
 		return map;
 	});
 
+	// Issue #1719 S4: die Kurzform-Marke des VERGLEICHS zeigt das
+	// Register-Kuerzel — die Vergleichs-SMS rendert aus `get_sms_code()`
+	// (comparison.py:625), nicht aus den Trip-SMS-Tabellen. Genau EIN Kuerzel
+	// je Groesse; Groessen ohne Registereintrag bekommen gar keine Marke.
+	const compareKuerzelById = $derived.by(() => {
+		const map: Record<string, string[]> = {};
+		for (const e of compareCatalog) if (e.sms_code) map[e.metric] = [e.sms_code];
+		return map;
+	});
+
 	// Ziehen = Reihenfolge setzen + SOFORT speichern (s. onCompareCommit-Prop).
 	function onCompareDndReorder(newOrder: string[]) {
 		if (!wiz) return;
@@ -1197,6 +1207,7 @@
 					onRemove={onCompareRemove}
 					onDndReorder={onCompareDndReorder}
 					onMode={noopMode}
+					kuerzelById={compareKuerzelById}
 				/>
 			</Card>
 			{/if}
@@ -1346,6 +1357,7 @@
 							{onMode}
 							offColumns={activeChannelSections.off}
 							onRestore={onRestoreMetric}
+							kuerzelById={metricSymbols}
 						/>
 					</Card>
 				{/snippet}

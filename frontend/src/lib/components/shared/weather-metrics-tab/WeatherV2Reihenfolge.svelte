@@ -42,11 +42,21 @@
 		 *  etwas anderes als "nicht übergeben" (kein Default-Wert hier). */
 		offColumns?: string[];
 		onRestore?: (id: string) => void;
+		/** Issue #1719 S4: ALLE Kürzel, die der Kanal DIESER Fläche für eine
+		 *  Größe sendet (metric_id -> Kürzel-Liste). Die Quelle richtet sich
+		 *  nach der Fläche und wird deshalb von der Einbettung geliefert, nicht
+		 *  hier bestimmt: der Touren-Editor reicht `/api/sms-symbols` durch
+		 *  (Mehrfach-Token `FK FD WC`, Grammatikformen), die drei
+		 *  Vergleichs-Editoren das Register-Kürzel `sms_code` — die
+		 *  Vergleichs-SMS rendert aus `get_sms_code()` (comparison.py). Eine
+		 *  flächenblinde Quelle würde den Vergleich falsch beschriften. Größen
+		 *  ohne Eintrag bekommen GAR KEINE Marke, keine leere (AC-9). */
+		kuerzelById: Record<string, string[]>;
 	}
 
 	let {
 		primaryColumns, metricById, friendlyMap, activeChannel, highlight, onRemove, onDndReorder, onMode,
-		offColumns, onRestore,
+		offColumns, onRestore, kuerzelById,
 	}: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
@@ -74,6 +84,7 @@
 			{@const hl = highlight && highlight.id === id}
 			{@const hasInd = indicatorCapable(id)}
 			{@const useIndicator = friendlyMap[id] === true}
+			{@const kurzform = kuerzelById[id]}
 			{#if showCutLine && i === tgBudget}
 				<div data-testid="wm2-cut-line">
 					<LTCutLine label="Telegram" max={tgBudget} />
@@ -94,19 +105,23 @@
 							     Feld, dort bleibt die Zeile unveraendert. -->
 							<span class="aggregation-badge" data-testid="wm2-aggregation-badge">{m.aggregation_label}</span>
 						{/if}
-						<!-- Issue #1453 (AC-7): alle DREI Namensformen nebeneinander —
-						     ausgeschriebener deutscher Name (oben), englische
-						     Fachkurzform (Mail-Stundentabelle) und SMS-Kuerzel.
-						     Damit ist ein Kuerzel aus einer Mail ("Dew") oder einer
-						     SMS ("DP") im Editor aufloesbar. -->
+						<!-- Issue #1453 (AC-7) / #1719 S4: alle DREI Namensformen
+						     nebeneinander — ausgeschriebener deutscher Name (oben),
+						     englische Fachkurzform der Mail-Stundentabelle und ALLE
+						     Kuerzel der Kurzform. Seit S4 tragen die Marken ihre
+						     Beschriftung SICHTBAR ("Mail"/"Kurzform"): ein blosses
+						     "TF" ist nicht aufloesbar, solange der Nutzer nicht
+						     weiss, ob es in seiner Mail oder in seiner SMS steht. -->
 						{#if m.col_label}
-							<span class="col-badge mono" title="Kurzform in der Mail-Stundentabelle">
-								{m.col_label}
+							<span class="col-badge" data-testid="wm2-mail-badge" title="Kurzform in der Mail-Stundentabelle">
+								<span class="badge-key">Mail</span>
+								<span class="badge-val mono">{m.col_label}</span>
 							</span>
 						{/if}
-						{#if m.sms_code}
-							<span class="sms-badge mono" title="Kürzel in der SMS">
-								SMS {m.sms_code}
+						{#if kurzform && kurzform.length}
+							<span class="kurzform-badge" data-testid="wm2-kurzform-badge" title="Kürzel in SMS, Premium-SMS und Telegram">
+								<span class="badge-key">Kurzform</span>
+								<span class="badge-val mono">{kurzform.join(' ')}</span>
 							</span>
 						{/if}
 					{:else}
@@ -139,6 +154,7 @@
 			<div class="section-subhead aus-subhead">Aus in diesem Kanal</div>
 			{#each offColumns as id (id)}
 				{@const m = metricById[id]}
+				{@const kurzform = kuerzelById[id]}
 				<div class="row aus-row" data-testid="wm2-aus-row" data-metric-id={id}>
 					<div class="label-cell">
 						{#if m}
@@ -150,13 +166,15 @@
 								<span class="aggregation-badge" data-testid="wm2-aggregation-badge">{m.aggregation_label}</span>
 							{/if}
 							{#if m.col_label}
-								<span class="col-badge mono" title="Kurzform in der Mail-Stundentabelle">
-									{m.col_label}
+								<span class="col-badge" data-testid="wm2-mail-badge" title="Kurzform in der Mail-Stundentabelle">
+									<span class="badge-key">Mail</span>
+									<span class="badge-val mono">{m.col_label}</span>
 								</span>
 							{/if}
-							{#if m.sms_code}
-								<span class="sms-badge mono" title="Kürzel in der SMS">
-									SMS {m.sms_code}
+							{#if kurzform && kurzform.length}
+								<span class="kurzform-badge" data-testid="wm2-kurzform-badge" title="Kürzel in SMS, Premium-SMS und Telegram">
+									<span class="badge-key">Kurzform</span>
+									<span class="badge-val mono">{kurzform.join(' ')}</span>
 								</span>
 							{/if}
 						{:else}
@@ -236,6 +254,13 @@
 		gap: 0;
 		min-width: 0;
 	}
+	/* Issue #1719 S4: `min-width: 0` ist der eigentliche Fix — ohne ihn hat ein
+	   Flex-Element `min-width: auto` (= min-content, bei `nowrap` die volle
+	   Textbreite) und kann NICHT schrumpfen. Die Zelle holte sich den fehlenden
+	   Platz stattdessen bei den Marken, deren Inhalt dadurch beschnitten wurde.
+	   Bei Platzmangel kuerzt jetzt der NAME, nie ein Kuerzel: der Name ist der
+	   Klartext und bleibt auch angerissen erkennbar, das Kuerzel daneben ist
+	   die Aufloesung und waere beschnitten wertlos. */
 	.metric-label {
 		font-size: 13.5px;
 		font-weight: 500;
@@ -243,6 +268,8 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		min-width: 0;
+		flex-shrink: 1;
 	}
 	.metric-unit {
 		font-size: 10.5px;
@@ -263,28 +290,40 @@
 		line-height: 1.6;
 		white-space: nowrap;
 	}
-	.col-badge {
+	/* Issue #1719 S4: die beiden Marken sind UNVERKUERZBAR. `flex-shrink: 0`
+	   plus `white-space: nowrap` ist die Zusicherung aus AC-12 — nimmt man sie
+	   heraus, wird der Inhalt der Marke zusammengedrueckt (`scrollWidth >
+	   clientWidth`) und der Browser-Nachweis rot. Das war der gemessene Defekt:
+	   unter 900px rettete `flex-wrap: wrap` alles, ab 900px gab es keinen
+	   Umbruch, und den Marken fehlte `flex-shrink: 0`. */
+	.col-badge,
+	.kurzform-badge {
 		font-size: 10px;
 		color: var(--g-ink-3);
 		background: var(--g-paper);
 		border: 1px solid var(--g-rule-soft);
 		border-radius: 3px;
 		padding: 0 4px;
-		margin-left: 6px;
-		line-height: 1.6;
-	}
-	/* Issue #1453: dritte Namensform. Gleiches Badge-Muster wie col-badge, mit
-	   vorangestelltem "SMS", damit die beiden Kuerzel nicht verwechselbar sind. */
-	.sms-badge {
-		font-size: 10px;
-		color: var(--g-ink-3);
-		background: var(--g-paper);
-		border: 1px solid var(--g-rule-soft);
-		border-radius: 3px;
-		padding: 0 4px;
-		margin-left: 4px;
 		line-height: 1.6;
 		white-space: nowrap;
+		flex-shrink: 0;
+	}
+	.col-badge {
+		margin-left: 6px;
+	}
+	.kurzform-badge {
+		margin-left: 4px;
+	}
+	/* Die Beschriftung gehoert IN die Marke, nicht ins title-Attribut: ein
+	   Kuerzel ohne sichtbare Herkunft ist nicht aufloesbar (der Nutzer weiss
+	   sonst nicht, ob "TF" in seiner Mail oder in seiner Kurzform steht).
+	   Unterscheidung ueber Schriftschnitt statt Farbe -- --g-ink-4 waere hier
+	   Hilfstext und ist dafuer gesperrt (Design-Leitprinzipien). */
+	.badge-key {
+		font-weight: 600;
+	}
+	.badge-val {
+		font-weight: 500;
 	}
 	.controls {
 		display: flex;
@@ -348,6 +387,20 @@
 		}
 		.label-cell {
 			flex-wrap: wrap;
+		}
+		/* Issue #1719 S4, Notausgang fuer schmale Fenster (320px): hier bricht
+		   die Zelle ohnehin um. Reicht eine ganze Zeile fuer eine Marke nicht
+		   aus, bricht sie ZWISCHEN ihren Kuerzeln um (`normal` bricht nur an
+		   Leerzeichen, `overflow-wrap: normal` nie innerhalb eines Kuerzels) --
+		   statt aus der Zeile zu ragen und die Seite waagerecht scrollen zu
+		   lassen. Alle Zeichen bleiben sichtbar, nur eben zweizeilig. Bewusst
+		   NUR hier: ab 900px muessen die Marken einzeilig und unverkuerzbar
+		   bleiben, sonst waere die Gegenprobe zu AC-12 blind. */
+		.col-badge,
+		.kurzform-badge {
+			white-space: normal;
+			overflow-wrap: normal;
+			max-width: 100%;
 		}
 		.controls {
 			flex-direction: column;

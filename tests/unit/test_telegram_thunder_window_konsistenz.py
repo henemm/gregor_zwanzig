@@ -98,10 +98,21 @@ _ROWS = [
 
 def _thunder_statements(*, night_thunder, has_gap):
     """Rendert die Bubbles fuer das Issue-Szenario und liefert alle
-    Gewitter-Aussagen (Text nach '⚡ ', vor einem etwaigen ' · ') der
-    Kurzuebersicht-Bubble."""
+    Gewitter-Aussagen (Text nach der Gewitter-Marke, vor einem etwaigen
+    ' · ') der Kurzuebersicht-Bubble.
+
+    #1719 S4: die Kurzuebersicht-ZEILE traegt seit der Kuerzel-
+    Vereinheitlichung das Kurzform-Kuerzel der Groesse ('TH' statt '⚡') --
+    dasselbe, das die SMS sendet. Die FUSSZEILE traegt weiterhin das Symbol
+    '⚡' (narrow.py:280, festes Zeichen, kein Katalogfeld). Deshalb werden
+    hier beide Marken gesucht; das Kuerzel wird aus dem Katalog GEHOLT, nicht
+    abgetippt. Die Zusicherung selbst ist unveraendert: ZWEI Zeilen, EINE
+    Aussage."""
+    from app.metric_catalog import get_metric
     from app.models import ThunderLevel
     from output.renderers.narrow import render_telegram_bubbles
+
+    marken = (get_metric("thunder").compact_label, "⚡")
 
     night = (
         _make_night_weather(night_thunder) if night_thunder is not None else None
@@ -115,9 +126,10 @@ def _thunder_statements(*, night_thunder, has_gap):
     overview = next(b.text for b in bubbles if "Kurzübersicht" in b.text)
     statements = []
     for line in overview.splitlines():
-        if "⚡" not in line:
+        marke = next((m for m in marken if line.startswith(m)), None)
+        if marke is None:
             continue
-        after = line.split("⚡", 1)[1].strip()
+        after = line[len(marke):].strip()
         statements.append(after.split(" · ", 1)[0].strip())
     return statements
 
