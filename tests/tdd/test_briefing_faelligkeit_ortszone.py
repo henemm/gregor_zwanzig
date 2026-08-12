@@ -89,13 +89,83 @@ def _faellig(scheduler, now_utc: datetime) -> set[tuple[str, str]]:
 
     Ruft die Fälligkeitssammlung mit einem ZEITPUNKT auf — vor dem Fix nimmt
     sie eine vorberechnete Stunde und schlägt hier fehl.
+
+    Issue #1725: die Sammlung liefert seither ein DRITTES Element (den Ortstag
+    des Laufs, Teil des Idempotenz-Schlüssels). Die Tests dieser Datei fragen
+    unverändert nur nach Trip und Slot — deshalb wird hier nur der Kopf des
+    Tupels ausgewertet, statt die Stelligkeit festzunageln.
     """
-    return {(t.id, rt) for t, rt in scheduler._collect_due_trips(now_utc)}
+    return {(eintrag[0].id, eintrag[1]) for eintrag in scheduler._collect_due_trips(now_utc)}
 
 
-def _stunden_eines_tages(tag: date) -> list[datetime]:
-    start = datetime(tag.year, tag.month, tag.day, 0, 0, tzinfo=timezone.utc)
-    return [start + timedelta(hours=h) for h in range(24)]
+def _scheduler_ohne_netz(user_id: str):
+    """Echter Scheduler, bei dem AUSSCHLIESSLICH die Naht zum Netz ersetzt ist
+    — kein Mock, eine echte Unterklasse mit echter Implementierung.
+
+    Issue #1725: Fälligkeit ist seither ein FENSTER von drei Ortsstunden, und
+    die Einmaligkeit entsteht durch den Vermerk `(trip_id, ortstag, slot)`, der
+    erst beim VERSAND geschrieben wird. Wer nur sammelt, sieht deshalb drei
+    Treffer statt einem — die Tests unten fahren die vollständige Kette
+    (`_lauf`), und dafür darf der Versand nicht ins Netz gehen.
+    """
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    class _OhneNetz(TripReportSchedulerService):
+        def _send_trip_report_outcome(self, trip, report_type, **kwargs):
+            return "sent"
+
+    return _OhneNetz(user_id=user_id)
+
+
+def _lauf(scheduler, now_utc: datetime) -> set[tuple[str, str, date]]:
+    """Ein vollständiger Sammellauf: sammeln, dann jedes fällige Element über
+    `_dispatch_due_item` abarbeiten — genau die Kette, die
+    `run_briefing_dispatch` fährt (`collect_due` → Schleife über
+    `dispatch_one`), ohne die 2s-Pause und ohne `pre_pass`.
+
+    Rückgabe ist die GESAMMELTE Menge, jeweils mit dem ORTSTAG des Laufs als
+    drittem Glied (Issue #1725) — nur mit ihm lässt sich ein Treffer dem
+    Ortstag zuordnen, zu dem er gehört.
+    """
+    gesammelt = list(scheduler._collect_due_trips(now_utc))
+    for trip, report_type, ortstag in gesammelt:
+        scheduler._dispatch_due_item(trip, report_type, ortstag)
+    return {(t.id, rt, tag) for t, rt, tag in gesammelt}
+
+
+def _slots(scheduler, now_utc: datetime) -> set[tuple[str, str]]:
+    """`_lauf` ohne den Ortstag — für die Tests, die genau EINE Zone messen und
+    deshalb ohnehin nur Zeitpunkte eines einzigen Ortstags durchlaufen."""
+    return {(trip_id, rt) for trip_id, rt, _ in _lauf(scheduler, now_utc)}
+
+
+def _ortstag_schritte(zone: "ZoneInfo | timezone", tag: date) -> list[datetime]:
+    """Stündliche UTC-Zeitpunkte, die den ORTSTAG `tag` in `zone` abdecken —
+    von Ortsmitternacht zu Ortsmitternacht.
+
+    Issue #1725: gezählt wird über den ORTSTAG, nicht mehr über den UTC-Tag.
+    Der Produktivcode entscheidet über Ortstage (ADR-0044), und die
+    Einmaligkeit gilt je Ortstag — ein UTC-Tag deckt bei jedem Zonen-Versatz
+    Teile ZWEIER Ortstage ab (bei Kathmandu +5:45 beginnt er um 05:45
+    Ortszeit) und zählte dann zwei völlig korrekte Treffer AUS ZWEI ORTSTAGEN
+    als Dopplung. Wer hier auf eine Iteration über den UTC-Tag zurückdreht
+    (die frühere Fassung `_stunden_eines_tages`, mit dieser Änderung
+    entfallen), misst wieder am falschen Maßstab.
+
+    Die Länge des Ortstags wird BERECHNET (ADR-0044): beide Ortsmitternachte
+    werden erst nach UTC gebracht, dort verglichen. Ein Vergleich der beiden
+    Wanduhr-Werte mit identischem `tzinfo` ergäbe an JEDEM Tag 24,0 h und
+    verschluckte die Umstellungstage.
+    """
+    start = datetime(tag.year, tag.month, tag.day, 0, 0, tzinfo=zone)
+    ende = start + timedelta(days=1)  # Wanduhr-Addition -> nächste Ortsmitternacht
+    t = start.astimezone(timezone.utc)
+    grenze = ende.astimezone(timezone.utc)
+    schritte = []
+    while t < grenze:
+        schritte.append(t)
+        t += timedelta(hours=1)
+    return schritte
 
 
 # ---------------------------------------------------------------------------
@@ -112,11 +182,14 @@ def test_ac1_auckland_faellig_genau_zur_ortsstunde():
     # zum jeweiligen Ortstag existiert.
     tage = [date(2026, 8, 19), date(2026, 8, 20), date(2026, 8, 21)]
     _schreibe("tz-ac1", [_trip_json("nz", lat, lon, tage)])
-    scheduler = _scheduler("tz-ac1")
+    # Issue #1725: vollständige Kette (sammeln + versenden) über den ORTSTAG.
+    # Die Fälligkeit ist seither ein Fenster; erst der beim Versand
+    # geschriebene Vermerk macht daraus genau einen Treffer.
+    scheduler = _scheduler_ohne_netz("tz-ac1")
 
     treffer = [
-        now for now in _stunden_eines_tages(date(2026, 8, 20))
-        if ("nz", "morning") in _faellig(scheduler, now)
+        now for now in _ortstag_schritte(zone, date(2026, 8, 20))
+        if ("nz", "morning") in _slots(scheduler, now)
     ]
 
     assert len(treffer) == 1, (
@@ -143,12 +216,24 @@ def test_ac2_vier_zonen_je_zur_eigenen_ortsstunde():
         for name, (lat, lon) in ZONEN.items()
     ]
     _schreibe("tz-ac2", trips)
-    scheduler = _scheduler("tz-ac2")
+    scheduler = _scheduler_ohne_netz("tz-ac2")
+
+    # Issue #1725: EIN gemeinsamer Lauf wie bisher, aber über die VEREINIGUNG
+    # der vier Ortstage 2026-08-20 statt über den UTC-Tag — die vier Zonen
+    # haben zum selben Zeitpunkt verschiedene Ortstage. Gezählt werden je Trip
+    # nur die Treffer, die auf SEINEN Ortstag 2026-08-20 fallen (drittes Glied
+    # der Sammlung). Über einen UTC-Tag gezählt fielen bei Kathmandu (+5:45)
+    # zwei völlig korrekte Treffer aus ZWEI Ortstagen zusammen.
+    ortstag = date(2026, 8, 20)
+    schritte = sorted({
+        t for zone_name in ZONEN
+        for t in _ortstag_schritte(ZoneInfo(zone_name), ortstag)
+    })
 
     ankunft: dict[str, list[datetime]] = {t["id"]: [] for t in trips}
-    for now in _stunden_eines_tages(date(2026, 8, 20)):
-        for trip_id, rt in _faellig(scheduler, now):
-            if rt == "morning":
+    for now in schritte:
+        for trip_id, rt, tag in _lauf(scheduler, now):
+            if rt == "morning" and tag == ortstag:
                 ankunft[trip_id].append(now)
 
     for zone_name in ZONEN:
@@ -233,11 +318,12 @@ def test_ac4_korsika_unveraendert(konfig_stunde: int):
         f"tz-ac4-{konfig_stunde}",
         [_trip_json("korsika", lat, lon, tage, morning=f"{konfig_stunde:02d}:00:00")],
     )
-    scheduler = _scheduler(f"tz-ac4-{konfig_stunde}")
+    scheduler = _scheduler_ohne_netz(f"tz-ac4-{konfig_stunde}")
 
+    # Issue #1725: vollständige Kette über den ORTSTAG (s. `_ortstag_schritte`).
     treffer = [
-        now for now in _stunden_eines_tages(date(2026, 8, 20))
-        if ("korsika", "morning") in _faellig(scheduler, now)
+        now for now in _ortstag_schritte(ZoneInfo("Europe/Paris"), date(2026, 8, 20))
+        if ("korsika", "morning") in _slots(scheduler, now)
     ]
 
     # Vorher: fällig, wenn Wiener Stunde == konfig_stunde. Wien und Paris
@@ -290,11 +376,14 @@ def test_ac6_trip_ohne_wegpunkte_verliert_sein_briefing_nicht():
     for stage in trip["stages"]:
         stage["waypoints"] = []
     _schreibe("tz-ac6", [trip])
-    scheduler = _scheduler("tz-ac6")
+    scheduler = _scheduler_ohne_netz("tz-ac6")
 
+    # Issue #1725: vollständige Kette über den ORTSTAG. Ortszone dieses Trips
+    # ist der dokumentierte UTC-Rückfall aus `trip_day.trip_tz` (keine
+    # Wegpunkte), sein Ortstag ist damit der UTC-Tag.
     treffer = [
-        now for now in _stunden_eines_tages(date(2026, 8, 20))
-        if ("ohne-wp", "morning") in _faellig(scheduler, now)
+        now for now in _ortstag_schritte(timezone.utc, date(2026, 8, 20))
+        if ("ohne-wp", "morning") in _slots(scheduler, now)
     ]
     assert len(treffer) == 1, (
         f"Trip ohne Wegpunkte verliert sein Briefing (Treffer: {len(treffer)}) — "
@@ -306,45 +395,71 @@ def test_ac6_trip_ohne_wegpunkte_verliert_sein_briefing_nicht():
 
 
 # ---------------------------------------------------------------------------
-# AC-7 — Sommerzeit: bekannte Lücke festnageln, NICHT als behoben ausgeben
+# AC-7 — Sommerzeit: an beiden Umstellungstagen genau ein Briefing
 # ---------------------------------------------------------------------------
 
-def test_ac7_sommerzeit_luecke_ist_gemessen_nicht_behauptet():
+def test_ac7_sommerzeit_umstellung_liefert_genau_ein_briefing():
     """Given Trip auf Korsika mit Briefing 02:00 / When der Lauf an den beiden
-    Umstellungstagen geht / Then haelt dieser Test das TATSAECHLICHE Verhalten
-    fest: am 29.03. faellt das Briefing aus, am 25.10. wird es zweimal faellig.
+    Umstellungstagen den Ortstag abschreitet / Then faellt das Briefing an
+    BEIDEN Tagen genau einmal: am 29.03. nachgeholt (die Ortsstunde 02
+    existiert nicht, Ortsstunde 03 erfuellt `3 >= 2 and 3 < 5`), am 25.10.
+    nur beim ERSTEN Durchlauf der doppelten Ortsstunde 02 — der Vermerk
+    filtert den zweiten.
 
-    Das ist kein Nachweis einer Behebung — die Behebung ist #1725. Wird dieser
-    Test dort rot, ist das die Absicht: er wird dann auf das Zielverhalten
-    umgeschrieben.
+    Bis #1725 hielt dieser Test hier das Fehlverhalten fest (0 Treffer am
+    29.03., 2 am 25.10.) und sagte in seinem Docstring an, dass er auf das
+    Zielverhalten umgeschrieben wird, sobald die Luecke geschlossen ist. Genau
+    das ist hier geschehen; die Fallabdeckung selbst (Fenster, Idempotenz-
+    Schluessel, Outcome-Matrix) liegt in
+    `tests/tdd/test_briefing_slot_idempotenz.py`.
+
+    Der Vermerk entsteht erst beim VERSAND — der Lauf hier ist deshalb die
+    vollstaendige Kette aus `run_briefing_dispatch` (sammeln, dann jedes
+    faellige Element ueber `_dispatch_due_item` abarbeiten). Ersetzt ist nur
+    die Naht zum Netz.
     """
+    from services.trip_report_scheduler import TripReportSchedulerService
+
     lat, lon = ZONEN["Europe/Paris"]
     zone = ZoneInfo("Europe/Paris")
     tage = [date(2026, 3, 28), date(2026, 3, 29), date(2026, 3, 30),
             date(2026, 10, 24), date(2026, 10, 25), date(2026, 10, 26)]
     _schreibe("tz-ac7", [_trip_json("korsika", lat, lon, tage, morning="02:00:00")])
-    scheduler = _scheduler("tz-ac7")
+
+    class _OhneNetz(TripReportSchedulerService):
+        """Echte Unterklasse, die nur den Versand ersetzt — kein Mock."""
+
+        def _send_trip_report_outcome(self, trip, report_type, **kwargs):
+            return "sent"
+
+    scheduler = _OhneNetz(user_id="tz-ac7")
 
     def treffer_am(tag: date) -> int:
-        # Ortstag von Ortsmitternacht bis Ortsmitternacht abschreiten.
+        # Ortstag von Ortsmitternacht bis Ortsmitternacht abschreiten. Die
+        # Laenge wird BERECHNET (ADR-0044): beide Ortsmitternachte erst nach
+        # UTC bringen, sonst ergibt die Subtraktion an jedem Tag 24,0 h.
         start = datetime(tag.year, tag.month, tag.day, 0, 0, tzinfo=zone)
         ende = start + timedelta(days=1)
         t = start.astimezone(timezone.utc)
         n = 0
         while t < ende.astimezone(timezone.utc):
-            if ("korsika", "morning") in _faellig(scheduler, t):
+            gesammelt = list(scheduler._collect_due_trips(t))
+            for trip, report_type, ortstag in gesammelt:
+                scheduler._dispatch_due_item(trip, report_type, ortstag)
+            if ("korsika", "morning") in [(x.id, rt) for x, rt, _ in gesammelt]:
                 n += 1
             t += timedelta(hours=1)
         return n
 
-    assert treffer_am(date(2026, 3, 29)) == 0, (
-        "Fruehjahrs-Umstellung: Ortsstunde 02 existiert nicht, das Briefing "
-        "entfaellt. Wenn hier 1 steht, ist die Luecke geschlossen — dann "
-        "gehoert dieser Test nach #1725 umgeschrieben, nicht angepasst."
+    assert treffer_am(date(2026, 3, 29)) == 1, (
+        "Fruehjahrs-Umstellung: die Ortsstunde 02 existiert nicht — das "
+        "Briefing muss trotzdem genau einmal fallen (nachgeholt in Ortsstunde "
+        "03). 0 heisst: die Faelligkeit haengt wieder an Stundengleichheit."
     )
-    assert treffer_am(date(2026, 10, 25)) == 2, (
-        "Herbst-Umstellung: Ortsstunde 02 existiert zweimal, das Briefing wird "
-        "zweimal faellig (bekannte Luecke, #1725)."
+    assert treffer_am(date(2026, 10, 25)) == 1, (
+        "Herbst-Umstellung: die Ortsstunde 02 existiert zweimal — das Briefing "
+        "darf trotzdem nur einmal fallen. 2 heisst: der Idempotenz-Schluessel "
+        "(trip_id, ortstag, slot) greift nicht."
     )
 
 

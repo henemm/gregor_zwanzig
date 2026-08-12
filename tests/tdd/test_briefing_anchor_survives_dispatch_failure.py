@@ -348,7 +348,9 @@ def test_ac3_versandfehler_zaehlt_weiterhin_als_fehlschlag_und_wird_protokollier
     strategy._service = _fixture_scheduler(25.0)(settings=settings, user_id=uid)
 
     with caplog.at_level(logging.ERROR, logger="dispatch_orchestrator"):
-        strategy.dispatch_one((trip, "morning"))
+        # Issue #1725: `collect_due` liefert (trip, report_type, ORTSTAG) —
+        # das dritte Glied des Idempotenz-Schluessels.
+        strategy.dispatch_one((trip, "morning", stage_date(LAT, LON)))
 
     assert strategy.result() == (0, 1), (
         "Ein Versandfehler muss weiterhin als fehlgeschlagener Lauf zaehlen "
@@ -1214,7 +1216,9 @@ def test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos(monkeyp
 
     zugestellt = _recording_email(monkeypatch)
     strategy = _strategy(uid, _settings_email_ok())
-    due = [(trip, "morning")]
+    # Issue #1725: `collect_due` liefert (trip, report_type, ORTSTAG) — das
+    # dritte Glied des Idempotenz-Schluessels.
+    due = [(trip, "morning", stage_date(LAT, LON))]
 
     strategy.pre_pass(now_utc=_zeitpunkt_ortsstunde(7), due=due)
     assert _dispatch_marker(uid) is not None, (
@@ -1227,7 +1231,7 @@ def test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos(monkeyp
         f"zustellen (Doppel-Nachricht): {zugestellt!r} (#1662 AC-5)"
     )
 
-    strategy.dispatch_one((trip, "morning"))
+    strategy.dispatch_one((trip, "morning", stage_date(LAT, LON)))
 
     assert len(zugestellt) == 1, (
         f"Der Nutzer muss genau EINE Nachricht bekommen, erhalten: "
@@ -1263,9 +1267,10 @@ def test_erneut_gescheiterter_regulaerer_versand_haelt_den_vermerk_am_leben():
     _seed_marker(uid, trip, reason="dispatch_error")
 
     strategy = _strategy(uid, _settings_email_broken())
-    due = [(trip, "morning")]
+    # Issue #1725: dritte Stelle = Ortstag (Idempotenz-Schluessel).
+    due = [(trip, "morning", stage_date(LAT, LON))]
     strategy.pre_pass(now_utc=_zeitpunkt_ortsstunde(7), due=due)
-    strategy.dispatch_one((trip, "morning"))
+    strategy.dispatch_one((trip, "morning", stage_date(LAT, LON)))
 
     assert strategy.result() == (0, 1), (
         f"Vorbedingung: der Lauf muss als gescheitert zaehlen, erhalten: "
