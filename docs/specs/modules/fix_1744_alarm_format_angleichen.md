@@ -12,7 +12,7 @@ tags: [alerts, renderer, email, subject]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-08-12 („go"), ACs auf Deutsch vorgelegt
 
 ## Purpose
 
