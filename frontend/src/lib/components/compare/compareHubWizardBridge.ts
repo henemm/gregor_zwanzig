@@ -82,6 +82,10 @@ export interface HubEdit {
 	// (Loesch-Sentinel "bis auf Weiteres", #1232-Kontext).
 	sendTelegram?: boolean;
 	sendSms?: boolean;
+	// Issue #1745 A (Landmine 3): DIESE Feldliste ist die zweite Kodierung neben
+	// buildComparePresetSavePayload — fehlt der Kanal hier, geht der Haken beim
+	// naechsten Hub-Speichern verloren.
+	sendPremiumSms?: boolean;
 	morningEnabled?: boolean;
 	morningTime?: string;
 	eveningEnabled?: boolean;
@@ -157,6 +161,9 @@ export function buildHubPutPayload(
 		// endDate: null wird NICHT auf undefined gemappt (Loesch-Sentinel, #1232).
 		sendTelegram: edit.sendTelegram,
 		sendSms: edit.sendSms,
+		// Issue #1745 A (Landmine 3): 1:1 durchreichen wie die Geschwister —
+		// undefined bleibt undefined (Round-Trip aus `preset`).
+		sendPremiumSms: edit.sendPremiumSms,
 		morningEnabled: edit.morningEnabled,
 		morningTime: edit.morningTime,
 		eveningEnabled: edit.eveningEnabled,
@@ -460,6 +467,10 @@ export interface AlarmHydrationTarget {
 	// naechsten Alarme-Save aktiv zurueckgeschrieben). Analog channelThresholds.
 	sendTelegram?: boolean;
 	sendSms?: boolean;
+	// Issue #1745 A: der vierte Kanal muss aus demselben Grund mit-hydriert
+	// werden — sonst ist eine Aenderung im Alarme-Reiter weder als
+	// Snapshot-Differenz erkennbar noch im PUT-Body enthalten.
+	sendPremiumSms?: boolean;
 	channelThresholds?: Record<string, string>;
 	// Issue #1320: activeMetricKeys wird sonst nur von den Hydrations-Effekten
 	// der Tabs "wetter-metriken"/"idealwerte" befuellt — fehlt Alarme als
@@ -504,6 +515,8 @@ export function hydrateAlarmFieldsFromPreset(
 	// Snapshot-Differenz erkennbar wird (s. AlarmHydrationTarget-Kommentar).
 	state.sendTelegram = preset.send_telegram ?? false;
 	state.sendSms = preset.send_sms ?? false;
+	// Issue #1745 A (D1): fehlt das Feld im Preset, ist der Kostenkanal AUS.
+	state.sendPremiumSms = preset.send_premium_sms ?? false;
 	state.channelThresholds = (preset.alert_channel_thresholds as Record<string, string>) ?? {};
 	state.alertCooldownMinutes = preset.alert_cooldown_minutes;
 	state.alertQuietFrom = preset.alert_quiet_from;
@@ -546,6 +559,9 @@ export interface AlarmSnapshot {
 	// Felder bleiben gueltig, `undefined` bedeutet "nicht editiert" (Round-Trip).
 	sendTelegram?: boolean;
 	sendSms?: boolean;
+	// Issue #1745 A: vierter Kanal im Snapshot — ein reiner Premium-SMS-Klick
+	// muss als Snapshot-Differenz erkannt werden und einen PUT ausloesen.
+	sendPremiumSms?: boolean;
 	channelThresholds?: Record<string, string>;
 }
 
@@ -597,6 +613,9 @@ export function flushPendingAlarmSave(
 		// AlarmSnapshot-Kommentar).
 		sendTelegram: current.sendTelegram,
 		sendSms: current.sendSms,
+		// Issue #1745 A: ohne diese Zeile schriebe jeder andere Alarme-Save den
+		// Server-Bestand des vierten Kanals still zurueck.
+		sendPremiumSms: current.sendPremiumSms,
 		channelThresholds: current.channelThresholds
 	});
 }
@@ -640,6 +659,8 @@ export function rollbackAlarmSnapshot(
 		// zurueck wie die uebrigen Alarme-Snapshot-Felder.
 		'sendTelegram',
 		'sendSms',
+		// Issue #1745 A: rollt diff-basiert zurueck wie die uebrigen Kanal-Felder.
+		'sendPremiumSms',
 		'channelThresholds'
 	];
 	const target = state as Record<string, unknown>;

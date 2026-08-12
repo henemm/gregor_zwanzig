@@ -42,9 +42,9 @@ import { buildAlarmeDeliveryPayload } from './alarmeDeliveryPayload.ts';
 // dieser ihn erreicht" (Startwert 'gering', Bestand wird angezeigt).
 // ─────────────────────────────────────────────────────────────────────────
 describe('AC-10: resolveAlertChannelThresholds() zeigt den aktuellen Wert je Kanal', () => {
-	test('ohne Bestand: alle drei Kanaele zeigen den Startwert LOW (gering)', () => {
+	test('ohne Bestand: alle vier Kanaele zeigen den Startwert LOW (gering)', () => {
 		const state = resolveAlertChannelThresholds(null);
-		assert.deepEqual(state, { telegram: 'LOW', sms: 'LOW', email: 'LOW' });
+		assert.deepEqual(state, { telegram: 'LOW', sms: 'LOW', email: 'LOW', premium_sms: 'LOW' });
 	});
 
 	test('mit Bestand: der eingestellte Wert eines Kanals erscheint unveraendert, die anderen bleiben LOW', () => {
@@ -68,24 +68,25 @@ describe('AC-10: resolveAlertChannelThresholds() zeigt den aktuellen Wert je Kan
 // geaenderten Wert.
 // ─────────────────────────────────────────────────────────────────────────
 describe('AC-10: eine geaenderte Schwelle erscheint in der gespeicherten Payload', () => {
-	test('buildAlarmeDeliveryPayload() sendet alert_channel_thresholds mit allen drei Kanaelen', () => {
+	test('buildAlarmeDeliveryPayload() sendet alert_channel_thresholds mit allen vier Kanaelen', () => {
 		const payload = buildAlarmeDeliveryPayload({
 			officialWarningsEnabled: true,
-			channels: { email: false, telegram: true, sms: true },
-			channelThresholds: { email: 'LOW', telegram: 'HIGH', sms: 'MODERATE' }
+			channels: { email: false, telegram: true, sms: true, premium_sms: false },
+			channelThresholds: { email: 'LOW', telegram: 'HIGH', sms: 'MODERATE', premium_sms: 'LOW' }
 		}) as { alert_channel_thresholds: Record<string, string> };
 		assert.deepEqual(payload.alert_channel_thresholds, {
 			email: 'LOW',
 			telegram: 'HIGH',
-			sms: 'MODERATE'
+			sms: 'MODERATE',
+			premium_sms: 'LOW'
 		});
 	});
 
 	test('eine hochgesetzte Telegram-Schwelle steht unveraendert (kein Runden/Clamping) in der Payload', () => {
 		const payload = buildAlarmeDeliveryPayload({
 			officialWarningsEnabled: false,
-			channels: { email: true, telegram: true, sms: false },
-			channelThresholds: { email: 'LOW', telegram: 'HIGH', sms: 'LOW' }
+			channels: { email: true, telegram: true, sms: false, premium_sms: false },
+			channelThresholds: { email: 'LOW', telegram: 'HIGH', sms: 'LOW', premium_sms: 'LOW' }
 		}) as { alert_channel_thresholds: { telegram: string } };
 		assert.equal(
 			payload.alert_channel_thresholds.telegram,
@@ -102,27 +103,27 @@ describe('AC-10: eine geaenderte Schwelle erscheint in der gespeicherten Payload
 // ─────────────────────────────────────────────────────────────────────────
 describe('AC-10: applyThresholdChange() ist die tatsaechliche Klick-Logik', () => {
 	test('setzt genau den geklickten Kanal auf die neue Stufe', () => {
-		const before = { telegram: 'LOW', sms: 'LOW', email: 'LOW' } as const;
+		const before = { telegram: 'LOW', sms: 'LOW', email: 'LOW', premium_sms: 'LOW' } as const;
 		const after = applyThresholdChange({ ...before }, 'telegram', 'HIGH');
 		assert.equal(after.telegram, 'HIGH', 'der geklickte Kanal muss die neue Stufe zeigen');
 	});
 
 	test('laesst die beiden nicht geklickten Kanaele unveraendert', () => {
-		const before = { telegram: 'MODERATE', sms: 'HIGH', email: 'LOW' } as const;
+		const before = { telegram: 'MODERATE', sms: 'HIGH', email: 'LOW', premium_sms: 'LOW' } as const;
 		const after = applyThresholdChange({ ...before }, 'email', 'HIGH');
 		assert.equal(after.telegram, 'MODERATE', 'telegram darf sich nicht mitaendern');
 		assert.equal(after.sms, 'HIGH', 'sms darf sich nicht mitaendern');
 	});
 
 	test('mutiert den uebergebenen Zustand nicht (reine Funktion)', () => {
-		const before = { telegram: 'LOW', sms: 'LOW', email: 'LOW' } as const;
+		const before = { telegram: 'LOW', sms: 'LOW', email: 'LOW', premium_sms: 'LOW' } as const;
 		const snapshot = { ...before };
 		applyThresholdChange(before, 'sms', 'MODERATE');
 		assert.deepEqual(before, snapshot, 'der Eingabe-Zustand darf durch den Aufruf nicht veraendert werden');
 	});
 
 	test('ein erneuter Klick auf denselben Kanal mit derselben Stufe ist ein Vorgang ohne Seiteneffekt auf andere Kanaele', () => {
-		const before = { telegram: 'HIGH', sms: 'LOW', email: 'MODERATE' } as const;
+		const before = { telegram: 'HIGH', sms: 'LOW', email: 'MODERATE', premium_sms: 'LOW' } as const;
 		const after = applyThresholdChange({ ...before }, 'telegram', 'HIGH');
 		assert.deepEqual(after, before);
 	});

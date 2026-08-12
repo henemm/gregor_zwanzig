@@ -152,7 +152,9 @@ describe('#1745 AC-1: beide_kontexte_zeigen_premium_sms_zeile', () => {
 		// Schutz. Gemessen als Gleichheit der Zeilenmengen beider Kontexte.
 		const zeilen = (html: string) =>
 			[...html.matchAll(/data-testid="alert-channel-row-([a-z_]+)"/g)].map((m) => m[1]);
-		const erwartet = ['telegram', 'sms', 'email', 'premium_sms'];
+		// Sollwert (Spec D5, wie in alarme_alert_channel_defaults.test.ts korrigiert):
+		// premium_sms steht DIREKT unter sms, VOR email.
+		const erwartet = ['telegram', 'sms', 'premium_sms', 'email'];
 
 		// Gegen den Ist-Zustand geprüft, nicht gegeneinander: ein Vergleich der
 		// beiden Kontexte allein wäre heute (drei Zeilen hier wie dort) grün und

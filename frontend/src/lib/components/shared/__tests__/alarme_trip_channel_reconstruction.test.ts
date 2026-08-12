@@ -85,7 +85,7 @@ test('#1745 AC-7: fehlender_premium_sms_schluessel_bedeutet_aus_kein_briefing_fa
 		}
 	} as unknown as Trip;
 
-	const result = reconstructTripAlertChannels(trip) as Record<string, boolean>;
+	const result = reconstructTripAlertChannels(trip);
 
 	assert.strictEqual(
 		result.premium_sms,
@@ -111,7 +111,7 @@ test('#1745 AC-7 (Vererbungszweig): OHNE alert_channels erbt der Alarm-Reiter re
 		}
 	} as unknown as Trip;
 
-	const result = reconstructTripAlertChannels(trip) as Record<string, boolean>;
+	const result = reconstructTripAlertChannels(trip);
 	assert.strictEqual(
 		result.premium_sms,
 		true,

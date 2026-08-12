@@ -59,7 +59,12 @@ Ortsvergleich gleichermaßen.
 **Frontend (`frontend/src/lib/components/...`, SvelteKit) — der gesamte Umfang dieser Scheibe:**
 
 - **File:** `shared/alarme-tab/alertChannelState.ts` (MODIFY, ≈+25 LoC) — `ALERT_CHANNEL_ORDER`
-  wird `['telegram', 'sms', 'email', 'premium_sms']`, `AlertChannelState`/
+  wird **`['telegram', 'sms', 'premium_sms', 'email']`** 🔴 *(korrigiert 2026-08-11: die
+  Erstfassung schrieb `[…, 'email', 'premium_sms']` und widersprach damit **D5** — „vierte Zeile
+  direkt unter SMS" — sowie der Anordnung im Versand-Reiter, wo Premium-SMS im selben
+  SMS-Block sitzt. **D5 ist der freigegebene Text und gewinnt.** In der RED-Phase aufgefallen.
+  Folge: der Order-Test heißt nicht mehr `…premium_sms_zuletzt`, und die Reihenfolge-Zusicherung
+  lautet „premium_sms **direkt nach** sms und **vor** email")*, `AlertChannelState`/
   `AlertChannelThresholdState` bekommen das vierte Feld, `NEW_ENTITY_DEFAULT` bekommt
   `premium_sms: false` (D1), `hasAnyExplicitChannelValue()` prüft den vierten Kanal mit
   (Landmine 2), `channelWarningNeeded()` prüft den vierten Kanal mit (Landmine 4, unten),
@@ -331,9 +336,10 @@ keine neue Fehlerklasse — nur dieselbe Regel auf ein viertes Feld angewendet.
   When ein Nutzer den Alarme-Reiter eines Trips ODER eines Ortsvergleichs öffnet / Then erscheint
   eine vierte Zeile „Premium-SMS (Garmin inReach)" direkt unter SMS — in **beiden** Flächen
   gleichermaßen, keine ist gegenüber der anderen eingeschränkt.
-  - Prüfort: (a) `ALERT_CHANNEL_ORDER` als reine Reihenfolge-Zusicherung, (b) SSR-Rendering von
-    `AlarmeTab` mit `context="route"` UND `context="vergleich"` — beide zeigen
-    `alert-channel-row-premium_sms` nach `alert-channel-row-sms`.
+  - Prüfort: (a) `ALERT_CHANNEL_ORDER` als reine Reihenfolge-Zusicherung — `premium_sms` steht
+    **unmittelbar nach `sms` und vor `email`** (D5), (b) SSR-Rendering von `AlarmeTab` mit
+    `context="route"` UND `context="vergleich"` — beide zeigen `alert-channel-row-premium_sms`
+    zwischen `alert-channel-row-sms` und `alert-channel-row-email`.
   - Test: `shared/__tests__/alarme_alert_channel_defaults.test.ts::alert_channel_order_hat_vier_kanaele_premium_sms_zuletzt`,
     `shared/__tests__/alarme_tab_premium_sms_channel_row_render.test.ts::beide_kontexte_zeigen_premium_sms_zeile`
 

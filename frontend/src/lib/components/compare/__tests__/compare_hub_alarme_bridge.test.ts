@@ -505,11 +505,11 @@ describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', 
 		} as Parameters<typeof buildHubPutPayload>[1]);
 
 		assert.strictEqual(
-			(body as Record<string, unknown>).send_premium_sms,
+			(body as unknown as Record<string, unknown>).send_premium_sms,
 			true,
 			'buildHubPutPayload reicht sendPremiumSms nicht an buildComparePresetSavePayload durch — ' +
 				'der Haken ginge beim nächsten Hub-Speichern verloren (Landmine 3). Erhalten: ' +
-				JSON.stringify((body as Record<string, unknown>).send_premium_sms)
+				JSON.stringify((body as unknown as Record<string, unknown>).send_premium_sms)
 		);
 	});
 
@@ -517,7 +517,7 @@ describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', 
 		const preset = makePreset({ send_premium_sms: true } as Partial<ComparePreset>);
 		const { body } = buildHubPutPayload(preset, { corridors: preset.corridors });
 		assert.strictEqual(
-			(body as Record<string, unknown>).send_premium_sms,
+			(body as unknown as Record<string, unknown>).send_premium_sms,
 			true,
 			'Ein Edit an einem ANDEREN Reiter darf den gespeicherten Premium-SMS-Haken nicht löschen.'
 		);
@@ -536,7 +536,7 @@ describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', 
 				'PUT liefern (nicht null) — sonst bleibt der Klick folgenlos.'
 		);
 		assert.strictEqual(
-			(result!.body as Record<string, unknown>).send_premium_sms,
+			(result!.body as unknown as Record<string, unknown>).send_premium_sms,
 			true,
 			`der geklickte Kanal muss im PUT-Body stehen — erhalten: ${JSON.stringify(result!.body.send_premium_sms)}`
 		);
@@ -553,7 +553,7 @@ describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', 
 		);
 
 		assert.ok(result);
-		assert.strictEqual((result!.body as Record<string, unknown>).send_premium_sms, true);
+		assert.strictEqual((result!.body as unknown as Record<string, unknown>).send_premium_sms, true);
 	});
 
 	test('Glied 4 — rollbackAlarmSnapshot: der eigene gescheiterte Klick rollt zurück', () => {

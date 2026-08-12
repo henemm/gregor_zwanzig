@@ -166,6 +166,7 @@ describe('AC-9: Neuanlage schreibt dasselbe Format wie der Edit-Pfad', () => {
 		officialAlertTriggersEnabled: false,
 		sendTelegram: false,
 		sendSms: false,
+		sendPremiumSms: false,
 		officialWarningsEnabled: false,
 		morningEnabled: true,
 		morningTime: '07:00',

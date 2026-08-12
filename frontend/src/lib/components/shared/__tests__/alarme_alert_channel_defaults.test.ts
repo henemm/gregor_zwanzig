@@ -40,10 +40,10 @@ import {
 // #1745 AC-1 (Teil a, reine Reihenfolge-Zusicherung). Ersetzt die frühere
 // Drei-Kanal-Fassung dieses Tests (#1258 AC-11) — dieselbe Zusicherung, um den
 // vierten Kanal erweitert.
-// ROT HEUTE: ALERT_CHANNEL_ORDER ist ['telegram','sms','email'].
-// Mutation (Spec): ALERT_CHANNEL_ORDER bleibt dreiwertig.
-test('#1745 AC-1: alert_channel_order_hat_vier_kanaele_premium_sms_zuletzt', () => {
-	assert.deepEqual(ALERT_CHANNEL_ORDER, ['telegram', 'sms', 'email', 'premium_sms']);
+// Sollwert (Spec D5, nach RED-Phase korrigiert): premium_sms steht DIREKT
+// unter sms, VOR email — identisch zur Anordnung im Versand-Reiter.
+test('#1745 AC-1: alert_channel_order_hat_vier_kanaele_premium_sms_direkt_nach_sms', () => {
+	assert.deepEqual(ALERT_CHANNEL_ORDER, ['telegram', 'sms', 'premium_sms', 'email']);
 	// Der Picker rendert per {#each ALERT_CHANNEL_ORDER} — die Position IN
 	// dieser Liste ist die Position in der Oberfläche. Premium-SMS steht nach
 	// SMS (AC-1 Prüfort: „…-premium_sms nach …-sms").
@@ -88,7 +88,7 @@ test('#1258 AC-11: resolveAlertChannels mit teilweisem Bestand füllt fehlende K
 // Mutation (Spec): NEW_ENTITY_DEFAULT.premium_sms auf `true` gesetzt.
 // ─────────────────────────────────────────────────────────────────────────────
 test('#1745 AC-2: neuanlage_default_premium_sms_aus', () => {
-	const state = resolveAlertChannels(undefined) as Record<string, unknown>;
+	const state = resolveAlertChannels(undefined);
 	assert.strictEqual(
 		state.premium_sms,
 		false,
@@ -191,7 +191,7 @@ test('#1745 AC-4: warnhinweis_bleibt_aus_bei_nur_premium_sms', () => {
 			sms: false,
 			email: false,
 			premium_sms: true
-		} as Record<string, boolean>),
+		}),
 		false,
 		'Bei aktivem Premium-SMS darf der Hinweis „kein Kanal — Alerts gehen nirgends hin" NICHT ' +
 			'erscheinen: der Alarm wird zugestellt, die Oberfläche behauptete sonst das Gegenteil.'

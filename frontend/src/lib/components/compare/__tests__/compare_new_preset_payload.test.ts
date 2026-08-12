@@ -43,6 +43,7 @@ function fullFields(): NewComparePresetFields {
 		officialAlertTriggersEnabled: true,
 		sendTelegram: false,
 		sendSms: false,
+		sendPremiumSms: false,
 		officialWarningsEnabled: false,
 		morningEnabled: true,
 		morningTime: '07:00',

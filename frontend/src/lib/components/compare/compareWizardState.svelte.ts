@@ -48,6 +48,9 @@ export class CompareWizardState {
 	sendEmail = $state(true);
 	sendTelegram = $state(false);
 	sendSms = $state(false);
+	// Issue #1745 A (D1): vierter ALARM-Kanal des Ortsvergleichs (Premium-SMS,
+	// Go-Pendant ComparePreset.SendPremiumSms). Default AUS — Kostenkanal.
+	sendPremiumSms = $state(false);
 	// Issue #1268: timeWindowStart/timeWindowEnd/forecastHours entfallen — die
 	// Felder sind aus dem Editor entfernt; der Dispatch nutzt fest 0–23 Uhr / 48 h.
 	// Issue #1040: amtliche Warnungen ein/aus (Default true).
@@ -123,6 +126,7 @@ export class CompareWizardState {
 			officialAlertTriggersEnabled: this.officialAlertTriggersEnabled, // Issue #1216 Slice 2b
 			sendTelegram: this.sendTelegram,
 			sendSms: this.sendSms,
+			sendPremiumSms: this.sendPremiumSms, // Issue #1745 A (AC-11)
 			officialWarningsEnabled: this.officialWarningsEnabled, // Issue #1258 S4
 			morningEnabled: this.morningEnabled, // Issue #1232 Scheibe 2b
 			morningTime: this.morningTime,

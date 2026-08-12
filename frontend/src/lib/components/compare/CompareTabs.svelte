@@ -591,6 +591,10 @@
 			// Snapshot-Differenz erkennbar noch im PUT-Body enthalten.
 			sendTelegram: wizardState.sendTelegram,
 			sendSms: wizardState.sendSms,
+			// Issue #1745 A: ohne dieses Feld geht ein im Hub gesetzter Haken beim
+			// naechsten Speichern verloren (Snapshot-Diff sieht die Aenderung sonst
+			// nicht, flushPendingAlarmSave sendet sie deshalb nie).
+			sendPremiumSms: wizardState.sendPremiumSms,
 			channelThresholds: wizardState.channelThresholds
 		});
 	}
