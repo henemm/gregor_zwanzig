@@ -556,6 +556,59 @@ def thunder_level_from_signals(
     return max_thunder(signals.values())
 
 
+def union_of_max_carriers(
+    pairs: Iterable[tuple[Optional[ThunderLevel], Optional[list[str]]]],
+) -> Optional[list[str]]:
+    """Vereinigt die Traeger DERJENIGEN Paare, die die Hoechststufe erreichen
+    (Issue #1680 S2).
+
+    Die EINE Stelle, an der die Aggregationsregel
+    ``"thunder_level_max_signals": "union_of_max_carriers"`` (deklariert in
+    ``WeatherMetricsService.compute_basis_metrics()``) tatsaechlich gerechnet
+    wird. Herausgeloest aus ``_compute_thunder_level_signals()``, damit die
+    unabhaengigen Aggregationswege (Stunden, Wegpunkte, spaeter Segmente) sie
+    IMPORTIEREN statt sie zu kopieren — dieselbe Fehlerklasse, gegen die #1480
+    laeuft. Muster: ``hail_priority()`` unten.
+
+    Genannt wird JEDE Zutat, die die Hoechststufe traegt (PO-Auslegung (ii),
+    Scheibe 1) — es wird kein Gewinner gekuert, ein Paar unterhalb des Maximums
+    steuert NICHTS bei. Dedupliziert unter Erhalt der ERSTauftrittsreihenfolge;
+    da jede einzelne Traegerliste aus ``thunder_signal_carriers()`` bereits in
+    der Katalogreihenfolge von ``THUNDER_SIGNAL_LABEL_DE`` steht, bleibt die
+    Nennreihenfolge deterministisch — ohne zweites Sortier-Vokabular.
+
+    ``None`` (nicht ``[]``) heisst "keine Aussage": kein Paar nennt eine Stufe
+    (z.B. leere Auswahl) ODER kein Paar am Maximum nennt einen Traeger (z.B.
+    ein Alt-Schnappschuss ohne das Feld). Eine Stufe ``NONE`` ist dabei eine
+    ECHTE Stufe und kein Ausstiegsgrund — liegt das Maximum aber BEI ``NONE``,
+    ist das Ergebnis ``None``, weil "kein Gewitter" keine Herkunft hat. Das
+    garantiert die Funktion SELBST und verlaesst sich nicht darauf, dass ihre
+    Aufrufer zu einem ``NONE``-Punkt ohnehin keine Traeger liefern — sie ist
+    fuer die Wiederverwendung gebaut, und eine Zusicherung, die nur aus dem
+    Verhalten der heutigen Aufrufer folgt, braeche beim naechsten.
+
+    Rueckgabe ist bewusst eine ``list``, NIE ein ``set``: das Ergebnis landet
+    ueber ``SegmentWeatherSummary.thunder_level_max_signals`` im Wetter-
+    Schnappschuss, und ein ``set`` braeche dort ``json.dumps`` — der Fehler
+    wird still geschluckt, der GESAMTE Schnappschuss waere weg (#1405).
+    """
+    paare = list(pairs)
+    stufen = [s for s, _ in paare if s is not None]
+    if not stufen:
+        return None
+    top = max_thunder(stufen)
+    if top == ThunderLevel.NONE:
+        return None
+    traeger: list[str] = []
+    for stufe, liste in paare:
+        if stufe != top:
+            continue
+        for name in liste or []:
+            if name not in traeger:
+                traeger.append(name)
+    return traeger or None
+
+
 # ---------------------------------------------------------------------------
 # Hagel-Kennzeichen (#1475 S5a, Epic #1419)
 #

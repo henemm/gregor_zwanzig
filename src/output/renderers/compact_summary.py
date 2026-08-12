@@ -90,8 +90,13 @@ class CompactSummaryFormatter:
         # Issue #1417: Temperatur/gefuehlte Temperatur des Satzes kommen aus
         # DERSELBEN Gehzeit-Punktliste wie Mail-Kachelzeile, SMS und Telegram
         # -- statt aus `_aggregate()`, das die Ankunftsstunde ausschliesst.
-        # `_aggregate()` bleibt unveraendert Quelle fuer Wolken/Wind/Regen/
-        # Gewitter (nur diese zwei Groessen wechseln die Quelle).
+        # `_aggregate()` bleibt unveraendert Quelle fuer Wolken/Wind/Regen
+        # (nur diese zwei Groessen wechseln die Quelle). NICHT fuer Gewitter:
+        # `_format_thunder()` hat gar keinen `summary`-Parameter und liest
+        # ausschliesslich die gefensterten Stundenwerte -- bewusst so
+        # (ADR-0025 Entscheidung 1, #1275). Die fruehere Nennung von "Gewitter"
+        # an dieser Stelle war eine Aussage ueber eigenen Code, die der Code
+        # nicht deckte (Issue #1680 S2).
         _points = collect_hiking_window_points(segments)
         _temp = hiking_field_min_max(_points, "t2m_c")
         _felt = hiking_field_min_max(_points, "wind_chill_c")
@@ -574,7 +579,10 @@ class CompactSummaryFormatter:
         # entscheiden, ob Gewitter gemeldet wird (Issue #1275).
         # Lokaler Import wie bei ``cloud_emoji`` oben — vermeidet den
         # Zirkelbezug metric_format -> renderers -> compact_summary.
-        from output.metric_format import format_hail_note, hail_priority
+        from output.metric_format import (
+            format_hail_note, hail_priority, thunder_signal_label,
+            union_of_max_carriers,
+        )
 
         thunder_hours = []
         # Issue #1475 Nachbesserung (Punkt 3/AC-4): das Hagel-Kennzeichen
@@ -582,10 +590,18 @@ class CompactSummaryFormatter:
         # Helfer (#1481), kein Parallel-Aggregat. Die Gewitterstufe selbst
         # bleibt davon unberuehrt (AC-10).
         hail_values = []
+        # Issue #1680 S2: die Herkunfts-Paare stammen aus DERSELBEN Schleife
+        # ueber DIESELBE gefensterte Stundenliste wie Zeitfenster und Hagel --
+        # kein zweiter Datenzugriff, damit Fenster und Herkunft nicht aus zwei
+        # Rechnungen stammen koennen (Spec D6, AC-6).
+        thunder_paare = []
         for dp in hourly:
             if dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
                 thunder_hours.append(local_hour(dp.ts, self._tz))
                 hail_values.append(getattr(dp, "hail_flag", None))
+                thunder_paare.append(
+                    (dp.thunder_level, getattr(dp, "thunder_level_signals", None))
+                )
 
         if not thunder_hours:
             return None
@@ -597,6 +613,22 @@ class CompactSummaryFormatter:
             text = f"⚡ möglich {start_h}:00–{end_h}:00"
         else:
             text = f"Gewitter möglich {start_h}:00–{end_h}:00"
+        # BEIDE Schreibweisen tragen die Herkunft: der Default aus
+        # `build_default_display_config()` ist `use_friendly_format=True`, ein
+        # Suffix nur am unfreundlichen Zweig bliebe fuer den Normalnutzer
+        # unsichtbar. Reihenfolge (Spec D5): Zeitfenster · Herkunft · Hagel.
+        # Die Herkunft nennt die Zutat(en) der HOECHSTEN Stufe im Fenster
+        # (Variante A) -- dieselbe Regel wie an jedem anderen Ausgabeort.
+        # KANAL: dieser Satz gehoert zur E-Mail (`email_plain`/HTML) und zur
+        # Telegram-Kurzfassung. SMS und Premium-SMS bleiben ausdruecklich OHNE
+        # Herkunft (PO-Entscheidung): sie rendern ihre Gewitterangabe in
+        # `sms_trip.py` als eigenes `TH:`-Token aus `dp.thunder_level` und
+        # lesen diesen Text nicht -- aktiv abgewaehlt, nicht stillschweigend
+        # ausgelassen (bewacht durch Spec AC-8).
+        traeger = union_of_max_carriers(thunder_paare)
+        herkunft = ", ".join(thunder_signal_label(n) for n in traeger or [])
+        if herkunft:
+            text = f"{text} · {herkunft}"
         note = format_hail_note(hail_priority(hail_values))
         return f"{text} · {note}" if note else text
 

@@ -825,9 +825,21 @@ class TripCommandProcessor:
         hail_flag = hail_priority(
             [getattr(p.metrics, "hail_flag", None) for p in points]
         )
+        # Issue #1680 S2: die Zutaten, die die oben gebildete Tagesstufe
+        # tragen -- ueber DIESELBE, nach `target_date` gefilterte Wegpunkt-
+        # liste (Stufe und Herkunft aus EINER Rechnung, Spec D6). Der geteilte
+        # Helfer statt einer dritten Eigenimplementierung derselben Regel
+        # (#1480). Nur `_fmt_gewitter()` liest den Schluessel; `_fmt_day_agg()`
+        # /GLANCE bleibt bewusst zeichengleich (Spec D3, Known Limitation 4).
+        from output.metric_format import union_of_max_carriers
+        thunder_signals = union_of_max_carriers(
+            [(p.metrics.thunder_level_max,
+              getattr(p.metrics, "thunder_level_max_signals", None))
+             for p in points]
+        )
         return {"temp_max": temp_max, "temp_min": temp_min, "wind_max": wind_max,
                 "thunder": thunder, "precip": precip, "pop": pop,
-                "hail_flag": hail_flag}
+                "hail_flag": hail_flag, "thunder_signals": thunder_signals}
 
     def _fmt_day_agg(self, agg: dict, label: str) -> str:
         """Formatiert Tages-Aggregat als kompakte Zeile."""
@@ -875,9 +887,22 @@ class TripCommandProcessor:
         # Renderern (#1481 DRY, call-time Import) -- rein deskriptiv NEBEN der
         # Gewitterstufe, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
         # "unbekannt"/"nein" bleibt die Antwort zeichengleich zu bisher.
-        from output.metric_format import format_hail_note
+        from output.metric_format import format_hail_note, thunder_signal_label
         hail_note = format_hail_note(agg.get("hail_flag"))
         suffix = f" · {hail_note}" if hail_note else ""
+        # Issue #1680 S2: die tragende(n) Zutat(en) der oben gezeigten Stufe --
+        # additiv VOR dem Hagel-Suffix, rein deskriptiv ohne Bewertung
+        # (ADR-0007). Ohne Traeger (kein Gewitter, Alt-Schnappschuss ohne das
+        # Feld) bleibt die Zeile zeichengleich zu bisher.
+        # KANAL: das GEWITTER-Kommando erreicht ausschliesslich E-Mail und
+        # Telegram -- `InboundMessage` hat genau diese zwei Erzeuger
+        # (inbound_email_reader.py, inbound_telegram_reader.py). Es gibt keinen
+        # SMS-/Premium-SMS-Kommandopfad, die PO-Abwahl "SMS ohne Herkunft"
+        # greift hier also strukturell, ohne Kanal-Unterscheidung.
+        traeger = agg.get("thunder_signals")
+        herkunft = ", ".join(thunder_signal_label(n) for n in traeger or [])
+        if herkunft:
+            suffix = f" · {herkunft}{suffix}"
         return f"⛈ Gewitter heute ({today:%d.%m}): {label}{suffix}"
 
     def _fmt_timeline(self, timeline, target_date, label: str, day_token: str) -> str:

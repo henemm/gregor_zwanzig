@@ -629,17 +629,21 @@ class WeatherMetricsService:
 
         ``None`` (keine Aussage) bei fehlender Stufe oder wenn keine Stunde
         eine Zutat nennt -- z.B. ein Alt-Schnappschuss ohne das Feld.
+
+        Issue #1680 S2: der Rumpf ist in die freie Funktion
+        ``output.metric_format.union_of_max_carriers()`` gewandert, damit die
+        anderen Aggregationswege (Wegpunkte des GEWITTER-Kommandos, Stunden
+        der Kurzzusammenfassung) dieselbe Regel importieren statt sie zu
+        kopieren. Zeichengleiches Verhalten: der Helfer bildet sein Maximum
+        ueber DIESELBE Punktmenge, aus der auch ``thunder_max`` stammt
+        (``_compute_thunder_level()``) -- der Parameter bleibt fuer die
+        bestehende Aufrufstelle erhalten, wird aber nicht mehr gebraucht.
         """
-        if thunder_max is None:
-            return None
-        traeger: list[str] = []
-        for dp in timeseries.data:
-            if dp.thunder_level != thunder_max:
-                continue
-            for name in getattr(dp, "thunder_level_signals", None) or []:
-                if name not in traeger:
-                    traeger.append(name)
-        return traeger or None
+        from output.metric_format import union_of_max_carriers
+        return union_of_max_carriers(
+            (dp.thunder_level, getattr(dp, "thunder_level_signals", None))
+            for dp in timeseries.data
+        )
 
     def _compute_hail_flag(
         self,
