@@ -85,11 +85,13 @@ from tests.helpers.nowcast_gate_fixtures import (  # noqa: E402
     location,
     make_trip,
     preset_root,
-    radar_preset,
+    read_daily_counter,
     reset_radar_cache,
     save_trip,
+    seed_daily_counter,
     settings_email_only,
     trip_alert_service,
+    trip_stage,
     write_user_tier,
 )
 
@@ -1395,4 +1397,431 @@ def test_ac15_kein_aufloesbarer_ort_ergibt_utc_und_einen_protokolleintrag(
     ), (
         "Der UTC-Rückfall darf nicht still geschehen: er gehört mit der "
         "Vergleichs-Kennung ins Protokoll."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# FIX-LOOP 1 — drei Stellen, die KEIN Test bewachte
+#
+# Der Adversary hat die Verdrahtung als korrekt gelesen und trotzdem BROKEN
+# geurteilt — nicht behauptet, sondern gemessen: er hat den Produktivcode an
+# drei Stellen verfälscht, und die Suite blieb grün. Ein grüner Testlauf
+# beweist nur, dass die Tests durchlaufen, nicht dass sie etwas bewachen.
+#
+# Jeder Test dieses Abschnitts nennt im Docstring die Verfälschung, gegen die
+# er rot wird, und WARUM die vorhandenen Tests sie durchgelassen haben.
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _segment_wetter(precip_sum_mm: float, segment_id: int = 1):
+    """Ein echtes `SegmentWeatherData` mit vorgegebener Niederschlagssumme.
+
+    Aufbau übernommen aus `test_issue_1070_daily_alert_limit.py::_weather_data`
+    — dieselbe Δ-Erkennung, dieselben Feldnamen. Ohne echte Wetterdaten auf
+    BEIDEN Seiten (`cached` und `fresh`) wird `DeviationAlertEngine.evaluate()`
+    gar nicht erst erreicht; genau daran scheiterte die Absicherung von F001.
+    """
+    from app.models import (
+        ForecastMeta,
+        GPXPoint,
+        NormalizedTimeseries,
+        Provider,
+        SegmentWeatherData,
+        SegmentWeatherSummary,
+        TripSegment,
+    )
+
+    start = datetime(2026, 4, 5, 8, 0, tzinfo=UTC)
+    return SegmentWeatherData(
+        segment=TripSegment(
+            segment_id=segment_id,
+            start_point=GPXPoint(
+                lat=47.0, lon=11.0, elevation_m=1000, distance_from_start_km=12.0,
+            ),
+            end_point=GPXPoint(
+                lat=47.1, lon=11.1, elevation_m=1500, distance_from_start_km=18.0,
+            ),
+            start_time=start, end_time=start + timedelta(hours=4),
+            duration_hours=4.0, distance_km=6.0, ascent_m=500, descent_m=0,
+        ),
+        timeseries=NormalizedTimeseries(
+            meta=ForecastMeta(provider=Provider.OPENMETEO, model="test", grid_res_km=1.0),
+            data=[],
+        ),
+        aggregated=SegmentWeatherSummary(precip_sum_mm=precip_sum_mm),
+        fetched_at=datetime.now(UTC),
+        provider="openmeteo",
+    )
+
+
+def _trip_mit_aenderungserkennung(user_id: str, trip_id: str, zone_name: str,
+                                  quiet: tuple[str, str]):
+    """Trip wie :func:`trip_mit_ruhezeit`, zusätzlich mit scharfer
+    Δ-Erkennung für `precipitation_sum` — sonst filtert die Engine die
+    Änderung als unbedeutend weg, bevor irgendetwas versendet wird."""
+    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+
+    trip = trip_mit_ruhezeit(user_id, trip_id, zone_name, quiet)
+    trip.display_config = UnifiedWeatherDisplayConfig(
+        trip_id=trip_id,
+        metrics=[MetricConfig(metric_id="precipitation", enabled=True)],
+        metric_alert_levels={"precipitation_sum": "standard"},
+    )
+    return trip
+
+
+def _deviation_versand(user_id: str, zone_name: str, quiet: tuple[str, str]):
+    """Ein VOLLSTÄNDIGER `check_and_send_alerts()`-Lauf mit echten Wetterdaten
+    auf beiden Seiten — bis in `DeviationAlertEngine.evaluate()` hinein und
+    weiter bis zum Versand. Liefert `(ergebnis, anzahl_versendeter_mails)`."""
+    from services.trip_alert import TripAlertService
+
+    gesendet: list = []
+    dienst = TripAlertService(
+        settings=settings_email_only(), throttle_hours=0, user_id=user_id,
+        mail_sink=lambda *a, **kw: gesendet.append((a, kw)),
+    )
+    trip = _trip_mit_aenderungserkennung(user_id, "t-kern-trip", zone_name, quiet)
+    ergebnis = dienst.check_and_send_alerts(
+        trip, [_segment_wetter(2.0)], fresh_weather=[_segment_wetter(18.0)],
+    )
+    return ergebnis, len(gesendet)
+
+
+def test_f001_zweite_ruhezeit_pruefung_der_engine_nutzt_die_trip_zone(sauberer_nutzer):
+    """F001 — `trip_alert.py:279`: die Zone in `AlertEvaluationConfig`.
+
+    Diese Zone wirkt NICHT an der Stelle, an der sie steht, sondern in der
+    ZWEITEN Ruhezeit-Prüfung, die innerhalb von `DeviationAlertEngine.
+    evaluate()` läuft (`deviation_alert_engine.py:285-287`).
+
+    Warum kein bestehender Test sie bewacht: alle Trip-Fixturen dieser Datei
+    halten `_fetch_fresh_weather()` bei `[]` an. Der Ablauf bricht dann schon
+    bei `trip_alert.py:252-254` ab — also VOR der Bildung der Konfiguration.
+    `evaluate()` wird über den TRIP-Erbauer nie erreicht; AC-3 Stelle 7 misst
+    ausschliesslich den COMPARE-Erbauer. Gemessen: eine fest verdrahtete
+    Wiener Zone an `:279` liess alle 52 Tests grün.
+
+    Wie dieser Test die INNERE Prüfung von der äusseren trennt: das
+    Ruhezeit-Fenster liegt um die WIENER Ortszeit. Die äussere Prüfung
+    (`:230`, Zone Auckland) lässt den Lauf damit durch — und die innere muss
+    dasselbe tun. Rechnet sie in Wien, unterdrückt sie, und nichts kommt an.
+
+    ROT bei der Verfälschung `zone=anchor_tz(trip, now_utc)` →
+    `ZoneInfo("Europe/Vienna")` an `:279`.
+    """
+    ergebnis, versendet = _deviation_versand(
+        sauberer_nutzer("f001-kern"), "Pacific/Auckland", fenster_um_jetzt(VIENNA),
+    )
+
+    assert ergebnis is True, (
+        "Ein Fenster um die WIENER Uhrzeit darf den Auckland-Trip nirgends "
+        "stilllegen — auch nicht in der zweiten Prüfung im Engine-Kern, die "
+        "ihre Zone aus `AlertEvaluationConfig` bezieht."
+    )
+    assert versendet >= 1, "Der Alarm muss tatsächlich hinausgehen, nicht nur True melden."
+
+    # Gegenprobe in derselben Bauart: liegt das Fenster um die AUCKLAND-Zeit,
+    # muss derselbe Lauf still bleiben. Ohne sie wäre die Zusicherung oben
+    # auch von einem Alarm erfüllt, der gar keine Ruhezeit mehr prüft.
+    ergebnis_ruhig, versendet_ruhig = _deviation_versand(
+        sauberer_nutzer("f001-kern-gegen"), "Pacific/Auckland",
+        fenster_um_jetzt(AUCKLAND),
+    )
+
+    assert ergebnis_ruhig is False
+    assert versendet_ruhig == 0, (
+        "Die Auckland-Ruhezeit muss denselben Lauf unterdrücken — sonst misst "
+        "die Zusicherung oben einen Pfad ohne jede Ruhezeit-Prüfung."
+    )
+
+
+# ── F002: `anchor_tz` gegen `trip_tz` — nur ein MEHRETAPPIGER Trip trennt sie ─
+#
+# `anchor_tz(trip, now)` liefert die Zone der Etappe des WELTZEIT-Tages,
+# `trip_tz(trip)` die der ERSTEN Etappe mit Wegpunkten. Bei einem Trip mit
+# genau einer Etappe ist das zwangsläufig dieselbe Zone — und jede Trip-Fixture
+# dieser Datei baut genau eine. Gemessen: ersetzt man JEDEN `anchor_tz`-Aufruf
+# in `trip_alert.py` durch `trip_tz(trip)`, bleibt die gesamte Suite grün.
+#
+# Das wiegt schwer, weil Abschnitt B der Spec ausdrücklich begründet, warum
+# `anchor_tz` nötig ist: „ein mehrtägiger Trek, der die Zone wechselt, braucht
+# die Zone SEINER AKTUELLEN Etappe, nicht die des Starttags". Diese Begründung
+# hatte bis hierher keinen Wächter.
+
+
+def trip_zwei_zonen(user_id: str, trip_id: str, *, erste_zone: str,
+                    heutige_zone: str, quiet: tuple[str | None, str | None]):
+    """Trip über ZWEI Etappen in verschiedenen Zonen.
+
+    Etappe 1 (erste der Liste, mit Wegpunkten, GESTERN) liegt in `erste_zone`
+    — das ist, was `trip_tz()` liefert. Etappe 2 trägt den heutigen
+    Weltzeit-Tag und liegt in `heutige_zone` — das ist, was `anchor_tz()`
+    liefert. Nur so lassen sich die beiden Auflösungen überhaupt
+    unterscheiden.
+    """
+    heute = datetime.now(UTC).date()
+    lat_erste, lon_erste = KOORDINATEN[erste_zone]
+    lat_heute, lon_heute = KOORDINATEN[heutige_zone]
+    trip = make_trip(
+        trip_id,
+        cooldown_minutes=0,
+        quiet_from=quiet[0],
+        quiet_to=quiet[1],
+        stage_date=heute - timedelta(days=1),
+        lat=lat_erste,
+        lon=lon_erste,
+        extra_stages=[
+            trip_stage("S2", heute, lat_heute, lon_heute, wp_prefix="B"),
+        ],
+    )
+    trip.report_config.alert_on_changes = True
+    save_trip(trip, user_id)
+    return trip
+
+
+def test_f002_anchor_tz_und_trip_tz_liefern_bei_diesem_trip_verschiedene_zonen():
+    """F002 (Vorbedingung, grüner Anker): Der Prüf-Trip der beiden folgenden
+    Tests trennt die zwei Auflösungen tatsächlich.
+
+    Kein Prüfling-Test — er sichert nur, dass die folgenden Zusicherungen
+    überhaupt etwas unterscheiden können. Fiele er, wären sie so blind wie die
+    einetappigen Fixturen, die den Fehler durchgelassen haben.
+    """
+    from services.trip_day import anchor_tz, trip_tz
+
+    trip = trip_zwei_zonen(
+        _uid("f002-vorbedingung"), "t-vorbedingung",
+        erste_zone="America/Los_Angeles", heutige_zone="Pacific/Auckland",
+        quiet=(None, None),
+    )
+    jetzt = datetime.now(UTC)
+
+    assert str(trip_tz(trip)) == "America/Los_Angeles", (
+        "Die erste Etappe mit Wegpunkten liegt in Los Angeles."
+    )
+    assert str(anchor_tz(trip, jetzt)) == "Pacific/Auckland", (
+        "Die Etappe des heutigen Weltzeit-Tages liegt in Auckland — nur wenn "
+        "beide Auflösungen hier auseinanderfallen, messen die folgenden Tests "
+        "die Wahl zwischen ihnen."
+    )
+    clean_uid(_uid("f002-vorbedingung"))
+
+
+def _zwei_zonen_lauf(user_id: str, quiet: tuple[str | None, str | None]) -> int:
+    """`check_and_send_alerts()` für den zweietappigen Trip; liefert die Zahl
+    der Wetterabrufe (0 = vorher unterdrückt)."""
+    dienst = trip_abweichungsdienst(user_id)
+    trip = trip_zwei_zonen(
+        user_id, "t-zwei-zonen",
+        erste_zone="America/Los_Angeles", heutige_zone="Pacific/Auckland",
+        quiet=quiet,
+    )
+    dienst.check_and_send_alerts(trip, cached_weather=[])
+    return type(dienst).fetch_aufrufe
+
+
+def test_f002_ruhezeit_folgt_der_heutigen_etappe_nicht_der_ersten(sauberer_nutzer):
+    """F002 (Ruhezeit) — `trip_alert.py:700` (`_is_quiet_hours`-Adapter).
+
+    Given ein Trek, dessen erste Etappe in Los Angeles liegt und dessen Etappe
+    des heutigen Tages in Auckland / When die Ruhezeit geprüft wird / Then
+    gilt die Zone der HEUTIGEN Etappe.
+
+    ROT bei der Verfälschung `anchor_tz(trip, now)` → `trip_tz(trip)`: dann
+    kippen BEIDE Zusicherungen gleichzeitig — der Auckland-Lauf liefe weiter,
+    der Los-Angeles-Lauf würde stillgelegt.
+    """
+    abrufe_heutige_etappe = _zwei_zonen_lauf(
+        sauberer_nutzer("f002-ruhe-heute"), fenster_um_jetzt(AUCKLAND),
+    )
+    abrufe_erste_etappe = _zwei_zonen_lauf(
+        sauberer_nutzer("f002-ruhe-erste"), fenster_um_jetzt(LOS_ANGELES),
+    )
+
+    assert abrufe_heutige_etappe == 0, (
+        "Die Ruhezeit muss der Zone der heutigen Etappe (Auckland) folgen."
+    )
+    assert abrufe_erste_etappe >= 1, (
+        "Die Zone der ERSTEN Etappe (Los Angeles) darf einen Trek, der längst "
+        "woanders ist, nicht mehr stilllegen — genau dafür gibt es `anchor_tz`."
+    )
+
+
+def test_f002_tageszaehler_folgt_der_heutigen_etappe_nicht_der_ersten(sauberer_nutzer):
+    """F002 (Tageszähler) — `trip_alert.py:243` (`is_allowed`).
+
+    Given derselbe Trek (erste Etappe Los Angeles, heutige Etappe Auckland)
+    und ein Free-Kontingent, das in EINER der beiden Zonen erschöpft ist /
+    When ein Abweichungs-Alarm ansteht / Then entscheidet der Auckland-Zähler.
+
+    Free-Limit 2, davon reserviert `reason="forecast_change"` einen Platz für
+    NowCast (#1555) — ein Stand von 1 sperrt also bereits.
+
+    ROT bei derselben Verfälschung wie oben (`anchor_tz` → `trip_tz`): dann
+    entscheidet der Los-Angeles-Zähler und beide Zusicherungen kippen.
+    """
+    def lauf(zone: ZoneInfo, kennung: str) -> int:
+        user_id = sauberer_nutzer(kennung)
+        seed_daily_counter(user_id, 1, zone=zone)
+        return _zwei_zonen_lauf(user_id, (None, None))
+
+    abrufe_bei_vollem_auckland = lauf(AUCKLAND, "f002-zaehler-heute")
+    abrufe_bei_vollem_la = lauf(LOS_ANGELES, "f002-zaehler-erste")
+
+    assert abrufe_bei_vollem_auckland == 0, (
+        "Erschöpftes Kontingent in der Zone der HEUTIGEN Etappe muss den "
+        "Alarm sperren — vor jedem Wetterabruf."
+    )
+    assert abrufe_bei_vollem_la >= 1, (
+        "Ein erschöpftes Kontingent in der Zone der ERSTEN Etappe geht diesen "
+        "Trek nichts mehr an; das Auckland-Kontingent steht auf 0."
+    )
+
+
+# ── F003: Prüfung und Buchung des Kontingents dürfen nicht auseinanderlaufen ──
+#
+# Beide Vergleichspfade lösen die Zone EINMAL auf und benutzen sie für die
+# Prüfung (`is_allowed`) UND die Buchung (`increment`). Dass beide dieselbe
+# Zone sehen, hängt allein an einer gemeinsamen lokalen Variable. Gemessen:
+# stellt man NUR `increment()` auf eine feste Wiener Zone um, bleibt alles
+# grün — AC-6/AC-7 prüfen `alert_daily_limit.*` ausschliesslich direkt über
+# den Testhelfer, nie über die tatsächlichen Aufrufstellen. `alert_gate.py`
+# benennt die Gefahr im eigenen Docstring: „wer hier eine andere zone
+# uebergibt als check_nowcast_gate(), fuellt einen anderen Zaehler als den
+# geprueften".
+#
+# Beide Tests unten laufen deshalb über den ECHTEN Preset-Lauf und messen die
+# Wirkung, die eine Divergenz hätte: der Riegel greift nicht mehr.
+
+
+def _amtlicher_vergleichsdienst_mit_warnung(user_id: str, gesendet: list):
+    """`CompareOfficialAlertService`, dessen Netz-Naht `_detect()` bei JEDEM
+    Lauf eine echte amtliche Warnung liefert — der Riegel, der den zweiten
+    bzw. dritten Lauf stoppen muss, ist dann allein das Tageskontingent."""
+    from services.compare_official_alert import CompareOfficialAlertService
+    from services.official_alerts.models import OfficialAlert
+
+    class _MitWarnung(CompareOfficialAlertService):
+        def _detect(self, preset_id, locs, sources=None):
+            warnung = OfficialAlert(
+                source="test-quelle", hazard="wind", level=3,
+                label="Sturmwarnung", region_label="Testregion",
+            )
+            return ([(warnung, [loc.id for loc in locs])], {})
+
+    return _MitWarnung(
+        settings=settings_email_only(), user_id=user_id,
+        mail_sink=lambda *a, **kw: gesendet.append((a, kw)),
+    )
+
+
+def test_f003_amtlicher_vergleich_bucht_in_der_zone_die_er_auch_prueft(
+    sauberer_nutzer,
+):
+    """F003 (amtliche Warnung) — `compare_official_alert.py:146` (`is_allowed`)
+    gegen `:190` (`increment`).
+
+    Given ein Free-Nutzer (Kontingent 2) mit einem Vergleich in Auckland /
+    When drei amtliche Warnungen nacheinander anstehen / Then gehen die ersten
+    beiden hinaus und die dritte wird gesperrt.
+
+    Das fängt eine Divergenz zwischen Prüf- und Buchungszone in BEIDE
+    Richtungen: bucht `increment()` woanders als `is_allowed()` prüft, steht
+    der geprüfte Zähler dauerhaft auf 0 und der Riegel greift nie.
+
+    ROT bei der Verfälschung `alert_daily_limit.increment(self._user_id, now,
+    zone)` → feste Wiener Zone an `:190` (dritter Lauf geht dann ebenfalls
+    hinaus).
+    """
+    user_id = sauberer_nutzer("f003-amtlich")
+    schreibe_ort(user_id, "loc-akl", "Pacific/Auckland")
+    schreibe_presets(user_id, [vergleichs_preset("cp-kontingent", ["loc-akl"])])
+
+    gesendet: list = []
+    dienst = _amtlicher_vergleichsdienst_mit_warnung(user_id, gesendet)
+    laeufe = [dienst.check_all_compare_presets() for _ in range(3)]
+
+    assert laeufe == [1, 1, 0], (
+        f"Free-Kontingent 2: zwei Warnungen gehen hinaus, die dritte ist "
+        f"gesperrt. Gemessen: {laeufe}"
+    )
+    assert read_daily_counter(user_id, zone=AUCKLAND) == 2, (
+        "Gebucht werden muss in DERSELBEN Zone, gegen die geprüft wird."
+    )
+    assert read_daily_counter(user_id, zone=VIENNA) == 0, (
+        "Eine Buchung auf der Wiener Uhr wäre ein Zähler, den niemand liest."
+    )
+
+
+class _OrtsWetterQuelle:
+    """Echte `LocationWeatherSource`-Naht (kein Mock): liefert für jeden Ort
+    ein festes `PointWeatherData` mit vorgegebener Niederschlagssumme, ohne
+    Netzzugriff. Vorbild: `test_issue_1070_daily_alert_limit.py::
+    _ScriptedComparePointSource`."""
+
+    def __init__(self, precip_sum_mm: float) -> None:
+        self._precip = precip_sum_mm
+
+    def fetch(self, point_id: str, lat: float, lon: float,
+              start_hour: int | None = None, end_hour: int | None = None):
+        from app.models import SegmentWeatherSummary
+        from services.point_weather import PointWeatherData
+
+        return PointWeatherData(
+            id=point_id, name=point_id, lat=lat, lon=lon, timeseries=None,
+            aggregated=SegmentWeatherSummary(precip_sum_mm=self._precip),
+            fetched_at=datetime.now(UTC), provider="test-fix-loop",
+        )
+
+
+def test_f003_vergleichs_aenderungsalarm_bucht_in_der_zone_die_er_auch_prueft(
+    sauberer_nutzer,
+):
+    """F003 (Änderungsalarm) — `compare_alert.py:158` (`is_allowed`) gegen
+    `:301` (`increment`). Strukturell identisch angreifbar wie der amtliche
+    Pfad, deshalb hier eigenständig nachgewiesen.
+
+    Given ein Free-Nutzer mit ZWEI Vergleichen am selben Auckland-Ort, beide
+    mit einer deutlichen Wetter-Abweichung gegen ihren Δ-Anker / When der
+    Alarmlauf beide abarbeitet / Then geht genau EINER hinaus: der erste
+    verbraucht das um die NowCast-Reserve verringerte Kontingent (Free 2 − 1),
+    der zweite sieht es als erschöpft.
+
+    ROT bei der Verfälschung `alert_daily_limit.increment(self._user_id, now,
+    config.zone)` → feste Wiener Zone: dann bleibt der Auckland-Zähler auf 0
+    und BEIDE Vergleiche senden.
+    """
+    from services.compare_alert import CompareAlertService
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+
+    user_id = sauberer_nutzer("f003-aenderung")
+    ort = schreibe_ort(user_id, "loc-akl", "Pacific/Auckland")
+    preset_ids = ["cp-erst", "cp-zweit"]
+    schreibe_presets(
+        user_id, [vergleichs_preset(pid, ["loc-akl"]) for pid in preset_ids],
+    )
+    anker = _OrtsWetterQuelle(2.0)
+    for preset_id in preset_ids:
+        CompareWeatherSnapshotService(user_id=user_id).save(
+            preset_id, ort.id, anker.fetch(ort.id, ort.lat, ort.lon),
+        )
+
+    gesendet: list = []
+    dienst = CompareAlertService(
+        settings=settings_email_only(), user_id=user_id,
+        weather_source=_OrtsWetterQuelle(30.0),
+        mail_sink=lambda *a, **kw: gesendet.append((a, kw)),
+    )
+    versandt = dienst.check_all_compare_presets()
+
+    assert versandt == 1, (
+        f"Der zweite Vergleich muss am Kontingent scheitern, das der erste "
+        f"verbraucht hat. Gemessen: {versandt} Versände."
+    )
+    assert read_daily_counter(user_id, zone=AUCKLAND) == 1, (
+        "Gebucht werden muss in DERSELBEN Zone, gegen die geprüft wird."
+    )
+    assert read_daily_counter(user_id, zone=VIENNA) == 0, (
+        "Eine Buchung auf der Wiener Uhr wäre ein Zähler, den niemand liest."
     )
