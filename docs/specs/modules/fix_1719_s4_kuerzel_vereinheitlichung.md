@@ -137,6 +137,75 @@ Je Zeile im Bereich „Reihenfolge" stehen beschriftete Marken:
 das Register-Kürzel, weil die Vergleichs-SMS aus `get_sms_code()` rendert
 (`comparison.py:625`). Eine flächenblinde Korrektur würde den Vergleich falsch machen.
 
+### 4. Die Marken bleiben in jeder Fenstergröße vollständig lesbar
+
+**PO-Vorgabe 2026-08-12:** *„Stelle per Browser Tests sicher, dass alle Zeichen der Legende
+in unterschiedlichen Browserauflösungen sichtbar bleiben. Aktuell ist es etwas Glückssache."*
+
+#### Gemessene Ursache
+
+```css
+.label-cell { display: flex; min-width: 0; }      /* darf unter Inhaltsbreite schrumpfen */
+.metric-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.col-badge { /* kein flex-shrink, kein white-space */ }
+.sms-badge { white-space: nowrap; /* kein flex-shrink */ }
+
+@media (max-width: 899px) {
+  .label-cell { flex-wrap: wrap; }                /* unter 900px: Marken brechen um */
+  .metric-label { white-space: normal; }
+}
+```
+
+Die Zeile ist ein Grid `28px 16px 1fr auto`; die Marken sitzen in der `1fr`-Zelle mit
+`min-width: 0`. **Unter 900 px** rettet der Umbruch alles. **Ab 900 px** gibt es keinen
+Umbruch, und weil den Marken `flex-shrink: 0` fehlt, werden sie zusammengedrückt und ihr
+Inhalt beschnitten. Die Bruchzone ist damit **900 px bis ~1300 px**.
+
+Der e2e-Bestand prüft 1280 px (53 Vorkommen) und 390 px (20 Vorkommen) — beide **außerhalb**
+der Bruchzone; 850 px liegt im sicheren Umbruch-Modus. Die vorhandenen Testbreiten umgehen
+den Defekt systematisch, deshalb ist er nie aufgefallen.
+
+**S4 verschärft ihn**, weil die Kurzform-Marke künftig `FK FD WC` statt `TF` trägt.
+
+#### Anforderung
+
+Die Marken sind **unverkürzbar**: Bei Platzmangel kürzt der Name (er ist im Klartext
+daneben ohnehin lesbar), nie ein Kürzel. Reicht der Platz auch dann nicht, bricht die Zelle
+um — in jeder Fensterbreite, nicht erst unter 900 px.
+
+#### „Sichtbar" heißt geometrisch gemessen, nicht „im DOM"
+
+Genau diese Verwechslung machte den Wächter aus #1453 blind. Jede Marke muss in **jeder**
+geprüften Auflösung alle fünf Bedingungen erfüllen:
+
+| # | Bedingung | Messung |
+|---|---|---|
+| 1 | Text nicht beschnitten | `el.scrollWidth <= el.clientWidth + 1` |
+| 2 | vollständig innerhalb ihrer Zeile | `boundingBox` der Marke liegt in dem der `.row` |
+| 3 | vollständig im Sichtfenster | `x >= 0` und `x + width <= viewport.width` |
+| 4 | nicht von einem Nachbarelement überdeckt | `document.elementFromPoint(mitte)` liefert die Marke oder einen Nachfahren |
+| 5 | Textinhalt exakt, kein Auslassungszeichen | gerenderter Text `=== ` erwartetes Kürzel, enthält kein `…` |
+
+Zusätzlich je Auflösung: die Seite scrollt nicht horizontal
+(`documentElement.scrollWidth <= window.innerWidth + 1`).
+
+#### Auflösungsmatrix (verbindlich)
+
+Vierzehn Breiten, mit Schwerpunkt auf der Bruchzone und beiden Rändern der Media-Query:
+
+| Klasse | Auflösungen |
+|---|---|
+| Kleine Handys | 320×568 · 375×667 |
+| Handys | 390×844 · 414×896 |
+| Schmales Fenster / geteilter Bildschirm | 600×900 · 768×1024 |
+| **Media-Query-Ränder** | **899×900 · 901×900** |
+| **Bruchzone** | **960×900 · 1024×768 · 1180×820** |
+| Desktop | 1280×900 · 1440×900 · 1920×1080 |
+
+Geprüft wird gegen den **Worst Case**, nicht gegen eine bequeme Auswahl: „Gefühlte
+Nacht-Tiefsttemperatur" (31 Zeichen, längster Name im Katalog) und „Gefühlte Temperatur"
+(längste Kurzform `FK FD WC`) müssen beide in der Liste stehen.
+
 ## Acceptance Criteria
 
 - **AC-1:** Given eine Telegram-Nachricht eines Trips mit den Größen Luftfeuchtigkeit,
@@ -194,6 +263,36 @@ das Register-Kürzel, weil die Vergleichs-SMS aus `get_sms_code()` rendert
   erscheint keine leere oder erfundene Kurzform-Marke, sondern gar keine.
   - Test: Kern-Wächter mit einer Größe ohne Registereintrag.
 
+- **AC-10:** Given der Touren-Editor mit einer Metrik-Liste, die „Gefühlte
+  Nacht-Tiefsttemperatur" und „Gefühlte Temperatur" enthält / When der Bereich
+  „Reihenfolge" in **jeder** der vierzehn Auflösungen der Matrix geladen wird / Then
+  erfüllt **jede** Marke **jeder** sichtbaren Zeile alle fünf Sichtbarkeits-Bedingungen.
+  - Test: Playwright-Klickpfad gegen Staging, über die Auflösungsliste iterierend, über
+    alle Zeilen iterierend — keine Stichprobe. Fehlermeldung nennt Auflösung, Größe,
+    Marke und die verletzte Bedingung.
+
+- **AC-11:** Given eine der vierzehn Auflösungen / When der Bereich „Reihenfolge"
+  angezeigt wird / Then scrollt die Seite nicht horizontal.
+  - Test: derselbe Lauf; `documentElement.scrollWidth <= window.innerWidth + 1`.
+
+- **AC-12:** Given eine Fensterbreite in der Bruchzone (900–1300 px) und eine Zeile, deren
+  Name und Marken zusammen breiter sind als die Zelle / When die Zeile gerendert wird /
+  Then wird **der Name** gekürzt oder die Zelle bricht um — **nie** eine Marke.
+  - Test: gezielt bei 960 px und 1024 px; die Marke trägt ihren vollen Text
+    (Bedingung 1 und 5), während der Name gekürzt sein **darf**.
+  - Gegenprobe (Pflicht): Entfernt man die Unverkürzbarkeit der Marken aus dem CSS, muss
+    dieser Test rot werden. Wird er es nicht, bewacht er nichts.
+
+- **AC-13:** Given der Reihenfolge-Bereich einer der drei Vergleichs-Flächen / When er in
+  den vierzehn Auflösungen geladen wird / Then gelten AC-10 und AC-11 dort ebenso.
+  - Test: derselbe Klickpfad gegen mindestens eine Vergleichs-Fläche.
+
+- **AC-14:** Given die Ziehgeste im Reihenfolge-Bereich / When nach den Layout-Änderungen
+  eine Zeile per Drag umsortiert wird / Then landet sie an der Zielposition und der Stand
+  wird gespeichert.
+  - Test: Playwright; **Pflicht**, weil S3 in genau dieser Datei die Ziehgeste lautlos
+    zerbrochen hat und 2553 Unit-Tests das nicht gesehen haben.
+
 ## Non-Goals (bewusst nicht in dieser Scheibe)
 
 - **Die Mail-Kurzformen bleiben** (`Feels`, `Dew`, `Gust`). Sie stehen in einer breiten
@@ -223,6 +322,15 @@ das Register-Kürzel, weil die Vergleichs-SMS aus `get_sms_code()` rendert
 5. **Telegram-Spaltenbreite.** Die Tabelle ist auf schmale Köpfe ausgelegt; `NS24+` ist
    fünf Zeichen. Die Breitenrechnung (`narrow.py:157-160`) passt sich an — zu prüfen ist,
    ob die Zeile dadurch umbricht.
+6. **Das Layout-Problem ist vorbestehend, nicht von S4 verursacht** — S4 verschärft es nur.
+   Die Reparatur (Abschnitt 4) ist damit Teil dieser Scheibe, nicht ein Nebenbefund: eine
+   Legende, deren Zeichen bei manchen Fensterbreiten fehlen, erfüllt ihren Zweck nicht.
+7. **Vierzehn Auflösungen × zwei Flächen sind ~28 Browserläufe.** Das kostet Laufzeit im
+   Klickpfad-Bündel. Bewusst in Kauf genommen: die bisherigen zwei Standardbreiten haben
+   die Bruchzone nachweislich verfehlt.
+8. **Die Prüfung testet Geometrie, keine Ästhetik.** Ob eine umgebrochene Zeile *gut
+   aussieht*, entscheidet der PO am Bildschirm — der `fresh-eyes-inspector` bewertet
+   Screenshots aus der Bruchzone ohne Bug-Kontext.
 
 ## Implementation Details
 
