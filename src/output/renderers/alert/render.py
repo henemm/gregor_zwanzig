@@ -20,6 +20,7 @@ from .model import (
     AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, arrow, delta_pct,
     km_span, over_thr, severity, side_label,
 )
+from .segments import format_alert_location
 
 
 def _sorted(msg: AlertMessage) -> list[AlertEvent]:
@@ -97,18 +98,31 @@ def _label(e: AlertEvent) -> str:
     return get_alert_label(e.metric_id)
 
 
+def _location_of(events, location_label: str | None = None) -> str:
+    """Ortsangabe einer Ereignismenge (Issue #1744 A1) — Betreff, Mailkoerper
+    und Telegram-Langform holen sie ALLE hier, damit eine Mail nicht zwei
+    Ortssprachen spricht (AC-6). Die Reihenfolge location_label -> Segment ->
+    km steht in `segments.format_alert_location` und NUR dort (AC-3).
+
+    Issue #1169: gesetztes `location_label` (Compare-Punkt-Alert) ersetzt die
+    sinnlose km-Spanne eines Punktes ohne km-Kontext; der Trip-Pfad setzt das
+    Feld nie."""
+    a, b = km_span(events)
+    return format_alert_location(
+        location_label, [e.segment_id for e in events], a, b,
+    )
+
+
 def _km_str(msg: AlertMessage) -> str:
-    # Issue #1169: gesetztes location_label (Compare-Punkt-Alert) ersetzt die
-    # sinnlose km-Spanne eines Punktes ohne km-Kontext; Trip-Pfad setzt das
-    # Feld nie (bit-identische Ausgabe, AC-7).
-    if msg.location_label:
-        return msg.location_label
-    a, b = km_span(msg.events)
-    return f"km {int(round(a))}–{int(round(b))}"
+    return _location_of(msg.events, msg.location_label)
 
 
 def _km_str_onset(e: OnsetEvent) -> str:
-    return f"km {int(round(e.km_from))}–{int(round(e.km_to))}"
+    # Bewusst OHNE `location_label`: `_render_telegram_onset` liest auch im
+    # gebuendelten Mehr-Orte-Fall nur `events[0]` (Nebenbefund im Kontext-
+    # Dokument) — mit Ortsnamen stuende dort statt "km 0–0" der Name des
+    # ERSTEN Ortes, und der Ortsvergleich soll unveraendert bleiben (AC-4).
+    return _location_of((e,))
 
 
 # --- Schwellen-Treffer (Issue #1444 S1, ADR-0013: eigener Render-Vertrag,
@@ -376,16 +390,14 @@ def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[
         f"Alarm-Schwelle {_val(e, e.threshold)}",
         f"Änderung {side_label(e)} {mark}",
     )
-    when = location_label if location_label else _km_str_events((e,))
+    # Issue #1744 A1 (AC-6): DIESELBE Aufloesung wie im Betreff — vorher stand
+    # hier ein dritter, eigener km-Bauer (`_km_str_events`), weshalb der
+    # Mailkoerper km sprach, waehrend der Betreff schon Segmente sprach.
+    when = _location_of((e,), location_label)
     if e.occurred_at:
         when += f" · {e.occurred_at}"
     row3 = ("Wo & wann", when)
     return [row1, row2, row3]
-
-
-def _km_str_events(events) -> str:
-    a, b = km_span(events)
-    return f"km {int(round(a))}–{int(round(b))}"
 
 
 def _datarow_html(label: str, value: str, value_color: str, first: bool) -> str:

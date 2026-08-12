@@ -737,13 +737,20 @@ def test_ac7_trip_alert_rendering_unchanged():
     html, plain = render_email(msg)
     telegram_text = render_telegram(msg)
 
-    assert subject == "[GR20] km 12–18 · ↑ Niedersch: 2,0 mm→18,0 mm", subject
+    # Issue #1744 A1: die Ortsangabe des Trip-Pfads ist die Etappen-Kennung
+    # ("Segment 1"), nicht mehr die km-Spanne — dieselbe Sprache, die die
+    # amtliche Warnung zum selben Segment spricht. Die km-Spanne bleibt der
+    # Rueckfall fuer Etappen OHNE Kennung (AC-7 von #1744). Erwartungen
+    # nachgezogen, NICHT gelockert: weiterhin Byte-Gleichheit aller drei
+    # Ausgaben. Die Invariante dieses Tests — der Trip-Pfad setzt
+    # `location_label` nie — steht oben unveraendert und gilt weiter.
+    assert subject == "[GR20] Segment 1 · ↑ Niedersch: 2,0 mm→18,0 mm", subject
     assert plain == (
         "Niedersch +800% seit dem Briefing\n\n"
         "↑ +800 % · Änderung über deiner Alarm-Schwelle (10,0 mm)\n\n"
         "Niedersch · mm: 2,0 mm ↑ 18,0 mm +800 %\n"
         "Alarm-Schwelle 10,0 mm: Änderung über ✗\n"
-        "Wo & wann: km 12–18\n\n"
+        "Wo & wann: Segment 1\n\n"
         "Stand: heute 14:00 · verglichen mit dem letzten Briefing"
         # Issue #1241: geteilte Herkunfts-Fußzeile (deviation-alert). Zeile 2
         # trug bis Commit 239f210c (#1338a, ADR-0034) den Renderer-Pfad plus
@@ -754,7 +761,7 @@ def test_ac7_trip_alert_rendering_unchanged():
         "\n\nAbweichungs-Alarm · Open-Meteo"
     ), plain
     assert telegram_text == (
-        "<b>GR20 · km 12–18 · ↑ Niedersch</b>\n"
+        "<b>GR20 · Segment 1 · ↑ Niedersch</b>\n"
         "Niedersch · Schwelle 10,0 mm · 2,0 mm ↑ 18,0 mm · Änderung über"
     ), telegram_text
 

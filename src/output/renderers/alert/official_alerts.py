@@ -25,6 +25,12 @@ from output.tokens.hazard_symbols import (
     MIN_SMS_LEVEL, sms_symbol_for,
 )
 
+# Issue #1744 A1: `format_segment_reference` ist seit dem Umzug nach
+# `segments.py` die GEMEINSAME Ortsformatierung aller Alarmarten (vorher hier
+# definiert, faktisch der amtlichen Warnung vorbehalten). Der Import haelt
+# zugleich den Re-Export fuer Bestandsaufrufer (`email/html.py:53`).
+from .segments import format_segment_reference
+
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData
     from app.trip import Trip
@@ -259,36 +265,6 @@ def render_official_alerts_plain(entries: list[tuple[str, list["OfficialAlert"]]
                 suffix = f" ({_format_validity(alert)})"
             lines.append(f"Amtliche Warnung: {alert.label}{suffix}")
     return lines
-
-
-def format_segment_reference(segment_ids: list[str]) -> str:
-    """Issue #1200: kompakter Segment-/Etappen-Bezug fuer die Standalone-
-    Alert-Mail. Numerische IDs werden sortiert, zusammenhaengende Laeufe als
-    Range ('Segment 3–5'), sonst als Aufzaehlung ('Segment 3, 5'). `"Ziel"`
-    wird NIE in die numerische Range/Aufzaehlung gemischt, sondern immer als
-    eigenes Element '🏁 Ziel' angehaengt. Mehr als 4 betroffene Segmente
-    insgesamt -> Verdichtung 'N Segmente' (Begriff bewusst 'Segmente', nicht
-    'Etappen')."""
-    has_ziel = "Ziel" in segment_ids
-    numeric = sorted({int(s) for s in segment_ids if s != "Ziel"})
-
-    total = len(numeric) + (1 if has_ziel else 0)
-    if total > 4:
-        return f"{total} Segmente"
-
-    numeric_part = ""
-    if numeric:
-        is_consecutive = numeric == list(range(numeric[0], numeric[-1] + 1))
-        if is_consecutive and len(numeric) > 1:
-            numeric_part = f"Segment {numeric[0]}–{numeric[-1]}"
-        else:
-            numeric_part = "Segment " + ", ".join(str(n) for n in numeric)
-
-    if numeric_part and has_ziel:
-        return f"{numeric_part}, 🏁 Ziel"
-    if has_ziel:
-        return "🏁 Ziel"
-    return numeric_part
 
 
 def dedupe_official_alerts(

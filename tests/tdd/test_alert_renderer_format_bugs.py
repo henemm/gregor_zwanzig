@@ -27,13 +27,16 @@ def _local(h: int, m: int, now: datetime) -> datetime:
     ).astimezone(timezone.utc)
 
 
-def _make_msg(trip_name: str = "GR221 Mallorca"):
+def _make_msg(trip_name: str = "GR221 Mallorca", segment_id: str | None = "1"):
+    """Issue #1744 A1: `segment_id=None` erzwingt den km-Rueckfall (Altdaten
+    ohne Etappen-Kennung) — nur dort ist das km-Format ueberhaupt noch im
+    Betreff/Telegram sichtbar, und nur dort kann Bug 1 also noch auftreten."""
     tz = ZoneInfo("Europe/Madrid")
     now = datetime.now(timezone.utc)
     seg_start = datetime(now.year, now.month, now.day, 8, 0, tzinfo=timezone.utc)
     seg_end   = datetime(now.year, now.month, now.day, 13, 30, tzinfo=timezone.utc)
     segment = TripSegment(
-        segment_id="1",
+        segment_id=segment_id,
         start_point=GPXPoint(lat=39.710564, lon=2.62293, elevation_m=410, distance_from_start_km=0.0),
         end_point=GPXPoint(lat=39.747657, lon=2.648606, elevation_m=149, distance_from_start_km=11.2),
         start_time=seg_start, end_time=seg_end,
@@ -60,22 +63,36 @@ def _make_msg(trip_name: str = "GR221 Mallorca"):
 
 
 class TestKmStrNoDuplicatedUnit:
-    """Bug 1: km_span darf km nicht doppelt im String haben."""
+    """Bug 1: km_span darf km nicht doppelt im String haben.
+
+    Issue #1744 A1: Betreff und Telegram nennen den Ort seither als
+    Etappen-Kennung ("Segment 1"); die km-Spanne ist der RUECKFALL fuer Alarme
+    ohne Kennung. Alle drei Faelle laufen deshalb ueber `segment_id=None` —
+    sonst pruefte diese Klasse ein Format, das gar nicht mehr gerendert wird
+    (die beiden "kein doppeltes km"-Zusicherungen waeren trivial erfuellt).
+    """
 
     def test_subject_no_km_km(self):
-        msg = _make_msg()
+        msg = _make_msg(segment_id=None)
         subj = render_subject(msg)
         assert "0 km-" not in subj and "0 km–" not in subj, f"Doppeltes km im Betreff: {subj!r}"
 
     def test_subject_contains_km_range(self):
-        msg = _make_msg()
+        msg = _make_msg(segment_id=None)
         subj = render_subject(msg)
         assert "km 0–11" in subj, f"Km-Bereich fehlt im Betreff: {subj!r}"
 
     def test_telegram_no_km_km(self):
-        msg = _make_msg()
+        msg = _make_msg(segment_id=None)
         tg = render_telegram(msg)
         assert "0 km–" not in tg, f"Doppeltes km in Telegram: {tg!r}"
+
+    def test_subject_names_the_segment_when_known(self):
+        """Issue #1744 A1: mit Kennung nennt der Betreff die Etappe statt km —
+        die Gegenprobe zum Rueckfall oben."""
+        subj = render_subject(_make_msg())
+        assert "Segment 1" in subj, f"Ortsangabe fehlt im Betreff: {subj!r}"
+        assert "km 0–11" not in subj, f"km-Spanne trotz Kennung: {subj!r}"
 
 
 class TestSmsTripNameTruncation:
