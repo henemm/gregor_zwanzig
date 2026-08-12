@@ -589,6 +589,47 @@ def test_etappe_ohne_segment_kennung_faellt_auf_km_zurueck(segment_id):
     assert _wo_ort(render_email(msg)[1]) == "km 12–20"
 
 
+@pytest.mark.parametrize("unbrauchbar", [None, "", "s7"])
+def test_gemischte_kennungen_fallen_GANZ_auf_km_zurueck(unbrauchbar):
+    """AC-7, gemischter Mehr-Segment-Fall: Given ein Alarm ueber DREI Etappen,
+    von denen zwei eine Kennung tragen und eine nicht / When die Ortsangabe
+    gebildet wird / Then nennt sie die km-Spanne ueber ALLE drei — und NICHT
+    die Teilliste der beiden bekannten.
+
+    Warum das kein Detail ist (Adversary-Befund F003, 2026-08-12): baut man
+    `_renderable_segment_ids` von „alles oder nichts" zu einem Filter um, sagt
+    der Alarm `Segment 3, 5` — die dritte, TATSAECHLICH betroffene Etappe
+    verschwindet spurlos aus der Ortsangabe, obwohl ihre Wetterwerte im Alarm
+    stecken. Fuer den Wanderer heisst das: die Mail nennt zwei Abschnitte und
+    meint drei. Genau diese stille Auslassung ist der Grund fuer die Regel —
+    und sie war bis hierher durch keinen Test bewacht (die Verfaelschung liess
+    99 Tests gruen).
+
+    Der Fall laeuft ueber den echten Produktivpfad `to_alert_message()` mit
+    echten `TripSegment`s, weil die Regel in der Projektion wirkt: dort
+    entscheidet sich, welche Kennungen ueberhaupt am Ereignis landen.
+
+    Die drei Parameter decken die drei Arten unbrauchbarer Kennung ab: fehlend
+    (`None`), leer (`""`, der Default von `WeatherChange.segment_id`) und
+    nicht auswertbar (`"s7"` — weder Zahl noch "Ziel"; ungeprueft wuerde
+    `format_segment_reference` daran mit ValueError abbrechen).
+    """
+    from output.renderers.alert.render import render_email, render_subject
+
+    msg = _delta_message([("3", 4.0, 6.0), ("5", 8.0, 10.0), (unbrauchbar, 12.0, 14.0)])
+
+    ort = _location_slot(render_subject(msg))
+    assert ort == "km 4–14", (
+        f"Ortsangabe deckt nicht alle drei betroffenen Etappen ab: {ort!r}"
+    )
+
+    plain = render_email(msg)[1]
+    assert "Segment" not in plain, (
+        "Die Mail nennt eine Teil-Segmentliste und verschweigt damit eine "
+        f"betroffene Etappe:\n{plain}"
+    )
+
+
 def test_nowcast_ohne_segment_kennung_faellt_auf_km_zurueck():
     """AC-7 (HEUTE GRUEN, Invariante gegen den Fix): dasselbe fuer die
     Nowcast-Bestandsaufrufer, die kein `OnsetEvent.segment_id` setzen
