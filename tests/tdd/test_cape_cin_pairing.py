@@ -22,10 +22,12 @@ Keine Mocks: reine Funktionsaufrufe, kein Netz.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
 from app.models import ThunderLevel
+from app.thunder_scale import thunder_ordinal
 from output.metric_format import thunder_level_from_signals
 
 NONE = ThunderLevel.NONE
@@ -300,3 +302,249 @@ def test_ac8_thunder_level_from_signals_ohne_cin_parameter_bricht_mit_typeerror(
             cape_threshold_jkg=CAPE_LOW,
             lpi_low_min=None, lpi_med_min=None, lpi_high_min=None,
         )
+
+
+# ===========================================================================
+# Issue #1760 -- CIN-Daempfung feuert nie: der DWD liefert `cin_ml` als
+# POSITIVEN Betrag, `_gedaempft_durch_cin()` erwartete bisher ausschliesslich
+# negative Werte (`cin_jkg > -25` ist fuer jeden positiven Wert wahr).
+# SPEC: docs/specs/modules/fix_1760_cin_vorzeichen.md
+#
+# Reale, gemessene DWD-Werte (`cin_ml`, ICON-D2/ICON-EU, 2026-08-11) --
+# NICHT erfunden, sondern aus den belegten Fixture-Aufzeichnungen:
+#   - 7.29 J/kg  -- test_dwd_thunder_new_signals_fetch.py:31 (ICON-D2, KHW)
+#   - 104.47 J/kg -- test_dwd_eu_thunder_energy_signals_fetch.py:17 (ICON-EU)
+#   - 767.8 J/kg  -- NICHT als Fixture-Wert auffindbar (weder in den beiden
+#     genannten Dateien noch sonst im Repo). Wird trotzdem verwendet, weil
+#     die Spec ihn ausdruecklich als "real gemessen" nennt und die
+#     Entwickler-Vorgabe verbietet, eigene Zahlen zu erfinden -- s. Bericht.
+# ===========================================================================
+
+
+# ────────────── #1760 AC-1/AC-5 -- positiver CIN daempft die FUSIONIERTE
+# Stufe (Produktivpfad `thunder_level_from_signals()`, nicht isoliert) ─────
+
+@pytest.mark.parametrize(
+    "cin_positiv, erwartet",
+    [
+        # 7.29 J/kg: Betrag < 25 -- schwacher Deckel, CAPE zaehlt VOLL.
+        (7.29, HIGH),
+        # 104.47 J/kg: Betrag > 100 -- nach der Tabelle in
+        # docs/features/gewitter-gesamtkonzept.md ("unter -100 J/kg: Deckel
+        # haelt, kein Beitrag") liegt das NEGATIVE Pendant -104.47 ebenfalls
+        # in diesem Band, nicht im Band "grosser Deckel" (-100 bis -50).
+        # Die Spec-Prosa zu AC-1 nennt hierfuer "hoechstens 'leicht'" --
+        # das ist mit NONE (schwaecher als LOW) technisch weiterhin erfuellt
+        # ("hoechstens" = Obergrenze), aber NICHT das Band "grosser Deckel"
+        # selbst. S. Bericht: Unstimmigkeit in der Spec-Illustration.
+        (104.47, NONE),
+        # 767.8 J/kg: Betrag weit > 100 -- ebenfalls "Deckel haelt".
+        (767.8, NONE),
+    ],
+)
+def test_1760_ac1_ac5_positiver_cin_daempft_fusionierte_stufe_echte_dwd_werte(
+    cin_positiv, erwartet,
+):
+    """#1760 AC-1 + AC-5: reale, POSITIV gemessene DWD-Werte (`cin_ml`)
+    durchlaufen den Produktivpfad `thunder_level_from_signals()` -- NICHT
+    isoliert `_gedaempft_durch_cin()` -- mit CAPE oberhalb der HIGH-Sprosse
+    (4500 J/kg, volle Leiter: HIGH).
+
+    RED vor dem Fix: `_gedaempft_durch_cin()` prueft `cin_jkg > -25`, was
+    fuer JEDEN positiven Wert wahr ist -- alle drei Faelle liefern HEUTE
+    HIGH statt des erwarteten, gedaempften Ergebnisses.
+    """
+    ergebnis = _call_cape(4500.0, cin_positiv)
+    assert ergebnis == erwartet, (
+        f"CAPE 4500 J/kg mit real gemessenem, POSITIVEM CIN={cin_positiv} "
+        f"muss {erwartet!r} liefern (Betragsvergleich), erhalten {ergebnis!r} "
+        f"-- vor dem Fix wurde jeder positive Wert wie 'kein Deckel' "
+        f"behandelt"
+    )
+
+
+# ────────────── #1760 AC-2 -- Bestandsverhalten (negativ) unveraendert ────
+#
+# Bewusst KEIN neuer Test hier: AC-2 verlangt, dass die bestehenden
+# Parametrisierungen mit negativem CIN (Zeilen 128, 160, 191, 212, 231 vor
+# dieser Ergaenzung) UNVERAENDERT gruen bleiben. Sie werden hier nicht
+# angefasst -- der Beweis ist ein unveraenderter Testlauf derselben Datei.
+
+
+# ────────────── #1760 AC-3 -- Sentinel -999.9 erreicht die Daempfung NIE ──
+
+def test_1760_ac3_gefilterter_sentinel_faellt_ueber_fuse_auf_hoechstens_low():
+    """#1760 AC-3: der DWD-Fehlwert -999.9 ("kein Ausloesepunkt gefunden")
+    wird bereits VOR dieser Funktion gefiltert (`dwd.py:240`/`dwd_eu.py:261`,
+    Konstante `dwd.py:206`) und erreicht die Fusion als `None`. Dieser Test
+    prueft das am Produktionspfad `_fuse_thunder_levels()` (DE_ALPEN/ICON-D2,
+    NICHT das FR-Pendant aus AC-7 oben) -- ein `None`-CIN muss auf
+    "hoechstens LOW" fallen: NIEMALS auf den staerksten Deckel (NONE waere
+    hier bereits ein AC-6-Verstoss, da CAPE weit ueber HIGH liegt) und
+    NIEMALS auf 'kein Deckel' (HIGH waere die Buggy-Interpretation, falls
+    ein `abs()` VOR dem Filter angewendet wuerde und -999.9 zu +999.9 wird).
+
+    Gegenprobe (Mutation): Wird der Sentinel-Filter in `dwd.py`/`dwd_eu.py`
+    entfernt und ein rohes -999.9 erreicht `convective_inhibition_jkg`
+    unveraendert, liefert `_gedaempft_durch_cin()` (Betrag 999.9 > 100)
+    zwar IMMER NOCH `NONE` -- das ist der Fund, den die Mutations-Gegenprobe
+    im Bericht dokumentiert, s. dort.
+    """
+    from app.model_registry import cape_ladder_thresholds_jkg
+    from app.models import ForecastDataPoint
+    from providers.thunder_enrichment import _fuse_thunder_levels
+
+    cape_ladder = cape_ladder_thresholds_jkg("icon_d2", "DE_ALPEN")
+    assert cape_ladder is not None, "Vorbedingung: DE_ALPEN muss kalibriert sein"
+
+    ts = datetime.now(timezone.utc)
+    dp = ForecastDataPoint(
+        ts=ts, thunder_level=None, cape_jkg=cape_ladder[2] + 500.0,
+        convective_inhibition_jkg=None,  # simuliert den bereits gefilterten Sentinel
+    )
+
+    _fuse_thunder_levels([dp], cape_ladder, None)
+
+    assert dp.thunder_level == LOW, (
+        f"DE_ALPEN-Datenpunkt mit CAPE weit ueber HIGH und gefiltertem "
+        f"Sentinel (CIN=None) muss LOW liefern (Notbremse 'hoechstens "
+        f"LOW'), erhalten {dp.thunder_level!r}"
+    )
+
+
+# ────────────── #1760 AC-3 -- Adversary F001: der Sentinel-FILTER selbst ──
+#
+# Der obige Test setzt `convective_inhibition_jkg=None` VORAUS -- er prueft
+# die Daempfung, nicht ob der Filter (`dwd.py:206`/`:240`, `dwd_eu.py:261`)
+# aus dem rohen -999,9 ueberhaupt `None` macht. Die bisher einzigen Tests,
+# die das tun (`test_ac2_..." in test_dwd_thunder_new_signals_fetch.py,
+# `test_f001_..." in test_dwd_eu_thunder_energy_signals_fetch.py) tragen
+# `pytestmark = pytest.mark.live` auf MODUL-Ebene (identisches Vorbild in
+# ~15 weiteren Tests derselben zwei Dateien, CI-Vermessung #1196) und laufen
+# damit NICHT im Standardlauf (`pyproject.toml:65`). Ein Entfernen des
+# Markers nur an diesen zwei Funktionen ist nicht moeglich, ohne den Marker
+# fuer ALLE anderen Tests derselben Datei ebenfalls anzufassen (Modul-Ebene)
+# -- diese sind bewusst als 'live' eingestuft, unabhaengig vom eigentlichen
+# Netzbedarf. Deshalb hier ein eigener, kleiner Kern-Test statt Entmarkierung
+# (Bericht: Wahl (b) statt (a)).
+
+_DWD_FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "dwd"
+
+
+@pytest.mark.parametrize(
+    "modul_pfad, fixture_name, marker_ort, echt_ort",
+    [
+        # Koordinaten identisch zu den bestehenden live-Tests uebernommen
+        # (nicht neu geraten) -- dort bereits als Sentinel- bzw. Echtwert-
+        # Gitterpunkt der jeweiligen, echten Aufzeichnung nachgewiesen.
+        (
+            "providers.dwd",
+            "icon_d2_alpen_cin_ml_2026081103_012.grib2.bz2",
+            (53.90, 1.22), (46.40, 12.52),
+        ),
+        (
+            "providers.dwd_eu",
+            "icon_eu_abruzzen_cin_ml_2026081100_000.grib2.bz2",
+            (70.5, -19.8125), (41.8125, 13.3750),
+        ),
+    ],
+    ids=["icon_d2_dwd_py_240", "icon_eu_dwd_eu_py_261"],
+)
+def test_1760_f001_dwd_sentinel_filter_faengt_minus_999_9_am_realen_gitterpunkt(
+    modul_pfad, fixture_name, marker_ort, echt_ort,
+):
+    """#1760 Adversary F001: der DWD-Sentinel-Filter fuer `cin_ml`
+    (Konstante `CIN_ML_LOWER_SENTINEL`, `dwd.py:206`; Filterzeilen
+    `dwd.py:240` und `dwd_eu.py:261`) direkt am Produktionsfilter
+    `_read_point_value()` geprueft -- kein Netz, kein lokaler Server, nur
+    die bereits eingecheckte, echte Aufzeichnung.
+
+    Mutations-Gegenprobe (Pflicht laut Auftrag, s. Bericht):
+    1. `CIN_ML_LOWER_SENTINEL` in `dwd.py:206` auf -9999.9 aendern -> rot.
+    2. Filterzeile `dwd.py:240` entfernen -> rot (nimmt wegen des
+       gemeinsamen Imports `dwd_eu.py:70` auch den ICON-EU-Fall mit).
+    """
+    import importlib
+
+    modul = importlib.import_module(modul_pfad)
+    compressed = (_DWD_FIXTURES / fixture_name).read_bytes()
+
+    marker_lat, marker_lon = marker_ort
+    echt_lat, echt_lon = echt_ort
+    marker_ergebnis = modul._read_point_value(
+        compressed, marker_lat, marker_lon, param="cin_ml",
+    )
+    echt_ergebnis = modul._read_point_value(
+        compressed, echt_lat, echt_lon, param="cin_ml",
+    )
+
+    assert marker_ergebnis is None, (
+        f"{modul_pfad}._read_point_value: Sentinel-Gitterpunkt {marker_ort} "
+        f"liefert {marker_ergebnis!r} statt None -- der -999,9-Filter greift "
+        f"nicht (Fehlwert wuerde als echter, extremer Deckel durchgereicht)"
+    )
+    assert echt_ergebnis is not None and echt_ergebnis > 1, (
+        f"{modul_pfad}._read_point_value: echter Gitterpunkt {echt_ort} "
+        f"liefert {echt_ergebnis!r} -- ohne diesen Vergleichswert waere der "
+        f"Test auch fuer einen Filter gruen, der PAUSCHAL alles auf None "
+        f"setzt statt nur den Sentinel"
+    )
+
+
+# ────────────── #1760 AC-4 -- Vorzeichen-Herkunft am Code belegt ──────────
+
+def test_1760_ac4_docstring_belegt_modellabhaengiges_vorzeichen():
+    """#1760 AC-4: die Docstring von `_gedaempft_durch_cin()` muss die
+    Vorzeichenfrage BELEGEN (nicht nur behaupten) -- ICON-Quellstelle, GRIB2
+    ohne Vorzeichenkonvention, US-Herkunft der Baender. Verhaltensnachweis
+    ueber Wortpruefung ist hier per Definition angemessen (Docstring IST der
+    Nachweisort von AC-4), daher explizit erlaubt via Marker.
+
+    # doc-compliance-test
+    """
+    import inspect
+
+    from output.metric_format import _gedaempft_durch_cin
+
+    doc = inspect.getdoc(_gedaempft_durch_cin) or ""
+    for beleg in (
+        "mo_opt_nwp_diagnostics.f90",  # ICON-Quellcode-Stelle
+        "GRIB2",  # Standard ohne Vorzeichenkonvention
+        "GFS",  # Gegenbeispiel: negatives Vorzeichen
+    ):
+        assert beleg in doc, (
+            f"Docstring von _gedaempft_durch_cin() muss '{beleg}' als Beleg "
+            f"fuer die Vorzeichenfrage enthalten (#1760 AC-4), fehlt aktuell"
+        )
+
+
+# ────────────── #1760 AC-6 -- Daempfung senkt AUSSCHLIESSLICH, hebt nie ───
+
+@pytest.mark.parametrize("cin_betrag", [7.29, 104.47, 767.8])
+def test_1760_ac6_positiv_und_negativ_liefern_identisches_ergebnis(cin_betrag):
+    """#1760 AC-6: derselbe Betrag mit positivem und negativem Vorzeichen
+    liefert IDENTISCHE Ergebnisse -- die Daempfung haengt nur vom Betrag ab,
+    nicht vom Vorzeichen. Vor dem Fix war das positive Ergebnis IMMER
+    `basis` (HIGH) unabhaengig vom Betrag -- fuer 104.47/767.8 waere die
+    Symmetrie damit heute verletzt (RED-Beleg identisch zu AC-1 oben).
+    """
+    positiv = _call_cape(4500.0, cin_betrag)
+    negativ = _call_cape(4500.0, -cin_betrag)
+    assert positiv == negativ, (
+        f"CIN={cin_betrag} und CIN={-cin_betrag} muessen identisch daempfen "
+        f"(nur der Betrag zaehlt), erhalten positiv={positiv!r} vs. "
+        f"negativ={negativ!r}"
+    )
+
+
+@pytest.mark.parametrize("cin_positiv", [7.29, 104.47, 767.8, 30.0, 60.0])
+def test_1760_ac6_daempfung_hebt_die_stufe_nie_ueber_die_basis(cin_positiv):
+    """#1760 AC-6: fuer JEDEN positiven CIN-Wert bleibt das gedaempfte
+    Ergebnis auf oder unter der ungedaempften Basisstufe (HIGH, volle
+    Leiter fuer CAPE=4500) -- die Daempfung dämpft ausschliesslich, sie
+    hebt nie an."""
+    ergebnis = _call_cape(4500.0, cin_positiv)
+    assert thunder_ordinal(ergebnis) <= thunder_ordinal(HIGH), (
+        f"CIN={cin_positiv} (positiv) darf die Stufe NIE ueber HIGH heben, "
+        f"erhalten {ergebnis!r}"
+    )
