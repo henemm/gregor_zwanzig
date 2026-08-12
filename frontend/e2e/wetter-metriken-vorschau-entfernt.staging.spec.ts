@@ -24,14 +24,50 @@ import { test, expect, type APIRequestContext, type Locator, type Page } from '@
 
 const TRIP_ID = 'e2e-1719-s3-vorschau-weg';
 
-// Identisch zu layout-tab-route.spec.ts:23-48 — Pointer-basierte
+// Basiert auf layout-tab-route.spec.ts:23-48 — Pointer-basierte
 // Drag-Simulation (svelte-dnd-action reagiert nicht auf natives HTML5-Drag).
+//
+// Diagnose-Fund (2026-08-12, #1719 S3 — Team-Lead-Auftrag "Reihenfolge-
+// Persistenz diagnostizieren"): `svelte-dnd-action` feuert das `finalize`-
+// CustomEvent auf der Drag-Zone NACH dem `mouseup` unzuverlässig verzögert.
+// Messung (4 Läufe gegen Staging, rohes DOM-CustomEvent-Log auf
+// `.sortable-zone`, unabhängig vom App-Code): 2× kein `finalize` innerhalb
+// der Testlaufzeit, 1× sofort, 1× erst nach ~1,9s. Ohne `finalize` ruft
+// `SortableList.svelte::handleDndFinalize` niemals `onDndReorder` auf — kein
+// `channelBuckets`-Edit, kein PUT, keine Persistenz. Die vorher hier
+// stehende feste `waitForTimeout(120)`-Pause nach dem Drop maskierte das:
+// der Test las den DOM-Zwischenstand aus `handleDndConsider` (der lokal
+// bereits die neue Reihenfolge zeigt, OHNE dass sie je committet wurde) und
+// hielt das fälschlich für einen bestandenen Speichervorgang. Bei tatsächlich
+// gefeuertem `finalize` ist die App-Logik nachweislich korrekt (PUT-Body mit
+// `precipitation order:0`, GET nach Reload bitgenau identisch) — der Fehler
+// liegt ausschließlich in der Test-Simulation, nicht im Produktcode.
+//
+// Der geteilte Helfer in layout-tab-route.spec.ts (und weiteren Dateien,
+// z.B. compare-hub-inline-edit.spec.ts) hat dieselbe Schwäche — reproduziert
+// mit layout-tab-route.spec.ts AC-3, 2× hintereinander lokal fehlgeschlagen,
+// KEIN S3-Bezug. Der Umbau dort ist bewusst NICHT Teil dieser Scheibe
+// (Team-Lead-Entscheid: "nur unseren eigenen Helfer robust machen, nichts
+// Geteiltes anfassen") — separat zu buchen.
 async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
 	await source.scrollIntoViewIfNeeded();
 	await target.scrollIntoViewIfNeeded();
 	const sourceBox = await source.boundingBox();
 	const targetBox = await target.boundingBox();
 	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
+
+	// Vor dem Drag: Promise auf der Zone verdrahten, die bei `finalize`
+	// aufloest. `document.querySelector` genuegt — diese Ansicht zeigt genau
+	// EINE Reihenfolge-Zone (die mobile FAB/Sheet-Duplizierung ist mit AC-1
+	// dieser Scheibe entfernt).
+	await page.evaluate(() => {
+		const zone = document.querySelector('.sortable-zone');
+		if (!zone) throw new Error('dragDndZoneItem: .sortable-zone nicht im DOM gefunden');
+		(window as unknown as { __gzDndFinalize?: Promise<void> }).__gzDndFinalize = new Promise((resolve) => {
+			zone.addEventListener('finalize', () => resolve(), { once: true });
+		});
+	});
+
 	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
 	await page.mouse.down();
 	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 - 12, {
@@ -43,6 +79,27 @@ async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Pr
 	});
 	await page.waitForTimeout(120);
 	await page.mouse.up();
+
+	// Großzügiges Zeitfenster ueber dem gemessenen Maximum (~1,9s). Feuert
+	// `finalize` nicht, scheitert der Test HIER mit klarer Ursache — statt
+	// spaeter unspezifisch an einer Persistenz-Assertion, die faelschlich
+	// als Produktfehler gelesen werden koennte.
+	const FINALIZE_TIMEOUT_MS = 4_000;
+	const fired = await page.evaluate(({ ms }) => {
+		const w = window as unknown as { __gzDndFinalize?: Promise<void> };
+		if (!w.__gzDndFinalize) return Promise.resolve(false);
+		return Promise.race([
+			w.__gzDndFinalize.then(() => true),
+			new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms))
+		]);
+	}, { ms: FINALIZE_TIMEOUT_MS });
+	if (!fired) {
+		throw new Error(
+			`dragDndZoneItem: finalize blieb aus (>${FINALIZE_TIMEOUT_MS}ms) — Ziehgeste hat nicht ` +
+			'committet. Bekannte Flakiness des Pointer-Drag-Helfers (svelte-dnd-action), kein ' +
+			'Produktfehler — siehe Kommentar ueber dieser Funktion (Diagnose 2026-08-12).'
+		);
+	}
 }
 
 const REPORT_CONFIG = {
