@@ -180,15 +180,19 @@ class BriefingSlotStore:
         🔴 Die Existenz-Bedingung steht bewusst HIER, an EINER Stelle, durch
         die beide Aufrufer (:meth:`is_recorded`, :meth:`reserve`) laufen. Sie
         ist die engere von zwei moeglichen Lesarten (PO-Entscheidung
-        2026-08-11) und schuetzt den On-Demand-Pfad: ``_append_briefing_log``
-        (``trip_report_scheduler.py:1246``) unterscheidet NICHT nach
-        ``on_demand``, ein per SMS angefordertes „heute" schreibt also einen
-        Log-Eintrag mit ``kind="morning"``. Wuerde die Ableitung dauerhaft
-        gelten, naehme diese Anfrage dem Nutzer sein regulaeres Briefing
-        desselben Tages weg (AC-12). Preis der engen Lesart: beim Rollout
-        bleibt ein einmaliges Fenster von Stunden, in dem ein Trip ungeschuetzt
-        ist, sobald ein ANDERER Trip die Datei bereits angelegt hat — ein
-        seltenes doppeltes Briefing gegen einen dauerhaften Ausfall.
+        2026-08-11): Die Ableitung dient allein dem Rollout-Uebergang, danach
+        ist der eigene Speicher massgeblich. Preis dafuer: beim Rollout bleibt
+        ein einmaliges Fenster von Stunden, in dem ein Trip ungeschuetzt ist,
+        sobald ein ANDERER Trip die Datei bereits angelegt hat — ein seltenes
+        doppeltes Briefing gegen einen sonst dauerhaften Ausfall.
+
+        🔴 Die enge Lesart allein genuegte NICHT (Adversary F004): sie
+        verkuerzte den Schaden am On-Demand-Pfad von dauerhaft auf einen Tag,
+        beseitigte ihn aber nicht. ``_append_briefing_log`` haelt seit diesem
+        Fix ``on_demand`` im Eintrag fest, und die Schleife unten ueberspringt
+        solche Eintraege — sonst naehme ein per SMS angefordertes „heute" dem
+        Nutzer sein regulaeres Briefing desselben Ortstags (AC-12), still, ohne
+        Protokollzeile.
         """
         if self._path.exists():
             return False
@@ -205,6 +209,15 @@ class BriefingSlotStore:
             if not isinstance(eintrag, dict):
                 continue
             if eintrag.get("trip_id") != trip_id or eintrag.get("kind") != slot:
+                continue
+            if eintrag.get("on_demand") is True:
+                # Issue #1725 (Adversary F004): ein angefordertes Briefing
+                # („heute"/„morgen" per SMS, Test-Versand-Knopf) darf dem
+                # Nutzer sein REGULAERES nicht wegnehmen (AC-12). Bestandsdaten
+                # tragen das Feld nicht — ein fehlender Schluessel gilt deshalb
+                # als regulaer, die Ableitung greift dort weiterhin. Das ist
+                # die sichere Richtung: lieber ein Briefing zu wenig als eines
+                # doppelt.
                 continue
             sent_at = self._parse(eintrag.get("sent_at"))
             if sent_at is None:

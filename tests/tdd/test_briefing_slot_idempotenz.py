@@ -133,9 +133,13 @@ from services.briefing_slots import BriefingSlotStore  # noqa: E402
 # Koordinaten je Zone — echte Orte, damit TimezoneFinder sie auflöst.
 KORSIKA = (42.30, 8.93)          # Europe/Paris
 LORD_HOWE = (-31.5545, 159.0821)  # Australia/Lord_Howe (+10:30/+11:00)
+# Adversary-Finding F002: eine Zone, deren ORTSTAG zur Briefing-Stunde vom
+# UTC-Tag abweicht — 07:00 Ortszeit am 20.08. ist 2026-08-19T19:00Z.
+AUCKLAND = (-36.85, 174.76)      # Pacific/Auckland (+12:00)
 
 PARIS = ZoneInfo("Europe/Paris")
 LORD_HOWE_TZ = ZoneInfo("Australia/Lord_Howe")
+AUCKLAND_TZ = ZoneInfo("Pacific/Auckland")
 
 # Die vier Ausgänge, die laut Spec einen Vermerk setzen, und der eine, der
 # es nicht tut (Spec „Vermerk je Outcome").
@@ -413,9 +417,17 @@ def test_t4_nachhol_fenster_faengt_h_plus_1_und_endet_vor_h_plus_3():
     genau einen Treffer — sichtbar wird die Breite nur an einem AUSGELASSENEN
     Lauf. Der Lauf zur Stunde H findet hier deshalb bewusst NICHT statt.
 
+    Adversary-Finding F001: H+1 und H+3 allein nageln die Breite NICHT fest —
+    beide Aussagen gelten auch bei Fensterbreite 2, und die Mutation 3 -> 2
+    liess die gesamte Suite gruen. Teil 1b prueft deshalb Ortsstunde H+2, den
+    einzigen Wert, der 3 von 2 unterscheidet. Der PO hat die drei Stunden
+    ausdruecklich freigegeben; ohne diese Messung koennte ein spaeterer Umbau
+    sie unbemerkt verengen, und der zweite ausgefallene Tick fiele still aus.
+
     RED-Charakter: Mutations-Waechter — rot bei: Fenster 3 -> 1 (dann ist H+1
-    nicht mehr faellig, erster Teil rot) UND bei Fenster 3 -> „bis Tagesende"
-    (dann ist H+3 noch faellig, zweiter Teil rot).
+    nicht mehr faellig, erster Teil rot), Fenster 3 -> 2 (dann ist H+2 nicht
+    mehr faellig, Teil 1b rot) UND bei Fenster 3 -> „bis Tagesende" (dann ist
+    H+3 noch faellig, zweiter Teil rot).
     """
     tage = [date(2026, 8, 19), date(2026, 8, 20), date(2026, 8, 21)]
     tag = date(2026, 8, 20)
@@ -430,6 +442,20 @@ def test_t4_nachhol_fenster_faengt_h_plus_1_und_endet_vor_h_plus_3():
         "der Slot nachgeholt werden. Ist er es nicht, ist das Nachhol-Fenster "
         "kleiner als 2 Stunden und faengt den an Umstellungstagen "
         "ausfallenden Cron-Tick nicht."
+    )
+
+    # Teil 1b (F001): Stunden 07 UND 08 ausgelassen, erster Lauf um 09
+    # Ortszeit. Diese Stunde unterscheidet Fensterbreite 3 von Breite 2 —
+    # `7 <= 9 < 10` trifft, `7 <= 9 < 9` nicht.
+    _schreibe("slot-t4c", [_trip_json("korsika", *KORSIKA, tage, morning="07:00:00")])
+    zweiter_nachzuegler = _scheduler("slot-t4c")
+    assert ("korsika", "morning") in _sammlung(
+        zweiter_nachzuegler, _zeitpunkt(PARIS, tag, 9)
+    ), (
+        "Zwei Ticks in Folge ausgefallen (07 und 08) — in Ortsstunde 09 muss "
+        "der Slot noch nachgeholt werden. Ist er es nicht, ist das Fenster auf "
+        "zwei Stunden verengt und deckt nur EINEN ausgefallenen Tick ab, "
+        "obwohl der PO drei Stunden freigegeben hat."
     )
 
     # Teil 2: Stunden 07, 08, 09 ausgelassen, erster Lauf um 10 Ortszeit.
@@ -661,16 +687,26 @@ def test_t9_rueckwaerts_ableitung_aus_dem_briefing_log():
     wird die Rueckwaerts-Ableitung selbst, also der Zustand direkt nach einem
     Deploy mitten im Nachhol-Fenster.
 
+    Teil c (Adversary-Finding F002) prueft, dass die Ableitung `sent_at` im
+    ORTSTAG des Trips auswertet und nicht in UTC: In `Europe/Paris` liegen
+    Ortstag und UTC-Tag zur Stunde 07 auf demselben Datum, die Zone ist am
+    Ergebnis also gar nicht ablesbar — beide Verfaelschungen (Zone nicht
+    durchgereicht, `zone or UTC` hart auf UTC) blieben mit den Teilen a/b
+    gruen. In `Pacific/Auckland` faellt 07:00 Ortszeit am 20.08. auf
+    `2026-08-19T19:00Z`, also einen ANDEREN UTC-Tag.
+
     RED-Charakter: Mutations-Waechter — rot bei: Rueckwaerts-Ableitung
-    entfernt; dann bekommt jeder Nutzer, dessen Briefing kurz vor dem Deploy
-    rausging, es im Fenster ein zweites Mal.
+    entfernt (dann bekommt jeder Nutzer, dessen Briefing kurz vor dem Deploy
+    rausging, es im Fenster ein zweites Mal) und, fuer Teil c, bei fehlender
+    Zonen-Durchreichung bzw. UTC-Auswertung von `sent_at`.
     """
     tage = [date(2026, 8, 19), date(2026, 8, 20), date(2026, 8, 21)]
     tag = date(2026, 8, 20)
     sieben_uhr = _zeitpunkt(PARIS, tag, 7)
 
-    def _mit_log(user: str, sent_at: datetime) -> None:
-        _schreibe(user, [_trip_json("korsika", *KORSIKA, tage, morning="07:00:00")])
+    def _mit_log(user: str, sent_at: datetime,
+                 koordinaten: tuple[float, float] = KORSIKA) -> None:
+        _schreibe(user, [_trip_json("korsika", *koordinaten, tage, morning="07:00:00")])
         pfad = get_data_dir(user) / "briefing_log.json"
         pfad.parent.mkdir(parents=True, exist_ok=True)
         pfad.write_text(json.dumps({"entries": [{
@@ -701,6 +737,26 @@ def test_t9_rueckwaerts_ableitung_aus_dem_briefing_log():
     ), (
         "Ein Eintrag vom VORTAG darf den heutigen Slot nicht blockieren — "
         "sonst faellt das Briefing nach dem ersten Tag dauerhaft aus."
+    )
+
+    # c) F002: Zone, deren Ortstag zur Briefing-Stunde vom UTC-Tag abweicht.
+    #    07:00 Ortszeit am 20.08. in Auckland ist 2026-08-19T19:00Z — wer
+    #    `sent_at` gegen UTC statt gegen den Ortstag auswertet, findet den
+    #    Eintrag nicht und sendet nach dem Deploy ein zweites Mal.
+    auckland_sieben_uhr = _zeitpunkt(AUCKLAND_TZ, tag, 7)
+    assert local_dt(auckland_sieben_uhr, UTC).date() != tag, (
+        "Testaufbau prueft nichts: UTC-Tag und Ortstag muessen hier "
+        f"auseinanderfallen, gefunden {local_dt(auckland_sieben_uhr, UTC).date()}"
+    )
+    _mit_log("slot-t9-auckland", auckland_sieben_uhr, koordinaten=AUCKLAND)
+    assert ("korsika", "morning") not in _sammlung(
+        _scheduler("slot-t9-auckland"), auckland_sieben_uhr
+    ), (
+        "Der Log-Eintrag liegt im ORTSTAG des Trips (20.08. Auckland), auch "
+        "wenn sein UTC-Tag der 19.08. ist. Wird `sent_at` gegen UTC statt "
+        "gegen den Ortstag ausgewertet — oder die Zone gar nicht erst "
+        "durchgereicht —, greift die Rueckwaerts-Ableitung fuer jeden Trip "
+        "oestlich von etwa UTC+8 und westlich von etwa UTC-5 nicht mehr."
     )
 
 
@@ -892,6 +948,166 @@ def test_t12_on_demand_schreibt_keinen_vermerk_und_liest_keinen(caplog):
     )
 
 
+# Alle Transport-Felder ausdruecklich unbrauchbar: `Settings()` faellt bei
+# fehlenden Feldern still auf die Prod-`.env` im Worktree zurueck (#1477).
+# SMTP ist vollstaendig, aber auf einen nicht existierenden Host gesetzt — der
+# Transportrand selbst wird unten durch eine aufzeichnende Funktion ersetzt.
+_TOTE_TRANSPORT_FELDER: dict = {
+    "smtp_host": "dummy.invalid", "smtp_user": "dummy", "smtp_pass": "dummy",
+    "mail_to": "dummy@example.com",
+    "telegram_bot_token": "", "telegram_chat_id": "",
+    "telegram_test_bot_token": "", "telegram_test_chat_id": "",
+    "sms_gateway_url": "", "seven_api_key": "", "sms_to": "",
+}
+
+
+def _zustellbare_settings():
+    """Echte `Settings`: E-Mail sendefaehig, Telegram/SMS nachweislich nicht."""
+    from app.config import Settings
+
+    settings = Settings(**_TOTE_TRANSPORT_FELDER)
+    assert settings.can_send_email() is True, (
+        "Vorbedingung: ohne sendefaehigen Kanal endet der Versand in "
+        "'no_channels' und erreicht den briefing_log-Eintrag nie."
+    )
+    # Sicherung (#1477): kein Kanal, der echte Nachrichten ausloesen koennte.
+    assert settings.can_send_telegram() is False
+    assert settings.can_send_sms() is False
+    return settings
+
+
+def _scheduler_mit_fixture_wetter(user_id: str, settings):
+    """Echter Scheduler, bei dem NUR der Wetterabruf aus einer Fixture kommt —
+    Haus-Muster `_FixtureScheduler` aus
+    `tests/tdd/test_briefing_anchor_survives_dispatch_failure.py:226`.
+
+    Kein Mock: eine echte Unterklasse, die `_fetch_weather` durch echte
+    `SegmentWeatherData`-Objekte beantwortet. Alles danach — Rendering,
+    Kanalauswahl, `_append_briefing_log` — laeuft unveraendert echt.
+    """
+    from app.models import (
+        ForecastMeta,
+        NormalizedTimeseries,
+        Provider,
+        SegmentWeatherData,
+        SegmentWeatherSummary,
+    )
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    class _MitFixtureWetter(TripReportSchedulerService):
+        def _fetch_weather(self, segments, provider=None):
+            return [
+                SegmentWeatherData(
+                    segment=s,
+                    timeseries=NormalizedTimeseries(
+                        meta=ForecastMeta(
+                            provider=Provider.OPENMETEO, model="test", grid_res_km=1.0,
+                        ),
+                        data=[],
+                    ),
+                    aggregated=SegmentWeatherSummary(),
+                    fetched_at=datetime.now(timezone.utc),
+                    provider="openmeteo",
+                )
+                for s in segments
+            ]
+
+    return _MitFixtureWetter(settings=settings, user_id=user_id)
+
+
+def _aufzeichnender_mailversand(monkeypatch) -> list:
+    """Ersetzt den Transportrand `EmailOutput.send` durch eine echte,
+    aufzeichnende Funktion (Haus-Muster) — kein Netz, kein Mock-Objekt."""
+    from output.channels.email import EmailOutput
+
+    zugestellt: list = []
+
+    def _record(self, *, subject, body, **kwargs):
+        zugestellt.append({"subject": subject, "body": body})
+
+    monkeypatch.setattr(EmailOutput, "send", _record)
+    return zugestellt
+
+
+def test_t12b_zugestellter_on_demand_versand_laesst_den_regulaeren_slot_faellig(
+    monkeypatch,
+):
+    """Given ein per SMS angefordertes „heute" wird TATSAECHLICH zugestellt
+    (Ausgang `sent`) / When der regulaere Sammellauf zur konfigurierten Stunde
+    laeuft / Then ist der Slot weiterhin faellig.
+
+    🔴 Adversary-Finding F004 — die Luecke, die T12 nicht sehen kann: T12 prueft
+    einen On-Demand-Versand, der ehrlich in `no_stage` endet, und kehrt damit
+    zurueck, BEVOR `_append_briefing_log` (`trip_report_scheduler.py:1337`)
+    erreicht ist. Genau dieser Log-Eintrag ist aber die Spur, ueber die ein
+    angefordertes Briefing dem Nutzer sein regulaeres wegnahm: die
+    Rueckwaerts-Ableitung (AC-9) liest `trip_id`, `kind` und `sent_at`, solange
+    `briefing_slots.json` noch nicht existiert — also genau in dem Zeitfenster
+    nach einem Deploy, in dem typischerweise der Test-Versand gedrueckt wird.
+
+    Ersetzt sind ausschliesslich die zwei Naehte zum Netz: der Wetterabruf
+    (Fixture-Unterklasse) und der Mail-Transportrand (aufzeichnende Funktion).
+    `_send_trip_report_outcome`, der Log-Schreiber, der Speicher und die
+    Sammlung laufen echt.
+
+    RED-Charakter: Mutations-Waechter — rot bei: `on_demand` nicht im
+    Log-Eintrag festgehalten oder in `_log_bezeugt_versand` nicht uebersprungen.
+    Dann faellt das regulaere Briefing dieses Ortstags still aus — ohne
+    Protokollzeile, ohne Fehlerzaehler.
+    """
+    from app.loader import get_data_dir, load_all_trips
+    from services.trip_day import trip_local_today
+
+    jetzt = datetime.now(timezone.utc)
+    heute_ort = local_dt(jetzt, PARIS).date()
+    _schreibe("slot-t12b", [_trip_json(
+        "korsika", *KORSIKA,
+        [heute_ort - timedelta(days=1), heute_ort, heute_ort + timedelta(days=1)],
+        morning="07:00:00",
+    )])
+    trip = load_all_trips(user_id="slot-t12b")[0]
+    ortstag = trip_local_today(trip, jetzt)
+    settings = _zustellbare_settings()
+    zugestellt = _aufzeichnender_mailversand(monkeypatch)
+    scheduler = _scheduler_mit_fixture_wetter("slot-t12b", settings)
+
+    # a) Der On-Demand-Versand geht wirklich raus.
+    assert scheduler.send_on_demand_report(trip, "morning") == "sent", (
+        "Testaufbau prueft nichts: nur ein zugestellter On-Demand-Versand "
+        "erreicht `_append_briefing_log` — genau darum geht es hier."
+    )
+    assert len(zugestellt) == 1, (
+        f"Genau eine zugestellte Nachricht erwartet, gefunden {len(zugestellt)}"
+    )
+    log_eintraege = json.loads(
+        (get_data_dir("slot-t12b") / "briefing_log.json").read_text(encoding="utf-8")
+    )["entries"]
+    assert [e["kind"] for e in log_eintraege] == ["morning"], (
+        "Testaufbau prueft nichts: der Log-Eintrag, um den es geht, muss "
+        f"entstanden sein. Gefunden: {log_eintraege}"
+    )
+
+    # b) Die eigentliche Zusicherung (AC-12): der regulaere Slot bleibt faellig.
+    assert not (get_data_dir("slot-t12b") / "briefing_slots.json").exists(), (
+        "Testaufbau prueft nichts: ohne eigenen Speicher greift die "
+        "Rueckwaerts-Ableitung gar nicht, und der Fall waere unerreichbar."
+    )
+    assert not BriefingSlotStore("slot-t12b").is_recorded(
+        "korsika", "morning", ortstag, zone=PARIS,
+    ), (
+        "Ein angefordertes Briefing darf den regulaeren Slot nicht als "
+        "erledigt erscheinen lassen."
+    )
+    assert ("korsika", "morning") in _sammlung(
+        _scheduler("slot-t12b"), _zeitpunkt(PARIS, ortstag, 7),
+    ), (
+        "Der regulaere 07:00-Slot muss weiterhin faellig sein (AC-12). Ist er "
+        "es nicht, hat die Rueckwaerts-Ableitung den On-Demand-Eintrag aus "
+        "briefing_log.json gelesen — der Nutzer verliert sein regulaeres "
+        "Briefing dieses Ortstags stillschweigend."
+    )
+
+
 # ---------------------------------------------------------------------------
 # AC-13 / T13 — Sperre nicht erhältlich → kein Versand (fail-closed)
 # ---------------------------------------------------------------------------
@@ -994,4 +1210,66 @@ def test_t14_lord_howe_halbstundenversatz_bleibt_unauffaellig(tag: date, stunde:
     assert _ortsstunde(treffer[0], LORD_HOWE_TZ) == stunde, (
         f"Treffer liegt auf Ortsstunde "
         f"{_ortsstunde(treffer[0], LORD_HOWE_TZ)}, konfiguriert war {stunde}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# T15 (Adversary-Finding F003) — der Schlüssel trägt den ORTSTAG, nicht den
+# UTC-Tag: das Fenster darf über die UTC-Tagesgrenze nicht auseinanderfallen
+# ---------------------------------------------------------------------------
+
+def test_t15_fenster_ueber_der_utc_tagesgrenze_sendet_nur_einmal():
+    """Given ein Trip in `Europe/Paris` mit Morgen-Briefing 01:00 — die drei
+    Fensterstunden 01/02/03 Ortszeit liegen auf ZWEI verschiedenen UTC-Tagen
+    (23:00 des Vortags, 00:00 und 01:00) / When der volle Ortstag abgeschritten
+    wird / Then geht genau EIN Morgen-Briefing raus.
+
+    🔴 Warum dieser Fall fehlte: `_collect_due_trips` bildet den Ortstag mit
+    `vor_ort.date()`. Ersetzt man das durch `now_utc.date()`, blieb die gesamte
+    Suite gruen (Adversary Z3) — kein Test verliess den Bereich, in dem Ortstag
+    und UTC-Tag ohnehin gleich sind. `test_ac4_korsika_unveraendert` klammert
+    die Konfigurationsstunden 0 und 1 per `parametrize` ausdruecklich aus, also
+    genau diesen Bereich.
+
+    Der Schaden waere ein DOPPELVERSAND an echte Empfaenger inklusive
+    kostenpflichtiger Premium-SMS: Der in Ortsstunde 01 geschriebene Vermerk
+    truege den UTC-Tag des Vortages, die Pruefung in Ortsstunde 02 fragte nach
+    dem heutigen — kein Treffer, zweiter Versand.
+
+    Gezaehlt werden VERSANDVERSUCHE des Morgen-Slots. Der Abend-Slot bleibt
+    unbeachtet: `_trip_json(evening=None)` schaltet ihn nicht ab, `loader.py`
+    setzt ihn per Default auf 18:00 (s. T2).
+
+    RED-Charakter: Mutations-Waechter — rot bei: `ortstag = now_utc.date()`
+    statt `vor_ort.date()`, also einem Schluessel, der den UTC-Tag statt des
+    Ortstags traegt.
+    """
+    tage = [date(2026, 8, 19), date(2026, 8, 20), date(2026, 8, 21)]
+    tag = date(2026, 8, 20)
+    _schreibe("slot-t15", [_trip_json("korsika", *KORSIKA, tage, morning="01:00:00")])
+    scheduler = _scheduler_mit_festem_ausgang("slot-t15")
+
+    # Vorbedingung: die Fensterstunden liegen tatsaechlich auf zwei UTC-Tagen.
+    utc_tage = {
+        local_dt(_zeitpunkt(PARIS, tag, h), UTC).date() for h in (1, 2, 3)
+    }
+    assert len(utc_tage) == 2, (
+        "Testaufbau prueft nichts: die drei Fensterstunden muessen ueber die "
+        f"UTC-Tagesgrenze reichen, gefunden {sorted(utc_tage)}"
+    )
+
+    treffer = [
+        now for now in _ortstag_schritte(PARIS, tag)
+        if ("korsika", "morning") in _lauf(scheduler, now)
+    ]
+
+    assert [_ortsstunde(t, PARIS) for t in treffer] == [1], (
+        "Erwartet genau ein Treffer auf Ortsstunde 01, gefunden "
+        f"{[_ortsstunde(t, PARIS) for t in treffer]}"
+    )
+    morgens = [v for v in scheduler.versandversuche if v[1] == "morning"]
+    assert morgens == [("korsika", "morning")], (
+        "Genau EIN Morgen-Versand ueber das ganze Fenster. Mehr heisst: der "
+        "Vermerk aus Ortsstunde 01 wurde in Ortsstunde 02 nicht gefunden, weil "
+        f"der Schluessel den UTC-Tag traegt statt den Ortstag. Gefunden: {morgens}"
     )

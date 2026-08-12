@@ -1334,7 +1334,9 @@ class TripReportSchedulerService:
                 f"Trip report NOT sent (configured channel unreachable): {trip.name} ({report_type})"
             )
         else:
-            self._append_briefing_log(trip.id, report_type, result.sent_channels)
+            self._append_briefing_log(
+                trip.id, report_type, result.sent_channels, on_demand=on_demand,
+            )
             logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
         # 8c. Issue #1662 AC-5: Der gelungene Versand macht einen offenen
@@ -1550,11 +1552,24 @@ class TripReportSchedulerService:
         """
         reset_alert_memory(user_id=self._user_id, entity_id=trip_id)
 
-    def _append_briefing_log(self, trip_id: str, kind: str, channels: List[str]) -> None:
+    def _append_briefing_log(
+        self, trip_id: str, kind: str, channels: List[str], on_demand: bool = False,
+    ) -> None:
         """Issue #393: Hängt einen Briefing-Versand-Eintrag an briefing_log.json an.
 
         Wird von Go (GET /api/cockpit/status) read-only gelesen. Kein Bereinigen —
         das Frontend filtert auf "heute".
+
+        Issue #1725 (Adversary F004): `on_demand` hält fest, dass der Eintrag aus
+        einem angeforderten Versand stammt („heute"/„morgen" per SMS,
+        Test-Versand-Knopf) und NICHT aus dem regulären Slot. Die
+        Rückwärts-Ableitung in `briefing_slots._log_bezeugt_versand` überspringt
+        solche Einträge — ohne das Feld nähme eine SMS-Anfrage dem Nutzer sein
+        reguläres Briefing desselben Ortstags (AC-12). Der Eintrag selbst wird
+        weiterhin geschrieben: ihn wegzulassen änderte die Cockpit-Kachel #393,
+        und das ist eine andere Scheibe. Go liest die Datei nur
+        (`internal/store/log.go:23`) und ignoriert unbekannte Felder, schreibt
+        sie also auch nicht weg.
         """
         path = get_data_dir(self._user_id) / "briefing_log.json"
         data = json.loads(path.read_text()) if path.exists() else {"entries": []}
@@ -1563,6 +1578,7 @@ class TripReportSchedulerService:
             "kind": kind,
             "sent_at": datetime.now(tz=timezone.utc).isoformat(),
             "channels": channels,
+            "on_demand": on_demand,
         })
         # Issue #1614: ein frischer Nutzer ohne jedes vorherige Datenverzeichnis
         # (kein Trip-Snapshot, kein Alert-State) hatte hier noch kein
