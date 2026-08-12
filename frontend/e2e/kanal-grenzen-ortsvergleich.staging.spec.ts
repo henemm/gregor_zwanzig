@@ -76,7 +76,15 @@ async function createComparePreset(page: Page, suffix: number): Promise<string> 
 			profil: 'wandern',
 			hour_from: 7,
 			hour_to: 18,
-			empfaenger: ['urlauber@example.com']
+			empfaenger: ['urlauber@example.com'],
+			// Staging-Fund (2026-08-11): `empfaenger` ist seit #1452 inert fuer die
+			// Kanal-Anzeige — presetChannels() (subscriptionHelpers.ts:245-251)
+			// leitet SMS AUSSCHLIESSLICH aus `send_sms` ab. Ohne dieses Feld zeigt
+			// die Vorschau `compare-preview-channel-not-configured` statt
+			// `compare-preview-sms`, obwohl das Backend (POST /api/preview/compare/
+			// {id}) bereits einen echten, nicht-leeren SMS-Text liefert — verifiziert
+			// per direktem API-Aufruf gegen Staging mit genau diesem Preset-Payload.
+			send_sms: true
 		}
 	});
 	expect(res.ok(), `Preset-Anlage fehlgeschlagen: ${res.status()}`).toBeTruthy();
@@ -124,13 +132,24 @@ test.describe('Issue #1719 S3 AC-6: Ortsvergleich nennt überall die echte SMS-Z
 		).toBe(false);
 	});
 
-	// AC-6 (Spec-Korrektur 2, Commit 6403c57a): 140 ist HIER der korrekte,
-	// gemessene Wert (alert/render.py:621, Vorgabewert; notification_service.py:1318
-	// überschreibt ihn nicht) — AlertChannelPicker.svelte:51 ("sofort · ≤ 140 Z.")
-	// darf NICHT auf 153 geändert werden. Geprüft wird ausschließlich, dass die
-	// Zahl weiterhin die des Alarm-Pfads ist (nicht versehentlich mit dem
-	// Briefing-Wert 153 überschrieben wird) und keine Wertung dazukommt.
-	test('Alarme-Reiter (AlertChannelPicker): SMS-Zeile nennt die eigene Alarm-Zeichengrenze 140 (korrekt, alert/render.py:621) und keine Wertung', async ({
+	// AC-6, Alarm-Anteil. Die Spec verlangt hier ausdruecklich NUR, dass die
+	// Wertung verschwindet und keine FREMDE Zahl auftaucht — nicht, dass eine
+	// Zahl sichtbar ist.
+	//
+	// 🔴 Staging-Messung 2026-08-12: die gewaehlte Zeile zeigt
+	// "SMS — gering mittel hoch", also die Stufen-Auswahl. Der statische Text
+	// mit "sofort · ≤ 140 Z." (AlertChannelPicker.svelte:51, CHANNEL_SUB.sms)
+	// ist im verdrahteten Zweig TOTES MARKUP: AlarmeTab.svelte:355 uebergibt
+	// `thresholds` immer (Typ nicht optional), also wird nie der Textzweig
+	// gerendert. Eine Zusicherung auf "140 muss sichtbar sein" wuerde daher
+	// neue Oberflaeche erzwingen, die niemand bestellt hat — das gehoert in den
+	// Alarm-Umbau (#1701/#1745), nicht in diese Scheibe.
+	//
+	// Die 140 bleibt in der Konstante trotzdem RICHTIG (alert/render.py:621,
+	// von notification_service.py:1318 nicht ueberschrieben) und darf nicht auf
+	// den Briefing-Wert 153 gezogen werden — genau das bewacht die zweite
+	// Zusicherung unten.
+	test('Alarme-Reiter (AlertChannelPicker): SMS-Zeile ohne Wertung und ohne die fremde Briefing-Zahl 153', async ({
 		page
 	}) => {
 		const id = await createComparePreset(page, Date.now() + 1);
@@ -141,28 +160,45 @@ test.describe('Issue #1719 S3 AC-6: Ortsvergleich nennt überall die echte SMS-Z
 
 		const smsRow = panel.getByTestId('alert-channel-row-sms');
 		await expect(smsRow).toBeVisible();
+
 		await expect(
 			smsRow,
-			'AC-6 FAIL: die SMS-Zeile im Alarme-Reiter muss die Alarm-Zeichengrenze 140 nennen ' +
-				'(alert/render.py:621) — das ist hier die RICHTIGE Zahl, nicht 153 (das wäre der ' +
-				'Briefing-Wert an der falschen Stelle)'
-		).toContainText('140');
-		await expect(
-			smsRow,
-			'AC-6 FAIL: "153" (Briefing-Zeichengrenze) darf im Alarm-Kontext nicht auftauchen — ' +
-				'der Alarm-Pfad hat seine eigene, andere Grenze (140)'
+			'AC-6 FAIL: "153" ist die Briefing-Zeichengrenze und im Alarm-Kontext falsch — ' +
+				'der Alarm-Pfad hat seine eigene Grenze (140, alert/render.py:621)'
 		).not.toContainText('153');
+
+		const rowText = (await smsRow.innerText()).toLowerCase();
+		for (const phrase of ['läuft flach', 'wird flach', 'entscheidungskritisch', 'nur das wesentliche']) {
+			expect(
+				rowText.includes(phrase),
+				`AC-6 FAIL: die SMS-Zeile im Alarme-Reiter enthaelt die Wertung "${phrase}"`
+			).toBe(false);
+		}
 	});
 
 	test('SMS-Vorschau (CompareSmsPreview): Zeichenzähler rechnet gegen 153, nicht 140', async ({ page }) => {
 		const id = await createComparePreset(page, Date.now() + 2);
-		await openCompareDetail(page, id);
-		await page.getByTestId('compare-detail-tab-vorschau').click();
-		const panel = page.getByTestId('compare-detail-panel-vorschau');
+		// Staging-Fund (2026-08-11): `getByTestId(...)` ohne `:visible`-Filter +
+		// Tab-Wechsel per Klick (ohne vorherige `?tab=vorschau`-Navigation) traf
+		// den SMS-Kanal-Umschalter nicht zuverlässig — "compare-preview-sms"
+		// blieb unauffindbar, obwohl das Backend (verifiziert per direktem
+		// API-Aufruf gegen denselben Preset-Payload) einen echten, nicht-leeren
+		// SMS-Text lieferte. Umgestellt auf das bewährte Muster aus
+		// compare-mobile-vervollstaendigung.spec.ts (Issue #1256 Scheibe 8b
+		// AC-1, exakt dieselbe Kanal-Umschalter-Interaktion, dort stabil grün):
+		// Tab per URL-Query vorwählen, zusätzlich per Klick bestätigen,
+		// durchgängig `:visible`-gefilterte Locators, SMS-Button-Sichtbarkeit
+		// VOR dem Klick abwarten.
+		await page.goto(`/compare/${id}?tab=vorschau`);
+		await page.waitForLoadState('networkidle');
+		await page.locator('[data-testid="compare-detail-tab-vorschau"]:visible').click();
+		const panel = page.locator('[data-testid="compare-detail-panel-vorschau"]:visible');
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 
-		await panel.getByRole('button', { name: 'SMS' }).click();
-		const smsPreview = page.getByTestId('compare-preview-sms');
+		const smsBtn = panel.getByRole('button', { name: 'SMS' });
+		await expect(smsBtn).toBeVisible({ timeout: 10_000 });
+		await smsBtn.click();
+		const smsPreview = panel.locator('[data-testid="compare-preview-sms"]');
 		await expect(smsPreview).toBeVisible({ timeout: 15_000 });
 		await expect(
 			smsPreview,

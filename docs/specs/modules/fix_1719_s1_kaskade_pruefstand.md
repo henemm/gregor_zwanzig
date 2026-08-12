@@ -393,13 +393,15 @@ AC-5/AC-7/AC-8/AC-12 als Zielmetrik ein.
 - **Backend-Umbau auf Verfeinerung** (`get_metrics_for_channel()` um
   Global-Maximum-Filter erweitern, damit AC-7 grün wird) — Scheibe S2.
 - **Frontend** (Editor-Zustandsanzeige statt Löschung, `onRemove`/`onToggleMetric`-Verhalten,
-  `CHANNEL_COL_BUDGET.sms`-Korrektur) — Scheibe S3.
+  `CHANNEL_COL_BUDGET.sms`-Korrektur) — Scheibe S3. ✅ Erledigt 2026-08-11, s.
+  `docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md`.
 - **Legende/Erklärtext zur Kaskade im UI** — Scheibe S4.
 - **Auswertungswahl-Abschnitt „05 — Auswertungen"** (Trennlinie
   Platz-statt-Kanal-Entscheid) — Issue #1728.
 - **3-Tages-Vorschau-Spalten, `show_night_block`-Bedienoberfläche** —
   Issues #1720/#1721.
-- **Live-Vorschau „So kommt es an"** (wird ersatzlos entfernt) — Scheibe S3.
+- **Live-Vorschau „So kommt es an"** (wird ersatzlos entfernt) — Scheibe S3. ✅
+  Erledigt 2026-08-11.
 
 ## Offene Fragen
 

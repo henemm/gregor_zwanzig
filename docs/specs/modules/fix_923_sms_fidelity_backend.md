@@ -10,6 +10,15 @@ tags: [sms, validator, frontend, trip-detail, editor, issue-923, adr-0011]
 
 # Briefing-SMS-Fidelity über Backend-Feed (Issue #923)
 
+> **Abgelöst durch #1719 S3 (2026-08-11):** Die Live-Vorschau, an die dieser
+> Endpoint über #923b angeschlossen wurde (`WeatherV2MailPreview.svelte`,
+> „So kommt es an"), ist auf PO-Entscheid ersatzlos entfernt — Komponente
+> gelöscht. `POST /api/_validator/sms-fidelity-preview` bleibt registriert,
+> ist damit aber toter Code ohne Live-Konsument (nicht Teil von S3, s.
+> `docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md` „Known
+> Limitations"). Diese Spec beschreibt weiterhin korrekt den historischen
+> Stand bis dahin.
+
 > **Korrektur (#923b, 2026-08-06):** Der hier beschriebene Endpoint war korrekt
 > gebaut, wurde aber gegen `ChannelFidelitySMS.svelte`/`ChannelPreviewCard.svelte`
 > verdrahtet — tote Komponenten, nie von einer Route importiert (nur über den

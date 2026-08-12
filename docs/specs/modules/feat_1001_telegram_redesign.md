@@ -199,7 +199,9 @@ for i, bubble_text in enumerate(report.telegram_bubbles):
 live gerenderte Kanalvorschau läuft seither über `WeatherV2MailPreview.svelte`
 (`frontend/src/lib/components/shared/weather-metrics-tab/`) — ein künftiges Folge-Ticket
 für die Multi-Bubble-Darstellung zielt auf diese Komponente, nicht mehr auf die
-gelöschten Dateien), `internal/handler/preview_proxy.go` (Go, unverändert),
+gelöschten Dateien; **Stand 2026-08-11: `WeatherV2MailPreview.svelte` ist mit #1719 S3
+ebenfalls ersatzlos entfernt — es gibt seither gar keine Kanal-Live-Vorschau mehr, auf
+die ein Folge-Ticket zielen könnte**), `internal/handler/preview_proxy.go` (Go, unverändert),
 `src/outputs/telegram.py` (Versand-Methode selbst bleibt unverändert),
 `src/services/trip_alert.py` (eigenständiger Alert-Versandpfad, nicht Briefing-Format).
 
@@ -302,7 +304,9 @@ gelöschten Dateien), `internal/handler/preview_proxy.go` (Go, unverändert),
   zusammengefügten `body`-String, nicht die einzelnen Bubbles. Multi-Bubble-Darstellung
   im Trip-Editor ist ein Folge-Ticket (Stand 2026-08-06: die live gerenderte Komponente
   ist `WeatherV2MailPreview.svelte`, `ChannelPreviewBlock.svelte`/`ChannelPreviewCard.svelte`
-  sind mit #923b gelöscht).
+  sind mit #923b gelöscht). **Stand 2026-08-11 (#1719 S3):** `WeatherV2MailPreview.svelte`
+  ist auf PO-Entscheid ebenfalls ersatzlos entfernt — es existiert derzeit keine
+  Kanal-Live-Vorschau mehr, weder als einzelner `body`-String noch als Bubble-Liste.
 - **#623/#640 bleiben draft:** Der fachliche Kern (mehrtägiger Trend) fließt in die
   Ausblick-Bubble ein, aber beide Ursprungs-Issues werden NICHT durch #1001 als
   eigenständige Spezifikation abgeschlossen — falls zusätzliche Anforderungen über die

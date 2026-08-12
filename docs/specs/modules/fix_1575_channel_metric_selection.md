@@ -9,6 +9,19 @@ workflow: fix-1575-channel-metric-selection
 
 # Kanal-eigene Metrik-Auswahl im Trip-Editor — #1575 Scheibe 3 (Symptom B)
 
+> **Teilweise überholt durch #1719 S3 (2026-08-11):** Das hier eingeführte
+> `channelBuckets`/`effectiveBuckets`-Modell bleibt die Grundlage — S3 baut
+> direkt darauf auf (`onToggleMetric` schreibt bei Abwahl in alle
+> vorhandenen `channelBuckets`-Einträge). Zwei Stellen sind aber überholt:
+> (1) Alle Verweise auf `WeatherV2MailPreview.svelte` (insb. Teil 2, „Fund"-
+> Absatz zu `effectiveBuckets`) — diese Komponente und ihr `preview`-Snippet
+> sind ersatzlos entfernt. (2) Der beschriebene `buildWeatherPayload()`
+> serialisiert hier bewusst nur den `activeChannel`; S3 hat das als
+> Persistenz-Bug identifiziert und behoben — seither werden **alle**
+> nicht-`null`-Einträge aus `channelBuckets` gesendet, sonst käme eine
+> Abwahl-Durchschreibung (Regel 3, ADR-0050) nie am Server an. Details:
+> `docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md` Abschnitt 4.
+
 - **Issue:** #1575 Scheibe 3 von 3, Symptom B
 - **Vorgänger (geteilter Organism):** `docs/specs/modules/layout_tab_route.md` (#1232 Scheibe 3b, live) — diese Scheibe löst dessen AC-6 teilweise ab, siehe „Architektur-Entscheidung" unten
 - **Typ:** Full-Stack-Fix — ein kleiner Backend-Bugfix (Python) + ein neuer Frontend-Persistenzpfad (Svelte/TS), kein neues Datenschema (additive, bereits vorhandene Backend-Felder)

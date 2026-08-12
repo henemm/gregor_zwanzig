@@ -73,7 +73,7 @@ const REPORT_CONFIG = {
 
 async function createTrip(request: APIRequestContext) {
 	await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
-	await request.post('/api/trips', {
+	return request.post('/api/trips', {
 		data: {
 			id: TRIP_ID,
 			name: 'E2E #1719 S3 Vorschau weg',
@@ -118,7 +118,15 @@ test.describe('Issue #1719 S3 Block A: Live-Vorschau ist ersatzlos weg', () => {
 		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 	});
 
-	test('AC-1: weder Vorschau-Spalte noch Mobile-Knopf existieren — Desktop UND Mobil', async ({ page }) => {
+	test('AC-1: weder Vorschau-Spalte noch Mobile-Knopf existieren — Desktop UND Mobil', async ({ page, request }) => {
+		// Staging-Fund (2026-08-11): `createTrip` war definiert, aber in BEIDEN
+		// Tests dieser Datei nie aufgerufen — der Trip existierte nicht, die
+		// Navigation zu `/trips/{id}?tab=weather` fand keinen Reiter
+		// ("trip-detail-tab-weather" not found). Test-/Fixture-Fehler, kein
+		// Produktfehler (Beleg: derselbe Navigationsweg besteht in
+		// kanal-grenzen-und-hinweise.staging.spec.ts, wo der Trip angelegt wird).
+		const created = await createTrip(request);
+		expect(created.ok(), `Trip-Anlage fehlgeschlagen: HTTP ${created.status()}`).toBeTruthy();
 		await page.setViewportSize({ width: 1440, height: 900 });
 		const tab = await openMetricsTab(page);
 
@@ -143,8 +151,13 @@ test.describe('Issue #1719 S3 Block A: Live-Vorschau ist ersatzlos weg', () => {
 	});
 
 	test('AC-2: Kanal-Wähler + Ziehen bleiben ohne Vorschau bedienbar, kein horizontaler Scroll', async ({
-		page
+		page,
+		request
 	}) => {
+		// Staging-Fund (2026-08-11): siehe Kommentar bei AC-1 — createTrip war
+		// nie aufgerufen.
+		const created = await createTrip(request);
+		expect(created.ok(), `Trip-Anlage fehlgeschlagen: HTTP ${created.status()}`).toBeTruthy();
 		await page.setViewportSize({ width: 1440, height: 900 });
 		const tab = await openMetricsTab(page);
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle');
