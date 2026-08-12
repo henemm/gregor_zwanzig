@@ -42,9 +42,10 @@ from app.model_registry import (  # noqa: E402
 )
 from app.models import (  # noqa: E402
     ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
-    SegmentWeatherData, TripSegment,
+    SegmentWeatherData, ThunderLevel, TripSegment,
 )
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
+from output.metric_format import union_of_max_carriers  # noqa: E402
 from output.renderers.trip_report import TripReportFormatter  # noqa: E402
 from providers.thunder_enrichment import _fuse_thunder_levels  # noqa: E402
 from providers.thunder_routing import thunder_region_for  # noqa: E402
@@ -454,3 +455,37 @@ def test_ac10_glance_bleibt_ohne_herkunft(kommando):
     assert "· CAPE" in kommando.frage(segmente), (
         "Gegenprobe gescheitert: die GEWITTER-Antwort DERSELBEN Fixture MUSS "
         "die Herkunft nennen")
+
+
+# ---------------------------------------------------------------------------
+# Zusicherung des Helfers selbst (Adversary-Befund F001 zu Scheibe 2)
+# ---------------------------------------------------------------------------
+
+def test_hoechststufe_none_hat_keine_herkunft_auch_mit_gefuellten_traegern():
+    """Given die Hoechststufe eines Aggregats ist ``NONE``, When Traeger
+    mitgeliefert werden, Then ist das Ergebnis ``None`` -- "kein Gewitter" hat
+    keine Herkunft.
+
+    Wirkort ist hier die Funktion selbst: kein heutiger Aufrufer erzeugt zu
+    einem ``NONE``-Punkt eine gefuellte Traegerliste, der Docstring sagt die
+    Eigenschaft aber als Eigenschaft der FUNKTION zu. Der Helfer ist laut
+    Spec D1 ausdruecklich fuer die Wiederverwendung gebaut (kuenftiger
+    ``aggregate_stage()``-Anschluss) -- eine Zusicherung, die nur aus dem
+    Verhalten der Aufrufer folgt, bricht genau dort.
+    """
+    assert union_of_max_carriers([(ThunderLevel.NONE, ["cape"])]) is None, (
+        "Ein einzelner NONE-Punkt mit Traeger darf keine Herkunft nennen")
+    assert union_of_max_carriers([
+        (ThunderLevel.NONE, ["cape"]),
+        (ThunderLevel.NONE, ["wettercode", "lightning"]),
+    ]) is None, (
+        "Auch mehrere NONE-Punkte mit Traegern nennen keine Herkunft")
+
+    # Gegenprobe: sobald irgendein Punkt ueber NONE liegt, traegt NUR er bei --
+    # unveraendertes Verhalten, nicht durch die neue Zusicherung mit-erschlagen.
+    assert union_of_max_carriers([
+        (ThunderLevel.NONE, ["cape"]),
+        (ThunderLevel.LOW, ["wettercode"]),
+    ]) == ["wettercode"], (
+        "Liegt das Maximum ueber NONE, bleibt die Vereinigung der Traeger am "
+        "Maximum unveraendert")

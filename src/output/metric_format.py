@@ -580,8 +580,12 @@ def union_of_max_carriers(
     ``None`` (nicht ``[]``) heisst "keine Aussage": kein Paar nennt eine Stufe
     (z.B. leere Auswahl) ODER kein Paar am Maximum nennt einen Traeger (z.B.
     ein Alt-Schnappschuss ohne das Feld). Eine Stufe ``NONE`` ist dabei eine
-    ECHTE Stufe und kein Ausstiegsgrund — sie fuehrt ueber den leeren
-    Traegerbestand auf ``None``, weil "kein Gewitter" keine Herkunft hat.
+    ECHTE Stufe und kein Ausstiegsgrund — liegt das Maximum aber BEI ``NONE``,
+    ist das Ergebnis ``None``, weil "kein Gewitter" keine Herkunft hat. Das
+    garantiert die Funktion SELBST und verlaesst sich nicht darauf, dass ihre
+    Aufrufer zu einem ``NONE``-Punkt ohnehin keine Traeger liefern — sie ist
+    fuer die Wiederverwendung gebaut, und eine Zusicherung, die nur aus dem
+    Verhalten der heutigen Aufrufer folgt, braeche beim naechsten.
 
     Rueckgabe ist bewusst eine ``list``, NIE ein ``set``: das Ergebnis landet
     ueber ``SegmentWeatherSummary.thunder_level_max_signals`` im Wetter-
@@ -593,6 +597,8 @@ def union_of_max_carriers(
     if not stufen:
         return None
     top = max_thunder(stufen)
+    if top == ThunderLevel.NONE:
+        return None
     traeger: list[str] = []
     for stufe, liste in paare:
         if stufe != top:
