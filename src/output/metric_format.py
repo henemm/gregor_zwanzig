@@ -318,25 +318,50 @@ def _gedaempft_durch_cin(
     """Daempft eine CAPE-Stufe anhand der Konvektionshemmung CIN (Issue #1679).
 
     Vier belegte Baender (Penn State/COMET, SPC -- Gesamtkonzept 3.7 Schritt 2):
-    schwacher Deckel (> -25) laesst die Leiter voll zaehlen, moderat
-    (-50 < cin <= -25) nimmt genau eine Stufe, grosser Deckel
-    (-100 <= cin <= -50) deckelt auf LOW, darunter traegt CAPE nichts mehr bei.
+    schwacher Deckel (Betrag < 25) laesst die Leiter voll zaehlen, moderat
+    (25 <= Betrag < 50) nimmt genau eine Stufe, grosser Deckel
+    (50 <= Betrag <= 100) deckelt auf LOW, darueber traegt CAPE nichts mehr bei.
     Ein Grenzwert gehoert dabei immer ins staerker daempfende Band.
 
-    Unbekanntes CIN (``None``, strukturell der Fall bei Meteo-France/AROME)
-    faellt auf die Bestands-Notbremse "hoechstens LOW" zurueck -- NICHT auf
-    "kein Deckel": eine fehlende Hemmungsangabe ist keine schwache Hemmung.
+    Unbekanntes CIN (``None``, strukturell der Fall bei Meteo-France/AROME;
+    ebenso der DWD-Fehlwert -999,9 "kein Ausloesepunkt gefunden", der VOR
+    dieser Funktion zu ``None`` gefiltert wird, `dwd.py:206`/`:240`,
+    `dwd_eu.py:261`) faellt auf die Bestands-Notbremse "hoechstens LOW"
+    zurueck -- NICHT auf "kein Deckel": eine fehlende Hemmungsangabe ist
+    keine schwache Hemmung.
+
+    Vorzeichen der Eingabe ist MODELLABHAENGIG, GRIB2 (Parameter 0/7/7 der
+    WMO-Registry) legt keines fest -- nur Name und Einheit (J/kg) sind
+    standardisiert. Der DWD (ICON-D2/ICON-EU) liefert ``cin_ml`` als
+    POSITIVEN Betrag: ICON-Quellcode
+    `src/atm_phy_nwp/mo_opt_nwp_diagnostics.f90:3957-3958`, Kommentar
+    ``! make CIN positive``, gefolgt von ``ABS(...)``. GFS/US-Modelle
+    liefern dagegen negativ -- die US-Literatur (Penn State/SPC), aus der
+    die vier Baender oben stammen, bezieht sich auf **MLCIN ueber 100 hPa**
+    negativ gezaehlt. Deshalb vergleicht diese Funktion den BETRAG der
+    Hemmung, nicht ihr Vorzeichen (Issue #1760) -- ein reiner
+    Vorzeichenvergleich (``cin_jkg > -25``) waere fuer JEDEN positiven
+    ICON-Wert immer wahr und die Daempfung wuerde nie feuern.
+
+    🔴 Bekannte Einschraenkung (Issue #1760 Known Limitations): die Baender
+    selbst sind fuer ICON NICHT geeicht. ICON mischt CIN ueber **50 hPa**
+    (ICON-Code Z. 2701-2702, "Depth of mixed surface layer: 50hPa following
+    Huntrieser, 1997"), reversibel, ohne Entrainment (ECMWF TM 852,
+    Groenemeijer et al. 2019) -- eine andere Rechnung als die US-MLCIN, aus
+    der -25/-50/-100/-200 stammen. Die Schwellen liegen in der richtigen
+    Groessenordnung, sind aber keine ICON-Eichung (Feineichung: #1678).
 
     CIN ist Ausloese-Filter, kein Schweremass (Rasmussen & Blanchard 1998) --
     diese Funktion daempft deshalb ausschliesslich und hebt nie an.
     """
     if cin_jkg is None:
         return min(basis, ThunderLevel.LOW, key=thunder_ordinal)
-    if cin_jkg > -25:
+    betrag = abs(cin_jkg)
+    if betrag < 25:
         return basis
-    if cin_jkg > -50:
+    if betrag < 50:
         return _THUNDER_JE_ORDINAL[max(thunder_ordinal(basis) - 1, 0)]
-    if cin_jkg >= -100:
+    if betrag <= 100:
         return min(basis, ThunderLevel.LOW, key=thunder_ordinal)
     return ThunderLevel.NONE
 
