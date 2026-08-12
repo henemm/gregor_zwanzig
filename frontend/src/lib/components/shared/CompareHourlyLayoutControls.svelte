@@ -136,6 +136,17 @@
 		return map;
 	});
 
+	// Issue #1719 S4: Kurzform-Marke = Register-Kuerzel (`sms_code`) — die
+	// Vergleichs-SMS rendert aus `get_sms_code()`. Die Legacy-Schluessel
+	// bekommen dasselbe Kuerzel wie ihre Groesse, sonst traegt dieselbe Zeile
+	// je nach Auswahlstand mal eine Marke und mal keine.
+	const hourlyKuerzelById = $derived.by(() => {
+		const map: Record<string, string[]> = {};
+		for (const [key, eintrag] of Object.entries(hourlyMetricById))
+			if (eintrag.sms_code) map[key] = [eintrag.sms_code];
+		return map;
+	});
+
 	function onHourlyRemove(key: string): void {
 		const group = hourlyGroups.find(
 			(g) => g.metric_id === key || g.hourly_legacy_keys.includes(key)
@@ -227,6 +238,7 @@
 			onRemove={onHourlyRemove}
 			onDndReorder={handleHourlyDndReorder}
 			onMode={noopHourlyMode}
+			kuerzelById={hourlyKuerzelById}
 		/>
 	</Card>
 {/if}

@@ -507,9 +507,11 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 	// ── AC-12 ───────────────────────────────────────────────────────────────
 	//
 	// Gegenprobe (Spec, Pflicht): nimmt man den Marken die Unverkuerzbarkeit
-	// wieder weg (`flex-shrink: 0` aus `.col-badge`/`.sms-badge` in
-	// WeatherV2Reihenfolge.svelte entfernen, bzw. den Umbruch auf `max-width:
-	// 899px` zurueckstellen), MUSS dieser Test rot werden. Wird er es nicht,
+	// wieder weg (`flex-shrink: 0` aus `.col-badge`/`.kurzform-badge` in
+	// WeatherV2Reihenfolge.svelte entfernen — ODER dort `min-width: 0` bei
+	// `.metric-label` streichen, das war der gemessene Auesloeser: ohne ihn
+	// kann der NAME nicht schrumpfen und die Zelle holt sich den Platz bei den
+	// Marken), MUSS dieser Test rot werden. Wird er es nicht,
 	// bewacht er nichts. Die Gegenprobe laeuft an einem eigenen Staging-Stand;
 	// dieser Test ist so gebaut, dass sie moeglich ist: er misst genau die
 	// beiden Bedingungen, die eine schrumpfende Marke verletzt (1 und 5), und

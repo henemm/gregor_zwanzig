@@ -371,6 +371,61 @@ def test_waechter_faengt_einen_neuen_katalogeintrag(ausnahmen, soll_rot, warum):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# AC-2, Grammatikformen (Adversary Runde 2, F004)
+#
+# Der Waechter oben rechnet BEIDE Seiten aus denselben Tabellen und ist
+# gegenueber den Grammatik-Ausnahmen damit selbstbezueglich: entfernt man sie,
+# aendern sich Soll UND Ist gleichzeitig, und er bleibt gruen. Gefangen wurde
+# das bisher nur von einer thematisch fremden Datei
+# (tests/tdd/test_sms_snow_symbols.py). Die Grammatikformen sind aber Teil der
+# Kuerzel-Wahrheit, die S4 zusichert — der Nutzer liest 'NS24+' in seiner SMS
+# und muss genau das im Editor wiederfinden. Deshalb hier, mit ausdruecklichen
+# Sollwerten und Begruendung.
+# ═══════════════════════════════════════════════════════════════════════════
+
+_GRAMMATIKFORMEN = [
+    ("thunder", "TH:", "der Doppelpunkt trennt die Gewitter-Stufe vom Kuerzel"),
+    ("fresh_snow", "NS24+", "'24+' benennt das 24-Stunden-Fenster des Neuschnees"),
+]
+
+
+@pytest.mark.parametrize("metric_id,erwartet,grund", _GRAMMATIKFORMEN)
+def test_grammatikform_ueberschreibt_das_register_kuerzel(metric_id, erwartet, grund):
+    """AC-2: Given eine Groesse, deren gesendetes Kuerzel eine Grammatikform
+    traegt / When das Kuerzel-Register aufgeloest wird / Then gilt die
+    Grammatikform, NICHT das nackte Register-Kuerzel — sonst nennt die
+    Oberflaeche ein Kuerzel, das in keiner Nachricht so vorkommt."""
+    from app.metric_catalog import get_sms_code
+    from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
+
+    ist = SMS_SYMBOL_BY_METRIC[metric_id]
+    assert ist == erwartet, (
+        f"F004 FAIL ({metric_id}): die Kurzform sendet {ist!r}, erwartet ist "
+        f"{erwartet!r} — {grund}. Wurde die Grammatik-Ausnahme entfernt, faellt "
+        f"das Kuerzel auf das nackte Register zurueck und stimmt mit nichts "
+        f"mehr ueberein, was der Nutzer wirklich liest."
+    )
+    assert ist != get_sms_code(metric_id), (
+        f"F004 FAIL ({metric_id}): Grammatikform und Register-Kuerzel sind "
+        f"identisch ({ist!r}). Dann ist die Ausnahme wirkungslos geworden — "
+        f"entweder ist sie verschwunden, oder das Register wurde ihr "
+        f"angeglichen. Beides macht diesen Wachhund blind."
+    )
+
+
+def test_neuschnee_traegt_die_grammatikform_auch_in_telegram():
+    """AC-1/AC-2: Given Neuschnee / When die Telegram-Stundentabelle gerendert
+    wird / Then steht dort 'NS24+' — dasselbe, was die SMS sendet. Ohne die
+    Grammatik-Ausnahme stuende dort 'NS', ein Kuerzel, das in keiner Nachricht
+    vorkommt (Spec-Tabelle, Zeile 'Neuschnee NS -> NS24+')."""
+    kopf = _tabellenkopf(["fresh_snow"])
+    assert kopf == ["NS24+"], (
+        f"F004 FAIL: Spaltenkopf {kopf} statt ['NS24+']. Die Telegram-Tabelle "
+        "nennt eine Groesse anders, als die SMS sie sendet."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # AC-9 — eine Groesse ohne Kuerzel bekommt keines angedichtet
 #
 # Der Editor speist die Kurzform-Marke aus /api/sms-symbols (Spec Abschnitt 3).

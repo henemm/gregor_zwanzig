@@ -357,6 +357,113 @@ describe('AC-7: die drei Vergleichs-Editoren tragen ebenfalls beide Marken', () 
 	}
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// AC-6 / AC-7 — die QUELLE der Kurzform-Marke, je Flaeche (Adversary Runde 2,
+// F002)
+//
+// Der Waechter darunter prueft nur, ob eine Flaeche `sms_code` IRGENDWIE
+// erreicht — das tut sie ueber `metricById` auch dann noch, wenn die
+// Kurzform-Marke laengst aus der falschen Quelle gespeist wird. Gemessen: der
+// Adversary hat die Vergleichs-Einbettung auf die TRIP-Quelle umgebogen, alle
+// 11 Tests blieben gruen. Das ist genau der Fehler, den diese Scheibe behebt —
+// falsche Quelle, falsches Kuerzel —, nur auf der anderen Flaeche.
+//
+// Deshalb hier: nicht "erreicht die Flaeche sms_code?", sondern "woraus wird
+// GENAU DIE `kuerzelById`-Eigenschaft gespeist?".
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Namen, unter denen die TRIP-SMS-Kuerzel (/api/sms-symbols) reisen. */
+const TRIP_QUELLEN = ['metricSymbols', 'smsSymbols', 'sms_symbols'];
+/** Der Name, unter dem das Register-Kuerzel des Vergleichs reist. */
+const REGISTER_QUELLE = 'sms_code';
+
+/** Namen, die AUSSCHLIESSLICH ueber die `kuerzelById`-Eigenschaft einer
+ *  Einbettung erreichbar sind — die dort genannten Bezeichner plus, einen
+ *  Schritt tief, alles aus ihrer Herleitung. Bewusst NICHT ueber alle
+ *  Eigenschaften: `metricById` traegt `sms_code` ohnehin mit, und genau das
+ *  machte den Waechter darunter blind. */
+function kuerzelQuelle(
+	datei: string,
+	waehle: (attrs: Set<string>) => boolean
+): Set<string> | null {
+	const ast = parseComponent(join(SHARED, datei));
+	let ziel: Knoten | null = null;
+	walk(ast.fragment, (n) => {
+		if (n.type !== 'Component' || n.name !== 'WeatherV2Reihenfolge') return;
+		const attrNamen = new Set<string>(
+			(n.attributes ?? [])
+				.filter((a: Knoten) => a.type === 'Attribute')
+				.map((a: Knoten) => String(a.name))
+		);
+		if (waehle(attrNamen) && !ziel) ziel = n;
+	});
+	if (!ziel) return null;
+	const attr = ((ziel as Knoten).attributes ?? []).find(
+		(a: Knoten) => a.type === 'Attribute' && a.name === 'kuerzelById'
+	);
+	if (!attr) return null;
+
+	const direkt = geleseneNamen(attr);
+	const alle = new Set(direkt);
+	walk(ast.instance?.content?.body, (n) => {
+		if (n.type !== 'VariableDeclarator') return;
+		const name = n.id?.type === 'Identifier' ? n.id.name : null;
+		if (!name || !direkt.has(name)) return;
+		for (const gelesen of geleseneNamen(n.init)) alle.add(gelesen);
+	});
+	return alle;
+}
+
+describe('AC-6/AC-7: die Kurzform-Marke wird je Flaeche aus der RICHTIGEN Quelle gespeist', () => {
+	test('Touren-Editor: aus /api/sms-symbols, NICHT aus dem Register', () => {
+		const quelle = kuerzelQuelle('WeatherMetricsTab.svelte', (attrs) =>
+			attrs.has('offColumns')
+		);
+		assert.ok(quelle, 'AC-6 FAIL: die Touren-Einbettung uebergibt kein `kuerzelById`.');
+		assert.ok(
+			TRIP_QUELLEN.some((q) => quelle!.has(q)),
+			`AC-6 FAIL: die Kurzform-Marke des Touren-Editors wird nicht aus ` +
+				`${TRIP_QUELLEN.join('/')} gespeist. Der Editor zeigte dann die ` +
+				`ALARM-Stammdaten statt der Kuerzel, die die Trip-SMS wirklich sendet — ` +
+				`bei "Gefuehlte Temperatur" ein "TF" statt "FK FD WC", bei ` +
+				`"Nacht-Tiefsttemperatur" ein "TN", das in KEINER SMS vorkommt. ` +
+				`Erreichbar: ${JSON.stringify([...quelle!].sort())}`
+		);
+		assert.ok(
+			!quelle!.has(REGISTER_QUELLE),
+			`AC-6 FAIL: die Kurzform-Marke des Touren-Editors wird (auch) aus ` +
+				`\`${REGISTER_QUELLE}\` gespeist. Das ist die Quelle des VERGLEICHS; ` +
+				`die Trip-SMS rendert aus SMS_MULTI_SYMBOLS_BY_METRIC / ` +
+				`SMS_SYMBOL_BY_METRIC. Erreichbar: ${JSON.stringify([...quelle!].sort())}`
+		);
+	});
+
+	for (const [name, datei, waehle] of VERGLEICHSFLAECHEN) {
+		test(`${name}: aus dem Register, NICHT aus den Trip-SMS-Kuerzeln`, () => {
+			const quelle = kuerzelQuelle(datei, waehle);
+			assert.ok(quelle, `AC-7 FAIL: ${name} uebergibt kein \`kuerzelById\`.`);
+			assert.ok(
+				quelle!.has(REGISTER_QUELLE),
+				`AC-7 FAIL: die Kurzform-Marke von ${name} wird nicht aus ` +
+					`\`${REGISTER_QUELLE}\` gespeist. Die Vergleichs-SMS rendert aus ` +
+					`\`get_sms_code()\` (comparison.py:625) — die Marke zeigte dann ein ` +
+					`Kuerzel, das der Vergleich nie sendet. ` +
+					`Erreichbar: ${JSON.stringify([...quelle!].sort())}`
+			);
+			const trip = TRIP_QUELLEN.filter((q) => quelle!.has(q));
+			assert.deepEqual(
+				trip,
+				[],
+				`AC-7 FAIL: die Kurzform-Marke von ${name} wird aus der TRIP-Quelle ` +
+					`gespeist (${trip.join(', ')}). Trip und Vergleich senden aus ` +
+					`VERSCHIEDENEN Tabellen; eine flaechenblinde Quelle macht den ` +
+					`Vergleich falsch — genau der Fehler, den diese Scheibe behebt, nur ` +
+					`auf der anderen Flaeche.`
+			);
+		});
+	}
+});
+
 describe('AC-7: die Kurzform-Marke des Vergleichs speist sich aus dem Register', () => {
 	for (const [name, datei, waehle] of VERGLEICHSFLAECHEN) {
 		test(`${name}: die Zeile erreicht das Register-Kuerzel (sms_code)`, () => {
@@ -388,6 +495,17 @@ describe('AC-7: die Kurzform-Marke des Vergleichs speist sich aus dem Register',
 
 describe('AC-8: der Bestandswaechter aus #1453 laeuft weiterhin gruen', () => {
 	test('weather_metric_name_forms_visible.test.ts besteht', () => {
+		// GEMESSEN 2026-08-12 (GREEN-Phase): OHNE die folgende Env-Bereinigung
+		// meldet dieser Test IMMER `status === 0`. Node vererbt an das Kind
+		// `NODE_TEST_CONTEXT` (gesetzt, weil DIESE Datei selbst unter
+		// `node --test` laeuft); in dieser Betriebsart schreibt der Laeufer TAP
+		// an den Elternprozess und beendet sich mit 0, auch wenn Tests scheitern.
+		// Beleg: derselbe Aufruf liefert direkt `exit=1`, mit
+		// `NODE_TEST_CONTEXT=child-v8` gesetzt `exit=0`.
+		// Der Waechter war damit ein Waechter, der nichts bewacht — er war auch
+		// in der RED-Phase gruen, waehrend die geprueften vier Editoren rot waren.
+		const kindUmgebung = { ...process.env };
+		delete kindUmgebung.NODE_TEST_CONTEXT;
 		const ergebnis = spawnSync(
 			process.execPath,
 			[
@@ -397,7 +515,15 @@ describe('AC-8: der Bestandswaechter aus #1453 laeuft weiterhin gruen', () => {
 				'--test',
 				'src/lib/components/shared/__tests__/weather_metric_name_forms_visible.test.ts'
 			],
-			{ cwd: FRONTEND, encoding: 'utf-8' }
+			{ cwd: FRONTEND, encoding: 'utf-8', env: kindUmgebung }
+		);
+		// Zweiter, unabhaengiger Beleg: der Laeufer MUSS eine Bilanz gedruckt
+		// haben. Ein Kind, das gar nicht erst startet, waere sonst "bestanden".
+		assert.match(
+			ergebnis.stdout ?? '',
+			/^# fail 0$/m,
+			`AC-8 FAIL: der Bestandswaechter meldet keine Null-Bilanz.\n` +
+				`${ergebnis.stdout}\n${ergebnis.stderr}`
 		);
 		assert.equal(
 			ergebnis.status,

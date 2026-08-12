@@ -13,7 +13,7 @@ Defines all available weather metrics with:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
@@ -587,6 +587,173 @@ _METRICS: list[MetricDefinition] = [
         # compact_label dieser Metrik (kollisionsfrei, mnemonisch).
         sms_code="NS", decimals=0, cmp="über", alert_label="Schnee",
     ),
+]
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Kurzform-Kürzel — EINE Quelle für SMS, Premium-SMS und Telegram (#1719 S4)
+# ═══════════════════════════════════════════════════════════════════════════
+# PO 2026-08-12: "Warum gibt es ein extra Telegram Kürzel? Das will ich nicht!"
+# `compact_label` (Telegram) wird deshalb ABGELEITET statt zweitgepflegt:
+# Vorgabe ist das Kürzel, das die Kurzform tatsächlich sendet; abweichen darf
+# nur, was in COMPACT_LABEL_EXCEPTIONS mit Begründung steht.
+#
+# Die Kürzel-Tabellen wohnen deshalb hier und nicht mehr in `sms_trip.py` --
+# der Katalog liest sie beim Ableiten, ein Import in die Gegenrichtung wäre
+# zirkulär (sms_trip -> metric_catalog). `sms_trip` re-exportiert sie unter
+# den bisherigen Namen; alle bestehenden Importstellen bleiben gültig.
+
+# Issue #624: metric_id -> SMS-Symbol für threshold-fähige Metriken.
+#
+# Issue #1435 E3b: keine gepflegte Kürzel-Liste mehr, sondern eine ABLEITUNG
+# aus dem zentralen Wetter-Register (`sms_code`). Damit kann diese Tabelle
+# nicht mehr vom Register abdriften. Die app-freie Formatschicht
+# `output/tokens/` darf das Register nicht lesen und führt die Kürzel dort
+# weiterhin als Literale (Schichtgrenze, abgesichert durch die Ratsche
+# tests/unit/test_sms_token_symbol_register_ratchet.py).
+# Issue #1660 Scheibe B Fix-Loop (Muster #1410, DEC-1): die 14 waehlbaren
+# Metriken als eigene, benannte Konstante -- Single Source fuer
+# _SMS_SYMBOL_METRIC_IDS UNTEN und fuer build_extended_metric_specs()
+# (sms_trip.py). Vorher standen dieselben 14 Ids literal in
+# _SMS_SYMBOL_METRIC_IDS UND in trip_report.py's disabled-only-Schleife -- das
+# Auseinanderdriften war genau die Ursache des Fix-Loop-Bugs (Root-Cause:
+# aktive Metriken bekamen NIE eine MetricSpec, nur abgewaehlte).
+SMS_NULLFORM_METRIC_IDS: tuple[str, ...] = (
+    "humidity",
+    "dewpoint",
+    "wind_direction",
+    "cape",
+    "precip_type",
+    "cloud_total",
+    "cloud_low",
+    "cloud_mid",
+    "cloud_high",
+    "visibility",
+    "sunshine",
+    "uv_index",
+    "pressure",
+    "freezing_level",
+)
+
+_SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
+    "precipitation",
+    "rain_probability",
+    "wind",
+    "gust",
+    "thunder",
+    "snow_depth",
+    "snowfall_limit",
+    "fresh_snow",
+    # Issue #1660 Scheibe B: 14 waehlbare Metriken, bisher ohne SMS-Token.
+    # Alle 1:1 (kein Kuerzel-Mehrfach wie wind_chill) -> gehoeren in diese
+    # Register-Ableitung, NICHT in SMS_MULTI_SYMBOLS_BY_METRIC (DEC-1).
+    *SMS_NULLFORM_METRIC_IDS,
+)
+
+# Benannte Ausnahme von der Register-Ableitung: 'TH:' ist Grammatikform (der
+# Doppelpunkt trennt die Gewitter-Stufe vom Kürzel ab, builder.py:16), das
+# Register kennt nur 'TH'. Ausdrücklich NICHT durch #1435 E3b aufgehoben.
+# Fix #1450/Adversary-F001: 'fresh_snow' ebenso -- das Register-Kuerzel ist
+# 'NS', der tatsaechlich gerenderte Wintersport-Token ist 'NS24+'
+# (builder.py::_wintersport, '24+'-Suffix ist Grammatik fuer das
+# 24-Stunden-Fenster). Ohne diese Ausnahme wuerde SMS_SYMBOL_BY_METRIC das
+# falsche Symbol 'NS' fuehren, das nirgends mit dem gerenderten Token
+# uebereinstimmt -- die Abwahl (#944) griffe dadurch weiterhin nicht.
+SMS_SYMBOL_GRAMMAR: dict[str, str] = {"thunder": "TH:", "fresh_snow": "NS24+"}
+
+_SMS_CODE_BY_ID: dict[str, str] = {m.id: m.sms_code for m in _METRICS}
+
+SMS_SYMBOL_BY_METRIC: dict[str, str] = {
+    metric_id: SMS_SYMBOL_GRAMMAR.get(metric_id) or _SMS_CODE_BY_ID[metric_id]
+    for metric_id in _SMS_SYMBOL_METRIC_IDS
+}
+
+# Issue #1410: metric_id -> MEHRERE SMS-Kuerzel derselben Metrik. Eigene
+# Zuordnung, weil eine Metrik hier mehrere Symbole traegt (Nacht/Tiefst/
+# Hoechst) — SMS_SYMBOL_BY_METRIC bildet 1:1 ab und wird zusaetzlich fuer
+# Schwellwerte gelesen (#624), wo diese Symbole nichts zu suchen haben.
+# Fix #1450/Adversary-F001: 'WC' (Wintersport-Tageskennzahl, builder.py::
+# _wintersport) ergaenzt -- ohne diesen Eintrag baut trip_report.py:283-287
+# keinen disabled_specs-Eintrag fuer WC, und die Abwahl von "Gefuehlte
+# Temperatur" im Trip-Editor wirkt sich nicht auf WC aus.
+# Fix #1415 (PO-Entscheidung 2026-08-03): die GEMESSENE Temperatur folgt
+# derselben Regel -- 'N'/'K'/'D' hingen an keinem Eintrag und erschienen
+# deshalb auch bei abgewaehlter Metrik "Temperatur" (Beleg: Trip KHW 403,
+# "K13 D16 FK13 FD16 ..." bei ausgeschalteter Temperatur). Register-Kuerzel
+# taugen dafuer nicht: get_sms_code("temperature") == 'D' waere nur eines von
+# dreien, get_sms_code("temperature_cold") == 'N' gehoert zur internen
+# Alarm-Pseudogroesse (selectable=False), und ein Eintrag in
+# SMS_SYMBOL_BY_METRIC wuerde zusaetzlich einen Schwellwert auf 'D' legen
+# (#624), den es fuer Temperatur-Token gar nicht gibt. Daher hier, in der
+# frueher 'FELT' benannten Mehrfach-Tabelle.
+# Fix #1482: 'thunder' traegt ZWEI Kuerzel -- 'TH:' (berichtete Etappe) und
+# 'TH+:' (Folge-Etappe). 'TH+:' hing an keinem Eintrag und blieb deshalb auch
+# nach Abwahl der Metrik "Gewitter" in der Kurzform stehen. SMS_SYMBOL_BY_METRIC
+# bildet 1:1 ab (nur 'TH:') und wird zusaetzlich fuer Schwellwerte gelesen
+# (#624) -- ein zweiter Eintrag dort wuerde das Schwellwert-Dict verfaelschen.
+# Fix #1484 (PO-Entscheidung 2026-08-03): 'N' wandert von "temperature" zur
+# eigenen waehlbaren Groesse "temperature_night" -- Tages- und Nachttemperatur
+# sind zwei unabhaengige Auswahl-Entscheidungen (Zelt vs. Huette).
+# Fix #1660 Scheibe A: dieselbe Trennung jetzt auch auf der gefuehlten Seite --
+# 'FN' wandert von "wind_chill" zur eigenen waehlbaren Groesse
+# "wind_chill_night". 'WC' (Wintersport-Tageskennzahl) bleibt bewusst bei
+# "wind_chill" (Regression #1450, Spec-Abgrenzung 1).
+SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
+    "temperature": ("K", "D"),
+    "temperature_night": ("N",),
+    "wind_chill": ("FK", "FD", "WC"),
+    "wind_chill_night": ("FN",),
+    "thunder": ("TH:", "TH+:"),
+}
+
+# #1719 S4: die einzigen Größen, deren Telegram-Kürzel vom Kurzform-Kürzel
+# abweichen DARF. Wert = Begründung (Muster: SMS_SYMBOL_GRAMMAR oben,
+# `gz-eigenstaendig` aus #1481 B). Ein Eintrag ohne Satz ist keine Ausnahme --
+# der Wächter tests/unit/test_telegram_kuerzel_folgt_register.py besteht auf
+# einer lesbaren Begründung.
+COMPACT_LABEL_EXCEPTIONS: dict[str, str] = {
+    "temperature": (
+        "Die Telegram-Zelle zeigt einen STUNDENWERT. Das Register führt für "
+        "diese Größe Tagesauswertungen ('K' Tagestiefst, 'D' Tageshöchst) — "
+        "ein Spaltenkopf 'Tageshöchst' wäre über einem Stundenwert eine "
+        "falsche Aussage."
+    ),
+    "wind_chill": (
+        "Wie 'temperature': die Zelle zeigt einen Stundenwert, das Register "
+        "führt Tagesauswertungen ('FK'/'FD' Tiefst/Höchst, 'WC' "
+        "Wintersport-Tageskennzahl)."
+    ),
+}
+
+
+def _kurzform_kuerzel(metric_id: str, sms_code: str) -> Optional[str]:
+    """Das Kürzel, das die Kurzform (SMS/Premium-SMS) für diese Größe sendet.
+
+    ``None``, wenn die Kurzform für diese Größe gar kein Kürzel führt — dann
+    gibt es nichts zu vereinheitlichen und der gepflegte ``compact_label``
+    bleibt stehen.
+
+    Dieselbe Auflösung wie ``/api/sms-symbols::_symbols_for``: Mehrfach-Token
+    haben Vorrang, davon benennt das ERSTE die Größe (die weiteren benennen
+    Auswertungen); ``':'`` trennt nur eine Stufenangabe ab und gehört nicht
+    zum Kürzel.
+    """
+    mehrfach = SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id)
+    if mehrfach:
+        return mehrfach[0].rstrip(":")
+    if metric_id not in _SMS_SYMBOL_METRIC_IDS:
+        return None
+    return (SMS_SYMBOL_GRAMMAR.get(metric_id) or sms_code).rstrip(":")
+
+
+# Die Ableitung selbst: ab hier trägt jede MetricDefinition das Kürzel, das
+# der Nutzer in seiner Kurzform liest. Ein neuer Katalog-Eintrag kann damit
+# nicht mehr unbemerkt ein zweites Kürzel einführen.
+_METRICS = [
+    m if m.id in COMPACT_LABEL_EXCEPTIONS
+    else replace(
+        m, compact_label=_kurzform_kuerzel(m.id, m.sms_code) or m.compact_label
+    )
+    for m in _METRICS
 ]
 
 # Lookup by id

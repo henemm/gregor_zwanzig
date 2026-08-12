@@ -45,8 +45,27 @@ const here = dirname(fileURLToPath(import.meta.url));
 const SHARED = join(here, '..');
 const LIB = resolve(here, '..', '..', '..'); // frontend/src/lib
 
-/** Die drei Namensformen, wie GET /api/metrics sie je Groesse ausliefert. */
-const FORMEN = ['label', 'col_label', 'sms_code'] as const;
+/** Die drei Namensformen, die eine Zeile je Groesse zeigen muss.
+ *
+ *  #1719 S4: die dritte Form heisst nicht mehr `sms_code`. Der Wert war eine
+ *  ANNAHME dieses Waechters ("sms_code IST das SMS-Kuerzel") — und genau die
+ *  war bei 5 von 25 Groessen falsch: die Trip-SMS sendet fuer
+ *  `temperature_night` ein `N`, das Register fuehrt `TN`. Seit S4 richtet
+ *  sich die Quelle nach der FLAECHE (Touren: /api/sms-symbols ueber
+ *  `kuerzelById`; Vergleich: Register-`sms_code`, ebenfalls ueber
+ *  `kuerzelById`), weil Trip und Vergleich aus verschiedenen Tabellen senden.
+ *
+ *  Geprueft wird unveraendert die ANWESENHEIT aller drei Formen je Editor —
+ *  nur nicht mehr die Herkunft der dritten. Teil 2 dieses Waechters (unten)
+ *  prueft weiterhin namentlich `sms_code`: dort geht es um die
+ *  Datengrundlage der Vergleichs-Eintraege, und die ist das Register. */
+const FORMEN = ['label', 'col_label', 'kurzform'] as const;
+
+/** Namen, unter denen die Kurzform-Kuerzel in eine Zeile gelangen. Mehrere,
+ *  weil die Quelle flaechenabhaengig ist (s.o.) — nicht als Aufweichung: es
+ *  muss weiterhin GENAU EINE Flaeche je Editor geben, die alle drei Formen
+ *  traegt. */
+const KURZFORM_QUELLEN = ['sms_code', 'kuerzelById', 'sms_symbols'];
 
 /** Die vier Editoren. `WeatherMetricsTab.svelte` traegt zwei davon (Touren-
  *  Editor und Compare-Uebersicht) — dieselbe Datei, zwei Kontexte. */
@@ -75,19 +94,19 @@ function walk(node: unknown, visit: (n: Record<string, any>) => void): void {
 	}
 }
 
-/** Welche der drei Formen liest dieser Teilbaum als Eigenschaft eines
- *  Objekts (`m.col_label`, `metric.sms_code`, …)? */
+/** Welche der drei Formen liest dieser Teilbaum? `label`/`col_label` als
+ *  Eigenschaft eines Objekts (`m.col_label`), die Kurzform zusaetzlich als
+ *  eigener Bezeichner — sie reist seit #1719 S4 in einer eigenen Zuordnung
+ *  (`kuerzelById[id]`, rechnender Zugriff) statt als Feld am Metrik-Objekt. */
 function geleseneFormen(subtree: unknown): Set<string> {
 	const gefunden = new Set<string>();
 	walk(subtree, (n) => {
-		if (
-			n.type === 'MemberExpression' &&
-			!n.computed &&
-			n.property?.type === 'Identifier' &&
-			(FORMEN as readonly string[]).includes(n.property.name)
-		) {
-			gefunden.add(n.property.name);
+		if (n.type === 'MemberExpression' && !n.computed && n.property?.type === 'Identifier') {
+			// `label`/`col_label` unveraendert streng: nur als Objekt-Eigenschaft.
+			if ((FORMEN as readonly string[]).includes(n.property.name)) gefunden.add(n.property.name);
+			if (KURZFORM_QUELLEN.includes(n.property.name)) gefunden.add('kurzform');
 		}
+		if (n.type === 'Identifier' && KURZFORM_QUELLEN.includes(n.name)) gefunden.add('kurzform');
 	});
 	return gefunden;
 }
