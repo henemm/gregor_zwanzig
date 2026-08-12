@@ -18,7 +18,11 @@ tags: [radar, nowcast, alarm, channel, trip, alert_rules]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-12 („freigabe", Klartext). Freigegeben ist der Wortlaut dieser
+  Fassung mit sieben Kriterien, einschließlich der drei ausdrücklich benannten Folgen:
+  SMS kommt für Regen-Alarme des KHW-Trips hinzu (Schwelle `HIGH`), Regen-Alarme gehorchen
+  künftig auch einzelnen Alarm-Regeln (D4), und das Alarm-Protokoll bekommt Einträge, wo bisher
+  spurlos abgebrochen wurde (D5).
 
 ## Purpose
 
