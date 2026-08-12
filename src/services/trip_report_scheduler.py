@@ -884,7 +884,11 @@ class TripReportSchedulerService:
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
-        return self._send_trip_report(trip, report_type, allow_test_fallback=True)
+        # Issue #1725 (Adversary F006): `angefordert=True` — dieser Weg traegt
+        # das Inbound-Kommando „report" (`trip_command_processor.py:1019`).
+        return self._send_trip_report(
+            trip, report_type, allow_test_fallback=True, angefordert=True,
+        )
 
     def send_test_report_outcome(self, trip: "Trip", report_type: str) -> str:
         """
@@ -908,7 +912,11 @@ class TripReportSchedulerService:
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
-        return self._send_trip_report_outcome(trip, report_type, allow_test_fallback=True)
+        # Issue #1725 (Adversary F006): `angefordert=True` — dieser Weg traegt
+        # den Test-Versand-Knopf (`api/routers/scheduler.py:232`).
+        return self._send_trip_report_outcome(
+            trip, report_type, allow_test_fallback=True, angefordert=True,
+        )
 
     def send_on_demand_report(self, trip: "Trip", report_type: str) -> bool:
         """
@@ -932,7 +940,11 @@ class TripReportSchedulerService:
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
-        return self._send_trip_report_outcome(trip, report_type, on_demand=True)
+        # Issue #1725: `angefordert=True` NEBEN `on_demand=True` — die beiden
+        # bedeuten Verschiedenes, siehe `_send_trip_report_outcome`.
+        return self._send_trip_report_outcome(
+            trip, report_type, on_demand=True, angefordert=True,
+        )
 
     def _send_trip_report(
         self,
@@ -940,6 +952,7 @@ class TripReportSchedulerService:
         report_type: str,
         allow_test_fallback: bool = False,
         on_demand: bool = False,
+        angefordert: bool = False,
     ) -> bool:
         """
         Generate and send report for a single trip — legacy bool wrapper.
@@ -955,7 +968,8 @@ class TripReportSchedulerService:
             configured), False if no matching stage/weather data found.
         """
         outcome = self._send_trip_report_outcome(
-            trip, report_type, allow_test_fallback=allow_test_fallback, on_demand=on_demand,
+            trip, report_type, allow_test_fallback=allow_test_fallback,
+            on_demand=on_demand, angefordert=angefordert,
         )
         return outcome in ("sent", "no_channels")
 
@@ -966,6 +980,7 @@ class TripReportSchedulerService:
         allow_test_fallback: bool = False,
         on_demand: bool = False,
         catchup_prefix: str | None = None,
+        angefordert: bool = False,
     ) -> str:
         """
         Generate and send report for a single trip.
@@ -977,6 +992,21 @@ class TripReportSchedulerService:
                 Briefings ("Nachgeliefert …" / "Aktualisiert …"), wird von
                 _process_pending_markers() bei erfolgreicher Nachlieferung
                 gesetzt.
+            angefordert: Issue #1725 (Adversary F006) — der Versand geht auf
+                eine Nutzeranfrage zurück (SMS „heute"/„morgen", Test-Versand-
+                Knopf, Inbound-Kommando „report") statt auf den regulären Slot.
+                Fließt AUSSCHLIESSLICH in den `briefing_log.json`-Eintrag, damit
+                die Rückwärts-Ableitung ihn überspringen kann (AC-12).
+                🔴 Bewusst NICHT `on_demand` mitbenutzt: dieses Flag trägt
+                sieben weitere Bedeutungen, die für Test-Versand und „report"
+                allesamt unerwünscht wären — es unterdrückt den
+                Ausfall-Hinweisversand (`:1097`), setzt eine „auf Anfrage"-
+                Kennzeichnung in den Mail-Text (`:1462`), hält Anker und
+                Alarm-Gedächtnis an (`:1265`), unterdrückt beide
+                Nachliefer-Marker (`:1296`/`:1393`, `:1351`), verhindert das
+                Aufräumen des Versandfehler-Vermerks (`:1345`) und die
+                Entdopplung amtlicher Warnungen (`:1368`). Ein Flag mit zwei
+                Bedeutungen führt den nächsten Leser in die Irre.
 
         Returns:
             "no_stage" if no matching stage, "no_weather" if the weather
@@ -1335,7 +1365,7 @@ class TripReportSchedulerService:
             )
         else:
             self._append_briefing_log(
-                trip.id, report_type, result.sent_channels, on_demand=on_demand,
+                trip.id, report_type, result.sent_channels, angefordert=angefordert,
             )
             logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
@@ -1553,23 +1583,30 @@ class TripReportSchedulerService:
         reset_alert_memory(user_id=self._user_id, entity_id=trip_id)
 
     def _append_briefing_log(
-        self, trip_id: str, kind: str, channels: List[str], on_demand: bool = False,
+        self, trip_id: str, kind: str, channels: List[str], angefordert: bool = False,
     ) -> None:
         """Issue #393: Hängt einen Briefing-Versand-Eintrag an briefing_log.json an.
 
         Wird von Go (GET /api/cockpit/status) read-only gelesen. Kein Bereinigen —
         das Frontend filtert auf "heute".
 
-        Issue #1725 (Adversary F004): `on_demand` hält fest, dass der Eintrag aus
-        einem angeforderten Versand stammt („heute"/„morgen" per SMS,
-        Test-Versand-Knopf) und NICHT aus dem regulären Slot. Die
-        Rückwärts-Ableitung in `briefing_slots._log_bezeugt_versand` überspringt
-        solche Einträge — ohne das Feld nähme eine SMS-Anfrage dem Nutzer sein
-        reguläres Briefing desselben Ortstags (AC-12). Der Eintrag selbst wird
-        weiterhin geschrieben: ihn wegzulassen änderte die Cockpit-Kachel #393,
-        und das ist eine andere Scheibe. Go liest die Datei nur
-        (`internal/store/log.go:23`) und ignoriert unbekannte Felder, schreibt
-        sie also auch nicht weg.
+        Issue #1725 (Adversary F004/F006): `angefordert` hält fest, dass der
+        Eintrag aus einem vom Nutzer ANGEFORDERTEN Versand stammt und nicht aus
+        dem regulären Slot. Angefordert sind alle drei Wege, die AC-12
+        aufzählt: SMS „heute"/„morgen" (`send_on_demand_report`), der
+        Test-Versand-Knopf (`send_test_report_outcome`,
+        `api/routers/scheduler.py:232`) und das Inbound-Kommando „report"
+        (`send_test_report`, `trip_command_processor.py:1019`). Die
+        Rückwärts-Ableitung in `briefing_slots._log_bezeugt_versand`
+        überspringt solche Einträge — ohne das Feld nähme eine Nutzeranfrage
+        dem Nutzer sein reguläres Briefing desselben Ortstags (AC-12).
+
+        Der Eintrag selbst wird weiterhin geschrieben: ihn wegzulassen änderte
+        die Cockpit-Kachel #393, und das ist eine andere Scheibe. Der
+        JSON-Schlüssel heißt weiterhin `on_demand` — er ist das Wire-Format,
+        das `briefing_slots` liest; Go liest die Datei nur
+        (`internal/store/log.go:23`), ignoriert unbekannte Felder und schreibt
+        sie deshalb auch nicht weg.
         """
         path = get_data_dir(self._user_id) / "briefing_log.json"
         data = json.loads(path.read_text()) if path.exists() else {"entries": []}
@@ -1578,7 +1615,7 @@ class TripReportSchedulerService:
             "kind": kind,
             "sent_at": datetime.now(tz=timezone.utc).isoformat(),
             "channels": channels,
-            "on_demand": on_demand,
+            "on_demand": angefordert,
         })
         # Issue #1614: ein frischer Nutzer ohne jedes vorherige Datenverzeichnis
         # (kein Trip-Snapshot, kein Alert-State) hatte hier noch kein

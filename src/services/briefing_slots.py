@@ -187,12 +187,14 @@ class BriefingSlotStore:
         doppeltes Briefing gegen einen sonst dauerhaften Ausfall.
 
         🔴 Die enge Lesart allein genuegte NICHT (Adversary F004): sie
-        verkuerzte den Schaden am On-Demand-Pfad von dauerhaft auf einen Tag,
-        beseitigte ihn aber nicht. ``_append_briefing_log`` haelt seit diesem
-        Fix ``on_demand`` im Eintrag fest, und die Schleife unten ueberspringt
-        solche Eintraege — sonst naehme ein per SMS angefordertes „heute" dem
+        verkuerzte den Schaden am angeforderten Versand von dauerhaft auf einen
+        Tag, beseitigte ihn aber nicht. ``_append_briefing_log`` haelt deshalb
+        im Eintrag fest, ob der Versand ANGEFORDERT war, und die Schleife unten
+        ueberspringt solche Eintraege — sonst naehme eine Nutzeranfrage dem
         Nutzer sein regulaeres Briefing desselben Ortstags (AC-12), still, ohne
-        Protokollzeile.
+        Protokollzeile. Seit F006 gilt das fuer ALLE DREI von AC-12 genannten
+        Wege; zuvor kennzeichnete nur der SMS-Weg seine Eintraege, waehrend
+        Test-Versand-Knopf und Inbound-Kommando „report" weiter durchschlugen.
         """
         if self._path.exists():
             return False
@@ -211,8 +213,9 @@ class BriefingSlotStore:
             if eintrag.get("trip_id") != trip_id or eintrag.get("kind") != slot:
                 continue
             if eintrag.get("on_demand") is True:
-                # Issue #1725 (Adversary F004): ein angefordertes Briefing
-                # („heute"/„morgen" per SMS, Test-Versand-Knopf) darf dem
+                # Issue #1725 (Adversary F004/F006): ein angefordertes Briefing
+                # (SMS „heute"/„morgen", Test-Versand-Knopf, Inbound-Kommando
+                # „report" — alle drei setzen es) darf dem
                 # Nutzer sein REGULAERES nicht wegnehmen (AC-12). Bestandsdaten
                 # tragen das Feld nicht — ein fehlender Schluessel gilt deshalb
                 # als regulaer, die Ableitung greift dort weiterhin. Das ist

@@ -1029,83 +1029,139 @@ def _aufzeichnender_mailversand(monkeypatch) -> list:
     return zugestellt
 
 
-def test_t12b_zugestellter_on_demand_versand_laesst_den_regulaeren_slot_faellig(
-    monkeypatch,
+#: Die DREI Einstiege, die AC-12 als „angefordert" aufzaehlt, plus der
+#: regulaere Weg als Gegenrichtung. Zweites Glied: bleibt der regulaere Slot
+#: danach faellig?
+ANGEFORDERTE_EINSTIEGE = [
+    # SMS-Kommando „heute"/„morgen" (`trip_command_processor.py:576`).
+    ("send_on_demand_report", True),
+    # Test-Versand-Knopf der Oberflaeche (`api/routers/scheduler.py:232`).
+    ("send_test_report_outcome", True),
+    # Inbound-Kommando „report" (`trip_command_processor.py:1019`).
+    ("send_test_report", True),
+    # Gegenrichtung (Adversary F007): der REGULAERE Versand — derselbe Aufruf,
+    # den auch der #1012-Nachliefer-Pfad ohne vorherige Reservierung macht.
+    ("regulaerer_versand", False),
+]
+
+
+def _ausloesen(scheduler, trip, einstieg: str):
+    """Ruft genau den benannten Einstieg — kein Nachbau, keine Abkuerzung."""
+    if einstieg == "regulaerer_versand":
+        return scheduler._send_trip_report_outcome(trip, "morning")
+    ergebnis = getattr(scheduler, einstieg)(trip, "morning")
+    # `send_test_report` liefert den bool-Bestand (#1007), die beiden anderen
+    # den Ausgangs-String. Auf eine gemeinsame Aussage bringen.
+    return "sent" if ergebnis is True else ergebnis
+
+
+@pytest.mark.parametrize("einstieg,bleibt_faellig", ANGEFORDERTE_EINSTIEGE)
+def test_t12b_angeforderter_versand_laesst_den_regulaeren_slot_faellig(
+    monkeypatch, einstieg: str, bleibt_faellig: bool,
 ):
-    """Given ein per SMS angefordertes „heute" wird TATSAECHLICH zugestellt
-    (Ausgang `sent`) / When der regulaere Sammellauf zur konfigurierten Stunde
-    laeuft / Then ist der Slot weiterhin faellig.
+    """Given ein Briefing wird ueber einen der drei ANGEFORDERTEN Wege
+    tatsaechlich zugestellt (Ausgang `sent`) / When der regulaere Sammellauf
+    zur konfigurierten Stunde laeuft / Then ist der Slot weiterhin faellig.
+    Der vierte Fall prueft die Gegenrichtung: nach einem REGULAEREN Versand
+    gilt der Slot als erledigt.
 
     🔴 Adversary-Finding F004 — die Luecke, die T12 nicht sehen kann: T12 prueft
     einen On-Demand-Versand, der ehrlich in `no_stage` endet, und kehrt damit
-    zurueck, BEVOR `_append_briefing_log` (`trip_report_scheduler.py:1337`)
-    erreicht ist. Genau dieser Log-Eintrag ist aber die Spur, ueber die ein
-    angefordertes Briefing dem Nutzer sein regulaeres wegnahm: die
-    Rueckwaerts-Ableitung (AC-9) liest `trip_id`, `kind` und `sent_at`, solange
-    `briefing_slots.json` noch nicht existiert — also genau in dem Zeitfenster
-    nach einem Deploy, in dem typischerweise der Test-Versand gedrueckt wird.
+    zurueck, BEVOR `_append_briefing_log` erreicht ist. Genau dieser
+    Log-Eintrag ist aber die Spur, ueber die ein angefordertes Briefing dem
+    Nutzer sein regulaeres wegnahm: die Rueckwaerts-Ableitung (AC-9) liest
+    `trip_id`, `kind` und `sent_at`, solange `briefing_slots.json` noch nicht
+    existiert — also genau in dem Zeitfenster nach einem Deploy, in dem
+    typischerweise der Test-Versand gedrueckt wird.
+
+    🔴 Adversary-Finding F006 — warum ueber ALLE DREI Einstiege parametrisiert:
+    Der erste Fix kennzeichnete nur den SMS-Weg. Test-Versand-Knopf und
+    Inbound-Kommando „report" schrieben weiterhin einen unmarkierten Eintrag
+    und nahmen dem Nutzer sein regulaeres Briefing — von AC-12 ausdruecklich
+    aufgezaehlt, von keinem Test gesehen. Ein Test, der nur einen der drei
+    Wege faehrt, ist gegen genau diesen Fehler blind.
+
+    🔴 Adversary-Finding F007 — warum der vierte Fall dazugehoert: Ohne ihn
+    faengt kein Test, wenn JEDER Versand als angefordert markiert wird. Er
+    faehrt bewusst `_send_trip_report_outcome` direkt statt ueber
+    `_dispatch_due_item`: das ist die Form, in der auch der
+    #1012-Nachliefer-Pfad sendet — OHNE vorherige Reservierung, der Speicher
+    fehlt also noch und die Rueckwaerts-Ableitung ist die einzige Absicherung.
+    Ueber den Wrapper gemessen waere die Markierung folgenlos, weil `reserve`
+    die Datei ohnehin anlegt.
 
     Ersetzt sind ausschliesslich die zwei Naehte zum Netz: der Wetterabruf
     (Fixture-Unterklasse) und der Mail-Transportrand (aufzeichnende Funktion).
     `_send_trip_report_outcome`, der Log-Schreiber, der Speicher und die
     Sammlung laufen echt.
 
-    RED-Charakter: Mutations-Waechter — rot bei: `on_demand` nicht im
-    Log-Eintrag festgehalten oder in `_log_bezeugt_versand` nicht uebersprungen.
-    Dann faellt das regulaere Briefing dieses Ortstags still aus — ohne
-    Protokollzeile, ohne Fehlerzaehler.
+    RED-Charakter: Mutations-Waechter — rot bei: `angefordert` an EINEM der
+    drei Einstiege nicht gesetzt (dann faellt genau dessen Parameterfall),
+    nicht in den Log-Eintrag geschrieben, in `_log_bezeugt_versand` nicht
+    uebersprungen — oder, im vierten Fall, hart auf `True` gesetzt.
     """
     from app.loader import get_data_dir, load_all_trips
     from services.trip_day import trip_local_today
 
+    nutzer = f"slot-t12b-{einstieg}"
     jetzt = datetime.now(timezone.utc)
     heute_ort = local_dt(jetzt, PARIS).date()
-    _schreibe("slot-t12b", [_trip_json(
+    _schreibe(nutzer, [_trip_json(
         "korsika", *KORSIKA,
         [heute_ort - timedelta(days=1), heute_ort, heute_ort + timedelta(days=1)],
         morning="07:00:00",
     )])
-    trip = load_all_trips(user_id="slot-t12b")[0]
+    trip = load_all_trips(user_id=nutzer)[0]
     ortstag = trip_local_today(trip, jetzt)
     settings = _zustellbare_settings()
     zugestellt = _aufzeichnender_mailversand(monkeypatch)
-    scheduler = _scheduler_mit_fixture_wetter("slot-t12b", settings)
+    scheduler = _scheduler_mit_fixture_wetter(nutzer, settings)
 
-    # a) Der On-Demand-Versand geht wirklich raus.
-    assert scheduler.send_on_demand_report(trip, "morning") == "sent", (
-        "Testaufbau prueft nichts: nur ein zugestellter On-Demand-Versand "
-        "erreicht `_append_briefing_log` — genau darum geht es hier."
+    # a) Der Versand geht ueber DIESEN Einstieg wirklich raus.
+    assert _ausloesen(scheduler, trip, einstieg) == "sent", (
+        f"Testaufbau prueft nichts: nur ein zugestellter Versand ueber "
+        f"`{einstieg}` erreicht `_append_briefing_log` — genau darum geht es."
     )
     assert len(zugestellt) == 1, (
         f"Genau eine zugestellte Nachricht erwartet, gefunden {len(zugestellt)}"
     )
     log_eintraege = json.loads(
-        (get_data_dir("slot-t12b") / "briefing_log.json").read_text(encoding="utf-8")
+        (get_data_dir(nutzer) / "briefing_log.json").read_text(encoding="utf-8")
     )["entries"]
     assert [e["kind"] for e in log_eintraege] == ["morning"], (
         "Testaufbau prueft nichts: der Log-Eintrag, um den es geht, muss "
         f"entstanden sein. Gefunden: {log_eintraege}"
     )
-
-    # b) Die eigentliche Zusicherung (AC-12): der regulaere Slot bleibt faellig.
-    assert not (get_data_dir("slot-t12b") / "briefing_slots.json").exists(), (
+    assert not (get_data_dir(nutzer) / "briefing_slots.json").exists(), (
         "Testaufbau prueft nichts: ohne eigenen Speicher greift die "
         "Rueckwaerts-Ableitung gar nicht, und der Fall waere unerreichbar."
     )
-    assert not BriefingSlotStore("slot-t12b").is_recorded(
+
+    # b) Die eigentliche Zusicherung.
+    erledigt = BriefingSlotStore(nutzer).is_recorded(
         "korsika", "morning", ortstag, zone=PARIS,
-    ), (
-        "Ein angefordertes Briefing darf den regulaeren Slot nicht als "
-        "erledigt erscheinen lassen."
     )
-    assert ("korsika", "morning") in _sammlung(
-        _scheduler("slot-t12b"), _zeitpunkt(PARIS, ortstag, 7),
-    ), (
-        "Der regulaere 07:00-Slot muss weiterhin faellig sein (AC-12). Ist er "
-        "es nicht, hat die Rueckwaerts-Ableitung den On-Demand-Eintrag aus "
-        "briefing_log.json gelesen — der Nutzer verliert sein regulaeres "
-        "Briefing dieses Ortstags stillschweigend."
+    gesammelt = ("korsika", "morning") in _sammlung(
+        _scheduler(nutzer), _zeitpunkt(PARIS, ortstag, 7),
     )
+
+    if bleibt_faellig:
+        assert not erledigt and gesammelt, (
+            f"Der regulaere 07:00-Slot muss nach `{einstieg}` weiterhin "
+            "faellig sein (AC-12). Ist er es nicht, hat die "
+            "Rueckwaerts-Ableitung den Eintrag dieses ANGEFORDERTEN Versands "
+            "gelesen — der Nutzer verliert sein regulaeres Briefing dieses "
+            f"Ortstags stillschweigend. erledigt={erledigt}, "
+            f"gesammelt={gesammelt}"
+        )
+    else:
+        assert erledigt and not gesammelt, (
+            "Nach einem REGULAEREN Versand muss der Slot als erledigt gelten "
+            "(AC-9). Gilt er es nicht, ist der Eintrag faelschlich als "
+            "angefordert markiert und die Rollout-Absicherung ausgehebelt — "
+            "der #1012-Nachliefer-Pfad sendet ohne Reservierung, dort ist sie "
+            f"die einzige. erledigt={erledigt}, gesammelt={gesammelt}"
+        )
 
 
 # ---------------------------------------------------------------------------
