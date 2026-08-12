@@ -201,7 +201,9 @@ def _fmt_visibility(v) -> str:
     return f"{v / 1000:.1f}" if v is not None else "—"
 
 
-def _fmt_thunder(v, hail: Optional[bool] = None) -> str:
+def _fmt_thunder(
+    v, hail: Optional[bool] = None, signals: Optional[list[str]] = None,
+) -> str:
     """Gewitterstufen-Label des Ortsvergleichs.
 
     Issue #1475 Nachbesserung (Punkt 5a): ``hail`` ist ADDITIV mit Default
@@ -209,14 +211,26 @@ def _fmt_thunder(v, hail: Optional[bool] = None) -> str:
     (``format_hail_note(None)`` liefert nichts). Nur bei bestaetigtem Hagel
     (``True``) haengt der rein deskriptive Zusatz an (ADR-0007, kein Rat).
     Die Stufe ``v`` selbst wird davon NIE beeinflusst (AC-10).
+
+    Issue #1680 S1: ``signals`` (die tragenden Zutaten der Stufe) ist aus
+    demselben Grund ein DRITTER Parameter mit Default ``None`` und steht VOR
+    dem Hagel-Hinweis. 🔴 Der Zusatz gehoert bewusst NICHT in den Rumpf: diese
+    Funktion speist ueber ``_HOUR_FMT_OVERRIDES["thunder"]`` AUCH die
+    Compare-Stundentabelle, die in dieser Scheibe unveraendert bleibt (AC-11)
+    -- sie ruft ohne dritten Parameter und bleibt damit zeichengleich.
     """
     if v is None:
         return "—"
     key = v.value if hasattr(v, "value") else str(v)
     label = _THUNDER_LEVEL_LABEL.get(key, "—")
-    from output.metric_format import format_hail_note
+    from output.metric_format import format_hail_note, thunder_signal_label
+    teile = [label]
+    if signals:
+        teile.append(", ".join(thunder_signal_label(s) for s in signals))
     note = format_hail_note(hail)
-    return f"{label} · {note}" if note else label
+    if note:
+        teile.append(note)
+    return " · ".join(teile)
 
 
 def _sev_thunder(v):
@@ -658,6 +672,34 @@ def loc_hail_flag(loc: LocationResult, summary=None) -> Optional[bool]:
     return getattr(summary, "hail_flag", None) if summary is not None else None
 
 
+def loc_thunder_signals(loc: LocationResult, summary=None) -> Optional[list[str]]:
+    """Issue #1680 S1: DER EINE Weg an die Herkunft der Gewitterstufe eines
+    verglichenen Ortes — genutzt von HTML-Uebersicht, Klartext und Telegram
+    (#1481 DRY-Pflicht, keine Parallel-Logik je Kanal).
+
+    🔴 ANDERS als ``loc_hail_flag``: es gibt KEIN Engine-Feld fuer die
+    Herkunft, wohl aber eines fuer die Stufe (``thunder_level_max``, #1285),
+    dem ``_metric_value`` Vorrang gibt. Eine blind live abgeleitete Herkunft
+    wuerde also eine Stufe aus dem Engine-Lauf mit einer Herkunft aus einer
+    ZWEITEN, unabhaengigen Rechnung paaren.
+
+    Deshalb: Traeger NUR, wenn die live abgeleitete Stufe der ANGEZEIGTEN
+    gleicht. Sonst ``None`` — lieber keine Angabe als eine, die zu einer
+    anderen als der gezeigten Stufe gehoert (ADR-0007, ADR-0048).
+    """
+    if summary is None:
+        summary = _daily_summary(loc)
+    if summary is None:
+        return None
+    signals = getattr(summary, "thunder_level_max_signals", None)
+    if not signals:
+        return None
+    gezeigt = _metric_value(loc, "thunder_max", summary)
+    if gezeigt is None or gezeigt != getattr(summary, "thunder_level_max", None):
+        return None
+    return signals
+
+
 def _fmt_metric(value, decimals, unit: str) -> str:
     if value is None:
         return "—"
@@ -704,7 +746,10 @@ def _render_overview_row(
             # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 1): die
             # Gewitter-Zeile bekommt zusaetzlich das Hagel-Kennzeichen DIESES
             # Ortes durchgereicht — alle anderen Zeilen bleiben unveraendert.
-            text = fmt_fn(value, loc_hail_flag(loc, summaries.get(id(loc))))
+            # Issue #1680 S1: dazu die tragenden Zutaten DIESES Ortes.
+            summary = summaries.get(id(loc))
+            text = fmt_fn(value, loc_hail_flag(loc, summary),
+                          loc_thunder_signals(loc, summary))
         elif fmt_fn:
             text = fmt_fn(value)
         else:

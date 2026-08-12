@@ -435,6 +435,9 @@ class WeatherMetricsService:
         cloud_avg = self._compute_cloud_cover(timeseries)
         humidity_avg = self._compute_humidity(timeseries)
         thunder_max = self._compute_thunder_level(timeseries)
+        thunder_max_signals = self._compute_thunder_level_signals(
+            timeseries, thunder_max
+        )
         hail_flag = self._compute_hail_flag(timeseries)
         visibility_min = self._compute_visibility(timeseries)
 
@@ -456,6 +459,7 @@ class WeatherMetricsService:
             cloud_avg_pct=cloud_avg,
             humidity_avg_pct=humidity_avg,
             thunder_level_max=thunder_max,
+            thunder_level_max_signals=thunder_max_signals,
             hail_flag=hail_flag,
             visibility_min_m=visibility_min,
             dominant_wmo_code=dominant_wmo,
@@ -471,6 +475,7 @@ class WeatherMetricsService:
                 "cloud_avg_pct": "avg",
                 "humidity_avg_pct": "avg",
                 "thunder_level_max": "max",
+                "thunder_level_max_signals": "union_of_max_carriers",
                 "hail_flag": "hail_priority",
                 "visibility_min_m": "min",
                 "dominant_wmo_code": "max_wmo_severity",
@@ -607,6 +612,34 @@ class WeatherMetricsService:
         # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
         from output.metric_format import max_thunder
         return max_thunder(levels)
+
+    def _compute_thunder_level_signals(
+        self,
+        timeseries: NormalizedTimeseries,
+        thunder_max: Optional[ThunderLevel],
+    ) -> Optional[list[str]]:
+        """Die Zutaten, die das TAGESmaximum tragen (Issue #1680 S1).
+
+        VEREINIGUNG ueber ALLE Stunden, die ``thunder_max`` erreichen -- nicht
+        die erste passende. Erreichen zwei Stunden desselben Tages dieselbe
+        Hoechststufe ueber verschiedene Zutaten (14 Uhr CAPE, 18 Uhr
+        Blitzpotenzial), entschiede sonst eine willkuerlich gewaehlte Stunde
+        ueber die angezeigte Herkunft. Dedupliziert unter Erhalt der ersten
+        Auftrittsreihenfolge.
+
+        ``None`` (keine Aussage) bei fehlender Stufe oder wenn keine Stunde
+        eine Zutat nennt -- z.B. ein Alt-Schnappschuss ohne das Feld.
+        """
+        if thunder_max is None:
+            return None
+        traeger: list[str] = []
+        for dp in timeseries.data:
+            if dp.thunder_level != thunder_max:
+                continue
+            for name in getattr(dp, "thunder_level_signals", None) or []:
+                if name not in traeger:
+                    traeger.append(name)
+        return traeger or None
 
     def _compute_hail_flag(
         self,
