@@ -13,7 +13,7 @@ tags: [issue-1726, epic-1722, timezone, adr-0051, adr-0044, alert-daily-limit, q
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe („go") 2026-08-12, 15 ACs
 
 ## Purpose
 
