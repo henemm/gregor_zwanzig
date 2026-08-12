@@ -309,7 +309,7 @@ Beide Wächter lassen bei **eigener** Störung immer durch und sagen es — ein 
 
 Signal ist entfernt: kein `SignalOutput`/`signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`. Wiedereinführung müsste neu spezifiziert werden. (Callmebot bleibt serverseitig für andere Dienste.)
 
-**Die Kanal-Liste lautet seit 2026-08-10 vier, nicht drei:** E-Mail · Telegram · SMS · Premium-SMS. Hier stand bis dahin „Kanäle sind nur noch E-Mail · Telegram · SMS" — das war nach der Signal-Entfernung richtig und ist seit #1676 S2a (ADR-0049, schreibt ADR-0004 fort) überholt. Premium-SMS ist heute nur im **Trip-Briefing** verdrahtet; Alarm- und Vergleichspfad folgen mit #1701, die Oberfläche mit S3. Zur Gleichrangigkeit der vier Kanäle siehe „Projekt-Ueberblick" oben.
+**Die Kanal-Liste lautet seit 2026-08-10 vier, nicht drei:** E-Mail · Telegram · SMS · Premium-SMS. Hier stand bis dahin „Kanäle sind nur noch E-Mail · Telegram · SMS" — das war nach der Signal-Entfernung richtig und ist seit #1676 S2a (ADR-0049, schreibt ADR-0004 fort) überholt. Als **Versandkanal** ist Premium-SMS weiterhin nur im **Trip-Briefing** verdrahtet (kein Ortsvergleich-Versand). Als **Alarm-Kanal** ist Premium-SMS seit #1701 (Backend) und #1745 Scheibe A (Oberfläche, Alarme-Reiter) in **beiden** Flächen (Trip UND Ortsvergleich) verdrahtet — hier stand bis 2026-08-11 „Alarm- und Vergleichspfad folgen mit #1701, die Oberfläche mit S3", das ist damit eingeholt. Wirkt sofort für Gewitter-, Änderungs- und amtliche Alarme, **nicht** für Regen-/Radar-Alarme, die weiterhin am Briefing-Flag hängen (Scheibe B, #1752, offen). Zur Gleichrangigkeit der vier Kanäle siehe „Projekt-Ueberblick" oben.
 
 ## Confidence (Vorhersage-Verlässlichkeit) — NICHT wählbar als Metrik (2026-06-10, Issue #710)
 
