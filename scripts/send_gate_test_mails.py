@@ -339,11 +339,12 @@ def build_radar_alert_message(token: str) -> AlertMessage:
         # zurueck -- die Nachweis-Mail zeigte dann genau das Format, das der
         # Produktivpfad seit #1744 NICHT mehr sendet, und der Validator-Lauf
         # bestaetigte eine Darstellung, die es nicht mehr gibt.
-        # BEWUSST numerisch statt "Ziel": `radar_alert_mail_validator.py:49-52`
-        # kennt "Etappe N"/"km X-Y"/"Segment", aber NICHT den Ziel-Sonderfall
-        # "🏁 Ziel" -- mit segment_id="Ziel" faellt P-1, obwohl die Mail korrekt
-        # ist (gemessen 2026-08-12). Die Luecke ist gemeldet, nicht hier gefixt.
-        segment_id="1",
+        # BEWUSST der Ziel-Sonderfall: das ist der Fall aus AC-1 ("🏁 Ziel"
+        # statt "km 8–8"), also genau die Darstellung, um die es in #1744 geht.
+        # Bis zur Waechter-Erweiterung (50a7d968) beanstandete P-1 diese
+        # korrekte Mail -- die Luecke ist gefixt und durch
+        # tests/tdd/test_radar_alert_validator_location_forms.py abgesichert.
+        segment_id="Ziel",
     )
     return AlertMessage(
         trip_short=f"GATE1241 {token}",
