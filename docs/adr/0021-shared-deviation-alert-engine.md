@@ -117,3 +117,18 @@ dieser Scheibe (Scheibe 2, #1169).
   Architekturprinzip: das bestehende aus diesem ADR wird auf den letzten noch
   abweichenden Pfad angewandt. Details:
   `docs/specs/modules/rework_1467_s3_nowcast.md`.
+- **Nachtrag (Issue #1752, 2026-08-12):** was der Nachtrag zu #1461 S3b-2b für den
+  **Ortsvergleich** vollzogen hat, ist jetzt auch für den **Trip** eingelöst. Der
+  Trip-Radar-Pfad löste seine Kanäle bis dahin über eine eigene Fassung
+  (`_radar_effective_channels()`) auf, die **ausschließlich die Briefing-Flags**
+  las und `trip.alert_channels`/`trip.alert_rules` nie — die im Alarme-Reiter
+  getroffene Auswahl war für Regen-Alarme also wirkungslos (#1745, Befund 2).
+  Die Sonderfassung ist ersatzlos entfallen; das Kanal-Set wird einmal über
+  `_effective_alert_channels()` aufgelöst und im ganzen Radar-Pfad geteilt
+  (Unterdrückungs-Protokoll, Leer-Check, Versand). Damit gibt es **einen**
+  Auflösungsweg für alle vier Trip-Alarmtypen. **Kein neues Architekturprinzip**
+  — dasselbe Muster wie bei S3b-2b, angewandt auf den letzten Pfad, der noch
+  abwich. Zwei benannte Folgen: Radar erbt damit auch die `alert_rules`-Union
+  mit, und ein Alarmversuch ohne erreichbaren Kanal hinterlässt jetzt einen
+  Protokoll-Eintrag statt spurlos abzubrechen. Details:
+  `docs/specs/modules/fix_1752_radar_folgt_alarm_kanaelen.md`.

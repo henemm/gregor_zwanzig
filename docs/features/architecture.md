@@ -86,10 +86,11 @@ Die folgenden Komponenten leben im Python-Core:
    - **Premium-SMS** (`src/output/channels/premium_sms.py`, `PremiumSmsOutput`,
      `name == "premium_sms"`, seit Issue #1676 S2a) – als **Versandkanal** weiterhin **nur
      Trip-Briefing**, kein Ortsvergleich-Versand. Als **Alarm-Kanal** seit #1701 (Backend)
-     für Gewitter-, Änderungs- und amtliche Alarme verdrahtet, in Trip **und** Ortsvergleich
-     (Regen-/Radar-Alarme lesen weiterhin ausschließlich das Briefing-Flag,
-     `_radar_effective_channels()`, `src/services/trip_alert.py:826-856` — Scheibe B/#1752,
-     noch offen). Fester Absender `4916092172595` (unabhängig von `sms_from`), Empfänger
+     für Gewitter-, Änderungs- und amtliche Alarme verdrahtet, in Trip **und** Ortsvergleich;
+     seit #1752 (Scheibe B) gilt das auch für **Regen-/Radar-Alarme** — sie lösen ihre Kanäle
+     über denselben `_effective_alert_channels()` auf wie alle anderen Alarmtypen. Die frühere
+     Sonderfassung `_radar_effective_channels()`, die ausschließlich die Briefing-Flags las, ist
+     ersatzlos entfallen. Fester Absender `4916092172595` (unabhängig von `sms_from`), Empfänger
      ausschließlich die in S1 gelernte Rückadresse aus `user.json` (nie `sms_to`), Fail-Closed
      bei fehlender oder >30 Tage alter Rückadresse mit auswertbarem Grund in
      `NotificationResult.blocked_channels`, eigenes Tier-Gate (`premium_sms_allowed()`,
@@ -224,12 +225,16 @@ setzbar, noch kein Go-Flach-Feld analog `send_sms`/`send_telegram`.
 Änderungs- und amtliche Alarme, in **beiden** Flächen (Trip UND Ortsvergleich), nicht
 nur Trip. Die zugehörige Oberfläche (Alarme-Reiter, vierte Kanalzeile + eigene
 Dringlichkeits-Schwelle) ist seit #1745 Scheibe A live, ebenfalls in beiden Flächen.
-Regen-/Radar-Alarme lesen weiterhin ausschließlich das Briefing-Flag
-(`_radar_effective_channels()`, `src/services/trip_alert.py:826-856`) — Scheibe B
-(#1752) vereinheitlicht das noch nicht. Der Versand-Pfad selbst (dieser Abschnitt) bleibt
-unverändert Trip-Briefing-only, davon unberührt. Details:
+Mit **#1752 (Scheibe B)** folgen auch **Regen-/Radar-Alarme** dem Alarm-Kanal-Satz: Die
+Sonderfassung `_radar_effective_channels()`, die ausschließlich die Briefing-Flags las, ist
+ersatzlos entfallen; das Kanal-Set wird einmal über `_effective_alert_channels()` aufgelöst
+und im ganzen Radar-Pfad geteilt (Unterdrückungs-Protokoll, Leer-Check, Versand). Damit gibt
+es **einen** Auflösungsweg für alle Alarmtypen — die zwei konkurrierenden Wege waren die
+Ursache von #1745. Der Versand-Pfad selbst (dieser Abschnitt) bleibt unverändert
+Trip-Briefing-only, davon unberührt. Details:
 `docs/specs/modules/feat_1701_alarm_premium_sms.md`,
-`docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md`.
+`docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md`,
+`docs/specs/modules/fix_1752_radar_folgt_alarm_kanaelen.md`.
 
 ### Telegram Bot-Menü (Automatisches Setup)
 
