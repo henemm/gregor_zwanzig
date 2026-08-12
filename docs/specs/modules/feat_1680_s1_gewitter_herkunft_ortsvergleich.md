@@ -48,10 +48,16 @@ oder eine Empfehlung daraus abzuleiten (ADR-0007).
 - **File:** `src/app/models.py` — `ForecastDataPoint` (Z. 99 ff.),
   `SegmentWeatherSummary` (Z. 405 ff.)
 - **File:** `src/services/weather_metrics.py` — `_compute_thunder_level()`
-  (Z. 590-609), `compute_metrics()` (Z. 396-492)
+  (Z. 590-609), `compute_basis_metrics()` (Z. 398 ff.) und der Compare-Wrapper
+  `summarize_points()` (Z. 1071)
 - **File:** `src/output/renderers/email/compare_html.py` — `_fmt_thunder()`
   (Z. 204-219), neue `loc_thunder_signals()` (analog `loc_hail_flag()`,
   Z. 643-658), Aufrufstelle `_render_overview_row()` (Z. 703-707)
+  - 🔴 **`_fmt_thunder` speist auch die Compare-Stundentabelle** (steht in
+    `_HOUR_FMT_OVERRIDES["thunder"]`, Z. 390). Ein Zusatz, der **im Rumpf**
+    von `_fmt_thunder` statt über den neuen dritten Parameter entsteht,
+    leckt sofort dorthin — genau das bewacht AC-11. In der RED-Phase
+    nachgemessen.
 - **File:** `src/output/renderers/comparison.py` — `_fmt_overview_cell()`
   (Z. 503-515), Aufrufstellen Z. 246 (Klartext-Übersicht),
   `_plain_metric_cell()` (Z. 632-644, Telegram), `_sms_metric_cell()`
@@ -62,9 +68,12 @@ oder eine Empfehlung daraus abzuleiten (ADR-0007).
 
 ## Estimated Scope
 
-- **LoC:** ~145-165 Quellcode + ~80-110 Tests, geschätzt **~225-250** gesamt
-  (Limit 250 je Workflow — **knapp**, s. „Nicht in dieser Scheibe" für den
-  ersten Kürzungs-Kandidaten, falls die Umsetzung darüber liegt).
+- **LoC:** ~145-165 Quellcode + **365 Tests (gemessen, nicht geschätzt)**.
+  🔴 Die ursprüngliche Test-Schätzung „~80-110" war zu optimistisch: zwölf
+  ACs, die jedes einmal durch die vollständige Kette bis zum zurückgegebenen
+  Body laufen, sind darin nicht darstellbar. Eine Kürzungsrunde brachte
+  423 → 365 Zeilen ohne Verlust einer Assertion. Gesamt damit **~510-530**
+  gegen ein Limit von 250 ⇒ `loc_limit_override` erforderlich (PO-Entscheid).
 - **Files:** 6 Quelldateien (s. Source) + 1-2 neue Testdateien, nach
   Verhalten benannt (nicht nach Issue-Nummer).
 - **Effort:** medium. Kein Breaking Change (additiv, s. D1/D2), kein
@@ -118,8 +127,17 @@ werte = _signal_levels(...)
 if not werte:
     return []
 top = max_thunder(werte.values())
+if top == ThunderLevel.NONE:      # 🔴 s. Korrektur unten
+    return []
 return [name for name in werte if werte[name] == top]
 ```
+
+🔴 **Korrektur 2026-08-12 (in der RED-Phase am Code gefunden):** Die
+`NONE`-Abfrage fehlte in der ersten Fassung. Ohne sie liefert die Funktion bei
+Stufe „kein" die Träger mit und der Ortsvergleich zeigte `— · CAPE` — ein
+Widerspruch zu AC-3. Ob die Unterdrückung hier oder in
+`loc_thunder_signals()` sitzt, ist frei; geprüft wird die **Wirkung** (kein
+Zusatz bei NONE), nicht der Ort.
 
 Löst Befund A (Gleichstands-Reihenfolge, Kontext-Dokument) auf: weil nichts
 gekürt wird, ist die interne `if`-Reihenfolge der Fusion keine Produktaussage
@@ -168,7 +186,9 @@ Erhalt der ersten Auftrittsreihenfolge. Grund für die Vereinigung statt
 dieselbe Höchststufe über unterschiedliche Zutaten (z. B. 14 Uhr CAPE, 18 Uhr
 Blitzpotenzial), nennt der Ortsvergleich beide — sonst würde eine willkürlich
 gewählte einzelne Stunde über die angezeigte Herkunft entscheiden.
-`compute_metrics()` (Z. 437-479) ruft die neue Methode auf und trägt das
+`compute_basis_metrics()` (Z. 398 ff., **nicht** `compute_metrics()` — die
+Funktion dieses Namens gibt es nicht; in der RED-Phase nachgemessen) ruft die
+neue Methode auf und trägt das
 Ergebnis in ein neues `SegmentWeatherSummary.thunder_level_max_signals:
 Optional[list[str]] = None` ein (`aggregation_config`-Eintrag:
 `"thunder_level_max_signals": "union_of_max_carriers"`, analog dem
@@ -331,7 +351,7 @@ nur ein künftiges **Entfernen** des Feldes, nicht diese Scheibe (additiv).
   nur die einer einzelnen (z. B. der ersten) Stunde.
   - Test: Fixture mit zwei Stunden desselben Tages — Stunde A nur CAPE über
     der Leiter, Stunde B nur LPI über derselben Höchststufe — durch die
-    echte Aggregation (`compute_metrics()`/`summarize_points()`); Assertion
+    echte Aggregation (`compute_basis_metrics()`/`summarize_points()`); Assertion
     auf beide Labels im gerenderten Ergebnis.
 
 - **AC-11:** Given der Trip-Bericht (Stundentabelle, Kurzzusammenfassung,
@@ -473,6 +493,14 @@ Mutationen ausschließlich per String-Ersetzung mit externer Sicherungskopie
 - 2026-08-12: Initial spec created (Issue #1680, Scheibe 1). Grundlage:
   `docs/context/feat-1680-thunder-herkunft.md`, PO-Entscheidungen vom
   2026-08-11.
+- 2026-08-12 (RED-Phase, am Code nachgemessen — drei sachliche Korrekturen
+  ohne AC-Aenderung): `compute_metrics()` gibt es nicht, richtig ist
+  `compute_basis_metrics()` + Wrapper `summarize_points()` · die
+  Pseudo-Implementierung in D2 lieferte bei Stufe NONE die Traeger mit und
+  widersprach damit AC-3 (`NONE`-Abfrage ergaenzt) · `_fmt_thunder` speist
+  ueber `_HOUR_FMT_OVERRIDES` auch die Compare-Stundentabelle, ein Zusatz im
+  Funktionsrumpf leckt dorthin. Test-LoC von Schaetzung 80-110 auf gemessene
+  365 berichtigt.
 - 2026-08-12 (Korrektur vor Freigabe, am Code nachgemessen): D7 lag falsch.
   Die Annahme „wie `hail_flag`, also immer live abgeleitet" trägt für Gewitter
   nicht — `LocationResult.thunder_level_max` **existiert** als Feld (#1285)
