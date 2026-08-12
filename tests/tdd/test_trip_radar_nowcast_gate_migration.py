@@ -34,7 +34,7 @@ from datetime import datetime, timezone
 
 from tests.helpers.nowcast_gate_fixtures import (
     SCOPE_TRIP_RADAR, CountingFrameSource, clean_uid, fresh_uid, make_trip,
-    quiet_window_elsewhere, quiet_window_now, read_daily_counter,
+    TRIP_ZONE, quiet_window_elsewhere, quiet_window_now, read_daily_counter,
     read_throttle_state, record_throttle, save_trip, seed_daily_counter,
     settings_email_only, trip_alert_service, write_user_tier,
 )
@@ -51,9 +51,13 @@ def _run_trip_scenario(
     """EIN Trip-Nowcast-Lauf mit auslloesendem Onset. Liefert
     ``(rueckgabewert, mail_aufrufe)``."""
     write_user_tier(uid, "free")  # Limit 2/Tag
-    seed_daily_counter(uid, 2 if daily_limit_reached else 0)
+    seed_daily_counter(uid, 2 if daily_limit_reached else 0, zone=TRIP_ZONE)
 
-    quiet_from, quiet_to = quiet_window_now() if quiet else quiet_window_elsewhere()
+    # Issue #1726: Ortszone der TOUR (Island), nicht Wien.
+    quiet_from, quiet_to = (
+        quiet_window_now(zone=TRIP_ZONE) if quiet
+        else quiet_window_elsewhere(zone=TRIP_ZONE)
+    )
     trip = make_trip(trip_id, cooldown_minutes=120, quiet_from=quiet_from, quiet_to=quiet_to)
     save_trip(trip, uid)
 
@@ -93,9 +97,9 @@ def test_szenario_a_ohne_sperre_wird_zugestellt_und_gebucht():
             f"Sperrzeit des Trip-Nowcast fehlt unter Scope {SCOPE_TRIP_RADAR!r} "
             f"mit Schluessel {trip_id!r}: {state!r}"
         )
-        assert read_daily_counter(uid) == 1, (
+        assert read_daily_counter(uid, zone=TRIP_ZONE) == 1, (
             f"Tageszaehler muss nach genau einer Zustellung auf 1 stehen, "
-            f"steht auf {read_daily_counter(uid)}"
+            f"steht auf {read_daily_counter(uid, zone=TRIP_ZONE)}"
         )
     finally:
         clean_uid(uid)
@@ -113,7 +117,7 @@ def test_szenario_b_ruhezeit_unterdrueckt():
 
         assert sent == 0, f"Ruhezeit muss den Trip-Nowcast unterdruecken, erhalten: {sent}"
         assert mails == [], "Waehrend der Ruhezeit darf keine Mail rausgehen"
-        assert read_daily_counter(uid) == 0, "Unterdrueckter Alarm darf nicht zaehlen"
+        assert read_daily_counter(uid, zone=TRIP_ZONE) == 0, "Unterdrueckter Alarm darf nicht zaehlen"
         assert trip_id not in read_throttle_state(uid).get(SCOPE_TRIP_RADAR, {}), (
             "Unterdrueckter Alarm darf keine Sperrzeit buchen"
         )
@@ -133,7 +137,7 @@ def test_szenario_c_sperrzeit_unterdrueckt():
 
         assert sent == 0, f"Sperrzeit muss den Trip-Nowcast unterdruecken, erhalten: {sent}"
         assert mails == [], "Innerhalb der Sperrzeit darf keine Mail rausgehen"
-        assert read_daily_counter(uid) == 0, "Unterdrueckter Alarm darf nicht zaehlen"
+        assert read_daily_counter(uid, zone=TRIP_ZONE) == 0, "Unterdrueckter Alarm darf nicht zaehlen"
     finally:
         clean_uid(uid)
 
@@ -150,9 +154,9 @@ def test_szenario_d_tageslimit_unterdrueckt():
 
         assert sent == 0, f"Tageslimit muss den Trip-Nowcast unterdruecken, erhalten: {sent}"
         assert mails == [], "Bei erreichtem Tageslimit darf keine Mail rausgehen"
-        assert read_daily_counter(uid) == 2, (
+        assert read_daily_counter(uid, zone=TRIP_ZONE) == 2, (
             f"Der Zaehler darf beim unterdrueckten Alarm nicht wachsen, steht auf "
-            f"{read_daily_counter(uid)}"
+            f"{read_daily_counter(uid, zone=TRIP_ZONE)}"
         )
         assert trip_id not in read_throttle_state(uid).get(SCOPE_TRIP_RADAR, {}), (
             "Unterdrueckter Alarm darf keine Sperrzeit buchen"

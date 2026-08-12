@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from app.config import Settings
 from app.loader import get_data_dir
@@ -95,7 +96,7 @@ def test_ac3_radar_alert_throttle_file_under_isolated_root():
 
     record_nowcast_sent(
         user_id=uid, throttle_scope=_THROTTLE_SCOPE, throttle_key=preset_id,
-        now=datetime.now(timezone.utc),
+        now=datetime.now(timezone.utc), zone=ZoneInfo("Europe/Vienna"),
     )
 
     expected = get_data_dir(uid) / "throttle_state.json"

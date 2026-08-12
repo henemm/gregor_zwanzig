@@ -797,30 +797,80 @@ def test_t10_neuer_trip_feuert_nicht_rueckwirkend():
 # AC-11 / T11 — der Ortsvergleich bleibt bit-identisch
 # ---------------------------------------------------------------------------
 
-def _compare_preset_schreiben(user_id: str, stunde: int) -> None:
-    """Echtes Vergleichs-Preset in `briefings/` (Cutover-Lesepfad #1250 S7b)."""
+def _compare_preset_schreiben(user_id: str, stunde: int) -> list[str]:
+    """Echtes Vergleichs-Preset in `briefings/` (Cutover-Lesepfad #1250 S7b)
+    samt seinen ORTEN; gibt deren Kennungen zurueck.
+
+    Issue #1726: die Faelligkeit des Vergleichs haengt nicht mehr an einer
+    festen Zone, sondern an der Ortszone des Presets. Die Orte muessen deshalb
+    real auf der Platte liegen — ohne sie greift der dokumentierte
+    UTC-Rueckfall, und der Test pruefte die Faelligkeit gegen eine Zone, die
+    nur ein Ausfall-Ersatz ist. Auckland mit Absicht: bei einer
+    mitteleuropaeischen Zone waere ein Rueckfall auf eine feste Wiener Uhr im
+    August unsichtbar, weil der Sommerzeit-Versatz derselbe ist (dieselbe
+    Falle wie im Kopf von test_ruhezeit_und_zaehler_folgen_der_ortszone.py).
+    """
+    orte = {"ort-a": AUCKLAND, "ort-b": AUCKLAND}
+    ort_ordner = get_data_dir(user_id) / "locations"
+    ort_ordner.mkdir(parents=True, exist_ok=True)
+    for ort_id, (lat, lon) in orte.items():
+        (ort_ordner / f"{ort_id}.json").write_text(json.dumps({
+            "id": ort_id, "name": f"Ort {ort_id}",
+            "lat": lat, "lon": lon, "elevation_m": 100,
+        }), encoding="utf-8")
+
     ordner = get_briefings_dir(user_id)
     ordner.mkdir(parents=True, exist_ok=True)
     (ordner / "vgl-1.json").write_text(json.dumps({
         "id": "vgl-1",
         "kind": "vergleich",
-        "name": "Alpen vs Voralpen",
+        "name": "Auckland-Vergleich",
         "user_id": user_id,
         "schedule": "daily",
-        "location_ids": ["ort-a", "ort-b"],
+        "location_ids": list(orte),
         "empfaenger": ["nutzer@example.com"],
         "morning_enabled": True,
         "morning_time": f"{stunde:02d}:00:00",
         "evening_enabled": False,
         "evening_time": "18:00:00",
     }), encoding="utf-8")
+    return list(orte)
+
+
+def _vergleichs_zone(user_id: str, ort_ids: list[str]) -> ZoneInfo:
+    """Die Zone, in der ueber die Faelligkeit des Presets ENTSCHIEDEN wird —
+    abgeleitet auf demselben Weg wie im Produktivcode.
+
+    Issue #1726: `CompareDispatchStrategy.collect_due()` baut `{loc.id: loc}`
+    aus `load_all_locations` und `presets_due_for_hour` loest daraus
+    `first_resolvable_tz(...)` auf. Genau diese zwei Zeilen stehen hier —
+    NICHT eine getippte Zonen-Konstante. Eine getippte Zone koennte still
+    neben der zustaendigen liegen; der Test waere dann gruen, ohne die
+    Faelligkeit zu pruefen.
+    """
+    from app.loader import load_all_locations
+    from utils.timezone import first_resolvable_tz
+
+    orte = {loc.id: loc for loc in load_all_locations(user_id=user_id)}
+    return first_resolvable_tz(
+        (orte.get(lid) for lid in ort_ids), context_label="vgl-1",
+    )
 
 
 def test_t11_ortsvergleich_kennt_keinen_vermerk(monkeypatch):
     """Given der Ortsvergleichs-Pfad mit unveraenderter Konfiguration / When
-    derselbe Versandlauf ueber 24 Stunden ausgefuehrt wird / Then feuert das
-    Preset genau zur konfigurierten Stunde der festen Vergleichs-Zone — und
-    ein ZWEITER Lauf in derselben Stunde feuert erneut.
+    derselbe Versandlauf ueber einen Ortstag ausgefuehrt wird / Then feuert das
+    Preset genau zur konfigurierten Stunde SEINER Ortszone — und ein ZWEITER
+    Lauf in derselben Stunde feuert erneut.
+
+    Issue #1726 hat die feste Vergleichs-Zone abgeloest
+    (`NOCH_NICHT_ORTSZEIT_SIEHE_1726`, bis dahin `Europe/Vienna`): die
+    Faelligkeit haengt jetzt an der Ortszone des jeweiligen Presets. Die hier
+    geprueffte Zusicherung bleibt davon UNBERUEHRT — sie lautet „genau eine
+    Stunde am Ortstag feuert, und ein zweiter Lauf in derselben Stunde feuert
+    erneut". Nur der Bezugspunkt wandert von der Konstante zum Preset, und er
+    wird deshalb ueber denselben Weg abgeleitet wie im Produktivcode
+    (`_vergleichs_zone`), nicht getippt.
 
     Der zweite Lauf ist der eigentliche Waechter: der Idempotenz-Schutz darf
     ausschliesslich im Trip-Pfad wirken. Gemessen wird ueber das GETEILTE
@@ -837,7 +887,7 @@ def test_t11_ortsvergleich_kennt_keinen_vermerk(monkeypatch):
     from app.config import Settings
     from services import dispatch_orchestrator as orchestrator
 
-    _compare_preset_schreiben("slot-t11", 9)
+    ort_ids = _compare_preset_schreiben("slot-t11", 9)
     protokoll: list = []
 
     class _MitgeschriebenerVergleich(orchestrator.CompareDispatchStrategy):
@@ -845,7 +895,7 @@ def test_t11_ortsvergleich_kennt_keinen_vermerk(monkeypatch):
             protokoll.append(item[0].get("id"))
 
     monkeypatch.setitem(orchestrator._STRATEGY, "vergleich", _MitgeschriebenerVergleich)
-    zone = ZoneInfo(orchestrator.CompareDispatchStrategy.NOCH_NICHT_ORTSZEIT_SIEHE_1726)
+    zone = _vergleichs_zone("slot-t11", ort_ids)
     settings = Settings(is_test_mode=True)
 
     stunden_mit_versand = []
@@ -857,7 +907,7 @@ def test_t11_ortsvergleich_kennt_keinen_vermerk(monkeypatch):
 
     assert stunden_mit_versand == [9], (
         "Der Ortsvergleich muss unveraendert genau zur konfigurierten Stunde "
-        f"seiner festen Zone feuern, gefunden {stunden_mit_versand}"
+        f"seiner Ortszone feuern, gefunden {stunden_mit_versand}"
     )
 
     # Zweiter Lauf in derselben Stunde: Compare kennt keinen Vermerk.

@@ -10,7 +10,7 @@ Getestet wird ein noch nicht existierendes, rein deterministisches Modul
   Liest die 5 neuen Slot-Felder aus einem rohen Preset-Dict, wendet bei
   fehlendem `morning_time` (Nil-Check-Marker "Altdaten, nie migriert") die
   Migrations-Fallback-Tabelle aus der Spec an.
-- `presets_due_for_hour(presets, hour, today) -> list[DuePreset]`
+- `presets_due_for_hour(presets, all_locations, now_utc) -> list[DuePreset]`
   Liefert je faelligem Preset den Tagesbezug in BEIDEN Formen — Zieldatum
   (Morgen-Slot -> heute, Abend-Slot -> morgen) UND Versatz gegen den Ortstag
   (0 bzw. +1) —, inkl. Pause-/Archiv-/Laufzeit-Guards.
@@ -32,6 +32,7 @@ from datetime import date, timedelta
 import pytest
 
 from services.compare_slot_scheduler import presets_due_for_hour, resolve_preset_slots
+from tests.helpers.compare_slot_time import utc_moment
 from services.scheduler_dispatch_service import build_compare_preset_subject
 
 TODAY = date(2026, 7, 12)
@@ -76,8 +77,8 @@ def test_ac4_morning_slot_due_at_configured_hour_not_outside():
         evening_enabled=False, evening_time="18:00:00",
     )
 
-    due_at_7 = presets_due_for_hour([preset], hour=7, today=TODAY)
-    due_at_8 = presets_due_for_hour([preset], hour=8, today=TODAY)
+    due_at_7 = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
+    due_at_8 = presets_due_for_hour([preset], {}, utc_moment(TODAY, 8))
 
     assert due_at_7 == [(preset, TODAY, 0)]
     assert due_at_8 == []
@@ -94,8 +95,8 @@ def test_ac5_evening_slot_due_targets_next_day():
         evening_enabled=True, evening_time="18:00:00",
     )
 
-    due_at_18 = presets_due_for_hour([preset], hour=18, today=TODAY)
-    due_at_17 = presets_due_for_hour([preset], hour=17, today=TODAY)
+    due_at_18 = presets_due_for_hour([preset], {}, utc_moment(TODAY, 18))
+    due_at_17 = presets_due_for_hour([preset], {}, utc_moment(TODAY, 17))
 
     assert due_at_18 == [(preset, TODAY + timedelta(days=1), 1)]
     assert due_at_17 == []
@@ -147,7 +148,7 @@ def test_migration_fallback_manual_still_paused_despite_active_slot():
     unabhaengig vom migrierten Slot."""
     preset = _without_slot_fields(_preset(schedule="manual"))
 
-    due = presets_due_for_hour([preset], hour=6, today=TODAY)
+    due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 6))
 
     assert due == []
 
@@ -165,8 +166,8 @@ def test_ac6_manual_schedule_with_explicit_slots_never_due():
         evening_enabled=True, evening_time="18:00:00",
     )
 
-    due_morning = presets_due_for_hour([preset], hour=7, today=TODAY)
-    due_evening = presets_due_for_hour([preset], hour=18, today=TODAY)
+    due_morning = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
+    due_evening = presets_due_for_hour([preset], {}, utc_moment(TODAY, 18))
 
     assert due_morning == []
     assert due_evening == []
@@ -184,7 +185,7 @@ def test_ac7_end_date_in_past_never_due():
         end_date=(TODAY - timedelta(days=1)).isoformat(),
     )
 
-    due = presets_due_for_hour([preset], hour=7, today=TODAY)
+    due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
 
     assert due == []
 
@@ -199,7 +200,7 @@ def test_ac7_end_date_today_still_due():
         end_date=TODAY.isoformat(),
     )
 
-    due = presets_due_for_hour([preset], hour=7, today=TODAY)
+    due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
 
     assert due == [(preset, TODAY, 0)]
 
@@ -214,7 +215,7 @@ def test_ac7_end_date_none_unbounded_still_due():
         end_date=None,
     )
 
-    due = presets_due_for_hour([preset], hour=7, today=TODAY)
+    due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
 
     assert due == [(preset, TODAY, 0)]
 
@@ -231,7 +232,7 @@ def test_ac8_archived_preset_never_due():
         archived_at="2026-07-01T00:00:00Z",
     )
 
-    due = presets_due_for_hour([preset], hour=7, today=TODAY)
+    due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
 
     assert due == []
 
@@ -248,7 +249,7 @@ def test_kl5_same_hour_for_morning_and_evening_yields_two_entries():
         evening_enabled=True, evening_time="09:45:00",
     )
 
-    due = presets_due_for_hour([preset], hour=9, today=TODAY)
+    due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 9))
 
     assert due == [(preset, TODAY, 0), (preset, TODAY + timedelta(days=1), 1)]
 
@@ -265,7 +266,7 @@ def test_kl2_morning_time_minutes_are_ignored_for_due_check():
         evening_enabled=False, evening_time="18:00:00",
     )
 
-    due = presets_due_for_hour([preset], hour=7, today=TODAY)
+    due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
     _, morning_time, _, _ = resolve_preset_slots(preset)
 
     assert due == [(preset, TODAY, 0)]
@@ -288,8 +289,8 @@ def test_explicit_slot_fields_override_schedule_fallback():
         evening_enabled=True, evening_time="20:00:00",
     )
 
-    due_morning_hour = presets_due_for_hour([preset], hour=6, today=TODAY)
-    due_evening_hour = presets_due_for_hour([preset], hour=20, today=TODAY)
+    due_morning_hour = presets_due_for_hour([preset], {}, utc_moment(TODAY, 6))
+    due_evening_hour = presets_due_for_hour([preset], {}, utc_moment(TODAY, 20))
 
     assert due_morning_hour == []
     assert due_evening_hour == [(preset, TODAY + timedelta(days=1), 1)]
@@ -316,9 +317,9 @@ def test_ac11_two_user_preset_lists_evaluated_independently():
         evening_enabled=True, evening_time="07:00:00",
     )
 
-    result_a = presets_due_for_hour([preset_user_a], hour=7, today=TODAY)
-    result_b = presets_due_for_hour([preset_user_b], hour=7, today=TODAY)
-    combined = presets_due_for_hour([preset_user_a, preset_user_b], hour=7, today=TODAY)
+    result_a = presets_due_for_hour([preset_user_a], {}, utc_moment(TODAY, 7))
+    result_b = presets_due_for_hour([preset_user_b], {}, utc_moment(TODAY, 7))
+    combined = presets_due_for_hour([preset_user_a, preset_user_b], {}, utc_moment(TODAY, 7))
 
     assert result_a == [(preset_user_a, TODAY, 0)]
     assert result_b == [(preset_user_b, TODAY + timedelta(days=1), 1)]
@@ -370,7 +371,7 @@ def test_f002_corrupt_end_date_skips_only_that_preset():
         evening_enabled=False, evening_time="18:00:00",
     )
 
-    due = presets_due_for_hour([corrupt_preset, valid_preset], hour=7, today=TODAY)
+    due = presets_due_for_hour([corrupt_preset, valid_preset], {}, utc_moment(TODAY, 7))
 
     assert due == [(valid_preset, TODAY, 0)]
 
@@ -399,7 +400,7 @@ def test_f003_slot_versatz_und_zieldatum_stammen_aus_derselben_zeitabfrage():
         evening_enabled=True, evening_time="09:45:00",
     )
 
-    due = presets_due_for_hour([preset], hour=9, today=TODAY)
+    due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 9))
 
     versaetze = [eintrag.tage_ab_ortstag for eintrag in due]
     assert versaetze == [0, 1], (

@@ -115,6 +115,19 @@ Regelverstoß — genau das war der Zustand vor #1697.
   die in ADR-0051 beschriebene Stundengleichheits-Falle: Fälligkeit ist jetzt ein Fenster von
   drei Ortsstunden ab der konfigurierten Stunde, gegen Doppelversand abgesichert über den
   Vermerk-Speicher `services/briefing_slots.py` (Schlüssel `(trip_id, ortstag, slot)`).
+- **Ruhezeit, Alarm-Tageszähler und Ortsvergleichs-Slot-Fälligkeit** (#1726, S4 des Epics
+  #1722): `deviation_alert_engine.is_quiet_hours()` und `alert_daily_limit.{load,is_allowed,
+  increment}` bekamen einen **Pflicht**-Parameter `zone` (kein Default — ein impliziter
+  Wien-/UTC-Rückfall wäre genau die behobene Fehlerklasse); beide `VIENNA`-Konstanten sind
+  ersatzlos entfallen. Der Tageszähler führt seither einen Stand **je Zone**
+  (`{"zones": {...}}`, Altbestand wandert beim ersten Zugriff unter `Europe/Vienna`) — der
+  bewusste Preis ist, dass ein Nutzer mit Objekten in drei Zonen das Kontingent dreimal
+  bekommt. `compare_slot_scheduler.presets_due_for_hour` prüft jedes Preset gegen die Zone
+  **seines ersten auflösbaren Orts** statt alle gegen eine gemeinsame Stunde. Die Zone kommt
+  bei Touren aus `anchor_tz`/`trip_local_now`, bei Ortsvergleichen aus dem neuen
+  `utils.timezone.first_resolvable_tz()` — der einen fachlichen Auswahlregel für „erster
+  Ort" (#1378 AC-4), die einen gelöschten oder zonenlosen Ersteintrag überspringt statt
+  still auf Weltzeit zu kippen.
 
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,
@@ -135,8 +148,14 @@ Vorfassung dieser Liste binnen Tagen veraltet.
 
 **Bewusst NICHT betroffen** (feste Zone ist dort Absicht, kein Verstoß):
 `forecast_budget._today_utc` und `meteoalarm_budget._today_utc` (Kontingent-Tageswechsel in
-UTC), `alert_daily_limit` und `deviation_alert_engine` (fest `Europe/Vienna`),
-Slot-Stunde im Versand-Orchestrator.
+UTC) sowie der manuelle `?hour=`-Testauslöser des Versand-Orchestrators
+(`CompareDispatchStrategy.MANUAL_TRIGGER_REFERENCE_ZONE`) — ein Ops-/Debug-Werkzeug ohne
+Preset-Bezug, für das „Stunde X" bei preset-eigenen Zonen keine EINE Bedeutung mehr hätte.
+
+Die beiden Alarm-Module, die bis 2026-08-12 an dieser Stelle als bewusste Ausnahme standen
+(Ruhezeit-Engine und Tageszähler, fest `Europe/Vienna`), sind **keine Ausnahme mehr** — sie
+folgen seit #1726 der Ortszone, s. „Umgesetzt" oben. Ebenso die Slot-Stunde des
+Ortsvergleichs, die dort ebenfalls gelistet war.
 
 Vollständige Fundstellen-Karte nach Wirkung sortiert:
 `docs/context/fix-1697-ortstag-statt-servertag.md`.

@@ -89,14 +89,24 @@ def _counter_path(uid: str) -> Path:
     return get_data_dir(uid) / "alert_daily_count.json"
 
 
-def _today_vienna_date_str() -> str:
-    return datetime.now(timezone.utc).astimezone(ZoneInfo("Europe/Vienna")).date().isoformat()
+# Issue #1726: der Tageszaehler laeuft in der ORTSZONE des Gegenstands, nicht
+# mehr fest in Wien. Gemessen (`utils.timezone.tz_for_coords`):
+#   Trip-Wegpunkte dieser Datei (LAT/LON = 42.20/9.10, Korsika) -> Europe/Paris
+#   Vergleichs-Ort `loc-1555` (46.9/10.9)                       -> Europe/Vienna
+VIENNA = ZoneInfo("Europe/Vienna")
+TRIP_ZONE = ZoneInfo("Europe/Paris")
 
 
-def _seed_daily_counter(uid: str, count: int) -> None:
+def _today_str(zone: ZoneInfo) -> str:
+    return datetime.now(timezone.utc).astimezone(zone).date().isoformat()
+
+
+def _seed_daily_counter(uid: str, count: int, zone: ZoneInfo = TRIP_ZONE) -> None:
     path = _counter_path(uid)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"date": _today_vienna_date_str(), "count": count}))
+    path.write_text(json.dumps(
+        {"zones": {str(zone): {"date": _today_str(zone), "count": count}}}
+    ))
 
 
 # ═══════════════════ Modul-Ebene: services.alert_daily_limit ════════════════
@@ -114,30 +124,30 @@ class TestModuleFreeTierLimitAndViennaReset:
             _write_user_tier(uid, "free")
             day1 = datetime(2026, 7, 7, 10, 0, tzinfo=timezone.utc)
 
-            assert is_allowed(uid, day1) is True, "1. Alert am Tag muss erlaubt sein"
-            increment(uid, day1)
-            assert is_allowed(uid, day1) is True, "2. Alert (Free-Limit 2) muss noch erlaubt sein"
-            increment(uid, day1)
-            assert is_allowed(uid, day1) is False, (
+            assert is_allowed(uid, day1, VIENNA) is True, "1. Alert am Tag muss erlaubt sein"
+            increment(uid, day1, VIENNA)
+            assert is_allowed(uid, day1, VIENNA) is True, "2. Alert (Free-Limit 2) muss noch erlaubt sein"
+            increment(uid, day1, VIENNA)
+            assert is_allowed(uid, day1, VIENNA) is False, (
                 "3. Alert am selben Tag muss unterdrückt werden (Free-Limit 2 erreicht)"
             )
 
             data = json.loads(_counter_path(uid).read_text())
-            assert data == {"date": "2026-07-07", "count": 2}, (
+            assert data == {"zones": {"Europe/Vienna": {"date": "2026-07-07", "count": 2}}}, (
                 f"Zählerdatei nach 2 Increments unerwartet: {data}"
             )
 
             # AC-4: Vienna-Mitternachts-Reset, NICHT UTC.
             # 2026-07-07 23:30 UTC == 2026-07-08 01:30 Vienna (Sommerzeit UTC+2).
             day1_late_utc = datetime(2026, 7, 7, 23, 30, tzinfo=timezone.utc)
-            assert is_allowed(uid, day1_late_utc) is True, (
+            assert is_allowed(uid, day1_late_utc, VIENNA) is True, (
                 "Nach dem Vienna-Mitternachts-Übergang (23:30 UTC == 01:30 Vienna) "
                 "muss das volle Tagesbudget wieder verfügbar sein — Reset ist "
                 "Vienna-, nicht UTC-basiert"
             )
-            increment(uid, day1_late_utc)
+            increment(uid, day1_late_utc, VIENNA)
             data2 = json.loads(_counter_path(uid).read_text())
-            assert data2 == {"date": "2026-07-08", "count": 1}, (
+            assert data2 == {"zones": {"Europe/Vienna": {"date": "2026-07-08", "count": 1}}}, (
                 f"Nach Vienna-Reset erwartete Zählerdatei date=2026-07-08 count=1, got {data2}"
             )
         finally:
@@ -156,11 +166,11 @@ class TestModuleStandardTierLimit:
             _write_user_tier(uid, "standard")
             now = datetime(2026, 7, 7, 10, 0, tzinfo=timezone.utc)
             for i in range(4):
-                assert is_allowed(uid, now) is True, (
+                assert is_allowed(uid, now, VIENNA) is True, (
                     f"Standard-Nutzer: Alert Nr. {i + 1} muss noch erlaubt sein (Limit 4)"
                 )
-                increment(uid, now)
-            assert is_allowed(uid, now) is False, (
+                increment(uid, now, VIENNA)
+            assert is_allowed(uid, now, VIENNA) is False, (
                 "Standard-Nutzer: 5. Alert am selben Tag muss unterdrückt werden (Limit 4)"
             )
         finally:
@@ -178,8 +188,8 @@ class TestModulePremiumTierNoLimit:
             _write_user_tier(uid, "premium")
             now = datetime(2026, 7, 7, 10, 0, tzinfo=timezone.utc)
             for _ in range(6):
-                increment(uid, now)
-            assert is_allowed(uid, now) is True, (
+                increment(uid, now, VIENNA)
+            assert is_allowed(uid, now, VIENNA) is True, (
                 "Premium-Nutzer darf trotz count=6 nie durch das Tageslimit blockiert werden"
             )
         finally:
@@ -201,7 +211,7 @@ class TestModuleLoadResetSemantics:
             before_mtime = counter_path.stat().st_mtime_ns
 
             now = datetime(2026, 7, 7, 10, 0, tzinfo=timezone.utc)
-            result = load(uid, now)
+            result = load(uid, now, VIENNA)
 
             assert result == 0, "load() muss bei veraltetem Datum 0 liefern (Reset-Semantik)"
             after_mtime = counter_path.stat().st_mtime_ns
@@ -340,7 +350,7 @@ def test_ac1_radar_alert_suppressed_when_free_daily_limit_reached():
         )
 
         data = json.loads(_counter_path(uid).read_text())
-        assert data["count"] == 2, (
+        assert data["zones"][str(TRIP_ZONE)]["count"] == 2, (
             f"AC-1: Zähler darf bei unterdrücktem Alert nicht erhöht werden, got {data}"
         )
 
@@ -470,10 +480,20 @@ def _weather_data(segment_id: int | str = 1, **summary_kwargs) -> SegmentWeather
 
 def _deviation_trip(trip_id: str) -> Trip:
     """Trip mit Telegram-Briefing-Kanal und aktiver Δ-Erkennung (Vorbild
-    test_issue_816_alert_deviation.py `_trip`)."""
+    test_issue_816_alert_deviation.py `_trip`).
+
+    Issue #1726: der Wegpunkt liegt jetzt auf DENSELBEN Koordinaten wie die
+    Radar-Trips dieser Datei (`LAT`/`LON`, Korsika). Vorher stand er auf
+    47.0/11.0 (Europe/Vienna) — seit der Tageszaehler je ORTSZONE gefuehrt
+    wird, haetten die beiden Trips damit getrennte Kontingente, und AC-5
+    („kein Umgehungspfad zwischen Radar- und Deviation-Alerts") wuerde
+    versehentlich das Gegenteil messen: nicht den fehlenden Riegel, sondern
+    die gewollte Zonen-Trennung aus AC-7. Die Zusicherung des Tests bleibt
+    unveraendert, nur die Zone der beiden Gegenstaende ist jetzt dieselbe.
+    """
     stage = Stage(
         id="T1", name="Tag 1", date=date_type(2026, 4, 5),
-        waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
+        waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
     )
     trip = Trip(
         id=trip_id, name="1070 Deviation-Trip", stages=[stage],
@@ -532,7 +552,7 @@ def test_ac5_cross_path_daily_limit_shared_between_radar_and_deviation(telegram_
             )
 
         counter_data = json.loads(_counter_path(uid).read_text())
-        assert counter_data["count"] == 2, (
+        assert counter_data["zones"][str(TRIP_ZONE)]["count"] == 2, (
             f"Vorbedingung: Zähler muss nach 2 erfolgreichen Radar-Alerts bei 2 "
             f"stehen, got {counter_data}"
         )
@@ -606,7 +626,7 @@ def test_ac6_radar_gate_passes_but_no_channel_delivered_leaves_counter_unchanged
         assert not mail_calls
 
         now = datetime.now(timezone.utc)
-        after_count = load(uid, now)
+        after_count = load(uid, now, TRIP_ZONE)
         assert after_count == 1, (
             f"F001: Zähler darf bei delivered=False nicht erhöht werden, "
             f"erwartet 1 (unverändert), got {after_count}"
@@ -651,7 +671,7 @@ def test_ac2_wiring_standard_limit_allows_fourth_blocks_fifth():
 
         assert result == 1, f"AC-2: 4. Alert für Standard muss noch erlaubt sein, got {result}"
         assert len(mail_calls) == 1, "AC-2: 4. Alert muss per E-Mail versendet werden"
-        assert load(uid, datetime.now(timezone.utc)) == 4, "AC-2: Zähler muss auf 4 steigen"
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 4, "AC-2: Zähler muss auf 4 steigen"
 
         # count=4 -> 5. Alert blockiert
         trip_id_5th = f"trip-{uuid.uuid4().hex[:6]}"
@@ -670,7 +690,7 @@ def test_ac2_wiring_standard_limit_allows_fourth_blocks_fifth():
 
         assert result_5th == 0, f"AC-2: 5. Alert für Standard muss blockiert sein, got {result_5th}"
         assert not mail_calls_5th, "AC-2: 5. Alert darf keinen E-Mail-Versand auslösen"
-        assert load(uid, datetime.now(timezone.utc)) == 4, "AC-2: Zähler darf nicht steigen"
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 4, "AC-2: Zähler darf nicht steigen"
     finally:
         _clean_user(uid)
 
@@ -704,7 +724,7 @@ def test_ac3_wiring_premium_no_limit():
 
         assert result == 1, f"AC-3: Premium-Alert trotz count=6 muss erlaubt sein, got {result}"
         assert len(mail_calls) == 1, "AC-3: Premium-Alert muss versendet werden"
-        assert load(uid, datetime.now(timezone.utc)) == 7, "AC-3: Zähler muss weiter steigen"
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 7, "AC-3: Zähler muss weiter steigen"
     finally:
         _clean_user(uid)
 
@@ -739,7 +759,7 @@ def test_ac6_deviation_gate_passes_but_no_channel_delivered_leaves_counter_uncha
         result = svc.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
         assert result is False, "Kein Kanal konfiguriert -> delivered=False"
-        assert load(uid, datetime.now(timezone.utc)) == 1, (
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 1, (
             "F001 (Deviation): Zähler darf bei delivered=False nicht erhöht werden"
         )
     finally:
@@ -840,7 +860,7 @@ def test_ac1_1555_free_tier_first_forecast_change_alert_delivered_at_reduced_bou
             f"AC-1: erster forecast_change-Alarm bei count=0 muss zugestellt werden, got {result}"
         )
         assert telegram_sink.send_count() == 1, "AC-1: Telegram-Sink muss genau 1 Versand zeigen"
-        assert load(uid, datetime.now(timezone.utc)) == 1, "AC-1: Zähler muss auf 1 steigen"
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 1, "AC-1: Zähler muss auf 1 steigen"
     finally:
         _clean_user(uid)
 
@@ -880,7 +900,7 @@ def test_ac2_1555_free_tier_forecast_change_suppressed_but_nowcast_still_deliver
             f"AC-2: forecast_change muss bei count=1 (Reserve-Grenze 1) "
             f"unterdrückt werden, got {dev_result}"
         )
-        assert load(uid, datetime.now(timezone.utc)) == 1, (
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 1, (
             "AC-2: Zähler darf durch den unterdrückten forecast_change-Alarm nicht steigen"
         )
 
@@ -903,7 +923,7 @@ def test_ac2_1555_free_tier_forecast_change_suppressed_but_nowcast_still_deliver
             f"erlaubt sein, got {radar_result}"
         )
         assert len(mail_calls) == 1, "AC-2: nowcast-Alarm muss tatsächlich versendet werden"
-        assert load(uid, datetime.now(timezone.utc)) == 2, "AC-2: Zähler muss nach nowcast auf 2 steigen"
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 2, "AC-2: Zähler muss nach nowcast auf 2 steigen"
     finally:
         _clean_user(uid)
 
@@ -937,7 +957,7 @@ def test_ac3_1555_standard_tier_forecast_change_suppressed_but_nowcast_still_del
             f"AC-3: forecast_change muss bei count=2 (Standard, Reserve-Grenze 2) "
             f"unterdrückt werden, got {dev_result}"
         )
-        assert load(uid, datetime.now(timezone.utc)) == 2, (
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 2, (
             "AC-3: Zähler darf durch den unterdrückten forecast_change-Alarm nicht steigen"
         )
 
@@ -959,7 +979,7 @@ def test_ac3_1555_standard_tier_forecast_change_suppressed_but_nowcast_still_del
             f"erlaubt sein, got {radar_result}"
         )
         assert len(mail_calls) == 1, "AC-3: nowcast-Alarm muss tatsächlich versendet werden"
-        assert load(uid, datetime.now(timezone.utc)) == 3, "AC-3: Zähler muss nach nowcast auf 3 steigen"
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 3, "AC-3: Zähler muss nach nowcast auf 3 steigen"
     finally:
         _clean_user(uid)
 
@@ -990,7 +1010,7 @@ def test_ac4_1555_premium_tier_unlimited_for_both_forecast_change_and_nowcast(te
 
         assert dev_result is True, f"AC-4: Premium forecast_change trotz count=6 muss zugestellt werden, got {dev_result}"
         assert telegram_sink.send_count() == 1
-        assert load(uid, datetime.now(timezone.utc)) == 7, "AC-4: Zähler steigt weiter (kein Deckel)"
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 7, "AC-4: Zähler steigt weiter (kein Deckel)"
 
         trip_id = f"trip-radar-{uid}"
         radar_trip = _make_trip(trip_id, send_email=True, send_telegram=False)
@@ -1007,7 +1027,7 @@ def test_ac4_1555_premium_tier_unlimited_for_both_forecast_change_and_nowcast(te
 
         assert radar_result == 1, f"AC-4: Premium nowcast trotz count=7 muss zugestellt werden, got {radar_result}"
         assert len(mail_calls) == 1
-        assert load(uid, datetime.now(timezone.utc)) == 8
+        assert load(uid, datetime.now(timezone.utc), TRIP_ZONE) == 8
     finally:
         _clean_user(uid)
 
@@ -1031,7 +1051,7 @@ def test_ac5_1555_is_allowed_without_reason_argument_uses_full_limit_backward_co
         _seed_daily_counter(uid, 1)
         now = datetime.now(timezone.utc)
 
-        assert is_allowed(uid, now) is True, (
+        assert is_allowed(uid, now, TRIP_ZONE) is True, (
             "AC-5: is_allowed(uid, now) ohne reason muss bei count=1/Free "
             "gegen das volle Limit (2) prüfen -> True, nicht gegen die "
             "reduzierte forecast_change-Obergrenze (1)"
@@ -1064,7 +1084,7 @@ def test_ac6_1555_compare_forecast_change_suppressed_at_reserve_boundary():
     _clean_compare_preset_dir(uid)
     try:
         _write_user_tier(uid, "free")
-        _seed_daily_counter(uid, 1)
+        _seed_daily_counter(uid, 1, VIENNA)
 
         loc = SavedLocation(id="loc-1555", name="ReserveOrt", lat=46.9, lon=10.9, elevation_m=900)
         save_location(loc, user_id=uid)
@@ -1090,7 +1110,7 @@ def test_ac6_1555_compare_forecast_change_suppressed_at_reserve_boundary():
             f"count=1 (Free, Reserve-Grenze 1) unterdrücken, got sent={sent}"
         )
         assert sent_subjects == [], "AC-6: mail_sink wurde trotz Reserve aufgerufen"
-        assert alert_daily_limit.load(uid, datetime.now(timezone.utc)) == 1, (
+        assert alert_daily_limit.load(uid, datetime.now(timezone.utc), VIENNA) == 1, (
             "AC-6: Zähler darf bei unterdrücktem Compare-Alarm nicht steigen"
         )
     finally:

@@ -33,8 +33,13 @@ datetime.now().
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from services.deviation_alert_engine import DeviationAlertEngine
+
+# Issue #1726: die Zone ist jetzt Pflicht-Parameter statt Modul-Konstante.
+# Diese Datei prueft die WIENER Auslegung — sie uebergibt sie deshalb selbst.
+VIENNA = ZoneInfo("Europe/Vienna")
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +58,7 @@ def test_ac1_summer_2230_vienna_is_suppressed():
     20:30 UTC liegt NICHT im Fenster 22:00-06:00 -> False. Rot vor Fix.
     """
     now = datetime(2026, 6, 15, 20, 30, tzinfo=timezone.utc)
-    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00")
+    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00", VIENNA)
     assert result is True
 
 
@@ -72,7 +77,7 @@ def test_ac2_summer_0700_vienna_not_suppressed():
     Fenster bis 06:00 UTC -> True (faelschlich unterdrueckt). Rot vor Fix.
     """
     now = datetime(2026, 6, 16, 5, 0, tzinfo=timezone.utc)
-    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00")
+    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00", VIENNA)
     assert result is False
 
 
@@ -92,7 +97,7 @@ def test_ac3_winter_2230_vienna_is_suppressed():
     -> False. Rot vor Fix.
     """
     now = datetime(2026, 1, 15, 21, 30, tzinfo=timezone.utc)
-    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00")
+    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00", VIENNA)
     assert result is True
 
 
@@ -113,7 +118,7 @@ def test_ac4_wrap_inside_2330_vienna_is_suppressed():
     -> False. Rot vor Fix.
     """
     now = datetime(2026, 6, 15, 21, 30, tzinfo=timezone.utc)
-    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00")
+    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00", VIENNA)
     assert result is True
 
 
@@ -133,7 +138,7 @@ def test_ac4_wrap_outside_2100_vienna_not_suppressed_anchor():
     damit der Fix den Wrap-Vergleich nicht versehentlich umkehrt.
     """
     now = datetime(2026, 6, 15, 19, 0, tzinfo=timezone.utc)
-    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00")
+    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00", VIENNA)
     assert result is False
 
 
@@ -153,7 +158,7 @@ def test_ac5_no_quiet_hours_configured_never_suppressed_anchor():
     liegt VOR jeder Zeitkonvertierung und bleibt vom Fix unberuehrt.
     """
     now = datetime(2026, 6, 15, 22, 30, tzinfo=timezone.utc)
-    result = DeviationAlertEngine.is_quiet_hours(now, None, None)
+    result = DeviationAlertEngine.is_quiet_hours(now, None, None, VIENNA)
     assert result is False
 
 
@@ -176,5 +181,5 @@ def test_naive_datetime_interpreted_as_utc():
     -> False. Rot vor Fix.
     """
     now = datetime(2026, 6, 15, 20, 30)  # bewusst ohne tzinfo
-    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00")
+    result = DeviationAlertEngine.is_quiet_hours(now, "22:00", "06:00", VIENNA)
     assert result is True

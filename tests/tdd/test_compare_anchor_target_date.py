@@ -709,6 +709,7 @@ def test_f003_tagessprung_zwischen_sammeln_und_schreiben_verschiebt_den_anker_ni
     import services.scheduler_dispatch_service as dispatch_mod
     from app.loader import get_data_root
     from services.compare_slot_scheduler import presets_due_for_hour
+    from tests.helpers.compare_slot_time import utc_moment
     from services.dispatch_orchestrator import CompareDispatchStrategy
 
     sz = Szenario(monkeypatch, tmp_path, ALPEN_LAT, ALPEN_LON)
@@ -724,7 +725,7 @@ def test_f003_tagessprung_zwischen_sammeln_und_schreiben_verschiebt_den_anker_ni
     # T1 — Sammelzeitpunkt: der Systemtag ist Tag D, der Abend-Slot briefed
     # ueber D+1. Exakt das, was `CompareDispatchStrategy.collect_due()` mit
     # `date.today() == D` liefert.
-    faellig = presets_due_for_hour([preset], hour=18, today=tag_d)
+    faellig = presets_due_for_hour([preset], {}, utc_moment(tag_d, 18))
     assert len(faellig) == 1, (
         "Fixtur-Schutz: der Abend-Slot muss zur Stunde 18 faellig sein, sonst "
         f"bewacht der Test nichts. Gefunden: {faellig!r}"

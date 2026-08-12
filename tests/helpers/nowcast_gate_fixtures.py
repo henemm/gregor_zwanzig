@@ -53,7 +53,18 @@ def preset_root() -> Path:
 
     return get_data_root() / "users"
 
-VIENNA = ZoneInfo("Europe/Vienna")
+# Issue #1726: Ruhezeit und Tageszaehler laufen nicht mehr auf der Wiener Uhr,
+# sondern auf der ORTSZONE des jeweiligen Gegenstands. Die Helfer unten nehmen
+# sie deshalb als Parameter. Die beiden Konstanten sind die Zonen der
+# DEFAULT-Koordinaten dieser Datei — gemessen, nicht angenommen:
+#   tz_for_coords(LAT, LON)           -> Europe/Vienna
+#   tz_for_coords(TRIP_LAT, TRIP_LON) -> Atlantic/Reykjavik
+# Wer einen Vergleich aus `location()` baut, braucht LOCATION_ZONE; wer einen
+# Trip aus `make_trip()` baut, TRIP_ZONE. Ein gemeinsamer Default waere fuer
+# eine der beiden Seiten still falsch (Versatz 1-2 h) und der Test dann gruen
+# aus dem falschen Grund.
+LOCATION_ZONE = ZoneInfo("Europe/Vienna")
+TRIP_ZONE = ZoneInfo("Atlantic/Reykjavik")
 
 LAT, LON = 47.0, 11.0
 
@@ -208,21 +219,24 @@ def reset_radar_cache() -> None:
 # ─────────────────────────── Ruhezeit-Fenster ───────────────────────────────
 
 
-def quiet_window_now(buffer_minutes: int = 5) -> tuple[str, str]:
-    """``(from, to)`` in Europe/Vienna-Lokalzeit, das den JETZIGEN Zeitpunkt
-    umschliesst — ``is_quiet_hours()`` vergleicht seit #1312 gegen Wien."""
-    now = datetime.now(timezone.utc).astimezone(VIENNA)
+def quiet_window_now(
+    buffer_minutes: int = 5, *, zone: ZoneInfo = LOCATION_ZONE,
+) -> tuple[str, str]:
+    """``(from, to)`` in der Ortszeit von ``zone``, das den JETZIGEN Zeitpunkt
+    umschliesst. Seit #1726 wertet ``is_quiet_hours()`` in der Zone des
+    Gegenstands aus — das Fenster muss in DERSELBEN Zone gebildet werden."""
+    now = datetime.now(timezone.utc).astimezone(zone)
     return (
         (now - timedelta(minutes=buffer_minutes)).strftime("%H:%M"),
         (now + timedelta(minutes=buffer_minutes)).strftime("%H:%M"),
     )
 
 
-def quiet_window_elsewhere() -> tuple[str, str]:
+def quiet_window_elsewhere(*, zone: ZoneInfo = LOCATION_ZONE) -> tuple[str, str]:
     """Ein GESETZTES Ruhezeit-Fenster, das „jetzt" NICHT enthaelt (2–3 h
     voraus). Schaerfer als „gar keine Ruhezeit", weil der Wert damit real
     ausgewertet wird statt in den ``not quiet_from``-Kurzschluss zu laufen."""
-    now = datetime.now(timezone.utc).astimezone(VIENNA)
+    now = datetime.now(timezone.utc).astimezone(zone)
     return (
         (now + timedelta(hours=2)).strftime("%H:%M"),
         (now + timedelta(hours=3)).strftime("%H:%M"),
@@ -236,24 +250,33 @@ def daily_counter_path(user_id: str) -> Path:
     return get_data_dir(user_id) / "alert_daily_count.json"
 
 
-def vienna_today() -> str:
-    return datetime.now(timezone.utc).astimezone(VIENNA).date().isoformat()
+def local_today(zone: ZoneInfo = LOCATION_ZONE) -> str:
+    return datetime.now(timezone.utc).astimezone(zone).date().isoformat()
 
 
-def seed_daily_counter(user_id: str, count: int) -> None:
+def seed_daily_counter(
+    user_id: str, count: int, *, zone: ZoneInfo = LOCATION_ZONE,
+) -> None:
+    """Zaehlerstand vorbelegen — im Schema, das der Pruefling seit #1726
+    SCHREIBT (``{"zones": {"<zone>": {...}}}``). Bewusst nicht im Alt-Schema:
+    der Helfer soll den Normalfall herstellen, nicht die Migration testen (die
+    hat ihren eigenen Nachweis in AC-8)."""
     path = daily_counter_path(user_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"date": vienna_today(), "count": count}))
+    path.write_text(json.dumps(
+        {"zones": {str(zone): {"date": local_today(zone), "count": count}}}
+    ))
 
 
-def read_daily_counter(user_id: str) -> int:
+def read_daily_counter(user_id: str, *, zone: ZoneInfo = LOCATION_ZONE) -> int:
     path = daily_counter_path(user_id)
     if not path.exists():
         return 0
     data = json.loads(path.read_text())
-    if data.get("date") != vienna_today():
+    entry = (data.get("zones") or {}).get(str(zone))
+    if not isinstance(entry, dict) or entry.get("date") != local_today(zone):
         return 0
-    return int(data.get("count", 0))
+    return int(entry.get("count", 0))
 
 
 def throttle_state_path(user_id: str) -> Path:

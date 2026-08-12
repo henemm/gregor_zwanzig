@@ -35,6 +35,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from typing import NamedTuple, Optional
+from zoneinfo import ZoneInfo
 
 from services import alert_daily_limit, alert_log
 from services.deviation_alert_engine import DeviationAlertEngine
@@ -78,6 +79,7 @@ def check_nowcast_gate(
     quiet_to: Optional[str],
     context_label: str,
     now: datetime,
+    zone: ZoneInfo,
     daily_limit_reason: str = "nowcast",
     throttle_store: Optional[ThrottleStore] = None,
 ) -> GateResult:
@@ -89,9 +91,12 @@ def check_nowcast_gate(
     Compare-eigener Grund waere zwar heute gleichwertig, verloere den Schutz
     aber still, sobald die Reserve-Tabelle waechst. Beide Nowcast-Pfade
     benutzen deshalb denselben Grund.
-    """
+
+    Issue #1726: `zone` ist PFLICHT und geht an BEIDE zonenabhaengigen Stufen —
+    Ruhezeit UND Tages-Obergrenze. Die Schranke hat kein eigenes Objekt im Scope
+    (geteilt Trip+Vergleich), deshalb liefern ihre zwei Aufrufer die Zone."""
     if DeviationAlertEngine.is_quiet_hours(
-        now, quiet_from, quiet_to, context_label=context_label
+        now, quiet_from, quiet_to, zone, context_label=context_label
     ):
         logger.debug("Nowcast-Alarm unterdrueckt (Ruhezeit) fuer %s", context_label)
         return GateResult(False, alert_log.REASON_QUIET_HOURS)
@@ -102,7 +107,7 @@ def check_nowcast_gate(
         logger.debug("Nowcast-Alarm unterdrueckt (Sperrzeit) fuer %s", context_label)
         return GateResult(False, alert_log.REASON_COOLDOWN)
 
-    if not alert_daily_limit.is_allowed(user_id, now, reason=daily_limit_reason):
+    if not alert_daily_limit.is_allowed(user_id, now, zone, reason=daily_limit_reason):
         logger.debug(
             "Nowcast-Alarm unterdrueckt (Tages-Obergrenze) fuer %s", context_label
         )
@@ -117,8 +122,12 @@ def record_nowcast_sent(
     throttle_scope: str,
     throttle_key: str,
     now: datetime,
+    zone: ZoneInfo,
     throttle_store: Optional[ThrottleStore] = None,
 ) -> None:
-    """Tageszaehler und Sperrzeit buchen — NUR nach erfolgreicher Zustellung."""
-    alert_daily_limit.increment(user_id, now)
+    """Tageszaehler und Sperrzeit buchen — NUR nach erfolgreicher Zustellung.
+    #1726: `zone` ist PFLICHT; wer hier eine andere uebergibt als
+    `check_nowcast_gate()`, fuellt einen anderen Zaehler als den geprueften.
+    """
+    alert_daily_limit.increment(user_id, now, zone)
     _resolve_store(user_id, throttle_store).record(throttle_scope, throttle_key, now)

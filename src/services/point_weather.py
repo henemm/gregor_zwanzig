@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional, Protocol, Set
+from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
     from app.models import (
@@ -69,6 +70,10 @@ class AlertEvaluationConfig:
     # Eintrag). None = kein Backfill (Abwärtskompatibilität für generische
     # Aufrufer ohne Weather-Tab-Kontext, z. B. reine metric_alert_levels-Nutzung).
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None
+    # Issue #1726: Ortszone des Gegenstands fuer die Ruhezeit-Pruefung (Trip:
+    # `anchor_tz`, Vergleich: `first_resolvable_tz`). `None` = der Erbauer
+    # kennt keine; die Engine rechnet dann in Weltzeit statt zu raten.
+    zone: Optional[ZoneInfo] = None
 
 
 class LocationWeatherSource(Protocol):

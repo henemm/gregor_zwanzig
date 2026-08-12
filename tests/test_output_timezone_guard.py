@@ -589,8 +589,20 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # von `src/services/**` + `api/**`, gemessen am 2026-08-11 gegen
     # origin/main `0db5eec6` (nach #1724, das zwei Europe/Vienna-Stellen
     # entfernt hat). 53 Einträge, ausschliesslich per AST-Scan erhoben, nicht
-    # per grep gezaehlt. Sie sind AUFGENOMMEN, nicht entschuldigt: diese
-    # Lieferung blockt nur Neuzugaenge, die Behebung traegt #1726 (S4).
+    # per grep gezaehlt. Sie sind AUFGENOMMEN, nicht entschuldigt: die
+    # Bestandsaufnahme selbst blockt nur Neuzugaenge.
+    #
+    # ZUORDNUNG (korrigiert mit #1726, S4): #1726 hat NUR die vier
+    # Entscheidungs-Stellen der Ruhezeit und des Alarm-Tageszaehlers behoben
+    # (Muster B in `alert_daily_limit.py`/`deviation_alert_engine.py` samt der
+    # zwei daran gekoppelten `raw_astimezone`-Funde) — die stehen deshalb
+    # unten nicht mehr. Die verbleibenden ~25 Muster-A-Funde
+    # (`date.today()`/`datetime.now()` ohne Zone) traegt **#1727** (S5); der
+    # frueher hier stehende pauschale Verweis „die Behebung traegt #1726"
+    # zeigte nach dem Schliessen von #1726 auf ein erledigtes Issue. Die
+    # `(#1726)`-Vermerke in den Einzelzeilen unten sind aus demselben Grund
+    # als **#1727** zu lesen; sie bleiben nur deshalb stehen, weil ihre
+    # Massen-Umschrift den Shrink-Vergleich unnoetig verrauschen wuerde.
     # -----------------------------------------------------------------------
     # --- Muster A: Umgebungsuhr (`date.today()` / `datetime.now()` ohne tz) ---
     "api/routers/compare.py::run_comparison::0": "Muster A (:53) — Sofort-Vergleich nimmt die Serveruhr als 'jetzt' (#1726).",
@@ -618,21 +630,19 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/trip_report_scheduler.py::_collect_future_stage_weather::0": "Muster A (:2205) — 'zukuenftige Etappen' ab Servertag (#1726).",
     "src/services/trip_report_scheduler.py::_send_trip_report_outcome::0": "Muster A (:932) — Test-Rueckfall vergleicht Zieltag mit Servertag (#1726).",
     "src/services/trip_report_scheduler.py::select_test_stage::0": "Muster A (:765) — Test-Etappenwahl ab Servertag (#1726).",
-    # --- Muster B: festes Nicht-UTC-Zonen-Literal (namentlich #1726/S4) ---
-    "src/services/alert_daily_limit.py::<module>::0": "Muster B (:23) — `VIENNA = ZoneInfo('Europe/Vienna')` als Tagesgrenze des Alarm-Kontingents; ADR-0051, Behebung #1726.",
-    "src/services/deviation_alert_engine.py::<module>::0": "Muster B (:31) — `VIENNA = ZoneInfo('Europe/Vienna')` als Ruhezeit-Zone; ADR-0051, Behebung #1726.",
+    # --- Muster B: festes Nicht-UTC-Zonen-Literal — mit #1726 vollstaendig
+    # abgeraeumt (beide `VIENNA`-Konstanten ersatzlos entfallen). Bleibt als
+    # Rubrik stehen: ein neuer Fund dieser Art gehoert behoben, nicht gelistet.
     # --- Bestehende Fundart `raw_astimezone` auf der NEU hinzugekommenen
     # Flaeche: kein neuer Detektor, nur groesserer Geltungsbereich. Viele davon
     # sind Umrechnungen NACH UTC (nach Hausnorm #1345 unauffaellig) — der
     # Scanner unterscheidet das strukturell nicht, deshalb gelistet statt
     # ausgenommen.
     "src/services/alert_briefing_anchor.py::record_briefing_sent::0": "raw_astimezone (:195) — Normalisierung des Sendezeitpunkts nach UTC.",
-    "src/services/alert_daily_limit.py::_vienna_date_str::0": "raw_astimezone (:32) — Tagesgrenze ueber die feste VIENNA-Zone, an Muster B oben gekoppelt (#1726).",
     "src/services/compare_location_weather_source.py::_window_bound::0": "raw_astimezone (:39) — Fenstergrenze aus lokalem Tag + Stunde.",
     "src/services/compare_location_weather_source.py::fetch::0": "raw_astimezone (:116) — lokaler Tag des Vergleichsorts.",
     "src/services/compare_official_alert.py::_day_window_end::0": "raw_astimezone (:271) — lokales 'jetzt' des Vergleichsorts.",
     "src/services/compare_official_alert.py::_day_window_end::1": "raw_astimezone (:275) — Fensterende zurueck nach UTC.",
-    "src/services/deviation_alert_engine.py::is_quiet_hours::0": "raw_astimezone (:112) — Ruhezeit gegen die feste VIENNA-Zone, an Muster B oben gekoppelt (#1726).",
     "src/services/forecast_budget.py::_today_utc::0": "raw_astimezone (:130) — Kontingent-Tag bewusst in UTC (Zaehlwerk, kein Nutzerdatum).",
     "src/services/official_alerts/meteoalarm_budget.py::_now_ts::0": "raw_astimezone (:167) — Kontingent-Zeitstempel bewusst in UTC.",
     "src/services/official_alerts/meteoalarm_budget.py::_today_utc::0": "raw_astimezone (:176) — Kontingent-Tag bewusst in UTC.",

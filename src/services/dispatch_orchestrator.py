@@ -120,30 +120,28 @@ class CompareDispatchStrategy:
     def empty_result(self) -> tuple[int, int]:
         return (0, 0)
 
-    #: Issue #1726 (offen): der Ortsvergleich entscheidet Faelligkeit weiterhin
-    #: an dieser festen Zone. Sie steht hier SICHTBAR statt versteckt, weil die
-    #: zugehoerige Produktfrage offen ist -- welche Zone gilt bei einem
-    #: Vergleich ueber Orte in mehreren Zonen? Das ist eine Entscheidung, keine
-    #: Ableitung, und wird nicht nebenbei in #1724 getroffen.
-    NOCH_NICHT_ORTSZEIT_SIEHE_1726 = "Europe/Vienna"
+    #: Referenz-Zone des manuellen `?hour=`-Testausloesers
+    #: (`scheduler_dispatch_service.run_compare_presets_daily`) -- reines
+    #: Ops-/Debug-Werkzeug ohne Preset-Bezug. Die FAELLIGKEIT selbst haengt
+    #: seit #1726 an der Ortszone des jeweiligen Presets, nicht mehr hier.
+    MANUAL_TRIGGER_REFERENCE_ZONE = "Europe/Vienna"
 
     def collect_due(self, now_utc: "datetime") -> list:
-        from zoneinfo import ZoneInfo
-
+        from app.loader import load_all_locations
         from services.compare_slot_scheduler import presets_due_for_hour
         from services.scheduler_dispatch_service import _load_presets_for_dispatch
-        from utils.timezone import local_dt
 
         presets = _load_presets_for_dispatch(self._user_id, self._data_root)
         if presets is None:
             return []
         self._presets = presets
-        # Verhaltensgleich zum Stand vor #1724: Stunde UND Kalendertag aus
-        # derselben festen Zone -- vorher kam die Stunde vom Aufrufer und der
-        # Tag aus `date.today()` (Prozess-Zeitzone). Beide jetzt aus EINER
-        # Ableitung, damit sie an der Tagesgrenze nicht auseinanderfallen.
-        vor_ort = local_dt(now_utc, ZoneInfo(self.NOCH_NICHT_ORTSZEIT_SIEHE_1726))
-        return presets_due_for_hour(presets, vor_ort.hour, vor_ort.date())
+        # Issue #1726: jedes Preset wird gegen die Ortszone SEINES ersten
+        # aufloesbaren Orts geprueft -- ein globaler `vor_ort` kann das nicht
+        # abbilden. Ortsliste deshalb vorab laden (bisher lazy) und mitgeben.
+        if self._all_locations is None:
+            self._all_locations = load_all_locations(user_id=self._user_id)
+        by_id = {loc.id: loc for loc in self._all_locations}
+        return presets_due_for_hour(presets, by_id, now_utc)
 
     def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1250 Scheibe 3 (AC-10/AC-11/AC-12): Auto-Pause fuer Presets

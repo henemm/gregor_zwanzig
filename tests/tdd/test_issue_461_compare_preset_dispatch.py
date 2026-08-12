@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from tests.helpers.compare_briefings import read_compare_briefings, write_compare_briefings
+from tests.helpers.compare_slot_time import utc_slot_for_manual_hour
 
 
 # ---------------------------------------------------------------------------
@@ -249,12 +250,17 @@ class TestComparePresetsFilterLogic:
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         # Preset mit leeren location_ids → sollte error_count erhöhen, nicht crashen
+        # Issue #1726: ohne aufloesbaren Ort gibt es auch keine Ortszone, das
+        # Preset rechnet also in UTC — waehrend `hour=6` in der Referenz-Zone
+        # Europe/Vienna verankert ist. Der Slot bekommt deshalb die UTC-Stunde
+        # desselben Zeitpunkts, sonst ist das Preset nicht mehr faellig und der
+        # Fehlschlag, den `failed == 1` nachweist, faende gar nicht statt.
         bad_preset = _make_preset(preset_id="cp-bad", schedule="daily", location_ids=[])
+        bad_preset["morning_time"] = utc_slot_for_manual_hour(6)
         _write_presets(tmp_path, "default", [bad_preset])
 
         # Kein pytest.raises — Fehler werden intern abgefangen
-        # hour=6: expliziter Morgen-Slot (Default-Fallback ohne morning_time,
-        # s. resolve_preset_slots) -- macht das Preset deterministisch
+        # hour=6: expliziter Morgen-Slot -- macht das Preset deterministisch
         # faellig, statt von der Wanduhrzeit des Testlaufs abzuhaengen
         # (Issue #1290 Nebenbefund: die neue failed==1-Assertion braucht
         # einen tatsaechlich fahrplanmaessig faelligen Lauf).

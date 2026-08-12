@@ -539,30 +539,50 @@ def test_gegenprobe_zieltag_wird_je_trip_bestimmt_nicht_einmal_fuer_alle():
     )
 
 
+class _Ort:
+    """Ort-Stellvertreter mit genau den Feldern, die `resolve_location_tz`
+    liest (`timezone`, `lat`, `lon`) — echtes Objekt, kein Mock."""
+
+    def __init__(self, loc_id: str, lat: float, lon: float) -> None:
+        self.id = loc_id
+        self.lat = lat
+        self.lon = lon
+        self.timezone = None
+
+
 def test_gegenprobe_ortsvergleich_tag_und_stunde_aus_derselben_zone():
     """Verfälschung M4: der Ortsvergleich holt seinen Kalendertag wieder aus
-    `date.today()` (Prozess-Zeitzone) statt aus derselben Zone wie die Stunde.
+    einer ZWEITEN Ableitung (`date.today()`, Prozess-Zeitzone) statt aus
+    derselben Zone wie die Stunde — an der Tagesgrenze fallen beide dann
+    auseinander. Das war der Zustand vor #1724.
 
-    AC-8 fordert unveraendertes Compare-Verhalten — unveraendert heisst hier
-    ausdruecklich NICHT "egal": Stunde und Tag muessen aus EINER Ableitung
-    kommen, sonst fallen sie an der Tagesgrenze auseinander. Genau das war der
-    Zustand vor #1724 (Stunde vom Aufrufer, Tag aus `date.today()`).
+    🔴 Fortgeschrieben mit #1726: Bis dahin bildete `collect_due()` Stunde und
+    Tag SELBST, aus einer festen Zone, und der Test las beide am Aufruf von
+    `presets_due_for_hour` ab. Seit #1726 hat jedes Preset seine EIGENE Zone
+    (die seines ersten Orts) — ein globaler Stunde/Tag-Wert kann das nicht mehr
+    abbilden, `collect_due()` reicht deshalb den ZEITPUNKT und die Ortsliste
+    durch. Die Zusicherung selbst bleibt: Stunde UND Tag entstehen aus EINER
+    Zonen-Ableitung. Sie wird jetzt an den zwei Stellen geprüft, an denen sie
+    wirkt — Durchreichung oben, Ableitung unten.
     """
-    from datetime import date as _date
-
+    from services.compare_slot_scheduler import presets_due_for_hour
     from services.dispatch_orchestrator import CompareDispatchStrategy
     from utils.timezone import local_dt
 
-    zone = ZoneInfo(CompareDispatchStrategy.NOCH_NICHT_ORTSZEIT_SIEHE_1726)
-    # 23:30 UTC: in der Vergleichs-Zone ist bereits der Folgetag.
+    # 23:30 UTC am 20.08.: in Auckland ist bereits der 21.08. (+12). Bewusst
+    # NICHT Wien: Wien war bis #1726 die fest verdrahtete Vergleichs-Zone, ein
+    # Rueckfall darauf waere hier unsichtbar.
     now = datetime(2026, 8, 20, 23, 30, tzinfo=timezone.utc)
-    vor_ort = local_dt(now, zone)
+    lat, lon = ZONEN["Pacific/Auckland"]
+    vor_ort = local_dt(now, ZoneInfo("Pacific/Auckland"))
     assert vor_ort.date() != now.date(), "Testaufbau prueft nichts"
 
-    gesehen: list[tuple[int, _date]] = []
+    # (1) `collect_due()` reicht den ZEITPUNKT unveraendert durch und legt die
+    #     Ortsliste dazu — es darf Stunde/Tag NICHT vorab selbst festlegen.
+    gesehen: list[tuple[dict, datetime]] = []
 
-    def _protokollierend(presets, hour, today):
-        gesehen.append((hour, today))
+    def _protokollierend(presets, all_locations, now_utc):
+        gesehen.append((all_locations, now_utc))
         return []
 
     import services.compare_slot_scheduler as css
@@ -581,9 +601,31 @@ def test_gegenprobe_ortsvergleich_tag_und_stunde_aus_derselben_zone():
         css.presets_due_for_hour = echte_funktion
         sds._load_presets_for_dispatch = echter_loader
 
-    assert gesehen == [(vor_ort.hour, vor_ort.date())], (
-        f"Stunde und Kalendertag muessen aus derselben Zonen-Ableitung stammen. "
-        f"Erwartet {(vor_ort.hour, vor_ort.date())}, gesehen {gesehen}"
+    assert len(gesehen) == 1 and gesehen[0][1] == now, (
+        f"Der Zeitpunkt muss unveraendert durchgereicht werden, damit jedes "
+        f"Preset ihn in SEINER Zone auswerten kann. Gesehen: {gesehen!r}"
+    )
+    assert isinstance(gesehen[0][0], dict), (
+        "Die Ortsliste gehoert dazu — ohne sie kann keine Preset-Zone "
+        f"aufgeloest werden. Gesehen: {gesehen[0][0]!r}"
+    )
+
+    # (2) Die echte Funktion leitet Stunde UND Tag aus DERSELBEN Zone ab: das
+    #     Preset ist zur Auckland-Ortsstunde faellig und traegt den
+    #     Auckland-Ortstag — nicht den UTC-Tag.
+    ort = _Ort("loc-akl", lat, lon)
+    preset = {
+        "id": "p1", "schedule": "daily", "location_ids": ["loc-akl"],
+        "morning_enabled": True, "morning_time": f"{vor_ort.hour:02d}:00:00",
+        "evening_enabled": False, "evening_time": "18:00:00",
+    }
+
+    faellig = presets_due_for_hour([preset], {"loc-akl": ort}, now)
+
+    assert [(p["id"], td) for p, td, _v in faellig] == [("p1", vor_ort.date())], (
+        f"Stunde und Kalendertag muessen aus derselben Zonen-Ableitung stammen "
+        f"(erwartet Ortstag {vor_ort.date()}, UTC-Tag waere {now.date()}). "
+        f"Gefunden: {faellig!r}"
     )
 
 

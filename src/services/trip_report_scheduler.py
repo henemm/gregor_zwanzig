@@ -1567,7 +1567,13 @@ class TripReportSchedulerService:
             if minutes_until_start > NOWCAST_HORIZON_MIN:
                 return None
 
-        if not alert_daily_limit.is_allowed(self._user_id, now_utc, reason="nowcast"):
+        # Issue #1726: reine Lesestelle (bucht nie), liest aber denselben
+        # Zaehler wie der Alarm-Pfad — also auf dem Kalendertag der TOUR.
+        from services.trip_day import anchor_tz
+
+        if not alert_daily_limit.is_allowed(
+            self._user_id, now_utc, anchor_tz(trip, now_utc), reason="nowcast",
+        ):
             return None
 
         from services.radar_service import INTENSITY_HEAVY, RadarNowcastService
