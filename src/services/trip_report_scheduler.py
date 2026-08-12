@@ -82,7 +82,7 @@ VERMERK_AUSGAENGE = frozenset({"sent", "no_stage", "no_weather", "no_channels"})
 # `konfigurierte_stunde <= ortsstunde < konfigurierte_stunde + 3`. Drei
 # Stunden decken den an Umstellungstagen ausfallenden Cron-Tick (1 Stunde,
 # `robfig/cron/v3`) mit Reserve fuer einen gescheiterten, nicht wiederholten
-# HTTP-Post (`scheduler.go:547`). Eine Deckelung am Tagesende ist nicht
+# HTTP-Post (`scheduler.triggerEndpointForUser`). Eine Deckelung am Tagesende ist nicht
 # noetig: fuer Slot 22 sind es die Ortsstunden 22 und 23, ab Ortsmitternacht
 # wechselt der Ortstag und `0 >= 22` ist falsch. Die Alternative „bis
 # Tagesende" wurde verworfen, weil sie neu angelegte oder aus `paused_until`
@@ -396,7 +396,8 @@ class TripReportSchedulerService:
         fehlt eine Ortsstunde ersatzlos (ein auf 02:00 gestelltes Briefing
         entfiel), am Herbsttag existiert sie zweimal (es ging zweimal raus).
         Das Fenster faengt zusaetzlich den Cron-Tick auf, der an genau diesen
-        Tagen weltweit fuer ALLE Nutzer ausfaellt (`scheduler.go:112`).
+        Tagen weltweit fuer ALLE Nutzer ausfaellt (`cron.New(cron.WithLocation)`
+        in `internal/scheduler/scheduler.go`, Verhalten von `robfig/cron/v3`).
         Erst der Vermerk macht das Fenster gefahrlos -- ohne ihn waere `>=`
         stuendlicher Serienversand.
 
@@ -408,12 +409,12 @@ class TripReportSchedulerService:
         auseinanderfallen (#1697).
 
         Der Vermerk-Filter sitzt HIER und nicht erst im Versand (Pruefort =
-        Wirkort): `_process_pending_markers` (`:445-448`) raeumt den
-        #1012-Nachliefer-Marker weg, sobald der Trip in `due_trip_ids_now`
-        steht -- eine unehrlich lange Liste legte den Nachliefermechanismus
-        lautlos still. Und er sitzt NACH `_get_active_trips`, weil dort
-        `skip_next` bei jedem Sammellauf konsumiert wird (`:678-683`),
-        unabhaengig von der Faelligkeit.
+        Wirkort): `_process_pending_markers` raeumt den #1012-Nachliefer-Marker
+        weg, sobald der Trip in `due_trip_ids_now` steht -- eine unehrlich
+        lange Liste legte den Nachliefermechanismus lautlos still. Und er sitzt
+        NACH `_get_active_trips`, weil dort `skip_next` bei jedem Sammellauf
+        konsumiert wird (RMW auf `report_config`), unabhaengig von der
+        Faelligkeit.
         """
         from services.trip_day import trip_local_now
 
@@ -885,7 +886,7 @@ class TripReportSchedulerService:
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
         # Issue #1725 (Adversary F006): `angefordert=True` — dieser Weg traegt
-        # das Inbound-Kommando „report" (`trip_command_processor.py:1019`).
+        # das Inbound-Kommando „report" (`trip_command_processor._trigger_report`).
         return self._send_trip_report(
             trip, report_type, allow_test_fallback=True, angefordert=True,
         )
@@ -913,7 +914,7 @@ class TripReportSchedulerService:
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
         # Issue #1725 (Adversary F006): `angefordert=True` — dieser Weg traegt
-        # den Test-Versand-Knopf (`api/routers/scheduler.py:232`).
+        # den Test-Versand-Knopf (`api/routers/scheduler.send_test_trip_report`).
         return self._send_trip_report_outcome(
             trip, report_type, allow_test_fallback=True, angefordert=True,
         )
@@ -998,15 +999,29 @@ class TripReportSchedulerService:
                 Fließt AUSSCHLIESSLICH in den `briefing_log.json`-Eintrag, damit
                 die Rückwärts-Ableitung ihn überspringen kann (AC-12).
                 🔴 Bewusst NICHT `on_demand` mitbenutzt: dieses Flag trägt
-                sieben weitere Bedeutungen, die für Test-Versand und „report"
-                allesamt unerwünscht wären — es unterdrückt den
-                Ausfall-Hinweisversand (`:1097`), setzt eine „auf Anfrage"-
-                Kennzeichnung in den Mail-Text (`:1462`), hält Anker und
-                Alarm-Gedächtnis an (`:1265`), unterdrückt beide
-                Nachliefer-Marker (`:1296`/`:1393`, `:1351`), verhindert das
-                Aufräumen des Versandfehler-Vermerks (`:1345`) und die
-                Entdopplung amtlicher Warnungen (`:1368`). Ein Flag mit zwei
+                sieben weitere Bedeutungen über acht Lesestellen (weil
+                `_mark_briefing_undelivered` zweimal vorkommt; vor diesem Fix
+                waren es neun — die neunte, der Log-Eintrag, ist jetzt
+                `angefordert`), die für Test-Versand und „report" allesamt
+                unerwünscht wären. Es
+                unterdrückt den Ausfall-Hinweisversand
+                (`send_no_data_hint`-Zweig im Totalausfall), setzt eine
+                „auf Anfrage"-Kennzeichnung in den Mail-Text
+                (`on_demand_prefix` in `_build_trip_report_request`), hält
+                Anker und Alarm-Gedächtnis an
+                (`write_anchor_and_reset_memory` in `_anchor_and_reset`),
+                unterdrückt beide Nachliefer-Marker
+                (`_mark_briefing_undelivered` im Ausnahme- UND im
+                `channels_unreachable`-Zweig, `_write_pending_marker` beim
+                Teilausfall), verhindert das Aufräumen des
+                Versandfehler-Vermerks (`_clear_dispatch_error_marker`) und
+                die Entdopplung amtlicher Warnungen
+                (`record_official_alerts_reported`). Ein Flag mit zwei
                 Bedeutungen führt den nächsten Leser in die Irre.
+                Absichtlich Namen statt Zeilennummern: diese Aufzählung stand
+                zuerst mit Zahlen hier und zeigte nach dem eigenen Commit um
+                30 Zeilen daneben — ausgerechnet der Verweis auf die
+                Log-Zeile landete auf dem Gegenbeispiel (Adversary F008).
 
         Returns:
             "no_stage" if no matching stage, "no_weather" if the weather
@@ -1594,9 +1609,10 @@ class TripReportSchedulerService:
         Eintrag aus einem vom Nutzer ANGEFORDERTEN Versand stammt und nicht aus
         dem regulären Slot. Angefordert sind alle drei Wege, die AC-12
         aufzählt: SMS „heute"/„morgen" (`send_on_demand_report`), der
-        Test-Versand-Knopf (`send_test_report_outcome`,
-        `api/routers/scheduler.py:232`) und das Inbound-Kommando „report"
-        (`send_test_report`, `trip_command_processor.py:1019`). Die
+        Test-Versand-Knopf (`send_test_report_outcome`, gerufen von
+        `api/routers/scheduler.send_test_trip_report`) und das Inbound-Kommando
+        „report" (`send_test_report`, gerufen von
+        `trip_command_processor._trigger_report`). Die
         Rückwärts-Ableitung in `briefing_slots._log_bezeugt_versand`
         überspringt solche Einträge — ohne das Feld nähme eine Nutzeranfrage
         dem Nutzer sein reguläres Briefing desselben Ortstags (AC-12).
@@ -1605,8 +1621,8 @@ class TripReportSchedulerService:
         die Cockpit-Kachel #393, und das ist eine andere Scheibe. Der
         JSON-Schlüssel heißt weiterhin `on_demand` — er ist das Wire-Format,
         das `briefing_slots` liest; Go liest die Datei nur
-        (`internal/store/log.go:23`), ignoriert unbekannte Felder und schreibt
-        sie deshalb auch nicht weg.
+        (`store.LoadBriefingLog`, kein Schreibpfad), ignoriert unbekannte
+        Felder und schreibt sie deshalb auch nicht weg.
         """
         path = get_data_dir(self._user_id) / "briefing_log.json"
         data = json.loads(path.read_text()) if path.exists() else {"entries": []}
