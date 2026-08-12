@@ -27,8 +27,15 @@ Nicht Gegenstand: die quellenübergreifende Entdopplung mehrerer Alarme zum selb
 
 - **Datei:** `src/output/renderers/alert/render.py`, `src/output/renderers/alert/official_alerts.py`,
   `src/output/renderers/alert/model.py`, `src/output/renderers/alert/project.py`
-- **Identifier:** `_km_str`, `_km_str_onset`, `render_subject`, `format_segment_reference`,
-  `AlertEvent`, `OnsetEvent`, `to_alert_message`
+- **Identifier:** `_km_str`, `_km_str_onset`, **`_km_str_events`**, `render_subject`,
+  `format_segment_reference`, `AlertEvent`, `OnsetEvent`, `to_alert_message`
+
+🔴 **Es sind DREI km-Bauer, nicht zwei** (in der RED-Phase 2026-08-12 nachgemessen):
+`_km_str` (`render.py:100-107`), `_km_str_onset` (`render.py:110-111`) und
+**`_km_str_events` (`render.py:386-388`)**. Der dritte speist die Zeile „Wo & wann" der
+Abweichungsmail (`render.py:379`) — also genau die Stelle, die AC-6 regelt. Wer nur die beiden
+erstgenannten umstellt, lässt AC-6 rot. (Ein vierter, `_corridor_when` bei `render.py:117-121`,
+gehört zum toten Korridor-Pfad und bleibt außen vor.)
 
 Schicht: **Python-Core** (Renderer + Projektion). Keine Go-Änderung, keine Frontend-Änderung.
 
@@ -142,11 +149,17 @@ Ortsbezug, Quelle) wird zu Datenzeilen im Aufbau des Nowcasts.
   - Test: die bestehenden Golden-Vergleiche des Ortsvergleichs laufen unverändert grün
     (`tests/tdd/test_issue_1169_compare_alert_consumer.py`).
 
-- **AC-5:** Given ein Trip-Alarm / When die Kurznachricht (SMS und Premium-SMS) gerendert wird /
-  Then nennt sie weiterhin **keinen** Ortsnamen und bleibt innerhalb von 140 Zeichen — der
-  PO-Entscheid vom 2026-08-04 bleibt unangetastet.
+- **AC-5:** Given ein Trip-Abweichungs- oder Nowcast-Alarm / When die Kurznachricht (SMS und
+  Premium-SMS) über `render_sms` gerendert wird / Then nennt sie weiterhin **keinen** Ortsbezug
+  und bleibt innerhalb von 140 Zeichen — der PO-Entscheid vom 2026-08-04 bleibt unangetastet.
   - Test: Kurznachricht für einen Trip-Alarm mit Ziel-Segment rendern; sie darf weder `Ziel`
     noch `Segment` enthalten, und ihre Länge bleibt ≤ 140.
+  - **Abgrenzung (in der RED-Phase gemessen):** Die Kurznachricht der **amtlichen Warnung** ist
+    davon NICHT betroffen — sie trägt seit jeher einen eigenen Kurz-Ortsbezug
+    (`render_official_alert_sms` → `sms_scope`, `official_alerts.py:1960-1967`), gemessene
+    Ist-Ausgabe `KHW403 AMT GELB1/3: TH Mi14-22, nur Ziel`. Das ist Bestand aus #1318 und in
+    `sms_official_alert_tokens.md` geregelt. AC-5 gilt ausschließlich für `render_sms`; wer den
+    amtlichen SMS-Pfad „mit angleicht", bricht eine andere Spec.
 
 - **AC-6:** Given eine Alarm-Mail mit Ortsangabe im Betreff / When der Mail-Körper gerendert
   wird / Then nennt die Zeile „Wo & wann" **denselben** Ortstext wie der Betreff — innerhalb
