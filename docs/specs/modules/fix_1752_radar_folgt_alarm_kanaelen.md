@@ -169,6 +169,15 @@ Code-Referenz (s. Known Limitations).
   als Standard-Settings für alle Kanal-Auflösungs-Tests — kein Kanal ist je zufällig
   "mit-erreichbar".
 
+  🔴 **Ausnahme AC-5, in der RED-Phase gemessen und korrigiert (2026-08-12).** Mit
+  `settings_no_channel_reachable()` liefert auch die **alte** Ableitung ein leeres Set, der Trip
+  bliebe still, und AC-5 wäre **strukturell grün, ohne irgendetwas zu bewachen** — per Sonde
+  nachgewiesen (1 passed vor jeder Änderung). AC-5 läuft deshalb mit `settings_email_only()`:
+  erst wenn das Briefing technisch erreichbar ist, wird der geprüfte Widerspruch „Briefing an,
+  Alarme-Reiter komplett aus" überhaupt sichtbar. Das deckt sich mit dem Given der AC („das
+  Trip-Briefing ist davon unberührt"); die Pflichtnennung oben gilt ausdrücklich nur AC-1/AC-6.
+  **Merksatz: ein Test, der nicht rot werden KANN, ist kein Nachweis.**
+
 ## Entscheidungen (D1–D6)
 
 - **D1 — Ein Auflösungsweg.** Radar folgt `trip.alert_channels` wie alle anderen Alarmtypen;
@@ -188,6 +197,27 @@ Code-Referenz (s. Known Limitations).
 - **D4 — Radar erbt die `alert_rules`-Union mit.** Das ist eine echte Bedeutungserweiterung
   über „Quelle wechseln" hinaus (AC-7) — jede Alternative (eigene Fassung ohne Regel-Teil)
   wäre die zweite, leicht abweichende Kopie, die diese Scheibe beseitigt.
+
+  🔴 **Präzisierung, in der RED-Phase aufgefallen und am Code nachgemessen
+  (`trip_alert.py:1534-1542`, 2026-08-12).** Die Regel-Kanäle **ergänzen** den Alarme-Reiter
+  nicht, sie **ersetzen** ihn je Regel:
+
+  ```
+  ohne aktive Regeln          → Alarme-Reiter (bzw. Briefing-Fallback)
+  mit aktiven Regeln          → Union ÜBER DIE REGELN, je Regel:
+        Regel hat eigene Kanäle  → diese
+        Regel hat keine          → Alarme-Reiter
+  ```
+
+  Folge: Der Alarme-Reiter-Anteil fällt **nur dann vollständig weg, wenn ALLE aktiven Regeln
+  eigene Kanäle tragen**. Hat auch nur eine Regel keine, bleibt er über diese erhalten. Der
+  RED-Bericht formulierte das zu grob („bei mindestens einer Regel mit Kanälen wird der geerbte
+  Anteil komplett verworfen") — das gilt nur bei genau einer aktiven Regel, wie im Test-Aufbau.
+  **Wer „Union aus Alarme-Reiter + Regel" liest, baut etwas anderes.**
+
+  Für den KHW-Trip folgenlos: vier aktive Regeln, **alle** mit leerer Kanalliste ⇒ Ergebnis ist
+  exakt der Alarme-Reiter. Die Semantik ist vorbestehend (#638) und wird hier **nicht** geändert
+  — Radar übernimmt sie nur mit.
 - **D5 — Zustellung ändert sich nicht, Beobachtbarkeit schon.** `_dispatch_alert_message`
   wiederholt `can_send_*()` (`notification_service.py:1388,1404,1485`), Premium-SMS bewusst
   ohne Vorprüfung (`:1499`). Wo heute `:1061` **ohne** Protokolleintrag abbricht (weil die alte
