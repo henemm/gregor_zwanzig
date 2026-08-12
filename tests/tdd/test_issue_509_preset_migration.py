@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.compare_slot_time import utc_slot_for_manual_hour
 
 
 # ---------------------------------------------------------------------------
@@ -74,11 +75,16 @@ class TestEmpfaengerFallback:
 
         preset = _minimal_preset("cp-no-emp", empfaenger=[])
         preset["location_ids"] = ["loc-x"]
+        # Issue #1726: `loc-x` existiert nicht, damit hat das Preset keine
+        # Ortszone und rechnet in UTC — `hour=6` ist aber in Europe/Vienna
+        # verankert. Ohne den passenden UTC-Slot waere es nicht mehr faellig
+        # und die erwartete Warnung entstuende nie.
+        preset["morning_time"] = utc_slot_for_manual_hour(6)
         _write_presets(tmp_path, "fallback-user", [preset])
 
         with caplog.at_level(logging.WARNING, logger="scheduler.dispatch"):
-            # hour=6 fixiert den Morgen-Slot (Fallback morning_time=06:00),
-            # sonst ist das Preset nur zur realen Vienna-Stunde 6 faellig (Zeit-Flake).
+            # hour=6 fixiert den Morgen-Slot, sonst ist das Preset nur zur
+            # realen Vienna-Stunde 6 faellig (Zeit-Flake).
             _run_compare_presets_daily(user_id="fallback-user", data_root=str(tmp_path), hour=6)
 
         skip_msgs = [r.message for r in caplog.records if "empfaenger" in r.message.lower()]
@@ -105,6 +111,11 @@ class TestEmpfaengerFallback:
 
         preset = _minimal_preset("cp-fallback", empfaenger=[])
         preset["location_ids"] = ["loc-does-not-exist"]  # nicht leer, aber kein Match
+        # Issue #1726: kein aufloesbarer Ort → keine Ortszone → das Preset
+        # rechnet in UTC, `hour=6` verankert dagegen in Europe/Vienna. Ohne
+        # den passenden UTC-Slot bliebe das Preset unfaellig und der gepruefte
+        # "nicht aufloesbar"-Abbruch traete nie ein.
+        preset["morning_time"] = utc_slot_for_manual_hour(6)
         _write_presets(tmp_path, "fallback-user2", [preset])
 
         with caplog.at_level(logging.INFO, logger="scheduler.dispatch"):

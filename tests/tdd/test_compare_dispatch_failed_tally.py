@@ -36,6 +36,7 @@ import pytest
 
 from app.models import ForecastDataPoint, ThunderLevel
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.compare_slot_time import utc_slot_for_manual_hour
 
 TARGET_DATE = date(2026, 7, 18)
 
@@ -72,6 +73,23 @@ def _preset(preset_id: str, location_ids: list[str], **extra) -> dict:
     }
     preset.update(extra)
     return preset
+
+
+def _broken_preset(preset_id: str, location_ids: list[str], **extra) -> dict:
+    """Ein faelliges Preset, dessen Versand am unaufloesbaren Ort scheitert.
+
+    Issue #1726: der Fehlschlag-Pfad und die Zonen-Aufloesung haengen seither
+    an DERSELBEN Bedingung — loest keiner der `location_ids` einen Ort auf,
+    scheitert nicht nur `order_locations_by_ids`, sondern es gibt auch keine
+    Ortszone, und das Preset rechnet in UTC. Der Ausloeser `hour=6` verankert
+    in Europe/Vienna; ohne eigenen Slot waere so ein Preset also gar nicht
+    mehr faellig und der Fehlschlag traete nie ein. Der Slot wird deshalb auf
+    die UTC-Stunde desselben Zeitpunkts gesetzt (berechnet, nicht getippt).
+    Die geprueften Zaehler bleiben unveraendert.
+    """
+    return _preset(
+        preset_id, location_ids, morning_time=utc_slot_for_manual_hour(6), **extra,
+    )
 
 
 @pytest.fixture
@@ -222,8 +240,8 @@ class TestTotalFailureVisible:
 
         data_root, user_id = dispatch_env
         _write_presets(data_root, user_id, [
-            _preset("cp-fail-1", ["loc-missing-a"]),
-            _preset("cp-fail-2", ["loc-missing-b"]),
+            _broken_preset("cp-fail-1", ["loc-missing-a"]),
+            _broken_preset("cp-fail-2", ["loc-missing-b"]),
         ])
 
         result = run_compare_presets_daily(
@@ -250,8 +268,8 @@ class TestTotalFailureVisible:
 
         data_root, user_id = dispatch_env
         _write_presets(data_root, user_id, [
-            _preset("cp-fail-1", ["loc-missing-a"]),
-            _preset("cp-fail-2", ["loc-missing-b"]),
+            _broken_preset("cp-fail-1", ["loc-missing-a"]),
+            _broken_preset("cp-fail-2", ["loc-missing-b"]),
         ])
 
         client = TestClient(app)
@@ -296,7 +314,7 @@ def test_mixed_run_reports_exact_success_and_failure_counts(
     _write_location(data_root, user_id, "loc-ibk", "Innsbruck")
     _write_presets(data_root, user_id, [
         _preset("cp-a-ok", ["loc-ibk"]),
-        _preset("cp-b-bad", ["loc-missing"]),
+        _broken_preset("cp-b-bad", ["loc-missing"]),
     ])
 
     result = run_compare_presets_daily(
@@ -385,7 +403,7 @@ def test_broken_preset_only_increments_failed_others_still_dispatch(
     # Alphabetische Dateinamen-Ordnung: das kaputte Preset liegt in der Mitte.
     _write_presets(data_root, user_id, [
         _preset("cp-a-ok", ["loc-ibk"]),
-        _preset("cp-b-broken", ["loc-missing"]),
+        _broken_preset("cp-b-broken", ["loc-missing"]),
         _preset("cp-c-ok", ["loc-ibk"]),
     ])
 
