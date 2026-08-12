@@ -59,6 +59,8 @@ from __future__ import annotations
 
 import uuid
 
+import pytest
+
 from app.models import (
     AlertMetric,
     AlertRule,
@@ -602,6 +604,67 @@ def test_radar_alert_channels_follow_active_alert_rule_override(monkeypatch):
             "AC-7: bei einer Regel mit eigenem Kanal gewinnt deren Union — "
             "der Standard-Kanal E-Mail zaehlt dann nicht mit, erhalten: "
             f"{reason_for_channel(entry, 'email')!r} (Eintrag: {entry!r})"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ═══════════ Fehler-Isolation je Trip (Adversary-Finding F001) ══════════════
+
+
+def test_broken_channel_resolution_of_one_trip_does_not_stop_the_batch(monkeypatch):
+    """Given der erste von zwei Trips desselben Nutzers hat ein beschaedigtes
+    Kanal-Feld gespeichert (Liste statt Objekt), sodass die Kanal-Aufloesung
+    fuer ihn scheitert / When der Radar-Stapellauf laeuft / Then wird NUR
+    dieser eine Trip uebersprungen — der zweite Trip wird trotzdem geprueft
+    und hinterlaesst seinen Protokoll-Eintrag.
+
+    Warum diese Zusicherung (Muster ``fix_1479``): die Kanal-Aufloesung dieser
+    Scheibe (``trip_alert.py:931``) sitzt in der Trip-SCHLEIFE, der reale
+    Aufrufer (``api/routers/scheduler.py:96-102``) faengt nichts ab. Ohne
+    Absicherung je Trip reisst ein einziger beschaedigter Trip den gesamten
+    Lauf ab — alle nachfolgenden Trips desselben Nutzers verlieren ihren
+    Radar-Alarm, bei jedem Scheduler-Tick erneut, bis die Daten repariert sind.
+
+    MOCK-FREI (Testpolitik dieser Datei): kein Test-Double des Prueflings —
+    ``alert_channels`` wird auf eine LISTE gesetzt, wie sie eine fehlerhafte
+    Persistenz hinterlaesst; ``_effective_alert_channels()`` ruft darauf
+    ``.get()`` (``trip_alert.py:1500``) und wirft echt. Die ``pytest.raises``-
+    Vorbedingung haelt den Test ehrlich: toleriert die Aufloesung diesen Wert
+    eines Tages, faellt der Test laut aus, statt still nichts mehr zu bewachen.
+
+    PRUEFORT = WIRKORT: Nachweis ist der Protokoll-Eintrag von Trip B im
+    echten ``alert_log.json`` — nicht die blosse Abwesenheit einer Ausnahme.
+    """
+    uid = fresh_uid("f001")
+    clean_uid(uid)
+    try:
+        write_user_tier(uid, "standard")
+        settings = settings_no_channel_reachable()
+        trip_a_id, trip_b_id = _trip_id("f001-kaputt"), _trip_id("f001-heil")
+        trip_a = _radar_trip(trip_a_id, send_email=True)
+        trip_a.alert_channels = ["sms"]  # beschaedigt: Liste statt Objekt
+        trip_b = _radar_trip(
+            trip_b_id, send_email=False,
+            alert_channels={"email": False, "telegram": False, "sms": True},
+        )
+        svc = trip_alert_service(uid, settings, CountingFrameSource(), lambda s, b: None)
+        with pytest.raises(AttributeError):
+            svc._effective_alert_channels(trip_a)
+
+        _run_radar(monkeypatch, uid, [trip_a, trip_b], settings)
+
+        entry = _single_entry(uid, trip_b_id)
+        assert reason_for_channel(entry, "sms") == REASON_DELIVERY_FAILED, (
+            "Der zweite Trip muss trotz des beschaedigten ersten geprueft "
+            "werden und seinen Kanal aufloesen, erhalten: "
+            f"{reason_for_channel(entry, 'sms')!r} (Eintrag: {entry!r})"
+        )
+        assert entries_for(uid, trip_a_id, bucket="entries") == [], (
+            f"Der beschaedigte Trip selbst darf nichts protokollieren: {read_log(uid)!r}"
+        )
+        assert entries_for(uid, trip_a_id, bucket="not_delivered") == [], (
+            f"Auch nicht in 'not_delivered': {read_log(uid)!r}"
         )
     finally:
         clean_uid(uid)

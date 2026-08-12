@@ -823,38 +823,6 @@ class TripAlertService:
         """Clear radar throttle for a trip (test helper)."""
         self._throttle_store.clear(_RADAR_THROTTLE_SCOPE, trip_id)
 
-    def _radar_effective_channels(self, trip: "Trip") -> set[str]:
-        """Kanal-Set des Radar-Alarms (Issue #1023): globale Faehigkeit UND
-        Trip-Opt-in, bei SMS zusaetzlich das Tier-Gate.
-
-        Issue #1467 S3 aus der Inline-Ableitung herausgezogen — die
-        Unterdrueckungs-Protokollierung braucht dieselbe Liste bereits am
-        Gate, also vor der Erkennung. Reine Ableitung ohne Seiteneffekt, das
-        Ergebnis ist an beiden Stellen identisch; eine zweite Fassung waere
-        genau die Duplikat-Falle, die diese Scheibe beseitigt.
-        """
-        config = trip.report_config
-        channels: set[str] = set()
-        if self._settings.can_send_email() and (not config or getattr(config, "send_email", True)):
-            channels.add("email")
-        if self._settings.can_send_telegram() and config and getattr(config, "send_telegram", False):
-            channels.add("telegram")
-        if (
-            self._settings.can_send_sms() and config
-            and getattr(config, "send_sms", False) and sms_allowed(self._user_id)
-        ):
-            channels.add("sms")
-        if (
-            config and getattr(config, "send_premium_sms", False)
-            and premium_sms_allowed(self._user_id)
-        ):
-            # Bewusst OHNE can_send_*()-Bereitschaftsfrage (D2/Spec-Nachtrag
-            # 2026-08-11): Premium-SMS hat keine feste Rufnummer, die
-            # Sendebereitschaft entscheidet ausschliesslich
-            # `PremiumSmsOutput._resolve_recipient()` zur Sendezeit.
-            channels.add("premium_sms")
-        return channels
-
     def _briefing_precip_for_onset(
         self,
         snapshot,
@@ -950,6 +918,29 @@ class TripAlertService:
                     )
                     continue
 
+            # Issue #1752 (Scheibe B zu #1745, D1/D2): Radar-Alarme folgen
+            # demselben Kanal-Resolver wie Gewitter-, Aenderungs- und amtliche
+            # Alarme — `trip.alert_channels`/`trip.alert_rules` statt der
+            # Briefing-Flags. Das Kanal-Set wird GENAU EINMAL berechnet und an
+            # allen drei Stellen (Unterdrueckungs-Protokoll, Leer-Check,
+            # Versand) geteilt; zwei leicht abweichende Ableitungen waren die
+            # Ursache dieses Bugs.
+            # D3: bewusst NACH dem Horizont-Guard oben — fuer ein Segment, das
+            # zeitlich gar nicht in Frage kommt, darf die `alert_rules`-Union
+            # nicht ausgewertet werden.
+            # Absicherung je Trip, nicht um den Stapellauf: scheitert die
+            # Kanal-Aufloesung EINES Trips (beschaedigte `alert_channels`/
+            # `alert_rules` aus der Persistenz), verlieren sonst ALLE weiteren
+            # Trips dieses Nutzers ihren Radar-Alarm — bei jedem Scheduler-Tick
+            # erneut, bis die Daten repariert sind (Muster `fix_1479`). Breite
+            # Klausel + laute Meldung mit Kennung, wie beim Nowcast-Abruf ein
+            # paar Zeilen weiter unten.
+            try:
+                effective_channels = self._effective_alert_channels(trip)
+            except Exception as e:
+                logger.error(f"Radar alert channel resolution failed for trip {trip.id}: {e}")
+                continue
+
             cooldown_min = (
                 trip.alert_cooldown_minutes
                 if trip.alert_cooldown_minutes is not None
@@ -984,7 +975,7 @@ class TripAlertService:
                     alert_log.append_suppressed_entry(
                         self._user_id, entity_id=trip.id, entity_type="trip",
                         reason=alert_log.REASON_NOWCAST, gate_reason=gate.reason,
-                        effective_channels=self._radar_effective_channels(trip),
+                        effective_channels=effective_channels,
                     )
                 except Exception as e:
                     logger.error(
@@ -1058,7 +1049,7 @@ class TripAlertService:
             # can_send_*()-Bereitschaftsfrage -- ein Trip mit ausschliesslich
             # Premium-SMS hat kein `sms_to`, `can_send_sms()` waere False,
             # obwohl ein funktionsfaehiger Kanal konfiguriert ist.
-            if not self._radar_effective_channels(trip):
+            if not effective_channels:
                 logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
                 continue
 
@@ -1104,18 +1095,12 @@ class TripAlertService:
                 tz=tz,
             )
 
-            # Issue #1023: Kanal-Set für NotificationService bauen; der Service prüft
-            # selbst can_send_*(). Trip-Ebene darf Kanäle explizit deaktivieren.
-            effective_channels = self._radar_effective_channels(trip)
-
-            if not effective_channels:
-                logger.info(f"Radar alert: alle Kanäle auf Trip-Ebene deaktiviert, kein Recording für {trip.id}")
-                continue
-
-            # Issue #1461 S3b-2a: eigenstaendige Inline-Ableitung (Kontext-
-            # Risiko 5) -- ruft `_effective_alert_channels()` bewusst NICHT
-            # auf, muss die Kanal-Schwelle deshalb hier ERNEUT anwenden, sonst
-            # bleibt der Regenradar-Pfad dauerhaft ungefiltert.
+            # Kanal-Schwelle (ADR-0046) auf dem oben einmalig berechneten,
+            # geteilten Kanal-Set. Bis #1752 stand hier ein dritter Aufruf der
+            # eigenen Radar-Ableitung samt zweitem Leer-Check — beides
+            # entfallen: die Aufloesung ist rein, `trip` bleibt zwischen dem
+            # Leer-Check oben (`if not effective_channels`) und dieser Stelle
+            # unveraendert.
             _radar_urgency = alert_urgency.urgency_from_radar(
                 is_convective=_radar_request.is_convective,
                 intensity_label=_radar_request.intensity_label,

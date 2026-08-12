@@ -368,7 +368,30 @@ CI-Lauf nur, dass nichts kaputtgegangen ist — nicht, dass etwas repariert wurd
 | AC-2 | Fallback bei `alert_channels is None` entfällt/bricht | `test_radar_alert_channels_fall_back_to_briefing_when_alert_channels_unset` |
 | AC-3 | Kanal-Schwelle (`split_by_threshold`) wird auf die alte, nicht-geteilte Variable angewendet | `test_radar_alert_below_threshold_channel_uses_shared_channel_set` |
 | AC-4 | Unterdrückungs-Protokoll (`:987`) bleibt bei der alten Auflösung, nur der Versand wird umgestellt | `test_radar_alert_suppressed_entry_matches_dispatch_channel_set` |
-| AC-5 | Der verbliebene erste Leer-Check (`:1061`) wird beim Entfernen des zweiten (`:1111-1113`) auf eine falsche Variable umgehängt | `test_radar_alert_stays_silent_when_all_trip_channels_off` |
+| AC-5 | Der verbliebene erste Leer-Check wird beim Entfernen des zweiten auf eine falsche Variable umgehängt | 🔴 **nicht** `…stays_silent_when_all_trip_channels_off`, sondern `test_radar_alert_logs_configured_but_unreachable_channel` (AC-6) — s. Nachtrag unten |
+| — | **Neu, Fix-Loop 1:** die Kanal-Auflösung wirft für einen Trip (beschädigte `alert_channels` aus der Persistenz) | `test_broken_channel_resolution_of_one_trip_does_not_stop_the_batch` |
+
+🔴 **Nachtrag zu AC-5, im Adversary-Lauf gefunden und im Fix-Loop nachgemessen (2026-08-12).**
+Die obige Zuordnung war **falsch**: Die Mutation wird gefangen, aber **nicht von AC-5** —
+`test_radar_alert_stays_silent_when_all_trip_channels_off` bleibt dabei grün. Grund: drei
+tiefer liegende Sicherungen halten das Verhalten unabhängig vom Leer-Check korrekt —
+`alert_log.append_entry()` verweigert bei leerem Kanal-Set jeden Eintrag
+(`alert_log.py:203-205`), die Sperrzeit wird erst nach `if not delivered: continue` gebucht
+(`trip_alert.py:1139-1142`), und `_dispatch_alert_message()` betritt einen Kanal-Zweig nur bei
+`"<kanal>" in effective_channels`. Gefangen wird die Mutation von **AC-6**, dessen Trip einen
+leeren Briefing-Satz hat und unter der Mutation stumm bliebe.
+
+**Was daraus folgt:** Das System ist an dieser Stelle korrekt und mehrfach abgesichert — die
+*Zusicherung der Spec* über die Abdeckung war es nicht. Ein AC, dessen benannte Mutation von
+einem anderen AC gefangen wird, bewacht seine eigene Codestelle nicht. AC-5 bleibt als
+Verhaltens-Zusicherung sinnvoll (ein stumm geschalteter Trip erzeugt kein Rauschen), taugt aber
+nicht als Nachweis für den Leer-Check. **Merksatz: „ein Test wird rot" ist erst dann ein
+Nachweis, wenn es der Test ist, dem man es zuschreibt.**
+
+**Bewusste Grenze:** Eine andere Lesart derselben Mutation — der Leer-Check ruft
+`_effective_alert_channels(trip)` ein zweites Mal frisch auf — bliebe von **allem** unentdeckt.
+Das ist kein Defekt: die Auflösung ist rein, `trip` ändert sich dazwischen nicht (Begründung
+steht im Code). Es ist aber auch nicht bewacht.
 | AC-6 | Die neue Auflösung prüft weiterhin selbst `can_send_*()`-Erreichbarkeit statt das dem Versand zu überlassen | `test_radar_alert_logs_configured_but_unreachable_channel` |
 | AC-7 | Die Auflösungsstelle nutzt eine eigene Fassung ohne `alert_rules`-Union statt `_effective_alert_channels()` unverändert | `test_radar_alert_channels_follow_active_alert_rule_override` |
 
