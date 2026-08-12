@@ -30,7 +30,7 @@ from output.renderers.alert.segments import normalize_segment_id
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
 from services.throttle_store import ThrottleStore
-from services.trip_day import trip_local_today
+from services.trip_day import anchor_tz, trip_local_today
 from services.user_tier import premium_sms_allowed, sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import tz_for_coords
@@ -227,7 +227,8 @@ class TripAlertService:
             return False
 
         # 1. QuietHours-Check (AC-4/5/6): Alert während stiller Stunden unterdrücken
-        if self._is_quiet_hours(trip, datetime.now(timezone.utc)):
+        now_utc = datetime.now(timezone.utc)
+        if self._is_quiet_hours(trip, now_utc):
             logger.debug(f"Alert suppressed: quiet hours active for trip {trip.id}")
             return False
 
@@ -238,7 +239,10 @@ class TripAlertService:
 
         # 1c. Issue #1070: Tages-Obergrenze nach Nutzerlevel (Free/Standard/Premium)
         # Issue #1555: reason="forecast_change" reserviert einen Anteil für NowCast.
-        if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc), reason="forecast_change"):
+        # Issue #1726: der Tageszaehler laeuft auf dem KALENDERTAG DER TOUR.
+        if not alert_daily_limit.is_allowed(
+            self._user_id, now_utc, anchor_tz(trip, now_utc), reason="forecast_change",
+        ):
             logger.debug(f"Alert suppressed: daily limit reached for trip {trip.id}")
             return False
 
@@ -273,6 +277,7 @@ class TripAlertService:
             ),
             channels=self._effective_alert_channels(trip),
             display_config=trip.display_config,
+            zone=anchor_tz(trip, now_utc),
         )
         engine = DeviationAlertEngine()
         eval_result = engine.evaluate(
@@ -342,7 +347,9 @@ class TripAlertService:
         # 7. Update throttle (only on success) + persist
         self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
         # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
-        alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
+        alert_daily_limit.increment(
+            self._user_id, now_utc, anchor_tz(trip, now_utc),
+        )
 
         return True
 
@@ -685,9 +692,13 @@ class TripAlertService:
 
         Returns:
             True if alerts should be suppressed (quiet hours active)
-        """
+
+        Issue #1726: Zone aus `anchor_tz(trip, now)` — der TAGESBEWUSSTEN
+        Aufloesung, nicht `trip_tz()`. Ein Trek durch mehrere Zonen braucht die
+        Zone SEINER AKTUELLEN Etappe, nicht die des Starttags."""
         return DeviationAlertEngine.is_quiet_hours(
             now, trip.alert_quiet_from, trip.alert_quiet_to,
+            anchor_tz(trip, now),
             context_label=trip.id,
         )
 
@@ -961,6 +972,7 @@ class TripAlertService:
                 quiet_to=trip.alert_quiet_to,
                 context_label=trip.id,
                 now=now_utc,
+                zone=anchor_tz(trip, now_utc),
                 throttle_store=self._throttle_store,
             )
             if not gate.allowed:
@@ -1158,6 +1170,7 @@ class TripAlertService:
             record_nowcast_sent(
                 user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
                 throttle_key=trip.id, now=datetime.now(timezone.utc),
+                zone=anchor_tz(trip, now_utc),
                 throttle_store=self._throttle_store,
             )
             sent += 1
@@ -1430,13 +1443,16 @@ class TripAlertService:
         (has_active_rules, _filter_significant_changes), da ein eigenständiger
         amtlicher Trigger laut PO-Entscheidung unabhängig vom Wetter-Delta feuern soll.
         """
-        if self._is_quiet_hours(trip, datetime.now(timezone.utc)):
+        now_utc = datetime.now(timezone.utc)
+        if self._is_quiet_hours(trip, now_utc):
             logger.debug(f"Official alert suppressed: quiet hours active for trip {trip.id}")
             return False
         if self._is_throttled_with_cooldown(trip):
             logger.debug(f"Official alert throttled for trip {trip.id}")
             return False
-        if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc)):
+        if not alert_daily_limit.is_allowed(
+            self._user_id, now_utc, anchor_tz(trip, now_utc),
+        ):
             logger.debug(f"Official alert suppressed: daily limit reached for trip {trip.id}")
             return False
 
@@ -1477,7 +1493,9 @@ class TripAlertService:
         if result.sent:
             self._record_official_alert_state(trip.id, official_notices)
             self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
-            alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
+            alert_daily_limit.increment(
+                self._user_id, now_utc, anchor_tz(trip, now_utc),
+            )
         return result.sent
 
     def _effective_alert_channels(self, trip: "Trip") -> set[str]:

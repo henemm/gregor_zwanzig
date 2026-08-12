@@ -159,16 +159,20 @@ def schreibe_ort(user_id: str, loc_id: str, zone_name: str):
     return loc
 
 
-def schreibe_ort_ohne_koordinaten(user_id: str, loc_id: str):
-    """Ort, dessen Zone NICHT auflösbar ist (Koordinaten auf 0/0 = Nullmeridian
-    im Golf von Guinea → `tz_for_coords` liefert "UTC" → `resolve_location_tz`
-    liefert `None`). Kein Konstrukt-Trick: genau diese Lage ist der reale Fall
-    „Ort ohne brauchbare Zone" aus `utils/timezone.py:60-64`."""
-    from app.loader import save_location
-
-    loc = location(loc_id, f"Ort {loc_id}", lat=0.0, lon=0.0)
-    save_location(loc, user_id=user_id)
-    return loc
+# 🔴 KORREKTUR DER RED-PHASE (GREEN, #1726). Hier stand ein Helfer
+# `schreibe_ort_ohne_koordinaten()`, der einen Ort auf 0/0 legte und behauptete,
+# `tz_for_coords(0, 0)` liefere "UTC" und damit `resolve_location_tz() is None`.
+# NACHGEMESSEN mit der installierten `timezonefinder`: sie liefert dort
+# `Etc/GMT` — seit Version 6 sind die Ozean-Zonen (`Etc/GMT±X`) in den Daten,
+# `timezone_at()` gibt für keinen Punkt der Erde mehr `None` zurück. Der Ort war
+# also sehr wohl auflösbar, der Test hätte die Zusicherung nie gemessen (er wäre
+# an der Protokoll-Erwartung hängengeblieben, ohne dass am Prüfling etwas fehlt).
+#
+# Der reale „kein Ort auflösbar"-Fall ist deshalb NICHT die Koordinate, sondern
+# die ins Leere zeigende Kennung: ein gelöschter Ort bleibt in `location_ids`
+# stehen (genau dafür filtert `compare_official_alert.py:128`). Zeigt die
+# EINZIGE Kennung ins Leere, löst kein Ort auf — das ist der Fall, den AC-15
+# meint, und er wird unten unverändert scharf geprüft.
 
 
 def vergleichs_preset(
@@ -1357,21 +1361,25 @@ def test_ac15_kein_aufloesbarer_ort_ergibt_utc_und_einen_protokolleintrag(
     """AC-15 (zweiter Teil): Löst KEIN Ort eine Zone auf, gilt UTC — aber
     sichtbar, mit der Vergleichs-Kennung im Protokoll.
 
-    Given ein Vergleich, dessen einziger Ort keine auflösbare Zone hat (0/0) /
-    When die Ruhezeit bestimmt wird / Then gilt UTC (das Fenster um die
-    UTC-Uhrzeit unterdrückt), UND es steht eine Warnung mit der Preset-Kennung
-    im Protokoll.
+    Given ein Vergleich, dessen EINZIGE Ortskennung ins Leere zeigt (der Ort
+    wurde gelöscht, die Kennung blieb im Preset stehen) / When die Ruhezeit
+    bestimmt wird / Then gilt UTC (das Fenster um die UTC-Uhrzeit
+    unterdrückt), UND es steht eine Warnung mit der Preset-Kennung im
+    Protokoll.
 
     ROT HEUTE: geprüft wird gegen Wien (das UTC-Fenster greift dort nicht), und
     protokolliert wird gar nichts.
+
+    Zur Wahl des Falls s. den Korrektur-Block oben bei den Ablage-Helfern:
+    eine Koordinate ohne auflösbare Zone gibt es seit `timezonefinder` 6 nicht
+    mehr, die ins Leere zeigende Kennung ist der reale Fall.
     """
     import logging
 
     fenster = fenster_um_jetzt(ZoneInfo("UTC"))
     user_id = sauberer_nutzer("ac15-nichts")
-    schreibe_ort_ohne_koordinaten(user_id, "loc-nirgendwo")
     schreibe_presets(user_id, [
-        vergleichs_preset("cp-ohne-zone", ["loc-nirgendwo"],
+        vergleichs_preset("cp-ohne-zone", ["loc-alle-weg"],
                           quiet_from=fenster[0], quiet_to=fenster[1])
     ])
     dienst = vergleichs_alarmdienst(user_id)

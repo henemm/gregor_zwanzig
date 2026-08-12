@@ -947,7 +947,7 @@ def test_paused_preset_is_not_due_for_regular_compare_briefing():
     Zeitplan aktiv (`schedule="daily"`), nicht archiviert, `end_date` 30 Tage
     in der Zukunft, Morgen-Slot 07:00 aktiv.
 
-    WHEN `presets_due_for_hour(..., hour=7, today=...)` fuer genau diese
+    WHEN `presets_due_for_hour(..., {}, utc_moment(..., 7))` fuer genau diese
     Stunde laeuft.
 
     THEN ist das Preset NICHT faellig — ein pausierter Ortsvergleich bekommt
@@ -959,10 +959,11 @@ def test_paused_preset_is_not_due_for_regular_compare_briefing():
     kommen — sonst waere der Test auch ohne die AG6-Wirkung gruen.
     """
     from services.compare_slot_scheduler import presets_due_for_hour
+    from tests.helpers.compare_slot_time import utc_moment
 
     paused = _briefing_preset("cp-briefing-paused", paused_at=PAUSED_AT)
 
-    due = presets_due_for_hour([paused], hour=7, today=BRIEFING_TODAY)
+    due = presets_due_for_hour([paused], {}, utc_moment(BRIEFING_TODAY, 7))
 
     assert due == [], (
         "Pausierter Ortsvergleich (paused_at gesetzt, schedule='daily', "
@@ -975,7 +976,7 @@ def test_active_preset_with_same_fixture_is_due_for_regular_compare_briefing():
     """F001 GEGENPROBE — dieselbe Fixture OHNE `paused_at`.
 
     GIVEN denselben Ortsvergleich, nur ohne gesetztes `paused_at`.
-    WHEN `presets_due_for_hour(..., hour=7, today=...)` laeuft.
+    WHEN `presets_due_for_hour(..., {}, utc_moment(..., 7))` laeuft.
     THEN ist er faellig mit Zieldatum heute.
 
     Ohne diese Gegenprobe waere „nie faellig" eine bestehende Loesung fuer den
@@ -983,10 +984,11 @@ def test_active_preset_with_same_fixture_is_due_for_regular_compare_briefing():
     Unterschied macht.
     """
     from services.compare_slot_scheduler import presets_due_for_hour
+    from tests.helpers.compare_slot_time import utc_moment
 
     active = _briefing_preset("cp-briefing-active")
 
-    due = presets_due_for_hour([active], hour=7, today=BRIEFING_TODAY)
+    due = presets_due_for_hour([active], {}, utc_moment(BRIEFING_TODAY, 7))
 
     # Tripel seit #1661 (F003): (preset, target_date, tage_ab_ortstag) —
     # Morgen-Slot briefed ueber den laufenden Tag, Versatz 0.
@@ -1003,7 +1005,7 @@ def test_paused_preset_is_not_due_for_evening_compare_briefing():
     mit AKTIVEM ABEND-SLOT (18:00) statt Morgen-Slot — `paused_at` gesetzt,
     `schedule="daily"`, nicht archiviert, `end_date` 30 Tage in der Zukunft.
 
-    WHEN `presets_due_for_hour(..., hour=18, today=...)` laeuft.
+    WHEN `presets_due_for_hour(..., {}, utc_moment(..., 18))` laeuft.
 
     THEN ist das Preset NICHT faellig.
 
@@ -1015,12 +1017,13 @@ def test_paused_preset_is_not_due_for_evening_compare_briefing():
     an denen sie wirkt.
     """
     from services.compare_slot_scheduler import presets_due_for_hour
+    from tests.helpers.compare_slot_time import utc_moment
 
     paused = _briefing_preset(
         "cp-briefing-evening-paused", slot="evening", paused_at=PAUSED_AT
     )
 
-    due = presets_due_for_hour([paused], hour=18, today=BRIEFING_TODAY)
+    due = presets_due_for_hour([paused], {}, utc_moment(BRIEFING_TODAY, 18))
 
     assert due == [], (
         "Pausierter Ortsvergleich (paused_at gesetzt, schedule='daily', "
@@ -1035,17 +1038,18 @@ def test_active_preset_is_due_for_evening_compare_briefing():
 
     GIVEN denselben Ortsvergleich mit aktivem Abend-Slot, nur ohne gesetztes
     `paused_at`.
-    WHEN `presets_due_for_hour(..., hour=18, today=...)` laeuft.
+    WHEN `presets_due_for_hour(..., {}, utc_moment(..., 18))` laeuft.
     THEN ist er faellig, Zieldatum MORGEN (der Abend-Slot briefed den Folgetag).
 
     Ohne diese Gegenprobe waere „der Abend-Slot ist nie faellig" eine
     bestehende Loesung fuer den Test darueber.
     """
     from services.compare_slot_scheduler import presets_due_for_hour
+    from tests.helpers.compare_slot_time import utc_moment
 
     active = _briefing_preset("cp-briefing-evening-active", slot="evening")
 
-    due = presets_due_for_hour([active], hour=18, today=BRIEFING_TODAY)
+    due = presets_due_for_hour([active], {}, utc_moment(BRIEFING_TODAY, 18))
 
     expected_date = BRIEFING_TODAY + timedelta(days=1)
     # Tripel seit #1661 (F003): der Abend-Slot briefed den Folgetag, Versatz +1.

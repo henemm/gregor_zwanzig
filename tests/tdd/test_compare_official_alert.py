@@ -18,6 +18,7 @@ import json
 import shutil
 import uuid
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 from app.config import Settings
@@ -644,7 +645,11 @@ def test_ac1_quiet_hours_suppresses_send_state_and_limit(monkeypatch):
             f"Waehrend Ruhezeit unterdrueckte Warnung darf KEINEN State schreiben "
             f"(sonst wird sie nach Ende der Ruhezeit als 'schon gemeldet' verschluckt): {state!r}"
         )
-        assert alert_daily_limit.load(uid, frozen_midnight) == 0, (
+        # Issue #1726: der Zaehler laeuft in der Ortszone des ersten Orts;
+        # Hermagor liegt in Europe/Vienna.
+        assert alert_daily_limit.load(
+            uid, frozen_midnight, ZoneInfo("Europe/Vienna"),
+        ) == 0, (
             "Tageslimit darf bei unterdruecktem Versand NICHT erhoeht werden"
         )
     finally:

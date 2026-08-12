@@ -84,6 +84,7 @@ from tests.helpers.nowcast_gate_fixtures import (
     entries_for,
     fresh_uid,
     make_trip,
+    TRIP_ZONE,
     quiet_window_elsewhere,
     quiet_window_now,
     read_log,
@@ -123,7 +124,11 @@ def _radar_trip(
     Konstruktion beschreibbare ``Trip``-Felder (``app/trip.py:192,214,219``);
     dasselbe Muster nutzt ``test_alert_channel_premium_sms.py::_base_trip``.
     """
-    quiet_from, quiet_to = quiet_window_now() if quiet else quiet_window_elsewhere()
+    # Issue #1726: Ortszone der TOUR (Island), nicht Wien.
+    quiet_from, quiet_to = (
+        quiet_window_now(zone=TRIP_ZONE) if quiet
+        else quiet_window_elsewhere(zone=TRIP_ZONE)
+    )
     trip = make_trip(trip_id, quiet_from=quiet_from, quiet_to=quiet_to)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=send_email, send_telegram=send_telegram,

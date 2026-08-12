@@ -43,6 +43,7 @@ from services.compare_alert_guard import is_silenced
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.official_alerts import get_official_alerts_for_location
+from utils.timezone import first_resolvable_tz
 
 logger = logging.getLogger("compare_official_alert")
 
@@ -114,12 +115,19 @@ class CompareOfficialAlertService:
                 return False
         elif not preset.get("official_alert_triggers_enabled", True):
             return False
+        # Issue #1726: Ruhezeit UND Tageszaehler laufen auf der Ortszeit des
+        # ERSTEN aufloesbaren Orts (#1378 AC-4, AC-15) — EINE Aufloesung fuer
+        # beide Stufen, damit sie nicht auseinanderfallen.
+        zone = first_resolvable_tz(
+            (all_locations.get(lid) for lid in location_ids), context_label=preset_id,
+        )
         # #1233: Ruhezeit unterdrueckt frueh -> kein State-Verbrauch der Warnung,
         # damit sie nach Ende der Ruhezeit noch als "neu" zugestellt wird (AC-2).
         if DeviationAlertEngine.is_quiet_hours(
             datetime.now(timezone.utc),
             preset.get("alert_quiet_from"),
             preset.get("alert_quiet_to"),
+            zone,
             context_label=preset_id,
         ):
             logger.debug(f"Compare official alert quiet hours active for preset {preset_id}")
@@ -135,7 +143,7 @@ class CompareOfficialAlertService:
             return False
 
         now = datetime.now(timezone.utc)
-        if not alert_daily_limit.is_allowed(self._user_id, now):
+        if not alert_daily_limit.is_allowed(self._user_id, now, zone):
             logger.debug(f"Compare official alert suppressed: daily limit for preset {preset_id}")
             return False
 
@@ -179,7 +187,7 @@ class CompareOfficialAlertService:
             return False
 
         self._record_state(preset_id, per_location_new)
-        alert_daily_limit.increment(self._user_id, now)
+        alert_daily_limit.increment(self._user_id, now, zone)
         return True
 
     def _detect(

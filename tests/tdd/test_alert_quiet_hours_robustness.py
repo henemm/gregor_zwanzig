@@ -71,6 +71,7 @@ import textwrap
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -80,6 +81,11 @@ from app.user import SavedLocation
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 from tests.helpers.compare_briefings import write_compare_briefings
+
+# Issue #1726: `is_quiet_hours` nimmt die Zone jetzt als Pflicht-Parameter
+# (frueher Modul-Konstante `deviation_alert_engine.VIENNA`). Diese Datei prueft
+# die #1479-Haertung, nicht die Zonenwahl — sie bleibt deshalb bei Wien.
+VIENNA = ZoneInfo("Europe/Vienna")
 
 _REPO = Path(__file__).resolve().parents[2]
 SERVICES_DIR = _REPO / "src" / "services"
@@ -622,13 +628,13 @@ def test_ac6_unusable_quiet_value_returns_false_without_raising(unusable):
 
     now = datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc)
 
-    as_from = DeviationAlertEngine.is_quiet_hours(now, unusable, "23:00")
+    as_from = DeviationAlertEngine.is_quiet_hours(now, unusable, "23:00", VIENNA)
     assert as_from is False, (
         f"Unbrauchbarer Beginn {unusable!r} muss als 'keine Ruhezeit gesetzt' "
         f"gelten — erwartet False, erhalten: {as_from!r} (AC-6)"
     )
 
-    as_to = DeviationAlertEngine.is_quiet_hours(now, "22:00", unusable)
+    as_to = DeviationAlertEngine.is_quiet_hours(now, "22:00", unusable, VIENNA)
     assert as_to is False, (
         f"Unbrauchbares Ende {unusable!r} muss als 'keine Ruhezeit gesetzt' "
         f"gelten — erwartet False, erhalten: {as_to!r} (AC-6)"
@@ -662,8 +668,8 @@ def test_ac7_empty_quiet_value_returns_false_and_writes_no_warning(caplog, empty
     now = datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc)
 
     with caplog.at_level(logging.WARNING):
-        as_from = DeviationAlertEngine.is_quiet_hours(now, empty, "23:00")
-        as_to = DeviationAlertEngine.is_quiet_hours(now, "22:00", empty)
+        as_from = DeviationAlertEngine.is_quiet_hours(now, empty, "23:00", VIENNA)
+        as_to = DeviationAlertEngine.is_quiet_hours(now, "22:00", empty, VIENNA)
 
     assert as_from is False and as_to is False, (
         f"Leerer/fehlender Ruhezeit-Wert {empty!r} muss False liefern — "
@@ -704,7 +710,7 @@ def test_ac8_caught_exception_is_logged_with_type_values_and_label(caplog):
 
     with caplog.at_level(logging.WARNING):
         result = DeviationAlertEngine.is_quiet_hours(
-            now, 2200, "23:00", context_label=label,
+            now, 2200, "23:00", VIENNA, context_label=label,
         )
 
     assert result is False, f"Erwartet False, erhalten: {result!r} (AC-8)"
@@ -950,34 +956,34 @@ def test_ac9_valid_quiet_window_still_suppresses_including_midnight_wrap():
     Sommer-/Winterzeit eine andere Ortszeit und der Test wuerde am
     Zeitumstellungstag etwas anderes pruefen als behauptet.
     """
-    from services.deviation_alert_engine import VIENNA, DeviationAlertEngine
+    from services.deviation_alert_engine import DeviationAlertEngine
 
     def at(month: int, day: int, hour: int, minute: int = 0) -> datetime:
         return datetime(2026, month, day, hour, minute, tzinfo=VIENNA)
 
-    assert DeviationAlertEngine.is_quiet_hours(at(6, 15, 23, 30), "22:00", "07:00") is True, (
+    assert DeviationAlertEngine.is_quiet_hours(at(6, 15, 23, 30), "22:00", "07:00", VIENNA) is True, (
         "23:30 Ortszeit liegt im Fenster 22:00-07:00 (Mitternachts-Wrap) (AC-9)"
     )
-    assert DeviationAlertEngine.is_quiet_hours(at(6, 16, 3, 0), "22:00", "07:00") is True, (
+    assert DeviationAlertEngine.is_quiet_hours(at(6, 16, 3, 0), "22:00", "07:00", VIENNA) is True, (
         "03:00 Ortszeit liegt nach Mitternacht noch im Fenster 22:00-07:00 (AC-9)"
     )
-    assert DeviationAlertEngine.is_quiet_hours(at(6, 16, 7, 0), "22:00", "07:00") is False, (
+    assert DeviationAlertEngine.is_quiet_hours(at(6, 16, 7, 0), "22:00", "07:00", VIENNA) is False, (
         "07:00 exakt ist das ENDE des Fensters und wird nicht mehr unterdrueckt (AC-9)"
     )
-    assert DeviationAlertEngine.is_quiet_hours(at(6, 16, 12, 0), "22:00", "07:00") is False, (
+    assert DeviationAlertEngine.is_quiet_hours(at(6, 16, 12, 0), "22:00", "07:00", VIENNA) is False, (
         "12:00 Ortszeit liegt ausserhalb des Fensters 22:00-07:00 (AC-9)"
     )
-    assert DeviationAlertEngine.is_quiet_hours(at(1, 15, 23, 30), "22:00", "07:00") is True, (
+    assert DeviationAlertEngine.is_quiet_hours(at(1, 15, 23, 30), "22:00", "07:00", VIENNA) is True, (
         "Auch in der Winterzeit gilt dasselbe Fenster in Ortszeit (AC-9)"
     )
-    assert DeviationAlertEngine.is_quiet_hours(at(6, 15, 15, 0), "08:00", "22:00") is True, (
+    assert DeviationAlertEngine.is_quiet_hours(at(6, 15, 15, 0), "08:00", "22:00", VIENNA) is True, (
         "15:00 Ortszeit liegt im normalen (nicht wrappenden) Fenster 08:00-22:00 (AC-9)"
     )
-    assert DeviationAlertEngine.is_quiet_hours(at(6, 15, 23, 0), "22:00", None) is False, (
+    assert DeviationAlertEngine.is_quiet_hours(at(6, 15, 23, 0), "22:00", None, VIENNA) is False, (
         "Halb ausgefuelltes Fenster (Beginn ohne Ende) darf NIE unterdruecken "
         "— Known Limitation aus #181 (AC-9)"
     )
-    assert DeviationAlertEngine.is_quiet_hours(at(6, 15, 23, 0), None, "07:00") is False, (
+    assert DeviationAlertEngine.is_quiet_hours(at(6, 15, 23, 0), None, "07:00", VIENNA) is False, (
         "Halb ausgefuelltes Fenster (Ende ohne Beginn) darf NIE unterdruecken (AC-9)"
     )
 
@@ -1021,7 +1027,7 @@ _SELF_CHECK_VIOLATION = textwrap.dedent(
     """
     def check(now, a, b):
         try:
-            active = DeviationAlertEngine.is_quiet_hours(now, a, b)
+            active = DeviationAlertEngine.is_quiet_hours(now, a, b, VIENNA)
         except Exception:
             active = False
         return active
@@ -1040,7 +1046,7 @@ _SELF_CHECK_SUPPRESS_VIOLATION = textwrap.dedent(
     def check(now, a, b):
         active = False
         with contextlib.suppress(Exception):
-            active = DeviationAlertEngine.is_quiet_hours(now, a, b)
+            active = DeviationAlertEngine.is_quiet_hours(now, a, b, VIENNA)
         return active
     """
 )
@@ -1051,14 +1057,14 @@ _SELF_CHECK_BARE_SUPPRESS_VIOLATION = textwrap.dedent(
     def check(now, a, b):
         active = False
         with suppress(ValueError, TypeError):
-            active = DeviationAlertEngine.is_quiet_hours(now, a, b)
+            active = DeviationAlertEngine.is_quiet_hours(now, a, b, VIENNA)
         return active
     """
 )
 _SELF_CHECK_CLEAN = textwrap.dedent(
     """
     def check(now, a, b):
-        active = DeviationAlertEngine.is_quiet_hours(now, a, b, context_label="x")
+        active = DeviationAlertEngine.is_quiet_hours(now, a, b, VIENNA, context_label="x")
         if active:
             return False
         return True
@@ -1070,7 +1076,7 @@ _SELF_CHECK_CLEAN_WITH = textwrap.dedent(
     """
     def check(now, a, b, lock):
         with lock:
-            return DeviationAlertEngine.is_quiet_hours(now, a, b, context_label="x")
+            return DeviationAlertEngine.is_quiet_hours(now, a, b, VIENNA, context_label="x")
     """
 )
 

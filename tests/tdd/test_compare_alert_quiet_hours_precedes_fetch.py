@@ -54,6 +54,9 @@ def _data_root_users() -> Path:
     return get_data_root() / "users"
 
 VIENNA = ZoneInfo("Europe/Vienna")
+# Issue #1726: der Tageszaehler laeuft in der Ortszone des ERSTEN Orts des
+# Vergleichs. `loc-c` liegt bei 46.5/10.5 -> Italien, Europe/Rome.
+_ORTS_ZONE = ZoneInfo("Europe/Rome")
 
 
 # ───────────────────────── Helfer (1:1 aus test_issue_1170 übernommen) ──────
@@ -422,7 +425,7 @@ def test_ac6_suppressed_run_leaves_throttle_and_daily_limit_untouched():
         now = datetime.now(timezone.utc)
         # Zähler-Snapshot VOR dem Lauf — echte Stores, kein Mock.
         before_last_sent = ThrottleStore(uid).last_sent("compare_preset", preset_id)
-        before_daily_count = alert_daily_limit.load(uid, now)
+        before_daily_count = alert_daily_limit.load(uid, now, _ORTS_ZONE)
 
         settings = _settings_email_capable_dummy()
         sent_subjects: list[str] = []
@@ -440,7 +443,7 @@ def test_ac6_suppressed_run_leaves_throttle_and_daily_limit_untouched():
         # Zähler-Snapshot NACH dem Lauf — frische Store-Instanz, kein
         # In-Memory-Zustand aus dem Lauf selbst.
         after_last_sent = ThrottleStore(uid).last_sent("compare_preset", preset_id)
-        after_daily_count = alert_daily_limit.load(uid, now)
+        after_daily_count = alert_daily_limit.load(uid, now, _ORTS_ZONE)
 
         assert after_last_sent == before_last_sent, (
             f"Sperrzeit-Zaehler wurde trotz durch Ruhezeit unterdruecktem Lauf "

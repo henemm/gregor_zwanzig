@@ -8,9 +8,12 @@ SPEC: docs/specs/bugfix/utc_localtime_display.md
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Iterable, Optional
 from zoneinfo import ZoneInfo
+
+logger = logging.getLogger(__name__)
 
 UTC = ZoneInfo("UTC")
 
@@ -69,6 +72,31 @@ def location_tz(location) -> ZoneInfo:
     die immer eine Zeitzone brauchen (Stundenauswahl, Beschriftung, Ausblick,
     Kopfzeile). Der Rueckfall bleibt durch ``local_stamp()`` sichtbar."""
     return resolve_location_tz(location) or UTC
+
+
+def first_resolvable_tz(locations: Iterable, context_label: str = "") -> ZoneInfo:
+    """Zone des ERSTEN Orts der Reihenfolge, dessen Zone sich aufloesen laesst.
+
+    Die fachliche Fassung von "erster Ort" (#1378 AC-4, #1726 AC-15): ein
+    reiner Indexzugriff ``location_ids[0]`` faellt still auf UTC, sobald die
+    erste Kennung ins Leere zeigt (geloeschter Ort) oder der Ort keine
+    aufloesbare Zone traegt — obwohl ein SPAETERER Ort eine gueltige haette.
+    Deshalb wird uebersprungen statt zurueckgefallen; ``None``-Eintraege sind
+    erlaubt (Sequenz ``(all_locations.get(lid) for lid in ids)``). Loest KEIN
+    Ort eine Zone auf, gilt UTC — sichtbar im Protokoll, nicht still.
+    """
+    for location in locations:
+        if location is None:
+            continue
+        tz = resolve_location_tz(location)
+        if tz is not None:
+            return tz
+    logger.warning(
+        "Keine aufloesbare Zeitzone%s — es gilt Weltzeit (UTC). Ruhezeit, "
+        "Tageszaehler und Faelligkeit rechnen damit NICHT in der Ortszeit.",
+        f" fuer {context_label}" if context_label else "",
+    )
+    return UTC
 
 
 def _as_utc(dt: datetime) -> datetime:

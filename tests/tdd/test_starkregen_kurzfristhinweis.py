@@ -43,6 +43,7 @@ from app.config import Settings
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 from services import alert_daily_limit
+from utils.timezone import tz_for_coords
 from services.radar_service import (
     INTENSITY_CONVECTIVE, INTENSITY_DRY, INTENSITY_HEAVY, INTENSITY_MODERATE,
     NowcastResult, RadarNowcastService,
@@ -300,9 +301,13 @@ def test_ac1_budget_erschoepft_blockiert_fetch_und_hinweis(monkeypatch):
     trip = _active_trip(f"trip-ac1-{uuid.uuid4().hex[:6]}")
 
     now = datetime.now(timezone.utc)
-    alert_daily_limit.increment(uid, now)
-    alert_daily_limit.increment(uid, now)
-    assert alert_daily_limit.is_allowed(uid, now, reason="nowcast") is False, (
+    # Issue #1726: der Zaehler laeuft in der Ortszone der TOUR — `LAT`/`LON`
+    # liegen auf Island. Wer hier eine andere Zone belegt als der Pruefling
+    # liest, erschoepft ein Kontingent, das nie geprueft wird.
+    trip_zone = tz_for_coords(LAT, LON)
+    alert_daily_limit.increment(uid, now, trip_zone)
+    alert_daily_limit.increment(uid, now, trip_zone)
+    assert alert_daily_limit.is_allowed(uid, now, trip_zone, reason="nowcast") is False, (
         "Testvoraussetzung: Free-Tier-Tageslimit (2) muss ausgeschoepft sein."
     )
 

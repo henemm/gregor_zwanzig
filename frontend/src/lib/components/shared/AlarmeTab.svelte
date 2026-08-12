@@ -425,10 +425,12 @@
 					<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
 				{/if}
 			{:else if id === 'quiet-hours'}
+				<!-- Issue #1726: EIN geteilter Baustein, zwei Bezugsgrössen — beim
+				     Vergleich gilt die Zone des erstgenannten Orts (#1378 AC-4). -->
 				{#if context === 'vergleich'}
-					<AlertQuietHoursCard bind:quiet_from={wiz!.alertQuietFrom} bind:quiet_to={wiz!.alertQuietTo} />
+					<AlertQuietHoursCard bind:quiet_from={wiz!.alertQuietFrom} bind:quiet_to={wiz!.alertQuietTo} zonen_bezug="des ersten Orts" />
 				{:else}
-					<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} />
+					<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} zonen_bezug="der Tour" />
 				{/if}
 			{:else if id === 'radar'}
 				<ChannelToggle

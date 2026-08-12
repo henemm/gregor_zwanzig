@@ -32,6 +32,7 @@ import json
 import re
 import shutil
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 from app.config import Settings
@@ -198,9 +199,9 @@ def _quiet_hours_window_now(buffer_minutes: int = 3) -> tuple[str, str]:
     vergleicht seit D1 gegen Europe/Vienna-Lokalzeit statt UTC, daher wird das
     Fenster um die Vienna-lokale „jetzt"-Zeit gelegt — sonst würde jeder
     UTC-Offset (60/120 Min) den engen 3-Minuten-Puffer sprengen."""
-    from services.deviation_alert_engine import VIENNA
-
-    now = datetime.now(timezone.utc).astimezone(VIENNA)
+    # Issue #1726: die Zone ist kein Modul-Attribut mehr, sondern haengt am
+    # Ort. Die Presets dieser Datei liegen in Oesterreich -> Europe/Vienna.
+    now = datetime.now(timezone.utc).astimezone(ZoneInfo("Europe/Vienna"))
     start = (now - timedelta(minutes=buffer_minutes)).strftime("%H:%M")
     end = (now + timedelta(minutes=buffer_minutes)).strftime("%H:%M")
     return start, end

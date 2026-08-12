@@ -36,7 +36,7 @@ from app.loader import save_location
 
 from tests.helpers.nowcast_gate_fixtures import (
     SCOPE_COMPARE_RADAR, CountingFrameSource, clean_uid, compare_radar_service,
-    fresh_uid, location, quiet_window_elsewhere, quiet_window_now,
+    LOCATION_ZONE, fresh_uid, location, quiet_window_elsewhere, quiet_window_now,
     radar_preset, read_daily_counter, read_throttle_state, record_throttle,
     reset_radar_cache, seed_daily_counter, settings_email_only,
     settings_no_channel_reachable, write_presets, write_user_tier,
@@ -106,7 +106,7 @@ def test_ac11_ruhezeit_stoppt_vor_der_sperrzeit_pruefung():
             user_id=uid, throttle_scope=SCOPE_COMPARE_RADAR, throttle_key=preset_id,
             cooldown_minutes=120, quiet_from=quiet_from, quiet_to=quiet_to,
             context_label=preset_id, now=datetime.now(timezone.utc),
-            throttle_store=store,
+            zone=LOCATION_ZONE, throttle_store=store,
         )
 
         assert ergebnis.allowed is False, (
@@ -146,6 +146,7 @@ def test_ac11_sperrzeit_stoppt_vor_der_tages_obergrenze():
             user_id=uid, throttle_scope=SCOPE_COMPARE_RADAR, throttle_key=preset_id,
             cooldown_minutes=120, quiet_from=quiet_from, quiet_to=quiet_to,
             context_label=preset_id, now=datetime.now(timezone.utc),
+            zone=LOCATION_ZONE,
         )
 
         assert ergebnis.allowed is False, f"Die Sperrzeit muss sperren: {ergebnis!r}"
@@ -176,6 +177,7 @@ def test_ac11_freie_bahn_wird_durchgelassen():
             user_id=uid, throttle_scope=SCOPE_COMPARE_RADAR, throttle_key=preset_id,
             cooldown_minutes=120, quiet_from=quiet_from, quiet_to=quiet_to,
             context_label=preset_id, now=datetime.now(timezone.utc),
+            zone=LOCATION_ZONE,
         )
 
         assert ergebnis.allowed is True, (
@@ -215,11 +217,15 @@ def test_ac12_vergleichs_nowcast_prueft_gegen_das_volle_tagesbudget():
 
         write_user_tier(reserve, "free")     # Limit 2, Reserve 1
         seed_daily_counter(reserve, 1)
-        assert alert_daily_limit.is_allowed(reserve, jetzt, reason="forecast_change") is False, (
+        assert alert_daily_limit.is_allowed(
+            reserve, jetzt, LOCATION_ZONE, reason="forecast_change",
+        ) is False, (
             "Aufbau-Nachweis: bei count=1 und Limit 2 muss die #1555-Reserve den "
             "Aenderungsalarm bereits sperren — sonst prueft dieser Test nichts"
         )
-        assert alert_daily_limit.is_allowed(reserve, jetzt, reason="nowcast") is True, (
+        assert alert_daily_limit.is_allowed(
+            reserve, jetzt, LOCATION_ZONE, reason="nowcast",
+        ) is True, (
             "Aufbau-Nachweis: derselbe Stand muss fuer den Nowcast frei sein"
         )
         _setup_compare(reserve, "cp-1467s3-ac12")

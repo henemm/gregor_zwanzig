@@ -36,6 +36,7 @@ from services.notification_service import NotificationService
 from services.point_weather import AlertEvaluationConfig
 from services.report_config_resolver import resolve_compare_time_window
 from services.throttle_store import ThrottleStore
+from utils.timezone import first_resolvable_tz
 
 logger = logging.getLogger("compare_alert")
 
@@ -145,14 +146,20 @@ class CompareAlertService:
                 logger.debug(f"Compare-Alert cooldown active for preset {preset_id}")
                 continue
 
+            # Issue #1726: die Konfiguration entsteht VOR der Tageslimit-Frage,
+            # weil sie die Ortszone traegt — Ruhezeit, Zaehler und Engine
+            # benutzen danach DIESELBE Aufloesung. Reine Vorverlegung eines
+            # seiteneffektfreien Erbauers, kein Verhaltenswechsel.
+            config = self._build_eval_config(preset, cooldown_minutes, all_locations)
+
             # Issue #1213 (AC-6): Compare an dieselbe Tageslimit-Prüfung
             # anbinden wie der Trip-Pfad (Epic #1067 Slice 3, #1070).
             # Issue #1555: reason="forecast_change" reserviert einen Anteil für NowCast.
-            if not alert_daily_limit.is_allowed(self._user_id, now, reason="forecast_change"):
+            if not alert_daily_limit.is_allowed(
+                self._user_id, now, config.zone, reason="forecast_change",
+            ):
                 logger.debug(f"Compare-Alert suppressed: daily limit reached for preset {preset_id}")
                 continue
-
-            config = self._build_eval_config(preset, cooldown_minutes)
 
             # Issue #1467 S2 AG2: Ruhezeit VOR den Wetterabruf ziehen — bisher
             # prüfte nur die Engine (`DeviationAlertEngine.evaluate()`), NACH
@@ -174,7 +181,8 @@ class CompareAlertService:
             # Aufrufstelle: der Schutz gehört in den geteilten Baustein
             # (ADR-0021), nicht in eine vierte Kopie.
             quiet_hours_active = DeviationAlertEngine.is_quiet_hours(
-                now, config.quiet_from, config.quiet_to, context_label=preset_id
+                now, config.quiet_from, config.quiet_to, config.zone,
+                context_label=preset_id,
             )
             if quiet_hours_active:
                 logger.debug(f"Compare-Alert quiet hours active for preset {preset_id}")
@@ -290,7 +298,7 @@ class CompareAlertService:
 
             self._finalize_triggered_state(finalized)
             self._throttle_store.record("compare_preset", preset_id, now)
-            alert_daily_limit.increment(self._user_id, now)
+            alert_daily_limit.increment(self._user_id, now, config.zone)
             sent += 1
 
         return sent
@@ -449,7 +457,9 @@ class CompareAlertService:
                 }
             entry["state_svc"].save(entry["entity_id"], alert_state)
 
-    def _build_eval_config(self, preset: dict, cooldown_minutes) -> AlertEvaluationConfig:
+    def _build_eval_config(
+        self, preset: dict, cooldown_minutes, all_locations: dict,
+    ) -> AlertEvaluationConfig:
         """B2-Defaults, vorwärtskompatible Overrides via `preset.get(feld, DEFAULT)`.
 
         Issue #1467 S2 AG4: die Kanalliste war hier fest `{"email"}` verdrahtet —
@@ -475,6 +485,12 @@ class CompareAlertService:
             ),
             channels=effective_compare_channels(preset, self._settings, self._user_id),
             display_config=self._display_config_from_active_metrics(preset),
+            # Issue #1726: Zone des ERSTEN aufloesbaren Orts (#1378 AC-4,
+            # AC-15) — die EINE Stelle, an der der Vergleich sie bildet.
+            zone=first_resolvable_tz(
+                (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+                context_label=preset.get("id", ""),
+            ),
         )
 
     def _display_config_from_active_metrics(self, preset: dict):

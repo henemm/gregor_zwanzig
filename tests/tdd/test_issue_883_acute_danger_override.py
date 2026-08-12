@@ -416,18 +416,23 @@ def test_ac5_override_respects_quiet_hours():
     """AC-5: GUARD — konvektive Gefahr, aber jetzt ist Nachtruhe → KEIN Alert.
 
     Der Override durchbricht nur die Briefing-Unterdrückung, nicht die Quiet Hours.
-    Issue #1312: `is_quiet_hours` vergleicht seit D1 gegen Europe/Vienna-
-    Lokalzeit statt UTC, daher wird das Fenster um die Vienna-lokale „jetzt"-
-    Zeit gelegt — sonst läge die Vienna-Zeit bei CEST (+2h) genau am oberen
-    Fensterrand (potenziell flaky im Sommer).
+
+    🔴 Issue #1726: Dieser Test baute sein Ruhezeit-Fenster bis dahin über
+    `Europe/Vienna` — obwohl die Tour auf ISLAND liegt (`LAT`/`LON` = 64.0/
+    -22.0, `Atlantic/Reykjavik`, UTC+0). Er war nur deshalb grün, weil der
+    Prüfling denselben falschen Bezug benutzte; das ist der Fehler dieses
+    Issues, im Test selbst. Das Fenster kommt jetzt aus der ORTSZONE der Tour
+    — abgeleitet aus ihren eigenen Koordinaten, nicht erneut angenommen. Die
+    Zusicherung („der Override durchbricht die Nachtruhe nicht") ist
+    unverändert; sie wird jetzt an der Zone gemessen, an der sie wirkt.
     """
-    from services.deviation_alert_engine import VIENNA
+    from utils.timezone import tz_for_coords
 
     uid = f"tdd-883-ac5-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
     try:
-        now = datetime.now(timezone.utc).astimezone(VIENNA)
-        # Fenster um die Vienna-lokale "jetzt"-Zeit (±2h); _is_quiet_hours
+        now = datetime.now(timezone.utc).astimezone(tz_for_coords(LAT, LON))
+        # Fenster um die ORTS-lokale "jetzt"-Zeit (±2h); _is_quiet_hours
         # behandelt Mitternachts-Wrap.
         quiet_from = (now - timedelta(hours=2)).strftime("%H:%M")
         quiet_to = (now + timedelta(hours=2)).strftime("%H:%M")

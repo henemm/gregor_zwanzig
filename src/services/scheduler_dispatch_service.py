@@ -163,19 +163,20 @@ def run_compare_presets_daily(
 
     from services.dispatch_orchestrator import CompareDispatchStrategy, run_briefing_dispatch
 
-    # Issue #1724: der Orchestrator nimmt jetzt einen ZEITPUNKT statt einer
-    # Stunde -- welche Stunde das ist, entscheidet der jeweilige Versandweg.
-    # Der Ortsvergleich bleibt dabei bewusst auf seiner festen Zone (#1726),
-    # das Verhalten ist unveraendert.
+    # Issue #1724: der Orchestrator nimmt einen ZEITPUNKT statt einer Stunde.
+    # Issue #1726: die Faelligkeit haengt jetzt je Preset an der Ortszone
+    # seines ersten Orts; nur der manuelle `?hour=`-Testausloeser bleibt an
+    # einer festen Referenz-Zone verankert -- "Stunde X" hat sonst keine EINE
+    # Bedeutung mehr. Verhalten des Endpunkts unveraendert.
     if hour is None:
         now_utc = _datetime.now(_timezone.utc)
     else:
         # Manuelles Ausloesen mit ausdruecklicher Stunde: Zeitpunkt bilden,
-        # dessen Stunde in der Vergleichs-Zone genau `hour` ist -- damit
-        # bleibt der bestehende Endpunkt-Vertrag (`?hour=`) erhalten.
+        # dessen Stunde in der Referenz-Zone genau `hour` ist -- damit bleibt
+        # der bestehende Endpunkt-Vertrag (`?hour=`) erhalten.
         from zoneinfo import ZoneInfo
 
-        zone = ZoneInfo(CompareDispatchStrategy.NOCH_NICHT_ORTSZEIT_SIEHE_1726)
+        zone = ZoneInfo(CompareDispatchStrategy.MANUAL_TRIGGER_REFERENCE_ZONE)
         now_utc = _datetime.now(zone).replace(
             hour=hour, minute=0, second=0, microsecond=0,
         ).astimezone(_timezone.utc)

@@ -3,10 +3,14 @@
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Eyebrow } from '$lib/components/atoms';
 
+    // Issue #1726: `zonen_bezug` benennt, WOVON die Ortszeit abhängt — beim
+    // Trip „der Tour", beim Ortsvergleich „des ersten Orts". Reiner Text: welche
+    // IANA-Zone gilt, entscheidet das Backend (`anchor_tz`/`first_resolvable_tz`).
     let {
         quiet_from = $bindable<string | undefined>(undefined),
         quiet_to   = $bindable<string | undefined>(undefined),
-    }: { quiet_from?: string; quiet_to?: string } = $props();
+        zonen_bezug = 'der Tour',
+    }: { quiet_from?: string; quiet_to?: string; zonen_bezug?: string } = $props();
 
     let enabled = $state(quiet_from !== undefined && quiet_to !== undefined);
 
@@ -32,7 +36,7 @@
             data-testid="alert-quiet-hours-toggle"
         >Aktiv</Checkbox>
     </div>
-    <p class="hint">In diesem Zeitraum keine Alerts senden — gestaute Alerts gehen mit dem nächsten Morgen-Briefing mit.</p>
+    <p class="hint">In diesem Zeitraum keine Alerts senden (Ortszeit {zonen_bezug}) — gestaute Alerts gehen mit dem nächsten Morgen-Briefing mit.</p>
     {#if enabled}
         <div class="time-row">
             <label>

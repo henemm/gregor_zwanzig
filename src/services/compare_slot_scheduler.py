@@ -8,7 +8,7 @@ Reine Funktionen (kein IO, kein globaler State):
   rohen Preset-Dict. Fehlt `morning_time` (Marker "nie migriert"), greift
   die Migrations-Fallback-Tabelle aus der Spec (abhaengig vom Alt-Wert von
   `schedule`).
-- `presets_due_for_hour(presets, hour, today)` liefert je faelligem Preset
+- `presets_due_for_hour(presets, all_locations, now_utc)` liefert je faelligem Preset
   ein `DuePreset(preset, target_date, tage_ab_ortstag)` (Morgen-Slot -> today
   bzw. Versatz 0, Abend-Slot -> today+1 bzw. Versatz +1), inkl. Pause-
   (`schedule == "manual"`), Archiv- (`archived_at`) und Laufzeit-Guard
@@ -17,10 +17,11 @@ Reine Funktionen (kein IO, kein globaler State):
 from __future__ import annotations
 
 import logging
-from datetime import date, time as dt_time, timedelta
+from datetime import date, datetime, time as dt_time, timedelta
 from typing import NamedTuple
 
 from services.compare_alert_guard import is_silenced
+from utils.timezone import first_resolvable_tz, local_dt
 
 logger = logging.getLogger("scheduler.compare_slot")
 
@@ -99,9 +100,17 @@ def resolve_preset_slots(preset: dict) -> PresetSlots:
     return PresetSlots(morning_enabled, morning_time, evening_enabled, evening_time)
 
 
-def presets_due_for_hour(presets: list, hour: int, today: date) -> list:
+def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime) -> list:
     """Liefert je faelligem Preset ein `DuePreset`-Tripel
     `(preset, target_date, tage_ab_ortstag)`.
+
+    Issue #1726: JEDES Preset wird gegen SEINE eigene Ortszone geprueft (die
+    seines ersten aufloesbaren Orts, `first_resolvable_tz`). Bis dahin galten
+    EINE Stunde und EIN Tag aus einer festen Zone fuer den ganzen Lauf — ein auf
+    07:00 gestelltes Preset mit Orten in Neuseeland ging zur falschen Weltzeit
+    raus. Preset-eigene Zonen sind mit einem globalen Zeitpunkt nicht abbildbar,
+    deshalb Ortsliste + ZEITPUNKT statt Stunde/Tag; die Pruefung selbst bleibt
+    Stundengleichheit (Fenster/Idempotenz traegt #1777).
 
     Guards (in dieser Reihenfolge): stillgelegt laut
     `compare_alert_guard.is_silenced` — `paused_at` gesetzt ODER
@@ -125,6 +134,13 @@ def presets_due_for_hour(presets: list, hour: int, today: date) -> list:
         if is_silenced(preset):
             continue
 
+        preset_id = preset.get("id", "?")
+        vor_ort = local_dt(now_utc, first_resolvable_tz(
+            (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+            context_label=preset_id,
+        ))
+        hour, today = vor_ort.hour, vor_ort.date()
+
         try:
             end_date_str = preset.get("end_date")
             if end_date_str:
@@ -144,7 +160,7 @@ def presets_due_for_hour(presets: list, hour: int, today: date) -> list:
             logger.warning(
                 "Preset %s: korrupte Zeitplan-Daten (end_date/morning_time/"
                 "evening_time), wird uebersprungen: %s",
-                preset.get("id", "?"),
+                preset_id,
                 e,
             )
             continue
