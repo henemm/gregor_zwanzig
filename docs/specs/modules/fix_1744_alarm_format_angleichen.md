@@ -4,14 +4,20 @@ type: module
 created: 2026-08-12
 updated: 2026-08-12
 status: partial
-version: "1.1"
+version: "1.2"
 tags: [alerts, renderer, email, subject]
 ---
 
 > **Liefer-Stand 2026-08-12:** Scheibe **A1** (AC-1 bis AC-7) ist ausgeliefert und live —
 > PR #1781, Merge `942fc778`, in Produktion über `0861a9a8`. Adversary VERIFIED nach vier
 > Runden (drei Findings behoben), Staging VERIFIED 7/7 an echt zugestellten Mails.
-> Scheibe **A2** (AC-8 bis AC-12, Mail-Körper) ist **offen**. #1744 bleibt deshalb offen.
+> Scheibe **A2** (AC-8 bis AC-14, Mail-Körper) ist **offen**. #1744 bleibt deshalb offen.
+>
+> **Nachtrag 2026-08-12 (Version 1.2), aus der Vermessung vor A2:** Drei Präzisierungen —
+> (1) die amtliche Warn-Mail hat **keinen eigenen Klartext-Teil**, er wird aus dem HTML
+> gestrippt; sie bekommt einen (PO-Entscheid, AC-13). (2) AC-11 nannte die falsche Testdatei,
+> korrigiert. (3) Der Warn-Mail-Wächter prüft **CSS-Klassen** und lehnt den Umbau sonst ab —
+> AC-14 neu. A1-ACs unverändert.
 
 # Alarm-Format angleichen: eine Ortssprache für alle Trip-Alarme (#1744 Scheibe A)
 
@@ -51,7 +57,7 @@ Zwei Liefer-Scheiben, ein gemeinsames Zielbild.
 | Scheibe | Inhalt | LoC (Produktiv) | Dateien |
 |---|---|---|---|
 | **A1** | Ortsangabe + Betreff | ~90 | 6 |
-| **A2** | Mail-Körper | ~130 | 2 |
+| **A2** | Mail-Körper (HTML + Klartext) | ~170 | 4 |
 
 - **Effort:** medium
 
@@ -114,6 +120,58 @@ Die Warnstufen-Skala (GELB · ORANGE · ROT mit „niedrigste von drei") bleibt 
 erhalten und wandert nicht in eine Textzeile: sie trägt eine Einordnung, die eine bloße
 Wortangabe verliert. Alles Übrige der amtlichen Warnung (Gefahrenart, Gültigkeitsfenster,
 Ortsbezug, Quelle) wird zu Datenzeilen im Aufbau des Nowcasts.
+
+### Was A2 vorfindet (vermessen 2026-08-12, `docs/context/fix-1744-a2-alarm-mailkoerper.md`)
+
+Zwei Bauformen für dieselbe Sache:
+
+- **Nowcast:** je Datenzeile eine `<table role="presentation">`, Label links, Wert rechtsbündig
+  — `_datarow_html`, `render.py:403-417`. Die Tabellenform ist Absicht (Outlook), nicht Zufall.
+- **Amtliche Warnung:** ein CSS-Grid-`<div class="warn">` mit einem einzigen Facts-Block, in dem
+  Label und Wert als `<span class="k">Gültig:</span> … <br>` inline stehen —
+  `official_alerts.py:1107-1132,1143-1177`.
+
+Ein Baustein steht **zusätzlich** im Ist-Zustand und fehlt in der Zielreihenfolge oben: die
+**Quelle-Box** (`_standalone_src_html`, `official_alerts.py:1285-1315`). Sie wird zur Datenzeile
+„Quelle" — mit der Randbedingung aus AC-14.
+
+### 🔴 Der Klartext der amtlichen Warn-Mail (PO-Entscheid 2026-08-12)
+
+Die amtliche Warn-Mail hat **keinen bewusst gebauten Klartext-Teil**:
+`send_official_alert` ruft `EmailOutput.send(...)` ohne `plain_text_body`
+(`notification_service.py:859-861`), woraufhin `output/channels/email.py:350-358` den Text per
+Regex aus dem HTML strippt — aus einem CSS-Grid wird dabei Zeilensalat. Der Nowcast dagegen baut
+`html` und `plain` in derselben Funktion aus denselben Label-Wert-Tupeln und übergibt den
+Klartext ausdrücklich (`notification_service.py:1322,1400-1405`).
+
+**Entscheid:** A2 schließt diese Lücke mit (AC-13). Begründung: Die Label-Wert-Zeilen entstehen
+für das HTML ohnehin neu; der Klartext fällt aus denselben Tupeln ab. Ihn später nachzuziehen
+hieße, dieselbe Struktur ein zweites Mal aufzubrechen.
+
+`render_official_alert_notice_plain` (`official_alerts.py:615-662`) ist **nicht** dieser
+Klartext — sie bedient den in eine andere Mail eingebetteten Warnblock und bleibt unangetastet.
+
+### 🔴 Der Wächter prüft CSS-Klassen, nicht nur Text
+
+`.claude/hooks/official_alert_mail_validator.py` verlangt in S-1 (`:73`, `:160-165`) die Klassen
+`{"verdict", "warn", "src", "body-foot"}` im HTML-Körper. **`src` ist die Quelle-Box** — wird sie
+zur Datenzeile, lehnt der Wächter eine sachlich korrekte Mail ab. Ebenso zählt S-2 (`:74-76`,
+`:167-174`) genau zwei erlaubte Skalen-Darstellungen auf (`stufe-line` bzw. `stacked`/`meter`).
+
+Das ist dieselbe Falle wie in A1 (`_SEGMENT_RE` kannte `🏁 Ziel` nicht): Ein Wächter, der gültige
+Formen aufzählt, lehnt jede neue ab. Behandlung wie damals — **additiv erweitern, nie lockern**
+(AC-14). Pflicht-Literale, die im Text überleben müssen: `"Quelle:"`, `"abgerufen bei"`
+(P-4 `:203-207`), `"Stand: heute"` (P-5 `:209-210`), Wochentag+Datum in der „Gültig:"-Zeile
+(P-3 `:62-69,188-201`).
+
+Am Commit verlangt `renderer_mail_gate.py` **zwei** frische Validator-Nachweise, weil A2 beide
+Renderer anfasst: `*_radar_alert_validation.yaml` **und** `*_official_alert_validation.yaml`.
+
+### Architektur-Entscheidung
+
+Der geänderte Aufbau wird in **ADR-0052** festgehalten (nächste freie Nummer; höchste vergebene
+ist ADR-0051). Es verweist auf **ADR-0033** als weiterhin bindend — geändert wird nur der Träger
+der Zusicherung, nicht die Zusicherung.
 
 ## Expected Behavior
 
@@ -197,14 +255,37 @@ Ortsbezug, Quelle) wird zu Datenzeilen im Aufbau des Nowcasts.
 - **AC-11:** Given ein Trip mit 63 Segmenten und einer Warnung für 1 Segment / When die Mail
   gerendert wird / Then erscheinen weiterhin **keine** nicht betroffenen Segmente — ADR-0033
   bleibt gewahrt.
-  - Test: der bestehende ADR-0033-Test bleibt grün
-    (`tests/tdd/test_official_alert_template_render.py`).
+  - Test: der bestehende ADR-0033-Test bleibt grün —
+    `tests/tdd/test_official_alert_warn_section.py::test_ac11_trip_path_shows_only_affected_segment_chips`
+    (`:332-361`, zitiert ADR-0033 wörtlich).
+  - 🔴 **Korrektur 2026-08-12:** Hier stand `tests/tdd/test_official_alert_template_render.py`.
+    Nachgemessen: Diese Datei legt zwar `free_chips`-Fixtures an, prüft die ADR-0033-Zusicherung
+    aber **nicht**. Wer nur sie grün hält, hat ADR-0033 nicht nachgewiesen — Prüfort ≠ Wirkort.
 
 - **AC-12:** Given mehrere amtliche Warnungen mit **verschiedenem** Umfang / When der Betreff
   gerendert wird / Then steht dort weiterhin die ehrliche Sammelangabe („mehrere Segmente") und
   nicht ein einzelnes Segment — AC-3 der Warnmail-Spec (#1248) bleibt gewahrt.
   - Test: der bestehende Test bleibt grün
     (`tests/tdd/test_official_alert_subject_compact.py`).
+
+- **AC-13:** Given eine amtliche Warn-Mail / When sie versendet wird / Then trägt sie einen
+  **eigens gebauten Klartext-Teil** mit denselben Datenzeilen und derselben Reihenfolge wie ihr
+  HTML — nicht mehr den aus dem HTML gestrippten Text.
+  - Test: die zugestellte Mail auf ihren `text/plain`-Teil prüfen. Er enthält die Datenzeilen
+    als Label-Wert-Zeilen (Gefahrenart, Gültigkeitsfenster, Ortsbezug, Quelle), die Stand-Zeile
+    und die Herkunfts-Fußzeile — in derselben Reihenfolge wie die Nowcast-Mail ihre Zeilen.
+  - **Mutations-Gegenprobe:** Wird die Übergabe des Klartexts an den Mailer entfernt, muss der
+    Test rot werden. Bleibt er grün, prüft er den gestrippten Text und nicht den gebauten —
+    genau der Fehler, den dieses AC beseitigt.
+
+- **AC-14:** Given der Umbau löst die Quelle-Box auf und der Warn-Mail-Wächter verlangt die
+  CSS-Klasse `src` / When eine sachlich korrekte Mail im neuen Aufbau geprüft wird / Then
+  besteht sie den Wächter, weil dessen Formen-Aufzählung **additiv erweitert** wurde — keine
+  bestehende Alternative wurde entfernt oder gelockert.
+  - Test: eine Mail **ohne** jede Quellenangabe wird weiterhin beanstandet. Ohne diesen
+    Negativfall belegt der Positivfall nur, dass der Wächter nichts mehr prüft.
+  - Nachweis am Ende: `official_alert_mail_validator.py` und `radar_alert_mail_validator.py`
+    laufen je mit Exit 0 gegen eine **echt zugestellte** Staging-Mail.
 
 ## Was sich ausdrücklich NICHT ändert
 
@@ -222,5 +303,20 @@ Ortsbezug, Quelle) wird zu Datenzeilen im Aufbau des Nowcasts.
    `tests/tdd/test_issue_811_mode_matrix.py` grün ist und ein `briefing_mail_validator.py`-Lauf
    bestanden hat.
 3. **A2 berührt ADR-0033-Fläche.** Die Entscheidung selbst (nur betroffener Umfang) bleibt gültig;
-   geändert wird nur ihr Träger. Ein neues ADR hält den geänderten Aufbau fest und verweist auf
+   geändert wird nur ihr Träger. **ADR-0052** hält den geänderten Aufbau fest und verweist auf
    ADR-0033 als weiterhin bindend.
+4. **Struktur-Prüfer brechen absichtlich.** `tests/tdd/test_official_alert_standalone_render.py`
+   prüft per BeautifulSoup auf `.verdict/.stufe/.warns/.facts/.mono/.seg/.route-note` und ist der
+   direkteste Gegenspieler des Umbaus; dazu `test_warn_block_render.py`,
+   `test_official_alert_warn_section.py`, `test_957_alert_mail_literal_structure.py`. Der einzige
+   byte-genaue Vergleich der Nowcast-Mail steht **inline** im Modul
+   (`test_multi_location_onset_alert.py::test_single_onset_email_and_subject_byte_identical`),
+   nicht in einer Golden-Datei. Alle nur **zusammen mit** dem Produktivfix umstellen.
+5. 🔴 **Vier Testdateien laufen still gar nicht.** `pyproject.toml:65` filtert
+   `-m 'not email and not live and not staging'`; modulweites `pytestmark` macht daraus ein
+   lautloses „deselected": `test_952_onset_alert_e2e.py`, `test_issue_1169_compare_alert_consumer.py`,
+   `test_alert_sms_location_positions.py`, `test_issue_1087_trip_official_alerts.py`. Wer eine
+   davon als Nachweis benennt, benennt einen Test, der nicht läuft — in A1 genau so passiert.
+6. **Briefing-Goldens hängen mit dran.** `tests/golden/email/corsica-vigilance-{html,plain}.txt`
+   sichern byte-genau die Briefing-Mail mit eingebettetem Warn-Badge über die geteilten
+   `render_official_alerts_html/plain`. Wer diese Helfer anfasst, bricht sie mit.
