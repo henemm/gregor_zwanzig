@@ -318,6 +318,16 @@
 	// hier bereits das EINE Objekt ist, das auch EditReportConfigSection per
 	// bind:reportConfig haelt.
 	function handleDayWindowChange(w: { day_window_start_hour: number; day_window_end_hour: number }) {
+		// Fix-Loop 2 (Staging-Regression #1775 nach Merge): gleiche Fehlerklasse
+		// wie handleWeatherMetricsChange oben -- ohne Inhaltsgleichheits-Guard
+		// erzeugt jeder Effect-Lauf in WeatherMetricsTab eine neue reportConfig-
+		// Referenz -> neue stubTrip-Referenz -> effect_update_depth_exceeded.
+		if (
+			reportConfig?.day_window_start_hour === w.day_window_start_hour &&
+			reportConfig?.day_window_end_hour === w.day_window_end_hour
+		) {
+			return;
+		}
 		reportConfig = { ...(reportConfig ?? {}), ...w };
 	}
 

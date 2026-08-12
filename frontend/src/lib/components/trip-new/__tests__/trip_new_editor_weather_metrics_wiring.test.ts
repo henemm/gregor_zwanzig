@@ -68,11 +68,36 @@ describe('AC-2/AC-3/AC-6 (Test 4-6, Issue #1775): handleDayWindowChange + stubTr
 	// Spec: docs/specs/modules/fix_1775_tagesfenster_anlegen.md § Test 4, Test 5, Test 6
 
 	test('ein handleDayWindowChange-Handler existiert und mergt additiv in reportConfig', () => {
+		// Fix-Loop 2 (Staging-Regression nach #1775-Merge): der Handler prueft
+		// jetzt zuerst auf Inhaltsgleichheit und schreibt nur bei echter
+		// Aenderung -- die Zuweisung folgt deshalb nicht mehr direkt auf die
+		// oeffnende Klammer (analog handleWeatherMetricsChange oben).
 		assert.match(
 			code,
-			/function handleDayWindowChange\([^)]*\)\s*\{\s*reportConfig\s*=\s*\{\s*\.\.\.\(reportConfig\s*\?\?\s*\{\}\),\s*\.\.\.w\s*\};?\s*\}/,
+			/function handleDayWindowChange\([^)]*\)\s*\{[\s\S]*?reportConfig\s*=\s*\{\s*\.\.\.\(reportConfig\s*\?\?\s*\{\}\),\s*\.\.\.w\s*\};?\s*[\s\S]*?\}/,
 			'Kein handleDayWindowChange-Handler gefunden, der additiv in reportConfig mergt — ' +
 				'ohne ihn erreicht das Tagesfenster nie den POST-Payload (#1775)'
+		);
+	});
+
+	test('handleDayWindowChange ueberspringt inhaltsgleiche Aufrufe (Fix-Loop 2, Regressionsschutz)', () => {
+		// Staging-Befund nach dem #1775-Merge (Commit 9149e480): /trips/new war
+		// komplett unbedienbar, effect_update_depth_exceeded SOFORT beim Laden,
+		// 5/5 Reproduktionen, keine Nutzerinteraktion noetig. Root Cause: dieser
+		// Handler schrieb bedingungslos eine neue reportConfig-Referenz, obwohl
+		// WeatherMetricsTab im createMode-$effect bei jedem Effect-Lauf
+		// onDayWindowChange(...) aufruft -- neue reportConfig-Referenz -> neue
+		// stubTrip-Referenz -> Kreis. Exakt dieselbe Fehlerklasse wie
+		// handleWeatherMetricsChange (Fix-Loop 2 zu #1552), dort bereits mit
+		// einem Inhaltsgleichheits-Guard behoben.
+		const fnMatch = code.match(/function handleDayWindowChange\([^)]*\)\s*\{[\s\S]*?\n\t\}/);
+		assert.ok(fnMatch, 'handleDayWindowChange nicht gefunden');
+		assert.match(
+			fnMatch[0],
+			/reportConfig\?\.day_window_start_hour\s*===\s*w\.day_window_start_hour\s*&&\s*reportConfig\?\.day_window_end_hour\s*===\s*w\.day_window_end_hour/,
+			'Kein Inhaltsgleichheits-Guard vor dem Schreiben -- jeder Effect-Lauf in ' +
+				'WeatherMetricsTab erzeugt sonst eine neue reportConfig-Referenz und damit ' +
+				'eine Endlosschleife (effect_update_depth_exceeded, Staging-Regression #1775)'
 		);
 	});
 
