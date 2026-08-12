@@ -89,6 +89,7 @@
 		stages: [],
 		activity: selectedActivity,
 		display_config: { channels, metrics: weatherMetrics } as unknown as Trip['display_config'],
+		report_config: reportConfig,
 	});
 
 	// Saving state
@@ -309,6 +310,15 @@
 		// unabhaengig davon, was WeatherMetricsTab intern liest.
 		if (JSON.stringify(m) === JSON.stringify(weatherMetrics)) return;
 		weatherMetrics = [...m];
+	}
+
+	// ── Tagesfenster-Änderung aus WeatherMetricsTab (Issue #1775) ─────────────
+	// Rückkanal analog handleChannelsChange/handleWeatherMetricsChange —
+	// additiv mergen statt Feld für Feld separat zu halten, da reportConfig
+	// hier bereits das EINE Objekt ist, das auch EditReportConfigSection per
+	// bind:reportConfig haelt.
+	function handleDayWindowChange(w: { day_window_start_hour: number; day_window_end_hour: number }) {
+		reportConfig = { ...(reportConfig ?? {}), ...w };
 	}
 
 	// ── Speichern ─────────────────────────────────────────────────────────────
@@ -802,7 +812,7 @@
 		     bestehen (Resize-Grenzfall: Tab kann kurzzeitig neu mounten). -->
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'metriken' ? '' : 'none'}>
-			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} />
+			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
 		</div>
 		{/if}
 		</div><!-- /.tn-desktop -->
@@ -1030,7 +1040,7 @@
 			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'metriken' ? '' : 'none'}>
-				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} />
+				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
 			</div>
 			{/if}
 

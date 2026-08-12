@@ -64,6 +64,49 @@ describe('AC-1/AC-2/AC-3 (Test 4): handleWeatherMetricsChange schreibt weatherMe
 	});
 });
 
+describe('AC-2/AC-3/AC-6 (Test 4-6, Issue #1775): handleDayWindowChange + stubTrip.report_config', () => {
+	// Spec: docs/specs/modules/fix_1775_tagesfenster_anlegen.md § Test 4, Test 5, Test 6
+
+	test('ein handleDayWindowChange-Handler existiert und mergt additiv in reportConfig', () => {
+		assert.match(
+			code,
+			/function handleDayWindowChange\([^)]*\)\s*\{\s*reportConfig\s*=\s*\{\s*\.\.\.\(reportConfig\s*\?\?\s*\{\}\),\s*\.\.\.w\s*\};?\s*\}/,
+			'Kein handleDayWindowChange-Handler gefunden, der additiv in reportConfig mergt — ' +
+				'ohne ihn erreicht das Tagesfenster nie den POST-Payload (#1775)'
+		);
+	});
+
+	test('beide WeatherMetricsTab-Mounts (Desktop+Mobile) uebergeben onDayWindowChange', () => {
+		const mounts = code.match(/<WeatherMetricsTab\b[^>]*\/>/g) ?? [];
+		assert.equal(mounts.length, 2, `Erwartet genau 2 WeatherMetricsTab-Mounts, gefunden: ${mounts.length}`);
+		for (const [i, m] of mounts.entries()) {
+			assert.match(
+				m,
+				/onDayWindowChange=\{handleDayWindowChange\}/,
+				`Mount #${i + 1} uebergibt onDayWindowChange nicht`
+			);
+			// Regression: bestehende Rueckkanaele duerfen nicht verloren gehen.
+			assert.match(m, /onChannelsChange=\{handleChannelsChange\}/, `Mount #${i + 1} verliert onChannelsChange`);
+			assert.match(m, /onWeatherMetricsChange=\{handleWeatherMetricsChange\}/, `Mount #${i + 1} verliert onWeatherMetricsChange`);
+		}
+	});
+
+	test('stubTrip traegt report_config (AC-6 — Viewport-Wechsel verliert sonst einen gesetzten Wert)', () => {
+		// Ohne dieses Feld startet eine neu gemountete WeatherMetricsTab-Instanz
+		// (Desktop<->Mobile-Remount) immer bei {} -> Default 4/19 und ueberschreibt
+		// damit einen zuvor bewusst gesetzten Wert in TripNewEditor.reportConfig
+		// stillschweigend (s. Spec "Implementation Details" B).
+		const stubMatch = code.match(/const stubTrip = \$derived<Trip>\(\{[\s\S]*?\}\);/);
+		assert.ok(stubMatch, 'stubTrip-Definition nicht gefunden');
+		assert.match(
+			stubMatch[0],
+			/report_config:\s*reportConfig/,
+			'stubTrip traegt kein report_config -- ein Viewport-Wechsel wuerde ein ' +
+				'bereits gesetztes Tagesfenster beim Remount auf 4/19 zuruecksetzen (AC-6)'
+		);
+	});
+});
+
 describe('Test 4 (Ende-zu-Ende der Anlage): buildCreateTripPayload uebernimmt eine geaenderte Auswahl', () => {
 	// Beweist die Kehrseite: SOBALD weatherMetrics tatsaechlich befuellt ist
 	// (was der oben bewiesene Handler jetzt leistet), landet die geaenderte

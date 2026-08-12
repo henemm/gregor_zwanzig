@@ -132,6 +132,10 @@
 		 *  oben emittieren (analog onChannelsChange), da im Anlege-Modus kein
 		 *  PUT möglich ist. */
 		onWeatherMetricsChange?: (metrics: WeatherConfigMetric[]) => void;
+		/** Issue #1775: Create-Modus — Tagesfenster per Rückkanal nach oben
+		 *  emittieren (analog onChannelsChange/onWeatherMetricsChange), da im
+		 *  Anlege-Modus kein PUT möglich ist. */
+		onDayWindowChange?: (w: { day_window_start_hour: number; day_window_end_hour: number }) => void;
 		/** Issue #694: Trip-State in +page.svelte nach erfolgreichem PUT aktualisieren */
 		onTripUpdate?: (t: Trip) => void;
 		/** Issue #758: SaveStatus controller — wenn gesetzt, entfällt der explizite Speichern-Button. */
@@ -155,7 +159,7 @@
 		 *  Stundenverlauf). Reine Weiterreichung an CompareOutlookLayoutControls. */
 		onOutlookCommit?: () => void;
 	}
-	let { context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit, onOutlookCommit }: Props = $props();
+	let { context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit, onOutlookCommit }: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
 	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
@@ -616,6 +620,19 @@
 	$effect(() => {
 		if (createMode && onWeatherMetricsChange && catalogLoaded) {
 			onWeatherMetricsChange(buildWeatherMetricsList());
+		}
+	});
+
+	// Issue #1775: Create-Modus — Tagesfenster nach oben propagieren (analog
+	// Kanal-/Wetter-Metrik-Rückkanal oben). Kein catalogLoaded-Gate noetig --
+	// die Tagesfenster-Felder haengen an keinem asynchron geladenen Katalog,
+	// sie sind ab Mount synchron verfuegbar.
+	$effect(() => {
+		if (createMode && onDayWindowChange) {
+			onDayWindowChange({
+				day_window_start_hour: reportConfig.day_window_start_hour ?? 4,
+				day_window_end_hour: reportConfig.day_window_end_hour ?? 19,
+			});
 		}
 	});
 
@@ -1378,12 +1395,18 @@
 			     `userTouched` UND `scheduleAutoSave()` explizit aus der echten
 			     DOM-Geste heraus setzen, statt sich auf den ambienten $effect zu
 			     verlassen.
-			     !createMode (analog 'report_config' unten): TripNewEditor.svelte
-			     haelt beim Anlegen eine EIGENE, separate reportConfig-Instanz
-			     (eigener EditReportConfigSection auSSerhalb dieser Komponente) —
-			     dieser hier lokale reportConfig-$state waere dort wirkungslos
-			     (Known Limitation, s. Spec-Rueckmeldung). -->
-			{#if !createMode && sections.includes('tagesfenster')}
+			     Kein !createMode-Gate (anders als 'report_config' unten, Z. 1542):
+			     TripNewEditor.svelte haelt beim Anlegen weiterhin eine EIGENE,
+			     separate reportConfig-Instanz (eigener EditReportConfigSection
+			     ausserhalb dieser Komponente) — dieser hier lokale reportConfig-
+			     $state bleibt dort technisch wirkungslos, genau wie beim
+			     'report_config'-Abschnitt. Die Card ist trotzdem im createMode
+			     sichtbar, weil Issue #1775 (analog #622/#1552) einen expliziten
+			     Rueckkanal-$effect ergaenzt hat (`onDayWindowChange`, s. Z. 601 ff.):
+			     der propagiert die Werte aktiv an TripNewEditor.svelte, das sie in
+			     seiner eigenen reportConfig-Instanz mergt (handleDayWindowChange)
+			     und beim Speichern in den Payload uebernimmt. -->
+			{#if sections.includes('tagesfenster')}
 				<div data-testid="weather-metrics-tagesfenster">
 					<!-- Reassign statt In-Place-Mutation: der Auto-Save-Effekt oben
 					     (Z. 635) vergleicht `cur !== _lastReportConfig` — eine reine
