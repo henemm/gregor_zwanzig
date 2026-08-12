@@ -12,7 +12,10 @@ tags: [backend, frontend, metrik-kaskade, kuerzel, telegram, sms, issue-1719]
 
 ## Approval
 
-- [ ] Approved — PO, 2026-08-__ („go")
+- [x] Approved — PO, 2026-08-12 („go"), ohne Einschränkung. Damit entschieden:
+  **Entscheidungspunkt A** — `⚡` und `☀` werden durch `TH` und `SU` ersetzt (keine
+  Symbol-Ausnahme); **Mail-Kürzel** (`Feels`, `Dew`, `Gust`) bleiben unangetastet;
+  die Auflösungsmatrix aus Abschnitt 4 gilt verbindlich.
 
 ## Purpose
 
