@@ -71,7 +71,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | E-Mail mobile Kompaktzeilen (in der **Voll**mail) | `src/output/renderers/email/html.py:878` `_render_mobile_compact_rows()`; Aufrufe `:1206`, `:1264`, `:1290` (Nachtzeilen) | katalog-getrieben (erbt `col_order`) | **unbewacht** |
 | Kurzform-Mail (eigenes Format `compact`) | `src/output/renderers/email/compact.py:96` `render_compact()`; Pillen-Aufruf `:176` | katalog-getrieben über `resolve_trip_active_metrics` | **unbewacht** |
 | Kompakt-Zusammenfassung (Fließtext-Block **in** der Vollmail) | `src/output/renderers/compact_summary.py:567` `_format_thunder()`, Aufruf `:243`; aktiviert über `src/output/renderers/trip_report.py:173` `options.show_compact_summary`, Formatter-Einstieg `trip_report.py:942` | handgeschrieben — `thunder` ist die **einzige** Metrik mit eigener Formatier-Methode | nur metrikspezifisch: `tests/tdd/test_hail_compact_summary_thunder.py:75`, `:89`, `:107` (Gewitter/Hagel). Als Metrik×Kanal-Ort **unbewacht** |
-| Ausblick / 3-Tages-Tabelle (Trip-Mail) | `src/output/renderers/email/outlook.py:149`, `:343`, `:522` — Spalten aus `src/output/renderers/compare_outlook_metric_ids.py:78` `outlook_columns()` | katalog-getrieben | **unbewacht** (größte Fläche, s. 4.2) |
+| Ausblick / 3-Tages-Tabelle (Trip-Mail) | `src/output/renderers/email/outlook.py:174–298` (HTML), `:353–403` (Klartext) — **feste** Spalten Tag/N/D/R/PR/Wind/Böen/Gew (+ACC) | **nicht** katalog-getrieben: alle drei Trip-Aufrufstellen (`email/html.py:1357`, `email/plain.py:338`, `trip_report_scheduler.py:1844`) übergeben **kein** `metrics` | `tests/tdd/test_trip_outlook_parity.py` (Byte-Golden über das GANZE HTML + Klartext) — strenger als eine Metrik-Achse; **keine Metrik×Kanal-Fläche**, weil der Nutzer hier nichts wählen kann (gemessen 2026-08-11, #1703 S2) |
 | Ausblick: Gewitter-Sonderbehandlung | `email/outlook.py:38` `_THUNDER_TOKEN_RE`; Wortlaut-Map `:195–198` (dritte LOW/MED/HIGH-Übersetzung im Code) | handgeschrieben | teilbewacht über Gewitter-Tests, nicht über die Matrix |
 | Telegram rich (Bubbles) | `src/output/renderers/narrow.py:661` → `src/output/renderers/channel_layout.py:75` `render_for_channel()`; Limits `channel_layout.py:45` `CHANNEL_LIMITS` | gemischt — Ausnahme `_NIGHT_SCALAR_IDS` `channel_layout.py:88` | `tests/tdd/test_channel_metric_matrix.py:114` |
 | Telegram Kurzübersicht / Trendzeile | `narrow.py:346` (Zeilentupel), `narrow.py:528–532`, `narrow.py:586–597` (drei hartkodierte Gewitter-Zweige) | handgeschrieben | **unbewacht** als eigener Ausgabeort |
@@ -91,7 +91,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | Klartext-Teil derselben Mail | `src/output/renderers/comparison.py:70` `_DAILY_PLAIN_ROWS`, `:100` `_PLAIN_ROWS` (je Zeile ein getipptes Tupel aus ID, Label, Format-Lambda); gerendert `:237` | handgeschrieben | Reihenfolge eingefroren in `tests/unit/test_compare_metric_order.py`; Werte-Parität zum HTML nur durch geteilte Formatierer, nicht durch Assertion |
 | Compare Telegram | `comparison.py:668` `render_for_channel(channel, dc, …)`; Labels/Formate `comparison.py:498` `_PLAIN_ROWS_BY_ID` | katalog-getrieben | **unbewacht** — der Matrix-Test kennt Compare überhaupt nicht |
 | Compare SMS | `comparison.py:486` `_CHANNEL_METRICS` — genau 6 Metriken (Temp, Wind, Sonne, Wolken, Schnee, Neuschnee) | handgeschrieben | **unbewacht** |
-| Compare Ausblick | `src/output/renderers/compare_outlook_metric_ids.py:78` `outlook_columns()` (dieselbe Funktion wie Trip-Ausblick) | katalog-getrieben | **unbewacht** |
+| Compare Ausblick | `src/output/renderers/compare_outlook_metric_ids.py:78` `outlook_columns()`; Aufrufe `comparison.py:348` (Klartext), `compare_html.py:1101`/`:1175` (HTML) — **der einzige** Pfad, der `outlook_columns()` tatsächlich erreicht | katalog-getrieben, 25 Paare aus `get_compare_metric_catalog()` | `tests/tdd/test_channel_metric_matrix.py` AC-S2-1..8 (#1703 S2) — Spalte, Kopf-Eindeutigkeit, **Zellwert**, beide Aggregationspfade gegeneinander; Soll aus `tests/helpers/outlook_columns.py` gerechnet |
 | Compare-ID-Auswahlmodule | `compare_hourly_metric_ids.py`, `compare_metric_ids.py`, `compare_outlook_metric_ids.py` (Neuformat `{"metric_id","aggregation"}`) | katalog-getrieben | teilbewacht |
 
 ### 2.3 Alarme und amtliche Warnungen
@@ -182,10 +182,37 @@ Modul-Docstring sind nachgezogen. Spec:
   (11 − 1 = 10).
 
 **Fläche 2 — Alle Metriken × Ausblick-Tabelle.** `outlook_columns()`
-(`compare_outlook_metric_ids.py:78`), genutzt von Trip-Mail **und** Compare-Mail
-(`email/outlook.py:149`, `:343`, `:522`).
-*Priorität 1, weil es flächenmäßig die größte unbewachte Zone ist: zwei
-Produktflächen, jede Katalogmetrik, kein einziger Wächter.*
+(`compare_outlook_metric_ids.py:78`).
+
+> **✅ Erledigt (2026-08-11, Epic #1703 Scheibe 2, PR #1748, Merge `9aced271`).**
+>
+> **Die hier ursprünglich behauptete Prämisse war falsch und ist korrigiert:** Diese Zeile
+> sagte, `outlook_columns()` werde „von Trip-Mail **und** Compare-Mail" genutzt. Gemessen
+> übergeben **alle drei** Trip-Aufrufstellen kein `metrics`-Argument und laufen im festen
+> Legacy-Spaltenpfad; `outlook_columns()` erreicht **nur** der Ortsvergleich. Der
+> Trip-Ausblick hat keine wählbaren Spalten und damit keine Metrik×Kanal-Fläche — er ist
+> zudem durch den Byte-Golden `test_trip_outlook_parity.py` strenger bewacht, als eine
+> Matrix-Achse es wäre. Die Scheibe ist deshalb **Compare-only** (PO-freigegeben).
+>
+> Wächter: `tests/tdd/test_channel_metric_matrix.py` AC-S2-1..8, Soll-Menge (25 Paare) aus
+> `get_compare_metric_catalog()` gerechnet via `tests/helpers/outlook_columns.py` inkl.
+> Vakuum-Schutz. Ist-Werte aus der **echten** Mail (`render_compare_email()`, HTML und
+> Klartext in einem Aufruf).
+>
+> **Mitrepariert — der eigentliche Fund:** Fünf der 25 wählbaren Spalten waren *dauerhaft
+> leer* (Schneehöhe, Neuschnee, Windrichtung, Gefühlte Temperatur Min/Max). `summarize_points()`
+> (`weather_metrics.py:1071`) ist eine handgepflegte Aufzählung und hatte fünf `_compute_*`-Regeln
+> nie verdrahtet, die `compute_extended_metrics()` (`:752-760`) längst nutzt. Gegenrichtung zu
+> #1391; #1324/#1392 sind Flicken an derselben Naht. AC-S2-5 hält beide Pfade nun gegeneinander.
+>
+> **Adversary-Finding F001 (HIGH), geschlossen:** „Soll rechnen statt tippen" sichert
+> Vollständigkeit, **nie Zuordnung** — und die Lücke lag diesmal nicht im Katalog, sondern im
+> Fix selbst: eine Vertauschung von `wind_chill_min_c`/`wind_chill_max_c` blieb grün, weil kein
+> Test im Repo die *Zahlenwerte* prüfte. AC-S2-8 schließt das mit unabhängig gerechneten
+> Erwartungswerten. Details: `docs/specs/modules/fix_1703_s2_ausblick_matrix.md`.
+>
+> Grenzen: Telegram (`narrow.py:571`) und Kompakt-Mail (`email/compact.py:227`) haben eigene
+> Ausblick-Implementierungen, die `outlook.py` nicht importieren → Scheibe 4.
 
 **Fläche 3 — Nicht-wählbare Register-Metriken.** `metric_catalog.py:695` —
 `get_all_metrics()` gibt `[m for m in _METRICS if m.selectable]` zurück. Jeder
@@ -311,12 +338,27 @@ wieder ausgenommen werden. Gemessen an den vier echten Renderern, nicht an
 Alarm (PO-Entscheidung #1585 löst die #978-Vorlage ab). Details, Soll-Menge, Grenzen und
 Mutations-Gegenprobe: `docs/specs/modules/fix_1703_s1_alert_renderer_matrix.md`.
 
-### Scheibe 2 — Ausblick-Tabelle Trip + Compare
+### Scheibe 2 — Ausblick-Tabelle (Compare) ✅ ERLEDIGT (2026-08-11)
 
-Matrix-Achse für `outlook_columns()` (`compare_outlook_metric_ids.py:78`) in
-beiden Mail-Pfaden (`email/outlook.py:149`, `:343`, `:522`).
-*Risiko: mittel. Größe: mittel–groß — zwei Produktflächen, eine geteilte
-Spaltenquelle, deshalb eine Assertion-Familie für beide.* Deckt Fläche 2.
+Matrix-Achse für `outlook_columns()` (`compare_outlook_metric_ids.py:78`). Deckt Fläche 2.
+
+**Der Titel hieß bis zum Umsetzen „Trip + Compare" — das war falsch.** Gemessen erreicht
+`outlook_columns()` nur den Ortsvergleich; alle drei Trip-Aufrufstellen übergeben kein
+`metrics`. Der Trip-Ausblick hat keine wählbaren Spalten (feste Sieben) und wird vom
+Byte-Golden `test_trip_outlook_parity.py` strenger bewacht, als eine Metrik-Achse es könnte.
+Zuschnitt daher **Compare-only**, PO-freigegeben 2026-08-11.
+
+Umgesetzt als 8 ACs (AC-S2-1..8) in `tests/tdd/test_channel_metric_matrix.py`, Soll-Menge
+**25 Paare** aus `get_compare_metric_catalog()` gerechnet (`tests/helpers/outlook_columns.py`,
+Vakuum-Schutz ≥ 20). Gemessen an der echten Mail über `render_compare_email()` — HTML und
+Klartext aus einem Aufruf, damit der Klartext-blinde Fleck des Mail-Validators mitfällt.
+
+**Produktivfix:** fünf dauerhaft leere Spalten (Schneehöhe, Neuschnee, Windrichtung, Gefühlte
+Temperatur Min/Max), Ursache in `summarize_points()`; AC-S2-5 hält beide Tages-Aggregationspfade
+gegeneinander. **F001 (HIGH, geschlossen):** die Zuordnungs-Blindstelle bestand im Fix selbst,
+nicht nur im Katalog — AC-S2-8 prüft die Zahlenwerte gegen unabhängig gerechnete Erwartungen.
+Details, Fehlzeichen-Falle (`–` U+2013 vs. `—` U+2014) und Grenzen:
+`docs/specs/modules/fix_1703_s2_ausblick_matrix.md`.
 
 ### Scheibe 3 — Nicht-wählbare Register-Metriken ✅ ERLEDIGT (2026-08-10)
 
