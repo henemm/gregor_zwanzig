@@ -9,6 +9,17 @@ workflow: feat-1232-layout-tab-3b
 
 # LayoutTab (route) — geteilter Layout-Organism im Trip-Editor — Scheibe 3b (letztes Stück von #1232)
 
+> **Teilweise überholt durch #1719 S3 (2026-08-11):** Die hier beschriebene
+> Live-Vorschau (`WeatherV2MailPreview`, `preview`-Snippet von `LayoutTab`,
+> FAB+Sheet „So kommt es an") ist auf PO-Entscheid ersatzlos entfernt —
+> `LayoutTab.svelte` hat seither keine `preview`-Prop und keine rechte Spalte
+> mehr, nur noch den hier beschriebenen `editor`-Teil (Kanal-Picker +
+> Reihenfolge). Ebenfalls überholt: die als `CHANNEL_COL_BUDGET.telegram = 8`
+> zitierte Kapplinie — der tatsächliche Wert ist 7 (die 8. Spalte ist die
+> Uhrzeit, nicht mitgezählt). Details:
+> `docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md`. Die Reihenfolge-/
+> DnD-/Kanal-Picker-Beschreibung dieser Spec bleibt unverändert gültig.
+
 - **Issue:** #1232 (Phase 4 — Editor-Konsolidierung, Sub-Issue von Epic #1230) · Scheibe 3b von 2 (LETZTE Scheibe)
 - **Vorgänger:** Scheibe 1 (`docs/specs/modules/versand_tab_route.md`, live) · Scheibe 2a (`docs/specs/modules/compare_preset_zeitplan.md`, live) · Scheibe 2b (`docs/specs/modules/versand_tab_vergleich.md`, live) · Scheibe 3a (`docs/specs/modules/layout_tab_vergleich.md`, live — geteilte Primitiva `shared/layout-tab/` + Compare-Editor)
 - **Design-Quelle (1:1, strukturell):** `claude-code-handoff/current/jsx/layout-tab.jsx` (370 Z., route-Zweig `LT_RoutePreview`/`LT_RouteOrderDense`) + `soll-29b-desktop-layout-route.png`

@@ -258,6 +258,19 @@
 		return splitChannelMetricsForDisplay(buckets.primary, channelView(ch).buckets.primary);
 	}
 
+	// Staging-Fund (2026-08-11, GREEN-Nachbesserung): MEMOISIERT statt eines
+	// Funktionsaufrufs im Markup. SortableList.svelte synct seine `items`
+	// per $effect (bewusst kein $derived dort, s. Kommentar dort) gegen die
+	// `primaryColumns`-Prop — ein bei JEDEM Render frisch erzeugtes Array
+	// (`.filter()` in splitChannelMetricsForDisplay liefert nie dieselbe
+	// Referenz) triggert diesen $effect auch OHNE echte Datenänderung und
+	// überschreibt den dndzone-internen Phantom-Placeholder MITTEN im Drag —
+	// der Drag bricht dann lautlos ab, bevor `finalize`/`onDndReorder` je
+	// feuert (kein PUT, keine Persistenz; Reihenfolge-Änderung überlebt den
+	// Reload nicht). `$derived` liefert zwischen echten Änderungen dieselbe
+	// Array-Referenz. Gilt nur für den aktiven Kanal — dort findet der Drag statt.
+	const activeChannelSections = $derived(channelListSections(activeChannel));
+
 	// AC-2 Diff-Highlight: 2,5s Aufleuchten nach jeder Änderung.
 	let highlight: Highlight | null = $state(null);
 	let highlightTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1317,13 +1330,13 @@
 			<LayoutTab
 				context="route"
 				bind:channel={activeChannel}
-				colCount={channelListSections(activeChannel).active.length}
+				colCount={activeChannelSections.active.length}
 				subjectLabel="Metriken"
 			>
 				{#snippet editor({ channel })}
 					<Card padding={0}>
 						<WeatherV2Reihenfolge
-							primaryColumns={channelListSections(channel).active}
+							primaryColumns={activeChannelSections.active}
 							{metricById}
 							friendlyMap={channelView(channel).friendlyMap}
 							activeChannel={channel}
@@ -1331,7 +1344,7 @@
 							onRemove={onRemove}
 							onDndReorder={onDndReorder}
 							{onMode}
-							offColumns={channelListSections(channel).off}
+							offColumns={activeChannelSections.off}
 							onRestore={onRestoreMetric}
 						/>
 					</Card>

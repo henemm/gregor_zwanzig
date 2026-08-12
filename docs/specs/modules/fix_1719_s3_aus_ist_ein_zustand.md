@@ -267,8 +267,17 @@ Spalte: `preview: Snippet<…>` (`:28`) ist heute
   - `VTBriefingChannels` → **153** (Vergleichs-Briefing); dieselbe Komponente im **Trip**
     → **160**. Die Zahl ist kontextabhängig, die Komponente ist geteilt.
   - `CompareSmsPreview` → **153**.
-  - `AlertChannelPicker` → **140**. Diese Zahl ist heute schon **richtig** und darf nicht
-    geändert werden; zu prüfen ist allein, dass die Wertung verschwindet.
+  - `AlertChannelPicker` → die **140** in der Konstante ist heute schon **richtig** und darf
+    nicht auf den Briefing-Wert gezogen werden. Geprüft wird, dass **keine Wertung** und
+    **nicht die fremde Zahl 153** in der Zeile steht — **nicht**, dass eine Zahl sichtbar ist.
+
+  > 🔴 **Fünfte Korrektur, Staging-Messung 2026-08-12.** Die verdrahtete Alarm-Zeile zeigt
+  > „SMS — gering mittel hoch", also die Stufen-Auswahl. Der statische Text mit
+  > „sofort · ≤ 140 Z." (`AlertChannelPicker.svelte:51`) ist **totes Markup**:
+  > `AlarmeTab.svelte:355` übergibt `thresholds` immer, der Textzweig wird nie gerendert.
+  > Eine Zusicherung „140 muss sichtbar sein" hätte neue Oberfläche erzwungen, die niemand
+  > bestellt hat — das gehört in den Alarm-Umbau (#1701/#1745). Der Befund stammt vom
+  > Developer aus Adversary-Runde 2 und wurde erst auf Staging in seiner Wirkung sichtbar.
 
 ### Block C — „Aus" ist ein Zustand
 
@@ -359,6 +368,17 @@ Test nachträglich passend zu machen.
 
 ## Known Limitations
 
+- **🔴 Die Scheibe hat das Ziehen im Kanal-Reiter zunächst lautlos zerstört** (auf Staging
+  gefunden, 2026-08-11). `channelListSections()` im Markup liefert per `.filter()` bei
+  **jedem** Rendern ein neues Array; `SortableList.svelte:58` gleicht seine Einträge per
+  `$effect` dagegen ab und überschreibt den Platzhalter **mitten in der Ziehgeste**. Der Zug
+  brach ab, bevor `onDndReorder` feuerte — kein Speichern, keine Persistenz, **keine
+  Fehlermeldung**. Vor S3 war die Referenz stabil (`channelView(ch).buckets.primary`).
+  Behoben durch Memoisierung (`$derived`). Bewacht von AC-2 (Ziehen + Neuladen).
+  **Lehre:** Eine im Markup aufgerufene Funktion, die eine neue Referenz liefert, ist in
+  Svelte 5 kein Darstellungsdetail, sondern ein Auslöser.
+- **Der Alarm-Reiter zeigt keine Zeichengrenze** (s. AC-6, fünfte Korrektur) — der Textzweig
+  mit „≤ 140 Z." ist totes Markup. Gehört in #1701/#1745.
 - **M1 und M2 sind bislang nur am Code nachverfolgt, nicht gemessen.** Beide werden allein von
   AC-10 gefangen, und AC-10 ist ein Playwright-Klickpfad, der gegen Staging laufen muss.
   Solange der Lauf aussteht, ist die Zusicherung „der Persistenz-Fix ist bewacht"

@@ -474,7 +474,8 @@ unangetastet (s. AC-6).
 ## Nicht in dieser Scheibe
 
 - **Frontend** (Editor-Zustandsanzeige „Aus ist ein Zustand" statt Löschung,
-  `CHANNEL_COL_BUDGET.sms`-Korrektur, ADR-0050 Regel 4) — Scheibe S3.
+  `CHANNEL_COL_BUDGET.sms`-Korrektur, ADR-0050 Regel 4) — Scheibe S3. ✅ Erledigt
+  2026-08-11, s. `docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md`.
 - **Legende/Erklärtext zur Kaskade im UI** — Scheibe S4.
 - ~~Telegram-Kurzübersicht bleibt an die E-Mail-Kollabierung gekoppelt~~ **Doch
   in dieser Scheibe behoben** (Adversary F004, s. AC-13 + Known Limitations 1)

@@ -10,6 +10,14 @@ tags: [sms, fidelity-preview, trip-editor, dead-code-cleanup]
 
 # Fix #923b — SMS-Fidelity-Vorschau an die live gerenderte Komponente anschließen
 
+> **Abgelöst durch #1719 S3 (2026-08-11):** Die hier verdrahtete Zielkomponente
+> `WeatherV2MailPreview.svelte` und die Live-Vorschau „So kommt es an" sind auf
+> PO-Entscheid ersatzlos entfernt (Komponente gelöscht, ebenso
+> `trip-detail/smsFidelityPreview.ts`). Der in dieser Scheibe angeschlossene
+> Endpoint `POST /api/_validator/sms-fidelity-preview` bleibt registriert, hat
+> seither aber keinen Live-Konsumenten mehr. Details:
+> `docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md`.
+
 ## Approval
 
 - [x] Approved

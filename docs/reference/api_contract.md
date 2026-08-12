@@ -1,15 +1,22 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-06 (Issue #923b, `fix-923b-wire-live-sms-preview` — Korrektur zu #923:
+**Updated:** 2026-08-11 (Issue #1719 Scheibe S3, `fix-1719-s3-aus-ist-ein-zustand` — die
+Live-Vorschau „So kommt es an" ist auf PO-Entscheid ersatzlos entfernt:
+`WeatherV2MailPreview.svelte` (der einzige Live-Konsument des unten beschriebenen
+`/api/_validator/sms-fidelity-preview`) ist gelöscht, ebenso `trip-detail/smsFidelityPreview.ts`.
+Der Endpoint selbst bleibt registriert, ist damit aber **toter Code** — nicht Teil dieser
+Scheibe, s. `docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md` „Known Limitations". Der
+darunterstehende #923b-Eintrag beschreibt entsprechend nur noch den historischen Stand);
+2026-08-06 (Issue #923b, `fix-923b-wire-live-sms-preview` — Korrektur zu #923:
 der am selben Tag gebaute Endpoint `POST /api/_validator/sms-fidelity-preview` war korrekt,
 aber gegen tote Komponenten verdrahtet (`ChannelFidelitySMS.svelte`, `ChannelPreviewCard.svelte`
 — nie von einer Route importiert, nur über den Organisms-Barrel erreichbar). Live konsumiert
-wird der Endpoint erst ab #923b, über `WeatherV2MailPreview.svelte`
+wurde der Endpoint ab #923b, über `WeatherV2MailPreview.svelte`
 (`frontend/src/lib/components/shared/weather-metrics-tab/`, eingebunden in
 `WeatherMetricsTab.svelte`), bei `context==='route'`. Bei `context==='vergleich'`
-(Ortsvergleich-Editor) bleibt die SMS-Kachel bewusst ausgeblendet — kein Aufruf. Die fünf toten
-Komponenten sind gelöscht. Spec: `docs/specs/modules/fix_923b_wire_live_sms_preview.md`);
+(Ortsvergleich-Editor) blieb die SMS-Kachel bewusst ausgeblendet — kein Aufruf. Die fünf toten
+Komponenten wurden gelöscht. Spec: `docs/specs/modules/fix_923b_wire_live_sms_preview.md`);
 2026-08-06 (Issue #1461 Scheibe S3b-2b, `feat-1461-s3b2b-compare-kanal-schwelle` —
 `alert_channel_thresholds` (s. S3b-2a-Eintrag darunter) gilt jetzt auch für **Ortsvergleiche**:
 dasselbe additive Geschwisterfeld (`AlertChannelThresholdsConfig`, kein neuer Typ) auf

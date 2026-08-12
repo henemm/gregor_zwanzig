@@ -9,6 +9,19 @@ workflow: feat-1232-layout-tab
 
 # LayoutTab (vergleich) — geteilter Layout-Organism + Primitiva — Scheibe 3a/3b
 
+> **Überholt.** Die hier gebaute Einbettung `<LayoutTab context="vergleich">`
+> im Compare-Editor existiert nicht mehr — Issue #1360/#1372 Scheibe S1a
+> (`docs/specs/modules/compare_layout_tab_dissolution.md`, 2026-07-24/25) hat
+> den gesamten Compare-„Layout"-Reiter ersatzlos aufgelöst; die einzige
+> tatsächliche Einbettung von `LayoutTab` ist seither `context="route"`
+> (s. `docs/specs/modules/layout_tab_route.md`). Zusätzlich hat #1719 S3
+> (2026-08-11) die hier beschriebene `preview`-Spalte (`WeatherV2MailPreview`,
+> `LTComparePreview`) ganz aus `LayoutTab.svelte` entfernt und
+> `CHANNEL_COL_BUDGET.telegram` von 8 auf 7 korrigiert — beides gilt also
+> auch für den hier dokumentierten, inzwischen nicht mehr existierenden
+> Vergleichs-Zweig. Diese Spec bleibt als historisches Dokument des
+> #1232-3a-Zwischenstands stehen.
+
 - **Issue:** #1232 (Phase 4 — Editor-Konsolidierung, Sub-Issue von Epic #1230) · Scheibe 3a von 2 (3b = route folgt als eigener Workflow)
 - **Vorgänger:** Scheibe 1 (`docs/specs/modules/versand_tab_route.md`, live) · Scheibe 2a (`docs/specs/modules/compare_preset_zeitplan.md`, live) · Scheibe 2b (`docs/specs/modules/versand_tab_vergleich.md`, live — `CompareInhaltSection` als Zwischenlösung)
 - **Nachfolger:** Scheibe 3b (`context="route"` im `WeatherMetricsTab`, eigener Workflow — dockt an die hier gebauten Primitiva an)
