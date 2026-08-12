@@ -5,7 +5,7 @@ created: 2026-08-12
 updated: 2026-08-12
 status: draft
 workflow: fix-1726-ruhezeit-ortszone
-version: "1.0"
+version: "1.1"
 tags: [issue-1726, epic-1722, timezone, adr-0051, adr-0044, alert-daily-limit, quiet-hours, compare, scheduler]
 ---
 
@@ -31,10 +31,12 @@ Diese Scheibe stellt alle drei auf die Ortszone um. Beide `VIENNA`-Konstanten en
   `src/services/compare_alert.py`, `src/services/compare_official_alert.py`,
   `src/services/compare_radar_alert.py`, `src/services/dispatch_orchestrator.py`,
   `src/services/compare_slot_scheduler.py`, `src/services/scheduler_dispatch_service.py`,
+  `src/utils/timezone.py`,
   `frontend/src/lib/components/alerts-tab/AlertQuietHoursCard.svelte`
 - **Identifier:** `DeviationAlertEngine.is_quiet_hours`, `DeviationAlertEngine.evaluate`,
   `alert_daily_limit.{load,is_allowed,increment}`, `check_nowcast_gate`,
-  `CompareDispatchStrategy.collect_due`, `presets_due_for_hour`
+  `CompareDispatchStrategy.collect_due`, `presets_due_for_hour`,
+  `utils.timezone.first_resolvable_tz` (neu)
 - Issue #1726, S4 des Epics #1722. Kontext-Dokument
   `docs/context/fix-1726-ruhezeit-ortszone.md` (erhoben 2026-08-12 gegen `bc7dc418`).
 - ADR-0051 (drei Zeitbegriffe, Zone an den Daten — Status Vorgeschlagen), ADR-0044 (Kalendertag
@@ -48,10 +50,10 @@ Diese Scheibe stellt alle drei auf die Ortszone um. Beide `VIENNA`-Konstanten en
 |--------|------|---------|
 | `docs/adr/0051-drei-zeitbegriffe-zone-an-den-daten.md` | adr | Regel 2 ("Die Zone gehört an die Daten, nicht an den Server") — Grundlage aller drei Umstellungen |
 | `docs/adr/0044-kalendertage-folgen-der-ortszeit.md` | adr | Listet `alert_daily_limit`/`deviation_alert_engine` heute als „bewusst NICHT betroffen" — wird hier fortgeschrieben (AC-12) |
-| `src/utils/timezone.py` (`resolve_location_tz`, `location_tz`) | module | EINZIGER Auflöser für Orte (PO-Entscheidung E3, #1378) — kein zweiter Weg |
+| `src/utils/timezone.py` (`resolve_location_tz`, `location_tz`, neu `first_resolvable_tz`) | module | EINZIGER Auflöser für Orte (PO-Entscheidung E3, #1378) — kein zweiter Weg; `first_resolvable_tz` präzisiert „erster Ort" auf „erster AUFLÖSBARER Ort" (E1, AC-15, s. Entwurf Abschnitt B) |
 | `src/services/trip_day.py` (`trip_local_now`, `anchor_tz`) | module | EINZIGER Auflöser für Trips, day-aware (nicht `trip_tz`, das ist fix auf die erste Etappe mit Wegpunkten) |
-| `src/services/compare_preview_service.py` (`order_locations_by_ids`) | module | Die vom Nutzer konfigurierte Ortsreihenfolge (#1359) — Basis für „erster Ort" (E1) |
-| `docs/specs/modules/issue_1378_compare_zeitbasis.md` | spec | Liefert den Präzedenzfall „Zone des erstgenannten Orts" (AC-4), hier auf Ruhezeit/Zähler/Fälligkeit übertragen |
+| `src/services/compare_preview_service.py` (`order_locations_by_ids`) | module | Die vom Nutzer konfigurierte Ortsreihenfolge (#1359) — liefert die Sequenz, die `first_resolvable_tz` (s. o.) auswertet |
+| `docs/specs/modules/issue_1378_compare_zeitbasis.md` | spec | Liefert den Präzedenzfall „Zone des erstgenannten Orts" (AC-4), hier auf Ruhezeit/Zähler/Fälligkeit übertragen — dort mit derselben, hier erst geschlossenen Lücke (s. Bekannte Grenzen) |
 | `docs/specs/modules/fix_1725_faelligkeit_und_idempotenz.md` | spec | Unmittelbares Vorbild für Struktur und Nachweis-Strategie dieser Spec |
 | Issue #1777 | issue | Fälligkeitsfenster + Idempotenz-Vermerk für den Ortsvergleich — bewusst NICHT Teil dieser Scheibe |
 | Issue #1727 | issue | S5 des Epics — die ~25 Muster-A-Funde (`date.today()`) der Wächter-Restliste |
@@ -64,15 +66,16 @@ Diese Scheibe stellt alle drei auf die Ortszone um. Beide `VIENNA`-Konstanten en
 | File | Change Type | Description |
 |------|-------------|--------------|
 | `src/services/deviation_alert_engine.py` | MODIFY | `VIENNA`-Konstante entfällt; `is_quiet_hours()` bekommt Pflicht-Parameter `zone: ZoneInfo`; `evaluate()` reicht `config.zone` (Rückfall UTC) durch |
+| `src/utils/timezone.py` | MODIFY | Neuer Baustein `first_resolvable_tz(locations, context_label="")` — die EINE Stelle, an der „erster auflösbarer Ort" implementiert ist (Abschnitt B, AC-15) |
 | `src/services/point_weather.py` | MODIFY | `AlertEvaluationConfig` bekommt neues Feld `zone: Optional[ZoneInfo] = None` |
 | `src/services/alert_gate.py` | MODIFY | `check_nowcast_gate()` bekommt Pflicht-Parameter `zone: ZoneInfo`, reicht ihn an `is_quiet_hours()` UND an `alert_daily_limit.is_allowed()`/`record_nowcast_sent()` an `increment()` weiter |
 | `src/services/alert_daily_limit.py` | MODIFY | `VIENNA`-Konstante entfällt; Schema-Wechsel auf zonenweise Zähler (`{"zones": {...}}`); `load`/`is_allowed`/`increment` bekommen Pflicht-Parameter `zone: ZoneInfo`; Rückwärts-Migration für Altbestand |
 | `src/services/trip_alert.py` | MODIFY | Sieben Stellen (Ruhezeit-Adapter `:672-691`, drei Aufrufer, `check_nowcast_gate`-Aufruf `:963`, vier `alert_daily_limit`-Aufrufe, `AlertEvaluationConfig`-Konstruktion `:265`) reichen `anchor_tz(trip, now)`/`trip_local_now(...).tzinfo` durch |
-| `src/services/compare_official_alert.py` | MODIFY | `:119` (is_quiet_hours) und `:138`/`:182` (alert_daily_limit) bekommen die Zone des ERSTEN Orts (`location_ids[0]`) |
-| `src/services/compare_alert.py` | MODIFY | `:151` (is_allowed — s. Korrektur unten), `:176` (is_quiet_hours über `AlertEvaluationConfig.zone`), `:293` (increment), `_build_eval_config()` (`:452-478`) bekommen die Zone des ersten Orts |
-| `src/services/compare_radar_alert.py` | MODIFY | `:131` (`check_nowcast_gate`-Aufruf) bekommt die Zone des ersten Orts |
+| `src/services/compare_official_alert.py` | MODIFY | `:119` (is_quiet_hours) und `:138`/`:182` (alert_daily_limit) bekommen die Zone aus `first_resolvable_tz(...)` (`utils/timezone.py`) |
+| `src/services/compare_alert.py` | MODIFY | `:151` (is_allowed — s. Korrektur unten), `:176` (is_quiet_hours über `AlertEvaluationConfig.zone`), `:293` (increment), `_build_eval_config()` (`:452-478`) bekommen die Zone aus `first_resolvable_tz(...)` |
+| `src/services/compare_radar_alert.py` | MODIFY | `:131` (`check_nowcast_gate`-Aufruf) bekommt die Zone aus `first_resolvable_tz(...)` |
 | `src/services/dispatch_orchestrator.py` | MODIFY | `CompareDispatchStrategy.collect_due()` lädt `all_locations` vorab und übergibt sie an `presets_due_for_hour`; `NOCH_NICHT_ORTSZEIT_SIEHE_1726` entfällt als Fälligkeits-Zone |
-| `src/services/compare_slot_scheduler.py` | MODIFY | `presets_due_for_hour(presets, hour, today)` → `presets_due_for_hour(presets, all_locations, now_utc)`, löst je Preset seine eigene Zone auf (s. Entwurf, Abschnitt D) |
+| `src/services/compare_slot_scheduler.py` | MODIFY | `presets_due_for_hour(presets, hour, today)` → `presets_due_for_hour(presets, all_locations, now_utc)`, löst je Preset über `first_resolvable_tz(...)` seine eigene Zone auf (s. Entwurf, Abschnitt D) |
 | `src/services/scheduler_dispatch_service.py` | MODIFY | Kommentar/Konstantenname am manuellen `?hour=`-Trigger angepasst (Verhalten unverändert, s. Entwurf Abschnitt D) |
 | `frontend/.../alerts-tab/AlertQuietHoursCard.svelte` | MODIFY | Neue Prop für die Zonen-Bezeichnung im Hinweistext |
 | `frontend/.../shared/AlarmeTab.svelte` | MODIFY | Beide Mount-Punkte (`:429`/`:431`) übergeben die neue Prop kontextabhängig |
@@ -96,9 +99,9 @@ alle Aufrufer von `presets_due_for_hour`: `tests/test_compare_auto_pause_end_dat
 
 ### Estimated Changes
 
-- Files: 12 Produktivdateien (10 Python, 2 Svelte) + 1 ADR + 1 Wächter-Datei + 1 neue Testdatei
+- Files: 13 Produktivdateien (11 Python, 2 Svelte) + 1 ADR + 1 Wächter-Datei + 1 neue Testdatei
   + ~13 bestehende Testdateien mit mechanischer Signatur-Folgeänderung
-- LoC: siehe „Estimated Scope" unten (~220 Produktivcode)
+- LoC: siehe „Estimated Scope" unten (~235 Produktivcode)
 
 ## Problem/Kontext
 
@@ -131,8 +134,10 @@ Kopie (ADR-0044, "Lehre für die Pflege dieser Liste").
 
 Für Mehrzonen-Fälle (ein Ortsvergleich mit Orten in verschiedenen Zonen) gilt EINHEITLICH die
 bereits PO-entschiedene Regel aus #1378 (AC-4): die Zone des **erstgenannten Orts der
-konfigurierten Reihenfolge** (`order_locations_by_ids`, #1359). Kein neues Datenfeld, keine
-zweite Regel für einen anderen Anwendungsfall derselben Frage.
+konfigurierten Reihenfolge** (`order_locations_by_ids`, #1359), präzisiert als „erster Ort,
+dessen Zone sich auflösen lässt" — umgesetzt in `utils.timezone.first_resolvable_tz` (s. Entwurf
+Abschnitt B, AC-15). Kein neues Datenfeld, keine zweite Regel für einen anderen Anwendungsfall
+derselben Frage.
 
 ## Abgrenzung
 
@@ -170,12 +175,12 @@ Jede der sieben Aufrufstellen liefert ihre Zone aus dem Objekt, das sie ohnehin 
 
 | # | Aufrufstelle | Zone-Quelle | Code-Änderung nötig an |
 |---|---|---|---|
-| 1 | `compare_official_alert.py:119` (amtliche Warnung, Vergleich) | erster Ort aus `location_ids`/`all_locations` | dieser Zeile |
+| 1 | `compare_official_alert.py:119` (amtliche Warnung, Vergleich) | `first_resolvable_tz(...)` (`utils/timezone.py`) | dieser Zeile |
 | 2 | `trip_alert.py:229` (Adapter-Aufruf, Wetter-Abweichung Trip) | Trip | keine — Zone entsteht im Adapter |
 | 3 | `trip_alert.py:688` (`_is_quiet_hours`-Adapter, tatsächlicher `is_quiet_hours`-Aufruf) | `anchor_tz(trip, now)` | dieser Zeile — EINZIGE Codeänderung für #2 UND #4 |
 | 4 | `trip_alert.py:1443` (Adapter-Aufruf, amtliche Warnung Trip) | Trip | keine — teilt sich den Adapter mit #2 |
-| 5 | `alert_gate.py:93` (Nowcast-Schranke, geteilt Trip+Vergleich) | **kein Objekt im Scope** — Zone als Parameter durchgereicht von den zwei Aufrufern (`trip_alert.py:963`: `anchor_tz(trip, now_utc)`; `compare_radar_alert.py:131`: erster Ort) | `check_nowcast_gate()`-Signatur + beide Aufrufer |
-| 6 | `compare_alert.py:176` (Wetter-Abweichung, Vergleich) | `config.zone`, gesetzt in `_build_eval_config()` (`:452-478`) aus dem ersten Ort | `AlertEvaluationConfig`-Konstruktion, nicht die Aufrufzeile selbst |
+| 5 | `alert_gate.py:93` (Nowcast-Schranke, geteilt Trip+Vergleich) | **kein Objekt im Scope** — Zone als Parameter durchgereicht von den zwei Aufrufern (`trip_alert.py:963`: `anchor_tz(trip, now_utc)`; `compare_radar_alert.py:131`: `first_resolvable_tz(...)`) | `check_nowcast_gate()`-Signatur + beide Aufrufer |
+| 6 | `compare_alert.py:176` (Wetter-Abweichung, Vergleich) | `config.zone`, gesetzt in `_build_eval_config()` (`:452-478`) aus `first_resolvable_tz(...)` | `AlertEvaluationConfig`-Konstruktion, nicht die Aufrufzeile selbst |
 | 7 | `deviation_alert_engine.py:286` (`evaluate()`, Engine-Kern) | `config.zone` (Rückfall UTC bei `None`, sichtbar dokumentiert) | dieser Zeile |
 
 Zwei und vier bzw. drei sind bewusst als GETRENNTE Zeilen der Tabelle aufgeführt, obwohl sie
@@ -190,7 +195,7 @@ bewies in #1697 dreimal in Folge nichts über den jeweiligen Aufrufer (ADR-0051,
 |---|---|---|
 | `services.trip_day.anchor_tz(trip, now_utc)` bzw. `trip_local_now(trip, now_utc).tzinfo` | Zone eines Trips, **tagesbewusst** (Etappe des Weltzeit-Tages) — dieselbe Auflösung, die #1724/#1725 für die Briefing-Fälligkeit benutzen, NICHT `trip_tz()` (das ist fix auf die erste Etappe mit Wegpunkten und tagesUNabhängig) | importierte `UTC`-Konstante bei Trips ohne Wegpunkte |
 | `utils.timezone.location_tz(location)` | Zone eines Orts, MIT UTC-Rückfall (identisch zu `compare_html.py:1537`, derselbe Aufruf für die Compare-Kopfzeile) | `UTC`, sichtbar über dieselbe Konvention wie die Mail-Kopfzeile |
-| `services.compare_preview_service.order_locations_by_ids(locations, location_ids)[0]` bzw. direkt `all_locations.get(location_ids[0])` | „erster Ort der konfigurierten Reihenfolge" (E1) | — |
+| `utils.timezone.first_resolvable_tz(locations, context_label="")` (NEU) | Zone des ERSTEN Orts EINER SEQUENZ, dessen Zone sich auflösen lässt — Ersatz für den naiven Indexzugriff `location_ids[0]` | `UTC`, protokolliert (s. u.) |
 
 **Warum `location_tz()` (UTC-Rückfall) statt `resolve_location_tz()` (`None`-Rückfall):**
 Ruhezeit-/Zähler-/Fälligkeits-Logik brauchen eine KONKRETE Zone, kein `None` — dieselbe
@@ -219,6 +224,40 @@ obwohl der zweite Ort der Liste eine gültige Zone trägt. Deshalb gilt:
 Das ist keine Abweichung von PO-Entscheidung E1, sondern ihre präzise Fassung: „erster Ort" war
 als fachliche Auswahl gemeint, nicht als `[0]`. Nachweis: AC-15.
 
+**Diese Regel bekommt EINEN benannten Baustein, keine fünf Kopien.** Die Auswahl wird an
+mindestens fünf Compare-Stellen gebraucht (`compare_alert.py:151`/`:176`/`:293`,
+`compare_official_alert.py:119`/`:138`/`:182`, `compare_radar_alert.py:131`, dazu
+`presets_due_for_hour`). Würde jede ihre eigene Überspring-Schleife bauen, entstünde genau die
+„eigene Kopie der Zonen-Auflösung", die ADR-0044 als Regelverstoß benennt — und diese Spec
+fordert an drei Stellen selbst „EINZIGER Auflöser, keine zweite Kopie". Neu in
+`src/utils/timezone.py`:
+
+```python
+def first_resolvable_tz(locations: Iterable, context_label: str = "") -> ZoneInfo:
+    """Zone des ersten Orts der Reihenfolge, dessen Zone sich auflösen lässt.
+
+    Überspringt `None` (gelöschter Ort, ID zeigt ins Leere) und Orte ohne
+    auflösbare Zone. Liefert kein Ergebnis einen Treffer, ist der Rückfall UTC
+    — dann aber mit `logger.warning` samt `context_label`, nicht still.
+    """
+```
+
+**Warum `utils/timezone.py` und nicht `compare_preview_service.py`** (wo
+`order_locations_by_ids` wohnt): Dort liegen `resolve_location_tz` und `location_tz`, also die
+Auflösungs-Domäne selbst — der Baustein ist eine Anwendung dieser Auflösung, kein
+Compare-Ablauf. Die Signatur nimmt bewusst eine **fertige Sequenz** statt `(location_ids,
+all_locations)`, damit sie kein Compare-Vokabular kennt und vom Trip-Pfad aus nutzbar bleibt.
+Die Aufrufer bauen die Sequenz in einer Zeile:
+
+```python
+tz = first_resolvable_tz(
+    (all_locations.get(lid) for lid in location_ids), context_label=preset_id
+)
+```
+
+`context_label` folgt dem Muster, das `is_quiet_hours` seit #1479 für protokollierbare Herkunft
+verwendet.
+
 **Warum `anchor_tz`/`trip_local_now` statt `trip_tz()` für Trips:** `trip_tz()` beantwortet nur
 „welcher Kalendertag ist gerade" (fix auf die erste Etappe mit Wegpunkten). Ruhezeit und Zähler
 werden dagegen fortlaufend geprüft, während der Trip läuft — ein mehrtägiger Trek, der die Zone
@@ -227,7 +266,7 @@ liefert genau das aus EINER Auflösung (Ortstag UND -stunde), konsistent mit #17
 
 ### C. Tageszähler — Schema, Migration, korrigierte Aufrufstellen-Liste
 
-**🔴 Korrektur der im Kontext-Dokument gezählten Aufrufstellen:** Das Kontext-Dokument nennt
+**🔴 Korrektur der im Kontext-Dokument gezählten Aufrufstellen:** Das Kontext-Dokument nennte
 „zehn Aufrufstellen". Nachgemessen (`grep -n 'alert_daily_limit\.\(is_allowed\|increment\|load\)'`
 über `src/`) sind es **elf** — `compare_alert.py:151` (`is_allowed(..., reason="forecast_change")`,
 im selben Preset-Loop wie die bereits gelistete `:293`) fehlte in der Aufzählung. Genau diese
@@ -248,7 +287,8 @@ Nebenbefund, unverändert).
 
 Zonen-Schlüssel = `str(zone)` (IANA-Name, z. B. `"Europe/Vienna"`; UTC-Rückfall unter dem
 Schlüssel `"UTC"`). `load`/`is_allowed`/`increment` bekommen einen Pflicht-Parameter
-`zone: ZoneInfo` (kein Default — dieselbe Begründung wie bei `is_quiet_hours`).
+`zone: ZoneInfo` (kein Default — dieselbe Begründung wie bei `is_quiet_hours`). Die Zone für
+Compare-Aufrufstellen kommt einheitlich aus `first_resolvable_tz(...)` (Abschnitt B).
 
 **Migration/Bestandserhalt (Projektregel: Read-Modify-Write mit Merge, niemals Replace):** Trifft
 `load`/`increment` beim ersten Zugriff auf das ALTE Schema (Top-Level-Schlüssel `"date"`/`"count"`,
@@ -265,15 +305,16 @@ Zonen-Ebene, nicht nur auf Datei-Ebene).
 `CompareDispatchStrategy.collect_due()` bildet heute EINEN `vor_ort`-Zeitpunkt für den GESAMTEN
 Lauf und übergibt `presets_due_for_hour(presets, vor_ort.hour, vor_ort.date())` — alle Presets
 eines Laufs werden gegen DIESELBE Stunde/denselben Tag geprüft. Unter E1 hat aber JEDES Preset
-potenziell eine ANDERE Zone (sein eigener erster Ort) — ein einzelner globaler `vor_ort`-Wert
-kann das nicht mehr abbilden. Reines Konstanten-Tauschen reicht hier NICHT.
+potenziell eine ANDERE Zone (die seines ersten auflösbaren Orts) — ein einzelner globaler
+`vor_ort`-Wert kann das nicht mehr abbilden. Reines Konstanten-Tauschen reicht hier NICHT.
 
 **Umbau:** `presets_due_for_hour(presets, hour, today)` wird zu
-`presets_due_for_hour(presets, all_locations, now_utc)`. Intern wird je Preset die Zone seines
-ersten Orts aufgelöst, `vor_ort = local_dt(now_utc, zone)` gebildet, und die BISHERIGE
-Stundengleichheits-Prüfung (`slots.morning_time.hour == vor_ort.hour` usw.) läuft unverändert
-gegen dieses preset-eigene `vor_ort`. `collect_due()` lädt `all_locations` dafür vor dem Aufruf
-(bisher nur lazy in `dispatch_one()`, `:168-169`).
+`presets_due_for_hour(presets, all_locations, now_utc)`. Intern wird je Preset über
+`first_resolvable_tz((all_locations.get(lid) for lid in preset.get("location_ids") or []),
+context_label=preset_id)` die Zone aufgelöst, `vor_ort = local_dt(now_utc, zone)` gebildet, und
+die BISHERIGE Stundengleichheits-Prüfung (`slots.morning_time.hour == vor_ort.hour` usw.) läuft
+unverändert gegen dieses preset-eigene `vor_ort`. `collect_due()` lädt `all_locations` dafür vor
+dem Aufruf (bisher nur lazy in `dispatch_one()`, `:168-169`).
 
 **Der manuelle `?hour=`-Testtrigger** (`scheduler_dispatch_service.py:170-181`, Endpunkt für
 manuell ausgelöste Testläufe) konstruiert heute einen `now_utc`, dessen Stunde in
@@ -331,6 +372,20 @@ Issue zeigen (AC-14).
   War nie die tatsächliche Regel (der Kommentar bei `comparison.py:201-202` behauptet das noch,
   ist seit #1359 falsch) — die konfigurierte Reihenfolge (`location_ids`) gilt, nicht eine vom
   System erzeugte Sortierung.
+- **„Erster Ort" als reiner Indexzugriff `location_ids[0]`.** Erwogen als einfachste Umsetzung,
+  aber verworfen: ein gelöschter oder unauflösbarer erster Ort führte zu einem stillen
+  UTC-Rückfall, obwohl ein späterer Ort der Liste eine gültige Zone hätte — genau die
+  Fehlerklasse, die diese Scheibe beseitigt, nur mit einem anderen falschen Ergebnis (UTC statt
+  Wien). Ersetzt durch `first_resolvable_tz()` (Abschnitt B, AC-15).
+- **`first_resolvable_tz()` in `compare_preview_service.py` ansiedeln** (neben
+  `order_locations_by_ids`, mit Compare-Vokabular `location_ids`/`all_locations` als Parameter).
+  Erwogen wegen der thematischen Nähe zu `order_locations_by_ids` — verworfen, weil die Funktion
+  selbst kein Compare-Wissen braucht: sie wertet eine FERTIGE Sequenz von Orten aus, kein Preset.
+  Mit einer generischen Sequenz-Signatur bleibt sie stattdessen in `utils/timezone.py`, wo bereits
+  `resolve_location_tz`/`location_tz` wohnen — die eigentliche Auflösungs-Domäne — und bliebe vom
+  Trip-Pfad aus nutzbar, falls dort je ein Mehrzonen-Fall entstünde (heute nicht der Fall, aber
+  keine Weichenstellung dagegen). Die Compare-Aufrufer bauen die Sequenz selbst in einer Zeile
+  (Abschnitt B).
 - **Fälligkeitsfenster + Idempotenz auch für den Ortsvergleich, in derselben Scheibe wie der
   Zonentausch.** Erwogen, aber PO-Entscheidung E3 (2026-08-12): getrennt, weil die
   Fälligkeitsfrage und die Zonenfrage unabhängig beantwortbar sind und die Zusammenlegung die
@@ -450,7 +505,8 @@ Issue zeigen (AC-14).
   Ruhezeit, Tageszähler oder Slot-Fälligkeit für diesen Vergleich bestimmt werden / Then gilt die
   Zone des ersten Orts, der sich AUFLÖSEN LÄSST — nicht Weltzeit. Nur wenn kein einziger Ort eine
   Zone liefert, gilt UTC, und dieser Fall wird im Protokoll mit der Vergleichs-Kennung sichtbar
-  gemacht, statt still zu geschehen.
+  gemacht, statt still zu geschehen. Wirkt in `utils.timezone.first_resolvable_tz()` (Abschnitt
+  B), genutzt von allen Compare-Aufrufstellen dieser Scheibe (Abschnitte A, C, D).
 
 ## Nachweis-Strategie
 
@@ -469,7 +525,7 @@ Scheibe verwenden deshalb `Pacific/Auckland` (östlich) und `America/Los_Angeles
 | AC-1 | Auckland-Trip, Ruhezeit-Wrap, Alarm bei Weltzeit, die in Auckland Nacht/in Wien Tag ist → unterdrückt | `zone`-Parameter ignorieren, weiter fest `VIENNA` verwenden |
 | AC-2 | LA-Trip, spiegelbildlich → unterdrückt | dito |
 | AC-3 | Sieben Einzeltests, je EINE der sieben Stellen mit einer Nicht-Wien-Zone | eine der sieben Stellen den `zone`-Parameter NICHT durchreichen lassen — nur die anderen sechs Tests bleiben grün |
-| AC-4 | Zwei Orte, zwei Zonen, Ruhezeit trifft nur bei Zone von `location_ids[0]`; Reihenfolge tauschen → Ruhezeit-Ergebnis kippt mit | `location_ids[0]` durch eine feste/alphabetische Auswahl ersetzen |
+| AC-4 | Zwei Orte, zwei Zonen, beide auflösbar, Ruhezeit trifft nur bei Zone von `location_ids[0]`; Reihenfolge tauschen → Ruhezeit-Ergebnis kippt mit | `location_ids[0]` durch eine feste/alphabetische Auswahl ersetzen |
 | AC-5 | `"25:00"`/`"abc"`/`None`-Ruhezeitwert mit gesetztem `zone`-Parameter → weiterhin `False`, kein Traceback | `try/except` um den neuen Parameter entfernen |
 | AC-6 | Zähler-Reset exakt an Orts-Mitternacht, Auckland UND LA, je knapp davor/danach geprüft | Reset weiterhin gegen `_vienna_date_str` statt zonenspezifisch |
 | AC-7 | Zwei Zonen, beide am Limit, unabhängige Zähler | ein gemeinsamer Schlüssel ohne Zonen-Diskriminator |
@@ -480,26 +536,27 @@ Scheibe verwenden deshalb `Pacific/Auckland` (östlich) und `America/Los_Angeles
 | AC-12 | Dateiinhalt-Prüfung (`# doc-compliance-test`): ADR-0044 nennt `alert_daily_limit`/`deviation_alert_engine` nicht mehr unter „Bewusst NICHT betroffen" | ADR unverändert lassen |
 | AC-13 | `test_known_violations_only_shrink()` bleibt grün nach Entfernen der vier Einträge | einen der vier Einträge stehen lassen |
 | AC-14 | Dateiinhalt-Prüfung: Kommentar bei `:593` referenziert die Muster-A-Restliste korrekt auf #1727 | Kommentar unverändert lassen |
-| AC-15 | Vergleich mit gelöschtem erstem Ort + gültigem zweitem Ort in Nicht-UTC-Zone → Ruhezeit folgt dem zweiten Ort; separater Fall „kein Ort auflösbar" → UTC UND Protokolleintrag | `location_ids[0]` als reinen Indexzugriff belassen (fällt still auf UTC) |
+| AC-15 | Vergleich mit gelöschtem erstem Ort + gültigem zweitem Ort in Nicht-UTC-Zone → Ruhezeit folgt dem zweiten Ort; separater Fall „kein Ort auflösbar" → UTC UND Protokolleintrag | `first_resolvable_tz`s Skip-Schleife durch direkten `location_ids[0]`-Zugriff ersetzen (fällt still auf UTC) |
 
 **Mutations-Gegenprobe (Pflicht):** mindestens gegenzuprüfen — `zone`-Parameter an einer der
 sieben Ruhezeit-Stellen stillschweigend ignorieren, Zähler-Migration durch Replace ersetzen,
-`location_ids[0]` durch eine andere Ortsauswahl ersetzen, `presets_due_for_hour` mit einem
-globalen statt preset-eigenen `vor_ort` belassen.
+`first_resolvable_tz`s Skip-Schleife durch direkten Index-0-Zugriff ersetzen,
+`presets_due_for_hour` mit einem globalen statt preset-eigenen `vor_ort` belassen.
 
 ## Estimated Scope
 
-- **LoC:** ~220 Produktivcode über 10 Python- + 2 Svelte-Dateien (grösste Einzelposten:
+- **LoC:** ~235 Produktivcode über 11 Python- + 2 Svelte-Dateien (grösste Einzelposten:
   `alert_daily_limit.py` ~60 wegen Schema-Migration, `trip_alert.py` ~25 wegen sieben
   Aufrufstellen, `compare_slot_scheduler.py`/`dispatch_orchestrator.py` zusammen ~45 wegen der
-  Restrukturierung von `presets_due_for_hour`); Testcode und die Wächter-Listen-Korrektur zählen
-  nicht gegen das Limit.
-- **Files:** 12 Produktivdateien, 1 ADR, 1 Wächter-Datei, 1 neue Testdatei, ~13 bestehende
+  Restrukturierung von `presets_due_for_hour`, `utils/timezone.py` ~15 für
+  `first_resolvable_tz`); Testcode und die Wächter-Listen-Korrektur zählen nicht gegen das
+  Limit.
+- **Files:** 13 Produktivdateien, 1 ADR, 1 Wächter-Datei, 1 neue Testdatei, ~13 bestehende
   Testdateien mit mechanischer Signatur-Folgeänderung.
 - **Effort:** high — nicht wegen algorithmischer Komplexität, sondern wegen der Anzahl
   unabhängig nachzuweisender Aufrufstellen (7 Ruhezeit + 11 Zähler + 1 Fälligkeits-Restrukturierung)
   und der Pflicht-Enumeration aus #1725s Lehre.
-- **Limit-Reserve:** ~220/250 ist knapp. 🔴 **Die naheliegende Ausweichoption ist keine.** Die
+- **Limit-Reserve:** ~235/250 ist knapp. 🔴 **Die naheliegende Ausweichoption ist keine.** Die
   Restrukturierung von `presets_due_for_hour`/`dispatch_orchestrator.py` (Abschnitt D, ~45 LoC)
   ist zwar technisch die am ehesten separierbare Einheit, aber sie herauszuschneiden hiesse: die
   **Ortsvergleichs-Slot-Fälligkeit bliebe vollständig auf Wien**. Das ist eine der DREI im Issue
@@ -529,9 +586,11 @@ globalen statt preset-eigenen `vor_ort` belassen.
   Umstellungstagen weiterhin aus/verdoppelt — unabhängig von dieser Scheibe, s. Abgrenzung.
 - **Dieselbe Präzisierung fehlt der Compare-Mail-Kopfzeile.** `compare_html.py:1535-1538` und
   `comparison.py:216` greifen mit `locations[0]` zu und fallen bei einem unauflösbaren ersten Ort
-  ebenso still auf UTC — der Präzedenzfall, dem AC-15 folgt, trägt den Mangel selbst. Hier
-  bewusst NICHT mitrepariert (die Kopfzeile ist Darstellung, nicht Entscheidung, und ein
-  UTC-Zeitstempel dort ist sichtbar falsch statt still wirksam). Zu buchen als eigener Eintrag.
+  ebenso still auf UTC — der Präzedenzfall, dem AC-15 folgt, trägt den Mangel selbst. Der
+  „gelöschte ID"-Fall tritt dort nicht auf (`result.locations` enthält nur bereits verarbeitete
+  Orte), der „unauflösbare Zone"-Fall aber schon. Hier bewusst NICHT mitrepariert (die Kopfzeile
+  ist Darstellung, nicht Alarm-Entscheidung, und ein UTC-Zeitstempel dort ist sichtbar falsch
+  statt still wirksam). Zu buchen als eigener Eintrag für den Team-Lead.
 - **Die Oberfläche nennt einen Referenzpunkt, keinen konkreten Zonennamen.** „Ortszeit der Tour"/
   „Ortszeit des ersten Orts" sagt WOVON die Zeit abhängt, nicht WELCHE IANA-Zone konkret gilt
   (z. B. „Europe/Paris"). Eine genauere Beschriftung wäre möglich, ist aber nicht Teil dieser
@@ -559,3 +618,13 @@ globalen statt preset-eigenen `vor_ort` belassen.
   Basis der Vorlage `fix_1725_faelligkeit_und_idempotenz.md`. Korrektur gegenüber dem
   Kontext-Dokument: die Zähler-Aufrufstellen sind ELF, nicht zehn (`compare_alert.py:151` ergänzt,
   s. Entwurf Abschnitt C).
+- 1.1 (2026-08-12): Nachtrag NACH PO-Freigabe (ACs unverändert im Wortlaut, Nummerierung,
+  Reihenfolge — nur Verortung der in AC-15 zugesicherten Regel präzisiert). Neue Funktion
+  `first_resolvable_tz()` in `utils/timezone.py` benannt (Abschnitt B, mit Skip-Logik über
+  gelöschte/unauflösbare Orte + protokolliertem UTC-Rückfall); Platzierung gegen
+  `compare_preview_service.py` abgewogen und begründet (generische Sequenz-Signatur statt
+  Compare-Vokabular, Nähe zu `resolve_location_tz`/`location_tz`, Abschnitt B + Verworfene
+  Alternativen). Dependencies, Affected-Files-Tabelle, Abschnitte A/C/D sowie
+  Nachweis-Strategie/Mutations-Gegenprobe auf `first_resolvable_tz(...)` umgestellt statt
+  `location_ids[0]`/„erster Ort". Estimated Changes/Scope auf ~235 LoC / 13 Produktivdateien
+  angehoben (inkl. `utils/timezone.py` ~15 LoC).

@@ -1,0 +1,1390 @@
+"""TDD RED — #1726: Ruhezeit, Alarm-Tageszähler und Ortsvergleichs-Fälligkeit
+folgen der ORTSZONE statt der Wiener Uhr.
+
+Spec: docs/specs/modules/fix_1726_ruhezeit_und_zaehler_ortszone.md (15 ACs)
+Kontext: docs/context/fix-1726-ruhezeit-ortszone.md
+ADR-0051 (Die Zone gehört an die Daten, nicht an den Server), ADR-0044.
+
+Drei Entscheidungen laufen heute auf `Europe/Vienna`, obwohl sie den Nutzer an
+SEINEM Ort betreffen:
+
+* Ruhezeit-Fenster  — `deviation_alert_engine.py:31` (`VIENNA`), wirksam `:112`
+* Tageszähler-Reset — `alert_daily_limit.py:23` (`VIENNA`), wirksam `:32`
+* Slot-Fälligkeit   — `dispatch_orchestrator.py:128`
+  (`NOCH_NICHT_ORTSZEIT_SIEHE_1726`), wirksam `:141`
+
+═══════════════════════════════════════════════════════════════════════════
+ZWEI FALLEN, DIE DIESE DATEI BEWUSST VERMEIDET
+═══════════════════════════════════════════════════════════════════════════
+
+**1. Die falsche Zone macht den Test blind.** `Europe/Paris` hat denselben
+UTC-Versatz wie Wien — ein Test dort kann strukturell nicht unterscheiden, ob
+die Zone aus den Daten kam oder still auf Wien zurückfiel (kostete in #1725
+eine Adversary-Runde). Alle Ost/West-Nachweise benutzen deshalb
+`Pacific/Auckland` (+12) und `America/Los_Angeles` (−7). Die beiden
+Sommerzeit-Wechseltage (AC-10) sind EU-Umstellungstage — dort ist
+`Europe/Lisbon` die Zone der Wahl: sie schaltet zum selben Zeitpunkt wie Wien
+(EU-weit 01:00 UTC), hat aber einen ANDEREN Versatz (+0/+1 statt +1/+2). Ein
+stiller Wien-Rückfall fällt damit trotzdem auf.
+
+**2. Ein Test, der aus dem falschen Grund rot ist, beweist nichts.** Nach der
+Umstellung bekommen `is_quiet_hours`, `check_nowcast_gate` und
+`alert_daily_limit.*` einen Pflicht-Parameter `zone`. Ein Test, der heute nur
+mit `TypeError: unexpected keyword argument 'zone'` scheitert, wäre ein
+Signatur-Test — er würde auch grün, wenn der Parameter entgegengenommen und
+IGNORIERT wird.
+
+Deshalb gilt hier durchgehend:
+
+* Wo möglich läuft der Nachweis über den **echten Dienstpfad** (Trip-Alarm,
+  Vergleichs-Alarm, Nowcast-Schranke, Versand-Orchestrator). Deren Signaturen
+  ändern sich NICHT — die Tests sind reine Verhaltenstests.
+* Wo die neue Signatur unvermeidbar ist (die drei `alert_daily_limit`-
+  Funktionen, der Engine-Kern), läuft der Aufruf über :func:`mit_zone`: die
+  Zone wird übergeben, sobald der Prüfling sie annimmt, und sonst weggelassen.
+  Dadurch ist der Test schon HEUTE mit einem Zählerstand/Unterdrückungs-
+  Ergebnis rot, nicht mit einem `TypeError`. Zugleich ist jedes Szenario so
+  gewählt, dass ein **entgegengenommener, aber ignorierter** `zone`-Parameter
+  den Test WEITERHIN rot lässt. Jeder solche Test sagt das im Docstring.
+* Jeder Test trägt im Docstring, WARUM er heute rot ist — „weil die Prüfung
+  gegen Wien läuft" ist der gewünschte Grund, „weil das Argument unbekannt
+  ist" nicht.
+
+**Gekreuzte Probe.** Viele Dienstpfad-Tests fahren ZWEI Läufe: einmal mit
+einem Ruhezeit-Fenster um „jetzt in der Ortszone" und einmal mit einem um
+„jetzt in Wien". Nach dem Fix muss sich das Ergebnis GENAU UMKEHREN. Das ist
+schärfer als ein einzelner Lauf und schützt gleichzeitig vor falschem Grün:
+bricht der Pfad vorzeitig ab (z.B. kein aktives Segment), wären BEIDE Läufe
+still — der Kreuz-Assert fällt darauf herein nicht.
+
+Kern-Schicht, deterministisch: kein Netz, keine echten Postfächer, keine
+`Mock()`/`patch()`/`MagicMock`. Netz-Nähte werden durch echte Unterklassen mit
+echter Implementierung ersetzt (Muster `_OhneNetz` aus
+`test_briefing_faelligkeit_ortszone.py`).
+
+Pfadregel #1409: alle Pfade relativ zu DIESER Datei.
+"""
+from __future__ import annotations
+
+import json
+import sys
+from datetime import date as date_type
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "src"))
+
+from tests.helpers.compare_briefings import write_compare_briefings  # noqa: E402
+from tests.helpers.nowcast_gate_fixtures import (  # noqa: E402
+    CountingFrameSource,
+    clean_uid,
+    location,
+    make_trip,
+    preset_root,
+    radar_preset,
+    reset_radar_cache,
+    save_trip,
+    settings_email_only,
+    trip_alert_service,
+    write_user_tier,
+)
+
+# ═════════════════════════ Zonen und Koordinaten ══════════════════════════
+
+VIENNA = ZoneInfo("Europe/Vienna")
+AUCKLAND = ZoneInfo("Pacific/Auckland")          # +12/+13 — östlich
+LOS_ANGELES = ZoneInfo("America/Los_Angeles")    # −8/−7  — westlich
+LISBON = ZoneInfo("Europe/Lisbon")               # +0/+1  — EU-DST, ≠ Wien
+UTC = timezone.utc
+
+# Echte Orte, damit TimezoneFinder sie auflöst (offline, kein Netz).
+KOORDINATEN = {
+    "Pacific/Auckland": (-36.85, 174.76),
+    "America/Los_Angeles": (34.05, -118.24),
+    "Europe/Lisbon": (38.72, -9.14),
+    "Europe/Vienna": (48.21, 16.37),
+}
+
+# Ruhezeit über Mitternacht (Wrap) — die Form, die der Nutzer real einstellt.
+RUHE_VON, RUHE_BIS = "22:00", "07:00"
+
+# ── Feste Zeitpunkte für die Pfade, die `now` als Parameter annehmen ───────
+# 2026-08-12 14:00 UTC: Auckland 02:00 (13.8., IM Fenster) · Wien 16:00
+# (ausserhalb) · Los Angeles 07:00 (ausserhalb — 07:00 ist die exklusive
+# Obergrenze). GENAU EINE der drei Zonen ist ruhig.
+JETZT_AUCKLAND_NACHT = datetime(2026, 8, 12, 14, 0, tzinfo=UTC)
+# 2026-08-12 06:30 UTC: Los Angeles 23:30 (11.8., IM Fenster) · Wien 08:30
+# (ausserhalb) · Auckland 18:30 (ausserhalb). Spiegelbild des obigen.
+JETZT_LA_NACHT = datetime(2026, 8, 12, 6, 30, tzinfo=UTC)
+
+
+def fenster_um_jetzt(zone: ZoneInfo, puffer_minuten: int = 45) -> tuple[str, str]:
+    """Ruhezeit-Fenster, das den JETZIGEN Zeitpunkt in `zone` umschliesst.
+
+    Für die Dienstpfade, die ihre Zeit selbst über `datetime.now(utc)` holen —
+    dort lässt sich der Zeitpunkt nicht hereinreichen, wohl aber das Fenster
+    um ihn herum legen.
+
+    Warum ±45 Minuten sicher unterscheidbar ist: Auckland/Wien liegen 10–12 h
+    auseinander, Los Angeles/Wien 8–10 h, Auckland/Los Angeles 19–21 h. Ein
+    90-Minuten-Fenster um die Ortszeit der einen Zone kann die Ortszeit einer
+    anderen nie mit enthalten. Mitternachts-Überläufe deckt die Wrap-Logik von
+    `is_quiet_hours()` ab.
+    """
+    jetzt = datetime.now(UTC).astimezone(zone)
+    return (
+        (jetzt - timedelta(minutes=puffer_minuten)).strftime("%H:%M"),
+        (jetzt + timedelta(minutes=puffer_minuten)).strftime("%H:%M"),
+    )
+
+
+def ortstag(zone: ZoneInfo) -> date_type:
+    return datetime.now(UTC).astimezone(zone).date()
+
+
+# ═══════════════════════ Ablage: Orte und Presets ═════════════════════════
+
+
+def schreibe_ort(user_id: str, loc_id: str, zone_name: str):
+    """Echter `SavedLocation` über den Produktiv-Schreiber `save_location()`."""
+    from app.loader import save_location
+
+    lat, lon = KOORDINATEN[zone_name]
+    loc = location(loc_id, f"Ort {loc_id}", lat=lat, lon=lon)
+    save_location(loc, user_id=user_id)
+    return loc
+
+
+def schreibe_ort_ohne_koordinaten(user_id: str, loc_id: str):
+    """Ort, dessen Zone NICHT auflösbar ist (Koordinaten auf 0/0 = Nullmeridian
+    im Golf von Guinea → `tz_for_coords` liefert "UTC" → `resolve_location_tz`
+    liefert `None`). Kein Konstrukt-Trick: genau diese Lage ist der reale Fall
+    „Ort ohne brauchbare Zone" aus `utils/timezone.py:60-64`."""
+    from app.loader import save_location
+
+    loc = location(loc_id, f"Ort {loc_id}", lat=0.0, lon=0.0)
+    save_location(loc, user_id=user_id)
+    return loc
+
+
+def vergleichs_preset(
+    preset_id: str,
+    location_ids: list[str],
+    *,
+    quiet_from: str | None = None,
+    quiet_to: str | None = None,
+    morning_time: str = "07:00:00",
+) -> dict:
+    """Vergleichs-Preset im Bestandsschema (Feldauswahl analog
+    `tests/test_compare_auto_pause_end_date.py::_make_preset`)."""
+    preset: dict = {
+        "id": preset_id,
+        "name": f"Vergleich {preset_id}",
+        "user_id": "default",
+        "location_ids": location_ids,
+        "schedule": "daily",
+        "weekday": None,
+        "profil": "ALLGEMEIN",
+        "hour_from": 9,
+        "hour_to": 16,
+        "empfaenger": ["dummy@example.invalid"],
+        "letzter_versand": None,
+        "created_at": "2026-08-01T00:00:00Z",
+        "archived_at": None,
+        "morning_enabled": True,
+        "morning_time": morning_time,
+        "evening_enabled": False,
+        "evening_time": "18:00:00",
+    }
+    if quiet_from is not None:
+        preset["alert_quiet_from"] = quiet_from
+    if quiet_to is not None:
+        preset["alert_quiet_to"] = quiet_to
+    return preset
+
+
+def schreibe_presets(user_id: str, presets: list[dict]) -> None:
+    write_compare_briefings(preset_root() / user_id, presets)
+
+
+# ═════════════ Dienstpfade mit ersetzter Netz-Naht (keine Mocks) ══════════
+
+
+def offizieller_vergleichsdienst(user_id: str):
+    """`CompareOfficialAlertService`, bei dem AUSSCHLIESSLICH die Netz-Naht
+    `_detect()` durch eine echte, zählende Implementierung ersetzt ist.
+
+    `_detect()` ist die erste Stelle des Pfads, die amtliche Warnungen über das
+    Netz holt — und sie liegt HINTER der Ruhezeit-Prüfung
+    (`compare_official_alert.py:119`). Die Zählung ist damit der direkte
+    Wirkungs-Nachweis: 0 Aufrufe = unterdrückt, ≥1 = durchgelassen.
+    """
+    from services.compare_official_alert import CompareOfficialAlertService
+
+    class _Zaehlend(CompareOfficialAlertService):
+        detect_aufrufe = 0
+
+        def _detect(self, preset_id, locs, sources=None):
+            type(self).detect_aufrufe += 1
+            return ([], {})
+
+    _Zaehlend.detect_aufrufe = 0
+    return _Zaehlend(settings=settings_email_only(), user_id=user_id)
+
+
+def vergleichs_alarmdienst(user_id: str):
+    """`CompareAlertService` mit ersetzter Netz-Naht `_detect_triggered_locations()`
+    (liegt hinter der Ruhezeit-Prüfung `compare_alert.py:176`)."""
+    from services.compare_alert import CompareAlertService
+
+    class _Zaehlend(CompareAlertService):
+        detect_aufrufe = 0
+
+        def _detect_triggered_locations(
+            self, preset_id, location_ids, all_locations, config, day_window
+        ):
+            type(self).detect_aufrufe += 1
+            return []
+
+    _Zaehlend.detect_aufrufe = 0
+    return _Zaehlend(settings=settings_email_only(), user_id=user_id)
+
+
+def trip_abweichungsdienst(user_id: str):
+    """`TripAlertService` mit ersetzter Netz-Naht `_fetch_fresh_weather()`
+    (liegt hinter der Ruhezeit-Prüfung `trip_alert.py:229`)."""
+    from services.trip_alert import TripAlertService
+
+    class _Zaehlend(TripAlertService):
+        fetch_aufrufe = 0
+
+        def _fetch_fresh_weather(self, cached_weather):
+            type(self).fetch_aufrufe += 1
+            return []
+
+    _Zaehlend.fetch_aufrufe = 0
+    return _Zaehlend(
+        settings=settings_email_only(), throttle_hours=2, user_id=user_id,
+    )
+
+
+def trip_mit_ruhezeit(user_id: str, trip_id: str, zone_name: str,
+                      quiet: tuple[str, str]):
+    """Aktiver Trip in `zone_name` mit gesetzter Ruhezeit, auf Platte."""
+    lat, lon = KOORDINATEN[zone_name]
+    trip = make_trip(
+        trip_id,
+        cooldown_minutes=0,
+        quiet_from=quiet[0],
+        quiet_to=quiet[1],
+        stage_date=ortstag(ZoneInfo(zone_name)),
+        lat=lat,
+        lon=lon,
+    )
+    trip.report_config.alert_on_changes = True
+    save_trip(trip, user_id)
+    return trip
+
+
+def mit_zone(funktion, *args, zone: ZoneInfo):
+    """Ruft eine Prüfling-Funktion mit `zone=`, SOBALD sie den Parameter
+    annimmt — und ohne ihn, solange sie das nicht tut.
+
+    Ohne diese Fallunterscheidung wäre jeder Zähler-/Ruhezeit-Test HEUTE nur
+    mit `TypeError: unexpected keyword argument 'zone'` rot. Das wäre ein
+    Signatur-Befund, kein Verhaltensbefund — und er würde bereits grün, wenn
+    der Parameter entgegengenommen und ignoriert wird. So misst der Test
+    stattdessen schon heute das ERGEBNIS („welcher Zählerstand steht da?",
+    „wird unterdrückt?") und bleibt nach der Umstellung wortgleich gültig. Ein
+    entgegengenommener, aber ignorierter Parameter fällt weiterhin durch, weil
+    jedes Szenario Wiener und Ortszeit auseinanderzieht.
+
+    Die Signatur wird gelesen, nicht geraten — kein `try/except TypeError`, das
+    einen echten Programmfehler nach der Umstellung verschlucken könnte.
+    """
+    import inspect
+
+    if "zone" in inspect.signature(funktion).parameters:
+        return funktion(*args, zone=zone)
+    return funktion(*args)
+
+
+def _uid(kennung: str) -> str:
+    return f"tdd-1726-{kennung}"
+
+
+@pytest.fixture
+def sauberer_nutzer():
+    """Vergibt Nutzer-Kennungen und räumt sie hinterher weg."""
+    vergeben: list[str] = []
+
+    def _neu(kennung: str, tier: str = "free") -> str:
+        user_id = _uid(kennung)
+        clean_uid(user_id)
+        write_user_tier(user_id, tier)
+        vergeben.append(user_id)
+        return user_id
+
+    yield _neu
+    for user_id in vergeben:
+        clean_uid(user_id)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-1 / AC-2 — Ruhezeit östlich und westlich von Wien
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _trip_deviation_lauf(user_id: str, zone_name: str, quiet: tuple[str, str]) -> int:
+    """Ein echter `check_and_send_alerts()`-Lauf; liefert die Zahl der
+    Wetterabrufe (0 = durch die Ruhezeit unterdrückt)."""
+    dienst = trip_abweichungsdienst(user_id)
+    trip = trip_mit_ruhezeit(user_id, f"{user_id}-trip", zone_name, quiet)
+    dienst.check_and_send_alerts(trip, cached_weather=[])
+    return type(dienst).fetch_aufrufe
+
+
+def test_ac1_ruhezeit_oestlich_folgt_der_ortszeit_nicht_wien(sauberer_nutzer):
+    """AC-1: Trip mit Wegpunkt in `Pacific/Auckland`, Ruhezeit 22:00–07:00.
+
+    Given ein Alarm-Zeitpunkt, der in Auckland IM Ruhezeit-Fenster liegt, in
+    Wien aber tagsüber / Then wird der Alarm unterdrückt (kein Wetterabruf).
+    Gekreuzt: ein Fenster um die WIENER Ortszeit darf denselben Trip NICHT
+    mehr unterdrücken.
+
+    ROT HEUTE, weil die Prüfung gegen Wien läuft (`deviation_alert_engine.py:112`):
+    das Auckland-Fenster greift nicht (Abruf findet statt), das Wien-Fenster
+    greift fälschlich (kein Abruf). Beide Erwartungen sind heute exakt
+    invertiert — es ist ein Verhaltens-, kein Signaturbefund.
+    """
+    abrufe_auckland = _trip_deviation_lauf(
+        sauberer_nutzer("ac1-ort"), "Pacific/Auckland", fenster_um_jetzt(AUCKLAND)
+    )
+    abrufe_wien = _trip_deviation_lauf(
+        sauberer_nutzer("ac1-wien"), "Pacific/Auckland", fenster_um_jetzt(VIENNA)
+    )
+
+    assert abrufe_auckland == 0, (
+        "Ruhezeit in Auckland-Ortszeit muss den Abweichungs-Alarm unterdrücken "
+        "— vor jedem Wetterabruf."
+    )
+    assert abrufe_wien >= 1, (
+        "Ein Fenster um die WIENER Uhrzeit darf einen Auckland-Trip nicht mehr "
+        "stilllegen — sonst hängt die Ruhezeit weiter am Server."
+    )
+
+
+def test_ac2_ruhezeit_westlich_folgt_der_ortszeit_nicht_wien(sauberer_nutzer):
+    """AC-2: Spiegelbild mit `America/Los_Angeles`.
+
+    ROT HEUTE aus demselben Grund wie AC-1 — die Prüfung läuft gegen Wien.
+    """
+    abrufe_la = _trip_deviation_lauf(
+        sauberer_nutzer("ac2-ort"), "America/Los_Angeles", fenster_um_jetzt(LOS_ANGELES)
+    )
+    abrufe_wien = _trip_deviation_lauf(
+        sauberer_nutzer("ac2-wien"), "America/Los_Angeles", fenster_um_jetzt(VIENNA)
+    )
+
+    assert abrufe_la == 0, (
+        "Ruhezeit in Los-Angeles-Ortszeit muss den Abweichungs-Alarm unterdrücken."
+    )
+    assert abrufe_wien >= 1, (
+        "Ein Fenster um die WIENER Uhrzeit darf einen LA-Trip nicht mehr stilllegen."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-3 — Alle SIEBEN Ruhezeit-Prüfstellen, je EINZELN nachgewiesen
+#
+# Geteilter Code bewies in #1697 dreimal in Folge nichts über den jeweiligen
+# Aufrufer. Deshalb sieben Tests, keiner erschliesst die anderen mit.
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _official_compare_lauf(user_id: str, quiet: tuple[str, str]) -> int:
+    schreibe_ort(user_id, "loc-akl", "Pacific/Auckland")
+    schreibe_presets(user_id, [
+        vergleichs_preset("cp-1", ["loc-akl"], quiet_from=quiet[0], quiet_to=quiet[1])
+    ])
+    dienst = offizieller_vergleichsdienst(user_id)
+    dienst.check_all_compare_presets()
+    return type(dienst).detect_aufrufe
+
+
+def test_ac3_stelle1_amtliche_warnung_vergleich(sauberer_nutzer):
+    """AC-3 Stelle 1 — `compare_official_alert.py:119` (amtliche Warnung,
+    Ortsvergleich). Zone-Quelle: erster Ort aus `location_ids`.
+
+    ROT HEUTE: die Ruhezeit dieses Vergleichs wird gegen Wien ausgewertet, der
+    Ort liegt in Auckland. Nachweis über den echten Dienst
+    (`check_all_compare_presets`), gemessen an der Netz-Naht dahinter.
+    """
+    aufrufe_ort = _official_compare_lauf(
+        sauberer_nutzer("ac3s1-ort"), fenster_um_jetzt(AUCKLAND)
+    )
+    aufrufe_wien = _official_compare_lauf(
+        sauberer_nutzer("ac3s1-wien"), fenster_um_jetzt(VIENNA)
+    )
+
+    assert aufrufe_ort == 0, "Auckland-Ruhezeit muss die amtliche Vergleichs-Warnung stoppen."
+    assert aufrufe_wien >= 1, "Wiener Ruhezeit darf einen Auckland-Vergleich nicht stoppen."
+
+
+def test_ac3_stelle2_wetterabweichung_trip(sauberer_nutzer):
+    """AC-3 Stelle 2 — `trip_alert.py:229` (Wetter-Abweichung, Trip).
+
+    Eigenständiger Nachweis für DIESE Aufrufstelle, obwohl sie sich den
+    Adapter mit Stelle 4 teilt (Spec, Entwurf A).
+
+    ROT HEUTE: Prüfung gegen Wien, Trip in Los Angeles.
+    """
+    abrufe_ort = _trip_deviation_lauf(
+        sauberer_nutzer("ac3s2-ort"), "America/Los_Angeles", fenster_um_jetzt(LOS_ANGELES)
+    )
+    abrufe_wien = _trip_deviation_lauf(
+        sauberer_nutzer("ac3s2-wien"), "America/Los_Angeles", fenster_um_jetzt(VIENNA)
+    )
+
+    assert abrufe_ort == 0
+    assert abrufe_wien >= 1
+
+
+def test_ac3_stelle3_geteilter_ruhezeit_adapter(sauberer_nutzer):
+    """AC-3 Stelle 3 — `trip_alert.py:688` (`_is_quiet_hours`-Adapter selbst).
+
+    Der Adapter nimmt `(trip, now)` entgegen; seine Signatur ändert sich durch
+    diese Scheibe NICHT — der Test reicht deshalb einen FESTEN Zeitpunkt herein
+    und misst die Antwort. `JETZT_AUCKLAND_NACHT` liegt in Auckland um 02:00
+    (im Fenster 22:00–07:00) und in Wien um 16:00 (ausserhalb).
+
+    ROT HEUTE: der Adapter liefert `False`, weil er auf 16:00 Wiener Zeit prüft.
+    """
+    user_id = sauberer_nutzer("ac3s3")
+    dienst = trip_abweichungsdienst(user_id)
+    trip = trip_mit_ruhezeit(user_id, "t-adapter", "Pacific/Auckland",
+                             (RUHE_VON, RUHE_BIS))
+
+    assert dienst._is_quiet_hours(trip, JETZT_AUCKLAND_NACHT) is True, (
+        "02:00 Ortszeit Auckland liegt im Fenster 22:00–07:00 — der geteilte "
+        "Adapter muss die Zone des Trips auflösen (anchor_tz), nicht Wien."
+    )
+    # Gegenprobe in derselben Zone: 16:00 Ortszeit Auckland ist wach.
+    wach = JETZT_AUCKLAND_NACHT - timedelta(hours=10)  # Auckland 16:00
+    assert dienst._is_quiet_hours(trip, wach) is False, (
+        "16:00 Ortszeit Auckland liegt ausserhalb — sonst wäre die Zusicherung "
+        "durch ein pauschales True erfüllbar."
+    )
+
+
+def test_ac3_stelle4_amtliche_warnung_trip(sauberer_nutzer):
+    """AC-3 Stelle 4 — `trip_alert.py:1443` (amtliche Warnung, Trip;
+    `_send_official_alert_only`).
+
+    Diese Methode IST die Aufrufstelle. Der öffentliche Einstieg darüber
+    (`check_official_alert_triggers`) holt die Warnungen über das Netz — sie
+    werden hier deshalb als echte `OfficialAlert`-Objekte hereingereicht,
+    genau wie der Produktivpfad es tut.
+
+    ROT HEUTE: Ruhezeit gegen Wien geprüft, Trip in Auckland → der Versand
+    läuft an, der Mail-Sink füllt sich.
+    """
+    from services.official_alerts.models import OfficialAlert
+
+    def lauf(quiet: tuple[str, str], kennung: str) -> int:
+        user_id = sauberer_nutzer(kennung)
+        gesendet: list = []
+        from services.trip_alert import TripAlertService
+
+        dienst = TripAlertService(
+            settings=settings_email_only(), throttle_hours=2, user_id=user_id,
+            mail_sink=lambda *a, **kw: gesendet.append((a, kw)),
+        )
+        trip = trip_mit_ruhezeit(user_id, "t-amtlich", "Pacific/Auckland", quiet)
+        warnung = OfficialAlert(
+            source="test-quelle", hazard="wind", level=3,
+            label="Sturmwarnung", region_label="Testregion",
+        )
+        # Segment-Kennungen sind numerische Strings (`format_segment_reference`).
+        dienst._send_official_alert_only(trip, [(warnung, ["1"])])
+        return len(gesendet)
+
+    versand_ort = lauf(fenster_um_jetzt(AUCKLAND), "ac3s4-ort")
+    versand_wien = lauf(fenster_um_jetzt(VIENNA), "ac3s4-wien")
+
+    assert versand_ort == 0, (
+        "Auckland-Ruhezeit muss die amtliche Trip-Warnung unterdrücken."
+    )
+    assert versand_wien >= 1, (
+        "Wiener Ruhezeit darf die amtliche Warnung eines Auckland-Trips nicht "
+        "unterdrücken."
+    )
+
+
+def test_ac3_stelle5_nowcast_schranke(sauberer_nutzer):
+    """AC-3 Stelle 5 — `alert_gate.py:93` (Nowcast-Schranke, geteilt
+    Trip+Vergleich). Kein Objekt im Scope: die Zone muss von den beiden
+    Aufrufern durchgereicht werden.
+
+    Nachweis über den echten Trip-Radar-Pfad (`check_radar_alerts`), gemessen
+    an der Radar-Naht `CountingFrameSource` — sie liegt HINTER der Schranke, ein
+    gesperrter Lauf kostet keinen Abruf (Modul-Docstring `alert_gate.py`).
+
+    Der Test ruft `check_nowcast_gate()` bewusst NICHT direkt auf: das wäre ein
+    Signatur-Test, der auch bei entgegengenommenem, aber ignoriertem `zone`
+    grün würde.
+
+    ROT HEUTE: die Schranke wertet die Ruhezeit gegen Wien aus.
+    """
+    def lauf(quiet: tuple[str, str], kennung: str) -> int:
+        user_id = sauberer_nutzer(kennung)
+        reset_radar_cache()
+        lat, lon = KOORDINATEN["Pacific/Auckland"]
+        trip = make_trip(
+            "t-radar", cooldown_minutes=0, quiet_from=quiet[0], quiet_to=quiet[1],
+            stage_date=ortstag(AUCKLAND), lat=lat, lon=lon,
+        )
+        save_trip(trip, user_id)
+        quelle = CountingFrameSource()
+        dienst = trip_alert_service(
+            user_id, settings_email_only(), quelle, mail_sink=lambda *a, **kw: None,
+        )
+        dienst.check_radar_alerts()
+        return quelle.call_count
+
+    abrufe_ort = lauf(fenster_um_jetzt(AUCKLAND), "ac3s5-ort")
+    abrufe_wien = lauf(fenster_um_jetzt(VIENNA), "ac3s5-wien")
+
+    assert abrufe_ort == 0, (
+        "Die Nowcast-Schranke muss die Auckland-Ruhezeit sehen — vor dem Abruf."
+    )
+    assert abrufe_wien >= 1, (
+        "Ohne diesen Gegen-Lauf wäre die erste Zusicherung auch dann erfüllt, "
+        "wenn der Radar-Pfad aus einem ganz anderen Grund gar nicht erst "
+        "losläuft (z.B. kein aktives Segment)."
+    )
+
+
+def _compare_deviation_lauf(user_id: str, quiet: tuple[str, str]) -> int:
+    schreibe_ort(user_id, "loc-akl", "Pacific/Auckland")
+    schreibe_presets(user_id, [
+        vergleichs_preset("cp-dev", ["loc-akl"], quiet_from=quiet[0], quiet_to=quiet[1])
+    ])
+    dienst = vergleichs_alarmdienst(user_id)
+    dienst.check_all_compare_presets()
+    return type(dienst).detect_aufrufe
+
+
+def test_ac3_stelle6_wetterabweichung_vergleich(sauberer_nutzer):
+    """AC-3 Stelle 6 — `compare_alert.py:176` (Wetter-Abweichung, Vergleich).
+    Zone-Quelle: `config.zone`, gesetzt in `_build_eval_config()` aus dem
+    ersten Ort.
+
+    ROT HEUTE: Prüfung gegen Wien, Ort in Auckland → der Wetterabruf läuft an.
+    """
+    aufrufe_ort = _compare_deviation_lauf(
+        sauberer_nutzer("ac3s6-ort"), fenster_um_jetzt(AUCKLAND)
+    )
+    aufrufe_wien = _compare_deviation_lauf(
+        sauberer_nutzer("ac3s6-wien"), fenster_um_jetzt(VIENNA)
+    )
+
+    assert aufrufe_ort == 0, "Auckland-Ruhezeit muss VOR dem Wetterabruf greifen."
+    assert aufrufe_wien >= 1, "Wiener Ruhezeit darf einen Auckland-Vergleich nicht stoppen."
+
+
+def _eval_config(dienst, preset: dict, all_locations: dict):
+    """Baut die `AlertEvaluationConfig` über den PRODUKTIVEN Erbauer
+    (`CompareAlertService._build_eval_config`) — nicht von Hand im Test.
+
+    Nur so misst der Test, was der Produktivpfad tatsächlich in die Engine
+    hineingibt. Ob der Erbauer die Ortsliste künftig als zusätzlichen
+    Parameter braucht, entscheidet die GREEN-Phase; der Test liest das an der
+    echten Signatur ab, statt es festzunageln.
+    """
+    import inspect
+
+    signatur = inspect.signature(dienst._build_eval_config)
+    extra = {}
+    if "all_locations" in signatur.parameters:
+        extra["all_locations"] = all_locations
+    return dienst._build_eval_config(preset, 0, **extra)
+
+
+def test_ac3_stelle7_engine_kern(sauberer_nutzer):
+    """AC-3 Stelle 7 — `deviation_alert_engine.py:286` (`evaluate()`, der Kern).
+    Zone-Quelle: `config.zone` (Rückfall UTC).
+
+    Die Konfiguration entsteht über den PRODUKTIVEN Erbauer, der Zeitpunkt wird
+    hereingereicht (`now=`, bestehender Parameter). Gemessen wird das
+    Auswertungs-ERGEBNIS, nicht die Argumentliste.
+
+    ROT HEUTE: `config` trägt keine Zone, die Engine rechnet in Wien (16:00,
+    wach) statt in Auckland (02:00, Ruhezeit) — `suppressed_reason` ist
+    `"no_significant_changes"` statt `"quiet_hours"`.
+
+    Ein entgegengenommener, aber IGNORIERTER `zone`-Parameter liefert dasselbe
+    falsche Ergebnis — dieser Test lässt sich damit nicht befriedigen.
+    """
+    from services.deviation_alert_engine import DeviationAlertEngine
+
+    user_id = sauberer_nutzer("ac3s7")
+    loc = schreibe_ort(user_id, "loc-akl", "Pacific/Auckland")
+    preset = vergleichs_preset("cp-kern", ["loc-akl"],
+                               quiet_from=RUHE_VON, quiet_to=RUHE_BIS)
+    schreibe_presets(user_id, [preset])
+
+    dienst = vergleichs_alarmdienst(user_id)
+    config = _eval_config(dienst, preset, {"loc-akl": loc})
+
+    ergebnis = DeviationAlertEngine().evaluate(
+        cached=[], fresh=[], config=config, alert_state={},
+        now=JETZT_AUCKLAND_NACHT,
+    )
+
+    assert ergebnis.triggered is False
+    assert ergebnis.suppressed_reason == "quiet_hours", (
+        "Der Engine-Kern muss die Zone aus der Konfiguration nehmen — 02:00 "
+        "Ortszeit Auckland liegt im Fenster 22:00–07:00. Heute rechnet er in "
+        f"Wien (16:00) und meldet {ergebnis.suppressed_reason!r}."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-4 — Mehrzonen-Vergleich: Ruhezeit folgt dem ERSTEN Ort
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_ac4_ruhezeit_folgt_dem_ersten_ort_und_wandert_mit_der_reihenfolge(
+    sauberer_nutzer,
+):
+    """AC-4: Zwei Orte, zwei Zonen — massgeblich ist der ERSTGENANNTE.
+
+    Given ein Vergleich [Auckland, Los Angeles] mit einem Ruhezeit-Fenster um
+    die Auckland-Ortszeit / Then ist er ruhig. When derselbe Vergleich als
+    [Los Angeles, Auckland] konfiguriert wird / Then ist er NICHT mehr ruhig —
+    das Ergebnis kippt mit der Reihenfolge.
+
+    ROT HEUTE: beide Reihenfolgen werden gegen Wien geprüft, das Ergebnis ist
+    in beiden Fällen dasselbe (nicht ruhig) — die Reihenfolge hat gar keine
+    Wirkung. Der Kipp-Nachweis schlägt fehl.
+
+    Eine feste oder alphabetische Ortsauswahl (statt `location_ids[0]`) fällt
+    hier ebenfalls durch: „Auckland" käme alphabetisch immer zuerst und das
+    Ergebnis kippte nicht.
+    """
+    fenster = fenster_um_jetzt(AUCKLAND)
+
+    def lauf(reihenfolge: list[str], kennung: str) -> int:
+        user_id = sauberer_nutzer(kennung)
+        schreibe_ort(user_id, "loc-akl", "Pacific/Auckland")
+        schreibe_ort(user_id, "loc-lax", "America/Los_Angeles")
+        schreibe_presets(user_id, [
+            vergleichs_preset("cp-multi", reihenfolge,
+                              quiet_from=fenster[0], quiet_to=fenster[1])
+        ])
+        dienst = vergleichs_alarmdienst(user_id)
+        dienst.check_all_compare_presets()
+        return type(dienst).detect_aufrufe
+
+    auckland_zuerst = lauf(["loc-akl", "loc-lax"], "ac4-akl-first")
+    la_zuerst = lauf(["loc-lax", "loc-akl"], "ac4-lax-first")
+
+    assert auckland_zuerst == 0, (
+        "Erster Ort Auckland → die Auckland-Ruhezeit gilt für den Vergleich."
+    )
+    assert la_zuerst >= 1, (
+        "Rückt Los Angeles an die erste Stelle, gilt dessen Ortszeit — dasselbe "
+        "Fenster liegt dort nicht in der Nacht, der Vergleich läuft weiter."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-5 — #1479 bleibt gewahrt (grüner Regressions-Anker)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.parametrize(
+    "kaputt",
+    [("25:00", "07:00"), ("abc", "07:00"), ("22:00", "xx:yy")],
+    ids=["stunde-25", "kein-zeitformat", "kaputtes-ende"],
+)
+def test_ac5_unbrauchbarer_ruhezeitwert_bleibt_keine_ruhezeit(sauberer_nutzer, kaputt):
+    """AC-5 (grüner Regressions-Anker, KEIN RED-Fall): ein unbrauchbarer
+    Ruhezeit-Wert gilt weiterhin als „keine Ruhezeit gesetzt" — auch mit dem
+    zusätzlichen Zonen-Parameter.
+
+    Dieser Test ist HEUTE grün und muss es bleiben. Er bewacht die Zusicherung
+    aus #1479 gegen die naheliegende Regression, die Zonen-Auflösung ausserhalb
+    (oder anstelle) des bestehenden `try/except` zu platzieren
+    (`deviation_alert_engine.py:109-139`).
+    """
+    user_id = sauberer_nutzer(f"ac5-{kaputt[0]}-{kaputt[1]}".replace(":", ""))
+    dienst = trip_abweichungsdienst(user_id)
+    trip = trip_mit_ruhezeit(user_id, "t-kaputt", "Pacific/Auckland", kaputt)
+
+    assert dienst._is_quiet_hours(trip, JETZT_AUCKLAND_NACHT) is False
+
+
+def test_ac5_nicht_string_ruhezeitwert_bleibt_keine_ruhezeit(sauberer_nutzer):
+    """AC-5, zweiter Teil (grüner Anker): ein Nicht-String (`int`) darf keine
+    Ausnahme an den Aufrufer durchreichen — der gefährlichste Fehlerfall wäre
+    ein Alarm-Totalausfall für ALLE Touren des Kontos (#1467)."""
+    user_id = sauberer_nutzer("ac5-nichtstring")
+    dienst = trip_abweichungsdienst(user_id)
+    trip = trip_mit_ruhezeit(user_id, "t-int", "Pacific/Auckland", ("22:00", "07:00"))
+    trip.alert_quiet_from = 2200  # kein String — kommt so aus einer Nutzerdatei
+
+    assert dienst._is_quiet_hours(trip, JETZT_AUCKLAND_NACHT) is False
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-6 — Tageszähler resettet zur ORTS-Mitternacht
+#
+# Die drei Modulfunktionen bekommen den Zonen-Parameter zwangsläufig. Die
+# Szenarien sind deshalb so gewählt, dass ein entgegengenommener, aber
+# IGNORIERTER `zone`-Parameter sie WEITERHIN rot lässt: gemessen wird immer
+# ein Zählerstand, der sich zwischen Wiener und Ortstag unterscheidet.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Auckland-Mitternacht (NZST, +12) = 12:00 UTC. Wien bleibt über beide
+# Zeitpunkte im selben Kalendertag (13:30 / 14:30 MESZ).
+VOR_AUCKLAND_MITTERNACHT = datetime(2026, 8, 12, 11, 30, tzinfo=UTC)
+NACH_AUCKLAND_MITTERNACHT = datetime(2026, 8, 12, 12, 30, tzinfo=UTC)
+# Wiener Mitternacht (MESZ, +2) = 22:00 UTC des Vortags. Auckland bleibt über
+# beide Zeitpunkte im selben Kalendertag (09:30 / 10:30 des 13.8.).
+VOR_WIENER_MITTERNACHT = datetime(2026, 8, 12, 21, 30, tzinfo=UTC)
+NACH_WIENER_MITTERNACHT = datetime(2026, 8, 12, 22, 30, tzinfo=UTC)
+# Los-Angeles-Mitternacht (PDT, −7) = 07:00 UTC. Wien bleibt im selben Tag.
+VOR_LA_MITTERNACHT = datetime(2026, 8, 12, 6, 30, tzinfo=UTC)
+NACH_LA_MITTERNACHT = datetime(2026, 8, 12, 7, 30, tzinfo=UTC)
+
+
+def test_ac6_zaehler_resettet_an_auckland_mitternacht(sauberer_nutzer):
+    """AC-6 (östlich): Der Zähler springt an der AUCKLAND-Mitternacht auf 0.
+
+    Given ein Alarm um 23:30 Auckland-Ortszeit (= 11:30 UTC) / When um 00:30
+    Auckland-Ortszeit (= 12:30 UTC) gelesen wird / Then steht der Zähler auf 0.
+    In Wien ist zwischen beiden Zeitpunkten NICHTS passiert (13:30 → 14:30,
+    derselbe Tag).
+
+    ROT HEUTE: der Reset hängt an `_vienna_date_str` — der Wiener Tag hat nicht
+    gewechselt, also liefert `load()` weiterhin 1.
+    """
+    from services import alert_daily_limit
+
+    user_id = sauberer_nutzer("ac6-akl-reset")
+    mit_zone(
+        alert_daily_limit.increment, user_id, VOR_AUCKLAND_MITTERNACHT, zone=AUCKLAND,
+    )
+
+    assert mit_zone(
+        alert_daily_limit.load, user_id, VOR_AUCKLAND_MITTERNACHT, zone=AUCKLAND,
+    ) == 1, "Vor der Orts-Mitternacht muss die Buchung sichtbar sein."
+    assert mit_zone(
+        alert_daily_limit.load, user_id, NACH_AUCKLAND_MITTERNACHT, zone=AUCKLAND,
+    ) == 0, (
+        "Nach der Auckland-Mitternacht beginnt der Ortstag neu — heute läuft "
+        "der Reset noch auf der Wiener Uhr und der Zähler bleibt bei 1."
+    )
+
+
+def test_ac6_zaehler_resettet_nicht_an_wiener_mitternacht(sauberer_nutzer):
+    """AC-6 (östlich, Gegenrichtung): Die WIENER Mitternacht darf einen
+    Auckland-Zähler NICHT zurücksetzen.
+
+    Given ein Alarm um 09:30 Auckland-Ortszeit (= 21:30 UTC) / When um 10:30
+    Auckland-Ortszeit (= 22:30 UTC) gelesen wird — in Wien ist inzwischen
+    Mitternacht vorbei / Then steht der Zähler unverändert auf 1.
+
+    ROT HEUTE: der Wiener Tageswechsel setzt ihn auf 0 — ein Kontingent-Leck
+    mitten am Ortstag.
+    """
+    from services import alert_daily_limit
+
+    user_id = sauberer_nutzer("ac6-akl-kein-reset")
+    mit_zone(
+        alert_daily_limit.increment, user_id, VOR_WIENER_MITTERNACHT, zone=AUCKLAND,
+    )
+
+    assert mit_zone(
+        alert_daily_limit.load, user_id, NACH_WIENER_MITTERNACHT, zone=AUCKLAND,
+    ) == 1, (
+        "Derselbe Auckland-Ortstag — der Zähler darf nicht mitten am Tag "
+        "aufgefüllt werden, nur weil in Wien ein neuer Tag begonnen hat."
+    )
+
+
+def test_ac6_zaehler_resettet_an_los_angeles_mitternacht(sauberer_nutzer):
+    """AC-6 (westlich): Spiegelbild zu Auckland.
+
+    Alarm um 23:30 LA-Ortszeit (= 06:30 UTC), Lesung um 00:30 LA-Ortszeit
+    (= 07:30 UTC). In Wien: 08:30 → 09:30, derselbe Tag.
+
+    ROT HEUTE: kein Wiener Tageswechsel → `load()` liefert weiterhin 1.
+    """
+    from services import alert_daily_limit
+
+    user_id = sauberer_nutzer("ac6-lax-reset")
+    mit_zone(
+        alert_daily_limit.increment, user_id, VOR_LA_MITTERNACHT, zone=LOS_ANGELES,
+    )
+
+    assert mit_zone(
+        alert_daily_limit.load, user_id, VOR_LA_MITTERNACHT, zone=LOS_ANGELES,
+    ) == 1
+    assert mit_zone(
+        alert_daily_limit.load, user_id, NACH_LA_MITTERNACHT, zone=LOS_ANGELES,
+    ) == 0, (
+        "Nach der Los-Angeles-Mitternacht beginnt der Ortstag neu."
+    )
+
+
+def test_ac6_zaehler_resettet_nicht_an_wiener_mitternacht_westlich(sauberer_nutzer):
+    """AC-6 (westlich, Gegenrichtung): Die Wiener Mitternacht (22:00 UTC) fällt
+    für Los Angeles mitten in den Nachmittag (15:00 Ortszeit) — der Zähler
+    bleibt stehen.
+
+    ROT HEUTE: der Wiener Tageswechsel setzt ihn auf 0.
+    """
+    from services import alert_daily_limit
+
+    user_id = sauberer_nutzer("ac6-lax-kein-reset")
+    mit_zone(
+        alert_daily_limit.increment, user_id, VOR_WIENER_MITTERNACHT, zone=LOS_ANGELES,
+    )
+
+    assert mit_zone(
+        alert_daily_limit.load, user_id, NACH_WIENER_MITTERNACHT, zone=LOS_ANGELES,
+    ) == 1, (
+        "In Los Angeles ist es 15:00 desselben Ortstags — der Zähler darf durch "
+        "die Wiener Mitternacht nicht aufgefüllt werden."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-7 — Getrennte Zähler pro Zone, BEIDE Richtungen
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_ac7_ausgeschoepfte_zone_blockiert_die_andere_nicht(sauberer_nutzer):
+    """AC-7 (Richtung 1): Ein in Zone A ausgeschöpftes Kontingent blockiert
+    Zone B nicht.
+
+    Given ein Free-Nutzer (Limit 2), dessen Auckland-Kontingent voll ist / When
+    ein Alarm für ein Objekt in Los Angeles anstünde / Then ist er erlaubt.
+
+    ROT HEUTE: es gibt genau EINEN Zähler ohne Zonen-Unterscheidung — nach zwei
+    Buchungen ist ALLES gesperrt. Ein ignorierter `zone`-Parameter ändert daran
+    nichts, dieser Test bliebe rot.
+    """
+    from services import alert_daily_limit
+
+    user_id = sauberer_nutzer("ac7-richtung1")
+    jetzt = JETZT_AUCKLAND_NACHT
+    mit_zone(
+        alert_daily_limit.increment, user_id, jetzt, zone=AUCKLAND,
+    )
+    mit_zone(
+        alert_daily_limit.increment, user_id, jetzt, zone=AUCKLAND,
+    )
+
+    assert mit_zone(
+        alert_daily_limit.is_allowed, user_id, jetzt, zone=AUCKLAND,
+    ) is False, (
+        "Zwei Buchungen = Free-Limit erreicht (Vorbedingung des Tests)."
+    )
+    assert mit_zone(
+        alert_daily_limit.is_allowed, user_id, jetzt, zone=LOS_ANGELES,
+    ) is True, (
+        "Das Kontingent wird je Zone geführt — der bewusste Preis dieser "
+        "Lösung (wer Objekte in drei Zonen hat, bekommt es dreimal) ist Teil "
+        "der Zusicherung, kein Nebenprodukt."
+    )
+
+
+def test_ac7_alarm_in_einer_zone_verbraucht_die_andere_nicht(sauberer_nutzer):
+    """AC-7 (Richtung 2): Ein Alarm in Zone A verbraucht NICHTS von Zone B.
+
+    ROT HEUTE: ein gemeinsamer Zähler ohne Zonen-Diskriminator — jede Buchung
+    schlägt überall durch.
+    """
+    from services import alert_daily_limit
+
+    user_id = sauberer_nutzer("ac7-richtung2")
+    jetzt = JETZT_AUCKLAND_NACHT
+    mit_zone(
+        alert_daily_limit.increment, user_id, jetzt, zone=AUCKLAND,
+    )
+
+    assert mit_zone(
+        alert_daily_limit.load, user_id, jetzt, zone=AUCKLAND,
+    ) == 1
+    assert mit_zone(
+        alert_daily_limit.load, user_id, jetzt, zone=LOS_ANGELES,
+    ) == 0, (
+        "Der Zählerstand von Los Angeles darf durch eine Auckland-Buchung "
+        "nicht steigen."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-8 — Bestandsdaten überleben den Rollout
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _schreibe_alt_schema(user_id: str, tag: date_type, count: int) -> Path:
+    """Zähler-Datei im ALTEN Schema `{"date": ..., "count": N}` — genau so,
+    wie sie heute auf der Produktions-Platte liegt."""
+    from app.loader import get_data_dir
+
+    ordner = get_data_dir(user_id)
+    ordner.mkdir(parents=True, exist_ok=True)
+    pfad = ordner / "alert_daily_count.json"
+    pfad.write_text(json.dumps({"date": tag.isoformat(), "count": count}))
+    return pfad
+
+
+def test_ac8_bestandszaehler_bleibt_beim_ersten_zugriff_erhalten(sauberer_nutzer):
+    """AC-8: Ein Deploy mitten am Tag darf kein Kontingent-Leck erzeugen.
+
+    Given ein Zähler im ALTEN Schema mit Stand 2 für den heutigen Wiener Tag /
+    When der neue Code ihn zum ersten Mal für `Europe/Vienna` liest und erhöht /
+    Then bleibt der Bestand erhalten (2 → 3), er wird nicht auf 0 gesetzt.
+
+    GRÜN HEUTE — und das ist Absicht: dieser Teil von AC-8 sichert eine
+    Eigenschaft, die der Altcode bereits hat, und die beim Schema-Wechsel
+    verloren gehen würde (Migration per Replace statt Merge). Er ist der
+    Regressions-Anker, nicht der RED-Fall. Von einem entgegengenommenen, aber
+    ignorierten `zone`-Parameter wäre er ebenfalls erfüllt — den scharfen Teil
+    trägt `test_ac8_migration_faellt_nur_der_wiener_zone_zu`.
+    """
+    from services import alert_daily_limit
+
+    user_id = sauberer_nutzer("ac8-bestand")
+    jetzt = JETZT_AUCKLAND_NACHT
+    _schreibe_alt_schema(user_id, jetzt.astimezone(VIENNA).date(), 2)
+
+    assert mit_zone(
+        alert_daily_limit.load, user_id, jetzt, zone=VIENNA,
+    ) == 2, (
+        "Der Altbestand wurde nach Wiener Kalendertag geführt — für diese Zone "
+        "ist er die korrekte Fortsetzung."
+    )
+    mit_zone(
+        alert_daily_limit.increment, user_id, jetzt, zone=VIENNA,
+    )
+    assert mit_zone(
+        alert_daily_limit.load, user_id, jetzt, zone=VIENNA,
+    ) == 3
+
+
+def test_ac8_migration_faellt_nur_der_wiener_zone_zu(sauberer_nutzer):
+    """AC-8 (Schärfung): Der Altbestand gilt NUR für `Europe/Vienna`; jede
+    andere Zone beginnt bei 0, und eine Buchung dort lässt den Wiener Stand
+    unangetastet (Merge auf ZONEN-Ebene, nicht nur auf Datei-Ebene).
+
+    ROT HEUTE — und auch mit einem ignorierten `zone`-Parameter: dort läge der
+    Auckland-Stand bei 2 statt 0 und stiege gemeinsam mit dem Wiener.
+    """
+    from services import alert_daily_limit
+
+    user_id = sauberer_nutzer("ac8-merge")
+    jetzt = JETZT_AUCKLAND_NACHT
+    _schreibe_alt_schema(user_id, jetzt.astimezone(VIENNA).date(), 2)
+
+    assert mit_zone(
+        alert_daily_limit.load, user_id, jetzt, zone=AUCKLAND,
+    ) == 0, (
+        "Für Auckland ist der Wiener Altbestand keine sinnvolle Fortsetzung."
+    )
+    mit_zone(
+        alert_daily_limit.increment, user_id, jetzt, zone=AUCKLAND,
+    )
+
+    assert mit_zone(
+        alert_daily_limit.load, user_id, jetzt, zone=AUCKLAND,
+    ) == 1
+    assert mit_zone(
+        alert_daily_limit.load, user_id, jetzt, zone=VIENNA,
+    ) == 2, (
+        "Die Auckland-Buchung darf den migrierten Wiener Eintrag nicht "
+        "überschreiben (Read-Modify-Write mit Merge, niemals Replace)."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-9 — Ortsvergleichs-Slot-Fälligkeit folgt der Zone des ersten Orts
+# ═══════════════════════════════════════════════════════════════════════════
+
+# 2026-08-12 19:30 UTC → Auckland 07:30 (13.8.) · Wien 21:30 · LA 12:30
+FAELLIG_IN_AUCKLAND = datetime(2026, 8, 12, 19, 30, tzinfo=UTC)
+# 2026-08-12 14:30 UTC → Los Angeles 07:30 · Wien 16:30 · Auckland 02:30
+FAELLIG_IN_LOS_ANGELES = datetime(2026, 8, 12, 14, 30, tzinfo=UTC)
+
+
+def _faellige_presets(user_id: str, now_utc: datetime) -> set[str]:
+    """Fällige Preset-Kennungen über den ECHTEN Versand-Orchestrator.
+
+    `CompareDispatchStrategy.collect_due(now_utc)` nimmt schon heute einen
+    ZEITPUNKT — die Signatur ändert sich durch diese Scheibe nicht. Der Test
+    ist damit ein reiner Verhaltenstest.
+    """
+    from app.loader import get_data_root
+    from services.dispatch_orchestrator import CompareDispatchStrategy
+
+    strategie = CompareDispatchStrategy(
+        settings_email_only(), user_id, data_root=str(get_data_root()),
+    )
+    return {eintrag[0].get("id") for eintrag in strategie.collect_due(now_utc)}
+
+
+def _zwei_presets_in_zwei_zonen(user_id: str) -> None:
+    schreibe_ort(user_id, "loc-akl", "Pacific/Auckland")
+    schreibe_ort(user_id, "loc-lax", "America/Los_Angeles")
+    schreibe_presets(user_id, [
+        vergleichs_preset("cp-akl", ["loc-akl"], morning_time="07:00:00"),
+        vergleichs_preset("cp-lax", ["loc-lax"], morning_time="07:00:00"),
+    ])
+
+
+def test_ac9_preset_ist_zur_eigenen_ortsstunde_faellig(sauberer_nutzer):
+    """AC-9: Ein Preset mit Morgen-Slot 07:00 und Orten in Auckland ist fällig,
+    wenn es DORT 07:00 ist — nicht, wenn es in Wien 07:00 ist.
+
+    ROT HEUTE: `collect_due()` bildet EINEN `vor_ort`-Zeitpunkt aus der festen
+    Konstante `NOCH_NICHT_ORTSZEIT_SIEHE_1726` und prüft alle Presets gegen
+    dieselbe Stunde. Um 19:30 UTC ist es in Wien 21:30 — nichts ist fällig.
+    """
+    user_id = sauberer_nutzer("ac9-akl")
+    _zwei_presets_in_zwei_zonen(user_id)
+
+    assert _faellige_presets(user_id, FAELLIG_IN_AUCKLAND) == {"cp-akl"}, (
+        "Um 07:30 Auckland-Ortszeit ist genau das Auckland-Preset fällig — das "
+        "Los-Angeles-Preset (dort 12:30) nicht."
+    )
+
+
+def test_ac9_zwei_presets_sind_zu_verschiedenen_weltzeiten_faellig(sauberer_nutzer):
+    """AC-9 (Gegenstück): Dasselbe Konto, dieselbe Slot-Uhrzeit, aber erste
+    Orte in verschiedenen Zonen → verschiedene Weltzeit-Momente.
+
+    ROT HEUTE: beide Läufe liefern die leere Menge, weil beide gegen die Wiener
+    Stunde geprüft werden (21:30 bzw. 16:30).
+    """
+    user_id = sauberer_nutzer("ac9-lax")
+    _zwei_presets_in_zwei_zonen(user_id)
+
+    assert _faellige_presets(user_id, FAELLIG_IN_LOS_ANGELES) == {"cp-lax"}, (
+        "Um 07:30 Los-Angeles-Ortszeit ist genau das LA-Preset fällig."
+    )
+
+
+def test_ac9_wiener_slotstunde_macht_fremde_presets_nicht_faellig(sauberer_nutzer):
+    """AC-9 (Kontrolle): Wenn es in WIEN 07:00 ist, darf kein Preset fällig
+    sein, dessen erster Ort anderswo liegt.
+
+    ROT HEUTE genau umgekehrt: um 05:30 UTC ist es in Wien 07:30 und BEIDE
+    Presets gelten als fällig, obwohl es in Auckland 17:30 und in Los Angeles
+    22:30 ist.
+    """
+    user_id = sauberer_nutzer("ac9-wien")
+    _zwei_presets_in_zwei_zonen(user_id)
+    wien_0730 = datetime(2026, 8, 12, 5, 30, tzinfo=UTC)
+
+    assert _faellige_presets(user_id, wien_0730) == set(), (
+        "Die Wiener Uhr entscheidet über gar nichts mehr."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-10 — Beide Sommerzeit-Wechseltage, Häufigkeit JEDER EINZELNEN Stunde
+#
+# Die beiden von der Spec vorgegebenen Daten sind EU-Umstellungstage. Wien ist
+# als Prüfzone unbrauchbar (ein Rückfall wäre unsichtbar), Paris ebenso
+# (gleicher Versatz). `Europe/Lisbon` schaltet zum selben Zeitpunkt, hat aber
+# +0/+1 statt +1/+2 — ein Wien-Rückfall verschiebt jede Grenzstunde um eine
+# Stunde und fällt auf.
+# ═══════════════════════════════════════════════════════════════════════════
+
+FRUEHJAHR = date_type(2026, 3, 29)   # 23 Ortsstunden, Stunde 01 fehlt (Lissabon)
+HERBST = date_type(2026, 10, 25)     # 25 Ortsstunden, Stunde 01 zweimal (Lissabon)
+
+
+def _stundenraster(tag: date_type, zone: ZoneInfo) -> list[datetime]:
+    """Alle vollen Ortsstunden des Kalendertags `tag` in `zone`, als
+    UTC-Zeitpunkte — gerechnet, nicht getippt.
+
+    Es wird von 24 Stunden VOR bis 24 Stunden NACH dem Tag in UTC-Schritten
+    gelaufen und behalten, was in der Ortszone auf diesem Kalendertag zur
+    vollen Stunde liegt. Ein Tag mit 23 bzw. 25 Ortsstunden entsteht dadurch
+    von selbst — die Zahl wird nirgends angenommen.
+    """
+    start = datetime.combine(tag, datetime.min.time(), tzinfo=UTC) - timedelta(days=1)
+    raster: list[datetime] = []
+    for i in range(24 * 3):
+        moment = start + timedelta(hours=i)
+        lokal = moment.astimezone(zone)
+        if lokal.date() == tag and lokal.minute == 0:
+            raster.append(moment)
+    return raster
+
+
+def test_ac10_fruehjahrs_umstellungstag_hat_23_ortsstunden():
+    """AC-10 (Vorbedingung, grüner Anker): Der 29.03.2026 hat in
+    `Europe/Lisbon` 23 Ortsstunden, Stunde 01 existiert nicht.
+
+    Kein Prüfling-Test — er sichert nur ab, dass die folgenden Tests am
+    richtigen Tag messen. Fiele er, wären die AC-10-Aussagen bedeutungslos.
+    """
+    stunden = [m.astimezone(LISBON).hour for m in _stundenraster(FRUEHJAHR, LISBON)]
+
+    assert len(stunden) == 23
+    assert stunden.count(1) == 0, "Die übersprungene Stunde ist 01 (WET→WEST)."
+    assert all(stunden.count(h) == 1 for h in stunden)
+
+
+def test_ac10_herbst_umstellungstag_hat_25_ortsstunden():
+    """AC-10 (Vorbedingung, grüner Anker): Der 25.10.2026 hat in
+    `Europe/Lisbon` 25 Ortsstunden, Stunde 01 existiert zweimal."""
+    stunden = [m.astimezone(LISBON).hour for m in _stundenraster(HERBST, LISBON)]
+
+    assert len(stunden) == 25
+    assert stunden.count(1) == 2, "Die doppelte Stunde ist 01 (WEST→WET)."
+
+
+@pytest.mark.parametrize("tag", [FRUEHJAHR, HERBST], ids=["fruehjahr", "herbst"])
+def test_ac10_ruhezeit_stimmt_an_jeder_einzelnen_stunde_des_umstellungstags(tag):
+    """AC-10: Ruhezeit-Wrap 22:00–07:00, Stunde für Stunde über den ganzen
+    Umstellungstag geprüft — nicht die Zeilenzahl, sondern JEDE Stunde.
+
+    ROT HEUTE: `is_quiet_hours` rechnet in Wien. Lissabon liegt eine Stunde
+    dahinter, also weicht das Ergebnis an jeder Grenzstunde ab (z.B. 21:00
+    Lissabon = 22:00 Wien: heute unterdrückt, richtig wäre wach).
+    """
+    from services.deviation_alert_engine import DeviationAlertEngine
+
+    abweichungen: list[tuple[str, int, bool, bool]] = []
+    for moment in _stundenraster(tag, LISBON):
+        lokale_stunde = moment.astimezone(LISBON).hour
+        erwartet = lokale_stunde >= 22 or lokale_stunde < 7
+        gemessen = mit_zone(
+            DeviationAlertEngine.is_quiet_hours,
+            moment, RUHE_VON, RUHE_BIS, zone=LISBON,
+        )
+        if gemessen is not erwartet:
+            abweichungen.append(
+                (moment.isoformat(), lokale_stunde, erwartet, gemessen)
+            )
+
+    assert not abweichungen, (
+        f"Ruhezeit weicht am {tag} an diesen Ortsstunden ab "
+        f"(Zeitpunkt, Ortsstunde, erwartet, gemessen): {abweichungen}"
+    )
+
+
+@pytest.mark.parametrize("tag", [FRUEHJAHR, HERBST], ids=["fruehjahr", "herbst"])
+def test_ac10_zaehler_haelt_ueber_den_ganzen_umstellungstag(sauberer_nutzer, tag):
+    """AC-10: Der Tageszähler wird an einem Umstellungstag WEDER vorzeitig
+    (Frühjahr) NOCH doppelt (Herbst) zurückgesetzt.
+
+    Gebucht wird an der ERSTEN Ortsstunde des Tages; danach wird an JEDER
+    weiteren Ortsstunde desselben Tages gelesen — überall muss 1 stehen. Erst
+    die erste Stunde des Folgetags liefert 0.
+
+    ROT HEUTE: gelesen wird gegen den WIENER Kalendertag. Der wechselt gegenüber
+    dem Lissabonner um eine Stunde versetzt, also fällt der Zähler an der
+    falschen Stelle auf 0.
+    """
+    from services import alert_daily_limit
+
+    user_id = sauberer_nutzer(f"ac10-{tag.isoformat()}")
+    raster = _stundenraster(tag, LISBON)
+    mit_zone(
+        alert_daily_limit.increment, user_id, raster[0], zone=LISBON,
+    )
+
+    zu_frueh = [
+        moment.astimezone(LISBON).isoformat()
+        for moment in raster
+        if mit_zone(
+        alert_daily_limit.load, user_id, moment, zone=LISBON,
+    ) != 1
+    ]
+    assert not zu_frueh, (
+        f"Der Zähler wurde am {tag} mitten am Ortstag zurückgesetzt: {zu_frueh}"
+    )
+
+    erste_stunde_folgetag = _stundenraster(tag + timedelta(days=1), LISBON)[0]
+    assert mit_zone(
+        alert_daily_limit.load, user_id, erste_stunde_folgetag, zone=LISBON,
+    ) == 0, "An der Orts-Mitternacht des Folgetags muss der Zähler neu beginnen."
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-12 / AC-13 / AC-14 — Dokumentation und Wächter-Restliste
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_ac12_adr_0044_nennt_die_beiden_module_nicht_mehr_als_ausnahme():
+    """AC-12 — doc-compliance-test.
+
+    ADR-0044 listet `alert_daily_limit` und `deviation_alert_engine` heute
+    unter „Bewusst NICHT betroffen (feste Zone ist dort Absicht)". Nach dieser
+    Scheibe stimmt das nicht mehr.
+
+    Dateiinhalt-Prüfung ist hier ausdrücklich zulässig (Spec AC-12): der
+    Gegenstand der Zusicherung IST die Dokumentation.
+
+    ROT HEUTE: der Absatz steht unverändert da.
+    """
+    # doc-compliance-test
+    adr = (ROOT / "docs/adr/0044-kalendertage-folgen-der-ortszeit.md").read_text(
+        encoding="utf-8"
+    )
+    marker = "**Bewusst NICHT betroffen**"
+    assert marker in adr, "Der Abschnitt selbst muss erhalten bleiben."
+
+    start = adr.index(marker)
+    ende = adr.find("\n\n", start)
+    absatz = adr[start:ende if ende != -1 else len(adr)]
+
+    for modul in ("alert_daily_limit", "deviation_alert_engine"):
+        assert modul not in absatz, (
+            f"ADR-0044 führt `{modul}` weiterhin als bewusste Ausnahme — nach "
+            "#1726 folgt das Modul der Ortszone und gehört in den Abschnitt "
+            "'Umgesetzt'."
+        )
+
+
+def test_ac13_waechter_restliste_verliert_genau_die_vier_eintraege():
+    """AC-13: Die vier zu dieser Scheibe gehörenden Einträge sind aus
+    `KNOWN_VIOLATIONS` entfernt.
+
+    Geprüft wird die DATENSTRUKTUR des Wächters, nicht der Dateitext — nach dem
+    Fix findet der Scanner diese Stellen nicht mehr, und
+    `test_known_violations_only_shrink()` würde sie sonst als „stale" melden.
+
+    ROT HEUTE: alle vier stehen noch drin.
+    """
+    from tests.test_output_timezone_guard import KNOWN_VIOLATIONS
+
+    zu_entfernen = [
+        "src/services/alert_daily_limit.py::<module>::0",
+        "src/services/deviation_alert_engine.py::<module>::0",
+        "src/services/alert_daily_limit.py::_vienna_date_str::0",
+        "src/services/deviation_alert_engine.py::is_quiet_hours::0",
+    ]
+    verblieben = [k for k in zu_entfernen if k in KNOWN_VIOLATIONS]
+
+    assert not verblieben, (
+        "Diese Einträge gehören zu #1726 und müssen mit dem Fix verschwinden "
+        f"(die Liste darf nur schrumpfen): {verblieben}"
+    )
+
+
+def test_ac14_blockkommentar_weist_die_muster_a_restliste_1727_zu():
+    """AC-14 — doc-compliance-test.
+
+    Der Blockkommentar bei `tests/test_output_timezone_guard.py:593` weist
+    heute ALLE 53 Bestandseinträge pauschal #1726 zu — auch die ~25
+    Muster-A-Funde, die tatsächlich #1727 (S5) tragen. Nach dem Schliessen von
+    #1726 zeigte die Liste auf ein erledigtes Issue.
+
+    ROT HEUTE: der Kommentar nennt #1727 nirgends.
+    """
+    # doc-compliance-test
+    quelle = (ROOT / "tests/test_output_timezone_guard.py").read_text(encoding="utf-8")
+    marker = "ENTSCHEIDUNGS-SCHICHT (Issue #1723"
+    assert marker in quelle, "Der Blockkommentar selbst muss erhalten bleiben."
+
+    start = quelle.index(marker)
+    block = quelle[start:start + 1400]
+
+    assert "#1727" in block, (
+        "Der Blockkommentar muss die verbleibenden Muster-A-Funde auf #1727 "
+        "verweisen, statt sie weiter #1726 zuzuschreiben."
+    )
+    assert "die Behebung traegt #1726 (S4)" not in block, (
+        "Die pauschale Zuweisung der GESAMTEN Restliste an #1726 ist nach dem "
+        "Schliessen dieses Issues falsch."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AC-15 — Gelöschter/unauflösbarer erster Ort kippt nicht still auf Weltzeit
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_ac15_geloeschter_erster_ort_faellt_auf_den_naechsten_aufloesbaren(
+    sauberer_nutzer,
+):
+    """AC-15: Steht in `location_ids` eine Kennung, zu der es keinen Ort mehr
+    gibt (gelöschter Ort — der Filter in `compare_official_alert.py:128` gibt
+    es zu), gilt die Zone des ersten Orts, der sich AUFLÖSEN LÄSST.
+
+    Given ein Vergleich [gelöschte-ID, Auckland] mit einem Fenster um die
+    Auckland-Ortszeit / Then ist er ruhig.
+
+    ROT HEUTE: geprüft wird gegen Wien. Und ein naiver Fix
+    (`all_locations.get(location_ids[0])` als reiner Indexzugriff) fällt hier
+    ebenfalls durch: `location_tz(None)` liefert still UTC, und in UTC ist das
+    Auckland-Fenster nicht erfüllt.
+    """
+    fenster = fenster_um_jetzt(AUCKLAND)
+    user_id = sauberer_nutzer("ac15-geloescht")
+    schreibe_ort(user_id, "loc-akl", "Pacific/Auckland")
+    schreibe_presets(user_id, [
+        vergleichs_preset("cp-luecke", ["loc-weg", "loc-akl"],
+                          quiet_from=fenster[0], quiet_to=fenster[1])
+    ])
+    dienst = vergleichs_alarmdienst(user_id)
+    dienst.check_all_compare_presets()
+
+    assert type(dienst).detect_aufrufe == 0, (
+        "Der erste AUFLÖSBARE Ort bestimmt die Zone — ein gelöschter Eintrag "
+        "davor darf den Vergleich nicht still auf Weltzeit kippen."
+    )
+
+
+def test_ac15_kein_aufloesbarer_ort_ergibt_utc_und_einen_protokolleintrag(
+    sauberer_nutzer, caplog,
+):
+    """AC-15 (zweiter Teil): Löst KEIN Ort eine Zone auf, gilt UTC — aber
+    sichtbar, mit der Vergleichs-Kennung im Protokoll.
+
+    Given ein Vergleich, dessen einziger Ort keine auflösbare Zone hat (0/0) /
+    When die Ruhezeit bestimmt wird / Then gilt UTC (das Fenster um die
+    UTC-Uhrzeit unterdrückt), UND es steht eine Warnung mit der Preset-Kennung
+    im Protokoll.
+
+    ROT HEUTE: geprüft wird gegen Wien (das UTC-Fenster greift dort nicht), und
+    protokolliert wird gar nichts.
+    """
+    import logging
+
+    fenster = fenster_um_jetzt(ZoneInfo("UTC"))
+    user_id = sauberer_nutzer("ac15-nichts")
+    schreibe_ort_ohne_koordinaten(user_id, "loc-nirgendwo")
+    schreibe_presets(user_id, [
+        vergleichs_preset("cp-ohne-zone", ["loc-nirgendwo"],
+                          quiet_from=fenster[0], quiet_to=fenster[1])
+    ])
+    dienst = vergleichs_alarmdienst(user_id)
+
+    with caplog.at_level(logging.WARNING):
+        dienst.check_all_compare_presets()
+
+    assert type(dienst).detect_aufrufe == 0, (
+        "Ohne auflösbare Zone gilt UTC — das UTC-Fenster muss greifen."
+    )
+    assert any(
+        "cp-ohne-zone" in eintrag.getMessage() for eintrag in caplog.records
+    ), (
+        "Der UTC-Rückfall darf nicht still geschehen: er gehört mit der "
+        "Vergleichs-Kennung ins Protokoll."
+    )
