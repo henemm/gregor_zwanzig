@@ -54,6 +54,7 @@ Tages-Aggregationspfade sind auseinandergelaufen).
 from __future__ import annotations
 
 import dataclasses
+import importlib
 import json
 import re
 from collections import Counter
@@ -80,6 +81,7 @@ from output.renderers.alert.render import (
 )
 from output.channels.premium_sms import PremiumSmsOutput
 from output.renderers.channel_layout import render_for_channel
+from output.renderers.email.compare_html import CV2_METRICS
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
 from output.renderers.comparison import render_compare_email
@@ -3155,3 +3157,507 @@ def test_ac_s4_14_telegram_narrow_confidence_absent():
     'confidence' bereits ab, bevor render_telegram_bubbles() sie sieht."""
     lines = _s4_kurzuebersicht(_single_metric_dc("confidence", enabled=True))
     assert lines == [], f"AC-S4-14: 'confidence' erscheint: {lines!r}"
+
+
+# ===========================================================================
+# Epic #1703 Scheibe 5 (AC-S5-1 bis AC-S5-6): Compare-Zellwert-
+# Vollstaendigkeit der Uebersichtstabelle (CV2_METRICS,
+# docs/reference/metric_output_matrix.md Flaeche 4). Reine
+# Charakterisierung, kein Produktivcode-Fix.
+# SPEC: docs/specs/modules/fix_1703_s5_compare_zellwerte.md
+#
+# Korrektur der Scheiben-Praemisse (s. Spec): 15 der 25 Uebersichtszeilen
+# sind bereits wertgeprueft (#1296/#1324/#1351, Gewitter-Suite) -- AC-S5-6
+# haelt den Abhaengigkeits-Anker darauf. Diese Scheibe schliesst die
+# restlichen 10 Zeilen (AC-S5-2, Engine-Vorrang-Stichprobe AC-S5-3) und
+# ergaenzt zwei generische Achsen, die KEINER der 25 Bestandstests prueft:
+# Formatierungs-Konsistenz (AC-S5-4) und Fehlzeichen-Divergenz (AC-S5-5).
+#
+# Pruefort = Wirkort (Bindende Test-Architektur-Entscheidung der Spec):
+# AC-S5-2/3/5 laufen ueber ``render_compare_email()`` -- EIN Aufruf liefert
+# HTML UND Klartext derselben Mail, kein isolierter Doppelaufruf (sonst
+# Klartext-blinder Fleck, #1366).
+# ===========================================================================
+
+_S5_CV2_BY_KEY: dict[str, dict] = {m["key"]: m for m in CV2_METRICS}
+
+
+def _s5_label(key: str) -> str:
+    """Beschriftung derselben Zeile wie im Renderer -- ueber den Katalog
+    abgeleitet (``label_de``, Muster ``derive_row_labels``), nicht
+    getippt. Innerhalb JEDER in dieser Scheibe gefilterten Zeilenauswahl
+    ist jede der zehn Metrik-IDs paarweise verschieden (s. unten), daher
+    ohne Kollisions-Zusatz ('Maximum'/'Minimum')."""
+    return get_metric(_S5_CV2_BY_KEY[key]["metric_id"]).label_de
+
+
+_S5_TAGS = re.compile(r"<[^>]+>")
+
+
+def _s5_overview_rows(html: str) -> list[dict]:
+    """Zeilen der Uebersichtstabelle als {'label': str, 'cells': [...]}} --
+    Muster ``_overview_rows()`` aus ``test_compare_metric_parity.py`` (Spec
+    AC-S5-2 Test-Hinweis)."""
+    start = html.index("min-width:760px")
+    body = html[html.index("<tbody>", start) + len("<tbody>"):html.index("</tbody>", start)]
+    rows = []
+    for row_html in re.findall(r"<tr[^>]*>(.*?)</tr>", body, re.S):
+        cells = [
+            _S5_TAGS.sub("", c).strip()
+            for c in re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.S)
+        ]
+        if cells:
+            rows.append({"label": cells[0], "cells": cells[1:]})
+    return rows
+
+
+def _s5_html_wert(html: str, label: str) -> str:
+    zeilen = _s5_overview_rows(html)
+    treffer = [r for r in zeilen if r["label"] == label]
+    assert len(treffer) == 1, (
+        f"AC-S5: erwartet genau eine HTML-Zeile mit Beschriftung {label!r}, "
+        f"gefunden {len(treffer)}: {[r['label'] for r in zeilen]}"
+    )
+    assert len(treffer[0]["cells"]) == 1, (
+        f"AC-S5: erwartet genau eine Wertzelle (ein Ort) fuer {label!r}, "
+        f"gefunden {treffer[0]['cells']!r}"
+    )
+    return treffer[0]["cells"][0]
+
+
+def _s5_klartext_wert(text: str, label: str) -> str:
+    """Klartext-Zeilenwert -- Muster ``_plain_row_value()`` aus
+    ``test_compare_metric_parity.py`` (Spec AC-S5-2 Test-Hinweis), hier per
+    Label-PRAEFIX statt Schluesselwort-Enthaltensein: die Beschriftung ist
+    innerhalb der gefilterten Auswahl dieser Scheibe eindeutig."""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(f"{label}:"):
+            return stripped.split(":", 1)[1].strip()
+    pytest.fail(
+        f"AC-S5: im Klartext derselben Mail ist keine Zeile {label!r} "
+        f"auffindbar.\n{text}"
+    )
+    return ""  # unreachable, haelt Typpruefer ruhig
+
+
+_S5_ZELLENZAHL = re.compile(r"^-?\d+(?:[.,]\d+)?")
+
+
+def _s5_zellenzahl(zelle: str) -> float:
+    """Die fuehrende Zahl einer Uebersichts-Zelle ("22°C" -> 22.0). Geprueft
+    wird der WERT, nicht die Schreibweise -- Einheit/Nachkommastellen
+    bewacht AC-S5-4."""
+    treffer = _S5_ZELLENZAHL.match(zelle.strip())
+    assert treffer is not None, (
+        f"AC-S5: die Zelle {zelle!r} beginnt nicht mit einer Zahl -- ohne "
+        "Zahl ist der Wert nicht pruefbar"
+    )
+    return float(treffer.group().replace(",", "."))
+
+
+# Klasse-A-Felder ohne Trip-Regel (snow_depth_cm/snow_new_cm, s. Spec
+# Implementation Details): unterscheidbarer Literalwert statt Aggregation --
+# die ComparisonEngine, die diese Felder aus Stundendaten befuellt, liegt
+# ausserhalb dieses Renderers (Known Limitations Punkt 2).
+_S5_SNOW_DEPTH_CM = 12.0
+_S5_SNOW_NEW_CM = 7.0
+
+# Vier reich besetzte Stundenpunkte EINES Tages (Spalten: Stunde, Temp,
+# Wind, Wolken, Regen, PoP, UV, Sicht_m, DNI) -- jedes der zehn Felder
+# unterschiedlich ueber die Stunden verteilt, damit MIN/MAX/SUM/AVG sich
+# unterscheiden (Vakuum-Gegenprobe unten, Lehre AC-S2-8).
+_S5_STUNDENWERTE = (
+    (6, 10.0, 15.0, 20, 1.0, 30, 2.0, 15000, 100.0),
+    (10, 18.0, 25.0, 50, 2.0, 50, 6.0, 12000, 500.0),
+    (14, 22.0, 35.0, 60, 1.4, 65, 9.0, 8000, 700.0),
+    (18, 15.0, 20.0, 30, 0.0, 40, 3.0, 20000, 200.0),
+)
+
+
+def _s5_punkte() -> list[ForecastDataPoint]:
+    return [
+        ForecastDataPoint(
+            ts=datetime(2026, 8, 12, stunde, 0, tzinfo=timezone.utc),
+            t2m_c=temp, wind10m_kmh=wind, cloud_total_pct=wolken,
+            precip_1h_mm=regen, pop_pct=pop, uv_index=uv, visibility_m=sicht,
+            dni_wm2=dni, is_day=1, thunder_level=ThunderLevel.NONE,
+        )
+        for stunde, temp, wind, wolken, regen, pop, uv, sicht, dni in _S5_STUNDENWERTE
+    ]
+
+
+def _s5_timeseries(hourly: list[ForecastDataPoint]) -> NormalizedTimeseries:
+    meta = ForecastMeta(provider=Provider.OPENMETEO, model="s5-test", grid_res_km=1.0)
+    return NormalizedTimeseries(meta=meta, data=hourly)
+
+
+def _s5_location(hourly: list[ForecastDataPoint]):
+    """Klasse A (temp_max/wind_max/cloud_avg/sunny_hours): derselbe Trip-Weg
+    wie die 15 bereits gedeckten Zeilen (``WeatherMetricsService``, s. Spec
+    Implementation Details) -- diese Werte werden wie von der
+    ComparisonEngine VORGEGEBEN behandelt, der Renderer liest sie nur per
+    ``getattr`` (Klasse A hat keine eigene Aggregation). snow_depth_cm/
+    snow_new_cm: unterscheidbarer Literalwert (Klasse A ohne Trip-Regel).
+    Klasse-B-Felder (precip_sum_mm etc.) bleiben BEWUSST auf ihrem Default
+    None -- AC-S5-2 prueft damit den Live-Ableitungspfad, AC-S5-3 separat
+    den Engine-Vorrang."""
+    from app.user import LocationResult, SavedLocation
+
+    basis = WeatherMetricsService().compute_basis_metrics(_s5_timeseries(hourly))
+    return LocationResult(
+        location=SavedLocation(
+            id="s5-ort", name="S5-Ort", lat=47.0, lon=11.0, elevation_m=500,
+        ),
+        score=50,
+        temp_max=basis.temp_max_c, wind_max=basis.wind_max_kmh,
+        cloud_avg=basis.cloud_avg_pct, sunny_hours=basis.sunny_hours,
+        snow_depth_cm=_S5_SNOW_DEPTH_CM, snow_new_cm=_S5_SNOW_NEW_CM,
+        hourly_data=hourly,
+    )
+
+
+_S5_NEU_GEPRUEFT_ORDER = (
+    "temp_max", "wind_max", "cloud_avg", "sunny_hours",
+    "snow_depth_cm", "snow_new_cm", "precip_sum", "pop_max", "uv_max",
+    "visibility_min",
+)
+
+_S5_DECIMALS: dict[str, int] = {
+    "temp_max": 0, "wind_max": 0, "cloud_avg": 0, "sunny_hours": 1,
+    "snow_depth_cm": 0, "snow_new_cm": 0, "precip_sum": 1, "pop_max": 0,
+    "uv_max": 0, "visibility_min": 1,
+}
+# visibility_min: HTML/Klartext zeigen km, die Fixture traegt m (Faktor
+# 1000, s. Spec "visibility_min Einheiten-Hinweis").
+_S5_FAKTOR: dict[str, float] = {"visibility_min": 0.001}
+
+
+def _s5_erwartete_werte(hourly: list[ForecastDataPoint]) -> dict[str, float]:
+    """Die zehn Soll-Tageswerte, UNABHAENGIG von der Uebersichtstabelle
+    gerechnet (Spec Implementation Details, Klasse A/B).
+
+    Klasse A (temp_max/wind_max/cloud_avg/sunny_hours) kommt aus derselben
+    Trip-Regel, mit der ``_s5_location`` das ``LocationResult`` befuellt --
+    der Renderer hat hierfuer keine eigene Aggregation, ein Fehler koennte
+    nur in der Zellzuordnung/Formatierung stecken.
+
+    Klasse B (precip_sum/pop_max/uv_max/visibility_min) wird HANDFEST aus
+    den Stundenwerten gerechnet (SUM/MAX/MAX/MIN) -- NICHT ueber
+    ``summarize_points()``/``compute_basis_metrics()``: sonst hielte ein
+    Fehler in deren ``_compute_*``-Regeln die Renderer-Ausgabe gegen sich
+    selbst, und eine vertauschte Zuweisung bliebe unsichtbar (Lehre
+    AC-S2-8/F001)."""
+    basis = WeatherMetricsService().compute_basis_metrics(_s5_timeseries(hourly))
+    return {
+        "temp_max": basis.temp_max_c,
+        "wind_max": basis.wind_max_kmh,
+        "cloud_avg": basis.cloud_avg_pct,
+        "sunny_hours": basis.sunny_hours,
+        "snow_depth_cm": _S5_SNOW_DEPTH_CM,
+        "snow_new_cm": _S5_SNOW_NEW_CM,
+        "precip_sum": sum(p.precip_1h_mm for p in hourly),
+        "pop_max": max(p.pop_pct for p in hourly),
+        "uv_max": max(p.uv_index for p in hourly),
+        "visibility_min": min(p.visibility_m for p in hourly),
+    }
+
+
+def _s5_werte_sind_unterscheidbar(soll: dict[str, float]) -> None:
+    """Vakuum-Gegenprobe (Muster ``_s2_erwartungen_sind_unterscheidbar``):
+    eine Wert-Zusicherung faengt eine Feldvertauschung nur, wenn die
+    vertauschten Werte ueberhaupt verschieden sind."""
+    felder = list(soll)
+    for i, eins in enumerate(felder):
+        for zwei in felder[i + 1:]:
+            if soll[eins] == soll[zwei]:
+                pytest.fail(
+                    f"Vakuum: {eins} und {zwei} tragen denselben Soll-Wert "
+                    f"({soll[eins]!r}) -- eine Vertauschung waere damit "
+                    "unsichtbar und AC-S5-2 blind. Die Fixture muss die "
+                    "zehn Felder unterscheidbar machen."
+                )
+
+
+@lru_cache(maxsize=None)
+def _s5_mail_neue_felder() -> tuple[str, str]:
+    """Die ECHTE Vergleichs-Mail (``render_compare_email``) mit genau den
+    zehn neu geprueften Zeilen (Filterung ueber ``enabled_metrics`` -- alle
+    zehn Katalog-IDs sind paarweise verschieden, daher keine Label-Kollision/
+    -Zusatz durch ``derive_row_labels``). Gecacht, weil jede AC-S5-2-Instanz
+    dieselbe Mail liest."""
+    from app.user import ComparisonResult
+
+    hourly = _s5_punkte()
+    ort = _s5_location(hourly)
+    ergebnis = ComparisonResult(
+        locations=[ort], time_window=(6, 18), target_date=date(2026, 8, 12),
+        created_at=datetime(2026, 8, 12, 4, 1),
+    )
+    return render_compare_email(ergebnis, enabled_metrics=list(_S5_NEU_GEPRUEFT_ORDER))
+
+
+# --- AC-S5-1: Soll-Menge gerechnet, Bucket-Vollstaendigkeit ---------------
+
+_S5_BEREITS_GEDECKT = frozenset({
+    # tests/unit/test_compare_extra_daily_metrics.py (#1296)
+    "temp_min", "gust_max", "freezing_level",
+    # tests/unit/test_compare_metric_parity.py (#1324)
+    "wind_direction_avg", "wind_chill_min", "cloud_low_avg", "cloud_mid_avg",
+    "cloud_high_avg", "humidity_avg", "dewpoint_avg", "pressure_avg",
+    "precip_type", "snowfall_limit",
+    # tests/test_wind_chill_max_selectable.py
+    "wind_chill_max",
+    # tests/tdd/test_thunder_low_output_channels.py (AC-11)
+    "thunder_max",
+})
+
+
+def test_ac_s5_1_soll_menge_gerechnet_und_vollstaendig():
+    """AC-S5-1: die 25 Compare-Uebersichtszeilen (CV2_METRICS ohne ``warn``)
+    zerfallen VOLLSTAENDIG und UEBERSCHNEIDUNGSFREI in die 15 bereits
+    wertgeprueften (AC-S5-6) und die 10 neu geprueften (AC-S5-2) Zeilen --
+    beide Mengen kommen aus dem Produktivmodul, nicht getippt."""
+    ist_keys = {m["key"] for m in CV2_METRICS if m["key"] != "warn"}
+    assert len(ist_keys) == 25 >= 20, (
+        f"Vakuum: {len(ist_keys)} Compare-Uebersichtszeilen (ohne 'warn') -- "
+        "unter der Mindestgroesse waere die Bucket-Aufteilung unten trivial"
+    )
+    neu_gepr = frozenset(_S5_NEU_GEPRUEFT_ORDER)
+    assert len(neu_gepr) == 10, f"Vakuum: {sorted(neu_gepr)} enthaelt Duplikate"
+    assert _S5_BEREITS_GEDECKT.isdisjoint(neu_gepr), (
+        f"AC-S5-1: {sorted(_S5_BEREITS_GEDECKT & neu_gepr)} stehen in BEIDEN "
+        "Buckets -- Ueberschneidung statt Aufteilung"
+    )
+    vereinigung = _S5_BEREITS_GEDECKT | neu_gepr
+    assert vereinigung == ist_keys, (
+        f"AC-S5-1: 15+10 deckt nicht die vollen 25 CV2_METRICS-Zeilen.\n"
+        f"Fehlt in 15+10: {sorted(ist_keys - vereinigung)}\n"
+        f"Zusaetzlich in 15+10 (existiert nicht mehr in CV2_METRICS): "
+        f"{sorted(vereinigung - ist_keys)}"
+    )
+
+
+# --- AC-S5-2: die zehn ungeprueften Zeilen zeigen den gerechneten Wert ----
+
+
+@pytest.mark.parametrize("key", _S5_NEU_GEPRUEFT_ORDER)
+def test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert(key):
+    """AC-S5-2: die zehn bislang ungeprueften Compare-Uebersichtszeilen
+    zeigen in der ECHTEN Vergleichs-Mail (``render_compare_email``) sowohl
+    HTML als auch Klartext exakt den unabhaengig gerechneten Tageswert --
+    kein Fehlzeichen, kein vertauschtes Feld."""
+    hourly = _s5_punkte()
+    soll = _s5_erwartete_werte(hourly)
+    _s5_werte_sind_unterscheidbar(soll)
+    label = _s5_label(key)
+    erwartet = round(soll[key] * _S5_FAKTOR.get(key, 1.0), _S5_DECIMALS[key])
+
+    html, text = _s5_mail_neue_felder()
+    html_zelle = _s5_html_wert(html, label)
+    assert _s5_zellenzahl(html_zelle) == erwartet, (
+        f"AC-S5-2: die HTML-Zelle {label!r} ({key}) zeigt {html_zelle!r}; "
+        f"aus den Stundenwerten gerechnet gehoert dort {erwartet!r} hin "
+        f"(Soll-Rohwert {soll[key]!r})."
+    )
+    klartext_zelle = _s5_klartext_wert(text, label)
+    assert _s5_zellenzahl(klartext_zelle) == erwartet, (
+        f"AC-S5-2: die KLARTEXT-Zeile {label!r} ({key}) zeigt "
+        f"{klartext_zelle!r}; aus den Stundenwerten gerechnet gehoert dort "
+        f"{erwartet!r} hin (Soll-Rohwert {soll[key]!r})."
+    )
+
+
+# --- AC-S5-3: Klasse B -- Engine-Feld hat Vorrang vor Live-Ableitung ------
+
+_S5_VORRANG_FELDER = ("precip_sum", "pop_max")
+
+
+@pytest.mark.parametrize("key", _S5_VORRANG_FELDER)
+def test_ac_s5_3_engine_feld_hat_vorrang_vor_live_ableitung(key):
+    """AC-S5-3: ist am ``LocationResult`` ein Engine-Tagesfeld gesetzt UND
+    ``hourly_data`` mit einem ABWEICHENDEN Wert vorhanden, zeigt die Zelle
+    (HTML wie Klartext) den Engine-Wert -- der generische, feldunabhaengige
+    Vorrang-Zweig in ``_metric_value()`` (compare_html.py:648-651). Zwei
+    Felder genuegen als Stichprobe (Spec 'Engine-Vorrang')."""
+    from app.user import ComparisonResult, LocationResult, SavedLocation
+
+    hourly = _s5_punkte()
+    if key == "precip_sum":
+        live_wert = sum(p.precip_1h_mm for p in hourly)
+        engine_feld, engine_wert = "precip_sum_mm", live_wert + 50.0
+    else:
+        live_wert = max(p.pop_pct for p in hourly)
+        engine_feld, engine_wert = "pop_max_pct", min(100, round(live_wert / 2))
+    assert engine_wert != live_wert, (
+        "Vakuum: Engine- und Live-Wert muessen sich unterscheiden, sonst "
+        "waere ein fehlender Vorrang unsichtbar"
+    )
+
+    ort = LocationResult(
+        location=SavedLocation(
+            id="s5-vorrang", name="S5-Vorrang", lat=47.0, lon=11.0, elevation_m=500,
+        ),
+        score=50, hourly_data=hourly, **{engine_feld: engine_wert},
+    )
+    ergebnis = ComparisonResult(
+        locations=[ort], time_window=(6, 18), target_date=date(2026, 8, 12),
+        created_at=datetime(2026, 8, 12, 4, 1),
+    )
+    html, text = render_compare_email(ergebnis, enabled_metrics=[key])
+    label = _s5_label(key)
+    erwartet = round(engine_wert, _S5_DECIMALS[key])
+
+    html_zelle = _s5_html_wert(html, label)
+    assert _s5_zellenzahl(html_zelle) == erwartet, (
+        f"AC-S5-3: die HTML-Zelle {label!r} ({key}) zeigt {html_zelle!r} -- "
+        f"erwartet den Engine-Wert {erwartet!r}, nicht den Live-Wert "
+        f"{live_wert!r}"
+    )
+    klartext_zelle = _s5_klartext_wert(text, label)
+    assert _s5_zellenzahl(klartext_zelle) == erwartet, (
+        f"AC-S5-3: die KLARTEXT-Zeile {label!r} ({key}) zeigt "
+        f"{klartext_zelle!r} -- erwartet den Engine-Wert {erwartet!r}, "
+        f"nicht den Live-Wert {live_wert!r}"
+    )
+
+
+# --- AC-S5-4: Formatierungs-Konsistenz format_value <-> CV2_METRICS -------
+
+_S5_FORMAT_FELDER: dict[str, str] = {
+    # CV2-Key -> Katalog-Metrik-ID, die der Klartext-Lambda TATSAECHLICH
+    # uebergibt (comparison.py _PLAIN_ROWS/_DAILY_PLAIN_ROWS, s. Spec
+    # "Formatierungs-Konsistenz"). wind_chill_min/wind_chill_max/
+    # dewpoint_avg rufen "temperature" statt der eigenen ID -- Nebenbefund
+    # (#1199): heute folgenlos, weil beide Seiten bei 0 Nachkommastellen
+    # liegen, faellt aber bei kuenftiger Katalog-Aenderung dieser drei IDs
+    # nicht mehr auf.
+    "temp_max": "temperature",
+    "temp_min": "temperature",
+    "wind_max": "wind",
+    "gust_max": "wind",
+    "wind_chill_min": "temperature",
+    "wind_chill_max": "temperature",
+    "dewpoint_avg": "temperature",
+    "cloud_avg": "cloud_total",
+    "snow_depth_cm": "snow_depth",
+    "sunny_hours": "sunshine",
+}
+
+
+@pytest.mark.parametrize("cv2_key,klartext_metric_id", sorted(_S5_FORMAT_FELDER.items()))
+def test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron(cv2_key, klartext_metric_id):
+    """AC-S5-4: fuer jedes der zehn ``format_value``-getriebenen Felder
+    stimmen die Nachkommastellen des Katalogs (Klartext-Pfad,
+    ``get_metric(...).decimals``) und von ``CV2_METRICS``/``_fmt_metric``
+    (HTML-Pfad) EINZELN ueberein -- rein struktureller Vergleich, kein
+    Rendering noetig. Ein Fehlschlag benennt genau das betroffene Feld
+    (Feld-Granularitaets-Fang)."""
+    katalog_decimals = get_metric(klartext_metric_id).decimals or 0
+    cv2_eintrag = next(m for m in CV2_METRICS if m["key"] == cv2_key)
+    cv2_decimals = cv2_eintrag.get("decimals") or 0
+    assert katalog_decimals == cv2_decimals, (
+        f"AC-S5-4: {cv2_key!r} zeigt im Klartext "
+        f"get_metric({klartext_metric_id!r}).decimals={katalog_decimals}, "
+        f"in der HTML-Uebersicht aber CV2_METRICS[{cv2_key!r}]"
+        f"['decimals']={cv2_decimals} -- die beiden Formatierungswege sind "
+        "auseinandergelaufen."
+    )
+
+
+# --- AC-S5-5: Fehlzeichen-Charakterisierung -- HTML EM DASH, Klartext HYPHEN
+
+_S5_FEHLZEICHEN_FELDER = ("temp_max", "cloud_avg")
+
+
+@pytest.mark.parametrize("key", _S5_FEHLZEICHEN_FELDER)
+def test_ac_s5_5_fehlzeichen_html_em_dash_klartext_hyphen(key):
+    """AC-S5-5 (Charakterisierung, kein Fix -- PO-Entscheidung, s. Spec
+    Purpose): fehlt der Wert einer generischen ``_fmt_metric``-Zeile, zeigt
+    HTML das EM DASH U+2014, Klartext den ASCII HYPHEN U+002D --
+    bytegenauer Codepoint-Vergleich, keine 'sieht aus wie ein Strich'-
+    Pruefung. Der dritte, im Modul existierende En-Dash-Zweig
+    (``format_value``s ``_NO_VALUE``) ist hier NICHT Gegenstand (im
+    Compare-Uebersichtspfad strukturell unerreichbar, s. Spec)."""
+    from app.user import ComparisonResult, LocationResult, SavedLocation
+
+    ort = LocationResult(
+        location=SavedLocation(
+            id="s5-fehlwert", name="S5-Fehlwert", lat=47.0, lon=11.0, elevation_m=500,
+        ),
+        score=50,  # temp_max/cloud_avg bleiben auf ihrem Default None
+    )
+    ergebnis = ComparisonResult(
+        locations=[ort], time_window=(6, 18), target_date=date(2026, 8, 12),
+        created_at=datetime(2026, 8, 12, 4, 1),
+    )
+    html, text = render_compare_email(ergebnis, enabled_metrics=[key])
+    label = _s5_label(key)
+
+    html_zelle = _s5_html_wert(html, label)
+    assert len(html_zelle) == 1 and ord(html_zelle) == 0x2014, (
+        f"AC-S5-5: HTML-Zelle {label!r} ({key}) ohne Wert zeigt {html_zelle!r} "
+        f"(Codepoints {[hex(ord(c)) for c in html_zelle]}) -- erwartet genau "
+        "U+2014 EM DASH"
+    )
+    klartext_zelle = _s5_klartext_wert(text, label)
+    assert len(klartext_zelle) == 1 and ord(klartext_zelle) == 0x2D, (
+        f"AC-S5-5: KLARTEXT-Zeile {label!r} ({key}) ohne Wert zeigt "
+        f"{klartext_zelle!r} (Codepoints {[hex(ord(c)) for c in klartext_zelle]}) "
+        "-- erwartet genau U+002D ASCII HYPHEN"
+    )
+
+
+# --- AC-S5-6: Abhaengigkeits-Anker auf die 15 bereits gedeckten Zeilen ----
+
+_S5_ANKER_MODULE: dict[str, tuple[str, ...]] = {
+    "tests.unit.test_compare_metric_parity": (
+        "test_selected_wind_direction_metric_appears_in_overview_matrix",
+        "test_selected_wind_chill_min_metric_appears_in_overview_matrix",
+        "test_selected_cloud_low_metric_appears_in_overview_matrix",
+        "test_selected_cloud_mid_metric_appears_in_overview_matrix",
+        "test_selected_cloud_high_metric_appears_in_overview_matrix",
+        "test_selected_humidity_metric_appears_in_overview_matrix",
+        "test_selected_dewpoint_metric_appears_in_overview_matrix",
+        "test_selected_pressure_metric_appears_in_overview_matrix",
+        "test_selected_precip_type_metric_appears_in_overview_matrix",
+        "test_selected_snowfall_limit_metric_appears_in_overview_matrix",
+        "test_plaintext_shows_all_ten_new_rows",
+    ),
+    "tests.unit.test_compare_extra_daily_metrics": (
+        "test_selected_temp_min_metric_appears_in_overview_matrix",
+        "test_selected_gust_max_metric_appears_in_overview_matrix",
+        "test_selected_freezing_level_metric_appears_in_overview_matrix",
+        "test_plaintext_shows_the_three_remaining_new_rows",
+    ),
+    "tests.test_wind_chill_max_selectable": (
+        "test_compare_html_renderer_shows_wind_chill_max_value",
+        "test_compare_plain_renderer_shows_wind_chill_max_value",
+    ),
+    "tests.tdd.test_thunder_low_output_channels": (
+        "test_ac11_compare_html_zeigt_leicht",
+    ),
+}
+
+
+@pytest.mark.parametrize("modulname", sorted(_S5_ANKER_MODULE))
+def test_ac_s5_6_abhaengigkeits_anker_auf_die_15_bereits_gedeckten_zeilen(modulname):
+    """AC-S5-6: die vier Testdateien, die heute 15 der 25 CV2_METRICS-Zeilen
+    wertgeprueft halten, muessen importierbar bleiben und die genannten
+    Testfunktionen weiterhin fuehren -- verschwindet eine, reisst diese
+    Scheibe eine unbemerkte Deckungsluecke (Lehre Scheibe 1/2 F001)."""
+    try:
+        modul = importlib.import_module(modulname)
+    except ImportError as exc:
+        pytest.fail(
+            f"AC-S5-6: {modulname} ist nicht mehr importierbar ({exc}) -- "
+            "die Wertpruefung fuer einen Teil der 15 bereits gedeckten "
+            "Compare-Uebersichtszeilen ist verwaist."
+        )
+        return
+    for name in _S5_ANKER_MODULE[modulname]:
+        assert hasattr(modul, name), (
+            f"AC-S5-6: {modulname} fuehrt keine Testfunktion {name!r} mehr -- "
+            "die Wertpruefung fuer eine der 15 bereits gedeckten Compare-"
+            "Uebersichtszeilen ist verwaist."
+        )

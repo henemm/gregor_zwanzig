@@ -248,7 +248,7 @@ Stundentabelle (AC-6, Charakterisierung).
 
 | # | Unbewachte Fläche | Ort | Prio | Bemerkung |
 |---|---|---|---|---|
-| 4 | Compare-Übersichtstabelle: **Zellwert** je Metrik | `compare_html.py:294`, `comparison.py:70/100` | 2 | nur Zeilen-Existenz ist bewacht; ein falscher Wert in der Zelle bleibt grün |
+| 4 | Compare-Übersichtstabelle: **Zellwert** je Metrik | `compare_html.py:294`, `comparison.py:70/100` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 5): Bei Nachmessung trug die pauschale Aussage „nur Zeilen-Existenz bewacht" nicht mehr — 15 der 25 `CV2_METRICS`-Zeilen hatten aus #1296/#1324/#1351/der Gewitter-Suite bereits Wert+Paritäts-Tests. Neuer Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S5-1 (Soll-Menge 15+10=25, disjunkt), AC-S5-2 (die 10 verbleibenden Zeilen, HTML+Klartext gegen unabhängig gerechnete Werte über `render_compare_email()`), AC-S5-3 (Engine-Vorrang vor Live-Ableitung), AC-S5-4 (Formatierungs-Konsistenz `format_value()` vs. `CV2_METRICS`-`decimals`, 10 Felder einzeln), AC-S5-5 (Fehlzeichen-Divergenz HTML `—` vs. Klartext `-`, charakterisiert), AC-S5-6 (Abhängigkeits-Anker auf die 15 bereits gedeckten Zeilen). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s5_compare_zellwerte.md` |
 | 5 | **Reihenfolge** in allen Kanälen außer E-Mail und Telegram-rich | `tokens/builder.py:78`, `comparison.py:237` | 2 | Compare-Klartext nutzt die Nutzer-Reihenfolge nur als Sichtbarkeitsfilter (#1356) |
 | 6 | Kurzform-Mail, mobile Kompaktzeilen und Kompakt-Zusammenfassung | `email/compact.py:96`, `email/html.py:878`, `compact_summary.py:567` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): **drei** verschiedene Orte, die alle „compact" heißen und regelmäßig verwechselt werden — `render_compact()` ist das eigene Kurzformat, `_render_mobile_compact_rows()` sitzt **in** der Vollmail, `CompactSummaryFormatter` erzeugt den Fließtext-Block ebendort — jetzt einzeln bewacht: `tests/tdd/test_channel_metric_matrix.py` AC-S4-1/2/3 (Ort 1), AC-S4-5 (Ort 2), AC-S4-6/6b/7/8-10 (Ort 3). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
 | 7 | **Telegram-Kurzform** als eigener Ausgabeort | `narrow.py:346`, `:528–532`, `:586–597` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S4-12/13/14 (Auswahl/Abwahl generisch über alle wählbaren Metriken, Resolver-Divergenz zu Ort 1 als Charakterisierung, confidence-Absenz). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
@@ -422,12 +422,39 @@ gate-unabhängige Mechanismen geschützt (Pillen-Katalog-Whitelist
 tatsächlich. Spec entsprechend korrigiert (Docstrings + AC-Wortlaut).
 Details: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md`.
 
-### Scheibe 5 — Compare-Zellwert-Vollständigkeit
+### Scheibe 5 — Compare-Zellwert-Vollständigkeit ✅ ERLEDIGT (2026-08-12)
 
 Über die Zeilen-Existenz hinaus prüfen, dass die Zelle je Metrik einen
 plausiblen Wert trägt und dass HTML (`compare_html.py:294`) und Klartext
 (`comparison.py:70/100`) für dieselbe Wetterlage dieselbe Zahl zeigen.
 *Risiko: mittel (Doppel-Quellen-Historie #1356). Größe: mittel.* Deckt Fläche 4.
+
+**Korrektur der Scheiben-Prämisse (bei Nachmessung, vor dem Schreiben der
+ACs):** Die pauschale Aussage „nur Zeilen-Existenz bewacht" traf nur noch auf
+10 der 25 `CV2_METRICS`-Zeilen zu — 15 hatten aus #1296/#1324/#1351 und der
+Gewitter-Testsuite bereits Wert+Paritäts-Tests. Die Wert-**Quelle** war zudem
+bereits geteilt (`comparison.py` importiert `_metric_value` direkt aus
+`compare_html.py`), das eigentliche Risiko lag in der **Formatierung**
+(drei parallele Wege: geteilte Formatter, eigene Lambdas, katalog-getriebenes
+`format_value()`), nicht im Wert selbst.
+
+Umgesetzt als 6 ACs (AC-S5-1 bis AC-S5-6, 29 parametrisierte Testfälle) in
+`tests/tdd/test_channel_metric_matrix.py`, gemessen gegen die echte Mail
+(`render_compare_email()`, HTML und Klartext in einem Aufruf). AC-S5-1 rechnet
+die 15+10-Aufteilung der 25 Zeilen disjunkt und lückenlos; AC-S5-2 sichert die
+10 zuvor ungeprüften Zeilen wertmäßig ab (unabhängig aus rohen Stundenwerten
+gerechnet, nicht aus `summarize_points()` übernommen — Lehre aus AC-S2-8/F001);
+AC-S5-3 belegt den Engine-Vorrang vor Live-Ableitung; AC-S5-4 hält
+`format_value()`-Dezimalstellen gegen `CV2_METRICS`-`decimals` für alle 10
+betroffenen Felder einzeln synchron (Nebenbefund: `wind_chill_min/max` und
+`dewpoint_avg` lesen im Klartext die `temperature`-Katalog-ID statt der
+eigenen — heute folgenlos, in #1199 gebucht); AC-S5-5 charakterisiert die
+Fehlzeichen-Divergenz (HTML `—` U+2014 vs. Klartext `-` U+002D) bewusst ohne
+Fix (PO-Entscheidung dieser Spec: kosmetisch); AC-S5-6 verankert die 15
+bereits gedeckten Zeilen gegen stillen Verlust ihrer Testabdeckung.
+**Kein Produktivcode-Fix.** Adversary VERIFIED, alle 4 Pflicht-Mutationen plus
+eine selbst gewählte Zusatz-Mutation exakt vom vorgesehenen Test gefangen.
+Details: `docs/specs/modules/fix_1703_s5_compare_zellwerte.md`.
 
 ### Scheibe 6 — Form-Wächter über Grammatik-Klassen
 
