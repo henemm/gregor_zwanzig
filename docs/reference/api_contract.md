@@ -1912,7 +1912,9 @@ Details in `docs/specs/modules/compare_preset_zeitplan.md`). `weekday` gilt als 
 (Altdaten-Lesbarkeit, kein neuer Schreibpfad, kein Wochenrhythmus mehr — Presets mit
 `schedule="weekly"` versenden seither täglich). Der stündliche Go-Cron `compare_presets_daily`
 ("Compare Presets Slot-Check (hourly)", vormals einmal täglich 06:00 UTC) prüft pro Preset, ob
-die aktuelle Stunde (Europe/Vienna) mit `morning_time`/`evening_time` übereinstimmt; Morgen-Slot
+die aktuelle Stunde **in der Ortszone dieses Presets** (erster auflösbarer Ort seiner
+konfigurierten Reihenfolge, seit #1726; davor fest `Europe/Vienna`) mit
+`morning_time`/`evening_time` übereinstimmt; Morgen-Slot
 versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards vor jedem Versand:
 siehe `compare_alert_guard.is_silenced()` (Issue #1467 S2 AG6: `paused_at` gesetzt, `schedule=="manual"`,
 oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
