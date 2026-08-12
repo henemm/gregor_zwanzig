@@ -19,7 +19,7 @@ tags: [thunder, compare, adr-0007, adr-0025, adr-0048, issue-1680, issue-1419]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-12 („freigabe")
 
 ## Purpose
 
