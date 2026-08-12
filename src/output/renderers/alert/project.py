@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from app.metric_catalog import _METRICS, get_cmp
 from utils.timezone import local_fmt, resolve_location_tz
 from .model import AlertEvent, AlertMessage, CorridorEvent, OnsetEvent
+from .segments import normalize_segment_id
 
 logger = logging.getLogger("alert_project")
 
@@ -91,6 +92,11 @@ def to_alert_message(
                 ch.occurred_at, _tz_for_location(match.segment.start_point, tz)
             ),
             km_from=km_from, km_to=km_to,
+            # Issue #1744 A1: die Kennung der TATSAECHLICH aufgeloesten Etappe
+            # (nicht `ch.segment_id` — `_find_segment` faellt bei nicht
+            # aufloesbarer Kennung auf das erste Segment zurueck, und der Alarm
+            # muss den Ort nennen, den er auch km-seitig meint).
+            segment_id=normalize_segment_id(match.segment.segment_id),
         ))
     corridor_events = (
         to_corridor_events(corridor_hits, segments, tz=tz) if corridor_hits else ()

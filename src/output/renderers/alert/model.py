@@ -25,6 +25,13 @@ class AlertEvent:
     # nur den kollektiven `AlertMessage.location_label`. Trip-Pfad und
     # Einzel-Ort-Pfad setzen es nie (Regressions-Invariante, AC-7).
     location_label: str | None = None
+    # Issue #1744 A1: additiv, optional, Muster `location_label`. Kennung der
+    # betroffenen Etappe ("1".."N" oder "Ziel") — Quelle der gemeinsamen
+    # Ortssprache aller Alarmarten (`segments.format_alert_location`). Gesetzt
+    # vom Trip-Abweichungspfad (`project.to_alert_message`); der Ortsvergleich
+    # setzt sie nie (ein Vergleichs-Ort hat keine Etappen). `None` -> Rueckfall
+    # auf die km-Spanne (AC-7).
+    segment_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -43,6 +50,10 @@ class OnsetEvent:
     # (to_multi_location_onset_alert_message) — trägt den Ortsnamen DIESES
     # Events. Trip-Radar-Pfad setzt es nie (Regressions-Invariante, AC-2/AC-3).
     location_label: str | None = None
+    # Issue #1744 A1: additiv, optional, analog `AlertEvent.segment_id` (o.).
+    # Gesetzt vom Trip-Radar-Pfad (`RadarAlertRequest` -> `send_radar_alert`);
+    # der Ortsvergleich-Radar setzt sie nie. `None` -> km-Spanne (AC-7).
+    segment_id: str | None = None
 
 
 @dataclass(frozen=True)

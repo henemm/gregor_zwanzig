@@ -26,6 +26,7 @@ from services.notification_service import (
     NotificationService,
     RadarAlertRequest,
 )
+from output.renderers.alert.segments import normalize_segment_id
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
 from services.throttle_store import ThrottleStore
@@ -1088,6 +1089,10 @@ class TripAlertService:
                 onset_time=_onset_time_str,
                 km_from=active.start_point.distance_from_start_km,
                 km_to=active.end_point.distance_from_start_km,
+                # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne
+                # liefert — nur zusaetzlich mit ihrer Kennung, damit der
+                # Nowcast denselben Ort benennt wie die amtliche Warnung.
+                segment_id=normalize_segment_id(active.segment_id),
                 is_convective=result.is_convective,
                 intensity_label=_label,
                 source_label=radar_svc.source_label(result.source),

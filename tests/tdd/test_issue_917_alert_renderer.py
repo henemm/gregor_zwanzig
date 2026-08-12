@@ -213,13 +213,19 @@ class TestAC2Subject:
         assert idx_trip < idx_km, f"[trip] muss vor km stehen: {subj!r}"
 
     def test_3events_n_ueber_schwelle_format(self):
-        """≥2 Events → 'N über Schwelle: K1 val1, K2 val2, K3 val3'."""
+        """≥2 Events → 'N über Schwelle: K1 val1, K2 val2, K3 val3'.
+
+        Issue #1744 A1: der Ortsslot nennt die Etappe ("Segment 1"), nicht mehr
+        die km-Spanne — dieselbe Sprache, die die amtliche Warnung zum selben
+        Segment spricht. Die frühere Erwartung `"km" in subj` beschrieb die alte
+        Ortssprache und ist damit abgelöst.
+        """
         from src.output.renderers.alert.render import render_subject
         msg = self._make_msg_3events()
         subj = render_subject(msg)
 
         assert "[GR20]" in subj
-        assert "km" in subj.lower()
+        assert "Segment 1" in subj, f"Ortsangabe fehlt: {subj!r}"
         # "über Schwelle" im Betreff (bei ≥2 Events)
         assert "Schwelle" in subj or "schwelle" in subj.lower(), (
             f"'Schwelle' fehlt bei 3 Events: {subj!r}"
@@ -362,14 +368,22 @@ class TestAC4Telegram:
         # Mindestens 2 Zeilen: erste Zeile + mind. 1 Event-Datenzeile
         assert len(lines) >= 2, f"Zu wenige Zeilen: {text!r}"
 
-    def test_first_line_contains_trip_and_km(self):
-        """Erste Zeile enthält Trip-Name und km-Angabe."""
+    def test_first_line_contains_trip_and_location(self):
+        """Erste Zeile enthält Trip-Name und Ortsangabe.
+
+        Issue #1744 A1: die Ortsangabe ist die Etappen-Kennung ("Segment 1")
+        statt der km-Spanne — die Telegram-Langform folgt derselben Ortssprache
+        wie Betreff und Mailkörper. Die frühere Erwartung `"km" in first_line`
+        beschrieb die alte Ortssprache und ist damit abgelöst.
+        """
         from src.output.renderers.alert.render import render_telegram
         msg = self._make_msg()
         text = render_telegram(msg)
         first_line = text.split("\n")[0]
         assert "GR20" in first_line, f"Trip-Name fehlt in erster Zeile: {first_line!r}"
-        assert "km" in first_line.lower(), f"km fehlt in erster Zeile: {first_line!r}"
+        assert "Segment 1" in first_line, (
+            f"Ortsangabe fehlt in erster Zeile: {first_line!r}"
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -178,6 +178,11 @@ class RadarAlertRequest:
     source_label: str
     tz: ZoneInfo
     briefing_context: str | None = None
+    # Issue #1744 A1: Kennung der betroffenen Etappe ("1".."N"/"Ziel"), additiv
+    # und optional. Ohne sie nennt der Nowcast den Ort weiter als km-Spanne
+    # (AC-7) — genau das taten bis 2026-08-12 ALLE Nowcast-Mails, waehrend die
+    # amtliche Warnung zum selben Ort "🏁 Ziel" sagte.
+    segment_id: str | None = None
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -1240,6 +1245,7 @@ class NotificationService:
             intensity_label=request.intensity_label,
             source_label=request.source_label,
             briefing_context=request.briefing_context,
+            segment_id=request.segment_id,  # Issue #1744 A1
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.

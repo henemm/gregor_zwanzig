@@ -335,6 +335,15 @@ def build_radar_alert_message(token: str) -> AlertMessage:
         intensity_label="Leichter Regen",
         source_label="Radar (DWD)",
         briefing_context=None,
+        # Issue #1744 A1: OHNE Kennung faellt die Ortsangabe auf "km 0–8"
+        # zurueck -- die Nachweis-Mail zeigte dann genau das Format, das der
+        # Produktivpfad seit #1744 NICHT mehr sendet, und der Validator-Lauf
+        # bestaetigte eine Darstellung, die es nicht mehr gibt.
+        # BEWUSST numerisch statt "Ziel": `radar_alert_mail_validator.py:49-52`
+        # kennt "Etappe N"/"km X-Y"/"Segment", aber NICHT den Ziel-Sonderfall
+        # "🏁 Ziel" -- mit segment_id="Ziel" faellt P-1, obwohl die Mail korrekt
+        # ist (gemessen 2026-08-12). Die Luecke ist gemeldet, nicht hier gefixt.
+        segment_id="1",
     )
     return AlertMessage(
         trip_short=f"GATE1241 {token}",
