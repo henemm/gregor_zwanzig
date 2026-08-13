@@ -54,6 +54,7 @@
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
 	import {
 		hydrateWeatherMetricsFromPreset,
+		hydrateChannelActiveMetricsFromPreset,
 		flushPendingWeatherMetricsSave,
 		hydrateDayWindowFromPreset,
 		type WeatherMetricsSnapshot
@@ -701,6 +702,12 @@
 			// (hydrateWetterMetrikenTab unten), zur Absicherung trotzdem konsequent
 			// dieselbe Funktion statt eines rohen Spreads (kein `[...null]`).
 			activeMetricKeys: [...materializeActiveMetricKeys(wizardState.activeMetricKeys)],
+			// Issue #1703 Scheibe 8: Kanal-Ebene derselben Uebersichtstabelle —
+			// flach kopiert, damit der Grundzustand nicht auf dieselbe Referenz
+			// zeigt wie der lebende $state (sonst ist JEDER Vergleich identisch).
+			// Die Kanal-Arrays selbst werden nur per Copy-on-write ersetzt, nie
+			// an Ort und Stelle mutiert (WeatherMetricsTab.svelte).
+			channelActiveMetricKeys: { ...wizardState.channelActiveMetricKeys },
 			officialAlertsEnabled: wizardState.officialAlertsEnabled,
 			dayWindowStartHour: wizardState.dayWindowStartHour,
 			dayWindowEndHour: wizardState.dayWindowEndHour
@@ -724,6 +731,13 @@
 		// Durchlauf, heutiges Verhalten fuer unbekannte Schluessel).
 		const catalog = await loadCompareSelectionEntries().catch(() => []);
 		wizardState.activeMetricKeys = hydrateWeatherMetricsFromPreset(currentPreset, catalog);
+		// Issue #1703 Scheibe 8: Kanal-Overrides aus DEMSELBEN geladenen Katalog —
+		// ohne sie zeigte jeder Kanal-Reiter nach dem Neuladen wieder die
+		// Grundauswahl (AC-S8-4/AC-S8-6/AC-S8-11).
+		wizardState.channelActiveMetricKeys = hydrateChannelActiveMetricsFromPreset(
+			currentPreset,
+			catalog
+		);
 		// D2-Fix-Loop 2 (AC-6): officialAlertsEnabled beim Erst-Oeffnen
 		// mit-hydrieren (analog hydrateAlarmFieldsFromPreset) — sonst zeigt der
 		// Toggle bei einem Deep-Link ?tab=wetter-metriken den Klassen-Default
@@ -765,6 +779,7 @@
 			} catch (e) {
 				console.error('[CompareTabs] Wetter-Metriken-Persistenz fehlgeschlagen, Rollback:', e);
 				wizardState.activeMetricKeys = before.activeMetricKeys;
+				wizardState.channelActiveMetricKeys = before.channelActiveMetricKeys;
 				wizardState.officialAlertsEnabled = before.officialAlertsEnabled;
 				wizardState.dayWindowStartHour = before.dayWindowStartHour;
 				wizardState.dayWindowEndHour = before.dayWindowEndHour;

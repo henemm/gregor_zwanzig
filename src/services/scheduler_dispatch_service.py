@@ -433,7 +433,10 @@ def send_one_compare_preset(
         result,
         undelivered=undelivered,
         profile=profile,
-        enabled_metrics=opts.enabled_metrics,
+        # Issue #1703 S8: kanal-eigene Uebersichts-Auswahl (bereits gegen die
+        # Grundauswahl geschnitten). NICHT `opts.enabled_metrics` -- das ist die
+        # gemeinsame Liste, mit der alle drei Kanaele dasselbe zeigten.
+        enabled_metrics=opts.enabled_metrics_by_channel["email"],
         hourly_metrics=opts.hourly_metrics,
         hourly_enabled=opts.hourly_enabled,
         preset_name=name,
@@ -493,10 +496,18 @@ def send_one_compare_preset(
             subject=subject,
             html_body=html_body,
             text_body=text_body,
+            # Issue #1703 S8: je Kanal die dort eingestellte Auswahl (s. oben).
+            # Beide Render-Aufrufe bleiben bewusst INNERHALB des try-Blocks --
+            # ihr Fehlerpfad gehoert wie bisher zu `record_briefing_dispatch_
+            # failure` + `_anchor_and_reset()` (#1629).
             telegram_text=render_compare_telegram(
-                result, enabled_metrics=opts.enabled_metrics, preset_name=name,
+                result,
+                enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
+                preset_name=name,
             ),
-            sms_text=render_compare_sms(result, enabled_metrics=opts.enabled_metrics),
+            sms_text=render_compare_sms(
+                result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
+            ),
             recipients=empfaenger,
             effective_channels=_effective_compare_channels(preset, settings, user_id),
             compare_hourly_enabled=opts.hourly_enabled,

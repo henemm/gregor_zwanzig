@@ -14,8 +14,15 @@ import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
 // Metrik-Auswahl (Größe + Auswertung) — die geladene Katalogantwort.
 import {
 	registeredCompareMetricCatalog,
-	type CompareSelectionEntry
+	type CompareSelectionEntry,
+	type StoredActiveMetric
 } from './compareMetricSelection.ts';
+// Issue #1703 Scheibe 8: kanal-eigene Auswahl DERSELBEN Uebersichtstabelle —
+// Erweiterung dieser Domaene, KEIN dritter Commit-Wrapper.
+import {
+	compareChannelActiveMetricsFromStored,
+	type CompareChannelActiveMetrics
+} from './compareChannelMetricLayouts.ts';
 
 // Issue #1361/#1372 S1b — Trip-Default (day_window.py DAY_WINDOW_START_HOUR/
 // _END_HOUR), geteilt zwischen Hydration und Neuanlage.
@@ -61,6 +68,22 @@ export function hydrateWeatherMetricsFromPreset(
 }
 
 /**
+ * Issue #1703 Scheibe 8: Kanal-Ebene derselben Uebersichtstabelle. Ein Preset
+ * OHNE `channel_active_metrics` (jedes heute gespeicherte, AC-S8-15) liefert
+ * dreimal `null` — alle Kanaele folgen dann der Grundauswahl, genau wie heute.
+ */
+export function hydrateChannelActiveMetricsFromPreset(
+	preset: ComparePreset,
+	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
+): CompareChannelActiveMetrics {
+	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
+	return compareChannelActiveMetricsFromStored(
+		displayConfig.channel_active_metrics as Record<string, StoredActiveMetric[]> | undefined,
+		catalog
+	);
+}
+
+/**
  * D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): der Amtliche-Warnungen-Toggle
  * ist fuer bestehende Vergleiche nur noch ueber diesen Hub-Tab erreichbar
  * (der Alarm-Tab-Toggle entfaellt mit D2) — der Snapshot traegt ihn deshalb
@@ -70,6 +93,10 @@ export function hydrateWeatherMetricsFromPreset(
  */
 export interface WeatherMetricsSnapshot {
 	activeMetricKeys: string[];
+	// Issue #1703 Scheibe 8: die Kanal-Ebene derselben Uebersichtstabelle gehoert
+	// in DENSELBEN Snapshot — ein reiner Kanal-Edit (Grundauswahl unveraendert)
+	// waere sonst kein Diff und wuerde nie gespeichert.
+	channelActiveMetricKeys: CompareChannelActiveMetrics;
 	officialAlertsEnabled: boolean;
 	// Issue #1361/#1372 S1b: Tagesfenster — Teil desselben Snapshots, damit ein
 	// reiner Von/Bis-Wechsel (ohne Metrik-/Toggle-Aenderung) ebenfalls als dirty
@@ -101,6 +128,15 @@ export function flushPendingWeatherMetricsSave(
 	// Geste (Checkbox-Toggle bzw. Drag-Ende).
 	const norm = (s: WeatherMetricsSnapshot) => ({
 		activeMetricKeys: [...s.activeMetricKeys],
+		// Issue #1703 Scheibe 8: feste Kanalfolge statt Objekt-Spread — der
+		// JSON.stringify-Vergleich ist schluesselreihenfolge-abhaengig, und ein
+		// per Copy-on-write neu gebautes Objekt kann eine andere Folge haben als
+		// der Grundzustand (Scheindiff bei jeder Geste).
+		channelActiveMetricKeys: [
+			s.channelActiveMetricKeys?.email ?? null,
+			s.channelActiveMetricKeys?.telegram ?? null,
+			s.channelActiveMetricKeys?.sms ?? null
+		],
 		officialAlertsEnabled: s.officialAlertsEnabled,
 		dayWindowStartHour: s.dayWindowStartHour,
 		dayWindowEndHour: s.dayWindowEndHour
@@ -108,6 +144,7 @@ export function flushPendingWeatherMetricsSave(
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
 	return buildHubPutPayload(preset, {
 		activeMetricKeys: current.activeMetricKeys,
+		channelActiveMetricKeys: current.channelActiveMetricKeys,
 		officialAlertsEnabled: current.officialAlertsEnabled,
 		dayWindowStartHour: current.dayWindowStartHour,
 		dayWindowEndHour: current.dayWindowEndHour

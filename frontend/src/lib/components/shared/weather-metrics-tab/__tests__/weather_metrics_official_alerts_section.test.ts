@@ -40,6 +40,9 @@ function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 function makeSnapshot(overrides: Partial<WeatherMetricsSnapshot> = {}): WeatherMetricsSnapshot {
 	return {
 		activeMetricKeys: ['temp_max', 'wind'],
+		// Issue #1703 S8: kein Kanal je editiert — alle drei folgen der
+		// Grundauswahl (unveraendertes Verhalten fuer diesen Test).
+		channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 		officialAlertsEnabled: true,
 		// Issue #1361/#1372 S1b: Teil desselben Snapshots, Default 4/19.
 		dayWindowStartHour: 4,

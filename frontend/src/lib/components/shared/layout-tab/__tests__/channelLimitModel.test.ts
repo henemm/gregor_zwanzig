@@ -153,3 +153,56 @@ describe('E-Mail bleibt unbegrenzt', () => {
 		assert.equal(ltOverflowForLimit({ kind: 'none' }, 999), undefined);
 	});
 });
+
+// ── TDD RED — Issue #1703 Scheibe 8, AC-S8-12 ──────────────────────────────
+//
+// Spec: docs/specs/modules/feat_1703_s8_compare_kanal_tabs.md Abschnitt 7
+//   ("Fix B — SMS-Zeichengrenze am Kanal-Tab-Badge"), AC-S8-12, Gegenprobe M7.
+//
+// Gemessener Widerspruch: `LTChannelPicker.svelte:29,39` iteriert die
+// Modul-Konstante `LT_CHANNELS` (ltChannels.ts:71-75), fest gebaut mit
+// SMS_TRIP_CHAR_LIMIT (160). Im Ortsvergleich zeigt der SMS-Badge damit "160",
+// waehrend der Hinweistext darunter (ltCapNoteText ueber smsCharLimit) korrekt
+// "153" nennt — zwei sich widersprechende Kappungs-Aussagen auf einer Seite.
+//
+// `ltChannelsFor(smsCharLimit)` existiert noch NICHT -> die Zusicherung in
+// `channelsFor()` schlaegt fehl (RED).
+const { ltChannelsFor, LT_CHANNELS, SMS_COMPARE_CHAR_LIMIT } = await import('../ltChannels.ts');
+
+const channelsFor = (smsCharLimit: number) => {
+	assert.equal(
+		typeof ltChannelsFor,
+		'function',
+		'RED: ltChannelsFor(smsCharLimit) fehlt in layout-tab/ltChannels.ts — ohne sie kann ' +
+			'LTChannelPicker nur die fest verdrahtete Trip-Liste (160) anzeigen'
+	);
+	return ltChannelsFor(smsCharLimit);
+};
+const limitOf = (list: { id: string; limit: unknown }[], id: string) =>
+	list.find((c) => c.id === id)?.limit;
+
+describe('AC-S8-12: der SMS-Kanal-Tab des Ortsvergleichs nennt 153, der Trip-Pfad weiter 160', () => {
+	test('ltChannelsFor(153) traegt fuer SMS chars:153 — LT_CHANNELS (Trip) unveraendert chars:160', () => {
+		assert.equal(SMS_COMPARE_CHAR_LIMIT, 153, 'Beleg: channel_layout.py:45-54, floor((140-6)*8/7)');
+		assert.deepEqual(
+			limitOf(channelsFor(SMS_COMPARE_CHAR_LIMIT), 'sms'),
+			{ kind: 'chars', value: 153 },
+			'AC-S8-12 FAIL: der Kanal-Tab-Badge im Ortsvergleich muss 153 Zeichen nennen — ' +
+				'M7 (weiterhin LT_CHANNELS direkt importieren) widerspraeche dem Hinweistext darunter'
+		);
+		assert.deepEqual(
+			limitOf(LT_CHANNELS, 'sms'),
+			{ kind: 'chars', value: 160 },
+			'AC-S8-12 FAIL: die Trip-Kanalliste darf sich dabei NICHT auf 153 mitverschieben ' +
+				'(trip_report.py:446, max_length=160)'
+		);
+	});
+
+	test('Telegram bleibt in beiden Listen columns:7 — nur die SMS-Einheit haengt am Aufrufer', () => {
+		assert.deepEqual(limitOf(channelsFor(SMS_COMPARE_CHAR_LIMIT), 'telegram'), {
+			kind: 'columns',
+			value: 7
+		});
+		assert.deepEqual(limitOf(LT_CHANNELS, 'telegram'), { kind: 'columns', value: 7 });
+	});
+});

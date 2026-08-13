@@ -17,6 +17,8 @@ import type { ActivityProfile, ComparePreset, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
+// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle.
+import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 // Issue #1373 (S2 Scheibe B, AC-12): dieselbe Lesenormalisierung wie im
 // Lade-Pfad — Alt- UND Neuformat der gespeicherten Metrik-Auswahl.
 import {
@@ -76,6 +78,10 @@ export interface HubEdit {
 	pickedIds?: string[];
 	idealRanges?: Record<string, IdealRange>;
 	activeMetricKeys?: string[];
+	// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle.
+	// undefined = nicht editiert -> Round-Trip via `preset.display_config`
+	// (der RMW-Merge in buildComparePresetSavePayload laeuft dann gar nicht).
+	channelActiveMetricKeys?: CompareChannelActiveMetrics;
 	metricAlertLevels?: Record<string, string>;
 	// Issue #1256 Scheibe 7 (AC-35/AC-36): Versand-Felder, analog Round-Trip-
 	// Prinzip — undefined = unangetastet, endDate zusaetzlich null-faehig
@@ -148,6 +154,11 @@ export function buildHubPutPayload(
 		// buildComparePresetSavePayload den Key wie bisher unangetastet
 		// round-trippt (#1191: fehlend != []).
 		activeMetricKeys: edit.activeMetricKeys ?? normalizeStoredActiveMetrics(displayConfig.active_metrics) ?? undefined,
+		// Issue #1703 Scheibe 8: KEIN Bestandsrueckfall wie bei activeMetricKeys —
+		// undefined bleibt undefined. Der gespeicherte Stand round-trippt dann
+		// unangetastet ueber `...restDisplayConfig`; ein hier gebauter Rueckfall
+		// wuerde denselben Wert nur unnoetig durch die Schreibuebersetzung jagen.
+		channelActiveMetricKeys: edit.channelActiveMetricKeys,
 		metricAlertLevels:
 			edit.metricAlertLevels ?? (displayConfig.metric_alert_levels as Record<string, string> | undefined),
 		// Issue #1461 S3b-2b: 1:1 Round-Trip wie alle anderen HubEdit-Felder,

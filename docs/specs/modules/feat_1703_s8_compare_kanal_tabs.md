@@ -12,7 +12,8 @@ tags: [frontend, backend, compare, metrik-kaskade, adr-0050, adr-0053, issue-170
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-13 (Klartext-Freigabe „freigabe"; Zuschnitt und
+      LoC-Override auf 450 vorab freigegeben)
 
 ## Purpose
 

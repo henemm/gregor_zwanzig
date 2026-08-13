@@ -30,9 +30,20 @@
 //     --experimental-test-module-mocks --test \
 //     src/lib/components/compare/__tests__/compare_wizard_save_new_preset_channels.test.ts
 
+// Issue #1703 Scheibe 8 — DIESELBE Klasse, zweite Fundstelle: die Zeile
+// `channelActiveMetricKeys: { ...this.channelActiveMetricKeys },`
+// (compareWizardState.svelte.ts:163) war ebenfalls von keinem Test bewacht —
+// eine Mutation, die den Aufrufer fest `{email:null,telegram:null,sms:null}`
+// senden liess, lief durch 38 Tests in drei Dateien, ohne einen einzigen rot
+// zu machen. compareEditorSave.test.ts prueft nur die reine Funktion
+// `buildNewComparePresetPayload()`. Der Test unten misst deshalb wieder den
+// ECHTEN POST-Body des Aufrufers.
+
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
+import { normalizeStoredActiveMetrics } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
+import type { CompareChannelActiveMetrics } from '../../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 
 // `$app/navigation` existiert ausserhalb von SvelteKit/vite nicht als
 // resolvbarer Specifier -- `mock.module()` versucht dennoch, den Specifier
@@ -60,7 +71,10 @@ const { CompareWizardState } = await import('../compareWizardState.svelte.ts');
 /** Instanziiert CompareWizardState und fuehrt saveNewPreset() gegen
  *  gespionte $lib/api + $app/navigation aus. Liefert den tatsaechlich
  *  gesendeten POST-Body. */
-async function runSaveNewPreset(sendPremiumSms: boolean): Promise<Record<string, unknown>> {
+async function runSaveNewPreset(
+	sendPremiumSms: boolean,
+	channelActiveMetricKeys?: CompareChannelActiveMetrics
+): Promise<Record<string, unknown>> {
 	let capturedBody: Record<string, unknown> | null = null;
 	const apiMock = mock.module('$lib/api', {
 		namedExports: {
@@ -81,6 +95,7 @@ async function runSaveNewPreset(sendPremiumSms: boolean): Promise<Record<string,
 		ws.name = 'Testvergleich';
 		ws.pickedIds = ['loc-1', 'loc-2'];
 		ws.sendPremiumSms = sendPremiumSms;
+		if (channelActiveMetricKeys) ws.channelActiveMetricKeys = channelActiveMetricKeys;
 		await ws.saveNewPreset();
 	} finally {
 		apiMock.restore();
@@ -97,6 +112,35 @@ test('saveNewPreset(): sendPremiumSms=true landet als send_premium_sms:true im t
 		body.send_premium_sms,
 		true,
 		`erwartet send_premium_sms:true im gesendeten Body, erhalten: ${JSON.stringify(body.send_premium_sms)}`
+	);
+});
+
+test('saveNewPreset(): Kanal-Overrides der Uebersichtstabelle landen als display_config.channel_active_metrics im tatsaechlich gesendeten POST-Body', async () => {
+	const body = await runSaveNewPreset(false, {
+		email: null, // nie editiert -> folgt der Grundauswahl, kein Eintrag
+		telegram: ['temp_max_c'], // abgewaehlt bis auf eine Groesse
+		sms: [] // bewusste Leerauswahl -> MUSS als [] mitreisen
+	});
+	const dc = body.display_config as Record<string, unknown> | undefined;
+	const channels = dc?.channel_active_metrics as Record<string, unknown[]> | undefined;
+	assert.ok(
+		channels,
+		'display_config.channel_active_metrics fehlt im gesendeten Body — saveNewPreset() reicht ' +
+			`channelActiveMetricKeys nicht weiter, die Kanal-Reiter im Anlege-Editor waeren eine Attrappe. display_config: ${JSON.stringify(dc)}`
+	);
+	assert.deepStrictEqual(
+		normalizeStoredActiveMetrics(channels.telegram),
+		['temp_max_c'],
+		`erwartet telegram-Override ['temp_max_c'] im gesendeten Body, erhalten: ${JSON.stringify(channels.telegram)}`
+	);
+	assert.ok(
+		Object.prototype.hasOwnProperty.call(channels, 'sms'),
+		`bewusste Leerauswahl von SMS muss als expliziter Eintrag mitreisen (weggelassen = alter Stand bleibt stehen), erhalten: ${JSON.stringify(channels)}`
+	);
+	assert.deepStrictEqual(channels.sms, [], 'SMS-Leerauswahl muss als [] gesendet werden');
+	assert.ok(
+		!Object.prototype.hasOwnProperty.call(channels, 'email'),
+		`nie editierter Kanal darf NICHT als Leerauswahl gesendet werden ("fehlend != leer"), erhalten: ${JSON.stringify(channels.email)}`
 	);
 });
 

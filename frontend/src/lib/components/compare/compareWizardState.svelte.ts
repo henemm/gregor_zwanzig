@@ -6,6 +6,7 @@
 
 import type { ActivityProfile, ComparePreset, Corridor } from '$lib/types';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState';
+import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/compareChannelMetricLayouts';
 import { buildComparePresetSavePayload, buildNewComparePresetPayload } from './compareEditorSave';
 
 export type SaveStatus = 'idle' | 'saving' | 'ok' | 'error';
@@ -29,6 +30,17 @@ export class CompareWizardState {
 	// Wetter-Metriken-Bereich nie geoeffnet wurde, bereits als „bewusst leer"
 	// (materializeActiveMetricKeys, compareMetricOrder.ts).
 	activeMetricKeys = $state<string[] | null>(null);
+	// Issue #1703 Scheibe 8 — kanal-eigene Auswahl DERSELBEN Uebersichtstabelle
+	// (display_config.channel_active_metrics). `null` je Kanal = nie editiert,
+	// der Kanal folgt der Grundauswahl `activeMetricKeys` (ADR-0050 Regel 1/2:
+	// die Grundauswahl ist das MAXIMUM, ein Kanal darf nur abwaehlen). `[]` =
+	// bewusste Leerauswahl fuer diesen Kanal — dieselbe „fehlend != leer"-
+	// Unterscheidung wie oben (#1191/#1366).
+	channelActiveMetricKeys = $state<CompareChannelActiveMetrics>({
+		email: null,
+		telegram: null,
+		sms: null
+	});
 	// Issue #1231 Slice 4 — Korridore (CorridorEditor context="vergleich"),
 	// TOP-LEVEL Feld (Dual-Write spiegelt zusaetzlich in idealRanges/activeMetricKeys/
 	// metricAlertLevels, s. corridorEditorState.ts::buildCompareCorridorSavePayload).
@@ -144,6 +156,11 @@ export class CompareWizardState {
 			region: this.region,
 			idealRanges: this.idealRanges,
 			activeMetricKeys: this.activeMetricKeys,
+			// Issue #1703 Scheibe 8: Kanal-Overrides der Uebersichtstabelle — der
+			// Anlege-Editor mountet denselben WeatherMetricsTab, ohne diese Zeile
+			// bliebe die Bedienflaeche dort eine Attrappe. Kopie, damit der
+			// gesendete Stand nicht spaeter noch mitmutiert.
+			channelActiveMetricKeys: { ...this.channelActiveMetricKeys },
 			hourlyMetricKeys: this.hourlyMetricKeys,
 			outlookMetricKeys: this.outlookMetricKeys, // Issue #1361/#1368
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170
