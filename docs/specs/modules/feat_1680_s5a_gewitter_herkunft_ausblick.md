@@ -374,6 +374,22 @@ Kommt eine Mutation durch, ist das ein Finding, kein Nebenbefund.
    bewusst nicht.
 6. **Ein Zeilenumbruch im Telegram-Trendblock ist hinnehmbar** (56 Zeichen,
    Wort-Umbruch) — kein Datenverlust, s. AC-3.
+7. **Dieselben zwei Zutaten können in umgekehrter Reihenfolge erscheinen**
+   (in der RED-Phase gemessen). Gipfeln beide Signale in **einer** Stunde,
+   lautet die Zeile `CAPE, Blitzpotenzial` (Katalogreihenfolge); fallen sie auf
+   **zwei** Stunden, lautet sie `Blitzpotenzial, CAPE` (zeitliche Reihenfolge).
+   Das folgt aus der in AC-4 festgelegten Erstauftritts-Reihenfolge von
+   `union_of_max_carriers()`. Für den Empfänger kann das wie eine **Rangfolge**
+   aussehen, ist aber nur die Uhrzeit — es gibt bewusst keinen Gewinner
+   (Auslegung ii). Eine Vereinheitlichung gehörte in
+   `union_of_max_carriers()` selbst und beträfe **alle** Verbraucher seit
+   Scheibe 2; sie ist deshalb ausdrücklich nicht Teil dieser Scheibe.
+   Sammel-Eintrag (#1199), kein eigenes Issue.
+8. **Der Metrik-Zweig (AC-11b) ist compare-exklusiv.** Der Trip ruft die
+   Ausblick-Renderer immer mit `metrics=None` (`html.py:1357`,
+   `plain.py:338`); nur der Ortsvergleich setzt eine Auswahl
+   (`compare_html.py:1241`). Die dortige Erweiterung kann die Trip-Golden
+   strukturell nicht berühren.
 
 ## Nicht in dieser Scheibe
 
