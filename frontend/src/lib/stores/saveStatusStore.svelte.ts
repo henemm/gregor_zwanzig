@@ -45,6 +45,13 @@ export class SaveStatus {
 
 	private _tripId?: string;
 
+	// Issue #1703 S8 (Staging-Befund BROKEN): die Meldung des letzten ECHTEN
+	// Speicherversuchs, solange sie NICHT durch einen erfolgreichen ersetzt
+	// wurde. Eigenes Feld statt `error`, weil `setSaving()` `error` bewusst
+	// leert — ein zweiter, folgenloser Commit derselben Geste (Diff-Guard
+	// liefert keinen Payload) darf den Fehlschlag trotzdem nicht vergessen.
+	private _unresolvedError: string | null = null;
+
 	constructor(tripId?: string) {
 		this._tripId = tripId;
 	}
@@ -58,6 +65,8 @@ export class SaveStatus {
 		this.savedAt = new Date();
 		this.state = 'idle';
 		this.error = null;
+		// Erst ein ECHTER Erfolg loescht den offenen Fehlschlag (s. markPristine).
+		this._unresolvedError = null;
 	}
 
 	setDirty(): void {
@@ -71,8 +80,25 @@ export class SaveStatus {
 	 * faelschlich dirty gesetzt hatte). savedAt bleibt unangetastet, damit nie
 	 * ein frischer "Gespeichert HH:MM"-Zeitstempel ohne echten Speichervorgang
 	 * vorgetaeuscht wird.
+	 *
+	 * Issue #1703 S8 (Staging-Befund BROKEN, Rollback-Klickpfad): "nichts zu
+	 * speichern" heisst NICHT "gespeichert", solange der letzte echte Versuch
+	 * gescheitert ist. Eine Geste kann mehrere Commits ausloesen (direkter
+	 * `onCompareCommit` + Wrapper-Ereignis in CompareTabs.svelte). Auf dem
+	 * Fehlerpfad faellt der Zustand durch den Rollback wieder mit dem
+	 * gespeicherten Stand zusammen — der zweite Commit findet dann keinen Diff
+	 * und landete hier, wodurch er den gerade gesetzten Fehler mit "Gespeichert"
+	 * ueberschrieb. Der Nutzer las Erfolg, obwohl der PUT mit 500 scheiterte.
 	 */
 	markPristine(): void {
+		// Truthy-Pruefung (nicht `!== null`): Testinstanzen entstehen im Repo per
+		// `Object.create(SaveStatus.prototype)` ohne Konstruktor, das Feld ist dort
+		// `undefined` — und "kein Fehlschlag bekannt" muss dort dasselbe heissen.
+		if (this._unresolvedError) {
+			this.state = 'error';
+			this.error = this._unresolvedError;
+			return;
+		}
 		this.state = 'idle';
 		this.error = null;
 	}
@@ -80,6 +106,7 @@ export class SaveStatus {
 	setError(msg: string): void {
 		this.state = 'error';
 		this.error = msg;
+		this._unresolvedError = msg;
 	}
 
 	async doSave(saveFn: SaveFn, init?: RequestInit): Promise<void> {
