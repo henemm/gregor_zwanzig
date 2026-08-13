@@ -23,7 +23,7 @@ tags: [testing, e2e, playwright, ci, infrastructure]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-08-13 („freigabe")
 
 ## Purpose
 
