@@ -260,7 +260,9 @@ Golden-/Aufrufer-Tests lesen Token-Werte über diese gemeinsame Funktion.
   SMS gerendert wird / Then enthält die SMS das Token `D13/27` und NICHT die Token `K13`/`D27`
   getrennt.
   - Test: SMS-Rendering mit realistischem Fixture, Assertion auf exakten Token-String im
-    gerenderten `sms_text`, UND dass die Zeichenfolge `K13` nirgends mehr vorkommt.
+    gerenderten `sms_text`, UND dass die Zeichenfolge `K13` in DIESEM Fixture (beide Auswertungen
+    gewählt) nirgends vorkommt — gilt ausschließlich für den „beide gewählt"-Fall, s. AC-4 für den
+    Gegenfall „nur min gewählt", wo `K13` weiterhin erscheint.
 
 - **AC-2:** Given dieselbe Konfiguration wie AC-1, aber mit negativen Werten (Tiefst −12°C,
   Höchst −4°C, reales Wintersport-Golden-Fixture) / When die SMS gerendert wird / Then enthält
