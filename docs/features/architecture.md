@@ -338,7 +338,7 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
    - 4 Render-Pfade: `render_subject()`, `render_email()`, `render_telegram()`, `render_sms()`
    - Projektion: `to_alert_message()` erzeugt `AlertMessage` aus `WeatherChange`-Events
    - Dynamischer Betreff: `Trip · Ortsangabe · Richtung · Metrik`; faktisch-generische H1.
-     Die Ortsangabe kommt aus der **einen** Auflösung `_location_of` (`render.py:116`, seit #1744 A1):
+     Die Ortsangabe kommt aus der **einen** Auflösung `_location_of` (`render.py:101`, seit #1744 A1):
      `location_label` (Ortsvergleich) → Segment-Kennung → km-Spanne als Rückfall. Der Funktionsname
      `_km_str` ist ein Relikt — hier stand bis 2026-08-13 noch `km`, das war seit A1 überholt
    - Severity-Sortierung pro Metrik; ASCII-SMS ≤140 Zeichen mit Überlauf-Marker
