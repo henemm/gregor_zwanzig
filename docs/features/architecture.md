@@ -337,7 +337,10 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
    - Renderer: `src/output/renderers/alert/` (model.py, project.py, render.py) — ersetzt das gelöschte `alert_compact.py`
    - 4 Render-Pfade: `render_subject()`, `render_email()`, `render_telegram()`, `render_sms()`
    - Projektion: `to_alert_message()` erzeugt `AlertMessage` aus `WeatherChange`-Events
-   - Dynamischer Betreff: `Trip · km · Richtung · Metrik`; faktisch-generische H1
+   - Dynamischer Betreff: `Trip · Ortsangabe · Richtung · Metrik`; faktisch-generische H1.
+     Die Ortsangabe kommt aus der **einen** Auflösung `_location_of` (`render.py:116`, seit #1744 A1):
+     `location_label` (Ortsvergleich) → Segment-Kennung → km-Spanne als Rückfall. Der Funktionsname
+     `_km_str` ist ein Relikt — hier stand bis 2026-08-13 noch `km`, das war seit A1 überholt
    - Severity-Sortierung pro Metrik; ASCII-SMS ≤140 Zeichen mit Überlauf-Marker
    - Enthält NICHT: Stundentabellen, Ausblick, Gewitter-Vorschau, Pills, Vortag-Vergleich, Statistik
    - km-Erweiterung: `build_segment_label()` zeigt `"Etappe N, km X–Y, HH–HH"` wenn km vorhanden (Issue #801)
@@ -368,7 +371,10 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      - `tz_for_coords(lat, lon)` bestimmt Tour-Zeitzone; `format_now_text(result, tz=tz)` gibt Onset-Zeit in Tour-TZ aus
      - `build_segment_label()` erzeugt „Etappe N, km X–Y" mit echten Strecken-Kilometern
    - **Kanonischer Render-Pfad (Issue #919):** `check_radar_alerts` konstruiert `AlertMessage(OnsetEvent(...))` und leitet durch dieselben vier Renderer wie der Abweichungs-Alert:
-     - `render_subject(msg)` — Betreff: `[<trip>] km <a>–<b> · Regen/Gewitter in <m> Min`
+     - `render_subject(msg)` — Betreff: `[<trip>] <Ortsangabe> · Regen/Gewitter in <m> Min`,
+       an einer echt zugestellten Mail gemessen z.B. `[KHW 403] 🏁 Ziel · Regen in 25 Min`.
+       Ortsangabe nach derselben dreistufigen Auflösung wie oben (seit #1744 A1; hier stand bis
+       2026-08-13 noch die km-Spanne)
      - `render_email(msg)` — HTML + Plain mit Onset-Uhrzeit, Intensity-Label, Quellenangabe, Cooldown-Block
      - `render_telegram(msg)` — Fettzeile + Detail mit Onset-Uhrzeit und Quelle
      - `render_sms(msg)` — Token `R!<min>` (Regen) oder `TH!<min>` (Gewitter), ≤140 Zeichen GSM-7

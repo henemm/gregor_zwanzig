@@ -70,7 +70,15 @@ _VALIDITY_VALUE_RE = re.compile(r"\b(Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{2}\.\d{2}\.")
 
 # CSS-Klassen, die die SOLL-Vorlage (#1233 Slice B) fuer die Standalone-
 # Amtliche-Warnung-Mail zwingend emittiert.
-_REQUIRED_CLASSES = {"verdict", "warn", "src", "body-foot"}
+_REQUIRED_CLASSES = {"verdict", "warn", "body-foot"}
+# Traeger der Quellenangabe -- ZWEI gueltige Formen (Issue #1744 A2, AC-14):
+# die getoente `.src`-Box (Bestand, #1233 Slice B) ODER die Quellen-Datenzeile
+# im gemeinsamen Datenzeilen-Block (A2 loest die Box auf; das Label steht dann
+# in einer eigenen Tabellenzelle, das Literal "Quelle:" entsteht im gebauten
+# Klartext-Teil). ADDITIV erweitert, nicht gelockert: `src` bleibt eine
+# gueltige Alternative, und eine Mail OHNE jede Quellenangabe faellt weiterhin
+# durch -- hier UND zusaetzlich an P-4.
+_SOURCE_ROW_RE = re.compile(r"^\s*Quelle:\s*\S", re.MULTILINE)
 # Warnstufen-Traeger: Leiter (uniform) ODER Eskalations-Meter (gemischt).
 _LADDER_CLASSES = {"stufe-line"}
 _MIXED_METER_CLASSES = {"stacked", "meter"}
@@ -162,6 +170,15 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
         errors.append(
             "S-1: Erwartete CSS-Struktur-Klassen fehlen im HTML-Body: "
             f"{sorted(missing_classes)}. Gefundene Klassen: {sorted(collector.classes)}"
+        )
+
+    # S-1b (#1744 A2, AC-14): die Quellenangabe muss EINE der beiden Formen
+    # tragen -- Box `.src` ODER Quellen-Datenzeile im Text.
+    if "src" not in collector.classes and not _SOURCE_ROW_RE.search(text):
+        errors.append(
+            "S-1b: Keine Quellenangabe erkennbar -- weder eine `.src`-Box im "
+            "HTML-Body noch eine Datenzeile 'Quelle: ...' im Text. "
+            f"Gefundene Klassen: {sorted(collector.classes)}"
         )
 
     has_ladder = bool(_LADDER_CLASSES & collector.classes)

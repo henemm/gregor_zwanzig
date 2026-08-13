@@ -826,9 +826,9 @@ class NotificationService:
         HTML-Body, Telegram- und SMS-Text ueber die vier Vorlagen-Renderer.
         """
         from output.renderers.alert.official_alerts import (
-            build_official_alert_notices, render_official_alert_sms,
-            render_official_alert_subject, render_official_alert_telegram,
-            render_warn_block,
+            build_official_alert_notices, render_official_alert_mail_plain,
+            render_official_alert_sms, render_official_alert_subject,
+            render_official_alert_telegram, render_warn_block,
         )
         from utils.timezone import tz_for_coords
 
@@ -853,6 +853,13 @@ class NotificationService:
             source_url=source_url, stand_at=stand_at, tz=alert_tz,
             context_label=trip.name,
         )
+        # Issue #1744 A2 (AC-13): eigens gebauter Klartext-Teil aus denselben
+        # Datenzeilen wie das HTML -- ohne ihn strippt `build_mime_message` die
+        # Tags aus dem HTML und der Klartext-Leser bekommt Zeilensalat.
+        plain = render_official_alert_mail_plain(
+            dto_notices, source_label=source_label, stand_at=stand_at,
+            tz=alert_tz, context_label=trip.name,
+        )
         telegram_text = render_official_alert_telegram(
             dto_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
         )
@@ -870,7 +877,8 @@ class NotificationService:
                     mail_sink(subject=subject, body=html)
                 else:
                     EmailOutput(self._settings).send(
-                        subject=subject, body=html, html=True, mail_type="official-alert",
+                        subject=subject, body=html, html=True,
+                        plain_text_body=plain, mail_type="official-alert",
                     )
             except Exception as e:
                 failed_channels.append("email")
@@ -1061,8 +1069,8 @@ class NotificationService:
         statt einer eigenen `tz_for_coords()`-Direktkopie.
         """
         from output.renderers.alert.official_alerts import (
-            build_compare_official_alert_notices, render_official_alert_subject,
-            render_warn_block,
+            build_compare_official_alert_notices, render_official_alert_mail_plain,
+            render_official_alert_subject, render_warn_block,
         )
         from utils.timezone import resolve_location_tz
 
@@ -1093,6 +1101,13 @@ class NotificationService:
             source_url=source_url, stand_at=stand_at, tz=alert_tz,
             context_label="Ortsvergleich",
         )
+        # Issue #1744 A2 (AC-13): derselbe Mailtyp, derselbe Klartext-Bau wie im
+        # Trip-Pfad -- sonst haetten die zwei Flaechen desselben Mailtyps
+        # wieder zwei verschiedene Klartexte.
+        plain = render_official_alert_mail_plain(
+            dto_notices, source_label=source_label, stand_at=stand_at,
+            tz=alert_tz, context_label="Ortsvergleich",
+        )
 
         sent_channels: list[str] = []
         failed_channels: list[str] = []  # Issue #1459: Alarm-Protokoll
@@ -1101,7 +1116,7 @@ class NotificationService:
         blocked_reason_codes: dict[str, str] = {}
         if "email" in effective_channels and self._settings.can_send_email():
             if not self._dispatch_compare_official_email(
-                preset_name, subject, html, mail_sink
+                preset_name, subject, html, mail_sink, plain=plain,
             ):
                 failed_channels.append("email")
             sent_channels.append("email")
@@ -1140,6 +1155,7 @@ class NotificationService:
 
     def _dispatch_compare_official_email(
         self, preset_name: str, subject: str, html: str, mail_sink: Optional[object],
+        *, plain: str | None = None,
     ) -> bool:
         """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
         try:
@@ -1147,7 +1163,8 @@ class NotificationService:
                 mail_sink(subject=subject, body=html)
             else:
                 EmailOutput(self._settings).send(
-                    subject=subject, body=html, html=True, mail_type="official-alert",
+                    subject=subject, body=html, html=True,
+                    plain_text_body=plain, mail_type="official-alert",
                 )
         except Exception as e:
             logger.error(f"Compare official alert email failed for {preset_name}: {e}")

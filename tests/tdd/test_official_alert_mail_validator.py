@@ -85,26 +85,47 @@ def _notice(alert, scope_label, sms_scope, affected_chips, free_chips):
     )
 
 
+def _hitze_notices() -> list:
+    """Eine Standalone-Warnung (uniforme Stufe) -- Vorlage fuer BEIDE Teile
+    derselben Mail."""
+    vf = datetime(2026, 7, 12, 6, 0, tzinfo=UTC)
+    vt = datetime(2026, 7, 12, 20, 0, tzinfo=UTC)
+    return [_notice(
+        _alert(2, "extreme_heat", "Hitzewarnung", vf, vt),
+        scope_label="gesamte Route", sms_scope="ges.Route",
+        affected_chips=["gesamte Route"], free_chips=[],
+    )]
+
+
 def _render_official_alert_html() -> str:
     """Ein echt gerenderter Standalone-Alert-Body (uniforme Stufe)."""
     from output.renderers.alert.official_alerts import render_warn_block
 
-    vf = datetime(2026, 7, 12, 6, 0, tzinfo=UTC)
-    vt = datetime(2026, 7, 12, 20, 0, tzinfo=UTC)
-    hitze = _notice(
-        _alert(2, "extreme_heat", "Hitzewarnung", vf, vt),
-        scope_label="gesamte Route", sms_scope="ges.Route",
-        affected_chips=["gesamte Route"], free_chips=[],
-    )
     return render_warn_block(
-        [hitze], variant="standalone", source_label="GeoSphere Austria",
+        _hitze_notices(), variant="standalone", source_label="GeoSphere Austria",
         stand_at="09:30", tz=UTC,
     )
 
 
-def _build_real_official_alert_message(html_body: str):
+def _render_official_alert_plain() -> str:
+    """Der Klartext-Teil DERSELBEN Mail (Issue #1744 A2, AC-13).
+
+    Seit A2 baut ihn der Renderer selbst und `send_official_alert` uebergibt
+    ihn ausdruecklich -- vorher entstand er per Tag-Strippen aus dem HTML. Der
+    Waechter prueft seine Textregeln bevorzugt gegen den Klartext
+    (`plain or html`); ein Pruefstand ohne Klartext-Teil legte ihm also einen
+    Zustand vor, den der Versandweg gar nicht mehr erzeugt."""
+    from output.renderers.alert.official_alerts import render_official_alert_mail_plain
+
+    return render_official_alert_mail_plain(
+        _hitze_notices(), source_label="GeoSphere Austria", stand_at="09:30", tz=UTC,
+    )
+
+
+def _build_real_official_alert_message(html_body: str, plain_body: str | None = None):
     """Baut die Mail EXAKT ueber die Produktions-Pipeline (build_mime_message),
-    mail_type=official-alert -- byte-identisch zum echten Versandweg."""
+    mail_type=official-alert -- byte-identisch zum echten Versandweg, inklusive
+    des seit #1744 A2 mitgelieferten Klartext-Teils."""
     from output.channels.email import build_mime_message
 
     return build_mime_message(
@@ -114,7 +135,7 @@ def _build_real_official_alert_message(html_body: str):
         to_header="gregor-test@henemm.com",
         reply_to=None,
         html=True,
-        plain_text_body=None,
+        plain_text_body=plain_body,
         mail_type="official-alert",
     )
 
@@ -142,7 +163,9 @@ def test_validator_exports_validate_message():
 
 def test_valid_official_alert_mail_passes():
     mod = _load_validator_module()
-    msg = _build_real_official_alert_message(_render_official_alert_html())
+    msg = _build_real_official_alert_message(
+        _render_official_alert_html(), _render_official_alert_plain(),
+    )
 
     ok, errors = mod.validate_message(msg)
     assert ok is True, (
@@ -206,37 +229,56 @@ def test_empty_body_fails():
 # P-3 (Issue #1240): Gueltigkeit wird auf INHALT geprueft, nicht auf Anwesenheit
 # ---------------------------------------------------------------------------
 
-def _render_untimed_official_alert_html() -> str:
-    """Echt gerenderter Standalone-Body fuer eine Warnung OHNE Zeitangabe --
-    genau das, was `massif_closure`/`meteo_forets` liefern (kein valid_from/
-    valid_to). Seit #1238 (E4/AC-7) laesst der Renderer die 'Gueltig:'-Zeile
-    hier komplett weg, statt 'unbekannt' zu schreiben."""
-    from output.renderers.alert.official_alerts import render_warn_block
+def _untimed_notices() -> list:
+    """Eine Warnung OHNE Zeitangabe -- genau das, was `massif_closure`/
+    `meteo_forets` liefern (kein valid_from/valid_to)."""
     from services.official_alerts.models import OfficialAlert
 
-    sperre = _notice(
+    return [_notice(
         OfficialAlert(
             source="massif_closure", hazard="access_ban", level=4,
             label="Zugang gesperrt — Maures", dedup_id="maures",
         ),
         scope_label="nur Collobrières", sms_scope="nurCollobrieres",
         affected_chips=["Collobrières"], free_chips=[],
-    )
-    return render_warn_block(
-        [sperre], variant="standalone", source_label="Präfektur (Zugangssperre)",
-        stand_at="02:00", tz=UTC,
-    )
+    )]
 
 
-def _html_with_unknown_validity() -> str:
-    """Body einer zeitlosen Warnung MIT wieder eingesetzter Platzhalter-Zeile
+_UNTIMED_KWARGS = dict(source_label="Präfektur (Zugangssperre)", stand_at="02:00", tz=UTC)
+
+
+def _render_untimed_official_alert_html() -> str:
+    """Echt gerenderter Standalone-Body fuer eine Warnung OHNE Zeitangabe.
+    Seit #1238 (E4/AC-7) laesst der Renderer die 'Gueltig:'-Zeile hier komplett
+    weg, statt 'unbekannt' zu schreiben."""
+    from output.renderers.alert.official_alerts import render_warn_block
+
+    return render_warn_block(_untimed_notices(), variant="standalone", **_UNTIMED_KWARGS)
+
+
+def _render_untimed_official_alert_plain() -> str:
+    """Der Klartext-Teil derselben zeitlosen Mail (#1744 A2, AC-13)."""
+    from output.renderers.alert.official_alerts import render_official_alert_mail_plain
+
+    return render_official_alert_mail_plain(_untimed_notices(), **_UNTIMED_KWARGS)
+
+
+def _mail_with_unknown_validity():
+    """Mail einer zeitlosen Warnung MIT wieder eingesetzter Platzhalter-Zeile
     'Gültig: unbekannt' — also genau der Renderer-Regress, den P-3 abfangen
     soll. Seit #1238 erzeugt der echte Renderer diesen Zustand nicht mehr
     (AC-7), die VALIDATOR-Regel muss ihn aber weiter zurueckweisen: der Pruefer
     sieht nur den Mail-Text und darf einen Platzhalter nie als Zeitangabe
-    durchwinken."""
+    durchwinken.
+
+    #1744 A2: der Platzhalter wird in BEIDE Teile gesetzt. Der Waechter liest
+    bevorzugt den Klartext (`plain or html`); ein Regress im Renderer schluege
+    ohnehin auf beide Teile durch, weil sie aus denselben `(Label, Wert)`-
+    Tupeln entstehen. Nur im HTML zu faelschen, hiesse den Pruefer an einer
+    Stelle zu testen, die er gar nicht liest."""
     html_body = _render_untimed_official_alert_html()
-    assert "Gültig:" not in html_body, (
+    plain_body = _render_untimed_official_alert_plain()
+    assert "Gültig:" not in html_body and "Gültig:" not in plain_body, (
         "Renderer schreibt wieder eine 'Gültig:'-Zeile bei fehlenden Zeiten (AC-7)"
     )
     placeholder = (
@@ -244,14 +286,16 @@ def _html_with_unknown_validity() -> str:
     )
     injected = html_body.replace('<div class="facts"', placeholder + '<div class="facts"', 1)
     assert placeholder in injected, "Testaufbau: Platzhalter-Zeile nicht eingesetzt"
-    return injected
+    return _build_real_official_alert_message(
+        injected, "Gültig: unbekannt\n" + plain_body,
+    )
 
 
 def test_validity_unknown_is_rejected():
     """'Gueltig: unbekannt' ist keine Zeitangabe -- der Pruefer muss die Mail
     zurueckweisen, statt sie (wie bisher) durchzuwinken."""
     mod = _load_validator_module()
-    msg = _build_real_official_alert_message(_html_with_unknown_validity())
+    msg = _mail_with_unknown_validity()
 
     ok, errors = mod.validate_message(msg)
     assert ok is False, (
@@ -277,7 +321,9 @@ def test_missing_validity_line_is_accepted():
     )
     assert "Gültig:" not in without_validity, "Testaufbau: Gültig-Zeile nicht entfernt"
 
-    msg = _build_real_official_alert_message(without_validity)
+    msg = _build_real_official_alert_message(
+        without_validity, _render_untimed_official_alert_plain(),
+    )
     ok, errors = mod.validate_message(msg)
     assert ok is True, (
         "Mail ohne 'Gültig:'-Zeile ist bei zeitlosen Warnungen korrekt und darf "
@@ -289,7 +335,9 @@ def test_valid_timed_validity_still_passes():
     """Non-Regression: eine Warnung MIT Zeitraum behaelt ihre 'Gueltig:'-Zeile
     und besteht weiterhin."""
     mod = _load_validator_module()
-    msg = _build_real_official_alert_message(_render_official_alert_html())
+    msg = _build_real_official_alert_message(
+        _render_official_alert_html(), _render_official_alert_plain(),
+    )
 
     ok, errors = mod.validate_message(msg)
     assert ok is True, f"Mail mit echtem Zeitraum muss bestehen, errors={errors}"

@@ -203,9 +203,15 @@ def test_ac6_html_notice_unchanged():
     body_text = soup.get_text(" ", strip=True)
     assert "Fr 10.07. · ganztägig" in body_text
     assert "Sa 11.07. · 15:00–21:00" in body_text
-    src = soup.select_one(".src")
-    assert src is not None, ".src-Box fehlt"
-    src_text = src.get_text()
+    # Fundort seit #1744 A2 (AC-8): die Quelle ist eine Datenzeile im
+    # gemeinsamen Block, keine eigene `.src`-Box mehr. Die gepruefte Zusicherung
+    # (Region-Dedup, beide Regionen genannt) ist unveraendert.
+    quellen_zellen = [
+        z for z in soup.select('table[role="presentation"] td[align="left"]')
+        if z.get_text(" ", strip=True).startswith("Quelle")
+    ]
+    assert len(quellen_zellen) == 1, f"Quellen-Datenzeile fehlt/doppelt: {quellen_zellen!r}"
+    src_text = quellen_zellen[0].find_parent("tr").get_text(" ", strip=True)
     assert "Haute-Corse" in src_text and "Rotwand-Massiv" in src_text
     assert "GeoSphere Austria" in src_text
 

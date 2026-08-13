@@ -165,6 +165,46 @@ Bypass.** Verhindert stille Mail-Format-Defekte vor dem Merge (Issue #810-Klasse
 Matrix-Nachweis automatisch) und den `briefing_mail_validator.py` gegen die
 zugestellte Staging-Mail grün bekommen.
 
+## 4. `official_alert_mail_validator.py` — amtliche Standalone-Warn-Mail (seit #1197)
+
+**Geltungsbereich:** kanonischer Acceptance-Validator für die eigenständige
+amtliche Warn-Mail (Trip- **und** Compare-Pfad), gerendert von
+`src/output/renderers/alert/official_alerts.py::render_official_alert_html`
+(bzw. `render_warn_block(variant="standalone", ...)`). Dispatcht über den
+Marker-Header `X-GZ-Mail-Type: official-alert` — falscher Mailtyp ist ein
+sauberes No-Op (Exit 0). Bis #1197 deckte **kein** Validator diesen Mailtyp
+ab; `radar_alert_mail_validator.py` behandelt `official-alert`-Mails
+ausdrücklich als No-Op (er ist für die **Nowcast**-Mail zuständig,
+`X-GZ-Mail-Type: radar-alert`).
+
+```bash
+uv run python3 .claude/hooks/official_alert_mail_validator.py
+```
+
+Struktur-Prüfung über `html.parser.HTMLParser` (stdlib): gesammelt werden nur
+tatsächlich als `class="..."`-Attributwert auftauchende CSS-Klassen-Tokens
+(kein Substring-Fund auf den Rohtext). Text-Plausibilität separat auf dem
+extrahierten Klartext/HTML-Fallback.
+
+| Regel | Prüft | Konsequenz |
+|---|---|---|
+| S-0 | HTML-Body mit `html.parser` parsbar | kaputtes HTML ist ein echter Befund (fail-closed) |
+| S-1 | Pflichtklassen `{"verdict", "warn", "body-foot"}` im HTML-Body | fehlt eine, Fehlermeldung nennt die fehlenden Klassen |
+| **S-1b** (neu, Issue #1744 A2, AC-14) | Quellenangabe als **eine von zwei** gültigen Formen: CSS-Klasse `src` (Bestand, `#1233` Slice B) **ODER** eine Datenzeile `Quelle: …` im Text (Regex `^\s*Quelle:\s*\S`, MULTILINE) | **additiv** zu S-1 ergänzt, nicht ersetzt — `src` bleibt gültig; A2 löst die eigene `.src`-Box zur Datenzeile im gemeinsamen Datenzeilen-Block auf, ohne dass der Wächter eine sachlich korrekte Mail ablehnt. Eine Mail **ohne** jede Quellenangabe fällt weiterhin durch (S-1b und zusätzlich P-4) |
+| S-2 | Warnstufen-Träger: Leiter (`stufe-line`, uniforme Stufe) **oder** Eskalations-Meter (`stacked`+`meter`, gemischte Stufen) | fehlt beides, Fehlermeldung nennt die gefundenen Klassen |
+| P-1 | Verdict-Zeile `„{N} amtliche Warnung(en)"` mit `N>=1` | |
+| P-2 | Warnstufen-Wort (`GELB`/`ORANGE`/`ROT`) im Text | |
+| P-3 (Issue #1240) | jede vorhandene `„Gültig:"`-Zeile trägt einen echten Zeitraum (Wochentag + Datum) | Warnungen ohne bekannten Zeitraum tragen zu Recht **gar keine** `„Gültig:"`-Zeile (Präfektur-Zugangssperren, Waldbrand-Tagesstufen, PO-Entscheidung #1238) — Anwesenheit allein ist kein Kriterium, nur der Inhalt, falls die Zeile da ist |
+| P-4 | Literale `„Quelle:"` **und** `„abgerufen bei"` im Text | unabhängig von S-1b — beide Prüfungen bleiben in Kraft |
+| P-5 | Literal `„Stand: heute"` im Text | |
+
+Exit codes wie bei `radar_alert_mail_validator.py`: `0` = bestanden/No-Op,
+`1` = Spec-Verletzung mit Fehlerliste, `2` = technischer Fehler (IMAP nicht
+erreichbar). IMAP-Fetch gegen dasselbe Test-Postfach, `GZ_TEST_IMAP_*` vor
+`GZ_IMAP_*` priorisiert (Pattern wie `radar_alert_mail_validator.py`).
+
+**Nur bei Exit 0** darfst du „E2E bestanden" für diesen Mailtyp sagen.
+
 ## Strukturelle Render-Checks im briefing_mail_validator (Issue #833)
 
 Der Trip-Briefing-Validator prüft die `full`-Mail nicht mehr nur als MIME-String,
