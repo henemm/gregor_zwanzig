@@ -15,7 +15,7 @@
 | `design-system/` | CHARTER, COMPONENTS, TOKENS, SCREENS |
 | `features/` | `architecture.md` (Systemarchitektur), `scope.md` (Vision), **`gewitter-gesamtkonzept.md`** (Gewitter Ende zu Ende: was der Nutzer sieht, wie die Stufe entsteht, Eichung, Fahrplan — führend gegenüber den Einzel-Specs), `openspec_workflow.md` (Workflow-Wegweiser) + aktive Epic-Dokumente |
 | `project/` | `known_issues.md` (Root-Cause-Archiv), Architektur-Programm 2026-07. (`strategic-directions.md` 2026-08-05 aufgelöst, #1166 — strategische Entscheidungen leben in `docs/adr/`) |
-| `runbooks/` | Betriebsanleitungen (z. B. `telegram-webhook.md`) |
+| `runbooks/` | Betriebsanleitungen (z. B. `telegram-webhook.md`, `premium_sms_generalprobe.md`) |
 
 ## Arbeits- und Wegwerf-Material
 
