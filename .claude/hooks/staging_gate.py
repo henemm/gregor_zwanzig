@@ -156,7 +156,7 @@ def _scope_diff_base(head: str | None = None) -> str:
     """
     head = head if head is not None else _head_sha()
     preflight_base = _e2e_paths.read_preflight_base(_shared_repo_dir(), head)
-    if preflight_base is not None:
+    if preflight_base is not None and preflight_base != head:
         if _e2e_paths.commit_exists(preflight_base, _verified_repo_dir()):
             return preflight_base
 
