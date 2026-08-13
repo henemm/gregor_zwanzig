@@ -1,4 +1,4 @@
-// Gemeinsamer Aufbau beider Klickpfad-Buendel zu Issue #1703 Scheibe 8
+// Gemeinsamer Aufbau der Klickpfad-Buendel zu Issue #1703 Scheibe 8
 // (kanal-eigene Metrikauswahl der Vergleichs-UEBERSICHTSTABELLE).
 // Spec: docs/specs/modules/feat_1703_s8_compare_kanal_tabs.md § Testauflage.
 //
@@ -11,7 +11,8 @@
 // (Uebersicht/Stundenverlauf/Ausblick) mit denselben `wm2-*`-Testids — alles
 // hier haengt am Block `[data-testid="layout-tab"][data-context="vergleich"]`.
 //
-// Beide Buendel ausfuehren (aus frontend/, NACH Merge + Staging-Deploy):
+// Alle Buendel ausfuehren (aus frontend/, NACH Merge + Staging-Deploy) —
+// die Config nimmt Hub- UND Anlege-Pfad auf:
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
 //   set -a; source /home/hem/gregor_zwanzig_staging/.env; set +a
 //   npx playwright test --config=e2e/playwright.compare-uebersicht-kanal.staging.config.ts
@@ -110,6 +111,19 @@ export async function ausSchalten(f: KanalFlaeche, metrik: string): Promise<void
 	await klickUndSpeichere(f, f.reihenfolge
 		.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${metrik}"]`)
 		.getByRole('button', { name: 'Aus', exact: true }));
+	await expect.poll(() => ausMetriken(f), { timeout: 10_000 }).toContain(metrik);
+}
+
+/** Wie `ausSchalten`, aber OHNE Speicher-Erwartung — fuer die Anlege-Seite
+ *  `/compare/new`: dort gibt es kein PUT je Geste, der Vergleich existiert noch
+ *  gar nicht. Gespeichert wird dort genau einmal, per POST beim „Briefing
+ *  aktivieren" (compare-neu-kanal-anlegen.staging.spec.ts). Die Zusicherung
+ *  bleibt dieselbe: die Groesse muss in der Aus-Gruppe ANKOMMEN — ein blosser
+ *  Klick ohne diese Wirkung waere kein Nachweis. */
+export async function ausSchaltenOhneSpeichern(f: KanalFlaeche, metrik: string): Promise<void> {
+	await f.reihenfolge
+		.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${metrik}"]`)
+		.getByRole('button', { name: 'Aus', exact: true }).click();
 	await expect.poll(() => ausMetriken(f), { timeout: 10_000 }).toContain(metrik);
 }
 

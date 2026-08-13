@@ -281,26 +281,93 @@ describe('AC-9: eine Groesse ohne Kuerzel bekommt gar keine Marke', () => {
 // Vergleich falsch machen.
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ───────────────────────────────────────────────────────────────────────────
+// Wie dieser Waechter die beiden Einbettungen AUSEINANDERHAELT
+//
+// WeatherMetricsTab.svelte bindet `WeatherV2Reihenfolge` ZWEIMAL ein: einmal
+// fuer die Tour, einmal fuer die Vergleichs-Uebersicht. Beide muessen sicher
+// unterscheidbar sein, denn sie speisen die Kurzform-Marke aus VERSCHIEDENEN
+// Quellen (Trip: /api/sms-symbols · Vergleich: Register-`sms_code`) — genau
+// diese Verwechslung bewachen die Tests weiter unten.
+//
+// FRUEHER diente `offColumns` als Merkmal ("die Touren-Einbettung ist die
+// einzige mit offColumns" — #1719 S3: 'Aus in diesem Kanal' gab es nur im
+// Trip-Kanal-Reiter). Das gilt seit Issue #1703 Scheibe 8 NICHT MEHR: dort
+// bekommt die Vergleichs-Uebersicht ausdruecklich ebenfalls `offColumns` und
+// `onRestore` (AC-S8-5, ADR-0050 Regel 4 gilt jetzt auch fuer Compare).
+// Gemessen 2026-08-13: die Attributnamen BEIDER Einbettungen sind seither
+// Zeichen fuer Zeichen dieselbe Menge. Damit griff `attrs.has('offColumns')`
+// auf die falsche Flaeche und `!attrs.has('offColumns')` auf gar keine —
+// dieselbe Fehlerklasse wie in #1719 S4: ein Merkmal wurde als SELEKTOR
+// benutzt, und als es sich aenderte, entwaffnete das einen Bestandstest.
+//
+// NEUES Merkmal: der `context`-Wert des umschliessenden `LayoutTab`
+// ('route' vs. 'vergleich'). Warum der stabiler ist:
+//   * Er ist auf BEIDEN Seiten POSITIV. Kein "die andere ist die ohne X" mehr
+//     — eine Abwesenheit als Signal ist genau das, was hier gebrochen ist.
+//   * `context: 'route' | 'vergleich'` ist eine PFLICHT-Eigenschaft mit
+//     Aufzaehlungstyp (LayoutTab.svelte:28). Sie kann nicht still wegfallen
+//     oder einen dritten Wert annehmen, ohne dass svelte-check anschlaegt.
+//   * Er benennt die FLAECHE selbst, nicht eine Faehigkeit. Genau daran
+//     scheiterte `offColumns`: Faehigkeiten wandern per Scheibe von einer
+//     Flaeche zur anderen (das ist der Sinn der Trip/Compare-Teilung,
+//     CLAUDE.md: "EIN Code, Parameter context='route'|'vergleich'"), die
+//     Flaechen-Zugehoerigkeit wandert nie.
+//   * Er ist NICHT selbst Gegenstand einer Zusicherung dieses Tests (der
+//     prueft `kuerzelById`, die zwei Marken und `sms_code`) — kein Zirkel.
+//
+// Merksatz fuer den naechsten Leser: als Selektor taugt nur, was die Flaeche
+// IST, nicht was sie KANN.
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Der `context`-Wert des naechsten umschliessenden `LayoutTab`. */
+function layoutKontext(eltern: Knoten[]): string | null {
+	for (let i = eltern.length - 1; i >= 0; i--) {
+		const e = eltern[i];
+		if (e.type === 'Component' && e.name === 'LayoutTab') return attributWert(e, 'context');
+	}
+	return null;
+}
+
+/** Waehlt die Einbettung, die in einem `LayoutTab` mit genau diesem `context` steht. */
+const imKontext = (wert: string) => (eltern: Knoten[]) => layoutKontext(eltern) === wert;
+
+/** Fuer Dateien, die nur EINE Einbettung tragen (gemessen: je eine in
+ *  CompareHourlyLayoutControls.svelte und CompareOutlookLayoutControls.svelte,
+ *  beide ohne `LayoutTab`-Huelle). */
+const dieEinzige = () => true;
+
+/** Die eine `<WeatherV2Reihenfolge …>`-Einbettung, auf die `waehle` passt.
+ *  Passen MEHRERE, ist das ein Befund und kein "nimm die erste": still die
+ *  erste zu nehmen ist genau das Verhalten, das den Waechter oben entwaffnet
+ *  hat, als `offColumns` auf beide Flaechen zutraf. */
+function findeEinbettung(ast: any, waehle: (eltern: Knoten[]) => boolean): Knoten | null {
+	const treffer: Knoten[] = [];
+	walk(ast.fragment, (n, eltern) => {
+		if (n.type !== 'Component' || n.name !== 'WeatherV2Reihenfolge') return;
+		if (waehle(eltern)) treffer.push(n);
+	});
+	assert.ok(
+		treffer.length <= 1,
+		`Das Erkennungsmerkmal ist nicht mehr eindeutig: ${treffer.length} ` +
+			`WeatherV2Reihenfolge-Einbettungen passen darauf. Dieser Waechter pruefte ` +
+			`dann eine beliebige davon und koennte die Vertauschung von Trip- und ` +
+			`Vergleichs-Quelle nicht mehr sehen — s. Kommentar ueber layoutKontext().`
+	);
+	return treffer[0] ?? null;
+}
+
 /** Namen, die eine `<WeatherV2Reihenfolge …>`-Einbettung erreicht: alles aus
  *  ihren Attributwerten plus — einen Schritt tief — alles aus der Herleitung
  *  der dort genannten Bezeichner. Zwei Bauarten sind damit gleich gueltig:
  *  die Kuerzel als EIGENE Eigenschaft uebergeben oder sie in die bestehende
  *  `metricById`-Zuordnung einweben. Der Test schreibt keine von beiden vor. */
-function erreichteNamen(datei: string, waehle: (attrs: Set<string>) => boolean): Set<string> | null {
+function erreichteNamen(datei: string, waehle: (eltern: Knoten[]) => boolean): Set<string> | null {
 	const ast = parseComponent(datei);
-	let ziel: Knoten | null = null;
-	walk(ast.fragment, (n) => {
-		if (n.type !== 'Component' || n.name !== 'WeatherV2Reihenfolge') return;
-		const attrNamen = new Set<string>(
-			(n.attributes ?? [])
-				.filter((a: Knoten) => a.type === 'Attribute')
-				.map((a: Knoten) => String(a.name))
-		);
-		if (waehle(attrNamen) && !ziel) ziel = n;
-	});
+	const ziel = findeEinbettung(ast, waehle);
 	if (!ziel) return null;
 
-	const direkt = geleseneNamen((ziel as Knoten).attributes);
+	const direkt = geleseneNamen(ziel.attributes);
 	const alle = new Set(direkt);
 	walk(ast.instance?.content?.body, (n) => {
 		if (n.type !== 'VariableDeclarator') return;
@@ -313,10 +380,12 @@ function erreichteNamen(datei: string, waehle: (attrs: Set<string>) => boolean):
 
 describe('AC-6: der Touren-Editor speist die Kurzform-Marke aus /api/sms-symbols', () => {
 	test('die Touren-Einbettung erreicht den Kuerzel-Katalog des Backends', () => {
-		// Die Touren-Einbettung ist die einzige mit `offColumns` (#1719 S3:
-		// "Aus in diesem Kanal" gibt es nur im Trip-Kanal-Reiter).
-		const erreicht = erreichteNamen(join(SHARED, 'WeatherMetricsTab.svelte'), (attrs) =>
-			attrs.has('offColumns')
+		// Erkennungsmerkmal: LayoutTab context="route". Bis #1703 S8 stand hier
+		// `attrs.has('offColumns')` — warum das nicht mehr traegt, steht im
+		// Kommentar ueber layoutKontext().
+		const erreicht = erreichteNamen(
+			join(SHARED, 'WeatherMetricsTab.svelte'),
+			imKontext('route')
 		);
 		assert.ok(erreicht, 'Touren-Einbettung von WeatherV2Reihenfolge nicht gefunden');
 		const quellen = ['metricSymbols', 'smsSymbols', 'sms_symbols'];
@@ -337,14 +406,16 @@ describe('AC-6: der Touren-Editor speist die Kurzform-Marke aus /api/sms-symbols
 // das Register-Kuerzel". Ein Test, der nur den zweiten prueft (erreicht die
 // Flaeche `sms_code`?), ist heute schon gruen — `compare_metric_catalog.py:309`
 // reicht das Feld seit #1453 durch — und kann die Umstellung nicht bewachen.
+//
+// Erkennungsmerkmal der Vergleichs-Uebersicht: LayoutTab context="vergleich".
+// Bis #1703 S8 stand hier `!attrs.has('offColumns')` — eine ABWESENHEIT, und
+// seit Scheibe 8 traegt auch die Vergleichs-Uebersicht `offColumns`, womit die
+// Bedingung auf GAR KEINE Einbettung mehr passte. Begruendung des neuen
+// Merkmals: Kommentar ueber layoutKontext().
 const VERGLEICHSFLAECHEN = [
-	[
-		'Vergleichs-Uebersicht',
-		'WeatherMetricsTab.svelte',
-		(attrs: Set<string>) => !attrs.has('offColumns')
-	],
-	['Vergleichs-Stundenverlauf', 'CompareHourlyLayoutControls.svelte', () => true],
-	['Vergleichs-Ausblick', 'CompareOutlookLayoutControls.svelte', () => true]
+	['Vergleichs-Uebersicht', 'WeatherMetricsTab.svelte', imKontext('vergleich')],
+	['Vergleichs-Stundenverlauf', 'CompareHourlyLayoutControls.svelte', dieEinzige],
+	['Vergleichs-Ausblick', 'CompareOutlookLayoutControls.svelte', dieEinzige]
 ] as const;
 
 describe('AC-7: die drei Vergleichs-Editoren tragen ebenfalls beide Marken', () => {
@@ -384,21 +455,12 @@ const REGISTER_QUELLE = 'sms_code';
  *  machte den Waechter darunter blind. */
 function kuerzelQuelle(
 	datei: string,
-	waehle: (attrs: Set<string>) => boolean
+	waehle: (eltern: Knoten[]) => boolean
 ): Set<string> | null {
 	const ast = parseComponent(join(SHARED, datei));
-	let ziel: Knoten | null = null;
-	walk(ast.fragment, (n) => {
-		if (n.type !== 'Component' || n.name !== 'WeatherV2Reihenfolge') return;
-		const attrNamen = new Set<string>(
-			(n.attributes ?? [])
-				.filter((a: Knoten) => a.type === 'Attribute')
-				.map((a: Knoten) => String(a.name))
-		);
-		if (waehle(attrNamen) && !ziel) ziel = n;
-	});
+	const ziel = findeEinbettung(ast, waehle);
 	if (!ziel) return null;
-	const attr = ((ziel as Knoten).attributes ?? []).find(
+	const attr = (ziel.attributes ?? []).find(
 		(a: Knoten) => a.type === 'Attribute' && a.name === 'kuerzelById'
 	);
 	if (!attr) return null;
@@ -416,9 +478,7 @@ function kuerzelQuelle(
 
 describe('AC-6/AC-7: die Kurzform-Marke wird je Flaeche aus der RICHTIGEN Quelle gespeist', () => {
 	test('Touren-Editor: aus /api/sms-symbols, NICHT aus dem Register', () => {
-		const quelle = kuerzelQuelle('WeatherMetricsTab.svelte', (attrs) =>
-			attrs.has('offColumns')
-		);
+		const quelle = kuerzelQuelle('WeatherMetricsTab.svelte', imKontext('route'));
 		assert.ok(quelle, 'AC-6 FAIL: die Touren-Einbettung uebergibt kein `kuerzelById`.');
 		assert.ok(
 			TRIP_QUELLEN.some((q) => quelle!.has(q)),
