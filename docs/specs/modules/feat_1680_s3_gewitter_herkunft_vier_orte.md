@@ -19,7 +19,7 @@ tags: [thunder, trip, compare, adr-0007, adr-0025, adr-0048, issue-1680, issue-1
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe „go" am 2026-08-13 auf die sechzehn Akzeptanzkriterien
 
 ## Purpose
 
