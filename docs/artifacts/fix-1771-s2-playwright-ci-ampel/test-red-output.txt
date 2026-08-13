@@ -1,0 +1,223 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 7 items
+
+tests/unit/test_e2e_ci_gate.py FFFFFFF                                   [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_alles_gruen_gibt_exit_0 _________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-23956/test_alles_gruen_gibt_exit_00')
+
+    def test_alles_gruen_gibt_exit_0(tmp_path):
+        """AC-4 Gegenprobe: alle drei Bedingungen erfuellt -> Exit 0.
+    
+        GIVEN ein Report mit `expected=55, unexpected=0, skipped=0` und `E2E_MIN_EXECUTED=50`
+        WHEN der Gate-Auswerter darauf laeuft
+        THEN meldet er Exit 0 -- keine roten Tests, kein Skip-Budget verbraucht, genug
+             ausgefuehrte Testfaelle.
+        """
+        report = _report(tmp_path, expected=55, unexpected=0, skipped=0)
+        r = _run_gate(report, min_executed=50)
+        ausgabe = _text(r)
+>       assert r.returncode == 0, f"Erwarteter Exit 0 bei allen drei Bedingungen erfuellt: {ausgabe}"
+E       AssertionError: Erwarteter Exit 0 bei allen drei Bedingungen erfuellt: /home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python'...laude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n").returncode
+
+tests/unit/test_e2e_ci_gate.py:84: AssertionError
+____________________ test_rote_tests_geben_exit_ungleich_0 _____________________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-23956/test_rote_tests_geben_exit_ung0')
+
+    def test_rote_tests_geben_exit_ungleich_0(tmp_path):
+        """Bedingung 1 (`unexpected == 0`): ein roter Testfall macht den Job rot.
+    
+        GIVEN ein Report mit `expected=55, unexpected=1, skipped=0`
+        WHEN der Gate-Auswerter darauf laeuft
+        THEN ist der Exit-Code != 0 und die Meldung nennt die roten Tests
+             (Zahl der `unexpected`-Faelle).
+        """
+        report = _report(tmp_path, expected=55, unexpected=1, skipped=0)
+        r = _run_gate(report, min_executed=50)
+        ausgabe = _text(r)
+        assert r.returncode != 0, f"Ein roter Testfall haette den Job rot machen muessen: {ausgabe}"
+>       assert "1" in ausgabe and (
+            "unexpected" in ausgabe.lower() or "rot" in ausgabe.lower()
+        ), f"Meldung nennt nicht die roten Tests: {ausgabe}"
+E       AssertionError: Meldung nennt nicht die roten Tests: /home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory
+E         
+E       assert ('1' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n" and ('unexpected' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n" or 'rot' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n"))
+E        +  where "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n" = <built-in method lower of str object at 0x747f692d6040>()
+E        +    where <built-in method lower of str object at 0x747f692d6040> = "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n".lower
+E        +  and   "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n" = <built-in method lower of str object at 0x747f692d6040>()
+E        +    where <built-in method lower of str object at 0x747f692d6040> = "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n".lower
+
+tests/unit/test_e2e_ci_gate.py:99: AssertionError
+_______________ test_uebersprungene_tests_geben_exit_ungleich_0 ________________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-23956/test_uebersprungene_tests_gebe0')
+
+    def test_uebersprungene_tests_geben_exit_ungleich_0(tmp_path):
+        """Bedingung 2 (`skipped == 0`): ein uebersprungener Testfall verbraucht das
+        Skip-Budget und macht den Job rot.
+    
+        GIVEN ein Report mit `expected=55, unexpected=0, skipped=1`
+        WHEN der Gate-Auswerter darauf laeuft
+        THEN ist der Exit-Code != 0 und die Meldung nennt das Skip-Budget
+             (bzw. die Zahl uebersprungener Tests).
+        """
+        report = _report(tmp_path, expected=55, unexpected=0, skipped=1)
+        r = _run_gate(report, min_executed=50)
+        ausgabe = _text(r)
+        assert r.returncode != 0, f"Ein uebersprungener Test haette den Job rot machen muessen: {ausgabe}"
+>       assert "1" in ausgabe and (
+            "skip" in ausgabe.lower() or "übersprung" in ausgabe.lower()
+            or "uebersprung" in ausgabe.lower()
+        ), f"Meldung nennt nicht das Skip-Budget: {ausgabe}"
+E       AssertionError: Meldung nennt nicht das Skip-Budget: /home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory
+E         
+E       assert ('1' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n" and ('skip' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n" or 'übersprung' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n" or 'uebersprung' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n"))
+E        +  where "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n" = <built-in method lower of str object at 0x747f692d63d0>()
+E        +    where <built-in method lower of str object at 0x747f692d63d0> = "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n".lower
+E        +  and   "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n" = <built-in method lower of str object at 0x747f692d63d0>()
+E        +    where <built-in method lower of str object at 0x747f692d63d0> = "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n".lower
+E        +  and   "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [errno 2] no such file or directory\n" = <built-in method lower of str object at 0x747f692d63d0>()
+E        +    where <built-in method lower of str object at 0x747f692d63d0> = "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n".lower
+
+tests/unit/test_e2e_ci_gate.py:117: AssertionError
+______________ test_null_ausgefuehrte_tests_geben_exit_ungleich_0 ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-23956/test_null_ausgefuehrte_tests_g0')
+
+    def test_null_ausgefuehrte_tests_geben_exit_ungleich_0(tmp_path):
+        """AC-4 Kerntest: null ausgefuehrte Tests sind KEIN Erfolg, auch wenn
+        `unexpected == 0` gilt.
+    
+        GIVEN ein Report mit `expected=0, unexpected=0, skipped=0` (Stack-Start oder
+              Seed ist fehlgeschlagen, kein einziger Test der Positivliste lief) und
+              `E2E_MIN_EXECUTED=50`
+        WHEN der Gate-Auswerter darauf laeuft
+        THEN ist der Exit-Code != 0 -- "0 Tests, 0 rot" ist kein Beleg, sondern ein Bericht
+             ueber gar nichts. Wuerde der Auswerter hier gruen melden, waere die zentrale
+             Zusicherung dieser Scheibe wirkungslos (Prueforten muss dem Wirkort entsprechen).
+        """
+        report = _report(tmp_path, expected=0, unexpected=0, skipped=0)
+        r = _run_gate(report, min_executed=50)
+        ausgabe = _text(r)
+        assert r.returncode != 0, (
+            f"Null ausgefuehrte Tests haetten NIEMALS gruen sein duerfen (AC-4): {ausgabe}"
+        )
+>       assert "0" in ausgabe and "50" in ausgabe, (
+            f"Meldung nennt weder die ausgefuehrte Zahl (0) noch die Schwelle (50) -- "
+            f"ein blosser Exit-Code != 0 belegt die Ursache noch nicht: {ausgabe}"
+        )
+E       AssertionError: Meldung nennt weder die ausgefuehrte Zahl (0) noch die Schwelle (50) -- ein blosser Exit-Code != 0 belegt die Ursache noch nicht: /home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory
+E         
+E       assert ('0' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n")
+
+tests/unit/test_e2e_ci_gate.py:141: AssertionError
+___________ test_zu_wenige_ausgefuehrte_tests_geben_exit_ungleich_0 ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-23956/test_zu_wenige_ausgefuehrte_te0')
+
+    def test_zu_wenige_ausgefuehrte_tests_geben_exit_ungleich_0(tmp_path):
+        """Bedingung 3 zaehlt ausgefuehrte TESTFAELLE, nicht Listen-DATEIEN.
+    
+        GIVEN ein Report mit `expected=11, unexpected=0, skipped=0` und
+              `E2E_MIN_EXECUTED=50`
+        WHEN der Gate-Auswerter darauf laeuft
+        THEN ist der Exit-Code != 0. Belegt: die Pruefung haengt an der Zahl
+             AUSGEFUEHRTER Testfaelle (`expected`) -- eine Verwechslung mit der Zahl der
+             Listen-Dateien (z.B. `E2E_MIN_SPECS=10`) waere hier faelschlich gruen
+             (11 >= 10), obwohl 39 von 50 erwarteten Testfaellen fehlen.
+        """
+        report = _report(tmp_path, expected=11, unexpected=0, skipped=0)
+        r = _run_gate(report, min_executed=50)
+        ausgabe = _text(r)
+        assert r.returncode != 0, (
+            f"11 von 50 erwarteten Testfaellen haetten NICHT gruen sein duerfen "
+            f"(Verwechslung mit Datei-Mindestzahl?): {ausgabe}"
+        )
+>       assert "11" in ausgabe and "50" in ausgabe, (
+            f"Meldung nennt weder die ausgefuehrte Zahl (11) noch die Schwelle (50) -- "
+            f"ein blosser Exit-Code != 0 belegt die Ursache noch nicht: {ausgabe}"
+        )
+E       AssertionError: Meldung nennt weder die ausgefuehrte Zahl (11) noch die Schwelle (50) -- ein blosser Exit-Code != 0 belegt die Ursache noch nicht: /home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory
+E         
+E       assert ('11' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n")
+
+tests/unit/test_e2e_ci_gate.py:165: AssertionError
+__________________ test_fehlender_report_gibt_exit_ungleich_0 __________________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-23956/test_fehlender_report_gibt_exi0')
+
+    def test_fehlender_report_gibt_exit_ungleich_0(tmp_path):
+        """Robustheit: fehlender Report -> Exit != 0 mit klarer Meldung, kein stiller
+        Durchlauf.
+    
+        GIVEN ein Pfad, unter dem KEINE JSON-Datei existiert
+        WHEN der Gate-Auswerter darauf laeuft
+        THEN ist der Exit-Code != 0 und die Ausgabe ist nicht leer -- ein fehlender Report
+             darf nie als "alles gut" durchgehen.
+        """
+        fehlender_report = tmp_path / "gibt-es-nicht.json"
+        assert not fehlender_report.exists()
+        r = _run_gate(fehlender_report, min_executed=50)
+        ausgabe = _text(r)
+        assert r.returncode != 0, f"Fehlender Report haette NIE Exit 0 ergeben duerfen: {ausgabe}"
+>       assert fehlender_report.name in ausgabe, (
+            f"Meldung nennt nicht den fehlenden Report-Pfad ({fehlender_report.name}) -- "
+            f"ein Fehler ueber irgendeine andere fehlende Datei ist kein Beleg, dass GENAU "
+            f"der Report als Ursache erkannt wurde: {ausgabe}"
+        )
+E       AssertionError: Meldung nennt nicht den fehlenden Report-Pfad (gibt-es-nicht.json) -- ein Fehler ueber irgendeine andere fehlende Datei ist kein Beleg, dass GENAU der Report als Ursache erkannt wurde: /home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory
+E         
+E       assert 'gibt-es-nicht.json' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n"
+E        +  where 'gibt-es-nicht.json' = PosixPath('/tmp/pytest-of-hem/pytest-23956/test_fehlender_report_gibt_exi0/gibt-es-nicht.json').name
+
+tests/unit/test_e2e_ci_gate.py:185: AssertionError
+__________________ test_kaputter_report_gibt_exit_ungleich_0 ___________________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-23956/test_kaputter_report_gibt_exit0')
+
+    def test_kaputter_report_gibt_exit_ungleich_0(tmp_path):
+        """Robustheit: kein gueltiges JSON -> Exit != 0, kein nackter Absturz.
+    
+        GIVEN eine Datei, deren Inhalt kein gueltiges JSON ist
+        WHEN der Gate-Auswerter darauf laeuft
+        THEN ist der Exit-Code != 0 und die Ausgabe ist eine erklaerende Meldung, nicht
+             ausschliesslich ein unbehandelter Python-Stacktrace.
+        """
+        kaputte_datei = tmp_path / "kaputt.json"
+        kaputte_datei.write_text("{das ist kein json", encoding="utf-8")
+        r = _run_gate(kaputte_datei, min_executed=50)
+        ausgabe = _text(r)
+        assert r.returncode != 0, f"Kaputtes JSON haette NIE Exit 0 ergeben duerfen: {ausgabe}"
+>       assert kaputte_datei.name in ausgabe, (
+            f"Meldung nennt nicht den kaputten Report-Pfad ({kaputte_datei.name}) -- ein "
+            f"unbehandelter Stacktrace an einer ganz anderen Stelle ist kein Beleg, dass "
+            f"GENAU das ungueltige JSON als Ursache erkannt wurde: {ausgabe}"
+        )
+E       AssertionError: Meldung nennt nicht den kaputten Report-Pfad (kaputt.json) -- ein unbehandelter Stacktrace an einer ganz anderen Stelle ist kein Beleg, dass GENAU das ungueltige JSON als Ursache erkannt wurde: /home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory
+E         
+E       assert 'kaputt.json' in "/home/hem/gregor_zwanzig/.claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.venv/bin/python: can't open file '/home...claude/worktrees/feat-1719-s2-kaskade-verfeinerung/.github/scripts/e2e_gate.py': [Errno 2] No such file or directory\n"
+E        +  where 'kaputt.json' = PosixPath('/tmp/pytest-of-hem/pytest-23956/test_kaputter_report_gibt_exit0/kaputt.json').name
+
+tests/unit/test_e2e_ci_gate.py:205: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_e2e_ci_gate.py::test_alles_gruen_gibt_exit_0 - Asserti...
+FAILED tests/unit/test_e2e_ci_gate.py::test_rote_tests_geben_exit_ungleich_0
+FAILED tests/unit/test_e2e_ci_gate.py::test_uebersprungene_tests_geben_exit_ungleich_0
+FAILED tests/unit/test_e2e_ci_gate.py::test_null_ausgefuehrte_tests_geben_exit_ungleich_0
+FAILED tests/unit/test_e2e_ci_gate.py::test_zu_wenige_ausgefuehrte_tests_geben_exit_ungleich_0
+FAILED tests/unit/test_e2e_ci_gate.py::test_fehlender_report_gibt_exit_ungleich_0
+FAILED tests/unit/test_e2e_ci_gate.py::test_kaputter_report_gibt_exit_ungleich_0
+============================== 7 failed in 0.40s ===============================

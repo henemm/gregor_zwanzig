@@ -17,10 +17,15 @@ export default defineConfig({
 	// Testfehlern/Abbrüchen) — löscht alle E2E-GZ--Präfix-Objekte.
 	globalTeardown: './e2e/global.teardown.ts',
 	timeout: 30_000,
+	// #1771 Scheibe 2: workers: 1 in CI -- Tests teilen dieselbe Datenwurzel
+	// und Seed-IDs (`e2e-loc-*`), Parallel-Laeufe wuerden sich stoeren.
+	workers: process.env.CI ? 1 : undefined,
 	retries: 0,
 	use: {
 		baseURL: 'http://localhost:4173',
 		headless: true,
+		// Diagnose im Runner; Artefakt nur bei Fehlschlag hochgeladen (ci.yml).
+		trace: process.env.CI ? 'retain-on-failure' : 'off',
 	},
 	projects: [
 		{
@@ -39,7 +44,8 @@ export default defineConfig({
 	webServer: {
 		command: 'bash e2e/start-preview.sh',
 		port: 4173,
-		reuseExistingServer: true,
+		// CI-Runner ist pro Lauf frisch -- kein Alt-Prozess zum Wiederverwenden.
+		reuseExistingServer: !process.env.CI,
 		timeout: 120_000,
 	},
 });
