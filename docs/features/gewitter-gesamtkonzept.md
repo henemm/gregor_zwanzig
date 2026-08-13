@@ -373,6 +373,22 @@ nebeneinanderzustellen, die vergleichbar aussehen und es nicht sind.
 
 ✅ **Scheibe 1 live seit 2026-08-12** (#1680, Spec `feat_1680_s1_gewitter_herkunft_ortsvergleich.md`).
 Umgesetzt ist der **Ortsvergleich**: die Stufe trägt dort einen Zusatz wie `leicht · CAPE`.
+
+✅ **Scheibe 2 live seit 2026-08-12** (#1680, Spec `feat_1680_s2_gewitter_herkunft_trip.md`,
+PR #1797). Umgesetzt sind zwei **Trip**-Ausgabeorte: die Kurzzusammenfassung der Trip-Mail
+(`⚡ möglich 13:00–19:00 · CAPE`) und die Antwort auf das GEWITTER-Kommando
+(`⛈ Gewitter heute (12.08): leicht · CAPE`). Getragen von **einem** geteilten Helfer
+`union_of_max_carriers()` (`src/output/metric_format.py`, Vorbild `hail_priority()`), weil
+die Trip-Seite **drei** unabhängige Aggregationswege hat, die die Tagesstufe je selbst rechnen
+— ohne den Helfer entstünden Kopien derselben Regel (#1480). Der dritte Weg
+(`aggregate_stage()`, Etappen-Ebene) blieb bewusst unangeschlossen: beide Ausgabeorte umgehen
+ihn strukturell, ein Dispatch-Zweig hätte dort keinen Verbraucher. Er gehört in die Scheibe
+mit dem Mehrtages-Ausblick, wo `trip_report_scheduler.py:2020` der erste echte Verbraucher ist.
+
+**Noch offen (Ticket #1680 bleibt offen):** Mehrtages-Ausblick, Pill im Metriken-Überblick,
+Gewitter-Vorschau, Kommando-Timeline je Wegpunkt, Trip- und Compare-Stundentabelle, Go-DTO,
+Frontend.
+
 Drei Festlegungen, die aus der Umsetzung stammen und hier nicht überlesen werden dürfen:
 
 - **Genannt werden ALLE tragenden Zutaten, nicht die eine „auslösende"** (PO-Auslegung (ii)).
@@ -806,7 +822,7 @@ Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
 | **1** | ✅ **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg | ✅ **erledigt** (2026-08-11, live) |
 | **2** | ✅ **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ **erledigt** — LPI-Teil **#1679** (adversary-VERIFIED); CAPE-Ladder + CIN-Paarung ebenfalls **#1679** (`feat_1679_cin_paarung_cape_leiter.md`, 2026-08-11, adversary-VERIFIED für AC-3/AC-5 mit Mutationsprobe, restliche ACs durch 24 RED-Tests grün) |
 | **3** | ~~Gleiche Statistik: `lpi_max` statt `lpi` gegen `lpi_con_max`~~ | War als Weg gedacht, den Gebietsbruch ohne Kalibrierung zu verkleinern | 🟡 **überholt** (2026-08-11): `lpi_max` wird seit #1531 abgerufen, aber NIE in der Fusion gelesen (`metric_format.py` liest weiterhin `lightning_potential_lpi_jkg`). #1679 hat den Gebietsbruch stattdessen über gebietsabhängige Schwellentabellen gelöst (1/30/50 für DE_ALPEN, kalibriert auf den Momentanwert `lpi`) — ein nachträglicher Wechsel auf `lpi_max` liefe dort gegen die falsche Statistik. Kein offener Arbeitsauftrag mehr, nur diese Zeile war stehen geblieben. |
-| **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | 🟡 **Scheibe 1 live seit 2026-08-12** (Ortsvergleich, PR #1780) — Rest offen, Ticket **#1680** bleibt offen für die Trip-Seite. Hier stand bis 2026-08-10 fälschlich „✅ E1": das markierte nur die Entscheidung, nicht die Umsetzung |
+| **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | 🟡 **Scheiben 1 und 2 live seit 2026-08-12** — Ortsvergleich (PR #1780) und zwei Trip-Ausgabeorte, Kurzzusammenfassung + GEWITTER-Kommando (PR #1797). Ticket **#1680** bleibt offen für Mehrtages-Ausblick, Pill, Gewitter-Vorschau, Stundentabellen, Go-DTO und Frontend. Hier stand bis 2026-08-10 fälschlich „✅ E1": das markierte nur die Entscheidung, nicht die Umsetzung |
 | **5** | ✅ **CAPE unsichtbar gemacht** (`selectable=False`, **#1585**) | **Umgesetzt und live** (2026-08-10): CAPE (`cape_jkg`) ist an jeder Nutzerkontakt-Stelle unsichtbar (Trip-Editor, E-Mail, SMS, Ortsvergleich inkl. Alt-Vergleich, Aktivitäts-Vorlagen, Wertebereichs-Korridor, jede Alarmwirkung inkl. #1592 Delta-Alarm) und bleibt ausschließlich interne Zutat der Fusion. Adversary-VERIFIED | ✅ erledigt |
 | **6** | **Radar hebt die Stufe an** | Beseitigt den Widerspruch aus Abschnitt 5 | ✅ E3 |
 | **7** | **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max`, kalibriert auf gleiche Überschreitungshäufigkeit | Sofort rechenbar über die Historical Forecast API (4.4) — unabhängig von #1531 | 🔴 offen, Ticket **#1678** |
