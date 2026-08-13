@@ -73,6 +73,9 @@ function createTestInstance(): SaveStatus {
 	internals._timer = null;
 	internals._pendingFn = null;
 	internals._inflight = null;
+	// Issue #1703 S8: Merker des letzten gescheiterten Speicherversuchs — auch ein
+	// Konstruktor-Feld (`= null`).
+	internals._unresolvedError = null;
 	return inst;
 }
 
@@ -143,6 +146,90 @@ describe('AC-2 (RED, Issue #1269 (b)): markPristine() geht dirty→idle OHNE sav
 			'function',
 			'SaveStatus.prototype.markPristine muss als parameterlose Methode existieren'
 		);
+	});
+});
+
+// Issue #1703 Scheibe 8 — Staging-Verdict BROKEN (Klickpfad
+// compare-uebersicht-kanal-persistenz.staging.spec.ts, Test "Rollback"):
+// nach einem PUT mit HTTP 500 zeigte der Indikator "Gespeichert" statt "Fehler".
+//
+// Ursache: EINE Geste löst im Vergleichs-Hub ZWEI Commits aus (direkter
+// `onCompareCommit` aus WeatherMetricsTab.editCompareChannel + das
+// Wrapper-Ereignis `.hub-wetter-metriken-wrap` in CompareTabs.svelte). Der erste
+// fängt den 500, rollt die Daten zurück und ruft setError(). Der zweite findet
+// nach dem Rollback keinen Diff mehr, schickt keinen PUT — und landete in
+// markPristine(), das den Fehler überschrieb.
+//
+// Geprüft wird hier der WIRKORT des Fixes: die Zustandsmaschine selbst. Beide
+// Reihenfolgen (mit und ohne zwischenzeitliches setSaving() des zweiten
+// Commits) müssen im Fehlerzustand enden.
+describe('Issue #1703 S8: ein folgenloser zweiter Commit darf einen gescheiterten Speichervorgang nicht in "Gespeichert" umdeuten', () => {
+	test('setError() → markPristine(): Zustand UND Meldung bleiben stehen', () => {
+		const c = createTestInstance();
+		c.setSaved();
+
+		c.setError('E2E-Simulation');
+		c.markPristine();
+
+		assert.equal(
+			c.state,
+			'error',
+			'markPristine() darf einen offenen Fehlschlag nicht auf idle setzen — der Nutzer läse "Gespeichert", ' +
+				'obwohl der PUT scheiterte'
+		);
+		assert.equal(c.error, 'E2E-Simulation', 'die Fehlermeldung muss erhalten bleiben');
+	});
+
+	test('setError() → setSaving() (zweiter Commit) → markPristine(): endet trotzdem im Fehlerzustand', () => {
+		const c = createTestInstance();
+
+		c.setError('E2E-Simulation');
+		// Genau die Reihenfolge des zweiten Commits: er meldet zuerst "Speichere …"
+		// (setSaving leert `error`) und stellt erst danach fest, dass es nichts zu
+		// senden gibt. Ein bloßer `state === 'error'`-Riegel in markPristine()
+		// würde hier NICHT greifen.
+		c.setSaving();
+		c.markPristine();
+
+		assert.equal(c.state, 'error', 'der Fehlschlag ist unbeantwortet — der Indikator muss ihn weiter zeigen');
+		assert.equal(c.error, 'E2E-Simulation', 'die Fehlermeldung muss wiederhergestellt sein');
+	});
+
+	test('echter doSave()-Fehlschlag → markPristine(): bleibt Fehler (Fehlerweg über den Produktionspfad)', async () => {
+		const c = createTestInstance();
+
+		await c.doSave(async () => {
+			throw { detail: 'E2E-Simulation' };
+		});
+		assert.equal(c.state, 'error', 'Vorbedingung: doSave() muss den Fehlschlag in den Fehlerzustand führen');
+
+		c.markPristine();
+
+		assert.equal(c.state, 'error');
+		assert.equal(c.error, 'E2E-Simulation');
+	});
+
+	test('nach einem ECHTEN Erfolg löst sich die Sperre wieder: setSaved() → setSaving() → markPristine() geht auf idle', async () => {
+		const c = createTestInstance();
+		c.setError('E2E-Simulation');
+
+		// Ein späterer, erfolgreicher Speichervorgang beantwortet den Fehlschlag.
+		await c.doSave(async () => {
+			/* echter Erfolgspfad */
+		});
+		assert.equal(c.state, 'idle');
+
+		// Danach ist ein folgenloser Commit wieder ein ganz normaler No-Op.
+		c.setSaving();
+		c.markPristine();
+
+		assert.equal(
+			c.state,
+			'idle',
+			'ohne offenen Fehlschlag muss markPristine() unverändert auf idle gehen — sonst bliebe der Editor ' +
+				'für immer im Fehlerzustand hängen'
+		);
+		assert.equal(c.error, null, 'die alte Meldung darf nach dem Erfolg nicht wieder auftauchen');
 	});
 });
 
