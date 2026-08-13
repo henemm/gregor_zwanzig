@@ -10,42 +10,10 @@
 // Ausführen:
 //   cd frontend && npx playwright test e2e/layout-tab-route.spec.ts
 
-import { test, expect, type Locator, type Page } from '@playwright/test';
-import { login } from './helpers.js';
-
-// Pointer-basierte Drag-Simulation. Seit Issue #1272 sortiert die
-// Reihenfolge-Liste ueber `svelte-dnd-action` (geteilter SortableList,
-// ADR-0024) statt ueber das native HTML5-Drag-API: die Bibliothek schaltet
-// natives Drag bewusst ab (`draggableEl.draggable = false`) und hoert nur auf
-// Pointer-Events mit 3px-Schwelle — Playwrights `locator.dragTo()` erzeugt nur
-// EINEN Move-Schritt und reisst diese Schwelle nicht.
-// Muster uebernommen aus compare-hub-inline-edit.spec.ts:22-38.
-async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
-	// Erst in den sichtbaren Bereich scrollen, DANN die Koordinaten lesen.
-	// `boundingBox()` scrollt selbst nicht (playwright-core/lib/server/dom.js:677) und
-	// liefert fuer Zeilen unterhalb des Viewports Koordinaten ausserhalb des Fensters —
-	// die Maus-Sequenz landet dann im Leeren und der Drag passiert nie. Playwrights
-	// `dragTo()`, das hier vorher stand, scrollte implizit mit; die Pointer-Simulation
-	// muss es explizit tun. Ein echter Nutzer scrollt die Zeile ebenfalls erst ins Bild.
-	await source.scrollIntoViewIfNeeded();
-	await target.scrollIntoViewIfNeeded();
-
-	const sourceBox = await source.boundingBox();
-	const targetBox = await target.boundingBox();
-	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
-
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
-	await page.mouse.down();
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 - 12, {
-		steps: 6
-	});
-	await page.waitForTimeout(120);
-	await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
-		steps: 15
-	});
-	await page.waitForTimeout(120);
-	await page.mouse.up();
-}
+import { test, expect, type Page } from '@playwright/test';
+// `dragDndZoneItem` ist seit #1771 S1 geteilt (war hier lokal kopiert) und
+// wartet auf das echte `finalize`-Ereignis statt auf eine feste Frist.
+import { login, dragDndZoneItem } from './helpers.js';
 
 const TRIP_ID = 'e2e-layout-tab-route';
 const OVERFLOW_TRIP_ID = 'e2e-layout-tab-route-overflow';
@@ -121,6 +89,10 @@ async function createTrip(
 
 async function openMetricsTab(page: Page, id: string) {
 	await page.goto(`/trips/${id}?tab=weather`);
+	// SvelteKit liefert die Tab-Leiste server-gerendert VOR der Hydration aus —
+	// ein Klick, der vor dem Attachen der Event-Listener ankommt, geht spurlos
+	// verloren (#1771; Muster aus compare-hub-inline-edit.spec.ts).
+	await page.waitForLoadState('networkidle');
 	const weatherTabBtn = page.getByTestId('trip-detail-tab-weather');
 	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
 	await weatherTabBtn.click();
