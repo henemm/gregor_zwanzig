@@ -10,6 +10,31 @@ beantwortet nur "und HIER, jetzt?".
 gemeldet hat (`workflow.py finish`) und in genau diesem Tab weitergemacht werden soll.
 Nicht automatisch.
 
+## Schritt 0: Kurzzeit-Cache prüfen — Pflicht vor jedem teuren Schritt
+
+Zwei Aufrufe kurz hintereinander (selbe Sitzung ohne `/clear`, oder ein zweiter Aufruf
+innerhalb weniger Minuten) dürfen NICHT zweimal denselben vollen Backlog neu einlesen und
+neu bewerten:
+
+- **Innerhalb derselben Sitzung:** Stehen Ergebnisse aus Schritt 2/3 bereits im
+  Gesprächsverlauf dieser Sitzung (kein `/clear` dazwischen, keine `workflow.py finish`
+  seither), diese direkt wiederverwenden statt die Befehle erneut auszuführen.
+- **Über Sitzungsstarts hinweg (Cache-Datei):** `.claude/next_ticket_cache.json`
+  (worktree-lokal, gitignored) prüfen. Ist die Datei jünger als 5 Minuten:
+  ```bash
+  gh issue list --repo henemm/gregor_zwanzig --state open --json number,updatedAt --limit 300 \
+    | sha256sum
+  ```
+  Stimmt diese Kurz-Prüfsumme (billig: keine Issue-Bodies) mit der im Cache hinterlegten
+  überein, ist der Backlog seit dem Cache-Schreiben unverändert — die zwischengespeicherte
+  Analyse aus Schritt 3 direkt weiterverwenden, Schritt 3 nicht erneut ausführen. Weicht sie
+  ab oder ist die Datei älter als 5 Minuten oder fehlt: normal weiter mit Schritt 1, und am
+  Ende von Schritt 3 die neue Prüfsumme + die daraus abgeleitete Analyse in die Cache-Datei
+  schreiben (überschreiben, keine Historie).
+- Der Belegt-Check aus Schritt 2 (Ausschlussliste anderer Tabs) wird von diesem Cache NICHT
+  erfasst — der ist lokal/kostenlos (kein `gh`-Aufruf, reine Dateisystem-/Git-Befehle) und
+  läuft bei jedem Aufruf frisch, weil er sich schneller ändert als der Backlog selbst.
+
 ## Schritt 1: Diesen Tab identifizieren
 
 ```bash
@@ -103,6 +128,12 @@ Ausgabe NUR im Chat dieser Session, kein Artifact, kein Dashboard:
 - Keine Tab-Buchstaben, keine Nachrücker-Liste für andere Tabs — das bleibt `/radar`s
   Aufgabe. Wenn der Gesamtüberblick über alle Fenster gefragt ist, `/radar` vorschlagen
   statt hier nachzubauen.
+- **VERBOTEN: unaufgefordert erklären, was NICHT vorgeschlagen wurde und warum.** Weder
+  "thematisch naheliegende, aber ausgeschlossene" Kandidaten noch die Rechercheschritte
+  dahinter gehören in die Standardausgabe — das ist Prozess-Transparenz, die niemand
+  angefordert hat, kein Teil der Antwort. Die Recherche (Schritt 2/3) bleibt vollständig
+  Voraussetzung für die Empfehlung, taucht aber nicht im sichtbaren Ergebnis auf. Fragt der
+  User gezielt nach ("warum nicht #N?"), das im Chat beantworten — nicht proaktiv voranstellen.
 
 ## Nicht vergessen
 
