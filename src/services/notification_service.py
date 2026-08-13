@@ -420,6 +420,11 @@ class NotificationService:
         # Unmoeglichkeit. Bewacht wird er am erzeugten Text (Spec AC-8:
         # `sms_text` nicht-leer UND ohne jede Zutat-Bezeichnung), nicht durch
         # die Annahme, er sei unerreichbar.
+        # Issue #1680 S3 (Nachtrag, weiterhin keine Logikaenderung): seit
+        # dieser Scheibe tragen AUCH die Gewitter-Pille des Metriken-
+        # Ueberblicks und die GLANCE-Tageszeile eine Herkunft, die in
+        # `email_plain` landet -- der Rueckfall unten ist damit derselbe
+        # Weg fuer mehr Inhalt, nicht fuer einen neuen.
         telegram_fully_sent = True
         if request.send_sms and self._settings.can_send_sms():
             try:

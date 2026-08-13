@@ -327,9 +327,19 @@ def render_comparison_text(
                     # Compare-Stundentabelle): Hagel als Text-Anhang, wie in
                     # der HTML-Fassung -- nie als Ring (das ist nur Trip).
                     if m["fmt"] is _fmt_thunder:
+                        # Issue #1680 S3 (Spec D4): die Herkunft der Stufe
+                        # DIESER Stunde, wie in der HTML-Fassung -- HTML und
+                        # Klartext derselben Mail haben zwei unabhaengige
+                        # Aufrufstellen und duerfen nicht auseinanderlaufen
+                        # (AC-4). Stufe und Traeger stammen aus DEMSELBEN `dp`.
+                        # KANAL: die Compare-SMS erreicht diese Schleife nie --
+                        # sie baut ihre Zelle ueber `_sms_metric_cell()` ->
+                        # `_fmt_overview_cell(..., include_origin=False)`
+                        # (PO-Entscheidung, dort aktiv abgewaehlt).
                         text = m["fmt"](
                             getattr(dp, m["key"], None),
                             getattr(dp, "hail_flag", None),
+                            getattr(dp, "thunder_level_signals", None),
                         )
                     else:
                         text = m["fmt"](getattr(dp, m["key"], None))

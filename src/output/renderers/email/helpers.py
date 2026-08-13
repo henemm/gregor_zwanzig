@@ -1740,16 +1740,38 @@ def _pill_for_metric(
         # zeichengleich zum bisherigen Stand (kein Rauschen, Spec AC-5).
         # Call-time-Import auf den EINEN geteilten Textbaustein (#1481 DRY) --
         # denselben, den `_fmt_gewitter()` nutzt.
-        from output.metric_format import format_hail_note, hail_priority
+        from output.metric_format import (
+            format_hail_note, hail_priority, thunder_signal_label,
+            union_of_max_carriers,
+        )
         _hail_note = format_hail_note(
             hail_priority([getattr(dp, "hail_flag", None) for dp in all_dps])
         )
         _hail_suffix = f" · {_hail_note}" if _hail_note else ""
+        # Issue #1680 S3 (Spec D1): die tragende(n) Zutat(en) DERSELBEN
+        # Tagesfenster-Liste, aus der oben `max_lvl` entstand -- Stufe und
+        # Herkunft aus EINER Rechnung, ohne zweiten Datenzugriff (AC-8). Der
+        # geteilte Helfer statt einer weiteren Eigenimplementierung derselben
+        # Vereinigungsregel (#1480); er garantiert selbst, dass die Stufe
+        # `NONE` auf `None` fuehrt ("kein Gewitter" hat keine Herkunft).
+        # KANAL (PO-Entscheidung, aktiv abgewaehlt -- kein vergessener
+        # Anschluss): die Pille erreicht ausschliesslich E-Mail
+        # (`plain.py:205`, `html.py:1432`, `compact.py:176`). SMS und
+        # Premium-SMS bauen ihren Text ueber `SMSTripFormatter`
+        # (`trip_report.py:441`) und sehen diese Zeichen nie; der Rueckfall
+        # `sms_text or email_plain` (`notification_service.py:428`/`446`)
+        # bleibt der einzige theoretische Weg und ist per AC-13 bewacht.
+        _traeger = union_of_max_carriers(
+            [(dp.thunder_level, getattr(dp, "thunder_level_signals", None))
+             for dp in all_dps]
+        )
+        _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
+        _origin_suffix = f" · {_herkunft}" if _herkunft else ""
         if first_thunder_ts is not None:
             first_hh = local_hour(first_thunder_ts, tz)
             peak_hh = local_hour(peak_ts or first_thunder_ts, tz)
             return (f"Gewitter ab {first_hh:02d}:00 · stärkste {peak_hh:02d}:00"
-                    f"{_hail_suffix}", "ampel_red")
+                    f"{_origin_suffix}{_hail_suffix}", "ampel_red")
         # Issue #1331: Ziel-Datenluecke (Ankunft->19 Uhr unbeobachtet) darf
         # keine positive Entwarnung "kein Gewitter" vortaeuschen.
         if has_gap:

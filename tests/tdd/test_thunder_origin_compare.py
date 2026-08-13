@@ -33,8 +33,10 @@ from providers.thunder_enrichment import _fuse_thunder_levels  # noqa: E402
 from providers.thunder_routing import thunder_region_for  # noqa: E402
 
 # Die vier Zutaten der Fusion (metric_format.thunder_level_from_signals) in
-# ihrer deutschen Beschriftung -- KEINE davon darf im SMS-Kanal oder in einer
-# Stundentabelle auftauchen (AC-5, AC-11).
+# ihrer deutschen Beschriftung -- KEINE davon darf im SMS-Kanal auftauchen
+# (AC-5). Die frueher hier ebenfalls genannte Compare-Stundentabelle (AC-11)
+# zeigt die Herkunft seit Issue #1680 Scheibe 3 sehr wohl -- s. den Docstring
+# von ``test_ac11_trip_stundenzelle_bleibt_ohne_herkunft``.
 ALLE_ZUTATEN = ("Wettercode", "Blitzdichte", "CAPE", "Blitzpotenzial")
 
 _TD = re.compile(r"<td[^>]*>(.*?)</td>", re.S)
@@ -246,22 +248,36 @@ def test_ac10_tagesmaximum_vereinigt_die_zutaten_mehrerer_stunden():
         f"Hoechststufe vereinigen: {_html_zellen(html)[0]!r}")
 
 
-def test_ac11_stundentabellen_bleiben_ohne_herkunft():
-    """AC-11: Given diese Scheibe aendert nur die Ortsvergleich-Tagesuebersicht,
-    When Mail und Trip-Stundenzelle gerendert werden, Then traegt keine
-    Stundentabelle einen Herkunfts-Zusatz -- waehrend die Uebersicht derselben
-    Mail ihn zeigt (Gegenprobe)."""
+def test_ac11_trip_stundenzelle_bleibt_ohne_herkunft():
+    """AC-11 (Trip-Haelfte, weiterhin gueltig): Given diese Scheibe aendert
+    nur die Ortsvergleich-Tagesuebersicht, When die Gewitterzelle der
+    TRIP-Stundentabelle gerendert wird, Then bleibt sie zeichengleich -- kein
+    Herkunfts-Zusatz auf der Trip-Seite.
+
+    Gegenprobe im selben Lauf: die Ortsvergleich-Uebersicht derselben Fixture
+    zeigt die Herkunft sehr wohl -- ohne sie waere die zugesicherte
+    ABWESENHEIT auch dann gruen, wenn die Herkunft nirgends erschiene.
+
+    🔴 Die ZWEITE Haelfte dieses AC ist abgeloest (PO-Entscheid 2026-08-13,
+    Issue #1680 Scheibe 3). Hier stand bis dahin die Zusicherung, dass keine
+    der vier Zutaten im Stundenabschnitt der Vergleichsmail (HTML UND
+    Klartext) auftaucht. Die Compare-Stundentabelle zeigt die Herkunft ab
+    Scheibe 3 SEHR WOHL; die Zusicherung ist damit veraltetes Verhalten und
+    ersatzlos entfallen -- nicht bloss umgedreht, sonst stuende dieselbe
+    Aussage doppelt in zwei Dateien. Den neuen Sollzustand bewacht
+    ``test_thunder_origin_four_places.py``, dort
+    ``test_ac4_stundentabelle_nennt_die_zutat_in_html_und_klartext`` und
+    ``test_ac9_jede_stundenzeile_zeigt_nur_die_zutat_ihres_datenpunkts``.
+    Die TRIP-Stundentabelle bleibt auch in Scheibe 3 ausdruecklich aussen vor
+    (dortige Spec, Abschnitt "Nicht in dieser Scheibe") -- deshalb bleibt
+    diese Haelfte stehen.
+    """
     from output.renderers.email.helpers import fmt_val
 
-    html, text = _mail(*_alpen_und_korsika(), stunden=True)
+    html, _ = _mail(*_alpen_und_korsika())
     assert _html_zellen(html)[0] == "hoch · CAPE", (
         f"Gegenprobe gescheitert: die Tagesuebersicht MUSS die Herkunft "
         f"zeigen: {_html_zellen(html)[0]!r}")
-    for abschnitt in (html.split("STUNDEN", 1)[1], text.split("STUNDENVERLAUF", 1)[1]):
-        for zutat in ALLE_ZUTATEN:
-            assert zutat not in abschnitt, (
-                f"Die Compare-Stundentabelle bleibt in dieser Scheibe "
-                f"unveraendert -- '{zutat}' darf dort nicht auftauchen.")
     assert fmt_val("thunder", ThunderLevel.HIGH, row={"_hail_flag": None}) == "hoch", (
         "Die Gewitterzelle der TRIP-Stundentabelle (email/helpers.fmt_val) "
         "bleibt zeichengleich -- kein Herkunfts-Zusatz auf der Trip-Seite.")
