@@ -829,8 +829,11 @@ class TripCommandProcessor:
         # tragen -- ueber DIESELBE, nach `target_date` gefilterte Wegpunkt-
         # liste (Stufe und Herkunft aus EINER Rechnung, Spec D6). Der geteilte
         # Helfer statt einer dritten Eigenimplementierung derselben Regel
-        # (#1480). Nur `_fmt_gewitter()` liest den Schluessel; `_fmt_day_agg()`
-        # /GLANCE bleibt bewusst zeichengleich (Spec D3, Known Limitation 4).
+        # (#1480). Issue #1680 S3: `_fmt_day_agg()`/GLANCE liest den Schluessel
+        # jetzt EBENFALLS (Spec D3) -- der Scheibe-2-Entscheid "GLANCE bleibt
+        # bewusst zeichengleich" (dortige D3, Known Limitation 4) ist mit
+        # PO-Entscheid vom 2026-08-13 abgeloest. Verbraucher sind damit
+        # `_fmt_gewitter()` UND `_fmt_day_agg()`.
         from output.metric_format import union_of_max_carriers
         thunder_signals = union_of_max_carriers(
             [(p.metrics.thunder_level_max,
@@ -847,6 +850,22 @@ class TripCommandProcessor:
         t_min = f"{agg['temp_min']:.0f}" if agg['temp_min'] is not None else "?"
         wind = f"{agg['wind_max']:.0f}" if agg['wind_max'] is not None else "?"
         thunder_label = _THUNDER_LABEL.get(agg['thunder'].value if agg['thunder'] else "NONE", "?")
+        # Issue #1680 S3 (Spec D3, abgeloeste Entscheidung): die tragende(n)
+        # Zutat(en) der oben gezeigten Tagesstufe -- aus DEMSELBEN Aggregat,
+        # das auch `agg['thunder']` traegt (`_aggregate_day()`, EINE Rechnung
+        # ueber die nach `target_date` gefilterte Wegpunktliste, AC-11). Ohne
+        # Traeger (kein Gewitter, Alt-Schnappschuss ohne das Feld) bleibt die
+        # Zeile zeichengleich zu bisher (AC-16). Denselben Schluessel und
+        # denselben Textbaustein nutzt `_fmt_gewitter()` -- keine zweite
+        # Formulierung. KANAL: GLANCE erreicht ausschliesslich E-Mail und
+        # Telegram (`InboundMessage` hat genau diese zwei Erzeuger); einen
+        # SMS-/Premium-SMS-Kommandopfad gibt es nicht, die PO-Abwahl "SMS ohne
+        # Herkunft" greift hier strukturell.
+        from output.metric_format import thunder_signal_label
+        _traeger = agg.get("thunder_signals")
+        _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
+        if _herkunft:
+            thunder_label = f"{thunder_label} · {_herkunft}"
         precip = f"{agg['precip']:.1f}" if agg.get('precip') else "0.0"
         return (
             f"{label}: 🌡 {t_min}–{t_max}°C  💨 {wind} km/h  "
@@ -932,6 +951,22 @@ class TripCommandProcessor:
             precip = f"{m.precip_sum_mm:.1f}" if m.precip_sum_mm is not None else "0.0"
             thunder = m.thunder_level_max
             t_label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
+            # Issue #1680 S3 (Spec D2): die tragende(n) Zutat(en) DIESES
+            # Wegpunkts -- `thunder_level_max` UND `thunder_level_max_signals`
+            # stammen aus DEMSELBEN `m` (`SegmentWeatherSummary`, von
+            # `compute_basis_metrics()` fuer genau dieses eine Segment
+            # gerechnet). Die Liste wird PRO Wegpunkt in der Schleife gelesen,
+            # nie einmal ausserhalb -- sonst zeigte jede Zeile dieselbe,
+            # globale Herkunft (AC-10). `getattr`, weil ein Alt-Schnappschuss
+            # vor Scheibe 1/2 das Feld nicht kennt (AC-15): dann bleibt die
+            # Zeile zeichengleich, ohne "unbekannt" und ohne leeren Trenner.
+            # KANAL: die Timeline erreicht nur E-Mail und Telegram (s. Hinweis
+            # in `_fmt_day_agg()`), SMS/Premium-SMS haben keinen Kommandopfad.
+            from output.metric_format import thunder_signal_label
+            _traeger = getattr(m, "thunder_level_max_signals", None)
+            _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
+            if _herkunft:
+                t_label = f"{t_label} · {_herkunft}"
             lines.append(
                 f"   🌡 {t_min}–{t_max} °C  💨 {wind} km/h  "
                 f"🌧 {precip} mm  ⛈ {t_label}"

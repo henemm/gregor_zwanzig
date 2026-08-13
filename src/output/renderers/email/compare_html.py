@@ -214,10 +214,19 @@ def _fmt_thunder(
 
     Issue #1680 S1: ``signals`` (die tragenden Zutaten der Stufe) ist aus
     demselben Grund ein DRITTER Parameter mit Default ``None`` und steht VOR
-    dem Hagel-Hinweis. 🔴 Der Zusatz gehoert bewusst NICHT in den Rumpf: diese
-    Funktion speist ueber ``_HOUR_FMT_OVERRIDES["thunder"]`` AUCH die
-    Compare-Stundentabelle, die in dieser Scheibe unveraendert bleibt (AC-11)
-    -- sie ruft ohne dritten Parameter und bleibt damit zeichengleich.
+    dem Hagel-Hinweis. 🔴 Der Zusatz gehoert weiterhin bewusst NICHT in den
+    Rumpf, sondern bleibt an der AUFRUFSTELLE: diese Funktion speist ueber
+    ``_HOUR_FMT_OVERRIDES["thunder"]`` AUCH die Compare-Stundentabelle, und
+    jede Stundenzeile muss die Zutat IHRES EIGENEN Datenpunkts nennen (S3
+    AC-9) -- ein Rumpf-Zusatz koennte das gar nicht unterscheiden und wuerde
+    zugleich die Uebersichtszeile mitveraendern (S3 AC-14).
+
+    Issue #1680 S3: die Compare-Stundentabelle uebergibt den dritten Parameter
+    ab jetzt (``_render_hour_row()`` unten, Klartext-Pendant
+    ``comparison.render_comparison_text()``). Der Scheibe-1-Entscheid "die
+    Stundentabelle bleibt unveraendert" (dortiges AC-11) ist mit PO-Entscheid
+    vom 2026-08-13 abgeloest -- der Satz oben stand bis dahin hier und
+    behauptete das Gegenteil des heutigen Codes.
     """
     if v is None:
         return "—"
@@ -980,7 +989,19 @@ def _render_hour_row(
         # (das ist ausschliesslich die Trip-Stundentabelle, Punkt 2). `dp` ist
         # hier bereits im Scope, analog zum Windrichtungs-Muster unten.
         if m["fmt"] is _fmt_thunder:
-            text = m["fmt"](value, getattr(dp, "hail_flag", None))
+            # Issue #1680 S3 (Spec D4): die Herkunft der Stufe DIESER Stunde --
+            # `value` (`dp.thunder_level`) und `dp.thunder_level_signals`
+            # stammen aus DEMSELBEN Datenpunkt, kein zweiter Rechenweg (AC-9).
+            # Die Uebergabe sitzt hier an der Aufrufstelle, NICHT im Rumpf von
+            # `_fmt_thunder()` -- der speist auch die Uebersichtszeile, die
+            # zeichengleich bleiben muss (AC-14). `getattr`, weil Alt-Daten
+            # ohne das Feld die Zelle unveraendert lassen sollen.
+            # KANAL: die Compare-SMS baut ihre Zelle ueber
+            # `comparison._sms_metric_cell()` -> `_fmt_overview_cell(...,
+            # include_origin=False)` und erreicht diese Aufrufstelle nie
+            # (PO-Entscheidung, aktiv abgewaehlt -- s. dortigen Kommentar).
+            text = m["fmt"](value, getattr(dp, "hail_flag", None),
+                            getattr(dp, "thunder_level_signals", None))
         else:
             text = m["fmt"](value)
         # Issue #1335 Scheibe 1 (AC-3): Windrichtung als Kompass-Text an die

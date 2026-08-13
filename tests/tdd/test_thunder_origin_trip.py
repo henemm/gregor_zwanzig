@@ -403,9 +403,10 @@ def test_ac9_alt_schnappschuss_zeigt_die_stufe_ohne_herkunft(kommando):
 
 
 def test_ac10_ohne_gewitter_bleiben_beide_ausgabeorte_zeichengleich(kommando):
-    """AC-10 (erste Haelfte): Given kein Datenpunkt erreicht eine Stufe ueber
-    NONE, When Kurzzusammenfassung und GEWITTER-Kommando gerendert werden,
-    Then bleibt die Ausgabe an BEIDEN Orten zeichengleich zu heute.
+    """AC-10 (erste Haelfte; die zweite ist abgeloest, s. Hinweis unter dieser
+    Funktion): Given kein Datenpunkt erreicht eine Stufe ueber NONE, When
+    Kurzzusammenfassung und GEWITTER-Kommando gerendert werden, Then bleibt
+    die Ausgabe an BEIDEN Orten zeichengleich zu heute.
 
     Gegenprobe im selben Test: dieselbe Etappe mit CAPE ueber der Leiter zeigt
     die Herkunft an beiden Orten sehr wohl.
@@ -429,32 +430,25 @@ def test_ac10_ohne_gewitter_bleiben_beide_ausgabeorte_zeichengleich(kommando):
         f"beiden Orten erscheinen: {laute_zeile!r}")
 
 
-def test_ac10_glance_bleibt_ohne_herkunft(kommando):
-    """AC-10 (zweite Haelfte): Given GLANCE liest denselben
-    ``_aggregate_day()``-Dict wie GEWITTER, When der neue Traeger-Schluessel
-    dazukommt, Then bleibt die GLANCE-Zeile zeichengleich (Known Limitation 4).
-
-    Gegenprobe im selben Test: die GEWITTER-Antwort derselben Fixture nennt
-    CAPE -- ohne sie waere dieses AC auch dann gruen, wenn die Herkunft
-    nirgends erschiene.
-    """
-    heute = kommando.heute
-    segmente = [_segment([_dp(h, tag=heute, cape=1500.0, cin=5.0) for h in (14, 15)],
-                         tag=heute, start_h=6, end_h=16)]
-
-    glance = kommando.frage(segmente, body="GLANCE")
-    erwartet = f"heute ({heute:%d.%m}): 🌡 20–20°C  💨 8 km/h  🌧 0.0mm  ⛈ Gewitter: hoch"
-    assert erwartet in glance, (
-        f"Die GLANCE-Tageszeile bleibt zeichengleich -- kein Herkunfts-Zusatz: "
-        f"{glance!r}")
-    for zutat in ALLE_ZUTATEN:
-        assert zutat not in glance, (
-            f"GLANCE bekommt bewusst keinen Zugriff auf den neuen Schluessel "
-            f"-- '{zutat}' darf dort nicht auftauchen: {glance!r}")
-
-    assert "· CAPE" in kommando.frage(segmente), (
-        "Gegenprobe gescheitert: die GEWITTER-Antwort DERSELBEN Fixture MUSS "
-        "die Herkunft nennen")
+# 🔴 Entfernt am 2026-08-13 (Issue #1680 Scheibe 3): hier stand
+# ``test_ac10_glance_bleibt_ohne_herkunft`` -- die zweite Haelfte von AC-10.
+# Sie sicherte zu, dass die GLANCE-Tageszeile den seit Scheibe 2 vorhandenen
+# Traeger-Schluessel bewusst NICHT liest und zeichengleich bleibt (dortige
+# Spec D3, Known Limitation 4). Der PO hat diese Entscheidung mit Scheibe 3
+# ausdruecklich abgeloest: GLANCE zeigt die Herkunft jetzt genau wie das
+# GEWITTER-Kommando. Der Test prueft damit veraltetes Verhalten und ist
+# ersatzlos entfallen -- die Erwartung bloss umzudrehen haette dieselbe
+# Zusicherung in zwei Dateien gestellt, die beim naechsten Wechsel
+# auseinanderlaufen. Neuer Sollzustand:
+# ``test_thunder_origin_four_places.py``, dort
+# ``test_ac3_glance_tageszeile_nennt_die_tragende_zutat`` (Einzelzutat) und
+# ``test_ac7_glance_vereinigt_die_zutaten_zweier_wegpunkte`` (Vereinigung);
+# die NONE-Zeichengleichheit von GLANCE bewacht dort
+# ``test_ac16_ohne_gewitter_bleiben_pille_timeline_und_glance_zeichengleich``.
+# Die einzige weitere Zusicherung der entfernten Funktion war eine Gegenprobe
+# ("die GEWITTER-Antwort derselben Fixture nennt CAPE"); sie bleibt
+# eigenstaendig bewacht von
+# ``test_ac2_gewitter_kommando_nennt_die_tragende_zutat`` weiter oben.
 
 
 # ---------------------------------------------------------------------------
