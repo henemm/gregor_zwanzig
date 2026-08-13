@@ -61,18 +61,27 @@ export interface LtChannel {
 }
 
 /**
- * Kanalliste fuer den Trip-Pfad (SMS_TRIP_CHAR_LIMIT) — der einzige heute
- * lebendige LayoutTab-Einhängepunkt ist WeatherMetricsTab.svelte (route).
- * Eine kuenftige Vergleichs-Einbettung braeuchte eine eigene Liste ueber
- * `ltLimitForChannel(id, SMS_COMPARE_CHAR_LIMIT)` — bewusst nicht hier
- * vorgehalten (Kontext-Dokument Abschnitt 10.2: der Vergleichs-Layout-Reiter
- * ist seit #1360 aufgeloest, keine aktive Einbettung).
+ * Issue #1703 Scheibe 8 (AC-S8-12, Gegenprobe M7): Kanalliste fuer EINEN
+ * Ausgabeweg — der SMS-Zeichenwert kommt vom Aufrufer, genau wie bei
+ * `ltLimitForChannel`/`ltCapNoteText`. Ohne sie zeigte der Kanal-Tab-Badge im
+ * Ortsvergleich die Trip-Zahl (160), waehrend der Kappungs-Hinweis darunter
+ * korrekt 153 nennt — zwei sich widersprechende Aussagen auf einer Seite.
  */
-export const LT_CHANNELS: LtChannel[] = (['email', 'telegram', 'sms'] as ChannelId[]).map((id) => ({
-	id,
-	label: CHANNEL_LABELS[id],
-	limit: ltLimitForChannel(id, SMS_TRIP_CHAR_LIMIT)
-}));
+export function ltChannelsFor(smsCharLimit: number): LtChannel[] {
+	return (['email', 'telegram', 'sms'] as ChannelId[]).map((id) => ({
+		id,
+		label: CHANNEL_LABELS[id],
+		limit: ltLimitForChannel(id, smsCharLimit)
+	}));
+}
+
+/**
+ * Kanalliste fuer den Trip-Pfad (SMS_TRIP_CHAR_LIMIT) — Default des
+ * LTChannelPicker und damit unveraenderter Wert fuer WeatherMetricsTab
+ * (route). Der Vergleichspfad baut sich seine Liste seit #1703 S8 ueber
+ * `ltChannelsFor(SMS_COMPARE_CHAR_LIMIT)`.
+ */
+export const LT_CHANNELS: LtChannel[] = ltChannelsFor(SMS_TRIP_CHAR_LIMIT);
 
 export const LT_CH_BY_ID: Record<ChannelId, LtChannel> = Object.fromEntries(
 	LT_CHANNELS.map((c) => [c.id, c])

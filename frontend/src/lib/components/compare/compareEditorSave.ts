@@ -14,7 +14,17 @@ import { toHHMMSS } from '../../utils/time.ts';
 // Auswertung. Die Übersetzung kommt aus der bereits geladenen Antwort von
 // GET /api/compare/metrics (Scheibe A liefert metric_id/aggregation je Eintrag) —
 // keine zweite Tabelle im Frontend, keine zusätzliche Anfrage.
-import { toStoredActiveMetrics } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
+import {
+	toStoredActiveMetrics,
+	type StoredActiveMetric
+} from '../shared/weather-metrics-tab/compareMetricSelection.ts';
+// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle — der
+// RMW-Merge ueber ALLE Kanaele lebt im geteilten Modul, nicht hier.
+import {
+	emptyCompareChannelActiveMetrics,
+	mergeAllCompareChannelActiveMetricsForSave,
+	type CompareChannelActiveMetrics
+} from '../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 
 export interface CompareEditorEdits {
 	name: string;
@@ -24,6 +34,10 @@ export interface CompareEditorEdits {
 	idealRanges: Record<string, IdealRange>;
 	// Issue #680: Slice 3 — aktive Metriken (AC-10). Optional → rückwärtskompatibel.
 	activeMetricKeys?: string[];
+	// Issue #1703 Scheibe 8: kanal-eigene Auswahl DERSELBEN Übersichtstabelle.
+	// `undefined` = Feld nicht editiert (Round-Trip aus original.display_config);
+	// je Kanal `null` = nie editiert, `[]` = bewusste Leerauswahl.
+	channelActiveMetricKeys?: CompareChannelActiveMetrics;
 	// Issue #1106: Slice C — Stundenverlauf-Metriken. Optional → rückwärtskompatibel.
 	// Issue #1366 F001: `null` möglich (Hub reicht den unangetasteten Editor-
 	// Zustand „nie eingestellt" durch) — wird wie ein Wert behandelt (RMW-Merge
@@ -127,6 +141,20 @@ export function buildComparePresetSavePayload(
 		// (Groesse + Auswertung). [] bleibt [] — die Uebersetzung einer leeren
 		// Auswahl ist eine leere Liste, kein weggelassener Key.
 		displayConfig.active_metrics = toStoredActiveMetrics(edits.activeMetricKeys);
+	}
+
+	if (edits.channelActiveMetricKeys !== undefined) {
+		// Issue #1703 Scheibe 8 (AC-S8-10/AC-S8-11): Read-Modify-Write ueber ALLE
+		// drei Kanaele. `mergeConfigMap` (config_merge.go:11-22) ersetzt diesen
+		// Top-Level-Key als GANZES und loescht nie einen Key — ein nicht
+		// mitgesendeter Kanal ginge lautlos verloren (M4), eine geleerte Auswahl
+		// als weggelassener Schluessel bliebe wirkungslos (M5, analog #1191/#1299).
+		displayConfig.channel_active_metrics = mergeAllCompareChannelActiveMetricsForSave(
+			restDisplayConfig.channel_active_metrics as
+				| Record<string, StoredActiveMetric[]>
+				| undefined,
+			edits.channelActiveMetricKeys
+		);
 	}
 
 	if (edits.hourlyMetricKeys !== undefined) {
@@ -272,6 +300,14 @@ export interface NewComparePresetFields {
 	// eingestellt" -- der Schluessel `active_metrics` wird dann gar nicht
 	// gesendet (Default bleibt „alle").
 	activeMetricKeys: string[] | null;
+	// Issue #1703 Scheibe 8: kanal-eigene Auswahl DERSELBEN Uebersichtstabelle.
+	// `/compare/new` mountet denselben `WeatherMetricsTab context="vergleich"`
+	// wie der Hub (CompareNewEditor.svelte:394/491), die Kanal-Reiter sind dort
+	// also bedienbar — ohne dieses Feld ginge die Einstellung beim „Briefing
+	// aktivieren" lautlos verloren (Attrappen-Verbot). Optional →
+	// rueckwaertskompatibel; je Kanal `null` = nie editiert, `[]` = bewusste
+	// Leerauswahl.
+	channelActiveMetricKeys?: CompareChannelActiveMetrics;
 	// Issue #1366 F001: `null` = „nie eingestellt" -- der Schluessel
 	// `hourly_metrics` wird dann gar nicht gesendet (Default bleibt „alle").
 	hourlyMetricKeys: string[] | null;
@@ -295,6 +331,15 @@ export interface NewComparePresetFields {
  * kommen direkt aus dem Wizard-Zustand.
  */
 export function buildNewComparePresetPayload(fields: NewComparePresetFields): Record<string, unknown> {
+	// Issue #1703 Scheibe 8: dieselbe Schreib-Naht wie im Edit-Pfad (oben), nur
+	// ohne `prevStored` — bei der Neuanlage gibt es keinen Bestand zum Merken.
+	// Ein bewusst geleerter Kanal reist damit als `[]` mit (nie als
+	// weggelassener Schluessel, analog #1191/#1366); ein nie editierter Kanal
+	// bleibt draussen und folgt weiter der Grundauswahl.
+	const channelActiveMetrics = mergeAllCompareChannelActiveMetricsForSave(
+		undefined,
+		fields.channelActiveMetricKeys ?? emptyCompareChannelActiveMetrics()
+	);
 	return {
 		name: fields.name,
 		location_ids: fields.pickedIds,
@@ -361,6 +406,12 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 			// alles abgewaehlt) wird weiterhin unbedingt gesendet -- AC-7 bleibt gueltig.
 			...(fields.activeMetricKeys !== null
 				? { active_metrics: toStoredActiveMetrics(fields.activeMetricKeys) }
+				: {}),
+			// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle.
+			// Ohne jeden Override bleibt der Schluessel weg (kein leeres Objekt
+			// im frisch angelegten Vergleich).
+			...(Object.keys(channelActiveMetrics).length > 0
+				? { channel_active_metrics: channelActiveMetrics }
 				: {}),
 			// Issue #1366 F001: anders als frueher NICHT unbedingt gesetzt -- `null`
 			// (Stundenverlauf-Tab nie geoeffnet/beruehrt) laesst den Schluessel ganz

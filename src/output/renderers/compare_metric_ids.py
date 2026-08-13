@@ -195,3 +195,47 @@ def resolve_enabled_metrics(
         if _resolvable(key)
     ))
     return resolved
+
+
+def resolve_channel_enabled_metrics(
+    global_metrics: list[str] | None,
+    channel_active_metrics: dict | None,
+    channel: str,
+) -> list[str] | None:
+    """Kanal-eigene Uebersichts-Auswahl eines Compare-Presets (#1703 S8).
+
+    Wendet ADR-0050 Regel 1/2 ("Grundauswahl ist das MAXIMUM, ein Kanal darf
+    nur ABWAEHLEN") als reine ID-Mengen-Operation auf zwei bereits aufgeloeste
+    Listen an. `global_metrics` ist das Ergebnis von
+    `resolve_enabled_metrics(display_config["active_metrics"])`,
+    `channel_active_metrics` der rohe `display_config["channel_active_metrics"]`
+    -Blob (je Kanal dasselbe Speicherformat wie `active_metrics`).
+
+    Semantik der drei "leer"-Faelle -- bewusst NICHT zusammengelegt:
+    * kein Kanal-Eintrag (Feld fehlt / Kanal-Key fehlt) -> der Kanal folgt der
+      Grundauswahl (AC-S8-15, Altbestand bleibt unveraendert).
+    * `global_metrics is None` (Feld `active_metrics` fehlt komplett) -> es gibt
+      KEIN Maximum, also wird nicht geschnitten. Dieselbe Regel wie beim Trip in
+      `models.py::_clip_to_global_maximum()` bei leerem `self.metrics`.
+    * `global_metrics == []` (bewusste Leerauswahl) IST ein Maximum -- die leere
+      Menge. Jeder Kanal wird dann auf `[]` geschnitten ("leer heisst leer",
+      #1366).
+
+    Die Reihenfolge des Ergebnisses ist die der KANAL-Liste, nicht die der
+    Grundauswahl -- die Listenposition ist die vom Nutzer eingestellte
+    Metrik-Reihenfolge (#1335/#1359) und bestimmt Zeilenfolge bzw. SMS-Budget.
+
+    Reine Funktion -- kein I/O, keine Mutation der Eingaben.
+    """
+    if not isinstance(channel_active_metrics, dict) or channel not in channel_active_metrics:
+        return global_metrics
+    channel_resolved = resolve_enabled_metrics(channel_active_metrics.get(channel))
+    if channel_resolved is None:
+        # Defensiv (Fremddaten/manipulierter Payload): ein unaufloesbarer
+        # Kanal-Eintrag darf den Kanal nicht leeren, sondern faellt auf die
+        # Grundauswahl zurueck.
+        return global_metrics
+    if global_metrics is None:
+        return channel_resolved
+    allowed = set(global_metrics)
+    return [m for m in channel_resolved if m in allowed]

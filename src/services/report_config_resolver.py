@@ -13,7 +13,7 @@ Keine I/O, keine Mutation der Eingaben — reine Aufloesungsfunktion.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -191,6 +191,21 @@ class CompareRenderOptions:
     # `active_metrics`, #1373). `None` = Feld fehlt (Altbestand, bisherige
     # sieben Spalten), `[]` = bewusst leer (Block entfaellt).
     outlook_metrics: Optional[list[dict]] = None
+    # Issue #1703 Scheibe 8: kanal-eigene Auswahl der UEBERSICHTSTABELLE, je
+    # Kanal bereits gegen die Grundauswahl geschnitten (ADR-0050 Regel 1/2 ueber
+    # `resolve_channel_enabled_metrics`). Keys: "email"/"telegram"/"sms" --
+    # Compare-Briefing kennt strukturell nur diese drei (ADR-0049; Premium-SMS
+    # ist im Vergleich reiner Alarm-Kanal, #1745).
+    #
+    # BEWUSST ADDITIV: `enabled_metrics` daruerber behaelt Bedeutung UND Wert
+    # (reine globale Aufloesung). Nur die zwei Leser dieses Objekts
+    # (scheduler_dispatch_service, compare_preview_service) wechseln auf das
+    # kanalweise Feld; die Renderer-Signaturen bleiben unveraendert
+    # `list[str] | None`. Ein Wert von `None` je Kanal heisst weiterhin "kein
+    # Filter" und entsteht genau dann, wenn auch `enabled_metrics` None ist.
+    enabled_metrics_by_channel: dict[str, Optional[list[str]]] = field(
+        default_factory=dict
+    )
 
 
 def resolve_compare_time_window(preset: dict) -> tuple[int, int]:
@@ -232,7 +247,9 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     from app.loader import _corridor_from_dict
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
     from output.renderers.compare_outlook_metric_ids import resolve_outlook_metrics
-    from output.renderers.compare_metric_ids import resolve_enabled_metrics
+    from output.renderers.compare_metric_ids import (
+        resolve_channel_enabled_metrics, resolve_enabled_metrics,
+    )
     from output.renderers.email.compare_html import has_visible_hour_columns
 
     preset_id = preset.get("id", "")
@@ -276,11 +293,21 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     if outlook_enabled and resolved_outlook_metrics == []:
         outlook_enabled = False
 
+    # Issue #1703 Scheibe 8: die Grundauswahl der Uebersichtstabelle wird EINMAL
+    # aufgeloest und dient doppelt -- als unveraendertes `enabled_metrics` UND
+    # als MAXIMUM, gegen das jede Kanal-Auswahl geschnitten wird (ADR-0050).
+    global_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
+    channel_raw = display_config.get("channel_active_metrics")
+
     return CompareRenderOptions(
-        enabled_metrics=resolve_enabled_metrics(display_config.get("active_metrics")),
+        enabled_metrics=global_metrics,
         hourly_metrics=resolved_hourly_metrics,
         hourly_enabled=hourly_enabled,
         corridors=corridors or None,
         outlook_enabled=outlook_enabled,
         outlook_metrics=resolved_outlook_metrics,
+        enabled_metrics_by_channel={
+            ch: resolve_channel_enabled_metrics(global_metrics, channel_raw, ch)
+            for ch in ("email", "telegram", "sms")
+        },
     )

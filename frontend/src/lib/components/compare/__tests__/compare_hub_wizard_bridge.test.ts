@@ -66,6 +66,14 @@ import {
 	buildToggleActivePutPayload,
 	type CorridorSnapshot
 } from '../compareHubWizardBridge.ts';
+// Issue #1703 Scheibe 8 (Bearbeiten-Pfad) — s. letztes describe dieser Datei.
+import type { CompareChannelActiveMetrics } from '../../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
+import { toCompareSelectionEntries } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
+import {
+	flushPendingWeatherMetricsSave,
+	hydrateChannelActiveMetricsFromPreset,
+	type WeatherMetricsSnapshot
+} from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 
 // Fixture nach dem echten DTO (compareEditorSave.ts:71-162, routes/compare/[id]/edit/+page.svelte:19-86):
 // location_ids/schedule/profil/display_config (region, ideal_ranges, active_metrics,
@@ -436,5 +444,66 @@ describe('Edge Case Spec Z.1020: snapshotForRollback liefert einen echten Deep-C
 			{ corridors: [{ metric: 'snow_depth_cm', range: [20, null], notify: true, mark: false }] },
 			'der Snapshot muss den Zustand VOR der Mutation zeigen (Deep-Copy, keine geteilten Referenzen)'
 		);
+	});
+});
+
+// Issue #1703 Scheibe 8 — BEARBEITEN-Pfad (Hauptpfad: bestehenden Ortsvergleich
+// aendern). `buildHubPutPayload` (Z.161) reicht `channelActiveMetricKeys` an
+// `buildComparePresetSavePayload` weiter; bewacht waren bisher nur die reinen
+// Leaf-Funktionen (compareChannelMetricLayouts.test.ts) und der ANLEGE-Pfad
+// (compare_wizard_save_new_preset_channels.test.ts) — derselbe Fehlertyp
+// "Pruefort != Wirkort" wie #1745 F001, nur schwerer wiegend. Gemessen wird der
+// Body, den der Commit-Handler des Hub-Reiters "Wetter-Metriken"
+// (CompareTabs.svelte::handleWetterMetrikenCommit) an `api.put()` gibt.
+describe('#1703 S8 (Bearbeiten-Pfad): Kanal-Overrides der Uebersichtstabelle landen im PUT-Body und ueberleben den Rundlauf', () => {
+	const OVERRIDES: CompareChannelActiveMetrics = { email: null, telegram: ['temp_max_c'], sms: [] };
+	const KEIN_OVERRIDE: CompareChannelActiveMetrics = { email: null, telegram: null, sms: null };
+
+	// Laedt die Katalogantwort wie der Editor beim Oeffnen (fuellt dabei den
+	// Umkehr-Index, den die Schreibuebersetzung als Default nutzt).
+	const loadCatalog = () =>
+		toCompareSelectionEntries({
+			metrics: [
+				{ key: 'temp_max_c', label: 'Temperatur', metric_id: 'temperature', aggregation: 'max' },
+				{ key: 'wind_max_kmh', label: 'Wind', metric_id: 'wind', aggregation: 'max' }
+			]
+		} as unknown as Parameters<typeof toCompareSelectionEntries>[0]);
+
+	const snapshot = (channelActiveMetricKeys: CompareChannelActiveMetrics): WeatherMetricsSnapshot => ({
+		activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
+		channelActiveMetricKeys,
+		officialAlertsEnabled: true,
+		dayWindowStartHour: 4,
+		dayWindowEndHour: 19
+	});
+
+	// Der PUT, den ein reiner Kanal-Edit (Grundauswahl unveraendert) ausloest.
+	function putOfChannelEdit() {
+		const payload = flushPendingWeatherMetricsSave(makePreset(), snapshot(OVERRIDES), snapshot(KEIN_OVERRIDE));
+		assert.ok(payload, 'ein reiner Kanal-Edit (Grundauswahl unveraendert) MUSS einen PUT ergeben — sonst waeren die Kanal-Reiter beim Bearbeiten eine Attrappe');
+		return payload!;
+	}
+
+	test('Bearbeiten mit Kanal-Overrides: telegram im Speicherformat, sms explizit leer, nie editiertes email gar nicht', () => {
+		loadCatalog();
+		const payload = putOfChannelEdit();
+		assert.strictEqual(payload.url, '/api/compare/presets/cmp-42');
+		const dc = payload.body.display_config as Record<string, unknown>;
+		assert.ok(dc.channel_active_metrics, 'display_config.channel_active_metrics fehlt im PUT-Body — der Bearbeiten-Pfad reicht channelActiveMetricKeys nicht weiter, ' +
+			`die Kanal-Reiter waeren beim Aendern eines bestehenden Vergleichs wirkungslos. display_config: ${JSON.stringify(dc)}`);
+		const channels = dc.channel_active_metrics as Record<string, unknown[]>;
+		assert.deepStrictEqual(channels.telegram, [{ metric_id: 'temperature', aggregation: 'max' }],
+			`erwartet den telegram-Override im Speicherformat (Groesse + Auswertung), erhalten: ${JSON.stringify(channels.telegram)}`);
+		assert.ok(Object.prototype.hasOwnProperty.call(channels, 'sms'),
+			`bewusste Leerauswahl muss als expliziter Eintrag mitreisen (weggelassen = alter Serverstand bleibt stehen), erhalten: ${JSON.stringify(channels)}`);
+		assert.deepStrictEqual(channels.sms, [], 'SMS-Leerauswahl muss als [] gesendet werden');
+		assert.ok(!Object.prototype.hasOwnProperty.call(channels, 'email'),
+			`nie editierter Kanal darf NICHT als Leerauswahl gesendet werden ("fehlend != leer"), erhalten: ${JSON.stringify(channels.email)}`);
+	});
+
+	test('Rundlauf speichern -> laden: die Hydration baut aus dem gespeicherten Stand denselben Kanal-Zustand wieder auf', () => {
+		const catalog = loadCatalog();
+		assert.deepStrictEqual(hydrateChannelActiveMetricsFromPreset(putOfChannelEdit().body, catalog), OVERRIDES,
+			'der gespeicherte Kanal-Stand muss unveraendert zurueckkommen — sonst zeigt der Kanal-Reiter nach dem Neuladen wieder die Grundauswahl');
 	});
 });

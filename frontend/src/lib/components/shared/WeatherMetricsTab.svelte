@@ -31,7 +31,13 @@
 	// Issue #1232 Scheibe 3b: geteilter Layout-Organism (Scheibe 3a) ersetzt das
 	// bisherige `.v2-layout`-Grid für den Ausgabe-Teil (Reihenfolge).
 	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
-	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
+	import { SMS_COMPARE_CHAR_LIMIT, type ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
+	// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Vergleichs-Uebersicht.
+	// `splitChannelMetricsForDisplay` (Trip-Modul, unten) wird WIEDERVERWENDET —
+	// sie ist bereits generisch ueber `string[]`, kein Compare-Eigenbau.
+	import {
+		COMPARE_CHANNEL_IDS, startCompareChannelOverride,
+	} from './weather-metrics-tab/compareChannelMetricLayouts.ts';
 	// Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (nur context="route").
 	// Issue #1719 Scheibe S3: splitChannelMetricsForDisplay (aktiv/Aus-Gruppe,
 	// AC-8/AC-12) + mergeAllChannelLayoutsForSave (Persistenz-Fix, AC-10) —
@@ -1012,7 +1018,26 @@
 	// Komponenten-Mount pruefbar ist (AC-2).
 	function toggleCompareMetric(metric: string) {
 		if (!wiz) return;
+		const wasOn = materializedActiveMetricKeys.includes(metric);
 		wiz.activeMetricKeys = toggleCompareMetricKeyFromState(wiz.activeMetricKeys, metric);
+		// Issue #1703 S8 (ADR-0050 Regel 3, Trip-Vorbild onToggleMetric Z. 712-730):
+		// eine globale ABWAHL wirkt SOFORT in allen bereits vorhandenen
+		// Kanal-Overrides. Die EINWAHL-Richtung schreibt bewusst NICHT durch
+		// ("keine Bevormundung") — die Zeile taucht im Kanal-Reiter in der
+		// Aus-Gruppe auf, der Nutzer entscheidet dort selbst.
+		// Ohne diese Durchschreibung bliebe die Anzeige zwar korrekt
+		// (splitChannelMetricsForDisplay filtert immer gegen die Grundauswahl),
+		// der GESPEICHERTE Kanal-Eintrag truege die Metrik aber weiter (M3).
+		if (!wasOn) return;
+		const next = { ...wiz.channelActiveMetricKeys };
+		let changed = false;
+		for (const ch of COMPARE_CHANNEL_IDS) {
+			const override = next[ch];
+			if (override === null || !override.includes(metric)) continue;
+			next[ch] = override.filter((id) => id !== metric);
+			changed = true;
+		}
+		if (changed) wiz.channelActiveMetricKeys = next;
 	}
 
 	// Issue #1366 F002: EINZIGE Materialisierungs-Quelle fuer Anzeige (Checkbox-
@@ -1052,18 +1077,55 @@
 		return map;
 	});
 
-	// Ziehen = Reihenfolge setzen + SOFORT speichern (s. onCompareCommit-Prop).
-	function onCompareDndReorder(newOrder: string[]) {
+	// ── Issue #1703 Scheibe 8: Kanal-Ebene der Uebersichtstabelle ────────────
+	// Reiner View-State (analog `activeChannel` im route-Zweig), NIE Teil des
+	// Persistenz-Snapshots — ein Kanal-WECHSEL ist keine Aenderung.
+	let compareChannel = $state<ChannelId>('email');
+
+	// Effektive Kanal-Sicht: eigener Override, sonst die Grundauswahl
+	// (copy-on-write — der Override entsteht erst beim ersten Edit).
+	function compareChannelPrimary(ch: ChannelId): string[] {
+		return wiz?.channelActiveMetricKeys?.[ch] ?? materializedActiveMetricKeys;
+	}
+
+	// "aktiv" (sortierbar) vs. "Aus in diesem Kanal" (wieder einschaltbar) —
+	// DIESELBE reine Funktion wie im Trip (ADR-0050 Regel 1/2/4). $derived, weil
+	// SortableList seine `items` per $effect gegen die Prop synct und ein bei
+	// jedem Render frisch gefiltertes Array den Drag lautlos abbrechen laesst
+	// (Staging-Fund #1719 S3, s. activeChannelSections oben).
+	const compareChannelSections = $derived(
+		splitChannelMetricsForDisplay(materializedActiveMetricKeys, compareChannelPrimary(compareChannel))
+	);
+
+	// Copy-on-write auf den AKTIVEN Kanal-Reiter — Vorbild `editActiveChannel`
+	// (Z. 677-691). Ohne bestehenden Override startet der Eintrag als Klon der
+	// globalen Reihenfolge, nicht leer.
+	function editCompareChannel(mutate: (view: string[]) => string[]) {
 		if (!wiz) return;
-		wiz.activeMetricKeys = newOrder;
+		const base = wiz.channelActiveMetricKeys[compareChannel]
+			?? startCompareChannelOverride(materializedActiveMetricKeys);
+		wiz.channelActiveMetricKeys = { ...wiz.channelActiveMetricKeys, [compareChannel]: mutate(base) };
 		onCompareCommit?.();
 	}
 
-	// "Aus" in der Reihenfolge-Liste = abwaehlen. Kein zweiter Pfad: derselbe
-	// reihenfolge-erhaltende Toggle wie die Grundauswahl-Checkbox.
+	// Ziehen = Reihenfolge des AKTIVEN KANALS setzen + SOFORT speichern
+	// (s. onCompareCommit-Prop) — nach einer Ziehgeste unterdruecken Browser das
+	// nachfolgende `click`, der Wrapper-Commit in CompareTabs greift dann nicht.
+	function onCompareDndReorder(newOrder: string[]) {
+		editCompareChannel(() => [...newOrder]);
+	}
+
+	// "Aus" in der Reihenfolge-Liste = in DIESEM Kanal abwaehlen. Die
+	// Grundauswahl bleibt unberuehrt (die Metrik wandert in die Aus-Gruppe des
+	// Kanals, ADR-0050 Regel 4 "Aus ist ein Zustand").
 	function onCompareRemove(metric: string) {
-		toggleCompareMetric(metric);
-		onCompareCommit?.();
+		editCompareChannel((view) => view.filter((id) => id !== metric));
+	}
+
+	// Gegenstueck zu onCompareRemove: aus der Aus-Gruppe zurueck in die aktive
+	// Liste. Ohne Positions-Erinnerung (Known Limitation) — ans Ende.
+	function onCompareRestore(metric: string) {
+		editCompareChannel((view) => (view.includes(metric) ? view : [...view, metric]));
 	}
 
 	// Roh/Einfach-Umschalter gibt es im Vergleich nicht (indicatorCapable() ist
@@ -1198,35 +1260,46 @@
 			     wiz.activeMetricKeys gespeist. Kein Compare-Eigenbau
 			     (Epic #1230 / Trip-Compare-Invariante).
 
-			     BEWUSSTE ABWEICHUNG von der Spec (§2 "LayoutTab-Block"): der
-			     LayoutTab-Organism bleibt aussen vor. Seine Kappungs-Aussage ist
-			     SPALTEN-basiert ("N Spalten (Label + …) · max 8") — im Vergleich
-			     sind die Spalten aber die ORTE (so nutzt ihn der Hub-Reiter
-			     "Layout", CompareTabs.svelte), Metriken sind Zeilen; mit
-			     Metriken als colCount stuende dort eine falsche Zahl (echte
-			     Compare-Budgets: 7 Metrik-Zellen je Ort im Telegram, 2 in der
-			     SMS — nicht 8/0 aus CHANNEL_COL_BUDGET). Und die echte
-			     Mail-Vorschau lebt im Hub-Reiter "Vorschau" (Server-Render,
-			     echte Werte); eine trip-geformte Beispieltabelle waere hier eine
-			     Attrappe (AC-8). -->
+			     Issue #1703 Scheibe 8: der LayoutTab-Organism kommt JETZT dazu —
+			     die frühere Ablehnung (Spalten-Kappung "max 8" aus dem
+			     Orte-als-Spalten-Reiter) ist mit #1719 S3 (LtLimit je Kanal:
+			     Telegram 7 Spalten, SMS Zeichen) und Scheibe 8 Fix A/B
+			     (hasLabelColumn/smsCharLimit vom Aufrufer) gegenstandslos: die
+			     Kappungs-Aussage nennt hier gemessene Vergleichs-Grenzen (SMS
+			     153 Zeichen, Telegram 7 Metrik-Zeilen). Die Mail-VORSCHAU bleibt
+			     draussen (Hub-Reiter "Vorschau", Server-Render) — der Organism
+			     ist seit #1719 S3 eine reine Ein-Spalten-Huelle. -->
 			{#if sections.includes('reihenfolge')}
-			<Card padding={0} data-testid="weather-metrics-vergleich-reihenfolge">
-				<p class="option-hint reihenfolge-hint" data-testid="weather-metrics-vergleich-warn-hint">
-					Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an
-					erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.
-				</p>
-				<WeatherV2Reihenfolge
-					primaryColumns={materializedActiveMetricKeys}
-					metricById={compareMetricById}
-					friendlyMap={{}}
-					activeChannel="email"
-					highlight={null}
-					onRemove={onCompareRemove}
-					onDndReorder={onCompareDndReorder}
-					onMode={noopMode}
-					kuerzelById={compareKuerzelById}
-				/>
-			</Card>
+			<LayoutTab
+				context="vergleich"
+				bind:channel={compareChannel}
+				colCount={compareChannelSections.active.length}
+				subjectLabel="Metriken"
+				hasLabelColumn={false}
+				smsCharLimit={SMS_COMPARE_CHAR_LIMIT}
+			>
+				{#snippet editor({ channel })}
+					<Card padding={0} data-testid="weather-metrics-vergleich-reihenfolge">
+						<p class="option-hint reihenfolge-hint" data-testid="weather-metrics-vergleich-warn-hint">
+							Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an
+							erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.
+						</p>
+						<WeatherV2Reihenfolge
+							primaryColumns={compareChannelSections.active}
+							metricById={compareMetricById}
+							friendlyMap={{}}
+							activeChannel={channel}
+							highlight={null}
+							onRemove={onCompareRemove}
+							onDndReorder={onCompareDndReorder}
+							onMode={noopMode}
+							offColumns={compareChannelSections.off}
+							onRestore={onCompareRestore}
+							kuerzelById={compareKuerzelById}
+						/>
+					</Card>
+				{/snippet}
+			</LayoutTab>
 			{/if}
 		{/if}
 		<!-- Issue #1361/#1372 S1b: geteiltes Tagesfenster — wirkt auf
@@ -1360,6 +1433,7 @@
 				bind:channel={activeChannel}
 				colCount={activeChannelSections.active.length}
 				subjectLabel="Metriken"
+				hasLabelColumn={false}
 			>
 				{#snippet editor({ channel })}
 					<Card padding={0}>

@@ -20,7 +20,9 @@
 	import type { Snippet } from 'svelte';
 	import LTChannelPicker from './LTChannelPicker.svelte';
 	import LTCapNote from './LTCapNote.svelte';
-	import { ltOverflowAcrossChannels, SMS_TRIP_CHAR_LIMIT, type ChannelId } from './ltChannels';
+	import {
+		ltChannelsFor, ltOverflowAcrossChannels, SMS_TRIP_CHAR_LIMIT, type ChannelId
+	} from './ltChannels';
 
 	interface Props {
 		context: 'route' | 'vergleich';
@@ -30,6 +32,23 @@
 		colCount: number;
 		/** z. B. "4 Orte" (vergleich) — Metriken (route, Scheibe 3b). */
 		subjectLabel: string;
+		/**
+		 * Issue #1703 Scheibe 8 (Fix A, AC-S8-13): PFLICHT-Prop ohne Vorgabewert.
+		 * Bis dahin wurde sie aus `context` abgeleitet (`context === 'vergleich'`)
+		 * — ein Default, der fuer den damals einzigen Vergleichsfall (Orte als
+		 * Spalten, Hub-Reiter „Layout") gebaut und seit dessen Aufloesung (#1360)
+		 * ohne Konsumenten war. Die Uebersichts-Einbettung dieser Scheibe zaehlt
+		 * Metriken als ZEILEN und braeuchte `false`; ein aus dem Kontext
+		 * abgeleiteter Wert haette dort vom ersten Tag an eine falsche
+		 * Kappungslinie behauptet. Die Zaehl-Einheit ist eine Eigenschaft des
+		 * AUFRUFERS, nicht des Kontext-Strings.
+		 */
+		hasLabelColumn: boolean;
+		/** Issue #1703 Scheibe 8 (Fix B, AC-S8-12): Zeichengrenze des SMS-Wegs
+		 *  dieser Flaeche (Trip 160 / Vergleich 153). Speist Kanal-Badge,
+		 *  Ueberlauf-Chip UND Kappungs-Hinweis aus EINER Zahl — vorher stand die
+		 *  Trip-Konstante an allen drei Stellen fest verdrahtet. */
+		smsCharLimit?: number;
 		editor: Snippet<[{ channel: ChannelId }]>;
 	}
 	let {
@@ -38,25 +57,26 @@
 		dense = false,
 		colCount,
 		subjectLabel,
+		hasLabelColumn,
+		smsCharLimit = SMS_TRIP_CHAR_LIMIT,
 		editor
 	}: Props = $props();
 
 	// Issue #1719 S3 Abschnitt 5: der SMS-Zeichenwert kommt vom AUFRUFER, nicht
-	// aus einer geteilten Konstante — LayoutTab kennt nur den Trip-Pfad (160),
-	// der Vergleichspfad (153) hat heute keine Einbettung ueber diesen
-	// Organism (Kontext-Dokument Abschnitt 10.2: der Vergleichs-Layout-Reiter
-	// ist seit #1360 aufgeloest).
-	const overflow = $derived(ltOverflowAcrossChannels(colCount, SMS_TRIP_CHAR_LIMIT));
+	// aus einer geteilten Konstante (Trip 160 / Vergleich 153 / Alarm 140).
+	const overflow = $derived(ltOverflowAcrossChannels(colCount, smsCharLimit));
+	const channels = $derived(ltChannelsFor(smsCharLimit));
 </script>
 
 <div class="layout-tab" class:dense data-testid="layout-tab" data-context={context}>
 	<div class="lt-eyebrow mono">Kanal · Auswahl &amp; Kappung</div>
-	<LTChannelPicker bind:channel {overflow} {dense} />
+	<LTChannelPicker bind:channel {overflow} {dense} {channels} />
 	{@render editor({ channel })}
-	<!-- Fresh-Eyes-Fund #1232-3b: hasLabelColumn=true nur im vergleich-Kontext
-	     (Orte-als-Spalten-Vorschau zählt eine Label-Spalte mit); route zählt
-	     reine Metriken (siehe LTCapNote-Prop-Kommentar). -->
-	<LTCapNote {channel} {colCount} subject={subjectLabel} {dense} hasLabelColumn={context === 'vergleich'} />
+	<!-- Issue #1703 S8 (Fix A/B): Zaehl-Einheit UND SMS-Zeichengrenze kommen vom
+	     Aufrufer — dieselbe Zahl, die oben schon Badge und Ueberlauf-Chip speist.
+	     Vorher: hasLabelColumn aus `context` abgeleitet, smsCharLimit gar nicht
+	     durchgereicht (LTCapNote fiel still auf den Trip-Default 160 zurueck). -->
+	<LTCapNote {channel} {colCount} subject={subjectLabel} {dense} {hasLabelColumn} {smsCharLimit} />
 </div>
 
 <style>

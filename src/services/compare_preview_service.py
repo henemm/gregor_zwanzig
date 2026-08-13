@@ -58,12 +58,17 @@ class ComparePreviewService:
 
         ctx = self._prepare(preset_id, user_id=user_id, target_date=target_date)
         html_body, _text_body = self._render_email(ctx)
+        # Issue #1703 S8: die Vorschau zeigt je Kanal DIESELBE Auswahl wie der
+        # Versand -- kanal-eigene Uebersichts-Liste statt der gemeinsamen.
         telegram = render_compare_telegram(
             ctx["result"],
-            enabled_metrics=ctx["opts"].enabled_metrics,
+            enabled_metrics=ctx["opts"].enabled_metrics_by_channel["telegram"],
             preset_name=ctx["name"],
         )
-        sms = render_compare_sms(ctx["result"], enabled_metrics=ctx["opts"].enabled_metrics)
+        sms = render_compare_sms(
+            ctx["result"],
+            enabled_metrics=ctx["opts"].enabled_metrics_by_channel["sms"],
+        )
         return {
             "subject": build_compare_preset_subject(ctx["name"], ctx["target_date"]),
             "email_html": html_body,
@@ -97,7 +102,7 @@ class ComparePreviewService:
         ctx = self._prepare(preset_id, user_id=user_id, target_date=target_date)
         return render_compare_telegram(
             ctx["result"],
-            enabled_metrics=ctx["opts"].enabled_metrics,
+            enabled_metrics=ctx["opts"].enabled_metrics_by_channel["telegram"],
             preset_name=ctx["name"],
         )
 
@@ -112,7 +117,10 @@ class ComparePreviewService:
         from output.renderers.comparison import render_compare_sms
 
         ctx = self._prepare(preset_id, user_id=user_id, target_date=target_date)
-        return render_compare_sms(ctx["result"], enabled_metrics=ctx["opts"].enabled_metrics)
+        return render_compare_sms(
+            ctx["result"],
+            enabled_metrics=ctx["opts"].enabled_metrics_by_channel["sms"],
+        )
 
     # ------------------------------------------------------------------
     # Interna
@@ -175,7 +183,7 @@ class ComparePreviewService:
         return render_compare_email(
             ctx["result"],
             profile=ctx["profile"],
-            enabled_metrics=opts.enabled_metrics,
+            enabled_metrics=opts.enabled_metrics_by_channel["email"],
             hourly_metrics=opts.hourly_metrics,
             hourly_enabled=opts.hourly_enabled,
             preset_name=ctx["name"],

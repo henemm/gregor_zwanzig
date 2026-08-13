@@ -118,12 +118,16 @@ describe('Issue #1359 Scheibe 1: Diff-Guard erkennt reine Umsortierung (AC-3)', 
 			preset,
 			{
 				activeMetricKeys: ['wind_max_kmh', 'temp_max_c'],
+				// Issue #1703 S8: kein Kanal je editiert (dieser Test prueft die
+				// GRUNDauswahl-Reihenfolge) — alle drei folgen ihr.
+				channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 				officialAlertsEnabled: true,
 				dayWindowStartHour: 4,
 				dayWindowEndHour: 19
 			},
 			{
 				activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
+				channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 				officialAlertsEnabled: true,
 				dayWindowStartHour: 4,
 				dayWindowEndHour: 19
@@ -139,6 +143,7 @@ describe('Issue #1359 Scheibe 1: Diff-Guard erkennt reine Umsortierung (AC-3)', 
 	test('AC-3: unveraenderte Reihenfolge schreibt weiterhin NICHT', () => {
 		const snapshot = {
 			activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
+			channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 			officialAlertsEnabled: true,
 			dayWindowStartHour: 4,
 			dayWindowEndHour: 19
