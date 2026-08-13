@@ -473,7 +473,7 @@ bereits gedeckten Zeilen gegen stillen Verlust ihrer Testabdeckung.
 eine selbst gewählte Zusatz-Mutation exakt vom vorgesehenen Test gefangen.
 Details: `docs/specs/modules/fix_1703_s5_compare_zellwerte.md`.
 
-### Scheibe 6 — Form-Wächter über Grammatik-Klassen
+### Scheibe 6 — Form-Wächter über Grammatik-Klassen ✅ ERLEDIGT (2026-08-13)
 
 Eigener Wächter über `PRIORITY`/`POSITIONAL` (`tokens/builder.py:47`, `:78`) und
 `SMS_MULTI_SYMBOLS_BY_METRIC` (`sms_trip.py:180`): jede Grammatik-Klasse hat
@@ -481,6 +481,34 @@ genau eine Prioritätsstufe und eine definierte Position; kein Kürzel kollidier
 mit `HAZARD_SMS_SYMBOLS` (`hazard_symbols.py:15`).
 *Risiko: niedrig–mittel. Größe: klein–mittel. Parallel zu 1–5 machbar*, weil sie
 eine andere Achse als die Metrik-ID benutzt. Deckt Fläche 8 teilweise, S2, S6.
+
+Umgesetzt als 6 ACs (AC-S6-1 bis AC-S6-6) in einer **eigenständigen** neuen
+Testdatei `tests/unit/test_sms_symbol_grammar_classes.py` (nicht als Achse in
+`test_channel_metric_matrix.py` — PO-Vorentscheidung §7b: „Form-Dimension als
+eigene Achse, nicht in die Hauptmatrix gemischt", weil `SMS_MULTI_SYMBOLS_BY_METRIC`
+1:n ist). AC-S6-1/2 sichern die bidirektionale Vollständigkeit
+`PRIORITY`↔`POSITIONAL` (36 bzw. 38 Einträge, `TH:`-Doppeleintrag bewusst über
+`_POSITION_SORTABLE_CATEGORIES` abgesichert); AC-S6-3/4 sichern die
+Katalog-Vollständigkeit (30 eindeutige Symbole aus beiden Katalog-Registern +
+6 benannte Systemzeichen = alle 36 `PRIORITY`-Schlüssel erklärt); AC-S6-5 hält
+die Format-Invariante fest, dass der `!`-Block-Marker der einzige verlässliche
+Diskriminator gegenüber `HAZARD_SMS_SYMBOLS` ist.
+
+**Mitrepariert — echter, sicherheitsrelevanter Fund (AC-S6-6, einziger
+Produktivcode-Fix dieser Scheibe):** Ein Wind-Datenausfall und der dedizierte
+„amtliche Warnungen nicht abrufbar"-Marker renderten **bytegleich** `"W?"` —
+unabhängig voneinander auslösbar, für den Leser nicht unterscheidbar (konnte
+verschleiern, dass amtliche Warnungen ausgefallen waren). `UNAVAILABLE_SYMBOL`
+(`tokens/builder.py`) auf `"X?"` geändert (`X` ist im gesamten
+Wetter-Kürzel-Alphabet unbenutzt und dafür reserviert); zwei Bestandstests
+(`test_sms_trip_unavailable_marker.py`, `test_sms_user_metric_order.py`)
+mechanisch mitgezogen, `docs/reference/sms_format.md` §3.4d aktualisiert.
+Adversary VERIFIED, alle 5 Pflicht-Mutationen exakt vom vorgesehenen Test
+gefangen. **Bekannte, bewusst unbehobene Grenze:** eine strukturell ähnliche,
+aber toter-Pfad-Kollision zwischen `TH:`/`HR:` (Hazard) und der
+Météo-France-Vigilance (`_vigilance()`, nie erreicht: kein Aufrufer setzt
+`provider="meteofrance"`) bleibt dokumentiert, nicht gefixt. Details:
+`docs/specs/modules/fix_1703_s6_form_waechter.md`.
 
 ### Scheibe 7 — Reihenfolge-Wächter jenseits E-Mail und Telegram-rich
 

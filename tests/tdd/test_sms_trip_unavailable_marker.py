@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 
 _TZ = ZoneInfo("Europe/Berlin")
 _LAT, _LON = 43.7102, 7.2620
-_MARKER = "W?"
+_MARKER = "X?"
 
 
 def _make_dp():
