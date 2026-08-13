@@ -345,13 +345,65 @@ Jede Mutation nur per String-Ersetzung mit externer Sicherungskopie — **nie**
   rot werden.
 - **(e)** Feld bedingungslos setzen statt nur bei vorhandenen Trägern → der
   Bestandstest `test_build_outlook_row_without_selection_is_unchanged` muss rot
-  werden (Beleg, dass AC-8 nicht durch Zufall grün ist).
+  werden (Beleg, dass AC-8 nicht durch Zufall grün ist). **Achtung:** Diese
+  Mutation prüft **AC-8 und AC-10**, ausdrücklich **nicht** AC-7 — s.
+  „In der GREEN-Phase präzisiert", Punkt A.
 - **(f)** Herkunft **vor** statt hinter der Uhrzeit einfügen → AC-1 muss rot
   werden.
 - **(g)** Herkunfts-Zusatz zusätzlich in die Kompakt-Mail hängen → AC-13 muss
   rot werden.
 
 Kommt eine Mutation durch, ist das ein Finding, kein Nebenbefund.
+
+## In der GREEN-Phase präzisiert
+
+**A. AC-7 hängt an einem anderen Mechanismus, als Implementation Detail 1
+nahelegt — und zwar an einem anderen, als hier zunächst stand.** Der
+Schlüssel-Filter („nur setzen, wenn Träger vorhanden") trägt **AC-8 und
+AC-10**, nicht AC-7. Gemessen: Bei einem Wert unterhalb der niedrigsten
+Sprosse liefert die echte Fusion `ThunderLevel.NONE` **mit einer leeren Liste
+`[]`** — also `is not None`, der Schlüssel **wird** gesetzt.
+
+AC-7 ist **doppelt** abgesichert, und die erste der beiden Absicherungen ist
+die wirksame:
+1. `thunder_signal_carriers()` (`metric_format.py:481-483`, Scheibe 1) gibt bei
+   Höchststufe `NONE` bereits `[]` zurück — die echte Kette erzeugt **nie** ein
+   Paar `(NONE, ["cape"])`.
+2. `union_of_max_carriers()` (`metric_format.py:599-601`, Scheibe 2, Finding
+   F001) hält dieselbe Zusage nochmals aus eigener Kraft.
+
+Die erste Fassung dieses Absatzes schrieb AC-7 allein Absicherung 2 zu. Der
+Adversary hat das widerlegt: Entfernt man Absicherung 2, bleibt die **gesamte**
+S5a-Suite grün (14/14) — gefangen wird die Mutation nur von einem
+**Bestandstest aus Scheibe 2**
+(`tests/tdd/test_thunder_origin_trip.py:458-486`). **Für die
+Mutations-Gegenprobe heißt das:** Weder Mutation (e) noch ein Angriff auf
+Absicherung 2 belegt AC-7 innerhalb dieser Scheibe. Wer AC-7 wirklich brechen
+will, muss Absicherung 1 angreifen.
+
+Das ist in diesem Workflow das **dritte** Mal, dass eine Aussage über den
+eigenen Code der Messung nicht standhielt — nach der aus S1–S4 übernommenen
+`aggregate_stage()`-Notiz und der ersten Fassung von AC-11. Kein
+Verhaltensfehler, aber ein Beleg dafür, dass auch eine frisch geschriebene
+Begründung geprüft gehört.
+
+**B. Ein toter Winkel, der erst in Scheibe 5b gefährlich wird.** Der
+Herkunfts-Token wird **unabhängig** von `sms_threshold_thunder` berechnet. Hebt
+ein Nutzer die Nennschwelle an, kann `thunder_day_token == "-"` sein, während
+der Herkunfts-Token gefüllt ist. Heute leckt nichts, weil alle drei Renderer
+den Zusatz ausschließlich **innerhalb** des Tages-Token-Zweigs anhängen. Ein
+Verbraucher in **S5b**, der den Herkunfts-Token liest, **ohne** vorher
+`thunder_day_token` zu prüfen, zeigte eine Herkunft zu einer Stufe, die nirgends
+steht — die AC-12-Fehlerklasse aus Scheibe 1. **Gehört als Vorgabe in die
+S5b-Spec**, nicht als Nachbesserung hierher: Der Zeilen-Vertrag darf nicht über
+den Scheibenrand hinweg geändert werden.
+
+**C. Der Spalten-Schlüssel `signals` reist wie `hail` an jeder Spalte mit**,
+verbraucht wird er nur bei `kind == "ordinal"` — und ordinal ist im
+Compare-Katalog ausschließlich Gewitter. Bewusst nach dem Hagel-Vorbild gebaut
+(Spec-Vorgabe); käme je eine zweite ordinale Größe dazu, bekäme sie
+Gewitter-Zutaten angeheftet. Dieselbe latente Eigenschaft trägt der
+Hagel-Schlüssel seit #1475 — geerbte Annahme, kein neuer Fehler.
 
 ## Known Limitations
 

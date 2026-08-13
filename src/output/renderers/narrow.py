@@ -589,6 +589,12 @@ def _outlook_lines(multi_day_trend: list[dict]) -> list[str]:
         nt = tok.get("thunder_night_token", "-")
         if dt != "-":
             thunder_part = f"⚡{dt}"
+            # Issue #1680 S5a: die tragende Zutat hinter der Tagesstufe --
+            # derselbe Token wie in HTML- und Klartext-Mail (AC-3). Ein
+            # Zeilenumbruch auf _TG_PROSE_WIDTH ist hinnehmbar (Wort-Umbruch).
+            _origin = tok.get("thunder_day_origin")
+            if _origin:
+                thunder_part += f" · {_origin}"
         elif stage.get("hourly_thunder"):
             thunder_part = _THUNDER_MAP["NONE"]["plain"]
         else:

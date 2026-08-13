@@ -1018,6 +1018,22 @@ def format_trend_tokens(stage: dict) -> dict:
         "TH", _night_samples, threshold=thunder_thr, is_level=True,
         level_labels=_TREND_THUNDER_LABELS,
     )
+    # Issue #1680 S5a: die tragende Zutat der TAGES-Stufe. Bewusst HIER und
+    # mit denselben `_win_start`/`_win_end` wie `thunder_day_token` -- eine
+    # zweite, unabhaengige Fensterauflösung waere genau die Fehlerklasse aus
+    # #1653/#1498 (Stufe aus dem einen, Herkunft aus dem anderen Fenster,
+    # Spec AC-9). Der Nachtteil bekommt bewusst KEINE Herkunft (AC-6).
+    from output.metric_format import thunder_signal_label, union_of_max_carriers
+
+    _signal_rows = stage.get("hourly_thunder_signals") or ()
+    _day_carriers = union_of_max_carriers(
+        (stufe, traeger) for stunde, stufe, traeger in _signal_rows
+        if hour_in_window(stunde, _win_start, _win_end)
+    )
+    thunder_day_origin = (
+        ", ".join(thunder_signal_label(s) for s in _day_carriers)
+        if _day_carriers else None
+    )
 
     return {
         "temp_str": temp_str,
@@ -1039,6 +1055,8 @@ def format_trend_tokens(stage: dict) -> dict:
         # Issue #1653: Tag/Nacht getrennt (additiv)
         "thunder_day_token": thunder_day_token,
         "thunder_night_token": thunder_night_token,
+        # Issue #1680 S5a: fertiger Herkunfts-Zusatz des Tagesteils (oder None)
+        "thunder_day_origin": thunder_day_origin,
     }
 
 
