@@ -647,6 +647,10 @@ class TripReportFormatter:
         # ueber die geteilte Aggregation (ja > unbekannt > nein).
         from output.metric_format import hail_priority
         row["_hail_flag"] = hail_priority(getattr(dp, "hail_flag", None) for dp in dps)
+        from output.metric_format import union_of_max_carriers
+        row["_thunder_signals"] = union_of_max_carriers(
+            (dp.thunder_level, getattr(dp, "thunder_level_signals", None)) for dp in dps
+        )
 
         return row
 
@@ -685,6 +689,7 @@ class TripReportFormatter:
         # Issue #1475 Nachbesserung (Punkt 2a): Seitenkanal fuer das Hagel-
         # Kennzeichen der Stunde — Quelle des Doppelrings in der Gewitter-Spalte.
         row["_hail_flag"] = getattr(dp, "hail_flag", None)
+        row["_thunder_signals"] = getattr(dp, "thunder_level_signals", None)
         return row
 
     # ------------------------------------------------------------------

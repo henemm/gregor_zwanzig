@@ -393,11 +393,25 @@ vorhandener, nur nicht übergebener Parameter. Netto rund 100 Zeilen, davon die 
 Kommentar. Zwei Bestandstests bewachten die dabei abgelösten Entscheidungen und wurden
 mitgezogen.
 
-**Noch offen (Ticket #1680 bleibt offen):** Mehrtages-Ausblick, Gewitter-Vorschau und
-Trip-Stundentabelle. Bei den ersten beiden gehen die Träger **strukturell** verloren
-(`HourlyValue` ohne Signalfeld); der Mehrtages-Ausblick ist zugleich der einzige Ort, der
-`aggregate_stage()` als Verbraucher aktivieren würde. **Go-DTO und Frontend fallen
-ersatzlos** — dort existiert kein Ort, an dem die Herkunft erscheinen könnte.
+✅ **Scheibe 4 live seit 2026-08-13** (#1680, Spec
+`feat_1680_s4_gewitter_herkunft_trip_stundentabelle.md`). Letzter strukturell erreichbarer
+Trip-Ausgabeort: die **Trip-Stundentabelle** (Vollmail, Klartext-/Roh-Modus) trägt jetzt
+denselben Zusatz — pro Stunde über einen rohen Seitenkanal (`row["_thunder_signals"]`,
+Muster `row["_hail_flag"]`), im Nacht-Block über den bereits aus Scheibe 2 geteilten Helfer
+`union_of_max_carriers()`. Angehängt wird in `fmt_val()`s Roh-/Klartext-Zweig, nach dem
+Vorbild von `_fmt_thunder()` (Scheibe 1). Die HTML-Ampel-Kreis-Ansicht bleibt bewusst
+unverändert — kein Textplatz für einen visuellen Herkunfts-Indikator. Weil dieselbe
+`fmt_val()`/`_dp_to_row()`-Kette bereits vor dieser Scheibe auch die Telegram-rich-
+Stundentabelle (Bubbles) speist, erbt diese den Zusatz strukturell mit, ohne eigenen
+Code-Pfad — konsistent mit der Kanal-Entscheidung „E-Mail und Telegram JA", aber ein eigener
+Wirkort, den die ursprüngliche Aufgabenbeschreibung nicht vorsah. SMS/Premium-SMS bleiben
+ausdrücklich ohne Herkunft.
+
+**Noch offen (Ticket #1680 bleibt offen):** Mehrtages-Ausblick und Gewitter-Vorschau. Bei
+beiden gehen die Träger **strukturell** verloren (`HourlyValue` ohne Signalfeld); der
+Mehrtages-Ausblick ist zugleich der einzige Ort, der `aggregate_stage()` als Verbraucher
+aktivieren würde. **Go-DTO und Frontend fallen ersatzlos** — dort existiert kein Ort, an dem
+die Herkunft erscheinen könnte.
 
 Drei Festlegungen, die aus der Umsetzung stammen und hier nicht überlesen werden dürfen:
 
@@ -832,7 +846,7 @@ Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
 | **1** | ✅ **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg | ✅ **erledigt** (2026-08-11, live) |
 | **2** | ✅ **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ **erledigt** — LPI-Teil **#1679** (adversary-VERIFIED); CAPE-Ladder + CIN-Paarung ebenfalls **#1679** (`feat_1679_cin_paarung_cape_leiter.md`, 2026-08-11, adversary-VERIFIED für AC-3/AC-5 mit Mutationsprobe, restliche ACs durch 24 RED-Tests grün) |
 | **3** | ~~Gleiche Statistik: `lpi_max` statt `lpi` gegen `lpi_con_max`~~ | War als Weg gedacht, den Gebietsbruch ohne Kalibrierung zu verkleinern | 🟡 **überholt** (2026-08-11): `lpi_max` wird seit #1531 abgerufen, aber NIE in der Fusion gelesen (`metric_format.py` liest weiterhin `lightning_potential_lpi_jkg`). #1679 hat den Gebietsbruch stattdessen über gebietsabhängige Schwellentabellen gelöst (1/30/50 für DE_ALPEN, kalibriert auf den Momentanwert `lpi`) — ein nachträglicher Wechsel auf `lpi_max` liefe dort gegen die falsche Statistik. Kein offener Arbeitsauftrag mehr, nur diese Zeile war stehen geblieben. |
-| **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | 🟡 **Scheiben 1–3 live (2026-08-12/13)** — Ortsvergleich (PR #1780), Trip-Kurzzusammenfassung + GEWITTER-Kommando (PR #1797), Pille + Timeline + GLANCE + Ortsvergleich-Stundentabelle (PR #1806). Ticket **#1680** bleibt offen für Mehrtages-Ausblick, Gewitter-Vorschau und Trip-Stundentabelle; Go-DTO und Frontend sind ersatzlos entfallen (kein Verbraucher). Hier stand bis 2026-08-10 fälschlich „✅ E1": das markierte nur die Entscheidung, nicht die Umsetzung |
+| **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | 🟡 **Scheiben 1–4 live (2026-08-12/13)** — Ortsvergleich (PR #1780), Trip-Kurzzusammenfassung + GEWITTER-Kommando (PR #1797), Pille + Timeline + GLANCE + Ortsvergleich-Stundentabelle (PR #1806), Trip-Stundentabelle inkl. strukturell mit-vererbter Telegram-rich-Ansicht (#1680 S4). Ticket **#1680** bleibt offen für Mehrtages-Ausblick und Gewitter-Vorschau; Go-DTO und Frontend sind ersatzlos entfallen (kein Verbraucher). Hier stand bis 2026-08-10 fälschlich „✅ E1": das markierte nur die Entscheidung, nicht die Umsetzung |
 | **5** | ✅ **CAPE unsichtbar gemacht** (`selectable=False`, **#1585**) | **Umgesetzt und live** (2026-08-10): CAPE (`cape_jkg`) ist an jeder Nutzerkontakt-Stelle unsichtbar (Trip-Editor, E-Mail, SMS, Ortsvergleich inkl. Alt-Vergleich, Aktivitäts-Vorlagen, Wertebereichs-Korridor, jede Alarmwirkung inkl. #1592 Delta-Alarm) und bleibt ausschließlich interne Zutat der Fusion. Adversary-VERIFIED | ✅ erledigt |
 | **6** | **Radar hebt die Stufe an** | Beseitigt den Widerspruch aus Abschnitt 5 | ✅ E3 |
 | **7** | **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max`, kalibriert auf gleiche Überschreitungshäufigkeit | Sofort rechenbar über die Historical Forecast API (4.4) — unabhängig von #1531 | 🔴 offen, Ticket **#1678** |
