@@ -91,9 +91,16 @@ Fork mit `gh issue view` + Code-Grep, wie in `/radar` Schritt 3 — Titel-/Label
 allein reicht nicht als Nachweis.
 
 **Erst den eigenen Strang zu Ende prüfen, PFLICHT vor dem Rest des Backlogs.** Gehört das
-zuletzt in diesem Tab bearbeitete Issue zu einer Kette (Epic-Bezug im Body, "Folge zu #X",
-"Scheibe N von #X", gemeinsames `epic`-Label)? Wenn ja, ist das nächste offene Folge-Issue
-im selben Strang der Standard-Kandidat — ein Themenwechsel kostet nach einem `/clear`
+zuletzt in diesem Tab bearbeitete Issue zu einer Kette? In diesem Repo tatsächlich verwendete
+Schreibweisen dafür, alle gleichwertig erkennen (Vielfalt ist Bestand, keine davon ist
+"falsch"): **"Folge zu #X"**, **"Scheibe N von #X"**, **"Nachzug zu #X"**, **"Teil von #X"**,
+**"S<N>[a-z]? zu/von #X"** (z. B. "S2-Nachzug zu #1457"), sowie ein **Issue-Titel-Präfix**
+`#<Epic-Nr> S<N>[a-z]?:` (z. B. "#1676 S2b: ..." — die Epic-Nummer steht dabei VOR dem
+Doppelpunkt, nicht als Fließtext-Referenz). Gemeinsames `epic`-Label zählt zusätzlich als
+Hinweis, ersetzt aber keine der Textformen. Steht KEINE dieser Formen im Titel/Body, gilt das
+Issue als eigenständig — nicht aktiv nach einer Kette suchen, die nirgends benannt ist.
+Trifft eine der Formen zu, ist das nächste offene Folge-Issue im selben Strang der
+Standard-Kandidat — ein Themenwechsel kostet nach einem `/clear`
 echten Aufwand (Domänenwissen, bereits gelesene Spec/Analyse geht verloren, wird andernorts
 neu aufgebaut). Nur verdrängen, wenn ein anderer Punkt nachweislich dringender ist (harter
 Termin, kritischer/produktionsrelevanter Bug, ausdrückliche PO-Vorgabe) — dann in der
