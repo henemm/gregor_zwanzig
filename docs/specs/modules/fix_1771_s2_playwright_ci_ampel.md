@@ -53,6 +53,9 @@ unbekannte Rote als Verpflichtung erben; eine Positivliste, die nur wachsen darf
   - `.github/workflows/ci.yml` — MODIFY (neuer Job `e2e` + `workflow_dispatch`-Variante)
   - `frontend/e2e/ci-stack.sh` — CREATE (Stack-Start/-Stop mit Health-Warteschleifen)
   - `.github/ci_e2e_specs.txt` — CREATE (Positivliste, wachstumsbeschränkte Ratsche)
+  - `.github/scripts/e2e_gate.py` — CREATE (Drei-Bedingungen-Auswertung als eigene,
+    testbare Datei statt YAML-Einzeiler)
+  - `tests/unit/test_e2e_ci_gate.py` — CREATE (bewacht die Auswertung; RED-Phase)
   - `frontend/playwright.config.ts` — MODIFY (CI-Zweig, kein neues Config-File)
   - `docs/adr/0053-*.md` — CREATE (Grundsatzentscheidung, fortschreibend zu ADR-0006/ADR-0028)
   - `docs/adr/README.md` — MODIFY (Index-Eintrag für ADR-0053)
@@ -207,6 +210,16 @@ allein im Juli 2026):
   wird nur bei `if: failure()` hochgeladen.
 
 ### 5. Auswertung: drei Bedingungen statt einer
+
+**🔴 Die Auswertung gehört in eine eigene Datei, nicht inline in die YAML.** Als
+`python3 -c "..."`-Einzeiler im Job-Schritt wäre sie von keinem Test erreichbar — die
+zentrale Zusicherung dieser Scheibe (AC-4) bliebe damit selbst unbewacht, also genau der
+Fehler, den sie verhindern soll (Prüfort muss dem Wirkort entsprechen). Daher:
+**`.github/scripts/e2e_gate.py`**, aufgerufen mit dem Pfad des JSON-Reports; Schwellen aus
+der Umgebung (`E2E_MIN_EXECUTED`, `E2E_MIN_SPECS`). Exit 0 = grün, Exit ≠ 0 = rot mit
+Klartext-Begründung, welche der drei Bedingungen gerissen ist. Der Job-Schritt ruft nur noch
+dieses Skript auf. Damit ist die Auswertung in der deterministischen Kern-Schicht testbar
+(`tests/unit/`), ohne Netz und ohne Runner.
 
 Playwright liefert über den JSON-Reporter `stats` (`expected`, `unexpected`, `skipped`).
 Der Job wertet **alle drei** aus, nicht nur „keine Roten":
