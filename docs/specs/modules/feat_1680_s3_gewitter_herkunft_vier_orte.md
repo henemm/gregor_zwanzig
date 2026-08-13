@@ -361,17 +361,31 @@ zwei Orte angewendet.
     eine dritte Zutat traegt; Assertion, dass die GLANCE-Zeile nur Zutaten von
     Wegpunkten DES Zieltags nennt.
 
-- **AC-12 (kein Leck Compare-SMS/Telegram):** Given die Ortsvergleich-
-  Stundentabelle zeigt an mindestens einem Ort eine Herkunft, When derselbe
-  Vergleich als SMS oder als Telegram-Nachricht gerendert wird, Then enthaelt
-  weder `render_compare_sms()` noch `render_compare_telegram()` irgendeine der
-  vier Zutat-Bezeichnungen — beide Kanaele zeigen weiterhin ausschliesslich
-  die Uebersichtszeile (kein Zugriff auf die Stundentabellen-Aufrufstellen
-  dieser Scheibe).
+- **AC-12 (kein Leck aus der Stundentabelle in SMS und Telegram):** Given die
+  Ortsvergleich-Stundentabelle zeigt an einer Stunde **unterhalb** der
+  Tages-Hoechststufe eine Zutat, die nur dort vorkommt, When derselbe Vergleich
+  als SMS oder als Telegram-Nachricht gerendert wird, Then taucht diese Zutat
+  in **keinem** der beiden Texte auf; die SMS traegt darueber hinaus
+  **keine** der vier Zutat-Bezeichnungen.
   - Test: dieselbe Fixture wie AC-4, zusaetzlich durch `render_compare_sms()`
-    und `render_compare_telegram()` gerendert; Assertion, dass keiner der
-    beiden Texte „CAPE", „Blitzpotenzial", „Blitzdichte" oder „Wettercode"
-    enthaelt.
+    und `render_compare_telegram()` gerendert. Fuer Telegram: Assertion auf die
+    Abwesenheit der **stundenexklusiven** Zutat (z. B. Blitzdichte auf einer
+    Stunde unterhalb des Tagesmaximums). Fuer die SMS: Assertion auf die
+    Abwesenheit **aller vier** Bezeichnungen (Gegenprobe zu Mutation (f)).
+
+  🔴 **Berichtigt 2026-08-13, vor der Implementierung.** Die urspruengliche
+  Fassung verlangte, dass **auch Telegram** keine der vier Bezeichnungen traegt.
+  Das ist am ausgelieferten Stand nachweislich falsch: die Telegram-**Uebersichts**-
+  zeile zeigt die Herkunft seit Scheibe 1 ausdruecklich, bewacht von
+  `tests/tdd/test_thunder_origin_compare.py::test_ac4_telegram_zeigt_dieselbe_herkunft_wie_die_mail`
+  (gruen, live seit 2026-08-12) und gedeckt vom PO-Entscheid „E-Mail und Telegram
+  **ja**". Die woertliche Fassung waere nur gruen zu bekommen gewesen, indem eine
+  bereits ausgelieferte Zusage bricht. Der Fehler entstand beim Formulieren des
+  Spec-Auftrags („kein Leck in SMS" pauschal, Telegram versehentlich mitgezogen)
+  und wurde in der RED-Phase entdeckt. Geprueft wird jetzt die Aussage, die AC-12
+  tatsaechlich traegt: aus den **neuen** Stundentabellen-Aufrufstellen darf nichts
+  in die Kurznachrichtenkanaele lecken. Der PO-Entscheid bleibt unveraendert —
+  diese Berichtigung stellt die Spec auf ihn zurueck, statt ihn zu aendern.
 
 - **AC-13 (kein Leck Trip-SMS/Premium-SMS):** Given die Pille und die
   GLANCE-Zeile tragen Herkunftsangaben, die in `email_plain` landen, When der
@@ -469,6 +483,46 @@ Isolation auf `union_of_max_carriers()` allein.
 
 Mutationen ausschliesslich per String-Ersetzung mit externer Sicherungskopie
 (kein `git checkout`/`stash`/`reset`, CLAUDE.md-Vorgabe).
+
+## Am Code berichtigt in der RED-Phase (2026-08-13)
+
+Fünf Annahmen dieser Spec haben beim Schreiben der Tests nicht gehalten. Alle
+Soll-Werte der Tests sind am **gemessenen** Verhalten verankert, nicht an den
+Beispieltexten oben. Wer implementiert, richtet sich nach dieser Liste.
+
+1. 🔴 **Die F001-Garantie trägt an der Stundentabelle NICHT.** D4 reicht
+   `dp.thunder_level_signals` **roh** durch, ohne `union_of_max_carriers()` — die
+   in Scheibe 2 eingebaute Zusicherung „Stufe `NONE` ⇒ keine Herkunft" greift dort
+   also gar nicht. Dass eine `NONE`-Stunde nicht zu „— · CAPE" wird, garantiert
+   allein eine **zweite, unabhängige** Zusage: `thunder_signal_carriers()` liefert
+   für `NONE` eine leere Liste (`metric_format.py:470-471`). Einziger Wächter
+   dafür ist `test_ac16_ohne_gewitter_bleibt_die_compare_stundenzelle_zeichengleich`.
+   **Dieselbe Fehlerklasse wie F001 selbst** — eine Zusage, die nur wegen einer
+   Eigenschaft an anderer Stelle hält.
+2. **„kein Gewitter" heißt an den vier Orten DREI verschiedene Dinge:** Pille
+   `kein Gewitter` · Timeline und GLANCE `kein` (`_THUNDER_LABEL`,
+   `trip_command_processor.py:136`) · Compare-Stundenzelle `—`
+   (`_THUNDER_LEVEL_LABEL`, `compare_html.py:166`). Diese Spec sprach durchweg von
+   „kein". **Nicht harmonisieren** — das wäre eine nicht spezifizierte
+   Textänderung an drei ausgelieferten Ausgabeorten.
+3. **Der Beispieltext von AC-1 ist nicht produzierbar.** „Gewitter ab 14:00 ·
+   stärkste 17:00" setzt voraus, dass die Spitzenstunde nach der ersten
+   Erwähnungsstunde liegt. `helpers.py:1734` vergleicht strikt (`>`), die
+   Spitzenstunde ist also die **erste**, die das Maximum erreicht. Bei mehreren
+   gleich hohen Stunden lautet die Pille „ab 14:00 · stärkste 14:00".
+4. **Die Timeline erreicht man NICHT über TODAY/TOMORROW.** Ein blankes
+   `HEUTE`/`MORGEN` löst `_trigger_on_demand()` aus
+   (`trip_command_processor.py:506-509`) — das **volle Tages-Briefing**.
+   `_fmt_timeline()` hängt allein am Query-Schlüssel `timeline_heute`/
+   `timeline_morgen`, den nur die Telegram-Inline-Schaltflächen `tl_today`/
+   `tl_tomorrow` erzeugen.
+5. **Die Testablage weicht von dieser Spec ab.** Der Testplan unten sieht die
+   Erweiterung der beiden Bestandsdateien vor; tatsächlich entstand eine eigene
+   Datei `tests/tdd/test_thunder_origin_four_places.py` (nach Verhalten benannt,
+   verstößt nicht gegen `test_naming_gate.py`). Preis: rund 150 Zeilen
+   Fixture-Gerüst doppeln sich mit den Vorgängerdateien. Bewusst in Kauf genommen,
+   damit die Scheibe als Ganzes nachvollziehbar bleibt; beide Schwesterdateien
+   sind unverändert und grün.
 
 ## Known Limitations
 
