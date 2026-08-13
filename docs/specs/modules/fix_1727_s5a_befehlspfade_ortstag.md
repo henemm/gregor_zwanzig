@@ -13,7 +13,7 @@ workflow: fix-1727-s5a-befehlspfade
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-08-13 („go"), 10 ACs auf Deutsch vorgelegt
 
 ## Purpose
 
@@ -289,3 +289,11 @@ entsteht.
 
 - 2026-08-12: Spec erstellt nach Kartierung `docs/context/fix-1727-s5a-befehlspfade.md`
   (Basis-HEAD `77229550`).
+- 2026-08-13: PO-Freigabe der 10 ACs („go"). **Faktenkorrektur ohne Kriterienänderung:** AC-1
+  nennt die US-Westküste beispielhaft mit „UTC−8" — das ist der *Winter*-Offset. Im August gilt
+  dort PDT = **UTC−7** (nachgemessen mit `tz_for_coords`), Neuseeland liegt bei NZST = UTC+12.
+  Die Testfälle tragen deshalb die IDs `westkueste-utc-minus-7` / `neuseeland-utc-plus-12`. Der
+  Offsetwert war illustrativ, die Zusicherung („negativer bzw. positiver Offset") ist unberührt.
+- 2026-08-13: AC-1 und AC-2 laufen als **ein** parametrisierter Test mit zwei Fällen —
+  Spiegelfälle derselben Regel („die Liste enthält genau die Etappen ab dem Ortstag"). Beide
+  prüften schon vorher in beide Richtungen, die Zusammenlegung ist also nicht erzwungen.

@@ -341,7 +341,10 @@ def run_command_through_pipeline(
         from app.loader import lookup_user_by_telegram_chat_id
 
         user_id = lookup_user_by_telegram_chat_id(chat_id, data_dir=data_dir) or "default"
-        trip = reader._find_active_trip(user_id)
+        # #1727 S5a: EIN Zeitpunkt fuer Trip-Auswahl UND received_at -- exakt
+        # wie im echten _process_update.
+        now_utc = datetime.now(tz=timezone.utc)
+        trip = reader._find_active_trip(now_utc, user_id)
         if trip is None:
             return "Kein aktiver Trip"
 
@@ -362,7 +365,7 @@ def run_command_through_pipeline(
             trip_name=trip.name,
             body=body,
             sender=chat_id,
-            received_at=datetime.now(tz=timezone.utc),
+            received_at=now_utc,
             user_id=user_id,
         )
         result = TripCommandProcessor().process(inbound)

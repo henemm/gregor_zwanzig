@@ -9,7 +9,8 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import date as _date
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,42 @@ PROD_SELFTEST = _REPO_ROOT / ".claude" / "hooks" / "prod_selftest.py"
 # Ablage, HEAD-Ermittlung/Attestation) -- unabhaengig davon, welche
 # Dateikopie (Worktree oder Hauptrepo) den Testcode tatsaechlich ausfuehrt.
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
+
+
+# ---------------------------------------------------------------------------
+# Zwei-Zonen-Tour -- geteilter Ort (Issue #1727 S5a, Spec-Sektion "Testfixtur")
+#
+# Gehoben aus tests/tdd/test_drilldown_day_window_local_date.py (#1470).
+# Wellington und Vizzavona liegen zwoelf Stunden auseinander: genau die
+# Spanne, die den Ortstag-Anker sichtbar macht. Eine dritte Kopie waere
+# genau der Fehler, den ADR-0044 fuer die Zonen-Aufloesung selbst verbietet.
+# ---------------------------------------------------------------------------
+
+WP_NZ = (-41.3, 174.8)      # Wellington -> Pacific/Auckland, im August UTC+12
+WP_KORSIKA = (42.1, 9.0)    # Vizzavona  -> Europe/Paris,     im August UTC+2
+
+
+def trip_two_zones(
+    day0: _date, trip_id: str = "zwei-zonen", trip_name: str = "Zwei-Zonen-Tour",
+):
+    """Etappe 0 in Neuseeland, ab Etappe 1 auf Korsika (drei Tage ab ``day0``)."""
+    from app.trip import Stage, Trip, Waypoint
+
+    coords = [WP_NZ, WP_KORSIKA, WP_KORSIKA]
+    return Trip(
+        id=trip_id,
+        name=trip_name,
+        stages=[
+            Stage(
+                id=f"S{i}", name=f"Etappe {i}", date=day0 + timedelta(days=i),
+                waypoints=[
+                    Waypoint(id=f"W{i}", name=f"WP{i}", lat=lat, lon=lon,
+                             elevation_m=100),
+                ],
+            )
+            for i, (lat, lon) in enumerate(coords)
+        ],
+    )
 
 
 def _load_prod_selftest_module():
