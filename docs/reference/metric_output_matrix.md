@@ -43,6 +43,21 @@ prüft, bewacht die E-Mail-Tabelle. Er bewacht **nicht** den Ausblick derselben 
 Ausgabeform definieren: `col_key`/`col_label`, `compact_label`, `sms_code`,
 `alert_label`, `format_modes`, `trip_default_rank`, `selectable`.
 
+> **🔴 Seit #1719 S4 (2026-08-13) ist `compact_label` KEIN unabhängig gepflegtes
+> Feld mehr**, sondern wird aus dem Register-Kürzel (`sms_code`) **abgeleitet**.
+> Abweichen darf nur, was in einer benannten Ausnahmeliste mit Begründung steht
+> — heute `temperature` (`T`) und `wind_chill` (`TF`), weil deren Register-Kürzel
+> eine *Tagesauswertung* bezeichnen (`D`/`K` bzw. `FK`/`FD`/`WC`), die
+> Telegram-Zelle aber einen *Stundenwert* zeigt. Ein Wächter
+> (`tests/unit/test_telegram_kuerzel_folgt_register.py`) macht jeden neuen
+> Alleingang rot.
+>
+> Grund: die beiden Felder wurden getrennt von Hand gepflegt und sind
+> auseinandergelaufen — 11 von 25 Größen trugen in Telegram ein anderes Kürzel
+> als in der SMS, ohne fachlichen Grund (Luftdruck `P` vs. `HP`, Bewölkung `C`
+> vs. `CT`, Nacht-Tiefsttemperatur `TN` vs. `N`). Wer hier ein Kürzel ändern
+> will, ändert `sms_code` — nicht `compact_label`.
+
 Gemessen am oben genannten Commit:
 
 - **28 Einträge in `_METRICS`** (`metric_catalog.py:92`), davon **26 selectable**
