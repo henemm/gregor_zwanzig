@@ -1,6 +1,6 @@
 # Metrik-Ausgabeorte je Kanal — Referenz & Entscheidungsvorlage
 
-> **Stand: 2026-08-10, Commit-Basis: 1c38a5ac** · Issue #1514 (`triage:po`)
+> **Stand: 2026-08-13, Commit-Basis: 21a6a1ef** · Issue #1514 (`triage:po`)
 >
 > **Abgrenzung:** Dieses Dokument ist reine Analyse. In dem Workflow, der es
 > erzeugt hat, wurde **kein Produktivcode** geändert und **kein neues Gate und
@@ -134,7 +134,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | API Metrik-Liste | `api/routers/config.py:73` `get_metrics()` — filtert auf `selectable` | Nicht-wählbare Metriken sind für das Frontend unsichtbar |
 | API SMS-Symbole | `api/routers/config.py:31` `get_sms_symbols()`, Hazards `:46`/`:65` | zwei Symbolregister nebeneinander |
 | Frontend Trip | `frontend/src/lib/components/shared/WeatherMetricsTab.svelte:411`, `:755–771` — Reihenfolge **je Kanal** (`channel_layouts`) | |
-| Frontend Compare | `compareWizardState.svelte.ts` `wiz.activeMetricKeys` + `compareEditorSave.ts` — **eine globale Liste**, keine Kanal-Tabs | struktureller Bruch, offene PO-Frage (7a) |
+| Frontend Compare | Übersicht: `compareWizardState.svelte.ts` `wiz.channelActiveMetricKeys` (#1703 Scheibe 8, live 2026-08-13) — kanalweise wie beim Trip. Ausblick/Stundenverlauf: weiterhin `wiz.activeMetricKeys` + je eigene globale Liste, **keine Kanal-Tabs** | struktureller Bruch besteht nur noch für Ausblick/Stundenverlauf; Übersicht gelöst (ADR-0053), Wächter `tests/unit/test_compare_channel_metrics_reach_the_renderer.py` (Wirkung) + `frontend/e2e/compare-uebersicht-kanal-{bedienung,persistenz}.staging.spec.ts` (Oberfläche) |
 
 ## 3. Sonderstrecken-Katalog
 
@@ -514,24 +514,85 @@ Météo-France-Vigilance (`_vigilance()`, nie erreicht: kein Aufrufer setzt
 
 ### Scheibe 7 — Reihenfolge-Wächter jenseits E-Mail und Telegram-rich
 
-Reihenfolge-Zusicherung für SMS, Compare-Klartext und Compare-Telegram.
-**Abhängig von der PO-Entscheidung zu Compare-Kanal-Tabs (7a)** — solange
-Compare eine globale Metrik-Liste führt (`wiz.activeMetricKeys`) und Trip
-kanalweise Layouts (`channel_layouts`), gibt es für Compare keine kanalbezogene
-Soll-Reihenfolge, die man prüfen könnte.
-*Risiko: mittel. Größe: mittel.* Deckt Fläche 5. **Blockiert bis 7a entschieden ist.**
+Reihenfolge-Zusicherung für SMS, Compare-Klartext und Compare-Telegram. War
+**abhängig von der PO-Entscheidung zu Compare-Kanal-Tabs (7a)** — diese
+Blockade ist mit Scheibe 8 (✅ ERLEDIGT 2026-08-13) aufgehoben: Compare führt
+jetzt eine kanalbezogene Soll-Reihenfolge, gegen die sich prüfen ließe
+(`display_config.channel_active_metrics`, `resolve_channel_enabled_metrics()`).
 
-### Scheibe 8 — Compare-Kanal-Tabs im Frontend
+**Zuschnitt bleibt enger als beim Trip:** Scheibe 8 deckt nur die
+Übersichtstabelle. Ausblick (`outlook_columns()`) und Stundenverlauf
+(`hourly_selectable_metric_ids()`) sind weiterhin je eine einzige globale
+Liste ohne Kanal-Ebene (ADR-0053 Punkt 1) — für sie gibt es weiterhin keine
+kanalbezogene Soll-Reihenfolge. Scheibe 7 kann deshalb vorerst nur die
+**Übersicht** abdecken; ein Reihenfolge-Wächter für Ausblick/Stundenverlauf
+bräuchte zuerst deren eigene Kanal-Kette (ADR-0053, Abschnitt „Folgepflicht").
+*Risiko: mittel. Größe: mittel.* Deckt Fläche 5. **Frei — nicht mehr
+blockiert**, Zuschnitt Compare-Übersicht only.
+
+### Scheibe 8 — Compare-Kanal-Tabs im Frontend ✅ ERLEDIGT (2026-08-13)
 
 Den strukturellen Bruch zwischen `compareWizardState.svelte.ts`
 (`wiz.activeMetricKeys`, eine globale Liste) und dem Trip-Editor
-(`WeatherMetricsTab.svelte:755–771`, `channel_layouts` je Kanal) auflösen.
-*Risiko: hoch (Datenmodell + Persistenz + Editor). Größe: groß — eigenes
-Vorhaben, keine Test-Scheibe.* **Nur nach PO-Entscheidung 7a**; ist sie „nein",
-entfällt diese Scheibe und Scheibe 7 wird auf Trip-Kanäle beschränkt.
+(`WeatherMetricsTab.svelte:755–771`, `channel_layouts` je Kanal) für die
+**Übersichtstabelle** aufgelöst. PRs #1813 + #1819, Merge `2fd4be0b`/`21a6a1ef`.
 
-**Abhängigkeitsbild:** 3 → (1, 2, 4, 5 parallel) · 6 jederzeit parallel ·
-7 nach 7a · 8 nur bei 7a = ja.
+Geliefert: kanal-eigene Metrikauswahl (E-Mail/Telegram/SMS) für
+`display_config.channel_active_metrics`, die volle Kette Oberfläche →
+Speicherweg → Resolver → Renderer — nicht nur die Oberfläche, das war die von
+ADR-0053 verlangte Bedingung für die Entscheidungs-Umkehr gegenüber
+#1287/#1291/#1351 („Attrappen"). Backend: `resolve_channel_enabled_metrics()`
+(`compare_metric_ids.py:200-241`) additiv neben `resolve_enabled_metrics()`;
+`CompareRenderOptions.enabled_metrics_by_channel`
+(`report_config_resolver.py:206-208`) additiv neben `enabled_metrics`; acht
+Aufrufstellen umgestellt (`scheduler_dispatch_service.py:439/505/509`,
+`compare_preview_service.py:65/70/105/122/186`).
+
+**Zuschnitt-Korrektur festhalten:** Stundenverlauf (`hourly_metrics`) und
+Ausblick (`outlook_metrics`) bleiben **global** — eigene, getrennt
+gespeicherte Auswahllisten, bewusste Schnitt-Entscheidung (ADR-0053), keine
+Auslassung. Eine Folge-Scheibe müsste dieselbe Kette (Resolver, Persistenz,
+Editor) dafür wiederholen.
+
+Bauform: additiv. `CompareRenderOptions.enabled_metrics` behält seine
+Bedeutung (reine globale Auflösung); `enabled_metrics_by_channel` tritt
+daneben. Kein Go-Schema-Change — `DisplayConfig`
+(`internal/model/compare_preset.go:48`) bleibt untypisiertes Blob,
+`config_merge.go` ersetzt `channel_active_metrics` als GANZEN Top-Level-Key
+(RMW-Pflicht beim Speichern, wie beim Trip).
+
+**ADR-0053** löst die Abschaffungs-Entscheidungen aus #1287/#1291
+(2026-07-18, „Attrappen") und #1351 Teil 2 (2026-07-24) ab; schreibt
+ADR-0050 (Metrik-Kaskade, Regeln 1-4) unverändert für Compare fort, statt sie
+zu duplizieren.
+
+**Mitrepariert:** Die Kappungs-Aussage war an **drei** Anzeigestellen falsch
+— SMS zeigte den Trip-Wert 160 statt 153, weil `LTChannelPicker` die feste
+Modul-Konstante `LT_CHANNELS` iterierte statt `smsCharLimit` zu respektieren
+(neue Funktion `ltChannelsFor()`, `ltChannels.ts:70`). `hasLabelColumn` ist
+jetzt Pflicht-Prop ohne Default — der bisherige `context === 'vergleich'`-
+Default zeigte auf den seit #1360 aufgelösten Hub-Layout-Reiter (Orte als
+Spalten), nicht auf den heute einzig lebenden Compare-Fall (Metriken als
+Zeilen).
+
+Nachweis: Adversary VERIFIED nach einer Fix-Runde; Staging VERIFIED nach
+einem Fix (fehlgeschlagenes Speichern wurde fälschlich als Erfolg gemeldet —
+behoben in #1819).
+
+**Ehrlich benennen:** `CompareTabs.svelte:710/737/782` (Snapshot-Kopie,
+Hydration, Rollback von `channelActiveMetricKeys`) sind offline nicht
+bewachbar — `.svelte`-Dateien sind unter `node:test` (ADR-0020) nicht
+importierbar, kein DOM im Projekt. Einziger Wächter sind die Klickpfade
+gegen Staging: `frontend/e2e/compare-uebersicht-kanal-bedienung.staging.spec.ts`,
+`frontend/e2e/compare-uebersicht-kanal-persistenz.staging.spec.ts`.
+
+Details, alle 15 ACs (AC-S8-1 bis AC-S8-15), Mutations-Gegenproben:
+`docs/specs/modules/feat_1703_s8_compare_kanal_tabs.md`.
+
+**Abhängigkeitsbild (Stand 2026-08-13):** 1, 2, 3, 4, 5, 6, 8 ✅ erledigt ·
+7 frei — nicht mehr blockiert (7a beantwortet, Scheibe 8 live). Zuschnitt
+bleibt auf die Compare-Übersicht beschränkt: Ausblick/Stundenverlauf haben
+weiterhin keine Kanal-Ebene.
 
 ## 7. PO-Entscheidungsvorlage — ENTSCHIEDEN (PO, 2026-08-10)
 
@@ -540,7 +601,14 @@ Abwägung bleibt zur Nachvollziehbarkeit stehen.
 
 - [x] PO-Entscheidung (a) **Compare-Kanal-Tabs: JA.** Der Compare-Editor bekommt
       Kanal-Layouts wie der Trip-Editor (Scheibe 8 ist damit beauftragt,
-      Scheibe 7 deckt Trip UND Compare). Ursprüngliche Abwägung: Heute führt der
+      Scheibe 7 deckt Trip UND Compare).
+      🔴 **Präzisierung nach Lieferung von Scheibe 8 (2026-08-13):** „Scheibe 7
+      deckt Trip UND Compare" ist zu großzügig formuliert. Scheibe 8 hat die
+      Kanal-Ebene **nur für die Compare-Übersichtstabelle** geliefert; Ausblick
+      und Stundenverlauf führen weiterhin je eine einzige globale Liste. Scheibe 7
+      kann für Compare daher vorerst **nur die Übersicht** abdecken. Wer diesen
+      Satz ohne die Präzisierung liest, schneidet Scheibe 7 zu breit zu.
+      Ursprüngliche Abwägung: Heute führt der
       Compare-Editor eine globale Metrik-Liste (`wiz.activeMetricKeys`), der
       Trip-Editor Layouts je Kanal (`channel_layouts`) — der Umbau stellt die
       Trip/Compare-Teilungsvorgabe auch hier her.
