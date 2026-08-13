@@ -21,7 +21,8 @@ tags: [thunder, trip, compare, telegram, outlook, adr-0007, adr-0025, issue-1680
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-go 2026-08-13 (13 ACs, Wortlaut und beide vorgelegten
+      Entscheidungen: Nachtteil ohne Herkunft, Compare-Ausblick erbt mit)
 
 ## Purpose
 
