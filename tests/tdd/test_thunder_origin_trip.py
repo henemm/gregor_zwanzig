@@ -193,8 +193,17 @@ def _alt_schnappschuss() -> None:
 def kommando():
     """Speichert Trip + Wetter-Schnappschuss und stellt die Kommando-Frage
     ueber ``TripCommandProcessor.process()`` -- derselbe Weg, den eine
-    eingehende Telegram-/E-Mail-Nachricht nimmt."""
-    jetzt = datetime.now(tz=timezone.utc)
+    eingehende Telegram-/E-Mail-Nachricht nimmt.
+
+    Fix #1795 AC-9: ``jetzt`` war ``datetime.now(tz=timezone.utc)`` --
+    ``_handle_query`` bestimmt den Kalendertag seit #1795 ueber den ORTStag
+    (``trip_local_now``, Koordinaten 47.0/12.0 = Europe/Vienna). Im
+    Mismatch-Fenster (22:00-24:00 UTC im Sommer) waere der Ortstag ein
+    anderer als ``heute`` (= UTC-Tag der echten Systemuhr) -- die Fixtur
+    haengt jetzt auf einem festen, zonensicheren Zeitpunkt statt an der
+    Systemuhr.
+    """
+    jetzt = datetime(2026, 8, 20, 9, 0, tzinfo=timezone.utc)
     heute = jetzt.date()
 
     def frage(segmente, *, body: str = "GEWITTER", alt: bool = False) -> str:

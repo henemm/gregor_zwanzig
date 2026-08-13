@@ -963,7 +963,9 @@ def test_t12_on_demand_schreibt_keinen_vermerk_und_liest_keinen(caplog):
 
     # a) Der On-Demand-Versand endet ehrlich mit `no_stage` — einem Ausgang,
     #    der im REGULAEREN Pfad einen Vermerk setzt.
-    assert scheduler.send_on_demand_report(trip, "evening") == "no_stage", (
+    # Fix #1795: send_on_demand_report() liefert seit AC-7 ein
+    # OnDemandErgebnis(outcome, zieltag) statt eines bloszen Strings.
+    assert scheduler.send_on_demand_report(trip, "evening").outcome == "no_stage", (
         "Testaufbau prueft nichts: der On-Demand-Versand muss hier ohne Netz "
         "im Ausgang 'no_stage' enden."
     )
@@ -984,7 +986,7 @@ def test_t12_on_demand_schreibt_keinen_vermerk_und_liest_keinen(caplog):
 
     caplog.clear()
     with caplog.at_level(logging.INFO, logger="trip_report_scheduler"):
-        ergebnis = scheduler.send_on_demand_report(trip, "evening")
+        ergebnis = scheduler.send_on_demand_report(trip, "evening").outcome
 
     assert ergebnis == "no_stage", (
         "Der On-Demand-Versand muss trotz bestehendem Vermerk denselben "
@@ -1083,7 +1085,9 @@ def _aufzeichnender_mailversand(monkeypatch) -> list:
 #: regulaere Weg als Gegenrichtung. Zweites Glied: bleibt der regulaere Slot
 #: danach faellig?
 ANGEFORDERTE_EINSTIEGE = [
-    # SMS-Kommando „heute"/„morgen" (`trip_command_processor.py:576`).
+    # SMS-Kommando „heute"/„morgen" (`trip_command_processor.py:576`). Fix
+    # #1795: liefert seit AC-7 OnDemandErgebnis(outcome, zieltag) -- `_ausloesen`
+    # zieht `.outcome`, bevor der bool/str-Normalisierer greift.
     ("send_on_demand_report", True),
     # Test-Versand-Knopf der Oberflaeche (`api/routers/scheduler.py:232`).
     ("send_test_report_outcome", True),
@@ -1100,6 +1104,11 @@ def _ausloesen(scheduler, trip, einstieg: str):
     if einstieg == "regulaerer_versand":
         return scheduler._send_trip_report_outcome(trip, "morning")
     ergebnis = getattr(scheduler, einstieg)(trip, "morning")
+    # Fix #1795: send_on_demand_report() liefert seit AC-7 ein
+    # OnDemandErgebnis(outcome, zieltag) statt eines bloszen Strings --
+    # zuerst entpacken, DANACH greift die bool/str-Normalisierung.
+    if einstieg == "send_on_demand_report":
+        ergebnis = ergebnis.outcome
     # `send_test_report` liefert den bool-Bestand (#1007), die beiden anderen
     # den Ausgangs-String. Auf eine gemeinsame Aussage bringen.
     return "sent" if ergebnis is True else ergebnis

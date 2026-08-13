@@ -128,23 +128,29 @@ Regelverstoß — genau das war der Zustand vor #1697.
   `utils.timezone.first_resolvable_tz()` — der einen fachlichen Auswahlregel für „erster
   Ort" (#1378 AC-4), die einen gelöschten oder zonenlosen Ersteintrag überspringt statt
   still auf Weltzeit zu kippen.
+- **Anzeige-/Kommando-Pfad in `trip_command_processor.py` und `inbound_telegram_reader.py`**
+  (#1727 S5a, live 2026-08-13, `fd87fca6`; `_handle_query` mit dieser Scheibe, #1795): `_show_status`,
+  `_show_now` und `command_date` (für `### ruhetag`) lösen den Kalendertag seither über
+  `trip_local_today` auf, `inbound_telegram_reader.py` reicht `received_at` durch statt selbst
+  `date.today()` zu bilden. `_handle_query` — löst zusätzlich einen Versand aus, nicht nur eine
+  Anzeige — folgt seit #1795 derselben EINEN Auflösung (`trip_local_now`) für Kopfzeile UND
+  Ortszeit-Anzeige der Timeline (`_aggregate_day`, `_fmt_glance`, `_fmt_gewitter`,
+  `_fmt_timeline`, `_timeline_buttons` bekommen `tz` als Pflichtparameter).
 
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,
 sucht vorher nach `date.today()`/`datetime.now().date()` im ganzen Produktivcode, statt nur
 die Datei zu nennen, in der er gerade gearbeitet hat.
 
-### Noch nicht umgesetzt (Stand 2026-08-12)
+### Noch nicht umgesetzt (Stand 2026-08-13)
 
 Der zuvor hier gelistete Briefing-/Versand-Pfad (`_get_target_date`, `_get_active_trips`,
-`save_dated`) ist umgesetzt — s. „Umgesetzt" oben (#1724/#1725).
+`save_dated`) ist umgesetzt — s. „Umgesetzt" oben (#1724/#1725). Ebenso der zuvor hier
+gelistete Kommando-/Anzeige-Pfad — s. „Umgesetzt" oben (#1727 S5a/#1795).
 
-**Anzeige, Vorschau, Werkzeuge:** vier Stellen in `src/services/trip_command_processor.py`
-(`_handle_query` — **löst einen Versand aus**, nicht nur eine Anzeige, eigene Abwägung nötig;
-`command_date` für `### ruhetag`; `_show_status` und `_show_now`), dazu
-`inbound_telegram_reader.py`, `preview_service.py`, `api/routers/debug.py` und
-`tools/weather_validation.py`. Zeilennummern bewusst weggelassen — sie waren in der
-Vorfassung dieser Liste binnen Tagen veraltet.
+**Vorschau, Werkzeuge:** `preview_service.py`, `api/routers/debug.py` und
+`tools/weather_validation.py` (S5b/S5c, eigene Scheibe). Zeilennummern bewusst weggelassen —
+sie waren in der Vorfassung dieser Liste binnen Tagen veraltet.
 
 **Bewusst NICHT betroffen** (feste Zone ist dort Absicht, kein Verstoß):
 `forecast_budget._today_utc` und `meteoalarm_budget._today_utc` (Kontingent-Tageswechsel in

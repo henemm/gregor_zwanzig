@@ -20,7 +20,7 @@ from typing import Optional
 
 from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip
-from services.trip_day import anchor_tz, display_tz, trip_local_today
+from services.trip_day import anchor_tz, display_tz, trip_local_now, trip_local_today
 from utils.timezone import UTC, local_dt, local_fmt, local_hour
 
 logger = logging.getLogger(__name__)
@@ -499,18 +499,30 @@ class TripCommandProcessor:
     def _handle_query(
         self, trip: Trip, query_key: str, received_at: datetime, user_id: str,
     ) -> CommandResult:
-        """Dispatch read-only query. Never mutates trip state."""
-        today = received_at.date()
+        """Dispatch read-only query. Never mutates trip state.
+
+        Fix #1795 (ADR-0044): "heute"/"morgen" folgen dem ORTStag der Tour,
+        nicht dem UTC-Tag von ``received_at`` — EINE Auflösung
+        (``trip_local_now``), aus der Tag UND (via ``display_tz``, je Tag
+        seine eigene Zone, AC-4) die Anzeige-Zonen hervorgehen. Alle
+        Formatierer bekommen ``tz`` als Pflichtparameter durchgereicht
+        (Docstring-Begründung: siehe ``_format_drilldown``) — ein Default
+        würde die Ortszeit wieder still gegen die Prozess-Zeitzone tauschen.
+        """
+        local_now = trip_local_now(trip, received_at)
+        today = local_now.date()
         tomorrow = today + timedelta(days=1)
+        tz_heute = display_tz(trip, today)
+        tz_morgen = display_tz(trip, tomorrow)
 
         # Issue #1007: heute/morgen lösen das volle Tages-Briefing aus (kein
         # Einzeiler-Aggregat mehr) — eigener Zweig VOR dem Timeline-Setup, da
         # der Scheduler die Wetterdaten selbst holt (keine WeatherExtractor-
         # Timeline nötig).
         if query_key == "heute":
-            return self._trigger_on_demand(trip, "morning", "Heute", today, user_id)
+            return self._trigger_on_demand(trip, "morning", "Heute", user_id)
         elif query_key == "morgen":
-            return self._trigger_on_demand(trip, "evening", "Morgen", tomorrow, user_id)
+            return self._trigger_on_demand(trip, "evening", "Morgen", user_id)
 
         from services.weather_extractor import WeatherExtractor
         extractor = WeatherExtractor(user_id=user_id)
@@ -521,7 +533,7 @@ class TripCommandProcessor:
             timeline = extractor.timeline(trip.id)
 
         if query_key == "glance":
-            body = self._fmt_glance(timeline, today, tomorrow)
+            body = self._fmt_glance(timeline, today, tomorrow, tz_heute, tz_morgen)
             return CommandResult(
                 success=True, command="glance",
                 confirmation_subject=f"[{trip.name}] Glance",
@@ -530,7 +542,7 @@ class TripCommandProcessor:
                 reply_markup=_GLANCE_BUTTONS,
             )
         elif query_key == "heute_gewitter":
-            body = self._fmt_gewitter(timeline, today)
+            body = self._fmt_gewitter(timeline, today, tz_heute)
             return CommandResult(
                 success=True, command="heute_gewitter",
                 confirmation_subject=f"[{trip.name}] Gewitter heute",
@@ -538,22 +550,22 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
         elif query_key == "timeline_heute":
-            body = self._fmt_timeline(timeline, today, "Heute", "today")
+            body = self._fmt_timeline(timeline, today, "Heute", "today", tz_heute)
             return CommandResult(
                 success=True, command="timeline_heute",
                 confirmation_subject=f"[{trip.name}] Timeline heute",
                 confirmation_body=body,
                 trip_name=trip.name,
-                reply_markup=self._timeline_buttons(timeline, today, "today"),
+                reply_markup=self._timeline_buttons(timeline, today, "today", tz_heute),
             )
         elif query_key == "timeline_morgen":
-            body = self._fmt_timeline(timeline, tomorrow, "Morgen", "tomorrow")
+            body = self._fmt_timeline(timeline, tomorrow, "Morgen", "tomorrow", tz_morgen)
             return CommandResult(
                 success=True, command="timeline_morgen",
                 confirmation_subject=f"[{trip.name}] Timeline morgen",
                 confirmation_body=body,
                 trip_name=trip.name,
-                reply_markup=self._timeline_buttons(timeline, tomorrow, "tomorrow"),
+                reply_markup=self._timeline_buttons(timeline, tomorrow, "tomorrow", tz_morgen),
             )
         # Fallback (should not reach)
         return CommandResult(
@@ -564,7 +576,7 @@ class TripCommandProcessor:
         )
 
     def _trigger_on_demand(
-        self, trip: Trip, report_type: str, label: str, target_date: date, user_id: str,
+        self, trip: Trip, report_type: str, label: str, user_id: str,
     ) -> CommandResult:
         """Issue #1007: heute/morgen lösen das volle Tages-Briefing aus statt
         des bisherigen Einzeiler-Aggregats. Wiederverwendung des On-Demand-
@@ -572,17 +584,24 @@ class TripCommandProcessor:
         ohne [TEST]-Präfix). Adversary-Fix F001/F002: `send_on_demand_report`
         liefert ein Outcome ("sent"/"no_stage"/"no_weather"/"no_channels")
         statt eines bloßen bool — nur "sent" unterdrückt die Bestätigung.
+
+        Fix #1795 AC-7: der Fehlertext nennt den TATSAECHLICH von
+        `send_on_demand_report` benutzten Zieltag (`OnDemandErgebnis.zieltag`)
+        — kein eigener, im Aufrufer aus `received_at` geratener `target_date`
+        mehr (Nebengewinn: der Parameter entfaellt hier ersatzlos).
         """
         from services.trip_report_scheduler import TripReportSchedulerService
         query_key = "heute" if report_type == "morning" else "morgen"
         buttons = _HEUTE_BUTTONS if report_type == "morning" else _MORGEN_BUTTONS
         service = TripReportSchedulerService(user_id=user_id)
-        outcome = service.send_on_demand_report(trip, report_type)
-        if outcome != "sent":
+        ergebnis = service.send_on_demand_report(trip, report_type)
+        if ergebnis.outcome != "sent":
             return CommandResult(
                 success=True, command=query_key,
                 confirmation_subject=f"[{trip.name}] {label}",
-                confirmation_body=_on_demand_failure_body(outcome, label, target_date),
+                confirmation_body=_on_demand_failure_body(
+                    ergebnis.outcome, label, ergebnis.zieltag,
+                ),
                 trip_name=trip.name,
                 reply_markup=buttons,
             )
@@ -805,11 +824,17 @@ class TripCommandProcessor:
             lines.append(line)
         return "\n".join(lines)
 
-    def _aggregate_day(self, timeline, target_date) -> Optional[dict]:
-        """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte."""
+    def _aggregate_day(self, timeline, target_date, tz) -> Optional[dict]:
+        """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte.
+
+        Fix #1795: der Filter vergleicht den ORTStag des Wegpunkts
+        (``local_dt(p.arrival_time, tz).date()``), nicht mehr den rohen
+        UTC-Tag von ``arrival_time`` — ``tz`` ist Pflichtparameter, s.
+        ``_handle_query``.
+        """
         from app.models import ThunderLevel as TL
         from output.metric_format import thunder_ordinal
-        points = [p for p in timeline.points if p.arrival_time.date() == target_date]
+        points = [p for p in timeline.points if local_dt(p.arrival_time, tz).date() == target_date]
         if not points:
             return None
         temp_max = max((p.metrics.temp_max_c for p in points if p.metrics.temp_max_c is not None), default=None)
@@ -876,14 +901,17 @@ class TripCommandProcessor:
             f"🌧 {precip}mm  ⛈ Gewitter: {thunder_label}"
         )
 
-    def _fmt_glance(self, timeline, today, tomorrow) -> str:
+    def _fmt_glance(self, timeline, today, tomorrow, tz_heute, tz_morgen) -> str:
+        """Fix #1795 AC-4: je Tag die Zone SEINER EIGENEN Etappe — ``tz_heute``
+        für ``today``, ``tz_morgen`` für ``tomorrow`` (nicht eine gemeinsame
+        Zone für beide Tage)."""
         if not timeline.available:
             return (
                 "Kein Wetter-Snapshot verfügbar. "
                 "Bitte einen Report anfordern um aktuelle Daten zu laden."
             )
-        agg_heute = self._aggregate_day(timeline, today)
-        agg_morgen = self._aggregate_day(timeline, tomorrow)
+        agg_heute = self._aggregate_day(timeline, today, tz_heute)
+        agg_morgen = self._aggregate_day(timeline, tomorrow, tz_morgen)
         lines = ["🗓 Glance — heute & morgen", ""]
         if agg_heute:
             lines.append(self._fmt_day_agg(agg_heute, f"heute ({today:%d.%m})"))
@@ -895,13 +923,13 @@ class TripCommandProcessor:
             lines.append(f"morgen ({tomorrow:%d.%m}): Keine Etappe geplant")
         return "\n".join(lines)
 
-    def _fmt_gewitter(self, timeline, today) -> str:
+    def _fmt_gewitter(self, timeline, today, tz) -> str:
         if not timeline.available:
             return (
                 "Kein Wetter-Snapshot verfügbar. "
                 "Bitte einen Report anfordern um aktuelle Daten zu laden."
             )
-        agg = self._aggregate_day(timeline, today)
+        agg = self._aggregate_day(timeline, today, tz)
         if not agg:
             return f"Heute ({today:%d.%m}): Keine Etappe geplant — kein Gewitter-Status."
         thunder = agg["thunder"]
@@ -928,15 +956,21 @@ class TripCommandProcessor:
             suffix = f" · {herkunft}{suffix}"
         return f"⛈ Gewitter heute ({today:%d.%m}): {label}{suffix}"
 
-    def _fmt_timeline(self, timeline, target_date, label: str, day_token: str) -> str:
-        """Vertikale Timeline: pro Wegpunkt zwei Zeilen (Zeit/Höhe + Metriken)."""
+    def _fmt_timeline(self, timeline, target_date, label: str, day_token: str, tz) -> str:
+        """Vertikale Timeline: pro Wegpunkt zwei Zeilen (Zeit/Höhe + Metriken).
+
+        Fix #1795: sowohl der Tagesfilter (``local_dt(...).date()``, AC-3) als
+        auch die 🕐-Uhrzeit (``local_fmt``, AC-1/AC-5) laufen über die
+        durchgereichte Ortszone — kein rohes ``arrival_time.date()``/
+        ``:%H:%M`` auf dem UTC-Zeitstempel mehr.
+        """
         if not timeline.available:
             return (
                 "Kein Wetter-Snapshot verfügbar. "
                 "Bitte einen Report anfordern um aktuelle Wetterdaten zu laden."
             )
         pts = sorted(
-            [p for p in timeline.points if p.arrival_time.date() == target_date],
+            [p for p in timeline.points if local_dt(p.arrival_time, tz).date() == target_date],
             key=lambda p: p.arrival_time,
         )
         if not pts:
@@ -945,9 +979,9 @@ class TripCommandProcessor:
         lines = [f"📋 Timeline · {label} ({target_date:%d.%m})", ""]
         for p in pts:
             if p.elevation_m is not None:
-                lines.append(f"🕐 {p.arrival_time:%H:%M} · {int(p.elevation_m)} m")
+                lines.append(f"🕐 {local_fmt(p.arrival_time, tz)} · {int(p.elevation_m)} m")
             else:
-                lines.append(f"🕐 {p.arrival_time:%H:%M}")
+                lines.append(f"🕐 {local_fmt(p.arrival_time, tz)}")
             m = p.metrics
             t_min = f"{m.temp_min_c:.0f}" if m.temp_min_c is not None else "?"
             t_max = f"{m.temp_max_c:.0f}" if m.temp_max_c is not None else "?"
@@ -977,12 +1011,12 @@ class TripCommandProcessor:
             )
         return "\n".join(lines)
 
-    def _timeline_buttons(self, timeline, target_date, day_token: str) -> dict:
+    def _timeline_buttons(self, timeline, target_date, day_token: str, tz) -> dict:
         """Drilldown-Buttons je kritischer Metrik + immer Zurück."""
         from app.models import ThunderLevel
         from output.metric_format import thunder_ordinal
         back = {"text": "⬅️ Zurück", "callback_data": "glance"}
-        agg = self._aggregate_day(timeline, target_date) if timeline.available else None
+        agg = self._aggregate_day(timeline, target_date, tz) if timeline.available else None
         if not agg:
             return {"inline_keyboard": [[back]]}
 

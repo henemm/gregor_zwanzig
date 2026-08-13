@@ -232,9 +232,10 @@ class TestAC1TripOfficialAlertsFR:
             try:
                 register_official_alert_source(counting_source)
 
+                # Fix #1795 AC-7: OnDemandErgebnis(outcome, zieltag) statt bloszem String.
                 outcome = TripReportSchedulerService(user_id=user_id).send_on_demand_report(
                     trip, "morning"
-                )
+                ).outcome
                 assert counting_source.fetch_calls >= 1, (
                     "RED: der Trip-Briefing-Pfad ruft die registrierten "
                     "Official-Alert-Quellen noch nicht ab (fetch_calls=0)."
@@ -486,9 +487,10 @@ class TestAC3ToggleNoFetch:
             oa_base._REGISTERED_SOURCES.clear()
             try:
                 register_official_alert_source(counting_source)
+                # Fix #1795 AC-7: OnDemandErgebnis(outcome, zieltag) statt bloszem String.
                 outcome = TripReportSchedulerService(user_id=user_id).send_on_demand_report(
                     trip, "morning"
-                )
+                ).outcome
                 assert outcome == "sent", f"Erwartet Outcome 'sent', bekommen {outcome!r}"
                 assert counting_source.fetch_calls == 0, (
                     "official_alerts_enabled=False muss den Fetch verhindern, aber "
@@ -580,9 +582,10 @@ class TestAC4FailSoft:
             try:
                 register_official_alert_source(erroring_source)
 
+                # Fix #1795 AC-7: OnDemandErgebnis(outcome, zieltag) statt bloszem String.
                 outcome = TripReportSchedulerService(user_id=user_id).send_on_demand_report(
                     trip, "morning"
-                )
+                ).outcome
                 assert erroring_source.fetch_calls >= 1, (
                     "RED: der Trip-Briefing-Pfad ruft die registrierten "
                     "Official-Alert-Quellen noch nicht ab (fetch_calls=0), "
@@ -650,9 +653,10 @@ class TestAC5CompactFormat:
             try:
                 register_official_alert_source(counting_source)
 
+                # Fix #1795 AC-7: OnDemandErgebnis(outcome, zieltag) statt bloszem String.
                 outcome = TripReportSchedulerService(user_id=user_id).send_on_demand_report(
                     trip, "morning"
-                )
+                ).outcome
                 assert counting_source.fetch_calls >= 1, (
                     "RED: der Trip-Briefing-Pfad ruft die registrierten "
                     "Official-Alert-Quellen noch nicht ab (fetch_calls=0)."
