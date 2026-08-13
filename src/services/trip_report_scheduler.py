@@ -15,7 +15,7 @@ import os
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -51,6 +51,20 @@ if TYPE_CHECKING:
 # vermeiden. Hinweis: `time` ist hier die datetime.time-Klasse — der echte
 # Zeit-Modul wird als `time_module` importiert.
 INTER_MAIL_DELAY_SECONDS = 2
+
+
+class OnDemandErgebnis(NamedTuple):
+    """Fix #1795 AC-7: Rückgabetyp von ``send_on_demand_report`` — ein bloßer
+    Outcome-String (die frühere ``-> bool``-Annotation war seit #1007 ohnehin
+    falsch) reicht dem Aufrufer nicht, WELCHER Ortstag tatsächlich benutzt
+    wurde (``_send_trip_report_outcome`` löst ihn intern über
+    ``datetime.now(timezone.utc)`` zum Ausführungs-, nicht Empfangszeitpunkt
+    auf). Ein NamedTuple ist nicht ``True`` und fällt in einem Normalisierer,
+    der noch mit dem alten bool/str rechnet, laut in den else-Zweig — eine
+    vergessene Migrationsstelle wird sichtbar rot, nicht still falsch.
+    """
+    outcome: str
+    zieltag: date
 
 # Issue #1113: >75 % fehlende Segmente -> Guard wie Totalausfall (#1012);
 # Retry-Budget pro Segment bei transienten Fetch-Fehlern (1s/2s Backoff).
@@ -919,7 +933,7 @@ class TripReportSchedulerService:
             trip, report_type, allow_test_fallback=True, angefordert=True,
         )
 
-    def send_on_demand_report(self, trip: "Trip", report_type: str) -> bool:
+    def send_on_demand_report(self, trip: "Trip", report_type: str) -> OnDemandErgebnis:
         """
         Send an on-demand full briefing triggered by an inbound heute/morgen command.
 
@@ -928,24 +942,34 @@ class TripReportSchedulerService:
         Zieltag keine Etappe liegt) und OHNE „[TEST]"-Präfix — stattdessen eine
         dezente „auf Anfrage"-Kennzeichnung im Mail-Body.
 
+        Fix #1795 AC-7: der Zieltag wird HIER einmal aufgelöst (Ortstag, s.
+        `_get_target_date`) und an `_send_trip_report_outcome` durchgereicht
+        — derselbe Wert kommt im Rückgabe-`zieltag` an, statt dass ein
+        Aufrufer ihn ein zweites Mal aus `received_at` raten muss (Nebengewinn:
+        `_trigger_on_demand` verliert dadurch seinen eigenen `target_date`-
+        Parameter).
+
         Args:
             trip: Trip object
             report_type: "morning" (heute) or "evening" (morgen)
 
         Returns:
-            Outcome string: "sent" | "no_stage" | "no_weather" | "no_channels" |
-            "channels_unreachable"
-            (Issue #1007 Adversary-Fix F001/F002 — Outcome-Unterscheidung statt
-            eines bloßen bool, damit der Aufrufer "keine Etappe" von "keine
-            Wetterdaten" und von "kein Kanal aktiv" unterscheiden kann).
+            OnDemandErgebnis(outcome, zieltag) — outcome: "sent" | "no_stage" |
+            "no_weather" | "no_channels" | "channels_unreachable" (Issue #1007
+            Adversary-Fix F001/F002 — Outcome-Unterscheidung statt eines
+            bloßen bool, damit der Aufrufer "keine Etappe" von "keine
+            Wetterdaten" und von "kein Kanal aktiv" unterscheiden kann);
+            zieltag: der TATSAECHLICH benutzte Ortstag.
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
+        zieltag = self._get_target_date(report_type, trip, datetime.now(timezone.utc))
         # Issue #1725: `angefordert=True` NEBEN `on_demand=True` — die beiden
         # bedeuten Verschiedenes, siehe `_send_trip_report_outcome`.
-        return self._send_trip_report_outcome(
-            trip, report_type, on_demand=True, angefordert=True,
+        outcome = self._send_trip_report_outcome(
+            trip, report_type, on_demand=True, angefordert=True, target_date=zieltag,
         )
+        return OnDemandErgebnis(outcome=outcome, zieltag=zieltag)
 
     def _send_trip_report(
         self,
@@ -982,6 +1006,7 @@ class TripReportSchedulerService:
         on_demand: bool = False,
         catchup_prefix: str | None = None,
         angefordert: bool = False,
+        target_date: date | None = None,
     ) -> str:
         """
         Generate and send report for a single trip.
@@ -1022,6 +1047,13 @@ class TripReportSchedulerService:
                 zuerst mit Zahlen hier und zeigte nach dem eigenen Commit um
                 30 Zeilen daneben — ausgerechnet der Verweis auf die
                 Log-Zeile landete auf dem Gegenbeispiel (Adversary F008).
+            target_date: Fix #1795 — optionaler, bereits aufgelöster Ortstag.
+                Gesetzt (von `send_on_demand_report`): wird STATT der
+                internen `datetime.now(timezone.utc)`-Auflösung unten benutzt
+                — EINE Auflösung, kein Zweitauflöser. `None` (Default): die
+                sechs bestehenden Aufrufer bleiben unverändert, die Funktion
+                löst den Zieltag wie bisher selbst zum Ausführungszeitpunkt
+                auf.
 
         Returns:
             "no_stage" if no matching stage, "no_weather" if the weather
@@ -1037,9 +1069,12 @@ class TripReportSchedulerService:
 
         # 1. Convert trip to segments
         # Issue #1724: Zieltag aus der Ortszeit DIESES Trips (ADR-0044).
-        target_date = self._get_target_date(
-            report_type, trip, datetime.now(timezone.utc),
-        )
+        # Fix #1795: ein bereits aufgeloester `target_date` (s. Docstring)
+        # ersetzt die interne Auflösung — kein zweiter Auflöser.
+        if target_date is None:
+            target_date = self._get_target_date(
+                report_type, trip, datetime.now(timezone.utc),
+            )
         segments = self._convert_trip_to_segments(trip, target_date)
 
         # Issue #768: Test-Pfad-Fallback — wenn am regulären Zieldatum keine

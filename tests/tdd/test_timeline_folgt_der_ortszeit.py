@@ -66,10 +66,14 @@ _ADR_0044 = (
 # ---------------------------------------------------------------------------
 
 def _seg(arrival_time: datetime, coords: tuple[float, float], *,
-         elevation_m: int = 1500, seg_id: int = 1) -> SegmentWeatherData:
+         elevation_m: int = 1500, seg_id: int = 1,
+         wind_max_kmh: float = 20.0) -> SegmentWeatherData:
     """Ein Timeline-Punkt mit kontrolliertem ``arrival_time`` (aware UTC) --
     Metriken sind Platzhalter, nur ``arrival_time``/Koordinaten sind fuer
-    diese Suite relevant (Filter-/Formatier-Logik, nicht Wetterinhalt)."""
+    diese Suite relevant (Filter-/Formatier-Logik, nicht Wetterinhalt).
+    ``wind_max_kmh`` optional erhoehbar (Adversary-Fix F002/AC-4-Nachtrag):
+    ab 40 km/h loest ``_timeline_buttons`` den Wind-Drilldown-Button aus --
+    ein von aussen beobachtbares Signal, OB ein Wegpunkt gefunden wurde."""
     lat, lon = coords
     segment = TripSegment(
         segment_id=seg_id,
@@ -78,7 +82,9 @@ def _seg(arrival_time: datetime, coords: tuple[float, float], *,
         start_time=arrival_time - timedelta(hours=2), end_time=arrival_time,
         duration_hours=2.0, distance_km=5.0, ascent_m=100.0, descent_m=0.0,
     )
-    aggregated = SegmentWeatherSummary(temp_min_c=10.0, temp_max_c=18.0, wind_max_kmh=20.0)
+    aggregated = SegmentWeatherSummary(
+        temp_min_c=10.0, temp_max_c=18.0, wind_max_kmh=wind_max_kmh,
+    )
     return SegmentWeatherData(
         segment=segment, timeseries=None, aggregated=aggregated,
         fetched_at=arrival_time, provider="test",
@@ -199,11 +205,56 @@ def test_ac3_timeline_heute_koppelt_datum_und_uhrzeit():
           eine ortszeitrichtig umgerechnete 🕐-Zeile -- EINE Assertion-Gruppe
           prueft BEIDES gemeinsam, ein Halb-Fix (nur Filter ODER nur
           Formatierung umgestellt) muss hier durchfallen.
+
+    🔴 Nachbesserung (Adversary-Befund F001): die urspruengliche Fassung
+    waehlte ``ankunft_heute`` so, dass roher UTC-Tag (21.08.) UND Ortstag
+    (21.08.) zufaellig zusammenfielen -- ein auf rohes UTC zurueckgedrehter
+    Filter (``p.arrival_time.date() == target_date``) fand denselben Punkt
+    TROTZDEM, der Test blieb bei diesem Halb-Fix gruen. ``ankunft_heute``
+    liegt jetzt bewusst im Mismatch-Fenster (22:30 UTC am VORTAG = 00:30
+    Ortszeit): roher UTC-Tag (20.08.) != Ortstag (21.08.) -- ein
+    zurueckgedrehter Filter findet den Punkt NICHT mehr (Timeline leer,
+    uhrzeit_ok wird False), eine zurueckgedrehte Formatierung zeigt "22:30"
+    statt "00:30" (uhrzeit_ok ebenfalls False). Beide Richtungen fallen
+    ueber dieselbe Assertion durch. Die Drei-Wege-Vorbedingung (Ortstag ==
+    D21, roher Tag != D21) wird im Testkoerper GEMESSEN, nicht nur im
+    Kommentar behauptet.
+
+    🔴 Zweite Nachbesserung (eigene Mutations-Gegenprobe): ``ankunft_morgen``
+    lag urspruenglich EBENFALLS im Mismatch-Fenster (21.08. 22:30 UTC), mit
+    rohem UTC-Tag 21.08. -- IDENTISCH mit ``D21``, dem Zieltag von "heute".
+    Unter dem zurueckgedrehten Filter fiel dadurch nicht "kein Punkt
+    gefunden" auf, sondern der FALSCHE Punkt (``ankunft_morgen`` statt
+    ``ankunft_heute``) wurde als "heute" gezeigt -- zufaellig mit derselben
+    lokalen Uhrzeit "00:30", sodass die Assertion trotzdem gruen blieb. Die
+    Mutations-Gegenprobe deckte das auf. ``ankunft_morgen`` liegt jetzt
+    bewusst AUSSERHALB des Mismatch-Fensters (roher Tag == Ortstag == D22),
+    kann also unter keiner Filter-Variante mit D21 verwechselt werden --
+    im Testkoerper gemessen, nicht nur behauptet.
     """
-    ankunft_heute = datetime(2026, 8, 21, 6, 0, tzinfo=timezone.utc)    # 08:00 Korsika
-    ankunft_morgen = datetime(2026, 8, 22, 6, 0, tzinfo=timezone.utc)   # 08:00 Korsika (Folgetag)
+    ankunft_heute = datetime(2026, 8, 20, 22, 30, tzinfo=timezone.utc)   # 00:30 Korsika am 21.08, Mismatch-Fenster
+    ankunft_morgen = datetime(2026, 8, 22, 10, 0, tzinfo=timezone.utc)  # 12:00 Korsika am 22.08, ausserhalb des Fensters
 
     with freeze_time(NACHTS_UTC):
+        assert ankunft_heute.astimezone(ZoneInfo(KORSIKA_ZONE)).date() == D21, (
+            "Testaufbau: ankunft_heute muss lokal (Korsika) auf den Ortstag "
+            f"{D21} fallen"
+        )
+        assert ankunft_heute.date() != D21, (
+            "Testaufbau nicht diskriminierend: roher UTC-Tag von "
+            f"ankunft_heute ({ankunft_heute.date()}) darf nicht mit dem "
+            f"Ortstag ({D21}) zusammenfallen -- sonst faende ein auf rohes "
+            "UTC zurueckgedrehter Filter denselben Punkt trotzdem (Adversary "
+            "F001)"
+        )
+        assert ankunft_morgen.date() != D21, (
+            "Testaufbau nicht diskriminierend: roher UTC-Tag von "
+            f"ankunft_morgen ({ankunft_morgen.date()}) darf nicht mit D21 "
+            "zusammenfallen -- sonst koennte ein zurueckgedrehter Filter "
+            "diesen Punkt statt ankunft_heute als 'heute' zeigen und die "
+            "Assertion zufaellig gruen bleiben"
+        )
+
         _anker(NACHTS_UTC, KORSIKA_ZONE, D21)
         trip = _trip("ac3-kopplung", [D21, D22], WP_KORSIKA)
         save_trip(trip)
@@ -215,7 +266,7 @@ def test_ac3_timeline_heute_koppelt_datum_und_uhrzeit():
         body = _befehl(trip, "### query: timeline_heute", NACHTS_UTC).confirmation_body
 
     kopfzeile_ok = f"({D21:%d.%m})" in body
-    uhrzeit_ok = "🕐 08:00" in body
+    uhrzeit_ok = "🕐 00:30" in body
     assert kopfzeile_ok and uhrzeit_ok, (
         "AC-3: EINE Assertion-Gruppe muss BEIDE Bestandteile pruefen -- den "
         "Kopfzeilen-Ortstag UND eine ortszeitrichtig umgerechnete 🕐-Zeile "
@@ -322,6 +373,217 @@ def test_ac4_glance_nutzt_je_tag_die_eigene_zone():
         f"AC-4: die KORSIKA-Etappe (eigene Zone: Europe/Paris) wurde nicht "
         f"gefunden -- eine gemeinsame Wellington-Zone (Mutante ii) findet "
         f"sie nicht:\n{body}"
+    )
+
+
+# ═══════════ Adversary-Fix F005 (schliesst die Fehlerklasse aus F002/F004) ═══════════
+#
+# Ausgezaehlt: SIEBEN Zonen-Entscheidungspunkte in `_handle_query` --
+# `glance` reicht ZWEI Argumente durch (`tz_heute` fuer heute, `tz_morgen`
+# fuer morgen, EIN Aufruf `_fmt_glance(..., tz_heute, tz_morgen)`),
+# `heute_gewitter` EINES, `timeline_heute` ZWEI (Text via `_fmt_timeline`,
+# Buttons via `_timeline_buttons`), `timeline_morgen` ebenfalls ZWEI.
+# AC-2/AC-3 nutzen einzonige Korsika-Touren (`tz_heute == tz_morgen` dort),
+# AC-4 deckt nur `glance` ab -- ein Zonentausch an JEDEM der sechs
+# UEBRIGEN Punkte blieb dadurch fuer sich genommen unsichtbar (F002/F004,
+# beide inzwischen geschlossen -- s. Bericht).
+#
+# EIN parametrisierter Test statt vier/fuenf Einzeltests, auf EINER
+# Mehrzonen-Tour (`trip_two_zones`: heute Wellington, morgen Korsika):
+# fuer jedes der vier Kommandos ein Wegpunkt, dessen Ortszeit unter der
+# EIGENEN Zone einen ANDEREN Tag/eine andere Uhrzeit ergibt als unter der
+# Zone des jeweils ANDEREN Tages. Wo ein `reply_markup` existiert
+# (`timeline_heute`/`timeline_morgen`), traegt es eine eigene Assertion --
+# sonst bliebe der Button-Pfad unbewacht. Ersetzt die drei F002-Tests und
+# den F004-Test vollstaendig (geloescht -- die Matrix deckt exakt dieselbe
+# Fehlerklasse ab, staerker: alle sieben Punkte statt einzelner, s. Beleg
+# im Bericht des Auftrags: Mutations-Gegenprobe ueber alle sieben Punkte).
+
+_F005_ABFRAGE = datetime(2026, 8, 19, 6, 0, tzinfo=timezone.utc)
+_F005_HEUTE_ZEIT = datetime(2026, 8, 18, 15, 0, tzinfo=timezone.utc)    # 03:00 Wellington 19.08, 17:00 Korsika 18.08
+_F005_MORGEN_ZEIT = datetime(2026, 8, 20, 18, 0, tzinfo=timezone.utc)   # 20:00 Korsika 20.08, 06:00 Wellington 21.08
+
+
+@pytest.mark.parametrize("query_key, body_cmd", [
+    pytest.param("glance", "### query: glance", id="glance"),
+    pytest.param("heute_gewitter", "### query: heute_gewitter", id="heute_gewitter"),
+    pytest.param("timeline_heute", "### query: timeline_heute", id="timeline_heute"),
+    pytest.param("timeline_morgen", "### query: timeline_morgen", id="timeline_morgen"),
+])
+def test_f005_alle_vier_kommandos_nutzen_die_zone_ihrer_eigenen_etappe(query_key, body_cmd):
+    """Adversary-Fix F005.
+
+    GIVEN eine Mehrzonen-Tour hat die heutige Etappe in Neuseeland
+          (Pacific/Auckland) und die morgige auf Korsika (Europe/Paris), je
+          ein Wegpunkt liegt so, dass seine Ortszeit unter der EIGENEN Zone
+          einen anderen Tag/eine andere Uhrzeit ergibt als unter der Zone
+          des jeweils ANDEREN Tages,
+    WHEN  eines der vier Query-Kommandos abgefragt wird,
+    THEN  spiegeln Text UND (wo vorhanden) ``reply_markup`` den unter der
+          EIGENEN Zone gefundenen Wegpunkt -- ein Tausch der Zone an JEDEM
+          der sieben Entscheidungspunkte in ``_handle_query`` (glance
+          heute/morgen, heute_gewitter, timeline_heute Text/Buttons,
+          timeline_morgen Text/Buttons) muss fuer das jeweils betroffene
+          Kommando durchfallen.
+    """
+    ortstag_heute = _F005_ABFRAGE.astimezone(ZoneInfo(WELLINGTON_ZONE)).date()
+    morgen_tag = ortstag_heute + timedelta(days=1)
+
+    heute_wellington = _F005_HEUTE_ZEIT.astimezone(ZoneInfo(WELLINGTON_ZONE))
+    heute_korsika = _F005_HEUTE_ZEIT.astimezone(ZoneInfo(KORSIKA_ZONE))
+    morgen_korsika = _F005_MORGEN_ZEIT.astimezone(ZoneInfo(KORSIKA_ZONE))
+    morgen_wellington = _F005_MORGEN_ZEIT.astimezone(ZoneInfo(WELLINGTON_ZONE))
+
+    # Vorbedingungen -- fuer JEDEN Parameterfall gemessen (nicht behauptet):
+    # die EIGENE Zone muss den Wegpunkt auf den erwarteten Ortstag legen,
+    # die FREMDE Zone auf einen ANDEREN Tag UND eine andere Uhrzeit --
+    # sonst waere der jeweilige Zonentausch strukturell unsichtbar.
+    assert ortstag_heute == date(2026, 8, 19), (
+        f"Testaufbau: Ortstag heute (Wellington) muss 19.08 sein, ist {ortstag_heute}"
+    )
+    assert heute_wellington.date() == ortstag_heute, (
+        "Testaufbau: heute_zeit muss lokal (Wellington, EIGENE Zone der "
+        f"heutigen Etappe) auf den heutigen Ortstag {ortstag_heute} fallen"
+    )
+    assert heute_korsika.date() != ortstag_heute, (
+        "Testaufbau nicht diskriminierend: unter der FALSCHEN Zone "
+        "(Korsika, Zone von MORGEN) muss heute_zeit auf einen ANDEREN Tag "
+        "fallen -- sonst faende ein Zonentausch den Wegpunkt trotzdem"
+    )
+    assert heute_wellington.strftime("%H:%M") != heute_korsika.strftime("%H:%M"), (
+        "Testaufbau nicht diskriminierend: die beiden Zonen muessen fuer "
+        "heute_zeit tatsaechlich verschiedene Ortszeiten ergeben"
+    )
+    assert morgen_korsika.date() == morgen_tag, (
+        "Testaufbau: morgen_zeit muss lokal (Korsika, EIGENE Zone der "
+        f"morgigen Etappe) auf den morgigen Ortstag {morgen_tag} fallen"
+    )
+    assert morgen_wellington.date() != morgen_tag, (
+        "Testaufbau nicht diskriminierend: unter der FALSCHEN Zone "
+        "(Wellington, Zone von HEUTE) muss morgen_zeit auf einen ANDEREN "
+        "Tag fallen -- sonst faende ein Zonentausch den Wegpunkt trotzdem"
+    )
+    assert morgen_korsika.strftime("%H:%M") != morgen_wellington.strftime("%H:%M"), (
+        "Testaufbau nicht diskriminierend: die beiden Zonen muessen fuer "
+        "morgen_zeit tatsaechlich verschiedene Ortszeiten ergeben"
+    )
+
+    with freeze_time(_F005_ABFRAGE):
+        trip = trip_two_zones(ortstag_heute, trip_id=f"f005-{query_key}")
+        save_trip(trip)
+        _save_snapshot(trip.id, [
+            _seg(_F005_HEUTE_ZEIT, WP_NZ, seg_id=1, wind_max_kmh=45.0),
+            _seg(_F005_MORGEN_ZEIT, WP_KORSIKA, seg_id=2, wind_max_kmh=45.0),
+        ])
+
+        ergebnis = _befehl(trip, body_cmd, _F005_ABFRAGE)
+        body = ergebnis.confirmation_body
+
+    if query_key == "glance":
+        assert f"heute ({ortstag_heute:%d.%m}): Keine Etappe geplant" not in body, (
+            "F005 [glance, heute-Argument]: der heutige Wegpunkt "
+            f"(Wellington) wurde nicht gefunden:\n{body}"
+        )
+        assert f"morgen ({morgen_tag:%d.%m}): Keine Etappe geplant" not in body, (
+            "F005 [glance, morgen-Argument]: der morgige Wegpunkt (Korsika) "
+            f"wurde nicht gefunden:\n{body}"
+        )
+    elif query_key == "heute_gewitter":
+        assert "Keine Etappe geplant" not in body, (
+            "F005 [heute_gewitter]: der heutige Wegpunkt (Wellington) wurde "
+            f"nicht gefunden:\n{body}"
+        )
+    elif query_key == "timeline_heute":
+        erwartete_zeile = f"🕐 {heute_wellington.strftime('%H:%M')}"
+        assert erwartete_zeile in body, (
+            "F005 [timeline_heute, Text]: die ortszeitrichtige "
+            f"(Wellington-)Uhrzeit fehlt:\n{body}"
+        )
+        callbacks = [
+            btn["callback_data"]
+            for row in ergebnis.reply_markup["inline_keyboard"]
+            for btn in row
+        ]
+        assert "dd_wind_today" in callbacks, (
+            "F005 [timeline_heute, Buttons]: der Wind-Drilldown-Button "
+            f"fehlt: {callbacks!r}"
+        )
+    elif query_key == "timeline_morgen":
+        erwartete_zeile = f"🕐 {morgen_korsika.strftime('%H:%M')}"
+        assert erwartete_zeile in body, (
+            "F005 [timeline_morgen, Text]: die ortszeitrichtige "
+            f"(Korsika-)Uhrzeit fehlt:\n{body}"
+        )
+        callbacks = [
+            btn["callback_data"]
+            for row in ergebnis.reply_markup["inline_keyboard"]
+            for btn in row
+        ]
+        assert "dd_wind_tomorrow" in callbacks, (
+            "F005 [timeline_morgen, Buttons]: der Wind-Drilldown-Button "
+            f"fehlt: {callbacks!r}"
+        )
+
+
+# ═══════ Dokumentierte Grenze der F005-Matrix: EIN Rest-Fall aus F002 ═══════
+#
+# Die F005-Matrix oben deckt (per Mutations-Gegenprobe belegt, s. Bericht des
+# Auftrags) alle SIEBEN `_handle_query`-Entscheidungspunkte UND zusaetzlich,
+# als Nebeneffekt derselben Konstruktion, drei der vier urspruenglichen
+# F002-Mutationen (den internen UTC-Ruckfall in `_fmt_gewitter`,
+# `_timeline_buttons` und im HEUTE-Zweig von `_fmt_glance`). EINE
+# F002-Mutation bleibt strukturell unerreichbar: der interne UTC-Ruckfall im
+# MORGEN-Zweig von `_fmt_glance` (`agg_morgen = self._aggregate_day(...,
+# UTC)` statt `tz_morgen`).
+#
+# Beweis (nicht nur behauptet): fuer einen Wegpunkt, der unter Korsika
+# (+2h) auf den morgigen Ortstag T faellt, aber unter Weltzeit NICHT (also
+# den internen UTC-Ruckfall faengt), MUSS der Zeitpunkt in der zweistuen-
+# digen Luecke [T-1 22:00, T 00:00) UTC liegen (dem Teil von Korsikas
+# Tagesfenster [T-1 22:00, T 22:00), der VOR dem UTC-Tageswechsel liegt).
+# Wellingtons Tagesfenster fuer T ist [T-1 12:00, T 12:00) (+12h) -- und
+# [T-1 22:00, T 00:00) liegt VOLLSTAENDIG darin (T-1 22:00 >= T-1 12:00,
+# T 00:00 <= T 12:00). JEDER Zeitpunkt, der den UTC-Ruckfall faengt, faellt
+# also zwangslaeufig AUCH unter Wellington auf T -- ein Wellington/Korsika-
+# Tausch (F004/F005s Fehlerklasse) waere an genau diesem Punkt dann NICHT
+# mehr diskriminierbar. Beide Eigenschaften gleichzeitig sind fuer EINEN
+# Wegpunkt auf dieser Zweizonen-Tour unerreichbar -- deshalb bleibt dieser
+# EINE Fall als eigener, einzoniger Test stehen (Mismatch-Fenster-Muster,
+# unveraendert aus F002 uebernommen) statt in der Matrix aufzugehen.
+
+
+def test_f002_rest_glance_morgen_internen_utc_ruckfall():
+    """Adversary-Fix F002, Rest-Fall (s. Beweis oben): der MORGEN-Zweig von
+    ``_fmt_glance`` muss ``tz_morgen`` tatsaechlich verwenden -- nicht nur
+    einen ANDEREN Zonenwert (das deckt F005), sondern auch nicht intern auf
+    UTC zurueckfallen. Einzonige Korsika-Tour, Wegpunkt im Mismatch-Fenster.
+    """
+    morgen_zeit = datetime(2026, 8, 21, 22, 30, tzinfo=timezone.utc)  # 00:30 Korsika am 22.08
+    heute_zeit = datetime(2026, 8, 21, 10, 0, tzinfo=timezone.utc)    # unauffaellig, kein Mismatch
+
+    with freeze_time(NACHTS_UTC):
+        assert morgen_zeit.astimezone(ZoneInfo(KORSIKA_ZONE)).date() == D22, (
+            "Testaufbau: morgen_zeit muss lokal (Korsika) auf D22 fallen"
+        )
+        assert morgen_zeit.date() != D22, (
+            "Testaufbau nicht diskriminierend: roher UTC-Tag von morgen_zeit "
+            "darf nicht mit D22 zusammenfallen -- sonst faende ein interner "
+            "UTC-Ruckfall denselben Punkt trotzdem"
+        )
+
+        _anker(NACHTS_UTC, KORSIKA_ZONE, D21)
+        trip = _trip("f002-rest-glance-morgen", [D21, D22], WP_KORSIKA)
+        save_trip(trip)
+        _save_snapshot(trip.id, [
+            _seg(heute_zeit, WP_KORSIKA, seg_id=1),
+            _seg(morgen_zeit, WP_KORSIKA, seg_id=2),
+        ])
+
+        body = _befehl(trip, "### query: glance", NACHTS_UTC).confirmation_body
+
+    assert f"morgen ({D22:%d.%m}): Keine Etappe geplant" not in body, (
+        "F002 (Rest): der morgige Wegpunkt wurde nicht gefunden -- der "
+        f"MORGEN-Zweig von _fmt_glance nutzt offenbar nicht tz_morgen:\n{body}"
     )
 
 

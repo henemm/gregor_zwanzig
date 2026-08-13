@@ -72,6 +72,26 @@ _load_main_env()
 
 LAT, LON = 47.2692, 11.4041
 
+
+def _heute_lokal() -> date:
+    """Der Ortstag JETZT fuer die Testtour (Europe/Vienna) -- dieselbe
+    Berechnung, die ``_handle_query`` seit Fix #1795 benutzt
+    (``trip_local_now``), NICHT ``date.today()`` (roher UTC-Tag).
+
+    Ohne diese Angleichung liefe der Test im Mismatch-Fenster (22:00-24:00
+    UTC im Sommer, Europe/Vienna) auf eine Etappe, deren Datum vom
+    tatsaechlich abgefragten Ortstag abweicht -- ``heute``/``morgen``
+    faenden dann keine Etappe. Bewusst KEIN literal eingefrorener Zeitpunkt
+    (``freeze_time``/hartkodiertes Datum): dieser Test versendet echt per
+    SMTP und fragt echtes Wetter ab, ein in der Vergangenheit/Zukunft
+    eingefrorenes "jetzt" wuerde den echten Forecast-Abruf verfaelschen.
+    Ruft freezegun-transparent ``datetime.now()`` auf -- unter einem
+    AEUSSEREN ``freeze_time`` (z. B. der AC-9-Gegenprobe) liefert diese
+    Funktion denselben Ortstag wie der Pruefling.
+    """
+    from utils.timezone import local_dt, tz_for_coords
+    return local_dt(datetime.now(timezone.utc), tz_for_coords(LAT, LON)).date()
+
 # Issue #1044: FESTES Mittagsfenster, keine now()-Abhängigkeit. Das Voll-Briefing
 # filtert die Timeline nach `arrival_time.date() == target_date` (siehe
 # TripCommandProcessor._aggregate_day / _fmt_timeline) — NICHT nach "jetzt aktiv".
@@ -245,7 +265,7 @@ def test_ac1_ac3_ac5_heute_sendet_volles_briefing_genau_eine_mail():
     user_id = "tdd-1007-ac1"
     trip_name = "TDD1007 AC1 HeuteVoll"
     _make_user(user_id)
-    _make_trip(user_id, "tdd-1007-ac1-trip", trip_name, date.today())
+    _make_trip(user_id, "tdd-1007-ac1-trip", trip_name, _heute_lokal())
 
     baseline_uid = _max_uid()
     result = _process(user_id, trip_name, "heute")
@@ -277,7 +297,7 @@ def test_ac1_ac3_ac5_heute_sendet_volles_briefing_genau_eine_mail():
     assert "Anfrage" in html or "Anfrage" in subj, (
         "Kennzeichnung 'auf Anfrage' fehlt in Betreff und Body"
     )
-    today_str = date.today().strftime("%d.%m.%Y")
+    today_str = _heute_lokal().strftime("%d.%m.%Y")
     assert today_str in html, (
         f"Briefing nennt nicht das heutige Datum {today_str}"
     )
@@ -291,7 +311,7 @@ def test_ac2_morgen_sendet_volles_briefing_fuer_morgen():
     user_id = "tdd-1007-ac2"
     trip_name = "TDD1007 AC2 MorgenVoll"
     _make_user(user_id)
-    tomorrow = date.today() + timedelta(days=1)
+    tomorrow = _heute_lokal() + timedelta(days=1)
     _make_trip(user_id, "tdd-1007-ac2-trip", trip_name, tomorrow)
 
     baseline_uid = _max_uid()
@@ -319,7 +339,7 @@ def test_ac4_keine_etappe_keine_mail_klare_antwort():
     trip_name = "TDD1007 AC4 KeineEtappe"
     _make_user(user_id)
     _make_trip(user_id, "tdd-1007-ac4-trip", trip_name,
-               date.today() + timedelta(days=10))
+               _heute_lokal() + timedelta(days=10))
 
     result = _process(user_id, trip_name, "heute")
 
@@ -340,7 +360,7 @@ def test_ac6_glance_bleibt_kurzform_ohne_versand():
     user_id = "tdd-1007-ac6"
     trip_name = "TDD1007 AC6 Glance"
     _make_user(user_id)
-    _make_trip(user_id, "tdd-1007-ac6-trip", trip_name, date.today())
+    _make_trip(user_id, "tdd-1007-ac6-trip", trip_name, _heute_lokal())
 
     result = _process(user_id, trip_name, "glance")
 
@@ -362,8 +382,8 @@ def test_ac8_zwei_nutzer_isolation():
     name_a, name_b = "TDD1007 IsoUserA", "TDD1007 IsoUserB"
     _make_user(user_a)
     _make_user(user_b)
-    _make_trip(user_a, "tdd-1007-iso", name_a, date.today())
-    _make_trip(user_b, "tdd-1007-iso", name_b, date.today())
+    _make_trip(user_a, "tdd-1007-iso", name_a, _heute_lokal())
+    _make_trip(user_b, "tdd-1007-iso", name_b, _heute_lokal())
 
     baseline_uid = _max_uid()
     result = _process(user_a, name_a, "heute")
@@ -394,7 +414,7 @@ def test_f001_keine_kanaele_aktiv_keine_stille_ohne_versand():
         trip_id="tdd-1007-f001-trip",
         send_email=False, send_sms=False, send_telegram=False,
     )
-    _make_trip(user_id, "tdd-1007-f001-trip", trip_name, date.today(), report_config=rc)
+    _make_trip(user_id, "tdd-1007-f001-trip", trip_name, _heute_lokal(), report_config=rc)
 
     baseline_uid = _max_uid()
     result = _process(user_id, trip_name, "heute")
@@ -443,7 +463,7 @@ def test_snapshot_bleibt_kombiniert_nach_heute():
     heilt."""
     user_id = "tdd-1007-adv-verify"
     trip_name = "TDD1007 SnapshotBleibtKombiniert"
-    today = date.today()
+    today = _heute_lokal()
     tomorrow = today + timedelta(days=1)
     _make_user(user_id)
     trip = _make_trip_two_stages(

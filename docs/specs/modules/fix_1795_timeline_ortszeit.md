@@ -61,10 +61,11 @@ derselben Nachricht (ADR-0051, s. „Warum eine Scheibe und kein Schnitt"). Hera
 
 | Datei | Änderung | Beschreibung |
 |---|---|---|
-| `src/services/trip_command_processor.py` | MODIFY | `_handle_query` (eine Auflösung, zwei Zonen), `_trigger_on_demand`, `_aggregate_day` (4 Aufrufstellen), `_fmt_glance`, `_fmt_gewitter`, `_fmt_timeline`, `_timeline_buttons`, `_fetch_and_save_snapshot` |
+| `src/services/trip_command_processor.py` | MODIFY | `_handle_query` (eine Auflösung, zwei Zonen), `_trigger_on_demand`, `_aggregate_day` (4 Aufrufstellen), `_fmt_glance`, `_fmt_gewitter`, `_fmt_timeline`, `_timeline_buttons` |
 | `src/services/trip_report_scheduler.py` | MODIFY | `OnDemandErgebnis`-NamedTuple, `send_on_demand_report`, optionaler `target_date`-Parameter an `_send_trip_report_outcome` |
-| `tests/tdd/test_timeline_folgt_der_ortszeit.py` | CREATE | Neue Suite (~17 Tests), Verhaltensname statt Issue-Nummer |
-| `tests/tdd/conftest.py` | MODIFY | DST-Fixtur (Europe/Paris, beide Wechseltage) heben |
+| `tests/tdd/test_timeline_folgt_der_ortszeit.py` | CREATE | Neue Suite, Verhaltensname statt Issue-Nummer |
+| `tests/tdd/conftest.py` | MODIFY | `_anker()`-Helfer heben (Vorbedingungs-Anker, aus `test_befehlspfade_folgen_ortszone.py`) |
+| `tests/tdd/test_befehlspfade_folgen_ortszone.py` | MODIFY | Altnutzer des gehobenen `_anker()` nachziehen (Import statt lokaler Kopie) |
 | `tests/tdd/test_thunder_origin_four_places.py` | MODIFY | Fixtur `kommando` einfrieren (`:206-236`) |
 | `tests/tdd/test_thunder_origin_trip.py` | MODIFY | Fixtur einfrieren (`:192-219`) |
 | `tests/tdd/test_issue_1007_heute_voll_briefing.py` | MODIFY | `date.today()` an sieben Stellen einfrieren (`:248`, `:280`, `:294`, `:322`, `:343`, `:365-366`, `:397`, `:446`) |
@@ -356,3 +357,20 @@ Neue Suite `tests/tdd/test_timeline_folgt_der_ortszeit.py` — nach Verhalten be
 
 - 2026-08-13: Spec erstellt nach `docs/context/fix-1795-timeline-ortszeit.md` (Basis-HEAD
   `dbad9614`).
+- 2026-08-13 (nach Umsetzung, Umfangsprüfung): Dateitabelle an die tatsächliche Lieferung
+  angeglichen — die ACs sind unberührt, nur die beschreibende Liste war falsch geworden.
+  Drei Abweichungen:
+  1. **`_fetch_and_save_snapshot` wurde NICHT geändert.** AC-8 ist trotzdem erfüllt, und zwar
+     strukturell: die Funktion bekommt `today` unverändert vom Aufrufer, und der trägt seit
+     dieser Scheibe den Ortstag (`trip_command_processor.py:532`). Weniger Diff als
+     angekündigt, gleiche Wirkung.
+  2. **`tests/tdd/conftest.py`** hat nicht die DST-Fixtur aufgenommen, sondern den
+     `_anker()`-Helfer (Vorbedingungs-Anker). Die DST-Fälle liegen lokal in der neuen Suite;
+     AC-5 ist inhaltlich abgedeckt (29.03. und 25.10.2026).
+  3. **`tests/tdd/test_befehlspfade_folgen_ortszone.py`** war in der Tabelle nicht vorgesehen,
+     wurde aber angefasst — als Altnutzer des gehobenen `_anker()`. Eine dritte Kopie wäre der
+     Fehler gewesen, den ADR-0044 für die Zonen-Auflösung selbst verbietet.
+- 2026-08-13: **Testumfang über der Schätzung.** Die neue Suite ist 928 statt geschätzter ~650
+  Zeilen. Ursache sind die Adversary-Runden (F001, F002, F004, F005) — genau der Posten, für den
+  der Override von 1000 Reserve tragen sollte; die Reserve war zu klein. Produktivcode liegt mit
+  +111/−42 im geschätzten Korridor.
