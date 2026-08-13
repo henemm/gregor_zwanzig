@@ -13,7 +13,7 @@ workflow: fix-1795-timeline-ortszeit
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe („go") am 2026-08-13
 
 ## Purpose
 
