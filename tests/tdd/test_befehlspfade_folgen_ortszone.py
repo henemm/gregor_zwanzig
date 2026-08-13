@@ -42,7 +42,7 @@ from services.trip_command_processor import (
     InboundMessage,
     TripCommandProcessor,
 )
-from tests.tdd.conftest import WP_KORSIKA, WP_NZ, trip_two_zones
+from tests.tdd.conftest import WP_KORSIKA, WP_NZ, _anker, trip_two_zones
 
 # Zonen, deren Ortstag sich zum selben Augenblick unterscheidet.
 KORSIKA_ZONE = "Europe/Paris"          # im August UTC+2
@@ -97,27 +97,9 @@ def _befehl(trip: Trip, body: str, now_utc: datetime,
     ))
 
 
-def _anker(now_utc: datetime, zone: str, erwarteter_ortstag: date) -> None:
-    """Vorbedingungs-Anker (AC-9) — PFLICHT vor jeder Hauptzusicherung.
-
-    Belegt, dass Ortstag, Weltzeit-Tag und Servertag bei DIESER Fixtur zu
-    DIESEM Zeitpunkt wirklich auseinanderfallen. Ohne ihn koennte die
-    Hauptzusicherung strukturell nie fehlschlagen (Fehlerklasse #1726 F002).
-    Der Sollwert wird aus der Zone gebildet, nicht aus dem Prueflingsweg.
-    """
-    ortstag = now_utc.astimezone(ZoneInfo(zone)).date()
-    assert ortstag == erwarteter_ortstag, (
-        f"Testaufbau: Ortstag in {zone} ist {ortstag}, der Test rechnet mit "
-        f"{erwarteter_ortstag} (Zeitpunkt {now_utc.isoformat()})"
-    )
-    assert ortstag != now_utc.date(), (
-        f"Testaufbau nicht diskriminierend: Ortstag ({ortstag}) und "
-        f"Weltzeit-Tag ({now_utc.date()}) sind gleich (#1726 F002)"
-    )
-    assert ortstag != date.today(), (
-        f"Testaufbau nicht diskriminierend: Ortstag ({ortstag}) und Servertag "
-        f"date.today() ({date.today()}) sind gleich (#1726 F002)"
-    )
+# ``_anker`` ist ab #1795 nach ``tests/tdd/conftest.py`` gehoben (geteilter
+# Ort statt einer zweiten Kopie, s. dortiger Docstring) — hier nur noch
+# importiert (s. Import-Block oben).
 
 
 # ══════════════════════ AC-1/AC-2: /status filtert nach Ortstag ══════════════════════

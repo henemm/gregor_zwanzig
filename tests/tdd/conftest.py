@@ -12,6 +12,7 @@ import sys
 from datetime import date as _date
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -72,6 +73,39 @@ def trip_two_zones(
             )
             for i, (lat, lon) in enumerate(coords)
         ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Vorbedingungs-Anker -- geteilter Ort (Issue #1795, gehoben aus
+# tests/tdd/test_befehlspfade_folgen_ortszone.py:100-118, #1727 S5a).
+#
+# Eine dritte Kopie waere derselbe Regelverstoss, den ADR-0044 fuer die
+# Zonen-Aufloesung selbst verbietet -- der Altnutzer importiert ab #1795
+# von hier statt einer eigenen Definition.
+# ---------------------------------------------------------------------------
+
+def _anker(now_utc: datetime, zone: str, erwarteter_ortstag: _date) -> None:
+    """Vorbedingungs-Anker — PFLICHT vor jeder Hauptzusicherung, die einen
+    vom Weltzeit-/Servertag abweichenden Ortstag behauptet.
+
+    Belegt, dass Ortstag, Weltzeit-Tag und Servertag bei DIESER Fixtur zu
+    DIESEM Zeitpunkt wirklich auseinanderfallen. Ohne ihn koennte die
+    Hauptzusicherung strukturell nie fehlschlagen (Fehlerklasse #1726 F002).
+    Der Sollwert wird aus der Zone gebildet, nicht aus dem Prueflingsweg.
+    """
+    ortstag = now_utc.astimezone(ZoneInfo(zone)).date()
+    assert ortstag == erwarteter_ortstag, (
+        f"Testaufbau: Ortstag in {zone} ist {ortstag}, der Test rechnet mit "
+        f"{erwarteter_ortstag} (Zeitpunkt {now_utc.isoformat()})"
+    )
+    assert ortstag != now_utc.date(), (
+        f"Testaufbau nicht diskriminierend: Ortstag ({ortstag}) und "
+        f"Weltzeit-Tag ({now_utc.date()}) sind gleich (#1726 F002)"
+    )
+    assert ortstag != _date.today(), (
+        f"Testaufbau nicht diskriminierend: Ortstag ({ortstag}) und Servertag "
+        f"date.today() ({_date.today()}) sind gleich (#1726 F002)"
     )
 
 
