@@ -4,7 +4,7 @@ type: feature
 created: 2026-08-13
 updated: 2026-08-13
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [thunder, trip, compare, telegram, outlook, adr-0007, adr-0025, issue-1680, issue-1419]
 ---
 
@@ -23,6 +23,10 @@ tags: [thunder, trip, compare, telegram, outlook, adr-0007, adr-0025, issue-1680
 
 - [x] Approved — PO-go 2026-08-13 (13 ACs, Wortlaut und beide vorgelegten
       Entscheidungen: Nachtteil ohne Herkunft, Compare-Ausblick erbt mit)
+- [x] Approved v1.1 — PO-go 2026-08-13. Nachtrag nach RED-Messung: AC-11 in
+      AC-11a/AC-11b geteilt (Compare hat ZWEI Renderpfade, der Metrik-Zweig
+      ist der Regelfall), AC-4 Reihenfolge praezisiert. Siehe "Am Code
+      gemessen" Punkt 9.
 
 ## Purpose
 
@@ -69,6 +73,15 @@ Handlungsempfehlung (ADR-0007).
 - **File:** `src/output/metric_format.py` — `union_of_max_carriers()`
   (Z. 559–609) und `THUNDER_SIGNAL_LABEL_DE` (Z. 374–379), beide unverändert
   wiederverwendet.
+- **File:** `src/output/renderers/compare_outlook_metric_ids.py` —
+  `outlook_columns()` (Z. 78) und `format_outlook_value()` (Z. 117–135) für
+  **AC-11b**. Der Zweig mit gesetzter Metrik-Auswahl umgeht den Token-Pfad
+  vollständig (früher Return `outlook.py:148`, `continue` `outlook.py:342`) und
+  baut die Zelle über `_fmt_thunder(value, column.get("hail"))`. Erweiterung
+  exakt nach dem **Hagel-Vorbild** (#1475 Punkt 5b, „Aufrufstelle 4"): ein
+  zusätzlicher Spalten-Schlüssel, durchgereicht an den dritten Parameter von
+  `_fmt_thunder`, den es seit Scheibe 1 bereits gibt
+  (`email/compare_html.py:204-242`).
 
 ## Wortlaut (freigabepflichtig)
 
@@ -114,8 +127,12 @@ eigenen Strukturdaten.
 
 - **AC-4:** Given eine Etappe, deren Höchststufe im Tagesfenster von **zwei**
   Zutaten gleichzeitig getragen wird / When der Ausblick gerendert wird / Then
-  werden **beide** Zutaten genannt, mit `", "` verbunden, in stabiler
-  Reihenfolge (Auslegung (ii): alle tragenden Signale, kein Gewinner gekürt).
+  werden **beide** Zutaten genannt, mit `", "` verbunden (Auslegung (ii): alle
+  tragenden Signale, kein Gewinner gekürt). **Reihenfolge:** die von
+  `union_of_max_carriers()` gelieferte — dedupliziert, in Erstauftritts-
+  Reihenfolge über die betrachteten Stunden. Bei einem einzelnen Punkt ist das
+  die Katalogreihenfolge, über mehrere Stunden hinweg die zeitliche. Es wird
+  **keine** eigene Sortierung eingeführt (unverändert gegenüber S1–S4).
 
 - **AC-5:** Given eine Etappe mit Gewitter **und** Hagel-Kennzeichen / When der
   Ausblick gerendert wird / Then steht die Herkunft **vor** dem Hagel-Zusatz,
@@ -152,10 +169,19 @@ eigenen Strukturdaten.
   **ohne** Herkunft — nie eine Herkunft, die nicht zur gezeigten Stufe gehört
   (AC-12-Regel aus Scheibe 1).
 
-- **AC-11:** Given einen Ortsvergleich mit aktivem Ausblick / When dessen
-  Ausblick-Tabelle gerendert wird / Then nennt auch sie die Herkunft — der
-  geteilte Zeilenbau wird **nicht** trip-seitig abgeschaltet
-  (Trip/Compare-Teilungs-Invariante).
+- **AC-11a:** Given einen Ortsvergleich **ohne** Metrik-Auswahl für den
+  Ausblick (Altbestand, `outlook_metrics` fehlt) / When dessen Ausblick-Tabelle
+  gerendert wird / Then nennt auch sie die Herkunft über denselben Token-Pfad
+  wie der Trip — der geteilte Zeilenbau wird **nicht** trip-seitig
+  abgeschaltet (Trip/Compare-Teilungs-Invariante).
+
+- **AC-11b:** Given einen Ortsvergleich **mit** gesetzter Metrik-Auswahl
+  (der Regelfall jedes über die Oberfläche gepflegten Vergleichs) und einer
+  gewählten Gewitter-Spalte / When dessen Ausblick-Tabelle gerendert wird /
+  Then nennt die Gewitter-Zelle ebenfalls die tragende Zutat. Die Herkunft
+  stammt dort aus **derselben** Rechnung wie die dort gezeigte Stufe (dem
+  Tages-Aggregat `summarize_points()`), nicht aus dem Tagesfenster — beide
+  gehören zusammen (AC-10-Regel). Nachweis in HTML **und** Klartext.
 
 - **AC-12:** Given einen Trip-Briefing-Versand über SMS bzw. Premium-SMS /
   When der Text erzeugt wird / Then enthält er **keine** der vier
@@ -236,6 +262,22 @@ Abwesenheits-Zusicherung.
 **8. Die aus S4 übernommene Telegram-Breite von 32 Zeichen gilt hier nicht.**
 Der Trendblock nutzt `_TG_PROSE_WIDTH = 56` mit Wort-Umbruch
 (`narrow.py:53`); die 32 (`_TG_TABLE_WIDTH`) gehören der Stundentabelle aus S4.
+
+**9. Der Compare-Ausblick hat ZWEI Renderpfade — in der RED-Phase gemessen,
+nach der ersten Freigabe (Spec-Korrektur v1.1).** Die erste Fassung von AC-11
+unterstellte, der Ortsvergleich erbe die Herkunft allein über den geteilten
+Zeilenbau. Gemessen trifft das **nur für Altbestand** zu: Ist
+`outlook_metrics` gesetzt, nimmt `render_outlook_table()` einen frühen Return
+(`outlook.py:148-172`), `render_outlook_plain()` ein `continue`
+(`outlook.py:342-351`); beide bauen die Zelle aus `stage["cells"]` und
+berühren `format_trend_tokens()`, `thunder_day_token` und `gew_str` **nie**
+(gemessen: Zelle `leicht` statt `leicht @16`). `resolve_outlook_metrics()`
+liefert `None` ausschließlich, wenn das Feld **fehlt**
+(`compare_outlook_metric_ids.py:53-54`) — die Oberfläche schreibt es
+(`compareHubWizardBridge.ts:714-719`). Der Metrik-Zweig ist damit der
+**Regelfall**, nicht der Randfall. Ein AC-11 nur über den Token-Pfad wäre grün
+getestet und für real gepflegte Vergleiche **unsichtbar** — dieselbe
+Fehlerklasse wie in S2 (Suffix am falschen Textzweig) und S3. Daher AC-11a/b.
 
 ## Implementation Details
 
