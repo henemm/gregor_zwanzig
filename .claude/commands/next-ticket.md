@@ -44,6 +44,13 @@ ohne gültiges `.git` sehen wie ein Tab aus, sind aber keiner). Jede Issue-Numme
 als aktiv erkannt wird → aus der Kandidatenliste ausschließen. Workflows mit sehr altem
 Stand und/oder bereits `gh issue view <N> --json state` CLOSED zählen nicht als belegt.
 
+**Das Ergebnis ist eine Tatsache, kein Vorbehalt.** Genau dafür läuft dieser Schritt — damit
+der User nicht selbst nachsehen muss, ob ein Kandidat gerade woanders läuft. Für JEDEN
+Kandidaten, der es in Schritt 4 in die Empfehlung oder die Alternativen schafft, muss vorher
+feststehen: frei oder belegt. Ließ sich das für einen Worktree technisch nicht prüfen (z. B.
+nicht lesbar, `workflow.py` schlägt fehl): das ehrlich als Lücke benennen ("Tab X konnte
+nicht geprüft werden") statt den Kandidaten trotzdem unter Vorbehalt weiterzureichen.
+
 ## Schritt 3: Backlog + echte Priorität, nicht nur das Label
 
 ```bash
@@ -85,6 +92,14 @@ Ausgabe NUR im Chat dieser Session, kein Artifact, kein Dashboard:
   zuerst anlegen") statt es als startbar hinzustellen.
 - Nur falls die Empfehlung unklar/knapp blockiert ist: 1–2 Alternativen darunter, kurz
   begründet, ebenfalls jeweils mit Issue-Nummer.
+- **VERBOTEN: den Belegt-Status eines anderen Tabs als Bedingung an den User zurückgeben**
+  — Formulierungen wie „falls #N gerade in einem anderen Fenster läuft" sind genau die
+  Prüfung, die Schritt 2 abschließend übernehmen soll, nicht der User. Jede genannte
+  Empfehlung/Alternative ist zum Ausgabezeitpunkt bereits als frei bestätigt. Konnte das für
+  einen Kandidaten nicht geprüft werden, gehört er entweder gar nicht in die Antwort, oder es
+  steht offen dabei "Tab X konnte nicht geprüft werden" — nie als stilles "falls". Erlaubt
+  bleibt ausschließlich ein echter Ermessens-Vorbehalt, der beim User liegt (z. B. "falls du
+  anders priorisieren willst").
 - Keine Tab-Buchstaben, keine Nachrücker-Liste für andere Tabs — das bleibt `/radar`s
   Aufgabe. Wenn der Gesamtüberblick über alle Fenster gefragt ist, `/radar` vorschlagen
   statt hier nachzubauen.
