@@ -39,19 +39,27 @@ statt ein neues zu erfinden.
 
 ## Estimated Scope
 
-- **LoC:** Produktivcode ~150-220 (builder.py ~60-80, trip_report.py ~40-60 — dort steckt die
-  eigentliche Umbau-Arbeit, weil die Auswertungswahl heute zwei unabhängig gate-bare Symbole `K`/`D`
-  kennt und künftig ein Symbol mit zwei optionalen Hälften bedienen muss —, render.py ~5,
-  metric_catalog.py ~10, sms_trip.py ggf. ~10). Dazu Test-Änderungen über ~27 Dateien (Blast Radius
-  laut Analyse: 24 für (A), 3 für (B), teils überlappend), meist kleine Diffs (Symbol-Ersetzung in
-  Assertions/Fixtures) plus 6 Golden-Dateien (5× `tests/golden/sms/*.txt` + 1×
-  `tests/golden/text_report/stubaier-skitour-evening.txt`), die NEU ERZEUGT und geprüft werden
-  müssen (nicht von Hand editiert). `docs/reference/sms_format.md` (§2/§3.2/§3.2a/§4/§6/§9/§12,
-  ca. 15 Stellen) zählt nicht gegen das LoC-Limit (Doku-Ausnahme).
-- **Files:** ~10 Produktivdateien, 1 bindende Referenz-Doku, 1 abzulösende Modul-Spec
+- **LoC:** Produktivcode ~70-100 — deutlich kleiner als eine erste interne Einschätzung vermuten
+  ließ, weil (A) nach dem PO-Entscheid (`K`/`D` bleiben eigenständig, nur der „beide
+  gewählt"-Fall verschmilzt) als reiner Merge-Schritt NACH der bestehenden, unveränderten
+  Sichtbarkeitslogik implementierbar ist: `builder.py` ~30-40 (ein Zusammenführungs-Schritt in der
+  Temperatur-Schleife, sonst keine Änderung — `PRIORITY`/`POSITIONAL` bleiben unangetastet),
+  `trip_report.py` **unverändert** (`_AGG_GATE_SYMBOLS` bleibt exakt wie heute, s. Implementation
+  Details), `render.py` **unverändert** für (A), ~5 für (B) (`DROP_ORDER`-Literale `WD:`/`PT:`),
+  `metric_catalog.py` ~5-10 (nur (B): `SMS_SYMBOL_GRAMMAR`-Ergänzung), `builder.py` zusätzlich
+  ~5-10 für (B) (Klasse-(c)-Tupel-Literale, `PRIORITY`/`POSITIONAL`-Schlüssel `WD:`/`PT:`). Dazu
+  Test-Änderungen über ~27 Dateien (Blast Radius laut Analyse: 24 für (A), 3 für (B), teils
+  überlappend), meist kleine Diffs (Symbol-Ersetzung in Assertions/Fixtures) plus 6 Golden-Dateien
+  (5× `tests/golden/sms/*.txt` + 1× `tests/golden/text_report/stubaier-skitour-evening.txt`), die
+  NEU ERZEUGT und geprüft werden müssen (nicht von Hand editiert). `docs/reference/sms_format.md`
+  (§2/§3.2/§3.2a/§4/§6/§9/§12, ca. 15 Stellen) zählt nicht gegen das LoC-Limit (Doku-Ausnahme).
+- **Files:** ~5-6 Produktivdateien, 1 bindende Referenz-Doku, 1 abzulösende Modul-Spec
   (`fix_1660b_sms_token_wiring.md`), ~27 Testdateien, 6 Golden-Fixtures.
-- **Effort:** high. Realistisch wird das Workflow-LoC-Budget (250) überschritten —
-  `workflow.py set-field loc_limit_override 500` vor Implementierung setzen.
+- **Effort:** medium. Die Produktivlogik ist klein und gut eingegrenzt; der Aufwand kommt aus der
+  Breite der Test-/Golden-/Doku-Berührungspunkte, nicht aus der Komplexität der Änderung selbst.
+  Das Workflow-LoC-Budget (250) reicht für den Produktivcode voraussichtlich aus; ob es inklusive
+  Testdateien reicht, hängt vom tatsächlichen Diff ab — im Zweifel `workflow.py set-field
+  loc_limit_override 500` vor Implementierung setzen.
 
 ## Dependencies
 
@@ -59,9 +67,10 @@ statt ein neues zu erfinden.
 |--------|------|---------|
 | `docs/reference/sms_format.md` | Reference (bindend) | Single Source of Truth für das Wire-Format — §2/§3.2/§3.2a/§4/§6/§9/§12 müssen mit dieser Spec synchron bleiben |
 | `docs/specs/modules/fix_1660b_sms_token_wiring.md` | Module-Spec | AC-6/AC-7 fordern wörtlich `WDNW`/`PTS` — durch (B) abgelöst, siehe „Known Limitations" |
-| `docs/specs/modules/fix_1677_sms_reihenfolge.md` | Module-Spec | POSITIONAL-Sortierung behandelt `K`/`D`/`FK`/`FD`/`WD`/`PT` als unabhängige Einzelanker — Anker-Menge schrumpft (`K`/`FK` entfallen), `WD`/`PT`-Symbole ändern sich auf `WD:`/`PT:` |
-| `docs/specs/modules/trip_min_temp_and_felt_shortforms.md` (#1410) | Module-Spec | Ursprung der Kürzel `K`/`D`/`FK`/`FD` — Namensgebung bleibt für `N`/`FN`/`D`/`FD` gültig, `K`/`FK` werden hier zurückgezogen |
-| `SMS_MULTI_SYMBOLS_BY_METRIC` / `SMS_SYMBOL_GRAMMAR` (`src/app/metric_catalog.py`) | Code (Single Source) | Beide Änderungen laufen über bestehende, bereits etablierte Ableitungs-Mechanismen dieser Datei — kein neuer Mechanismus nötig |
+| `docs/specs/modules/fix_1677_sms_reihenfolge.md` | Module-Spec | POSITIONAL-Sortierung behandelt `K`/`D`/`FK`/`FD`/`WD`/`PT` als unabhängige Einzelanker — Anker-Menge bleibt für (A) unverändert (`K`/`FK` bleiben bestehen, PO-Entscheid 2026-08-13), nur `WD`/`PT`-Symbole ändern sich auf `WD:`/`PT:` (B) |
+| `docs/specs/modules/trip_min_temp_and_felt_shortforms.md` (#1410) | Module-Spec | Ursprung der Kürzel `K`/`D`/`FK`/`FD` — Namensgebung bleibt vollständig gültig, keines der vier Kürzel wird zurückgezogen; (A) ergänzt lediglich eine zusätzliche Kombinationsform bei doppelter Auswertungswahl |
+| `SMS_MULTI_SYMBOLS_BY_METRIC` (`src/app/metric_catalog.py`) | Code | Bleibt für (A) **unverändert** (`K`/`D`/`FK`/`FD`/`WC` bleiben alle eingetragen, PO-Entscheid 2026-08-13) |
+| `SMS_SYMBOL_GRAMMAR` (`src/app/metric_catalog.py`) | Code (Single Source) | (B) läuft über diesen bereits etablierten Ableitungs-Mechanismus (Präzedenz `"thunder": "TH:"`) — kein neuer Mechanismus nötig |
 | `MetricConfig.aggregations` (#1357, Wirkung in SMS seit #1660 Scheibe A) | Feature | Bestimmt je Trip, ob Tiefst-/Höchstwert/beide/keins gewählt sind — steuert die vier Zustände in (A) |
 
 ## Implementation Details
@@ -77,40 +86,40 @@ Stunden, `()` für Peak-Klammern, `,` für Fire-IDs). Der En-Dash `–` des E-Ma
 (`email/helpers.py:945,1473`) ist NICHT GSM-7 und würde die SMS still auf UCS-2 zwingen (halbe
 Zeichenkapazität) — als SMS-Trenner unbrauchbar, unabhängig von dieser Spec.
 
-**Anker-Kürzel ist `D` bzw. `FD`.** `K`/`FK` verschwinden als eigenständige SMS-Token vollständig
-— unabhängig davon, ob eine, beide oder keine Auswertung gewählt ist (s. Tabelle unten). `N`/`FN`
-(Nacht-Tiefsttemperatur am Schlafplatz) sind davon **nicht** betroffen — eigene Metriken ohne
-Auswertungswahl, PO-Vorgabe wörtlich: „Bei Nachttemperatur bleibt es aber bei der
-Tiefsttemperatur." `WC` (Wintersport-Tageskennzahl) ist ebenfalls kein Teil dieses Merges und
+**`K`/`D` (bzw. `FK`/`FD`) bleiben unverändert die Kürzel für Einzelwerte.** Ein Bereichs-Token
+entsteht AUSSCHLIESSLICH, wenn BEIDE Auswertungen (Tiefst- UND Höchstwert) gewählt sind — dann
+ersetzt EIN Token unter dem Kürzel `D` (bzw. `FD`) die bisherigen zwei separaten Token
+`K{min} D{max}`. `N`/`FN` (Nacht-Tiefsttemperatur am Schlafplatz) sind davon **nicht** betroffen —
+eigene Metriken ohne Auswertungswahl, PO-Vorgabe wörtlich: „Bei Nachttemperatur bleibt es aber bei
+der Tiefsttemperatur." `WC` (Wintersport-Tageskennzahl) ist ebenfalls kein Teil dieses Merges und
 bleibt unverändert eigenständig — es hängt an `wind_chill_c`, nicht an der Auswertungswahl von
 `K`/`D`, und trägt ohnehin keinen Buchstaben-Folgewert, den (B) beträfe.
+
+🔴 **PO-Entscheid 2026-08-13, überstimmt eine frühere Eigenentscheidung dieser Spec-Fassung** (s.
+Changelog): eine erste Fassung dieser Spec schlug vor, bei „nur Tiefstwert gewählt" ebenfalls den
+Anker `D` wiederzuverwenden (`D13` statt `K13`), mit der Begründung, `K` verschwinde sonst
+konsistent als eigenständiges Symbol. Der PO hat dem widersprochen: `D` steht im Format an jeder
+anderen Stelle für den HÖCHSTWERT — ein `D13`, das in Wahrheit den Tiefstwert zeigt, ist auf einem
+tourenentscheidungs-relevanten Kanal **Falschinformation**, nicht nur überraschend. Die geltende
+Regel ist die einfachere: `K`/`FK` bedeuten immer Tiefstwert, `D`/`FD` bedeuten Höchstwert ODER —
+nur wenn beide Auswertungen gewählt sind — den Bereich von Tiefst- bis Höchstwert.
 
 **Vier Auswertungs-Zustände (`MetricConfig.aggregations` je Metrik `temperature`/`wind_chill`,
 Werte `min`/`max`/`avg`, Wirkung in der SMS seit #1660 Scheibe A über `_AGG_GATE_SYMBOLS` in
 `trip_report.py:420-430`):**
 
-| Auswertungswahl | Heutige Form | Neue Form | Begründung |
+| Auswertungswahl | Ausgabe (gemessen) | Ausgabe (gefühlt) | Änderung ggü. heute |
 |---|---|---|---|
-| min UND max gewählt | `K13 D27` (zwei Token) | `D13/27` (ein Token) | Kernfall dieser Spec |
-| nur max gewählt | `D27` | `D27` (unverändert) | Bereits heute die Einzelform von `D` — keine Änderung nötig |
-| nur min gewählt | `K13` | `D13` (Symbol wechselt) | s. Begründung unten |
-| weder min noch max (nur `avg`, oder keine Auswertung) | kein Token (weder `K` noch `D`) | kein Token (unverändert) | `avg` kennt die SMS nicht (#1660 Scheibe A DEC-1), unverändert |
+| min UND max gewählt | `D13/27` | `FD13/27` | **NEU:** ein Token statt zwei |
+| nur max gewählt | `D27` | `FD27` | unverändert (heutige Einzelform) |
+| nur min gewählt | `K13` | `FK13` | unverändert (heutige Einzelform) |
+| weder min noch max (nur `avg`) | kein Token | kein Token | unverändert — `avg` kennt die SMS nicht (#1660 Scheibe A DEC-1) |
 
-**Begründung „nur min gewählt" → `D13`, nicht `K13`:** `K` verschwindet nach PO-Entscheidung
-als SMS-Symbol vollständig — in JEDEM der vier Zustände oben, nicht nur im Range-Fall. Würde `K`
-ausgerechnet im „nur min"-Fall als einzige Ausnahme wieder auftauchen, entstünde ein Symbol, das
-in drei von vier Zuständen nicht existiert und nur in einem isolierten Sonderfall zurückkehrt —
-ein stiller Wiederkehr-Fall, der weder in dieser Spec noch im Format-Dokument einen erkennbaren
-Grund hätte und bei der nächsten Änderung leicht übersehen wird. `D` als alleiniger Anker für den
-gesamten Temperatur-Block (unabhängig davon, welche Hälfte(n) er trägt) ist die konsistentere
-Regel: „`D`/`FD` ist das Kürzel für die Gehzeit-Temperatur, sein Wert ist Einzelwert, Bereich oder
-entfällt je nach Auswertungswahl" — eine Regel statt einer Regel-plus-Ausnahme. Diese Entscheidung
-ist eine begründete Wahl dieser Spec, keine im Vorfeld getroffene PO-Entscheidung — bei der
-Spec-Freigabe (`## Approval`) sollte der PO sie ausdrücklich mit abnicken, weil sie auf den ersten
-Blick semantisch überrascht (ein „D13" ohne begleitendes „D27" zeigt technisch den Tiefstwert unter
-dem Kürzel, das sonst für den Höchstwert steht).
+Der einzige Verhaltens-Unterschied zu heute ist also exakt der Fall „beide Auswertungen gewählt" —
+die drei anderen Zustände sind bereits heute exakt so, wie sie in der Tabelle stehen (seit #1660
+Scheibe A, `_AGG_GATE_SYMBOLS`), und bleiben durch diese Spec unangetastet.
 
-**Null-/Lücken-Kombinationen des Range-Tokens.** Jede Hälfte (min-Teil, max-Teil) kann unabhängig
+**Null-/Lücken-Kombinationen des Range-Tokens** (gilt nur für den „beide gewählt"-Fall). Jede Hälfte (min-Teil, max-Teil) kann unabhängig
 einen Wert tragen, geprüft-aber-kein-Wert (`-`) oder Datenlücke (`?`) sein — vollständige 3×3-Matrix:
 
 | min-Teil ↓ / max-Teil → | Wert (`27`) | `-` | `?` |
@@ -132,48 +141,42 @@ was ein Konsument der Token-Zeile syntaktisch akzeptieren muss — nur Testfixtu
 **Rendering braucht keine Sonderbehandlung.** `Token.render()` (`dto.py:130-135`) bleibt
 unverändert: `if self.value == "-": return f"{symbol}-"` greift nur bei der alten
 Bare-Null-Form; ein Range-Wert wie `"-/-"` ist ungleich `"-"` und fällt in den `else`-Zweig
-(`f"{symbol}{value}"`), liefert also korrekt `D-/-`. Der Builder muss lediglich `value` als
-`f"{min_part}/{max_part}"` zusammensetzen (jede Hälfte über die bestehenden
-`render_temperature()`/`_gap_or()`-Aufrufe, wie heute für `K`/`D` einzeln), statt zwei Tokens zu
-erzeugen. Für „nur min"/„nur max" bleibt `value` ein bare String ohne `/` — identisch zum
-heutigen Pfad.
+(`f"{symbol}{value}"`), liefert also korrekt `D-/-`.
 
-**Betroffene Konstanten in `builder.py` — Auflistung, keine Erfindung neuer Mechanismen:**
+**Implementierung im Builder — minimaler, gut eingegrenzter Eingriff.** Die bestehende
+Temperatur-Schleife (`build_token_line()`, `builder.py:316-355`) berechnet heute für `K` und `D`
+(bzw. `FK`/`FD`) UNABHÄNGIG je einen Token-oder-nichts über dieselbe Sichtbarkeits-/
+`needs_spec`-Logik wie bisher — **das bleibt unverändert**. NEU ist ausschließlich ein
+Zusammenführungs-Schritt NACH dieser Berechnung: existieren nach den bestehenden Prüfungen sowohl
+ein `K`- als auch ein `D`-Token (bzw. `FK`+`FD`), werden sie zu EINEM Token verschmolzen —
+`Token(symbol="D", value=f"{k_token.value}/{d_token.value}", ...)` — statt beide unabhängig an die
+Token-Liste angehängt zu werden. Existiert nur einer von beiden (oder keiner), ändert sich nichts —
+der bestehende Pfad läuft exakt wie heute weiter. Diese Kapselung hat einen wichtigen Nebeneffekt:
+**kein anderer Teil von `builder.py` und kein anderer Konsument muss angefasst werden.**
 
-1. **`PRIORITY`** (Zeile 47-65): Einträge `"K": 6` und `"FK": 4` entfallen (Symbole werden nie
-   mehr erzeugt); `"D": 6`, `"FD": 4`, `"N": 6`, `"FN": 4` bleiben unverändert. `PRIORITY[sym]`
-   wird in der Temperatur-Schleife weiterhin ungeschützt gelesen (Zeile 352) — solange `D`/`FD`
-   Einträge behalten, kein `KeyError`-Risiko.
-2. **`POSITIONAL`** (Zeile 88-109): Einträge `("K", "forecast")` und `("FK", "forecast")`
-   entfallen; `("D", "forecast")`/`("FD", "forecast")` bleiben an ihrer Position stehen (§2 der
-   Format-Doku bleibt in der äußeren Reihenfolge unverändert, nur die Paar-interne Granularität
-   sinkt von zwei Ankern auf einen).
-3. **Kürzungsreihenfolge** (`render.py:84-99`): die hartkodierten Literal-Tupel werden kürzer —
-   `("FN", "FK", "FD")` → `("FN", "FD")`, `("K", "D", "N")` → `("D", "N")`. **Ein Kürzungsschritt
-   weniger Granularität:** heute konnte `K` allein fallen und `D` stehen bleiben (bzw. `FK` allein
-   vor `FD`); nach dem Merge ist der Range-Token EINE Einheit — er fällt komplett oder gar nicht
-   (s. AC-16). Das ist eine akzeptierte Nebenwirkung, keine Fehlfunktion (§6 der Format-Doku
-   dokumentiert die neue Reihenfolge entsprechend).
-4. **Temperatur-Schleife** (`build_token_line()`, Zeile 316-355): heute sechs unabhängige
-   Symbol-Wert-Paare in einer Schleife. Muss zu vier Fällen umgebaut werden: `N`/`FN` bleiben
-   unverändert (Einzelwert, evening-only, eigene Metrik ohne Auswertungswahl); `D`/`FD` werden je
-   aus einem Paar (Tiefst-Quelle, Höchst-Quelle) zusammengesetzt, wobei welche Hälfte(n)
-   überhaupt gerendert werden von der Auswertungswahl abhängt (heute in `trip_report.py`s
-   `_AGG_GATE_SYMBOLS` als zwei unabhängige `MetricSpec.enabled`-Flags für `K` und `D`
-   ausgedrückt — muss zu EINEM Spec-Objekt mit zwei Sichtbarkeits-Hälften werden, oder zu zwei
-   weiterhin getrennten internen Hilfswerten, die der Builder erst am Ende zu einem Token
-   zusammenführt). Die konkrete Code-Form (Hilfsfunktion `_mk_temp_range()` o.ä.) ist
-   Implementierungs-Entscheidung der GREEN-Phase, nicht dieser Spec — der Kontrakt (Tabellen oben)
-   ist bindend, der Weg dorthin nicht.
-5. **`SMS_MULTI_SYMBOLS_BY_METRIC`** (`metric_catalog.py:700-706`): `"temperature": ("K", "D")` →
-   `("D",)`; `"wind_chill": ("FK", "FD", "WC")` → `("FD", "WC")`. Das ist die einzige Stelle, die
-   angefasst werden muss, damit `_kurzform_kuerzel()` (Zeile 728-745, nimmt `mehrfach[0]`),
-   `/api/sms-symbols` (`api/routers/config.py:48-54`, liest denselben Dict) und die
-   Editor-Kürzel-Badges (`WeatherMetricsTab.svelte`, liest nur den Endpoint) automatisch
-   konsistent werden — **kein zweiter Änderungsort** nötig. `compact_label` für `temperature` und
-   `wind_chill` ist über `COMPACT_LABEL_EXCEPTIONS` (`metric_catalog.py`) ohnehin von dieser
-   Ableitung ausgenommen (zeigt einen Stundenwert, nicht das Kurzform-Kürzel) — hier ändert sich
-   nichts sichtbar.
+- **`PRIORITY`** (Zeile 47-65) und **`POSITIONAL`** (Zeile 88-109): **keine Änderung.** Die
+  Einträge `"K": 6`/`"FK": 4` bzw. `("K", "forecast")`/`("FK", "forecast")` bleiben bestehen und
+  werden weiterhin gebraucht — bei „nur min gewählt" entsteht weiterhin ein eigenständiges
+  `K`/`FK`-Token, das über `PRIORITY[sym]` (Zeile 352, ungeschützter Zugriff) seine Priorität
+  bezieht.
+- **Kürzungsreihenfolge** (`render.py:84-99`): **kein Code-Änderungsbedarf** — die Literal-Tupel
+  `("FN", "FK", "FD")` und `("K", "D", "N")` bleiben unverändert gültig. Die Atomarität des
+  Range-Tokens (AC-16) ergibt sich automatisch aus der Merge-Konstruktion: im „beide
+  gewählt"-Fall existiert nach dem Merge nur noch EIN Token mit Symbol `D` in der Token-Liste (das
+  `K`-Token wurde nie separat angehängt) — `_drop_first(tokens, "K")` findet dadurch nichts
+  (No-op), `_drop_first(tokens, "D")` entfernt den kompletten Bereichs-Token in einem Schritt.
+  **Eine Nebenwirkung, kein Bug:** die Kürzung verliert dadurch im „beide gewählt"-Fall eine
+  Granularitätsstufe gegenüber heute — heute konnte `K` allein fallen (ein Kürzungsschritt) und
+  `D` danach separat (zweiter Schritt); künftig fällt der Bereichs-Token als EIN Schritt (s.
+  „Known Limitations"). In den Fällen „nur min"/„nur max" ändert sich an der Kürzung nichts, weil
+  dort ohnehin nur je ein Token existiert(e).
+- **`SMS_MULTI_SYMBOLS_BY_METRIC`** (`metric_catalog.py:700-706`): **keine Änderung** —
+  `"temperature": ("K", "D")` und `"wind_chill": ("FK", "FD", "WC")` bleiben exakt wie heute. Die
+  Editor-Kürzel-Badges (`/api/sms-symbols` → `WeatherMetricsTab.svelte`) zeigen dadurch weiterhin
+  BEIDE Kürzel je Metrik — nach dem PO-Entscheid ist das korrekt, weil beide real vorkommen können
+  (s. AC-17).
+- **`_kurzform_kuerzel()`** (`metric_catalog.py:728-745`, nimmt `mehrfach[0]` = `K` bzw. `FK`):
+  **keine Änderung nötig.**
 
 ### (B) Trennzeichen bei Buchstaben-Werten
 
@@ -238,12 +241,15 @@ Golden-/Aufrufer-Tests lesen Token-Werte über diese gemeinsame Funktion.
 - **Output:** Veränderte Token-Zeile (`TripReport.sms_text`) für SMS **und** Premium-SMS
   (gemeinsamer Renderer, ADR-0049/D8) — E-Mail-Tabellen und Telegram-Kurzübersicht sind NICHT
   betroffen (eigene Darstellung, nicht die Token-Zeile). Netto-Zeicheneffekt an einer echten
-  Briefing-Zeile gemessen: −3 Zeichen (Bereich, `K`/`FK` entfallen) + 2 Zeichen (zwei neue
-  Doppelpunkte) = **−1 Zeichen** gesamt — real geltende Grenze bleibt **160 Zeichen**
-  (`trip_report.py:446`, `dto.py`-Default), NICHT 153 (unverdrahtete Konstante) und NICHT 140
-  (PDU-Byte-Limit, keine Zeichengrenze).
-- **Side effects:** `/api/sms-symbols`-Antwort ändert sich (ein Symbol weniger je Temperatur-Metrik,
-  keine sichtbare Badge-Änderung wegen `.rstrip(":")`); 6 Golden-Fixtures müssen neu erzeugt werden;
+  Briefing-Zeile mit beiden Auswertungen gewählt gemessen: −3 Zeichen (Bereich, `K`/`FK` entfallen
+  in genau diesem Fall) + 2 Zeichen (zwei neue Doppelpunkte aus (B)) = **−1 Zeichen** gesamt — real
+  geltende Grenze bleibt **160 Zeichen** (`trip_report.py:446`, `dto.py`-Default), NICHT 153
+  (unverdrahtete Konstante) und NICHT 140 (PDU-Byte-Limit, keine Zeichengrenze). Bei „nur
+  min"/„nur max" gewählt ändert sich die Zeichenzahl NICHT (unveränderte Einzelform).
+- **Side effects:** `/api/sms-symbols`-Antwort ändert sich NICHT sichtbar — (A) lässt
+  `SMS_MULTI_SYMBOLS_BY_METRIC` unverändert (beide Kürzel je Metrik bleiben gelistet, s. AC-17),
+  (B) ändert nur das interne Symbol (`WD:`/`PT:`), das `.rstrip(":")` vor der Ausgabe wieder auf
+  `WD`/`PT` zurückführt (s. AC-18); 6 Golden-Fixtures müssen neu erzeugt werden;
   `docs/reference/sms_format.md` (§2/§3.2/§3.2a/§4/§6/§9/§12) und
   `fix_1660b_sms_token_wiring.md` (AC-6/AC-7, s. Known Limitations) müssen mitgezogen werden.
 
@@ -262,12 +268,13 @@ Golden-/Aufrufer-Tests lesen Token-Werte über diese gemeinsame Funktion.
   keine Verwechslung zwischen Trenner und Vorzeichen).
 
 - **AC-3:** Given ein Trip mit Metrik „Temperatur" und NUR der Auswertung „Höchstwert" gewählt,
-  Höchstwert 27°C / When die SMS gerendert wird / Then enthält die SMS das Token `D27` (unveränderte
-  heutige Einzelform, kein `/`).
+  Höchstwert 27°C / When die SMS gerendert wird / Then enthält die SMS das Token `D27`
+  (unverändert — identisch zum heutigen Verhalten seit #1660 Scheibe A, kein `/`).
 
 - **AC-4:** Given ein Trip mit Metrik „Temperatur" und NUR der Auswertung „Tiefstwert" gewählt,
-  Tiefstwert 13°C / When die SMS gerendert wird / Then enthält die SMS das Token `D13` (NEUE Form:
-  Anker `D`, nicht `K` — `K` erscheint an keiner Stelle der Zeile mehr).
+  Tiefstwert 13°C / When die SMS gerendert wird / Then enthält die SMS das Token `K13`
+  (unverändert — identisch zum heutigen Verhalten seit #1660 Scheibe A; PO-Entscheid 2026-08-13:
+  KEIN Wechsel auf `D13`, weil `D` sonst überall den Höchstwert bedeutet).
 
 - **AC-5:** Given ein Trip mit Metrik „Temperatur" und NUR der Auswertung „Mittelwert" gewählt
   (weder „Tiefstwert" noch „Höchstwert") / When die SMS gerendert wird / Then enthält die SMS
@@ -312,16 +319,19 @@ Golden-/Aufrufer-Tests lesen Token-Werte über diese gemeinsame Funktion.
   die SMS gerendert wird / Then enthält die SMS das Token `PT:S` (mit Doppelpunkt), NICHT `PTS`;
   Leer- (`PT:-`) und Lückenform (`PT:?`) verhalten sich analog zu AC-13/AC-14.
 
-- **AC-16:** Given eine Token-Zeile mit Range-Token `D13/27`, die unter Kürzungsdruck (>160
-  Zeichen) so weit gekürzt werden muss, dass die gemessenen Temperatur-Token fallen müssen / When
-  die Kürzung läuft / Then fällt `D13/27` als EINE atomare Einheit — es gibt keinen
-  Zwischenzustand, in dem nur `D13` oder nur `D27` in der Zeile übrig bleibt.
+- **AC-16:** Given eine Token-Zeile mit Range-Token `D13/27` (beide Auswertungen gewählt), die
+  unter Kürzungsdruck (>160 Zeichen) so weit gekürzt werden muss, dass die gemessenen
+  Temperatur-Token fallen müssen / When die Kürzung läuft / Then fällt `D13/27` als EINE atomare
+  Einheit — es gibt keinen Zwischenzustand, in dem nur `D13` oder nur `D27` in der Zeile übrig
+  bleibt (Ursache: der Range-Wert steckt in einem einzigen Token-Objekt, `K` wurde beim Merge nie
+  separat an die Token-Liste angehängt).
 
 - **AC-17:** Given ein Trip, dessen SMS-Kürzel-Katalog über `/api/sms-symbols` abgefragt wird, mit
   Metrik „Temperatur" / When der Endpoint antwortet / Then enthält die Symbol-Liste für
-  `temperature` nur noch `["D"]` (nicht mehr `["K", "D"]`), analog `wind_chill` nur noch
-  `["FD", "WC"]` (nicht mehr `["FK", "FD", "WC"]") — der Touren-Editor zeigt entsprechend keine
-  `K`-/`FK`-Badge mehr an.
+  `temperature` unverändert BEIDE Kürzel `["K", "D"]`, analog `wind_chill` unverändert
+  `["FK", "FD", "WC"]` — Regressionsschutz (PO-Entscheid 2026-08-13): der Touren-Editor zeigt
+  weiterhin sowohl die `K`- als auch die `D`-Badge, weil beide Kürzel real vorkommen können (je
+  nach Auswertungswahl `K13`, `D27` oder gemeinsam als `D13/27`).
 
 - **AC-18:** Given dieselbe Endpoint-Abfrage für die Metriken „Windrichtung"/„Niederschlagsart" /
   When der Endpoint antwortet / Then bleibt die angezeigte Badge unverändert `"WD"`/`"PT"` (ohne
@@ -345,9 +355,11 @@ Golden-/Aufrufer-Tests lesen Token-Werte über diese gemeinsame Funktion.
 - **`WC` bleibt vorerst bestehen und bekommt keinen Trenner** — Issue #1728 (ersatzloser Wegfall
   von `WC`, weil es denselben Wert wie `FK`/künftig `FD` doppelt trägt) ist ein separates, noch
   offenes Issue und NICHT Teil dieser Spec.
-- **Die Wahl `D13` für „nur Tiefstwert gewählt" ist eine begründete Entscheidung dieser Spec, keine
-  vorab getroffene PO-Entscheidung** (s. Implementation Details, Begründungs-Absatz) — sollte bei
-  der Spec-Freigabe explizit vom PO mit abgenickt werden, da sie auf den ersten Blick überrascht.
+- **Erledigt, zur Historie:** eine erste Fassung dieser Spec sah für „nur Tiefstwert gewählt" `D13`
+  statt `K13` vor (Anker-Wiederverwendung, Begründung: Konsistenz). Der PO hat das am 2026-08-13
+  überstimmt — `K`/`FK` bleiben eigenständige Kürzel, ein Bereichs-Token entsteht ausschließlich
+  bei doppelter Auswertungswahl (s. Implementation Details, Changelog). Diese Zeile dokumentiert
+  die Historie, ist aber kein offener Punkt mehr.
 - **`fix_1660b_sms_token_wiring.md` AC-6/AC-7 werden durch diese Spec abgelöst** — sie fordern
   wörtlich die Token `WDNW`/`PTS`, die es nach (B) nicht mehr gibt. Diese Spec ersetzt sie
   funktional durch AC-12/AC-15 oben; `fix_1660b` sollte bei Implementierung einen entsprechenden
@@ -357,12 +369,23 @@ Golden-/Aufrufer-Tests lesen Token-Werte über diese gemeinsame Funktion.
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** keine
-- **Rationale:** Beide Änderungen wenden ein bereits etabliertes Muster konsequent an — der
-  Doppelpunkt-Trenner existiert seit `TH:`/`HR:`/`Z:`/`M:` (kein neues Grammatik-Konzept), die
-  Kürzel-Migration (Symbol verschwindet/wandert) folgt demselben Muster wie #1435 E3b
-  (Schnee-Kürzel) und #1703 Scheibe 6 (`W?`→`X?`). Kein neues Architekturprinzip, daher kein ADR
-  nötig — die Single Source of Truth bleibt `docs/reference/sms_format.md`.
+- **Rationale:** Beide Änderungen wenden ein bereits etabliertes Muster konsequent an, statt ein
+  neues zu erfinden. (B) ist eine Kürzel-Grammatik-Änderung (Doppelpunkt wandert ins Symbol) nach
+  demselben Muster wie `TH:`/`HR:`/`Z:`/`M:` — kein neues Grammatik-Konzept, vergleichbar mit der
+  Kürzel-Migration in #1435 E3b (Schnee-Kürzel) und #1703 Scheibe 6 (`W?`→`X?`). (A) führt (nach
+  dem PO-Entscheid 2026-08-13) gar keine Kürzel-Migration mehr durch — `K`/`D`/`FK`/`FD` bleiben
+  bestehende Einzelwert-Kürzel, lediglich eine zusätzliche Kombinationsform (beide gleichzeitig →
+  ein Token) kommt hinzu. Kein neues Architekturprinzip in beiden Fällen, daher kein ADR nötig —
+  die Single Source of Truth bleibt `docs/reference/sms_format.md`.
 
 ## Changelog
 
 - 2026-08-13: Initial spec created (Issue #1824)
+- 2026-08-13: PO-Entscheid übernommen — „nur Tiefstwert gewählt" bleibt `K13` (nicht `D13`, wie in
+  der Erstfassung vorgeschlagen). `K`/`FK` bleiben eigenständige Kürzel für Einzelwerte; ein
+  Bereichs-Token entsteht ausschließlich bei gleichzeitig gewähltem Tiefst- UND Höchstwert.
+  Begründung des PO: `D` bedeutet im Format sonst immer Höchstwert — ein `D13` mit tatsächlichem
+  Tiefstwert wäre auf einem tourenentscheidungs-relevanten Kanal Falschinformation. Betrifft
+  Implementation Details ((A), Konstanten-Liste, Vier-Zustände-Tabelle), Estimated Scope (LoC
+  deutlich kleiner, weil `SMS_MULTI_SYMBOLS_BY_METRIC`/`PRIORITY`/`POSITIONAL`/
+  `_AGG_GATE_SYMBOLS` jetzt unverändert bleiben), AC-3/AC-4/AC-16/AC-17, Known Limitations.
