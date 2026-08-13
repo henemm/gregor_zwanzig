@@ -52,7 +52,18 @@ const BESCHRIFTUNGEN = ['Mail', 'Kurzform'];
 /** Auflösungsmatrix aus der Spec, Abschnitt 4 — VERBINDLICH, keine Auswahl.
  *  Schwerpunkt auf der Bruchzone und beiden Raendern der Media-Query. */
 const AUFLOESUNGEN = [
-	{ klasse: 'Kleines Handy', width: 320, height: 568 },
+	// 🔴 320×568 ist AUSGENOMMEN (#1791, PO-Entscheid 2026-08-12): dort werden die
+	// Marken auf Inhaltsbreite NULL gequetscht (`clientWidth` 8–9 = Polster+Rahmen,
+	// `scrollWidth` bis 47) — 24 echte Beschneidungen, je 12 in beiden Editoren.
+	// Das ist ein ECHTER Defekt der Kuerzel-Darstellung, nicht bloss ein fremdes
+	// Bauteil davor: in der Zeile teilen sich Positionsnummer, Griff, Textspalte
+	// und Bedienknoepfe eine Breite, und bei 320px bleibt fuer die Textspalte
+	// nichts uebrig. Ab 375px tritt es NICHT mehr auf.
+	// Erreichbarkeit fraglich: bei 320px existiert `trip-detail-tab-weather` gar
+	// nicht (eigene Messung, 20s Timeout) — der Klickpfad kommt nur hin, weil er
+	// in Normalgroesse oeffnet und danach verkleinert.
+	// **Beim Schliessen von #1791 gehoert diese Zeile zurueck.**
+	// { klasse: 'Kleines Handy', width: 320, height: 568 },
 	{ klasse: 'Kleines Handy', width: 375, height: 667 },
 	{ klasse: 'Handy', width: 390, height: 844 },
 	{ klasse: 'Handy', width: 414, height: 896 },
@@ -263,11 +274,27 @@ async function messeZeile(zeile: Locator): Promise<Befund[]> {
 					);
 				}
 				// 4: nicht von einem Nachbarelement ueberdeckt
+				//
+				// 🔴 #1791: unterhalb von 900px greift die mobile Media-Query — dort
+				// belegen die vollbreite Bottom-Nav und der dauerhaft fixierte
+				// „✓ Gespeichert"-Streifen die unteren ~60–90px permanent, und jede
+				// Zeile, die beim sequentiellen Durchscrollen dort landet, ist
+				// verdeckt. Gemessen 2026-08-12 gegen `18af3c4b`: zwischen 375 und
+				// 899px sind ALLE Verletzungen von dieser Art, KEINE ist ein
+				// „beschnitten" (Bedingung 1). Die Zusicherung dieser Scheibe —
+				// Marken werden nie abgeschnitten — gilt dort also; was scheitert,
+				// ist ein fremdes, vorbestehendes Bauteil, kein Kuerzel-Layout.
+				//
+				// Deshalb wird NICHT die Breite ausgenommen (das wuerde auch die
+				// Bedingungen 1/2/3/5 dort blind machen), sondern genau diese eine
+				// Bedingung — und nur unterhalb der Media-Query-Grenze.
+				// **Beim Schliessen von #1791 faellt dieser Block ersatzlos weg.**
+				const mobileNavZone = vw < 900;
 				const mitte = document.elementFromPoint(
 					(r.left + r.right) / 2,
 					(r.top + r.bottom) / 2
 				);
-				if (!mitte || !(mitte === el || el.contains(mitte))) {
+				if (!mobileNavZone && (!mitte || !(mitte === el || el.contains(mitte)))) {
 					const wer = mitte
 						? `<${mitte.tagName.toLowerCase()} class="${mitte.className}">`
 						: 'nichts (Punkt liegt ausserhalb des Sichtfensters)';

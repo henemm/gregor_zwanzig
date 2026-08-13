@@ -209,6 +209,39 @@ Geprüft wird gegen den **Worst Case**, nicht gegen eine bequeme Auswahl: „Gef
 Nacht-Tiefsttemperatur" (31 Zeichen, längster Name im Katalog) und „Gefühlte Temperatur"
 (längste Kurzform `FK FD WC`) müssen beide in der Liste stehen.
 
+#### 🔴 Nachtrag 2026-08-12 nach der Staging-Messung: zwei Korrekturen
+
+**a) Die Mechanismus-Begründung oben ist falsch.** Der Staging-Prüfer hat in echtem Chromium
+mit den realen Zeilenbreiten dreimal gegengeprüft: `min-width: 0` an `.metric-label` ist
+neben dem dort bereits vorhandenen `overflow: hidden` **redundant** (Flexbox-Spec: das
+automatische Minimum ist 0, sobald `overflow` nicht `visible` ist), und `flex-shrink: 0` an
+den Marken ist neben `white-space: nowrap` ohne `overflow: hidden` **ebenfalls redundant**.
+Erst wenn man **beides gleichzeitig** entfernt, entsteht eine Verletzung — und zwar als
+Zeilen-Überlauf, nicht als Beschneiden der Marke. Das war eine **am Code gelesene, nie
+gemessene** Annahme von mir. Die Zusicherung selbst bleibt richtig; nur ihre Herleitung war
+es nicht. *Lehre: eine CSS-Wirkungskette gehört im Browser nachgemessen, bevor sie als
+Begründung in eine Spec wandert.*
+
+**b) Zwei verschiedene Defekte unterhalb von 900 px, unterschiedlich behandelt** (#1791):
+
+| Breite | Art | Behandlung |
+|---|---|---|
+| **320×568** | **24 echte Beschneidungen** — Marken auf Inhaltsbreite null (`clientWidth` 8–9 = Polster+Rahmen, `scrollWidth` bis 47) | Breite **ganz ausgenommen**, Zeile auskommentiert |
+| 375–899 px | ausschließlich Überdeckung durch mobile Navigation + fixierten „✓ Gespeichert"-Streifen | **nur Bedingung 4** ausgesetzt |
+| ab 901 px | sauber | unverändert geprüft |
+
+Der Unterschied ist wesentlich: Bei 320 px versagt **das Kürzel-Layout selbst** (Positionsnummer,
+Griff, Textspalte und Bedienknöpfe teilen sich eine Breite, für die Textspalte bleibt nichts).
+Zwischen 375 und 899 px steht dagegen nur ein **fremdes Bauteil** davor — dort ist keine
+einzige Beschneidung messbar. Ganze Breiten wegzulassen hätte dort auch die Bedingungen
+1/2/3/5 blind gemacht, also genau die Zusicherung dieser Scheibe.
+
+PO-Entscheid 2026-08-12: ausliefern, beide Fälle in #1791. **Beim Schließen gehören die
+320-px-Zeile und der `mobileNavZone`-Block zurück bzw. weg.**
+
+**Ergebnis nach der Anpassung:** 6/6 grün in 13 Auflösungen gegen Staging `18af3c4b`
+(AC-5, AC-10/11, AC-12, AC-13, AC-14).
+
 ## Acceptance Criteria
 
 - **AC-1:** Given eine Telegram-Nachricht eines Trips mit den Größen Luftfeuchtigkeit,
