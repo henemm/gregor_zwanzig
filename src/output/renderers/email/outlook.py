@@ -235,6 +235,11 @@ def render_outlook_table(
         _d = _thunder_token_parts(d_tok)
         if _d:
             day_part = f"{_d[0]} @{_d[1]}{_d[2]}"
+            # Issue #1680 S5a: die tragende Zutat unmittelbar hinter der
+            # Uhrzeit des Tagesteils -- vor Nacht- und Hagel-Zusatz (AC-1/AC-5).
+            _origin = tokens.get("thunder_day_origin")
+            if _origin:
+                day_part += f" · {_origin}"
         elif not (stage.get("hourly_thunder") or ()) and thunder_level in (
             "LOW", "MED", "HIGH",
         ):
@@ -370,6 +375,12 @@ def render_outlook_plain(
         _dm = _thunder_token_parts(_d_tok)
         if _dm:
             thunder_word = f"⚡{_dm[0]}{_dm[2]}"
+            # Issue #1680 S5a: derselbe Zusatz wie in der HTML-Zelle, aus
+            # demselben Token -- der Klartext fuehrt wie bisher keine
+            # Tagesuhrzeit (AC-2).
+            _origin = tok.get("thunder_day_origin")
+            if _origin:
+                thunder_word += f" · {_origin}"
         elif stage.get("hourly_thunder"):
             # Stundenreihe da, im Tagesfenster aber kein Gewitter.
             thunder_word = _THUNDER_MAP["NONE"]["plain"]
@@ -460,6 +471,12 @@ def build_outlook_row(
     _hourly_wind: list = []
     _hourly_gust: list = []
     _hourly_thunder: list = []
+    # Issue #1680 S5a: die tragenden Zutaten je Stunde REICHEN nur durch --
+    # gefiltert und vereinigt wird erst in `format_trend_tokens()`, an
+    # derselben Stelle und mit demselben Fenster wie `thunder_day_token`
+    # (eine Fensterauflösung, nicht zwei; Spec AC-9).
+    _thunder_signals: list = []
+    _hat_signale = False
     for dp in points:
         lh = _lh(dp.ts, tz)
         if dp.precip_1h_mm is not None:
@@ -475,6 +492,12 @@ def build_outlook_row(
             _hourly_thunder.append(HourlyValue(
                 hour=lh, value=float(thunder_label_value(dp.thunder_level))
             ))
+            _signale = getattr(dp, "thunder_level_signals", None)
+            if _signale is not None:
+                _hat_signale = True
+            _thunder_signals.append(
+                (lh, dp.thunder_level, list(_signale or ()))
+            )
 
     row = dict(
         weekday=weekday,
@@ -514,6 +537,14 @@ def build_outlook_row(
         # (Compare, Bestandstests) erhalten ein zeichengleiches Row-Dict.
         "day_window_start_hour": day_window_start_hour,
         "day_window_end_hour": day_window_end_hour,
+        # Issue #1680 S5a: (Stunde, Stufe, Traegerliste) je Stunde mit
+        # Gewitterstufe. Steht bewusst im None-gefilterten `optional`-Block:
+        # fuehrt KEIN Punkt eine Traegerliste (Alt-Schnappschuss vor Scheibe 1,
+        # Bestandsfixturen), bleibt das Row-Dict zeichengleich (AC-8/AC-10,
+        # Paritaets-Test tests/tdd/test_trip_outlook_parity.py).
+        "hourly_thunder_signals": (
+            tuple(_thunder_signals) if _hat_signale else None
+        ),
     }
     row.update({k: v for k, v in optional.items() if v is not None})
 
@@ -527,9 +558,17 @@ def build_outlook_row(
         # Gewitter-Zelle des Ausblicks denselben Zusatz zeigt wie die
         # Uebersichtstabelle derselben Mail.
         _hail = getattr(summary, "hail_flag", None)
+        # Issue #1680 S5a (AC-11b): dieselbe Bauart wie der Hagel-Wert oben --
+        # die tragenden Zutaten reisen als Spalten-Eigenschaft mit. Quelle ist
+        # bewusst das TAGES-Aggregat `summary.thunder_level_max_signals`, also
+        # DIESELBE Rechnung wie die hier gezeigte Stufe (`col["field"]`), nicht
+        # das Tagesfenster -- eine Herkunft, die nicht zur gezeigten Stufe
+        # gehoert, waere der AC-12-Fehler aus Scheibe 1.
+        _signals = getattr(summary, "thunder_level_max_signals", None)
         row["cells"] = [
             format_outlook_value(
-                getattr(summary, col["field"], None), {**col, "hail": _hail},
+                getattr(summary, col["field"], None),
+                {**col, "hail": _hail, "signals": _signals},
             )
             for col in outlook_columns(metrics)
         ]
