@@ -243,7 +243,7 @@ Globale Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
 | Schritt | Was |
 |---|---|
 | 1 | Arbeitsbranch pushen: `git push -u origin <branch>` (nie direkt `main`; Server-Sessions: Themen-Branch oder `ws/<name>` aus gz-workspace) |
-| 1b | PR eröffnen (`gh pr create --fill`) und CI-Ampel abwarten — **alle 5 Checks grün** auf dem letzten Stand, sonst erst fixen (Merge-Regel unten) |
+| 1b | PR eröffnen (`gh pr create --fill`) und CI-Ampel abwarten — **alle 6 Checks grün** auf dem letzten Stand, sonst erst fixen (Merge-Regel unten) |
 | 1c | Mergen (`gh pr merge --merge`) — erst damit ist `main` aktualisiert |
 | 2 | Auto-Deploy auf Staging abwarten (~5 Min, Cron `*/5`) |
 | 3 | Staging-Validierung (s.u.) |
@@ -261,14 +261,16 @@ Wird ein Push nach `main` von GitHub abgewiesen, ist das kein Fehler, sondern di
 
 ### CI-Ampel & Merge-Regel (Tech-Lead-Entscheid 2026-08-04, #1196)
 
-Die 5 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test`) sind die **CI-Ampel**. Seit PR #1497 ist sie vollständig grün bei ehrlichem Umfang (`test`-Job: 5837 Tests inkl. `tests/tdd/` + pytest-socket-Egress-Wächter).
+Die 6 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`) sind die **CI-Ampel**. Seit PR #1497 ist sie vollständig grün bei ehrlichem Umfang (`test`-Job: 5837 Tests inkl. `tests/tdd/` + pytest-socket-Egress-Wächter). `e2e` kam mit #1771 Scheibe 2 hinzu (2026-08-13) — eigener, paralleler Job (kein `needs:`), isolierter Offline-Stack + wachstumsbeschränkte Playwright-Positivliste (`.github/ci_e2e_specs.txt`), Details: ADR-0054.
 
-- **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 5 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
+- **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 6 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
 - **Wird `main` trotzdem rot** (Altbestand, Notfall-Push): Drive-to-green hat Vorrang vor neuer Feature-Arbeit — wer es findet, fixt es oder ordnet es belegt zu.
 - **tdd-Ratsche:** `.github/ci_tdd_excludes.txt` listet die offline-roten `tests/tdd/`-Dateien. Nur ENTFERNEN erlaubt (Datei grün gemacht → Zeile raus); neue tdd-Dateien laufen automatisch auf CI. Ergänzen einer Zeile nur mit Begründung im PR.
-- **Branch-Protection ist beschlossen (PO-go 2026-08-05):** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow (oben). Den mechanischen Schalter (GitHub → Settings → Branches: PR-Pflicht + die 5 Status-Checks als required) setzt der PO; bis er gesetzt ist, gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
+- **e2e-Ratsche (umgekehrte Richtung):** `.github/ci_e2e_specs.txt` ist eine Positivliste und darf nur WACHSEN — eine Ausschlussliste würde eine grüne Grundmenge voraussetzen, die eine Stichprobenmessung (30,6 % rot) widerlegt hat. Erweiterung nur nach Filter A + Filter B (3× grün im `workflow_dispatch`-Vermessungslauf), siehe `docs/specs/modules/fix_1771_s2_playwright_ci_ampel.md`.
+- **Branch-Protection ist beschlossen (PO-go 2026-08-05):** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow (oben). Den mechanischen Schalter (GitHub → Settings → Branches: PR-Pflicht + die 6 Status-Checks als required) setzt der PO; bis er gesetzt ist, gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
 
-*Regel-Budget: Prüfdatum 2026-11-02. Fang-Beleg bei Einführung: 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196, PRs #1494/#1496/#1497).*
+*Regel-Budget (5-Checks-Ampel): Prüfdatum 2026-11-02. Fang-Beleg bei Einführung: 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196, PRs #1494/#1496/#1497).*
+*Regel-Budget (6. Check `e2e`, #1771 S2): Prüfdatum 2026-11-11. Fang-Kriterium: mindestens ein PR, in dem die Lane eine Regression fängt, die die anderen fünf Checks durchlassen — sonst Rückbau.*
 
 ## Monitoring
 

@@ -57,8 +57,8 @@ unbekannte Rote als Verpflichtung erben; eine Positivliste, die nur wachsen darf
     testbare Datei statt YAML-Einzeiler)
   - `tests/unit/test_e2e_ci_gate.py` — CREATE (bewacht die Auswertung; RED-Phase)
   - `frontend/playwright.config.ts` — MODIFY (CI-Zweig, kein neues Config-File)
-  - `docs/adr/0053-*.md` — CREATE (Grundsatzentscheidung, fortschreibend zu ADR-0006/ADR-0028)
-  - `docs/adr/README.md` — MODIFY (Index-Eintrag für ADR-0053)
+  - `docs/adr/0054-playwright-e2e-in-ci-ampel-positivliste.md` — CREATE (Grundsatzentscheidung, fortschreibend zu ADR-0006/ADR-0028)
+  - `docs/adr/README.md` — MODIFY (Index-Eintrag für ADR-0054)
   - `CLAUDE.md` — MODIFY (Merge-Regel „5 Checks" → „6 Checks")
 - **Identifier:** neuer Job `e2e:` in `.github/workflows/ci.yml` (parallel zu `test` ·
   `go-test` · `frontend-test` · `svelte-check` · `lint`); Skript
@@ -72,10 +72,13 @@ unbekannte Rote als Verpflichtung erben; eine Positivliste, die nur wachsen darf
 
 ## Estimated Scope
 
-- **LoC:** ≈165 (Code) — unter dem 250er-Limit, kein Override nötig; `.md`-Dateien
-  (ADR, README, CLAUDE.md) zählen nicht
+- **LoC:** ursprünglich auf ≈165 geschätzt; tatsächlich **≈340** — die Differenz entstand
+  durch drei in der Umsetzung gefundene Defekte samt ihrer Tests (fehlendes `GZ_USER_ID`,
+  `E2E_MIN_EXECUTED`-Default 0, fehlendes `GZ_CACHE_DIR`) sowie die Existenzprüfung der
+  Positivliste aus dem Adversary-Befund F006. **LoC-Override 500 vom PO erteilt (2026-08-13).**
+  `.md`-Dateien (ADR, README, CLAUDE.md) zählen nicht
 - **Files:** 4 Code-Dateien (`ci.yml`, `ci-stack.sh`, `ci_e2e_specs.txt`,
-  `playwright.config.ts`) + 3 Doku-Dateien (ADR-0053, ADR-README, CLAUDE.md)
+  `playwright.config.ts`) + 3 Doku-Dateien (ADR-0054, ADR-README, CLAUDE.md)
 - **Effort:** medium — kein Produktcode, aber eine neue Grundsatzentscheidung (ADR) und ein
   Pflicht-Check, der die Merge-Regel erweitert
 
@@ -87,7 +90,7 @@ unbekannte Rote als Verpflichtung erben; eine Positivliste, die nur wachsen darf
 | `frontend/e2e/ci-stack.sh` | CREATE | ~35 |
 | `.github/ci_e2e_specs.txt` | CREATE | ~30 |
 | `frontend/playwright.config.ts` | MODIFY | ~10 |
-| `docs/adr/0053-*.md`, `docs/adr/README.md`, `CLAUDE.md` | CREATE/MODIFY | 0 (zählt nicht) |
+| `docs/adr/0054-playwright-e2e-in-ci-ampel-positivliste.md`, `docs/adr/README.md`, `CLAUDE.md` | CREATE/MODIFY | 0 (zählt nicht) |
 
 ## Dependencies
 
@@ -102,7 +105,7 @@ unbekannte Rote als Verpflichtung erben; eine Positivliste, die nur wachsen darf
 | `api/routers/internal.py` | Python-Core (nur gelesen) | `FixtureProvider` (#346) — Offline-Wetter für den Python-Core im isolierten Stack |
 | `fixtures/openmeteo/{innsbruck,stubai,zillertal}.json` | Testdaten | Deckt nur **heute + 2 Tage**; muss zu den drei von `global.setup.ts` geseedeten Orten passen |
 | `frontend/playwright.config.ts` (Bestand) | test infra | `webServer`, Projekte `setup`/`tests`, `storageState` — bekommt einen CI-Zweig, **kein** neues Config-File (Gegenmaßnahme zum gemessenen Wildwuchs von 50 Configs) |
-| ADR-0006, ADR-0028 | ADR (Bestand) | Diese Scheibe schreibt beide fort (ADR-0053); ADR-0028s Begründung „`GZ_DATA_DIR` technisch nicht tragfähig" ist verjährt (siehe unten) |
+| ADR-0006, ADR-0028 | ADR (Bestand) | Diese Scheibe schreibt beide fort (ADR-0054); ADR-0028s Begründung „`GZ_DATA_DIR` technisch nicht tragfähig" ist verjährt (siehe unten) |
 | CLAUDE.md „CI-Ampel & Merge-Regel" | Regel (Bestand) | Ein neuer Pflicht-Check ändert „5 Checks" auf „6 Checks" — Downstream-Wirkung auf die GitHub-Branch-Protection |
 
 ## Implementation Details
@@ -120,8 +123,8 @@ Ablauf im Job (illustrativ, finale Reihenfolge entsteht in der Umsetzung):
 e2e:
   runs-on: ubuntu-latest
   env:
-    E2E_MIN_SPECS: 10        # Ratsche-Wächter: Zahl der DATEIEN auf der Positivliste
-    E2E_MIN_EXECUTED: 50     # Mindestzahl tatsächlich AUSGEFÜHRTER Testfälle
+    E2E_MIN_SPECS: 36        # Ratsche-Wächter: Zahl der DATEIEN auf der Positivliste
+    E2E_MIN_EXECUTED: 173    # exakt der belegte Wert — KEIN Puffer nach unten (s.u.)
   steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-go@v5
@@ -181,18 +184,30 @@ verpflichtet zu nichts.
 
 Auswahl in zwei Filtern, beide belegt:
 
-- **Filter A (strukturell, gemessen):** keine konditionalen `test.skip()`, keine
-  `waitForTimeout`, keine permanenten Skips ⇒ Kandidatenpool **106 Dateien / 618
-  Testfälle**. Zusätzlich raus: Specs, die Wetter*werte* prüfen (Fixtures decken nur heute +
-  2 Tage), und die 16 `.staging.spec.ts` (brauchen Remote + Zugangsdaten, gehören nicht in
-  eine Offline-Lane).
+- **Filter A (strukturell, gemessen, verschärft am 2026-08-13):** keine konditionalen
+  `test.skip()`, keine `waitForTimeout`, keine permanenten Skips, keine `.staging.spec.ts`,
+  keine Specs, die Wetter*werte* prüfen (Fixtures decken nur heute + 2 Tage) — und
+  zusätzlich zwei vom Adversary gefundene, am Code bestätigte strukturell kaputte Dateien
+  ausgeschlossen: `list-routes-btn-migration.spec.ts:26` (liest über den fest verdrahteten
+  Hauptrepo-Pfad `/home/hem/gregor_zwanzig/${file}` — auf einem Runner ENOENT, aus einem
+  Worktree falsches Grün gegen die unveränderte Hauptrepo-Kopie, Verstoß gegen Pfadregel
+  #1409) und `issue-322-wicon-komponente.spec.ts:14` (`__dirname` in einem ESM-Modul,
+  `frontend/package.json` hat `"type": "module"` ⇒ deterministischer `ReferenceError`).
+  Gemessener Kandidatenpool nach diesem verschärften Filter: **87 Dateien** (die frühere
+  Schätzung „106 Dateien" war ungemessen und ist damit abgelöst).
 - **Filter B (gemessen im Runner, nicht lokal):** aufgenommen wird nur, was im
-  Vermessungslauf (s. Punkt 6) **3× hintereinander grün** ist.
+  Vermessungslauf (s. Punkt 6) **3× hintereinander grün** ist. Belegt am 2026-08-13 gegen den
+  isolierten Stack (Ports 8095/8005): Lauf 1 (Vermessung, 87 Kandidaten) ⇒ 36 Dateien
+  vollständig grün; Lauf 2 und Lauf 3 je **173 expected / 0 unexpected / 0 skipped** (126s
+  bzw. 131s).
 
-Startgröße ~10–15 Dateien / ~50 Testfälle — passt in das ~4,5-min-Budget bei `workers: 1`.
-Die finale Startliste entsteht aus dem ersten `workflow_dispatch`-Vermessungslauf im Runner,
-nicht aus lokalen Zahlen (lokale Läufe im Haupt-Checkout sind laut `ci_tdd_excludes.txt`-
-Lektion kein Beleg für CI-Grün).
+Startgröße **36 Dateien / 173 Testfälle, 3× hintereinander grün belegt** (nicht mehr die
+ursprünglich geschätzten ~10–15 Dateien / ~50 Testfälle). Reine Testzeit ~130s bei
+`workers: 1` — die 57 min des ersten Vermessungslaufs entstanden fast vollständig durch
+**fehlschlagende** Tests in 30s-Zeitüberschreitungen, nicht durch die hier gelisteten
+grünen. Die finale Startliste entstand aus dem `workflow_dispatch`-Vermessungslauf im
+Runner, nicht aus lokalen Zahlen (lokale Läufe im Haupt-Checkout sind laut
+`ci_tdd_excludes.txt`-Lektion kein Beleg für CI-Grün).
 
 ### 4. `frontend/playwright.config.ts` — CI-Zweig, kein neues Config-File
 
@@ -234,10 +249,10 @@ Der Job wertet **alle drei** aus, nicht nur „keine Roten":
 
 **🔴 Zwei getrennte Zahlen, nicht eine.** `E2E_MIN_SPECS` zählt **Dateien** auf der Liste,
 `E2E_MIN_EXECUTED` zählt **ausgeführte Testfälle**. Sie dürfen nicht zu einer Variable
-verschmolzen werden: Bei 10 Listen-Dateien mit zusammen ~50 Testfällen wäre eine Prüfung
-`expected >= 10` bereits erfüllt, wenn nur 11 Tests laufen — 39 könnten still ausfallen und
-der Job bliebe grün. Das wäre exakt das „grün ohne Aussage", das diese Bedingung verhindern
-soll. Beide stehen als `env:` im Job (Muster: `BASELINE_ERRORS` im `svelte-check`-Job,
+verschmolzen werden: Bei 36 Listen-Dateien mit zusammen 173 belegten Testfällen wäre eine
+Prüfung `expected >= 36` bereits erfüllt, wenn nur 37 Tests laufen — über 130 könnten still
+ausfallen und der Job bliebe grün. Das wäre exakt das „grün ohne Aussage", das diese
+Bedingung verhindern soll. Beide stehen als `env:` im Job (Muster: `BASELINE_ERRORS` im `svelte-check`-Job,
 `ci.yml:122`); `E2E_MIN_SPECS` verhindert stilles Schrumpfen der Liste,
 `E2E_MIN_EXECUTED` stilles Ausfallen von Tests.
 
@@ -247,7 +262,8 @@ jedem denkbaren Fehlschlag des Stacks selbst grün bleibt.
 ### 6. Vermessungslauf als `workflow_dispatch`-Variante desselben Jobs
 
 Derselbe Job bekommt einen zweiten Trigger `workflow_dispatch`. Im manuellen Modus fährt er
-statt der Positivliste den Filter-A-Kandidatenpool (106 Dateien) und protokolliert das
+statt der Positivliste den Filter-A-Kandidatenpool (87 Dateien nach dem verschärften Filter,
+s. Punkt 3) und protokolliert das
 Ergebnis — das ist die Grundlage, auf der künftige Scheiben Zeilen zu
 `.github/ci_e2e_specs.txt` hinzufügen (Filter B: 3× hintereinander grün). Der vom Issue
 geforderte Volllauf über die volle Suite wird damit **Wachstumsmaschine statt
@@ -263,7 +279,7 @@ Merge-Regel, kein neues Gate — Regel-Budget-Eintrag mit eigenem Prüfdatum **2
 Fang-Kriterium: „mindestens ein PR, in dem die Lane eine Regression fängt, die die anderen
 fünf Checks durchlassen".
 
-### 8. ADR-0053
+### 8. ADR-0054
 
 Neue Grundsatzentscheidung zur Teststrategie, fortschreibend zu ADR-0006 („keine gemockten
 Tests, echte E2E") und ADR-0028 (Proxy-Ziel auf Staging als Default-Override). Der ADR-Text
@@ -303,12 +319,12 @@ dagegen **kein** Abweichen von ADR-0028 — der Override ist dort ausdrücklich 
   - Regulärer PR-Lauf: Der `e2e`-Job startet einen eigenen, isolierten Stack
     (Python-Core + Go-Server, Fixtures, leere Datenwurzel), fährt die Positivliste aus
     `.github/ci_e2e_specs.txt` mit `workers: 1` und wertet drei Bedingungen aus
-    (`unexpected == 0`, `skipped == 0`, `expected >= E2E_MIN_SPECS`). Sind alle drei erfüllt,
+    (`unexpected == 0`, `skipped == 0`, `expected >= E2E_MIN_EXECUTED`). Sind alle drei erfüllt,
     ist der Check grün; sonst rot — inklusive des Falls, dass der Stack selbst nicht
     hochkommt (dann `expected == 0`).
   - `workflow_dispatch`-Lauf: fährt statt der Positivliste den Filter-A-Kandidatenpool
-    (106 Dateien) und protokolliert das Ergebnis als Grundlage für künftige
-    Listenerweiterungen.
+    (87 Dateien nach dem verschärften Filter) und protokolliert das Ergebnis als Grundlage
+    für künftige Listenerweiterungen.
   - Die Ampel-Wanduhrzeit bleibt unverändert bei ~10 min (paralleler Job).
 - **Side effects:** CLAUDE.md nennt ab dieser Scheibe „6 Checks" statt „5 Checks" als
   vollständige Ampel; ein neuer PR wird erst gemergt, wenn auch `e2e` grün ist. Kein
@@ -370,18 +386,19 @@ dagegen **kein** Abweichen von ADR-0028 — der Override ist dort ausdrücklich 
     Kerne/2-Default).
 
 - **AC-7:** Given `.github/ci_e2e_specs.txt` enthält beim ersten Merge eine Startmenge von
-  10–15 Dateien, ausgewählt über Filter A (strukturell) und Filter B (3× hintereinander grün
-  im Vermessungslauf) / When ein Test diese beiden Filter nicht erfüllt (z. B. einer der 22
-  von 72 in der Stichprobe gemessenen roten Fälle) / Then steht dieser Test NICHT auf der
-  Liste und wird vom regulären `e2e`-Lauf nicht ausgeführt.
+  36 Dateien / 173 Testfällen, ausgewählt über Filter A (strukturell, verschärft) und
+  Filter B (3× hintereinander grün im Vermessungslauf, belegt am 2026-08-13) / When ein Test
+  diese beiden Filter nicht erfüllt (z. B. einer der 22 von 72 in der Stichprobe gemessenen
+  roten Fälle, oder eine der zwei strukturell kaputten Dateien aus Punkt 3) / Then steht
+  dieser Test NICHT auf der Liste und wird vom regulären `e2e`-Lauf nicht ausgeführt.
   - Test: Abgleich der committeten Liste gegen das Vermessungsprotokoll des
     `workflow_dispatch`-Laufs — jede gelistete Datei hat einen Beleg von 3 aufeinanderfolgend
     grünen JSON-Reports.
 
 - **AC-8:** Given derselbe Job ist zusätzlich über `workflow_dispatch` auslösbar / When er
   manuell im Vermessungsmodus gestartet wird / Then fährt er den Filter-A-Kandidatenpool
-  (106 Dateien statt der ~10–15 der Positivliste) und protokolliert das Ergebnis, ohne dass
-  dafür ein Volllauf über alle 921 Tests nötig ist.
+  (87 Dateien nach dem verschärften Filter statt der 36 der Positivliste) und protokolliert
+  das Ergebnis, ohne dass dafür ein Volllauf über alle 921 Tests nötig ist.
   - Test: Manueller `workflow_dispatch`-Trigger im Actions-Tab mit dem Vermessungs-Input;
     das Run-Log zeigt eine deutlich größere Testmenge als der reguläre PR-Lauf.
 
@@ -399,12 +416,13 @@ dagegen **kein** Abweichen von ADR-0028 — der Override ist dort ausdrücklich 
   rebasen auf „heute" — die „Gestern"-Etappe des Seed-Trips und Mehrtagesansichten sind im
   isolierten Stack datenlos. Auswahlkriterium (Filter A schließt wertprüfende Specs aus),
   keine Reparatur in dieser Scheibe.
-- **KL-2 · Verbleibender 401 im SvelteKit-Weiterleitungspfad:** Im lokalen Nachbau blieb ein
-  `401` auf dem Weg über den SvelteKit-Preview-Proxy bestehen, während der direkte Weg zum
-  Go-Server (Login 200, Anlegen 201) einwandfrei funktionierte. Lokal schwer zu isolieren,
-  weil dieser Rechner eine `.env` hat, die der Runner nicht hat — muss im Runner selbst
-  (`workflow_dispatch`-Vermessungslauf) erneut geprüft werden, bevor die finale Positivliste
-  feststeht.
+- **KL-2 · Verbleibender 401 bei `createTestLocation`/Preset-Anlage (präzisiert
+  2026-08-13):** Der 401 tritt weiterhin bei `createTestLocation`/Preset-Anlage-Helfern auf
+  dem Weg über den SvelteKit-Preview-Proxy auf, während der direkte Weg zum Go-Server (Login
+  200, Anlegen 201) einwandfrei funktioniert. Die 36 Dateien der Positivliste sind davon
+  **nicht** betroffen — sie kommen ohne diese Helfer aus (Filter B hätte sie sonst nicht 3×
+  grün gemessen); Specs, die `createTestLocation`/Preset-Anlage brauchen, stehen deshalb
+  bewusst nicht auf der Liste.
 - **KL-3 · Grün-Quote an einer Stichprobe gemessen:** Die 30,6-%-Rot-Quote (22 von 72
   Testfällen) wurde an einer 15-Datei-Stichprobe gegen die geteilte Staging-Instanz
   gemessen, auf der parallele Sessions arbeiten — einzelne Fehlschläge können
@@ -416,7 +434,7 @@ dagegen **kein** Abweichen von ADR-0028 — der Override ist dort ausdrücklich 
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** ADR-0053 (neu, fortschreibend zu ADR-0006 „keine gemockten Tests, echte E2E"
+- **ADR-Nr.:** ADR-0054 (neu, fortschreibend zu ADR-0006 „keine gemockten Tests, echte E2E"
   und ADR-0028 „Proxy-Ziel auf Staging als Default")
 - **Rationale:** Die Einhängung von Playwright-E2E-Klickpfaden in die CI-Ampel ist eine
   Grundsatzentscheidung zur Teststrategie (Entscheidungsfläche „Test-/Deploy-Strategie" laut

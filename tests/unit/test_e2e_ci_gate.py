@@ -67,6 +67,19 @@ def _text(r: subprocess.CompletedProcess) -> str:
     return r.stdout + r.stderr
 
 
+def _run_gate_ohne_schwelle(report_path: Path, min_executed_raw: str | None = None) -> subprocess.CompletedProcess:
+    """Wie `_run_gate`, aber OHNE automatisch eine gueltige `E2E_MIN_EXECUTED`
+    zu setzen -- fuer die Faelle, die genau das Fehlen/die Unbrauchbarkeit der
+    Schwelle selbst pruefen (Gegenlese-Fund Defekt 2, PR-Review #1771 S2)."""
+    env = {k: v for k, v in os.environ.items() if k != "E2E_MIN_EXECUTED"}
+    if min_executed_raw is not None:
+        env["E2E_MIN_EXECUTED"] = min_executed_raw
+    return subprocess.run(
+        [sys.executable, str(GATE), str(report_path)],
+        capture_output=True, text=True, timeout=30, env=env,
+    )
+
+
 # ------------------------------------------------------------------------- Faelle
 
 
@@ -206,4 +219,48 @@ def test_kaputter_report_gibt_exit_ungleich_0(tmp_path):
         f"Meldung nennt nicht den kaputten Report-Pfad ({kaputte_datei.name}) -- ein "
         f"unbehandelter Stacktrace an einer ganz anderen Stelle ist kein Beleg, dass "
         f"GENAU das ungueltige JSON als Ursache erkannt wurde: {ausgabe}"
+    )
+
+
+def test_fehlende_schwelle_gibt_exit_ungleich_0(tmp_path):
+    """Gegenlese-Fund (Defekt 2): der alte Default `E2E_MIN_EXECUTED=0` machte
+    Bedingung 3 wirkungslos, sobald die Variable fehlte -- ein leerer Report
+    (Stack nie hochgekommen) waere dann GRUEN gewesen.
+
+    GIVEN ein Report mit `expected=0, unexpected=0, skipped=0` und
+          E2E_MIN_EXECUTED NICHT gesetzt
+    WHEN der Gate-Auswerter darauf laeuft
+    THEN ist der Exit-Code != 0 (fail-closed) und die Meldung nennt
+         `E2E_MIN_EXECUTED` als Ursache.
+    """
+    report = _report(tmp_path, expected=0, unexpected=0, skipped=0)
+    r = _run_gate_ohne_schwelle(report)
+    ausgabe = _text(r)
+    assert r.returncode != 0, (
+        f"Fehlende Schwelle haette NIE Exit 0 ergeben duerfen (fail-closed): {ausgabe}"
+    )
+    assert "E2E_MIN_EXECUTED" in ausgabe, (
+        f"Meldung nennt nicht die fehlende Variable E2E_MIN_EXECUTED: {ausgabe}"
+    )
+
+
+def test_unbrauchbare_schwelle_gibt_exit_ungleich_0(tmp_path):
+    """Gegenlese-Fund (Defekt 2): eine nicht-parsbare Schwelle darf nicht als
+    nackter Python-Stacktrace enden, sondern muss als erklaerte Ablehnung
+    scheitern (fail-closed).
+
+    GIVEN ein sonst gueltiger Report und `E2E_MIN_EXECUTED=abc`
+    WHEN der Gate-Auswerter darauf laeuft
+    THEN ist der Exit-Code != 0, die Ausgabe enthaelt KEINEN unbehandelten
+         Traceback und nennt `E2E_MIN_EXECUTED` als Ursache.
+    """
+    report = _report(tmp_path, expected=55, unexpected=0, skipped=0)
+    r = _run_gate_ohne_schwelle(report, min_executed_raw="abc")
+    ausgabe = _text(r)
+    assert r.returncode != 0, f"Unbrauchbare Schwelle haette NIE Exit 0 ergeben duerfen: {ausgabe}"
+    assert "Traceback (most recent call last)" not in ausgabe, (
+        f"Ein nackter Python-Stacktrace ist keine erklaerende Meldung: {ausgabe}"
+    )
+    assert "E2E_MIN_EXECUTED" in ausgabe, (
+        f"Meldung nennt nicht die unbrauchbare Variable E2E_MIN_EXECUTED: {ausgabe}"
     )
