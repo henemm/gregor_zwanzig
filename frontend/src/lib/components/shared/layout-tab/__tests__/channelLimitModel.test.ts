@@ -59,6 +59,10 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parse } from 'svelte/compiler';
 
 const {
 	TELEGRAM_METRIC_COLUMNS,
@@ -204,5 +208,166 @@ describe('AC-S8-12: der SMS-Kanal-Tab des Ortsvergleichs nennt 153, der Trip-Pfa
 			value: 7
 		});
 		assert.deepEqual(limitOf(LT_CHANNELS, 'telegram'), { kind: 'columns', value: 7 });
+	});
+});
+
+// ── Fix-Loop Adversary-Fund F002 (HIGH) — die VERDRAHTUNG, nicht nur die
+//    reine Funktion ─────────────────────────────────────────────────────────
+//
+// Die Tests oben belegen ausschliesslich `ltChannelsFor()` als reine Funktion.
+// Ob der Kanal-Umschalter sie ueberhaupt SIEHT, war unbewacht: die Mutation
+// `{#each channels ...}` -> `{#each LT_CHANNELS ...}` in LTChannelPicker.svelte
+// stellt exakt den Zustand VOR dem Fix wieder her (SMS-Badge zeigt im
+// Ortsvergleich 160 statt 153, im Widerspruch zum Hinweistext darunter) und
+// lief trotzdem durch alle Frontend-Tests gruen.
+//
+// Bewacht wird deshalb die ganze kurze Kette:
+//   LayoutTab.smsCharLimit (Prop vom Aufrufer)
+//     -> ltChannelsFor(smsCharLimit)
+//     -> <LTChannelPicker channels={...}>
+//     -> {#each channels}
+// Reisst ein Glied, ist der Badge wieder eine feste Trip-Zahl.
+//
+// AST statt DOM aus demselben Grund wie in den Geschwister-Waechtern: dieses
+// Repo hat kein vitest/jsdom (package.json "test": node --test), geparst wird
+// mit dem ECHTEN Svelte-5-Compiler.
+
+const here = dirname(fileURLToPath(import.meta.url));
+const PICKER_FILE = join(here, '..', 'LTChannelPicker.svelte');
+const LAYOUT_TAB_FILE = join(here, '..', 'LayoutTab.svelte');
+
+function svelteAst(path: string): any {
+	return parse(readFileSync(path, 'utf-8'), { modern: true });
+}
+
+function walk(root: unknown, pred: (n: any) => boolean): any[] {
+	const found: any[] = [];
+	(function visit(node: unknown): void {
+		if (node === null || typeof node !== 'object') return;
+		if (Array.isArray(node)) {
+			node.forEach(visit);
+			return;
+		}
+		const n = node as Record<string, any>;
+		if (pred(n)) found.push(n);
+		for (const key of Object.keys(n)) {
+			if (key === 'parent') continue;
+			visit(n[key]);
+		}
+	})(root);
+	return found;
+}
+
+/** Namen der aus `$props()` destrukturierten Eintraege einer Komponente. */
+function propNames(ast: any): string[] {
+	const decl = walk(ast.instance, (n) => n.type === 'VariableDeclarator').find(
+		(d: any) => d.init?.type === 'CallExpression' && d.init.callee?.name === '$props'
+	);
+	if (!decl || decl.id?.type !== 'ObjectPattern') return [];
+	return decl.id.properties.map((p: any) => p.key?.name).filter(Boolean);
+}
+
+/** `$derived(x)` / `$derived.by(...)` auspacken, sonst den Ausdruck selbst. */
+function unwrapDerived(expr: any): any {
+	if (expr?.type === 'CallExpression' && expr.callee?.name === '$derived') {
+		return expr.arguments?.[0];
+	}
+	return expr;
+}
+
+describe('AC-S8-12 (Verdrahtung): der Kanal-Umschalter iteriert die PROP, nicht die Modul-Konstante', () => {
+	test('LTChannelPicker.svelte: das {#each} laeuft ueber `channels`, und `channels` ist eine $props()-Prop', () => {
+		const ast = svelteAst(PICKER_FILE);
+
+		const eachBlocks = walk(ast.fragment, (n) => n.type === 'EachBlock');
+		assert.equal(
+			eachBlocks.length,
+			1,
+			`Erwartet genau EIN {#each} in LTChannelPicker.svelte, gefunden ${eachBlocks.length} — ` +
+				'Test ist blind geworden oder die Struktur hat sich geaendert.'
+		);
+
+		const expr = eachBlocks[0].expression;
+		assert.equal(
+			expr?.type === 'Identifier' ? expr.name : `Ausdruck(${expr?.type})`,
+			'channels',
+			'AC-S8-12 FAIL: der Kanal-Umschalter iteriert nicht mehr die `channels`-Prop. Iteriert er ' +
+				'wieder die Modul-Konstante LT_CHANNELS (ltChannels.ts:84, fest mit ' +
+				'SMS_TRIP_CHAR_LIMIT gebaut), zeigt der SMS-Badge im Ortsvergleich 160 — der ' +
+				'Kappungs-Hinweis darunter nennt aber 153 (LTCapNote ueber smsCharLimit). Zwei ' +
+				'sich widersprechende Kappungs-Aussagen auf einer Seite, genau der Zustand vor #1703 S8.'
+		);
+
+		assert.ok(
+			propNames(ast).includes('channels'),
+			'AC-S8-12 FAIL: `channels` ist kein $props()-Eintrag von LTChannelPicker mehr — eine ' +
+				'gleichnamige lokale Konstante wuerde das {#each} oben unveraendert bestehen lassen ' +
+				'und den Aufrufer trotzdem entmachten.'
+		);
+	});
+
+	test('LayoutTab.svelte: LTChannelPicker bekommt `channels` aus ltChannelsFor(smsCharLimit)', () => {
+		const ast = svelteAst(LAYOUT_TAB_FILE);
+
+		const pickers = walk(
+			ast.fragment,
+			(n) => n.type === 'Component' && n.name === 'LTChannelPicker'
+		);
+		assert.equal(
+			pickers.length,
+			1,
+			`Erwartet genau EINEN LTChannelPicker-Aufruf in LayoutTab.svelte, gefunden ${pickers.length} — ` +
+				'Test ist blind geworden oder die Struktur hat sich geaendert.'
+		);
+
+		const attr = (pickers[0].attributes ?? []).find(
+			(a: any) => a.type === 'Attribute' && a.name === 'channels'
+		);
+		assert.notEqual(
+			attr,
+			undefined,
+			'AC-S8-12 FAIL: LayoutTab reicht `channels` nicht mehr an LTChannelPicker durch — die ' +
+				'Prop faellt dann auf ihren Vorgabewert LT_CHANNELS (Trip, 160 Zeichen) zurueck und ' +
+				'der Ortsvergleich zeigt wieder die falsche Zahl.'
+		);
+
+		// `{channels}` (Kurzform) -> Identifier; der Wert darf auch direkt als
+		// Aufruf stehen. Beide Formen werden bis zum Aufruf zurueckverfolgt.
+		let call = attr.value?.type === 'ExpressionTag' ? attr.value.expression : undefined;
+		if (call?.type === 'Identifier') {
+			const decl = walk(ast.instance, (n) => n.type === 'VariableDeclarator').find(
+				(d: any) => d.id?.type === 'Identifier' && d.id.name === call.name
+			);
+			assert.notEqual(
+				decl,
+				undefined,
+				`AC-S8-12 FAIL: \`channels={${call.name}}\` — aber \`${call.name}\` ist in LayoutTab.svelte ` +
+					'nicht deklariert (Import einer fertigen Liste?). Dann haengt der Badge nicht mehr am ' +
+					'smsCharLimit des Aufrufers.'
+			);
+			call = unwrapDerived(decl.init);
+		}
+
+		assert.equal(
+			call?.type === 'CallExpression' ? call.callee?.name : `Ausdruck(${call?.type})`,
+			'ltChannelsFor',
+			'AC-S8-12 FAIL: die Kanalliste stammt nicht aus `ltChannelsFor(...)`. Jede andere Quelle ' +
+				'(LT_CHANNELS, eigene Literalliste) traegt eine fest verdrahtete SMS-Zeichenzahl.'
+		);
+
+		const arg = call.arguments?.[0];
+		assert.equal(
+			arg?.type === 'Identifier' ? arg.name : `Ausdruck(${arg?.type})`,
+			'smsCharLimit',
+			'AC-S8-12 FAIL: `ltChannelsFor(...)` bekommt nicht die `smsCharLimit`-Prop, sondern eine ' +
+				'andere Quelle. Steht dort wieder eine Konstante (SMS_TRIP_CHAR_LIMIT), nennt der ' +
+				'Badge im Ortsvergleich 160 statt 153 — die Prop waere zwar benutzt, aber falsch gespeist.'
+		);
+
+		assert.ok(
+			propNames(ast).includes('smsCharLimit'),
+			'AC-S8-12 FAIL: `smsCharLimit` ist kein $props()-Eintrag von LayoutTab mehr — der Wert ' +
+				'kaeme dann nicht mehr vom Aufrufer (Trip 160 / Vergleich 153), sondern aus dem Organism.'
+		);
 	});
 });

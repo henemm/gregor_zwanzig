@@ -53,6 +53,52 @@ function findAttr(node: any, name: string): any {
 	return (node?.attributes ?? []).find((a: any) => a.type === 'Attribute' && a.name === name);
 }
 
+/**
+ * Fix-Loop Adversary-Fund F001 (HIGH): `findAttr` belegt nur die ANWESENHEIT
+ * eines Attributs. Die Mutation `hasLabelColumn={false}` -> `{true}` lief
+ * dadurch durch alle Frontend-Tests gruen — die Kappungs-Aussage haette dann
+ * "N Spalten (Label + Metriken)" behauptet, obwohl es keine Label-Spalte gibt.
+ *
+ * Liefert den TATSAECHLICHEN Wert eines boolean-Attributs:
+ *   - `undefined`          Attribut fehlt
+ *   - `true` / `false`     `{true}` / `{false}` (Literal)
+ *   - `true`               Kurzform `<C hasLabelColumn />` (Svelte-Semantik:
+ *                          ein Attribut ohne Wert ist `true`)
+ *   - String               alles andere (Identifier, Aufruf, Text) — der Text
+ *                          landet in der Fehlermeldung, damit ein spaeterer
+ *                          Umbau nicht still als "kein false" durchrutscht.
+ */
+function boolAttrValue(node: any, name: string): true | false | string | undefined {
+	const attr = findAttr(node, name);
+	if (attr === undefined) return undefined;
+	const value = attr.value;
+	if (value === true) return true;
+	if (value?.type === 'ExpressionTag') {
+		const expr = value.expression;
+		if (expr?.type === 'Literal') {
+			if (expr.value === true) return true;
+			if (expr.value === false) return false;
+			return `Literal(${expr.raw})`;
+		}
+		return `Ausdruck(${expr?.type})`;
+	}
+	if (Array.isArray(value)) {
+		return `Text("${value.map((t: any) => t.raw ?? t.data ?? '').join('')}")`;
+	}
+	return `unbekannt(${value?.type})`;
+}
+
+/** Name des Identifiers, der als `name={IDENT}` uebergeben wird (sonst eine
+ *  beschreibende Zeichenkette bzw. `undefined`, wenn das Attribut fehlt). */
+function identAttrValue(node: any, name: string): string | undefined {
+	const attr = findAttr(node, name);
+	if (attr === undefined) return undefined;
+	const expr = attr.value?.type === 'ExpressionTag' ? attr.value.expression : undefined;
+	if (expr?.type === 'Identifier') return expr.name;
+	if (expr?.type === 'Literal') return `Literal(${expr.raw})`;
+	return `Ausdruck(${expr?.type ?? attr.value?.type ?? 'Text'})`;
+}
+
 function findComponentsNamed(subtree: unknown, name: string): any[] {
 	const found: any[] = [];
 	function visit(node: unknown): void {
@@ -146,21 +192,65 @@ describe('AC-S8-14 (a): die Vergleichs-UEBERSICHT traegt jetzt offColumns UND on
 			if (layoutTabs.length !== 1) return;
 
 			// Fix A: Metriken sind ZEILEN — die Kappungs-Zaehlung darf keine
-			// Label-Spalte mitzaehlen (Gegenprobe M6).
-			const hasLabelColumn = findAttr(layoutTabs[0], 'hasLabelColumn');
-			assert.notEqual(
-				hasLabelColumn,
-				undefined,
-				'AC-S8-13 FAIL: der Uebersichts-LayoutTab uebergibt `hasLabelColumn` nicht explizit — ' +
-					'ein kontextabgeleiteter Default wuerde hier "N Spalten (Label + Metriken)" behaupten.'
+			// Label-Spalte mitzaehlen (Gegenprobe M6). Geprueft wird der WERT,
+			// nicht die Anwesenheit (Fix-Loop F001).
+			assert.equal(
+				boolAttrValue(layoutTabs[0], 'hasLabelColumn'),
+				false,
+				'AC-S8-13 FAIL: der Uebersichts-LayoutTab uebergibt `hasLabelColumn` nicht als ' +
+					'`{false}` — die Uebersicht zaehlt Metriken als ZEILEN; jeder andere Wert laesst ' +
+					'den Kappungs-Hinweis "N Spalten (Label + Metriken)" behaupten (ltCapNoteText, ' +
+					'ltChannels.ts:147), obwohl es dort keine Label-Spalte gibt.'
 			);
 			// Fix B: die SMS-Zeichengrenze des VERGLEICHSPFADS (153), nicht die
-			// Trip-Konstante (160) — Gegenprobe M7.
-			assert.notEqual(
-				findAttr(layoutTabs[0], 'smsCharLimit'),
-				undefined,
-				'AC-S8-12 FAIL: der Uebersichts-LayoutTab uebergibt `smsCharLimit` nicht — Badge und ' +
-					'Kappungs-Hinweis fielen still auf den Trip-Wert 160 zurueck.'
+			// Trip-Konstante (160) — Gegenprobe M7. Auch hier der WERT: ein
+			// Tausch auf SMS_TRIP_CHAR_LIMIT haette die Anwesenheitspruefung
+			// unveraendert bestanden und den Widerspruch Badge/Hinweis (160 vs.
+			// 153) wieder eingefuehrt, den Fix B gerade beseitigt hat.
+			assert.equal(
+				identAttrValue(layoutTabs[0], 'smsCharLimit'),
+				'SMS_COMPARE_CHAR_LIMIT',
+				'AC-S8-12 FAIL: der Uebersichts-LayoutTab speist `smsCharLimit` nicht aus ' +
+					'SMS_COMPARE_CHAR_LIMIT (153, channel_layout.py:45-54) — Badge, Ueberlauf-Chip ' +
+					'und Kappungs-Hinweis nennten dann den Trip-Wert 160.'
+			);
+		}
+	);
+
+	// Fix-Loop Adversary-Fund F001 (HIGH): der Trip-Aufruf uebergibt seit
+	// Scheibe 8 ebenfalls `hasLabelColumn={false}` — vorher war das der aus
+	// `context` abgeleitete Default (route -> false). Die Ableitung ist mit
+	// dieser Scheibe entfallen; ohne Waechter waere ein stiller Wechsel auf
+	// `{true}` eine Regression im Trip-Editor, die kein Test bemerkt.
+	test(
+		'auch der Trip-Aufruf (route-Zweig) zaehlt Metriken als ZEILEN: hasLabelColumn={false}',
+		{ skip: !exists(SHARED_FILE) },
+		() => {
+			const code = readFileSync(SHARED_FILE, 'utf-8');
+			const markupStart = code.indexOf("{#if context === 'vergleich'}");
+			const routeStart = code.indexOf('\n{:else}', markupStart);
+			assert.ok(
+				markupStart > 0 && routeStart > markupStart,
+				'Markup-Verzweigung nicht gefunden — Test ist blind geworden.'
+			);
+			const ast = parse(code, { modern: true });
+			const layoutTabs = findComponentsNamed(ast.fragment, 'LayoutTab').filter(
+				(n) => n.start >= routeStart
+			);
+			assert.equal(
+				layoutTabs.length,
+				1,
+				`Erwartet genau EINEN LayoutTab-Aufruf im route-Zweig, gefunden ${layoutTabs.length} — ` +
+					'Test ist blind geworden oder die Struktur hat sich geaendert.'
+			);
+			if (layoutTabs.length !== 1) return;
+			assert.equal(
+				boolAttrValue(layoutTabs[0], 'hasLabelColumn'),
+				false,
+				'REGRESSION: der Trip-LayoutTab uebergibt `hasLabelColumn` nicht mehr als `{false}`. ' +
+					'Die Trip-Kappung zaehlt reine Metriken (Fresh-Eyes-Fund #1232-3b, ' +
+					'WeatherMetricsTab.svelte:1422-1427); jeder andere Wert verschiebt die Kapplinie ' +
+					'gegen den Ueberlauf-Chip.'
 			);
 		}
 	);
