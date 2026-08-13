@@ -71,7 +71,17 @@ OFFICIAL_ALERT_PRIORITY = 11
 # Issue #1349: "amtliche Warnungen nicht abrufbar" — sicherheitsrelevant,
 # darf unter Truncation-Druck nie wegfallen (ausserhalb DROP_ORDER/
 # _last_resort in render.py; Prioritaet hier nur dokumentarisch >= 11).
-UNAVAILABLE_SYMBOL = "W?"
+# Issue #1703 Scheibe 6 (AC-S6-6): war zuvor "W?" -- bytegleiche Kollision
+# mit dem Wind-Datenausfall-Marker (Symbol "W" + Gap-Wert "?" ueber
+# _gap_or(), siehe Token.render()). Auf "X?" geaendert, weil beide Zustaende
+# (Wind-Datenluecke vs. amtliche Warnungen nicht abrufbar) fachlich
+# unabhaengig sind und fuer den Leser unterscheidbar sein muessen.
+# RESERVIERUNG: "X" ist ab jetzt fuer UNAVAILABLE_SYMBOL reserviert -- kein
+# Katalog-Kuerzel darf kuenftig "X" werden, sonst entsteht ueber ein
+# Gap-faehiges Rendering ("X?") dieselbe Kollisionsklasse erneut (Spec
+# docs/specs/modules/fix_1703_s6_form_waechter.md, Implementation Details
+# Punkt 4).
+UNAVAILABLE_SYMBOL = "X?"
 UNAVAILABLE_PRIORITY = OFFICIAL_ALERT_PRIORITY + 1
 
 # (symbol, category) -> §2 POSITIONAL index. Vigilance shares 'TH:' symbol.
@@ -223,9 +233,10 @@ def _official_alerts(fc: NormalizedForecast) -> list[Token]:
 
 
 def _unavailable(fc: NormalizedForecast) -> list[Token]:
-    """Issue #1349: eigenstaendiger 'W?'-Marker in eigener Kategorie
-    ('unavailable', NICHT 'official_alert') — sonst wuerde render.py's
-    '!'-Warnblock-Fusion ihn faelschlich als amtliche Warnung lesen."""
+    """Issue #1349: eigenstaendiger UNAVAILABLE_SYMBOL-Marker (Issue #1703
+    Scheibe 6: 'X?', vormals 'W?') in eigener Kategorie ('unavailable',
+    NICHT 'official_alert') — sonst wuerde render.py's '!'-Warnblock-Fusion
+    ihn faelschlich als amtliche Warnung lesen."""
     if not fc.official_alerts_unavailable:
         return []
     return [Token(UNAVAILABLE_SYMBOL, "", "unavailable", UNAVAILABLE_PRIORITY)]
@@ -471,7 +482,7 @@ def build_token_line(
 
     # Issue #1677: zweistufige Sortierung. Bucket 0 = Token, deren MetricSpec
     # eine Nutzer-Position traegt (nur 'forecast'/'wintersport' -- die
-    # waehlbare Metrik-Kaskade; Vigilance/amtliche Warnungen/Fire/W?/DBG
+    # waehlbare Metrik-Kaskade; Vigilance/amtliche Warnungen/Fire/X?/DBG
     # sind strukturell nicht sortierbar, DEC-4/Known Limitation 2), sortiert
     # nach dieser Position. Bucket 1 = alle uebrigen Token, unveraendert nach
     # der bisherigen POS_INDEX-Reihenfolge. Ohne jede Position (kein

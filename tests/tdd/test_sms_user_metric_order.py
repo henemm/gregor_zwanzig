@@ -345,7 +345,7 @@ def test_ac6_drop_order_ignores_display_position():
 def test_ac7_wintersport_metric_can_precede_forecast_metric_but_stays_before_system_blocks():
     """Wintersport-Metrik (snow_depth, Nutzer-Position 0) vor
     Vorhersage-Metrik (gust, Position 2) -- beide bleiben trotzdem vor dem
-    nicht-sortierbaren System-Block (hier: 'W?', amtliche-Warnungen-nicht-
+    nicht-sortierbaren System-Block (hier: 'X?', amtliche-Warnungen-nicht-
     abrufbar-Marker)."""
     order = ["snow_depth", "snowfall_limit", "gust"]
     dc = _sms_layout_dc(order)
@@ -361,13 +361,13 @@ def test_ac7_wintersport_metric_can_precede_forecast_metric_but_stays_before_sys
     sms = report.sms_text
     i_sd = _token_index(sms, "SD")
     i_g = _token_index(sms, "G")
-    i_marker = _exact_token_index(sms, "W?")
+    i_marker = _exact_token_index(sms, "X?")
     assert i_sd < i_g, (
         f"SD (Wintersport, Nutzer-Position 0) muss vor G (Vorhersage, "
         f"Position 2) stehen: {sms!r}"
     )
     assert i_g < i_marker, (
-        f"Systemblock 'W?' muss auch bei umsortierten Fachtoken dahinter "
+        f"Systemblock 'X?' muss auch bei umsortierten Fachtoken dahinter "
         f"bleiben: {sms!r}"
     )
 
