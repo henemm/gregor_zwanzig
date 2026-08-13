@@ -1,5 +1,94 @@
-import { type APIRequestContext, type Page } from '@playwright/test';
+import { type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import * as path from 'node:path';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #1771 Scheibe 1: geteilte, zustandsbasierte Ziehgeste für
+// `svelte-dnd-action`-Zonen. Ersetzt 5 lokale Kopien in den Spec-Dateien.
+//
+// Spec: docs/specs/modules/fix_1771_s1_dnd_wartestrategie.md
+//
+// WARUM Pointer-Simulation statt `locator.dragTo()`: die Bibliothek schaltet
+// natives HTML5-Drag bewusst ab (`draggableEl.draggable = false`) und hört nur
+// auf Pointer-Events mit 3px-Bewegungsschwelle (MIN_MOVEMENT_BEFORE_DRAG_START_PX);
+// `dragTo()` erzeugt nur EINEN Move-Schritt und reißt diese Schwelle nicht.
+//
+// WARUM auf `finalize` warten statt auf eine Frist: gemessen (4 Läufe gegen
+// Staging, rohes DOM-CustomEvent-Log, unabhängig vom App-Code) feuert
+// `svelte-dnd-action` das `finalize`-CustomEvent nach dem `mouseup`
+// unzuverlässig — 2× gar nicht, 1× sofort, 1× erst nach ~1,9s. Ohne `finalize`
+// ruft `SortableList.svelte::handleDndFinalize` nie `onDndReorder` auf: kein
+// Edit, kein PUT, keine Persistenz. Eine feste `waitForTimeout`-Pause maskierte
+// das — der Test las den `handleDndConsider`-Zwischenstand (lokal bereits neue
+// Reihenfolge, nie committet) und hielt ihn für einen Speichervorgang.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Zieht ein `.sortable-item` per Maus-Sequenz auf ein Ziel und kehrt erst
+ * zurück, wenn die zugehörige `.sortable-zone` das `finalize`-CustomEvent
+ * gefeuert hat. Bleibt es binnen 5s aus, wirft die Funktion — statt lautlos
+ * einen `consider`-Zwischenstand als Erfolg durchzureichen (#1771).
+ */
+export async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
+	// Erst in den sichtbaren Bereich scrollen, DANN die Koordinaten lesen.
+	// `boundingBox()` scrollt selbst nicht und liefert für Zeilen unterhalb des
+	// Viewports Koordinaten außerhalb des Fensters — die Maus-Sequenz landet
+	// dann im Leeren und der Drag passiert nie.
+	await source.scrollIntoViewIfNeeded();
+	await target.scrollIntoViewIfNeeded();
+
+	// `.last()` trifft die NÄCHSTGELEGENE (innerste) Zone: `ancestor::*` liefert
+	// Knoten in Dokumentreihenfolge von der Wurzel nach unten.
+	const zone = source
+		.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " sortable-zone ")]')
+		.last();
+	const zoneHandle = await zone.elementHandle();
+	if (!zoneHandle) throw new Error('dragDndZoneItem: keine .sortable-zone-Ahnenzone gefunden');
+
+	const before = await zoneHandle.evaluate((el) => {
+		const marker = el as HTMLElement & { __gzFinalizeCount?: number };
+		if (marker.__gzFinalizeCount === undefined) {
+			marker.__gzFinalizeCount = 0;
+			el.addEventListener('finalize', () => {
+				marker.__gzFinalizeCount = (marker.__gzFinalizeCount ?? 0) + 1;
+			});
+		}
+		return marker.__gzFinalizeCount;
+	});
+
+	const sourceBox = await source.boundingBox();
+	const targetBox = await target.boundingBox();
+	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
+
+	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+	await page.mouse.down();
+	// Erster Zwischenschritt reißt sicher die 3px-Schwelle, damit dndzone den
+	// Drag überhaupt als solchen erkennt (nicht als bloßen Klick).
+	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 - 12, {
+		steps: 6
+	});
+	await page.waitForTimeout(120);
+	await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
+		steps: 15
+	});
+	await page.waitForTimeout(120);
+	await page.mouse.up();
+
+	// Zeitfenster bewusst großzügig über dem gemessenen Worst Case (~1,9s) —
+	// ein zu kurzes Fenster verlagert den Flake nur (Fehlschlag am Helfer statt
+	// an der Fach-Assertion, obwohl `finalize` kurz danach gefeuert hätte).
+	try {
+		await page.waitForFunction(
+			({ el, before }) =>
+				((el as HTMLElement & { __gzFinalizeCount?: number }).__gzFinalizeCount ?? 0) > before,
+			{ el: zoneHandle, before },
+			{ timeout: 5_000, polling: 100 }
+		);
+	} catch {
+		throw new Error(
+			'dragDndZoneItem: kein finalize-Ereignis nach dem Ziehen (#1771) — svelte-dnd-action hat den Drag nicht committet'
+		);
+	}
+}
 
 /**
  * Login helper — authenticates via the login form and returns the page

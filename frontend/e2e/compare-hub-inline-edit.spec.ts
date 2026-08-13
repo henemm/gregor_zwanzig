@@ -9,34 +9,10 @@
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
 //   npx playwright test --config=playwright.1256-s6.staging.config.ts
 
-import { test, expect, type Page, type Locator } from '@playwright/test';
-import { createTestLocation } from './helpers';
-
-// Fix-Loop 1 (F003, Adversary MEDIUM): `svelte-dnd-action`s `dndzone` deaktiviert
-// natives HTML5-Drag-and-Drop bewusst (node_modules/svelte-dnd-action/dist/index.js:
-// draggableEl.draggable = false) und fährt eine eigene Pointer-/Maus-Event-basierte
-// Drag-Logik mit 3px-Bewegungsschwelle (MIN_MOVEMENT_BEFORE_DRAG_START_PX). Playwrights
-// `locator.dragTo()` erzeugt nur EINEN einzigen Move-Schritt und trifft diese Schwelle
-// nicht zuverlässig — anders als natives HTML5-DnD (layout-tab-route.spec.ts:160), das
-// hier NICHT als Präzedenzfall gilt. Stattdessen: manuelle Maus-Sequenz mit mehreren
-// Zwischenschritten (bekanntes Kompatibilitätsmuster für svelte-dnd-action + Playwright).
-async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
-	const sourceBox = await source.boundingBox();
-	const targetBox = await target.boundingBox();
-	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
-
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
-	await page.mouse.down();
-	// Erster Zwischenschritt reißt sicher die 3px-Schwelle, damit dndzone den
-	// Drag überhaupt als solchen erkennt (nicht als bloßen Klick).
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 - 12, {
-		steps: 6
-	});
-	await page.waitForTimeout(120);
-	await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 15 });
-	await page.waitForTimeout(120);
-	await page.mouse.up();
-}
+import { test, expect, type Page } from '@playwright/test';
+// `dragDndZoneItem` ist seit #1771 S1 geteilt (war hier lokal kopiert) und
+// wartet auf das echte `finalize`-Ereignis statt auf eine feste Frist.
+import { createTestLocation, dragDndZoneItem } from './helpers';
 
 let createdIds: string[] = [];
 let createdLocationIds: string[] = [];

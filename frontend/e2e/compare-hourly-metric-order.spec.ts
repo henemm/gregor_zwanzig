@@ -44,7 +44,9 @@
 // pauschal `:visible` (beide Blöcke sind gleichzeitig sichtbar).
 
 import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
-import { createTestLocation } from './helpers';
+// `dragDndZoneItem` ist seit #1771 S1 geteilt (war hier lokal kopiert) und
+// wartet auf das echte `finalize`-Ereignis statt auf eine feste Frist.
+import { createTestLocation, dragDndZoneItem } from './helpers';
 
 let createdPresetIds: string[] = [];
 let createdLocationIds: string[] = [];
@@ -138,32 +140,6 @@ function collectPresetPuts(page: Page, id: string): Request[] {
 		}
 	});
 	return puts;
-}
-
-/**
- * Pointer-basierte Drag-Simulation gegen `svelte-dnd-action` (geteilter
- * SortableList, ADR-0024) — 1:1 aus compare-metric-order.spec.ts übernommen
- * (`locator.dragTo()` reißt die 3px-Pointer-Schwelle der Bibliothek nicht).
- */
-async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
-	await source.scrollIntoViewIfNeeded();
-	await target.scrollIntoViewIfNeeded();
-
-	const sourceBox = await source.boundingBox();
-	const targetBox = await target.boundingBox();
-	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
-
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
-	await page.mouse.down();
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 - 12, {
-		steps: 6
-	});
-	await page.waitForTimeout(120);
-	await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
-		steps: 15
-	});
-	await page.waitForTimeout(120);
-	await page.mouse.up();
 }
 
 /** Öffnet den Vergleich am Hub und wechselt per Klick auf den Metriken-Tab. */
