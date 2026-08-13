@@ -2,16 +2,21 @@
 entity_id: fix_1744_alarm_format_angleichen
 type: module
 created: 2026-08-12
-updated: 2026-08-12
-status: partial
-version: "1.2"
+updated: 2026-08-13
+status: implemented
+version: "1.3"
 tags: [alerts, renderer, email, subject]
 ---
 
-> **Liefer-Stand 2026-08-12:** Scheibe **A1** (AC-1 bis AC-7) ist ausgeliefert und live —
-> PR #1781, Merge `942fc778`, in Produktion über `0861a9a8`. Adversary VERIFIED nach vier
-> Runden (drei Findings behoben), Staging VERIFIED 7/7 an echt zugestellten Mails.
-> Scheibe **A2** (AC-8 bis AC-14, Mail-Körper) ist **offen**. #1744 bleibt deshalb offen.
+> **Liefer-Stand 2026-08-13: Scheibe A ist vollständig und live.**
+> **A1** (AC-1 bis AC-7): PR #1781, Merge `942fc778`, live über `0861a9a8`. Adversary VERIFIED
+> nach vier Runden, Staging VERIFIED 7/7 an echt zugestellten Mails.
+> **A2** (AC-8 bis AC-14): PR #1805, live über `5244158e`, Post-Deploy-Selftest Exit 0.
+> Adversary VERIFIED nach drei Runden — zwei Findings, beide bei 157 grünen Tests unsichtbar:
+> F001 (HIGH) der Compare-Pfad war ungeschützt (Mutation lief durch 28 Tests), F002 (MEDIUM)
+> die AC-14-Prämisse traf nicht zu, weil `class="src"` stehen blieb. Beide behoben und vom
+> Prüfer per wiederholter Mutations-Gegenprobe bestätigt. Aufbau festgehalten in **ADR-0052**.
+> **#1744 ist geschlossen.** Scheibe B (quellenübergreifende Entdopplung) bleibt an #1467 S4.
 >
 > **Nachtrag 2026-08-12 (Version 1.2), aus der Vermessung vor A2:** Drei Präzisierungen —
 > (1) die amtliche Warn-Mail hat **keinen eigenen Klartext-Teil**, er wird aus dem HTML
