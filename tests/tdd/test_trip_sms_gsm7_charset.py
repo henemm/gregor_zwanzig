@@ -169,7 +169,10 @@ def test_trip_briefing_sms_stays_gsm7_clean_with_dense_token_line():
 
     fehlend = [
         sym for sym in ("N", "K", "D", "FN", "FK", "FD", "R", "PR", "W", "G",
-                        "TH:", "TH+:", "W?", "HU", "DP", "CP", "UV", "CT",
+                        # Issue #1703 Scheibe 6: Marker fuer "amtliche Warnungen
+                        # nicht verfuegbar" heisst "X?", vormals "W?"
+                        # (UNAVAILABLE_SYMBOL, builder.py:84).
+                        "TH:", "TH+:", "X?", "HU", "DP", "CP", "UV", "CT",
                         "VS", "SU", "HP", "NL", "WD", "PT", "SD", "SL")
         if sym not in full
     ]

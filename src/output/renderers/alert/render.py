@@ -400,10 +400,18 @@ def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[
     return [row1, row2, row3]
 
 
-def _datarow_html(label: str, value: str, value_color: str, first: bool) -> str:
+def _datarow_html(
+    label: str, value: str, value_color: str, first: bool, *,
+    value_html: str | None = None,
+) -> str:
     """Issue #986: Outlook-kompatible 2-Spalten-Tabellen-Row (Label links,
     Wert rechtsbündig in FONT_DATA). Outlook ignoriert Flexbox — daher eine
     `<table role="presentation">`-Row statt zweier <span>s im selben <div>.
+
+    Issue #1744 A2: `value_html` setzt FERTIGES Markup in die Wert-Zelle
+    (Route-Chips der amtlichen Warnung), statt `value` zu escapen — dieselbe
+    Bauform trägt damit beide Alarm-Mailtypen (AC-8). Ohne den Parameter
+    bleibt die Ausgabe byte-identisch.
     """
     border = "" if first else "border-top:1px solid #d8d5c9;"
     return (
@@ -412,7 +420,7 @@ def _datarow_html(label: str, value: str, value_color: str, first: bool) -> str:
         f"<td align=\"left\" style=\"padding:8px 0;font-family:{FONT_UI};color:{G_INK_MUTED};\">"
         f"{_esc(label)}</td>"
         f"<td align=\"right\" style=\"padding:8px 0;font-family:{FONT_DATA};color:{value_color};\">"
-        f"{_esc(value)}</td>"
+        f"{_esc(value) if value_html is None else value_html}</td>"
         f"</tr></table>"
     )
 
