@@ -154,3 +154,30 @@ def test_scope_diff_base_ignores_hint_for_wrong_target(tmp_path, monkeypatch):
         "Ein Hint fuer einen fremden Ziel-Commit darf nicht greifen -- Fallback "
         "auf die bestehende Marker-Logik"
     )
+
+
+# ---------------------------------------------------------------------------
+# Unit-Test (c): Selbstreferenz -- Fix #1776. Preflight-Basis == Ziel-Commit
+# selbst (kann bei einem Merge kurz nach dem Preflight entstehen). Ein
+# HEAD..HEAD-Diff waere immer leer und faelschlich "docs-only" (henemm-infra
+# Live-Vorfaelle #1725, #1803). _scope_diff_base() darf die Selbstreferenz
+# nicht zurueckgeben, sondern muss auf die bestehende Marker/HEAD~1-Fallback-
+# Kette ausweichen -- dasselbe Muster, das der marker_sha-Zweig (Zeile
+# 164: "if marker_sha and marker_sha != head") bereits hat.
+# ---------------------------------------------------------------------------
+def test_scope_diff_base_rejects_preflight_hint_self_reference(tmp_path, monkeypatch):
+    _init_repo(tmp_path)
+    target = _commit(tmp_path, {"src/app.py": "x = 1\n"}, "target (Preflight-Basis == Ziel-Commit)")
+    _point(monkeypatch, tmp_path)
+
+    # Selbstreferenz: Preflight-Basis zeigt auf den Ziel-Commit selbst.
+    GATE._e2e_paths.write_preflight_base(tmp_path, target, target)
+
+    _git(["checkout", "-q", target], tmp_path)
+    result = GATE._scope_diff_base(head=target)
+    assert result != target, (
+        "Bei Selbstreferenz (preflight_base == head) darf _scope_diff_base() "
+        "nicht den Ziel-Commit selbst zurueckgeben (HEAD..HEAD-Diff waere "
+        "immer leer und faelschlich docs-only, #1776) -- Fallback auf "
+        "Marker/HEAD~1 erwartet"
+    )
