@@ -706,11 +706,32 @@ def render_sms(
     return body if len(body) <= limit else body[:limit]
 
 
+# GSM-7-Extension-Tabelle (Form-Feed, ^ { } \ [ ~ ] | €) ist zwar
+# GSM-7-kodierbar, kostet aber ZWEI Septets je Zeichen (ESC-Fluchtsequenz,
+# GSM 03.38) -- eine stille Budget-Verletzung. Zeichenliste dupliziert aus
+# tests/tdd/_gsm7_charset.py::GSM7_EXTENDED_TWO_SEPTET_CHARS (Quelle der
+# Wahrheit fuer die Test-Verifikation), Issue #1796.
+_ASCII_EXTENSION_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("[", "("),
+    ("]", ")"),
+    ("{", "("),
+    ("}", ")"),
+    ("\\", "/"),
+    ("|", "-"),
+    ("~", "-"),
+    ("^", ""),
+    ("€", "EUR"),
+    ("\x0c", ""),
+)
+
+
 def _ascii(text: str) -> str:
     text = (
         text.replace("–", "-").replace("−", "-").replace("°", "")
         .replace("↑", "+").replace("↓", "-")
     )
+    for bad, good in _ASCII_EXTENSION_REPLACEMENTS:
+        text = text.replace(bad, good)
     return fold_ascii(text)
 
 

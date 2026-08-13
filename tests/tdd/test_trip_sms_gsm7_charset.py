@@ -40,7 +40,7 @@ from output.renderers.alert.official_alerts import (
 from output.renderers.sms_trip import SMSTripFormatter, _sms_stage_prefix
 from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
 from services.official_alerts.models import OfficialAlert
-from tests.tdd._gsm7_charset import assert_gsm7_clean
+from tests.tdd._gsm7_charset import GSM7_EXTENDED_TWO_SEPTET_CHARS, assert_gsm7_clean
 
 _YEAR, _MONTH, _DAY = 2026, 8, 12
 _UTC = ZoneInfo("UTC")
@@ -227,4 +227,30 @@ def test_official_alert_sms_stays_gsm7_clean_for_every_hazard_and_umlaut_trip_na
         assert_gsm7_clean(text, f"amtlicher Alarm ({hazard}, {stufe})")
 
 
-# AC-3 (Extension-Zeichen aus dem Trip-Namen) entfernt, s. Issue #1796.
+# ---------------------------------------------------------------------------
+# fix_1796 AC-1 + AC-3 -- GSM-7-Extension-Zeichen im Trip-Namen (Issue #1796)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("ext_char", list(GSM7_EXTENDED_TWO_SEPTET_CHARS))
+def test_official_alert_sms_filters_gsm7_extension_char_in_trip_name(ext_char: str):
+    """fix_1796 AC-1: jedes der 9 GSM-7-Extension-Zeichen (Form-Feed, ^ { } \\
+    [ ~ ] | €) im Trip-Namen darf die gerenderte amtliche Alarm-SMS nicht
+    verlassen -- sonst schaltet der Betreiber die GANZE SMS still auf UCS-2
+    um (67 statt 153 Zeichen je Teil, 3GPP TS 23.040). Diese Zeichen sind
+    GSM-7-KODIERBAR (daher kein Fund fuer die reine `_GSM7_CHARSET`-Pruefung
+    im Compare-Waechter), kosten aber je zwei Septets -- eine stille
+    Budget-Verletzung, die `_ascii()` heute nicht abfaengt."""
+    prefix = f"Tour{ext_char}Nord"
+    sms = render_official_alert_sms([_notice("thunderstorm", 4)], sms_prefix=prefix)
+    assert_gsm7_clean(sms, f"amtlicher Alarm (Extension-Zeichen {ext_char!r})")
+
+
+@pytest.mark.parametrize("trip_name", ["KHW [Test]", "Tour~Nord", "Weg|Nord"])
+def test_official_alert_sms_with_gsm7_extension_char_in_trip_name(trip_name: str):
+    """fix_1796 AC-3 (Bug-Nachweis): die drei in Issue #1796 gemessenen
+    Beispiel-Trip-Namen, direkt aus dem Issue uebernommen -- reproduziert den
+    urspruenglich gemeldeten Fund."""
+    sms = render_official_alert_sms(
+        [_notice("thunderstorm", 4)], sms_prefix=trip_name.replace(" ", ""),
+    )
+    assert_gsm7_clean(sms, f"amtlicher Alarm (Trip-Name {trip_name!r})")
