@@ -61,6 +61,7 @@ from services.trip_command_processor import (
     TripCommandProcessor,
 )
 from services.weather_snapshot import WeatherSnapshotService
+from tests.tdd.conftest import WP_NZ, trip_two_zones
 
 # Korsika -> Europe/Paris, im August CEST (UTC+2). Nur so unterscheiden sich
 # Ortszeit, Weltzeit und Prozess-Zone voneinander.
@@ -408,27 +409,15 @@ def test_tomorrow_window_matches_the_real_length_of_the_local_day(
 # ---------------------------------------------------------------------------
 
 # Wellington und Vizzavona — zwoelf Stunden auseinander. Genau die Spanne,
-# die den Anker sichtbar macht.
-_WP_NZ = (-41.3, 174.8)
+# die den Anker sichtbar macht. Die Fixtur selbst liegt seit #1727 S5a in
+# tests/tdd/conftest.py (geteilter Ort, keine zweite Kopie); hier bleibt nur
+# die Parametrierung mit den Namen dieses Moduls.
+_WP_NZ = WP_NZ
 
 
 def _trip_two_zones(day0: date) -> Trip:
     """Etappe 0 in Neuseeland, ab Etappe 1 auf Korsika."""
-    coords = [_WP_NZ, (_WP_LAT, _WP_LON), (_WP_LAT, _WP_LON)]
-    return Trip(
-        id=_TRIP_ID,
-        name=_TRIP_NAME,
-        stages=[
-            Stage(
-                id=f"S{i}", name=f"Etappe {i}", date=day0 + timedelta(days=i),
-                waypoints=[
-                    Waypoint(id=f"W{i}", name=f"WP{i}", lat=lat, lon=lon,
-                             elevation_m=100),
-                ],
-            )
-            for i, (lat, lon) in enumerate(coords)
-        ],
-    )
+    return trip_two_zones(day0, trip_id=_TRIP_ID, trip_name=_TRIP_NAME)
 
 
 @pytest.mark.parametrize(

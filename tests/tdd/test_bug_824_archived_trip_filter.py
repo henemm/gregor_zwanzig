@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -195,7 +195,9 @@ class TestAC2FindActiveTripSkipsArchived:
         from services.inbound_telegram_reader import InboundTelegramReader
 
         reader = InboundTelegramReader.__new__(InboundTelegramReader)
-        trip = reader._find_active_trip(two_trip_env)
+        trip = reader._find_active_trip(
+            datetime.now(tz=timezone.utc), two_trip_env,
+        )
 
         assert trip is not None, "_find_active_trip() soll aktiven Trip finden"
         assert trip.archived_at is None, (

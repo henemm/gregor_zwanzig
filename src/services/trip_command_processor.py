@@ -20,7 +20,7 @@ from typing import Optional
 
 from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip
-from services.trip_day import anchor_tz, display_tz
+from services.trip_day import anchor_tz, display_tz, trip_local_today
 from utils.timezone import UTC, local_dt, local_fmt, local_hour
 
 logger = logging.getLogger(__name__)
@@ -426,7 +426,11 @@ class TripCommandProcessor:
             )
 
         # 3. Dispatch
-        command_date = msg.received_at.date()
+        # Issue #1727 S5a (ADR-0044): "heute" ist der ORTStag DIESER Tour, nicht
+        # der Weltzeit-Tag der Nachricht. Im Mismatch-Fenster (00:30 Ortszeit auf
+        # Korsika = 22:30 UTC des Vortages) trug `command_date` sonst den Vortag
+        # -- `### ruhetag` verschob dann die heutige Etappe mit.
+        command_date = trip_local_today(trip, msg.received_at)
         if key == "ruhetag":
             return self._apply_ruhetag(trip, value, command_date, msg.user_id)
         elif key == "report":
@@ -436,9 +440,9 @@ class TripCommandProcessor:
         elif key == "abbruch":
             return self._cancel_trip(trip, msg.user_id)
         elif key == "status":
-            return self._show_status(trip)
+            return self._show_status(trip, msg.received_at)
         elif key == "now":
-            return self._show_now(trip)
+            return self._show_now(trip, msg.received_at)
         elif key == "weiter":
             return self._resume_trip(trip, msg.user_id)
         elif key == "pause":
@@ -1131,9 +1135,22 @@ class TripCommandProcessor:
             trip_name=trip.name, shifts=shifts,
         )
 
-    def _show_status(self, trip: Trip) -> CommandResult:
-        """Listet heute und kommende Etappen (vergangene werden gefiltert)."""
-        today = date.today()
+    def _show_status(self, trip: Trip, now_utc: datetime) -> CommandResult:
+        """Listet heute und kommende Etappen (vergangene werden gefiltert).
+
+        Issue #1727 S5a (ADR-0044): "heute" ist der ORTStag DIESER Tour. Vorher
+        stand hier `date.today()` -- das Datum der Prozess-Zeitzone, auf dem
+        Server `Etc/UTC`. In Neuseeland blieb die lokal abgeschlossene Etappe
+        dadurch bis zu zwoelf Stunden am Tag stehen, an der US-Westkueste fiel
+        die heutige bis zu sieben Stunden am Tag durch den Filter.
+
+        Args:
+            trip: die Tour, deren Etappen gelistet werden.
+            now_utc: Zeitpunkt der Abfrage (`msg.received_at`). Pflichtparameter
+                -- ein Default auf die Systemuhr wuerde genau die Umgebungsuhr
+                wieder einfuehren, die ADR-0051 Regel 3 verbietet.
+        """
+        today = trip_local_today(trip, now_utc)
         lines = [f"Status: {trip.name}", ""]
         for stage in trip.stages:
             if stage.date >= today:
@@ -1281,10 +1298,20 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _show_now(self, trip: Trip) -> CommandResult:
-        """Fetch radar nowcast for today's stage position."""
+    def _show_now(self, trip: Trip, now_utc: datetime) -> CommandResult:
+        """Fetch radar nowcast for today's stage position.
+
+        Issue #1727 S5a (ADR-0044): der Standort haengt am ORTStag der Tour.
+        #1402 hatte hier nur die Uhrzeit des Onset-Textes ortsrichtig gemacht --
+        die Etappen-, und damit die Standortwahl, blieb am Servertag haengen.
+
+        Args:
+            trip: die Tour, deren heutiger Wegpunkt den Nowcast bestimmt.
+            now_utc: Zeitpunkt der Abfrage (`msg.received_at`). Pflichtparameter
+                aus demselben Grund wie in :meth:`_show_status`.
+        """
         from services.radar_service import RadarNowcastService
-        today = date.today()
+        today = trip_local_today(trip, now_utc)
         stage = trip.get_stage_for_date(today)
         if not stage or not stage.waypoints:
             return CommandResult(
