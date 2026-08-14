@@ -13,7 +13,7 @@ workflow: fix-1727-s5b-versandpfade
 
 ## Approval
 
-- [ ] Approved — PO-Freigabe ausstehend, 9 ACs auf Deutsch vorgelegt
+- [x] Approved — PO-Freigabe 2026-08-14 („Go"), 9 ACs auf Deutsch vorgelegt
 
 ## Purpose
 
@@ -475,3 +475,10 @@ ebenso zulässig.
 
 - 2026-08-14: Spec erstellt nach Kartierung `docs/context/fix-1727-s5b-versandpfade.md`
   (Basis-HEAD `1e5e0be9`), Vorbild `docs/specs/modules/fix_1727_s5a_befehlspfade_ortstag.md`.
+- 2026-08-14: Vier Korrekturen am Entwurf vor der Vorlage — (1) AC-3 prüft künftig
+  „Parameter gegen Systemuhr" (Muster S5a-F001) statt einer Verzögerungs-Simulation;
+  (2) die Nachweis-Grenze war invertiert: die Probe ist an den Fundstellen mit Pflichtparameter
+  (1, 3, 4, 5, 6, 7) möglich und Pflicht, unmöglich nur an 2, 8, 9; (3) AC-8 nimmt die
+  Ordinal-Rückverschiebung `_build_stage_trend::2` → `::1` auf; (4) Fundstelle 7 räumt das
+  wächter-unsichtbare `datetime.utcnow()` (`scheduler_dispatch_service.py:69`) mit auf.
+- 2026-08-14: PO-Freigabe der 9 ACs („Go").
