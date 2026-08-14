@@ -414,8 +414,12 @@ dagegen **kein** Abweichen von ADR-0028 — der Override ist dort ausdrücklich 
 
 - **KL-1 · Fixture-Fenster nur heute + 2 Tage:** Beide `FixtureProvider` (Go und Python)
   rebasen auf „heute" — die „Gestern"-Etappe des Seed-Trips und Mehrtagesansichten sind im
-  isolierten Stack datenlos. Auswahlkriterium (Filter A schließt wertprüfende Specs aus),
-  keine Reparatur in dieser Scheibe.
+  isolierten Stack datenlos. Keine Reparatur in dieser Scheibe.
+  **Erratum 2026-08-14 (#1771 S3):** Hier stand „Auswahlkriterium (Filter A schließt
+  wertprüfende Specs aus)". Das war nie verdrahtet — Filter A besteht ausschließlich aus
+  strukturellen Kriterien (`waitForTimeout`/`test.skip`/`test.fixme`/`describe.skip`,
+  `.staging.spec.ts`, Hauptrepo-Pfad, `__dirname`). Das Fixture-Fenster ist eine
+  **Beobachtung**, kein Filter. Ausführlich: ADR-0054, Erratum zu Entscheidung 2.
 - **KL-2 · Verbleibender 401 bei `createTestLocation`/Preset-Anlage (präzisiert
   2026-08-13):** Der 401 tritt weiterhin bei `createTestLocation`/Preset-Anlage-Helfern auf
   dem Weg über den SvelteKit-Preview-Proxy auf, während der direkte Weg zum Go-Server (Login
