@@ -148,7 +148,23 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # `selectable=True` gesetzt und erhielt EXAKT den alten Digest
 # (142624b1…) zurueck -- die CAPE-Spalte ist nachweislich der einzige
 # Unterschied.
-_EXPECTED_SHA256 = "5a453eaa5ce82c0b560b51600baf2ae2daf386121b268d974a1aa213566ffa42"
+#
+# Fix #1801 S2 (2026-08-14): erneut fortgeschrieben, wieder AUSDRUECKLICH.
+# Wie bei test_compare_mail_corridor_mark.py ist design_tokens.tone_css()
+# die EINE geteilte Farbquelle fuer Trip- UND Compare-Zellfaerbung; dieselbe
+# Zutat faerbt hier die Ampel-Zellhintergruende der Stundentabelle (Wind/
+# Boeen/Regen/Regen-W. gelb/orange) UND helpers._AMPEL_DOT_COLORS (Risk-Dots
+# der Metriken-Pillen) UND helpers._PILL_TAG_PALETTE (neuer vierter Ton
+# "caution" zwischen gelb/orange, AC-5..AC-7). NACHGEMESSEN per separatem
+# Scratch-Worktree auf 6b21c3e6 (Scheibe S1, reine tone_css-Konsolidierung
+# ohne Palettenaenderung): beide hier gepruefte Fixtures liefen dort noch
+# GRUEN -- der Bruch kommt nachweislich erst aus S2 (9fdb249a), nicht aus der
+# Konsolidierung. Byte-Diff HTML gegen den S1-Stand: ausschliesslich Hex-
+# Werte in den `style`-Attributen der Ampel-Zellen/Dots/Pillen veraendert,
+# Text/Reihenfolge/Struktur aller Spans identisch (span-weiser Vergleich).
+# Klartext bleibt byte-identisch (Farbe steckt nur im HTML). Alter Digest
+# 5a453eaa…, neuer 1769ef8f….
+_EXPECTED_SHA256 = "1769ef8f9bd71b2c85795098a2d71bbbc2a0b510d4d935cb2d469bd049667023"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",
