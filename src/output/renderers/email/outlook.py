@@ -22,7 +22,6 @@ die @-time-Hourly-Samples.
 from __future__ import annotations
 
 import html as _html
-import re as _re
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -31,32 +30,11 @@ if TYPE_CHECKING:
 
 from app.metric_catalog import get_metric
 from output.renderers.email.helpers import format_trend_tokens
+from output.renderers.email.thunder_branch import (
+    _thunder_token_parts, resolve_thunder_day_branch,
+)
 from output.renderers.email.design_tokens import FONT_DATA, tone_css
 from utils.geo import degrees_to_compass
-
-
-_THUNDER_TOKEN_RE = _re.compile(
-    r"^([a-zA-Zäöü]+)@(\d+)(?:\(([a-zA-Zäöü]+)@(\d+)\))?"
-)
-
-
-def _thunder_token_parts(token: Optional[str]):
-    """Zerlegt einen Gewitter-Token in (Erst-Wort, Erst-Stunde, Peak-Zusatz).
-
-    Issue #1653 (F005): ``render_threshold_peak_value`` haengt den
-    Spitzenwert als ``leicht@5(hoch@15)`` an, wenn Erst-Ueberschreitung und
-    Spitze im selben Fenster auseinanderfallen -- der meteorologische
-    Normalfall eines ueber den Nachmittag eskalierenden Gewitters. Wer nur
-    die erste Gruppe liest, unterschlaegt genau die Stufe, vor der der
-    Report warnen soll. Der Peak-Zusatz ist "" (leer), wenn Erst == Peak.
-    """
-    if not token or token == "-":
-        return None
-    m = _THUNDER_TOKEN_RE.match(token)
-    if not m:
-        return None
-    peak_suffix = f" ({m.group(3)} @{m.group(4)})" if m.group(3) else ""
-    return m.group(1), m.group(2), peak_suffix
 
 
 # ---------------------------------------------------------------------------
@@ -374,10 +352,19 @@ def render_outlook_plain(
         # hier ganz -- und umgekehrt behauptete die Zeile ein Tagesgewitter,
         # wenn das Aggregat eine Stufe trug, die Stundenreihe im Tagesfenster
         # aber leer war.
+        # Issue #1671: Zweigwahl aus dem geteilten Helfer (identisch zu
+        # compact.py/narrow.py) -- nur die Formatierung bleibt hier lokal.
         from output.renderers.email.helpers import _THUNDER_MAP
-        thunder_word = tok["thunder_plain"]
-        _d_tok = tok.get("thunder_day_token", "-")
-        _dm = _thunder_token_parts(_d_tok)
+        branch = resolve_thunder_day_branch(tok, stage)
+        # Der Helfer entscheidet nur ueber `thunder_day_token != "-"`; ob
+        # der Token tatsaechlich zerlegbar ist (`_THUNDER_TOKEN_RE`),
+        # bleibt Aufrufer-Sache -- ein gesetzter, aber unzerlegbarer Token
+        # fiel im Altcode auf denselben Zweig zurueck wie "none" (ein
+        # ungesetzter Token bedeutet immer auch keinen hourly_thunder-Wert
+        # dieser Stunde). Reines `if branch == "day": thunder_word = ...`
+        # ohne diesen Guard wuerde bei einem unzerlegbaren Token mit
+        # `_dm is None` abstuerzen (TypeError beim Subscript).
+        _dm = _thunder_token_parts(tok.get("thunder_day_token", "-")) if branch == "day" else None
         if _dm:
             thunder_word = f"⚡{_dm[0]}{_dm[2]}"
             # Issue #1680 S5a: derselbe Zusatz wie in der HTML-Zelle, aus
@@ -386,11 +373,14 @@ def render_outlook_plain(
             _origin = tok.get("thunder_day_origin")
             if _origin:
                 thunder_word += f" · {_origin}"
-        elif stage.get("hourly_thunder"):
-            # Stundenreihe da, im Tagesfenster aber kein Gewitter.
+        elif branch in ("day", "none"):
+            # Stundenreihe da, im Tagesfenster aber kein Gewitter (bzw. ein
+            # gesetzter, aber unzerlegbarer Tages-Token).
             thunder_word = _THUNDER_MAP["NONE"]["plain"]
-        # Ohne jede Stundenreihe (Alt-Aufrufer, Compare) bleibt es beim
-        # Aggregatwort -- der Split kann dort nichts sagen.
+        else:
+            # Ohne jede Stundenreihe (Alt-Aufrufer, Compare) bleibt es beim
+            # Aggregatwort -- der Split kann dort nichts sagen.
+            thunder_word = tok["thunder_plain"]
 
         name_field = f"{name:<26} " if show_name else ""
         line = (
