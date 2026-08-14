@@ -46,16 +46,20 @@ def run_comparison(
     if not selected:
         return {"error": "no_locations_found", "locations": []}
 
-    # Default: if before 14:00 → today, else tomorrow
+    # Default: if before 14:00 → today, else tomorrow (Issue #1727 S5c,
+    # ADR-0044): "14:00" ist die ORTSZEIT des ersten aufloesbaren Orts, nicht
+    # mehr die zonenlose Serveruhr — Stunde UND Tag kommen aus DERSELBEN
+    # Aufloesung, sonst waere die Schwelle in sich widersprochen.
     if target_date:
         td = date.fromisoformat(target_date)
     else:
-        now = datetime.now()
-        if now.hour < 14:
-            td = date.today()
-        else:
-            from datetime import timedelta
-            td = date.today() + timedelta(days=1)
+        from datetime import timedelta, timezone
+
+        from utils.timezone import first_resolvable_tz, local_dt
+
+        zone = first_resolvable_tz(selected, context_label="Sofort-Vergleich")
+        local_now = local_dt(datetime.now(timezone.utc), zone)
+        td = local_now.date() if local_now.hour < 14 else local_now.date() + timedelta(days=1)
 
     profile = None
     if activity_profile:

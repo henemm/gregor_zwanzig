@@ -79,7 +79,9 @@ def _render() -> tuple[str, str]:
     _make_and_save_trip()
     ps = PreviewService()
     trip = ps._load_trip(_TRIP_ID, user_id=_USER)
-    report, *_rest = ps._build_report(trip, _TARGET, "morning", demo=True)
+    report, *_rest = ps._build_report(
+        trip, _TARGET, "morning", now_utc=datetime.now(timezone.utc), demo=True,
+    )
     _subject, token_line = ps.render_sms_preview(
         _TRIP_ID, user_id=_USER, report_type="morning",
         target_date=_TARGET.isoformat(), demo=True,

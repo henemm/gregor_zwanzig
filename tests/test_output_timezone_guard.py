@@ -608,16 +608,10 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # Massen-Umschrift den Shrink-Vergleich unnoetig verrauschen wuerde.
     # -----------------------------------------------------------------------
     # --- Muster A: Umgebungsuhr (`date.today()` / `datetime.now()` ohne tz) ---
-    "api/routers/compare.py::run_comparison::0": "Muster A (:53) — Sofort-Vergleich nimmt die Serveruhr als 'jetzt' (#1726).",
-    "api/routers/compare.py::run_comparison::1": "Muster A (:55) — Zieltag 'heute' vom Server, nicht vom Ort (#1726).",
-    "api/routers/compare.py::run_comparison::2": "Muster A (:58) — Zieltag 'morgen' vom Server, nicht vom Ort (#1726).",
     "api/routers/debug.py::trigger_radar_alert::0": "Muster A (:61) — Debug-Ausloeser datiert auf die Serveruhr (#1726).",
-    "src/output/renderers/email/compare_html.py::_compute_next_send::0": "Muster A (:1377) — naechste Sendezeit gegen den Servertag geprueft (#1726).",
     # #1727 S5b: `briefing_target_day_is_current` hat keinen Systemuhr-
     # Rueckfall mehr — `today` ist Pflicht und kommt als Ortstag der Tour vom
     # Aufrufer. Eintrag entfaellt.
-    "src/services/compare_preview_service.py::_resolve_target_date::0": "Muster A (:250) — Vorschau-Zieltag vom Server (#1726).",
-    "src/services/comparison_engine.py::dict_to_comparison_result::0": "Muster A (:407) — Zieltag beim Einlesen vom Server (#1726).",
     "src/services/gpx_processing.py::compute_default_start_date::0": "Muster A (:189) — GPX-Vorgabestart vom Servertag (#1726).",
     "src/services/gpx_processing.py::compute_default_start_date::1": "Muster A (:193) — zweiter Rueckfall auf den Servertag (#1726).",
     "src/services/gpx_processing.py::gpx_to_stage_data::0": "Muster A (:223) — Etappendatum faellt auf den Servertag zurueck (#1726).",
@@ -627,7 +621,12 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/official_alerts/massif_closure.py::_do_request::0": "Muster A (:102) — Abfrage-Datum der franzoesischen Quelle vom Server (#1726).",
     "src/services/official_alerts/massif_closure.py::fetch::0": "Muster A (:127) — Zeitstempel fuer `last_run` ohne Zone (#1726).",
     "src/services/official_alerts/meteo_forets.py::covers::0": "Muster A (:130) — Saison-Fenster gegen den Servermonat (#1726).",
-    "src/services/preview_service.py::_resolve_target_date::0": "Muster A (:94) — Vorschau-Zieltag vom Server (#1726).",
+    # #1727 S5c: die sieben verbleibenden Vorschau-/Anzeige-/Sofort-Vergleichs-
+    # Eintraege dieser Rubrik (api/routers/compare.py::run_comparison x3,
+    # compare_html.py::_compute_next_send, compare_preview_service.py::
+    # _resolve_target_date, comparison_engine.py::dict_to_comparison_result
+    # [entfernt], preview_service.py::_resolve_target_date) sind behoben.
+    # Eintraege entfallen.
     # #1727 S5b: die sechs Versandpfad-Eintraege dieser Rubrik sind behoben —
     # `_auto_pause_expired_presets` und `send_one_compare_preset` rechnen ueber
     # `first_resolvable_tz(locations)` im Ortstag des Presets, die vier

@@ -10,6 +10,7 @@ werden im Test toleriert (HTTP 200 bei Erfolg, HTTP 503 bei API-Fehler — beide
 from __future__ import annotations
 
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -86,7 +87,9 @@ class TestT1PreviewService:
     def test_resolve_target_date_returns_first_future_stage(self, service):
         """Wenn kein Datum gegeben, liefert _resolve_target_date das nächste Stage-Datum."""
         trip = service._load_trip("gr221-mallorca", user_id="default")
-        target = service._resolve_target_date(trip, given_date=None)
+        target = service._resolve_target_date(
+            trip, given_date=None, now_utc=datetime.now(timezone.utc),
+        )
         # Muss ein ISO-Datum-String sein oder ein date-Objekt
         assert target is not None
 
@@ -453,7 +456,9 @@ class TestIssue990WaypointSkip:
         stage_ok = _make_stage990("ok", today + timedelta(days=1), num_waypoints=2)
         trip = _make_trip990([stage_empty, stage_ok])
 
-        target = service._resolve_target_date(trip, given_date=None)
+        target = service._resolve_target_date(
+            trip, given_date=None, now_utc=datetime.now(timezone.utc),
+        )
 
         assert target == stage_ok.date, (
             f"Erwartet: nächste renderbare Etappe ({stage_ok.date}), "
@@ -468,7 +473,10 @@ class TestIssue990WaypointSkip:
         trip = _make_trip990([stage_empty])
 
         with pytest.raises(LookupError) as exc_info:
-            service._build_report(trip, stage_empty.date, "morning", demo=True)
+            service._build_report(
+                trip, stage_empty.date, "morning",
+                now_utc=datetime.now(timezone.utc), demo=True,
+            )
 
         assert "waypoint" in str(exc_info.value).lower(), (
             f"Fehlertext muss 'waypoint' enthalten, war: {exc_info.value!r}"
@@ -483,7 +491,10 @@ class TestIssue990WaypointSkip:
         no_stage_date = date(2026, 9, 15)
 
         with pytest.raises(LookupError) as exc_info:
-            service._build_report(trip, no_stage_date, "morning", demo=True)
+            service._build_report(
+                trip, no_stage_date, "morning",
+                now_utc=datetime.now(timezone.utc), demo=True,
+            )
 
         assert "waypoint" not in str(exc_info.value).lower(), (
             f"Generischer 'keine Stage'-Fall darf 'waypoint' nicht enthalten, "
@@ -500,7 +511,9 @@ class TestIssue990WaypointSkip:
         trip = _make_trip990([stage_past, stage_future])
 
         with pytest.raises((LookupError, ValueError)) as exc_info:
-            service._resolve_target_date(trip, given_date=None)
+            service._resolve_target_date(
+                trip, given_date=None, now_utc=datetime.now(timezone.utc),
+            )
 
         assert "waypoint" in str(exc_info.value).lower(), (
             f"Fehlertext bei komplett wegpunktlosem Trip muss 'waypoint' "
@@ -515,7 +528,9 @@ class TestIssue990WaypointSkip:
         stage_second = _make_stage990("second", date(2026, 8, 2), num_waypoints=4)
         trip = _make_trip990([stage_second, stage_first])  # bewusst unsortiert
 
-        target = service._resolve_target_date(trip, given_date=None)
+        target = service._resolve_target_date(
+            trip, given_date=None, now_utc=datetime.now(timezone.utc),
+        )
 
         assert target == stage_first.date, (
             f"Erwartet: früheste renderbare Etappe ({stage_first.date}), war: {target}"
@@ -529,7 +544,9 @@ class TestIssue990WaypointSkip:
         trip = _make_trip990([])
 
         with pytest.raises(ValueError) as exc_info:
-            service._resolve_target_date(trip, given_date=None)
+            service._resolve_target_date(
+                trip, given_date=None, now_utc=datetime.now(timezone.utc),
+            )
 
         assert not isinstance(exc_info.value, LookupError), (
             "Trip ohne jede Etappe darf NICHT als LookupError/waypoint-Fall behandelt werden"

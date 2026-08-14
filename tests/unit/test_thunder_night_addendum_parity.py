@@ -232,6 +232,7 @@ def _run_both_paths(monkeypatch, tmp_path, *, show_night_block: bool):
     recorder.label = "vorschau"
     PreviewService()._build_report(
         _trip(show_night_block=show_night_block), _TODAY, "morning",
+        now_utc=_dt.datetime.now(_dt.timezone.utc),
     )
 
     return recorder.entry("versand"), recorder.entry("vorschau")

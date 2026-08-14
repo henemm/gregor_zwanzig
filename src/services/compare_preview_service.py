@@ -30,7 +30,7 @@ Fallback.
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,9 @@ class ComparePreviewService:
 
         preset = self._load_preset(preset_id, user_id=user_id)
         locations = self._resolve_locations(preset, user_id=user_id)
-        resolved_date = _resolve_target_date(target_date)
+        resolved_date = _resolve_target_date(
+            target_date, locations, datetime.now(timezone.utc),
+        )
         profile = _parse_activity_profile(str(preset.get("profil", "")).lower())
 
         # Issue #1361/#1372 S1b (AC-2): die Vorschau MUSS mit demselben
@@ -252,10 +254,17 @@ def order_locations_by_ids(locations: list, location_ids: list[str]) -> list:
     return [by_id[loc_id] for loc_id in location_ids if loc_id in by_id]
 
 
-def _resolve_target_date(given: str | date | None) -> date:
-    """ISO-String/`date`/None → `date`. None = heute (analog Einzelversand)."""
+def _resolve_target_date(
+    given: str | date | None, locations: list, now_utc: datetime,
+) -> date:
+    """ISO-String/`date`/None → `date`. None = Ortstag des ersten aufloesbaren
+    Orts (Issue #1727 S5c, ADR-0044/-0051) — analog zum Compare-Versandpfad
+    seit S5b (``scheduler_dispatch_service.py``), nicht mehr die zonenlose
+    Serveruhr. Der ``given``-Zweig bleibt unveraendert."""
     if given is None or given == "":
-        return date.today()
+        from utils.timezone import first_resolvable_tz, local_dt
+        zone = first_resolvable_tz(locations, context_label="Compare-Vorschau")
+        return local_dt(now_utc, zone).date()
     if isinstance(given, date):
         return given
     try:

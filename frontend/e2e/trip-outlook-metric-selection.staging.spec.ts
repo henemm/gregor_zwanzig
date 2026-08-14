@@ -1,30 +1,24 @@
-// TDD RED — #1720 Scheibe 1: Abschnitt "3-Tages-Vorschau" im Wetter-Metriken-
-// Reiter des Trips (AC-6, AC-7, AC-13).
+// Staging-Klickpfad — #1720 Scheibe 1: Abschnitt "3-Tages-Vorschau" im
+// Wetter-Metriken-Reiter des Trips (AC-6, AC-7, AC-11, AC-13).
 //
 // Spec: docs/specs/modules/feat_1720_s1_trip_ausblick_metriken.md
+// Nacharbeit: docs/specs/fast/fix-1720-s1-playwright-selektoren.md
 // Kontext: docs/context/feat-1720-vorschau-metriken.md
-// Workflow: feat-1720-vorschau-metriken
 //
 // Namensregel (CLAUDE.md): nach Verhalten benannt, nicht nach Ticket.
 // Muster: compare-outlook-metric-selection.staging.spec.ts — dieselbe
 // Bedienflaeche, nur im Trip-Kontext (parametrisiert statt kopiert).
 //
-// 🔴 IN DER RED-PHASE NICHT AUSFUEHRBAR: der Abschnitt existiert auf Staging
-// noch nicht ('ausblick' steht in COMPARE_ONLY_SECTIONS,
-// weatherMetricsTabSections.ts:56). Der Lauf gehoert in die GREEN-Phase,
-// nach dem Staging-Deploy.
+// Die Datei entstand in der RED-Phase und war dort strukturell nicht
+// ausfuehrbar (der Abschnitt war noch nicht deployt). Zwei Annahmen ueber die
+// Oberflaeche hielten dem ersten echten Lauf nicht stand und sind hier
+// richtiggestellt — s. `wartetAufAutosave` (kein Speichern-Knopf im Trip) und
+// die Gegenprobe in AC-13 (der Ausblick-Schalter lebt im selben Reiter).
 //
 // Ausfuehren (gegen Staging, aus frontend/):
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
 //   set -a; source /home/hem/gregor_zwanzig_staging/.env; set +a
 //   npx playwright test --config=playwright.trip-outlook.staging.config.ts
-//
-// ⚠️ Die genannte Config `frontend/playwright.trip-outlook.staging.config.ts`
-// FEHLT noch: der Edit-Wächter der RED-Phase laesst dort keine Datei zu
-// (kein Test-Pfad). Sie ist in der GREEN-Phase anzulegen, 1:1 nach dem
-// Muster `playwright.compare-outlook.staging.config.ts` — Projekte `setup`
-// (diese `.staging.setup.ts`) und `chromium` mit
-// `storageState: 'playwright/.auth/staging-trip-outlook.json'`.
 //
 // Zugangsdaten-Hinweis (CLAUDE.md, 2026-08-08): nginx-Schranke =
 // GZ_VALIDATOR_*, App-Anmeldung = GZ_AUTH_* aus der STAGING-.env — die .env
@@ -62,14 +56,22 @@ function vorschauAbschnitt(reiter: Locator): Locator {
 	return reiter.getByTestId('weather-metrics-ausblick');
 }
 
-async function speichern(page: Page, reiter: Locator, tripId: string): Promise<void> {
-	const put = page.waitForResponse(
-		(r) => r.url().includes(`/api/trips/${tripId}`) && r.request().method() === 'PUT',
-		{ timeout: 10000 }
+/** Der Trip-Editor hat KEINEN Speichern-Knopf: `TripTabs` reicht einen
+ *  `saveController` hinein, und `WeatherMetricsTab.svelte:1451` rendert
+ *  `weather-metrics-tab-save` nur `{#if isDirty && !saveController && !createMode}`.
+ *  Gespeichert wird per Autosave (700 ms Debounce) — `scheduleAutoSave()`
+ *  schreibt die Ausblick-Auswahl per PUT auf `/api/trips/{id}/weather-config`
+ *  (WeatherMetricsTab.svelte:960). Der Test wartet deshalb auf die echte
+ *  Speicher-Antwort statt auf einen Knopf, den es hier nicht gibt.
+ *
+ *  Scharfschalten VOR der Geste: der Debounce kann sonst ablaufen, bevor
+ *  jemand zuhoert. */
+function wartetAufAutosave(page: Page, tripId: string) {
+	return page.waitForResponse(
+		(r) =>
+			r.url().includes(`/api/trips/${tripId}/weather-config`) && r.request().method() === 'PUT',
+		{ timeout: 15000 }
 	);
-	await reiter.getByTestId('weather-metrics-tab-save').click();
-	await put;
-	await page.waitForLoadState('networkidle');
 }
 
 test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720 S1, Staging)', () => {
@@ -98,10 +100,12 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 		// Eine Groesse abwaehlen, die in der Grundvorbelegung aktiv ist.
 		const boeen = abschnitt.getByTestId('compare-layout-outlook-metric-gust').locator('input');
 		await expect(boeen, 'Vorbedingung: Böen ist vor der Abwahl angehakt').toBeChecked();
+		const gespeichertePut = wartetAufAutosave(page, trip.id);
 		await boeen.uncheck();
 		await expect(boeen).not.toBeChecked();
 
-		await speichern(page, reiter, trip.id);
+		await gespeichertePut;
+		await page.waitForLoadState('networkidle');
 
 		// Serverstand ist die eigentliche Aussage, nicht nur der DOM.
 		const gespeichert = await page.request.get(`/api/trips/${trip.id}`);
@@ -184,11 +188,14 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 			'AC-13: kein zweiter Ausblick-Schalter (Beschriftung des Compare-Toggles)'
 		).toHaveCount(0);
 
-		// Gegenprobe: der EINE vorhandene Schalter lebt weiterhin im
-		// Inhalt-/Versand-Bereich und ist unberuehrt.
-		await page.getByTestId('trip-detail-tab-briefings').first().click();
+		// Gegenprobe: der EINE vorhandene Schalter lebt weiterhin in der
+		// Mail-Inhalt-Karte — und die sitzt im SELBEN Wetter-Metriken-Reiter,
+		// nicht im Versand-Reiter: `WeatherMetricsTab.svelte:1780-1787` bindet
+		// `EditReportConfigSection` (Abschnitt 'report_config') inline ein,
+		// `BriefingScheduleTab.svelte:117-119` haelt ausdruecklich fest
+		// "Mail-Inhalt bleibt unangetastet im Inhalt-Tab". Also ohne Tab-Wechsel.
 		await expect(
-			page.getByTestId('report-show-outlook'),
+			reiter.getByTestId('report-show-outlook'),
 			'AC-13: der bestehende Ein/Aus-Schalter fuer den Ausblick muss erhalten bleiben'
 		).toBeVisible({ timeout: 10000 });
 
