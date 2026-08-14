@@ -173,7 +173,8 @@ Implementierungsphase.
 ### 3. Zusätzliches Aufnahme-Kriterium: keine Schreibpfade in getrackte Verzeichnisse (Filter C)
 
 **Befund, gemessen am 2026-08-14 über alle `page.screenshot({ path: ... })`-Aufrufe im
-161-Datei-Korpus:** 27 der gemessenen relativen Schreibpfade beginnen mit `../docs/artifacts/`.
+161-Datei-Korpus (nachgemessen 2026-08-14, Adversary-Fund F001 — hier stand zuvor
+27/30):** von **27** Schreibpfaden insgesamt beginnen **24** mit `../docs/artifacts/`.
 Playwright-Tests laufen mit `frontend/` als Arbeitsverzeichnis; `../docs/artifacts/` löst damit
 zum Repo-Root-Verzeichnis `docs/artifacts/` auf, das `.gitignore:80` ignoriert — **harmlos**.
 Genau **3 Pfade in genau 2 Dateien** beginnen dagegen OHNE `../`-Präfix mit `docs/artifacts/`:
@@ -186,7 +187,7 @@ Verzeichnisebene. Entsprechende PNG-Dateien liegen dort bereits versioniert im R
 Lauf dieser beiden Dateien verändert damit eine getrackte Datei im Arbeitsbaum — ein Test, der
 seinen eigenen Prüfling bzw. den Arbeitsbaum verändert, ist ein Anti-Pattern.
 
-**Einordnung:** 27 von 30 gemessenen Pfaden sind korrekt — das ist ein isolierter Ausrutscher
+**Einordnung:** 24 von 27 gemessenen Pfaden sind korrekt — das ist ein isolierter Ausrutscher
 in zwei Dateien (ein fehlendes `../`), kein verbreitetes Muster. Die Reparatur ist eine
 **Ein-Zeichen-Korrektur** (`docs/artifacts/...` → `../docs/artifacts/...`) ohne fachliche
 Entscheidung, kein Ausschlussgrund für `trip-detail-actions.spec.ts`. Für den Kandidaten
@@ -285,7 +286,7 @@ nicht wiederholen müssen, sondern direkt beim Einzelfall-Verfahren ansetzen.
   `issue-322-wicon-komponente.spec.ts` (`__dirname` in ESM) — unverändert seit S2.
   `waitForTimeout`, konditionale Skips, Toter Bestand, Config-Wildwuchs, Sharding, die 16
   `.staging.spec.ts` — alles unverändert wie in S2 "Nicht in dieser Scheibe" begründet.
-- **27 der 30 gemessenen `page.screenshot`-Schreibpfade** (mit korrektem `../`-Präfix) — kein
+- **24 der 27 gemessenen `page.screenshot`-Schreibpfade** (mit korrektem `../`-Präfix) — kein
   Handlungsbedarf, dienen als Referenz für das neue Filter-C-Kriterium.
 - **Ein Volllauf über alle 921 Testfälle** — bleibt per `workflow_dispatch`-Vermessungsmodus
   aus S2 verfügbar, ist für diese Scheibe nicht Vorbedingung.
@@ -345,7 +346,7 @@ nicht wiederholen müssen, sondern direkt beim Einzelfall-Verfahren ansetzen.
   - Test: Für jede der vier Dateien liegt entweder ein Aufnahme-Beleg (Filter B, 3× grün im
     Zielverbund) oder ein Buchungs-Verweis vor, nie ein unkommentiertes Weglassen.
 
-- **AC-5:** Given genau 3 von 30 gemessenen `page.screenshot`-Schreibpfaden im Korpus beginnen
+- **AC-5:** Given genau 3 von 27 gemessenen `page.screenshot`-Schreibpfaden im Korpus beginnen
   ohne `../`-Präfix und landen damit in `frontend/docs/artifacts/` statt im per
   `.gitignore:80` ignorierten Repo-Root-`docs/artifacts/` (betroffen:
   `trip-detail-actions.spec.ts:211`, `trip-detail-tabs.spec.ts:113,119`) / When
