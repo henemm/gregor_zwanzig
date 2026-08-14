@@ -332,6 +332,19 @@ unverändert. Byte-Parität zum heutigen Stand ist Pflicht (s. Testplan).
 - **`render_outlook_table()` (HTML-Zelle)** — hat eine strukturell andere
   Zweigwahl (s. „Am Code gemessen", Punkt 3) und wird nicht auf den neuen
   Helfer umgestellt.
+- **Der Metrik-Zweig des Trip-Ausblicks (#1841)** — nachgetragen 2026-08-14
+  nach dem Rebase auf `2ceadc9d`: mit #1720 S1 (heute gemergt) hat der
+  **Trip**-Ausblick einen zweiten Renderpfad bekommen. Ist eine
+  Ausblick-Spaltenauswahl gesetzt, rendern HTML-Tabelle und Klartext die
+  `row["cells"]` und überspringen den gesamten Token-Zeilenbau per
+  `continue` (`outlook.py:155-162` bzw. `348-356`); die Gewitterstufe kommt
+  dort aus `summary.thunder_level_max` — dem Gehzeit-Aggregat —, eine
+  Nachtangabe existiert nicht. **Dieselbe Fehlerklasse, ein weiterer
+  Ausgabeort**, als eigenes Issue **#1841** gebucht. Die Kurzformat-Mail
+  kennt diesen Zweig nicht (`compact.py` liest keine `cells`), diese Scheibe
+  bleibt davon unberührt. Die Aussage „die Klasse ist mit vier Ausgabeorten
+  vollständig ausgezählt" im Kontext-Doc gilt für den Token-Pfad — der
+  Metrik-Pfad ist eine fünfte Stelle, die dort noch nicht existierte.
 
 ## Testplan
 
