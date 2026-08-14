@@ -27,12 +27,29 @@ PLAYWRIGHT_CWD = "frontend"  # Arbeitsordner des Playwright-Laufs
 MANDANTEN_SPECS = ("e2e/compare-cross-user-write-block.spec.ts",
                    "e2e/compare-editor-autosave-user-isolation.spec.ts")
 _PATH_RE = re.compile(r"""path:\s*['"`]([^'"`]+)['"`]""")
+# Nur die YAML-ZUWEISUNG zaehlt, nicht die Erwaehnung in Kommentar oder Shell
+# (`$E2E_MIN_SPECS`) -- sonst legte ein Kommentar die Schwelle fest.
+_MIN_SPECS_RE = re.compile(r"^[ \t]*E2E_MIN_SPECS:[ \t]*(\d+)[ \t]*(?:#.*)?$", re.M)
 
 
 def pruefe_schwellen_bindung(ci_yml_text: str, listen_text: str) -> list[str]:
     """AC-6: meldet Divergenzen zwischen `E2E_MIN_SPECS` und Listenlaenge (leer =
     in Ordnung). EXAKTE Gleichheit, nicht `>=`; fehlende Schwelle = Verstoss."""
-    raise NotImplementedError("entsteht in /50-implement (#1771 S3, AC-6)")
+    anzahl = len(_liste_zeilen(listen_text))
+    werte = sorted({int(m.group(1)) for m in _MIN_SPECS_RE.finditer(ci_yml_text)})
+    if not werte:
+        return [f"E2E_MIN_SPECS ist in ci.yml nicht als Zuweisung auffindbar, die "
+                f"Positivliste hat {anzahl} Eintraege -- ungemessen ist kein "
+                f"Nachweis, deshalb Verstoss statt stillem Gruen (fail-closed)."]
+    if len(werte) > 1:
+        return [f"E2E_MIN_SPECS ist mehrfach mit verschiedenen Werten gesetzt "
+                f"({werte}) -- welcher im Job gilt, ist nicht entscheidbar."]
+    if werte[0] != anzahl:
+        return [f"E2E_MIN_SPECS={werte[0]} weicht von der Positivliste ab: "
+                f"{anzahl} Eintraege. Gefordert ist EXAKTE Gleichheit -- eine zu "
+                f"niedrige Schwelle ist das F006-Loch (Liste waechst, Schwelle "
+                f"steht), eine zu hohe blockiert jeden PR grundlos."]
+    return []
 
 def _liste_zeilen(text: str) -> list[str]:
     return [z.strip() for z in text.splitlines()

@@ -208,7 +208,7 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.waitForSelector('[data-testid="trip-detail-breadcrumb-bar"]');
 		await page.screenshot({
-			path: 'docs/artifacts/epic-135-step2-trip-detail-actions/screenshot-trip-header.png',
+			path: '../docs/artifacts/epic-135-step2-trip-detail-actions/screenshot-trip-header.png',
 			fullPage: false
 		});
 	});

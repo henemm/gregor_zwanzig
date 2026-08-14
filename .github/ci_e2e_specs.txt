@@ -45,12 +45,38 @@
 # + Filter B, ci_tdd_excludes.txt-Lektion: lokale/einmalige Zahlen sind kein
 # Beleg fuer CI-Gruen).
 #
+# Filter C (NEU 2026-08-14, #1771 S3): eine Datei darf keinen
+# `page.screenshot({path: ...})` in ein von Git gefuehrtes Verzeichnis
+# schreiben. Playwright laeuft mit `frontend/` als Arbeitsordner; nur mit
+# fuehrendem `../` landet der Screenshot im per .gitignore:80 ignorierten
+# Repo-Wurzel-`docs/artifacts/`, ohne `../` dagegen im VERSIONIERTEN
+# `frontend/docs/artifacts/` -- ein Lauf wuerde dann getrackte Dateien
+# aendern. Bewacht statisch von
+# tests/unit/test_e2e_positivliste_ratschen_bindung.py, kein Runner noetig.
+#
+# 🔴 bug-703-login-ratelimit.spec.ts laeuft in einem EIGENEN, nachgelagerten
+# Playwright-Aufruf (ci.yml). Es feuert absichtlich 32 Logins ab und
+# verbraucht damit das IP-Limit aus internal/router/router.go:45 (30/Stunde)
+# fuer den gesamten Job. Playwright sortiert Dateien alphabetisch, die Datei
+# liegt auf Position 3 -- jede spaeter laufende Datei mit EIGENEM Login
+# scheitert sonst an "429". Die Zeile bleibt bewusst hier stehen: DIESE Liste
+# ist die eine Positivliste, an der Ratsche und E2E_MIN_SPECS haengen.
+#
+# Aufnahme 2026-08-14 (#1771 S3, Filter B im ZIELVERBUND belegt, nicht im
+# 51er-Kandidatenverbund): compare-cross-user-write-block.spec.ts und
+# compare-editor-autosave-user-isolation.spec.ts -- die einzige Klasse im
+# Korpus, die die CLAUDE.md-Pflicht "jeder datenbewegende Endpoint mit ZWEI
+# Nutzern" belegt. Beide brauchen einen eigenen Zweit-Login und waren genau
+# deshalb im ungeteilten Zielverbund rot (429) -- Anlass fuer den Split oben.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
 e2e/bug-703-login-ratelimit.spec.ts
 e2e/bug-708-stage-delete-confirm.spec.ts
+e2e/compare-cross-user-write-block.spec.ts
 e2e/compare-detail-edit-entry.spec.ts
+e2e/compare-editor-autosave-user-isolation.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-radar-toggle.spec.ts
 e2e/design-system-lauf-a.spec.ts

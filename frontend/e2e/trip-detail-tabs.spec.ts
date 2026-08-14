@@ -110,13 +110,13 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.waitForSelector('[data-testid="trip-detail-tab-list"]');
 		await page.screenshot({
-			path: 'docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-overview.png',
+			path: '../docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-overview.png',
 			fullPage: false
 		});
 		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
 		await page.waitForSelector('[data-testid="trip-detail-panel-alerts"]');
 		await page.screenshot({
-			path: 'docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-alerts.png',
+			path: '../docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-alerts.png',
 			fullPage: false
 		});
 	});
