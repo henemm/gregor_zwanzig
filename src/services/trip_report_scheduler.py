@@ -2399,7 +2399,10 @@ class TripReportSchedulerService:
             resolve_configured_window,
         )
         from app.models import ThunderLevel
-        from app.thunder_scale import thunder_label_value, thunder_ordinal
+        from app.thunder_scale import (
+            thunder_label_value, thunder_ordinal, thunder_signal_label,
+            union_of_max_carriers,
+        )
 
         win_start, win_end = resolve_configured_window(window_start, window_end)
         # Rueckabbildung Sample-Wert -> Level ueber die geteilte Render-Skala
@@ -2423,6 +2426,19 @@ class TripReportSchedulerService:
                 ),
                 key=thunder_ordinal,
             )
+            # Issue #1680 S5b: die tragende Zutat der TAGES-Stufe, aus der
+            # S5a-Traegerquelle `row["hourly_thunder_signals"]` und mit
+            # DEMSELBEN Fensterfilter, der oben `windowed` erzeugt -- eine
+            # zweite, unabhaengige Fensterauflösung waere genau die
+            # Fehlerklasse aus #1653/#1498 (Stufe aus dem einen, Herkunft aus
+            # dem anderen Fenster). Vorbild: `helpers.format_trend_tokens()`.
+            carriers = union_of_max_carriers(
+                (stufe, traeger)
+                for stunde, stufe, traeger in (
+                    row.get("hourly_thunder_signals") or ()
+                )
+                if hour_in_window(int(stunde), win_start, win_end)
+            )
         else:
             # Fail-soft (Known Limitation): ohne Stundenproben im Fenster
             # keine Klemmung — Kalendertags-Maximum wie bisher, nie eine
@@ -2431,6 +2447,11 @@ class TripReportSchedulerService:
                 level = ThunderLevel[row.get("thunder") or "NONE"]
             except KeyError:
                 level = ThunderLevel.NONE
+            # Issue #1680 S5b (Spec AC-8): zu einer Stufe aus dem
+            # Kalendertags-Maximum gibt es KEINE zum Fenster passende
+            # Traegerquelle -- "keine Herkunft" ist hier die einzig ehrliche
+            # Antwort, nicht die Herkunft irgendeiner unbeobachteten Stunde.
+            carriers = None
         when = None
         hour = None
         if level != ThunderLevel.NONE:
@@ -2453,6 +2474,14 @@ class TripReportSchedulerService:
                 f"Starkes Gewitter erwartet ab {when}"
                 if when else "Starkes Gewitter erwartet"
             )
+        # Issue #1680 S5b: die Herkunft steht unmittelbar hinter der
+        # Tagesaussage -- VOR dem Nacht-Halbsatz und (weil sie Teil von `text`
+        # ist) auch vor dem Hagel-Zusatz, den erst der Renderer anhaengt.
+        # Der Level-Check steht bewusst HIER, am Wirkort: "Kein Gewitter
+        # erwartet" traegt nie eine Herkunft (Spec AC-6), und ohne
+        # Traegerliste entsteht kein leerer ·-Trenner (Spec AC-11).
+        if level != ThunderLevel.NONE and carriers:
+            text += " · " + ", ".join(thunder_signal_label(n) for n in carriers)
         # Issue #1651: das Gewitter AUSSERHALB des Fensters wird angehaengt
         # genannt. Quelle sind dieselben, ohnehin vorliegenden Stundenproben
         # der Zeile -- fuer 00:00-06:00 des Folgetags schlaegt `night_hourly`
@@ -2602,7 +2631,7 @@ class TripReportSchedulerService:
         ist die geteilte Sortier-Skala -- kein zweites, driftendes Ordinal.
         """
         from app.models import ThunderLevel
-        from app.thunder_scale import thunder_ordinal
+        from app.thunder_scale import thunder_ordinal, thunder_signal_label
         # Issue #1475 Nachbesserung (Punkt 4a): das Hagel-Aggregat kommt ueber
         # den kanonischen Basis-Metrik-Weg (``summarize_points`` ->
         # ``_compute_hail_flag`` -> ``hail_priority``) statt ueber einen
@@ -2678,6 +2707,22 @@ class TripReportSchedulerService:
                 text = f"Gewitter möglich ab {when}"
             else:
                 text = f"Starkes Gewitter erwartet ab {when}"
+            # Issue #1680 S5b: der ohnehin vorhandene summarize_points()-Aufruf
+            # (bisher nur fuer `hail_flag`, s.u.) wird in eine Variable
+            # gehoben und zusaetzlich um die Traegerliste der Tagesstufe
+            # gelesen. Beide Groessen entstehen ueber DIESELBE `thunder_dps`-
+            # Menge, aus der auch `level` stammt -- kein zweiter Datenzugriff,
+            # keine zweite Fensterfilterung.
+            summary = summarize_points(thunder_dps)
+            carriers = getattr(summary, "thunder_level_max_signals", None)
+            # Herkunft unmittelbar hinter der Tagesaussage, VOR dem
+            # Nacht-Halbsatz (und damit vor dem Hagel-Zusatz des Renderers).
+            # Level-Check am Wirkort (Spec AC-6), Traeger-Guard gegen den
+            # leeren ·-Trenner bei Alt-Fixturen ohne Traegerfeld (AC-11).
+            if level != ThunderLevel.NONE and carriers:
+                text += " · " + ", ".join(
+                    thunder_signal_label(n) for n in carriers
+                )
             # Issue #1651: Nacht-Zusatz, wortgleich zum Trend-Weg (eine
             # Wortlaut-Quelle: format_night_addendum). `night_weather` reicht
             # nur bis 06:00 des Folgetags und ist deshalb allein fuer "+1"
@@ -2701,7 +2746,7 @@ class TripReportSchedulerService:
                 # Vorschau — ueber DIESELBE thunder_dps-Menge, die auch
                 # level/hour liefert (kein zweiter Datenzugriff). Beeinflusst
                 # `level` an keiner Stelle (AC-10).
-                "hail": getattr(summarize_points(thunder_dps), "hail_flag", None),
+                "hail": getattr(summary, "hail_flag", None),
             }
 
         return forecast if forecast else None

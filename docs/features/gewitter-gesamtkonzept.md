@@ -407,11 +407,23 @@ Code-Pfad — konsistent mit der Kanal-Entscheidung „E-Mail und Telegram JA", 
 Wirkort, den die ursprüngliche Aufgabenbeschreibung nicht vorsah. SMS/Premium-SMS bleiben
 ausdrücklich ohne Herkunft.
 
-**Noch offen (Ticket #1680 bleibt offen):** Mehrtages-Ausblick und Gewitter-Vorschau. Bei
-beiden gehen die Träger **strukturell** verloren (`HourlyValue` ohne Signalfeld); der
-Mehrtages-Ausblick ist zugleich der einzige Ort, der `aggregate_stage()` als Verbraucher
-aktivieren würde. **Go-DTO und Frontend fallen ersatzlos** — dort existiert kein Ort, an dem
-die Herkunft erscheinen könnte.
+✅ **Scheibe 5a live seit 2026-08-13** (#1680, Spec `feat_1680_s5a_gewitter_herkunft_ausblick.md`).
+**Mehrtages-Ausblick** (HTML, Klartext, Telegram-Trendblock, beide Compare-Ausblick-Renderpfade)
+trägt jetzt denselben Zusatz. 🔴 **Korrektur:** Diese Stelle behauptete bis hierhin, bei
+Mehrtages-Ausblick und Gewitter-Vorschau gingen die Träger „strukturell" verloren, weil
+`HourlyValue` kein Signalfeld habe — **das ist widerlegt, nicht nur überholt.**
+`build_outlook_row()` (`email/outlook.py`) bekommt die rohen `ForecastDataPoint`s und verengt
+sie **selbst** zu `HourlyValue`; die Trägerinformation (`dp.thunder_level_signals`) liegt zum
+Verengungszeitpunkt noch vor und wurde nur nie gelesen. Eine Änderung an `HourlyValue` war nie
+nötig. Details: `feat_1680_s5a_gewitter_herkunft_ausblick.md` „Am Code gemessen" Punkt 4.
+`aggregate_stage()` bleibt trotzdem **ohne** erreichbaren Verbraucher — S5a berechnet die
+Herkunft direkt in der Darstellungsschicht, nicht über diesen Dispatch-Zweig (#1199).
+
+✅ **Scheibe 5b live seit 2026-08-14** (#1680, Spec `feat_1680_s5b_gewitter_herkunft_vorschau.md`).
+**Gewitter-Vorschau** (der `+1`/`+2`-Block der Trip-Vollmail, Klartext + HTML) trägt jetzt
+denselben Zusatz — letzter Ausgabeort ohne Herkunft, **Ticket #1680 damit schließbar.**
+SMS/Premium-SMS/Telegram/Kompakt-Mail bleiben strukturell ohne Herkunft. **Go-DTO und Frontend
+fallen weiterhin ersatzlos** — dort existiert kein Ort, an dem die Herkunft erscheinen könnte.
 
 Drei Festlegungen, die aus der Umsetzung stammen und hier nicht überlesen werden dürfen:
 
