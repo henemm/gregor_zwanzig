@@ -272,7 +272,9 @@ func SendTripReportProxyHandler(pythonURL string) http.HandlerFunc {
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		client := &http.Client{Timeout: 120 * time.Second}
+		// Issue #1756 (AC-8): 120s -> 300s, der reguläre Erfolgsfall
+		// (vollständiger Mehrtages-Ausblick) braucht 3-4 Minuten.
+		client := &http.Client{Timeout: 300 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")

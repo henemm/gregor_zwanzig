@@ -12,6 +12,7 @@ import dataclasses
 import json
 import logging
 import os
+import threading
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -274,6 +275,30 @@ def record_corrupt_trip_observability(
         corrupt_files=[name for name, _ in corrupt],
         newly_notified=newly,
     )
+
+
+# Issue #1756: In-Process-Lock gegen doppelten manuellen Trip-Versand.
+# Modul-Ebene (nicht instanz-gebunden): pro Request entsteht eine neue
+# TripReportSchedulerService-Instanz (api/routers/scheduler.py), ein
+# Instanzattribut würde daher nie mit sich selbst kollidieren. Wirkt nur
+# innerhalb eines Systemd-Prozesses (siehe Spec „Known Limitations").
+_send_locks: Dict[Tuple[str, str, str], bool] = {}
+_send_locks_guard = threading.Lock()
+
+
+def _try_acquire_send_lock(user_id: str, trip_id: str, report_type: str) -> bool:
+    key = (user_id, trip_id, report_type)
+    with _send_locks_guard:
+        if _send_locks.get(key):
+            return False
+        _send_locks[key] = True
+        return True
+
+
+def _release_send_lock(user_id: str, trip_id: str, report_type: str) -> None:
+    key = (user_id, trip_id, report_type)
+    with _send_locks_guard:
+        _send_locks.pop(key, None)
 
 
 class TripReportSchedulerService:
@@ -949,11 +974,17 @@ class TripReportSchedulerService:
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
-        # Issue #1725 (Adversary F006): `angefordert=True` — dieser Weg traegt
-        # den Test-Versand-Knopf (`api/routers/scheduler.send_test_trip_report`).
-        return self._send_trip_report_outcome(
-            trip, report_type, allow_test_fallback=True, angefordert=True,
-        )
+        # Issue #1756: Idempotenz-Lock gegen doppelten Versand bei erneutem Klick.
+        if not _try_acquire_send_lock(self._user_id, trip.id, report_type):
+            return "already_in_progress"
+        try:
+            # Issue #1725 (Adversary F006): `angefordert=True` — dieser Weg traegt
+            # den Test-Versand-Knopf (`api/routers/scheduler.send_test_trip_report`).
+            return self._send_trip_report_outcome(
+                trip, report_type, allow_test_fallback=True, angefordert=True,
+            )
+        finally:
+            _release_send_lock(self._user_id, trip.id, report_type)
 
     def send_on_demand_report(self, trip: "Trip", report_type: str) -> OnDemandErgebnis:
         """
@@ -986,11 +1017,17 @@ class TripReportSchedulerService:
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
         zieltag = self._get_target_date(report_type, trip, datetime.now(timezone.utc))
-        # Issue #1725: `angefordert=True` NEBEN `on_demand=True` — die beiden
-        # bedeuten Verschiedenes, siehe `_send_trip_report_outcome`.
-        outcome = self._send_trip_report_outcome(
-            trip, report_type, on_demand=True, angefordert=True, target_date=zieltag,
-        )
+        # Issue #1756: geteilter Lock-Key-Raum mit send_test_report_outcome().
+        if not _try_acquire_send_lock(self._user_id, trip.id, report_type):
+            return OnDemandErgebnis(outcome="already_in_progress", zieltag=zieltag)
+        try:
+            # Issue #1725: `angefordert=True` NEBEN `on_demand=True` — die beiden
+            # bedeuten Verschiedenes, siehe `_send_trip_report_outcome`.
+            outcome = self._send_trip_report_outcome(
+                trip, report_type, on_demand=True, angefordert=True, target_date=zieltag,
+            )
+        finally:
+            _release_send_lock(self._user_id, trip.id, report_type)
         return OnDemandErgebnis(outcome=outcome, zieltag=zieltag)
 
     def _send_trip_report(
