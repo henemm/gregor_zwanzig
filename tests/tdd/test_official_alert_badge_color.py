@@ -139,9 +139,15 @@ def test_compare_overview_chip_colored_by_level_not_severity():
 
 def test_metric_severity_cells_unchanged_by_alert_recolor():
     """AC-6 (Regressionsschutz): Die _RISK_CELL-basierten Wetter-METRIK-Zellen
-    (Temp/Wind) bleiben unverändert — nur die Warn-Chips wechseln auf Level."""
+    (Temp/Wind) bleiben von der Alert-Umfaerbung UNBERÜHRT — nur die
+    Warn-Chips wechseln auf Level. _RISK_CELL selbst leitet sich (Issue
+    #1214 Scheibe 2) von der EINEN Ampel-Quelle design_tokens.tone_css() ab
+    und traegt deshalb die neue Fix-#1801-S2-Palette (groesserer Abstand
+    orange<->rot, WCAG-Fix) -- diese Werte hier zu aktualisieren ist genau
+    der Nachweis, dass NUR die Ampel-Palette wirkte, keine Alert-Umfaerbung."""
     from output.renderers.email import compare_html as ch
-    # _RISK_CELL bleibt die kanonische Metrik-Zell-Palette (unberührt).
-    assert ch._RISK_CELL["caution"] == ("#fbeeb8", "#5e4a00")
-    assert ch._RISK_CELL["warn"] == ("#fad6b8", "#8a3506")
-    assert ch._RISK_CELL["danger"] == ("#f6c5bf", "#8a1009")
+    # _RISK_CELL bleibt die kanonische Metrik-Zell-Palette (unberührt VON
+    # DER ALERT-UMFAERBUNG; Fix #1801 S2 aendert die Werte selbst bewusst).
+    assert ch._RISK_CELL["caution"] == ("#fdf4cd", "#5e4a00")
+    assert ch._RISK_CELL["warn"] == ("#fbe3cc", "#7d3400")
+    assert ch._RISK_CELL["danger"] == ("#f7d3e2", "#7d0c39")

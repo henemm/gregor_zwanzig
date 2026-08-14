@@ -12,11 +12,12 @@ from zoneinfo import ZoneInfo
 # Issue #1222: Kreis-Emojis wurden durch gestylte CSS-Dots ersetzt. Diese
 # Fill-Farben sind die SSoT (helpers._AMPEL_DOT_COLORS) — Assertions unten
 # pruefen die Band-Farbe im CSS-Dot statt auf Emoji-Gleichheit.
+# Fix #1801 S2: yellow/orange/red neu (groesserer Abstand orange<->rot).
 _AMPEL_DOT_FILL = {
     "green": "#15803d",
-    "yellow": "#ca8a04",
-    "orange": "#c2410c",
-    "red": "#b91c1c",
+    "yellow": "#d69500",
+    "orange": "#d4530a",
+    "red": "#a8104a",
 }
 _CIRCLE_EMOJIS = ("🟢", "🟡", "🟠", "🔴")
 

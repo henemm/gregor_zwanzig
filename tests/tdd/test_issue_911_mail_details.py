@@ -642,7 +642,8 @@ class TestAC9OutlookEyebrow:
 
 class TestAC10CellBackgroundHighlighting:
     """AC-10: Given Zelle mit erhöhtem Schweregrad, When gerendert,
-    Then trägt die ZELLE einen getönten Hintergrund (#fbeeb8/warn #fad6b8/danger #f6c5bf)."""
+    Then trägt die ZELLE einen getönten Hintergrund (Fix #1801 S2:
+    #fdf4cd/warn #fbe3cc/danger #f7d3e2; vormals #fbeeb8/#fad6b8/#f6c5bf)."""
 
     def _make_high_gust_rows(self):
         """Erzeugt Rows mit hohem Gust-Wert (>45 km/h → warn)."""
@@ -669,16 +670,17 @@ class TestAC10CellBackgroundHighlighting:
         return [row]
 
     def test_warn_cell_has_background_color(self):
-        """Warn-Zellen (gust >45) müssen Zell-Hintergrund #fad6b8 tragen."""
+        """Warn-Zellen (gust >45) müssen Zell-Hintergrund #fbe3cc tragen
+        (Fix #1801 S2, vormals #fad6b8)."""
         rows = self._make_high_gust_rows()
         html = _render(seg_tables=[rows])
 
         # Aktuell: nur farbiger Text im <span>, kein Zell-Hintergrund
-        # Soll: background:#fad6b8 auf der <td>-Ebene
-        assert "#fad6b8" in html, (
-            "Warn-Zellen müssen Hintergrund #fad6b8 tragen (warn-Tönung). "
+        # Soll: background:#fbe3cc auf der <td>-Ebene
+        assert "#fbe3cc" in html, (
+            "Warn-Zellen müssen Hintergrund #fbe3cc tragen (warn-Tönung). "
             "Aktuell gibt es nur farbigen Text im <span>, keinen Zell-Hintergrund. "
-            "Vorlage RISK_CELL.warn.bg = #fad6b8"
+            "Vorlage RISK_CELL.warn.bg = #fbe3cc"
         )
 
     def _make_danger_thunder_rows(self):
@@ -707,17 +709,19 @@ class TestAC10CellBackgroundHighlighting:
         return [row]
 
     def test_danger_cell_has_background_color(self):
-        """Danger-Zellen (thunder >30%) müssen Hintergrund #f6c5bf tragen."""
+        """Danger-Zellen (thunder >30%) müssen Hintergrund #f7d3e2 tragen
+        (Fix #1801 S2, vormals #f6c5bf)."""
         rows = self._make_danger_thunder_rows()
         html = _render(seg_tables=[rows])
-        assert "#f6c5bf" in html, (
-            "Danger-Zellen müssen Hintergrund #f6c5bf tragen. "
+        assert "#f7d3e2" in html, (
+            "Danger-Zellen müssen Hintergrund #f7d3e2 tragen. "
             "Aktuell kein Zell-Hintergrund, nur Text-Farbe. "
-            "Vorlage RISK_CELL.danger.bg = #f6c5bf"
+            "Vorlage RISK_CELL.danger.bg = #f7d3e2"
         )
 
     def test_caution_cell_has_background_color(self):
-        """Caution-Zellen müssen Hintergrund #fbeeb8 tragen."""
+        """Caution-Zellen müssen Hintergrund #fdf4cd tragen (Fix #1801 S2,
+        vormals #fbeeb8)."""
         from src.app.models import ForecastDataPoint, ThunderLevel
         from app.metric_catalog import build_default_display_config
         from src.output.renderers.email.helpers import dp_to_row
@@ -741,9 +745,9 @@ class TestAC10CellBackgroundHighlighting:
         row = dp_to_row(dp, dc, tz=ZoneInfo("Europe/Berlin"))
         row["risk"] = "caution"
         html = _render(seg_tables=[row] if not isinstance(row, list) else row)
-        assert "#fbeeb8" in html, (
-            "Caution-Zellen müssen Hintergrund #fbeeb8 tragen. "
-            "Vorlage RISK_CELL.caution.bg = #fbeeb8"
+        assert "#fdf4cd" in html, (
+            "Caution-Zellen müssen Hintergrund #fdf4cd tragen. "
+            "Vorlage RISK_CELL.caution.bg = #fdf4cd"
         )
 
 
@@ -900,7 +904,8 @@ class TestAC12OutlookTable:
         html = _render(trend=[stage])
 
         # Wenn die Tabelle gerendert wird, muss mindestens eine Gefahren-Farbe da sein
-        has_cell_bg = "#fad6b8" in html or "#f6c5bf" in html or "#fbeeb8" in html
+        # Fix #1801 S2: neue Flaechenfarben (vormals #fad6b8/#f6c5bf/#fbeeb8).
+        has_cell_bg = "#fbe3cc" in html or "#f7d3e2" in html or "#fdf4cd" in html
         assert has_cell_bg, (
             "Ausblick-Tabellen-Zellen mit hohen Werten müssen Hintergrund-Tönung haben. "
             "Vorlage: sevCellStyle → RISK_CELL bg-Farben"

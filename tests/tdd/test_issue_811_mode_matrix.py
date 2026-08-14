@@ -370,11 +370,15 @@ def _render_thunder_full(*, raw: bool, thunder_level):
 
 
 def test_thunder_einfach_med_has_orange_ampel_dot():
-    """Issue #1491: Gewitter Einfach MED zeigt den orangen Ampel-Kreis, kein Blitzsymbol."""
+    """Issue #1491: Gewitter Einfach MED zeigt den orangen Ampel-Kreis, kein Blitzsymbol.
+
+    Fix #1801 S2: Punktfarbe orange #c2410c -> #d4530a (groesserer Abstand
+    zu rot).
+    """
     from app.models import ThunderLevel
     html, _plain = _render_thunder_full(raw=False, thunder_level=ThunderLevel.MED)
     cells = _data_cells(html)
-    ampel_cells = [c for c in cells if "border-radius:50%" in c and "#c2410c" in c]
+    ampel_cells = [c for c in cells if "border-radius:50%" in c and "#d4530a" in c]
     assert ampel_cells, (
         f"Issue #1491: Einfach MED muss den orangen Ampel-Kreis zeigen. "
         f"Daten-Zellen: {cells!r}"
@@ -385,11 +389,15 @@ def test_thunder_einfach_med_has_orange_ampel_dot():
 
 
 def test_thunder_einfach_high_has_red_ampel_dot():
-    """Issue #1491: Gewitter Einfach HIGH zeigt den roten Ampel-Kreis, kein Blitzsymbol."""
+    """Issue #1491: Gewitter Einfach HIGH zeigt den roten Ampel-Kreis, kein Blitzsymbol.
+
+    Fix #1801 S2: Punktfarbe rot #b91c1c -> #a8104a (Karminrot, groesserer
+    Abstand zu orange).
+    """
     from app.models import ThunderLevel
     html, _plain = _render_thunder_full(raw=False, thunder_level=ThunderLevel.HIGH)
     cells = _data_cells(html)
-    ampel_cells = [c for c in cells if "border-radius:50%" in c and "#b91c1c" in c]
+    ampel_cells = [c for c in cells if "border-radius:50%" in c and "#a8104a" in c]
     assert ampel_cells, (
         f"Issue #1491: Einfach HIGH muss den roten Ampel-Kreis zeigen. "
         f"Daten-Zellen: {cells!r}"

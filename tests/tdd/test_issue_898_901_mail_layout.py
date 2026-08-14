@@ -571,9 +571,9 @@ class TestAC7TrendAsTable:
         assert trend_section, "Trend-Abschnitt nicht gefunden"
         tbody_match = re.search(r"<tbody>(.*?)</tbody>", trend_section, re.DOTALL)
         assert tbody_match, "Kein <tbody> im Ausblick-Tabellenmarkup gefunden"
-        assert "background:#f6c5bf;" in tbody_match.group(1), (
+        assert "background:#f7d3e2;" in tbody_match.group(1), (
             "AC-7: Zelle mit Gewitter-Warnlevel HIGH muss den definierten "
-            "Zellhintergrund (_THUNDER_LEVEL_BG['HIGH']) tragen"
+            "Zellhintergrund (_THUNDER_LEVEL_BG['HIGH'], Fix #1801 S2) tragen"
         )
 
 

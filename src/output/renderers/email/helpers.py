@@ -576,11 +576,14 @@ def build_column_legend(rows: list[dict]) -> str:
 # Issue #1222: Kreis-Emojis 🟢🟡🟠🔴 durch gestylte CSS-Dots ersetzt (kein
 # Emoji mehr in E-Mails). Palette (fill, ring) je Level, Ring an _risk_dot
 # (html.py) angelehnt, um Gelb/Amber erweitert.
+# Fix #1801 S2: groesserer Punktabstand orange<->rot (ΔE76 16,4 -> 54,4).
+# green/yellow bleiben unveraendert -- nur orange/rot wandern (Karminrot statt
+# Violett, PO-Entscheid 2026-08-14).
 _AMPEL_DOT_COLORS = {
     "green":  ("#15803d", "rgba(21,128,61,0.18)"),
-    "yellow": ("#ca8a04", "rgba(202,138,4,0.20)"),
-    "orange": ("#c2410c", "rgba(194,65,12,0.20)"),
-    "red":    ("#b91c1c", "rgba(185,28,28,0.22)"),
+    "yellow": ("#d69500", "rgba(214,149,0,0.20)"),
+    "orange": ("#d4530a", "rgba(212,83,10,0.20)"),
+    "red":    ("#a8104a", "rgba(168,16,74,0.22)"),
 }
 
 
@@ -1261,16 +1264,20 @@ def tone_symbol(tone: str) -> str:
     return ""
 
 
+# Fix #1801 S2: neuer vierter Ton "caution" schliesst die Luecke zwischen
+# gelb und orange (bisher beide auf "warn" -- Chips konnten nur 3 von 4
+# Ampelstufen zeigen). warn/risk zusaetzlich verschaerft (Karminrot-Angleich).
 _PILL_TAG_PALETTE = {
-    "ok":   {"bg": "#dcf2e1", "fg": "#14532d", "border": "#86c89a"},
-    "warn": {"bg": "#fde6cc", "fg": "#7c2d12", "border": "#f0a060"},
-    "risk": {"bg": "#fadcd6", "fg": "#7f1d1d", "border": "#e88472"},
-    "info": {"bg": "#dde8f3", "fg": "#1e3a5f", "border": "#8aacd0"},
+    "ok":      {"bg": "#dcf2e1", "fg": "#14532d", "border": "#86c89a"},
+    "caution": {"bg": "#fdf2c4", "fg": "#6b5200", "border": "#e0b93c"},
+    "warn":    {"bg": "#fbe0c4", "fg": "#7d3400", "border": "#e59248"},
+    "risk":    {"bg": "#fad3e1", "fg": "#7d0c39", "border": "#dd7ba2"},
+    "info":    {"bg": "#dde8f3", "fg": "#1e3a5f", "border": "#8aacd0"},
 }
 
 _PILL_TONE_MAP = {
     "ampel_green":  "ok",
-    "ampel_yellow": "warn",
+    "ampel_yellow": "caution",
     "ampel_orange": "warn",
     "ampel_red":    "risk",
 }
@@ -1560,7 +1567,10 @@ def _pill_for_metric(
     der Erwaehnungsschwelle. Klasse 2 (Bereich): „min–max Einheit", neutral.
     """
     # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
-    from output.metric_format import thunder_ordinal
+    # Fix #1801 S2 AC-5: thunder_ampel_band ist die deklarierte SSoT
+    # Gewitterstufe -> Ampelband (ADR-0025) -- der Gewitter-Chip liest sie
+    # jetzt statt fest "ampel_red" zu liefern.
+    from output.metric_format import thunder_ampel_band, thunder_ordinal
 
     # ---- Klasse 2 — Bereichs-/Kontext-Metriken (mit Uhrzeit, neutral) ----
     # Issue #1357: Temperatur ("8–11°C · Max 15:00") und gefuehlte Temperatur
@@ -1648,7 +1658,14 @@ def _pill_for_metric(
             return None
         max_val, max_ts = max(vals_ts, key=lambda x: x[0])
         max_hh = local_hour(max_ts, tz)
-        return (f"UV max {max_val:.1f} ({max_hh:02d}:00)", _PILL_NEUTRAL_TONE)
+        # Fix #1801 S2 AC-6: Katalog fuehrt fuer UV Schwellen (3/6/8) -- der
+        # Chip wertet sie jetzt aus statt fest neutral zu bleiben. Unterhalb
+        # der ersten Schwelle bleibt der Chip neutral (keine Ampelfarbe fuer
+        # "unbedenklich").
+        from output.metric_format import severity_for
+        _level = severity_for("uv_index", max_val)
+        tone = f"ampel_{_level}" if _level and _level != "green" else _PILL_NEUTRAL_TONE
+        return (f"UV max {max_val:.1f} ({max_hh:02d}:00)", tone)
 
     if metric_id == "sunshine":
         from services.weather_metrics import WeatherMetricsService
@@ -1795,8 +1812,13 @@ def _pill_for_metric(
         if first_thunder_ts is not None:
             first_hh = local_hour(first_thunder_ts, tz)
             peak_hh = local_hour(peak_ts or first_thunder_ts, tz)
+            # Fix #1801 S2 AC-5: Ton aus derselben SSoT wie die Stundentabelle
+            # (thunder_ampel_band), nicht mehr fest "ampel_red" -- max_lvl ist
+            # hier bereits die hoechste Stufe der Stunden.
+            _band = thunder_ampel_band(max_lvl)
+            _tone = f"ampel_{_band}" if _band else "ampel_red"
             return (f"Gewitter ab {first_hh:02d}:00 · stärkste {peak_hh:02d}:00"
-                    f"{_origin_suffix}{_hail_suffix}", "ampel_red")
+                    f"{_origin_suffix}{_hail_suffix}", _tone)
         # Issue #1331: Ziel-Datenluecke (Ankunft->19 Uhr unbeobachtet) darf
         # keine positive Entwarnung "kein Gewitter" vortaeuschen.
         if has_gap:
@@ -1835,17 +1857,21 @@ def _pill_for_metric(
         thr = _sms_mention_threshold("humidity")
         peak_val = max(v for v, _ in vals)
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
+        # Fix #1801 S2 AC-7: humidity fuehrt im Katalog KEINE display_thresholds
+        # -- der Chip bleibt deshalb IMMER neutral, unabhaengig vom Wert (Regel:
+        # Schwellen vorhanden -> Ampelfarbe, sonst neutral), analog Wolken/
+        # 0°-Linie/Taupunkt/Sonne.
         if fp is not None:
             first_hh, pv, peak_hh = fp
             text = (f"Feuchte >{int(thr)}% ab {first_hh:02d}:00 · "
                     f"max {int(pv)}% ({peak_hh:02d}:00)")
-            return (text, "ampel_yellow")
+            return (text, _PILL_NEUTRAL_TONE)
         # Unter Schwelle: Bereich + Uhrzeit des Maximums
         min_v = min(v for v, _ in vals)
         max_ts = max(vals, key=lambda x: x[0])[1]
         max_hh = local_hour(max_ts, tz)
         return (f"Feuchte {min_v:.0f}–{peak_val:.0f}% · Max {max_hh:02d}:00",
-                "ampel_green")
+                _PILL_NEUTRAL_TONE)
 
     return None
 

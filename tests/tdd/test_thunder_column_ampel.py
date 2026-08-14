@@ -33,10 +33,11 @@ TZ = ZoneInfo("Europe/Berlin")
 # Fest verdrahtet: die Spec schreibt ausdrücklich vor, den bestehenden
 # Baustein `_ampel_dot_css`/`_AMPEL_DOT_COLORS` wiederzuverwenden, nicht eine
 # neue Palette zu erfinden.
+# Fix #1801 S2: yellow/orange/red neu (groesserer Abstand orange<->rot).
 _GREEN_FILL = "#15803d"
-_YELLOW_FILL = "#ca8a04"
-_ORANGE_FILL = "#c2410c"
-_RED_FILL = "#b91c1c"
+_YELLOW_FILL = "#d69500"
+_ORANGE_FILL = "#d4530a"
+_RED_FILL = "#a8104a"
 
 _LEVEL_FILL = {
     ThunderLevel.NONE: _GREEN_FILL,
@@ -514,9 +515,10 @@ def _compare_thunder_cell(html: str) -> str:
 @pytest.mark.parametrize(
     "level,expected_word,expected_bg",
     [
-        (ThunderLevel.LOW, "leicht", "#fbeeb8"),
-        (ThunderLevel.MED, "mittel", "#fad6b8"),
-        (ThunderLevel.HIGH, "hoch", "#f6c5bf"),
+        # Fix #1801 S2: neue Flaechenfarben (vormals #fbeeb8/#fad6b8/#f6c5bf).
+        (ThunderLevel.LOW, "leicht", "#fdf4cd"),
+        (ThunderLevel.MED, "mittel", "#fbe3cc"),
+        (ThunderLevel.HIGH, "hoch", "#f7d3e2"),
     ],
     ids=["low", "med", "high"],
 )

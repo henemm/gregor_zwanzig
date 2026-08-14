@@ -26,10 +26,11 @@ from playwright.sync_api import sync_playwright  # noqa: E402
 # Design-SOLL-Werte (aus screen-output-preview.jsx)
 # ---------------------------------------------------------------------------
 LINE_COLOR_RGB = "rgb(240, 236, 225)"     # #f0ece1 — alle Zell-Linien
+# Fix #1801 S2: neue Flaechenfarben (groesserer Abstand orange<->rot).
 RISK_CELL = {
-    "caution": "rgb(251, 238, 184)",       # #fbeeb8
-    "warn":    "rgb(250, 214, 184)",       # #fad6b8
-    "danger":  "rgb(246, 197, 191)",       # #f6c5bf
+    "caution": "rgb(253, 244, 205)",       # #fdf4cd (vormals #fbeeb8)
+    "warn":    "rgb(251, 227, 204)",       # #fbe3cc (vormals #fad6b8)
+    "danger":  "rgb(247, 211, 226)",       # #f7d3e2 (vormals #f6c5bf)
 }
 WHITE_OR_TRANSPARENT = {"rgba(0, 0, 0, 0)", "rgb(255, 255, 255)", "transparent"}
 
