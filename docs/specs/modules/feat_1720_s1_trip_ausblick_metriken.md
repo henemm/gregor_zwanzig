@@ -3,7 +3,7 @@ entity_id: feat_1720_s1_trip_ausblick_metriken
 type: feature
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: approved
 version: "1.0"
 workflow: feat-1720-vorschau-metriken
 tags: [trip, outlook, ausblick, mail, metrik-katalog, feature, epic-1372, issue-1720]
@@ -13,7 +13,10 @@ tags: [trip, outlook, ausblick, mail, metrik-katalog, feature, epic-1372, issue-
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO Henning, 2026-08-14 (Freigabe auf die 16 ACs auf Deutsch,
+      nach vier Vorab-Entscheidungen: alle vier Ausgabeorte in zwei Scheiben ·
+      keine Kanal-Ebene · Legenden-Korrektur in dieser Lieferung ·
+      Vorschau-Auswahl an die Grundauswahl gebunden)
 
 ## Purpose
 
