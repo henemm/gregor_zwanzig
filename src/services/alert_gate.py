@@ -41,6 +41,7 @@ from services import alert_daily_limit, alert_log
 from services.alert_briefing_anchor import last_briefing_at
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.throttle_store import ThrottleStore
+from utils.timezone import local_fmt
 
 logger = logging.getLogger("alert_gate")
 
@@ -288,14 +289,14 @@ def check_briefing_imminent(
         logger.debug(
             "Keine Sperre fuer %s: das anstehende Briefing wurde um %s Ortszeit "
             "bereits versucht.",
-            entity_id, letzter_versuch.astimezone(zone).strftime("%H:%M"),
+            entity_id, local_fmt(letzter_versuch, zone),
         )
         return False
 
     logger.debug(
         "Meldung unterdrueckt: Briefing fuer %s ist um %s Ortszeit faellig und "
         "noch nicht versucht.",
-        entity_id, faellig_ab.astimezone(zone).strftime("%H:%M"),
+        entity_id, local_fmt(faellig_ab, zone),
     )
     return True
 
