@@ -12,7 +12,8 @@ tags: [alerts, trip, compare, issue-1594]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-„go" am 2026-08-14 (Klartext-Freigabe der 16 Akzeptanzkriterien auf Deutsch;
+  Vorlaufzeit 60 Minuten separat entschieden)
 
 ## Purpose
 
