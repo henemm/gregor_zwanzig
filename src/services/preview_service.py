@@ -222,8 +222,13 @@ class PreviewService:
         # Werkzeuge" (S5c), nicht in diese Scheibe.
         jetzt_utc = datetime.now(timezone.utc)
         if segment_weather and render_options.show_multi_day_trend:
+            # Issue #1720 S1: `report_type` ist hier NICHT optional -- der
+            # Zeilenbau loest damit die Ausblick-Spalten auf. Ohne ihn baute
+            # die Vorschau die Zellen nach dem Abend-Default (Spaltenversatz
+            # bei Morgen-/Abend-Overrides, nur in der Vorschau).
             trend_result = scheduler._build_stage_trend(
                 trip, target, now_utc=jetzt_utc, tz=trip_tz,
+                report_type=report_type,
             )
             multi_day_trend = trend_result.rows
             outlook_state = trend_result.state

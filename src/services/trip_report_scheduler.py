@@ -1316,6 +1316,7 @@ class TripReportSchedulerService:
         if segment_weather and render_options.show_multi_day_trend:
             trend_result = self._build_stage_trend(
                 trip, target_date, now_utc=now_utc, tz=trip_tz,
+                report_type=report_type,
             )
             multi_day_trend = trend_result.rows
             outlook_state = trend_result.state
@@ -2069,6 +2070,7 @@ class TripReportSchedulerService:
         target_date: date,
         now_utc: datetime,
         tz=None,
+        report_type: str = "evening",
     ):
         """
         Build trend rows for each future stage (v4.0 column layout).
@@ -2198,6 +2200,10 @@ class TripReportSchedulerService:
                 row = build_outlook_row(
                     agg, _flat_points, WEEKDAYS_DE[stage.date.weekday()], _tz,
                     sms_thresholds=_sms_thr,
+                    # #1720 S1: ungekollabierte Konfiguration durchreichen,
+                    # nicht selbst aufloesen -- Renderer-Vokabular gehoert in
+                    # die Ausgabeschicht (test_scheduler_has_no_output_imports).
+                    trip_display_config=dc, report_type=report_type,
                     day_window_start_hour=_win_start,
                     day_window_end_hour=_win_end,
                 )

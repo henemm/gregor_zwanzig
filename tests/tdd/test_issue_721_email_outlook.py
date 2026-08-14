@@ -115,12 +115,15 @@ class TestAC1OutlookHeadIsStability:
 
         pos_outlook = html.find("Ausblick")
         pos_label = html.find("WECHSELHAFT")
-        # #911: Ausblick-Block ist jetzt OutlookTable; "N Nacht-Tief" ist eindeutige
-        # Legende-Signatur die erst NACH der Tabelle erscheint (einmaliger String)
-        pos_table = html.find("N Nacht-Tief")
+        # #911: Ausblick-Block ist jetzt OutlookTable; die Legende ist eindeutige
+        # Signatur die erst NACH der Tabelle erscheint (einmaliger String).
+        # #1720 S1 (AC-8): der Anker heisst "N Tagestief" statt "N Nacht-Tief" --
+        # die Spalte zeigt das Tages-Minimum im Wanderfenster, nie ein
+        # naechtliches Tief. Geprueft wird hier weiterhin die REIHENFOLGE.
+        pos_table = html.find("N Tagestief")
         assert pos_outlook != -1, "Ausblick-Block fehlt"
         assert pos_label != -1, "Großwetterlage-Label fehlt im Output"
-        assert pos_table != -1, "Ausblick-Tabellen-Legende 'N Nacht-Tief' fehlt"
+        assert pos_table != -1, "Ausblick-Tabellen-Legende 'N Tagestief' fehlt"
         # Reihenfolge: Ausblick-Marker → Wetterlage → Tabellen-Legende
         assert pos_outlook < pos_label < pos_table, (
             f"Reihenfolge falsch: outlook={pos_outlook}, label={pos_label}, "

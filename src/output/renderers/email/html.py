@@ -966,6 +966,7 @@ def render_html(
     multi_day_trend: Optional[list[dict]],
     outlook_state: Optional["OutlookState"] = None,
     outlook_horizon_days: Optional[int] = None,
+    outlook_metrics: Optional[list[dict]] = None,
     compact_summary: Optional[str],
     tz: ZoneInfo,
     friendly_keys: set[str],
@@ -1304,9 +1305,18 @@ def render_html(
             + "</div>"
         )
 
+    # Issue #1720 S1: gewaehlte Vorschau-Spalten. None = Altbestand (sieben
+    # feste Spalten, unveraendert), [] = bewusst geleert (Block entfaellt
+    # GANZ -- render_outlook_table(metrics=[]) lieferte sonst eine Tabelle mit
+    # nur der Wochentag-Spalte, outlook.py:148-172).
+    # 🔴 Der Renderer loest NICHT selbst auf (F001): das `dc` hier ist
+    # kanal-kollabiert, der Zeilenbau arbeitet ungekollabiert -- zwei
+    # Aufloesungen ergaeben richtige Ueberschriften ueber falschen Zahlen.
+    _outlook_metrics = outlook_metrics
+
     # Issue #1313 (E1): Gewitter-Vorschau entfaellt, wenn der Mehrtages-
     # Ausblick in derselben Mail aktiv ist (gleiche Datenquelle, Dopplung).
-    outlook_active = show_outlook and bool(multi_day_trend)
+    outlook_active = show_outlook and bool(multi_day_trend) and _outlook_metrics != []
 
     thunder_html = ""
     if thunder_forecast and not outlook_active:
@@ -1347,23 +1357,32 @@ def render_html(
         return "#b91c1c"
 
     trend_html = ""
-    if multi_day_trend:
+    if multi_day_trend and _outlook_metrics != []:
         # AC-8/9/12 (#911): Ausblick als OutlookTable (Tabelle statt Chips).
         # Spalten: Tag · N · D · R · PR · Wind · Böen · Gew · ACC
         # Zell-Hintergrund je Warn-Level; Code-Legende darunter.
         # Epic #1301 B4: Tabellenbau in geteilten Baustein extrahiert
         # (Trip/Compare-Teilungs-Invariante) -- show_acc=True bleibt
         # byte-identisch zum bisherigen Inline-Verhalten.
-        outlook_table = render_outlook_table(multi_day_trend, show_acc=True)
+        outlook_table = render_outlook_table(multi_day_trend, show_acc=True,
+                                             metrics=_outlook_metrics)
 
-        # Code-Legende
-        outlook_legend = (
-            f'<div style="font-family:{FONT_DATA};font-size:9px;color:#9a978d;'
-            f'margin-top:6px;line-height:1.8;">'
-            f'N Nacht-Tief · D Tag-Hoch °C · R Regen mm · PR Regen-W. % · '
-            f'Wind/Böen km/h · Gew Gewitter-Stufe @h · ACC Prognose-Genauigkeit'
-            f'</div>'
-        )
+        # Code-Legende — NUR im Altbestand (#1720 S1, AC-9): sie beschreibt
+        # ausschliesslich die sieben festen Spalten. Bei aktiver Auswahl sind
+        # die Tabellenkoepfe bereits ausgeschriebene deutsche Katalog-Labels;
+        # eine Legende wuerde dort Kuerzel erklaeren, die gar nicht vorkommen.
+        # "N Tagestief" statt "N Nacht-Tief" (AC-8): die Spalte zeigt
+        # `summary.temp_min_c`, das Tages-Minimum IM WANDERFENSTER -- die
+        # Nachtdaten (_fetch_night_weather) fliessen hier gar nicht ein.
+        outlook_legend = ""
+        if _outlook_metrics is None:
+            outlook_legend = (
+                f'<div style="font-family:{FONT_DATA};font-size:9px;color:#9a978d;'
+                f'margin-top:6px;line-height:1.8;">'
+                f'N Tagestief · D Tag-Hoch °C · R Regen mm · PR Regen-W. % · '
+                f'Wind/Böen km/h · Gew Gewitter-Stufe @h · ACC Prognose-Genauigkeit'
+                f'</div>'
+            )
 
         # AC-6 (#899): Context label (gesendet-Zeitstempel) bleibt erhalten
         _weekday_de_short = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]

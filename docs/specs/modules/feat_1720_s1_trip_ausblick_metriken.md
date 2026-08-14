@@ -169,19 +169,19 @@ Implementation Details Punkt 5).
    keinen äquivalenten Render-Options-Schritt. Deshalb wird die Bedingung, ob
    der Block überhaupt gebaut wird, direkt an der Aufrufstelle erweitert:
    - `html.py`: `if multi_day_trend and _outlook_metrics != []:` statt
-     `if multi_day_trend:` (Zeile 1350), wobei
-     `_outlook_metrics = resolve_outlook_metrics(dc.outlook_metrics) if dc is not None else None`
-     einmalig vor dem Block berechnet wird.
-   - `plain.py`: `outlook_active = show_outlook and bool(multi_day_trend) and _outlook_metrics != []`
-     (Zeile 309), dieselbe `_outlook_metrics`-Berechnung.
+     `if multi_day_trend:`.
+   - `plain.py`: `outlook_active = show_outlook and bool(multi_day_trend) and _outlook_metrics != []`,
+     dieselbe `_outlook_metrics`.
    - Für `_outlook_metrics is None` (Altbestand) bleibt das Verhalten
      unverändert — nur der explizite `[]`-Fall schaltet ab.
+   - Woher `_outlook_metrics` in beiden Renderern kommt, steht in Punkt 10 —
+     sie berechnen es **nicht** selbst.
 
 3. **`metrics=` wird an BEIDE Renderer übergeben, nicht nur an HTML.**
    Der stärkste vorhandene Wächter prüft das nicht (s. „Der Befund, der die
    Testplanung bestimmt" unten) — eine Aufrufstelle zu vergessen fiele ohne
-   den neuen Wirkort-Test nicht auf. `html.py:1357` UND `plain.py:338`
-   bekommen dieselbe `_outlook_metrics`.
+   den neuen Wirkort-Test nicht auf. `render_outlook_table()` (HTML) UND
+   `render_outlook_plain()` (Klartext) bekommen dieselbe `_outlook_metrics`.
 
 4. **Legende wird an dieselbe Bedingung gekoppelt wie die Spaltenauswahl.**
    Die Abkürzungs-Legende (`html.py:1360-1366`,
@@ -264,6 +264,48 @@ Implementation Details Punkt 5).
      sicher, dass eine bewusste Leerauswahl (`outlookMetricKeys = []`)
      tatsächlich als `[]` gesendet wird und nicht durch den Spread verdeckt
      bleibt (RMW-Pflicht, Fehlerklasse #102 → #1159).
+
+10. **EINE Auflösungsregel, explizit durchgereicht (Nachbesserung nach
+    Adversary-Finding F001, PO-Entscheid 2026-08-14).** Die Auswahl wurde
+    zunächst an drei Stellen unabhängig aufgelöst (Zeitplaner, `html.py`,
+    `plain.py`). Der Zeitplaner arbeitete auf dem ungekollabierten
+    `trip.display_config`, die Renderer auf dem kanal-kollabierten `dc`
+    (`trip_report.py`, `dataclasses.replace(dc, metrics=active_metrics)`) —
+    ein Ausdruck, der auf beiden Seiten dasselbe liefert, musste deshalb
+    `get_metrics_for_channel("email", …)` sein und schnitt damit
+    kanal-gebunden. Die neue Bauform beseitigt die Ursache statt eine Seite
+    zu opfern:
+    - **Regel:** `resolve_trip_outlook_metrics(dc, report_type)`
+      (`compare_outlook_metric_ids.py`) schneidet gegen
+      `dc.get_metrics_for_report_type(report_type)` — kanal-neutral,
+      spec-wörtlich, D2/D3/D4 unverändert. Der Ortsvergleich ruft weiterhin
+      `resolve_outlook_metrics()` und bleibt unberührt.
+    - **Spalten:** `trip_report.py` löst EINMAL aus `_dc_uncollapsed` auf
+      (dem Stand, den #1575 Scheibe 3 für die SMS eingeführt hat) und reicht
+      das Ergebnis als `render_email(outlook_metrics=…)` →
+      `render_html(outlook_metrics=…)` / `render_plain(outlook_metrics=…)`
+      durch. Beide Renderer lösen nicht mehr selbst auf; ihre Importe von
+      `resolve_trip_outlook_metrics` entfallen.
+    - **Zeilen:** der Zeitplaner löst gar nicht mehr auf, sondern reicht die
+      ungekollabierte Konfiguration durch:
+      `build_outlook_row(…, trip_display_config=dc, report_type=report_type)`.
+      Die Auflösung passiert dort, in derselben Schicht wie der Spaltenbau.
+      Nebeneffekt, der sie erzwingt: der Zeitplaner darf laut
+      `test_notification_service::test_scheduler_has_no_output_imports`
+      **nichts** aus `output/` importieren außer `build_outlook_row` — die
+      erste Fassung verletzte diese Wache.
+    - **Warum `build_outlook_row()` weiterhin selbst auflöst** (die eine
+      verbleibende zweite Aufrufstelle, bewusst benannt): die Zellen entstehen
+      zur Aggregationszeit aus `SegmentWeatherSummary`. Dieses Objekt reist
+      nicht im Zeilen-Dict zum Renderer; es dorthin zu heben würde den
+      geteilten Ausblick-Baustein und damit den Ortsvergleich ändern. Beide
+      Aufrufstellen lesen jetzt aber dieselbe Funktion **und** denselben
+      ungekollabierten Stand — die frühere Ursache des Auseinanderlaufens ist
+      damit weg, nicht nur überdeckt. Ein ausdrücklich übergebenes `metrics=`
+      hat Vorrang, deshalb ist der Compare-Pfad unverändert.
+    - **Vorschau:** `preview_service` baut die Zeilen über einen EIGENEN
+      `_build_stage_trend()`-Aufruf — dieser bekommt jetzt `report_type`
+      durchgereicht (s. „Known Limitations").
 
 ## Was sich NICHT ändern darf
 
@@ -458,6 +500,29 @@ dem Wirkort entsprechen.
     wortgleich nachgebildet — der Ausblick-Schnitt darf sich hier nicht
     anders verhalten als der Kanal-Schnitt aus #1719 Scheibe 2.
 
+- **AC-17:** Gegeben ein Trip führt ein E-Mail-eigenes Kanal-Layout
+  (`display_config.per_channel_layouts["email"]`, Bestandsfeature seit #429),
+  das eine Wettergröße NICHT enthält, während dieselbe Größe in der
+  Grundauswahl aktiv UND für die Vorschau gewählt ist, wenn die Mail über den
+  echten Versandpfad zugestellt wird, dann erscheint sie als Spalte im
+  Ausblick, und jede Spalte trägt den Wert ihrer eigenen Größe (kein
+  Spaltenversatz zwischen Überschrift und Zahl). Der Ausblick hat bewusst
+  keine Kanal-Ebene (s. „Out of Scope") — ein enges Kanal-Layout darf ihn
+  nicht leiser machen als die Grundauswahl erlaubt.
+  - Herkunft: Adversary-Finding F001 (HIGH, spec_violation) aus dem Lauf vom
+    2026-08-14 — der erste Schnitt lief gegen
+    `get_metrics_for_channel("email", report_type)` und schnitt damit für
+    diese reale, im Editor bedienbare Konfiguration strenger als AC-14/15/16
+    verlangen. Keiner der ersten 27 Tests setzte `per_channel_layouts`.
+  - Test: drei Prüfungen am Wirkort (zugestellte MIME-Nachricht bzw. echte
+    Vorschau-Pipeline), `tests/tdd/test_trip_outlook_dispatch_mail.py`:
+    (a) Kanal-Layout ohne die **zweite** gewählte Größe ⇒ sie steht trotzdem
+    in Kopfzeile und Klartext; (b) Kanal-Layout ohne die **erste** gewählte
+    Größe ⇒ ein Versatz verschöbe die Zuordnung um eine Position statt nur
+    abzuschneiden, deshalb werden zusätzlich die Zellwerte je Spalte geprüft;
+    (c) Vorschau (`PreviewService._build_report()`) zeigt dieselbe Kopfzeile
+    UND dieselben Zellen wie die zugestellte Mail.
+
 ## Mutations-Gegenproben
 
 Zehn Verfälschungen: fünf aus dem Kontextdokument (1-5), zwei S1-eigene
@@ -593,11 +658,33 @@ Formulierung ausdrücklich ab.
   geteilt bleibt. Der Schnitt sitzt bewusst außerhalb von
   `resolve_outlook_metrics()`, damit der Compare-Pfad unberührt bleibt;
   eine spätere Vereinheitlichung muss ihn hineinziehen, nicht danebenlegen.
+- 🔴 **Der Vorschau-Pfad baute die Ausblick-Zellen nach dem falschen
+  Report-Typ** (gefunden bei der F001-Nachbesserung, 2026-08-14, behoben):
+  `preview_service` rief `scheduler._build_stage_trend(trip, target, …)` ohne
+  `report_type` — der Parameter hat den Default `"evening"`. Solange dort
+  nichts aufgelöst wurde, war das folgenlos; mit dieser Scheibe steuert
+  `report_type` die Zellen. Bei einem Morgen-/Abend-Override
+  (`morning_enabled`/`evening_enabled`) hätte die Vorschau die Zellen nach dem
+  Abend-Default und die Überschriften nach dem echten Typ gebaut — sichtbar
+  als „–" unter einer korrekt beschrifteten Spalte, ausschließlich in der
+  Vorschau, nicht in der zugestellten Mail. Jetzt durchgereicht und von
+  AC-17 (c) bewacht; die Mutations-Gegenprobe (Parameter entfernt) macht
+  diesen Test rot.
+- Die Vorschau-Parität ist damit für die **Spaltenwahl** bewacht, nicht für
+  jede andere Abweichung zwischen Vorschau und Versand — dafür bleiben
+  `test_preview_parity_without_outlook.py` und `test_sms_preview_matches_sent.py`
+  zuständig.
 
 ## Definition of Done
 
-- [ ] AC-1 bis AC-16 grün
+- [ ] AC-1 bis AC-17 grün (AC-17 kam nach dem Adversary-Lauf vom 2026-08-14
+      hinzu, Finding F001 — die 16 vom PO freigegebenen ACs bleiben inhaltlich
+      unverändert)
 - [ ] Adversary-Verdict VERIFIED, alle zehn Pflicht-Mutationen gefangen
+      sowie die fünf Gegenproben der F001-Nachbesserung (Spaltenauflösung aus
+      dem kollabierten `dc`; Durchreichung an `render_html` bzw.
+      `render_plain` weggelassen; `report_type` im Vorschau-Zeilenbau
+      weggelassen; `trip_display_config` im Zeilenbau weggelassen)
 - [ ] `test_trip_outlook_parity.py` bleibt grün OHNE Anpassung der
       Golden-Dateien
 - [ ] Playwright-Beleg zu AC-6 im Änderungssatz (Screenshot + Konsolenprotokoll)
@@ -631,3 +718,8 @@ Formulierung ausdrücklich ab.
 ## Changelog
 
 - 2026-08-14: Initial spec created
+- 2026-08-14: Nachbesserung nach Adversary-Finding F001 (HIGH) — AC-17
+  ergänzt, Implementation Details Punkt 10 (eine Auflösungsregel,
+  kanal-neutral, explizit durchgereicht) ergänzt, Punkte 2/3 darauf
+  verwiesen, Known Limitations um den Vorschau-Befund erweitert, DoD-Zählungen
+  nachgezogen. Die 16 freigegebenen ACs bleiben inhaltlich unangetastet.
