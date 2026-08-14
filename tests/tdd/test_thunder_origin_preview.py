@@ -111,6 +111,12 @@ ALLE_ZUTATEN = ("Wettercode", "Blitzdichte", "CAPE", "Blitzpotenzial")
 _TZ = ZoneInfo("UTC")
 _LAT, _LON, _MODELL = 47.0, 12.0, "icon_d2"   # Gebiet DE_ALPEN
 _HEUTE = date(2026, 8, 20)     # Etappe des Briefings (Bezugstag)
+# Der EINE Zeitpunkt des Briefing-Aufbaus (#1727 S5b, ADR-0051 Regel 3): der
+# Produktivpfad bindet ihn oben einmal (`trip_report_scheduler.py:1136`,
+# `preview_service.py:223`) und reicht ihn durch. Hier fest auf den Morgen des
+# Bezugstags gesetzt, in DERSELBEN Zone, in der die ganze Fixture rechnet —
+# ein `datetime.now()` machte den Test von der Systemuhr abhaengig.
+_JETZT = datetime(2026, 8, 20, 6, 0, tzinfo=timezone.utc)
 _MORGEN = date(2026, 8, 21)    # die "+1"-Vorschau-Etappe
 _DATUM = "21.08.2026"          # so schreibt der Eintrag sein Datum
 _KLARTEXT_UEBERSCHRIFT = "━━ Gewitter-Vorschau ━━"
@@ -141,6 +147,41 @@ def _dp(h: int, *, tag: date = _MORGEN, cape=None, cin=None, lpi=None,
     )
 
 
+def _eine_zutat_14uhr() -> list[ForecastDataPoint]:
+    """Die Standard-Fixture „genau EINE tragende Zutat im Tagesfenster":
+    14 Uhr, CAPE 800 J/kg bei schwachem Deckel → ueber die echte Fusion
+    ``MED`` mit der Traegerliste ``['cape']``, im Text „· CAPE".
+
+    ALS FUNKTION statt als Konstante, damit jede Verwendung zwangslaeufig ein
+    FRISCHES Objekt bekommt: die Fusion mutiert die Punkte in-place (s.
+    ``_fusioniere``), eine geteilte Liste laege beim zweiten Durchgang anders
+    vor. Ein Aufrufausdruck kann — anders als eine Variable — nicht versehentlich
+    ein zweites Mal durch die Fusion gereicht werden.
+    """
+    return [_dp(14, cape=800.0, cin=5.0)]
+
+
+def _kein_gewitter_am_tag() -> list[ForecastDataPoint]:
+    """Die ENTSCHEIDBARE „Kein Gewitter"-Fixture (AC-6): 14 Uhr CAPE 200 J/kg
+    → ueber die echte Fusion ``NONE`` mit LEERER Traegerliste, dazu 21 Uhr
+    CAPE 800 → ``MED`` mit ``['cape']``, also AUSSERHALB des Standardfensters
+    4-19.
+
+    Warum nicht der ruhige Tag allein: fuehrt KEINE Stunde der Etappe eine
+    nichtleere Traegerliste, kann die Zeile schon deshalb keine Herkunft
+    zeigen, weil es nirgends eine gibt — der Test waere dann gruen, ganz
+    gleich ob der NONE-Guard am Wirkort steht oder nicht (gemessen: die
+    Verfaelschung, die bei ``NONE`` eine Herkunft anhaengt, laesst eine
+    reine 200er-Fixture unveraendert). Erst die Nachtstunde legt eine
+    Traegerliste in die Zeile, die ein Fehler ANHAENGEN koennte — damit wird
+    „ohne Gewitter keine Herkunft" ueberhaupt falsifizierbar.
+
+    Als FUNKTION aus demselben Grund wie ``_eine_zutat_14uhr()``: jeder
+    Fusionsdurchgang braucht ein frisches Objekt (s. ``_fusioniere``).
+    """
+    return [_dp(14, cape=200.0), _dp(21, cape=800.0, cin=5.0)]
+
+
 def _fusioniere(punkte: list[ForecastDataPoint], *,
                 traeger_verwerfen: bool = False) -> list[ForecastDataPoint]:
     """Wendet die ECHTE Fusion in-place an (setzt ``dp.thunder_level`` UND
@@ -149,7 +190,32 @@ def _fusioniere(punkte: list[ForecastDataPoint], *,
     ``traeger_verwerfen=True`` bildet einen aufgezeichneten Schnappschuss VOR
     Scheibe 1 nach: die Stufe steht am Datenpunkt, die Traegerliste fehlt
     (AC-11).
+
+    DER WAECHTER UNTEN schliesst eine ganze Fehlerklasse aus, die diese Datei
+    schon einmal falsch messen liess: die Fusion arbeitet IN-PLACE und reicht
+    ``dp.thunder_level`` als Wettercode-Eingang wieder in sich selbst hinein
+    (``thunder_enrichment.py:140-151``). Geht DIESELBE Punktliste ein zweites
+    Mal durch, traegt die Stufe ploetzlich zusaetzlich „Wettercode" — gemessen:
+    1x auf frischer Liste ``MED ['cape']``, 2x auf derselben Liste
+    ``MED ['wettercode', 'cape']``. Im Produktivpfad kann das nicht passieren,
+    weil der einzige echte Einstieg ``enrich_thunder()`` bei einer bereits
+    angereicherten Reihe sofort zurueckkehrt (``:228-231``) — es ist also ein
+    Fixture-Fehler, kein Codefehler, und genau deshalb gehoert der Waechter
+    hierher und nicht in den Prueflings-Code. Ohne ihn faellt jeder kuenftige
+    Test derselben Datei still darauf herein, sobald er eine Punktliste in
+    einer Variablen bindet und zweimal verwendet.
     """
+    bereits = [p for p in punkte
+               if p.thunder_level is not None or p.thunder_level_signals is not None]
+    assert not bereits, (
+        "Fixture-Aliasing: diese Punktliste wurde bereits fusioniert. Die "
+        "Fusion arbeitet in-place und speist ihr eigenes Ergebnis als "
+        "Wettercode-Eingang wieder ein — ein zweiter Durchgang erfindet einen "
+        "zusaetzlichen Traeger 'Wettercode' und der Test misst dann etwas "
+        "anderes, als er behauptet. Fuer jeden Durchgang eine FRISCHE Liste "
+        "bauen (z.B. ueber ``_eine_zutat_14uhr()``), nie eine Variable "
+        f"mehrfach durchreichen. Betroffene Punkte: "
+        f"{[(p.ts.hour, p.thunder_level, p.thunder_level_signals) for p in bereits]!r}")
     region = thunder_region_for(_LAT, _LON)
     _fuse_thunder_levels(
         punkte, cape_ladder_thresholds_jkg(_MODELL, region),
@@ -233,13 +299,21 @@ class _ZeitplanerOhneNetz(TripReportSchedulerService):
 
     ``segmente=[]`` heisst „der Rueckfall kann strukturell nichts liefern" —
     genau das macht den Primaerpfad-Nachweis in ``_primaer()`` entscheidbar.
+
+    ``now_utc`` steht in der Signatur, weil der Produktivaufrufer ihn seit
+    #1727 S5b als Schluesselwort uebergibt (``trip_report_scheduler.py:2316``).
+    Ersetzt ist genau der Netzabruf: im Original waehlt ``now_utc`` ueber
+    ``trip_local_today()`` -> ``is_within_forecast_horizon()``, WELCHE ETAPPEN
+    ueberhaupt abgerufen werden; die hier gelieferten Segmente sind das
+    Ergebnis genau dieser Wahl. Auf die Fensterfrage (welche STUNDEN zaehlen)
+    wirkt er an keiner Stelle.
     """
 
     def __init__(self, segmente: list[SegmentWeatherData]) -> None:
         super().__init__()
         self._segmente = list(segmente)
 
-    def _collect_future_stage_weather(self, trip, target_date,
+    def _collect_future_stage_weather(self, trip, target_date, now_utc,
                                       wanted_dates=None):
         return list(self._segmente)
 
@@ -290,7 +364,8 @@ def _rueckfall(punkte: list[ForecastDataPoint], *,
                  _MORGEN, 2)]
     )
     forecast = zeitplaner._build_thunder_forecast_from_trend_or_fetch(
-        _TripAttrappe(report_config), _HEUTE, _TZ, multi_day_trend=None,
+        _TripAttrappe(report_config), _HEUTE, now_utc=_JETZT, tz=_TZ,
+        multi_day_trend=None,
     )
     assert forecast and "+1" in forecast, (
         "Fixture-/Wegefehler: ohne Trend MUSS der Rueckfallpfad einen "
@@ -316,7 +391,8 @@ def _primaer(punkte: list[ForecastDataPoint], *,
                            traeger_verwerfen=traeger_verwerfen)]
     zeitplaner = _ZeitplanerOhneNetz([])
     forecast = zeitplaner._build_thunder_forecast_from_trend_or_fetch(
-        _TripAttrappe(report_config), _HEUTE, _TZ, multi_day_trend=zeilen,
+        _TripAttrappe(report_config), _HEUTE, now_utc=_JETZT, tz=_TZ,
+        multi_day_trend=zeilen,
     )
     assert forecast and "+1" in forecast, (
         "Fixture-/Wegefehler: die Trend-Zeile MUSS ueber den Primaerpfad "
@@ -579,25 +655,80 @@ def test_ac6_kein_gewitter_zeigt_nie_herkunft():
     ``ThunderLevel.NONE`` mit LEERER Traegerliste — kein Python-``None``, das
     schon ein frueher Guard abfinge.
 
-    Gegenprobe an derselben Fixture (Spec-Auflage): dieselbe Stunde mit
-    ``cape=800`` liegt oberhalb NONE und MUSS die Herkunft zeigen. Ohne sie
-    waere dieser Test auch dann gruen, wenn die Herkunft nirgends erschiene.
-    Die Pflicht-Mutation (c) der Spec setzt an genau der Einfuegestelle an,
+    BEIDE Pfade, weil die Zusicherung ZWEIMAL im Produktivcode steht, in
+    baulich getrennten Zweigen mit je EIGENER Traegerquelle:
+    ``_thunder_entry_from_trend_row()`` (``trip_report_scheduler.py:2376``,
+    Quelle ``row["hourly_thunder_signals"]``) und ``_build_thunder_forecast()``
+    (``:2605``, Quelle ``summarize_points(thunder_dps)``). Gemessen (Adversary
+    F001): eine Verfaelschung, die im PRIMAERpfad bei ``NONE`` doch eine
+    Herkunft anhaengt, liess die Fassung dieses Tests, die nur ueber
+    ``_rueckfall()`` lief, vollstaendig gruen — die Haelfte der Zusicherung war
+    unbewacht. Muster fuer die Zwei-Pfad-Messung:
+    ``test_ac11_ohne_traegerinfo_bleibt_byte_identisch``.
+
+    Fixture: ``_kein_gewitter_am_tag()`` — ruhiger Tag, Gewitter erst um
+    21 Uhr, also AUSSERHALB des Fensters. Das ist die einzige Gestalt, in der
+    die Zeile ueberhaupt eine Traegerliste MIT SICH FUEHRT, die ein Fehler
+    anhaengen koennte; ohne sie ist der Test unfalsifizierbar (Begruendung
+    dort). Der Nacht-Halbsatz ist Folge derselben Auflage und Teil der
+    Erwartung — er ist wortgleich zu heute und traegt selbst keine Herkunft.
+
+    Gegenprobe JE PFAD (Spec-Auflage): dieselbe 14-Uhr-Stunde mit ``cape=800``
+    liegt oberhalb NONE und MUSS ueber DENSELBEN Pfad die Herkunft zeigen.
+    Ohne sie waere der jeweilige Abwesenheits-Nachweis auch dann gruen, wenn
+    die Herkunft auf diesem Pfad ueberhaupt nicht entstuende.
+    Die Pflicht-Mutation (c) der Spec setzt an genau den Einfuegestellen an,
     die dieser Test bewacht.
     """
-    ruhig = _beide_fassungen(_mail(_rueckfall([_dp(14, cape=200.0)])))
-    assert ruhig == f"{_DATUM}: Kein Gewitter erwartet", (
-        f"Ohne Gewitter bleibt die Zeile zeichengleich zu heute: {ruhig!r}")
-    assert "·" not in ruhig, (
-        f"Kein zusaetzlicher ·-Trenner ohne Gewitter: {ruhig!r}")
-    for zutat in ALLE_ZUTATEN:
-        assert zutat not in ruhig, (
-            f"'{zutat}' darf ohne Gewitter nicht erscheinen: {ruhig!r}")
+    ohne = f"{_DATUM}: Kein Gewitter erwartet, nachts mittleres Gewitter ab 21:00"
+    mit = f"{_DATUM}: ⚡ Gewitter möglich ab 14:00 · CAPE"
 
-    laut = _beide_fassungen(_mail(_rueckfall([_dp(14, cape=800.0, cin=5.0)])))
-    assert laut == f"{_DATUM}: ⚡ Gewitter möglich ab 14:00 · CAPE", (
-        "Gegenprobe gescheitert: oberhalb NONE MUSS die Herkunft erscheinen, "
-        f"sonst beweist die ruhige Zeile nichts: {laut!r}")
+    def _ohne_herkunft(zeile: str, pfad: str, ohne: str = ohne) -> None:
+        assert zeile == ohne, (
+            f"{pfad}: ohne Gewitter im Tagesfenster bleibt die Zeile "
+            f"zeichengleich zu heute: {zeile!r}")
+        assert "·" not in zeile, (
+            f"{pfad}: kein zusaetzlicher ·-Trenner ohne Gewitter: {zeile!r}")
+        for zutat in ALLE_ZUTATEN:
+            assert zutat not in zeile, (
+                f"{pfad}: '{zutat}' darf ohne Gewitter nicht erscheinen — auch "
+                f"nicht die Zutat der Nachtstunde: {zeile!r}")
+
+    # --- RUECKFALLPFAD (_build_thunder_forecast, :2605) --------------------
+    _ohne_herkunft(
+        _beide_fassungen(_mail(_rueckfall(_kein_gewitter_am_tag()))),
+        "Rueckfallpfad",
+    )
+    # Der durchweg ruhige Tag zusaetzlich, damit auch die Fassung OHNE jeden
+    # Nachtteil zeichengleich bleibt (Bestandszusicherung, unveraendert).
+    _ohne_herkunft(
+        _beide_fassungen(_mail(_rueckfall([_dp(14, cape=200.0)]))),
+        "Rueckfallpfad (ruhiger Tag ohne Nachtgewitter)",
+        f"{_DATUM}: Kein Gewitter erwartet",
+    )
+    laut_r = _beide_fassungen(_mail(_rueckfall(_eine_zutat_14uhr())))
+    assert laut_r == mit, (
+        "Gegenprobe Rueckfallpfad gescheitert: oberhalb NONE MUSS die Herkunft "
+        f"erscheinen, sonst beweist die ruhige Zeile nichts: {laut_r!r}")
+
+    # --- PRIMAERPFAD (_thunder_entry_from_trend_row, :2376) ----------------
+    aus = TripReportConfig(show_outlook=False)
+    forecast, zeilen = _primaer(_kein_gewitter_am_tag(), report_config=aus)
+    assert zeilen[0].get("hourly_thunder_signals"), (
+        "Fixture-Fehler: die Trend-Zeile MUSS eine Traegerliste fuehren, sonst "
+        "kann der Primaerpfad selbst bei entferntem NONE-Guard nichts "
+        f"anhaengen und der Test bewacht nichts: {sorted(zeilen[0])!r}")
+    _ohne_herkunft(
+        _beide_fassungen(_mail(forecast, trend=zeilen, report_type="evening",
+                               report_config=aus)),
+        "Primaerpfad",
+    )
+    forecast_g, zeilen_g = _primaer(_eine_zutat_14uhr(), report_config=aus)
+    laut_p = _beide_fassungen(_mail(forecast_g, trend=zeilen_g,
+                                    report_type="evening", report_config=aus))
+    assert laut_p == mit, (
+        "Gegenprobe Primaerpfad gescheitert: oberhalb NONE MUSS die Herkunft "
+        f"auch ueber die Trend-Zeile erscheinen: {laut_p!r}")
 
 
 def test_ac7_primaerpfad_abweichendes_fenster():
@@ -739,7 +870,7 @@ def test_ac9_sms_und_premium_sms_ohne_herkunft_sonde():
     try:
         for schluessel in list(metric_format.THUNDER_SIGNAL_LABEL_DE):
             metric_format.THUNDER_SIGNAL_LABEL_DE[schluessel] = f"{sonde}-{schluessel}"
-        bericht = _mail(_rueckfall([_dp(14, cape=800.0, cin=5.0)]))
+        bericht = _mail(_rueckfall(_eine_zutat_14uhr()))
 
         zeile = _beide_fassungen(bericht)
         assert sonde in zeile, (
@@ -776,13 +907,13 @@ def test_ac10_telegram_und_kompaktmail_unveraendert():
     eine reine Wortsuche, weil es auch eine Herkunft faenge, die unter einer
     anderen Beschriftung durchsickerte.
 
-    Gegenprobe an DERSELBEN Fixture: die VOLLMAIL zeigt die Herkunft sehr
-    wohl — ohne sie waere der Test auch dann gruen, wenn die Scheibe gar
-    nichts bewirkte.
+    Gegenprobe an derselben Fixture-DEFINITION (``_eine_zutat_14uhr()``, jeder
+    Durchgang auf einem frischen Objekt — s. dort und ``_fusioniere``): die
+    VOLLMAIL zeigt die Herkunft sehr wohl — ohne sie waere der Test auch dann
+    gruen, wenn die Scheibe gar nichts bewirkte.
     """
-    punkte = [_dp(14, cape=800.0, cin=5.0)]
-    mit = _mail(_rueckfall(punkte))
-    ohne = _mail(_rueckfall(punkte, traeger_verwerfen=True))
+    mit = _mail(_rueckfall(_eine_zutat_14uhr()))
+    ohne = _mail(_rueckfall(_eine_zutat_14uhr(), traeger_verwerfen=True))
 
     assert mit.telegram_bubbles == ohne.telegram_bubbles, (
         "Die Telegram-Bubbles duerfen sich durch die Traegerinformation NICHT "
@@ -795,8 +926,9 @@ def test_ac10_telegram_und_kompaktmail_unveraendert():
                 f"'{zutat}' darf nicht in einer Telegram-Bubble stehen: {bubble!r}")
 
     kompakt = TripReportConfig(email_format="compact")
-    k_mit = _mail(_rueckfall(punkte), report_config=kompakt).email_plain
-    k_ohne = _mail(_rueckfall(punkte, traeger_verwerfen=True),
+    k_mit = _mail(_rueckfall(_eine_zutat_14uhr()),
+                  report_config=kompakt).email_plain
+    k_ohne = _mail(_rueckfall(_eine_zutat_14uhr(), traeger_verwerfen=True),
                    report_config=kompakt).email_plain
     assert _ohne_zeitstempel(k_mit) == _ohne_zeitstempel(k_ohne), (
         "Die Kompakt-Mail darf sich durch die Traegerinformation NICHT "
@@ -835,20 +967,22 @@ def test_ac11_ohne_traegerinfo_bleibt_byte_identisch():
       der aufgezeichneten Golden-Fixturen unter
       ``tests/fixtures/outlook_trip_parity/``.
 
-    Gegenprobe an DERSELBEN Fixture: dieselben Punkte MIT Traegerliste zeigen
-    die Herkunft sehr wohl. Pflicht-Mutation (f) der Spec entfernt den Guard,
-    der die Herkunft nur bei vorhandener Traegerliste anhaengt.
+    Gegenprobe an derselben Fixture-DEFINITION (``_eine_zutat_14uhr()``, jedes
+    Mal ein frisches Objekt — s. dort und ``_fusioniere``): dieselben Rohwerte
+    MIT Traegerliste zeigen die Herkunft sehr wohl. Pflicht-Mutation (f) der
+    Spec entfernt den Guard, der die Herkunft nur bei vorhandener Traegerliste
+    anhaengt.
     """
-    punkte = [_dp(14, cape=800.0, cin=5.0)]
     heute = f"{_DATUM}: ⚡ Gewitter möglich ab 14:00"
 
-    ohne_r = _beide_fassungen(_mail(_rueckfall(punkte, traeger_verwerfen=True)))
+    ohne_r = _beide_fassungen(_mail(
+        _rueckfall(_eine_zutat_14uhr(), traeger_verwerfen=True)))
     assert ohne_r == heute, (
         "Rueckfallpfad ohne Traegerliste: die Zeile bleibt byte-identisch zu "
         f"heute: {ohne_r!r}")
 
     aus = TripReportConfig(show_outlook=False)
-    forecast_p, zeilen_p = _primaer(punkte, report_config=aus,
+    forecast_p, zeilen_p = _primaer(_eine_zutat_14uhr(), report_config=aus,
                                     traeger_verwerfen=True)
     assert "hourly_thunder_signals" not in zeilen_p[0], (
         "Fixture-Fehler: eine Alt-Zeile darf das S5a-Traegerfeld gar nicht "
@@ -859,7 +993,7 @@ def test_ac11_ohne_traegerinfo_bleibt_byte_identisch():
         "Primaerpfad ohne Traegerfeld: die Zeile bleibt byte-identisch zu "
         f"heute: {ohne_p!r}")
 
-    mit = _beide_fassungen(_mail(_rueckfall(punkte)))
+    mit = _beide_fassungen(_mail(_rueckfall(_eine_zutat_14uhr())))
     assert mit == f"{heute} · CAPE", (
         "Gegenprobe gescheitert: MIT Traegerliste MUSS die Herkunft "
         f"erscheinen, sonst beweisen die Alt-Faelle nichts: {mit!r}")
