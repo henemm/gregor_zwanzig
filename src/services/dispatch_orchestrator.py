@@ -148,7 +148,15 @@ class CompareDispatchStrategy:
         # mit ueberschrittenem end_date -- unabhaengig vom Faelligkeits-Slot.
         from services.scheduler_dispatch_service import _auto_pause_expired_presets
 
-        _auto_pause_expired_presets(self._presets, self._user_id, self._data_root)
+        # Issue #1727 S5b: `now_utc` liegt hier bereits als Parameter vor und
+        # die Ortsliste hat `collect_due` schon geladen -- beides wird
+        # durchgereicht, damit der Ablauf gegen den ORTSTAG des Presets
+        # geprueft wird (ADR-0044) statt gegen den Servertag. Keine zweite
+        # Zeitabfrage, kein zweiter Ladevorgang.
+        _auto_pause_expired_presets(
+            self._presets, self._user_id, self._data_root,
+            now_utc, self._all_locations or [],
+        )
 
     def dispatch_one(self, item) -> None:
         from app.loader import load_all_locations

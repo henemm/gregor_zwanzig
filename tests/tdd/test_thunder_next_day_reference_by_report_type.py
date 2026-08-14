@@ -81,7 +81,8 @@ class TestThunderNextDayReferenceByReportType:
         )
 
         fc = svc._build_thunder_forecast_from_trend_or_fetch(
-            None, target, tz=None, multi_day_trend=_trend_rows_for(target),
+            None, target, now_utc=_jetzt(), tz=None,
+            multi_day_trend=_trend_rows_for(target),
         )
 
         expected = (target + timedelta(days=1)).strftime("%d.%m.%Y")
@@ -104,7 +105,8 @@ class TestThunderNextDayReferenceByReportType:
         )
 
         fc = svc._build_thunder_forecast_from_trend_or_fetch(
-            None, target, tz=None, multi_day_trend=_trend_rows_for(target),
+            None, target, now_utc=_jetzt(), tz=None,
+            multi_day_trend=_trend_rows_for(target),
         )
 
         expected = (target + timedelta(days=1)).strftime("%d.%m.%Y")
@@ -126,11 +128,11 @@ class TestThunderNextDayReferenceByReportType:
         evening_target = svc._get_target_date("evening", _trip, _now)
 
         fc_morning = svc._build_thunder_forecast_from_trend_or_fetch(
-            None, morning_target, tz=None,
+            None, morning_target, now_utc=_jetzt(), tz=None,
             multi_day_trend=_trend_rows_for(morning_target),
         )
         fc_evening = svc._build_thunder_forecast_from_trend_or_fetch(
-            None, evening_target, tz=None,
+            None, evening_target, now_utc=_jetzt(), tz=None,
             multi_day_trend=_trend_rows_for(evening_target),
         )
 

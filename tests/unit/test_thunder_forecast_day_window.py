@@ -34,6 +34,10 @@ from app.models import ThunderLevel
 _UTC = ZoneInfo("UTC")
 _TODAY = date(2026, 7, 3)
 _TOMORROW = date(2026, 7, 4)
+# #1727 S5b: `now_utc` ist Pflichtparameter. Dieser Test misst das Tagesfenster
+# an fertigen Trend-Zeilen — der Zeitpunkt spielt fuer die Zusicherung keine
+# Rolle, er passt hier nur zum Zieltag.
+_NOW_UTC = datetime(2026, 7, 3, 12, 0, tzinfo=timezone.utc)
 
 
 def _dp(day: date, hour: int, thunder: ThunderLevel = ThunderLevel.NONE):
@@ -152,7 +156,7 @@ def test_trend_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
 
     row = _trend_row({2: ThunderLevel.LOW}, ThunderLevel.LOW)
     fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-        None, _TODAY, _UTC, multi_day_trend=[row],
+        None, _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
     assert entry is not None, "Trend-Zeile fuer morgen wurde nicht verwendet"
@@ -172,7 +176,7 @@ def test_trend_ab_stunde_kommt_aus_dem_fenster():
 
     row = _trend_row({2: ThunderLevel.LOW, 19: ThunderLevel.LOW}, ThunderLevel.LOW)
     fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-        None, _TODAY, _UTC, multi_day_trend=[row],
+        None, _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
     assert entry is not None
@@ -194,14 +198,25 @@ class _StubReportConfig:
 
 
 class _StubTrip:
-    """Echtes Datenobjekt (kein Mock): nur die zwei Zugriffe, die
-    _build_thunder_forecast_from_trend_or_fetch auf dem Trip macht."""
+    """Echtes Datenobjekt (kein Mock): nur die Zugriffe, die
+    _build_thunder_forecast_from_trend_or_fetch auf dem Trip macht.
+
+    #1727 S5b: seit der Rueckfall-Pfad den ORTSTAG der Tour bestimmt
+    (`trip_local_today` -> `anchor_tz` -> `display_tz`), sind es drei statt
+    zwei — `stages` und `get_stage_for_date` kommen dazu. Ohne Etappen faellt
+    die Zonenaufloesung auf UTC (`trip_day.trip_tz`); dieser Test misst das
+    Tagesfenster, nicht die Zone.
+    """
 
     def __init__(self, start, end):
         self.report_config = _StubReportConfig(start, end)
+        self.stages: list = []
 
     def get_future_stages(self, target_date):
         return []
+
+    def get_stage_for_date(self, day_date):
+        return None
 
 
 def test_konfiguriertes_fenster_wird_beachtet():
@@ -211,7 +226,7 @@ def test_konfiguriertes_fenster_wird_beachtet():
 
     row = _trend_row({5: ThunderLevel.LOW}, ThunderLevel.LOW)
     fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-        _StubTrip(6, 18), _TODAY, _UTC, multi_day_trend=[row],
+        _StubTrip(6, 18), _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
     assert entry is not None
@@ -231,7 +246,7 @@ def test_mitternachts_fenster_wrap_zaehlt_nachtstunden():
 
     row = _trend_row({23: ThunderLevel.LOW}, ThunderLevel.LOW)
     fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-        _StubTrip(22, 2), _TODAY, _UTC, multi_day_trend=[row],
+        _StubTrip(22, 2), _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
     assert entry is not None

@@ -28,7 +28,7 @@ aus einer echten Codepfad-Verzweigung (Folge-Etappe mit nur EINEM Waypoint ->
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 import pytest
@@ -241,7 +241,8 @@ class TestAC3RealGapShowsUnknown:
 
         svc = TripReportSchedulerService()
         forecast = svc._build_thunder_forecast_from_trend_or_fetch(
-            trip, today, tz=None, multi_day_trend=None,
+            trip, today, now_utc=datetime.now(timezone.utc), tz=None,
+            multi_day_trend=None,
         )
 
         assert forecast is not None, (

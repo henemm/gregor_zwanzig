@@ -187,7 +187,7 @@ def test_ac2_trend_path_sets_source_trend(tmp_path, monkeypatch):
     trip = _make_trend_trip(target)
 
     # _build_stage_trend schluckt Fehler je Etappe; 429 ist hier erlaubt.
-    scheduler._build_stage_trend(trip, target)
+    scheduler._build_stage_trend(trip, target, now_utc=datetime.now(timezone.utc))
 
     entries = _read_jsonl(log_path)
     sources = {e["source"] for e in entries}

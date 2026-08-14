@@ -14,7 +14,7 @@ Spec: docs/specs/bugfix/fix_1275_sms_th_mismatch.md (AC-1/AC-2)
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from src.output.tokens.dto import HourlyValue
 from src.app.models import ThunderLevel
@@ -63,7 +63,8 @@ class TestTrendReuseNoDoubleFetch:
                Crash, d.h. kein zweiter Fetch (Doppel-Fetch vermieden)
         """
         fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-            None, _TARGET, tz=None, multi_day_trend=_trend_rows(),
+            None, _TARGET, now_utc=datetime.now(timezone.utc), tz=None,
+            multi_day_trend=_trend_rows(),
         )
 
         assert fc is not None
@@ -100,7 +101,8 @@ class TestTrendReuseNoDoubleFetch:
             },
         ]
         fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-            None, _TARGET, tz=None, multi_day_trend=rest_day_trend,
+            None, _TARGET, now_utc=datetime.now(timezone.utc), tz=None,
+            multi_day_trend=rest_day_trend,
         )
         assert "+1" not in fc, (
             f"+2-Zeile wurde als +1 verwechselt (Index- statt Datums-Match): {fc!r}"

@@ -425,14 +425,14 @@ def _trip_with_day_window(start_hour, end_hour):
 
 class TestStageTrendUsesConfiguredDayWindow:
     def _tokens_for_window(self, start_hour, end_hour):
-        from datetime import date
+        from datetime import date, datetime, timezone
         from zoneinfo import ZoneInfo
         from src.output.renderers.email.helpers import format_trend_tokens
 
         service = _TrendSchedulerWithFixedWeather.build(_weather_with_thunder_hours())
         result = service._build_stage_trend(
             _trip_with_day_window(start_hour, end_hour),
-            date.today(), tz=ZoneInfo("UTC"),
+            date.today(), now_utc=datetime.now(timezone.utc), tz=ZoneInfo("UTC"),
         )
         assert result.rows, (
             f"Kein Ausblick gebaut (state={result.state}) -- der Test misst "
@@ -463,14 +463,15 @@ class TestStageTrendUsesConfiguredDayWindow:
 
     def test_rendered_cell_carries_the_individual_window(self):
         """Wirkung statt Faehigkeit: bis in die gerenderte Zelle der Mail."""
-        from datetime import date
+        from datetime import date, datetime, timezone
         from zoneinfo import ZoneInfo
         from src.output.renderers.email.outlook import render_outlook_table
         import re
 
         service = _TrendSchedulerWithFixedWeather.build(_weather_with_thunder_hours())
         result = service._build_stage_trend(
-            _trip_with_day_window(20, 23), date.today(), tz=ZoneInfo("UTC"),
+            _trip_with_day_window(20, 23), date.today(),
+            now_utc=datetime.now(timezone.utc), tz=ZoneInfo("UTC"),
         )
         assert result.rows
         html = render_outlook_table(result.rows)
