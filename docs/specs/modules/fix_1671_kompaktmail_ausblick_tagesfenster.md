@@ -80,7 +80,18 @@ Zweig-Entscheidungen), statt eine vierte Kopie zu schreiben.
 | `output.renderers.email.helpers.format_trend_tokens()` | vorhanden, unverändert | Liefert `thunder_day_token`, `thunder_night_token`, `thunder_plain`, `thunder_day_origin` — alle nötigen Token bereits vorhanden |
 | `_thunder_token_parts()` | vorhanden, **wandert nach `helpers.py`** | Zerlegt einen Token (`leicht@5(hoch@15)`) in (Wort, Stunde, Peak-Zusatz). Steht heute in `outlook.py:43`; mit dem dritten Verbraucher (`compact.py`) gehört sie neben `format_trend_tokens()`, das diese Token baut. **Nur die Definition wandert** — `outlook.py` importiert sie aus `helpers.py`, seine vier Aufrufstellen bleiben unverändert. Kein Cross-Modul-Import einer privaten Funktion aus einem Schwester-Renderer |
 | `output.renderers.email.helpers._THUNDER_MAP["NONE"]["plain"]` | vorhanden, wiederverwendet | Explizites „kein Gewitter"-Label, wenn Stundenreihe im Tagesfenster leer ist |
-| neuer: `output.renderers.email.helpers.resolve_thunder_day_branch()` | NEU (diese Scheibe) | Einmalige Zweigwahl (day/none/plain), von `compact.py`, `outlook.py`, `narrow.py` genutzt |
+| neues Modul: `output.renderers.email.thunder_branch` | NEU (diese Scheibe) | Trägt `resolve_thunder_day_branch()` (einmalige Zweigwahl day/none/plain) **und** das hierher verschobene `_thunder_token_parts()` samt `_THUNDER_TOKEN_RE`. Genutzt von `compact.py`, `outlook.py`, `narrow.py` |
+
+**Zielort geändert gegenüber der freigegebenen Fassung (2026-08-14, Tech-Lead-Entscheid).**
+Ursprünglich war `helpers.py` vorgesehen. Diese Datei war durch das Datei-Claim-Gate
+von einer Parallel-Session belegt (verwaister Rest abgeschlossener #1801-Arbeit; die
+Eigentümer-Session hat das schriftlich bestätigt, ein Zurücknehmen der Belegung ist
+im Gate nicht vorgesehen, der Notausgang technisch aus einer laufenden Sitzung nicht
+erreichbar). Statt eine Stunde auf den 4-Stunden-Verfall zu warten, liegen die
+Funktionen nun in einem eigenen Modul — **kein AC ist davon berührt**, der Zielort
+war reines Implementierungsdetail. Zwei Nebeneffekte, beide günstig: `helpers.py`
+(ohnehin ein überladenes Sammelmodul) bleibt unverändert, und der zusätzliche
+Compare-Mail-Nachweis entfällt (s. „Nachweis vor Commit").
 
 ## Am Code gemessen
 
@@ -414,9 +425,15 @@ gemessen", Punkt 7). Damit sind **beide** Nachweisstränge fällig:
    erfolgreicher `uv run python3 .claude/hooks/briefing_mail_validator.py`-
    Lauf gegen eine echt zugestellte Staging-Mail im Kurzformat
    (`X-GZ-Format: compact`).
-2. **Compare-Nachweis** (wegen `helpers.py`, Shared-Helper-Muster): ein
-   erfolgreicher `uv run python3 .claude/hooks/email_spec_validator.py`-
-   Lauf gegen eine echt zugestellte Staging-Compare-Mail.
+2. ~~**Compare-Nachweis** (wegen `helpers.py`, Shared-Helper-Muster)~~ —
+   **entfällt** (2026-08-14): `helpers.py` wird nicht mehr angefasst, s.
+   „Zielort geändert" unter Dependencies. Am Gate-Code nachgemessen:
+   `_SHARED_HELPER_PATTERNS` (`renderer_mail_gate.py:76-78`) nennt
+   ausschließlich `helpers|design_tokens|profile_signature` — das neue Modul
+   `thunder_branch.py` matcht dort **nicht**. Es matcht aber sehr wohl das
+   breite Mail-Inhalts-Muster `src/output/renderers/email/.*\.py$`
+   (`renderer_mail_gate.py:43`), der Briefing-Nachweis aus Punkt 1 bleibt
+   also fällig — er war es über `compact.py` ohnehin.
 
 Beide Läufe nur bei Exit 0 als „E2E bestanden" verbuchen — kein Mock, kein
 Gmail, gegen Stalwart-Test-Postfach (`GZ_IMAP_*`).

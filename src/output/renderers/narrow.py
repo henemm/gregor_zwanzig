@@ -35,6 +35,7 @@ from output.renderers.day_window import (
 )
 from output.metric_format import THUNDER_LABEL_DE
 from output.renderers.email.helpers import _THUNDER_MAP, fmt_val, format_trend_tokens
+from output.renderers.email.thunder_branch import resolve_thunder_day_branch
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
     render_official_alerts_unavailable_plain,
@@ -587,7 +588,10 @@ def _outlook_lines(multi_day_trend: list[dict]) -> list[str]:
         # hoch@0" -- ein Tagesgewitter, das es im Tagesfenster nicht gab.
         dt = tok.get("thunder_day_token", "-")
         nt = tok.get("thunder_night_token", "-")
-        if dt != "-":
+        # Issue #1671: Zweigwahl aus dem geteilten Helfer (identisch zu
+        # compact.py/outlook.py) -- die Formatierung bleibt hier unveraendert.
+        branch = resolve_thunder_day_branch(tok, stage)
+        if branch == "day":
             thunder_part = f"⚡{dt}"
             # Issue #1680 S5a: die tragende Zutat hinter der Tagesstufe --
             # derselbe Token wie in HTML- und Klartext-Mail (AC-3). Ein
@@ -595,7 +599,7 @@ def _outlook_lines(multi_day_trend: list[dict]) -> list[str]:
             _origin = tok.get("thunder_day_origin")
             if _origin:
                 thunder_part += f" · {_origin}"
-        elif stage.get("hourly_thunder"):
+        elif branch == "none":
             thunder_part = _THUNDER_MAP["NONE"]["plain"]
         else:
             thunder_part = tok["thunder_plain"]

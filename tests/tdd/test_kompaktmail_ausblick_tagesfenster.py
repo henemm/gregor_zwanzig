@@ -273,6 +273,78 @@ def test_kein_gewitter_tag_und_nacht_zeigt_explizites_none():
 
 
 # ---------------------------------------------------------------------------
+# Adversary-Nachbesserung F002 (Blocker): Peak-Zusatz einer Eskalation
+# innerhalb des Tagesfensters ist unbewacht -- Mutation `_d[2]` entfernen
+# blieb bei 582 Bestandstests gruen, weil keine Fixture eine Eskalation im
+# Tagesfenster nutzte.
+# ---------------------------------------------------------------------------
+
+def test_tagesgewitter_eskalation_zeigt_spitzenstufe_im_kompaktformat():
+    """F002: Given eine Etappe mit einer Gewitter-Eskalation INNERHALB des
+    Tagesfensters (Erst-Ueberschreitung 'leicht' um 5 Uhr, Spitze 'hoch' um
+    15 Uhr -- Vorbild ``test_outlook_day_night_thunder_split.py::
+    TestEscalationWithinWindowShowsPeak``, derselbe meteorologische
+    Normalfall wie #1653 F005) / When die Kurzformat-Mail gerendert wird /
+    Then zeigt die zugestellte, ASCII-gefaltete Ausblick-Zeile sowohl die
+    Erst-Stufe 'leicht' als auch den Peak-Zusatz '(hoch @15)' -- nicht nur
+    die erste, schwaechere Stufe.
+
+    Ohne diese Pruefung liest die Zeile zwar bereits ``thunder_day_token``
+    (AC-1), unterschlaegt aber stillschweigend die staerkere Spitzenstufe,
+    vor der gewarnt werden soll (Adversary-Finding F002).
+    """
+    zeile = _stage(hourly_thunder=(_hv(5, 1.0), _hv(15, 3.0)), thunder="NONE")
+    bericht = _mail([zeile], report_config=_KOMPAKT)
+    ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
+    assert ausblick.endswith("Tleicht (hoch @15)"), (
+        f"Die Kompakt-Ausblick-Zeile muss die Erst-Stufe 'leicht' UND den "
+        f"Peak-Zusatz '(hoch @15)' zeigen -- die Eskalation innerhalb des "
+        f"Tagesfensters darf nicht auf die schwaechere Erst-Stufe "
+        f"zusammenschrumpfen: {ausblick!r}")
+
+
+# ---------------------------------------------------------------------------
+# Adversary-Nachbesserung F001: ein gesetzter, aber unzerlegbarer
+# Tages-Token darf nicht abstuerzen, sondern muss auf "kein Gewitter"
+# zurueckfallen (Guard aus der Nachbesserung waehrend der Implementierung,
+# bislang ohne injizierten Testfall).
+# ---------------------------------------------------------------------------
+
+def test_unzerlegbarer_tagestoken_faellt_auf_kein_gewitter_zurueck():
+    """F001: Given eine Tagesstunde mit einem Gewitter-Rohwert (4.0), der in
+    KEINEM Eintrag von ``_TREND_THUNDER_LABELS`` (nur 1/2/3) vorkommt / When
+    die Kurzformat-Mail gerendert wird / Then wird ``thunder_day_token``
+    zwar gesetzt (``"-@5"``, denn ``render_threshold_peak_value`` liefert
+    fuer eine unbekannte Stufe das Label '-'), ist aber fuer
+    ``_thunder_token_parts()`` NICHT zerlegbar (der Regex verlangt ein
+    Buchstaben-Wort vor dem '@'). Die Zeile faellt auf das explizite
+    'kein Gewitter'-Zeichen zurueck, statt mit ``TypeError:
+    'NoneType' object is not subscriptable`` abzustuerzen.
+
+    Belegt die Invariante, auf der der ``branch == "day"``-Guard aus
+    ``_compact_thunder_field()`` beruht, mit einem echten injizierten Fall
+    (Adversary-Finding F001) -- vorher war die Absicherung nur durch
+    Codeanalyse, nicht durch einen Test verifiziert.
+
+    Bewusst mit Aggregat 'HIGH' (statt 'NONE', analog AC-4): faellt der
+    unzerlegbare Zweig faelschlich auf ``tok["thunder_plain"]`` zurueck
+    (die Mutation, die dieser Test fangen muss), zeigt die Zeile 'THIGH'
+    statt 'T-' -- mit Aggregat 'NONE' waeren beide Rueckfaelle zufaellig
+    identisch und die Mutation bliebe ungefangen.
+    """
+    zeile = _stage(hourly_thunder=(_hv(5, 4.0),), thunder="HIGH")
+    bericht = _mail([zeile], report_config=_KOMPAKT)
+    ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
+    assert ausblick.endswith("T-"), (
+        f"Ein gesetzter, aber unzerlegbarer Tages-Token muss auf das "
+        f"explizite 'kein Gewitter'-Zeichen 'T-' zurueckfallen (nicht "
+        f"abstuerzen und nicht das Aggregat 'HIGH' zeigen): {ausblick!r}")
+    assert "HIGH" not in ausblick, (
+        f"Das Aggregat 'HIGH' darf im Rueckfall nicht durchsickern: "
+        f"{ausblick!r}")
+
+
+# ---------------------------------------------------------------------------
 # AC-5: Bestandsschutz -- Alt-Fixture ohne Stundenreihe bleibt unveraendert
 # ---------------------------------------------------------------------------
 
