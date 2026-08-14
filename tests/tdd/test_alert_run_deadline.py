@@ -48,6 +48,8 @@ from app.trip import Stage, Trip, Waypoint
 from services import trip_alert
 from services.trip_alert import TripAlertService
 
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
 LAT, LON = 47.0, 11.0
 
 
@@ -125,7 +127,12 @@ def _active_trip(trip_id: str, *, lat: float = LAT, lon: float = LON) -> Trip:
         waypoints=[Waypoint(id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0)],
     )
     trip = Trip(id=trip_id, name="Deadline-Test-Trip", stages=[stage])
-    trip.report_config = TripReportConfig(trip_id=trip_id, send_email=True)
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs — sonst zaehlt der
+    # Lauf weniger gepruefte Trips, weil die Sperre sie vorher abschneidet.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
+    trip.report_config = TripReportConfig(
+        trip_id=trip_id, send_email=True, morning_time=morgen, evening_time=abend,
+    )
     return trip
 
 
@@ -138,7 +145,12 @@ def _official_trigger_trip(trip_id: str, *, lat: float = LAT, lon: float = LON) 
         waypoints=[Waypoint(id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0)],
     )
     trip = Trip(id=trip_id, name="Amtliche-Warnung-Trip", stages=[stage], official_warnings=None)
-    trip.report_config = TripReportConfig(trip_id=trip_id, send_email=True)
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs — sonst zaehlt der
+    # Lauf weniger gepruefte Trips, weil die Sperre sie vorher abschneidet.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
+    trip.report_config = TripReportConfig(
+        trip_id=trip_id, send_email=True, morning_time=morgen, evening_time=abend,
+    )
     return trip
 
 

@@ -183,10 +183,21 @@ def vergleichs_preset(
     *,
     quiet_from: str | None = None,
     quiet_to: str | None = None,
-    morning_time: str = "07:00:00",
+    morning_time: str | None = None,
 ) -> dict:
     """Vergleichs-Preset im Bestandsschema (Feldauswahl analog
-    `tests/test_compare_auto_pause_end_date.py::_make_preset`)."""
+    `tests/test_compare_auto_pause_end_date.py::_make_preset`).
+
+    Issue #1594: `morning_time` stand hier fest auf "07:00:00". Liegt die
+    Ortszeit des Presets in der Stunde davor, unterdrückt die neue
+    Vorlauf-Sperre den Alarm aus einem ZWEITEN Grund — die Ruhezeit-Messung
+    dieser Datei wäre dann nicht mehr die gemessene (belegt: AC-3 Stelle 1/6
+    und AC-4 waren so täglich zwei Stunden rot). Ohne Angabe setzt jetzt
+    `write_compare_briefings()` eine Stunde ausserhalb des Vorlaufs, und zwar
+    in der ZONE DER ORTE dieses Presets — hier stehen Auckland und Los Angeles
+    nebeneinander, eine gemeinsame feste Stunde kann es also gar nicht geben.
+    Wer eine bestimmte Stunde braucht (AC-9: Fälligkeit zur Ortsstunde),
+    übergibt sie weiterhin ausdrücklich."""
     preset: dict = {
         "id": preset_id,
         "name": f"Vergleich {preset_id}",
@@ -202,10 +213,11 @@ def vergleichs_preset(
         "created_at": "2026-08-01T00:00:00Z",
         "archived_at": None,
         "morning_enabled": True,
-        "morning_time": morning_time,
         "evening_enabled": False,
         "evening_time": "18:00:00",
     }
+    if morning_time is not None:
+        preset["morning_time"] = morning_time
     if quiet_from is not None:
         preset["alert_quiet_from"] = quiet_from
     if quiet_to is not None:

@@ -34,12 +34,14 @@ from output.renderers.alert.official_alerts import (
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
+from services.alert_gate import check_briefing_imminent
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import (
     effective_compare_channels,
     effective_compare_telegram_style,
 )
 from services.compare_alert_guard import is_silenced
+from services.compare_slot_scheduler import presets_due_for_hour
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.official_alerts import get_official_alerts_for_location
@@ -131,6 +133,22 @@ class CompareOfficialAlertService:
             context_label=preset_id,
         ):
             logger.debug(f"Compare official alert quiet hours active for preset {preset_id}")
+            return False
+
+        # Issue #1594: dieselbe Stufe wie im Vergleichs-Aenderungspfad, gleiche
+        # Position (nach der Ruhezeit, VOR `_detect()`). Rein lesend — die
+        # #1233-Zusicherung „kein State-Verbrauch bei Unterdrueckung" bleibt
+        # damit auch fuer diese Stufe erhalten. Ein Preset OHNE geplantes
+        # Briefing faellt aus der Sperre (AC-7/AC-9): `presets_due_for_hour`
+        # prueft Stilllegung, `end_date`, `weekly` und Slot-Schalter selbst.
+        if check_briefing_imminent(
+            user_id=self._user_id, entity_id=preset_id, entity_type="compare",
+            now=datetime.now(timezone.utc), zone=zone,
+            briefing_due_at=lambda moment: bool(
+                presets_due_for_hour([preset], all_locations, moment)
+            ),
+        ):
+            logger.debug(f"Compare official alert briefing imminent for {preset_id}")
             return False
 
         locs = [all_locations[lid] for lid in location_ids if lid in all_locations]

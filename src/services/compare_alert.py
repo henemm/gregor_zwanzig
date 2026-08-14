@@ -22,6 +22,7 @@ from app.config import Settings
 from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
 from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
+from services.alert_gate import check_briefing_imminent
 from services.alert_preset import _PRESET_TABLE
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import (
@@ -30,6 +31,7 @@ from services.compare_alert_channels import (
 )
 from services.compare_alert_guard import is_silenced
 from services.compare_location_weather_source import CompareLocationWeatherSource
+from services.compare_slot_scheduler import presets_due_for_hour
 from services.compare_weather_snapshot import CompareWeatherSnapshotService
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
@@ -186,6 +188,23 @@ class CompareAlertService:
             )
             if quiet_hours_active:
                 logger.debug(f"Compare-Alert quiet hours active for preset {preset_id}")
+                continue
+
+            # Issue #1594: steht das geplante Briefing dieses Vergleichs
+            # unmittelbar bevor und wurde es noch nicht versucht, waere dieser
+            # Alarm eine Doppel-Meldung. Zusaetzliche, rein lesende Stufe nach
+            # der Ruhezeit und VOR dem Wetterabruf. Die Faelligkeit wird GEFRAGT —
+            # `presets_due_for_hour` prueft `is_silenced`, `end_date`,
+            # `weekly` und die Slot-Schalter selbst, ein Preset ohne geplantes
+            # Briefing faellt dadurch von allein aus der Sperre (AC-7).
+            if check_briefing_imminent(
+                user_id=self._user_id, entity_id=preset_id, entity_type="compare",
+                now=now, zone=config.zone,
+                briefing_due_at=lambda moment: bool(
+                    presets_due_for_hour([preset], all_locations, moment)
+                ),
+            ):
+                logger.debug(f"Compare-Alert briefing imminent for preset {preset_id}")
                 continue
 
             # Issue #1584 Scheibe C: das Tagesfenster dieses Presets kommt aus

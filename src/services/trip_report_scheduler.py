@@ -120,6 +120,87 @@ def _is_transient_fetch_error(exc: Exception) -> bool:
 logger = logging.getLogger("trip_report_scheduler")
 
 
+def _slot_stunde(trip: "Trip", report_type: str) -> int:
+    """Konfigurierte Ortsstunde eines Slots — EINE Fassung fuer den Sammellauf
+    und fuer das Faelligkeits-Praedikat (#1594)."""
+    rc = trip.report_config
+    zeit = None
+    if rc is not None:
+        zeit = rc.morning_time if report_type == "morning" else rc.evening_time
+    if zeit is not None:
+        return zeit.hour
+    return 7 if report_type == "morning" else 18
+
+
+def trip_briefing_due_at(
+    trip: "Trip", moment: datetime, *, user_id: str,
+) -> bool:
+    """Ist fuer diesen Trip zum Zeitpunkt ``moment`` ein geplantes Briefing
+    faellig? — das REINE Faelligkeits-Praedikat (Issue #1594).
+
+    Beantwortet dieselbe Frage wie :meth:`TripReportSchedulerService._collect_due_trips`
+    (Aktiv-Filter + Faelligkeits-Fenster + Vermerk), aber SEITENEFFEKTFREI und
+    fuer EINEN Trip: kein `save_trip()`, kein Versand, keine Reservierung.
+
+    🔴 Ohne den ``skip_next``-Zweig aus ``_get_active_trips()``: der konsumiert
+    das Nutzer-Kennzeichen „naechstes Briefing ueberspringen" per
+    Read-Modify-Write MIT ``save_trip()`` bei JEDEM Aufruf. Wuerde die
+    Vorlauf-Sperre jene Methode mitbenutzen, verbrauchte sie den Wunsch im
+    15-Minuten-Alarmtakt, bevor der Briefing-Scheduler ihn je saehe — das
+    Briefing kaeme trotzdem. Fuer die Faelligkeit ist der Unterschied
+    folgenlos: ein uebersprungenes Briefing bleibt ein geplantes Briefing.
+
+    Alle uebrigen Aktiv-Filter sind zwingend enthalten (AC-8): Etappe am
+    Zieltag, ``paused_at``, ``report_config.enabled``, ``paused_until``. Fehlt
+    einer, schwiege der Alarm fuer einen Trip OHNE geplantes Briefing — ohne
+    Ersatz, also verschluckt statt ersetzt (Fehlerklasse #1555/#1584).
+
+    Args:
+        trip: der Trip.
+        moment: Zeitpunkt (UTC), gegen den geprueft wird — die Vorlauf-Sperre
+            wertet dasselbe Praedikat auch gegen spaetere Zeitpunkte aus.
+        user_id: echte Nutzer-Kennung (Mandantentrennung, nie ``"default"``) —
+            traegt den Vermerk-Speicher.
+    """
+    from services.trip_day import trip_local_now
+
+    if trip.paused_at is not None:
+        return False
+    rc = trip.report_config
+    if rc is not None:
+        if rc.enabled is False:
+            return False
+        if rc.paused_until is not None:
+            pu = rc.paused_until
+            if pu.tzinfo is None:
+                pu = pu.replace(tzinfo=timezone.utc)
+            if moment < pu:
+                return False
+
+    vor_ort = trip_local_now(trip, moment)
+    store = BriefingSlotStore(user_id)
+    for report_type, zieltag in (
+        ("morning", vor_ort.date()),
+        ("evening", vor_ort.date() + timedelta(days=1)),
+    ):
+        if trip.get_stage_for_date(zieltag) is None:
+            continue
+        stunde = _slot_stunde(trip, report_type)
+        if not stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN:
+            continue
+        # Der Vermerk beendet das Nachhol-Fenster, sobald das Briefing raus
+        # ist — sonst schwiege der Alarm bis zu drei Stunden nach einem
+        # bereits zugestellten Briefing. Nach einem GESCHEITERTEN Versand
+        # traegt er nicht (reserve-then-release, `:565-571`); dort endet die
+        # Sperre ueber den Briefing-Anker (`check_briefing_imminent`, R6).
+        if store.is_recorded(
+            trip.id, report_type, vor_ort.date(), zone=vor_ort.tzinfo,
+        ):
+            continue
+        return True
+    return False
+
+
 def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
     """Returns a hint text when conditions are notable, else None."""
     notes = []
@@ -757,16 +838,16 @@ class TripReportSchedulerService:
         _write_pending_data(path, data)
 
     def _get_morning_hour(self, trip: "Trip") -> int:
-        """Get configured morning hour for trip (default: 7)."""
-        if trip.report_config and trip.report_config.morning_time:
-            return trip.report_config.morning_time.hour
-        return 7
+        """Get configured morning hour for trip (default: 7).
+
+        Issue #1594: die Regel steht in `_slot_stunde()` — dieselbe Fassung,
+        die das Faelligkeits-Praedikat der Vorlauf-Sperre benutzt.
+        """
+        return _slot_stunde(trip, "morning")
 
     def _get_evening_hour(self, trip: "Trip") -> int:
-        """Get configured evening hour for trip (default: 18)."""
-        if trip.report_config and trip.report_config.evening_time:
-            return trip.report_config.evening_time.hour
-        return 18
+        """Get configured evening hour for trip (default: 18). S. oben."""
+        return _slot_stunde(trip, "evening")
 
     def _get_active_trips(self, report_type: str, now_utc: datetime) -> List["Trip"]:
         """

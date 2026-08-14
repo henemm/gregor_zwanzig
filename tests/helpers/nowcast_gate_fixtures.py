@@ -41,6 +41,7 @@ from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 from app.user import SavedLocation
 
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 from tests.helpers.compare_briefings import write_compare_briefings
 
 def preset_root() -> Path:
@@ -416,8 +417,16 @@ def make_trip(
     )
     stages = [stage] + list(extra_stages or [])
     trip = Trip(id=trip_id, name="S3 Nowcast-Trip", stages=stages)
+    # Issue #1594: ohne gesetzte Zeiten erbt `TripReportConfig` 07:00/18:00
+    # Ortszeit. Der Trip waere damit taeglich zweimal 60 Minuten lang
+    # "Briefing steht bevor", und die Vorlauf-Sperre unterdrueckte den Alarm
+    # aus einem ZWEITEN Grund — die Freigabe-Stufe, die diese Tests messen,
+    # waere dann nicht mehr die gemessene. Reine Vorbedingung; die Zone kommt
+    # aus derselben Aufloesung wie in der Sperre selbst (`anchor_tz`).
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=False,
+        morning_time=morgen, evening_time=abend,
     )
     trip.alert_cooldown_minutes = cooldown_minutes
     trip.alert_quiet_from = quiet_from
@@ -452,6 +461,12 @@ def save_trip(trip: Trip, user_id: str) -> None:
             "trip_id": trip.report_config.trip_id,
             "send_email": trip.report_config.send_email,
             "send_telegram": trip.report_config.send_telegram,
+            # Issue #1594: die Zeiten MUESSEN mitgeschrieben werden. Fehlen
+            # sie in der Datei, setzt der Loader beim Zurueckladen wieder die
+            # Modell-Vorgaben 07:00/18:00 ein — der am Objekt gesetzte Wert
+            # aus `make_trip()` waere dann wirkungslos, und zwar still.
+            "morning_time": trip.report_config.morning_time.isoformat(),
+            "evening_time": trip.report_config.evening_time.isoformat(),
         },
     }
     (trips_dir / f"{trip.id}.json").write_text(json.dumps(data))

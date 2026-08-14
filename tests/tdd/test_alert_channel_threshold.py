@@ -67,6 +67,7 @@ from tests.helpers.alert_log_fixtures import (
     weather,
 )
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 
 # ═══════════════════════════ Telegram-Stub (echtes 127.0.0.1) ═════════════
 #
@@ -166,9 +167,13 @@ def _telegram_trip(trip_id: str) -> Trip:
     eingeschaltetem Telegram-Kanal — Vorbild
     ``test_alert_urgency.py::_telegram_trip``."""
     trip = gust_alert_trip(trip_id)
+    # Issue #1594: das neue `report_config` ERSETZT das von `gust_alert_trip`
+    # gesetzte — ohne die Zeiten hier waere der Trip wieder im Vorlauf-Fenster
+    # und die Sperre unterdrueckte den Alarm vor jeder Schwellen-Pruefung.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=True, send_sms=False,
-        alert_on_changes=True,
+        alert_on_changes=True, morning_time=morgen, evening_time=abend,
     )
     trip.alert_cooldown_minutes = 0
     return trip
@@ -202,9 +207,11 @@ def _ac4_trip(trip_id: str) -> Trip:
             metric_alert_levels={"wind_gust": "standard"},
         ),
     )
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs (Vorbedingung).
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=False, send_telegram=False, send_sms=False,
-        alert_on_changes=True,
+        alert_on_changes=True, morning_time=morgen, evening_time=abend,
     )
     trip.alert_channels = {"email": True, "telegram": True, "sms": False}
     trip.alert_cooldown_minutes = 0
@@ -1214,8 +1221,11 @@ def test_einzeln_auftretende_amtliche_warnung_ohne_wetter_delta_respektiert_kana
             id=f"trip-standalone-official-{uuid.uuid4().hex[:6]}", name="Standalone-Official-Trip",
             stages=[stage], official_warnings=None,
         )
+        # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs (Vorbedingung).
+        morgen, abend = briefing_zeiten_fuer_trip(trip)
         trip.report_config = TripReportConfig(
             trip_id=trip.id, send_email=False, send_telegram=False, send_sms=False,
+            morning_time=morgen, evening_time=abend,
         )
         trip.alert_channels = {"email": True, "telegram": True, "sms": False}
         trip.alert_channel_thresholds = {"telegram": "HIGH"}  # email bleibt LOW

@@ -42,6 +42,8 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 from services.official_alerts.models import OfficialAlert
 
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
 # Pfadregel #1409: Pruefling relativ zur Testdatei, nicht ueber den Hauptrepo-Pfad.
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
@@ -111,7 +113,13 @@ def _identical_trip() -> Trip:
             metric_alert_levels={"wind_gust": "standard", "thunder_level": "sensibel"},
         ),
     )
-    trip.report_config = TripReportConfig(trip_id=TRIP_ID, send_email=True, alert_on_changes=True)
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs — sonst schweigt der
+    # Alarm wegen der Sperre und die Mandantentrennung bleibt ungemessen.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
+    trip.report_config = TripReportConfig(
+        trip_id=TRIP_ID, send_email=True, alert_on_changes=True,
+        morning_time=morgen, evening_time=abend,
+    )
     trip.alert_cooldown_minutes = 0
     return trip
 
