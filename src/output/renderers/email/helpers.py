@@ -1659,12 +1659,14 @@ def _pill_for_metric(
         max_val, max_ts = max(vals_ts, key=lambda x: x[0])
         max_hh = local_hour(max_ts, tz)
         # Fix #1801 S2 AC-6: Katalog fuehrt fuer UV Schwellen (3/6/8) -- der
-        # Chip wertet sie jetzt aus statt fest neutral zu bleiben. Unterhalb
-        # der ersten Schwelle bleibt der Chip neutral (keine Ampelfarbe fuer
-        # "unbedenklich").
+        # Chip wertet sie jetzt aus statt fest neutral zu bleiben. Wie bei
+        # jeder anderen Schwellen-Metrik (Wind, Regen, Temperatur ueber
+        # _extreme_ampel_tone) ist Gruen selbst eine Ampelfarbe: unterhalb
+        # der ersten Schwelle zeigt der Chip "ampel_green", nicht neutral
+        # (F001-Fix, #1801-Adversary).
         from output.metric_format import severity_for
         _level = severity_for("uv_index", max_val)
-        tone = f"ampel_{_level}" if _level and _level != "green" else _PILL_NEUTRAL_TONE
+        tone = f"ampel_{_level}" if _level else _PILL_NEUTRAL_TONE
         return (f"UV max {max_val:.1f} ({max_hh:02d}:00)", tone)
 
     if metric_id == "sunshine":

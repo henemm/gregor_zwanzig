@@ -86,20 +86,20 @@ class TestAC5ThunderChipFollowsAmpelBand:
 
 class TestAC6UvChipUsesThresholds:
 
-    def test_uv_below_first_threshold_is_neutral(self):
+    def test_uv_below_first_threshold_is_ampel_green(self):
         """GIVEN UV-Hoechstwert unter der ersten Schwelle (3) / WHEN der
-        Chip gebaut wird / THEN bleibt er neutral (kein Ampel-Ton)."""
-        from output.renderers.email.helpers import (
-            _PILL_NEUTRAL_TONE, _pill_for_metric,
-        )
+        Chip gebaut wird / THEN zeigt er 'ampel_green' -- Gruen ist eine
+        Ampelfarbe wie bei jeder anderen Schwellen-Metrik (Wind, Regen,
+        Temperatur), kein Sonderweg auf neutral (F001-Fix, #1801)."""
+        from output.renderers.email.helpers import _pill_for_metric
 
         dps = [_dp(14, uv_index=2.0)]
         pill = _pill_for_metric("uv_index", {}, dps, tz=TZ)
 
         assert pill is not None
         _text, tone = pill
-        assert tone == _PILL_NEUTRAL_TONE, (
-            f"UV 2.0 (unter Schwelle 3) sollte neutral sein, war {tone!r}"
+        assert tone == "ampel_green", (
+            f"UV 2.0 (unter Schwelle 3) sollte 'ampel_green' sein, war {tone!r}"
         )
 
     def test_uv_between_yellow_and_orange_threshold_is_ampel_yellow(self):
