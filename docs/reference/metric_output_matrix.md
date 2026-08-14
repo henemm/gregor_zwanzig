@@ -268,7 +268,7 @@ Stundentabelle (AC-6, Charakterisierung).
 | # | Unbewachte Fläche | Ort | Prio | Bemerkung |
 |---|---|---|---|---|
 | 4 | Compare-Übersichtstabelle: **Zellwert** je Metrik | `compare_html.py:294`, `comparison.py:70/100` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 5): Bei Nachmessung trug die pauschale Aussage „nur Zeilen-Existenz bewacht" nicht mehr — 15 der 25 `CV2_METRICS`-Zeilen hatten aus #1296/#1324/#1351/der Gewitter-Suite bereits Wert+Paritäts-Tests. Neuer Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S5-1 (Soll-Menge 15+10=25, disjunkt), AC-S5-2 (die 10 verbleibenden Zeilen, HTML+Klartext gegen unabhängig gerechnete Werte über `render_compare_email()`), AC-S5-3 (Engine-Vorrang vor Live-Ableitung), AC-S5-4 (Formatierungs-Konsistenz `format_value()` vs. `CV2_METRICS`-`decimals`, 10 Felder einzeln), AC-S5-5 (Fehlzeichen-Divergenz HTML `—` vs. Klartext `-`, charakterisiert), AC-S5-6 (Abhängigkeits-Anker auf die 15 bereits gedeckten Zeilen). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s5_compare_zellwerte.md` |
-| 5 | **Reihenfolge** in allen Kanälen außer E-Mail und Telegram-rich | `tokens/builder.py:78`, `comparison.py:237` | 2 | Compare-Klartext nutzt die Nutzer-Reihenfolge nur als Sichtbarkeitsfilter (#1356) |
+| 5 | **Reihenfolge** in allen Kanälen außer E-Mail und Telegram-rich | `email/helpers.py:1908`, `comparison.py:127/729`, `compare_html.py:798` | 2 | ✅ Erledigt (2026-08-14, Epic #1703 Scheibe 7). 🔴 **Zwei Angaben dieser Zeile waren bei Nachmessung falsch und sind hier ersetzt:** (a) `tokens/builder.py:78` — die Trip-SMS-Reihenfolge ist seit #1677/#1660 B bewacht (`test_channel_metric_matrix.py::test_ac15_…` (c), paarweise über alle 26 Katalog-Metriken, `_POSITION_SORTABLE_CATEGORIES`); (b) „Compare-Klartext nutzt die Reihenfolge nur als Sichtbarkeitsfilter (#1356)" — überholt seit #1359, `_ordered_rows()` (`comparison.py:127-140`) setzt sie um, der HTML-Zwilling `_visible_metrics()` (`compare_html.py:798`) ebenso. Tatsächlich fehlte die **Katalog-Deckung** (bewacht waren 4 von 25 Metriken über `tests/unit/test_compare_metric_order.py`) und die **Kanal-Achse** aus Scheibe 8. Neuer Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S7-1 (Soll-Menge 25 gerechnet + Vakuum-Schutz), AC-S7-2/3 (HTML und Klartext derselben Sendung, alle 25 paarweise), AC-S7-4 (Altbestands-Divergenz HTML `CV2_METRICS` vs. Klartext `_PLAIN_ROWS` ab Position 3 — charakterisiert, nicht gefixt, → #1199), AC-S7-5 (drei Kanäle, drei Reihenfolgen, EINE Sendung — gemessen an der zugestellten Ausgabe über Versand- **und** Vorschaupfad), AC-S7-6 (**Produktivcode-Fix**, s.u.), AC-S7-7 (Trip-Telegram-Kurzübersicht; benennt die zwei Ordnungsquellen in `render_telegram_bubbles()`), AC-S7-8 (Compare-Telegram/SMS unter Kappung — Telegram 7 Spalten, SMS 153 Zeichen), AC-S7-9 (Kompakt-Zusammenfassung ohne Reihenfolge-Achse, benannte Ausnahme). Spec: `docs/specs/modules/fix_1703_s7_reihenfolge_matrix.md` |
 | 6 | Kurzform-Mail, mobile Kompaktzeilen und Kompakt-Zusammenfassung | `email/compact.py:96`, `email/html.py:878`, `compact_summary.py:567` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): **drei** verschiedene Orte, die alle „compact" heißen und regelmäßig verwechselt werden — `render_compact()` ist das eigene Kurzformat, `_render_mobile_compact_rows()` sitzt **in** der Vollmail, `CompactSummaryFormatter` erzeugt den Fließtext-Block ebendort — jetzt einzeln bewacht: `tests/tdd/test_channel_metric_matrix.py` AC-S4-1/2/3 (Ort 1), AC-S4-5 (Ort 2), AC-S4-6/6b/7/8-10 (Ort 3). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
 | 7 | **Telegram-Kurzform** als eigener Ausgabeort | `narrow.py:346`, `:528–532`, `:586–597` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S4-12/13/14 (Auswahl/Abwahl generisch über alle wählbaren Metriken, Resolver-Divergenz zu Ort 1 als Charakterisierung, confidence-Absenz). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
 | 8 | Einheiten und Nachkommastellen je Kanal | `metric_catalog.get_decimals()`, `compare_html.py:384` | 3 | nur die Compare-Legende ist bewacht |
@@ -512,23 +512,81 @@ Météo-France-Vigilance (`_vigilance()`, nie erreicht: kein Aufrufer setzt
 `provider="meteofrance"`) bleibt dokumentiert, nicht gefixt. Details:
 `docs/specs/modules/fix_1703_s6_form_waechter.md`.
 
-### Scheibe 7 — Reihenfolge-Wächter jenseits E-Mail und Telegram-rich
+### Scheibe 7 — Reihenfolge-Wächter jenseits E-Mail und Telegram-rich ✅ ERLEDIGT (2026-08-14)
 
-Reihenfolge-Zusicherung für SMS, Compare-Klartext und Compare-Telegram. War
-**abhängig von der PO-Entscheidung zu Compare-Kanal-Tabs (7a)** — diese
-Blockade ist mit Scheibe 8 (✅ ERLEDIGT 2026-08-13) aufgehoben: Compare führt
-jetzt eine kanalbezogene Soll-Reihenfolge, gegen die sich prüfen ließe
-(`display_config.channel_active_metrics`, `resolve_channel_enabled_metrics()`).
+Deckt Fläche 5. Spec: `docs/specs/modules/fix_1703_s7_reihenfolge_matrix.md`.
 
-**Zuschnitt bleibt enger als beim Trip:** Scheibe 8 deckt nur die
-Übersichtstabelle. Ausblick (`outlook_columns()`) und Stundenverlauf
-(`hourly_selectable_metric_ids()`) sind weiterhin je eine einzige globale
-Liste ohne Kanal-Ebene (ADR-0053 Punkt 1) — für sie gibt es weiterhin keine
-kanalbezogene Soll-Reihenfolge. Scheibe 7 kann deshalb vorerst nur die
-**Übersicht** abdecken; ein Reihenfolge-Wächter für Ausblick/Stundenverlauf
-bräuchte zuerst deren eigene Kanal-Kette (ADR-0053, Abschnitt „Folgepflicht").
-*Risiko: mittel. Größe: mittel.* Deckt Fläche 5. **Frei — nicht mehr
-blockiert**, Zuschnitt Compare-Übersicht only.
+🔴 **Der Zuschnitt dieser Scheibe war zweimal falsch beschrieben — beide
+Korrekturen sind vor dem Schreiben der ACs gemessen worden.** Hier stand
+„Reihenfolge-Zusicherung für SMS, Compare-Klartext und Compare-Telegram":
+
+- **Die Trip-SMS war längst bewacht.** `test_channel_metric_matrix.py::test_ac15_…`
+  (c) prüft die Nutzer-Reihenfolge seit #1677 paarweise über alle 26
+  Katalog-Metriken; die in Fläche 5 genannte Lücke `tokens/builder.py:78` ist
+  mit #1677/#1660 B geschlossen (`_POSITION_SORTABLE_CATEGORIES`,
+  `MetricSpec.position`).
+- **Der Compare-Klartext folgt der Reihenfolge.** Die Notiz „nutzt sie nur als
+  Sichtbarkeitsfilter (#1356)" ist seit #1359 überholt (`_ordered_rows()`,
+  `comparison.py:127-140`).
+
+Was tatsächlich fehlte: die **Katalog-Deckung** (bewacht waren 4 von 25
+Metriken, `tests/unit/test_compare_metric_order.py` mit zwei getippten
+Reihenfolgen) und die **Kanal-Achse**, die es erst seit Scheibe 8 gibt. Damit
+wiederholt sich exakt das Muster aus Scheibe 2: *das Prinzip war bewacht, die
+Deckung nicht.*
+
+**Geliefert:** neun ACs (`AC-S7-1` bis `AC-S7-9`) in
+`tests/tdd/test_channel_metric_matrix.py`, 142 Testfälle, plus
+`tests/helpers/compare_order.py`. Der Nachweis der Kanal-Achse hängt an der
+**zugestellten Ausgabe** — drei Kanäle führen dieselbe Metrik-Menge in drei
+Reihenfolgen, geprüft über Versandpfad (`send_one_compare_preset()` mit Sinks)
+und Vorschaupfad, zusammen alle acht Aufrufstellen. Adversary VERIFIED; alle
+fünf Pflicht-Mutationen exakt vom vorgesehenen Test gefangen, die
+Kanal-Mutation an zwei unabhängigen Stellen.
+
+**Der Produktivcode-Fix (AC-S7-6):** `build_metrics_summary_pills()`
+(`email/helpers.py:1908`) kollabierte die geordnete Metrikliste zu
+`set(metric_ids)` und rendert danach eine feste Katalogordnung — die im Editor
+je Kanal eingestellte Reihenfolge konnte den Pillen-Überblick **strukturell
+nicht erreichen**. Ein Bedienelement ohne Wirkung, also genau die Fehlerklasse
+dieses Epics. Der Katalog bleibt weiße Liste (welche Größen überhaupt eine
+Pille haben), gibt aber nicht mehr die Ordnung vor.
+
+Zwei Nebenwirkungen, beide gemessen und gewollt: Der Fix wirkt auf **drei**
+Ausgabeorte (Kurz-E-Mail `compact.py:176` **und** beide Teile der Voll-Mail,
+`html.py:1432`/`plain.py:205`) — dabei schlug **kein** Golden- oder
+Paritätstest an, die Pillen-Reihenfolge der Voll-Mail war also von nichts
+bewacht. Und für Trips ohne jede gespeicherte Auswahl tauschen `visibility`
+und `freezing_level` ihre Plätze, weil `DEFAULT_TRIP_METRIC_IDS` seit #1552
+aus `trip_default_rank` stammt und nicht aus `_PILL_CATALOG_ORDER` — eine
+Ordnungsquelle statt zweier.
+
+**Abgelöste Entscheidung, nicht still vollzogen:** `email_metrics_summary_664.md:88`
+(2026-06-08) legte ausdrücklich fest „Reihenfolge = Katalog-Reihenfolge, nicht
+Eingabereihenfolge", und `test_metric_order_follows_catalog` fror das ein. Die
+alte Wahl war unter ihren Bedingungen richtig — im Juni 2026 gab es keine
+nutzergesetzte Reihenfolge, die Kanal-Layouts kamen erst mit #1575/#1677 (Trip)
+bzw. #1335/#1359 (Compare); die „Eingabereihenfolge" war die zufällige Folge
+der Config-Einträge und trug keine Absicht. Der Test heißt jetzt
+`test_metric_order_follows_input`, prüft paarweise statt einseitig und trägt
+den Ablösungsvermerk (#664 → abgelöst durch #1703 S7), ebenso der Docstring von
+`build_metrics_summary_pills()`.
+
+**Zuschnitt-Grenze, bewusst offen:** Ausblick (`outlook_columns()`) und
+Stundenverlauf (`hourly_selectable_metric_ids()`) des Ortsvergleichs führen
+weiterhin je eine einzige globale Liste ohne Kanal-Ebene (ADR-0053 Punkt 1) —
+für sie gibt es keine kanalbezogene Soll-Reihenfolge, gegen die sich prüfen
+ließe. Ein Wächter dafür bräuchte zuerst deren eigene Kanal-Kette.
+
+**Weitere Grenzen:** Die Altbestands-Divergenz zwischen HTML (`CV2_METRICS`)
+und Klartext (`_PLAIN_ROWS`) ab Position 3 ist charakterisiert, nicht gefixt —
+die `_PLAIN_ROWS`-Ordnung ist in `test_compare_metric_order.py` AC-7 als
+Altbestands-Standard eingefroren, ein Fix wäre eine eigene Entscheidung
+(→ #1199). `render_telegram_bubbles()` führt zwei Ordnungsquellen
+(`dc.get_enabled_metric_ids()` für die Kurzübersicht, `render_for_channel()`
+für die Tabellen-Bubbles); im Versandpfad fallen sie zusammen, das Driftrisiko
+ist benannt (AC-S7-7). `format_stage_summary()` hat keine Reihenfolge-Achse
+(AC-S7-9).
 
 ### Scheibe 8 — Compare-Kanal-Tabs im Frontend ✅ ERLEDIGT (2026-08-13)
 
@@ -589,10 +647,17 @@ gegen Staging: `frontend/e2e/compare-uebersicht-kanal-bedienung.staging.spec.ts`
 Details, alle 15 ACs (AC-S8-1 bis AC-S8-15), Mutations-Gegenproben:
 `docs/specs/modules/feat_1703_s8_compare_kanal_tabs.md`.
 
-**Abhängigkeitsbild (Stand 2026-08-13):** 1, 2, 3, 4, 5, 6, 8 ✅ erledigt ·
-7 frei — nicht mehr blockiert (7a beantwortet, Scheibe 8 live). Zuschnitt
-bleibt auf die Compare-Übersicht beschränkt: Ausblick/Stundenverlauf haben
-weiterhin keine Kanal-Ebene.
+**Abhängigkeitsbild (Stand 2026-08-14):** **alle acht Scheiben ✅ erledigt.**
+Die Flächen 1–7 aus Abschnitt 4 tragen damit jeweils einen Wächter in
+`tests/tdd/test_channel_metric_matrix.py` (Achsen `AC-S1-*` bis `AC-S7-*`);
+Fläche 5 ist mit Scheibe 7 als letzte geschlossen worden.
+
+**Offen bleiben bewusst** — beides braucht eine eigene Entscheidung, keine
+Fortsetzung dieses Epics: (a) Ausblick und Stundenverlauf des Ortsvergleichs
+haben weiterhin keine Kanal-Ebene (ADR-0053 Punkt 1), also auch keine
+kanalbezogene Soll-Reihenfolge; (b) die Flächen 8, 9 und 10 aus Abschnitt 4.2
+(Einheiten/Nachkommastellen je Kanal · Frontend ohne Metrik×Kanal-Matrix ·
+Trip-SMS liest die Kaskade nicht) standen nie im Zuschnitt der acht Scheiben.
 
 ## 7. PO-Entscheidungsvorlage — ENTSCHIEDEN (PO, 2026-08-10)
 

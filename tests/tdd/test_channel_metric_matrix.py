@@ -1,12 +1,14 @@
-"""TDD RED: Issue #1677 Scheibe B -- Vollstaendigkeits-Matrix Metrik-Katalog x
-Kanal, damit die Fehlerklasse "Bedienelement ohne Wirkung" (#1450, #1362,
-#1660 A/B, #1677) strukturell bewacht ist statt fallweise entdeckt zu werden.
+"""Vollstaendigkeits-Matrix Metrik-Katalog x Kanal, damit die Fehlerklasse
+"Bedienelement ohne Wirkung" (#1450, #1362, #1660 A/B, #1677) strukturell
+bewacht ist statt fallweise entdeckt zu werden. Angelegt als TDD RED zu Issue
+#1677 Scheibe B, seither um mehrere Achsen von Epic #1703 gewachsen -- welcher
+Anteil ROT war, steht bei der jeweiligen Scheibe unten.
 
 SPEC: docs/specs/modules/fix_1677_sms_reihenfolge.md AC-13/AC-14/AC-15.
 
-Parametrisiert ueber ``app.metric_catalog.get_all_metrics()`` (26
-waehlbare Metriken). Pro Kanal wird gegen die Funktion getestet, die der
-jeweilige Produktivpfad TATSAECHLICH aufruft (kein Duplikat-Rendering):
+Parametrisiert ueber ``app.metric_catalog.get_all_metrics()`` (25 waehlbare
+Metriken, gemessen 2026-08-14). Pro Kanal wird gegen die Funktion getestet,
+die der jeweilige Produktivpfad TATSAECHLICH aufruft (kein Duplikat-Rendering):
 - E-Mail:        ``resolve_metric_col_order`` (email/html.py:1021 ``_col_order``)
 - Telegram-rich: ``render_for_channel`` (narrow.py:644)
 - SMS-Kurzform:  ``TripReportFormatter().format_email() -> report.sms_text``
@@ -17,12 +19,17 @@ AC-Zuordnung:
 - AC-14 (Telegram-rich):  test_ac14_telegram_rich_selection_and_order      -> GRUEN (Bestand, #429/#1575)
 - AC-15 (SMS-Kurzform):   test_ac15_sms_kurzform_selection_deselection_and_order
     - (a)/(b) Auswahl/Abwahl -> GRUEN (Bestand, Bug-#944-Muster + #1415/#1660B)
-    - (c) Nutzer-Reihenfolge -> RED (exakt die Luecke aus #1677)
+    - (c) Nutzer-Reihenfolge -> GRUEN seit dem Fix zu #1677/#1660 B
+      (``_POSITION_SORTABLE_CATEGORIES`` in output/tokens/builder.py,
+      ``MetricSpec.position``); beim Schreiben dieser Datei war sie ROT
     - (d) ohne SMS-Layout   -> GRUEN (Charakterisierung, wie AC-2)
 
-E-Mail/Telegram sind bewusste GRUEN-Ausnahmen (Bestandsfunktion, hier nur
-strukturell abgesichert) -- der SMS-Kurzform-Reihenfolge-Teil ist der
-einzige neue, heute rote Anteil dieser Datei.
+Alle drei Achsen laufen heute GRUEN: E-Mail/Telegram waren von Anfang an
+Bestandsfunktion (hier nur strukturell abgesichert), die SMS-Kurzform-
+Reihenfolge ist seit #1677 gefixt. Hier stand bis 2026-08-14, sie sei "der
+einzige neue, heute rote Anteil dieser Datei" -- das galt zum Schreibzeitpunkt
+und war seither ueberholt; der Satz liess den Zuschnitt von Epic #1703
+Scheibe 7 zunaechst zu breit erscheinen.
 
 Epic #1703 Scheibe 3 (AC-1 bis AC-8, unten): schliesst die
 get_all_metrics()-vs-_METRICS-Blindstelle (docs/reference/metric_output_matrix.md
@@ -50,11 +57,30 @@ Trip-Aufrufstellen des geteilten Ausblick-Renderers uebergeben kein
 ``metrics``-Argument, s. Spec "Korrektur der Scheiben-Praemisse"). ROTER
 Anteil: AC-S2-4 (fuenf dauerhaft leere Spalten) und AC-S2-5 (die beiden
 Tages-Aggregationspfade sind auseinandergelaufen).
+
+Epic #1703 Scheibe 7 (AC-S7-1 bis AC-S7-9, weiter unten): die REIHENFOLGE
+derselben 25 Uebersichts-Groessen ueber alle Ausgabeorte
+(docs/reference/metric_output_matrix.md) -- bewacht war bisher, DASS eine
+gewaehlte Groesse erscheint, nicht AN WELCHER STELLE. Die Soll-Menge wird aus
+``get_compare_metric_catalog()`` GERECHNET, nie getippt (AC-S7-1, mit
+Vakuum-Schutz AC-S7-1b). SPEC:
+docs/specs/modules/fix_1703_s7_reihenfolge_matrix.md. Achsen: HTML- und
+Klartext-Zwilling derselben Compare-Mail (AC-S7-2/3), Altbestand ohne
+gespeicherte Auswahl (AC-S7-4, Charakterisierung der HTML/Klartext-Divergenz),
+je Kanal eine EIGENE Reihenfolge in EINER Sendung -- am echten Versand- UND
+Vorschaupfad (AC-S7-5/5b, Gegenprobe zum Label-Vergleich AC-S7-5c),
+Trip-Kurzuebersicht und ihre zwei Reihenfolge-Quellen (AC-S7-7/7b),
+Compare-Telegram/-SMS unter Kappung (AC-S7-8a/8b/8c), Kompakt-Fliesstext als
+benannte Ausnahme ohne Reihenfolge-Achse (AC-S7-9). EINZIGER roter Anteil:
+AC-S7-6 -- die Pillen der Kurz-E-Mail verwarfen die eingestellte Ordnung
+(``build_metrics_summary_pills()`` kollabierte die geordnete Liste zu einer
+Menge).
 """
 from __future__ import annotations
 
 import dataclasses
 import importlib
+import itertools
 import json
 import re
 from collections import Counter
@@ -80,12 +106,14 @@ from output.renderers.alert.render import (
     _HANDLED_UNITS, render_email, render_sms, render_subject, render_telegram,
 )
 from output.channels.premium_sms import PremiumSmsOutput
-from output.renderers.channel_layout import render_for_channel
+from output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
 from output.renderers.email.compare_html import CV2_METRICS
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
-from output.renderers.comparison import render_compare_email
-from output.renderers.email.helpers import resolve_metric_col_order
+from output.renderers.comparison import (
+    _PLAIN_ROWS_BY_ID, render_compare_email, render_compare_sms, render_compare_telegram,
+)
+from output.renderers.email.helpers import _PILL_CATALOG_ORDER, resolve_metric_col_order
 from output.renderers.email.html import _render_mobile_compact_rows
 from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC, SMS_MULTI_SYMBOLS_BY_METRIC
 from output.renderers.trip_metric_ids import DEFAULT_TRIP_METRIC_IDS
@@ -94,6 +122,11 @@ from services.report_config_resolver import ReportRenderOptions
 from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID, is_alert_metric_active
 from services.weather_metrics import WeatherMetricsService, summarize_points
 
+from tests.helpers.compare_order import (
+    assert_compare_order_soll_ist_plausibel, compare_order_soll_metriken,
+    html_uebersicht_labels, klartext_uebersicht_labels, partner_von,
+    sms_index, sms_kuerzel, telegram_zellen, uebersichts_label,
+)
 from tests.helpers.outlook_columns import (
     assert_soll_menge_ist_plausibel, compare_outlook_soll_paare,
     compare_outlook_soll_spalten,
@@ -105,6 +138,13 @@ from tests.tdd import _min_temp_felt_fixtures as F
 # auch im importierenden Modul).
 from tests.tdd.test_channel_origin_guard_parity import (
     _prod_style_premium_sms_settings, premium_sms_stub,  # noqa: F401 - pytest loest die Fixture per Name auf
+)
+# Issue #1703 S7 AC-S7-5: geteilter Daten-/Engine-Rahmen des Scheibe-8-
+# Waechters -- echte ComparisonEngine-Subklasse, echte Renderer, kein Netz,
+# kein Mock. Wiederverwendet statt kopiert (dasselbe Muster wie oben).
+from tests.unit.test_compare_channel_metrics_reach_the_renderer import (
+    LOCATION as _S7_LOCATION, TARGET_DATE as _S7_TARGET_DATE,
+    env,  # noqa: F401 - pytest loest die Fixture per Name auf
 )
 
 _ALL_METRIC_IDS = [m.id for m in get_all_metrics()]
@@ -3686,3 +3726,802 @@ def test_ac_s5_6_abhaengigkeits_anker_auf_die_15_bereits_gedeckten_zeilen(moduln
             "die Wertpruefung fuer eine der 15 bereits gedeckten Compare-"
             "Uebersichtszeilen ist verwaist."
         )
+
+
+# ===========================================================================
+# Epic #1703 Scheibe 7 (AC-S7-1 bis AC-S7-9): Reihenfolge-Waechter jenseits
+# E-Mail-Vollformat und Telegram-rich (docs/reference/metric_output_matrix.md
+# Flaeche 5). SPEC: docs/specs/modules/fix_1703_s7_reihenfolge_matrix.md
+#
+# Korrektur der Scheiben-Praemisse (s. Spec): Flaeche 5 nennt die
+# Trip-SMS-Reihenfolge als Luecke -- sie ist seit #1677/#1660 B ueber
+# AC-15 (c) oben bewacht. Bewacht war dagegen NICHT die Katalog-DECKUNG der
+# Compare-Uebersicht (Bestand `tests/unit/test_compare_metric_order.py`:
+# 4 fest getippte von 25 Groessen, EINE globale Liste) und gar nicht die
+# Kanal-Achse aus Scheibe 8.
+#
+# Pruefmuster durchgehend PAARWEISE: dieselbe Metrik-MENGE in zwei
+# Reihenfolgen rendern und die Positionen vergleichen. Ein Test gegen eine
+# einzelne feste Erwartung faengt "intern nach eigener Prioritaet umsortiert"
+# nicht.
+#
+# Pruefort = Wirkort: gemessen wird die zugestellte Ausgabe je Kanal, nie der
+# Rueckgabewert von `resolve_channel_enabled_metrics()` (Lehre Scheibe 8:
+# viermal war die reine Funktion geprueft und die Aufrufstelle nicht).
+#
+# ROTER Anteil: AC-S7-6 (die Kurz-E-Mail-Pillen verwerfen die Reihenfolge,
+# `build_metrics_summary_pills()` kollabiert die geordnete Liste zu einer
+# Menge). Alles Uebrige ist Charakterisierung bisher ungeprueften, aber
+# korrekten Verhaltens.
+# ===========================================================================
+
+_S7_SOLL = compare_order_soll_metriken()
+
+
+def _s7_dp(hour: int, temp: float, wind: float) -> ForecastDataPoint:
+    """EIN reich besetzter Stundenpunkt -- jede der 25 Uebersichts-Groessen
+    muss an jedem Ort einen Wert haben, sonst entfaellt ihre Zeile/Zelle und
+    der Test misst das Fehlen statt der Reihenfolge."""
+    return ForecastDataPoint(
+        ts=datetime(2026, 8, 12, hour, 0, tzinfo=timezone.utc),
+        t2m_c=temp, wind10m_kmh=wind, wind_direction_deg=180, gust_kmh=wind + 10,
+        precip_1h_mm=1.0, cloud_total_pct=40, cloud_low_pct=10, cloud_mid_pct=20,
+        cloud_high_pct=30, pop_pct=50, uv_index=4.0, visibility_m=9000,
+        pressure_msl_hpa=1013.0, humidity_pct=70, dewpoint_c=8.0,
+        snow_depth_cm=3.0, snow_new_24h_cm=2.0, snowfall_limit_m=1800,
+        freezing_level_m=3200, precip_type=PrecipType.RAIN,
+        thunder_level=ThunderLevel.MED, wind_chill_c=temp - 2, is_day=1,
+        dni_wm2=300.0,
+    )
+
+
+def _s7_location(loc_id: str, name: str):
+    from app.user import LocationResult, SavedLocation
+
+    return LocationResult(
+        location=SavedLocation(
+            id=loc_id, name=name, lat=47.0, lon=11.0, elevation_m=600,
+        ),
+        score=1,
+        temp_max=22.0, temp_min=11.0, wind_max=15.0, gust_max=30.0,
+        wind_direction_avg=180, wind_chill_min=8.0, wind_chill_max=18.0,
+        cloud_avg=40, cloud_low_avg=10, cloud_mid_avg=20, cloud_high_avg=30,
+        sunny_hours=5, snow_depth_cm=3.0, snow_new_cm=2.0,
+        precip_sum_mm=2.0, pop_max_pct=50, uv_index_max=4.0,
+        visibility_min_m=9000, thunder_level_max=ThunderLevel.MED,
+        hourly_data=[_s7_dp(9, 12.0, 10.0), _s7_dp(12, 22.0, 15.0), _s7_dp(15, 18.0, 12.0)],
+        official_alerts=[],
+    )
+
+
+@lru_cache(maxsize=None)
+def _s7_result(anzahl: int = 3):
+    """``ComparisonResult`` mit ``anzahl`` gleich befuellten Orten. Gecacht --
+    die Renderer sind reine Funktionen, jede Achse liest dasselbe Ergebnis."""
+    from app.user import ComparisonResult
+
+    namen = ["Aachen", "Bremen", "Chemnitz"][:anzahl]
+    return ComparisonResult(
+        locations=[_s7_location(f"s7-{i}", nm) for i, nm in enumerate(namen)],
+        time_window=(0, 23), target_date=date(2026, 8, 12),
+        created_at=datetime(2026, 8, 12, 4, 0),
+    )
+
+
+@lru_cache(maxsize=None)
+def _s7_mail_paar(metric_id: str):
+    """Beide Reihenfolgen EINES Metrik-Paares als ((html_a, text_a),
+    (html_b, text_b)). EIN ``render_compare_email()``-Aufruf je Richtung
+    liefert HTML UND Klartext derselben Mail -- AC-S7-2 und AC-S7-3 lesen
+    denselben Aufruf, damit eine Divergenz zwischen beiden Formen nicht durch
+    getrennte Aufrufe verdeckt wird."""
+    partner = partner_von(metric_id)
+    return (
+        render_compare_email(_s7_result(), enabled_metrics=[metric_id, partner]),
+        render_compare_email(_s7_result(), enabled_metrics=[partner, metric_id]),
+    )
+
+
+# --- AC-S7-1: Soll-Menge gerechnet, Vakuum-geschuetzt ----------------------
+
+def test_ac_s7_1_soll_menge_gerechnet_und_vakuumgeschuetzt():
+    """AC-S7-1: die geprueften Groessen stammen ausschliesslich aus
+    ``get_compare_metric_catalog()`` (26 rohe Katalog-Zeilen minus der nicht
+    waehlbaren ``cape_max_jkg`` = 25), nie aus einer getippten Liste; unter
+    20 Eintraegen scheitert der Vakuum-Schutz ausdruecklich."""
+    soll = assert_compare_order_soll_ist_plausibel()
+    assert soll == _S7_SOLL, (
+        "AC-S7-1: die Modul-Konstante _S7_SOLL und die frisch gerechnete "
+        f"Soll-Menge laufen auseinander: {_S7_SOLL} vs. {soll}"
+    )
+
+
+def test_ac_s7_1b_vakuum_schutz_schlaegt_bei_leerem_katalog_an():
+    """AC-S7-1 (Pflicht-Gegenprobe, Spec Mutation 5): waere der Katalog leer
+    oder stark geschrumpft, MUSS der Vakuum-Schutz scheitern statt
+    stillschweigend zu bestehen -- sonst liefe die ganze Achse ueber null
+    Faelle und waere immer gruen. Geprueft ueber die Katalog-Injektion
+    (``entries=``), ohne den echten Katalog anzufassen."""
+    with pytest.raises(AssertionError):
+        assert_compare_order_soll_ist_plausibel(entries=[])
+    with pytest.raises(AssertionError):
+        assert_compare_order_soll_ist_plausibel(
+            entries=[e for e in COMPARE_METRIC_CATALOG[:3]]
+        )
+
+
+# --- AC-S7-2: Compare-HTML folgt der Reihenfolge, ueber den ganzen Katalog -
+
+@pytest.mark.parametrize("metric_id", _S7_SOLL)
+def test_ac_s7_2_compare_html_folgt_der_reihenfolge(metric_id):
+    """AC-S7-2: dieselbe Vergleichs-Mail, einmal mit [A, B] und einmal mit
+    [B, A] gerendert, zeigt in der HTML-Uebersichtstabelle die beiden Zeilen
+    in genau dieser Reihenfolge -- fuer JEDE der 25 waehlbaren Groessen
+    gegen einen festen Partner, nicht nur fuer vier ausgewaehlte (Bestand
+    #1359)."""
+    partner = partner_von(metric_id)
+    sichtbare = [metric_id, partner]
+    label_m = uebersichts_label(metric_id, sichtbare)
+    label_p = uebersichts_label(partner, sichtbare)
+    assert label_m != label_p, (
+        f"Vakuum: {metric_id!r} und Partner {partner!r} teilen sich die "
+        f"Beschriftung {label_m!r} -- eine Positionsaussage waere mehrdeutig"
+    )
+    (html_a, _text_a), (html_b, _text_b) = _s7_mail_paar(metric_id)
+    assert html_uebersicht_labels(html_a) == [label_m, label_p], (
+        f"AC-S7-2: Reihenfolge [{metric_id}, {partner}] ergibt in der "
+        f"HTML-Uebersicht {html_uebersicht_labels(html_a)}"
+    )
+    assert html_uebersicht_labels(html_b) == [label_p, label_m], (
+        f"AC-S7-2: Reihenfolge [{partner}, {metric_id}] ergibt in der "
+        f"HTML-Uebersicht {html_uebersicht_labels(html_b)} -- dieselbe MENGE "
+        "in zwei Reihenfolgen muss zwei verschiedene Zeilenfolgen ergeben"
+    )
+
+
+# --- AC-S7-3: Compare-Klartext folgt derselben Reihenfolge ----------------
+
+@pytest.mark.parametrize("metric_id", _S7_SOLL)
+def test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge(metric_id):
+    """AC-S7-3: der Klartext-Teil DERSELBEN Mail (ein Aufruf, zwei Formen)
+    zeigt dieselbe Metrik-Reihenfolge wie der HTML-Teil -- und zwar
+    zugeordnet, nicht nur gleich lang (Lehre Scheibe 2 F001: Rechnen sichert
+    Vollstaendigkeit, nie Zuordnung)."""
+    partner = partner_von(metric_id)
+    sichtbare = [metric_id, partner]
+    label_m = uebersichts_label(metric_id, sichtbare)
+    label_p = uebersichts_label(partner, sichtbare)
+    (html_a, text_a), (html_b, text_b) = _s7_mail_paar(metric_id)
+    for richtung, html, text, erwartet in (
+        ("A", html_a, text_a, [label_m, label_p]),
+        ("B", html_b, text_b, [label_p, label_m]),
+    ):
+        klartext = klartext_uebersicht_labels(text)
+        assert klartext == erwartet, (
+            f"AC-S7-3 (Richtung {richtung}): der Klartext-Teil zeigt "
+            f"{klartext} statt {erwartet}"
+        )
+        assert klartext == html_uebersicht_labels(html), (
+            f"AC-S7-3 (Richtung {richtung}): Klartext {klartext} weicht vom "
+            f"HTML {html_uebersicht_labels(html)} DERSELBEN Mail ab"
+        )
+
+
+# --- AC-S7-4: Altbestand ohne gespeicherte Auswahl (Charakterisierung) ----
+
+def test_ac_s7_4_altbestand_html_und_klartext_divergieren_charakterisiert():
+    """AC-S7-4 (CHARAKTERISIERUNG, kein Fix -- Spec 'Bewusst NICHT in dieser
+    Scheibe'): ohne gespeicherte Auswahl (``enabled_metrics=None``) behaelt
+    jede Form derselben Mail ihre eigene Quellcode-Ordnung. Die MENGEN sind
+    identisch (25 Zeilen), die ORDNUNG nicht -- erste Abweichung an Position
+    3: HTML fuehrt dort ``precip_sum`` (CV2_METRICS), der Klartext
+    ``temp_min`` (_PLAIN_ROWS).
+
+    Ein Fix zoege den Bestandstest ``test_compare_metric_order.py`` AC-7 mit,
+    der die _PLAIN_ROWS-Ordnung ausdruecklich als Altbestands-Standard
+    einfriert -- eigene Entscheidung, Nebenbefund #1199. Faellt dieser Test
+    rot, hat sich das Produktivverhalten geaendert: dann Spec-Korrektur statt
+    Test-Anpassung pruefen."""
+    html, text = render_compare_email(_s7_result(), enabled_metrics=None)
+    html_labels = html_uebersicht_labels(html)
+    text_labels = klartext_uebersicht_labels(text)
+    assert len(html_labels) == len(_S7_SOLL) == len(text_labels), (
+        f"AC-S7-4: {len(html_labels)} HTML- und {len(text_labels)} "
+        f"Klartext-Zeilen bei {len(_S7_SOLL)} Katalog-Groessen"
+    )
+    assert set(html_labels) == set(text_labels), (
+        "AC-S7-4: HTML und Klartext zeigen NICHT dieselbe Menge -- das waere "
+        "ein anderer, schwererer Befund als die reine Ordnungs-Divergenz.\n"
+        f"nur HTML: {sorted(set(html_labels) - set(text_labels))}\n"
+        f"nur Klartext: {sorted(set(text_labels) - set(html_labels))}"
+    )
+    assert html_labels != text_labels, (
+        "AC-S7-4: die Altbestands-Divergenz ist verschwunden -- gut moeglich "
+        "ein bewusster Fix, dann gehoert diese Charakterisierung ersetzt "
+        "(und der Bestandstest AC-7 mitgezogen)."
+    )
+    erste_abweichung = next(
+        i for i, (h, t) in enumerate(zip(html_labels, text_labels)) if h != t
+    )
+    assert erste_abweichung == 2, (
+        f"AC-S7-4: erste Abweichung an Position {erste_abweichung + 1}, "
+        "gemessen 2026-08-13 war es Position 3"
+    )
+    assert html_labels[2] == uebersichts_label("precip_sum", _S7_SOLL), (
+        f"AC-S7-4: HTML-Position 3 traegt {html_labels[2]!r}"
+    )
+    assert text_labels[2] == uebersichts_label("temp_min", _S7_SOLL), (
+        f"AC-S7-4: Klartext-Position 3 traegt {text_labels[2]!r}"
+    )
+
+
+# --- AC-S7-5: kanalweise unterschiedliche Reihenfolge in EINER Sendung ----
+#
+# Die drei Kanal-Listen fuehren DIESELBE Menge in DREI verschiedenen
+# Reihenfolgen, die Grundauswahl (= MAXIMUM, ADR-0050 Regel 1) in einer
+# VIERTEN. Faellt eine der acht Aufrufstellen auf die gemeinsame
+# `opts.enabled_metrics` zurueck, zeigt genau dieser Kanal die vierte
+# Ordnung und faellt EINZELN auf -- ein Nachweis auf
+# `resolve_channel_enabled_metrics()` faenge das nicht (dort ist die
+# Mechanik korrekt, die Wirkung haengt an der Aufrufstelle).
+#
+# Der Daten-/Engine-Rahmen (`env`, oben importiert) ist der Waechter aus
+# Scheibe 8: echte Engine-Subklasse, echte Renderer, kein Mock/patch, kein Netz.
+
+_S7_KANAL_ORDNUNG: dict[str, list[str]] = {
+    "email": ["temp_max_c", "sunny_hours_h", "uv_index_max"],
+    "telegram": ["sunny_hours_h", "uv_index_max", "temp_max_c"],
+    "sms": ["uv_index_max", "temp_max_c", "sunny_hours_h"],
+}
+_S7_GRUNDAUSWAHL = ["temp_max_c", "uv_index_max", "sunny_hours_h"]
+
+
+def _s7_kanal_preset(preset_id: str, user_id: str) -> dict:
+    return {
+        "id": preset_id, "name": "S7-Reihenfolge", "user_id": user_id,
+        "kind": "vergleich", "location_ids": [_S7_LOCATION.id], "schedule": "daily",
+        "profil": "ALLGEMEIN", "created_at": "2026-07-01T00:00:00Z",
+        "send_telegram": True, "send_sms": True,
+        # Stundenverlauf/Ausblick aus: diese Achse betrifft NUR die
+        # Uebersicht -- beide Bloecke wuerden die Kuerzel-Suche stoeren.
+        "hourly_enabled": False, "outlook_enabled": False,
+        "display_config": {
+            "active_metrics": list(_S7_GRUNDAUSWAHL),
+            "channel_active_metrics": {k: list(v) for k, v in _S7_KANAL_ORDNUNG.items()},
+        },
+    }
+
+
+def _s7_erwartete_renderer_ids(kanal: str) -> list[str]:
+    return [FRONTEND_TO_RENDERER_METRIC_ID[k] for k in _S7_KANAL_ORDNUNG[kanal]]
+
+
+def _s7_pruefe_kanal_reihenfolge(
+    kanal: str, ausgabe: str, wo: str, ids: list[str] | None = None,
+) -> None:
+    """Die Reihenfolge-Aussage je Kanal an der jeweils ZUGESTELLTEN Ausgabe --
+    HTML-Zeilenfolge, Telegram-Zellfolge, SMS-Tokenfolge.
+
+    ``ids`` injiziert eine andere Soll-Folge als die des Kanals (Vorbild
+    ``assert_compare_order_soll_ist_plausibel(entries=...)``), damit die
+    Gegenprobe unten den Vergleich selbst pruefen kann."""
+    ids = _s7_erwartete_renderer_ids(kanal) if ids is None else ids
+    if kanal == "email":
+        erwartet = [uebersichts_label(m, ids) for m in ids]
+        assert html_uebersicht_labels(ausgabe) == erwartet, (
+            f"{wo}: die E-Mail zeigt {html_uebersicht_labels(ausgabe)} statt "
+            f"{erwartet} -- vermutlich liest die Aufrufstelle wieder die "
+            f"gemeinsame `opts.enabled_metrics` ({_S7_GRUNDAUSWAHL})"
+        )
+    elif kanal == "telegram":
+        zellen = telegram_zellen(ausgabe)
+        erwartet = [_PLAIN_ROWS_BY_ID[m][1] for m in ids]
+        # Das GANZE Label tragen, nie nur sein erstes Wort (Adversary S7 F001):
+        # "Gefuehlte Temp. min"/"Gefuehlte Temp. max" und "Wolken"/"Wolken
+        # tief" teilen sich den Wortanfang -- ein Wortanfang-Vergleich hielte
+        # ihre Vertauschung fuer richtig (Gegenproben: AC-S7-5c/5d unten).
+        # Muster AC-S7-8a: volles Label per ``startswith``.
+        #
+        # Das angehaengte Leerzeichen ist Haertung gegen eine VERTAUSCHTE
+        # GROESSE ("Wolken " faengt nicht auf "Wolken tief 10%" an), nicht
+        # gegen eine vertauschte REIHENFOLGE: auf einer Permutation derselben
+        # Menge sind beide Formen gleichwertig, weil ein Label nur Praefix
+        # eines echt laengeren sein kann und die Gesamtlaenge erhalten bleibt.
+        # 5c/5d unterscheiden es deshalb NICHT (gemessen 2026-08-14: das
+        # Leerzeichen entfernt -> alle fuenf S7-5-Achsen bleiben gruen). Es
+        # kostet nichts, weil jede der 25 Uebersichts-Zellen die Form
+        # "<Label> <Wert>" hat (ebenfalls gemessen).
+        assert len(zellen) == len(erwartet) and all(
+            z.startswith(f"{e} ") for z, e in zip(zellen, erwartet)
+        ), f"{wo}: Telegram zeigt {zellen} statt der Reihenfolge {erwartet}"
+    else:
+        ort = _s7_result(1).locations[0]
+        positionen = [sms_index(ausgabe, sms_kuerzel(ort, m)) for m in ids]
+        assert all(p is not None for p in positionen), (
+            f"{wo}: nicht jede gewaehlte Groesse steht in der SMS "
+            f"({positionen}) -- {ausgabe!r}"
+        )
+        assert positionen == sorted(positionen), (
+            f"{wo}: die SMS-Token-Folge {positionen} widerspricht der "
+            f"eingestellten Reihenfolge {ids} -- {ausgabe!r}"
+        )
+
+
+def test_ac_s7_5_versand_traegt_je_kanal_eine_eigene_reihenfolge(
+    env,  # noqa: F811 - pytest loest die Fixture per Name auf
+    tmp_path,
+):
+    """AC-S7-5: GIVEN ein Vergleich, dessen drei Kanaele DIESELBEN Groessen in
+    DREI verschiedenen Reihenfolgen fuehren / WHEN der echte Versandpfad
+    laeuft / THEN traegt jede zugestellte Nachricht die Reihenfolge IHRES
+    Kanals."""
+    from app.config import Settings
+    from services.scheduler_dispatch_service import send_one_compare_preset
+
+    ordnungen = [tuple(v) for v in _S7_KANAL_ORDNUNG.values()] + [tuple(_S7_GRUNDAUSWAHL)]
+    assert len(set(ordnungen)) == 4, (
+        "Vakuum: die drei Kanal-Reihenfolgen und die Grundauswahl muessen "
+        f"paarweise verschieden sein, sind aber {ordnungen}"
+    )
+
+    versandt: dict[str, list[str]] = {"email": [], "telegram": [], "sms": []}
+    send_one_compare_preset(
+        _s7_kanal_preset("cp-s7-dispatch", env),
+        Settings(
+            smtp_host="dummy.invalid", smtp_user="dummy", smtp_pass="dummy",
+            mail_to="dummy@example.invalid", telegram_bot_token="dummy-token",
+            telegram_chat_id="123456", sms_gateway_url="https://sms.invalid",
+            seven_api_key="k", sms_to="+491700000000",
+        ),
+        env, str(tmp_path), all_locations_cache=[_S7_LOCATION],
+        target_date=_S7_TARGET_DATE, tage_ab_ortstag=0,
+        mail_sink=lambda subject, body: versandt["email"].append(body),
+        telegram_sink=versandt["telegram"].append,
+        sms_sink=versandt["sms"].append,
+    )
+    for kanal, zugestellt in versandt.items():
+        assert len(zugestellt) == 1, (
+            f"{kanal}: eine Zustellung erwartet, waren {len(zugestellt)}"
+        )
+        _s7_pruefe_kanal_reihenfolge(kanal, zugestellt[0], "Versandpfad")
+
+
+def test_ac_s7_5b_vorschau_zeigt_dieselbe_reihenfolge_wie_der_versand(
+    env,  # noqa: F811 - pytest loest die Fixture per Name auf
+):
+    """AC-S7-5 (zweiter Leser derselben Optionen): die Vorschau MUSS je Kanal
+    dieselbe Reihenfolge zeigen wie der Versand -- sonst verspricht der Editor
+    eine andere Zeilenfolge, als ankommt. Deckt die uebrigen fuenf der acht
+    Aufrufstellen (`compare_preview_service.py`)."""
+    from app.loader import get_data_dir, save_location
+    from services.compare_preview_service import ComparePreviewService
+    from tests.helpers.compare_briefings import write_compare_briefings
+
+    save_location(_S7_LOCATION, user_id=env)
+    write_compare_briefings(get_data_dir(env), [_s7_kanal_preset("cp-s7-preview", env)])
+
+    service = ComparePreviewService()
+    args = dict(user_id=env, target_date=_S7_TARGET_DATE.isoformat())
+    payload = service.render_all_channels("cp-s7-preview", **args)
+    for kanal, key in (("email", "email_html"), ("telegram", "telegram"), ("sms", "sms")):
+        _s7_pruefe_kanal_reihenfolge(kanal, payload[key], f"Vorschau[{key}]")
+    _s7_pruefe_kanal_reihenfolge(
+        "telegram", service.render_telegram_preview("cp-s7-preview", **args),
+        "Vorschau render_telegram_preview",
+    )
+    _s7_pruefe_kanal_reihenfolge(
+        "sms", service.render_sms_preview("cp-s7-preview", **args),
+        "Vorschau render_sms_preview",
+    )
+
+
+def test_ac_s7_5c_telegram_vergleich_faengt_praefix_kollision():
+    """AC-S7-5 (Pflicht-Gegenprobe, Adversary S7 F001): der Telegram-Zweig von
+    ``_s7_pruefe_kanal_reihenfolge`` MUSS eine Vertauschung auch dann sehen,
+    wenn beide Labels denselben Wortanfang haben.
+
+    Gemessen an einer ECHT vertauschten Render-Ausgabe, nicht an einem
+    gebastelten String: der frueher benutzte Wortanfang-Vergleich haelt sie
+    fuer richtig, der Label-Vergleich schlaegt an. Ohne diese Achse waere der
+    Fix eine Vermutung."""
+    ids = ["wind_chill_min", "wind_chill_max"]
+    erwartet = [_PLAIN_ROWS_BY_ID[m][1] for m in ids]
+    assert len(set(e.split(" ")[0] for e in erwartet)) == 1, (
+        f"Vakuum: {ids} teilen sich ihren Wortanfang nicht mehr ({erwartet}) "
+        "-- die Gegenprobe pruefte dann eine Kollision, die es nicht gibt"
+    )
+    assert len(set(erwartet)) == len(erwartet), (
+        f"Vakuum: {ids} teilen sich das GANZE Telegram-Label ({erwartet}) -- "
+        "auch ein Label-Vergleich koennte ihre Reihenfolge nicht sehen"
+    )
+
+    vertauscht = render_compare_telegram(
+        _s7_result(), enabled_metrics=list(reversed(ids)),
+    )
+    zellen = telegram_zellen(vertauscht)
+    assert [z.split(" ")[0] for z in zellen] == [e.split(" ")[0] for e in erwartet], (
+        f"Vakuum: der ALTE Wortanfang-Vergleich muss auf {zellen} gruen sein, "
+        "sonst belegt die Gegenprobe nichts"
+    )
+    with pytest.raises(AssertionError):
+        _s7_pruefe_kanal_reihenfolge("telegram", vertauscht, "Gegenprobe", ids=ids)
+
+
+@pytest.mark.parametrize(
+    "ids",
+    [
+        ["cloud_avg", "cloud_low_avg"],
+        ["cloud_avg", "cloud_low_avg", "cloud_mid_avg"],
+    ],
+    ids=["paar", "tripel"],
+)
+def test_ac_s7_5d_telegram_vergleich_faengt_die_wolken_kollision(ids):
+    """AC-S7-5 (zweite Pflicht-Gegenprobe, Adversary S7 F002): die Wolken-
+    Familie ist die haertere Kollision -- "Wolken" ist nicht nur
+    wortanfangsgleich mit "Wolken tief"/"Wolken mittel", sondern deren echtes
+    PRAEFIX. AC-S7-5c oben deckt nur das wind_chill-Paar; die Wolken-Familie
+    stand bisher bloss im Kommentar.
+
+    Die drei sind so gewaehlt, dass ALLE denselben Wortanfang "Wolken" tragen
+    -- der frueher benutzte Wortanfang-Vergleich ist damit auf JEDER
+    Vertauschung gruen und kann keine einzige sehen. Geprueft werden alle
+    Vertauschungen statt nur der umgekehrten Folge, und der Tripel-Fall
+    zusaetzlich zum Paar: bei zwei Elementen liesse sich ein Fang noch mit dem
+    Sonderfall der Vollvertauschung erklaeren, bei drei nicht mehr."""
+    erwartet = [_PLAIN_ROWS_BY_ID[m][1] for m in ids]
+    assert len({e.split(" ")[0] for e in erwartet}) == 1, (
+        f"Vakuum: {ids} teilen sich ihren Wortanfang nicht mehr ({erwartet}) "
+        "-- die Gegenprobe pruefte dann eine Kollision, die es nicht gibt"
+    )
+    assert len(set(erwartet)) == len(erwartet), (
+        f"Vakuum: {ids} teilen sich das GANZE Telegram-Label ({erwartet})"
+    )
+
+    for folge in itertools.permutations(ids):
+        if list(folge) == ids:
+            continue
+        vertauscht = render_compare_telegram(
+            _s7_result(), enabled_metrics=list(folge),
+        )
+        zellen = telegram_zellen(vertauscht)
+        assert [z.split(" ")[0] for z in zellen] == [
+            e.split(" ")[0] for e in erwartet
+        ], (
+            f"Vakuum: der ALTE Wortanfang-Vergleich muss auf {zellen} gruen "
+            "sein, sonst belegt die Gegenprobe nichts"
+        )
+        with pytest.raises(AssertionError):
+            _s7_pruefe_kanal_reihenfolge(
+                "telegram", vertauscht, f"Gegenprobe {list(folge)}", ids=ids,
+            )
+
+
+# --- AC-S7-6: DER FIX -- die Kurz-E-Mail folgt der eingestellten Ordnung --
+
+def _s7_email_layout_dc(reihenfolge: list[str]) -> UnifiedWeatherDisplayConfig:
+    """Trip mit E-Mail-KANAL-Layout in ``reihenfolge``. ``format_email()``
+    kollabiert `dc.metrics` vor dem Rendern auf
+    ``get_metrics_for_channel("email", ...)`` (trip_report.py:133-138) --
+    diese Reihenfolge ist damit genau die, die ``render_compact()`` sieht
+    (gemessen 2026-08-13)."""
+    return UnifiedWeatherDisplayConfig(
+        trip_id="s7-pillen",
+        metrics=[
+            MetricConfig(metric_id=m, enabled=True, order=i)
+            for i, m in enumerate(sorted(reihenfolge))
+        ],
+        per_channel_layouts={
+            "email": [
+                MetricConfig(metric_id=m, enabled=True, bucket="primary", order=i)
+                for i, m in enumerate(reihenfolge)
+            ],
+        },
+    )
+
+
+def _s7_pillen(reihenfolge: list[str]) -> list[str]:
+    return [
+        zeile.strip()
+        for zeile in _s4_pill_lines(_s4_email_compact_text(_s7_email_layout_dc(reihenfolge)))
+    ]
+
+
+def _s7_pill_partner(metric_id: str) -> str:
+    """``temperature`` steht als erste Groesse der Katalog-Ordnung
+    (``_PILL_CATALOG_ORDER``) vor jeder anderen -- als Partner macht sie den
+    Unterschied zwischen Katalog- und Nutzer-Ordnung in BEIDEN Richtungen
+    sichtbar."""
+    return "wind" if metric_id == "temperature" else "temperature"
+
+
+@pytest.mark.parametrize("metric_id", _S4_PILL_RELIABLE)
+def test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge(metric_id):
+    """AC-S7-6 (DER Produktivcode-Fix dieser Scheibe -- heute ROT): fuehrt das
+    E-Mail-Kanal-Layout zwei Groessen in einer von der Katalogordnung
+    abweichenden Reihenfolge, erscheinen die beiden Pillen im
+    Metriken-Ueberblick der Kurz-E-Mail heute trotzdem in KATALOGORDNUNG:
+    ``build_metrics_summary_pills()`` (email/helpers.py:1899-1901) kollabiert
+    die geordnete Liste zu ``ids_set = set(metric_ids)`` und iteriert
+    anschliessend ``_PILL_CATALOG_ORDER``. Die im Editor eingestellte
+    Reihenfolge kann diesen Ausgabeort strukturell nicht erreichen -- ein
+    Bedienelement ohne Wirkung."""
+    partner = _s7_pill_partner(metric_id)
+    a = _s7_pillen([metric_id, partner])
+    b = _s7_pillen([partner, metric_id])
+    assert len(a) == 2 and len(b) == 2, (
+        f"Vakuum: {metric_id!r}/{partner!r} ergeben {a} bzw. {b} statt je "
+        "zwei Pillen -- ohne zwei Pillen ist keine Reihenfolge messbar"
+    )
+    assert a[0] != a[1], (
+        f"Vakuum: beide Pillen tragen denselben Text {a[0]!r}"
+    )
+    assert a == list(reversed(b)), (
+        f"AC-S7-6: Layout [{metric_id}, {partner}] ergibt {a}, Layout "
+        f"[{partner}, {metric_id}] ergibt {b} -- dieselbe MENGE in zwei "
+        "Reihenfolgen muss zwei verschiedene Pillenfolgen ergeben"
+    )
+    assert a != b, (
+        f"AC-S7-6: beide Layouts ergeben dieselbe Pillenfolge {a} -- die "
+        "eingestellte Reihenfolge wird verworfen"
+    )
+
+
+# Am 2026-08-13 am unveraenderten Renderer abgenommen: Text UND Ampelstufe je
+# Pille bei KATALOG-Ordnung. Der Fix aus AC-S7-6 aendert ausschliesslich die
+# Reihenfolge -- bleibt diese Erwartung gruen, sind Auswahl, Abwahl,
+# Schwellenlogik und Ampelstufen nachweislich unberuehrt.
+_S7_PILLEN_BASIS_KATALOGORDNUNG = [
+    "3-20C - Max 11:00",
+    "gef. 1.0-18.0C - Max 11:00",
+    "! Wind >10 km/h ab 04:00 - max 45 (10:00)",
+    "!!! Boeen >20 km/h ab 04:00 - max 70 (10:00)",
+    "!! Regen ab 05:00 - 8.9 mm",
+    "!!! Regen-W. >20% ab 05:00 - max 95% (11:00)",
+    "!!! Gewitter ab 11:00 - staerkste 11:00",
+    "50% bewoelkt - Max 08:00",
+    "Feuchte 55-55% - Max 08:00",
+    "Sonne 150 min",
+]
+
+
+def test_ac_s7_6b_pilleninhalt_bleibt_bei_katalogordnung_bytegleich():
+    """AC-S7-6 (Begleitschutz): bei einem E-Mail-Layout IN Katalogordnung
+    bleiben die Pillen byte-gleich zum heutigen Zustand -- Text, Ampel-
+    Praefix und Reihenfolge. Der Fix darf nur die Ausgabereihenfolge einer
+    ABWEICHENDEN Nutzerliste aendern, nichts sonst."""
+    katalog_ordnung = [m for m in _PILL_CATALOG_ORDER if m in _S4_PILL_RELIABLE]
+    assert len(katalog_ordnung) == len(_S4_PILL_RELIABLE), (
+        "Vakuum: nicht jede zuverlaessig feuernde Pillen-Metrik steht in "
+        f"_PILL_CATALOG_ORDER: {sorted(set(_S4_PILL_RELIABLE) - set(katalog_ordnung))}"
+    )
+    assert _s7_pillen(katalog_ordnung) == _S7_PILLEN_BASIS_KATALOGORDNUNG, (
+        "AC-S7-6b: der Pillen-INHALT hat sich geaendert, nicht nur die "
+        f"Reihenfolge:\n{_s7_pillen(katalog_ordnung)}"
+    )
+
+
+# --- AC-S7-7: Trip-Telegram-Kurzuebersicht folgt der Reihenfolge ----------
+
+# temperature_night/wind_chill_night unterdruecken ihre eigene Zeile, sobald
+# die Tages-Groesse mitgewaehlt ist (narrow.py:745-760) -- mit einem festen
+# Partner waere ihr Verhalten von der Partnerwahl abhaengig und der Test
+# maesse die Unterdrueckung statt der Reihenfolge. Ihre ANWESENHEIT deckt
+# AC-S4-12.
+_S7_TELEGRAM_ORDER_METRIKEN = [
+    m for m in _ALL_METRIC_IDS if m not in ("temperature_night", "wind_chill_night")
+]
+
+
+def _s7_telegram_layout_dc(reihenfolge: list[str]) -> UnifiedWeatherDisplayConfig:
+    return UnifiedWeatherDisplayConfig(
+        trip_id="s7-telegram",
+        metrics=[
+            MetricConfig(metric_id=m, enabled=True, order=i)
+            for i, m in enumerate(sorted(reihenfolge))
+        ],
+        per_channel_layouts={
+            "telegram": [
+                MetricConfig(metric_id=m, enabled=True, bucket="primary", order=i)
+                for i, m in enumerate(reihenfolge)
+            ],
+        },
+    )
+
+
+def _s7_kurzuebersicht_index(zeilen: list[str], metric_id: str) -> int:
+    """Position der Kurzuebersicht-Zeile einer Groesse. Gesucht wird ueber
+    ``compact_label`` + Leerzeichen -- ohne das Leerzeichen faende "T" auch
+    "TN"/"TH" (Praefix-Kollision, dieselbe Falle wie im SMS-Pfad)."""
+    label = get_metric(metric_id).compact_label
+    treffer = [i for i, z in enumerate(zeilen) if z.startswith(label + " ")]
+    assert len(treffer) == 1, (
+        f"AC-S7-7: {metric_id!r} (Kuerzel {label!r}) kommt {len(treffer)}-mal "
+        f"in der Kurzuebersicht vor: {zeilen!r}"
+    )
+    return treffer[0]
+
+
+@pytest.mark.parametrize("metric_id", _S7_TELEGRAM_ORDER_METRIKEN)
+def test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge(metric_id):
+    """AC-S7-7: die Telegram-Kurzuebersicht-Bubble folgt der im
+    Telegram-Kanal eingestellten Reihenfolge -- paarweise ueber alle
+    waehlbaren Groessen."""
+    partner = "temperature" if metric_id == "wind" else "wind"
+    zeilen_a = _s4_kurzuebersicht(_s7_telegram_layout_dc([metric_id, partner]))
+    zeilen_b = _s4_kurzuebersicht(_s7_telegram_layout_dc([partner, metric_id]))
+    assert _s7_kurzuebersicht_index(zeilen_a, metric_id) < _s7_kurzuebersicht_index(
+        zeilen_a, partner
+    ), f"AC-S7-7: [{metric_id}, {partner}] ergibt {zeilen_a}"
+    assert _s7_kurzuebersicht_index(zeilen_b, partner) < _s7_kurzuebersicht_index(
+        zeilen_b, metric_id
+    ), f"AC-S7-7: [{partner}, {metric_id}] ergibt {zeilen_b}"
+
+
+def test_ac_s7_7b_zwei_reihenfolge_quellen_in_einem_renderer():
+    """AC-S7-7 (benanntes Driftrisiko, Charakterisierung): ``render_telegram_
+    bubbles()`` bezieht die Reihenfolge der KURZUEBERSICHT aus
+    ``dc.get_enabled_metric_ids()`` -- der reinen LISTENPOSITION -- und die
+    der TABELLEN-Bubbles zwei Zeilen weiter aus ``render_for_channel()``,
+    das nach dem ``order``-FELD sortiert. Im Versandpfad fallen beide
+    zusammen, weil ``get_metrics_for_channel()`` die Liste vorher nach
+    ``order`` sortiert (models.py:751-770); widersprechen sich die beiden
+    Angaben, laufen sie auseinander. Solange beide Quellen bestehen, soll das
+    benannt sein statt unbemerkt."""
+    from output.renderers.narrow import render_telegram_bubbles
+
+    dc = UnifiedWeatherDisplayConfig(
+        trip_id="s7-drift",
+        metrics=[
+            MetricConfig(metric_id="wind", enabled=True, bucket="primary", order=1),
+            MetricConfig(metric_id="temperature", enabled=True, bucket="primary", order=0),
+        ],
+    )
+    assert dc.get_enabled_metric_ids() == ["wind", "temperature"], (
+        "AC-S7-7b: Quelle 1 (Listenposition) hat sich geaendert"
+    )
+    assert render_for_channel("telegram", dc, "evening").table_columns == [
+        "temperature", "wind",
+    ], "AC-S7-7b: Quelle 2 (order-Feld) hat sich geaendert"
+
+    bubbles = render_telegram_bubbles(
+        segments=[_matrix_segment()], seg_tables=[[]], dc=dc,
+        report_type="evening", tz=F.TZ, trip_name="Issue1703S7",
+        night_weather=F.night_weather(),
+    )
+    zeilen = [
+        z.strip() for z in bubbles[1].text.splitlines()
+        if z.strip() and z.strip() != "Kurzübersicht"
+    ]
+    assert _s7_kurzuebersicht_index(zeilen, "wind") < _s7_kurzuebersicht_index(
+        zeilen, "temperature"
+    ), (
+        "AC-S7-7b: die Kurzuebersicht folgt nicht mehr der Listenposition, "
+        f"sondern offenbar dem order-Feld: {zeilen!r}"
+    )
+
+
+# --- AC-S7-8: Compare-Telegram und -SMS unter Kappung ---------------------
+
+@pytest.mark.parametrize("metric_id", _S7_SOLL)
+def test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge(metric_id):
+    """AC-S7-8 (Telegram): die Zellfolge je Ort folgt der eingestellten
+    Reihenfolge. Paarweise mit ZWEI Groessen geprueft -- mit der vollen
+    Auswahl maesse der Test die 7-Spalten-Kappung statt der Reihenfolge
+    (``CHANNEL_LIMITS["telegram"]["max_table_cols"]``)."""
+    partner = partner_von(metric_id)
+    label_m = _PLAIN_ROWS_BY_ID[metric_id][1]
+    label_p = _PLAIN_ROWS_BY_ID[partner][1]
+    assert label_m != label_p, (
+        f"Vakuum: {metric_id!r} und {partner!r} teilen sich das Telegram-Label"
+    )
+    zellen_a = telegram_zellen(
+        render_compare_telegram(_s7_result(), enabled_metrics=[metric_id, partner])
+    )
+    zellen_b = telegram_zellen(
+        render_compare_telegram(_s7_result(), enabled_metrics=[partner, metric_id])
+    )
+    assert [z.startswith(label_m) for z in zellen_a] == [True, False], (
+        f"AC-S7-8: [{metric_id}, {partner}] ergibt {zellen_a}"
+    )
+    assert [z.startswith(label_p) for z in zellen_b] == [True, False], (
+        f"AC-S7-8: [{partner}, {metric_id}] ergibt {zellen_b}"
+    )
+
+
+@pytest.mark.parametrize("metric_id", _S7_SOLL)
+def test_ac_s7_8b_compare_sms_folgt_der_reihenfolge(metric_id):
+    """AC-S7-8 (SMS): die Kuerzel-Token-Folge je Ort folgt der eingestellten
+    Reihenfolge. Ebenfalls paarweise -- die SMS kappt am Zeichenbudget
+    (``CHANNEL_LIMITS["sms"]["max_chars"]``, gemessen 153)."""
+    partner = partner_von(metric_id)
+    ort = _s7_result().locations[0]
+    kuerzel_m, kuerzel_p = sms_kuerzel(ort, metric_id), sms_kuerzel(ort, partner)
+    assert kuerzel_m != kuerzel_p, (
+        f"Vakuum: {metric_id!r} und {partner!r} teilen sich das SMS-Kuerzel "
+        f"{kuerzel_m!r}"
+    )
+    sms_a = render_compare_sms(_s7_result(), enabled_metrics=[metric_id, partner])
+    sms_b = render_compare_sms(_s7_result(), enabled_metrics=[partner, metric_id])
+    ia_m, ia_p = sms_index(sms_a, kuerzel_m), sms_index(sms_a, kuerzel_p)
+    ib_m, ib_p = sms_index(sms_b, kuerzel_m), sms_index(sms_b, kuerzel_p)
+    assert None not in (ia_m, ia_p, ib_m, ib_p), (
+        f"AC-S7-8: nicht beide Kuerzel in beiden SMS auffindbar "
+        f"({kuerzel_m}/{kuerzel_p}):\nA: {sms_a!r}\nB: {sms_b!r}"
+    )
+    assert ia_m < ia_p, f"AC-S7-8: [{metric_id}, {partner}] ergibt {sms_a!r}"
+    assert ib_p < ib_m, f"AC-S7-8: [{partner}, {metric_id}] ergibt {sms_b!r}"
+
+
+def test_ac_s7_8c_kappung_folgt_der_reihenfolge_und_wird_zum_inhaltsfehler():
+    """AC-S7-8 (Kappungs-Anteil): oberhalb der Kappungsgrenze entscheidet die
+    Reihenfolge, WELCHE Groesse ueberhaupt erhalten bleibt -- in der SMS ist
+    ein Reihenfolgefehler damit ein INHALTSfehler, kein Schoenheitsfehler."""
+    metrik_slots = CHANNEL_LIMITS["telegram"]["max_table_cols"] - 1  # Slot 0 = Zeit
+    assert len(_S7_SOLL) > 2 * metrik_slots, (
+        f"Vakuum: {len(_S7_SOLL)} Groessen reichen nicht, um zwei disjunkte "
+        f"Kappungsfenster von je {metrik_slots} zu belegen"
+    )
+    vorwaerts = telegram_zellen(
+        render_compare_telegram(_s7_result(), enabled_metrics=list(_S7_SOLL))
+    )
+    rueckwaerts = telegram_zellen(
+        render_compare_telegram(_s7_result(), enabled_metrics=list(reversed(_S7_SOLL)))
+    )
+    assert len(vorwaerts) == len(rueckwaerts) == metrik_slots, (
+        f"AC-S7-8c: Telegram zeigt {len(vorwaerts)}/{len(rueckwaerts)} Zellen "
+        f"statt der erwarteten {metrik_slots}"
+    )
+    assert set(vorwaerts).isdisjoint(rueckwaerts), (
+        "AC-S7-8c: die ersten und die letzten sieben Groessen der Auswahl "
+        f"ueberschneiden sich: {sorted(set(vorwaerts) & set(rueckwaerts))}"
+    )
+
+    ort = _s7_result().locations[0]
+    letzte = _S7_SOLL[-1]
+    kuerzel_letzte = sms_kuerzel(ort, letzte)
+    sms_vorwaerts = render_compare_sms(_s7_result(), enabled_metrics=list(_S7_SOLL))
+    sms_rueckwaerts = render_compare_sms(
+        _s7_result(), enabled_metrics=list(reversed(_S7_SOLL))
+    )
+    max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
+    for text in (sms_vorwaerts, sms_rueckwaerts):
+        assert len(text) <= max_chars, f"SMS zu lang ({len(text)}): {text!r}"
+    assert sms_index(sms_vorwaerts, kuerzel_letzte) is None, (
+        f"AC-S7-8c: {letzte!r} steht am Listenende und muesste vom "
+        f"Zeichenbudget verdraengt sein: {sms_vorwaerts!r}"
+    )
+    kuerzel_vorletzte = sms_kuerzel(ort, _S7_SOLL[-2])
+    position_letzte = sms_index(sms_rueckwaerts, kuerzel_letzte)
+    position_vorletzte = sms_index(sms_rueckwaerts, kuerzel_vorletzte)
+    assert position_letzte is not None and position_vorletzte is not None, (
+        f"AC-S7-8c: dieselbe Groesse muesste an erster Listenposition "
+        f"erscheinen: {sms_rueckwaerts!r}"
+    )
+    assert position_letzte < position_vorletzte, (
+        f"AC-S7-8c: {letzte!r} steht in der umgedrehten Liste vor "
+        f"{_S7_SOLL[-2]!r}, erscheint in der SMS aber dahinter: "
+        f"{sms_rueckwaerts!r}"
+    )
+
+
+# --- AC-S7-9: Kompakt-Zusammenfassung -- benannte Ausnahme ----------------
+
+def test_ac_s7_9_kompakt_zusammenfassung_hat_keine_reihenfolge_achse():
+    """AC-S7-9 (benannte, begruendete Ausnahme -- KEIN Fix): der Fliesstext
+    ``format_stage_summary()`` folgt einer festen Positivliste und kennt
+    keine nutzergesteuerte Reihenfolge. Dieselben zwei Groessen in zwei
+    Reihenfolgen ergeben denselben Satz. Anschluss an AC-S4-6/AC-S4-7
+    (feste Positivliste als akzeptierter Dauerzustand, PO-Entscheid
+    2026-08-12) -- hier ausdruecklich festgehalten statt stillschweigend
+    ausgelassen."""
+    basis = _s4_baseline_summary()
+    satz_a = _s4_compact_summary_text(_two_metric_dc("wind", "temperature"))
+    satz_b = _s4_compact_summary_text(_two_metric_dc("temperature", "wind"))
+    assert satz_a != basis, (
+        "Vakuum: die beiden Groessen veraendern den Fliesstext gar nicht -- "
+        f"dann sagt der Reihenfolge-Vergleich unten nichts. Basis: {basis!r}"
+    )
+    assert satz_a == satz_b, (
+        "AC-S7-9: der Fliesstext hat entgegen der Messung eine "
+        f"Reihenfolge-Achse bekommen:\nA: {satz_a!r}\nB: {satz_b!r}"
+    )

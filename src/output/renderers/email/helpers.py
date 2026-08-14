@@ -1874,6 +1874,17 @@ def build_metrics_summary_pills(
     """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
 
     metric_ids: list of metric IDs to render (from display_config, E-Mail enabled).
+        Issue #1703 S7: die REIHENFOLGE dieser Liste ist die Ausgabereihenfolge
+        der Pillen (Nutzer-Reihenfolge aus dem Kanal-Layout). Bis #1703 S7 galt
+        „Katalog-Reihenfolge, nicht Eingabereihenfolge" (Spec
+        ``email_metrics_summary_664.md:88``, 2026-06-08) -- **#664 → abgeloest
+        durch #1703 S7**. Die alte Wahl war unter ihren Bedingungen richtig:
+        im Juni 2026 gab es keine nutzergesetzte Metrik-Reihenfolge, die
+        Kanal-Layouts kamen erst mit #1575/#1677 (Trip) bzw. #1335/#1359
+        (Compare). Die „Eingabereihenfolge" war die zufaellige Folge der
+        Config-Eintraege und trug keine Absicht; Katalogordnung war die
+        stabilere Wahl. Seit die Eingabe eine Nutzerabsicht traegt, verwirft
+        die Katalogordnung sie.
     sms_mention_thresholds: dict[metric_id -> float] (Issue #1474b) —
         pro Trip eingestellte Erwaehnungsschwellen (aus `MetricConfig.
         sms_threshold`), im `metric_id`-Raum. Nur der `"thunder"`-Zweig in
@@ -1900,7 +1911,9 @@ def build_metrics_summary_pills(
         (``MetricConfig.aggregations``). Additiv: fehlt der Parameter oder ein
         Eintrag, gilt die Katalog-Vorgabe ``pill_default_aggregations()``. Eine
         ausdruecklich leere Liste heisst „keine Kachel" (AC-8).
-    Returns list of (text, tone) tuples in catalog order.
+    Returns list of (text, tone) tuples in ``metric_ids`` order (Issue #1703 S7;
+    zuvor: Katalog-Reihenfolge). Groessen ohne Eintrag in
+    ``_PILL_CATALOG_ORDER`` erzeugen unveraendert keine Pille.
     """
     from output.renderers.day_window import (
         build_day_window_points, collect_hiking_window_points,
@@ -1913,12 +1926,20 @@ def build_metrics_summary_pills(
     # ihre Gehzeit-Extrema ziehen — kein zweiter Rechenweg mehr.
     hiking_dps = collect_hiking_window_points(segments)
 
-    # Render in catalog order
-    ids_set = set(metric_ids)
+    # Issue #1703 Scheibe 7 (AC-S7-6): in der UEBERGEBENEN Reihenfolge rendern.
+    # Bis dahin wurde ``metric_ids`` hier zu ``set(metric_ids)`` kollabiert und
+    # stattdessen ``_PILL_CATALOG_ORDER`` iteriert. ``_PILL_CATALOG_ORDER``
+    # bleibt WEISSE LISTE (welche Groessen ueberhaupt eine Pille haben), gibt
+    # aber nicht mehr die Ordnung vor. ``seen`` haelt die Entdopplung, die
+    # bisher ``set()`` nebenbei erledigt hat -- ``resolve_trip_active_metrics()``
+    # dedupliziert nicht.
+    pill_ids = set(_PILL_CATALOG_ORDER)
+    seen: set[str] = set()
     pills = []
-    for mid in _PILL_CATALOG_ORDER:
-        if mid not in ids_set:
+    for mid in metric_ids:
+        if mid not in pill_ids or mid in seen:
             continue
+        seen.add(mid)
         dps = window_dps if mid in _DAY_WINDOW_PILL_IDS else hiking_dps
         chosen = None if metric_aggregations is None else metric_aggregations.get(mid)
         pill = _pill_for_metric(mid, sms_mention_thresholds, dps, tz=tz, has_gap=has_gap,
