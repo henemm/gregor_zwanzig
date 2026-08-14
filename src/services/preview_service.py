@@ -81,17 +81,22 @@ class PreviewService:
             )
         return load_trip(path)
 
-    def _resolve_target_date(self, trip: "Trip", given_date: str | None) -> date:
+    def _resolve_target_date(self, trip: "Trip", given_date: str | None, now_utc: datetime) -> date:
         """Liefert das Ziel-Datum: gegebenes oder nächstes Stage-Datum.
 
         Falls kein Stage in der Zukunft, nimm das erste Stage-Datum überhaupt.
+
+        Issue #1727 S5c: ``now_utc`` ist Pflicht (ADR-0051 Regel 3) — "heute"
+        bestimmt sich über ``trip_local_today(trip, now_utc)`` (Ortstag der
+        Tour), nicht mehr über die zonenlose ``date.today()``-Serveruhr.
         """
         if given_date:
             try:
                 return date.fromisoformat(given_date)
             except ValueError as e:
                 raise ValueError(f"Ungültiges Datum '{given_date}', ISO erwartet") from e
-        today = date.today()
+        from services.trip_day import trip_local_today
+        today = trip_local_today(trip, now_utc)
         # Issue #990 / Adversary F001: Trip komplett ohne Etappen ist ein
         # anderer Fall als "Etappen ohne genug Wegpunkte". Ein wegpunktloser
         # Trip hat keine im Wegpunkt-Editor bearbeitbare Etappe — daher hier
@@ -122,6 +127,7 @@ class PreviewService:
         trip: "Trip",
         target: date,
         report_type: str,
+        now_utc: datetime,
         demo: bool = False,
     ):
         """Gemeinsame Pipeline: segments → weather → format_email → TripReport.
@@ -130,6 +136,10 @@ class PreviewService:
             trip: Trip-Modell
             target: Ziel-Datum
             report_type: 'morning' | 'evening'
+            now_utc: Zeitpunkt "jetzt" (Issue #1727 S5c, ADR-0051 Regel 3) —
+                Pflichtparameter, speist BEIDE Ausblicks-/Trend-Aufrufe unten
+                (ein einziger Zeitpunkt statt zweier potenziell auseinander-
+                fallender ``datetime.now()``-Momentaufnahmen).
             demo: Wenn True (Issue #483), wird der FixtureProvider statt der
                 Live-OpenMeteo-API genutzt. Damit ist die Vorschau immer
                 verfügbar — unabhängig von API-Limit oder Datum.
@@ -214,27 +224,26 @@ class PreviewService:
         multi_day_trend = None
         outlook_state = None
         outlook_horizon_days = None
-        # Issue #1727 S5b: rein mechanischer Durchreich — beide Scheduler-
-        # Methoden verlangen den Zeitpunkt jetzt als Pflichtparameter
-        # (ADR-0051 Regel 3). Die EIGENE Tagesbestimmung der Vorschau
-        # (`_resolve_target_date`) bleibt unangetastet und folgt weiterhin dem
-        # Servertag — sie gehoert in die ADR-0044-Restliste „Vorschau,
-        # Werkzeuge" (S5c), nicht in diese Scheibe.
-        jetzt_utc = datetime.now(timezone.utc)
+        # Issue #1727 S5c: EIN von aussen uebergebenes `now_utc` speist BEIDE
+        # Scheduler-Methoden — dieselbe Zeitbasis, mit der `_resolve_target_date`
+        # (aufgerufen von den drei oeffentlichen render_*_preview-Methoden)
+        # bereits die Etappe gewaehlt hat. Die frueher hier lokal aufgeloeste
+        # zweite `datetime.now(timezone.utc)` entfaellt ersatzlos (ADR-0051
+        # Regel 3, keine Umgebungsuhr).
         if segment_weather and render_options.show_multi_day_trend:
             # Issue #1720 S1: `report_type` ist hier NICHT optional -- der
             # Zeilenbau loest damit die Ausblick-Spalten auf. Ohne ihn baute
             # die Vorschau die Zellen nach dem Abend-Default (Spaltenversatz
             # bei Morgen-/Abend-Overrides, nur in der Vorschau).
             trend_result = scheduler._build_stage_trend(
-                trip, target, now_utc=jetzt_utc, tz=trip_tz,
+                trip, target, now_utc=now_utc, tz=trip_tz,
                 report_type=report_type,
             )
             multi_day_trend = trend_result.rows
             outlook_state = trend_result.state
             outlook_horizon_days = trend_result.horizon_days
         thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
-            trip, target, now_utc=jetzt_utc, tz=trip_tz,
+            trip, target, now_utc=now_utc, tz=trip_tz,
             multi_day_trend=multi_day_trend, night_weather=night_weather,
         )
 
@@ -326,9 +335,10 @@ class PreviewService:
         if report_type not in VALID_REPORT_TYPES:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
-        target = self._resolve_target_date(trip, target_date)
+        now_utc = datetime.now(timezone.utc)
+        target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
         report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, demo=demo,
+            trip, target, report_type, now_utc=now_utc, demo=demo,
         )
         # Issue #722: compact format — wrap plain text in <pre> for browser preview
         if not report.email_html and report.email_plain:
@@ -353,9 +363,10 @@ class PreviewService:
         if report_type not in VALID_REPORT_TYPES:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
-        target = self._resolve_target_date(trip, target_date)
+        now_utc = datetime.now(timezone.utc)
+        target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
         report, _segment_weather, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, demo=demo,
+            trip, target, report_type, now_utc=now_utc, demo=demo,
         )
         # Issue #954: kein eigener Renderpfad mehr — report.sms_text ist bereits
         # der #944-korrekte Versandtext (inkl. disabled_specs-Filterung).
@@ -379,9 +390,10 @@ class PreviewService:
         if report_type not in VALID_REPORT_TYPES:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
-        target = self._resolve_target_date(trip, target_date)
+        now_utc = datetime.now(timezone.utc)
+        target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
         report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, demo=demo,
+            trip, target, report_type, now_utc=now_utc, demo=demo,
         )
         bubbles = report.telegram_bubbles or []
         body = "\n\n---\n\n".join(bubbles)
