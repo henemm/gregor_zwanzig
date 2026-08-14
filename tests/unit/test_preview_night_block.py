@@ -219,7 +219,7 @@ def test_demo_preview_night_fetch_never_touches_live_openmeteo(monkeypatch):
     trip = _demo_trip_single_stage(target, show_night_block=True)
 
     report, _segments, _stage_name, _tz = PreviewService()._build_report(
-        trip, target, "evening", demo=True,
+        trip, target, "evening", now_utc=datetime.now(timezone.utc), demo=True,
     )
 
     assert calls == [], (
@@ -262,7 +262,9 @@ def test_preview_night_fetch_follows_night_metric_selection(monkeypatch):
         "aktiviert haben (build_default_display_config, #1484)."
     )
 
-    PreviewService()._build_report(trip, target, "evening", demo=True)
+    PreviewService()._build_report(
+        trip, target, "evening", now_utc=datetime.now(timezone.utc), demo=True,
+    )
 
     assert calls, (
         "Die Vorschau beschafft KEINE Nachtdaten, obwohl die "
@@ -306,7 +308,9 @@ def test_preview_skips_night_fetch_when_neither_selected(monkeypatch):
         for mc in trip.display_config.metrics
     ]
 
-    PreviewService()._build_report(trip, target, "evening", demo=True)
+    PreviewService()._build_report(
+        trip, target, "evening", now_utc=datetime.now(timezone.utc), demo=True,
+    )
 
     assert calls == [], (
         "Die Vorschau beschafft Nachtdaten, obwohl weder Nacht-Tabelle noch "

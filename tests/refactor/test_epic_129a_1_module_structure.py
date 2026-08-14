@@ -33,7 +33,8 @@ def test_comparison_scoring():
 
 def test_comparison_engine():
     """AC-2 (engine): services.comparison_engine exportiert ComparisonEngine,
-    fetch_forecast_for_location, dict_to_comparison_result.
+    fetch_forecast_for_location. ``dict_to_comparison_result`` hatte 0
+    Aufrufer und ist mit Issue #1727 S5c ersatzlos entfernt.
     """
     mod = importlib.import_module("services.comparison_engine")
     assert hasattr(mod, "ComparisonEngine"), (
@@ -42,8 +43,9 @@ def test_comparison_engine():
     assert hasattr(mod, "fetch_forecast_for_location"), (
         "services.comparison_engine.fetch_forecast_for_location fehlt"
     )
-    assert hasattr(mod, "dict_to_comparison_result"), (
-        "services.comparison_engine.dict_to_comparison_result fehlt"
+    assert not hasattr(mod, "dict_to_comparison_result"), (
+        "services.comparison_engine.dict_to_comparison_result existiert noch — "
+        "sollte mit #1727 S5c entfernt worden sein (0 Aufrufer)"
     )
 
 

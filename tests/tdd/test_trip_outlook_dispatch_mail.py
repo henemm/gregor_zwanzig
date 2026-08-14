@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import sys
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 # Pfadregel #1409: Pruefling relativ zur eigenen Testdatei aufloesen.
@@ -509,7 +509,7 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
     sched_mod.TripReportSchedulerService = _fixture_scheduler_klasse()
     try:
         report, *_ = PreviewService(settings=settings)._build_report(
-            trip, date.today(), "morning",
+            trip, date.today(), "morning", now_utc=datetime.now(timezone.utc),
         )
     finally:
         sched_mod.TripReportSchedulerService = original

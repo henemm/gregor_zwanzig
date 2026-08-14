@@ -121,6 +121,21 @@ FROST_UTC = datetime(2026, 8, 19, 20, 0, tzinfo=timezone.utc)
 # 20:00 UTC am 21.08. = 08:00 Ortszeit am 22.08. in Wellington (Ortstag D22).
 PARAM_UTC = datetime(2026, 8, 21, 20, 0, tzinfo=timezone.utc)
 
+# Adversary-Fund F001 (#1727 S5c QA-Runde): mit PARAM_UTC (Ortstag D22) landen
+# der korrekte Pfad UND ein Mutant, der ``now_utc`` ignoriert und stattdessen
+# ``date.today()`` benutzt, beim GLEICHEN Ergebnis (D19) -- der Mutant faellt
+# durch den Rueckfall auf die "chronologisch erste Etappe", der korrekte Pfad
+# ebenso (weil am Ortstag D22 beide Etappen laengst vergangen sind); der
+# nackte UTC-Kalendertag von FROST_UTC (= D19, s.u.) trifft zufaellig exakt
+# dieselbe Etappe. Dieser eigene Wert trifft stattdessen EXAKT die ZWEITE
+# Etappe -- der korrekte Pfad matcht sie direkt im Haupt-Vergleich
+# ``stage_date >= today``, nicht ueber den Rueckfall; ein Mutant landet weiter
+# bei der ERSTEN Etappe (D19, nackter UTC-Tag von FROST_UTC). Zwei
+# unterscheidbare Ergebnisse statt eines zufaelligen Zusammentreffens.
+# 20:00 UTC am 20.08. = 08:00 Ortszeit am 21.08. in Wellington (Ortstag D21,
+# faellt exakt auf die zweite Etappe).
+PARAM_UTC_STAGE_MATCH = datetime(2026, 8, 20, 20, 0, tzinfo=timezone.utc)
+
 
 def _preview_trip(trip_id: str, tage_und_koordinaten: list) -> Trip:
     """Tour mit je einer RENDERBAREN (2-Wegpunkt-)Etappe pro Tag.
@@ -161,43 +176,93 @@ def _uhr_eingefroren(now_utc: datetime) -> None:
 # ═══════════════════════ AC-1: preview_service (F1) ═══════════════════════
 
 
-def test_ac1_resolve_target_date_folgt_dem_parameter_nicht_der_systemuhr():
+def test_ac1_resolve_target_date_folgt_dem_parameter_nicht_der_systemuhr(monkeypatch):
     """AC-1, erste Haelfte -- ``PreviewService._resolve_target_date`` (F1).
 
     GIVEN eine Neuseeland-Tour (UTC+12) mit Etappen am 19.08. und 21.08.,
     WHEN  ``_resolve_target_date(trip, given_date=None, now_utc=Y)`` unter
           eingefrorener Systemuhr X aufgerufen wird, wobei X und Y auf
           verschiedene Ortstage derselben Zone fallen,
-    THEN  waehlt die Auto-Resolve-Logik die Etappe gemessen am Ortstag VON Y
-          -- nicht von X. Bei X (Ortstag 20.08.) waere die 21.08.-Etappe die
-          naechste kommende; bei Y (Ortstag 22.08.) liegen BEIDE Etappen
-          bereits in der Vergangenheit, der Rueckfall greift auf die
-          chronologisch ERSTE Etappe (19.08.) -- ein eindeutig
-          unterscheidbares Ergebnis.
+    THEN  ruft der Pruefling ``trip_local_today(trip, now_utc)`` MIT dem
+          uebergebenen Y auf -- nicht mit X.
+
+    Fund-Geschichte, warum dieser Test per DI-SPION misst statt ueber die
+    gewaehlte Etappe zu schliessen (Adversary #1727 S5c, QA-Runde 3):
+
+    F001: Die urspruengliche Fixtur nutzte ``PARAM_UTC`` (Ortstag 22.08.,
+    BEIDE Etappen vergangen). Der korrekte Pfad landete dort ueber den
+    Rueckfall auf die "chronologisch erste Etappe" (19.08.) -- GENAU das
+    Ergebnis, das ein Mutant liefert, der ``now_utc`` ignoriert und
+    stattdessen ``date.today()`` benutzt (der nackte UTC-Kalendertag der
+    eingefrorenen Systemuhr X ist 19.08. und trifft zufaellig dieselbe,
+    erste Etappe). Fix: ``PARAM_UTC_STAGE_MATCH`` (Ortstag 21.08.), dessen
+    Ortstag EXAKT auf die zweite Etappe faellt.
+
+    F002: Dieser Fix schloss die Kollision am UNTEREN Rand, liess die
+    STRUKTURELLE Kollisionszone aber offen. Der Ortstag von ``FROST_UTC``
+    (20.08.) UND der von ``PARAM_UTC_STAGE_MATCH`` (21.08.) liegen BEIDE im
+    Intervall (19.08., 21.08.] der Zwei-Etappen-Fixtur -- die
+    ``stage_date >= today``-Schleife waehlt in BEIDEN Faellen dieselbe
+    zweite Etappe. Eine Mutation, die den Parameter formal behaelt, im
+    Rumpf aber ``trip_local_today(trip, datetime.now(timezone.utc))``
+    aufruft (Systemuhr statt Parameter, Zonenaufloesung bleibt korrekt),
+    blieb dadurch unentdeckt -- und DIESMAL ohne AST-Wächter als Backstop:
+    ``datetime.now(timezone.utc)`` ist an drei Stellen in
+    ``preview_service.py`` legitim (``has_tz_arg = True``,
+    ``tests/test_output_timezone_guard.py:383-393``).
+
+    Der Umweg ueber die Etappenauswahl ist strukturell immer nur so scharf
+    wie die zufaellige Lage der Etappendaten -- eine dritte Kollisionszone
+    liesse sich mit demselben Muster jederzeit wiederfinden. Ein DI-Spion
+    direkt auf ``trip_local_today`` misst stattdessen MIT WELCHEM ARGUMENT
+    der Pruefling die Funktion aufruft -- die Zusicherung, die AC-8
+    tatsaechlich meint, geprueft an der Stelle, an der sie wirkt. Analog
+    zum zweiten AC-1-Test unten (``_build_report``), der genau dasselbe
+    Muster fuer die Scheduler-Aufrufe nutzt. **Nicht wieder auf einen
+    Etappen-Umweg vereinfachen** -- das waere ein Rueckfall auf F001/F002.
 
     RED heute: ``now_utc`` existiert an ``_resolve_target_date`` noch nicht
     -> ``TypeError``.
     """
+    import services.trip_day as trip_day_mod
+
+    gesehen_now_utc: list = []
+    _echte_trip_local_today = trip_day_mod.trip_local_today
+
+    def _trip_local_today_spion(trip_arg, now_utc_arg):
+        gesehen_now_utc.append(now_utc_arg)
+        return _echte_trip_local_today(trip_arg, now_utc_arg)
+
+    monkeypatch.setattr(trip_day_mod, "trip_local_today", _trip_local_today_spion)
+
     trip = _preview_trip("preview-param-nz", [(D19, WP_NZ), (D21, WP_NZ)])
     service = PreviewService(settings_email_only())
 
     with freeze_time(FROST_UTC):
         _anker(FROST_UTC, WELLINGTON_ZONE, D20)
         _uhr_eingefroren(FROST_UTC)
-        ergebnis = service._resolve_target_date(trip, None, now_utc=PARAM_UTC)
+        ergebnis = service._resolve_target_date(
+            trip, None, now_utc=PARAM_UTC_STAGE_MATCH,
+        )
 
-    ortstag_param = PARAM_UTC.astimezone(ZoneInfo(WELLINGTON_ZONE)).date()
-    assert ortstag_param == D22, (
-        "Testaufbau nicht diskriminierend: PARAM_UTC muss auf Ortstag "
-        f"{D22} fallen, liegt aber auf {ortstag_param}"
+    assert gesehen_now_utc == [PARAM_UTC_STAGE_MATCH], (
+        f"AC-1/AC-8: trip_local_today wurde mit now_utc={gesehen_now_utc!r} "
+        f"aufgerufen, erwartet [{PARAM_UTC_STAGE_MATCH.isoformat()}] -- der "
+        "Pruefling hat entweder den Parameter gar nicht an trip_local_today "
+        "durchgereicht (leere Liste) oder die eingefrorene Systemuhr "
+        f"({FROST_UTC.isoformat()}) statt des uebergebenen Parameters "
+        "gelesen (F002, ADR-0051 Regel 3)."
     )
-    assert ergebnis == D19, (
-        f"AC-1: _resolve_target_date lieferte {ergebnis}, erwartet {D19} "
-        f"(chronologisch erste Etappe, weil am Ortstag von now_utc={PARAM_UTC.isoformat()} "
-        f"({ortstag_param}) BEIDE Etappen bereits vergangen sind). "
-        f"{D21} heisst: der Pruefling hat die eingefrorene Systemuhr "
-        f"({FROST_UTC.isoformat()}, Ortstag {D20}) benutzt statt des "
-        "uebergebenen Parameters now_utc (ADR-0051 Regel 3)."
+    ortstag_param = PARAM_UTC_STAGE_MATCH.astimezone(ZoneInfo(WELLINGTON_ZONE)).date()
+    assert ortstag_param == D21, (
+        "Testaufbau nicht diskriminierend: PARAM_UTC_STAGE_MATCH muss auf "
+        f"Ortstag {D21} fallen (exakt die zweite Etappe), liegt aber auf "
+        f"{ortstag_param}"
+    )
+    assert ergebnis == D21, (
+        f"AC-1: _resolve_target_date lieferte {ergebnis}, erwartet {D21} "
+        f"(die Etappe am Ortstag von now_utc={PARAM_UTC_STAGE_MATCH.isoformat()} "
+        f"({ortstag_param}))."
     )
 
 
@@ -227,12 +292,19 @@ def test_ac1_build_report_folgt_dem_parameter_nicht_der_systemuhr(monkeypatch):
     gesehen_trend: list = []
     gesehen_thunder: list = []
 
-    def _trend_spion(self, trip, target_date, now_utc, tz=None):
+    def _trend_spion(self, trip, target_date, now_utc, **kwargs):
+        # **kwargs statt einzeln nachgezogener Parameter (tz, report_type, ...):
+        # dieser Spion bewacht AUSSCHLIESSLICH now_utc (AC-1) -- der bleibt
+        # explizit benannt und wird unten geprueft. Alles andere (Issue
+        # #1720 S1 hat report_type ergaenzt, kuenftige Erweiterungen sind
+        # nicht ausgeschlossen) wird stillschweigend entgegengenommen, statt
+        # bei JEDER Signaturerweiterung von _build_stage_trend erneut mit
+        # einem TypeError zu brechen, der wie ein Testfehler aussieht, aber
+        # nur Signatur-Drift ist.
         gesehen_trend.append(now_utc)
         return TrendResult(rows=None, state=OutlookState.NO_STAGES)
 
-    def _thunder_spion(self, trip, target_date, now_utc, tz,
-                        multi_day_trend=None, night_weather=None):
+    def _thunder_spion(self, trip, target_date, now_utc, **kwargs):
         gesehen_thunder.append(now_utc)
         return None
 

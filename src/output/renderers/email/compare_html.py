@@ -21,7 +21,7 @@ SPEC: docs/specs/modules/issue_1110_compare_mail_v2.md
 from __future__ import annotations
 
 import html as _html
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -640,8 +640,9 @@ def _daily_summary(loc: LocationResult):
     """Tages-Aggregat eines Ortes aus ``hourly_data`` (kanonische Trip-Regeln).
 
     Der Renderer darf sich NICHT darauf verlassen, dass die ComparisonEngine
-    gelaufen ist: ``dict_to_comparison_result()`` und der Validator-Render-Pfad
-    fuettern denselben Renderer ohne Engine. Genau dieses Live-Ableiten aus
+    gelaufen ist: der Validator-Render-Pfad fuettert denselben Renderer ohne
+    Engine (``dict_to_comparison_result()`` -- der frühere zweite Fuetterer --
+    ist mit Issue #1727 S5c als toter Code entfernt). Genau dieses Live-Ableiten aus
     ``hourly_data`` macht ``uv_max`` heute schon (Issue #1110); die vier neuen
     Zeilen folgen demselben Muster.
     """
@@ -1435,12 +1436,18 @@ def _render_legend(hourly_metrics: list[str] | None = None, hourly_enabled: bool
     )
 
 
-def _compute_next_send(schedule, weekday) -> Optional[str]:
+def _compute_next_send(schedule, weekday, tz) -> Optional[str]:
     """Known Limitation (SPEC): liefert None (-> '—'), wenn schedule nicht
-    ermittelbar ist."""
+    ermittelbar ist.
+
+    Issue #1727 S5c (ADR-0044): ``today`` kommt aus ``tz`` (bereits von
+    ``render_compare_html`` aufgeloestes ``header_tz``) statt aus der
+    zonenlosen ``date.today()``-Serveruhr — dieselbe Zeitbasis wie die
+    Kopfzeile derselben Mail.
+    """
     if not schedule:
         return None
-    today = date.today()
+    today = local_dt(datetime.now(timezone.utc), tz).date()
     schedule_str = str(schedule).lower()
     if "weekly" in schedule_str and weekday is not None:
         try:
@@ -1454,9 +1461,9 @@ def _compute_next_send(schedule, weekday) -> Optional[str]:
     return None
 
 
-def _render_abo_footer(preset_name, preset_schedule, preset_weekday, location_count: int, sig) -> str:
+def _render_abo_footer(preset_name, preset_schedule, preset_weekday, location_count: int, sig, tz) -> str:
     name = _html.escape(preset_name) if preset_name else "Ortsvergleich"
-    next_send = _compute_next_send(preset_schedule, preset_weekday) or "—"
+    next_send = _compute_next_send(preset_schedule, preset_weekday, tz) or "—"
     return (
         f'<div style="padding:20px 24px;background:{G_PAPER};border-top:1px solid #e6e1d3;">'
         f'<table style="width:100%;border-collapse:collapse;"><tr>'
@@ -1667,7 +1674,9 @@ def render_compare_html(
     )
 
     legend_html = _render_legend(hourly_metrics, hourly_enabled)
-    abo_html = _render_abo_footer(preset_name, preset_schedule, preset_weekday, len(locations), sig)
+    abo_html = _render_abo_footer(
+        preset_name, preset_schedule, preset_weekday, len(locations), sig, header_tz,
+    )
     app_footer_html = _render_app_footer()
 
     # Nur nicht-leere Bloecke einreihen (kein Doppel-Newline durch leeren

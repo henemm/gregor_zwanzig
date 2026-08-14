@@ -153,6 +153,20 @@ Regelverstoß — genau das war der Zustand vor #1697.
   Retry-Backoff liegt. An den Fundstellen `_send_trip_report_outcome`,
   `_target_date_from_report` und `send_one_compare_preset` bleibt die Auflösung bewusst
   funktionsintern (jeweils vor jedem Netzabruf).
+- **Vorschau-, Anzeige- und Sofort-Vergleichspfade** (#1727 S5c): sieben Fundstellen in fünf
+  Dateien. Die Trip-Vorschau (`preview_service.py`) — `_resolve_target_date` UND
+  `_build_report` — folgt seither `trip_local_today(trip, now_utc)`; EIN von den drei
+  öffentlichen `render_*_preview`-Methoden einmal gebundenes `now_utc` speist beide Aufrufe,
+  die zuvor bei `_build_report` separat aufgelöste zweite Systemuhr entfällt ersatzlos. Die
+  Compare-Vorschau (`compare_preview_service.py::_resolve_target_date`) und der
+  Sofort-Vergleich (`api/routers/compare.py::run_comparison`, alle drei Funde im selben
+  Commit — Stunde UND Zieltag „heute"/„morgen" aus DERSELBEN Auflösung) folgen
+  `first_resolvable_tz(locations)`, demselben Muster wie der Compare-Versand seit S5b. Der
+  Mail-Footer „Nächster Versand" (`compare_html.py::_compute_next_send`) übernimmt das in
+  `render_compare_html` bereits aufgelöste `header_tz`, statt selbst ein zweites Mal
+  aufzulösen. Die siebte Fundstelle, `comparison_engine.py::dict_to_comparison_result`,
+  wurde NICHT korrigiert, sondern als toter Code (0 Aufrufer im gesamten Repo) ersatzlos
+  entfernt.
 
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,
@@ -166,18 +180,48 @@ Der zuvor hier gelistete Briefing-/Versand-Pfad (`_get_target_date`, `_get_activ
 gelistete Kommando-/Anzeige-Pfad — s. „Umgesetzt" oben (#1727 S5a/#1795) und die neun
 Versandpfade aus #1727 S5b.
 
-**Vorschau, Werkzeuge:** `preview_service._resolve_target_date`, `api/routers/debug.py` und
-`tools/weather_validation.py` (S5c, eigene Scheibe). Zeilennummern bewusst weggelassen —
-sie waren in der Vorfassung dieser Liste binnen Tagen veraltet. `preview_service.py` reicht
-seit #1727 S5b zwar `now_utc` an die beiden Scheduler-Methoden durch (mechanisch erzwungen
-durch deren Pflichtparameter), seine EIGENE Tagesbestimmung folgt aber weiterhin dem
-Servertag — die Datei steht deshalb hier UND oben.
+`preview_service._resolve_target_date` (samt `_build_report`) ist mit #1727 S5c erledigt und
+nach „Umgesetzt" oben gewandert. `tools/weather_validation.py` ist damit ebenfalls KEINE
+offene Arbeit mehr — s. „Bewusst NICHT betroffen" unten, wo die begründete Ausnahme steht.
+
+**Fünfte unvollständige Aufzählung dieses Epics:** `compare_preview_service._resolve_target_date`
+fehlte in dieser Restliste vollständig, obwohl der Wächter
+(`tests/test_output_timezone_guard.py::KNOWN_VIOLATIONS`) sie bereits als offenen Fund
+führte — weder oben noch unten stand sie je drin. Mit #1727 S5c ist sie behoben (s.
+„Umgesetzt" oben); hier ausdrücklich als das benannt, was sie war, statt sie stillschweigend
+als „schon immer bekannt" durchgehen zu lassen.
+
+**S5d — vier Dateien, sieben verbleibende Muster-A-Funde (Wächter-Restliste, nachgezählt am
+Stand nach S5c):**
+
+- `api/routers/debug.py` — `trigger_radar_alert` (1): Debug-Auslöser für Radar-Alarme datiert
+  weiterhin auf die Serveruhr.
+- `src/services/gpx_processing.py` — `compute_default_start_date` (2), `gpx_to_stage_data`
+  (1).
+- `src/services/official_alerts/massif_closure.py` — `_do_request`, `fetch` (2).
+- `src/services/official_alerts/meteo_forets.py` — `covers` (1).
+
+**Sechste unvollständige Aufzählung dieses Epics:** die drei letztgenannten Dateien
+(`gpx_processing.py`, `massif_closure.py`, `meteo_forets.py`) standen bis zu dieser Scheibe in
+KEINEM Abschnitt dieses ADR — weder oben noch unten —, obwohl der Wächter
+(`tests/test_output_timezone_guard.py::KNOWN_VIOLATIONS`) sie durchgehend als offene Funde
+führte. Nur `api/routers/debug.py` war hier bislang erwähnt. Hier ausdrücklich als das
+benannt, was sie waren, statt sie stillschweigend unter „bleibt offen" mitzumeinen. Nach S5d
+ist die Muster-A-Liste des Wächters vollständig leer; offen bleiben dann nur noch
+`raw_astimezone`-Funde, die dritte Fundart des Wächters (stille Mid-Body-Rückfälle, per
+`BoolOp`/`getattr`/`If`/`IfExp` erkannt) sowie die vom Wächter nicht gescannten Bereiche
+(S5e).
 
 **Bewusst NICHT betroffen** (feste Zone ist dort Absicht, kein Verstoß):
 `forecast_budget._today_utc` und `meteoalarm_budget._today_utc` (Kontingent-Tageswechsel in
 UTC) sowie der manuelle `?hour=`-Testauslöser des Versand-Orchestrators
 (`CompareDispatchStrategy.MANUAL_TRIGGER_REFERENCE_ZONE`) — ein Ops-/Debug-Werkzeug ohne
 Preset-Bezug, für das „Stunde X" bei preset-eigenen Zonen keine EINE Bedeutung mehr hätte.
+Seit #1727 S5c außerdem `tools/weather_validation.py`s Punkt-Validierungsmodus (`:288`,
+begründet über einen `# gz-main-path:`-Kommentar an der Zeile): das Werkzeug fragt seine
+Referenzdaten selbst ausdrücklich mit `"timezone": "UTC"` ab (`fetch_openmeteo`, `:31`) — ein
+Ortstag-Default erzeugte einen Widerspruch INNERHALB desselben Skripts (Validierungsziel UTC,
+Validierungs-Default Ortszeit).
 
 Die beiden Alarm-Module, die bis 2026-08-12 an dieser Stelle als bewusste Ausnahme standen
 (Ruhezeit-Engine und Tageszähler, fest `Europe/Vienna`), sind **keine Ausnahme mehr** — sie
