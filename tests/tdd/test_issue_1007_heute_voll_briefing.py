@@ -450,6 +450,12 @@ def test_f002_no_stage_body_nennt_keine_etappe_geplant():
     assert "Keine Etappe geplant" in body, body
 
 
+def test_ac9_already_in_progress_body_nennt_kollisionsfall_nicht_keine_etappe():
+    body = _on_demand_failure_body("already_in_progress", "Heute", date(2026, 7, 10))
+    assert "Keine Etappe geplant" not in body, body
+    assert "läuft bereits" in body or "warten" in body, body
+
+
 # ---------------------------------------------------------------------------
 # Regressionstest (Runde 3) — On-Demand-'heute' darf die kombinierte
 # heute+morgen-Momentaufnahme NICHT mit nur dem Zieltag überschreiben.

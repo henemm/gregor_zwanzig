@@ -1,7 +1,13 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-11 (Issue #1719 Scheibe S3, `fix-1719-s3-aus-ist-ein-zustand` — die
+**Updated:** 2026-08-14 (Issue #1756 — Send-Idempotenz-Lock: `POST /api/trips/{trip_id}/send`
+lehnt einen zweiten Sendeversuch für denselben `(user_id, trip_id, report_type)`-Schlüssel,
+während ein erster noch läuft, jetzt mit neuem Statuscode 409 ab statt einen echten
+Doppelversand auszulösen (Prozess-lokaler `threading.Lock`, keine Persistenz); Go-Proxy-Timeout
+in `SendTripReportProxyHandler` von 120s auf 300s angehoben, da der reguläre Erfolgsfall durch
+den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann. Details Section 14.5, Spec
+`docs/specs/modules/fix_1756_send_idempotenz_lock.md`); 2026-08-11 (Issue #1719 Scheibe S3, `fix-1719-s3-aus-ist-ein-zustand` — die
 Live-Vorschau „So kommt es an" ist auf PO-Entscheid ersatzlos entfernt:
 `WeatherV2MailPreview.svelte` (der einzige Live-Konsument des unten beschriebenen
 `/api/_validator/sms-fidelity-preview`) ist gelöscht, ebenso `trip-detail/smsFidelityPreview.ts`.
@@ -1319,9 +1325,12 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 | Status | Scenario | Detail |
 |--------|----------|--------|
 | 404 | Trip `trip_id` not found for user | `"Trip {trip_id} not found"` |
+| 409 | Another send for the same `(user_id, trip_id, report_type)` is already in progress (Issue #1756) | `"Versand für {report_type} läuft bereits — bitte warten"` |
 | 422 | SMTP not configured for user (Issue #474) | `"SMTP not configured for this user"` |
 | 422 | No stages for target date (Bug #716 — AC-1) | `"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum"` |
 | 422 | Invalid `report_type` | `"Invalid report_type: {value}"` |
+
+**Idempotenz (Issue #1756):** Ein zweiter Aufruf für denselben `(user_id, trip_id, report_type)`-Schlüssel während ein erster Versand noch läuft (z. B. wiederholter Klick nach vorzeitigem Proxy-Timeout) wird mit HTTP 409 abgewiesen statt einen zweiten echten Versand auszulösen. Der Lock ist prozesslokal (`threading.Lock`, In-Memory), keine Persistenz. Der Go-Proxy (`SendTripReportProxyHandler`) hat außerdem einen auf 300s (vorher 120s) angehobenen Timeout, da der reguläre Erfolgsfall durch den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann.
 
 **Multi-Tenant Behavior:**
 - `user_id` query parameter determines which user's data (trip, email config) is used

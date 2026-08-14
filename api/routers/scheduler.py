@@ -276,6 +276,14 @@ def send_test_trip_report(trip_id: str, user_id: str = "default", report_type: s
                 "nicht erreichbar)"
             ),
         )
+    # Issue #1756: ein zweiter Sendeversuch waehrend ein erster fuer
+    # denselben Schluessel noch laeuft wird abgewiesen statt parallel
+    # ausgefuehrt (Doppelversand-Schutz).
+    if outcome == "already_in_progress":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Versand für {report_type} läuft bereits — bitte warten",
+        )
     return {"status": "ok", "trip_id": trip_id, "report_type": report_type, "sent": True}
 
 
