@@ -38,3 +38,14 @@ Wird ein Test gegen diese Referenz rot, hat sich die Trip-Mail veraendert --
 das ist der Befund, nicht der Anlass, die Dateien neu zu erzeugen. Das
 Aufzeichnungs-Werkzeug schreibt deshalb nur ueber eine vorhandene
 Aufzeichnung, wenn ihm ausdruecklich `--force` uebergeben wird.
+
+## Ausnahme 2026-08-14 (#1801, PO-freigegeben)
+
+`outlook_table.html` wurde manuell auf die neue Warnstufen-Palette (#1801)
+nachgezogen. Nachgemessen per Hex-Maskierung (Ist gegen Alt-Referenz):
+gleiche Laenge, gleiche Anzahl Farbwerte, nach Maskierung zeichengleich --
+es weichen ausschliesslich drei Flaechenfarben ab (`#fbeeb8`->`#fdf4cd`,
+`#fad6b8`->`#fbe3cc`, `#f6c5bf`->`#f7d3e2`). Keine Struktur-, Text- oder
+Zahlenaenderung. `outlook_legend.html` und `outlook_block.txt` sind von
+#1801 nicht betroffen (keine Hex-Werte / unveraendert) und bleiben
+unangetastet.
