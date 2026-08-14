@@ -327,6 +327,19 @@ Die alte Anthropic-Tokens-Datei definierte `--g-weather-thunder` als rotes
 von einem semantisch unpassenden Violett-Ton zu Rot (`#c43a2a`), konsistent
 mit der Gefahr-Palette (`--g-danger`). Konflikt ist gelöst.
 
+**Bewusste Divergenz — Ampel-Zellfärbung ist mail-only (Bug #1801, 2026-08-14):**
+`design_tokens.py::_TONE_CSS`/`tone_css()` (Zell-Ampel gelb/orange/rot in
+Trip-Stundentabelle und Ortsvergleich) sowie die neue Konstante
+`G_AMPEL_TEXT_GREEN` (`#2f6b39`, WCAG-AA-Fix für den grünen Zelltext) liegen
+**außerhalb** der 11 Kern-Mail-Tokens oben und haben **kein** `app.css`-Pendant
+— reine Mail-Renderer-Werte ohne Frontend-Spiegelung. Der Fix hat diese
+Ampel-Palette verändert (gelb `#d69500`/`#fdf4cd`, orange `#d4530a`/`#fbe3cc`,
+rot `#a8104a`/`#f7d3e2` statt vormals `#ca8a04`/`#fbeeb8` bzw.
+`#c2410c`/`#fad6b8` bzw. `#b91c1c`/`#f6c5bf`); `--g-success`/`--g-warning`/
+`--g-danger` oben bleiben davon unberührt — sie sind ohnehin ein eigenes,
+dreistufiges System, keine Spiegelung der vierstufigen Mail-Ampel. Details:
+`docs/reference/renderer_email_spec.md` §„Segmente (Sektion 4)".
+
 ### Inventar: `src/output/renderers/email/html.py`
 
 Status-Bewertung der sechs Bausteine, die EPIC 9 (Issue #236) adressiert:
