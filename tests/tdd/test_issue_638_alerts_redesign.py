@@ -45,6 +45,8 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 import output.channels.telegram as telegram_mod
 
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
 
 def _reset_alert_state(user_id: str) -> None:
     """State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
@@ -254,8 +256,39 @@ def _trip(rule: AlertRule, report_config: TripReportConfig | None = None) -> Tri
         display_config=_alert_display_config("tdd-638-trip"),
     )
     trip.alert_rules = [rule]
+    # Issue #1594: ohne gesetzte Briefing-Zeiten gelten 07:00/18:00 Ortszeit;
+    # die Vorlauf-Sperre schnitte den Alarm dann taeglich fuer je eine Stunde
+    # vor der Kanal-Aufloesung ab. Nur die Vorbedingung wandert — welche
+    # Kanaele an sind, bleibt Sache des jeweiligen Tests.
+    #
+    # 🔴 `report_config=None` wird hier NICHT erfunden: in dieser Datei ist der
+    # Fall bedeutungstragend (nur dann greift der E-Mail-Default, s.
+    # `test_f001_all_channels_off_sends_nothing`). Die zwei Alarm-Tests, die
+    # ihn benutzten, reichen ihr `report_config` jetzt selbst herein — dort
+    # steht auch, warum das ihre Aussage nicht antastet.
     trip.report_config = report_config
+    if trip.report_config is not None:
+        (trip.report_config.morning_time,
+         trip.report_config.evening_time) = briefing_zeiten_fuer_trip(trip)
     return trip
+
+
+def _briefing_config(trip_id: str) -> TripReportConfig:
+    """Briefing-Konfiguration, die den Trip aus dem Vorlauf-Fenster der
+    Alarm-Sperre (#1594) haelt und sonst nichts aussagt.
+
+    ``send_email=True`` bildet den Zustand nach, den ein Trip OHNE
+    ``report_config`` in der Kanal-Aufloesung hat (E-Mail-Default). Fuer
+    Regeln mit explizitem Kanal-Override — die einzigen, die diese
+    Konfiguration bekommen — ist beides ohnehin gleichwertig.
+
+    Die Uhrzeiten setzt :func:`_trip` selbst, in der Zone der Tour
+    (``anchor_tz``) — hier waere jede feste Zone geraten.
+    """
+    return TripReportConfig(
+        trip_id=trip_id, send_email=True, send_telegram=False,
+        alert_on_changes=True,
+    )
 
 
 def _wind_rule(severity: AlertSeverity, channels: list[str]) -> AlertRule:
@@ -302,7 +335,15 @@ def test_ac1_info_severity_alert_is_no_longer_silently_swallowed(
     Heute: info → ChangeSeverity.MINOR → vom MODERATE-Filter verschluckt → kein Versand.
     """
     rule = _wind_rule(AlertSeverity.INFO, channels=["telegram"])
-    trip = _trip(rule, report_config=None)
+    # Issue #1594: mit `report_config=None` gilt der Trip um 07:00/18:00
+    # Ortszeit als briefing-faellig (`_slot_stunde()` faellt genau darauf
+    # zurueck) und die Vorlauf-Sperre schwieg den Alarm ab — der Severity-Fall
+    # waere dann gar nicht mehr gemessen worden. Die Kanal-Aufloesung bleibt
+    # davon unberuehrt: die Regel traegt einen expliziten Override, und ein
+    # Override schlaegt `report_config` (AC-2 dieser Datei). NACHGEMESSEN
+    # ueber `_effective_alert_channels`: mit und ohne `report_config` exakt
+    # {'telegram'}.
+    trip = _trip(rule, report_config=_briefing_config("tdd-638-trip"))
 
     result = _run_alert(trip, _settings(smtp_refuse.port), user_id="tdd-638-ac1")
 
@@ -469,6 +510,11 @@ def test_mixed_rules_union_both_channels(telegram_sink, smtp_refuse, tmp_path):
     )
     trip.alert_rules = [rule_a, rule_b]
     trip.report_config = report_config
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs — sonst schwiege der
+    # Alarm wegen der Sperre und die Union-Semantik bliebe ungemessen. Die
+    # Kanal-Flags oben bleiben unberuehrt.
+    (report_config.morning_time,
+     report_config.evening_time) = briefing_zeiten_fuer_trip(trip)
 
     from services.trip_alert import TripAlertService
 
@@ -525,6 +571,10 @@ def test_channel_inheritance_no_alert_rules_uses_report_config(
     )
     trip.alert_rules = []  # keine alert_rules → Kanäle werden aus report_config geerbt
     trip.report_config = report_config
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs — die Kanal-Flags
+    # oben (die eigentliche Zusicherung) bleiben unberuehrt.
+    (report_config.morning_time,
+     report_config.evening_time) = briefing_zeiten_fuer_trip(trip)
 
     from services.trip_alert import TripAlertService
 
@@ -568,7 +618,10 @@ def test_telegram_only_user_without_smtp_still_gets_alert(telegram_sink, tmp_pat
         telegram_chat_id="test-chat",
     )
     rule = _wind_rule(AlertSeverity.WARNING, channels=["telegram"])
-    trip = _trip(rule, report_config=None)
+    # Issue #1594: wie in AC-1 — ohne Briefing-Zeiten schwiege die Sperre den
+    # Alarm zeitweise ab, und der SMTP-Guard-Fall waere ungemessen. Die
+    # Kanal-Aufloesung bleibt {'telegram'} (expliziter Override, s. AC-1).
+    trip = _trip(rule, report_config=_briefing_config("tdd-638-trip"))
 
     # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
     # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).

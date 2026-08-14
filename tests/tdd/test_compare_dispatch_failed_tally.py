@@ -124,7 +124,13 @@ def dispatch_env(tmp_path, monkeypatch):
 def _write_presets(data_root: Path, user_id: str, presets: list[dict]) -> None:
     user_dir = data_root / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
-    write_compare_briefings(user_dir, presets)
+    # Issue #1594: KEINE ausgewichene Briefing-Stunde hier. Diese Datei prueft
+    # den BRIEFING-Versand und braucht den Migrations-Rueckfall (Morgen-Slot
+    # 06:00 Ortszeit), auf den der Ausloeser `hour=6` zielt — eine
+    # ausgewichene Stunde machte die Presets unfaellig und der gemessene Lauf
+    # faende gar nicht statt. Die Vorlauf-Sperre beruehrt den Briefing-Pfad
+    # nicht, nur die Alarm-Pfade.
+    write_compare_briefings(user_dir, presets, briefing_stunde_setzen=False)
 
 
 def _write_location(data_root: Path, user_id: str, loc_id: str, name: str) -> None:

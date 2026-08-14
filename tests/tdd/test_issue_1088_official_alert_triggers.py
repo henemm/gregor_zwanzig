@@ -43,6 +43,8 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 LAT, LON = 47.0, 11.0
@@ -109,7 +111,11 @@ def _minimal_trip(trip_id: str, **trip_kwargs) -> Trip:
         waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
     )
     trip = Trip(id=trip_id, name="Amtliche-Warnung-Trip", stages=[stage], **trip_kwargs)
-    trip.report_config = TripReportConfig(trip_id=trip_id, send_email=True)
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs (Vorbedingung).
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
+    trip.report_config = TripReportConfig(
+        trip_id=trip_id, send_email=True, morning_time=morgen, evening_time=abend,
+    )
     return trip
 
 
@@ -133,7 +139,12 @@ def _delta_trip(trip_id: str, **trip_kwargs) -> Trip:
         ),
         **trip_kwargs,
     )
-    trip.report_config = TripReportConfig(trip_id=trip_id, send_email=True, alert_on_changes=True)
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs (Vorbedingung).
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
+    trip.report_config = TripReportConfig(
+        trip_id=trip_id, send_email=True, alert_on_changes=True,
+        morning_time=morgen, evening_time=abend,
+    )
     return trip
 
 
@@ -547,8 +558,12 @@ class TestF001OfficialTriggerViaCheckAllTrips:
             )
             # Wetter-Delta-Alert vom Nutzer explizit deaktiviert, keine aktive Regel
             # (kein preset, keine metric_alert_levels, keine alert_rules).
+            # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs — sonst
+            # schwiege der eigenstaendige Trigger wegen der Sperre.
+            morgen, abend = briefing_zeiten_fuer_trip(trip)
             trip.report_config = TripReportConfig(
                 trip_id=trip.id, send_email=True, alert_on_changes=False,
+                morning_time=morgen, evening_time=abend,
             )
             # official_alert_triggers_enabled bleibt None -> Default = aktiv.
             save_trip(trip, user_id=user_id)

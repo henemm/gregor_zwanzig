@@ -45,6 +45,8 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
 # Pfadregel #1409: Pruefling relativ zur Testdatei, nicht ueber den Hauptrepo-Pfad.
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
@@ -124,8 +126,12 @@ def _corridor_plus_level_trip(trip_id: str) -> Trip:
         metrics=[MetricConfig(metric_id="gust", enabled=True)],
         metric_alert_levels={"wind_gust": "standard"},
     )
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlaufs — sonst schwiege die
+    # Empfindlichkeitsstufe wegen der Sperre statt wegen des Wertebereichs.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, alert_on_changes=True,
+        morning_time=morgen, evening_time=abend,
     )
     return trip
 

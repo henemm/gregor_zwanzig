@@ -83,6 +83,7 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 
 # Pfadregel #1409: Pruefling relativ zur Testdatei aufloesen, nie ueber einen
 # festen Hauptrepo-Pfad — sonst pruefte dieser Test aus dem Worktree die
@@ -213,9 +214,15 @@ def _trip(trip_id: str, *, with_levels: bool = False,
             metric_alert_levels={"wind_gust": "standard"},
         )
     trip = Trip(id=trip_id, name="Anker-Trip #1629", stages=stages, **kwargs)
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlauf-Fensters. AC-9 misst,
+    # dass der Alarm-Lauf nach einem gescheiterten Briefing REGULAER prueft —
+    # mit den Vorgabezeiten 07:00/18:00 unterdrueckte ihn dort zeitweise die
+    # Sperre, und der Test haette „still" statt „regulaer" gemessen.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=send_email, send_telegram=send_telegram,
         send_sms=send_sms, alert_on_changes=with_levels,
+        morning_time=morgen, evening_time=abend,
     )
     trip.alert_cooldown_minutes = 0
     trip.official_alerts_enabled = False
