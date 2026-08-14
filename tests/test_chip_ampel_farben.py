@@ -118,6 +118,23 @@ class TestAC6UvChipUsesThresholds:
             f"'ampel_yellow'"
         )
 
+    def test_uv_between_orange_and_red_threshold_is_ampel_orange(self):
+        """GIVEN UV-Hoechstwert zwischen Schwelle 6 und 8 / WHEN der Chip
+        gebaut wird / THEN zeigt er 'ampel_orange' -- 7.7 ist exakt der Wert
+        aus dem vom PO gemeldeten Screenshot (Chip 'UV max 7.7' war blau,
+        muesste orange sein, #1801)."""
+        from output.renderers.email.helpers import _pill_for_metric
+
+        dps = [_dp(14, uv_index=7.7)]
+        pill = _pill_for_metric("uv_index", {}, dps, tz=TZ)
+
+        assert pill is not None
+        text, tone = pill
+        assert tone == "ampel_orange", (
+            f"UV 7.7 (zwischen Schwelle 6 und 8) war {tone!r}, erwartet "
+            f"'ampel_orange' -- Text: {text!r}"
+        )
+
     def test_uv_above_highest_threshold_is_ampel_red(self):
         """GIVEN UV-Hoechstwert oberhalb der obersten Schwelle (8) / WHEN
         der Chip gebaut wird / THEN zeigt er 'ampel_red' statt der heutigen
