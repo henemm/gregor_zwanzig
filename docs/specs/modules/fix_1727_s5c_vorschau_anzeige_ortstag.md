@@ -13,7 +13,7 @@ workflow: fix-1727-s5c-vorschau-anzeige
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-08-14 („go")
 
 ## Purpose
 
