@@ -214,6 +214,23 @@ Versand — die neue Stufe sitzt weit davor und liest nur. Eine unterdrückte Me
 hier ohnehin **ersetzt**, nicht verschluckt — eine „nicht zugestellt"-Zeile für etwas, das
 Minuten später vollständig ankommt, wäre irreführend.
 
+## Expected Behavior
+
+- **Input:** Der jeweilige Alarm-Lauf (`*/15`-Takt) an einem der drei Einhängepunkte, mit der
+  Entität (`Trip` bzw. Ortsvergleich-Preset-Dict), der Nutzer-Kennung, dem aktuellen Zeitpunkt
+  und der Ortszone der Entität — alles bereits im Scope der jeweiligen Aufrufstelle, nichts muss
+  zusätzlich durchgereicht werden.
+- **Output:** Eine Ja/Nein-Antwort auf „steht für diese Entität unmittelbar ein geplantes
+  Briefing an oder ist gerade eines rausgegangen?". Bei „ja" bricht der Alarm-Lauf für diese
+  Entität ab und verschickt **keine** Meldung; bei „nein" läuft er unverändert weiter.
+- **Side effects:** **Keine.** Die Stufe liest ausschließlich — sie schreibt kein
+  Melde-Gedächtnis (`AlertStateService`), keine Sperrzeit (`ThrottleStore`), keinen Tageszähler
+  (`alert_daily_limit`), keinen Protokolleintrag (`alert_log`), und sie konsumiert insbesondere
+  **nicht** `report_config.skip_next`. Sie beschafft auch keine Wetterdaten: sie sitzt an allen
+  drei Einhängepunkten vor dem Abruf, ein gesperrter Lauf kostet also kein Abruf-Kontingent
+  (Ausnahme: der amtliche Trip-Pfad, dessen Abruf schon heute früher liegt — siehe „Bewusst
+  NICHT in dieser Scheibe").
+
 ## Invarianten
 
 - **Reihenfolge:** die neue Stufe läuft an jedem Einhängepunkt NACH der bestehenden
