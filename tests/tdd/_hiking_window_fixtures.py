@@ -481,6 +481,13 @@ def mail_temp_average(report) -> tuple[Optional[float], str]:
     return None, " | ".join(pill_lines(report))
 
 
+# Issue #1824 (A): siehe _min_temp_felt_fixtures.py — bei gewaehltem Tiefst-
+# UND Hoechstwert steht EIN Bereichs-Token ('D13/27'). 'K'/'FK' bezeichnen
+# weiterhin den Tiefstwert, 'D'/'FD' den Hoechstwert.
+_HALF = r"-?\d+|-|\?"
+_RANGE_PARTNER = {"K": "D", "FK": "FD"}
+
+
 def sms_token_value(sms: str, symbol: str) -> Optional[str]:
     """Wert eines Temperatur-Tokens aus der gerenderten SMS (``None`` = fehlt).
 
@@ -488,9 +495,18 @@ def sms_token_value(sms: str, symbol: str) -> Optional[str]:
     'FK1' ist kein 'K'-Token.
     """
     body = sms.split(": ", 1)[1] if ": " in sms else sms
-    pattern = re.compile(rf"{re.escape(symbol)}(-?\d+|-|\?)$")
-    for token in body.split(" "):
+    tokens = body.split(" ")
+    pattern = re.compile(rf"{re.escape(symbol)}({_HALF})(?:/({_HALF}))?$")
+    for token in tokens:
         m = pattern.fullmatch(token)
+        if m:
+            return m.group(2) if m.group(2) is not None else m.group(1)
+    partner = _RANGE_PARTNER.get(symbol)
+    if partner is None:
+        return None
+    ranged = re.compile(rf"{re.escape(partner)}({_HALF})/({_HALF})$")
+    for token in tokens:
+        m = ranged.fullmatch(token)
         if m:
             return m.group(1)
     return None

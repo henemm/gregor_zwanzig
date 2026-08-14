@@ -109,8 +109,12 @@ def _render_sms(dc: UnifiedWeatherDisplayConfig, report_type: str = "evening") -
 # unmittelbar vor '@'/Ende/Klammer-Ende) -- ein Praefix-Kollisionstest
 # ('L' nach Symbol 'N' fuer den Token 'NL-') bestaetigt, dass 'N' weiterhin
 # NICHT faelschlich in 'NL-' matcht.
+# Issue #1824 (A): zusaetzlich die Bereichsform ('D3/20', 'FD-12/-4', 'D-/-',
+# 'D?/?') -- zwei Haelften, durch '/' getrennt.
+_RANGE_HALF = r"-?\d+|-|\?"
 _VALUE_GRAMMAR = re.compile(
-    r"(?:(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
+    rf"(?:(?:{_RANGE_HALF})/(?:{_RANGE_HALF})"
+    r"|(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
 )
 
 
@@ -257,17 +261,26 @@ def test_ac4_vigilance_block_stays_behind_forecast_and_fused():
 
 def test_ac5_position_applies_per_metric_anchor_not_per_symbol():
     """wind_chill (FK/FD) an Position 0, temperature (K/D) an Position 1 ->
-    FK/FD-Paar VOR K/D-Paar, interne Paar-Reihenfolge bleibt (FK<FD, K<D)."""
+    gefuehltes Paar VOR gemessenem Paar.
+
+    Issue #1824 (A): sind Tiefst- UND Hoechstwert gewaehlt (Modell-Default),
+    traegt jede der beiden Groessen ihr Paar als EIN Bereichs-Token
+    ('FD1/18', 'D3/20') -- eigenstaendige 'FK'/'K'-Token entstehen dann gar
+    nicht mehr, die frueheren Paar-internen Zusicherungen (FK<FD, K<D) haben
+    keinen Gegenstand mehr. Die Zusicherung dieses AC ist unveraendert die
+    Nutzer-Position PRO METRIK-ANKER; die Vorbedingung stellt sicher, dass
+    hier wirklich Bereichs-Token gemessen werden und der Test nicht still an
+    einer Einzelform vorbeilaeuft."""
     dc = _sms_layout_dc(["wind_chill", "temperature"])
     sms = _render_sms(dc)
-    i_fk, i_fd = _token_index(sms, "FK"), _token_index(sms, "FD")
-    i_k, i_d = _token_index(sms, "K"), _token_index(sms, "D")
-    assert i_fk < i_k and i_fd < i_k, (
+    assert "FD1/18" in sms and "D3/20" in sms, (
+        f"Vorbedingung: beide Groessen muessen als Bereichs-Token stehen: {sms!r}"
+    )
+    i_fd, i_d = _token_index(sms, "FD"), _token_index(sms, "D")
+    assert i_fd < i_d, (
         f"Gefuehltes Paar (Nutzer-Position 0) muss vor dem gemessenen Paar "
         f"(Position 1) stehen: {sms!r}"
     )
-    assert i_fk < i_fd, f"Interne Reihenfolge FK vor FD muss erhalten bleiben: {sms!r}"
-    assert i_k < i_d, f"Interne Reihenfolge K vor D muss erhalten bleiben: {sms!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -458,7 +471,8 @@ def test_ac11_sms_and_telegram_kurzform_share_one_token_line():
     order = ["wind_direction", "visibility", "humidity"]  # Klasse c, b, a
     dc = _sms_layout_dc(order)
     sms = _render_sms(dc)
-    i_wd, i_vs, i_hu = _token_index(sms, "WD"), _token_index(sms, "VS"), _token_index(sms, "HU")
+    # Issue #1824 (B): 'WD' traegt jetzt den Grammatik-Doppelpunkt im Symbol.
+    i_wd, i_vs, i_hu = _token_index(sms, "WD:"), _token_index(sms, "VS"), _token_index(sms, "HU")
     assert i_wd < i_vs < i_hu, (
         f"Nutzer-Reihenfolge WD < VS < HU muss auf report.sms_text gelten, "
         f"dem Objekt, das notification_service.py fuer SMS UND "

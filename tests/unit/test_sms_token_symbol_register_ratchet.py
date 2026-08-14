@@ -35,12 +35,18 @@ from pathlib import Path
 
 import pytest
 
-from app.metric_catalog import get_all_metrics, get_sms_code
+from app.metric_catalog import (
+    SMS_NULLFORM_METRIC_IDS, get_all_metrics, get_sms_code,
+)
 from output.adapters.trip_result import _wintersport_default_config
-from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC
+from output.renderers.sms_trip import (
+    SMS_SYMBOL_BY_METRIC, build_extended_metric_specs,
+)
 from output.tokens import builder as builder_mod
-from output.tokens.builder import POSITIONAL, PRIORITY, _wintersport
-from output.tokens.dto import DailyForecast
+from output.tokens.builder import (
+    POSITIONAL, PRIORITY, _wintersport, build_token_line,
+)
+from output.tokens.dto import DailyForecast, HourlyValue, NormalizedForecast
 from output.tokens.render import DROP_ORDER
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -301,6 +307,85 @@ def test_all_symbol_tables_carry_the_same_wintersport_symbols():
         "_wintersport_default_config() (trip_result.py) — der CLI-Pfad "
         f"liefert dann {sorted(default_cfg)!r}."
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1824 / Adversary-Fix-Loop F001: dieselbe Zusicherung fuer den Block
+# der 14 erweiterten Metriken (#1660 B).
+# ---------------------------------------------------------------------------
+
+def _extended_block_symbols() -> set[str]:
+    """Die Kuerzel, die ``build_token_line()`` fuer die 14 erweiterten
+    Metriken TATSAECHLICH erzeugt — abgetastet, nicht getippt (Bauprinzip 2
+    dieser Datei). Genau diese Zeichenketten legt der Renderer zur Laufzeit
+    den drei Tabellen vor.
+    """
+    day = DailyForecast(
+        humidity_hourly=(HourlyValue(14, 88),),
+        dewpoint_hourly=(HourlyValue(9, 7),),
+        cape_hourly=(HourlyValue(16, 1200),),
+        uv_hourly=(HourlyValue(13, 8),),
+        cloud_total_hourly=(HourlyValue(12, 80),),
+        cloud_low_hourly=(HourlyValue(10, 40),),
+        cloud_mid_hourly=(HourlyValue(11, 55),),
+        cloud_high_hourly=(HourlyValue(9, 20),),
+        visibility_hourly=(HourlyValue(11, 600),),
+        freezing_level_hourly=(HourlyValue(12, 2400),),
+        wind_direction_sector="NW",
+        precip_type_dominant="S",
+        sunshine_hours=6.4,
+        pressure_avg_hpa=1013.4,
+    )
+    line = build_token_line(
+        NormalizedForecast(days=(day,)),
+        build_extended_metric_specs(set(SMS_NULLFORM_METRIC_IDS)),
+        report_type="evening", stage_name="E1",
+    )
+    erwartet = {SMS_SYMBOL_BY_METRIC[mid] for mid in SMS_NULLFORM_METRIC_IDS}
+    return {t.symbol for t in line.tokens} & erwartet
+
+
+def test_extended_metric_tables_carry_the_symbol_the_builder_emits():
+    """Issue #1824 (B) verschob den Grammatik-Doppelpunkt der Kuerzel
+    ``WD``/``PT`` ins Symbol. Die drei Tabellen fuehren das Symbol als
+    LITERAL und mussten mitgezogen werden.
+
+    Warum diese Zusicherung strukturell ist und nicht am Verhalten haengt:
+    fuer ``DROP_ORDER`` und ``POSITIONAL`` gibt es Verhaltens-Waechter
+    (``tests/tdd/test_sms_letter_value_separator.py``, Kuerzung bzw.
+    Reihenfolge der fertigen Zeile). Fuer ``PRIORITY`` gibt es keinen: der
+    einzige Leser von ``Token.priority`` ist der Last-Resort-Schritt in
+    ``render.py::_truncate()``, und dorthin gelangen die 14 Kuerzel nie,
+    weil ``DROP_ORDER`` sie vorher entfernt. Gemessen (2026-08-14): mit
+    absichtlich verfaelschtem ``PRIORITY``-Schluessel sind die gerenderten
+    Zeilen ueber 175 Zeichenbudgets hinweg BYTEGLEICH. Der Eintrag ist
+    zweite Verteidigungslinie — sichtbar wird sein Fehlen erst, wenn auch
+    ``DROP_ORDER`` bricht. Genau dafuer steht dieser Waechter.
+    """
+    emitted = _extended_block_symbols()
+
+    assert len(emitted) >= 10, (
+        "Weniger als 10 der 14 erweiterten Kuerzel abgetastet — der Waechter "
+        f"prueft praktisch nichts. Gefunden: {sorted(emitted)!r}"
+    )
+
+    for tabelle, inhalt, folge in (
+        ("PRIORITY (builder.py)", set(PRIORITY),
+         "`PRIORITY.get(sym, 5)` faellt still auf den Standardwert zurueck — "
+         "die Kuerzung raeumt dann in der falschen Rangfolge ab"),
+        ("POSITIONAL (builder.py)", {s for s, _cat in POSITIONAL},
+         "`POS_INDEX.get(...)` greift den Fallback 99 — das Kuerzel rutscht "
+         "ans Zeilenende, hinter die System-Bloecke"),
+        ("DROP_ORDER (render.py)", set(DROP_ORDER),
+         "`_drop_first()` findet das Token nie — es faellt unter "
+         "Kuerzungsdruck NIE mehr an seiner Stelle"),
+    ):
+        fehlend = sorted(emitted - inhalt)
+        assert not fehlend, (
+            f"Der Builder erzeugt {fehlend!r}, aber {tabelle} kennt diese "
+            f"Zeichenkette nicht. Folge: {folge}.\n"
+            f"  erzeugt: {sorted(emitted)!r}"
+        )
 
 
 @pytest.mark.parametrize("legacy_symbol", ["SN", "SN24+", "SFL"])

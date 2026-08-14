@@ -260,6 +260,16 @@ Alle vier Symbole sind kollisionsfrei in allen drei Domänen.
 
 ### 2. Beispielzeilen mit Zeichenzählung
 
+> ⚠️ **Veraltet durch #1824** (`docs/specs/modules/feat_1824_sms_range_und_trenner.md`,
+> Scheibe A: Temperatur-Bereichs-Token). Seit #1824 verschmelzen `K`/`D` bzw. `FK`/`FD`
+> zu EINEM Bereichs-Token, sobald Tiefst- UND Höchstwert derselben Größe gewählt sind
+> (Modell-Default) — `K3 D9` → `D3/9`, `FK1 FD7` → `FD1/7`. In allen drei Beispielzeilen
+> unten sind jeweils beide Hälften aktiv, sie würden heute also als Bereichs-Token
+> erscheinen, nicht als separate Einzelsymbole. Die Zeichenzählungen (Zuwachs,
+> Worst-Case) sind entsprechend ebenfalls nicht mehr aktuell — die Zusammenfassung macht
+> den Zuwachs KLEINER, nicht größer (ein Trennzeichen statt eines Leerzeichens plus
+> Symbol). Ursprünglicher Wortlaut zur Historie unverändert stehen gelassen:
+
 **Morgen** (Vorbild `gr20-spring-morning.txt`, heute 89 Zeichen):
 ```
 GR20 E1: K3 D9 FK1 FD7 R0.2@4(18.5@11) PR50%@4(95%@11) W35@5(60@10) G55@5(85@10) TH:M@8(H@11) TH+:-

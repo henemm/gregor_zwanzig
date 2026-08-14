@@ -356,9 +356,14 @@ class TestTemperatureShowsUnknownOnGap:
         sms = _format(segments, report_type="evening",
                        disabled_specs=_TEMPERATURE_ON)
 
-        for sym in ("N", "K", "D", "FN", "FK", "FD"):
-            assert f"{sym}?" in sms, (
-                f"Erwartet `{sym}?` (unbekannt, kompletter Etappenausfall), "
+        # Issue #1824 (A): Tiefst- UND Hoechstwert sind gewaehlt, also tragen
+        # 'K'/'D' bzw. 'FK'/'FD' EINEN gemeinsamen Bereichs-Token -- die
+        # Unbekannt-Kennzeichnung steht dort je Haelfte ('D?/?'). Die
+        # Zusicherung ist unveraendert: keine der sechs Groessen darf bei
+        # Komplettausfall als Entwarnung erscheinen.
+        for token in ("N?", "D?/?", "FN?", "FD?/?"):
+            assert token in sms.split(), (
+                f"Erwartet `{token}` (unbekannt, kompletter Etappenausfall), "
                 f"stattdessen faelschliche Entwarnung.\nSMS: {sms}"
             )
         # Einzelner Gesamt-Check statt sechsfacher Substring-Subtraktion:
@@ -391,18 +396,21 @@ class TestTemperatureShowsUnknownOnGap:
         # test_all_six_show_unknown_on_total_segment_failure`` beschreibt
         # dieselbe Falle fuer die `-`-Form; hier gilt sie fuer `?`.
         tokens = sms.split()
-        for sym in ("N", "K", "D"):
-            assert f"{sym}15" in sms, (
-                f"Erwartet den gefundenen Wert `{sym}15` aus dem "
+        # Issue #1824 (A): der gemessene Bereich steht als EIN Token
+        # ('D15/15' -- beide Haelften tragen denselben gefundenen Wert).
+        for token in ("N15", "D15/15"):
+            assert token in tokens, (
+                f"Erwartet den gefundenen Wert `{token}` aus dem "
                 f"verbleibenden Regular-Segment.\nSMS: {sms}"
             )
+        for sym in ("N", "K", "D"):
             assert f"{sym}?" not in tokens, (
                 f"Ein gefundener Temperaturwert darf nie durch `?` "
                 f"verschluckt werden.\nSMS: {sms}"
             )
-        for sym in ("FN", "FK", "FD"):
-            assert f"{sym}?" in sms, (
-                f"Erwartet `{sym}?` (keine Windchill-Daten UND "
+        for token in ("FN?", "FD?/?"):
+            assert token in tokens, (
+                f"Erwartet `{token}` (keine Windchill-Daten UND "
                 f"Datenluecke).\nSMS: {sms}"
             )
 
@@ -417,10 +425,13 @@ class TestTemperatureShowsUnknownOnGap:
                        report_type="evening",
                        disabled_specs=_TEMPERATURE_ON)
 
-        for sym in ("FN", "FK", "FD"):
-            assert f"{sym}-" in sms, (
-                f"Erwartet weiterhin `{sym}-` ohne Datenluecke.\nSMS: {sms}"
+        # Issue #1824 (A): 'FK'/'FD' stehen als EIN Bereichs-Token ('FD-/-'),
+        # die Null-Form je Haelfte einmal.
+        for token in ("FN-", "FD-/-"):
+            assert token in sms.split(), (
+                f"Erwartet weiterhin `{token}` ohne Datenluecke.\nSMS: {sms}"
             )
+        for sym in ("FN", "FK", "FD"):
             assert f"{sym}?" not in sms, (
                 f"Kein `?` ohne Datenluecke erwartet.\nSMS: {sms}"
             )

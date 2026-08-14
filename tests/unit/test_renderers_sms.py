@@ -111,7 +111,8 @@ def test_render_sms_v2_format():
     line = _short_token_line()
     out = render_sms(line)
     assert "N12" in out, f"v2.0 erwartet 'N12' (Tag-Min): {out!r}"
-    assert "D18" in out, f"v2.0 erwartet 'D18' (Tag-Max): {out!r}"
+    # Issue #1824 (A): Tiefst- UND Hoechstwert gewaehlt -> EIN Bereichs-Token.
+    assert "D12/18" in out, f"v2.0 erwartet 'D12/18' (Tag-Min/Max): {out!r}"
     assert "T12/18" not in out, (
         f"Legacy 'T12/18' Format verboten in v2.0: {out!r}"
     )
