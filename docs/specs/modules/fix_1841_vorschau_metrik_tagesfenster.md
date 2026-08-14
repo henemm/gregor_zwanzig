@@ -301,10 +301,17 @@ Ortsvergleich bleiben unveraendert.
 - **Ampelfarben im Metrik-Zweig (#1849).** Der Zweig faerbt keine Zelle ein
   (`outlook.py:141`, `_otd()` ohne `bg=`). Betrifft alle Spalten und beide
   Flaechen; eigener Fix, PO-Entscheid 2026-08-14.
-- **Der Ortsvergleich.** Bleibt byte-identisch (AC-5). Ob das Tages-Aggregat
-  dort inhaltlich das richtige Fenster ist, ist eine offene Frage — #1680 S5a
-  AC-11b begruendet nur die **Kohaerenz** von Stufe und Herkunft, nicht die
-  Wahl des Fensters. Nicht hier entscheiden.
+- **Der Ortsvergleich.** Bleibt byte-identisch (AC-5). Er leidet **nicht** am
+  Fehler dieser Scheibe: der Ortsvergleich kennt keine Etappen
+  (`fix-1361-1368-ausblick-konfigurierbar.md:70`), also gibt es nichts, wogegen
+  geklemmt werden koennte — `_group_by_calendar_day()` aggregiert den vollen
+  Kalendertag, die Nacht ist dort bereits enthalten und verschwindet nicht.
+  Ob zusaetzlich ein Tag/Nacht-Split fuer den Ortsvergleich sinnvoll waere,
+  ist **unentschieden**: #1653 AC-6 ist reiner Bestandsschutz (das dortige
+  Finding F003 nahm eine *versehentliche* Compare-Aenderung zurueck, es war
+  keine bewusste Ablehnung), und #1680 S5a AC-11b begruendet nur die
+  **Kohaerenz** von Stufe und Herkunft, nicht die Wahl des Fensters. Nicht
+  hier entscheiden.
 - **`render_outlook_table()` auf den geteilten Helfer umstellen.** #1671 hat
   das bewusst ausgelassen (strukturell andere Zweigwahl, dortige Known
   Limitation). Diese Scheibe aendert nur den Metrik-Zweig, nicht den
