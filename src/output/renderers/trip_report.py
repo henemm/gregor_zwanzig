@@ -46,6 +46,7 @@ from output.renderers.day_window import resolve_configured_window
 import services.alert_urgency as alert_urgency
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
+from output.renderers.compare_outlook_metric_ids import resolve_trip_outlook_metrics
 from output.renderers.email import render_email
 from output.renderers.email.helpers import (
     NO_HOURLY_COLUMN_METRIC_IDS,
@@ -211,6 +212,12 @@ class TripReportFormatter:
             multi_day_trend=effective_trend,
             outlook_state=outlook_state,
             outlook_horizon_days=outlook_horizon_days,
+            # Issue #1720 S1 (F001): Ausblick-Spalten HIER einmal aufloesen,
+            # aus dem UNGEKOLLABIERTEN Stand (Muster #1575) -- der Ausblick
+            # hat keine Kanal-Ebene. Renderer bekommen nur das Ergebnis.
+            outlook_metrics=resolve_trip_outlook_metrics(
+                _dc_uncollapsed, report_type,
+            ),
             changes=changes,
             stage_name=stage_name,
             stage_stats=stage_stats,

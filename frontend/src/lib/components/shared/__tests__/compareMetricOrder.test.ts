@@ -42,6 +42,13 @@ describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
 			// der Ortsvergleich zieht mit #1411 nach (Spec AC-9).
 			'auswertungen',
 			'report_config',
+			// Issue #1720 S1: 'ausblick' kommt DAZU — der Trip bekommt die
+			// Spaltenauswahl der 3-Tages-Vorschau (dasselbe geteilte Bauteil wie
+			// der Ortsvergleich). Diese Erwartung fror das Fehlen des Abschnitts
+			// fest; sie dreht sich um, weil `display_config.outlook_metrics` jetzt
+			// auch im Trip echte Mail-Wirkung hat (HTML- und Klartext-Ausblick).
+			// Spec: docs/specs/modules/feat_1720_s1_trip_ausblick_metriken.md
+			'ausblick',
 			'official_alerts'
 		]);
 	});

@@ -87,7 +87,9 @@
 	// Issue #1350 Teil 2: Vergleich-Auswahlliste kommt jetzt aus GET
 	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
 	// Schwellen-Slider/Winner-Box/Save-Default-Fallback unveraendert, Teil 3).
-	import { type CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
+	import {
+		type CompareSelectionEntry, normalizeStoredActiveMetrics, toStoredActiveMetrics
+	} from './weather-metrics-tab/compareMetricSelection.ts';
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): geteilter Katalog-Cache — eine
 	// Anfrage pro Seiten-Load fuer Auswahlliste, Schwellen-Editor und
 	// Hub-Hydration; `toCompareSelectionEntries()` darin fuellt den Umkehr-Index
@@ -255,6 +257,19 @@
 		email: null, telegram: null, sms: null,
 	});
 
+	// Issue #1720 S1 (route): Spaltenauswahl der 3-Tages-Vorschau. `null` = nie
+	// eingestellt -> die heutigen sieben festen Spalten; `[]` = bewusst geleert
+	// (der Block entfaellt in der Mail ganz). Steht in snapshot()/isDirty UND
+	// handleDiscard() — fehlte es dort, bliebe der Reiter nach einer reinen
+	// Vorschau-Aenderung faelschlich „sauber" und der Speichern-Weg feuerte nie.
+	let outlookMetricKeys = $state<string[] | null>(null);
+
+	function onOutlookMetricKeys(keys: string[]): void {
+		outlookMetricKeys = keys;
+		userTouched = true;
+		scheduleAutoSave();
+	}
+
 	// Effektive Sicht eines Kanals: eigener Eintrag, sonst die globale Auswahl.
 	function channelView(ch: ChannelId): ChannelOverride {
 		return channelBuckets[ch] ?? { buckets, friendlyMap };
@@ -349,17 +364,20 @@
 	// Snapshot — sonst bliebe ein Kanal-Edit unspeicherbar. Der reine
 	// Kanal-WECHSEL veraendert channelBuckets nicht und bleibt damit clean
 	// (AC-1); erst ein Edit-Callback legt einen Eintrag an (AC-2).
+	// Issue #1720 S1: outlookMetricKeys gehoert in Dirty-Vergleich UND Snapshot —
+	// sonst bleibt der Reiter nach einer reinen Vorschau-Aenderung „sauber".
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, aggregationsMap, reportConfig, officialAlertsEnabled, channelBuckets }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, aggregationsMap, reportConfig, officialAlertsEnabled, channelBuckets, outlookMetricKeys }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
 		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean,
 		ag: Record<string, string[]> = aggregationsMap,
-		cb: Record<ChannelId, ChannelOverride | null> = channelBuckets
+		cb: Record<ChannelId, ChannelOverride | null> = channelBuckets,
+		om: string[] | null = outlookMetricKeys
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, aggregationsMap: ag, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, aggregationsMap: ag, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb, outlookMetricKeys: om });
 	}
 
 	function allCatalogIds(): string[] {
@@ -450,7 +468,13 @@
 			if (layout) cb[ch] = channelOverrideFromMetrics(layout, allCatalogIds(), fMap);
 		}
 		channelBuckets = cb;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, aggMap, cb);
+		// Issue #1720 S1: gespeicherte Vorschau-Auswahl (Neuformat
+		// {metric_id, aggregation}) in Auswahl-Schluessel uebersetzen —
+		// DIESELBE Umkehrung wie im Ortsvergleich, kein zweiter Lesepfad. Ein
+		// roher Cast auf string[] liesse die Haken nach dem Neuladen leer.
+		const om = normalizeStoredActiveMetrics(trip!.display_config?.outlook_metrics, compareCatalog);
+		outlookMetricKeys = om;
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, aggMap, cb, om);
 	}
 
 	// Issue #1332 F003 (Fix-Loop 2): eigener, idempotenter Ladepfad fuer die
@@ -508,6 +532,19 @@
 			// nachtraeglich hier — ein Mechanismus, nicht zwei.
 			compareCatalog = await loadCompareSelectionEntries();
 			compareCatalogLoaded = true;
+			// Issue #1720 S1: die Vorschau-Auswahl liegt im Neuformat vor und ist
+			// erst MIT geladenem Katalog in Auswahl-Schluessel uebersetzbar. Der
+			// Trip hat einen eigenen Ladepfad (load()), der frueher fertig sein
+			// kann — dann traegt outlookMetricKeys noch rohe Objekte und der
+			// Picker zeigte keinen Haken. Baseline zieht mit, sonst gaelte der
+			// Reiter ohne jede Nutzergeste als geaendert.
+			if (context === 'route' && trip && catalogLoaded && !isDirty) {
+				outlookMetricKeys = normalizeStoredActiveMetrics(
+					trip.display_config?.outlook_metrics, compareCatalog,
+				);
+				savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform,
+					smsThresholds, reportConfig, officialAlertsEnabled);
+			}
 		} catch (e: unknown) {
 			compareCatalogError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
 		}
@@ -529,7 +566,11 @@
 		// es als Erstes auf null zurueck — das aendert eine getrackte Dependency
 		// und der Effect feuert einen zweiten, konkurrierenden Fetch (Doppel-
 		// Fetch bei "Wiederholen" bzw. Auto-Retry-Loop bei jedem Fehlschlag).
-		if (context === 'vergleich' && !compareCatalogLoaded) {
+		// Issue #1720 S1: auch der Trip braucht diesen Katalog — der Abschnitt
+		// "3-Tages-Vorschau" waehlt aus DERSELBEN Quelle, gegen die der Resolver
+		// serverseitig validiert (get_compare_metric_catalog()). Ohne die
+		// Erweiterung bliebe der Block beim Trip dauerhaft im Ladezustand.
+		if ((context === 'vergleich' || context === 'route') && !compareCatalogLoaded) {
 			loadCompareMetricCatalog();
 		}
 	});
@@ -801,6 +842,10 @@
 			// Issue #1575 Scheibe 3: Kanal-Eintraege mit zuruecknehmen, sonst bleibt
 			// der Tab nach dem Verwerfen dirty.
 			channelBuckets = snap.channelBuckets ?? { email: null, telegram: null, sms: null };
+			// Issue #1720 S1: Vorschau-Auswahl mit zuruecknehmen, sonst bleibt der
+			// Reiter nach dem Verwerfen dirty. `?? null` ist hier richtig: `null`
+			// heisst "nie eingestellt" und ist ein gueltiger Zustand.
+			outlookMetricKeys = snap.outlookMetricKeys ?? null;
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
@@ -854,6 +899,14 @@
 			channel_layouts: nextLayouts,
 			preset_name: selectedTemplate || undefined,
 			telegram_kurzform: telegramKurzform,
+			// Issue #1720 S1: explizit, nicht nur ueber den Spread — sonst
+			// verdeckte der Altwert eine bewusste Leerauswahl (`[]`), und der
+			// Nutzer kaeme aus dem "Block aus"-Zustand nie wieder heraus
+			// (RMW-Pflicht, Fehlerklasse #102 -> #1159). `null` (nie eingestellt)
+			// reicht den Altwert unveraendert durch.
+			outlook_metrics: outlookMetricKeys === null
+				? trip!.display_config?.outlook_metrics
+				: toStoredActiveMetrics(outlookMetricKeys, compareCatalog),
 		};
 	}
 
@@ -1134,6 +1187,19 @@
 	// (Safari-Factory-Muster).
 	function noopMode() {}
 
+	// Issue #1720 S1: der Ausblick-Block bekommt flache Props statt der frueheren
+	// `wiz`-Bindung (dasselbe Bauteil bedient jetzt auch den Trip). Diese beiden
+	// Handler schreiben exakt das, was die Komponente bis dahin selbst schrieb —
+	// Verhalten des Ortsvergleichs unveraendert. Named functions statt
+	// Inline-Closures (Safari-Factory-Muster).
+	function onCompareOutlookMetricKeys(keys: string[]) {
+		if (wiz) wiz.outlookMetricKeys = keys;
+	}
+
+	function onCompareOutlookEnabled(checked: boolean) {
+		if (wiz) wiz.outlookEnabled = checked;
+	}
+
 	// D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): Amtliche-Warnungen-Toggle im
 	// Vergleich-Zweig — kein Self-Save (analog toggleCompareMetric oben),
 	// CompareTabs.svelte (`.hub-wetter-metriken-wrap` onchange-Bubble) persistiert
@@ -1347,7 +1413,17 @@
 		     leere Liste zu zeigen (bewusst, s. Spec). -->
 		{#if sections.includes('ausblick') && wiz && compareCatalogLoaded}
 			<div data-testid="weather-metrics-ausblick">
-				<CompareOutlookLayoutControls {wiz} catalog={compareCatalog} {onOutlookCommit} />
+				<!-- Issue #1720 S1: dasselbe Bauteil, flach parametrisiert. Der
+				     Vergleich fuehrt zusaetzlich den Ein/Aus-Schalter
+				     (outlook_enabled); der Trip nicht (AC-13). -->
+				<CompareOutlookLayoutControls
+					metricKeys={wiz.outlookMetricKeys}
+					catalog={compareCatalog}
+					onMetricKeys={onCompareOutlookMetricKeys}
+					{onOutlookCommit}
+					enabled={wiz.outlookEnabled}
+					onEnabledChange={onCompareOutlookEnabled}
+				/>
 			</div>
 		{/if}
 		<!-- Issue #1350 Teil 2: Amtliche-Warnungen-Toggle haengt nicht am
@@ -1707,6 +1783,25 @@
 						showMailContent={true}
 						showChannels={false}
 						showSchedule={false}
+					/>
+				</div>
+				{/if}
+
+				<!-- Issue #1720 S1: Abschnitt "3-Tages-Vorschau" — DASSELBE Bauteil
+				     wie im Ortsvergleich, flach parametrisiert statt kopiert
+				     (Trip/Compare-Teilungs-Invariante). Ohne Ein/Aus-Schalter:
+				     `report_config.show_outlook` in der Inhalt-/Versand-Karte ist
+				     der EINE Schalter (AC-13). Der Metrik-Pool ist die Antwort von
+				     GET /api/compare/metrics — dieselbe Quelle, gegen die
+				     resolve_outlook_metrics() serverseitig validiert (AC-11); ohne
+				     geladenen Katalog bleibt der Block aus statt leer zu erscheinen. -->
+				{#if !createMode && sections.includes('ausblick') && compareCatalogLoaded}
+				<div data-testid="weather-metrics-ausblick">
+					<CompareOutlookLayoutControls
+						metricKeys={outlookMetricKeys}
+						catalog={compareCatalog}
+						onMetricKeys={onOutlookMetricKeys}
+						title="3-Tages-Vorschau"
 					/>
 				</div>
 				{/if}

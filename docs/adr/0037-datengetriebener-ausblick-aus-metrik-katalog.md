@@ -1,9 +1,24 @@
 # ADR-0037: 3-Tages-Ausblick der Vergleichs-Mail datengetrieben aus dem Metrik-Katalog
 
-- **Status:** Akzeptiert
+- **Status:** Akzeptiert — **Punkt 2 abgelöst durch ADR-0055** (2026-08-14)
 - **Datum:** 2026-07-27
 - **Bezug:** GitHub-Issue #1361 (Befund 2), #1368, Epic #1372 (Etappe S3 Scheibe A), Dach
   #1374, Spec `docs/specs/modules/issue_1361_1368_ausblick_konfigurierbar.md`
+
+> **Teil-Ablösung (2026-08-14, ADR-0055, Issue #1720 Scheibe 1):** Punkt 2 der
+> Entscheidung unten sichert zu, der Trip rufe „weiterhin ohne `metrics` auf —
+> die Trip-Mail ändert sich in keinem Byte". Das gilt **nicht mehr**: Der
+> Trip-Ausblick hat seit #1720 eine eigene Spaltenauswahl. Ohne Bedienung der
+> neuen Fläche bleibt die Trip-Mail byte-identisch, mit Bedienung ändert sie
+> sich. Die Punkte 1, 3 und 4 gelten unverändert; das Datenformat und die
+> Drei-Werte-Semantik (`None` / `[]` / gefüllt) hat ADR-0055 übernommen statt
+> ein zweites Vokabular einzuführen.
+>
+> Die damalige Formulierung war für ihre Lieferung richtig — sie hielt den Trip
+> aus einer Compare-Scheibe heraus. Sie wurde später jedoch als dauerhafte
+> Festlegung gelesen („der Trip bekommt bewusst keine Ausblick-Auswahlfläche",
+> `weatherMetricsTabSections.ts:54-55`). ADR-0055 benennt diese Fehlerklasse
+> ausdrücklich: eine Zuschnittgrenze wird beim Weiterreichen zur Festlegung.
 
 ## Kontext
 

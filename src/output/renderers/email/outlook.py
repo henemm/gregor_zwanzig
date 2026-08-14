@@ -426,6 +426,8 @@ def build_outlook_row(
     *,
     sms_thresholds: Optional[dict] = None,
     metrics: Optional[list] = None,
+    trip_display_config: object = None,
+    report_type: Optional[str] = None,
     day_window_start_hour: Optional[int] = None,
     day_window_end_hour: Optional[int] = None,
 ) -> dict:
@@ -445,13 +447,29 @@ def build_outlook_row(
     ``sms_threshold_thunder`` abgebildet; ``None``-Werte werden gefiltert
     (analog ``trip_report_scheduler._build_stage_trend``).
 
-    ``metrics`` (#1361, nur Compare): gesetzte Auswahl im Neuformat
+    ``metrics`` (#1361, Compare): gesetzte Auswahl im Neuformat
     (``{"metric_id", "aggregation"}``) ergaenzt das Dict um ``cells`` -- die
     fertig formatierten Zellentexte der gewaehlten Groessen in Auswahl-
     Reihenfolge, datengetrieben aus ``summary`` ueber
-    ``MetricDefinition.summary_fields``. ``None`` (Trip) laesst das Dict
+    ``MetricDefinition.summary_fields``. ``None`` laesst das Dict
     unveraendert (rein additiv, AC-11).
+
+    ``trip_display_config``/``report_type`` (#1720 S1, Trip): statt einer
+    fertigen Auswahl reicht der Zeitplaner die UNGEKOLLABIERTE
+    ``display_config`` durch -- die Aufloesung (``resolve_trip_outlook_metrics``)
+    passiert dann hier, in derselben Schicht wie der Spaltenbau und nach
+    derselben Regel. So braucht der Zeitplaner kein Renderer-Vokabular
+    (Architektur-Wache ``test_scheduler_has_no_output_imports``), und die
+    Zellen dieser Zeile koennen nicht nach einer anderen Regel entstehen als
+    die Ueberschriften darueber. Ein ausdrueckliches ``metrics`` hat Vorrang
+    (Compare-Pfad unveraendert).
     """
+    if metrics is None and trip_display_config is not None:
+        from output.renderers.compare_outlook_metric_ids import (
+            resolve_trip_outlook_metrics,
+        )
+
+        metrics = resolve_trip_outlook_metrics(trip_display_config, report_type)
     from output.metric_format import thunder_label_value
     from output.tokens.dto import HourlyValue
     from utils.timezone import local_hour as _lh

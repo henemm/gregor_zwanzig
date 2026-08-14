@@ -923,6 +923,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         telegram_kurzform=data.get("telegram_kurzform", False),
         alert_preset=data.get("alert_preset"),  # Issue #846
         metric_alert_levels=_migrate_metric_alert_levels(data.get("metric_alert_levels")),  # Issue #946/#959
+        outlook_metrics=data.get("outlook_metrics"),  # Issue #1720 S1
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 
@@ -1541,6 +1542,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             **({"alert_preset": dc.alert_preset} if dc.alert_preset is not None else {}),
             **({"metric_alert_levels": dc.metric_alert_levels}
                if dc.metric_alert_levels is not None else {}),
+            # Issue #1720 S1: BEDINGT schreiben, nicht unbedingt -- sonst
+            # bekaeme jeder Trip nach dem ersten Speichern ein explizites
+            # `outlook_metrics` und "nie gesetzt" (sieben feste Spalten) waere
+            # von "bewusst geleert" (Block entfaellt) nicht mehr zu trennen.
+            **({"outlook_metrics": dc.outlook_metrics}
+               if dc.outlook_metrics is not None else {}),
         }
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
         if dc.per_channel_layouts is not None:

@@ -46,6 +46,9 @@ def render_email(
     multi_day_trend: Optional[list[dict]] = None,
     outlook_state: Optional["OutlookState"] = None,
     outlook_horizon_days: Optional[int] = None,
+    # #1720 S1: fertig aufgeloeste Ausblick-Spalten (trip_report.py, aus dem
+    # UNGEKOLLABIERTEN dc) -- hier nur durchgereicht. None = Altbestand.
+    outlook_metrics: Optional[list[dict]] = None,
     changes: Optional[list[WeatherChange]] = None,
     stage_name: Optional[str] = None,
     stage_stats: Optional[dict] = None,
@@ -154,6 +157,7 @@ def render_email(
         multi_day_trend=multi_day_trend,
         outlook_state=outlook_state,
         outlook_horizon_days=outlook_horizon_days,
+        outlook_metrics=outlook_metrics,
         compact_summary=compact_summary,
         tz=tz,
         friendly_keys=friendly_keys,
@@ -191,6 +195,7 @@ def render_email(
         multi_day_trend=multi_day_trend,
         outlook_state=outlook_state,
         outlook_horizon_days=outlook_horizon_days,
+        outlook_metrics=outlook_metrics,
         compact_summary=compact_summary,
         tz=tz,
         friendly_keys=friendly_keys,

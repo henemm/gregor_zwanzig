@@ -48,12 +48,22 @@ const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'auswertungen', 'report_config'] a
 // Geteilt vorbereitet, in dieser Scheibe aber NUR im Vergleich aktiv: der Trip
 // hat heute keine Stundenverlauf-Steuerung, sie nachzuruesten ist nicht Teil
 // dieser Scheibe (Spec § Known Limitations).
+const COMPARE_ONLY_SECTIONS = ['stundenverlauf'] as const;
+
 // Issue #1361 Befund 2/#1368 (S3 Scheibe A von Epic #1372): 'ausblick' ist die
-// Bedienflaeche des 3-Tages-Ausblicks (Schalter + Spaltenauswahl +
-// Reihenfolge). Position: direkt NACH 'stundenverlauf' — beide beschreiben die
-// Ausgabe-Bloecke der Mail in ihrer Reihenfolge. Ebenfalls NUR im Vergleich:
-// der Trip bekommt bewusst keine Ausblick-Auswahlflaeche (Spec § Out of Scope).
-const COMPARE_ONLY_SECTIONS = ['stundenverlauf', 'ausblick'] as const;
+// Bedienflaeche des 3-Tages-Ausblicks (Spaltenauswahl + Reihenfolge; im
+// Vergleich zusaetzlich der Ein/Aus-Schalter).
+// Issue #1720 S1: fuer BEIDE Kontexte. Hier stand bis 2026-08-14 "der Trip
+// bekommt bewusst keine Ausblick-Auswahlflaeche (Spec § Out of Scope)" — das
+// war die ZUSCHNITTGRENZE der Lieferung #1361/#1368 ("das Epic betrifft
+// ausschliesslich den Ortsvergleich"), keine Produktentscheidung; die
+// Verkuerzung zu "bewusst keine" las sich wie eine dauerhafte Festlegung.
+// #1720 loest sie ausdruecklich ab (PO-Auftrag 2026-08-14). Position: im
+// Vergleich unveraendert direkt nach 'stundenverlauf', im Trip nach den
+// route-eigenen Abschnitten — in beiden Faellen vor 'official_alerts'.
+// 'stundenverlauf' bleibt compare-exklusiv (der Trip hat keine
+// Stundenverlauf-Steuerung; das nachzuruesten ist nicht Teil der Scheibe).
+const SHARED_TRAILING_SECTIONS = ['ausblick', 'official_alerts'] as const;
 
 // Issue #1361/#1372 S1b: 'tagesfenster' ist NICHT kontext-exklusiv — beide
 // Seiten teilen sich ab jetzt EIN Tagesfenster (dieselbe Bedienfläche, gleiche
@@ -64,6 +74,6 @@ export function weatherMetricsTabSections(context: WeatherMetricsContext): strin
 	const sections: string[] = ['grundauswahl', 'reihenfolge', 'tagesfenster'];
 	if (context === 'route') sections.push(...ROUTE_ONLY_SECTIONS);
 	if (context === 'vergleich') sections.push(...COMPARE_ONLY_SECTIONS);
-	sections.push('official_alerts');
+	sections.push(...SHARED_TRAILING_SECTIONS);
 	return sections;
 }

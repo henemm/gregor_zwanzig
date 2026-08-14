@@ -296,6 +296,9 @@ export interface DisplayConfig {
 	alert_preset?: string; // Issue #846: "deaktiviert" | "entspannt" | "standard" | "sensibel"
 	metric_alert_levels?: Record<string, SensLevel>; // Issue #864: metric → SensLevel
 	telegram_style?: 'rich' | 'kurzform'; // Issue #1260: Compare-amtliche Warnung im SMS-Kurzstil (opt-in)
+	// Issue #1720 S1: Spaltenauswahl der 3-Tages-Vorschau, Neuformat #1373.
+	// Feld fehlt = die sieben festen Spalten; `[]` = der Block entfaellt ganz.
+	outlook_metrics?: { metric_id: string; aggregation: string }[];
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).
