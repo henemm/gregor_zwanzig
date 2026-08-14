@@ -10,6 +10,15 @@ AC -> Test-Mapping (Teil B; AC-1..AC-11/AC-16/AC-17/AC-19 s.
   AC-15  TestAC15PrecipTypeForms
   AC-18  TestAC18EditorBadgesStayWithoutColon
 
+Zusaetzlich (Adversary-Fix-Loop F001, kein eigenes AC): die drei
+Konstanten-Tabellen, die das Symbol als LITERAL fuehren, mussten den
+Doppelpunkt mitbekommen (``DROP_ORDER`` in ``render.py``, ``PRIORITY`` und
+``POSITIONAL`` in ``builder.py``). Der Adversary hat den Doppelpunkt je
+einzeln wieder entfernt — 522 Tests blieben gruen. Die beiden Klassen
+``TestDropOrderKnowsTheGrammarColon``/``TestPositionalKnowsTheGrammarColon``
+schliessen diese Luecke am WIRKORT (Kuerzung bzw. Reihenfolge der fertigen
+Zeile), nicht am Tabelleninhalt.
+
 ``WD``/``PT`` sind die einzigen zwei Token, deren Wert mit einem BUCHSTABEN
 beginnt und die heute keinen Trenner tragen (``WDNW``, ``PTS``). Sie bekommen
 denselben Doppelpunkt, den ``TH:``/``HR:`` bereits fuehren — der Trenner
@@ -27,6 +36,7 @@ from __future__ import annotations
 import pytest
 
 from app.models import PrecipType
+from output.renderers.sms_trip import SMSTripFormatter, build_extended_metric_specs
 
 from tests.tdd import _sms_token_format_fixtures as F
 
@@ -132,6 +142,103 @@ class TestAC18EditorBadgesStayWithoutColon:
         )
         assert by_metric.get("precip_type") == ["PT"], (
             f"Ist: {by_metric.get('precip_type')!r}"
+        )
+
+
+def _line(max_length: int) -> str:
+    """Echte Trip-SMS mit BEIDEN Buchstaben-Wert-Token, variables Budget.
+
+    Gemessen wird ``SMSTripFormatter.format_sms()`` — genau der Aufruf, den
+    ``trip_report.py`` fuer die Trip-SMS macht, nur mit variablem
+    ``max_length`` (dieselbe Begruendung wie bei
+    ``TestAC16RangeTokenIsAtomicUnderTruncation``: die Kuerzung selbst ist
+    bit-identisch dieselbe, das Zeichenbudget ist der einzige Unterschied).
+    ``build_extended_metric_specs`` ist die Ableitung, die auch der
+    Produktivpfad nutzt — die Symbole kommen damit aus dem Katalog und sind
+    NICHT im Test getippt.
+    """
+    return SMSTripFormatter().format_sms(
+        [F.segment(wind_dir_deg=F.NW_DEGREES, precip_type=PrecipType.SNOW)],
+        stage_name=F.STAGE_NAME, report_type="evening", tz=F.TZ,
+        night_weather=F.night_weather(), max_length=max_length,
+        disabled_specs=build_extended_metric_specs(
+            {"wind_direction", "precip_type"}),
+    )
+
+
+# §6-Rangfolge: alles hier faellt STRIKT SPAETER als die 14 erweiterten
+# Metrik-Token (Wintersport, Peak-Bloecke, gefuehltes Trio, PR, gemessenes
+# Trio). Solange 'WD:'/'PT:' in der Zeile stehen, muss deshalb jedes dieser
+# Token noch dastehen.
+_OUTRANKS_THE_FOURTEEN = ("WC10", "PR40%@5(95%@11)", "FN7", "FD10/20",
+                          "N9", "D13/27", "R0.5@5(8.4@11)")
+
+
+class TestDropOrderKnowsTheGrammarColon:
+    """Adversary-Fix-Loop F001: ``DROP_ORDER`` (``render.py``) fuehrt die
+    Symbole als Literale. Ohne den Grammatik-Doppelpunkt findet
+    ``_drop_first()`` die Token nie — sie fallen dann unter Kuerzungsdruck
+    NICHT mehr an ihrer Stelle, sondern ueberleben, waehrend statt ihrer die
+    sicherheitsrelevanten Groessen weggekuerzt werden. Still, weil die Zeile
+    weiterhin ins Budget passt.
+
+    Gemessen wird die Rangfolge, nicht die blosse Abwesenheit: eine reine
+    „bei kleinem Budget weg"-Pruefung waere kein Nachweis, weil der
+    Last-Resort-Schritt die Token am Ende ohnehin entfernt — nur eben
+    NACHDEM er Wichtigeres geopfert hat.
+    """
+
+    def test_letter_value_tokens_fall_before_what_outranks_them(self):
+        offenders: list[tuple[int, str]] = []
+        for max_length in range(40, 121):
+            line = _line(max_length)
+            if "WD:" not in line and "PT:" not in line:
+                continue
+            fehlend = [t for t in _OUTRANKS_THE_FOURTEEN if t not in line]
+            if fehlend:
+                offenders.append((max_length, f"{fehlend} fehlen: {line}"))
+
+        assert not offenders, (
+            "'WD:'/'PT:' muessen VOR Wintersport, Peak-Bloecken, gefuehltem "
+            "Trio, PR und gemessenem Trio fallen (sms_format.md §6). Bei "
+            "diesen Budgets standen sie noch, obwohl Hoeherrangiges bereits "
+            "gefallen war:\n"
+            + "\n".join(f"  max_length={mx}: {why}" for mx, why in offenders[:6])
+        )
+
+    def test_sweep_actually_covers_both_states(self):
+        """Gegenprobe zur Vorbedingung: der Bereich oben muss beide Zustaende
+        wirklich durchlaufen, sonst waere die Zusicherung leer erfuellbar."""
+        weit, eng = _line(120), _line(40)
+
+        assert "WD:NW" in weit and "PT:S" in weit, (
+            f"Ohne Kuerzungsdruck muessen beide Token dastehen: {weit}"
+        )
+        assert "WD:" not in eng and "PT:" not in eng, (
+            f"Bei engem Budget muessen beide gefallen sein: {eng}"
+        )
+
+
+class TestPositionalKnowsTheGrammarColon:
+    """Adversary-Fix-Loop F001, zweite Tabelle: ``POSITIONAL``
+    (``builder.py``) fuehrt die Symbole ebenfalls als Literale. Ohne den
+    Doppelpunkt greift ``POS_INDEX.get((symbol, category), 99)`` den
+    Fallback 99 — die beiden Token rutschen ans ENDE der Zeile, hinter die
+    System-Bloecke, statt in ihrem Block nach ``TH+:`` zu stehen (§2)."""
+
+    def test_letter_value_tokens_stay_in_their_block(self):
+        line = _line(2000)
+        toks = line.split(" ")
+
+        for sym in ("WD:NW", "PT:S"):
+            assert sym in toks, f"Vorbedingung: {sym!r} fehlt in {line}"
+
+        assert toks.index("TH+:-") < toks.index("WD:NW") < toks.index("WC10"), (
+            "Der erweiterte Metrik-Block steht nach 'TH+:' und vor den "
+            f"Wintersport-Token (sms_format.md §2): {line}"
+        )
+        assert toks.index("WD:NW") < toks.index("PT:S") < toks.index("WC10"), (
+            f"'WD:' steht vor 'PT:', beide vor 'WC': {line}"
         )
 
 
