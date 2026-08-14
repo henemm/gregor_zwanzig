@@ -267,9 +267,10 @@ relativ zur Orte-Prüfung ändert sich damit **nicht**, nur die Orte-Auflösung 
     anderen Delta liefert als mit dem (falschen) Servertag.
 
 - **AC-2:** Given `_send_trip_report_outcome` (`trip_report_scheduler.py:1001`) läuft für eine
-  Tour in einer Zone mit negativem UTC-Offset (z. B. PCT), deren `target_date` bereits
-  ortsrichtig aus `_get_target_date` → `trip_local_today` stammt, während der SERVERTAG noch
-  einen Tag zurückliegt (Mismatch-Fenster 12:00–24:00 UTC) / When die Zeile 1103 prüft, ob der
+  Tour in einer Zone mit negativem UTC-Offset (z. B. Los Angeles, im August UTC−7), deren
+  `target_date` bereits ortsrichtig aus `_get_target_date` → `trip_local_today` stammt, während
+  der SERVERTAG dem Ortstag bereits einen Tag VORAUS ist (Mismatch-Fenster 00:00–07:00 UTC) /
+  When die Zeile 1103 prüft, ob der
   Wetter-Klemm-Zweig greift / Then vergleicht sie `target_date < trip_local_today(trip,
   now_utc)` statt `target_date < date.today()`, wobei `now_utc` EINMAL oben in der Funktion
   gebunden wird (statt bisher nur innerhalb des `if target_date is None:`-Zweigs bei Zeile
@@ -482,3 +483,14 @@ ebenso zulässig.
   Ordinal-Rückverschiebung `_build_stage_trend::2` → `::1` auf; (4) Fundstelle 7 räumt das
   wächter-unsichtbare `datetime.utcnow()` (`scheduler_dispatch_service.py:69`) mit auf.
 - 2026-08-14: PO-Freigabe der 9 ACs („Go").
+- 2026-08-14: **Faktenkorrektur ohne Kriterienänderung** (RED-Phase). AC-2 nannte „negativer
+  UTC-Offset … Servertag liegt zurück … Fenster 12:00–24:00 UTC" — das ist in sich
+  widersprüchlich: bei negativem Versatz ist der Servertag dem Ortstag VORAUS, und das Fenster
+  liegt zwischen 00:00 und 07:00 UTC. Die operative Zusicherung („der Klemm-Zweig greift nicht,
+  obwohl `date.today() > target_date` gälte") war und bleibt unberührt; der Testfall trägt
+  entsprechend Los Angeles, 03:00 UTC.
+- 2026-08-14: (b)-Nachweis für Fundstelle 6 sitzt am **Wirkort**. `briefing_target_day_is_current`
+  folgt schon heute ihrem optionalen `today`-Argument — eine Parameter-gegen-Uhr-Probe an der
+  Funktion selbst wäre in der RED-Phase grün gewesen und hätte nichts bewacht. Geprüft wird
+  deshalb der Aufrufer `_process_pending_markers` plus die eigene Zusicherung, dass der
+  Systemuhr-Default ersatzlos entfällt.
