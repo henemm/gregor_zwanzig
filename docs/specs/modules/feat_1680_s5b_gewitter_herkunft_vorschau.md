@@ -318,6 +318,20 @@ Bildschirm-Vorschau ist ein echter Wirkort, s. AC-12/AC-13).
 | AC-13 | dieselbe Datei → `vorschau_abend_ohne_ausblick_zeigt_herkunft` + Gegenprobe `mit_ausblick_verschwindet_der_block` | echter Browser gegen Staging, Ausblick-Schalter im Reiter „Wetter-Metriken" |
 | AC-14 | `briefing_mail_validator.py` gegen die per IMAP abgeholte Staging-Mail (kein Unit-Test) | echt zugestellte Mail, Klartext + HTML |
 
+**Aufrufweg des Browser-Tests (in der RED-Phase festgelegt):**
+`cd frontend/e2e && npx playwright test trip-preview-thunder-origin.spec.ts --reporter=line`.
+Der Spec setzt `baseURL`, nginx-Schranke und `storageState` selbst per `test.use`; ein Aufruf
+aus `frontend/` würde `playwright.config.ts` mitziehen (lokaler `webServer` + `global.setup`)
+und ist deshalb **nicht** geeignet. Er sät seinen eigenen Trip `e2e-1680-s5b-origin` unter
+`default` — der namensstabile Rolling-Trip gehört einem Nutzer ohne Anmeldeweg (s. Kontext,
+Risiko 7).
+
+**Bewusste Abweichung bei AC-13:** Der Vorzustand (`show_outlook=false`) wird per
+`PUT /api/trips/<id>` hergestellt, nicht im Reiter „Wetter-Metriken" durchgeklickt. Der
+**Wirkort** des Kriteriums ist die Vorschau-Fläche, und die wird im echten Browser gemessen;
+den Schalter selbst bewachen die Editor-Tests. Ein Durchklicken des Schalters würde die
+Zusicherung nicht schärfen, aber den Test an eine zweite, fremde Fläche binden.
+
 **Fixture-Hinweis (Rückfallpfad-Regressionsschutz):** Die Fixture für AC-1
 sollte zusätzlich zu den Punkten im Tagesfenster Punkte **außerhalb** des
 Fensters mit einer **anderen** Zutat tragen. Würde die Implementierung die

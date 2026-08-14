@@ -154,6 +154,18 @@ Nachweis; keiner darf als „ohnehin abgedeckt" durchgereicht werden.**
    und **zwei** Konfigurationen (Morgen-Report für den Rückfall, Abend mit `show_outlook=False`
    für den Primärpfad).
 
+   🔴 **Korrektur, in der RED-Phase gemessen:** Der Trip `staging-validator-rolling` — der
+   einzige mit künftigen Etappen im Dateisystem — gehört dem Nutzer `validator-issue110`, und
+   dieser Nutzer hat **keinen Anmeldeweg** (`user.json` führt keinen Passwort-Hash). Die
+   App-Anmeldung mit den Staging-Zugangsdaten landet bei `default`; der Abruf endet mit
+   `404 Trip ... nicht gefunden für user 'default'`. **Die Datenlage am Dateisystem zu messen
+   genügt nicht — entscheidend ist, was der angemeldete Nutzer sieht** (Mandantentrennung).
+   Dieselbe Erkenntnis steht bereits in `frontend/e2e/feat-1258-s3.staging.setup.ts:7`.
+   Konsequenz und Bestandsmuster: **eigener Test-Trip unter `default` säen**. Angelegt ist
+   `e2e-1680-s5b-origin` (Innsbruck-Koordinaten, **drei** aufeinanderfolgende künftige Etappen —
+   zwei genügen nicht, weil `+1` und `+2` je eine eigene Etappe brauchen; die vier
+   `default`-Bestandstrips haben nur eine und erzeugen deshalb gar keine Vorschau).
+
 ## Existing Specs
 
 | Datei | Bezug zu dieser Scheibe |
