@@ -80,7 +80,7 @@ _ = render_official_alerts_html
 from output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
     G_ACCENT, G_WARNING, G_DANGER, G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_HEADER_BG,
-    FONT_UI, FONT_DATA, WEB_FONT_LINK,
+    FONT_UI, FONT_DATA, WEB_FONT_LINK, tone_css,
 )
 # Epic #1301 B4: geteilter Ausblick-Renderer (Trip/Compare-Teilungs-Invariante)
 from output.renderers.email.outlook import render_outlook_table
@@ -237,6 +237,15 @@ _RISK_DOT_COLORS = {
     "watch": ("#c2410c", "rgba(194,65,12,0.20)"),
     "risk":  ("#b91c1c", "rgba(185,28,28,0.22)"),
 }
+
+
+def _ampel_cell_bg(level: "str | None") -> "str | None":
+    """Fix #1801 S1: Zell-Hintergrund einer Ampelstufe aus der EINEN Quelle
+    ``design_tokens.tone_css()`` statt vier lokaler Hex-Kopien. 'green'/None
+    bleiben ungetoent (kein Hintergrund) -- unveraendertes Verhalten."""
+    if level not in ("yellow", "orange", "red"):
+        return None
+    return tone_css(level)[0]
 
 
 def _render_email_stat(
@@ -777,11 +786,7 @@ def _render_html_table(
                 # Issue #888: Tönung aus dem Ampel-Level (Katalog-Schwellenquelle).
                 metric_id = _COL_KEY_TO_METRIC_ID.get(key)
                 level = ampel_level(metric_id, numeric) if metric_id else None
-                cell_bg = {
-                    "yellow": "#fbeeb8",
-                    "orange": "#fad6b8",
-                    "red": "#f6c5bf",
-                }.get(level)
+                cell_bg = _ampel_cell_bg(level)
             # Issue #1377 Scheibe B: Roh-Modus-Fallback (key nicht in
             # indicator_keys) fragt denselben Katalog wie der freundliche
             # Modus oben (severity_for statt eigener hartcodierter Schwellen).
@@ -794,11 +799,7 @@ def _render_html_table(
                 if key in ("vis", "visibility"):
                     value = numeric if numeric > 100 else numeric * 1000
                 level = severity_for(metric_id, value)
-                cell_bg = {
-                    "yellow": "#fbeeb8",
-                    "orange": "#fad6b8",
-                    "red": "#f6c5bf",
-                }.get(level)
+                cell_bg = _ampel_cell_bg(level)
             # Gewitter ist seit Issue #1491 eine reguläre 4-stufige
             # Ampel-Spalte (wie Wind/Böen/Regen/Regenwahrsch./CAPE) — die
             # Tönung kommt aus derselben Quelle (`thunder_ampel_band`,
@@ -813,16 +814,12 @@ def _render_html_table(
             # Stand vor #1491) bleibt an dieser EINEN Stelle erhalten.
             elif key == "thunder":
                 if isinstance(raw_val, str):
-                    cell_bg = {
-                        "yellow": "#fbeeb8",
-                        "orange": "#fad6b8",
-                        "red": "#f6c5bf",
-                    }.get(thunder_ampel_band(raw_val))
+                    cell_bg = _ampel_cell_bg(thunder_ampel_band(raw_val))
                 else:
-                    cell_bg = {
-                        "risk": "#f6c5bf",
-                        "watch": "#fad6b8",
+                    _numeric_thunder_level = {
+                        "risk": "red", "watch": "orange",
                     }.get(_thunder_risk_level(raw_val))
+                    cell_bg = _ampel_cell_bg(_numeric_thunder_level)
 
             # Issue #1425 Schritt 1: Korridor-mark-Markierung, geteilter
             # Baustein mit dem Compare-Renderer (corridor_mark.py). Trip-
