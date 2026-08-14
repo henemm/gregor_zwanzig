@@ -76,6 +76,18 @@ def test_ac1_bestandstrip_html_ausblick_bleibt_byte_identisch():
         "gerendert -- genau das passiert, wenn 'Feld fehlt' (None) und "
         "'bewusst geleert' ([]) verwechselt werden (AC-1)."
     )
+    # Ausnahme #1801 (2026-08-14, PO-freigegeben): die Referenz WURDE hier
+    # bewusst nachgezogen -- Grund ist NICHT ein unbeachteter Rotstand,
+    # sondern die #1801-Warnstufen-Palette (Ampel-Flaechenfarben). Nachgemessen
+    # per Hex-Maskierung (`#[0-9a-fA-F]{6}` -> Platzhalter) in Ist vs.
+    # aufgezeichneter Referenz: gleiche Laenge (8717 Zeichen), gleiche Anzahl
+    # Farbwerte (86), nach Maskierung ZEICHENGLEICH -- es weichen ausschliesslich
+    # drei Flaechenfarben ab (`#fbeeb8`->`#fdf4cd` gelb, `#fad6b8`->`#fbe3cc`
+    # orange, `#f6c5bf`->`#f7d3e2` rot), keine Struktur-/Text-/Zahlenaenderung.
+    # Der Satz "Die Referenz wird NICHT nachgezogen" bleibt die Regel fuer
+    # INHALTLICHE Aenderungen (Mutation 1: stiller Totalausfall der Vorschau);
+    # diese eine, gemessene, PO-freigegebene Palettenaenderung ist die einzige
+    # dokumentierte Gegenausnahme dazu.
     assert tabelle == REFERENCE_TABLE.read_text(encoding="utf-8"), (
         f"Die HTML-Ausblick-Tabelle weicht von der Aufzeichnung ab "
         f"({REFERENCE_TABLE}). Die Referenz wird NICHT nachgezogen -- rot "

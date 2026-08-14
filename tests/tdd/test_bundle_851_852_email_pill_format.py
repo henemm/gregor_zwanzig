@@ -36,12 +36,15 @@ class TestAC1PillHtmlAmpelToneBorder:
         """
         GIVEN: tone='ampel_orange'
         WHEN: pill_html() aufgerufen
-        THEN: Rückgabe enthält 'border:1px solid #f0a060' (warn-Palette)
+        THEN: Rückgabe enthält 'border:1px solid #e59248' (warn-Palette,
+              Fix #1801 S2 -- alter Wert #f0a060 wich der neuen, staerker
+              abgesetzten Palette; ampel_orange hat seit dem vierten Ton
+              "caution" weiterhin einen eigenen warn-Rahmen).
         """
         from src.output.renderers.email.helpers import pill_html
         result = pill_html("Regen ab 11:00", "ampel_orange")
-        assert "border:1px solid #f0a060" in result, (
-            f"Erwartet 'border:1px solid #f0a060' (warn-Palette), nicht gefunden.\n"
+        assert "border:1px solid #e59248" in result, (
+            f"Erwartet 'border:1px solid #e59248' (warn-Palette), nicht gefunden.\n"
             f"IST: {result}"
         )
 
@@ -79,30 +82,35 @@ class TestAC1PillHtmlAmpelToneBorder:
         """
         GIVEN: tone='ampel_red'
         WHEN: pill_html() aufgerufen
-        THEN: Rückgabe enthält risk-Palette: bg=#fadcd6 + border=#e88472
+        THEN: Rückgabe enthält risk-Palette: bg=#fad3e1 + border=#dd7ba2
+              (Fix #1801 S2 -- alte Werte #fadcd6/#e88472 wichen der neuen,
+              staerker abgesetzten Palette, Karminrot-Angleich)
         """
         from src.output.renderers.email.helpers import pill_html
         result = pill_html("Gewitter", "ampel_red")
-        assert "background:#fadcd6" in result, (
-            f"Erwartet bg=#fadcd6 (risk-Palette), nicht gefunden.\nIST: {result}"
+        assert "background:#fad3e1" in result, (
+            f"Erwartet bg=#fad3e1 (risk-Palette), nicht gefunden.\nIST: {result}"
         )
-        assert "border:1px solid #e88472" in result, (
-            f"Erwartet border=#e88472 (risk-Palette), nicht gefunden.\nIST: {result}"
+        assert "border:1px solid #dd7ba2" in result, (
+            f"Erwartet border=#dd7ba2 (risk-Palette), nicht gefunden.\nIST: {result}"
         )
 
-    def test_pill_html_ampel_yellow_warn_palette(self):
+    def test_pill_html_ampel_yellow_caution_palette(self):
         """
         GIVEN: tone='ampel_yellow'
         WHEN: pill_html() aufgerufen
-        THEN: Rückgabe enthält warn-Palette: bg=#fde6cc + border=#f0a060
+        THEN: Rückgabe enthält den NEUEN eigenstaendigen caution-Ton
+              (bg=#fdf2c4 + border=#e0b93c) -- Fix #1801 S2 AC-8: 'ampel_yellow'
+              mappt nicht mehr auf 'warn' (das teilt sich 'ampel_orange' jetzt
+              exklusiv), sondern auf den vierten Ton 'caution'.
         """
         from src.output.renderers.email.helpers import pill_html
         result = pill_html("Wind mäßig", "ampel_yellow")
-        assert "background:#fde6cc" in result, (
-            f"Erwartet bg=#fde6cc (warn-Palette), nicht gefunden.\nIST: {result}"
+        assert "background:#fdf2c4" in result, (
+            f"Erwartet bg=#fdf2c4 (caution-Palette), nicht gefunden.\nIST: {result}"
         )
-        assert "border:1px solid #f0a060" in result, (
-            f"Erwartet border=#f0a060 (warn-Palette), nicht gefunden.\nIST: {result}"
+        assert "border:1px solid #e0b93c" in result, (
+            f"Erwartet border=#e0b93c (caution-Palette), nicht gefunden.\nIST: {result}"
         )
 
 

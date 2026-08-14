@@ -4270,6 +4270,19 @@ def test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge(metric_i
 # Pille bei KATALOG-Ordnung. Der Fix aus AC-S7-6 aendert ausschliesslich die
 # Reihenfolge -- bleibt diese Erwartung gruen, sind Auswahl, Abwahl,
 # Schwellenlogik und Ampelstufen nachweislich unberuehrt.
+#
+# Fix #1801 S2 (2026-08-14): EIN Eintrag fortgeschrieben, sonst nichts.
+# helpers._pill_for_metric() liest den Gewitter-Ton seither aus derselben
+# SSoT wie die Stundentabelle (thunder_ampel_band(), ADR-0025, AC-5) statt
+# fest "ampel_red" zu liefern -- fuer die Testdaten dieser Datei ist das
+# Ergebnis "orange" (zwei Ausrufezeichen), vorher hart "!!!"/rot. NACHGEMESSEN
+# per echtem Testlauf, nicht angenommen: die uebrigen neun Eintraege sind
+# byte-identisch geblieben (nur Index 6 wich ab). Reichweite gemessen: diese
+# Pillenform (`build_metrics_summary_pills`) wird ausschliesslich von den
+# E-Mail-Renderern erzeugt (email/compact.py, email/plain.py, email/html.py);
+# SMS laeuft ueber den eigenstaendigen SMSTripFormatter (sms_trip.py), Telegram
+# ueber compact_summary.py/trip_report.py -- keiner der beiden importiert
+# build_metrics_summary_pills. Betrifft also nur den E-Mail-Kanal.
 _S7_PILLEN_BASIS_KATALOGORDNUNG = [
     "3-20C - Max 11:00",
     "gef. 1.0-18.0C - Max 11:00",
@@ -4277,7 +4290,7 @@ _S7_PILLEN_BASIS_KATALOGORDNUNG = [
     "!!! Boeen >20 km/h ab 04:00 - max 70 (10:00)",
     "!! Regen ab 05:00 - 8.9 mm",
     "!!! Regen-W. >20% ab 05:00 - max 95% (11:00)",
-    "!!! Gewitter ab 11:00 - staerkste 11:00",
+    "!! Gewitter ab 11:00 - staerkste 11:00",
     "50% bewoelkt - Max 08:00",
     "Feuchte 55-55% - Max 08:00",
     "Sonne 150 min",

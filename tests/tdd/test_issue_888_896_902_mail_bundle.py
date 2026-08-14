@@ -78,56 +78,59 @@ def test_ac1_wind_25_green_no_tint():
     )
     cell = _cell_for_label(html, "Wind")
     assert "#15803d" in cell, f"Expected green ampel CSS-Dot, got: {cell}"
-    assert "background:#fbeeb8" not in cell, (
+    assert "background:#fdf4cd" not in cell, (
         f"AC-1: wind=25 (< yellow=30) must NOT carry warn tint, got: {cell}"
     )
 
 
 def test_ac1_wind_35_yellow_tint():
     """AC-1: GIVEN Wind=35.0 km/h im Einfach-Modus,
-    THEN zeigt die Zelle den gelben Ampel-CSS-Dot MIT background:#fbeeb8
-    (35 >= yellow=30, < orange=50).
+    THEN zeigt die Zelle den gelben Ampel-CSS-Dot MIT background:#fdf4cd
+    (35 >= yellow=30, < orange=50). Fix #1801 S2: neue Flaechenfarbe
+    (vormals #fbeeb8), Punktfarbe #d69500 (vormals #ca8a04).
     """
     rows = [{"time": "08:00", "wind": 35.0}]
     html = _render_html_table(
         rows, friendly_keys=set(), indicator_keys={"wind"}
     )
     cell = _cell_for_label(html, "Wind")
-    assert "#ca8a04" in cell, f"Expected yellow ampel CSS-Dot, got: {cell}"
-    assert "background:#fbeeb8" in cell, (
-        f"AC-1: wind=35 (yellow level) must carry #fbeeb8 tint, got: {cell}"
+    assert "#d69500" in cell, f"Expected yellow ampel CSS-Dot, got: {cell}"
+    assert "background:#fdf4cd" in cell, (
+        f"AC-1: wind=35 (yellow level) must carry #fdf4cd tint, got: {cell}"
     )
 
 
 def test_ac1_wind_55_orange_tint():
     """AC-1: GIVEN Wind=55.0 km/h im Einfach-Modus,
-    THEN zeigt die Zelle den orangen Ampel-CSS-Dot MIT background:#fad6b8
-    (55 >= orange=50, < red=70).
+    THEN zeigt die Zelle den orangen Ampel-CSS-Dot MIT background:#fbe3cc
+    (55 >= orange=50, < red=70). Fix #1801 S2: neue Flaechenfarbe (vormals
+    #fad6b8), Punktfarbe #d4530a (vormals #c2410c).
     """
     rows = [{"time": "08:00", "wind": 55.0}]
     html = _render_html_table(
         rows, friendly_keys=set(), indicator_keys={"wind"}
     )
     cell = _cell_for_label(html, "Wind")
-    assert "#c2410c" in cell, f"Expected orange ampel CSS-Dot, got: {cell}"
-    assert "background:#fad6b8" in cell, (
-        f"AC-1: wind=55 (orange level) must carry #fad6b8 tint, got: {cell}"
+    assert "#d4530a" in cell, f"Expected orange ampel CSS-Dot, got: {cell}"
+    assert "background:#fbe3cc" in cell, (
+        f"AC-1: wind=55 (orange level) must carry #fbe3cc tint, got: {cell}"
     )
 
 
 def test_ac1_wind_75_red_tint():
     """AC-1: GIVEN Wind=75.0 km/h im Einfach-Modus,
-    THEN zeigt die Zelle den roten Ampel-CSS-Dot MIT background:#f6c5bf
-    (75 >= red=70).
+    THEN zeigt die Zelle den roten Ampel-CSS-Dot MIT background:#f7d3e2
+    (75 >= red=70). Fix #1801 S2: neue Flaechenfarbe (vormals #f6c5bf),
+    Punktfarbe #a8104a (vormals #b91c1c).
     """
     rows = [{"time": "08:00", "wind": 75.0}]
     html = _render_html_table(
         rows, friendly_keys=set(), indicator_keys={"wind"}
     )
     cell = _cell_for_label(html, "Wind")
-    assert "#b91c1c" in cell, f"Expected red ampel CSS-Dot, got: {cell}"
-    assert "background:#f6c5bf" in cell, (
-        f"AC-1: wind=75 (red level) must carry #f6c5bf tint, got: {cell}"
+    assert "#a8104a" in cell, f"Expected red ampel CSS-Dot, got: {cell}"
+    assert "background:#f7d3e2" in cell, (
+        f"AC-1: wind=75 (red level) must carry #f7d3e2 tint, got: {cell}"
     )
 
 
@@ -244,11 +247,12 @@ def test_ac7_visibility_below_500m_keeps_red_tint():
     Wert unter 500m,
     WHEN die HTML-Tabelle gerendert wird,
     THEN bleibt die bestehende Zell-Toenungslogik unveraendert
-    (background:#f6c5bf), unbeeinflusst von der #888-Aenderung.
+    (background:#f7d3e2, Fix #1801 S2 -- vormals #f6c5bf), unbeeinflusst
+    von der #888-Aenderung.
     """
     rows = [{"time": "08:00", "visibility": 400.0}]
     html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
     cell = _cell_for_label(html, "Visib")
-    assert "background:#f6c5bf" in cell, (
-        f"AC-7: visibility=400m (< 500m) must keep #f6c5bf tint, got: {cell}"
+    assert "background:#f7d3e2" in cell, (
+        f"AC-7: visibility=400m (< 500m) must keep #f7d3e2 tint, got: {cell}"
     )

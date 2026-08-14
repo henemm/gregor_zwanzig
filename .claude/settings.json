@@ -8,7 +8,7 @@
       "WebSearch",
       "WebFetch",
       "Monitor",
-      "Write(.claude/next_ticket_cache.json)"
+      "Edit(.claude/next_ticket_cache.json)"
     ],
     "deny": [],
     "ask": []

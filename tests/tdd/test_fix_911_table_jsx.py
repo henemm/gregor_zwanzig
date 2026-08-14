@@ -41,7 +41,8 @@ def test_no_class_resp_in_empty_table():
 def test_raw_mode_still_highlights_gust():
     """Given gust im 'raw'-Format-Modus (kein Indikator), Gust-Wert >45 km/h,
     When über render_email gerendert (baut format_modes + indicator_keys),
-    Then trägt die Zelle trotzdem Hintergrund #fad6b8 (warn).
+    Then trägt die Zelle trotzdem Hintergrund #fbe3cc (warn, Fix #1801 S2 --
+    vormals #fad6b8).
 
     Läuft über render_email, damit das explicitly_raw-Gate echt aktiv ist:
     format_modes['gust']=='raw' und gust NICHT in indicator_keys → vor dem Fix
@@ -89,9 +90,9 @@ def test_raw_mode_still_highlights_gust():
         friendly_keys=set(),
     )
 
-    assert "#fad6b8" in html, (
+    assert "#fbe3cc" in html, (
         "Auch im raw-Modus muss ein Gust-Wert >45 km/h den Warn-Hintergrund "
-        "#fad6b8 tragen — das explicitly_raw-Gate wurde entfernt."
+        "#fbe3cc tragen — das explicitly_raw-Gate wurde entfernt."
     )
 
 

@@ -23,6 +23,14 @@ G_ACCENT = '#c45a2a'           # Burnt-Orange, einziger Markenakzent
 
 # --- Semantic ---
 G_SUCCESS = '#3a7d44'
+# Fix #1801 S2 (WCAG-AA-Fix, ADR-0008): eigenstaendige Konstante fuer den
+# gruenen Ampel-Zelltext, getrennt von G_SUCCESS. G_SUCCESS bleibt
+# unveraendert -- er wird von der amtlichen Warnstufe 1
+# (compare_html._ALERT_LEVEL_CELL) und dem Korridor-Marker (corridor_mark.py)
+# geteilt, deren Farbe diese Spec NICHT aendert (Scoping-Entscheidung, s.
+# Spec "Nicht-Ziele"). #3a7d44 auf #dbeadd erreicht nur 4.01:1 (< WCAG-AA
+# 4.5:1); #2f6b39 erreicht 5.12:1.
+G_AMPEL_TEXT_GREEN = '#2f6b39'
 G_WARNING = '#c8882a'          # Daylight-/Confidence-Akzent
 G_DANGER = '#b33a2a'           # Error-Akzent
 G_INFO = '#2a6cb3'             # Compact-Summary-Akzent
@@ -64,11 +72,16 @@ WEB_FONT_LINK = (
 # _RISK_CELL: caution/warn/danger) 1:1, damit die Migration output-identisch
 # bleibt. green nutzt den bestehenden gruenen Tint (identisch zu
 # _ALERT_LEVEL_CELL[1]: Tint + G_SUCCESS).
+# Fix #1801 S2 (Bug #1801, PO-Entscheid Karminrot statt Violett, 2026-08-14):
+# groesserer Farbabstand orange<->rot (ΔE76 Punkt 16,4 -> 54,4) + WCAG-Fix
+# des gruenen Zelltexts. G_SUCCESS bleibt fuer die amtliche Warnpalette/den
+# Korridor-Marker unveraendert -- der gruene Zelltext nutzt die neue,
+# eigenstaendige G_AMPEL_TEXT_GREEN statt G_SUCCESS direkt.
 _TONE_CSS: dict[str, tuple[str, str]] = {
-    "green": ('#dbeadd', G_SUCCESS),   # gruener Tint + Erfolgs-Ink (bestehende Palette)
-    "yellow": ('#fbeeb8', '#5e4a00'),  # == frueheres _RISK_CELL["caution"]
-    "orange": ('#fad6b8', '#8a3506'),  # == frueheres _RISK_CELL["warn"]
-    "red": ('#f6c5bf', '#8a1009'),     # == frueheres _RISK_CELL["danger"]
+    "green": ('#dbeadd', G_AMPEL_TEXT_GREEN),  # gruener Tint (unveraendert) + WCAG-AA-Text
+    "yellow": ('#fdf4cd', '#5e4a00'),          # Flaeche neu, Text unveraendert
+    "orange": ('#fbe3cc', '#7d3400'),          # Flaeche + Text neu
+    "red": ('#f7d3e2', '#7d0c39'),             # Flaeche + Text neu (Karminrot)
 }
 
 

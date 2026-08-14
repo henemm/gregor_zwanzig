@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 from app.metric_catalog import get_metric
 from output.renderers.email.helpers import format_trend_tokens
-from output.renderers.email.design_tokens import FONT_DATA
+from output.renderers.email.design_tokens import FONT_DATA, tone_css
 from utils.geo import degrees_to_compass
 
 
@@ -88,12 +88,14 @@ def render_outlook_table(
         except (TypeError, ValueError):
             return ""
         c, w, d = thresholds
+        # Fix #1801 S1: Hex-Werte aus der EINEN Quelle tone_css() statt
+        # dreier lokaler Kopien.
         if d is not None and v >= d:
-            return "background:#f6c5bf;"
+            return f"background:{tone_css('red')[0]};"
         if w is not None and v >= w:
-            return "background:#fad6b8;"
+            return f"background:{tone_css('orange')[0]};"
         if c is not None and v >= c:
-            return "background:#fbeeb8;"
+            return f"background:{tone_css('yellow')[0]};"
         return ""
 
     def _catalog_thresholds(metric_id: str) -> tuple:
@@ -197,10 +199,13 @@ def render_outlook_table(
         "MED": _THUNDER_LABEL_DE["MED"],
         "HIGH": _THUNDER_LABEL_DE["HIGH"],
     }
+    # Fix #1801 S1: MED/HIGH aus tone_css() (EINE Quelle); LOW bleibt bewusst
+    # ein abweichender, eigener Gelbton ausserhalb des Ampel-Vokabulars
+    # (Spec „Nicht-Ziele").
     _THUNDER_LEVEL_BG = {
         "LOW": "background:#fbe6c3;",
-        "MED": "background:#fad6b8;",
-        "HIGH": "background:#f6c5bf;",
+        "MED": f"background:{tone_css('orange')[0]};",
+        "HIGH": f"background:{tone_css('red')[0]};",
     }
 
     outlook_rows = ""

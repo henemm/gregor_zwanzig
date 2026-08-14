@@ -342,7 +342,16 @@ class TestCorridorScoreIndependence:
 # _DAILY_PLAIN_ROWS) zur Laufzeit wieder eingesetzt und erhielt EXAKT die
 # beiden alten Summen zurueck (HTML a6bd956e…, Klartext b7d76e21…) -- die
 # CAPE-Zeile ist damit nachweislich der einzige Unterschied.
-_COMPARE_HTML_SHA256_BEFORE = "2ea4e178875aefc206da1253fabe5629e9a366b03d54e258e8cced245e22365f"
+#
+# Fix #1801 S2 (2026-08-14): erneut fortgeschrieben, wieder AUSDRUECKLICH.
+# Die Ampel-Palette (design_tokens._TONE_CSS) ist die EINE geteilte Quelle
+# fuer Trip- UND Compare-Zellfaerbung (compare_html._RISK_CELL leitet sich
+# seit #1214 Scheibe 2 direkt von tone_css() ab) -- dieselbe Zutat, die die
+# Zellfarben in den Fixture-Zeilen dieses Tests faerbt (thunder_level MED/
+# HIGH). Nur der HTML-Teil aendert sich (Farbe steckt nur im HTML); der
+# Klartext-Teil bleibt byte-identisch (alte Summe unveraendert gueltig).
+# Alte HTML-Summe: 2ea4e178…, neue: 68b9c7d4….
+_COMPARE_HTML_SHA256_BEFORE = "68b9c7d42a75598aff70064aa1f512e936a8511d2e914fd60e41f66340fd541e"
 _COMPARE_TEXT_SHA256_BEFORE = "54f2982ccec411d91d7de9b0c6c13a4d3e80ac9e64e49fa8db9893827ee6311e"
 
 

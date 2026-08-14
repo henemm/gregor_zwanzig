@@ -230,8 +230,10 @@ class TestAC2AmpelEmojis:
             f"ruhige Ereignis-Stufe muss ampel_green sein, war {tone!r}"
         )
 
-    def test_thunder_pill_is_red_plain(self):
-        # Gewitter → höchste Ampelstufe ampel_red (tone), kein Kreis-Emoji im Plain.
+    def test_thunder_pill_is_ampel_orange_plain(self):
+        # Fix #1801 S2 AC-5/AC-9: _build_segments(thunder=True) nutzt
+        # ThunderLevel.MED -- thunder_ampel_band(MED) == "orange" (SSoT
+        # ADR-0025), nicht mehr fest "ampel_red". Kein Kreis-Emoji im Plain.
         from src.output.renderers.email.helpers import build_metrics_summary_pills
 
         segs = _build_segments(thunder=True)
@@ -243,7 +245,9 @@ class TestAC2AmpelEmojis:
         pills = build_metrics_summary_pills(segs, ["thunder"], {}, tz=TZ)
         assert pills, "keine Gewitter-Pill"
         _text, tone = pills[0]
-        assert tone == "ampel_red", f"Gewitter-Stufe muss ampel_red sein, war {tone!r}"
+        assert tone == "ampel_orange", (
+            f"Gewitter-Stufe (ThunderLevel.MED) muss ampel_orange sein, war {tone!r}"
+        )
 
     def test_event_pill_only_uses_ampel_emoji_set(self):
         """Ereignis-Pills tragen im Plain KEIN Emoji mehr (Issue #1222 AC-4).
@@ -548,9 +552,11 @@ class TestAC7WcagFullColorFourStages:
                 f"(bg={bg}, fg={fg})"
             )
             seen_bg.add(bg)
-        # ampel_yellow + ampel_orange mappen beide auf 'warn' → 3 distinkte BGs by design (#851)
-        assert len(seen_bg) >= 3, (
-            f"Mind. 3 unterscheidbare Stufen-Farben erwartet, gefunden: {seen_bg}"
+        # Fix #1801 S2 AC-8: vierter Ton "caution" trennt ampel_yellow von
+        # ampel_orange -- alle vier Ampelstufen zeigen jetzt vier
+        # unterscheidbare Hintergrundfarben (vorher 3, #851).
+        assert len(seen_bg) == 4, (
+            f"4 unterscheidbare Stufen-Farben erwartet, gefunden: {seen_bg}"
         )
 
     def test_full_color_capsule_shape(self):
