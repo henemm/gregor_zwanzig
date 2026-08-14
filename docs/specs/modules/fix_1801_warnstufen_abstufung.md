@@ -13,7 +13,8 @@ tags: [email, design-tokens, ampel, kontrast, chips]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO „go", 2026-08-14 (Karminrot statt Violett; alle drei
+      Chip-Fälle im Fix; Chip-Palette mit dieser Spec freigegeben)
 
 ## Purpose
 
