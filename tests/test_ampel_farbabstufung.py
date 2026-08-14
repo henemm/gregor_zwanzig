@@ -22,7 +22,6 @@ Sonde, die die Kopplung an die zentrale Quelle misst, keine Ersatzlogik.
 from __future__ import annotations
 
 import math
-from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("Europe/Berlin")
