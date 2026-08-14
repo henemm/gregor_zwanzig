@@ -23,7 +23,9 @@ tags: [testing, e2e, playwright, ci, infrastructure]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-08-14 ("Go"), alle 10 ACs auf Deutsch vorgelegt und
+  freigegeben. Ausdrücklich mitfreigegeben: das Ergebnis der Einzelfall-Diagnose ist bei
+  Freigabe offen (zwischen 2 und 13 zusätzlich aufgenommenen Dateien, KL-2).
 
 ## Purpose
 
