@@ -80,6 +80,7 @@ from __future__ import annotations
 
 import dataclasses
 import importlib
+import itertools
 import json
 import re
 from collections import Counter
@@ -4018,11 +4019,18 @@ def _s7_pruefe_kanal_reihenfolge(
         # Das GANZE Label tragen, nie nur sein erstes Wort (Adversary S7 F001):
         # "Gefuehlte Temp. min"/"Gefuehlte Temp. max" und "Wolken"/"Wolken
         # tief" teilen sich den Wortanfang -- ein Wortanfang-Vergleich hielte
-        # ihre Vertauschung fuer richtig (Gegenprobe: AC-S7-5c unten).
-        # Muster AC-S7-8a: volles Label per ``startswith``. Das angehaengte
-        # Leerzeichen trennt zusaetzlich "Wolken " von "Wolken tief" -- jede
-        # der 25 Uebersichts-Zellen hat die Form "<Label> <Wert>" (gemessen
-        # 2026-08-14 ueber alle _S7_SOLL-Groessen).
+        # ihre Vertauschung fuer richtig (Gegenproben: AC-S7-5c/5d unten).
+        # Muster AC-S7-8a: volles Label per ``startswith``.
+        #
+        # Das angehaengte Leerzeichen ist Haertung gegen eine VERTAUSCHTE
+        # GROESSE ("Wolken " faengt nicht auf "Wolken tief 10%" an), nicht
+        # gegen eine vertauschte REIHENFOLGE: auf einer Permutation derselben
+        # Menge sind beide Formen gleichwertig, weil ein Label nur Praefix
+        # eines echt laengeren sein kann und die Gesamtlaenge erhalten bleibt.
+        # 5c/5d unterscheiden es deshalb NICHT (gemessen 2026-08-14: das
+        # Leerzeichen entfernt -> alle fuenf S7-5-Achsen bleiben gruen). Es
+        # kostet nichts, weil jede der 25 Uebersichts-Zellen die Form
+        # "<Label> <Wert>" hat (ebenfalls gemessen).
         assert len(zellen) == len(erwartet) and all(
             z.startswith(f"{e} ") for z, e in zip(zellen, erwartet)
         ), f"{wo}: Telegram zeigt {zellen} statt der Reihenfolge {erwartet}"
@@ -4137,6 +4145,55 @@ def test_ac_s7_5c_telegram_vergleich_faengt_praefix_kollision():
     )
     with pytest.raises(AssertionError):
         _s7_pruefe_kanal_reihenfolge("telegram", vertauscht, "Gegenprobe", ids=ids)
+
+
+@pytest.mark.parametrize(
+    "ids",
+    [
+        ["cloud_avg", "cloud_low_avg"],
+        ["cloud_avg", "cloud_low_avg", "cloud_mid_avg"],
+    ],
+    ids=["paar", "tripel"],
+)
+def test_ac_s7_5d_telegram_vergleich_faengt_die_wolken_kollision(ids):
+    """AC-S7-5 (zweite Pflicht-Gegenprobe, Adversary S7 F002): die Wolken-
+    Familie ist die haertere Kollision -- "Wolken" ist nicht nur
+    wortanfangsgleich mit "Wolken tief"/"Wolken mittel", sondern deren echtes
+    PRAEFIX. AC-S7-5c oben deckt nur das wind_chill-Paar; die Wolken-Familie
+    stand bisher bloss im Kommentar.
+
+    Die drei sind so gewaehlt, dass ALLE denselben Wortanfang "Wolken" tragen
+    -- der frueher benutzte Wortanfang-Vergleich ist damit auf JEDER
+    Vertauschung gruen und kann keine einzige sehen. Geprueft werden alle
+    Vertauschungen statt nur der umgekehrten Folge, und der Tripel-Fall
+    zusaetzlich zum Paar: bei zwei Elementen liesse sich ein Fang noch mit dem
+    Sonderfall der Vollvertauschung erklaeren, bei drei nicht mehr."""
+    erwartet = [_PLAIN_ROWS_BY_ID[m][1] for m in ids]
+    assert len({e.split(" ")[0] for e in erwartet}) == 1, (
+        f"Vakuum: {ids} teilen sich ihren Wortanfang nicht mehr ({erwartet}) "
+        "-- die Gegenprobe pruefte dann eine Kollision, die es nicht gibt"
+    )
+    assert len(set(erwartet)) == len(erwartet), (
+        f"Vakuum: {ids} teilen sich das GANZE Telegram-Label ({erwartet})"
+    )
+
+    for folge in itertools.permutations(ids):
+        if list(folge) == ids:
+            continue
+        vertauscht = render_compare_telegram(
+            _s7_result(), enabled_metrics=list(folge),
+        )
+        zellen = telegram_zellen(vertauscht)
+        assert [z.split(" ")[0] for z in zellen] == [
+            e.split(" ")[0] for e in erwartet
+        ], (
+            f"Vakuum: der ALTE Wortanfang-Vergleich muss auf {zellen} gruen "
+            "sein, sonst belegt die Gegenprobe nichts"
+        )
+        with pytest.raises(AssertionError):
+            _s7_pruefe_kanal_reihenfolge(
+                "telegram", vertauscht, f"Gegenprobe {list(folge)}", ids=ids,
+            )
 
 
 # --- AC-S7-6: DER FIX -- die Kurz-E-Mail folgt der eingestellten Ordnung --
