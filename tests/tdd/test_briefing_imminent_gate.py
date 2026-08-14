@@ -141,61 +141,127 @@ def _anker(user_id: str, vor_minuten: float) -> None:
     )
 
 
-# ═════════════════════════ AC-5 — Nachlauf-Fenster ══════════════════════════
+# ══════════ AC-5 — der VERSUCH beendet die Sperre, nicht der Erfolg ═════════
+#
+# 🔴 Die erste Fassung hatte hier ein Nachlauf-Fenster: „letztes Briefing
+# weniger als 15 Minuten her" SPERRTE. Das war falsch begruendet — der Anker
+# wird auch bei gescheitertem Versand geschrieben (#1629), der Nachlauf
+# schwieg also gerade dann, wenn nichts ankam, und machte sieben
+# Bestandstests rot. Der Anker hat jetzt das UMGEKEHRTE Vorzeichen: er
+# BEENDET die Sperre.
 
-
-def test_ac5_kurz_nach_einem_briefing_wird_gesperrt(nutzer):
-    """AC-5: Ist das letzte Briefing dieser Entitaet nachweislich vor wenigen
-    Minuten rausgegangen, wird eine Meldung ebenfalls nicht mehr als eigene
-    Nachricht verschickt — der gemessene 13.08.-Fall (Alarm zwei Minuten NACH
-    dem Briefing).
-
-    Der Nachlauf haengt an der TATSACHE „ein Briefing ist raus"
-    (``alert_briefing_anchor.last_briefing_at``), nicht an einer
-    Uhrzeit-Rechnung: scheitert der Versand, wird der Anker gar nicht erst
-    fortgeschrieben und die Sperre greift zu Recht nicht.
-
-    Das Faelligkeits-Praedikat sagt hier durchgehend „nein" — die Sperre darf
-    also allein aus dem Nachlauf entstehen.
-
-    ROT HEUTE: ``services.alert_gate.check_briefing_imminent`` existiert nicht
-    (ImportError).
-    """
-    uid = nutzer("ac5")
-    _anker(uid, vor_minuten=5)
-
-    assert _sperre(uid, NIE_FAELLIG()) is True, (
-        "Ein Briefing, das vor fuenf Minuten rausging, muss die nachfolgende "
-        "Meldung im Nachlauf-Fenster sperren."
+# Ein Faelligkeits-Fenster, das JETZT offen ist — der Zustand nach einem
+# gescheiterten Versand: der Slot bleibt faellig (der Vermerk wurde
+# zurueckgenommen), obwohl der Versuch stattgefunden hat.
+def OFFENES_FENSTER() -> Faelligkeit:
+    return Faelligkeit(
+        FEST - timedelta(minutes=30), FEST + timedelta(minutes=30),
     )
 
 
-def test_ac5_ohne_jedes_briefing_wird_nicht_gesperrt(nutzer):
-    """AC-5 (Gegenprobe): Gab es fuer diese Entitaet noch nie ein Briefing
-    (Bestandsnutzer, erster Lauf nach der Auslieferung), liefert
-    ``last_briefing_at()`` ``None`` — und die Sperre darf daraus NICHT „gerade
-    rausgegangen" machen.
+def test_ac5_versuch_im_offenen_fenster_beendet_die_sperre(nutzer):
+    """AC-5: Wurde das anstehende Briefing bereits versucht — ob zugestellt
+    oder beim Versand gescheitert —, wird die Meldung regulaer verschickt.
 
-    Ohne diese Haelfte waere eine Implementierung, die bei fehlendem Anker
-    pauschal sperrt, formal AC-5-konform und legte jede Bestandstour still.
+    Das Faelligkeits-Fenster ist hier durchgehend offen, sagt also „das
+    Briefing steht immer noch an". Genau so sieht ein GESCHEITERTER Versand
+    aus: der Anker ist gesetzt (er steht in beiden Versandpfaden im
+    Fehler-Zweig, #1629), der Idempotenz-Vermerk wurde zurueckgenommen.
+    Allein daraus entsteht sonst der gemessene 4-Stunden-Schweif (R6).
 
-    ROT HEUTE: ImportError.
+    ROT vor der Korrektur: der Vorlauf-Zweig sperrt, der Anker konnte die
+    Sperre nicht beenden — er loeste sie aus.
+    """
+    uid = nutzer("ac5-versucht")
+    _anker(uid, vor_minuten=10)
+
+    assert _sperre(uid, OFFENES_FENSTER()) is False, (
+        "Das anstehende Briefing wurde vor zehn Minuten versucht — die Sperre "
+        "muss damit enden, sonst schweigt der Alarm bis zu vier Stunden lang "
+        "fuer ein Briefing, das nie angekommen ist."
+    )
+
+
+def test_ac5_ohne_versuch_bleibt_die_sperre_bestehen(nutzer):
+    """AC-5 (Gegenprobe): Dieselbe Lage, aber ohne jeden Briefing-Anker — der
+    gemeldete 13.08.-Fall (Alarm-Lauf zur Briefing-Minute selbst, noch kein
+    Versuch). Hier MUSS gesperrt werden.
+
+    Ohne diese Haelfte waere eine Implementierung, die nach Bedingung 1 immer
+    durchlaesst, formal AC-5-konform — und der ganze Fix wirkungslos.
     """
     uid = nutzer("ac5-ohne")
 
-    assert _sperre(uid, NIE_FAELLIG()) is False, (
-        "Ohne jeden Briefing-Anker darf nichts gesperrt werden."
+    assert _sperre(uid, OFFENES_FENSTER()) is True, (
+        "Ohne Briefing-Anker gab es noch keinen Versuch — die Meldung muss "
+        "gesperrt bleiben, das Briefing ersetzt sie Minuten spaeter."
+    )
+
+
+def test_ac5_anker_vom_vortag_beendet_die_heutige_sperre_nicht(nutzer):
+    """AC-5 (Zuordnung zum Slot): Ein Briefing-Versuch von GESTERN darf die
+    heutige Sperre nicht beenden — sonst waere die Sperre ab dem zweiten
+    Betriebstag jeder Tour dauerhaft wirkungslos, ohne dass irgendein Test
+    umkippt.
+
+    Eine Implementierung, die nur „gibt es ueberhaupt einen Anker?" fragt,
+    faellt hier durch.
+    """
+    uid = nutzer("ac5-vortag")
+    _anker(uid, vor_minuten=24 * 60)
+
+    assert _sperre(uid, OFFENES_FENSTER()) is True, (
+        "Der Anker liegt 24 Stunden zurueck und gehoert damit zum Briefing von "
+        "gestern — er darf die heutige Sperre nicht beenden."
+    )
+
+
+def test_ac5_versuch_am_morgen_beendet_die_sperre_des_abends_nicht(nutzer):
+    """AC-5 (Zuordnung zum SLOT, nicht zum Ortstag): Zwei Faelligkeits-Fenster
+    am selben Tag — das Morgen-Fenster liegt zwei Stunden zurueck und ist
+    abgearbeitet, das Abend-Fenster steht in 30 Minuten an. Der Anker des
+    Morgen-Briefings darf die Sperre des ABEND-Briefings nicht beenden.
+
+    Ohne diesen Fall waere eine Implementierung, die den Versuch nur gegen
+    Mitternacht Ortszeit abgleicht („heute schon ein Briefing gehabt"),
+    formal AC-5-konform — und liesse jeden Abend-Alarm durch, obwohl das
+    Abend-Briefing Minuten spaeter dasselbe erzaehlt.
+    """
+    uid = nutzer("ac5-zwei-slots")
+    _anker(uid, vor_minuten=120)
+
+    class ZweiFenster:
+        def __init__(self) -> None:
+            self.gefragt: list[datetime] = []
+
+        def __call__(self, moment: datetime) -> bool:
+            self.gefragt.append(moment)
+            morgens = (
+                FEST - timedelta(minutes=125) <= moment
+                <= FEST - timedelta(minutes=115)
+            )
+            abends = (
+                FEST + timedelta(minutes=30) <= moment
+                <= FEST + timedelta(minutes=90)
+            )
+            return morgens or abends
+
+    assert _sperre(uid, ZweiFenster()) is True, (
+        "Der Anker gehoert zum Morgen-Briefing von vor zwei Stunden — das "
+        "Abend-Briefing in 30 Minuten wurde noch nicht versucht und muss "
+        "gesperrt bleiben."
     )
 
 
 # ═══════════════════ AC-6 — Fenstergrenzen in beide Richtungen ══════════════
 
 
-def test_ac6_ausserhalb_beider_fenster_wird_regulaer_verschickt(nutzer):
-    """AC-6: Naechstes Briefing weiter als 60 Minuten entfernt UND letztes
-    laenger als 15 Minuten her — die Meldung geht wie bisher regulaer raus.
+def test_ac6_ausserhalb_des_vorlaufs_wird_regulaer_verschickt(nutzer):
+    """AC-6: Naechstes Briefing weiter als 60 Minuten entfernt — die Meldung
+    geht wie bisher regulaer raus.
 
-    ROT HEUTE: ImportError.
+    Der Anker vor 30 Minuten ist bewusst gesetzt: er darf hier weder sperren
+    (das war der gestrichene Nachlauf) noch sonst etwas bewirken.
     """
     uid = nutzer("ac6")
     _anker(uid, vor_minuten=30)
@@ -212,32 +278,35 @@ def test_ac6_ausserhalb_beider_fenster_wird_regulaer_verschickt(nutzer):
     )
 
 
-def test_ac6_vorlauf_grenze_60_minuten(nutzer):
-    """AC-6 (Grenze des Vorlaufs): Ein Briefing 59 Minuten voraus sperrt, eines
-    75 Minuten voraus nicht. Damit ist die PO-Entscheidung „60 Minuten" als
-    Verhalten gemessen — nicht als Konstante abgelesen.
+def test_ac6_vorlauf_grenze_genau_60_und_61_minuten(nutzer):
+    """AC-6 (Grenze des Vorlaufs, auf die Minute): Ein Briefing GENAU 60
+    Minuten voraus sperrt, eines GENAU 61 Minuten voraus nicht. Damit ist die
+    PO-Entscheidung „60 Minuten" als Verhalten gemessen — nicht als Konstante
+    abgelesen.
 
     Der gemessene Anlassfall lag genau hier: Alarme um 04:00 und 04:45 UTC
     gegen ein Briefing um 05:00. Ein 15-Minuten-Vorlauf haette die 04:00-Faelle
     nicht gefangen.
 
-    ROT HEUTE: ImportError.
+    Die Fenster beginnen exakt auf der Grenze und reichen nach HINTEN weg:
+    ein Fenster, das die Grenze umschliesst, waere in beiden Faellen getroffen
+    und wuerde nichts unterscheiden.
     """
     uid = nutzer("ac6-vorlauf")
-    knapp_drin = Faelligkeit(
-        FEST + timedelta(minutes=55), FEST + timedelta(minutes=59),
+    genau_60 = Faelligkeit(
+        FEST + timedelta(minutes=60), FEST + timedelta(minutes=120),
     )
-    knapp_draussen = Faelligkeit(
-        FEST + timedelta(minutes=70), FEST + timedelta(minutes=80),
+    genau_61 = Faelligkeit(
+        FEST + timedelta(minutes=61), FEST + timedelta(minutes=121),
     )
 
-    assert _sperre(uid, knapp_drin) is True, (
-        "Ein Briefing 55–59 Minuten voraus liegt im Vorlauf-Fenster und muss "
-        "sperren."
+    assert _sperre(uid, genau_60) is True, (
+        "Ein Briefing genau 60 Minuten voraus liegt im Vorlauf-Fenster und "
+        "muss sperren."
     )
-    assert _sperre(uid, knapp_draussen) is False, (
-        "Ein Briefing 70–80 Minuten voraus liegt ausserhalb — hier darf nicht "
-        "gesperrt werden, sonst schweigt der Alarm ohne zeitnahen Ersatz."
+    assert _sperre(uid, genau_61) is False, (
+        "Ein Briefing genau 61 Minuten voraus liegt ausserhalb — hier darf "
+        "nicht gesperrt werden, sonst schweigt der Alarm ohne zeitnahen Ersatz."
     )
 
 
@@ -262,40 +331,33 @@ def test_ac6_faelligkeit_genau_jetzt_sperrt_ebenfalls(nutzer):
     )
 
 
-def test_ac6_nachlauf_grenze_15_minuten(nutzer):
-    """AC-6 (Grenze des Nachlaufs, Risiko R6): Ein Briefing vor 14 Minuten
-    sperrt, eines vor 25 Minuten nicht. Ohne diesen Deckel bliebe die Sperre
-    wirksam, obwohl das Briefing laengst durch ist — ein Meldeloch ohne Grenze.
+def test_ac6_ohne_jede_faelligkeit_wird_nie_gesperrt(nutzer):
+    """AC-6 (Gegenprobe zur gestrichenen Nachlauf-Haelfte): Steht ueberhaupt
+    kein Briefing an, wird NIE gesperrt — auch nicht kurz nach einem gerade
+    verschickten.
 
-    Zwei getrennte Nutzer, damit der Anker des einen den anderen nicht faerbt
-    (er wird pro Nutzerverzeichnis gefuehrt).
-
-    ROT HEUTE: ImportError.
+    Genau hier stand bis zur Spec-Korrektur das Gegenteil („letztes Briefing
+    vor 5 Minuten ⇒ sperren"). Der Anker vor drei Minuten ist deshalb bewusst
+    gesetzt: er ist der Ausloeser, der NICHT mehr ausloesen darf.
     """
-    drin, draussen = nutzer("ac6-nach-drin"), nutzer("ac6-nach-draussen")
-    _anker(drin, vor_minuten=14)
-    _anker(draussen, vor_minuten=25)
+    uid = nutzer("ac6-ohne-faelligkeit")
+    _anker(uid, vor_minuten=3)
 
-    assert _sperre(drin, NIE_FAELLIG()) is True, (
-        "Ein Briefing vor 14 Minuten liegt im Nachlauf-Fenster und muss sperren."
-    )
-    assert _sperre(draussen, NIE_FAELLIG()) is False, (
-        "Ein Briefing vor 25 Minuten liegt ausserhalb — die Sperre muss enden, "
-        "sonst schweigt der Alarm unbegrenzt weiter."
+    assert _sperre(uid, NIE_FAELLIG()) is False, (
+        "Ohne anstehendes Briefing gibt es keinen Ersatz fuer die Meldung — "
+        "ein gerade verschicktes Briefing darf sie nicht sperren."
     )
 
 
-def test_ac6_anker_eines_fremden_gegenstands_sperrt_nicht(nutzer):
+def test_ac6_anker_eines_fremden_gegenstands_beendet_die_sperre_nicht(nutzer):
     """AC-6 (Trennschaerfe): Der Anker liegt je ``(entity_id, entity_type)``.
     Ein frisches Briefing einer ANDEREN Entitaet desselben Nutzers darf die
-    Meldung hier nicht sperren.
+    Sperre hier nicht beenden — fuer DIESE Entitaet gab es noch keinen
+    Versuch.
 
     Ohne diesen Fall waere eine Implementierung, die den Anker nur nach
-    ``user_id`` nachschlaegt, formal AC-5-konform — und legte bei jedem
-    Briefing irgendeiner Tour saemtliche Alarme des Nutzers fuer 15 Minuten
-    still.
-
-    ROT HEUTE: ImportError.
+    ``user_id`` nachschlaegt, formal AC-5-konform — und liesse bei jedem
+    Briefing irgendeiner Tour saemtliche Doppel-Meldungen des Nutzers durch.
     """
     from services.alert_briefing_anchor import record_briefing_sent
 
@@ -305,8 +367,9 @@ def test_ac6_anker_eines_fremden_gegenstands_sperrt_nicht(nutzer):
         at=FEST - timedelta(minutes=3),
     )
 
-    assert _sperre(uid, NIE_FAELLIG()) is False, (
-        "Das Briefing einer fremden Entitaet darf diese hier nicht sperren."
+    assert _sperre(uid, OFFENES_FENSTER()) is True, (
+        "Das Briefing einer fremden Entitaet sagt nichts darueber, ob DIESES "
+        "Briefing schon versucht wurde — die Sperre muss bestehen bleiben."
     )
 
 

@@ -232,6 +232,16 @@ class TripAlertService:
             logger.debug(f"Alert suppressed: quiet hours active for trip {trip.id}")
             return False
 
+        # 1a2. Issue #1594: steht das geplante Briefing dieses Trips unmittelbar
+        # bevor und wurde es noch nicht versucht, waere dieser Alarm eine
+        # Doppel-Meldung — der Wetterstand kommt Minuten spaeter vollstaendig
+        # im Briefing an. Zusaetzliche, rein lesende Stufe nach der Ruhezeit
+        # und VOR dem Abruf; die bestehende Reihenfolge bleibt unangetastet
+        # (Vereinheitlichung ist #1467 S4).
+        if self._is_briefing_imminent(trip, now_utc):
+            logger.debug(f"Alert suppressed: briefing imminent for trip {trip.id}")
+            return False
+
         # 1b. Throttle-Check mit per-trip Cooldown (AC-2/3)
         if self._is_throttled_with_cooldown(trip):
             logger.debug(f"Alert throttled for trip {trip.id}")
@@ -700,6 +710,34 @@ class TripAlertService:
             now, trip.alert_quiet_from, trip.alert_quiet_to,
             anchor_tz(trip, now),
             context_label=trip.id,
+        )
+
+    def _is_briefing_imminent(self, trip: "Trip", now: datetime) -> bool:
+        """Issue #1594: Steht fuer diesen Trip unmittelbar ein geplantes
+        Briefing an, das noch nicht versucht wurde?
+
+        DER gemeinsame Adapter beider Trip-Alarmarten — Aenderungsalarm
+        (`check_and_send_alerts`) und amtliche Warnung
+        (`_send_official_alert_only`) fragen dieselbe Stufe, direkt nach der
+        Ruhezeit und VOR jedem Abruf. Rein lesend; das Faelligkeits-Praedikat
+        ist die seiteneffektfreie Fassung aus dem Briefing-Scheduler, die
+        `skip_next` NICHT verbraucht.
+
+        Der Anker liegt unter der PROTOKOLL-Kennung `(trip.id, "trip")` — so
+        schreibt ihn `trip_report_scheduler` (`briefing_entity_type="trip"`);
+        eine andere Kennung faende ihn nie, die Sperre bliebe nach einem
+        gescheiterten Versand das ganze Nachholfenster ueber stehen, ohne dass
+        es auffiele.
+        """
+        from services.alert_gate import check_briefing_imminent
+        from services.trip_report_scheduler import trip_briefing_due_at
+
+        return check_briefing_imminent(
+            user_id=self._user_id, entity_id=trip.id, entity_type="trip",
+            now=now, zone=anchor_tz(trip, now),
+            briefing_due_at=lambda moment: trip_briefing_due_at(
+                trip, moment, user_id=self._user_id,
+            ),
         )
 
     def _is_throttled_with_cooldown(self, trip: "Trip") -> bool:
@@ -1446,6 +1484,12 @@ class TripAlertService:
         now_utc = datetime.now(timezone.utc)
         if self._is_quiet_hours(trip, now_utc):
             logger.debug(f"Official alert suppressed: quiet hours active for trip {trip.id}")
+            return False
+        # Issue #1594: dieselbe Stufe wie im Aenderungspfad, gleiche Position
+        # (nach der Ruhezeit) — die Warnung erscheint im Briefing, das
+        # unmittelbar folgt (AC-16), statt zusaetzlich als eigene Nachricht.
+        if self._is_briefing_imminent(trip, now_utc):
+            logger.debug(f"Official alert suppressed: briefing imminent for trip {trip.id}")
             return False
         if self._is_throttled_with_cooldown(trip):
             logger.debug(f"Official alert throttled for trip {trip.id}")

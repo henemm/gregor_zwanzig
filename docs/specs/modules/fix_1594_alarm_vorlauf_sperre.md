@@ -45,8 +45,8 @@ Briefing) nicht gefangen.
 
 **Diese Scheibe fügt eine zusätzliche, rein lesende Freigabe-Stufe** hinzu: Sie unterdrückt
 einen Änderungsalarm oder eine amtliche Warnung für eine Entität (Trip oder
-Ortsvergleich-Preset), wenn für dieselbe Entität unmittelbar ein geplantes Briefing ansteht
-(Vorlauf) oder gerade eines rausgegangen ist (Nachlauf). Der Wetter-Inhalt geht dem Nutzer dabei
+Ortsvergleich-Preset), wenn für dieselbe Entität unmittelbar ein geplantes Briefing ansteht und
+dieses noch nicht versucht wurde. Der Wetter-Inhalt geht dem Nutzer dabei
 nicht verloren — er kommt vollständig im Briefing an, das Sekunden bis Minuten später folgt. Die
 Meldung wird **ersetzt**, nicht verschluckt. **NowCast-Alarme (Regen-/Gewitter-Onset) sind
 ausdrücklich ausgenommen** (PO-Entscheid) — sie bleiben zeitkritisch und laufen unverändert
@@ -113,7 +113,7 @@ Frontend-Code.
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `src/services/alert_gate.py` | module (Bestand) | Vorgesehene Heimat der neuen Funktion `check_briefing_imminent()`, klar getrennt von `check_nowcast_gate()` |
-| `src/services/alert_briefing_anchor.py::last_briefing_at()` | module (Bestand) | Liefert den Zeitpunkt des letzten Briefings je `(entity_id, entity_type)` — deckt den Nachlauf-Zweig |
+| `src/services/alert_briefing_anchor.py::last_briefing_at()` | module (Bestand) | Zeitpunkt des letzten Briefing-**Versuchs** je `(entity_id, entity_type)` — beendet die Sperre (AC-5). 🔴 Der Anker wird auch bei gescheitertem Versand geschrieben (#1629), das Feld heisst also „versucht", nicht „zugestellt" |
 | `src/services/compare_slot_scheduler.py::presets_due_for_hour()` | module (Bestand) | Beantwortet für den Ortsvergleich „ist jetzt ein Briefing fällig?" — inkl. `is_silenced`/`end_date`/`weekly`/Slot-Flags |
 | `src/services/trip_report_scheduler.py::_get_active_trips()` | module (Bestand) | Vorlage für ein neu herauszulösendes reines Trip-Fälligkeits-Prädikat — **ohne** den `skip_next`-Verbrauch |
 | `src/services/compare_alert_guard.py::is_silenced()` | module (Bestand) | Der eine Stilllegungs-Riegel (`paused_at`/`schedule=="manual"`/`archived_at`), bereits Teil von `presets_due_for_hour()` |
@@ -144,19 +144,52 @@ def check_briefing_imminent(
     zone: ZoneInfo,
     briefing_due_at: Callable[[datetime], bool],  # reines Faelligkeits-Praedikat, gg. Zeitpunkt ausgewertet
     vorlauf_minuten: int = 60,
-    nachlauf_minuten: int = 15,
 ) -> bool
 ```
 
-Zwei ODER-verknüpfte, rein lesende Bedingungen:
+Eine UND-verknüpfte, rein lesende Bedingung — gesperrt wird nur, wenn **beides** zutrifft:
 
 1. **Vorlauf:** Das bestehende Fälligkeits-Prädikat der Entität — beim Ortsvergleich
-   `presets_due_for_hour()`, beim Trip das unten beschriebene herausgelöste Prädikat — wird
-   nicht nur gegen `now`, sondern zusätzlich gegen `now + vorlauf_minuten` ausgewertet. Wird die
-   Entität innerhalb dieses verschobenen Zeitpunkts fällig, steht ihr Briefing unmittelbar
-   bevor.
-2. **Nachlauf:** `alert_briefing_anchor.last_briefing_at(user_id=..., entity_id=...,
-   entity_type=...)` liegt nicht länger als `nachlauf_minuten` zurück.
+   `presets_due_for_hour()`, beim Trip das unten beschriebene herausgelöste Prädikat — ist für
+   irgendeinen Zeitpunkt in `[now, now + vorlauf_minuten]` wahr. Dann steht das Briefing
+   unmittelbar bevor.
+2. **Noch nicht versucht:** Für das anstehende Briefing gab es noch **keinen Versandversuch**.
+   Sobald einer stattgefunden hat, endet die Sperre — unabhängig davon, ob er gelang.
+
+### 🔴 Warum es KEINEN Nachlauf gibt (Korrektur der ersten Fassung, PO-„go" 2026-08-14)
+
+Die erste Fassung dieser Spec hatte eine zweite, ODER-verknüpfte Bedingung („letztes Briefing
+liegt weniger als 15 Minuten zurück") und begründete sie in den Known Limitations damit, dass bei
+einem gescheiterten Versand der Anker unverändert bleibe. **Diese Begründung war falsch — sie war
+angenommen, nicht gemessen.** `_anchor_and_reset()` steht in beiden Versandpfaden ausdrücklich im
+Fehler-Zweig (`src/services/scheduler_dispatch_service.py:561-566`,
+`src/services/trip_report_scheduler.py:1483-1485`); das ist die bewusste Entscheidung aus #1629
+(„Briefing-Anker überlebt Versandfehler"). **`last_briefing_at()` beantwortet damit „wurde ein
+Briefing VERSUCHT?", nicht „wurde eines ZUGESTELLT?".**
+
+Gemessen in der GREEN-Phase: der Nachlauf-Zweig machte **sieben** Bestandstests rot, der
+Vorlauf-Zweig keinen einzigen. Zwei unabhängige Gründe, die jeder für sich zum Wegfall reichen:
+
+- **Er schweigt, wenn nichts ankam.** Weil der Anker auch bei Fehlschlag gesetzt wird,
+  unterdrückte er 15 Minuten lang Alarme, obwohl kein Briefing existiert, das sie ersetzen
+  könnte — exakt die Fehlerklasse #1555/#1584, gegen die AC-7/AC-8 antreten.
+- **Er verschluckt echte neue Information.** Nach dem Briefing ist der Δ-Anker frisch. Ein Alarm,
+  der danach noch auslöst, meldet zwangsläufig etwas, das im Briefing NICHT stand.
+  `tests/tdd/test_compare_briefing_anchor_and_memory_reset.py::test_ac15_starker_ausschlag_nach_dem_briefing_wird_zugestellt`
+  (#1461 AG5) sichert genau das zu: 30 mm im Briefing, danach 55 mm ⇒ muss raus.
+
+Der gemessene 13.08.-Fall (Alarm 05:02, Briefing 05:00) braucht den Nachlauf nicht: der Alarm-Lauf
+startet zum `*/15`-Tick um **05:00**, also zur Briefing-Minute selbst — dort greift der Vorlauf.
+
+### 🔴 Warum „noch nicht versucht" als zweite Bedingung nötig ist
+
+Anker und Idempotenz-Vermerk laufen bei einem Fehlschlag **auseinander**: der Anker wird gesetzt,
+der Vermerk aber zurückgenommen (reserve-then-release, `trip_report_scheduler.py:565-571`,
+`VERMERK_AUSGAENGE` bei `:93`). Der Trip bleibt dadurch bis zu `NACHHOL_FENSTER_STUNDEN = 3`
+(`:105`, `:444`) weiter „fällig". Ohne die zweite Bedingung ergäbe das **60 Minuten Vorlauf + 3
+Stunden Nachholfenster = bis zu 4 Stunden Alarmstille nach einem gescheiterten Versand** (am
+07:00-Slot gemessen: Sperre 06:00–09:59 Ortszeit). Nach einem *erfolgreichen* Briefing entsteht
+dieser Schweif nicht — dort setzt der Vermerk die Fälligkeit sofort auf falsch.
 
 Die genaue Funktionssignatur ist Implementierungsdetail; verbindlich ist die beobachtbare
 Wirkung in den Acceptance Criteria unten.
@@ -222,7 +255,7 @@ Minuten später vollständig ankommt, wäre irreführend.
   und der Ortszone der Entität — alles bereits im Scope der jeweiligen Aufrufstelle, nichts muss
   zusätzlich durchgereicht werden.
 - **Output:** Eine Ja/Nein-Antwort auf „steht für diese Entität unmittelbar ein geplantes
-  Briefing an oder ist gerade eines rausgegangen?". Bei „ja" bricht der Alarm-Lauf für diese
+  Briefing an, das noch nicht versucht wurde?". Bei „ja" bricht der Alarm-Lauf für diese
   Entität ab und verschickt **keine** Meldung; bei „nein" läuft er unverändert weiter.
 - **Side effects:** **Keine.** Die Stufe liest ausschließlich — sie schreibt kein
   Melde-Gedächtnis (`AlertStateService`), keine Sperrzeit (`ThrottleStore`), keinen Tageszähler
@@ -249,7 +282,7 @@ Minuten später vollständig ankommt, wäre irreführend.
 
 | Datei | Art | ~LoC | Beschreibung |
 |---|---|---|---|
-| `src/services/alert_gate.py` | MODIFY | 50–70 | Neue Funktion `check_briefing_imminent(...)` — Vorlauf über das jeweilige Fälligkeits-Prädikat, Nachlauf über `last_briefing_at()`. Getrennt von `check_nowcast_gate()`. |
+| `src/services/alert_gate.py` | MODIFY | 50–70 | Neue Funktion `check_briefing_imminent(...)` — Vorlauf über das jeweilige Fälligkeits-Prädikat, beendet durch den Briefing-Versuch (`last_briefing_at()`). Getrennt von `check_nowcast_gate()`. |
 | `src/services/trip_report_scheduler.py` | MODIFY | 15–25 | Reines Fälligkeits-Prädikat herauslösen, **ohne** `skip_next`-Verbrauch. Bestandspfad (`_get_active_trips`) verhaltensgleich. |
 | `src/services/trip_alert.py` | MODIFY | ~15 | Beide Aufrufstellen (`:231`, `:1447`) über den gemeinsamen Adapter an `_is_quiet_hours()` abgedeckt. |
 | `src/services/compare_alert.py` | MODIFY | ~8 | Eine Aufrufstelle nach `:183`. |
@@ -273,9 +306,8 @@ Minuten später vollständig ankommt, wäre irreführend.
   an, vermerkt sie aber nicht im Melde-Gedächtnis (`scheduler_dispatch_service.py:453-464` fehlt
   das Gegenstück zu `trip_report_scheduler.py:1218-1226`), weshalb der Prüfer sie erneut
   verschickt. Diese Scheibe **mildert** das nur innerhalb ihres Fensters: eine Wiederholung
-  innerhalb der 15 Nachlauf-Minuten fällt weg, eine 20 oder 40 Minuten später nicht. Die Ursache
-  — der fehlende Vermerk — bleibt bestehen. #1714 darf deshalb nicht mit dieser Scheibe
-  geschlossen werden.
+  vor dem Briefing fällt weg, eine kurz danach nicht. Die Ursache — der fehlende Vermerk — bleibt
+  bestehen. #1714 darf deshalb nicht mit dieser Scheibe geschlossen werden.
 
 ## Risiken
 
@@ -286,7 +318,8 @@ Minuten später vollständig ankommt, wäre irreführend.
 | **R3** | `skip_next` wird durch die neue Sperre konsumiert, weil sie bequem `_get_active_trips()` mitbenutzt statt des herausgelösten reinen Prädikats | AC-11 |
 | **R4** | Die neue Sperre schreibt State (Melde-Gedächtnis/Sperrzeit/Tageszähler) und bricht damit die #1233-Zusicherung „kein State-Verbrauch bei Unterdrückung" | AC-10 |
 | **R5** | NowCast wird versehentlich mitgesperrt, weil `check_nowcast_gate()` (oder sein Aufrufer) die neue Funktion mitruft | AC-12 |
-| **R6** | Ohne Nachlauf-Deckel bleibt die Sperre wirksam, obwohl das Briefing gar nicht (mehr) zugestellt wurde (`record_briefing_dispatch_failure`) — Meldeloch ohne Grenze | AC-6 |
+| **R6** | Die Sperre bleibt wirksam, obwohl das Briefing gescheitert ist — bis zu 4 Stunden Alarmstille, weil ein Trip nach einem Fehlschlag das 3-Stunden-Nachholfenster über bleibt (`NACHHOL_FENSTER_STUNDEN`). **In der GREEN-Phase real gemessen**, nicht hypothetisch | AC-5 |
+| **R7** | Ein Alarm gegen den FRISCHEN Anker nach dem Briefing wird unterdrückt, obwohl er zwangsläufig etwas meldet, das im Briefing nicht stand. **In der GREEN-Phase real gemessen** (7 rote Bestandstests) | AC-5 |
 
 ## Test-Plan
 
@@ -365,22 +398,21 @@ Briefing-Lauf warten" wäre unzuverlässig und langsam.
   Then wird diese Warnung NICHT als eigenständige Zusatz-Meldung verschickt.
   - Test: Preset mit fälligem Slot in 10 Minuten, amtliche Warnung simulieren, kein Versand.
 
-**(b) Nachlauf und Fenstergrenzen**
+**(b) Ende der Sperre und Fenstergrenzen**
 
-- **AC-5:** Given eine Entität (Trip oder Ortsvergleich-Preset), deren letztes Briefing
-  nachweislich vor wenigen Minuten (bis zu 15) rausgegangen ist, When unmittelbar danach ein
-  Änderungsalarm oder eine amtliche Warnung für dieselbe Entität ausgelöst würde, Then wird
-  diese Meldung ebenfalls NICHT als eigenständige Zusatz-Meldung verschickt — das entspricht dem
-  gemessenen 13.08.-Fall (Alarm 2 Minuten nach dem Briefing).
-  - Test: `last_briefing_at()` auf „vor 5 Minuten" setzen, Alarm-Bedingung erfüllen, kein
-    Versand.
+- **AC-5:** Given eine Entität, für die das fällige Briefing bereits **versucht** wurde — ob
+  erfolgreich zugestellt oder beim Versand gescheitert —, When danach ein Änderungsalarm oder
+  eine amtliche Warnung für dieselbe Entität ausgelöst würde, Then wird diese Meldung **regulär
+  verschickt**: die Sperre endet mit dem Versuch, nicht mit dem Erfolg.
+  - Test: (a) Briefing erfolgreich verschicken, danach eine Abweichung gegen den frischen Anker
+    erzeugen → Versand erfolgt. (b) Briefing-Versand scheitern lassen
+    (`record_briefing_dispatch_failure`-Pfad), danach Alarm-Bedingung erfüllen → Versand erfolgt.
 
-- **AC-6:** Given eine Entität, deren nächstes Briefing weiter als 60 Minuten entfernt ist UND
-  deren letztes Briefing länger als 15 Minuten zurückliegt (oder es gab noch keins), When ein
-  Änderungsalarm oder eine amtliche Warnung ausgelöst würde, Then wird diese Meldung wie bisher
-  regulär verschickt — die neue Sperre greift außerhalb des Fensters nicht.
-  - Test: nächstes Briefing in 90 Minuten, letztes Briefing vor 30 Minuten, Alarm-Bedingung
-    erfüllen, Versand erfolgt normal.
+- **AC-6:** Given eine Entität, deren nächstes geplantes Briefing weiter als 60 Minuten entfernt
+  ist, When ein Änderungsalarm oder eine amtliche Warnung ausgelöst würde, Then wird diese
+  Meldung wie bisher regulär verschickt — die Sperre greift außerhalb des Vorlauf-Fensters nicht.
+  - Test: nächstes Briefing in 90 Minuten, Alarm-Bedingung erfüllen, Versand erfolgt normal;
+    Grenzfall genau 60 Minuten sperrt, genau 61 Minuten sperrt nicht.
 
 **(c) Kein Schweigen ohne Ersatz**
 
@@ -442,7 +474,7 @@ Briefing-Lauf warten" wäre unzuverlässig und langsam.
 
 **(e) Symmetrie und Mandantentrennung**
 
-- **AC-14:** Given identische Vorlauf-/Nachlauf-Bedingungen, When sie für ein Morgen-Briefing
+- **AC-14:** Given identische Vorlauf-Bedingungen, When sie für ein Morgen-Briefing
   UND für ein Abend-Briefing geprüft werden, sowohl beim Trip als auch beim Ortsvergleich, Then
   wirkt die Sperre in allen vier Kombinationen gleichermaßen — es gibt keine versteckte
   Bevorzugung des Morgen- oder des Trip-Pfads.
@@ -478,20 +510,20 @@ Briefing-Lauf warten" wäre unzuverlässig und langsam.
 - **Der amtliche Trip-Abruf wird durch diese Scheibe nicht vorgezogen** (siehe „Bewusst NICHT in
   dieser Scheibe"). Die Sperre spart also kein Abruf-Kontingent beim amtlichen Trip-Pfad ein,
   nur die Zustellung der resultierenden Meldung entfällt.
-- **Scheitert der Briefing-Versand** (`record_briefing_dispatch_failure`), bleibt der Anker
-  unverändert, und der Nachlauf-Zweig wirkt entsprechend nicht mehr für diesen Fall. Der zuvor
-  im Vorlauf-Fenster unterdrückte Alarm bleibt dadurch für maximal einen Alarm-Takt (bis zu 15
-  Minuten) unzugestellt — der nächste reguläre Alarm-Lauf ist davon nicht betroffen und prüft
-  wieder normal.
+- **Scheitert der Briefing-Versand**, bleibt die im Vorlauf-Fenster unterdrückte Meldung für
+  höchstens einen Alarm-Takt aus: der Versuch beendet die Sperre (AC-5), der nächste Lauf prüft
+  wieder regulär. Der Nutzer bekommt dann zwar kein Briefing, aber seine Alarme laufen weiter —
+  das ist die bewusst gewählte Fehlerrichtung.
 - **Die Abend-Sperre bleibt in der Praxis meist folgenlos**, weil die Abend-Redundanz heute kaum
   auftritt (gemessen: 1 von 15 Fällen seit 25.07.). Das ist kein Defekt dieser Scheibe, sondern
   Ausdruck der aktuell verbreiteten Konfiguration (Ruhezeit-Ende ≠ Abend-Briefing-Zeit) — ändert
   sich die Konfiguration eines Nutzers, greift die Symmetrie sofort.
-- **Ad-hoc-Briefings („Handversand") lösen den Nachlauf nicht aus.**
+- **Ad-hoc-Briefings („Handversand") beenden die Sperre nicht.**
   `write_anchor_and_reset_memory(on_demand=True)` schreibt weder Anker noch Reset (#1007) — ein
-  auf Zuruf abgerufenes Briefing aktualisiert `last_briefing_at()` also nicht und unterdrückt
-  entsprechend keinen nachfolgenden Alarm. Das ist beabsichtigt: ein Ad-hoc-Abruf ist gegenüber
-  beiden Zuständen bewusst read-only, und ein solcher Abruf ersetzt kein geplantes Briefing.
+  auf Zuruf abgerufenes Briefing aktualisiert `last_briefing_at()` also nicht. Ein Handversand
+  kurz vor dem geplanten Slot hebt die Vorlauf-Sperre deshalb nicht auf. Das ist beabsichtigt:
+  ein Ad-hoc-Abruf ist gegenüber beiden Zuständen bewusst read-only und ersetzt kein geplantes
+  Briefing.
 - **Kein ADR zur Grundsatzfrage „wann darf ein Alarm unterdrückt werden".** Diese Scheibe fügt
   eine weitere, implizit begründete Sperrart hinzu (analog Ruhezeit, Sperrzeit, Tageslimit).
   Ein eigenständiger ADR-Nachtrag ist nicht Teil dieser Scheibe (siehe unten).
@@ -508,6 +540,16 @@ Briefing-Lauf warten" wäre unzuverlässig und langsam.
   heute unterschiedlichen Prüf-Reihenfolgen ohnehin zusammenlegt.
 
 ## Changelog
+
+- 2026-08-14 (2): **AC-5 ersetzt, Nachlauf-Zweig gestrichen — PO-„go" nach gemessenem Befund in
+  der GREEN-Phase.** Der Nachlauf machte sieben Bestandstests rot, der Vorlauf keinen. Ursache:
+  die Begründung der ersten Fassung („bei gescheitertem Versand bleibt der Anker unverändert")
+  war **angenommen statt gemessen** und ist falsch — `_anchor_and_reset()` steht in beiden
+  Versandpfaden im Fehler-Zweig (#1629). Neu: die Sperre endet mit dem Briefing-**Versuch**,
+  nicht mit dessen Erfolg; damit entfallen zugleich die real gemessenen bis zu 4 Stunden
+  Alarmstille nach einem Fehlschlag (60 Min Vorlauf + 3 h Nachholfenster). Aufgenommen als R6/R7.
+  Der gemeldete 13.08.-Fall bleibt gefangen, weil der Alarm-Lauf zur Briefing-Minute selbst
+  startet.
 
 - 2026-08-14: Initiale Spec, basierend auf `docs/context/fix-1594-alarm-vorlauf-sperre.md`. Alle
   zehn dort getroffenen Entscheidungen 1:1 übernommen (drei Einhängepunkte, Heimat

@@ -590,3 +590,52 @@ def briefing_anker_setzen(
         user_id=user_id, entity_id=entity_id, entity_type=entity_type, at=moment,
     )
     return moment
+
+
+def briefing_versand_gescheitert(
+    user_id: str, entity_id: str, *, entity_type: str, kind: str,
+    vor_minuten: float = 0.0,
+) -> datetime:
+    """Hinterlaesst genau den Zustand, den ein GESCHEITERTER Briefing-Versand
+    hinterlaesst — ueber die Produktiv-Schreiber, nicht per Handschrift.
+
+    Zwei Spuren, beide aus dem Fehler-Zweig beider Versandpfade (#1629,
+    ``trip_report_scheduler.py:1483-1485``,
+    ``scheduler_dispatch_service.py:561-566``):
+    ``record_briefing_dispatch_failure()`` und — ueber
+    ``_anchor_and_reset()`` → ``write_anchor_and_reset_memory()`` — der
+    Briefing-Anker.
+
+    🔴 KEIN Idempotenz-Vermerk: den nimmt der Fehlschlag zurueck
+    (reserve-then-release, ``trip_report_scheduler.py:565-571``). Genau
+    dadurch bleibt der Trip das volle Nachholfenster ueber „faellig" — die
+    Ausgangslage des 4-Stunden-Schweifs (Risiko R6).
+    """
+    from services.alert_briefing_anchor import (
+        record_briefing_dispatch_failure, record_briefing_sent,
+    )
+
+    moment = datetime.now(timezone.utc) - timedelta(minutes=vor_minuten)
+    record_briefing_dispatch_failure(
+        user_id=user_id, kind=kind, entity_id=entity_id,
+        error=RuntimeError("Versand gescheitert (Testaufbau #1594 AC-5)"),
+    )
+    record_briefing_sent(
+        user_id=user_id, entity_id=entity_id, entity_type=entity_type, at=moment,
+    )
+    return moment
+
+
+def trip_briefing_vermerk_setzen(
+    user_id: str, trip_id: str, *, slot: str = "morning", tage: int = 0,
+) -> None:
+    """Der Idempotenz-Vermerk eines GELUNGENEN Trip-Briefings — ueber den
+    echten Speicher (``BriefingSlotStore.record_outcome``), mit demselben
+    Ausgang ``"sent"``, den der Versandpfad schreibt
+    (``VERMERK_AUSGAENGE``).
+    """
+    from services.briefing_slots import BriefingSlotStore
+
+    BriefingSlotStore(user_id).record_outcome(
+        trip_id, slot, ortstag(TRIP_ZONE, tage), "sent",
+    )

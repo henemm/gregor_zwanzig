@@ -44,6 +44,7 @@ Pfadregel #1409: alle Pfade relativ zu DIESER Datei bzw. ueber
 from __future__ import annotations
 
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -55,6 +56,8 @@ for _p in (str(ROOT), str(ROOT / "src")):
 
 from tests.helpers.briefing_imminent_fixtures import (  # noqa: E402
     LOCATION_ZONE,
+    briefing_anker_setzen,
+    briefing_versand_gescheitert,
     clean_uid,
     compare_change_alert_run,
     compare_preset,
@@ -318,3 +321,68 @@ def test_ac15_sperre_wirkt_nur_auf_die_eigenen_daten_des_nutzers(nutzer):
         f"Nutzer B hat sein Briefing erst in fuenf Stunden — die Sperre von A "
         f"darf ihn nicht mitnehmen ({abrufe_b} Abrufe)."
     )
+
+
+# ════════ AC-5 — der VERSUCH beendet die Sperre, auch ohne Vermerk ══════════
+#
+# 🔴 Der Ortsvergleich hat KEINEN Idempotenz-Vermerk: ``presets_due_for_hour``
+# prueft reine Stundengleichheit. Ein Preset bleibt seine ganze Slot-Stunde
+# ueber „faellig" — auch nach dem gelungenen Versand. Beim Trip nimmt der
+# Vermerk die Faelligkeit; hier traegt die Sperr-Beendigung ALLEIN der
+# Briefing-Anker. Faellt sie aus, schweigt der Alarm bis zum Ende der
+# Slot-Stunde, obwohl das Briefing schon durch ist.
+#
+# Uhr GESTELLT statt geerbt (dasselbe wie im Trip-Teil): der Slot muss
+# bereits LAUFEN, und die uebrigen Tests dieser Datei koennen nur Slots in der
+# Zukunft legen. `check_all_compare_presets()` holt sich den Zeitpunkt selbst,
+# er ist kein Parameter — Einfrieren ist hier also zulaessig.
+# Europe/Vienna liegt Mitte Maerz auf UTC+1: 08:20 UTC = 09:20 Ortszeit.
+_JETZT_UTC = datetime(2026, 3, 15, 8, 20, tzinfo=timezone.utc)
+_SLOT_STUNDE_ORTSZEIT = 9
+
+
+@pytest.mark.parametrize(
+    "ausgang, erwartet_abrufe",
+    [("erfolgreich", True), ("gescheitert", True), ("ohne_versuch", False)],
+)
+def test_ac5_der_briefing_versuch_beendet_die_sperre(
+    nutzer, ausgang, erwartet_abrufe,
+):
+    """AC-5 (Ortsvergleich): Die Sperre endet mit dem Versandversuch — ob er
+    gelang oder scheiterte.
+
+    Der Alarm-Lauf liegt 20 Minuten hinter dem Slot-Beginn, das Preset ist
+    also weiterhin faellig (Stundengleichheit, kein Vermerk). Beide
+    Versandausgaenge schreiben den Briefing-Anker: der gelungene ueber
+    ``_anchor_and_reset()``, der gescheiterte ueber denselben Aufruf im
+    Fehler-Zweig (#1629, ``scheduler_dispatch_service.py:561-566``). Genau
+    deshalb darf der Anker die Sperre nicht AUSLOESEN, sondern muss sie
+    BEENDEN.
+
+    Der Kontrollfall ``ohne_versuch`` haelt die Grenze: ohne Anker steht das
+    Briefing noch aus und die Meldung bleibt gesperrt.
+    """
+    from freezegun import freeze_time
+
+    with freeze_time(_JETZT_UTC):
+        user_id = nutzer(f"ac5-{ausgang}")
+        if ausgang == "erfolgreich":
+            briefing_anker_setzen(user_id, PRESET, "compare", vor_minuten=20)
+        elif ausgang == "gescheitert":
+            briefing_versand_gescheitert(
+                user_id, PRESET, entity_type="compare", kind="vergleich",
+                vor_minuten=20,
+            )
+        abrufe = _lauf(user_id, morgen_stunde=_SLOT_STUNDE_ORTSZEIT)
+
+    if erwartet_abrufe:
+        assert abrufe >= 1, (
+            f"Das Briefing wurde vor 20 Minuten versucht ({ausgang}) — die "
+            f"Sperre muss enden, es waren {abrufe} Abrufe. Ohne den Anker "
+            f"schwiege der Alarm bis zum Ende der Slot-Stunde."
+        )
+    else:
+        assert abrufe == 0, (
+            f"Ohne Versandversuch steht das Briefing der laufenden Slot-Stunde "
+            f"noch aus — der Alarm muss schweigen, es waren {abrufe} Abrufe."
+        )

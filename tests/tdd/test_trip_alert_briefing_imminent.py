@@ -50,6 +50,8 @@ for _p in (str(ROOT), str(ROOT / "src")):
 
 from tests.helpers.briefing_imminent_fixtures import (  # noqa: E402
     TRIP_ZONE,
+    briefing_anker_setzen,
+    briefing_versand_gescheitert,
     clean_uid,
     fresh_uid,
     official_alert,
@@ -57,6 +59,7 @@ from tests.helpers.briefing_imminent_fixtures import (  # noqa: E402
     read_trip_raw,
     render_trip_briefing_html,
     stunde_versetzt,
+    trip_briefing_vermerk_setzen,
     trip_change_alert_run,
     trip_official_alert_run,
     write_trip,
@@ -420,3 +423,143 @@ def test_ac16_unterdrueckte_warnung_erscheint_im_folgenden_briefing(nutzer):
         "sonst waere die Zusicherung durch einen festen Textbaustein erfuellt "
         "und wuerde nichts ueber die Ersetzung aussagen."
     )
+
+
+# ════════ AC-5 + R6 — der VERSUCH beendet die Sperre, nicht der Erfolg ══════
+#
+# 🔴 HIER wird die Uhr GESTELLT, nicht geerbt. Die uebrigen Tests dieser Datei
+# legen die Briefing-Stunde relativ zur echten Uhr; das geht nur fuer Slots in
+# der ZUKUNFT. Diese Faelle brauchen einen Slot, der bereits laeuft, und das
+# Nachholfenster des Trip-Schedulers rechnet ohne Mitternachts-Umbruch
+# (`stunde <= vor_ort.hour < stunde + 3`) — ein Lauf um 01:00 Ortszeit haette
+# sonst still am fehlenden Fenster gemessen statt an der Sperre.
+#
+# Einfrieren ist hier erlaubt und noetig: `check_and_send_alerts()` holt sich
+# den Zeitpunkt SELBST (`datetime.now(timezone.utc)`), er ist kein Parameter.
+# Die Warnung aus
+# `reference_freeze_time_macht_parameter_vs_systemuhr_unfalsifizierbar` gilt
+# fuer die reine Gate-Funktion — dort wird deshalb NICHT eingefroren, sondern
+# ein Zeitpunkt weit weg von der Systemuhr uebergeben
+# (`test_briefing_imminent_gate.py`).
+#
+# Ortszone des Trips ist Atlantic/Reykjavik (ganzjaehrig UTC+0), Ortsstunde ist
+# damit gleich der UTC-Stunde.
+SLOT_STUNDE = 7
+
+
+def _lauf_nach_briefing(user_id: str, *, ausgang: str, jetzt: datetime) -> int:
+    """Ein Alarm-Lauf zum Zeitpunkt ``jetzt``, nachdem das Morgen-Briefing um
+    ``SLOT_STUNDE`` den Ausgang ``ausgang`` genommen hat.
+
+    ``"erfolgreich"``  Anker UND Idempotenz-Vermerk — der Trip ist damit nicht
+                       mehr faellig.
+    ``"gescheitert"``  Anker, ABER kein Vermerk (reserve-then-release) — der
+                       Trip bleibt das ganze Nachholfenster ueber faellig.
+    ``"ohne_versuch"`` weder noch — die Ausgangslage des gemeldeten
+                       13.08.-Falls.
+
+    Returns: Anzahl der Wetterabrufe (0 = gesperrt).
+    """
+    write_trip(
+        user_id, "t-ac5", morgen_stunde=SLOT_STUNDE, abend_stunde=ABEND_WEG(),
+    )
+    slot_zeitpunkt = jetzt.replace(hour=SLOT_STUNDE, minute=0, second=30)
+    vor_minuten = (jetzt - slot_zeitpunkt).total_seconds() / 60.0
+
+    if ausgang == "erfolgreich":
+        briefing_anker_setzen(user_id, "t-ac5", "trip", vor_minuten=vor_minuten)
+        trip_briefing_vermerk_setzen(user_id, "t-ac5", slot="morning")
+    elif ausgang == "gescheitert":
+        briefing_versand_gescheitert(
+            user_id, "t-ac5", entity_type="trip", kind="route",
+            vor_minuten=vor_minuten,
+        )
+    elif ausgang != "ohne_versuch":  # pragma: no cover - Tippfehler-Schutz
+        raise AssertionError(f"unbekannter Ausgang: {ausgang!r}")
+
+    return trip_change_alert_run(user_id, "t-ac5")
+
+
+@pytest.mark.parametrize(
+    "ausgang, erwartet_abrufe",
+    [("erfolgreich", True), ("gescheitert", True), ("ohne_versuch", False)],
+)
+def test_ac5_der_briefing_versuch_beendet_die_sperre(
+    nutzer, ausgang, erwartet_abrufe,
+):
+    """AC-5: Die Sperre endet mit dem VERSUCH, nicht mit dem Erfolg.
+
+    Der Alarm-Lauf liegt fuenf Minuten hinter der Briefing-Stunde — im
+    Vorlauf-Fenster, das Briefing steht dort noch „an". Trotzdem muss die
+    Meldung regulaer rausgehen, sobald ein Versandversuch stattgefunden hat:
+
+    * ``erfolgreich`` — der Idempotenz-Vermerk nimmt dem Trip die Faelligkeit.
+    * ``gescheitert``  — der Vermerk wurde zurueckgenommen, der Trip ist noch
+      faellig; hier MUSS der Briefing-Anker die Sperre beenden. Genau das
+      konnte die erste Fassung nicht: dort loeste der Anker die Sperre aus,
+      statt sie zu beenden, und der Alarm schwieg fuer ein Briefing, das nie
+      angekommen ist.
+    * ``ohne_versuch`` — Kontrolle: ohne jeden Versuch muss gesperrt werden,
+      sonst waere die ganze Scheibe wirkungslos und die beiden anderen Faelle
+      trivial gruen.
+    """
+    from freezegun import freeze_time
+
+    jetzt = datetime(2026, 3, 15, SLOT_STUNDE, 5, tzinfo=timezone.utc)
+    with freeze_time(jetzt):
+        uid = nutzer(f"ac5-{ausgang}")
+        abrufe = _lauf_nach_briefing(uid, ausgang=ausgang, jetzt=jetzt)
+
+    if erwartet_abrufe:
+        assert abrufe >= 1, (
+            f"Das Briefing wurde um {SLOT_STUNDE}:00 bereits versucht "
+            f"({ausgang}) — die Sperre muss enden und der Alarm regulaer "
+            f"pruefen, es waren {abrufe} Abrufe."
+        )
+    else:
+        assert abrufe == 0, (
+            f"Ohne Versandversuch steht das Briefing noch aus — der Alarm muss "
+            f"schweigen, es waren {abrufe} Abrufe."
+        )
+
+
+@pytest.mark.parametrize(
+    "ausgang, erwartet_abrufe", [("gescheitert", True), ("ohne_versuch", False)],
+)
+def test_r6_gescheitertes_briefing_sperrt_nicht_das_ganze_nachholfenster(
+    nutzer, ausgang, erwartet_abrufe,
+):
+    """R6: Kein 4-Stunden-Schweif nach einem gescheiterten Briefing.
+
+    Anker und Idempotenz-Vermerk laufen bei einem Fehlschlag auseinander: der
+    Anker wird geschrieben (#1629), der Vermerk zurueckgenommen
+    (reserve-then-release). Der Trip bleibt dadurch das volle
+    ``NACHHOL_FENSTER_STUNDEN = 3`` ueber „faellig" — zusammen mit den 60
+    Minuten Vorlauf waeren das bis zu VIER Stunden Alarmstille fuer ein
+    Briefing, das nie ankam. In der GREEN-Phase real gemessen: Sperre von
+    06:00 bis 09:59 Ortszeit am 07:00-Slot.
+
+    Der Lauf liegt hier ZWEIEINHALB Stunden hinter der Briefing-Stunde, also
+    tief im Nachholfenster. Der Kontrollfall ``ohne_versuch`` zeigt, dass die
+    Sperre dort tatsaechlich noch greifen WUERDE — ohne ihn bewiese der erste
+    Fall nur, dass irgendetwas anderes den Lauf durchlaesst.
+    """
+    from freezegun import freeze_time
+
+    jetzt = datetime(2026, 3, 15, SLOT_STUNDE + 2, 30, tzinfo=timezone.utc)
+    with freeze_time(jetzt):
+        uid = nutzer(f"r6-{ausgang}")
+        abrufe = _lauf_nach_briefing(uid, ausgang=ausgang, jetzt=jetzt)
+
+    if erwartet_abrufe:
+        assert abrufe >= 1, (
+            f"Der Versand um {SLOT_STUNDE}:00 ist gescheitert und wurde damit "
+            f"versucht — zweieinhalb Stunden spaeter darf der Alarm nicht mehr "
+            f"gesperrt sein, es waren {abrufe} Abrufe (R6)."
+        )
+    else:
+        assert abrufe == 0, (
+            f"Kontrolle: ohne Versandversuch ist der Trip im Nachholfenster "
+            f"weiterhin faellig und der Alarm gesperrt, es waren {abrufe} "
+            f"Abrufe — ohne diese Haelfte misst der Schweif-Nachweis nichts."
+        )
