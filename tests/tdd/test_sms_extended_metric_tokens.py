@@ -201,7 +201,8 @@ def test_ac6_wind_direction_dominant_sector_over_window():
     sms = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
     )
-    assert "WDNW" in sms, f"WD-Sektor-Mehrheitstoken fehlt/falsch: {sms!r}"
+    # Issue #1824 (B): Trenner zwischen Kuerzel und Buchstaben-Wert ('WD:NW').
+    assert "WD:NW" in sms, f"WD-Sektor-Mehrheitstoken fehlt/falsch: {sms!r}"
 
 
 def test_ac7_precip_type_dominant_majority():
@@ -218,7 +219,8 @@ def test_ac7_precip_type_dominant_majority():
     sms = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
     )
-    assert "PTS" in sms, f"PT-Dominanz-Token fehlt/falsch: {sms!r}"
+    # Issue #1824 (B): Trenner zwischen Kuerzel und Buchstaben-Wert ('PT:S').
+    assert "PT:S" in sms, f"PT-Dominanz-Token fehlt/falsch: {sms!r}"
 
 
 def test_ac7_precip_type_tie_break_rank():
@@ -235,7 +237,7 @@ def test_ac7_precip_type_tie_break_rank():
     sms = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
     )
-    assert "PTS" in sms, f"PT-Gleichstand-Rang-Token fehlt/falsch (SNOW muss RAIN schlagen): {sms!r}"
+    assert "PT:S" in sms, f"PT-Gleichstand-Rang-Token fehlt/falsch (SNOW muss RAIN schlagen): {sms!r}"
 
 
 def test_ac8_sunshine_and_pressure_daily_values():
@@ -355,12 +357,16 @@ def test_ac11_golden_byte_identity_without_the_14_new_metrics():
     evening = _render(today, config, report_type="evening", stage_name="Etappe 3 Bergsee")
     morning = _render(today, config, report_type="morning", stage_name="Etappe 3 Bergsee")
 
+    # Issue #1824 (A): der eingefrorene Sollstand traegt die Temperatur-Paare
+    # jetzt als Bereichs-Token ('D8/19' statt 'K8 D19', 'FD-3/5' statt
+    # 'FK-3 FD5'). Alles Uebrige bleibt zeichengleich -- genau das ist die
+    # Zusicherung, die dieser Test weiterhin bewacht.
     assert evening == (
-        "Etappe 3 B: N- K8 D19 FK-3 FD5 R0.3@6(1.8@15) PR35%@10(80%@16) "
+        "Etappe 3 B: N- D8/19 FD-3/5 R0.3@6(1.8@15) PR35%@10(80%@16) "
         "W15@11(22@14) G20@11(35@14) TH:M@15 WC-3"
     ), f"Byte-Identitaet gebrochen (evening): {evening!r}"
     assert morning == (
-        "Etappe 3 B: K8 D19 FK-3 FD5 R0.3@6(1.8@15) PR35%@10(80%@16) "
+        "Etappe 3 B: D8/19 FD-3/5 R0.3@6(1.8@15) PR35%@10(80%@16) "
         "W15@11(22@14) G20@11(35@14) TH:M@15 WC-3"
     ), f"Byte-Identitaet gebrochen (morning): {morning!r}"
 

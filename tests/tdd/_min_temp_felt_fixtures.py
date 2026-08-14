@@ -204,6 +204,15 @@ def sms_body(sms: str) -> str:
     return sms.split(": ", 1)[1] if ": " in sms else sms
 
 
+# Issue #1824 (A): sind Tiefst- UND Hoechstwert gewaehlt, steht die Temperatur
+# als EIN Bereichs-Token ('D13/27' statt 'K13 D27'). Die Helfer-Semantik bleibt
+# unveraendert — 'K'/'FK' liefern weiterhin den Tiefstwert, 'D'/'FD' den
+# Hoechstwert; sie lesen ihn nur zusaetzlich aus der jeweiligen Haelfte des
+# Bereichs-Tokens, wenn kein eigenstaendiges Kuerzel mehr in der Zeile steht.
+_HALF = r"-?\d+|-|\?"
+_RANGE_PARTNER = {"K": "D", "FK": "FD"}
+
+
 def sms_token_value(sms: str, symbol: str) -> Optional[str]:
     """Wert eines Temperatur-Tokens aus der gerenderten SMS.
 
@@ -212,11 +221,22 @@ def sms_token_value(sms: str, symbol: str) -> Optional[str]:
     (#1435 E3b: das frühere Beispiel hieß 'SN12').
     ``None`` = Symbol kommt in der Zeile nicht vor.
     """
-    pattern = re.compile(rf"{re.escape(symbol)}(-?\d+|-|\?)$")
-    for token in sms_body(sms).split(" "):
+    tokens = sms_body(sms).split(" ")
+    pattern = re.compile(rf"{re.escape(symbol)}({_HALF})(?:/({_HALF}))?$")
+    for token in tokens:
         m = pattern.fullmatch(token)
         if m:
-            return m.group(1)
+            # Bereichs-Token: die ZWEITE Haelfte ist der Hoechstwert, und nur
+            # 'D'/'FD' koennen ihn tragen.
+            return m.group(2) if m.group(2) is not None else m.group(1)
+    partner = _RANGE_PARTNER.get(symbol)
+    if partner is None:
+        return None
+    ranged = re.compile(rf"{re.escape(partner)}({_HALF})/({_HALF})$")
+    for token in tokens:
+        m = ranged.fullmatch(token)
+        if m:
+            return m.group(1)  # erste Haelfte = Tiefstwert
     return None
 
 

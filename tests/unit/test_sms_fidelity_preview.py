@@ -361,10 +361,16 @@ class TestAC9_RenderLineUnchangedByAdditiveFunction:
 
         # Golden-Wert gemessen VOR dieser Erweiterung (2026-08-06),
         # unverändertes render_line() auf einer TATSÄCHLICH kürzenden Zeile.
+        # Issue #1824 (A): nachgezogen — die Temperatur-Paare stehen jetzt als
+        # Bereichs-Token ('D-12/28'/'FD-18/24'), und die drei Schnee-Größen der
+        # Beispiel-Vorhersage tragen je eine Stelle mehr, damit die Zeile
+        # weiterhin über 160 Zeichen liegt (s. Kommentar an
+        # SMS_FIDELITY_SAMPLE_FORECAST). Die Zusicherung selbst ist unverändert:
+        # render_line() darf sich durch die additive Nachbarfunktion nicht ändern.
         baseline = (
-            "Etappe: N-15 K-12 D28 FN-21 FK-18 FD24 R245.0@6(845.0@14) "
+            "Etappe: N-15 D-12/28 FN-21 FD-18/24 R245.0@6(845.0@14) "
             "PR25%@7(98%@14) W850@6(1420@16) G1200@6(2080@16) TH:L@8(H@12) "
-            "TH+:M@10 SD24500 NS24+18500 SL98000"
+            "TH+:M@10 SD245000 NS24+185000 SL980000"
         )
         line = self._truncating_line()
         out = render_line(line, 160)

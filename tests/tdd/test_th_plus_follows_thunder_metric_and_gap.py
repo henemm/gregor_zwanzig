@@ -123,7 +123,9 @@ class TestAC1ThunderDeselectedRemovesBothTokens:
 
             # Vorbedingung: die Zeile hat ueberhaupt Inhalt und ist nicht
             # gekuerzt — sonst waere ein fehlendes TH+: kein Beweis.
-            assert "K3" in sms and "D20" in sms, (
+            # Issue #1824 (A): Tiefst- UND Hoechstwert sind gewaehlt, also
+            # stehen sie als EIN Bereichs-Token 'D3/20' statt als 'K3 D20'.
+            assert "D3/20" in sms, (
                 f"[{report_type}] Die gewaehlten Temperaturwerte fehlen — der "
                 f"Nachweis ueber TH+: waere nicht aussagekraeftig.\nSMS: {sms}"
             )

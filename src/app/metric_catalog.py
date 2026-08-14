@@ -658,7 +658,17 @@ _SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
 # 24-Stunden-Fenster). Ohne diese Ausnahme wuerde SMS_SYMBOL_BY_METRIC das
 # falsche Symbol 'NS' fuehren, das nirgends mit dem gerenderten Token
 # uebereinstimmt -- die Abwahl (#944) griffe dadurch weiterhin nicht.
-SMS_SYMBOL_GRAMMAR: dict[str, str] = {"thunder": "TH:", "fresh_snow": "NS24+"}
+# Issue #1824 (B): 'WD'/'PT' sind die einzigen zwei Kuerzel, deren Wert mit
+# einem BUCHSTABEN beginnt ('WDNW', 'PTS') -- Kuerzel und Wert verschmelzen
+# dort optisch zu einem Wort. Sie bekommen denselben Doppelpunkt, den 'TH:'
+# bereits traegt; der Trenner gehoert ins SYMBOL, nicht in den Wert, damit
+# Token.render() Leer- ('WD:-') und Lueckenform ('WD:?') ohne jede
+# Sonderbehandlung mitzieht. Die Editor-Badge bleibt unveraendert 'WD'/'PT'
+# (`.rstrip(":")` in _kurzform_kuerzel/_symbols_for).
+SMS_SYMBOL_GRAMMAR: dict[str, str] = {
+    "thunder": "TH:", "fresh_snow": "NS24+",
+    "wind_direction": "WD:", "precip_type": "PT:",
+}
 
 _SMS_CODE_BY_ID: dict[str, str] = {m.id: m.sms_code for m in _METRICS}
 

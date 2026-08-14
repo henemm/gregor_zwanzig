@@ -230,7 +230,17 @@ def _render_sms(dc: UnifiedWeatherDisplayConfig) -> str:
     return report.sms_text
 
 
+# Issue #1824 (A): sind Tiefst- UND Hoechstwert gewaehlt (Modell-Default), steht
+# die Temperatur als EIN Bereichs-Token unter dem HOECHSTWERT-Kuerzel ('D3/20');
+# ein eigenstaendiges 'K' entsteht dann gar nicht. Der Stellvertreter dieser
+# beiden Groessen ist deshalb das Bereichs-Kuerzel. Praefix-Kollisionen bleiben
+# ausgeschlossen: 'DP'/'DBG' scheitern an der Wert-Grammatik unten.
+_RANGE_REPRESENTATIVE = {"temperature": "D", "wind_chill": "FD"}
+
+
 def _representative_symbol(metric_id: str) -> str:
+    if metric_id in _RANGE_REPRESENTATIVE:
+        return _RANGE_REPRESENTATIVE[metric_id]
     if metric_id in SMS_MULTI_SYMBOLS_BY_METRIC:
         return SMS_MULTI_SYMBOLS_BY_METRIC[metric_id][0]
     return SMS_SYMBOL_BY_METRIC[metric_id]
@@ -246,8 +256,12 @@ def _representative_symbol(metric_id: str) -> str:
 # unveraendert). Die Stufen-Buchstaben stehen bewusst nur unmittelbar vor
 # '@'/Ende/Klammer-Ende (Praefix-Kollisionsschutz z.B. 'N' vs. 'NL-'
 # unveraendert, s. test_sms_user_metric_order.py::_VALUE_GRAMMAR).
+# Issue #1824 (A): zusaetzlich die Bereichsform ('D3/20', 'D-12/-4', 'D-/-',
+# 'D?/?') -- zwei Haelften, durch '/' getrennt.
+_RANGE_HALF = r"-?\d+|-|\?"
 _GRAMMAR_SUFFIX = re.compile(
-    r"(?:(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
+    rf"(?:(?:{_RANGE_HALF})/(?:{_RANGE_HALF})"
+    r"|(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
 )
 
 
@@ -896,6 +910,10 @@ def test_kaskade_ac7_sms_channel_must_not_add_globally_disabled_metric():
 
 # --- AC-8: alle Kuerzel einer Metrik toggeln gemeinsam (wind_chill FK/FD/WC) ---
 
+# Issue #1824 (A): das gefuehlte Bereichs-Token ('FD1/18') traegt den
+# Tiefstwert in seiner ersten Haelfte.
+_RANGE_TOKEN_FD = re.compile(rf"(?:^|\s)FD(?:{_RANGE_HALF})/(?:{_RANGE_HALF})(?:\s|$)")
+
 
 def test_kaskade_ac8_all_wind_chill_symbols_toggle_together():
     symbols = SMS_MULTI_SYMBOLS_BY_METRIC["wind_chill"]
@@ -910,6 +928,13 @@ def test_kaskade_ac8_all_wind_chill_symbols_toggle_together():
     on_dc = _cascade_sms_variant({"wind_chill": {"enabled": True}})
     sms_on = _kaskade_sms_text(on_dc)
     for symbol in symbols:
+        # Issue #1824 (A): sind beide Auswertungen gewaehlt, steht der
+        # gefuehlte Tiefstwert nicht mehr als eigenes 'FK'-Token, sondern als
+        # ERSTE HAELFTE des Bereichs-Tokens 'FD{min}/{max}'. Die Zusicherung
+        # dieses AC bleibt dieselbe -- die Groesse muss mit ihrer Zuwahl
+        # sichtbar werden -- nur ihr Traeger hat sich geaendert.
+        if symbol == "FK" and _RANGE_TOKEN_FD.search(sms_on):
+            continue
         assert _first_index_starting_with(sms_on, symbol) is not None, (
             f"AC-8: {symbol!r} fehlt trotz Zuwahl: {sms_on!r}"
         )

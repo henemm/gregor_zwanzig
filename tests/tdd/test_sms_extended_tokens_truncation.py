@@ -122,8 +122,9 @@ def test_ac12_new_tokens_drop_before_any_wintersport_token():
         MetricSpec(symbol="CH", enabled=True),
         MetricSpec(symbol="VS", enabled=True, threshold=1.0),
         MetricSpec(symbol="NL", enabled=True),
-        MetricSpec(symbol="WD", enabled=True),
-        MetricSpec(symbol="PT", enabled=True),
+        # Issue #1824 (B): Symbole tragen den Grammatik-Doppelpunkt.
+        MetricSpec(symbol="WD:", enabled=True),
+        MetricSpec(symbol="PT:", enabled=True),
         MetricSpec(symbol="SU", enabled=True),
         MetricSpec(symbol="HP", enabled=True),
     ]
@@ -170,7 +171,8 @@ def test_ac14_sms_and_telegram_kurzform_share_the_same_rendered_text():
     config = [
         MetricSpec(symbol="HU", enabled=True, threshold=85.0),
         MetricSpec(symbol="VS", enabled=True, threshold=1.0),
-        MetricSpec(symbol="WD", enabled=True),
+        # Issue #1824 (B): Symbol traegt den Grammatik-Doppelpunkt.
+        MetricSpec(symbol="WD:", enabled=True),
     ]
     sms_line = _render(today, config, stage_name="S1")
     # Zweiter Aufruf mit identischem Input simuliert exakt das, was
@@ -182,7 +184,7 @@ def test_ac14_sms_and_telegram_kurzform_share_the_same_rendered_text():
 
     assert "HU88@14(92@17)" in sms_line
     assert "VS0.6@11" in sms_line
-    assert "WDNW" in sms_line
+    assert "WD:NW" in sms_line
     assert sms_line == telegram_kurzform_line, (
         "SMS und Telegram-Kurzform muessen zeichengleich sein"
     )

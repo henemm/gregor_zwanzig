@@ -101,7 +101,8 @@ def test_format_sms_single_segment_v2():
     sms = formatter.format_sms(segments)
 
     assert "N12" in sms, f"v2.0 erwartet 'N12' (Tag-Min): {sms!r}"
-    assert "D18" in sms, f"v2.0 erwartet 'D18' (Tag-Max): {sms!r}"
+    # Issue #1824 (A): Tiefst- UND Hoechstwert gewaehlt -> EIN Bereichs-Token.
+    assert "D12/18" in sms, f"v2.0 erwartet 'D12/18' (Tag-Min/Max): {sms!r}"
     assert "T12/18" not in sms, f"Legacy 'T12/18' verboten in v2.0: {sms!r}"
     assert "E1:" not in sms, f"Legacy 'E1:' Etappen-Prefix verboten in v2.0: {sms!r}"
     assert "|" not in sms, f"v2.0 §3: kein '|'-Trenner erlaubt: {sms!r}"

@@ -168,7 +168,11 @@ def test_trip_briefing_sms_stays_gsm7_clean_with_dense_token_line():
     )
 
     fehlend = [
-        sym for sym in ("N", "K", "D", "FN", "FK", "FD", "R", "PR", "W", "G",
+        # Issue #1824 (A): 'K'/'FK' stehen bei gewaehltem Tiefst- UND
+        # Hoechstwert nicht mehr eigenstaendig in der Zeile -- ihre Werte
+        # sind die erste Haelfte von 'D{min}/{max}' bzw. 'FD{min}/{max}',
+        # die hier ueber 'D'/'FD' geprueft werden.
+        sym for sym in ("N", "D", "FN", "FD", "R", "PR", "W", "G",
                         # Issue #1703 Scheibe 6: Marker fuer "amtliche Warnungen
                         # nicht verfuegbar" heisst "X?", vormals "W?"
                         # (UNAVAILABLE_SYMBOL, builder.py:84).
