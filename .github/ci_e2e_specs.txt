@@ -45,14 +45,92 @@
 # + Filter B, ci_tdd_excludes.txt-Lektion: lokale/einmalige Zahlen sind kein
 # Beleg fuer CI-Gruen).
 #
+# Filter C (NEU 2026-08-14, #1771 S3): eine Datei darf keinen
+# `page.screenshot({path: ...})` in ein von Git gefuehrtes Verzeichnis
+# schreiben. Playwright laeuft mit `frontend/` als Arbeitsordner; nur mit
+# fuehrendem `../` landet der Screenshot im per .gitignore:80 ignorierten
+# Repo-Wurzel-`docs/artifacts/`, ohne `../` dagegen im VERSIONIERTEN
+# `frontend/docs/artifacts/` -- ein Lauf wuerde dann getrackte Dateien
+# aendern. Bewacht statisch von
+# tests/unit/test_e2e_positivliste_ratschen_bindung.py, kein Runner noetig.
+#
+# 🔴 bug-703-login-ratelimit.spec.ts laeuft in einem EIGENEN, nachgelagerten
+# Playwright-Aufruf (ci.yml). Es feuert absichtlich 32 Logins ab und
+# verbraucht damit das IP-Limit aus internal/router/router.go:45 (30/Stunde)
+# fuer den gesamten Job. Playwright sortiert Dateien alphabetisch, die Datei
+# liegt auf Position 3 -- jede spaeter laufende Datei mit EIGENEM Login
+# scheitert sonst an "429". Die Zeile bleibt bewusst hier stehen: DIESE Liste
+# ist die eine Positivliste, an der Ratsche und E2E_MIN_SPECS haengen.
+#
+# Aufnahme 2026-08-14 (#1771 S3, Filter B im ZIELVERBUND belegt, nicht im
+# 51er-Kandidatenverbund): compare-cross-user-write-block.spec.ts und
+# compare-editor-autosave-user-isolation.spec.ts -- die einzige Klasse im
+# Korpus, die die CLAUDE.md-Pflicht "jeder datenbewegende Endpoint mit ZWEI
+# Nutzern" belegt. Beide brauchen einen eigenen Zweit-Login und waren genau
+# deshalb im ungeteilten Zielverbund rot (429) -- Anlass fuer den Split oben.
+#
+# Aufnahme 2026-08-14 Block B (#1771 S3, Einzelfall-Diagnose der 11 Dateien
+# mit genau EINEM roten Testfall, Verfahren: Spec Implementation Detail 2).
+# 7 davon meldeten einen VERALTETEN Test (Entscheidungsregel 1) und sind nach
+# der Reparatur aufgenommen -- je mit Begruendung am Code, nicht geraten:
+#   bug-274-safe-area-insets      AC-2 geloescht: /trips/[id]/edit ist seit
+#                                 #616 ein 307-Redirect, TripEditView.svelte
+#                                 von keiner Route mehr eingebunden.
+#   compare-editor-slice1         7 -> 6 Segmente: Reiter `layout` per #1360
+#                                 (Epic #1372 S1a) aufgeloest.
+#   compare-editor-slice3         Klick auf tab-layout entfernt, gleiche
+#                                 Ursache wie slice1 (lief in 30s-Timeout).
+#   design-compliance-group-a     AC-3 auf #1273 S3 gezogen: der Hub IST die
+#                                 Bearbeiten-Flaeche, der Desktop-Button ist
+#                                 bewusst entfernt (Kern-Wache:
+#                                 issue_1273_s3_redirect_links.test.ts AC-4).
+#   issue-269-mobile-trip-tabs    Pruefort -> Wirkort: overflow-x sitzt seit
+#                                 #1231 S6 auf [data-slot="segmented"] INNEN,
+#                                 nicht auf dem Testid-Container.
+#   issue-616-trip-one-surface    title="<Name> öffnen" gibt es seit #1277
+#                                 nicht mehr; ListTableRow traegt nur
+#                                 data-testid="trip-row-<id>".
+#   trip-detail-actions           Pill-Tone: TripStatusBadge TONE_MAP bildet
+#                                 active auf 'accent' ab (eigene app.css-Regel),
+#                                 nicht auf 'success'.
+# NICHT aufgenommen und gebucht statt repariert:
+#   issue-280-home-topbar-polish  Datei GELOESCHT -- h1.home__title existiert
+#                                 im Frontend nicht mehr (Home-Redesign #568
+#                                 hat das h1 ersatzlos entfernt), einziger Test.
+#   issue-579-home-fidelity       braucht Home im Compare-Modus (kein Live-
+#                                 Trip); global.setup.ts seedet aber den Trip
+#                                 e2e-cockpit-test -> Modus 'trip'. Vorbedingung
+#                                 im GETEILTEN Seed nicht herstellbar.
+#   orts-vergleich-c4             "Neuer Ort" liegt seit dem Umbau auf
+#                                 /locations, nicht in der /compare-Sidebar;
+#                                 LocationNewModal hat weder role="dialog"
+#                                 noch Testids -> Rewrite, keine Reparatur.
+#   waypoint-mapclick-autosave    maplibre-Kartentipp braucht Kacheln/Style
+#                                 aus dem Netz; der CI-Stack ist offline.
+#
+# Filter B fuer die 7 neuen Dateien, GEMESSEN am 2026-08-14 im ZIELVERBUND
+# (Positivliste 38 + 7 = 45 Dateien), isolierter Stack Ports 8095/8005,
+# 3 Zyklen mit je FRISCHEM Stack (Login-Limiter ist prozess-intern):
+#   Hauptlauf (44 Dateien): 224/224/224 expected, 0 unexpected, 0 skipped
+#   Zweitlauf (bug-703):      3/3/3     expected, 0 unexpected, 0 skipped
+# 224 = 223 Testfaelle in 44 Dateien + 1x global.setup (vgl. F008 oben).
+# Zuwachs 51 Faelle: bug-274 1 · slice1 5 · slice3 9 · design-compliance-a 7 ·
+# issue-269 8 · issue-616 8 · trip-detail-actions 13.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
+e2e/bug-274-safe-area-insets.spec.ts
 e2e/bug-703-login-ratelimit.spec.ts
 e2e/bug-708-stage-delete-confirm.spec.ts
+e2e/compare-cross-user-write-block.spec.ts
 e2e/compare-detail-edit-entry.spec.ts
+e2e/compare-editor-autosave-user-isolation.spec.ts
+e2e/compare-editor-slice1.spec.ts
+e2e/compare-editor-slice3.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-radar-toggle.spec.ts
+e2e/design-compliance-group-a.spec.ts
 e2e/design-system-lauf-a.spec.ts
 e2e/dnd-helper-finalize-wait.spec.ts
 e2e/email-preview-header.spec.ts
@@ -62,6 +140,7 @@ e2e/issue-1059-trip-resume-error-feedback.spec.ts
 e2e/issue-1071-tier-change-request.spec.ts
 e2e/issue-1093-unit.spec.ts
 e2e/issue-1117-official-alerts-content-tab.spec.ts
+e2e/issue-269-mobile-trip-tabs.spec.ts
 e2e/issue-293-wordmark.spec.ts
 e2e/issue-313-design-showcase.spec.ts
 e2e/issue-336-status-dedup.spec.ts
@@ -69,6 +148,7 @@ e2e/issue-343-horizon-chips.spec.ts
 e2e/issue-344-wetter-profile.spec.ts
 e2e/issue-370-brand.spec.ts
 e2e/issue-486-trips-overflow.spec.ts
+e2e/issue-616-trip-one-surface.spec.ts
 e2e/issue-619-mail-elements-ui.spec.ts
 e2e/issue-661-trip-new-mobile.spec.ts
 e2e/issue-682-compare-editor-mobile.spec.ts
@@ -82,4 +162,5 @@ e2e/issue-767-768-test-briefing.spec.ts
 e2e/issue-951-sheet-bottomnav.spec.ts
 e2e/mobile-editor-controls-viewport.spec.ts
 e2e/tokens-and-topo.spec.ts
+e2e/trip-detail-actions.spec.ts
 e2e/versand-tab.spec.ts

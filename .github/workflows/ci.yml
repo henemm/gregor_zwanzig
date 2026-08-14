@@ -180,14 +180,22 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     env:
-      # Werte belegt am 2026-08-13, 3x hintereinander gegen den isolierten
-      # Stack (Ports 8095/8005): 173 expected / 0 unexpected / 0 skipped in
-      # zwei Folgelaeufen (126s, 131s). E2E_MIN_SPECS = Zeilenzahl der
-      # Positivliste (36).
+      # Werte belegt gegen den isolierten Stack (Ports 8095/8005), zuletzt
+      # nachgemessen am 2026-08-14 (#1771 S3 Block B, Listenwachstum auf 45
+      # Dateien nach der Einzelfall-Diagnose der 11 Ein-Fehler-Dateien),
+      # Filter B im ZIELVERBUND: 3 Zyklen hintereinander, je frischer Stack
+      # (der Login-Limiter ist prozess-intern), jeweils identisch
+      #   Hauptlauf (44 Dateien):   expected=224, unexpected=0, skipped=0
+      #   Zweitlauf (nur bug-703):  expected=3,   unexpected=0, skipped=0
+      # 224 = 223 Testfaelle in 44 Dateien + 1x global.setup (F008-Klarstellung
+      # im Kopf von ci_e2e_specs.txt). Vorstand vor Block B: 38 Dateien / 173.
+      # E2E_MIN_SPECS = Zeilenzahl der Positivliste (45) -- die Gleichheit
+      # bewacht tests/unit/test_e2e_positivliste_ratschen_bindung.py, damit
+      # eine wachsende Liste die Schwelle nicht stehen laesst (F006).
       #
-      # E2E_MIN_EXECUTED = 173 -- EXAKT der belegte Wert, KEIN Puffer nach
-      # unten (Adversary-Fund F006, #1771 S2 Runde 2). Ein Puffer wie zuvor
-      # (170) ist hier selbst das Loch: 15 der 36 Listen-Dateien haben <=3
+      # Beide E2E_MIN_EXECUTED_* sind EXAKT die belegten Werte, KEIN Puffer
+      # nach unten (Adversary-Fund F006, #1771 S2 Runde 2). Ein Puffer wie
+      # zuvor (170) ist selbst das Loch: 15 der Listen-Dateien haben <=3
       # Testfaelle -- verschwindet eine davon klaglos vom Dateisystem
       # (Umbenennung/Loeschung/Merge-Verlust), OHNE dass die Liste geaendert
       # wird, faellt `expected` exakt auf 170 und ein Puffer von 3 haette das
@@ -197,8 +205,33 @@ jobs:
       # Die eigentliche Zusicherung gegen verschwundene Dateien traegt NICHT
       # diese Zahl allein, sondern der Existenzpruefungs-Schritt weiter
       # unten (vor dem Playwright-Lauf).
-      E2E_MIN_SPECS: 36     # Ratsche: Mindestzahl DATEIEN auf der Positivliste
-      E2E_MIN_EXECUTED: 173 # Mindestzahl tatsaechlich AUSGEFUEHRTER Testfaelle -- exakt belegt, kein Puffer
+      #
+      # 🔴 ZWEI Playwright-Aufrufe, deshalb ZWEI Schwellen (#1771 S3).
+      # bug-703-login-ratelimit.spec.ts feuert absichtlich 32 Logins ab
+      # (frontend/e2e/bug-703-login-ratelimit.spec.ts:27, BURST + 2) und
+      # verbraucht damit das IP-Limit aus internal/router/router.go:45
+      # (NewIPRateLimiter(30, time.Hour)) fuer den ganzen Job. Playwright
+      # sortiert Dateien ALPHABETISCH (unabhaengig von der CLI-Reihenfolge);
+      # bug-703 liegt auf Position 3 von 46 (45 Listen-Dateien + global.setup;
+      # vor Block B waren es 3 von 39). Jede spaeter laufende Datei mit
+      # EIGENEM Login laeuft danach in "Login B fehlgeschlagen: 429" -- also
+      # ausgerechnet die zwei Mandantentrennungs-Tests, die diese Scheibe
+      # aufnimmt. Die uebrigen Listen-Dateien merken nichts davon, weil sie
+      # den gespeicherten Anmeldezustand (storageState) wiederverwenden.
+      # A/B nachgemessen am 2026-08-14 im damaligen Zielverbund, gleicher
+      # Stack, gleiche 38 Dateien -- einziger Unterschied die Aufteilung:
+      #   EIN Aufruf (38 Dateien):  expected=173, unexpected=2
+      #     beide Roten woertlich "Login B fehlgeschlagen: 429"
+      #   GETEILT (37 + 1, 3 Zyklen): expected=173/3, unexpected=0/0
+      # Die Aufteilung ist damit gemessen, nicht Geschmack -- NICHT wieder zu
+      # einem Aufruf zusammenlegen, ohne diese Messung zu wiederholen. Die
+      # sieben in Block B ergaenzten Dateien aendern daran nichts: sie nutzen
+      # alle den storageState (login() in helpers.ts:97-106 kehrt sofort
+      # zurueck, wenn die Sitzung schon steht), holen sich also keinen
+      # eigenen Login -- nachgemessen in denselben 3 Zyklen, 0 unexpected.
+      E2E_MIN_SPECS: 45     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
+      E2E_MIN_EXECUTED_HAUPT: 224      # Hauptlauf: 44 Dateien + global.setup -- exakt belegt, kein Puffer
+      E2E_MIN_EXECUTED_RATELIMIT: 3    # Zweitlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
@@ -247,10 +280,20 @@ jobs:
               grep -qE '/home/hem/gregor_zwanzig|__dirname' "$kandidat" || echo "$kandidat" >> /tmp/e2e-specs-full.txt
             done < /tmp/e2e-candidates.txt
             sed 's#^frontend/e2e/##' /tmp/e2e-specs-full.txt > /tmp/e2e-specs.txt
+            # Im Vermessungsmodus wird nicht bewertet -- kein Split noetig.
+            cp /tmp/e2e-specs.txt /tmp/e2e-specs-haupt.txt
+            : > /tmp/e2e-specs-ratelimit.txt
           else
             echo "mode=positivliste" >> "$GITHUB_OUTPUT"
             echo "Regulaerer Lauf: Positivliste .github/ci_e2e_specs.txt."
             grep -v '^#' .github/ci_e2e_specs.txt | grep -v '^[[:space:]]*$' > /tmp/e2e-specs.txt
+            # Aufteilung zur LAUFZEIT (#1771 S3, Begruendung + A/B-Zahlen im
+            # env-Block oben): bug-703 verbrennt das Login-Kontingent des
+            # ganzen Jobs und laeuft deshalb als eigener, NACHGELAGERTER
+            # Aufruf. Die Positivliste selbst bleibt ungeteilt -- an IHR
+            # haengen Ratsche, Existenzpruefung und E2E_MIN_SPECS.
+            grep -v 'bug-703-login-ratelimit' /tmp/e2e-specs.txt > /tmp/e2e-specs-haupt.txt
+            grep 'bug-703-login-ratelimit' /tmp/e2e-specs.txt > /tmp/e2e-specs-ratelimit.txt || true
           fi
           cat /tmp/e2e-specs.txt
       - name: Ratsche -- Mindestzahl Listen-Dateien (E2E_MIN_SPECS)
@@ -281,12 +324,16 @@ jobs:
           echo "OK: alle $(wc -l < /tmp/e2e-specs.txt) gelisteten Dateien existieren unter frontend/."
       - name: Isolierten Stack starten (Health-Warteschleifen statt sleep)
         run: bash frontend/e2e/ci-stack.sh start
-      - name: Playwright-Specs ausfuehren
+      - name: Playwright-Specs ausfuehren (Hauptlauf, ohne bug-703)
         working-directory: frontend
         env:
           CI: "1"
-        run: npx playwright test --reporter=json $(cat /tmp/e2e-specs.txt) > /tmp/e2e-report.json || true
-      - name: E2E-Gate auswerten (drei Bedingungen, AC-4)
+        # Leere Auswahl waere KEIN harmloser Leerlauf: `npx playwright test`
+        # ohne Argument faehrt den GESAMTEN Korpus (161 Dateien, ~30% rot).
+        run: |
+          [ -s /tmp/e2e-specs-haupt.txt ] || { echo "FEHLER: Spec-Auswahl fuer den Hauptlauf ist leer."; exit 1; }
+          npx playwright test --reporter=json $(cat /tmp/e2e-specs-haupt.txt) > /tmp/e2e-report.json || true
+      - name: E2E-Gate auswerten (Hauptlauf, drei Bedingungen, AC-4)
         # F010 (#1771 S2 Runde 3, Adversary MEDIUM): dieser Schritt darf NUR
         # im Positivlisten-Modus streng auswerten. Ohne dieses `if:` wertet
         # auch ein `workflow_dispatch`-Vermessungslauf streng aus (Exit != 0
@@ -296,7 +343,27 @@ jobs:
         # deshalb faehrt man den Pool ja. Gleiches Muster wie die Ratsche-
         # und Existenzpruefungs-Schritte oben.
         if: steps.specs.outputs.mode == 'positivliste'
-        run: python3 .github/scripts/e2e_gate.py /tmp/e2e-report.json
+        # Schwelle als echte Shell-Variable durchgereicht (Job-`env` ist im
+        # `run`-Shell garantiert gesetzt) statt ueber `${{ env.* }}` -- eine
+        # leer aufgeloeste Ausdrucks-Zuweisung waere zwar fail-closed, aber
+        # als "Schwelle fehlt" schwer zu deuten.
+        run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_HAUPT" python3 .github/scripts/e2e_gate.py /tmp/e2e-report.json
+      - name: Playwright-Specs ausfuehren (Zweitlauf, nur bug-703)
+        # Eigener Aufruf, damit das von bug-703 absichtlich verbrannte
+        # Login-Kontingent (30/Stunde je IP) den Hauptlauf nicht mehr
+        # erreicht -- A/B-Beleg im env-Block oben. Der Zweitlauf laeuft
+        # NACH dem Hauptlauf; die Reihenfolge innerhalb eines Aufrufs
+        # liesse sich nicht steuern (Playwright sortiert alphabetisch).
+        if: steps.specs.outputs.mode == 'positivliste'
+        working-directory: frontend
+        env:
+          CI: "1"
+        run: |
+          [ -s /tmp/e2e-specs-ratelimit.txt ] || { echo "FEHLER: bug-703-login-ratelimit.spec.ts steht nicht mehr auf der Positivliste -- dann sind beide Schwellen neu zu messen und dieser Schritt zu entfernen."; exit 1; }
+          npx playwright test --reporter=json $(cat /tmp/e2e-specs-ratelimit.txt) > /tmp/e2e-report-ratelimit.json || true
+      - name: E2E-Gate auswerten (Zweitlauf)
+        if: steps.specs.outputs.mode == 'positivliste'
+        run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_RATELIMIT" python3 .github/scripts/e2e_gate.py /tmp/e2e-report-ratelimit.json
       - name: Vermessungslauf -- Zusammenfassung (nicht bewertend, AC-8)
         # Gegenstueck zum vorigen Schritt: im Vermessungsmodus wird NICHT
         # bewertet, sondern nur protokolliert -- Kandidatenzahl und die
