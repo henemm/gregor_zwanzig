@@ -90,9 +90,37 @@ Epic gebaut wurde (#1450, #1362, #1660 A/B, #1677). Kein Test bemerkt es:
 AC-S4-1/2/3 aus Scheibe 4 prüfen Auswahl und Abwahl, nie die Position.
 
 **Empfehlung: fixen.** Der Eingriff ist klein und lokal — die Katalog-Ordnung
-wird zur Ordnung der übergebenen Liste. Für Trips ohne gespeicherte eigene
-Reihenfolge ändert sich nichts, weil `resolve_trip_active_metrics()` dann
-ohnehin die Katalog-Ordnung liefert.
+wird zur Ordnung der übergebenen Liste.
+
+🔴 **Korrektur (bei der Umsetzung gemessen, 2026-08-14).** Hier stand: „Für
+Trips ohne gespeicherte eigene Reihenfolge ändert sich nichts, weil
+`resolve_trip_active_metrics()` dann ohnehin die Katalog-Ordnung liefert."
+**Das trifft nicht zu.** Der Altbestands-Rückfall `DEFAULT_TRIP_METRIC_IDS`
+wird seit #1552 aus `trip_default_rank` abgeleitet, nicht aus
+`_PILL_CATALOG_ORDER` — die beiden Listen unterscheiden sich in den letzten
+zwei Positionen:
+
+```
+DEFAULT_TRIP_METRIC_IDS: … thunder, freezing_level, visibility
+_PILL_CATALOG_ORDER    : … thunder, visibility, freezing_level
+```
+
+Für Trips **ohne jede** gespeicherte Auswahl tauschen `visibility` und
+`freezing_level` also ihre Pillenplätze. Der Effekt ist gewollt mitgenommen:
+die Ordnung folgt danach dem Register-Rang statt einer zweiten, separat
+gepflegten Liste — eine Ordnungsquelle statt zweier. Festgehalten in
+`test_altbestand_pillen_folgen_dem_trip_default_rang`
+(`tests/tdd/test_issue_664_metrics_summary.py`), damit die Änderung nicht als
+Rätsel zurückkommt.
+
+**Der Fix wirkt auf DREI Ausgabeorte, nicht auf einen** (ebenfalls bei der
+Umsetzung ausgezählt): `build_metrics_summary_pills()` speist neben der
+Kurz-E-Mail (`compact.py:176`) auch den HTML- und den Klartext-Teil der
+Voll-Mail (`html.py:1432`, `plain.py:205`). Alle drei beziehen ihre Liste aus
+derselben Quelle, in allen dreien ist die Reihenfolge fachlich gemeint — der
+Mitgewinn ist erwünscht und per A/B gegen den Vorzustand belegt. Bezeichnend:
+**kein Golden- oder Paritätstest hat dabei angeschlagen** — die
+Pillen-Reihenfolge der Voll-Mail war bislang von nichts bewacht.
 
 **Was der Fix NICHT tut:** Er ändert weder Auswahl noch Schwellenlogik noch
 die Ampelstufen. Nur die Ausgabereihenfolge der Pillen folgt der Nutzerliste.
