@@ -181,12 +181,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Werte belegt gegen den isolierten Stack (Ports 8095/8005), zuletzt
-      # nachgemessen am 2026-08-14 (#1771 S3, Listenwachstum auf 38 Dateien),
+      # nachgemessen am 2026-08-14 (#1771 S3 Block B, Listenwachstum auf 45
+      # Dateien nach der Einzelfall-Diagnose der 11 Ein-Fehler-Dateien),
       # Filter B im ZIELVERBUND: 3 Zyklen hintereinander, je frischer Stack
       # (der Login-Limiter ist prozess-intern), jeweils identisch
-      #   Hauptlauf (37 Dateien):   expected=173, unexpected=0, skipped=0
+      #   Hauptlauf (44 Dateien):   expected=224, unexpected=0, skipped=0
       #   Zweitlauf (nur bug-703):  expected=3,   unexpected=0, skipped=0
-      # E2E_MIN_SPECS = Zeilenzahl der Positivliste (38) -- die Gleichheit
+      # 224 = 223 Testfaelle in 44 Dateien + 1x global.setup (F008-Klarstellung
+      # im Kopf von ci_e2e_specs.txt). Vorstand vor Block B: 38 Dateien / 173.
+      # E2E_MIN_SPECS = Zeilenzahl der Positivliste (45) -- die Gleichheit
       # bewacht tests/unit/test_e2e_positivliste_ratschen_bindung.py, damit
       # eine wachsende Liste die Schwelle nicht stehen laesst (F006).
       #
@@ -209,20 +212,25 @@ jobs:
       # verbraucht damit das IP-Limit aus internal/router/router.go:45
       # (NewIPRateLimiter(30, time.Hour)) fuer den ganzen Job. Playwright
       # sortiert Dateien ALPHABETISCH (unabhaengig von der CLI-Reihenfolge);
-      # bug-703 liegt auf Position 3 von 39. Jede spaeter laufende Datei mit
+      # bug-703 liegt auf Position 3 von 46 (45 Listen-Dateien + global.setup;
+      # vor Block B waren es 3 von 39). Jede spaeter laufende Datei mit
       # EIGENEM Login laeuft danach in "Login B fehlgeschlagen: 429" -- also
       # ausgerechnet die zwei Mandantentrennungs-Tests, die diese Scheibe
-      # aufnimmt. Die 36 Bestandsdateien merken nichts davon, weil sie den
-      # gespeicherten Anmeldezustand (storageState) wiederverwenden.
-      # A/B nachgemessen am 2026-08-14 im Zielverbund, gleicher Stack,
-      # gleiche 38 Dateien -- einziger Unterschied ist die Aufteilung:
+      # aufnimmt. Die uebrigen Listen-Dateien merken nichts davon, weil sie
+      # den gespeicherten Anmeldezustand (storageState) wiederverwenden.
+      # A/B nachgemessen am 2026-08-14 im damaligen Zielverbund, gleicher
+      # Stack, gleiche 38 Dateien -- einziger Unterschied die Aufteilung:
       #   EIN Aufruf (38 Dateien):  expected=173, unexpected=2
       #     beide Roten woertlich "Login B fehlgeschlagen: 429"
       #   GETEILT (37 + 1, 3 Zyklen): expected=173/3, unexpected=0/0
       # Die Aufteilung ist damit gemessen, nicht Geschmack -- NICHT wieder zu
-      # einem Aufruf zusammenlegen, ohne diese Messung zu wiederholen.
-      E2E_MIN_SPECS: 38     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
-      E2E_MIN_EXECUTED_HAUPT: 173      # Hauptlauf: 37 Dateien + global.setup -- exakt belegt, kein Puffer
+      # einem Aufruf zusammenlegen, ohne diese Messung zu wiederholen. Die
+      # sieben in Block B ergaenzten Dateien aendern daran nichts: sie nutzen
+      # alle den storageState (login() in helpers.ts:97-106 kehrt sofort
+      # zurueck, wenn die Sitzung schon steht), holen sich also keinen
+      # eigenen Login -- nachgemessen in denselben 3 Zyklen, 0 unexpected.
+      E2E_MIN_SPECS: 45     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
+      E2E_MIN_EXECUTED_HAUPT: 224      # Hauptlauf: 44 Dateien + global.setup -- exakt belegt, kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Zweitlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:
       - uses: actions/checkout@v4

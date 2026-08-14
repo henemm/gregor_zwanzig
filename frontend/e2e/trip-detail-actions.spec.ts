@@ -56,9 +56,13 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		const badge = page.getByTestId('trip-detail-status-badge');
 		await expect(badge).toBeVisible();
 		await expect(badge).toContainText(/Aktiv|Geplant/); // 'Aktiv' wenn heute innerhalb, sonst 'Geplant'
-		// Pill-Tone success für aktiv
+		// Pill-Tone laut TripStatusBadge.svelte TONE_MAP: active -> 'accent',
+		// planned -> 'info'. 'accent' ist gewollt und eigens in app.css
+		// gestylt (Regel [data-slot="pill"][data-outlined][data-tone="accent"],
+		// bewacht von TripStatusBadge.atomic.test.ts AC-4) — die frühere
+		// Erwartung 'success' stammt aus der Zeit vor diesem Mapping.
 		const tone = await badge.getAttribute('data-tone');
-		expect(['success', 'info']).toContain(tone);
+		expect(['accent', 'info']).toContain(tone);
 	});
 
 	test('AC-13: Klick auf "Pausieren" → PATCH + Badge wechselt zu "Pausiert" ohne Reload', async ({
