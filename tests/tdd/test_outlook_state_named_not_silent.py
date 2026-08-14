@@ -121,7 +121,9 @@ def test_ac1_no_future_stages_reports_state_and_logs_nothing(caplog):
     service = _scheduler()
 
     with caplog.at_level(logging.DEBUG, logger=_LOGGER_NAME):
-        result = service._build_stage_trend(trip, date.today(), tz=None)
+        result = service._build_stage_trend(
+            trip, date.today(), now_utc=datetime.now(timezone.utc), tz=None,
+        )
 
     assert result.state is OutlookState.NO_STAGES, (
         "Eine Tour ohne Folge-Etappe muss den Zustand NO_STAGES melden, "
@@ -151,7 +153,9 @@ def test_ac2_beyond_horizon_reports_state_with_real_horizon(caplog):
     service = _scheduler()
 
     with caplog.at_level(logging.DEBUG, logger=_LOGGER_NAME):
-        result = service._build_stage_trend(trip, date.today(), tz=None)
+        result = service._build_stage_trend(
+            trip, date.today(), now_utc=datetime.now(timezone.utc), tz=None,
+        )
 
     assert result.state is OutlookState.BEYOND_HORIZON, (
         "Eine Folge-Etappe jenseits des Vorhersagehorizonts muss den Zustand "
@@ -173,7 +177,9 @@ def test_ac2_beyond_horizon_is_logged_as_warning(caplog):
     service = _scheduler()
 
     with caplog.at_level(logging.DEBUG, logger=_LOGGER_NAME):
-        service._build_stage_trend(trip, date.today(), tz=None)
+        service._build_stage_trend(
+            trip, date.today(), now_utc=datetime.now(timezone.utc), tz=None,
+        )
 
     messages = [r.getMessage() for r in _warnings(caplog)]
     assert any("S2" in m for m in messages), (
@@ -224,7 +230,9 @@ def test_ac3_all_three_failure_causes_report_unavailable():
     OutlookState = _outlook_state()
     for label, build in _unavailable_cases().items():
         trip, weather = build()
-        result = _scheduler(weather)._build_stage_trend(trip, date.today(), tz=None)
+        result = _scheduler(weather)._build_stage_trend(
+            trip, date.today(), now_utc=datetime.now(timezone.utc), tz=None,
+        )
         assert result.state is OutlookState.UNAVAILABLE, (
             f"Ursache '{label}' ist eine Stoerung und muss UNAVAILABLE melden, "
             f"bekam: {result!r}"
@@ -239,7 +247,9 @@ def test_ac3_all_three_failure_causes_log_a_warning(caplog):
         caplog.clear()
         trip, weather = build()
         with caplog.at_level(logging.DEBUG, logger=_LOGGER_NAME):
-            _scheduler(weather)._build_stage_trend(trip, date.today(), tz=None)
+            _scheduler(weather)._build_stage_trend(
+            trip, date.today(), now_utc=datetime.now(timezone.utc), tz=None,
+        )
         messages = [r.getMessage() for r in _warnings(caplog)]
         assert any("S2" in m for m in messages), (
             f"Ursache '{label}' muss ein WARNING mit Etappen-Bezug erzeugen, "

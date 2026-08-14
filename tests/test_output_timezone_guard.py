@@ -578,12 +578,15 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/output/renderers/alert/official_alerts.py::render_official_alert_sms::0": "Aufrufseite abgesichert (vormals :1690) — render_official_alert_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
     "src/services/radar_service.py::format_now_text::0": "Aufrufseite abgesichert (vormals :219) — format_now_text (Wächter: test_production_callsites_pass_tz_explicitly).",
     "src/services/trip_report_scheduler.py::_build_stage_trend::0": "Aufrufseite abgesichert (vormals :1365) — _build_stage_trend (Wächter: test_production_callsites_pass_tz_explicitly).",
-    # ORDINAL-VERSCHIEBUNG (#1723): Muster A findet in _build_stage_trend ein
-    # `date.today()` (:1812) VOR dem Ternary (:1869) — der Ternary rutscht
-    # dadurch von ::1 auf ::2. Dieselben zwei Codestellen wie bisher, plus der
-    # neue Fund dazwischen; nichts gestrichen.
-    "src/services/trip_report_scheduler.py::_build_stage_trend::1": "Muster A (:1812) — `today = date.today()` datiert den Etappen-Trend auf die Serveruhr statt auf die Ortszeit der Etappe (#1726).",
-    "src/services/trip_report_scheduler.py::_build_stage_trend::2": "Aufrufseite abgesichert (vormals :1427, jetzt :1869) — Ternary-Rückfall zum Default von _build_stage_trend, daran gekoppelt.",
+    # ORDINAL-RUECKVERSCHIEBUNG (#1727 S5b): der Muster-A-Fund in
+    # _build_stage_trend (`today = date.today()`) ist behoben — er folgt jetzt
+    # `trip_local_today(trip, now_utc)`. Damit entfaellt der Eintrag ::1, und
+    # der Ternary rutscht von ::2 auf ::1 zurueck: die Gegenbewegung zu der mit
+    # #1723 hier dokumentierten Verschiebung (s. Kommentar-Historie). Es ist
+    # DIESELBE Codestelle wie bisher, nur mit kleinerem Ordinal; ohne diese
+    # Umbenennung meldete der Waechter ::2 als veraltet UND ::1 als neuen,
+    # unbekannten Verstoss, ohne dass sich dort etwas geaendert haette.
+    "src/services/trip_report_scheduler.py::_build_stage_trend::1": "Aufrufseite abgesichert (vormals :1427/:1869, Ordinal vormals ::2) — Ternary-Rückfall zum Default von _build_stage_trend, daran gekoppelt.",
     # -----------------------------------------------------------------------
     # ENTSCHEIDUNGS-SCHICHT (Issue #1723, Epic #1722 S1) — Bestandsaufnahme
     # von `src/services/**` + `api/**`, gemessen am 2026-08-11 gegen
@@ -610,23 +613,26 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "api/routers/compare.py::run_comparison::2": "Muster A (:58) — Zieltag 'morgen' vom Server, nicht vom Ort (#1726).",
     "api/routers/debug.py::trigger_radar_alert::0": "Muster A (:61) — Debug-Ausloeser datiert auf die Serveruhr (#1726).",
     "src/output/renderers/email/compare_html.py::_compute_next_send::0": "Muster A (:1377) — naechste Sendezeit gegen den Servertag geprueft (#1726).",
-    "src/services/alert_briefing_anchor.py::briefing_target_day_is_current::0": "Muster A (:169) — Briefing-Anker faellt auf den Servertag zurueck (#1726).",
+    # #1727 S5b: `briefing_target_day_is_current` hat keinen Systemuhr-
+    # Rueckfall mehr — `today` ist Pflicht und kommt als Ortstag der Tour vom
+    # Aufrufer. Eintrag entfaellt.
     "src/services/compare_preview_service.py::_resolve_target_date::0": "Muster A (:250) — Vorschau-Zieltag vom Server (#1726).",
     "src/services/comparison_engine.py::dict_to_comparison_result::0": "Muster A (:407) — Zieltag beim Einlesen vom Server (#1726).",
     "src/services/gpx_processing.py::compute_default_start_date::0": "Muster A (:189) — GPX-Vorgabestart vom Servertag (#1726).",
     "src/services/gpx_processing.py::compute_default_start_date::1": "Muster A (:193) — zweiter Rueckfall auf den Servertag (#1726).",
     "src/services/gpx_processing.py::gpx_to_stage_data::0": "Muster A (:223) — Etappendatum faellt auf den Servertag zurueck (#1726).",
-    "src/services/notification_service.py::_target_date_from_report::0": "Muster A (:1676) — Zieltag des Berichts vom Server (#1726).",
+    # #1727 S5b: `_target_date_from_report` leitet den Rueckfall-Tag aus
+    # `request.trip_tz` ab (Zone liegt am DTO bereits aufgeloest vor).
+    # Eintrag entfaellt.
     "src/services/official_alerts/massif_closure.py::_do_request::0": "Muster A (:102) — Abfrage-Datum der franzoesischen Quelle vom Server (#1726).",
     "src/services/official_alerts/massif_closure.py::fetch::0": "Muster A (:127) — Zeitstempel fuer `last_run` ohne Zone (#1726).",
     "src/services/official_alerts/meteo_forets.py::covers::0": "Muster A (:130) — Saison-Fenster gegen den Servermonat (#1726).",
     "src/services/preview_service.py::_resolve_target_date::0": "Muster A (:94) — Vorschau-Zieltag vom Server (#1726).",
-    "src/services/scheduler_dispatch_service.py::_auto_pause_expired_presets::0": "Muster A (:79) — Ablauf eines Presets gegen den Servertag (#1726).",
-    "src/services/scheduler_dispatch_service.py::send_one_compare_preset::0": "Muster A (:368) — Zieltag des Vergleichs-Versands vom Server (#1726).",
-    "src/services/trip_report_scheduler.py::_clamp_segments_to_today::0": "Muster A (:1497) — Segment-Beschnitt gegen den Servertag (#1726).",
-    "src/services/trip_report_scheduler.py::_collect_future_stage_weather::0": "Muster A (:2205) — 'zukuenftige Etappen' ab Servertag (#1726).",
-    "src/services/trip_report_scheduler.py::_send_trip_report_outcome::0": "Muster A (:932) — Test-Rueckfall vergleicht Zieltag mit Servertag (#1726).",
-    "src/services/trip_report_scheduler.py::select_test_stage::0": "Muster A (:765) — Test-Etappenwahl ab Servertag (#1726).",
+    # #1727 S5b: die sechs Versandpfad-Eintraege dieser Rubrik sind behoben —
+    # `_auto_pause_expired_presets` und `send_one_compare_preset` rechnen ueber
+    # `first_resolvable_tz(locations)` im Ortstag des Presets, die vier
+    # Scheduler-Stellen ueber `trip_local_today(trip, now_utc)` im Ortstag der
+    # Tour. Eintraege entfallen.
     # --- Muster B: festes Nicht-UTC-Zonen-Literal — mit #1726 vollstaendig
     # abgeraeumt (beide `VIENNA`-Konstanten ersatzlos entfallen). Bleibt als
     # Rubrik stehen: ein neuer Fund dieser Art gehoert behoben, nicht gelistet.

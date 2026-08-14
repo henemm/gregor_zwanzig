@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -214,14 +214,23 @@ class PreviewService:
         multi_day_trend = None
         outlook_state = None
         outlook_horizon_days = None
+        # Issue #1727 S5b: rein mechanischer Durchreich — beide Scheduler-
+        # Methoden verlangen den Zeitpunkt jetzt als Pflichtparameter
+        # (ADR-0051 Regel 3). Die EIGENE Tagesbestimmung der Vorschau
+        # (`_resolve_target_date`) bleibt unangetastet und folgt weiterhin dem
+        # Servertag — sie gehoert in die ADR-0044-Restliste „Vorschau,
+        # Werkzeuge" (S5c), nicht in diese Scheibe.
+        jetzt_utc = datetime.now(timezone.utc)
         if segment_weather and render_options.show_multi_day_trend:
-            trend_result = scheduler._build_stage_trend(trip, target, tz=trip_tz)
+            trend_result = scheduler._build_stage_trend(
+                trip, target, now_utc=jetzt_utc, tz=trip_tz,
+            )
             multi_day_trend = trend_result.rows
             outlook_state = trend_result.state
             outlook_horizon_days = trend_result.horizon_days
         thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
-            trip, target, tz=trip_tz, multi_day_trend=multi_day_trend,
-            night_weather=night_weather,
+            trip, target, now_utc=jetzt_utc, tz=trip_tz,
+            multi_day_trend=multi_day_trend, night_weather=night_weather,
         )
 
         # Issue #474: F12 Wetterlage-Label vor format_email berechnen.

@@ -137,20 +137,41 @@ Regelverstoß — genau das war der Zustand vor #1697.
   Ortszeit-Anzeige der Timeline (`_aggregate_day`, `_fmt_glance`, `_fmt_gewitter`,
   `_fmt_timeline`, `_timeline_buttons` bekommen `tz` als Pflichtparameter).
 
+- **Versandpfade von Trip-Briefing und Ortsvergleich** (#1727 S5b): neun Fundstellen, die
+  auf tatsächlich VERSENDETE Inhalte wirken und in dieser Liste bis dahin gar nicht standen
+  (vierte unvollständige Aufzählung dieses Epics). `select_test_stage`,
+  `_send_trip_report_outcome`s Klemm-Vergleich, `_clamp_segments_to_today`,
+  `_build_stage_trend` und `_collect_future_stage_weather` folgen seither
+  `trip_local_today(trip, now_utc)`; `briefing_target_day_is_current` hat keinen
+  Systemuhr-Rückfall mehr (`today` ist Pflicht und kommt als Ortstag der Tour vom
+  Aufrufer); `_auto_pause_expired_presets` und der Einzelversand-Zweig von
+  `send_one_compare_preset` rechnen über `first_resolvable_tz(locations)` im Ortstag des
+  ersten auflösbaren Preset-Orts; `_target_date_from_report` leitet den Präfix-Tag aus der
+  am DTO bereits aufgelösten `request.trip_tz` ab. An sechs der neun Stellen ist „jetzt"
+  zugleich Pflichtparameter geworden (ADR-0051 Regel 3) — der Briefing-Aufbau steht damit
+  auf EINER Zeitabfrage, obwohl zwischen ihr und dem Ausblick ein Wetterabruf mit
+  Retry-Backoff liegt. An den Fundstellen `_send_trip_report_outcome`,
+  `_target_date_from_report` und `send_one_compare_preset` bleibt die Auflösung bewusst
+  funktionsintern (jeweils vor jedem Netzabruf).
+
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,
 sucht vorher nach `date.today()`/`datetime.now().date()` im ganzen Produktivcode, statt nur
 die Datei zu nennen, in der er gerade gearbeitet hat.
 
-### Noch nicht umgesetzt (Stand 2026-08-13)
+### Noch nicht umgesetzt (Stand 2026-08-14)
 
 Der zuvor hier gelistete Briefing-/Versand-Pfad (`_get_target_date`, `_get_active_trips`,
 `save_dated`) ist umgesetzt — s. „Umgesetzt" oben (#1724/#1725). Ebenso der zuvor hier
-gelistete Kommando-/Anzeige-Pfad — s. „Umgesetzt" oben (#1727 S5a/#1795).
+gelistete Kommando-/Anzeige-Pfad — s. „Umgesetzt" oben (#1727 S5a/#1795) und die neun
+Versandpfade aus #1727 S5b.
 
-**Vorschau, Werkzeuge:** `preview_service.py`, `api/routers/debug.py` und
-`tools/weather_validation.py` (S5b/S5c, eigene Scheibe). Zeilennummern bewusst weggelassen —
-sie waren in der Vorfassung dieser Liste binnen Tagen veraltet.
+**Vorschau, Werkzeuge:** `preview_service._resolve_target_date`, `api/routers/debug.py` und
+`tools/weather_validation.py` (S5c, eigene Scheibe). Zeilennummern bewusst weggelassen —
+sie waren in der Vorfassung dieser Liste binnen Tagen veraltet. `preview_service.py` reicht
+seit #1727 S5b zwar `now_utc` an die beiden Scheduler-Methoden durch (mechanisch erzwungen
+durch deren Pflichtparameter), seine EIGENE Tagesbestimmung folgt aber weiterhin dem
+Servertag — die Datei steht deshalb hier UND oben.
 
 **Bewusst NICHT betroffen** (feste Zone ist dort Absicht, kein Verstoß):
 `forecast_budget._today_utc` und `meteoalarm_budget._today_utc` (Kontingent-Tageswechsel in

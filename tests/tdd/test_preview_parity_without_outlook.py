@@ -112,9 +112,13 @@ def _sent_report(trip, segment_weather, stage_name, trip_tz):
 
     scheduler = TripReportSchedulerService()
     stage = trip.get_stage_for_date(_TARGET)
-    trend_result = scheduler._build_stage_trend(trip, _TARGET, tz=trip_tz)
+    jetzt_utc = datetime.now(timezone.utc)
+    trend_result = scheduler._build_stage_trend(
+        trip, _TARGET, now_utc=jetzt_utc, tz=trip_tz,
+    )
     thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
-        trip, _TARGET, tz=trip_tz, multi_day_trend=trend_result.rows,
+        trip, _TARGET, now_utc=jetzt_utc, tz=trip_tz,
+        multi_day_trend=trend_result.rows,
     )
     try:
         from services.weather_pattern import WeatherPatternService

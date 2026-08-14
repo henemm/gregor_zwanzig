@@ -101,7 +101,8 @@ def _entry_from_trend(row, *, night_weather=None, key="+1"):
     if night_weather is not None:
         kwargs["night_weather"] = night_weather
     fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-        None, _TODAY, _UTC, multi_day_trend=[row], **kwargs,
+        None, _TODAY, datetime.now(timezone.utc), _UTC,
+        multi_day_trend=[row], **kwargs,
     )
     return (fc or {}).get(key)
 

@@ -535,7 +535,17 @@ class TripReportSchedulerService:
             # Issue #1662 AC-4: Verfall ueber den Zieltag (geteilte, reine
             # Entscheidungsfunktion) — ein Morgen-Briefing von gestern ist
             # heute wertlos und wird nicht mehr zugestellt.
-            if is_dispatch_error and not briefing_target_day_is_current(entry.get("date")):
+            # Issue #1727 S5b (ADR-0044): der Vergleichstag ist der ORTSTAG
+            # DIESER Tour und kommt von hier — `now_utc` liegt als Parameter
+            # vor, `trip` steht im Zugriff. Vorher loeste die Funktion still
+            # `date.today()` auf: im Mismatch-Fenster verfiel der Vermerk einen
+            # Tag zu frueh (Briefing nie nachgeliefert) oder wurde einen Tag zu
+            # lange weitergeschleppt.
+            from services.trip_day import trip_local_today
+
+            if is_dispatch_error and not briefing_target_day_is_current(
+                entry.get("date"), today=trip_local_today(trip, now_utc),
+            ):
                 self._remove_pending_marker(trip_id)
                 continue
 
@@ -846,7 +856,9 @@ class TripReportSchedulerService:
             "max_elevation_m": max_elev,
         }
 
-    def select_test_stage(self, trip: "Trip", report_type: str) -> Optional["Stage"]:
+    def select_test_stage(
+        self, trip: "Trip", report_type: str, now_utc: datetime,
+    ) -> Optional["Stage"]:
         """Pick the stage to use for a TEST briefing when no stage matches today/tomorrow.
 
         Issue #768 — Test-Pfad-Fallback (NICHT der reguläre Scheduler):
@@ -858,17 +870,27 @@ class TripReportSchedulerService:
           **erste** (früheste) Etappe zurück.
         - Leere ``stages`` → ``None``.
 
+        Issue #1727 S5b (ADR-0044): „heute" ist der Ortstag DIESES Trips, nicht
+        der Tag der Prozess-Zeitzone (auf dem Server `Etc/UTC`). Sonst zaehlte
+        eine ortszeitlich bereits vergangene Etappe noch als „kommend" — der
+        Test-Versand nahm die falsche Etappe. `now_utc` ist Pflichtparameter
+        (ADR-0051 Regel 3): der Zeitpunkt kommt vom Aufrufer, damit der ganze
+        Briefing-Aufbau auf EINER Zeitabfrage steht.
+
         Args:
             trip: Trip object.
             report_type: "morning" or "evening" (nicht ausschlaggebend für die Wahl,
                 Teil des Kontrakts für Aufrufer-Symmetrie).
+            now_utc: Zeitpunkt des Laufs (Pflichtparameter, s. `_get_target_date`).
 
         Returns:
             Die gewählte Stage oder None bei leeren stages.
         """
+        from services.trip_day import trip_local_today
+
         if not trip.stages:
             return None
-        today = date.today()
+        today = trip_local_today(trip, now_utc)
         upcoming = sorted(
             (s for s in trip.stages if s.date >= today),
             key=lambda s: s.date,
@@ -1068,13 +1090,18 @@ class TripReportSchedulerService:
         logger.info(f"Generating {report_type} report for trip: {trip.name}")
 
         # 1. Convert trip to segments
+        # Issue #1727 S5b: EINE Zeitabfrage fuer den gesamten Briefing-Aufbau,
+        # hier oben gebunden statt weiter unten mehrfach implizit aufgeloest.
+        # Sie speist Zieltag, Etappen-Rueckfall, Klemme, Ausblick und
+        # Gewitter-Ausblick — zwischen ihnen liegt ein Wetterabruf mit
+        # Retry-Backoff und damit moeglicherweise eine Mitternacht
+        # (gemessener Praezedenzfall: dispatch_orchestrator.py:157-163).
+        now_utc = datetime.now(timezone.utc)
         # Issue #1724: Zieltag aus der Ortszeit DIESES Trips (ADR-0044).
         # Fix #1795: ein bereits aufgeloester `target_date` (s. Docstring)
         # ersetzt die interne Auflösung — kein zweiter Auflöser.
         if target_date is None:
-            target_date = self._get_target_date(
-                report_type, trip, datetime.now(timezone.utc),
-            )
+            target_date = self._get_target_date(report_type, trip, now_utc)
         segments = self._convert_trip_to_segments(trip, target_date)
 
         # Issue #768: Test-Pfad-Fallback — wenn am regulären Zieldatum keine
@@ -1082,7 +1109,7 @@ class TripReportSchedulerService:
         # (bzw. früheste) Etappe aus. Der reguläre Scheduler (Default False)
         # bleibt unberührt (AC-7).
         if not segments and allow_test_fallback:
-            fb = self.select_test_stage(trip, report_type)
+            fb = self.select_test_stage(trip, report_type, now_utc)
             if fb is not None:
                 target_date = fb.date
                 segments = self._convert_trip_to_segments(trip, target_date)
@@ -1099,9 +1126,19 @@ class TripReportSchedulerService:
         # nur die Segment-Zeiten, die in _fetch_weather() gehen, wandern auf
         # "heute", damit ein echter Forecast statt eines toten
         # Vergangenheits-Requests entsteht.
+        #
+        # Issue #1727 S5b (ADR-0044): verglichen wird gegen den ORTSTAG der
+        # Tour. `target_date` ist bereits ortsrichtig (`_get_target_date` ->
+        # `trip_local_today`); ein roher `date.today()` daneben stellte zwei
+        # verschiedene Tagesbegriffe in denselben `<`-Vergleich.
+        from services.trip_day import trip_local_today
+
+        heute_am_ort = trip_local_today(trip, now_utc)
         weather_segments = segments
-        if allow_test_fallback and target_date < date.today():
-            weather_segments = self._clamp_segments_to_today(segments, target_date)
+        if allow_test_fallback and target_date < heute_am_ort:
+            weather_segments = self._clamp_segments_to_today(
+                segments, target_date, today=heute_am_ort,
+            )
 
         # 1b. Compute local timezone from coordinates for display
         # (tz_for_coords now imported top-level — Bug #401)
@@ -1240,7 +1277,9 @@ class TripReportSchedulerService:
         outlook_state = None
         outlook_horizon_days = None
         if segment_weather and render_options.show_multi_day_trend:
-            trend_result = self._build_stage_trend(trip, target_date, tz=trip_tz)
+            trend_result = self._build_stage_trend(
+                trip, target_date, now_utc=now_utc, tz=trip_tz,
+            )
             multi_day_trend = trend_result.rows
             outlook_state = trend_result.state
             outlook_horizon_days = trend_result.horizon_days
@@ -1255,8 +1294,8 @@ class TripReportSchedulerService:
         #    damit der Satz ein Gewitter ausserhalb des Tagesfensters nennt --
         #    aus DERSELBEN Reihe, die daneben als Nacht-Tabelle steht.
         thunder_forecast = self._build_thunder_forecast_from_trend_or_fetch(
-            trip, target_date, tz=trip_tz, multi_day_trend=multi_day_trend,
-            night_weather=night_weather,
+            trip, target_date, now_utc=now_utc, tz=trip_tz,
+            multi_day_trend=multi_day_trend, night_weather=night_weather,
         )
 
         # 7b. Vortag-Vergleich (Issue #750): gestrigen Snapshot laden + Deltas
@@ -1694,18 +1733,24 @@ class TripReportSchedulerService:
         return convert_trip_to_segments(trip, target_date)
 
     def _clamp_segments_to_today(
-        self, segments: List[TripSegment], from_date: date,
+        self, segments: List[TripSegment], from_date: date, today: date,
     ) -> List[TripSegment]:
         """Shift segment start_time/end_time from `from_date` to today (Issue #1325).
 
         Pure helper — kein Netz-/IO-Zugriff. Erhält den Uhrzeit-Anteil, nur
-        das Kalenderdatum wandert um `date.today() - from_date` Tage nach
-        vorne. Ausschließlich für den Wetter-Abruf-Input im Test-Fallback-
-        Pfad genutzt, damit ein veralteter Test-Trip (alle Etappen in der
+        das Kalenderdatum wandert um `today - from_date` Tage nach vorne.
+        Ausschließlich für den Wetter-Abruf-Input im Test-Fallback-Pfad
+        genutzt, damit ein veralteter Test-Trip (alle Etappen in der
         Vergangenheit) trotzdem einen echten Forecast statt eines toten
         historischen Datums bekommt.
+
+        Issue #1727 S5b: `today` kommt PFLICHTWEISE vom Aufrufer, der ihn dort
+        bereits ortsrichtig hat (`trip_local_today`). Diese Funktion sieht kein
+        `Trip`-Objekt und könnte den Ortstag gar nicht selbst bestimmen — ein
+        eigenes `date.today()` verschob die Segmentzeiten im Mismatch-Fenster
+        um einen Tag zu wenig oder zu weit (ADR-0044).
         """
-        delta_days = (date.today() - from_date).days
+        delta_days = (today - from_date).days
         if delta_days <= 0:
             return segments
         shift = timedelta(days=delta_days)
@@ -1985,6 +2030,7 @@ class TripReportSchedulerService:
         self,
         trip,
         target_date: date,
+        now_utc: datetime,
         tz=None,
     ):
         """
@@ -1998,12 +2044,23 @@ class TripReportSchedulerService:
         Vorschau-Vergleich (ADR-0025/#1297) lesen genau dieses Feld weiter.
         ``result.state`` benennt zusaetzlich, WARUM der Ausblick entfaellt
         (vorher fuenf Ausstiege, alle mit demselben stummen ``None``).
+
+        Issue #1727 S5b (ADR-0044/ADR-0051 Regel 3): ``now_utc`` ist
+        PFLICHTPARAMETER ohne Default. Der Vorhersage-Horizont wird gegen den
+        ORTSTAG der Tour gemessen (``trip_local_today``), nicht gegen den
+        Servertag — ``stage.date`` ist ein Etappentag mit Ortstag-Semantik, ein
+        Servertag daneben mischt zwei Tagesbegriffe. Und der Zeitpunkt kommt
+        vom Aufrufer, weil zwischen dessen Zeitabfrage und diesem Aufruf ein
+        Wetterabruf mit Retry-Backoff liegt: eine eigene Aufloesung koennte
+        bereits den naechsten Ortstag tragen, waehrend ``target_date`` noch auf
+        dem alten steht.
         """
         from app.models import OutlookState, TrendResult
         from providers.openmeteo import (
             OPENMETEO_MAX_FORECAST_DAYS,
             is_within_forecast_horizon,
         )
+        from services.trip_day import trip_local_today
         from services.weather_metrics import aggregate_stage
 
         WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -2020,7 +2077,7 @@ class TripReportSchedulerService:
         # Information).
         failures: set = set()
         horizon_days: Optional[int] = None
-        today = date.today()
+        today = trip_local_today(trip, now_utc)
         for stage in future_stages[:3]:
             if not is_within_forecast_horizon(stage.date, today):
                 # Fix #1486: war logger.debug — im Betrieb unsichtbar.
@@ -2139,6 +2196,7 @@ class TripReportSchedulerService:
         self,
         trip,
         target_date: date,
+        now_utc: datetime,
         tz: Optional[ZoneInfo],
         multi_day_trend=None,
         night_weather=None,
@@ -2174,6 +2232,12 @@ class TripReportSchedulerService:
         die Tages-Aussage (``level``/``hour``) bleibt geklemmt. Beide
         Aufrufer (Versand und Vorschau) reichen sie durch; genau das traegt
         die Paritaet aus AC-9/AC-11.
+
+        Issue #1727 S5b: ``now_utc`` ist PFLICHTPARAMETER und wird
+        unveraendert an ``_collect_future_stage_weather`` durchgereicht —
+        diese Funktion trifft selbst KEINE Tagesentscheidung (kein eigener
+        Fundort), sie haelt nur den Zeitpunkt auf demselben Weg wie der
+        Rest des Briefing-Aufbaus.
         """
         from app.day_window import resolve_configured_window
 
@@ -2212,7 +2276,7 @@ class TripReportSchedulerService:
 
         if missing_dates:
             fetched = self._collect_future_stage_weather(
-                trip, target_date, wanted_dates=missing_dates,
+                trip, target_date, now_utc=now_utc, wanted_dates=missing_dates,
             )
             fetched_fc = (
                 self._build_thunder_forecast(
@@ -2375,6 +2439,7 @@ class TripReportSchedulerService:
         self,
         trip,
         target_date: date,
+        now_utc: datetime,
         wanted_dates=None,
     ) -> List[SegmentWeatherData]:
         """Issue #1275: fetch weather for the actual next future stages,
@@ -2402,18 +2467,27 @@ class TripReportSchedulerService:
         Fail-soft: a per-stage fetch error is logged and the stage skipped, so
         the corresponding TH+ key is simply absent (SMS shows ``TH+:-``) —
         the report is never blocked.
+
+        Issue #1727 S5b (ADR-0044/ADR-0051 Regel 3): ``now_utc`` ist
+        PFLICHTPARAMETER, der Horizont wird gegen den ORTSTAG der Tour
+        gemessen. Dieser Rueckfall liegt noch HINTER dem Trend-Bauweg, also
+        noch spaeter im Wetterabruf — eine eigene Zeitaufloesung koennte hier
+        bereits auf dem naechsten Ortstag stehen (s. ``_build_stage_trend``).
         """
         from providers.openmeteo import is_within_forecast_horizon
+        from services.trip_day import trip_local_today
 
         # #1498 (Fall 2, Beifang): ohne Trip-Objekt (Vorschau-Pfad, s.
         # Fail-soft-Zusage oben und #1482-Guard im Aufrufer) gibt es keine
         # Etappenliste — vorher stuerzte genau dieser Fall mit
         # AttributeError, sobald der Trend einen Offset nicht abdeckte.
+        # Issue #1727 S5b: Reihenfolge bewusst UNVERAENDERT — dieser Ausstieg
+        # steht VOR der Zonen-Aufloesung, die ohne Trip nicht ginge.
         if trip is None:
             return []
 
         collected: List[SegmentWeatherData] = []
-        today = date.today()
+        today = trip_local_today(trip, now_utc)
         wanted = wanted_dates if wanted_dates is not None else {
             target_date + timedelta(days=1),
             target_date + timedelta(days=2),

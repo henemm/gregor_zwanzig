@@ -95,8 +95,10 @@ class TestThunderForecastFailSoft:
         today = date.today()
         trip = _trip_with_unfetchable_next_stage(today)
 
+        from datetime import datetime, timezone
+
         collected = TripReportSchedulerService()._collect_future_stage_weather(
-            trip, today,
+            trip, today, now_utc=datetime.now(timezone.utc),
         )
 
         assert collected == [], (

@@ -34,7 +34,7 @@ from output.channels.premium_sms import PremiumSmsOutput
 from output.channels.sms import SMSOutput
 from output.channels.telegram import TelegramOutput
 from services.trip_command_processor import CommandResult
-from utils.timezone import local_fmt
+from utils.timezone import local_dt, local_fmt
 
 if TYPE_CHECKING:
     from app.models import (
@@ -1710,11 +1710,18 @@ class NotificationService:
 
     @staticmethod
     def _target_date_from_report(report, request: TripReportRequest):
-        """Versucht, das Zieldatum aus den Segmenten zu ermitteln."""
+        """Versucht, das Zieldatum aus den Segmenten zu ermitteln.
+
+        Issue #1727 S5b (ADR-0044): der Rueckfall (Report ohne verwertbare
+        Segmente) folgt der ZONE DER TOUR, die am DTO bereits als
+        `request.trip_tz` aufgeloest vorliegt — kein zweiter Aufloeser, kein
+        zusaetzlicher Parameter. Vorher stand hier `date.today()`: im
+        Mismatch-Fenster las der Nutzer im Mail-/SMS-/Telegram-Praefix ein
+        Datum, das einen Tag neben dem Tag lag, fuer den das Briefing gilt.
+        """
         if report.segments and report.segments[0].segment:
             return report.segments[0].segment.start_time.date()
-        from datetime import date as _date
-        return _date.today()
+        return local_dt(datetime.now(timezone.utc), request.trip_tz).date()
 
     def _send_email(self, report) -> None:
         """Versendet das Briefing per E-Mail (full oder compact)."""

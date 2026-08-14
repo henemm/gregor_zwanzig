@@ -319,7 +319,8 @@ def test_ac3_nacht_angabe_und_nacht_tabelle_nennen_dieselbe_stunde():
     row["date"] = date(2026, 7, 12)
 
     forecast = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-        None, target, _UTC, multi_day_trend=[row], night_weather=night,
+        None, target, datetime.now(timezone.utc), _UTC,
+        multi_day_trend=[row], night_weather=night,
     )
 
     report = TripReportFormatter().format_email(

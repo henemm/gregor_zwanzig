@@ -552,6 +552,48 @@ def test_ac5_preset_pausiert_nach_dem_ortstag_seines_ersten_orts(tmp_path):
     )
 
 
+def test_ac5_auto_pause_ueberspringt_den_unaufloesbaren_ersten_ort(tmp_path):
+    """AC-5, zweite Hälfte — „ERSTER AUFLÖSBARER Ort", nicht „Ort Nummer eins".
+
+    GIVEN dasselbe Preset wie oben, aber mit zwei Orten: der erste OHNE
+          auflösbare Zone (Ort ohne Koordinaten), der zweite in Neuseeland,
+    WHEN  der Versandlauf die Auto-Pause prüft,
+    THEN  wird es pausiert — die Zone kommt vom ZWEITEN Ort.
+
+    Eigener Fall, weil der Test darüber ihn nicht abdeckt: bei EINEM
+    auflösbaren Ort liefert ein stumpfer ``locations[0]``-Zugriff dasselbe
+    Ergebnis wie ``first_resolvable_tz`` — die Zusicherung „überspringen statt
+    zurückfallen" (#1378 AC-4, #1726 AC-15) wäre dort strukturell nicht
+    falsifizierbar. Ein Indexzugriff fällt hier still auf Weltzeit zurück, der
+    Ortstag bliebe der 20.08. und das Preset liefe einen Tag zu lange.
+    """
+    presets = [_preset("preset-zwei-orte", ["ohne-zone", "ort-nz"], D20)]
+    data_root = _preset_ablage(tmp_path, presets)
+    orte = [_ort("ohne-zone", None), _ort("ort-nz", WP_NZ)]
+
+    from utils.timezone import resolve_location_tz
+
+    assert resolve_location_tz(orte[0]) is None, (
+        "Testaufbau nicht diskriminierend: der erste Ort muss UNAUFLÖSBAR sein"
+    )
+
+    with freeze_time(MITTAGS_UTC):
+        _anker(MITTAGS_UTC, WELLINGTON_ZONE, D21)
+        _uhr_eingefroren(MITTAGS_UTC)
+        servertag = date.today()
+        _auto_pause_expired_presets(
+            presets, "default", data_root,
+            now_utc=MITTAGS_UTC, all_locations=orte,
+        )
+
+    assert _pausiert(tmp_path, "preset-zwei-orte"), (
+        f"AC-5: das Preset mit end_date {D20} wurde NICHT pausiert. Der erste "
+        f"konfigurierte Ort hat keine auflösbare Zone — wer ihn per Index nimmt, "
+        f"fällt still auf Weltzeit ({servertag}) zurück, statt zum zweiten Ort "
+        f"weiterzugehen (Ortstag {D21})."
+    )
+
+
 # ══════════════ AC-6: Datum im Präfix-Text aus der Zone des Trips ══════════════
 
 
