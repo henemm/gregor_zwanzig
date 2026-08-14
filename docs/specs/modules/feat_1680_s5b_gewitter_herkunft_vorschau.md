@@ -382,7 +382,12 @@ Kommt eine Mutation durch, ist das ein Finding, kein Nebenbefund.
    (`tests/unit/test_thunder_forecast_day_window.py` 6×,
    `tests/unit/test_thunder_night_addendum.py` 13×,
    `tests/tdd/test_thunder_forecast_low_level.py` 4×), dazu 2 Paritätstests
-   (`tests/tdd/test_thunder_night_addendum_parity.py:382,415`). Für den
+   (`tests/unit/test_thunder_night_addendum_parity.py:382,415` — v1.0 nannte
+   hier fälschlich `tests/tdd/`, in der RED-Phase am Dateisystem korrigiert).
+   **In der RED-Phase nachgemessen: keiner dieser Tests bricht** — keine ihrer
+   Fixtures führt Trägerdaten (`thunder_level_signals`, Rohwerte oder Fusion);
+   der Paritätstest fährt zwar den echten Provider-Pfad, sein Gewitter liegt
+   aber ausschließlich in der Nachtquelle, die Tagesstufe ist `NONE`. Für den
    **Primärpfad** ist das Risiko strukturell gering: `hourly_thunder_signals`
    wird im ganzen Repo nur an zwei Stellen berührt (Erzeuger in
    `outlook.py`, Verbraucher in `helpers.py`), keine bekannte Testfixture
