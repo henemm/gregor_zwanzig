@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from threading import Lock
 from typing import TYPE_CHECKING, Optional, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
@@ -189,6 +190,35 @@ class ProviderRequestError(ProviderError):
 # Provider registry - lazy loading to avoid circular imports
 _PROVIDER_FACTORIES: dict[str, type] = {}
 
+#: Sperre + SEPARATES Fertig-Flag fuer das einmalige, threadsichere Fuellen der
+#: Registry. Die frueher hier stehende Pruefung ``if not _PROVIDER_FACTORIES``
+#: genuegt NICHT: sie meldet "schon geladen", sobald der ERSTE Anbieter
+#: eingetragen ist -- waehrend ``_load_providers()`` die uebrigen noch
+#: importiert. Seriell war die Luecke nie erreichbar; seit die
+#: Vergleichs-Vorschau ihre Orte gleichzeitig verarbeitet (#1765 B1), schlug sie
+#: auf Staging bei JEDEM ersten Aufruf nach einem Dienst-Neustart zu: Ort 1
+#: laedt, Ort 2 sieht "nicht leer", ueberspringt das Laden und findet
+#: ``openmeteo`` nicht -> "Unknown provider: openmeteo. Available: geosphere".
+#: Muster 1:1 wie services/weather_cache.py:294-305 und utils/timezone.py:25-34.
+_registry_lock = Lock()
+_providers_loaded = False
+
+
+def _ensure_providers_loaded() -> None:
+    """Fuellt die Registry genau einmal prozessweit (doppelt gepruefte Sperre).
+
+    Die zweite Bedingung (``not _PROVIDER_FACTORIES``) haelt das bisherige
+    Verhalten fuer den Fall aufrecht, dass die Registry nachtraeglich geleert
+    wurde (Test-Isolation): eine geleerte Registry gilt NICHT auf ewig als
+    "geladen", sondern wird neu gefuellt.
+    """
+    if _providers_loaded and _PROVIDER_FACTORIES:
+        return
+    with _registry_lock:
+        if _providers_loaded and _PROVIDER_FACTORIES:
+            return
+        _load_providers()
+
 
 def register_provider(name: str, factory: type) -> None:
     """
@@ -225,9 +255,8 @@ def get_provider(name: str) -> WeatherProvider:
         from providers.fixture import FixtureProvider
         return FixtureProvider(fixture_dir)
 
-    # Lazy import providers to populate registry
-    if not _PROVIDER_FACTORIES:
-        _load_providers()
+    # Lazy import providers to populate registry (threadsicher, s. o.)
+    _ensure_providers_loaded()
 
     if name not in _PROVIDER_FACTORIES:
         available = ", ".join(_PROVIDER_FACTORIES.keys()) or "none"
@@ -239,7 +268,17 @@ def get_provider(name: str) -> WeatherProvider:
 
 
 def _load_providers() -> None:
-    """Load all available providers."""
+    """Load all available providers.
+
+    Setzt das Fertig-Flag am ENDE selbst -- also erst, wenn ALLE Anbieter
+    eingetragen sind. Bewusst hier und nicht beim Aufrufer: so wirkt es auch
+    fuer die Bestands-Tests, die diese Funktion direkt aufrufen, um danach
+    einen eigenen Anbieter in die Registry zu haengen (z.B.
+    tests/tdd/test_compare_alert_day_window.py:209). Wuerde das Flag dort
+    ungesetzt bleiben, wuerde der naechste ``get_provider()``-Aufruf erneut
+    laden und die eingehaengten Test-Anbieter ueberschreiben.
+    """
+    global _providers_loaded
     # Import providers to trigger registration
     try:
         from providers.geosphere import GeoSphereProvider
@@ -287,9 +326,13 @@ def _load_providers() -> None:
     # from providers.met import METProvider
     # register_provider("met", METProvider)
 
+    _providers_loaded = True
+
 
 def available_providers() -> list[str]:
     """Return list of available provider names."""
-    if not _PROVIDER_FACTORIES:
-        _load_providers()
+    # Dieselbe doppelt gepruefte Sperre wie in get_provider(): sonst koennte
+    # ein gleichzeitiger Aufruf waehrend des Erstladens eine UNVOLLSTAENDIGE
+    # Liste zurueckgeben (z.B. nur ["geosphere"]).
+    _ensure_providers_loaded()
     return list(_PROVIDER_FACTORIES.keys())
