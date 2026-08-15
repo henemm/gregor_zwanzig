@@ -148,6 +148,19 @@ python3 .claude/hooks/staging_gate.py \
   --findings-json /tmp/e2e_findings.json
 ```
 
+⚠️ **Die Findings-Datei muss eine JSON-LISTE sein, jedes Element ein Objekt** — die
+äußeren eckigen Klammern oben sind Pflicht, nicht Verzierung. Seit #1689 weist
+`--write-verdict` jede andere Form **hart** ab: Exit ≠ 0, kein Artefakt, und die
+Meldung nennt den vorgefundenen Typ (`gefunden: dict statt list`) bzw. Index und Typ
+des ersten unbrauchbaren Elements. Abhilfe: Datei korrigieren, Aufruf wiederholen.
+
+**Exit ≠ 0 heißt also zweierlei** — entweder das Verdict war BROKEN, oder die
+Findings-Datei hatte die falsche Form. Die Meldung lesen, bevor man auf BROKEN
+schließt. Vor #1689 lief der zweite Fall **still** durch: Wer ein JSON-Objekt statt
+einer Liste übergab, dessen Schlüssel landeten als nackte Zeichenketten im Nachweis
+(Exit 0, keine Meldung), und der Pflicht-Selftest stürzte Stunden später daran ab —
+zweimal am 2026-08-10 (#1653, #1677).
+
 ## VERBOTEN
 
 - Den lokalen Produktiv-API-Port (8090) beenden oder beschiessen.

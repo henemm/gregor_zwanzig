@@ -88,7 +88,14 @@ python3 .claude/hooks/staging_gate.py \
   --findings-json /tmp/staging_findings_${GZ_ACTIVE_WORKFLOW}.json
 ```
 
-Exit 0 means the artifact landed in `.claude/e2e_verified/<sha>.json` (commit-tagged, no parallel-session collisions). Exit 1 means BROKEN — no artifact written, deploy stays blocked until you re-run after a fix.
+Exit 0 means the artifact landed in `.claude/e2e_verified/<sha>.json` (commit-tagged, no parallel-session collisions).
+
+**Exit 1 has TWO possible causes — read the message before concluding anything (#1689):**
+
+1. **BROKEN verdict** — no artifact written, deploy stays blocked until you re-run after a fix.
+2. **Malformed findings file** — the JSON must be a **list** whose every element is an **object**. A single object (`{...}`) instead of a list is rejected hard; the message names the type it actually found (`gefunden: dict statt list`) or the index and type of the first unusable element. Nothing is written, and re-running with a corrected file is all it takes.
+
+Before #1689 the second case passed silently: iterating a JSON object yields its **keys**, so bare strings landed in the artifact with exit 0, and the mandatory post-deploy selftest crashed on them hours later. It happened twice on 2026-08-10 (#1653, #1677). Writing `echo '{...}'` instead of `echo '[{...}]'` is the whole mistake — check the leading bracket.
 
 ### Step 8: Emit a structured report
 
