@@ -10,8 +10,10 @@ tags: [gewitter, ausblick, vorschau, tagesfenster, metrik-zweig, issue-1841]
 
 <!-- Issue #1841. Grundlage: PFLICHTLEKTUERE
      docs/context/fix-1841-ausblick-metrik-tagesfenster.md (am Stand
-     `e6303c75` gemessen, nach Rebase auf `57e36375` nachgeprueft — keine
-     Zeilennummer hat sich verschoben). Vorbilder:
+     `e6303c75` gemessen, nach Rebase auf `57e36375` nachgeprueft). ACHTUNG:
+     #1594 (im Rebase enthalten) hat `trip_report_scheduler.py` verschoben —
+     der Aufruf steht jetzt bei `:2282`, nicht mehr bei `:2200`. Die
+     Renderer-Dateien sind unveraendert. Vorbilder:
      docs/specs/modules/fix_1671_kompaktmail_ausblick_tagesfenster.md
      (liefert den geteilten Helfer) und
      docs/specs/modules/fix_1653_ausblick_tag_nacht_trennung.md (dessen
@@ -94,7 +96,7 @@ Alle Angaben am Stand `57e36375` nachgeprueft, nicht aus dem Ticket uebernommen.
 
 2. **Der Diskriminator existiert bereits.** Genau **zwei** Produktionsaufrufer
    von `build_outlook_row()`, sauber getrennt (unabhaengig gegengeprueft):
-   - Trip: `trip_report_scheduler.py:2200` — setzt immer
+   - Trip: `trip_report_scheduler.py:2282` — setzt immer
      `trip_display_config=dc`, `report_type=…`, `day_window_start_hour`,
      `day_window_end_hour`; setzt **nie** `metrics=`.
    - Ortsvergleich: `compare_html.py:1168` — setzt immer `metrics=…`;
@@ -121,13 +123,29 @@ Alle Angaben am Stand `57e36375` nachgeprueft, nicht aus dem Ticket uebernommen.
    `row["hourly_thunder"]` ist dagegen immer befuellt, traegt die Stufe
    aber als Fliesskommazahl ueber `thunder_label_value()`.
 
-6. **SMS macht es bereits genau so.** `sms_trip.py:303-323` baut die
+6. **🔴 Aggregat und Stundenreihe stammen aus VERSCHIEDEN weit gefassten
+   Datensaetzen — das ist die Ursache und zugleich die Testbedingung.**
+   Im selben Aufruf `build_outlook_row(agg, _flat_points, …)`
+   (`trip_report_scheduler.py:2282`) gilt:
+   - `agg` (→ `summary`, Quelle der heutigen Zelle) ist auf die **Gehzeit**
+     geklemmt: `segment_weather.py:264-281` filtert die Reihe auf
+     `segment.start_time … segment.end_time` und aggregiert **nur** darueber.
+   - `_flat_points` (→ `hourly_thunder`, Quelle des Tagesfensters) ist die
+     **ungefilterte Ganztagsreihe** (`trip_report_scheduler.py:2258`:
+     `sw.timeseries.data`; `segment_weather.py:239` haelt ausdruecklich fest,
+     die ungefilterte Reihe bleibe „for table display" erhalten).
+
+   Faellt die Gehzeit mit dem Tagesfenster zusammen, sind beide Rechnungen
+   deckungsgleich und eine Fixture waere von einem No-Op nicht
+   unterscheidbar — der Test bliebe nach jeder Mutation gruen.
+
+7. **SMS macht es bereits genau so.** `sms_trip.py:303-323` baut die
    Gewitter-Stundenreihe ausschliesslich aus
    `build_day_window_points(start_hour=…, end_hour=…)` — rein Tagesfenster,
    ohne jede Nachtangabe. Die PO-Vorgabe „so wie auch fuer SMS" ist damit
    am Code belegt, nicht nur behauptet.
 
-7. **Zwei Bestandstests umreissen den Korridor.**
+8. **Zwei Bestandstests umreissen den Korridor.**
    - `test_outlook_day_night_thunder_split.py:665` verlangt, dass
      `row["cells"]` mit und ohne `day_window_*` identisch bleibt —
      aufgerufen mit `metrics=` und ohne `trip_display_config`. Der Test
@@ -139,11 +157,11 @@ Alle Angaben am Stand `57e36375` nachgeprueft, nicht aus dem Ticket uebernommen.
      richtig oder falsch ist — **kein Nachweis fuer diese Scheibe** und in
      der Adversary-Runde nicht als solcher zu zitieren.
 
-8. **Der Testhelfer prueft heute den falschen Pfad.**
+9. **Der Testhelfer prueft heute den falschen Pfad.**
    `tests/helpers/trip_outlook_selection.py:163` baut die Ausblick-Zeilen
    mit `build_outlook_row(..., metrics=metrics)` — der **Compare**-Konvention
    — und behauptet im Docstring (`:155-157`), das sei der Parameter, den der
-   Zeitplaner fuellt. Gemessen fuellt `trip_report_scheduler.py:2200`
+   Zeitplaner fuellt. Gemessen fuellt `trip_report_scheduler.py:2282`
    stattdessen `trip_display_config`/`report_type`. Die gesamte
    #1720-S1-Renderer-Suite faehrt den Metrik-Zweig damit ueber den
    Compare-Weg. `test_trip_outlook_metric_selection.py:17-20` benennt diese
@@ -206,7 +224,7 @@ wie heute. Alle anderen Spalten (`kind != "ordinal"`) bleiben unberuehrt.
 🔴 Der Diskriminator ist `trip_display_config`, **nicht** die Praesenz des
 Tagesfensters und **nicht** `report_type`. `report_type` ist beim Trip immer
 gesetzt und sagt nichts ueber den Pfad; die Fensterpraesenz ist genau die
-Falle aus „Am Code gemessen" Punkt 7.
+Falle aus „Am Code gemessen" Punkt 8.
 
 ### 3. Herkunft wandert mit der Stufe
 
@@ -224,7 +242,7 @@ gezeigten Stufe gehoert (AC-10-Regel aus #1680 S5a).
 
 `tests/helpers/trip_outlook_selection.py::outlook_rows()` uebergibt kuenftig
 `trip_display_config` + `report_type` + Tagesfenster wie
-`trip_report_scheduler.py:2200`, statt `metrics=`. Der veraltete Docstring
+`trip_report_scheduler.py:2282`, statt `metrics=`. Der veraltete Docstring
 (`:155-157`) wird mitkorrigiert.
 
 🔴 **Reihenfolge:** Dieser Schritt kommt **zuerst**. Ohne ihn faehrt die
@@ -297,7 +315,7 @@ Ortsvergleich bleiben unveraendert.
 
 - **AC-8:** Given den Testhelfer `tests/helpers/trip_outlook_selection.py` /
   When er Ausblick-Zeilen fuer den Trip baut / Then benutzt er dieselbe
-  Aufrufkonvention wie `trip_report_scheduler.py:2200`
+  Aufrufkonvention wie `trip_report_scheduler.py:2282`
   (`trip_display_config`/`report_type`/Tagesfenster), nicht `metrics=`.
   Nachweis: eine Verfaelschung des Trip-Zweigs macht mindestens einen Test
   der #1720-S1-Suite rot.
@@ -344,6 +362,28 @@ Ortsvergleich bleiben unveraendert.
 
 Kern-Schicht, deterministisch. Keine Mocks, kein Netz. Dateiname nach
 Verhalten: `tests/tdd/test_vorschau_metrik_tagesfenster.py`.
+
+### 🔴 Fixtur-Geometrie — AC-1 und AC-2 brauchen VERSCHIEDENE Zuschnitte
+
+Aus „Am Code gemessen" Punkt 6 folgt eine harte Bedingung an die Testdaten.
+Die beiden Fehlerrichtungen entstehen an **entgegengesetzten** Raendern:
+
+| AC | Gewitterstunde liegt … | Gehzeit vs. Tagesfenster | Wirkung heute |
+|---|---|---|---|
+| AC-1 | im **Tagesfenster**, aber **ausserhalb der Gehzeit** | Gehzeit **enger** (z.B. Gehzeit 08–14, Fenster 04–19, Gewitter 17:00) | Aggregat sagt `NONE` → Gewitter verschwindet |
+| AC-2 | in der **Gehzeit**, aber **ausserhalb des Tagesfensters** | Gehzeit **reicht hinaus** (z.B. Gehzeit 02–21, Fenster 04–19, Gewitter 02:00) | Aggregat traegt eine Stufe → Tagesgewitter erfunden |
+
+🔴 **Eine einzige Fixture kann nicht beide ACs tragen.** Wer beide mit
+derselben Geometrie baut, bekommt fuer eine der beiden Richtungen ein
+Datenbild, in dem Aggregat und Tagesfenster **denselben** Wert liefern — der
+Test ist dann von einem No-Op nicht unterscheidbar und bleibt nach jeder
+Mutation gruen. Genau diese Falle hat die parallel gestoppte Session
+gemeldet; hier ist sie um die zweite, entgegengesetzte Geometrie ergaenzt.
+
+**Vorbedingungs-Test (PFLICHT, vor den AC-Tests):** je Fixture zeigen, dass
+`summary.thunder_level_max` und die Tagesfenster-Stufe **verschieden** sind.
+Sind sie gleich, prueft der darauf aufbauende AC-Test nichts — die Fixture
+ist dann kaputt, nicht der Code.
 
 ## Mutations-Gegenprobe (PFLICHT)
 
