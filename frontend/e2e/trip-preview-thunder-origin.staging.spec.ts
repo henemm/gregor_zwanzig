@@ -12,9 +12,22 @@
 // LAEUFT GEGEN STAGING. Der Spec ist config-frei: baseURL, nginx-Schranke und
 // storageState setzt er selbst per `test.use`, damit kein zusaetzliches
 // Config-/Setup-Paar noetig ist. Aufruf:
-//     cd frontend/e2e && npx playwright test trip-preview-thunder-origin.spec.ts --reporter=line
-// Aufnahme in `.github/ci_e2e_specs.txt` erst nach der Vermessung (3x gruen,
-// ADR-0054) — bewusst NICHT Teil dieser Scheibe.
+//     cd frontend/e2e && npx playwright test trip-preview-thunder-origin.staging.spec.ts --reporter=line
+//
+// 🔴 GEHOERT NICHT IN `.github/ci_e2e_specs.txt` — und das ist kein Versaeumnis,
+// sondern gemessen: Die Vermessung lief am 2026-08-15 mit 3 von 3 gruen
+// (1,7 min / 17,6 s / 17,5 s). Aufgenommen wuerde er trotzdem scheitern, denn
+// die `e2e`-Lane faehrt einen ISOLIERTEN OFFLINE-STACK (`ci-stack.sh start`),
+// waehrend dieser Spec Staging braucht: GZ_VALIDATOR_* (nginx), GZ_AUTH_* aus
+// der Staging-.env und eine storageState-Datei. Nichts davon existiert in der CI.
+//
+// Das Suffix `.staging.` ist deshalb ein WAECHTER, keine Kosmetik: Der
+// Vermessungslauf schliesst genau dieses Muster aus (ci.yml:277,
+// `--exclude='*.staging.spec.ts'`). Der zweite Filter (ci.yml:280, sucht
+// `__dirname` oder absolute Pfade) greift hier NICHT — dieses Modul loest sein
+// Verzeichnis ueber `fileURLToPath(import.meta.url)` auf. Ohne das Suffix waere
+// der Spec beim naechsten Vermessungslauf still aufgenommen worden und haette
+// die Ampel fuer alle rot gefaerbt.
 //
 // Drei Zugangsschichten, nicht verwechseln (CLAUDE.md):
 //   nginx-Schranke  -> GZ_VALIDATOR_USER/PASS  (aus .claude/validator.env)
