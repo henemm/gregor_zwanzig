@@ -51,5 +51,26 @@ Zusicherung nur drei von 24 Stunden.
 Kein Wächter vorhanden: eine Verhaltensänderung im Alarmpfad kann bestehende
 Alarm-Tests kippen, und die CI-Ampel misst das nur zu ihrer Laufzeit — #1594
 kippte drei Tests, ohne dass es auffiel, weil die eigene Ampel abends lief.
+
+**Nachmessen lässt es sich aber** (seit #1709): `tests/helpers/wanduhr_matrix.py`
+fährt eine Testdatei zu mehreren gestellten Uhrzeiten und meldet nur die
+**Differenz** — eine nicht-leere Menge heißt „hängt an der Wanduhr".
+
+```
+uv run python3 -c "
+import sys; sys.path.insert(0,'tests')
+from datetime import datetime, timezone
+from pathlib import Path
+from helpers.wanduhr_matrix import matrix_differenz
+zeiten=[datetime(2026,8,15,h,0,tzinfo=timezone.utc) for h in (5,12,18,23)]
+print(matrix_differenz(Path('<testdatei>'), zeiten))"
+```
+
+Drei Fallen dabei, alle teuer gelernt: je Datenpunkt ein **eigener Prozess**
+(mehrere Läufe im selben Prozess sind nicht reproduzierbar); nur **Differenzen**
+auswerten (sitzungsweites `freezegun` zerstört pydantic-v1-Importe und erzeugt
+Falsch-Positive); Uhrzeiten in der **Ortszone der Fixture** wählen, nicht in UTC.
+
 Quelle: #1851 / `docs/specs/modules/fix_1851_alarm_tests_vorlaufsperre.md`;
+Werkzeug aus #1709 / `docs/specs/modules/fix_1709_wallclock_ratsche_indirekt.md`;
 Nebenbefund gebucht in #1199.
