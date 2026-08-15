@@ -205,6 +205,22 @@ Skala in `thunder_scale.py` — **keine lokale Kopie der Zuordnung**
 (#1474: eine lokale `{NONE:0,MED:1,HIGH:2}`-Kopie ist seit der
 LOW-Erweiterung stillschweigend falsch).
 
+**Nachtrag 2026-08-15 (RED/GREEN-Phase, am Code gemessen): ZWEI Schluessel,
+nicht einer.** Die Herkunft braucht einen eigenen additiven Schluessel
+`thunder_day_carriers` — die **Rohliste** der Traeger, nicht den bereits
+verketteten String `thunder_day_origin`. Zwei gemessene Gruende:
+
+1. `_fmt_thunder(v, hail, signals)` **iteriert** ueber `signals` und mappt
+   selbst ueber `thunder_signal_label()`. Ein String liefe zeichenweise
+   durch — ein stiller Formatfehler, kein Absturz.
+2. Die Traeger in `outlook.py` erneut zu filtern waere die **zweite**
+   Fensteraufloesung, die dieser Abschnitt und #1680 S5a AC-9 gerade
+   verbieten.
+
+Beide Schluessel speisen sich aus den Mengen, die `format_trend_tokens()
+`**ohnehin schon** berechnet (`_day_samples` / `_day_carriers`,
+`helpers.py:1010-1035`). Damit bleibt es bei **einer** Aufloesung.
+
 Additiv: bestehende Aufrufer lesen nur ihre bekannten Schluessel, das
 Verhalten aller heutigen Verbraucher bleibt zeichengleich.
 
@@ -216,7 +232,7 @@ kommt aus `resolve_thunder_day_branch(format_trend_tokens(row), row)`:
 
 | Zweig | Wert der Zelle | Herkunft (`signals`) |
 |---|---|---|
-| `"day"` | `tok["thunder_day_level"]` | Traeger aus dem Tagesfenster |
+| `"day"` | `tok["thunder_day_level"]` | `tok["thunder_day_carriers"]` (Rohliste) |
 | `"none"` | `ThunderLevel.NONE` (explizit „kein Gewitter") | keine |
 | `"plain"` | `summary.thunder_level_max` (unveraendert) | `summary.thunder_level_max_signals` (unveraendert) |
 
