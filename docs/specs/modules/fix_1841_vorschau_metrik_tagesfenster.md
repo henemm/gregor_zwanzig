@@ -370,7 +370,13 @@ in beiden Richtungen gruen).
   Trip **ohne** Auswahl und bewacht damit den Altpfad. Sie sollte sich durch
   diese Scheibe **nicht** aendern; der im #1841-Kommentar erwartete zweite
   datierte Eintrag entfaellt voraussichtlich. Vor einem Nachziehen der
-  Referenz ist das zu **messen**, nicht anzunehmen.
+  Referenz ist das zu **messen**, nicht anzunehmen. Aendert sie sich wider
+  Erwarten doch, gilt: einen **zweiten** datierten Eintrag anhaengen, den
+  bestehenden #1801-Eintrag **nicht** ersetzen — die Historie muss lesbar
+  bleiben (#1841-Kommentar vom 2026-08-14). Zur Einordnung: diese
+  Aufzeichnungen bewachen die **Konstanz** der Ausgabe, nicht ihre
+  **Korrektheit** — eine unveraenderte Referenz belegt nicht, dass der Inhalt
+  vorher richtig war.
 - Der Fix wirkt nur auf den Metrik-Zweig. Zeigt ein Trip beide Zustaende
   nacheinander (Auswahl gesetzt, dann geleert), wechselt er zwischen zwei
   Darstellungen mit und ohne Nachtangabe. Das ist die Folge des
