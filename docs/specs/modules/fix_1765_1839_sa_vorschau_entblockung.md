@@ -12,7 +12,7 @@ tags: [bug, performance, preview, python-core, issue-1765, issue-1839]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe („go") am 2026-08-15 auf AC-1 bis AC-4
 
 ## Purpose
 
