@@ -578,10 +578,41 @@ def build_outlook_row(
         # das Tagesfenster -- eine Herkunft, die nicht zur gezeigten Stufe
         # gehoert, waere der AC-12-Fehler aus Scheibe 1.
         _signals = getattr(summary, "thunder_level_max_signals", None)
+        # Issue #1841: im TRIP-Fall (trip_display_config gesetzt) liest die
+        # Gewitterspalte (kind == "ordinal") das konfigurierte TAGESFENSTER
+        # statt des gehzeit-geklemmten Aggregats -- derselbe geteilte Helfer
+        # wie Kompaktmail/Klartext-Altpfad/Telegram (#1671). Diskriminator ist
+        # `trip_display_config`, NICHT `report_type` (beim Trip immer gesetzt,
+        # sagt nichts ueber den Pfad) und NICHT die Fensterpraesenz (Falle:
+        # test_outlook_day_night_thunder_split.py:665, gilt fuer Compare mit
+        # gesetztem Fenster). Der Ortsvergleich (trip_display_config is None)
+        # bleibt unveraendert (AC-5).
+        _thunder_value = summary.thunder_level_max
+        _thunder_signals = _signals
+        if trip_display_config is not None:
+            from app.models import ThunderLevel as _ThunderLevel
+
+            _tok = format_trend_tokens(row)
+            _zweig = resolve_thunder_day_branch(_tok, row)
+            if _zweig == "day":
+                # Stufe UND Herkunft aus DEMSELBEN Fenster (AC-6) -- beide
+                # Schluessel speisen sich aus derselben, in
+                # format_trend_tokens() EINMAL berechneten Menge, keine
+                # zweite Fensterauflösung hier.
+                _thunder_value = _tok.get("thunder_day_level")
+                _thunder_signals = _tok.get("thunder_day_carriers")
+            elif _zweig == "none":
+                _thunder_value = _ThunderLevel.NONE
+                _thunder_signals = None
+            # "plain": _thunder_value/_thunder_signals bleiben das Aggregat
+            # (unveraendert, wie ohne Stundenreihe/AC-4).
         row["cells"] = [
             format_outlook_value(
-                getattr(summary, col["field"], None),
-                {**col, "hail": _hail, "signals": _signals},
+                (_thunder_value if col.get("kind") == "ordinal"
+                 else getattr(summary, col["field"], None)),
+                {**col, "hail": _hail,
+                 "signals": (_thunder_signals if col.get("kind") == "ordinal"
+                             else _signals)},
             )
             for col in outlook_columns(metrics)
         ]

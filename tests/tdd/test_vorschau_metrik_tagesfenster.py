@@ -84,6 +84,17 @@ AC1_POINTS_OHNE_SIGNALE = [_point(14, ThunderLevel.HIGH)]
 AC2_POINTS = [_point(0, ThunderLevel.HIGH, signals=["cape"])]
 AC2_SUMMARY = _summary(ThunderLevel.HIGH, signals=["cape"])
 
+# M6-Gegenprobe (Adversary-Finding F001, HIGH): AC-1/AC-2 tragen je NUR EINEN
+# Stundenpunkt -- Tagesfenster- und 24h-Menge sind dort IDENTISCH, eine
+# Verwechslung der beiden Fenster kann darin nicht auffallen. Diese Fixture
+# hat ZWEI Punkte mit unterschiedlichen Stufen auf beiden Seiten der
+# Fenstergrenze: MED um 14 Uhr (im Tagesfenster), HIGH um 0 Uhr (ausserhalb)
+# -- Tagesfenster-Maximum (MED) und 24h-Maximum (HIGH) muessen sich
+# unterscheiden, sonst pruefte der Test wieder nichts (dieselbe Falle wie
+# bei AC-1/AC-2, nur auf der zweiten, unabhaengigen Achse).
+M6_POINTS = [_point(14, ThunderLevel.MED), _point(0, ThunderLevel.HIGH)]
+M6_SUMMARY = _summary(ThunderLevel.NONE)
+
 
 # ═══════════════════ Fixtur-Vorbedingungen (KEIN AC) ═════════════════════
 # Zeigen, dass Aggregat und Tagesfenster-Stufe je Fixture verschiedene Werte
@@ -363,4 +374,67 @@ def test_ac9_format_trend_tokens_liefert_zusaetzlich_thunder_day_level():
         "Rueckgabeschluessel 'thunder_day_level' -- AC-9 verlangt eine "
         "zusaetzliche, additive Tagesfenster-STUFE neben dem bestehenden "
         "String-Token 'thunder_day_token'."
+    )
+
+
+# ═══════════ Mutations-Gegenprobe M6 (Adversary-Finding F001, HIGH) ══════════
+# AC-1/AC-2 tragen je nur EINEN Stundenpunkt -- Tagesfenster- und 24h-Menge
+# sind dort identisch, eine Verwechslung der beiden Fenster (M6: "aus dem
+# 24h-Fenster statt dem Tagesfenster") kann darin nicht auffallen. Diese
+# zweite, unabhaengige Fixtur-Achse braucht mindestens zwei Punkte auf
+# beiden Seiten der Fenstergrenze mit UNTERSCHIEDLICHEN Stufen.
+
+def test_vorbedingung_m6_tagesfenster_max_und_24h_max_liefern_verschiedene_werte():
+    """Fixtur-Vorbedingung (KEIN AC): zeigt, dass fuer die M6-Fixture das
+    Tagesfenster-Maximum (MED, aus dem Punkt um 14 Uhr) und das 24h-Maximum
+    (HIGH, aus dem Punkt um 0 Uhr ausserhalb) verschieden sind -- sonst
+    pruefte der M6-Test nichts. Muss schon HEUTE gruen sein."""
+    from app.thunder_scale import thunder_ordinal
+
+    row = build_outlook_row(
+        M6_SUMMARY, M6_POINTS, "Mo", _UTC,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+    )
+    tok = format_trend_tokens(row)
+    _24h_max = max(
+        (p.thunder_level for p in M6_POINTS if p.thunder_level is not None),
+        key=thunder_ordinal,
+    )
+    assert _24h_max == ThunderLevel.HIGH, (
+        "Testaufbau: das 24h-Maximum der M6-Fixture ist nicht HIGH."
+    )
+    assert tok["thunder_day_token"] == "mittel@14", (
+        "Vorbedingung verletzt: das Tagesfenster-Maximum der M6-Fixture "
+        f"({tok['thunder_day_token']!r}) muss MED ('mittel@14') sein, nicht "
+        "das 24h-Maximum HIGH -- sonst unterscheiden Tagesfenster und 24h-"
+        "Fenster nichts, und der M6-Test koennte die Verwechslung nicht "
+        "fangen."
+    )
+
+
+def test_m6_tagesfenster_stufe_kommt_aus_dem_tagesfenster_nicht_aus_24h():
+    """Mutations-Gegenprobe M6 (Spec-Tabelle): Given eine Stundenreihe mit
+    zwei Punkten -- MED um 14 Uhr (im Tagesfenster 4-19), HIGH um 0 Uhr
+    (ausserhalb) / When die Trip-Mail mit gesetzter Gewitterspalte erzeugt
+    wird / Then zeigt die Zelle die Stufe DES TAGESFENSTERS (MED) -- nicht
+    das 24-Stunden-Maximum (HIGH).
+
+    Eine Ein-Punkt-Fixtur (wie AC-1/AC-2) kann diese Verwechslung nicht
+    fangen, weil Tagesfenster- und 24h-Menge dort identisch sind
+    (Adversary-Finding F001, HIGH)."""
+    dc = display_config(outlook_metrics=[GEWITTER])
+    row = build_outlook_row(
+        M6_SUMMARY, M6_POINTS, "Mo", _UTC,
+        trip_display_config=dc, report_type="evening",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+    )
+    html, _ = render_trip_mail(dc, [row])
+    erwartet = _fmt_thunder(ThunderLevel.MED)
+
+    zeilen = html_outlook_body_rows(html)
+    zelle = zeilen[0][1] if zeilen else None
+    assert zelle == erwartet, (
+        f"HTML-Gewitterzelle {zelle!r} statt {erwartet!r} -- zeigt "
+        "vermutlich das 24h-Maximum (HIGH) statt der Tagesfenster-Stufe "
+        "(MED) (Mutations-Gegenprobe M6)."
     )

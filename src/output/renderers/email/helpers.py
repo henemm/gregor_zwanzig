@@ -1026,7 +1026,9 @@ def format_trend_tokens(stage: dict) -> dict:
     # zweite, unabhaengige Fensterauflösung waere genau die Fehlerklasse aus
     # #1653/#1498 (Stufe aus dem einen, Herkunft aus dem anderen Fenster,
     # Spec AC-9). Der Nachtteil bekommt bewusst KEINE Herkunft (AC-6).
-    from output.metric_format import thunder_signal_label, union_of_max_carriers
+    from output.metric_format import (
+        thunder_label_value, thunder_signal_label, union_of_max_carriers,
+    )
 
     _signal_rows = stage.get("hourly_thunder_signals") or ()
     _day_carriers = union_of_max_carriers(
@@ -1037,6 +1039,25 @@ def format_trend_tokens(stage: dict) -> dict:
         ", ".join(thunder_signal_label(s) for s in _day_carriers)
         if _day_carriers else None
     )
+
+    # Issue #1841: die hoechste Gewitterstufe IM TAGESFENSTER als
+    # ThunderLevel-OBJEKT (nicht nur als String-Token) -- der Metrik-Zweig
+    # des Ausblicks (outlook.py) braucht ein Objekt fuer _fmt_thunder(),
+    # keinen Text. Aus `_day_samples` (immer befuellt), NICHT aus
+    # `hourly_thunder_signals` (None ohne Traegerlisten, s.o.).
+    # Rueckabbildung ueber die GETEILTE Render-Skala (thunder_label_value,
+    # thunder_scale.py) -- keine lokale Kopie der Zuordnung (#1474).
+    # `thunder_day_carriers` (Rohliste, additiv analog `thunder_day_origin`)
+    # reicht dieselbe, bereits gefensterte `_day_carriers`-Menge unformatiert
+    # durch -- eine ZWEITE, unabhaengige Fensterauflösung im Metrik-Zweig
+    # waere genau die Fehlerklasse, gegen die #1653/#1680 S5a AC-9 schreiben.
+    _level_by_value = {thunder_label_value(l): l for l in ThunderLevel}
+    _day_values = [s.value for s in _day_samples]
+    thunder_day_level = (
+        _level_by_value.get(int(round(max(_day_values))))
+        if _day_values else None
+    )
+    thunder_day_carriers = _day_carriers
 
     return {
         "temp_str": temp_str,
@@ -1060,6 +1081,9 @@ def format_trend_tokens(stage: dict) -> dict:
         "thunder_night_token": thunder_night_token,
         # Issue #1680 S5a: fertiger Herkunfts-Zusatz des Tagesteils (oder None)
         "thunder_day_origin": thunder_day_origin,
+        # Issue #1841: Tagesfenster-STUFE + Rohliste der Traeger (additiv)
+        "thunder_day_level": thunder_day_level,
+        "thunder_day_carriers": thunder_day_carriers,
     }
 
 
