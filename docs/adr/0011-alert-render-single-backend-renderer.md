@@ -75,6 +75,33 @@ Der Status dieses ADR bleibt **Akzeptiert** und unverändert — E3b nimmt keine
 Entscheidung zurück, sondern erfüllt Ziel 3 vollständiger. Spec:
 `docs/specs/modules/fix_1435_e3b_sms_kuerzel.md`.
 
+## Nachtrag 2026-08-15 (#1856 E7) — die Sonderfälle sind jetzt bewacht
+
+Die im E3b-Nachtrag oben **bewusst nicht widerrufenen** Sonderfälle — `TH:` und das
+Quartett `WC`/`FN`/`FK`/`FD` — standen bis hierher nur als Prosa in diesem ADR und als
+Kommentar im Code. Mit E7 sind sie **maschinenlesbar**: Der Wächter
+`tests/helpers/metrik_listen_scan.py` führt `SMS_MULTI_SYMBOLS_BY_METRIC`,
+`SMS_SYMBOL_BY_METRIC` und `SMS_SYMBOL_GRAMMAR` in seiner Registrierung und prüft, dass
+jede dort geführte Kennung im Register existiert.
+
+Zwei Zusicherungen kommen hinzu, beide in `tests/unit/test_sms_token_symbol_register_ratchet.py`
+(fünfte Prüfstelle neben den vier aus E3b, die unverändert bleiben):
+
+- **Kein Kürzel bezeichnet zwei verschiedene Größen** — getrennt geprüft für den Trip-SMS-Weg
+  (über `_kurzform_kuerzel()`) und den Register-Weg (`sms_code`), nie über die Wege hinweg.
+- Gruppiert wird nach **Metrik-Kennung**, nicht nach Kürzel-Wert: `TH` erscheint in beiden
+  Trip-Tabellen, beide Male für `thunder`. Leere Kürzel werden übersprungen — `confidence`
+  führt bewusst keines (28 Register-Einträge, 27 Kürzel).
+
+**Ausdrücklich nicht** geprüft wird die Gleichheit zwischen Trip-SMS-Weg und Register-Weg. Die
+beiden Wege sind bewusst verschieden (Trip-SMS sendet Tagesauswertungen `FK`/`FD`/`WC`,
+Vergleichs- und Alarm-SMS senden `TF` aus `get_sms_code()`, siehe `comparison.py:647` und
+`alert/render.py:93`). Eine Gleichheitsprüfung hätte drei entschiedene Zustände als Fehler
+gemeldet und wäre nach dem ersten Lauf taub gewesen — verworfen, Begründung in der Spec unter
+„Verworfene Alternativen".
+
+Status unverändert **Akzeptiert**. Spec: `docs/specs/modules/fix_1856_e7_metrik_listen_waechter.md`.
+
 ## Nachtrag 2026-08-06 (#923)
 
 Der im Kontext-Abschnitt genannte dritte Fall der dreifachen SMS-Kürzel-Kopie
