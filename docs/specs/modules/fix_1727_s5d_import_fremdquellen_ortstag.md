@@ -13,7 +13,7 @@ workflow: fix-1727-s5d-import-fremdquellen
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe („go") am 2026-08-15
 
 ## Purpose
 
