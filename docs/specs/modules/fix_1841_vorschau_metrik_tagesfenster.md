@@ -341,6 +341,16 @@ Ortsvergleich bleiben unveraendert.
   keine bewusste Ablehnung), und #1680 S5a AC-11b begruendet nur die
   **Kohaerenz** von Stufe und Herkunft, nicht die Wahl des Fensters. Nicht
   hier entscheiden.
+- **Das Auswahl-Vokabular (`{metric_id, aggregation}` vs. Katalog-Kennungen).**
+  PO-Entscheid 2026-08-14, gebucht als **#1848**: die Paar-Darstellung und die
+  Kaskaden-Nachbildung in `resolve_trip_outlook_metrics()`
+  (`compare_outlook_metric_ids.py:78-102`) sollen perspektivisch entfallen.
+  Diese Scheibe **vertieft sie nicht**: sie fasst weder
+  `resolve_trip_outlook_metrics()` noch `outlook_columns()` an und erkennt die
+  Gewitterspalte an `col["kind"] == "ordinal"` — einer **Katalog**-Eigenschaft
+  (`compare_outlook_metric_ids.py:164-166`), nicht am Paar-Vokabular. Der Fix
+  bleibt damit tragfaehig, egal welches Vokabular #1848 durchsetzt.
+
 - **`render_outlook_table()` auf den geteilten Helfer umstellen.** #1671 hat
   das bewusst ausgelassen (strukturell andere Zweigwahl, dortige Known
   Limitation). Diese Scheibe aendert nur den Metrik-Zweig, nicht den
