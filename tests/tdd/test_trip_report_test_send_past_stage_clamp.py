@@ -259,6 +259,17 @@ class TestAC3GenuineNoWeatherHonestOutcome:
         user_id, trip_id, _ = past_only_trip
         _patch_provider(monkeypatch, fail_for_today=True)
         _patch_email_transport(monkeypatch)
+        # Haertung, kein Bugfix (Issue #1557): kein nachgewiesener Defekt.
+        # Ursache: `user_id` enthaelt "tdd" -> is_test_user_id() (config.py:
+        # 56-68) True -> with_user_profile() (:370) nimmt for_testing() als
+        # Basis -> SMTP kommt aus GZ_TEST_SMTP_*, NICHT den hier gesetzten
+        # GZ_SMTP_*-Werten -- Route ist ueber diese Werte nicht falsifizierbar
+        # (RED-Artefakt docs/artifacts/fix-1557-no-weather-outcome/
+        # ac4-hermetik-nicht-falsifizierbar.txt). Dummy-Werte bleiben trotzdem
+        # gesetzt: Determinismus statt Verlass auf zufaellige .env im Ordner.
+        monkeypatch.setenv("GZ_SMTP_HOST", "test.invalid")
+        monkeypatch.setenv("GZ_SMTP_USER", "u")
+        monkeypatch.setenv("GZ_SMTP_PASS", "p")
 
         client = TestClient(app)
         resp = client.post(

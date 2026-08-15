@@ -412,29 +412,13 @@ class TripReportFormatter:
             for metric_id, syms in SMS_MULTI_SYMBOLS_BY_METRIC.items()
             for sym in syms
         ]
-        # Issue #1660 Scheibe A Mechanismus 2: die seit #1357 bestehende
-        # Auswertungswahl (MetricConfig.aggregations) gated zusaetzlich K/D
-        # bzw. FK/FD -- bisher las die SMS-Kette sie gar nicht (nur die
-        # E-Mail-Kachelzeile, email/html.py:1430). DEC-2: Quelle ist die
-        # GLOBALE Metrikliste (_global_metrics), NICHT die Kanal-Kaskade --
-        # gespeicherte Kanal-Layouts fuehren keine eigene Auswertungswahl und
-        # fallen beim Laden auf min+max zurueck (loader.py:841/874); laese
-        # das Gate aus der Kaskade, waere eine Abwahl bei jedem kanal-
-        # konfigurierten Trip wirkungslos (AC-6). DEC-1: 'avg' kennt die SMS
-        # nicht -- weder 'min' noch 'max' gewaehlt heisst BEIDE Token
-        # entfallen (nicht in _AGG_GATE_SYMBOLS aufgefuehrt: N/FN -- eigene
-        # Groessen ohne Auswertungswahl, #1484/#1660).
-        _AGG_GATE_SYMBOLS: dict[str, tuple[str, str]] = {
-            "K": ("temperature", "min"), "D": ("temperature", "max"),
-            "FK": ("wind_chill", "min"), "FD": ("wind_chill", "max"),
-        }
-        _disabled_sms_specs += [
-            MetricSpec(symbol=sym, enabled=False)
-            for sym, (metric_id, agg_key) in _AGG_GATE_SYMBOLS.items()
-            if metric_id in active_metric_ids
-            and metric_id in _global_metrics
-            and agg_key not in _global_metrics[metric_id].aggregations
-        ]
+        # Issue #1728 Scheibe 1 (DEC-4): das zusaetzliche Auswertungs-Gate
+        # (_AGG_GATE_SYMBOLS, #1660 A Mechanismus 2) entfaellt ersatzlos.
+        # K/D/FK/FD haengen jetzt an je eigenen Katalog-Groessen
+        # (temperature_day_low/_high, wind_chill_day_low/_high), die die
+        # Schleife oben bereits generisch ueber SMS_MULTI_SYMBOLS_BY_METRIC
+        # gegen active_metric_ids prueft -- zwei parallele Gating-Mechanismen
+        # fuer dieselbe Frage waeren der Fehler, den DEC-1 vermeidet.
         # Issue #1461 S3b-2a: SMS-Kanal-Schwelle des Trips -> niedrigste
         # amtliche Warnstufe fuer den Kurznachrichten-Bericht (Startwert
         # 'gering', s. SMSTripFormatter.format_sms Docstring).

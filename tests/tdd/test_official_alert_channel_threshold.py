@@ -46,11 +46,16 @@ def _segment_with_alert(alert: OfficialAlert):
 
 
 def _trip(threshold: dict | None) -> Trip:
+    # #1709: feste Ankunftszeiten statt Naismith-Self-Heal
+    # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
+    # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
         id="T1", name="Tag 1", date=date.today(),
         waypoints=[
-            Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0),
-            Waypoint(id="G2", name="Ziel", lat=LAT + 0.05, lon=LON + 0.05, elevation_m=1200.0),
+            Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
+                     arrival_calculated="08:00"),
+            Waypoint(id="G2", name="Ziel", lat=LAT + 0.05, lon=LON + 0.05, elevation_m=1200.0,
+                     arrival_calculated="12:00"),
         ],
     )
     return Trip(

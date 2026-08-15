@@ -24,7 +24,12 @@ REPO = Path(__file__).resolve().parents[2]
 
 
 def test_gpx_processing_module():
-    """AC-2 (gpx_processing): services.gpx_processing exportiert alle 6 Helper-Funktionen."""
+    """AC-2 (gpx_processing): services.gpx_processing exportiert die 5 verbliebenen
+    Helper-Funktionen. ``compute_default_start_date`` ist mit Issue #1727 S5d
+    ersatzlos entfernt (0 Produktiv-Aufrufer, Muster-A-Fund gegen ADR-0044) --
+    Vorbild ``test_epic_129a_1_module_structure.py::test_comparison_engine``,
+    dort fuer ``dict_to_comparison_result`` in S5c identisch gedreht.
+    """
     mod = importlib.import_module("services.gpx_processing")
     expected = [
         "process_gpx_upload",
@@ -32,12 +37,15 @@ def test_gpx_processing_module():
         "segments_to_trip",
         "gpx_to_stage_data",
         "process_bulk_gpx_uploads",
-        "compute_default_start_date",
     ]
     missing = [name for name in expected if not hasattr(mod, name)]
     assert missing == [], (
         f"services.gpx_processing exportiert nicht alle erwarteten Funktionen. "
         f"Fehlend: {missing}"
+    )
+    assert not hasattr(mod, "compute_default_start_date"), (
+        "services.gpx_processing.compute_default_start_date existiert noch — "
+        "sollte mit #1727 S5d entfernt worden sein (0 Aufrufer, Muster-A-Fund)"
     )
 
 

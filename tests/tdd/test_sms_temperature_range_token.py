@@ -64,6 +64,14 @@ _GOLDEN_FILES = [
 _LONE_COLD_TOKEN = re.compile(r"(?:^|\s)(F?K)(-?\d+)", re.MULTILINE)
 _RANGE_TOKEN = re.compile(r"(?:^|\s)(F?D)(-?\d+)/(-?\d+)", re.MULTILINE)
 
+# Issue #1728 Scheibe 1: die Sichtbarkeit von K/D bzw. FK/FD haengt seit
+# dieser Scheibe an eigenen Katalog-Groessen (temperature_day_low/_high,
+# wind_chill_day_low/_high) statt an ``MetricConfig.aggregations``. Die
+# #1824-Zusicherung — die FORM der Token — ist unveraendert; nur die
+# Steuerung wird hier im neuen Vokabular ausgedrueckt.
+_TEMP_BOTH = ("temperature", "temperature_day_low", "temperature_day_high")
+_FELT_BOTH = ("wind_chill", "wind_chill_day_low", "wind_chill_day_high")
+
 
 class TestAC1BothAggregationsMerge:
     """AC-1: Given ein Trip mit Metrik „Temperatur" und BEIDEN Auswertungen
@@ -72,7 +80,7 @@ class TestAC1BothAggregationsMerge:
     ``D13/27`` und NICHT ``K13``/``D27`` getrennt."""
 
     def test_both_aggregations_render_one_range_token(self):
-        sms = F.sms("temperature")
+        sms = F.sms(*_TEMP_BOTH)
 
         assert "D13/27" in F.tokens(sms), (
             "Bei gewaehltem Tiefst- UND Hoechstwert muss EIN Bereichs-Token "
@@ -95,7 +103,7 @@ class TestAC2NegativeRange:
     Minuszeichen bleibt Vorzeichen, ``/`` bleibt der einzige Trenner."""
 
     def test_negative_values_keep_sign_and_separator_apart(self):
-        sms = F.sms("temperature",
+        sms = F.sms(*_TEMP_BOTH,
                     segments=[F.segment(temp_min=-12.0, temp_max=-4.0)])
 
         assert "D-12/-4" in F.tokens(sms), (
@@ -113,7 +121,7 @@ class TestAC3OnlyMaxUnchanged:
     gerendert wird / Then steht ``D27`` — unveraendert, kein ``/``."""
 
     def test_only_max_keeps_single_value_token(self):
-        sms = F.sms("temperature", aggregations={"temperature": ["max"]})
+        sms = F.sms("temperature", "temperature_day_high")
 
         assert "D27" in F.tokens(sms), (
             "Bei nur gewaehltem Hoechstwert bleibt die heutige Einzelform "
@@ -135,7 +143,7 @@ class TestAC4OnlyMinUnchanged:
     Wechsel auf ``D13``, weil ``D`` sonst ueberall den Hoechstwert bedeutet."""
 
     def test_only_min_keeps_cold_symbol(self):
-        sms = F.sms("temperature", aggregations={"temperature": ["min"]})
+        sms = F.sms("temperature", "temperature_day_low")
 
         assert "K13" in F.tokens(sms), (
             "Bei nur gewaehltem Tiefstwert bleibt die heutige Einzelform "
@@ -153,7 +161,7 @@ class TestAC5OnlyAverageNoToken:
     Then enthaelt sie WEDER ``D...`` NOCH ``K...``."""
 
     def test_average_only_yields_no_temperature_token(self):
-        sms = F.sms("temperature", aggregations={"temperature": ["avg"]})
+        sms = F.sms("temperature")
 
         assert F.token_with_symbol(sms, "D") is None, (
             f"'avg' kennt die SMS nicht — kein 'D'-Token.\nSMS: {sms}"
@@ -169,7 +177,7 @@ class TestAC6MaxHalfMissing:
     Then enthaelt sie ``D13/-``."""
 
     def test_missing_max_half_renders_as_dash(self):
-        sms = F.sms("temperature",
+        sms = F.sms(*_TEMP_BOTH,
                     segments=[F.segment(hourly_temps=False, temp_max=None)])
 
         assert "D13/-" in F.tokens(sms), (
@@ -185,7 +193,7 @@ class TestAC7BothHalvesGap:
 
     def test_data_gap_marks_both_halves_unknown(self):
         sms = F.sms(
-            "temperature", has_gap=True,
+            *_TEMP_BOTH, has_gap=True,
             segments=[F.segment(hourly_temps=False, temp_min=None, temp_max=None)],
         )
 
@@ -205,7 +213,7 @@ class TestAC8BothHalvesEmpty:
 
     def test_no_values_without_gap_render_double_dash(self):
         sms = F.sms(
-            "temperature",
+            *_TEMP_BOTH,
             segments=[F.segment(hourly_temps=False, temp_min=None, temp_max=None)],
         )
 
@@ -221,7 +229,7 @@ class TestAC9FeltRange:
     ``FD10/20`` und NICHT ``FK10``/``FD20`` getrennt."""
 
     def test_felt_temperature_merges_in_parallel(self):
-        sms = F.sms("temperature", "wind_chill")
+        sms = F.sms(*_TEMP_BOTH, *_FELT_BOTH)
 
         assert "FD10/20" in F.tokens(sms), (
             "Die gefuehlte Spanne folgt derselben Regel wie die gemessene.\n"
@@ -241,7 +249,7 @@ class TestAC10NightTokenUnchanged:
     Merge, unabhaengig von der Auswertungswahl der Metrik „Temperatur"."""
 
     def test_night_low_stays_a_single_value_token(self):
-        sms = F.sms("temperature", "temperature_night", report_type="evening")
+        sms = F.sms(*_TEMP_BOTH, "temperature_night", report_type="evening")
 
         assert "N9" in F.tokens(sms), (
             "Die Nacht-Tiefsttemperatur ist eine eigene Groesse ohne "
@@ -261,7 +269,7 @@ class TestAC11WindChillDayValueUnchanged:
 
     def test_wintersport_day_value_is_not_merged(self):
         sms = F.sms(
-            "temperature", "wind_chill",
+            *_TEMP_BOTH, *_FELT_BOTH,
             segments=[F.segment(temp_min=-12.0, temp_max=-4.0,
                                 felt_min=-22.0, felt_max=-14.0)],
         )
@@ -316,9 +324,15 @@ class TestAC16RangeTokenIsAtomicUnderTruncation:
 
 class TestAC17SmsSymbolCatalogUnchanged:
     """AC-17: Given die Abfrage ``/api/sms-symbols`` / When der Endpoint
-    antwortet / Then fuehrt ``temperature`` unveraendert BEIDE Kuerzel
-    ``["K", "D"]``, ``wind_chill`` unveraendert ``["FK", "FD", "WC"]``
-    (Regressionsschutz — der Editor zeigt weiterhin beide Badges)."""
+    antwortet / Then sind alle sechs Temperatur-Kuerzel weiterhin gelistet
+    (Regressionsschutz — der Editor zeigt weiterhin jedes Badge).
+
+    Umgeschrieben mit #1728 Scheibe 1: die Kuerzel haengen nicht mehr
+    gebuendelt an ``temperature``/``wind_chill``, sondern je an ihrer eigenen
+    Groesse. Die Zusicherung ist dieselbe (kein Kuerzel verschwindet aus dem
+    Editor), nur ihr Traeger hat sich geaendert; das alte Buendel abzufragen
+    haette den Wechsel als Verlust gemeldet, den es nicht gibt.
+    """
 
     def test_editor_badges_keep_both_temperature_symbols(self):
         from api.routers.config import get_sms_symbols
@@ -327,14 +341,15 @@ class TestAC17SmsSymbolCatalogUnchanged:
             entry["metric_id"]: entry["sms_symbols"]
             for entry in get_sms_symbols()["metrics"]
         }
-
-        assert by_metric.get("temperature") == ["K", "D"], (
-            "Beide Kuerzel bleiben gelistet — je nach Auswertungswahl kommen "
-            f"'K13', 'D27' oder 'D13/27' real vor. Ist: "
-            f"{by_metric.get('temperature')!r}"
-        )
-        assert by_metric.get("wind_chill") == ["FK", "FD", "WC"], (
-            f"Ist: {by_metric.get('wind_chill')!r}"
+        erwartet = {
+            "temperature_day_low": ["K"], "temperature_day_high": ["D"],
+            "wind_chill_day_low": ["FK"], "wind_chill_day_high": ["FD"],
+            "wind_chill": ["WC"], "temperature_night": ["N"],
+        }
+        ist = {mid: by_metric.get(mid) for mid in erwartet}
+        assert ist == erwartet, (
+            f"Ein Temperatur-Kuerzel ist aus /api/sms-symbols verschwunden "
+            f"oder haengt an der falschen Groesse: {ist} statt {erwartet}"
         )
 
 

@@ -16,7 +16,7 @@ class TestRequest(BaseModel):
 
 
 @router.post("/api/notify/test")
-async def test_notify(
+def test_notify(
     req: TestRequest,
     user_id: str = Query(...),
 ):

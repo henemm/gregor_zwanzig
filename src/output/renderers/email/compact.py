@@ -203,16 +203,13 @@ def render_compact(
         for mc in dc.metrics
         if mc.sms_threshold is not None
     }
-    # Issue #1357: gespeicherte Auswertungswahl je Groesse (sonst Katalog-Vorgabe).
-    metric_aggregations = {
-        mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
-    }
+    # Issue #1728 Scheibe 1 (DEC-5): unbedingt die Spanne, kein
+    # Lesen von ``mc.aggregations``.
     pills = build_metrics_summary_pills(
         segments, metric_ids, sms_mention_thresholds, tz=tz,
         night_weather=night_weather, has_gap=has_gap,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour,
-        metric_aggregations=metric_aggregations,
     ) if metric_ids else []
     if pills:
         lines.append("== Metriken-Ueberblick ==")

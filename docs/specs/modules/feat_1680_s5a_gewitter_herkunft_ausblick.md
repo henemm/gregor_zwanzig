@@ -443,6 +443,31 @@ Hagel-Schlüssel seit #1475 — geerbte Annahme, kein neuer Fehler.
    (`compare_html.py:1241`). Die dortige Erweiterung kann die Trip-Golden
    strukturell nicht berühren.
 
+   > 🔴 **ERRATUM, nachgetragen 2026-08-15 (#1841): Punkt 8 gilt nicht mehr.**
+   > Diese Messung war am 2026-08-13 korrekt. **Einen Tag später** hat #1720 S1
+   > (PR #1840) die Voraussetzung aufgehoben: `html.py:1364` und `plain.py:344`
+   > übergeben seither `metrics=_outlook_metrics` **auch für den Trip**, sobald
+   > der Nutzer unter „Wertebereiche → 3-Tages-Vorschau" eine Auswahl gesetzt
+   > hat. Der Metrik-Zweig ist damit **nicht mehr compare-exklusiv**.
+   >
+   > Genau daraus entstand **#1841**: die Gewitterstufe kam dort aus dem
+   > gehzeit-geklemmten Aggregat statt aus dem Tagesfenster.
+   >
+   > **Lehre, nicht nur Korrektur:** Der Satz oben war belegt, gemessen und
+   > PO-freigegeben — und wurde trotzdem falsch, ohne dass sich ein Zeichen
+   > daran änderte. Wer ihn las, sah „Am Code gemessen" plus Freigabe und prüfte
+   > **gerade deshalb** nicht nach. Misstrauen gegen Prosa hilft hier nicht.
+   > Was hilft: **beim Ändern fragen, wer sich auf die Voraussetzung verlässt,
+   > die man gerade entzieht.** Suchmuster für gefährdete Zusagen sind Wörter
+   > der Ausschließlichkeit — „exklusiv", „nur", „immer", „nie", `=None`.
+   >
+   > Die schärfere Regel (gemeinsam mit der #1728-Sitzung gefunden): **Ließe
+   > ein Spec-Satz sich in drei Zeilen als Test formulieren und wurde es
+   > trotzdem nicht, ist er unbewacht.** „Der Trip ruft immer mit
+   > `metrics=None`" wäre ein solcher Dreizeiler gewesen und hätte #1841 am Tag
+   > der Entstehung gemeldet statt einen Tag später als Ticket. Aufräumauftrag
+   > dafür: #1848 Teil A.
+
 ## Nicht in dieser Scheibe
 
 - **Gewitter-Vorschau** — folgt als **Scheibe 5b**; sie konsumiert den hier

@@ -143,7 +143,10 @@ _CONFIGS = [
         "mod": massif_closure,
         "url_attr": "_ENDPOINT",
         "local_url": lambda port: f"http://127.0.0.1:{port}/s/{{src}}/{{ymd}}.json",
-        "call": lambda mod: mod._get_cached_daily_json("83"),
+        # #1727 S5d: _get_cached_daily_json bekommt `ymd` als zweiten
+        # Parameter (AC-3) -- mechanisch mitgezogen, kein Nachweis dieser
+        # Scheibe (der Nachweis liegt in der neuen Kern-Schicht-Testdatei).
+        "call": lambda mod: mod._get_cached_daily_json("83", "20260101"),
         "reset": _reset_keyed,
         "service": "massif_closure",
         "host": "www.risque-prevention-incendie.fr",

@@ -28,18 +28,15 @@ export type WeatherMetricsContext = 'route' | 'vergleich';
 
 // 'sms_schwellen'/'report_config' bleiben route-exklusiv: fuer sie gibt es im
 // Vergleich keine Mail-Wirkung (Attrappen-Verbot).
-// Issue #1357: 'auswertungen' (welche Tagesauswertung in der Mail-Kachelzeile
-// erscheint) ist route-exklusiv — der Ortsvergleich liest
-// `display_config.metrics[].aggregations` nicht, dort waere die Flaeche also
-// eine Attrappe.
-// Issue #1411 (Epic #1372 S4b Scheibe 1, AC-9): PO-Entscheidung 2026-07-29 —
-// die Compare-Mengen-Wahl (Hoechst-/Tiefstwert unabhaengig ankreuzbar)
-// entsteht INNERHALB des bestehenden Abschnitts 'grundauswahl', KEIN neuer
-// Abschnitt 'auswertungen' fuer den Vergleich. Die frueher hier vermerkte
-// Vorab-Vermutung ("er zieht mit #1411 nach") war keine PO-Festlegung und ist
-// mit dieser Entscheidung erledigt — 'auswertungen' bleibt dauerhaft
-// route-exklusiv.
-const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'auswertungen', 'report_config'] as const;
+// Issue #1728 Scheibe 2 (DEC-8): 'auswertungen' ist ENTFERNT, nicht mehr nur
+// route-exklusiv. Der Bedienabschnitt "05 — Auswertungen" (Trip-Kontext)
+// entfaellt ersatzlos — der zugrunde liegende Mechanismus
+// (`MetricConfig.aggregations`) wirkt seit Scheibe 1
+// (feat_1728_s1_temp_aufloesung) an keinem Trip-Ausgabeort mehr. Vormals hier
+// (Issue #1357/#1411): 'auswertungen' war route-exklusiv, weil der Vergleich
+// `display_config.metrics[].aggregations` nicht liest; diese Unterscheidung
+// ist mit dem Wegfall des Abschnitts hinfaellig.
+const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'report_config'] as const;
 
 // Issue #1360 (Scheibe S1a von Epic #1372): 'stundenverlauf' ist die neue
 // Heimat der Stundenverlauf-Steuerung — der Reiter "Layout" des Ortsvergleichs

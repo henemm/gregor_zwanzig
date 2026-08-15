@@ -23,6 +23,16 @@ _HOOKS_DIR = Path(__file__).resolve().parents[2] / ".claude" / "hooks"
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
+# tests/ selbst auf sys.path (#1709): test_wanduhr_matrix.py importiert das
+# Messwerkzeug als `from helpers.wanduhr_matrix import ...` -- OHNE
+# "tests."-Präfix, anders als die übliche Absolut-Importform
+# `from tests.helpers.xxx import yyy` (die über pythonpath="." im
+# Repo-Root bereits funktioniert). Ohne diesen Eintrag bliebe der Import ein
+# ModuleNotFoundError, unabhängig von der Implementierung des Werkzeugs.
+_TESTS_DIR = Path(__file__).resolve().parents[1]
+if str(_TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TESTS_DIR))
+
 from validation import GroundTruthFetcher
 
 # ---------------------------------------------------------------------------

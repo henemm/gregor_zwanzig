@@ -33,6 +33,12 @@ from tests.tdd import _min_temp_felt_fixtures as F
 
 _MEASURED = ("N", "K", "D")
 _FELT = ("FN", "FK", "FD")
+# Issue #1728 Scheibe 1: „die Temperatur ist gewaehlt" heisst seither, dass
+# auch ihre Tagesrichtungen gewaehlt sind -- sie tragen K/D. Die Zusicherung
+# dieser Suite (die Kuerzel folgen der Auswahl) ist unveraendert, nur die
+# Auswahl besteht jetzt aus drei statt einer Zeile.
+_TEMP_GEWAEHLT = ("temperature", "temperature_day_low", "temperature_day_high")
+_FELT_GEWAEHLT = ("wind_chill", "wind_chill_day_low", "wind_chill_day_high")
 # Kuerzel, die schon heute korrekt der Auswahl folgen (Nichtregression).
 _THRESHOLD_SYMBOLS = ("R", "PR", "W", "G", "TH:")
 
@@ -141,7 +147,7 @@ class TestMeasuredTemperatureFollowsSelection:
 
     def test_measured_tokens_absent_when_temperature_deselected(self):
         for report_type in ("morning", "evening"):
-            sms = _sms(report_type, "wind_chill", "precipitation")
+            sms = _sms(report_type, *_FELT_GEWAEHLT, "precipitation")
 
             # Vorbedingung: die gefuehlten Werte sind da — die Abwesenheit der
             # gemessenen ist damit Folge der Abwahl, nicht Folge fehlender
@@ -165,7 +171,7 @@ class TestMeasuredTemperatureFollowsSelection:
         #1484 zur eigenen Groesse "temperature_night" (eigene Suite:
         test_night_temp_own_metric_selection.py)."""
         for report_type in ("morning", "evening"):
-            sms = _sms(report_type, "temperature", "precipitation")
+            sms = _sms(report_type, *_TEMP_GEWAEHLT, "precipitation")
 
             expected = {"K", "D"}
             assert F.present_symbols(sms, _MEASURED) == expected, (
@@ -209,7 +215,7 @@ class TestSelectedButNoValueKeepsNullForm:
     def test_selected_temperature_without_data_shows_null_form(self):
         for report_type in ("morning", "evening"):
             sms = _sms(
-                report_type, "temperature", "precipitation",
+                report_type, *_TEMP_GEWAEHLT, "precipitation",
                 segment=_templess_segment(), night=_templess_night(),
             )
 
@@ -234,7 +240,7 @@ class TestSelectedButNoValueKeepsNullForm:
         unterscheiden, sonst ist die Regel nicht umgesetzt, sondern nur
         zufaellig erfuellt."""
         selected = _sms(
-            "evening", "temperature", "precipitation",
+            "evening", *_TEMP_GEWAEHLT, "precipitation",
             segment=_templess_segment(), night=_templess_night(),
         )
         deselected = _sms(
@@ -257,7 +263,7 @@ class TestNullFormsUnaffected:
 
     def test_selected_metrics_without_exceedance_keep_null_form(self):
         sms = _sms(
-            "morning", "temperature", "precipitation", "rain_probability",
+            "morning", *_TEMP_GEWAEHLT, "precipitation", "rain_probability",
             "wind", "gust", "thunder",
             segment=_calm_segment(), night=_calm_night(),
         )
@@ -274,7 +280,7 @@ class TestNullFormsUnaffected:
         )
 
     def test_deselected_threshold_metrics_stay_absent(self):
-        sms = _sms("morning", "temperature")
+        sms = _sms("morning", *_TEMP_GEWAEHLT)
 
         for sym in _THRESHOLD_SYMBOLS:
             # `_token_present` statt `sms_token_value`: ein voller Verlauf

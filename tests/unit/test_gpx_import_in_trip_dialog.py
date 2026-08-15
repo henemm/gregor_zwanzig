@@ -271,34 +271,15 @@ class TestMultiGpxImport:
         assert len(stages) == 1
         assert stages[0]["date"] == "2026-06-15"
 
-    def test_default_start_date_with_existing_stages(self):
+    def test_compute_default_start_date_removed(self):
+        """Issue #1727 S5d (AC-2): ``compute_default_start_date`` hatte 0
+        Produktiv-Aufrufer und ist ersatzlos entfernt (Muster-A-Fund gegen
+        ADR-0044). Ersetzt die frueheren zwei Tests dieser Funktion
+        (``test_default_start_date_with_existing_stages``/
+        ``test_default_start_date_no_existing_stages``) -- Symbol-Abwesenheit
+        ist bereits von ``tests/refactor/test_epic_129a_2_module_structure.py``
+        geprueft, hier nur die Konsequenz fuer den Import-Weg dieses Moduls.
         """
-        GIVEN: existing stages with last date 2026-05-10
-        WHEN: compute_default_start_date(existing_stages_data)
-        THEN: Returns date(2026, 5, 11) — last_stage_date + 1
+        import services.gpx_processing as mod
 
-        Per spec §2 _refresh_commit_row default-date logic. Tests the
-        helper that is expected to be extracted as
-        `compute_default_start_date(stages_data)`.
-        """
-        from services.gpx_processing import compute_default_start_date
-
-        stages_data = [
-            {"name": "Stage A", "date": "2026-05-08", "waypoints": []},
-            {"name": "Stage B", "date": "2026-05-09", "waypoints": []},
-            {"name": "Stage C", "date": "2026-05-10", "waypoints": []},
-        ]
-
-        result = compute_default_start_date(stages_data)
-        assert result == date(2026, 5, 11)
-
-    def test_default_start_date_no_existing_stages(self):
-        """
-        GIVEN: Empty stages list
-        WHEN: compute_default_start_date([])
-        THEN: Returns date.today()
-        """
-        from services.gpx_processing import compute_default_start_date
-
-        result = compute_default_start_date([])
-        assert result == date.today()
+        assert not hasattr(mod, "compute_default_start_date")

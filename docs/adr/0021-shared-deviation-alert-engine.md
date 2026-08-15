@@ -132,3 +132,33 @@ dieser Scheibe (Scheibe 2, #1169).
   mit, und ein Alarmversuch ohne erreichbaren Kanal hinterlässt jetzt einen
   Protokoll-Eintrag statt spurlos abzubrechen. Details:
   `docs/specs/modules/fix_1752_radar_folgt_alarm_kanaelen.md`.
+- **Nachtrag (Issue #1594, 2026-08-14):** `services/alert_gate.py` beherbergt seit
+  dieser Scheibe **zwei voneinander unabhängige Funktionen**, nicht mehr nur die
+  eine Kette. Die im #1467-S3-Nachtrag beschriebene Reihenfolge
+  Ruhezeit → Sperrzeit → Tages-Obergrenze (`check_nowcast_gate()`) gilt
+  unverändert und **ausschließlich für NowCast**. Daneben steht neu
+  `check_briefing_imminent()`: eine rein lesende Stufe, die einen
+  **Änderungsalarm oder eine amtliche Warnung** unterdrückt, wenn für dieselbe
+  Entität innerhalb von 60 Minuten ein geplantes Briefing ansteht, das **noch
+  nicht versucht** wurde. Sie ist an drei Stellen eingehängt
+  (`trip_alert._is_quiet_hours`-Umfeld für beide Trip-Alarmarten,
+  `compare_alert.py`, `compare_official_alert.py`) und wird von
+  `check_nowcast_gate()` **nicht** gerufen — die NowCast-Ausnahme ist damit
+  baulich, nicht durch Sorgfalt an den Aufrufstellen.
+  **Kein neues Architekturprinzip:** die fachliche Zulässigkeit trägt ADR-0009
+  (Alerts sind Δ-Wächter gegen den letzten Briefing-Snapshot) — die Meldung wird
+  durch das folgende Briefing **ersetzt**, nicht ersatzlos verschluckt, weil das
+  Briefing Anker und Melde-Gedächtnis selbst zurücksetzt.
+  Drei benannte Folgen: (1) Die Fälligkeit wird bei den vorhandenen Rechnern
+  **erfragt** (`presets_due_for_hour()` bzw. ein aus `trip_report_scheduler`
+  herausgelöstes reines Prädikat), nicht neu gerechnet — eine eigene
+  Zeitrechnung wäre die vierte Fassung derselben Regel. (2) Das Prädikat trägt
+  bewusst **keinen** `skip_next`-Verbrauch; `_get_active_trips()` schreibt beim
+  Lesen (`save_trip()`) und darf deshalb aus dem 15-Minuten-Alarmtakt nicht
+  gerufen werden. (3) Die Sperre endet mit dem Briefing-**Versuch**, nicht mit
+  dessen Erfolg — `last_briefing_at()` bedeutet „versucht", weil der Anker seit
+  #1629 auch im Fehlerzweig geschrieben wird; eine an den Erfolg gebundene
+  Sperre hätte nach einem gescheiterten Versand bis zu vier Stunden geschwiegen.
+  Eine Unterdrückung durch diese Stufe erzeugt **keinen** Protokolleintrag (Lücke
+  O3 aus dem vorigen Nachtrag bleibt bewusst offen). Details:
+  `docs/specs/modules/fix_1594_alarm_vorlauf_sperre.md`.

@@ -56,9 +56,12 @@ for _legacy, _metric_id in FRONTEND_TO_HOURLY_METRIC_ID.items():
 # AC-11 (PO-Entscheid 2026-08-01): ausdruecklich vom Stundenverlauf
 # ausgenommene Groessen. BENANNTE Menge statt stillem Fehlen -- Bedienflaeche,
 # Aufloeser und Tests geben so dieselbe Auskunft.
-HOURLY_EXCLUDED_METRIC_IDS: frozenset[str] = frozenset(
-    {"sunshine", "temperature_night", "wind_chill_night"}
-)
+HOURLY_EXCLUDED_METRIC_IDS: frozenset[str] = frozenset({
+    "sunshine", "temperature_night", "wind_chill_night",
+    # #1728 Scheibe 1: Tagesrichtungen der Gehzeit-Spanne, kein Stundenwert.
+    "temperature_day_low", "temperature_day_high",
+    "wind_chill_day_low", "wind_chill_day_high",
+})
 
 # Begruendung, die die Bedienflaeche anzeigt (ueber die Katalogantwort, s.
 # compare_metric_catalog.get_compare_metric_catalog). Nennt den Grund UND die
@@ -78,6 +81,20 @@ HOURLY_EXCLUSION_REASON: dict[str, str] = {
         "beantwortet die gefuehlte Temperatur dieselbe Frage."
     ),
 }
+
+# #1728 Scheibe 1: dieselbe Begruendung fuer die vier Tagesrichtungen. Als
+# Schleife statt vier Textblocks, damit die Begruendung nicht viermal leicht
+# abweichend gepflegt werden muss.
+for _mid, _eltern in (
+    ("temperature_day_low", "die Temperatur"),
+    ("temperature_day_high", "die Temperatur"),
+    ("wind_chill_day_low", "die gefuehlte Temperatur"),
+    ("wind_chill_day_high", "die gefuehlte Temperatur"),
+):
+    HOURLY_EXCLUSION_REASON[_mid] = (
+        f"Tagesrichtung der Gehzeit-Spanne (#1728), kein Stundenwert — "
+        f"stuendlich beantwortet {_eltern} dieselbe Frage."
+    )
 
 # Reines Merge-Signal: erzeugt nie eine eigene Spalte (s. Modul-Kommentar oben
 # und `compare_html._should_merge_wind_dir`).

@@ -70,12 +70,21 @@ def _compact(report_type: str, *metric_ids: str) -> str:
 # AC-1 / AC-2 / AC-3 — SMS-Token folgen der eigenen Auswahl
 # ---------------------------------------------------------------------------
 
+# Issue #1728 Scheibe 1: „Gefuehlte Temperatur gewaehlt" umfasst seither ihre
+# beiden Tagesrichtungen (FK/FD); 'WC' bleibt an der Elterngroesse (E3,
+# haelt #1450). Die Zusicherung dieser Suite (FN folgt der EIGENEN
+# Nachtgroesse) ist unveraendert.
+_FELT_TAG_GEWAEHLT = (
+    "wind_chill", "wind_chill_day_low", "wind_chill_day_high",
+)
+
+
 class TestSmsFeltNightTokenFollowsOwnSelection:
 
     def test_day_tokens_present_without_night_metric(self):
         """AC-1: Gefuehlte Temperatur AN, gefuehlte Nachtgroesse AUS ->
         FK/FD/WC ja, FN nein."""
-        sms = _sms("evening", "wind_chill", "precipitation")
+        sms = _sms("evening", *_FELT_TAG_GEWAEHLT, "precipitation")
 
         present = F.present_symbols(sms, _FELT_WITH_WC)
         assert present == {"FK", "FD", "WC"}, (
@@ -102,7 +111,7 @@ class TestSmsFeltNightTokenFollowsOwnSelection:
 
     def test_both_selected_keeps_all_four_tokens(self):
         """Nichtregression: beide AN -> FN/FK/FD/WC wie vor dem Schnitt."""
-        sms = _sms("evening", "wind_chill", NIGHT_METRIC, "precipitation")
+        sms = _sms("evening", *_FELT_TAG_GEWAEHLT, NIGHT_METRIC, "precipitation")
 
         assert F.present_symbols(sms, _FELT_WITH_WC) == {"FN", "FK", "FD", "WC"}, (
             f"Beide Groessen gewaehlt — alle vier Kuerzel erwartet.\nSMS: {sms}"

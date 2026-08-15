@@ -1572,10 +1572,29 @@ class TripReportSchedulerService:
                 f"Trip report NOT sent (configured channel unreachable): {trip.name} ({report_type})"
             )
         else:
-            self._append_briefing_log(
-                trip.id, report_type, result.sent_channels, angefordert=angefordert,
+            # Issue #1847: die Erfolgszeile nennt zusaetzlich die tatsaechlich
+            # zugestellten Kanaele und — sofern E-Mail dabei war — den
+            # E-Mail-Empfaenger. Vorbild ist der Compare-Pfad
+            # (scheduler_dispatch_service.py:571, "Compare preset %s sent to
+            # %s"): dort war "Versand gemeldet, Postfach leer" in einer Minute
+            # aufgeklaert, hier kostete dieselbe Falle eine Stunde (vierte
+            # Wiederholung: #1351, #1403, #1782, #1847). Bewusst UNMASKIERT —
+            # eine Maskierung machte gregor-test@ und gregor-staging@
+            # ununterscheidbar und verfehlte genau den Zweck.
+            mail_empfaenger = (
+                self._settings.mail_to if "email" in result.sent_channels else None
             )
-            logger.info(f"Trip report sent: {trip.name} ({report_type})")
+            self._append_briefing_log(
+                trip.id, report_type, result.sent_channels,
+                angefordert=angefordert, mail_empfaenger=mail_empfaenger,
+            )
+            logger.info(
+                "Trip report sent: %s (%s) via %s%s",
+                trip.name,
+                report_type,
+                ",".join(result.sent_channels),
+                f" to {mail_empfaenger}" if mail_empfaenger else "",
+            )
 
         # 8c. Issue #1662 AC-5: Der gelungene Versand macht einen offenen
         # Versandfehler-Vermerk gegenstandslos — der Nutzer hat sein Briefing
@@ -1798,6 +1817,7 @@ class TripReportSchedulerService:
 
     def _append_briefing_log(
         self, trip_id: str, kind: str, channels: List[str], angefordert: bool = False,
+        mail_empfaenger: Optional[str] = None,
     ) -> None:
         """Issue #393: Hängt einen Briefing-Versand-Eintrag an briefing_log.json an.
 
@@ -1822,16 +1842,28 @@ class TripReportSchedulerService:
         das `briefing_slots` liest; Go liest die Datei nur
         (`store.LoadBriefingLog`, kein Schreibpfad), ignoriert unbekannte
         Felder und schreibt sie deshalb auch nicht weg.
+
+        Issue #1847: `mail_empfaenger` hält fest, an WELCHE Adresse das
+        Briefing per E-Mail ging — sonst ist „Versand gemeldet, Postfach leer"
+        nachträglich nicht mehr auflösbar (vierte Wiederholung derselben Falle:
+        #1351, #1403, #1782, #1847). Der Schlüssel `mail_to` entsteht nur, wenn
+        E-Mail auch tatsächlich zugestellt wurde — ein Eintrag, der bei JEDEM
+        Versand eine Adresse nennt, wäre keine Zustell-Aussage. Rein additiv:
+        die bestehenden Schlüssel bleiben unverändert, Go ignoriert den neuen
+        (s.o.).
         """
         path = get_data_dir(self._user_id) / "briefing_log.json"
         data = json.loads(path.read_text()) if path.exists() else {"entries": []}
-        data["entries"].append({
+        eintrag: Dict[str, object] = {
             "trip_id": trip_id,
             "kind": kind,
             "sent_at": datetime.now(tz=timezone.utc).isoformat(),
             "channels": channels,
             "on_demand": angefordert,
-        })
+        }
+        if mail_empfaenger:
+            eintrag["mail_to"] = mail_empfaenger
+        data["entries"].append(eintrag)
         # Issue #1614: ein frischer Nutzer ohne jedes vorherige Datenverzeichnis
         # (kein Trip-Snapshot, kein Alert-State) hatte hier noch kein
         # Zielverzeichnis — path.write_text() scheiterte mit FileNotFoundError.

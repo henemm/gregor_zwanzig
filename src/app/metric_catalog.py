@@ -148,6 +148,41 @@ _METRICS: list[MetricDefinition] = [
         sms_code="TN",
         decimals=0,
     ),
+    # Issue #1728 Scheibe 1: Tages-Tief und Tages-Hoch der GEMESSENEN
+    # Temperatur als je eigene waehlbare Groesse (PO 2026-08-11), Muster
+    # temperature_night (#1484, s.o.). Reine Sichtbarkeits-Gates fuer die
+    # SMS-Token K/D: KEINE summary_fields (= keine Auswertungs-Pills, keine
+    # Tabellenspalte), keine Alarm-Deklaration. Der Zahlenwert kommt
+    # unveraendert aus der Gehzeit-Aggregation in sms_trip.py.
+    # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
+    # Tagesfenster 04-19 von temperature_min/temperature_max
+    # (Alarm-Vokabular, models.py:1123-1124) -- zwei fachlich verschiedene
+    # Dinge mit aehnlichem Namen, in getrennten Namensraeumen.
+    MetricDefinition(
+        id="temperature_day_low", label_de="Tages-Tiefsttemperatur (Gehzeit)",
+        unit="°C", dp_field="t2m_c", category="temperature",
+        default_aggregations=("min",),
+        compact_label="K", col_key="temp_day_low", col_label="TagMin",
+        providers={"openmeteo": True, "geosphere": True},
+        sms_code="K", decimals=0,
+        trip_default_rank=8,  # Issue #1728: neue Rangstufe, keine Umnummerierung
+    ),
+    # Wie temperature_day_low, Gegenrichtung. DEC-8: sms_code "TD" statt "D"
+    # -- "D" ist seit #914 von "temperature" selbst belegt (:113) und die
+    # Eindeutigkeits-Ratsche unterscheidet inerte Felder nicht. Der
+    # gerenderte SMS-Token bleibt "D" (aus SMS_MULTI_SYMBOLS_BY_METRIC),
+    # exakt wie bei temperature_night ("TN" im Register, "N" in der SMS).
+    # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
+    # Tagesfenster 04-19 von temperature_min/temperature_max.
+    MetricDefinition(
+        id="temperature_day_high", label_de="Tages-Höchsttemperatur (Gehzeit)",
+        unit="°C", dp_field="t2m_c", category="temperature",
+        default_aggregations=("max",),
+        compact_label="D", col_key="temp_day_high", col_label="TagMax",
+        providers={"openmeteo": True, "geosphere": True},
+        sms_code="TD", decimals=0,
+        trip_default_rank=9,
+    ),
     MetricDefinition(
         id="wind_chill", label_de="Gefühlte Temperatur", unit="°C",
         dp_field="wind_chill_c", category="temperature",
@@ -193,6 +228,34 @@ _METRICS: list[MetricDefinition] = [
         # geprueft gegen alle heutigen sms_code-Werte des Katalogs.
         sms_code="FN",
         decimals=0,
+    ),
+    # Issue #1728 Scheibe 1: dieselbe Aufloesung auf der GEFUEHLTEN Seite
+    # (SMS-Token FK/FD), Muster wind_chill_night (#1660 A, s.o.). Ebenfalls
+    # reine Sichtbarkeits-Gates ohne summary_fields und ohne Alarm.
+    # KEIN trip_default_rank -- folgt exakt der heutigen Lage von
+    # "wind_chill" (waehlbar, aber bei neuen Trips nicht vorbelegt, DEC-7).
+    # "WC" (Wintersport-Tageskennzahl) bleibt bei "wind_chill" (E3, #1450).
+    # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
+    # Tagesfenster 04-19 von temperature_min/temperature_max.
+    MetricDefinition(
+        id="wind_chill_day_low",
+        label_de="Gefühlte Tages-Tiefsttemperatur (Gehzeit)",
+        unit="°C", dp_field="wind_chill_c", category="temperature",
+        default_aggregations=("min",),
+        compact_label="FK", col_key="felt_day_low", col_label="TagMinF",
+        providers={"openmeteo": True, "geosphere": True},
+        sms_code="FK", decimals=0,
+    ),
+    # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
+    # Tagesfenster 04-19 von temperature_min/temperature_max.
+    MetricDefinition(
+        id="wind_chill_day_high",
+        label_de="Gefühlte Tages-Höchsttemperatur (Gehzeit)",
+        unit="°C", dp_field="wind_chill_c", category="temperature",
+        default_aggregations=("max",),
+        compact_label="FD", col_key="felt_day_high", col_label="TagMaxF",
+        providers={"openmeteo": True, "geosphere": True},
+        sms_code="FD", decimals=0,
     ),
     MetricDefinition(
         id="humidity", label_de="Luftfeuchtigkeit", unit="%",
@@ -707,10 +770,18 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
 # 'FN' wandert von "wind_chill" zur eigenen waehlbaren Groesse
 # "wind_chill_night". 'WC' (Wintersport-Tageskennzahl) bleibt bewusst bei
 # "wind_chill" (Regression #1450, Spec-Abgrenzung 1).
+# Fix #1728 Scheibe 1 (PO-Entscheidung 2026-08-11): 'K'/'D' bzw. 'FK'/'FD'
+# wandern von den Elterngroessen zu je eigenen waehlbaren Tagesrichtungen --
+# Tages-Tief und Tages-Hoch sind zwei unabhaengige Auswahl-Entscheidungen.
+# 'WC' (Wintersport-Tageskennzahl) bleibt als eigener Ein-Symbol-Eintrag bei
+# "wind_chill" (E3, PO: „WC soll bleiben"; Regression #1450).
 SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
-    "temperature": ("K", "D"),
+    "temperature_day_low": ("K",),
+    "temperature_day_high": ("D",),
     "temperature_night": ("N",),
-    "wind_chill": ("FK", "FD", "WC"),
+    "wind_chill_day_low": ("FK",),
+    "wind_chill_day_high": ("FD",),
+    "wind_chill": ("WC",),
     "wind_chill_night": ("FN",),
     "thunder": ("TH:", "TH+:"),
 }

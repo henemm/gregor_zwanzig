@@ -336,22 +336,30 @@ class TestAC3HelperValues:
         from output.renderers.trip_metric_ids import DEFAULT_TRIP_METRIC_IDS
 
         default_ids = list(DEFAULT_TRIP_METRIC_IDS)
-        katalog_ids = [m for m in _PILL_CATALOG_ORDER if m in set(default_ids)]
-        assert sorted(default_ids) == sorted(katalog_ids), (
+        # Issue #1728 Scheibe 1: der Standard-Satz enthaelt seither auch
+        # Groessen OHNE Pille (die Tagesrichtungen sind reine
+        # Sichtbarkeits-Gates der Kurzform, Rang 8/9). Verglichen wird
+        # deshalb nur der pillenfaehige Teil -- der Pruefgegenstand
+        # (welche ORDNUNG gewinnt) ist davon unberuehrt.
+        mit_pille = [m for m in default_ids if m in set(_PILL_CATALOG_ORDER)]
+        katalog_ids = [m for m in _PILL_CATALOG_ORDER if m in set(mit_pille)]
+        assert sorted(mit_pille) == sorted(katalog_ids), (
             "Vorbedingung entfallen: Standard-Satz und Pillen-Katalog fuehren "
-            f"nicht mehr dieselbe MENGE ({default_ids} / {katalog_ids})"
+            f"nicht mehr dieselbe MENGE ({mit_pille} / {katalog_ids})"
         )
-        assert default_ids != katalog_ids, (
+        assert mit_pille != katalog_ids, (
             "Die beiden Ordnungen sind inzwischen identisch -- dann ist dieser "
             "Charakterisierungstest gegenstandslos und darf weg (#1703 S7)"
         )
 
+        # Uebergeben wird bewusst die VOLLE Standardliste -- das ist der echte
+        # Fall-A-Pfad; Groessen ohne Pille fallen im Renderer weg.
         pillen = build_metrics_summary_pills(
             _build_segments(), default_ids, {}, tz=TZ,
         )
-        assert len(pillen) == len(default_ids), (
-            f"Vakuum: {len(pillen)} Pillen fuer {len(default_ids)} Groessen "
-            f"-- nicht jede feuert mit dieser Fixture: {pillen}"
+        assert len(pillen) == len(mit_pille), (
+            f"Vakuum: {len(pillen)} Pillen fuer {len(mit_pille)} pillenfaehige "
+            f"Groessen -- nicht jede feuert mit dieser Fixture: {pillen}"
         )
         # Zuordnung eigens geprueft: Rechnen sichert Vollstaendigkeit, nie
         # Zuordnung (#1703 S2 F001). "0°-Linie" = freezing_level, "Sicht" =

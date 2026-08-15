@@ -28,7 +28,7 @@ from utils.timezone import local_fmt, local_hour
 
 from output.renderers.alert.render import _esc
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
-from output.renderers.channel_layout import render_for_channel
+from output.renderers.channel_layout import VISIBILITY_GATE_IDS, render_for_channel
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
     hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
@@ -766,6 +766,14 @@ def render_telegram_bubbles(
             overview_lines.extend(_wrap(_esc(
                 f"{get_metric('wind_chill_night').compact_label} "
                 f"{_night_felt_min_c:.1f}"), _TG_PROSE_WIDTH))
+            continue
+        # Issue #1728 Scheibe 1: die vier Tagesrichtungen sind reine
+        # Sichtbarkeits-Gates der Kurzform (SMS-Token K/D/FK/FD) und tragen
+        # in der Telegram-Kurzuebersicht keinen eigenen Wert -- die T-/TF-
+        # Zeile zeigt die Spanne dort bereits unbedingt. Ohne diese Ausnahme
+        # entstuenden vier leere Zeilen ("K –", "D –", "FK –", "FD –").
+        # Die beiden Nachtfenster-Skalare sind oben eigens behandelt.
+        if mid in VISIBILITY_GATE_IDS:
             continue
         overview_lines.extend(_wrap(_esc(_overview_line(
             mid, seg_tables, fkeys, report_type=report_type,

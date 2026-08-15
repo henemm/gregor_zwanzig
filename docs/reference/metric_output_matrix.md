@@ -12,6 +12,22 @@
 > genannten Commits und wurden für dieses Dokument einzeln am Code nachgeschlagen.
 > Es gibt (noch) keine Ratsche, die sie aktuell hält — siehe Abschnitt 8.
 
+> **Nachtrag 2026-08-15 (Issue #1728 Scheibe 1):** Der Katalog trägt jetzt sechs
+> SMS-only Sichtbarkeits-Gate-Größen ohne `summary_fields` —
+> `temperature_night`/`wind_chill_night` (#1484/#1660 A, schon vor dieser
+> Scheibe im Katalog) und neu `temperature_day_low`/`temperature_day_high`/
+> `wind_chill_day_low`/`wind_chill_day_high` (#1728). Alle sechs sind
+> katalog-getrieben nur für die Trip-SMS wirksam (`SMS_MULTI_SYMBOLS_BY_METRIC`,
+> Sonderstrecke S6 unten) und tragen keine eigene Zeile in Abschnitt 2.1, weil
+> sie in keinem der dort gelisteten Ausgabeorte eine eigene Spalte/Zelle
+> erzeugen (Stundentabelle, Ausblick, Pillen zeigen die **Elterngröße**
+> „Temperatur"/„Gefühlte Temperatur"). **Benannte, vorbestehende Lücke:** Die
+> beiden Nachtfenster-Größen fehlten in diesem Dokument bereits vor #1728
+> namentlich — dieser Nachtrag schließt sie nicht rückwirkend ein, sondern
+> benennt die Lücke, damit sie nicht durch die vier neuen Größen
+> stillschweigend größer wird. Ein vollständiger Abschnitt-2.1-Eintrag für alle
+> sechs Größen ist nicht Teil dieser Doku-Aktualisierung.
+
 ## 1. Zweck & Leitfrage
 
 Anlass ist #1475 (Hagel): drei Recherche-Runden waren nötig, um 12 Ausgabeorte
@@ -86,9 +102,9 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | E-Mail mobile Kompaktzeilen (in der **Voll**mail) | `src/output/renderers/email/html.py:878` `_render_mobile_compact_rows()`; Aufrufe `:1206`, `:1264`, `:1290` (Nachtzeilen) | katalog-getrieben (erbt `col_order`) | **unbewacht** |
 | Kurzform-Mail (eigenes Format `compact`) | `src/output/renderers/email/compact.py:96` `render_compact()`; Pillen-Aufruf `:176` | katalog-getrieben über `resolve_trip_active_metrics` | **unbewacht** |
 | Kompakt-Zusammenfassung (Fließtext-Block **in** der Vollmail) | `src/output/renderers/compact_summary.py:567` `_format_thunder()`, Aufruf `:243`; aktiviert über `src/output/renderers/trip_report.py:173` `options.show_compact_summary`, Formatter-Einstieg `trip_report.py:942` | handgeschrieben — `thunder` ist die **einzige** Metrik mit eigener Formatier-Methode | nur metrikspezifisch: `tests/tdd/test_hail_compact_summary_thunder.py:75`, `:89`, `:107` (Gewitter/Hagel) und seit #1680 S2 `test_thunder_origin_trip.py` für den Herkunfts-Zusatz (beide Textzweige, bis `email_plain`). Als Metrik×Kanal-Ort weiterhin **unbewacht** |
-| Ausblick / 3-Tages-Tabelle (Trip-Mail) | `src/output/renderers/email/outlook.py:174–298` (HTML), `:353–403` (Klartext) — **feste** Spalten Tag/N/D/R/PR/Wind/Böen/Gew (+ACC) | **nicht** katalog-getrieben: alle drei Trip-Aufrufstellen (`email/html.py:1357`, `email/plain.py:338`, `trip_report_scheduler.py:1844`) übergeben **kein** `metrics` | `tests/tdd/test_trip_outlook_parity.py` (Byte-Golden über das GANZE HTML + Klartext) — strenger als eine Metrik-Achse; **keine Metrik×Kanal-Fläche**, weil der Nutzer hier nichts wählen kann (gemessen 2026-08-11, #1703 S2) |
+| Ausblick / 3-Tages-Tabelle (Trip-Mail) | `src/output/renderers/email/outlook.py` — **zwei** Renderpfade: Altpfad mit festen Spalten Tag/N/D/R/PR/Wind/Böen/Gew (+ACC) UND seit #1720 S1 der katalog-getriebene Metrik-Zweig (`build_outlook_row():564`, `row["cells"]`) | **teilweise** katalog-getrieben (KORRIGIERT 2026-08-15, #1841): setzt der Nutzer unter „Wertebereiche → 3-Tages-Vorschau" eine Auswahl, übergeben `email/html.py:1364` und `email/plain.py:344` sehr wohl `metrics=` — der Trip erreicht `outlook_columns()` seit #1720 S1 | Altpfad: `tests/tdd/test_trip_outlook_parity.py` (Byte-Golden). Metrik-Zweig: `tests/tdd/test_trip_outlook_metric_selection.py`, Gewitterquelle `tests/tdd/test_vorschau_metrik_tagesfenster.py` (#1841) |
 | Ausblick: Gewitter-Sonderbehandlung | `email/outlook.py:38` `_THUNDER_TOKEN_RE`; Wortlaut-Map `:195–198` (dritte LOW/MED/HIGH-Übersetzung im Code) | handgeschrieben | teilbewacht über Gewitter-Tests, nicht über die Matrix |
-| Telegram rich (Bubbles) | `src/output/renderers/narrow.py:661` → `src/output/renderers/channel_layout.py:75` `render_for_channel()`; Limits `channel_layout.py:45` `CHANNEL_LIMITS` | gemischt — Ausnahme `_NIGHT_SCALAR_IDS` `channel_layout.py:88` | `tests/tdd/test_channel_metric_matrix.py:114` |
+| Telegram rich (Bubbles) | `src/output/renderers/narrow.py:661` → `src/output/renderers/channel_layout.py:75` `render_for_channel()`; Limits `channel_layout.py:45` `CHANNEL_LIMITS` | gemischt — Ausnahme `VISIBILITY_GATE_IDS` `channel_layout.py:75` (hieß bis #1728 S1 `_NIGHT_SCALAR_IDS` und führte 2 statt 6 Größen); seit #1856 E7 gewächtert in `tests/helpers/metrik_listen_scan.py` | `tests/tdd/test_channel_metric_matrix.py:114` |
 | Telegram Kurzübersicht / Trendzeile | `narrow.py:346` (Zeilentupel), `narrow.py:528–532`, `narrow.py:586–597` (drei hartkodierte Gewitter-Zweige) | handgeschrieben | **unbewacht** als eigener Ausgabeort |
 | SMS Trip (Kurzform) | `src/output/renderers/sms_trip.py:606` `format_sms()`; Symbole `sms_trip.py:116` `SMS_SYMBOL_BY_METRIC` aus `metric_catalog.py:938` `get_sms_code()` | gemischt | `tests/tdd/test_channel_metric_matrix.py:210` (nur Auswahl/Reihenfolge) |
 | SMS: Grammatik-Ausnahmen | `sms_trip.py:114` `_SMS_SYMBOL_GRAMMAR` (`thunder` → `TH:`, `fresh_snow` → `NS24+`) | handgeschrieben (2 benannte Fälle) | Ratsche in der SMS-Suite, nicht in der Matrix |
@@ -150,7 +166,7 @@ Eine Übersicht, die nur Katalog-Konsumenten erfasst, wiederholt genau den
 | S3 | **System-Blöcke der Kurzform (DEC-4)** | `src/output/tokens/builder.py:61`, `:86`, `:105`; Einsortierung `src/output/tokens/render.py:12` | Blöcke mit eigener Prioritätsstufe und Katalog-Reihenfolge; „strukturell nicht sortierbar" laut Known Limitation 2 in #1677 |
 | S4 | **`TokenLine.filter_for_subject`** | `src/output/tokens/dto.py:154` | **Stub**: gibt `self` zurück. Der in `sms_format.md` §11 beschriebene Betreff-Filter (β2) existiert nicht — der Betreff bekommt die volle Tokenzeile |
 | S5 | **Wintersport-Block** | Profil-Default `src/output/adapters/trip_result.py:196` `_wintersport_default_config()`; Token `NS24+` erklärt in `sms_trip.py:109–114`, `WC` in `sms_trip.py:154` | eigenes Profil mit eigener MetricSpec-Liste; die gerenderten Token weichen bewusst vom `sms_code` des Katalogs ab (`NS` → `NS24+`) |
-| S6 | **`SMS_MULTI_SYMBOLS_BY_METRIC`** | `src/output/renderers/sms_trip.py:180` | **1:n-Strukturbruch**: eine Metrik erzeugt mehrere Kürzel (Grammatik-Klassen). Der Katalog bildet 1:1 ab und kann das strukturell nicht ausdrücken — deshalb die Empfehlung, die Form-Dimension als eigene Achse zu führen (Frage 7b) |
+| S6 | **`SMS_MULTI_SYMBOLS_BY_METRIC`** | `src/output/renderers/sms_trip.py:180` | **1:n-Strukturbruch**: eine Metrik erzeugt mehrere Kürzel (Grammatik-Klassen). Der Katalog bildet 1:1 ab und kann das strukturell nicht ausdrücken — deshalb die Empfehlung, die Form-Dimension als eigene Achse zu führen (Frage 7b). **Nachtrag 2026-08-15 (#1728 Scheibe 1):** die Einträge `"temperature"`/`"wind_chill"` (bisher `("K","D")` bzw. `("FK","FD","WC")`) sind aus diesem Dict entfernt; `K`/`D`/`FK`/`FD` hängen jetzt an den vier neuen eigenen Größen `temperature_day_low`/`temperature_day_high`/`wind_chill_day_low`/`wind_chill_day_high`, `"wind_chill": ("WC",)` bleibt unverändert stehen. Die hier genannte Datei:Zeile-Angabe ist ungeprüft — die Registrierung wohnt inzwischen laut Katalog-Kopfkommentar (`metric_catalog.py:656`, seit #1719 S4) in `metric_catalog.py`, `sms_trip.py` re-exportiert nur; das ist eine vorbestehende Drift dieses Dokuments, hier nur benannt, nicht nachgemessen |
 
 ## 4. Unbewachte Flächen mit Priorisierung
 
@@ -214,6 +230,13 @@ Modul-Docstring sind nachgezogen. Spec:
 > Trip-Ausblick hat keine wählbaren Spalten und damit keine Metrik×Kanal-Fläche — er ist
 > zudem durch den Byte-Golden `test_trip_outlook_parity.py` strenger bewacht, als eine
 > Matrix-Achse es wäre. Die Scheibe ist deshalb **Compare-only** (PO-freigegeben).
+>
+> 🔴 **ÜBERHOLT seit #1720 S1 (2026-08-14), korrigiert 2026-08-15 (#1841).** Der
+> Trip-Ausblick hat seither sehr wohl wählbare Spalten; `email/html.py:1364` und
+> `email/plain.py:344` übergeben `metrics=`, sobald eine Auswahl gesetzt ist. Der
+> Absatz oben beschreibt den Stand VOR #1720 S1 und bleibt als Beleg stehen, warum
+> die damalige Scheibe Compare-only zugeschnitten war. Der Byte-Golden bewacht nur
+> den Altpfad — den Metrik-Zweig sieht er strukturell nicht (ADR-0055:167-171).
 >
 > Wächter: `tests/tdd/test_channel_metric_matrix.py` AC-S2-1..8, Soll-Menge (25 Paare) aus
 > `get_compare_metric_catalog()` gerechnet via `tests/helpers/outlook_columns.py` inkl.
@@ -340,8 +363,9 @@ entscheidende Unterschied zu Option B und der Grund für die Empfehlung.
    unvollständig bleibt, solange die Ortsliste nicht aus einer Quelle kommt.
    Teuer ist die Assertion-Logik **pro Zelle**,
    nicht die Metrik-Anzahl — Parametrisierung ist billig. Wo strukturell keine
-   Zelle existiert: benannte Ausnahme nach dem Muster `_NIGHT_SCALAR_IDS`
-   (`channel_layout.py:88`), nie stilles Überspringen.
+   Zelle existiert: benannte Ausnahme nach dem Muster `VISIBILITY_GATE_IDS`
+   (`channel_layout.py:75`, bis #1728 S1 `_NIGHT_SCALAR_IDS`), nie stilles
+   Überspringen.
 
 ## 6. Folge-Scheiben
 
@@ -376,6 +400,11 @@ Matrix-Achse für `outlook_columns()` (`compare_outlook_metric_ids.py:78`). Deck
 `metrics`. Der Trip-Ausblick hat keine wählbaren Spalten (feste Sieben) und wird vom
 Byte-Golden `test_trip_outlook_parity.py` strenger bewacht, als eine Metrik-Achse es könnte.
 Zuschnitt daher **Compare-only**, PO-freigegeben 2026-08-11.
+
+🔴 **Diese Messung galt am 2026-08-11 und wurde am 2026-08-14 durch #1720 S1 überholt**
+(nachgetragen 2026-08-15, #1841): der Trip übergibt seither `metrics=`, sobald eine
+Auswahl gesetzt ist. Lehrstück für den Umgang mit „Am Code gemessen"-Aussagen — die
+Messung war richtig, entzogen wurde ihre **Voraussetzung**.
 
 Umgesetzt als 8 ACs (AC-S2-1..8) in `tests/tdd/test_channel_metric_matrix.py`, Soll-Menge
 **25 Paare** aus `get_compare_metric_catalog()` gerechnet (`tests/helpers/outlook_columns.py`,

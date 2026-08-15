@@ -127,6 +127,7 @@ def outlook_columns(metrics: object) -> list[dict]:
             continue
         columns.append({
             "label": catalog["label"],
+            "metric_id": metric_id,
             "field": field,
             "unit": catalog.get("unit", ""),
             "decimals": catalog.get("decimals", 0),

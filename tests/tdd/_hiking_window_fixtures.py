@@ -240,23 +240,17 @@ def night_weather(
     return NormalizedTimeseries(meta=_meta(), data=points)
 
 
-def dc(
-    *metric_ids: str, aggregations: Optional[dict[str, list[str]]] = None,
-) -> UnifiedWeatherDisplayConfig:
+def dc(*metric_ids: str) -> UnifiedWeatherDisplayConfig:
     """Displaykonfiguration mit genau den genannten Metriken aktiv.
 
-    ``aggregations``: gespeicherte Auswertungswahl je Groesse (Issue #1357,
-    z.B. ``{"temperature": ["avg"]}`` = „nur Mittelwert"), sonst die
-    Katalog-Vorgabe ``["min", "max"]``.
+    Issue #1728 Scheibe 1: der ``aggregations``-Parameter (#1357) ist
+    entfernt -- die gespeicherte Auswertungswahl wird an keinem Trip-Wirkort
+    mehr gelesen.
     """
-    chosen = aggregations or {}
     return UnifiedWeatherDisplayConfig(
         trip_id="i1417",
         metrics=[
-            MetricConfig(
-                metric_id=m, enabled=True,
-                **({"aggregations": chosen[m]} if m in chosen else {}),
-            )
+            MetricConfig(metric_id=m, enabled=True)
             for m in metric_ids
         ],
     )
@@ -415,7 +409,6 @@ def render_report(
     report_type: str,
     metrics: tuple[str, ...] = ("temperature",),
     night: Optional[NormalizedTimeseries] = None,
-    aggregations: Optional[dict[str, list[str]]] = None,
 ):
     """EIN echter Briefing-Lauf — Quelle fuer alle vier Kanaele."""
     from output.renderers.trip_report import TripReportFormatter
@@ -425,7 +418,7 @@ def render_report(
         trip_name=TRIP_NAME,
         report_type=report_type,
         night_weather=night,
-        display_config=dc(*metrics, aggregations=aggregations),
+        display_config=dc(*metrics),
         stage_name=STAGE_NAME,
         tz=TZ,
     )
@@ -464,21 +457,11 @@ def mail_felt(report) -> Extrema:
     return Extrema(None, None, " | ".join(pill_lines(report)))
 
 
-_MAIL_AVG_PILL = re.compile(rf"^(?:\S+\s+)?Ø (?P<avg>-?\d+){_SPAN_UNIT}$")
-
-
-def mail_temp_average(report) -> tuple[Optional[float], str]:
-    """Mittelwert-Kachel der Mail (Auswertungswahl „nur Mittelwert", #1357).
-
-    Der Mittelwert ist der einzige gerenderte Wert, der eine DOPPELT gezaehlte
-    Grenzstunde ueberhaupt sichtbar macht — Minimum und Maximum aendern sich
-    durch eine Wiederholung nicht.
-    """
-    for line in pill_lines(report):
-        m = _MAIL_AVG_PILL.match(line)
-        if m is not None:
-            return float(m.group("avg")), line
-    return None, " | ".join(pill_lines(report))
+# Issue #1728 Scheibe 1: ``mail_temp_average()`` (Mittelwert-Kachel, #1357)
+# ist ERSATZLOS entfernt -- die Kachel zeigt seit dieser Scheibe unbedingt die
+# Spanne, einen gerenderten Mittelwert gibt es nicht mehr. Ein Helfer, der
+# eine Ausgabe sucht, die es nicht gibt, liefert stumm ``None`` und laedt zum
+# Fehlschluss ein.
 
 
 # Issue #1824 (A): siehe _min_temp_felt_fixtures.py — bei gewaehltem Tiefst-

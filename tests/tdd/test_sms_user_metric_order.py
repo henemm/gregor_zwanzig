@@ -270,8 +270,16 @@ def test_ac5_position_applies_per_metric_anchor_not_per_symbol():
     keinen Gegenstand mehr. Die Zusicherung dieses AC ist unveraendert die
     Nutzer-Position PRO METRIK-ANKER; die Vorbedingung stellt sicher, dass
     hier wirklich Bereichs-Token gemessen werden und der Test nicht still an
-    einer Einzelform vorbeilaeuft."""
-    dc = _sms_layout_dc(["wind_chill", "temperature"])
+    einer Einzelform vorbeilaeuft.
+
+    Issue #1728 Scheibe 1: die Tagesrichtungen sind eigene Groessen und
+    muessen mit in der Kanal-Liste stehen, sonst entsteht ueberhaupt kein
+    Temperatur-Token. Die Zusicherung (Nutzer-Position bestimmt die
+    Reihenfolge) ist unveraendert."""
+    dc = _sms_layout_dc([
+        "wind_chill", "wind_chill_day_low", "wind_chill_day_high",
+        "temperature", "temperature_day_low", "temperature_day_high",
+    ])
     sms = _render_sms(dc)
     assert "FD1/18" in sms and "D3/20" in sms, (
         f"Vorbedingung: beide Groessen muessen als Bereichs-Token stehen: {sms!r}"
@@ -305,7 +313,12 @@ def test_ac6_drop_order_ignores_display_position():
     order = [
         "dewpoint", "gust", "wind", "precipitation", "rain_probability", "thunder",
         "snow_depth", "snowfall_limit", "fresh_snow",
-        "temperature", "temperature_night", "wind_chill", "wind_chill_night",
+        # #1728 S1: die vier Tagesrichtungen gehoeren mit in die Liste --
+        # ohne sie fehlen K/D/FK/FD und die Zeile bleibt unter 160 Zeichen,
+        # der Kuerzungsdruck (Praemisse dieses AC) entstuende nie.
+        "temperature", "temperature_day_low", "temperature_day_high",
+        "temperature_night", "wind_chill", "wind_chill_day_low",
+        "wind_chill_day_high", "wind_chill_night",
         "humidity", "wind_direction", "precip_type", "cloud_total",
         "cloud_low", "cloud_mid", "cloud_high", "visibility", "sunshine",
         "uv_index", "pressure", "freezing_level",
