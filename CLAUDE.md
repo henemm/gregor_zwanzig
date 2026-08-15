@@ -142,7 +142,7 @@ Die 6 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · 
 
 Ratschen-Pflege (`ci_tdd_excludes.txt`, `ci_e2e_specs.txt`, Aufnahmefilter): `docs/reference/gates_und_ratschen.md`.
 
-## Mail-Validatoren (ZWINGEND)
+## Mail-Validatoren & Renderer-Gate (ZWINGEND)
 
 Zwei Mail-Pfade, zwei Gates. Falscher Validator auf einen Pfad → strukturell nie bestehbar → Gate-Erosion.
 
