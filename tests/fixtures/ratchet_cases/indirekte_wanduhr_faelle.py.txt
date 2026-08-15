@@ -377,3 +377,28 @@ def _trip_mit_start_time_und_unaufloesbaren_wegpunkten():
     trip = Trip(id="t-1709-adv4", name="Start-Time vor Wegpunktaufloesung",
                 stages=[stage])
     return trip
+
+# === indirekt-antimuster-import-modulname ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services import trip_alert
+
+
+def _trip_ohne_ankunftszeiten_modulimport():
+    """Adversary-Finding F-ADV5 (HIGH): identisch zum Anti-Muster aus
+    'indirekt-antimuster', aber der Alarmpfad wird als ``from services
+    import trip_alert`` importiert statt als ``from services.trip_alert
+    import TripAlertService``. Beide Schreibweisen importieren denselben
+    Pfad -- ein Vergleich, der nur den Modulpfad (``services``) statt auch
+    den importierten Namen (``trip_alert``) prueft, sieht diesen Stil nicht.
+    Real im Bestand: tests/tdd/test_alert_run_deadline.py:48."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709-adv5", name="Alarmpfad ueber Modulimport", stages=[stage])
+    return trip

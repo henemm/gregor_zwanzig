@@ -907,10 +907,22 @@ _ALARMPFADE_INDIREKT = (
 
 
 def _importierte_module(baum: ast.AST) -> set[str]:
+    """Modulpfade, die diese Datei importiert -- Grundlage fuer Merkmal 6.
+
+    Fuer ``ImportFrom`` zaehlt neben dem reinen Modulpfad (``services``) auch
+    ``<modul>.<importierter name>`` (``services.trip_alert``): ohne diese
+    Ergaenzung erkannte der Teilstring-Vergleich in ``_importiert_eines_von``
+    ``from services import trip_alert`` nicht, obwohl er denselben Alarmpfad
+    importiert wie ``from services.trip_alert import TripAlertService`` --
+    Adversary-Finding F-ADV5 zu #1709. Realer Bestandsstil:
+    tests/tdd/test_alert_run_deadline.py:48,
+    tests/tdd/test_starkregen_kurzfristhinweis.py:45."""
     module: set[str] = set()
     for n in ast.walk(baum):
         if isinstance(n, ast.ImportFrom) and n.module:
             module.add(n.module)
+            for alias in n.names:
+                module.add(f"{n.module}.{alias.name}")
         elif isinstance(n, ast.Import):
             for alias in n.names:
                 module.add(alias.name)
@@ -1171,6 +1183,21 @@ def test_scanner_schweigt_bei_start_time_vor_unaufloesbaren_wegpunkten(tmp_path)
     )
 
 
+def test_scanner_erkennt_alarmpfad_ueber_modulimport(tmp_path):
+    """Adversary-Finding F-ADV5 (HIGH): ``from services import trip_alert``
+    importiert denselben Alarmpfad wie ``from services.trip_alert import
+    TripAlertService``, wird von ``_importierte_module``/
+    ``_importiert_eines_von`` aber nur erkannt, wenn auch der importierte
+    NAME (nicht nur der Modulpfad) in den Vergleich eingeht -- sonst 0 statt
+    1 Fund bei identischem Anti-Muster. Real im Bestand:
+    tests/tdd/test_alert_run_deadline.py:48,
+    tests/tdd/test_starkregen_kurzfristhinweis.py:45."""
+    _attrappe(tmp_path, _fall_indirekt("indirekt-antimuster-import-modulname"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+    assert funde[0].function == "_trip_ohne_ankunftszeiten_modulimport"
+
+
 def test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel():
     """AC-5: der echte Baum tests/ erzeugt keinen Fehlalarm — Fundmenge leer
     oder vollstaendig durch KNOWN_VIOLATIONS_INDIREKT gedeckt, UND mindestens
@@ -1225,6 +1252,42 @@ def test_known_violations_der_neuen_regel_ohne_veraltete_eintraege():
     assert not veraltet, (
         "Diese KNOWN_VIOLATIONS_INDIREKT-Eintraege werden nicht mehr gefunden "
         f"und muessen entfernt werden: {veraltet}"
+    )
+
+
+def test_known_violations_der_neuen_regel_ist_leer():
+    """AC-10 (F-ADV6, CRITICAL): ``KNOWN_VIOLATIONS_INDIREKT`` MUSS leer
+    bleiben -- und zwar erzwungen, nicht nur zufaellig.
+
+    PO-Entscheidung 2026-08-15: ein Fund der zweiten Regel wird durch
+    Haertung der betroffenen Fixture aufgeloest (arrival_calculated /
+    stage.start_time / Haertungs-Helfer), NIEMALS durch einen Eintrag in
+    dieser Liste. Ohne diesen Test erzwingt nichts diese Vorgabe: weder AC-5
+    (``test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel``) noch AC-6
+    (``test_known_violations_der_neuen_regel_ohne_veraltete_eintraege``)
+    schlagen an, wenn jemand eine Haertung zuruecknimmt UND den dadurch
+    entstehenden -- echten -- Fund in ``KNOWN_VIOLATIONS_INDIREKT``
+    eintraegt: AC-5 ist durch den neuen Eintrag gedeckt, AC-6 prueft nur auf
+    VERALTETE Eintraege, nicht auf neue. Adversary-Runde 3 hat das belegt:
+    36 Tests gruen, 0 rot, mit genau diesem Vorgehen.
+
+    Dieser Test prueft deshalb ZWEI Dinge zugleich: die Liste ist leer UND
+    der Scan des echten Baums liefert unabhaengig davon ebenfalls keine
+    Funde -- eine Haertung darf also nicht durch einen Listeneintrag ERSETZT
+    werden."""
+    assert KNOWN_VIOLATIONS_INDIREKT == frozenset(), (
+        "KNOWN_VIOLATIONS_INDIREKT ist nicht leer. Ein Fund der zweiten "
+        "Fundregel wird NICHT durch einen Eintrag hier aufgeloest, sondern "
+        "durch Haertung der betroffenen Fixture (arrival_calculated setzen, "
+        "stage.start_time setzen, oder einen Haertungs-Helfer nutzen). "
+        "PO-Entscheidung 2026-08-15."
+    )
+    funde = scan_indirekte_wanduhr_fixtures(TESTS_ROOT)
+    assert funde == [], (
+        f"{len(funde)} Fundstelle(n) im echten Testbaum, obwohl "
+        "KNOWN_VIOLATIONS_INDIREKT leer sein und bleiben soll -- Haerten "
+        f"statt Eintragen:\n" +
+        "\n".join(f"  - {_relativ(f)}:{f.line} in {f.function}()" for f in funde)
     )
 
 
