@@ -9,9 +9,11 @@ Function order matches the spec:
   1. process_gpx_upload
   2. compute_full_segmentation
   3. segments_to_trip
-  4. compute_default_start_date
-  5. gpx_to_stage_data           (API-Contract stable!)
-  6. process_bulk_gpx_uploads
+  4. gpx_to_stage_data           (API-Contract stable!)
+  5. process_bulk_gpx_uploads
+
+Issue #1727 S5d: compute_default_start_date entfernt (0 Produktiv-Aufrufer,
+Muster-A-Fund gegen ADR-0044).
 
 API-Contract: gpx_to_stage_data is consumed by api/routers/gpx.py
 (Production endpoint POST /api/gpx/parse). Signature
@@ -36,6 +38,7 @@ from core.gpx_parser import parse_gpx
 from core.hybrid_segmentation import optimize_segments
 from core.natural_sort import natural_sort_key
 from core.segment_builder import build_segments
+from utils.timezone import local_dt, tz_for_coords
 
 
 def process_gpx_upload(
@@ -177,23 +180,6 @@ def segments_to_trip(
     )
 
 
-def compute_default_start_date(stages_data: list[dict]) -> date:
-    """Default start date for a Multi-GPX-Upload commit row.
-
-    Returns last_stage_date + 1 day if stages exist, otherwise date.today().
-    Used by the Multi-Upload-UI to pre-fill the date picker.
-
-    Spec: docs/specs/modules/gpx_multi_import.md
-    """
-    if not stages_data:
-        return date.today()
-    try:
-        last = date.fromisoformat(stages_data[-1]["date"])
-    except (KeyError, TypeError, ValueError):
-        return date.today()
-    return last + timedelta(days=1)
-
-
 def gpx_to_stage_data(
     content: bytes,
     filename: str,
@@ -212,7 +198,8 @@ def gpx_to_stage_data(
     Args:
         content: Raw GPX file bytes.
         filename: Original filename (must end with .gpx).
-        stage_date: Date for the stage (defaults to today).
+        stage_date: Date for the stage. Falls back to the LOCAL day of the
+            first waypoint's timezone (Issue #1727 S5d, ADR-0044) when omitted.
         start_hour: Start hour of the hike (0-23).
         upload_dir: Directory to save the GPX file (mandatory).
 
@@ -220,7 +207,13 @@ def gpx_to_stage_data(
         Dict with keys: name, date, waypoints[]
     """
     track = process_gpx_upload(content, filename, upload_dir=upload_dir)
-    d = stage_date or date.today()
+    d = stage_date
+    if d is None:
+        if track.points:
+            p = track.points[0]
+            d = local_dt(datetime.now(timezone.utc), tz_for_coords(p.lat, p.lon)).date()
+        else:
+            d = datetime.now(timezone.utc).date()  # Fail-soft: kein Ortsbezug
 
     config = EtappenConfig()
     start_time = datetime(d.year, d.month, d.day, start_hour, 0, 0,

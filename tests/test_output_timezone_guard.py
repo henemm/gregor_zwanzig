@@ -608,30 +608,20 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # Massen-Umschrift den Shrink-Vergleich unnoetig verrauschen wuerde.
     # -----------------------------------------------------------------------
     # --- Muster A: Umgebungsuhr (`date.today()` / `datetime.now()` ohne tz) ---
-    "api/routers/debug.py::trigger_radar_alert::0": "Muster A (:61) — Debug-Ausloeser datiert auf die Serveruhr (#1726).",
-    # #1727 S5b: `briefing_target_day_is_current` hat keinen Systemuhr-
-    # Rueckfall mehr — `today` ist Pflicht und kommt als Ortstag der Tour vom
-    # Aufrufer. Eintrag entfaellt.
-    "src/services/gpx_processing.py::compute_default_start_date::0": "Muster A (:189) — GPX-Vorgabestart vom Servertag (#1726).",
-    "src/services/gpx_processing.py::compute_default_start_date::1": "Muster A (:193) — zweiter Rueckfall auf den Servertag (#1726).",
-    "src/services/gpx_processing.py::gpx_to_stage_data::0": "Muster A (:223) — Etappendatum faellt auf den Servertag zurueck (#1726).",
-    # #1727 S5b: `_target_date_from_report` leitet den Rueckfall-Tag aus
-    # `request.trip_tz` ab (Zone liegt am DTO bereits aufgeloest vor).
-    # Eintrag entfaellt.
-    "src/services/official_alerts/massif_closure.py::_do_request::0": "Muster A (:102) — Abfrage-Datum der franzoesischen Quelle vom Server (#1726).",
-    "src/services/official_alerts/massif_closure.py::fetch::0": "Muster A (:127) — Zeitstempel fuer `last_run` ohne Zone (#1726).",
-    "src/services/official_alerts/meteo_forets.py::covers::0": "Muster A (:130) — Saison-Fenster gegen den Servermonat (#1726).",
-    # #1727 S5c: die sieben verbleibenden Vorschau-/Anzeige-/Sofort-Vergleichs-
-    # Eintraege dieser Rubrik (api/routers/compare.py::run_comparison x3,
-    # compare_html.py::_compute_next_send, compare_preview_service.py::
-    # _resolve_target_date, comparison_engine.py::dict_to_comparison_result
-    # [entfernt], preview_service.py::_resolve_target_date) sind behoben.
-    # Eintraege entfallen.
-    # #1727 S5b: die sechs Versandpfad-Eintraege dieser Rubrik sind behoben —
-    # `_auto_pause_expired_presets` und `send_one_compare_preset` rechnen ueber
-    # `first_resolvable_tz(locations)` im Ortstag des Presets, die vier
-    # Scheduler-Stellen ueber `trip_local_today(trip, now_utc)` im Ortstag der
-    # Tour. Eintraege entfallen.
+    # #1727 S5d: alle sieben verbliebenen Muster-A-Funde dieser Rubrik sind
+    # behoben — `gpx_to_stage_data` loest den Rueckfalltag ueber
+    # `tz_for_coords` des ersten Wegpunkts auf, `compute_default_start_date`
+    # ist ersatzlos entfernt (kein Aufrufer), `massif_closure` und
+    # `meteo_forets.covers` rechnen ueber den Herausgebertag
+    # (`tz_for_coords(lat, lon)`), `debug.py::trigger_radar_alert` ueber
+    # `trip_local_today(trip, now_utc)`. Die Rubrik ist damit LEER — die mit
+    # S5a begonnene Liste ist geschlossen. Eintraege entfallen:
+    #   api/routers/debug.py::trigger_radar_alert::0 (vormals :61)
+    #   src/services/gpx_processing.py::compute_default_start_date::0/1 (vormals :189/:193)
+    #   src/services/gpx_processing.py::gpx_to_stage_data::0 (vormals :223)
+    #   src/services/official_alerts/massif_closure.py::_do_request::0 (vormals :102)
+    #   src/services/official_alerts/massif_closure.py::fetch::0 (vormals :127)
+    #   src/services/official_alerts/meteo_forets.py::covers::0 (vormals :130)
     # --- Muster B: festes Nicht-UTC-Zonen-Literal — mit #1726 vollstaendig
     # abgeraeumt (beide `VIENNA`-Konstanten ersatzlos entfallen). Bleibt als
     # Rubrik stehen: ein neuer Fund dieser Art gehoert behoben, nicht gelistet.
