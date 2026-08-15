@@ -104,7 +104,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | Kompakt-Zusammenfassung (Fließtext-Block **in** der Vollmail) | `src/output/renderers/compact_summary.py:567` `_format_thunder()`, Aufruf `:243`; aktiviert über `src/output/renderers/trip_report.py:173` `options.show_compact_summary`, Formatter-Einstieg `trip_report.py:942` | handgeschrieben — `thunder` ist die **einzige** Metrik mit eigener Formatier-Methode | nur metrikspezifisch: `tests/tdd/test_hail_compact_summary_thunder.py:75`, `:89`, `:107` (Gewitter/Hagel) und seit #1680 S2 `test_thunder_origin_trip.py` für den Herkunfts-Zusatz (beide Textzweige, bis `email_plain`). Als Metrik×Kanal-Ort weiterhin **unbewacht** |
 | Ausblick / 3-Tages-Tabelle (Trip-Mail) | `src/output/renderers/email/outlook.py` — **zwei** Renderpfade: Altpfad mit festen Spalten Tag/N/D/R/PR/Wind/Böen/Gew (+ACC) UND seit #1720 S1 der katalog-getriebene Metrik-Zweig (`build_outlook_row():564`, `row["cells"]`) | **teilweise** katalog-getrieben (KORRIGIERT 2026-08-15, #1841): setzt der Nutzer unter „Wertebereiche → 3-Tages-Vorschau" eine Auswahl, übergeben `email/html.py:1364` und `email/plain.py:344` sehr wohl `metrics=` — der Trip erreicht `outlook_columns()` seit #1720 S1 | Altpfad: `tests/tdd/test_trip_outlook_parity.py` (Byte-Golden). Metrik-Zweig: `tests/tdd/test_trip_outlook_metric_selection.py`, Gewitterquelle `tests/tdd/test_vorschau_metrik_tagesfenster.py` (#1841) |
 | Ausblick: Gewitter-Sonderbehandlung | `email/outlook.py:38` `_THUNDER_TOKEN_RE`; Wortlaut-Map `:195–198` (dritte LOW/MED/HIGH-Übersetzung im Code) | handgeschrieben | teilbewacht über Gewitter-Tests, nicht über die Matrix |
-| Telegram rich (Bubbles) | `src/output/renderers/narrow.py:661` → `src/output/renderers/channel_layout.py:75` `render_for_channel()`; Limits `channel_layout.py:45` `CHANNEL_LIMITS` | gemischt — Ausnahme `_NIGHT_SCALAR_IDS` `channel_layout.py:88` | `tests/tdd/test_channel_metric_matrix.py:114` |
+| Telegram rich (Bubbles) | `src/output/renderers/narrow.py:661` → `src/output/renderers/channel_layout.py:75` `render_for_channel()`; Limits `channel_layout.py:45` `CHANNEL_LIMITS` | gemischt — Ausnahme `VISIBILITY_GATE_IDS` `channel_layout.py:75` (hieß bis #1728 S1 `_NIGHT_SCALAR_IDS` und führte 2 statt 6 Größen); seit #1856 E7 gewächtert in `tests/helpers/metrik_listen_scan.py` | `tests/tdd/test_channel_metric_matrix.py:114` |
 | Telegram Kurzübersicht / Trendzeile | `narrow.py:346` (Zeilentupel), `narrow.py:528–532`, `narrow.py:586–597` (drei hartkodierte Gewitter-Zweige) | handgeschrieben | **unbewacht** als eigener Ausgabeort |
 | SMS Trip (Kurzform) | `src/output/renderers/sms_trip.py:606` `format_sms()`; Symbole `sms_trip.py:116` `SMS_SYMBOL_BY_METRIC` aus `metric_catalog.py:938` `get_sms_code()` | gemischt | `tests/tdd/test_channel_metric_matrix.py:210` (nur Auswahl/Reihenfolge) |
 | SMS: Grammatik-Ausnahmen | `sms_trip.py:114` `_SMS_SYMBOL_GRAMMAR` (`thunder` → `TH:`, `fresh_snow` → `NS24+`) | handgeschrieben (2 benannte Fälle) | Ratsche in der SMS-Suite, nicht in der Matrix |
@@ -363,8 +363,9 @@ entscheidende Unterschied zu Option B und der Grund für die Empfehlung.
    unvollständig bleibt, solange die Ortsliste nicht aus einer Quelle kommt.
    Teuer ist die Assertion-Logik **pro Zelle**,
    nicht die Metrik-Anzahl — Parametrisierung ist billig. Wo strukturell keine
-   Zelle existiert: benannte Ausnahme nach dem Muster `_NIGHT_SCALAR_IDS`
-   (`channel_layout.py:88`), nie stilles Überspringen.
+   Zelle existiert: benannte Ausnahme nach dem Muster `VISIBILITY_GATE_IDS`
+   (`channel_layout.py:75`, bis #1728 S1 `_NIGHT_SCALAR_IDS`), nie stilles
+   Überspringen.
 
 ## 6. Folge-Scheiben
 
