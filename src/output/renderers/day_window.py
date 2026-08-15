@@ -54,7 +54,9 @@ def _merge_hour(dps: list[ForecastDataPoint]) -> ForecastDataPoint:
     # `WeatherMetricsService._compute_thunder_level` fuer `max_thunder`
     # schon verwendet, verhindert, dass der naechste Modulkopf-Import
     # irgendwo in der Renderer-Kette dieselbe Falle wieder aufreisst.
-    from output.metric_format import max_thunder, thunder_ordinal
+    from output.metric_format import (
+        max_thunder, thunder_ordinal, union_of_max_carriers,
+    )
     base = max(
         dps,
         key=lambda dp: (
@@ -66,6 +68,18 @@ def _merge_hour(dps: list[ForecastDataPoint]) -> ForecastDataPoint:
     return dataclasses.replace(
         base,
         thunder_level=max_thunder(dp.thunder_level for dp in dps),
+        # Issue #1680 S2: die Traegerliste MUSS wie die Stufe ueber alle
+        # Punkte der Stunde neu gebildet werden. Ohne diesen Override kam sie
+        # unveraendert von `base` -- also von GENAU EINEM Punkt mit
+        # Hoechststufe, ausgewaehlt ueber einen fuer die Herkunft sachfremden
+        # Tie-Break (Niederschlag, dann Boeen). Erreichbar an der
+        # Ankunftsstunde, wo sich Segment- und Nachtfenster ueberschneiden
+        # (s. Docstring oben) -- die Kurzzusammenfassung nannte dort nur eine
+        # von zwei tragenden Zutaten, entgegen der PO-Auslegung (ii).
+        thunder_level_signals=union_of_max_carriers(
+            (dp.thunder_level, getattr(dp, "thunder_level_signals", None))
+            for dp in dps
+        ),
         precip_1h_mm=_max_optional([dp.precip_1h_mm for dp in dps]),
         pop_pct=_max_optional([dp.pop_pct for dp in dps]),
         wind10m_kmh=_max_optional([dp.wind10m_kmh for dp in dps]),

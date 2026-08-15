@@ -505,6 +505,33 @@ describe('[REGRESSIONSSCHUTZ] Umgebung des Auswahl-Blocks bleibt unberuehrt', ()
 		);
 	});
 
+	// Issue #1719 S3 (Adversary-Fund F001, BROKEN): "Aus ist ein Zustand" gilt
+	// NUR fuer den Trip-Kanal-Reiter (WeatherMetricsTab.svelte, route-Kontext)
+	// — diese Einbettung arbeitet auf einem flachen Array ohne Kanal-Ebene und
+	// hat bereits einen funktionierenden Rueckweg (Checkbox darueber).
+	// `offColumns`/`onRestore` sind OPTIONALE Props ohne Vorgabewert — die
+	// Naht ist die PROP-ANWESENHEIT (Spec Abschnitt 1), nicht ein
+	// `context`-String. Werden sie hier durchgereicht, entsteht eine
+	// ungewollte Aus-Gruppe im Ortsvergleich (AC-13-Verstoss).
+	test('WeatherV2Reihenfolge bekommt WEDER offColumns NOCH onRestore uebergeben', () => {
+		const ast = parseComponent(COMPONENT);
+		const rows = findComponentsNamed(ast.fragment, 'WeatherV2Reihenfolge');
+		assert.equal(rows.length, 1, `REGRESSION: erwartet genau einen WeatherV2Reihenfolge-Aufruf, gefunden ${rows.length}.`);
+		const row = rows[0];
+		assert.equal(
+			findAttr(row, 'offColumns'),
+			undefined,
+			'AC-13 FAIL: der Stundenverlauf-Aufruf von WeatherV2Reihenfolge uebergibt jetzt `offColumns` — ' +
+				'das erzeugt eine Aus-Gruppe im Ortsvergleich, wo ADR-0050 Regel 4 nicht gilt.'
+		);
+		assert.equal(
+			findAttr(row, 'onRestore'),
+			undefined,
+			'AC-13 FAIL: der Stundenverlauf-Aufruf von WeatherV2Reihenfolge uebergibt jetzt `onRestore` — ' +
+				'siehe offColumns-Befund oben, dieselbe Naht.'
+		);
+	});
+
 	test('der Hinweis "Erscheint nur in der E-Mail" bleibt stehen', () => {
 		const ast = parseComponent(COMPONENT);
 		const ids = renderedTestids(ast.fragment);

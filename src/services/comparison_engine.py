@@ -391,54 +391,6 @@ class ComparisonEngine:
         )
 
 
-def dict_to_comparison_result(
-    results: List[Dict[str, Any]],
-    time_window: tuple[int, int],
-    target_date: Any,
-) -> ComparisonResult:
-    """
-    Convert dict-based results from UI to ComparisonResult dataclass.
-
-    This enables the UI button to use the same renderer as subscriptions.
-    """
-    from datetime import date
-
-    if target_date is None:
-        target_date = date.today()
-
-    location_results = []
-    for r in results:
-        if r.get("error"):
-            continue
-        loc_result = LocationResult(
-            location=r["location"],
-            score=r.get("score", 0),
-            snow_depth_cm=r.get("snow_depth_cm"),
-            snow_new_cm=r.get("snow_new_cm"),
-            temp_min=r.get("temp_min"),
-            temp_max=r.get("temp_max"),
-            wind_max=r.get("wind_max"),
-            wind_direction_avg=r.get("wind_direction_avg"),
-            gust_max=r.get("gust_max"),
-            wind_chill_min=r.get("wind_chill_min"),
-            wind_chill_max=r.get("wind_chill_max"),
-            cloud_avg=r.get("cloud_avg"),
-            cloud_low_avg=r.get("cloud_low_avg"),
-            cloud_mid_avg=r.get("cloud_mid_avg"),
-            cloud_high_avg=r.get("cloud_high_avg"),
-            sunny_hours=r.get("sunny_hours"),
-            hourly_data=r.get("hourly_data", []),
-            outlook_hourly_data=r.get("outlook_hourly_data", []),
-        )
-        location_results.append(loc_result)
-
-    return ComparisonResult(
-        locations=location_results,
-        time_window=time_window,
-        target_date=target_date,
-    )
-
-
 def fetch_forecast_for_location(
     loc: SavedLocation,
     hours: int = COMPARE_FORECAST_HOURS,

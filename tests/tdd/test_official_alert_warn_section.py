@@ -93,9 +93,18 @@ def _type_texts(html: str) -> list[str]:
 
 
 def _src_text(html: str) -> str:
-    box = _soup(html).select_one("div.src")
-    assert box is not None, "Quelle-Box (.src) fehlt im Standalone-Alert"
-    return box.get_text(" ", strip=True)
+    """Text der Quellen-Angabe samt Scope-Satz.
+
+    Fundort seit #1744 A2 (AC-8): die Quelle ist eine DATENZEILE im
+    gemeinsamen Datenzeilen-Block ("Quelle:" links, Wert rechts, Scope-Satz
+    als `.scope-note` darunter) -- bis dahin eine eigene `.src`-Box unter der
+    Warn-Karte. Geprueft wird unveraendert der INHALT (Regionen vollstaendig,
+    Scope-Satz verallgemeinert nicht); nur der Fundort hat sich geaendert.
+    """
+    for zelle in _soup(html).select('table[role="presentation"] td[align="left"]'):
+        if zelle.get_text(" ", strip=True).startswith("Quelle"):
+            return zelle.find_parent("table").parent.get_text(" ", strip=True)
+    raise AssertionError("Quellen-Datenzeile fehlt im Standalone-Alert")
 
 
 def _text(html: str) -> str:

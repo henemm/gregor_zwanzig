@@ -166,6 +166,7 @@ describe('AC-9: Neuanlage schreibt dasselbe Format wie der Edit-Pfad', () => {
 		officialAlertTriggersEnabled: false,
 		sendTelegram: false,
 		sendSms: false,
+		sendPremiumSms: false,
 		officialWarningsEnabled: false,
 		morningEnabled: true,
 		morningTime: '07:00',
@@ -360,6 +361,9 @@ describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nu
 	function snapshot(keys: string[]): WeatherMetricsSnapshot {
 		return {
 			activeMetricKeys: [...keys],
+			// Issue #1703 S8: kein Kanal je editiert — alle drei folgen der
+			// Grundauswahl (unveraendertes Verhalten fuer diesen Test).
+			channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 			officialAlertsEnabled: true,
 			dayWindowStartHour: 4,
 			dayWindowEndHour: 19

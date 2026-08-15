@@ -30,10 +30,15 @@ def _sms(report_type: str, *, felt_enabled: bool) -> str:
     # gefuehlten Seite ("wind_chill_night") — ohne expliziten Eintrag bleibt
     # FN abgewaehlt (F.dc() baut MetricConfig direkt, ohne die
     # Bestandsableitung des Ladepfads).
-    metrics = (
-        ("temperature", "temperature_night", "wind_chill", "wind_chill_night")
-        if felt_enabled else ("temperature", "temperature_night")
-    )
+    # #1728 Scheibe 1: K/D bzw. FK/FD haengen an je eigenen Groessen
+    # (temperature_day_low/_high, wind_chill_day_low/_high) — ohne sie
+    # erschiene keiner der Tages-Token, und die Abwesenheits-Assertion bei
+    # abgewaehlter Groesse waere nicht mehr aussagekraeftig.
+    _measured = ("temperature", "temperature_day_low", "temperature_day_high",
+                 "temperature_night")
+    _felt = ("wind_chill", "wind_chill_day_low", "wind_chill_day_high",
+             "wind_chill_night")
+    metrics = _measured + _felt if felt_enabled else _measured
     report = TripReportFormatter().format_email(
         [F.segment()],
         trip_name="Issue1410",

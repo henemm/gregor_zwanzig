@@ -42,6 +42,7 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 
 from tests.helpers.alert_log_fixtures import LAT, LON, settings_email_only
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 
 # Bewusst absurd hoch: das Delta gegen JEDE reale Vorhersage reisst damit die
 # Boeen-Standardschwelle (20 km/h). Ob ein Alarm rausgeht, haengt so nur noch
@@ -122,8 +123,13 @@ def boeen_trip(trip_id: str, tage: list[date]) -> Trip:
             metric_alert_levels={"wind_gust": "standard"},
         ),
     )
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlauf-Fensters — sonst
+    # unterdrueckt die Sperre den Alarm aus einem zweiten Grund und diese
+    # Datei misst nicht mehr den Anker. Vorbedingung, keine Zusicherung.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
     trip.report_config = TripReportConfig(trip_id=trip_id, send_email=True,
-                                          alert_on_changes=True)
+                                          alert_on_changes=True,
+                                          morning_time=morgen, evening_time=abend)
     trip.alert_cooldown_minutes = 0
     trip.official_alert_triggers_enabled = False
     return trip

@@ -20,7 +20,11 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildComparePresetSavePayload } from './compareEditorSave.ts';
+import {
+	buildComparePresetSavePayload,
+	buildNewComparePresetPayload,
+	type NewComparePresetFields
+} from './compareEditorSave.ts';
 import type { ComparePreset, Corridor } from '../../types.ts';
 
 // ─── Fixture: echtes, vollständiges ComparePreset (keine Mocks) ──────────────
@@ -294,5 +298,81 @@ describe('buildComparePresetSavePayload — corridors (#1231 Slice 4)', () => {
 		// Round-Trip-Spread (`...original`) traegt original.corridors weiter —
 		// kein expliziter edits-Key noetig, da der Spread es bereits enthaelt.
 		assert.deepEqual(body.corridors, original.corridors);
+	});
+});
+
+// ─── Issue #1703 Scheibe 8: der ANLEGE-Pfad traegt die Kanal-Overrides mit ───
+//
+// `/compare/new` mountet DENSELBEN `WeatherMetricsTab context="vergleich"` wie
+// der Hub (CompareNewEditor.svelte:394/491) — die Kanal-Reiter der
+// Uebersichtstabelle sind dort also bedienbar. Der Anlege-Pfad speichert aber
+// nicht ueber die Hub-Bridge, sondern ueber
+// `CompareWizardState.saveNewPreset()` -> `buildNewComparePresetPayload()`.
+// Kennt diese Funktion `channel_active_metrics` nicht, verlaesst der Nutzer den
+// Anlege-Editor mit sichtbar eingestellten Kanal-Abwahlen und bekommt einen
+// Vergleich ohne sie — lautloser Verlust, genau die Attrappe, die diese
+// Scheibe verhindern soll (Vorbild: derselbe zweite Persistenzpfad in #1745 A).
+describe('buildNewComparePresetPayload — Kanal-Auswahl der Uebersicht (#1703 S8)', () => {
+	function newFields(): NewComparePresetFields {
+		return {
+			name: 'Neuer Vergleich',
+			pickedIds: ['loc-1', 'loc-2'],
+			activityProfile: 'wandern',
+			schedule: 'daily_morning',
+			officialAlertsEnabled: true,
+			radarAlertEnabled: false,
+			hourlyEnabled: true,
+			officialAlertTriggersEnabled: true,
+			sendTelegram: false,
+			sendSms: false,
+			sendPremiumSms: false,
+			officialWarningsEnabled: false,
+			morningEnabled: true,
+			morningTime: '07:00',
+			eveningEnabled: false,
+			eveningTime: '18:00',
+			endDate: null,
+			dayWindowStartHour: 4,
+			dayWindowEndHour: 19,
+			corridors: [],
+			region: 'Salzburger Land',
+			idealRanges: {},
+			activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
+			hourlyMetricKeys: null,
+			metricAlertLevels: {},
+			telegramStyle: 'rich'
+		};
+	}
+
+	test('editierte Kanaele stehen im POST-Body, ein bewusst geleerter Kanal als [] (nicht als weggelassener Schluessel)', () => {
+		const payload = buildNewComparePresetPayload({
+			...newFields(),
+			channelActiveMetricKeys: {
+				email: null, // nie editiert -> folgt der Grundauswahl
+				telegram: ['temp_max_c'], // eigene, kuerzere Auswahl
+				sms: [] // bewusst geleert
+			}
+		});
+
+		const dc = payload.display_config as Record<string, unknown>;
+		const channels = dc.channel_active_metrics as Record<string, unknown[]> | undefined;
+		assert.ok(
+			channels,
+			'display_config.channel_active_metrics fehlt — die im Anlege-Editor ' +
+				'eingestellten Kanal-Abwahlen gehen beim „Briefing aktivieren" lautlos verloren'
+		);
+		assert.deepEqual(channels.telegram, ['temp_max_c']);
+		assert.equal(
+			Object.prototype.hasOwnProperty.call(channels, 'sms'),
+			true,
+			'Ein bewusst geleerter Kanal muss als [] mitreisen — ein weggelassener ' +
+				'Schluessel ist von „nie editiert" nicht unterscheidbar (analog #1191/#1366)'
+		);
+		assert.deepEqual(channels.sms, []);
+		assert.equal(
+			Object.prototype.hasOwnProperty.call(channels, 'email'),
+			false,
+			'Ein nie editierter Kanal darf keinen Eintrag bekommen — er folgt der Grundauswahl'
+		);
 	});
 });

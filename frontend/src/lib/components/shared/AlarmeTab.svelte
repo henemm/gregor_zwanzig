@@ -16,6 +16,7 @@
 	// Spec: docs/specs/modules/issue_1258_alarme_tab_official_warnings.md
 	//   (AC-9 .. AC-12, Implementation Details Abschnitt 4/5)
 
+	import { onMount, untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import { Eyebrow } from '$lib/components/atoms';
 	import type { Trip, AlertMetric, SensLevel } from '$lib/types';
@@ -34,7 +35,11 @@
 		triggerGroupHeading,
 		type AlarmeContext
 	} from './alarme-tab/alarmeTabSections.ts';
-	import { resolveAlertChannels, type AlertChannelState } from './alarme-tab/alertChannelState.ts';
+	import {
+		resolveAlertChannels,
+		type AlertChannelState,
+		type ChannelKind
+	} from './alarme-tab/alertChannelState.ts';
 	import {
 		applyThresholdChange,
 		resolveAlertChannelThresholds,
@@ -42,6 +47,7 @@
 		type ChannelThreshold
 	} from './alarme-tab/alertChannelState.ts';
 	import { buildAlarmeDeliveryPayload } from './alarme-tab/alarmeDeliveryPayload.ts';
+	import { derivePremiumSmsAlarmGate } from './alarme-tab/premiumSmsAlarmGate.ts';
 	// Feature #1435 E1a-2: die Alarm-Zeilen kommen aus dem zentralen Register
 	// (Katalog-Feld `alertMetric`), nicht mehr aus der geloeschten Frontend-
 	// Liste compareMetricMapping.ts.
@@ -75,12 +81,18 @@
 		catalog?: CompareSelectionEntry[];
 		// beide Kontexte
 		existingChannels?: Partial<AlertChannelState> | null;
-		onChannelToggle?: (kind: 'telegram' | 'sms' | 'email') => void;
+		onChannelToggle?: (kind: ChannelKind) => void;
 		// Issue #1461 S3b-2a (route) + S3b-2b (vergleich): route liest den
 		// Bestand ueber diese Prop (Trip-Speicherweg); vergleich liest/schreibt
 		// stattdessen direkt gegen `wiz.channelThresholds` (Muster
 		// metricAlertLevels/sendTelegram — kein zweiter Speicherweg noetig).
-		existingChannelThresholds?: Partial<Record<'telegram' | 'sms' | 'email', string | null>> | null;
+		existingChannelThresholds?: Partial<Record<ChannelKind, string | null>> | null;
+		// Issue #1745 A: Testhaken fuer den Tarif-Zustand (Muster
+		// VTBriefingChannels.svelte:60,74,82). Ohne Uebergabe (`undefined`)
+		// unveraendertes Verhalten (Fetch in onMount); mit Uebergabe (auch
+		// explizit `null`) wird der Fetch uebersprungen — SSR-Tests koennen den
+		// Tarif-Zustand so steuern, ohne dass `onMount` je laeuft (#1717).
+		profileOverride?: { premium_sms_allowed?: boolean } | null;
 	}
 	let {
 		context = 'route',
@@ -94,8 +106,34 @@
 		catalog,
 		existingChannels,
 		onChannelToggle,
-		existingChannelThresholds
+		existingChannelThresholds,
+		profileOverride
 	}: Props = $props();
+
+	// ── Tarif-Zustand fuer das Premium-SMS-Gate (AC-5/AC-13) ───────────────────
+	// EIN Fetch-Ort fuer alle vier Mount-Punkte (Trip-Alarme-Reiter,
+	// Vergleichs-Hub, beide Compare-Anlege-Masken) — AlertChannelPicker wird
+	// ausschliesslich von AlarmeTab eingebunden.
+	let alarmProfile = $state<{ premium_sms_allowed?: boolean } | null>(
+		untrack(() => (profileOverride !== undefined ? profileOverride : null))
+	);
+	onMount(() => {
+		if (profileOverride !== undefined) return;
+		fetch('/api/auth/profile', { credentials: 'same-origin' })
+			.then((r) => (r.ok ? r.json() : null))
+			.then((p) => {
+				alarmProfile = p as { premium_sms_allowed?: boolean } | null;
+			})
+			.catch(() => {
+				alarmProfile = null;
+			});
+	});
+	const premiumSmsAlarmGate = $derived(derivePremiumSmsAlarmGate(alarmProfile));
+	const channelDisabled = $derived(
+		premiumSmsAlarmGate.disabled && premiumSmsAlarmGate.hint
+			? { premium_sms: premiumSmsAlarmGate.hint }
+			: undefined
+	);
 
 	const sections = $derived(alarmeTabSections(context));
 
@@ -189,14 +227,20 @@
 	let routeChannelState = $state<AlertChannelState>(resolveAlertChannels(existingChannels));
 	const displayChannelState = $derived<AlertChannelState>(
 		context === 'vergleich'
-			? { telegram: wiz?.sendTelegram ?? false, sms: wiz?.sendSms ?? false, email: true }
+			? {
+					telegram: wiz?.sendTelegram ?? false,
+					sms: wiz?.sendSms ?? false,
+					premium_sms: wiz?.sendPremiumSms ?? false,
+					email: true
+				}
 			: routeChannelState
 	);
-	function handleChannelToggle(kind: 'telegram' | 'sms' | 'email') {
+	function handleChannelToggle(kind: ChannelKind) {
 		if (context === 'vergleich') {
 			if (!wiz) return;
 			if (kind === 'telegram') wiz.sendTelegram = !wiz.sendTelegram;
 			else if (kind === 'sms') wiz.sendSms = !wiz.sendSms;
+			else if (kind === 'premium_sms') wiz.sendPremiumSms = !wiz.sendPremiumSms;
 			// E-Mail bleibt implizit — kein Toggle im vergleich-Zweig.
 			return;
 		}
@@ -223,19 +267,19 @@
 			? resolveAlertChannelThresholds(wiz?.channelThresholds ?? null)
 			: routeChannelThresholds
 	);
-	function handleThresholdChange(kind: 'telegram' | 'sms' | 'email', level: ChannelThreshold) {
+	function handleThresholdChange(kind: ChannelKind, level: ChannelThreshold) {
 		if (context === 'vergleich') {
 			if (wiz) {
-				const updated = applyThresholdChange(
+				// Issue #1745 A (Landmine 1): die VOLLE, bereits berechnete
+				// `updated`-Struktur durchreichen statt Feld-fuer-Feld zu picken —
+				// applyThresholdChange() liefert nach der Typ-Erweiterung alle vier
+				// Kanaele (inkl. premium_sms). Ein explizites Dreifeld-Objekt hier
+				// wuerde premium_sms still verwerfen.
+				wiz.channelThresholds = applyThresholdChange(
 					resolveAlertChannelThresholds(wiz.channelThresholds ?? null),
 					kind,
 					level
-				);
-				wiz.channelThresholds = {
-					telegram: updated.telegram,
-					sms: updated.sms,
-					email: updated.email
-				};
+				) as unknown as Record<string, string>;
 			}
 			return;
 		}
@@ -357,6 +401,7 @@
 					onToggle={handleChannelToggle}
 					thresholds={displayChannelThresholds}
 					onThresholdChange={handleThresholdChange}
+					disabledChannels={channelDisabled}
 				/>
 				{#if context === 'vergleich'}
 					<!-- Issue #1260 S5: geteilter Kurzstil-Schalter (DIESELBE Komponente
@@ -380,10 +425,12 @@
 					<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
 				{/if}
 			{:else if id === 'quiet-hours'}
+				<!-- Issue #1726: EIN geteilter Baustein, zwei Bezugsgrössen — beim
+				     Vergleich gilt die Zone des erstgenannten Orts (#1378 AC-4). -->
 				{#if context === 'vergleich'}
-					<AlertQuietHoursCard bind:quiet_from={wiz!.alertQuietFrom} bind:quiet_to={wiz!.alertQuietTo} />
+					<AlertQuietHoursCard bind:quiet_from={wiz!.alertQuietFrom} bind:quiet_to={wiz!.alertQuietTo} zonen_bezug="des ersten Orts" />
 				{:else}
-					<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} />
+					<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} zonen_bezug="der Tour" />
 				{/if}
 			{:else if id === 'radar'}
 				<ChannelToggle

@@ -10,42 +10,10 @@
 // Ausführen:
 //   cd frontend && npx playwright test e2e/layout-tab-route.spec.ts
 
-import { test, expect, type Locator, type Page } from '@playwright/test';
-import { login } from './helpers.js';
-
-// Pointer-basierte Drag-Simulation. Seit Issue #1272 sortiert die
-// Reihenfolge-Liste ueber `svelte-dnd-action` (geteilter SortableList,
-// ADR-0024) statt ueber das native HTML5-Drag-API: die Bibliothek schaltet
-// natives Drag bewusst ab (`draggableEl.draggable = false`) und hoert nur auf
-// Pointer-Events mit 3px-Schwelle — Playwrights `locator.dragTo()` erzeugt nur
-// EINEN Move-Schritt und reisst diese Schwelle nicht.
-// Muster uebernommen aus compare-hub-inline-edit.spec.ts:22-38.
-async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
-	// Erst in den sichtbaren Bereich scrollen, DANN die Koordinaten lesen.
-	// `boundingBox()` scrollt selbst nicht (playwright-core/lib/server/dom.js:677) und
-	// liefert fuer Zeilen unterhalb des Viewports Koordinaten ausserhalb des Fensters —
-	// die Maus-Sequenz landet dann im Leeren und der Drag passiert nie. Playwrights
-	// `dragTo()`, das hier vorher stand, scrollte implizit mit; die Pointer-Simulation
-	// muss es explizit tun. Ein echter Nutzer scrollt die Zeile ebenfalls erst ins Bild.
-	await source.scrollIntoViewIfNeeded();
-	await target.scrollIntoViewIfNeeded();
-
-	const sourceBox = await source.boundingBox();
-	const targetBox = await target.boundingBox();
-	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
-
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
-	await page.mouse.down();
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 - 12, {
-		steps: 6
-	});
-	await page.waitForTimeout(120);
-	await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
-		steps: 15
-	});
-	await page.waitForTimeout(120);
-	await page.mouse.up();
-}
+import { test, expect, type Page } from '@playwright/test';
+// `dragDndZoneItem` ist seit #1771 S1 geteilt (war hier lokal kopiert) und
+// wartet auf das echte `finalize`-Ereignis statt auf eine feste Frist.
+import { login, dragDndZoneItem } from './helpers.js';
 
 const TRIP_ID = 'e2e-layout-tab-route';
 const OVERFLOW_TRIP_ID = 'e2e-layout-tab-route-overflow';
@@ -121,6 +89,10 @@ async function createTrip(
 
 async function openMetricsTab(page: Page, id: string) {
 	await page.goto(`/trips/${id}?tab=weather`);
+	// SvelteKit liefert die Tab-Leiste server-gerendert VOR der Hydration aus —
+	// ein Klick, der vor dem Attachen der Event-Listener ankommt, geht spurlos
+	// verloren (#1771; Muster aus compare-hub-inline-edit.spec.ts).
+	await page.waitForLoadState('networkidle');
 	const weatherTabBtn = page.getByTestId('trip-detail-tab-weather');
 	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
 	await weatherTabBtn.click();
@@ -154,27 +126,37 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 		});
 
-		// ── AC-1/AC-2: Kanal-Wechsel schaltet Vorschau-Template, keine alten Tabs ──
-		test('AC-1/AC-2: Kanal-Picker schaltet Vorschau Email→Telegram→SMS, alte interne Tabs sind weg', async ({
+		// ── AC-1/AC-2 (Issue #1719 S3, umgedreht): Kanal-Picker schaltet den
+		// aktiven Kanal — die Live-Vorschau ("So kommt es an") ist ersatzlos
+		// entfernt (PO-Entscheid, WeatherV2MailPreview.svelte gelöscht). Dieser
+		// Test prüfte zuvor ausschließlich das Umschalten der Vorschau-Tabelle;
+		// ersetzt durch eine Prüfung, dass der Kanal-Picker weiterhin den
+		// aktiven Kanal umschaltet und der Reihenfolge-Editor dabei sichtbar
+		// bleibt. Absenz der Vorschau ist der eigentliche Nachweis dafür im
+		// RED-Bündel `wetter-metriken-vorschau-entfernt.staging.spec.ts` (AC-1).
+		test('AC-1/AC-2: Kanal-Picker schaltet den aktiven Kanal Email→Telegram→SMS, keine Vorschau mehr im DOM', async ({
 			page
 		}) => {
 			const tab = await openMetricsTab(page, TRIP_ID);
-			const preview = tab.getByTestId('wm2-mail-preview');
-			await expect(preview).toBeVisible();
+			await expect(tab.getByTestId('wm2-mail-preview')).toHaveCount(0);
 
-			// Keine alten internen Kanal-Tab-Buttons mehr im Vorschau-Markup.
-			await expect(preview.locator('button[data-channel]')).toHaveCount(0);
+			const emailBtn = tab.getByTestId('channel-tab-email');
+			const telegramBtn = tab.getByTestId('channel-tab-telegram');
+			const smsBtn = tab.getByTestId('channel-tab-sms');
 
-			await tab.getByTestId('channel-tab-email').click();
-			await expect(preview.getByTestId('wm2-email-table')).toBeVisible();
+			await emailBtn.click();
+			await expect(emailBtn).toHaveClass(/active/);
+			await expect(tab.getByTestId('wm2-reihenfolge')).toBeVisible();
 
-			await tab.getByTestId('channel-tab-telegram').click();
-			await expect(preview.getByTestId('wm2-telegram-bubble')).toBeVisible();
-			await expect(preview.getByTestId('wm2-email-table')).toHaveCount(0);
+			await telegramBtn.click();
+			await expect(telegramBtn).toHaveClass(/active/);
+			await expect(emailBtn).not.toHaveClass(/active/);
+			await expect(tab.getByTestId('wm2-reihenfolge')).toBeVisible();
 
-			await tab.getByTestId('channel-tab-sms').click();
-			await expect(preview.getByTestId('wm2-sms-line')).toBeVisible();
-			await expect(preview.getByTestId('wm2-telegram-bubble')).toHaveCount(0);
+			await smsBtn.click();
+			await expect(smsBtn).toHaveClass(/active/);
+			await expect(telegramBtn).not.toHaveClass(/active/);
+			await expect(tab.getByTestId('wm2-reihenfolge')).toBeVisible();
 		});
 
 		// ── AC-3: DnD-Reihenfolge + Auto-Save + Reload-Beweis ──────────────────────
@@ -195,11 +177,10 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 
 			await expect(rows.first()).toHaveAttribute('data-metric-id', 'precipitation');
 
-			// Email-Vorschau-Spaltenreihenfolge folgt der neuen Reihenfolge.
-			await tab.getByTestId('channel-tab-email').click();
-			const headerCells = tab.getByTestId('wm2-email-table').locator('thead th');
-			await expect(headerCells.nth(1)).toHaveText(/Rain/i);
-
+			// Issue #1719 S3: die Email-Vorschau-Spaltenreihenfolge-Teilprüfung
+			// entfällt — WeatherV2MailPreview.svelte (wm2-email-table) ist mit der
+			// Live-Vorschau ersatzlos gelöscht (PO-Entscheid). Der Reload-Beweis
+			// unten bleibt der Kern dieses Tests.
 			await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 				timeout: 5_000
 			});
@@ -235,8 +216,14 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle');
 		});
 
-		// ── AC-5 (Test-Plan-Punkt): Entfernen/Modus-Wechsel funktioniert weiterhin ──
-		test('AC-5: "Aus"-Button entfernt eine Metrik weiterhin und löst Auto-Save aus', async ({
+		// ── AC-5 (Issue #1719 S3, umgedreht — ADR-0050 Regel 4): "Aus ist ein
+		// Zustand, keine Löschung". Diese Datei kodierte bisher `toHaveCount(0)`
+		// nach "Aus" — das WAR das von ADR-0050 verworfene Verhalten. Jetzt:
+		// die Metrik verschwindet aus der aktiven Liste, bleibt aber sichtbar in
+		// der "Aus in diesem Kanal"-Gruppe. Vollständiger Klickpfad (Aus →
+		// Reload → Aus-Gruppe → Ein → wieder aktiv) im RED-Bündel
+		// `kanal-abwahl-bleibt-reversibel.staging.spec.ts` (AC-7).
+		test('AC-5: "Aus"-Button entfernt eine Metrik aus der aktiven Liste — sie landet in der Aus-Gruppe, keine Löschung', async ({
 			page
 		}) => {
 			const tab = await openMetricsTab(page, TRIP_ID);
@@ -247,30 +234,33 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			await row.getByRole('button', { name: 'Aus' }).click();
 
 			await expect(
-				tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]')
+				tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]'),
+				'"wind" muss aus der AKTIVEN Liste verschwinden'
 			).toHaveCount(0);
+			await expect(
+				tab.getByTestId('wm2-aus-gruppe').locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]'),
+				'ADR-0050 Regel 4: "wind" darf nicht physisch gelöscht werden — es muss in der Aus-Gruppe stehen'
+			).toBeVisible();
 			await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 				timeout: 5_000
 			});
 		});
 
-		// ── AC-7: Mobile FAB+Sheet folgt dem gewählten Kanal, kein horiz. Scroll ───
-		test('AC-7: Mobile FAB öffnet Sheet mit der Vorschau des gewählten Kanals, kein horizontaler Scroll', async ({
+		// ── AC-7 (Issue #1719 S3, umgedreht): Mobile-FAB + Bottom-Sheet ist mit
+		// der Live-Vorschau ersatzlos entfernt (PO-Entscheid) — Nachweis, dass
+		// beides aus dem DOM verschwunden ist UND die Seite auf Mobil trotzdem
+		// bedienbar bleibt (kein horizontaler Scroll).
+		test('AC-7: kein Mobile-FAB/Sheet mehr, Kanal-Wechsel bleibt auf Mobil bedienbar, kein horizontaler Scroll', async ({
 			page
 		}) => {
 			await page.setViewportSize({ width: 390, height: 844 });
 			const tab = await openMetricsTab(page, TRIP_ID);
 
-			await tab.locator('[data-testid="channel-tab-telegram"]:visible').first().click();
+			await expect(page.getByTestId('mobile-mail-fab')).toHaveCount(0);
+			await expect(page.getByTestId('mobile-mail-sheet')).toHaveCount(0);
 
-			// F001-Fix (Staging-Adversary #1232-3b): FAB lag vor dem CSS-Fix hinter
-			// der globalen BottomNav (z-index:50) — echter Klick jetzt möglich,
-			// da der FAB per bottom-Offset (64px Nav-Höhe + safe-area + 16px) und
-			// z-index:55 über die Nav gehoben wurde (WeatherMetricsTab.svelte).
-			await page.locator('[data-testid="mobile-mail-fab"]:visible').first().click();
-			const sheet = page.locator('[data-testid="mobile-mail-sheet"]:visible').first();
-			await expect(sheet).toBeVisible();
-			await expect(sheet.getByTestId('wm2-telegram-bubble')).toBeVisible();
+			await tab.locator('[data-testid="channel-tab-telegram"]:visible').first().click();
+			await expect(tab.getByTestId('wm2-reihenfolge')).toBeVisible();
 
 			const overflowsX = await page.evaluate(
 				() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 4
@@ -316,16 +306,18 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			await request.delete(`/api/trips/${OVERFLOW_TRIP_ID}`).catch(() => {});
 		});
 
-		// ── AC-4: >8 aktive Metriken → Cut-Line + Overflow-Chip am Telegram-Button ──
-		// Fresh-Eyes-Fund #1232-3b: `colCount` im route-Kontext zählt reine
-		// Metriken (kein „+1" Label-Spalte wie im vergleich-Kontext) — Badge-
-		// Overflow-Zahl, Cut-Line-Position und Vorschau-Hinweis-Zahl MÜSSEN
-		// dieselbe Zahl zeigen (hier: 9 Metriken − 8 Budget = 1 Überlauf).
-		test('AC-4: >8 aktive Metriken zeigen Cut-Line im Kanal Telegram + Overflow-Chip am Picker', async ({
+		// ── AC-4/AC-3 (Issue #1719 S3, umgedreht): >7 aktive Metriken → Cut-Line +
+		// Overflow-Chip am Telegram-Button. Telegram-Budget von 8 auf 7 korrigiert
+		// (die 8. Backend-Spalte ist die Uhrzeit, keine Metrik —
+		// channel_layout.py:110). Die "Zahlen-Konsistenz mit der Vorschau"-Prüfung
+		// entfällt: WeatherV2MailPreview.svelte ist mit der Live-Vorschau
+		// ersatzlos gelöscht (PO-Entscheid) — Cut-Line/Badge/LTCapNote bleiben die
+		// einzigen (weiterhin konsistenten) Zähler.
+		test('AC-4/AC-3: >7 aktive Metriken zeigen Cut-Line im Kanal Telegram + Overflow-Chip am Picker', async ({
 			page
 		}) => {
 			const tab = await openMetricsTab(page, OVERFLOW_TRIP_ID);
-			// "Wandern"-Preset hat 9 Metriken (> Telegram-Budget 8).
+			// "Wandern"-Preset hat 9 Metriken (> Telegram-Budget 7).
 			await tab.getByTestId('weather-preset-pill-wandern').click();
 			const confirmOk = page.getByTestId('preset-confirm-ok');
 			if (await confirmOk.isVisible()) await confirmOk.click();
@@ -333,14 +325,14 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			const rows = tab.locator('[data-testid="wm2-reihenfolge-row"]');
 			const totalMetrics = await rows.count();
 			expect(totalMetrics).toBe(9);
-			const tgBudget = 8;
-			const expectedOverflow = totalMetrics - tgBudget; // 1
+			const tgBudget = 7;
+			const expectedOverflow = totalMetrics - tgBudget; // 2
 
 			// Cut-Line erscheint NICHT im Kanal Email (kein Limit).
 			await tab.getByTestId('channel-tab-email').click();
 			await expect(tab.locator('[data-testid="wm2-cut-line"]')).toHaveCount(0);
 
-			// Cut-Line erscheint im Kanal Telegram an Position 9 (nach 8 Zeilen).
+			// Cut-Line erscheint im Kanal Telegram an Position 8 (nach 7 Zeilen).
 			const telegramBtn = tab.getByTestId('channel-tab-telegram');
 			await telegramBtn.click();
 			const cutLine = tab.locator('[data-testid="wm2-cut-line"]');
@@ -348,17 +340,9 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			await expect(cutLine).toContainText('Telegram');
 			await expect(cutLine).toContainText(String(tgBudget));
 
-			// Overflow-Chip am Telegram-Button: 9 Metriken > 8 Budget → "−1"
-			// (NICHT "−2" — das wäre die vergleich-Konvention mit Label-Spalte).
+			// Overflow-Chip am Telegram-Button: 9 Metriken > 7 Budget → "−2"
+			// (NICHT "−3" — das wäre die vergleich-Konvention mit Label-Spalte).
 			await expect(telegramBtn).toContainText(`−${expectedOverflow}`);
-
-			// Zahlen-Konsistenz: Badge-Overflow == Vorschau-Hinweis-Zahl.
-			// Die Vorschau zeigt bei Kanal Telegram denselben Überlauf-Wert wie
-			// Cut-Line/Badge (kein zweiter, abweichender Zähler im UI).
-			const bubble = tab.getByTestId('wm2-mail-preview').getByTestId('wm2-telegram-bubble');
-			await expect(bubble).toBeVisible();
-			const overflowWord = expectedOverflow === 1 ? 'Metrik passt' : 'Metriken passen';
-			await expect(bubble).toContainText(`${expectedOverflow} ${overflowWord} nicht in die Tabelle`);
 
 			// LTCapNote spiegelt dieselbe Metriken-Zählung (kein "Label +"-Zusatz
 			// im route-Kontext, siehe LTCapNote.svelte hasLabelColumn-Prop).
@@ -433,6 +417,12 @@ test.describe('Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (context="rout
 			.getByRole('button', { name: 'Aus' })
 			.click();
 		await expect(rows).toHaveCount(2);
+		// Issue #1719 S3 (ADR-0050 Regel 4, umgedreht): "wind" verschwindet aus
+		// der aktiven Liste, ist aber NICHT gelöscht — es steht in der
+		// "Aus in diesem Kanal"-Gruppe.
+		await expect(
+			tab.getByTestId('wm2-aus-gruppe').locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]')
+		).toBeVisible();
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});
@@ -459,7 +449,14 @@ test.describe('Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (context="rout
 		await reloaded.getByTestId('channel-tab-sms').click();
 		await expect(reloaded.locator('[data-testid="wm2-reihenfolge-row"]')).toHaveCount(2);
 		await expect(
-			reloaded.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]')
+			reloaded.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]'),
+			'"wind" darf nach dem Reload nicht mehr in der AKTIVEN Liste stehen'
 		).toHaveCount(0);
+		// Issue #1719 S3 (ADR-0050 Regel 4, umgedreht): "wind" bleibt auch nach
+		// dem Reload sichtbar — persistiert in der Aus-Gruppe, nicht gelöscht.
+		await expect(
+			reloaded.getByTestId('wm2-aus-gruppe').locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]'),
+			'"wind" muss nach dem Reload weiterhin in der Aus-Gruppe stehen (ADR-0050 Regel 4)'
+		).toBeVisible();
 	});
 });

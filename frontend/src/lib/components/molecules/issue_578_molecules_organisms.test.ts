@@ -307,9 +307,14 @@ describe('AC-10–13: Compare-Briefing-Vorschau-Molecules', () => {
 		assert.ok(/#5ea9dd/.test(src), 'CompareChatBubble: Telegram-Accent #5ea9dd fehlt');
 	});
 
-	test('AC-12: CompareSmsPreview kürzt bei > 140 Zeichen + Warn-Farbe', () => {
+	// Issue #1719 S3 (Spec-Korrektur, Commit 6403c57a): das Limit ist 153, nicht
+	// 140 — 140 war fuer den Vergleichspfad nachweislich falsch gemessen
+	// (channel_layout.py:45-54, GSM-7/UDH floor((140-6)*8/7)). Umgedreht statt
+	// geloescht, weil AC-12 (Kuerzung + Warn-Farbe) weiterhin gilt, nur mit der
+	// korrigierten Zahl.
+	test('AC-12: CompareSmsPreview kürzt bei > 153 Zeichen + Warn-Farbe', () => {
 		const src = readMol('CompareSmsPreview.svelte');
-		assert.ok(/140/.test(src), 'CompareSmsPreview: 140-Zeichen-Limit fehlt');
+		assert.ok(/153/.test(src), 'CompareSmsPreview: 153-Zeichen-Limit fehlt');
 		assert.ok(/#f0a060/.test(src), 'CompareSmsPreview: Warn-Farbe #f0a060 bei Überschreitung fehlt');
 	});
 

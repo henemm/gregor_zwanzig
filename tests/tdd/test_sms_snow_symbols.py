@@ -622,14 +622,25 @@ def test_ac1_wind_chill_reports_all_four_symbols():
     app.include_router(config_router.router)
     metrics = TestClient(app).get("/sms-symbols").json()["metrics"]
 
-    entries = [m for m in metrics if m["metric_id"] == "wind_chill"]
-    assert len(entries) == 1, (
-        f"AC-1: erwarte genau einen wind_chill-Eintrag, gefunden {len(entries)}: "
-        f"{entries!r}"
-    )
-    assert entries[0]["sms_symbols"] == ["FK", "FD", "WC"], (
-        "AC-1: wind_chill liefert "
-        f"{entries[0]['sms_symbols']!r}, erwartet ['FK','FD','WC']"
+    # Issue #1728 Scheibe 1: 'FK'/'FD' haengen an eigenen Groessen, 'WC'
+    # bleibt bei "wind_chill" (E3, haelt #1450). Die Zusicherung dieses AC --
+    # der Endpoint meldet je Groesse GENAU EINEN Eintrag und alle vier
+    # gefuehlten Kuerzel bleiben ueber den Katalog erreichbar -- ist
+    # unveraendert; nur ihre Traeger sind aufgeteilt.
+    by_id = {}
+    for m in metrics:
+        assert m["metric_id"] not in by_id, (
+            f"AC-1: doppelter Eintrag fuer {m['metric_id']!r}: {metrics!r}"
+        )
+        by_id[m["metric_id"]] = m["sms_symbols"]
+    erwartet = {
+        "wind_chill_day_low": ["FK"], "wind_chill_day_high": ["FD"],
+        "wind_chill": ["WC"],
+    }
+    ist = {mid: by_id.get(mid) for mid in erwartet}
+    assert ist == erwartet, (
+        f"AC-1: die gefuehlten Tages-Kuerzel haengen falsch: {ist} statt "
+        f"{erwartet}"
     )
 
     night_entries = [m for m in metrics if m["metric_id"] == "wind_chill_night"]
@@ -721,15 +732,27 @@ def test_ac6_endpoint_reports_eleven_metrics_total():
     app.include_router(config_router.router)
     metrics = TestClient(app).get("/sms-symbols").json()["metrics"]
 
-    assert len(metrics) == 26, (
-        f"AC-6: erwarte 26 Metrik-Eintraege (8 Register + 14 neue + 4 "
-        f"Mehrfach-Kuerzel, thunder nur einmal gezaehlt), gefunden "
-        f"{len(metrics)}: {metrics!r}"
+    # Issue #1728 Scheibe 1: 26 -> 29. Die vier neuen Tagesrichtungen kommen
+    # hinzu, "temperature" faellt weg (fuehrt kein eigenes Kuerzel mehr):
+    # 26 - 1 + 4 = 29. Die Zusicherung -- der Endpoint meldet JEDE Groesse
+    # mit Kuerzel genau einmal -- ist unveraendert.
+    assert len(metrics) == 29, (
+        f"AC-6: erwarte 29 Metrik-Eintraege (8 Register + 14 neue + "
+        f"7 Kuerzel-Traeger der Temperatur-Familie, thunder nur einmal "
+        f"gezaehlt), gefunden {len(metrics)}: {metrics!r}"
     )
     by_metric = {m["metric_id"]: m["sms_symbols"] for m in metrics}
-    assert by_metric.get("temperature") == ["K", "D"], (
-        f"AC-6: temperature liefert {by_metric.get('temperature')!r}, "
-        "erwartet ['K','D']"
+    assert by_metric.get("temperature_day_low") == ["K"], (
+        f"AC-6: temperature_day_low liefert "
+        f"{by_metric.get('temperature_day_low')!r}, erwartet ['K']"
+    )
+    assert by_metric.get("temperature_day_high") == ["D"], (
+        f"AC-6: temperature_day_high liefert "
+        f"{by_metric.get('temperature_day_high')!r}, erwartet ['D']"
+    )
+    assert "temperature" not in by_metric, (
+        "AC-6/#1728: 'temperature' fuehrt kein eigenes Kurzform-Kuerzel mehr "
+        f"— gefunden {by_metric.get('temperature')!r}"
     )
     assert by_metric.get("temperature_night") == ["N"], (
         f"AC-6: temperature_night liefert {by_metric.get('temperature_night')!r}, "

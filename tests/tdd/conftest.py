@@ -9,8 +9,10 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import date as _date
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -20,6 +22,16 @@ import pytest
 _HOOKS_DIR = Path(__file__).resolve().parents[2] / ".claude" / "hooks"
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
+
+# tests/ selbst auf sys.path (#1709): test_wanduhr_matrix.py importiert das
+# Messwerkzeug als `from helpers.wanduhr_matrix import ...` -- OHNE
+# "tests."-Präfix, anders als die übliche Absolut-Importform
+# `from tests.helpers.xxx import yyy` (die über pythonpath="." im
+# Repo-Root bereits funktioniert). Ohne diesen Eintrag bliebe der Import ein
+# ModuleNotFoundError, unabhängig von der Implementierung des Werkzeugs.
+_TESTS_DIR = Path(__file__).resolve().parents[1]
+if str(_TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TESTS_DIR))
 
 from validation import GroundTruthFetcher
 
@@ -36,6 +48,75 @@ PROD_SELFTEST = _REPO_ROOT / ".claude" / "hooks" / "prod_selftest.py"
 # Ablage, HEAD-Ermittlung/Attestation) -- unabhaengig davon, welche
 # Dateikopie (Worktree oder Hauptrepo) den Testcode tatsaechlich ausfuehrt.
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
+
+
+# ---------------------------------------------------------------------------
+# Zwei-Zonen-Tour -- geteilter Ort (Issue #1727 S5a, Spec-Sektion "Testfixtur")
+#
+# Gehoben aus tests/tdd/test_drilldown_day_window_local_date.py (#1470).
+# Wellington und Vizzavona liegen zwoelf Stunden auseinander: genau die
+# Spanne, die den Ortstag-Anker sichtbar macht. Eine dritte Kopie waere
+# genau der Fehler, den ADR-0044 fuer die Zonen-Aufloesung selbst verbietet.
+# ---------------------------------------------------------------------------
+
+WP_NZ = (-41.3, 174.8)      # Wellington -> Pacific/Auckland, im August UTC+12
+WP_KORSIKA = (42.1, 9.0)    # Vizzavona  -> Europe/Paris,     im August UTC+2
+
+
+def trip_two_zones(
+    day0: _date, trip_id: str = "zwei-zonen", trip_name: str = "Zwei-Zonen-Tour",
+):
+    """Etappe 0 in Neuseeland, ab Etappe 1 auf Korsika (drei Tage ab ``day0``)."""
+    from app.trip import Stage, Trip, Waypoint
+
+    coords = [WP_NZ, WP_KORSIKA, WP_KORSIKA]
+    return Trip(
+        id=trip_id,
+        name=trip_name,
+        stages=[
+            Stage(
+                id=f"S{i}", name=f"Etappe {i}", date=day0 + timedelta(days=i),
+                waypoints=[
+                    Waypoint(id=f"W{i}", name=f"WP{i}", lat=lat, lon=lon,
+                             elevation_m=100),
+                ],
+            )
+            for i, (lat, lon) in enumerate(coords)
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Vorbedingungs-Anker -- geteilter Ort (Issue #1795, gehoben aus
+# tests/tdd/test_befehlspfade_folgen_ortszone.py:100-118, #1727 S5a).
+#
+# Eine dritte Kopie waere derselbe Regelverstoss, den ADR-0044 fuer die
+# Zonen-Aufloesung selbst verbietet -- der Altnutzer importiert ab #1795
+# von hier statt einer eigenen Definition.
+# ---------------------------------------------------------------------------
+
+def _anker(now_utc: datetime, zone: str, erwarteter_ortstag: _date) -> None:
+    """Vorbedingungs-Anker — PFLICHT vor jeder Hauptzusicherung, die einen
+    vom Weltzeit-/Servertag abweichenden Ortstag behauptet.
+
+    Belegt, dass Ortstag, Weltzeit-Tag und Servertag bei DIESER Fixtur zu
+    DIESEM Zeitpunkt wirklich auseinanderfallen. Ohne ihn koennte die
+    Hauptzusicherung strukturell nie fehlschlagen (Fehlerklasse #1726 F002).
+    Der Sollwert wird aus der Zone gebildet, nicht aus dem Prueflingsweg.
+    """
+    ortstag = now_utc.astimezone(ZoneInfo(zone)).date()
+    assert ortstag == erwarteter_ortstag, (
+        f"Testaufbau: Ortstag in {zone} ist {ortstag}, der Test rechnet mit "
+        f"{erwarteter_ortstag} (Zeitpunkt {now_utc.isoformat()})"
+    )
+    assert ortstag != now_utc.date(), (
+        f"Testaufbau nicht diskriminierend: Ortstag ({ortstag}) und "
+        f"Weltzeit-Tag ({now_utc.date()}) sind gleich (#1726 F002)"
+    )
+    assert ortstag != _date.today(), (
+        f"Testaufbau nicht diskriminierend: Ortstag ({ortstag}) und Servertag "
+        f"date.today() ({_date.today()}) sind gleich (#1726 F002)"
+    )
 
 
 def _load_prod_selftest_module():

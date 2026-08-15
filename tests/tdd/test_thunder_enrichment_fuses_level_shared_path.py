@@ -421,6 +421,57 @@ def test_f001_kein_signal_laesst_thunder_level_am_produktionspfad_unveraendert()
     )
 
 
+def test_1680_herkunft_teilt_die_ueberschreib_bedingung_der_stufe():
+    """Issue #1680 S1: `dp.thunder_level_signals` (die Herkunft) haengt an
+    DERSELBEN Ueberschreib-Bedingung wie `dp.thunder_level` -- liefert die
+    Fusion `None` ("keine Aussage"), bleibt auch eine bereits vorhandene
+    Herkunft unangetastet.
+
+    Ohne diese Kopplung wuerde eine zweite Runde ohne Rohsignale einen
+    vorhandenen Traeger-Wert still auf die leere Liste setzen: die Stufe
+    bliebe stehen, die Herkunft waere weg -- genau das, was der Docstring von
+    `_fuse_thunder_levels()` ausschliesst. Zieht man die zweite Zuweisung aus
+    dem `if fused is not None`, muss dieser Test rot werden.
+
+    Gegenprobe im selben Test: liefert die Fusion sehr wohl ein Ergebnis,
+    wird die Herkunft AKTIV mitgezogen -- Stufe und Herkunft stammen dann aus
+    derselben Rechnung, ein alter Traeger-Wert darf nicht stehenbleiben.
+    """
+    from app.model_registry import lpi_thresholds_jkg
+    from app.models import ForecastDataPoint
+    from providers.thunder_enrichment import _fuse_thunder_levels
+
+    ts = datetime.now(timezone.utc)
+    stumm = ForecastDataPoint(
+        ts=ts, thunder_level=None, lightning_density_per_km2_3h=None,
+        cape_jkg=None, lightning_potential_lpi_jkg=None,
+        thunder_level_signals=["cape"],
+    )
+    laut = ForecastDataPoint(
+        ts=ts, thunder_level=None, lightning_density_per_km2_3h=None,
+        cape_jkg=None, lightning_potential_lpi_jkg=60.0,
+        thunder_level_signals=["cape"],
+    )
+
+    _fuse_thunder_levels([stumm, laut], None, lpi_thresholds_jkg("EU_REST"))
+
+    assert stumm.thunder_level_signals == ["cape"], (
+        "dp.thunder_level_signals wurde veraendert, obwohl die Fusion "
+        "'keine Aussage' (None) lieferte -- die Herkunft muss an derselben "
+        f"Ueberschreib-Bedingung haengen wie die Stufe: "
+        f"{stumm.thunder_level_signals!r}"
+    )
+    assert laut.thunder_level == ThunderLevel.HIGH, (
+        f"Gegenprobe-Vorbedingung: 60 J/kg Blitzpotenzial muessen ueber die "
+        f"EU_REST-Leiter 'hoch' ergeben, erhalten {laut.thunder_level!r}"
+    )
+    assert laut.thunder_level_signals == ["blitzpotenzial"], (
+        "Gegenprobe gescheitert: liefert die Fusion ein Ergebnis, MUSS die "
+        "Herkunft mitgezogen werden (sonst gehoerte sie zu einer anderen "
+        f"Rechnung als die Stufe): {laut.thunder_level_signals!r}"
+    )
+
+
 def test_f001_blitzpotenzial_null_komma_null_setzt_stufe_none_am_produktionspfad():
     """F001 Gegenfall: `lightning_potential_lpi_jkg=0.0` (aktiv geprueft,
     unter der LOW-Schwelle 5.0) bei sonst None -- liefert am Produktionspfad

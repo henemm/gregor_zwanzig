@@ -30,10 +30,11 @@ from src.output.renderers.email.html import _render_html_table
 TZ = ZoneInfo("Europe/Berlin")
 
 # Cell-Toenungsfarben (SSoT aus html.py/helpers.py) -> Ampelstufe.
+# Fix #1801 S2: neue Flaechenfarben (groesserer Abstand orange<->rot).
 _CELL_BG_TO_LEVEL = {
-    "#fbeeb8": "yellow",
-    "#fad6b8": "orange",
-    "#f6c5bf": "red",
+    "#fdf4cd": "yellow",
+    "#fbe3cc": "orange",
+    "#f7d3e2": "red",
 }
 _TD_OPEN_TAG = re.compile(r'<td[^>]*data-label="([^"]*)"[^>]*>')
 

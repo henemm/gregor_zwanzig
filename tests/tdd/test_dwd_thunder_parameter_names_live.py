@@ -26,6 +26,7 @@ gehalten (Stream, sofort geschlossen).
 """
 from __future__ import annotations
 
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,6 +35,7 @@ import httpx
 import pytest
 
 _SRC = Path(__file__).resolve().parents[2] / "src"
+_REPO_ROOT = _SRC.parent
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
@@ -41,7 +43,7 @@ from providers import dwd  # noqa: E402
 
 
 @pytest.mark.live
-@pytest.mark.parametrize("param_index", [0, 1])
+@pytest.mark.parametrize("param_index", range(len(dwd.THUNDER_PARAMS)))
 def test_ac6_hinterlegte_gewitter_parameter_existieren_beim_echten_dienst(param_index):
     """AC-6: Given die im Produktivcode hinterlegten DWD-Parameternamen fuer
     Blitzpotenzial und Hagel, When gegen das echte Verzeichnis auf
@@ -100,3 +102,78 @@ def test_ac6_der_gewaehlte_lauf_ist_beim_dienst_veroeffentlicht():
         f"{url} — der Sicherheitsabstand von `_thunder_run_candidates` reicht "
         "nicht (S2a-Lehre: dort waren 3 h zu knapp)"
     )
+
+
+# ---------------------------------------------------------------------------
+# #1531 S1 AC-8: Mutations-Gegenprobe -- der HEUTIGE Waechter prueft nur
+# param_index in [0, 1] (s. `@pytest.mark.parametrize` oben) und uebersieht
+# damit JEDEN Namen, der spaeter an der Liste angehaengt wird. Die Mutation
+# haengt einen ERFUNDENEN Parameternamen an LETZTER Position von
+# `THUNDER_PARAMS` an (String-Ersetzung an `dwd.py`, EXTERNE Sicherungskopie
+# im Testkoerper, garantierte Rueckschreibung in `finally` -- NIE per
+# `git checkout/stash/reset`, CLAUDE.md "Mutations-Gegenprobe ist PFLICHT").
+#
+# Der Waechter selbst laeuft als SUBPROZESS (frischer Python-Interpreter,
+# frischer Import von `providers.dwd`) gegen genau diese Datei -- ein
+# `importlib.reload` im selben Prozess wuerde nicht reichen, weil
+# `@pytest.mark.parametrize` seine Werte schon beim COLLECT liest, nicht erst
+# beim Ausfuehren.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.live
+def test_ac8_mutations_gegenprobe_erfundener_parameter_an_letzter_position_wird_heute_nicht_gefangen():
+    """AC-8: Given `THUNDER_PARAMS` traegt einen erfundenen Namen an letzter
+    Position, When der Live-Waechter darauf laeuft, Then MUSS er rot werden
+    (AC-8-Zusage).
+
+    HEUTIGER Befund (RED-Grund dieses Tests): der Waechter ist auf
+    `param_index in [0, 1]` festgenagelt und prueft die letzte Position nie
+    -- er bleibt GRUEN, obwohl THUNDER_PARAMS einen ungueltigen Eintrag
+    traegt. Ein Waechter, der nicht scheitern kann, bewacht nichts. Dieser
+    Test wird erst GREEN, wenn der Waechter dynamisch ALLE Eintraege prueft.
+    """
+    dwd_pfad = _SRC / "providers" / "dwd.py"
+    original_quelltext = dwd_pfad.read_text(encoding="utf-8")
+    alte_zeile = (
+        'THUNDER_PARAMS = (\n'
+        '    "lpi", "grau_gsp", "cin_ml", "sdi_2", "cape_ml", "lpi_max",\n'
+        '    "uh_max_med", "uh_max", "uh_max_low",\n'
+        ')'
+    )
+    assert alte_zeile in original_quelltext, (
+        "Die erwartete THUNDER_PARAMS-Zeile wurde in dwd.py nicht gefunden -- "
+        "die Mutation kann nicht angesetzt werden. KEINE Aenderung vorgenommen."
+    )
+    fake_param = "erfundener_gewitterparameter_1531_ac8"
+    neue_zeile = (
+        'THUNDER_PARAMS = (\n'
+        '    "lpi", "grau_gsp", "cin_ml", "sdi_2", "cape_ml", "lpi_max",\n'
+        f'    "uh_max_med", "uh_max", "uh_max_low", "{fake_param}",\n'
+        ')'
+    )
+    mutierter_quelltext = original_quelltext.replace(alte_zeile, neue_zeile, 1)
+    assert mutierter_quelltext != original_quelltext, "Mutation griff nicht"
+
+    guard_datei = Path(__file__).resolve()
+    try:
+        dwd_pfad.write_text(mutierter_quelltext, encoding="utf-8")
+        ergebnis = subprocess.run(
+            [sys.executable, "-m", "pytest", "-m", "live", "-q",
+             str(guard_datei), "-k", "test_ac6_hinterlegte_gewitter_parameter_existieren_beim_echten_dienst"],
+            cwd=str(_REPO_ROOT), capture_output=True, text=True, timeout=120,
+        )
+    finally:
+        dwd_pfad.write_text(original_quelltext, encoding="utf-8")
+        zurueckgelesen = dwd_pfad.read_text(encoding="utf-8")
+        assert zurueckgelesen == original_quelltext, (
+            "RUECKSCHREIBUNG FEHLGESCHLAGEN -- dwd.py weicht vom Original ab!"
+        )
+
+    assert ergebnis.returncode != 0, (
+        "AC-8: der Waechter MUSS rot werden, wenn THUNDER_PARAMS einen "
+        "erfundenen Namen an letzter Position traegt. Er blieb GRUEN -- "
+        "heute, weil er nur param_index in [0, 1] prueft (ein Waechter, der "
+        f"nicht scheitern kann, bewacht nichts). Ausgabe:\n"
+        f"{ergebnis.stdout}\n{ergebnis.stderr}"
+    )
+

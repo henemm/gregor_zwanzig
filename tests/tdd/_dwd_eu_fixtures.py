@@ -82,6 +82,28 @@ FIXTURE = (
     / "icon_eu_abruzzen_lpi_con_max_2026080400_015.grib2.bz2"
 )
 
+# #1531 S1: echte Aufzeichnungen der drei neuen ICON-EU-Energiegroessen,
+# Lauf 2026-08-11T00Z, Zeitschritt +000, Abruzzen (dieselbe Koordinate wie
+# `FIXTURE` oben). Herkunft/Werte: Modul-Docstring von
+# tests/tdd/test_dwd_eu_thunder_energy_signals_fetch.py.
+FIXTURE_CAPE_ML = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "dwd"
+    / "icon_eu_abruzzen_cape_ml_2026081100_000.grib2.bz2"
+)
+FIXTURE_CAPE_CON = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "dwd"
+    / "icon_eu_abruzzen_cape_con_2026081100_000.grib2.bz2"
+)
+FIXTURE_CIN_ML = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "dwd"
+    / "icon_eu_abruzzen_cin_ml_2026081100_000.grib2.bz2"
+)
+
+# Parameter-Ordner aus dem URL-Pfad lesen (Muster
+# test_dwd_thunder_signal_fetch.py::_param_aus_pfad) -- fuer den NEUEN,
+# per-Parameter dispatchenden Servermodus unten.
+_PARAM_AUS_PFAD_RE = re.compile(r"/([a-z_]+)/icon-eu_")
+
 # Abruzzen (Apennin, IT) — liegt AUSSERHALB beider bestehenden Gewittergebiete
 # (FR: 41,3..51,1 N / -5,2..9,7 O; DE_ALPEN: 43,17..58,09 N / -3,95..20,35 O)
 # und traegt in der Aufzeichnung ein echtes Gewitter (lpi 217,8 J/kg).
@@ -126,13 +148,21 @@ def kunst_raster(wert: float, nodata: Optional[float] = None) -> bytes:
 
 class _Server(ThreadingHTTPServer):
     def __init__(self, adresse, handler, *, inhalt, status_je_lauf,
-                 fehlende_zeitschritte, verzoegerung_s):
+                 fehlende_zeitschritte, verzoegerung_s, fixtures=None):
         super().__init__(adresse, handler)
         self.inhalt = inhalt
         self.status_je_lauf = status_je_lauf
         self.fehlende_zeitschritte = fehlende_zeitschritte
         self.verzoegerung_s = verzoegerung_s
+        # #1531 S1: optionale Parameter->Bytes-Zuordnung. NUR gesetzt, wenn
+        # der Aufrufer mehrere GETRENNTE Signale gleichzeitig braucht (z.B.
+        # cape_ml/cape_con/cin_ml) -- ohne diese Naht liefert der Server fuer
+        # JEDEN Parameter dieselbe Datei (das bestehende `inhalt`-Verhalten),
+        # was bei mehreren Signalen in EINEM Test falsche Werte vortaeuschen
+        # wuerde. `None` (Default) aendert am bestehenden Verhalten NICHTS.
+        self.fixtures = fixtures
         self.abrufe: list[tuple[str, int]] = []   # (Lauf, Zeitschritt)
+        self.abrufe_mit_param: list[tuple[str, str, int]] = []  # (Param, Lauf, Zeitschritt)
         self._lock = threading.Lock()
 
 
@@ -141,14 +171,18 @@ class _Handler(BaseHTTPRequestHandler):
         srv = self.server
         if srv.verzoegerung_s:
             time.sleep(srv.verzoegerung_s)
-        treffer = _DATEINAME.search(urlparse(self.path).path)
+        path = urlparse(self.path).path
+        treffer = _DATEINAME.search(path)
         if treffer is None:
             self.send_response(404)
             self.end_headers()
             return
         lauf, ttt = treffer.group(1), int(treffer.group(2))
+        param_treffer = _PARAM_AUS_PFAD_RE.search(path)
+        param = param_treffer.group(1) if param_treffer else None
         with srv._lock:
             srv.abrufe.append((lauf, ttt))
+            srv.abrufe_mit_param.append((param, lauf, ttt))
         status = srv.status_je_lauf.get(lauf, 200)
         if ttt in srv.fehlende_zeitschritte:
             status = 404
@@ -156,7 +190,14 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_response(status)
             self.end_headers()
             return
-        body = srv.inhalt(lauf, ttt)
+        if srv.fixtures is not None:
+            body = srv.fixtures.get(param)
+            if body is None:
+                self.send_response(404)
+                self.end_headers()
+                return
+        else:
+            body = srv.inhalt(lauf, ttt)
         self.send_response(200)
         self.send_header("Content-Type", "application/octet-stream")
         self.send_header("Content-Length", str(len(body)))
@@ -181,9 +222,15 @@ class AlleLaeufe(dict):
 
 @contextmanager
 def eu_server(monkeypatch, *, inhalt=None, status_je_lauf=None,
-              fehlende_zeitschritte=None, verzoegerung_s=0.0):
+              fehlende_zeitschritte=None, verzoegerung_s=0.0, fixtures=None):
     """Lokaler Server unter `dwd_eu.BASE_URL`. Lauf und Zeitschritt bestimmt
-    der Pruefling selbst — der Test raet sie nie."""
+    der Pruefling selbst — der Test raet sie nie.
+
+    `fixtures` (#1531 S1, optional): `{Parametername: Bytes}` — dispatcht je
+    Request ueber den Parameter-Ordner im URL-Pfad, fuer Tests, die MEHRERE
+    Signale gleichzeitig mit UNTERSCHIEDLICHEN Werten brauchen (z.B.
+    cape_ml/cape_con/cin_ml gleichzeitig). Bleibt `None` (Default), gilt
+    unveraendert das bestehende `inhalt`/Einzel-`FIXTURE`-Verhalten."""
     aufzeichnung = FIXTURE.read_bytes()
     srv = _Server(
         ("127.0.0.1", 0), _Handler,
@@ -191,6 +238,7 @@ def eu_server(monkeypatch, *, inhalt=None, status_je_lauf=None,
         status_je_lauf=status_je_lauf if status_je_lauf is not None else {},
         fehlende_zeitschritte=fehlende_zeitschritte or set(),
         verzoegerung_s=verzoegerung_s,
+        fixtures=fixtures,
     )
     thread = threading.Thread(target=srv.serve_forever, daemon=True)
     thread.start()

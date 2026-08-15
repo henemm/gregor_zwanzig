@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.23"
+version: "2.27"
 status: active
 created: 2025-12-27
-updated: 2026-08-10
+updated: 2026-08-15
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.23)
+# SMS / Kompakt-Format Specification (v2.27)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -42,35 +42,39 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 ## 2. Token-Reihenfolge (fix)
 
 ```
-{Name}: N K D FN FK FD R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL C HR:TH: !{Warn-Block} Z: M: [SD NS24+ SL AV WC] W? DBG
+{Name}: N K D FN FK FD R PR W G TH: TH+: HU DP WD: CP PT: CT CL CM CH VS SU UV HP NL C HR:TH: !{Warn-Block} Z: M: [SD NS24+ SL AV WC] X? DBG
 ```
+
+**Hinweis zu `K D` / `FK FD` (Issue #1824, 2026-08-14):** Sind bei einer Temperatur-Metrik **beide** Auswertungen („Tiefstwert" UND „Höchstwert") gewählt, erscheinen die beiden Kürzel nicht getrennt, sondern als **ein Bereichs-Token** unter dem Höchstwert-Kürzel: `D{min}/{max}` statt `K{min} D{max}` (gefühlt: `FD{min}/{max}`). Ist nur eine der beiden Auswertungen gewählt, bleibt die bisherige Einzelform (`K13` bzw. `D27`) unverändert — `K`/`FK` bedeuten also weiterhin immer den Tiefstwert. `N`/`FN` (Nacht) und `WC` sind davon nicht betroffen.
 
 | Block | Tokens | Pflicht? |
 |-------|--------|---------|
 | Header | `{Name}:` | immer |
 | Forecast (Nacht) | `N` | **nur Abendbriefing** (Issue #1319 Scheibe D) — im Morgenbriefing entfällt der Token komplett, nicht als `N-` — UND nur bei aktivierter Metrik „Nacht-Tiefsttemperatur“ (`temperature_night`, Issue #1484; bis dahin an „Temperatur“ gekoppelt, Issue #1415) |
-| Forecast (Tiefst unterwegs) | `K` | Morgen + Abend (Issue #1410) — kälteste Gehzeit-Stunde, von `N` unterschieden — nur bei aktivierter Metrik „Temperatur“ (Issue #1415) |
+| Forecast (Tiefst unterwegs) | `K` | Morgen + Abend (Issue #1410) — kälteste Gehzeit-Stunde, von `N` unterschieden — **seit 2026-08-15 nur bei aktivierter Metrik „Tages-Tiefsttemperatur (Gehzeit)“** (`temperature_day_low`, Issue #1728; bis dahin an die Auswertungswahl der Metrik „Temperatur“ gekoppelt, Issue #1415/#1824); ist zusätzlich „Tages-Höchsttemperatur (Gehzeit)“ (`temperature_day_high`) aktiviert, tragen die beiden Werte gemeinsam den Bereichs-Token `D{min}/{max}` (Issue #1824) |
 | Forecast (gefühlt, Nacht) | `FN` | **nur Abendbriefing** UND nur bei aktivierter Metrik „Gefühlte Nacht-Tiefsttemperatur“ (`wind_chill_night`, Issue #1660; bis dahin an „Gefühlte Temperatur“ gekoppelt, Issue #1410) |
-| Forecast (gefühlt) | `FK FD` | Morgen + Abend, aber nur bei aktivierter Metrik „Gefühlte Temperatur“ |
-| Forecast (Höchst) | `D` | Morgen + Abend, nur bei aktivierter Metrik „Temperatur“ (Issue #1415) |
+| Forecast (gefühlt) | `FK FD` | Morgen + Abend — **seit 2026-08-15** hängt `FK` an der eigenen Metrik „Gefühlte Tages-Tiefsttemperatur (Gehzeit)“ (`wind_chill_day_low`), `FD` an „Gefühlte Tages-Höchsttemperatur (Gehzeit)“ (`wind_chill_day_high`, beide Issue #1728; bis dahin hingen beide gemeinsam an „Gefühlte Temperatur“ + deren Auswertungswahl, Issue #1660 A/#1824) — sind beide aktiviert, ein Bereichs-Token `FD{min}/{max}` (Issue #1824) |
+| Forecast (Höchst) | `D` | Morgen + Abend, **seit 2026-08-15** nur bei aktivierter Metrik „Tages-Höchsttemperatur (Gehzeit)“ (`temperature_day_high`, Issue #1728; bis dahin an „Temperatur“ + deren Auswertungswahl gekoppelt, Issue #1415) — trägt bei zusätzlich aktiviertem `temperature_day_low` den Bereich `D{min}/{max}` (Issue #1824) |
 | Forecast | `R PR W G TH:` | nur bei aktivierter Metrik (bei `-` als Null-Wert) |
 | Forecast (Gewitter Folge-Etappe) | `TH+:` | nur bei aktivierter Metrik „Gewitter“ — seit Fix #1482 (2026-08-04) synchron mit `TH:` über dieselbe Metrik-Bindung (vorher Ist-Abweichung, s. Hinweis unter §2) |
-| Forecast (14 erweiterte Metriken, Issue #1660 Scheibe B) | `HU DP WD CP PT CT CL CM CH VS SU UV HP NL` | Morgen + Abend, jeweils nur bei aktivierter Metrik — Details §3.2a |
+| Forecast (14 erweiterte Metriken, Issue #1660 Scheibe B) | `HU DP WD: CP PT: CT CL CM CH VS SU UV HP NL` | Morgen + Abend, jeweils nur bei aktivierter Metrik — Details §3.2a. `WD:`/`PT:` tragen seit Issue #1824 den Grammatik-Doppelpunkt (Buchstaben-Wert, s. §3.2a) |
 | Confidence | `C` | nur wenn Provider Konfidenz liefert (Issue #121, v2.1) |
 | Risks (Vigilance) | `HR:TH:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
 | Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab der wirksamen Kanal-Schwelle — Ortsvergleich weiterhin fest ab ORANGE, Trips seit Issue #1461 S3b-2a je Kanal einstellbar, Startwert bereits ab GELB (§3.4c) |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
 | Wintersport | `SD NS24+ SL AV WC` | optional (Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`) |
-| Nicht abrufbar | `W?` | nur wenn ≥1 abdeckende amtliche Warn-Quelle beim Fetch ausgefallen ist (§3.4d, Issue #1349) |
+| Nicht abrufbar | `X?` | nur wenn ≥1 abdeckende amtliche Warn-Quelle beim Fetch ausgefallen ist (§3.4d, Issue #1349; Kürzel seit Epic #1703 Scheibe 6 `X?`, vormals `W?` — Kollision mit dem Wind-Datenausfall-Marker) |
 | Debug | `DBG[...]` | nur Dry-Run / Debug-Modus |
 
 **Hinweis zu `HR:TH:`** — Das sind zwei separate Tokens, die ohne Leerzeichen aneinandergeschrieben werden (z.B. `HR:M@17TH:H@17` oder `HR:-TH:-`). Siehe §3.3 und §3.4.
 
 **Hinweis zu `N` (Issue #1319 Scheibe D, 2026-07-23):** Im Abendbriefing ist `N` das erste Forecast-Token wie oben dargestellt. Im Morgenbriefing entfällt `N` vollständig aus der Zeile (nicht `N-`) — die Reihenfolge rutscht entsprechend nach: `{Name}: K D FK FD R PR W G TH: TH+: ...`.
 
-**Hinweis zu `K`/`FK`/`FD`/`FN` (Issue #1410, 2026-07-28; Kürzel-Bindung nachgezogen durch Issue #1660, 2026-08-09):** `K` ist die Tiefsttemperatur **unterwegs** (kälteste Gehzeit-Stunde) und steht unabhängig neben `N` (Nacht am Schlafplatz) — beide erscheinen abends gemeinsam (`N` seit Issue #1484 nur bei gewählter eigener Metrik „Nacht-Tiefsttemperatur“), morgens nur `K`. Das `F`-Präfix bezeichnet die **gefühlte** Temperatur (`FN`/`FK`/`FD` als Parität zu `N`/`K`/`D`). `FN` folgt seit Issue #1660 — wie `N` seit #1484 — der eigenen wählbaren Metrik „Gefühlte Nacht-Tiefsttemperatur“ (`wind_chill_night`), statt wie zuvor an „Gefühlte Temperatur“ zu hängen. `FK`/`FD` bleiben an „Gefühlte Temperatur“ (`wind_chill`) gekoppelt und folgen seit #1660 zusätzlich der dortigen Auswertungswahl (#1357): nur bei gewähltem „Tiefstwert“ erscheint `FK`, nur bei gewähltem „Höchstwert“ `FD`. Für `K`/`D` bei der Metrik „Temperatur“ gilt seither dieselbe Regel (min→`K`, max→`D`).
+**Hinweis zu `K`/`FK`/`FD`/`FN` (Issue #1410, 2026-07-28; Kürzel-Bindung nachgezogen durch Issue #1660, 2026-08-09; erneut geändert durch Issue #1728, 2026-08-15):** `K` ist die Tiefsttemperatur **unterwegs** (kälteste Gehzeit-Stunde) und steht unabhängig neben `N` (Nacht am Schlafplatz) — beide erscheinen abends gemeinsam (`N` seit Issue #1484 nur bei gewählter eigener Metrik „Nacht-Tiefsttemperatur“), morgens nur `K`. Das `F`-Präfix bezeichnet die **gefühlte** Temperatur (`FN`/`FK`/`FD` als Parität zu `N`/`K`/`D`). `FN` folgt seit Issue #1660 — wie `N` seit #1484 — der eigenen wählbaren Metrik „Gefühlte Nacht-Tiefsttemperatur“ (`wind_chill_night`), statt wie zuvor an „Gefühlte Temperatur“ zu hängen.
 
-**Grundregel „gewählt / nicht gewählt” (PO-Entscheidung 2026-08-03, Issue #1415):** Für **jedes** Vorhersage-Kürzel gilt: geprüft, aber nichts über der Schwelle bzw. kein Wert ⇒ Null-Form (`R-`, `K-`); Metrik im Trip **abgewählt** ⇒ das Kürzel entfällt vollständig, auch die Null-Form. Eine dritte Stufe „Wert nicht abrufbar / Datenlücke im Fenster ⇒ `R?`” (#1328) gibt es bei den Schwellwert-Kürzeln `R`/`PR`/`W`/`G`/`TH:`/`TH+:` (`TH+:` seit Fix #1482, 2026-08-04) **und** seit Fix #1483 (2026-08-05, s. „Bekannte Ist-Abweichungen”) auch bei den Temperatur-Kürzeln `N`/`K`/`D`/`FN`/`FK`/`FD` (s. §4). Es gibt damit **keine unbedingten Vorhersage-Token** mehr: `N`/`K`/`D` (Metrik „Temperatur”) verhalten sich seit #1415 exakt wie `FN`/`FK`/`FD` (Metrik „Gefühlte Temperatur”), und `TH+:` verhält sich seit #1482 exakt wie `TH:`. Die Bindung Kürzel→Metrik liegt an genau einer Stelle: `SMS_MULTI_SYMBOLS_BY_METRIC` (mehrere Kürzel je Metrik) bzw. `SMS_SYMBOL_BY_METRIC` (1:1) in `src/output/renderers/sms_trip.py`, ausgewertet in `trip_report.py` (`disabled_specs` → `output/tokens/builder.py::_visible()`).
+> **Korrektur 2026-08-15 (Issue #1728 Scheibe 1):** Bis hierhin stand: „`FK`/`FD` bleiben an ‚Gefühlte Temperatur' (`wind_chill`) gekoppelt und folgen seit #1660 zusätzlich der dortigen Auswertungswahl (#1357): nur bei gewähltem ‚Tiefstwert' erscheint `FK`, nur bei gewähltem ‚Höchstwert' `FD`. Für `K`/`D` bei der Metrik ‚Temperatur' gilt seither dieselbe Regel (min→`K`, max→`D`)." Das ist überholt. `K`, `D`, `FK`, `FD` hängen jetzt an je einer **eigenen, unabhängig wählbaren** Katalog-Größe (`temperature_day_low`/`temperature_day_high`/`wind_chill_day_low`/`wind_chill_day_high`) — exakt nach dem Muster von `temperature_night`/`wind_chill_night` — statt an der Auswertungswahl (`MetricConfig.aggregations`) der Elterngröße. `temperature`/`wind_chill` bleiben als Katalogeinträge bestehen, liefern aber nur noch den **Stundenwert** für Stundentabelle und Telegram-Zelle (`COMPACT_LABEL_EXCEPTIONS`). `WC` bleibt unverändert an `wind_chill` gebunden (s. §3.6/§9).
+
+**Grundregel „gewählt / nicht gewählt” (PO-Entscheidung 2026-08-03, Issue #1415):** Für **jedes** Vorhersage-Kürzel gilt: geprüft, aber nichts über der Schwelle bzw. kein Wert ⇒ Null-Form (`R-`, `K-`); Metrik im Trip **abgewählt** ⇒ das Kürzel entfällt vollständig, auch die Null-Form. Eine dritte Stufe „Wert nicht abrufbar / Datenlücke im Fenster ⇒ `R?`” (#1328) gibt es bei den Schwellwert-Kürzeln `R`/`PR`/`W`/`G`/`TH:`/`TH+:` (`TH+:` seit Fix #1482, 2026-08-04) **und** seit Fix #1483 (2026-08-05, s. „Bekannte Ist-Abweichungen”) auch bei den Temperatur-Kürzeln `N`/`K`/`D`/`FN`/`FK`/`FD` (s. §4). Es gibt damit **keine unbedingten Vorhersage-Token** mehr: `N`/`K`/`D` verhalten sich seit #1415 exakt wie `FN`/`FK`/`FD`, und `TH+:` verhält sich seit #1482 exakt wie `TH:`. Die Bindung Kürzel→Metrik liegt an genau einer Stelle: `SMS_MULTI_SYMBOLS_BY_METRIC` (mehrere Kürzel je Metrik) bzw. `SMS_SYMBOL_BY_METRIC` (1:1). **Korrektur 2026-08-15 (Issue #1728):** Die Klammer-Zuordnung „`N`/`K`/`D` (Metrik „Temperatur")" bzw. „`FN`/`FK`/`FD` (Metrik „Gefühlte Temperatur")" ist entfallen — jedes der sechs Kürzel hängt seither an einer eigenen Metrik (s. Korrektur-Absatz oben). **Ungeprüfte, vorbestehende Datei-Angabe:** ob `SMS_MULTI_SYMBOLS_BY_METRIC`/`SMS_SYMBOL_BY_METRIC` noch in `src/output/renderers/sms_trip.py` *definiert* sind oder dort nur re-exportiert werden (Katalog-Kommentar in `metric_catalog.py:656` deutet seit #1719 S4 auf Letzteres hin), wurde für diese Korrektur nicht nachgemessen, ausgewertet in `trip_report.py` (`disabled_specs` → `output/tokens/builder.py::_visible()`).
 
 **Bekannte Ist-Abweichungen (Stand 2026-08-05):** aktuell keine — die letzte offene Abweichung (Temperatur-Kürzel ohne `?`-Form) wurde mit Fix #1483 behoben, s. Blockquote unten.
 
@@ -78,7 +82,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 
 > **Fix #1483 (2026-08-05):** Bis hierhin gab es die `?`-Form nur für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:`/`TH+:`. Die Temperatur-Kürzel `N`/`K`/`D`/`FN`/`FK`/`FD` durchliefen stattdessen `render_temperature()`, das ausschliesslich Zahl oder `-` lieferte — eine Datenlücke erschien dort folglich als `K-` und war von „geprüft, kein Wert” nicht unterscheidbar. Jetzt nutzen beide Pfade denselben gemeinsamen Helfer `_gap_or()` (`builder.py:120-130`): `_mk_metric()` (Zeile 150, Schwellwert-Kürzel) UND die Temperatur-Schleife in `build_token_line()` (Zeile 299). `_wintersport()` (Schneehöhe/Neuschnee/Schneefallgrenze/Lawinenstufe/Windchill) bleibt bewusst unverändert und zeigt weiterhin nie `?` — es ruft `render_int()` über einen eigenen Pfad auf, der mit `_gap_or()` nichts zu tun hat. Details: `docs/specs/modules/fix_1483_temp_gap_marker.md`.
 
-> **Fix #1677 (2026-08-10, v2.23):** Die in §2 gezeigte Token-Reihenfolge ist ab jetzt der **Default** — sie gilt unverändert, solange für den Kanal `sms` keine kanal-eigene Kaskadenebene aktiv ist (weder `per_report_layouts[report_type].sms` noch `per_channel_layouts.sms`, geprüft über `UnifiedWeatherDisplayConfig.cascade_source_for_channel("sms", report_type)`). Ist eine dieser beiden Ebenen gesetzt, bestimmt die dort im SMS-Kanal-Tab des Trip-Editors per Drag&Drop gezogene Reihenfolge die Anzeigefolge der **Vorhersage-** (`R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL K D FK FD N FN`) und **Wintersport-Token** (`SD NS24+ SL AV WC`) — jede Metrik ist dabei EIN Anker: bei Mehrfach-Symbol-Metriken (`temperature`→`K D`, `temperature_night`→`N`, `wind_chill`→`FK FD WC`, `wind_chill_night`→`FN`, `thunder`→`TH: TH+:`) erben alle zugehörigen Symbole dieselbe Nutzer-Position, ihre interne Reihenfolge (z.B. `K` vor `D`) bleibt fix. **Unverändert fix, unabhängig von jeder Nutzer-Reihenfolge:** die Vigilance-Adjazenz `HR:TH:` (§3.3, ohne Leerzeichen), der amtliche Warn-Block, Fire (`Z: M:`), `W?` und `DBG` — diese System-Blöcke stehen immer hinter dem sortierbaren Block, in ihrer bisherigen relativen Reihenfolge (sie sind nicht Teil der wählbaren Metrik-Kaskade). Die Kürzung bei Überlänge (§6) bleibt unverändert prioritätsbasiert — die Anzeige-Position beeinflusst NICHT, welches Token zuerst fällt. Details: `docs/specs/modules/fix_1677_sms_reihenfolge.md`.
+> **Fix #1677 (2026-08-10, v2.23):** Die in §2 gezeigte Token-Reihenfolge ist ab jetzt der **Default** — sie gilt unverändert, solange für den Kanal `sms` keine kanal-eigene Kaskadenebene aktiv ist (weder `per_report_layouts[report_type].sms` noch `per_channel_layouts.sms`, geprüft über `UnifiedWeatherDisplayConfig.cascade_source_for_channel("sms", report_type)`). Ist eine dieser beiden Ebenen gesetzt, bestimmt die dort im SMS-Kanal-Tab des Trip-Editors per Drag&Drop gezogene Reihenfolge die Anzeigefolge der **Vorhersage-** (`R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL K D FK FD N FN`) und **Wintersport-Token** (`SD NS24+ SL AV WC`) — jede Metrik ist dabei EIN Anker: bei Mehrfach-Symbol-Metriken (`temperature`→`K D`, `temperature_night`→`N`, `wind_chill`→`FK FD WC`, `wind_chill_night`→`FN`, `thunder`→`TH: TH+:`) erben alle zugehörigen Symbole dieselbe Nutzer-Position, ihre interne Reihenfolge (z.B. `K` vor `D`) bleibt fix. **Unverändert fix, unabhängig von jeder Nutzer-Reihenfolge:** die Vigilance-Adjazenz `HR:TH:` (§3.3, ohne Leerzeichen), der amtliche Warn-Block, Fire (`Z: M:`), `X?` und `DBG` — diese System-Blöcke stehen immer hinter dem sortierbaren Block, in ihrer bisherigen relativen Reihenfolge (sie sind nicht Teil der wählbaren Metrik-Kaskade). Die Kürzung bei Überlänge (§6) bleibt unverändert prioritätsbasiert — die Anzeige-Position beeinflusst NICHT, welches Token zuerst fällt. Details: `docs/specs/modules/fix_1677_sms_reihenfolge.md`.
 
 ---
 
@@ -110,11 +114,13 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Token | Bedeutung | Quelle (DTO-Feld) | Beispiel |
 |-------|-----------|-------------------|----------|
 | `N{temp}` / `N-` (**nur Abendbriefing**, nur bei aktivierter Metrik „Nacht-Tiefsttemperatur“, Issue #1484) | Nacht-Tiefsttemperatur °C am Schlafplatz, ganzzahlig — Fenster Ankunft→06:00 Folgetag am Etappenziel, NICHT das Tagessegment-Minimum. Im Morgenbriefing entfällt der Token komplett (kein `N-`). | `night_temp_min_c()` aus `night_weather` (Fallback: Tagessegment-`temp_min_c`, wenn `night_weather` fehlt/leer) | `N9` |
-| `K{temp}` / `K-` (nur bei aktivierter Metrik „Temperatur“) | Tiefsttemperatur **unterwegs** °C, ganzzahlig — kälteste Stunde der Gehzeit. Erscheint in BEIDEN Report-Typen und ist von `N` (Nacht am Schlafplatz) zu unterscheiden. | `day_window.collect_hiking_window_points()` → `hiking_field_min_max("t2m_c")`, MIN (Issue #1417) | `K3` |
-| `D{temp}` / `D-` (nur bei aktivierter Metrik „Temperatur“) | Tag-Max °C, ganzzahlig — genauer: Höchstwert **während der Gehzeit**, nicht der Kalendertag (s. Hinweis unter der Tabelle) | dieselbe Quelle wie `K`, MAX | `D24` |
+| `K{temp}` / `K-` (nur bei aktivierter Metrik „Tages-Tiefsttemperatur (Gehzeit)“, `temperature_day_low`, Issue #1728, 2026-08-15; bis dahin an aktivierter Metrik „Temperatur“ + Auswertungswahl „nur Tiefstwert“ gekoppelt) | Tiefsttemperatur **unterwegs** °C, ganzzahlig — kälteste Stunde der Gehzeit. Erscheint in BEIDEN Report-Typen und ist von `N` (Nacht am Schlafplatz) zu unterscheiden. Ist zusätzlich `temperature_day_high` aktiviert, entsteht statt `K`+`D` der Bereichs-Token (Zeile darunter, Issue #1824). | `day_window.collect_hiking_window_points()` → `hiking_field_min_max("t2m_c")`, MIN (Issue #1417) | `K3` |
+| `D{temp}` / `D-` (nur bei aktivierter Metrik „Tages-Höchsttemperatur (Gehzeit)“, `temperature_day_high`, Issue #1728, 2026-08-15; bis dahin an „Temperatur“ gekoppelt) | Tag-Max °C, ganzzahlig — genauer: Höchstwert **während der Gehzeit**, nicht der Kalendertag (s. Hinweis unter der Tabelle) | dieselbe Quelle wie `K`, MAX | `D24` |
+| `D{min}/{max}` (Issue #1824, **nur** wenn `temperature_day_low` UND `temperature_day_high` aktiviert sind) | Temperatur-**Spanne** der Gehzeit in einem Token. Trennzeichen ist `/`, nicht `-`: bei Minusgraden wäre der Bindestrich zugleich Trenner und Vorzeichen (`D-12--4` ist nicht eindeutig parsbar). `/` ist GSM-7-sicher. Jede Hälfte kann unabhängig Wert, Null-Form (`-`) oder Lückenform (`?`) sein (§4). | dieselbe Quelle wie `K`/`D` — MIN und MAX desselben Fensters | `D13/27`, `D-12/-4`, `D13/-` |
+| `FD{min}/{max}` (Issue #1824, **nur** wenn `wind_chill_day_low` UND `wind_chill_day_high` aktiviert sind) | Gefühltes Pendant zum Bereichs-Token, gleiche Regel. | dieselbe Quelle wie `FK`/`FD` | `FD10/20` |
 | `FN{temp}` / `FN-` (**nur Abendbriefing**, nur bei aktivierter Metrik „Gefühlte Nacht-Tiefsttemperatur“, `wind_chill_night`, Issue #1660) | **Gefühlte** Nacht-Tiefsttemperatur °C am Schlafplatz — Parität zu `N`, gleiches Fenster Ankunft→06:00 Folgetag. | `night_wind_chill_min_c()` aus `night_weather` (Fallback: Gehzeit-`wind_chill_min_c`) | `FN6` |
-| `FK{temp}` / `FK-` (nur bei aktivierter Metrik) | **Gefühlte** Tiefsttemperatur unterwegs °C — Parität zu `K`, identisches Gehzeit-Fenster. | dieselbe Quelle wie `K`, aber `hiking_field_min_max("wind_chill_c")`, MIN | `FK1` |
-| `FD{temp}` / `FD-` (nur bei aktivierter Metrik) | **Gefühlte** Höchsttemperatur während der Gehzeit °C — Parität zu `D`. | dieselbe Quelle wie `FK`, MAX | `FD18` |
+| `FK{temp}` / `FK-` (nur bei aktivierter Metrik „Gefühlte Tages-Tiefsttemperatur (Gehzeit)“, `wind_chill_day_low`, Issue #1728, 2026-08-15; bis dahin an „Gefühlte Temperatur“ + Auswertungswahl gekoppelt, Issue #1660 A) | **Gefühlte** Tiefsttemperatur unterwegs °C — Parität zu `K`, identisches Gehzeit-Fenster. | dieselbe Quelle wie `K`, aber `hiking_field_min_max("wind_chill_c")`, MIN | `FK1` |
+| `FD{temp}` / `FD-` (nur bei aktivierter Metrik „Gefühlte Tages-Höchsttemperatur (Gehzeit)“, `wind_chill_day_high`, Issue #1728, 2026-08-15; bis dahin an „Gefühlte Temperatur“ gekoppelt) | **Gefühlte** Höchsttemperatur während der Gehzeit °C — Parität zu `D`. | dieselbe Quelle wie `FK`, MAX | `FD18` |
 | `R{mm}@{h}({max}@{h})` / `R-` | Regen Threshold@Stunde + Peak | Hourly `precip_1h_mm`, Threshold aus `config.rain_amount_threshold` | `R0.2@6(1.4@16)` |
 | `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak (Issue #887: auch SMS via `pop_hourly` aus `agg.pop_max_pct` synthetisiert) | Hourly `pop_pct`, Threshold aus `config.rain_probability_threshold` | `PR20%@11(100%@17)` |
 | `W{v}@{h}({max}@{h})` / `W-` | Wind km/h Threshold + Peak | Hourly `wind10m_kmh`, Threshold aus `config.wind_speed_threshold` | `W10@11(15@17)` |
@@ -176,7 +182,9 @@ Drei Wertegrammatik-Klassen:
 
 - **(a) Threshold-Peak** (wie `R`/`W`/`G`, ganzzahlig): `HU` (Luftfeuchtigkeit %), `DP` (Taupunkt °C), `CP` (CAPE J/kg), `UV` (UV-Index), `CT`/`CL`/`CM`/`CH` (Bewölkung gesamt/tief/mittel/hoch %). Beispiel: `HU88@14(92@17)`.
 - **(b) Invers-Min** (wie `SL`, aber MIT Stunde und Null-Form statt Weglassen): `VS` (Sichtweite, angezeigt in km mit einer Dezimale, DTO-Feld ist Meter), `NL` (Nullgradgrenze, m ganzzahlig). Zeigt den Tages-**Tiefst**wert; mit konfiguriertem Schwellwert nur, wenn der Tiefstwert die Schwelle unterschreitet (`min <= threshold`), sonst Null-Form. Beispiel: `VS0.6@11`.
-- **(c) Tageswert ohne Stunde:** `WD` (dominante 8-Sektor-Windrichtung N/NO/O/SO/S/SW/W/NW, Beispiel `WDNW`), `PT` (dominante Niederschlagsart, Rang `FREEZING_RAIN`>`SNOW`>`MIXED`>`RAIN`, Codes `G`/`S`/`M`/`R`, Beispiel `PTS`), `SU` (Sonnenstunden, gerundet), `HP` (Luftdruck-Tagesmittel hPa, gerundet).
+- **(c) Tageswert ohne Stunde:** `WD:` (dominante 8-Sektor-Windrichtung N/NO/O/SO/S/SW/W/NW, Beispiel `WD:NW`), `PT:` (dominante Niederschlagsart, Rang `FREEZING_RAIN`>`SNOW`>`MIXED`>`RAIN`, Codes `G`/`S`/`M`/`R`, Beispiel `PT:S`), `SU` (Sonnenstunden, gerundet), `HP` (Luftdruck-Tagesmittel hPa, gerundet).
+
+**Doppelpunkt bei Buchstaben-Werten (Issue #1824, 2026-08-14):** `WD` und `PT` sind die einzigen beiden Kürzel, deren Wert mit einem **Buchstaben** beginnt — ohne Trenner verschmolzen Kürzel und Wert zu einem Wort (`WDNW`, `PTS`) und waren nicht mehr auseinanderzulesen. Sie tragen jetzt denselben Doppelpunkt wie `TH:`/`HR:`: der Trenner gehört zum **Symbol**, nicht zum Wert, wodurch Null- und Lückenform ihn automatisch mitziehen (`WD:-`, `WD:?`, `PT:-`, `PT:?`). Für den Trip-Editor ändert sich nichts — `/api/sms-symbols` schneidet den Doppelpunkt ab, die Badge bleibt `WD`/`PT`. Unberührt bleiben `DBG[...]` (Wert beginnt mit `[`) und `CL` (amtliches `access_ban`-Flag ohne Wert, §3.4c).
 
 Alle 14 erscheinen unverändert in Morgen- **und** Abendbriefing (kein Nacht-Sonderfall wie `N`/`FN`). Quelle je Metrik: `docs/specs/modules/fix_1660b_sms_token_wiring.md` §3/§6, Kürzel-Register unverändert `metric_catalog.sms_code`.
 
@@ -259,18 +267,20 @@ Beides ist sicherheitsrelevant, nicht kosmetisch: eine amtliche Warnung, die sti
 Nur Vorhersage:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16
 Mit Warnung:      GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 !TH:H@14 W:M
 Brand + Sperrung: GR20 E5: N9 D28 R- W12@11 TH:- !FR:H CL
-Nicht abrufbar:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 W?
+Nicht abrufbar:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 X?
 ```
 
-### 3.4d Nicht-abrufbar-Marker `W?` (Issue #1349, Folge von #1348)
+### 3.4d Nicht-abrufbar-Marker `X?` (Issue #1349, Folge von #1348; Kürzel seit Epic #1703 Scheibe 6)
 
-Ein **eigenständiger** Marker `W?` (2 Zeichen, GSM-7-sicher) signalisiert: für mindestens ein Segment ist **mindestens eine abdeckende amtliche Warn-Quelle beim Fetch ausgefallen** — „keine Warnung" bedeutet dann **nicht** sicher „alles ruhig". Semantisch das Kurzform-Pendant zum E-Mail-/Telegram-Hinweis „amtliche Warnungen aktuell nicht abrufbar".
+Ein **eigenständiger** Marker `X?` (2 Zeichen, GSM-7-sicher) signalisiert: für mindestens ein Segment ist **mindestens eine abdeckende amtliche Warn-Quelle beim Fetch ausgefallen** — „keine Warnung" bedeutet dann **nicht** sicher „alles ruhig". Semantisch das Kurzform-Pendant zum E-Mail-/Telegram-Hinweis „amtliche Warnungen aktuell nicht abrufbar".
+
+**Kürzel-Historie:** Ursprünglich `W?` — kollidierte bytegleich mit dem Wind-Datenausfall-Marker (Wind-Symbol `W` + Gap-Wert `?`, `_gap_or()`), der unabhängig von einem Warn-Ausfall auftreten kann. Epic #1703 Scheibe 6 (AC-S6-6) hat das auf `X?` geändert — `X` ist im gesamten Wetter-Kürzel-Alphabet unbenutzt und dafür reserviert.
 
 - **Bedingung:** `any(SegmentWeatherData.official_alerts_unavailable)` — gesetzt am echten Fail-soft-Pfad (`get_official_alerts_with_status`, #1348). Strenge Regel: **eine** ausgefallene abdeckende Quelle genügt.
-- **Kein Warn-Block-Token:** `W?` gehört zur eigenen Kategorie `unavailable`, trägt **nie** den `!`-Marker (§3.4c) und darf nicht als amtliche Warnung („`!W?`") gelesen werden. Es ist „nicht abrufbar", nicht „es liegt eine Warnung vor".
+- **Kein Warn-Block-Token:** `X?` gehört zur eigenen Kategorie `unavailable`, trägt **nie** den `!`-Marker (§3.4c) und darf nicht als amtliche Warnung („`!X?`") gelesen werden. Es ist „nicht abrufbar", nicht „es liegt eine Warnung vor".
 - **Position:** am Ende der Zeile (nach Wintersport-Block, vor `DBG`), analog zum Verlässlichkeits-Symbol `C`.
 - **Truncation:** höchste Priorität (12, §6, noch über dem Warn-Block) und **nicht** in der Drop-Liste — der sicherheitsrelevante Marker fällt unter 160-Zeichen-Druck **strukturell nie** weg.
-- **Kanäle:** In Telegram-Kurzform (die `sms_text` sendet) erscheint `W?` automatisch mit; das Telegram-„rich"-Briefing und die Compare-/Trip-Mail zeigen stattdessen die ausgeschriebene Hinweiszeile bzw. den Banner.
+- **Kanäle:** In Telegram-Kurzform (die `sms_text` sendet) erscheint `X?` automatisch mit; das Telegram-„rich"-Briefing und die Compare-/Trip-Mail zeigen stattdessen die ausgeschriebene Hinweiszeile bzw. den Banner.
 
 Quelle des Flags: `src/output/tokens/dto.py` (`NormalizedForecast.official_alerts_unavailable`), Emission in `src/output/tokens/builder.py`. Vertraglich abgesichert durch `docs/specs/modules/feat_1349_sms_unavailable.md`.
 
@@ -331,13 +341,41 @@ Wenn keine relevanten Zonen/Massifs aktiv sind: **Block komplett weglassen** (ke
 
 Nur ausgeben wenn der Trip als Wintersport markiert ist (`trip.profile == "wintersport"`). Details siehe `docs/specs/wintersport_extension.md`.
 
-> **`WC` ist im Produktivpfad nicht erreichbar (Klarstellung v2.12, Issue #1410 §4).**
-> `profile="wintersport"` wird ausschliesslich von der Legacy-CLI
-> (`src/app/cli.py`) gesetzt; kein Briefing-Versandweg erzeugt es. `WC`
-> ist damit seit Einführung faktisch tot und NICHT die gefühlte
-> Temperatur des Trip-Briefings — dafür stehen seit v2.12 `FN`/`FK`/`FD`
-> (§3.2). Der Token bleibt aus Rückwärtskompatibilität im Code, wird hier
-> aber nicht länger als regulär verfügbare Option geführt.
+> 🔴 **KORREKTUR 2026-08-11: `WC` IST im Produktivpfad erreichbar — und ist eine
+> Wert-Dublette von `FK`.** Hier stand bis dahin das Gegenteil („im Produktivpfad
+> nicht erreichbar … seit Einführung faktisch tot", Klarstellung v2.12, Issue
+> #1410 §4). Das war zum Zeitpunkt der Formulierung richtig und ist seit
+> **#1660 B** (2026-08-10) überholt: `SMS_MULTI_SYMBOLS_BY_METRIC["wind_chill"]
+> = ("FK", "FD", "WC")` (`sms_trip.py:183`) erzeugt alle drei Symbole, sobald
+> die Metrik `wind_chill` gewählt ist — unabhängig von `profile`.
+>
+> **Zweimal am laufenden Code gemessen** (2026-08-11): die reale Briefing-SMS
+> des Trips KHW enthielt `FK10 … WC10`, eine Gegenprobe über
+> `TripReportFormatter().format_email(...).sms_text` lieferte `FK1 … WC1`.
+> **Beide Male trägt `WC` denselben Wert wie `FK`** (Quelle `day.wind_chill_c`,
+> `builder.py:259`) — in einer auf 160 Zeichen gekürzten Nachricht verbraucht
+> derselbe Messwert also zweimal Platz.
+>
+> **Korrektur 2026-08-15 (Issue #1728 Scheibe 1):** Die hier angekündigte
+> Entscheidung „`WC` fällt mit #1728 ersatzlos weg" ist **nicht** eingetreten.
+> PO-Entscheidung E3 (`docs/specs/modules/feat_1728_s1_temp_aufloesung.md`
+> DEC-3): „WC soll bleiben" — `SMS_MULTI_SYMBOLS_BY_METRIC["wind_chill"] =
+> ("WC",)` bleibt unverändert bestehen, zur Vermeidung von Regression #1450.
+> Die Wert-Dublette zu `FK` bleibt damit ebenfalls unverändert bestehen. Eine
+> als Entscheidung formulierte Ankündigung ist keine Zusicherung über
+> künftigen Code — verwandt mit, aber nicht dieselbe Fehlerklasse wie im
+> Absatz unten: dort überholte eine spätere Änderung eine zuvor wahre
+> Aussage, hier erwies sich eine bereits zum Zeitpunkt des Schreibens
+> geplante Änderung beim Umsetzen als nicht vollzogen.
+>
+> Unverändert richtig bleibt: `WC` ist **nicht** die gefühlte Temperatur des
+> Trip-Briefings im Sinne der Auswahl — dafür stehen `FN`/`FK`/`FD` (§3.2).
+>
+> **Fehlerklasse, zur Warnung:** eine Aussage über den eigenen Code, die stimmte,
+> dann durch eine Änderung überholt wurde und die niemand prüft. Dieselbe Klasse
+> traf am selben Tag den Editor-Hinweis „SMS kennt keine Spalten-Reihenfolge"
+> (seit #1677 falsch). Kein Test hält Dokumentationstexte gegen das tatsächliche
+> Verhalten.
 
 ### 3.7 Debug-Token
 
@@ -354,16 +392,17 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 | Token | Null-Form | Anmerkung |
 |-------|-----------|-----------|
 | `N` (nur Abend) | `N-` | Bei fehlender Nacht-Temperatur — **nur im Abendbriefing**; im Morgenbriefing fehlt der Token komplett (kein `N-`). **Nur** bei aktivierter Metrik „Nacht-Tiefsttemperatur“ (Issue #1484, vorher „Temperatur“ per #1415) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
-| `K` | `K-` | Bei fehlender Gehzeit-Tiefsttemperatur — **nur** bei aktivierter Metrik „Temperatur“ (Issue #1415) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
-| `D` | `D-` | Bei fehlender Tag-Temperatur — **nur** bei aktivierter Metrik „Temperatur“ (Issue #1415) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
+| `K` | `K-` | Bei fehlender Gehzeit-Tiefsttemperatur — **nur** bei aktivierter Metrik „Tages-Tiefsttemperatur (Gehzeit)“ (`temperature_day_low`, Issue #1728, 2026-08-15; bis dahin an aktivierter Metrik „Temperatur“ (Issue #1415) + Auswertungswahl „nur Tiefstwert“ gekoppelt) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
+| `D` | `D-` | Bei fehlender Tag-Temperatur — **nur** bei aktivierter Metrik „Tages-Höchsttemperatur (Gehzeit)“ (`temperature_day_high`, Issue #1728, 2026-08-15; bis dahin an „Temperatur“, Issue #1415, gekoppelt) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
+| `D{min}/{max}` bzw. `FD{min}/{max}` (Bereich, Issue #1824) | je Hälfte einzeln: `D13/-`, `D-/27`, `D-/-`, `D13/?`, `D?/?` | Jede Hälfte trägt unabhängig Wert, Null-Form oder Lückenform. Weil die `-`/`?`-Wahl heute an EINEM tagesweiten Lücken-Flag hängt, sind die gemischten Formen `D-/?` und `D?/-` praktisch nicht erreichbar — syntaktisch erlaubt sind sie dennoch |
 | `FN` | `FN-` | **Nur** bei aktivierter Metrik „Gefühlte Nacht-Tiefsttemperatur“ (`wind_chill_night`, Issue #1660; vorher „Gefühlte Temperatur“, Issue #1410), wenn lediglich die Daten fehlen. Ist die Metrik nicht gewählt, erscheint gar nichts — auch keine Null-Form — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
-| `FK` / `FD` | `FK-` / `FD-` | **Nur** bei aktivierter Metrik „Gefühlte Temperatur“ UND passender Auswertungswahl (min→`FK`, max→`FD`, Issue #1660), wenn lediglich die Daten fehlen. Ist die Metrik nicht gewählt oder die Auswertungswahl passt nicht, erscheint gar nichts — auch keine Null-Form (Issue #1410) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
+| `FK` / `FD` | `FK-` / `FD-` | **Nur** bei aktivierter Metrik „Gefühlte Tages-Tiefsttemperatur (Gehzeit)“ bzw. „Gefühlte Tages-Höchsttemperatur (Gehzeit)“ (`wind_chill_day_low`/`wind_chill_day_high`, Issue #1728, 2026-08-15; bis dahin gemeinsam an „Gefühlte Temperatur“ + Auswertungswahl gekoppelt, Issue #1660), wenn lediglich die Daten fehlen. Ist die jeweilige Metrik nicht gewählt, erscheint gar nichts — auch keine Null-Form (Issue #1410) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
 | `R` / `PR` | `R-` / `PR-` | Bei fehlendem oder Sub-Threshold-Niederschlag |
 | `W` / `G` | `W-` / `G-` | Bei fehlendem oder Sub-Threshold-Wind |
 | `TH` / `TH+` | `TH:-` / `TH+:-` | Bei fehlendem oder Sub-Threshold-Gewitter — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
 | `HU`/`DP`/`CP`/`UV`/`CT`/`CL`/`CM`/`CH` | `HU-` usw. | Klasse (a), bei fehlendem oder Sub-Threshold-Wert — Issue #1660 Scheibe B, zusätzliche `?`-Form bei Datenlücke s. Hinweis unten |
 | `VS` / `NL` | `VS-` / `NL-` | Klasse (b), bei fehlenden Stundenwerten ODER wenn der Tiefstwert eine konfigurierte Schwelle NICHT unterschreitet (Invers-Gate) |
-| `WD` / `PT` / `SU` / `HP` | `WD-` usw. | Klasse (c), bei fehlendem Tageswert — anders als bei den Wintersport-Token (unten) gibt es hier eine Null-Form, kein komplettes Weglassen (DEC-3, `fix_1660b_sms_token_wiring.md`) |
+| `WD:` / `PT:` / `SU` / `HP` | `WD:-` / `PT:-` / `SU-` / `HP-` | Klasse (c), bei fehlendem Tageswert — anders als bei den Wintersport-Token (unten) gibt es hier eine Null-Form, kein komplettes Weglassen (DEC-3, `fix_1660b_sms_token_wiring.md`). Der Doppelpunkt bei `WD:`/`PT:` gehört zum Symbol und steht deshalb auch in Null- und Lückenform (Issue #1824, Muster `TH:-`) |
 | `HR` / `TH` (Vigilance) | `HR:-TH:-` | Bei keiner Vigilance-Warnung; immer paarweise |
 | `Z` / `M` (Fire) | komplett weglassen | Kein `Z:-`, einfach Block entfernen |
 | `SD`/`NS24+`/`SL`/`AV`/`WC` | komplett weglassen | Wintersport-Tokens nicht zwingend |
@@ -402,13 +441,13 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser **Reihenfolge** entfernt:
 
 1. `DBG[...]`
-2. Die 14 erweiterten Metrik-Tokens aus §3.2a (`HU DP WD CP PT CT CL CM CH VS SU UV HP NL`, Issue #1660 Scheibe B) — fallen als erste Fachtoken, noch VOR den Wintersport-Größen
+2. Die 14 erweiterten Metrik-Tokens aus §3.2a (`HU DP WD: CP PT: CT CL CM CH VS SU UV HP NL`, Issue #1660 Scheibe B) — fallen als erste Fachtoken, noch VOR den Wintersport-Größen
 3. Wintersport-Tokens (`WC`, `AV`, `SL`, `NS24+`, `SD`)
 4. Fire-Block komplett (`Z:HIGH...`, `MAX...`, `M:...`)
 5. Peak-Werte `(max@h)` (Threshold-Werte bleiben erhalten)
 6. `FN`, `FK`, `FD` (gefühlte Temperaturen — Komfortangabe, fällt VOR den sicherheitsrelevanten Planungsgrössen, Issue #1410)
 7. `PR` (Regenwahrscheinlichkeit)
-8. `K`, `D`, `N` (gemessene Temperaturen — `K` zuerst, `N` zuletzt)
+8. `K`, `D`, `N` (gemessene Temperaturen — `K` zuerst, `N` zuletzt). Ein Bereichs-Token `D{min}/{max}` (Issue #1824) fällt **als Ganzes** in einem Schritt: es gibt keinen Zwischenzustand, in dem nur der Tiefst- oder nur der Höchstwert übrig bleibt. Die Kürzung verliert dadurch im „beide gewählt"-Fall eine Granularitätsstufe gegenüber früher (bewusste Nebenwirkung)
 9. Last Resort: verbleibende Forecast-/Vigilance-/Warn-Token nach aufsteigender `PRIORITY`, bis nur noch eines übrig ist (amtliche Warnungen fallen als allerletzte). Dieser Schritt existiert im Code seit jeher, fehlte aber bis v2.12 in dieser Aufzählung.
 
 `{Name}:` plus mindestens **ein** Risk- oder Wert-Token ist Pflicht. Wenn nach allen Truncation-Schritten immer noch >160 Zeichen: ValueError.
@@ -497,9 +536,9 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 | `Z`/`M` | `risque-prevention-incendie.fr` | tagesaktueller JSON | ⚠️ Provider TODO |
 | `SD`/`NS24+`/`SL` | GeoSphere/SLF | siehe Wintersport-Spec | ⚠️ teilweise vorhanden |
 | `AV` | `AvalancheReport.danger.level` | aus Lawinenbericht | ⚠️ Provider TODO |
-| `WC` | `wind_chill_c` | berechnet | ⚠️ nur Legacy-CLI (`profile="wintersport"`), im Produktivpfad nie erreichbar — s. §3.6 |
-| `FN` / `FK` / `FD` | `night_wind_chill_min_c` / `wind_chill_min_c` / `wind_chill_max_c` | Open-Meteo `apparent_temperature`, GeoSphere | ✅ vorhanden (Issue #1410) |
-| `K` | `temp_min_c` (Gehzeit-Fenster) | Provider | ✅ vorhanden (Issue #1410) |
+| `WC` | `wind_chill_c` | berechnet | 🔴 **erreichbar, sobald `wind_chill` gewählt ist** (seit #1660 B) und **wertgleich mit `FK`** — zweimal gemessen 2026-08-11. Die frühere Angabe „nur Legacy-CLI, nie erreichbar" war überholt — s. §3.6. **Korrektur 2026-08-15 (#1728 Scheibe 1):** die hier zuvor stehende Ankündigung „fällt mit #1728 ersatzlos weg" ist nicht eingetreten — `WC` bleibt bewusst bestehen (PO-Entscheid E3, s. §3.6) |
+| `FN` / `FK` / `FD` | `night_wind_chill_min_c` / `wind_chill_min_c` / `wind_chill_max_c` | Open-Meteo `apparent_temperature`, GeoSphere | ✅ vorhanden (Issue #1410) — `FK`/`FD` seit #1728 (2026-08-15) über die eigenen Metriken `wind_chill_day_low`/`wind_chill_day_high` gegated (s. §2) |
+| `K` | `temp_min_c` (Gehzeit-Fenster) | Provider | ✅ vorhanden (Issue #1410) — seit #1728 (2026-08-15) nur bei aktivierter Metrik „Tages-Tiefsttemperatur (Gehzeit)“ (`temperature_day_low`); bis dahin hing das Kürzel an der Auswertungswahl „nur Tiefstwert“ von „Temperatur“. Ist zusätzlich `temperature_day_high` aktiv, trägt `D{min}/{max}` denselben Wert in der ersten Hälfte (Issue #1824) |
 | `HU` | `humidity_pct` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
 | `DP` | `dewpoint_c` hourly | Threshold + MAX (Klasse a, nur `> 0`, s. Known Limitations) | ✅ vorhanden (Issue #1660 Scheibe B) |
 | `CP` | `cape_jkg` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
@@ -507,8 +546,8 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 | `CT`/`CL`/`CM`/`CH` | `cloud_total_pct`/`cloud_low_pct`/`cloud_mid_pct`/`cloud_high_pct` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
 | `VS` | `visibility_m` hourly | Tages-MIN + Stunde, Anzeige in km (Klasse b, Invers-Gate) | ✅ vorhanden (Issue #1660 Scheibe B) |
 | `NL` | `freezing_level_m` hourly | Tages-MIN + Stunde (Klasse b, Invers-Gate) | ✅ vorhanden (Issue #1660 Scheibe B) |
-| `WD` | `wind_direction_deg` hourly | dominanter 8-Sektor, Gleichstand → Sektor des Wind-Peaks (Klasse c) | ✅ vorhanden (Issue #1660 Scheibe B) |
-| `PT` | `precip_type` hourly | dominanter Typ, Gleichstand → Rang `FREEZING_RAIN`>`SNOW`>`MIXED`>`RAIN` (Klasse c) | ✅ vorhanden (Issue #1660 Scheibe B) |
+| `WD:` | `wind_direction_deg` hourly | dominanter 8-Sektor, Gleichstand → Sektor des Wind-Peaks (Klasse c) | ✅ vorhanden (Issue #1660 Scheibe B; Doppelpunkt seit #1824) |
+| `PT:` | `precip_type` hourly | dominanter Typ, Gleichstand → Rang `FREEZING_RAIN`>`SNOW`>`MIXED`>`RAIN` (Klasse c) | ✅ vorhanden (Issue #1660 Scheibe B; Doppelpunkt seit #1824) |
 | `SU` | Fensterpunkte via `WeatherMetricsService.calculate_sunny_hours()` | DNI-Interpolation, Fallback proportional bewölkt (Klasse c) | ✅ vorhanden (Issue #1660 Scheibe B) |
 | `HP` | `pressure_msl_hpa` hourly | arithmetisches Tagesmittel (Klasse c) | ✅ vorhanden (Issue #1660 Scheibe B) |
 | `DBG` | `source.chosen`, `source.confidence` | aus DebugBuffer | ✅ vorhanden |
@@ -575,6 +614,12 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.20 | 2026-08-06 | Folgescheibe S3b-2b: der `!`-Warn-Block-Filter des **Ortsvergleichs** (`comparison.py`) geht ebenfalls auf die Startschwelle „gering" über — `render_compare_sms`/`render_compare_telegram` rufen den geteilten Kern jetzt mit `min_official_level_for_threshold("LOW")` statt des vormals festen `MIN_SMS_LEVEL` (orange). Der Compare-SMS-/Telegram-Bericht zeigt künftig auch **gelbe** (Stufe 2) amtliche Warnungen, die vorher nie erschienen. Anders als beim Trip gibt es dafür keinen eigenen, je Kanal einstellbaren Bericht-Parameter — die neue Alarm-Kanal-Schwelle des Ortsvergleichs (`ComparePreset.alert_channel_thresholds`) regelt ausschließlich den Alarm-**Versand**, nicht diesen Bericht (derselbe Zielkonflikt wie beim Trip, gleiche Auflösung). §2 (Token-Tabelle) und §3.4c entsprechend präzisiert. ADR-0046, Spec: `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md`. |
 | 2.21 | 2026-08-09 | Temperatur-Trennung Scheibe A (Issue #1660): (1) `FN` hängt nicht mehr an „Gefühlte Temperatur" (`wind_chill`), sondern an der neuen eigenen wählbaren Metrik „Gefühlte Nacht-Tiefsttemperatur" (`wind_chill_night`) — exakt analog zu `N`/`temperature_night` seit #1484; `FK`/`FD`/`WC` bleiben bei `wind_chill`. (2) Die seit #1357 vorhandene Auswertungswahl (Spanne/Tiefstwert/Höchstwert/Mittelwert je Metrik) wirkt jetzt auch in der SMS: `K` nur bei gewähltem „Tiefstwert", `D` nur bei „Höchstwert" (Metrik „Temperatur"); `FK`/`FD` analog bei „Gefühlte Temperatur"; „Nur Mittelwert" entfernt beide Token der jeweiligen Größe ersatzlos, kein Rückfall auf die Spanne. `N`/`FN` sind von der Auswertungswahl unberührt (eigene Metriken ohne Auswertungswahl). Betrifft §2 (Token-Reihenfolge-Tabelle, Hinweis zu `K`/`FK`/`FD`/`FN`), §3.2 (`FN`-Zeile), §4 (Null-Repräsentation). Spec: `docs/specs/modules/fix_1660a_temp_trennung.md`. |
 | 2.22 | 2026-08-10 | SMS-Token-Verdrahtung Scheibe B (Issue #1660): 14 bisher wählbare, aber wirkungslose Metriken bekommen ein Kürzel — `HU`/`DP`/`WD`/`CP`/`PT`/`CT`/`CL`/`CM`/`CH`/`VS`/`SU`/`UV`/`HP`/`NL` (Kürzel unverändert `metric_catalog.sms_code`, kein neuer Katalogeintrag). Drei Wertegrammatik-Klassen: Threshold-Peak (HU/DP/CP/UV/CT/CL/CM/CH, wie `R`/`W`/`G`), Invers-Min mit Stunde (VS/NL, wie `SL` aber mit `{min}@{h}` statt reinem Tageswert und Null-Form statt Weglassen), Tageswert ohne Stunde (WD/PT/SU/HP). Position: eigener Block nach `TH+:`, vor `C`/Vigilance (§2); Kürzungsrang direkt nach `DBG`, vor den Wintersport-Token (§6, DROP_ORDER). Erscheinen in Morgen- und Abendbriefing gleich (kein Nacht-Sonderfall). Betrifft §2, neuer §3.2a, §4, §6, §9. Spec: `docs/specs/modules/fix_1660b_sms_token_wiring.md`. |
+
+| 2.24 | 2026-08-11 | 🔴 **Korrektur einer Falschaussage, keine Formatänderung.** §3.6 und §9 behaupteten, `WC` sei „im Produktivpfad nie erreichbar" und „seit Einführung faktisch tot" (v2.12, #1410 §4). Das stimmte damals und ist seit **#1660 B** (2026-08-10) überholt: `SMS_MULTI_SYMBOLS_BY_METRIC["wind_chill"] = ("FK","FD","WC")` erzeugt alle drei Symbole, sobald `wind_chill` gewählt ist — unabhängig von `profile`. Zweimal am laufenden Code gemessen (reale KHW-Briefing-SMS `FK10 … WC10`; Gegenprobe über `format_email(...).sms_text` → `FK1 … WC1`): **`WC` trägt denselben Wert wie `FK`**, verbraucht in der 160-Zeichen-Grenze also doppelt Platz. `WC` fällt mit **#1728** ersatzlos weg. Fehlerklasse: eine Aussage über den eigenen Code, die durch eine spätere Änderung überholt wurde und die kein Test gegen das Verhalten hält — dieselbe Klasse traf am selben Tag den Editor-Hinweis „SMS kennt keine Spalten-Reihenfolge" (seit #1677 falsch, →#1719 S3). **[Korrektur 2026-08-15, s. v2.27: die angekündigte Entfernung von `WC` ist NICHT eingetreten — PO-Entscheid #1728 E3 „WC soll bleiben", s. §3.6/§9.]** |
+| 2.25 | 2026-08-13 | Präzisierung zu §1 (Zeichensatz), keine Formatänderung. `fold_ascii()` bleibt die einzige Quelle für **Buchstaben**-Transliteration, deckt aber die GSM-7-**Extension-Tabelle** (Form-Feed, `^{}\[~]\|€`) nicht ab — diese Zeichen sind bereits ASCII/kein Buchstabe und liefen bei amtlichen Alarm-SMS (§ „Amtliche Warnungen") unverändert durch, was die SMS-Kodierung still auf UCS-2 umschaltet (67 statt 153 Zeichen je Teil). Fix in `alert/render.py::_ascii()`: feste Ersetzungstabelle `_ASCII_EXTENSION_REPLACEMENTS`, angewendet vor `fold_ascii()`. Betrifft nur den amtlichen-Alarm-SMS-/Premium-SMS-Pfad (`render_official_alert_sms`), nicht das Trip-Briefing (`sms_trip.py`, dort bislang kein Fund). Issue #1796, Spec: `docs/specs/modules/fix_1796_official_alert_gsm7_extension.md`. |
+
+| 2.26 | 2026-08-14 | **Zwei Formatänderungen aus der Lektüre eines echten KHW-Briefings (Issue #1824).** (A) **Bereichs-Token:** Sind bei „Temperatur“ bzw. „Gefühlte Temperatur“ BEIDE Auswertungen gewählt, stehen Tiefst- und Höchstwert nicht mehr als zwei Token (`K13 D27`), sondern als einer: `D13/27` (gefühlt `FD10/20`). Trennzeichen ist `/`, nicht `-` — bei Minusgraden wäre der Bindestrich zugleich Trenner und Vorzeichen (`D-12--4`), `/` ist GSM-7-sicher und im Format sonst unbenutzt. `K`/`FK` bleiben eigenständige Kürzel und bedeuten weiterhin **immer** den Tiefstwert (PO-Entscheid 2026-08-13: ein `D13` mit tatsächlichem Tiefstwert wäre auf einem tourenentscheidungs-relevanten Kanal Falschinformation); bei „nur Tiefstwert“ bzw. „nur Höchstwert“ ändert sich nichts. `N`/`FN`/`WC` unberührt. Der Bereich fällt beim Kürzen als eine Einheit (§6). (B) **Trenner bei Buchstaben-Werten:** `WD`→`WD:`, `PT`→`PT:` — die einzigen zwei Kürzel mit buchstabenbeginnendem Wert bekommen denselben Doppelpunkt wie `TH:`/`HR:`; der Trenner gehört zum Symbol, weshalb Null- und Lückenform ihn mitziehen (`WD:-`, `WD:?`). `/api/sms-symbols` schneidet ihn wieder ab — die Editor-Badge bleibt `WD`/`PT`. Netto-Zeichenwirkung an einer echten Briefing-Zeile: −3 (A) +2 (B) = **−1**. Betrifft §2, §3.2, §3.2a, §4, §6, §9; löst AC-6/AC-7 aus `fix_1660b_sms_token_wiring.md` ab. Spec: `docs/specs/modules/feat_1824_sms_range_und_trenner.md`. |
+| 2.27 | 2026-08-15 | **Temperatur-Auflösung Scheibe 1 (Issue #1728) — die Auswertungswahl steuert `K`/`D`/`FK`/`FD` nicht mehr.** Vier neue, eigenständig wählbare Katalog-Größen (`temperature_day_low`/`temperature_day_high`/`wind_chill_day_low`/`wind_chill_day_high`) übernehmen die Sichtbarkeits-Gates dieser vier Kürzel von der bisherigen Auswertungswahl (`MetricConfig.aggregations`) der Elterngrößen „Temperatur"/„Gefühlte Temperatur" — exakt nach dem Muster von `temperature_night`/`wind_chill_night` (#1484/#1660 A). `temperature`/`wind_chill` bleiben als Katalogeinträge bestehen und liefern weiterhin den Stundenwert für Stundentabelle und Telegram-Zelle; `WC` bleibt unverändert an `wind_chill` gebunden (PO E3, „WC soll bleiben" — **löst die in v2.24 angekündigte, nie umgesetzte Entfernung ab**, s. §3.6/§9-Korrekturen). Das Bereichs-Token-Verhalten aus v2.26 ist unverändert, greift jetzt aber, wenn **beide** neuen Tagesrichtungs-Größen aktiviert sind, statt bei „beide Auswertungen gewählt". Betrifft §2, den Hinweis zu `K`/`FK`/`FD`/`FN`, §3.2, §3.6, §4, §9. Reine Backend-Scheibe — der Trip-Editor zeigt bis Scheibe 2 weiterhin die (jetzt wirkungslose) alte Auswertungswahl für „Temperatur"/„Gefühlte Temperatur" an. Spec: `docs/specs/modules/feat_1728_s1_temp_aufloesung.md`. |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

@@ -1,15 +1,28 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-06 (Issue #923b, `fix-923b-wire-live-sms-preview` — Korrektur zu #923:
+**Updated:** 2026-08-14 (Issue #1756 — Send-Idempotenz-Lock: `POST /api/trips/{trip_id}/send`
+lehnt einen zweiten Sendeversuch für denselben `(user_id, trip_id, report_type)`-Schlüssel,
+während ein erster noch läuft, jetzt mit neuem Statuscode 409 ab statt einen echten
+Doppelversand auszulösen (Prozess-lokaler `threading.Lock`, keine Persistenz); Go-Proxy-Timeout
+in `SendTripReportProxyHandler` von 120s auf 300s angehoben, da der reguläre Erfolgsfall durch
+den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann. Details Section 14.5, Spec
+`docs/specs/modules/fix_1756_send_idempotenz_lock.md`); 2026-08-11 (Issue #1719 Scheibe S3, `fix-1719-s3-aus-ist-ein-zustand` — die
+Live-Vorschau „So kommt es an" ist auf PO-Entscheid ersatzlos entfernt:
+`WeatherV2MailPreview.svelte` (der einzige Live-Konsument des unten beschriebenen
+`/api/_validator/sms-fidelity-preview`) ist gelöscht, ebenso `trip-detail/smsFidelityPreview.ts`.
+Der Endpoint selbst bleibt registriert, ist damit aber **toter Code** — nicht Teil dieser
+Scheibe, s. `docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md` „Known Limitations". Der
+darunterstehende #923b-Eintrag beschreibt entsprechend nur noch den historischen Stand);
+2026-08-06 (Issue #923b, `fix-923b-wire-live-sms-preview` — Korrektur zu #923:
 der am selben Tag gebaute Endpoint `POST /api/_validator/sms-fidelity-preview` war korrekt,
 aber gegen tote Komponenten verdrahtet (`ChannelFidelitySMS.svelte`, `ChannelPreviewCard.svelte`
 — nie von einer Route importiert, nur über den Organisms-Barrel erreichbar). Live konsumiert
-wird der Endpoint erst ab #923b, über `WeatherV2MailPreview.svelte`
+wurde der Endpoint ab #923b, über `WeatherV2MailPreview.svelte`
 (`frontend/src/lib/components/shared/weather-metrics-tab/`, eingebunden in
 `WeatherMetricsTab.svelte`), bei `context==='route'`. Bei `context==='vergleich'`
-(Ortsvergleich-Editor) bleibt die SMS-Kachel bewusst ausgeblendet — kein Aufruf. Die fünf toten
-Komponenten sind gelöscht. Spec: `docs/specs/modules/fix_923b_wire_live_sms_preview.md`);
+(Ortsvergleich-Editor) blieb die SMS-Kachel bewusst ausgeblendet — kein Aufruf. Die fünf toten
+Komponenten wurden gelöscht. Spec: `docs/specs/modules/fix_923b_wire_live_sms_preview.md`);
 2026-08-06 (Issue #1461 Scheibe S3b-2b, `feat-1461-s3b2b-compare-kanal-schwelle` —
 `alert_channel_thresholds` (s. S3b-2a-Eintrag darunter) gilt jetzt auch für **Ortsvergleiche**:
 dasselbe additive Geschwisterfeld (`AlertChannelThresholdsConfig`, kein neuer Typ) auf
@@ -84,7 +97,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
 - Einheiten im Feldnamen: `*_c`, `*_kmh`, `*_mmph`, `*_mm`, `*_pct`, `*_hpa`, `*_jkg`, `*_m`, `*_cm`
-- Provider (Ist-Stand, s. `docs/reference/decision_matrix.md`): `openmeteo` (Standard) | `geosphere` | `brightsky` | `radar_dpc` | `at_direct`/`de_direct`/`fr_direct` (Fallback)
+- Provider (Ist-Stand, s. `docs/reference/decision_matrix.md`): `openmeteo` (Standard) | `geosphere` | `brightsky` | `at_direct`/`de_direct`/`fr_direct` (Fallback) — `radar_dpc` seit #1648 ersatzlos entfernt
 
 ---
 
@@ -278,6 +291,26 @@ Ein **Normalized Forecast Timeseries**-Objekt (siehe unten), bestehend aus `meta
 |-------------------------------|---------------|-------------------------------------------------|
 | lightning_potential_lpi_jkg   | float \| None | DWD-Blitzpotenzial (`lpi`, J/kg) — **zwei Quellen, ein Feld**: für Deutschland/Alpen/Österreich liefert ICON-D2 (2,2 km, S2b, Messwerte typisch ~88, Fehlwert-Marker 9999.0 empirisch ermittelt), für den Rest Europas liefert ICON-EU (~6,5 km, S2c, externer Abrufname `lpi_con_max`, live gegen `opendata.dwd.de` verifiziert). ICON-EU kennt **keinen** festen Fehlwert-Sentinel — dort wird stattdessen die Fehlwert-Markierung der GRIB2-Antwort selbst geprüft (`dataset.nodata`/NaN). Welcher der beiden Dienste einen konkreten Wert geliefert hat, steht **nicht im Feld selbst**, sondern ist im Regelfall über die Position rekonstruierbar (`providers/thunder_routing.py::thunder_provider_for` → `de_direct` oder `eu_direct`) — fachlich dieselbe Energiegröße, deshalb bewusst kein zweites Feld. **Seit #1492 Scheibe 2a / ADR-0047 gilt diese Rückrechnung nicht mehr uneingeschränkt:** fällt die zuständige Quelle wirklich aus, liefert eine benannte Vertretung (`de_direct → eu_direct`, `fr_direct → eu_direct`); die Position nennt dann nur noch den *Zuständigen*, nicht den tatsächlichen *Lieferanten*. Maßgeblich ist ab dann `ForecastMeta.fallback_model` / `fallback_reason` (`"thunder_source_unavailable"`) / `fallback_metrics` — wobei `fallback_model` einen bereits vorhandenen Grundvorhersage-Fallback (#1115) nicht überschreibt (Merge-Schutz), der Gewitter-Wechsel also unter Umständen **nur** in `fallback_metrics` steht. ⚠️ Bei Vertretung von `fr_direct` wechselt zudem die Messgröße: statt der Blitz**dichte** (`lightning_density_per_km2_3h`, Météo-France) wird das Blitz**potenzial** dieses Feldes befüllt — verschiedene Skalen, deshalb schreibt die Vertretung strukturell in das Feld der Ersatzquelle und nie in das der Primärquelle. Befüllt über den gemeinsamen Anreicherungsweg `providers/thunder_enrichment.py::enrich_thunder`, angehängt im regulären Rückgabeweg von `OpenMeteoProvider.fetch_forecast`. Zuständigkeitstabelle `providers/thunder_routing.py::thunder_provider_for` trägt seit S2b den Eintrag `DE_ALPEN` (43.17–58.09 N / −3.95–20.35 O) → `de_direct`, seit S2c zusätzlich die Catch-all-Zeile `EU_REST` (ganze Welt, first-match-wins **letzte** Zeile) → `eu_direct`. **Bewusst getrennt von S2a** (Météo-France Blitzdichte): DWD liefert ein **Potenzial** (Energiegröße), Météo-France eine **Dichte** (Blitze je Fläche/3h) — verschiedene Größen, verschiedene Skalen, ein gemeinsames Feld mit einer Schwelle wäre ein stiller Fehler. `None` heißt **„keine Aussage"**, nie „kein Signal". **Seit #1474c viertes Signal in der Gewitterstufen-Fusion** (`thunder_level_from_signals()`, `output/metric_format.py`) — **seit #1679 gebietsabhängige** Schwellentabelle (`model_registry.LPI_THRESHOLDS_JKG`/`lpi_thresholds_jkg()`, s. `docs/reference/decision_matrix.md`): DE_ALPEN (ICON-D2, `de_direct`) unter 1 J/kg → `NONE`, 1 bis unter 30 → `LOW`, 30 bis unter 50 → `MED`, ab 50 → `HIGH` (alle drei Werte belegt, Bína et al., Atmospheric Research/ASR Copernicus 2022); EU_REST (ICON-EU, `eu_direct`) bleibt als Interim **unverändert** bei unter 5 → `NONE`, 5 bis unter 20 → `LOW`, 20 bis unter 50 → `MED`, ab 50 → `HIGH` (5/50 belegt, 20 interpoliert), bis #1678 eine eigene Eichung liefert. Beide Gebiete befüllen dasselbe Feld, aber über getrennte Schwellen. |
 | hail_potential_grau_gsp       | float \| None | DWD ICON-D2 Hagel-Potenzial (`grau_gsp`, Graupel-Akkumulation) für Deutschland/Alpen/Österreich. Akkumulation gegenüber dem Nullpunkt-Lauf gerechnet (Anker-Abruf wie `precip_1h_mm` / `tot_prec`-Muster). Fehlwert-Marker 9999.0. Befüllung analog `lightning_potential_lpi_jkg`, über `de_direct` → `thunder_enrichment.py`. **Bleibt für ICON-EU-Gebiete (S2c, `eu_direct`) dauerhaft `None`** — ICON-EU liefert kein Hagel-Pendant zu `grau_gsp`, beabsichtigt, keine offene Lücke. **Reine Rohdaten**, kein Anschluss an Renderer und **keine Stufenbildung** — anders als `lightning_potential_lpi_jkg` (s. dort) bleibt Hagel außen vor, das ist S5/#1475. `None` heißt **„keine Aussage"**. |
+
+#### Gewitter-Rohgrößen DWD (optional, Issue #1531)
+Sieben zusätzliche DWD-Größen, reiner Datenabruf — **keine Einstufung, keine Schwellen, kein
+Renderer-Anschluss** (Scope-Abgrenzung der Spec `docs/specs/modules/feat_1531_s1_dwd_gewittergroessen.md`).
+Fehlwert-Marker 9999.0 (außerhalb Modellgebiet) wird bei allen sieben zu `None`.
+
+| Feld                              | Typ           | Beschreibung                                   |
+|------------------------------------|---------------|-------------------------------------------------|
+| supercell_index_sdi2_1s           | float \| None | Superzellenindex (`sdi_2`, 1/s) — nur ICON-D2 (DE/Alpen/AT), **vorzeichenbehaftet** (antizyklonale Rotation bleibt negativ im Feld). |
+| convective_inhibition_jkg         | float \| None | Konvektionshemmung (`cin_ml`, J/kg) — ICON-D2 **und** ICON-EU. **Zweiter** Fehlwert-Marker −999,9 (ICON-D2, ca. 46 % der Gitterpunkte) wird zusätzlich zu 9999,0 zu `None`. |
+| cape_ml_jkg                       | float \| None | Mixed-Layer-CAPE (`cape_ml`, J/kg) — ICON-D2 **und** ICON-EU, **eigenes** Feld getrennt von `cape_jkg` (andere Quelle, #1419 §3.1/§5: je Größe ein eigenes Feld). |
+| lightning_potential_max_lpi_jkg   | float \| None | Blitzpotenzial-Maximum (`lpi_max`, J/kg) — nur ICON-D2 (ICON-EU liefert stattdessen `lpi_con_max` in `lightning_potential_lpi_jkg`, s. o.). |
+| updraft_helicity_max_m2s2         | float \| None | Updraft-Helizität, Gesamtsäule (`uh_max`, m²/s²) — nur ICON-D2. |
+| updraft_helicity_max_med_m2s2     | float \| None | Updraft-Helizität, mittlere Schicht (`uh_max_med`, m²/s²) — nur ICON-D2. |
+| updraft_helicity_max_low_m2s2     | float \| None | Updraft-Helizität, untere Schicht (`uh_max_low`, m²/s²) — nur ICON-D2. |
+
+Alle drei `uh_max*`-Varianten werden bewusst parallel geholt, weil die DWD-Felddefinition der
+Schichtgrenzen nicht auffindbar ist (s. Spec „Known Limitations"). ICON-EU liefert außerdem
+`cape_con` providerintern (`src/providers/dwd_eu.py`), aber **ohne** eigenes Modellfeld —
+kein Zwilling zu `cape_ml_jkg`.
 
 ### Provenance (Meta, Pflicht)
 - `provider`, `model`, `run`, `interp`, `grid_res_km`, optional `stations_used[]`
@@ -576,7 +609,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | timezone                        | str         | Zeitzone (default: "Europe/Vienna")                    |
 | send_email                      | bool        | E-Mail senden? (default: true)                         |
 | send_sms                        | bool        | SMS senden? (default: false)                           |
-| send_premium_sms                | bool        | Premium-SMS (Garmin inReach) senden? (default: false, Issue #1676 S2a) — eigenständiger vierter Kanal `premium_sms`, **nur Trip-Briefing** (Alarmpfad/Ortsvergleich erst mit #1701, s. ADR-0049); Empfänger ist ausschließlich die in Scheibe S1 gelernte Rückadresse aus `user.json`, nie `sms_to`. Lebt aktuell nur im freien `report_config`-Schlüssel (kein eigenes Go-Struct-Feld analog `send_sms`/`send_telegram`, folgt erst mit S3). |
+| send_premium_sms                | bool        | Premium-SMS (Garmin inReach) senden? (default: false, Issue #1676 S2a) — eigenständiger vierter Kanal `premium_sms`, **nur Trip-Briefing** (Alarmpfad/Ortsvergleich erst mit #1701, s. ADR-0049); Empfänger ist ausschließlich die in Scheibe S1 gelernte Rückadresse aus `user.json`, nie `sms_to`. Seit #1717 S3 auch in der Oberfläche schaltbar (Trip-Anlage + Trip-Detail) und als abgeleitetes Go-Struct-Feld `Trip.SendPremiumSms` vorhanden — `report_config.send_premium_sms` bleibt die autoritative Quelle. |
 | alert_on_changes                | bool        | Alerts bei Änderungen? (default: true)                 |
 | change_threshold_temp_c         | float       | Temp-Änderungs-Schwelle [°C] (default: 5.0)            |
 | change_threshold_wind_kmh       | float       | Wind-Änderungs-Schwelle [km/h] (default: 20.0)         |
@@ -601,7 +634,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 |---------------------|------------------|-------------------------------------------------------|
 | metric_id           | str              | Metrik-ID (z.B. `wind`, `cloud_total`, `sunshine`)     |
 | enabled             | bool             | Metrik aktiv im Report? (default: true)                |
-| aggregations        | list[str]        | Aggregations-Funktionen pro Segment (default: `["min","max"]`). **Seit Issue #1357** vom Renderer gelesen: bestimmt, welche Tagesauswertung in der Kachelzeile der Briefing-Mail erscheint. **Einzelwahl, keine Menge** (PO 2026-07-28: „Es gibt kein zusätzlich: entweder oder") — genau eine von vier sich ausschließenden Möglichkeiten gilt: Spanne (`["min","max"]`), nur Tiefstwert (`["min"]`), nur Höchstwert (`["max"]`), nur Mittelwert (`["avg"]`, nur bei Größen mit `avg` im Katalog, z. B. Temperatur — bei der gefühlten Temperatur entfällt diese Möglichkeit). Fehlt das Feld ⇒ Katalog-Vorgabe (`metric_catalog.pill_default_aggregations()`, `{min,max}` ∩ berechenbar); leere Liste `[]` ⇒ bewusst keine Kachel; eine gespeicherte Liste ohne Entsprechung in den vier Möglichkeiten (Altbestand, z. B. `["min","avg"]`) wird zur Anzeigezeit auf die nächstliegende Möglichkeit abgebildet und per `logger.warning` gemeldet — Ausnahme: der Katalog-Schreib-Default `["min","max","avg"]` bildet ohne Meldung auf Spanne ab. Bedienfläche (Segmented Control) nur für Größen mit mehr als einer berechenbaren Auswertung (heute Temperatur und gefühlte Temperatur); Details `docs/specs/modules/trip_aggregation_selection.md` |
+| aggregations        | list[str]        | Aggregations-Funktionen pro Segment (default: `["min","max"]`). **Seit Issue #1357, 2026-07-28 bis 2026-08-14** vom Renderer gelesen: bestimmt, welche Tagesauswertung in der Kachelzeile der Briefing-Mail erscheint. **Einzelwahl, keine Menge** (PO 2026-07-28: „Es gibt kein zusätzlich: entweder oder") — genau eine von vier sich ausschließenden Möglichkeiten galt: Spanne (`["min","max"]`), nur Tiefstwert (`["min"]`), nur Höchstwert (`["max"]`), nur Mittelwert (`["avg"]`, nur bei Größen mit `avg` im Katalog, z. B. Temperatur — bei der gefühlten Temperatur entfiel diese Möglichkeit). Fehlt das Feld ⇒ Katalog-Vorgabe (`metric_catalog.pill_default_aggregations()`, `{min,max}` ∩ berechenbar); leere Liste `[]` ⇒ bewusst keine Kachel; eine gespeicherte Liste ohne Entsprechung in den vier Möglichkeiten (Altbestand, z. B. `["min","avg"]`) wurde zur Anzeigezeit auf die nächstliegende Möglichkeit abgebildet und per `logger.warning` gemeldet — Ausnahme: der Katalog-Schreib-Default `["min","max","avg"]` bildete ohne Meldung auf Spanne ab. Bedienfläche (Segmented Control) nur für Größen mit mehr als einer berechenbaren Auswertung (heute Temperatur und gefühlte Temperatur); Details `docs/specs/modules/trip_aggregation_selection.md`.<br>**Korrektur 2026-08-15 (Issue #1728 Scheibe 1):** Dieser Wirkmechanismus auf die Kachelzeile ist entfallen — alle drei E-Mail-Pillen-Wirkorte (HTML/Plain/Compact) zeigen für „Temperatur"/„Gefühlte Temperatur" jetzt **unbedingt** die Spanne (`min`/`max`), unabhängig vom gespeicherten Wert dieses Felds; `mc.aggregations` wird an keinem dieser drei Wirkorte mehr gelesen. Das Feld selbst bleibt im Modell bestehen und `GET /api/metrics` liefert weiterhin `metrics[].aggregations` (s. oben) — nur die hier beschriebene **Wirkung** entfällt. Sichtbarkeit von `K`/`D`/`FK`/`FD` in der SMS hängt seit derselben Scheibe an vier eigenen Katalog-Größen (`temperature_day_low`/`temperature_day_high`/`wind_chill_day_low`/`wind_chill_day_high`), nicht mehr an diesem Feld — s. `docs/reference/sms_format.md` v2.27. Der Trip-Editor zeigt bis Scheibe 2 weiterhin die (jetzt wirkungslose) Auswertungswahl an — bewusste Übergangslücke. Details: `docs/specs/modules/feat_1728_s1_temp_aufloesung.md`<br>**Korrektur 2026-08-15 (Issue #1728 Scheibe 2):** Die genannte Übergangslücke ist geschlossen — der Bedienabschnitt „05 — Auswertungen" ist ersatzlos aus `WeatherMetricsTab.svelte` entfernt, der Trip-Editor zeigt die (ohnehin wirkungslose) Auswertungswahl nicht mehr an. Das Feld `MetricConfig.aggregations` bleibt im Modell und in `GET /api/metrics` bestehen, hat aber jetzt weder eine Bedienfläche noch einen Wirkort. Details: `docs/specs/modules/feat_1728_s2_editor.md` |
 | morning_enabled     | bool \| None     | Override Morgen-Report (None = globale Einstellung)    |
 | evening_enabled     | bool \| None     | Override Abend-Report (None = globale Einstellung)     |
 | use_friendly_format | bool             | @deprecated (seit Issue #435) — nutze `format_mode`    |
@@ -741,6 +774,7 @@ type Trip struct {
     SendEmail               *bool                  `json:"send_email,omitempty"`
     SendSms                 *bool                  `json:"send_sms,omitempty"`
     SendTelegram            *bool                  `json:"send_telegram,omitempty"`
+    SendPremiumSms          *bool                  `json:"send_premium_sms,omitempty"`        // Issue #1717 S3 — vierter Kanal (Premium-SMS)
     EndDate                 *string                `json:"end_date,omitempty"`                // max(stage.date), ISO
     Kind                    string                 `json:"kind,omitempty"`                    // ADR-0023-Diskriminator ("route"); nur Migration schreibt ihn
 }
@@ -803,7 +837,7 @@ Additives Geschwisterfeld zu `alert_channels`/`send_telegram`+`send_sms`+`send_p
 | `alert_channel_thresholds` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend:** kein Kanal hat eine Schwelle gesetzt — Startwert `"LOW"` je Kanal (Python-Vorgabewert, nicht persistiert). **Gesetzt:** je Kanal maßgeblich für den Versand-Filter |
 | `alert_channel_thresholds.email`/`.telegram`/`.sms`/`.premium_sms` | `"LOW"`\|`"MODERATE"`\|`"HIGH"` \| fehlend | fehlender Kanal-Key im PUT-Body → **Feld-Level-Merge** bewahrt den Bestandswert (AC-7 Trip / AC-10 Compare); ein GANZ fehlendes `alert_channel_thresholds` im Body bewahrt das ganze Unterobjekt (Top-Level-`nil`-Erbe, AC-6 Trip / AC-9 Compare) |
 
-Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn ihre Dringlichkeit (`services.alert_urgency`, `LOW`/`MODERATE`/`HIGH`) die dort eingestellte Schwelle erreicht oder übertrifft (`services.alert_channel_threshold.split_by_threshold()`). Das an das Alarm-Protokoll übergebene Kanal-Set bleibt dabei das **rohe**, unveränderte Opt-in — nur der tatsächliche Versand wird gefiltert (ADR-0046). Vollständig unterdrückte Meldungen erscheinen im nächsten Briefing als nicht zugestellt (Grund `below_channel_threshold`, S3b-1-Sichtbarkeit).
+Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn ihre Dringlichkeit (`services.alert_urgency`, `LOW`/`MODERATE`/`HIGH`) die dort eingestellte Schwelle erreicht oder übertrifft (`services.alert_channel_threshold.split_by_threshold()`). Das an das Alarm-Protokoll übergebene Kanal-Set bleibt dabei das **rohe**, unveränderte Opt-in — nur der tatsächliche Versand wird gefiltert (ADR-0046). Vollständig unterdrückte Meldungen erscheinen im nächsten Briefing im Block „ZURÜCKGEHALTEN — so hast du es eingestellt" mit dem Grund „unter deiner Schwelle" (`below_channel_threshold`, S3b-1-Sichtbarkeit). Die frühere Formulierung „als nicht zugestellt" steht seit #1750 nicht mehr in der Mail — sie behauptete für die planmäßigen Sperrgründe einen Fehler.
 
 **Ortsvergleich (S3b-2b), zwei Besonderheiten:**
 - Der Compare-Regenradar-Alarm (`compare_radar_alert.py`) war bis S3b-2b hart auf `{"email"}` verdrahtet — die Kanal-Schwelle greift dort seither über denselben Resolver (`effective_compare_channels()`) wie bei den beiden anderen Compare-Alarmwegen (Verhaltensänderung: Regenradar-Alarme erreichen jetzt auch Telegram/SMS).
@@ -1291,9 +1325,12 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 | Status | Scenario | Detail |
 |--------|----------|--------|
 | 404 | Trip `trip_id` not found for user | `"Trip {trip_id} not found"` |
+| 409 | Another send for the same `(user_id, trip_id, report_type)` is already in progress (Issue #1756) | `"Versand für {report_type} läuft bereits — bitte warten"` |
 | 422 | SMTP not configured for user (Issue #474) | `"SMTP not configured for this user"` |
 | 422 | No stages for target date (Bug #716 — AC-1) | `"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum"` |
 | 422 | Invalid `report_type` | `"Invalid report_type: {value}"` |
+
+**Idempotenz (Issue #1756):** Ein zweiter Aufruf für denselben `(user_id, trip_id, report_type)`-Schlüssel während ein erster Versand noch läuft (z. B. wiederholter Klick nach vorzeitigem Proxy-Timeout) wird mit HTTP 409 abgewiesen statt einen zweiten echten Versand auszulösen. Der Lock ist prozesslokal (`threading.Lock`, In-Memory), keine Persistenz. Der Go-Proxy (`SendTripReportProxyHandler`) hat außerdem einen auf 300s (vorher 120s) angehobenen Timeout, da der reguläre Erfolgsfall durch den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann.
 
 **Multi-Tenant Behavior:**
 - `user_id` query parameter determines which user's data (trip, email config) is used
@@ -1458,10 +1495,10 @@ Returns catalog of all available weather metrics with format mode options and de
 | metrics[].format_modes | string[] | Supported format modes for this metric (`raw`, `scale`, `simplified`, `symbol`) |
 | metrics[].default_format_mode | string | Recommended default format mode (must be in `format_modes`) |
 | metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metrics have `selectable=false`: `confidence` (Issue #710) and, since 2026-08-10, `cape` (Issue #1585, precedent-following the confidence pattern per ADR-0005) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints resp. thunderstorm-level fusion (UI-Auswahl heißt heute Editor-Metrik-Auswahl, kein Wizard) |
-| metrics[].trip_default_enabled | bool | **Neu Issue #1552.** Ob die Größe zur Vorbelegung eines **neu angelegten Trips** gehört — unabhängig von `default_enabled` (das weiterhin die Orte-/Abonnement-Konfiguration über `build_default_display_config()` versorgt; vor #1552 zeigte der Anlege-Dialog `default_enabled` als Vorbelegung an, während der Versand eines nie eingestellten Trips tatsächlich einem anderen Siebener-Satz folgte — Überschneidung nur 5 von 10). Quelle: `MetricDefinition.trip_default_rank is not None` (`metric_catalog.py`). Genau sieben Größen tragen einen Rang: `temperature`(1), `wind`(2), `gust`(3), `precipitation`(4), `thunder`(5), `freezing_level`(6), `visibility`(7) — dieselbe Rangfolge, aus der `DEFAULT_TRIP_METRIC_IDS` (`src/output/renderers/trip_metric_ids.py`) jetzt abgeleitet wird, statt sie hart zu listen |
+| metrics[].trip_default_enabled | bool | **Neu Issue #1552.** Ob die Größe zur Vorbelegung eines **neu angelegten Trips** gehört — unabhängig von `default_enabled` (das weiterhin die Orte-/Abonnement-Konfiguration über `build_default_display_config()` versorgt; vor #1552 zeigte der Anlege-Dialog `default_enabled` als Vorbelegung an, während der Versand eines nie eingestellten Trips tatsächlich einem anderen Siebener-Satz folgte — Überschneidung nur 5 von 10). Quelle: `MetricDefinition.trip_default_rank is not None` (`metric_catalog.py`). **Seit Issue #1728 Scheibe 1 (2026-08-15) tragen neun statt sieben Größen einen Rang:** `temperature`(1), `wind`(2), `gust`(3), `precipitation`(4), `thunder`(5), `freezing_level`(6), `visibility`(7), `temperature_day_low`(8), `temperature_day_high`(9) — die beiden neuen Ränge sind angehängt, die ursprünglichen sieben unverändert. `wind_chill_day_low`/`wind_chill_day_high` bekommen bewusst **keinen** Rang (folgen der Lage von `wind_chill` selbst, das ebenfalls keinen Rang trägt) — dieselbe Rangfolge, aus der `DEFAULT_TRIP_METRIC_IDS` (`src/output/renderers/trip_metric_ids.py`) abgeleitet wird, statt sie hart zu listen |
 | metrics[].sms_code | string | GSM-7-safe short token for the metric in SMS/Subject/Telegram alert tokens (e.g., `W`, `G`, `R`, `PR`, `TH`, `CP`, `SL`, `VS`, `HU`). Single source for alert renderers (Issue #914 Slice 1); the metric catalog is the only place these are defined |
 | metrics[].decimals | int \| null | Rounding precision for display (e.g., `precipitation: 1`, `visibility: 1`, most metrics `0`). `null` ⇒ fall back to the unit-based heuristic in `format_metric_value()` |
-| metrics[].aggregations | `{id, label, alert_metric}[]` | **Neu Issue #1357, `alert_metric` neu #1435 E1a:** die für diese Größe tatsächlich berechenbaren Tagesauswertungen in fester Reihenfolge (`min`, `max`, `avg`, `sum`), mit deutschem Label. Quelle: `metric_catalog.available_aggregations()`/`aggregation_label_de()` über `MetricDefinition.summary_fields` — **nicht** `default_aggregations` (verspricht bei `snowfall_limit`/`freezing_level` mehr, als berechenbar ist). Weniger als zwei Einträge ⇒ der Editor zeigt keine Auswahl (kein wirkungsloses Bedienelement) |
+| metrics[].aggregations | `{id, label, alert_metric}[]` | **Neu Issue #1357, `alert_metric` neu #1435 E1a:** die für diese Größe tatsächlich berechenbaren Tagesauswertungen in fester Reihenfolge (`min`, `max`, `avg`, `sum`), mit deutschem Label. Quelle: `metric_catalog.available_aggregations()`/`aggregation_label_de()` über `MetricDefinition.summary_fields` — **nicht** `default_aggregations` (verspricht bei `snowfall_limit`/`freezing_level` mehr, als berechenbar ist). Weniger als zwei Einträge ⇒ der Editor zeigt keine Auswahl (kein wirkungsloses Bedienelement). **Korrektur 2026-08-15 (Issue #1728 Scheibe 2):** Diese editor-seitige Bedingung ist gegenstandslos geworden — der Bedienabschnitt „05 — Auswertungen", der dieses Feld auswertete, ist ersatzlos entfernt (`docs/specs/modules/feat_1728_s2_editor.md`). Der Editor zeigt für **keine** Größe mehr eine Auswertungswahl, unabhängig vom Inhalt dieses Felds. Das Feld selbst bleibt in `GET /api/metrics` bestehen (kein Backend-Change), hat aber keinen Leser mehr im Frontend |
 | metrics[].aggregations[].alert_metric | string \| null | **Neu #1435 E1a.** Die absolute Alarm-Identität DIESER Auswertung (`MetricDefinition.alert_metrics.get(aggregation_id)`), `null` wenn diese Auswertung keinen eigenen Alarm auslöst. Bewusst **ohne** den `change_alert_metric`-Rückfall aus `alert_metric_for()` — der gehört zur Größe als Ganzes, nicht zu einer einzelnen Auswertung, und steht als eigenes Feld (`metrics[].change_alert_metric`) daneben. Beispiel (Staging verifiziert): `gust.aggregations` → `{id: "max", alert_metric: "wind_gust"}`; `wind.aggregations` → `{id: "max", alert_metric: null}` (Wind selbst hat keinen absoluten Alarm, nur den Änderungs-Alarm über `change_alert_metric`) |
 | metrics[].change_alert_metric | string \| null | **Neu #1435 E1a.** Der Änderungsraten-Alarm der Größe (`MetricDefinition.change_alert_metric`), `null` wenn die Größe keinen kennt. Orthogonal zu `aggregations[].alert_metric` — Änderungsraten sind keine Auswertung, sondern an die Größe als Ganzes gekoppelt (analog `default_change_threshold`). Beispiele (Staging verifiziert): `temperature.change_alert_metric = "temperature_change"`, `wind.change_alert_metric = "wind_change"`, `humidity.change_alert_metric = null` (Luftfeuchtigkeit ist bewusst nicht alarmfähig, Issue #889/ADR-0010 — die Auswertungskette `weather_change_detection.py::_ALERT_METRIC_TO_CATALOG_ID` kennt `AlertMetric.HUMIDITY` nicht) |
 | metrics[].cmp | string | Comparison direction: `"über"` or `"unter"`. Single source for the direction/arrow used by deviation and absolute alert detection (Issue #914 Slice 1) — replaces the former hand-coded `_ALERT_METRIC_COMPARISON` dict. **Not** a threshold comparator for the deviation-alert (live) path: per ADR-0013, an event triggers there when `abs(value_to − value_from) ≥ threshold` regardless of `cmp`; `cmp` remains a literal exceeds/falls-below comparator only for `ABSOLUTE`-kind rules (`_detect_absolute_changes()`), which is unused in the send path (`include_absolute=False`) |
@@ -1884,7 +1921,9 @@ Details in `docs/specs/modules/compare_preset_zeitplan.md`). `weekday` gilt als 
 (Altdaten-Lesbarkeit, kein neuer Schreibpfad, kein Wochenrhythmus mehr — Presets mit
 `schedule="weekly"` versenden seither täglich). Der stündliche Go-Cron `compare_presets_daily`
 ("Compare Presets Slot-Check (hourly)", vormals einmal täglich 06:00 UTC) prüft pro Preset, ob
-die aktuelle Stunde (Europe/Vienna) mit `morning_time`/`evening_time` übereinstimmt; Morgen-Slot
+die aktuelle Stunde **in der Ortszone dieses Presets** (erster auflösbarer Ort seiner
+konfigurierten Reihenfolge, seit #1726; davor fest `Europe/Vienna`) mit
+`morning_time`/`evening_time` übereinstimmt; Morgen-Slot
 versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards vor jedem Versand:
 siehe `compare_alert_guard.is_silenced()` (Issue #1467 S2 AG6: `paused_at` gesetzt, `schedule=="manual"`,
 oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
@@ -2705,6 +2744,10 @@ Returns authenticated user profile (requires valid session cookie).
   "sms_allowed": false,
   "requested_tier": "standard",
   "requested_at": "2026-07-07T14:00:00Z",
+  "premium_sms_allowed": false,
+  "premium_sms_reply_state": "none",
+  "premium_sms_reply_to": "15551234567",
+  "premium_sms_reply_at": "2026-08-05T12:00:00Z",
   "has_passkey": true,
   "passkeys": [
     {
@@ -2738,6 +2781,10 @@ Returns authenticated user profile (requires valid session cookie).
 | sms_allowed | bool | Whether SMS channel is available for this user (Issue #1069, Slice 2 of Epic #1067); `true` if `tier` is `standard` or `premium`, `false` for `free`; determines server-side channel-gating in report-dispatch and alert-dispatch |
 | requested_tier | string | Level change requested by the user via `POST /api/auth/tier-change-request` (Issue #1071, Slice 4 of Epic #1067); `omitempty` — absent/empty if no request is pending. Does not change `tier` itself; only the PO setting `tier` manually clears the pending state (once `requested_tier == tier`, the frontend Pending-hint disappears) |
 | requested_at | string (RFC3339) | Timestamp of the pending tier-change request set alongside `requested_tier`; pointer type server-side so it is omitted entirely (not a zero-value timestamp) when no request is pending |
+| premium_sms_allowed | bool | Whether the Premium-SMS channel (Garmin inReach) is available (Issue #1717 S3); **always present**. Own tariff gate `model.PremiumSmsAllowed` — `true` **only** for `tier == "premium"`, deliberately NOT derived from `sms_allowed` (which also lets `standard` through). Otherwise a `standard` user could tick a channel the dispatch path blocks anyway (#1676 S2a AC-8) |
+| premium_sms_reply_state | string | Server-derived state of the learned reply address (Issue #1717 S3): `none` (device never reported), `stale` (reported but past the expiry), `fresh` (valid); **always present**. Derived from `PremiumSmsReplyTo`/`PremiumSmsReplyAt` via `model.DerivePremiumSmsReplyState` against `model.PremiumSmsReplyTTL` (30 days, Go pendant of `PREMIUM_SMS_REPLY_TTL` in `src/output/channels/premium_sms.py`; drift guard: `tests/test_premium_sms_ttl_drift.py`). The UI follows this field only and never recomputes the deadline — otherwise a third copy of the number would exist |
+| premium_sms_reply_to | string | The learned Garmin reply address (Issue #1717 S3, raw value); `omitempty` — absent while the device has never reported. Read-only: the sole writer is the internal endpoint `POST /api/internal/premium-sms-learn` (#1676 S1), `PUT /api/auth/profile` does **not** accept it |
+| premium_sms_reply_at | string (RFC3339) | When that address was learned (Issue #1717 S3, raw value — here the timestamp *is* the payload, unlike `email_verified_at` which is never exposed); pointer server-side so it is omitted entirely instead of a zero-value timestamp. Same read-only rule as `premium_sms_reply_to` |
 | has_passkey | bool | Whether user has registered any passkeys |
 | passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
 
@@ -2768,6 +2815,13 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 - `mail_to`: Optional, any non-empty string (no format validation)
 - `sms_to`: Optional, any non-empty string (no format validation; validation happens during send via SMS provider)
 - Empty strings allowed (unset field)
+- **Not accepted (Issue #1717 S3, AC-7):** `premium_sms_reply_to`, `premium_sms_reply_at`,
+  `premium_sms_reply_state`, `premium_sms_allowed`. The decode struct does not contain them, so
+  sending them is silently a no-op — the learned reply address stays writable **only** by the
+  internal learning endpoint (#1676 S1). Were it editable, the S2a promise "recipient is
+  exclusively the learned reply address, never configuration" would collapse: a user could enter a
+  foreign number and have paid Premium-SMS delivered there. Guarded by
+  `internal/handler/profile_test.go::TestUpdateProfileHandlerIgnoresPremiumSmsReplyFields`
 
 **Error Responses:**
 
@@ -2835,7 +2889,7 @@ type User struct {
     Tier               string                 `json:"tier,omitempty"`  // NEW (Issue #1068, Slice 1 of Epic #1067) — free/standard/premium; empty defaults to "free" at read time
     RequestedTier      string                 `json:"requested_tier,omitempty"`  // NEW (Issue #1071, Slice 4 of Epic #1067) — pending level-change request
     RequestedAt        *time.Time             `json:"requested_at,omitempty"`  // NEW (Issue #1071) — pointer type: plain time.Time's omitempty doesn't work, would serialize as zero-value "0001-01-01T00:00:00Z" instead of being omitted
-    PremiumSmsReplyTo  string                 `json:"premium_sms_reply_to,omitempty"`  // NEW (Issue #1676, Scheibe S1) — vom Garmin inReach zuletzt gelernte Rückadresse (seven.io-Journal, Kennzeichen `inreachlink.com`); einziger Schreiber ist der interne Endpoint `POST /api/internal/premium-sms-learn`; kein Frontend, keine Auth-Profile-Ausgabe in dieser Scheibe
+    PremiumSmsReplyTo  string                 `json:"premium_sms_reply_to,omitempty"`  // NEW (Issue #1676, Scheibe S1) — vom Garmin inReach zuletzt gelernte Rückadresse (seven.io-Journal, Kennzeichen `inreachlink.com`); einziger Schreiber bleibt der interne Endpoint `POST /api/internal/premium-sms-learn`. REVIDIERT durch #1717 S3: `GET /api/auth/profile` gibt den Wert seither LESEND aus (`premium_sms_reply_to` + abgeleitetes `premium_sms_reply_state`), damit die Oberfläche zeigen kann, wohin gesendet wird und ob die Adresse noch gilt — `PUT /api/auth/profile` nimmt ihn weiterhin NICHT an (AC-7)
     PremiumSmsReplyAt  *time.Time             `json:"premium_sms_reply_at,omitempty"`  // NEW (Issue #1676, Scheibe S1) — Empfangszeitpunkt des Go-Endpoints (nicht der seven.io-`timestamp`); pointer-Muster analog RequestedAt
 }
 
@@ -3422,6 +3476,29 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-11: Issue #1745 Scheibe A — Premium-SMS als vierter Kanal in der Alarm-Kanal-Auswahl
+  (Alarme-Reiter, Trip UND Ortsvergleich). **Keine DTO-/Feld-Änderung** — `alert_channels.premium_sms`
+  und `alert_channel_thresholds.premium_sms` (s. Abschnitte unten) existieren bereits seit #1701 S2b;
+  diese Scheibe macht sie erstmals über die Oberfläche bedienbar (vierte Kanalzeile „Premium-SMS
+  (Garmin inReach)" direkt unter SMS, gesperrt mit Hinweis unter Tarif `standard`, eigene
+  Dringlichkeits-Schwelle). Reines Frontend (`frontend/src/lib/components/shared/AlarmeTab.svelte`
+  u.a.), kein Go-/Python-Code geändert. Klarstellung, da leicht zu verwechseln: das gilt nur für den
+  **Alarm**-Pfad — der **Versand**-Pfad (`send_premium_sms`, Trip-Briefing) bleibt seit #1676 S2a
+  bewusst auf Trips beschränkt, kein Ortsvergleich-Versand; die Alarm-Kanal-Auswahl war schon seit
+  #1701 ausdrücklich auch für den Vergleich vorgesehen (#1701 AC-4) und ist das jetzt auch in der
+  Oberfläche. Regen-/Radar-Alarme lesen weiterhin nur das Briefing-Flag, unverändert durch diese
+  Scheibe (Scheibe B, #1752, offen). Spec: `docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md`.
+- 2026-08-11: Issue #1717 Scheibe S3 — Premium-SMS in der Oberfläche. `GET /api/auth/profile`
+  liefert vier neue, **rein lesende** Felder: `premium_sms_reply_to`/`premium_sms_reply_at`
+  (Rohwerte, `omitempty`), `premium_sms_reply_state` (`none`/`stale`/`fresh`, immer vorhanden,
+  serverseitig aus `model.PremiumSmsReplyTTL` abgeleitet) und `premium_sms_allowed` (immer
+  vorhanden, eigenes Tarif-Gate `model.PremiumSmsAllowed` — nur `premium`, NICHT von
+  `sms_allowed` abgeleitet). `PUT /api/auth/profile` nimmt keins davon an (AC-7) — die gelernte
+  Rückadresse bleibt allein durch den internen Lernpfad (#1676 S1) schreibbar. `Trip` bekommt
+  das vierte abgeleitete Flach-Feld `send_premium_sms` (nicht autoritativ, aus
+  `report_config.send_premium_sms` bei jedem Load neu abgeleitet und zuvor auf `nil` zurückgesetzt).
+  Die Verfallsfrist existiert damit zwangsläufig zweimal (Python-Sendepfad + Go-Ableitung) und wird
+  von `tests/test_premium_sms_ttl_drift.py` gegeneinander bewacht.
 - 2026-08-11: Issue #1701 Scheibe S2b — Premium-SMS wird vierter Kanal im
   Alarm- UND Ortsvergleich-Pfad (Vorgänger: S2a #1676, ausschließlich
   Trip-Briefing). `AlertChannelsConfig` bekommt `PremiumSms *bool` — dabei
@@ -3540,6 +3617,10 @@ function corridorInside(value, min, max) {
   „Es gibt kein zusätzlich: entweder oder"). Betrifft heute Temperatur und
   gefühlte Temperatur (einzige Größen mit mehr als einer berechenbaren
   Auswertung). Siehe `docs/specs/modules/trip_aggregation_selection.md`.
+  **Korrektur 2026-08-15 (Issue #1728 Scheibe 1):** Dieser Wirkmechanismus
+  ist seither entfallen — die Kachelzeile zeigt für Temperatur/Gefühlte
+  Temperatur jetzt unbedingt die Spanne. Details in der `MetricConfig`-
+  Feldreferenz oben (`aggregations`-Zeile).
 - 2026-07-26: Issues #1366 + #1361 Befund 3 (S3 Scheibe B von Epic #1372) —
   `resolve_enabled_metrics()`/`resolve_hourly_metrics()` unterscheiden jetzt
   „Feld fehlt" (Legacy-Fallback: alle Größen/Spalten) von „Feld vorhanden und

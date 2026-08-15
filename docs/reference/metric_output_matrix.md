@@ -1,6 +1,6 @@
 # Metrik-Ausgabeorte je Kanal — Referenz & Entscheidungsvorlage
 
-> **Stand: 2026-08-10, Commit-Basis: 1c38a5ac** · Issue #1514 (`triage:po`)
+> **Stand: 2026-08-13, Commit-Basis: 21a6a1ef** · Issue #1514 (`triage:po`)
 >
 > **Abgrenzung:** Dieses Dokument ist reine Analyse. In dem Workflow, der es
 > erzeugt hat, wurde **kein Produktivcode** geändert und **kein neues Gate und
@@ -11,6 +11,22 @@
 > **Aktualität:** Die Datei:Zeile-Belege sind eine Momentaufnahme des oben
 > genannten Commits und wurden für dieses Dokument einzeln am Code nachgeschlagen.
 > Es gibt (noch) keine Ratsche, die sie aktuell hält — siehe Abschnitt 8.
+
+> **Nachtrag 2026-08-15 (Issue #1728 Scheibe 1):** Der Katalog trägt jetzt sechs
+> SMS-only Sichtbarkeits-Gate-Größen ohne `summary_fields` —
+> `temperature_night`/`wind_chill_night` (#1484/#1660 A, schon vor dieser
+> Scheibe im Katalog) und neu `temperature_day_low`/`temperature_day_high`/
+> `wind_chill_day_low`/`wind_chill_day_high` (#1728). Alle sechs sind
+> katalog-getrieben nur für die Trip-SMS wirksam (`SMS_MULTI_SYMBOLS_BY_METRIC`,
+> Sonderstrecke S6 unten) und tragen keine eigene Zeile in Abschnitt 2.1, weil
+> sie in keinem der dort gelisteten Ausgabeorte eine eigene Spalte/Zelle
+> erzeugen (Stundentabelle, Ausblick, Pillen zeigen die **Elterngröße**
+> „Temperatur"/„Gefühlte Temperatur"). **Benannte, vorbestehende Lücke:** Die
+> beiden Nachtfenster-Größen fehlten in diesem Dokument bereits vor #1728
+> namentlich — dieser Nachtrag schließt sie nicht rückwirkend ein, sondern
+> benennt die Lücke, damit sie nicht durch die vier neuen Größen
+> stillschweigend größer wird. Ein vollständiger Abschnitt-2.1-Eintrag für alle
+> sechs Größen ist nicht Teil dieser Doku-Aktualisierung.
 
 ## 1. Zweck & Leitfrage
 
@@ -43,6 +59,21 @@ prüft, bewacht die E-Mail-Tabelle. Er bewacht **nicht** den Ausblick derselben 
 Ausgabeform definieren: `col_key`/`col_label`, `compact_label`, `sms_code`,
 `alert_label`, `format_modes`, `trip_default_rank`, `selectable`.
 
+> **🔴 Seit #1719 S4 (2026-08-13) ist `compact_label` KEIN unabhängig gepflegtes
+> Feld mehr**, sondern wird aus dem Register-Kürzel (`sms_code`) **abgeleitet**.
+> Abweichen darf nur, was in einer benannten Ausnahmeliste mit Begründung steht
+> — heute `temperature` (`T`) und `wind_chill` (`TF`), weil deren Register-Kürzel
+> eine *Tagesauswertung* bezeichnen (`D`/`K` bzw. `FK`/`FD`/`WC`), die
+> Telegram-Zelle aber einen *Stundenwert* zeigt. Ein Wächter
+> (`tests/unit/test_telegram_kuerzel_folgt_register.py`) macht jeden neuen
+> Alleingang rot.
+>
+> Grund: die beiden Felder wurden getrennt von Hand gepflegt und sind
+> auseinandergelaufen — 11 von 25 Größen trugen in Telegram ein anderes Kürzel
+> als in der SMS, ohne fachlichen Grund (Luftdruck `P` vs. `HP`, Bewölkung `C`
+> vs. `CT`, Nacht-Tiefsttemperatur `TN` vs. `N`). Wer hier ein Kürzel ändern
+> will, ändert `sms_code` — nicht `compact_label`.
+
 Gemessen am oben genannten Commit:
 
 - **28 Einträge in `_METRICS`** (`metric_catalog.py:92`), davon **26 selectable**
@@ -70,10 +101,10 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | E-Mail-Pillen („Metriken-Überblick") | `src/output/renderers/email/helpers.py:1815` `build_metrics_summary_pills()`; Metrik-Auflösung `src/output/renderers/trip_metric_ids.py:37` `resolve_trip_active_metrics()` | katalog-getrieben | **unbewacht** (keine Metrik×Ort-Prüfung) |
 | E-Mail mobile Kompaktzeilen (in der **Voll**mail) | `src/output/renderers/email/html.py:878` `_render_mobile_compact_rows()`; Aufrufe `:1206`, `:1264`, `:1290` (Nachtzeilen) | katalog-getrieben (erbt `col_order`) | **unbewacht** |
 | Kurzform-Mail (eigenes Format `compact`) | `src/output/renderers/email/compact.py:96` `render_compact()`; Pillen-Aufruf `:176` | katalog-getrieben über `resolve_trip_active_metrics` | **unbewacht** |
-| Kompakt-Zusammenfassung (Fließtext-Block **in** der Vollmail) | `src/output/renderers/compact_summary.py:567` `_format_thunder()`, Aufruf `:243`; aktiviert über `src/output/renderers/trip_report.py:173` `options.show_compact_summary`, Formatter-Einstieg `trip_report.py:942` | handgeschrieben — `thunder` ist die **einzige** Metrik mit eigener Formatier-Methode | nur metrikspezifisch: `tests/tdd/test_hail_compact_summary_thunder.py:75`, `:89`, `:107` (Gewitter/Hagel). Als Metrik×Kanal-Ort **unbewacht** |
-| Ausblick / 3-Tages-Tabelle (Trip-Mail) | `src/output/renderers/email/outlook.py:149`, `:343`, `:522` — Spalten aus `src/output/renderers/compare_outlook_metric_ids.py:78` `outlook_columns()` | katalog-getrieben | **unbewacht** (größte Fläche, s. 4.2) |
+| Kompakt-Zusammenfassung (Fließtext-Block **in** der Vollmail) | `src/output/renderers/compact_summary.py:567` `_format_thunder()`, Aufruf `:243`; aktiviert über `src/output/renderers/trip_report.py:173` `options.show_compact_summary`, Formatter-Einstieg `trip_report.py:942` | handgeschrieben — `thunder` ist die **einzige** Metrik mit eigener Formatier-Methode | nur metrikspezifisch: `tests/tdd/test_hail_compact_summary_thunder.py:75`, `:89`, `:107` (Gewitter/Hagel) und seit #1680 S2 `test_thunder_origin_trip.py` für den Herkunfts-Zusatz (beide Textzweige, bis `email_plain`). Als Metrik×Kanal-Ort weiterhin **unbewacht** |
+| Ausblick / 3-Tages-Tabelle (Trip-Mail) | `src/output/renderers/email/outlook.py` — **zwei** Renderpfade: Altpfad mit festen Spalten Tag/N/D/R/PR/Wind/Böen/Gew (+ACC) UND seit #1720 S1 der katalog-getriebene Metrik-Zweig (`build_outlook_row():564`, `row["cells"]`) | **teilweise** katalog-getrieben (KORRIGIERT 2026-08-15, #1841): setzt der Nutzer unter „Wertebereiche → 3-Tages-Vorschau" eine Auswahl, übergeben `email/html.py:1364` und `email/plain.py:344` sehr wohl `metrics=` — der Trip erreicht `outlook_columns()` seit #1720 S1 | Altpfad: `tests/tdd/test_trip_outlook_parity.py` (Byte-Golden). Metrik-Zweig: `tests/tdd/test_trip_outlook_metric_selection.py`, Gewitterquelle `tests/tdd/test_vorschau_metrik_tagesfenster.py` (#1841) |
 | Ausblick: Gewitter-Sonderbehandlung | `email/outlook.py:38` `_THUNDER_TOKEN_RE`; Wortlaut-Map `:195–198` (dritte LOW/MED/HIGH-Übersetzung im Code) | handgeschrieben | teilbewacht über Gewitter-Tests, nicht über die Matrix |
-| Telegram rich (Bubbles) | `src/output/renderers/narrow.py:661` → `src/output/renderers/channel_layout.py:75` `render_for_channel()`; Limits `channel_layout.py:45` `CHANNEL_LIMITS` | gemischt — Ausnahme `_NIGHT_SCALAR_IDS` `channel_layout.py:88` | `tests/tdd/test_channel_metric_matrix.py:114` |
+| Telegram rich (Bubbles) | `src/output/renderers/narrow.py:661` → `src/output/renderers/channel_layout.py:75` `render_for_channel()`; Limits `channel_layout.py:45` `CHANNEL_LIMITS` | gemischt — Ausnahme `VISIBILITY_GATE_IDS` `channel_layout.py:75` (hieß bis #1728 S1 `_NIGHT_SCALAR_IDS` und führte 2 statt 6 Größen); seit #1856 E7 gewächtert in `tests/helpers/metrik_listen_scan.py` | `tests/tdd/test_channel_metric_matrix.py:114` |
 | Telegram Kurzübersicht / Trendzeile | `narrow.py:346` (Zeilentupel), `narrow.py:528–532`, `narrow.py:586–597` (drei hartkodierte Gewitter-Zweige) | handgeschrieben | **unbewacht** als eigener Ausgabeort |
 | SMS Trip (Kurzform) | `src/output/renderers/sms_trip.py:606` `format_sms()`; Symbole `sms_trip.py:116` `SMS_SYMBOL_BY_METRIC` aus `metric_catalog.py:938` `get_sms_code()` | gemischt | `tests/tdd/test_channel_metric_matrix.py:210` (nur Auswahl/Reihenfolge) |
 | SMS: Grammatik-Ausnahmen | `sms_trip.py:114` `_SMS_SYMBOL_GRAMMAR` (`thunder` → `TH:`, `fresh_snow` → `NS24+`) | handgeschrieben (2 benannte Fälle) | Ratsche in der SMS-Suite, nicht in der Matrix |
@@ -90,8 +121,14 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | HTML-Stundentabelle | `compare_html.py:428` über `hourly_selectable_metric_ids()`; Ausnahmen `:384` `_HOUR_FMT_OVERRIDES` (10), `:400` `_HOUR_SEV_OVERRIDES` (3) | gemischt | `tests/unit/test_compare_hourly_catalog_columns.py:122` — der **einzige** echte Wirkungs-Vollständigkeitstest im Bestand |
 | Klartext-Teil derselben Mail | `src/output/renderers/comparison.py:70` `_DAILY_PLAIN_ROWS`, `:100` `_PLAIN_ROWS` (je Zeile ein getipptes Tupel aus ID, Label, Format-Lambda); gerendert `:237` | handgeschrieben | Reihenfolge eingefroren in `tests/unit/test_compare_metric_order.py`; Werte-Parität zum HTML nur durch geteilte Formatierer, nicht durch Assertion |
 | Compare Telegram | `comparison.py:668` `render_for_channel(channel, dc, …)`; Labels/Formate `comparison.py:498` `_PLAIN_ROWS_BY_ID` | katalog-getrieben | **unbewacht** — der Matrix-Test kennt Compare überhaupt nicht |
-| Compare SMS | `comparison.py:486` `_CHANNEL_METRICS` — genau 6 Metriken (Temp, Wind, Sonne, Wolken, Schnee, Neuschnee) | handgeschrieben | **unbewacht** |
-| Compare Ausblick | `src/output/renderers/compare_outlook_metric_ids.py:78` `outlook_columns()` (dieselbe Funktion wie Trip-Ausblick) | katalog-getrieben | **unbewacht** |
+| Compare SMS | `comparison.py:488` `_CHANNEL_METRICS`; Zellbau `comparison.py:641` `_sms_metric_cell()` über `_fmt_overview_cell()` | handgeschrieben | **unbewacht** · 🔴 **Korrektur 2026-08-11 (am Code gemessen):** hier stand „genau 6 Metriken“ — das ist falsch. `_CHANNEL_METRICS` ist eine **Rangliste** für die Platzvergabe, **keine Auswahl**. Jede vom Nutzer gewählte Metrik erscheint in der Compare-SMS, auch Gewitter. Wer sich auf die alte Lesart verlässt, hält einen Ausgabeort für tot, der lebt |
+| **Herkunft der Gewitterstufe — Ortsvergleich** (Zusatz `· CAPE`, #1680 S1, live 2026-08-12) | Träger-Ermittlung `src/output/metric_format.py` `thunder_signal_carriers()` + Katalog `THUNDER_SIGNAL_LABEL_DE`; Ortsauflösung `compare_html.py` `loc_thunder_signals()`; Anhängen `_fmt_thunder(v, hail, signals)`; Kanalschalter `comparison.py` `_fmt_overview_cell(..., include_origin=)` | katalog-getrieben (vier feste Signalschlüssel; ein unbekannter Name fällt roh durch, wird nie erfunden) | `tests/tdd/test_thunder_origin_compare.py` (12 ACs, jedes durch die volle Renderkette bis zum zurückgegebenen Body) + `test_thunder_origin_snapshot_roundtrip.py`. **Erscheint NUR in HTML-Übersicht, Klartext und Telegram** — SMS/Premium-SMS aktiv abgewählt (`include_origin=False`, mit Begründungskommentar im Code), Compare-**Stundentabelle** bewusst ohne (`_HOUR_FMT_OVERRIDES` übergibt den Parameter nicht) |
+| **Herkunft der Gewitterstufe — Trip** (#1680 S2, live 2026-08-12) | Vereinigungsregel `src/output/metric_format.py` `union_of_max_carriers()` (**die eine** Stelle, an der `"thunder_level_max_signals": "union_of_max_carriers"` gerechnet wird; Vorbild `hail_priority()`). Drei Andockstellen, alle über denselben Helfer: `weather_metrics.py:616` `_compute_thunder_level_signals()` (Stunden→Segment, jetzt dünner Wrapper) · `trip_command_processor.py:804` `_aggregate_day()` (Wegpunkte→Tag) · `day_window.py:56` `_merge_hour()` (Punkte→Stunde). Anzeige: `compact_summary.py:567` `_format_thunder()` und `trip_command_processor.py:863` `_fmt_gewitter()` | katalog-getrieben; Nennreihenfolge = Erstauftrittsreihenfolge, die pro Datenpunkt bereits die Katalogreihenfolge von `THUNDER_SIGNAL_LABEL_DE` ist | `tests/tdd/test_thunder_origin_trip.py` (13 Tests, jeder bis zum zugestellten Text: `email_plain` bzw. `confirmation_body`). **Erscheint NUR in Kurzzusammenfassung und GEWITTER-Antwort**, also E-Mail + Telegram — SMS/Premium-SMS aktiv abgewählt mit Begründungskommentar. 🔴 `_format_thunder()` hat **zwei** Textzweige (`friendly=True` → `⚡ möglich …`, Default aus `build_default_display_config()`; `False` → `Gewitter möglich …`) — beide tragen den Zusatz, je ein eigener Test. Ein Suffix nur an einem Zweig wäre grün getestet und für den Normalnutzer unsichtbar |
+| **Herkunft der Gewitterstufe — vier weitere Orte** (#1680 S3, live 2026-08-13) | Pille `email/helpers.py:1743` `_pill_for_metric()` (Träger über `union_of_max_carriers()` aus den Tagesfenster-Punkten) · Kommando-Timeline `trip_command_processor.py:954` `_fmt_timeline()` (aus `p.metrics.thunder_level_max_signals`) · GLANCE-Tageszeile `trip_command_processor.py:853` `_fmt_day_agg()` (liest `agg["thunder_signals"]`, seit S2 vorhanden) · Ortsvergleich-Stundentabelle `compare_html.py:992` `_render_hour_row()` und `comparison.py:330` (dritter Parameter an `_fmt_thunder`, seit S1 vorhanden) | katalog-getrieben | `tests/tdd/test_thunder_origin_four_places.py` (17 Tests, jeder bis zum zugestellten Text). 🔴 **Die F001-Garantie aus S2 trägt an der Stundenzelle NICHT** — dort wird `dp.thunder_level_signals` **roh** durchgereicht, ohne `union_of_max_carriers()`. Dass eine `NONE`-Stunde nicht zu `— · CAPE` wird, hält allein `thunder_signal_carriers()` (leere Liste bei `NONE`); einziger Wächter ist `test_ac16_ohne_gewitter_bleibt_die_compare_stundenzelle_zeichengleich`. 🔴 **„kein Gewitter" heißt an den Orten DREI verschiedene Dinge**: Pille `kein Gewitter` · Timeline/GLANCE `kein` · Compare-Stundenzelle `—`. Nicht harmonisieren. Der Zusatz sitzt an der **Aufrufstelle**, nicht im Rumpf von `_fmt_thunder` — der speist auch die S1-Übersichtszeile |
+| **Herkunft der Gewitterstufe — Trip-Stundentabelle** (#1680 S4, live 2026-08-13) | Seitenkanal Pro-Stunde `trip_report.py:692` `_dp_to_row()` (`row["_thunder_signals"] = getattr(dp, "thunder_level_signals", None)`, kein eigener `NONE`-Guard — hängt an `thunder_signal_carriers()`s Garantie) · Seitenkanal Nacht-Block `trip_report.py:651` `_aggregate_night_block()` (`union_of_max_carriers(...)`, F001-Garantie aus S2 greift hier direkt) · Anhängen `email/helpers.py:751-757` `fmt_val()` Roh-/Klartext-Zweig (`thunder_signal_label()`, Muster `_fmt_thunder()`/S1) | katalog-getrieben | `tests/tdd/test_thunder_origin_trip_hour_table.py` (13 ACs, jeweils bis zum zurückgegebenen `email_plain`/`html_body`/Telegram-Bubble-Text). **Erscheint im E-Mail-Klartext/Roh-HTML UND strukturell mit-vererbt in der Telegram-rich-Stundentabelle** (Bubbles) — `narrow.py::_cell()` ruft `fmt_val()` ohne `html=True` über dieselbe `_dp_to_row()`-Konstruktion, kein eigener Telegram-Code-Pfad, aber der feste 32-Zeichen-Umbruch (`narrow.py:60` `_TG_TABLE_WIDTH`) kann Stufe und Zutat auf zwei Zeilen trennen (bewusst hingenommen, kein Datenverlust). SMS/Premium-SMS aktiv abgewählt geblieben (Rückfall `sms_text or email_plain` als unproblematisch nachgewiesen). **HTML-Ampel-Kreis-Modus bewusst unverändert** — kein visueller Herkunfts-Indikator. Compare bleibt strukturell unberührt: `fmt_val()` wird von keinem Compare-Rendermodul importiert (grep-belegt) |
+| **Herkunft der Gewitterstufe — Mehrtages-Ausblick** (#1680 S5a, live 2026-08-13) | Träger-Feld `email/outlook.py` `build_outlook_row()` (`hourly_thunder_signals`, additiv); Einfügestelle HTML `email/outlook.py:238-242`, Klartext `:378-383`; Telegram `narrow.py:571` `_outlook_lines()`, Herkunfts-Zusatz `:595-597`; Compare-Ausblick `compare_outlook_metric_ids.py:117` `format_outlook_value()` → `compare_html.py` `_fmt_thunder()` | katalog-getrieben (`union_of_max_carriers()`, seit S5b in `src/app/thunder_scale.py`, zuvor `src/output/metric_format.py`, dort weiterhin per Re-Export erreichbar) | `tests/tdd/test_thunder_origin_outlook.py`. 🔴 **Korrektur (2026-08-14, #1680 S5b):** Diese Zeile behauptete bis hierhin „Bei beiden gehen die Träger **strukturell** verloren: `HourlyValue` (`tokens/dto.py:15-18`) ist ein frozen Dataclass mit nur `hour` und `value`" — das ist **widerlegt**, nicht bloß überholt (gemessen im S5a-Workflow selbst, s. `feat_1680_s5a_gewitter_herkunft_ausblick.md` „Am Code gemessen" Punkt 4). `build_outlook_row()` bekommt die rohen `ForecastDataPoint`s und verengt sie **selbst** zu `HourlyValue`; `dp.thunder_level_signals` liegt zum Verengungszeitpunkt noch vor, wurde aber nie gelesen. Eine Änderung an `HourlyValue` war nie nötig — die falsche Begründung stand unwidersprochen über S2, S3, S4 und die erste Fassung dieser Zeile hinweg (vier Scheiben). **Weiterhin gültig, unverändert:** `aggregate_stage()` (`weather_metrics.py:1168`, `else` → `values[0]` bei Z. 1265-1266) kennt `union_of_max_carriers` weiterhin **nicht** — und anders als hier bis 2026-08-13 spekuliert, ist der Mehrtages-Ausblick **nicht** sein Verbraucher geworden: S5a berechnet die Herkunft direkt in der Darstellungsschicht, nicht über `aggregate_stage()`. Der Dispatch-Zweig bleibt ohne erreichbaren Verbraucher (#1199). **Go-DTO und Frontend fallen weiterhin ersatzlos** — in `internal/` wird `model.SegmentWeatherSummary` nirgends konstruiert oder gelesen, im Frontend rendert keine Komponente eine echte Gewitterstufe |
+| **Herkunft der Gewitterstufe — Gewitter-Vorschau** (#1680 S5b, live 2026-08-14) | `src/services/trip_report_scheduler.py` `_thunder_entry_from_trend_row()` (Primärpfad, Z. 2352) und `_build_thunder_forecast()` (Rückfallpfad, Z. 2582), beide über die Weiche `_build_thunder_forecast_from_trend_or_fetch()` (Z. 2232) angesteuert; Renderer `email/plain.py:311-332`/`email/html.py:1311-1329` übernehmen den fertigen `text` unverändert — **kein** Renderer-Code geändert | katalog-getrieben (`union_of_max_carriers()`, `src/app/thunder_scale.py`) | `tests/tdd/test_thunder_origin_preview.py` (14 ACs). Letzter Ausgabeort ohne Herkunft aus #1680 — Issue damit schließbar. SMS/Premium-SMS/Telegram/Kompakt-Mail bleiben strukturell ohne Herkunft (AC-9/AC-10) |
+| Compare Ausblick | `src/output/renderers/compare_outlook_metric_ids.py:78` `outlook_columns()`; Aufrufe `comparison.py:348` (Klartext), `compare_html.py:1101`/`:1175` (HTML) — **der einzige** Pfad, der `outlook_columns()` tatsächlich erreicht | katalog-getrieben, 25 Paare aus `get_compare_metric_catalog()` | `tests/tdd/test_channel_metric_matrix.py` AC-S2-1..8 (#1703 S2) — Spalte, Kopf-Eindeutigkeit, **Zellwert**, beide Aggregationspfade gegeneinander; Soll aus `tests/helpers/outlook_columns.py` gerechnet |
 | Compare-ID-Auswahlmodule | `compare_hourly_metric_ids.py`, `compare_metric_ids.py`, `compare_outlook_metric_ids.py` (Neuformat `{"metric_id","aggregation"}`) | katalog-getrieben | teilbewacht |
 
 ### 2.3 Alarme und amtliche Warnungen
@@ -114,7 +151,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | API Metrik-Liste | `api/routers/config.py:73` `get_metrics()` — filtert auf `selectable` | Nicht-wählbare Metriken sind für das Frontend unsichtbar |
 | API SMS-Symbole | `api/routers/config.py:31` `get_sms_symbols()`, Hazards `:46`/`:65` | zwei Symbolregister nebeneinander |
 | Frontend Trip | `frontend/src/lib/components/shared/WeatherMetricsTab.svelte:411`, `:755–771` — Reihenfolge **je Kanal** (`channel_layouts`) | |
-| Frontend Compare | `compareWizardState.svelte.ts` `wiz.activeMetricKeys` + `compareEditorSave.ts` — **eine globale Liste**, keine Kanal-Tabs | struktureller Bruch, offene PO-Frage (7a) |
+| Frontend Compare | Übersicht: `compareWizardState.svelte.ts` `wiz.channelActiveMetricKeys` (#1703 Scheibe 8, live 2026-08-13) — kanalweise wie beim Trip. Ausblick/Stundenverlauf: weiterhin `wiz.activeMetricKeys` + je eigene globale Liste, **keine Kanal-Tabs** | struktureller Bruch besteht nur noch für Ausblick/Stundenverlauf; Übersicht gelöst (ADR-0053), Wächter `tests/unit/test_compare_channel_metrics_reach_the_renderer.py` (Wirkung) + `frontend/e2e/compare-uebersicht-kanal-{bedienung,persistenz}.staging.spec.ts` (Oberfläche) |
 
 ## 3. Sonderstrecken-Katalog
 
@@ -124,12 +161,12 @@ Eine Übersicht, die nur Katalog-Konsumenten erfasst, wiederholt genau den
 
 | # | Sonderstrecke | Datei:Zeile | Warum außerhalb des Katalogs |
 |---|---|---|---|
-| S1 | **`thunder_forecast`-Datenkanal** | Aufbau `src/services/trip_report_scheduler.py:2168` `_build_thunder_forecast()`, Trend-/Nachlade-Variante `:1864`, Aufruf `:1030`. Durchreiche: `src/services/notification_service.py:71`, `:323` → `src/output/renderers/trip_report.py` → `src/output/renderers/sms_trip.py:616`, `:682–700` und `src/output/renderers/email/html.py:962`, `:1312` | eigener Datenkanal ohne Katalogeintrag und ohne Editor-Auswahl; speist mindestens drei Kanäle. War Lücke 3 in #1475 |
+| S1 | **`thunder_forecast`-Datenkanal** | Aufbau `src/services/trip_report_scheduler.py:2582` `_build_thunder_forecast()` (Rückfallpfad), Weiche „Trend-/Nachlade" `_build_thunder_forecast_from_trend_or_fetch()` `:2232`, Aufruf `:1333`. Durchreiche: `src/services/notification_service.py:72`, `:362` → `src/output/renderers/trip_report.py` → `src/output/renderers/sms_trip.py:588-608` (Lesung), `:686-692` (Verbrauch im Token-Aufbau) und `src/output/renderers/email/html.py:962`, `:1312` (unverändert) | eigener Datenkanal ohne Katalogeintrag und ohne Editor-Auswahl; speist mindestens drei Kanäle. War Lücke 3 in #1475. 🔴 **Frisch gegen `c88c681f` gemessen (2026-08-14, #1680 S5b) — vormals `:2168`/`:1864`/`:1030` bzw. `notification_service.py:71`/`:323` bzw. `sms_trip.py:616`/`:682–700`, alle gedriftet.** Die Zuordnung „Weiche = Trend-/Nachlade-Variante" ist aus Funktionsname und Docstring abgeleitet (`_build_thunder_forecast_from_trend_or_fetch()` beschreibt wörtlich „Primary path — reuse … trend rows / Fallback — … dedicated single-stage fetch"), nicht per Git-Historie am alten Commit nachvollzogen — dafür fehlte in dieser Session der Werkzeugzugriff. Die `sms_trip.py`-Zeilen sind als aktuell korrekte Fundstellen verifiziert; ob sie exakt denselben Codepunkten wie die alten `:616`/`:682–700` entsprechen, ist offen (Blockgrößen zwischen Lese- und Verbrauchsstelle haben sich seit #944/#1677 verschoben). `email/html.py` ist unverändert — beide alten Zeilen stimmen noch |
 | S2 | **Hazard-Symbole** (amtliche Warnungen) | `src/output/tokens/hazard_symbols.py:15` `HAZARD_SMS_SYMBOLS`, `:29` `HAZARD_ORDER`; API `api/routers/config.py:46`, `:65` | eigenes Symbolregister **neben** dem Metrikkatalog; Kollisionsfreiheit der Kürzel ist Konvention, nicht geprüft |
 | S3 | **System-Blöcke der Kurzform (DEC-4)** | `src/output/tokens/builder.py:61`, `:86`, `:105`; Einsortierung `src/output/tokens/render.py:12` | Blöcke mit eigener Prioritätsstufe und Katalog-Reihenfolge; „strukturell nicht sortierbar" laut Known Limitation 2 in #1677 |
 | S4 | **`TokenLine.filter_for_subject`** | `src/output/tokens/dto.py:154` | **Stub**: gibt `self` zurück. Der in `sms_format.md` §11 beschriebene Betreff-Filter (β2) existiert nicht — der Betreff bekommt die volle Tokenzeile |
 | S5 | **Wintersport-Block** | Profil-Default `src/output/adapters/trip_result.py:196` `_wintersport_default_config()`; Token `NS24+` erklärt in `sms_trip.py:109–114`, `WC` in `sms_trip.py:154` | eigenes Profil mit eigener MetricSpec-Liste; die gerenderten Token weichen bewusst vom `sms_code` des Katalogs ab (`NS` → `NS24+`) |
-| S6 | **`SMS_MULTI_SYMBOLS_BY_METRIC`** | `src/output/renderers/sms_trip.py:180` | **1:n-Strukturbruch**: eine Metrik erzeugt mehrere Kürzel (Grammatik-Klassen). Der Katalog bildet 1:1 ab und kann das strukturell nicht ausdrücken — deshalb die Empfehlung, die Form-Dimension als eigene Achse zu führen (Frage 7b) |
+| S6 | **`SMS_MULTI_SYMBOLS_BY_METRIC`** | `src/output/renderers/sms_trip.py:180` | **1:n-Strukturbruch**: eine Metrik erzeugt mehrere Kürzel (Grammatik-Klassen). Der Katalog bildet 1:1 ab und kann das strukturell nicht ausdrücken — deshalb die Empfehlung, die Form-Dimension als eigene Achse zu führen (Frage 7b). **Nachtrag 2026-08-15 (#1728 Scheibe 1):** die Einträge `"temperature"`/`"wind_chill"` (bisher `("K","D")` bzw. `("FK","FD","WC")`) sind aus diesem Dict entfernt; `K`/`D`/`FK`/`FD` hängen jetzt an den vier neuen eigenen Größen `temperature_day_low`/`temperature_day_high`/`wind_chill_day_low`/`wind_chill_day_high`, `"wind_chill": ("WC",)` bleibt unverändert stehen. Die hier genannte Datei:Zeile-Angabe ist ungeprüft — die Registrierung wohnt inzwischen laut Katalog-Kopfkommentar (`metric_catalog.py:656`, seit #1719 S4) in `metric_catalog.py`, `sms_trip.py` re-exportiert nur; das ist eine vorbestehende Drift dieses Dokuments, hier nur benannt, nicht nachgemessen |
 
 ## 4. Unbewachte Flächen mit Priorisierung
 
@@ -182,10 +219,52 @@ Modul-Docstring sind nachgezogen. Spec:
   (11 − 1 = 10).
 
 **Fläche 2 — Alle Metriken × Ausblick-Tabelle.** `outlook_columns()`
-(`compare_outlook_metric_ids.py:78`), genutzt von Trip-Mail **und** Compare-Mail
-(`email/outlook.py:149`, `:343`, `:522`).
-*Priorität 1, weil es flächenmäßig die größte unbewachte Zone ist: zwei
-Produktflächen, jede Katalogmetrik, kein einziger Wächter.*
+(`compare_outlook_metric_ids.py:78`).
+
+> **✅ Erledigt (2026-08-11, Epic #1703 Scheibe 2, PR #1748, Merge `9aced271`).**
+>
+> **Die hier ursprünglich behauptete Prämisse war falsch und ist korrigiert:** Diese Zeile
+> sagte, `outlook_columns()` werde „von Trip-Mail **und** Compare-Mail" genutzt. Gemessen
+> übergeben **alle drei** Trip-Aufrufstellen kein `metrics`-Argument und laufen im festen
+> Legacy-Spaltenpfad; `outlook_columns()` erreicht **nur** der Ortsvergleich. Der
+> Trip-Ausblick hat keine wählbaren Spalten und damit keine Metrik×Kanal-Fläche — er ist
+> zudem durch den Byte-Golden `test_trip_outlook_parity.py` strenger bewacht, als eine
+> Matrix-Achse es wäre. Die Scheibe ist deshalb **Compare-only** (PO-freigegeben).
+>
+> 🔴 **ÜBERHOLT seit #1720 S1 (2026-08-14), korrigiert 2026-08-15 (#1841).** Der
+> Trip-Ausblick hat seither sehr wohl wählbare Spalten; `email/html.py:1364` und
+> `email/plain.py:344` übergeben `metrics=`, sobald eine Auswahl gesetzt ist. Der
+> Absatz oben beschreibt den Stand VOR #1720 S1 und bleibt als Beleg stehen, warum
+> die damalige Scheibe Compare-only zugeschnitten war. Der Byte-Golden bewacht nur
+> den Altpfad — den Metrik-Zweig sieht er strukturell nicht (ADR-0055:167-171).
+>
+> Wächter: `tests/tdd/test_channel_metric_matrix.py` AC-S2-1..8, Soll-Menge (25 Paare) aus
+> `get_compare_metric_catalog()` gerechnet via `tests/helpers/outlook_columns.py` inkl.
+> Vakuum-Schutz. Ist-Werte aus der **echten** Mail (`render_compare_email()`, HTML und
+> Klartext in einem Aufruf).
+>
+> **Mitrepariert — der eigentliche Fund:** Fünf der 25 wählbaren Spalten waren *dauerhaft
+> leer* (Schneehöhe, Neuschnee, Windrichtung, Gefühlte Temperatur Min/Max). `summarize_points()`
+> (`weather_metrics.py:1071`) ist eine handgepflegte Aufzählung und hatte fünf `_compute_*`-Regeln
+> nie verdrahtet, die `compute_extended_metrics()` (`:752-760`) längst nutzt. Gegenrichtung zu
+> #1391; #1324/#1392 sind Flicken an derselben Naht. AC-S2-5 hält beide Pfade nun gegeneinander.
+>
+> **Adversary-Finding F001 (HIGH), geschlossen:** „Soll rechnen statt tippen" sichert
+> Vollständigkeit, **nie Zuordnung** — und die Lücke lag diesmal nicht im Katalog, sondern im
+> Fix selbst: eine Vertauschung von `wind_chill_min_c`/`wind_chill_max_c` blieb grün, weil kein
+> Test im Repo die *Zahlenwerte* prüfte. AC-S2-8 schließt das mit unabhängig gerechneten
+> Erwartungswerten. Details: `docs/specs/modules/fix_1703_s2_ausblick_matrix.md`.
+>
+> Grenzen: Telegram (`narrow.py:571`) und Kompakt-Mail (`email/compact.py:227`) haben eigene
+> Ausblick-Implementierungen, die `outlook.py` nicht importieren → Scheibe 4.
+>
+> **Nachtrag (2026-08-12, Scheibe 4 abgeschlossen):** dieser Trend-/Ausblick-Pfad
+> (`narrow.py:571` `_outlook_lines()`, `email/compact.py` "Naechste Etappen"-Block —
+> beide über `format_trend_tokens()`) ist NICHT Teil dessen, was Scheibe 4 bewacht.
+> Deren vier Ausgabeorte (s. Abschnitt 6) sind die Metrik-Übersichts-/Kurzform-Pfade
+> (Pillen, mobile Zeilen, Fließtext-Zusammenfassung, Telegram-Kurzübersicht), nicht
+> dieser separate Trend-Block. Der „→ Scheibe 4"-Verweis ist damit nur teilweise
+> eingelöst; der Trend-/Ausblick-Pfad in Telegram und Kompakt-Mail bleibt unbewacht.
 
 **Fläche 3 — Nicht-wählbare Register-Metriken.** `metric_catalog.py:695` —
 `get_all_metrics()` gibt `[m for m in _METRICS if m.selectable]` zurück. Jeder
@@ -212,10 +291,10 @@ Stundentabelle (AC-6, Charakterisierung).
 
 | # | Unbewachte Fläche | Ort | Prio | Bemerkung |
 |---|---|---|---|---|
-| 4 | Compare-Übersichtstabelle: **Zellwert** je Metrik | `compare_html.py:294`, `comparison.py:70/100` | 2 | nur Zeilen-Existenz ist bewacht; ein falscher Wert in der Zelle bleibt grün |
-| 5 | **Reihenfolge** in allen Kanälen außer E-Mail und Telegram-rich | `tokens/builder.py:78`, `comparison.py:237` | 2 | Compare-Klartext nutzt die Nutzer-Reihenfolge nur als Sichtbarkeitsfilter (#1356) |
-| 6 | Kurzform-Mail, mobile Kompaktzeilen und Kompakt-Zusammenfassung | `email/compact.py:96`, `email/html.py:878`, `compact_summary.py:567` | 2 | **drei** verschiedene Orte, die alle „compact" heißen und regelmäßig verwechselt werden: `render_compact()` ist das eigene Kurzformat, `_render_mobile_compact_rows()` sitzt **in** der Vollmail, `CompactSummaryFormatter` erzeugt den Fließtext-Block ebendort. Nur der dritte hat überhaupt einen Test — und nur für Gewitter/Hagel |
-| 7 | **Telegram-Kurzform** als eigener Ausgabeort | `narrow.py:346`, `:528–532`, `:586–597` | 2 | taucht in keiner Matrix auf, obwohl es der Prüfweg für die SMS-Grammatik ist |
+| 4 | Compare-Übersichtstabelle: **Zellwert** je Metrik | `compare_html.py:294`, `comparison.py:70/100` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 5): Bei Nachmessung trug die pauschale Aussage „nur Zeilen-Existenz bewacht" nicht mehr — 15 der 25 `CV2_METRICS`-Zeilen hatten aus #1296/#1324/#1351/der Gewitter-Suite bereits Wert+Paritäts-Tests. Neuer Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S5-1 (Soll-Menge 15+10=25, disjunkt), AC-S5-2 (die 10 verbleibenden Zeilen, HTML+Klartext gegen unabhängig gerechnete Werte über `render_compare_email()`), AC-S5-3 (Engine-Vorrang vor Live-Ableitung), AC-S5-4 (Formatierungs-Konsistenz `format_value()` vs. `CV2_METRICS`-`decimals`, 10 Felder einzeln), AC-S5-5 (Fehlzeichen-Divergenz HTML `—` vs. Klartext `-`, charakterisiert), AC-S5-6 (Abhängigkeits-Anker auf die 15 bereits gedeckten Zeilen). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s5_compare_zellwerte.md` |
+| 5 | **Reihenfolge** in allen Kanälen außer E-Mail und Telegram-rich | `email/helpers.py:1908`, `comparison.py:127/729`, `compare_html.py:798` | 2 | ✅ Erledigt (2026-08-14, Epic #1703 Scheibe 7). 🔴 **Zwei Angaben dieser Zeile waren bei Nachmessung falsch und sind hier ersetzt:** (a) `tokens/builder.py:78` — die Trip-SMS-Reihenfolge ist seit #1677/#1660 B bewacht (`test_channel_metric_matrix.py::test_ac15_…` (c), paarweise über alle 26 Katalog-Metriken, `_POSITION_SORTABLE_CATEGORIES`); (b) „Compare-Klartext nutzt die Reihenfolge nur als Sichtbarkeitsfilter (#1356)" — überholt seit #1359, `_ordered_rows()` (`comparison.py:127-140`) setzt sie um, der HTML-Zwilling `_visible_metrics()` (`compare_html.py:798`) ebenso. Tatsächlich fehlte die **Katalog-Deckung** (bewacht waren 4 von 25 Metriken über `tests/unit/test_compare_metric_order.py`) und die **Kanal-Achse** aus Scheibe 8. Neuer Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S7-1 (Soll-Menge 25 gerechnet + Vakuum-Schutz), AC-S7-2/3 (HTML und Klartext derselben Sendung, alle 25 paarweise), AC-S7-4 (Altbestands-Divergenz HTML `CV2_METRICS` vs. Klartext `_PLAIN_ROWS` ab Position 3 — charakterisiert, nicht gefixt, → #1199), AC-S7-5 (drei Kanäle, drei Reihenfolgen, EINE Sendung — gemessen an der zugestellten Ausgabe über Versand- **und** Vorschaupfad), AC-S7-6 (**Produktivcode-Fix**, s.u.), AC-S7-7 (Trip-Telegram-Kurzübersicht; benennt die zwei Ordnungsquellen in `render_telegram_bubbles()`), AC-S7-8 (Compare-Telegram/SMS unter Kappung — Telegram 7 Spalten, SMS 153 Zeichen), AC-S7-9 (Kompakt-Zusammenfassung ohne Reihenfolge-Achse, benannte Ausnahme). Spec: `docs/specs/modules/fix_1703_s7_reihenfolge_matrix.md` |
+| 6 | Kurzform-Mail, mobile Kompaktzeilen und Kompakt-Zusammenfassung | `email/compact.py:96`, `email/html.py:878`, `compact_summary.py:567` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): **drei** verschiedene Orte, die alle „compact" heißen und regelmäßig verwechselt werden — `render_compact()` ist das eigene Kurzformat, `_render_mobile_compact_rows()` sitzt **in** der Vollmail, `CompactSummaryFormatter` erzeugt den Fließtext-Block ebendort — jetzt einzeln bewacht: `tests/tdd/test_channel_metric_matrix.py` AC-S4-1/2/3 (Ort 1), AC-S4-5 (Ort 2), AC-S4-6/6b/7/8-10 (Ort 3). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
+| 7 | **Telegram-Kurzform** als eigener Ausgabeort | `narrow.py:346`, `:528–532`, `:586–597` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S4-12/13/14 (Auswahl/Abwahl generisch über alle wählbaren Metriken, Resolver-Divergenz zu Ort 1 als Charakterisierung, confidence-Absenz). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
 | 8 | Einheiten und Nachkommastellen je Kanal | `metric_catalog.get_decimals()`, `compare_html.py:384` | 3 | nur die Compare-Legende ist bewacht |
 | 9 | **Frontend** ohne Metrik×Kanal-Matrix | `WeatherMetricsTab.svelte:411`, `compareMetricDefs.ts` | 3 | das Frontend führt eigene Register; Drift zum Backend fällt erst im Betrieb auf |
 | 10 | **Trip-SMS liest die Kaskade nicht** | `sms_trip.py:606` `format_sms()` — kein Aufruf von `get_metrics_for_channel()`/`cascade_source_for_channel()`; Ersatz-Verdrahtung `trip_report.py:301` | 2 | dokumentiert in `fix_1575_channel_metric_selection.md`; Folge-Issue #1689 (`format_sms`-Merge verschluckt Spec-Felder) |
@@ -284,8 +363,9 @@ entscheidende Unterschied zu Option B und der Grund für die Empfehlung.
    unvollständig bleibt, solange die Ortsliste nicht aus einer Quelle kommt.
    Teuer ist die Assertion-Logik **pro Zelle**,
    nicht die Metrik-Anzahl — Parametrisierung ist billig. Wo strukturell keine
-   Zelle existiert: benannte Ausnahme nach dem Muster `_NIGHT_SCALAR_IDS`
-   (`channel_layout.py:88`), nie stilles Überspringen.
+   Zelle existiert: benannte Ausnahme nach dem Muster `VISIBILITY_GATE_IDS`
+   (`channel_layout.py:75`, bis #1728 S1 `_NIGHT_SCALAR_IDS`), nie stilles
+   Überspringen.
 
 ## 6. Folge-Scheiben
 
@@ -311,12 +391,32 @@ wieder ausgenommen werden. Gemessen an den vier echten Renderern, nicht an
 Alarm (PO-Entscheidung #1585 löst die #978-Vorlage ab). Details, Soll-Menge, Grenzen und
 Mutations-Gegenprobe: `docs/specs/modules/fix_1703_s1_alert_renderer_matrix.md`.
 
-### Scheibe 2 — Ausblick-Tabelle Trip + Compare
+### Scheibe 2 — Ausblick-Tabelle (Compare) ✅ ERLEDIGT (2026-08-11)
 
-Matrix-Achse für `outlook_columns()` (`compare_outlook_metric_ids.py:78`) in
-beiden Mail-Pfaden (`email/outlook.py:149`, `:343`, `:522`).
-*Risiko: mittel. Größe: mittel–groß — zwei Produktflächen, eine geteilte
-Spaltenquelle, deshalb eine Assertion-Familie für beide.* Deckt Fläche 2.
+Matrix-Achse für `outlook_columns()` (`compare_outlook_metric_ids.py:78`). Deckt Fläche 2.
+
+**Der Titel hieß bis zum Umsetzen „Trip + Compare" — das war falsch.** Gemessen erreicht
+`outlook_columns()` nur den Ortsvergleich; alle drei Trip-Aufrufstellen übergeben kein
+`metrics`. Der Trip-Ausblick hat keine wählbaren Spalten (feste Sieben) und wird vom
+Byte-Golden `test_trip_outlook_parity.py` strenger bewacht, als eine Metrik-Achse es könnte.
+Zuschnitt daher **Compare-only**, PO-freigegeben 2026-08-11.
+
+🔴 **Diese Messung galt am 2026-08-11 und wurde am 2026-08-14 durch #1720 S1 überholt**
+(nachgetragen 2026-08-15, #1841): der Trip übergibt seither `metrics=`, sobald eine
+Auswahl gesetzt ist. Lehrstück für den Umgang mit „Am Code gemessen"-Aussagen — die
+Messung war richtig, entzogen wurde ihre **Voraussetzung**.
+
+Umgesetzt als 8 ACs (AC-S2-1..8) in `tests/tdd/test_channel_metric_matrix.py`, Soll-Menge
+**25 Paare** aus `get_compare_metric_catalog()` gerechnet (`tests/helpers/outlook_columns.py`,
+Vakuum-Schutz ≥ 20). Gemessen an der echten Mail über `render_compare_email()` — HTML und
+Klartext aus einem Aufruf, damit der Klartext-blinde Fleck des Mail-Validators mitfällt.
+
+**Produktivfix:** fünf dauerhaft leere Spalten (Schneehöhe, Neuschnee, Windrichtung, Gefühlte
+Temperatur Min/Max), Ursache in `summarize_points()`; AC-S2-5 hält beide Tages-Aggregationspfade
+gegeneinander. **F001 (HIGH, geschlossen):** die Zuordnungs-Blindstelle bestand im Fix selbst,
+nicht nur im Katalog — AC-S2-8 prüft die Zahlenwerte gegen unabhängig gerechnete Erwartungen.
+Details, Fehlzeichen-Falle (`–` U+2013 vs. `—` U+2014) und Grenzen:
+`docs/specs/modules/fix_1703_s2_ausblick_matrix.md`.
 
 ### Scheibe 3 — Nicht-wählbare Register-Metriken ✅ ERLEDIGT (2026-08-10)
 
@@ -332,7 +432,7 @@ gegen den echten Renderpfad (`TripReportFormatter().format_email()`, nicht die p
 ungenutzte `email/helpers.py::dp_to_row()`). Details, Sollzustand je Metrik, Mutations-
 Gegenprobe: `docs/specs/modules/fix_1703_s3_selectable_metrics.md`.
 
-### Scheibe 4 — Kurzform-Mail, Kompaktzeilen, Kompakt-Zusammenfassung, Telegram-Kurzform
+### Scheibe 4 — Kurzform-Mail, Kompaktzeilen, Kompakt-Zusammenfassung, Telegram-Kurzform ✅ ERLEDIGT (2026-08-12)
 
 Vier bisher namenlose Ausgabeorte als eigene Matrix-Spalten aufnehmen:
 `email/compact.py:96`, `email/html.py:878`, `compact_summary.py:567`,
@@ -340,14 +440,72 @@ Vier bisher namenlose Ausgabeorte als eigene Matrix-Spalten aufnehmen:
 wiederkehrender Fehler und sollte in den Testnamen aufgelöst werden.
 *Risiko: mittel. Größe: mittel.* Deckt Flächen 6 und 7.
 
-### Scheibe 5 — Compare-Zellwert-Vollständigkeit
+Umgesetzt als 15 ACs (AC-S4-1 bis AC-S4-15, teils als kombinierte
+Positiv-/Negativ-Assertion in einer parametrisierten Testfunktion
+zusammengefasst) in `tests/tdd/test_channel_metric_matrix.py`, gemessen
+gegen den echten Renderpfad (`TripReportFormatter().format_email()`,
+`email_format="compact"` bzw. Telegram-Pfad) statt isolierter
+Direktaufrufe — dieselbe Prüfort-=-Wirkort-Pflicht wie in Scheibe 3.
+Reine Charakterisierung, **kein Produktivcode-Fix**, auch dort nicht, wo
+die Recherche eine strukturelle Eigenheit aufdeckte: Resolver-Divergenz
+Ort 1 (`resolve_trip_active_metrics()`, Fallback auf
+`DEFAULT_TRIP_METRIC_IDS` bei leerer Auswahl) vs. Ort 5
+(`get_enabled_metric_ids()`, kein Fallback) — als Nebenbefund in #1199
+gebucht (Eintrag 2026-08-12), kein Fix hier; Positivliste von
+`format_stage_summary()` bleibt akzeptierter Dauerzustand (PO-Anschluss
+an #1214 Scheibe 5c). Ort 4 (`format_location_summary()`,
+Compare-Wrapper) bleibt ohne Test — totes Gleis seit #1300. **Nicht
+Gegenstand dieser Scheibe:** die eigenen Ausblick-/Trend-Implementierungen
+in `narrow.py:571` (`_outlook_lines()`) und `email/compact.py`
+("Naechste Etappen"-Block), die `outlook.py` nicht importieren (s.
+Fläche 2 Grenzen, Nachtrag oben) — Scheibe 4 deckt die
+Metrik-Übersichts-/Kurzform-Pfade, nicht diesen separaten Trend-Block.
+
+**Adversary-Finding F001 (geschlossen):** die ursprüngliche Spec-Fassung
+behauptete für AC-S4-3 (Ort 1) und AC-S4-8 (Ort 3), dieselbe zentrale
+`_is_selectable()`-Gate-Wirkung greife wie an Ort 5. Die
+Mutations-Gegenprobe widerlegte das — Ort 1 und Ort 3 sind durch lokale,
+gate-unabhängige Mechanismen geschützt (Pillen-Katalog-Whitelist
+`_PILL_CATALOG_ORDER` bzw. fehlender `confidence`-Zweig in
+`compact_summary.py`); nur AC-S4-14 (Telegram) belegt die Gate-Wirkung
+tatsächlich. Spec entsprechend korrigiert (Docstrings + AC-Wortlaut).
+Details: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md`.
+
+### Scheibe 5 — Compare-Zellwert-Vollständigkeit ✅ ERLEDIGT (2026-08-12)
 
 Über die Zeilen-Existenz hinaus prüfen, dass die Zelle je Metrik einen
 plausiblen Wert trägt und dass HTML (`compare_html.py:294`) und Klartext
 (`comparison.py:70/100`) für dieselbe Wetterlage dieselbe Zahl zeigen.
 *Risiko: mittel (Doppel-Quellen-Historie #1356). Größe: mittel.* Deckt Fläche 4.
 
-### Scheibe 6 — Form-Wächter über Grammatik-Klassen
+**Korrektur der Scheiben-Prämisse (bei Nachmessung, vor dem Schreiben der
+ACs):** Die pauschale Aussage „nur Zeilen-Existenz bewacht" traf nur noch auf
+10 der 25 `CV2_METRICS`-Zeilen zu — 15 hatten aus #1296/#1324/#1351 und der
+Gewitter-Testsuite bereits Wert+Paritäts-Tests. Die Wert-**Quelle** war zudem
+bereits geteilt (`comparison.py` importiert `_metric_value` direkt aus
+`compare_html.py`), das eigentliche Risiko lag in der **Formatierung**
+(drei parallele Wege: geteilte Formatter, eigene Lambdas, katalog-getriebenes
+`format_value()`), nicht im Wert selbst.
+
+Umgesetzt als 6 ACs (AC-S5-1 bis AC-S5-6, 29 parametrisierte Testfälle) in
+`tests/tdd/test_channel_metric_matrix.py`, gemessen gegen die echte Mail
+(`render_compare_email()`, HTML und Klartext in einem Aufruf). AC-S5-1 rechnet
+die 15+10-Aufteilung der 25 Zeilen disjunkt und lückenlos; AC-S5-2 sichert die
+10 zuvor ungeprüften Zeilen wertmäßig ab (unabhängig aus rohen Stundenwerten
+gerechnet, nicht aus `summarize_points()` übernommen — Lehre aus AC-S2-8/F001);
+AC-S5-3 belegt den Engine-Vorrang vor Live-Ableitung; AC-S5-4 hält
+`format_value()`-Dezimalstellen gegen `CV2_METRICS`-`decimals` für alle 10
+betroffenen Felder einzeln synchron (Nebenbefund: `wind_chill_min/max` und
+`dewpoint_avg` lesen im Klartext die `temperature`-Katalog-ID statt der
+eigenen — heute folgenlos, in #1199 gebucht); AC-S5-5 charakterisiert die
+Fehlzeichen-Divergenz (HTML `—` U+2014 vs. Klartext `-` U+002D) bewusst ohne
+Fix (PO-Entscheidung dieser Spec: kosmetisch); AC-S5-6 verankert die 15
+bereits gedeckten Zeilen gegen stillen Verlust ihrer Testabdeckung.
+**Kein Produktivcode-Fix.** Adversary VERIFIED, alle 4 Pflicht-Mutationen plus
+eine selbst gewählte Zusatz-Mutation exakt vom vorgesehenen Test gefangen.
+Details: `docs/specs/modules/fix_1703_s5_compare_zellwerte.md`.
+
+### Scheibe 6 — Form-Wächter über Grammatik-Klassen ✅ ERLEDIGT (2026-08-13)
 
 Eigener Wächter über `PRIORITY`/`POSITIONAL` (`tokens/builder.py:47`, `:78`) und
 `SMS_MULTI_SYMBOLS_BY_METRIC` (`sms_trip.py:180`): jede Grammatik-Klasse hat
@@ -356,26 +514,180 @@ mit `HAZARD_SMS_SYMBOLS` (`hazard_symbols.py:15`).
 *Risiko: niedrig–mittel. Größe: klein–mittel. Parallel zu 1–5 machbar*, weil sie
 eine andere Achse als die Metrik-ID benutzt. Deckt Fläche 8 teilweise, S2, S6.
 
-### Scheibe 7 — Reihenfolge-Wächter jenseits E-Mail und Telegram-rich
+Umgesetzt als 6 ACs (AC-S6-1 bis AC-S6-6) in einer **eigenständigen** neuen
+Testdatei `tests/unit/test_sms_symbol_grammar_classes.py` (nicht als Achse in
+`test_channel_metric_matrix.py` — PO-Vorentscheidung §7b: „Form-Dimension als
+eigene Achse, nicht in die Hauptmatrix gemischt", weil `SMS_MULTI_SYMBOLS_BY_METRIC`
+1:n ist). AC-S6-1/2 sichern die bidirektionale Vollständigkeit
+`PRIORITY`↔`POSITIONAL` (36 bzw. 38 Einträge, `TH:`-Doppeleintrag bewusst über
+`_POSITION_SORTABLE_CATEGORIES` abgesichert); AC-S6-3/4 sichern die
+Katalog-Vollständigkeit (30 eindeutige Symbole aus beiden Katalog-Registern +
+6 benannte Systemzeichen = alle 36 `PRIORITY`-Schlüssel erklärt); AC-S6-5 hält
+die Format-Invariante fest, dass der `!`-Block-Marker der einzige verlässliche
+Diskriminator gegenüber `HAZARD_SMS_SYMBOLS` ist.
 
-Reihenfolge-Zusicherung für SMS, Compare-Klartext und Compare-Telegram.
-**Abhängig von der PO-Entscheidung zu Compare-Kanal-Tabs (7a)** — solange
-Compare eine globale Metrik-Liste führt (`wiz.activeMetricKeys`) und Trip
-kanalweise Layouts (`channel_layouts`), gibt es für Compare keine kanalbezogene
-Soll-Reihenfolge, die man prüfen könnte.
-*Risiko: mittel. Größe: mittel.* Deckt Fläche 5. **Blockiert bis 7a entschieden ist.**
+**Mitrepariert — echter, sicherheitsrelevanter Fund (AC-S6-6, einziger
+Produktivcode-Fix dieser Scheibe):** Ein Wind-Datenausfall und der dedizierte
+„amtliche Warnungen nicht abrufbar"-Marker renderten **bytegleich** `"W?"` —
+unabhängig voneinander auslösbar, für den Leser nicht unterscheidbar (konnte
+verschleiern, dass amtliche Warnungen ausgefallen waren). `UNAVAILABLE_SYMBOL`
+(`tokens/builder.py`) auf `"X?"` geändert (`X` ist im gesamten
+Wetter-Kürzel-Alphabet unbenutzt und dafür reserviert); zwei Bestandstests
+(`test_sms_trip_unavailable_marker.py`, `test_sms_user_metric_order.py`)
+mechanisch mitgezogen, `docs/reference/sms_format.md` §3.4d aktualisiert.
+Adversary VERIFIED, alle 5 Pflicht-Mutationen exakt vom vorgesehenen Test
+gefangen. **Bekannte, bewusst unbehobene Grenze:** eine strukturell ähnliche,
+aber toter-Pfad-Kollision zwischen `TH:`/`HR:` (Hazard) und der
+Météo-France-Vigilance (`_vigilance()`, nie erreicht: kein Aufrufer setzt
+`provider="meteofrance"`) bleibt dokumentiert, nicht gefixt. Details:
+`docs/specs/modules/fix_1703_s6_form_waechter.md`.
 
-### Scheibe 8 — Compare-Kanal-Tabs im Frontend
+### Scheibe 7 — Reihenfolge-Wächter jenseits E-Mail und Telegram-rich ✅ ERLEDIGT (2026-08-14)
+
+Deckt Fläche 5. Spec: `docs/specs/modules/fix_1703_s7_reihenfolge_matrix.md`.
+
+🔴 **Der Zuschnitt dieser Scheibe war zweimal falsch beschrieben — beide
+Korrekturen sind vor dem Schreiben der ACs gemessen worden.** Hier stand
+„Reihenfolge-Zusicherung für SMS, Compare-Klartext und Compare-Telegram":
+
+- **Die Trip-SMS war längst bewacht.** `test_channel_metric_matrix.py::test_ac15_…`
+  (c) prüft die Nutzer-Reihenfolge seit #1677 paarweise über alle 26
+  Katalog-Metriken; die in Fläche 5 genannte Lücke `tokens/builder.py:78` ist
+  mit #1677/#1660 B geschlossen (`_POSITION_SORTABLE_CATEGORIES`,
+  `MetricSpec.position`).
+- **Der Compare-Klartext folgt der Reihenfolge.** Die Notiz „nutzt sie nur als
+  Sichtbarkeitsfilter (#1356)" ist seit #1359 überholt (`_ordered_rows()`,
+  `comparison.py:127-140`).
+
+Was tatsächlich fehlte: die **Katalog-Deckung** (bewacht waren 4 von 25
+Metriken, `tests/unit/test_compare_metric_order.py` mit zwei getippten
+Reihenfolgen) und die **Kanal-Achse**, die es erst seit Scheibe 8 gibt. Damit
+wiederholt sich exakt das Muster aus Scheibe 2: *das Prinzip war bewacht, die
+Deckung nicht.*
+
+**Geliefert:** neun ACs (`AC-S7-1` bis `AC-S7-9`) in
+`tests/tdd/test_channel_metric_matrix.py`, 142 Testfälle, plus
+`tests/helpers/compare_order.py`. Der Nachweis der Kanal-Achse hängt an der
+**zugestellten Ausgabe** — drei Kanäle führen dieselbe Metrik-Menge in drei
+Reihenfolgen, geprüft über Versandpfad (`send_one_compare_preset()` mit Sinks)
+und Vorschaupfad, zusammen alle acht Aufrufstellen. Adversary VERIFIED; alle
+fünf Pflicht-Mutationen exakt vom vorgesehenen Test gefangen, die
+Kanal-Mutation an zwei unabhängigen Stellen.
+
+**Der Produktivcode-Fix (AC-S7-6):** `build_metrics_summary_pills()`
+(`email/helpers.py:1908`) kollabierte die geordnete Metrikliste zu
+`set(metric_ids)` und rendert danach eine feste Katalogordnung — die im Editor
+je Kanal eingestellte Reihenfolge konnte den Pillen-Überblick **strukturell
+nicht erreichen**. Ein Bedienelement ohne Wirkung, also genau die Fehlerklasse
+dieses Epics. Der Katalog bleibt weiße Liste (welche Größen überhaupt eine
+Pille haben), gibt aber nicht mehr die Ordnung vor.
+
+Zwei Nebenwirkungen, beide gemessen und gewollt: Der Fix wirkt auf **drei**
+Ausgabeorte (Kurz-E-Mail `compact.py:176` **und** beide Teile der Voll-Mail,
+`html.py:1432`/`plain.py:205`) — dabei schlug **kein** Golden- oder
+Paritätstest an, die Pillen-Reihenfolge der Voll-Mail war also von nichts
+bewacht. Und für Trips ohne jede gespeicherte Auswahl tauschen `visibility`
+und `freezing_level` ihre Plätze, weil `DEFAULT_TRIP_METRIC_IDS` seit #1552
+aus `trip_default_rank` stammt und nicht aus `_PILL_CATALOG_ORDER` — eine
+Ordnungsquelle statt zweier.
+
+**Abgelöste Entscheidung, nicht still vollzogen:** `email_metrics_summary_664.md:88`
+(2026-06-08) legte ausdrücklich fest „Reihenfolge = Katalog-Reihenfolge, nicht
+Eingabereihenfolge", und `test_metric_order_follows_catalog` fror das ein. Die
+alte Wahl war unter ihren Bedingungen richtig — im Juni 2026 gab es keine
+nutzergesetzte Reihenfolge, die Kanal-Layouts kamen erst mit #1575/#1677 (Trip)
+bzw. #1335/#1359 (Compare); die „Eingabereihenfolge" war die zufällige Folge
+der Config-Einträge und trug keine Absicht. Der Test heißt jetzt
+`test_metric_order_follows_input`, prüft paarweise statt einseitig und trägt
+den Ablösungsvermerk (#664 → abgelöst durch #1703 S7), ebenso der Docstring von
+`build_metrics_summary_pills()`.
+
+**Zuschnitt-Grenze, bewusst offen:** Ausblick (`outlook_columns()`) und
+Stundenverlauf (`hourly_selectable_metric_ids()`) des Ortsvergleichs führen
+weiterhin je eine einzige globale Liste ohne Kanal-Ebene (ADR-0053 Punkt 1) —
+für sie gibt es keine kanalbezogene Soll-Reihenfolge, gegen die sich prüfen
+ließe. Ein Wächter dafür bräuchte zuerst deren eigene Kanal-Kette.
+
+**Weitere Grenzen:** Die Altbestands-Divergenz zwischen HTML (`CV2_METRICS`)
+und Klartext (`_PLAIN_ROWS`) ab Position 3 ist charakterisiert, nicht gefixt —
+die `_PLAIN_ROWS`-Ordnung ist in `test_compare_metric_order.py` AC-7 als
+Altbestands-Standard eingefroren, ein Fix wäre eine eigene Entscheidung
+(→ #1199). `render_telegram_bubbles()` führt zwei Ordnungsquellen
+(`dc.get_enabled_metric_ids()` für die Kurzübersicht, `render_for_channel()`
+für die Tabellen-Bubbles); im Versandpfad fallen sie zusammen, das Driftrisiko
+ist benannt (AC-S7-7). `format_stage_summary()` hat keine Reihenfolge-Achse
+(AC-S7-9).
+
+### Scheibe 8 — Compare-Kanal-Tabs im Frontend ✅ ERLEDIGT (2026-08-13)
 
 Den strukturellen Bruch zwischen `compareWizardState.svelte.ts`
 (`wiz.activeMetricKeys`, eine globale Liste) und dem Trip-Editor
-(`WeatherMetricsTab.svelte:755–771`, `channel_layouts` je Kanal) auflösen.
-*Risiko: hoch (Datenmodell + Persistenz + Editor). Größe: groß — eigenes
-Vorhaben, keine Test-Scheibe.* **Nur nach PO-Entscheidung 7a**; ist sie „nein",
-entfällt diese Scheibe und Scheibe 7 wird auf Trip-Kanäle beschränkt.
+(`WeatherMetricsTab.svelte:755–771`, `channel_layouts` je Kanal) für die
+**Übersichtstabelle** aufgelöst. PRs #1813 + #1819, Merge `2fd4be0b`/`21a6a1ef`.
 
-**Abhängigkeitsbild:** 3 → (1, 2, 4, 5 parallel) · 6 jederzeit parallel ·
-7 nach 7a · 8 nur bei 7a = ja.
+Geliefert: kanal-eigene Metrikauswahl (E-Mail/Telegram/SMS) für
+`display_config.channel_active_metrics`, die volle Kette Oberfläche →
+Speicherweg → Resolver → Renderer — nicht nur die Oberfläche, das war die von
+ADR-0053 verlangte Bedingung für die Entscheidungs-Umkehr gegenüber
+#1287/#1291/#1351 („Attrappen"). Backend: `resolve_channel_enabled_metrics()`
+(`compare_metric_ids.py:200-241`) additiv neben `resolve_enabled_metrics()`;
+`CompareRenderOptions.enabled_metrics_by_channel`
+(`report_config_resolver.py:206-208`) additiv neben `enabled_metrics`; acht
+Aufrufstellen umgestellt (`scheduler_dispatch_service.py:439/505/509`,
+`compare_preview_service.py:65/70/105/122/186`).
+
+**Zuschnitt-Korrektur festhalten:** Stundenverlauf (`hourly_metrics`) und
+Ausblick (`outlook_metrics`) bleiben **global** — eigene, getrennt
+gespeicherte Auswahllisten, bewusste Schnitt-Entscheidung (ADR-0053), keine
+Auslassung. Eine Folge-Scheibe müsste dieselbe Kette (Resolver, Persistenz,
+Editor) dafür wiederholen.
+
+Bauform: additiv. `CompareRenderOptions.enabled_metrics` behält seine
+Bedeutung (reine globale Auflösung); `enabled_metrics_by_channel` tritt
+daneben. Kein Go-Schema-Change — `DisplayConfig`
+(`internal/model/compare_preset.go:48`) bleibt untypisiertes Blob,
+`config_merge.go` ersetzt `channel_active_metrics` als GANZEN Top-Level-Key
+(RMW-Pflicht beim Speichern, wie beim Trip).
+
+**ADR-0053** löst die Abschaffungs-Entscheidungen aus #1287/#1291
+(2026-07-18, „Attrappen") und #1351 Teil 2 (2026-07-24) ab; schreibt
+ADR-0050 (Metrik-Kaskade, Regeln 1-4) unverändert für Compare fort, statt sie
+zu duplizieren.
+
+**Mitrepariert:** Die Kappungs-Aussage war an **drei** Anzeigestellen falsch
+— SMS zeigte den Trip-Wert 160 statt 153, weil `LTChannelPicker` die feste
+Modul-Konstante `LT_CHANNELS` iterierte statt `smsCharLimit` zu respektieren
+(neue Funktion `ltChannelsFor()`, `ltChannels.ts:70`). `hasLabelColumn` ist
+jetzt Pflicht-Prop ohne Default — der bisherige `context === 'vergleich'`-
+Default zeigte auf den seit #1360 aufgelösten Hub-Layout-Reiter (Orte als
+Spalten), nicht auf den heute einzig lebenden Compare-Fall (Metriken als
+Zeilen).
+
+Nachweis: Adversary VERIFIED nach einer Fix-Runde; Staging VERIFIED nach
+einem Fix (fehlgeschlagenes Speichern wurde fälschlich als Erfolg gemeldet —
+behoben in #1819).
+
+**Ehrlich benennen:** `CompareTabs.svelte:710/737/782` (Snapshot-Kopie,
+Hydration, Rollback von `channelActiveMetricKeys`) sind offline nicht
+bewachbar — `.svelte`-Dateien sind unter `node:test` (ADR-0020) nicht
+importierbar, kein DOM im Projekt. Einziger Wächter sind die Klickpfade
+gegen Staging: `frontend/e2e/compare-uebersicht-kanal-bedienung.staging.spec.ts`,
+`frontend/e2e/compare-uebersicht-kanal-persistenz.staging.spec.ts`.
+
+Details, alle 15 ACs (AC-S8-1 bis AC-S8-15), Mutations-Gegenproben:
+`docs/specs/modules/feat_1703_s8_compare_kanal_tabs.md`.
+
+**Abhängigkeitsbild (Stand 2026-08-14):** **alle acht Scheiben ✅ erledigt.**
+Die Flächen 1–7 aus Abschnitt 4 tragen damit jeweils einen Wächter in
+`tests/tdd/test_channel_metric_matrix.py` (Achsen `AC-S1-*` bis `AC-S7-*`);
+Fläche 5 ist mit Scheibe 7 als letzte geschlossen worden.
+
+**Offen bleiben bewusst** — beides braucht eine eigene Entscheidung, keine
+Fortsetzung dieses Epics: (a) Ausblick und Stundenverlauf des Ortsvergleichs
+haben weiterhin keine Kanal-Ebene (ADR-0053 Punkt 1), also auch keine
+kanalbezogene Soll-Reihenfolge; (b) die Flächen 8, 9 und 10 aus Abschnitt 4.2
+(Einheiten/Nachkommastellen je Kanal · Frontend ohne Metrik×Kanal-Matrix ·
+Trip-SMS liest die Kaskade nicht) standen nie im Zuschnitt der acht Scheiben.
 
 ## 7. PO-Entscheidungsvorlage — ENTSCHIEDEN (PO, 2026-08-10)
 
@@ -384,7 +696,14 @@ Abwägung bleibt zur Nachvollziehbarkeit stehen.
 
 - [x] PO-Entscheidung (a) **Compare-Kanal-Tabs: JA.** Der Compare-Editor bekommt
       Kanal-Layouts wie der Trip-Editor (Scheibe 8 ist damit beauftragt,
-      Scheibe 7 deckt Trip UND Compare). Ursprüngliche Abwägung: Heute führt der
+      Scheibe 7 deckt Trip UND Compare).
+      🔴 **Präzisierung nach Lieferung von Scheibe 8 (2026-08-13):** „Scheibe 7
+      deckt Trip UND Compare" ist zu großzügig formuliert. Scheibe 8 hat die
+      Kanal-Ebene **nur für die Compare-Übersichtstabelle** geliefert; Ausblick
+      und Stundenverlauf führen weiterhin je eine einzige globale Liste. Scheibe 7
+      kann für Compare daher vorerst **nur die Übersicht** abdecken. Wer diesen
+      Satz ohne die Präzisierung liest, schneidet Scheibe 7 zu breit zu.
+      Ursprüngliche Abwägung: Heute führt der
       Compare-Editor eine globale Metrik-Liste (`wiz.activeMetricKeys`), der
       Trip-Editor Layouts je Kanal (`channel_layouts`) — der Umbau stellt die
       Trip/Compare-Teilungsvorgabe auch hier her.

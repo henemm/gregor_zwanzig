@@ -29,6 +29,9 @@ node_modules/
 .claude/workflows/
 .claude/active_workflow
 .claude/validator.env
+.claude/next_ticket_cache.json
+.claude/file_claims.json
+.claude/file_claims.json.lock
 
 # Claude Code (transient)
 .claude/current_task.json

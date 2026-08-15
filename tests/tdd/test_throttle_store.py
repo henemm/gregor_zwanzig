@@ -457,8 +457,11 @@ def test_daily_limit_increment_is_atomic():
     uid = f"tdd-throttle-atomic-{uuid.uuid4().hex[:6]}"
     now = datetime(2026, 7, 7, 10, 0, tzinfo=timezone.utc)
 
-    alert_daily_limit.increment(uid, now)
-    alert_daily_limit.increment(uid, now)
+    # Issue #1726: der Zaehler ist zonenweise; diese Zusicherung prueft die
+    # Schreibmechanik (atomar, isolierte Wurzel), nicht die Zonenwahl.
+    zone = ZoneInfo("Europe/Vienna")
+    alert_daily_limit.increment(uid, now, zone)
+    alert_daily_limit.increment(uid, now, zone)
 
     counter_dir = get_data_dir(uid)
     assert counter_dir.exists(), (
@@ -472,7 +475,9 @@ def test_daily_limit_increment_is_atomic():
     )
 
     data = json.loads((counter_dir / "alert_daily_count.json").read_text())
-    assert data["count"] == 2, f"Zähler nach 2 Increments unerwartet: {data}"
+    assert data["zones"][str(zone)]["count"] == 2, (
+        f"Zähler nach 2 Increments unerwartet: {data}"
+    )
 
 
 # ═══════════════ AC-7: get_time_until_next_alert per-Trip-Cooldown ══════════

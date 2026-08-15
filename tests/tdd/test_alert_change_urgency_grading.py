@@ -65,6 +65,7 @@ from tests.helpers.alert_log_fixtures import (
     settings_email_only,
     weather,
 )
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 from tests.helpers.compare_briefings import write_compare_briefings
 
 # Schwellen der Empfindlichkeitsstufe "standard" aus `alert_preset._PRESET_TABLE`.
@@ -130,8 +131,12 @@ def _trip(trip_id: str, levels: dict[str, str], catalog_ids: list[str],
             metric_alert_levels=levels,
         ),
     )
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlauf-Fensters — sonst
+    # schwiege der Alarm wegen der Sperre und die Abstufung waere ungemessen.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, alert_on_changes=True,
+        morning_time=morgen, evening_time=abend,
     )
     trip.alert_cooldown_minutes = 0
     trip.official_alert_triggers_enabled = False

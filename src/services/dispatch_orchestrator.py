@@ -2,7 +2,7 @@
 
 SPEC: docs/specs/modules/dispatch_orchestrator.md
 
-Duenner geteilter Seam: `run_briefing_dispatch(kind, user_id, hour)` kapselt
+Duenner geteilter Seam: `run_briefing_dispatch(kind, user_id, now_utc)` kapselt
 das gemeinsame Skelett (Settings-Laden, Faelligkeits-/Delay-/Tally-Schleife)
 und delegiert alles Kind-spezifische an eine Strategie (`TripDispatchStrategy`
 fuer `kind="route"`, `CompareDispatchStrategy` fuer `kind="vergleich"`). Die
@@ -26,6 +26,8 @@ from app.config import Settings
 from app.loader import get_data_root
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from services.trip_report_scheduler import TripReportSchedulerService
 
 logger = logging.getLogger("dispatch_orchestrator")
@@ -54,19 +56,30 @@ class TripDispatchStrategy:
     def empty_result(self) -> tuple[int, int]:
         return (0, 0)
 
-    def collect_due(self, hour: int) -> list:
-        return self._service._collect_due_trips(hour)
+    def collect_due(self, now_utc: "datetime") -> list:
+        return self._service._collect_due_trips(now_utc)
 
-    def pre_pass(self, hour: int, due: list) -> None:
+    def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1012 (b2): Catch-up ZUERST, offene Nachliefer-Marker vor den
         # regulaeren faelligen Slots abarbeiten (AC-6/AC-7).
-        due_trip_ids_now = {trip.id for trip, _ in due}
-        self._sent += self._service._process_pending_markers(hour, due_trip_ids_now)
+        # Issue #1725: `collect_due` liefert (trip, report_type, ortstag).
+        due_trip_ids_now = {trip.id for trip, _, _ in due}
+        self._sent += self._service._process_pending_markers(now_utc, due_trip_ids_now)
 
     def dispatch_one(self, item) -> None:
-        trip, report_type = item
+        trip, report_type, local_day = item
         try:
-            outcome = self._service._send_trip_report_outcome(trip, report_type)
+            # Issue #1725: NICHT direkt `_send_trip_report_outcome` -- der
+            # Wrapper reserviert zuerst den Vermerk (trip_id, ortstag, slot)
+            # und gibt ihn je nach Ausgang frei. Er ist bewusst die EINZIGE
+            # Stelle, die den Vermerk anfasst: die On-Demand-Pfade rufen
+            # weiterhin `_send_trip_report_outcome` und bleiben unberuehrt.
+            outcome = self._service._dispatch_due_item(trip, report_type, local_day)
+            if outcome is None:
+                # Kein Versandversuch (Slot bereits vermerkt oder Sperre nicht
+                # zu bekommen). Weder gesendet noch technisch fehlgeschlagen --
+                # der Wrapper hat den Grund bereits protokolliert.
+                return
             # Issue #1012 (c): "no_weather" (kompletter Ausfall) zaehlt als
             # failed statt sent -- alle anderen Outcomes bleiben sent.
             if outcome == "no_weather":
@@ -107,9 +120,14 @@ class CompareDispatchStrategy:
     def empty_result(self) -> tuple[int, int]:
         return (0, 0)
 
-    def collect_due(self, hour: int) -> list:
-        from datetime import date
+    #: Referenz-Zone des manuellen `?hour=`-Testausloesers
+    #: (`scheduler_dispatch_service.run_compare_presets_daily`) -- reines
+    #: Ops-/Debug-Werkzeug ohne Preset-Bezug. Die FAELLIGKEIT selbst haengt
+    #: seit #1726 an der Ortszone des jeweiligen Presets, nicht mehr hier.
+    MANUAL_TRIGGER_REFERENCE_ZONE = "Europe/Vienna"
 
+    def collect_due(self, now_utc: "datetime") -> list:
+        from app.loader import load_all_locations
         from services.compare_slot_scheduler import presets_due_for_hour
         from services.scheduler_dispatch_service import _load_presets_for_dispatch
 
@@ -117,14 +135,28 @@ class CompareDispatchStrategy:
         if presets is None:
             return []
         self._presets = presets
-        return presets_due_for_hour(presets, hour, date.today())
+        # Issue #1726: jedes Preset wird gegen die Ortszone SEINES ersten
+        # aufloesbaren Orts geprueft -- ein globaler `vor_ort` kann das nicht
+        # abbilden. Ortsliste deshalb vorab laden (bisher lazy) und mitgeben.
+        if self._all_locations is None:
+            self._all_locations = load_all_locations(user_id=self._user_id)
+        by_id = {loc.id: loc for loc in self._all_locations}
+        return presets_due_for_hour(presets, by_id, now_utc)
 
-    def pre_pass(self, hour: int, due: list) -> None:
+    def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1250 Scheibe 3 (AC-10/AC-11/AC-12): Auto-Pause fuer Presets
         # mit ueberschrittenem end_date -- unabhaengig vom Faelligkeits-Slot.
         from services.scheduler_dispatch_service import _auto_pause_expired_presets
 
-        _auto_pause_expired_presets(self._presets, self._user_id, self._data_root)
+        # Issue #1727 S5b: `now_utc` liegt hier bereits als Parameter vor und
+        # die Ortsliste hat `collect_due` schon geladen -- beides wird
+        # durchgereicht, damit der Ablauf gegen den ORTSTAG des Presets
+        # geprueft wird (ADR-0044) statt gegen den Servertag. Keine zweite
+        # Zeitabfrage, kein zweiter Ladevorgang.
+        _auto_pause_expired_presets(
+            self._presets, self._user_id, self._data_root,
+            now_utc, self._all_locations or [],
+        )
 
     def dispatch_one(self, item) -> None:
         from app.loader import load_all_locations
@@ -163,7 +195,7 @@ _STRATEGY = {
 
 
 def run_briefing_dispatch(
-    kind: str, user_id: str, hour: int, data_root: str | None = None,
+    kind: str, user_id: str, now_utc: "datetime", data_root: str | None = None,
     settings: Settings | None = None,
 ):
     """Gemeinsamer Versand-Einstieg fuer Trip (`route`) und Vergleich (`vergleich`).
@@ -191,8 +223,8 @@ def run_briefing_dispatch(
     if strategy.smtp_guard and not settings.can_send_email():
         return strategy.empty_result()
 
-    due = strategy.collect_due(hour)
-    strategy.pre_pass(hour, due)
+    due = strategy.collect_due(now_utc)
+    strategy.pre_pass(now_utc, due)
 
     for i, item in enumerate(due):
         strategy.dispatch_one(item)

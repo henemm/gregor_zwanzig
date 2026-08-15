@@ -38,22 +38,45 @@ data/users/<user_id>/alert_state/
   └── <trip_id>.json
 ```
 
-**Schema:**
+**Schema:** eine Datei, **zwei** Schlüsselräume.
+
 ```json
 {
   "<metric>:<segment_id>": {
     "last_reported_value": 18.5,
     "reported_at": "2026-06-14T13:30:00+00:00"
+  },
+  "official_alert:<ident>:<hazard>:<valid_from>:<valid_to>": {
+    "last_reported_value": 2.0,
+    "reported_at": "2026-08-10T05:01:19+00:00",
+    "valid_from": "2026-08-10T12:00:00+00:00",
+    "valid_to": "2026-08-10T20:00:00+00:00"
   }
 }
 ```
 
-**Re-Alert-Logik:**
+Der zweite Raum gehört den **amtlichen Warnungen** (Präfix-Konstante
+`OFFICIAL_ALERT_KEY_PREFIX`, Schlüsselbildung `official_alert_state_key()` in
+`src/output/renderers/alert/official_alerts.py`). `ident` folgt der Präzedenz
+`dedup_id` > `region_label` > `label`. Die Felder `valid_from`/`valid_to` kamen mit
+**#1685** hinzu; Bestandseinträge ohne sie bleiben gültig (Read-Modify-Write mit Merge)
+und werden dann wie vor #1685 allein über den exakten Schlüsseltreffer bewertet.
+
+**Re-Alert-Logik (Δ-Raum):**
 - **Erste Erkennung:** Eintrag fehlt → Alert send, Eintrag angelegt mit aktuellem Wert.
 - **Stagnation:** `|current - last_reported| < threshold` → unterdrückt (keine E-Mail).
 - **Eskalation:** `|current - last_reported| >= threshold` → erneut Alert, Wert aktualisiert.
 
-**Reset:** Beim Briefing-Versand wird die komplette Datei gelöscht (siehe Punkt 3 unten).
+**Re-Alert-Logik (amtliche Warnungen, #1685):** entscheidet
+`official_alert_revision_verdict()` — geteilt von Trip und Ortsvergleich. Überlappt das
+Gültigkeitsfenster einer Warnung **echt** mit dem eines bereits gemeldeten Eintrags gleicher
+Identität + Gefahr, bleibt sie **still**; Ausnahmen: die Stufe ist gestiegen ODER der Beginn
+liegt **≥ 2 h früher**. Aneinandergrenzende Fenster (A endet 22:00, B beginnt 22:00) gelten
+**nicht** als Überlappung und bleiben zwei Warnungen (#1245 AC-4, dort präzisiert zu „T2
+überlappt T1 nicht"). Bei stiller Revision wird der Eintrag fortgeschrieben — der alte
+Schlüssel entfällt, `reported_at` bleibt das Datum der **tatsächlichen** Meldung.
+
+**Reset:** siehe Punkt 3 — er trifft **nur** den Δ-Raum, nicht die amtlichen Warnungen.
 
 ### 2. Read-Only Briefing-Snapshot
 
@@ -65,11 +88,18 @@ Der Snapshot bleibt stabil bis zum nächsten Briefing (Morgen ODER Abend) — er
 
 ### 3. Reset beim Briefing
 
-**Änderung in `trip_report_scheduler.py` (Z. 628–633):**
-Nach dem `WeatherSnapshotService.save()`-Block wird `AlertStateService.reset(trip_id)` aufgerufen.
-Dies löscht den kompletten Trip-Alert-State — der nächste Alert startet mit leerem Gedächtnis.
+Nach dem `WeatherSnapshotService.save()`-Block wird `AlertStateService.reset(trip_id)`
+aufgerufen — heute über die geteilte Fassung `reset_alert_memory()` in
+`src/services/alert_briefing_anchor.py`, an die der Scheduler nur noch delegiert.
 
-**Effekt:** Nach jedem Briefing endet der "Alert-Zyklus"; die Abweichung wird neu gemessen.
+**Effekt:** Nach jedem Briefing endet der „Alert-Zyklus"; die Abweichung wird neu gemessen.
+
+**🔴 Der Reset löscht NICHT die ganze Datei.** Hier stand bis 2026-08-11 „Dies löscht den
+kompletten Trip-Alert-State" — das ist **seit #1460 (P2) falsch**. `AlertStateService.reset()`
+schneidet am Präfix `official_alert:` und **behält** die amtlichen Warnungen: sie haben ihre
+eigene Entprellung und überleben den Briefing-Versand. Ohne diesen Schnitt galt dieselbe,
+unveränderte amtliche Warnung nach jedem Briefing wieder als „neu" und wurde erneut gemeldet.
+Bleibt nach dem Schnitt kein amtlicher Eintrag übrig, verschwindet die Datei wie bisher ganz.
 
 ### 4. Symmetrische Δ-Erkennung
 
@@ -121,12 +151,19 @@ Betreff: [GR20] Wetter ändert sich seit dem Briefing
 
 Wetter ändert sich seit dem Briefing
 
-Regen      2 → 18 mm     (Etappe 3, km 12–18, 14–16 Uhr)
-Böen      25 → 48 km/h   (Etappe 3, km 12–18, 14–16 Uhr)
-Temp      22 → 16 °C     (Etappe 3, km 18–24, 16–18 Uhr)
+Regen      2 → 18 mm     (Segment 3, 14–16 Uhr)
+Böen      25 → 48 km/h   (Segment 3, 14–16 Uhr)
+Temp      22 → 16 °C     (Segment 4, 16–18 Uhr)
 
 Stand: heute 13:30 · verglichen mit dem letzten Briefing
 ```
+
+> **Hinweis (#1744 A1, 2026-08-12):** Der Ortsbezug lautet seit dieser Änderung
+> `Segment N` bzw. `🏁 Ziel` statt einer km-Spanne — dieselbe Sprache, die die
+> amtliche Warnung spricht; die km-Spanne bleibt der Rückfall für Etappen ohne
+> Kennung. Die obige Beispiel-Mail ist im Übrigen eine **Entwurfsskizze aus #816**
+> und bildet den heutigen Renderer nicht zeilengetreu ab (real: Datenzeilen mit
+> „Wo & wann"). Maßgeblich ist der Renderer, nicht diese Skizze.
 
 **km-Erweiterung:** `build_segment_label()` in `helpers.py` wird um km erweitert:
 - Neu: `"Etappe N, km X–Y, HH:MM–HH:MM"`

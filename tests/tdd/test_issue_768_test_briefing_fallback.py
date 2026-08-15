@@ -27,7 +27,7 @@ import imaplib
 import json
 import time
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -151,7 +151,9 @@ class TestAC5FallbackStageSelection:
         user_id, trip_id, future = future_only_trip
         trip = _load_trip(user_id, trip_id)
         service = TripReportSchedulerService(user_id=user_id)
-        stage = service.select_test_stage(trip, "morning")
+        stage = service.select_test_stage(
+            trip, "morning", now_utc=datetime.now(timezone.utc),
+        )
         assert stage is not None, "Fallback muss eine Etappe liefern, nicht None"
         assert stage.date.isoformat() == future, (
             f"Erwartet künftige Etappe {future}, bekommen {stage.date}"
@@ -167,7 +169,9 @@ class TestAC5FallbackStageSelection:
         user_id, trip_id, nearest = multi_future_trip
         trip = _load_trip(user_id, trip_id)
         service = TripReportSchedulerService(user_id=user_id)
-        stage = service.select_test_stage(trip, "evening")
+        stage = service.select_test_stage(
+            trip, "evening", now_utc=datetime.now(timezone.utc),
+        )
         assert stage is not None and stage.date.isoformat() == nearest, (
             f"Erwartet nächste kommende Etappe {nearest}, bekommen "
             f"{getattr(stage, 'date', None)}"
@@ -183,7 +187,9 @@ class TestAC5FallbackStageSelection:
         user_id, trip_id, earliest = past_only_trip
         trip = _load_trip(user_id, trip_id)
         service = TripReportSchedulerService(user_id=user_id)
-        stage = service.select_test_stage(trip, "morning")
+        stage = service.select_test_stage(
+            trip, "morning", now_utc=datetime.now(timezone.utc),
+        )
         assert stage is not None and stage.date.isoformat() == earliest, (
             f"Erwartet früheste Etappe {earliest}, bekommen "
             f"{getattr(stage, 'date', None)}"
@@ -251,8 +257,13 @@ class TestAC8TenantIsolation:
         from services.trip_report_scheduler import TripReportSchedulerService
         ua, ta, fa = future_only_trip
         ub, tb, fb = multi_future_trip
-        sa = TripReportSchedulerService(user_id=ua).select_test_stage(_load_trip(ua, ta), "morning")
-        sb = TripReportSchedulerService(user_id=ub).select_test_stage(_load_trip(ub, tb), "morning")
+        jetzt = datetime.now(timezone.utc)
+        sa = TripReportSchedulerService(user_id=ua).select_test_stage(
+            _load_trip(ua, ta), "morning", now_utc=jetzt,
+        )
+        sb = TripReportSchedulerService(user_id=ub).select_test_stage(
+            _load_trip(ub, tb), "morning", now_utc=jetzt,
+        )
         assert sa.date.isoformat() == fa, f"Nutzer A: erwartet {fa}, bekommen {sa.date}"
         assert sb.date.isoformat() == fb, f"Nutzer B: erwartet {fb}, bekommen {sb.date}"
 

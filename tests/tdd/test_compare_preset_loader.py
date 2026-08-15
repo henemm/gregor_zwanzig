@@ -39,6 +39,7 @@ from app.loader import (
 )
 from app.models import ComparePreset
 from services.compare_slot_scheduler import presets_due_for_hour
+from tests.helpers.compare_slot_time import utc_moment
 from services.scheduler_dispatch_service import (
     run_compare_presets_daily,
     save_compare_preset_status,
@@ -226,14 +227,14 @@ def test_ac5_presets_due_for_hour_identical_via_raw_dict_and_new_loader(tmp_path
     # Alter Pfad: rohes json.loads, wie es die 5 Call-Sites bisher taten.
     # _write_presets liefert das briefings/-Verzeichnis -> user_dir ist dessen Elternteil.
     raw_presets = read_compare_briefings(path.parent)
-    due_old = presets_due_for_hour(raw_presets, hour, today)
+    due_old = presets_due_for_hour(raw_presets, {}, utc_moment(today, hour))
 
     # Neuer Pfad: zentraler Loader + Dataclass -> Dict-Form via dem
     # produktiv genutzten compare_preset_to_dict() fuer die bestehende
     # reine Funktion presets_due_for_hour.
     loaded = load_compare_presets(user_id="testuser", data_root=str(data_root))
     due_new = presets_due_for_hour(
-        [compare_preset_to_dict(p) for p in loaded], hour, today
+        [compare_preset_to_dict(p) for p in loaded], {}, utc_moment(today, hour)
     )
 
     # Issue #1661 (Adversary-Finding F003): `presets_due_for_hour` liefert

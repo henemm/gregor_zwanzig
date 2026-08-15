@@ -23,7 +23,12 @@ def trigger_radar_alert(user_id: str = "default"):
     Ablauf (analog check_radar_alerts(), ohne Throttle-Check):
     1. Staging-Guard (GZ_ENV=staging) -> sonst 404.
     2. Trips fuer user_id laden.
-    3. Ersten Trip + Segment ableiten.
+    3. Ersten Trip + Segment ableiten — eigene Kopie der Basisregel (nur
+       heutiges Datum, aktives-oder-erstes Segment), KEIN Vortags-Rueckgriff.
+       Anders als `TripAlertService.check_radar_alerts()` seit Issue #1667 S3
+       geht diese Debug-Route NICHT ueber `resolve_current_segment` — eine
+       Etappe mit Ankunft nach Mitternacht, die nur gestern eine aktive
+       Etappe hatte, liefert hier `no_segment` statt eines Segments.
     4. Nowcast-Ergebnis als deterministisches Fixture injizieren (source="test") —
        KEIN echter Quellen-Abruf (#1190): geprueft wird nur die Alarm-Mechanik
        (Throttle/Mail-Format/Cooldown), nicht die Provider-Kette. Fuer
@@ -32,7 +37,7 @@ def trigger_radar_alert(user_id: str = "default"):
     6. Kein radar_alert_due()-Check, kein Throttle-Eintrag (Test-Seam).
     """
     import sys
-    from datetime import date as date_type, datetime, timedelta, timezone
+    from datetime import datetime, timedelta, timezone
     from pathlib import Path
     from types import SimpleNamespace
 
@@ -50,6 +55,7 @@ def trigger_radar_alert(user_id: str = "default"):
     from app.loader import load_all_trips
     from services.radar_alert_service import build_onset_alert_message, send_radar_alert_email
     from services.radar_service import RadarNowcastService
+    from services.trip_day import trip_local_today
     from services.trip_segments import convert_trip_to_segments
     from utils.timezone import tz_for_coords
 
@@ -58,8 +64,8 @@ def trigger_radar_alert(user_id: str = "default"):
         return JSONResponse({"status": "no_trips"})
 
     trip = trips[0]
-    today = date_type.today()
     now_utc = datetime.now(timezone.utc)
+    today = trip_local_today(trip, now_utc)
     segments = convert_trip_to_segments(trip, today)
     # Fallback: Trip-Etappen liegen evtl. in der Vergangenheit (Staging-Testdaten).
     # Debug-Seam nutzt einfach die erste Etappe des Trips, egal welches Datum.

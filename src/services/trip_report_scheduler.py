@@ -12,10 +12,11 @@ import dataclasses
 import json
 import logging
 import os
+import threading
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -36,6 +37,7 @@ from services.alert_briefing_anchor import (
     reset_alert_memory,
     write_anchor_and_reset_memory,
 )
+from services.briefing_slots import BriefingSlotStore
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
 from services.user_tier import premium_sms_allowed, sms_allowed
@@ -50,6 +52,20 @@ if TYPE_CHECKING:
 # vermeiden. Hinweis: `time` ist hier die datetime.time-Klasse — der echte
 # Zeit-Modul wird als `time_module` importiert.
 INTER_MAIL_DELAY_SECONDS = 2
+
+
+class OnDemandErgebnis(NamedTuple):
+    """Fix #1795 AC-7: Rückgabetyp von ``send_on_demand_report`` — ein bloßer
+    Outcome-String (die frühere ``-> bool``-Annotation war seit #1007 ohnehin
+    falsch) reicht dem Aufrufer nicht, WELCHER Ortstag tatsächlich benutzt
+    wurde (``_send_trip_report_outcome`` löst ihn intern über
+    ``datetime.now(timezone.utc)`` zum Ausführungs-, nicht Empfangszeitpunkt
+    auf). Ein NamedTuple ist nicht ``True`` und fällt in einem Normalisierer,
+    der noch mit dem alten bool/str rechnet, laut in den else-Zweig — eine
+    vergessene Migrationsstelle wird sichtbar rot, nicht still falsch.
+    """
+    outcome: str
+    zieltag: date
 
 # Issue #1113: >75 % fehlende Segmente -> Guard wie Totalausfall (#1012);
 # Retry-Budget pro Segment bei transienten Fetch-Fehlern (1s/2s Backoff).
@@ -68,6 +84,27 @@ _TRANSIENT_FETCH_ERROR_MARKERS = (
     "502", "503", "504", "timeout", "timed out", "overloaded",
 )
 
+# Issue #1725: Ausgaenge, die den Slot fuer diesen Ortstag abschliessen.
+# `channels_unreachable` fehlt bewusst -- dort hat per Definition
+# (`sent = bool(sent_channels)`) niemand etwas bekommen, das ist der einzige
+# beabsichtigte Nachholfall. `no_weather` steht dagegen drin: ohne Vermerk
+# gaebe es eine stuendliche "keine Daten"-Mail plus stuendlichen vollen
+# Wetterabruf gegen das Kontingent (#1329), waehrend der #1012-Pending-Marker
+# die Nachlieferung bereits abdeckt.
+VERMERK_AUSGAENGE = frozenset({"sent", "no_stage", "no_weather", "no_channels"})
+
+# Issue #1725: Breite des Faelligkeitsfensters in Ortsstunden.
+# `konfigurierte_stunde <= ortsstunde < konfigurierte_stunde + 3`. Drei
+# Stunden decken den an Umstellungstagen ausfallenden Cron-Tick (1 Stunde,
+# `robfig/cron/v3`) mit Reserve fuer einen gescheiterten, nicht wiederholten
+# HTTP-Post (`scheduler.triggerEndpointForUser`). Eine Deckelung am Tagesende ist nicht
+# noetig: fuer Slot 22 sind es die Ortsstunden 22 und 23, ab Ortsmitternacht
+# wechselt der Ortstag und `0 >= 22` ist falsch. Die Alternative „bis
+# Tagesende" wurde verworfen, weil sie neu angelegte oder aus `paused_until`
+# zurueckkehrende Trips RUECKWIRKEND feuern liesse (AC-10) --
+# `_get_active_trips` prueft nur die Etappe, nicht das Anlagedatum.
+NACHHOL_FENSTER_STUNDEN = 3
+
 
 def _is_transient_fetch_error(exc: Exception) -> bool:
     status_code = getattr(exc, "status_code", None)
@@ -81,6 +118,87 @@ def _is_transient_fetch_error(exc: Exception) -> bool:
     return any(marker in message for marker in _TRANSIENT_FETCH_ERROR_MARKERS)
 
 logger = logging.getLogger("trip_report_scheduler")
+
+
+def _slot_stunde(trip: "Trip", report_type: str) -> int:
+    """Konfigurierte Ortsstunde eines Slots — EINE Fassung fuer den Sammellauf
+    und fuer das Faelligkeits-Praedikat (#1594)."""
+    rc = trip.report_config
+    zeit = None
+    if rc is not None:
+        zeit = rc.morning_time if report_type == "morning" else rc.evening_time
+    if zeit is not None:
+        return zeit.hour
+    return 7 if report_type == "morning" else 18
+
+
+def trip_briefing_due_at(
+    trip: "Trip", moment: datetime, *, user_id: str,
+) -> bool:
+    """Ist fuer diesen Trip zum Zeitpunkt ``moment`` ein geplantes Briefing
+    faellig? — das REINE Faelligkeits-Praedikat (Issue #1594).
+
+    Beantwortet dieselbe Frage wie :meth:`TripReportSchedulerService._collect_due_trips`
+    (Aktiv-Filter + Faelligkeits-Fenster + Vermerk), aber SEITENEFFEKTFREI und
+    fuer EINEN Trip: kein `save_trip()`, kein Versand, keine Reservierung.
+
+    🔴 Ohne den ``skip_next``-Zweig aus ``_get_active_trips()``: der konsumiert
+    das Nutzer-Kennzeichen „naechstes Briefing ueberspringen" per
+    Read-Modify-Write MIT ``save_trip()`` bei JEDEM Aufruf. Wuerde die
+    Vorlauf-Sperre jene Methode mitbenutzen, verbrauchte sie den Wunsch im
+    15-Minuten-Alarmtakt, bevor der Briefing-Scheduler ihn je saehe — das
+    Briefing kaeme trotzdem. Fuer die Faelligkeit ist der Unterschied
+    folgenlos: ein uebersprungenes Briefing bleibt ein geplantes Briefing.
+
+    Alle uebrigen Aktiv-Filter sind zwingend enthalten (AC-8): Etappe am
+    Zieltag, ``paused_at``, ``report_config.enabled``, ``paused_until``. Fehlt
+    einer, schwiege der Alarm fuer einen Trip OHNE geplantes Briefing — ohne
+    Ersatz, also verschluckt statt ersetzt (Fehlerklasse #1555/#1584).
+
+    Args:
+        trip: der Trip.
+        moment: Zeitpunkt (UTC), gegen den geprueft wird — die Vorlauf-Sperre
+            wertet dasselbe Praedikat auch gegen spaetere Zeitpunkte aus.
+        user_id: echte Nutzer-Kennung (Mandantentrennung, nie ``"default"``) —
+            traegt den Vermerk-Speicher.
+    """
+    from services.trip_day import trip_local_now
+
+    if trip.paused_at is not None:
+        return False
+    rc = trip.report_config
+    if rc is not None:
+        if rc.enabled is False:
+            return False
+        if rc.paused_until is not None:
+            pu = rc.paused_until
+            if pu.tzinfo is None:
+                pu = pu.replace(tzinfo=timezone.utc)
+            if moment < pu:
+                return False
+
+    vor_ort = trip_local_now(trip, moment)
+    store = BriefingSlotStore(user_id)
+    for report_type, zieltag in (
+        ("morning", vor_ort.date()),
+        ("evening", vor_ort.date() + timedelta(days=1)),
+    ):
+        if trip.get_stage_for_date(zieltag) is None:
+            continue
+        stunde = _slot_stunde(trip, report_type)
+        if not stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN:
+            continue
+        # Der Vermerk beendet das Nachhol-Fenster, sobald das Briefing raus
+        # ist — sonst schwiege der Alarm bis zu drei Stunden nach einem
+        # bereits zugestellten Briefing. Nach einem GESCHEITERTEN Versand
+        # traegt er nicht (reserve-then-release, `:565-571`); dort endet die
+        # Sperre ueber den Briefing-Anker (`check_briefing_imminent`, R6).
+        if store.is_recorded(
+            trip.id, report_type, vor_ort.date(), zone=vor_ort.tzinfo,
+        ):
+            continue
+        return True
+    return False
 
 
 def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
@@ -240,6 +358,30 @@ def record_corrupt_trip_observability(
     )
 
 
+# Issue #1756: In-Process-Lock gegen doppelten manuellen Trip-Versand.
+# Modul-Ebene (nicht instanz-gebunden): pro Request entsteht eine neue
+# TripReportSchedulerService-Instanz (api/routers/scheduler.py), ein
+# Instanzattribut würde daher nie mit sich selbst kollidieren. Wirkt nur
+# innerhalb eines Systemd-Prozesses (siehe Spec „Known Limitations").
+_send_locks: Dict[Tuple[str, str, str], bool] = {}
+_send_locks_guard = threading.Lock()
+
+
+def _try_acquire_send_lock(user_id: str, trip_id: str, report_type: str) -> bool:
+    key = (user_id, trip_id, report_type)
+    with _send_locks_guard:
+        if _send_locks.get(key):
+            return False
+        _send_locks[key] = True
+        return True
+
+
+def _release_send_lock(user_id: str, trip_id: str, report_type: str) -> None:
+    key = (user_id, trip_id, report_type)
+    with _send_locks_guard:
+        _send_locks.pop(key, None)
+
+
 class TripReportSchedulerService:
     """
     Service for scheduled trip weather reports.
@@ -278,7 +420,10 @@ class TripReportSchedulerService:
             logger.error("SMTP not configured, cannot send trip reports")
             return 0
 
-        active_trips = self._get_active_trips(report_type)
+        # Issue #1724 AC-9: EIN "Jetzt" fuer den ganzen Lauf -- kein Trip
+        # darf eine andere Sekunde sehen als der naechste.
+        now_utc = datetime.now(timezone.utc)
+        active_trips = self._get_active_trips(report_type, now_utc)
         logger.info(f"Found {len(active_trips)} active trips for {report_type} reports")
 
         sent_count = 0
@@ -296,12 +441,18 @@ class TripReportSchedulerService:
         logger.info(f"Sent {sent_count}/{len(active_trips)} {report_type} reports")
         return sent_count
 
-    def send_reports_for_hour(self, current_hour: int) -> Tuple[int, int]:
+    def send_due_reports(self, now_utc: datetime) -> Tuple[int, int]:
         """
-        Send reports for trips whose configured time matches current_hour.
+        Send reports for trips whose configured time matches their LOCAL hour.
 
         Called hourly by the scheduler. Checks both morning and evening
-        times per trip against the current hour.
+        times per trip against the hour in that trip's own timezone.
+
+        Issue #1724: hiess bis dahin `send_reports_for_hour(current_hour)` und
+        bekam eine in `Europe/Vienna` vorberechnete Stunde. Der Name war Teil
+        des Fehlers -- "die Stunde" gibt es nicht, es gibt nur die Stunde
+        EINER Zone. Uebergeben wird jetzt der Zeitpunkt; die Stunde entsteht je
+        Trip (ADR-0051 Regel 2).
 
         Issue #766: Sammelt alle fälligen Mails, sendet sie mit 2s Pause
         zwischen aufeinanderfolgenden Versendungen (Rate-Limit-Schutz) und
@@ -319,7 +470,7 @@ class TripReportSchedulerService:
         so nicht mehr stillschweigend verworfen.
 
         Args:
-            current_hour: Current hour (0-23) in Europe/Vienna
+            now_utc: Zeitpunkt des Laufs (zeitzonenbehaftet, UTC).
 
         Returns:
             Tuple (sent, failed): Anzahl erfolgreich versendeter und
@@ -339,27 +490,115 @@ class TripReportSchedulerService:
         from services.dispatch_orchestrator import run_briefing_dispatch
 
         return run_briefing_dispatch(
-            "route", self._user_id, current_hour, settings=self._settings,
+            "route", self._user_id, now_utc, settings=self._settings,
         )
 
-    def _collect_due_trips(self, current_hour: int) -> List[Tuple["Trip", str]]:
-        """Sammelt alle (trip, report_type)-Paare, die zur gegebenen Stunde fällig sind.
+    def _collect_due_trips(self, now_utc: datetime) -> List[Tuple["Trip", str, date]]:
+        """Sammelt alle (trip, report_type, ortstag)-Tripel, die JETZT fällig sind.
 
-        Issue #1207: Extrahiert aus `send_reports_for_hour` fuer Delegation
-        durch `TripDispatchStrategy.collect_due()` -- Morgen- UND
-        Abend-Fälligkeit werden VOR dem Versand gesammelt, damit das
-        Inter-Mail-Delay über beide Slots hinweg greift.
+        Issue #1207: Extrahiert aus dem Sendelauf fuer Delegation durch
+        `TripDispatchStrategy.collect_due()` -- Morgen- UND Abend-Fälligkeit
+        werden VOR dem Versand gesammelt, damit das Inter-Mail-Delay über
+        beide Slots hinweg greift.
+
+        Issue #1724 (ADR-0051 Regel 2): der Parameter ist ein ZEITPUNKT, keine
+        vorberechnete Stunde. Eine Stunde traegt immer die Zone dessen, der sie
+        ausgerechnet hat -- frueher `Europe/Vienna`, eine Konstante ohne
+        fachliche Herleitung. Die Stunde entsteht jetzt je Trip aus DESSEN
+        Ortszeit, damit ein auf 07:00 gestelltes Briefing ueberall um 07:00
+        Ortszeit ankommt statt um 17:00 (Auckland) oder 22:00 des Vortages
+        (PCT).
+
+        Issue #1725: Faelligkeit ist ein FENSTER, keine Stundengleichheit --
+        `konfigurierte_stunde <= ortsstunde < konfigurierte_stunde +
+        NACHHOL_FENSTER_STUNDEN`, kombiniert mit dem Vermerk-Filter unten.
+        Ein Ortstag hat nicht immer 24 Stunden: am Fruehjahrs-Umstellungstag
+        fehlt eine Ortsstunde ersatzlos (ein auf 02:00 gestelltes Briefing
+        entfiel), am Herbsttag existiert sie zweimal (es ging zweimal raus).
+        Das Fenster faengt zusaetzlich den Cron-Tick auf, der an genau diesen
+        Tagen weltweit fuer ALLE Nutzer ausfaellt (`cron.New(cron.WithLocation)`
+        in `internal/scheduler/scheduler.go`, Verhalten von `robfig/cron/v3`).
+        Erst der Vermerk macht das Fenster gefahrlos -- ohne ihn waere `>=`
+        stuendlicher Serienversand.
+
+        Drittes Element ist der ORTSTAG DES LAUFS -- zusammen mit
+        Trip-Kennung und Slot der Idempotenz-Schluessel. Ausdruecklich NICHT
+        `target_date`: das Abend-Briefing berichtet ueber morgen, gehoert aber
+        zum heutigen Slot. Ortstag und Ortsstunde entstehen aus EINER
+        Zonen-Aufloesung (`trip_local_now`) -- zwei koennen an der Tagesgrenze
+        auseinanderfallen (#1697).
+
+        Der Vermerk-Filter sitzt HIER und nicht erst im Versand (Pruefort =
+        Wirkort): `_process_pending_markers` raeumt den #1012-Nachliefer-Marker
+        weg, sobald der Trip in `due_trip_ids_now` steht -- eine unehrlich
+        lange Liste legte den Nachliefermechanismus lautlos still. Und er sitzt
+        NACH `_get_active_trips`, weil dort `skip_next` bei jedem Sammellauf
+        konsumiert wird (RMW auf `report_config`), unabhaengig von der
+        Faelligkeit.
         """
-        due: List[Tuple["Trip", str]] = []
-        for trip in self._get_active_trips("morning"):
-            if self._get_morning_hour(trip) == current_hour:
-                due.append((trip, "morning"))
-        for trip in self._get_active_trips("evening"):
-            if self._get_evening_hour(trip) == current_hour:
-                due.append((trip, "evening"))
+        from services.trip_day import trip_local_now
+
+        store = BriefingSlotStore(self._user_id)
+        due: List[Tuple["Trip", str, date]] = []
+        for report_type, slot_stunde in (
+            ("morning", self._get_morning_hour),
+            ("evening", self._get_evening_hour),
+        ):
+            for trip in self._get_active_trips(report_type, now_utc):
+                vor_ort = trip_local_now(trip, now_utc)
+                stunde = slot_stunde(trip)
+                if not stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN:
+                    continue
+                ortstag = vor_ort.date()
+                if store.is_recorded(
+                    trip.id, report_type, ortstag, zone=vor_ort.tzinfo,
+                ):
+                    continue
+                due.append((trip, report_type, ortstag))
         return due
 
-    def _process_pending_markers(self, current_hour: int, due_trip_ids_now: set) -> int:
+    def _dispatch_due_item(
+        self, trip: "Trip", report_type: str, local_day: date,
+    ) -> Optional[str]:
+        """Versand EINES faelligen Slots, abgesichert durch den Vermerk (#1725).
+
+        Reserve-then-release: der Vermerk entsteht VOR dem Versandversuch und
+        wird nur bei `channels_unreachable` oder einer Ausnahme wieder
+        zurueckgenommen. Stirbt der Prozess mitten im Versand, bleibt er
+        stehen -- nie doppelt, im schlimmsten Fall ein ausgelassener Slot.
+
+        Ausschliesslich `TripDispatchStrategy.dispatch_one` ruft diese Methode.
+        Dadurch bleiben die On-Demand-Pfade (Test-Knopf, Inbound-Kommandos,
+        Legacy-CLI) vom Vermerk unberuehrt, ohne dass ein zusaetzliches Flag
+        noetig waere (AC-12) -- sie rufen `_send_trip_report_outcome` direkt.
+
+        Returns:
+            Den Ausgang des Versandversuchs -- oder `None`, wenn gar keiner
+            stattfand (Slot bereits vermerkt oder Sperre nicht zu bekommen,
+            fail-closed, AC-13). Eine Ausnahme aus dem Versand wird nach dem
+            `release` WEITERGEREICHT, nicht geschluckt.
+        """
+        from services.trip_day import trip_tz
+
+        store = BriefingSlotStore(self._user_id)
+        if not store.reserve(trip.id, report_type, local_day, zone=trip_tz(trip)):
+            logger.warning(
+                "Slot %s/%s am %s nicht reservierbar -- kein Versandversuch",
+                trip.id, report_type, local_day,
+            )
+            return None
+        try:
+            outcome = self._send_trip_report_outcome(trip, report_type)
+        except Exception:
+            store.release(trip.id, report_type, local_day)
+            raise
+        if outcome in VERMERK_AUSGAENGE:
+            store.record_outcome(trip.id, report_type, local_day, outcome)
+        else:
+            store.release(trip.id, report_type, local_day)
+        return outcome
+
+    def _process_pending_markers(self, now_utc: datetime, due_trip_ids_now: set) -> int:
         """Issue #1012 (b2): Verarbeitet offene Nachliefer-Marker VOR den
         regulären Slots. Für jeden Marker:
         - Trip regulär JETZT fällig (beliebiger report_type) -> Marker
@@ -402,7 +641,17 @@ class TripReportSchedulerService:
             # Issue #1662 AC-4: Verfall ueber den Zieltag (geteilte, reine
             # Entscheidungsfunktion) — ein Morgen-Briefing von gestern ist
             # heute wertlos und wird nicht mehr zugestellt.
-            if is_dispatch_error and not briefing_target_day_is_current(entry.get("date")):
+            # Issue #1727 S5b (ADR-0044): der Vergleichstag ist der ORTSTAG
+            # DIESER Tour und kommt von hier — `now_utc` liegt als Parameter
+            # vor, `trip` steht im Zugriff. Vorher loeste die Funktion still
+            # `date.today()` auf: im Mismatch-Fenster verfiel der Vermerk einen
+            # Tag zu frueh (Briefing nie nachgeliefert) oder wurde einen Tag zu
+            # lange weitergeschleppt.
+            from services.trip_day import trip_local_today
+
+            if is_dispatch_error and not briefing_target_day_is_current(
+                entry.get("date"), today=trip_local_today(trip, now_utc),
+            ):
                 self._remove_pending_marker(trip_id)
                 continue
 
@@ -589,36 +838,45 @@ class TripReportSchedulerService:
         _write_pending_data(path, data)
 
     def _get_morning_hour(self, trip: "Trip") -> int:
-        """Get configured morning hour for trip (default: 7)."""
-        if trip.report_config and trip.report_config.morning_time:
-            return trip.report_config.morning_time.hour
-        return 7
+        """Get configured morning hour for trip (default: 7).
+
+        Issue #1594: die Regel steht in `_slot_stunde()` — dieselbe Fassung,
+        die das Faelligkeits-Praedikat der Vorlauf-Sperre benutzt.
+        """
+        return _slot_stunde(trip, "morning")
 
     def _get_evening_hour(self, trip: "Trip") -> int:
-        """Get configured evening hour for trip (default: 18)."""
-        if trip.report_config and trip.report_config.evening_time:
-            return trip.report_config.evening_time.hour
-        return 18
+        """Get configured evening hour for trip (default: 18). S. oben."""
+        return _slot_stunde(trip, "evening")
 
-    def _get_active_trips(self, report_type: str) -> List["Trip"]:
+    def _get_active_trips(self, report_type: str, now_utc: datetime) -> List["Trip"]:
         """
         Get trips that are active for the given report type.
 
         - morning: Trips with a stage for today
         - evening: Trips with a stage for tomorrow
 
+        Issue #1724: "heute" ist der ORTStag DIESES Trips (ADR-0044), nicht
+        das Datum der Serveruhr. Der Zieltag wird deshalb IN der Schleife je
+        Trip bestimmt -- vorher stand er davor und galt fuer alle gleich. In
+        Auckland lag er dadurch bis zu zwoelf Stunden am Tag daneben, und
+        `get_stage_for_date` vergleicht strikt: kein Treffer heisst, der Trip
+        wird still uebersprungen.
+
         Args:
             report_type: "morning" or "evening"
+            now_utc: Zeitpunkt des Laufs. Pflichtparameter -- ein Default auf
+                die Systemuhr wuerde genau die Umgebungsuhr wieder einfuehren,
+                die ADR-0051 Regel 3 verbietet.
 
         Returns:
             List of active Trip objects
         """
         all_trips = load_all_trips(user_id=self._user_id)
-        target_date = self._get_target_date(report_type)
-        now_utc = datetime.now(timezone.utc)
 
         active = []
         for trip in all_trips:
+            target_date = self._get_target_date(report_type, trip, now_utc)
             if trip.get_stage_for_date(target_date) is None:
                 continue
             # Issue #995: Trip-Detail-Pause-Button (Go-Feld paused_at) unterdrückt
@@ -647,20 +905,30 @@ class TripReportSchedulerService:
                     continue
             active.append(trip)
 
-        logger.debug(f"Active trips for {target_date}: {[t.id for t in active]}")
+        logger.debug(f"Active trips ({report_type}): {[t.id for t in active]}")
         return active
 
-    def _get_target_date(self, report_type: str) -> date:
+    def _get_target_date(self, report_type: str, trip: "Trip", now_utc: datetime) -> date:
         """
         Get the target date for the report type.
 
+        Issue #1724 (ADR-0044): "heute" ist der Ortstag DIESES Trips. Vorher
+        stand hier `date.today()` -- das Datum der Prozess-Zeitzone, auf dem
+        Server `Etc/UTC`. Das war der in #1697 ausdruecklich offen gelassene
+        Briefing-Pfad.
+
         Args:
             report_type: "morning" or "evening"
+            trip: Trip, dessen Ortszeit den Kalendertag bestimmt
+            now_utc: Zeitpunkt des Laufs (Pflichtparameter, s.
+                `_get_active_trips`)
 
         Returns:
-            date object (today for morning, tomorrow for evening)
+            date object (Ortstag fuer morning, Ortstag+1 fuer evening)
         """
-        today = date.today()
+        from services.trip_day import trip_local_today
+
+        today = trip_local_today(trip, now_utc)
         if report_type == "morning":
             return today
         else:  # evening
@@ -694,7 +962,9 @@ class TripReportSchedulerService:
             "max_elevation_m": max_elev,
         }
 
-    def select_test_stage(self, trip: "Trip", report_type: str) -> Optional["Stage"]:
+    def select_test_stage(
+        self, trip: "Trip", report_type: str, now_utc: datetime,
+    ) -> Optional["Stage"]:
         """Pick the stage to use for a TEST briefing when no stage matches today/tomorrow.
 
         Issue #768 — Test-Pfad-Fallback (NICHT der reguläre Scheduler):
@@ -706,17 +976,27 @@ class TripReportSchedulerService:
           **erste** (früheste) Etappe zurück.
         - Leere ``stages`` → ``None``.
 
+        Issue #1727 S5b (ADR-0044): „heute" ist der Ortstag DIESES Trips, nicht
+        der Tag der Prozess-Zeitzone (auf dem Server `Etc/UTC`). Sonst zaehlte
+        eine ortszeitlich bereits vergangene Etappe noch als „kommend" — der
+        Test-Versand nahm die falsche Etappe. `now_utc` ist Pflichtparameter
+        (ADR-0051 Regel 3): der Zeitpunkt kommt vom Aufrufer, damit der ganze
+        Briefing-Aufbau auf EINER Zeitabfrage steht.
+
         Args:
             trip: Trip object.
             report_type: "morning" or "evening" (nicht ausschlaggebend für die Wahl,
                 Teil des Kontrakts für Aufrufer-Symmetrie).
+            now_utc: Zeitpunkt des Laufs (Pflichtparameter, s. `_get_target_date`).
 
         Returns:
             Die gewählte Stage oder None bei leeren stages.
         """
+        from services.trip_day import trip_local_today
+
         if not trip.stages:
             return None
-        today = date.today()
+        today = trip_local_today(trip, now_utc)
         upcoming = sorted(
             (s for s in trip.stages if s.date >= today),
             key=lambda s: s.date,
@@ -747,7 +1027,11 @@ class TripReportSchedulerService:
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
-        return self._send_trip_report(trip, report_type, allow_test_fallback=True)
+        # Issue #1725 (Adversary F006): `angefordert=True` — dieser Weg traegt
+        # das Inbound-Kommando „report" (`trip_command_processor._trigger_report`).
+        return self._send_trip_report(
+            trip, report_type, allow_test_fallback=True, angefordert=True,
+        )
 
     def send_test_report_outcome(self, trip: "Trip", report_type: str) -> str:
         """
@@ -771,9 +1055,19 @@ class TripReportSchedulerService:
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
-        return self._send_trip_report_outcome(trip, report_type, allow_test_fallback=True)
+        # Issue #1756: Idempotenz-Lock gegen doppelten Versand bei erneutem Klick.
+        if not _try_acquire_send_lock(self._user_id, trip.id, report_type):
+            return "already_in_progress"
+        try:
+            # Issue #1725 (Adversary F006): `angefordert=True` — dieser Weg traegt
+            # den Test-Versand-Knopf (`api/routers/scheduler.send_test_trip_report`).
+            return self._send_trip_report_outcome(
+                trip, report_type, allow_test_fallback=True, angefordert=True,
+            )
+        finally:
+            _release_send_lock(self._user_id, trip.id, report_type)
 
-    def send_on_demand_report(self, trip: "Trip", report_type: str) -> bool:
+    def send_on_demand_report(self, trip: "Trip", report_type: str) -> OnDemandErgebnis:
         """
         Send an on-demand full briefing triggered by an inbound heute/morgen command.
 
@@ -782,20 +1076,40 @@ class TripReportSchedulerService:
         Zieltag keine Etappe liegt) und OHNE „[TEST]"-Präfix — stattdessen eine
         dezente „auf Anfrage"-Kennzeichnung im Mail-Body.
 
+        Fix #1795 AC-7: der Zieltag wird HIER einmal aufgelöst (Ortstag, s.
+        `_get_target_date`) und an `_send_trip_report_outcome` durchgereicht
+        — derselbe Wert kommt im Rückgabe-`zieltag` an, statt dass ein
+        Aufrufer ihn ein zweites Mal aus `received_at` raten muss (Nebengewinn:
+        `_trigger_on_demand` verliert dadurch seinen eigenen `target_date`-
+        Parameter).
+
         Args:
             trip: Trip object
             report_type: "morning" (heute) or "evening" (morgen)
 
         Returns:
-            Outcome string: "sent" | "no_stage" | "no_weather" | "no_channels" |
-            "channels_unreachable"
-            (Issue #1007 Adversary-Fix F001/F002 — Outcome-Unterscheidung statt
-            eines bloßen bool, damit der Aufrufer "keine Etappe" von "keine
-            Wetterdaten" und von "kein Kanal aktiv" unterscheiden kann).
+            OnDemandErgebnis(outcome, zieltag) — outcome: "sent" | "no_stage" |
+            "no_weather" | "no_channels" | "channels_unreachable" (Issue #1007
+            Adversary-Fix F001/F002 — Outcome-Unterscheidung statt eines
+            bloßen bool, damit der Aufrufer "keine Etappe" von "keine
+            Wetterdaten" und von "kein Kanal aktiv" unterscheiden kann);
+            zieltag: der TATSAECHLICH benutzte Ortstag.
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
-        return self._send_trip_report_outcome(trip, report_type, on_demand=True)
+        zieltag = self._get_target_date(report_type, trip, datetime.now(timezone.utc))
+        # Issue #1756: geteilter Lock-Key-Raum mit send_test_report_outcome().
+        if not _try_acquire_send_lock(self._user_id, trip.id, report_type):
+            return OnDemandErgebnis(outcome="already_in_progress", zieltag=zieltag)
+        try:
+            # Issue #1725: `angefordert=True` NEBEN `on_demand=True` — die beiden
+            # bedeuten Verschiedenes, siehe `_send_trip_report_outcome`.
+            outcome = self._send_trip_report_outcome(
+                trip, report_type, on_demand=True, angefordert=True, target_date=zieltag,
+            )
+        finally:
+            _release_send_lock(self._user_id, trip.id, report_type)
+        return OnDemandErgebnis(outcome=outcome, zieltag=zieltag)
 
     def _send_trip_report(
         self,
@@ -803,6 +1117,7 @@ class TripReportSchedulerService:
         report_type: str,
         allow_test_fallback: bool = False,
         on_demand: bool = False,
+        angefordert: bool = False,
     ) -> bool:
         """
         Generate and send report for a single trip — legacy bool wrapper.
@@ -818,7 +1133,8 @@ class TripReportSchedulerService:
             configured), False if no matching stage/weather data found.
         """
         outcome = self._send_trip_report_outcome(
-            trip, report_type, allow_test_fallback=allow_test_fallback, on_demand=on_demand,
+            trip, report_type, allow_test_fallback=allow_test_fallback,
+            on_demand=on_demand, angefordert=angefordert,
         )
         return outcome in ("sent", "no_channels")
 
@@ -829,6 +1145,8 @@ class TripReportSchedulerService:
         allow_test_fallback: bool = False,
         on_demand: bool = False,
         catchup_prefix: str | None = None,
+        angefordert: bool = False,
+        target_date: date | None = None,
     ) -> str:
         """
         Generate and send report for a single trip.
@@ -840,6 +1158,42 @@ class TripReportSchedulerService:
                 Briefings ("Nachgeliefert …" / "Aktualisiert …"), wird von
                 _process_pending_markers() bei erfolgreicher Nachlieferung
                 gesetzt.
+            angefordert: Issue #1725 (Adversary F006) — der Versand geht auf
+                eine Nutzeranfrage zurück (SMS „heute"/„morgen", Test-Versand-
+                Knopf, Inbound-Kommando „report") statt auf den regulären Slot.
+                Fließt AUSSCHLIESSLICH in den `briefing_log.json`-Eintrag, damit
+                die Rückwärts-Ableitung ihn überspringen kann (AC-12).
+                🔴 Bewusst NICHT `on_demand` mitbenutzt: dieses Flag trägt
+                sieben weitere Bedeutungen über acht Lesestellen (weil
+                `_mark_briefing_undelivered` zweimal vorkommt; vor diesem Fix
+                waren es neun — die neunte, der Log-Eintrag, ist jetzt
+                `angefordert`), die für Test-Versand und „report" allesamt
+                unerwünscht wären. Es
+                unterdrückt den Ausfall-Hinweisversand
+                (`send_no_data_hint`-Zweig im Totalausfall), setzt eine
+                „auf Anfrage"-Kennzeichnung in den Mail-Text
+                (`on_demand_prefix` in `_build_trip_report_request`), hält
+                Anker und Alarm-Gedächtnis an
+                (`write_anchor_and_reset_memory` in `_anchor_and_reset`),
+                unterdrückt beide Nachliefer-Marker
+                (`_mark_briefing_undelivered` im Ausnahme- UND im
+                `channels_unreachable`-Zweig, `_write_pending_marker` beim
+                Teilausfall), verhindert das Aufräumen des
+                Versandfehler-Vermerks (`_clear_dispatch_error_marker`) und
+                die Entdopplung amtlicher Warnungen
+                (`record_official_alerts_reported`). Ein Flag mit zwei
+                Bedeutungen führt den nächsten Leser in die Irre.
+                Absichtlich Namen statt Zeilennummern: diese Aufzählung stand
+                zuerst mit Zahlen hier und zeigte nach dem eigenen Commit um
+                30 Zeilen daneben — ausgerechnet der Verweis auf die
+                Log-Zeile landete auf dem Gegenbeispiel (Adversary F008).
+            target_date: Fix #1795 — optionaler, bereits aufgelöster Ortstag.
+                Gesetzt (von `send_on_demand_report`): wird STATT der
+                internen `datetime.now(timezone.utc)`-Auflösung unten benutzt
+                — EINE Auflösung, kein Zweitauflöser. `None` (Default): die
+                sechs bestehenden Aufrufer bleiben unverändert, die Funktion
+                löst den Zieltag wie bisher selbst zum Ausführungszeitpunkt
+                auf.
 
         Returns:
             "no_stage" if no matching stage, "no_weather" if the weather
@@ -854,7 +1208,18 @@ class TripReportSchedulerService:
         logger.info(f"Generating {report_type} report for trip: {trip.name}")
 
         # 1. Convert trip to segments
-        target_date = self._get_target_date(report_type)
+        # Issue #1727 S5b: EINE Zeitabfrage fuer den gesamten Briefing-Aufbau,
+        # hier oben gebunden statt weiter unten mehrfach implizit aufgeloest.
+        # Sie speist Zieltag, Etappen-Rueckfall, Klemme, Ausblick und
+        # Gewitter-Ausblick — zwischen ihnen liegt ein Wetterabruf mit
+        # Retry-Backoff und damit moeglicherweise eine Mitternacht
+        # (gemessener Praezedenzfall: dispatch_orchestrator.py:157-163).
+        now_utc = datetime.now(timezone.utc)
+        # Issue #1724: Zieltag aus der Ortszeit DIESES Trips (ADR-0044).
+        # Fix #1795: ein bereits aufgeloester `target_date` (s. Docstring)
+        # ersetzt die interne Auflösung — kein zweiter Auflöser.
+        if target_date is None:
+            target_date = self._get_target_date(report_type, trip, now_utc)
         segments = self._convert_trip_to_segments(trip, target_date)
 
         # Issue #768: Test-Pfad-Fallback — wenn am regulären Zieldatum keine
@@ -862,7 +1227,7 @@ class TripReportSchedulerService:
         # (bzw. früheste) Etappe aus. Der reguläre Scheduler (Default False)
         # bleibt unberührt (AC-7).
         if not segments and allow_test_fallback:
-            fb = self.select_test_stage(trip, report_type)
+            fb = self.select_test_stage(trip, report_type, now_utc)
             if fb is not None:
                 target_date = fb.date
                 segments = self._convert_trip_to_segments(trip, target_date)
@@ -879,9 +1244,19 @@ class TripReportSchedulerService:
         # nur die Segment-Zeiten, die in _fetch_weather() gehen, wandern auf
         # "heute", damit ein echter Forecast statt eines toten
         # Vergangenheits-Requests entsteht.
+        #
+        # Issue #1727 S5b (ADR-0044): verglichen wird gegen den ORTSTAG der
+        # Tour. `target_date` ist bereits ortsrichtig (`_get_target_date` ->
+        # `trip_local_today`); ein roher `date.today()` daneben stellte zwei
+        # verschiedene Tagesbegriffe in denselben `<`-Vergleich.
+        from services.trip_day import trip_local_today
+
+        heute_am_ort = trip_local_today(trip, now_utc)
         weather_segments = segments
-        if allow_test_fallback and target_date < date.today():
-            weather_segments = self._clamp_segments_to_today(segments, target_date)
+        if allow_test_fallback and target_date < heute_am_ort:
+            weather_segments = self._clamp_segments_to_today(
+                segments, target_date, today=heute_am_ort,
+            )
 
         # 1b. Compute local timezone from coordinates for display
         # (tz_for_coords now imported top-level — Bug #401)
@@ -1020,7 +1395,10 @@ class TripReportSchedulerService:
         outlook_state = None
         outlook_horizon_days = None
         if segment_weather and render_options.show_multi_day_trend:
-            trend_result = self._build_stage_trend(trip, target_date, tz=trip_tz)
+            trend_result = self._build_stage_trend(
+                trip, target_date, now_utc=now_utc, tz=trip_tz,
+                report_type=report_type,
+            )
             multi_day_trend = trend_result.rows
             outlook_state = trend_result.state
             outlook_horizon_days = trend_result.horizon_days
@@ -1035,8 +1413,8 @@ class TripReportSchedulerService:
         #    damit der Satz ein Gewitter ausserhalb des Tagesfensters nennt --
         #    aus DERSELBEN Reihe, die daneben als Nacht-Tabelle steht.
         thunder_forecast = self._build_thunder_forecast_from_trend_or_fetch(
-            trip, target_date, tz=trip_tz, multi_day_trend=multi_day_trend,
-            night_weather=night_weather,
+            trip, target_date, now_utc=now_utc, tz=trip_tz,
+            multi_day_trend=multi_day_trend, night_weather=night_weather,
         )
 
         # 7b. Vortag-Vergleich (Issue #750): gestrigen Snapshot laden + Deltas
@@ -1194,8 +1572,29 @@ class TripReportSchedulerService:
                 f"Trip report NOT sent (configured channel unreachable): {trip.name} ({report_type})"
             )
         else:
-            self._append_briefing_log(trip.id, report_type, result.sent_channels)
-            logger.info(f"Trip report sent: {trip.name} ({report_type})")
+            # Issue #1847: die Erfolgszeile nennt zusaetzlich die tatsaechlich
+            # zugestellten Kanaele und — sofern E-Mail dabei war — den
+            # E-Mail-Empfaenger. Vorbild ist der Compare-Pfad
+            # (scheduler_dispatch_service.py:571, "Compare preset %s sent to
+            # %s"): dort war "Versand gemeldet, Postfach leer" in einer Minute
+            # aufgeklaert, hier kostete dieselbe Falle eine Stunde (vierte
+            # Wiederholung: #1351, #1403, #1782, #1847). Bewusst UNMASKIERT —
+            # eine Maskierung machte gregor-test@ und gregor-staging@
+            # ununterscheidbar und verfehlte genau den Zweck.
+            mail_empfaenger = (
+                self._settings.mail_to if "email" in result.sent_channels else None
+            )
+            self._append_briefing_log(
+                trip.id, report_type, result.sent_channels,
+                angefordert=angefordert, mail_empfaenger=mail_empfaenger,
+            )
+            logger.info(
+                "Trip report sent: %s (%s) via %s%s",
+                trip.name,
+                report_type,
+                ",".join(result.sent_channels),
+                f" to {mail_empfaenger}" if mail_empfaenger else "",
+            )
 
         # 8c. Issue #1662 AC-5: Der gelungene Versand macht einen offenen
         # Versandfehler-Vermerk gegenstandslos — der Nutzer hat sein Briefing
@@ -1343,8 +1742,18 @@ class TripReportSchedulerService:
         DTO, KEINEN Renderer-Aufruf — die Textformatierung
         (`format_starkregen_hint()`) passiert in `notification_service.py`.
 
-        Segment-Auswahl identisch zu `TripAlertService.check_radar_alerts()`
-        (trip_alert.py:730-745). Naehe-Guard und Budget-Gate laufen VOR dem
+        Segment-Auswahl nach derselben Grundregel wie
+        `TripAlertService.check_radar_alerts()` (trip_alert.py:917-955):
+        aktives Segment, sonst Vorschau auf das erste. Den tagesuebergreifenden
+        Vortags-Rueckgriff des Alarm-Pfads (Issue #1667 S3) hat dieser Pfad
+        BEWUSST nicht — `_get_target_date` ist strikt vorwaertsgerichtet
+        (morgens `today`, abends `today+1`) und die Briefing-Kopfdaten stammen
+        aus `trip.get_stage_for_date(target_date)`; ein Vortags-Rueckgriff
+        erzeugte hier ein Briefing mit heutiger Etappe im Kopf und gestriger
+        Koordinate im Regenhinweis. Die Live-Ueberwachung eines noch laufenden
+        Vortagssegments ist Aufgabe von `check_radar_alerts()` (alle ~15 min),
+        nicht der zweimal taeglichen Briefing-Erzeugung.
+        Naehe-Guard und Budget-Gate laufen VOR dem
         Fetch — ein zu weit entferntes Segment oder ausgeschoepftes Tagesbudget
         verursacht keinen Nowcast-Call (AC-1/AC-2). Fail-soft bei Fetch-Fehlern
         (ADR-0018, AC-4).
@@ -1370,7 +1779,13 @@ class TripReportSchedulerService:
             if minutes_until_start > NOWCAST_HORIZON_MIN:
                 return None
 
-        if not alert_daily_limit.is_allowed(self._user_id, now_utc, reason="nowcast"):
+        # Issue #1726: reine Lesestelle (bucht nie), liest aber denselben
+        # Zaehler wie der Alarm-Pfad — also auf dem Kalendertag der TOUR.
+        from services.trip_day import anchor_tz
+
+        if not alert_daily_limit.is_allowed(
+            self._user_id, now_utc, anchor_tz(trip, now_utc), reason="nowcast",
+        ):
             return None
 
         from services.radar_service import INTENSITY_HEAVY, RadarNowcastService
@@ -1400,20 +1815,55 @@ class TripReportSchedulerService:
         """
         reset_alert_memory(user_id=self._user_id, entity_id=trip_id)
 
-    def _append_briefing_log(self, trip_id: str, kind: str, channels: List[str]) -> None:
+    def _append_briefing_log(
+        self, trip_id: str, kind: str, channels: List[str], angefordert: bool = False,
+        mail_empfaenger: Optional[str] = None,
+    ) -> None:
         """Issue #393: Hängt einen Briefing-Versand-Eintrag an briefing_log.json an.
 
         Wird von Go (GET /api/cockpit/status) read-only gelesen. Kein Bereinigen —
         das Frontend filtert auf "heute".
+
+        Issue #1725 (Adversary F004/F006): `angefordert` hält fest, dass der
+        Eintrag aus einem vom Nutzer ANGEFORDERTEN Versand stammt und nicht aus
+        dem regulären Slot. Angefordert sind alle drei Wege, die AC-12
+        aufzählt: SMS „heute"/„morgen" (`send_on_demand_report`), der
+        Test-Versand-Knopf (`send_test_report_outcome`, gerufen von
+        `api/routers/scheduler.send_test_trip_report`) und das Inbound-Kommando
+        „report" (`send_test_report`, gerufen von
+        `trip_command_processor._trigger_report`). Die
+        Rückwärts-Ableitung in `briefing_slots._log_bezeugt_versand`
+        überspringt solche Einträge — ohne das Feld nähme eine Nutzeranfrage
+        dem Nutzer sein reguläres Briefing desselben Ortstags (AC-12).
+
+        Der Eintrag selbst wird weiterhin geschrieben: ihn wegzulassen änderte
+        die Cockpit-Kachel #393, und das ist eine andere Scheibe. Der
+        JSON-Schlüssel heißt weiterhin `on_demand` — er ist das Wire-Format,
+        das `briefing_slots` liest; Go liest die Datei nur
+        (`store.LoadBriefingLog`, kein Schreibpfad), ignoriert unbekannte
+        Felder und schreibt sie deshalb auch nicht weg.
+
+        Issue #1847: `mail_empfaenger` hält fest, an WELCHE Adresse das
+        Briefing per E-Mail ging — sonst ist „Versand gemeldet, Postfach leer"
+        nachträglich nicht mehr auflösbar (vierte Wiederholung derselben Falle:
+        #1351, #1403, #1782, #1847). Der Schlüssel `mail_to` entsteht nur, wenn
+        E-Mail auch tatsächlich zugestellt wurde — ein Eintrag, der bei JEDEM
+        Versand eine Adresse nennt, wäre keine Zustell-Aussage. Rein additiv:
+        die bestehenden Schlüssel bleiben unverändert, Go ignoriert den neuen
+        (s.o.).
         """
         path = get_data_dir(self._user_id) / "briefing_log.json"
         data = json.loads(path.read_text()) if path.exists() else {"entries": []}
-        data["entries"].append({
+        eintrag: Dict[str, object] = {
             "trip_id": trip_id,
             "kind": kind,
             "sent_at": datetime.now(tz=timezone.utc).isoformat(),
             "channels": channels,
-        })
+            "on_demand": angefordert,
+        }
+        if mail_empfaenger:
+            eintrag["mail_to"] = mail_empfaenger
+        data["entries"].append(eintrag)
         # Issue #1614: ein frischer Nutzer ohne jedes vorherige Datenverzeichnis
         # (kein Trip-Snapshot, kein Alert-State) hatte hier noch kein
         # Zielverzeichnis — path.write_text() scheiterte mit FileNotFoundError.
@@ -1434,18 +1884,24 @@ class TripReportSchedulerService:
         return convert_trip_to_segments(trip, target_date)
 
     def _clamp_segments_to_today(
-        self, segments: List[TripSegment], from_date: date,
+        self, segments: List[TripSegment], from_date: date, today: date,
     ) -> List[TripSegment]:
         """Shift segment start_time/end_time from `from_date` to today (Issue #1325).
 
         Pure helper — kein Netz-/IO-Zugriff. Erhält den Uhrzeit-Anteil, nur
-        das Kalenderdatum wandert um `date.today() - from_date` Tage nach
-        vorne. Ausschließlich für den Wetter-Abruf-Input im Test-Fallback-
-        Pfad genutzt, damit ein veralteter Test-Trip (alle Etappen in der
+        das Kalenderdatum wandert um `today - from_date` Tage nach vorne.
+        Ausschließlich für den Wetter-Abruf-Input im Test-Fallback-Pfad
+        genutzt, damit ein veralteter Test-Trip (alle Etappen in der
         Vergangenheit) trotzdem einen echten Forecast statt eines toten
         historischen Datums bekommt.
+
+        Issue #1727 S5b: `today` kommt PFLICHTWEISE vom Aufrufer, der ihn dort
+        bereits ortsrichtig hat (`trip_local_today`). Diese Funktion sieht kein
+        `Trip`-Objekt und könnte den Ortstag gar nicht selbst bestimmen — ein
+        eigenes `date.today()` verschob die Segmentzeiten im Mismatch-Fenster
+        um einen Tag zu wenig oder zu weit (ADR-0044).
         """
-        delta_days = (date.today() - from_date).days
+        delta_days = (today - from_date).days
         if delta_days <= 0:
             return segments
         shift = timedelta(days=delta_days)
@@ -1725,7 +2181,9 @@ class TripReportSchedulerService:
         self,
         trip,
         target_date: date,
+        now_utc: datetime,
         tz=None,
+        report_type: str = "evening",
     ):
         """
         Build trend rows for each future stage (v4.0 column layout).
@@ -1738,12 +2196,23 @@ class TripReportSchedulerService:
         Vorschau-Vergleich (ADR-0025/#1297) lesen genau dieses Feld weiter.
         ``result.state`` benennt zusaetzlich, WARUM der Ausblick entfaellt
         (vorher fuenf Ausstiege, alle mit demselben stummen ``None``).
+
+        Issue #1727 S5b (ADR-0044/ADR-0051 Regel 3): ``now_utc`` ist
+        PFLICHTPARAMETER ohne Default. Der Vorhersage-Horizont wird gegen den
+        ORTSTAG der Tour gemessen (``trip_local_today``), nicht gegen den
+        Servertag — ``stage.date`` ist ein Etappentag mit Ortstag-Semantik, ein
+        Servertag daneben mischt zwei Tagesbegriffe. Und der Zeitpunkt kommt
+        vom Aufrufer, weil zwischen dessen Zeitabfrage und diesem Aufruf ein
+        Wetterabruf mit Retry-Backoff liegt: eine eigene Aufloesung koennte
+        bereits den naechsten Ortstag tragen, waehrend ``target_date`` noch auf
+        dem alten steht.
         """
         from app.models import OutlookState, TrendResult
         from providers.openmeteo import (
             OPENMETEO_MAX_FORECAST_DAYS,
             is_within_forecast_horizon,
         )
+        from services.trip_day import trip_local_today
         from services.weather_metrics import aggregate_stage
 
         WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -1760,7 +2229,7 @@ class TripReportSchedulerService:
         # Information).
         failures: set = set()
         horizon_days: Optional[int] = None
-        today = date.today()
+        today = trip_local_today(trip, now_utc)
         for stage in future_stages[:3]:
             if not is_within_forecast_horizon(stage.date, today):
                 # Fix #1486: war logger.debug — im Betrieb unsichtbar.
@@ -1844,6 +2313,10 @@ class TripReportSchedulerService:
                 row = build_outlook_row(
                     agg, _flat_points, WEEKDAYS_DE[stage.date.weekday()], _tz,
                     sms_thresholds=_sms_thr,
+                    # #1720 S1: ungekollabierte Konfiguration durchreichen,
+                    # nicht selbst aufloesen -- Renderer-Vokabular gehoert in
+                    # die Ausgabeschicht (test_scheduler_has_no_output_imports).
+                    trip_display_config=dc, report_type=report_type,
                     day_window_start_hour=_win_start,
                     day_window_end_hour=_win_end,
                 )
@@ -1879,6 +2352,7 @@ class TripReportSchedulerService:
         self,
         trip,
         target_date: date,
+        now_utc: datetime,
         tz: Optional[ZoneInfo],
         multi_day_trend=None,
         night_weather=None,
@@ -1914,6 +2388,12 @@ class TripReportSchedulerService:
         die Tages-Aussage (``level``/``hour``) bleibt geklemmt. Beide
         Aufrufer (Versand und Vorschau) reichen sie durch; genau das traegt
         die Paritaet aus AC-9/AC-11.
+
+        Issue #1727 S5b: ``now_utc`` ist PFLICHTPARAMETER und wird
+        unveraendert an ``_collect_future_stage_weather`` durchgereicht —
+        diese Funktion trifft selbst KEINE Tagesentscheidung (kein eigener
+        Fundort), sie haelt nur den Zeitpunkt auf demselben Weg wie der
+        Rest des Briefing-Aufbaus.
         """
         from app.day_window import resolve_configured_window
 
@@ -1952,7 +2432,7 @@ class TripReportSchedulerService:
 
         if missing_dates:
             fetched = self._collect_future_stage_weather(
-                trip, target_date, wanted_dates=missing_dates,
+                trip, target_date, now_utc=now_utc, wanted_dates=missing_dates,
             )
             fetched_fc = (
                 self._build_thunder_forecast(
@@ -2032,7 +2512,10 @@ class TripReportSchedulerService:
             resolve_configured_window,
         )
         from app.models import ThunderLevel
-        from app.thunder_scale import thunder_label_value, thunder_ordinal
+        from app.thunder_scale import (
+            thunder_label_value, thunder_ordinal, thunder_signal_label,
+            union_of_max_carriers,
+        )
 
         win_start, win_end = resolve_configured_window(window_start, window_end)
         # Rueckabbildung Sample-Wert -> Level ueber die geteilte Render-Skala
@@ -2056,6 +2539,19 @@ class TripReportSchedulerService:
                 ),
                 key=thunder_ordinal,
             )
+            # Issue #1680 S5b: die tragende Zutat der TAGES-Stufe, aus der
+            # S5a-Traegerquelle `row["hourly_thunder_signals"]` und mit
+            # DEMSELBEN Fensterfilter, der oben `windowed` erzeugt -- eine
+            # zweite, unabhaengige Fensterauflösung waere genau die
+            # Fehlerklasse aus #1653/#1498 (Stufe aus dem einen, Herkunft aus
+            # dem anderen Fenster). Vorbild: `helpers.format_trend_tokens()`.
+            carriers = union_of_max_carriers(
+                (stufe, traeger)
+                for stunde, stufe, traeger in (
+                    row.get("hourly_thunder_signals") or ()
+                )
+                if hour_in_window(int(stunde), win_start, win_end)
+            )
         else:
             # Fail-soft (Known Limitation): ohne Stundenproben im Fenster
             # keine Klemmung — Kalendertags-Maximum wie bisher, nie eine
@@ -2064,6 +2560,11 @@ class TripReportSchedulerService:
                 level = ThunderLevel[row.get("thunder") or "NONE"]
             except KeyError:
                 level = ThunderLevel.NONE
+            # Issue #1680 S5b (Spec AC-8): zu einer Stufe aus dem
+            # Kalendertags-Maximum gibt es KEINE zum Fenster passende
+            # Traegerquelle -- "keine Herkunft" ist hier die einzig ehrliche
+            # Antwort, nicht die Herkunft irgendeiner unbeobachteten Stunde.
+            carriers = None
         when = None
         hour = None
         if level != ThunderLevel.NONE:
@@ -2086,6 +2587,14 @@ class TripReportSchedulerService:
                 f"Starkes Gewitter erwartet ab {when}"
                 if when else "Starkes Gewitter erwartet"
             )
+        # Issue #1680 S5b: die Herkunft steht unmittelbar hinter der
+        # Tagesaussage -- VOR dem Nacht-Halbsatz und (weil sie Teil von `text`
+        # ist) auch vor dem Hagel-Zusatz, den erst der Renderer anhaengt.
+        # Der Level-Check steht bewusst HIER, am Wirkort: "Kein Gewitter
+        # erwartet" traegt nie eine Herkunft (Spec AC-6), und ohne
+        # Traegerliste entsteht kein leerer ·-Trenner (Spec AC-11).
+        if level != ThunderLevel.NONE and carriers:
+            text += " · " + ", ".join(thunder_signal_label(n) for n in carriers)
         # Issue #1651: das Gewitter AUSSERHALB des Fensters wird angehaengt
         # genannt. Quelle sind dieselben, ohnehin vorliegenden Stundenproben
         # der Zeile -- fuer 00:00-06:00 des Folgetags schlaegt `night_hourly`
@@ -2115,6 +2624,7 @@ class TripReportSchedulerService:
         self,
         trip,
         target_date: date,
+        now_utc: datetime,
         wanted_dates=None,
     ) -> List[SegmentWeatherData]:
         """Issue #1275: fetch weather for the actual next future stages,
@@ -2142,18 +2652,27 @@ class TripReportSchedulerService:
         Fail-soft: a per-stage fetch error is logged and the stage skipped, so
         the corresponding TH+ key is simply absent (SMS shows ``TH+:-``) —
         the report is never blocked.
+
+        Issue #1727 S5b (ADR-0044/ADR-0051 Regel 3): ``now_utc`` ist
+        PFLICHTPARAMETER, der Horizont wird gegen den ORTSTAG der Tour
+        gemessen. Dieser Rueckfall liegt noch HINTER dem Trend-Bauweg, also
+        noch spaeter im Wetterabruf — eine eigene Zeitaufloesung koennte hier
+        bereits auf dem naechsten Ortstag stehen (s. ``_build_stage_trend``).
         """
         from providers.openmeteo import is_within_forecast_horizon
+        from services.trip_day import trip_local_today
 
         # #1498 (Fall 2, Beifang): ohne Trip-Objekt (Vorschau-Pfad, s.
         # Fail-soft-Zusage oben und #1482-Guard im Aufrufer) gibt es keine
         # Etappenliste — vorher stuerzte genau dieser Fall mit
         # AttributeError, sobald der Trend einen Offset nicht abdeckte.
+        # Issue #1727 S5b: Reihenfolge bewusst UNVERAENDERT — dieser Ausstieg
+        # steht VOR der Zonen-Aufloesung, die ohne Trip nicht ginge.
         if trip is None:
             return []
 
         collected: List[SegmentWeatherData] = []
-        today = date.today()
+        today = trip_local_today(trip, now_utc)
         wanted = wanted_dates if wanted_dates is not None else {
             target_date + timedelta(days=1),
             target_date + timedelta(days=2),
@@ -2225,7 +2744,7 @@ class TripReportSchedulerService:
         ist die geteilte Sortier-Skala -- kein zweites, driftendes Ordinal.
         """
         from app.models import ThunderLevel
-        from app.thunder_scale import thunder_ordinal
+        from app.thunder_scale import thunder_ordinal, thunder_signal_label
         # Issue #1475 Nachbesserung (Punkt 4a): das Hagel-Aggregat kommt ueber
         # den kanonischen Basis-Metrik-Weg (``summarize_points`` ->
         # ``_compute_hail_flag`` -> ``hail_priority``) statt ueber einen
@@ -2301,6 +2820,22 @@ class TripReportSchedulerService:
                 text = f"Gewitter möglich ab {when}"
             else:
                 text = f"Starkes Gewitter erwartet ab {when}"
+            # Issue #1680 S5b: der ohnehin vorhandene summarize_points()-Aufruf
+            # (bisher nur fuer `hail_flag`, s.u.) wird in eine Variable
+            # gehoben und zusaetzlich um die Traegerliste der Tagesstufe
+            # gelesen. Beide Groessen entstehen ueber DIESELBE `thunder_dps`-
+            # Menge, aus der auch `level` stammt -- kein zweiter Datenzugriff,
+            # keine zweite Fensterfilterung.
+            summary = summarize_points(thunder_dps)
+            carriers = getattr(summary, "thunder_level_max_signals", None)
+            # Herkunft unmittelbar hinter der Tagesaussage, VOR dem
+            # Nacht-Halbsatz (und damit vor dem Hagel-Zusatz des Renderers).
+            # Level-Check am Wirkort (Spec AC-6), Traeger-Guard gegen den
+            # leeren ·-Trenner bei Alt-Fixturen ohne Traegerfeld (AC-11).
+            if level != ThunderLevel.NONE and carriers:
+                text += " · " + ", ".join(
+                    thunder_signal_label(n) for n in carriers
+                )
             # Issue #1651: Nacht-Zusatz, wortgleich zum Trend-Weg (eine
             # Wortlaut-Quelle: format_night_addendum). `night_weather` reicht
             # nur bis 06:00 des Folgetags und ist deshalb allein fuer "+1"
@@ -2324,7 +2859,7 @@ class TripReportSchedulerService:
                 # Vorschau — ueber DIESELBE thunder_dps-Menge, die auch
                 # level/hour liefert (kein zweiter Datenzugriff). Beeinflusst
                 # `level` an keiner Stelle (AC-10).
-                "hail": getattr(summarize_points(thunder_dps), "hail_flag", None),
+                "hail": getattr(summary, "hail_flag", None),
             }
 
         return forecast if forecast else None

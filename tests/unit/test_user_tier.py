@@ -13,9 +13,10 @@ abbrechen und damit auch den Bestandsnachweis unten mitreissen.
 from __future__ import annotations
 
 import json
+import logging
 
 from app.loader import get_data_dir
-from services.user_tier import sms_allowed
+from services.user_tier import daily_alert_limit, sms_allowed
 
 
 def _profile(user_id: str, tier: str | None) -> str:
@@ -26,6 +27,16 @@ def _profile(user_id: str, tier: str | None) -> str:
     if tier is not None:
         data["tier"] = tier
     (path / "user.json").write_text(json.dumps(data), encoding="utf-8")
+    return user_id
+
+
+def _corrupt_profile(user_id: str) -> str:
+    """Legt eine VORHANDENE, aber inhaltlich kaputte ``user.json`` an (kein
+    valides JSON) -- der Fall aus #1596, zu unterscheiden von einer
+    tatsaechlich fehlenden Datei."""
+    path = get_data_dir(user_id)
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "user.json").write_text("{not valid json", encoding="utf-8")
     return user_id
 
 
@@ -66,4 +77,41 @@ def test_premium_sms_allowed_excludes_standard_tier() -> None:
     )
     assert premium_sms_allowed(prem) is True, (
         "premium-Tier muss Premium-SMS erlauben — sonst ist der Kanal generell tot."
+    )
+
+
+def test_corrupt_user_json_logs_warning_but_missing_file_stays_quiet(caplog) -> None:
+    """AC-2 + AC-4-Abgrenzung (#1596): eine VORHANDENE, aber kaputte
+    ``user.json`` muss fuer alle drei Tier-Funktionen eine Warnung loggen
+    (Pfad/Ursache), OHNE den Rueckgabewert zu aendern -- insbesondere bleibt
+    ``premium_sms_allowed`` fail-closed (#1676 S2a AC-8/D7). Eine
+    tatsaechlich FEHLENDE ``user.json`` (legitimer Normalfall) bleibt
+    weiterhin still."""
+    from services.user_tier import premium_sms_allowed
+
+    corrupt_id = _corrupt_profile("tdd-1596-tier-corrupt")
+
+    with caplog.at_level(logging.WARNING):
+        caplog.clear()
+        assert sms_allowed(corrupt_id) is False, "Rueckgabewert darf sich durch das Logging nicht aendern"
+        assert premium_sms_allowed(corrupt_id) is False, (
+            "premium_sms_allowed muss bei kaputter Datei fail-closed bleiben (#1676)"
+        )
+        assert daily_alert_limit(corrupt_id) == 2, "free-Default-Limit darf sich nicht aendern"
+
+    assert corrupt_id in caplog.text, (
+        f"AC-2: kaputte user.json muss eine Warnung mit der User-ID loggen, "
+        f"Log-Ausgabe war: {caplog.text!r}"
+    )
+
+    missing_id = "tdd-1596-tier-missing"
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        assert sms_allowed(missing_id) is False
+        assert premium_sms_allowed(missing_id) is False
+        assert daily_alert_limit(missing_id) == 2
+
+    assert missing_id not in caplog.text, (
+        f"AC-4: eine tatsaechlich fehlende user.json ist der legitime Normalfall "
+        f"und darf NICHT geloggt werden, Log-Ausgabe war: {caplog.text!r}"
     )

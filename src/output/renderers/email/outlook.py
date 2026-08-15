@@ -22,7 +22,6 @@ die @-time-Hourly-Samples.
 from __future__ import annotations
 
 import html as _html
-import re as _re
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -31,32 +30,11 @@ if TYPE_CHECKING:
 
 from app.metric_catalog import get_metric
 from output.renderers.email.helpers import format_trend_tokens
-from output.renderers.email.design_tokens import FONT_DATA
-from utils.geo import degrees_to_compass
-
-
-_THUNDER_TOKEN_RE = _re.compile(
-    r"^([a-zA-Zäöü]+)@(\d+)(?:\(([a-zA-Zäöü]+)@(\d+)\))?"
+from output.renderers.email.thunder_branch import (
+    _thunder_token_parts, resolve_thunder_day_branch,
 )
-
-
-def _thunder_token_parts(token: Optional[str]):
-    """Zerlegt einen Gewitter-Token in (Erst-Wort, Erst-Stunde, Peak-Zusatz).
-
-    Issue #1653 (F005): ``render_threshold_peak_value`` haengt den
-    Spitzenwert als ``leicht@5(hoch@15)`` an, wenn Erst-Ueberschreitung und
-    Spitze im selben Fenster auseinanderfallen -- der meteorologische
-    Normalfall eines ueber den Nachmittag eskalierenden Gewitters. Wer nur
-    die erste Gruppe liest, unterschlaegt genau die Stufe, vor der der
-    Report warnen soll. Der Peak-Zusatz ist "" (leer), wenn Erst == Peak.
-    """
-    if not token or token == "-":
-        return None
-    m = _THUNDER_TOKEN_RE.match(token)
-    if not m:
-        return None
-    peak_suffix = f" ({m.group(3)} @{m.group(4)})" if m.group(3) else ""
-    return m.group(1), m.group(2), peak_suffix
+from output.renderers.email.design_tokens import FONT_DATA, tone_css
+from utils.geo import degrees_to_compass
 
 
 # ---------------------------------------------------------------------------
@@ -88,12 +66,14 @@ def render_outlook_table(
         except (TypeError, ValueError):
             return ""
         c, w, d = thresholds
+        # Fix #1801 S1: Hex-Werte aus der EINEN Quelle tone_css() statt
+        # dreier lokaler Kopien.
         if d is not None and v >= d:
-            return "background:#f6c5bf;"
+            return f"background:{tone_css('red')[0]};"
         if w is not None and v >= w:
-            return "background:#fad6b8;"
+            return f"background:{tone_css('orange')[0]};"
         if c is not None and v >= c:
-            return "background:#fbeeb8;"
+            return f"background:{tone_css('yellow')[0]};"
         return ""
 
     def _catalog_thresholds(metric_id: str) -> tuple:
@@ -155,10 +135,13 @@ def render_outlook_table(
         body = ""
         for stage in rows:
             cells = stage.get("cells") or []
+            # Issue #1849: Ampel-Hintergruende parallel zu den Zellentexten.
+            cell_bg = stage.get("cell_bg") or []
             body += (
                 '<tr>' + _otd(stage.get("weekday", "–"))
                 + "".join(
-                    _otd(_html.escape(cells[i] if i < len(cells) else "–"))
+                    _otd(_html.escape(cells[i] if i < len(cells) else "–"),
+                         bg=cell_bg[i] if i < len(cell_bg) else "")
                     for i in range(len(columns))
                 )
                 + '</tr>'
@@ -197,10 +180,13 @@ def render_outlook_table(
         "MED": _THUNDER_LABEL_DE["MED"],
         "HIGH": _THUNDER_LABEL_DE["HIGH"],
     }
+    # Fix #1801 S1: MED/HIGH aus tone_css() (EINE Quelle); LOW bleibt bewusst
+    # ein abweichender, eigener Gelbton ausserhalb des Ampel-Vokabulars
+    # (Spec „Nicht-Ziele").
     _THUNDER_LEVEL_BG = {
         "LOW": "background:#fbe6c3;",
-        "MED": "background:#fad6b8;",
-        "HIGH": "background:#f6c5bf;",
+        "MED": f"background:{tone_css('orange')[0]};",
+        "HIGH": f"background:{tone_css('red')[0]};",
     }
 
     outlook_rows = ""
@@ -235,6 +221,11 @@ def render_outlook_table(
         _d = _thunder_token_parts(d_tok)
         if _d:
             day_part = f"{_d[0]} @{_d[1]}{_d[2]}"
+            # Issue #1680 S5a: die tragende Zutat unmittelbar hinter der
+            # Uhrzeit des Tagesteils -- vor Nacht- und Hagel-Zusatz (AC-1/AC-5).
+            _origin = tokens.get("thunder_day_origin")
+            if _origin:
+                day_part += f" · {_origin}"
         elif not (stage.get("hourly_thunder") or ()) and thunder_level in (
             "LOW", "MED", "HIGH",
         ):
@@ -364,17 +355,35 @@ def render_outlook_plain(
         # hier ganz -- und umgekehrt behauptete die Zeile ein Tagesgewitter,
         # wenn das Aggregat eine Stufe trug, die Stundenreihe im Tagesfenster
         # aber leer war.
+        # Issue #1671: Zweigwahl aus dem geteilten Helfer (identisch zu
+        # compact.py/narrow.py) -- nur die Formatierung bleibt hier lokal.
         from output.renderers.email.helpers import _THUNDER_MAP
-        thunder_word = tok["thunder_plain"]
-        _d_tok = tok.get("thunder_day_token", "-")
-        _dm = _thunder_token_parts(_d_tok)
+        branch = resolve_thunder_day_branch(tok, stage)
+        # Der Helfer entscheidet nur ueber `thunder_day_token != "-"`; ob
+        # der Token tatsaechlich zerlegbar ist (`_THUNDER_TOKEN_RE`),
+        # bleibt Aufrufer-Sache -- ein gesetzter, aber unzerlegbarer Token
+        # fiel im Altcode auf denselben Zweig zurueck wie "none" (ein
+        # ungesetzter Token bedeutet immer auch keinen hourly_thunder-Wert
+        # dieser Stunde). Reines `if branch == "day": thunder_word = ...`
+        # ohne diesen Guard wuerde bei einem unzerlegbaren Token mit
+        # `_dm is None` abstuerzen (TypeError beim Subscript).
+        _dm = _thunder_token_parts(tok.get("thunder_day_token", "-")) if branch == "day" else None
         if _dm:
             thunder_word = f"⚡{_dm[0]}{_dm[2]}"
-        elif stage.get("hourly_thunder"):
-            # Stundenreihe da, im Tagesfenster aber kein Gewitter.
+            # Issue #1680 S5a: derselbe Zusatz wie in der HTML-Zelle, aus
+            # demselben Token -- der Klartext fuehrt wie bisher keine
+            # Tagesuhrzeit (AC-2).
+            _origin = tok.get("thunder_day_origin")
+            if _origin:
+                thunder_word += f" · {_origin}"
+        elif branch in ("day", "none"):
+            # Stundenreihe da, im Tagesfenster aber kein Gewitter (bzw. ein
+            # gesetzter, aber unzerlegbarer Tages-Token).
             thunder_word = _THUNDER_MAP["NONE"]["plain"]
-        # Ohne jede Stundenreihe (Alt-Aufrufer, Compare) bleibt es beim
-        # Aggregatwort -- der Split kann dort nichts sagen.
+        else:
+            # Ohne jede Stundenreihe (Alt-Aufrufer, Compare) bleibt es beim
+            # Aggregatwort -- der Split kann dort nichts sagen.
+            thunder_word = tok["thunder_plain"]
 
         name_field = f"{name:<26} " if show_name else ""
         line = (
@@ -407,6 +416,31 @@ def render_outlook_plain(
 # build_outlook_row — extrahiert aus trip_report_scheduler.py (Z.1460-1488, AC-3)
 # ---------------------------------------------------------------------------
 
+def _metric_column_bg(col: dict, raw: object) -> str:
+    """Zell-Hintergrund einer Ausblick-Metrikspalte (#1849).
+
+    Ampelband aus den SSoT-Helfern (``severity_for``/``thunder_ampel_band``),
+    Hex-Wert aus ``tone_css`` -- dieselben Quellen wie der Altpfad. ``green``
+    faerbt bewusst NICHT (Altpfad-Paritaet, kein gruener Teppich), und die
+    Gewitterstufe LOW traegt den abweichenden Altpfad-Hellgelbton
+    (``_THUNDER_LEVEL_BG``), nicht ``tone_css('yellow')``.
+    """
+    from output.metric_format import severity_for, thunder_ampel_band
+
+    kind = col.get("kind")
+    if kind == "enum":
+        return ""
+    if kind == "ordinal":
+        band = thunder_ampel_band(raw)
+        if band == "yellow":
+            return "background:#fbe6c3;"
+    else:
+        band = severity_for(col.get("metric_id"), raw)
+    if band in (None, "green"):
+        return ""
+    return f"background:{tone_css(band)[0]};"
+
+
 def build_outlook_row(
     summary: "SegmentWeatherSummary",
     points: list["ForecastDataPoint"],
@@ -415,6 +449,8 @@ def build_outlook_row(
     *,
     sms_thresholds: Optional[dict] = None,
     metrics: Optional[list] = None,
+    trip_display_config: object = None,
+    report_type: Optional[str] = None,
     day_window_start_hour: Optional[int] = None,
     day_window_end_hour: Optional[int] = None,
 ) -> dict:
@@ -434,13 +470,29 @@ def build_outlook_row(
     ``sms_threshold_thunder`` abgebildet; ``None``-Werte werden gefiltert
     (analog ``trip_report_scheduler._build_stage_trend``).
 
-    ``metrics`` (#1361, nur Compare): gesetzte Auswahl im Neuformat
+    ``metrics`` (#1361, Compare): gesetzte Auswahl im Neuformat
     (``{"metric_id", "aggregation"}``) ergaenzt das Dict um ``cells`` -- die
     fertig formatierten Zellentexte der gewaehlten Groessen in Auswahl-
     Reihenfolge, datengetrieben aus ``summary`` ueber
-    ``MetricDefinition.summary_fields``. ``None`` (Trip) laesst das Dict
+    ``MetricDefinition.summary_fields``. ``None`` laesst das Dict
     unveraendert (rein additiv, AC-11).
+
+    ``trip_display_config``/``report_type`` (#1720 S1, Trip): statt einer
+    fertigen Auswahl reicht der Zeitplaner die UNGEKOLLABIERTE
+    ``display_config`` durch -- die Aufloesung (``resolve_trip_outlook_metrics``)
+    passiert dann hier, in derselben Schicht wie der Spaltenbau und nach
+    derselben Regel. So braucht der Zeitplaner kein Renderer-Vokabular
+    (Architektur-Wache ``test_scheduler_has_no_output_imports``), und die
+    Zellen dieser Zeile koennen nicht nach einer anderen Regel entstehen als
+    die Ueberschriften darueber. Ein ausdrueckliches ``metrics`` hat Vorrang
+    (Compare-Pfad unveraendert).
     """
+    if metrics is None and trip_display_config is not None:
+        from output.renderers.compare_outlook_metric_ids import (
+            resolve_trip_outlook_metrics,
+        )
+
+        metrics = resolve_trip_outlook_metrics(trip_display_config, report_type)
     from output.metric_format import thunder_label_value
     from output.tokens.dto import HourlyValue
     from utils.timezone import local_hour as _lh
@@ -460,6 +512,12 @@ def build_outlook_row(
     _hourly_wind: list = []
     _hourly_gust: list = []
     _hourly_thunder: list = []
+    # Issue #1680 S5a: die tragenden Zutaten je Stunde REICHEN nur durch --
+    # gefiltert und vereinigt wird erst in `format_trend_tokens()`, an
+    # derselben Stelle und mit demselben Fenster wie `thunder_day_token`
+    # (eine Fensterauflösung, nicht zwei; Spec AC-9).
+    _thunder_signals: list = []
+    _hat_signale = False
     for dp in points:
         lh = _lh(dp.ts, tz)
         if dp.precip_1h_mm is not None:
@@ -475,6 +533,12 @@ def build_outlook_row(
             _hourly_thunder.append(HourlyValue(
                 hour=lh, value=float(thunder_label_value(dp.thunder_level))
             ))
+            _signale = getattr(dp, "thunder_level_signals", None)
+            if _signale is not None:
+                _hat_signale = True
+            _thunder_signals.append(
+                (lh, dp.thunder_level, list(_signale or ()))
+            )
 
     row = dict(
         weekday=weekday,
@@ -514,6 +578,14 @@ def build_outlook_row(
         # (Compare, Bestandstests) erhalten ein zeichengleiches Row-Dict.
         "day_window_start_hour": day_window_start_hour,
         "day_window_end_hour": day_window_end_hour,
+        # Issue #1680 S5a: (Stunde, Stufe, Traegerliste) je Stunde mit
+        # Gewitterstufe. Steht bewusst im None-gefilterten `optional`-Block:
+        # fuehrt KEIN Punkt eine Traegerliste (Alt-Schnappschuss vor Scheibe 1,
+        # Bestandsfixturen), bleibt das Row-Dict zeichengleich (AC-8/AC-10,
+        # Paritaets-Test tests/tdd/test_trip_outlook_parity.py).
+        "hourly_thunder_signals": (
+            tuple(_thunder_signals) if _hat_signale else None
+        ),
     }
     row.update({k: v for k, v in optional.items() if v is not None})
 
@@ -527,11 +599,56 @@ def build_outlook_row(
         # Gewitter-Zelle des Ausblicks denselben Zusatz zeigt wie die
         # Uebersichtstabelle derselben Mail.
         _hail = getattr(summary, "hail_flag", None)
-        row["cells"] = [
-            format_outlook_value(
-                getattr(summary, col["field"], None), {**col, "hail": _hail},
-            )
-            for col in outlook_columns(metrics)
-        ]
+        # Issue #1680 S5a (AC-11b): dieselbe Bauart wie der Hagel-Wert oben --
+        # die tragenden Zutaten reisen als Spalten-Eigenschaft mit. Quelle ist
+        # bewusst das TAGES-Aggregat `summary.thunder_level_max_signals`, also
+        # DIESELBE Rechnung wie die hier gezeigte Stufe (`col["field"]`), nicht
+        # das Tagesfenster -- eine Herkunft, die nicht zur gezeigten Stufe
+        # gehoert, waere der AC-12-Fehler aus Scheibe 1.
+        _signals = getattr(summary, "thunder_level_max_signals", None)
+        # Issue #1841: im TRIP-Fall (trip_display_config gesetzt) liest die
+        # Gewitterspalte (kind == "ordinal") das konfigurierte TAGESFENSTER
+        # statt des gehzeit-geklemmten Aggregats -- derselbe geteilte Helfer
+        # wie Kompaktmail/Klartext-Altpfad/Telegram (#1671). Diskriminator ist
+        # `trip_display_config`, NICHT `report_type` (beim Trip immer gesetzt,
+        # sagt nichts ueber den Pfad) und NICHT die Fensterpraesenz (Falle:
+        # test_outlook_day_night_thunder_split.py:665, gilt fuer Compare mit
+        # gesetztem Fenster). Der Ortsvergleich (trip_display_config is None)
+        # bleibt unveraendert (AC-5).
+        _thunder_value = summary.thunder_level_max
+        _thunder_signals = _signals
+        if trip_display_config is not None:
+            from app.models import ThunderLevel as _ThunderLevel
+
+            _tok = format_trend_tokens(row)
+            _zweig = resolve_thunder_day_branch(_tok, row)
+            if _zweig == "day":
+                # Stufe UND Herkunft aus DEMSELBEN Fenster (AC-6) -- beide
+                # Schluessel speisen sich aus derselben, in
+                # format_trend_tokens() EINMAL berechneten Menge, keine
+                # zweite Fensterauflösung hier.
+                _thunder_value = _tok.get("thunder_day_level")
+                _thunder_signals = _tok.get("thunder_day_carriers")
+            elif _zweig == "none":
+                _thunder_value = _ThunderLevel.NONE
+                _thunder_signals = None
+            # "plain": _thunder_value/_thunder_signals bleiben das Aggregat
+            # (unveraendert, wie ohne Stundenreihe/AC-4).
+        # Issue #1849: Zellentext UND Zell-Hintergrund entstehen aus DEMSELBEN
+        # Rohwert -- eine zweite Rohwert-Aufloesung koennte fuer die
+        # Gewitterspalte am oben (#1841) aufgeloesten Tagesfenster vorbeigehen.
+        cells: list[str] = []
+        cell_bg: list[str] = []
+        for col in outlook_columns(metrics):
+            ordinal = col.get("kind") == "ordinal"
+            raw = _thunder_value if ordinal else getattr(summary, col["field"], None)
+            cells.append(format_outlook_value(
+                raw,
+                {**col, "hail": _hail,
+                 "signals": _thunder_signals if ordinal else _signals},
+            ))
+            cell_bg.append(_metric_column_bg(col, raw))
+        row["cells"] = cells
+        row["cell_bg"] = cell_bg
 
     return row

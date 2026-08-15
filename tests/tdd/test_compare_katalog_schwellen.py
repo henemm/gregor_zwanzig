@@ -286,16 +286,17 @@ def test_kern_pop_35_pct_full_matrix_render_shows_yellow_not_green():
     """Kern des Issues: Given 35% Regenwahrscheinlichkeit (Trip-Zelle zeigt
     dafuer bereits 'yellow', B1) / When die Uebersichts-Matrix gerendert
     wird / Then ist die 'Regenwahrscheinlichkeit'-Zeile ebenfalls gelb
-    getoent (background:#fbeeb8) -- heute bleibt sie ungetoent (transparent),
-    weil die eigene Compare-Schwelle (ab 40%) 35% nicht erfasst."""
+    getoent (background:#fdf4cd, Fix #1801 S2) -- heute bleibt sie ungetoent
+    (transparent), weil die eigene Compare-Schwelle (ab 40%) 35% nicht
+    erfasst."""
     result = _result(pop_pct=35)
     enabled = resolve_enabled_metrics(["pop_max_pct"])
     html = render_compare_html(result, enabled_metrics=enabled)
     row_html = _overview_row_html(html, "Regenwahrscheinlichkeit")
 
-    assert "#fbeeb8" in row_html, (
+    assert "#fdf4cd" in row_html, (
         f"Regenwahrscheinlichkeits-Zeile zeigt fuer 35% (Katalog-Schwelle "
-        f"ab 30%, sollte 'yellow'/background:#fbeeb8 sein) keine Ampel-"
+        f"ab 30%, sollte 'yellow'/background:#fdf4cd sein) keine Ampel-"
         f"Faerbung -- heutige Schwelle (ab 40%) laesst 35% ungefaerbt: "
         f"{row_html}"
     )

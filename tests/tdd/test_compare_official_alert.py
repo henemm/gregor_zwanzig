@@ -18,6 +18,7 @@ import json
 import shutil
 import uuid
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 from app.config import Settings
@@ -86,7 +87,14 @@ def _location(loc_id: str, name: str, lat: float, lon: float) -> SavedLocation:
 
 def _preset(preset_id, location_ids, empfaenger, *, triggers_enabled=None,
             send_telegram=None, send_sms=None, name=None, schedule="daily",
-            archived_at=None, alert_quiet_from=None, alert_quiet_to=None) -> dict:
+            archived_at=None, alert_quiet_from=None, alert_quiet_to=None,
+            morning_time=None) -> dict:
+    """``morning_time`` (Issue #1594): ohne Angabe setzt
+    ``write_compare_briefings()`` eine Stunde ausserhalb des Vorlauf-Fensters,
+    gerechnet gegen die ECHTE Uhr. Tests, die die Uhr des Dienstes EINFRIEREN,
+    muessen die Stunde selbst waehlen — fuer sie ist die echte Uhr die falsche
+    Bezugsgroesse, und die berechnete Stunde faellt je nach Tageszeit mit der
+    eingefrorenen zusammen."""
     # Issue #1233: der Default war frueher "manual" (beliebig gewaehlt, bevor
     # "manual" eine Gating-Bedeutung hatte). Seit #1233 heisst schedule=="manual"
     # "Ortsvergleich deaktiviert" -> Default hier auf "daily" (aktiv) umgestellt,
@@ -111,6 +119,8 @@ def _preset(preset_id, location_ids, empfaenger, *, triggers_enabled=None,
         p["alert_quiet_from"] = alert_quiet_from
     if alert_quiet_to is not None:
         p["alert_quiet_to"] = alert_quiet_to
+    if morning_time is not None:
+        p["morning_time"] = morning_time
     return p
 
 
@@ -370,7 +380,12 @@ def test_f001_compare_alert_localizes_validity_to_location_timezone(monkeypatch)
     b._REGISTERED_SOURCES.clear()
     try:
         save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
-        _write_presets(uid, [_preset("p1", ["loc-a"], ["e@x.invalid"])])
+        # Issue #1594: eingefroren auf 08:00 UTC = 10:00 Hermagor — eine aus der
+        # ECHTEN Uhr gerechnete Briefing-Stunde faellt dort zeitweise mit dem
+        # Vorlauf-Fenster zusammen. 16:00 liegt sicher daneben.
+        _write_presets(uid, [_preset(
+            "p1", ["loc-a"], ["e@x.invalid"], morning_time="16:00:00",
+        )])
         # Issue #1460 (P4): Die Warnung liegt jetzt am SELBEN Tag im
         # Tagesfenster statt am Folgetag -- eine erst morgen gueltige Warnung
         # wird heute nicht mehr gemeldet (AC-31). Damit das Ergebnis nicht von
@@ -623,9 +638,16 @@ def test_ac1_quiet_hours_suppresses_send_state_and_limit(monkeypatch):
     b._REGISTERED_SOURCES.clear()
     try:
         save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
+        # Issue #1594: Briefing-Stunde ausserhalb des Vorlaufs der EINGEFRORENEN
+        # Runden — 00:00 UTC = 02:00 und 09:00 UTC = 11:00 in Hermagor
+        # (Europe/Vienna); 16:00 liegt von beiden Fenstern weit weg. Ohne das
+        # waere AC-1 zeitweise aus dem falschen Grund gruen: die Sperre
+        # unterdrueckt denselben Versand wie die Ruhezeit, und der Test koennte
+        # die Ruhezeit nicht mehr von ihr unterscheiden.
         _write_presets(uid, [_preset(
             "p1", ["loc-a"], ["e@x.invalid"],
             alert_quiet_from="22:00", alert_quiet_to="06:00",
+            morning_time="16:00:00",
         )])
         register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert()]))
         frozen_midnight = datetime(2026, 7, 12, 0, 0, tzinfo=timezone.utc)
@@ -644,7 +666,11 @@ def test_ac1_quiet_hours_suppresses_send_state_and_limit(monkeypatch):
             f"Waehrend Ruhezeit unterdrueckte Warnung darf KEINEN State schreiben "
             f"(sonst wird sie nach Ende der Ruhezeit als 'schon gemeldet' verschluckt): {state!r}"
         )
-        assert alert_daily_limit.load(uid, frozen_midnight) == 0, (
+        # Issue #1726: der Zaehler laeuft in der Ortszone des ersten Orts;
+        # Hermagor liegt in Europe/Vienna.
+        assert alert_daily_limit.load(
+            uid, frozen_midnight, ZoneInfo("Europe/Vienna"),
+        ) == 0, (
             "Tageslimit darf bei unterdruecktem Versand NICHT erhoeht werden"
         )
     finally:
@@ -667,9 +693,16 @@ def test_ac2_quiet_hour_suppression_does_not_permanently_swallow_warning(monkeyp
     b._REGISTERED_SOURCES.clear()
     try:
         save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
+        # Issue #1594: Briefing-Stunde ausserhalb des Vorlaufs der EINGEFRORENEN
+        # Runden — 00:00 UTC = 02:00 und 09:00 UTC = 11:00 in Hermagor
+        # (Europe/Vienna); 16:00 liegt von beiden Fenstern weit weg. Ohne das
+        # waere AC-1 zeitweise aus dem falschen Grund gruen: die Sperre
+        # unterdrueckt denselben Versand wie die Ruhezeit, und der Test koennte
+        # die Ruhezeit nicht mehr von ihr unterscheiden.
         _write_presets(uid, [_preset(
             "p1", ["loc-a"], ["e@x.invalid"],
             alert_quiet_from="22:00", alert_quiet_to="06:00",
+            morning_time="16:00:00",
         )])
         # Issue #1460 (P4): Die Warnzeiten muessen zur EINGEFRORENEN Uhr passen.
         # Vorher trug die Warnung real-jetzt-relative Zeiten (`_alert()`-Default),

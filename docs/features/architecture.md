@@ -1,6 +1,13 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-08-10 (Issue #1676 Scheibe S2a — Premium-SMS wird vierter Versandkanal `premium_sms`, ausschließlich fürs Trip-Briefing: fester Absender `4916092172595`, Empfänger die in S1 gelernte Rückadresse aus `user.json`, Verfall nach 30 Tagen ohne Nachlernen, fail-closed mit auswertbarem Grund statt stillem Ausbleiben, eigenes Tier-Gate nur `premium`; ADR-0049 schreibt ADR-0004 fort — Kanalliste jetzt E-Mail · Telegram · SMS · Premium-SMS; Alarm-/Vergleichspfad und Oberfläche folgen erst mit S2b/#1701 bzw. S3); 2026-08-10 (Issue #1676 Scheibe S1 — neuer Premium-SMS-Rückkanal: `InboundSmsReader` pollt das seven.io-Journal auf Garmin-inReach-Antworten und lernt die Rückadresse über den neuen internen Go-Endpoint `POST /api/internal/premium-sms-learn`; kein Trip-Befehlskanal, kein Frontend); 2026-08-03 (Issue #1460 Teil 1, ADR-0043 löst ADR-0040 ab — Wertebereich (`corridors[].notify`) fällt als Alarm-Auslöser weg, Empfindlichkeitsstufe bleibt einziger Regler und wirkt bei Gewitter über das erreichte Niveau statt die Sprunggröße, symmetrisch für Verschärfung und Entwarnung; Melde-Gedächtnis-Reset löscht beim Briefing nur noch den Änderungs-Raum, der amtliche Raum bleibt erhalten); 2026-07-21 (Doku-Audit #1341 — Frontend-Sektionen auf Ist-Stand: Wizards entfernt, Organisms-Barrel korrigiert, /api/subscriptions → /api/compare/presets + /api/briefings); 2026-07-03 (Issue #1001 — Telegram-Ausgabe neu gebaut: `render_telegram_bubbles()` ersetzt `render_narrow()` für den Telegram-Kanal, Multi-Bubble-Versand statt Prosa-Nachricht, echte Monospace-Segment-Tabellen, Inline-Keyboard-Aktionen-Bubble); 2026-06-30 (Issue #919 — Radar-Alert auf kanonischen Renderer migriert: `OnsetEvent`-Datenklasse + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `check_radar_alerts` baut jetzt `AlertMessage(OnsetEvent(...))`, `src/outputs/radar_alert.py` gelöscht); 2026-06-26 (Issue #887 — SMS/Telegram Report-Konsistenz: SMS `pop_hourly` aus `agg.pop_max_pct`, Telegram Detail-Zeile mit config-gesteuerten Metriken; Issue #884 — HTML-Mail Fidelity: 8-Sektion-Layout mit zweispaltigem Header + Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer); 2026-06-15 (Issue #822 — Radar-/Regen-Nowcast-Alert segmentbewusst: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text); 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-08-11 (Issue #1745 Scheibe A — Premium-SMS ist jetzt auch im
+Alarme-Reiter als vierter Kanal sichtbar/schaltbar, mit eigener Dringlichkeits-Schwelle, in
+**beiden** Flächen (Trip UND Ortsvergleich); wirkt sofort für Gewitter-, Änderungs- und
+amtliche Alarme, **nicht** für Regen-/Radar-Alarme, die weiterhin am Briefing-Flag hängen
+(Scheibe B, #1752, noch offen); reines Frontend, keine Backend-Änderung — löst die
+„Alarm-/Vergleichspfad und Oberfläche folgen erst mit S2b/#1701 bzw. S3"-Aussage der
+#1676-S2a-Zeile unten ab, die inzwischen von #1701 (Backend) und #1745 (Oberfläche)
+eingeholt wurde; siehe „Premium-SMS als Versandkanal" unten); 2026-08-11 (Issue #1667 S3 — Radar-/NowCast-Alarm-Segmentauswahl in `check_radar_alerts` tagesübergreifend: `trip_segments.py::resolve_current_segment()` fällt bei einer Etappe mit Ankunft nach Mitternacht auf das noch aktive Ziel-Segment des Vortags zurück (aktiv heute → aktiv gestern → Vorschau heute[0] → nichts) statt `[]`/Falsch-Ortung zu liefern; der Briefing-Schnappschuss-Vergleich liest fortan unter dem Datum des gewählten Segments statt starr unter `today`; Issue #1667 damit vollständig geschlossen); 2026-08-10 (Issue #1676 Scheibe S2a — Premium-SMS wird vierter Versandkanal `premium_sms`, ausschließlich fürs Trip-Briefing: fester Absender `4916092172595`, Empfänger die in S1 gelernte Rückadresse aus `user.json`, Verfall nach 30 Tagen ohne Nachlernen, fail-closed mit auswertbarem Grund statt stillem Ausbleiben, eigenes Tier-Gate nur `premium`; ADR-0049 schreibt ADR-0004 fort — Kanalliste jetzt E-Mail · Telegram · SMS · Premium-SMS; Alarm-/Vergleichspfad und Oberfläche folgen erst mit S2b/#1701 bzw. S3); 2026-08-10 (Issue #1676 Scheibe S1 — neuer Premium-SMS-Rückkanal: `InboundSmsReader` pollt das seven.io-Journal auf Garmin-inReach-Antworten und lernt die Rückadresse über den neuen internen Go-Endpoint `POST /api/internal/premium-sms-learn`; kein Trip-Befehlskanal, kein Frontend); 2026-08-03 (Issue #1460 Teil 1, ADR-0043 löst ADR-0040 ab — Wertebereich (`corridors[].notify`) fällt als Alarm-Auslöser weg, Empfindlichkeitsstufe bleibt einziger Regler und wirkt bei Gewitter über das erreichte Niveau statt die Sprunggröße, symmetrisch für Verschärfung und Entwarnung; Melde-Gedächtnis-Reset löscht beim Briefing nur noch den Änderungs-Raum, der amtliche Raum bleibt erhalten); 2026-07-21 (Doku-Audit #1341 — Frontend-Sektionen auf Ist-Stand: Wizards entfernt, Organisms-Barrel korrigiert, /api/subscriptions → /api/compare/presets + /api/briefings); 2026-07-03 (Issue #1001 — Telegram-Ausgabe neu gebaut: `render_telegram_bubbles()` ersetzt `render_narrow()` für den Telegram-Kanal, Multi-Bubble-Versand statt Prosa-Nachricht, echte Monospace-Segment-Tabellen, Inline-Keyboard-Aktionen-Bubble); 2026-06-30 (Issue #919 — Radar-Alert auf kanonischen Renderer migriert: `OnsetEvent`-Datenklasse + `cooldown_display` in `model.py`, Onset-Zweige in alle vier `render_*`-Funktionen, `check_radar_alerts` baut jetzt `AlertMessage(OnsetEvent(...))`, `src/outputs/radar_alert.py` gelöscht); 2026-06-26 (Issue #887 — SMS/Telegram Report-Konsistenz: SMS `pop_hourly` aus `agg.pop_max_pct`, Telegram Detail-Zeile mit config-gesteuerten Metriken; Issue #884 — HTML-Mail Fidelity: 8-Sektion-Layout mit zweispaltigem Header + Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer); 2026-06-15 (Issue #822 — Radar-/Regen-Nowcast-Alert segmentbewusst: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text); 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und einem Dual-Stack-Backend (Go + Python):
@@ -9,8 +16,11 @@ Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und 
 - **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, Scheduler, Alerts, Inbound-Handler (FastAPI, Port 8000)
 - **Frontend:** SvelteKit Web-UI für Trip-Management, Konfiguration und Orts-Vergleiche
 - **Channels:** E-Mail (SMTP), Telegram, SMS (seven.io), Premium-SMS (seven.io, Garmin
-  inReach — seit Issue #1676 S2a **nur im Trip-Briefing** verdrahtet, nicht im Alarmpfad und
-  nicht im Ortsvergleich; siehe ADR-0049)
+  inReach) — als **Versandkanal** seit Issue #1676 S2a weiterhin **nur im Trip-Briefing**
+  (kein Ortsvergleich-Versand); als **Alarm-Kanal** seit #1701 (Backend) und #1745 Scheibe A
+  (Oberfläche, Alarme-Reiter) in **beiden** Flächen verdrahtet — Trip UND Ortsvergleich,
+  für Gewitter-, Änderungs- und amtliche Alarme, **nicht** für Regen-/Radar-Alarme (Scheibe
+  B, #1752, offen); siehe ADR-0049
 - **Abo-Objekte:** Briefing-Subscriptions für Trips (ADR-0023) und Compare-Presets für Orts-Vergleiche — getrennte Domänenobjekte, keine gemeinsame „Subscription“-Abstraktion mehr
 
 Siehe `docs/adr/0015-dual-stack-zielarchitektur.md` für die verbindliche Zuständigkeitsgrenze.
@@ -74,16 +84,21 @@ Die folgenden Komponenten leben im Python-Core:
      Spec: `docs/specs/modules/telegram_send_pacing.md`.
    - **SMS** (`src/output/channels/sms.py`) – SMS-Versand via seven.io
    - **Premium-SMS** (`src/output/channels/premium_sms.py`, `PremiumSmsOutput`,
-     `name == "premium_sms"`, seit Issue #1676 S2a) – **nur Trip-Briefing**, kein Alarm-
-     und kein Ortsvergleich-Pfad (folgt frühestens mit #1701). Fester Absender
-     `4916092172595` (unabhängig von `sms_from`), Empfänger ausschließlich die in S1
-     gelernte Rückadresse aus `user.json` (nie `sms_to`), Fail-Closed bei fehlender oder
-     >30 Tage alter Rückadresse mit auswertbarem Grund in `NotificationResult.blocked_channels`,
-     eigenes Tier-Gate (`premium_sms_allowed()`, ausschließlich Tier `premium`). Teilt sich
-     mit `SMSOutput` die Basisklasse `SevenIoChannelBase` (Sicherheitssperren + HTTP-Transport
-     genau einmal statt zweimal). Kein eigener Render-Pfad — Text kommt unverändert aus
-     `report.sms_text`. Kein Frontend-Schalter (folgt mit S3). Details: ADR-0049,
-     `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`.
+     `name == "premium_sms"`, seit Issue #1676 S2a) – als **Versandkanal** weiterhin **nur
+     Trip-Briefing**, kein Ortsvergleich-Versand. Als **Alarm-Kanal** seit #1701 (Backend)
+     für Gewitter-, Änderungs- und amtliche Alarme verdrahtet, in Trip **und** Ortsvergleich;
+     seit #1752 (Scheibe B) gilt das auch für **Regen-/Radar-Alarme** — sie lösen ihre Kanäle
+     über denselben `_effective_alert_channels()` auf wie alle anderen Alarmtypen. Die frühere
+     Sonderfassung `_radar_effective_channels()`, die ausschließlich die Briefing-Flags las, ist
+     ersatzlos entfallen. Fester Absender `4916092172595` (unabhängig von `sms_from`), Empfänger
+     ausschließlich die in S1 gelernte Rückadresse aus `user.json` (nie `sms_to`), Fail-Closed
+     bei fehlender oder >30 Tage alter Rückadresse mit auswertbarem Grund in
+     `NotificationResult.blocked_channels`, eigenes Tier-Gate (`premium_sms_allowed()`,
+     ausschließlich Tier `premium`). Teilt sich mit `SMSOutput` die Basisklasse
+     `SevenIoChannelBase` (Sicherheitssperren + HTTP-Transport genau einmal statt zweimal).
+     Kein eigener Render-Pfad — Text kommt unverändert aus `report.sms_text`. Frontend-Schalter
+     im Versand-Reiter seit #1717 S3, im Alarme-Reiter (Trip UND Ortsvergleich) seit #1745
+     Scheibe A. Details: ADR-0049, `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`.
 
 ### Datenfluss (Produktiv)
 
@@ -200,10 +215,26 @@ Rückadresse ist seit Scheibe S2a live (s. u.) — **nur fürs Trip-Briefing**.
 
 Aufbauend auf der gelernten Rückadresse aus S1 ist Premium-SMS seit S2a ein
 vierter, eigenständiger Versandkanal `premium_sms` (s. „Channels" oben und
-ADR-0049). Bewusst **nicht** verdrahtet: Alarmpfad und Ortsvergleich (folgen
-frühestens mit #1701), Oberfläche (folgt mit S3). `send_premium_sms` ist bis
-dahin nur über den freien `report_config`-Schlüssel setzbar, noch kein
-Go-Flach-Feld analog `send_sms`/`send_telegram`.
+ADR-0049). S2a selbst verdrahtete bewusst **nicht**: Alarmpfad und Ortsvergleich
+(folgten mit #1701), Oberfläche (folgte mit #1717 S3 für den Versand-Reiter).
+`send_premium_sms` war bis dahin nur über den freien `report_config`-Schlüssel
+setzbar, noch kein Go-Flach-Feld analog `send_sms`/`send_telegram`.
+
+🔴 **Nachtrag (der Absatz oben beschreibt den Stand von S2a, 2026-08-10 — inzwischen
+überholt):** Der Alarmpfad ist seit #1701 (Backend) verdrahtet — für Gewitter-,
+Änderungs- und amtliche Alarme, in **beiden** Flächen (Trip UND Ortsvergleich), nicht
+nur Trip. Die zugehörige Oberfläche (Alarme-Reiter, vierte Kanalzeile + eigene
+Dringlichkeits-Schwelle) ist seit #1745 Scheibe A live, ebenfalls in beiden Flächen.
+Mit **#1752 (Scheibe B)** folgen auch **Regen-/Radar-Alarme** dem Alarm-Kanal-Satz: Die
+Sonderfassung `_radar_effective_channels()`, die ausschließlich die Briefing-Flags las, ist
+ersatzlos entfallen; das Kanal-Set wird einmal über `_effective_alert_channels()` aufgelöst
+und im ganzen Radar-Pfad geteilt (Unterdrückungs-Protokoll, Leer-Check, Versand). Damit gibt
+es **einen** Auflösungsweg für alle Alarmtypen — die zwei konkurrierenden Wege waren die
+Ursache von #1745. Der Versand-Pfad selbst (dieser Abschnitt) bleibt unverändert
+Trip-Briefing-only, davon unberührt. Details:
+`docs/specs/modules/feat_1701_alarm_premium_sms.md`,
+`docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md`,
+`docs/specs/modules/fix_1752_radar_folgt_alarm_kanaelen.md`.
 
 ### Telegram Bot-Menü (Automatisches Setup)
 
@@ -244,8 +275,12 @@ für `ComparePreset`-Orte auf, ohne die Auswertungslogik zu duplizieren. Wetter-
 `compare_weather_snapshot.py` persistiert (`data/users/<user_id>/compare_weather_snapshots/`)
 und beim Report-Versand (`send_one_compare_preset()`) aktualisiert; der 15-Minuten-Check liest
 nur. Versand ohne Trip-Bindung über `NotificationService.send_location_deviation_alert()`; der
-geteilte Alert-Renderer zeigt bei gesetztem `AlertMessage.location_label` den Ortsnamen statt
-der (bei einem Punkt sinnlosen) km-Spanne. Alarmkonfiguration ist in Scheibe 2 hartkodiert
+geteilte Alert-Renderer löst den Ortsbezug seit #1744 A1 in **einer** Funktion
+(`renderers/alert/segments.py::format_alert_location`) über drei Stufen auf: gesetztes
+`location_label` → Ortsname (Ortsvergleich), sonst Segment-Kennung über
+`format_segment_reference` (`Segment 3–5`, `🏁 Ziel` — dieselbe Sprache wie die amtliche
+Warnung), sonst km-Spanne als Rückfall. Die Kurznachricht (SMS/Premium-SMS) nennt bewusst
+weiterhin keinen Ortsbezug. Alarmkonfiguration ist in Scheibe 2 hartkodiert
 (Default-Sensitivität „standard", 120 Min Cooldown, nur E-Mail) — editierbare UI folgt in
 Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cron-Job
 `compare_alert_checks` (`*/15 * * * *`, 7. registrierter Job). Details:
@@ -259,14 +294,32 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
 
 2. **Melde-Gedächtnis (`alert_state`)**
    - Persistenz: `data/users/<user_id>/alert_state/<trip_id>.json`
-   - Schema: `{ "<metric>:<segment_id>": { "last_reported_value": float, "reported_at": ISO-8601 } }`
-   - **Re-Alert-Logik:**
+   - Eine Datei, **zwei Schlüsselräume**:
+     - Änderungs-Raum: `{ "<metric>:<segment_id>": { "last_reported_value": float, "reported_at": ISO-8601 } }`
+     - Amtlicher Raum: `{ "official_alert:<ident>:<hazard>:<valid_from>:<valid_to>": { "last_reported_value": float, "reported_at": ISO-8601, "valid_from": ISO-8601|null, "valid_to": ISO-8601|null } }`
+       — Schlüsselbildung `official_alert_state_key()`, `ident` nach Präzedenz `dedup_id` >
+       `region_label` > `label`; Präfix-Konstante `OFFICIAL_ALERT_KEY_PREFIX` in
+       `services/alert_state.py`. Die Felder `valid_from`/`valid_to` kamen mit **#1685**;
+       Bestandseinträge ohne sie bleiben gültig (Read-Modify-Write mit Merge).
+   - **Re-Alert-Logik (Änderungs-Raum):**
      - Neu (kein Eintrag): Alert sent, Eintrag angelegt
      - Stagnation (`|current - last| < threshold`): unterdrückt
      - Eskalation (`|current - last| >= threshold`): erneut Alert, Wert aktualisiert
+   - **Re-Alert-Logik (amtlicher Raum) seit #1685 (2026-08-11):** entscheidet
+     `official_alert_revision_verdict()` in `output/renderers/alert/official_alerts.py` —
+     **geteilt** von Trip (`trip_alert.check_official_alert_triggers`) und Ortsvergleich
+     (`compare_official_alert._detect`). Überlappt das Gültigkeitsfenster einer Warnung **echt**
+     mit dem eines gemeldeten Eintrags gleicher Identität + Gefahr, bleibt sie **still**;
+     Ausnahmen: Stufe gestiegen ODER Beginn **≥ 2 h früher** (PO-Entscheidung: ein früher
+     eintretendes Ereignis zwingt zum Umplanen). Aneinandergrenzende Fenster sind **keine**
+     Überlappung und bleiben zwei Warnungen — präzisiert #1245 AC-4 zu „T2 überlappt T1 nicht".
+     Bei stiller Revision wird fortgeschrieben (alter Schlüssel entfällt, `reported_at` bleibt
+     das Datum der tatsächlichen Meldung); ohne diese Fortschreibung meldete das dritte Glied
+     einer Revisionskette fälschlich erneut. Die **Anzeige** (`dedupe_official_alerts`) ist davon
+     unberührt — beide Perioden bleiben in der Mail sichtbar.
    - **Reset seit #1460 T1 (2026-08-03, ADR-0043):** beim Briefing-Versand wird nur noch der
-     Änderungs-Raum (`<feld>:<segment>`) gelöscht — der amtliche Raum (Präfix `official_alert:`,
-     s. u.) überlebt den Reset, damit dessen Entprellung nicht bei jedem Briefing verlorengeht.
+     Änderungs-Raum (`<feld>:<segment>`) gelöscht — der amtliche Raum überlebt den Reset, damit
+     dessen Entprellung nicht bei jedem Briefing verlorengeht.
      Vorher löschte `AlertStateService.reset()` die komplette Datei.
 
 3. **Symmetrische Δ-Erkennung**
@@ -284,7 +337,10 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
    - Renderer: `src/output/renderers/alert/` (model.py, project.py, render.py) — ersetzt das gelöschte `alert_compact.py`
    - 4 Render-Pfade: `render_subject()`, `render_email()`, `render_telegram()`, `render_sms()`
    - Projektion: `to_alert_message()` erzeugt `AlertMessage` aus `WeatherChange`-Events
-   - Dynamischer Betreff: `Trip · km · Richtung · Metrik`; faktisch-generische H1
+   - Dynamischer Betreff: `Trip · Ortsangabe · Richtung · Metrik`; faktisch-generische H1.
+     Die Ortsangabe kommt aus der **einen** Auflösung `_location_of` (`render.py:101`, seit #1744 A1):
+     `location_label` (Ortsvergleich) → Segment-Kennung → km-Spanne als Rückfall. Der Funktionsname
+     `_km_str` ist ein Relikt — hier stand bis 2026-08-13 noch `km`, das war seit A1 überholt
    - Severity-Sortierung pro Metrik; ASCII-SMS ≤140 Zeichen mit Überlauf-Marker
    - Enthält NICHT: Stundentabellen, Ausblick, Gewitter-Vorschau, Pills, Vortag-Vergleich, Statistik
    - km-Erweiterung: `build_segment_label()` zeigt `"Etappe N, km X–Y, HH–HH"` wenn km vorhanden (Issue #801)
@@ -297,15 +353,28 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
    - Gemeinsamer Segment-Helfer: `src/services/trip_segments.py:convert_trip_to_segments(trip, target_date) -> List[TripSegment]`
      - Extrahiert SSoT-Segmentlogik aus dem Briefing-Scheduler
      - Erzeugt konsistente Segmente mit `segment_id`, `start_point`/`end_point`, `start_time`/`end_time`
-   - **Segment-Auswahl in `check_radar_alerts`:**
-     - Statt Blindcheck am `stage.waypoints[0]`: wähle das aktuelle oder nächste Segment nach `now_utc`
-     - Logik: Aktives Segment = `seg.start_time <= now_utc <= seg.end_time`; wenn nicht: erstes Segment vor `now_utc`; wenn alle vorbei: kein Alert
+   - **Segment-Auswahl in `check_radar_alerts` (tagesübergreifend seit Issue #1667 S3):**
+     - Basisregel unverändert (`trip_segments.py::select_active_segment`, 1:1 extrahiert
+       aus der ursprünglichen Inline-Logik): aktives Segment = `seg.start_time <= now_utc
+       <= seg.end_time`; sonst Vorschau auf `segments[0]`, wenn `now_utc` noch davor liegt;
+       sonst kein Alert
+     - Seit #1667 S3 wählt `trip_segments.py::resolve_current_segment(trip, now_utc, today)`
+       zusätzlich vorrangig: (1) aktives Segment von `today` → (2) aktives Segment von
+       `today - 1 Tag` → (3) Vorschau `today[0]` → (4) nichts. Deckt eine Etappe mit
+       Ankunft nach Mitternacht ab, deren Ziel-Segment am heutigen Kalendertag sonst nicht
+       gefunden würde (`Trip.get_stage_for_date` löst strikt per `==` auf)
+     - Rückgabe ist `(Segment, Datum)` — der Briefing-Schnappschuss-Vergleich
+       (`WeatherSnapshotService.load_dated`, Punkt „Konvektiver Sicherheits-Override" unten)
+       liest unter diesem Segment-Datum, nicht mehr zwingend unter `today`
    - **Nowcast + Ort-Label:**
      - Ein `get_nowcast()`-Call am `segment.start_point` (nicht am alten Stage-Waypoint)
      - `tz_for_coords(lat, lon)` bestimmt Tour-Zeitzone; `format_now_text(result, tz=tz)` gibt Onset-Zeit in Tour-TZ aus
      - `build_segment_label()` erzeugt „Etappe N, km X–Y" mit echten Strecken-Kilometern
    - **Kanonischer Render-Pfad (Issue #919):** `check_radar_alerts` konstruiert `AlertMessage(OnsetEvent(...))` und leitet durch dieselben vier Renderer wie der Abweichungs-Alert:
-     - `render_subject(msg)` — Betreff: `[<trip>] km <a>–<b> · Regen/Gewitter in <m> Min`
+     - `render_subject(msg)` — Betreff: `[<trip>] <Ortsangabe> · Regen/Gewitter in <m> Min`,
+       an einer echt zugestellten Mail gemessen z.B. `[KHW 403] 🏁 Ziel · Regen in 25 Min`.
+       Ortsangabe nach derselben dreistufigen Auflösung wie oben (seit #1744 A1; hier stand bis
+       2026-08-13 noch die km-Spanne)
      - `render_email(msg)` — HTML + Plain mit Onset-Uhrzeit, Intensity-Label, Quellenangabe, Cooldown-Block
      - `render_telegram(msg)` — Fettzeile + Detail mit Onset-Uhrzeit und Quelle
      - `render_sms(msg)` — Token `R!<min>` (Regen) oder `TH!<min>` (Gewitter), ≤140 Zeichen GSM-7
@@ -355,14 +424,13 @@ check_and_send_alerts(trip, cached_weather)
   ↓ render_deviation_alert() → (html, plain)
   ↓ Versand + alert_state updaten
 
-check_radar_alerts(user_id)  [Issue #822 + #919]
-  ↓ pro Trip: convert_trip_to_segments(trip, today)
-  ↓ Segment-Auswahl nach now_utc (aktiv/nächstes)
+check_radar_alerts(user_id)  [Issue #822 + #919, tagesübergreifend seit #1667 S3]
+  ↓ pro Trip: resolve_current_segment(trip, now_utc, today)  [heute → gestern → Vorschau → nichts]
   ↓ get_nowcast(segment.start_point.lat, segment.start_point.lon)
   ↓ build_segment_label() + format_now_text(tz=tour_tz)
   ↓ AlertMessage(OnsetEvent(...))  [seit #919]
   ↓ render_subject / render_email / render_telegram / render_sms
-  ↓ Versand + throttle/log setzen
+  ↓ Versand + throttle/log setzen (Schnappschuss-Vergleich liest unter dem Segment-Datum)
 
 _send_briefing_report() [trip_report_scheduler.py]
   ↓ WeatherSnapshotService.save(snapshot)

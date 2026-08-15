@@ -410,7 +410,10 @@ class TestGuardBlockVisibleInCompareFailedTally:
             "empfaenger": ["gregor-test@henemm.com"],
             "send_telegram": True,
             "created_at": "2026-07-01T00:00:00Z",
-        }])
+        # Issue #1594: der BRIEFING-Versand wird gemessen, nicht ein Alarm —
+        # der Migrations-Rueckfall (Morgen-Slot 06:00 Ortszeit) muss stehen
+        # bleiben, sonst zielt der Ausloeser `hour=6` ins Leere.
+        }], briefing_stunde_setzen=False)
 
         result = run_compare_presets_daily(
             user_id=user_id, data_root=str(data_root), hour=6,

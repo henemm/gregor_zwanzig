@@ -39,7 +39,6 @@ INVENTORY: dict[str, IsolationKind] = {
     # Issue #1457 S2b: DWD-Gewitterabruf (LPI/GSP) und DWD-Basis-Vorhersage-
     # Fallback (Epic #1127) rufen diesen Host regulaer auf -- kein Warn-Feed.
     "opendata.dwd.de": IsolationKind.TEST_ACCESS,
-    "radar-api.protezionecivile.it": IsolationKind.TEST_ACCESS,
     # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
     "api.meteoalarm.org": IsolationKind.BLOCKED,
     # Issue #1445 S1: derselbe Anbieter, kontingentfreier Feed-Transport --

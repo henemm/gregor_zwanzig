@@ -38,8 +38,9 @@ DOT_RISK = _RISK_DOT_COLORS["risk"][0]    # rot    — Risiko
 # Zell-Toenungsfarben stehen als Literale im Renderer (html.py:633-637 /
 # :650-654 — "orange"/"red" der Zell-Toenung); es gibt dafuer keine
 # exportierte Konstante, daher hier bewusst als Literal mit Herkunftsangabe.
-CELL_RED = "#f6c5bf"
-CELL_ORANGE = "#fad6b8"
+# Fix #1801 S2: neue Flaechenfarben (design_tokens._TONE_CSS).
+CELL_RED = "#f7d3e2"
+CELL_ORANGE = "#fbe3cc"
 
 _BG_HEX = re.compile(r"background:\s*(#[0-9a-fA-F]{6})")
 
@@ -126,10 +127,11 @@ def test_ac1_thunder_high_makes_risk_dot_red():
     des vormaligen Blitzsymbols ⚡⚡) bereits korrekt erscheint."""
     html = _render_one(_row(thunder=ThunderLevel.HIGH))
 
-    assert _thunder_cell_dot_fill(html) == "#b91c1c", (
+    assert _thunder_cell_dot_fill(html) == "#a8104a", (
         "Erwartungs-Grundlage: Die Gewitterzelle zeigt bei HIGH bereits "
-        "korrekt den roten Ampel-Kreis (#b91c1c, Issue #1491) — genau diese "
-        "Diskrepanz zum gruenen Risiko-Punkt ist der Fehler."
+        "korrekt den roten Ampel-Kreis (#a8104a, Fix #1801 S2 -- vormals "
+        "#b91c1c, Issue #1491) — genau diese Diskrepanz zum gruenen "
+        "Risiko-Punkt ist der Fehler."
     )
 
     color = _risk_dot_color(html)
@@ -148,8 +150,8 @@ def test_ac1_thunder_high_makes_risk_dot_red():
 def test_ac2_thunder_high_tints_cell_red():
     """AC-2: GIVEN dieselbe Stundenzeile mit Gewitterstufe HIGH / WHEN die
     Briefing-Stundentabelle gerendert wird / THEN ist die Gewitterspalte
-    dieser Zeile rot hinterlegt (#f6c5bf) — heute bleibt sie in jedem Fall
-    ungefaerbt, unabhaengig vom Wert."""
+    dieser Zeile rot hinterlegt (#f7d3e2, Fix #1801 S2) — heute bleibt sie
+    in jedem Fall ungefaerbt, unabhaengig vom Wert."""
     html = _render_one(_row(thunder=ThunderLevel.HIGH))
 
     bg = _thunder_cell_bg(html)

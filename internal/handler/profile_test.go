@@ -2,16 +2,19 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/middleware"
+	"github.com/henemm/gregor-api/internal/model"
 )
 
 // TDD RED: Tests for profile endpoints — must FAIL until implemented.
@@ -560,5 +563,247 @@ func TestGetProfileHandlerEmailVerifiedField_AC20(t *testing.T) {
 	}
 	if strings.Contains(unverifiedBody, "email_verified_at") {
 		t.Errorf("AC-20: Zeitstempel email_verified_at darf NIE im JSON-Body stehen, war: %s", unverifiedBody)
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Issue #1717 (Scheibe S3): Premium-SMS in der Oberflaeche.
+// Spec: docs/specs/modules/feat_1717_s3_premium_sms_ui.md — AC-7 (der Endpoint
+// bleibt rein lesend) und die Feldmenge der vier neuen Profil-Felder, die die
+// Oberflaeche ueberhaupt erst mit Daten versorgt.
+//
+// Herkunft: in der RED-Phase lagen die beiden Funktionen ausserhalb von
+// internal/ und wurden per `go test -overlay` eingespielt (der edit_gate laesst
+// in phase5_tdd_red nur Test-Verzeichnisse zu). Seit Phase 6 stehen sie hier
+// neben TestGetProfileHandlerSmsAllowedField/
+// TestGetProfileHandlerEmailVerifiedField_AC20 — Assertions unveraendert.
+//
+// RED war: `profileResponse` fuehrte keins der vier Felder, und
+// `model.PremiumSmsReplyTTL`/`model.DerivePremiumSmsReplyState` existierten
+// nicht — das Paket uebersetzte deshalb nicht.
+//
+// Keine Mocks: echter Handler, echter Store auf t.TempDir(), echtes user.json.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Die vier Felder, die S3 lesend ergaenzt. `_state` und `_allowed` sind immer
+// vorhanden (kein omitempty), die beiden Rohwerte nur wenn gelernt.
+const (
+	fieldPremiumReplyTo    = "premium_sms_reply_to"
+	fieldPremiumReplyAt    = "premium_sms_reply_at"
+	fieldPremiumReplyState = "premium_sms_reply_state"
+	fieldPremiumAllowed    = "premium_sms_allowed"
+)
+
+// Feldmenge und abgeleiteter Zustand je Drei-Zustands-Fall. Die Frist wird
+// relativ zu model.PremiumSmsReplyTTL gesetzt, nicht als zweite 30 im Test —
+// die Deckungsgleichheit der Zahl bewacht tests/test_premium_sms_ttl_drift.py.
+func TestGetProfileHandlerPremiumSmsFields(t *testing.T) {
+	s := newTestStore(t)
+	h := GetProfileHandler(s)
+
+	now := time.Now().UTC()
+	frisch := now.Add(-model.PremiumSmsReplyTTL / 2).Format(time.RFC3339)
+	veraltet := now.Add(-model.PremiumSmsReplyTTL - 48*time.Hour).Format(time.RFC3339)
+
+	writeUser := func(id, extra string) {
+		dir := filepath.Join(s.DataDir, "users", id)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+		body := fmt.Sprintf(`{"id":%q%s}`, id, extra)
+		if err := os.WriteFile(filepath.Join(dir, "user.json"), []byte(body), 0644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}
+	getProfile := func(id string) map[string]interface{} {
+		req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+		req = req.WithContext(middleware.ContextWithUserID(req.Context(), id))
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != 200 {
+			t.Fatalf("%s: expected 200, got %d: %s", id, w.Code, w.Body.String())
+		}
+		var resp map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("%s: unmarshal: %v (%s)", id, err, w.Body.String())
+		}
+		return resp
+	}
+
+	faelle := []struct {
+		id           string
+		extra        string
+		wantState    string
+		wantAllowed  bool
+		wantReplyTo  string // "" = Feld darf gar nicht im JSON stehen (omitempty)
+		beschreibung string
+	}{
+		{
+			id:           "premium-fresh",
+			extra:        `,"tier":"premium","premium_sms_reply_to":"15551234567","premium_sms_reply_at":"` + frisch + `"`,
+			wantState:    model.PremiumSmsStateFresh,
+			wantAllowed:  true,
+			wantReplyTo:  "15551234567",
+			beschreibung: "Premium-Tier, frische gelernte Rueckadresse",
+		},
+		{
+			id:           "premium-stale",
+			extra:        `,"tier":"premium","premium_sms_reply_to":"15559999999","premium_sms_reply_at":"` + veraltet + `"`,
+			wantState:    model.PremiumSmsStateStale,
+			wantAllowed:  true,
+			wantReplyTo:  "15559999999",
+			beschreibung: "Premium-Tier, laut Frist verfallene Rueckadresse",
+		},
+		{
+			id:           "premium-none",
+			extra:        `,"tier":"premium"`,
+			wantState:    model.PremiumSmsStateNone,
+			wantAllowed:  true,
+			wantReplyTo:  "",
+			beschreibung: "Premium-Tier, Geraet hat sich noch nie gemeldet",
+		},
+		{
+			id:           "standard-fresh",
+			extra:        `,"tier":"standard","premium_sms_reply_to":"15551234567","premium_sms_reply_at":"` + frisch + `"`,
+			wantState:    model.PremiumSmsStateFresh,
+			wantAllowed:  false, // AC-6: eigenes Tarif-Gate, nicht sms_allowed
+			wantReplyTo:  "15551234567",
+			beschreibung: "Standard-Tier trotz frischer Rueckadresse",
+		},
+	}
+
+	for _, f := range faelle {
+		writeUser(f.id, f.extra)
+		resp := getProfile(f.id)
+
+		state, ok := resp[fieldPremiumReplyState]
+		if !ok {
+			t.Fatalf("%s (%s): Feld %q fehlt in der Profil-Antwort — ohne es kann die Oberflaeche "+
+				"die drei Zustaende nicht unterscheiden.", f.id, f.beschreibung, fieldPremiumReplyState)
+		}
+		if state != f.wantState {
+			t.Errorf("%s (%s): %s = %v, want %q", f.id, f.beschreibung, fieldPremiumReplyState, state, f.wantState)
+		}
+
+		allowed, ok := resp[fieldPremiumAllowed]
+		if !ok {
+			t.Fatalf("%s (%s): Feld %q fehlt in der Profil-Antwort.", f.id, f.beschreibung, fieldPremiumAllowed)
+		}
+		if allowed != f.wantAllowed {
+			t.Errorf("%s (%s): %s = %v, want %v", f.id, f.beschreibung, fieldPremiumAllowed, allowed, f.wantAllowed)
+		}
+
+		if f.wantReplyTo == "" {
+			if _, present := resp[fieldPremiumReplyTo]; present {
+				t.Errorf("%s (%s): %s steht im JSON, obwohl nichts gelernt wurde (omitempty).",
+					f.id, f.beschreibung, fieldPremiumReplyTo)
+			}
+			if _, present := resp[fieldPremiumReplyAt]; present {
+				t.Errorf("%s (%s): %s steht im JSON, obwohl nichts gelernt wurde (omitempty).",
+					f.id, f.beschreibung, fieldPremiumReplyAt)
+			}
+			continue
+		}
+		if resp[fieldPremiumReplyTo] != f.wantReplyTo {
+			t.Errorf("%s (%s): %s = %v, want %q — ohne die Zielnummer kann die Oberflaeche nicht "+
+				"zeigen, WOHIN gesendet wird (AC-4).",
+				f.id, f.beschreibung, fieldPremiumReplyTo, resp[fieldPremiumReplyTo], f.wantReplyTo)
+		}
+		at, ok := resp[fieldPremiumReplyAt].(string)
+		if !ok || at == "" {
+			t.Errorf("%s (%s): %s fehlt oder ist leer (%v) — das Meldedatum ist die Nutzinformation "+
+				"(Muster requested_at, auth.go:461), nicht der abgeleitete Zustand allein.",
+				f.id, f.beschreibung, fieldPremiumReplyAt, resp[fieldPremiumReplyAt])
+		} else if _, err := time.Parse(time.RFC3339, at); err != nil {
+			t.Errorf("%s (%s): %s = %q ist kein RFC3339-Zeitstempel: %v",
+				f.id, f.beschreibung, fieldPremiumReplyAt, at, err)
+		}
+	}
+}
+
+// AC-7: `PUT /api/auth/profile` darf die gelernte Rueckadresse NICHT annehmen.
+// Waere sie editierbar, faellt die S2a-Zusage "Empfaenger ist ausschliesslich die
+// gelernte Rueckadresse" in sich zusammen — ein Nutzer koennte sich eine fremde
+// Nummer eintragen und kostenpflichtige Premium-SMS dorthin schicken lassen.
+// Mutation, die hier rot werden MUSS: die beiden Felder in die Decode-Struct
+// von UpdateProfileHandler (auth.go:541-547) aufnehmen.
+func TestUpdateProfileHandlerIgnoresPremiumSmsReplyFields(t *testing.T) {
+	s := newTestStore(t)
+	dir := filepath.Join(s.DataDir, "users", "nora")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	const gelernt = "15551234567"
+	const gelerntAm = "2026-08-05T12:00:00Z"
+	const untergeschoben = "4999999999"
+
+	userJSON := fmt.Sprintf(
+		`{"id":"nora","tier":"premium","mail_to":"nora@henemm.com",`+
+			`"premium_sms_reply_to":%q,"premium_sms_reply_at":%q}`, gelernt, gelerntAm)
+	if err := os.WriteFile(filepath.Join(dir, "user.json"), []byte(userJSON), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	// PUT mit untergeschobener Rueckadresse — zusammen mit einer legitimen
+	// Aenderung, damit der Request ein normaler Profil-Speichervorgang ist.
+	body := fmt.Sprintf(
+		`{"display_name":"Nora","premium_sms_reply_to":%q,"premium_sms_reply_at":"2026-08-11T00:00:00Z"}`,
+		untergeschoben)
+	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
+	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "nora"))
+	w := httptest.NewRecorder()
+	UpdateProfileHandler(s, config.Config{}).ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 1. Persistenz: die gelernten Werte stehen unveraendert in user.json.
+	data, err := os.ReadFile(filepath.Join(dir, "user.json"))
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	var persisted map[string]interface{}
+	if err := json.Unmarshal(data, &persisted); err != nil {
+		t.Fatalf("unmarshal user.json: %v (%s)", err, data)
+	}
+	if persisted["premium_sms_reply_to"] != gelernt {
+		t.Errorf("AC-7: premium_sms_reply_to = %v, want %q — der Endpoint hat die untergeschobene "+
+			"Nummer uebernommen. Damit koennte ein Nutzer Premium-SMS an eine fremde Nummer "+
+			"schicken lassen. Datei: %s", persisted["premium_sms_reply_to"], gelernt, data)
+	}
+	if strings.Contains(string(data), untergeschoben) {
+		t.Errorf("AC-7: die untergeschobene Nummer %q steht in user.json: %s", untergeschoben, data)
+	}
+	at, _ := persisted["premium_sms_reply_at"].(string)
+	if at == "" {
+		t.Errorf("AC-7: premium_sms_reply_at wurde beim PUT geloescht: %s", data)
+	} else if parsed, err := time.Parse(time.RFC3339, at); err != nil {
+		t.Errorf("AC-7: premium_sms_reply_at = %q unlesbar: %v", at, err)
+	} else if want, _ := time.Parse(time.RFC3339, gelerntAm); !parsed.Equal(want) {
+		t.Errorf("AC-7: premium_sms_reply_at = %q, want %q (Meldezeitpunkt wurde ueberschrieben)", at, gelerntAm)
+	}
+
+	// 2. Die legitime Aenderung ist durchgekommen — der Request war kein No-Op.
+	if persisted["display_name"] != "Nora" {
+		t.Errorf("Vorbedingung: display_name = %v, want \"Nora\" — der PUT hat gar nichts geschrieben, "+
+			"dann beweist der Test oben nichts.", persisted["display_name"])
+	}
+
+	// 3. Lesepfad: GET liefert weiterhin den gelernten Wert.
+	getReq := httptest.NewRequest("GET", "/api/auth/profile", nil)
+	getReq = getReq.WithContext(middleware.ContextWithUserID(getReq.Context(), "nora"))
+	getW := httptest.NewRecorder()
+	GetProfileHandler(s).ServeHTTP(getW, getReq)
+	if getW.Code != 200 {
+		t.Fatalf("GET expected 200, got %d: %s", getW.Code, getW.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.Unmarshal(getW.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal GET: %v", err)
+	}
+	if resp[fieldPremiumReplyTo] != gelernt {
+		t.Errorf("AC-7: GET liefert %s = %v, want %q", fieldPremiumReplyTo, resp[fieldPremiumReplyTo], gelernt)
 	}
 }

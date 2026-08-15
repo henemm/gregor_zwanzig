@@ -20,7 +20,7 @@ GREEN-Zustand KEINEN Netzwerk-Call. Kein ``pytest.mark.live``.
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 # RED: Dieser Import schlägt JETZT fehl (Symbole existieren noch nicht).
 # Er gehört bewusst auf Modul-Ebene, damit die ganze Datei rot wird.
@@ -150,7 +150,9 @@ class TestFarStagesSkippedNoCall:
         trip = _make_far_future_trip()
         service = TripReportSchedulerService()
 
-        result = service._build_stage_trend(trip, date.today(), tz=None)
+        result = service._build_stage_trend(
+            trip, date.today(), now_utc=datetime.now(timezone.utc), tz=None,
+        )
 
         assert result.rows is None, (
             "Ein Trip ausschließlich mit Etappen jenseits today+15 darf KEINE "
@@ -169,7 +171,9 @@ class TestFarStagesSkippedNoCall:
         service = TripReportSchedulerService()
 
         before = _count_trend_calls()
-        service._build_stage_trend(trip, date.today(), tz=None)
+        service._build_stage_trend(
+            trip, date.today(), now_utc=datetime.now(timezone.utc), tz=None,
+        )
         after = _count_trend_calls()
 
         assert after == before, (
@@ -193,7 +197,9 @@ class TestNoErrorLogOnSkip:
         service = TripReportSchedulerService()
 
         with caplog.at_level(logging.ERROR, logger="trip_report_scheduler"):
-            service._build_stage_trend(trip, date.today(), tz=None)
+            service._build_stage_trend(
+            trip, date.today(), now_utc=datetime.now(timezone.utc), tz=None,
+        )
 
         error_records = [
             r for r in caplog.records if r.levelno >= logging.ERROR

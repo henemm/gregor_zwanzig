@@ -299,7 +299,8 @@ class TestAC1RenderedOutputsAgree:
 
         scheduler = TripReportSchedulerService()
         thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
-            None, _TODAY, tz=_UTC, multi_day_trend=trend,
+            None, _TODAY, now_utc=datetime.now(timezone.utc), tz=_UTC,
+            multi_day_trend=trend,
         )
 
         report = TripReportFormatter().format_email(

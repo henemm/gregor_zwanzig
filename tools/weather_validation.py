@@ -285,6 +285,10 @@ def main():
     args = parser.parse_args()
 
     if args.lat and args.lon:
+        # gz-main-path: dieses Werkzeug fragt seine Referenzdaten selbst
+        # ausdruecklich mit "timezone": "UTC" ab (fetch_openmeteo, Zeile 31) --
+        # ein Ortstag-Default erzeugte einen Widerspruch INNERHALB desselben
+        # Skripts (Validierungsziel UTC, Validierungs-Default Ortszeit).
         target_date = args.date or date.today().isoformat()
         validate_point(args.lat, args.lon, target_date)
     elif args.trip:

@@ -36,6 +36,17 @@ logger = logging.getLogger("thunder_enrichment")
 _SIGNAL_ZU_FELD: Dict[str, str] = {
     "lpi": "lightning_potential_lpi_jkg",
     "grau_gsp": "hail_potential_grau_gsp",
+    # #1531: sieben neue Signale (ICON-D2 + ICON-EU-Energiegroessen). Je
+    # Groesse ein eigenes Feld (Spec Implementation Details Punkt 4).
+    # `cape_con` (ICON-EU) bekommt BEWUSST keinen Eintrag -- wird abgerufen,
+    # aber keinem Feld zugeordnet (Spec Scope-Abgrenzung).
+    "sdi_2": "supercell_index_sdi2_1s",
+    "cin_ml": "convective_inhibition_jkg",
+    "cape_ml": "cape_ml_jkg",
+    "lpi_max": "lightning_potential_max_lpi_jkg",
+    "uh_max": "updraft_helicity_max_m2s2",
+    "uh_max_med": "updraft_helicity_max_med_m2s2",
+    "uh_max_low": "updraft_helicity_max_low_m2s2",
 }
 
 # Feld der bestehenden Einzelwert-Quelle (S2a). Es steht NICHT in der Tabelle
@@ -83,7 +94,7 @@ def _bezugszeitpunkt(reihe: "NormalizedTimeseries") -> datetime:
 
 def _fuse_thunder_levels(
     data: list,
-    cape_threshold_jkg: Optional[float],
+    cape_ladder: Optional[Tuple[float, float, float]],
     lpi_thresholds: Optional[Tuple[float, float, float]],
 ) -> None:
     """Issue #1474 Abschnitt 3: ergaenzt ``dp.thunder_level`` je Datenpunkt um
@@ -92,14 +103,19 @@ def _fuse_thunder_levels(
     seit Issue #1474c; Hagel (``hail_potential_grau_gsp``) bleibt bewusst
     aussen vor (S5/#1475).
 
-    ``cape_threshold_jkg`` -- die geeichte, modell-/gebietsabhaengige
-    Schwelle (Issue #1592 C1), EINMAL je Reihe in ``enrich_thunder()``
+    ``cape_ladder`` -- die geeichte, modell-/gebietsabhaengige
+    (low, med, high)-CAPE-Leiter (Issue #1592 C1, seit Issue #1679 dreisprossig
+    statt einer einzelnen Schwelle), EINMAL je Reihe in ``enrich_thunder()``
     aufgeloest und hier unveraendert durchgereicht. BEWUSST OHNE Default
     (PO-Korrektur 2026-08-08): "kein stiller Rueckfall" (Spec Abschnitt 3,
     ADR-0025) gilt auf der GANZEN Kette, nicht nur an der oeffentlichen
     Grenze ``thunder_level_from_signals()`` -- jeder Aufrufer, auch ein
     Test, der nur die Blitzdichte-/Blitzpotenzial-/Hagel-Fusion pruefen
     will, muss den Parameter ausdruecklich nennen.
+
+    Die Konvektionshemmung CIN kommt dagegen NICHT je Reihe, sondern je
+    Datenpunkt (``dp.convective_inhibition_jkg``, Issue #1531) -- sie ist ein
+    Rohwert der Vorhersage, keine Kalibrierungskonstante des Gebiets.
 
     ``lpi_thresholds`` -- die gebietsabhaengige (low, med, high)-Leiter des
     Blitzpotenzials (Issue #1679, ``model_registry.lpi_thresholds_jkg()``),
@@ -110,28 +126,41 @@ def _fuse_thunder_levels(
     Ueberschreibt NUR, wenn die Fusion ein Ergebnis liefert -- liefert sie
     ``None`` ("keine Aussage"), bleibt ein bereits vorhandener Wert an
     ``dp.thunder_level`` erhalten (s. Spec Abschnitt 3, letzter Absatz).
-    """
-    from output.metric_format import thunder_level_from_signals
 
+    Issue #1680 S1: zusaetzlich wird festgehalten, WELCHE Zutaten die Stufe
+    tragen (``dp.thunder_level_signals``) -- aus DEMSELBEN Argumentsatz und
+    unter DERSELBEN Ueberschreib-Bedingung, damit Stufe und Herkunft nie aus
+    zwei verschiedenen Rechnungen stammen koennen.
+    """
+    from output.metric_format import thunder_level_from_signals, thunder_signal_carriers
+
+    cape_low, cape_med, cape_high = cape_ladder or (None, None, None)
     lpi_low, lpi_med, lpi_high = lpi_thresholds or (None, None, None)
     for dp in data:
-        fused = thunder_level_from_signals(
-            dp.thunder_level, dp.lightning_density_per_km2_3h, dp.cape_jkg,
-            dp.lightning_potential_lpi_jkg,
-            cape_threshold_jkg=cape_threshold_jkg,
+        werte = (dp.thunder_level, dp.lightning_density_per_km2_3h, dp.cape_jkg,
+                 dp.lightning_potential_lpi_jkg)
+        leitern = dict(
+            cape_threshold_jkg=cape_low,
+            cape_med_min=cape_med, cape_high_min=cape_high,
+            cin_jkg=dp.convective_inhibition_jkg,
             lpi_low_min=lpi_low, lpi_med_min=lpi_med, lpi_high_min=lpi_high,
         )
+        fused = thunder_level_from_signals(*werte, **leitern)
         if fused is not None:
             dp.thunder_level = fused
+            dp.thunder_level_signals = thunder_signal_carriers(*werte, **leitern)
 
 
 def _schwellen_fuer_reihe(
     reihe: "NormalizedTimeseries", location: "Location",
-) -> Tuple[Optional[float], Optional[Tuple[float, float, float]]]:
-    """Loest die beiden gebietsabhaengigen Schwellen der Fusion EINMAL je
-    Reihe auf: die geeichte CAPE-Schwelle (Issue #1592 C1, Modell x Gebiet)
-    und die Blitzpotenzial-Leiter (Issue #1679, Gebiet). BEIDE haengen am
-    SELBEN Gebiets-Nachschlag -- kein zweiter Aufloesungs-Ort.
+) -> Tuple[
+    Optional[Tuple[float, float, float]], Optional[Tuple[float, float, float]]
+]:
+    """Loest die beiden gebietsabhaengigen Schwellenleitern der Fusion EINMAL
+    je Reihe auf: die geeichte CAPE-Leiter (Issue #1592 C1 / #1679,
+    Modell x Gebiet) und die Blitzpotenzial-Leiter (Issue #1679, Gebiet).
+    BEIDE haengen am SELBEN Gebiets-Nachschlag -- kein zweiter
+    Aufloesungs-Ort.
 
     Wohnt bewusst NEBEN ``enrich_thunder()`` statt darin: der Kern-Dispatch
     dort darf keinen einzelnen Signalnamen im Quelltext tragen (Waechter
@@ -139,13 +168,13 @@ def _schwellen_fuer_reihe(
     AC-9), und der Name der Nachschlag-Funktion traegt ihn.
     """
     from app.model_registry import (
-        cape_threshold_jkg, effective_cape_model_id, lpi_thresholds_jkg,
+        cape_ladder_thresholds_jkg, effective_cape_model_id, lpi_thresholds_jkg,
     )
     from providers.thunder_routing import thunder_region_for
 
     region = thunder_region_for(location.latitude, location.longitude)
     return (
-        cape_threshold_jkg(effective_cape_model_id(reihe.meta), region),
+        cape_ladder_thresholds_jkg(effective_cape_model_id(reihe.meta), region),
         lpi_thresholds_jkg(region),
     )
 
@@ -206,12 +235,12 @@ def enrich_thunder(
     except Exception:
         logger.warning("Gewitter-Anreicherung fehlgeschlagen", exc_info=True)
 
-    schwelle, potenzial_leiter = _schwellen_fuer_reihe(reihe, location)
+    cape_leiter, potenzial_leiter = _schwellen_fuer_reihe(reihe, location)
 
     # Laeuft IMMER (auch ausserhalb eines Zustaendigkeitsgebiets oder bei
     # Abruf-Fehlschlag) -- CAPE steht unabhaengig von der Blitzdichte-Quelle
     # an jedem Datenpunkt und kann allein schon "leicht" ausloesen.
-    _fuse_thunder_levels(reihe.data, schwelle, potenzial_leiter)
+    _fuse_thunder_levels(reihe.data, cape_leiter, potenzial_leiter)
 
 
 def _hole_eintraege(

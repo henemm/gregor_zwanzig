@@ -492,8 +492,8 @@ class TestCompareMailV2HTML:
             )
 
     def test_ac6_danger_zelle_temp_ueber_schwelle_faerbung(self):
-        """AC-6: Temp >= 34 Grad wird mit Danger-Hintergrund #f6c5bf hinterlegt
-        (Collobrières, t2m_c=34.0).
+        """AC-6: Temp >= 34 Grad wird mit Danger-Hintergrund #f7d3e2
+        (Fix #1801 S2, vormals #f6c5bf) hinterlegt (Collobrières, t2m_c=34.0).
 
         Zeilen-Beschriftung hergeleitet (Issue #1378 — Beschriftung in
         ORTSZEIT): Fixture-Datenpunkt `_dp(12, 34.0, ...)` traegt
@@ -521,8 +521,8 @@ class TestCompareMailV2HTML:
         assert "34" in re.sub(r"<[^>]+>", "", temp_cell), (
             f"Temp-Zelle um 14:00 Ortszeit muss '34' zeigen, war: {temp_cell}"
         )
-        assert "#f6c5bf" in temp_cell, (
-            f"Danger-Hintergrund #f6c5bf fehlt in der Temp-Zelle >= 34 Grad: {temp_cell}"
+        assert "#f7d3e2" in temp_cell, (
+            f"Danger-Hintergrund #f7d3e2 fehlt in der Temp-Zelle >= 34 Grad: {temp_cell}"
         )
 
     def test_ac7_wind_chill_none_zeigt_strich_in_gef_spalte(self):

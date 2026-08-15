@@ -8,14 +8,25 @@
 	//
 	// Spec: docs/specs/modules/layout_tab_vergleich.md (Implementation Details §1)
 
-	import { LT_CHANNELS, ltBadge, type ChannelId } from './ltChannels';
+	import { LT_CHANNELS, ltBadgeForLimit, type ChannelId, type LtChannel } from './ltChannels';
 
 	interface Props {
 		channel: ChannelId;
 		overflow?: Partial<Record<ChannelId, number>>;
 		dense?: boolean;
+		/** Issue #1703 Scheibe 8 (AC-S8-12): die anzuzeigenden Kanaele MIT ihrer
+		 *  Platzgrenze. Der Badge kommt aus `ch.limit` — eine fest importierte
+		 *  Konstante wuerde im Ortsvergleich die Trip-Zeichengrenze (160) statt
+		 *  der gemessenen Vergleichsgrenze (153) behaupten. Default = Trip-Liste,
+		 *  damit der bestehende route-Aufruf unveraendert bleibt. */
+		channels?: LtChannel[];
 	}
-	let { channel = $bindable('email'), overflow = {}, dense = false }: Props = $props();
+	let {
+		channel = $bindable('email'),
+		overflow = {},
+		dense = false,
+		channels = LT_CHANNELS
+	}: Props = $props();
 
 	// Factory-Pattern (Safari-Closure-Schutz, CLAUDE.md).
 	function makeSelectHandler(id: ChannelId) {
@@ -26,7 +37,7 @@
 </script>
 
 <div class="lt-channel-picker" class:dense data-testid="lt-channel-picker">
-	{#each LT_CHANNELS as ch (ch.id)}
+	{#each channels as ch (ch.id)}
 		<button
 			type="button"
 			class="lt-channel-tab"
@@ -36,7 +47,7 @@
 			onclick={makeSelectHandler(ch.id)}
 		>
 			<span class="lt-ch-label">{ch.label}</span>
-			<span class="lt-ch-badge mono">{ltBadge(ch.max)}</span>
+			<span class="lt-ch-badge mono">{ltBadgeForLimit(ch.limit)}</span>
 			{#if overflow[ch.id]}
 				<span class="lt-ch-overflow mono">−{overflow[ch.id]}</span>
 			{/if}

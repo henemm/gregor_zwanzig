@@ -424,6 +424,49 @@ Details (Read-Modify-Write-Prinzip, Restrisiken R1/R2, AC-Zuordnung): Spec
 
 ---
 
+## „Versand gemeldet, Postfach leer" — zuerst den Empfänger nachsehen (#1847)
+
+Diese Falle hat sich **viermal** wiederholt (#1351, #1403, #1782, #1847) und jedes Mal
+Stunden gekostet, weil die Suche beim Versandcode statt beim Empfänger begann. **Die Mail
+war jedes Mal zugestellt — nur in einem anderen Postfach.**
+
+Es gibt **drei** Postfächer: `gregor-test@` (Test-/Gate-Mails), `gregor-staging@`
+(`GZ_IMAP_USER` auf Staging, Eingang) und `gregor_zwanzig` (`GZ_IMAP_USER` lokal).
+
+**Reihenfolge, die in einer Minute entscheidet:**
+
+1. **Protokoll lesen — der Empfänger steht seit #1847 wörtlich drin:**
+   ```bash
+   sudo -n journalctl -u gregor-python-staging | grep "Trip report sent" | tail -3
+   # Trip report sent: <Trip> (evening) via email to gregor-test@henemm.com
+   ```
+   Für den Ortsvergleich seit jeher analog: `grep "sent to"` →
+   `Compare preset <id> sent to ['…']`.
+   Nachträglich steht derselbe Wert im `briefing_log.json`-Eintrag als `mail_to`.
+
+2. **Im genannten Postfach nachsehen**, nicht im vermuteten — und in **allen Ordnern**,
+   nicht nur INBOX.
+
+3. **Erst wenn der Empfänger stimmt und trotzdem nichts ankam**, den Versandweg untersuchen.
+
+🔴 **Wo die Nutzerdaten wirklich liegen:** Die Staging-Datenwurzel ist
+`/var/lib/gregor-staging` (systemd-Drop-in `1595-datenwurzel.conf`), **nicht**
+`/home/hem/gregor_zwanzig_staging/data/` — der Ordner dort ist stillgelegter Altbestand.
+Der pro Nutzer abweichende Empfänger steht in
+`/var/lib/gregor-staging/users/<uid>/user.json` als `mail_to` und **überschreibt** das
+globale `GZ_MAIL_TO` aus der `.env`.
+
+```bash
+systemctl cat gregor-python-staging | grep GZ_DATA_DIR      # Wurzel feststellen
+sudo -n cat /var/lib/gregor-staging/users/<uid>/user.json    # Empfänger nachsehen
+```
+
+⚠️ Ein von Hand nachgestelltes `Settings().with_user_profile(<uid>)` **ohne** gesetztes
+`GZ_DATA_DIR` liest die stillgelegte Wurzel und liefert ein plausibles, reproduzierbares,
+**falsches** Ergebnis. Genau daran ist die Nachmessung in #1847 zunächst gescheitert.
+
+---
+
 ## Prod-Mail-Pfad-Nachweis: nur passiv (#1147)
 
 **VERBOT: synthetische Sends oder Kunst-User auf Prod zur Pfad-Verifikation.**

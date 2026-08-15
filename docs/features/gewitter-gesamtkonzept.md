@@ -331,12 +331,19 @@ Produkt mit zwei Schwellen; eine dritte zu erfinden wäre Eigenkalibrierung.
 Heute wird CAPE pauschal auf „leicht" gedeckelt, weil die Gegengröße fehlt. Künftig entscheidet
 die Konvektionshemmung, **wie viel** von der Energie überhaupt zählt:
 
+🔴 **Korrektur 2026-08-11 (Umsetzung #1679 CIN-Teil):** Die Grenzen unten waren beim Schreiben
+absichtlich unscharf formuliert ("0 bis −25" ohne Klarheit, welche Seite den Randwert bekommt).
+Implementierung und die freigegebenen Acceptance Criteria (`feat_1679_cin_paarung_cape_leiter.md`
+AC-4/AC-5/AC-6, adversary-VERIFIED per Mutationsprobe) legen den Randwert jeweils ins **stärker
+dämpfende** Band — Tabelle unten entsprechend präzisiert, an der fachlichen Bedeutung ändert sich
+nichts.
+
 | Hemmung (CIN) | Bedeutung | CAPE darf höchstens |
 |---|---|---|
-| 0 bis −25 J/kg | schwacher Deckel | **voll wirken** — Leiter 1000 / 2500 / 4000 J/kg |
-| −25 bis −50 | moderat | **eine Stufe weniger** |
-| −50 bis −100 | großer Deckel | **höchstens „leicht"** (heutiges Verhalten) |
-| unter −100 | Deckel hält | **kein Beitrag** |
+| über −25 J/kg (d. h. `cin > -25`) | schwacher Deckel | **voll wirken** — Leiter 1000 / 2500 / 4000 J/kg |
+| −50 bis −25 J/kg (d. h. `-50 < cin <= -25`) | moderat | **eine Stufe weniger** |
+| −100 bis −50 J/kg (d. h. `-100 <= cin <= -50`) | großer Deckel | **höchstens „leicht"** (heutiges Verhalten) |
+| unter −100 J/kg (d. h. `cin < -100`) | Deckel hält | **kein Beitrag** |
 | Hemmung unbekannt | keine Aussage | **höchstens „leicht"** — die heutige Notbremse bleibt als sicherer Rückfall |
 
 ⚠️ **Ausdrücklich:** Die Hemmung ist ein **Auslöse-Filter**, kein Schweremaß. Rasmussen &
@@ -364,6 +371,82 @@ Jede Stufe merkt sich, **welche Zutat sie ausgelöst hat** (E1). Im Ortsvergleic
 erkennbar, dass Korsika und die Alpen auf verschiedenen Größen fußen — statt zwei Zahlen
 nebeneinanderzustellen, die vergleichbar aussehen und es nicht sind.
 
+✅ **Scheibe 1 live seit 2026-08-12** (#1680, Spec `feat_1680_s1_gewitter_herkunft_ortsvergleich.md`).
+Umgesetzt ist der **Ortsvergleich**: die Stufe trägt dort einen Zusatz wie `leicht · CAPE`.
+
+✅ **Scheibe 2 live seit 2026-08-12** (#1680, Spec `feat_1680_s2_gewitter_herkunft_trip.md`,
+PR #1797). Umgesetzt sind zwei **Trip**-Ausgabeorte: die Kurzzusammenfassung der Trip-Mail
+(`⚡ möglich 13:00–19:00 · CAPE`) und die Antwort auf das GEWITTER-Kommando
+(`⛈ Gewitter heute (12.08): leicht · CAPE`). Getragen von **einem** geteilten Helfer
+`union_of_max_carriers()` (`src/output/metric_format.py`, Vorbild `hail_priority()`), weil
+die Trip-Seite **drei** unabhängige Aggregationswege hat, die die Tagesstufe je selbst rechnen
+— ohne den Helfer entstünden Kopien derselben Regel (#1480). Der dritte Weg
+(`aggregate_stage()`, Etappen-Ebene) blieb bewusst unangeschlossen: beide Ausgabeorte umgehen
+ihn strukturell, ein Dispatch-Zweig hätte dort keinen Verbraucher. Er gehört in die Scheibe
+mit dem Mehrtages-Ausblick, wo `trip_report_scheduler.py:2020` der erste echte Verbraucher ist.
+
+✅ **Scheibe 3 live seit 2026-08-13** (#1680, Spec `feat_1680_s3_gewitter_herkunft_vier_orte.md`,
+PR #1806). Vier weitere Ausgabeorte: Pille im Metriken-Überblick, Kommando-Timeline je
+Wegpunkt, GLANCE-Tageszeile und Ortsvergleich-Stundentabelle. Bei allen vieren lag die Zutat
+bereits vor — bei GLANCE fertig im Aggregat, bei der Stundentabelle als seit Scheibe 1
+vorhandener, nur nicht übergebener Parameter. Netto rund 100 Zeilen, davon die Hälfte
+Kommentar. Zwei Bestandstests bewachten die dabei abgelösten Entscheidungen und wurden
+mitgezogen.
+
+✅ **Scheibe 4 live seit 2026-08-13** (#1680, Spec
+`feat_1680_s4_gewitter_herkunft_trip_stundentabelle.md`). Letzter strukturell erreichbarer
+Trip-Ausgabeort: die **Trip-Stundentabelle** (Vollmail, Klartext-/Roh-Modus) trägt jetzt
+denselben Zusatz — pro Stunde über einen rohen Seitenkanal (`row["_thunder_signals"]`,
+Muster `row["_hail_flag"]`), im Nacht-Block über den bereits aus Scheibe 2 geteilten Helfer
+`union_of_max_carriers()`. Angehängt wird in `fmt_val()`s Roh-/Klartext-Zweig, nach dem
+Vorbild von `_fmt_thunder()` (Scheibe 1). Die HTML-Ampel-Kreis-Ansicht bleibt bewusst
+unverändert — kein Textplatz für einen visuellen Herkunfts-Indikator. Weil dieselbe
+`fmt_val()`/`_dp_to_row()`-Kette bereits vor dieser Scheibe auch die Telegram-rich-
+Stundentabelle (Bubbles) speist, erbt diese den Zusatz strukturell mit, ohne eigenen
+Code-Pfad — konsistent mit der Kanal-Entscheidung „E-Mail und Telegram JA", aber ein eigener
+Wirkort, den die ursprüngliche Aufgabenbeschreibung nicht vorsah. SMS/Premium-SMS bleiben
+ausdrücklich ohne Herkunft.
+
+✅ **Scheibe 5a live seit 2026-08-13** (#1680, Spec `feat_1680_s5a_gewitter_herkunft_ausblick.md`).
+**Mehrtages-Ausblick** (HTML, Klartext, Telegram-Trendblock, beide Compare-Ausblick-Renderpfade)
+trägt jetzt denselben Zusatz. 🔴 **Korrektur:** Diese Stelle behauptete bis hierhin, bei
+Mehrtages-Ausblick und Gewitter-Vorschau gingen die Träger „strukturell" verloren, weil
+`HourlyValue` kein Signalfeld habe — **das ist widerlegt, nicht nur überholt.**
+`build_outlook_row()` (`email/outlook.py`) bekommt die rohen `ForecastDataPoint`s und verengt
+sie **selbst** zu `HourlyValue`; die Trägerinformation (`dp.thunder_level_signals`) liegt zum
+Verengungszeitpunkt noch vor und wurde nur nie gelesen. Eine Änderung an `HourlyValue` war nie
+nötig. Details: `feat_1680_s5a_gewitter_herkunft_ausblick.md` „Am Code gemessen" Punkt 4.
+`aggregate_stage()` bleibt trotzdem **ohne** erreichbaren Verbraucher — S5a berechnet die
+Herkunft direkt in der Darstellungsschicht, nicht über diesen Dispatch-Zweig (#1199).
+
+✅ **Scheibe 5b live seit 2026-08-14** (#1680, Spec `feat_1680_s5b_gewitter_herkunft_vorschau.md`).
+**Gewitter-Vorschau** (der `+1`/`+2`-Block der Trip-Vollmail, Klartext + HTML) trägt jetzt
+denselben Zusatz — letzter Ausgabeort ohne Herkunft, **Ticket #1680 damit schließbar.**
+SMS/Premium-SMS/Telegram/Kompakt-Mail bleiben strukturell ohne Herkunft. **Go-DTO und Frontend
+fallen weiterhin ersatzlos** — dort existiert kein Ort, an dem die Herkunft erscheinen könnte.
+
+Drei Festlegungen, die aus der Umsetzung stammen und hier nicht überlesen werden dürfen:
+
+- **Genannt werden ALLE tragenden Zutaten, nicht die eine „auslösende"** (PO-Auslegung (ii)).
+  Damit wird keine Gewinner-Rangfolge zur Produktaussage — die interne Prüfreihenfolge der
+  Fusion war nie eine Entscheidung, sondern ein Artefakt.
+- **SMS und Premium-SMS bleiben ohne Herkunft** — ausdrücklich abgewählt (153 Zeichen, GSM-7
+  entstellt den Mittelpunkt, der `+N`-Mechanismus verdrängte hintere Metriken). Die Stufe selbst
+  bleibt dort unverändert sichtbar.
+- **Die Herkunft erscheint nur, wenn sie zur gezeigten Stufe gehört.** Weicht der Engine-Wert von
+  dem ab, was sich aus den Stundenwerten ergibt, zeigt der Ortsvergleich die Stufe **ohne**
+  Zusatz — keine Angabe ist besser als eine, die zu einer anderen Zahl gehört.
+
+🔴 **Das Beispiel „hoch, Blitzpotenzial+Superzelle" aus Abschnitt 4.5 ist NICHT baubar.** `sdi_2`
+(Superzellen) ist keine Zutat der Fusion — sie hat vier: Wettercode, Blitzdichte (nur FR), CAPE
+(CIN-gedämpft) und Blitzpotenzial LPI (nicht FR). Am Code gemessen 2026-08-11.
+
+**Noch offen:** Trip-Mail-Pill, Nachtblock, Kurzzusammenfassung, Mehrtages-Ausblick,
+GEWITTER-Kommando, Compare-Stundentabelle, Go-DTO, Frontend. ⚠️ Wer die Herkunft auf die
+**Trip-Seite** bringt, muss zuerst `aggregate_stage()` beibringen, die Aggregationsregel
+`union_of_max_carriers` zu kennen — sonst gewinnt dort die Herkunft des *ersten* Segments,
+während die Stufe über alle Segmente maximiert wird (Known Limitation 7, gebucht in #1199).
+
 ### Was das je Gebiet konkret bedeutet
 
 Die Gebietsgrenzen sind **ganze Länderregionen**, nicht einzelne Touren: „FR" umfasst
@@ -378,7 +461,7 @@ Die Gebietsgrenzen sind **ganze Länderregionen**, nicht einzelne Touren: „FR"
 | CAPE + Hemmung | CAPE ja, **Hemmung nein** ⇒ bleibt gedeckelt | ✅ beides | ✅ beides |
 | Superzellen | ❌ nicht verfügbar | ✅ | ❌ |
 | Hagel-Kennzeichen | ❌ (→ #1507) | ✅ | ❌ |
-| Radar | ✅ (Radar-DPC) | ✅ | ✅ (global) |
+| Radar | ⚠️ nur Modell (ARPAE ICON-2I, seit #1648 kein echtes Radar mehr für IT/Korsika) | ✅ | ✅ (global) |
 
 ⚠️ **Signalanzahl ist nicht Vorhersagegüte — die beiden bitte nicht verwechseln.** Frankreich
 und Korsika haben die **wenigsten Zusatzsignale**, aber die **feinste Grundvorhersage**:
@@ -538,7 +621,8 @@ dieselbe Zahl überall. Das ist kein Notbehelf, sondern der Stand der Praxis.
 
 Das Produkt weiß auch, was **gerade** passiert: Ein Radar-Nowcast ist angebunden, mit eigener
 Quellenkette je Gebiet (`radar_service.py:280-313`): RADOLAN/BrightSky für Deutschland, INCA für
-Österreich, Radar-DPC für Italien **inklusive Korsika**, AROME-HD für Frankreich, ICON-D2 für die
+Österreich, ARPAE ICON-2I für Italien **inklusive Korsika** (seit #1648 — der frühere Radar-DPC
+war ersatzlos zu streichen, er lieferte nur Vergangenheitsbilder), AROME-HD für Frankreich, ICON-D2 für die
 Alpen, `minutely_15` als globaler Rückfall. Ob es gewittert, kommt aus dem WMO-Code 95/96/99 je
 Einzelbild (`radar_service.py:151-153`).
 
@@ -771,10 +855,10 @@ Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
 | Rang | Scheibe | Warum hier | Stand |
 |---|---|---|---|
 | **0** | ✅ **CAPE-Schwelle modellabhängig gemacht** (3.4b, **#1592**, ADR-0048) | **Fusion, RiskEngine und Δ-Alarme erledigt und live**: Schwelle je Modell × Gebiet, geeicht am 95. Perzentil der Modellklimatologie (mind. 300 J/kg). Auf dem GR20 gilt jetzt 300 statt 1000 — CAPE trägt dort erstmals bei. RiskEngine zählt CAPE nicht mehr doppelt (C2), Δ-Alarme rechnen die Empfindlichkeitsstufe in dieselbe Modellwelt um (C3). Vollzugsvermerk: ADR-0048 | ✅ erledigt |
-| **1** | **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg. Spec liegt fertig vor | Spec fertig, Freigabe offen |
-| **2** | **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | 🟡 **LPI-Teil ✅ erledigt** (**#1679**, adversary-VERIFIED); CAPE-Ladder + CIN-Paarung offen |
-| **3** | **Gleiche Statistik**: `lpi_max` statt `lpi` gegen `lpi_con_max` | Nimmt allein **Faktor 5** aus dem Gebietsbruch — ohne jede Kalibrierung | ✅ E1 |
-| **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | ✅ E1 |
+| **1** | ✅ **Fehlende DWD-Größen abrufen** (#1531) — Felder befüllen, **nicht** einstufen | Liefert `lpi_max` (gleiche Statistik) und `cin_ml` (ersetzt die Deckelung). **CIN gibt es bei Open-Meteo nicht für ICON/AROME** — der Direktabruf ist der einzige Weg | ✅ **erledigt** (2026-08-11, live) |
+| **2** | ✅ **Belegte Leitern übernehmen**: LPI **1/30/50** statt 5/**20**/50 · CAPE **1000/2500/4000** statt binär · CIN-Paarung **−25/−50/−100/−200** statt Deckelung | Beseitigt eine der beiden erfundenen Zahlen und macht CAPE zu einem vollwertigen Signal. Alles belegt (3.5, 3.5b) | ✅ **erledigt** — LPI-Teil **#1679** (adversary-VERIFIED); CAPE-Ladder + CIN-Paarung ebenfalls **#1679** (`feat_1679_cin_paarung_cape_leiter.md`, 2026-08-11, adversary-VERIFIED für AC-3/AC-5 mit Mutationsprobe, restliche ACs durch 24 RED-Tests grün) |
+| **3** | ~~Gleiche Statistik: `lpi_max` statt `lpi` gegen `lpi_con_max`~~ | War als Weg gedacht, den Gebietsbruch ohne Kalibrierung zu verkleinern | 🟡 **überholt** (2026-08-11): `lpi_max` wird seit #1531 abgerufen, aber NIE in der Fusion gelesen (`metric_format.py` liest weiterhin `lightning_potential_lpi_jkg`). #1679 hat den Gebietsbruch stattdessen über gebietsabhängige Schwellentabellen gelöst (1/30/50 für DE_ALPEN, kalibriert auf den Momentanwert `lpi`) — ein nachträglicher Wechsel auf `lpi_max` liefe dort gegen die falsche Statistik. Kein offener Arbeitsauftrag mehr, nur diese Zeile war stehen geblieben. |
+| **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | 🟡 **Scheiben 1–4 live (2026-08-12/13)** — Ortsvergleich (PR #1780), Trip-Kurzzusammenfassung + GEWITTER-Kommando (PR #1797), Pille + Timeline + GLANCE + Ortsvergleich-Stundentabelle (PR #1806), Trip-Stundentabelle inkl. strukturell mit-vererbter Telegram-rich-Ansicht (#1680 S4). Ticket **#1680** bleibt offen für Mehrtages-Ausblick und Gewitter-Vorschau; Go-DTO und Frontend sind ersatzlos entfallen (kein Verbraucher). Hier stand bis 2026-08-10 fälschlich „✅ E1": das markierte nur die Entscheidung, nicht die Umsetzung |
 | **5** | ✅ **CAPE unsichtbar gemacht** (`selectable=False`, **#1585**) | **Umgesetzt und live** (2026-08-10): CAPE (`cape_jkg`) ist an jeder Nutzerkontakt-Stelle unsichtbar (Trip-Editor, E-Mail, SMS, Ortsvergleich inkl. Alt-Vergleich, Aktivitäts-Vorlagen, Wertebereichs-Korridor, jede Alarmwirkung inkl. #1592 Delta-Alarm) und bleibt ausschließlich interne Zutat der Fusion. Adversary-VERIFIED | ✅ erledigt |
 | **6** | **Radar hebt die Stufe an** | Beseitigt den Widerspruch aus Abschnitt 5 | ✅ E3 |
 | **7** | **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max`, kalibriert auf gleiche Überschreitungshäufigkeit | Sofort rechenbar über die Historical Forecast API (4.4) — unabhängig von #1531 | 🔴 offen, Ticket **#1678** |

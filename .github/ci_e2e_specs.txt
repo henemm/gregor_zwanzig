@@ -1,0 +1,166 @@
+# CI-Positivliste frontend/e2e/*.spec.ts (Ratsche: darf nur WACHSEN — Issue
+# #1771 S2). Richtungsumkehr zu ci_tdd_excludes.txt: eine Stichprobe (72
+# Testfaelle, 15 Dateien) gegen Staging ergab 22 rote Faelle (30,6 %) --
+# eine Ausschlussliste wuerde das erben, eine Positivliste nicht.
+#
+# Filter A (strukturell, verschaerft 2026-08-13, NACHGEBESSERT 2026-08-13
+# Runde 2 -- Adversary-Fund F007: der zuvor in ci.yml verdrahtete Filter war
+# schwaecher als hier dokumentiert und lieferte 105 statt 87): Kandidatenpool
+# ohne waitForTimeout/test.skip/test.fixme/describe.skip, ohne
+# .staging.spec.ts, ZUSAETZLICH ausgeschlossen zwei strukturell kaputte
+# Dateien (Adversary-Fund, am Code bestaetigt):
+#   - list-routes-btn-migration.spec.ts:26 -- liest ueber den fest
+#     verdrahteten Hauptrepo-Pfad `/home/hem/gregor_zwanzig/${file}`. Auf
+#     einem Runner => ENOENT; aus einem Worktree prueft er die UNVERAENDERTE
+#     Hauptrepo-Kopie und meldet falsches Gruen (Verstoss gegen die
+#     Pfadregel #1409).
+#   - issue-322-wicon-komponente.spec.ts:14 -- `__dirname` in einem
+#     ESM-Modul (`frontend/package.json` hat `"type": "module"`) =>
+#     deterministischer ReferenceError.
+# `describe.skip` kommt zusaetzlich zu test.skip/test.fixme hinzu, weil
+# mindestens eine Datei (epic-138-metriken-editor.spec.ts) ausschliesslich
+# describe.skip nutzt und sonst faelschlich als Kandidat gezaehlt wuerde.
+# Kandidatenpool nach diesem verschaerften Filter: 87 Dateien (nachgemessen
+# 2026-08-13, identisch zum jetzt in ci.yml:224 verdrahteten Filter -- vorher
+# grob auf 105/106 geschaetzt).
+#
+# Filter B (3x hintereinander gruen, GEMESSEN am 2026-08-13 gegen den
+# isolierten Stack auf Ports 8095/8005, NICHT gegen Staging):
+#   Lauf 1 (Vermessung, 87 Kandidaten): 36 Dateien vollstaendig gruen.
+#   Lauf 2: 173 expected / 0 unexpected / 0 skipped in 126s.
+#   Lauf 3: 173 expected / 0 unexpected / 0 skipped in 131s.
+# Reine Testzeit der 36 Dateien ~130s bei workers: 1 -- die 57 min des
+# Vermessungslaufs entstanden fast vollstaendig durch fehlschlagende Tests
+# in 30s-Zeitueberschreitungen, nicht durch die hier gelisteten gruenen.
+#
+# Zur Zahl 173 (Adversary-Fund F008, kosmetisch, nur Klarstellung -- kein
+# Verhaltensfix): die 36 Dateien unten summieren sich auf 172 Testfaelle;
+# der 173. Fall ist `frontend/e2e/global.setup.ts` (Login + Seed der drei
+# Fixture-Orte), das Playwright als eigenes Setup-Projekt mitzaehlt und das
+# JEDER Lauf durchlaeuft, unabhaengig von der Positivliste. 173 = 36
+# Spec-Dateien + 1 Setup-Projekt -- korrekt und beabsichtigt, nicht als
+# 37. Listen-Datei misszuverstehen.
+#
+# Damit sind die 36 Dateien unten 3x hintereinander gruen belegt (Filter A
+# + Filter B, ci_tdd_excludes.txt-Lektion: lokale/einmalige Zahlen sind kein
+# Beleg fuer CI-Gruen).
+#
+# Filter C (NEU 2026-08-14, #1771 S3): eine Datei darf keinen
+# `page.screenshot({path: ...})` in ein von Git gefuehrtes Verzeichnis
+# schreiben. Playwright laeuft mit `frontend/` als Arbeitsordner; nur mit
+# fuehrendem `../` landet der Screenshot im per .gitignore:80 ignorierten
+# Repo-Wurzel-`docs/artifacts/`, ohne `../` dagegen im VERSIONIERTEN
+# `frontend/docs/artifacts/` -- ein Lauf wuerde dann getrackte Dateien
+# aendern. Bewacht statisch von
+# tests/unit/test_e2e_positivliste_ratschen_bindung.py, kein Runner noetig.
+#
+# 🔴 bug-703-login-ratelimit.spec.ts laeuft in einem EIGENEN, nachgelagerten
+# Playwright-Aufruf (ci.yml). Es feuert absichtlich 32 Logins ab und
+# verbraucht damit das IP-Limit aus internal/router/router.go:45 (30/Stunde)
+# fuer den gesamten Job. Playwright sortiert Dateien alphabetisch, die Datei
+# liegt auf Position 3 -- jede spaeter laufende Datei mit EIGENEM Login
+# scheitert sonst an "429". Die Zeile bleibt bewusst hier stehen: DIESE Liste
+# ist die eine Positivliste, an der Ratsche und E2E_MIN_SPECS haengen.
+#
+# Aufnahme 2026-08-14 (#1771 S3, Filter B im ZIELVERBUND belegt, nicht im
+# 51er-Kandidatenverbund): compare-cross-user-write-block.spec.ts und
+# compare-editor-autosave-user-isolation.spec.ts -- die einzige Klasse im
+# Korpus, die die CLAUDE.md-Pflicht "jeder datenbewegende Endpoint mit ZWEI
+# Nutzern" belegt. Beide brauchen einen eigenen Zweit-Login und waren genau
+# deshalb im ungeteilten Zielverbund rot (429) -- Anlass fuer den Split oben.
+#
+# Aufnahme 2026-08-14 Block B (#1771 S3, Einzelfall-Diagnose der 11 Dateien
+# mit genau EINEM roten Testfall, Verfahren: Spec Implementation Detail 2).
+# 7 davon meldeten einen VERALTETEN Test (Entscheidungsregel 1) und sind nach
+# der Reparatur aufgenommen -- je mit Begruendung am Code, nicht geraten:
+#   bug-274-safe-area-insets      AC-2 geloescht: /trips/[id]/edit ist seit
+#                                 #616 ein 307-Redirect, TripEditView.svelte
+#                                 von keiner Route mehr eingebunden.
+#   compare-editor-slice1         7 -> 6 Segmente: Reiter `layout` per #1360
+#                                 (Epic #1372 S1a) aufgeloest.
+#   compare-editor-slice3         Klick auf tab-layout entfernt, gleiche
+#                                 Ursache wie slice1 (lief in 30s-Timeout).
+#   design-compliance-group-a     AC-3 auf #1273 S3 gezogen: der Hub IST die
+#                                 Bearbeiten-Flaeche, der Desktop-Button ist
+#                                 bewusst entfernt (Kern-Wache:
+#                                 issue_1273_s3_redirect_links.test.ts AC-4).
+#   issue-269-mobile-trip-tabs    Pruefort -> Wirkort: overflow-x sitzt seit
+#                                 #1231 S6 auf [data-slot="segmented"] INNEN,
+#                                 nicht auf dem Testid-Container.
+#   issue-616-trip-one-surface    title="<Name> öffnen" gibt es seit #1277
+#                                 nicht mehr; ListTableRow traegt nur
+#                                 data-testid="trip-row-<id>".
+#   trip-detail-actions           Pill-Tone: TripStatusBadge TONE_MAP bildet
+#                                 active auf 'accent' ab (eigene app.css-Regel),
+#                                 nicht auf 'success'.
+# NICHT aufgenommen und gebucht statt repariert:
+#   issue-280-home-topbar-polish  Datei GELOESCHT -- h1.home__title existiert
+#                                 im Frontend nicht mehr (Home-Redesign #568
+#                                 hat das h1 ersatzlos entfernt), einziger Test.
+#   issue-579-home-fidelity       braucht Home im Compare-Modus (kein Live-
+#                                 Trip); global.setup.ts seedet aber den Trip
+#                                 e2e-cockpit-test -> Modus 'trip'. Vorbedingung
+#                                 im GETEILTEN Seed nicht herstellbar.
+#   orts-vergleich-c4             "Neuer Ort" liegt seit dem Umbau auf
+#                                 /locations, nicht in der /compare-Sidebar;
+#                                 LocationNewModal hat weder role="dialog"
+#                                 noch Testids -> Rewrite, keine Reparatur.
+#   waypoint-mapclick-autosave    maplibre-Kartentipp braucht Kacheln/Style
+#                                 aus dem Netz; der CI-Stack ist offline.
+#
+# Filter B fuer die 7 neuen Dateien, GEMESSEN am 2026-08-14 im ZIELVERBUND
+# (Positivliste 38 + 7 = 45 Dateien), isolierter Stack Ports 8095/8005,
+# 3 Zyklen mit je FRISCHEM Stack (Login-Limiter ist prozess-intern):
+#   Hauptlauf (44 Dateien): 224/224/224 expected, 0 unexpected, 0 skipped
+#   Zweitlauf (bug-703):      3/3/3     expected, 0 unexpected, 0 skipped
+# 224 = 223 Testfaelle in 44 Dateien + 1x global.setup (vgl. F008 oben).
+# Zuwachs 51 Faelle: bug-274 1 · slice1 5 · slice3 9 · design-compliance-a 7 ·
+# issue-269 8 · issue-616 8 · trip-detail-actions 13.
+#
+# Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
+# nur bei Loeschung/Umbenennung der Datei.
+e2e/alert-table-mobile-visibility.spec.ts
+e2e/bug-274-safe-area-insets.spec.ts
+e2e/bug-703-login-ratelimit.spec.ts
+e2e/bug-708-stage-delete-confirm.spec.ts
+e2e/compare-cross-user-write-block.spec.ts
+e2e/compare-detail-edit-entry.spec.ts
+e2e/compare-editor-autosave-user-isolation.spec.ts
+e2e/compare-editor-slice1.spec.ts
+e2e/compare-editor-slice3.spec.ts
+e2e/compare-legacy-fields-survive-save.spec.ts
+e2e/compare-radar-toggle.spec.ts
+e2e/design-compliance-group-a.spec.ts
+e2e/design-system-lauf-a.spec.ts
+e2e/dnd-helper-finalize-wait.spec.ts
+e2e/email-preview-header.spec.ts
+e2e/epic-138-block-b.spec.ts
+e2e/font-weights.spec.ts
+e2e/issue-1059-trip-resume-error-feedback.spec.ts
+e2e/issue-1071-tier-change-request.spec.ts
+e2e/issue-1093-unit.spec.ts
+e2e/issue-1117-official-alerts-content-tab.spec.ts
+e2e/issue-269-mobile-trip-tabs.spec.ts
+e2e/issue-293-wordmark.spec.ts
+e2e/issue-313-design-showcase.spec.ts
+e2e/issue-336-status-dedup.spec.ts
+e2e/issue-343-horizon-chips.spec.ts
+e2e/issue-344-wetter-profile.spec.ts
+e2e/issue-370-brand.spec.ts
+e2e/issue-486-trips-overflow.spec.ts
+e2e/issue-616-trip-one-surface.spec.ts
+e2e/issue-619-mail-elements-ui.spec.ts
+e2e/issue-661-trip-new-mobile.spec.ts
+e2e/issue-682-compare-editor-mobile.spec.ts
+e2e/issue-690-custom-metrics-persist.spec.ts
+e2e/issue-714-trip-ui-polish.spec.ts
+e2e/issue-718-idealwert-validation.spec.ts
+e2e/issue-723-email-tab-eindampfen.spec.ts
+e2e/issue-724-trip-name-save-error.spec.ts
+e2e/issue-725-mobile-sidebar.spec.ts
+e2e/issue-767-768-test-briefing.spec.ts
+e2e/issue-951-sheet-bottomnav.spec.ts
+e2e/mobile-editor-controls-viewport.spec.ts
+e2e/tokens-and-topo.spec.ts
+e2e/trip-detail-actions.spec.ts
+e2e/versand-tab.spec.ts

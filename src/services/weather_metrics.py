@@ -435,6 +435,9 @@ class WeatherMetricsService:
         cloud_avg = self._compute_cloud_cover(timeseries)
         humidity_avg = self._compute_humidity(timeseries)
         thunder_max = self._compute_thunder_level(timeseries)
+        thunder_max_signals = self._compute_thunder_level_signals(
+            timeseries, thunder_max
+        )
         hail_flag = self._compute_hail_flag(timeseries)
         visibility_min = self._compute_visibility(timeseries)
 
@@ -456,6 +459,7 @@ class WeatherMetricsService:
             cloud_avg_pct=cloud_avg,
             humidity_avg_pct=humidity_avg,
             thunder_level_max=thunder_max,
+            thunder_level_max_signals=thunder_max_signals,
             hail_flag=hail_flag,
             visibility_min_m=visibility_min,
             dominant_wmo_code=dominant_wmo,
@@ -471,6 +475,7 @@ class WeatherMetricsService:
                 "cloud_avg_pct": "avg",
                 "humidity_avg_pct": "avg",
                 "thunder_level_max": "max",
+                "thunder_level_max_signals": "union_of_max_carriers",
                 "hail_flag": "hail_priority",
                 "visibility_min_m": "min",
                 "dominant_wmo_code": "max_wmo_severity",
@@ -607,6 +612,38 @@ class WeatherMetricsService:
         # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
         from output.metric_format import max_thunder
         return max_thunder(levels)
+
+    def _compute_thunder_level_signals(
+        self,
+        timeseries: NormalizedTimeseries,
+        thunder_max: Optional[ThunderLevel],
+    ) -> Optional[list[str]]:
+        """Die Zutaten, die das TAGESmaximum tragen (Issue #1680 S1).
+
+        VEREINIGUNG ueber ALLE Stunden, die ``thunder_max`` erreichen -- nicht
+        die erste passende. Erreichen zwei Stunden desselben Tages dieselbe
+        Hoechststufe ueber verschiedene Zutaten (14 Uhr CAPE, 18 Uhr
+        Blitzpotenzial), entschiede sonst eine willkuerlich gewaehlte Stunde
+        ueber die angezeigte Herkunft. Dedupliziert unter Erhalt der ersten
+        Auftrittsreihenfolge.
+
+        ``None`` (keine Aussage) bei fehlender Stufe oder wenn keine Stunde
+        eine Zutat nennt -- z.B. ein Alt-Schnappschuss ohne das Feld.
+
+        Issue #1680 S2: der Rumpf ist in die freie Funktion
+        ``output.metric_format.union_of_max_carriers()`` gewandert, damit die
+        anderen Aggregationswege (Wegpunkte des GEWITTER-Kommandos, Stunden
+        der Kurzzusammenfassung) dieselbe Regel importieren statt sie zu
+        kopieren. Zeichengleiches Verhalten: der Helfer bildet sein Maximum
+        ueber DIESELBE Punktmenge, aus der auch ``thunder_max`` stammt
+        (``_compute_thunder_level()``) -- der Parameter bleibt fuer die
+        bestehende Aufrufstelle erhalten, wird aber nicht mehr gebraucht.
+        """
+        from output.metric_format import union_of_max_carriers
+        return union_of_max_carriers(
+            (dp.thunder_level, getattr(dp, "thunder_level_signals", None))
+            for dp in timeseries.data
+        )
 
     def _compute_hail_flag(
         self,
@@ -1109,6 +1146,17 @@ def summarize_points(points: list) -> Optional[SegmentWeatherSummary]:
     summary.cloud_low_avg_pct = svc._compute_cloud_low(ts)
     summary.cloud_mid_avg_pct = svc._compute_cloud_mid(ts)
     summary.cloud_high_avg_pct = svc._compute_cloud_high(ts)
+    # Issue #1703 S2: GEGENRICHTUNG zu #1391 -- dort fehlte die
+    # Schneefallgrenze im Trip-Pfad, obwohl der Vergleich sie setzte; hier
+    # fehlten diese fuenf im Vergleichspfad, obwohl compute_extended_metrics()
+    # sie laengst fuellt (:752-760). Folge waren fuenf dauerhaft leere
+    # Ausblick-Spalten des Ortsvergleichs. Kanonische Trip-Regeln, keine
+    # eigene Rechenvorschrift.
+    summary.snow_depth_cm = svc._compute_snow_depth(ts)
+    summary.snow_new_sum_cm = svc._compute_fresh_snow(ts)
+    summary.wind_direction_avg_deg = svc._compute_wind_direction(ts)
+    summary.wind_chill_min_c = svc._compute_wind_chill(ts)
+    summary.wind_chill_max_c = svc._compute_wind_chill_max(ts)
     return summary
 
 

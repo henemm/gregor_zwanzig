@@ -21,8 +21,12 @@ from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HO
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
-    _AMPEL_STAGE_TONES, build_confidence_hint, build_metrics_summary_pills,
-    build_origin_footer, format_trend_tokens, render_origin_footer_text,
+    _AMPEL_STAGE_TONES, _THUNDER_MAP,
+    build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
+    format_trend_tokens, render_origin_footer_text,
+)
+from output.renderers.email.thunder_branch import (
+    _thunder_token_parts, resolve_thunder_day_branch,
 )
 from output.renderers.email.profile_signature import profile_signature
 from output.renderers.alert.official_alerts import (
@@ -75,6 +79,36 @@ def _severity_prefix(tone: str) -> str:
     if tone in _AMPEL_STAGE_TONES:
         return _AMPEL_ASCII_SEVERITY[_AMPEL_STAGE_TONES.index(tone)]
     return ""
+
+
+def _compact_thunder_field(tok: dict, stage: dict) -> str:
+    """Gewitterspalte der Kompakt-Ausblick-Zeile (#1671).
+
+    Nutzt denselben Entscheidungs-Helfer wie ``render_outlook_plain()`` und
+    ``_outlook_lines()`` (thunder_branch.resolve_thunder_day_branch) -- Tagesteil
+    ohne Uhrzeit (Wort + optionaler Peak-Zusatz), Nachtteil als Zusatz MIT
+    Uhrzeit. KEIN Herkunfts-Zusatz (``thunder_day_origin`` wird bewusst
+    nicht gelesen, PO-Entscheidung 1 der Spec -- AC-13 aus #1680 S5a bleibt
+    fuer die Kompakt-Mail in Kraft).
+    """
+    branch = resolve_thunder_day_branch(tok, stage)
+    # Der Helfer entscheidet nur ueber `thunder_day_token != "-"`; ob der
+    # Token zerlegbar ist (`_THUNDER_TOKEN_RE`), bleibt Aufrufer-Sache --
+    # analog outlook.render_outlook_plain() (#1671-Nachbesserung: ein
+    # gesetzter, aber unzerlegbarer Token darf nicht abstuerzen, sondern
+    # faellt wie im Altcode auf "kein Gewitter" zurueck).
+    _d = _thunder_token_parts(tok.get("thunder_day_token", "-")) if branch == "day" else None
+    if _d:
+        field = f"⚡{_d[0]}{_d[2]}"
+    elif branch in ("day", "none"):
+        field = _THUNDER_MAP["NONE"]["plain"]
+    else:
+        field = tok["thunder_plain"]
+
+    _n = _thunder_token_parts(tok.get("thunder_night_token", "-"))
+    if _n:
+        field += f" · nachts {_n[0]} @{_n[1]}{_n[2]}"
+    return field
 
 
 _STABILITY_TEXTS = {
@@ -169,16 +203,13 @@ def render_compact(
         for mc in dc.metrics
         if mc.sms_threshold is not None
     }
-    # Issue #1357: gespeicherte Auswertungswahl je Groesse (sonst Katalog-Vorgabe).
-    metric_aggregations = {
-        mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
-    }
+    # Issue #1728 Scheibe 1 (DEC-5): unbedingt die Spanne, kein
+    # Lesen von ``mc.aggregations``.
     pills = build_metrics_summary_pills(
         segments, metric_ids, sms_mention_thresholds, tz=tz,
         night_weather=night_weather, has_gap=has_gap,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour,
-        metric_aggregations=metric_aggregations,
     ) if metric_ids else []
     if pills:
         lines.append("== Metriken-Ueberblick ==")
@@ -230,9 +261,10 @@ def render_compact(
             tok = format_trend_tokens(stage)
             weekday = stage.get("weekday", "")
             name = stage.get("name", "")
+            thunder_field = _compact_thunder_field(tok, stage)
             line = (
                 f"{weekday:<3} {name:<26} {tok['temp_str']:<8} "
-                f"{tok['precip_str']:<5} {tok['wind_str']:<5} {tok['thunder_plain']}"
+                f"{tok['precip_str']:<5} {tok['wind_str']:<5} {thunder_field}"
             )
             lines.append(_ascii(line))
         lines.append("")

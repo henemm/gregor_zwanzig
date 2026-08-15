@@ -2,11 +2,13 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
-**Last Updated:** 2026-07-29 (Issue #1377 Scheibe B1, `506c25f4` — Zell-Tönung/`_row_risk`
+**Last Updated:** 2026-08-14 (Bug #1801 S2 — neue Ampel-Palette (Punkt/Fläche/Text) für
+gelb/orange/rot, WCAG-Fix grüner Zelltext (`G_AMPEL_TEXT_GREEN`); `html.py`/`outlook.py`
+beziehen die Zellfarben seither aus `design_tokens.tone_css()` statt eigener Kopien)
+
+**Vorherige Aktualisierung:** 2026-07-29 (Issue #1377 Scheibe B1, `506c25f4` — Zell-Tönung/`_row_risk`
 lesen den zentralen Ampel-Katalog statt hartcodierter Schwellen; Sicht bekommt erstmals
 eine Zellhintergrund-Tönung)
-
-**Vorherige Aktualisierung:** 2026-06-26 (Issue #884 — HTML-Mail vollständige Fidelity: 8-Sektion-Layout mit Header-Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer)
 
 **Acceptance Validators (seit Issue #733):**
 - **Trip-Briefing-Mail** (beide Formate: `full` HTML / `compact` Nur-Text): `.claude/hooks/briefing_mail_validator.py` (dispatcht auf `X-GZ-Mail-Type` + `X-GZ-Format` Header)
@@ -58,9 +60,11 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 - **Desktop-Tabelle:** zwei Ebenen
   - Gruppen-Row: Hintergrund `#fbfaf6`, Spaltenkopfgruppen (TEMP, WIND, NIEDERSCHLAG, SICHT/UV, HÖHE) mit Colspan
   - Einheiten-Row: Spalten-Labels mit Einheiten
-  - Datenzellen: kritische Werte bekommen einen getönten Zellhintergrund (gelb `#fbeeb8` /
-    orange `#fad6b8` / rot `#f6c5bf`), nicht farbigen Fettdruck. Seit Issue #1377 Scheibe B1
-    (`506c25f4`) stammt die Stufe für Wind/Böen/Regen/Regenwahrscheinlichkeit/Sicht
+  - Datenzellen: kritische Werte bekommen einen getönten Zellhintergrund (gelb `#fdf4cd` /
+    orange `#fbe3cc` / rot `#f7d3e2`; Farben seit Bug #1801 S2, vormals `#fbeeb8`/`#fad6b8`/
+    `#f6c5bf` — SSoT ist `design_tokens.py::tone_css()`), nicht farbigen Fettdruck. Seit
+    Issue #1377 Scheibe B1 (`506c25f4`) stammt die Stufe für
+    Wind/Böen/Regen/Regenwahrscheinlichkeit/Sicht
     einheitlich aus `severity_for`/`ampel_level` und den Katalog-Schwellen der
     „Best-Practice-Schwellen"-Tabelle unten (Wind z.B. 30/50/70 km/h, nicht mehr die alte
     fixe 20-km/h-Grenze). Gewitter bleibt ausdrücklich hartcodiert (kein `display_thresholds`
@@ -258,7 +262,8 @@ Orange-Highlight bei Sicht — `highlight_color` war nie gewollt).
 
 **Die Zell-Hintergrund-Tönung (`cell_bg`) gilt dagegen IMMER** — unabhängig von
 Roh/Einfach-Modus (`html.py`, seit #911; als gewollte Invariante PO-approved,
-AC-2-Negativ-Test im Bundle #888/#896/#902: Roh-Zelle Wind=25 trägt `background:#fbeeb8`).
+AC-2-Negativ-Test im Bundle #888/#896/#902: Roh-Zelle Wind=25 trägt `background:#fdf4cd`,
+vormals `#fbeeb8` — Farbwert seit Bug #1801 S2, s.o.).
 Seit dem #888-Fix folgt die Tönung bei Ampel-Zellen dem Katalog-Ampel-Level, im
 Roh-Modus den bestehenden Legacy-Schwellen. Die frühere Absolutform „Roh ist Roh =
 gar kein Styling" ist damit überholt (Doku-Abgleich #985/#1198).

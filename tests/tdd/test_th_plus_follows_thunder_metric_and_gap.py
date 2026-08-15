@@ -28,7 +28,7 @@ aus einer echten Codepfad-Verzweigung (Folge-Etappe mit nur EINEM Waypoint ->
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 import pytest
@@ -117,13 +117,19 @@ class TestAC1ThunderDeselectedRemovesBothTokens:
         for report_type in ("morning", "evening"):
             sms = _trip_sms(
                 report_type,
-                _dc("temperature", "precipitation"),
+                # #1728 S1: die Tagesrichtungen tragen K/D und muessen mit
+                # gewaehlt sein, sonst haette die Vorbedingung unten keinen
+                # Gegenstand. An der Gewitter-Zusicherung aendert das nichts.
+                _dc("temperature", "temperature_day_low",
+                    "temperature_day_high", "precipitation"),
                 thunder_forecast=_TOMORROW_HIGH,
             )
 
             # Vorbedingung: die Zeile hat ueberhaupt Inhalt und ist nicht
             # gekuerzt — sonst waere ein fehlendes TH+: kein Beweis.
-            assert "K3" in sms and "D20" in sms, (
+            # Issue #1824 (A): Tiefst- UND Hoechstwert sind gewaehlt, also
+            # stehen sie als EIN Bereichs-Token 'D3/20' statt als 'K3 D20'.
+            assert "D3/20" in sms, (
                 f"[{report_type}] Die gewaehlten Temperaturwerte fehlen — der "
                 f"Nachweis ueber TH+: waere nicht aussagekraeftig.\nSMS: {sms}"
             )
@@ -220,9 +226,15 @@ class TestAC3RealGapShowsUnknown:
         THEN:  '+1' ist als Luecke markiert, '+2' NICHT (dort ist schlicht
                keine Etappe — das ist kein Datenausfall)
         """
+        # #1709: feste Ankunftszeit fuer die HEUTIGE (zweipunktige) Etappe statt
+        # Naismith-Self-Heal (trip_segments.py:125-127) -- die morgige Etappe
+        # braucht das GERADE NICHT: sie hat absichtlich nur EINEN Waypoint (s.
+        # GIVEN oben), das traegt die Pruefaussage "keine Segmente" bereits.
         today = date.today()
-        wp_a = Waypoint(id="A", name="Start", lat=42.0, lon=9.0, elevation_m=500)
-        wp_b = Waypoint(id="B", name="Ziel", lat=42.1, lon=9.1, elevation_m=600)
+        wp_a = Waypoint(id="A", name="Start", lat=42.0, lon=9.0, elevation_m=500,
+                        arrival_calculated="08:00")
+        wp_b = Waypoint(id="B", name="Ziel", lat=42.1, lon=9.1, elevation_m=600,
+                        arrival_calculated="12:00")
         trip = Trip(
             id="i1482gap",
             name="Luecken-Trip",
@@ -239,7 +251,8 @@ class TestAC3RealGapShowsUnknown:
 
         svc = TripReportSchedulerService()
         forecast = svc._build_thunder_forecast_from_trend_or_fetch(
-            trip, today, tz=None, multi_day_trend=None,
+            trip, today, now_utc=datetime.now(timezone.utc), tz=None,
+            multi_day_trend=None,
         )
 
         assert forecast is not None, (

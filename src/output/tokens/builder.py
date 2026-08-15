@@ -1,6 +1,7 @@
 """Token builder per sms_format.md v2.3 §2/§3 (POSITIONAL)."""
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Iterable, Optional
 
 from utils.ascii_fold import fold_ascii
@@ -60,7 +61,9 @@ PRIORITY = {
     # Issue #1660 Scheibe B: 14 waehlbare Metriken ohne bisherigen SMS-Token,
     # gleiche Prioritaetsstufe wie die Wintersport-Token (DEC-4). Pflicht,
     # weil `PRIORITY[sym]` an mehreren Stellen ungeschuetzt gelesen wird.
-    "HU": 2, "DP": 2, "WD": 2, "CP": 2, "PT": 2, "CT": 2, "CL": 2, "CM": 2,
+    # Issue #1824 (B): 'WD:'/'PT:' tragen den Grammatik-Doppelpunkt im Symbol
+    # (wie 'TH:'), deshalb lautet der Schluessel hier ebenfalls mit Doppelpunkt.
+    "HU": 2, "DP": 2, "WD:": 2, "CP": 2, "PT:": 2, "CT": 2, "CL": 2, "CM": 2,
     "CH": 2, "VS": 2, "SU": 2, "UV": 2, "HP": 2, "NL": 2,
 }
 
@@ -71,7 +74,17 @@ OFFICIAL_ALERT_PRIORITY = 11
 # Issue #1349: "amtliche Warnungen nicht abrufbar" — sicherheitsrelevant,
 # darf unter Truncation-Druck nie wegfallen (ausserhalb DROP_ORDER/
 # _last_resort in render.py; Prioritaet hier nur dokumentarisch >= 11).
-UNAVAILABLE_SYMBOL = "W?"
+# Issue #1703 Scheibe 6 (AC-S6-6): war zuvor "W?" -- bytegleiche Kollision
+# mit dem Wind-Datenausfall-Marker (Symbol "W" + Gap-Wert "?" ueber
+# _gap_or(), siehe Token.render()). Auf "X?" geaendert, weil beide Zustaende
+# (Wind-Datenluecke vs. amtliche Warnungen nicht abrufbar) fachlich
+# unabhaengig sind und fuer den Leser unterscheidbar sein muessen.
+# RESERVIERUNG: "X" ist ab jetzt fuer UNAVAILABLE_SYMBOL reserviert -- kein
+# Katalog-Kuerzel darf kuenftig "X" werden, sonst entsteht ueber ein
+# Gap-faehiges Rendering ("X?") dieselbe Kollisionsklasse erneut (Spec
+# docs/specs/modules/fix_1703_s6_form_waechter.md, Implementation Details
+# Punkt 4).
+UNAVAILABLE_SYMBOL = "X?"
 UNAVAILABLE_PRIORITY = OFFICIAL_ALERT_PRIORITY + 1
 
 # (symbol, category) -> §2 POSITIONAL index. Vigilance shares 'TH:' symbol.
@@ -84,8 +97,8 @@ POSITIONAL = [
     ("PR", "forecast"), ("W", "forecast"), ("G", "forecast"),
     (FORECAST_TH, "forecast"), (FORECAST_THP, "forecast"),
     # Issue #1660 Scheibe B: eigener Block, Katalog-Reihenfolge (DEC-4).
-    ("HU", "forecast"), ("DP", "forecast"), ("WD", "forecast"),
-    ("CP", "forecast"), ("PT", "forecast"), ("CT", "forecast"),
+    ("HU", "forecast"), ("DP", "forecast"), ("WD:", "forecast"),
+    ("CP", "forecast"), ("PT:", "forecast"), ("CT", "forecast"),
     ("CL", "forecast"), ("CM", "forecast"), ("CH", "forecast"),
     ("VS", "forecast"), ("SU", "forecast"), ("UV", "forecast"),
     ("HP", "forecast"), ("NL", "forecast"),
@@ -223,9 +236,10 @@ def _official_alerts(fc: NormalizedForecast) -> list[Token]:
 
 
 def _unavailable(fc: NormalizedForecast) -> list[Token]:
-    """Issue #1349: eigenstaendiger 'W?'-Marker in eigener Kategorie
-    ('unavailable', NICHT 'official_alert') — sonst wuerde render.py's
-    '!'-Warnblock-Fusion ihn faelschlich als amtliche Warnung lesen."""
+    """Issue #1349: eigenstaendiger UNAVAILABLE_SYMBOL-Marker (Issue #1703
+    Scheibe 6: 'X?', vormals 'W?') in eigener Kategorie ('unavailable',
+    NICHT 'official_alert') — sonst wuerde render.py's '!'-Warnblock-Fusion
+    ihn faelschlich als amtliche Warnung lesen."""
     if not fc.official_alerts_unavailable:
         return []
     return [Token(UNAVAILABLE_SYMBOL, "", "unavailable", UNAVAILABLE_PRIORITY)]
@@ -343,6 +357,28 @@ def build_token_line(
             evening_visible=spec.evening_enabled if spec else True,
         ))
 
+    # Issue #1824 (A): Bereichs-Token. Sind nach den obigen -- unveraenderten --
+    # Sichtbarkeits-/Auswertungspruefungen BEIDE Haelften eines Temperatur-Paares
+    # entstanden (Tiefst- UND Hoechstwert gewaehlt), ersetzt EIN Token unter dem
+    # Hoechstwert-Kuerzel die beiden Einzelwerte: 'K13 D27' -> 'D13/27'.
+    # Trennzeichen '/' statt '-', weil der Bindestrich bei Minusgraden
+    # gleichzeitig Trenner UND Vorzeichen waere ('D-12--4' ist nicht eindeutig
+    # parsbar); '/' ist GSM-7-sicher und im Format sonst unbenutzt.
+    # Existiert nur eine Haelfte (oder keine), bleibt die heutige Einzelform
+    # unangetastet -- PO-Entscheid 2026-08-13: 'K'/'FK' bedeuten immer den
+    # Tiefstwert, ein 'D13' mit tatsaechlichem Tiefstwert waere auf einem
+    # tourenentscheidungs-relevanten Kanal Falschinformation.
+    # Nebeneffekt (Spec Known Limitations): der Bereich faellt beim Kuerzen als
+    # EINE Einheit, weil das 'K'-Token gar nicht erst in der Liste steht.
+    for cold_sym, warm_sym in (("K", "D"), ("FK", "FD")):
+        cold = next((t for t in tokens if t.symbol == cold_sym), None)
+        warm = next((t for t in tokens if t.symbol == warm_sym), None)
+        if cold is None or warm is None:
+            continue
+        tokens[tokens.index(warm)] = replace(
+            warm, value=f"{cold.value}/{warm.value}")
+        tokens.remove(cold)
+
     for sym, samples, is_lvl in [
         ("R", today.rain_hourly, False),
         ("PR", today.pop_hourly, False),
@@ -396,7 +432,7 @@ def build_token_line(
     # Issue #1660 Scheibe B, Klasse (c) Tageswert ohne Stunde — WD/PT (Text-
     # Code) und SU/HP (ganzzahliger Wert via render_int).
     for sym, str_val in (
-        ("WD", today.wind_direction_sector), ("PT", today.precip_type_dominant),
+        ("WD:", today.wind_direction_sector), ("PT:", today.precip_type_dominant),
     ):
         spec = by_sym.get(sym)
         if spec is None and str_val is None:
@@ -471,7 +507,7 @@ def build_token_line(
 
     # Issue #1677: zweistufige Sortierung. Bucket 0 = Token, deren MetricSpec
     # eine Nutzer-Position traegt (nur 'forecast'/'wintersport' -- die
-    # waehlbare Metrik-Kaskade; Vigilance/amtliche Warnungen/Fire/W?/DBG
+    # waehlbare Metrik-Kaskade; Vigilance/amtliche Warnungen/Fire/X?/DBG
     # sind strukturell nicht sortierbar, DEC-4/Known Limitation 2), sortiert
     # nach dieser Position. Bucket 1 = alle uebrigen Token, unveraendert nach
     # der bisherigen POS_INDEX-Reihenfolge. Ohne jede Position (kein

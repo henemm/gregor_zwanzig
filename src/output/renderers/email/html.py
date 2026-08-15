@@ -80,7 +80,7 @@ _ = render_official_alerts_html
 from output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
     G_ACCENT, G_WARNING, G_DANGER, G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_HEADER_BG,
-    FONT_UI, FONT_DATA, WEB_FONT_LINK,
+    FONT_UI, FONT_DATA, WEB_FONT_LINK, tone_css,
 )
 # Epic #1301 B4: geteilter Ausblick-Renderer (Trip/Compare-Teilungs-Invariante)
 from output.renderers.email.outlook import render_outlook_table
@@ -237,6 +237,15 @@ _RISK_DOT_COLORS = {
     "watch": ("#c2410c", "rgba(194,65,12,0.20)"),
     "risk":  ("#b91c1c", "rgba(185,28,28,0.22)"),
 }
+
+
+def _ampel_cell_bg(level: "str | None") -> "str | None":
+    """Fix #1801 S1: Zell-Hintergrund einer Ampelstufe aus der EINEN Quelle
+    ``design_tokens.tone_css()`` statt vier lokaler Hex-Kopien. 'green'/None
+    bleiben ungetoent (kein Hintergrund) -- unveraendertes Verhalten."""
+    if level not in ("yellow", "orange", "red"):
+        return None
+    return tone_css(level)[0]
 
 
 def _render_email_stat(
@@ -777,11 +786,7 @@ def _render_html_table(
                 # Issue #888: Tönung aus dem Ampel-Level (Katalog-Schwellenquelle).
                 metric_id = _COL_KEY_TO_METRIC_ID.get(key)
                 level = ampel_level(metric_id, numeric) if metric_id else None
-                cell_bg = {
-                    "yellow": "#fbeeb8",
-                    "orange": "#fad6b8",
-                    "red": "#f6c5bf",
-                }.get(level)
+                cell_bg = _ampel_cell_bg(level)
             # Issue #1377 Scheibe B: Roh-Modus-Fallback (key nicht in
             # indicator_keys) fragt denselben Katalog wie der freundliche
             # Modus oben (severity_for statt eigener hartcodierter Schwellen).
@@ -794,11 +799,7 @@ def _render_html_table(
                 if key in ("vis", "visibility"):
                     value = numeric if numeric > 100 else numeric * 1000
                 level = severity_for(metric_id, value)
-                cell_bg = {
-                    "yellow": "#fbeeb8",
-                    "orange": "#fad6b8",
-                    "red": "#f6c5bf",
-                }.get(level)
+                cell_bg = _ampel_cell_bg(level)
             # Gewitter ist seit Issue #1491 eine reguläre 4-stufige
             # Ampel-Spalte (wie Wind/Böen/Regen/Regenwahrsch./CAPE) — die
             # Tönung kommt aus derselben Quelle (`thunder_ampel_band`,
@@ -813,16 +814,12 @@ def _render_html_table(
             # Stand vor #1491) bleibt an dieser EINEN Stelle erhalten.
             elif key == "thunder":
                 if isinstance(raw_val, str):
-                    cell_bg = {
-                        "yellow": "#fbeeb8",
-                        "orange": "#fad6b8",
-                        "red": "#f6c5bf",
-                    }.get(thunder_ampel_band(raw_val))
+                    cell_bg = _ampel_cell_bg(thunder_ampel_band(raw_val))
                 else:
-                    cell_bg = {
-                        "risk": "#f6c5bf",
-                        "watch": "#fad6b8",
+                    _numeric_thunder_level = {
+                        "risk": "red", "watch": "orange",
                     }.get(_thunder_risk_level(raw_val))
+                    cell_bg = _ampel_cell_bg(_numeric_thunder_level)
 
             # Issue #1425 Schritt 1: Korridor-mark-Markierung, geteilter
             # Baustein mit dem Compare-Renderer (corridor_mark.py). Trip-
@@ -966,6 +963,7 @@ def render_html(
     multi_day_trend: Optional[list[dict]],
     outlook_state: Optional["OutlookState"] = None,
     outlook_horizon_days: Optional[int] = None,
+    outlook_metrics: Optional[list[dict]] = None,
     compact_summary: Optional[str],
     tz: ZoneInfo,
     friendly_keys: set[str],
@@ -1304,9 +1302,18 @@ def render_html(
             + "</div>"
         )
 
+    # Issue #1720 S1: gewaehlte Vorschau-Spalten. None = Altbestand (sieben
+    # feste Spalten, unveraendert), [] = bewusst geleert (Block entfaellt
+    # GANZ -- render_outlook_table(metrics=[]) lieferte sonst eine Tabelle mit
+    # nur der Wochentag-Spalte, outlook.py:148-172).
+    # 🔴 Der Renderer loest NICHT selbst auf (F001): das `dc` hier ist
+    # kanal-kollabiert, der Zeilenbau arbeitet ungekollabiert -- zwei
+    # Aufloesungen ergaeben richtige Ueberschriften ueber falschen Zahlen.
+    _outlook_metrics = outlook_metrics
+
     # Issue #1313 (E1): Gewitter-Vorschau entfaellt, wenn der Mehrtages-
     # Ausblick in derselben Mail aktiv ist (gleiche Datenquelle, Dopplung).
-    outlook_active = show_outlook and bool(multi_day_trend)
+    outlook_active = show_outlook and bool(multi_day_trend) and _outlook_metrics != []
 
     thunder_html = ""
     if thunder_forecast and not outlook_active:
@@ -1347,23 +1354,32 @@ def render_html(
         return "#b91c1c"
 
     trend_html = ""
-    if multi_day_trend:
+    if multi_day_trend and _outlook_metrics != []:
         # AC-8/9/12 (#911): Ausblick als OutlookTable (Tabelle statt Chips).
         # Spalten: Tag · N · D · R · PR · Wind · Böen · Gew · ACC
         # Zell-Hintergrund je Warn-Level; Code-Legende darunter.
         # Epic #1301 B4: Tabellenbau in geteilten Baustein extrahiert
         # (Trip/Compare-Teilungs-Invariante) -- show_acc=True bleibt
         # byte-identisch zum bisherigen Inline-Verhalten.
-        outlook_table = render_outlook_table(multi_day_trend, show_acc=True)
+        outlook_table = render_outlook_table(multi_day_trend, show_acc=True,
+                                             metrics=_outlook_metrics)
 
-        # Code-Legende
-        outlook_legend = (
-            f'<div style="font-family:{FONT_DATA};font-size:9px;color:#9a978d;'
-            f'margin-top:6px;line-height:1.8;">'
-            f'N Nacht-Tief · D Tag-Hoch °C · R Regen mm · PR Regen-W. % · '
-            f'Wind/Böen km/h · Gew Gewitter-Stufe @h · ACC Prognose-Genauigkeit'
-            f'</div>'
-        )
+        # Code-Legende — NUR im Altbestand (#1720 S1, AC-9): sie beschreibt
+        # ausschliesslich die sieben festen Spalten. Bei aktiver Auswahl sind
+        # die Tabellenkoepfe bereits ausgeschriebene deutsche Katalog-Labels;
+        # eine Legende wuerde dort Kuerzel erklaeren, die gar nicht vorkommen.
+        # "N Tagestief" statt "N Nacht-Tief" (AC-8): die Spalte zeigt
+        # `summary.temp_min_c`, das Tages-Minimum IM WANDERFENSTER -- die
+        # Nachtdaten (_fetch_night_weather) fliessen hier gar nicht ein.
+        outlook_legend = ""
+        if _outlook_metrics is None:
+            outlook_legend = (
+                f'<div style="font-family:{FONT_DATA};font-size:9px;color:#9a978d;'
+                f'margin-top:6px;line-height:1.8;">'
+                f'N Tagestief · D Tag-Hoch °C · R Regen mm · PR Regen-W. % · '
+                f'Wind/Böen km/h · Gew Gewitter-Stufe @h · ACC Prognose-Genauigkeit'
+                f'</div>'
+            )
 
         # AC-6 (#899): Context label (gesendet-Zeitstempel) bleibt erhalten
         _weekday_de_short = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -1424,17 +1440,13 @@ def render_html(
             for mc in dc.metrics
             if mc.sms_threshold is not None
         }
-        # Issue #1357: die gespeicherte Auswertungswahl je Groesse mitgeben —
-        # ohne sie faellt die Kachel auf die Katalog-Vorgabe zurueck.
-        _pill_aggregations = {
-            mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
-        }
+        # Issue #1728 Scheibe 1 (DEC-5): die Kachel zeigt unbedingt die
+        # Spanne -- ``mc.aggregations`` wird hier NICHT mehr gelesen.
         _pills = build_metrics_summary_pills(
             segments, _pill_metric_ids, _sms_mention_thresholds, tz=tz,
             night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,
-            metric_aggregations=_pill_aggregations,
         )
         # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
         _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)

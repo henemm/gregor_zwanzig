@@ -25,6 +25,12 @@ from output.tokens.hazard_symbols import (
     MIN_SMS_LEVEL, sms_symbol_for,
 )
 
+# Issue #1744 A1: `format_segment_reference` ist seit dem Umzug nach
+# `segments.py` die GEMEINSAME Ortsformatierung aller Alarmarten (vorher hier
+# definiert, faktisch der amtlichen Warnung vorbehalten). Der Import haelt
+# zugleich den Re-Export fuer Bestandsaufrufer (`email/html.py:53`).
+from .segments import format_segment_reference
+
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData
     from app.trip import Trip
@@ -165,7 +171,7 @@ class OfficialAlertNotice:
     # gebuendelten Mitglieder (dedupliziert, Reihenfolge = erstes Auftreten),
     # NICHT nur `alert.region_label` des Repraesentanten. Von den Buildern aus
     # dem dritten `_bundle_by_hazard_level`-Rueckgabewert gesetzt. Leeres Tuple
-    # (Default) -> `_standalone_src_html` faellt auf `alert.region_label`
+    # (Default) -> `_standalone_src_value` faellt auf `alert.region_label`
     # zurueck (Alt-Aufrufer/handgebaute Test-Notices ohne dieses Feld,
     # Bestandsverhalten unveraendert).
     regions: tuple[str, ...] = ()
@@ -259,36 +265,6 @@ def render_official_alerts_plain(entries: list[tuple[str, list["OfficialAlert"]]
                 suffix = f" ({_format_validity(alert)})"
             lines.append(f"Amtliche Warnung: {alert.label}{suffix}")
     return lines
-
-
-def format_segment_reference(segment_ids: list[str]) -> str:
-    """Issue #1200: kompakter Segment-/Etappen-Bezug fuer die Standalone-
-    Alert-Mail. Numerische IDs werden sortiert, zusammenhaengende Laeufe als
-    Range ('Segment 3–5'), sonst als Aufzaehlung ('Segment 3, 5'). `"Ziel"`
-    wird NIE in die numerische Range/Aufzaehlung gemischt, sondern immer als
-    eigenes Element '🏁 Ziel' angehaengt. Mehr als 4 betroffene Segmente
-    insgesamt -> Verdichtung 'N Segmente' (Begriff bewusst 'Segmente', nicht
-    'Etappen')."""
-    has_ziel = "Ziel" in segment_ids
-    numeric = sorted({int(s) for s in segment_ids if s != "Ziel"})
-
-    total = len(numeric) + (1 if has_ziel else 0)
-    if total > 4:
-        return f"{total} Segmente"
-
-    numeric_part = ""
-    if numeric:
-        is_consecutive = numeric == list(range(numeric[0], numeric[-1] + 1))
-        if is_consecutive and len(numeric) > 1:
-            numeric_part = f"Segment {numeric[0]}–{numeric[-1]}"
-        else:
-            numeric_part = "Segment " + ", ".join(str(n) for n in numeric)
-
-    if numeric_part and has_ziel:
-        return f"{numeric_part}, 🏁 Ziel"
-    if has_ziel:
-        return "🏁 Ziel"
-    return numeric_part
 
 
 def dedupe_official_alerts(
@@ -970,8 +946,7 @@ def _standalone_verdict_html(
     color = level_colors.get(leading_level, level_colors[4])
     css_class = _LEVEL_CLASS.get(leading_level, "rot")
     tint = _hex_to_rgba(color, 0.16)
-    extra = "" if uniform else f" · höchste Stufe {leading_word}"
-    word = "amtliche Warnung" if n_count == 1 else "amtliche Warnungen"
+    text = _verdict_text(n_count, leading_word, uniform)
     dot = (
         f'<span class="dot {css_class}" style="width:12px;height:12px;'
         f'border-radius:999px;background:{color};'
@@ -982,8 +957,33 @@ def _standalone_verdict_html(
         f'gap:8px;font-family:{font_mono};font-size:12px;font-weight:600;'
         f'letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;'
         f'border-radius:999px;margin-bottom:16px;background:{tint};'
-        f'color:{color};">{dot}{n_count} {word}{extra}</div>'
+        f'color:{color};">{dot}{_html.escape(text)}</div>'
     )
+
+
+def _headline_text(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
+    """Kernaussage der Ueberschrift als Klartext -- gemeinsame Quelle fuer das
+    HTML (escaped, `_standalone_headline_html`) und den Klartext-Teil der Mail
+    (#1744 A2, AC-13). Regeln unveraendert, siehe dort."""
+    types = []
+    for n in ordered:
+        typ = _display_label(n.alert)
+        if not uniform:
+            _e, lw = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
+            typ = f"{typ} ({lw})"
+        types.append(typ)
+    text = _join_de(types)
+    if _uniform_scope(ordered) and not _scope_matches_sole_chip(ordered[0]):
+        return f"{text} für {_scope_display(ordered[0])} gemeldet."
+    return f"{text} gemeldet."
+
+
+def _verdict_text(n_count: int, leading_word: str, uniform: bool) -> str:
+    """Kennzeichen-Text '{N} amtliche Warnung(en)' (+ Hoechststufe bei
+    gemischten Stufen) -- geteilt von Verdict-Pille und Klartext-Teil."""
+    word = "amtliche Warnung" if n_count == 1 else "amtliche Warnungen"
+    extra = "" if uniform else f" · höchste Stufe {leading_word}"
+    return f"{n_count} {word}{extra}"
 
 
 def _standalone_headline_html(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
@@ -1014,22 +1014,14 @@ def _standalone_headline_html(ordered: list["OfficialAlertNotice"], uniform: boo
     "Zugang eingeschränkt — Monts Toulonnais")."""
     from output.renderers.email.design_tokens import G_INK
 
-    types = []
-    for n in ordered:
-        typ = _html.escape(_display_label(n.alert))
-        if not uniform:
-            _e, lw = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
-            typ = f"{typ} ({lw})"
-        types.append(typ)
     style = (
         f"font-size:26px;font-weight:700;letter-spacing:-.01em;"
         f"margin:0 0 18px;line-height:1.2;color:{G_INK};"
     )
-    types_html = _join_de(types)
-    if _uniform_scope(ordered) and not _scope_matches_sole_chip(ordered[0]):
-        scope = _html.escape(_scope_display(ordered[0]))
-        return f'<div class="body-h1" style="{style}">{types_html} für {scope} gemeldet.</div>'
-    return f'<div class="body-h1" style="{style}">{types_html} gemeldet.</div>'
+    # #1744 A2: EINE Textquelle fuer HTML und Klartext (`_headline_text`), hier
+    # escaped -- die Regeln (F006/F007, Scope-Nennung) stehen dort.
+    text = _html.escape(_headline_text(ordered, uniform))
+    return f'<div class="body-h1" style="{style}">{text}</div>'
 
 
 def _standalone_ladder_html(active_level: int, level_colors: dict[int, str]) -> str:
@@ -1128,31 +1120,95 @@ def _standalone_warn_type_html(notice: "OfficialAlertNotice") -> str:
     return _html.escape(_display_label(notice.alert))
 
 
-def _standalone_facts_html(
-    notice: "OfficialAlertNotice", tz: "ZoneInfo | None", chips: str, note: str,
-    font_data: str, ink: str, ink_faint: str, ink_muted: str,
-) -> str:
-    """`.facts`-Block der Standalone-Warn-Zeile (Grid UND Stacked):
+#: Datenzeile der Standalone-Warn-Mail: `(Label, Klartext-Wert, HTML-Wert|None)`.
+#: `None` heisst "Klartext-Wert escapen" -- fertiges Markup nur, wo es sein muss
+#: (Route-Chips, `.type`-Beschriftung).
+_DataRow = tuple[str, str, "str | None"]
 
-    - AC-7/AC-8: die "Gültig:"-Zeile entfaellt VOLLSTAENDIG, wenn die Warnung
+
+def _standalone_datarow_html(
+    label: str, value: str, *, first: bool, value_html: "str | None" = None,
+) -> str:
+    """Datenzeile in der Bauform des Nowcasts (#1744 A2, AC-8): GETEILTER
+    Baustein `_datarow_html` (`render.py`), damit beide Alarm-Mailtypen
+    dieselbe Outlook-sichere `<table role="presentation">`-Zeile emittieren
+    (Label links, Wert rechtsbuendig).
+
+    Die Beschriftung behaelt ihren Doppelpunkt: an ihm haengen die
+    Pflicht-Literale des Warn-Mail-Waechters ("Gültig:" P-3, "Quelle:" P-4)
+    und die Bestands-Zusicherung "keine Gültig-Zeile ohne bekannten Zeitraum"
+    (#1238 AC-7)."""
+    from output.renderers.email.design_tokens import G_INK
+
+    from .render import _datarow_html
+
+    return _datarow_html(f"{label}:", value, G_INK, first, value_html=value_html)
+
+
+def _standalone_type_row(notice: "OfficialAlertNotice") -> _DataRow:
+    """Datenzeile "Gefahr". Der Wert traegt die `.type`-Beschriftung -- die
+    Detail-Fidelity aus `_display_label` (#1238 AC-4/AC-6) bleibt damit an
+    derselben Stelle pruefbar wie vor dem Umbau."""
+    from output.renderers.email.design_tokens import G_INK
+
+    typ = _standalone_warn_type_html(notice)  # bereits escaped
+    return (
+        "Gefahr", _display_label(notice.alert),
+        f'<span class="type" style="font-weight:600;color:{G_INK};">{typ}</span>',
+    )
+
+
+def _standalone_fact_rows(
+    notice: "OfficialAlertNotice", tz: "ZoneInfo | None",
+) -> list[_DataRow]:
+    """Die uebrigen Fakten EINER Warnung als Datenzeilen (Grid UND Stacked):
+
+    - AC-7/AC-8: die "Gültig"-Zeile entfaellt VOLLSTAENDIG, wenn die Warnung
       keinen Gueltigkeitszeitraum hat (tagesbezogene Zugangssperren, Waldbrand-
       Tagesstufen) -- kein Platzhalter "unbekannt" mehr. Mit Zeiten bleibt sie
       unveraendert.
-    - AC-12: Feld-Label "Orte:" im Ortsvergleich (`scope_kind="locations"`),
-      "Route:" im Trip-Pfad (unveraendert)."""
-    validity = ""
+    - AC-12: Feld-Label "Orte" im Ortsvergleich (`scope_kind="locations"`),
+      "Route" im Trip-Pfad (unveraendert)."""
+    rows: list[_DataRow] = []
     if notice.alert.valid_from and notice.alert.valid_to:
-        validity = (
-            f'<span class="k" style="color:{ink_faint};">Gültig:</span> '
-            f'<span class="mono" style="font-family:{font_data};font-weight:500;'
-            f'color:{ink};">{_format_validity(notice.alert, tz)}</span><br>'
-        )
-    scope_key = "Orte:" if notice.scope_kind == "locations" else "Route:"
+        rows.append(("Gültig", _format_validity(notice.alert, tz), None))
+    chips = "".join(_standalone_chip_html(c, active=True) for c in notice.affected_chips)
+    chips += "".join(_standalone_chip_html(c, active=False) for c in notice.free_chips)
+    scope_key = "Orte" if notice.scope_kind == "locations" else "Route"
+    rows.append((scope_key, _join_de(list(notice.affected_chips)), chips or None))
+    return rows
+
+
+def _standalone_facts_html(rows: list[_DataRow], note: str) -> str:
+    """`.facts`-Block der Standalone-Warn-Zeile: die Fakten als Datenzeilen in
+    der Bauform des Nowcasts (#1744 A2, AC-8) statt als Inline-Grid mit
+    `<br>`-getrennten `.k`/`.mono`-Spans."""
+    zeilen = "".join(
+        _standalone_datarow_html(label, value, first=(i == 0), value_html=value_html)
+        for i, (label, value, value_html) in enumerate(rows)
+    )
+    return f'<div class="facts" style="font-size:14px;line-height:1.5;">{zeilen}{note}</div>'
+
+
+def _standalone_route_note_html(notice: "OfficialAlertNotice") -> str:
+    """`.route-note` unter den Datenzeilen: nennt die freie Reststrecke, wenn
+    es eine gibt (ADR-0033 unberuehrt -- freie Chips werden nur im Trip-Pfad
+    mit Teilstrecke gesetzt)."""
+    if not notice.free_chips:
+        return ""
+    from output.renderers.email.design_tokens import G_INK_FAINT
+
     return (
-        f'<div class="facts" style="font-size:14px;color:{ink_muted};line-height:1.5;">'
-        f'{validity}'
-        f'<span class="k" style="color:{ink_faint};">{scope_key}</span> {chips}{note}'
-        f'</div>'
+        f'<div class="route-note" style="font-size:12.5px;color:{G_INK_FAINT};'
+        f'margin-top:7px;">{_html.escape(_route_note_text(notice))}</div>'
+    )
+
+
+def _route_note_text(notice: "OfficialAlertNotice") -> str:
+    """Klartext der `.route-note` -- geteilt von HTML und Klartext-Teil."""
+    return (
+        "übrige Strecke frei — keine amtliche Warnung für "
+        f"{_join_de(list(notice.free_chips))}"
     )
 
 
@@ -1167,37 +1223,17 @@ def _standalone_row_border_style(first: bool) -> str:
 def _standalone_warn_grid_html(
     notice: "OfficialAlertNotice", tz: "ZoneInfo | None", *, first: bool = True,
 ) -> str:
-    """`.warn`-Grid-Zeile (uniforme Stufe, Design 'Beispiel A/B'): Typ links,
-    Gueltigkeit + Route-Chips rechts (AC-8/AC-10). Freie Chips durchgestrichen
-    plus `.route-note`, wenn welche vorhanden sind. Inline-CSS 1:1 aus der
-    Vorlage (F002). `first` (Fix-Loop-Nachzug): jede Zeile ausser der ersten
-    traegt `border-top` als Inline-Ersatz fuer `.warn + .warn`."""
-    from output.renderers.email.design_tokens import FONT_DATA, G_INK, G_INK_FAINT, G_INK_MUTED
-
-    typ = _standalone_warn_type_html(notice)
-    chips = "".join(_standalone_chip_html(c, active=True) for c in notice.affected_chips)
-    chips += "".join(_standalone_chip_html(c, active=False) for c in notice.free_chips)
-    note = ""
-    if notice.free_chips:
-        free_text = _html.escape(_join_de(notice.free_chips))
-        note = (
-            f'<div class="route-note" style="font-size:12.5px;color:{G_INK_FAINT};'
-            f'margin-top:7px;">übrige Strecke frei — keine amtliche '
-            f'Warnung für {free_text}</div>'
-        )
-    facts = _standalone_facts_html(
-        notice, tz, chips, note, FONT_DATA, G_INK, G_INK_FAINT, G_INK_MUTED,
-    )
+    """`.warn`-Zeile bei uniformer Stufe: Gefahrenart, Gueltigkeit und
+    Route-Chips als Datenzeilen (#1744 A2, AC-8) -- vor A2 ein zweispaltiges
+    Grid mit Typ links und einem Inline-Facts-Block rechts. Freie Chips bleiben
+    durchgestrichen, die `.route-note` bleibt darunter (ADR-0033 unberuehrt).
+    `first`: jede Zeile ausser der ersten traegt `border-top` als Inline-Ersatz
+    fuer den Geschwister-Selektor `.warn + .warn`."""
+    rows = [_standalone_type_row(notice)] + _standalone_fact_rows(notice, tz)
     return (
-        # AC-18: Titel-Spalte von 130px auf 150px verbreitert -- 130px zwang
-        # lange Stufen-/Typ-Woerter ("ORANGE") in den Wortumbruch.
-        f'<div class="warn" style="display:grid;grid-template-columns:150px '
-        f'minmax(0,1fr);gap:14px;padding:14px 16px;align-items:start;'
+        f'<div class="warn" style="display:block;padding:14px 16px;'
         f'{_standalone_row_border_style(first)}">'
-        f'<div class="lead" style="display:flex;flex-direction:column;gap:6px;">'
-        f'<span class="type" style="font-size:15px;font-weight:600;color:{G_INK};">'
-        f'{typ}</span></div>'
-        f'{facts}</div>'
+        f'{_standalone_facts_html(rows, _standalone_route_note_html(notice))}</div>'
     )
 
 
@@ -1205,18 +1241,16 @@ def _standalone_warn_stacked_html(
     notice: "OfficialAlertNotice", tz: "ZoneInfo | None", color: str, *, first: bool = True,
 ) -> str:
     """`.warn.stacked` (gemischte Stufen, Design 'Beispiel C', AC-9): eigenes
-    Eskalations-Meter + Typ im `.whead`, Route-Chips darunter. Inline-CSS 1:1
-    aus der Vorlage (F002). `first` (Fix-Loop-Nachzug): siehe
-    `_standalone_warn_grid_html`."""
-    from output.renderers.email.design_tokens import FONT_DATA, G_INK, G_INK_FAINT, G_INK_MUTED
+    Eskalations-Meter + Typ im `.whead`, darunter die Fakten als Datenzeilen
+    (#1744 A2, AC-8). Die Gefahrenart bleibt hier im `.whead` neben dem Meter --
+    sie steht deshalb NICHT zusaetzlich als Datenzeile (sonst nennte die Mail
+    denselben Typ zweimal). Inline-CSS 1:1 aus der Vorlage (F002). `first`
+    (Fix-Loop-Nachzug): siehe `_standalone_warn_grid_html`."""
+    from output.renderers.email.design_tokens import G_INK
 
     typ = _standalone_warn_type_html(notice)
-    chips = "".join(_standalone_chip_html(c, active=True) for c in notice.affected_chips)
-    chips += "".join(_standalone_chip_html(c, active=False) for c in notice.free_chips)
     meter = _standalone_bars_meter_html(notice.alert.level, color)
-    facts = _standalone_facts_html(
-        notice, tz, chips, "", FONT_DATA, G_INK, G_INK_FAINT, G_INK_MUTED,
-    )
+    facts = _standalone_facts_html(_standalone_fact_rows(notice, tz), "")
     return (
         f'<div class="warn stacked" style="display:block;padding:14px 16px;'
         f'{_standalone_row_border_style(first)}">'
@@ -1263,7 +1297,7 @@ def _scope_matches_sole_chip(notice: "OfficialAlertNotice") -> bool:
 
 
 def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
-    """Prosaischer Scope-Satz der `.src`-Box (Spec Slice B Punkt 6) --
+    """Prosaischer Scope-Satz des `.src`-Bausteins (Spec Slice B Punkt 6) --
     deterministisches Template, keine freie Prosa (bereits HTML-escaped).
 
     AC-9 (#1238): der Satz darf den Umfang der FUEHRENDEN Warnung nicht mehr
@@ -1306,12 +1340,12 @@ def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool
     return f"Betrifft nur {core}, {rest}."
 
 
-def _standalone_src_html(
-    ordered: list["OfficialAlertNotice"], source_label: str, uniform: bool,
-    box_bg: str, info_color: str, ink_muted: str, ink: str,
+def _standalone_src_value(
+    ordered: list["OfficialAlertNotice"], source_label: str,
 ) -> str:
-    """`.src`-Box (Spec Slice B Punkt 6): 'Quelle: {Quelle} — {Regionen}.
-    {Scope-Satz}'. Regionen dedupliziert (F007-Bestandsschutz).
+    """Wert der Quellen-Angabe als Klartext: '{Quelle} — {Regionen}.'
+    Regionen dedupliziert (F007-Bestandsschutz). Geteilt von HTML-Datenzeile
+    und Klartext-Teil (#1744 A2).
 
     Adversary F013 (#1239 Nachzug Runde 7, HIGH): pro Notice werden ALLE
     Regionen ihres Buendels genannt (`n.regions`, von den Buildern aus
@@ -1322,21 +1356,43 @@ def _standalone_src_html(
     Zustaendigkeits-Zuordnung, kein blosses Auslassen). Fallback auf
     `alert.region_label`, wenn `n.regions` leer ist (Alt-Aufrufer/handgebaute
     Test-Notices ohne dieses Feld)."""
-    regions = []
+    regions: list[str] = []
     for n in ordered:
         rls = n.regions or ((n.alert.region_label,) if n.alert.region_label else ())
         for rl in rls:
             if rl and rl not in regions:
                 regions.append(rl)
-    region_suffix = f" — {_html.escape(', '.join(regions))}" if regions else ""
-    sentence = _standalone_src_sentence(ordered, uniform)
-    return (
-        f'<div class="src" style="font-size:14px;color:{ink_muted};'
-        f'line-height:1.5;background:{box_bg};border-left:3px solid '
-        f'{info_color};padding:12px 16px;border-radius:0 4px 4px 0;">'
-        f'<b style="color:{ink};font-weight:600;">Quelle:</b> '
-        f'{_html.escape(source_label)}{region_suffix}. {sentence}</div>'
+    region_suffix = " — " + ", ".join(regions) if regions else ""
+    return f"{source_label}{region_suffix}."
+
+
+def _standalone_src_html(
+    ordered: list["OfficialAlertNotice"], source_label: str, uniform: bool,
+    ink_muted: str,
+) -> str:
+    """Quelle als DATENZEILE innerhalb des Datenzeilen-Blocks (#1744 A2, AC-8)
+    -- bis A2 eine eigene getoente `.src`-Box UNTER der Warn-Karte, also ein
+    Baustein, den die gemeinsame Zielreihenfolge nicht kennt (deshalb entfallen
+    die Box-Farbparameter `box_bg`/`info_color`).
+
+    Die Klasse `.src` ist ERSATZLOS entfallen (Adversary F002): solange sie am
+    Rest der alten Box klebte, war die Quelle strukturell weiter ein Sonderfall
+    -- der Warn-Mail-Waechter haette seine Quellen-Pruefung unveraendert an ihr
+    festmachen koennen, und seine neue Datenzeilen-Alternative (S-1b) waere von
+    keiner echt gerenderten Mail je erreicht worden. Die Quelle ist jetzt eine
+    Datenzeile wie Gefahr, Gueltigkeit und Ortsbezug; der aeussere `<div>`
+    traegt nur noch den Zeilenabstand, keine Kennung. Der prosaische Scope-Satz
+    steht als `.scope-note` unter der Zeile, statt in die rechtsbuendige
+    Wert-Zelle gequetscht zu werden."""
+    zeile = _standalone_datarow_html(
+        "Quelle", _standalone_src_value(ordered, source_label), first=False,
     )
+    sentence = _standalone_src_sentence(ordered, uniform)
+    note = (
+        f'<div class="scope-note" style="font-size:12.5px;color:{ink_muted};'
+        f'margin-top:7px;">{sentence}</div>' if sentence else ""
+    )
+    return f'<div style="padding:0 16px 12px;">{zeile}{note}</div>'
 
 
 def render_official_alert_html(
@@ -1346,12 +1402,19 @@ def render_official_alert_html(
     """E-Mail-HTML auf dem SOLL-Design (#1233 Slice B, „Alert · Amtliche
     Warnung"): Verdict-Pill, deterministische Headline, Warnstufen-Leiter
     (uniforme Stufe) bzw. Eskalations-Meter je Warnung (gemischte Stufen),
-    Warn-Block mit Route-Chips (frei = durchgestrichen), Quelle-Box, Footer.
+    Datenzeilen-Block (Gefahr, Gültig, Route-Chips — frei durchgestrichen —,
+    Quelle), Stand-Zeile, Herkunfts-Fußzeile.
     Ausschliesslich Bestands-Farb-Tokens (G_ALERT_L2/L3/L4), keine
-    Design-Vorlage-Hex (AC-13)."""
+    Design-Vorlage-Hex (AC-13).
+
+    Issue #1744 A2 (AC-8): die Fakten stehen in DERSELBEN Datenzeilen-Bauform
+    wie in der Nowcast-Mail (`render.py::_datarow_html`), und die Quelle ist
+    eine Datenzeile IM Block statt einer eigenen Box darunter -- beide
+    Alarm-Mailtypen tragen damit dieselbe Bausteinfolge. Den Klartext-Teil
+    dazu baut `render_official_alert_mail_plain`."""
     from output.renderers.email.design_tokens import (
-        FONT_DATA, FONT_UI, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4, G_BOX_INFO_BG,
-        G_INFO, G_INK, G_INK_FAINT, G_INK_MUTED,
+        FONT_DATA, FONT_UI, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4, G_INK,
+        G_INK_FAINT, G_INK_MUTED,
     )
 
     level_colors = {2: G_ALERT_L2, 3: G_ALERT_L3, 4: G_ALERT_L4}
@@ -1378,14 +1441,16 @@ def render_official_alert_html(
             )
             for i, n in enumerate(ordered)
         )
+    # #1744 A2 (AC-8): die Quellen-Datenzeile steht IM Datenzeilen-Block, nicht
+    # als eigener Baustein darunter -- beide Alarm-Mailtypen tragen damit
+    # dieselbe Bausteinfolge (Kennzeichen, Ueberschrift, [Skala,] Datenzeilen,
+    # [Sperrzeit,] Stand, Herkunft).
+    src = _standalone_src_html(ordered, source_label, uniform, G_INK_MUTED)
     warns_block = (
         f'<div class="warns" style="border:1px solid #d8d3c2;border-radius:6px;'
-        f'overflow:hidden;margin:4px 0 16px;">{warns}</div>'
+        f'overflow:hidden;margin:4px 0 16px;">{warns}{src}</div>'
     )
 
-    src = _standalone_src_html(
-        ordered, source_label, uniform, G_BOX_INFO_BG, G_INFO, G_INK_MUTED, G_INK,
-    )
     footer = (
         f'<p class="body-foot" style="font-size:13.5px;color:{G_INK_FAINT};'
         f'margin:18px 0 0;">Stand: heute {_html.escape(stand_at)} · '
@@ -1402,8 +1467,79 @@ def render_official_alert_html(
     ))
     return (
         f'<html><body style="font-family:{FONT_UI};color:{G_INK};">'
-        f'{verdict}{headline}{ladder}{warns_block}{src}{footer}{origin}</body></html>'
+        f'{verdict}{headline}{ladder}{warns_block}{footer}{origin}</body></html>'
     )
+
+
+def render_official_alert_mail_plain(
+    notices: list["OfficialAlertNotice"], *, source_label: str, stand_at: str,
+    tz: "ZoneInfo", context_label: str | None = None,
+) -> str:
+    """Klartext-Teil der eigenstaendigen amtlichen Warn-Mail (#1744 A2, AC-13).
+
+    Baut dieselben Bausteine in derselben Reihenfolge wie
+    `render_official_alert_html` aus DENSELBEN `(Label, Wert)`-Tupeln -- so wie
+    der Nowcast es haelt (`render.py::_render_email_onset`).
+
+    Bis A2 hatte diese Mail keinen eigens gebauten Klartext: `EmailOutput.send`
+    bekam kein `plain_text_body`, woraufhin `build_mime_message` die Tags aus
+    dem HTML strippte (`channels/email.py`) -- aus dem Warn-Block wurde eine
+    einzige zusammengeklebte Zeile ("…WarnstufeGELBORANGEROT…").
+
+    NICHT zu verwechseln mit `render_official_alert_notice_plain`: die bedient
+    den in eine ANDERE Mail eingebetteten Warnblock.
+
+    `tz` ist PFLICHT (kein stiller UTC-Rueckfall, #1402): Klartext und HTML
+    derselben Mail muessen denselben Wochentag nennen."""
+    from output.renderers.email.helpers import (
+        build_origin_footer, render_origin_footer_text,
+    )
+
+    ordered = _sort_notices(notices)
+    uniform = len({n.alert.level for n in ordered}) == 1
+    leading_level = ordered[0].alert.level
+    _emoji, leading_word = _LEVEL_WORDS.get(leading_level, ("🔴", "ROT"))
+
+    zeilen = [
+        _headline_text(ordered, uniform),
+        "",
+        _verdict_text(len(ordered), leading_word, uniform),
+        "",
+    ]
+    if uniform:
+        # Gegenstueck der Warnstufen-Leiter: die Skala traegt eine Einordnung,
+        # die eine blosse Wortangabe verliert (AC-9) -- im Klartext als
+        # Datenzeile, weil es dort keine Leiter gibt.
+        pos = _LEVEL_POSITION.get(leading_level, 0)
+        hint = _LEVEL_POSITION_WORD.get(pos, "niedrigste")
+        zeilen.append(
+            f"Warnstufe: {leading_word} ({hint} von drei) — Skala GELB · ORANGE · ROT"
+        )
+    for n in ordered:
+        rows: list[_DataRow] = []
+        if not uniform:
+            _e, word = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
+            rows.append(("Warnstufe", f"{word} · {_LEVEL_POSITION.get(n.alert.level, 0)}/3", None))
+        rows.append(_standalone_type_row(n))
+        rows.extend(_standalone_fact_rows(n, tz))
+        zeilen.extend(f"{label}: {value}" for label, value, _h in rows)
+        if n.free_chips:
+            zeilen.append(_route_note_text(n))
+    zeilen.append(f"Quelle: {_standalone_src_value(ordered, source_label)}")
+    sentence = _standalone_src_sentence(ordered, uniform)
+    if sentence:
+        # `_standalone_src_sentence` liefert bereits escapetes HTML (geteilt mit
+        # der Datenzeile) -- im Klartext gehoert der rohe Satz hin.
+        zeilen.append(_html.unescape(sentence))
+    zeilen.extend([
+        "",
+        f"Stand: heute {stand_at} · abgerufen bei {source_label}",
+        "",
+        render_origin_footer_text(build_origin_footer(
+            "official-alert", source=source_label, context_label=context_label,
+        )),
+    ])
+    return "\n".join(zeilen)
 
 
 def _embedded_meter_html(level: int, color: str) -> str:

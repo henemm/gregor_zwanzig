@@ -32,7 +32,7 @@ from output.renderers.email.compare_html import (
     _column_legend_text, _fmt_precip_type, _fmt_thunder,
     _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
     _units_legend_text, _visible_hour_metrics, derive_row_labels,
-    loc_hail_flag, location_render_order,
+    loc_hail_flag, loc_thunder_signals, location_render_order,
 )
 from output.renderers.email.outlook_state_hint import (
     OutlookState, render_outlook_state_plain,
@@ -243,7 +243,9 @@ def render_comparison_text(
         for (metric_id, _de_label, fmt), row in zip(ordered, labelled):
             value = _metric_value(loc_result, metric_id)
             cell = (
-                _fmt_overview_cell(fmt, value, loc_result)
+                # Issue #1680 S1: der Klartext-Teil der Mail zeigt die
+                # Herkunft der Gewitterstufe genau wie der HTML-Teil.
+                _fmt_overview_cell(fmt, value, loc_result, include_origin=True)
                 if value is not None else "-"
             )
             lines.append(f"   {row['label']}: {cell}")
@@ -325,9 +327,19 @@ def render_comparison_text(
                     # Compare-Stundentabelle): Hagel als Text-Anhang, wie in
                     # der HTML-Fassung -- nie als Ring (das ist nur Trip).
                     if m["fmt"] is _fmt_thunder:
+                        # Issue #1680 S3 (Spec D4): die Herkunft der Stufe
+                        # DIESER Stunde, wie in der HTML-Fassung -- HTML und
+                        # Klartext derselben Mail haben zwei unabhaengige
+                        # Aufrufstellen und duerfen nicht auseinanderlaufen
+                        # (AC-4). Stufe und Traeger stammen aus DEMSELBEN `dp`.
+                        # KANAL: die Compare-SMS erreicht diese Schleife nie --
+                        # sie baut ihre Zelle ueber `_sms_metric_cell()` ->
+                        # `_fmt_overview_cell(..., include_origin=False)`
+                        # (PO-Entscheidung, dort aktiv abgewaehlt).
                         text = m["fmt"](
                             getattr(dp, m["key"], None),
                             getattr(dp, "hail_flag", None),
+                            getattr(dp, "thunder_level_signals", None),
                         )
                     else:
                         text = m["fmt"](getattr(dp, m["key"], None))
@@ -500,7 +512,9 @@ _CHANNEL_METRICS: tuple[tuple[str, str], ...] = (
 _PLAIN_ROWS_BY_ID = {row[0]: row for row in _PLAIN_ROWS}
 
 
-def _fmt_overview_cell(fmt, value, loc_result: LocationResult) -> str:
+def _fmt_overview_cell(
+    fmt, value, loc_result: LocationResult, *, include_origin: bool = False,
+) -> str:
     """Issue #1475 Nachbesserung (Punkt 5b, Aufrufstellen 3/5/6): DIE EINE
     Stelle, an der die Ortsvergleich-Kanaele Klartext, SMS und Telegram ihren
     Uebersichtswert formatieren.
@@ -509,9 +523,17 @@ def _fmt_overview_cell(fmt, value, loc_result: LocationResult) -> str:
     Ortes durchgereicht; alle uebrigen Zeilen bleiben zeichengleich. Ohne
     diesen gemeinsamen Baustein haette jeder der drei Kanaele eine eigene
     Kopie derselben Fallunterscheidung bekommen (#1481).
+
+    Issue #1680 S1: ``include_origin`` schaltet die Herkunft der Gewitterstufe
+    zu. 🔴 Default ``False``, weil dieselbe Funktion AUCH die SMS-Zelle baut
+    und die PO-Entscheidung dort ausdruecklich KEINE Herkunft vorsieht -- ohne
+    diesen Schalter leckte der Zusatz automatisch in die SMS, wuerde dort vom
+    GSM-7-Filter zu "-" entstellt und verdraengte ueber den "+N"-Mechanismus
+    hintere Metriken.
     """
     if fmt is _fmt_thunder:
-        return fmt(value, loc_hail_flag(loc_result))
+        signale = loc_thunder_signals(loc_result) if include_origin else None
+        return fmt(value, loc_hail_flag(loc_result), signale)
     return fmt(value)
 
 # Issue #1362 (Scheibe S5b): Compare-Renderer-ID -> zentrale Katalog-Metrik-ID
@@ -626,6 +648,15 @@ def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
     if not code:
         return None
     code = f"{code}{_sms_aggregation_sign(metric_id)}"
+    # Issue #1680 S1 (Spec D8): ``include_origin`` bleibt hier AKTIV ABGEWAEHLT
+    # auf dem Default ``False`` -- die SMS zeigt die Gewitterstufe, aber KEINE
+    # Herkunft. PO-Entscheidung, kein vergessener Anschluss. Drei Gruende:
+    # (1) 153 Zeichen Gesamtbudget und kein Spaltenbudget fuer einen zweiten
+    # ``·``-Abschnitt je Ort; (2) ``_sms_gsm7_safe`` entstellt den Trenner
+    # ``·`` zu ``-``, der Zusatz saehe entstellt aus; (3) der
+    # ``+N``-Mechanismus wuerde die vom Zusatz verdraengten hinteren Metriken
+    # nur noch zaehlen statt zeigen. Gilt ueber denselben Renderer auch fuer
+    # Premium-SMS, sobald der Ortsvergleich ihn bedient.
     return f"{code} {_sms_gsm7_safe(_fmt_overview_cell(fmt, value, loc_result))}"
 
 
@@ -641,7 +672,7 @@ def _plain_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None
     value = _metric_value(loc_result, metric_id)
     if value is None:
         return None
-    return f"{label} {_fmt_overview_cell(fmt, value, loc_result)}"
+    return f"{label} {_fmt_overview_cell(fmt, value, loc_result, include_origin=True)}"
 
 
 def _channel_layout_for_metrics(channel: str, metric_ids: list[str]):

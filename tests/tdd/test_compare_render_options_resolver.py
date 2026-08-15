@@ -100,6 +100,55 @@ def test_no_active_metrics_means_no_filter():
 
 
 # ---------------------------------------------------------------------------
+# enabled_metrics_by_channel -- Issue #1703 Scheibe 8 (ADR-0053).
+#
+# Der Resolver ist die EINZIGE Stelle, an der die kanalweise Uebersichts-
+# Auswahl entsteht; seine beiden Leser (scheduler_dispatch_service,
+# compare_preview_service) greifen mit festen Keys darauf zu
+# (`opts.enabled_metrics_by_channel["email"|"telegram"|"sms"]`). Faellt die
+# Befuellung weg oder schrumpft die Schluessel-Menge, bricht der Compare-
+# Versand mit KeyError -- deshalb wird hier die Schluessel-Menge UND ein Wert
+# zugesichert, nicht nur die Existenz des Feldes.
+# ---------------------------------------------------------------------------
+
+
+def test_enabled_metrics_by_channel_covers_exactly_the_three_compare_channels():
+    """Genau email/telegram/sms -- Premium-SMS ist im Vergleich reiner
+    Alarm-Kanal (#1745), Signal ist entfernt (#610)."""
+    options = resolve_compare_render_options({"id": "p18"})
+    assert set(options.enabled_metrics_by_channel) == {"email", "telegram", "sms"}, (
+        "Die Leser greifen mit genau diesen drei Keys zu "
+        "(scheduler_dispatch_service.py:439/505/509, compare_preview_service.py:65/70/186)"
+    )
+
+
+def test_channel_selection_is_clipped_to_the_global_maximum_per_channel():
+    """ADR-0050 Regel 1/2: die Grundauswahl ist das MAXIMUM, ein Kanal darf nur
+    ABWAEHLEN. SMS waehlt hier 'wind_max_kmh' zusaetzlich an -- das ist nicht in
+    der Grundauswahl und muss weggeschnitten werden; die beiden Kanaele ohne
+    eigenen Eintrag folgen unveraendert der Grundauswahl (AC-S8-15)."""
+    preset = {
+        "id": "p19",
+        "display_config": {
+            "active_metrics": ["temp_max_c", "cloud_avg_pct"],
+            "channel_active_metrics": {"sms": ["temp_max_c", "wind_max_kmh"]},
+        },
+    }
+    options = resolve_compare_render_options(preset)
+    by_channel = options.enabled_metrics_by_channel
+
+    assert by_channel["sms"] == ["temp_max"], (
+        "Die SMS-Auswahl muss gegen die Grundauswahl geschnitten werden -- "
+        "'wind_max' ist dort nicht enthalten und darf nicht durch eine "
+        "Kanal-Auswahl wieder hereinkommen"
+    )
+    assert by_channel["email"] == ["temp_max", "cloud_avg"]
+    assert by_channel["telegram"] == ["temp_max", "cloud_avg"]
+    # Bewusst additiv: das globale Feld behaelt Bedeutung UND Wert.
+    assert options.enabled_metrics == ["temp_max", "cloud_avg"]
+
+
+# ---------------------------------------------------------------------------
 # hourly_enabled — TOP-LEVEL Feld (nicht im display_config-Blob), Default True
 # ---------------------------------------------------------------------------
 

@@ -32,6 +32,8 @@ der Versandlauf endet mit "no_channels".
 """
 from __future__ import annotations
 
+import datetime as _dt
+
 import json
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -212,7 +214,11 @@ def _run_both_paths(monkeypatch, tmp_path, *, show_night_block: bool):
     # Mehrtages-Ausblick ist aus (multi_day_trend_reports=["evening"]) --
     # damit greift in beiden Pfaden derselbe Bauweg.
     scheduler = TripReportSchedulerService()
-    assert scheduler._get_target_date("morning") == _TODAY, (
+    # #1724: Zieltag haengt am Trip (dessen Ortszeit) und am Zeitpunkt.
+    _probe_trip = _trip(show_night_block=show_night_block)
+    assert scheduler._get_target_date(
+        "morning", _probe_trip, _dt.datetime.now(_dt.timezone.utc),
+    ) == _TODAY, (
         "Fixture-Fehler: Versand und Vorschau muessen denselben Zieltag bauen"
     )
 
@@ -226,6 +232,7 @@ def _run_both_paths(monkeypatch, tmp_path, *, show_night_block: bool):
     recorder.label = "vorschau"
     PreviewService()._build_report(
         _trip(show_night_block=show_night_block), _TODAY, "morning",
+        now_utc=_dt.datetime.now(_dt.timezone.utc),
     )
 
     return recorder.entry("versand"), recorder.entry("vorschau")
@@ -313,7 +320,8 @@ def test_ac3_nacht_angabe_und_nacht_tabelle_nennen_dieselbe_stunde():
     row["date"] = date(2026, 7, 12)
 
     forecast = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-        None, target, _UTC, multi_day_trend=[row], night_weather=night,
+        None, target, datetime.now(timezone.utc), _UTC,
+        multi_day_trend=[row], night_weather=night,
     )
 
     report = TripReportFormatter().format_email(

@@ -35,7 +35,8 @@ from services.official_alerts import warn_egress
 from services.official_alerts.geo_ray_cast import _point_in_ring
 from services.official_alerts.models import OfficialAlert
 from services.radar_service import (
-    _DPC_LAT_MAX, _DPC_LAT_MIN, _DPC_LON_MAX, _DPC_LON_MIN,
+    _ITALY_RADAR_LAT_MAX, _ITALY_RADAR_LAT_MIN,
+    _ITALY_RADAR_LON_MAX, _ITALY_RADAR_LON_MIN,
 )
 
 logger = logging.getLogger("dpc")
@@ -228,7 +229,10 @@ class DpcSource:
     def covers(self, lat: float, lon: float) -> bool:
         """Grober Italien-Bbox-Vorfilter (kein Netzabruf) -- die feine
         Zonen-Zuordnung laeuft erst in ``fetch()``."""
-        return _DPC_LAT_MIN <= lat <= _DPC_LAT_MAX and _DPC_LON_MIN <= lon <= _DPC_LON_MAX
+        return (
+            _ITALY_RADAR_LAT_MIN <= lat <= _ITALY_RADAR_LAT_MAX
+            and _ITALY_RADAR_LON_MIN <= lon <= _ITALY_RADAR_LON_MAX
+        )
 
     def fetch(self, lat: float, lon: float) -> list[OfficialAlert]:
         zone_code = _zone_at(lat, lon)

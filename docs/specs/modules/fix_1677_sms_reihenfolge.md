@@ -202,8 +202,21 @@ zweistufig: positionierte Token zuerst nach `position`, alle übrigen
 - **AC-4:** Given ein Trip mit SMS-Layout, das Gewitter (`thunder`) an erster Position führt, während zusätzlich echte Vigilance-Daten (`HR:`/`TH:`, französischer Provider) für dieselbe Etappe vorliegen / When die SMS gerendert wird / Then steht das Vorhersage-Gewitter-Token `TH:` (Kategorie `forecast`, Nutzer-Position 0) VOR dem Vigilance-Block, und `HR:`/`TH:` (Kategorie `vigilance`) bleiben unmittelbar aneinander fusioniert (`HR:...TH:...` ohne Leerzeichen dazwischen, §3.3) — unabhängig von der gewählten Nutzer-Reihenfolge.
   - Test: SMS-Rendering mit Vigilance-Fixture UND aktivem SMS-Layout, Assertion sowohl auf Block-Reihenfolge (forecast vor vigilance) als auch auf die ununterbrochene `HR:...TH:...`-Fusion (Regex ohne Leerzeichen).
 
-- **AC-5:** Given ein Trip mit SMS-Layout, in dem „Temperatur" (`temperature`) an Position 2 und „Gefühlte Temperatur" (`wind_chill`) an Position 0 steht / When die SMS gerendert wird / Then erscheinen `FK`/`FD` (Windchill-Symbole) VOR `K`/`D` (Temperatur-Symbole), und innerhalb jedes Metrik-Ankers bleibt die interne Reihenfolge unverändert (`K` vor `D`, `FK` vor `FD`) — die Nutzer-Position gilt pro Metrik, nicht pro Symbol.
-  - Test: SMS-Rendering mit beiden Metriken aktiv, Assertion auf Block-Reihenfolge (FK/FD-Paar vor K/D-Paar) UND auf die unveränderte interne Paar-Reihenfolge.
+- **AC-5:** ⚠️ **Teilweise abgelöst durch #1824** (`docs/specs/modules/feat_1824_sms_range_und_trenner.md`,
+  Scheibe A: Temperatur-Bereichs-Token) — sind Tiefst- UND Höchstwert einer Größe gewählt
+  (Modell-Default), verschmelzen `K`/`D` bzw. `FK`/`FD` seit #1824 zu EINEM Bereichs-Token
+  (`D3/20`, `FD1/18`); die hier behauptete interne Symbol-Reihenfolge (`K` vor `D`, `FK` vor
+  `FD`) hat dann keinen Gegenstand mehr, weil die Einzelsymbole gar nicht mehr getrennt
+  existieren. Die Kernzusicherung — Nutzer-Position gilt pro Metrik-Anker, nicht pro Symbol —
+  bleibt gültig und ist jetzt gegen den Bereichs-Token abgesichert. Ursprünglicher Wortlaut zur
+  Historie: „Given ein Trip mit SMS-Layout, in dem „Temperatur" (`temperature`) an Position 2
+  und „Gefühlte Temperatur" (`wind_chill`) an Position 0 steht / When die SMS gerendert wird /
+  Then erscheinen `FK`/`FD` (Windchill-Symbole) VOR `K`/`D` (Temperatur-Symbole), und innerhalb
+  jedes Metrik-Ankers bleibt die interne Reihenfolge unverändert (`K` vor `D`, `FK` vor `FD`) —
+  die Nutzer-Position gilt pro Metrik, nicht pro Symbol."
+  - Test: `tests/tdd/test_sms_user_metric_order.py::test_ac5_position_applies_per_metric_anchor_not_per_symbol`
+    (angepasst für #1824: prüft die Block-Reihenfolge des Bereichs-Tokens `FD` vor `D`, nicht mehr
+    zwei separate Einzelsymbol-Paare).
 
 - **AC-6:** Given ein Trip mit SMS-Layout, das eine der 14 erweiterten Metriken (z.B. CAPE, `cape`) an erste Position setzt, kombiniert mit einem Fixture, das eine Zeilenlänge >160 Zeichen erzwingt (mehrere Wintersport- und Sicherheitsgrößen aktiv) / When die SMS gerendert und gekürzt wird / Then fällt `CP` trotz Position 0 als eines der ERSTEN Token weg (unverändert nach `DROP_ORDER`, direkt nach `DBG`), bevor auch nur ein Wintersport- oder Sicherheitstoken (`R`/`PR`/`W`/`G`/`TH:`) entfernt wird.
   - Test: konstruiertes Überlängen-Fixture mit aktivem SMS-Layout, Assertion auf die Reihenfolge des Wegfalls (welche Symbole zuerst verschwinden), nicht nur auf die Endlänge — Gegenprobe: Anzeige-Position ≠ Überlebensrang.

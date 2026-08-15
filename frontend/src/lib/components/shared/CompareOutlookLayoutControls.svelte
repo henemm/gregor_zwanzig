@@ -28,25 +28,42 @@
 		materializeOutlookMetricKeys,
 		toggleOutlookMetricKeyFromState
 	} from './weather-metrics-tab/compareMetricOrder.ts';
-	import type { CompareWizardState } from '../compare/compareWizardState.svelte';
 
+	// Issue #1720 S1: flache Props statt `CompareWizardState`-Bindung — dasselbe
+	// Bauteil bedient jetzt Ortsvergleich UND Trip (parametrisiert statt
+	// kopiert, Trip/Compare-Teilungs-Invariante). Der Speicher-Weg bleibt wie
+	// bisher AUSSERHALB: der Vergleich schreibt in den wiz-State, der Trip in
+	// seinen `$state` + `scheduleAutoSave()`.
 	interface Props {
-		wiz: CompareWizardState;
+		/** `null` = nie eingestellt (sieben feste Spalten), `[]` = bewusst leer. */
+		metricKeys: string[] | null;
 		/** Bereits geladene Antwort von GET /api/compare/metrics — dieselbe
 		 *  Liste wie die Uebersichts-Grundauswahl (kein zweiter Abruf). */
 		catalog: CompareSelectionEntry[];
+		/** Neue Auswahl (Umschalten ODER Reihenfolge) nach oben melden. */
+		onMetricKeys: (keys: string[]) => void;
 		/** Direkter Speicherausloeser nach einer Ziehgeste, analog
 		 *  `onHourlyCommit`. Ohne Uebergabe (Anlege-Seite) bleibt die Mutation
-		 *  lokal im wiz-State. */
+		 *  lokal beim Aufrufer. */
 		onOutlookCommit?: () => void;
+		/** Ueberschrift: Vergleich "3-Tages-Ausblick", Trip "3-Tages-Vorschau". */
+		title?: string;
+		/** Ein/Aus-Schalter — NUR der Vergleich uebergibt beides. Der Trip hat
+		 *  mit `report_config.show_outlook` bereits einen Schalter; ein zweiter
+		 *  waere eine widerspruechliche Bedienflaeche (#1720 S1, AC-13). */
+		enabled?: boolean;
+		onEnabledChange?: (checked: boolean) => void;
 	}
-	let { wiz, catalog, onOutlookCommit }: Props = $props();
+	let {
+		metricKeys, catalog, onMetricKeys, onOutlookCommit,
+		title = '3-Tages-Ausblick', enabled = true, onEnabledChange
+	}: Props = $props();
 
 	// „Nie eingestellt" (`null`) = die heutigen sieben Ausblick-Spalten; eine
 	// bewusst geleerte Auswahl (`[]`) bleibt leer und laesst den Block ganz
 	// entfallen (AC-8). Anzeige UND Umschalt-Handler nutzen ZWINGEND dieselbe
 	// Materialisierung (Issue #1366 F001).
-	const materializedOutlookKeys = $derived(materializeOutlookMetricKeys(wiz.outlookMetricKeys));
+	const materializedOutlookKeys = $derived(materializeOutlookMetricKeys(metricKeys));
 
 	function isOutlookMetricActive(key: string): boolean {
 		return materializedOutlookKeys.includes(key);
@@ -54,12 +71,12 @@
 
 	function makeOutlookMetricHandler(key: string) {
 		return function handleOutlookMetric(): void {
-			wiz.outlookMetricKeys = toggleOutlookMetricKeyFromState(wiz.outlookMetricKeys, key);
+			onMetricKeys(toggleOutlookMetricKeyFromState(metricKeys, key));
 		};
 	}
 
 	function handleEnabledToggle(checked: boolean): void {
-		wiz.outlookEnabled = checked;
+		onEnabledChange?.(checked);
 	}
 
 	const outlookMetricById = $derived.by(() => {
@@ -74,13 +91,22 @@
 		return map;
 	});
 
+	// Issue #1719 S4: Kurzform-Marke = Register-Kuerzel (`sms_code`) — die
+	// Vergleichs-SMS rendert aus `get_sms_code()`, nicht aus den
+	// Trip-SMS-Tabellen.
+	const outlookKuerzelById = $derived.by(() => {
+		const map: Record<string, string[]> = {};
+		for (const e of catalog) if (e.sms_code) map[e.metric] = [e.sms_code];
+		return map;
+	});
+
 	function onOutlookRemove(key: string): void {
 		makeOutlookMetricHandler(key)();
 		onOutlookCommit?.();
 	}
 
 	function handleOutlookDndReorder(newOrder: string[]): void {
-		wiz.outlookMetricKeys = newOrder;
+		onMetricKeys(newOrder);
 		onOutlookCommit?.();
 	}
 
@@ -90,13 +116,18 @@
 	function noopOutlookMode(): void {}
 </script>
 
-<SectionH title="3-Tages-Ausblick" />
-<ChannelToggle
-	label="3-Tages-Ausblick"
-	checked={wiz.outlookEnabled}
-	onchange={handleEnabledToggle}
-	testid="compare-layout-outlook-enabled-toggle"
-/>
+<SectionH {title} />
+<!-- Issue #1720 S1 (AC-13): der Schalter erscheint NUR, wenn der Aufrufer ihn
+     fuehrt. Der Trip laesst `onEnabledChange` weg — sein Ein/Aus liegt bereits
+     in der Inhalt-/Versand-Karte (`report_config.show_outlook`). -->
+{#if onEnabledChange}
+	<ChannelToggle
+		label="3-Tages-Ausblick"
+		checked={enabled}
+		onchange={handleEnabledToggle}
+		testid="compare-layout-outlook-enabled-toggle"
+	/>
+{/if}
 <div
 	data-testid="compare-layout-outlook-metrics"
 	style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px"
@@ -160,6 +191,7 @@
 			onRemove={onOutlookRemove}
 			onDndReorder={handleOutlookDndReorder}
 			onMode={noopOutlookMode}
+			kuerzelById={outlookKuerzelById}
 		/>
 	</Card>
 {/if}

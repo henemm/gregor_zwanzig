@@ -13,7 +13,10 @@ from output.tokens.dto import Token, TokenLine
 # 'DBG' -- als erste Fachtoken, noch vor den Wintersport-Groessen.
 DROP_ORDER = [
     "DBG",
-    "HU", "DP", "WD", "CP", "PT", "CT", "CL", "CM", "CH", "VS", "SU", "UV",
+    # Issue #1824 (B): 'WD:'/'PT:' mit Grammatik-Doppelpunkt -- ohne den
+    # Doppelpunkt hier faenden _drop_first() die Token nie und sie fielen unter
+    # Kuerzungsdruck NIE mehr (stiller Kuerzungs-Regressionsfall).
+    "HU", "DP", "WD:", "CP", "PT:", "CT", "CL", "CM", "CH", "VS", "SU", "UV",
     "HP", "NL",
     "WC", "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:",
 ]

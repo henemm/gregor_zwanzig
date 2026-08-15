@@ -248,11 +248,17 @@ def _dc(*, rain_probability: bool = False, wind_chill: bool = True):
       der erwartete SMS-Text zeigt dann genau das, was konfiguriert wurde, und
       belegt nebenbei die Abwahl-Wirkung.
 
-    NICHT abschaltbar sind K/D (Tiefst-/Hoechsttemperatur): sie erscheinen
-    unbedingt, auch bei abgewaehlter Metrik ``temperature`` — bekannter,
-    offener Stand (#1415, ``tokens/builder.py:242-249`` needs_spec=False, und
-    ``sms_trip.SMS_SYMBOL_BY_METRIC`` fuehrt ``temperature`` gar nicht).
-    Erwartungsstrings enthalten K/D deshalb immer.
+    Issue #1728 Scheibe 1: ``wind_chill=False`` waehlt zusaetzlich die beiden
+    gefuehlten TAGESRICHTUNGEN ab -- seit dieser Scheibe haengen FK/FD an
+    eigenen Groessen und folgen der Elterngroesse NICHT mehr (PO-Entscheid
+    2026-08-15 zu AC-4). Ohne das blieben sie hier stehen und der Schalter
+    haette seinen Zweck verloren.
+
+    K/D bleiben in allen Erwartungsstrings: die Vorgabe schaltet
+    ``temperature_day_low``/``_high`` mit an (trip_default_rank 8/9). Der
+    frueher hier vermerkte Grund ("nicht abschaltbar", #1415) gilt seit
+    #1728 nicht mehr -- sie WAEREN abwaehlbar, dieser Fixture-Satz waehlt sie
+    nur nicht ab.
     """
     dc = build_default_display_config()
     metrics = list(dc.metrics)
@@ -262,8 +268,11 @@ def _dc(*, rain_probability: bool = False, wind_chill: bool = True):
             for mc in metrics
         ]
     if not wind_chill:
+        _felt_aus = {
+            "wind_chill", "wind_chill_day_low", "wind_chill_day_high",
+        }
         metrics = [
-            dataclasses.replace(mc, enabled=False) if mc.metric_id == "wind_chill" else mc
+            dataclasses.replace(mc, enabled=False) if mc.metric_id in _felt_aus else mc
             for mc in metrics
         ]
     return dataclasses.replace(dc, metrics=metrics)
@@ -787,7 +796,7 @@ class TestAC4TargetWindowGapShowsUnknownInSms:
         )
         sms = report.sms_text
 
-        assert "E7: K15 D15 R? PR? W? G? TH:? TH+:-" in sms, (
+        assert "E7: D15/15 R? PR? W? G? TH:? TH+:-" in sms, (
             f"Erwartet, dass die Ziel-Datenluecke (Ankunft 12:00, "
             f"night_weather=None, Fenster 12-19 unbeobachtet) alle fuenf "
             f"Fenster-Symbole R/PR/W/G/TH: von `-` auf `?` umstellt -- "
@@ -901,7 +910,7 @@ class TestAC5FoundValueStaysVisibleDespiteGap:
         )
         sms = report.sms_text
 
-        assert "E7: K15 D15 R0.5@10 PR? W? G? TH:? TH+:-" in sms, (
+        assert "E7: D15/15 R0.5@10 PR? W? G? TH:? TH+:-" in sms, (
             f"Erwartet: gefundener Regen (10:00, vor Ankunft) bleibt "
             f"sichtbar (`R0.5@10`), waehrend PR/W/G/TH: ohne Fund im "
             f"unbeobachteten Zielfenster auf `?` wechseln.\nSMS: {sms}"
@@ -977,7 +986,7 @@ class TestAC6ArrivalAfter19NoOverFlagging:
             f"Tagesfenster-Ende 19:00, es sind keine Nach-Ankunft-Stunden "
             f"im Fenster erwartet (Ueber-Flagging-Schutz).\nSMS: {sms}"
         )
-        assert "E7: K15 D15 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+        assert "E7: D15/15 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
 
     def test_no_channel_shows_unknown_marker_when_arrival_after_window_end(self):
         segments = [_segment(day=20, start_h=15, end_h=20)]  # Ankunft 20:00
@@ -1008,7 +1017,7 @@ class TestAC7CompleteDataNoNewUnknown:
             f"Kein `?` erwartet -- night_weather ist vollstaendig vorhanden "
             f"(nur ereignislos), keine Datenluecke.\nSMS: {sms}"
         )
-        assert "E7: K15 D15 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+        assert "E7: D15/15 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
 
     def test_no_channel_shows_unknown_marker_with_complete_night_weather(self):
         segments = [_segment(day=20)]

@@ -77,7 +77,10 @@ def _single_day_segment(points: list[ForecastDataPoint]) -> SegmentWeatherData:
 
 def test_precip_type_null_form_when_active_without_data():
     """Klasse (c), Wirkort-Test: nur precip_type aktiv, KEIN Datenpunkt traegt
-    precip_type -> 'PT-' MUSS in der SMS stehen (nicht: Token fehlt ganz)."""
+    precip_type -> 'PT:-' MUSS in der SMS stehen (nicht: Token fehlt ganz).
+
+    Issue #1824 (B): der Doppelpunkt gehoert seither zum Symbol; die
+    Null-Form zieht ihn ohne Sonderbehandlung mit (Muster 'TH:-')."""
     points = [_dp(h) for h in range(4, 20)]
     segments = [_single_day_segment(points)]
 
@@ -85,7 +88,7 @@ def test_precip_type_null_form_when_active_without_data():
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
         disabled_specs=build_extended_metric_specs({"precip_type"}),
     )
-    assert "PT-" in sms, f"PT-Null-Form fehlt (Bug: Token entfaellt komplett): {sms!r}"
+    assert "PT:-" in sms, f"PT-Null-Form fehlt (Bug: Token entfaellt komplett): {sms!r}"
 
 
 def test_cloud_total_null_and_gap_form_when_active_without_data():
@@ -151,7 +154,7 @@ def test_empty_active_set_matches_all_disabled_byte_identical():
         f"  Helfer: {sms_via_helper!r}\n"
         f"  alt:    {sms_via_old_pattern!r}"
     )
-    assert "PT-" not in sms_via_helper and "HU55" not in sms_via_helper, (
+    assert "PT:" not in sms_via_helper and "HU55" not in sms_via_helper, (
         f"kein Geistertoken/Wert der 14 bei vollstaendiger Abwahl erwartet: {sms_via_helper!r}"
     )
 
@@ -176,7 +179,7 @@ from tests.tdd import _min_temp_felt_fixtures as F
 
 
 def test_precip_type_null_form_reaches_production_wiring():
-    """AKTIV, ohne precip_type-Daten im Fenster -> 'PT-' MUSS in der ECHTEN
+    """AKTIV, ohne precip_type-Daten im Fenster -> 'PT:-' MUSS in der ECHTEN
     Trip-SMS stehen (TripReportFormatter().format_email() -> sms_text).
 
     F.segment()/F.night_weather() tragen nie precip_type (Feld bleibt in der
@@ -192,8 +195,9 @@ def test_precip_type_null_form_reaches_production_wiring():
         tz=F.TZ,
     )
     sms = report.sms_text
-    assert F.sms_token_value(sms, "PT") == "-", (
-        f"'PT-' erwartet (Metrik gewaehlt, keine Daten) -- Bug: der Token "
+    # Issue #1824 (B): Symbol traegt den Grammatik-Doppelpunkt ('PT:').
+    assert F.sms_token_value(sms, "PT:") == "-", (
+        f"'PT:-' erwartet (Metrik gewaehlt, keine Daten) -- Bug: der Token "
         f"entfaellt komplett, wenn die Verdrahtung in trip_report.py fehlt.\n"
         f"SMS: {sms!r}"
     )

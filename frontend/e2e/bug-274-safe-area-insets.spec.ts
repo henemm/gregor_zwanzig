@@ -29,21 +29,25 @@ test('AC-1: viewport-meta enthält viewport-fit=cover', async ({ page }) => {
 });
 
 // =============================================================================
-// AC-2: Action-Bar-Container hat safe-area padding-bottom im style-Attribut
+// AC-2: ENTFALLEN — der geprüfte Prüfling existiert nicht mehr
 // =============================================================================
-
-test('AC-2: Action-Bar-Container hat env(safe-area-inset-bottom) im style', async ({ page }) => {
-	await page.goto(EDIT_URL);
-
-	const saveBtn = page.getByTestId('edit-save-btn');
-	await expect(saveBtn).toBeVisible();
-
-	// Container = die fixed Bottom-Bar (Vorfahre des Save-Buttons mit der
-	// fixed-bottom-0-Klasse). Wir greifen den nächsten fixed-Vorfahren.
-	const bar = page.locator('div.fixed.bottom-0').filter({ has: saveBtn });
-	await expect(bar).toBeVisible();
-
-	const style = (await bar.getAttribute('style')) ?? '';
-	expect(style).toMatch(/padding-bottom/);
-	expect(style).toMatch(/env\(safe-area-inset-bottom/);
-});
+//
+// AC-2 prüfte die fixed Bottom-Action-Bar der separaten Trip-Edit-Seite
+// (Container von [data-testid="edit-save-btn"] in TripEditView.svelte).
+// Issue #616 („EINE Trip-Seite") hat diese Fläche abgeschafft:
+// `/trips/[id]/edit/+page.server.ts` wirft heute einen 307-Redirect auf
+// `/trips/[id]`, und TripEditView.svelte wird von keiner Route mehr
+// eingebunden. Der Test lief deshalb zwangsläufig in „element(s) not found" —
+// er prüfte ein bewusst entferntes Verhalten (#1771 S3, Entscheidungsregel 1:
+// veraltete Prüfung löschen).
+//
+// Die Safe-Area-Zusicherung selbst ist NICHT ersatzlos weg, sie sitzt heute an
+// anderen Stellen und mit anderer Mechanik (CSS-Regel statt style-Attribut):
+// BottomNav.svelte:28, routes/trips/+page.svelte:513, Sheet.svelte:136,
+// SaveIndicator.svelte:83, app.css:196 sowie EditStagesPanelNew.svelte:83-88
+// (liest den Inset zur Laufzeit als px-Zahl aus). Ein e2e-Nachweis dafür wäre
+// ein eigener Test gegen eine andere Fläche, keine Reparatur dieses hier —
+// er wird hier bewusst nicht nachgezogen.
+//
+// AC-1 (viewport-fit=cover in app.html) bleibt und trägt weiterhin die
+// Vorbedingung, ohne die iOS Safari alle env(safe-area-inset-*) ignoriert.

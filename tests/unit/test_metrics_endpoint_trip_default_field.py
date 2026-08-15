@@ -13,9 +13,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+# Issue #1728 Scheibe 1 (DEC-7): um die beiden gemessenen Tagesrichtungen
+# erweitert (Rang 8/9) -- die gefuehlten tragen bewusst keinen Rang und
+# bleiben hier aussen vor.
 EXPECTED_TRUE = {
     "temperature", "wind", "gust", "precipitation",
     "thunder", "freezing_level", "visibility",
+    "temperature_day_low", "temperature_day_high",
 }
 
 
@@ -35,12 +39,12 @@ def _all_metrics(payload: dict) -> list[dict]:
     return out
 
 
-def test_exactly_the_seven_target_metrics_are_marked_trip_default_enabled(client: TestClient):
+def test_exactly_the_target_metrics_are_marked_trip_default_enabled(client: TestClient):
     payload = client.get("/api/metrics").json()
     metrics = _all_metrics(payload)
     true_ids = {m["id"] for m in metrics if m["trip_default_enabled"] is True}
     assert true_ids == EXPECTED_TRUE, (
-        f"AC-8 FAIL: /api/metrics markiert nicht genau die 7 Ziel-Groessen als "
+        f"AC-8 FAIL: /api/metrics markiert nicht genau die Ziel-Groessen als "
         f"trip_default_enabled. Ist: {true_ids!r}"
     )
 

@@ -67,6 +67,7 @@ func deriveFlatFields(trip *model.Trip) {
 	trip.SendEmail = nil
 	trip.SendSms = nil
 	trip.SendTelegram = nil
+	trip.SendPremiumSms = nil
 	trip.EndDate = nil
 
 	if rc := trip.ReportConfig; rc != nil {
@@ -84,6 +85,13 @@ func deriveFlatFields(trip *model.Trip) {
 		}
 		if v, ok := rc["send_telegram"].(bool); ok {
 			trip.SendTelegram = &v
+		}
+		// Issue #1717 S3: viertes Kanal-Feld (Premium-SMS). Kein neuer
+		// Schreibpfad — der Client schickt weiterhin
+		// report_config.send_premium_sms, mergeConfigMap transportiert es
+		// generisch.
+		if v, ok := rc["send_premium_sms"].(bool); ok {
+			trip.SendPremiumSms = &v
 		}
 		if v, ok := rc["enabled"].(bool); ok {
 			trip.MorningEnabled = &v

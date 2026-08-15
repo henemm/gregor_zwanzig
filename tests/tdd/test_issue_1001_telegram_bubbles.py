@@ -723,16 +723,44 @@ class TestF001OverviewThunderMatchesFooterWorstValue:
         assert len(bubbles) >= 2, f"Erwarte mindestens Kopf+Kurzübersicht, waren {len(bubbles)}"
         overview_text = bubbles[1].text
 
-        thunder_lines = [ln for ln in overview_text.splitlines() if ln.startswith("⚡")]
-        assert thunder_lines, f"Keine Gewitter-Zeile (⚡) in der Kurzübersicht-Bubble:\n{overview_text}"
+        # Issue #1719 S4: die Kurzuebersicht-ZEILE traegt seit der Kuerzel-
+        # Vereinheitlichung das Kurzform-Kuerzel der Groesse ("TH"), die
+        # FUSSZEILE weiterhin das feste Zeichen "⚡" (narrow.py:280, kein
+        # Katalogfeld). Wer die Zeile weiterhin ueber "⚡" auswaehlt, trifft
+        # die Fusszeile — und weil beide "hoch" tragen, bliebe dieser Test
+        # gruen, waehrend der F001-Bug (`hits[-1]` statt Tages-Schlimmstwert)
+        # laengst wieder da waere. Nachgemessen 2026-08-12: mit der alten
+        # Auswahl faengt er die reaktivierte Regression NICHT.
+        # Das Kuerzel wird deshalb aus dem Katalog GEHOLT, nicht abgetippt.
+        from app.metric_catalog import get_metric
+        tg_kuerzel = get_metric("thunder").compact_label
 
-        # Die ERSTE ⚡-Zeile ist die _overview_line("thunder", ...)-Zeile — genau
-        # die Stelle des F001-Bugs (`hits[-1]` statt Tages-Schlimmstwert).
+        thunder_lines = [
+            ln for ln in overview_text.splitlines()
+            if ln.startswith(f"{tg_kuerzel} ") or ln.startswith("⚡")
+        ]
+        assert thunder_lines, (
+            f"Keine Gewitter-Zeile ({tg_kuerzel}/⚡) in der Kurzübersicht-Bubble:"
+            f"\n{overview_text}"
+        )
+
+        overview_lines = [
+            ln for ln in thunder_lines if ln.startswith(f"{tg_kuerzel} ")
+        ]
+        assert overview_lines, (
+            f"Keine Kurzuebersicht-Gewitterzeile ({tg_kuerzel}) gefunden — nur "
+            f"{thunder_lines!r}. Traegt die Zeile ein anderes Kuerzel, ist die "
+            f"Auswahl anzupassen, NICHT die Pruefung."
+        )
+
+        # Die erste Zeile mit dem Groessen-Kuerzel ist die
+        # _overview_line("thunder", ...)-Zeile — genau die Stelle des
+        # F001-Bugs (`hits[-1]` statt Tages-Schlimmstwert).
         # Issue #1491: Gewitter ist eine reguläre Ampel-Spalte geworden --
         # HIGH rendert als deutsches Wort "hoch" (THUNDER_LABEL_DE), nicht
         # mehr als Blitzsymbol "⚡⚡" (siehe email/helpers.py fmt_val
         # key=="thunder"). NONE als "–".
-        overview_thunder_line = thunder_lines[0]
+        overview_thunder_line = overview_lines[0]
         assert "hoch" in overview_thunder_line, (
             f"F001-Regression: Kurzübersicht-Gewitterzeile zeigt nicht das "
             f"Wort 'hoch' (Tages-Schlimmstwert, Issue #1491), sondern "
@@ -740,7 +768,7 @@ class TestF001OverviewThunderMatchesFooterWorstValue:
             f"Wert 'NONE'/'–' des letzten Segments statt des "
             f"Tages-Schlimmstwerts). Ganze Bubble:\n{overview_text}"
         )
-        assert overview_thunder_line.strip() != "⚡ –", (
+        assert overview_thunder_line.strip() != f"{tg_kuerzel} –", (
             f"Widerspruch (F001): Kurzübersicht zeigt 'kein Gewitter' (–), "
             f"obwohl ein Segment HIGH meldete: {overview_thunder_line!r}"
         )
@@ -752,10 +780,12 @@ class TestF001OverviewThunderMatchesFooterWorstValue:
         # zeigt seit jeher das deutsche Wort (THUNDER_LABEL_DE, #1474b), nicht
         # den englischen Enum-Namen "HIGH" — diese Erwartung war bereits vor
         # #1491 veraltet, nur von der frueheren "⚡⚡"-Assertion maskiert.
-        footer_thunder_line = next((ln for ln in thunder_lines if "Sicht" in ln), None)
+        footer_thunder_line = next(
+            (ln for ln in thunder_lines if ln.startswith("⚡") and "Sicht" in ln), None
+        )
         assert footer_thunder_line is not None, f"Keine Fußzeile mit ⚡ gefunden: {thunder_lines}"
         assert "hoch" in footer_thunder_line, f"Fußzeile zeigt nicht 'hoch': {footer_thunder_line!r}"
-        overview_says_none = overview_thunder_line.strip() == "⚡ –"
+        overview_says_none = overview_thunder_line.strip() == f"{tg_kuerzel} –"
         footer_says_none = "kein" in footer_thunder_line
         assert not (overview_says_none and not footer_says_none), (
             f"Widersprüchliche Gewitter-Aussagen in derselben Bubble: "

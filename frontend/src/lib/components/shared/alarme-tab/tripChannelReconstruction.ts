@@ -20,7 +20,12 @@ export function reconstructTripAlertChannels(trip: Trip): AlertChannelState {
 		return {
 			telegram: trip.alert_channels.telegram,
 			sms: trip.alert_channels.sms,
-			email: trip.alert_channels.email
+			email: trip.alert_channels.email,
+			// Issue #1745 A (D4): fehlender Schluessel bedeutet AUS — KEIN
+			// Rueckfall auf report_config.send_premium_sms. Sobald alert_channels
+			// existiert, ersetzt es den geerbten Briefing-Anteil vollstaendig
+			// (deckt sich mit #1258 S3 AC-15, "kein stiller Kanal-Wechsel").
+			premium_sms: trip.alert_channels.premium_sms ?? false
 		};
 	}
 	const rc = trip.report_config;
@@ -28,8 +33,11 @@ export function reconstructTripAlertChannels(trip: Trip): AlertChannelState {
 		return {
 			telegram: rc.send_telegram ?? false,
 			sms: rc.send_sms ?? false,
-			email: rc.send_email ?? true
+			email: rc.send_email ?? true,
+			// Vererbungszweig: ohne scharfes Kanal-Set zaehlt der Briefing-Haken
+			// (analog send_telegram/send_sms eine Zeile darueber).
+			premium_sms: rc.send_premium_sms ?? false
 		};
 	}
-	return { telegram: false, sms: false, email: true };
+	return { telegram: false, sms: false, email: true, premium_sms: false };
 }

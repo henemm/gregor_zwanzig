@@ -238,6 +238,9 @@ export interface ReportConfig {
 	send_email?: boolean;
 	send_telegram?: boolean;
 	send_sms?: boolean;
+	// Issue #1717 S3 — vierter Briefing-Kanal (Premium-SMS, Garmin inReach).
+	// Backend seit #1676 S2a live; report_config bleibt die autoritative Quelle.
+	send_premium_sms?: boolean;
 	alert_on_changes?: boolean;
 	change_threshold_temp_c?: number;
 	change_threshold_wind_kmh?: number;
@@ -293,6 +296,9 @@ export interface DisplayConfig {
 	alert_preset?: string; // Issue #846: "deaktiviert" | "entspannt" | "standard" | "sensibel"
 	metric_alert_levels?: Record<string, SensLevel>; // Issue #864: metric → SensLevel
 	telegram_style?: 'rich' | 'kurzform'; // Issue #1260: Compare-amtliche Warnung im SMS-Kurzstil (opt-in)
+	// Issue #1720 S1: Spaltenauswahl der 3-Tages-Vorschau, Neuformat #1373.
+	// Feld fehlt = die sieben festen Spalten; `[]` = der Block entfaellt ganz.
+	outlook_metrics?: { metric_id: string; aggregation: string }[];
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).
@@ -349,6 +355,9 @@ export interface Trip {
 	send_email?: boolean;
 	send_sms?: boolean;
 	send_telegram?: boolean;
+	// Issue #1717 S3 — viertes abgeleitetes Kanal-Feld (Premium-SMS),
+	// Go-Pendant: model.Trip.SendPremiumSms.
+	send_premium_sms?: boolean;
 	end_date?: string;
 	// Issue #1258 S1 — scharfes Feld, loest official_alert_triggers_enabled ab
 	// (Legacy-Feld bleibt fuer Rollback erhalten, wird nicht mehr gelesen/geschrieben).
@@ -358,11 +367,19 @@ export interface Trip {
 	// report_config geerbt); gesetzt = ersetzt den geerbten Briefing-Anteil
 	// in TripAlertService._effective_alert_channels (all-or-nothing, alle
 	// drei Felder explizit).
-	alert_channels?: { email: boolean; telegram: boolean; sms: boolean };
+	// Issue #1745 A — premium_sms ist OPTIONAL: Bestandstrips tragen den
+	// Schluessel nicht (D4: fehlend bedeutet AUS, kein Rueckfall auf das
+	// Briefing-Flag report_config.send_premium_sms).
+	alert_channels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms?: boolean };
 	// Issue #1461 S3b-2a — additives Geschwisterfeld zu alert_channels: je
 	// Kanal die Dringlichkeits-Schwelle ("LOW"|"MODERATE"|"HIGH"). undefined/
 	// fehlender Kanal-Key = Startwert "LOW".
-	alert_channel_thresholds?: { email?: string; telegram?: string; sms?: string };
+	alert_channel_thresholds?: {
+		email?: string;
+		telegram?: string;
+		sms?: string;
+		premium_sms?: string;
+	};
 }
 
 export interface HealthResponse {
@@ -632,6 +649,10 @@ export interface ComparePreset {
 	official_alert_triggers_enabled?: boolean;
 	send_telegram?: boolean;
 	send_sms?: boolean;
+	// Issue #1745 A — Premium-SMS als vierter ALARM-Kanal des Ortsvergleichs
+	// (Go-Pendant model.ComparePreset.SendPremiumSms, #1701 AC-4). Anders als
+	// beim Trip ist das hier das Alarm-Opt-in, kein abgeleitetes Briefing-Flag.
+	send_premium_sms?: boolean;
 	// Issue #1232 Scheibe 2a/2b — Zwei-Slot-Zeitplan + editierbare Laufzeit
 	// (docs/specs/modules/compare_preset_zeitplan.md, versand_tab_vergleich.md).
 	// morning_time/evening_time im Format "HH:MM:SS", end_date "YYYY-MM-DD".
@@ -654,7 +675,12 @@ export interface ComparePreset {
 	day_window_end_hour?: number | null;
 	// Issue #1461 S3b-2b — Kanal-Schwelle (analog Trip alert_channel_thresholds
 	// oben, :346), additives Geschwisterfeld zu send_telegram/send_sms.
-	alert_channel_thresholds?: { email?: string; telegram?: string; sms?: string };
+	alert_channel_thresholds?: {
+		email?: string;
+		telegram?: string;
+		sms?: string;
+		premium_sms?: string;
+	};
 }
 
 // Issue #1068 — Nutzerlevel (Slice 1 aus Epic #1067).

@@ -75,6 +75,33 @@ def resolve_outlook_metrics(outlook_metrics: object) -> list[dict] | None:
     return resolved
 
 
+def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[dict] | None:
+    """Trip-Vorschau (#1720 S1): aufgeloest UND gegen die Grundauswahl
+    geschnitten. Der Ortsvergleich ruft weiterhin ``resolve_outlook_metrics()``
+    direkt -- er kennt bewusst kein globales Maximum (ADR-0053).
+
+    Nachbildung von ``UnifiedWeatherDisplayConfig._clip_to_global_maximum()``
+    fuer das ``{metric_id, aggregation}``-Vokabular (ADR-0050 Regel 1/2 auf die
+    Ausgabeflaeche "Vorschau" ausgeweitet, PO-Entscheid 2026-08-14) -- mit
+    denselben drei Regeln: Schnittmenge aus der report-typ-gefilterten Auswahl
+    (nicht aus rohen ``enabled``-Flags, damit Morgen-/Abend-Overrides und das
+    ``selectable``-Gate #1585 wirken), kein Schnitt bei leerer Grundauswahl
+    (D4: kein Maximum definiert heisst nicht "nichts erlaubt"), Reihenfolge der
+    Auswahl bleibt erhalten.
+
+    🔴 ``dc`` MUSS der ungekollabierte Stand sein: geschnitten wird gegen die
+    kanal-neutrale ``get_metrics_for_report_type()``, denn der Ausblick hat
+    bewusst KEINE Kanal-Ebene (AC-17). Ein enges
+    ``per_channel_layouts["email"]`` (#429) darf eine global aktive, gewaehlte
+    Groesse nicht aus der Vorschau schneiden (Adversary-Finding F001).
+    """
+    resolved = resolve_outlook_metrics(getattr(dc, "outlook_metrics", None))
+    if not resolved or not getattr(dc, "metrics", None):
+        return resolved
+    allowed = {mc.metric_id for mc in dc.get_metrics_for_report_type(report_type)}
+    return [e for e in resolved if e.get("metric_id") in allowed]
+
+
 def outlook_columns(metrics: object) -> list[dict]:
     """Auswahl -> geordnete Spalten-Beschreibung fuer den Ausblick-Renderer.
 
@@ -100,6 +127,7 @@ def outlook_columns(metrics: object) -> list[dict]:
             continue
         columns.append({
             "label": catalog["label"],
+            "metric_id": metric_id,
             "field": field,
             "unit": catalog.get("unit", ""),
             "decimals": catalog.get("decimals", 0),
@@ -125,6 +153,10 @@ def format_outlook_value(value: object, column: dict) -> str:
     Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 4): traegt ``column``
     den Schluessel ``"hail"``, wird er an ``_fmt_thunder`` durchgereicht --
     ohne den Schluessel bleibt die Zelle zeichengleich zum bisherigen Stand.
+
+    Issue #1680 S5a (AC-11b): ``"signals"`` folgt exakt derselben Bauart --
+    dritter Parameter von ``_fmt_thunder``, additiv, ohne den Schluessel
+    zeichengleich.
     """
     from output.renderers.email.compare_html import _fmt_precip_type, _fmt_thunder
 
@@ -132,7 +164,7 @@ def format_outlook_value(value: object, column: dict) -> str:
         return "–"
     kind = column.get("kind")
     if kind == "ordinal":
-        return _fmt_thunder(value, column.get("hail"))
+        return _fmt_thunder(value, column.get("hail"), column.get("signals"))
     if kind == "enum":
         return _fmt_precip_type(value)
     try:
@@ -147,6 +179,7 @@ def format_outlook_value(value: object, column: dict) -> str:
 
 __all__ = [
     "resolve_outlook_metrics",
+    "resolve_trip_outlook_metrics",
     "outlook_columns",
     "format_outlook_value",
 ]

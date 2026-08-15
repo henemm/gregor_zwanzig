@@ -114,6 +114,7 @@ def render_plain(
     multi_day_trend: Optional[list[dict]],
     outlook_state: Optional["OutlookState"] = None,
     outlook_horizon_days: Optional[int] = None,
+    outlook_metrics: Optional[list[dict]] = None,
     compact_summary: Optional[str],
     tz: ZoneInfo,
     friendly_keys: set[str],
@@ -198,16 +199,13 @@ def render_plain(
             for mc in dc.metrics
             if mc.sms_threshold is not None
         }
-        # Issue #1357: gespeicherte Auswertungswahl je Groesse (sonst Katalog-Vorgabe).
-        _pill_aggregations = {
-            mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
-        }
+        # Issue #1728 Scheibe 1 (DEC-5): unbedingt die Spanne, kein
+        # Lesen von ``mc.aggregations``.
         _plain_pills = build_metrics_summary_pills(
             segments, _pill_metric_ids, _sms_mention_thresholds, tz=tz,
             night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,
-            metric_aggregations=_pill_aggregations,
         )
         lines.append("━━ Metriken-Überblick ━━")
         for _lbl, _tone in _plain_pills:
@@ -304,9 +302,14 @@ def render_plain(
             lines.append("  * Temperatur/Nullgradgrenze: Minimum im 2h-Block")
         lines.append("")
 
+    # Issue #1720 S1: DASSELBE Ergebnis wie im HTML-Zweig, weil beide es vom
+    # Aufrufer bekommen statt es je einzeln aufzuloesen (F001, s. html.py).
+    # None = Altbestand, [] = bewusst geleert (ganzer Block weg).
+    _outlook_metrics = outlook_metrics
+
     # Issue #1313 (E1): Gewitter-Vorschau entfaellt, wenn der Mehrtages-
     # Ausblick in derselben Mail aktiv ist (gleiche Datenquelle, Dopplung).
-    outlook_active = show_outlook and bool(multi_day_trend)
+    outlook_active = show_outlook and bool(multi_day_trend) and _outlook_metrics != []
 
     if thunder_forecast and not outlook_active:
         # Fix #1482: Ueberschrift nur mit Eintraegen -- dieselbe Absicherung,
@@ -335,7 +338,8 @@ def render_plain(
         # Epic #1301 B4: Ausblick-Klartext-Block in geteilten Baustein
         # extrahiert (Trip/Compare-Teilungs-Invariante) -- show_acc=True
         # bleibt zeichengleich zum bisherigen Inline-Verhalten.
-        lines.append(render_outlook_plain(multi_day_trend, show_acc=True))
+        lines.append(render_outlook_plain(multi_day_trend, show_acc=True,
+                                          metrics=_outlook_metrics))
     elif (
         show_outlook
         and outlook_state is not None

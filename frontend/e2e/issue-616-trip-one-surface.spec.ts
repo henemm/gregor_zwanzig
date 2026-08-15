@@ -47,7 +47,12 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		 *        Tab-Leiste (trip-detail-tab-list) ist sichtbar.
 		 */
 		await page.goto('/trips');
-		const row = page.locator(`[title="${TRIP_NAME} öffnen"]`).first();
+		// Issue #1277: die Desktop-Trip-Liste rendert ueber das geteilte
+		// ListTable-Organism. Das frueher gesetzte `title="<Name> öffnen"` gibt es
+		// dort nicht mehr — ListTableRow traegt nur noch `data-testid` aus
+		// `rowTestid` (trips/+page.svelte: `trip-row-<id>`). Der alte
+		// title-Selektor lief deshalb in den 30s-Timeout.
+		const row = page.locator(`[data-testid="trip-row-${TRIP_ID}"]`).first();
 		await row.locator('[data-testid="trip-row-menu-btn"]').click();
 		await page.locator('[data-testid="trip-edit-btn"]:visible').first().click();
 

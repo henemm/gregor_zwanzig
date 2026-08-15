@@ -7,8 +7,13 @@ Radar-Nowcast geprüft; bei Regen-Onset ≤ 20 Min (konvektive Gefahr steuert
 nur das Label) wird EINE gebündelte E-Mail an die Preset-Empfänger
 versendet. Eigener Parallelpfad neben `CompareAlertService` (Metrik-
 Abweichungs-Alarme) — Struktur-Vorbild ist `CompareAlertService`
-(`compare_alert.py`), Auslöse-/Fetch-Logik ist 1:1 vom Trip-Radar-Pfad
-übernommen (`TripAlertService.check_radar_alerts()`, `trip_alert.py:628`).
+(`compare_alert.py`), Auslöse-/Fetch-Logik (Nowcast-Abruf +
+`radar_alert_due()`-Schwelle) ist vom Trip-Radar-Pfad übernommen
+(`TripAlertService.check_radar_alerts()`, `trip_alert.py:887`). Diese
+Übernahme betrifft NICHT die tagesübergreifende Segment-Auswahl seit
+Issue #1667 S3 (`resolve_current_segment`, `trip_segments.py`) — Compare-
+Presets arbeiten direkt auf `location_ids`, es gibt hier keine Etappen/
+Segmente und damit auch keinen Vortags-Rückgriff.
 
 SPEC: docs/specs/modules/issue_1041b_compare_radar_alert_service.md
 """
@@ -23,6 +28,7 @@ from app.loader import compare_preset_to_dict, load_all_locations, load_compare_
 from services import alert_channel_threshold, alert_log
 import services.alert_urgency as alert_urgency
 from services.alert_gate import check_nowcast_gate, record_nowcast_sent
+from utils.timezone import first_resolvable_tz
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import effective_compare_channels
 from services.compare_alert_guard import is_silenced
@@ -123,6 +129,12 @@ class CompareRadarAlertService:
         # eigenen Cooldown (presetseigene Datei `compare_radar_alert_throttle.json`)
         # und die Ruhezeit-Pruefung NACH der Erkennung; die Tages-Obergrenze
         # fehlte hier bisher vollstaendig.
+        # Issue #1726: Ortszeit des ERSTEN aufloesbaren Orts (#1378 AC-4,
+        # AC-15). Dieselbe Zone geht in die Buchung — sonst pruefte die
+        # Schranke einen anderen Zaehler als sie fuellt.
+        zone = first_resolvable_tz(
+            (all_locations.get(lid) for lid in location_ids), context_label=preset_id,
+        )
         gate = check_nowcast_gate(
             user_id=self._user_id,
             throttle_scope=_THROTTLE_SCOPE,
@@ -132,6 +144,7 @@ class CompareRadarAlertService:
             quiet_to=preset.get("alert_quiet_to"),
             context_label=preset_id,
             now=datetime.now(timezone.utc),
+            zone=zone,
         )
         if not gate.allowed:
             # Die Protokollierung darf den Stapellauf NIE mitreissen: ein
@@ -213,6 +226,7 @@ class CompareRadarAlertService:
         record_nowcast_sent(
             user_id=self._user_id, throttle_scope=_THROTTLE_SCOPE,
             throttle_key=preset_id, now=datetime.now(timezone.utc),
+            zone=zone,
         )
         return True
 

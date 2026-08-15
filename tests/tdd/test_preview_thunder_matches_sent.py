@@ -153,7 +153,8 @@ def _thunder_forecast_from_scheduler(trend: list[dict]) -> dict:
     Quelle, kein Nachbau. trip=None ist sicher, weil der Trend beide Offsets
     abdeckt (kein Fetch)."""
     return TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
-        None, _TARGET, tz=_UTC, multi_day_trend=trend,
+        None, _TARGET, now_utc=datetime.now(timezone.utc), tz=_UTC,
+        multi_day_trend=trend,
     )
 
 

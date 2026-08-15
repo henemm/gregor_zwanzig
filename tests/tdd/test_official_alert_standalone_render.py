@@ -453,11 +453,18 @@ def test_f002_central_structure_elements_carry_non_empty_inline_style():
         scope_label="Segment 2–4", sms_scope="nur S2-4",
         affected_chips=["Segment 2–4"], free_chips=["Segment 1", "Ziel"],
     )
+    # #1744 A2 (AC-8): `.src` ist entfallen -- die Quelle ist eine Datenzeile
+    # wie die uebrigen Fakten. An ihre Stelle tritt die Zelle der Datenzeilen
+    # selbst (`td`, nicht `table`: die Tabelle der ERSTEN Zeile traegt
+    # bewusst ein leeres style-Attribut, weil sie keine Trennlinie hat).
+    datenzeilen = 'table[role="presentation"] td'
     uniform_selectors = [
         ".verdict", ".body-h1", ".stufe", ".warn", ".facts", ".seg",
-        ".route-note", ".src", ".body-foot",
+        ".route-note", datenzeilen, ".body-foot",
     ]
-    mixed_selectors = [".verdict", ".body-h1", ".warn", ".facts", ".seg", ".meter"]
+    mixed_selectors = [
+        ".verdict", ".body-h1", ".warn", ".facts", ".seg", ".meter", datenzeilen,
+    ]
     for html, selectors in (
         (_render([warn_partial]), uniform_selectors),
         (_render(_mixed_orange_gelb()), mixed_selectors),

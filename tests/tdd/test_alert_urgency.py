@@ -43,6 +43,7 @@ from tests.helpers.alert_log_fixtures import (
     read_log, settings_email_only, weather,
 )
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 from tests.helpers.compare_briefings import write_compare_briefings
 
 _GUST_STANDARD_THRESHOLD_KMH = 20.0
@@ -672,9 +673,13 @@ def _make_change() -> WeatherChange:
 
 def _telegram_trip(trip_id: str) -> Trip:
     trip = gust_alert_trip(trip_id)
+    # Issue #1594: dieses `report_config` ERSETZT das von `gust_alert_trip`
+    # gesetzte — ohne die Zeiten laege der Trip wieder im Vorlauf-Fenster und
+    # die Sperre schnitte den Versand vor der Kanal-Pruefung ab.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=True, send_sms=False,
-        alert_on_changes=True,
+        alert_on_changes=True, morning_time=morgen, evening_time=abend,
     )
     trip.alert_cooldown_minutes = 0
     return trip

@@ -58,13 +58,37 @@ def _legacy_trip_data() -> dict[str, Any]:
 
 
 def _per_channel_trip_data() -> dict[str, Any]:
-    """Neuer Trip MIT `channel_layouts` — Email und Telegram haben eigene Listen."""
+    """Neuer Trip MIT `channel_layouts` — Email und Telegram haben eigene Listen.
+
+    Issue #1719 Scheibe 2 (ADR-0050): eine Kanal-Ebene darf die globale
+    Grundauswahl nur noch verfeinern (schneiden), nicht mehr ergaenzen — die
+    globale Liste muss deshalb JEDE Metrik-ID fuehren, die irgendeine
+    Kanal-Ebene unten benutzt (sonst schneidet get_metrics_for_channel() sie
+    jetzt weg). "metric_0".."metric_9" sind reine Struktur-Test-IDs ohne
+    Katalog-Eintrag (AC-5, Telegram-Slot-Limit) und werden hier bewusst
+    ebenfalls global gefuehrt, damit sie den Schnitt ueberleben. Alle
+    Ergaenzungen bewusst als "primary" mit steigendem `order` -- AC-4
+    vergleicht get_metrics_for_channel() (sortiert) gegen
+    get_metrics_for_report_type() (unsortiert) auf ID-Gleichheit; ein
+    "secondary"-Eintrag dazwischen wuerde die beiden Reihenfolgen
+    auseinanderlaufen lassen, ohne dass das etwas mit dieser Scheibe zu tun
+    haette.
+    """
     return {
         "trip_id": "per-channel-trip",
         "metrics": [
-            # Globale Fallback-Liste — wird für Kanäle ohne Eintrag verwendet (Signal, SMS).
+            # Globale Fallback-Liste — wird für Kanäle ohne Eintrag verwendet (Signal, SMS)
+            # UND ist seit #1719 S2 das Maximum fuer email/telegram unten.
             {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
             {"metric_id": "wind", "enabled": True, "bucket": "primary", "order": 1},
+            {"metric_id": "wind_chill", "enabled": True, "bucket": "primary", "order": 2},
+            {"metric_id": "gust", "enabled": True, "bucket": "primary", "order": 3},
+            {"metric_id": "precipitation", "enabled": True, "bucket": "primary", "order": 4},
+            {"metric_id": "cloud_total", "enabled": True, "bucket": "primary", "order": 5},
+            *[
+                {"metric_id": f"metric_{i}", "enabled": True, "bucket": "primary", "order": 6 + i}
+                for i in range(10)
+            ],
         ],
         "channel_layouts": {
             "email": [
@@ -128,12 +152,25 @@ def test_ac1_loader_reads_channel_layouts():
     assert "telegram" in dc.per_channel_layouts
 
     email_layout = dc.per_channel_layouts["email"]
-    assert len(email_layout) == 6
-    # Reihenfolge muss erhalten bleiben
-    assert email_layout[0].metric_id == "temperature"
-    assert email_layout[1].metric_id == "wind_chill"
-    assert email_layout[0].bucket == "primary"
-    assert email_layout[5].bucket == "secondary"
+    # Issue #1728 DEC-6b: der Ladepfad haengt fehlende ABGELEITETE Groessen
+    # (Nachtfenster-Skalare + Tagesrichtungen) auch an jede Kanal-Ebene an --
+    # sonst waehlt ein vor #1728 gespeichertes Layout sie stillschweigend ab.
+    # Geprueft wird deshalb die GESPEICHERTE Liste (derived=False) in ihrer
+    # Reihenfolge; die Zusicherung ist unveraendert „das Layout kommt
+    # unverfaelscht und in Reihenfolge aus der Datei".
+    gespeichert = [m for m in email_layout if not m.derived]
+    assert len(gespeichert) == 6, (
+        f"Gespeicherte Kanal-Liste veraendert: "
+        f"{[m.metric_id for m in gespeichert]!r}"
+    )
+    assert gespeichert[0].metric_id == "temperature"
+    assert gespeichert[1].metric_id == "wind_chill"
+    assert gespeichert[0].bucket == "primary"
+    assert gespeichert[5].bucket == "secondary"
+    assert all(m.derived for m in email_layout[6:]), (
+        "Alles hinter der gespeicherten Liste muss abgeleitet sein — sonst "
+        "haengt der Ladepfad echte Nutzerauswahl an."
+    )
 
 
 def test_all_empty_channel_layouts_kept_as_dict_not_none():

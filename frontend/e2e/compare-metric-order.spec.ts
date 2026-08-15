@@ -39,7 +39,9 @@
 // der Login ist auf 30/h gedeckelt (reference_staging_e2e_storagestate_login_rate_limit).
 
 import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
-import { createTestLocation } from './helpers';
+// `dragDndZoneItem` ist seit #1771 S1 geteilt (war hier lokal kopiert) und
+// wartet auf das echte `finalize`-Ereignis statt auf eine feste Frist.
+import { createTestLocation, dragDndZoneItem } from './helpers';
 
 let createdIds: string[] = [];
 let createdLocationIds: string[] = [];
@@ -104,34 +106,6 @@ function collectPresetPuts(page: Page, id: string): Request[] {
 	return puts;
 }
 
-/**
- * Pointer-basierte Drag-Simulation gegen `svelte-dnd-action` (geteilter
- * SortableList, ADR-0024): die Bibliothek schaltet natives HTML5-Drag ab
- * (`draggableEl.draggable = false`) und hört nur auf Pointer-Events mit
- * 3px-Schwelle — Playwrights `locator.dragTo()` erzeugt nur EINEN Move-Schritt
- * und reißt diese Schwelle nicht. Übernommen aus layout-tab-route.spec.ts:23-48.
- */
-async function dragDndZoneItem(page: Page, source: Locator, target: Locator): Promise<void> {
-	await source.scrollIntoViewIfNeeded();
-	await target.scrollIntoViewIfNeeded();
-
-	const sourceBox = await source.boundingBox();
-	const targetBox = await target.boundingBox();
-	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItem: source/target ohne BoundingBox');
-
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
-	await page.mouse.down();
-	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 - 12, {
-		steps: 6
-	});
-	await page.waitForTimeout(120);
-	await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
-		steps: 15
-	});
-	await page.waitForTimeout(120);
-	await page.mouse.up();
-}
-
 /** Öffnet den Vergleich am Hub und wechselt per KLICK auf den Metriken-Tab. */
 async function openMetricsTab(page: Page, id: string): Promise<Locator> {
 	await page.goto(`/compare/${id}`);
@@ -145,6 +119,15 @@ async function openMetricsTab(page: Page, id: string): Promise<Locator> {
 	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
 	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
 	await expect(panel).toBeVisible({ timeout: 10_000 });
+	// Issue #1719 S3 (Adversary-Fund F001): "Aus ist ein Zustand" (ADR-0050
+	// Regel 4) gilt NUR für den Trip-Kanal-Reiter — diese Vergleichs-
+	// Übersichts-Einbettung von WeatherV2Reihenfolge bekommt bewusst KEIN
+	// `offColumns` durchgereicht (Naht = Prop-Anwesenheit, kein
+	// `context`-String). Eine Aus-Gruppe darf hier nie entstehen.
+	await expect(
+		panel.getByTestId('wm2-aus-gruppe'),
+		'AC-13 FAIL: eine "Aus in diesem Kanal"-Gruppe darf im Ortsvergleich nicht entstehen'
+	).toHaveCount(0);
 	return panel;
 }
 

@@ -19,7 +19,10 @@ Wetterdaten über `get_provider("openmeteo")` (`src/providers/base.py`).
 Ausfall-Verhalten in dieser Reihenfolge: (1) Intra-Open-Meteo-Modell-Fallback
 ohne Kaschieren (ADR-0018), (2) Cross-Provider-Fallback auf regionale
 Direktanbindungen AT/DE/FR (`src/providers/region_routing.py`, Epic #1127).
-`brightsky` (DWD) dient dem Radar-Pfad, `radar_dpc` dem Nowcast Italien.
+`brightsky` (DWD) dient dem Radar-Pfad; für Italien läuft der Radar-Pfad seit
+#1648 über ARPAE ICON-2I (Open-Meteo selbst, kein separater Provider — der
+frühere `radar_dpc` ist ersatzlos entfernt). Tatsachenkorrektur an einem
+Detailsatz, keine Rücknahme der Kernentscheidung.
 
 ## Verworfene Alternativen
 

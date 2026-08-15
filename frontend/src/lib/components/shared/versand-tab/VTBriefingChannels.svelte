@@ -13,15 +13,20 @@
 	import { onMount, untrack } from 'svelte';
 	import { Eyebrow, Card, Dot } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
-	import { channelConnectionStatus } from './channelConnectionStatus';
+	import { channelConnectionStatus, type ConnectionProfile } from './channelConnectionStatus';
 	import { channelContactLabel } from './channelContactLabel';
+	import { premiumSmsChannelState } from './premiumSmsChannelState';
+	// Issue #1719 S3 (AC-5a, Adversary-Fund F002): Hinweistexte als reine
+	// Funktionen ausgelagert — testbar ohne Renderharness.
+	import { vtBriefingLeadText, vtBriefingSubTexts } from './vtBriefingChannelsText';
 	import TelegramKurzstilToggle from '$lib/components/shared/TelegramKurzstilToggle.svelte';
 
 	interface Channels {
 		email: boolean;
 		telegram: boolean;
 		sms: boolean;
+		/** Issue #1717 S3 — vierter Briefing-Kanal, nur im route-Kontext schaltbar. */
+		premium_sms?: boolean;
 	}
 	interface Props {
 		context?: 'route' | 'vergleich';
@@ -42,6 +47,13 @@
 		 * Kanaelen im Alarme-Tab (dieselbe geteilte Komponente). */
 		telegramStyle?: 'rich' | 'kurzform';
 		onTelegramStyleChange?: (style: 'rich' | 'kurzform') => void;
+		/** Issue #1717 S3: Premium-SMS (Garmin inReach). Die ANWESENHEIT dieser
+		 * Prop schaltet den schaltbaren Premium-SMS-Block frei — exakt das
+		 * Gating-Muster von onTelegramStyleChange oben. VersandTab uebergibt sie
+		 * nur im route-Zweig; im vergleich-Zweig bleibt der feste
+		 * "bald verfuegbar"-Platzhalter stehen, weil Premium-SMS laut ADR-0049
+		 * ausschliesslich ein Trip-Briefing-Kanal ist (AC-1). */
+		onPremiumSmsChange?: (e: Event) => void;
 		/** RED-Infrastruktur (#1510): optionaler SSR-Test-Override fuer `profile`.
 		 * Falls gesetzt (auch explizit `null`) wird `profile` daraus initialisiert
 		 * und der `onMount`-Fetch uebersprungen — `svelte/server`s `render()` fuehrt
@@ -60,16 +72,14 @@
 		smsTestid = 'channel-sms',
 		telegramStyle = 'rich',
 		onTelegramStyleChange,
+		onPremiumSmsChange,
 		profileOverride
 	}: Props = $props();
 
-	interface Profile {
-		mail_to?: string;
-		telegram_chat_id?: string;
-		sms_to?: string;
-		sms_allowed?: boolean;
-		email_verified?: boolean;
-	}
+	/** Issue #1717 S3: EINE kanonische Profilform (channelConnectionStatus.ts)
+	 * statt einer lokalen Kopie je Komponente — sonst muesste jedes neue
+	 * Profilfeld an drei Stellen nachgezogen werden. */
+	type Profile = ConnectionProfile;
 	let profile = $state<Profile | null>(
 		untrack(() => (profileOverride !== undefined ? profileOverride : null))
 	);
@@ -84,6 +94,9 @@
 	// additiv zu den bestehenden Checkboxen.
 	let connectionStatus = $derived(channelConnectionStatus(profile));
 	let contactLabel = $derived(channelContactLabel(profile));
+	// Issue #1717 S3: geteilter Zustands-Helfer — dieselbe Quelle, die
+	// EditReportConfigSection benutzt (keine zweite Kopie der Logik).
+	let premiumSms = $derived(premiumSmsChannelState(profile));
 
 	onMount(() => {
 		if (profileOverride !== undefined) return;
@@ -97,22 +110,16 @@
 			});
 	});
 
-	// Issue #1232 Scheibe 3a: einzige Kappungs-Quelle CHANNEL_COL_BUDGET (metricsEditor.ts).
-	const CTX_LEAD: Record<string, string> = {
-		route: `Das Trip-Briefing ist eine Etappen-Tabelle — E-Mail trägt alle Spalten, Telegram die ersten ${CHANNEL_COL_BUDGET.telegram}, SMS läuft flach.`,
-		vergleich: `Der Orts-Vergleich ist eine breite Tabelle — realistisch läuft er per E-Mail. Telegram trägt nur ≤ ${CHANNEL_COL_BUDGET.telegram} Spalten, SMS wird flach.`
-	};
-	// Issue #1232 Scheibe 3a: einzige Kappungs-Quelle CHANNEL_COL_BUDGET (metricsEditor.ts).
-	const SUB = {
-		email: 'Layout · volle Tabelle',
-		telegram: `Layout · ${CHANNEL_COL_BUDGET.telegram} Spalten`,
-		sms: 'Layout · flach, ≤ 140 Z.'
-	} as const;
+	// Issue #1719 S3 (AC-5/AC-5a, AC-6): Hinweistexte kommen aus reinen
+	// Funktionen (vtBriefingChannelsText.ts) — keine Wertung mehr ("läuft/wird
+	// flach" raus), SMS-Zeichengrenze kontextabhängig (Trip 160 / Vergleich 153).
+	const ctxLeadText = $derived(vtBriefingLeadText(context));
+	const SUB = $derived(vtBriefingSubTexts(context));
 </script>
 
 <div>
 	<Eyebrow style="margin-bottom: 10px;">Geplantes Briefing · Kanäle</Eyebrow>
-	<p class="vt-lead">{CTX_LEAD[context] ?? CTX_LEAD.route}</p>
+	<p class="vt-lead">{ctxLeadText}</p>
 	<Card padding={0}>
 		<div class="vt-channels-body">
 			<div class="text-sm">
@@ -184,12 +191,41 @@
 						Handynummer fehlt — <a href="/account">im Account einrichten</a>
 					</div>
 				{/if}
-				<div class="text-sm" style="margin-top: 6px;">
-					<span data-testid="channel-premium-sms" class="inline-flex items-center gap-2">
-						<Checkbox checked={false} disabled={true}>Premium-SMS (Garmin inReach)</Checkbox>
-					</span>
-				</div>
-				<div class="pl-6 text-xs text-muted-foreground">bald verfügbar</div>
+				<!-- Premium-SMS (Garmin inReach) — Issue #1717 S3. Schaltbar NUR wenn
+				     onPremiumSmsChange uebergeben wurde (route-Zweig von VersandTab);
+				     im vergleich-Zweig bleibt der Platzhalter aus #1069 unveraendert
+				     stehen, weil Premium-SMS laut ADR-0049 kein Vergleichs-Kanal ist. -->
+				{#if onPremiumSmsChange}
+					<div class="text-sm" style="margin-top: 6px;">
+						<span data-testid="channel-premium-sms" class="inline-flex items-center gap-2">
+							<Checkbox
+								checked={channels.premium_sms ?? false}
+								disabled={premiumSms.disabled}
+								onchange={onPremiumSmsChange}
+								>Premium-SMS (Garmin inReach){premiumSms.contactLabel}</Checkbox
+							>
+						</span>
+						<span data-testid="channel-status-premium-sms" class="vt-channel-status">
+							<Dot tone={premiumSms.tone} size={7} />
+							<span class="vt-channel-status-label">{premiumSms.statusLabel}</span>
+						</span>
+						<p data-testid="channel-premium-sms-hint" class="vt-channel-sub pl-6">
+							{premiumSms.hint}
+						</p>
+						{#if premiumSms.reportedAtLabel}
+							<p data-testid="channel-premium-sms-reported-at" class="vt-premium-reported-at pl-6">
+								{premiumSms.reportedAtLabel}
+							</p>
+						{/if}
+					</div>
+				{:else}
+					<div class="text-sm" style="margin-top: 6px;">
+						<span data-testid="channel-premium-sms" class="inline-flex items-center gap-2">
+							<Checkbox checked={false} disabled={true}>Premium-SMS (Garmin inReach)</Checkbox>
+						</span>
+					</div>
+					<div class="pl-6 text-xs text-muted-foreground">bald verfügbar</div>
+				{/if}
 			</div>
 		</div>
 	</Card>
@@ -231,5 +267,16 @@
 	}
 	.vt-telegram-style {
 		margin-top: 8px;
+	}
+	/* Issue #1717 S3 (AC-9): das Meldedatum der gelernten Rueckadresse ist ein
+	   DATEN-Label, keine Fussnote — deshalb dieselbe Farbe wie
+	   .vt-channel-status-label (--g-ink-3) und ausdruecklich NICHT --g-ink-4
+	   (2,85:1 auf Weiss, strikt Platzhalter/Disabled vorbehalten). Auf einem
+	   Handydisplay entscheidet genau dieser Kontrast, ob man der Anzeige traut. */
+	.vt-premium-reported-at {
+		font-family: var(--g-font-mono);
+		font-size: 11px;
+		color: var(--g-ink-3);
+		margin: 2px 0 0;
 	}
 </style>

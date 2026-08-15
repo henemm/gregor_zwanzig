@@ -395,11 +395,21 @@ die pro Report-Lauf neu aufgebaut werden. Eine Read-Modify-Write-Frage
 - **AC-5:** Given ein Trip mit gewählter Metrik „Nullgradgrenze" (`freezing_level`) OHNE konfigurierten `sms_threshold` und stündlichen `freezing_level_m`-Werten mit Tagestief 1800 m um 6 Uhr / When das Briefing als SMS erzeugt wird / Then enthält die SMS `NL1800@6` (ohne Schwelle immer sichtbar, wenn gewählt).
   - Test: SMS-Rendering Klasse b ohne Threshold, Assertion auf unbedingte Sichtbarkeit des Tiefstwerts.
 
-- **AC-6:** Given ein Trip mit gewählter Metrik „Windrichtung" (`wind_direction`) und stündlichen `wind_direction_deg`-Werten, deren Mehrheit im Sektor Nordwest (315°–359°) liegt / When das Briefing als SMS erzeugt wird / Then enthält die SMS das Token `WDNW`.
+- **AC-6:** ⚠️ **Abgelöst durch #1824** (`docs/specs/modules/feat_1824_sms_range_und_trenner.md`
+  AC-12/AC-13/AC-14) — der wörtlich geforderte Wert `WDNW` gilt nicht mehr, `WD` bekommt seit #1824
+  den Trenner `:` (Symbol-String `WD:`, wie `TH:`/`HR:`). Ursprünglicher Wortlaut zur Historie:
+  „Given ein Trip mit gewählter Metrik „Windrichtung" (`wind_direction`) und stündlichen
+  `wind_direction_deg`-Werten, deren Mehrheit im Sektor Nordwest (315°–359°) liegt / When das
+  Briefing als SMS erzeugt wird / Then enthält die SMS das Token `WDNW`."
   - Test: SMS-Rendering mit Klasse-c-Fixture (Sektor-Mehrheit eindeutig), Assertion auf den Sektor-Code.
 
-- **AC-7:** Given ein Trip mit gewählter Metrik „Niederschlagsart" (`precip_type`) und einem Fenster, in dem `SNOW`-Stunden häufiger auftreten als `RAIN`- oder `MIXED`-Stunden / When das Briefing als SMS erzeugt wird / Then enthält die SMS das Token `PTS`.
-  - Test: SMS-Rendering mit gemischtem Fixture (mehrere `PrecipType`-Werte im Fenster), Assertion auf den dominanten Code UND (separater Fall) auf die Rang-Regel bei Gleichstand (gleich viele RAIN- wie SNOW-Stunden ⇒ `PTS` gewinnt nach Schwere).
+- **AC-7:** ⚠️ **Abgelöst durch #1824** (`docs/specs/modules/feat_1824_sms_range_und_trenner.md`
+  AC-15) — der wörtlich geforderte Wert `PTS` gilt nicht mehr, `PT` bekommt seit #1824 den Trenner
+  `:` (Symbol-String `PT:`). Ursprünglicher Wortlaut zur Historie: „Given ein Trip mit gewählter
+  Metrik „Niederschlagsart" (`precip_type`) und einem Fenster, in dem `SNOW`-Stunden häufiger
+  auftreten als `RAIN`- oder `MIXED`-Stunden / When das Briefing als SMS erzeugt wird / Then
+  enthält die SMS das Token `PTS`."
+  - Test: SMS-Rendering mit gemischtem Fixture (mehrere `PrecipType`-Werte im Fenster), Assertion auf den dominanten Code UND (separater Fall) auf die Rang-Regel bei Gleichstand (gleich viele RAIN- wie SNOW-Stunden ⇒ Rang-Regel unverändert, nur der Trenner ändert sich).
 
 - **AC-8:** Given ein Trip mit gewählten Metriken „Sonnenstunden" (`sunshine`) und „Luftdruck" (`pressure`), DNI-abgeleiteten Sonnenstunden von 6.4 h und einem mittleren `pressure_msl_hpa` von 1013.4 hPa über das Tagesfenster / When das Briefing als SMS erzeugt wird / Then enthält die SMS die Token `SU6` und `HP1013` (kaufmännisch gerundet, ganzzahlig).
   - Test: SMS-Rendering mit beiden Metriken gewählt, Assertion auf beide gerundeten Werte.

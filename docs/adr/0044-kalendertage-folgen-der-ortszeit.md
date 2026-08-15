@@ -71,60 +71,194 @@ diesem Tag die Zone, kann die Etappe des Weltzeit-Tages eine andere Zone tragen 
 Ortstages. Der Fehler ist dann die Differenz zweier benachbarter Etappen — in aller Regel
 null. Eine Tour dieser Spannweite hat ohnehin keinen eindeutigen „Kalendertag".
 
-### Wo die Zonen-Auflösung liegt (Stand 2026-08-11, Issue #1697)
+### Wo die Zonen-Auflösung liegt (Stand 2026-08-12, Issue #1697, #1724)
 
 Die drei Bausteine waren ursprünglich **private Methoden** auf `TripCommandProcessor`. Seit
 #1697 liegen sie als Modulfunktionen in **`src/services/trip_day.py`** und werden von dort
-geteilt:
+geteilt; #1724 hat `trip_local_now` ergänzt:
 
 | Funktion | Aufgabe |
 |---|---|
 | `trip_tz(trip)` | Rückfall 2: erste Etappe mit Wegpunkten |
 | `display_tz(trip, day_date)` | Zone der Etappe dieses Tages, sonst `trip_tz` |
 | `anchor_tz(trip, now_utc)` | Auflösung der Henne-Ei-Falle: Zone der Etappe des **Weltzeit**-Tages |
-| `trip_local_today(trip, now_utc)` | **der Ortstag der Tour** — das, was `date.today()` ersetzt |
+| `trip_local_now(trip, now_utc)` | Ortstag UND Ortsstunde der Tour aus EINER Zonen-Auflösung |
+| `trip_local_today(trip, now_utc)` | **der Ortstag der Tour** — das, was `date.today()` ersetzt; dünne Sicht auf `trip_local_now` |
 
-Wer diese Regel anwendet, ruft `trip_local_today()`. Eine eigene Kopie der Zonen-Auflösung
-ist ein Regelverstoß — genau das war der Zustand vor #1697.
+Wer nur den Kalendertag braucht, ruft `trip_local_today()`; wer zusätzlich die Ortsstunde
+braucht — etwa eine Fälligkeitsprüfung wie in #1725 —, ruft `trip_local_now()` direkt, damit
+Tag und Stunde aus derselben Auflösung kommen. Eine eigene Kopie der Zonen-Auflösung ist ein
+Regelverstoß — genau das war der Zustand vor #1697.
 
 ### Umgesetzt
 
 - **Drilldown** (#1470) — der ursprüngliche Anlass dieses ADR.
 - **Alarm-Pfad** (#1697, live 2026-08-11): `src/services/trip_alert.py` an allen drei
   Stellen, die einen Kalendertag bestimmen (`:404` Ablauf-Filter, `:584` Schnappschuss-
-  Anker, `:901` Segmentwahl). Dieser Pfad stand in der Restliste unten **nie drin** und war
+  Anker, `:911` Segmentwahl). Dieser Pfad stand in der Restliste unten **nie drin** und war
   trotzdem der schwerwiegendste Verstoß: nicht eine falsche Anzeige, sondern **ausbleibende
   Alarme**. Gemessen für eine gewöhnliche Etappe 08:00–19:00 Ortszeit — Neuseeland verlor
   die ersten ~4 von 11 Stunden *jedes* Etappentags, Kalifornien die letzten ~2, Mitteleuropa
   zwei Stunden jede Nacht.
+  **Hinweis, kein neuer Haken (Issue #1667 S3, live 2026-08-11):** Die Segmentwahl (`:911`)
+  ruft seither `trip_segments.py::resolve_current_segment()` und fällt additiv auf das
+  Ziel-Segment des unmittelbaren Vortags zurück, wenn heute nichts aktiv ist. Das ändert
+  **nicht** die Zonen-Auflösung dieses ADR — `today`/`gestern` bleiben beide über
+  `trip_local_today()` bestimmt —, sondern nur die Tages-**Tiefe** der Suche (ein Tag
+  zusätzlich statt nur der eine bereits aufgelöste Ortstag). Details:
+  `docs/specs/modules/fix_1667_s3_tagesuebergreifende_segmente.md`.
+- **Briefing-/Versand-Pfad** (#1724, live 2026-08-11; Fälligkeitsfenster + Idempotenz #1725,
+  live 2026-08-12): `_get_target_date` und `_get_active_trips` in
+  `src/services/trip_report_scheduler.py` bestimmen den Zieltag jetzt über `trip_local_today`
+  statt `date.today()`; `save_dated`/`load_dated` schreiben und lesen denselben
+  Ortstag-Schlüssel, Schreiber und Leser sind also zusammen umgestellt. #1725 löst zusätzlich
+  die in ADR-0051 beschriebene Stundengleichheits-Falle: Fälligkeit ist jetzt ein Fenster von
+  drei Ortsstunden ab der konfigurierten Stunde, gegen Doppelversand abgesichert über den
+  Vermerk-Speicher `services/briefing_slots.py` (Schlüssel `(trip_id, ortstag, slot)`).
+- **Ruhezeit, Alarm-Tageszähler und Ortsvergleichs-Slot-Fälligkeit** (#1726, S4 des Epics
+  #1722): `deviation_alert_engine.is_quiet_hours()` und `alert_daily_limit.{load,is_allowed,
+  increment}` bekamen einen **Pflicht**-Parameter `zone` (kein Default — ein impliziter
+  Wien-/UTC-Rückfall wäre genau die behobene Fehlerklasse); beide `VIENNA`-Konstanten sind
+  ersatzlos entfallen. Der Tageszähler führt seither einen Stand **je Zone**
+  (`{"zones": {...}}`, Altbestand wandert beim ersten Zugriff unter `Europe/Vienna`) — der
+  bewusste Preis ist, dass ein Nutzer mit Objekten in drei Zonen das Kontingent dreimal
+  bekommt. `compare_slot_scheduler.presets_due_for_hour` prüft jedes Preset gegen die Zone
+  **seines ersten auflösbaren Orts** statt alle gegen eine gemeinsame Stunde. Die Zone kommt
+  bei Touren aus `anchor_tz`/`trip_local_now`, bei Ortsvergleichen aus dem neuen
+  `utils.timezone.first_resolvable_tz()` — der einen fachlichen Auswahlregel für „erster
+  Ort" (#1378 AC-4), die einen gelöschten oder zonenlosen Ersteintrag überspringt statt
+  still auf Weltzeit zu kippen.
+- **Anzeige-/Kommando-Pfad in `trip_command_processor.py` und `inbound_telegram_reader.py`**
+  (#1727 S5a, live 2026-08-13, `fd87fca6`; `_handle_query` mit dieser Scheibe, #1795): `_show_status`,
+  `_show_now` und `command_date` (für `### ruhetag`) lösen den Kalendertag seither über
+  `trip_local_today` auf, `inbound_telegram_reader.py` reicht `received_at` durch statt selbst
+  `date.today()` zu bilden. `_handle_query` — löst zusätzlich einen Versand aus, nicht nur eine
+  Anzeige — folgt seit #1795 derselben EINEN Auflösung (`trip_local_now`) für Kopfzeile UND
+  Ortszeit-Anzeige der Timeline (`_aggregate_day`, `_fmt_glance`, `_fmt_gewitter`,
+  `_fmt_timeline`, `_timeline_buttons` bekommen `tz` als Pflichtparameter).
+
+- **Versandpfade von Trip-Briefing und Ortsvergleich** (#1727 S5b): neun Fundstellen, die
+  auf tatsächlich VERSENDETE Inhalte wirken und in dieser Liste bis dahin gar nicht standen
+  (vierte unvollständige Aufzählung dieses Epics). `select_test_stage`,
+  `_send_trip_report_outcome`s Klemm-Vergleich, `_clamp_segments_to_today`,
+  `_build_stage_trend` und `_collect_future_stage_weather` folgen seither
+  `trip_local_today(trip, now_utc)`; `briefing_target_day_is_current` hat keinen
+  Systemuhr-Rückfall mehr (`today` ist Pflicht und kommt als Ortstag der Tour vom
+  Aufrufer); `_auto_pause_expired_presets` und der Einzelversand-Zweig von
+  `send_one_compare_preset` rechnen über `first_resolvable_tz(locations)` im Ortstag des
+  ersten auflösbaren Preset-Orts; `_target_date_from_report` leitet den Präfix-Tag aus der
+  am DTO bereits aufgelösten `request.trip_tz` ab. An sechs der neun Stellen ist „jetzt"
+  zugleich Pflichtparameter geworden (ADR-0051 Regel 3) — der Briefing-Aufbau steht damit
+  auf EINER Zeitabfrage, obwohl zwischen ihr und dem Ausblick ein Wetterabruf mit
+  Retry-Backoff liegt. An den Fundstellen `_send_trip_report_outcome`,
+  `_target_date_from_report` und `send_one_compare_preset` bleibt die Auflösung bewusst
+  funktionsintern (jeweils vor jedem Netzabruf).
+- **Vorschau-, Anzeige- und Sofort-Vergleichspfade** (#1727 S5c): sieben Fundstellen in fünf
+  Dateien. Die Trip-Vorschau (`preview_service.py`) — `_resolve_target_date` UND
+  `_build_report` — folgt seither `trip_local_today(trip, now_utc)`; EIN von den drei
+  öffentlichen `render_*_preview`-Methoden einmal gebundenes `now_utc` speist beide Aufrufe,
+  die zuvor bei `_build_report` separat aufgelöste zweite Systemuhr entfällt ersatzlos. Die
+  Compare-Vorschau (`compare_preview_service.py::_resolve_target_date`) und der
+  Sofort-Vergleich (`api/routers/compare.py::run_comparison`, alle drei Funde im selben
+  Commit — Stunde UND Zieltag „heute"/„morgen" aus DERSELBEN Auflösung) folgen
+  `first_resolvable_tz(locations)`, demselben Muster wie der Compare-Versand seit S5b. Der
+  Mail-Footer „Nächster Versand" (`compare_html.py::_compute_next_send`) übernimmt das in
+  `render_compare_html` bereits aufgelöste `header_tz`, statt selbst ein zweites Mal
+  aufzulösen. Die siebte Fundstelle, `comparison_engine.py::dict_to_comparison_result`,
+  wurde NICHT korrigiert, sondern als toter Code (0 Aufrufer im gesamten Repo) ersatzlos
+  entfernt.
 
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,
 sucht vorher nach `date.today()`/`datetime.now().date()` im ganzen Produktivcode, statt nur
 die Datei zu nennen, in der er gerade gearbeitet hat.
 
-### Noch nicht umgesetzt (Stand 2026-08-11)
+### Noch nicht umgesetzt (Stand 2026-08-14)
 
-**Briefing-/Versand-Pfad** (`src/services/trip_report_scheduler.py`) — die größte offene
-Fläche, gleiche Ursache, andere Wirkung („Briefing für den falschen Tag" statt „kein Alarm"):
+Der zuvor hier gelistete Briefing-/Versand-Pfad (`_get_target_date`, `_get_active_trips`,
+`save_dated`) ist umgesetzt — s. „Umgesetzt" oben (#1724/#1725). Ebenso der zuvor hier
+gelistete Kommando-/Anzeige-Pfad — s. „Umgesetzt" oben (#1727 S5a/#1795) und die neun
+Versandpfade aus #1727 S5b.
 
-| Ort | Wirkung |
-|---|---|
-| `_get_target_date` | Zieltag des Briefings, morgens `date.today()` / abends `+1` |
-| `_get_active_trips` | entscheidet, ob ein Trip überhaupt ein Briefing bekommt |
-| `save_dated` | Schlüssel des Wetter-Schnappschusses — **Schreiber und Leser müssen zusammen umgestellt werden**, sonst findet der Alarm-Pfad den Anker nicht mehr |
+`preview_service._resolve_target_date` (samt `_build_report`) ist mit #1727 S5c erledigt und
+nach „Umgesetzt" oben gewandert. `tools/weather_validation.py` ist damit ebenfalls KEINE
+offene Arbeit mehr — s. „Bewusst NICHT betroffen" unten, wo die begründete Ausnahme steht.
 
-**Anzeige, Vorschau, Werkzeuge:** vier Stellen in `src/services/trip_command_processor.py`
-(`_handle_query` — **löst einen Versand aus**, nicht nur eine Anzeige, eigene Abwägung nötig;
-`command_date` für `### ruhetag`; `_show_status` und `_show_now`), dazu
-`inbound_telegram_reader.py`, `preview_service.py`, `api/routers/debug.py` und
-`tools/weather_validation.py`. Zeilennummern bewusst weggelassen — sie waren in der
-Vorfassung dieser Liste binnen Tagen veraltet.
+**Fünfte unvollständige Aufzählung dieses Epics:** `compare_preview_service._resolve_target_date`
+fehlte in dieser Restliste vollständig, obwohl der Wächter
+(`tests/test_output_timezone_guard.py::KNOWN_VIOLATIONS`) sie bereits als offenen Fund
+führte — weder oben noch unten stand sie je drin. Mit #1727 S5c ist sie behoben (s.
+„Umgesetzt" oben); hier ausdrücklich als das benannt, was sie war, statt sie stillschweigend
+als „schon immer bekannt" durchgehen zu lassen.
+
+**S5d — ERLEDIGT (2026-08-15).** Die sieben Funde in vier Dateien sind umgesetzt; **die
+Muster-A-Rubrik der `KNOWN_VIOLATIONS` ist damit leer** — die Liste, die mit S5a begonnen hat,
+ist geschlossen.
+
+- `api/routers/debug.py` — `trigger_radar_alert` (1): folgt `trip_local_today(trip, now_utc)`.
+- `src/services/gpx_processing.py` — `compute_default_start_date` (2) **ersatzlos entfernt**
+  (null Produktiv-Aufrufer über alle drei Stacks; Strukturtest auf Abwesenheit gedreht, Vorbild
+  `dict_to_comparison_result` aus S5c); `gpx_to_stage_data` (1) leitet den Rückfalltag aus der
+  Zone des ersten Wegpunkts ab, der Fail-soft-Zweig aus **explizitem UTC**.
+- `src/services/official_alerts/massif_closure.py` — `_do_request` folgt dem Tag des
+  **Herausgebers** (`tz_for_coords(lat, lon)` in `fetch()`, durchgereicht an die private
+  `_get_cached_daily_json(src, ymd)`); `fetch`s `last_run` ist explizit tz-aware UTC
+  (Regel 1 aus ADR-0051).
+- `src/services/official_alerts/meteo_forets.py` — `covers` prüft die Saison am Ortsmonat.
+
+**Warum Koordinaten und nicht eine feste `Europe/Paris`-Konstante:** Ein festes Zonen-Literal
+wäre selbst ein Muster-B-Fund desselben Wächters gewesen. Fachlich fallen Herausgeber- und
+Wanderertag hier ohnehin zusammen, weil beide Quellen geografisch auf Frankreich/Korsika
+begrenzt sind (`massif_zones.py`, AROME-Box) — gemessen liefern Var wie Korsika `Europe/Paris`.
+
+**Keine Signatur wurde erweitert.** `gpx_to_stage_data` ist per `inspect.signature` auf fünf
+Parameter festgelegt, `covers`/`fetch` erfüllen das `OfficialAlertSource`-Protocol. Die Registry
+ruft beide in `try/except Exception` (`base.py:137-148`) — eine Signaturerweiterung hätte die
+Quelle **still deaktiviert** statt laut zu brechen. Die Zone wird deshalb überall lokal aus
+bereits vorliegenden Argumenten aufgelöst.
+
+**Wirkung, am echten Endpunkt gemessen (2026-08-15):** Die Annahme, ein falsches Datum führe bei
+`massif_closure` zu HTTP 404 und über den Fail-soft-Pfad zu „keine Warnung", ist **falsch**. Die
+Quelle antwortet für Vortag und heutigen Tag mit HTTP 200 bei unterschiedlichem Inhalt. Zwischen
+22:00 und 00:00 UTC (00:00–02:00 Pariser Sommerzeit) wurden also **gestrige Zugangssperren als
+heutige** gemeldet — eine über Nacht neu verhängte Sperre erschien nicht.
+
+**Bleibt offen (S5e):** Regel 3 aus ADR-0051 („Jetzt" kommt als Parameter) ist an diesen vier
+Fundorten **nicht** erfüllt — die genannten Signatur-Verträge lassen keinen Zeitparameter zu,
+`datetime.now(timezone.utc)` bleibt funktionsintern. Derselbe Rest steht seit #1795 für
+`send_on_demand_report` offen. Ebenso offen: `massif_closure`s Erfolgs-Cache schlüsselt nach
+`src`, nicht nach `ymd`, und kann den Tageswechsel bis zu 30 Minuten maskieren (im
+Adversary-Lauf zu S5d empirisch belegt, kein Regress dieser Scheibe).
+
+**Sechste unvollständige Aufzählung dieses Epics:** die drei letztgenannten Dateien
+(`gpx_processing.py`, `massif_closure.py`, `meteo_forets.py`) standen bis zu dieser Scheibe in
+KEINEM Abschnitt dieses ADR — weder oben noch unten —, obwohl der Wächter
+(`tests/test_output_timezone_guard.py::KNOWN_VIOLATIONS`) sie durchgehend als offene Funde
+führte. Nur `api/routers/debug.py` war hier bislang erwähnt. Hier ausdrücklich als das
+benannt, was sie waren, statt sie stillschweigend unter „bleibt offen" mitzumeinen. **Mit S5d
+ist die Muster-A-Liste des Wächters vollständig leer** (2026-08-15 eingetreten); offen bleiben
+nur noch `raw_astimezone`-Funde, die dritte Fundart des Wächters (stille Mid-Body-Rückfälle, per
+`BoolOp`/`getattr`/`If`/`IfExp` erkannt) sowie die vom Wächter nicht gescannten Bereiche
+(S5e) — darunter `src/providers/openmeteo.py:320`/`:344`. Für die beiden Provider-Stellen ist
+dort zusätzlich offen, **ob ein Ortstag-Fix überhaupt richtig ist**: beide haben keinerlei
+Ortsbezug (feste Referenzkoordinaten je Modell bzw. ein reiner TTL-Vergleich) und liegen damit
+strukturell näher am `forecast_budget._today_utc`-Fall unten als an `massif_closure`.
 
 **Bewusst NICHT betroffen** (feste Zone ist dort Absicht, kein Verstoß):
 `forecast_budget._today_utc` und `meteoalarm_budget._today_utc` (Kontingent-Tageswechsel in
-UTC), `alert_daily_limit` und `deviation_alert_engine` (fest `Europe/Vienna`),
-Slot-Stunde im Versand-Orchestrator.
+UTC) sowie der manuelle `?hour=`-Testauslöser des Versand-Orchestrators
+(`CompareDispatchStrategy.MANUAL_TRIGGER_REFERENCE_ZONE`) — ein Ops-/Debug-Werkzeug ohne
+Preset-Bezug, für das „Stunde X" bei preset-eigenen Zonen keine EINE Bedeutung mehr hätte.
+Seit #1727 S5c außerdem `tools/weather_validation.py`s Punkt-Validierungsmodus (`:288`,
+begründet über einen `# gz-main-path:`-Kommentar an der Zeile): das Werkzeug fragt seine
+Referenzdaten selbst ausdrücklich mit `"timezone": "UTC"` ab (`fetch_openmeteo`, `:31`) — ein
+Ortstag-Default erzeugte einen Widerspruch INNERHALB desselben Skripts (Validierungsziel UTC,
+Validierungs-Default Ortszeit).
+
+Die beiden Alarm-Module, die bis 2026-08-12 an dieser Stelle als bewusste Ausnahme standen
+(Ruhezeit-Engine und Tageszähler, fest `Europe/Vienna`), sind **keine Ausnahme mehr** — sie
+folgen seit #1726 der Ortszone, s. „Umgesetzt" oben. Ebenso die Slot-Stunde des
+Ortsvergleichs, die dort ebenfalls gelistet war.
 
 Vollständige Fundstellen-Karte nach Wirkung sortiert:
 `docs/context/fix-1697-ortstag-statt-servertag.md`.

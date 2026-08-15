@@ -191,7 +191,10 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 		const { idA, idB } = await seedTwoAndOpenIdealwerte(page, 'wintersport', 'Persist');
 
 		// Bis zum Versand-Tab durchklicken (schaltet den Aktivieren-Button frei).
-		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').first().click();
+		// Issue #1360 (Epic #1372 S1a): der Reiter `layout` ist aufgeloest — die
+		// Kette laeuft seither idealwerte -> alarme -> versand. Der frueher hier
+		// stehende Klick auf `compare-editor-tab-layout` lief deshalb in den
+		// 30s-Timeout, weil es das Ziel nicht mehr gibt.
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
 		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 

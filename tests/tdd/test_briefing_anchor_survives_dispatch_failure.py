@@ -58,6 +58,16 @@ from pathlib import Path
 
 import pytest
 
+from datetime import datetime as _datetime, timezone as _timezone
+
+
+def _zeitpunkt_ortsstunde(stunde: int) -> _datetime:
+    """UTC-Zeitpunkt zur gegebenen Stunde (#1724: `pre_pass` nimmt seit dieser
+    Aenderung einen Zeitpunkt statt einer vorberechneten Stunde -- welche Stunde
+    das ist, entscheidet jeder Trip in seiner eigenen Zone)."""
+    heute = _datetime.now(_timezone.utc).date()
+    return _datetime(heute.year, heute.month, heute.day, stunde, tzinfo=_timezone.utc)
+
 from app.config import Settings
 from app.models import (
     ForecastMeta,
@@ -73,6 +83,7 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 
 # Pfadregel #1409: Pruefling relativ zur Testdatei aufloesen, nie ueber einen
 # festen Hauptrepo-Pfad — sonst pruefte dieser Test aus dem Worktree die
@@ -203,9 +214,15 @@ def _trip(trip_id: str, *, with_levels: bool = False,
             metric_alert_levels={"wind_gust": "standard"},
         )
     trip = Trip(id=trip_id, name="Anker-Trip #1629", stages=stages, **kwargs)
+    # Issue #1594: Briefing-Zeiten ausserhalb des Vorlauf-Fensters. AC-9 misst,
+    # dass der Alarm-Lauf nach einem gescheiterten Briefing REGULAER prueft —
+    # mit den Vorgabezeiten 07:00/18:00 unterdrueckte ihn dort zeitweise die
+    # Sperre, und der Test haette „still" statt „regulaer" gemessen.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=send_email, send_telegram=send_telegram,
         send_sms=send_sms, alert_on_changes=with_levels,
+        morning_time=morgen, evening_time=abend,
     )
     trip.alert_cooldown_minutes = 0
     trip.official_alerts_enabled = False
@@ -338,7 +355,9 @@ def test_ac3_versandfehler_zaehlt_weiterhin_als_fehlschlag_und_wird_protokollier
     strategy._service = _fixture_scheduler(25.0)(settings=settings, user_id=uid)
 
     with caplog.at_level(logging.ERROR, logger="dispatch_orchestrator"):
-        strategy.dispatch_one((trip, "morning"))
+        # Issue #1725: `collect_due` liefert (trip, report_type, ORTSTAG) —
+        # das dritte Glied des Idempotenz-Schluessels.
+        strategy.dispatch_one((trip, "morning", stage_date(LAT, LON)))
 
     assert strategy.result() == (0, 1), (
         "Ein Versandfehler muss weiterhin als fehlgeschlagener Lauf zaehlen "
@@ -1077,7 +1096,7 @@ def test_vorgemerkter_versandfehler_wird_im_naechsten_vorlauf_zugestellt(monkeyp
     _run_failing_briefing(uid, trip, gust=25.0)
 
     zugestellt = _recording_email(monkeypatch)
-    _strategy(uid, _settings_email_ok()).pre_pass(hour=9, due=[])
+    _strategy(uid, _settings_email_ok()).pre_pass(now_utc=_zeitpunkt_ortsstunde(9), due=[])
 
     assert len(zugestellt) == 1, (
         "Der stuendliche Vorlauf muss das nach einem Versandfehler "
@@ -1111,7 +1130,7 @@ def test_nachgeliefertes_briefing_nennt_den_gescheiterten_versand_als_grund(monk
     _run_failing_briefing(uid, trip, gust=25.0)
 
     zugestellt = _recording_email(monkeypatch)
-    _strategy(uid, _settings_email_ok()).pre_pass(hour=9, due=[])
+    _strategy(uid, _settings_email_ok()).pre_pass(now_utc=_zeitpunkt_ortsstunde(9), due=[])
 
     assert zugestellt, (
         "Ohne Nachlieferung gibt es keinen Text zu pruefen (#1662 AC-3)"
@@ -1165,7 +1184,7 @@ def test_vermerk_mit_vergangenem_zieltag_verfaellt_ohne_zustellversuch(monkeypat
                  target_date=date.today() - timedelta(days=1))
 
     zugestellt = _recording_email(monkeypatch)
-    _strategy(uid, _settings_email_ok()).pre_pass(hour=9, due=[])
+    _strategy(uid, _settings_email_ok()).pre_pass(now_utc=_zeitpunkt_ortsstunde(9), due=[])
 
     assert zugestellt == [], (
         "Ein Vermerk mit gestrigem Zieltag darf keinen Zustellversuch mehr "
@@ -1204,9 +1223,11 @@ def test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos(monkeyp
 
     zugestellt = _recording_email(monkeypatch)
     strategy = _strategy(uid, _settings_email_ok())
-    due = [(trip, "morning")]
+    # Issue #1725: `collect_due` liefert (trip, report_type, ORTSTAG) — das
+    # dritte Glied des Idempotenz-Schluessels.
+    due = [(trip, "morning", stage_date(LAT, LON))]
 
-    strategy.pre_pass(hour=7, due=due)
+    strategy.pre_pass(now_utc=_zeitpunkt_ortsstunde(7), due=due)
     assert _dispatch_marker(uid) is not None, (
         "Der Vorlauf hat den Vermerk bei Faelligkeit blind geloescht — dann "
         "gibt es keinen 'letzten Versuch' mehr, wenn der regulaere Versand "
@@ -1217,7 +1238,7 @@ def test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos(monkeyp
         f"zustellen (Doppel-Nachricht): {zugestellt!r} (#1662 AC-5)"
     )
 
-    strategy.dispatch_one((trip, "morning"))
+    strategy.dispatch_one((trip, "morning", stage_date(LAT, LON)))
 
     assert len(zugestellt) == 1, (
         f"Der Nutzer muss genau EINE Nachricht bekommen, erhalten: "
@@ -1253,9 +1274,10 @@ def test_erneut_gescheiterter_regulaerer_versand_haelt_den_vermerk_am_leben():
     _seed_marker(uid, trip, reason="dispatch_error")
 
     strategy = _strategy(uid, _settings_email_broken())
-    due = [(trip, "morning")]
-    strategy.pre_pass(hour=7, due=due)
-    strategy.dispatch_one((trip, "morning"))
+    # Issue #1725: dritte Stelle = Ortstag (Idempotenz-Schluessel).
+    due = [(trip, "morning", stage_date(LAT, LON))]
+    strategy.pre_pass(now_utc=_zeitpunkt_ortsstunde(7), due=due)
+    strategy.dispatch_one((trip, "morning", stage_date(LAT, LON)))
 
     assert strategy.result() == (0, 1), (
         f"Vorbedingung: der Lauf muss als gescheitert zaehlen, erhalten: "

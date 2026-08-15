@@ -44,13 +44,25 @@ def _legacy_trip_data() -> dict[str, Any]:
 
 
 def _per_report_trip_data() -> dict[str, Any]:
-    """Trip MIT channel_layouts_per_report — Morning und Evening haben verschiedene Email-Listen."""
+    """Trip MIT channel_layouts_per_report — Morning und Evening haben verschiedene Email-Listen.
+
+    Issue #1719 Scheibe 2 (ADR-0050): die globale Liste ist das Maximum, gegen
+    das jede Kanal-/Report-Ebene unten geschnitten wird -- sie muss deshalb
+    jede unten verwendete Metrik-ID fuehren (precipitation, gust, wind_chill
+    kamen sonst nur in channel_layouts/channel_layouts_per_report vor). Alle
+    Ergaenzungen bewusst "primary" mit steigendem `order` -- AC-4 vergleicht
+    den (sortierten) globalen Fallback von get_metrics_for_channel() gegen
+    das (unsortierte) get_metrics_for_report_type() auf ID-Gleichheit.
+    """
     return {
         "trip_id": "per-report-trip-434",
         "metrics": [
             # Globale Fallback-Liste
             {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
             {"metric_id": "wind", "enabled": True, "bucket": "primary", "order": 1},
+            {"metric_id": "precipitation", "enabled": True, "bucket": "primary", "order": 2},
+            {"metric_id": "gust", "enabled": True, "bucket": "primary", "order": 3},
+            {"metric_id": "wind_chill", "enabled": True, "bucket": "primary", "order": 4},
         ],
         "channel_layouts": {
             # Per-Kanal-Fallback (#429)
@@ -125,14 +137,20 @@ def test_ac1_loader_reads_channel_layouts_per_report():
 
     assert "morning" in dc.per_report_layouts
     assert "email" in dc.per_report_layouts["morning"]
-    morning_email = dc.per_report_layouts["morning"]["email"]
+    # Issue #1728 DEC-6b: abgeleitete Groessen werden auch hier angehaengt
+    # (s. test_issue_429_channel_layouts). Geprueft wird die GESPEICHERTE
+    # Liste — die Zusicherung „per-Report-Ebene kommt unverfaelscht und in
+    # Reihenfolge aus der Datei" ist unveraendert.
+    morning_email = [m for m in dc.per_report_layouts["morning"]["email"]
+                     if not m.derived]
     assert len(morning_email) == 2
     assert morning_email[0].metric_id == "temperature"
     assert morning_email[1].metric_id == "precipitation"
 
     assert "evening" in dc.per_report_layouts
     assert "email" in dc.per_report_layouts["evening"]
-    evening_email = dc.per_report_layouts["evening"]["email"]
+    evening_email = [m for m in dc.per_report_layouts["evening"]["email"]
+                     if not m.derived]
     assert len(evening_email) == 3
     assert evening_email[0].metric_id == "wind"
     assert evening_email[1].metric_id == "gust"
@@ -174,10 +192,18 @@ def test_ac3_per_report_wins_over_per_channel():
     morning_metrics = dc.get_metrics_for_channel("email", "morning")
     ids = [m.metric_id for m in morning_metrics]
 
-    # Morgen-Override: nur temperature + precipitation (nicht das per_channel email-Layout)
-    assert ids == ["temperature", "precipitation"], (
+    # Morgen-Override: nur temperature + precipitation (nicht das per_channel
+    # email-Layout). Issue #1728 DEC-6b: die abgeleiteten Sichtbarkeits-Gates
+    # kommen aus dem Ladepfad dazu und sind hier nicht der Pruefgegenstand --
+    # die Zusicherung ist, dass NICHTS aus dem per_channel-Layout (wind/gust)
+    # durchschlaegt.
+    gewaehlt = [m.metric_id for m in morning_metrics if not m.derived]
+    assert gewaehlt == ["temperature", "precipitation"], (
         f"Morgen-Override sollte [temperature, precipitation] liefern, "
         f"nicht das per_channel-Layout [temperature, wind, gust]. Erhalten: {ids}"
+    )
+    assert "wind" not in ids and "gust" not in ids, (
+        f"per_channel-Layout schlaegt durch: {ids}"
     )
 
     evening_metrics = dc.get_metrics_for_channel("email", "evening")

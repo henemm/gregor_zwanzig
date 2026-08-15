@@ -53,6 +53,33 @@ CENTRAL_METRICS_COVERED_ELSEWHERE: dict[str, str] = {
     # gefuehlten Temperatur -- Eintrag `wind_chill_min_c` (wind_chill/min)
     # deckt sie ab (Spec-Abgrenzung 4: keine Ortsvergleich-Sonderbehandlung).
     "wind_chill_night": "#1660 — deckungsgleich mit wind_chill_min_c (wind_chill/min)",
+    # #1728 Scheibe 1: die vier Tagesrichtungen sind die Trip-Sicht auf die
+    # Tages-Spanne. Der Ortsvergleich fuehrt dieselbe ART von Aussage seit
+    # jeher als eigenen Eintrag je Auswertung (`temp_min_c` = temperature/min
+    # usw.) -- BEDEUTUNGSGLEICH, exakt dieselbe Begruendungsart wie bei den
+    # zwei Nachtgroessen oben, nicht staerker.
+    #
+    # 🔴 AUSDRUECKLICH NICHT WERTGLEICH -- die beiden Seiten fenstern
+    # verschieden und liefern deshalb VERSCHIEDENE ZAHLEN:
+    #   * Trip K/D: `collect_hiking_window_points()` -- die GEHZEIT entlang
+    #     der Route, Segmentgrenzen inklusiv/exklusiv gemischt
+    #     (sms_trip.py:237-239, renderers/day_window.py:183).
+    #   * Compare temp_min_c/temp_max_c: `resolve_configured_window()` --
+    #     ein KONFIGURIERTES Tagesfenster (Vorgabe 04-19) am festen Ort
+    #     (services/compare_location_weather_source.py:110, app/day_window.py:20).
+    # Eine fruehere Fassung dieses Kommentars behauptete "buchstaeblich
+    # dieselbe Zahl". Das war falsch und ist nachgemessen widerlegt.
+    #
+    # Rueckbaupfad: #1848 (Zusammenfuehrung von Ortsvergleich-Katalog,
+    # 3-Tages-Ausblick und Trip-Katalog auf EIN Vokabular, PO-Entscheid E4
+    # zu #1728). Danach fallen diese vier Zeilen ersatzlos weg. WER DAS TUT,
+    # MUSS DEN FENSTERUNTERSCHIED ZUERST AUFLOESEN: zwei Kennungen mit
+    # gleicher Bedeutung, aber verschiedener Fensterung zusammenzufuehren
+    # erzeugt eine Groesse, die je nach Aufrufer eine andere Zahl liefert.
+    "temperature_day_low": "#1728 — bedeutungsgleich mit temp_min_c (temperature/min), anderes Zeitfenster (s. Blockkommentar); Rueckbau mit #1848",
+    "temperature_day_high": "#1728 — bedeutungsgleich mit temp_max_c (temperature/max), anderes Zeitfenster (s. Blockkommentar); Rueckbau mit #1848",
+    "wind_chill_day_low": "#1728 — bedeutungsgleich mit wind_chill_min_c (wind_chill/min), anderes Zeitfenster (s. Blockkommentar); Rueckbau mit #1848",
+    "wind_chill_day_high": "#1728 — bedeutungsgleich mit wind_chill_max_c (wind_chill/max), anderes Zeitfenster (s. Blockkommentar); Rueckbau mit #1848",
 }
 
 # ---------------------------------------------------------------------------

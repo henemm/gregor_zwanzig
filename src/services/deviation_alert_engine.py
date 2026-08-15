@@ -25,10 +25,9 @@ from zoneinfo import ZoneInfo
 from app.models import ChangeSeverity, GPXPoint, WeatherChange
 from services.point_weather import AlertEvaluationConfig, PointWeatherData
 from services.weather_change_detection import WeatherChangeDetectionService
+from utils.timezone import UTC, local_dt
 
 logger = logging.getLogger(__name__)
-
-VIENNA = ZoneInfo("Europe/Vienna")  # Vorbild alert_daily_limit.py:21
 
 
 @dataclass
@@ -85,20 +84,18 @@ class DeviationAlertEngine:
         now: datetime,
         quiet_from: Optional[str],
         quiet_to: Optional[str],
+        zone: ZoneInfo,
         context_label: str = "",
     ) -> bool:
-        """Prüft, ob `now` (in Europe/Vienna-Lokalzeit) innerhalb des
+        """Prüft, ob `now` (in der ORTSZEIT von `zone`) innerhalb des
         konfigurierten Ruhezeit-Fensters liegt — inkl. Mitternachts-Wrap.
 
-        Issue #1312 (Scheibe D1): `now` wird VOR dem Vergleich nach
-        Europe/Vienna konvertiert, weil Nutzer die Uhrzeiten in gefühlter
-        Lokalzeit eingeben. Naive datetimes (kein tzinfo) werden als UTC
-        interpretiert (konservativ, deckungsgleich mit dem bisherigen
-        De-facto-Verhalten aller sechs Aufrufer). DST wird durch ZoneInfo
-        automatisch korrekt behandelt (Sommer +2h, Winter +1h). Vorbild:
-        `alert_daily_limit.py` (dieselbe Konvention für den
-        Tageszähler-Reset). Mitternachts-Wrap-Logik unverändert aus
-        `TripAlertService._is_quiet_hours()` übernommen.
+        Issue #1726: `zone` ist PFLICHT, ohne Default. Bis dahin rechnete die
+        Funktion fest in `Europe/Vienna` — ein Alarm um 03:00 Neuseeland-Zeit
+        ging mitten in der Nacht durch, weil er auf Wiener Uhr tagsüber lag
+        (ADR-0051 Regel 2); ein Wien-Rückfall waere dieselbe Fehlerklasse, nur
+        leiser. Umrechnung ueber `utils.timezone.local_dt` (naiv = UTC, #1345),
+        Mitternachts-Wrap unveraendert.
 
         Issue #1479 (Wurzel-Härtung): ein unbrauchbarer Ruhezeit-Wert gilt als
         „keine Ruhezeit gesetzt" (`False`) statt eine Ausnahme an den Aufrufer
@@ -108,8 +105,7 @@ class DeviationAlertEngine:
         """
         if not quiet_from or not quiet_to:
             return False
-        aware_now = now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
-        local_now = aware_now.astimezone(VIENNA)
+        local_now = local_dt(now, zone)
         try:
             from_time = time_type.fromisoformat(quiet_from)
             to_time = time_type.fromisoformat(quiet_to)
@@ -283,7 +279,12 @@ class DeviationAlertEngine:
         """
         now = now or datetime.now(timezone.utc)
 
-        if self.is_quiet_hours(now, config.quiet_from, config.quiet_to):
+        # Issue #1726: Zone aus der Konfiguration, die der Adapter aus SEINEM
+        # Gegenstand aufgeloest hat. Ohne Zone gilt Weltzeit — sichtbar hier,
+        # statt als geratene Zone irgendwo im Kern.
+        if self.is_quiet_hours(
+            now, config.quiet_from, config.quiet_to, config.zone or UTC
+        ):
             return EvaluationResult(triggered=False, suppressed_reason="quiet_hours")
 
         active_detector = self._select_detector(config)

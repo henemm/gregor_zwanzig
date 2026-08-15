@@ -26,10 +26,11 @@ from services.notification_service import (
     NotificationService,
     RadarAlertRequest,
 )
+from output.renderers.alert.segments import normalize_segment_id
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
 from services.throttle_store import ThrottleStore
-from services.trip_day import trip_local_today
+from services.trip_day import anchor_tz, trip_local_today
 from services.user_tier import premium_sms_allowed, sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import tz_for_coords
@@ -226,8 +227,19 @@ class TripAlertService:
             return False
 
         # 1. QuietHours-Check (AC-4/5/6): Alert während stiller Stunden unterdrücken
-        if self._is_quiet_hours(trip, datetime.now(timezone.utc)):
+        now_utc = datetime.now(timezone.utc)
+        if self._is_quiet_hours(trip, now_utc):
             logger.debug(f"Alert suppressed: quiet hours active for trip {trip.id}")
+            return False
+
+        # 1a2. Issue #1594: steht das geplante Briefing dieses Trips unmittelbar
+        # bevor und wurde es noch nicht versucht, waere dieser Alarm eine
+        # Doppel-Meldung — der Wetterstand kommt Minuten spaeter vollstaendig
+        # im Briefing an. Zusaetzliche, rein lesende Stufe nach der Ruhezeit
+        # und VOR dem Abruf; die bestehende Reihenfolge bleibt unangetastet
+        # (Vereinheitlichung ist #1467 S4).
+        if self._is_briefing_imminent(trip, now_utc):
+            logger.debug(f"Alert suppressed: briefing imminent for trip {trip.id}")
             return False
 
         # 1b. Throttle-Check mit per-trip Cooldown (AC-2/3)
@@ -237,7 +249,10 @@ class TripAlertService:
 
         # 1c. Issue #1070: Tages-Obergrenze nach Nutzerlevel (Free/Standard/Premium)
         # Issue #1555: reason="forecast_change" reserviert einen Anteil für NowCast.
-        if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc), reason="forecast_change"):
+        # Issue #1726: der Tageszaehler laeuft auf dem KALENDERTAG DER TOUR.
+        if not alert_daily_limit.is_allowed(
+            self._user_id, now_utc, anchor_tz(trip, now_utc), reason="forecast_change",
+        ):
             logger.debug(f"Alert suppressed: daily limit reached for trip {trip.id}")
             return False
 
@@ -272,6 +287,7 @@ class TripAlertService:
             ),
             channels=self._effective_alert_channels(trip),
             display_config=trip.display_config,
+            zone=anchor_tz(trip, now_utc),
         )
         engine = DeviationAlertEngine()
         eval_result = engine.evaluate(
@@ -341,7 +357,9 @@ class TripAlertService:
         # 7. Update throttle (only on success) + persist
         self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
         # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
-        alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
+        alert_daily_limit.increment(
+            self._user_id, now_utc, anchor_tz(trip, now_utc),
+        )
 
         return True
 
@@ -684,10 +702,42 @@ class TripAlertService:
 
         Returns:
             True if alerts should be suppressed (quiet hours active)
-        """
+
+        Issue #1726: Zone aus `anchor_tz(trip, now)` — der TAGESBEWUSSTEN
+        Aufloesung, nicht `trip_tz()`. Ein Trek durch mehrere Zonen braucht die
+        Zone SEINER AKTUELLEN Etappe, nicht die des Starttags."""
         return DeviationAlertEngine.is_quiet_hours(
             now, trip.alert_quiet_from, trip.alert_quiet_to,
+            anchor_tz(trip, now),
             context_label=trip.id,
+        )
+
+    def _is_briefing_imminent(self, trip: "Trip", now: datetime) -> bool:
+        """Issue #1594: Steht fuer diesen Trip unmittelbar ein geplantes
+        Briefing an, das noch nicht versucht wurde?
+
+        DER gemeinsame Adapter beider Trip-Alarmarten — Aenderungsalarm
+        (`check_and_send_alerts`) und amtliche Warnung
+        (`_send_official_alert_only`) fragen dieselbe Stufe, direkt nach der
+        Ruhezeit und VOR jedem Abruf. Rein lesend; das Faelligkeits-Praedikat
+        ist die seiteneffektfreie Fassung aus dem Briefing-Scheduler, die
+        `skip_next` NICHT verbraucht.
+
+        Der Anker liegt unter der PROTOKOLL-Kennung `(trip.id, "trip")` — so
+        schreibt ihn `trip_report_scheduler` (`briefing_entity_type="trip"`);
+        eine andere Kennung faende ihn nie, die Sperre bliebe nach einem
+        gescheiterten Versand das ganze Nachholfenster ueber stehen, ohne dass
+        es auffiele.
+        """
+        from services.alert_gate import check_briefing_imminent
+        from services.trip_report_scheduler import trip_briefing_due_at
+
+        return check_briefing_imminent(
+            user_id=self._user_id, entity_id=trip.id, entity_type="trip",
+            now=now, zone=anchor_tz(trip, now),
+            briefing_due_at=lambda moment: trip_briefing_due_at(
+                trip, moment, user_id=self._user_id,
+            ),
         )
 
     def _is_throttled_with_cooldown(self, trip: "Trip") -> bool:
@@ -823,38 +873,6 @@ class TripAlertService:
         """Clear radar throttle for a trip (test helper)."""
         self._throttle_store.clear(_RADAR_THROTTLE_SCOPE, trip_id)
 
-    def _radar_effective_channels(self, trip: "Trip") -> set[str]:
-        """Kanal-Set des Radar-Alarms (Issue #1023): globale Faehigkeit UND
-        Trip-Opt-in, bei SMS zusaetzlich das Tier-Gate.
-
-        Issue #1467 S3 aus der Inline-Ableitung herausgezogen — die
-        Unterdrueckungs-Protokollierung braucht dieselbe Liste bereits am
-        Gate, also vor der Erkennung. Reine Ableitung ohne Seiteneffekt, das
-        Ergebnis ist an beiden Stellen identisch; eine zweite Fassung waere
-        genau die Duplikat-Falle, die diese Scheibe beseitigt.
-        """
-        config = trip.report_config
-        channels: set[str] = set()
-        if self._settings.can_send_email() and (not config or getattr(config, "send_email", True)):
-            channels.add("email")
-        if self._settings.can_send_telegram() and config and getattr(config, "send_telegram", False):
-            channels.add("telegram")
-        if (
-            self._settings.can_send_sms() and config
-            and getattr(config, "send_sms", False) and sms_allowed(self._user_id)
-        ):
-            channels.add("sms")
-        if (
-            config and getattr(config, "send_premium_sms", False)
-            and premium_sms_allowed(self._user_id)
-        ):
-            # Bewusst OHNE can_send_*()-Bereitschaftsfrage (D2/Spec-Nachtrag
-            # 2026-08-11): Premium-SMS hat keine feste Rufnummer, die
-            # Sendebereitschaft entscheidet ausschliesslich
-            # `PremiumSmsOutput._resolve_recipient()` zur Sendezeit.
-            channels.add("premium_sms")
-        return channels
-
     def _briefing_precip_for_onset(
         self,
         snapshot,
@@ -900,7 +918,7 @@ class TripAlertService:
         Returns the number of radar alerts triggered.
         """
         from app.loader import load_all_trips
-        from services.trip_segments import convert_trip_to_segments
+        from services.trip_segments import resolve_current_segment
 
         now_utc = datetime.now(timezone.utc)
         sent = 0
@@ -909,27 +927,23 @@ class TripAlertService:
             # Issue #1697: Ortstag dieses Trips statt Serverdatum (ADR-0044) —
             # je Trip, die Zone haengt vom Trip ab.
             today = trip_local_today(trip, now_utc)
-            # Segment-Auswahl (Issue #822 — ersetzt stage.waypoints[0])
-            segments = convert_trip_to_segments(trip, today)
-            if not segments:
+            # Segment-Auswahl (Issue #822 — ersetzt stage.waypoints[0]),
+            # seit Issue #1667 S3 tagesuebergreifend: aktiv heute -> aktiv
+            # gestern -> Vorschau heute[0] -> nichts. Eine Etappe mit
+            # Abendstart und Ankunft nach Mitternacht traegt ihr Ziel-Segment
+            # bis in den Folgetag; der heutige Kalendertag allein fand es
+            # nicht (`get_stage_for_date` loest strikt per `==` auf).
+            # `segment_date` ist das Datum, dem das gewaehlte Segment
+            # ENTSTAMMT — nicht zwingend `today`, s. Schnappschuss unten.
+            _resolved = resolve_current_segment(trip, now_utc, today)
+            if _resolved is None:
+                # Keine Etappe an beiden Tagen oder alle Segmente zeitlich
+                # vorbei → kein Alert (Option Y der Spec)
+                logger.debug(
+                    f"Radar alert skipped: kein aktives/naechstes Segment fuer {trip.id}"
+                )
                 continue
-
-            # Aktives Segment: erstes mit start_time <= now_utc <= end_time
-            active = None
-            for seg in segments:
-                if seg.start_time <= now_utc <= seg.end_time:
-                    active = seg
-                    break
-
-            if active is None:
-                if now_utc < segments[0].start_time:
-                    active = segments[0]   # vor allen Segmenten → erstes
-                else:
-                    # Alle Segmente zeitlich vorbei → kein Alert (Option Y der Spec)
-                    logger.debug(
-                        f"Radar alert skipped: alle Segmente vorbei fuer {trip.id}"
-                    )
-                    continue
+            active, segment_date = _resolved
 
             # Issue #1697 AC-4: Horizont-Guard — Vorbild
             # `trip_report_scheduler.py::_build_starkregen_hint`. Ein Segment,
@@ -954,6 +968,29 @@ class TripAlertService:
                     )
                     continue
 
+            # Issue #1752 (Scheibe B zu #1745, D1/D2): Radar-Alarme folgen
+            # demselben Kanal-Resolver wie Gewitter-, Aenderungs- und amtliche
+            # Alarme — `trip.alert_channels`/`trip.alert_rules` statt der
+            # Briefing-Flags. Das Kanal-Set wird GENAU EINMAL berechnet und an
+            # allen drei Stellen (Unterdrueckungs-Protokoll, Leer-Check,
+            # Versand) geteilt; zwei leicht abweichende Ableitungen waren die
+            # Ursache dieses Bugs.
+            # D3: bewusst NACH dem Horizont-Guard oben — fuer ein Segment, das
+            # zeitlich gar nicht in Frage kommt, darf die `alert_rules`-Union
+            # nicht ausgewertet werden.
+            # Absicherung je Trip, nicht um den Stapellauf: scheitert die
+            # Kanal-Aufloesung EINES Trips (beschaedigte `alert_channels`/
+            # `alert_rules` aus der Persistenz), verlieren sonst ALLE weiteren
+            # Trips dieses Nutzers ihren Radar-Alarm — bei jedem Scheduler-Tick
+            # erneut, bis die Daten repariert sind (Muster `fix_1479`). Breite
+            # Klausel + laute Meldung mit Kennung, wie beim Nowcast-Abruf ein
+            # paar Zeilen weiter unten.
+            try:
+                effective_channels = self._effective_alert_channels(trip)
+            except Exception as e:
+                logger.error(f"Radar alert channel resolution failed for trip {trip.id}: {e}")
+                continue
+
             cooldown_min = (
                 trip.alert_cooldown_minutes
                 if trip.alert_cooldown_minutes is not None
@@ -973,6 +1010,7 @@ class TripAlertService:
                 quiet_to=trip.alert_quiet_to,
                 context_label=trip.id,
                 now=now_utc,
+                zone=anchor_tz(trip, now_utc),
                 throttle_store=self._throttle_store,
             )
             if not gate.allowed:
@@ -988,7 +1026,7 @@ class TripAlertService:
                     alert_log.append_suppressed_entry(
                         self._user_id, entity_id=trip.id, entity_type="trip",
                         reason=alert_log.REASON_NOWCAST, gate_reason=gate.reason,
-                        effective_channels=self._radar_effective_channels(trip),
+                        effective_channels=effective_channels,
                     )
                 except Exception as e:
                     logger.error(
@@ -1016,8 +1054,14 @@ class TripAlertService:
                 continue
 
             # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)
+            # Issue #1667 S3: gelesen wird unter dem Datum, dem das GEWAEHLTE
+            # Segment entstammt — nicht unter `today`. Stammt es vom Vortag
+            # (Nacht-Ankunft), liegt sein Briefing-Schnappschuss auch unter
+            # dem Vortag; mit `today` fiele der Vergleich ins Leere und ein
+            # gerade gewonnener Alarm bliebe unbegruendet unterdrueckt bzw.
+            # der angekuendigte Regen unerkannt.
             from services.weather_snapshot import WeatherSnapshotService
-            _snapshot = WeatherSnapshotService(self._user_id).load_dated(trip.id, today)
+            _snapshot = WeatherSnapshotService(self._user_id).load_dated(trip.id, segment_date)
             _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
             _briefing_precip = self._briefing_precip_for_onset(_snapshot, active.segment_id, _onset_dt)
             _briefing_announced = (_briefing_precip is not None and _briefing_precip >= 0.5)
@@ -1056,7 +1100,7 @@ class TripAlertService:
             # can_send_*()-Bereitschaftsfrage -- ein Trip mit ausschliesslich
             # Premium-SMS hat kein `sms_to`, `can_send_sms()` waere False,
             # obwohl ein funktionsfaehiger Kanal konfiguriert ist.
-            if not self._radar_effective_channels(trip):
+            if not effective_channels:
                 logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
                 continue
 
@@ -1095,6 +1139,10 @@ class TripAlertService:
                 onset_time=_onset_time_str,
                 km_from=active.start_point.distance_from_start_km,
                 km_to=active.end_point.distance_from_start_km,
+                # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne
+                # liefert — nur zusaetzlich mit ihrer Kennung, damit der
+                # Nowcast denselben Ort benennt wie die amtliche Warnung.
+                segment_id=normalize_segment_id(active.segment_id),
                 is_convective=result.is_convective,
                 intensity_label=_label,
                 source_label=radar_svc.source_label(result.source),
@@ -1102,18 +1150,12 @@ class TripAlertService:
                 tz=tz,
             )
 
-            # Issue #1023: Kanal-Set für NotificationService bauen; der Service prüft
-            # selbst can_send_*(). Trip-Ebene darf Kanäle explizit deaktivieren.
-            effective_channels = self._radar_effective_channels(trip)
-
-            if not effective_channels:
-                logger.info(f"Radar alert: alle Kanäle auf Trip-Ebene deaktiviert, kein Recording für {trip.id}")
-                continue
-
-            # Issue #1461 S3b-2a: eigenstaendige Inline-Ableitung (Kontext-
-            # Risiko 5) -- ruft `_effective_alert_channels()` bewusst NICHT
-            # auf, muss die Kanal-Schwelle deshalb hier ERNEUT anwenden, sonst
-            # bleibt der Regenradar-Pfad dauerhaft ungefiltert.
+            # Kanal-Schwelle (ADR-0046) auf dem oben einmalig berechneten,
+            # geteilten Kanal-Set. Bis #1752 stand hier ein dritter Aufruf der
+            # eigenen Radar-Ableitung samt zweitem Leer-Check — beides
+            # entfallen: die Aufloesung ist rein, `trip` bleibt zwischen dem
+            # Leer-Check oben (`if not effective_channels`) und dieser Stelle
+            # unveraendert.
             _radar_urgency = alert_urgency.urgency_from_radar(
                 is_convective=_radar_request.is_convective,
                 intensity_label=_radar_request.intensity_label,
@@ -1166,6 +1208,7 @@ class TripAlertService:
             record_nowcast_sent(
                 user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
                 throttle_key=trip.id, now=datetime.now(timezone.utc),
+                zone=anchor_tz(trip, now_utc),
                 throttle_store=self._throttle_store,
             )
             sent += 1
@@ -1438,13 +1481,22 @@ class TripAlertService:
         (has_active_rules, _filter_significant_changes), da ein eigenständiger
         amtlicher Trigger laut PO-Entscheidung unabhängig vom Wetter-Delta feuern soll.
         """
-        if self._is_quiet_hours(trip, datetime.now(timezone.utc)):
+        now_utc = datetime.now(timezone.utc)
+        if self._is_quiet_hours(trip, now_utc):
             logger.debug(f"Official alert suppressed: quiet hours active for trip {trip.id}")
+            return False
+        # Issue #1594: dieselbe Stufe wie im Aenderungspfad, gleiche Position
+        # (nach der Ruhezeit) — die Warnung erscheint im Briefing, das
+        # unmittelbar folgt (AC-16), statt zusaetzlich als eigene Nachricht.
+        if self._is_briefing_imminent(trip, now_utc):
+            logger.debug(f"Official alert suppressed: briefing imminent for trip {trip.id}")
             return False
         if self._is_throttled_with_cooldown(trip):
             logger.debug(f"Official alert throttled for trip {trip.id}")
             return False
-        if not alert_daily_limit.is_allowed(self._user_id, datetime.now(timezone.utc)):
+        if not alert_daily_limit.is_allowed(
+            self._user_id, now_utc, anchor_tz(trip, now_utc),
+        ):
             logger.debug(f"Official alert suppressed: daily limit reached for trip {trip.id}")
             return False
 
@@ -1485,7 +1537,9 @@ class TripAlertService:
         if result.sent:
             self._record_official_alert_state(trip.id, official_notices)
             self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
-            alert_daily_limit.increment(self._user_id, datetime.now(timezone.utc))
+            alert_daily_limit.increment(
+                self._user_id, now_utc, anchor_tz(trip, now_utc),
+            )
         return result.sent
 
     def _effective_alert_channels(self, trip: "Trip") -> set[str]:

@@ -82,8 +82,16 @@ PARAMS = ("t_2m", "u_10m", "v_10m", "tot_prec")
 # hier liest, statt sie zu wiederholen — genau diese Naht fehlte bei S2a
 # (`LITOTA3` existierte beim Dienst nicht, jeder Abruf lief lautlos in 404).
 # Reihenfolge = Reihenfolge der Signale; Index 0 ist das Signal, das der
-# Einzelwert-Pflichtteil des Protokolls liefert.
-THUNDER_PARAMS = ("lpi", "grau_gsp")
+# Einzelwert-Pflichtteil des Protokolls liefert. Reihenfolge = Ausfallreihen-
+# folge bei Budget-Ende (#1531, Spec AC-7): `lpi`, `grau_gsp`, `cin_ml` stehen
+# vorn, damit sie bei erschoepftem Budget sicher schon abgerufen sind.
+# `uh_max_med` steht bewusst vor `uh_max`/`uh_max_low` -- die einzigen
+# publizierten Schwellen (SPC 75/150 m^2/s^2) beziehen sich auf die Schicht
+# 2-5 km, also auf `uh_max_med` (Spec Implementation Details Punkt 2).
+THUNDER_PARAMS = (
+    "lpi", "grau_gsp", "cin_ml", "sdi_2", "cape_ml", "lpi_max",
+    "uh_max_med", "uh_max", "uh_max_low",
+)
 
 # `grau_gsp` ist seit Laufbeginn KUMULIERT (empirisch 2026-08-03, Zelle
 # 45,94N/7,86O: ab +8h konstant 3,3035 ueber +12/+16/+20/+24h) — exakt wie
@@ -105,7 +113,10 @@ THUNDER_FILL_VALUE = 9999.0
 # meteofrance.py:114 — dort 180s fuer 96 Calls, also ~1,9s je Call; fuer die
 # bis zu 48 zusaetzlichen Calls hier ergibt das 90s. Fest, nicht rollend
 # (Lehre #1448): EINMAL je Abruf gebildet, dann vor jedem Einzel-Call geprueft.
-THUNDER_FETCH_DEADLINE_SECONDS = 90.0
+# #1531: 9 statt 2 Signale x 24h ergibt bis zu 216 Abrufe (Regelfall ~52s,
+# gemessen 0,24s je Abruf) -- auf 150s angehoben (PO-Entscheid 2026-08-08),
+# damit auch ein langsamer Lauf traegt.
+THUNDER_FETCH_DEADLINE_SECONDS = 150.0
 
 # Rueckfall auf hoechstens zwei aeltere Laeufe (je 3h), macht bis zu 6h
 # zurueck ab dem bereits 3h zurueckgesetzten `_latest_run` (Spec AC-7). Ein
@@ -192,7 +203,11 @@ def _build_url(run: datetime, offset: int, param: str) -> str:
     )
 
 
-def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[float]:
+CIN_ML_LOWER_SENTINEL = -999.9
+
+def _read_point_value(
+    compressed: bytes, lat: float, lon: float, param: Optional[str] = None,
+) -> Optional[float]:
     """Entpackt eine `.grib2.bz2`-Antwort und liest den Pixelwert von Band 1
     an (lat, lon) — Muster meteofrance._read_point_value, ergänzt um den
     `bz2.decompress`-Schritt (ICON-D2 liefert komprimiert, AROME-WCS nicht).
@@ -201,7 +216,13 @@ def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[flo
     `None` — sonst stuende er als echter Messwert in der Vorhersage. Quelle
     der Wahrheit ist `dataset.nodata`; ist es nicht gesetzt, traegt der
     bekannte Sentinel. Vergleich `>=`: echte Messwerte erreichen diese
-    Groessenordnung nie."""
+    Groessenordnung nie.
+
+    #1531 Spec Implementation Details Punkt 3: `cin_ml` traegt einen ZWEITEN
+    Fehlwert-Marker nach UNTEN (-999,9, gemessen bei 46 % der Gitterpunkte).
+    Die Pruefung ist JE PARAMETER gefuehrt, nicht global -- ein anderer
+    Parameter mit einem echten Wert um -999,9 waere sonst faelschlich
+    verworfen (Analogieschluss-Warnung dwd_eu.py)."""
     try:
         raw = bz2.decompress(compressed)
         with MemoryFile(raw) as memfile, memfile.open() as dataset:
@@ -214,7 +235,11 @@ def _read_point_value(compressed: bytes, lat: float, lon: float) -> Optional[flo
                 if dataset.nodata is not None
                 else THUNDER_FILL_VALUE
             )
-            return None if wert >= sentinel else wert
+            if wert >= sentinel:
+                return None
+            if param == "cin_ml" and wert <= CIN_ML_LOWER_SENTINEL:
+                return None
+            return wert
     except Exception:
         logger.warning("GRIB2-Parsing fehlgeschlagen", exc_info=True)
         return None
@@ -321,7 +346,7 @@ class DwdDirectProvider:
                 )
             url = _build_url(run, offset, param)
             raw = self._request(url)
-            values[offset] = _read_point_value(raw, lat, lon)
+            values[offset] = _read_point_value(raw, lat, lon, param)
         return values
 
     def _thunder_point(
@@ -371,7 +396,7 @@ class DwdDirectProvider:
                 )
                 return None
             zustand["bestaetigt"] = True
-            wert = _read_point_value(raw, lat, lon)
+            wert = _read_point_value(raw, lat, lon, param)
             # AC-2: "keine Aussage" ist nicht "keine Gefahr" — der Fuellwert
             # ausserhalb des Modellgebiets wird NIE durchgereicht und NIE 0.
             # Seit #1354 filtert ihn `_read_point_value` zentral zu None.
@@ -423,39 +448,57 @@ class DwdDirectProvider:
             # Zeitgrenze fest, nicht rollend (Lehre #1448): EINMAL je Abruf
             # gebildet, dann vor JEDEM Einzel-Call geprueft.
             deadline_at = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
+            roh_je_param: Dict[str, Dict[int, Optional[float]]] = {
+                param: {} for param in THUNDER_PARAMS
+            }
+            anker_je_param: Dict[str, Optional[float]] = {
+                param: 0.0 for param in THUNDER_PARAMS
+            }
+            # Anker der Differenzbildung je kumuliertem Signal: der kumulierte
+            # Stand eine Stunde VOR dem ersten angefragten Zeitschritt. Nur
+            # wenn `base` tatsaechlich auf dem Lauf sitzt, ist dieser Stand 0
+            # (nichts kumuliert). Sonst -- dem Regelfall, weil der
+            # Bezugszeitpunkt praktisch immer Stunden nach dem Lauf liegt --
+            # wird er echt abgerufen: EIN zusaetzlicher Call je kumuliertem
+            # Signal, VOR dem eigentlichen Zeitschritt-Abruf unten.
+            abgebrochen = False
+            for param in THUNDER_PARAMS:
+                if param not in THUNDER_CUMULATIVE_PARAMS or not offsets or not (base > run):
+                    continue
+                if _thunder_budget_erschoepft(deadline_at):
+                    abgebrochen = True
+                    break
+                anker_je_param[param] = self._thunder_point(
+                    param, lat, lon, base, kandidaten, zustand,
+                )
+            # #1531 AC-7: je ZEITSCHRITT ALLE Signale in THUNDER_PARAMS-
+            # Reihenfolge abrufen (nicht je Signal alle Zeitschritte) --
+            # sonst wuerde ein knappes Budget allein das VORDERSTE Signal
+            # aufzehren, obwohl die Reihenfolge bewusst die kontingent-
+            # kritischsten Signale VORN platziert (Spec Implementation
+            # Details Punkt 2): die hinteren Signale sollen bei Budget-Ende
+            # ausfallen, nicht die hinteren Zeitschritte EINES Signals.
+            if not abgebrochen:
+                for offset in offsets:
+                    if abgebrochen:
+                        break
+                    for param in THUNDER_PARAMS:
+                        if _thunder_budget_erschoepft(deadline_at):
+                            abgebrochen = True
+                            break
+                        roh_je_param[param][offset] = self._thunder_point(
+                            param, lat, lon, base + timedelta(hours=offset),
+                            kandidaten, zustand,
+                        )
             for param in THUNDER_PARAMS:
                 kumuliert = param in THUNDER_CUMULATIVE_PARAMS
-                # Anker der Differenzbildung: der kumulierte Stand eine Stunde
-                # VOR dem ersten angefragten Zeitschritt. Nur wenn `base`
-                # tatsaechlich auf dem Lauf sitzt, ist dieser Stand 0 (nichts
-                # kumuliert). Sonst — dem Regelfall, weil der Bezugszeitpunkt
-                # praktisch immer Stunden nach dem Lauf liegt — wird er echt
-                # abgerufen: EIN zusaetzlicher Call je kumuliertem Signal.
-                # Ohne ihn traegt die erste gelieferte Stunde die gesamte
-                # Kumulation seit Laufbeginn und ist systematisch zu hoch.
-                anker: Optional[float] = 0.0
-                if kumuliert and offsets and base > run:
-                    if _thunder_budget_erschoepft(deadline_at):
-                        break
-                    anker = self._thunder_point(
-                        param, lat, lon, base, kandidaten, zustand,
-                    )
-                roh: Dict[int, Optional[float]] = {}
-                erschoepft = False
-                for offset in offsets:
-                    if _thunder_budget_erschoepft(deadline_at):
-                        erschoepft = True
-                        break
-                    roh[offset] = self._thunder_point(
-                        param, lat, lon, base + timedelta(hours=offset),
-                        kandidaten, zustand,
-                    )
                 ergebnis[param] = (
-                    _precip_series_from_cumulative(roh, ndigits=4, vorwert=anker)
-                    if kumuliert else roh
+                    _precip_series_from_cumulative(
+                        roh_je_param[param], ndigits=4,
+                        vorwert=anker_je_param[param],
+                    )
+                    if kumuliert else roh_je_param[param]
                 )
-                if erschoepft:
-                    break
         except Exception:
             logger.warning("Gewitter-Abruf fehlgeschlagen", exc_info=True)
         # #1492 S2a Implementation Details Punkt 3: NACH dem try/except, damit

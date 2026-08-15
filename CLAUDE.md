@@ -243,7 +243,7 @@ Globale Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
 | Schritt | Was |
 |---|---|
 | 1 | Arbeitsbranch pushen: `git push -u origin <branch>` (nie direkt `main`; Server-Sessions: Themen-Branch oder `ws/<name>` aus gz-workspace) |
-| 1b | PR eröffnen (`gh pr create --fill`) und CI-Ampel abwarten — **alle 5 Checks grün** auf dem letzten Stand, sonst erst fixen (Merge-Regel unten) |
+| 1b | PR eröffnen (`gh pr create --fill`) und CI-Ampel abwarten — **alle 6 Checks grün** auf dem letzten Stand, sonst erst fixen (Merge-Regel unten) |
 | 1c | Mergen (`gh pr merge --merge`) — erst damit ist `main` aktualisiert |
 | 2 | Auto-Deploy auf Staging abwarten (~5 Min, Cron `*/5`) |
 | 3 | Staging-Validierung (s.u.) |
@@ -261,14 +261,19 @@ Wird ein Push nach `main` von GitHub abgewiesen, ist das kein Fehler, sondern di
 
 ### CI-Ampel & Merge-Regel (Tech-Lead-Entscheid 2026-08-04, #1196)
 
-Die 5 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test`) sind die **CI-Ampel**. Seit PR #1497 ist sie vollständig grün bei ehrlichem Umfang (`test`-Job: 5837 Tests inkl. `tests/tdd/` + pytest-socket-Egress-Wächter).
+Die 6 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`) sind die **CI-Ampel**. Seit PR #1497 ist sie vollständig grün bei ehrlichem Umfang (`test`-Job: 5837 Tests inkl. `tests/tdd/` + pytest-socket-Egress-Wächter). `e2e` kam mit #1771 Scheibe 2 hinzu (2026-08-13) — eigener, paralleler Job (kein `needs:`), isolierter Offline-Stack + wachstumsbeschränkte Playwright-Positivliste (`.github/ci_e2e_specs.txt`), Details: ADR-0054.
 
-- **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 5 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
+- **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 6 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
 - **Wird `main` trotzdem rot** (Altbestand, Notfall-Push): Drive-to-green hat Vorrang vor neuer Feature-Arbeit — wer es findet, fixt es oder ordnet es belegt zu.
 - **tdd-Ratsche:** `.github/ci_tdd_excludes.txt` listet die offline-roten `tests/tdd/`-Dateien. Nur ENTFERNEN erlaubt (Datei grün gemacht → Zeile raus); neue tdd-Dateien laufen automatisch auf CI. Ergänzen einer Zeile nur mit Begründung im PR.
-- **Branch-Protection ist beschlossen (PO-go 2026-08-05):** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow (oben). Den mechanischen Schalter (GitHub → Settings → Branches: PR-Pflicht + die 5 Status-Checks als required) setzt der PO; bis er gesetzt ist, gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
+- **e2e-Ratsche (umgekehrte Richtung):** `.github/ci_e2e_specs.txt` ist eine Positivliste und darf nur WACHSEN — eine Ausschlussliste würde eine grüne Grundmenge voraussetzen, die eine Stichprobenmessung (30,6 % rot) widerlegt hat. Stand nach #1771 S3 (2026-08-14): **45 Dateien / 224 Testfälle**. Aufnahme nur nach **Filter A** (strukturell) + **Filter B** (3× hintereinander grün) + **Filter C** (die Datei darf beim Laufen keine *versionierte* Datei verändern — 3 Specs schrieben Screenshots ohne `../` nach `frontend/docs/artifacts/`, das die Ignore-Regel `docs/artifacts/` nicht abdeckt). Specs: `fix_1771_s2_playwright_ci_ampel.md` (Lane) und `fix_1771_s3_e2e_listen_wachstum.md` (Wachstum, Verfahren, Abbruchgrenze).
+  - 🔴 **Filter B MUSS im ZIELVERBUND gemessen werden**, nie im Kandidatenverbund. Genau daran hing #1771 S3: zwei Dateien waren im 51er-Verbund grün und in der echten Positivliste **rot** — `bug-703-login-ratelimit.spec.ts` feuert absichtlich 32 Anmeldungen gegen das IP-Limit von 30/Stunde (`internal/router/router.go`) und verbrennt das Kontingent des **ganzen Jobs**; Playwright sortiert **alphabetisch**, die CLI-Reihenfolge ist wirkungslos. Deshalb läuft die Datei in `ci.yml` als eigener, nachgelagerter Aufruf. Bestandsdateien merken nichts davon (sie nutzen `storageState`) — es trifft nur Dateien mit **eigenem** Login, also ausgerechnet Mandantentrennungs-Tests. **Der Split behandelt das Symptom; beim nächsten Wachstum um Login-Tests neu bewerten.**
+  - **Beide Schwellen exakt nachziehen, kein Puffer** (F006): `E2E_MIN_SPECS` ist mechanisch an die Listenlänge gebunden (`tests/unit/test_e2e_positivliste_ratschen_bindung.py`, prüft auch Filter C); `E2E_MIN_EXECUTED_HAUPT`/`_RATELIMIT` bleiben **Handpflege** — ohne echten Browserlauf nicht statisch ableitbar, als Known Limitation benannt statt als gelöst behauptet.
+  - **Der rote Restbestand ist veraltet, nicht kaputt:** #1771 S3 hat 200 rote Testfälle diagnostiziert — **0 echte Produktfehler**, dafür 22 gesuchte Testids, die es im Frontend nicht mehr gibt. Es gibt **keinen gemeinsamen Hebel** (dreifach belegt, ADR-0054-Nachtrag) ⇒ jede weitere Aufnahme ist Einzelfallarbeit. Diese Messung nicht wiederholen.
+- **Branch-Protection ist beschlossen (PO-go 2026-08-05):** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow (oben). Den mechanischen Schalter (GitHub → Settings → Branches: PR-Pflicht + die 6 Status-Checks als required) setzt der PO; bis er gesetzt ist, gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
 
-*Regel-Budget: Prüfdatum 2026-11-02. Fang-Beleg bei Einführung: 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196, PRs #1494/#1496/#1497).*
+*Regel-Budget (5-Checks-Ampel): Prüfdatum 2026-11-02. Fang-Beleg bei Einführung: 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196, PRs #1494/#1496/#1497).*
+*Regel-Budget (6. Check `e2e`, #1771 S2): Prüfdatum 2026-11-11. Fang-Kriterium: mindestens ein PR, in dem die Lane eine Regression fängt, die die anderen fünf Checks durchlassen — sonst Rückbau. #1771 S3 vergrößert die Fangfläche von 173 auf 224 Testfälle, ändert das Kriterium aber nicht.*
 
 ## Monitoring
 
@@ -309,7 +314,7 @@ Beide Wächter lassen bei **eigener** Störung immer durch und sagen es — ein 
 
 Signal ist entfernt: kein `SignalOutput`/`signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`. Wiedereinführung müsste neu spezifiziert werden. (Callmebot bleibt serverseitig für andere Dienste.)
 
-**Die Kanal-Liste lautet seit 2026-08-10 vier, nicht drei:** E-Mail · Telegram · SMS · Premium-SMS. Hier stand bis dahin „Kanäle sind nur noch E-Mail · Telegram · SMS" — das war nach der Signal-Entfernung richtig und ist seit #1676 S2a (ADR-0049, schreibt ADR-0004 fort) überholt. Premium-SMS ist heute nur im **Trip-Briefing** verdrahtet; Alarm- und Vergleichspfad folgen mit #1701, die Oberfläche mit S3. Zur Gleichrangigkeit der vier Kanäle siehe „Projekt-Ueberblick" oben.
+**Die Kanal-Liste lautet seit 2026-08-10 vier, nicht drei:** E-Mail · Telegram · SMS · Premium-SMS. Hier stand bis dahin „Kanäle sind nur noch E-Mail · Telegram · SMS" — das war nach der Signal-Entfernung richtig und ist seit #1676 S2a (ADR-0049, schreibt ADR-0004 fort) überholt. Als **Versandkanal** ist Premium-SMS weiterhin nur im **Trip-Briefing** verdrahtet (kein Ortsvergleich-Versand). Als **Alarm-Kanal** ist Premium-SMS seit #1701 (Backend) und #1745 Scheibe A (Oberfläche, Alarme-Reiter) in **beiden** Flächen (Trip UND Ortsvergleich) verdrahtet — hier stand bis 2026-08-11 „Alarm- und Vergleichspfad folgen mit #1701, die Oberfläche mit S3", das ist damit eingeholt. Wirkt für **alle** Alarmarten inklusive Regen-/Radar-Alarme — hier stand bis 2026-08-13 „nicht für Regen-/Radar-Alarme, die weiterhin am Briefing-Flag hängen (Scheibe B, #1752, offen)"; #1752 ist seit 2026-08-12 geschlossen, Radar-Alarme laufen seither über dieselbe geteilte Kanal-Auflösung wie alle anderen Alarme (bestätigt per Paritäts-Audit #1533, 2026-08-13). Zur Gleichrangigkeit der vier Kanäle siehe „Projekt-Ueberblick" oben.
 
 ## Confidence (Vorhersage-Verlässlichkeit) — NICHT wählbar als Metrik (2026-06-10, Issue #710)
 

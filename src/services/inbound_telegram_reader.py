@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 import httpx
 
@@ -24,6 +24,7 @@ from services.trip_command_processor import (
     TripCommandProcessor,
     _BARE_KEYWORD_MAP,
 )
+from services.trip_day import trip_local_today
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +185,11 @@ class InboundTelegramReader:
             return True
 
         # Aktiven Trip ermitteln (user-scoped)
-        trip = self._find_active_trip(user_id)
+        # #1727 S5a: EIN Zeitpunkt fuer Trip-Auswahl UND Nachrichtenstempel --
+        # vorher zwei knapp versetzte datetime.now()-Aufrufe, die an der
+        # Tagesgrenze auf verschiedene Ortstage fallen konnten.
+        now_utc = datetime.now(tz=timezone.utc)
+        trip = self._find_active_trip(now_utc, user_id)
         if not trip:
             mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
@@ -224,7 +229,7 @@ class InboundTelegramReader:
             trip_name=trip.name,
             body=body,
             sender=chat_id,
-            received_at=datetime.now(tz=timezone.utc),
+            received_at=now_utc,
             user_id=user_id,
         )
 
@@ -311,14 +316,16 @@ class InboundTelegramReader:
 
             body = self._callback_to_body(data)  # None bei unbekannt
             if body and message_id is not None and chat_id:
-                trip = self._find_active_trip(user_id)
+                # #1727 S5a: ein Zeitpunkt fuer Auswahl und Stempel (s. oben).
+                now_utc = datetime.now(tz=timezone.utc)
+                trip = self._find_active_trip(now_utc, user_id)
                 if trip:
                     inbound = InboundMessage(
                         channel="telegram",
                         trip_name=trip.name,
                         body=body,
                         sender=chat_id,
-                        received_at=datetime.now(tz=timezone.utc),
+                        received_at=now_utc,
                         user_id=user_id,
                     )
                     result: CommandResult = TripCommandProcessor().process(inbound)
@@ -349,26 +356,46 @@ class InboundTelegramReader:
             return f"### {data}"
         return None
 
-    def _find_active_trip(self, user_id: str = "default") -> Trip | None:
+    def _find_active_trip(
+        self, now_utc: datetime, user_id: str = "default",
+    ) -> Trip | None:
         """Aktiver Trip = erster Trip mit Datum-Overlap.
 
         Fallback: nächster zukünftiger Trip.
         Gibt None zurück wenn keine Trips existieren.
+
+        Issue #1727 S5a: "heute" ist der ORTStag DIESES Trips (ADR-0044), nicht
+        das Datum der Serveruhr. Der Vergleichstag wird deshalb IN der Schleife
+        je Trip bestimmt -- vorher stand er davor und galt fuer alle gleich.
+        Wortgleiches Muster zu `trip_report_scheduler._get_active_trips`
+        (#1724): ein einziger, aus nur einer Tour abgeleiteter Tag waehlt an der
+        Tourgrenze die bereits abgelaufene Tour, und diese Auswahl sitzt vor
+        JEDEM Telegram-Befehl. Auch der Zukunfts-Rueckfall rechnet je Trip.
+
+        Args:
+            now_utc: Zeitpunkt der eingehenden Nachricht. Pflichtparameter --
+                ein Default auf die Systemuhr wuerde genau die Umgebungsuhr
+                wieder einfuehren, die ADR-0051 Regel 3 verbietet.
+            user_id: Mandant, dessen Touren durchsucht werden.
         """
-        today = date.today()
         trips = load_all_trips(user_id)
         if not trips:
             return None
 
-        # 1. Overlap: stage[0].date <= heute <= stage[-1].date
+        # 1. Overlap: stage[0].date <= Ortstag DIESES Trips <= stage[-1].date
         for trip in trips:
             if not trip.stages:
                 continue
+            today = trip_local_today(trip, now_utc)
             if trip.stages[0].date <= today <= trip.stages[-1].date:
                 return trip
 
-        # 2. Fallback: frühester zukünftiger Trip
-        future = [t for t in trips if t.stages and t.stages[0].date > today]
+        # 2. Fallback: frühester zukünftiger Trip — "zukuenftig" ebenfalls am
+        #    Ortstag DIESES Trips gemessen, nicht an einem gemeinsamen Wert.
+        future = [
+            t for t in trips
+            if t.stages and t.stages[0].date > trip_local_today(t, now_utc)
+        ]
         if future:
             return min(future, key=lambda t: t.stages[0].date)
 

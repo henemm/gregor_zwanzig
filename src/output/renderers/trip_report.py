@@ -46,6 +46,7 @@ from output.renderers.day_window import resolve_configured_window
 import services.alert_urgency as alert_urgency
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
+from output.renderers.compare_outlook_metric_ids import resolve_trip_outlook_metrics
 from output.renderers.email import render_email
 from output.renderers.email.helpers import (
     NO_HOURLY_COLUMN_METRIC_IDS,
@@ -211,6 +212,12 @@ class TripReportFormatter:
             multi_day_trend=effective_trend,
             outlook_state=outlook_state,
             outlook_horizon_days=outlook_horizon_days,
+            # Issue #1720 S1 (F001): Ausblick-Spalten HIER einmal aufloesen,
+            # aus dem UNGEKOLLABIERTEN Stand (Muster #1575) -- der Ausblick
+            # hat keine Kanal-Ebene. Renderer bekommen nur das Ergebnis.
+            outlook_metrics=resolve_trip_outlook_metrics(
+                _dc_uncollapsed, report_type,
+            ),
             changes=changes,
             stage_name=stage_name,
             stage_stats=stage_stats,
@@ -253,11 +260,37 @@ class TripReportFormatter:
 
         # Issue #1001: Multi-Bubble-Telegram-Rendering (ersetzt #360-Narrow-Body).
         # Reine Zusatzberechnung — email_plain bleibt unveraendert.
+        # Issue #1719 Scheibe 2 (K2): Telegram folgt ohne eigene Kanal-Ebene
+        # der GRUNDAUSWAHL, nicht der kollabierten E-Mail-Auswahl (analog dem
+        # _dc_uncollapsed-Muster fuer SMS, #1575). seg_tables (oben, Z. 146)
+        # bleibt fuer die E-Mail unveraendert (AC-6) -- Telegram bekommt eine
+        # EIGENE, aus derselben unverfaelschten Basis gebaute Zeilenmenge,
+        # sonst blieben Telegram-Zellen leer ("-"), weil _dp_to_row() nur
+        # Metriken eintraegt, die in der uebergebenen dc enabled sind.
+        _telegram_active_metrics = [
+            dataclasses.replace(mc, enabled=True)
+            for mc in _dc_uncollapsed.get_metrics_for_channel("telegram", report_type)
+        ]
+        _dc_telegram = dataclasses.replace(_dc_uncollapsed, metrics=_telegram_active_metrics)
+        seg_tables_telegram = [self._extract_hourly_rows(s, _dc_telegram) for s in segments]
+        # Adversary F004 (S2-Fix-Runde): dc=_dc_telegram statt dc=_dc_uncollapsed
+        # -- render_telegram_bubbles() liest dc NICHT nur fuer die
+        # Spalten-/Zeilenermittlung (render_for_channel(), idempotent gegen
+        # eine bereits kaskadierte dc), sondern narrow.py:735/741/776 lesen
+        # dc.get_enabled_metric_ids() DIREKT, ohne durch get_metrics_for_channel()
+        # zu gehen. Mit _dc_uncollapsed (der rohen, ungefilterten Grundauswahl)
+        # blieb die Telegram-Kurzuebersicht + Fusszeile (Sicht/0°C-Grenze/
+        # Gewitter) vom D1-D4-Schnitt UNBERUEHRT -- eine Metrik mit
+        # evening_enabled=False erschien dort trotzdem (als "-"-Geisterzeile
+        # bzw., mit passenden Segment-Aggregaten, mit echtem Zahlenwert).
+        # _dc_telegram traegt bereits die report-typ- UND kanal-kaskadierte
+        # Menge (Z. 266-270 oben) -- EINE Quelle fuer Tabellenspalten,
+        # Kurzuebersicht UND Fusszeile.
         from output.renderers.narrow import render_telegram_bubbles
         telegram_bubbles_result = render_telegram_bubbles(
             segments=segments,
-            seg_tables=seg_tables,
-            dc=dc,
+            seg_tables=seg_tables_telegram,
+            dc=_dc_telegram,
             report_type=report_type,
             tz=self._tz,
             trip_name=trip_name,
@@ -379,29 +412,13 @@ class TripReportFormatter:
             for metric_id, syms in SMS_MULTI_SYMBOLS_BY_METRIC.items()
             for sym in syms
         ]
-        # Issue #1660 Scheibe A Mechanismus 2: die seit #1357 bestehende
-        # Auswertungswahl (MetricConfig.aggregations) gated zusaetzlich K/D
-        # bzw. FK/FD -- bisher las die SMS-Kette sie gar nicht (nur die
-        # E-Mail-Kachelzeile, email/html.py:1430). DEC-2: Quelle ist die
-        # GLOBALE Metrikliste (_global_metrics), NICHT die Kanal-Kaskade --
-        # gespeicherte Kanal-Layouts fuehren keine eigene Auswertungswahl und
-        # fallen beim Laden auf min+max zurueck (loader.py:841/874); laese
-        # das Gate aus der Kaskade, waere eine Abwahl bei jedem kanal-
-        # konfigurierten Trip wirkungslos (AC-6). DEC-1: 'avg' kennt die SMS
-        # nicht -- weder 'min' noch 'max' gewaehlt heisst BEIDE Token
-        # entfallen (nicht in _AGG_GATE_SYMBOLS aufgefuehrt: N/FN -- eigene
-        # Groessen ohne Auswertungswahl, #1484/#1660).
-        _AGG_GATE_SYMBOLS: dict[str, tuple[str, str]] = {
-            "K": ("temperature", "min"), "D": ("temperature", "max"),
-            "FK": ("wind_chill", "min"), "FD": ("wind_chill", "max"),
-        }
-        _disabled_sms_specs += [
-            MetricSpec(symbol=sym, enabled=False)
-            for sym, (metric_id, agg_key) in _AGG_GATE_SYMBOLS.items()
-            if metric_id in active_metric_ids
-            and metric_id in _global_metrics
-            and agg_key not in _global_metrics[metric_id].aggregations
-        ]
+        # Issue #1728 Scheibe 1 (DEC-4): das zusaetzliche Auswertungs-Gate
+        # (_AGG_GATE_SYMBOLS, #1660 A Mechanismus 2) entfaellt ersatzlos.
+        # K/D/FK/FD haengen jetzt an je eigenen Katalog-Groessen
+        # (temperature_day_low/_high, wind_chill_day_low/_high), die die
+        # Schleife oben bereits generisch ueber SMS_MULTI_SYMBOLS_BY_METRIC
+        # gegen active_metric_ids prueft -- zwei parallele Gating-Mechanismen
+        # fuer dieselbe Frage waeren der Fehler, den DEC-1 vermeidet.
         # Issue #1461 S3b-2a: SMS-Kanal-Schwelle des Trips -> niedrigste
         # amtliche Warnstufe fuer den Kurznachrichten-Bericht (Startwert
         # 'gering', s. SMSTripFormatter.format_sms Docstring).
@@ -621,6 +638,10 @@ class TripReportFormatter:
         # ueber die geteilte Aggregation (ja > unbekannt > nein).
         from output.metric_format import hail_priority
         row["_hail_flag"] = hail_priority(getattr(dp, "hail_flag", None) for dp in dps)
+        from output.metric_format import union_of_max_carriers
+        row["_thunder_signals"] = union_of_max_carriers(
+            (dp.thunder_level, getattr(dp, "thunder_level_signals", None)) for dp in dps
+        )
 
         return row
 
@@ -659,6 +680,7 @@ class TripReportFormatter:
         # Issue #1475 Nachbesserung (Punkt 2a): Seitenkanal fuer das Hagel-
         # Kennzeichen der Stunde — Quelle des Doppelrings in der Gewitter-Spalte.
         row["_hail_flag"] = getattr(dp, "hail_flag", None)
+        row["_thunder_signals"] = getattr(dp, "thunder_level_signals", None)
         return row
 
     # ------------------------------------------------------------------

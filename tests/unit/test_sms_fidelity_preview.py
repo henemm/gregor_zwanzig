@@ -44,8 +44,13 @@ from output.tokens.render import render_line
 # metric_id "temperature_night", nicht mehr an "temperature".
 # Issue #1660 Scheibe A: dieselbe Trennung jetzt auch auf der gefuehlten
 # Seite -- "FN" haengt an der eigenen metric_id "wind_chill_night".
+# Issue #1728 Scheibe 1: "K"/"D" bzw. "FK"/"FD" haengen an je eigenen
+# metric_ids; "temperature" traegt gar kein Symbol mehr, "wind_chill" nur
+# noch "WC".
 ALL_SMS_METRIC_IDS = [
-    "temperature", "temperature_night", "wind_chill", "wind_chill_night",
+    "temperature_day_low", "temperature_day_high", "temperature_night",
+    "wind_chill", "wind_chill_day_low", "wind_chill_day_high",
+    "wind_chill_night",
     "precipitation", "rain_probability", "wind", "gust", "thunder",
     "snow_depth", "snowfall_limit", "fresh_snow",
 ]
@@ -56,9 +61,12 @@ ALL_SMS_METRIC_IDS = [
 # dupliziert (nicht importiert), damit der Test unabhängig von der internen
 # Ableitung bleibt und wirklich das SICHTBARE Symbol im Rendertext prüft.
 METRIC_TO_SYMBOLS = {
-    "temperature": ("K", "D"),
+    "temperature_day_low": ("K",),
+    "temperature_day_high": ("D",),
     "temperature_night": ("N",),
-    "wind_chill": ("FK", "FD", "WC"),
+    "wind_chill": ("WC",),
+    "wind_chill_day_low": ("FK",),
+    "wind_chill_day_high": ("FD",),
     "wind_chill_night": ("FN",),
     "precipitation": ("R",),
     "rain_probability": ("PR",),
@@ -111,7 +119,7 @@ class TestAC1_NoTruncationByteIdentical:
     wenn keine Kürzung nötig ist."""
 
     def test_line_matches_direct_pipeline_call_no_truncation(self, client):
-        metric_ids = ["temperature"]
+        metric_ids = ["temperature_day_high"]
         resp = client.post(
             "/api/_validator/sms-fidelity-preview",
             json={"metric_ids": metric_ids},
@@ -237,7 +245,7 @@ class TestAC3_StatelessNoUserId:
     def test_no_user_id_param_returns_200(self, client):
         resp = client.post(
             "/api/_validator/sms-fidelity-preview",
-            json={"metric_ids": ["temperature", "wind"]},
+            json={"metric_ids": ["temperature_day_high", "wind"]},
         )
         assert resp.status_code == 200, (
             f"AC-3: erwartet 200 ohne user_id-Query-Param, bekam "
@@ -247,7 +255,7 @@ class TestAC3_StatelessNoUserId:
     def test_response_has_valid_shape(self, client):
         resp = client.post(
             "/api/_validator/sms-fidelity-preview",
-            json={"metric_ids": ["temperature", "wind"]},
+            json={"metric_ids": ["temperature_day_high", "wind"]},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -279,7 +287,7 @@ class TestAC4_MetricWithoutSmsCodeExcluded:
     def test_metric_without_token_symbol_missing_from_carried_ids(self, client):
         resp = client.post(
             "/api/_validator/sms-fidelity-preview",
-            json={"metric_ids": ["temperature", NO_SMS_TOKEN_METRIC_ID]},
+            json={"metric_ids": ["temperature_day_high", NO_SMS_TOKEN_METRIC_ID]},
         )
         assert resp.status_code == 200, f"Body: {resp.text[:300]}"
         carried_ids = resp.json()["carried_ids"]
@@ -287,7 +295,7 @@ class TestAC4_MetricWithoutSmsCodeExcluded:
             f"AC-4: '{NO_SMS_TOKEN_METRIC_ID}' hat kein SMS-Token-Symbol und "
             f"darf nicht in carried_ids stehen: {carried_ids}"
         )
-        assert "temperature" in carried_ids, (
+        assert "temperature_day_high" in carried_ids, (
             "AC-4-Kontrollfixture: 'temperature' sollte bei nur zwei "
             f"angefragten Metriken ohne Kürzungsdruck ueberleben: {carried_ids}"
         )
@@ -302,7 +310,7 @@ class TestAC5_MaxLengthIs160NotOldFrontendValue:
     def test_max_length_is_160(self, client):
         resp = client.post(
             "/api/_validator/sms-fidelity-preview",
-            json={"metric_ids": ["temperature"]},
+            json={"metric_ids": ["temperature_day_high"]},
         )
         assert resp.status_code == 200
         max_length = resp.json()["max_length"]
@@ -361,10 +369,16 @@ class TestAC9_RenderLineUnchangedByAdditiveFunction:
 
         # Golden-Wert gemessen VOR dieser Erweiterung (2026-08-06),
         # unverändertes render_line() auf einer TATSÄCHLICH kürzenden Zeile.
+        # Issue #1824 (A): nachgezogen — die Temperatur-Paare stehen jetzt als
+        # Bereichs-Token ('D-12/28'/'FD-18/24'), und die drei Schnee-Größen der
+        # Beispiel-Vorhersage tragen je eine Stelle mehr, damit die Zeile
+        # weiterhin über 160 Zeichen liegt (s. Kommentar an
+        # SMS_FIDELITY_SAMPLE_FORECAST). Die Zusicherung selbst ist unverändert:
+        # render_line() darf sich durch die additive Nachbarfunktion nicht ändern.
         baseline = (
-            "Etappe: N-15 K-12 D28 FN-21 FK-18 FD24 R245.0@6(845.0@14) "
+            "Etappe: N-15 D-12/28 FN-21 FD-18/24 R245.0@6(845.0@14) "
             "PR25%@7(98%@14) W850@6(1420@16) G1200@6(2080@16) TH:L@8(H@12) "
-            "TH+:M@10 SD24500 NS24+18500 SL98000"
+            "TH+:M@10 SD245000 NS24+185000 SL980000"
         )
         line = self._truncating_line()
         out = render_line(line, 160)

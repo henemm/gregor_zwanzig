@@ -182,6 +182,15 @@ Trip-Segmented-Control-Karte „05 — Auswertungen" reserviert — die bleibt v
 Vergleich unberührt). Der Kommentar an `ROUTE_ONLY_SECTIONS` wird korrigiert,
 damit er nicht als offene/vergessene Verknüpfung zu #1411 gelesen wird.
 
+> **Korrektur 2026-08-15 (Issue #1728 Scheibe 2):** Der Abschnitt
+> „05 — Auswertungen" und mit ihm der Eintrag `'auswertungen'` in
+> `ROUTE_ONLY_SECTIONS` sind seither ersatzlos entfernt — nicht mehr nur
+> route-exklusiv „reserviert", sondern in keinem Kontext mehr vorhanden.
+> Diese Abweichungs-Begründung bleibt als historische Entscheidung korrekt
+> (Compare bekam bewusst keinen eigenen Auswertungen-Abschnitt), ist aber
+> keine Ist-Beschreibung von `weatherMetricsTabSections.ts` mehr. Details:
+> `docs/specs/modules/feat_1728_s2_editor.md`.
+
 ## Expected Behavior
 
 - **Input:** dieselbe Katalogantwort wie heute (`GET /api/compare/metrics`,

@@ -160,6 +160,23 @@ class ForecastDataPoint:
     lightning_potential_lpi_jkg: Optional[float] = None
     hail_potential_grau_gsp: Optional[float] = None
 
+    # Gewittergroessen DWD ICON-D2/ICON-EU (#1531, Fortfuehrung #1457 S2):
+    # sieben Groessen, die Epic #1419 Abs. 2a/3.2 je Gebiet vorsieht, bisher
+    # aber nicht abgerufen wurden. Je Groesse ein eigenes Feld -- die drei
+    # Updraft-Varianten tragen VERSCHIEDENE Werte (gemessen: uh_max rund
+    # siebenmal groesser als die Schichtvarianten am selben Punkt) und teilen
+    # sich deshalb keine Spalte. `cape_ml` bekommt bewusst KEIN gemeinsames
+    # Feld mit `cape_jkg` -- unterschiedliche Quellen, nicht mehr zuordenbar.
+    # Diese Scheibe reicht nur Rohwerte durch -- keine Einstufung (Scope-
+    # Abgrenzung der Spec).
+    supercell_index_sdi2_1s: Optional[float] = None          # 1/s, vorzeichenbehaftet
+    convective_inhibition_jkg: Optional[float] = None        # J/kg
+    cape_ml_jkg: Optional[float] = None                       # J/kg, ICON-D2/EU
+    lightning_potential_max_lpi_jkg: Optional[float] = None
+    updraft_helicity_max_m2s2: Optional[float] = None        # m^2/s^2, Gesamtsaeule
+    updraft_helicity_max_med_m2s2: Optional[float] = None    # m^2/s^2, mittlere Schicht (2-5 km)
+    updraft_helicity_max_low_m2s2: Optional[float] = None    # m^2/s^2, untere Schicht
+
     # Gewitter-Wahrscheinlichkeit (Issue #1474 Abschnitt 5, getrennte Achse von
     # thunder_level/"Staerke"): vorbereitetes, in dieser Scheibe von KEINER
     # Quelle befuelltes Feld, kein Renderer-Anschluss. Befuellung ist #1419 S6
@@ -176,6 +193,15 @@ class ForecastDataPoint:
     #   False = "nein"      -- in S5a strukturell unerreichbar, reserviert fuer
     #                          S5b/S5c (DWD-Schwelle bzw. Meteo-France AROME)
     hail_flag: Optional[bool] = None
+
+    # Issue #1680 S1: WELCHE Zutaten die fusionierte `thunder_level` dieser
+    # Stunde tragen (Schluessel aus `metric_format.THUNDER_SIGNAL_LABEL_DE`).
+    # BEWUSST `list[str]`, nie `list[ThunderLevel]` oder `set`: die
+    # Schnappschuss-Serialisierung behandelt nur SKALARE Enums, alles andere
+    # bricht `json.dumps` -- und der Fehler wird dort still geschluckt
+    # (`weather_snapshot.py`), der Schnappschuss waere weg. `None` heisst
+    # "keine Aussage", eine leere Liste "keine tragende Zutat".
+    thunder_level_signals: Optional[list[str]] = None
 
     # Issue #435: Test-helper alias — some test helpers init with
     # `wind_dir_deg=` instead of `wind_direction_deg=`. We accept both;
@@ -397,6 +423,11 @@ class SegmentWeatherSummary:
     cloud_avg_pct: Optional[int] = None
     humidity_avg_pct: Optional[int] = None
     thunder_level_max: Optional[ThunderLevel] = None
+    # Issue #1680 S1: Vereinigung der Zutaten ALLER Stunden, die
+    # `thunder_level_max` erreichen (Aggregationsregel
+    # "union_of_max_carriers"). Feldtyp `list[str]` aus demselben Grund wie
+    # `ForecastDataPoint.thunder_level_signals` -- s. dort.
+    thunder_level_max_signals: Optional[list[str]] = None
     visibility_min_m: Optional[int] = None
 
     # Extended metrics (Feature 2.2b) - ALL None for Feature 2.1
@@ -773,6 +804,12 @@ class UnifiedWeatherDisplayConfig:
     # Frontend (AlertsTab) und trip_alert._select_change_detector lesen dieses Feld.
     alert_preset: Optional[str] = None
     metric_alert_levels: Optional[dict[str, str]] = None  # metric → SensLevel (off|entspannt|standard|sensibel)
+    # Issue #1720 S1: Spaltenauswahl der 3-Tages-Vorschau im Neuformat
+    # [{"metric_id": ..., "aggregation": ...}] (#1373), dasselbe Vokabular wie
+    # der Ortsvergleich. Drei-Werte-Semantik (ADR-0037): None/fehlt = die
+    # bisherigen sieben festen Spalten · [] = der Ausblick-Block entfaellt ganz
+    # · gefuellt = gewaehlte Spalten in Auswahlreihenfolge.
+    outlook_metrics: Optional[list[dict]] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:
@@ -808,12 +845,28 @@ class UnifiedWeatherDisplayConfig:
     def get_metrics_for_channel(self, channel: str, report_type: str) -> list[MetricConfig]:
         """Liefert die Metriken-Liste für einen Kanal (Issue #429 + #434).
 
-        Dreistufige Kaskade:
+        Dreistufige Kaskade, ADR-0050: die globale Auswahl (Ebene 3) ist das
+        MAXIMUM -- Ebenen 1/2 duerfen davon nur ABWAEHLEN, nie ergaenzen
+        (Issue #1719 Scheibe 2).
         1. per_report_layouts[report_type][channel] (Issue #434) — höchste Priorität.
-           Leere Liste = expliziter User-Wunsch, kein Fallback.
+           Leere Liste = expliziter User-Wunsch, kein Fallback. Wird gegen das
+           globale Maximum geschnitten (s.u.), NICHT zusaetzlich gegen
+           per_channel_layouts verkettet -- ADR-0050 kennt nur EIN Maximum,
+           keine Zwischenebene (#1719 AC-8).
         2. per_channel_layouts[channel] (Issue #429) — zweite Stufe.
-           Leere Liste = expliziter User-Wunsch, kein Fallback.
-        3. globale Liste via get_metrics_for_report_type(report_type) — Fallback.
+           Leere Liste = expliziter User-Wunsch, kein Fallback. Ebenfalls
+           gegen das globale Maximum geschnitten.
+        3. globale Liste via get_metrics_for_report_type(report_type) — Fallback
+           UND zugleich das Maximum selbst; hier greift kein Schnitt (er
+           wuerde sich gegen sich selbst richten und waere wirkungslos).
+
+        Maximum-Schnitt (#1719 Scheibe 2): Ebenen 1/2 werden auf die IDs
+        geschnitten, die ``get_metrics_for_report_type(report_type)`` liefert
+        -- NICHT gegen rohe ``enabled``-Flags, damit ``morning_enabled``/
+        ``evening_enabled`` (ADR-0050 Regel 3) und das ``selectable``-Gate
+        (#1585) im Schnitt korrekt wirken. Ist ``self.metrics`` leer, ist kein
+        Maximum definiert -- es wird NICHT geschnitten (sonst Totalausfall
+        fuer Altbestand ohne globale Liste, s. ``_clip_to_global_maximum``).
 
         Issue #1575: JEDE Ebene laeuft durch dieselbe Sortierung nach der im
         Editor eingestellten Position — sonst verhielte sich ein Trip mit
@@ -830,20 +883,43 @@ class UnifiedWeatherDisplayConfig:
             report_channel_metrics = self.per_report_layouts[report_type][channel]  # type: ignore[index]
             if len(report_channel_metrics) == 0:
                 return []
-            return _sorted_by_layout(
-                _filter_metrics_by_report_type(report_channel_metrics, report_type),
-            )
+            filtered = _filter_metrics_by_report_type(report_channel_metrics, report_type)
+            return _sorted_by_layout(self._clip_to_global_maximum(filtered, report_type))
 
         if source == "per_channel":
             channel_metrics = self.per_channel_layouts[channel]  # type: ignore[index]
             if len(channel_metrics) == 0:
                 return []
-            return _sorted_by_layout(
-                _filter_metrics_by_report_type(channel_metrics, report_type),
-            )
+            filtered = _filter_metrics_by_report_type(channel_metrics, report_type)
+            return _sorted_by_layout(self._clip_to_global_maximum(filtered, report_type))
 
-        # Ebene 3: globaler Fallback
+        # Ebene 3: globaler Fallback -- ist bereits das Maximum, kein Schnitt.
         return _sorted_by_layout(self.get_metrics_for_report_type(report_type))
+
+    def _clip_to_global_maximum(
+        self, metrics: list[MetricConfig], report_type: str,
+    ) -> list[MetricConfig]:
+        """Schneidet eine Kanal-Ebene (per_report/per_channel) gegen das
+        globale Maximum (ADR-0050, #1719 Scheibe 2, D1-D4).
+
+        Nur aufgerufen aus den per_report/per_channel-Zweigen von
+        ``get_metrics_for_channel()`` -- NIE aus dem global-Zweig, der selbst
+        das Maximum ist (D1).
+
+        Schnittmenge sind die IDs aus
+        ``get_metrics_for_report_type(report_type)`` (D2) -- nicht rohe
+        ``enabled``-Flags, damit morning_enabled/evening_enabled-Overrides
+        und das selectable-Gate (#1585) im Schnitt wirken.
+
+        D4: ``self.metrics`` leer -> kein Maximum definiert -> nicht
+        schneiden. Pruefort = Wirkort, keine Wiederverwendung von
+        ``_trip_metrics_altbestand`` (misst denselben Sachverhalt an anderer
+        Stelle fuer einen anderen Zweck).
+        """
+        if not self.metrics:
+            return metrics
+        allowed_ids = {mc.metric_id for mc in self.get_metrics_for_report_type(report_type)}
+        return [mc for mc in metrics if mc.metric_id in allowed_ids]
 
     def cascade_source_for_channel(self, channel: str, report_type: str) -> CascadeSource:
         """Issue #1677 AC-9: auf welcher Kaskadenebene antwortet

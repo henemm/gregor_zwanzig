@@ -161,6 +161,9 @@ type Trip struct {
 	SendEmail      *bool   `json:"send_email,omitempty"`
 	SendSms        *bool   `json:"send_sms,omitempty"`
 	SendTelegram   *bool   `json:"send_telegram,omitempty"`
+	// SendPremiumSms — Issue #1717 S3, viertes Kanal-Flach-Feld (Premium-SMS,
+	// Garmin inReach). Wie die drei darueber: abgeleitet, nicht autoritativ.
+	SendPremiumSms *bool `json:"send_premium_sms,omitempty"`
 	// EndDate — max(stage.date), ISO-normalisiert (analog Python @property
 	// trip.end_date). Kein Roundtrip-Verlustrisiko wie bei Corridors, da
 	// Struct-Feld (nicht Extra-Map).

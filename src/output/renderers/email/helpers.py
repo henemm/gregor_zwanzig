@@ -95,9 +95,14 @@ def should_merge_wind_dir(dc: UnifiedWeatherDisplayConfig) -> bool:
 # Nachtfenster-Skalare erscheinen als SMS-Token bzw. Abend-Untergrenze, nie
 # als Spalte. EINE Quelle fuer alle Trip-Zeilen-Bauer (Pendant der
 # Compare-Seite: compare_hourly_metric_ids.HOURLY_EXCLUDED_METRIC_IDS).
-NO_HOURLY_COLUMN_METRIC_IDS: frozenset[str] = frozenset(
-    {"temperature_night", "wind_chill_night"}
-)
+# Issue #1728 Scheibe 1: die vier Tagesrichtungen sind ebenfalls reine
+# Sichtbarkeits-Gates ohne eigenen Stundenwert -- ohne diese Ausnahme
+# entstuende eine Spalte, die mit der Elterngroesse kollidiert.
+NO_HOURLY_COLUMN_METRIC_IDS: frozenset[str] = frozenset({
+    "temperature_night", "wind_chill_night",
+    "temperature_day_low", "temperature_day_high",
+    "wind_chill_day_low", "wind_chill_day_high",
+})
 
 
 def dp_to_row(dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig,
@@ -576,11 +581,14 @@ def build_column_legend(rows: list[dict]) -> str:
 # Issue #1222: Kreis-Emojis 🟢🟡🟠🔴 durch gestylte CSS-Dots ersetzt (kein
 # Emoji mehr in E-Mails). Palette (fill, ring) je Level, Ring an _risk_dot
 # (html.py) angelehnt, um Gelb/Amber erweitert.
+# Fix #1801 S2: groesserer Punktabstand orange<->rot (ΔE76 16,4 -> 54,4).
+# green/yellow bleiben unveraendert -- nur orange/rot wandern (Karminrot statt
+# Violett, PO-Entscheid 2026-08-14).
 _AMPEL_DOT_COLORS = {
     "green":  ("#15803d", "rgba(21,128,61,0.18)"),
-    "yellow": ("#ca8a04", "rgba(202,138,4,0.20)"),
-    "orange": ("#c2410c", "rgba(194,65,12,0.20)"),
-    "red":    ("#b91c1c", "rgba(185,28,28,0.22)"),
+    "yellow": ("#d69500", "rgba(214,149,0,0.20)"),
+    "orange": ("#d4530a", "rgba(212,83,10,0.20)"),
+    "red":    ("#a8104a", "rgba(168,16,74,0.22)"),
 }
 
 
@@ -748,9 +756,16 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         )
         hail = (row.get("_hail_flag") is True) if row else False
         if mode == "raw" or not html:
+            from output.metric_format import thunder_signal_label
             label = THUNDER_LABEL_DE.get(val, "–")
+            teile = [label]
+            signals = row.get("_thunder_signals") if row else None
+            if signals:
+                teile.append(", ".join(thunder_signal_label(s) for s in signals))
             note = format_hail_note(row.get("_hail_flag") if row else None)
-            return f"{label} · {note}" if note else label
+            if note:
+                teile.append(note)
+            return " · ".join(teile)
         band = thunder_ampel_band(val)
         if band is None:
             return "–"
@@ -1011,6 +1026,43 @@ def format_trend_tokens(stage: dict) -> dict:
         "TH", _night_samples, threshold=thunder_thr, is_level=True,
         level_labels=_TREND_THUNDER_LABELS,
     )
+    # Issue #1680 S5a: die tragende Zutat der TAGES-Stufe. Bewusst HIER und
+    # mit denselben `_win_start`/`_win_end` wie `thunder_day_token` -- eine
+    # zweite, unabhaengige Fensterauflösung waere genau die Fehlerklasse aus
+    # #1653/#1498 (Stufe aus dem einen, Herkunft aus dem anderen Fenster,
+    # Spec AC-9). Der Nachtteil bekommt bewusst KEINE Herkunft (AC-6).
+    from output.metric_format import (
+        thunder_label_value, thunder_signal_label, union_of_max_carriers,
+    )
+
+    _signal_rows = stage.get("hourly_thunder_signals") or ()
+    _day_carriers = union_of_max_carriers(
+        (stufe, traeger) for stunde, stufe, traeger in _signal_rows
+        if hour_in_window(stunde, _win_start, _win_end)
+    )
+    thunder_day_origin = (
+        ", ".join(thunder_signal_label(s) for s in _day_carriers)
+        if _day_carriers else None
+    )
+
+    # Issue #1841: die hoechste Gewitterstufe IM TAGESFENSTER als
+    # ThunderLevel-OBJEKT (nicht nur als String-Token) -- der Metrik-Zweig
+    # des Ausblicks (outlook.py) braucht ein Objekt fuer _fmt_thunder(),
+    # keinen Text. Aus `_day_samples` (immer befuellt), NICHT aus
+    # `hourly_thunder_signals` (None ohne Traegerlisten, s.o.).
+    # Rueckabbildung ueber die GETEILTE Render-Skala (thunder_label_value,
+    # thunder_scale.py) -- keine lokale Kopie der Zuordnung (#1474).
+    # `thunder_day_carriers` (Rohliste, additiv analog `thunder_day_origin`)
+    # reicht dieselbe, bereits gefensterte `_day_carriers`-Menge unformatiert
+    # durch -- eine ZWEITE, unabhaengige Fensterauflösung im Metrik-Zweig
+    # waere genau die Fehlerklasse, gegen die #1653/#1680 S5a AC-9 schreiben.
+    _level_by_value = {thunder_label_value(stufe): stufe for stufe in ThunderLevel}
+    _day_values = [s.value for s in _day_samples]
+    thunder_day_level = (
+        _level_by_value.get(int(round(max(_day_values))))
+        if _day_values else None
+    )
+    thunder_day_carriers = _day_carriers
 
     return {
         "temp_str": temp_str,
@@ -1032,6 +1084,11 @@ def format_trend_tokens(stage: dict) -> dict:
         # Issue #1653: Tag/Nacht getrennt (additiv)
         "thunder_day_token": thunder_day_token,
         "thunder_night_token": thunder_night_token,
+        # Issue #1680 S5a: fertiger Herkunfts-Zusatz des Tagesteils (oder None)
+        "thunder_day_origin": thunder_day_origin,
+        # Issue #1841: Tagesfenster-STUFE + Rohliste der Traeger (additiv)
+        "thunder_day_level": thunder_day_level,
+        "thunder_day_carriers": thunder_day_carriers,
     }
 
 
@@ -1236,16 +1293,20 @@ def tone_symbol(tone: str) -> str:
     return ""
 
 
+# Fix #1801 S2: neuer vierter Ton "caution" schliesst die Luecke zwischen
+# gelb und orange (bisher beide auf "warn" -- Chips konnten nur 3 von 4
+# Ampelstufen zeigen). warn/risk zusaetzlich verschaerft (Karminrot-Angleich).
 _PILL_TAG_PALETTE = {
-    "ok":   {"bg": "#dcf2e1", "fg": "#14532d", "border": "#86c89a"},
-    "warn": {"bg": "#fde6cc", "fg": "#7c2d12", "border": "#f0a060"},
-    "risk": {"bg": "#fadcd6", "fg": "#7f1d1d", "border": "#e88472"},
-    "info": {"bg": "#dde8f3", "fg": "#1e3a5f", "border": "#8aacd0"},
+    "ok":      {"bg": "#dcf2e1", "fg": "#14532d", "border": "#86c89a"},
+    "caution": {"bg": "#fdf2c4", "fg": "#6b5200", "border": "#e0b93c"},
+    "warn":    {"bg": "#fbe0c4", "fg": "#7d3400", "border": "#e59248"},
+    "risk":    {"bg": "#fad3e1", "fg": "#7d0c39", "border": "#dd7ba2"},
+    "info":    {"bg": "#dde8f3", "fg": "#1e3a5f", "border": "#8aacd0"},
 }
 
 _PILL_TONE_MAP = {
     "ampel_green":  "ok",
-    "ampel_yellow": "warn",
+    "ampel_yellow": "caution",
     "ampel_orange": "warn",
     "ampel_red":    "risk",
 }
@@ -1379,78 +1440,12 @@ _AGGREGATION_PILL_METRICS: dict[str, tuple[str, str, int]] = {
 }
 
 
-def pill_aggregation_choices(metric_id: str) -> list[list[str]]:
-    """Die sich gegenseitig ausschliessenden Auswertungs-Moeglichkeiten (#1357).
-
-    PO 2026-07-28: „Es gibt kein zusaetzlich: entweder oder." Genau eine gilt —
-    Spanne (Tiefst- UND Hoechstwert), nur Tiefstwert, nur Hoechstwert, nur
-    Mittelwert. Abgeleitet aus ``summary_fields`` (was berechenbar ist), NIE aus
-    ``default_aggregations``: bei ``wind_chill`` entfaellt „nur Mittelwert"
-    deshalb von selbst, ohne Sonderpfad fuer diese Groesse.
-    """
-    from app.metric_catalog import available_aggregations
-
-    available = available_aggregations(metric_id)
-    choices = [["min", "max"]] if "min" in available and "max" in available else []
-    return choices + [[a] for a in available]
-
-
-def _resolve_pill_aggregations(
-    metric_id: str, chosen: Optional[list[str]],
-) -> list[str]:
-    """Gespeicherte Auswertungswahl auf genau EINE gueltige Moeglichkeit abbilden.
-
-    Issue #1357 AC-7 — zwei Faelle werden per ``logger.warning`` sichtbar
-    gemacht (Vorbild ``resolve_outlook_metrics()``, #1361 Befund 3), keiner
-    still geschluckt: (a) eine fuer diese Groesse nicht berechenbare Auswertung
-    (z.B. ``avg`` bei ``wind_chill``) faellt weg, gueltige Teile bleiben;
-    (b) eine Liste ohne Entsprechung in ``pill_aggregation_choices()`` — seit
-    der Einzelwahl nur noch aus Altbestand moeglich — wird auf die
-    naechstliegende Moeglichkeit abgebildet: min+max -> Spanne, sonst der
-    enthaltene Einzelwert.
-
-    Ausgenommen von (b) ist die vom System selbst geschriebene Katalog-Vorgabe
-    ``default_aggregations`` (Temperatur ``["min","max","avg"]``, s.
-    ``build_default_display_config()``): keine Nutzerwahl, bildet verlustfrei
-    auf die Spanne ab, darf also keinen Fehlalarm ausloesen.
-
-    ``None`` = keine Nutzereinschraenkung -> Katalog-Vorgabe. ``[]`` bleibt
-    leer (AC-8: keine Kachel).
-    """
-    from app.metric_catalog import (
-        available_aggregations, get_metric, pill_default_aggregations,
-    )
-
-    if chosen is None:
-        return pill_default_aggregations(metric_id)
-    available = available_aggregations(metric_id)
-    dropped = [a for a in chosen if a not in available]
-    if dropped:
-        logger.warning(
-            "Kachel-Auswertung %s fuer Groesse %r nicht berechenbar (moeglich: "
-            "%s) — Eintrag wird verworfen statt still ignoriert (#1357 AC-7)",
-            dropped, metric_id, available,
-        )
-    kept = [a for a in available if a in chosen]
-    choices = pill_aggregation_choices(metric_id)
-    if not kept or kept in choices:
-        return kept
-    if "min" in kept and "max" in kept:
-        resolved = ["min", "max"]
-    elif "min" in kept:
-        resolved = ["min"]
-    elif "max" in kept:
-        resolved = ["max"]
-    else:
-        resolved = kept[:1]
-    if list(get_metric(metric_id).default_aggregations) != kept:
-        logger.warning(
-            "Kachel-Auswertung %s fuer Groesse %r ist keine gueltige Wahl "
-            "(moeglich: %s) — Altbestand wird auf %s abgebildet statt Teile "
-            "still zu verschlucken (#1357 AC-7)",
-            kept, metric_id, choices, resolved,
-        )
-    return resolved
+# Issue #1728 Scheibe 1 (DEC-5): die Kachel ist KEIN Bedienelement mehr --
+# sie zeigt unbedingt die Spanne. ``pill_aggregation_choices()`` und
+# ``_resolve_pill_aggregations()`` (beide #1357) sind damit ohne Aufrufer
+# und ersatzlos ENTFERNT: toter Code, der eine gespeicherte
+# Auswertungswahl liest, waere ein Rueckfallpfad, sobald ihn jemand
+# versehentlich wieder verdrahtet.
 
 
 def format_temp_span(min_v: float, max_v: float, *, decimals: int) -> str:
@@ -1472,9 +1467,10 @@ def _aggregation_pill_text(
 ) -> Optional[str]:
     """Kachel-Text aus der EINEN gewaehlten Auswertung und dem Werteverlauf.
 
-    Issue #1357: ``aggregations`` ist durch ``_resolve_pill_aggregations()``
-    bereits auf genau eine Moeglichkeit abgebildet, die Faelle koennen sich also
-    nicht mehr gegenseitig verdecken. ``["min","max"]`` -> Spanne mit
+    Issue #1728 Scheibe 1: der einzige Trip-Aufrufer gibt fest
+    ``["min","max"]`` mit (DEC-5). Die uebrigen Faelle bleiben stehen, weil
+    die Funktion mit anderen Werten weiterhin korrekt sein muss.
+    ``["min","max"]`` -> Spanne mit
     Uhrzeit-Anker · ``["min"]``/``["max"]`` -> Einzelwert mit Uhrzeit ·
     ``["avg"]`` -> Mittelwert ohne Uhrzeit (kein Zeitpunkt-Ereignis) · ``[]``
     -> ``None`` (AC-8). Beide Groessen laufen durch DIESELBE
@@ -1525,7 +1521,6 @@ def _pill_for_metric(
     *,
     tz: "ZoneInfo",
     has_gap: bool = False,
-    chosen_aggregations: Optional[list[str]] = None,
 ) -> Optional[tuple[str, str]]:
     """Issue #795/RC0+RC5: (text, tone) pill je Metrik, analog SMS ausgeschrieben.
 
@@ -1535,18 +1530,23 @@ def _pill_for_metric(
     der Erwaehnungsschwelle. Klasse 2 (Bereich): „min–max Einheit", neutral.
     """
     # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
-    from output.metric_format import thunder_ordinal
+    # Fix #1801 S2 AC-5: thunder_ampel_band ist die deklarierte SSoT
+    # Gewitterstufe -> Ampelband (ADR-0025) -- der Gewitter-Chip liest sie
+    # jetzt statt fest "ampel_red" zu liefern.
+    from output.metric_format import thunder_ampel_band, thunder_ordinal
 
     # ---- Klasse 2 — Bereichs-/Kontext-Metriken (mit Uhrzeit, neutral) ----
     # Issue #1357: Temperatur ("8–11°C · Max 15:00") und gefuehlte Temperatur
     # ("gef. 6.6–9.0°C · Max 08:00") laufen durch DENSELBEN Auswahl- und
-    # Darstellungsweg. Der #1351-F001-Sperrgrund ("kein Auswahl-Signal am
-    # Renderer") ist mit `chosen_aggregations` aufgehoben.
+    # Darstellungsweg.
+    # Issue #1728 Scheibe 1 (DEC-5): die Kachel zeigt UNBEDINGT die Spanne --
+    # feste ["min","max"] statt einer aufgeloesten Nutzerwahl. Die
+    # Tages-Sichtbarkeit steuern seit dieser Scheibe die eigenen Groessen
+    # temperature_day_low/_high bzw. wind_chill_day_low/_high in der SMS; die
+    # Vollmail-Kachel ist kein Bedienelement mehr (PO 2026-08-11).
     if metric_id in _AGGREGATION_PILL_METRICS:
         dp_field, prefix, decimals = _AGGREGATION_PILL_METRICS[metric_id]
-        aggregations = _resolve_pill_aggregations(metric_id, chosen_aggregations)
-        if not aggregations:
-            return None
+        aggregations = ["min", "max"]
         vals_ts = [(getattr(dp, dp_field, None), dp.ts) for dp in all_dps]
         vals_ts = [(v, ts) for v, ts in vals_ts if v is not None]
         if not vals_ts:
@@ -1623,7 +1623,16 @@ def _pill_for_metric(
             return None
         max_val, max_ts = max(vals_ts, key=lambda x: x[0])
         max_hh = local_hour(max_ts, tz)
-        return (f"UV max {max_val:.1f} ({max_hh:02d}:00)", _PILL_NEUTRAL_TONE)
+        # Fix #1801 S2 AC-6: Katalog fuehrt fuer UV Schwellen (3/6/8) -- der
+        # Chip wertet sie jetzt aus statt fest neutral zu bleiben. Wie bei
+        # jeder anderen Schwellen-Metrik (Wind, Regen, Temperatur ueber
+        # _extreme_ampel_tone) ist Gruen selbst eine Ampelfarbe: unterhalb
+        # der ersten Schwelle zeigt der Chip "ampel_green", nicht neutral
+        # (F001-Fix, #1801-Adversary).
+        from output.metric_format import severity_for
+        _level = severity_for("uv_index", max_val)
+        tone = f"ampel_{_level}" if _level else _PILL_NEUTRAL_TONE
+        return (f"UV max {max_val:.1f} ({max_hh:02d}:00)", tone)
 
     if metric_id == "sunshine":
         from services.weather_metrics import WeatherMetricsService
@@ -1740,16 +1749,43 @@ def _pill_for_metric(
         # zeichengleich zum bisherigen Stand (kein Rauschen, Spec AC-5).
         # Call-time-Import auf den EINEN geteilten Textbaustein (#1481 DRY) --
         # denselben, den `_fmt_gewitter()` nutzt.
-        from output.metric_format import format_hail_note, hail_priority
+        from output.metric_format import (
+            format_hail_note, hail_priority, thunder_signal_label,
+            union_of_max_carriers,
+        )
         _hail_note = format_hail_note(
             hail_priority([getattr(dp, "hail_flag", None) for dp in all_dps])
         )
         _hail_suffix = f" · {_hail_note}" if _hail_note else ""
+        # Issue #1680 S3 (Spec D1): die tragende(n) Zutat(en) DERSELBEN
+        # Tagesfenster-Liste, aus der oben `max_lvl` entstand -- Stufe und
+        # Herkunft aus EINER Rechnung, ohne zweiten Datenzugriff (AC-8). Der
+        # geteilte Helfer statt einer weiteren Eigenimplementierung derselben
+        # Vereinigungsregel (#1480); er garantiert selbst, dass die Stufe
+        # `NONE` auf `None` fuehrt ("kein Gewitter" hat keine Herkunft).
+        # KANAL (PO-Entscheidung, aktiv abgewaehlt -- kein vergessener
+        # Anschluss): die Pille erreicht ausschliesslich E-Mail
+        # (`plain.py:205`, `html.py:1432`, `compact.py:176`). SMS und
+        # Premium-SMS bauen ihren Text ueber `SMSTripFormatter`
+        # (`trip_report.py:441`) und sehen diese Zeichen nie; der Rueckfall
+        # `sms_text or email_plain` (`notification_service.py:428`/`446`)
+        # bleibt der einzige theoretische Weg und ist per AC-13 bewacht.
+        _traeger = union_of_max_carriers(
+            [(dp.thunder_level, getattr(dp, "thunder_level_signals", None))
+             for dp in all_dps]
+        )
+        _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
+        _origin_suffix = f" · {_herkunft}" if _herkunft else ""
         if first_thunder_ts is not None:
             first_hh = local_hour(first_thunder_ts, tz)
             peak_hh = local_hour(peak_ts or first_thunder_ts, tz)
+            # Fix #1801 S2 AC-5: Ton aus derselben SSoT wie die Stundentabelle
+            # (thunder_ampel_band), nicht mehr fest "ampel_red" -- max_lvl ist
+            # hier bereits die hoechste Stufe der Stunden.
+            _band = thunder_ampel_band(max_lvl)
+            _tone = f"ampel_{_band}" if _band else "ampel_red"
             return (f"Gewitter ab {first_hh:02d}:00 · stärkste {peak_hh:02d}:00"
-                    f"{_hail_suffix}", "ampel_red")
+                    f"{_origin_suffix}{_hail_suffix}", _tone)
         # Issue #1331: Ziel-Datenluecke (Ankunft->19 Uhr unbeobachtet) darf
         # keine positive Entwarnung "kein Gewitter" vortaeuschen.
         if has_gap:
@@ -1788,17 +1824,21 @@ def _pill_for_metric(
         thr = _sms_mention_threshold("humidity")
         peak_val = max(v for v, _ in vals)
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
+        # Fix #1801 S2 AC-7: humidity fuehrt im Katalog KEINE display_thresholds
+        # -- der Chip bleibt deshalb IMMER neutral, unabhaengig vom Wert (Regel:
+        # Schwellen vorhanden -> Ampelfarbe, sonst neutral), analog Wolken/
+        # 0°-Linie/Taupunkt/Sonne.
         if fp is not None:
             first_hh, pv, peak_hh = fp
             text = (f"Feuchte >{int(thr)}% ab {first_hh:02d}:00 · "
                     f"max {int(pv)}% ({peak_hh:02d}:00)")
-            return (text, "ampel_yellow")
+            return (text, _PILL_NEUTRAL_TONE)
         # Unter Schwelle: Bereich + Uhrzeit des Maximums
         min_v = min(v for v, _ in vals)
         max_ts = max(vals, key=lambda x: x[0])[1]
         max_hh = local_hour(max_ts, tz)
         return (f"Feuchte {min_v:.0f}–{peak_val:.0f}% · Max {max_hh:02d}:00",
-                "ampel_green")
+                _PILL_NEUTRAL_TONE)
 
     return None
 
@@ -1822,11 +1862,21 @@ def build_metrics_summary_pills(
     has_gap: bool = False,
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
-    metric_aggregations: Optional[dict[str, list[str]]] = None,
 ) -> list[tuple[str, str]]:
     """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
 
     metric_ids: list of metric IDs to render (from display_config, E-Mail enabled).
+        Issue #1703 S7: die REIHENFOLGE dieser Liste ist die Ausgabereihenfolge
+        der Pillen (Nutzer-Reihenfolge aus dem Kanal-Layout). Bis #1703 S7 galt
+        „Katalog-Reihenfolge, nicht Eingabereihenfolge" (Spec
+        ``email_metrics_summary_664.md:88``, 2026-06-08) -- **#664 → abgeloest
+        durch #1703 S7**. Die alte Wahl war unter ihren Bedingungen richtig:
+        im Juni 2026 gab es keine nutzergesetzte Metrik-Reihenfolge, die
+        Kanal-Layouts kamen erst mit #1575/#1677 (Trip) bzw. #1335/#1359
+        (Compare). Die „Eingabereihenfolge" war die zufaellige Folge der
+        Config-Eintraege und trug keine Absicht; Katalogordnung war die
+        stabilere Wahl. Seit die Eingabe eine Nutzerabsicht traegt, verwirft
+        die Katalogordnung sie.
     sms_mention_thresholds: dict[metric_id -> float] (Issue #1474b) —
         pro Trip eingestellte Erwaehnungsschwellen (aus `MetricConfig.
         sms_threshold`), im `metric_id`-Raum. Nur der `"thunder"`-Zweig in
@@ -1849,11 +1899,14 @@ def build_metrics_summary_pills(
         ``night_weather`` (z.B. Bestandstests mit vollstaendigen Segment-
         Daten) sollen keine Luecke unterstellt bekommen, nur weil sie den
         Nacht-Parameter nicht mitgeben. Default False = keine Luecke.
-    metric_aggregations: Issue #1357 — gespeicherte Auswertungswahl je Groesse
-        (``MetricConfig.aggregations``). Additiv: fehlt der Parameter oder ein
-        Eintrag, gilt die Katalog-Vorgabe ``pill_default_aggregations()``. Eine
-        ausdruecklich leere Liste heisst „keine Kachel" (AC-8).
-    Returns list of (text, tone) tuples in catalog order.
+    (Issue #1728 Scheibe 1, DEC-5: der frühere Parameter
+        ``metric_aggregations`` (#1357) ist ENTFERNT — die Kachel zeigt
+        unbedingt die Spanne und liest ``MetricConfig.aggregations`` nicht
+        mehr. Bewusst entfernt statt still ignoriert: ein Aufrufer, der die
+        Wahl noch mitgibt, soll scheitern, nicht schweigend wirkungslos sein.)
+    Returns list of (text, tone) tuples in ``metric_ids`` order (Issue #1703 S7;
+    zuvor: Katalog-Reihenfolge). Groessen ohne Eintrag in
+    ``_PILL_CATALOG_ORDER`` erzeugen unveraendert keine Pille.
     """
     from output.renderers.day_window import (
         build_day_window_points, collect_hiking_window_points,
@@ -1866,16 +1919,23 @@ def build_metrics_summary_pills(
     # ihre Gehzeit-Extrema ziehen — kein zweiter Rechenweg mehr.
     hiking_dps = collect_hiking_window_points(segments)
 
-    # Render in catalog order
-    ids_set = set(metric_ids)
+    # Issue #1703 Scheibe 7 (AC-S7-6): in der UEBERGEBENEN Reihenfolge rendern.
+    # Bis dahin wurde ``metric_ids`` hier zu ``set(metric_ids)`` kollabiert und
+    # stattdessen ``_PILL_CATALOG_ORDER`` iteriert. ``_PILL_CATALOG_ORDER``
+    # bleibt WEISSE LISTE (welche Groessen ueberhaupt eine Pille haben), gibt
+    # aber nicht mehr die Ordnung vor. ``seen`` haelt die Entdopplung, die
+    # bisher ``set()`` nebenbei erledigt hat -- ``resolve_trip_active_metrics()``
+    # dedupliziert nicht.
+    pill_ids = set(_PILL_CATALOG_ORDER)
+    seen: set[str] = set()
     pills = []
-    for mid in _PILL_CATALOG_ORDER:
-        if mid not in ids_set:
+    for mid in metric_ids:
+        if mid not in pill_ids or mid in seen:
             continue
+        seen.add(mid)
         dps = window_dps if mid in _DAY_WINDOW_PILL_IDS else hiking_dps
-        chosen = None if metric_aggregations is None else metric_aggregations.get(mid)
-        pill = _pill_for_metric(mid, sms_mention_thresholds, dps, tz=tz, has_gap=has_gap,
-                                chosen_aggregations=chosen)
+        pill = _pill_for_metric(mid, sms_mention_thresholds, dps, tz=tz,
+                                has_gap=has_gap)
         if pill is not None:
             pills.append(pill)
     return pills

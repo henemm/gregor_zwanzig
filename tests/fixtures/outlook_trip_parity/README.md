@@ -22,6 +22,7 @@ Default-Parameter abgeschirmte Erweiterungen.
 | 2026-08-10 | `...html` | Zeile "Di", Spalte "Gew" | `–` | `mittel @16` | #1653/F002 |
 | 2026-08-10 | `...txt` | Zeile "Mo", Gewitter-Feld | `⚡MED` | `⚡mittel` | #1653/F004 |
 | 2026-08-10 | `...txt` | Zeile "Di", Gewitter-Feld | `⚡–` | `⚡mittel` | #1653/F004 |
+| 2026-08-14 | `...html` | alle Zellen mit gelber/oranger Ampel-Toenung (Regenwahrsch./Gewitter, Zeilen "Mo"/"Di") | `#fbeeb8`/`#fad6b8` | `#fdf4cd`/`#fbe3cc` | #1801 S2 (design_tokens.tone_css() ist die geteilte Farbquelle von `render_outlook_table()`; `.txt`-Gegenstueck traegt keine Farben, unveraendert) |
 
 Beide Eingabezeilen tragen `hourly_thunder` mit "mittel" um 16 Uhr — im
 Tagesfenster 4-19 —, waehrend das Aggregat `thunder` einmal `MED` und einmal

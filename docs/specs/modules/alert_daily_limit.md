@@ -20,8 +20,9 @@ tags: [epic-1067, tiers, alerts]
 Führt eine harte Tages-Obergrenze für proaktive Alerts (Deviation-Watcher und
 Radar/Onset) pro Nutzerlevel ein: Free 2/Tag, Standard 4/Tag, Premium kein
 Tageslimit (nur der bestehende 15-Min-Mindestabstand gilt weiter). Ein
-persistierter Tageszähler pro Nutzer mit Mitternachts-Reset in Europe/Vienna
-verhindert, dass Free-/Standard-Nutzer über einen der beiden Alert-Pfade das
+persistierter Tageszähler pro Nutzer und Zone mit Reset zur jeweiligen
+Orts-Mitternacht (seit #1726; bis dahin ein Stand je Nutzer mit Wiener
+Mitternacht) verhindert, dass Free-/Standard-Nutzer über einen der beiden Alert-Pfade das
 Limit umgehen. Planmäßige Trip-Briefings (morning/evening) sind explizit NICHT
 betroffen (PO-Entscheidung 2026-07-07).
 
@@ -54,16 +55,22 @@ betroffen (PO-Entscheidung 2026-07-07).
 ## Implementation Details
 
 **Neues Modul `src/services/alert_daily_limit.py`:**
-- `load(user_id, now) -> int`: liest `data/users/<user_id>/alert_daily_count.json`
-  (`{"date": "YYYY-MM-DD", "count": N}`). Konvertiert `now` (UTC) nach
-  `ZoneInfo("Europe/Vienna")`, nimmt davon `.date()`. Ist das gespeicherte
-  `date` ungleich dem heutigen Vienna-Datum, liefert `load` `0` zurück — reine
-  Load-Semantik, kein Schreibzugriff bei Reset.
-- `is_allowed(user_id, now) -> bool`: holt `daily_alert_limit(user_id)` aus
-  `user_tier.py`. `None` (Premium) → immer `True`. Sonst: `load(user_id, now) < limit`.
-- `increment(user_id, now) -> None`: Read-Modify-Write der Zählerdatei nach
-  demselben Vienna-Datumsvergleich wie `load` (neuer Tag → Zähler startet bei 1
-  statt fortlaufend zu erhöhen).
+- `load(user_id, now, zone) -> int`: liest `data/users/<user_id>/alert_daily_count.json`.
+  **Schema seit #1726:** `{"zones": {"<IANA>": {"date": "YYYY-MM-DD", "count": N}}}` —
+  ein Stand je Zone. Konvertiert `now` (UTC) in die übergebene `zone` und nimmt
+  davon `.date()`. Ist das gespeicherte `date` dieser Zone ungleich dem heutigen
+  Ortsdatum, liefert `load` `0` zurück — reine Load-Semantik, kein Schreibzugriff
+  bei Reset. Altbestand im Vorgänger-Schema (`{"date", "count"}` auf oberster
+  Ebene) wandert beim ersten Zugriff unter den Schlüssel `"Europe/Vienna"`, weil
+  der Alt-Zähler faktisch nach Wiener Kalendertag geführt wurde.
+- `is_allowed(user_id, now, zone, reason=None) -> bool`: holt `daily_alert_limit(user_id)`
+  aus `user_tier.py`. `None` (Premium) → immer `True`. Sonst: `load(...) < limit`,
+  bei `reason="forecast_change"` gegen `limit - RESERVE` (#1555).
+- `increment(user_id, now, zone) -> None`: Read-Modify-Write der Zählerdatei nach
+  demselben Ortsdatums-Vergleich wie `load` (neuer Tag → Zähler startet bei 1).
+  **Merge auf Zonen-Ebene:** Einträge anderer Zonen bleiben unangetastet.
+- `zone` ist seit #1726 ein **Pflicht**-Parameter ohne Default — ein impliziter
+  Rückfall auf eine feste Zone wäre genau die dort behobene Fehlerklasse.
 - `now` ist durchgehend ein Funktionsparameter (Zeit-Injektion). Kein
   Zeit-Mock, keine `datetime.now()`-Aufrufe im Modul selbst.
 
@@ -117,6 +124,7 @@ betroffen (PO-Entscheidung 2026-07-07).
   - Test: Zählerdatei mit `count=6` vorseeden, Premium-Tier setzen, echten Alert-Lauf ausführen; Assert, dass `mail_sink` einen neuen Eintrag enthält und der Zähler weiter erhöht wird (kein Deckel).
 
 - **AC-4:** Given ein Free-Nutzer hat sein Tageslimit von 2 Alerts erreicht, während gleichzeitig der Kalendertag in Europe/Vienna wechselt (nicht in UTC) / When ein weiterer Alert nach dem Vienna-Mitternachts-Übergang ausgelöst wird / Then ist das volle Tagesbudget wieder verfügbar.
+  - ⚠️ **Seit #1726 überholt, historisch:** Die Tagesgrenze ist nicht mehr Wien, sondern die **Ortszone des jeweiligen Trips/Vergleichs**, und gezählt wird je Zone getrennt. Dieses AC belegt heute nur noch „nicht UTC"; die geltende Zusicherung steht in `fix_1726_ruhezeit_und_zaehler_ortszone.md` (AC-6, AC-7).
   - Test: `now`-Parameter auf `2026-07-07 23:30 UTC` (= `2026-07-08 01:30` Vienna) injizieren nach vorherigem Erschöpfen des Budgets an `2026-07-07`; echter Lauf zeigt erneuten Versand und Zählerstand `1` in der neu geschriebenen Datei — beweist die Vienna- statt UTC-Grenze.
 
 - **AC-5:** Given ein Free-Nutzer hat sein Tageslimit bereits über den Radar-Alert-Pfad ausgeschöpft / When derselbe Nutzer einen Deviation-Alert auslöst (und umgekehrt) / Then wird auch dieser unterdrückt, weil beide Pfade denselben Zähler teilen.

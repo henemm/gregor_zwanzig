@@ -273,23 +273,109 @@ class TestAC3HelperValues:
         texts = [t for t, _ in pills]
         assert any("40" in t for t in texts), f"40 km/h (max gust) nicht in Pillen: {texts}"
 
-    def test_metric_order_follows_catalog(self):
-        """Reihenfolge der Pillen folgt Katalog, nicht Eingabe-Reihenfolge."""
+    def test_metric_order_follows_input(self):
+        """Reihenfolge der Pillen folgt der Eingabe-Reihenfolge.
+
+        **#664 → abgeloest durch #1703 S7.** Bis dahin galt hier das Gegenteil
+        („Reihenfolge = Katalog-Reihenfolge, nicht Eingabereihenfolge",
+        ``docs/specs/modules/email_metrics_summary_664.md:88``, 2026-06-08).
+        Diese Wahl war unter ihren Bedingungen richtig: im Juni 2026 gab es
+        keine nutzergesetzte Metrik-Reihenfolge -- die Kanal-Layouts kamen erst
+        mit #1575/#1677 (Trip) bzw. #1335/#1359 (Compare). Die
+        „Eingabereihenfolge" war die zufaellige Folge der Config-Eintraege und
+        trug keine Absicht; Katalogordnung war die stabilere Wahl. Seit die
+        Eingabe eine Nutzerabsicht traegt (im Editor je Kanal gezogene
+        Position), verwirft die Katalogordnung sie -- ein Bedienelement ohne
+        Wirkung. Deshalb dreht #1703 S7 die Zusicherung um.
+
+        Paarweise geprueft: dieselbe MENGE in zwei Reihenfolgen muss zwei
+        verschiedene Pillenfolgen ergeben. Eine einzelne feste Erwartung wuerde
+        „intern nach eigener Prioritaet umsortiert" nicht von „Reihenfolge
+        befolgt" unterscheiden.
+        """
         from output.renderers.email.helpers import build_metrics_summary_pills
-        # Eingabe umgekehrt: precipitation NACH temperature
-        segs = _build_segments()
-        pills = build_metrics_summary_pills(
-            segs, ["precipitation", "temperature"], {}, tz=TZ
+
+        def _texts(reihenfolge):
+            return [t for t, _ in build_metrics_summary_pills(
+                _build_segments(), reihenfolge, {}, tz=TZ,
+            )]
+
+        # Katalog-Ordnung waere temperature VOR precipitation -- die Eingabe
+        # dreht das in einer Richtung ausdruecklich um.
+        a = _texts(["precipitation", "temperature"])
+        b = _texts(["temperature", "precipitation"])
+        assert len(a) == 2 and len(b) == 2, (
+            f"Vakuum: nicht beide Pillen feuern mit dieser Fixture ({a} / {b}) "
+            "-- ohne zwei Pillen ist keine Reihenfolge messbar. Der abgeloeste "
+            "Test hatte diese Luecke als `if ... is not None` und waere bei "
+            "einer ausfallenden Pille still gruen geblieben."
         )
-        ids_order = [t for t, _ in pills]
-        # temperature kommt im Katalog vor precipitation → temperature zuerst
-        # Prüfe, dass der temperature-Wert (enthält "°C") vor precipitation (enthält "mm" oder "Regen")
-        temp_pos = next((i for i, t in enumerate(ids_order) if "°C" in t), None)
-        rain_pos = next((i for i, t in enumerate(ids_order) if "mm" in t or "Regen" in t.lower()), None)
-        if temp_pos is not None and rain_pos is not None:
-            assert temp_pos < rain_pos, (
-                f"temperature muss vor precipitation stehen (Katalog-Reihenfolge): {ids_order}"
-            )
+        assert a == list(reversed(b)), (
+            f"Eingabe [precipitation, temperature] ergibt {a}, Eingabe "
+            f"[temperature, precipitation] ergibt {b} -- die uebergebene "
+            "Reihenfolge wird verworfen (#1703 S7)"
+        )
+
+    def test_altbestand_pillen_folgen_dem_trip_default_rang(self):
+        """Befund aus #1703 S7: fuer Trips OHNE gespeicherte Auswahl aendert
+        sich die Pillen-Reihenfolge -- entgegen der Spec-Annahme „da aendert
+        sich nichts".
+
+        Der Fall-A-Rueckfall ``DEFAULT_TRIP_METRIC_IDS`` wird seit #1552 aus
+        dem Register-Feld ``trip_default_rank`` abgeleitet, NICHT aus
+        ``_PILL_CATALOG_ORDER``. Die beiden Listen fuehren dieselben sieben
+        Groessen, aber in den letzten zwei Positionen vertauscht
+        (``freezing_level``/``visibility``). Seit die Pillen der uebergebenen
+        Liste folgen, gewinnt der Register-Rang -- eine Ordnungsquelle statt
+        zweier separat gepflegter Listen. Der Effekt ist gewollt und hier
+        festgehalten, damit er nicht als Raetsel zurueckkommt.
+        """
+        from output.renderers.email.helpers import (
+            _PILL_CATALOG_ORDER, build_metrics_summary_pills,
+        )
+        from output.renderers.trip_metric_ids import DEFAULT_TRIP_METRIC_IDS
+
+        default_ids = list(DEFAULT_TRIP_METRIC_IDS)
+        # Issue #1728 Scheibe 1: der Standard-Satz enthaelt seither auch
+        # Groessen OHNE Pille (die Tagesrichtungen sind reine
+        # Sichtbarkeits-Gates der Kurzform, Rang 8/9). Verglichen wird
+        # deshalb nur der pillenfaehige Teil -- der Pruefgegenstand
+        # (welche ORDNUNG gewinnt) ist davon unberuehrt.
+        mit_pille = [m for m in default_ids if m in set(_PILL_CATALOG_ORDER)]
+        katalog_ids = [m for m in _PILL_CATALOG_ORDER if m in set(mit_pille)]
+        assert sorted(mit_pille) == sorted(katalog_ids), (
+            "Vorbedingung entfallen: Standard-Satz und Pillen-Katalog fuehren "
+            f"nicht mehr dieselbe MENGE ({mit_pille} / {katalog_ids})"
+        )
+        assert mit_pille != katalog_ids, (
+            "Die beiden Ordnungen sind inzwischen identisch -- dann ist dieser "
+            "Charakterisierungstest gegenstandslos und darf weg (#1703 S7)"
+        )
+
+        # Uebergeben wird bewusst die VOLLE Standardliste -- das ist der echte
+        # Fall-A-Pfad; Groessen ohne Pille fallen im Renderer weg.
+        pillen = build_metrics_summary_pills(
+            _build_segments(), default_ids, {}, tz=TZ,
+        )
+        assert len(pillen) == len(mit_pille), (
+            f"Vakuum: {len(pillen)} Pillen fuer {len(mit_pille)} pillenfaehige "
+            f"Groessen -- nicht jede feuert mit dieser Fixture: {pillen}"
+        )
+        # Zuordnung eigens geprueft: Rechnen sichert Vollstaendigkeit, nie
+        # Zuordnung (#1703 S2 F001). "0°-Linie" = freezing_level, "Sicht" =
+        # visibility -- genau das vertauschte Paar.
+        texte = [t for t, _ in pillen]
+        frost = next(i for i, t in enumerate(texte) if t.startswith("0°-Linie"))
+        sicht = next(i for i, t in enumerate(texte) if t.startswith("Sicht"))
+        assert frost < sicht, (
+            "AC-S7-6/Befund A: der Standard-Satz fuehrt `freezing_level` vor "
+            f"`visibility` (trip_default_rank), die Pillen zeigen: {texte}"
+        )
+        assert katalog_ids.index("visibility") < katalog_ids.index("freezing_level"), (
+            "Gegenprobe entfallen: `_PILL_CATALOG_ORDER` fuehrt `visibility` "
+            "nicht mehr vor `freezing_level` -- dann ist der oben belegte "
+            "Unterschied keiner mehr"
+        )
 
 
 # ---------------------------------------------------------------------------

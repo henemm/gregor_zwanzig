@@ -57,7 +57,13 @@ def _load_presets_for_dispatch(user_id: str, data_root: str) -> list | None:
         return None
 
 
-def _auto_pause_expired_presets(presets: list, user_id: str, data_root: str) -> None:
+def _auto_pause_expired_presets(
+    presets: list,
+    user_id: str,
+    data_root: str,
+    now_utc: _datetime,
+    all_locations: list,
+) -> None:
     """Pausiert Presets mit ueberschrittenem `end_date` (Issue #1250 Scheibe 3).
 
     Issue #1207: Extrahiert aus `run_compare_presets_daily` fuer Delegation
@@ -65,8 +71,24 @@ def _auto_pause_expired_presets(presets: list, user_id: str, data_root: str) -> 
     VERBIRGT abgelaufene Presets bereits (compare_slot_scheduler.py Guard) --
     dieser Durchlauf laeuft unabhaengig davon ueber ALLE geladenen Presets,
     um den Pause-Zustand persistent + sichtbar (UI) zu machen.
+
+    Issue #1727 S5b (ADR-0044): `end_date` wird gegen den ORTSTAG des ersten
+    aufloesbaren Preset-Orts geprueft (`first_resolvable_tz`, dasselbe Muster
+    wie die Faelligkeit seit #1726) -- nicht gegen den Servertag. Sonst blieb
+    ein Preset im Mismatch-Fenster einen Tag zu lange aktiv (und verschickte
+    einen abbestellten Vergleich) oder pausierte einen Tag zu frueh.
+    `now_utc` und die Ortsliste kommen vom Aufrufer (`pre_pass`), der beide
+    bereits hat -- ADR-0051 Regel 3, ohne zusaetzliche Zeitabfrage oder
+    zweiten Ladevorgang.
+
+    Der Zeitstempel `now_iso` stammt jetzt aus DERSELBEN Zeitabfrage wie die
+    Ablauf-Pruefung (vorher `datetime.utcnow()`: naiv, ohne Zone, veraltet --
+    und fuer Muster A des Zeitzonen-Waechters unsichtbar).
     """
-    now_iso = _datetime.utcnow().isoformat() + "Z"
+    from services.compare_preview_service import order_locations_by_ids
+    from utils.timezone import first_resolvable_tz, local_dt
+
+    now_iso = now_utc.isoformat()
     for preset in presets:
         if preset.get("archived_at"):
             continue
@@ -75,8 +97,14 @@ def _auto_pause_expired_presets(presets: list, user_id: str, data_root: str) -> 
         end_date_str = preset.get("end_date")
         if not end_date_str:
             continue
+        locations = order_locations_by_ids(
+            all_locations, preset.get("location_ids") or [],
+        )
+        zone = first_resolvable_tz(
+            locations, context_label=f"Preset {preset.get('id', '?')}",
+        )
         try:
-            expired = date.fromisoformat(end_date_str) < date.today()
+            expired = date.fromisoformat(end_date_str) < local_dt(now_utc, zone).date()
         except (ValueError, TypeError) as e:
             logger.warning(
                 "Preset %s: korruptes end_date bei Auto-Pause-Pruefung, "
@@ -158,14 +186,30 @@ def run_compare_presets_daily(
     """
     if data_root is None:
         data_root = str(get_data_root())
+
+    from datetime import timezone as _timezone
+
+    from services.dispatch_orchestrator import CompareDispatchStrategy, run_briefing_dispatch
+
+    # Issue #1724: der Orchestrator nimmt einen ZEITPUNKT statt einer Stunde.
+    # Issue #1726: die Faelligkeit haengt jetzt je Preset an der Ortszone
+    # seines ersten Orts; nur der manuelle `?hour=`-Testausloeser bleibt an
+    # einer festen Referenz-Zone verankert -- "Stunde X" hat sonst keine EINE
+    # Bedeutung mehr. Verhalten des Endpunkts unveraendert.
     if hour is None:
+        now_utc = _datetime.now(_timezone.utc)
+    else:
+        # Manuelles Ausloesen mit ausdruecklicher Stunde: Zeitpunkt bilden,
+        # dessen Stunde in der Referenz-Zone genau `hour` ist -- damit bleibt
+        # der bestehende Endpunkt-Vertrag (`?hour=`) erhalten.
         from zoneinfo import ZoneInfo
 
-        hour = _datetime.now(ZoneInfo("Europe/Vienna")).hour
+        zone = ZoneInfo(CompareDispatchStrategy.MANUAL_TRIGGER_REFERENCE_ZONE)
+        now_utc = _datetime.now(zone).replace(
+            hour=hour, minute=0, second=0, microsecond=0,
+        ).astimezone(_timezone.utc)
 
-    from services.dispatch_orchestrator import run_briefing_dispatch
-
-    return run_briefing_dispatch("vergleich", user_id, hour, data_root=data_root)
+    return run_briefing_dispatch("vergleich", user_id, now_utc, data_root=data_root)
 
 
 def save_compare_preset_status(
@@ -347,11 +391,6 @@ def send_one_compare_preset(
             f"{preset.get('id', '?')}, target_date={target_date}, "
             f"tage_ab_ortstag={tage_ab_ortstag})."
         )
-    if target_date is None:
-        # Kein Slot-Kontext (Einzelversand): EINE Zeitabfrage, aus der beide
-        # Formen ohne Differenzbildung hervorgehen.
-        target_date = date.today()
-        tage_ab_ortstag = 0
     from output.renderers.comparison import (
         render_compare_email, render_compare_sms, render_compare_telegram,
     )
@@ -382,6 +421,26 @@ def send_one_compare_preset(
     locations = order_locations_by_ids(all_locations_cache, location_ids)
     if not locations:
         raise ValueError(f"Preset {preset_id}: Orte {location_ids} nicht aufloesbar")
+
+    if target_date is None:
+        # Kein Slot-Kontext (Einzelversand): EINE Zeitabfrage, aus der beide
+        # Formen ohne Differenzbildung hervorgehen.
+        # Issue #1727 S5b (ADR-0044): dieser Block steht jetzt HINTER der
+        # Ortsaufloesung, weil sie die Zone liefert — „heute" ist der Ortstag
+        # des ERSTEN AUFLOESBAREN Orts (`first_resolvable_tz`, Muster #1726),
+        # nicht der Servertag. Vorher behauptete das daneben gesetzte
+        # `tage_ab_ortstag = 0` einen Versatz gegen den ORTSTAG, waehrend
+        # `target_date` vom Server kam — genau die zwei Tagesbegriffe, die der
+        # Kontrakt aus #1661 F003 zusammenhalten sollte.
+        # Der Empfaenger-Check bleibt VOR der Ortspruefung: die Reihenfolge der
+        # beiden ValueError-Pfade zueinander ist unveraendert.
+        from datetime import timezone as _timezone
+
+        from utils.timezone import first_resolvable_tz, local_dt
+
+        zone = first_resolvable_tz(locations, context_label=f"Preset {preset_id}")
+        target_date = local_dt(_datetime.now(_timezone.utc), zone).date()
+        tage_ab_ortstag = 0
 
     profil_str = preset.get("profil", "").lower()
     profile = _parse_activity_profile(profil_str)
@@ -417,7 +476,10 @@ def send_one_compare_preset(
         result,
         undelivered=undelivered,
         profile=profile,
-        enabled_metrics=opts.enabled_metrics,
+        # Issue #1703 S8: kanal-eigene Uebersichts-Auswahl (bereits gegen die
+        # Grundauswahl geschnitten). NICHT `opts.enabled_metrics` -- das ist die
+        # gemeinsame Liste, mit der alle drei Kanaele dasselbe zeigten.
+        enabled_metrics=opts.enabled_metrics_by_channel["email"],
         hourly_metrics=opts.hourly_metrics,
         hourly_enabled=opts.hourly_enabled,
         preset_name=name,
@@ -477,10 +539,18 @@ def send_one_compare_preset(
             subject=subject,
             html_body=html_body,
             text_body=text_body,
+            # Issue #1703 S8: je Kanal die dort eingestellte Auswahl (s. oben).
+            # Beide Render-Aufrufe bleiben bewusst INNERHALB des try-Blocks --
+            # ihr Fehlerpfad gehoert wie bisher zu `record_briefing_dispatch_
+            # failure` + `_anchor_and_reset()` (#1629).
             telegram_text=render_compare_telegram(
-                result, enabled_metrics=opts.enabled_metrics, preset_name=name,
+                result,
+                enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
+                preset_name=name,
             ),
-            sms_text=render_compare_sms(result, enabled_metrics=opts.enabled_metrics),
+            sms_text=render_compare_sms(
+                result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
+            ),
             recipients=empfaenger,
             effective_channels=_effective_compare_channels(preset, settings, user_id),
             compare_hourly_enabled=opts.hourly_enabled,

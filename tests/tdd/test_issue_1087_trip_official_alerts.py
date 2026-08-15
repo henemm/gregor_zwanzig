@@ -232,9 +232,10 @@ class TestAC1TripOfficialAlertsFR:
             try:
                 register_official_alert_source(counting_source)
 
+                # Fix #1795 AC-7: OnDemandErgebnis(outcome, zieltag) statt bloszem String.
                 outcome = TripReportSchedulerService(user_id=user_id).send_on_demand_report(
                     trip, "morning"
-                )
+                ).outcome
                 assert counting_source.fetch_calls >= 1, (
                     "RED: der Trip-Briefing-Pfad ruft die registrierten "
                     "Official-Alert-Quellen noch nicht ab (fetch_calls=0)."
@@ -486,9 +487,10 @@ class TestAC3ToggleNoFetch:
             oa_base._REGISTERED_SOURCES.clear()
             try:
                 register_official_alert_source(counting_source)
+                # Fix #1795 AC-7: OnDemandErgebnis(outcome, zieltag) statt bloszem String.
                 outcome = TripReportSchedulerService(user_id=user_id).send_on_demand_report(
                     trip, "morning"
-                )
+                ).outcome
                 assert outcome == "sent", f"Erwartet Outcome 'sent', bekommen {outcome!r}"
                 assert counting_source.fetch_calls == 0, (
                     "official_alerts_enabled=False muss den Fetch verhindern, aber "
@@ -515,8 +517,13 @@ class TestAC3LoaderRoundtripPersistence:
         from app.loader import load_trip, save_trip
         from app.trip import Stage, Trip, Waypoint
 
-        wp1 = Waypoint(id="w1", name="Nizza", lat=NICE_LAT, lon=NICE_LON, elevation_m=10)
-        wp2 = Waypoint(id="w2", name="Villefranche", lat=43.7048, lon=7.3131, elevation_m=20)
+        # #1709: feste Ankunftszeiten statt Naismith-Self-Heal (trip_segments.py:
+        # 125-127) — die Zeiten selbst tragen keine Pruefaussage dieser Datei
+        # (Read-Modify-Write-Roundtrip), sie muessen nur ueberhaupt gesetzt sein.
+        wp1 = Waypoint(id="w1", name="Nizza", lat=NICE_LAT, lon=NICE_LON, elevation_m=10,
+                       arrival_calculated="09:00")
+        wp2 = Waypoint(id="w2", name="Villefranche", lat=43.7048, lon=7.3131, elevation_m=20,
+                       arrival_calculated="11:00")
         stage = Stage(id="s1", name="Etappe Cote d'Azur", date=date.today(), waypoints=[wp1, wp2])
         trip = Trip(
             id="tdd-1087-loader-roundtrip",
@@ -580,9 +587,10 @@ class TestAC4FailSoft:
             try:
                 register_official_alert_source(erroring_source)
 
+                # Fix #1795 AC-7: OnDemandErgebnis(outcome, zieltag) statt bloszem String.
                 outcome = TripReportSchedulerService(user_id=user_id).send_on_demand_report(
                     trip, "morning"
-                )
+                ).outcome
                 assert erroring_source.fetch_calls >= 1, (
                     "RED: der Trip-Briefing-Pfad ruft die registrierten "
                     "Official-Alert-Quellen noch nicht ab (fetch_calls=0), "
@@ -650,9 +658,10 @@ class TestAC5CompactFormat:
             try:
                 register_official_alert_source(counting_source)
 
+                # Fix #1795 AC-7: OnDemandErgebnis(outcome, zieltag) statt bloszem String.
                 outcome = TripReportSchedulerService(user_id=user_id).send_on_demand_report(
                     trip, "morning"
-                )
+                ).outcome
                 assert counting_source.fetch_calls >= 1, (
                     "RED: der Trip-Briefing-Pfad ruft die registrierten "
                     "Official-Alert-Quellen noch nicht ab (fetch_calls=0)."

@@ -34,7 +34,7 @@ from output.channels.premium_sms import PremiumSmsOutput
 from output.channels.sms import SMSOutput
 from output.channels.telegram import TelegramOutput
 from services.trip_command_processor import CommandResult
-from utils.timezone import local_fmt
+from utils.timezone import local_dt, local_fmt
 
 if TYPE_CHECKING:
     from app.models import (
@@ -178,6 +178,11 @@ class RadarAlertRequest:
     source_label: str
     tz: ZoneInfo
     briefing_context: str | None = None
+    # Issue #1744 A1: Kennung der betroffenen Etappe ("1".."N"/"Ziel"), additiv
+    # und optional. Ohne sie nennt der Nowcast den Ort weiter als km-Spanne
+    # (AC-7) — genau das taten bis 2026-08-12 ALLE Nowcast-Mails, waehrend die
+    # amtliche Warnung zum selben Ort "🏁 Ziel" sagte.
+    segment_id: str | None = None
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -404,6 +409,22 @@ class NotificationService:
                 logger.error(f"E-Mail send failed for {request.trip.name}: {e}")
 
         # SMS
+        #
+        # Issue #1680 S2 (nur Hinweis, keine Logikaenderung): der Rueckfall
+        # `sms_text or email_plain` ist der EINZIGE Weg, auf dem die
+        # Gewitter-Herkunft ("… · CAPE", Teil der Kurzzusammenfassung in
+        # `email_plain`) doch noch in SMS/Premium-SMS landen koennte — beide
+        # Kanaele tragen sie laut PO-Entscheidung ausdruecklich NICHT.
+        # `sms_text` wird seit #868 immer erzeugt (`trip_report.py:441`), der
+        # Zweig ist also praktisch tot; "praktisch tot" ist aber keine
+        # Unmoeglichkeit. Bewacht wird er am erzeugten Text (Spec AC-8:
+        # `sms_text` nicht-leer UND ohne jede Zutat-Bezeichnung), nicht durch
+        # die Annahme, er sei unerreichbar.
+        # Issue #1680 S3 (Nachtrag, weiterhin keine Logikaenderung): seit
+        # dieser Scheibe tragen AUCH die Gewitter-Pille des Metriken-
+        # Ueberblicks und die GLANCE-Tageszeile eine Herkunft, die in
+        # `email_plain` landet -- der Rueckfall unten ist damit derselbe
+        # Weg fuer mehr Inhalt, nicht fuer einen neuen.
         telegram_fully_sent = True
         if request.send_sms and self._settings.can_send_sms():
             try:
@@ -421,6 +442,8 @@ class NotificationService:
         # selbst (Spec D3) und liefert den Grund als Ausnahme zurueck. Eine
         # Bedingung davor wuerde dieselbe Pruefung doppeln und den Grund
         # verschlucken — genau das, was `blocked_channels` verhindert.
+        # Zum Rueckfall `sms_text or email_plain` s. den Hinweis beim
+        # SMS-Block oben (Issue #1680 S2, Herkunft gehoert hier nicht hin).
         if request.send_premium_sms:
             try:
                 PremiumSmsOutput(self._settings).send(
@@ -808,9 +831,9 @@ class NotificationService:
         HTML-Body, Telegram- und SMS-Text ueber die vier Vorlagen-Renderer.
         """
         from output.renderers.alert.official_alerts import (
-            build_official_alert_notices, render_official_alert_sms,
-            render_official_alert_subject, render_official_alert_telegram,
-            render_warn_block,
+            build_official_alert_notices, render_official_alert_mail_plain,
+            render_official_alert_sms, render_official_alert_subject,
+            render_official_alert_telegram, render_warn_block,
         )
         from utils.timezone import tz_for_coords
 
@@ -835,6 +858,13 @@ class NotificationService:
             source_url=source_url, stand_at=stand_at, tz=alert_tz,
             context_label=trip.name,
         )
+        # Issue #1744 A2 (AC-13): eigens gebauter Klartext-Teil aus denselben
+        # Datenzeilen wie das HTML -- ohne ihn strippt `build_mime_message` die
+        # Tags aus dem HTML und der Klartext-Leser bekommt Zeilensalat.
+        plain = render_official_alert_mail_plain(
+            dto_notices, source_label=source_label, stand_at=stand_at,
+            tz=alert_tz, context_label=trip.name,
+        )
         telegram_text = render_official_alert_telegram(
             dto_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
         )
@@ -852,7 +882,8 @@ class NotificationService:
                     mail_sink(subject=subject, body=html)
                 else:
                     EmailOutput(self._settings).send(
-                        subject=subject, body=html, html=True, mail_type="official-alert",
+                        subject=subject, body=html, html=True,
+                        plain_text_body=plain, mail_type="official-alert",
                     )
             except Exception as e:
                 failed_channels.append("email")
@@ -1043,8 +1074,8 @@ class NotificationService:
         statt einer eigenen `tz_for_coords()`-Direktkopie.
         """
         from output.renderers.alert.official_alerts import (
-            build_compare_official_alert_notices, render_official_alert_subject,
-            render_warn_block,
+            build_compare_official_alert_notices, render_official_alert_mail_plain,
+            render_official_alert_subject, render_warn_block,
         )
         from utils.timezone import resolve_location_tz
 
@@ -1075,6 +1106,13 @@ class NotificationService:
             source_url=source_url, stand_at=stand_at, tz=alert_tz,
             context_label="Ortsvergleich",
         )
+        # Issue #1744 A2 (AC-13): derselbe Mailtyp, derselbe Klartext-Bau wie im
+        # Trip-Pfad -- sonst haetten die zwei Flaechen desselben Mailtyps
+        # wieder zwei verschiedene Klartexte.
+        plain = render_official_alert_mail_plain(
+            dto_notices, source_label=source_label, stand_at=stand_at,
+            tz=alert_tz, context_label="Ortsvergleich",
+        )
 
         sent_channels: list[str] = []
         failed_channels: list[str] = []  # Issue #1459: Alarm-Protokoll
@@ -1083,7 +1121,7 @@ class NotificationService:
         blocked_reason_codes: dict[str, str] = {}
         if "email" in effective_channels and self._settings.can_send_email():
             if not self._dispatch_compare_official_email(
-                preset_name, subject, html, mail_sink
+                preset_name, subject, html, mail_sink, plain=plain,
             ):
                 failed_channels.append("email")
             sent_channels.append("email")
@@ -1122,6 +1160,7 @@ class NotificationService:
 
     def _dispatch_compare_official_email(
         self, preset_name: str, subject: str, html: str, mail_sink: Optional[object],
+        *, plain: str | None = None,
     ) -> bool:
         """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
         try:
@@ -1129,7 +1168,8 @@ class NotificationService:
                 mail_sink(subject=subject, body=html)
             else:
                 EmailOutput(self._settings).send(
-                    subject=subject, body=html, html=True, mail_type="official-alert",
+                    subject=subject, body=html, html=True,
+                    plain_text_body=plain, mail_type="official-alert",
                 )
         except Exception as e:
             logger.error(f"Compare official alert email failed for {preset_name}: {e}")
@@ -1240,6 +1280,7 @@ class NotificationService:
             intensity_label=request.intensity_label,
             source_label=request.source_label,
             briefing_context=request.briefing_context,
+            segment_id=request.segment_id,  # Issue #1744 A1
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.
@@ -1669,11 +1710,18 @@ class NotificationService:
 
     @staticmethod
     def _target_date_from_report(report, request: TripReportRequest):
-        """Versucht, das Zieldatum aus den Segmenten zu ermitteln."""
+        """Versucht, das Zieldatum aus den Segmenten zu ermitteln.
+
+        Issue #1727 S5b (ADR-0044): der Rueckfall (Report ohne verwertbare
+        Segmente) folgt der ZONE DER TOUR, die am DTO bereits als
+        `request.trip_tz` aufgeloest vorliegt — kein zweiter Aufloeser, kein
+        zusaetzlicher Parameter. Vorher stand hier `date.today()`: im
+        Mismatch-Fenster las der Nutzer im Mail-/SMS-/Telegram-Praefix ein
+        Datum, das einen Tag neben dem Tag lag, fuer den das Briefing gilt.
+        """
         if report.segments and report.segments[0].segment:
             return report.segments[0].segment.start_time.date()
-        from datetime import date as _date
-        return _date.today()
+        return local_dt(datetime.now(timezone.utc), request.trip_tz).date()
 
     def _send_email(self, report) -> None:
         """Versendet das Briefing per E-Mail (full oder compact)."""

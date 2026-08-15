@@ -22,7 +22,7 @@ FixtureProvider (Issue #346/#483), kein Dateiinhalt-Check.
 from __future__ import annotations
 
 import copy
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 _FIXTURE_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "openmeteo"
@@ -106,7 +106,8 @@ def test_preview_does_not_mutate_display_config_and_matches_reference_render():
     before = trip_for_preview.display_config.show_compact_summary
 
     preview_report, _segments, _stage_name, _tz = PreviewService()._build_report(
-        trip_for_preview, target, "morning", demo=True,
+        trip_for_preview, target, "morning",
+        now_utc=datetime.now(timezone.utc), demo=True,
     )
 
     after = trip_for_preview.display_config.show_compact_summary

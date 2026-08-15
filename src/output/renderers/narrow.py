@@ -28,13 +28,14 @@ from utils.timezone import local_fmt, local_hour
 
 from output.renderers.alert.render import _esc
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
-from output.renderers.channel_layout import render_for_channel
+from output.renderers.channel_layout import VISIBILITY_GATE_IDS, render_for_channel
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
     hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
 )
 from output.metric_format import THUNDER_LABEL_DE
 from output.renderers.email.helpers import _THUNDER_MAP, fmt_val, format_trend_tokens
+from output.renderers.email.thunder_branch import resolve_thunder_day_branch
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
     render_official_alerts_unavailable_plain,
@@ -587,9 +588,18 @@ def _outlook_lines(multi_day_trend: list[dict]) -> list[str]:
         # hoch@0" -- ein Tagesgewitter, das es im Tagesfenster nicht gab.
         dt = tok.get("thunder_day_token", "-")
         nt = tok.get("thunder_night_token", "-")
-        if dt != "-":
+        # Issue #1671: Zweigwahl aus dem geteilten Helfer (identisch zu
+        # compact.py/outlook.py) -- die Formatierung bleibt hier unveraendert.
+        branch = resolve_thunder_day_branch(tok, stage)
+        if branch == "day":
             thunder_part = f"⚡{dt}"
-        elif stage.get("hourly_thunder"):
+            # Issue #1680 S5a: die tragende Zutat hinter der Tagesstufe --
+            # derselbe Token wie in HTML- und Klartext-Mail (AC-3). Ein
+            # Zeilenumbruch auf _TG_PROSE_WIDTH ist hinnehmbar (Wort-Umbruch).
+            _origin = tok.get("thunder_day_origin")
+            if _origin:
+                thunder_part += f" · {_origin}"
+        elif branch == "none":
             thunder_part = _THUNDER_MAP["NONE"]["plain"]
         else:
             thunder_part = tok["thunder_plain"]
@@ -756,6 +766,14 @@ def render_telegram_bubbles(
             overview_lines.extend(_wrap(_esc(
                 f"{get_metric('wind_chill_night').compact_label} "
                 f"{_night_felt_min_c:.1f}"), _TG_PROSE_WIDTH))
+            continue
+        # Issue #1728 Scheibe 1: die vier Tagesrichtungen sind reine
+        # Sichtbarkeits-Gates der Kurzform (SMS-Token K/D/FK/FD) und tragen
+        # in der Telegram-Kurzuebersicht keinen eigenen Wert -- die T-/TF-
+        # Zeile zeigt die Spanne dort bereits unbedingt. Ohne diese Ausnahme
+        # entstuenden vier leere Zeilen ("K –", "D –", "FK –", "FD –").
+        # Die beiden Nachtfenster-Skalare sind oben eigens behandelt.
+        if mid in VISIBILITY_GATE_IDS:
             continue
         overview_lines.extend(_wrap(_esc(_overview_line(
             mid, seg_tables, fkeys, report_type=report_type,

@@ -27,8 +27,18 @@ faellig". `_daily_preset()` hat keine Slot-Felder → Migrations-Fallback
 (Morgen-Slot aktiv @06:00, siehe `compare_slot_scheduler.resolve_preset_slots`).
 Alle Aufrufe hier uebergeben deshalb explizit `hour=6`, damit die Tests
 deterministisch bleiben (statt von der aktuellen Wanduhrzeit abzuhaengen).
+
+Update #1726: `hour=6` ist in der Referenz-Zone Europe/Vienna verankert. Die
+Presets hier haben absichtlich KEINEN aufloesbaren Ort (das ist der gepruefte
+Fehlschlag-Pfad) und damit seither auch keine Ortszone — sie rechnen in UTC
+und sehen zu diesem Zeitpunkt eine andere Stunde. Der Morgen-Slot wird deshalb
+auf die UTC-Stunde desselben Zeitpunkts gesetzt (`utc_slot_for_manual_hour`),
+sonst ist kein Preset mehr faellig und die Tests pruefen einen Lauf, der nie
+stattfindet. Der oben beschriebene Migrations-Rueckfall greift damit nicht
+mehr — er ist in `test_compare_preset_slot_dispatch.py` eigens geprueft.
 """
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.compare_slot_time import utc_slot_for_manual_hour
 import logging
 import uuid
 
@@ -53,6 +63,9 @@ def _daily_preset(preset_id="cp-649", location_ids=("loc-missing",), schedule="d
         "name": f"Vergleich {preset_id}",
         "location_ids": list(location_ids),
         "schedule": schedule,
+        # Issue #1726: ortslose Presets rechnen in UTC, der Ausloeser `hour=6`
+        # verankert in Europe/Vienna — ohne diesen Slot waeren sie unfaellig.
+        "morning_time": utc_slot_for_manual_hour(6),
         "profil": "SUMMER_TREKKING",
         "hour_from": 9,
         "hour_to": 16,

@@ -38,10 +38,17 @@ describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
 			'reihenfolge',
 			'tagesfenster',
 			'sms_schwellen',
-			// Issue #1357: Auswertungswahl fuer die Mail-Kachelzeile — route-only,
-			// der Ortsvergleich zieht mit #1411 nach (Spec AC-9).
-			'auswertungen',
+			// Issue #1728 Scheibe 2 (2026-08-15): 'auswertungen' ist ENTFERNT,
+			// nicht mehr Teil der Liste — der Bedienabschnitt "05 — Auswertungen"
+			// entfaellt ersatzlos (Spec § DEC-9/AC-8).
 			'report_config',
+			// Issue #1720 S1: 'ausblick' kommt DAZU — der Trip bekommt die
+			// Spaltenauswahl der 3-Tages-Vorschau (dasselbe geteilte Bauteil wie
+			// der Ortsvergleich). Diese Erwartung fror das Fehlen des Abschnitts
+			// fest; sie dreht sich um, weil `display_config.outlook_metrics` jetzt
+			// auch im Trip echte Mail-Wirkung hat (HTML- und Klartext-Ausblick).
+			// Spec: docs/specs/modules/feat_1720_s1_trip_ausblick_metriken.md
+			'ausblick',
 			'official_alerts'
 		]);
 	});
@@ -118,12 +125,16 @@ describe('Issue #1359 Scheibe 1: Diff-Guard erkennt reine Umsortierung (AC-3)', 
 			preset,
 			{
 				activeMetricKeys: ['wind_max_kmh', 'temp_max_c'],
+				// Issue #1703 S8: kein Kanal je editiert (dieser Test prueft die
+				// GRUNDauswahl-Reihenfolge) — alle drei folgen ihr.
+				channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 				officialAlertsEnabled: true,
 				dayWindowStartHour: 4,
 				dayWindowEndHour: 19
 			},
 			{
 				activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
+				channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 				officialAlertsEnabled: true,
 				dayWindowStartHour: 4,
 				dayWindowEndHour: 19
@@ -139,6 +150,7 @@ describe('Issue #1359 Scheibe 1: Diff-Guard erkennt reine Umsortierung (AC-3)', 
 	test('AC-3: unveraenderte Reihenfolge schreibt weiterhin NICHT', () => {
 		const snapshot = {
 			activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
+			channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 			officialAlertsEnabled: true,
 			dayWindowStartHour: 4,
 			dayWindowEndHour: 19

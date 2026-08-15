@@ -198,6 +198,11 @@ def render_compare_email_preview(body: Any) -> str:
 # nur eine Etappe strukturell unter 160 Zeichen. Temperatur/gefuehlte
 # Temperatur bleiben in einem realistischen Bereich (weniger auffaellig fuer
 # Nutzer als Wind/Niederschlag/Schnee-Groessenordnungen).
+# Issue #1824 (A): der Bereichs-Token ('D-12/28' statt 'K-12 D28') macht die
+# Zeile um 3 Zeichen kuerzer und schob sie unter die 160er-Grenze -- die
+# Kuerzung waere damit unsichtbar geworden und AC-2 haette den falschen Zweig
+# geprueft. Die drei Schnee-Groessen tragen deshalb je eine Stelle mehr; sie
+# waren schon vorher bewusst unrealistisch und dienen allein diesem Zweck.
 SMS_FIDELITY_SAMPLE_FORECAST = NormalizedForecast(
     days=(
         DailyForecast(
@@ -235,9 +240,9 @@ SMS_FIDELITY_SAMPLE_FORECAST = NormalizedForecast(
                     range(6, 18), (0, 0, 1, 1, 2, 2, 3, 3, 3, 2, 1, 0),
                 )
             ),
-            snow_depth_cm=24500.0,
-            snowfall_limit_m=98000.0,
-            snow_new_24h_cm=18500.0,
+            snow_depth_cm=245000.0,
+            snowfall_limit_m=980000.0,
+            snow_new_24h_cm=185000.0,
         ),
         DailyForecast(thunder_hourly=(HourlyValue(10, 2.0),)),
     ),

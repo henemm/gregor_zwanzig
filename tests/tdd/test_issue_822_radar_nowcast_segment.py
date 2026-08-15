@@ -536,18 +536,27 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
             f"AC-4 F003b: Body enthält noch rohen Source-Key 'radar'.\nBody:\n{body}"
         )
 
-        # F003c — km-Wert arithmetisch konsistent (Haversine ±2 km Toleranz)
-        # build_segment_label emittiert z.B. „Etappe 1, km 0–13.1, 07:00–09:00"
-        import re
-        km_match = re.search(r"km\s*[\d.]+[–-]([\d.]+)", body)
-        assert km_match, (
-            f"AC-4 F003c: Body muss einen km-Bereich enthalten (z.B. 'km 0–13.1').\n"
-            f"Body:\n{body}"
+        # Segment-Label — Issue #1744 A1: die Zeile „Wo & wann" nennt die
+        # Etappen-Kennung („Segment 1"), dieselbe Sprache wie Betreff und
+        # amtliche Warnung. Vorher stand hier die km-Spanne.
+        assert "Segment 1" in body, (
+            f"AC-4: Body muss die betroffene Etappe nennen.\nBody:\n{body}"
         )
-        actual_end_km = float(km_match.group(1))
+
+        # F003c — km-Wert arithmetisch konsistent (Haversine ±2 km Toleranz).
+        # Issue #1744 A1: seit die Mail den Ort als Etappen-Kennung nennt, taucht
+        # der km-Wert dort nicht mehr auf. Die Zusicherung bleibt trotzdem
+        # bestehen — sie haengt jetzt an der QUELLE, die der Alarmpfad selbst
+        # liest (`trip_alert.py:1099-1100`: `active.{start,end}_point.
+        # distance_from_start_km` aus `resolve_current_segment`), statt an ihrem
+        # frueheren Abdruck im Mailtext.
+        from services.trip_segments import resolve_current_segment
+        _res = resolve_current_segment(trip, datetime.now(timezone.utc), today)
+        assert _res is not None, "AC-4 F003c: kein aktives Segment aufloesbar."
+        actual_end_km = _res[0].end_point.distance_from_start_km
         assert abs(actual_end_km - expected_km) < 2.0, (
             f"AC-4 F003c: km-Endwert {actual_end_km:.1f} weicht mehr als 2 km von "
-            f"Haversine-Distanz {expected_km:.1f} ab.\nBody:\n{body}"
+            f"Haversine-Distanz {expected_km:.1f} ab."
         )
 
         # Cooldown-Text

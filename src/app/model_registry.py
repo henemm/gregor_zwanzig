@@ -192,3 +192,32 @@ def cape_delta_threshold_jkg(
     if geeicht is None:
         return None
     return nominal * geeicht / CAPE_REFERENZ_NIVEAU_JKG
+
+
+# CAPE-Leiter (Issue #1679, CIN-Teil). Belegt: NWS/SPC, mehrfach unabhaengig
+# publiziert -- "Weak instability: less than 1000 J/kg, Moderate: 1000 to
+# 2500, Strong: 2500-4000, Extreme: greater than 4000" (Gesamtkonzept 3.5b).
+# Die beiden oberen Sprossen sind KEINE eigenstaendige Eichung, sondern die
+# publizierten Verhaeltnisse (2,5x / 4x) auf die bereits geeichte
+# LOW-Schwelle (#1592) uebertragen -- ueber dieselbe Umrechnung, die
+# `cape_delta_threshold_jkg()` schon fuer die Alarm-Empfindlichkeit nutzt.
+CAPE_LEITER_MED_NOMINAL_JKG = 2500.0
+CAPE_LEITER_HIGH_NOMINAL_JKG = 4000.0
+
+
+def cape_ladder_thresholds_jkg(
+    model_id: Optional[str], region: Optional[str]
+) -> Optional[Tuple[float, float, float]]:
+    """(low, med, high)-CAPE-Leiter fuer (``model_id``, ``region``),
+    regions-/modellskaliert. ``low`` ist unveraendert ``cape_threshold_jkg()``
+    -- keine zweite, abweichende Kalibrierung derselben Sprosse.
+
+    ``None``, wenn keine Kalibrierung fuer die Kombination vorliegt --
+    identisch zu ``cape_threshold_jkg()``, kein Rueckfall auf die rohe
+    NWS-Leiter."""
+    low = cape_threshold_jkg(model_id, region)
+    if low is None:
+        return None
+    med = cape_delta_threshold_jkg(CAPE_LEITER_MED_NOMINAL_JKG, model_id, region)
+    high = cape_delta_threshold_jkg(CAPE_LEITER_HIGH_NOMINAL_JKG, model_id, region)
+    return (low, med, high)

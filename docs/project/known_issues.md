@@ -59,6 +59,18 @@ Diagnose und Fix-Design stammen von der `henemm-infra`-Claude-Instanz (inkl. Sel
 1. **Eine Diff-BASIS zu hinterlegen ist robuster als einen fertigen Scope-WERT zu cachen**, wenn eine bereits bestehende Schutzregel (hier #1096/F001) genau diesen Wert-Cache für einen bestimmten Ergebnistyp (`docs-only`) grundsätzlich verwirft — der erste, naheliegende Lösungsansatz hätte an der eigenen Schutzregel scheitern müssen.
 2. **Cross-Repo-Root-Cause-Analyse funktioniert**, wenn die diagnostizierende Instanz keinen Schreibzugriff auf das betroffene Repo braucht, um trotzdem den vollständigen Fix (inkl. Code) zu liefern — die Umsetzung bleibt dann bei der zuständigen Instanz.
 
+### Nachtrag (2026-08-13, Fix #1776): verbleibende Selbstreferenz im `preflight_base`-Zweig
+
+Der obige Fix hinterlegt die Diff-Basis, prüfte beim Lesen in `_scope_diff_base()` aber nicht, ob
+`preflight_base` zufällig mit dem aktuellen HEAD identisch ist (Selbstreferenz, z. B. bei einem
+Merge kurz nach dem Preflight). Das ergab denselben `HEAD..HEAD`-Fehlklassifikations-Effekt wie
+das Ursprungsproblem, nur über den neuen Hint statt den alten Marker — dreimal live beobachtet
+(#1725, #1803, sowie der #1776-Befund selbst). Fix: `_scope_diff_base()` verlangt jetzt zusätzlich
+`preflight_base != head`, spiegelbildlich zum bereits vorhandenen `marker_sha != head`-Schutz im
+direkt folgenden Zweig. Details: `docs/specs/modules/fix_1776_staging_gate_selfref.md`. Der
+separate Fehlerpfad über einen fälschlich mit `scope=docs-only` auf HEAD geschriebenen Marker
+(Issue #1640) ist davon unberührt und bleibt offen.
+
 ---
 
 ## BUG-1383-1385-1386-ALERT-TZ: Alarm-Uhrzeiten in drei Renderpfaden in UTC statt Ortszeit

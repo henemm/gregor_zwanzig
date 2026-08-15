@@ -75,7 +75,7 @@ def test_find_active_trip_today_overlap(monkeypatch):
 
     from services.inbound_telegram_reader import InboundTelegramReader
     reader = InboundTelegramReader()
-    result = reader._find_active_trip()
+    result = reader._find_active_trip(datetime.now(tz=timezone.utc))
     assert result is not None
     assert result.name == "GR20"
 
@@ -105,7 +105,7 @@ def test_find_active_trip_next_future(monkeypatch):
 
     from services.inbound_telegram_reader import InboundTelegramReader
     reader = InboundTelegramReader()
-    result = reader._find_active_trip()
+    result = reader._find_active_trip(datetime.now(tz=timezone.utc))
     assert result is not None
     assert result.name == "GR20"
 
@@ -127,7 +127,7 @@ def test_find_active_trip_no_trips_returns_none(monkeypatch):
 
     from services.inbound_telegram_reader import InboundTelegramReader
     reader = InboundTelegramReader()
-    result = reader._find_active_trip()
+    result = reader._find_active_trip(datetime.now(tz=timezone.utc))
     assert result is None
 
 

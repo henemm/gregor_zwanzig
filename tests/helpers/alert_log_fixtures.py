@@ -41,6 +41,8 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
 LAT, LON = 47.0, 11.0
 
 def compare_data_root() -> Path:
@@ -143,7 +145,19 @@ def gust_alert_trip(
             trip_id=trip_id, metrics=metrics, metric_alert_levels=levels,
         ),
     )
-    trip.report_config = TripReportConfig(trip_id=trip_id, send_email=True, alert_on_changes=True)
+    # Issue #1594: ohne gesetzte Zeiten erbt `TripReportConfig` 07:00/18:00
+    # Ortszeit — der Trip waere dann zweimal taeglich 60 Minuten lang
+    # "Briefing steht bevor" und die neue Vorlauf-Sperre unterdrueckte den
+    # Alarm aus einem ZWEITEN Grund. Die Tests hier messen Protokoll und
+    # Kanaele, nicht die Sperre; die Zeiten sind Vorbedingung, keine
+    # Zusicherung. Die Zone kommt aus derselben Aufloesung, die auch die
+    # Sperre benutzt (`anchor_tz`) — eine andere waere ein Pruefort neben dem
+    # Wirkort.
+    morgen, abend = briefing_zeiten_fuer_trip(trip)
+    trip.report_config = TripReportConfig(
+        trip_id=trip_id, send_email=True, alert_on_changes=True,
+        morning_time=morgen, evening_time=abend,
+    )
     trip.alert_cooldown_minutes = 0
     trip.official_alert_triggers_enabled = False
     if alert_channels is not None:

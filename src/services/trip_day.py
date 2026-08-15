@@ -71,11 +71,26 @@ def anchor_tz(trip: "Trip", now_utc: datetime) -> "ZoneInfo":
     return display_tz(trip, local_dt(now_utc, UTC).date())
 
 
+def trip_local_now(trip: "Trip", now_utc: datetime) -> datetime:
+    """Die Ortszeit der Tour zum Zeitpunkt ``now_utc`` — Datum UND Uhrzeit aus
+    EINER Zonen-Aufloesung (#1724).
+
+    Henne-Ei-Aufloesung in zwei Schritten (#1470): :func:`anchor_tz` bestimmt
+    zuerst WELCHER Kalendertag gerade ist (ueber die Etappe des Weltzeit-Tages),
+    dann liefert dieselbe Zone die Ortszeit.
+
+    Wer Tag und Stunde braucht, ruft DIESE Funktion einmal — nicht
+    :func:`trip_local_today` und daneben eine zweite Aufloesung fuer die
+    Stunde. Zwei Aufloesungen koennen an der Tagesgrenze auseinanderfallen und
+    sind genau die Fehlerklasse, die #1697 dreimal gefunden hat.
+    """
+    return local_dt(now_utc, anchor_tz(trip, now_utc))
+
+
 def trip_local_today(trip: "Trip", now_utc: datetime) -> date:
     """Der Kalendertag "heute", gemessen an der Ortszeit der Tour (ADR-0044).
 
-    Henne-Ei-Aufloesung in zwei Schritten (#1470): :func:`anchor_tz`
-    bestimmt zuerst WELCHER Kalendertag gerade ist (ueber die Etappe des
-    Weltzeit-Tages), dann liefert dieselbe Zone den eigentlichen Ortstag.
+    Duenne Sicht auf :func:`trip_local_now` — verhaltensgleich zur Fassung aus
+    #1697, nur ohne eigene Aufloesung.
     """
-    return local_dt(now_utc, anchor_tz(trip, now_utc)).date()
+    return trip_local_now(trip, now_utc).date()

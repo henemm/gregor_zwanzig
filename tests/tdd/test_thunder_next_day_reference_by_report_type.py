@@ -54,6 +54,19 @@ def _trend_rows_for(target: date) -> list[dict]:
     ]
 
 
+def _jetzt():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc)
+
+
+def _zonenloser_trip():
+    """Trip ohne Wegpunkte — #1724: der Zieltag ist der ORTStag des Trips.
+    Ohne Wegpunkt greift der dokumentierte UTC-Rueckfall (`trip_day.trip_tz`),
+    der Zieltag ist damit derselbe wie vor der Aenderung."""
+    from app.trip import Trip
+    return Trip(id="thunder-probe", name="Probe", stages=[])
+
+
 class TestThunderNextDayReferenceByReportType:
     def test_morning_th_plus_refers_to_tomorrow(self):
         """
@@ -62,13 +75,14 @@ class TestThunderNextDayReferenceByReportType:
         THEN:  fc["+1"]["date"] == (heute + 1 Tag) — morgen, NICHT uebermorgen
         """
         svc = TripReportSchedulerService()
-        target = svc._get_target_date("morning")
+        target = svc._get_target_date("morning", _zonenloser_trip(), _jetzt())
         assert target == date.today(), (
             "Vorbedingung: morning-Zieltag muss heute sein"
         )
 
         fc = svc._build_thunder_forecast_from_trend_or_fetch(
-            None, target, tz=None, multi_day_trend=_trend_rows_for(target),
+            None, target, now_utc=_jetzt(), tz=None,
+            multi_day_trend=_trend_rows_for(target),
         )
 
         expected = (target + timedelta(days=1)).strftime("%d.%m.%Y")
@@ -85,13 +99,14 @@ class TestThunderNextDayReferenceByReportType:
         THEN:  fc["+1"]["date"] == (heute + 2 Tage) — uebermorgen
         """
         svc = TripReportSchedulerService()
-        target = svc._get_target_date("evening")
+        target = svc._get_target_date("evening", _zonenloser_trip(), _jetzt())
         assert target == date.today() + timedelta(days=1), (
             "Vorbedingung: evening-Zieltag muss heute+1 sein"
         )
 
         fc = svc._build_thunder_forecast_from_trend_or_fetch(
-            None, target, tz=None, multi_day_trend=_trend_rows_for(target),
+            None, target, now_utc=_jetzt(), tz=None,
+            multi_day_trend=_trend_rows_for(target),
         )
 
         expected = (target + timedelta(days=1)).strftime("%d.%m.%Y")
@@ -108,15 +123,16 @@ class TestThunderNextDayReferenceByReportType:
         gleich, nicht zwei Tage verschoben.
         """
         svc = TripReportSchedulerService()
-        morning_target = svc._get_target_date("morning")
-        evening_target = svc._get_target_date("evening")
+        _trip, _now = _zonenloser_trip(), _jetzt()
+        morning_target = svc._get_target_date("morning", _trip, _now)
+        evening_target = svc._get_target_date("evening", _trip, _now)
 
         fc_morning = svc._build_thunder_forecast_from_trend_or_fetch(
-            None, morning_target, tz=None,
+            None, morning_target, now_utc=_jetzt(), tz=None,
             multi_day_trend=_trend_rows_for(morning_target),
         )
         fc_evening = svc._build_thunder_forecast_from_trend_or_fetch(
-            None, evening_target, tz=None,
+            None, evening_target, now_utc=_jetzt(), tz=None,
             multi_day_trend=_trend_rows_for(evening_target),
         )
 

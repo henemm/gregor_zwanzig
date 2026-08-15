@@ -37,18 +37,32 @@
 		// Stufen-Auswahl (kein Vergleichs-Zweig ohne eigene Wirkung mehr).
 		thresholds?: AlertChannelThresholdState;
 		onThresholdChange?: (kind: ChannelKind, level: ChannelThreshold) => void;
+		// Issue #1745 A (D3): gesperrte Kanaele — Schluessel = Kanal, Wert =
+		// Hinweistext. Die Zeile bleibt SICHTBAR, nur der Schalter ist gesperrt
+		// (versteckt waere vorgespiegelte Abwesenheit statt ehrlicher Sperre).
+		disabledChannels?: Partial<Record<ChannelKind, string>>;
 	}
-	let { channels, onToggle, targets, dense = false, thresholds, onThresholdChange }: Props =
-		$props();
+	let {
+		channels,
+		onToggle,
+		targets,
+		dense = false,
+		thresholds,
+		onThresholdChange,
+		disabledChannels
+	}: Props = $props();
 
 	const CHANNEL_LABELS: Record<ChannelKind, string> = {
 		telegram: 'Telegram',
 		sms: 'SMS',
+		// Issue #1745 A (D5): woertlich wie im Versand-Reiter.
+		premium_sms: 'Premium-SMS (Garmin inReach)',
 		email: 'Email'
 	};
 	const CHANNEL_SUB: Record<ChannelKind, string> = {
 		telegram: 'sofortiger Push',
 		sms: 'sofort · ≤ 140 Z.',
+		premium_sms: 'Satellit · auch ohne Handynetz',
 		email: 'optional · langsamer als Push'
 	};
 
@@ -123,11 +137,19 @@
 						{:else}
 							<div class="acp-sub">{CHANNEL_SUB[kind]}</div>
 						{/if}
+						{#if disabledChannels?.[kind]}
+							<!-- Issue #1745 A (D3): eine gesperrte Zeile ohne Begruendung waere
+							     eine Sackgasse. -->
+							<div class="acp-sub" data-testid="alert-channel-disabled-hint-{kind}">
+								{disabledChannels[kind]}
+							</div>
+						{/if}
 					</div>
 					<div data-testid="alert-channel-toggle-{kind}">
 						<Switch
 							checked={channels[kind]}
 							onchange={makeToggleHandler(kind)}
+							disabled={!!disabledChannels?.[kind]}
 							tone="good"
 							size={dense ? 'lg' : 'md'}
 							aria-label="{CHANNEL_LABELS[kind]} umschalten"

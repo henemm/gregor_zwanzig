@@ -48,7 +48,8 @@ def _call(value, *, lpi_low_min, lpi_med_min, lpi_high_min):
     return thunder_level_from_signals(
         wettercode_level=None, lightning_density=None, cape_jkg=None,
         lightning_potential_jkg=value,
-        cape_threshold_jkg=None,
+        cape_threshold_jkg=None, cape_med_min=None, cape_high_min=None,
+        cin_jkg=None,
         lpi_low_min=lpi_low_min, lpi_med_min=lpi_med_min, lpi_high_min=lpi_high_min,
     )
 
@@ -220,7 +221,11 @@ def test_ac5_thunder_level_from_signals_ohne_lpi_parameter_bricht_mit_typeerror(
         thunder_level_from_signals(
             wettercode_level=None, lightning_density=None, cape_jkg=None,
             lightning_potential_jkg=5.0,
-            cape_threshold_jkg=None,
+            # Issue #1679 (CIN-Teil) ausdruecklich mitgegeben: sonst loeste
+            # dieser Test den TypeError schon wegen der CAPE-/CIN-Parameter
+            # aus und pruefte die LPI-Pflicht gar nicht mehr.
+            cape_threshold_jkg=None, cape_med_min=None, cape_high_min=None,
+            cin_jkg=None,
         )
 
 

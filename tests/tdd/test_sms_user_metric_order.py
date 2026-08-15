@@ -109,8 +109,12 @@ def _render_sms(dc: UnifiedWeatherDisplayConfig, report_type: str = "evening") -
 # unmittelbar vor '@'/Ende/Klammer-Ende) -- ein Praefix-Kollisionstest
 # ('L' nach Symbol 'N' fuer den Token 'NL-') bestaetigt, dass 'N' weiterhin
 # NICHT faelschlich in 'NL-' matcht.
+# Issue #1824 (A): zusaetzlich die Bereichsform ('D3/20', 'FD-12/-4', 'D-/-',
+# 'D?/?') -- zwei Haelften, durch '/' getrennt.
+_RANGE_HALF = r"-?\d+|-|\?"
 _VALUE_GRAMMAR = re.compile(
-    r"(?:(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
+    rf"(?:(?:{_RANGE_HALF})/(?:{_RANGE_HALF})"
+    r"|(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
 )
 
 
@@ -257,17 +261,34 @@ def test_ac4_vigilance_block_stays_behind_forecast_and_fused():
 
 def test_ac5_position_applies_per_metric_anchor_not_per_symbol():
     """wind_chill (FK/FD) an Position 0, temperature (K/D) an Position 1 ->
-    FK/FD-Paar VOR K/D-Paar, interne Paar-Reihenfolge bleibt (FK<FD, K<D)."""
-    dc = _sms_layout_dc(["wind_chill", "temperature"])
+    gefuehltes Paar VOR gemessenem Paar.
+
+    Issue #1824 (A): sind Tiefst- UND Hoechstwert gewaehlt (Modell-Default),
+    traegt jede der beiden Groessen ihr Paar als EIN Bereichs-Token
+    ('FD1/18', 'D3/20') -- eigenstaendige 'FK'/'K'-Token entstehen dann gar
+    nicht mehr, die frueheren Paar-internen Zusicherungen (FK<FD, K<D) haben
+    keinen Gegenstand mehr. Die Zusicherung dieses AC ist unveraendert die
+    Nutzer-Position PRO METRIK-ANKER; die Vorbedingung stellt sicher, dass
+    hier wirklich Bereichs-Token gemessen werden und der Test nicht still an
+    einer Einzelform vorbeilaeuft.
+
+    Issue #1728 Scheibe 1: die Tagesrichtungen sind eigene Groessen und
+    muessen mit in der Kanal-Liste stehen, sonst entsteht ueberhaupt kein
+    Temperatur-Token. Die Zusicherung (Nutzer-Position bestimmt die
+    Reihenfolge) ist unveraendert."""
+    dc = _sms_layout_dc([
+        "wind_chill", "wind_chill_day_low", "wind_chill_day_high",
+        "temperature", "temperature_day_low", "temperature_day_high",
+    ])
     sms = _render_sms(dc)
-    i_fk, i_fd = _token_index(sms, "FK"), _token_index(sms, "FD")
-    i_k, i_d = _token_index(sms, "K"), _token_index(sms, "D")
-    assert i_fk < i_k and i_fd < i_k, (
+    assert "FD1/18" in sms and "D3/20" in sms, (
+        f"Vorbedingung: beide Groessen muessen als Bereichs-Token stehen: {sms!r}"
+    )
+    i_fd, i_d = _token_index(sms, "FD"), _token_index(sms, "D")
+    assert i_fd < i_d, (
         f"Gefuehltes Paar (Nutzer-Position 0) muss vor dem gemessenen Paar "
         f"(Position 1) stehen: {sms!r}"
     )
-    assert i_fk < i_fd, f"Interne Reihenfolge FK vor FD muss erhalten bleiben: {sms!r}"
-    assert i_k < i_d, f"Interne Reihenfolge K vor D muss erhalten bleiben: {sms!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -292,7 +313,12 @@ def test_ac6_drop_order_ignores_display_position():
     order = [
         "dewpoint", "gust", "wind", "precipitation", "rain_probability", "thunder",
         "snow_depth", "snowfall_limit", "fresh_snow",
-        "temperature", "temperature_night", "wind_chill", "wind_chill_night",
+        # #1728 S1: die vier Tagesrichtungen gehoeren mit in die Liste --
+        # ohne sie fehlen K/D/FK/FD und die Zeile bleibt unter 160 Zeichen,
+        # der Kuerzungsdruck (Praemisse dieses AC) entstuende nie.
+        "temperature", "temperature_day_low", "temperature_day_high",
+        "temperature_night", "wind_chill", "wind_chill_day_low",
+        "wind_chill_day_high", "wind_chill_night",
         "humidity", "wind_direction", "precip_type", "cloud_total",
         "cloud_low", "cloud_mid", "cloud_high", "visibility", "sunshine",
         "uv_index", "pressure", "freezing_level",
@@ -345,7 +371,7 @@ def test_ac6_drop_order_ignores_display_position():
 def test_ac7_wintersport_metric_can_precede_forecast_metric_but_stays_before_system_blocks():
     """Wintersport-Metrik (snow_depth, Nutzer-Position 0) vor
     Vorhersage-Metrik (gust, Position 2) -- beide bleiben trotzdem vor dem
-    nicht-sortierbaren System-Block (hier: 'W?', amtliche-Warnungen-nicht-
+    nicht-sortierbaren System-Block (hier: 'X?', amtliche-Warnungen-nicht-
     abrufbar-Marker)."""
     order = ["snow_depth", "snowfall_limit", "gust"]
     dc = _sms_layout_dc(order)
@@ -361,13 +387,13 @@ def test_ac7_wintersport_metric_can_precede_forecast_metric_but_stays_before_sys
     sms = report.sms_text
     i_sd = _token_index(sms, "SD")
     i_g = _token_index(sms, "G")
-    i_marker = _exact_token_index(sms, "W?")
+    i_marker = _exact_token_index(sms, "X?")
     assert i_sd < i_g, (
         f"SD (Wintersport, Nutzer-Position 0) muss vor G (Vorhersage, "
         f"Position 2) stehen: {sms!r}"
     )
     assert i_g < i_marker, (
-        f"Systemblock 'W?' muss auch bei umsortierten Fachtoken dahinter "
+        f"Systemblock 'X?' muss auch bei umsortierten Fachtoken dahinter "
         f"bleiben: {sms!r}"
     )
 
@@ -458,7 +484,8 @@ def test_ac11_sms_and_telegram_kurzform_share_one_token_line():
     order = ["wind_direction", "visibility", "humidity"]  # Klasse c, b, a
     dc = _sms_layout_dc(order)
     sms = _render_sms(dc)
-    i_wd, i_vs, i_hu = _token_index(sms, "WD"), _token_index(sms, "VS"), _token_index(sms, "HU")
+    # Issue #1824 (B): 'WD' traegt jetzt den Grammatik-Doppelpunkt im Symbol.
+    i_wd, i_vs, i_hu = _token_index(sms, "WD:"), _token_index(sms, "VS"), _token_index(sms, "HU")
     assert i_wd < i_vs < i_hu, (
         f"Nutzer-Reihenfolge WD < VS < HU muss auf report.sms_text gelten, "
         f"dem Objekt, das notification_service.py fuer SMS UND "

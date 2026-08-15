@@ -38,7 +38,7 @@ from tests.helpers.alert_log_fixtures import gust_alert_trip, weather
 from tests.helpers.nowcast_gate_fixtures import (
     LAT, LON, SCOPE_COMPARE_RADAR, SCOPE_TRIP_RADAR, CountingFrameSource,
     clean_uid, compare_radar_service, entries_for, fresh_uid, location,
-    make_trip, quiet_window_elsewhere, quiet_window_now, radar_preset,
+    TRIP_ZONE, make_trip, quiet_window_elsewhere, quiet_window_now, radar_preset,
     read_log, record_throttle, save_trip, seed_daily_counter,
     settings_email_only, suppression_reasons, trip_alert_service,
     write_presets, write_user_tier,
@@ -228,12 +228,17 @@ def _run_trip(
     uid: str, trip_id: str, *, quiet: bool = False, throttled: bool = False,
     daily_limit_reached: bool = False,
 ) -> int:
-    quiet_from, quiet_to = quiet_window_now() if quiet else quiet_window_elsewhere()
+    # Issue #1726: Ruhezeit und Zaehler laufen in der Ortszone der TOUR —
+    # `make_trip()` legt ihre Wegpunkte nach Island (TRIP_ZONE), nicht nach Wien.
+    quiet_from, quiet_to = (
+        quiet_window_now(zone=TRIP_ZONE) if quiet
+        else quiet_window_elsewhere(zone=TRIP_ZONE)
+    )
     save_trip(make_trip(trip_id, quiet_from=quiet_from, quiet_to=quiet_to), uid)
     if throttled:
         record_throttle(uid, SCOPE_TRIP_RADAR, trip_id,
                         datetime.now(timezone.utc) - timedelta(minutes=5))
-    seed_daily_counter(uid, 2 if daily_limit_reached else 0)
+    seed_daily_counter(uid, 2 if daily_limit_reached else 0, zone=TRIP_ZONE)
     return trip_alert_service(
         uid, settings_email_only(), CountingFrameSource(onset_minutes=8),
         lambda subject, body: None,

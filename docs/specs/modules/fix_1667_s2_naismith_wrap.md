@@ -2,10 +2,10 @@
 entity_id: fix_1667_s2_naismith_wrap
 type: bugfix
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-11
 status: draft
 workflow: fix-1667-s2-naismith-wrap
-version: "1.1"
+version: "1.2"
 tags: [issue-1667, naismith, midnight-wrap, cross-language-parity, arrival-time]
 ---
 
@@ -16,6 +16,10 @@ tags: [issue-1667, naismith, midnight-wrap, cross-language-parity, arrival-time]
 - [x] Approved — PO-„go" 2026-08-10
 
 ## 🔴 Diese Scheibe schließt Issue #1667 NICHT
+
+**Update 2026-08-11: mittlerweile durch S3 geschlossen** — s. „Known
+Limitations" unten. Der Rest dieses Abschnitts beschreibt den Scope von S2
+selbst und bleibt als solcher richtig: S2 allein schloss #1667 nicht.
 
 **S2 macht Nacht-Ankünfte *darstellbar*, nicht *erreichbar*.** Sie behebt die
 23:59-Klemme in den drei `formatHHMM`-Kopien und damit den Datenkollaps im
@@ -361,10 +365,16 @@ gefundener Wurzel) fällt in der Implementierung.
 
 ## Known Limitations
 
-- **Die Alarm-Sicherheitslücke bleibt offen.** S2 macht Nacht-Ankünfte
-  darstellbar, nicht erreichbar für die Alarm-Pipeline —
-  `trip_alert.py:745` fragt weiterhin nur den heutigen Tag ab. Behoben erst
-  durch S3.
+- **Die Alarm-Sicherheitslücke ist behoben — durch S3.** S2 machte
+  Nacht-Ankünfte nur darstellbar, nicht erreichbar für die Alarm-Pipeline:
+  `check_radar_alerts()` fragte weiterhin ausschließlich den heutigen
+  Kalendertag ab. Seit Issue #1667 S3
+  (`docs/specs/modules/fix_1667_s3_tagesuebergreifende_segmente.md`) löst
+  `src/services/trip_segments.py::resolve_current_segment` das Ziel-Segment
+  additiv tagesübergreifend auf (aktiv heute → aktiv gestern → Vorschau
+  heute[0] → nichts, `trip_alert.py:911-928`) und liest den
+  Briefing-Schnappschuss unter dem Datum des gewählten Segments (`:1022`)
+  statt starr unter `today`. Issue #1667 ist damit vollständig geschlossen.
 - **`wp_days[0]` bei manuellem `arrival_override` nach Mitternacht** ist
   weiterhin nicht darstellbar — nach S2 kommt `wp[0]` bei Naismith-
   berechneten Etappen garantiert aus `start_time` (0-23h), aber ein
@@ -428,3 +438,6 @@ Falls ja: eigenes Issue (a: nutzersichtbares Fehlverhalten), sonst
   (Vorbild `internal/mail/recipient_parity_test.go::findRepoRoot`),
   zwei Zitate in AC-6 korrigiert, `cockpitHelpers.ts::stageWindow` in
   Known Limitations ergänzt
+- 2026-08-11: Docs-Update nach #1667 S3 (LIVE) — „Alarm-Sicherheitslücke
+  bleibt offen" in Known Limitations als behoben markiert, mit Verweis auf
+  `fix_1667_s3_tagesuebergreifende_segmente.md`

@@ -133,14 +133,21 @@ test.describe('#528 Compare Hub · Header-Primäraktion', () => {
 		await expect(page.getByRole('button', { name: 'Setup abschließen' })).toBeVisible();
 	});
 
-	// Issue #1261 (a): Bearbeiten wieder im Detail-Header (Trip-Parität),
-	// ergänzt #528-Primäraktion — der Desktop-Header zeigt fuer ein aktives
-	// Preset jetzt "Test senden" UND "Bearbeiten" nebeneinander (analog
-	// Trip-Header), statt "Bearbeiten" zu verstecken.
-	test('AC-3: Aktives Preset zeigt "Test senden" UND "Bearbeiten"', async ({ page }) => {
+	// Issue #1261 (a) hatte "Bearbeiten" neben "Test senden" in den
+	// Detail-Header geholt (Trip-Parität). Epic #1273 Slice S3 hat das bewusst
+	// zurückgenommen: der Hub /compare/[id] IST die Bearbeiten-Fläche
+	// (Name/Region/Profil inline, Tabs), /compare/[id]/edit ist nur noch ein
+	// 307-Redirect (+page.server.ts) und der Desktop-"Bearbeiten"-Button ist
+	// aus dem Header entfernt (+page.svelte:334-335). Bewacht auf Kern-Ebene
+	// von issue_1273_s3_redirect_links.test.ts AC-4. Der Test prüft daher
+	// jetzt den geltenden Stand: Primäraktion "Test senden" ja, redundante
+	// "Bearbeiten"-Affordanz nein.
+	test('AC-3: Aktives Preset zeigt "Test senden", keine redundante "Bearbeiten"-Affordanz', async ({
+		page
+	}) => {
 		await page.goto(`/compare/${activePresetId}`);
-		await expect(page.getByRole('link', { name: 'Bearbeiten' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Test senden' })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Bearbeiten' })).toHaveCount(0);
 	});
 });
 

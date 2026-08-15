@@ -21,31 +21,41 @@
 	// eingefuehrt; sie umzuziehen haette CompareEditor.svelte (Legacy) beruehrt,
 	// was ausserhalb des C1-Scopes liegt (CLAUDE.md: "NICHT anfassen").
 	import SavePresetDialog from './weather-metrics-tab/SavePresetDialog.svelte';
-	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	// v2 Sub-Komponenten (neu, standalone, keine Abhängigkeit von OutputLayoutEditor)
 	import WeatherV2PresetBar from './weather-metrics-tab/WeatherV2PresetBar.svelte';
 	import WeatherV2Grundauswahl from './weather-metrics-tab/WeatherV2Grundauswahl.svelte';
 	import WeatherV2Reihenfolge from './weather-metrics-tab/WeatherV2Reihenfolge.svelte';
 	// WeatherV2Kanaele entfernt in Issue #736 (Kanal-Config → Versand-Reiter)
-	import WeatherV2MailPreview from './weather-metrics-tab/WeatherV2MailPreview.svelte';
+	// Issue #1719 Scheibe S3: WeatherV2MailPreview ("So kommt es an") ist
+	// ersatzlos entfernt (PO-Entscheid) — samt Mobile-FAB/Sheet weiter unten.
 	// Issue #1232 Scheibe 3b: geteilter Layout-Organism (Scheibe 3a) ersetzt das
-	// bisherige `.v2-layout`-Grid für den Ausgabe-Teil (Reihenfolge + Vorschau).
+	// bisherige `.v2-layout`-Grid für den Ausgabe-Teil (Reihenfolge).
 	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
-	import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
-	// Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (nur context="route").
+	import { SMS_COMPARE_CHAR_LIMIT, type ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
+	// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Vergleichs-Uebersicht.
+	// `splitChannelMetricsForDisplay` (Trip-Modul, unten) wird WIEDERVERWENDET —
+	// sie ist bereits generisch ueber `string[]`, kein Compare-Eigenbau.
 	import {
-		mergeChannelLayoutsForSave, startChannelOverride, channelOverrideFromMetrics,
+		COMPARE_CHANNEL_IDS, startCompareChannelOverride,
+	} from './weather-metrics-tab/compareChannelMetricLayouts.ts';
+	// Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (nur context="route").
+	// Issue #1719 Scheibe S3: splitChannelMetricsForDisplay (aktiv/Aus-Gruppe,
+	// AC-8/AC-12) + mergeAllChannelLayoutsForSave (Persistenz-Fix, AC-10) —
+	// `mergeChannelLayoutsForSave` bleibt als Funktion bestehen (eigener Test,
+	// #1575), wird hier aber nicht mehr aufgerufen.
+	import {
+		startChannelOverride, channelOverrideFromMetrics,
+		splitChannelMetricsForDisplay, mergeAllChannelLayoutsForSave,
 		type ChannelOverride,
 	} from './weather-metrics-tab/channelMetricLayouts.ts';
 	import ThresholdMetricRow from './weather-metrics-tab/ThresholdMetricRow.svelte';
 	// Fix #1613: Mehrfach-Symbol-Metriken (temperature/temperature_night/wind_chill)
 	// haben keinen Schwellwert -- eigene, schlanke Zeile ohne Segmented-Control.
 	import MultiSymbolMetricRow from './weather-metrics-tab/MultiSymbolMetricRow.svelte';
-	// Issue #1357: Auswertungswahl je Wettergroesse (Mail-Kachelzeile).
+	// Issue #1357: Auswertungswahl je Wettergroesse (Mail-Kachelzeile). Trip-
+	// eigener Aufrufer (05-Block) entfaellt mit #1728 Scheibe 2 (DEC-2/DEC-7) —
+	// die Komponente bleibt fuer den Vergleich-Zweig (mode='multiple') aktiv.
 	import AggregationMetricRow from './weather-metrics-tab/AggregationMetricRow.svelte';
-	import {
-		aggregationChoices, choiceAggregations, selectedChoiceId, showsAggregationChoice,
-	} from './weather-metrics-tab/aggregationSelection.ts';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	// Issue #1117: „Amtliche Warnungen"-Checkbox auch im Inhalt-Tab (eigener Block,
 	// EditReportConfigSection bleibt unverändert).
@@ -76,7 +86,9 @@
 	// Issue #1350 Teil 2: Vergleich-Auswahlliste kommt jetzt aus GET
 	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
 	// Schwellen-Slider/Winner-Box/Save-Default-Fallback unveraendert, Teil 3).
-	import { type CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
+	import {
+		type CompareSelectionEntry, normalizeStoredActiveMetrics, toStoredActiveMetrics
+	} from './weather-metrics-tab/compareMetricSelection.ts';
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): geteilter Katalog-Cache — eine
 	// Anfrage pro Seiten-Load fuer Auswahlliste, Schwellen-Editor und
 	// Hub-Hydration; `toCompareSelectionEntries()` darin fuellt den Umkehr-Index
@@ -127,6 +139,10 @@
 		 *  oben emittieren (analog onChannelsChange), da im Anlege-Modus kein
 		 *  PUT möglich ist. */
 		onWeatherMetricsChange?: (metrics: WeatherConfigMetric[]) => void;
+		/** Issue #1775: Create-Modus — Tagesfenster per Rückkanal nach oben
+		 *  emittieren (analog onChannelsChange/onWeatherMetricsChange), da im
+		 *  Anlege-Modus kein PUT möglich ist. */
+		onDayWindowChange?: (w: { day_window_start_hour: number; day_window_end_hour: number }) => void;
 		/** Issue #694: Trip-State in +page.svelte nach erfolgreichem PUT aktualisieren */
 		onTripUpdate?: (t: Trip) => void;
 		/** Issue #758: SaveStatus controller — wenn gesetzt, entfällt der explizite Speichern-Button. */
@@ -150,7 +166,7 @@
 		 *  Stundenverlauf). Reine Weiterreichung an CompareOutlookLayoutControls. */
 		onOutlookCommit?: () => void;
 	}
-	let { context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit, onOutlookCommit }: Props = $props();
+	let { context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit, onOutlookCommit }: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
 	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
@@ -218,7 +234,6 @@
 	let aggregationsMap = $state<Record<string, string[]>>({});
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
-	let mailSheetOpen = $state(false);
 	let pendingPreset: string | null = $state(null);
 	let profile = $state<{ mail_to?: string; telegram_chat_id?: string; sms_to?: string } | null>(null);
 	// Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
@@ -241,10 +256,44 @@
 		email: null, telegram: null, sms: null,
 	});
 
+	// Issue #1720 S1 (route): Spaltenauswahl der 3-Tages-Vorschau. `null` = nie
+	// eingestellt -> die heutigen sieben festen Spalten; `[]` = bewusst geleert
+	// (der Block entfaellt in der Mail ganz). Steht in snapshot()/isDirty UND
+	// handleDiscard() — fehlte es dort, bliebe der Reiter nach einer reinen
+	// Vorschau-Aenderung faelschlich „sauber" und der Speichern-Weg feuerte nie.
+	let outlookMetricKeys = $state<string[] | null>(null);
+
+	function onOutlookMetricKeys(keys: string[]): void {
+		outlookMetricKeys = keys;
+		userTouched = true;
+		scheduleAutoSave();
+	}
+
 	// Effektive Sicht eines Kanals: eigener Eintrag, sonst die globale Auswahl.
 	function channelView(ch: ChannelId): ChannelOverride {
 		return channelBuckets[ch] ?? { buckets, friendlyMap };
 	}
+
+	// Issue #1719 S3 (AC-8/AC-12): "aktiv" (sortierbar) vs. "Aus in diesem
+	// Kanal" (wieder einschaltbar) — aktiv wird defensiv gegen die globale
+	// Grundauswahl gefiltert, aus = globale Grundauswahl MINUS aktiv. Eine
+	// global abgewählte Metrik erscheint damit in keiner der beiden Listen.
+	function channelListSections(ch: ChannelId): { active: string[]; off: string[] } {
+		return splitChannelMetricsForDisplay(buckets.primary, channelView(ch).buckets.primary);
+	}
+
+	// Staging-Fund (2026-08-11, GREEN-Nachbesserung): MEMOISIERT statt eines
+	// Funktionsaufrufs im Markup. SortableList.svelte synct seine `items`
+	// per $effect (bewusst kein $derived dort, s. Kommentar dort) gegen die
+	// `primaryColumns`-Prop — ein bei JEDEM Render frisch erzeugtes Array
+	// (`.filter()` in splitChannelMetricsForDisplay liefert nie dieselbe
+	// Referenz) triggert diesen $effect auch OHNE echte Datenänderung und
+	// überschreibt den dndzone-internen Phantom-Placeholder MITTEN im Drag —
+	// der Drag bricht dann lautlos ab, bevor `finalize`/`onDndReorder` je
+	// feuert (kein PUT, keine Persistenz; Reihenfolge-Änderung überlebt den
+	// Reload nicht). `$derived` liefert zwischen echten Änderungen dieselbe
+	// Array-Referenz. Gilt nur für den aktiven Kanal — dort findet der Drag statt.
+	const activeChannelSections = $derived(channelListSections(activeChannel));
 
 	// AC-2 Diff-Highlight: 2,5s Aufleuchten nach jeder Änderung.
 	let highlight: Highlight | null = $state(null);
@@ -287,15 +336,6 @@
 		for (const ms of Object.values(catalog)) for (const m of ms) map[m.id] = m;
 		return map;
 	});
-	// Issue #1357 (AC-5): nur aktive Groessen mit MEHR ALS EINER berechenbaren
-	// Auswertung bekommen eine Auswahl — sonst waere sie ein wirkungsloses
-	// Bedienelement. Die Liste kommt aus dem Katalog, nicht aus einer
-	// getippten Metrik-Aufzaehlung.
-	const aggregationMetricIds = $derived(
-		allCatalogIds().filter(
-			(id) => !buckets.off.includes(id) && showsAggregationChoice(metricById[id]),
-		),
-	);
 	const shortById = $derived.by(() => {
 		const map: Record<string, string> = {};
 		for (const id of Object.keys(metricById)) {
@@ -314,17 +354,20 @@
 	// Snapshot — sonst bliebe ein Kanal-Edit unspeicherbar. Der reine
 	// Kanal-WECHSEL veraendert channelBuckets nicht und bleibt damit clean
 	// (AC-1); erst ein Edit-Callback legt einen Eintrag an (AC-2).
+	// Issue #1720 S1: outlookMetricKeys gehoert in Dirty-Vergleich UND Snapshot —
+	// sonst bleibt der Reiter nach einer reinen Vorschau-Aenderung „sauber".
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, aggregationsMap, reportConfig, officialAlertsEnabled, channelBuckets }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, aggregationsMap, reportConfig, officialAlertsEnabled, channelBuckets, outlookMetricKeys }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
 		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean,
 		ag: Record<string, string[]> = aggregationsMap,
-		cb: Record<ChannelId, ChannelOverride | null> = channelBuckets
+		cb: Record<ChannelId, ChannelOverride | null> = channelBuckets,
+		om: string[] | null = outlookMetricKeys
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, aggregationsMap: ag, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, aggregationsMap: ag, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb, outlookMetricKeys: om });
 	}
 
 	function allCatalogIds(): string[] {
@@ -415,7 +458,13 @@
 			if (layout) cb[ch] = channelOverrideFromMetrics(layout, allCatalogIds(), fMap);
 		}
 		channelBuckets = cb;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, aggMap, cb);
+		// Issue #1720 S1: gespeicherte Vorschau-Auswahl (Neuformat
+		// {metric_id, aggregation}) in Auswahl-Schluessel uebersetzen —
+		// DIESELBE Umkehrung wie im Ortsvergleich, kein zweiter Lesepfad. Ein
+		// roher Cast auf string[] liesse die Haken nach dem Neuladen leer.
+		const om = normalizeStoredActiveMetrics(trip!.display_config?.outlook_metrics, compareCatalog);
+		outlookMetricKeys = om;
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, aggMap, cb, om);
 	}
 
 	// Issue #1332 F003 (Fix-Loop 2): eigener, idempotenter Ladepfad fuer die
@@ -473,6 +522,19 @@
 			// nachtraeglich hier — ein Mechanismus, nicht zwei.
 			compareCatalog = await loadCompareSelectionEntries();
 			compareCatalogLoaded = true;
+			// Issue #1720 S1: die Vorschau-Auswahl liegt im Neuformat vor und ist
+			// erst MIT geladenem Katalog in Auswahl-Schluessel uebersetzbar. Der
+			// Trip hat einen eigenen Ladepfad (load()), der frueher fertig sein
+			// kann — dann traegt outlookMetricKeys noch rohe Objekte und der
+			// Picker zeigte keinen Haken. Baseline zieht mit, sonst gaelte der
+			// Reiter ohne jede Nutzergeste als geaendert.
+			if (context === 'route' && trip && catalogLoaded && !isDirty) {
+				outlookMetricKeys = normalizeStoredActiveMetrics(
+					trip.display_config?.outlook_metrics, compareCatalog,
+				);
+				savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform,
+					smsThresholds, reportConfig, officialAlertsEnabled);
+			}
 		} catch (e: unknown) {
 			compareCatalogError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
 		}
@@ -494,7 +556,11 @@
 		// es als Erstes auf null zurueck — das aendert eine getrackte Dependency
 		// und der Effect feuert einen zweiten, konkurrierenden Fetch (Doppel-
 		// Fetch bei "Wiederholen" bzw. Auto-Retry-Loop bei jedem Fehlschlag).
-		if (context === 'vergleich' && !compareCatalogLoaded) {
+		// Issue #1720 S1: auch der Trip braucht diesen Katalog — der Abschnitt
+		// "3-Tages-Vorschau" waehlt aus DERSELBEN Quelle, gegen die der Resolver
+		// serverseitig validiert (get_compare_metric_catalog()). Ohne die
+		// Erweiterung bliebe der Block beim Trip dauerhaft im Ladezustand.
+		if ((context === 'vergleich' || context === 'route') && !compareCatalogLoaded) {
 			loadCompareMetricCatalog();
 		}
 	});
@@ -594,6 +660,19 @@
 		}
 	});
 
+	// Issue #1775: Create-Modus — Tagesfenster nach oben propagieren (analog
+	// Kanal-/Wetter-Metrik-Rückkanal oben). Kein catalogLoaded-Gate noetig --
+	// die Tagesfenster-Felder haengen an keinem asynchron geladenen Katalog,
+	// sie sind ab Mount synchron verfuegbar.
+	$effect(() => {
+		if (createMode && onDayWindowChange) {
+			onDayWindowChange({
+				day_window_start_hour: reportConfig.day_window_start_hour ?? 4,
+				day_window_end_hour: reportConfig.day_window_end_hour ?? 19,
+			});
+		}
+	});
+
 	// Preset-Auswahl
 	function applyPreset(id: string) {
 		// Issue #1234 (2c): Preset anwenden ist eine echte Nutzerabsicht (auch wenn
@@ -667,6 +746,25 @@
 			const newBuckets = move(buckets, id, from, to);
 			applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
 			buckets = newBuckets;
+			// Issue #1719 S3 (ADR-0050 Regel 3): eine globale ABWAHL wirkt SOFORT
+			// in allen bereits vorhandenen Kanal-Overrides — die Zeile verschwindet
+			// dort aus der aktiven Liste. Die EINWAHL-Richtung schreibt bewusst
+			// NICHT durch (Grundsatz "keine Bevormundung", Spec Abschnitt 4): die
+			// Zeile ist ab S3 im Kanal-Reiter selbst sichtbar (Aus-Gruppe), der
+			// Nutzer entscheidet dort, ob er sie dort auch wieder aktiviert.
+			if (wasOn) {
+				const nextChannelBuckets = { ...channelBuckets };
+				for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
+					const override = nextChannelBuckets[ch];
+					if (override === null || !override.buckets.primary.includes(id)) continue;
+					const updatedOverride: ChannelOverride = {
+						buckets: move(override.buckets, id, 'primary', 'off'),
+						friendlyMap: override.friendlyMap,
+					};
+					nextChannelBuckets[ch] = updatedOverride;
+				}
+				channelBuckets = nextChannelBuckets;
+			}
 		}
 		if (selectedTemplate) selectedTemplate = '';
 		scheduleAutoSave();
@@ -685,6 +783,20 @@
 		userTouched = true;
 		editActiveChannel((view) => ({
 			buckets: move(view.buckets, id, 'primary', 'off'),
+			friendlyMap: view.friendlyMap,
+		}));
+		if (selectedTemplate) selectedTemplate = '';
+		scheduleAutoSave();
+	}
+
+	// Issue #1719 S3 (AC-7, ADR-0050 Regel 4): aus der "Aus in diesem
+	// Kanal"-Gruppe wieder aktivieren (→ primary) — kanal-eigen, Gegenstück
+	// zu onRemove. Wirkt NUR auf den aktiven Kanal, nie auf die Grundauswahl
+	// oder andere Kanäle (keine Durchschreibung in dieser Richtung).
+	function onRestoreMetric(id: string) {
+		userTouched = true;
+		editActiveChannel((view) => ({
+			buckets: move(view.buckets, id, 'off', 'primary'),
 			friendlyMap: view.friendlyMap,
 		}));
 		if (selectedTemplate) selectedTemplate = '';
@@ -720,6 +832,10 @@
 			// Issue #1575 Scheibe 3: Kanal-Eintraege mit zuruecknehmen, sonst bleibt
 			// der Tab nach dem Verwerfen dirty.
 			channelBuckets = snap.channelBuckets ?? { email: null, telegram: null, sms: null };
+			// Issue #1720 S1: Vorschau-Auswahl mit zuruecknehmen, sonst bleibt der
+			// Reiter nach dem Verwerfen dirty. `?? null` ist hier richtig: `null`
+			// heisst "nie eingestellt" und ist ein gueltiger Zustand.
+			outlookMetricKeys = snap.outlookMetricKeys ?? null;
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
@@ -752,18 +868,20 @@
 	}
 
 	function buildWeatherPayload() {
-		// Issue #1575 Scheibe 3: `config_merge.go` ersetzt `channel_layouts`
-		// komplett — deshalb geht IMMER der vollstaendige Stand aller bereits
-		// editierten Kanaele mit, nicht nur der aktive (AC-3, Datenverlust-Schutz).
-		const override = channelBuckets[activeChannel];
-		const nextLayouts = mergeChannelLayoutsForSave(
+		// Issue #1575 Scheibe 3 / #1719 Scheibe S3 (AC-10, Persistenz-Fix):
+		// `config_merge.go` ersetzt `channel_layouts` komplett — deshalb geht
+		// IMMER der vollstaendige Stand ALLER bereits editierten Kanaele mit,
+		// nicht nur der aktive (Datenverlust-Schutz #1575). Bis S2 wurde nur
+		// `activeChannel` serialisiert — eine Durchschreibung (Regel 3) in einen
+		// NICHT aktiven Kanal ging dadurch beim Speichern verloren (Kontext-
+		// Dokument Abschnitt 10.1). `mergeAllChannelLayoutsForSave` serialisiert
+		// jeden nicht-null Eintrag aus `channelBuckets`.
+		const nextLayouts = mergeAllChannelLayoutsForSave(
 			trip!.display_config?.channel_layouts,
-			activeChannel,
-			override
-				? buildWeatherConfigMetrics(
-					override.buckets, override.friendlyMap, horizonsMap, catalog, aggregationsMap,
-				)
-				: null,
+			channelBuckets,
+			(override) => buildWeatherConfigMetrics(
+				override.buckets, override.friendlyMap, horizonsMap, catalog, aggregationsMap,
+			),
 		);
 		return {
 			...(trip!.display_config ?? {}),
@@ -771,6 +889,14 @@
 			channel_layouts: nextLayouts,
 			preset_name: selectedTemplate || undefined,
 			telegram_kurzform: telegramKurzform,
+			// Issue #1720 S1: explizit, nicht nur ueber den Spread — sonst
+			// verdeckte der Altwert eine bewusste Leerauswahl (`[]`), und der
+			// Nutzer kaeme aus dem "Block aus"-Zustand nie wieder heraus
+			// (RMW-Pflicht, Fehlerklasse #102 -> #1159). `null` (nie eingestellt)
+			// reicht den Altwert unveraendert durch.
+			outlook_metrics: outlookMetricKeys === null
+				? trip!.display_config?.outlook_metrics
+				: toStoredActiveMetrics(outlookMetricKeys, compareCatalog),
 		};
 	}
 
@@ -935,7 +1061,26 @@
 	// Komponenten-Mount pruefbar ist (AC-2).
 	function toggleCompareMetric(metric: string) {
 		if (!wiz) return;
+		const wasOn = materializedActiveMetricKeys.includes(metric);
 		wiz.activeMetricKeys = toggleCompareMetricKeyFromState(wiz.activeMetricKeys, metric);
+		// Issue #1703 S8 (ADR-0050 Regel 3, Trip-Vorbild onToggleMetric Z. 712-730):
+		// eine globale ABWAHL wirkt SOFORT in allen bereits vorhandenen
+		// Kanal-Overrides. Die EINWAHL-Richtung schreibt bewusst NICHT durch
+		// ("keine Bevormundung") — die Zeile taucht im Kanal-Reiter in der
+		// Aus-Gruppe auf, der Nutzer entscheidet dort selbst.
+		// Ohne diese Durchschreibung bliebe die Anzeige zwar korrekt
+		// (splitChannelMetricsForDisplay filtert immer gegen die Grundauswahl),
+		// der GESPEICHERTE Kanal-Eintrag truege die Metrik aber weiter (M3).
+		if (!wasOn) return;
+		const next = { ...wiz.channelActiveMetricKeys };
+		let changed = false;
+		for (const ch of COMPARE_CHANNEL_IDS) {
+			const override = next[ch];
+			if (override === null || !override.includes(metric)) continue;
+			next[ch] = override.filter((id) => id !== metric);
+			changed = true;
+		}
+		if (changed) wiz.channelActiveMetricKeys = next;
 	}
 
 	// Issue #1366 F002: EINZIGE Materialisierungs-Quelle fuer Anzeige (Checkbox-
@@ -965,18 +1110,65 @@
 		return map;
 	});
 
-	// Ziehen = Reihenfolge setzen + SOFORT speichern (s. onCompareCommit-Prop).
-	function onCompareDndReorder(newOrder: string[]) {
+	// Issue #1719 S4: die Kurzform-Marke des VERGLEICHS zeigt das
+	// Register-Kuerzel — die Vergleichs-SMS rendert aus `get_sms_code()`
+	// (comparison.py:625), nicht aus den Trip-SMS-Tabellen. Genau EIN Kuerzel
+	// je Groesse; Groessen ohne Registereintrag bekommen gar keine Marke.
+	const compareKuerzelById = $derived.by(() => {
+		const map: Record<string, string[]> = {};
+		for (const e of compareCatalog) if (e.sms_code) map[e.metric] = [e.sms_code];
+		return map;
+	});
+
+	// ── Issue #1703 Scheibe 8: Kanal-Ebene der Uebersichtstabelle ────────────
+	// Reiner View-State (analog `activeChannel` im route-Zweig), NIE Teil des
+	// Persistenz-Snapshots — ein Kanal-WECHSEL ist keine Aenderung.
+	let compareChannel = $state<ChannelId>('email');
+
+	// Effektive Kanal-Sicht: eigener Override, sonst die Grundauswahl
+	// (copy-on-write — der Override entsteht erst beim ersten Edit).
+	function compareChannelPrimary(ch: ChannelId): string[] {
+		return wiz?.channelActiveMetricKeys?.[ch] ?? materializedActiveMetricKeys;
+	}
+
+	// "aktiv" (sortierbar) vs. "Aus in diesem Kanal" (wieder einschaltbar) —
+	// DIESELBE reine Funktion wie im Trip (ADR-0050 Regel 1/2/4). $derived, weil
+	// SortableList seine `items` per $effect gegen die Prop synct und ein bei
+	// jedem Render frisch gefiltertes Array den Drag lautlos abbrechen laesst
+	// (Staging-Fund #1719 S3, s. activeChannelSections oben).
+	const compareChannelSections = $derived(
+		splitChannelMetricsForDisplay(materializedActiveMetricKeys, compareChannelPrimary(compareChannel))
+	);
+
+	// Copy-on-write auf den AKTIVEN Kanal-Reiter — Vorbild `editActiveChannel`
+	// (Z. 677-691). Ohne bestehenden Override startet der Eintrag als Klon der
+	// globalen Reihenfolge, nicht leer.
+	function editCompareChannel(mutate: (view: string[]) => string[]) {
 		if (!wiz) return;
-		wiz.activeMetricKeys = newOrder;
+		const base = wiz.channelActiveMetricKeys[compareChannel]
+			?? startCompareChannelOverride(materializedActiveMetricKeys);
+		wiz.channelActiveMetricKeys = { ...wiz.channelActiveMetricKeys, [compareChannel]: mutate(base) };
 		onCompareCommit?.();
 	}
 
-	// "Aus" in der Reihenfolge-Liste = abwaehlen. Kein zweiter Pfad: derselbe
-	// reihenfolge-erhaltende Toggle wie die Grundauswahl-Checkbox.
+	// Ziehen = Reihenfolge des AKTIVEN KANALS setzen + SOFORT speichern
+	// (s. onCompareCommit-Prop) — nach einer Ziehgeste unterdruecken Browser das
+	// nachfolgende `click`, der Wrapper-Commit in CompareTabs greift dann nicht.
+	function onCompareDndReorder(newOrder: string[]) {
+		editCompareChannel(() => [...newOrder]);
+	}
+
+	// "Aus" in der Reihenfolge-Liste = in DIESEM Kanal abwaehlen. Die
+	// Grundauswahl bleibt unberuehrt (die Metrik wandert in die Aus-Gruppe des
+	// Kanals, ADR-0050 Regel 4 "Aus ist ein Zustand").
 	function onCompareRemove(metric: string) {
-		toggleCompareMetric(metric);
-		onCompareCommit?.();
+		editCompareChannel((view) => view.filter((id) => id !== metric));
+	}
+
+	// Gegenstueck zu onCompareRemove: aus der Aus-Gruppe zurueck in die aktive
+	// Liste. Ohne Positions-Erinnerung (Known Limitation) — ans Ende.
+	function onCompareRestore(metric: string) {
+		editCompareChannel((view) => (view.includes(metric) ? view : [...view, metric]));
 	}
 
 	// Roh/Einfach-Umschalter gibt es im Vergleich nicht (indicatorCapable() ist
@@ -984,6 +1176,19 @@
 	// wird also nie gerendert). Named function statt Inline-Closure im Markup
 	// (Safari-Factory-Muster).
 	function noopMode() {}
+
+	// Issue #1720 S1: der Ausblick-Block bekommt flache Props statt der frueheren
+	// `wiz`-Bindung (dasselbe Bauteil bedient jetzt auch den Trip). Diese beiden
+	// Handler schreiben exakt das, was die Komponente bis dahin selbst schrieb —
+	// Verhalten des Ortsvergleichs unveraendert. Named functions statt
+	// Inline-Closures (Safari-Factory-Muster).
+	function onCompareOutlookMetricKeys(keys: string[]) {
+		if (wiz) wiz.outlookMetricKeys = keys;
+	}
+
+	function onCompareOutlookEnabled(checked: boolean) {
+		if (wiz) wiz.outlookEnabled = checked;
+	}
 
 	// D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): Amtliche-Warnungen-Toggle im
 	// Vergleich-Zweig — kein Self-Save (analog toggleCompareMetric oben),
@@ -1111,34 +1316,46 @@
 			     wiz.activeMetricKeys gespeist. Kein Compare-Eigenbau
 			     (Epic #1230 / Trip-Compare-Invariante).
 
-			     BEWUSSTE ABWEICHUNG von der Spec (§2 "LayoutTab-Block"): der
-			     LayoutTab-Organism bleibt aussen vor. Seine Kappungs-Aussage ist
-			     SPALTEN-basiert ("N Spalten (Label + …) · max 8") — im Vergleich
-			     sind die Spalten aber die ORTE (so nutzt ihn der Hub-Reiter
-			     "Layout", CompareTabs.svelte), Metriken sind Zeilen; mit
-			     Metriken als colCount stuende dort eine falsche Zahl (echte
-			     Compare-Budgets: 7 Metrik-Zellen je Ort im Telegram, 2 in der
-			     SMS — nicht 8/0 aus CHANNEL_COL_BUDGET). Und die echte
-			     Mail-Vorschau lebt im Hub-Reiter "Vorschau" (Server-Render,
-			     echte Werte); eine trip-geformte Beispieltabelle waere hier eine
-			     Attrappe (AC-8). -->
+			     Issue #1703 Scheibe 8: der LayoutTab-Organism kommt JETZT dazu —
+			     die frühere Ablehnung (Spalten-Kappung "max 8" aus dem
+			     Orte-als-Spalten-Reiter) ist mit #1719 S3 (LtLimit je Kanal:
+			     Telegram 7 Spalten, SMS Zeichen) und Scheibe 8 Fix A/B
+			     (hasLabelColumn/smsCharLimit vom Aufrufer) gegenstandslos: die
+			     Kappungs-Aussage nennt hier gemessene Vergleichs-Grenzen (SMS
+			     153 Zeichen, Telegram 7 Metrik-Zeilen). Die Mail-VORSCHAU bleibt
+			     draussen (Hub-Reiter "Vorschau", Server-Render) — der Organism
+			     ist seit #1719 S3 eine reine Ein-Spalten-Huelle. -->
 			{#if sections.includes('reihenfolge')}
-			<Card padding={0} data-testid="weather-metrics-vergleich-reihenfolge">
-				<p class="option-hint reihenfolge-hint" data-testid="weather-metrics-vergleich-warn-hint">
-					Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an
-					erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.
-				</p>
-				<WeatherV2Reihenfolge
-					primaryColumns={materializedActiveMetricKeys}
-					metricById={compareMetricById}
-					friendlyMap={{}}
-					activeChannel="email"
-					highlight={null}
-					onRemove={onCompareRemove}
-					onDndReorder={onCompareDndReorder}
-					onMode={noopMode}
-				/>
-			</Card>
+			<LayoutTab
+				context="vergleich"
+				bind:channel={compareChannel}
+				colCount={compareChannelSections.active.length}
+				subjectLabel="Metriken"
+				hasLabelColumn={false}
+				smsCharLimit={SMS_COMPARE_CHAR_LIMIT}
+			>
+				{#snippet editor({ channel })}
+					<Card padding={0} data-testid="weather-metrics-vergleich-reihenfolge">
+						<p class="option-hint reihenfolge-hint" data-testid="weather-metrics-vergleich-warn-hint">
+							Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an
+							erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.
+						</p>
+						<WeatherV2Reihenfolge
+							primaryColumns={compareChannelSections.active}
+							metricById={compareMetricById}
+							friendlyMap={{}}
+							activeChannel={channel}
+							highlight={null}
+							onRemove={onCompareRemove}
+							onDndReorder={onCompareDndReorder}
+							onMode={noopMode}
+							offColumns={compareChannelSections.off}
+							onRestore={onCompareRestore}
+							kuerzelById={compareKuerzelById}
+						/>
+					</Card>
+				{/snippet}
+			</LayoutTab>
 			{/if}
 		{/if}
 		<!-- Issue #1361/#1372 S1b: geteiltes Tagesfenster — wirkt auf
@@ -1186,7 +1403,17 @@
 		     leere Liste zu zeigen (bewusst, s. Spec). -->
 		{#if sections.includes('ausblick') && wiz && compareCatalogLoaded}
 			<div data-testid="weather-metrics-ausblick">
-				<CompareOutlookLayoutControls {wiz} catalog={compareCatalog} {onOutlookCommit} />
+				<!-- Issue #1720 S1: dasselbe Bauteil, flach parametrisiert. Der
+				     Vergleich fuehrt zusaetzlich den Ein/Aus-Schalter
+				     (outlook_enabled); der Trip nicht (AC-13). -->
+				<CompareOutlookLayoutControls
+					metricKeys={wiz.outlookMetricKeys}
+					catalog={compareCatalog}
+					onMetricKeys={onCompareOutlookMetricKeys}
+					{onOutlookCommit}
+					enabled={wiz.outlookEnabled}
+					onEnabledChange={onCompareOutlookEnabled}
+				/>
 			</div>
 		{/if}
 		<!-- Issue #1350 Teil 2: Amtliche-Warnungen-Toggle haengt nicht am
@@ -1261,24 +1488,23 @@
 			<!-- Fresh-Eyes-Fund #1232-3b: colCount zählt reine Metriken (ohne "+1"
 			     Label-Spalte, die aus dem vergleich-Kontext stammt und dort
 			     Orte-als-Spalten korrekt mitzählt) — die Trip-Kappung
-			     (WeatherV2Reihenfolge/WeatherV2MailPreview: tgBudget = Anzahl
-			     Metriken, Zeitspalte zählt nicht mit) erwartet dieselbe reine
-			     Metriken-Zählung, sonst weicht der Overflow-Chip von Cut-Line
-			     und Vorschau-Hinweis ab. -->
+			     (WeatherV2Reihenfolge: tgBudget = Anzahl Metriken, Zeitspalte
+			     zählt nicht mit) erwartet dieselbe reine Metriken-Zählung, sonst
+			     weicht der Überlauf-Chip von der Kapplinie ab. -->
 			{#if sections.includes('reihenfolge')}
-			<!-- Issue #1575 Scheibe 3: Reihenfolge-Karte UND Vorschau zeigen die
-			     EFFEKTIVE Auswahl des aktiven Kanals (eigener Eintrag, sonst die
-			     globale) — ohne das bliebe der Reiter eine reine Vorschau-Umschaltung. -->
+			<!-- Issue #1575 Scheibe 3: Reihenfolge-Karte zeigt die EFFEKTIVE
+			     Auswahl des aktiven Kanals (eigener Eintrag, sonst die globale). -->
 			<LayoutTab
 				context="route"
 				bind:channel={activeChannel}
-				colCount={channelView(activeChannel).buckets.primary.length}
+				colCount={activeChannelSections.active.length}
 				subjectLabel="Metriken"
+				hasLabelColumn={false}
 			>
 				{#snippet editor({ channel })}
 					<Card padding={0}>
 						<WeatherV2Reihenfolge
-							primaryColumns={channelView(channel).buckets.primary}
+							primaryColumns={activeChannelSections.active}
 							{metricById}
 							friendlyMap={channelView(channel).friendlyMap}
 							activeChannel={channel}
@@ -1286,19 +1512,11 @@
 							onRemove={onRemove}
 							onDndReorder={onDndReorder}
 							{onMode}
+							offColumns={activeChannelSections.off}
+							onRestore={onRestoreMetric}
+							kuerzelById={metricSymbols}
 						/>
 					</Card>
-				{/snippet}
-				{#snippet preview({ channel })}
-					<WeatherV2MailPreview
-						primaryColumns={channelView(channel).buckets.primary}
-						{metricById}
-						friendlyMap={channelView(channel).friendlyMap}
-						{telegramKurzform}
-						{highlight}
-						{channel}
-						{context}
-					/>
 				{/snippet}
 			</LayoutTab>
 			{/if}
@@ -1317,12 +1535,18 @@
 			     `userTouched` UND `scheduleAutoSave()` explizit aus der echten
 			     DOM-Geste heraus setzen, statt sich auf den ambienten $effect zu
 			     verlassen.
-			     !createMode (analog 'report_config' unten): TripNewEditor.svelte
-			     haelt beim Anlegen eine EIGENE, separate reportConfig-Instanz
-			     (eigener EditReportConfigSection auSSerhalb dieser Komponente) —
-			     dieser hier lokale reportConfig-$state waere dort wirkungslos
-			     (Known Limitation, s. Spec-Rueckmeldung). -->
-			{#if !createMode && sections.includes('tagesfenster')}
+			     Kein !createMode-Gate (anders als 'report_config' unten, Z. 1542):
+			     TripNewEditor.svelte haelt beim Anlegen weiterhin eine EIGENE,
+			     separate reportConfig-Instanz (eigener EditReportConfigSection
+			     ausserhalb dieser Komponente) — dieser hier lokale reportConfig-
+			     $state bleibt dort technisch wirkungslos, genau wie beim
+			     'report_config'-Abschnitt. Die Card ist trotzdem im createMode
+			     sichtbar, weil Issue #1775 (analog #622/#1552) einen expliziten
+			     Rueckkanal-$effect ergaenzt hat (`onDayWindowChange`, s. Z. 601 ff.):
+			     der propagiert die Werte aktiv an TripNewEditor.svelte, das sie in
+			     seiner eigenen reportConfig-Instanz mergt (handleDayWindowChange)
+			     und beim Speichern in den Payload uebernimmt. -->
+			{#if sections.includes('tagesfenster')}
 				<div data-testid="weather-metrics-tagesfenster">
 					<!-- Reassign statt In-Place-Mutation: der Auto-Save-Effekt oben
 					     (Z. 635) vergleicht `cur !== _lastReportConfig` — eine reine
@@ -1477,45 +1701,44 @@
 									symbols={metricSymbols['wind_chill'] ?? []}
 								/>
 								{/if}
-							</tbody>
-						</table>
-					</div>
-				</Card>
-				{/if}
-
-				<!-- 05 Auswertungen (Issue #1357): welche Tagesauswertung einer
-				     Wettergroesse in der Kachelzeile der Briefing-Mail erscheint.
-				     Nur Groessen mit mehr als einer berechenbaren Auswertung
-				     (AC-5); `context='vergleich'` bekommt diesen Abschnitt
-				     dauerhaft nicht — die Compare-Mengen-Wahl entsteht mit #1411
-				     im bestehenden Abschnitt 'grundauswahl' (AC-9, PO-Entscheidung
-				     2026-07-29, s. weatherMetricsTabSections.ts). -->
-				{#if sections.includes('auswertungen') && aggregationMetricIds.length}
-				<Card padding={18}>
-					<Eyebrow style="margin-bottom:8px">05 — Auswertungen</Eyebrow>
-					<p class="option-hint">
-						Welcher Tageswert im Überblick der E-Mail steht — genau einer je Größe.
-						Soll eine Größe dort gar nicht erscheinen, im Abschnitt oben abwählen.
-					</p>
-					<div data-testid="metric-aggregations">
-						<table class="threshold-table">
-							<tbody>
-								{#each aggregationMetricIds as id (id)}
-									<AggregationMetricRow
-										metricId={id}
-										label={metricById[id]?.label ?? id}
-										choices={aggregationChoices(metricById[id])}
-										selectedChoiceId={selectedChoiceId(metricById[id], aggregationsMap[id])}
-										onSelect={(mid, choiceId) => {
-											userTouched = true;
-											aggregationsMap = {
-												...aggregationsMap,
-												[mid]: choiceAggregations(metricById[mid], choiceId),
-											};
-											scheduleAutoSave();
-										}}
-									/>
-								{/each}
+								<!-- Issue #1728 Scheibe 2 (DEC-6): vier neue Tagesrichtungs-Groessen
+								     (Scheibe 1) sowie wind_chill_night (vorbestehende Luecke,
+								     #1484/#1660 A) -- exaktes Muster der Zeilen oben. -->
+								{#if !buckets.off.includes('temperature_day_low')}
+								<MultiSymbolMetricRow
+									metricId="temperature_day_low"
+									label={metricById['temperature_day_low']?.label ?? 'Tages-Tiefsttemperatur (Gehzeit)'}
+									symbols={metricSymbols['temperature_day_low'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('temperature_day_high')}
+								<MultiSymbolMetricRow
+									metricId="temperature_day_high"
+									label={metricById['temperature_day_high']?.label ?? 'Tages-Höchsttemperatur (Gehzeit)'}
+									symbols={metricSymbols['temperature_day_high'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('wind_chill_day_low')}
+								<MultiSymbolMetricRow
+									metricId="wind_chill_day_low"
+									label={metricById['wind_chill_day_low']?.label ?? 'Gefühlte Tages-Tiefsttemperatur (Gehzeit)'}
+									symbols={metricSymbols['wind_chill_day_low'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('wind_chill_day_high')}
+								<MultiSymbolMetricRow
+									metricId="wind_chill_day_high"
+									label={metricById['wind_chill_day_high']?.label ?? 'Gefühlte Tages-Höchsttemperatur (Gehzeit)'}
+									symbols={metricSymbols['wind_chill_day_high'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('wind_chill_night')}
+								<MultiSymbolMetricRow
+									metricId="wind_chill_night"
+									label={metricById['wind_chill_night']?.label ?? 'Gefühlte Nacht-Tiefsttemperatur'}
+									symbols={metricSymbols['wind_chill_night'] ?? []}
+								/>
+								{/if}
 							</tbody>
 						</table>
 					</div>
@@ -1553,6 +1776,25 @@
 				</div>
 				{/if}
 
+				<!-- Issue #1720 S1: Abschnitt "3-Tages-Vorschau" — DASSELBE Bauteil
+				     wie im Ortsvergleich, flach parametrisiert statt kopiert
+				     (Trip/Compare-Teilungs-Invariante). Ohne Ein/Aus-Schalter:
+				     `report_config.show_outlook` in der Inhalt-/Versand-Karte ist
+				     der EINE Schalter (AC-13). Der Metrik-Pool ist die Antwort von
+				     GET /api/compare/metrics — dieselbe Quelle, gegen die
+				     resolve_outlook_metrics() serverseitig validiert (AC-11); ohne
+				     geladenen Katalog bleibt der Block aus statt leer zu erscheinen. -->
+				{#if !createMode && sections.includes('ausblick') && compareCatalogLoaded}
+				<div data-testid="weather-metrics-ausblick">
+					<CompareOutlookLayoutControls
+						metricKeys={outlookMetricKeys}
+						catalog={compareCatalog}
+						onMetricKeys={onOutlookMetricKeys}
+						title="3-Tages-Vorschau"
+					/>
+				</div>
+				{/if}
+
 				{#if !createMode && sections.includes('official_alerts')}
 				<!-- Issue #1117: Amtliche Warnungen — zweiter Einstiegspunkt neben dem -->
 				<!-- Alerts-Tab, gleiche Optik wie die Content-Bausteine oben. Eigener  -->
@@ -1564,24 +1806,8 @@
 			</div>
 		</div>
 
-		<!-- Mobile: fixierter "So kommt es an"-Button → Mail-Vorschau als Bottom-Sheet (#618) -->
-		<button class="mobile-mail-fab" data-testid="mobile-mail-fab" onclick={() => (mailSheetOpen = true)}>
-			<span>So kommt es an</span>
-			<span class="mobile-mail-fab__badge">{buckets.primary.length + (buckets.secondary?.length ?? 0)} Metriken</span>
-		</button>
-		<Sheet open={mailSheetOpen} onClose={() => (mailSheetOpen = false)} title="So kommt es an">
-			<div data-testid="mobile-mail-sheet" style="padding: 4px 16px 24px;">
-				<WeatherV2MailPreview
-					primaryColumns={channelView(activeChannel).buckets.primary}
-					{metricById}
-					friendlyMap={channelView(activeChannel).friendlyMap}
-					{telegramKurzform}
-					{highlight}
-					channel={activeChannel}
-					{context}
-				/>
-			</div>
-		</Sheet>
+		<!-- Issue #1719 Scheibe S3 (PO-Entscheid): der Mobile-FAB "So kommt es an"
+		     + Bottom-Sheet (#618) ist mit der Live-Vorschau ersatzlos entfernt. -->
 
 		<!-- Dialoge & Overlays -->
 		<SavePresetDialog
@@ -1627,10 +1853,6 @@
 	.load-error-msg {
 		color: var(--g-danger);
 		font-size: var(--g-text-sm);
-	}
-	/* Issue #618: FAB auf Desktop versteckt */
-	.mobile-mail-fab {
-		display: none;
 	}
 	.save-bar {
 		display: flex;
@@ -1726,48 +1948,6 @@
 		}
 		.save-bar {
 			padding: var(--g-s-3) var(--g-s-4);
-		}
-		/* Inline-Vorschau auf Mobil verstecken (kommt stattdessen als Sheet, #618).
-		   Ersetzt das bisherige .preview-col{display:none} — jetzt die
-		   LayoutTab-eigene Vorschau-Spalte (KL-1). */
-		:global(.layout-tab[data-context='route'] .lt-col-preview) {
-			display: none;
-		}
-		/* Issue #618: Floating FAB mobil.
-		   F001 (Staging-Adversary #1232-3b): z-index:20/bottom:16px lag HINTER
-		   der globalen BottomNav (z-index:50, 64px + safe-area, BottomNav.svelte
-		   Z.27/28) — echte Klicks trafen den Nav-Link statt den FAB. Fix nach
-		   etabliertem Muster (SaveIndicator.svelte Z.74-78: „Mobile: über
-		   BottomNav (64px Höhe + safe-area)"): bottom-Offset über die Nav-Höhe
-		   heben, z-index über 50 (unter Sheet.svelte 60/61, damit der FAB beim
-		   offenen Bottom-Sheet dahinter bleibt). */
-		.mobile-mail-fab {
-			position: fixed;
-			bottom: calc(64px + env(safe-area-inset-bottom) + 16px);
-			left: 14px;
-			right: 14px;
-			z-index: 55;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			gap: 10px;
-			padding: 14px;
-			border: none;
-			border-radius: var(--g-r-pill);
-			background: var(--g-ink);
-			color: var(--g-paper);
-			font-size: 14px;
-			font-weight: 600;
-			cursor: pointer;
-			box-shadow: 0 4px 20px rgba(26, 26, 24, 0.25);
-		}
-		.mobile-mail-fab__badge {
-			font-family: var(--g-font-mono);
-			font-size: 11px;
-			opacity: 0.7;
-			background: rgba(255, 255, 255, 0.15);
-			padding: 2px 8px;
-			border-radius: 999px;
 		}
 	}
 	/* Issue #1311 (C1): Vergleich-Grundauswahl — schlanke Checkbox-Liste. */

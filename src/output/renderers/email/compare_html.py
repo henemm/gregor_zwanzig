@@ -21,7 +21,7 @@ SPEC: docs/specs/modules/issue_1110_compare_mail_v2.md
 from __future__ import annotations
 
 import html as _html
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -201,7 +201,9 @@ def _fmt_visibility(v) -> str:
     return f"{v / 1000:.1f}" if v is not None else "—"
 
 
-def _fmt_thunder(v, hail: Optional[bool] = None) -> str:
+def _fmt_thunder(
+    v, hail: Optional[bool] = None, signals: Optional[list[str]] = None,
+) -> str:
     """Gewitterstufen-Label des Ortsvergleichs.
 
     Issue #1475 Nachbesserung (Punkt 5a): ``hail`` ist ADDITIV mit Default
@@ -209,14 +211,35 @@ def _fmt_thunder(v, hail: Optional[bool] = None) -> str:
     (``format_hail_note(None)`` liefert nichts). Nur bei bestaetigtem Hagel
     (``True``) haengt der rein deskriptive Zusatz an (ADR-0007, kein Rat).
     Die Stufe ``v`` selbst wird davon NIE beeinflusst (AC-10).
+
+    Issue #1680 S1: ``signals`` (die tragenden Zutaten der Stufe) ist aus
+    demselben Grund ein DRITTER Parameter mit Default ``None`` und steht VOR
+    dem Hagel-Hinweis. 🔴 Der Zusatz gehoert weiterhin bewusst NICHT in den
+    Rumpf, sondern bleibt an der AUFRUFSTELLE: diese Funktion speist ueber
+    ``_HOUR_FMT_OVERRIDES["thunder"]`` AUCH die Compare-Stundentabelle, und
+    jede Stundenzeile muss die Zutat IHRES EIGENEN Datenpunkts nennen (S3
+    AC-9) -- ein Rumpf-Zusatz koennte das gar nicht unterscheiden und wuerde
+    zugleich die Uebersichtszeile mitveraendern (S3 AC-14).
+
+    Issue #1680 S3: die Compare-Stundentabelle uebergibt den dritten Parameter
+    ab jetzt (``_render_hour_row()`` unten, Klartext-Pendant
+    ``comparison.render_comparison_text()``). Der Scheibe-1-Entscheid "die
+    Stundentabelle bleibt unveraendert" (dortiges AC-11) ist mit PO-Entscheid
+    vom 2026-08-13 abgeloest -- der Satz oben stand bis dahin hier und
+    behauptete das Gegenteil des heutigen Codes.
     """
     if v is None:
         return "—"
     key = v.value if hasattr(v, "value") else str(v)
     label = _THUNDER_LEVEL_LABEL.get(key, "—")
-    from output.metric_format import format_hail_note
+    from output.metric_format import format_hail_note, thunder_signal_label
+    teile = [label]
+    if signals:
+        teile.append(", ".join(thunder_signal_label(s) for s in signals))
     note = format_hail_note(hail)
-    return f"{label} · {note}" if note else label
+    if note:
+        teile.append(note)
+    return " · ".join(teile)
 
 
 def _sev_thunder(v):
@@ -617,8 +640,9 @@ def _daily_summary(loc: LocationResult):
     """Tages-Aggregat eines Ortes aus ``hourly_data`` (kanonische Trip-Regeln).
 
     Der Renderer darf sich NICHT darauf verlassen, dass die ComparisonEngine
-    gelaufen ist: ``dict_to_comparison_result()`` und der Validator-Render-Pfad
-    fuettern denselben Renderer ohne Engine. Genau dieses Live-Ableiten aus
+    gelaufen ist: der Validator-Render-Pfad fuettert denselben Renderer ohne
+    Engine (``dict_to_comparison_result()`` -- der frühere zweite Fuetterer --
+    ist mit Issue #1727 S5c als toter Code entfernt). Genau dieses Live-Ableiten aus
     ``hourly_data`` macht ``uv_max`` heute schon (Issue #1110); die vier neuen
     Zeilen folgen demselben Muster.
     """
@@ -656,6 +680,34 @@ def loc_hail_flag(loc: LocationResult, summary=None) -> Optional[bool]:
     if summary is None:
         summary = _daily_summary(loc)
     return getattr(summary, "hail_flag", None) if summary is not None else None
+
+
+def loc_thunder_signals(loc: LocationResult, summary=None) -> Optional[list[str]]:
+    """Issue #1680 S1: DER EINE Weg an die Herkunft der Gewitterstufe eines
+    verglichenen Ortes — genutzt von HTML-Uebersicht, Klartext und Telegram
+    (#1481 DRY-Pflicht, keine Parallel-Logik je Kanal).
+
+    🔴 ANDERS als ``loc_hail_flag``: es gibt KEIN Engine-Feld fuer die
+    Herkunft, wohl aber eines fuer die Stufe (``thunder_level_max``, #1285),
+    dem ``_metric_value`` Vorrang gibt. Eine blind live abgeleitete Herkunft
+    wuerde also eine Stufe aus dem Engine-Lauf mit einer Herkunft aus einer
+    ZWEITEN, unabhaengigen Rechnung paaren.
+
+    Deshalb: Traeger NUR, wenn die live abgeleitete Stufe der ANGEZEIGTEN
+    gleicht. Sonst ``None`` — lieber keine Angabe als eine, die zu einer
+    anderen als der gezeigten Stufe gehoert (ADR-0007, ADR-0048).
+    """
+    if summary is None:
+        summary = _daily_summary(loc)
+    if summary is None:
+        return None
+    signals = getattr(summary, "thunder_level_max_signals", None)
+    if not signals:
+        return None
+    gezeigt = _metric_value(loc, "thunder_max", summary)
+    if gezeigt is None or gezeigt != getattr(summary, "thunder_level_max", None):
+        return None
+    return signals
 
 
 def _fmt_metric(value, decimals, unit: str) -> str:
@@ -704,7 +756,10 @@ def _render_overview_row(
             # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 1): die
             # Gewitter-Zeile bekommt zusaetzlich das Hagel-Kennzeichen DIESES
             # Ortes durchgereicht — alle anderen Zeilen bleiben unveraendert.
-            text = fmt_fn(value, loc_hail_flag(loc, summaries.get(id(loc))))
+            # Issue #1680 S1: dazu die tragenden Zutaten DIESES Ortes.
+            summary = summaries.get(id(loc))
+            text = fmt_fn(value, loc_hail_flag(loc, summary),
+                          loc_thunder_signals(loc, summary))
         elif fmt_fn:
             text = fmt_fn(value)
         else:
@@ -935,7 +990,19 @@ def _render_hour_row(
         # (das ist ausschliesslich die Trip-Stundentabelle, Punkt 2). `dp` ist
         # hier bereits im Scope, analog zum Windrichtungs-Muster unten.
         if m["fmt"] is _fmt_thunder:
-            text = m["fmt"](value, getattr(dp, "hail_flag", None))
+            # Issue #1680 S3 (Spec D4): die Herkunft der Stufe DIESER Stunde --
+            # `value` (`dp.thunder_level`) und `dp.thunder_level_signals`
+            # stammen aus DEMSELBEN Datenpunkt, kein zweiter Rechenweg (AC-9).
+            # Die Uebergabe sitzt hier an der Aufrufstelle, NICHT im Rumpf von
+            # `_fmt_thunder()` -- der speist auch die Uebersichtszeile, die
+            # zeichengleich bleiben muss (AC-14). `getattr`, weil Alt-Daten
+            # ohne das Feld die Zelle unveraendert lassen sollen.
+            # KANAL: die Compare-SMS baut ihre Zelle ueber
+            # `comparison._sms_metric_cell()` -> `_fmt_overview_cell(...,
+            # include_origin=False)` und erreicht diese Aufrufstelle nie
+            # (PO-Entscheidung, aktiv abgewaehlt -- s. dortigen Kommentar).
+            text = m["fmt"](value, getattr(dp, "hail_flag", None),
+                            getattr(dp, "thunder_level_signals", None))
         else:
             text = m["fmt"](value)
         # Issue #1335 Scheibe 1 (AC-3): Windrichtung als Kompass-Text an die
@@ -1369,12 +1436,18 @@ def _render_legend(hourly_metrics: list[str] | None = None, hourly_enabled: bool
     )
 
 
-def _compute_next_send(schedule, weekday) -> Optional[str]:
+def _compute_next_send(schedule, weekday, tz) -> Optional[str]:
     """Known Limitation (SPEC): liefert None (-> '—'), wenn schedule nicht
-    ermittelbar ist."""
+    ermittelbar ist.
+
+    Issue #1727 S5c (ADR-0044): ``today`` kommt aus ``tz`` (bereits von
+    ``render_compare_html`` aufgeloestes ``header_tz``) statt aus der
+    zonenlosen ``date.today()``-Serveruhr — dieselbe Zeitbasis wie die
+    Kopfzeile derselben Mail.
+    """
     if not schedule:
         return None
-    today = date.today()
+    today = local_dt(datetime.now(timezone.utc), tz).date()
     schedule_str = str(schedule).lower()
     if "weekly" in schedule_str and weekday is not None:
         try:
@@ -1388,9 +1461,9 @@ def _compute_next_send(schedule, weekday) -> Optional[str]:
     return None
 
 
-def _render_abo_footer(preset_name, preset_schedule, preset_weekday, location_count: int, sig) -> str:
+def _render_abo_footer(preset_name, preset_schedule, preset_weekday, location_count: int, sig, tz) -> str:
     name = _html.escape(preset_name) if preset_name else "Ortsvergleich"
-    next_send = _compute_next_send(preset_schedule, preset_weekday) or "—"
+    next_send = _compute_next_send(preset_schedule, preset_weekday, tz) or "—"
     return (
         f'<div style="padding:20px 24px;background:{G_PAPER};border-top:1px solid #e6e1d3;">'
         f'<table style="width:100%;border-collapse:collapse;"><tr>'
@@ -1601,7 +1674,9 @@ def render_compare_html(
     )
 
     legend_html = _render_legend(hourly_metrics, hourly_enabled)
-    abo_html = _render_abo_footer(preset_name, preset_schedule, preset_weekday, len(locations), sig)
+    abo_html = _render_abo_footer(
+        preset_name, preset_schedule, preset_weekday, len(locations), sig, header_tz,
+    )
     app_footer_html = _render_app_footer()
 
     # Nur nicht-leere Bloecke einreihen (kein Doppel-Newline durch leeren

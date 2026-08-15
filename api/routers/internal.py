@@ -27,7 +27,7 @@ router = APIRouter()
 
 
 @router.get("/api/_internal/trip/{trip_id}/loaded")
-async def loaded_trip(trip_id: str, user_id: str = Query(...)):
+def loaded_trip(trip_id: str, user_id: str = Query(...)):
     """Liefert den hydrierten Trip als JSON, inklusive der vom Loader
     auto-injizierten ``display_config``. Kanonische Serialisierung via
     ``_trip_to_dict`` — Datetimes als ISO-Strings, Enums als ``.value``.
@@ -53,7 +53,7 @@ def get_stage_weather_provider():
 
 
 @router.get("/api/_internal/trips/{trip_id}/stages-weather")
-async def stages_weather(
+def stages_weather(
     trip_id: str,
     user_id: str = Query(...),
     provider=Depends(get_stage_weather_provider),

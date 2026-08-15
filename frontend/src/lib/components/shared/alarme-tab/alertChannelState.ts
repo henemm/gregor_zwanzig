@@ -10,16 +10,28 @@ export interface AlertChannelState {
 	telegram: boolean;
 	sms: boolean;
 	email: boolean;
+	// Issue #1745 A — vierter Alarm-Kanal (Garmin inReach), im Backend seit
+	// #1701 vollwertig (_effective_alert_channels, compare_alert_channels.py).
+	premium_sms: boolean;
 }
 
 // Anzeige-Reihenfolge lt. Design (corridor-editor.jsx:487-489).
-export const ALERT_CHANNEL_ORDER = ['telegram', 'sms', 'email'] as const;
+// Issue #1745 A (D5): premium_sms steht DIREKT unter sms und VOR email —
+// identisch zur Anordnung im Versand-Reiter (ein SMS-Block).
+export const ALERT_CHANNEL_ORDER = ['telegram', 'sms', 'premium_sms', 'email'] as const;
 export type ChannelKind = (typeof ALERT_CHANNEL_ORDER)[number];
 
 // Design-Default (corridor-editor.jsx:470) — gilt NUR ohne uebergebenen
 // Bestands-State (Neuanlage, AC-11). Mit Bestand wird der Bestand
 // uebernommen, fehlende Keys werden false (kein stiller Kanal-Wechsel).
-const NEW_ENTITY_DEFAULT: AlertChannelState = { telegram: true, sms: true, email: false };
+// Issue #1745 A (D1): premium_sms ist beim Anlegen AUS — Kostenkanal
+// (Satelliten-SMS), wird bewusst angehakt, nie automatisch.
+const NEW_ENTITY_DEFAULT: AlertChannelState = {
+	telegram: true,
+	sms: true,
+	email: false,
+	premium_sms: false
+};
 
 // Adversary Fix-Loop 1, F001: ein leeres Objekt `{}` (oder eines ohne einen
 // einzigen explizit gesetzten boolean-Wert, z.B. `{telegram: undefined}`)
@@ -29,11 +41,15 @@ const NEW_ENTITY_DEFAULT: AlertChannelState = { telegram: true, sms: true, email
 // explizit gesetzten boolean-Kanal gilt als Bestand; sonst greift der
 // Neuanlage-Default. Aufrufer-Vertrag: Bestand nur mit mindestens einem
 // explizit gesetzten Kanal uebergeben — sonst greift der Neuanlage-Default.
+// Issue #1745 A (Landmine 2): premium_sms zaehlt hier MIT — ein Bestand, der
+// nur beim vierten Kanal einen expliziten Wert traegt, galt sonst als "kein
+// Bestand" und wuerde vom Neuanlage-Default ueberschrieben.
 function hasAnyExplicitChannelValue(existing: Partial<AlertChannelState>): boolean {
 	return (
 		typeof existing.telegram === 'boolean' ||
 		typeof existing.sms === 'boolean' ||
-		typeof existing.email === 'boolean'
+		typeof existing.email === 'boolean' ||
+		typeof existing.premium_sms === 'boolean'
 	);
 }
 
@@ -44,14 +60,18 @@ export function resolveAlertChannels(
 	return {
 		telegram: existing.telegram ?? false,
 		sms: existing.sms ?? false,
-		email: existing.email ?? false
+		email: existing.email ?? false,
+		premium_sms: existing.premium_sms ?? false
 	};
 }
 
 export const NO_CHANNEL_WARNING = 'kein Kanal — Alerts gehen nirgends hin';
 
+// Issue #1745 A (Landmine 4): premium_sms zaehlt hier MIT — ein Trip/Preset mit
+// AUSSCHLIESSLICH Premium-SMS zeigte sonst faelschlich "kein Kanal", waehrend
+// das Backend den Alarm sehr wohl zustellt (_effective_alert_channels, #1701).
 export function channelWarningNeeded(state: AlertChannelState): boolean {
-	return !state.telegram && !state.sms && !state.email;
+	return !state.telegram && !state.sms && !state.email && !state.premium_sms;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -67,6 +87,9 @@ export interface AlertChannelThresholdState {
 	telegram: ChannelThreshold;
 	sms: ChannelThreshold;
 	email: ChannelThreshold;
+	// Issue #1745 A: der vierte Kanal hat dieselbe Dringlichkeits-Schwelle wie
+	// die drei Bestandskanaele (ADR-0046 gilt fuer jeden Kanal).
+	premium_sms: ChannelThreshold;
 }
 
 export const CHANNEL_THRESHOLD_LEVELS: ChannelThreshold[] = ['LOW', 'MODERATE', 'HIGH'];
@@ -92,7 +115,8 @@ export function resolveAlertChannelThresholds(
 	return {
 		telegram: coerceThreshold(existing?.telegram),
 		sms: coerceThreshold(existing?.sms),
-		email: coerceThreshold(existing?.email)
+		email: coerceThreshold(existing?.email),
+		premium_sms: coerceThreshold(existing?.premium_sms)
 	};
 }
 

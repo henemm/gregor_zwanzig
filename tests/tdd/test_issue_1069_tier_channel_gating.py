@@ -175,11 +175,16 @@ def _make_segment_data():
 def _make_trip(trip_id: str, send_sms: bool):
     from app.trip import Stage, Trip, Waypoint
     from app.models import TripReportConfig
+    # #1709: feste Ankunftszeiten statt Naismith-Self-Heal
+    # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
+    # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
         id="S1", name="Etappe 1", date=date.today() + timedelta(days=1),
         waypoints=[
-            Waypoint(id="W1", name="Start", lat=42.2, lon=9.05, elevation_m=400),
-            Waypoint(id="W2", name="Ziel", lat=42.25, lon=9.09, elevation_m=1200),
+            Waypoint(id="W1", name="Start", lat=42.2, lon=9.05, elevation_m=400,
+                     arrival_calculated="08:00"),
+            Waypoint(id="W2", name="Ziel", lat=42.25, lon=9.09, elevation_m=1200,
+                     arrival_calculated="12:00"),
         ],
     )
     return Trip(
@@ -346,11 +351,16 @@ def _make_alert_trip(trip_id: str, send_sms: bool, rule_channels: list[str] | No
     from app.trip import Stage, Trip, Waypoint
     from app.models import AlertRule, AlertRuleKind, AlertMetric, AlertSeverity, TripReportConfig
 
+    # #1709: feste Ankunftszeiten statt Naismith-Self-Heal
+    # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
+    # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
         id="S1", name="Etappe 1", date=date.today() + timedelta(days=1),
         waypoints=[
-            Waypoint(id="W1", name="Start", lat=42.2, lon=9.05, elevation_m=400),
-            Waypoint(id="W2", name="Ziel", lat=42.25, lon=9.09, elevation_m=1200),
+            Waypoint(id="W1", name="Start", lat=42.2, lon=9.05, elevation_m=400,
+                     arrival_calculated="08:00"),
+            Waypoint(id="W2", name="Ziel", lat=42.25, lon=9.09, elevation_m=1200,
+                     arrival_calculated="12:00"),
         ],
     )
     rules = []

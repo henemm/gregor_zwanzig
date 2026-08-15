@@ -20,7 +20,7 @@ from typing import Optional
 
 from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip
-from services.trip_day import anchor_tz, display_tz
+from services.trip_day import anchor_tz, display_tz, trip_local_now, trip_local_today
 from utils.timezone import UTC, local_dt, local_fmt, local_hour
 
 logger = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ def _on_demand_failure_body(outcome: str, label: str, target_date: date) -> str:
     """Formatiert den Antworttext für einen nicht-erfolgreichen On-Demand-Versand.
 
     outcome: "no_stage" | "no_weather" | "no_channels" | "channels_unreachable"
-    (alles außer "sent").
+    | "already_in_progress" (alles außer "sent").
     """
     human_date = f"{target_date:%d.%m.%Y}"
     if outcome == "no_weather":
@@ -263,6 +263,10 @@ def _on_demand_failure_body(outcome: str, label: str, target_date: date) -> str:
             "Versandweg für diesen Trip konfiguriert, aber nicht erreichbar "
             "— Briefing nicht gesendet. Verbindung prüfen."
         )
+    # Issue #1756 AC-9: Kollisionsfall (Lock belegt) darf nicht mit "keine
+    # Etappe" verwechselt werden.
+    if outcome == "already_in_progress":
+        return f"{label} ({human_date}): Versand läuft bereits — bitte kurz warten."
     # "no_stage" (Default/Fallback)
     return f"{label} ({human_date}): Keine Etappe geplant"
 
@@ -426,7 +430,11 @@ class TripCommandProcessor:
             )
 
         # 3. Dispatch
-        command_date = msg.received_at.date()
+        # Issue #1727 S5a (ADR-0044): "heute" ist der ORTStag DIESER Tour, nicht
+        # der Weltzeit-Tag der Nachricht. Im Mismatch-Fenster (00:30 Ortszeit auf
+        # Korsika = 22:30 UTC des Vortages) trug `command_date` sonst den Vortag
+        # -- `### ruhetag` verschob dann die heutige Etappe mit.
+        command_date = trip_local_today(trip, msg.received_at)
         if key == "ruhetag":
             return self._apply_ruhetag(trip, value, command_date, msg.user_id)
         elif key == "report":
@@ -436,9 +444,9 @@ class TripCommandProcessor:
         elif key == "abbruch":
             return self._cancel_trip(trip, msg.user_id)
         elif key == "status":
-            return self._show_status(trip)
+            return self._show_status(trip, msg.received_at)
         elif key == "now":
-            return self._show_now(trip)
+            return self._show_now(trip, msg.received_at)
         elif key == "weiter":
             return self._resume_trip(trip, msg.user_id)
         elif key == "pause":
@@ -495,18 +503,30 @@ class TripCommandProcessor:
     def _handle_query(
         self, trip: Trip, query_key: str, received_at: datetime, user_id: str,
     ) -> CommandResult:
-        """Dispatch read-only query. Never mutates trip state."""
-        today = received_at.date()
+        """Dispatch read-only query. Never mutates trip state.
+
+        Fix #1795 (ADR-0044): "heute"/"morgen" folgen dem ORTStag der Tour,
+        nicht dem UTC-Tag von ``received_at`` — EINE Auflösung
+        (``trip_local_now``), aus der Tag UND (via ``display_tz``, je Tag
+        seine eigene Zone, AC-4) die Anzeige-Zonen hervorgehen. Alle
+        Formatierer bekommen ``tz`` als Pflichtparameter durchgereicht
+        (Docstring-Begründung: siehe ``_format_drilldown``) — ein Default
+        würde die Ortszeit wieder still gegen die Prozess-Zeitzone tauschen.
+        """
+        local_now = trip_local_now(trip, received_at)
+        today = local_now.date()
         tomorrow = today + timedelta(days=1)
+        tz_heute = display_tz(trip, today)
+        tz_morgen = display_tz(trip, tomorrow)
 
         # Issue #1007: heute/morgen lösen das volle Tages-Briefing aus (kein
         # Einzeiler-Aggregat mehr) — eigener Zweig VOR dem Timeline-Setup, da
         # der Scheduler die Wetterdaten selbst holt (keine WeatherExtractor-
         # Timeline nötig).
         if query_key == "heute":
-            return self._trigger_on_demand(trip, "morning", "Heute", today, user_id)
+            return self._trigger_on_demand(trip, "morning", "Heute", user_id)
         elif query_key == "morgen":
-            return self._trigger_on_demand(trip, "evening", "Morgen", tomorrow, user_id)
+            return self._trigger_on_demand(trip, "evening", "Morgen", user_id)
 
         from services.weather_extractor import WeatherExtractor
         extractor = WeatherExtractor(user_id=user_id)
@@ -517,7 +537,7 @@ class TripCommandProcessor:
             timeline = extractor.timeline(trip.id)
 
         if query_key == "glance":
-            body = self._fmt_glance(timeline, today, tomorrow)
+            body = self._fmt_glance(timeline, today, tomorrow, tz_heute, tz_morgen)
             return CommandResult(
                 success=True, command="glance",
                 confirmation_subject=f"[{trip.name}] Glance",
@@ -526,7 +546,7 @@ class TripCommandProcessor:
                 reply_markup=_GLANCE_BUTTONS,
             )
         elif query_key == "heute_gewitter":
-            body = self._fmt_gewitter(timeline, today)
+            body = self._fmt_gewitter(timeline, today, tz_heute)
             return CommandResult(
                 success=True, command="heute_gewitter",
                 confirmation_subject=f"[{trip.name}] Gewitter heute",
@@ -534,22 +554,22 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
         elif query_key == "timeline_heute":
-            body = self._fmt_timeline(timeline, today, "Heute", "today")
+            body = self._fmt_timeline(timeline, today, "Heute", "today", tz_heute)
             return CommandResult(
                 success=True, command="timeline_heute",
                 confirmation_subject=f"[{trip.name}] Timeline heute",
                 confirmation_body=body,
                 trip_name=trip.name,
-                reply_markup=self._timeline_buttons(timeline, today, "today"),
+                reply_markup=self._timeline_buttons(timeline, today, "today", tz_heute),
             )
         elif query_key == "timeline_morgen":
-            body = self._fmt_timeline(timeline, tomorrow, "Morgen", "tomorrow")
+            body = self._fmt_timeline(timeline, tomorrow, "Morgen", "tomorrow", tz_morgen)
             return CommandResult(
                 success=True, command="timeline_morgen",
                 confirmation_subject=f"[{trip.name}] Timeline morgen",
                 confirmation_body=body,
                 trip_name=trip.name,
-                reply_markup=self._timeline_buttons(timeline, tomorrow, "tomorrow"),
+                reply_markup=self._timeline_buttons(timeline, tomorrow, "tomorrow", tz_morgen),
             )
         # Fallback (should not reach)
         return CommandResult(
@@ -560,7 +580,7 @@ class TripCommandProcessor:
         )
 
     def _trigger_on_demand(
-        self, trip: Trip, report_type: str, label: str, target_date: date, user_id: str,
+        self, trip: Trip, report_type: str, label: str, user_id: str,
     ) -> CommandResult:
         """Issue #1007: heute/morgen lösen das volle Tages-Briefing aus statt
         des bisherigen Einzeiler-Aggregats. Wiederverwendung des On-Demand-
@@ -568,17 +588,24 @@ class TripCommandProcessor:
         ohne [TEST]-Präfix). Adversary-Fix F001/F002: `send_on_demand_report`
         liefert ein Outcome ("sent"/"no_stage"/"no_weather"/"no_channels")
         statt eines bloßen bool — nur "sent" unterdrückt die Bestätigung.
+
+        Fix #1795 AC-7: der Fehlertext nennt den TATSAECHLICH von
+        `send_on_demand_report` benutzten Zieltag (`OnDemandErgebnis.zieltag`)
+        — kein eigener, im Aufrufer aus `received_at` geratener `target_date`
+        mehr (Nebengewinn: der Parameter entfaellt hier ersatzlos).
         """
         from services.trip_report_scheduler import TripReportSchedulerService
         query_key = "heute" if report_type == "morning" else "morgen"
         buttons = _HEUTE_BUTTONS if report_type == "morning" else _MORGEN_BUTTONS
         service = TripReportSchedulerService(user_id=user_id)
-        outcome = service.send_on_demand_report(trip, report_type)
-        if outcome != "sent":
+        ergebnis = service.send_on_demand_report(trip, report_type)
+        if ergebnis.outcome != "sent":
             return CommandResult(
                 success=True, command=query_key,
                 confirmation_subject=f"[{trip.name}] {label}",
-                confirmation_body=_on_demand_failure_body(outcome, label, target_date),
+                confirmation_body=_on_demand_failure_body(
+                    ergebnis.outcome, label, ergebnis.zieltag,
+                ),
                 trip_name=trip.name,
                 reply_markup=buttons,
             )
@@ -801,11 +828,17 @@ class TripCommandProcessor:
             lines.append(line)
         return "\n".join(lines)
 
-    def _aggregate_day(self, timeline, target_date) -> Optional[dict]:
-        """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte."""
+    def _aggregate_day(self, timeline, target_date, tz) -> Optional[dict]:
+        """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte.
+
+        Fix #1795: der Filter vergleicht den ORTStag des Wegpunkts
+        (``local_dt(p.arrival_time, tz).date()``), nicht mehr den rohen
+        UTC-Tag von ``arrival_time`` — ``tz`` ist Pflichtparameter, s.
+        ``_handle_query``.
+        """
         from app.models import ThunderLevel as TL
         from output.metric_format import thunder_ordinal
-        points = [p for p in timeline.points if p.arrival_time.date() == target_date]
+        points = [p for p in timeline.points if local_dt(p.arrival_time, tz).date() == target_date]
         if not points:
             return None
         temp_max = max((p.metrics.temp_max_c for p in points if p.metrics.temp_max_c is not None), default=None)
@@ -825,9 +858,24 @@ class TripCommandProcessor:
         hail_flag = hail_priority(
             [getattr(p.metrics, "hail_flag", None) for p in points]
         )
+        # Issue #1680 S2: die Zutaten, die die oben gebildete Tagesstufe
+        # tragen -- ueber DIESELBE, nach `target_date` gefilterte Wegpunkt-
+        # liste (Stufe und Herkunft aus EINER Rechnung, Spec D6). Der geteilte
+        # Helfer statt einer dritten Eigenimplementierung derselben Regel
+        # (#1480). Issue #1680 S3: `_fmt_day_agg()`/GLANCE liest den Schluessel
+        # jetzt EBENFALLS (Spec D3) -- der Scheibe-2-Entscheid "GLANCE bleibt
+        # bewusst zeichengleich" (dortige D3, Known Limitation 4) ist mit
+        # PO-Entscheid vom 2026-08-13 abgeloest. Verbraucher sind damit
+        # `_fmt_gewitter()` UND `_fmt_day_agg()`.
+        from output.metric_format import union_of_max_carriers
+        thunder_signals = union_of_max_carriers(
+            [(p.metrics.thunder_level_max,
+              getattr(p.metrics, "thunder_level_max_signals", None))
+             for p in points]
+        )
         return {"temp_max": temp_max, "temp_min": temp_min, "wind_max": wind_max,
                 "thunder": thunder, "precip": precip, "pop": pop,
-                "hail_flag": hail_flag}
+                "hail_flag": hail_flag, "thunder_signals": thunder_signals}
 
     def _fmt_day_agg(self, agg: dict, label: str) -> str:
         """Formatiert Tages-Aggregat als kompakte Zeile."""
@@ -835,20 +883,39 @@ class TripCommandProcessor:
         t_min = f"{agg['temp_min']:.0f}" if agg['temp_min'] is not None else "?"
         wind = f"{agg['wind_max']:.0f}" if agg['wind_max'] is not None else "?"
         thunder_label = _THUNDER_LABEL.get(agg['thunder'].value if agg['thunder'] else "NONE", "?")
+        # Issue #1680 S3 (Spec D3, abgeloeste Entscheidung): die tragende(n)
+        # Zutat(en) der oben gezeigten Tagesstufe -- aus DEMSELBEN Aggregat,
+        # das auch `agg['thunder']` traegt (`_aggregate_day()`, EINE Rechnung
+        # ueber die nach `target_date` gefilterte Wegpunktliste, AC-11). Ohne
+        # Traeger (kein Gewitter, Alt-Schnappschuss ohne das Feld) bleibt die
+        # Zeile zeichengleich zu bisher (AC-16). Denselben Schluessel und
+        # denselben Textbaustein nutzt `_fmt_gewitter()` -- keine zweite
+        # Formulierung. KANAL: GLANCE erreicht ausschliesslich E-Mail und
+        # Telegram (`InboundMessage` hat genau diese zwei Erzeuger); einen
+        # SMS-/Premium-SMS-Kommandopfad gibt es nicht, die PO-Abwahl "SMS ohne
+        # Herkunft" greift hier strukturell.
+        from output.metric_format import thunder_signal_label
+        _traeger = agg.get("thunder_signals")
+        _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
+        if _herkunft:
+            thunder_label = f"{thunder_label} · {_herkunft}"
         precip = f"{agg['precip']:.1f}" if agg.get('precip') else "0.0"
         return (
             f"{label}: 🌡 {t_min}–{t_max}°C  💨 {wind} km/h  "
             f"🌧 {precip}mm  ⛈ Gewitter: {thunder_label}"
         )
 
-    def _fmt_glance(self, timeline, today, tomorrow) -> str:
+    def _fmt_glance(self, timeline, today, tomorrow, tz_heute, tz_morgen) -> str:
+        """Fix #1795 AC-4: je Tag die Zone SEINER EIGENEN Etappe — ``tz_heute``
+        für ``today``, ``tz_morgen`` für ``tomorrow`` (nicht eine gemeinsame
+        Zone für beide Tage)."""
         if not timeline.available:
             return (
                 "Kein Wetter-Snapshot verfügbar. "
                 "Bitte einen Report anfordern um aktuelle Daten zu laden."
             )
-        agg_heute = self._aggregate_day(timeline, today)
-        agg_morgen = self._aggregate_day(timeline, tomorrow)
+        agg_heute = self._aggregate_day(timeline, today, tz_heute)
+        agg_morgen = self._aggregate_day(timeline, tomorrow, tz_morgen)
         lines = ["🗓 Glance — heute & morgen", ""]
         if agg_heute:
             lines.append(self._fmt_day_agg(agg_heute, f"heute ({today:%d.%m})"))
@@ -860,13 +927,13 @@ class TripCommandProcessor:
             lines.append(f"morgen ({tomorrow:%d.%m}): Keine Etappe geplant")
         return "\n".join(lines)
 
-    def _fmt_gewitter(self, timeline, today) -> str:
+    def _fmt_gewitter(self, timeline, today, tz) -> str:
         if not timeline.available:
             return (
                 "Kein Wetter-Snapshot verfügbar. "
                 "Bitte einen Report anfordern um aktuelle Daten zu laden."
             )
-        agg = self._aggregate_day(timeline, today)
+        agg = self._aggregate_day(timeline, today, tz)
         if not agg:
             return f"Heute ({today:%d.%m}): Keine Etappe geplant — kein Gewitter-Status."
         thunder = agg["thunder"]
@@ -875,20 +942,39 @@ class TripCommandProcessor:
         # Renderern (#1481 DRY, call-time Import) -- rein deskriptiv NEBEN der
         # Gewitterstufe, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
         # "unbekannt"/"nein" bleibt die Antwort zeichengleich zu bisher.
-        from output.metric_format import format_hail_note
+        from output.metric_format import format_hail_note, thunder_signal_label
         hail_note = format_hail_note(agg.get("hail_flag"))
         suffix = f" · {hail_note}" if hail_note else ""
+        # Issue #1680 S2: die tragende(n) Zutat(en) der oben gezeigten Stufe --
+        # additiv VOR dem Hagel-Suffix, rein deskriptiv ohne Bewertung
+        # (ADR-0007). Ohne Traeger (kein Gewitter, Alt-Schnappschuss ohne das
+        # Feld) bleibt die Zeile zeichengleich zu bisher.
+        # KANAL: das GEWITTER-Kommando erreicht ausschliesslich E-Mail und
+        # Telegram -- `InboundMessage` hat genau diese zwei Erzeuger
+        # (inbound_email_reader.py, inbound_telegram_reader.py). Es gibt keinen
+        # SMS-/Premium-SMS-Kommandopfad, die PO-Abwahl "SMS ohne Herkunft"
+        # greift hier also strukturell, ohne Kanal-Unterscheidung.
+        traeger = agg.get("thunder_signals")
+        herkunft = ", ".join(thunder_signal_label(n) for n in traeger or [])
+        if herkunft:
+            suffix = f" · {herkunft}{suffix}"
         return f"⛈ Gewitter heute ({today:%d.%m}): {label}{suffix}"
 
-    def _fmt_timeline(self, timeline, target_date, label: str, day_token: str) -> str:
-        """Vertikale Timeline: pro Wegpunkt zwei Zeilen (Zeit/Höhe + Metriken)."""
+    def _fmt_timeline(self, timeline, target_date, label: str, day_token: str, tz) -> str:
+        """Vertikale Timeline: pro Wegpunkt zwei Zeilen (Zeit/Höhe + Metriken).
+
+        Fix #1795: sowohl der Tagesfilter (``local_dt(...).date()``, AC-3) als
+        auch die 🕐-Uhrzeit (``local_fmt``, AC-1/AC-5) laufen über die
+        durchgereichte Ortszone — kein rohes ``arrival_time.date()``/
+        ``:%H:%M`` auf dem UTC-Zeitstempel mehr.
+        """
         if not timeline.available:
             return (
                 "Kein Wetter-Snapshot verfügbar. "
                 "Bitte einen Report anfordern um aktuelle Wetterdaten zu laden."
             )
         pts = sorted(
-            [p for p in timeline.points if p.arrival_time.date() == target_date],
+            [p for p in timeline.points if local_dt(p.arrival_time, tz).date() == target_date],
             key=lambda p: p.arrival_time,
         )
         if not pts:
@@ -897,9 +983,9 @@ class TripCommandProcessor:
         lines = [f"📋 Timeline · {label} ({target_date:%d.%m})", ""]
         for p in pts:
             if p.elevation_m is not None:
-                lines.append(f"🕐 {p.arrival_time:%H:%M} · {int(p.elevation_m)} m")
+                lines.append(f"🕐 {local_fmt(p.arrival_time, tz)} · {int(p.elevation_m)} m")
             else:
-                lines.append(f"🕐 {p.arrival_time:%H:%M}")
+                lines.append(f"🕐 {local_fmt(p.arrival_time, tz)}")
             m = p.metrics
             t_min = f"{m.temp_min_c:.0f}" if m.temp_min_c is not None else "?"
             t_max = f"{m.temp_max_c:.0f}" if m.temp_max_c is not None else "?"
@@ -907,18 +993,34 @@ class TripCommandProcessor:
             precip = f"{m.precip_sum_mm:.1f}" if m.precip_sum_mm is not None else "0.0"
             thunder = m.thunder_level_max
             t_label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
+            # Issue #1680 S3 (Spec D2): die tragende(n) Zutat(en) DIESES
+            # Wegpunkts -- `thunder_level_max` UND `thunder_level_max_signals`
+            # stammen aus DEMSELBEN `m` (`SegmentWeatherSummary`, von
+            # `compute_basis_metrics()` fuer genau dieses eine Segment
+            # gerechnet). Die Liste wird PRO Wegpunkt in der Schleife gelesen,
+            # nie einmal ausserhalb -- sonst zeigte jede Zeile dieselbe,
+            # globale Herkunft (AC-10). `getattr`, weil ein Alt-Schnappschuss
+            # vor Scheibe 1/2 das Feld nicht kennt (AC-15): dann bleibt die
+            # Zeile zeichengleich, ohne "unbekannt" und ohne leeren Trenner.
+            # KANAL: die Timeline erreicht nur E-Mail und Telegram (s. Hinweis
+            # in `_fmt_day_agg()`), SMS/Premium-SMS haben keinen Kommandopfad.
+            from output.metric_format import thunder_signal_label
+            _traeger = getattr(m, "thunder_level_max_signals", None)
+            _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
+            if _herkunft:
+                t_label = f"{t_label} · {_herkunft}"
             lines.append(
                 f"   🌡 {t_min}–{t_max} °C  💨 {wind} km/h  "
                 f"🌧 {precip} mm  ⛈ {t_label}"
             )
         return "\n".join(lines)
 
-    def _timeline_buttons(self, timeline, target_date, day_token: str) -> dict:
+    def _timeline_buttons(self, timeline, target_date, day_token: str, tz) -> dict:
         """Drilldown-Buttons je kritischer Metrik + immer Zurück."""
         from app.models import ThunderLevel
         from output.metric_format import thunder_ordinal
         back = {"text": "⬅️ Zurück", "callback_data": "glance"}
-        agg = self._aggregate_day(timeline, target_date) if timeline.available else None
+        agg = self._aggregate_day(timeline, target_date, tz) if timeline.available else None
         if not agg:
             return {"inline_keyboard": [[back]]}
 
@@ -1071,9 +1173,22 @@ class TripCommandProcessor:
             trip_name=trip.name, shifts=shifts,
         )
 
-    def _show_status(self, trip: Trip) -> CommandResult:
-        """Listet heute und kommende Etappen (vergangene werden gefiltert)."""
-        today = date.today()
+    def _show_status(self, trip: Trip, now_utc: datetime) -> CommandResult:
+        """Listet heute und kommende Etappen (vergangene werden gefiltert).
+
+        Issue #1727 S5a (ADR-0044): "heute" ist der ORTStag DIESER Tour. Vorher
+        stand hier `date.today()` -- das Datum der Prozess-Zeitzone, auf dem
+        Server `Etc/UTC`. In Neuseeland blieb die lokal abgeschlossene Etappe
+        dadurch bis zu zwoelf Stunden am Tag stehen, an der US-Westkueste fiel
+        die heutige bis zu sieben Stunden am Tag durch den Filter.
+
+        Args:
+            trip: die Tour, deren Etappen gelistet werden.
+            now_utc: Zeitpunkt der Abfrage (`msg.received_at`). Pflichtparameter
+                -- ein Default auf die Systemuhr wuerde genau die Umgebungsuhr
+                wieder einfuehren, die ADR-0051 Regel 3 verbietet.
+        """
+        today = trip_local_today(trip, now_utc)
         lines = [f"Status: {trip.name}", ""]
         for stage in trip.stages:
             if stage.date >= today:
@@ -1221,10 +1336,20 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _show_now(self, trip: Trip) -> CommandResult:
-        """Fetch radar nowcast for today's stage position."""
+    def _show_now(self, trip: Trip, now_utc: datetime) -> CommandResult:
+        """Fetch radar nowcast for today's stage position.
+
+        Issue #1727 S5a (ADR-0044): der Standort haengt am ORTStag der Tour.
+        #1402 hatte hier nur die Uhrzeit des Onset-Textes ortsrichtig gemacht --
+        die Etappen-, und damit die Standortwahl, blieb am Servertag haengen.
+
+        Args:
+            trip: die Tour, deren heutiger Wegpunkt den Nowcast bestimmt.
+            now_utc: Zeitpunkt der Abfrage (`msg.received_at`). Pflichtparameter
+                aus demselben Grund wie in :meth:`_show_status`.
+        """
         from services.radar_service import RadarNowcastService
-        today = date.today()
+        today = trip_local_today(trip, now_utc)
         stage = trip.get_stage_for_date(today)
         if not stage or not stage.waypoints:
             return CommandResult(

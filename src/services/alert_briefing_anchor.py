@@ -142,7 +142,7 @@ def record_briefing_dispatch_failure(
 
 
 def briefing_target_day_is_current(
-    target_date: Union[date, str, None], *, today: Optional[date] = None,
+    target_date: Union[date, str, None], *, today: date,
 ) -> bool:
     """Ist der Zieltag eines Nachliefer-Vermerks noch aktuell? (#1662, Punkt 4)
 
@@ -157,16 +157,23 @@ def briefing_target_day_is_current(
     nominell „dauerhafte" Fehlertyp heilte beim einzigen echten Vorfall nach
     rund 13 Stunden von selbst.
 
+    Issue #1727 S5b (ADR-0044/ADR-0051 Regel 3): `today` ist PFLICHT und trägt
+    keinen Systemuhr-Rückfall mehr. Welcher Kalendertag gemeint ist, weiß nur
+    der Aufrufer — er kennt die Tour und damit deren Ortszone. Der frühere
+    Default `today or date.today()` machte den Aufruf-Fehler „Tag vergessen"
+    unsichtbar: die Funktion antwortete plausibel, aber zum Servertag.
+
     Args:
         target_date: Zieltag des Vermerks (`date` oder ISO-Zeichenkette).
-        today: Vergleichstag; ohne Angabe der heutige Tag.
+        today: Vergleichstag (Ortstag der betroffenen Tour), keyword-only,
+            ohne Default.
 
     Returns:
         True, solange der Zieltag heute oder in der Zukunft liegt. Ein
         unlesbarer Zieltag gilt als abgelaufen — ein Vermerk, dessen Zieltag
         niemand bestimmen kann, darf nicht stündlich weitergeschleppt werden.
     """
-    heute = today or date.today()
+    heute = today
     if isinstance(target_date, date):
         tag = target_date
     else:

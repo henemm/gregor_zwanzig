@@ -5,7 +5,12 @@ Die vier SSoT-Aufrufer von ``convert_trip_to_segments()``:
 2. Trip-Detail-Vorschau — ``preview_service.py:96`` → ``render_email_preview``
 3. Telegram-Segmentabruf — ``trip_command_processor.py:212`` (Wrapper-Aufruf)
    + ``render_telegram_preview`` (#1001-Bubbles, voller Renderpfad)
-4. Alert-Segmentfenster — ``trip_alert.py:681`` (Direktaufruf)
+4. Alert-Segmentfenster — ``convert_trip_to_segments(trip, _TARGET)`` direkt,
+   wie die erste Stufe von ``resolve_current_segment`` (``trip_segments.py:377``)
+   sie fuer den heutigen Tag aufruft. Seit Issue #1667 S3 ruft
+   ``trip_alert.py`` (``check_radar_alerts()``, ab ``:911``) nicht mehr
+   direkt auf, sondern geht ueber ``resolve_current_segment`` — die
+   Startzeit-SSoT dieses Tests gilt unveraendert fuer deren erste Stufe.
 
 Given: EIN persistierter Trip mit geänderter Etappen-Startzeit 14:00 und
 alten GPX-Import-``time_window``-Werten (07:00/09:00/11:00).
@@ -115,7 +120,9 @@ def test_ac3_alle_vier_produkt_pfade_konsistent():
         f"Telegram-Bubbles zeigen weiterhin die alte Importzeit {_OLD_IMPORT}"
     )
 
-    # --- Pfad 4: Alert-Segmentfenster (Direktaufruf wie trip_alert.py:681) ---
+    # --- Pfad 4: Alert-Segmentfenster (wie die heutige Stufe von
+    #     resolve_current_segment(), trip_segments.py:377 — seit Issue
+    #     #1667 S3 kein Direktaufruf mehr aus trip_alert.py selbst) ---
     alert_segments = convert_trip_to_segments(trip, _TARGET)
     assert alert_segments, "Alert-Pfad: Segmentliste leer"
     observed["alert"] = _local_hhmm(alert_segments[0])

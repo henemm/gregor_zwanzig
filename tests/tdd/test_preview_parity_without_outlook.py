@@ -112,9 +112,13 @@ def _sent_report(trip, segment_weather, stage_name, trip_tz):
 
     scheduler = TripReportSchedulerService()
     stage = trip.get_stage_for_date(_TARGET)
-    trend_result = scheduler._build_stage_trend(trip, _TARGET, tz=trip_tz)
+    jetzt_utc = datetime.now(timezone.utc)
+    trend_result = scheduler._build_stage_trend(
+        trip, _TARGET, now_utc=jetzt_utc, tz=trip_tz,
+    )
     thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
-        trip, _TARGET, tz=trip_tz, multi_day_trend=trend_result.rows,
+        trip, _TARGET, now_utc=jetzt_utc, tz=trip_tz,
+        multi_day_trend=trend_result.rows,
     )
     try:
         from services.weather_pattern import WeatherPatternService
@@ -164,7 +168,7 @@ def test_preview_matches_sent_when_the_outlook_is_absent():
     # Der ECHTE Vorschau-Pfad — inklusive der Stelle, an der die
     # Ausblick-Parameter an die Render-Naht uebergeben werden.
     preview, segment_weather, stage_name, trip_tz = PreviewService()._build_report(
-        trip, _TARGET, _REPORT_TYPE, demo=True,
+        trip, _TARGET, _REPORT_TYPE, now_utc=datetime.now(timezone.utc), demo=True,
     )
     sent, trend_result = _sent_report(trip, segment_weather, stage_name, trip_tz)
 

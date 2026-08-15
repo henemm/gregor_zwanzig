@@ -17,6 +17,8 @@ import type { ActivityProfile, ComparePreset, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
 import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
+// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle.
+import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 // Issue #1373 (S2 Scheibe B, AC-12): dieselbe Lesenormalisierung wie im
 // Lade-Pfad — Alt- UND Neuformat der gespeicherten Metrik-Auswahl.
 import {
@@ -76,12 +78,20 @@ export interface HubEdit {
 	pickedIds?: string[];
 	idealRanges?: Record<string, IdealRange>;
 	activeMetricKeys?: string[];
+	// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle.
+	// undefined = nicht editiert -> Round-Trip via `preset.display_config`
+	// (der RMW-Merge in buildComparePresetSavePayload laeuft dann gar nicht).
+	channelActiveMetricKeys?: CompareChannelActiveMetrics;
 	metricAlertLevels?: Record<string, string>;
 	// Issue #1256 Scheibe 7 (AC-35/AC-36): Versand-Felder, analog Round-Trip-
 	// Prinzip — undefined = unangetastet, endDate zusaetzlich null-faehig
 	// (Loesch-Sentinel "bis auf Weiteres", #1232-Kontext).
 	sendTelegram?: boolean;
 	sendSms?: boolean;
+	// Issue #1745 A (Landmine 3): DIESE Feldliste ist die zweite Kodierung neben
+	// buildComparePresetSavePayload — fehlt der Kanal hier, geht der Haken beim
+	// naechsten Hub-Speichern verloren.
+	sendPremiumSms?: boolean;
 	morningEnabled?: boolean;
 	morningTime?: string;
 	eveningEnabled?: boolean;
@@ -144,6 +154,11 @@ export function buildHubPutPayload(
 		// buildComparePresetSavePayload den Key wie bisher unangetastet
 		// round-trippt (#1191: fehlend != []).
 		activeMetricKeys: edit.activeMetricKeys ?? normalizeStoredActiveMetrics(displayConfig.active_metrics) ?? undefined,
+		// Issue #1703 Scheibe 8: KEIN Bestandsrueckfall wie bei activeMetricKeys —
+		// undefined bleibt undefined. Der gespeicherte Stand round-trippt dann
+		// unangetastet ueber `...restDisplayConfig`; ein hier gebauter Rueckfall
+		// wuerde denselben Wert nur unnoetig durch die Schreibuebersetzung jagen.
+		channelActiveMetricKeys: edit.channelActiveMetricKeys,
 		metricAlertLevels:
 			edit.metricAlertLevels ?? (displayConfig.metric_alert_levels as Record<string, string> | undefined),
 		// Issue #1461 S3b-2b: 1:1 Round-Trip wie alle anderen HubEdit-Felder,
@@ -157,6 +172,9 @@ export function buildHubPutPayload(
 		// endDate: null wird NICHT auf undefined gemappt (Loesch-Sentinel, #1232).
 		sendTelegram: edit.sendTelegram,
 		sendSms: edit.sendSms,
+		// Issue #1745 A (Landmine 3): 1:1 durchreichen wie die Geschwister —
+		// undefined bleibt undefined (Round-Trip aus `preset`).
+		sendPremiumSms: edit.sendPremiumSms,
 		morningEnabled: edit.morningEnabled,
 		morningTime: edit.morningTime,
 		eveningEnabled: edit.eveningEnabled,
@@ -460,6 +478,10 @@ export interface AlarmHydrationTarget {
 	// naechsten Alarme-Save aktiv zurueckgeschrieben). Analog channelThresholds.
 	sendTelegram?: boolean;
 	sendSms?: boolean;
+	// Issue #1745 A: der vierte Kanal muss aus demselben Grund mit-hydriert
+	// werden — sonst ist eine Aenderung im Alarme-Reiter weder als
+	// Snapshot-Differenz erkennbar noch im PUT-Body enthalten.
+	sendPremiumSms?: boolean;
 	channelThresholds?: Record<string, string>;
 	// Issue #1320: activeMetricKeys wird sonst nur von den Hydrations-Effekten
 	// der Tabs "wetter-metriken"/"idealwerte" befuellt — fehlt Alarme als
@@ -504,6 +526,8 @@ export function hydrateAlarmFieldsFromPreset(
 	// Snapshot-Differenz erkennbar wird (s. AlarmHydrationTarget-Kommentar).
 	state.sendTelegram = preset.send_telegram ?? false;
 	state.sendSms = preset.send_sms ?? false;
+	// Issue #1745 A (D1): fehlt das Feld im Preset, ist der Kostenkanal AUS.
+	state.sendPremiumSms = preset.send_premium_sms ?? false;
 	state.channelThresholds = (preset.alert_channel_thresholds as Record<string, string>) ?? {};
 	state.alertCooldownMinutes = preset.alert_cooldown_minutes;
 	state.alertQuietFrom = preset.alert_quiet_from;
@@ -546,6 +570,9 @@ export interface AlarmSnapshot {
 	// Felder bleiben gueltig, `undefined` bedeutet "nicht editiert" (Round-Trip).
 	sendTelegram?: boolean;
 	sendSms?: boolean;
+	// Issue #1745 A: vierter Kanal im Snapshot — ein reiner Premium-SMS-Klick
+	// muss als Snapshot-Differenz erkannt werden und einen PUT ausloesen.
+	sendPremiumSms?: boolean;
 	channelThresholds?: Record<string, string>;
 }
 
@@ -597,6 +624,9 @@ export function flushPendingAlarmSave(
 		// AlarmSnapshot-Kommentar).
 		sendTelegram: current.sendTelegram,
 		sendSms: current.sendSms,
+		// Issue #1745 A: ohne diese Zeile schriebe jeder andere Alarme-Save den
+		// Server-Bestand des vierten Kanals still zurueck.
+		sendPremiumSms: current.sendPremiumSms,
 		channelThresholds: current.channelThresholds
 	});
 }
@@ -640,6 +670,8 @@ export function rollbackAlarmSnapshot(
 		// zurueck wie die uebrigen Alarme-Snapshot-Felder.
 		'sendTelegram',
 		'sendSms',
+		// Issue #1745 A: rollt diff-basiert zurueck wie die uebrigen Kanal-Felder.
+		'sendPremiumSms',
 		'channelThresholds'
 	];
 	const target = state as Record<string, unknown>;

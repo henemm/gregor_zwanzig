@@ -46,9 +46,24 @@ _INTENSITY_LABELS = [
     "Regen",     # Fallback: Teilstring
 ]
 
-# Segment-Erkennungs-Muster: "Etappe N", "km X-Y", oder generischer Segment-Label
+# Segment-Erkennungs-Muster: "Etappe N", "km X-Y", generischer Segment-Label
+# oder die Ziel-Form.
+#
+# Issue #1744 A1 (2026-08-12, an der zugestellten Mail gemessen): seit die
+# Alarme EINE Ortssprache sprechen, nennt eine Radar-Alarm-Mail fuer die letzte
+# Etappe den Ort als "🏁 Ziel" (`segments.format_segment_reference`). Das traf
+# KEINE der vier bisherigen Alternativen — der Waechter beanstandete eine
+# korrekte, PO-freigegebene Ausgabe (P-1, Exit 1) und haette damit jede
+# Ziel-Segment-Warnung blockiert. Die Ziel-Form kommt additiv dazu; keine der
+# vier bestehenden Alternativen wurde entfernt oder gelockert.
+#
+# Das Flaggen-Symbol ist BEWUSST nicht Teil der Bedingung: geprueft wird das
+# Ortswort, nicht seine Dekoration — sonst haengt der Waechter an einem Emoji.
+# Dass die Pruefung ihre Zaehne behaelt (Body ganz ohne Ortsbezug faellt
+# weiterhin durch), sichert
+# tests/tdd/test_radar_alert_validator_location_forms.py.
 _SEGMENT_RE = re.compile(
-    r"(Etappe\s+\d+|km\s+\d+\s*[–\-]\s*\d+|\bseg\b|\bSegment\b)",
+    r"(Etappe\s+\d+|km\s+\d+\s*[–\-]\s*\d+|\bseg\b|\bSegment\b|\bZiel\b)",
     re.IGNORECASE,
 )
 

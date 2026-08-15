@@ -222,12 +222,18 @@ const PRIMARY_SLOTS = 5;
 
 /**
  * Waehlbare Metrik-Spalten je Kanal (Uhrzeit NICHT mitgezaehlt).
- * Telegram-Budget = 8 (#587: Signal entfernt, Budget von 7→8 angehoben).
+ * Telegram-Budget = 7 (Issue #1719 S3: von 8 auf 7 korrigiert — die 8. vom
+ * Backend gerenderte Telegram-Spalte ist die Uhrzeit, keine Metrik. Beleg:
+ * src/output/renderers/channel_layout.py:110, metric_slots = limit - 1;
+ * src/output/renderers/narrow.py:148, headers = ["Zt"] + ...).
  * Signal entfernt (#610). Anzeige-Budget, KEIN hartes Limit.
+ * SMS bleibt 0 — das ist als SPALTENZAHL korrekt (SMS hat kein Raster);
+ * die echte Zeichengrenze (160 Trip / 153 Vergleich) lebt in
+ * layout-tab/ltChannels.ts (LtLimit-Modell, Issue #1719 S3 Abschnitt 5).
  */
 export const CHANNEL_COL_BUDGET: Record<'email' | 'telegram' | 'sms', number> = {
 	email: Infinity,
-	telegram: 8,
+	telegram: 7,
 	sms: 0,
 };
 

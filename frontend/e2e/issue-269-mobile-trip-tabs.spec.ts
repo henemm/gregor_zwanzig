@@ -28,7 +28,15 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		/**
 		 * GIVEN: Viewport ist 375×667 px (Mobile)
 		 * WHEN:  Trip-Detail-Seite geladen
-		 * THEN:  .trip-tabs-list hat overflow-x: auto
+		 * THEN:  das Tab-Band hat overflow-x: auto
+		 *
+		 * Issue #1231 Slice 6: das Tab-Band ist seither das geteilte
+		 * Segmented-Atom INNERHALB von [data-testid="trip-detail-tab-list"];
+		 * TripTabs.svelte setzt overflow-x unter `@media (max-width: 899px)`
+		 * gezielt auf `[data-slot="segmented"]`. Der Testid-Container selbst
+		 * umschliesst zusaetzlich die Tab-Panels und bleibt bewusst
+		 * `overflow: visible` — er ist nicht mehr das scrollende Element.
+		 * Geprueft wird deshalb der Wirkort, nicht der fruehere Pruefort.
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
@@ -36,7 +44,10 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		const list = page.getByTestId('trip-detail-tab-list');
 		await expect(list).toBeVisible();
 
-		const overflowX = await list.evaluate((el) => getComputedStyle(el).overflowX);
+		const band = list.locator('[data-slot="segmented"]').first();
+		await expect(band).toBeVisible();
+
+		const overflowX = await band.evaluate((el) => getComputedStyle(el).overflowX);
 		expect(overflowX).toBe('auto');
 	});
 

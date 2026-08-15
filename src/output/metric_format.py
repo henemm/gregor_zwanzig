@@ -31,11 +31,21 @@ from app.models import ThunderLevel
 # aber keine Darstellungsschicht importieren (Waechter #1365). Re-Export hier
 # haelt alle bestehenden `from output.metric_format import ...`-Stellen
 # gueltig; die privaten Dicts _THUNDER_ORDER/_THUNDER_LABEL_VALUE ziehen mit.
+#
+# Issue #1680 S5b: `union_of_max_carriers` (S2) und `thunder_signal_label`/
+# `THUNDER_SIGNAL_LABEL_DE` (S1) sind aus DEMSELBEN Grund nachgezogen -- die
+# Gewitter-Vorschau baut ihren Herkunfts-Zusatz im Zeitplaner. Der Re-Export
+# bindet DIESELBEN Objekte (insbesondere DIESELBE Dict-Instanz), keine Kopie:
+# eine in-place-Mutation von `THUNDER_SIGNAL_LABEL_DE` wirkt deshalb ueber
+# beide Modulnamen gleich.
 from app.thunder_scale import (  # noqa: F401  (Re-Export, s.o.)
     _THUNDER_LABEL_VALUE,
     _THUNDER_ORDER,
+    THUNDER_SIGNAL_LABEL_DE,
     thunder_label_value,
     thunder_ordinal,
+    thunder_signal_label,
+    union_of_max_carriers,
 )
 
 __all__ = [
@@ -306,6 +316,160 @@ def _thunder_level_from_ladder(
     return ThunderLevel.NONE
 
 
+# Umkehrung der kanonischen Ordnung (thunder_scale.thunder_ordinal) --
+# abgeleitet statt handgeschrieben, damit eine kuenftige fuenfte Stufe nicht
+# an zwei Stellen gepflegt werden muss.
+_THUNDER_JE_ORDINAL = {thunder_ordinal(stufe): stufe for stufe in ThunderLevel}
+
+
+def _gedaempft_durch_cin(
+    basis: ThunderLevel, cin_jkg: Optional[float]
+) -> ThunderLevel:
+    """Daempft eine CAPE-Stufe anhand der Konvektionshemmung CIN (Issue #1679).
+
+    Vier belegte Baender (Penn State/COMET, SPC -- Gesamtkonzept 3.7 Schritt 2):
+    schwacher Deckel (Betrag < 25) laesst die Leiter voll zaehlen, moderat
+    (25 <= Betrag < 50) nimmt genau eine Stufe, grosser Deckel
+    (50 <= Betrag <= 100) deckelt auf LOW, darueber traegt CAPE nichts mehr bei.
+    Ein Grenzwert gehoert dabei immer ins staerker daempfende Band.
+
+    Unbekanntes CIN (``None``, strukturell der Fall bei Meteo-France/AROME;
+    ebenso der DWD-Fehlwert -999,9 "kein Ausloesepunkt gefunden", der VOR
+    dieser Funktion zu ``None`` gefiltert wird, `dwd.py:206`/`:240`,
+    `dwd_eu.py:261`) faellt auf die Bestands-Notbremse "hoechstens LOW"
+    zurueck -- NICHT auf "kein Deckel": eine fehlende Hemmungsangabe ist
+    keine schwache Hemmung.
+
+    Vorzeichen der Eingabe ist MODELLABHAENGIG, GRIB2 (Parameter 0/7/7 der
+    WMO-Registry) legt keines fest -- nur Name und Einheit (J/kg) sind
+    standardisiert. Der DWD (ICON-D2/ICON-EU) liefert ``cin_ml`` als
+    POSITIVEN Betrag: ICON-Quellcode
+    `src/atm_phy_nwp/mo_opt_nwp_diagnostics.f90:3957-3958`, Kommentar
+    ``! make CIN positive``, gefolgt von ``ABS(...)``. GFS/US-Modelle
+    liefern dagegen negativ -- die US-Literatur (Penn State/SPC), aus der
+    die vier Baender oben stammen, bezieht sich auf **MLCIN ueber 100 hPa**
+    negativ gezaehlt. Deshalb vergleicht diese Funktion den BETRAG der
+    Hemmung, nicht ihr Vorzeichen (Issue #1760) -- ein reiner
+    Vorzeichenvergleich (``cin_jkg > -25``) waere fuer JEDEN positiven
+    ICON-Wert immer wahr und die Daempfung wuerde nie feuern.
+
+    🔴 Bekannte Einschraenkung (Issue #1760 Known Limitations): die Baender
+    selbst sind fuer ICON NICHT geeicht. ICON mischt CIN ueber **50 hPa**
+    (ICON-Code Z. 2701-2702, "Depth of mixed surface layer: 50hPa following
+    Huntrieser, 1997"), reversibel, ohne Entrainment (ECMWF TM 852,
+    Groenemeijer et al. 2019) -- eine andere Rechnung als die US-MLCIN, aus
+    der -25/-50/-100/-200 stammen. Die Schwellen liegen in der richtigen
+    Groessenordnung, sind aber keine ICON-Eichung (Feineichung: #1678).
+
+    CIN ist Ausloese-Filter, kein Schweremass (Rasmussen & Blanchard 1998) --
+    diese Funktion daempft deshalb ausschliesslich und hebt nie an.
+    """
+    if cin_jkg is None:
+        return min(basis, ThunderLevel.LOW, key=thunder_ordinal)
+    betrag = abs(cin_jkg)
+    if betrag < 25:
+        return basis
+    if betrag < 50:
+        return _THUNDER_JE_ORDINAL[max(thunder_ordinal(basis) - 1, 0)]
+    if betrag <= 100:
+        return min(basis, ThunderLevel.LOW, key=thunder_ordinal)
+    return ThunderLevel.NONE
+
+
+def _signal_levels(
+    wettercode_level: Optional[ThunderLevel],
+    lightning_density: Optional[float],
+    cape_jkg: Optional[float],
+    lightning_potential_jkg: Optional[float] = None,
+    *,
+    cape_threshold_jkg: Optional[float],
+    cape_med_min: Optional[float],
+    cape_high_min: Optional[float],
+    cin_jkg: Optional[float],
+    lpi_low_min: Optional[float],
+    lpi_med_min: Optional[float],
+    lpi_high_min: Optional[float],
+) -> dict[str, ThunderLevel]:
+    """Die EINZELsignale der Fusion, je Zutat unter festem Schluessel
+    (Issue #1680 S1). Ein Signal, das nichts beitraegt (Wert fehlt ODER seine
+    Leiter ist unkalibriert), erscheint GAR NICHT -- "keine Aussage" ist kein
+    Eintrag mit Stufe ``NONE``.
+
+    Ausgelagert aus ``thunder_level_from_signals()``, damit die Stufe UND ihre
+    Herkunft aus EINER Rechnung stammen (keine zweite Fusionsregel neben der
+    kanonischen, ADR-0025).
+    """
+    levels: dict[str, ThunderLevel] = {}
+
+    if wettercode_level is not None:
+        levels["wettercode"] = wettercode_level
+
+    if lightning_density is not None:
+        levels["blitzdichte"] = _thunder_level_from_ladder(
+            lightning_density, _LIGHTNING_LOW_MIN, _LIGHTNING_MED_MIN, _LIGHTNING_HIGH_MIN,
+        )
+
+    if (cape_jkg is not None
+            and cape_threshold_jkg is not None
+            and cape_med_min is not None
+            and cape_high_min is not None):
+        levels["cape"] = _gedaempft_durch_cin(
+            _thunder_level_from_ladder(
+                cape_jkg, cape_threshold_jkg, cape_med_min, cape_high_min,
+            ),
+            cin_jkg,
+        )
+
+    if (lightning_potential_jkg is not None
+            and lpi_low_min is not None
+            and lpi_med_min is not None
+            and lpi_high_min is not None):
+        levels["blitzpotenzial"] = _thunder_level_from_ladder(
+            lightning_potential_jkg, lpi_low_min, lpi_med_min, lpi_high_min,
+        )
+
+    return levels
+
+
+def thunder_signal_carriers(
+    wettercode_level: Optional[ThunderLevel],
+    lightning_density: Optional[float],
+    cape_jkg: Optional[float],
+    lightning_potential_jkg: Optional[float] = None,
+    *,
+    cape_threshold_jkg: Optional[float],
+    cape_med_min: Optional[float],
+    cape_high_min: Optional[float],
+    cin_jkg: Optional[float],
+    lpi_low_min: Optional[float],
+    lpi_med_min: Optional[float],
+    lpi_high_min: Optional[float],
+) -> list[str]:
+    """Die Zutaten, die die fusionierte Stufe TRAGEN (Issue #1680 S1).
+
+    Dieselben Argumente wie ``thunder_level_from_signals()`` -- absichtlich
+    eine zweite Funktion statt eines Rueckgabetyp-Wechsels, damit die Signatur
+    der Fusion unveraendert bleibt.
+
+    Genannt wird JEDE Zutat, die die Hoechststufe erreicht (PO-Entscheidung
+    (ii)): es wird kein Gewinner gekuert, die interne Pruefreihenfolge ist
+    damit keine Produktaussage. ``NONE`` liefert eine LEERE Liste -- "kein
+    Gewitter" hat keine Herkunft ("— · CAPE" waere ein Widerspruch, Spec AC-3).
+    """
+    levels = _signal_levels(
+        wettercode_level, lightning_density, cape_jkg, lightning_potential_jkg,
+        cape_threshold_jkg=cape_threshold_jkg, cape_med_min=cape_med_min,
+        cape_high_min=cape_high_min, cin_jkg=cin_jkg, lpi_low_min=lpi_low_min,
+        lpi_med_min=lpi_med_min, lpi_high_min=lpi_high_min,
+    )
+    if not levels:
+        return []
+    top = max_thunder(levels.values())
+    if top == ThunderLevel.NONE:
+        return []
+    return [name for name, stufe in levels.items() if stufe == top]
+
+
 def thunder_level_from_signals(
     wettercode_level: Optional[ThunderLevel],
     lightning_density: Optional[float],
@@ -313,6 +477,9 @@ def thunder_level_from_signals(
     lightning_potential_jkg: Optional[float] = None,
     *,
     cape_threshold_jkg: Optional[float],
+    cape_med_min: Optional[float],
+    cape_high_min: Optional[float],
+    cin_jkg: Optional[float],
     lpi_low_min: Optional[float],
     lpi_med_min: Optional[float],
     lpi_high_min: Optional[float],
@@ -336,8 +503,19 @@ def thunder_level_from_signals(
     KEIN Signal zur Fusion bei -- unabhaengig von seinem Wert ("keine
     Aussage" statt "geprueft, unauffaellig", Spec Abschnitt 3).
 
-    CAPE ist bei ``LOW`` gedeckelt und eskaliert NIE auf ``MED``/``HIGH``
-    (misst Energie, kein Ereignis, Spec AC-6/AC-8).
+    Seit Issue #1679 (CIN-Teil) laeuft CAPE ueber die dreisprossige Leiter
+    ``cape_threshold_jkg``/``cape_med_min``/``cape_high_min``
+    (``model_registry.cape_ladder_thresholds_jkg()``) und wird anschliessend
+    durch die Konvektionshemmung ``cin_jkg`` gedaempft
+    (``_gedaempft_durch_cin()``). Alle drei sind ebenso KEYWORD-ONLY OHNE
+    DEFAULT; fehlt EINE der drei Sprossen, traegt CAPE KEIN Signal bei --
+    dieselbe Alles-oder-nichts-Regel wie beim Blitzpotenzial, kein stiller
+    Rueckfall auf eine binaere Ersatzpruefung.
+
+    Damit ist die fruehere pauschale Deckelung "CAPE erreicht hoechstens
+    ``LOW``, eskaliert NIE" (Issue #1474, ``feat_1474`` AC-6) auf die beiden
+    CIN-Baender "grosser Deckel" und "unbekannt" eingeschraenkt: bei
+    schwacher oder moderater Hemmung erreicht CAPE jetzt ``MED``/``HIGH``.
 
     Das Blitzpotenzial (DWD ICON-D2/ICON-EU LPI, J/kg) ist das vierte Signal
     seit Issue #1474c -- eigene Schwellenleiter, weil es eine andere Groesse
@@ -348,31 +526,20 @@ def thunder_level_from_signals(
     KEYWORD-ONLY OHNE DEFAULT, exakt wie ``cape_threshold_jkg``. Ist auch
     nur eine der drei ``None`` (Gebiet unbekannt ODER keine Kalibrierung,
     z.B. FR), traegt das Blitzpotenzial KEIN Signal zur Fusion bei.
+
+    Issue #1680 S1: die Einzelsignale entstehen seither in ``_signal_levels()``
+    -- gleiche Regeln, gleicher Rueckgabewert, nur zusaetzlich unter ihrem
+    Signalnamen abrufbar (``thunder_signal_carriers()``).
     """
-    signals: list[ThunderLevel] = []
-
-    if wettercode_level is not None:
-        signals.append(wettercode_level)
-
-    if lightning_density is not None:
-        signals.append(_thunder_level_from_ladder(
-            lightning_density, _LIGHTNING_LOW_MIN, _LIGHTNING_MED_MIN, _LIGHTNING_HIGH_MIN,
-        ))
-
-    if cape_jkg is not None and cape_threshold_jkg is not None:
-        signals.append(ThunderLevel.LOW if cape_jkg >= cape_threshold_jkg else ThunderLevel.NONE)
-
-    if (lightning_potential_jkg is not None
-            and lpi_low_min is not None
-            and lpi_med_min is not None
-            and lpi_high_min is not None):
-        signals.append(_thunder_level_from_ladder(
-            lightning_potential_jkg, lpi_low_min, lpi_med_min, lpi_high_min,
-        ))
-
+    signals = _signal_levels(
+        wettercode_level, lightning_density, cape_jkg, lightning_potential_jkg,
+        cape_threshold_jkg=cape_threshold_jkg, cape_med_min=cape_med_min,
+        cape_high_min=cape_high_min, cin_jkg=cin_jkg, lpi_low_min=lpi_low_min,
+        lpi_med_min=lpi_med_min, lpi_high_min=lpi_high_min,
+    )
     if not signals:
         return None
-    return max_thunder(signals)
+    return max_thunder(signals.values())
 
 
 # ---------------------------------------------------------------------------
