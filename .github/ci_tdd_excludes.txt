@@ -85,4 +85,3 @@ tests/tdd/test_telegram_kurzstil_compare_official_alert.py
 tests/tdd/test_telegram_kurzstil_parse_mode.py
 tests/tdd/test_telegram_kurzstil_trip_alert.py
 tests/tdd/test_telegram_kurzstil_trip_briefing.py
-tests/tdd/test_trip_report_test_send_past_stage_clamp.py
