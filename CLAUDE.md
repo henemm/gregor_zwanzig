@@ -226,6 +226,8 @@ Jede Session liefert **unabhängig** aus, Integrationspunkt ist `origin/main` �
 - **Breit suchen heißt delegieren.** Fan-out-Suchen an einen Explore-Agenten geben — dessen gelesene Dateien landen nicht im Hauptkontext.
 - **Gezielt lesen** (`limit`/`offset`), nicht ganze Dateien „zur Sicherheit". Eine einmal gelesene Datei wird bei **jedem** folgenden Schritt erneut bezahlt.
 
+`context_budget_guard.py` (UserPromptSubmit-Hook) macht das sichtbar: ab 180k Kontext erscheint bei jeder Nutzereingabe eine `⚑`-Zeile mit Kontextgröße und bisherigen Sitzungskosten, ab 260k mit der Aufforderung, `/clear` **selbst** vorzuschlagen. Darunter schweigt er. Er blockiert nie.
+
 Detailablauf, WIP-Sicherung beim Deploy: `docs/reference/operations_playbook.md`.
 
 ## Messaging

@@ -125,6 +125,17 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/context_budget_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/context_budget_guard.py\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
