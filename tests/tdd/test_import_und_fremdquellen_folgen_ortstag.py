@@ -316,10 +316,16 @@ def test_ac6_debug_trigger_radar_alert_today_folgt_trip_local_today(monkeypatch)
             Stage(
                 id="S0", name="Etappe 0", date=erwarteter_ortstag,
                 waypoints=[
+                    # #1709: feste Ankunftszeiten statt Naismith-Self-Heal
+                    # (trip_segments.py:125-127) — der Ortstag dieses Tests
+                    # ist bewusst UNVERAENDERT (er ist die Pruefaussage von
+                    # AC-6), nur die Ankunftszeiten werden ergaenzt.
                     Waypoint(id="W0", name="Start", lat=KIRITIMATI[0],
-                              lon=KIRITIMATI[1], elevation_m=10),
+                              lon=KIRITIMATI[1], elevation_m=10,
+                              arrival_calculated="08:00"),
                     Waypoint(id="W1", name="Ziel", lat=KIRITIMATI[0] + 0.05,
-                              lon=KIRITIMATI[1] + 0.05, elevation_m=20),
+                              lon=KIRITIMATI[1] + 0.05, elevation_m=20,
+                              arrival_calculated="12:00"),
                 ],
             ),
         ],

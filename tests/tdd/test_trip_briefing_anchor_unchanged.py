@@ -108,11 +108,16 @@ def _trip(trip_id: str) -> Trip:
     (Ergebnis `no_channels`), es wird nichts versendet. Der Anker-/Reset-Block
     liegt VOR dem Ruecksprung — Muster aus
     `test_alert_state_briefing_reset.py::test_ac23_...`."""
+    # #1709: feste Ankunftszeiten statt Naismith-Self-Heal
+    # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
+    # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
         id="T1", name="Tag 1", date=date.today(),
         waypoints=[
-            Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0),
-            Waypoint(id="G2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=1500.0),
+            Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
+                     arrival_calculated="08:00"),
+            Waypoint(id="G2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=1500.0,
+                     arrival_calculated="12:00"),
         ],
     )
     trip = Trip(id=trip_id, name="AG5-Trip", stages=[stage], official_warnings=None)

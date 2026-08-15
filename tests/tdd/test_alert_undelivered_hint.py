@@ -229,11 +229,17 @@ def _trip(trip_id: str, *, email_format: str = "full") -> Trip:
     """Tour ohne scharfen Kanal: der Briefing-Pfad laeuft VOLLSTAENDIG durch
     (Ergebnis ``no_channels``) und rendert die Mail — versendet wird nichts.
     Muster aus ``test_trip_briefing_anchor_unchanged.py::_trip``."""
+    # #1709: feste Ankunftszeiten statt Naismith-Self-Heal (trip_segments.py:
+    # 125-127) — sonst haengt die Etappe komplett am Wanduhr-basierten
+    # Default-Start 08:00 samt Laufzeit-Schaetzung. Die Zeiten selbst tragen
+    # keine Pruefaussage dieser Datei; sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
         id="T1", name="Tag 1", date=date.today(),
         waypoints=[
-            Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0),
-            Waypoint(id="G2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=1500.0),
+            Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
+                     arrival_calculated="08:00"),
+            Waypoint(id="G2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=1500.0,
+                     arrival_calculated="12:00"),
         ],
     )
     trip = Trip(id=trip_id, name="Hinweis-Trip", stages=[stage], official_warnings=None)

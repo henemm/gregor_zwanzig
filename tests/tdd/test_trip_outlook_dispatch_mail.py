@@ -94,13 +94,17 @@ def _trip(*, outlook_metrics, enabled_ids=None, leere_grundauswahl=False,
 
     trip_id = f"trip-1720-{uuid.uuid4().hex[:8]}"
     heute = date.today()
+    # #1709: feste Ankunftszeiten statt Naismith-Self-Heal
+    # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
+    # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stages = [
         Stage(id=f"S{i}", name=f"Tag {i}", date=heute + timedelta(days=i),
               waypoints=[
                   Waypoint(id=f"W{i}a", name="Start", lat=LAT, lon=LON,
-                           elevation_m=1400.0),
+                           elevation_m=1400.0, arrival_calculated="08:00"),
                   Waypoint(id=f"W{i}b", name="Ziel", lat=LAT + 0.05,
-                           lon=LON + 0.1, elevation_m=2100.0),
+                           lon=LON + 0.1, elevation_m=2100.0,
+                           arrival_calculated="12:00"),
               ])
         for i in range(5)
     ]

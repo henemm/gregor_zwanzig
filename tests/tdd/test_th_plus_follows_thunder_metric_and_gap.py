@@ -226,9 +226,15 @@ class TestAC3RealGapShowsUnknown:
         THEN:  '+1' ist als Luecke markiert, '+2' NICHT (dort ist schlicht
                keine Etappe — das ist kein Datenausfall)
         """
+        # #1709: feste Ankunftszeit fuer die HEUTIGE (zweipunktige) Etappe statt
+        # Naismith-Self-Heal (trip_segments.py:125-127) -- die morgige Etappe
+        # braucht das GERADE NICHT: sie hat absichtlich nur EINEN Waypoint (s.
+        # GIVEN oben), das traegt die Pruefaussage "keine Segmente" bereits.
         today = date.today()
-        wp_a = Waypoint(id="A", name="Start", lat=42.0, lon=9.0, elevation_m=500)
-        wp_b = Waypoint(id="B", name="Ziel", lat=42.1, lon=9.1, elevation_m=600)
+        wp_a = Waypoint(id="A", name="Start", lat=42.0, lon=9.0, elevation_m=500,
+                        arrival_calculated="08:00")
+        wp_b = Waypoint(id="B", name="Ziel", lat=42.1, lon=9.1, elevation_m=600,
+                        arrival_calculated="12:00")
         trip = Trip(
             id="i1482gap",
             name="Luecken-Trip",
