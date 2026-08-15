@@ -21,6 +21,7 @@ Die Renderer selbst bleiben echt (reine Funktionen, kein Netz).
 """
 from __future__ import annotations
 
+import threading
 import uuid
 from datetime import date, datetime
 
@@ -107,6 +108,13 @@ class _EngineCalls:
         self.count = 0
         self.locations_seen: list[list[SavedLocation]] = []
         self.kwargs_seen: list[dict] = []
+        # #1765 B1 (AC-4): die im Journal landende Diagnose-Quelle, aufgeloest
+        # im AUSFUEHRENDEN Thread -- genau so, wie log_api_call sie sieht.
+        self.sources_seen: list[str] = []
+        # #1765 B1: die Naht wird jetzt aus mehreren Threads GLEICHZEITIG
+        # bedient (ein Engine-Lauf je Ort) -- ohne Sperre koennte ein
+        # Zaehler-Inkrement verloren gehen und der Test zufaellig rot werden.
+        self.lock = threading.Lock()
 
 
 def _install_recording_engine(monkeypatch, calls: _EngineCalls) -> None:
@@ -129,9 +137,14 @@ def _install_recording_engine(monkeypatch, calls: _EngineCalls) -> None:
             if locations is None and args:
                 locations = args[0]
             locations = list(locations or [])
-            calls.count += 1
-            calls.locations_seen.append(locations)
-            calls.kwargs_seen.append(dict(kwargs))
+            from providers.call_log import resolve_call_source
+
+            source = resolve_call_source()
+            with calls.lock:
+                calls.count += 1
+                calls.locations_seen.append(locations)
+                calls.kwargs_seen.append(dict(kwargs))
+                calls.sources_seen.append(source)
             return ComparisonResult(
                 locations=[
                     LocationResult(
@@ -228,10 +241,23 @@ def test_email_preview_shows_real_preset_locations_not_stub(compare_env, monkeyp
         "'Vorschau-Ort' (validator_render_service.py:147) statt der Orte des Nutzers."
     )
     assert "preview-1" not in html, "Stub-Orts-ID 'preview-1' darf in der Vorschau nicht vorkommen"
-    assert calls.count == 1, f"Genau ein Engine-Lauf erwartet, waren {calls.count}"
-    assert [loc.id for loc in calls.locations_seen[0]] == ["loc-ibk", "loc-bz"], (
+    # Abgeloester Vertrag (#1765 B1): frueher EIN Engine-Lauf mit beiden Orten,
+    # jetzt ein Lauf JE ORT (parallel). Geprueft wird die Vereinigung ueber alle
+    # Aufrufe -- deren REIHENFOLGE ist die (nichtdeterministische) Startfolge der
+    # Threads und taugt nicht mehr als Zusicherung; die konfigurierte Reihenfolge
+    # wird deshalb dort geprueft, wo sie wirkt: in der gerenderten Vorschau.
+    assert calls.count == len(locations), (
+        f"Genau ein Engine-Lauf je Ort erwartet ({len(locations)}), waren {calls.count}"
+    )
+    assert sorted(loc.id for aufruf in calls.locations_seen for loc in aufruf) == [
+        "loc-bz", "loc-ibk",
+    ], (
         "Der Service muss die im Preset konfigurierten Orte an die "
-        f"ComparisonEngine reichen, uebergeben wurden: {calls.locations_seen[0]!r}"
+        f"ComparisonEngine reichen, uebergeben wurden: {calls.locations_seen!r}"
+    )
+    assert html.index("Innsbruck") < html.index("Bozen"), (
+        "Die im Preset konfigurierte Ortsreihenfolge muss in der Vorschau "
+        "erhalten bleiben (kein Sortieren nach Fertigstellung)"
     )
 
 
@@ -274,23 +300,35 @@ def test_telegram_preview_renders_real_preset_locations(compare_env, monkeypatch
         f"sein, war aber: {text[:300]!r}"
     )
     assert "Vorschau-Ort" not in text, "Stub-Ort darf in der Telegram-Vorschau nicht vorkommen"
-    assert calls.count == 1, f"Genau ein Engine-Lauf erwartet, waren {calls.count}"
+    # #1765 B1: ein Engine-Lauf JE ORT (parallel) statt einem je Ortsmenge.
+    assert calls.count == len(locations), (
+        f"Genau ein Engine-Lauf je Ort erwartet ({len(locations)}), waren {calls.count}"
+    )
 
 
 # ---------------------------------------------------------------------------
-# Test 8 (AC-7) — EIN Aufruf, EIN Engine-Lauf, alle drei Kanaele gefuellt
+# Test 8 (AC-7) — EIN Aufruf, EIN Engine-Lauf JE ORT, alle drei Kanaele gefuellt
 # ---------------------------------------------------------------------------
 
 
-def test_single_preview_call_runs_engine_once_and_fills_all_channels(compare_env, monkeypatch):
+def test_single_preview_call_runs_engine_once_per_location_and_fills_all_channels(
+    compare_env, monkeypatch
+):
     """GIVEN ein Preset mit zwei Orten
     WHEN die Preview-Einstiegsfunktion EINMAL aufgerufen wird
-    THEN wird ComparisonEngine.run genau einmal ausgefuehrt UND die Antwort
-    traegt email_html, telegram und sms gleichzeitig gefuellt.
+    THEN laeuft ComparisonEngine.run genau einmal JE ORT (parallel statt
+    nacheinander, #1765 Scheibe B1) UND die Antwort traegt email_html, telegram
+    und sms gleichzeitig gefuellt.
 
-    Aufruf-Zaehler ueber eine echte Subklasse (kein Verhaltens-Mock).
-    RED: services.compare_preview_service existiert nicht — es gibt heute
-    keinen Einstieg, der alle Kanaele in einer Antwort liefert (ADR-0011)."""
+    Abgeloester Vertrag: bis #1765 B1 lautete die Zusicherung `calls.count == 1`
+    ("ein Engine-Lauf je Ortsmenge"). Die Parallelisierung ruft die Engine je
+    Ort einzeln auf (`run(locations=[loc])`); der Teil der Zusicherung, der dem
+    Nutzer nuetzt — alle Kanaele in EINER Antwort, kein zusaetzlicher
+    Kanalwechsel-Aufruf —, bleibt unveraendert und wird unten weiter geprueft.
+    Spec: docs/specs/modules/fix_1765_b1_compare_vorschau_parallel.md
+    ("Ein abzuloesender Bestandsvertrag").
+
+    Aufruf-Zaehler ueber eine echte Subklasse (kein Verhaltens-Mock)."""
     user_id = compare_env
     locations = [
         _location("loc-ibk", "Innsbruck", 47.27, 11.39),
@@ -306,9 +344,17 @@ def test_single_preview_call_runs_engine_once_and_fills_all_channels(compare_env
         "cp-1270-c", user_id=user_id, target_date=TARGET_DATE.isoformat()
     )
 
-    assert calls.count == 1, (
-        "AC-7: Ein Vorschau-Aufruf darf die Wetter-Berechnung genau EINMAL "
-        f"ausloesen (ein ComparisonEngine.run), gezaehlt wurden {calls.count}."
+    assert calls.count == len(locations), (
+        "AC-7 (neu, #1765 B1): Ein Vorschau-Aufruf loest genau eine "
+        f"Wetter-Berechnung JE ORT aus ({len(locations)} Orte -> "
+        f"{len(locations)} ComparisonEngine.run), gezaehlt wurden {calls.count}."
+    )
+    # AC-4 (#1765 B1) am Wirkort: in den Worker-Threads steht keiner der 11
+    # Bestandsmarker mehr im Stack -- ohne durchgereichte Quelle buchte das
+    # Diagnose-Journal jeden Abruf dieser Vorschau als "unbekannt".
+    assert calls.sources_seen == ["vergleich"] * len(locations), (
+        "AC-4: Jeder Orts-Lauf muss die Diagnose-Quelle 'vergleich' tragen, "
+        f"aufgeloest wurde: {calls.sources_seen}"
     )
     email_html = _flatten_text(_field(payload, "email_html"))
     telegram = _flatten_text(_field(payload, "telegram"))
