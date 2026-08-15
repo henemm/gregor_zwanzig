@@ -300,9 +300,15 @@ Betroffen: `test_alert_state_briefing_reset.py`, `test_alert_undelivered_hint.py
   - Test: `test_known_violations_der_neuen_regel_ist_leer`; Assert
     `KNOWN_VIOLATIONS_INDIREKT == frozenset()` und `scan_indirekte_wanduhr_fixtures(TESTS_ROOT) == []`.
 
-**LoC-Budget:** auf 1000 Testzeilen angehoben (PO-Erlaubnis 2026-08-15). Der größte Block sind
-die Attrappen und die sieben Gegenproben — also genau die Nachweise, die den Wächter davor
+**LoC-Budget:** zunächst auf 1000 Testzeilen angehoben (PO-Erlaubnis 2026-08-15), nach der
+Fix-Schleife auf **1300** (zweite PO-Erlaubnis am selben Tag). Der größte Block sind die
+Attrappen und inzwischen elf Gegenproben — also genau die Nachweise, die den Wächter davor
 bewahren, alles zu melden. Kürzen hätte die Zusicherung geschwächt.
+
+🔴 **Das LoC-Gate hat die erste Überschreitung nicht bemerkt** (Anzeige `+0/1000`, tatsächlich
+1252 Testzeilen). Es misst hier den falschen Stand — dieselbe Schwäche, die als
+Phantom-Delta bekannt ist. Die Überschreitung wurde deshalb von Hand gemeldet und freigegeben,
+nicht vom Gate erzwungen. Wer sich hier auf die Anzeige verlässt, hat kein Budget.
 
 ## Nicht in dieser Scheibe
 
