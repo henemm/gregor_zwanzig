@@ -98,9 +98,20 @@ einzige verbleibende `async def`-Handler nutzt `await` tatsächlich.
 
 ### Nebenwirkung von Ä1 — Scheibe A führt erstmals echte Nebenläufigkeit im Anfragepfad ein
 
-Bevor der Umfang dieser Scheibe festgelegt wurde, sind alle `global`-Anweisungen in `src/`
-und `api/` durchgesehen worden, um zu prüfen, welcher geteilte, veränderliche Zustand von der
-neuen Nebenläufigkeit aus Ä1 betroffen sein könnte:
+Bevor der Umfang dieser Scheibe festgelegt wurde, ist **nach `global`-Anweisungen in `src/`
+und `api/` gesucht** worden, um zu prüfen, welcher geteilte, veränderliche Zustand von der
+neuen Nebenläufigkeit aus Ä1 betroffen sein könnte.
+
+**Reichweite dieser Suche — Korrektur nach Adversary-Lauf am 2026-08-15 (F002):** Hier stand
+zunächst, es seien „alle `global`-Anweisungen durchgesehen" worden und außer `_get_tf()` sei
+nichts Offenes zurückgeblieben. Diese Vollständigkeitsaussage ging zu weit und ist widerlegt.
+Eine Suche nach dem Schlüsselwort `global` findet **prinzipiell** eine ganze Klasse geteilten
+Zustands nicht: Dekorator-basierte Zwischenspeicher (`functools.lru_cache`, `functools.cache`),
+Klassenattribute und veränderliche Standardargumente kommen ohne `global` aus. Genau ein Fall
+dieser Klasse liegt im umgestellten Pfad (`_lookup_department_cached()`, Zeile unten) und wurde
+von der ursprünglichen Suche übersehen. Die Tabelle ist deshalb **kein** Vollständigkeitsbeweis,
+sondern eine Liste geprüfter Stellen — die beiden zuletzt aufgenommenen Zeilen stammen aus dem
+Adversary-Lauf, nicht aus der ursprünglichen Durchsicht.
 
 | Stelle | Zustand | Bewertung |
 |---|---|---|
@@ -110,9 +121,12 @@ neuen Nebenläufigkeit aus Ä1 betroffen sein könnte:
 | **`src/utils/timezone.py:23-29` `_get_tf()`** | **Lazy-Singleton OHNE Sperre** | **muss repariert werden → Ä3** |
 | `_warned_missing_key` in `src/services/official_alerts/vigilance.py:63`, `meteoalarm.py:496`, `meteo_forets.py:63` | „einmal warnen"-Merker ohne Sperre | unkritisch, **nicht** angefasst — schlimmstenfalls wird eine Warnung doppelt protokolliert |
 | `api/routers/webhook.py:57` `telegram_webhook`, `api/routers/scheduler.py:174` `trigger_inbound_telegram` | Lazy-Singletons ohne Sperre | **nicht** angefasst, bewusste Abgrenzung — diese Handler sind bereits heute `def` und damit schon vor Scheibe A nebenläufig erreichbar; Ä1 verursacht dieses Bestandsrisiko nicht und vergrößert es nicht |
+| `src/services/official_alerts/department_mapper.py:335-336` `_lookup_department_cached()` — **von der `global`-Suche strukturell nicht auffindbar** (`@functools.lru_cache`, kein `global`) | prozessweiter Zwischenspeicher ohne eigene Sperre | **geprüft, unkritisch — nicht angefasst.** Erreichbar aus dem umgestellten `preview_compare`: `comparison_engine.py:322` → `get_official_alerts_with_status()` (`official_alerts/base.py:90`) → `lookup_department()` (`department_mapper.py:376`, dort Zeile 411) → `_lookup_department_cached()`. Der Pfad ist im Normalfall aktiv (`official_alerts_enabled` steht auf `True`, `comparison_engine.py:104`). `lru_cache` ist in CPython intern abgesichert; ein Wettlauf führt zu **doppelter Berechnung**, nicht zu Datenverfälschung oder verfälschtem Cache-Inhalt — dieselbe Risikoklasse, die diese Spec bei `_get_tf()` (dort: zwei kurzzeitige `TimezoneFinder`-Instanzen) ohnehin als unkritisch einstuft und nur wegen der 12-MB-Größe repariert. Hier fehlt dieser Größen-Anlass. |
+| `src/app/egress_guard.py:139-140` `install_egress_guard()` (`_installed`, `_orig_*`) | Modul-Globals ohne Sperre | **geprüft, unkritisch — nicht angefasst.** Läuft einmalig in `lifespan()` (`api/main.py:96`), also **bevor** die Anwendung Anfragen annimmt; zur Laufzeit schreibt niemand mehr in diese Globals. Ä1 macht die Stelle nicht neu erreichbar. |
 
-Einzig `_get_tf()` ist ein echtes, durch Ä1 neu erreichbares Risiko und wird als Ä3 behoben.
-Alles andere ist entweder bereits abgesichert oder ein Bestandsrisiko außerhalb dieser Scheibe.
+`_get_tf()` bleibt das einzige durch Ä1 neu erreichbare Risiko, das **repariert** wird (→ Ä3).
+Alles andere ist entweder bereits abgesichert, ein Bestandsrisiko außerhalb dieser Scheibe oder
+— wie die beiden zuletzt aufgenommenen Zeilen — geprüft und in der Wirkung folgenlos.
 
 ### Ä3 — `_get_tf()` in `src/utils/timezone.py` gegen gleichzeitige Erstinitialisierung absichern
 
@@ -356,10 +370,17 @@ Mutationen ausschließlich per String-Ersetzung mit externer Sicherungskopie, ni
   eine Reparatur.** Vorher: „ein Aufruf legt alles lahm, dafür läuft nie etwas gleichzeitig".
   Nachher: „vieles läuft gleichzeitig". Der Tausch ist eindeutig richtig — die heutige
   Blockade ist der gemeldete, nutzersichtbare Fehler —, aber er verschiebt die Fehlerklasse
-  von **Blockade** zu **Nebenläufigkeit**. Die Tabelle unter „Nebenwirkung von Ä1" oben ist
-  der Beleg, dass diese Verschiebung vor Festlegung des Umfangs systematisch geprüft wurde
-  (alle `global`-Anweisungen in `src/` und `api/`) und außer `_get_tf()` (→ Ä3) nichts
-  Offenes zurückließ, das durch Ä1 neu erreichbar würde.
+  von **Blockade** zu **Nebenläufigkeit**. Die Tabelle unter „Nebenwirkung von Ä1" oben
+  listet die daraufhin geprüften Stellen. **Sie ist ausdrücklich kein Vollständigkeitsbeweis**
+  — hier stand bis zum Adversary-Lauf am 2026-08-15 die Behauptung, es seien „alle
+  `global`-Anweisungen in `src/` und `api/`" geprüft worden und außer `_get_tf()` (→ Ä3) sei
+  nichts Offenes zurückgeblieben. Das war widerlegbar und wurde widerlegt (F002): Die
+  Suchmethode („Schlüsselwort `global`") kann Dekorator-basierte Zwischenspeicher,
+  Klassenattribute und veränderliche Standardargumente prinzipiell nicht finden, und genau so
+  ein Fall liegt im umgestellten Pfad (`_lookup_department_cached()`, `@functools.lru_cache`).
+  Sachlich blieb es folgenlos — der Fall ist geprüft und unkritisch, siehe Tabelle —, aber die
+  **Aussage** war zu stark. Wer diese Scheibe fortschreibt, darf sich nicht darauf verlassen,
+  dass die Tabelle jeden geteilten Zustand im Anfragepfad kennt.
 - **Threadpool-Erschöpfung bei mehr als 40 gleichzeitigen langsamen Vorschauen.** Der
   anyio-Threadpool-Default liegt bei 40 Threads; eine 41. gleichzeitige langsame Vorschau
   würde warten müssen, bis ein Thread frei wird. Das ist gegenüber dem **heutigen** Zustand
@@ -460,3 +481,23 @@ Sitzungen), bevor ein Ergebnis als Befund gewertet wird.
   Retry-Status sowie die drei Festlegungen (a)/(b)/(c) für den Zuschnitt von Scheibe B; die
   `SegmentWeatherData`-Vertragsüberlegung (has_error statt Auslassen) ist dorthin
   übernommen, damit sie nicht verloren geht.
+- 2026-08-15: Korrektur nach Adversary-Lauf (Verdict AMBIGUOUS, zwei MEDIUM-Findings) —
+  **kein Produktivcode geändert**, beide Findings sind Aussage- bzw. Testdokumentations-Mängel.
+  **F002:** Die Vollständigkeitsaussage in „Nebenwirkung von Ä1" und unter „Risiken" („alle
+  `global`-Anweisungen in `src/`/`api/` durchgesehen, außer `_get_tf()` nichts Offenes") ist
+  **widerlegt** — die Suchmethode findet Dekorator-basierte Zwischenspeicher, Klassenattribute
+  und veränderliche Standardargumente prinzipiell nicht. Belegter Fall:
+  `_lookup_department_cached()` (`department_mapper.py:335-336`, `@functools.lru_cache`),
+  erreichbar aus dem umgestellten `preview_compare` über `comparison_engine.py:322` →
+  `get_official_alerts_with_status()` → `lookup_department()`, im Normalfall aktiv. Sachlich
+  unkritisch (`lru_cache` ist in CPython intern abgesichert; Wettlauf = doppelte Berechnung,
+  keine Datenverfälschung) — deshalb als **geprüft und unkritisch** in die Tabelle aufgenommen
+  statt repariert. Ebenfalls aufgenommen: `egress_guard.py:139-140` (`global`, aber einmalig in
+  `lifespan()` vor Annahme von Anfragen). Die zu weit gehende Aussage wurde **nicht
+  stillschweigend geglättet**, sondern an beiden Stellen ausdrücklich als widerlegt und
+  korrigiert markiert. **F001:** `tests/unit/test_route_handler_ohne_await.py` zählt `await`
+  rein per AST, ohne Erreichbarkeit im Kontrollfluss — ein Handler mit `if False: await …`
+  gefolgt von `time.sleep()` käme grün durch (Adversary-Sonde). Bewusst **nicht gelöst**
+  (kein Bestandsfall, Erreichbarkeitsanalyse unverhältnismäßig), sondern als Abschnitt
+  „Bekannte Grenze" im Docstring des Tests benannt, samt zweiter Verteidigungslinie
+  (`test_event_loop_bleibt_frei.py`, deckt aber nur die Vorschau-Handler ab).

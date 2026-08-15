@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from threading import Lock
 from typing import Iterable, Optional
 from zoneinfo import ZoneInfo
 
@@ -18,14 +19,18 @@ logger = logging.getLogger(__name__)
 UTC = ZoneInfo("UTC")
 
 _tf_instance = None
+_tf_lock = Lock()
 
 
 def _get_tf():
-    """Lazy singleton — TimezoneFinder loads ~12MB on first call."""
+    """Lazy singleton — TimezoneFinder loads ~12MB on first call.
+    Thread-safe (double-checked locking, Muster weather_cache.py:300-305)."""
     global _tf_instance
     if _tf_instance is None:
-        from timezonefinder import TimezoneFinder
-        _tf_instance = TimezoneFinder()
+        with _tf_lock:
+            if _tf_instance is None:
+                from timezonefinder import TimezoneFinder
+                _tf_instance = TimezoneFinder()
     return _tf_instance
 
 

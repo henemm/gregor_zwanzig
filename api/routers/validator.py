@@ -164,7 +164,7 @@ def _determine_cascade_source(
 # ---------------------------------------------------------------------------
 
 @router.get("/api/_validator/format-metric")
-async def format_metric(
+def format_metric(
     unit: str = Query(..., description="Unit code: m, km, hPa, %, km/h, °C, mm"),
     value: float = Query(...),
     signed: bool = Query(False),
@@ -178,7 +178,7 @@ async def format_metric(
 # ---------------------------------------------------------------------------
 
 @router.get("/api/_validator/detector-thresholds")
-async def detector_thresholds(
+def detector_thresholds(
     trip: str = Query(..., description="Trip-ID"),
     user_id: str = Query(...),
 ):
@@ -241,7 +241,7 @@ class AlertPreviewBody(BaseModel):
 
 
 @router.post("/api/trips/{trip_id}/alert-preview")
-async def alert_preview(
+def alert_preview(
     trip_id: str,
     body: AlertPreviewBody,
     user_id: str = Query(...),
@@ -269,7 +269,7 @@ async def alert_preview(
 # ---------------------------------------------------------------------------
 
 @router.get("/api/_validator/metrics-for-channel")
-async def metrics_for_channel(
+def metrics_for_channel(
     trip: str = Query(..., description="Trip-ID"),
     channel: str = Query(..., description="email|telegram|sms"),
     report: str = Query(..., description="morning|evening"),
@@ -314,7 +314,7 @@ class CompareEmailPreviewBody(BaseModel):
 
 
 @router.post("/api/_validator/compare-email-preview")
-async def compare_email_preview(body: CompareEmailPreviewBody):
+def compare_email_preview(body: CompareEmailPreviewBody):
     """Rendert Compare-E-Mail HTML für den Validator.
 
     Spec: docs/specs/modules/issue_464_compare_email_preview_validator.md.
@@ -336,7 +336,7 @@ class SmsFidelityPreviewBody(BaseModel):
 
 
 @router.post("/api/_validator/sms-fidelity-preview")
-async def sms_fidelity_preview(body: SmsFidelityPreviewBody):
+def sms_fidelity_preview(body: SmsFidelityPreviewBody):
     """Rendert die SMS-Kurzform fuer die Metrik-Editor-Vorschau.
 
     Spec: docs/specs/modules/fix_923_sms_fidelity_backend.md.

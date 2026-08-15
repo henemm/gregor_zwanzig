@@ -27,7 +27,7 @@ def _build_service(user_id: str) -> PreviewService:
 
 
 @router.get("/api/preview/{trip_id}/email", response_class=HTMLResponse)
-async def preview_email(
+def preview_email(
     trip_id: str,
     user_id: str = Query(..., description="Session-User (vom Go-Proxy injiziert)"),
     type: str = Query("morning", description="morning | evening"),
@@ -53,7 +53,7 @@ async def preview_email(
 
 
 @router.get("/api/preview/{trip_id}/sms")
-async def preview_sms(
+def preview_sms(
     trip_id: str,
     user_id: str = Query(...),
     type: str = Query("morning"),
@@ -83,7 +83,7 @@ async def preview_sms(
 
 
 @router.post("/api/preview/compare/{preset_id}")
-async def preview_compare(
+def preview_compare(
     preset_id: str,
     user_id: str = Query(..., description="Session-User (vom Go-Proxy injiziert)"),
     date: str | None = Query(None, description="ISO-Datum, default: heute"),
@@ -126,7 +126,7 @@ def _narrow_payload(subject: str, body: str, bubbles: list[str] | None = None) -
 
 
 @router.get("/api/preview/{trip_id}/telegram")
-async def preview_telegram(
+def preview_telegram(
     trip_id: str,
     user_id: str = Query(...),
     type: str = Query("morning"),
