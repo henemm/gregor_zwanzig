@@ -1005,14 +1005,11 @@ def scan_indirekte_wanduhr_fixtures(tests_root: Path) -> list[Finding]:
 # Fixture braucht das Anti-Muster", sondern "Sanierung ist fuer diese Scheibe
 # explizit nicht beauftragt" -- eine bewusst andere Kategorie, review-pflichtig
 # wie dort.
-KNOWN_VIOLATIONS_INDIREKT: frozenset[tuple[str, str]] = frozenset({
-    # #1709 Haertung (2026-08-15): 9 von 10 Bestandsstellen sind gehaertet
-    # (arrival_calculated gesetzt, s. Commits dieser Scheibe). Der letzte
-    # Eintrag bleibt, solange der Datei-Claim-Gate die Haertung von
-    # tests/tdd/test_alert_undelivered_hint.py blockiert (fremde Session
-    # auf Worktree fix-1676-s2-sms-versand / Branch fix-1750-sperrzeit-wortwahl).
-    ("tests/tdd/test_alert_undelivered_hint.py", "_trip"),
-})
+KNOWN_VIOLATIONS_INDIREKT: frozenset[tuple[str, str]] = frozenset()
+# #1709 Haertung (2026-08-15) abgeschlossen: alle 10 gemessenen
+# Bestandsstellen sind gehaertet (arrival_calculated gesetzt, s. Commits
+# dieser Scheibe, zuletzt tests/tdd/test_alert_undelivered_hint.py::_trip).
+# Die Liste ist damit leer — jeder neue Fund ab hier ist ein echter Verstoss.
 
 
 def test_scanner_meldet_die_indirekte_variante(tmp_path):
