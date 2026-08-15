@@ -12,7 +12,7 @@ tags: [bug, performance, preview, python-core, issue-1765]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe („Go") am 2026-08-15 auf die neun Acceptance Criteria
 
 ## Purpose
 
@@ -46,6 +46,24 @@ derselben Nummer — Begründung im Abschnitt „Abgrenzung — was diese Scheib
 - **Effort:** medium — die Mechanik ist am Code als äquivalent zum heutigen Verhalten geprüft
   (Kontextdokument, Abschnitt „Äquivalenz von `run(locations=[loc])` je Ort"), der Aufwand
   liegt im Nachweis, nicht im Mechanismus
+
+**🔴 Nachtrag 2026-08-15 — die Schätzung oben ist überholt. Gemessen wurden 215 Zeilen
+Produktivcode (geschätzt 65, Faktor 3,3) und 732 Zeilen Testcode (geschätzt 140–180,
+Faktor ~4,5).** Die Abweichung ist erklärbar, war aber nicht vorhergesehen:
+
+| Ursache | trifft |
+|---|---|
+| Der abgelöste Bestandsvertrag saß an **drei** Stellen statt an einer (RED-Nachtrag) | Testcode |
+| F001 (Adversary) verlangte eine **eigene Wirkort-Testdatei** über den echten Router — `test_compare_vorschau_systemfehler.py`, 207 Zeilen | Testcode |
+| F002 (Adversary) verlangte einen Vorrang-Test, der zuvor niemandem fehlte | Testcode |
+| Docstrings und die Begründung der Fehler-Einordnung im Baustein selbst | Produktivcode |
+
+**Lehre für künftige Schätzungen dieser Art:** Nicht die Schätzung des Mechanismus lag
+daneben, sondern die des Nachweises — um ein Vielfaches. Wo Nebenläufigkeit im Spiel ist,
+braucht **jeder einzelne** Nachweis einen eigenen Aufbau (Treffpunkt-Sperre, gedrehte
+Fertigstellung, echter Router), der sich zwischen den Kriterien nicht teilen lässt. Der
+Faustwert „der Nachweis kostet mehr als der Mechanismus" ist hier zu niedrig gegriffen;
+realistisch ist **Faktor 3–4 auf den Testanteil**.
 
 ## Dependencies
 
@@ -116,6 +134,13 @@ Baustein aus `comparison_parallel.py` setzt den Override-Wert für die Quelle `"
 bevor er `ComparisonEngine.run()` für den jeweiligen Ort aufruft, und setzt ihn danach wieder
 zurück — sonst könnte ein wiederverwendeter Verarbeitungspfad den Wert in eine spätere,
 fachlich andere Anfrage hinein „vererben".
+
+**Name festgelegt (RED-Phase 2026-08-15):** Der Mechanismus heißt
+`providers.call_log.override_call_source(quelle)` und ist ein **Context-Manager**
+(`with`-Block mit automatischem Zurücksetzen am Ende). Die RED-Tests fordern genau diesen
+Namen und diese Bauform — eine abweichende Umsetzung lässt die AC-4-Tests rot. Die Spec hatte
+zuvor nur „Override-Wert samt Zurücksetzen-Mechanismus" beschrieben, ohne Namen; die
+Festlegung stammt aus der Testphase, nicht aus der Freigabe.
 
 Vorbild im Repo: `official_alerts/warn_egress.py:55-57` — dort existiert bereits ein Wert
 genau dieser Bauart für einen anderen Zweck, mit dem Kommentar „isoliert korrekt über
@@ -193,6 +218,23 @@ Vorhersage-Horizont korrekt bei der Engine ankommen, nutzen durchweg Presets mit
 Ort — bei einem Ort ist „einmal je Ort" identisch zu „einmal insgesamt", diese Tests bleiben
 unverändert bestehen und müssen nach dem Umbau weiterhin grün sein. Sie sind der Nachweis,
 dass beim Aufteilen der Ortsliste in parallele Einzelaufrufe kein Parameter verloren geht.
+
+**🔴 Nachtrag aus der RED-Phase (2026-08-15): der Vertrag sitzt an DREI Stellen, nicht an
+einer.** Beim Schreiben der Tests kamen zwei weitere Fundstellen derselben Zusicherung ans
+Licht, die diese Spec zunächst übersehen hatte. Beide gehören zu Presets mit **zwei** Orten
+und werden mit der Umstellung ebenfalls rot:
+
+| Stelle | Zusicherung heute | nach dem Umbau |
+|---|---|---|
+| `:231` | `calls.count == 1` (Preset mit 2 Orten) | `== len(locations)` |
+| `:232` | beide Orte kommen in **einem** Engine-Aufruf an (`locations_seen[0] == ["loc-ibk","loc-bz"]`) | jeder Aufruf sieht **genau einen** Ort — Prüfung auf die Vereinigung über alle Aufrufe umstellen, Reihenfolge erhalten |
+| `:277` | `calls.count == 1` (Preset mit 2 Orten) | `== len(locations)` |
+
+Die Unterscheidung, die diese Spec ursprünglich zu grob getroffen hatte, lautet **nicht**
+„`:285-311` gegen den Rest", sondern: **jede** Stelle mit einem Mehr-Ort-Preset trägt den
+abgelösten Vertrag, **jede** Stelle mit einem Ein-Ort-Preset nicht. Wer nur die in dieser
+Spec zuerst genannte Zeile umbaut, läuft in eine berechtigte Blockade des
+Commit-Gates `touched_tests_gate.py`.
 
 ## Abgrenzung — was diese Scheibe NICHT umfasst
 
@@ -375,6 +417,31 @@ Mutationen ausschließlich per String-Ersetzung mit externer Sicherungskopie, ni
 - **`comparison_engine.py` bleibt unverändert.** Die Ortsschleife dort läuft weiterhin
   nacheinander innerhalb eines einzelnen Aufrufs mit genau einem Ort — die Parallelität
   entsteht ausschließlich außerhalb, im neuen Baustein.
+- 🔴 **AC-9 ist im Kern NICHT eigenständig nachgewiesen — der Beleg gehört auf Staging.**
+  Der zugeordnete Test `tests/unit/test_event_loop_bleibt_frei.py:160` stammt **unverändert**
+  aus Scheibe A (`git diff` gegen den Abzweigpunkt ist leer). Er ersetzt
+  `preview.ComparePreviewService` **vollständig** durch einen Schlaf-Stub und prüft damit nur,
+  dass der Router-Handler `def` bleibt und Starlette ihn in den Threadpool legt — den neuen
+  `ThreadPoolExecutor` berührt er nie. Er kann eine Regression, die **gerade** durch die neue,
+  verschachtelte Nebenläufigkeit entstünde, strukturell nicht sehen. Das ist erneut
+  Prüfort ≠ Wirkort, diesmal geerbt statt neu gebaut.
+  **Bewusst nicht durch einen weiteren Kern-Test geschlossen:** Ein Kern-Test müsste den
+  Threadpool erneut nachbauen und würde wieder nur den Nachbau prüfen. Der Wirkort ist der
+  laufende Dienst. **Verbindliche Folge: Die Staging-Verifikation dieser Scheibe MUSS
+  `/api/health` WÄHREND einer echten Vergleichs-Vorschau mit 3+ Orten abfragen** und das
+  Ergebnis in der Attestation festhalten. Ohne diese Messung gilt AC-9 als unbelegt, nicht
+  als erfüllt.
+- **Grenze der Systemfehler-Erkennung (Adversary-Runde 3, 2026-08-15).** Scheitern **alle**
+  Orte mit einer Ausnahme, gilt die Störung als systemisch und die Ausnahme des Orts mit dem
+  **niedrigsten Index** wird weitergereicht (→ 503). Werfen dabei verschiedene Orte
+  Ausnahmen **verschiedenen Typs** — zwei zeitgleiche, voneinander unabhängige systemische
+  Ursachen —, entscheidet damit der erste konfigurierte Ort über die Fehlerart; ein
+  `ValueError` dort ergäbe 422 statt 503. Kein AC fordert für diesen Fall eine Antwort, und
+  vor dem Umbau konnte er nicht auftreten (ein Engine-Lauf für alle Orte kannte nur *einen*
+  Fehler). **Nicht zufällig, sondern deterministisch:** Die Einsammel-Schleife iteriert über
+  `future_to_idx.items()` — Einreichungsreihenfolge, nicht Fertigstellungsreihenfolge. Über
+  fünf Wiederholungsläufe mit gedrehter Fertigstellung kam stets dieselbe Ausnahme heraus.
+  Die Fehlermeldung an den Nutzer schwankt also nicht zwischen zwei Aufrufen.
 
 ## Architektur-Entscheidung (ADR)
 

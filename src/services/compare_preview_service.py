@@ -3,7 +3,8 @@
 SPEC: docs/specs/modules/compare_channel_preview_dispatch.md (Scheiben S2/S4)
 
 Loest das Preset + die ECHTEN Orte des Nutzers auf, laesst die
-``ComparisonEngine`` genau EINMAL je Aufruf laufen und rendert daraus die
+``ComparisonEngine`` genau EINMAL JE ORT laufen (seit #1765 B1 gleichzeitig,
+ueber ``comparison_parallel.run_comparison_parallel``) und rendert daraus die
 fertigen Kanal-Payloads (E-Mail/Telegram/SMS) — kein Versand, keine
 Persistenz. Ersetzt fachlich den Validator-Stub
 (`validator_render_service.render_compare_email_preview`, hartcodierter Ort
@@ -49,9 +50,10 @@ class ComparePreviewService:
         user_id: str,
         target_date: str | date | None = None,
     ) -> dict:
-        """Sammel-Einstieg (ADR-0011): EIN Engine-Lauf, ALLE Kanaele fertig
-        gerendert in EINER Antwort — der Kanalwechsel im Vorschau-Tab braucht
-        damit keinen weiteren Request (AC-7).
+        """Sammel-Einstieg (ADR-0011): EIN Engine-Lauf JE ORT (seit #1765 B1
+        gleichzeitig statt nacheinander), ALLE Kanaele fertig gerendert in EINER
+        Antwort — der Kanalwechsel im Vorschau-Tab braucht damit keinen weiteren
+        Request (AC-7).
         """
         from output.renderers.comparison import render_compare_sms, render_compare_telegram
         from services.scheduler_dispatch_service import build_compare_preset_subject
@@ -133,12 +135,13 @@ class ComparePreviewService:
         user_id: str,
         target_date: str | date | None,
     ) -> dict:
-        """Preset + echte Orte laden und die ComparisonEngine EINMAL laufen
-        lassen. Alle Kanal-Renderer eines Aufrufs sitzen auf demselben
-        ``ComparisonResult`` (AC-7).
+        """Preset + echte Orte laden und die ComparisonEngine EINMAL JE ORT
+        laufen lassen (gleichzeitig, #1765 B1). Alle Kanal-Renderer eines
+        Aufrufs sitzen auf demselben ``ComparisonResult`` (AC-7).
         """
         from app.loader import _parse_activity_profile
-        from services.comparison_engine import COMPARE_FORECAST_HOURS, ComparisonEngine
+        from services.comparison_engine import COMPARE_FORECAST_HOURS
+        from services.comparison_parallel import run_comparison_parallel
         from services.report_config_resolver import (
             resolve_compare_render_options, resolve_compare_time_window,
         )
@@ -160,13 +163,18 @@ class ComparePreviewService:
         # wie der echte Versand (scheduler_dispatch_service.py). Der geteilte Bezug
         # auf COMPARE_FORECAST_HOURS ersetzt den bisherigen Kommentar-Appell durch
         # Struktur — Divergenz ist strukturell ausgeschlossen (#1297).
-        result = ComparisonEngine.run(
+        # Issue #1765 Scheibe B1: die Orte werden gleichzeitig statt nacheinander
+        # gerechnet (ein Engine-Lauf JE ORT) -- sonst riss die Vorschau ab drei
+        # Orten die 60-Sekunden-Grenze zwischen Go-API und nginx. Alle uebrigen
+        # Parameter unveraendert; ``comparison_engine.py`` bleibt unangetastet.
+        result = run_comparison_parallel(
             locations=locations,
             time_window=resolve_compare_time_window(preset),
             target_date=resolved_date,
             forecast_hours=COMPARE_FORECAST_HOURS,
             profile=profile,
             official_alerts_enabled=preset.get("official_alerts_enabled", True),
+            call_source="vergleich",
         )
         return {
             "preset": preset,

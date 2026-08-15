@@ -12,10 +12,12 @@ aufgelöst über `app.loader.get_data_root()` (#1633).
 """
 from __future__ import annotations
 
+import contextvars
 import json
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Iterator, List, Optional, Tuple
 
 # Test-Override (Path) oder None. Issue #1633: der Pfad wird bei JEDEM Zugriff
 # über `diagnostics_path()` aufgelöst, nie beim Import — eine Modul-Konstante mit
@@ -53,8 +55,46 @@ _CALL_SOURCE_MARKERS: List[Tuple[str, str]] = [
 ]
 
 
+# Issue #1765 Scheibe B1: ausdruecklich gesetzte Quelle des AKTUELLEN
+# Verarbeitungspfads. Die Marker-Liste oben liest den Aufruf-Stapel des
+# AUSFUEHRENDEN Threads -- wandert die Arbeit in einen eigenen Thread
+# (ThreadPoolExecutor), taucht dort keiner der 11 Marker mehr auf und das
+# Journal bucht faelschlich "unbekannt" (belegt: 7,4 % der Eintraege).
+# ``ContextVar`` isoliert korrekt ueber Threads/Tasks (Vorbild:
+# official_alerts/warn_egress.py:55-57): ein neuer Thread startet mit leerem
+# Kontext, ein anderswo aktiver Override faerbt also nicht auf ihn ab.
+_call_source_override: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "gz_call_source_override", default=None
+)
+
+
+@contextmanager
+def override_call_source(source: str) -> Iterator[None]:
+    """Setzt die Diagnose-Quelle fuer den aktuellen Verarbeitungspfad und nimmt
+    sie am Ende des Blocks wieder zurueck.
+
+    Das Zuruecksetzen ist Pflicht, nicht Kosmetik: ein ``ThreadPoolExecutor``
+    verwendet seine Threads wieder -- ein stehengebliebener Wert vererbte die
+    Quelle in eine spaetere, fachlich ANDERE Anfrage.
+    """
+    token = _call_source_override.set(source)
+    try:
+        yield
+    finally:
+        _call_source_override.reset(token)
+
+
 def resolve_call_source() -> str:
-    """Issue #338: Diagnose-Quelle aus den Aufrufer-Frame-Namen ableiten."""
+    """Issue #338: Diagnose-Quelle aus den Aufrufer-Frame-Namen ableiten.
+
+    Issue #1765 B1: Ein ausdruecklich gesetzter Override (``override_call_source``)
+    geht VOR -- er ist die einzige Quelle, die einen Threadwechsel ueberlebt.
+    Ohne Override bleibt es unveraendert bei den 11 Namens-Markern.
+    """
+    override = _call_source_override.get()
+    if override is not None:
+        return override
+
     import inspect
 
     names = [f.function for f in inspect.stack()[:25]]
