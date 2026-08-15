@@ -20,7 +20,7 @@ SPEC: docs/specs/modules/issue_1037_official_alerts_massif_closure.md
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
@@ -28,6 +28,7 @@ import httpx
 from services.official_alerts import warn_egress
 from services.official_alerts.massif_zones import Massif, massif_at, massifs_at
 from services.official_alerts.models import OfficialAlert
+from utils.timezone import local_dt, tz_for_coords
 
 logger = logging.getLogger("massif_closure")
 
@@ -93,13 +94,14 @@ def _extract_alert(data, hit: Massif) -> list[OfficialAlert]:
     return [alert] if alert is not None else []
 
 
-def _get_cached_daily_json(src: str) -> Optional[dict]:
+def _get_cached_daily_json(src: str, ymd: str) -> Optional[dict]:
     """Tages-JSON fuer ein Source-DEPT, gecacht via ``warn_egress``.
 
     30-Min-Erfolgs-Cache + 429-bewusster Rückzug + Egress-Zähler über den
-    geteilten Kern (Issue #1348). ``None`` bei Fehler."""
+    geteilten Kern (Issue #1348). ``ymd`` ist der Tag des HERAUSGEBERS
+    (Issue #1727 S5d, ``fetch()`` loest ihn ueber ``tz_for_coords`` auf).
+    ``None`` bei Fehler."""
     def _do_request() -> httpx.Response:
-        ymd = datetime.now().strftime("%Y%m%d")
         return httpx.get(_ENDPOINT.format(src=src, ymd=ymd), timeout=TIMEOUT)
 
     return warn_egress.cached_fetch(
@@ -124,10 +126,11 @@ class MassifClosureSource:
         if not hits:
             return []
 
-        _STATUS["last_run"] = datetime.now().isoformat()
+        ymd = local_dt(datetime.now(timezone.utc), tz_for_coords(lat, lon)).strftime("%Y%m%d")
+        _STATUS["last_run"] = datetime.now(timezone.utc).isoformat()
         best_alert: Optional[OfficialAlert] = None
         for hit in hits:
-            data = _get_cached_daily_json(hit.src)
+            data = _get_cached_daily_json(hit.src, ymd)
             if data is None:
                 _STATUS["last_error"] = f"fetch failed for src={hit.src}"
                 _STATUS["error_count"] += 1

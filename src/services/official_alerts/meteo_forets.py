@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
@@ -34,6 +34,7 @@ from services.radar_service import (
     _AROME_FR_LON_MAX,
     _AROME_FR_LON_MIN,
 )
+from utils.timezone import local_dt, tz_for_coords
 
 logger = logging.getLogger("meteo_forets")
 
@@ -126,8 +127,12 @@ class MeteoForetsSource:
         return "meteo_forets"
 
     def covers(self, lat: float, lon: float) -> bool:
-        """Saison-Gate (Juni–September) plus Frankreich-Bounding-Box (kein API-Call)."""
-        if not _is_season(datetime.now().month):
+        """Saison-Gate (Juni–September) plus Frankreich-Bounding-Box (kein API-Call).
+
+        Saison-Monat der ORTSZONE (Issue #1727 S5d, ADR-0044) — nicht der
+        Servermonat."""
+        monat = local_dt(datetime.now(timezone.utc), tz_for_coords(lat, lon)).month
+        if not _is_season(monat):
             return False
         return (
             _AROME_FR_LAT_MIN <= lat <= _AROME_FR_LAT_MAX

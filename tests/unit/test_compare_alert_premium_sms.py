@@ -33,7 +33,9 @@ from app.config import Settings
 from app.loader import save_location
 from app.user import SavedLocation
 from services.official_alerts import OfficialAlert
+from utils.timezone import first_resolvable_tz
 
+from tests.helpers.briefing_zeiten import briefing_zeiten_iso
 from tests.helpers.compare_briefings import write_compare_briefings
 
 LEARNED_REPLY_TO = "+4915799912345"
@@ -156,6 +158,24 @@ def _compare_preset(preset_id: str, location_ids: list[str], **extra) -> dict:
     return preset
 
 
+def _preset_briefing_zeiten() -> tuple[str, str]:
+    """Morgen-/Abend-Slot ausserhalb des Vorlauf-Fensters (#1594) -- in GENAU
+    der Zone, die der Compare-Faelligkeitspfad selbst auswertet
+    (``first_resolvable_tz``, ``compare_alert.py::_build_eval_config`` bzw.
+    ``compare_official_alert.py::check_all_compare_presets``), nicht in einer
+    angenommenen festen Zone. Ohne explizites ``morning_time`` faellt ein
+    Preset auf den Migrations-Fallback 06:00 Ortszeit zurueck
+    (``compare_slot_scheduler.py::resolve_preset_slots``) -- das ist
+    zwischen ca. 05:00 und 07:00 Ortszeit ein taeglich wiederkehrendes
+    Sperrfenster (dieselbe Fehlerklasse wie #1594 auf der Trip-Seite, hier am
+    Ortsvergleich). Alle Presets dieser Datei liegen auf LAT/LON, eine
+    Probe-Location genuegt fuer die Aufloesung."""
+    zone = first_resolvable_tz(
+        [SavedLocation(id="probe", name="probe", lat=LAT, lon=LON, elevation_m=0)],
+    )
+    return briefing_zeiten_iso(zone)
+
+
 def _write_presets(user_id: str, presets: list[dict]) -> None:
     write_compare_briefings(_data_root_users() / user_id, presets)
 
@@ -258,7 +278,11 @@ def test_compare_deviation_alert_reaches_premium_sms():
             SavedLocation(id=loc_id, name="Testort", lat=LAT, lon=LON, elevation_m=353),
             user_id=uid,
         )
-        _write_presets(uid, [_compare_preset(preset_id, [loc_id], send_premium_sms=True)])
+        morgen, abend = _preset_briefing_zeiten()
+        _write_presets(uid, [_compare_preset(
+            preset_id, [loc_id], send_premium_sms=True,
+            morning_time=morgen, evening_time=abend,
+        )])
         CompareWeatherSnapshotService(user_id=uid).save(
             preset_id, loc_id, _pwd(loc_id, "Testort", LAT, LON, 2.0),
         )
@@ -360,7 +384,11 @@ def test_compare_official_alert_reaches_premium_sms():
             SavedLocation(id=loc_id, name="Testort", lat=LAT, lon=LON, elevation_m=353),
             user_id=uid,
         )
-        _write_presets(uid, [_compare_preset(preset_id, [loc_id], send_premium_sms=True)])
+        morgen, abend = _preset_briefing_zeiten()
+        _write_presets(uid, [_compare_preset(
+            preset_id, [loc_id], send_premium_sms=True,
+            morning_time=morgen, evening_time=abend,
+        )])
         register_official_alert_source(_FakeOfficialAlertSource(LAT, LON, [_official_alert()]))
 
         stub = _SevenIoStub()
