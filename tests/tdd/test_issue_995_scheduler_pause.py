@@ -44,9 +44,17 @@ _REAL_DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 def _make_trip(trip_id: str, report_config: TripReportConfig | None = None) -> Trip:
     """Trip mit Etappe heute — aktiv für 'morning'."""
-    stage = Stage(id="S1", name="Tag 1", date=date.today(), waypoints=[
-        Waypoint(id="G1", name="Start", lat=42.13, lon=9.13, elevation_m=400),
-        Waypoint(id="G2", name="Ziel", lat=42.10, lon=9.18, elevation_m=1200),
+    # #1709: stage_date()/active_window_offsets() statt date.today() ohne
+    # jede Ankunftszeit — der Haertungs-Helfer wird hier DIREKT aufgerufen
+    # (die Datei importiert ihn ohnehin schon fuer AC9, s. oben), die
+    # konkreten Zeiten tragen keine Pruefaussage dieser Funktion.
+    lat, lon = 42.13, 9.13
+    arr1, arr2 = active_window_offsets(lat, lon, 60, 240)
+    stage = Stage(id="S1", name="Tag 1", date=stage_date(lat, lon), waypoints=[
+        Waypoint(id="G1", name="Start", lat=lat, lon=lon, elevation_m=400,
+                 arrival_calculated=arr1),
+        Waypoint(id="G2", name="Ziel", lat=42.10, lon=9.18, elevation_m=1200,
+                 arrival_calculated=arr2),
     ])
     rc = report_config if report_config is not None else TripReportConfig(trip_id=trip_id, enabled=True)
     return Trip(id=trip_id, name=trip_id, stages=[stage], report_config=rc)

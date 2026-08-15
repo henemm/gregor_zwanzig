@@ -104,11 +104,17 @@ def _save_cached(user_id: str, trip_id: str, cached: list[SegmentWeatherData]) -
 
 
 def _trip(trip_id: str, *, with_levels: bool = False, stage_date: date | None = None) -> Trip:
+    # #1709: feste Ankunftszeiten statt Naismith-Self-Heal (trip_segments.py:
+    # 125-127) — sonst haengt die Etappe komplett am Wanduhr-basierten
+    # Default-Start 08:00 samt Laufzeit-Schaetzung. Die Zeiten selbst tragen
+    # keine Pruefaussage dieser Datei; sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
         id="T1", name="Tag 1", date=stage_date or date.today(),
         waypoints=[
-            Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0),
-            Waypoint(id="G2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=1500.0),
+            Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
+                     arrival_calculated="08:00"),
+            Waypoint(id="G2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=1500.0,
+                     arrival_calculated="12:00"),
         ],
     )
     kwargs: dict = {"official_warnings": None}

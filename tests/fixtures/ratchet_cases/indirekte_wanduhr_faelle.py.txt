@@ -1,0 +1,301 @@
+# Fixture-Quelltexte fuer die zweite Fundregel scan_indirekte_wanduhr_fixtures()
+# in tests/tdd/test_fixture_wallclock_ratchet.py (#1709).
+#
+# Bewusst KEINE .py-Endung: die Ratsche scannt tests/**/*.py, und diese Datei
+# enthaelt absichtlich das Anti-Muster bzw. seine Gegenproben. Laege sie als
+# .py hier, meldete der Waechter seine eigenen Fixtures. Format wie beim
+# Vorbild tests/fixtures/ratchet_cases/wallclock_arrival_faelle.py.txt:
+# `# === <fall> ===` trennt die Faelle, der Text bis zum naechsten Trenner
+# wird 1:1 als Testdatei nach tmp_path geschrieben.
+#
+# Diese Faelle werden NIE ausgefuehrt (nur ast.parse) — Laufzeitfehler in
+# Helferaufrufen (z.B. briefing_zeiten_fuer_trip auf einem unvollstaendigen
+# Trip) sind deshalb unerheblich.
+
+# === indirekt-antimuster ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+
+def _trip_ohne_ankunftszeiten():
+    """Anti-Muster #1709: KEINE Ankunftszeit gesetzt, kein Haertungs-Helfer,
+    Etappendatum aus der Wanduhr. Ohne Ankunftszeiten greift der
+    Naismith-Standardstart 08:00 (trip_segments.py:132), und ob das
+    Ziel-Segment "vorbei" ist, entscheidet allein das Tagesfenster-Ende."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709", name="Ohne Ankunftszeiten", stages=[stage])
+    return trip
+
+# === nur-ein-wegpunkt ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+
+def _trip_mit_einem_wegpunkt():
+    """Gegenprobe (a): nur EIN Wegpunkt -> convert_trip_to_segments baut gar
+    kein Segment (trip_segments.py:121-123): "if len(stage.waypoints) < 2:
+    return []". Es gibt nichts, das "vorbei" sein koennte."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+        ],
+    )
+    trip = Trip(id="t-1709-a", name="Ein Wegpunkt", stages=[stage])
+    return trip
+
+# === arrival-calculated-gesetzt ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+
+def _trip_mit_arrival_calculated():
+    """Gegenprobe (b): arrival_calculated ist bei BEIDEN Wegpunkten gesetzt
+    -> der Self-Heal-Ausloeser "all(wp.arrival_calculated is None ...)"
+    (trip_segments.py:126) greift nicht, Naismith rechnet nicht neu."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000,
+                     arrival_calculated="09:00"),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500,
+                     arrival_calculated="14:00"),
+        ],
+    )
+    trip = Trip(id="t-1709-b", name="Arrival berechnet", stages=[stage])
+    return trip
+
+# === arrival-override-gesetzt ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+
+def _trip_mit_arrival_override():
+    """Gegenprobe (c), der heikelste Fall: arrival_calculated ist bei BEIDEN
+    Wegpunkten None (der Self-Heal-Ausloeser waere erfuellt) — aber
+    arrival_override gewinnt in _known_time_for_index (trip_segments.py:
+    36-52), noch vor dem Default. Die Fixture ist deshalb immun, obwohl sie
+    den Self-Heal-Ausloeser erfuellt. Eine Regel, die nur auf
+    arrival_calculated schaut, meldet sie faelschlich."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000,
+                     arrival_calculated=None, arrival_override="09:00"),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500,
+                     arrival_calculated=None, arrival_override="14:00"),
+        ],
+    )
+    trip = Trip(id="t-1709-c", name="Arrival override", stages=[stage])
+    return trip
+
+# === stage-start-time-gesetzt ===
+from datetime import date, time
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+
+def _trip_mit_stage_start_time():
+    """Gegenprobe (d): stage.start_time ist gesetzt -> ersetzt den
+    Naismith-Default 08:00 (trip_segments.py:132: "default_start =
+    stage.start_time if stage.start_time else time(8, 0)")."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(), start_time=time(7, 30),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709-d", name="Etappenstart gesetzt", stages=[stage])
+    return trip
+
+# === nutzt-arrival-window-fixtures ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+from tests.helpers.arrival_window_fixtures import stage_date
+
+
+def _trip_mit_arrival_window_helfer():
+    """Gegenprobe (e): die Datei nutzt den Haertungs-Helfer
+    arrival_window_fixtures (hier fuer das Etappendatum) -> immun, auch wenn
+    im Einzelfall keine Ankunftszeit gesetzt ist. Die Regel macht am IMPORT
+    fest, nicht an der tatsaechlichen Verwendung je Wegpunkt."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=stage_date(47.0, 11.0),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709-e", name="Haertungs-Helfer Fenster", stages=[stage])
+    return trip
+
+# === nutzt-briefing-zeiten ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
+
+def _trip_mit_briefing_zeiten_helfer():
+    """Gegenprobe (f): die Datei nutzt briefing_zeiten_fuer_trip -> immun.
+    Ausgefuehrt wird diese Attrappe nie (nur ast.parse), der Aufruf muss
+    hier nicht sinnvoll auf trip anwendbar sein."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709-f", name="Briefing-Zeiten Helfer", stages=[stage])
+    briefing_zeiten_fuer_trip(trip)
+    return trip
+
+# === kein-alarmpfad-import ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+
+
+def _trip_ohne_alarmpfad_import():
+    """Gegenprobe (g): die Datei importiert KEINEN zeitgrenzen-auswertenden
+    Pfad -> die Naeherung fuer "wertet der Pruefling eine Tageszeit-Grenze
+    aus?" schlaegt negativ an, obwohl die Fixture-Bauart sonst identisch mit
+    dem Anti-Muster ist."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709-g", name="Kein Alarmpfad-Import", stages=[stage])
+    return trip
+
+# === wegpunkte-aus-hilfsfunktion ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+
+def _bau_wegpunkte():
+    """Hilfsfunktion, die die Wegpunkte AUSSERHALB des ``Stage(...)``-Aufrufs
+    baut -- Adversary-Finding F001: die urspruengliche Zaehlung sah nur
+    ``Waypoint(...)``-Aufrufe DIREKT im Syntaxbaum des ``Stage(...)``-Aufrufs
+    und zaehlte hier 0, obwohl zur Laufzeit 2 Wegpunkte entstehen."""
+    return [
+        Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+        Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+    ]
+
+
+def _trip_ueber_hilfsfunktion():
+    stage = Stage(id="T1", name="Tag 1", date=date.today(), waypoints=_bau_wegpunkte())
+    trip = Trip(id="t-1709-f001", name="Wegpunkte aus Hilfsfunktion", stages=[stage])
+    return trip
+
+# === stage-kwargs-entpackung ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+
+def _trip_ueber_kwargs():
+    """Adversary-Finding F002: ``Stage(**stage_kwargs)`` -- die Schluessel-
+    woerter stammen aus einem Dict, das der Scanner nicht einsehen kann. Die
+    alte Zaehlung fand am Aufruf selbst keine Keywords und damit auch keine
+    ``waypoints=``-Angabe -> 0 Wegpunkte gezaehlt, obwohl das Dict 2
+    enthaelt."""
+    stage_kwargs = dict(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    stage = Stage(**stage_kwargs)
+    trip = Trip(id="t-1709-f002", name="Stage aus kwargs-Entpackung", stages=[stage])
+    return trip
+
+# === wegpunkte-aus-comprehension ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+
+def _trip_ueber_comprehension():
+    """Adversary-Finding F003: ``waypoints=[Waypoint(...) for x in liste]``
+    -- die alte Zaehlung sah GENAU EINEN Syntaxknoten (den ``Waypoint(...)``-
+    Aufruf im Comprehension-Rumpf), waehrend zur Laufzeit ``len(liste)``
+    Wegpunkte entstehen. Bei einer Liste mit 3 Elementen zaehlte der Scanner
+    also 1 statt 3 -- unter der Schwelle von 2, obwohl tatsaechlich 3
+    Wegpunkte gebaut werden."""
+    ids = ["W1", "W2", "W3"]
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id=x, name=x, lat=47.0, lon=11.0, elevation_m=1000)
+            for x in ids
+        ],
+    )
+    trip = Trip(id="t-1709-f003", name="Wegpunkte aus Comprehension", stages=[stage])
+    return trip
+
+# === haertungs-helfer-nur-in-anderer-funktion ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+from tests.helpers.arrival_window_fixtures import stage_date
+
+
+def _gehaertete_funktion():
+    """Diese Funktion nutzt den Haertungs-Helfer SELBST -> immun."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=stage_date(47.0, 11.0),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709-f004-ok", name="Gehaertete Funktion", stages=[stage])
+    return trip
+
+
+def _ungehaertete_funktion():
+    """Adversary-Finding F004: die Datei importiert den Haertungs-Helfer (s.
+    oben), aber DIESE Funktion ruft ihn nicht auf -- baut das Anti-Muster
+    unveraendert. Die alte, dateiweite Pruefung machte diese Funktion
+    faelschlich mit unsichtbar, weil irgendeine ANDERE Funktion derselben
+    Datei den Helfer importierte."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709-f004-bad", name="Ungehaertete Funktion", stages=[stage])
+    return trip

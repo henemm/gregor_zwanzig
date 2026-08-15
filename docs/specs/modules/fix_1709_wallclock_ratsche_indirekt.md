@@ -262,9 +262,51 @@ Mindestens diese Verfälschungen müssen einen Test rot machen:
 - **Der konkrete rote Testfall wird hier NICHT behoben** (#1871, Ursache offen). Diese Scheibe
   liefert das Werkzeug, mit dem er gefunden wurde, und den Wächter gegen Neuzugänge.
 
+## Nachtrag 2026-08-15: Härtung von zehn Bestandsdateien kam hinzu (PO-Entscheidung)
+
+Die ursprüngliche Fassung schrieb „keine Sanierung von Bestandsdateien (gemessen: nicht nötig)".
+Das war für die **Wirkung** richtig und für die **Bauart** falsch — ein Unterschied, der beim
+Schreiben der Spec nicht gesehen wurde.
+
+Der fertige Scanner meldete elf Bestandsstellen. Alle zehn betroffenen Dateien wurden mit dem
+in dieser Scheibe entstandenen Werkzeug zu vier Uhrzeiten (05/12/18/23 UTC) nachgemessen:
+**keine einzige ist zeitabhängig**. Sie bauen das Anti-Muster, ihre Prüfaussagen hängen aber
+nicht daran — latent, nicht defekt.
+
+Der erste Implementierungsversuch trug die elf Stellen in `KNOWN_VIOLATIONS_INDIREKT` ein, um
+den Wächter grün zu bekommen. **Das ist zurückgenommen.** Die Regel neben der bestehenden Liste
+verbietet es wörtlich („darf NICHT gefuellt werden, um den Waechter gruen zu bekommen";
+„Umstellen waere aufwendig" ist kein Grund), und ein Wächter mit elf Ausnahmen bewacht nur noch
+Neuzugänge — weniger, als freigegeben wurde.
+
+**PO-Entscheidung 2026-08-15:** die zehn Fixturen werden auf das vorhandene Härtungs-Kit
+umgestellt, `KNOWN_VIOLATIONS_INDIREKT` bleibt **leer**. Bedingungen: keine `assert`-Zeile wird
+angefasst (geändert wird die Vorbedingung, nicht die Zusicherung), jede Datei bleibt einzeln
+grün, und jede wird vor und nach der Härtung mit `matrix_differenz` gegengemessen.
+
+Betroffen: `test_alert_state_briefing_reset.py`, `test_alert_undelivered_hint.py`,
+`test_import_und_fremdquellen_folgen_ortstag.py`, `test_issue_1069_tier_channel_gating.py`
+(zwei Funktionen), `test_official_alert_channel_threshold.py`,
+`test_official_alert_sms_marker.py`, `test_trip_alert_channel_precedence.py`,
+`test_trip_briefing_anchor_unchanged.py`, `test_trip_outlook_dispatch_mail.py`,
+`tests/unit/test_premium_sms_versand.py`.
+
+**Zusätzliches Kriterium aus diesem Nachtrag:**
+
+- **AC-10 (die Ausnahmeliste der neuen Regel bleibt leer):** Given
+  `KNOWN_VIOLATIONS_INDIREKT` nach dieser Scheibe / When der Scanner über den echten Baum
+  `tests/` läuft / Then ist die Liste leer **und** die Fundmenge leer — der Wächter ist ohne
+  jede Ausnahme grün.
+  - Test: `test_known_violations_der_neuen_regel_ist_leer`; Assert
+    `KNOWN_VIOLATIONS_INDIREKT == frozenset()` und `scan_indirekte_wanduhr_fixtures(TESTS_ROOT) == []`.
+
+**LoC-Budget:** auf 1000 Testzeilen angehoben (PO-Erlaubnis 2026-08-15). Der größte Block sind
+die Attrappen und die sieben Gegenproben — also genau die Nachweise, die den Wächter davor
+bewahren, alles zu melden. Kürzen hätte die Zusicherung geschwächt.
+
 ## Nicht in dieser Scheibe
 
-- Keine Sanierung von Bestandsdateien (gemessen: nicht nötig, s. Source).
+- Keine Sanierung über die zehn oben genannten Dateien hinaus.
 - Kein Eingriff in `src/`, `api/`, `internal/`, `frontend/`, `cmd/`.
 - Keine Änderung an der bestehenden ersten Fundregel oder ihrer `KNOWN_VIOLATIONS`.
 - Keine Bewertung des 1440-Minuten-Wächters `test_radar_fixture_ist_zu_jeder_tageszeit_…`
@@ -282,3 +324,5 @@ Fixture dieser Bauart gestoppt? Kein Fang → Rückbau der Regel, Werkzeug bleib
 ## Changelog
 
 - 2026-08-15: Initial spec created
+- 2026-08-15: Nachtrag — Härtung von zehn Bestandsdateien aufgenommen, AC-10 ergänzt,
+  LoC-Budget auf 1000 Testzeilen angehoben (beides PO-Entscheidung nach der Messung)

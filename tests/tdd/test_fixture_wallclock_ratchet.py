@@ -124,8 +124,18 @@ TESTS_ROOT = REPO_ROOT / "tests"
 # (Endung .py.txt) — sonst meldete der Waechter seine eigenen Fixtures.
 _FAELLE_DATEI = REPO_ROOT / "tests/fixtures/ratchet_cases/wallclock_arrival_faelle.py.txt"
 
+# Fixture-Quelltexte fuer die ZWEITE Fundregel (#1709, indirekte Variante) —
+# derselbe Grund fuer die .py.txt-Endung wie oben.
+_INDIREKT_FAELLE_DATEI = (
+    REPO_ROOT / "tests/fixtures/ratchet_cases/indirekte_wanduhr_faelle.py.txt"
+)
+
 # Pruefdatum des Regel-Budgets: 2026-11-08
 EXPIRY = date(2026, 11, 8)
+
+# Pruefdatum des Regel-Budgets der ZWEITEN Fundregel (#1709): 2026-11-10, aus
+# dem Ticket uebernommen.
+EXPIRY_INDIREKT = date(2026, 11, 10)
 
 _HHMM = "%H:%M"
 _WANDUHR_NAMEN = ("now", "jetzt", "heute")
@@ -520,6 +530,18 @@ def _attrappe(tmp_path: Path, quelltext: str) -> Path:
     return f
 
 
+def _fall_indirekt(name: str) -> str:
+    """Fixture-Quelltext ``name`` aus der externen Vorlagendatei der ZWEITEN
+    Fundregel (#1709) holen."""
+    abschnitte = re.split(r"^# === (\S+) ===$\n",
+                          _INDIREKT_FAELLE_DATEI.read_text("utf-8"), flags=re.M)
+    vorrat = dict(zip(abschnitte[1::2], abschnitte[2::2]))
+    assert name in vorrat, (
+        f"Fall {name!r} fehlt in {_INDIREKT_FAELLE_DATEI}: {sorted(vorrat)}"
+    )
+    return vorrat[name]
+
+
 # ══════════════ Die Ratsche selbst (heute ROT, gruen nach S1) ══════════════
 
 def test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr():
@@ -670,3 +692,488 @@ def test_regel_budget_pruefdatum_steht_als_text_in_der_datei():
         "Das ISO-Pruefdatum muss als Text in dieser Datei stehen, damit das "
         "Gate-Audit es per grep findet."
     )
+
+
+# ═══════════ #1709: zweite Fundregel — indirekte Wanduhr-Abhaengigkeit ═══════════
+#
+# Anders als die erste Regel (Ankunftszeit direkt aus der Wanduhr gerechnet)
+# meldet diese Regel das LOGISCHE GEGENTEIL: eine Fixture, die GAR KEINE
+# Ankunftszeit setzt, wodurch der Pruefling (nicht die Fixture) eine
+# Tageszeit-Grenze selbst berechnet (Naismith-Default 08:00 Start, s.
+# ``src/services/trip_segments.py``). Fundbedingung, ALLE Merkmale zugleich:
+#
+#   1. die Funktion baut eine Etappe mit >= 2 Wegpunkten,
+#   2. das Etappendatum stammt aus der Wanduhr (dieselbe Erkennung wie
+#      _ist_wanduhr_datum oben),
+#   3. KEIN Wegpunkt traegt arrival_calculated ODER arrival_override,
+#   4. stage.start_time ist nicht gesetzt,
+#   5. die Datei nutzt WEDER arrival_window_fixtures NOCH briefing_zeiten,
+#   6. die Datei importiert einen zeitgrenzen-auswertenden Pfad (trip_alert,
+#      compare_alert, trip_report_scheduler, compare_slot_scheduler,
+#      alert_gate, deviation_alert, alert_daily_limit, official_alert).
+#
+# Die ersten vier Merkmale sind AM PRUEFLING abgelesen, nicht geraten
+# (``src/services/trip_segments.py``, HEAD ``b6674c94``):
+#   - >= 2 Wegpunkte:        :121-123 "if len(stage.waypoints) < 2: return []"
+#   - kein arrival_calculated: :125-127 Self-Heal-Ausloeser
+#     "all(wp.arrival_calculated is None ...)"
+#   - kein arrival_override: :36-52 _known_time_for_index, Kette
+#     arrival_override > stage.start_time (idx 0) > arrival_calculated --
+#     arrival_override GEWINNT, auch wenn der Self-Heal-Ausloeser erfuellt
+#     waere (AC-2 Fall c, der heikelste)
+#   - kein stage.start_time: :132 "default_start = stage.start_time if
+#     stage.start_time else time(8, 0)"
+#
+# Verworfen: eine Fundregel, die den Pruefling analysiert -- bei acht
+# gemessenen Kippkanten-Familien in verschiedenen Modulen fuehrte das zu
+# einer Regel, die entweder alles oder nichts meldet (Spec, Abschnitt
+# "Gewaehlte Loesung").
+
+
+def _stage_calls(funktion: ast.AST) -> list[ast.Call]:
+    """Alle ``Stage(...)``-Aufrufe innerhalb dieser Funktion."""
+    return [n for n in ast.walk(funktion) if isinstance(n, ast.Call)
+            and ((isinstance(n.func, ast.Name) and n.func.id == "Stage")
+                 or (isinstance(n.func, ast.Attribute) and n.func.attr == "Stage"))]
+
+
+def _ist_waypoint_call(node: ast.AST) -> bool:
+    return (isinstance(node, ast.Call)
+            and ((isinstance(node.func, ast.Name) and node.func.id == "Waypoint")
+                 or (isinstance(node.func, ast.Attribute) and node.func.attr == "Waypoint")))
+
+
+def _hat_kwargs_entpackung(call: ast.Call) -> bool:
+    """``Stage(**irgendwas)`` -- die Schluesselwoerter stammen aus einem
+    Dict, dessen Inhalt der Scanner nicht einsehen kann (Adversary-Finding
+    F002 zu #1709)."""
+    return any(kw.arg is None for kw in call.keywords)
+
+
+def _wegpunkte_wert(stage_call: ast.Call) -> ast.AST | None:
+    """Der Wert des ``waypoints=``-Arguments, oder ``None`` wenn keins
+    gesetzt ist."""
+    for kw in stage_call.keywords:
+        if kw.arg == "waypoints":
+            return kw.value
+    return None
+
+
+def _wegpunkte_liste(wert: ast.AST, zuweisungen: dict[str, list[ast.AST]],
+                     gesehen: frozenset[str] = frozenset()) -> list[ast.Call] | None:
+    """Loest ``wert`` (den Wert von ``waypoints=``) zu einer VOLLSTAENDIG
+    einsehbaren flachen Liste von ``Waypoint(...)``-Aufrufen auf.
+
+    ``None`` heisst: die Menge ist NICHT vollstaendig einsehbar -- ein
+    Aufruf einer Hilfsfunktion (F001, ``waypoints=_bau_wegpunkte()``), eine
+    Comprehension (F003, ``[Waypoint(...) for x in liste]``, deren Laenge
+    erst zur Laufzeit feststeht) oder ein Name, dessen Herkunft sich nicht
+    aufloesen laesst. Uebertragen aus #1431 (``hook_utils.is_git_subcommand``):
+    nicht "erkenne ich das Muster", sondern "bin ich sicher, dass es NICHT
+    vorliegt". Eine Etappe gilt deshalb nur dann als sicher unter zwei
+    Wegpunkten, wenn diese Funktion eine LEERE Liste zurueckgibt -- bei
+    ``None`` bleibt die Etappe pruefbeduerftig statt immun."""
+    if _ist_waypoint_call(wert):
+        return [wert]
+    if isinstance(wert, ast.List):
+        ergebnis: list[ast.Call] = []
+        for element in wert.elts:
+            teil = _wegpunkte_liste(element, zuweisungen, gesehen)
+            if teil is None:
+                return None
+            ergebnis.extend(teil)
+        return ergebnis
+    if isinstance(wert, ast.Name):
+        if wert.id in gesehen:
+            return None
+        zuweisungswerte = zuweisungen.get(wert.id)
+        if not zuweisungswerte:
+            return None
+        gesehen = gesehen | {wert.id}
+        ergebnis = []
+        for einzelwert in zuweisungswerte:
+            teil = _wegpunkte_liste(einzelwert, zuweisungen, gesehen)
+            if teil is None:
+                return None
+            ergebnis.extend(teil)
+        return ergebnis
+    # Aufruf einer Hilfsfunktion, Comprehension, Attribute, Entpackung
+    # (``*rest``) o.ae. -- die Menge ist nicht statisch zaehlbar.
+    return None
+
+
+def _keyword_ist_gesetzt(call: ast.Call, name: str) -> bool:
+    """Traegt ``call`` das Keyword ``name`` mit einem Wert, der NICHT ``None``
+    ist? Ein fehlendes Keyword oder ``name=None`` zaehlt als "nicht gesetzt"."""
+    for kw in call.keywords:
+        if kw.arg == name:
+            return not (isinstance(kw.value, ast.Constant) and kw.value.value is None)
+    return False
+
+
+def _stage_ist_anfaellig(stage_call: ast.Call, zuweisungen: dict[str, list[ast.AST]]) -> bool:
+    """Merkmale 1, 3, 4 fuer EINEN ``Stage(...)``-Aufruf: >= 2 Wegpunkte,
+    keiner mit arrival_calculated/arrival_override, kein gesetztes
+    stage.start_time -- direkt an trip_segments.py:121-132 abgelesen (s.
+    Tabelle oben).
+
+    Merkmal 1 (>= 2 Wegpunkte) gilt als erfuellt, sobald die Menge NICHT
+    beweisbar unter zwei liegt -- s. ``_wegpunkte_liste`` (F001-F003).
+
+    Merkmal 4 (``stage.start_time``) wird ZUERST geprueft, VOR der
+    Wegpunkt-Aufloesung: ein direkt gesetztes ``start_time=`` macht die
+    Etappe unabhaengig davon immun, ob die Wegpunkt-Menge einsehbar ist --
+    sonst uebersteuerte eine unaufloesbare ``waypoints=``-Angabe (F001-F003)
+    faelschlich eine bereits vorhandene Haertung ueber ``start_time``."""
+    if _keyword_ist_gesetzt(stage_call, "start_time"):
+        return False
+    if _hat_kwargs_entpackung(stage_call):
+        return True
+    wert = _wegpunkte_wert(stage_call)
+    if wert is None:
+        return False  # kein waypoints=... -> Default ist eine leere Liste
+    wegpunkte = _wegpunkte_liste(wert, zuweisungen)
+    if wegpunkte is None:
+        return True  # Menge nicht einsehbar -> pruefbeduerftig, nicht immun
+    if len(wegpunkte) < 2:
+        return False
+    if any(_keyword_ist_gesetzt(wp, "arrival_calculated")
+           or _keyword_ist_gesetzt(wp, "arrival_override") for wp in wegpunkte):
+        return False
+    return True
+
+
+# Zeitgrenzen-auswertende Pfade (Merkmal 6) bleiben DATEI-weit (Import): sie
+# entscheiden, ob der Pruefling in dieser Datei ueberhaupt eine Tageszeit-
+# Grenze auswertet, nicht ob eine EINZELNE Funktion gehaertet ist.
+#
+# Haertungs-Helfer (Merkmal 5) sind dagegen FUNKTIONS-weit (Adversary-Finding
+# F004 zu #1709): die urspruengliche Fassung machte am Import fest -- eine
+# Fixture galt schon dann als geschuetzt, wenn IRGENDEINE Funktion derselben
+# Datei den Helfer importierte, nicht wenn sie ihn selbst BENUTZTE. Eine
+# zweite, ungehaertete Funktion derselben Datei blieb dadurch unsichtbar.
+# Die Ausnahme greift jetzt nur, wenn die betroffene Funktion selbst einen
+# der importierten Namen (``stage_date``, ``briefing_zeiten_fuer_trip`` o.ae.)
+# AUFRUFT -- geprueft an den bestehenden Gegenproben (e)/(f), die den Aufruf
+# bereits jeweils in der eigenen Funktion haben.
+_HAERTUNGS_HELFER_INDIREKT = ("arrival_window_fixtures", "briefing_zeiten")
+_ALARMPFADE_INDIREKT = (
+    "trip_alert", "compare_alert", "trip_report_scheduler", "compare_slot_scheduler",
+    "alert_gate", "deviation_alert", "alert_daily_limit", "official_alert",
+)
+
+
+def _importierte_module(baum: ast.AST) -> set[str]:
+    module: set[str] = set()
+    for n in ast.walk(baum):
+        if isinstance(n, ast.ImportFrom) and n.module:
+            module.add(n.module)
+        elif isinstance(n, ast.Import):
+            for alias in n.names:
+                module.add(alias.name)
+    return module
+
+
+def _importiert_eines_von(module: set[str], namen: tuple[str, ...]) -> bool:
+    return any(name in m for name in namen for m in module)
+
+
+def _importierte_haertungs_namen(baum: ast.AST) -> set[str]:
+    """Namen, die per ``from <haertungs-modul> import <name>`` in diese Datei
+    gelangt sind -- z.B. ``stage_date`` aus
+    ``tests.helpers.arrival_window_fixtures``. Grundlage fuer die
+    FUNKTIONS-weite Pruefung (F004), nicht mehr fuer eine dateiweite."""
+    namen: set[str] = set()
+    for n in ast.walk(baum):
+        if not isinstance(n, ast.ImportFrom) or not n.module:
+            continue
+        if not any(helfer in n.module for helfer in _HAERTUNGS_HELFER_INDIREKT):
+            continue
+        for alias in n.names:
+            namen.add(alias.asname or alias.name)
+    return namen
+
+
+def _funktion_nutzt_haertungs_helfer(funktion: ast.AST, haertungs_namen: set[str]) -> bool:
+    """Ruft die FUNKTION SELBST einen der importierten Haertungs-Bausteine
+    auf? (Adversary-Finding F004: vorher entschied allein der Import
+    irgendwo in der Datei, nicht die tatsaechliche Nutzung durch diese
+    Funktion.)"""
+    if not haertungs_namen:
+        return False
+    return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+               and n.func.id in haertungs_namen for n in ast.walk(funktion))
+
+
+def scan_indirekte_wanduhr_fixtures(tests_root: Path) -> list[Finding]:
+    """Alle Funktionen unter ``tests_root``, die eine Etappe mit
+    Wanduhr-Datum und nicht beweisbar unter 2 Wegpunkten bauen, OHNE jede
+    Ankunftszeit, OHNE dass die Funktion SELBST einen Haertungs-Helfer
+    aufruft, UND mit Alarmpfad-Import in der Datei (zweite Fundregel, #1709
+    -- s. Kommentarblock oben)."""
+    funde: list[Finding] = []
+    for datei in sorted(tests_root.rglob("*.py")):
+        try:
+            baum = ast.parse(datei.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+
+        module = _importierte_module(baum)
+        if not _importiert_eines_von(module, _ALARMPFADE_INDIREKT):
+            continue
+        haertungs_namen = _importierte_haertungs_namen(baum)
+
+        for knoten in ast.walk(baum):
+            if not isinstance(knoten, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if _funktion_nutzt_haertungs_helfer(knoten, haertungs_namen):
+                continue
+            zuw = _zuweisungen(knoten)
+            anfaellige_stages = [s for s in _stage_calls(knoten)
+                                 if _stage_ist_anfaellig(s, zuw)]
+            if not anfaellige_stages:
+                continue
+            if not any(_ist_wanduhr_datum(n) for n in ast.walk(knoten)):
+                continue
+            funde.append(Finding(path=datei, function=knoten.name,
+                                 line=anfaellige_stages[0].lineno))
+    return funde
+
+
+# 🔴 Wie bei KNOWN_VIOLATIONS oben: nur SCHRUMPFEN, nie fuellen um gruen zu
+# werden. Die 11 Eintraege unten sind der GEMESSENE, nicht geratene Bestand
+# (Scanner-Lauf ueber tests/ bei Implementierung dieser Scheibe): jede Datei
+# baut eine Etappe mit Wanduhr-Datum, >= 2 Wegpunkten, ohne jede Ankunftszeit
+# und importiert einen Alarmpfad -- strukturell exakt das Anti-Muster.
+#
+# Sanierung ist laut Spec (Abschnitt "Nicht in dieser Scheibe") ausdruecklich
+# NICHT Gegenstand dieser Scheibe: "Keine Sanierung von Bestandsdateien
+# (gemessen: nicht noetig, s. Source)". Die Source-Messung dort (Tabelle
+# "Bestandsmenge ist gemessen, nicht geschaetzt") belegt per
+# matrix_differenz()-Lauf ueber vergleichbare Kandidatenmengen, dass diese
+# Bauart bei den gemessenen Uhrzeiten NICHT tatsaechlich kippt -- anders als
+# der eine Fall aus #1871 (dort NICHT in dieser Liste, weiterhin offen,
+# ausdruecklich ausserhalb dieser Scheibe). Diese Regel meldet strukturelles
+# Risiko, nicht gemessene Flakiness (s. Kommentarblock oben, "Verworfen").
+#
+# Anders als bei der ERSTEN Regel oben ist die Rechtfertigung hier NICHT "die
+# Fixture braucht das Anti-Muster", sondern "Sanierung ist fuer diese Scheibe
+# explizit nicht beauftragt" -- eine bewusst andere Kategorie, review-pflichtig
+# wie dort.
+KNOWN_VIOLATIONS_INDIREKT: frozenset[tuple[str, str]] = frozenset({
+    # #1709 Haertung (2026-08-15): 9 von 10 Bestandsstellen sind gehaertet
+    # (arrival_calculated gesetzt, s. Commits dieser Scheibe). Der letzte
+    # Eintrag bleibt, solange der Datei-Claim-Gate die Haertung von
+    # tests/tdd/test_alert_undelivered_hint.py blockiert (fremde Session
+    # auf Worktree fix-1676-s2-sms-versand / Branch fix-1750-sperrzeit-wortwahl).
+    ("tests/tdd/test_alert_undelivered_hint.py", "_trip"),
+})
+
+
+def test_scanner_meldet_die_indirekte_variante(tmp_path):
+    """AC-1: Etappe mit Wanduhr-Datum OHNE jede Ankunftszeit, ohne
+    Haertungs-Helfer, mit Alarmpfad-Import -> wird gemeldet (Datei,
+    Funktionsname, Zeile)."""
+    _attrappe(tmp_path, _fall_indirekt("indirekt-antimuster"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+    assert funde[0].function == "_trip_ohne_ankunftszeiten"
+
+
+def test_scanner_schweigt_bei_nur_einem_wegpunkt(tmp_path):
+    """AC-2 (a): eine Ein-Wegpunkt-Etappe erzeugt gar kein Segment
+    (trip_segments.py:121-123) — kein Fund."""
+    _attrappe(tmp_path, _fall_indirekt("nur-ein-wegpunkt"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert not funde, f"Falsch-Positiv bei nur einem Wegpunkt: {[f.ref for f in funde]}"
+
+
+def test_scanner_schweigt_bei_gesetztem_arrival_calculated(tmp_path):
+    """AC-2 (b): arrival_calculated ist gesetzt -> der Self-Heal-Ausloeser
+    greift nicht — kein Fund."""
+    _attrappe(tmp_path, _fall_indirekt("arrival-calculated-gesetzt"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert not funde, f"Falsch-Positiv bei arrival_calculated: {[f.ref for f in funde]}"
+
+
+def test_scanner_schweigt_bei_gesetztem_arrival_override(tmp_path):
+    """AC-2 (c), der heikelste Fall: arrival_calculated ist bei ALLEN
+    Wegpunkten None (der Self-Heal-Ausloeser waere erfuellt), aber
+    arrival_override gewinnt in _known_time_for_index (trip_segments.py:
+    36-52) noch vor dem Default -> kein Fund. Eine Regel, die nur auf
+    arrival_calculated schaut, meldet diese Fixture faelschlich."""
+    _attrappe(tmp_path, _fall_indirekt("arrival-override-gesetzt"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert not funde, f"Falsch-Positiv bei arrival_override: {[f.ref for f in funde]}"
+
+
+def test_scanner_schweigt_bei_gesetztem_stage_start_time(tmp_path):
+    """AC-2 (d): stage.start_time ist gesetzt -> ersetzt den
+    Naismith-Default 08:00 (trip_segments.py:132) — kein Fund."""
+    _attrappe(tmp_path, _fall_indirekt("stage-start-time-gesetzt"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert not funde, f"Falsch-Positiv bei stage.start_time: {[f.ref for f in funde]}"
+
+
+def test_scanner_schweigt_bei_arrival_window_fixtures_import(tmp_path):
+    """AC-2 (e): die Datei nutzt den Haertungs-Helfer
+    arrival_window_fixtures -> kein Fund."""
+    _attrappe(tmp_path, _fall_indirekt("nutzt-arrival-window-fixtures"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert not funde, (
+        f"Falsch-Positiv trotz arrival_window_fixtures-Import: "
+        f"{[f.ref for f in funde]}"
+    )
+
+
+def test_scanner_schweigt_bei_briefing_zeiten_import(tmp_path):
+    """AC-2 (f): die Datei nutzt den Haertungs-Helfer briefing_zeiten ->
+    kein Fund."""
+    _attrappe(tmp_path, _fall_indirekt("nutzt-briefing-zeiten"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert not funde, (
+        f"Falsch-Positiv trotz briefing_zeiten-Import: {[f.ref for f in funde]}"
+    )
+
+
+def test_scanner_schweigt_ohne_alarmpfad_import(tmp_path):
+    """AC-2 (g): die Datei importiert keinen zeitgrenzen-auswertenden Pfad
+    -> kein Fund, obwohl die Fixture-Bauart sonst identisch mit dem
+    Anti-Muster ist."""
+    _attrappe(tmp_path, _fall_indirekt("kein-alarmpfad-import"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert not funde, (
+        f"Falsch-Positiv ohne Alarmpfad-Import: {[f.ref for f in funde]}"
+    )
+
+
+def test_scanner_erkennt_wegpunkte_aus_einer_hilfsfunktion(tmp_path):
+    """Adversary-Finding F001: ``waypoints=_bau_wegpunkte()`` -- eine
+    Hilfsfunktion baut die Wegpunkte AUSSERHALB des ``Stage(...)``-Aufrufs.
+    Die alte Zaehlung sah im Syntaxbaum des Aufrufs 0 ``Waypoint(...)``-
+    Knoten und stufte die Etappe faelschlich als immun ein."""
+    _attrappe(tmp_path, _fall_indirekt("wegpunkte-aus-hilfsfunktion"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+    assert funde[0].function == "_trip_ueber_hilfsfunktion"
+
+
+def test_scanner_erkennt_stage_aus_kwargs_entpackung(tmp_path):
+    """Adversary-Finding F002: ``Stage(**stage_kwargs)`` -- die Keywords
+    stammen aus einem Dict, das der Scanner nicht einsehen kann. Die alte
+    Zaehlung fand am Aufruf gar kein ``waypoints=``-Keyword und stufte die
+    Etappe faelschlich als immun ein."""
+    _attrappe(tmp_path, _fall_indirekt("stage-kwargs-entpackung"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+    assert funde[0].function == "_trip_ueber_kwargs"
+
+
+def test_scanner_erkennt_wegpunkte_aus_einer_comprehension(tmp_path):
+    """Adversary-Finding F003: ``waypoints=[Waypoint(...) for x in liste]``
+    -- die alte Zaehlung sah GENAU EINEN Syntaxknoten, obwohl zur Laufzeit
+    ``len(liste)`` (hier 3) Wegpunkte entstehen, und stufte die Etappe unter
+    der Schwelle von 2 faelschlich als immun ein."""
+    _attrappe(tmp_path, _fall_indirekt("wegpunkte-aus-comprehension"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+    assert funde[0].function == "_trip_ueber_comprehension"
+
+
+def test_scanner_erkennt_ungehaertete_funktion_trotz_dateiweitem_import(tmp_path):
+    """Adversary-Finding F004: die Datei importiert den Haertungs-Helfer,
+    aber nur EINE von zwei Funktionen nutzt ihn. Die alte, dateiweite
+    Pruefung sprach beide frei; jetzt wird nur die tatsaechlich gehaertete
+    Funktion ausgenommen."""
+    _attrappe(tmp_path, _fall_indirekt("haertungs-helfer-nur-in-anderer-funktion"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+    assert funde[0].function == "_ungehaertete_funktion"
+
+
+def test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel():
+    """AC-5: der echte Baum tests/ erzeugt keinen Fehlalarm — Fundmenge leer
+    oder vollstaendig durch KNOWN_VIOLATIONS_INDIREKT gedeckt, UND mindestens
+    20 geprueft Kandidatenfunktionen.
+
+    Die Kandidatenzaehlung ist ABSICHTLICH UNABHAENGIG von
+    scan_indirekte_wanduhr_fixtures() implementiert (Vorbild
+    test_ac3_echter_testbaum_ohne_fehlalarm in
+    test_repo_path_hardcoding_ratchet.py) — sonst wuerde ein Bug in der
+    Kandidatensuche des Scanners auch die Sicherung selbst reissen und ein
+    leerer Scan waere von einem kaputten Scanner nicht zu unterscheiden."""
+    kandidaten: list[str] = []
+    for datei in sorted(TESTS_ROOT.rglob("*.py")):
+        try:
+            baum = ast.parse(datei.read_text(encoding="utf-8", errors="replace"))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        for knoten in ast.walk(baum):
+            if not isinstance(knoten, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            waypoint_aufrufe = sum(
+                1 for c in ast.walk(knoten)
+                if isinstance(c, ast.Call)
+                and ((isinstance(c.func, ast.Name) and c.func.id == "Waypoint")
+                     or (isinstance(c.func, ast.Attribute) and c.func.attr == "Waypoint"))
+            )
+            if waypoint_aufrufe >= 2:
+                kandidaten.append(f"{datei}:{knoten.name}")
+    assert len(kandidaten) >= 20, (
+        f"nur {len(kandidaten)} Kandidatenfunktionen (>=2 Waypoint(...)-Aufrufe) "
+        "im Testbaum gefunden — die Untergrenze verhindert, dass ein leerer "
+        "Scan durch eine kaputte Kandidatensuche vorgetaeuscht wird"
+    )
+
+    funde = scan_indirekte_wanduhr_fixtures(TESTS_ROOT)
+    offen = [f for f in funde if (_relativ(f), f.function) not in KNOWN_VIOLATIONS_INDIREKT]
+    zeilen = "\n".join(f"  - {_relativ(f)}:{f.line} in {f.function}()" for f in offen)
+    assert not offen, (
+        f"{len(offen)} Fundstellen bauen eine Etappe mit Wanduhr-Datum ohne "
+        f"jede Ankunftszeit, ohne Haertungs-Helfer und mit Alarmpfad-Import:\n"
+        f"{zeilen}"
+    )
+
+
+def test_known_violations_der_neuen_regel_ohne_veraltete_eintraege():
+    """AC-6: KNOWN_VIOLATIONS_INDIREKT darf nur SCHRUMPFEN — was der Scanner
+    nicht mehr findet, muss raus. Muster der bestehenden Regel oben
+    (test_known_violations_enthaelt_keine_veralteten_eintraege)."""
+    aktuell = {(_relativ(f), f.function)
+               for f in scan_indirekte_wanduhr_fixtures(TESTS_ROOT)}
+    veraltet = sorted(KNOWN_VIOLATIONS_INDIREKT - aktuell)
+    assert not veraltet, (
+        "Diese KNOWN_VIOLATIONS_INDIREKT-Eintraege werden nicht mehr gefunden "
+        f"und muessen entfernt werden: {veraltet}"
+    )
+
+
+def test_regel_budget_pruefdatum_der_neuen_regel_steht_als_text():
+    """AC-8: das Pruefdatum der zweiten Fundregel ist maschinell auffindbar —
+    als Konstante UND als Text in der Datei (Muster Z. 663-672 oben)."""
+    assert EXPIRY_INDIREKT == date(2026, 11, 10), (
+        "Pruefdatum des Regel-Budgets der zweiten Fundregel (aus dem Ticket "
+        "#1709 uebernommen)"
+    )
+    text = Path(__file__).read_text(encoding="utf-8").splitlines()
+    assert [n for n, z in enumerate(text, 1) if EXPIRY_INDIREKT.isoformat() in z], (
+        "Das ISO-Pruefdatum der zweiten Fundregel muss als Text in dieser "
+        "Datei stehen, damit das Gate-Audit es per grep findet."
+    )
+
+
+def test_neue_waechter_sind_nicht_von_der_ci_ausgenommen():
+    """AC-9: ein Waechter, der nicht auf der CI-Ampel laeuft, ist keiner.
+    Weder diese Datei noch test_wanduhr_matrix.py duerfen in der
+    tests/tdd/-Ausschlussliste stehen.
+
+    Dieser Test ist heute schon erfuellt — er ist eine Regressionssperre,
+    kein Arbeitsnachweis fuer diese Scheibe: als einziger AC-Test bleibt er
+    von Anfang an gruen."""
+    text = (REPO_ROOT / ".github/ci_tdd_excludes.txt").read_text(encoding="utf-8")
+    for name in ("test_fixture_wallclock_ratchet", "test_wanduhr_matrix"):
+        assert name not in text, (
+            f"{name} steht in .github/ci_tdd_excludes.txt und laeuft damit "
+            "nicht auf der CI-Ampel — ein Waechter, der nicht laeuft, ist "
+            "kein Waechter."
+        )

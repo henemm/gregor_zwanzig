@@ -517,8 +517,13 @@ class TestAC3LoaderRoundtripPersistence:
         from app.loader import load_trip, save_trip
         from app.trip import Stage, Trip, Waypoint
 
-        wp1 = Waypoint(id="w1", name="Nizza", lat=NICE_LAT, lon=NICE_LON, elevation_m=10)
-        wp2 = Waypoint(id="w2", name="Villefranche", lat=43.7048, lon=7.3131, elevation_m=20)
+        # #1709: feste Ankunftszeiten statt Naismith-Self-Heal (trip_segments.py:
+        # 125-127) — die Zeiten selbst tragen keine Pruefaussage dieser Datei
+        # (Read-Modify-Write-Roundtrip), sie muessen nur ueberhaupt gesetzt sein.
+        wp1 = Waypoint(id="w1", name="Nizza", lat=NICE_LAT, lon=NICE_LON, elevation_m=10,
+                       arrival_calculated="09:00")
+        wp2 = Waypoint(id="w2", name="Villefranche", lat=43.7048, lon=7.3131, elevation_m=20,
+                       arrival_calculated="11:00")
         stage = Stage(id="s1", name="Etappe Cote d'Azur", date=date.today(), waypoints=[wp1, wp2])
         trip = Trip(
             id="tdd-1087-loader-roundtrip",
