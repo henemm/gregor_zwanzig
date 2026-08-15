@@ -13,7 +13,7 @@ workflow: fix-1856-e7-listen-waechter
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-08-15 („go"), inkl. der geänderten AC-1-Fassung
 
 ## Purpose
 
@@ -158,13 +158,35 @@ Stufe 1** — sie läuft über die Registrierung, komplett unabhängig davon, ob
 der Scan die Liste heute (noch) als „100 % Quote" einstufen würde.
 
 **Schlüsselseite und Werteseite bekommen unterschiedliche Prüfungen, nie
-eine gemeinsame.** Schlüsselseite (12 Listen, Stand Kandidatenmessung
-dieser Etappe): alle Schlüssel sind gültige Kennungen. Werteseite (6
-Listen — die Übersetzungstabellen, s. „Vollständigkeit der Registrierung"
+eine gemeinsame.** Schlüsselseite: alle Schlüssel sind gültige Kennungen.
+Werteseite (die Übersetzungstabellen, s. „Vollständigkeit der Registrierung"
 unten): alle **Werte** sind gültige Kennungen; die Schlüssel sind
 absichtlich fremdes Vokabular (`col_key`, `frontend_key` o. Ä.) und dürfen
 **niemals** gegen das Register geprüft werden — das wäre eine falsche
-Zusicherung, keine strengere. Macht zusammen **18** registrierte Listen.
+Zusicherung, keine strengere.
+
+🔴 **Zahlenstand nach der Umsetzung (2026-08-15, am Code nachgemessen).** Die
+Planungszahl **18** in einer früheren Fassung dieses Absatzes war zu niedrig:
+Sie zählte nur Wörterbücher. Die Regel erfasst aber alle vier Sammlungsformen
+(`dict`/`set`/`list`/`tuple`). Verbindlich ist:
+
+| Zahl | Bedeutung |
+|---|---|
+| **42** | registrierte Listen = Fundstellen des Scans, in **12 von 200** Dateien |
+| 40 | davon in `_BESTAND`; die übrigen 2 sind Laufzeit-Einträge (`METRIC_PRIORITY`, `HOURLY_EXCLUSION_REASON` — s. Known Limitations) |
+| 47 | Rohtreffer **ohne** den `in`-Ausschluss (fünf `if metric_id in (…)`-Vergleiche, keine Listen) |
+| 34 | eigenständige Sammlungen nach Namensgruppierung (`WEATHER_TEMPLATES` 7→1, `_ALERT_METRIC_TO_CATALOG_ID` 2→1, `_DERIVED_METRIC_RULES` 2→1) |
+
+Stand **nach #1728 Scheibe 1** (`c18f8eb7`, 2026-08-15), am Code nachgemessen.
+Vor dieser Scheibe lauteten dieselben vier Zahlen 40 / 39 / 45 / 33; #1728 hat
+vier Größen ergänzt (Register 28 → 32, wählbar 25 → 29) und dabei zwei
+Fundstellen in `loader._DERIVED_METRIC_RULES` sowie eine umbenannte,
+gewachsene Liste (`_NIGHT_SCALAR_IDS` → `VISIBILITY_GATE_IDS`) hinterlassen.
+Der Wächter hat alle drei gemeldet — das ist sein erster Fang im Betrieb.
+
+Alle vier Zahlen sind gültig, meinen aber **verschiedene Zähleinheiten** — sie
+wurden in der Umsetzung gegeneinander verwechselt (Adversary-Finding F003).
+Wer sie zitiert, nennt die Einheit mit.
 Eine gemeinsame **Erkennung** (Stufe 1, „Element ∈ Register-Kennungen") ist
 für beide Seiten richtig; eine gemeinsame **Validierung** wäre falsch.
 
@@ -493,6 +515,39 @@ der Einführung rot.
   Register-Liste automatisch. Eine Liste, die fachlich Vollständigkeit
   bräuchte, aber nie mit diesem Flag registriert wurde, bleibt bezüglich
   fehlender Einträge unbewacht — nur bezüglich ungültiger Einträge.
+- **Zur Laufzeit berechnete Sammlungen sieht der AST nicht — zwei
+  Registrierungen lesen deshalb das echte Objekt statt des Quelltexts.**
+  `_literal` löst jede Registrierung über ihren Namen im Quelltext auf und
+  sieht damit nur, was dort **literal** steht. Für **40 der 42**
+  Registrierungen bleibt es dabei; **zwei** lesen bewusst den Laufzeitstand:
+
+  | Registrierung | Warum Laufzeit |
+  |---|---|
+  | `channel_layout.METRIC_PRIORITY` | Für die Vollständigkeitsrichtung (`soll_vollstaendig`) zählt der Stand zur Laufzeit, nicht die Schreibweise. |
+  | `compare_hourly_metric_ids.HOURLY_EXCLUSION_REASON` | #1728 Scheibe 1 trägt **vier der sieben** Schlüssel per Schleife nach (`compare_hourly_metric_ids.py:84-96`). Literal gelesen prüfte die Registrierung 3 von 7 — und da Stufe 1 Schleifen ohnehin nicht sieht, entkäme ein Tippfehler in genau den vier neuen Kennungen **beiden** Stufen. |
+
+  Gemessen (A/B an einer Kopie, `wind_chill_day_high` → `wind_chill_day_hihg`
+  **nur** in der Schleife, das Literal bleibt heil): literal gelesen 3
+  Kennungen sichtbar / **0 Befunde**, zur Laufzeit 7 Kennungen sichtbar /
+  **1 Befund** mit Namensnennung.
+
+  **Warum nicht alle Registrierungen so:** Laufzeit-Lesen setzt voraus, dass
+  sich der Prüfling **importieren** lässt. Der Wirksamkeitsnachweis dieses
+  Wächters (AC-2/AC-3) arbeitet aber mit erfundenen Wegwerf-Modulen — die
+  lassen sich scannen, aber nicht sinnvoll importieren. Läse alles zur
+  Laufzeit, wäre der Wächter nur noch gegen den Bestand prüfbar, und genau
+  daran sind in E3a zwei Wächter gescheitert (grün, ohne je etwas geprüft zu
+  haben). Der Regelfall bleibt literal; Laufzeit-Lesen ist die je Fundstelle
+  begründete Ausnahme. Mechanisch festgehalten:
+  `test_per_schleife_nachgetragene_schluessel_werden_mitgeprueft` wird rot,
+  sobald `HOURLY_EXCLUSION_REASON` wieder literal gelesen wird (gemessen:
+  Rückfall auf `_registriere` sieht 3 statt 7 Kennungen ⇒ Zusicherung
+  `literal < ist` verletzt).
+
+  **Restlücke, bewusst offen:** eine **neue**, zur Laufzeit aufgebaute
+  Sammlung an anderer Stelle bleibt unsichtbar — Stufe 1 findet sie nicht,
+  und ohne Fundstelle registriert sie niemand. Das Laufzeit-Lesen schließt
+  die Lücke also je Eintrag, nicht als Klasse.
 - **Go-Seite und Frontend** sind nicht Gegenstand: beide lesen über
   `/api/metrics` bzw. `/api/sms-symbols` aus dem Backend.
 - **Eigenschaftslisten als Liste von Datensätzen** (`[{"id": "snow_depth",
