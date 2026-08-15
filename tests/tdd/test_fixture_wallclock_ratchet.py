@@ -97,6 +97,25 @@ Zwei Stellen im Bestand brauchen das Anti-Muster strukturell und stehen
 deshalb begruendet in ``KNOWN_VIOLATIONS`` (Begruendung dort, nicht hier —
 sie gehoert an den Eintrag).
 
+**Fuer die ZWEITE Fundregel (``scan_indirekte_wanduhr_fixtures``, #1709)
+gilt zusaetzlich eine Luecke, bewusst NICHT geschlossen** (Adversary-Finding
+F-ADV2): Wird das Wanduhr-Datum im AUFRUFER berechnet und als Parameter an
+eine GESCHWISTER-Funktion uebergeben, die ihrerseits ``Stage(...)`` baut, so
+sieht KEINE der beiden Funktionen fuer sich beide Merkmale zugleich —
+Merkmal 2 (Wanduhr-Datum) steht im Aufrufer, Merkmal 1/3/4 (``Stage(...)``
+mit >= 2 Wegpunkten etc.) in der Geschwister-Funktion, und Ruecksprung- bzw.
+Parameter-Fluss ueber Funktionsgrenzen hinweg wird nicht verfolgt (teuer,
+s. oben). Diese Struktur ist im Bestand bereits ETABLIERT:
+``tests/tdd/test_issue_760_stage_number.py:31`` (Helferfunktion ``_stage(...,
+d: date)``, die ``date`` als Parameter entgegennimmt und ``Stage(date=d,
+...)`` baut) ist heute nur deshalb ungefaehrlich, weil dort ausschliesslich
+mit EINEM Wegpunkt gebaut wird — eine Erweiterung dieser Helferfunktion auf
+ZWEI Wegpunkte wuerde dort bereits genuegen, um die Ratsche zu umgehen, ohne
+dass irgendein Merkmal der UND-Kette lokal fehlt. Aufrufketten ueber
+Funktionsgrenzen zu verfolgen ist teuer, und #1709 erlaubt der Regel
+ausdruecklich, eine Naeherung zu bleiben — SOLANGE die Grenze wie hier
+benannt ist.
+
 Regel-Budget
 ------------
 ``EXPIRY`` (2026-11-08, +90 Tage) — Vorbild ``EXPIRY`` in
@@ -730,16 +749,38 @@ def test_regel_budget_pruefdatum_steht_als_text_in_der_datei():
 # "Gewaehlte Loesung").
 
 
-def _stage_calls(funktion: ast.AST) -> list[ast.Call]:
-    """Alle ``Stage(...)``-Aufrufe innerhalb dieser Funktion."""
+def _importierte_konstruktor_aliase(baum: ast.AST, kanonischer_name: str) -> set[str]:
+    """Alias-Namen, unter denen ``kanonischer_name`` per ``from ... import
+    <kanonischer_name> as <alias>`` in diese Datei gelangt ist -- z.B.
+    ``from app.trip import Stage as S`` -> ``{"S"}``. Gleiche Bauart wie
+    ``_importierte_haertungs_namen`` unten, aber OHNE Modul-Einschraenkung:
+    ein Konstruktor-Alias kann aus jedem Modul kommen. Ohne diese Aufloesung
+    machte ein Alias denselben Anti-Muster-Fall unsichtbar -- 0 statt 1 Fund
+    (Adversary-Finding F-ADV1 zu #1709)."""
+    aliase: set[str] = set()
+    for n in ast.walk(baum):
+        if not isinstance(n, ast.ImportFrom):
+            continue
+        for alias in n.names:
+            if alias.name == kanonischer_name and alias.asname:
+                aliase.add(alias.asname)
+    return aliase
+
+
+def _stage_calls(funktion: ast.AST, stage_aliase: frozenset[str] = frozenset()) -> list[ast.Call]:
+    """Alle ``Stage(...)``-Aufrufe innerhalb dieser Funktion -- auch unter
+    einem importierten Alias (F-ADV1)."""
     return [n for n in ast.walk(funktion) if isinstance(n, ast.Call)
-            and ((isinstance(n.func, ast.Name) and n.func.id == "Stage")
+            and ((isinstance(n.func, ast.Name)
+                  and (n.func.id == "Stage" or n.func.id in stage_aliase))
                  or (isinstance(n.func, ast.Attribute) and n.func.attr == "Stage"))]
 
 
-def _ist_waypoint_call(node: ast.AST) -> bool:
+def _ist_waypoint_call(node: ast.AST, waypoint_aliase: frozenset[str] = frozenset()) -> bool:
+    """Auch unter einem importierten Alias (F-ADV1)."""
     return (isinstance(node, ast.Call)
-            and ((isinstance(node.func, ast.Name) and node.func.id == "Waypoint")
+            and ((isinstance(node.func, ast.Name)
+                  and (node.func.id == "Waypoint" or node.func.id in waypoint_aliase))
                  or (isinstance(node.func, ast.Attribute) and node.func.attr == "Waypoint")))
 
 
@@ -760,7 +801,8 @@ def _wegpunkte_wert(stage_call: ast.Call) -> ast.AST | None:
 
 
 def _wegpunkte_liste(wert: ast.AST, zuweisungen: dict[str, list[ast.AST]],
-                     gesehen: frozenset[str] = frozenset()) -> list[ast.Call] | None:
+                     gesehen: frozenset[str] = frozenset(),
+                     waypoint_aliase: frozenset[str] = frozenset()) -> list[ast.Call] | None:
     """Loest ``wert`` (den Wert von ``waypoints=``) zu einer VOLLSTAENDIG
     einsehbaren flachen Liste von ``Waypoint(...)``-Aufrufen auf.
 
@@ -773,12 +815,12 @@ def _wegpunkte_liste(wert: ast.AST, zuweisungen: dict[str, list[ast.AST]],
     vorliegt". Eine Etappe gilt deshalb nur dann als sicher unter zwei
     Wegpunkten, wenn diese Funktion eine LEERE Liste zurueckgibt -- bei
     ``None`` bleibt die Etappe pruefbeduerftig statt immun."""
-    if _ist_waypoint_call(wert):
+    if _ist_waypoint_call(wert, waypoint_aliase):
         return [wert]
     if isinstance(wert, ast.List):
         ergebnis: list[ast.Call] = []
         for element in wert.elts:
-            teil = _wegpunkte_liste(element, zuweisungen, gesehen)
+            teil = _wegpunkte_liste(element, zuweisungen, gesehen, waypoint_aliase)
             if teil is None:
                 return None
             ergebnis.extend(teil)
@@ -792,7 +834,7 @@ def _wegpunkte_liste(wert: ast.AST, zuweisungen: dict[str, list[ast.AST]],
         gesehen = gesehen | {wert.id}
         ergebnis = []
         for einzelwert in zuweisungswerte:
-            teil = _wegpunkte_liste(einzelwert, zuweisungen, gesehen)
+            teil = _wegpunkte_liste(einzelwert, zuweisungen, gesehen, waypoint_aliase)
             if teil is None:
                 return None
             ergebnis.extend(teil)
@@ -811,7 +853,8 @@ def _keyword_ist_gesetzt(call: ast.Call, name: str) -> bool:
     return False
 
 
-def _stage_ist_anfaellig(stage_call: ast.Call, zuweisungen: dict[str, list[ast.AST]]) -> bool:
+def _stage_ist_anfaellig(stage_call: ast.Call, zuweisungen: dict[str, list[ast.AST]],
+                         waypoint_aliase: frozenset[str] = frozenset()) -> bool:
     """Merkmale 1, 3, 4 fuer EINEN ``Stage(...)``-Aufruf: >= 2 Wegpunkte,
     keiner mit arrival_calculated/arrival_override, kein gesetztes
     stage.start_time -- direkt an trip_segments.py:121-132 abgelesen (s.
@@ -832,7 +875,7 @@ def _stage_ist_anfaellig(stage_call: ast.Call, zuweisungen: dict[str, list[ast.A
     wert = _wegpunkte_wert(stage_call)
     if wert is None:
         return False  # kein waypoints=... -> Default ist eine leere Liste
-    wegpunkte = _wegpunkte_liste(wert, zuweisungen)
+    wegpunkte = _wegpunkte_liste(wert, zuweisungen, waypoint_aliase=waypoint_aliase)
     if wegpunkte is None:
         return True  # Menge nicht einsehbar -> pruefbeduerftig, nicht immun
     if len(wegpunkte) < 2:
@@ -922,6 +965,8 @@ def scan_indirekte_wanduhr_fixtures(tests_root: Path) -> list[Finding]:
         if not _importiert_eines_von(module, _ALARMPFADE_INDIREKT):
             continue
         haertungs_namen = _importierte_haertungs_namen(baum)
+        stage_aliase = frozenset(_importierte_konstruktor_aliase(baum, "Stage"))
+        waypoint_aliase = frozenset(_importierte_konstruktor_aliase(baum, "Waypoint"))
 
         for knoten in ast.walk(baum):
             if not isinstance(knoten, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -929,8 +974,8 @@ def scan_indirekte_wanduhr_fixtures(tests_root: Path) -> list[Finding]:
             if _funktion_nutzt_haertungs_helfer(knoten, haertungs_namen):
                 continue
             zuw = _zuweisungen(knoten)
-            anfaellige_stages = [s for s in _stage_calls(knoten)
-                                 if _stage_ist_anfaellig(s, zuw)]
+            anfaellige_stages = [s for s in _stage_calls(knoten, stage_aliase)
+                                 if _stage_ist_anfaellig(s, zuw, waypoint_aliase)]
             if not anfaellige_stages:
                 continue
             if not any(_ist_wanduhr_datum(n) for n in ast.walk(knoten)):
@@ -1089,6 +1134,44 @@ def test_scanner_erkennt_ungehaertete_funktion_trotz_dateiweitem_import(tmp_path
     funde = scan_indirekte_wanduhr_fixtures(tmp_path)
     assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
     assert funde[0].function == "_ungehaertete_funktion"
+
+
+def test_scanner_erkennt_stage_und_waypoint_hinter_import_alias(tmp_path):
+    """Adversary-Finding F-ADV1 (HIGH): ``from app.trip import Stage as S,
+    Waypoint as WP`` machte denselben Anti-Muster-Fall unsichtbar, wenn der
+    Scanner Konstruktoren nur am literalen Namen erkennt -- 0 statt 1 Fund
+    bei identischem Muster."""
+    _attrappe(tmp_path, _fall_indirekt("indirekt-antimuster-mit-alias"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+    assert funde[0].function == "_trip_ohne_ankunftszeiten_alias"
+
+
+def test_scanner_schweigt_bei_literalem_etappendatum(tmp_path):
+    """AC-2 (h), Adversary-Finding F-ADV3 (MEDIUM): eigene Gegenprobe fuer
+    Merkmal 2 (Wanduhr-Etappendatum) -- ein LITERALES Datum statt
+    Wanduhr-Arithmetik, sonst identisch zum Anti-Muster -> kein Fund. Ohne
+    diesen Test faengt keine Attrappe die Mutation "Merkmal 2 aus der
+    UND-Kette entfernen" gezielt ab."""
+    _attrappe(tmp_path, _fall_indirekt("literales-datum-statt-wanduhr"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert not funde, f"Falsch-Positiv bei literalem Etappendatum: {[f.ref for f in funde]}"
+
+
+def test_scanner_schweigt_bei_start_time_vor_unaufloesbaren_wegpunkten(tmp_path):
+    """Regressionsschutz (Adversary-Finding F-ADV4, MEDIUM): stage.start_time
+    gesetzt UND waypoints= nicht statisch einsehbar (Modulkonstante) -- die
+    Immunitaet ueber start_time muss VOR der Wegpunkt-Aufloesung greifen,
+    sonst erzeugt die unaufloesbare Menge faelschlich einen Fund, obwohl
+    start_time die Etappe bereits immun macht (trip_segments.py:132).
+    Bewacht die Reihenfolge in ``_stage_ist_anfaellig()`` direkt, statt nur
+    ueber zwei thematisch unbeteiligte Bestandsdateien."""
+    _attrappe(tmp_path, _fall_indirekt("start-time-mit-unaufloesbaren-wegpunkten"))
+    funde = scan_indirekte_wanduhr_fixtures(tmp_path)
+    assert not funde, (
+        f"Falsch-Positiv trotz start_time vor unaufloesbaren Wegpunkten: "
+        f"{[f.ref for f in funde]}"
+    )
 
 
 def test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel():

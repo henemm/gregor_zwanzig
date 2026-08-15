@@ -299,3 +299,81 @@ def _ungehaertete_funktion():
     )
     trip = Trip(id="t-1709-f004-bad", name="Ungehaertete Funktion", stages=[stage])
     return trip
+
+# === indirekt-antimuster-mit-alias ===
+from datetime import date
+
+from app.trip import Stage as StageAlias, Trip, Waypoint as WaypointAlias
+from services.trip_alert import TripAlertService
+
+
+def _trip_ohne_ankunftszeiten_alias():
+    """Adversary-Finding F-ADV1 (HIGH): identisch zum Anti-Muster aus
+    'indirekt-antimuster', aber Stage/Waypoint werden unter einem
+    Import-Alias verwendet (``Stage as StageAlias``, ``Waypoint as
+    WaypointAlias``). Der literale Namensvergleich uebersah diesen Fall
+    vollstaendig -- 0 statt 1 Fund."""
+    stage = StageAlias(
+        id="T1", name="Tag 1", date=date.today(),
+        waypoints=[
+            WaypointAlias(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            WaypointAlias(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709-adv1", name="Alias Stage/Waypoint", stages=[stage])
+    return trip
+
+# === literales-datum-statt-wanduhr ===
+from datetime import date
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+
+def _trip_mit_literalem_datum():
+    """Gegenprobe (h), Adversary-Finding F-ADV3 (MEDIUM): identisch zum
+    Anti-Muster, aber das Etappendatum ist ein LITERALES Datum statt
+    Wanduhr-Arithmetik -- Merkmal 2 (Wanduhr-Etappendatum) fehlt -> kein
+    Fund. Bislang hatte dieses Merkmal keine eigene Gegenprobe; die Mutation
+    "Merkmal 2 aus der UND-Kette entfernen" fiel nur zufaellig ueber den
+    Bestandsscan auf, nicht ueber einen gezielten Test."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date(2026, 8, 20),
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+            Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+        ],
+    )
+    trip = Trip(id="t-1709-adv3", name="Literales Datum", stages=[stage])
+    return trip
+
+# === start-time-mit-unaufloesbaren-wegpunkten ===
+from datetime import date, time
+
+from app.trip import Stage, Trip, Waypoint
+from services.trip_alert import TripAlertService
+
+_WEGPUNKTE_MODUL_KONSTANTE = [
+    Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=1000),
+    Waypoint(id="W2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1500),
+]
+
+
+def _trip_mit_start_time_und_unaufloesbaren_wegpunkten():
+    """Regressionsschutz (Adversary-Finding F-ADV4, MEDIUM): stage.start_time
+    ist gesetzt UND waypoints= ist NICHT statisch einsehbar (Modulkonstante,
+    ausserhalb der Funktion gebunden). ``_stage_ist_anfaellig()`` prueft
+    start_time ZUERST, VOR der Wegpunkt-Aufloesung -- vertauscht man diese
+    Reihenfolge, uebersteuert die unaufloesbare Wegpunktmenge (F001-F003:
+    'im Zweifel pruefbeduerftig') faelschlich eine bereits vorhandene
+    Haertung ueber start_time. Diese Regression trat waehrend der Umsetzung
+    bereits einmal auf und wurde bislang nur durch zwei thematisch
+    unbeteiligte Bestandsdateien mitbewacht, nicht durch einen eigenen
+    Test."""
+    stage = Stage(
+        id="T1", name="Tag 1", date=date.today(), start_time=time(7, 30),
+        waypoints=_WEGPUNKTE_MODUL_KONSTANTE,
+    )
+    trip = Trip(id="t-1709-adv4", name="Start-Time vor Wegpunktaufloesung",
+                stages=[stage])
+    return trip

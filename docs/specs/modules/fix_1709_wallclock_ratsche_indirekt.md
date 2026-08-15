@@ -261,6 +261,18 @@ Mindestens diese Verfälschungen müssen einen Test rot machen:
   Kontext-Dokument vermessen, aber keine dieser Familien hat bislang einen Fang belegt.
 - **Der konkrete rote Testfall wird hier NICHT behoben** (#1871, Ursache offen). Diese Scheibe
   liefert das Werkzeug, mit dem er gefunden wurde, und den Wächter gegen Neuzugänge.
+- **Aufrufer/Geschwister-Split bewusst nicht geschlossen (Adversary-Finding F-ADV2, Runde 2).**
+  Wird das Wanduhr-Datum im **Aufrufer** berechnet und als Parameter an eine **Geschwister**-
+  Funktion übergeben, die ihrerseits `Stage(...)` baut, sieht keine der beiden Funktionen für
+  sich beide Merkmale zugleich — die zweite Fundregel prüft ausschließlich innerhalb einer
+  Funktion, Rückgabewerte/Parameter über Funktionsgrenzen hinweg werden nicht verfolgt (teuer,
+  s. Grenzen-Abschnitt im Docstring von `test_fixture_wallclock_ratchet.py`). Diese Struktur ist
+  im Bestand bereits **etabliert**: `tests/tdd/test_issue_760_stage_number.py:31` (Helferfunktion
+  `_stage(..., d: date)`, die das Datum als Parameter entgegennimmt und `Stage(date=d, ...)`
+  baut) ist heute nur deshalb ungefährlich, weil dort ausschließlich mit **einem** Wegpunkt
+  gebaut wird — eine Erweiterung dieser Helferfunktion auf **zwei** Wegpunkte würde dort bereits
+  genügen, um die Ratsche zu umgehen. #1709 erlaubt der Regel ausdrücklich, eine Näherung zu
+  bleiben; diese Grenze ist damit bewusst offen, nicht gelöst.
 
 ## Nachtrag 2026-08-15: Härtung von zehn Bestandsdateien kam hinzu (PO-Entscheidung)
 
