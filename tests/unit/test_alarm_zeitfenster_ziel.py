@@ -41,6 +41,7 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 from services.segment_weather import SegmentWeatherService
 from services.trip_alert import TripAlertService
+from services.trip_day import trip_local_now
 from services.trip_segments import convert_trip_to_segments
 from services.weather_cache import reset_shared_weather_cache_for_tests
 from utils.timezone import tz_for_coords
@@ -140,6 +141,14 @@ def _trip(
     )
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, alert_on_changes=True,
+        # #1851: dieser Trip hat bewusst KEIN geplantes Briefing, sonst
+        # ersetzt die Vorlaufsperre aus #1594 (trip_alert.py:241 ->
+        # alert_gate.py:200 -> trip_report_scheduler.py:135/171) den Alarm
+        # planmaessig durch das faellige Briefing (ADR-0009: ersetzen, nicht
+        # verschlucken) -- abhaengig von der Wanduhr beim Testlauf. Der Alarm
+        # bleibt damit die einzige Zustellform, unabhaengig davon, wann der
+        # Test laeuft.
+        enabled=False,
     )
     if day_window is not None:
         trip.report_config.day_window_start_hour = day_window[0]
@@ -168,6 +177,7 @@ def _calm(segment) -> SegmentWeatherData:
 def _alarm_mails(
     lat: float, lon: float, arrival_local: str, thunder_hour: int,
     day_window: tuple[int, int] | None = None,
+    trip: Trip | None = None,
 ) -> list:
     """Ein vollstaendiger Alarm-Lauf; gibt die tatsaechlich zugestellten
     Mails zurueck.
@@ -177,10 +187,16 @@ def _alarm_mails(
     fetch_segment_weather(..., priority="alert_check")``, Fehler pro Segment
     verschluckt) — nur die dortigen ``datetime.now()``-Filter entfallen,
     damit der Test nicht von der realen Uhrzeit abhaengt.
+
+    ``trip`` optional: wird kein Trip uebergeben, baut die Funktion ihn wie
+    bisher selbst ueber ``_trip()`` (alle bestehenden Aufrufer). Die
+    Gegenprobe (#1851, AC-2) braucht dagegen einen Trip mit modifiziertem
+    ``report_config`` (Variante A/B) VOR dem Alarm-Lauf.
     """
     tz = tz_for_coords(lat, lon)
     day = date.today()
-    trip = _trip(f"t-{uuid.uuid4().hex[:8]}", lat, lon, day, arrival_local, day_window)
+    if trip is None:
+        trip = _trip(f"t-{uuid.uuid4().hex[:8]}", lat, lon, day, arrival_local, day_window)
 
     segments = convert_trip_to_segments(trip, day)
     anchor = datetime.combine(day - timedelta(days=1), time(0, 0), tzinfo=timezone.utc)
@@ -428,6 +444,64 @@ def test_ac1_gewitter_17_uhr_am_tagesziel_wird_zugestellt():
     )
 
 
+def test_gegenprobe_vorlaufsperre_wird_durch_fix_neutralisiert():
+    """AC-2 (wichtigster AC): stellt die Sperre AKTIV her, statt auf eine
+    Tageszeit zu warten — kein ``freeze_time``, keine gestellte Uhr.
+
+    Baut zweimal denselben AC-1-Fall (Ankunft 13:18 Ortszeit, Gewitter 17:00
+    Ortszeit, ALPEN_LAT/ALPEN_LON):
+
+    - Variante A (Ausgangszustand vor #1851): ``report_config.enabled=True``
+      UND ``morning_time`` auf die AKTUELLE Ortsstunde des Trips gesetzt
+      (relativ zu ``datetime.now()`` im Testlauf) -> das Nachhol-Fenster
+      [Stunde, Stunde+3) aus #1594 trifft garantiert den Testlauf-Zeitpunkt,
+      egal wann der Test laeuft. Die Vorlaufsperre muss den Alarm
+      unterdruecken -> KEINE Mail.
+    - Variante B (Fixture-Haertung dieser Scheibe): identischer Trip, aber
+      ``report_config.enabled=False`` -> die Sperre ist neutralisiert, der
+      Alarm muss zugestellt werden.
+    """
+    day = date.today()
+
+    trip_a = _trip(f"t-{uuid.uuid4().hex[:8]}", ALPEN_LAT, ALPEN_LON, day, "13:18")
+    trip_a.report_config.enabled = True
+    stunde_jetzt = trip_local_now(trip_a, datetime.now(timezone.utc)).hour
+    trip_a.report_config.morning_time = time(stunde_jetzt, 0)
+    mails_a = _alarm_mails(ALPEN_LAT, ALPEN_LON, "13:18", 17, trip=trip_a)
+    assert not mails_a, (
+        "Gegenprobe Variante A: Mit faelligem Briefing (enabled=True, "
+        "morning_time=aktuelle Ortsstunde) muss die Vorlaufsperre aus #1594 "
+        "den Alarm unterdruecken. Tatsaechlich zugestellt: "
+        f"{[s for s, _ in mails_a]} — die Sperre greift hier nicht, obwohl "
+        "die Vorbedingung (faelliges, unversuchtes Briefing) aktiv "
+        "hergestellt wurde."
+    )
+
+    trip_b = _trip(f"t-{uuid.uuid4().hex[:8]}", ALPEN_LAT, ALPEN_LON, day, "13:18")
+    # #1851 Adversary-Finding F001: Variante B setzt dieselbe faellige
+    # Briefingzeit wie Variante A. Nicht, damit sie scheitert, sondern damit
+    # sie scheitert, WENN der Fix zurueckgenommen wird — sonst wacht diese
+    # Zusicherung nur in den drei Morgenstunden, in denen sie zufaellig
+    # geprueft wurde (Adversary-Finding F001). Ohne dieses Setzen haengt die
+    # Fangkraft an ``_trip()``s Default ``morning_time=07:00``: nur zwischen
+    # 07 und 10 Uhr Ortszeit faellt ein versehentlich zurueckgedrehtes
+    # ``enabled=True`` in der Fixture ueberhaupt auf (3 von 96 gescannten
+    # Zeitpunkten = 12,5 % des Tages). Mit der aktuellen Ortsstunde hat
+    # Variante B zu JEDER Tageszeit ein Briefing, das faellig WAERE — und
+    # bleibt trotzdem gruen, weil ``enabled=False`` die Faelligkeit
+    # strukturell abschaltet (trip_report_scheduler.py:171, Kurzschluss vor
+    # jeder Zeitrechnung). Wird ``enabled=False`` zurueckgedreht, wird
+    # Variante B zu JEDER Uhrzeit rot statt nur zwischen 07 und 10 Uhr.
+    trip_b.report_config.morning_time = time(stunde_jetzt, 0)
+    mails_b = _alarm_mails(ALPEN_LAT, ALPEN_LON, "13:18", 17, trip=trip_b)
+    assert mails_b, (
+        "Gegenprobe Variante B: Ohne faelliges Briefing (enabled=False, die "
+        "Fixture-Haertung aus #1851) muss der Alarm zugestellt werden. Es "
+        "kam KEINE Mail an — die Neutralisierung der Vorlaufsperre wirkt in "
+        "den Test-Fixtures nicht."
+    )
+
+
 def test_ac2a_gewitter_1845_knapp_vor_fensterende_wird_zugestellt():
     """AC-2a: Gewitter 18:45 Ortszeit — innerhalb 19:00, weit ausserhalb der
     alten 2-h-Grenze (15:18). Die diskriminierende Haelfte des Grenzwertpaars."""
@@ -442,7 +516,16 @@ def test_ac2a_gewitter_1845_knapp_vor_fensterende_wird_zugestellt():
 
 def test_ac2b_gewitter_1915_knapp_nach_fensterende_bleibt_aus():
     """AC-2b: Gewitter 19:15 Ortszeit — knapp ausserhalb 19:00. Bewacht die
-    PO-Vorgabe „kein naechtlicher Alarm" an der tatsaechlichen Grenze."""
+    PO-Vorgabe „kein naechtlicher Alarm" an der tatsaechlichen Grenze.
+
+    #1851 AC-4: seit der Fixture-Haertung in ``_trip()`` (``enabled=False``)
+    besteht dieser Test aus dem RICHTIGEN Grund — Gewitter ausserhalb des
+    Tagesfensters, nicht generell unterdrueckte Alarme. Beleg ist das Paar
+    mit ``test_ac2a_…`` (identische Fixture-Familie, Gewitter 18:45
+    INNERHALB des Fensters, erwartet eine Mail): waeren unter der gehaerteten
+    Fixture generell keine Alarme mehr moeglich, muesste ``test_ac2a_…`` rot
+    sein. Sein Gruen-Status im selben Lauf ist der Beleg.
+    """
     mails = _alarm_mails(ALPEN_LAT, ALPEN_LON, "13:18", 19)
     assert not mails, (
         "AC-2b: Ein Gewitter um 19:15 Ortszeit liegt ausserhalb der "
