@@ -306,6 +306,21 @@ def _reset_thunder_window_cache():
 
 
 @pytest.fixture(autouse=True)
+def _reset_shared_weather_cache():
+    """Issue #1557: der geteilte Wetter-Cache (`services.weather_cache`) ist
+    ein Prozess-Singleton mit 600s-TTL, Treffer ueber "Fenster deckt ab".
+    Ohne Reset zwischen Testfaellen bedient ein spaeterer Testfall still aus
+    dem Cache-Eintrag eines frueheren -- ein absichtlich scheiternder
+    Provider-Double wird dann nie aufgerufen, weil der Cache-Hit den Abruf
+    gar nicht erst ausloest. Analog `_reset_shared_radar_cache` und
+    `_reset_thunder_window_cache`."""
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+    reset_shared_weather_cache_for_tests()
+    yield
+    reset_shared_weather_cache_for_tests()
+
+
+@pytest.fixture(autouse=True)
 def _reset_telegram_rate_limit():
     """Issue #1370: die Telegram-Sende-Drossel fuehrt ihre Zeitstempel je Chat
     prozessweit auf Klassenebene (fuer JEDE Bubble wird eine frische

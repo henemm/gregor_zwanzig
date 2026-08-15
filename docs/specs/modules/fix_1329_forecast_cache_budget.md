@@ -106,6 +106,14 @@ def reset_shared_weather_cache_for_tests() -> None:
         _shared_cache = None
 ```
 
+**Nachtrag #1557 (2026-08-15):** `reset_shared_weather_cache_for_tests()` wird
+seither **zentral** in `tests/conftest.py` als autouse-Fixture vor und nach
+jedem Testfall aufgerufen — analog zu Radar- und Thunder-Window-Cache. Bis
+dahin musste jede Testdatei den Reset selbst aufrufen; wo das unterblieb,
+bediente ein späterer Testfall still aus dem Cache-Eintrag eines früheren und
+ein absichtlich scheiternder Provider-Double wurde nie erreicht (Symptom in
+#1557: Versand meldete `sent` statt `no_weather`).
+
 `segment_weather.py:61-63` verwendet `get_shared_weather_cache()` statt
 `WeatherCacheService()` als Default, wenn kein `cache` übergeben wird.
 Explizite Injektion (`SegmentWeatherService(provider, cache=...)`, wie in
