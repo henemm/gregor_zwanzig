@@ -413,3 +413,115 @@ def test_legacy_snow_symbols_are_absent_from_all_tables(legacy_symbol: str):
         "Erwartet werden die Registerwerte SD (Schneehoehe), NS24+ "
         "(Neuschnee), SL (Schneefallgrenze)."
     )
+
+
+# ---------------------------------------------------------------------------
+# Fuenfte Pruefstelle — Issue #1856 (#1435 Etappe E7), AC-1/AC-7.
+# SPEC: docs/specs/modules/fix_1856_e7_metrik_listen_waechter.md
+#
+# Kein Kuerzel bezeichnet zwei VERSCHIEDENE Groessen. Zwei Ausgabewege, zwei
+# getrennte Pruefungen, nie gemischt: die Trip-SMS liest
+# SMS_SYMBOL_BY_METRIC/SMS_MULTI_SYMBOLS_BY_METRIC, Vergleichs- und Alarm-SMS
+# lesen `get_sms_code()` direkt (comparison.py:647, alert/render.py:93).
+#
+# Die vier Pruefstellen oberhalb bleiben unveraendert (AC-7) — auch ihre
+# Import-Zeilen. Der Kollisions-Kern wird deshalb LOKAL importiert: er lebt in
+# `tests/helpers/metrik_listen_scan.py`, damit er gegen erfundene Eingaben
+# pruefbar ist (dritte Funktion unten); ein Modul-Import wuerde diese Datei
+# bei jedem Fehler dort komplett unauffuehrbar machen.
+#
+# NICHT geprueft wird Gleichheit zwischen den Wegen: die drei Abweichungen
+# (temperature K/D, wind_chill FK/FD/WC, temperature_night N) sind
+# PO-Entscheide (#1415/#1450/#1484), eine Gleichheitspruefung waere nach dem
+# ersten Lauf taub. Gueltigkeit faellt ueber AC-2/AC-4 an.
+# ---------------------------------------------------------------------------
+
+def _kuerzel_trip_sms_weg() -> dict[str, str]:
+    """Metrik-Kennung -> das Kuerzel, das die Trip-Kurzform sendet.
+
+    Gruppiert nach KENNUNG, nicht nach Kuerzel-Wert: 'TH:' steht sowohl in
+    SMS_SYMBOL_BY_METRIC als auch in SMS_MULTI_SYMBOLS_BY_METRIC, beide Male
+    fuer dieselbe Groesse `thunder` (dedupliziert auch von /api/sms-symbols,
+    s. tests/tdd/test_sms_snow_symbols.py). Wer nach Wert gruppiert, meldet
+    beim ersten Lauf eine Kollision, die keine ist.
+    """
+    from app.metric_catalog import (
+        _METRICS, _kurzform_kuerzel, SMS_MULTI_SYMBOLS_BY_METRIC,
+    )
+    codes = {m.id: m.sms_code for m in _METRICS}
+    ids = set(SMS_SYMBOL_BY_METRIC) | set(SMS_MULTI_SYMBOLS_BY_METRIC)
+    kuerzel = {mid: _kurzform_kuerzel(mid, codes[mid]) for mid in ids}
+    return {mid: k for mid, k in kuerzel.items() if k}
+
+
+def test_trip_sms_kuerzel_bezeichnen_je_genau_eine_groesse():
+    """AC-1(b), Trip-SMS-Weg."""
+    from tests.helpers.metrik_listen_scan import finde_kuerzel_kollisionen
+
+    kuerzel = _kuerzel_trip_sms_weg()
+    assert len(kuerzel) >= 20, (
+        f"Nur {len(kuerzel)} Kuerzel geprueft — zu wenig, die Pruefung misst "
+        f"nichts. Gemessen zum Stand der Spec: 26. {kuerzel!r}"
+    )
+    assert kuerzel.get("thunder") == "TH", (
+        "Fuer `thunder` steht nicht genau ein Kuerzel — vermutlich wurde nach "
+        f"Kuerzel-Wert statt nach Metrik-Kennung gruppiert: {kuerzel!r}"
+    )
+
+    kollisionen = finde_kuerzel_kollisionen(kuerzel)
+    assert kollisionen == [], (
+        "Ein Kuerzel der Trip-Kurzform bezeichnet zwei verschiedene "
+        "Wettergroessen:\n" + "\n".join(kollisionen)
+    )
+
+
+def test_register_kuerzel_bezeichnen_je_genau_eine_groesse():
+    """AC-1(b), Register-Weg (Vergleichs-SMS, Alarm-SMS)."""
+    from app.metric_catalog import _METRICS
+    from tests.helpers.metrik_listen_scan import finde_kuerzel_kollisionen
+
+    kuerzel = {m.id: m.sms_code for m in _METRICS if m.sms_code}
+    assert len(kuerzel) >= 25, (
+        f"Nur {len(kuerzel)} Register-Kuerzel geprueft — zu wenig. Gemessen "
+        f"zum Stand der Spec: 27 von 28 Groessen ({kuerzel!r})"
+    )
+
+    kollisionen = finde_kuerzel_kollisionen(kuerzel)
+    assert kollisionen == [], (
+        "Ein Register-Kuerzel (`sms_code`) bezeichnet zwei verschiedene "
+        "Wettergroessen:\n" + "\n".join(kollisionen)
+    )
+
+
+def test_kollisionspruefung_beisst_zu_und_ueberspringt_leere_kuerzel():
+    """Wirksamkeitsnachweis fuer AC-1: beide Pruefungen oben sind heute gruen
+    (0 Kollisionen) — ohne diesen Fall belegten sie nur, dass sie durchlaufen.
+
+    Zugleich der gemessene zweite Fallstrick: `confidence` fuehrt einen LEEREN
+    `sms_code` (selectable=False, PO-Entscheid #710). Leere Kuerzel duerfen
+    nicht gruppiert werden, sonst meldet der Waechter zwei Luecken als
+    Doppelvergabe, sobald eine zweite kuerzellose Groesse hinzukommt.
+    """
+    from tests.helpers.metrik_listen_scan import finde_kuerzel_kollisionen
+
+    befunde = finde_kuerzel_kollisionen({
+        "erfundene_groesse_a": "XY",
+        "erfundene_groesse_b": "XY",
+        "erfundene_groesse_c": "YZ",
+        "ohne_kuerzel_eins": "",
+        "ohne_kuerzel_zwei": "",
+    })
+    text = "\n".join(befunde)
+
+    assert len(befunde) == 1, (
+        f"Erwartet genau eine gemeldete Doppelvergabe, bekommen: {befunde!r}"
+    )
+    for kennung in ("erfundene_groesse_a", "erfundene_groesse_b"):
+        assert kennung in text, (
+            f"Die Doppelvergabe von 'XY' nennt {kennung!r} nicht: {text!r}"
+        )
+    for unbeteiligt in ("erfundene_groesse_c", "ohne_kuerzel_eins",
+                        "ohne_kuerzel_zwei"):
+        assert unbeteiligt not in text, (
+            f"{unbeteiligt!r} ist keine Kollision, wird aber gemeldet: {text!r}"
+        )
