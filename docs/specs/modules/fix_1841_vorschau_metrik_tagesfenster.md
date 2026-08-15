@@ -3,7 +3,7 @@ entity_id: fix_1841_vorschau_metrik_tagesfenster
 type: bugfix
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: approved
 version: "1.0"
 tags: [gewitter, ausblick, vorschau, tagesfenster, metrik-zweig, issue-1841]
 ---
@@ -23,7 +23,9 @@ tags: [gewitter, ausblick, vorschau, tagesfenster, metrik-zweig, issue-1841]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-go 2026-08-15 (Klartext-Freigabe der neun ACs
+      auf Deutsch). Zugleich gesetzt: keine Nachtangabe im Metrik-Zweig
+      (Tagesfenster wie SMS), Ampelfarben als eigenes Issue #1849.
 
 ## Purpose
 
