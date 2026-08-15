@@ -342,6 +342,16 @@ bisher nie durch).
     bzw. `test_compare_outlook*.py`) bleibt grün, ergänzt um einen Lauf mit
     Tag+Nacht-Gewitterdaten, der zeigt, dass `cells`/`format_outlook_value`
     unverändert bleiben.
+  - **Erratum 2026-08-15 (#1849):** „byte-identisch" galt für den
+    Zellen-**Text**, nicht für den Zellen-**Hintergrund**. Fix #1849 behebt
+    einen eigenständigen Bug im selben Metrik-Zweig — dort fehlte jede
+    Ampelfärbung, sobald eine Spaltenauswahl gesetzt war. Seit #1849 füllt
+    `build_outlook_row()` zusätzlich `row["cell_bg"]`, und
+    `render_outlook_table()` nutzt diesen Wert für `bg=` an `_otd()`
+    (`src/output/renderers/email/outlook.py`, Helfer `_metric_column_bg()`).
+    Der hier beschriebene AC-6-Textvergleich bleibt gültig; ein reiner
+    Text-Diff sieht den Hintergrundfarben-Unterschied ohnehin nicht. Details:
+    `docs/specs/modules/fix_1849_ausblick_ampelfarben.md`.
 
 - **AC-7:** Given Niederschlag-, Wind- und Böen-Tokens, weiterhin über
   genau einen unveränderten Aufruf von `render_threshold_peak_value()`

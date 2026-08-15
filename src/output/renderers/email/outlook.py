@@ -135,10 +135,13 @@ def render_outlook_table(
         body = ""
         for stage in rows:
             cells = stage.get("cells") or []
+            # Issue #1849: Ampel-Hintergruende parallel zu den Zellentexten.
+            cell_bg = stage.get("cell_bg") or []
             body += (
                 '<tr>' + _otd(stage.get("weekday", "–"))
                 + "".join(
-                    _otd(_html.escape(cells[i] if i < len(cells) else "–"))
+                    _otd(_html.escape(cells[i] if i < len(cells) else "–"),
+                         bg=cell_bg[i] if i < len(cell_bg) else "")
                     for i in range(len(columns))
                 )
                 + '</tr>'
@@ -413,6 +416,31 @@ def render_outlook_plain(
 # build_outlook_row — extrahiert aus trip_report_scheduler.py (Z.1460-1488, AC-3)
 # ---------------------------------------------------------------------------
 
+def _metric_column_bg(col: dict, raw: object) -> str:
+    """Zell-Hintergrund einer Ausblick-Metrikspalte (#1849).
+
+    Ampelband aus den SSoT-Helfern (``severity_for``/``thunder_ampel_band``),
+    Hex-Wert aus ``tone_css`` -- dieselben Quellen wie der Altpfad. ``green``
+    faerbt bewusst NICHT (Altpfad-Paritaet, kein gruener Teppich), und die
+    Gewitterstufe LOW traegt den abweichenden Altpfad-Hellgelbton
+    (``_THUNDER_LEVEL_BG``), nicht ``tone_css('yellow')``.
+    """
+    from output.metric_format import severity_for, thunder_ampel_band
+
+    kind = col.get("kind")
+    if kind == "enum":
+        return ""
+    if kind == "ordinal":
+        band = thunder_ampel_band(raw)
+        if band == "yellow":
+            return "background:#fbe6c3;"
+    else:
+        band = severity_for(col.get("metric_id"), raw)
+    if band in (None, "green"):
+        return ""
+    return f"background:{tone_css(band)[0]};"
+
+
 def build_outlook_row(
     summary: "SegmentWeatherSummary",
     points: list["ForecastDataPoint"],
@@ -606,15 +634,21 @@ def build_outlook_row(
                 _thunder_signals = None
             # "plain": _thunder_value/_thunder_signals bleiben das Aggregat
             # (unveraendert, wie ohne Stundenreihe/AC-4).
-        row["cells"] = [
-            format_outlook_value(
-                (_thunder_value if col.get("kind") == "ordinal"
-                 else getattr(summary, col["field"], None)),
+        # Issue #1849: Zellentext UND Zell-Hintergrund entstehen aus DEMSELBEN
+        # Rohwert -- eine zweite Rohwert-Aufloesung koennte fuer die
+        # Gewitterspalte am oben (#1841) aufgeloesten Tagesfenster vorbeigehen.
+        cells: list[str] = []
+        cell_bg: list[str] = []
+        for col in outlook_columns(metrics):
+            ordinal = col.get("kind") == "ordinal"
+            raw = _thunder_value if ordinal else getattr(summary, col["field"], None)
+            cells.append(format_outlook_value(
+                raw,
                 {**col, "hail": _hail,
-                 "signals": (_thunder_signals if col.get("kind") == "ordinal"
-                             else _signals)},
-            )
-            for col in outlook_columns(metrics)
-        ]
+                 "signals": _thunder_signals if ordinal else _signals},
+            ))
+            cell_bg.append(_metric_column_bg(col, raw))
+        row["cells"] = cells
+        row["cell_bg"] = cell_bg
 
     return row
