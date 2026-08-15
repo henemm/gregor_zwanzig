@@ -149,19 +149,45 @@ def tages_summary(index: int, anteile: int = 1):
     )
 
 
-def outlook_rows(metrics: Optional[list[dict]] = None) -> list[dict]:
+def outlook_rows(
+    metrics: Optional[list[dict]] = None,
+    *,
+    trip_display_config: object = None,
+    report_type: str = "evening",
+    day_window_start_hour: Optional[int] = None,
+    day_window_end_hour: Optional[int] = None,
+    points_override: Optional[dict[int, list]] = None,
+    summary_override: Optional[dict[int, object]] = None,
+) -> list[dict]:
     """Die drei Ausblick-Zeilen, gebaut wie der Scheduler sie baut.
 
-    ``metrics`` geht 1:1 an ``build_outlook_row`` -- der Parameter, den
-    ``_build_stage_trend()`` (trip_report_scheduler.py:2161) mit dieser
-    Lieferung fuellt. ``name``/``note`` haengt der Scheduler danach an.
+    RED-Korrektur (#1841, AC-8): ``metrics`` ist NICHT der Parameter, den
+    ``trip_report_scheduler.py:2282`` fuellt -- das ist die COMPARE-
+    Konvention. Der bisherige Docstring behauptete das Gegenteil. Der
+    Zeitplaner reicht stattdessen die UNGEKOLLABIERTE
+    ``trip_display_config``/``report_type``/das Tagesfenster durch und
+    ueberlaesst ``build_outlook_row`` die Aufloesung (s. dortiger
+    Docstring). Ist ``trip_display_config`` gesetzt, geht dieser Helfer
+    denselben Weg; ``metrics`` bleibt dann unbenutzt (Vorrangregel in
+    ``build_outlook_row``). ``points_override``/``summary_override``
+    (Tagesindex -> Wert) spielen Tests eigene Punktreihen/Aggregate ein --
+    noetig fuer Geometrien, in denen Gehzeit-Aggregat und Tagesfenster
+    auseinanderfallen (#1841 Spec "Fixtur-Geometrie").
     """
     from output.renderers.email.outlook import build_outlook_row
 
     with utc_process_tz():
         zeilen = [
-            build_outlook_row(_summary(i), _points(i), _TAGE[i][0], TZ,
-                              metrics=metrics)
+            build_outlook_row(
+                (summary_override or {}).get(i, _summary(i)),
+                (points_override or {}).get(i, _points(i)),
+                _TAGE[i][0], TZ,
+                metrics=metrics if trip_display_config is None else None,
+                trip_display_config=trip_display_config,
+                report_type=report_type,
+                day_window_start_hour=day_window_start_hour,
+                day_window_end_hour=day_window_end_hour,
+            )
             for i in range(len(_TAGE))
         ]
     for i, zeile in enumerate(zeilen):
