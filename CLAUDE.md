@@ -1,74 +1,19 @@
 # CLAUDE.md - Gregor Zwanzig
 
+> Diese Datei wird bei **jeder** Modell-Anfrage mitgeladen. Sie enthält nur Entscheidungen und Fakten,
+> die man sonst nicht wissen kann. Detailmechanik von Gates, Ratschen und Betriebsabläufen steht in
+> `docs/reference/` und wird bei Bedarf gelesen — **nicht** hier einpflegen.
+
 ## Projekt-Ueberblick
 
 **Gregor Zwanzig** ist ein Headless-Service zur Normalisierung von Wetterdaten und Ausgabe als kompakte Reports (SMS <=160 Zeichen, E-Mail mit Tabellen).
 
 - **Zielgruppe:** Weitwanderer (z.B. GR20), eingeschraenkte Konnektivitaet
 - **Stack:** Python, uv, pytest
-- **Channels:** E-Mail, Telegram, SMS, **Premium-SMS** (Garmin inReach, #1676 — seit 2026-08-10 im Trip-Briefing, ADR-0049). (Signal 2026-06-06 app-weit entfernt, Issue #610 — s.u.)
-- **🔴 Alle vier Kanäle sind gleichrangig relevant — kein Kanal ersetzt einen anderen.** PO-Vorgabe, mehrfach bekräftigt (zuletzt 2026-08-10): Auf dem Karnischen Höhenweg gibt es **auf der Hütte nur Satellit** — und das ist genau die Zeit, zu der Briefings verschickt werden, weshalb dort **nur Premium-SMS** ankommt. **Auf dem Pass gibt es normalen Handyempfang, dort sind E-Mail und Telegram relevant** und werden gelesen. Wer daraus „E-Mail/Telegram sind für die Tour nachrangig" folgert, liegt falsch — dieser Fehlschluss stand bereits einmal in einer Notiz und musste vom PO korrigiert werden. Alarme müssen **alle** Kanäle erreichen (#1701).
-- **Multi-User-Produkt:** Gregor Zwanzig ist **mandantenfähig** — jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger und Settings. Persistenz pro Nutzer unter `data/users/<user_id>/`. Isolation **konsequent** über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT bei jedem nutzerbezogenen Endpoint:** echte `user_id` aus Auth-Kontext durchreichen, **niemals** auf `"default"` zurückfallen — das ist ein Cross-User-Datenleck. Jeder neue datenbewegende Endpoint MUSS mit **zwei verschiedenen Nutzern** getestet werden. Es gibt kein systemseitiges „an mich" — „senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers".
-
-## Workflow
-
-OpenSpec-Workflow mit Adversary Verification (Commands sind zweistellig; Einstiege: `/00-intake`, `/00-bug`, `/01-feature`):
-
-| Command | Purpose | PO-Eingriff |
-|---------|---------|-------------|
-| `/10-context` | Kontext sammeln | — |
-| `/20-analyse` | Request verstehen, Codebase recherchieren | Optional: 3-Satz-Zusammenfassung korrigieren |
-| `/30-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** ('go') |
-| `/40-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
-| `/50-implement` | Implementieren (GREEN) + Adversary | — (läuft automatisch durch) |
-| `/60-validate` | Validieren vor Commit | — |
-| `/70-deploy` | Staging-Verifikation + Prod-Deploy (eigene Phase) | — (läuft autonom durch, **kein** Freigabe-Halt) |
-
-**Deploy läuft ohne Freigabe-Halt (PO-Vorgabe 2026-08-03, korrigiert 2026-08-05 via #1511).** Die frühere Zeile „Pflicht: Tech-Lead-Brief lesen + 'go' sagen" bei `/70-deploy` ist damit **abgelöst**: nach dem Merge zieht die Kette Staging-Poll → `/e2e-verify` → `deploy-gregor-prod.sh` → `prod_selftest.py` → Issue-Close **am Stück** durch. Der PO liest das Ergebnis danach, nicht vorher als Freigabe. Ein selbst formulierter „Tech-Lead-Brief" mit anschließender Bitte um 'go' ist dieselbe verbotene Prozessfrage, nur in Freitextform. Einzige erlaubte Unterbrechung: ein echtes Hard Gate scheitert (Staging-Verdict BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund. **Freigabepflichtig bleibt allein die Spec** (`/30-write-spec`, ACs auf Deutsch).
-
-**Adversary Verification:** Nach Implementation führt ein unabhängiger `implementation-validator` Agent (Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen. Tri-State Verdict: VERIFIED / BROKEN / AMBIGUOUS. Details: `docs/features/openspec_workflow.md`
-
-**🔴 Mutations-Gegenprobe ist PFLICHT, keine Kür (PO-Vorgabe 2026-08-03).** Der Adversary muss die Implementierung gezielt verfälschen und melden, **welche Verfälschung KEIN Test fängt** — wird kein Test rot, ist das ein Finding. Ein grüner Testlauf beweist nur, dass die Tests durchlaufen, nicht dass sie etwas bewachen. Leitfrage, die in #1457 dreimal denselben Fehler aufdeckte: **Ist die Zusicherung an der Stelle geprüft, an der sie WIRKT — oder nur dort, wo der Code steht?** (Dreimal war ein AC erfüllt, der Testlauf grün und die Wirkung null.) Ablauf, Mutations-Familien und die Pflichtfrage „prüfen die Tests, was sie behaupten?": `.claude/agents/implementation-validator.md` Sektion „Step 3b". **Mutationen nur per String-Ersetzung mit externer Sicherungskopie — nie `git checkout/stash/reset`** (hat einmal die gesamte unkommittete Arbeit gelöscht). *Regel-Budget: Prüfdatum 2026-11-01; belegte Fänge bei Einführung: #1448 (2 von 3 Scheiben), #1457 (6 Findings).*
-
-**Fresh Eyes:** Bei UI-Änderungen prüft zusätzlich ein `fresh-eyes-inspector` Agent Screenshots OHNE Bug-Kontext (verhindert Confirmation Bias).
-
-**Hooks erzwingen diesen Workflow!** Edit/Write auf geschützte Dateien ist blockiert.
-
-### Workflow-Tools v3 (Epic #191, ab 2026-05-11)
-
-| Was | Befehl / Pflicht |
-|-----|------------------|
-| **AC-N-Format in Specs** | Jede Spec `created >= 2026-05-11` braucht `## Acceptance Criteria` mit `**AC-1:** Given.../When.../Then...` (>=30 Zeichen). Vorbild: `docs/specs/modules/epic_191_state_migration.md`. Ohne AC-N blockt `workflow_gate` Phase 6. |
-| **Execution-Log vor `finish`** | `python3 .claude/hooks/workflow.py write-log success` schreibt YAML (Phasen, Laufzeiten, Token-Verbrauch, Issue #829) nach `.claude/workflows/_log/`, dann `workflow.py finish`. Ohne Log blockt der Hook. |
-| **Token-Tracking (#829)** | Stop-Hook `track_token_usage.py` summiert Transcript-Tokens ins Workflow-State, kumulativ über Sessions. Kein `GZ_ACTIVE_WORKFLOW` → fail-safe. |
-| **LoC-Limit 250/Workflow** | `workflow.py status` zeigt `LoC-Delta: +N/250`. Überschritten → `workflow.py set-field loc_limit_override 500`. Generierte Dateien + `docs/`/`*.md`/`.gitignore` zählen nicht. |
-| **Adversary-Verdict Gating** | Nach phase6b: `AMBIGUOUS` → `workflow.py override-ambiguous "<Grund>"` (TTL 1h); `None`/`BROKEN` → `qa_gate.py` aufrufen. Commit blockt ohne Verdict. |
-| **Phasen-Audit-Trail** | Jede Transition landet in `phase_transitions[]` (from/to/at/trigger), inkl. Fix-Loop-Counter. |
-| **Trigger-Typen für `phase`** | `workflow.py phase <ziel> --trigger=command\|advance\|user_keyword\|manual` (Default `command`). |
-| **State pro Workflow** | `.claude/workflows/<name>.json` (laufend) / `_archive/<name>.json` (abgeschlossen). |
-| **GZ_ACTIVE_WORKFLOW PFLICHT** | `export GZ_ACTIVE_WORKFLOW=<name>` ist die EINZIGE erlaubte Methode — `workflow.py start <name>` gibt die Export-Zeile aus. |
-
-**SYMLINK VERBOTEN:** `.active`-Symlink-Fallback ist deaktiviert; `workflow.py` bricht FATAL ab ohne `GZ_ACTIVE_WORKFLOW`. Niemals `state['active_workflow']` lesen — immer `os.environ['GZ_ACTIVE_WORKFLOW']`. Beim Agent-Spawn immer `export GZ_ACTIVE_WORKFLOW=<name>` im Prompt übergeben.
-
-**Test-Politik: siehe „Test-Politik: Zwei Schichten" weiter unten** (Mock-Theater bleibt verboten; die alte Absolutform „keine Mocks" ist ersetzt). Bei Adversary-Findings ist `Code reference: file:line` Pflicht — siehe `.claude/agents/implementation-validator.md` Sektion „Findings-Format".
-
-**Product Owner Pattern:** Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung geht an den Developer Agent (Opus, Worktree-Isolation).
-
-**Agenten-Rollen und Modelle:**
-
-| Agent | Modell | Rolle |
-|-------|--------|-------|
-| `developer` | Opus | Implementiert Code in Worktree-Isolation |
-| `bug-intake` | Sonnet | Bug-Analyse mit User-Perspektive |
-| `feature-planner` | Sonnet | Use-Case-Denken, Feature-Planung |
-| `implementation-validator` | Sonnet | Adversary QA Testing |
-| `spec-writer` | Sonnet | Spezifikationen schreiben |
-| `fresh-eyes-inspector` | Sonnet | UI-Screenshots neutral bewerten |
-| `docs-updater` | Haiku | Dokumentation aktualisieren |
-| `spec-validator` | Haiku | Spec-Checklisten pruefen |
-| Explore-Agents | Haiku | Codebase durchsuchen |
-
-**Developer Agent Timeout:** >10 Min ohne grüne Tests → `TaskStop` + Neustart mit präziserem Briefing. Max 2 Versuche, danach Eskalation an den User.
+- **Kanäle (vier):** E-Mail · Telegram · SMS · **Premium-SMS** (Garmin inReach, ADR-0049). Signal ist seit 2026-06-06 app-weit entfernt (#610) — kein `SignalOutput`/`signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`; Wiedereinführung müsste neu spezifiziert werden.
+- **🔴 Alle vier Kanäle sind gleichrangig relevant — kein Kanal ersetzt einen anderen.** PO-Vorgabe, mehrfach bekräftigt: Auf dem Karnischen Höhenweg gibt es **auf der Hütte nur Satellit** — und das ist genau die Zeit, zu der Briefings verschickt werden, weshalb dort **nur Premium-SMS** ankommt. **Auf dem Pass gibt es normalen Handyempfang, dort sind E-Mail und Telegram relevant** und werden gelesen. Wer daraus „E-Mail/Telegram sind für die Tour nachrangig" folgert, liegt falsch. Alarme müssen **alle** Kanäle erreichen (#1701).
+- **Premium-SMS-Reichweite:** als **Versandkanal** nur im **Trip-Briefing** verdrahtet (kein Ortsvergleich-Versand). Als **Alarm-Kanal** in **beiden** Flächen (Trip UND Ortsvergleich), für **alle** Alarmarten inklusive Regen-/Radar-Alarme — alles über dieselbe geteilte Kanal-Auflösung (Paritäts-Audit #1533).
+- **Multi-User-Produkt:** mandantenfähig — jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger und Settings. Persistenz pro Nutzer unter `data/users/<user_id>/`. Isolation **konsequent** über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT bei jedem nutzerbezogenen Endpoint:** echte `user_id` aus Auth-Kontext durchreichen, **niemals** auf `"default"` zurückfallen — das ist ein Cross-User-Datenleck. Jeder neue datenbewegende Endpoint MUSS mit **zwei verschiedenen Nutzern** getestet werden. Es gibt kein systemseitiges „an mich" — „senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers".
 
 ## Architektur
 
@@ -81,142 +26,190 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
 
 - **Go-API** (`internal/`, `cmd/`): Auth/Sessions, Mandantentrennung, Persistenz (`data/users/<user_id>/`), Cron-Scheduler, Proxy zum Python-Core
 - **Python-Core** (`api/`, `src/`): Wetter-Domäne (Provider Open-Meteo + Fallbacks, Risk Engine, Aggregation), alle Kanal-Renderer/-Transporte, Alerts, Inbound-Handler
-- Die Legacy-CLI (`src/app/cli.py`, s. u.) ist Debug-Werkzeug, nicht der Produktivpfad
-
-Details: `docs/features/architecture.md`
+- Die Legacy-CLI (`python -m src.app.cli`, Priorität CLI > ENV > config.ini) ist Debug-Werkzeug, nicht der Produktivpfad
 
 ## Wichtige Referenzen
 
 | Dokument | Beschreibung |
 |----------|--------------|
-| `docs/features/epic-134-cockpit-dashboard.md` | Trip-Cockpit-Startseite |
 | `docs/features/architecture.md` | Systemarchitektur (Backend + Frontend + Editoren) |
 | `docs/reference/api_contract.md` | Single Source of Truth: DTOs & Datenformate |
+| `docs/reference/operations_playbook.md` | Deploy, Rollback, Staging-Verdicts, Datenmigration |
+| `docs/reference/gates_und_ratschen.md` | **Detailmechanik aller Gates/Ratschen** — bei Blockade hier nachsehen |
+| `docs/reference/mail_validators.md` | Plausibilitäts-Schwellen, Anti-Stale-Mechanik |
 | `docs/reference/decision_matrix.md` | Provider-Ist-Stand (Open-Meteo + Fallback-Kette) |
-| `docs/features/scope.md` | Projektvision & Ziele |
+| `docs/features/epic-134-cockpit-dashboard.md` | Trip-Cockpit-Startseite |
+| `docs/adr/README.md` | Index der Architektur-Entscheidungen |
 | `docs/README.md` | Wegweiser durch docs/ (Referenz vs. Archiv) |
 
-## Architektur-Entscheidungen (ADRs)
+**ADRs:** `docs/adr/` hält die Grundsatzentscheidungen fest — **vor Änderungen an Entscheidungsflächen** (Kanäle, Provider, Datenmodell/Persistenz, Auth, Editor-Paradigma, Test-/Deploy-Strategie) dort nachsehen. Eine dokumentierte Entscheidung wird nie still rückgängig gemacht: Abweichung ⇒ neues ADR (Status „Abgelöst durch"). Index↔Datei-Konsistenz erzwingt `tests/test_adr_index_drift.py`.
 
-`docs/adr/` (Index: `docs/adr/README.md`) hält die Grundsatzentscheidungen fest — **vor Änderungen an Entscheidungsflächen** (Kanäle, Provider, Datenmodell/Persistenz, Auth, Editor-Paradigma, Test-/Deploy-Strategie) dort nachsehen. Eine dokumentierte Entscheidung wird nie still rückgängig gemacht: Abweichung ⇒ neues ADR (Status „Abgelöst durch"). Index↔Datei-Konsistenz erzwingt `tests/test_adr_index_drift.py`.
+**Specs:** Alle Module brauchen eine Spec vor der Implementierung. Template `docs/specs/_template.md`, Ablage `docs/specs/modules/[entity].md`. Jede Spec `created >= 2026-05-11` braucht `## Acceptance Criteria` mit `**AC-1:** Given.../When.../Then...` (>=30 Zeichen), sonst blockt `workflow_gate` Phase 6.
 
-## CLI
+## Workflow
 
-```bash
-python -m src.app.cli --report evening --channel email
-python -m src.app.cli --report morning --channel none --dry-run
-python -m src.app.cli --debug verbose
-```
+OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake`, `/00-bug`, `/01-feature`):
 
-Konfigurations-Prioritaet: CLI > ENV > config.ini
+| Command | Purpose | PO-Eingriff |
+|---------|---------|-------------|
+| `/10-context` | Kontext sammeln | — |
+| `/20-analyse` | Request verstehen, Codebase recherchieren | Optional: 3-Satz-Zusammenfassung korrigieren |
+| `/30-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** ('go') |
+| `/40-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
+| `/50-implement` | Implementieren (GREEN) + Adversary | — |
+| `/60-validate` | Validieren vor Commit | — |
+| `/70-deploy` | Staging-Verifikation + Prod-Deploy | — (läuft autonom, **kein** Freigabe-Halt) |
 
-## Tests
+**Freigabepflichtig ist allein die Spec.** Deploy läuft ohne Halt durch: nach dem Merge zieht die Kette Staging-Poll → `/e2e-verify` → `deploy-gregor-prod.sh` → `prod_selftest.py` → Issue-Close **am Stück**. Der PO liest das Ergebnis danach, nicht vorher als Freigabe. Ein selbst formulierter „Tech-Lead-Brief" mit anschließender Bitte um 'go' ist dieselbe verbotene Prozessfrage in Freitextform. Einzige erlaubte Unterbrechung: ein echtes Hard Gate scheitert (Staging-Verdict BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund.
 
-```bash
-uv run pytest
-```
+**Adversary Verification:** Nach der Implementation führt ein unabhängiger `implementation-validator` (Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen. Tri-State Verdict: VERIFIED / BROKEN / AMBIGUOUS. Details: `docs/features/openspec_workflow.md`. Bei Findings ist `Code reference: file:line` Pflicht.
 
-## Test-Politik: Zwei Schichten (PO-go 2026-07-09)
+**🔴 Mutations-Gegenprobe ist PFLICHT, keine Kür.** Der Adversary muss die Implementierung gezielt verfälschen und melden, **welche Verfälschung KEIN Test fängt** — wird kein Test rot, ist das ein Finding. Ein grüner Testlauf beweist nur, dass die Tests durchlaufen, nicht dass sie etwas bewachen. Leitfrage: **Ist die Zusicherung an der Stelle geprüft, an der sie WIRKT — oder nur dort, wo der Code steht?** Ablauf und Mutations-Familien: `.claude/agents/implementation-validator.md`, Sektion „Step 3b". **Mutationen nur per String-Ersetzung mit externer Sicherungskopie — nie `git checkout/stash/reset`** (hat einmal die gesamte unkommittete Arbeit gelöscht).
 
-Ersetzt die alte Absolutform von „KEINE MOCKED TESTS". Unverändert verboten bleibt **Mock-Theater**: `Mock()`/`patch()`/`MagicMock`, die nur die eigene Annahme zurückspiegeln, beweisen nichts. Ebenso verboten bleiben Dateiinhalt-Checks (`assert 'xyz' in file.read_text()`) als Verhaltensnachweis (Ausnahme: `# doc-compliance-test`).
+**Fresh Eyes:** Bei UI-Änderungen prüft zusätzlich ein `fresh-eyes-inspector` Screenshots OHNE Bug-Kontext.
+
+**Product Owner Pattern:** Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung geht an den Developer Agent (Opus, Worktree-Isolation). >10 Min ohne grüne Tests → `TaskStop` + Neustart mit präziserem Briefing; max 2 Versuche, danach Eskalation.
+
+**Agenten-Modelle:** `developer` Opus · `bug-intake`/`feature-planner`/`implementation-validator`/`spec-writer`/`fresh-eyes-inspector` Sonnet · `docs-updater`/`spec-validator`/Explore Haiku.
+
+### Workflow-State
+
+| Was | Regel |
+|-----|-------|
+| **GZ_ACTIVE_WORKFLOW** | `export GZ_ACTIVE_WORKFLOW=<name>` ist die EINZIGE erlaubte Methode. **Symlink-Fallback ist deaktiviert** — `workflow.py` bricht FATAL ab ohne die Variable. Niemals `state['active_workflow']` lesen. Beim Agent-Spawn immer im Prompt übergeben. |
+| **Execution-Log vor `finish`** | `python3 .claude/hooks/workflow.py write-log success`, dann `workflow.py finish`. Ohne Log blockt der Hook. |
+| **LoC-Limit 250/Workflow** | `workflow.py status` zeigt `LoC-Delta: +N/250`. Überschritten → `workflow.py set-field loc_limit_override 500`. `docs/`/`*.md`/`.gitignore` und generierte Dateien zählen nicht. |
+| **Adversary-Verdict Gating** | `AMBIGUOUS` → `workflow.py override-ambiguous "<Grund>"` (TTL 1h); `None`/`BROKEN` → `qa_gate.py`. Commit blockt ohne Verdict. |
+| **State-Ablage** | `.claude/workflows/<name>.json` (laufend) / `_archive/<name>.json` (abgeschlossen) |
+
+**Hooks erzwingen diesen Workflow** — Edit/Write auf geschützte Dateien ist blockiert. Blockiert ein Gate und die Meldung reicht nicht: `docs/reference/gates_und_ratschen.md`.
+
+## Test-Politik: Zwei Schichten
+
+Verboten bleibt **Mock-Theater**: `Mock()`/`patch()`/`MagicMock`, die nur die eigene Annahme zurückspiegeln, beweisen nichts. Ebenso verboten sind Dateiinhalt-Checks (`assert 'xyz' in file.read_text()`) als Verhaltensnachweis (Ausnahme: `# doc-compliance-test`).
 
 | Schicht | Was | Wann | Regel bei Rot |
 |---|---|---|---|
 | **Kern (deterministisch)** | ohne Netz/Live-Dienste/echte Postfächer; echte **aufgezeichnete** API-/Mail-Daten als versionierte Fixtures erwünscht | jeder Testlauf; Commit-Gate | MUSS 100 % grün sein: sofort fixen ODER löschen (wenn er veraltetes Verhalten prüft) — nie als „vorbestehend rot" liegenlassen |
 | **Live-E2E** | echte API-Calls, echte Staging-Mails via IMAP, Playwright gegen Staging (Marker `live`/`email`/`staging`) | nur `/e2e-verify` bzw. Deploy | Flake → Retry; erst reproduzierbares Scheitern ist ein Befund (→ #1199 bzw. #1196) |
 
-Bug-Nachweis unverändert: mindestens ein Test reproduziert den Bug aus Nutzersicht (rot vor Fix, grün nach Fix) — in der Live-Schicht, wenn er Staging braucht, sonst im Kern.
+Bug-Nachweis: mindestens ein Test reproduziert den Bug aus Nutzersicht (rot vor Fix, grün nach Fix) — in der Live-Schicht, wenn er Staging braucht, sonst im Kern.
 
-**Namensregel (neu):** Testdateien nach Verhalten benennen (`test_alert_throttle.py`), NICHT nach Issue-Nummer (`test_issue_1234.py`). Nach dem Fix wird der Repro-Test in die passende Modul-Suite überführt oder gelöscht — der Issue-Nummern-Korpus (Bestand: 262 Dateien) wächst nicht weiter. Bestandssanierung: #1196. **Hart durchgesetzt** via `test_naming_gate.py` (blockt neue issue-nummerierte Testdateien; Prüfdatum 2026-10-09). **Kein Big-Bang-Reorg des Bestands (Tech-Lead-Entscheid 2026-08-08):** Testpfade sind hart verdrahtet in `.github/ci_tdd_excludes.txt`, den Collection-Meta-Tests und den Ratschen — Massen-Umbenennung bricht diese Wächter. Bestand nur opportunistisch (Datei ohnehin angefasst) oder themenweise mit eigenem PR konsolidieren, in dem alle Referenzen mitgezogen werden.
+**Testdateien nach Verhalten benennen** (`test_alert_throttle.py`), NICHT nach Issue-Nummer. **`uv run pytest` ohne benannte Testdateien ist gesperrt** — ein ungemarkerter Test genügt für echten Versand an Produktiv-Empfänger (#1477). Erlaubt: Dateien benennen · `--collect-only` · `--disable-socket` · Einmal-Freigabe, die **nur der User** durch Tippen von `override` erzeugt. Ein Test löst seinen Prüfling **relativ zur eigenen Testdatei** auf, nie über den festen Hauptrepo-Pfad (sonst falsches Grün aus dem Worktree).
 
-**Pfadregel (#1409, ab 2026-07-29):** Ein Test löst seinen **Prüfling** relativ zur eigenen Testdatei auf (`Path(__file__).resolve().parents[2]`), NIE über den festen Hauptrepo-Pfad — sonst prüft er aus einem Worktree die unveränderte Hauptrepo-Kopie und meldet **falsches Grün**. Bewusst fest bleibt die **geteilte Ablage**: HEAD-Ermittlung, Attestation, `docs/artifacts`, `cwd` und Daten, die der Prüfling über sein `cwd` liest (z.B. Soll-Bilder). **Durchgesetzt** via `tests/tdd/test_repo_path_hardcoding_ratchet.py` (AST-Auflösung inkl. Konstanten-Joins; Fund = Ziel liegt per `git ls-files` als Datei im Repo; Prüfdatum 2026-10-27). Begründete Ausnahme als Kommentar **an der Zeile**: `# gz-main-path: <Begründung>` (mind. 15 sinnvolle Zeichen). Grenzen — u.a. tote Pfade und Ketten ab 26 Gliedern — stehen in `docs/specs/modules/fix_1409b_repo_path_ratchet.md` unter „Known Limitations".
+Durchsetzung, Ausnahme-Syntax und Grenzen: `docs/reference/gates_und_ratschen.md`.
 
-**Breiter Testlauf gesperrt (ab 2026-08-03, Prüfdatum 2026-11-01):** `uv run pytest` **ohne konkret benannte Testdateien** ist blockiert — voller Suite-Lauf und Verzeichnis-Lauf (`pytest tests/`, `pytest tests/unit/`). Grund: eine ungemarkerte Testdatei genügt, um echten Versand auszulösen; am 2026-08-03 gingen so echte Telegram-Nachrichten an den **Produktiv-Chat des PO** (#1477 — `Settings(...)` fällt bei fehlenden Feldern still auf die Prod-`.env` im Worktree zurück, und ein `mail_sink` schützt nur Mail). Durchgesetzt via `.claude/hooks/broad_test_run_gate.py`. **Erlaubt:** Dateien benennen · `--collect-only` · `--disable-socket` (pytest-socket — dann ist auch ein voller Lauf sicher) · Einmal-Freigabe, die **nur der User** durch Tippen von `override` erzeugt. Zielbild ist der zentrale Ausgangs-Wächter aus #1337; `pytest-socket` ist das fertige Standardwerkzeug dafür, kein Eigenbau nötig.
-
-## Nebenbefund-Triage (PO-go 2026-07-09, ersetzt „immer Folge-Issue")
-
-Nebenbefunde aus Workflows/Adversary-Läufen werden NICHT mehr automatisch eigene Issues. **Eigenes Issue nur bei:** (a) nutzersichtbarem Fehlverhalten, (b) Datenverlust-/Sicherheitsrisiko, (c) fälschlich blockierendem Gate. **Alles andere** → eine Checkbox-Zeile im rollierenden Sammel-Issue **#1199** (Format dort beschrieben). Test-/Gate-Befunde gehören in #1196/#1197, solange diese offen sind. Einträge ohne PO-Bestätigung verfallen nach 30 Tagen. Adversary-Findings der Stufe LOW/kosmetisch sind per Default Sammel-Einträge, keine Issues.
-
-## Regel-Budget (Ratsche-Gegengewicht, PO-go 2026-07-09)
-
-Jede neue Pflicht-Regel, jedes neue Gate, jeder neue Pflicht-Validator muss beim Einführen entweder **eine bestehende Regel ersetzen** oder ein **Prüfdatum (+90 Tage)** tragen. Am Prüfdatum gilt: kein nachweisbarer Fang (verhinderter echter Fehler) → Rückbau. Gate-Befunde, die keine Arbeit blockieren, sind Sammel-Einträge (#1199), keine Issues. Bestandsaudit aller Gates: #1197. Hintergrund und Wirkmodell: `docs/analysis/backlog-spirale-2026-07.md`.
-
-## E2E-Verifikation (Post-Push auf Staging)
+## E2E-Verifikation & Deploy
 
 Verifikation läuft **nach** dem Push gegen Staging (`https://staging.gregor20.henemm.com`) — **nie** durch lokalen Neustart des Live-Servers (= Produktion). Issue #339.
 
-**Ablauf:** Push → ~5 Min Staging-Auto-Deploy → `/e2e-verify` → `deploy-gregor-prod.sh` → Post-Deploy-Selftest (#564) → Issue close. Prod-Deploy ist Hard Gate: blockt, wenn für den Zielstand kein bestandener, frischer Nachweis vorliegt (#521).
-
-**Nachweis-Ablage (seit #1382):** **eine Datei je Stand** unter `.claude/e2e_verified/<sha>.json` — geschrieben und gelesen über dieselbe Auflösung. Die frühere einzelne Sammeldatei ist abgekündigt und wird **nicht mehr gelesen**; fehlt der Nachweis für den Zielstand, blockiert das Gate und sagt genau das, statt einen fremden Stand zu nennen. Dieselbe Bedingung gilt für Deploy-Gate und Post-Deploy-Selftest: exakter Treffer ODER ein Vorgänger, der bestanden **und** frisch ist **und** dessen Zuwachs reine Doku ist. Ein ausdrücklich übergebener `--e2e-path` ist maßgeblich (keine Vorgänger-Suche). Kommt `verified_commit (<fremder Stand>) != expected-commit` — das ist der **alte** Wortlaut; dann läuft dort noch Code vor #1382.
+**Ablauf:** Push → ~5 Min Staging-Auto-Deploy → `/e2e-verify` → `deploy-gregor-prod.sh` → Post-Deploy-Selftest → Issue close. Prod-Deploy ist Hard Gate: blockt ohne bestandenen, frischen Nachweis für den Zielstand (`.claude/e2e_verified/<sha>.json`, eine Datei je Stand).
 
 **VERBOTEN:** lokalen Live-Server stoppen/neustarten · Sammel-Versand über alle Touren (nur Test-Trip) · „E2E bestanden" ohne Staging-Verifikation sagen.
 
-Detailablauf, Verdict-Ableitung PASS/PARTIAL/FAIL/SKIP, Rollback: **`docs/reference/operations_playbook.md`**. Kern: **Issue-Close nur bei Selftest-Exit 0**.
+**Issue-Close nur bei Selftest-Exit 0.** Verdict-Ableitung, Rollback: `docs/reference/operations_playbook.md`. Gate-Mechanik (Frontend-Browser-Gate, Notausgänge, Zugangsdaten-Quellen): `docs/reference/gates_und_ratschen.md`.
 
-**Frontend-Browser-Gate (#1558, seit 2026-08-08):** Berührt der committete Scope `frontend-only` oder `full-stack`, lädt `staging_gate.py --write-verdict` **selbst** die sechs Kernseiten (`/`, `/trips`, `/trips/new`, `/compare`, `/compare/new`, `/locations`) in einem echten Chromium gegen Staging und sammelt `console(type=error)` sowie `pageerror` — Warnungen zählen nicht. Schlägt das fehl, entsteht **keine** Attestation, der Prod-Deploy bleibt blockiert. **Fail-Grenze:** lässt sich das Gate-Modul selbst nicht laden (Import-/Syntaxfehler), läuft der Aufruf mit Warnung durch — ein kaputter Wächter darf nie die Ursache sein, dass niemand mehr ausliefert. Fehlt dagegen Playwright, ist Staging nicht erreichbar, scheitert die Anmeldung oder fehlen Zugangsdaten, wird **blockiert** — das ist „Nachweis nicht erbringbar", nicht „Gate kaputt". **Notausgang: `GZ_SKIP_FRONTEND_BROWSER_GATE=1`** (exakt `1`, laut auf stderr). **`GZ_SKIP_E2E_GATE` wirkt hier NICHT** — das sitzt in `gate_check()` (Deploy-Check, Mode B), der Browserlauf hängt in `write_verdict()` (Mode A). Bis 2026-08-08 stand hier das Gegenteil: eine aus Plausibilität abgeleitete, nie nachgemessene Annahme — aufgefallen, als der Wächter defekt war und jede Frontend-Auslieferung blockierte. Zwei Schalter mit Absicht: der Deploy-Skip ist flüchtig, der Browserlauf-Skip erzeugt ein **dauerhaftes** Artefakt. Bei bestandenem Lauf trägt die Attestation `frontend_pages_checked`; wurde übersprungen oder war das Gate-Modul nicht ladbar, trägt sie stattdessen `frontend_browser_gate: "UEBERSPRUNGEN via …"` bzw. `"NICHT GELAUFEN …"` — das Artefakt darf keinen Nachweis behaupten, den es nie gab. Die Blockade-Meldung nennt die Variable selbst.
+### Liefer-Workflow (PFLICHT — PR statt Direkt-Push)
 
-**🔴 Zugangsdaten: DREI Quellen, nicht zwei (2026-08-08).** Bei einer Blockade **zuerst hier** nachsehen, nicht in der `.env` des Arbeitsordners. Die Staging-Instanz hat **eigene** Anmeldedaten der Anwendung — gleicher Benutzername, **anderes Passwort**; gemessen an `POST /api/auth/login`: Arbeitsordner-`.env` → **401**, `/home/hem/gregor_zwanzig_staging/.env` → **200**. Genau daran blockierte das frisch ausgelieferte Gate jede Frontend-Auslieferung. Zuordnung: nginx-Schranke `GZ_VALIDATOR_*` ← `.claude/validator.env` · App-Anmeldung `GZ_AUTH_*` ← **Staging-`.env`** bei Staging-Ziel (Modul-Attribut `STAGING_ENV_PATH`, überschreibbar per `GZ_STAGING_ENV_PATH`), sonst lokale `.env`. **„Anmeldung abgelehnt" ≠ „zurückgeleitet auf die Anmeldemaske"** — wer beides gleichsetzt, hält einen generell kaputten Anmeldeweg für den Beleg, dass ein falsches Passwort erkannt wurde. Die Ablehnung kommt als `POST 401` auf **`/login`** (SvelteKit-Form-Action), nicht auf `/api/auth/login`; ein darauf fest verdrahteter Wächter blieb still. Die Tests bewachen die **Quelle** der Anmeldedaten, nicht ihre **Gültigkeit** — ein gedrehtes Staging-Passwort lässt die Kern-Suite grün und blockiert trotzdem. Meldungs-Tabelle: `docs/reference/operations_playbook.md`. *Regel-Budget: Prüfdatum 2026-11-05. Fang-Beleg: #1552 (Kernseite auf Staging unbedienbar bei 5837 grünen Tests, Adversary VERIFIED, alle CI-Checks grün). Am Prüfdatum mitzubewerten: ob `ui_screenshot_gate.py` dadurch ganz oder teilweise entbehrlich wird.*
+**Direkt-Push auf `main` ist abgeschafft.** `main` ändert sich nur per Pull Request mit vollständig grüner CI-Ampel.
 
-## Mail-Validatoren & Renderer-Gate (ZWINGEND)
+| Schritt | Was |
+|---|---|
+| 1 | Arbeitsbranch pushen: `git push -u origin <branch>` (nie direkt `main`) |
+| 1b | PR eröffnen (`gh pr create --fill`), CI-Ampel abwarten — **alle 6 Checks grün** auf dem letzten Stand |
+| 1c | Mergen (`gh pr merge --merge`) — erst damit ist `main` aktualisiert |
+| 2 | Auto-Deploy auf Staging abwarten (~5 Min, Cron `*/5`) |
+| 3 | Staging-Validierung |
+| 4 | Prod-Deploy: `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
+| 4b | Post-Deploy-Selftest: `python3 .claude/hooks/prod_selftest.py` — nur Exit 0 fährt weiter |
+| 5 | `gh issue close <N>` — nur wenn 4b Exit 0 |
 
-Zwei Mail-Pfade, zwei Gates. Falscher Validator auf einen Pfad → strukturell nie bestehbar → Gate-Erosion. Dispatch:
+Wird ein Push nach `main` abgewiesen, ist das die Branch-Protection, kein Fehler. Ein PR ersetzt NICHT die Staging-Validierung — die Ampel bewacht Code-Gesundheit, Staging bewacht Verhalten.
+
+`systemctl restart` allein **reicht nie** — das Deploy-Script macht flock-Lock → hart auf `origin/main` syncen (Daten unberührt, WIP gesichert) → Go-Binary + Frontend bauen → alle 3 Services restarten → Smoke-Test. Ohne vollen Lauf entsteht Code-Drift (#113). Script ist **parallel-session-sicher** — Schritt 4 jederzeit aus jeder Session.
+
+**„Staging-validiert"** = mindestens HTTP-Smoke (`/` → 200/302, `/api/health` → 200) + geänderte Funktion durchgeklickt; bei Mail-Änderungen Test-Mail + IMAP-Verifikation; bei Scheduler-Änderungen `last_run` geprüft.
+
+**Ausnahme reine Doku-/Tooling-Änderungen** (nur `.md`/`docs/`/`.claude/`/`.gitignore`, kein Code in `src/`/`api/`/`internal/`/`frontend/`/`cmd/`): Schritt 3 entfällt, Schritt 4 entfällt solange der Drift-Monitor ruhig ist.
+
+### CI-Ampel & Merge-Regel
+
+Die 6 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`) sind die **CI-Ampel**.
+
+- **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 6 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
+- **Wird `main` trotzdem rot:** Drive-to-green hat Vorrang vor neuer Feature-Arbeit.
+- **Branch-Protection ist beschlossen:** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow. Den mechanischen Schalter setzt der PO; bis dahin gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
+
+Ratschen-Pflege (`ci_tdd_excludes.txt`, `ci_e2e_specs.txt`, Aufnahmefilter): `docs/reference/gates_und_ratschen.md`.
+
+## Mail-Validatoren (ZWINGEND)
+
+Zwei Mail-Pfade, zwei Gates. Falscher Validator auf einen Pfad → strukturell nie bestehbar → Gate-Erosion.
 
 | Mail-Pfad | Validator (PFLICHT vor „E2E bestanden") | Marker-Header |
 |---|---|---|
 | **Orts-Vergleich** (Vergleichsmatrix, Winner-Box, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
 | **Trip-Briefing** (`full`/`compact`, Stundentabellen) | `uv run python3 .claude/hooks/briefing_mail_validator.py` | `X-GZ-Mail-Type: trip-briefing` + `X-GZ-Format: full\|compact` |
 
-**Regeln:** gegen **echt zugestellte Staging-Mail** aus Stalwart-Test-Postfach (`gregor-test@henemm.com`, Creds `GZ_IMAP_*`, nie im Klartext) — kein Mock, kein Gmail. Geprüft wird Plausibilität, nicht bloße String-Presence. **Nur bei Exit 0** darf „E2E bestanden" gesagt werden.
+**Regeln:** gegen **echt zugestellte Staging-Mail** aus dem Stalwart-Test-Postfach (`gregor-test@henemm.com`, Creds `GZ_IMAP_*`, nie im Klartext) — kein Mock, kein Gmail. Geprüft wird Plausibilität, nicht bloße String-Presence. **Nur bei Exit 0** darf „E2E bestanden" gesagt werden.
 
-**Renderer-Commit-Gate (#811, un-überspringbar):** `renderer_mail_gate.py` blockiert jeden Commit, der eine Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`, `src/output/renderers/{trip_report,sms_trip,compact_summary}.py`, `src/output/renderers/alert/*.py`, `src/output/channels/email.py`), bis im aktiven Workflow **beide** frisch vorliegen: (1) `tests/tdd/test_issue_811_mode_matrix.py` grün, (2) erfolgreicher `briefing_mail_validator.py`-Lauf. Abhilfe bei Blockade: `uv run pytest tests/tdd/test_issue_811_mode_matrix.py` ausführen, dann Validator grün bekommen.
+Ein **Renderer-Commit-Gate** blockiert Commits an Mail-Inhalts-Dateien, bis Modus-Matrix-Test und Validator frisch grün sind — Details in `docs/reference/gates_und_ratschen.md`.
 
-**„Un-überspringbar" gilt erst seit #1431 (2026-08-04) wirklich.** Davor entschied dieses Gate — wie vier weitere — per Teilstring `"git commit"`, ob es überhaupt prüft; `git -C /pfad commit`, `git -c k=v commit` und `git --no-pager commit` umgingen es **still**, ohne Umgehungsabsicht und ohne Meldung. Seit #1431 entscheidet `hook_utils.is_git_subcommand` tokenbasiert (agent-os-openspec ≥ 3.10.0) mit umgedrehter Frage: nicht „erkenne ich einen Aufruf?", sondern „bin ich sicher, dass hier keiner drinsteckt?" — alles Unzerlegbare wird geprüft statt durchgelassen. **Merksatz für jede solche Zusicherung: nachmessen, nicht glauben.**
+## Design-Leitprinzipien (PO-bestätigt 2026-05-25)
 
-Details (Plausibilitäts-Schwellen, Anti-Stale-Mechanik, Historie): **`docs/reference/mail_validators.md`**.
+**Hoher Kontrast = Lesbarkeit.** Bei Konflikt zwischen „weicher Optik" und „klarer Lesbarkeit" gewinnt **Lesbarkeit** — das Produkt ist ein Briefing-Werkzeug für Wetter-/Tourenentscheidungen, Inhalt muss unter Zeitdruck lesbar sein. Steht über ästhetischen Präferenzen.
 
-## Specs
+- Karten = weiß (`--g-card #ffffff`) auf warmer Off-White-Page (`--g-paper #f6f4ee`). Kein beiges Card-on-beige.
+- Text-Kontrast mindestens WCAG-AA (4.5:1). `--g-ink-4` strikt nur Placeholder/Disabled, nie Captions/Help-Text/Daten-Labels (nur 2.85:1 auf Weiß).
+- Akzent-Farben sparsam, nie alleiniger Lesbarkeits-Träger — Form + Position + Mono-Strecke tragen mit.
 
-Alle Module benoetigen Specs vor Implementierung:
-- Template: `docs/specs/_template.md`
-- Location: `docs/specs/modules/[entity].md`
-- Implementierte Module: siehe geschlossene GitHub Issues + `docs/specs/modules/`
+Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN.md`. Folge-Arbeit: Surface-Stack-Migration → Token-Rename → Atom-Migration (Epic #368).
 
-## Dokumentation
+## Trip/Ortsvergleich-Code-Teilung (PO-Vorgabe, mehrfach bekräftigt)
 
-- `docs/specs/` - Entity-Spezifikationen
-- `docs/features/` - Feature-Dokumentation
-- `docs/reference/` - Technische Referenz
-- `docs/project/` - Projekt-Management (Archiv)
+**Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor funktioniert wie der Trip-Editor.** Als prüfbare Invariante:
 
-## Backlog & Issue-Tracking
+- **Geteilt (EIN Code, Parameter `context="route"|"vergleich"`):** Editor-Rahmen (Progressive Tabs, Lock-Engine, Speichern/Verwerfen), Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell-Konvergenz (Epic #1230).
+- **Anlegen folgt dem Trip-Muster:** `/trips/new` = Progressive-Tab-Anlege-Seite aus geteilten Bausteinen (`TripNewEditor`, #622); der alte 5-Schritt-Wizard ist dort abgeschafft. `/compare/new` bekommt dieselbe Bauart; `CompareEditor.svelte` + Compare-Wizard sind Alt-Bestand und fallen ersatzlos. **Es gibt keine offene Designfrage dazu — nicht erneut vorlegen.**
+- **Compare-eigen dürfen NUR sein:** Orte-Tab (statt Etappen), transponierte Übersicht (Orte = Spalten), Compare-Mail-Template.
+- **Default-Fehler:** Eine neue Compare-Komponente, zu der ein Trip-Pendant existiert (oder umgekehrt), ist ein Verstoß — Ausnahme nur mit dokumentierter Begründung in der Spec. Anti-Pattern: #1170.
+- **Prüfung:** Bei jeder Editor-/Detail-Arbeit ist „hätte das ein geteilter Baustein sein müssen?" expliziter Adversary-/Review-Punkt. Eine **Pendant-Sperre am Commit** setzt das für Neuanlagen durch (`docs/reference/gates_und_ratschen.md`).
 
-**GitHub Issues ist die Single Source of Truth für offene Arbeit:** https://github.com/henemm/gregor_zwanzig/issues
+## Confidence — NICHT wählbar als Metrik (Issue #710, Final)
 
-- Neue Features → Issue Label `enhancement`; neue Bugs → Label `bug`; fertig → Issue schließen
-- Root-Cause-Analysen → `docs/project/known_issues.md`; strategische Entscheidungen → `docs/project/strategic-directions.md`
-- **NICHT MEHR in Markdown-Dateien planen!** Offene Features/Bugs/Sprint-Planung gehören auf GitHub Issues.
+**`confidence_pct` ist KEINE pro-Etappe wählbare Wetter-Metrik** — eine Meta-Aussage über mehrtägige Ensemble-Divergenz, keine lokale Wettergröße. Darf ausschließlich erscheinen als: (1) Vorhersage-Verlässlichkeits-Hinweis im E-Mail-Textblock, (2) SMS-Token (C+/C~/C? für Sicherheit-Bands), (3) interne Aggregation/Scoring. **NIEMALS** im Trip-Editor, Wizard Step 3, Metrik-Auswahl oder als per-Etappe-Spalte.
 
-## Pre-Test Validierung (PFLICHT!)
-
-**Vor jeder Testaufforderung an den User:** `python3 .claude/validate.py` prüft Syntax + Import geänderter Python-Dateien + Server-Startup. Erst bei allen Checks grün den User zum Testen auffordern; danach `python3 .claude/validate.py --clear`.
-
-**NIEMALS "teste es" ohne vorherige Validierung!**
+**Implementierung:** `MetricDefinition.selectable=false`; GET `/api/metrics` filtert auf `selectable=true`. Alte Trips mit aktiviertem `confidence` laden still, die Metrik wird in Render-Pfaden ignoriert.
 
 ## Daten-Schema-Reworks (PFLICHT!)
 
 **Bestandsdaten bei Persistenz-Änderungen MÜSSEN erhalten bleiben.** Regel: **Read-Modify-Write mit Merge** — bestehendes Objekt laden, nur geänderte Felder überschreiben. **Niemals Replace** (Client-unbekannte Felder gehen sonst verloren). Hintergrund: BUG-DATALOSS-GR221 (#102), 3 von 4 Stages verloren.
 
-**Schema-relevante Dateien:** `src/app/models.py`, `src/app/trip.py`, `src/app/loader.py`, `internal/model/*.go`, `internal/store/store.go` — Edits lösen automatisch den Pre-Snapshot-Hook `data_schema_backup.py` aus (tar.gz nach `.backups/`, Retention 20).
+**Schema-relevante Dateien:** `src/app/models.py`, `src/app/trip.py`, `src/app/loader.py`, `internal/model/*.go`, `internal/store/store.go` — Edits lösen automatisch den Pre-Snapshot-Hook `data_schema_backup.py` aus (tar.gz nach `.backups/`, Retention 20). Migration + Roundtrip-Test, Rollback, Anti-Pattern-Beispiele: `docs/reference/operations_playbook.md`.
 
-Migration + Roundtrip-Test, Rollback, Anti-Pattern-Beispiele: **`docs/reference/operations_playbook.md`**.
+## Backlog & Nebenbefunde
 
-## Session-Artefakte mit Tokens: NIE weltlesbar nach /tmp (Security #199)
+**GitHub Issues ist die Single Source of Truth für offene Arbeit.** Neue Features → Label `enhancement`; Bugs → Label `bug`; fertig → Issue schließen. **NICHT in Markdown-Dateien planen.** Root-Cause-Analysen → `docs/project/known_issues.md`; strategische Entscheidungen → `docs/project/strategic-directions.md`.
 
-Cookiejars, `storageState`, Auth-Responses u.ä. enthalten Session-Tokens (`gz_session`). **Verboten:** `curl -c /tmp/xyz.txt` o.ä. mit Default-Rechten. **Stattdessen:** ins Session-Scratchpad-Verzeichnis schreiben (ist privat) ODER vorher Datei mit `install -m 600 /dev/null <pfad>` anlegen bzw. `umask 077` setzen. Playwright-`storageState` gehört nach `frontend/e2e/playwright/.auth/` (gitignored), nie nach `/tmp`. Hintergrund: henemm-security #199 — world-readable Tokens in /tmp; infra-Monitor härtet nur kompensierend nach. (Prüfdatum-Regelbudget: Konvention statt neuem Gate; Gate nur bei Wiederauftreten.)
+**Nebenbefund-Triage:** Nebenbefunde werden NICHT automatisch eigene Issues. **Eigenes Issue nur bei:** (a) nutzersichtbarem Fehlverhalten, (b) Datenverlust-/Sicherheitsrisiko, (c) fälschlich blockierendem Gate. **Alles andere** → Checkbox-Zeile im rollierenden Sammel-Issue **#1199**; Test-/Gate-Befunde in #1196/#1197. Einträge ohne PO-Bestätigung verfallen nach 30 Tagen. Adversary-Findings der Stufe LOW/kosmetisch sind per Default Sammel-Einträge.
 
-## Parallele Sessions
+**Regel-Budget:** Jede neue Pflicht-Regel, jedes neue Gate, jeder neue Pflicht-Validator muss beim Einführen entweder **eine bestehende Regel ersetzen** oder ein **Prüfdatum (+90 Tage)** tragen. Am Prüfdatum: kein nachweisbarer Fang → Rückbau. Prüfdaten-Tabelle: `docs/reference/gates_und_ratschen.md`. Wirkmodell: `docs/analysis/backlog-spirale-2026-07.md`.
 
-**Ein Projektordner = höchstens eine Claude-Session gleichzeitig** (kollidierende Dateien/WIP/Workflow-Buchführung). Der Session-Wächter erzwingt bei einer zweiten Sitzung `EnterWorktree`:
+## Betrieb
+
+- **Production:** https://gregor20.henemm.com — Systemd (`gregor-python.service`, `gregor-api`, `gregor-frontend`)
+- **Staging:** https://staging.gregor20.henemm.com — Systemd (`gregor-python-staging`, `gregor-api-staging`, `gregor-frontend-staging`)
+- **Infrastruktur-Repo:** `henemm/henemm-infra`. Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
+
+**Monitoring:** extern über `henemm-infra/check-gregor20.sh`. Status-Endpoint `/api/scheduler/status` (Port 8090) — pro Job `next_run`/`last_run`. **PFLICHT bei neuen Services/Schedulern:** `last_run`-Tracking im Status-Endpoint — kein Job ohne Observability.
+
+**Pre-Test-Validierung:** Vor jeder Testaufforderung an den User `python3 .claude/validate.py` (Syntax + Import geänderter Python-Dateien + Server-Startup); danach `--clear`. **NIEMALS „teste es" ohne vorherige Validierung.**
+
+**Session-Artefakte mit Tokens NIE weltlesbar nach /tmp** (Security #199): Cookiejars, `storageState`, Auth-Responses enthalten Session-Tokens. Verboten: `curl -c /tmp/xyz.txt` mit Default-Rechten. Stattdessen ins Session-Scratchpad (privat) schreiben ODER vorher `install -m 600 /dev/null <pfad>` bzw. `umask 077`. Playwright-`storageState` gehört nach `frontend/e2e/playwright/.auth/` (gitignored).
+
+## Parallele Sessions & Token-Budget
+
+**Ein Projektordner = höchstens eine Claude-Session gleichzeitig.** Der Session-Wächter erzwingt bei einer zweiten Sitzung `EnterWorktree`:
 
 ```bash
 bash .claude/tools/gz-workspace new <name>   # isolierter Klon auf Branch ws/<name>
@@ -224,111 +217,24 @@ bash .claude/tools/gz-workspace list         # alle Workspaces mit Branch + unco
 bash .claude/tools/gz-workspace clean <name> # entfernen (nur wenn sauber; --force erzwingt)
 ```
 
-**Regel:** jede Session liefert **unabhängig** aus, Integrationspunkt ist `origin/main` — erreicht ausschließlich per PR mit grüner Ampel (Liefer-Workflow unten, PO-go 2026-08-05). Nur so wird gemergt → `main` ist immer auslieferbar → Deploy (`deploy-gregor-prod.sh`, `flock`-serialisiert) darf aus jeder Session jederzeit laufen. **Verboten:** Deploy aufschieben „bis der Ordner sauber ist" — diese Pattsituation existiert nicht mehr.
+Jede Session liefert **unabhängig** aus, Integrationspunkt ist `origin/main` — erreicht ausschließlich per PR mit grüner Ampel. **Verboten:** Deploy aufschieben „bis der Ordner sauber ist".
 
-Detailablauf, WIP-Sicherung beim Deploy: **`docs/reference/operations_playbook.md`**.
+**🔴 Kontext ist die teuerste Ressource (gemessen 2026-08-15).** 67 % des Token-Verbrauchs sind Wieder-Einlesen von Kontext, nicht erzeugter Text; Anfragen jenseits 200k Kontext machten 41 % der Anfragen und **66 % des Verbrauchs** aus. Daraus folgt, **unabhängig von der Auslastung**:
 
-## Deployment & Infrastruktur
+- **Nach jedem abgeschlossenen Ticket `/clear`** — nicht erst, wenn es eng wird. Bei neuem Thema selbst vorschlagen.
+- **Bash-Aufrufe bündeln.** Jeder Aufruf ist ein voller Durchlauf mit dem gesamten bisherigen Kontext; drei zusammengehörige Kommandos in einem Aufruf kosten ein Drittel.
+- **Breit suchen heißt delegieren.** Fan-out-Suchen an einen Explore-Agenten geben — dessen gelesene Dateien landen nicht im Hauptkontext.
+- **Gezielt lesen** (`limit`/`offset`), nicht ganze Dateien „zur Sicherheit". Eine einmal gelesene Datei wird bei **jedem** folgenden Schritt erneut bezahlt.
 
-Globale Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
-
-- **Production:** https://gregor20.henemm.com — Systemd (`gregor-python.service`, `gregor-api`, `gregor-frontend`)
-- **Staging:** https://staging.gregor20.henemm.com — Systemd (`gregor-python-staging`, `gregor-api-staging`, `gregor-frontend-staging`)
-- **Infrastruktur-Repo:** `henemm/henemm-infra`
-
-### Liefer-Workflow (PFLICHT — PR statt Direkt-Push, PO-go 2026-08-05)
-
-**Direkt-Push auf `main` ist abgeschafft.** `main` ändert sich nur noch per Pull Request mit vollständig grüner CI-Ampel (ersetzt den alten Schritt 1 „`git push origin main`" — Regel-Budget: Ersatz, kein Zusatz). Anlass: 2026-08-04/05 liefen vier Direkt-Pushes in Folge auf rote Ampel (37 test-Rote + Lint, PR #1508 musste fremde Befunde grün ziehen).
-
-| Schritt | Was |
-|---|---|
-| 1 | Arbeitsbranch pushen: `git push -u origin <branch>` (nie direkt `main`; Server-Sessions: Themen-Branch oder `ws/<name>` aus gz-workspace) |
-| 1b | PR eröffnen (`gh pr create --fill`) und CI-Ampel abwarten — **alle 6 Checks grün** auf dem letzten Stand, sonst erst fixen (Merge-Regel unten) |
-| 1c | Mergen (`gh pr merge --merge`) — erst damit ist `main` aktualisiert |
-| 2 | Auto-Deploy auf Staging abwarten (~5 Min, Cron `*/5`) |
-| 3 | Staging-Validierung (s.u.) |
-| 4 | Prod-Deploy: `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
-| 4b | Post-Deploy-Selftest: `python3 .claude/hooks/prod_selftest.py` — nur Exit 0 fährt weiter |
-| 5 | `gh issue close <N>` — nur wenn 4b Exit 0 |
-
-Wird ein Push nach `main` von GitHub abgewiesen, ist das kein Fehler, sondern die Branch-Protection: Branch anlegen, PR nachziehen. Ein PR ersetzt NICHT die Staging-Validierung (Schritte 2–5 unverändert) — die Ampel bewacht Code-Gesundheit, Staging bewacht Verhalten.
-
-`systemctl restart` allein **reicht nie** — das Deploy-Script macht flock-Lock → hart auf `origin/main` syncen (Daten unberührt, WIP gesichert) → Go-Binary + Frontend bauen → alle 3 Services restarten → Smoke-Test. Ohne vollen Lauf entsteht Code-Drift, den `check-gregor20.sh` meldet (#113). Script ist **parallel-session-sicher** (`flock`) — Schritt 4 jederzeit aus jeder Session.
-
-**„Staging-validiert"** = mindestens: HTTP-Smoke (`/` → 200/302, `/api/health` → 200) + geänderte Funktion manuell/Playwright durchgeklickt; bei Mail-Änderungen Test-Mail + IMAP-Verifikation; bei Scheduler-Änderungen `last_run` geprüft.
-
-**Ausnahme reine Doku-/Tooling-Änderungen** (nur `.md`/`docs/`/`.claude/`/`.gitignore`, kein Code in `src/`/`api/`/`internal/`/`frontend/`/`cmd/`): Schritt 3 entfällt, Schritt 4 entfällt solange Drift-Monitor ruhig ist. Im Zweifel trotzdem deployen. Volle Definitionen: **`docs/reference/operations_playbook.md`**.
-
-### CI-Ampel & Merge-Regel (Tech-Lead-Entscheid 2026-08-04, #1196)
-
-Die 6 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`) sind die **CI-Ampel**. Seit PR #1497 ist sie vollständig grün bei ehrlichem Umfang (`test`-Job: 5837 Tests inkl. `tests/tdd/` + pytest-socket-Egress-Wächter). `e2e` kam mit #1771 Scheibe 2 hinzu (2026-08-13) — eigener, paralleler Job (kein `needs:`), isolierter Offline-Stack + wachstumsbeschränkte Playwright-Positivliste (`.github/ci_e2e_specs.txt`), Details: ADR-0054.
-
-- **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 6 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
-- **Wird `main` trotzdem rot** (Altbestand, Notfall-Push): Drive-to-green hat Vorrang vor neuer Feature-Arbeit — wer es findet, fixt es oder ordnet es belegt zu.
-- **tdd-Ratsche:** `.github/ci_tdd_excludes.txt` listet die offline-roten `tests/tdd/`-Dateien. Nur ENTFERNEN erlaubt (Datei grün gemacht → Zeile raus); neue tdd-Dateien laufen automatisch auf CI. Ergänzen einer Zeile nur mit Begründung im PR.
-- **e2e-Ratsche (umgekehrte Richtung):** `.github/ci_e2e_specs.txt` ist eine Positivliste und darf nur WACHSEN — eine Ausschlussliste würde eine grüne Grundmenge voraussetzen, die eine Stichprobenmessung (30,6 % rot) widerlegt hat. Stand nach #1771 S3 (2026-08-14): **45 Dateien / 224 Testfälle**. Aufnahme nur nach **Filter A** (strukturell) + **Filter B** (3× hintereinander grün) + **Filter C** (die Datei darf beim Laufen keine *versionierte* Datei verändern — 3 Specs schrieben Screenshots ohne `../` nach `frontend/docs/artifacts/`, das die Ignore-Regel `docs/artifacts/` nicht abdeckt). Specs: `fix_1771_s2_playwright_ci_ampel.md` (Lane) und `fix_1771_s3_e2e_listen_wachstum.md` (Wachstum, Verfahren, Abbruchgrenze).
-  - 🔴 **Filter B MUSS im ZIELVERBUND gemessen werden**, nie im Kandidatenverbund. Genau daran hing #1771 S3: zwei Dateien waren im 51er-Verbund grün und in der echten Positivliste **rot** — `bug-703-login-ratelimit.spec.ts` feuert absichtlich 32 Anmeldungen gegen das IP-Limit von 30/Stunde (`internal/router/router.go`) und verbrennt das Kontingent des **ganzen Jobs**; Playwright sortiert **alphabetisch**, die CLI-Reihenfolge ist wirkungslos. Deshalb läuft die Datei in `ci.yml` als eigener, nachgelagerter Aufruf. Bestandsdateien merken nichts davon (sie nutzen `storageState`) — es trifft nur Dateien mit **eigenem** Login, also ausgerechnet Mandantentrennungs-Tests. **Der Split behandelt das Symptom; beim nächsten Wachstum um Login-Tests neu bewerten.**
-  - **Beide Schwellen exakt nachziehen, kein Puffer** (F006): `E2E_MIN_SPECS` ist mechanisch an die Listenlänge gebunden (`tests/unit/test_e2e_positivliste_ratschen_bindung.py`, prüft auch Filter C); `E2E_MIN_EXECUTED_HAUPT`/`_RATELIMIT` bleiben **Handpflege** — ohne echten Browserlauf nicht statisch ableitbar, als Known Limitation benannt statt als gelöst behauptet.
-  - **Der rote Restbestand ist veraltet, nicht kaputt:** #1771 S3 hat 200 rote Testfälle diagnostiziert — **0 echte Produktfehler**, dafür 22 gesuchte Testids, die es im Frontend nicht mehr gibt. Es gibt **keinen gemeinsamen Hebel** (dreifach belegt, ADR-0054-Nachtrag) ⇒ jede weitere Aufnahme ist Einzelfallarbeit. Diese Messung nicht wiederholen.
-- **Branch-Protection ist beschlossen (PO-go 2026-08-05):** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow (oben). Den mechanischen Schalter (GitHub → Settings → Branches: PR-Pflicht + die 6 Status-Checks als required) setzt der PO; bis er gesetzt ist, gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
-
-*Regel-Budget (5-Checks-Ampel): Prüfdatum 2026-11-02. Fang-Beleg bei Einführung: 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196, PRs #1494/#1496/#1497).*
-*Regel-Budget (6. Check `e2e`, #1771 S2): Prüfdatum 2026-11-11. Fang-Kriterium: mindestens ein PR, in dem die Lane eine Regression fängt, die die anderen fünf Checks durchlassen — sonst Rückbau. #1771 S3 vergrößert die Fangfläche von 173 auf 224 Testfälle, ändert das Kriterium aber nicht.*
-
-## Monitoring
-
-Externes Monitoring über `henemm-infra/check-gregor20.sh`. Interner Heartbeat vom Scheduler an BetterStack ist optional (fail-soft bei leeren `GZ_HEARTBEAT_*`-Vars) — dann geht einmalig eine MQ-Nachricht an `infra`.
-
-**Status-Endpoint:** `/api/scheduler/status` (gregor-api, Port 8090) — pro Job `next_run`/`last_run` (Status, Fehler).
-
-**PFLICHT bei neuen Services/Schedulern:** `last_run`-Tracking im Status-Endpoint — kein Job ohne Observability!
-
-## Design-Leitprinzipien (PO-bestätigt 2026-05-25)
-
-**Hoher Kontrast = Lesbarkeit.** Bei Konflikt zwischen "weicher Optik" und "klarer Lesbarkeit" gewinnt **Lesbarkeit** — das Produkt ist ein Briefing-Werkzeug für Wetter-/Tourenentscheidungen, Inhalt muss unter Zeitdruck lesbar sein. Steht über ästhetischen Präferenzen.
-
-Konsequenzen (Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN.md`):
-- Karten = weiß (`--g-card #ffffff`) auf warmer Off-White-Page (`--g-paper #f6f4ee`). Kein beiges Card-on-beige.
-- Text-Kontrast mindestens WCAG-AA (4.5:1). `--g-ink-4` strikt nur Placeholder/Disabled, nie Captions/Help-Text/Daten-Labels (nur 2.85:1 auf Weiß).
-- Akzent-Farben sparsam, nie alleiniger Lesbarkeits-Träger — Form + Position + Mono-Strecke tragen mit.
-
-Folge-Arbeit: Surface-Stack-Migration (vor Atom-Migration) → Token-Rename → Atom-Migration (Epic #368). Kontrast-Audit (#16) parallel möglich.
-
-## Trip/Ortsvergleich-Code-Teilung (PO-Vorgabe, mehrfach bekräftigt, zuletzt 2026-07-13)
-
-**Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor funktioniert wie der Trip-Editor.** Als prüfbare Invariante:
-
-- **Geteilt (EIN Code, Parameter `context="route"|"vergleich"`):** Editor-Rahmen (Progressive Tabs, Lock-Engine, Speichern/Verwerfen), Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell-Konvergenz (Epic #1230).
-- **Anlegen folgt dem Trip-Muster (PO-bekräftigt 2026-07-19):** `/trips/new` = Progressive-Tab-Anlege-Seite aus geteilten Bausteinen (`TripNewEditor`, #622); der alte 5-Schritt-Wizard ist dort abgeschafft. `/compare/new` bekommt mit #1301 F2 dieselbe Bauart (geteilte Tab-Organismen, kein eigener Anlege-Editor); `CompareEditor.svelte` + Compare-Wizard sind Alt-Bestand und fallen ersatzlos. **Es gibt keine offene Designfrage dazu — nicht erneut vorlegen.**
-- **Compare-eigen dürfen NUR sein:** Orte-Tab (statt Etappen), transponierte Übersicht (Orte = Spalten), Compare-Mail-Template (E9).
-- **Default-Fehler:** Eine neue Compare-Komponente, zu der ein Trip-Pendant existiert (oder umgekehrt), ist ein Verstoß — Ausnahme nur mit dokumentierter Begründung in der Spec. Anti-Pattern-Referenz: #1170 (CompareAlarmSection „analog Trip" nachgebaut statt geteilt).
-- **Prüfung:** Bei jeder Editor-/Detail-Arbeit ist „hätte das ein geteilter Baustein sein müssen?" expliziter Adversary-/Review-Punkt.
-
-**Pendant-Sperre am Commit (#1481 B, seit 2026-08-04):** `pendant_gate.py` blockiert jeden Commit, der eine **neu angelegte** Datei in einem einseitigen Bereich enthält — `frontend/src/lib/components/{compare,compare-new,trip-detail,trip-new}/**` und `src/output/renderers/**/{compare_*,trip_*}.py` (rekursiv). Zwei Auswege, beide ohne Rückfrage: die Datei unter `frontend/src/lib/components/shared/**` bzw. als Renderer **ohne** `compare_`/`trip_`-Präfix ablegen — **oder** eine Kopfzeile `gz-eigenstaendig: <fachlicher Grund>` in die ersten 20 Zeilen setzen (mind. 15 sinnvolle Zeichen; `#`, `//` oder bloße Zeile im Python-Docstring; Muster der `gz-main-path`-Ausnahme aus #1409). **Der Ausweg verhindert nichts — er macht die Entscheidung im Änderungssatz zitierbar.** Die Meldung nennt das vermutete Gegenstück auf der anderen Seite. Ausgenommen: Testdateien (Endung `.test.ts`/`.spec.ts`, Ordner `tests/**`/`__tests__/**`) und der gesamte Bestand — nur Neuanlagen greifen. **Bewusste Grenzen** (Spec `docs/specs/modules/feat_1481b_pendant_gate.md` → „Nicht in dieser Scheibe"): keine Go-Seite, unpräfigierte Trip-Gegenstücke wie `email/html.py` sind unerkennbar, die Begründung wird auf Länge geprüft (nicht auf Substanz), und ein Commit in ein **anderes** Verzeichnis wird nicht geprüft — der Wächter sagt das dann ausdrücklich. Prüfdatum 2026-11-03.
-
-**Commit-Gate „Tests der berührten Dateien" (#1481 A, seit 2026-08-04):** `touched_tests_gate.py` blockiert jeden Commit, der einen Test rot macht, der zu einer der geänderten Dateien gehört (Python/Go/Frontend). Vorbestehend rote Tests blockieren nicht — der Vorzustand wird an einem Wegwerf-Abzug des letzten Commits **gemessen**, nicht gepflegt. Geprüft wird nur `tests/unit/`; was ungeprüft blieb, nennt die Meldung. Abhilfe bei Blockade: den genannten Test reparieren oder löschen — nicht drumherum arbeiten. Prüfdatum 2026-11-03.
-
-Beide Wächter lassen bei **eigener** Störung immer durch und sagen es — ein defektes Gate darf nie die Ursache sein, dass nicht mehr gearbeitet werden kann.
-
-## Signal als Channel — ENTFERNT (2026-06-06, Issue #610)
-
-Signal ist entfernt: kein `SignalOutput`/`signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`. Wiedereinführung müsste neu spezifiziert werden. (Callmebot bleibt serverseitig für andere Dienste.)
-
-**Die Kanal-Liste lautet seit 2026-08-10 vier, nicht drei:** E-Mail · Telegram · SMS · Premium-SMS. Hier stand bis dahin „Kanäle sind nur noch E-Mail · Telegram · SMS" — das war nach der Signal-Entfernung richtig und ist seit #1676 S2a (ADR-0049, schreibt ADR-0004 fort) überholt. Als **Versandkanal** ist Premium-SMS weiterhin nur im **Trip-Briefing** verdrahtet (kein Ortsvergleich-Versand). Als **Alarm-Kanal** ist Premium-SMS seit #1701 (Backend) und #1745 Scheibe A (Oberfläche, Alarme-Reiter) in **beiden** Flächen (Trip UND Ortsvergleich) verdrahtet — hier stand bis 2026-08-11 „Alarm- und Vergleichspfad folgen mit #1701, die Oberfläche mit S3", das ist damit eingeholt. Wirkt für **alle** Alarmarten inklusive Regen-/Radar-Alarme — hier stand bis 2026-08-13 „nicht für Regen-/Radar-Alarme, die weiterhin am Briefing-Flag hängen (Scheibe B, #1752, offen)"; #1752 ist seit 2026-08-12 geschlossen, Radar-Alarme laufen seither über dieselbe geteilte Kanal-Auflösung wie alle anderen Alarme (bestätigt per Paritäts-Audit #1533, 2026-08-13). Zur Gleichrangigkeit der vier Kanäle siehe „Projekt-Ueberblick" oben.
-
-## Confidence (Vorhersage-Verlässlichkeit) — NICHT wählbar als Metrik (2026-06-10, Issue #710)
-
-**`confidence_pct` ist KEINE pro-Etappe wählbare Wetter-Metrik** — eine Meta-Aussage über mehrtägige Ensemble-Divergenz, keine lokale Wettergröße. Darf ausschließlich erscheinen als: (1) Vorhersage-Verlässlichkeits-Hinweis im E-Mail-Textblock, (2) SMS-Token (C+/C~/C? für Sicherheit-Bands), (3) interne Aggregation/Scoring. **NIEMALS** im Trip-Editor, Wizard Step 3, Metrik-Auswahl oder als per-Etappe-Spalte.
-
-**Implementierung:** `MetricDefinition.selectable=false`; GET `/api/metrics` filtert auf `selectable=true`. Alte Trips mit aktiviertem `confidence` laden still, Metrik wird in Render-Pfaden ignoriert. **PO-Entscheidung, Final** — verhindert Regress wie #710/#473.
+Detailablauf, WIP-Sicherung beim Deploy: `docs/reference/operations_playbook.md`.
 
 ## Messaging
 
-Diese Instanz heißt `gregor`. Siehe `~/.claude/CLAUDE.md` → "Inter-Instance Messaging" für Details.
+Diese Instanz heißt `gregor`. Siehe `~/.claude/CLAUDE.md` → „Inter-Instance Messaging".
 
 # Compact instructions
 
-Diese Sektion wird von `/compact` automatisch als Zusammenfassungs-Anleitung gelesen. Sie greift bei jedem `/compact` — nie einen langen `/compact <Text>` tippen, einfaches `/compact` genügt.
+Diese Sektion wird von `/compact` automatisch als Zusammenfassungs-Anleitung gelesen — nie einen langen `/compact <Text>` tippen, einfaches `/compact` genügt.
 
 Bei aktivem OpenSpec-Workflow (`GZ_ACTIVE_WORKFLOW` gesetzt) beim Komprimieren IMMER bewahren:
 
@@ -338,4 +244,4 @@ Bei aktivem OpenSpec-Workflow (`GZ_ACTIVE_WORKFLOW` gesetzt) beim Komprimieren I
 - **Implementierung & QA:** geänderte Dateien, Adversary-Verdict, offene Fix-Loop-Punkte
 - **Deploy-relevant:** Scope (frontend-only vs. full-stack), `verified_commit`-Status, Staging-Verdict
 
-Verwerfen: rohe Tool-Output-Dumps, allgemeines Hin-und-Her, Implementierungs-Detail-Diskussionen die bereits in Code/State-Dateien (`.claude/workflows/<name>.json`, `.claude/e2e_verified/<sha>.json`, `docs/artifacts/`) stehen.
+Verwerfen: rohe Tool-Output-Dumps, allgemeines Hin-und-Her, Implementierungs-Detail-Diskussionen, die bereits in Code/State-Dateien (`.claude/workflows/<name>.json`, `.claude/e2e_verified/<sha>.json`, `docs/artifacts/`) stehen.
