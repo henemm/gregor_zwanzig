@@ -323,6 +323,19 @@ bleibt unverändert ohne diese Zeile (`'auswertungen'` steht in
 `ROUTE_ONLY_SECTIONS`, `weatherMetricsTabSections.ts`) — der Ortsvergleich
 zieht mit **#1411** nach.
 
+> **Korrektur 2026-08-15 (Issue #1728 Scheibe 2):** Der hier beschriebene
+> Bedienabschnitt „05 — Auswertungen" (`context='route'`) ist ersatzlos
+> entfernt, nicht mehr nur `context='vergleich'`-exklusiv — der zugrunde
+> liegende Renderer-Mechanismus (`MetricConfig.aggregations`) wirkt seit
+> Scheibe 1 (`feat_1728_s1_temp_aufloesung`) an keinem Trip-Ausgabeort mehr
+> (die E-Mail-Pillen zeigen unbedingt die Spanne). `'auswertungen'` steht
+> seither nicht mehr in `ROUTE_ONLY_SECTIONS`, weil der Abschnitt selbst
+> nicht mehr existiert. Diese Spec beschreibt damit einen abgelösten Stand
+> (s. `docs/specs/modules/feat_1728_s2_editor.md`, dort als Dependency
+> ausdrücklich als „bleibt als Historie stehen" geführt) — als
+> Implementierungshistorie weiterhin korrekt, nicht mehr als
+> Ist-Beschreibung der Bedienoberfläche.
+
 **Abbildung von Altbestand (nur zur Anzeigezeit, nichts wird beim Laden
 umgeschrieben):** Eine gespeicherte Liste ohne Entsprechung in den vier
 Möglichkeiten wird sowohl im Renderer (`_resolve_pill_aggregations()`) als

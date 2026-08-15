@@ -11,7 +11,19 @@
 // bereits GRUEN und MUSS es bleiben.
 //
 // Spec: docs/specs/modules/feat_1411_s4b_grundauswahl.md § AC-9
-// Kontext: docs/context/feat-1411-s4b-grundauswahl.md
+//
+// Issue #1728 Scheibe 2 (DEC-9, AC-8): der dritte Testfall unten ist AB HIER
+// UMGEDREHT — vormals Positiv-Nachweis, dass 'route' 'auswertungen' ENTHAELT
+// (der Bedienabschnitt "05 -- Auswertungen" existierte), jetzt Negativ-
+// Nachweis, dass 'auswertungen' in KEINEM Kontext mehr vorkommt. Der
+// Bedienabschnitt entfaellt ersatzlos (Spec § Purpose), der zugrunde liegende
+// Mechanismus (`MetricConfig.aggregations`) wirkt seit Scheibe 1
+// (feat_1728_s1_temp_aufloesung) an keinem Trip-Ausgabeort mehr. ROT bis der
+// 05-Block aus WeatherMetricsTab.svelte entfernt und 'auswertungen' aus
+// ROUTE_ONLY_SECTIONS (weatherMetricsTabSections.ts:42) gestrichen ist.
+//
+// Spec: docs/specs/modules/feat_1728_s2_editor.md § DEC-9, AC-8
+// Kontext: docs/context/feat-1728-s2-editor.md
 //
 // Ausfuehrung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -35,7 +47,17 @@ describe('#1411 AC-9: Mengen-Wahl bekommt KEINEN eigenen Abschnitt "auswertungen
 		assert.ok(weatherMetricsTabSections('route').includes('grundauswahl'));
 	});
 
-	test("'auswertungen' bleibt im Trip-Kontext ('route') bestehen — nur der Vergleich bekommt keinen eigenen Abschnitt", () => {
-		assert.ok(weatherMetricsTabSections('route').includes('auswertungen'));
+	// Issue #1728 Scheibe 2, DEC-9/AC-8: ersetzt den vormaligen Positiv-Fall
+	// "'auswertungen' bleibt im Trip-Kontext ('route') bestehen".
+	test("AC-8: 'auswertungen' ist in KEINEM Kontext mehr enthalten (Bedienabschnitt '05 — Auswertungen' entfaellt ersatzlos)", () => {
+		assert.ok(
+			!weatherMetricsTabSections('route').includes('auswertungen'),
+			'AC-8 FAIL: der Trip-Kontext zeigt weiterhin den Abschnitt "auswertungen" — ' +
+				'der Bedienabschnitt "05 — Auswertungen" sollte ersatzlos entfallen sein'
+		);
+		assert.ok(
+			!weatherMetricsTabSections('vergleich').includes('auswertungen'),
+			'AC-8 FAIL: der Vergleich zeigt einen Abschnitt "auswertungen"'
+		);
 	});
 });

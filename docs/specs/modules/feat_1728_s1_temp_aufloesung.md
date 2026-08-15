@@ -412,7 +412,9 @@ keine Änderung nötig).
    (Spanne/Tiefst/Höchst/Mittel), die nach dieser Scheibe **nirgends mehr
    wirkt** (`mc.aggregations` wird an keinem Wirkort mehr gelesen, DEC-5).
    Das ist eine bewusst in Kauf genommene Übergangslücke, kein Fehler dieser
-   Scheibe.
+   Scheibe. **Nachtrag 2026-08-15:** Scheibe 2 (`feat_1728_s2_editor`) ist
+   abgeschlossen — der Bedienabschnitt ist entfernt, die Zwischenlücke
+   damit geschlossen.
 2. **Entfernen von `MetricConfig.aggregations` aus Modell/Loader/
    `GET /api/metrics`** — Scheibe 3. Das Feld bleibt bestehen, wird aber ab
    dieser Scheibe an keinem Trip-Wirkort mehr gelesen.

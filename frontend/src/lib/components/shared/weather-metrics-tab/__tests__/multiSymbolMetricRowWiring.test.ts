@@ -135,3 +135,93 @@ describe('AC-6: bestehende sieben ThresholdMetricRow-Aufrufe lesen metricSymbols
 		);
 	});
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Issue #1728 Scheibe 2 (DEC-6, DEC-5) — fuenf neue Kuerzel-Zeilen fuer die
+// vier neuen Tagesrichtungs-Groessen (Scheibe 1) sowie die vorbestehende
+// Luecke `wind_chill_night` (#1484/#1660 A). Exaktes Muster der
+// Bestandszeilen oben: {#if !buckets.off.includes('<id>')}
+// <MultiSymbolMetricRow metricId="<id>" .../> {/if}. ROT bis
+// WeatherMetricsTab.svelte:1584-1718 um die fuenf Bloecke ergaenzt ist.
+//
+// Spec: docs/specs/modules/feat_1728_s2_editor.md § DEC-6, AC-1..AC-6
+// Kontext: docs/context/feat-1728-s2-editor.md
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Generalisierte Fassung von windChillGateBlock() fuer eine beliebige metricId
+ * -- isoliert `{#if !buckets.off.includes('<id>')}...{/if}` und wirft mit
+ * einer AC-spezifischen Meldung, wenn das Gate nicht gefunden wird. */
+function multiSymbolGateBlock(metricId: string, acLabel: string): string {
+	const gateRe = new RegExp(`\\{#if !buckets\\.off\\.includes\\('${metricId}'\\)\\}`);
+	const gateMatch = gateRe.exec(src);
+	assert.ok(
+		gateMatch,
+		`${acLabel}: kein {#if !buckets.off.includes('${metricId}')}-Gate im Quelltext gefunden — ` +
+			`${metricId} hat noch keinen Schwellwerte-Anzeigeort`
+	);
+	const start = gateMatch!.index;
+	const end = src.indexOf('{/if}', start);
+	assert.ok(end > start, `${acLabel}: schliessendes {/if} zum ${metricId}-Gate nicht gefunden`);
+	return src.slice(start, end + '{/if}'.length);
+}
+
+const NEW_DAY_RANGE_ROWS: Array<{ ac: string; metricId: string; symbol: string }> = [
+	{ ac: 'AC-1', metricId: 'temperature_day_low', symbol: 'K' },
+	{ ac: 'AC-2', metricId: 'temperature_day_high', symbol: 'D' },
+	{ ac: 'AC-3', metricId: 'wind_chill_day_low', symbol: 'FK' },
+	{ ac: 'AC-4', metricId: 'wind_chill_day_high', symbol: 'FD' },
+	{ ac: 'AC-5', metricId: 'wind_chill_night', symbol: 'FN' },
+];
+
+for (const { ac, metricId, symbol } of NEW_DAY_RANGE_ROWS) {
+	describe(`${ac}: MultiSymbolMetricRow ist fuer '${metricId}' verdrahtet (Kuerzel ${symbol})`, () => {
+		test(`der Gate-Block fuer '${metricId}' enthaelt genau einen <MultiSymbolMetricRow>-Aufruf`, () => {
+			const block = multiSymbolGateBlock(metricId, ac);
+			const matches = block.match(/<MultiSymbolMetricRow/g) ?? [];
+			assert.equal(
+				matches.length,
+				1,
+				`${ac}: erwarte genau einen <MultiSymbolMetricRow>-Aufruf im '${metricId}'-Gate, gefunden ${matches.length}`
+			);
+		});
+
+		test(`der Aufruf setzt metricId="${metricId}"`, () => {
+			const block = multiSymbolGateBlock(metricId, ac);
+			assert.match(
+				block,
+				new RegExp(`<MultiSymbolMetricRow[\\s\\S]*?metricId="${metricId}"`),
+				`${ac}: metricId="${metricId}" fehlt am MultiSymbolMetricRow-Aufruf`
+			);
+		});
+
+		test(`die symbols-Prop bindet an metricSymbols['${metricId}'] -- NICHT hartcodiert`, () => {
+			const block = multiSymbolGateBlock(metricId, ac);
+			const callMatch = block.match(/<MultiSymbolMetricRow[\s\S]*?\/>/);
+			assert.ok(callMatch, `${ac}: MultiSymbolMetricRow-Aufruf (selbstschliessendes Tag) nicht gefunden`);
+			const call = callMatch![0];
+			assert.match(
+				call,
+				new RegExp(`symbols=\\{metricSymbols\\['${metricId}'\\][^}]*\\}`),
+				`${ac}: symbols-Prop muss an metricSymbols['${metricId}'] gebunden sein (nicht hartcodiert), gefunden:\n${call}`
+			);
+			assert.ok(
+				!/symbols=\{\s*\[\s*['"]/.test(call),
+				`${ac}: symbols-Prop darf kein hartcodiertes Array sein, gefunden:\n${call}`
+			);
+		});
+
+		// AC-6: Abwahl-Gegenprobe -- der Aufruf muss tatsaechlich INNERHALB des
+		// Gates liegen (nicht nur zufaellig irgendwo im Quelltext danach), sonst
+		// waere eine Abwahl in buckets.off wirkungslos.
+		test(`AC-6: <MultiSymbolMetricRow> fuer '${metricId}' liegt ZWISCHEN Gate-Oeffnung und {/if} (Abwahl-Gegenprobe)`, () => {
+			const block = multiSymbolGateBlock(metricId, ac);
+			const rowIdx = block.indexOf('<MultiSymbolMetricRow');
+			const closeIdx = block.lastIndexOf('{/if}');
+			assert.ok(
+				rowIdx >= 0 && rowIdx < closeIdx,
+				`AC-6: <MultiSymbolMetricRow> fuer '${metricId}' muss zwischen Gate-Oeffnung und {/if} liegen -- ` +
+					'sonst blendet eine Abwahl in buckets.off die Zeile nicht aus'
+			);
+		});
+	});
+}
