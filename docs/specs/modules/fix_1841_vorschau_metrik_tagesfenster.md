@@ -413,6 +413,31 @@ gemeldet; hier ist sie um die zweite, entgegengesetzte Geometrie ergaenzt.
 Sind sie gleich, prueft der darauf aufbauende AC-Test nichts — die Fixture
 ist dann kaputt, nicht der Code.
 
+### 🔴 ZWEI unabhaengige Achsen — Korrektur 2026-08-15 (Adversary F001, HIGH)
+
+Die Tabelle oben nennt nur **eine** Achse. Das war ein Fehler dieser Spec und
+hat eine Pflicht-Gegenprobe wirkungslos gemacht:
+
+| Achse | Unterscheidet | Fixtur-Bedingung |
+|---|---|---|
+| **A: Gehzeit ↔ Tagesfenster** | Aggregat von Tagesfenster | Gewitterstunde liegt in genau einem der beiden (Tabelle oben) |
+| **B: 24h-Reihe ↔ Tagesfenster** | ob ueberhaupt gefiltert wird | **mindestens zwei** Stundenpunkte: einer IM Fenster mit **niedrigerer**, einer AUSSERHALB mit **hoeherer** Stufe |
+
+🔴 **Eine Fixture, die Achse A trifft, trifft Achse B NICHT automatisch.**
+Gemessen (Adversary, 2026-08-15): `AC1_POINTS`/`AC2_POINTS` tragen je **einen**
+Stundenpunkt. Damit sind Tagesfenster-Menge und 24h-Menge identisch — die
+Filterung kann nicht wirken, also kann ihr Ausfall auch nicht auffallen. M6
+blieb dadurch von **allen 81** Tests ungefangen. AC-2 liest `thunder_day_level`
+zusaetzlich gar nicht, weil es ueber den `"none"`-Zweig laeuft.
+
+**Kein aequivalenter Mutant:** mit einer Zwei-Punkte-Fixtur liefert der
+unmutierte Code `MED` (Fenster-Maximum), der mutierte `HIGH` (24h-Maximum).
+Der Unterschied ist beobachtbar, es fehlte nur der Test.
+
+**Pflicht:** eine **dritte** Fixture fuer Achse B, mit eigenem
+Vorbedingungs-Test (Tagesfenster-Maximum ≠ 24h-Maximum). `AC1_POINTS`/
+`AC2_POINTS` bleiben unveraendert — sie tragen Achse A.
+
 ## Mutations-Gegenprobe (PFLICHT)
 
 | # | Verfaelschung | Muss rot werden |
@@ -422,7 +447,7 @@ ist dann kaputt, nicht der Code.
 | M3 | Diskriminator auf Fensterpraesenz statt `trip_display_config` | `test_outlook_day_night_thunder_split.py:665` |
 | M4 | Herkunft weiter aus `summary.thunder_level_max_signals` | AC-6 |
 | M5 | Zweig `"none"` liefert das Aggregat statt `ThunderLevel.NONE` | AC-2 |
-| M6 | `thunder_day_level` aus dem 24h-Fenster statt dem Tagesfenster | AC-1 **und** AC-2 |
+| M6 | `thunder_day_level` aus dem 24h-Fenster statt dem Tagesfenster | der **dritte** Fixtur-Test (zwei Stundenpunkte, s.u.) — **nicht** AC-1/AC-2 |
 | M7 | Testhelfer zurueck auf `metrics=` | AC-8 |
 
 🔴 **M1 und M2 muessen BEIDE greifen.** Wird nur eine Richtung rot, bewacht
