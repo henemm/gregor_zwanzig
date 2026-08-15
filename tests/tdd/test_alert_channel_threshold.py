@@ -1015,10 +1015,10 @@ def test_f001_below_threshold_grund_im_echten_delta_wetter_dispatch(monkeypatch)
         f"F001: genau eine Vorfall-Zeile im naechsten Briefing erwartet, "
         f"gefunden {zeilen!r}\n--- Klartext-Mail ---\n{report.email_plain}"
     )
-    assert "unter Schwelle" in zeilen[0], (
-        "F001: die Briefing-Zeile muss den WORTLAUT 'unter Schwelle' zeigen "
-        f"(nicht den technischen Ersatzgrund 'Versand fehlgeschlagen'): "
-        f"{zeilen[0]!r}"
+    assert "unter deiner Schwelle" in zeilen[0], (
+        "F001: die Briefing-Zeile muss den WORTLAUT 'unter deiner Schwelle' "
+        f"zeigen (#1750; nicht den technischen Ersatzgrund "
+        f"'Versand fehlgeschlagen'): {zeilen[0]!r}"
     )
     assert "Versand fehlgeschlagen" not in zeilen[0], (
         f"F001: 'Versand fehlgeschlagen' waere die falsche technische "

@@ -102,8 +102,8 @@ _REASON_LABELS = {
     "daily_limit": "Tageslimit",                                    # unveraendert
     "cooldown": "Cooldown",                                         # NEU, war "Sperrzeit"
     "below_channel_threshold": "unter deiner Schwelle",             # NEU, war "unter Schwelle"
-    "premium_sms_no_reply_address": "keine Rueckadresse gelernt",   # NEU (B1)
-    "premium_sms_reply_address_stale": "Rueckadresse veraltet",     # NEU (B1)
+    "premium_sms_no_reply_address": "keine Rückadresse gelernt",    # NEU (B1)
+    "premium_sms_reply_address_stale": "Rückadresse veraltet",      # NEU (B1)
 }
 ```
 
@@ -448,6 +448,12 @@ echte Zustellung ins Stalwart-Test-Postfach, kein Mock, kein Gmail.
 
 ## Changelog
 
+- 2026-08-15 (v1.0a): Redaktionelle Angleichung ohne Bedeutungsänderung — der
+  Beispiel-Codeblock schrieb `"keine Rueckadresse gelernt"`/`"Rueckadresse veraltet"` in
+  ASCII, während das verbindliche AC-13 „Rückadresse" mit Umlaut zusichert. Der Codeblock
+  folgt jetzt dem AC. Aufgefallen in der TDD-RED-Phase; die Kurzfassung faltet den Umlaut
+  ohnehin über `fold_ascii` (s. Messtabelle oben), eine ASCII-Schreibweise im Label wäre also
+  auch fachlich falsch gewesen.
 - 2026-08-15 (v1.0): Initial spec created, auf Basis von
   `docs/context/fix-1750-sperrzeit-wortwahl.md`. Ändert AC-6 aus
   `feat_1461_s3b1_briefing_sichtbarkeit.md` (Deckelung jetzt je Block statt gesamt, PO-begründet)
