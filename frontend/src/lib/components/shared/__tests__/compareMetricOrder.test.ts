@@ -38,9 +38,9 @@ describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
 			'reihenfolge',
 			'tagesfenster',
 			'sms_schwellen',
-			// Issue #1357: Auswertungswahl fuer die Mail-Kachelzeile — route-only,
-			// der Ortsvergleich zieht mit #1411 nach (Spec AC-9).
-			'auswertungen',
+			// Issue #1728 Scheibe 2 (2026-08-15): 'auswertungen' ist ENTFERNT,
+			// nicht mehr Teil der Liste — der Bedienabschnitt "05 — Auswertungen"
+			// entfaellt ersatzlos (Spec § DEC-9/AC-8).
 			'report_config',
 			// Issue #1720 S1: 'ausblick' kommt DAZU — der Trip bekommt die
 			// Spaltenauswahl der 3-Tages-Vorschau (dasselbe geteilte Bauteil wie
