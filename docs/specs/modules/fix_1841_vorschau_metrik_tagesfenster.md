@@ -45,6 +45,17 @@ statt eine vierte eigene Aufloesung derselben Frage zu bauen (ADR-0055).
   compare-exklusiven Metrik-Renderpfad fuer den Trip geoeffnet, ohne die
   Voraussetzung der damaligen Compare-Entscheidung mitzupruefen: der Trip
   **hat** eine Stundenreihe, und sein Aggregat **ist** gehzeit-geklemmt.
+
+  🔴 Das ist belegt, nicht hergeleitet: `feat_1680_s5a` haelt unter „Am Code
+  gemessen" Punkt 8 (`:440-444`, PO-go 2026-08-13) fest, der Metrik-Zweig sei
+  **compare-exklusiv**, „der Trip ruft die Ausblick-Renderer immer mit
+  `metrics=None` (`html.py:1357`, `plain.py:338`)". Am 2026-08-13 war das
+  wahr. **Einen Tag spaeter** hat #1720 S1 genau diese Voraussetzung
+  aufgehoben — `html.py:1364` und `plain.py:344` uebergeben seither
+  `metrics=_outlook_metrics` auch fuer den Trip. Der Fehler entstand also
+  nachweislich beim Ausweiten des Zweigs und war nicht schon vorher da.
+  (Diese Spec-Zeile wird als Erratum korrigiert, siehe Implementation
+  Details §5.)
 - Vorgaenger: #1653 (drei Ausgabeorte umgestellt), #1671 (Kurzformat-Mail,
   liefert den geteilten Helfer), #1680 S5a (Herkunft der Gewitterstufe).
 - Abgetrennt: #1849 (fehlende Ampelfarben im selben Renderpfad).
