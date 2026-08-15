@@ -21,9 +21,14 @@ def _mc(metric_id: str, *, enabled: bool) -> MetricConfig:
 
 class TestFallAAltbestand:
     """Fall A: Feld fehlt ganz (`metrics == []`) UND `altbestand=True` →
-    die sieben Standard-IDs (AC-5/AC-6 auf Resolver-Ebene)."""
+    die Register-Standardliste (AC-5/AC-6 auf Resolver-Ebene)."""
 
-    def test_empty_metrics_altbestand_true_returns_default_seven(self):
+    def test_empty_metrics_altbestand_true_returns_register_default(self):
+        """Issue #1728 Scheibe 1: die frueher hier aufgezaehlte Siebener-Liste
+        ist um die zwei gemessenen Tagesrichtungen gewachsen (Rang 8/9,
+        DEC-7). Aufgezaehlt bleibt bewusst der KERN der Vorbelegung -- er ist
+        die eigentliche Zusicherung dieses Falls; dass die Liste ueberhaupt
+        aus dem Register stammt, bewacht die Klasse ganz unten."""
         from output.renderers.trip_metric_ids import (
             DEFAULT_TRIP_METRIC_IDS, resolve_trip_active_metrics,
         )
@@ -32,7 +37,8 @@ class TestFallAAltbestand:
         assert result == [
             "temperature", "wind", "gust", "precipitation",
             "thunder", "freezing_level", "visibility",
-        ], f"Standard-Siebener-Liste weicht ab: {result!r}"
+            "temperature_day_low", "temperature_day_high",
+        ], f"Standard-Liste weicht ab: {result!r}"
 
     def test_default_altbestand_is_true(self):
         """`altbestand` ist rueckwaertskompatibel Default True (Invariante 5)."""
@@ -131,7 +137,7 @@ class TestDefaultTripMetricIdsIstAusDemRegisterAbgeleitet:
         from app import metric_catalog
         from output.renderers import trip_metric_ids as tmi_module
 
-        extra = dataclasses_replace_temperature_with_rank_eight(metric_catalog)
+        extra = dataclasses_replace_temperature_with_next_free_rank(metric_catalog)
         monkeypatch.setattr(
             metric_catalog, "_METRICS", metric_catalog._METRICS + [extra],
         )
@@ -146,13 +152,24 @@ class TestDefaultTripMetricIdsIstAusDemRegisterAbgeleitet:
             importlib.reload(tmi_module)  # Modul-Cache fuer alle Folgetests bereinigen
 
 
-def dataclasses_replace_temperature_with_rank_eight(metric_catalog):
-    """Baut ein echtes zusaetzliches MetricDefinition-Objekt (Rang 8) -- kein
-    Mock, reale Dataclass-Instanz aus dem Produktivtyp."""
+def dataclasses_replace_temperature_with_next_free_rank(metric_catalog):
+    """Baut ein echtes zusaetzliches MetricDefinition-Objekt mit dem naechsten
+    freien Rang -- kein Mock, reale Dataclass-Instanz aus dem Produktivtyp.
+
+    Issue #1728 Scheibe 1: der Rang wird GERECHNET (hoechster vergebener + 1)
+    statt fest 8 zu sein. Fest verdrahtet kollidierte er mit dem ersten neu
+    vergebenen Rang und die Sonde landete nicht mehr am Listenende -- der
+    Mutations-Nachweis waere aus einem Grund rot geworden, den er gar nicht
+    prueft."""
     temperature = metric_catalog.get_metric("temperature")
     import dataclasses
+    hoechster = max(
+        (m.trip_default_rank for m in metric_catalog.get_all_metrics()
+         if m.trip_default_rank is not None),
+        default=0,
+    )
     return dataclasses.replace(
         temperature,
         id="trip_1552_mutation_probe",
-        trip_default_rank=8,
+        trip_default_rank=hoechster + 1,
     )

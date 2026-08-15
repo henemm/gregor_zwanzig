@@ -69,6 +69,15 @@ METRIC_PRIORITY = {
 # Anzahl Metriken, die die Auto-Verteilung als ``primary`` markiert.
 _PRIMARY_SLOTS = 5
 
+# #1484/#1660 A/#1728 S1: reine Sichtbarkeits-Gates ohne eigenen Stundenwert
+# (Nachtfenster-Skalare + Tagesrichtungen). Sie tragen ihren Wert ueber
+# SMS-Token bzw. Abend-Untergrenzen und duerfen nie in einem Bucket landen.
+VISIBILITY_GATE_IDS: frozenset[str] = frozenset({
+    "temperature_night", "wind_chill_night",
+    "temperature_day_low", "temperature_day_high",
+    "wind_chill_day_low", "wind_chill_day_high",
+})
+
 
 @dataclass(frozen=True)
 class ChannelLayout:
@@ -91,8 +100,11 @@ def render_for_channel(
     # #1484/#1660 Scheibe A: Nachtfenster-Skalare — nie eine Tabellenspalte/
     # Detail-Zeile; den Wert tragen SMS-Token bzw. die Abend-Untergrenzen der
     # Kurzzusammenfassung/Telegram-Kurzuebersicht.
-    _NIGHT_SCALAR_IDS = {"temperature_night", "wind_chill_night"}
-    enabled = [m for m in enabled if m.metric_id not in _NIGHT_SCALAR_IDS]
+    # #1728 Scheibe 1: dieselbe Lage fuer die vier Tagesrichtungen — reine
+    # Sichtbarkeits-Gates ohne eigenen Stundenwert. Kein Eintrag in
+    # METRIC_PRIORITY noetig: die Auto-Verteilungs-Heuristik sieht sie dank
+    # dieses Filters gar nicht erst.
+    enabled = [m for m in enabled if m.metric_id not in VISIBILITY_GATE_IDS]
     primary = sorted(
         [m for m in enabled if m.bucket == "primary"], key=lambda m: m.order,
     )

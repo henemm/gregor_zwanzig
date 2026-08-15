@@ -193,26 +193,6 @@ class TestAC2WindChill:
             f"got: {texts}"
         )
 
-    def test_wind_chill_min_only_selection_keeps_912_format(self):
-        """SOLL: die #912-Einzelwert-Form bleibt fuer die ausdrueckliche Wahl
-        „nur Tiefstwert" woertlich erhalten."""
-        from output.renderers.email.helpers import build_metrics_summary_pills
-        dps = [
-            _dp(6, t2m_c=15.0, wind_chill_c=9.0),
-            _dp(7, t2m_c=15.0, wind_chill_c=8.0),
-            _dp(8, t2m_c=15.0, wind_chill_c=6.6),
-        ]
-        segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        pills = build_metrics_summary_pills(
-            segs, ["wind_chill"], {}, tz=TZ,
-            metric_aggregations={"wind_chill": ["min"]},
-        )
-        texts = [t for t, _ in pills]
-        assert texts == ["gef. min 6.6°C · 10:00"], (
-            f"AC-2: 'gef. min 6.6°C · 10:00' bei Auswahl ['min'] erwartet — "
-            f"got: {texts}"
-        )
-
 
 # ---------------------------------------------------------------------------
 # AC-3: Wind ohne Schwellenüberschreitung — "Wind max X km/h (HH:00)"

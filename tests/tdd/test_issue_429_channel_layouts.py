@@ -152,12 +152,25 @@ def test_ac1_loader_reads_channel_layouts():
     assert "telegram" in dc.per_channel_layouts
 
     email_layout = dc.per_channel_layouts["email"]
-    assert len(email_layout) == 6
-    # Reihenfolge muss erhalten bleiben
-    assert email_layout[0].metric_id == "temperature"
-    assert email_layout[1].metric_id == "wind_chill"
-    assert email_layout[0].bucket == "primary"
-    assert email_layout[5].bucket == "secondary"
+    # Issue #1728 DEC-6b: der Ladepfad haengt fehlende ABGELEITETE Groessen
+    # (Nachtfenster-Skalare + Tagesrichtungen) auch an jede Kanal-Ebene an --
+    # sonst waehlt ein vor #1728 gespeichertes Layout sie stillschweigend ab.
+    # Geprueft wird deshalb die GESPEICHERTE Liste (derived=False) in ihrer
+    # Reihenfolge; die Zusicherung ist unveraendert „das Layout kommt
+    # unverfaelscht und in Reihenfolge aus der Datei".
+    gespeichert = [m for m in email_layout if not m.derived]
+    assert len(gespeichert) == 6, (
+        f"Gespeicherte Kanal-Liste veraendert: "
+        f"{[m.metric_id for m in gespeichert]!r}"
+    )
+    assert gespeichert[0].metric_id == "temperature"
+    assert gespeichert[1].metric_id == "wind_chill"
+    assert gespeichert[0].bucket == "primary"
+    assert gespeichert[5].bucket == "secondary"
+    assert all(m.derived for m in email_layout[6:]), (
+        "Alles hinter der gespeicherten Liste muss abgeleitet sein — sonst "
+        "haengt der Ladepfad echte Nutzerauswahl an."
+    )
 
 
 def test_all_empty_channel_layouts_kept_as_dict_not_none():

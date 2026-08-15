@@ -86,11 +86,17 @@ def _templess_night():
 # AC-1 / AC-2 / AC-3 — SMS-Token folgen der eigenen Auswahl
 # ---------------------------------------------------------------------------
 
+# Issue #1728 Scheibe 1: „Temperatur gewaehlt" umfasst seither ihre beiden
+# Tagesrichtungen -- sie tragen K/D. Die Zusicherung dieser Suite (N folgt
+# der EIGENEN Nachtgroesse, nicht der Tagesgroesse) ist unveraendert.
+_TAG_GEWAEHLT = ("temperature", "temperature_day_low", "temperature_day_high")
+
+
 class TestSmsNightTokenFollowsOwnSelection:
 
     def test_night_token_absent_when_night_metric_deselected(self):
         """AC-1: Temperatur AN, Nachtgroesse AUS -> K/D ja, N nein."""
-        sms = _sms("evening", "temperature", "precipitation")
+        sms = _sms("evening", *_TAG_GEWAEHLT, "precipitation")
 
         present = F.present_symbols(sms, _MEASURED)
         assert present == {"K", "D"}, (
@@ -115,7 +121,7 @@ class TestSmsNightTokenFollowsOwnSelection:
 
     def test_both_selected_keeps_all_three_tokens(self):
         """Nichtregression: beide AN -> N/K/D wie bisher."""
-        sms = _sms("evening", "temperature", NIGHT_METRIC, "precipitation")
+        sms = _sms("evening", *_TAG_GEWAEHLT, NIGHT_METRIC, "precipitation")
 
         assert F.present_symbols(sms, _MEASURED) == {"N", "K", "D"}, (
             f"Beide Groessen gewaehlt — alle drei Kuerzel erwartet.\nSMS: {sms}"
@@ -126,7 +132,7 @@ class TestSmsNightTokenFollowsOwnSelection:
 
     def test_morning_never_shows_night_token(self):
         """AC-3: das Nur-Abends-Gate bleibt, auch mit gewaehlter Nachtgroesse."""
-        sms = _sms("morning", "temperature", NIGHT_METRIC, "precipitation")
+        sms = _sms("morning", *_TAG_GEWAEHLT, NIGHT_METRIC, "precipitation")
 
         assert F.sms_token_value(sms, "N") is None, (
             f"N erscheint im Morgen-Briefing.\nSMS: {sms}"
@@ -389,7 +395,7 @@ class TestSelectionIsPerConfig:
         """Zwei entgegengesetzte Konfigurationen, nacheinander gerendert —
         jede SMS folgt nur der eigenen Auswahl (kein globaler Zustand)."""
         dc_night = F.dc(NIGHT_METRIC, "precipitation")
-        dc_day = F.dc("temperature", "precipitation")
+        dc_day = F.dc(*_TAG_GEWAEHLT, "precipitation")
 
         fmt = TripReportFormatter()
         sms_night = fmt.format_email(

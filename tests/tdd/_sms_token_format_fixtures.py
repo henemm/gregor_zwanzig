@@ -10,9 +10,9 @@ Werte, fehlende Haelften, gefuehltes Pendant), deshalb diese eigene Datei.
 Prueforte, die diese Fixtures bedienen:
 
 * ``TripReportFormatter().format_email(...).sms_text`` — der echte Weg von der
-  Nutzereinstellung (Metrik-Auswahl, ``MetricConfig.aggregations``) bis zur
-  fertigen Kurznachricht. Nur dort wirkt das Auswertungs-Gate aus #1660 A
-  (``trip_report.py::_AGG_GATE_SYMBOLS``).
+  Nutzereinstellung (Metrik-Auswahl) bis zur fertigen Kurznachricht. Seit
+  #1728 Scheibe 1 gaten dort die eigenen Tagesrichtungs-Groessen; das
+  Auswertungs-Gate aus #1660 A (``_AGG_GATE_SYMBOLS``) ist entfallen.
 * ``SMSTripFormatter().format_sms(..., max_length=...)`` — derselbe Renderer,
   den ``format_email`` aufruft; nur so laesst sich Kuerzungsdruck (§6)
   erzeugen, ohne den 160er-Default zu verbiegen.
@@ -170,28 +170,22 @@ def night_weather(day: int = DAY) -> NormalizedTimeseries:
     return NormalizedTimeseries(meta=_meta(), data=points)
 
 
-def dc(*metric_ids: str,
-       aggregations: Optional[dict[str, list[str]]] = None,
-       ) -> UnifiedWeatherDisplayConfig:
+def dc(*metric_ids: str) -> UnifiedWeatherDisplayConfig:
     """Displaykonfiguration mit genau den genannten Metriken aktiv.
 
-    ``aggregations``: metric_id -> Auswertungswahl (``min``/``max``/``avg``).
-    Ohne Eintrag gilt der Modell-Default ``["min", "max"]`` = beide gewaehlt.
+    Issue #1728 Scheibe 1: der fruehere ``aggregations``-Parameter ist
+    entfernt — die Sichtbarkeit von K/D bzw. FK/FD steuert jetzt die Auswahl
+    der eigenen Groessen ``temperature_day_low``/``_high`` bzw.
+    ``wind_chill_day_low``/``_high``, nicht mehr ``MetricConfig.aggregations``.
     """
-    aggregations = aggregations or {}
     return UnifiedWeatherDisplayConfig(
         trip_id="i1824",
-        metrics=[
-            MetricConfig(metric_id=m, enabled=True,
-                         **({"aggregations": aggregations[m]} if m in aggregations else {}))
-            for m in metric_ids
-        ],
+        metrics=[MetricConfig(metric_id=m, enabled=True) for m in metric_ids],
     )
 
 
 def sms(*metric_ids: str,
         report_type: str = "evening",
-        aggregations: Optional[dict[str, list[str]]] = None,
         segments: Optional[list[SegmentWeatherData]] = None,
         with_night_weather: bool = True,
         has_gap: bool = False) -> str:
@@ -201,7 +195,7 @@ def sms(*metric_ids: str,
         trip_name="Issue1824",
         report_type=report_type,
         night_weather=night_weather() if with_night_weather else None,
-        display_config=dc(*metric_ids, aggregations=aggregations),
+        display_config=dc(*metric_ids),
         stage_name=STAGE_NAME,
         tz=TZ,
         has_gap=has_gap,
