@@ -75,9 +75,9 @@ def _dc() -> UnifiedWeatherDisplayConfig:
     return UnifiedWeatherDisplayConfig(
         trip_id="test",
         metrics=[
-            MetricConfig(metric_id="temperature", enabled=True, aggregations=["min", "max"]),
-            MetricConfig(metric_id="precipitation", enabled=True, aggregations=["sum"]),
-            MetricConfig(metric_id="rain_probability", enabled=True, aggregations=["max"]),
+            MetricConfig(metric_id="temperature", enabled=True, ),
+            MetricConfig(metric_id="precipitation", enabled=True, ),
+            MetricConfig(metric_id="rain_probability", enabled=True, ),
         ],
     )
 

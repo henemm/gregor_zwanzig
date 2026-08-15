@@ -229,9 +229,6 @@
 	// Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
 	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder', 'snow_depth', 'snowfall_limit'];
 	let smsThresholds = $state<Record<string, string>>({});
-	// Issue #1357: gewaehlte Tagesauswertungen je Groesse. Fehlender Schluessel =
-	// nie eingeschraenkt (Katalog-Vorgabe); leere Liste = bewusst keine Kachel.
-	let aggregationsMap = $state<Record<string, string[]>>({});
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
 	let pendingPreset: string | null = $state(null);
@@ -347,9 +344,6 @@
 
 	// Issue #736: channels aus isDirty + snapshot entfernt (Kanal-Config lebt jetzt im Versand-Reiter).
 	// Issue #776/#774: reportConfig in isDirty einschliessen (Toggle-Persistenz, Checkbox-Änderung macht Tab dirty).
-	// Issue #1357: aggregationsMap gehoert in Dirty-Vergleich UND Snapshot — sonst
-	// bleibt die Auswertungswahl unspeicherbar (der Dirty-Check sieht nur, was im
-	// Snapshot steht).
 	// Issue #1575 Scheibe 3: channelBuckets gehoert in Dirty-Vergleich UND
 	// Snapshot — sonst bliebe ein Kanal-Edit unspeicherbar. Der reine
 	// Kanal-WECHSEL veraendert channelBuckets nicht und bleibt damit clean
@@ -357,17 +351,16 @@
 	// Issue #1720 S1: outlookMetricKeys gehoert in Dirty-Vergleich UND Snapshot —
 	// sonst bleibt der Reiter nach einer reinen Vorschau-Aenderung „sauber".
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, aggregationsMap, reportConfig, officialAlertsEnabled, channelBuckets, outlookMetricKeys }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled, channelBuckets, outlookMetricKeys }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
 		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean,
-		ag: Record<string, string[]> = aggregationsMap,
 		cb: Record<ChannelId, ChannelOverride | null> = channelBuckets,
 		om: string[] | null = outlookMetricKeys
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, aggregationsMap: ag, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb, outlookMetricKeys: om });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb, outlookMetricKeys: om });
 	}
 
 	function allCatalogIds(): string[] {
@@ -419,7 +412,6 @@
 		}
 
 		const thrMap: Record<string, string> = {};
-		const aggMap: Record<string, string[]> = {};
 		if (savedMetrics) {
 			for (const m of savedMetrics) {
 				fMap[m.metric_id] = m.use_friendly_format ?? true;
@@ -428,10 +420,6 @@
 				if (SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id) && m.sms_threshold != null) {
 					thrMap[m.metric_id] = String(m.sms_threshold);
 				}
-				// Issue #1357: gespeicherte Auswertungswahl laden. `[]` ist ein
-				// gueltiger Wert (bewusst keine Kachel) und darf nicht wie „fehlt"
-				// behandelt werden.
-				if (m.aggregations !== undefined) aggMap[m.metric_id] = [...m.aggregations];
 			}
 		}
 
@@ -448,7 +436,6 @@
 		// Issue #736: channels nicht mehr im snapshot (Conflict 2 entfällt).
 		// Issue #774: reportConfig in snapshot aufnehmen.
 		smsThresholds = thrMap;
-		aggregationsMap = aggMap;
 		// Issue #1575 Scheibe 3: gespeicherte Kanal-Layouts zurueckbauen, damit ein
 		// editierter Reiter nach dem Reload seine eigene Auswahl zeigt.
 		const savedLayouts = trip!.display_config?.channel_layouts;
@@ -464,7 +451,7 @@
 		// roher Cast auf string[] liesse die Haken nach dem Neuladen leer.
 		const om = normalizeStoredActiveMetrics(trip!.display_config?.outlook_metrics, compareCatalog);
 		outlookMetricKeys = om;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, aggMap, cb, om);
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, cb, om);
 	}
 
 	// Issue #1332 F003 (Fix-Loop 2): eigener, idempotenter Ladepfad fuer die
@@ -824,7 +811,6 @@
 			telegramKurzform = snap.telegramKurzform ?? false;
 			// Issue #736: channels nicht mehr im snapshot (Conflict 3 entfällt).
 			smsThresholds = snap.smsThresholds ?? {};
-			aggregationsMap = snap.aggregationsMap ?? {};
 			// Issue #774: reportConfig wiederherstellen (sonst bleibt Tab dirty nach Verwerfen).
 			reportConfig = snap.reportConfig ?? {};
 			// Issue #1117: officialAlertsEnabled wiederherstellen (Konsistenz-Vollständigkeit).
@@ -841,7 +827,6 @@
 			initFromTrip();
 			telegramKurzform = trip!.display_config?.telegram_kurzform ?? false;
 			smsThresholds = {};
-			aggregationsMap = {};
 			reportConfig = trip!.report_config ? JSON.parse(JSON.stringify(trip!.report_config)) : {};
 			officialAlertsEnabled = trip!.official_alerts_enabled ?? true;
 		}
@@ -855,7 +840,7 @@
 	// Metrik-Liste war der trip-Read nie noetig, nur ein zufaelliges
 	// Abhaengigkeits-Nebenprodukt).
 	function buildWeatherMetricsList() {
-		const baseMetrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog, aggregationsMap);
+		const baseMetrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog);
 		return baseMetrics.map((m) => {
 			if (!SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id)) return m;
 			const rawThr = smsThresholds[m.metric_id];
@@ -880,7 +865,7 @@
 			trip!.display_config?.channel_layouts,
 			channelBuckets,
 			(override) => buildWeatherConfigMetrics(
-				override.buckets, override.friendlyMap, horizonsMap, catalog, aggregationsMap,
+				override.buckets, override.friendlyMap, horizonsMap, catalog,
 			),
 		);
 		return {

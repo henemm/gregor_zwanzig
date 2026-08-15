@@ -31,9 +31,6 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import { toggleCompareMetricKeyFromState } from '../compareMetricOrder.ts';
-import {
-	aggregationChoices, choiceAggregations, defaultAggregations, selectedChoiceId,
-} from '../aggregationSelection.ts';
 
 const GROUPING_MODULE_FILE = join(
 	dirname(fileURLToPath(import.meta.url)),
@@ -127,38 +124,3 @@ describe('AC-3: Abwaehlen des einen Kaestchens wirkt nie auf das andere', () => 
 	});
 });
 
-// ── Regressionsschutz Trip-Seite (mode='single', bereits GRUEN) ────────────
-// Dieser Block prueft KEIN neues Verhalten — er beweist, dass die Trip-
-// Einzelwahl mit Spanne-Logik (AggregationMetricRow im Trip-Kontext,
-// aggregationSelection.ts) durch die Mengen-Wahl-Erweiterung fuer den
-// Vergleich NICHT beruehrt wird. Er ist heute bereits GRUEN (dieselben
-// Funktionen wie in aggregation_selection.test.ts) und MUSS es nach der
-// Implementierung von #1411 bleiben — kein Befund, sondern die geforderte
-// Bitidentitaets-Probe (Team-Lead-Auftrag).
-describe('Regressionsschutz Trip (mode=\'single\' bleibt bitidentisch — bereits heute GRUEN)', () => {
-	const TEMPERATURE_ENTRY = {
-		id: 'temperature', label: 'Temperatur', unit: '°C', category: 'temperature',
-		default_enabled: true, has_friendly_format: false,
-		aggregations: [
-			{ id: 'min', label: 'Minimum' },
-			{ id: 'max', label: 'Maximum' },
-			{ id: 'avg', label: 'Mittel' },
-		],
-	};
-
-	test('Einzelwahl bleibt exklusiv: "Spanne" heisst weiterhin min+max in EINER Wahl, kein Nebeneinander wie im Vergleich', () => {
-		assert.deepEqual(choiceAggregations(TEMPERATURE_ENTRY, 'range'), ['min', 'max']);
-		assert.equal(selectedChoiceId(TEMPERATURE_ENTRY, ['min', 'max']), 'range');
-		// Anders als beim Vergleich (AC-2/AC-3) ist die Wahl HIER eine einzige
-		// Kachel — es gibt keine zwei unabhaengig klickbaren Kaestchen.
-		assert.deepEqual(
-			aggregationChoices(TEMPERATURE_ENTRY).map((c) => c.id),
-			['range', 'min', 'max', 'avg'],
-		);
-	});
-
-	test('Vorgabe ohne Nutzereinschraenkung bleibt {min, max} als EINE Spanne, nicht als zwei unabhaengige Kaestchen', () => {
-		assert.deepEqual(defaultAggregations(TEMPERATURE_ENTRY), ['min', 'max']);
-		assert.equal(selectedChoiceId(TEMPERATURE_ENTRY, undefined), 'range');
-	});
-});

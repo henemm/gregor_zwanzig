@@ -360,7 +360,6 @@ class TestAC4WriterPersistsBothFields:
         mc = MetricConfig(
             metric_id="cloud_total",
             enabled=True,
-            aggregations=["avg"],
             format_mode="symbol",  # neues Feld
         )
         trip.display_config = UnifiedWeatherDisplayConfig(
@@ -406,15 +405,13 @@ class TestAC5RendererRawMode:
         mc = MetricConfig(
             metric_id="cloud_total",
             enabled=True,
-            aggregations=["avg"],
             format_mode="raw",  # NEU
             use_friendly_format=True,  # Legacy True — format_mode soll gewinnen
         )
         dc = UnifiedWeatherDisplayConfig(
             trip_id="test-ac5",
             metrics=[
-                MetricConfig(metric_id="temperature", enabled=True,
-                             aggregations=["min", "max"]),
+                MetricConfig(metric_id="temperature", enabled=True),
                 mc,
             ],
         )
@@ -462,7 +459,6 @@ class TestAC6SimplifiedWindKuerzel:
         mc_wind = MetricConfig(
             metric_id="wind",
             enabled=True,
-            aggregations=["max"],
             format_mode="simplified",  # NEU
         )
         dc = UnifiedWeatherDisplayConfig(
@@ -518,12 +514,10 @@ class TestAC7WindDirectionMergeScale:
         from output.renderers.trip_report import TripReportFormatter
 
         def _build_html(wdir_mode: str) -> str:
-            mc_wind = MetricConfig(metric_id="wind", enabled=True,
-                                   aggregations=["max"])
+            mc_wind = MetricConfig(metric_id="wind", enabled=True)
             mc_wdir = MetricConfig(
                 metric_id="wind_direction",
                 enabled=True,
-                aggregations=["avg"],
                 format_mode=wdir_mode,  # NEU
             )
             dc = UnifiedWeatherDisplayConfig(

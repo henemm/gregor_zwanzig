@@ -166,10 +166,12 @@ def test_scan_hat_pruefmaterial():
     assert len(gefunden) > 0, (
         "Der AST-Scan findet unter src/ + api/ keine einzige Register-Liste — "
         "er prueft praktisch nichts. Eigene Messung zum Stand dieser Etappe "
-        "(2026-08-15 nach #1728 S1, dict/set/list/tuple, Mindestgroesse 2): "
-        "42 Fundstellen in 12 von 200 Dateien — 47 waeren es ohne den "
-        "strukturellen ``in``-Ausschluss (s. Modul-Docstring des Scan-Kerns, "
-        "Grenzen)."
+        "(2026-08-15 nach #1728 S3, dict/set/list/tuple, Mindestgroesse 2): "
+        "46 Fundstellen in 12 Dateien unter src/ + api/ (vor S3: 42 — die vier "
+        "Tagesrichtungs-Regelzeilen wurden erst sichtbar, als das "
+        "Auswertungswort aus ``_DERIVED_METRIC_RULES`` fiel). Der strukturelle "
+        "``in``-Ausschluss haelt weitere Fundstellen zurueck (s. "
+        "Modul-Docstring des Scan-Kerns, Grenzen)."
     )
     assert len(REGISTERED_LISTS) > 0, (
         "REGISTERED_LISTS ist leer — dann ist jede Gueltigkeitspruefung aus "

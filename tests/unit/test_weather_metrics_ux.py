@@ -272,7 +272,6 @@ class TestLoaderUseFriendlyFormat:
                 {
                     "metric_id": "cloud_total",
                     "enabled": True,
-                    "aggregations": ["avg"],
                     "use_friendly_format": False,
                 }
             ],
@@ -290,7 +289,6 @@ class TestLoaderUseFriendlyFormat:
                 {
                     "metric_id": "cloud_total",
                     "enabled": True,
-                    "aggregations": ["avg"],
                 }
             ],
         }
@@ -321,7 +319,6 @@ class TestLoaderUseFriendlyFormat:
                 MetricConfig(
                     metric_id="cloud_total",
                     enabled=True,
-                    aggregations=["avg"],
                     use_friendly_format=False,
                 )
             ],

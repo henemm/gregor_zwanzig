@@ -149,7 +149,7 @@ class TestBug801SnapshotDistanceRoundtrip:
 
         dc = UnifiedWeatherDisplayConfig(
             trip_id="trip-km",
-            metrics=[MetricConfig(metric_id="temperature", enabled=True, aggregations=["max"])],
+            metrics=[MetricConfig(metric_id="temperature", enabled=True, )],
             show_night_block=False,
             night_interval_hours=2,
             thunder_forecast_days=0,

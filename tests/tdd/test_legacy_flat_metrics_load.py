@@ -112,7 +112,7 @@ def test_flat_string_trip_survives_load_all_trips():
 
 def test_dict_metrics_roundtrip_field_identical():
     """GIVEN ein Trip mit voll ausgepraegten dict-`MetricConfig` (inkl.
-    `bucket`, `order`, `alert_threshold`, `aggregations`) / WHEN er geladen,
+    `bucket`, `order`, `alert_threshold`) / WHEN er geladen,
     serialisiert (`_trip_to_dict`) und erneut geladen wird / THEN bleibt die
     `metrics`-Config feldweise identisch — die Flach-String-Normalisierung
     fasst den bestehenden dict-Pfad NICHT an (AC-3, darf heute schon gruen
@@ -129,7 +129,6 @@ def test_dict_metrics_roundtrip_field_identical():
                 {
                     "metric_id": "temperature",
                     "enabled": True,
-                    "aggregations": ["min", "max", "avg"],
                     "bucket": "primary",
                     "order": 2,
                     "alert_enabled": True,
@@ -138,7 +137,6 @@ def test_dict_metrics_roundtrip_field_identical():
                 {
                     "metric_id": "wind_speed",
                     "enabled": False,
-                    "aggregations": ["max"],
                     "bucket": "secondary",
                     "order": 5,
                     "alert_enabled": False,
@@ -157,7 +155,7 @@ def test_dict_metrics_roundtrip_field_identical():
     m2 = [m for m in trip2.display_config.metrics if not m.derived]
     assert len(m1) == len(m2) == 2
 
-    fields = ("metric_id", "enabled", "aggregations", "bucket", "order",
+    fields = ("metric_id", "enabled", "bucket", "order",
               "alert_enabled", "alert_threshold")
     for a, b in zip(m1, m2):
         for f in fields:

@@ -274,13 +274,15 @@ def _literal(pfad: Path, name: str, seite: str) -> tuple[list[str], int]:
                           "— umbenannt oder geloescht?")
     return strings, zeile
 
-# Alle Fundstellen des AC-2-Scans (nachgemessen 2026-08-15 NACH #1728 S1:
-# 42 in 12 von 200 Dateien; ohne den ``in``-Ausschluss waeren es 47). Hier
-# stehen 40 davon, die beiden uebrigen (``METRIC_PRIORITY``,
-# ``HOURLY_EXCLUSION_REASON``) stehen unten als Laufzeit-Eintraege — zusammen
-# 42 Registrierungen fuer 42 Fundstellen, 1:1; eigenstaendige Sammlungen 34
-# (``WEATHER_TEMPLATES`` 7, ``_ALERT_METRIC_TO_CATALOG_ID`` 2 und
-# ``_DERIVED_METRIC_RULES`` 2 Zeilen gehoeren je zu einer).
+# Alle Fundstellen des AC-2-Scans (nachgemessen 2026-08-15 NACH #1728 S3:
+# 46 in 12 Dateien unter src/ + api/; vor S3 waren es 42 — die vier
+# Tagesrichtungs-Regelzeilen wurden erst sichtbar, als das Auswertungswort
+# aus ``_DERIVED_METRIC_RULES`` fiel). Hier stehen 44 davon, die beiden
+# uebrigen (``METRIC_PRIORITY``, ``HOURLY_EXCLUSION_REASON``) stehen unten als
+# Laufzeit-Eintraege — zusammen 46 Registrierungen fuer 46 Fundstellen, 1:1;
+# eigenstaendige Sammlungen 34 (``WEATHER_TEMPLATES`` 7,
+# ``_ALERT_METRIC_TO_CATALOG_ID`` 2 und ``_DERIVED_METRIC_RULES`` 6 Zeilen
+# gehoeren je zu einer).
 # Datei, Name, geprueffte Seite — je Fundstelle EINE Zeile; die Aufloesung
 # macht ``_literal`` generisch. Die Seite ist fachlich verschieden:
 # "schluessel"/"element" = die Kennung STEHT dort; "wert" = Uebersetzung INS
@@ -289,15 +291,18 @@ def _literal(pfad: Path, name: str, seite: str) -> tuple[list[str], int]:
 _R = "src/output/renderers/"
 _BESTAND: tuple[tuple[str, str, str], ...] = (
     ("src/app/loader.py", "report_config.daily_summary_metrics", "element"),
-    # #1728 S1: je Regel-Zeile eine Fundstelle. Registriert sind nur die beiden
-    # Nacht-Zeilen — sie fuehren ausschliesslich Kennungen. Die vier
-    # Tagesrichtungs-Zeilen ([2]..[5]) tragen daneben "min"/"max" und bleiben
-    # damit BEIDEN Stufen verborgen: Stufe 1 verlangt Quote 100 %, und Stufe 2
-    # meldete das Auswertungswort als unbekannte Kennung, wuerde man sie
-    # eintragen. Das ist die bekannte Quote-Grenze (s. Modul-Docstring), keine
-    # Aussage darueber, dass dort nichts stehen koennte.
+    # #1728 S1/S3: je Regel-Zeile eine Fundstelle. Bis S3 trugen die vier
+    # Tagesrichtungs-Zeilen ([2]..[5]) neben den Kennungen ein Auswertungswort
+    # ("min"/"max") und blieben damit beiden Stufen verborgen (Quote-Grenze,
+    # s. Modul-Docstring). Mit S3 DEC-1 ist ``MetricConfig.aggregations``
+    # abgeschafft, alle sechs Zeilen fuehren nur noch Kennungen — alle sechs
+    # sind deshalb registriert.
     ("src/app/loader.py", "_DERIVED_METRIC_RULES[0]", "element"),
     ("src/app/loader.py", "_DERIVED_METRIC_RULES[1]", "element"),
+    ("src/app/loader.py", "_DERIVED_METRIC_RULES[2]", "element"),
+    ("src/app/loader.py", "_DERIVED_METRIC_RULES[3]", "element"),
+    ("src/app/loader.py", "_DERIVED_METRIC_RULES[4]", "element"),
+    ("src/app/loader.py", "_DERIVED_METRIC_RULES[5]", "element"),
     ("src/app/metric_catalog.py", "SMS_NULLFORM_METRIC_IDS", "element"),
     ("src/app/metric_catalog.py", "_SMS_SYMBOL_METRIC_IDS", "element"),
     ("src/app/metric_catalog.py", "SMS_SYMBOL_GRAMMAR", "schluessel"),

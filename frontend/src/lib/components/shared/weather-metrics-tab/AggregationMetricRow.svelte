@@ -12,10 +12,15 @@
 	// Issue #1411 (Epic #1372 S4b Scheibe 1): `mode='multiple'` ergaenzt die
 	// Ortsvergleich-Mengen-Wahl (Hoechst-/Tiefstwert unabhaengig ankreuzbar)
 	// als zweiten Modus desselben geteilten Bausteins statt einer
-	// Compare-Zweitkomponente (Trip/Compare-Teilungs-Invariante). `mode='single'`
-	// (Default) bleibt fuer den Trip bitidentisch zum bisherigen Verhalten.
+	// Compare-Zweitkomponente (Trip/Compare-Teilungs-Invariante).
 	// Spec: docs/specs/modules/feat_1411_s4b_grundauswahl.md § Implementation
 	// Details 2, AC-2, AC-3
+	//
+	// Issue #1728 Scheibe 3: der Trip-Modus `mode='single'` (Einzelwahl ueber
+	// `MetricConfig.aggregations`) ist ersatzlos entfallen — das Feld ist
+	// abgeschafft. `mode` bleibt als Prop bestehen, weil beide Aufrufer es
+	// ausdruecklich mit `"multiple"` setzen; die Kaestchen-Form ist seither die
+	// einzige.
 	//
 	// Issue #1406 Scheibe A (Epic #1372 S4b Scheibe 2): optionaler
 	// `testidPrefix` — der Ausblick wird der zweite `mode='multiple'`-Aufrufer
@@ -25,20 +30,15 @@
 	// auf). Spec: docs/specs/modules/feat_1406a_ausblick_geteiltes_element.md
 	// § Implementation Details 2, AC-8
 
-	import type { AggregationChoice } from './aggregationSelection.ts';
 	import type { CompareAggregationOption } from './compareAggregationGrouping.ts';
 
 	interface Props {
 		metricId: string;
 		label: string;
-		mode?: 'single' | 'multiple';
-		// mode='single' (Trip, Default) — unveraendert.
-		choices?: AggregationChoice[];
-		selectedChoiceId?: string | null;
-		onSelect?: (metricId: string, choiceId: string) => void;
-		// mode='multiple' (Vergleich, neu) — die rohen Katalog-Optionen einer
-		// Gruppe, jede unabhaengig an-/abwaehlbar; `onToggle` bekommt den
-		// jeweiligen einzelnen Katalog-`key` (derselbe Toggle-Pfad wie heute).
+		mode?: 'multiple';
+		// Die rohen Katalog-Optionen einer Gruppe, jede unabhaengig
+		// an-/abwaehlbar; `onToggle` bekommt den jeweiligen einzelnen
+		// Katalog-`key` (derselbe Toggle-Pfad wie heute).
 		options?: CompareAggregationOption[];
 		selectedChoiceIds?: string[];
 		onToggle?: (metricId: string, key: string) => void;
@@ -47,8 +47,7 @@
 	}
 
 	let {
-		metricId, label, mode = 'single',
-		choices = [], selectedChoiceId = null, onSelect,
+		metricId, label,
 		options = [], selectedChoiceIds = [], onToggle,
 		testidPrefix
 	}: Props = $props();
@@ -63,52 +62,27 @@
 		class="segmented-control"
 		data-testid={testidPrefix ? `${testidPrefix}-choices-${metricId}` : `aggregation-choices-${metricId}`}
 	>
-		{#if mode === 'single'}
-			{#each choices as c (c.id)}
-				<button
-					type="button"
-					class:active={selectedChoiceId === c.id}
-					aria-pressed={selectedChoiceId === c.id}
-					onclick={() => onSelect?.(metricId, c.id)}
-					data-testid={testidPrefix ? `${testidPrefix}-option-${metricId}-${c.id}` : `aggregation-option-${metricId}-${c.id}`}
-				>
-					{c.label}
-				</button>
-			{/each}
-		{:else}
-			{#each options as o (o.key)}
-				<label
-					class="multi-option"
-					data-testid={testidPrefix ? `${testidPrefix}-option-${metricId}-${o.aggregation}` : `weather-metrics-vergleich-option-${metricId}-${o.aggregation}`}
-				>
-					<input
-						type="checkbox"
-						checked={selectedChoiceIds.includes(o.key)}
-						onchange={() => onToggle?.(metricId, o.key)}
-						data-metric-key={o.key}
-					/>
-					<span>{o.aggregation_label}</span>
-				</label>
-			{/each}
-		{/if}
+		{#each options as o (o.key)}
+			<label
+				class="multi-option"
+				data-testid={testidPrefix ? `${testidPrefix}-option-${metricId}-${o.aggregation}` : `weather-metrics-vergleich-option-${metricId}-${o.aggregation}`}
+			>
+				<input
+					type="checkbox"
+					checked={selectedChoiceIds.includes(o.key)}
+					onchange={() => onToggle?.(metricId, o.key)}
+					data-metric-key={o.key}
+				/>
+				<span>{o.aggregation_label}</span>
+			</label>
+		{/each}
 	</td>
 </tr>
 
 <style>
 	.metric-label { padding: 8px; font-size: 14px; color: var(--g-ink); }
 	.segmented-control { display: flex; gap: 2px; padding: 8px; flex-wrap: wrap; }
-	.segmented-control button {
-		min-height: 44px; padding: 8px 10px;
-		border: 1px solid var(--g-rule, #ddd);
-		background: transparent; color: var(--g-ink);
-		cursor: pointer; font-size: 14px;
-	}
-	.segmented-control button.active {
-		background: var(--g-accent, #2563eb);
-		color: white; border-color: var(--g-accent, #2563eb);
-	}
-	/* mode='multiple' (Issue #1411): unabhaengige Kaestchen statt exklusivem
-	   Segmented-Control — dieselbe Zeile, andere Wahl-Semantik. */
+	/* Issue #1411: unabhaengige Kaestchen; seit #1728 S3 die einzige Form. */
 	.multi-option {
 		display: inline-flex; align-items: center; gap: 6px;
 		min-height: 44px; padding: 8px 10px;
@@ -120,7 +94,6 @@
 		td { display: block; }
 		.metric-label { font-weight: 600; }
 		.segmented-control { width: 100%; padding: 8px 0 0; }
-		.segmented-control button { flex: 1; font-size: 16px; }
 		.multi-option { font-size: 16px; }
 	}
 </style>

@@ -184,21 +184,15 @@ class TestEmailFriendlyVsRawFormatting:
         return UnifiedWeatherDisplayConfig(
             trip_id="test-trip",
             metrics=[
-                MetricConfig(metric_id="temperature", enabled=True,
-                             aggregations=["min", "max"]),
-                MetricConfig(metric_id="wind", enabled=True,
-                             aggregations=["max"]),
+                MetricConfig(metric_id="temperature", enabled=True),
+                MetricConfig(metric_id="wind", enabled=True),
                 MetricConfig(metric_id="cloud_total", enabled=True,
-                             aggregations=["avg"],
                              use_friendly_format=friendly_cloud),
                 MetricConfig(metric_id="cape", enabled=True,
-                             aggregations=["max"],
                              use_friendly_format=friendly_cape),
                 MetricConfig(metric_id="visibility", enabled=True,
-                             aggregations=["min"],
                              use_friendly_format=friendly_vis),
-                MetricConfig(metric_id="thunder", enabled=True,
-                             aggregations=["max"]),
+                MetricConfig(metric_id="thunder", enabled=True),
             ],
         )
 
