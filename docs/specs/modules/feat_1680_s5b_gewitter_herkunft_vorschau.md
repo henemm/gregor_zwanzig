@@ -277,7 +277,31 @@ Scheibe.
 | `src/output/metric_format.py` | MODIFY | Beide Symbole per Re-Export unverändert erhalten, analog zum bestehenden Re-Export von `thunder_ordinal`/`thunder_label_value` (Z. 29–39). Alle externen Importe (`helpers.py`, `weather_metrics.py`, `trip_command_processor.py`, `compare_html.py`, `trip_report.py`) bleiben gültig. |
 | `src/services/trip_report_scheduler.py` | MODIFY | Beide Bauwege (`_thunder_entry_from_trend_row()`, `_build_thunder_forecast()`) hängen die Herkunft an `text` — unmittelbar nach dem Aufbau der Tagesaussage, vor der Berechnung/dem Anhängen des Nacht-Halbsatzes. Primärpfad: neue, fenstergefilterte `union_of_max_carriers()`-Auswertung über `row["hourly_thunder_signals"]` mit denselben `win_start`/`win_end`, die bereits `windowed` filtern. Rückfallpfad: `summarize_points(thunder_dps)`-Aufruf in eine Variable heben, `.thunder_level_max_signals` zusätzlich zu `.hail_flag` lesen. |
 | `tests/tdd/test_thunder_origin_preview.py` | CREATE | Neue TDD-Testsuite für AC-1 bis AC-11, echte Renderkette bis zum fertigen Text (kein Mock-Theater). |
-| `frontend/e2e/trip-preview-thunder-origin.spec.ts` | CREATE | Playwright-Spec für AC-12/AC-13: öffnet `/trips/<id>?tab=preview`, schaltet Morgen/Abend um und liest den Text **im `email-iframe`** ab. Aufnahme in die CI-Positivliste `.github/ci_e2e_specs.txt` nur nach der vorgeschriebenen Vermessung (3× grün im `workflow_dispatch`-Lauf, ADR-0054); bis dahin läuft er gegen Staging im Rahmen von `/e2e-verify`. |
+| `frontend/e2e/trip-preview-thunder-origin.staging.spec.ts` | CREATE | Playwright-Spec für AC-12/AC-13: öffnet `/trips/<id>?tab=preview`, schaltet Morgen/Abend um und liest den Text **im `email-iframe`** ab. **Gehört NICHT in die CI-Positivliste** — s. „Warum dieser Test nicht in die Ampel gehört". |
+
+### Warum dieser Test nicht in die Ampel gehört (nachgetragen 2026-08-15)
+
+Die erste Fassung dieser Spec sah vor, den Spec nach einer Vermessung (3× grün) in
+`.github/ci_e2e_specs.txt` aufzunehmen. **Die Vermessung ist gelaufen — 3 von 3 grün
+(1,7 min / 17,6 s / 17,5 s) — und das Ergebnis lautet trotzdem: nicht aufnehmen.**
+
+Grund ist nicht Wackeligkeit, sondern Bauart: Die `e2e`-Lane fährt einen **isolierten
+Offline-Stack** (`frontend/e2e/ci-stack.sh start`). Dieser Spec läuft dagegen **gegen
+Staging** — er setzt `baseURL` auf `https://staging.gregor20.henemm.com`, braucht die
+nginx-Schranke (`GZ_VALIDATOR_*`), die App-Anmeldung (`GZ_AUTH_*` aus der Staging-`.env`)
+und eine `storageState`-Datei. Nichts davon existiert in der CI. Aufgenommen würde er dort
+scheitern und die Ampel für alle rot färben.
+
+**Deshalb die Umbenennung auf `*.staging.spec.ts`.** Das ist die etablierte Konvention des
+Repos (25+ Dateien) und zugleich ein Wächter: Der Vermessungslauf schließt dieses Muster
+ausdrücklich aus (`--exclude='*.staging.spec.ts'`, `ci.yml:277`).
+
+🔴 **Ohne die Umbenennung wäre der Spec beim nächsten Vermessungslauf automatisch
+aufgenommen worden.** Der zweite Filter (`grep -qE '/home/hem/gregor_zwanzig|__dirname'`,
+`ci.yml:280`) greift bei ihm **nicht**: Er löst sein Verzeichnis über
+`path.dirname(fileURLToPath(import.meta.url))` auf, enthält also weder `__dirname` noch
+einen absoluten Pfad. Er wäre durch beide Filter gerutscht — eine gestellte Falle, gefunden
+nur, weil vor dem Eintragen geprüft wurde, ob er in der Ampel überhaupt laufen *kann*.
 
 **Nicht angefasst (bewusst):** `src/output/renderers/email/plain.py`,
 `src/output/renderers/email/html.py` (E1), `src/output/renderers/sms_trip.py`,
@@ -314,12 +338,12 @@ Bildschirm-Vorschau ist ein echter Wirkort, s. AC-12/AC-13).
 | AC-9 | `test_ac9_sms_und_premium_sms_ohne_herkunft_sonde` | Sonde auf `THUNDER_SIGNAL_LABEL_DE` (nach dem Umzug: `thunder_scale.THUNDER_SIGNAL_LABEL_DE`, objektidentisch mit dem Re-Export), Gegenprobe an derselben Mail |
 | AC-10 | `test_ac10_telegram_und_kompaktmail_unveraendert` | Telegram-Bubbles + Kompakt-Mail derselben Etappe, Gegenprobe an der Vollmail |
 | AC-11 | `test_ac11_ohne_traegerinfo_bleibt_byte_identisch` | beide Pfade je einmal mit/ohne S5a-Trägerfeld bzw. Rückfall-Trägerliste |
-| AC-12 | `frontend/e2e/trip-preview-thunder-origin.spec.ts` → `vorschau_morgen_zeigt_herkunft` | echter Browser gegen Staging, `?tab=preview`, Ansicht „Morgen" |
+| AC-12 | `frontend/e2e/trip-preview-thunder-origin.staging.spec.ts` → `vorschau_morgen_zeigt_herkunft` | echter Browser gegen Staging, `?tab=preview`, Ansicht „Morgen" |
 | AC-13 | dieselbe Datei → `vorschau_abend_ohne_ausblick_zeigt_herkunft` + Gegenprobe `mit_ausblick_verschwindet_der_block` | echter Browser gegen Staging, Ausblick-Schalter im Reiter „Wetter-Metriken" |
 | AC-14 | `briefing_mail_validator.py` gegen die per IMAP abgeholte Staging-Mail (kein Unit-Test) | echt zugestellte Mail, Klartext + HTML |
 
 **Aufrufweg des Browser-Tests (in der RED-Phase festgelegt):**
-`cd frontend/e2e && npx playwright test trip-preview-thunder-origin.spec.ts --reporter=line`.
+`cd frontend/e2e && npx playwright test trip-preview-thunder-origin.staging.spec.ts --reporter=line`.
 Der Spec setzt `baseURL`, nginx-Schranke und `storageState` selbst per `test.use`; ein Aufruf
 aus `frontend/` würde `playwright.config.ts` mitziehen (lokaler `webServer` + `global.setup`)
 und ist deshalb **nicht** geeignet. Er sät seinen eigenen Trip `e2e-1680-s5b-origin` unter
