@@ -1051,7 +1051,7 @@ def format_trend_tokens(stage: dict) -> dict:
     # reicht dieselbe, bereits gefensterte `_day_carriers`-Menge unformatiert
     # durch -- eine ZWEITE, unabhaengige Fensterauflösung im Metrik-Zweig
     # waere genau die Fehlerklasse, gegen die #1653/#1680 S5a AC-9 schreiben.
-    _level_by_value = {thunder_label_value(l): l for l in ThunderLevel}
+    _level_by_value = {thunder_label_value(stufe): stufe for stufe in ThunderLevel}
     _day_values = [s.value for s in _day_samples]
     thunder_day_level = (
         _level_by_value.get(int(round(max(_day_values))))
