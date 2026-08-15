@@ -94,10 +94,16 @@ def _enabled_state(dc, metric_id: str):
 
 class TestLoaderDerivesDayDirectionsFromParent:
 
-    def test_stored_min_only_yields_k_without_d(self, tmp_path):
-        """AC-8: ``temperature: {enabled: true, aggregations: ["min"]}`` ohne
-        eigene Tagesrichtungs-Eintraege -> ``temperature_day_low`` abgeleitet
-        AN, ``temperature_day_high`` AUS; die SMS traegt K und kein D."""
+    def test_stored_min_only_now_yields_both_directions(self, tmp_path):
+        """S3 AC-2: ``temperature: {enabled: true, aggregations: ["min"]}``
+        ohne eigene Tagesrichtungs-Eintraege -> BEIDE Tagesrichtungen
+        abgeleitet AN; die SMS traegt K UND D.
+
+        Umkehrung der S1-Zusicherung (dort AC-8: D blieb AUS). Mit S3 DEC-1
+        faellt der ``required_agg``-Filter aus ``_DERIVED_METRIC_RULES``: das
+        Feld ``aggregations`` ist abgeschafft, also darf es die Ableitung
+        nicht mehr steuern — nur noch ``enabled`` der Elterngroesse zaehlt.
+        """
         _write_trip(tmp_path, "default", "bestand-min", [
             {"metric_id": "temperature", "enabled": True, "aggregations": ["min"]},
             {"metric_id": "precipitation", "enabled": True},
@@ -106,21 +112,22 @@ class TestLoaderDerivesDayDirectionsFromParent:
 
         assert _enabled_state(dc, TEMP_LOW) is True, (
             f"{TEMP_LOW!r} nach dem Laden: {_enabled_state(dc, TEMP_LOW)!r} — "
-            f"die Bestands-Ableitung in loader.py fehlt oder wertet 'min' "
-            f"nicht aus.\nGeladen: {[m.metric_id for m in dc.metrics]}"
+            f"die Bestands-Ableitung in loader.py fehlt.\n"
+            f"Geladen: {[m.metric_id for m in dc.metrics]}"
         )
-        assert _enabled_state(dc, TEMP_HIGH) is False, (
+        assert _enabled_state(dc, TEMP_HIGH) is True, (
             f"{TEMP_HIGH!r} nach dem Laden: "
-            f"{_enabled_state(dc, TEMP_HIGH)!r} — 'max' steht NICHT in der "
-            f"gespeicherten Auswertungswahl ['min']."
+            f"{_enabled_state(dc, TEMP_HIGH)!r} — der gespeicherte Wert "
+            f"['min'] darf die Ableitung nach S3 DEC-1 NICHT mehr "
+            f"einschraenken (required_agg-Filter entfaellt)."
         )
         sms = _sms(dc)
         assert F.sms_token_value(sms, "K") == str(int(F.HIKE_MIN_C)), (
             f"K fehlt im Briefing des Bestands-Trips.\nSMS: {sms}"
         )
-        assert F.sms_token_value(sms, "D") is None, (
-            f"D erscheint, obwohl der Bestands-Trip nur 'min' gespeichert "
-            f"hat.\nSMS: {sms}"
+        assert F.sms_token_value(sms, "D") == str(int(F.HIKE_MAX_C)), (
+            f"D fehlt im Briefing, obwohl die Ableitung nach S3 DEC-1 nur "
+            f"noch an ``temperature.enabled`` haengt.\nSMS: {sms}"
         )
 
     def test_stored_default_keeps_both_felt_directions(self, tmp_path):
@@ -155,12 +162,16 @@ class TestLoaderDerivesDayDirectionsFromParent:
 class TestRoundtripDoesNotMaterializeDerivedEntries:
 
     def test_load_save_keeps_file_free_of_derived_ids(self, tmp_path):
-        """AC-10: Laden + unveraendert Speichern schreibt keine expliziten
-        Eintraege fuer die vier neuen IDs, und die uebrigen
-        ``display_config``-Felder bleiben erhalten (Merge, kein Replace).
+        """AC-10 (S1) + AC-6 (S3): Laden + unveraendert Speichern schreibt
+        keine expliziten Eintraege fuer die vier neuen IDs, die uebrigen
+        ``display_config``-Felder bleiben erhalten (Merge, kein Replace) —
+        UND die gespeicherte Datei traegt fuer KEINE Metrik mehr einen
+        ``"aggregations"``-Key.
 
-        # BESTANDSSCHUTZ: heute bereits gruen — bewacht, dass Scheibe 1
-        # dieses Verhalten nicht bricht. Kein RED-Nachweis.
+        Der zweite Teil ist die gewollte Wirkung von S3 DEC-2: das
+        abgeschaffte Feld verlaesst den Datenbestand beim ersten Speichern
+        nach dieser Scheibe. Kein Merge-Verstoss — das Feld wird bewusst
+        entfernt, nicht versehentlich verworfen.
         """
         original = [
             {"metric_id": "temperature", "enabled": True,
@@ -191,11 +202,19 @@ class TestRoundtripDoesNotMaterializeDerivedEntries:
         )
         for eintrag in original:
             gesp = gespeichert[eintrag["metric_id"]]
-            assert (gesp["enabled"], gesp["aggregations"]) == (
-                eintrag["enabled"], eintrag["aggregations"]), (
+            assert gesp["enabled"] == eintrag["enabled"], (
                 f"{eintrag['metric_id']!r} hat sich beim Roundtrip "
                 f"veraendert: {gesp!r} statt {eintrag!r}"
             )
+        mit_key = sorted(mid for mid, m in gespeichert.items()
+                         if "aggregations" in m)
+        assert not mit_key, (
+            f"S3 AC-6: {mit_key} tragen nach dem Speichern weiterhin einen "
+            f"``aggregations``-Key. Das Feld ist mit S3 DEC-2 abgeschafft "
+            f"und darf die Datei beim naechsten Speichern nicht mehr "
+            f"verlassen — Serialisierung in loader.py::_metric_to_dict "
+            f"schreibt es noch."
+        )
         for feld in ("show_night_block", "night_interval_hours"):
             assert nachher["display_config"][feld] == \
                 vorher["display_config"][feld], (
@@ -209,14 +228,17 @@ class TestRoundtripDoesNotMaterializeDerivedEntries:
 
 class TestRealLegacyTripKeepsItsTokens:
 
-    def test_gr221_mallorca_keeps_k_d_fk_and_loses_only_fd(self):
-        """AC-11: ``gr221-mallorca.json`` (``temperature: ["min","max","avg"]``,
-        ``wind_chill: ["min"]``) -> K und D bleiben (der entfallende
-        Mittelwert kostet keine Tagesrichtung, E1), FK bleibt, FD fehlt.
-        N/FN/WC unveraendert.
+    def test_gr221_mallorca_keeps_all_day_direction_tokens(self):
+        """S3 AC-2: ``gr221-mallorca.json`` (``temperature:
+        ["min","max","avg"]``, ``wind_chill: ["min"]``) traegt jetzt die
+        VOLLE Token-Menge N/K/D/FN/FK/FD/WC.
 
-        # BESTANDSSCHUTZ: heute bereits gruen — bewacht, dass Scheibe 1
-        # dieses Verhalten nicht bricht. Kein RED-Nachweis.
+        Umkehrung der S1-Zusicherung (dort AC-11: FD fehlte, weil
+        ``wind_chill: ["min"]`` die Ableitung von ``wind_chill_day_high``
+        blockierte). Mit S3 DEC-1 ist das gespeicherte Feld abgeschafft und
+        steuert nichts mehr — PO-akzeptierte Verhaltensaenderung: dieser
+        Bestandstrip bekommt FD zurueck, bis er einmal ueber den
+        S2-Editor gespeichert wird (dort einzeln abwaehlbar).
         """
         assert GR221.exists(), f"Bestandsdatei fehlt: {GR221}"
         trip = load_trip(GR221)
@@ -224,10 +246,11 @@ class TestRealLegacyTripKeepsItsTokens:
         sms = _sms(trip.display_config)
 
         vorhanden = F.present_symbols(sms, ("N", "K", "D", "FN", "FK", "FD", "WC"))
-        assert vorhanden == {"N", "K", "D", "FN", "FK", "WC"}, (
+        assert vorhanden == {"N", "K", "D", "FN", "FK", "FD", "WC"}, (
             f"Token-Menge des realen Bestandstrips: {sorted(vorhanden)} — "
-            f"erwartet N/K/D/FN/FK/WC ohne FD (wind_chill: ['min']).\n"
-            f"SMS: {sms}"
+            f"erwartet N/K/D/FN/FK/FD/WC. Fehlt FD, wertet die Ableitung "
+            f"``wind_chill.aggregations`` noch aus (S3 DEC-1 nicht "
+            f"umgesetzt).\nSMS: {sms}"
         )
 
 

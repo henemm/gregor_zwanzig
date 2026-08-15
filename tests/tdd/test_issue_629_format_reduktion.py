@@ -18,7 +18,6 @@ def _trip_with_modes(metric_entries):
         mc = {
             "metric_id": entry["metric_id"],
             "enabled": entry.get("enabled", True),
-            "aggregations": entry.get("aggregations", ["min", "max"]),
             "use_friendly_format": entry.get("use_friendly_format", True),
         }
         if "format_mode" in entry:
@@ -102,7 +101,7 @@ def test_ac4_other_fields_preserved_through_migration():
     trip = load_trip_from_dict(_trip_with_modes([
         {
             "metric_id": "cloud_total", "format_mode": "symbol",
-            "enabled": False, "aggregations": ["avg"],
+            "enabled": False,
             "alert_enabled": True, "alert_threshold": 42.0,
             "horizons": {"today": True, "tomorrow": False, "day_after": True},
             "morning_enabled": True, "evening_enabled": False,
@@ -111,7 +110,6 @@ def test_ac4_other_fields_preserved_through_migration():
     mc = _mc_by_id(trip, "cloud_total")
     assert mc.format_mode is None
     assert mc.enabled is False
-    assert mc.aggregations == ["avg"]
     assert mc.alert_enabled is True
     assert mc.alert_threshold == 42.0
     assert mc.horizons == {"today": True, "tomorrow": False, "day_after": True}
@@ -126,11 +124,11 @@ def test_ac5_roundtrip_no_data_loss_and_no_legacy_mode_persisted():
     scale/symbol mehr im serialisierten Dict."""
     src = _trip_with_modes([
         {"metric_id": "wind_direction", "format_mode": "scale",
-         "enabled": True, "aggregations": ["avg"]},
+         "enabled": True},
         {"metric_id": "cloud_total", "format_mode": "symbol",
-         "enabled": False, "aggregations": ["avg"], "alert_enabled": True,
+         "enabled": False, "alert_enabled": True,
          "alert_threshold": 7.0},
-        {"metric_id": "wind", "format_mode": "raw", "aggregations": ["max"]},
+        {"metric_id": "wind", "format_mode": "raw"},
     ])
     trip1 = load_trip_from_dict(src)
     serialized = _trip_to_dict(trip1)
@@ -146,7 +144,6 @@ def test_ac5_roundtrip_no_data_loss_and_no_legacy_mode_persisted():
         a, b = _mc_by_id(trip1, mid), _mc_by_id(trip2, mid)
         assert a.format_mode == b.format_mode
         assert a.enabled == b.enabled
-        assert a.aggregations == b.aggregations
         assert a.alert_enabled == b.alert_enabled
         assert a.alert_threshold == b.alert_threshold
 

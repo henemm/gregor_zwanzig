@@ -610,7 +610,6 @@ class MetricConfig:
     """Per-metric configuration within UnifiedWeatherDisplayConfig."""
     metric_id: str
     enabled: bool = True
-    aggregations: list[str] = field(default_factory=lambda: ["min", "max"])
     # Phase 3: per-report-type overrides (None = follows global enabled)
     morning_enabled: Optional[bool] = None
     evening_enabled: Optional[bool] = None

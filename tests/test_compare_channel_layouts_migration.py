@@ -54,7 +54,7 @@ def _compare_preset_with_channel_layouts(preset_id: str, **extra) -> dict:
             "metrics": [],
             "active_metrics": ["temp_max_c"],
             "channel_layouts": {
-                "email": [{"metric_id": "temperature", "enabled": True, "aggregations": ["max"]}],
+                "email": [{"metric_id": "temperature", "enabled": True, }],
                 "sms": [],
             },
             "updated_at": "2026-07-24T00:00:00Z",
@@ -78,8 +78,8 @@ def _trip_preset_with_channel_layouts(trip_id: str, **extra) -> dict:
             "trip_id": trip_id,
             "metrics": [],
             "channel_layouts": {
-                "email": [{"metric_id": "temperature", "enabled": True, "aggregations": ["min", "max"]}],
-                "sms": [{"metric_id": "temperature", "enabled": True, "aggregations": ["max"]}],
+                "email": [{"metric_id": "temperature", "enabled": True, }],
+                "sms": [{"metric_id": "temperature", "enabled": True, }],
             },
             "updated_at": "2026-07-24T00:00:00Z",
         },

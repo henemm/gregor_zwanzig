@@ -43,7 +43,6 @@ _TRIP_FULL = {
             {
                 "metric_id": "temperature_max",
                 "enabled": True,
-                "aggregations": ["MAX"],
                 "morning_enabled": True,
                 "evening_enabled": False,
                 "use_friendly_format": True,

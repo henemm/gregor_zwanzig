@@ -911,18 +911,6 @@ def available_aggregations(metric_id: object) -> list[str]:
     return [a for a in _AGGREGATION_ORDER if a in definition.summary_fields]
 
 
-def pill_default_aggregations(metric_id: object) -> list[str]:
-    """Auswertungen ohne aktive Nutzereinschraenkung: ``{min, max}`` geschnitten
-    auf das Angebot der Groesse, sonst das gesamte Angebot.
-
-    Ergibt fuer Temperatur UND gefuehlte Temperatur ``["min", "max"]`` — die
-    Temperatur zeigt also nie unverlangt zusaetzlich den Mittelwert.
-    """
-    available = available_aggregations(metric_id)
-    preferred = [a for a in available if a in ("min", "max")]
-    return preferred or available
-
-
 def aggregation_label_de(aggregation: object) -> str:
     """Deutsche Beschriftung einer Auswertung (``""`` wenn unbekannt)."""
     return _AGGREGATION_LABELS_DE.get(aggregation, "") if isinstance(aggregation, str) else ""
@@ -976,7 +964,6 @@ def build_default_display_config(trip_id: str = "") -> "UnifiedWeatherDisplayCon
         metrics.append(MetricConfig(
             metric_id=m.id,
             enabled=m.default_enabled,
-            aggregations=list(m.default_aggregations),
             alert_enabled=False,
         ))
 
@@ -1082,7 +1069,6 @@ def build_default_display_config_for_profile(
         metrics.append(MetricConfig(
             metric_id=metric_def.id,
             enabled=metric_def.id in enabled_ids,
-            aggregations=list(metric_def.default_aggregations),
         ))
     return UnifiedWeatherDisplayConfig(
         trip_id=location_id,

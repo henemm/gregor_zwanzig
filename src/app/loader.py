@@ -157,7 +157,6 @@ def _metric_to_dict(mc) -> dict:
     out = {
         "metric_id": mc.metric_id,
         "enabled": mc.enabled,
-        "aggregations": mc.aggregations,
         "morning_enabled": mc.morning_enabled,
         "evening_enabled": mc.evening_enabled,
         "use_friendly_format": friendly,
@@ -748,20 +747,19 @@ def _coerce_metric_entry(entry: Any) -> Any:
     return entry
 
 
-# Issue #1484/#1660 A/#1728 S1 — Bestands-Ableitung abgeleiteter Groessen:
+# Issue #1484/#1660 A/#1728 S1/S3 — Bestands-Ableitung abgeleiteter Groessen:
 # (Kennung, Elterngroesse, geforderte Auswertung der Eltern | None).
-# ``None`` = reines ``enabled``-Erbe (Nachtfenster-Skalare). Eine geforderte
-# Auswertung ("min"/"max") bindet die Tagesrichtung zusaetzlich an die
-# gespeicherte Auswertungswahl der Elterngroesse (DEC-6): ``["min"]`` schaltet
-# nur das Tages-Tief an, der Default ``["min","max"]`` beide, ``avg`` faellt
-# ersatzlos weg (kein drittes Tagesglied existiert).
+# Seit #1728 S3 (DEC-1) ist ``MetricConfig.aggregations`` abgeschafft; die
+# Ableitung haengt fuer ALLE Kennungen ausschliesslich am ``enabled`` der
+# Elterngroesse. ``required_agg`` bleibt als Feld erhalten, wird aber nirgends
+# mehr belegt.
 _DERIVED_METRIC_RULES: tuple[tuple[str, str, Optional[str]], ...] = (
     ("temperature_night", "temperature", None),
     ("wind_chill_night", "wind_chill", None),
-    ("temperature_day_low", "temperature", "min"),
-    ("temperature_day_high", "temperature", "max"),
-    ("wind_chill_day_low", "wind_chill", "min"),
-    ("wind_chill_day_high", "wind_chill", "max"),
+    ("temperature_day_low", "temperature", None),
+    ("temperature_day_high", "temperature", None),
+    ("wind_chill_day_low", "wind_chill", None),
+    ("wind_chill_day_high", "wind_chill", None),
 )
 
 
@@ -781,19 +779,14 @@ def _append_derived_metrics(metrics: List["MetricConfig"]) -> List["MetricConfig
     """
     from app.models import MetricConfig
 
-    for child_id, parent_id, required_agg in _DERIVED_METRIC_RULES:
+    for child_id, parent_id, _required_agg in _DERIVED_METRIC_RULES:
         if any(mc.metric_id == child_id for mc in metrics):
             continue
         parents = [mc for mc in metrics if mc.metric_id == parent_id]
         if not parents:
             continue
-        enabled = any(mc.enabled for mc in parents)
-        if required_agg is not None:
-            enabled = enabled and required_agg in {
-                a for mc in parents for a in mc.aggregations
-            }
         metrics.append(MetricConfig(
-            metric_id=child_id, enabled=enabled, aggregations=[],
+            metric_id=child_id, enabled=any(mc.enabled for mc in parents),
             bucket="secondary", derived=True,
         ))
     return metrics
@@ -838,7 +831,6 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         metrics.append(MetricConfig(
             metric_id=mid,
             enabled=mc_data.get("enabled", True),
-            aggregations=mc_data.get("aggregations", ["min", "max"]),
             morning_enabled=mc_data.get("morning_enabled"),
             evening_enabled=mc_data.get("evening_enabled"),
             use_friendly_format=friendly,
@@ -880,7 +872,6 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                 ch_parsed.append(MetricConfig(
                     metric_id=mc_data["metric_id"],
                     enabled=mc_data.get("enabled", True),
-                    aggregations=mc_data.get("aggregations", ["min", "max"]),
                     morning_enabled=mc_data.get("morning_enabled"),
                     evening_enabled=mc_data.get("evening_enabled"),
                     use_friendly_format=ch_friendly,
@@ -916,7 +907,6 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                     pr_parsed.append(MetricConfig(
                         metric_id=mc_data["metric_id"],
                         enabled=mc_data.get("enabled", True),
-                        aggregations=mc_data.get("aggregations", ["min", "max"]),
                         morning_enabled=mc_data.get("morning_enabled"),
                         evening_enabled=mc_data.get("evening_enabled"),
                         use_friendly_format=pr_friendly,
@@ -997,13 +987,11 @@ def _migrate_weather_config(old_config) -> "UnifiedWeatherDisplayConfig":
             metrics.append(MetricConfig(
                 metric_id=m.id,
                 enabled=True,
-                aggregations=enabled_metrics[m.id],
             ))
         else:
             metrics.append(MetricConfig(
                 metric_id=m.id,
                 enabled=False,
-                aggregations=list(m.default_aggregations),
             ))
 
     return UnifiedWeatherDisplayConfig(

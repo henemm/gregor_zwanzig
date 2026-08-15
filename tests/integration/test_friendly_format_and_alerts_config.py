@@ -32,7 +32,6 @@ def _make_display_config(friendly_overrides: dict[str, bool]) -> UnifiedWeatherD
             new_metrics.append(MetricConfig(
                 metric_id=mc.metric_id,
                 enabled=True,
-                aggregations=mc.aggregations,
                 use_friendly_format=friendly_overrides[mc.metric_id],
                 alert_enabled=mc.alert_enabled,
                 alert_threshold=mc.alert_threshold,
@@ -145,13 +144,11 @@ class TestAlertEnabledConfig:
             if mc.metric_id == "cape":
                 new_metrics.append(MetricConfig(
                     metric_id="cape", enabled=True,
-                    aggregations=mc.aggregations,
                     alert_enabled=True, alert_threshold=500.0,
                 ))
             elif mc.metric_id == "wind":
                 new_metrics.append(MetricConfig(
                     metric_id="wind", enabled=True,
-                    aggregations=mc.aggregations,
                     alert_enabled=False,
                 ))
             else:
@@ -181,7 +178,6 @@ class TestAlertEnabledConfig:
         none_enabled = [
             MetricConfig(
                 metric_id=mc.metric_id, enabled=False,
-                aggregations=mc.aggregations,
                 alert_enabled=mc.alert_enabled,
             )
             for mc in dc.metrics
@@ -199,7 +195,6 @@ class TestAlertEnabledConfig:
         new_metrics = [
             MetricConfig(
                 metric_id=mc.metric_id, enabled=mc.metric_id in opted_in,
-                aggregations=mc.aggregations,
                 alert_enabled=mc.alert_enabled,
             )
             for mc in dc.metrics
@@ -228,7 +223,6 @@ class TestAlertEnabledConfig:
         new_metrics = [
             MetricConfig(
                 metric_id=mc.metric_id, enabled=False,
-                aggregations=mc.aggregations,
                 alert_enabled=mc.alert_enabled,
             )
             for mc in dc.metrics
@@ -261,14 +255,12 @@ def _make_wind_config(
             new_metrics.append(MetricConfig(
                 metric_id="wind_direction",
                 enabled=wind_dir_enabled,
-                aggregations=mc.aggregations,
                 use_friendly_format=wind_dir_friendly,
             ))
         elif mc.metric_id == "wind":
             new_metrics.append(MetricConfig(
                 metric_id="wind",
                 enabled=wind_enabled,
-                aggregations=mc.aggregations,
             ))
         else:
             new_metrics.append(mc)

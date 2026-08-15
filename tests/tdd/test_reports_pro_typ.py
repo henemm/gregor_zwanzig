@@ -25,7 +25,6 @@ def _build_dc(metric_configs):
             enabled=enabled,
             morning_enabled=morning,
             evening_enabled=evening,
-            aggregations=["min", "max"],
         ))
     return UnifiedWeatherDisplayConfig(
         trip_id="test",
@@ -175,7 +174,6 @@ class TestSerializationRoundtrip:
                 "enabled": mc.enabled,
                 "morning_enabled": mc.morning_enabled,
                 "evening_enabled": mc.evening_enabled,
-                "aggregations": mc.aggregations,
                 "use_friendly_format": mc.use_friendly_format,
                 "alert_enabled": mc.alert_enabled,
                 "alert_threshold": mc.alert_threshold,

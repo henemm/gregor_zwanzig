@@ -218,11 +218,6 @@ export interface WeatherConfigMetric {
 	score_member?: boolean;
 	/** Issue #624: Konfigurierter Schwellwert für SMS-/Telegram-Kurzform (erste-Überschreitung). */
 	sms_threshold?: number;
-	/** Issue #1357: gewählte Tagesauswertungen für die Mail-Kachelzeile
-	 *  (`MetricConfig.aggregations`). Fehlt das Feld ⇒ Katalog-Vorgabe;
-	 *  leere Liste ⇒ bewusst keine Kachel. Muss hier stehen, sonst geht die
-	 *  Wahl beim nächsten Speichern über die Oberfläche verloren. */
-	aggregations?: string[];
 }
 
 export interface WeatherConfig {

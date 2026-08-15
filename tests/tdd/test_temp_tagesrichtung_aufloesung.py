@@ -46,14 +46,10 @@ SPAN_ASCII = f"{int(F.HIKE_MIN_C)}-{int(F.HIKE_MAX_C)}C - Max {F.WARM_HOUR:02d}:
 ONLY_MAX_ASCII = f"max {int(F.HIKE_MAX_C)}C - {F.WARM_HOUR:02d}:00"
 
 
-def _dc(*specs: tuple[str, bool], aggs: dict[str, list[str]] | None = None
-        ) -> UnifiedWeatherDisplayConfig:
+def _dc(*specs: tuple[str, bool]) -> UnifiedWeatherDisplayConfig:
     """Displaykonfiguration aus (metric_id, enabled)-Paaren."""
-    aggs = aggs or {}
     metrics = [
-        MetricConfig(metric_id=mid, enabled=on, **(
-            {"aggregations": aggs[mid]} if mid in aggs else {}
-        ))
+        MetricConfig(metric_id=mid, enabled=on)
         for mid, on in specs
     ]
     return UnifiedWeatherDisplayConfig(trip_id="i1728-s1", metrics=metrics)
@@ -187,11 +183,11 @@ class TestWindChillDayDirectionsLeaveWcAlone:
 # ---------------------------------------------------------------------------
 
 def _dc_stored_max_only() -> UnifiedWeatherDisplayConfig:
-    """Bestandslage, aus der die Ableitung ``temperature_day_low`` AUS
-    erzeugt: gespeicherte Auswertungswahl ["max"] an der Elterngroesse."""
+    """Bestandslage mit abgewaehltem ``temperature_day_low``: die Kachel muss
+    die Spanne trotzdem zeigen."""
     return _dc(
         ("temperature", True), (TEMP_LOW, False), (TEMP_HIGH, True),
-        ("precipitation", True), aggs={"temperature": ["max"]},
+        ("precipitation", True),
     )
 
 
@@ -251,18 +247,16 @@ class TestStoredAverageHasNoOutputLeft:
     hat der Mittelwert keinen Ausgabeort mehr."""
 
     def test_stored_avg_only_still_renders_the_span_everywhere(self):
-        """Given ein Trip, dessen gespeicherte Auswertungswahl AUSSCHLIESSLICH
-        ``["avg"]`` ist (der schaerfste Fall — frueher zeigte die Kachel dann
-        ``Ø 15°C``) / When alle drei Mailformen und die Kurznachricht erzeugt
+        """Given ein Trip mit beiden Tagesrichtungen (frueher konnte eine
+        gespeicherte Auswertungswahl ``["avg"]`` die Kachel auf ``Ø 15°C``
+        zwingen) / When alle drei Mailformen und die Kurznachricht erzeugt
         werden / Then erscheint nirgends ein Mittelwert; die Kachel zeigt die
         Spanne, die SMS ihre Tages-Token.
 
-        Der reale Fall existiert: ``gr221-mallorca.json`` traegt
-        ``temperature: ["min","max","avg"]``. Geprueft wird hier die
-        Zuspitzung davon, weil sie den Mittelwert frueher als EINZIGE Form
-        erzwang."""
+        Seit #1728 S3 ist ``MetricConfig.aggregations`` abgeschafft — der
+        Mittelwert hat damit endgueltig keinen Ausgabeort mehr."""
         dc = _dc(("temperature", True), (TEMP_LOW, True), (TEMP_HIGH, True),
-                 ("precipitation", True), aggs={"temperature": ["avg"]})
+                 ("precipitation", True))
         voll = _report(dc)
         kompakt = _report(dc, email_format="compact")
 

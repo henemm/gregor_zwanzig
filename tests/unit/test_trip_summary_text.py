@@ -92,7 +92,7 @@ def _trip_sentence(
     dc = UnifiedWeatherDisplayConfig(
         trip_id="ref",
         metrics=[
-            MetricConfig(metric_id=m, enabled=True, aggregations=["max"], use_friendly_format=True)
+            MetricConfig(metric_id=m, enabled=True, use_friendly_format=True)
             for m in metric_ids
         ],
     )

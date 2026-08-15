@@ -269,14 +269,10 @@ def test_ac7_legacy_roundtrip_assigns_bucket_order_without_diff(tmp_path: Path):
         "display_config": {
             "trip_id": "legacy-360",
             "metrics": [
-                {"metric_id": "temperature", "enabled": True,
-                 "aggregations": ["min", "max"]},
-                {"metric_id": "wind", "enabled": True,
-                 "aggregations": ["max"]},
-                {"metric_id": "precipitation", "enabled": True,
-                 "aggregations": ["sum"]},
-                {"metric_id": "humidity", "enabled": False,
-                 "aggregations": ["avg"]},
+                {"metric_id": "temperature", "enabled": True},
+                {"metric_id": "wind", "enabled": True},
+                {"metric_id": "precipitation", "enabled": True},
+                {"metric_id": "humidity", "enabled": False},
             ],
             "show_night_block": True,
             "night_interval_hours": 2,
@@ -313,7 +309,6 @@ def test_ac7_legacy_roundtrip_assigns_bucket_order_without_diff(tmp_path: Path):
         assert mc.bucket == o.bucket
         assert mc.order == o.order
         assert mc.enabled == o.enabled
-        assert mc.aggregations == o.aggregations
         assert mc.use_friendly_format == o.use_friendly_format
         assert mc.alert_enabled == o.alert_enabled
         assert mc.alert_threshold == o.alert_threshold
@@ -363,12 +358,10 @@ def test_ac7b_partial_migration_keeps_active_metric_primary(tmp_path: Path):
             "metrics": [
                 # Nur temperature ist explizit migriert.
                 {"metric_id": "temperature", "enabled": True,
-                 "aggregations": ["min", "max"], "bucket": "primary", "order": 0},
+                 "bucket": "primary", "order": 0},
                 # wind + precipitation aktiv, aber OHNE bucket/order.
-                {"metric_id": "wind", "enabled": True,
-                 "aggregations": ["max"]},
-                {"metric_id": "precipitation", "enabled": True,
-                 "aggregations": ["sum"]},
+                {"metric_id": "wind", "enabled": True},
+                {"metric_id": "precipitation", "enabled": True},
             ],
             "show_night_block": True,
             "night_interval_hours": 2,

@@ -83,7 +83,6 @@ class TestConfigRoundtrip:
             if mc.metric_id == "visibility":
                 new_metrics.append(MetricConfig(
                     metric_id="visibility", enabled=False,
-                    aggregations=mc.aggregations,
                     use_friendly_format=True,
                 ))
             else:
@@ -115,7 +114,6 @@ class TestConfigRoundtrip:
             if mc.metric_id == "visibility":
                 new_metrics.append(MetricConfig(
                     metric_id="visibility", enabled=True,
-                    aggregations=mc.aggregations,
                     use_friendly_format=False,
                 ))
             else:
@@ -143,7 +141,6 @@ class TestConfigRoundtrip:
             if mc.metric_id == "cape":
                 new_metrics.append(MetricConfig(
                     metric_id="cape", enabled=True,
-                    aggregations=mc.aggregations,
                     alert_enabled=True, alert_threshold=500.0,
                 ))
             else:
@@ -251,7 +248,6 @@ class TestDisabledMetricsExcluded:
             MetricConfig(
                 metric_id=mc.metric_id,
                 enabled=False if mc.metric_id == "visibility" else mc.enabled,
-                aggregations=mc.aggregations,
             )
             for mc in dc.metrics
         ]
@@ -274,7 +270,6 @@ class TestDisabledMetricsExcluded:
             MetricConfig(
                 metric_id=mc.metric_id,
                 enabled=False if mc.metric_id == "uv_index" else mc.enabled,
-                aggregations=mc.aggregations,
             )
             for mc in dc.metrics
         ]
@@ -296,7 +291,6 @@ class TestDisabledMetricsExcluded:
             MetricConfig(
                 metric_id=mc.metric_id,
                 enabled=False if mc.metric_id == "snowfall_limit" else mc.enabled,
-                aggregations=mc.aggregations,
             )
             for mc in dc.metrics
         ]
@@ -388,7 +382,6 @@ class TestLocationConfigRoundtrip:
                 return MetricConfig(
                     metric_id="wind",
                     enabled=True,
-                    aggregations=mc.aggregations,
                     alert_enabled=True,
                     alert_threshold=750.0,
                 )
@@ -417,7 +410,6 @@ class TestLocationConfigRoundtrip:
                 return MetricConfig(
                     metric_id="wind",
                     enabled=True,
-                    aggregations=mc.aggregations,
                     morning_enabled=False,
                 )
             return mc
@@ -442,7 +434,6 @@ class TestLocationConfigRoundtrip:
                 return MetricConfig(
                     metric_id="visibility",
                     enabled=True,
-                    aggregations=mc.aggregations,
                     use_friendly_format=False,
                 )
             return mc

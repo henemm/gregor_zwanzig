@@ -438,7 +438,7 @@ class TestAC3WiringInRenderer:
         from datetime import datetime, timezone
         return UnifiedWeatherDisplayConfig(
             trip_id="test-wiring",
-            metrics=[MetricConfig(metric_id="wind", enabled=True, aggregations=["max"])],
+            metrics=[MetricConfig(metric_id="wind", enabled=True, )],
             show_night_block=False,
             night_interval_hours=2,
             thunder_forecast_days=0,

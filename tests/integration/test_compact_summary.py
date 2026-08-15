@@ -111,14 +111,14 @@ def _default_dc() -> UnifiedWeatherDisplayConfig:
     return UnifiedWeatherDisplayConfig(
         trip_id="test",
         metrics=[
-            MetricConfig(metric_id="temperature", enabled=True, aggregations=["min", "max"], use_friendly_format=True),
-            MetricConfig(metric_id="cloud_total", enabled=True, aggregations=["avg"], use_friendly_format=True),
-            MetricConfig(metric_id="precipitation", enabled=True, aggregations=["sum"], use_friendly_format=True),
-            MetricConfig(metric_id="rain_probability", enabled=True, aggregations=["max"], use_friendly_format=True),
-            MetricConfig(metric_id="wind", enabled=True, aggregations=["max"], use_friendly_format=True),
-            MetricConfig(metric_id="gust", enabled=True, aggregations=["max"], use_friendly_format=True),
-            MetricConfig(metric_id="wind_direction", enabled=True, aggregations=["avg"], use_friendly_format=True),
-            MetricConfig(metric_id="thunder", enabled=True, aggregations=["max"], use_friendly_format=True),
+            MetricConfig(metric_id="temperature", enabled=True, use_friendly_format=True),
+            MetricConfig(metric_id="cloud_total", enabled=True, use_friendly_format=True),
+            MetricConfig(metric_id="precipitation", enabled=True, use_friendly_format=True),
+            MetricConfig(metric_id="rain_probability", enabled=True, use_friendly_format=True),
+            MetricConfig(metric_id="wind", enabled=True, use_friendly_format=True),
+            MetricConfig(metric_id="gust", enabled=True, use_friendly_format=True),
+            MetricConfig(metric_id="wind_direction", enabled=True, use_friendly_format=True),
+            MetricConfig(metric_id="thunder", enabled=True, use_friendly_format=True),
         ],
     )
 
