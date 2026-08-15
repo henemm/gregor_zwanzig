@@ -10,6 +10,15 @@ tags: [alerts, briefing, email, epic-1458, issue-1461]
 
 # Briefing zeigt, welche Alarme nicht angekommen sind (#1461 S3b-1)
 
+> **Teilweise überholt durch #1750/#1800 (2026-08-15):** Die Sammelüberschrift
+> „NICHT BEI DIR ANGEKOMMEN" entfällt ersatzlos, ersetzt durch zwei eigenständige Blöcke
+> „FEHLGESCHLAGEN — da ist etwas schiefgegangen" (Fehler) und „ZURÜCKGEHALTEN — so hast du es
+> eingestellt" (Absicht). Die Deckelung aus AC-6 (5 Zeilen) gilt seither **je Block**, nicht mehr
+> über die Gesamtliste — siehe die Notiz direkt bei AC-6. Details, Wortlaute und Begründung:
+> `docs/specs/modules/fix_1750_zustell_hinweis_klartext.md`. Die übrige Beschreibung dieser Spec
+> (Lesefunktion, Zeitanker, Renderer-Einbindung, Entdoppelung, AC-1 bis AC-5, AC-7 bis AC-17)
+> bleibt unverändert gültig.
+
 ## Approval
 
 - [x] Approved — PO, 2026-08-05 („go"). Deckelung bei 5 Zeilen ohne Widerspruch übernommen.
@@ -73,6 +82,11 @@ und verworfen.
 | Umfang | **beide** Fälle — Totalausfall **und** Teilausfall („E-Mail kam an, SMS nicht") |
 | Kanäle | **nur E-Mail.** Telegram-Kurzform und SMS bleiben unberührt |
 | Deckelung | **5 Zeilen**, darunter „und N weitere" — *zur Freigabe vorgelegt* |
+
+> **Fortgeschrieben durch #1750 (2026-08-15):** Die Zeile „5 Zeilen" bezog sich hier auf die
+> Gesamtliste unter einer Sammelüberschrift. Seit
+> `docs/specs/modules/fix_1750_zustell_hinweis_klartext.md` gilt derselbe Zahlenwert
+> (`MAX_LINES_PER_BLOCK`) **je Block** getrennt (Fehlgeschlagen/Zurückgehalten) — s. Notiz bei AC-6.
 
 Abgeleitet (Routine, keine Rückfrage): „E-Mail" heißt **beide** Mail-Formate (`full` und
 `compact`); Trip und Ortsvergleich bekommen **denselben** Baustein (Teilungs-Gate).
@@ -148,6 +162,13 @@ NICHT BEI DIR ANGEKOMMEN
   … und 2 weitere
 ```
 
+> **Überholt durch #1750 (2026-08-15):** Dieses Beispiel zeigt noch die Sammelüberschrift
+> „NICHT BEI DIR ANGEKOMMEN" und die Formulierung „SMS nicht zugestellt". Seit
+> `docs/specs/modules/fix_1750_zustell_hinweis_klartext.md` gibt es diese Überschrift nicht mehr
+> — stattdessen „FEHLGESCHLAGEN — da ist etwas schiefgegangen" bzw. „ZURÜCKGEHALTEN — so hast du
+> es eingestellt", ohne die Formulierung „nicht zugestellt". Die hier gezeigte Zeitform
+> `TT.MM. HH:MM` bleibt unverändert gültig.
+
 Zeitform `TT.MM. HH:MM` statt „Gestern/Heute" (v1.2, Begründung aus der GREEN-Phase): „Gestern"
 hinge vom Erzeugungszeitpunkt ab und bräche damit die Reinheit des Renderers — gleiche Eingabe
 müsste sonst nicht mehr die gleiche Ausgabe liefern. Zusätzlich verlangt AC-15, dass außer dem
@@ -201,6 +222,12 @@ Zeitstempel keine Ziffer in der Zeile steht; ein Wortpräfix macht diese Prüfun
   erreicht / When das Briefing erzeugt wird / Then stehen die fünf jüngsten als Zeilen da,
   gefolgt von einem Hinweis, wie viele weitere es sind.
   - Test: Acht Vorfälle anlegen; fünf Zeilen plus „und 3 weitere" nachweisen.
+  - ⚠️ **Abgelöst durch #1750 (2026-08-15)** (`docs/specs/modules/fix_1750_zustell_hinweis_klartext.md`
+    AC-12, E6): Die Deckelung gilt nicht mehr über die Gesamtliste, sondern **je Block** getrennt
+    (`MAX_LINES_PER_BLOCK`) — ein zurückgehaltener Vorfall wird von der Deckelung des
+    Fehlgeschlagen-Blocks nicht mehr verdrängt und umgekehrt. Der hier beschriebene Test (acht
+    Vorfälle in einer gemeinsamen Liste) ist als Konstruktion überholt; der Nachweis erfolgt jetzt
+    block-getrennt. Ursprünglicher AC-Wortlaut bleibt zur Historie unverändert stehen.
 
 - **AC-7:** Given ein Nutzer bekommt zum ersten Mal ein Briefing, nachdem diese Funktion
   ausgeliefert wurde, und sein Protokoll enthält alte nicht zugestellte Meldungen /
@@ -314,6 +341,12 @@ Zeitstempel keine Ziffer in der Zeile steht; ein Wortpräfix macht diese Prüfun
 
 ## Changelog
 
+- 2026-08-15: **AC-6 abgelöst durch #1750/#1800**
+  (`docs/specs/modules/fix_1750_zustell_hinweis_klartext.md`) — Sammelüberschrift
+  „NICHT BEI DIR ANGEKOMMEN" entfällt ersatzlos zugunsten zweier Blöcke „FEHLGESCHLAGEN"/
+  „ZURÜCKGEHALTEN"; die 5-Zeilen-Deckelung gilt seither je Block statt über die Gesamtliste.
+  Historischer AC-Wortlaut und das alte Klartext-Beispiel bleiben zur Nachvollziehbarkeit
+  unverändert stehen, mit Fortschreibungs-Notizen versehen.
 - 2026-08-05 (v1.2): AC-17 ergänzt — der **Klartext-Teil** der Ortsvergleichs-Mail bekommt den
   Abschnitt ebenfalls. In der GREEN-Phase war er ausgelassen worden, weil die Dateiliste
   `comparison.py` nicht nannte und AC-11 nur HTML prüft. Beide Fassungen werden zugestellt; der
