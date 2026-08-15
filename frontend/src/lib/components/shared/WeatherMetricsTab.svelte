@@ -52,11 +52,10 @@
 	// Fix #1613: Mehrfach-Symbol-Metriken (temperature/temperature_night/wind_chill)
 	// haben keinen Schwellwert -- eigene, schlanke Zeile ohne Segmented-Control.
 	import MultiSymbolMetricRow from './weather-metrics-tab/MultiSymbolMetricRow.svelte';
-	// Issue #1357: Auswertungswahl je Wettergroesse (Mail-Kachelzeile).
+	// Issue #1357: Auswertungswahl je Wettergroesse (Mail-Kachelzeile). Trip-
+	// eigener Aufrufer (05-Block) entfaellt mit #1728 Scheibe 2 (DEC-2/DEC-7) —
+	// die Komponente bleibt fuer den Vergleich-Zweig (mode='multiple') aktiv.
 	import AggregationMetricRow from './weather-metrics-tab/AggregationMetricRow.svelte';
-	import {
-		aggregationChoices, choiceAggregations, selectedChoiceId, showsAggregationChoice,
-	} from './weather-metrics-tab/aggregationSelection.ts';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	// Issue #1117: „Amtliche Warnungen"-Checkbox auch im Inhalt-Tab (eigener Block,
 	// EditReportConfigSection bleibt unverändert).
@@ -337,15 +336,6 @@
 		for (const ms of Object.values(catalog)) for (const m of ms) map[m.id] = m;
 		return map;
 	});
-	// Issue #1357 (AC-5): nur aktive Groessen mit MEHR ALS EINER berechenbaren
-	// Auswertung bekommen eine Auswahl — sonst waere sie ein wirkungsloses
-	// Bedienelement. Die Liste kommt aus dem Katalog, nicht aus einer
-	// getippten Metrik-Aufzaehlung.
-	const aggregationMetricIds = $derived(
-		allCatalogIds().filter(
-			(id) => !buckets.off.includes(id) && showsAggregationChoice(metricById[id]),
-		),
-	);
 	const shortById = $derived.by(() => {
 		const map: Record<string, string> = {};
 		for (const id of Object.keys(metricById)) {
@@ -1711,45 +1701,44 @@
 									symbols={metricSymbols['wind_chill'] ?? []}
 								/>
 								{/if}
-							</tbody>
-						</table>
-					</div>
-				</Card>
-				{/if}
-
-				<!-- 05 Auswertungen (Issue #1357): welche Tagesauswertung einer
-				     Wettergroesse in der Kachelzeile der Briefing-Mail erscheint.
-				     Nur Groessen mit mehr als einer berechenbaren Auswertung
-				     (AC-5); `context='vergleich'` bekommt diesen Abschnitt
-				     dauerhaft nicht — die Compare-Mengen-Wahl entsteht mit #1411
-				     im bestehenden Abschnitt 'grundauswahl' (AC-9, PO-Entscheidung
-				     2026-07-29, s. weatherMetricsTabSections.ts). -->
-				{#if sections.includes('auswertungen') && aggregationMetricIds.length}
-				<Card padding={18}>
-					<Eyebrow style="margin-bottom:8px">05 — Auswertungen</Eyebrow>
-					<p class="option-hint">
-						Welcher Tageswert im Überblick der E-Mail steht — genau einer je Größe.
-						Soll eine Größe dort gar nicht erscheinen, im Abschnitt oben abwählen.
-					</p>
-					<div data-testid="metric-aggregations">
-						<table class="threshold-table">
-							<tbody>
-								{#each aggregationMetricIds as id (id)}
-									<AggregationMetricRow
-										metricId={id}
-										label={metricById[id]?.label ?? id}
-										choices={aggregationChoices(metricById[id])}
-										selectedChoiceId={selectedChoiceId(metricById[id], aggregationsMap[id])}
-										onSelect={(mid, choiceId) => {
-											userTouched = true;
-											aggregationsMap = {
-												...aggregationsMap,
-												[mid]: choiceAggregations(metricById[mid], choiceId),
-											};
-											scheduleAutoSave();
-										}}
-									/>
-								{/each}
+								<!-- Issue #1728 Scheibe 2 (DEC-6): vier neue Tagesrichtungs-Groessen
+								     (Scheibe 1) sowie wind_chill_night (vorbestehende Luecke,
+								     #1484/#1660 A) -- exaktes Muster der Zeilen oben. -->
+								{#if !buckets.off.includes('temperature_day_low')}
+								<MultiSymbolMetricRow
+									metricId="temperature_day_low"
+									label={metricById['temperature_day_low']?.label ?? 'Tages-Tiefsttemperatur (Gehzeit)'}
+									symbols={metricSymbols['temperature_day_low'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('temperature_day_high')}
+								<MultiSymbolMetricRow
+									metricId="temperature_day_high"
+									label={metricById['temperature_day_high']?.label ?? 'Tages-Höchsttemperatur (Gehzeit)'}
+									symbols={metricSymbols['temperature_day_high'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('wind_chill_day_low')}
+								<MultiSymbolMetricRow
+									metricId="wind_chill_day_low"
+									label={metricById['wind_chill_day_low']?.label ?? 'Gefühlte Tages-Tiefsttemperatur (Gehzeit)'}
+									symbols={metricSymbols['wind_chill_day_low'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('wind_chill_day_high')}
+								<MultiSymbolMetricRow
+									metricId="wind_chill_day_high"
+									label={metricById['wind_chill_day_high']?.label ?? 'Gefühlte Tages-Höchsttemperatur (Gehzeit)'}
+									symbols={metricSymbols['wind_chill_day_high'] ?? []}
+								/>
+								{/if}
+								{#if !buckets.off.includes('wind_chill_night')}
+								<MultiSymbolMetricRow
+									metricId="wind_chill_night"
+									label={metricById['wind_chill_night']?.label ?? 'Gefühlte Nacht-Tiefsttemperatur'}
+									symbols={metricSymbols['wind_chill_night'] ?? []}
+								/>
+								{/if}
 							</tbody>
 						</table>
 					</div>
