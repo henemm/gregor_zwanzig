@@ -17,8 +17,15 @@ CLAUDE.md -> Parallele Sessions). Verwaiste Belegungen (Worktree existiert laut
 `git worktree list` nicht mehr, ODER seit STALE_AFTER_SECONDS nicht aufgefrischt) zaehlen
 nicht als belegt.
 
-Notausgang: `export GZ_FILE_CLAIM_OVERRIDE=1` (einmalig pro Session, falls die Belegung
-nachweislich ein Irrtum ist).
+Freigabeweg (Issue #1866): `python3 .claude/hooks/file_claim_gate.py --release <pfad>` bzw.
+`--release-session <name>` -- der `export GZ_FILE_CLAIM_OVERRIDE=1`-Notausgang ist strukturell
+unerreichbar (jeder PreToolUse-Aufruf ist ein eigener Kindprozess) und wird nicht mehr als
+Weg beworben; die env-Pruefung bleibt im Code bestehen, schadet nicht.
+
+Aktivitaets-Verfall (#1866): ein sonst blockierender Claim gilt zusaetzlich als beendet, wenn
+die Datei im belegenden Worktree byte-identisch mit `origin/main` ist UND `git status
+--porcelain` fuer den Pfad dort nichts meldet -- lockert nur zusaetzlich, verschaerft nie
+(jeder Fehler beim Zusatz-Check -> nicht verfallen).
 
 Regel-Budget: Pruefdatum 2026-11-11 -- danach deaktiviert sich das Gate selbst;
 Entscheidung (behalten/entfernen) faellt im Gate-Audit #1197.
@@ -164,9 +171,152 @@ def _acquire_lock(lock_path: Path):
             return None
 
 
+def _claim_expired_by_activity(entry: dict, rel_path: str, main_root: Path) -> bool:
+    """Zusaetzlicher Verfall (#1866): nur relevant, wenn die bestehende Logik den Claim
+    ohnehin als blockierend einstufen wuerde -- lockert nur zusaetzlich, verschaerft nie.
+    Sicherheitsrichtung: JEDER Fehler (Git-Befehl schlaegt fehl, Worktree nicht auffindbar,
+    origin/main nicht aufloesbar, Timeout) -> False (nicht verfallen)."""
+    session = entry.get("session", "")
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(main_root), "worktree", "list", "--porcelain"],
+            capture_output=True, text=True, timeout=5, check=True,
+        )
+    except Exception:
+        return False
+
+    wt_path = None
+    for line in out.stdout.splitlines():
+        if line.startswith("worktree "):
+            path = line[len("worktree "):].strip()
+            if Path(path).name == session:
+                wt_path = Path(path)
+                break
+    if wt_path is None:
+        return False
+
+    try:
+        status = subprocess.run(
+            ["git", "-C", str(wt_path), "status", "--porcelain", "--", rel_path],
+            capture_output=True, text=True, timeout=5, check=True,
+        )
+        if status.stdout.strip():
+            return False  # lokale (un)staged Aenderung -> nicht verfallen
+
+        origin = subprocess.run(
+            ["git", "-C", str(wt_path), "show", f"origin/main:{rel_path}"],
+            capture_output=True, timeout=5, check=True,
+        )
+        local_content = (wt_path / rel_path).read_bytes()
+        return origin.stdout == local_content
+    except Exception:
+        return False
+
+
+def _load_registry_strict(path: Path) -> dict:
+    """Wie _load_registry, aber OHNE Fail-Open (#1866 F001): eine fehlende Datei bleibt {}
+    (unveraendertes Verhalten), eine EXISTIERENDE, aber kaputte Registry wirft weiter --
+    _load_registry() selbst bleibt fuer den Haupt-Hook-Pfad bewusst fail-open (Docstring
+    dort) und wird hier NICHT angetastet; nur --release/--release-session brauchen laut
+    Spec (AC-1) eine von 'kein aktiver Claim' unterscheidbare Fehlermeldung."""
+    if not path.exists():
+        return {}
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _handle_release(rel_path: str, main_root: Path) -> int:
+    """CLI-Freigabeweg (#1866): entfernt genau einen Registry-Eintrag. Gleiches Locking wie
+    der Hook-Pfad. Kein Crash, kein irrefuehrendes "gelöscht" wenn kein Claim existiert."""
+    registry_path = main_root / ".claude" / REGISTRY_NAME
+    lock_fh = _acquire_lock(registry_path.with_suffix(".lock"))
+    if lock_fh is None:
+        sys.stderr.write("DATEI-CLAIM-GATE: Lock nicht verfuegbar, --release abgebrochen.\n")
+        return 1
+    try:
+        try:
+            registry = _load_registry_strict(registry_path)
+        except Exception as exc:
+            sys.stderr.write(
+                f"DATEI-CLAIM-GATE: Registry beschaedigt/nicht lesbar ({registry_path}): {exc}\n"
+            )
+            return 2
+        entry = registry.pop(rel_path, None)
+        if entry is None:
+            sys.stdout.write(f"DATEI-CLAIM-GATE: kein aktiver Claim fuer {rel_path}.\n")
+            return 1
+        _save_registry(registry_path, registry)
+        sys.stdout.write(
+            f"DATEI-CLAIM-GATE: Belegung fuer {rel_path} entfernt "
+            f"(Session: {entry.get('session', '?')}, Branch: {entry.get('branch', '?')}, "
+            f"Belegt seit: {entry.get('claimed_at', '?')}).\n"
+        )
+        return 0
+    except Exception as exc:
+        sys.stderr.write(f"DATEI-CLAIM-GATE: --release fehlgeschlagen: {exc}\n")
+        return 2
+    finally:
+        try:
+            fcntl.flock(lock_fh, fcntl.LOCK_UN)
+        except Exception:
+            pass
+        lock_fh.close()
+
+
+def _handle_release_session(session: str, main_root: Path) -> int:
+    """CLI-Freigabeweg (#1866): entfernt ALLE Eintraege einer Session. Gleiches Locking wie
+    der Hook-Pfad. Kein Treffer -> klare "nichts zu tun"-Meldung, kein Fehler."""
+    registry_path = main_root / ".claude" / REGISTRY_NAME
+    lock_fh = _acquire_lock(registry_path.with_suffix(".lock"))
+    if lock_fh is None:
+        sys.stderr.write("DATEI-CLAIM-GATE: Lock nicht verfuegbar, --release-session abgebrochen.\n")
+        return 1
+    try:
+        try:
+            registry = _load_registry_strict(registry_path)
+        except Exception as exc:
+            sys.stderr.write(
+                f"DATEI-CLAIM-GATE: Registry beschaedigt/nicht lesbar ({registry_path}): {exc}\n"
+            )
+            return 2
+        matched = sorted(p for p, e in registry.items() if e.get("session") == session)
+        if not matched:
+            sys.stdout.write(
+                f"DATEI-CLAIM-GATE: keine Belegungen fuer Session {session} gefunden, nichts zu tun.\n"
+            )
+            return 0
+        for p in matched:
+            del registry[p]
+        _save_registry(registry_path, registry)
+        sys.stdout.write(
+            f"DATEI-CLAIM-GATE: {len(matched)} Belegung(en) fuer Session {session} entfernt: "
+            f"{', '.join(matched)}.\n"
+        )
+        return 0
+    except Exception as exc:
+        sys.stderr.write(f"DATEI-CLAIM-GATE: --release-session fehlgeschlagen: {exc}\n")
+        return 2
+    finally:
+        try:
+            fcntl.flock(lock_fh, fcntl.LOCK_UN)
+        except Exception:
+            pass
+        lock_fh.close()
+
+
 def main() -> int:
     if date.today() > EXPIRY:
         return 0  # Pruefdatum erreicht (Regel-Budget) -> Gate inaktiv, Entscheidung: #1197
+
+    argv = sys.argv[1:]
+    if len(argv) >= 2 and argv[0] in ("--release", "--release-session"):
+        main_root = _find_main_repo_root()
+        if main_root is None:
+            sys.stderr.write("DATEI-CLAIM-GATE: Hauptrepo nicht aufloesbar, Freigabe abgebrochen.\n")
+            return 1
+        if argv[0] == "--release":
+            return _handle_release(argv[1], main_root)
+        return _handle_release_session(argv[1], main_root)
 
     if os.environ.get(OVERRIDE_ENV) == "1":
         return 0
@@ -188,6 +338,14 @@ def main() -> int:
     if rel_path is None:
         return 0
 
+    # #1878: geteilte Referenz-/Feature-Doku wird nie beansprucht. Getrennte
+    # Zweige machen eine Doppelaenderung beim Mergen ohnehin als Konflikt
+    # sichtbar, und bei Prosa ist der trivial aufzuloesen -- die Sperre kostet
+    # dort viel und verhindert wenig. docs/specs/** bleibt beansprucht: eine
+    # Spec gehoert waehrend eines laufenden Workflows genau einer Session.
+    if rel_path.startswith("docs/") and not rel_path.startswith("docs/specs/"):
+        return 0
+
     session = _session_id()
     registry_path = main_root / ".claude" / REGISTRY_NAME
     lock_fh = _acquire_lock(registry_path.with_suffix(".lock"))
@@ -205,7 +363,10 @@ def main() -> int:
             still_fresh = age < STALE_AFTER_SECONDS
             other_still_active = _worktree_still_exists(entry.get("session", ""), main_root)
 
-            if not same_session and still_fresh and other_still_active:
+            if (
+                not same_session and still_fresh and other_still_active
+                and not _claim_expired_by_activity(entry, rel_path, main_root)
+            ):
                 sys.stderr.write(
                     "DATEI-CLAIM-GATE (PO-Wunsch 2026-08-13, Kollisionsvermeidung zwischen Sessions):\n"
                     f"{rel_path} ist gerade von einer anderen aktiven Session belegt:\n"
@@ -214,8 +375,8 @@ def main() -> int:
                     "\n"
                     "-> Erst per SendMessage mit dieser Session abstimmen, dann weitermachen.\n"
                     "-> Falls die Belegung ein Irrtum ist (Datei laengst wieder frei, Registry nur\n"
-                    "   nicht aktualisiert): einmalig `export GZ_FILE_CLAIM_OVERRIDE=1` setzen und\n"
-                    "   erneut versuchen.\n"
+                    f"   nicht aktualisiert): `python3 .claude/hooks/file_claim_gate.py --release {rel_path}`\n"
+                    "   ausfuehren und erneut versuchen.\n"
                     f"(Verwaist automatisch nach {STALE_AFTER_SECONDS // 3600}h ohne Auffrischung "
                     f"oder wenn der Worktree weg ist. Pruefdatum dieses Gates: {EXPIRY.isoformat()}.)\n"
                 )
