@@ -191,26 +191,58 @@ führte — weder oben noch unten stand sie je drin. Mit #1727 S5c ist sie behob
 „Umgesetzt" oben); hier ausdrücklich als das benannt, was sie war, statt sie stillschweigend
 als „schon immer bekannt" durchgehen zu lassen.
 
-**S5d — vier Dateien, sieben verbleibende Muster-A-Funde (Wächter-Restliste, nachgezählt am
-Stand nach S5c):**
+**S5d — ERLEDIGT (2026-08-15).** Die sieben Funde in vier Dateien sind umgesetzt; **die
+Muster-A-Rubrik der `KNOWN_VIOLATIONS` ist damit leer** — die Liste, die mit S5a begonnen hat,
+ist geschlossen.
 
-- `api/routers/debug.py` — `trigger_radar_alert` (1): Debug-Auslöser für Radar-Alarme datiert
-  weiterhin auf die Serveruhr.
-- `src/services/gpx_processing.py` — `compute_default_start_date` (2), `gpx_to_stage_data`
-  (1).
-- `src/services/official_alerts/massif_closure.py` — `_do_request`, `fetch` (2).
-- `src/services/official_alerts/meteo_forets.py` — `covers` (1).
+- `api/routers/debug.py` — `trigger_radar_alert` (1): folgt `trip_local_today(trip, now_utc)`.
+- `src/services/gpx_processing.py` — `compute_default_start_date` (2) **ersatzlos entfernt**
+  (null Produktiv-Aufrufer über alle drei Stacks; Strukturtest auf Abwesenheit gedreht, Vorbild
+  `dict_to_comparison_result` aus S5c); `gpx_to_stage_data` (1) leitet den Rückfalltag aus der
+  Zone des ersten Wegpunkts ab, der Fail-soft-Zweig aus **explizitem UTC**.
+- `src/services/official_alerts/massif_closure.py` — `_do_request` folgt dem Tag des
+  **Herausgebers** (`tz_for_coords(lat, lon)` in `fetch()`, durchgereicht an die private
+  `_get_cached_daily_json(src, ymd)`); `fetch`s `last_run` ist explizit tz-aware UTC
+  (Regel 1 aus ADR-0051).
+- `src/services/official_alerts/meteo_forets.py` — `covers` prüft die Saison am Ortsmonat.
+
+**Warum Koordinaten und nicht eine feste `Europe/Paris`-Konstante:** Ein festes Zonen-Literal
+wäre selbst ein Muster-B-Fund desselben Wächters gewesen. Fachlich fallen Herausgeber- und
+Wanderertag hier ohnehin zusammen, weil beide Quellen geografisch auf Frankreich/Korsika
+begrenzt sind (`massif_zones.py`, AROME-Box) — gemessen liefern Var wie Korsika `Europe/Paris`.
+
+**Keine Signatur wurde erweitert.** `gpx_to_stage_data` ist per `inspect.signature` auf fünf
+Parameter festgelegt, `covers`/`fetch` erfüllen das `OfficialAlertSource`-Protocol. Die Registry
+ruft beide in `try/except Exception` (`base.py:137-148`) — eine Signaturerweiterung hätte die
+Quelle **still deaktiviert** statt laut zu brechen. Die Zone wird deshalb überall lokal aus
+bereits vorliegenden Argumenten aufgelöst.
+
+**Wirkung, am echten Endpunkt gemessen (2026-08-15):** Die Annahme, ein falsches Datum führe bei
+`massif_closure` zu HTTP 404 und über den Fail-soft-Pfad zu „keine Warnung", ist **falsch**. Die
+Quelle antwortet für Vortag und heutigen Tag mit HTTP 200 bei unterschiedlichem Inhalt. Zwischen
+22:00 und 00:00 UTC (00:00–02:00 Pariser Sommerzeit) wurden also **gestrige Zugangssperren als
+heutige** gemeldet — eine über Nacht neu verhängte Sperre erschien nicht.
+
+**Bleibt offen (S5e):** Regel 3 aus ADR-0051 („Jetzt" kommt als Parameter) ist an diesen vier
+Fundorten **nicht** erfüllt — die genannten Signatur-Verträge lassen keinen Zeitparameter zu,
+`datetime.now(timezone.utc)` bleibt funktionsintern. Derselbe Rest steht seit #1795 für
+`send_on_demand_report` offen. Ebenso offen: `massif_closure`s Erfolgs-Cache schlüsselt nach
+`src`, nicht nach `ymd`, und kann den Tageswechsel bis zu 30 Minuten maskieren (im
+Adversary-Lauf zu S5d empirisch belegt, kein Regress dieser Scheibe).
 
 **Sechste unvollständige Aufzählung dieses Epics:** die drei letztgenannten Dateien
 (`gpx_processing.py`, `massif_closure.py`, `meteo_forets.py`) standen bis zu dieser Scheibe in
 KEINEM Abschnitt dieses ADR — weder oben noch unten —, obwohl der Wächter
 (`tests/test_output_timezone_guard.py::KNOWN_VIOLATIONS`) sie durchgehend als offene Funde
 führte. Nur `api/routers/debug.py` war hier bislang erwähnt. Hier ausdrücklich als das
-benannt, was sie waren, statt sie stillschweigend unter „bleibt offen" mitzumeinen. Nach S5d
-ist die Muster-A-Liste des Wächters vollständig leer; offen bleiben dann nur noch
-`raw_astimezone`-Funde, die dritte Fundart des Wächters (stille Mid-Body-Rückfälle, per
+benannt, was sie waren, statt sie stillschweigend unter „bleibt offen" mitzumeinen. **Mit S5d
+ist die Muster-A-Liste des Wächters vollständig leer** (2026-08-15 eingetreten); offen bleiben
+nur noch `raw_astimezone`-Funde, die dritte Fundart des Wächters (stille Mid-Body-Rückfälle, per
 `BoolOp`/`getattr`/`If`/`IfExp` erkannt) sowie die vom Wächter nicht gescannten Bereiche
-(S5e).
+(S5e) — darunter `src/providers/openmeteo.py:320`/`:344`. Für die beiden Provider-Stellen ist
+dort zusätzlich offen, **ob ein Ortstag-Fix überhaupt richtig ist**: beide haben keinerlei
+Ortsbezug (feste Referenzkoordinaten je Modell bzw. ein reiner TTL-Vergleich) und liegen damit
+strukturell näher am `forecast_budget._today_utc`-Fall unten als an `massif_closure`.
 
 **Bewusst NICHT betroffen** (feste Zone ist dort Absicht, kein Verstoß):
 `forecast_budget._today_utc` und `meteoalarm_budget._today_utc` (Kontingent-Tageswechsel in
