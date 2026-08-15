@@ -12,6 +12,22 @@
 > genannten Commits und wurden für dieses Dokument einzeln am Code nachgeschlagen.
 > Es gibt (noch) keine Ratsche, die sie aktuell hält — siehe Abschnitt 8.
 
+> **Nachtrag 2026-08-15 (Issue #1728 Scheibe 1):** Der Katalog trägt jetzt sechs
+> SMS-only Sichtbarkeits-Gate-Größen ohne `summary_fields` —
+> `temperature_night`/`wind_chill_night` (#1484/#1660 A, schon vor dieser
+> Scheibe im Katalog) und neu `temperature_day_low`/`temperature_day_high`/
+> `wind_chill_day_low`/`wind_chill_day_high` (#1728). Alle sechs sind
+> katalog-getrieben nur für die Trip-SMS wirksam (`SMS_MULTI_SYMBOLS_BY_METRIC`,
+> Sonderstrecke S6 unten) und tragen keine eigene Zeile in Abschnitt 2.1, weil
+> sie in keinem der dort gelisteten Ausgabeorte eine eigene Spalte/Zelle
+> erzeugen (Stundentabelle, Ausblick, Pillen zeigen die **Elterngröße**
+> „Temperatur"/„Gefühlte Temperatur"). **Benannte, vorbestehende Lücke:** Die
+> beiden Nachtfenster-Größen fehlten in diesem Dokument bereits vor #1728
+> namentlich — dieser Nachtrag schließt sie nicht rückwirkend ein, sondern
+> benennt die Lücke, damit sie nicht durch die vier neuen Größen
+> stillschweigend größer wird. Ein vollständiger Abschnitt-2.1-Eintrag für alle
+> sechs Größen ist nicht Teil dieser Doku-Aktualisierung.
+
 ## 1. Zweck & Leitfrage
 
 Anlass ist #1475 (Hagel): drei Recherche-Runden waren nötig, um 12 Ausgabeorte
@@ -150,7 +166,7 @@ Eine Übersicht, die nur Katalog-Konsumenten erfasst, wiederholt genau den
 | S3 | **System-Blöcke der Kurzform (DEC-4)** | `src/output/tokens/builder.py:61`, `:86`, `:105`; Einsortierung `src/output/tokens/render.py:12` | Blöcke mit eigener Prioritätsstufe und Katalog-Reihenfolge; „strukturell nicht sortierbar" laut Known Limitation 2 in #1677 |
 | S4 | **`TokenLine.filter_for_subject`** | `src/output/tokens/dto.py:154` | **Stub**: gibt `self` zurück. Der in `sms_format.md` §11 beschriebene Betreff-Filter (β2) existiert nicht — der Betreff bekommt die volle Tokenzeile |
 | S5 | **Wintersport-Block** | Profil-Default `src/output/adapters/trip_result.py:196` `_wintersport_default_config()`; Token `NS24+` erklärt in `sms_trip.py:109–114`, `WC` in `sms_trip.py:154` | eigenes Profil mit eigener MetricSpec-Liste; die gerenderten Token weichen bewusst vom `sms_code` des Katalogs ab (`NS` → `NS24+`) |
-| S6 | **`SMS_MULTI_SYMBOLS_BY_METRIC`** | `src/output/renderers/sms_trip.py:180` | **1:n-Strukturbruch**: eine Metrik erzeugt mehrere Kürzel (Grammatik-Klassen). Der Katalog bildet 1:1 ab und kann das strukturell nicht ausdrücken — deshalb die Empfehlung, die Form-Dimension als eigene Achse zu führen (Frage 7b) |
+| S6 | **`SMS_MULTI_SYMBOLS_BY_METRIC`** | `src/output/renderers/sms_trip.py:180` | **1:n-Strukturbruch**: eine Metrik erzeugt mehrere Kürzel (Grammatik-Klassen). Der Katalog bildet 1:1 ab und kann das strukturell nicht ausdrücken — deshalb die Empfehlung, die Form-Dimension als eigene Achse zu führen (Frage 7b). **Nachtrag 2026-08-15 (#1728 Scheibe 1):** die Einträge `"temperature"`/`"wind_chill"` (bisher `("K","D")` bzw. `("FK","FD","WC")`) sind aus diesem Dict entfernt; `K`/`D`/`FK`/`FD` hängen jetzt an den vier neuen eigenen Größen `temperature_day_low`/`temperature_day_high`/`wind_chill_day_low`/`wind_chill_day_high`, `"wind_chill": ("WC",)` bleibt unverändert stehen. Die hier genannte Datei:Zeile-Angabe ist ungeprüft — die Registrierung wohnt inzwischen laut Katalog-Kopfkommentar (`metric_catalog.py:656`, seit #1719 S4) in `metric_catalog.py`, `sms_trip.py` re-exportiert nur; das ist eine vorbestehende Drift dieses Dokuments, hier nur benannt, nicht nachgemessen |
 
 ## 4. Unbewachte Flächen mit Priorisierung
 

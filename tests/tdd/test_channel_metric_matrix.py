@@ -106,7 +106,9 @@ from output.renderers.alert.render import (
     _HANDLED_UNITS, render_email, render_sms, render_subject, render_telegram,
 )
 from output.channels.premium_sms import PremiumSmsOutput
-from output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
+from output.renderers.channel_layout import (
+    CHANNEL_LIMITS, VISIBILITY_GATE_IDS, render_for_channel,
+)
 from output.renderers.email.compare_html import CV2_METRICS
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
@@ -149,10 +151,20 @@ from tests.unit.test_compare_channel_metrics_reach_the_renderer import (
 
 _ALL_METRIC_IDS = [m.id for m in get_all_metrics()]
 
-# #1484/#1660 A: Nachtfenster-Skalare sind bewusst NIE eine Telegram-rich-
-# Tabellen-/Detailzelle (channel_layout.py:85-89 ``_NIGHT_SCALAR_IDS``) --
-# strukturelle Ausnahme, kein Auswahl-Bug.
-_TELEGRAM_NIGHT_SCALAR_EXCEPTIONS = {"temperature_night", "wind_chill_night"}
+# #1484/#1660 A/#1728 S1: reine Sichtbarkeits-Gates sind bewusst NIE eine
+# Telegram-rich-Tabellen-/Detailzelle (channel_layout.VISIBILITY_GATE_IDS) --
+# strukturelle Ausnahme, kein Auswahl-Bug. Aus der Produktivmenge GELESEN
+# statt hier zweitgepflegt: eine Erweiterung dort soll diese Ausnahme
+# automatisch mitnehmen, sonst laufen zwei Listen auseinander.
+_TELEGRAM_NIGHT_SCALAR_EXCEPTIONS = set(VISIBILITY_GATE_IDS)
+
+# Teilmenge davon: die Groessen, die in der Telegram-KURZUEBERSICHT gar keine
+# Zeile tragen. Die zwei Nachtfenster-Skalare sind hier ausgenommen -- sie
+# bekommen abends sehr wohl eine eigene Zeile, wenn die Tages-Groesse nicht
+# mitgewaehlt ist (narrow.py:745-760).
+_TELEGRAM_NO_OVERVIEW_ROW = set(VISIBILITY_GATE_IDS) - {
+    "temperature_night", "wind_chill_night",
+}
 
 
 def _partner_of(metric_id: str) -> str:
@@ -160,6 +172,36 @@ def _partner_of(metric_id: str) -> str:
     keinem anderen Katalog-Kuerzel Praefix, s. Kollisionsanalyse im Kontext-
     Dokument der Spec)."""
     return "wind" if metric_id == "temperature" else "temperature"
+
+
+# Issue #1728 Scheibe 1: ``temperature`` fuehrt in der Kurzform SELBST kein
+# Kuerzel mehr -- 'K'/'D' haengen an ``temperature_day_low``/``_high``, die
+# als eigene Parametrisierungen derselben Matrix geprueft werden. Eine
+# Auswahl-/Reihenfolge-Assertion gegen ein Kuerzel, das die Groesse nicht
+# fuehrt, waere strukturell unerfuellbar -- die Zusicherung ist nicht
+# entfallen, sie ist umgezogen.
+_SMS_WITHOUT_OWN_SYMBOL = {"temperature"}
+
+# Die zwei Groessen, deren Kuerzel bei gemeinsamer Auswahl zu EINEM
+# Bereichs-Token verschmelzen (#1824: 'K3 D20' -> 'D3/20'). Sie duerfen
+# einander in dieser Matrix nicht als Partner bekommen, sonst misst der Test
+# die Verschmelzung statt der Reihenfolge.
+_SMS_MERGING_SIBLINGS = {"temperature_day_low", "temperature_day_high"}
+
+
+def _sms_partner_of(metric_id: str) -> str:
+    """Partner fuer die KURZFORM-Matrix: er muss selbst ein Token tragen und
+    darf mit dem Prueflings-Kuerzel nicht verschmelzen.
+
+    Issue #1728 Scheibe 1: bis dahin war ``temperature`` der Partner (trug
+    'K'/'D'); seit die Tages-Token an eigenen Groessen haengen, erzeugt
+    ``temperature`` allein kein Token mehr. Der Pruefgegenstand
+    (Nutzer-Reihenfolge schlaegt die feste Tabelle) ist unveraendert, nur der
+    Bezugspartner traegt jetzt selbst ein Kuerzel. 'W' ist bei keinem anderen
+    Kuerzel Praefix, 'D' nur bei sich selbst — die Kollisionsfreiheit der
+    urspruenglichen Analyse bleibt gewahrt.
+    """
+    return "wind" if metric_id in _SMS_MERGING_SIBLINGS else "temperature_day_high"
 
 
 def _single_metric_dc(metric_id: str, *, enabled: bool, order: int = 0) -> UnifiedWeatherDisplayConfig:
@@ -270,12 +312,14 @@ def _render_sms(dc: UnifiedWeatherDisplayConfig) -> str:
     return report.sms_text
 
 
-# Issue #1824 (A): sind Tiefst- UND Hoechstwert gewaehlt (Modell-Default), steht
-# die Temperatur als EIN Bereichs-Token unter dem HOECHSTWERT-Kuerzel ('D3/20');
-# ein eigenstaendiges 'K' entsteht dann gar nicht. Der Stellvertreter dieser
-# beiden Groessen ist deshalb das Bereichs-Kuerzel. Praefix-Kollisionen bleiben
-# ausgeschlossen: 'DP'/'DBG' scheitern an der Wert-Grammatik unten.
-_RANGE_REPRESENTATIVE = {"temperature": "D", "wind_chill": "FD"}
+# Issue #1824 (A): sind Tiefst- UND Hoechstwert gewaehlt, steht die Temperatur
+# als EIN Bereichs-Token unter dem HOECHSTWERT-Kuerzel ('D3/20').
+# Issue #1728 Scheibe 1: seit jede Groesse GENAU EIN Kuerzel traegt, kann die
+# Verschmelzung in dieser Matrix nicht mehr auftreten — der Partner ist nie
+# die verschmelzende Schwester (s. _sms_partner_of). Die Stellvertreter-
+# Tabelle ist damit leer statt geraten; sie bleibt als benannte Stelle
+# stehen, falls je wieder eine Groesse mehrere Wert-Kuerzel fuehrt.
+_RANGE_REPRESENTATIVE: dict[str, str] = {}
 
 
 def _representative_symbol(metric_id: str) -> str:
@@ -329,8 +373,14 @@ def _sms_order_dc(order: list[str]) -> UnifiedWeatherDisplayConfig:
 
 @pytest.mark.parametrize("metric_id", _ALL_METRIC_IDS)
 def test_ac15_sms_kurzform_selection_deselection_and_order(metric_id):
+    if metric_id in _SMS_WITHOUT_OWN_SYMBOL:
+        assert metric_id not in SMS_MULTI_SYMBOLS_BY_METRIC, (
+            f"{metric_id!r} fuehrt wieder ein eigenes Kurzform-Kuerzel — dann "
+            f"gehoert es zurueck in diese Matrix statt in die Ausnahme."
+        )
+        return
     symbol = _representative_symbol(metric_id)
-    partner_id = _partner_of(metric_id)
+    partner_id = _sms_partner_of(metric_id)
     partner_symbol = _representative_symbol(partner_id)
 
     # (a)/(b) Auswahl/Abwahl -- heute bereits GRUEN (Bug-#944-Muster +
@@ -956,8 +1006,20 @@ _RANGE_TOKEN_FD = re.compile(rf"(?:^|\s)FD(?:{_RANGE_HALF})/(?:{_RANGE_HALF})(?:
 
 
 def test_kaskade_ac8_all_wind_chill_symbols_toggle_together():
-    symbols = SMS_MULTI_SYMBOLS_BY_METRIC["wind_chill"]
-    assert symbols == ("FK", "FD", "WC")
+    """Issue #1728 Scheibe 1: 'FK'/'FD' haengen seit dieser Scheibe an eigenen
+    Groessen, 'WC' bleibt an ``wind_chill`` (E3, haelt #1450). Die Zusicherung
+    dieses AC — die Zuwahl der gefuehlten Temperatur macht ALLE ihre Kuerzel
+    sichtbar, die Abwahl entfernt sie alle — gilt unveraendert; sie umfasst
+    jetzt drei Groessen statt einer, und genau deshalb wird sie hier aus der
+    Kuerzel-Tabelle GELESEN statt getippt."""
+    traeger = ("wind_chill", "wind_chill_day_low", "wind_chill_day_high")
+    symbols = tuple(
+        sym for mid in traeger for sym in SMS_MULTI_SYMBOLS_BY_METRIC[mid]
+    )
+    assert set(symbols) == {"FK", "FD", "WC"}, (
+        f"Die gefuehlten Tages-Kuerzel haben ihren Traeger gewechselt: "
+        f"{symbols!r}"
+    )
 
     sms_off = _kaskade_sms_text(_load_cascade_dc())
     for symbol in symbols:
@@ -965,7 +1027,9 @@ def test_kaskade_ac8_all_wind_chill_symbols_toggle_together():
             f"AC-8: {symbol!r} erscheint trotz Abwahl: {sms_off!r}"
         )
 
-    on_dc = _cascade_sms_variant({"wind_chill": {"enabled": True}})
+    on_dc = _cascade_sms_variant({
+        mid: {"enabled": True} for mid in traeger
+    })
     sms_on = _kaskade_sms_text(on_dc)
     for symbol in symbols:
         # Issue #1824 (A): sind beide Auswertungen gewaehlt, steht der
@@ -3189,6 +3253,19 @@ def test_ac_s4_12_telegram_narrow_selection(metric_id):
     label = get_metric(metric_id).compact_label
     on_lines = _s4_kurzuebersicht(_single_metric_dc(metric_id, enabled=True))
     off_lines = _s4_kurzuebersicht(_single_metric_dc(metric_id, enabled=False))
+    if metric_id in _TELEGRAM_NO_OVERVIEW_ROW:
+        # Issue #1728 Scheibe 1: reine Sichtbarkeits-Gates der Kurzform. Sie
+        # tragen in der Telegram-Kurzuebersicht KEINEN eigenen Wert -- die
+        # T-/TF-Zeile zeigt die Spanne dort unbedingt. Ohne diesen Filter
+        # entstuenden vier wertlose Zeilen ("K –", "D –", "FK –", "FD –").
+        # Ausdrueckliche Abwesenheits-Assertion statt Ueberspringen.
+        assert not any(line.startswith(label + " ") for line in on_lines), (
+            f"AC-S4-12/#1728: {metric_id!r} erzeugt eine eigene "
+            f"Kurzuebersicht-Zeile ({label!r}), obwohl es nur ein "
+            f"Sichtbarkeits-Gate ist: {on_lines!r}"
+        )
+        assert not any(line.startswith(label + " ") for line in off_lines)
+        return
     assert any(line.startswith(label + " ") for line in on_lines), (
         f"AC-S4-12: {metric_id!r} aktiv -> keine Zeile mit Kuerzel {label!r} "
         f"in der Kurzuebersicht: {on_lines!r}"
@@ -4320,8 +4397,15 @@ def test_ac_s7_6b_pilleninhalt_bleibt_bei_katalogordnung_bytegleich():
 # Partner waere ihr Verhalten von der Partnerwahl abhaengig und der Test
 # maesse die Unterdrueckung statt der Reihenfolge. Ihre ANWESENHEIT deckt
 # AC-S4-12.
+# Issue #1728 Scheibe 1: die vier Tagesrichtungen tragen in der
+# Kurzuebersicht ueberhaupt keine Zeile (narrow.py filtert sie ueber
+# VISIBILITY_GATE_IDS) -- die T-/TF-Zeile zeigt die Spanne dort bereits
+# unbedingt. Ihre ABWESENHEIT wird in AC-S4-12 ausdruecklich geprueft; eine
+# Reihenfolge-Aussage ueber eine Zeile, die es nicht gibt, waere sinnlos.
 _S7_TELEGRAM_ORDER_METRIKEN = [
-    m for m in _ALL_METRIC_IDS if m not in ("temperature_night", "wind_chill_night")
+    m for m in _ALL_METRIC_IDS
+    if m not in ("temperature_night", "wind_chill_night")
+    and m not in _TELEGRAM_NO_OVERVIEW_ROW
 ]
 
 

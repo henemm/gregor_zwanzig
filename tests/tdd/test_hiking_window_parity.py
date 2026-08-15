@@ -41,7 +41,17 @@ from tests.tdd import _hiking_window_fixtures as F
 # #1660 Scheibe A: dieselbe Eigenstaendigkeit jetzt auch fuer die gefuehlte
 # Nachtgroesse ("wind_chill_night") -- sonst faellt der AC-7-Nachwert der
 # gefuehlten Seite still auf den Gehzeit-Tiefstwert zurueck.
-_FELT = ("temperature", "temperature_night", "wind_chill", "wind_chill_night")
+# #1728 Scheibe 1: die Tages-Token K/D bzw. FK/FD haengen jetzt an eigenen
+# Groessen -- ohne sie erzeugte die Kurznachricht ueberhaupt keinen
+# Temperaturwert und die Paritaets-Aussage haette keinen Gegenstand mehr.
+# Der Pruefgegenstand (EINE Gehzeit-Berechnung fuer alle vier Ausgaben) ist
+# unveraendert.
+_FELT = (
+    "temperature", "temperature_day_low", "temperature_day_high",
+    "temperature_night",
+    "wind_chill", "wind_chill_day_low", "wind_chill_day_high",
+    "wind_chill_night",
+)
 _NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
 
 
@@ -202,34 +212,45 @@ def test_shared_boundary_hour_counted_once_across_channels():
         f"{pairs['mail']}.\n" + F.describe(channels)
     )
 
-    # 2. Empfindlichkeitsprobe ueber den Mittelwert.
+    # 2. Empfindlichkeitsprobe an der GETEILTEN QUELLE.
+    #
+    # Issue #1728 Scheibe 1: diese Probe lief bis dahin ueber die
+    # Mittelwert-Kachel der Mail (Auswertungswahl „nur Mittelwert", #1357).
+    # Die Kachel zeigt seit dieser Scheibe unbedingt die Spanne, es gibt
+    # keinen gerenderten Mittelwert mehr -- der bisherige Messpunkt ist
+    # ersatzlos entfallen. Gemessen wird deshalb direkt
+    # ``collect_hiking_window_points()``, die EINE Quelle, um die es diesem
+    # Test von Anfang an geht: eine doppelt gezaehlte Grenzstunde ist dort
+    # unmittelbar sichtbar, waehrend Minimum und Maximum sie nie verraten
+    # haetten. Der gerenderte Wirkort bleibt durch Teil 1 oben abgedeckt.
+    from output.renderers.day_window import collect_hiking_window_points
+
     boundary_hour, spike_c, base_c = 10, 40.0, 10.0
     temps = {h: base_c for h in range(24)}
     temps[boundary_hour] = spike_c
     felt = {h: base_c - 5.0 for h in range(24)}
-    avg_report = F.render_report(
-        F.build_segments([(8, boundary_hour), (boundary_hour, 12)], temps, felt),
-        report_type="morning", metrics=("temperature",),
-        aggregations={"temperature": ["avg"]},
+    punkte = collect_hiking_window_points(
+        F.build_segments([(8, boundary_hour), (boundary_hour, 12)], temps, felt)
     )
-    average, raw = F.mail_temp_average(avg_report)
+    werte = [dp.t2m_c for dp in punkte]
+    spitzen = [v for v in werte if v == spike_c]
 
     counted_once = round((base_c * 4 + spike_c) / 5)          # 16 °C
     counted_twice = round((base_c * 4 + spike_c * 2) / 6)     # 20 °C
-    assert average is not None, (
-        "Die Mail zeigt keine Mittelwert-Kachel, obwohl die Auswertung "
-        f"„nur Mittelwert\" gewaehlt ist.\n"
-        f"Kachelzeilen: {F.pill_lines(avg_report)}"
+    assert len(spitzen) == 1, (
+        f"Die Grenzstunde {boundary_hour}:00 kommt {len(spitzen)}-mal im "
+        f"Gehzeit-Fenster vor — sie wird von beiden Etappenteilen gezaehlt "
+        f"(Bug #806/#807).\nWerte: {werte!r}"
     )
-    assert average != counted_twice, (
-        f"Der Mittelwert der Gehzeit-Stunden ist {average} °C — das ist genau "
-        f"der Wert, der entsteht, wenn die Grenzstunde {boundary_hour}:00 "
-        f"DOPPELT zaehlt (Bug #806/#807).\nKachelzeile: {raw!r}"
+    mittel = round(sum(werte) / len(werte))
+    assert mittel != counted_twice, (
+        f"Der Mittelwert der Gehzeit-Stunden ist {mittel} °C — genau der "
+        f"Wert bei doppelt gezaehlter Grenzstunde.\nWerte: {werte!r}"
     )
-    assert average == counted_once, (
-        f"Der Mittelwert der Gehzeit-Stunden ist {average} °C statt "
+    assert mittel == counted_once, (
+        f"Der Mittelwert der Gehzeit-Stunden ist {mittel} °C statt "
         f"{counted_once} °C (jede Stunde 08-12 genau einmal).\n"
-        f"Kachelzeile: {raw!r}"
+        f"Werte: {werte!r}"
     )
 
 

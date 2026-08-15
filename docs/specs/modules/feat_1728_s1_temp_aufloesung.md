@@ -229,6 +229,31 @@ Daraus folgt exakt die im Auftrag geforderte Tabelle: gespeichertes
 (kein drittes Tagesglied existiert). Eine leere `metrics`-Liste bleibt leer
 (Altbestand Fall A, Roundtrip-Invarianz — Snow-AC-10-Muster aus #1484).
 
+#### DEC-6b — die Ableitung muss AUCH in der Kanal-Layout-Parsung greifen
+
+**Nachgetragen 2026-08-15 aus dem RED-Befund.** Die obige Beschreibung deckt
+nur die **globale** Metrikliste ab. Das reicht für AC-13 nicht: Seit ADR-0050
+(#1719 S2) darf eine Kanal-Ebene nur **abwählen** — eine gespeicherte
+`channel_layouts.sms`, die die neuen Kennungen nicht führt, wählt sie damit
+ab, und der Maximum-Schnitt fügt nichts hinzu. Ein kanal-konfigurierter
+Bestandstrip verlöre `K`/`D` vollständig.
+
+⇒ Die Kanal-Layout-Parsung (`loader.py:846-875`) und die
+`channel_layouts_per_report`-Parsung (`:877-905`) brauchen denselben
+Ableitungsschritt wie die globale Liste: fehlt eine der vier neuen Kennungen
+in einer Kanal-Liste, die einen Eltern-Eintrag führt, wird sie dort mit
+`derived=True` ergänzt und erbt dessen Zustand.
+
+**Dieselbe Lücke besteht bereits für `temperature_night`/`wind_chill_night`**
+— beide Ableitungsblöcke stehen ausschließlich auf der globalen Liste, die
+Kanal-Parsung kennt sie nicht. **Gemessen: derzeit ohne Wirkung** — keine
+der 18 Dateien unter `data/users/**` trägt überhaupt `channel_layouts`
+(geprüft 2026-08-15). Die Lücke ist strukturell echt, aber latent; sie wird
+mit dieser Scheibe für alle vier Nachtfenster-/Tagesrichtungs-Größen
+gemeinsam geschlossen, statt dafür ein eigenes Ticket zu eröffnen.
+`fix_1719_s2` AC-12 traf den Fall nicht, weil es einen **expliziten**
+Kanaleintrag voraussetzte.
+
 ### 8. DEC-7 — Vorbelegung neuer Trips
 
 `build_default_display_config()` (`metric_catalog.py:891-910`) materialisiert
@@ -435,8 +460,9 @@ keine Änderung nötig).
 - **AC-3:** Given ein Trip mit aktivierter „Gefühlter Temperatur", `wind_chill_day_low` AN und `wind_chill_day_high` AUS / When das Briefing als SMS erzeugt wird / Then enthält die SMS `FK` und `WC`, aber kein `FD`-Token — die Abwahl von `wind_chill_day_high` lässt `WC` unverändert stehen.
   - Test: `format_email().sms_text`, Fixture mit unterschiedlichem Tiefst-/Höchstwert; das ist die WC-Gegenprobe (E3) in Abwahlrichtung „nur eine Tagesrichtung ab".
 
-- **AC-4:** Given ein Trip mit **abgewählter** „Gefühlter Temperatur" (`wind_chill` selbst AUS) und `wind_chill_day_high` explizit AN gesetzt (Konstruktionsfall, wie er über die Ableitung nie entstünde, aber im Editor denkbar ist) / When das Briefing als SMS erzeugt wird / Then fehlen `FD` **und** `WC` beide — die Abwahl der Elterngröße entfernt `WC`, nicht die Abwahl der Tagesrichtung.
-  - Test: `format_email().sms_text`, direkt konstruiertes `MetricConfig`; Gegenstück zu AC-3, misst denselben Fakt (E3) aus der anderen Richtung.
+- **AC-4:** Given ein Trip mit **abgewählter** „Gefühlter Temperatur" (`wind_chill` selbst AUS) und `wind_chill_day_high` explizit AN gesetzt (Konstruktionsfall, über die Ableitung nicht erzeugbar, nur durch direkte Bearbeitung der gespeicherten Auswahl) / When das Briefing als SMS erzeugt wird / Then fehlt `WC` — die Abwahl der Elterngröße entfernt die Wintersport-Kennzahl —, **`FD` erscheint jedoch**, weil die Tagesrichtungen eigenständige Größen sind und nicht von der Elterngröße abhängen.
+  - Test: `format_email().sms_text`, direkt konstruiertes `MetricConfig`; Gegenstück zu AC-3, misst denselben Fakt (E3) aus der anderen Richtung — **plus** die Unabhängigkeits-Zusage aus DEC-3/DEC-4.
+  - **Korrigiert 2026-08-15 nach RED-Befund (PO: „ac-4 korrigieren").** Die erste Fassung verlangte, dass `FD` **und** `WC` beide fehlen. Das widersprach DEC-3/DEC-4: dort gaten die Tagesrichtungen ausschließlich über ihr eigenes `enabled` in `SMS_MULTI_SYMBOLS_BY_METRIC`, ohne Eltern-Gate. Die Umsetzung hätte diesen AC von grün auf rot gekippt. Entschieden wurde zugunsten des Bauplans: **eigenständige Größen sind eigenständig** — dasselbe Verhalten, das `temperature_night` seit #1484 zeigt, und die Voraussetzung für das Zielbild „eine Zeile je ausgebbarer Größe, drei Zustände, je Kanal". `WC` bleibt unverändert an `wind_chill` gebunden (E3, hält Regression #1450) — dieser Teil des ursprünglichen AC war richtig und steht unverändert.
 
 - **AC-5:** Given ein Trip mit aktivierter „Temperatur", `temperature_day_low` AUS / When die Abend-E-Mail (HTML) erzeugt wird / Then zeigt die Metriken-Überblick-Kachel für Temperatur dennoch die volle Min–Max-Spanne, nicht nur den Höchstwert.
   - Test: `TripReportFormatter().format_email().email_html`, Parsing der Kachel-Zeile; das ist der Wirkort-Nachweis für DEC-5 (nicht `build_metrics_summary_pills()` direkt aufrufen).
@@ -535,8 +561,12 @@ Sicherungskopie — nie `git checkout/stash/reset`):**
 - Im Loader-Ableitungsblock `"min"` und `"max"` vertauschen (Tief bekommt
   die max-Prüfung) — fängt das ein Test, oder prüfen alle nur „ein Token
   weniger, egal welches"?
-- `wind_chill_day_high` versehentlich `sms_code="D"` statt `"TD"` geben —
-  muss AC-14 rot werden lassen.
+- `temperature_day_high` versehentlich `sms_code="D"` statt `"TD"` geben —
+  muss AC-14 rot werden lassen. (Korrigiert 2026-08-15: hier stand
+  `wind_chill_day_high`; nur bei `temperature_day_high` kollidiert `"D"`
+  überhaupt, weil `temperature` selbst `sms_code="D"` trägt,
+  `metric_catalog.py:113`. Eine Mutationsprobe, die an der falschen Größe
+  ansetzt, kann den Wächter nicht auslösen und beweist nichts.)
 - Den Pillen-Aufruf in `html.py`/`plain.py`/`compact.py` auf `["min"]` statt
   `["min","max"]` fest verdrahten (statt die Spanne) — muss AC-5/AC-6/AC-7
   rot werden lassen, nicht nur „ein Wert weniger" unbemerkt durchlassen.

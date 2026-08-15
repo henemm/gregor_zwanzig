@@ -1440,17 +1440,13 @@ def render_html(
             for mc in dc.metrics
             if mc.sms_threshold is not None
         }
-        # Issue #1357: die gespeicherte Auswertungswahl je Groesse mitgeben —
-        # ohne sie faellt die Kachel auf die Katalog-Vorgabe zurueck.
-        _pill_aggregations = {
-            mc.metric_id: mc.aggregations for mc in dc.metrics if mc.enabled
-        }
+        # Issue #1728 Scheibe 1 (DEC-5): die Kachel zeigt unbedingt die
+        # Spanne -- ``mc.aggregations`` wird hier NICHT mehr gelesen.
         _pills = build_metrics_summary_pills(
             segments, _pill_metric_ids, _sms_mention_thresholds, tz=tz,
             night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,
-            metric_aggregations=_pill_aggregations,
         )
         # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
         _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)

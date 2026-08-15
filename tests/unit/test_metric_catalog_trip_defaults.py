@@ -5,8 +5,12 @@ Spec: docs/specs/modules/fix_1552_neuanlage_metrikauswahl.md
 Kern-Tests (Test-Politik "Zwei Schichten", CLAUDE.md): kein Netz, keine
 Live-Dienste, kein Mock/patch. Reine Registrierungs-Abfragen.
 
-Prueft die Register-Ebene: genau 7 Groessen tragen `trip_default_rank`,
-alle sind `selectable=True`, in der dokumentierten Reihenfolge. Zusaetzlich
+Prueft die Register-Ebene: genau die kuratierten Groessen tragen
+`trip_default_rank`, alle sind `selectable=True`, in der dokumentierten
+Reihenfolge. Die Liste ist bewusst AUFGEZAEHLT -- sie IST die Festlegung,
+welche Groessen ein neuer Trip vorbelegt bekommt; eine unbeabsichtigte
+Ergaenzung soll hier auffallen. Die Rang-LUECKENLOSIGKEIT dagegen wird
+gerechnet, nicht aufgezaehlt (s.u.). Zusaetzlich
 Regressionsschutz fuer AC-7: `default_enabled` (Orte/Abonnements-Vorbelegung)
 bleibt fuer alle betroffenen Groessen unveraendert -- `trip_default_rank`
 ist eine reine Zusatz-Markierung, kein Ersatz.
@@ -18,6 +22,12 @@ from app.metric_catalog import get_all_metrics
 EXPECTED_ORDER = [
     "temperature", "wind", "gust", "precipitation",
     "thunder", "freezing_level", "visibility",
+    # Issue #1728 Scheibe 1 (DEC-7, PO „an"): die beiden gemessenen
+    # Tagesrichtungen sind bei einem neuen Trip von Anfang an aktiv --
+    # ANGEHAENGT als Rang 8/9, ohne Umnummerierung der bestehenden sieben.
+    # Die gefuehlten Tagesrichtungen tragen bewusst KEINEN Rang (sie folgen
+    # der heutigen Lage von "wind_chill").
+    "temperature_day_low", "temperature_day_high",
 ]
 
 
@@ -29,23 +39,30 @@ def _ranked_metrics():
 
 
 class TestTripDefaultRankRegister:
-    def test_exactly_seven_metrics_carry_trip_default_rank(self):
+    def test_exactly_the_curated_metrics_carry_trip_default_rank(self):
         ranked = _ranked_metrics()
         assert [m.id for m in ranked] == EXPECTED_ORDER, (
-            f"Erwartete genau die 7 Standard-Groessen in dieser Reihenfolge, "
-            f"bekam: {[m.id for m in ranked]!r}"
+            f"Erwartete genau die kuratierten Standard-Groessen in dieser "
+            f"Reihenfolge, bekam: {[m.id for m in ranked]!r}"
         )
 
-    def test_all_seven_are_selectable(self):
+    def test_all_ranked_are_selectable(self):
         ranked = _ranked_metrics()
         assert all(m.selectable for m in ranked), (
-            "Alle 7 Trip-Anlege-Standardgroessen muessen selectable=True sein "
+            "Alle Trip-Anlege-Standardgroessen muessen selectable=True sein "
             "(sonst waeren sie nie im Anlege-Dialog waehlbar)"
         )
 
-    def test_rank_values_are_1_to_7_without_gaps(self):
+    def test_rank_values_are_consecutive_from_one_without_gaps(self):
+        """Lueckenlos ab 1 -- GERECHNET aus dem Register, nicht aufgezaehlt:
+        die Zusicherung ist „keine Luecke, kein Doppelrang", nicht „genau
+        sieben". So bleibt sie bei jedem gewollten Katalog-Zuwachs gueltig
+        und faellt trotzdem bei einem Rang-Fehler."""
         ranked = _ranked_metrics()
-        assert [m.trip_default_rank for m in ranked] == [1, 2, 3, 4, 5, 6, 7]
+        raenge = [m.trip_default_rank for m in ranked]
+        assert raenge == list(range(1, len(ranked) + 1)), (
+            f"Raenge muessen lueckenlos ab 1 laufen: {raenge!r}"
+        )
 
     def test_no_other_metric_carries_trip_default_rank(self):
         all_ids = {m.id for m in get_all_metrics()}

@@ -248,11 +248,17 @@ def _dc(*, rain_probability: bool = False, wind_chill: bool = True):
       der erwartete SMS-Text zeigt dann genau das, was konfiguriert wurde, und
       belegt nebenbei die Abwahl-Wirkung.
 
-    NICHT abschaltbar sind K/D (Tiefst-/Hoechsttemperatur): sie erscheinen
-    unbedingt, auch bei abgewaehlter Metrik ``temperature`` — bekannter,
-    offener Stand (#1415, ``tokens/builder.py:242-249`` needs_spec=False, und
-    ``sms_trip.SMS_SYMBOL_BY_METRIC`` fuehrt ``temperature`` gar nicht).
-    Erwartungsstrings enthalten K/D deshalb immer.
+    Issue #1728 Scheibe 1: ``wind_chill=False`` waehlt zusaetzlich die beiden
+    gefuehlten TAGESRICHTUNGEN ab -- seit dieser Scheibe haengen FK/FD an
+    eigenen Groessen und folgen der Elterngroesse NICHT mehr (PO-Entscheid
+    2026-08-15 zu AC-4). Ohne das blieben sie hier stehen und der Schalter
+    haette seinen Zweck verloren.
+
+    K/D bleiben in allen Erwartungsstrings: die Vorgabe schaltet
+    ``temperature_day_low``/``_high`` mit an (trip_default_rank 8/9). Der
+    frueher hier vermerkte Grund ("nicht abschaltbar", #1415) gilt seit
+    #1728 nicht mehr -- sie WAEREN abwaehlbar, dieser Fixture-Satz waehlt sie
+    nur nicht ab.
     """
     dc = build_default_display_config()
     metrics = list(dc.metrics)
@@ -262,8 +268,11 @@ def _dc(*, rain_probability: bool = False, wind_chill: bool = True):
             for mc in metrics
         ]
     if not wind_chill:
+        _felt_aus = {
+            "wind_chill", "wind_chill_day_low", "wind_chill_day_high",
+        }
         metrics = [
-            dataclasses.replace(mc, enabled=False) if mc.metric_id == "wind_chill" else mc
+            dataclasses.replace(mc, enabled=False) if mc.metric_id in _felt_aus else mc
             for mc in metrics
         ]
     return dataclasses.replace(dc, metrics=metrics)

@@ -748,6 +748,57 @@ def _coerce_metric_entry(entry: Any) -> Any:
     return entry
 
 
+# Issue #1484/#1660 A/#1728 S1 — Bestands-Ableitung abgeleiteter Groessen:
+# (Kennung, Elterngroesse, geforderte Auswertung der Eltern | None).
+# ``None`` = reines ``enabled``-Erbe (Nachtfenster-Skalare). Eine geforderte
+# Auswertung ("min"/"max") bindet die Tagesrichtung zusaetzlich an die
+# gespeicherte Auswertungswahl der Elterngroesse (DEC-6): ``["min"]`` schaltet
+# nur das Tages-Tief an, der Default ``["min","max"]`` beide, ``avg`` faellt
+# ersatzlos weg (kein drittes Tagesglied existiert).
+_DERIVED_METRIC_RULES: tuple[tuple[str, str, Optional[str]], ...] = (
+    ("temperature_night", "temperature", None),
+    ("wind_chill_night", "wind_chill", None),
+    ("temperature_day_low", "temperature", "min"),
+    ("temperature_day_high", "temperature", "max"),
+    ("wind_chill_day_low", "wind_chill", "min"),
+    ("wind_chill_day_high", "wind_chill", "max"),
+)
+
+
+def _append_derived_metrics(metrics: List["MetricConfig"]) -> List["MetricConfig"]:
+    """Haengt fehlende abgeleitete Groessen in-memory an eine Metrik-Liste an.
+
+    Abgeleitet wird NUR, wenn ein Eltern-Eintrag existiert: Laden erfindet
+    sonst Eintraege (Roundtrip-Invarianz, s. Snow-AC-10), und eine leere Liste
+    ist Altbestand Fall A (DEFAULT_TRIP_METRIC_IDS) und bleibt leer. Nichts
+    wird zurueckgeschrieben — ``derived=True`` filtert beim Speichern.
+
+    Issue #1728 DEC-6b: laeuft NICHT nur auf der globalen Liste, sondern auch
+    auf jeder Kanal-Ebene. Seit ADR-0050 darf eine Kanal-Ebene nur ABWAEHLEN;
+    eine vor dieser Scheibe gespeicherte ``channel_layouts.sms`` fuehrt die
+    neuen Kennungen nicht und wuerde sie damit stillschweigend abwaehlen — ein
+    kanal-konfigurierter Bestandstrip verloere K/D vollstaendig.
+    """
+    from app.models import MetricConfig
+
+    for child_id, parent_id, required_agg in _DERIVED_METRIC_RULES:
+        if any(mc.metric_id == child_id for mc in metrics):
+            continue
+        parents = [mc for mc in metrics if mc.metric_id == parent_id]
+        if not parents:
+            continue
+        enabled = any(mc.enabled for mc in parents)
+        if required_agg is not None:
+            enabled = enabled and required_agg in {
+                a for mc in parents for a in mc.aggregations
+            }
+        metrics.append(MetricConfig(
+            metric_id=child_id, enabled=enabled, aggregations=[],
+            bucket="secondary", derived=True,
+        ))
+    return metrics
+
+
 def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig":
     """Parse UnifiedWeatherDisplayConfig from dict."""
     from datetime import datetime as _dt
@@ -800,38 +851,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             sms_threshold=mc_data.get("sms_threshold"),
         ))
 
-    # Issue #1484 (Bestands-Ableitung): fehlt die Nachtgroesse im
-    # gespeicherten Config, erbt sie den Zustand von "temperature" — das
-    # heutige Verhalten (N haengt an der Temperatur) bleibt fuer Altbestand
-    # exakt erhalten; erst ein Editor-Save schreibt den expliziten Eintrag.
-    # Abgeleitet wird NUR, wenn ein "temperature"-Eintrag existiert: Laden
-    # erfindet sonst Eintraege (Roundtrip-Invarianz, s. Snow-AC-10), und eine
-    # leere Liste ist Altbestand Fall A (DEFAULT_TRIP_METRIC_IDS) und bleibt leer.
-    if not any(mc.metric_id == "temperature_night" for mc in metrics):
-        _temp_entries = [mc for mc in metrics if mc.metric_id == "temperature"]
-        if _temp_entries:
-            metrics.append(MetricConfig(
-                metric_id="temperature_night",
-                enabled=any(mc.enabled for mc in _temp_entries),
-                aggregations=[],
-                bucket="secondary",
-                derived=True,
-            ))
-
-    # Issue #1660 Scheibe A: baugleicher Ableitungsblock fuer die gefuehlte
-    # Seite -- fehlt "wind_chill_night" im gespeicherten Config, erbt sie den
-    # Zustand von "wind_chill". Abgeleitet wird NUR, wenn ein
-    # "wind_chill"-Eintrag existiert (Roundtrip-Invarianz).
-    if not any(mc.metric_id == "wind_chill_night" for mc in metrics):
-        _felt_entries = [mc for mc in metrics if mc.metric_id == "wind_chill"]
-        if _felt_entries:
-            metrics.append(MetricConfig(
-                metric_id="wind_chill_night",
-                enabled=any(mc.enabled for mc in _felt_entries),
-                aggregations=[],
-                bucket="secondary",
-                derived=True,
-            ))
+    _append_derived_metrics(metrics)
 
     # Issue #429/#1394 (T4): kanal-spezifische Layouts laden (optional,
     # backward-compat). Wenn channel_layouts fehlt → None, damit
@@ -872,7 +892,10 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                     order=mc_data.get("order", 0),
                     sms_threshold=mc_data.get("sms_threshold"),
                 ))
-            per_channel_layouts[ch] = ch_parsed
+            # Issue #1728 DEC-6b: dieselbe Ableitung wie auf der globalen
+            # Liste -- sonst waehlt ein vor dieser Scheibe gespeichertes
+            # Kanal-Layout die neuen Kennungen stillschweigend ab.
+            per_channel_layouts[ch] = _append_derived_metrics(ch_parsed)
 
     # Issue #434: per-report-Overrides laden (optional, backward-compat).
     per_report_layouts: Optional[Dict[str, Dict[str, List[MetricConfig]]]] = None
@@ -905,7 +928,10 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                         order=mc_data.get("order", 0),
                         sms_threshold=mc_data.get("sms_threshold"),
                     ))
-                per_report_layouts[report_type][ch] = pr_parsed
+                # Issue #1728 DEC-6b (wie oben, per-Report-Ebene).
+                per_report_layouts[report_type][ch] = _append_derived_metrics(
+                    pr_parsed
+                )
         if not per_report_layouts:
             per_report_layouts = None
 
@@ -1334,14 +1360,16 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
         if dc.per_channel_layouts is not None:
             data["display_config"]["channel_layouts"] = {
-                ch: [_metric_to_dict(mc) for mc in metrics]
+                ch: [_metric_to_dict(mc) for mc in metrics
+                     if not getattr(mc, "derived", False)]
                 for ch, metrics in dc.per_channel_layouts.items()
             }
         # Issue #434: per_report_layouts serialisieren
         if dc.per_report_layouts is not None:
             data["display_config"]["channel_layouts_per_report"] = {
                 report_type: {
-                    ch: [_metric_to_dict(mc) for mc in metrics]
+                    ch: [_metric_to_dict(mc) for mc in metrics
+                     if not getattr(mc, "derived", False)]
                     for ch, metrics in channels_dict.items()
                 }
                 for report_type, channels_dict in dc.per_report_layouts.items()
@@ -1552,14 +1580,16 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
         if dc.per_channel_layouts is not None:
             data["display_config"]["channel_layouts"] = {
-                ch: [_metric_to_dict(mc) for mc in metrics]
+                ch: [_metric_to_dict(mc) for mc in metrics
+                     if not getattr(mc, "derived", False)]
                 for ch, metrics in dc.per_channel_layouts.items()
             }
         # Issue #434: per_report_layouts serialisieren
         if dc.per_report_layouts is not None:
             data["display_config"]["channel_layouts_per_report"] = {
                 report_type: {
-                    ch: [_metric_to_dict(mc) for mc in metrics]
+                    ch: [_metric_to_dict(mc) for mc in metrics
+                     if not getattr(mc, "derived", False)]
                     for ch, metrics in channels_dict.items()
                 }
                 for report_type, channels_dict in dc.per_report_layouts.items()

@@ -117,7 +117,11 @@ class TestAC1ThunderDeselectedRemovesBothTokens:
         for report_type in ("morning", "evening"):
             sms = _trip_sms(
                 report_type,
-                _dc("temperature", "precipitation"),
+                # #1728 S1: die Tagesrichtungen tragen K/D und muessen mit
+                # gewaehlt sein, sonst haette die Vorbedingung unten keinen
+                # Gegenstand. An der Gewitter-Zusicherung aendert das nichts.
+                _dc("temperature", "temperature_day_low",
+                    "temperature_day_high", "precipitation"),
                 thunder_forecast=_TOMORROW_HIGH,
             )
 
