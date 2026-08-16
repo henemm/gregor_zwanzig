@@ -12,7 +12,7 @@ tags: [guard, ratsche, persistenz, issue-1708]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-08-16)
 
 ## Purpose
 
@@ -84,8 +84,21 @@ Per `rglob` **berechnet**, nie als abgeschriebene Dateiliste (sonst läuft eine 
 
 ### Gemessene Wirkung auf dem heutigen Bestand
 
-292 Produktivdateien (91 Go, 201 Python) → **genau 3 Funde, null Falsch-Positive**:
-`internal/store/trip.go:15`, `internal/store/user.go:84`, `src/app/loader.py:1163`.
+292 Produktivdateien (91 Go, 201 Python) → **4 Funde, null Falsch-Positive**:
+`internal/store/trip.go:15`, `internal/store/user.go:84`, `src/app/loader.py:1163`
+und `api/routers/preview.py:10`.
+
+**Der vierte Fund wurde erst beim RED-Lauf sichtbar** und ist ein echter Fang, kein Fehlalarm:
+Der Modul-Docstring von `api/routers/preview.py` behauptet in Zeile 10
+„Trip-Owner-Check: Loader-Pfad ist user-scoped (`data/users/<user>/trips/<id>.json`)".
+Das ist **inhaltlich falsch** — der `PreviewService` liest aus `briefings/`
+(`src/services/preview_service.py:18,67`, dessen eigener Docstring `:55-56` es korrekt beschreibt).
+Die Falschaussage steht ausgerechnet an der Stelle, die den Sicherheitsmechanismus für den
+Trip-Owner-Check erklärt — genau die Klasse plausibler, vollständig aussehender Fehlaussage über den
+Ablageort, die #1708 erzeugt hat.
+
+**Konsequenz:** keine zweite Ausnahme, keine Verschärfung von R1/R2. Docstrings vom Scan auszunehmen
+würde künftige Fänge dieser Art blind machen. Der Docstring wird richtiggestellt (AC-13).
 
 Nicht getroffen (alle real im Bestand, als Negativnachweis zu verankern): die 13 Routen-Strings
 `"/api/trips/…"` (`internal/router/router.go:141-167`), `"corrupt_trips.json"`
@@ -201,6 +214,13 @@ Umgekehrte Reihenfolge (erst löschen) macht den Wächter **grün geboren** — 
   Then nennt `docs/adr/0031-persistenz-dateibasiert-data-users.md:16` `trips/` nicht mehr als Bestandteil
   - Test: Sichtprüfung der ADR-Zeile im Review. Ohne diese Korrektur widerspricht das ADR dem Code, und die
     nächste Sitzung liest die alte Aussage als gültig — genau der Mechanismus, der #1708 erzeugt hat.
+
+- **AC-13:** Given der Modul-Docstring von `api/routers/preview.py` beschreibt den Ablageort, aus dem der
+  Trip-Owner-Check liest / When ein Entwickler ihn liest / Then nennt er `briefings/<id>.json` statt des
+  toten `trips/<id>.json`, und der Wächter meldet die Datei nicht mehr
+  - Test: `test_keine_unlisted_trips_pfad_funde` wird für diese Datei grün — der Wächter selbst ist der
+    Nachweis. Die Aussage ist heute falsch (`src/services/preview_service.py:18,67` liest über
+    `get_briefings_dir`), und sie steht an der Stelle, die den Sicherheitsmechanismus erklärt.
 
 ## Known Limitations
 
