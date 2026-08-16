@@ -474,7 +474,7 @@ def test_ac3_sofortvergleich_ortszeit_ist_dem_servertag_bereits_voraus(client, m
         _anker(jetzt_utc, WELLINGTON_ZONE, D21)
         _uhr_eingefroren(jetzt_utc)
         servertag = date.today()
-        resp = client.get(f"/api/compare?location_ids={ort.id}")
+        resp = client.get(f"/api/compare?location_ids={ort.id}&user_id=zonen-tester")
 
     assert resp.status_code == 200, resp.text
     daten = resp.json()
@@ -518,7 +518,7 @@ def test_ac3_sofortvergleich_ortszeit_hinkt_dem_servertag_hinterher(client, monk
         _anker(jetzt_utc, PAGO_ZONE, D19)
         _uhr_eingefroren(jetzt_utc)
         servertag = date.today()
-        resp = client.get(f"/api/compare?location_ids={ort.id}")
+        resp = client.get(f"/api/compare?location_ids={ort.id}&user_id=zonen-tester")
 
     assert resp.status_code == 200, resp.text
     daten = resp.json()
@@ -594,7 +594,7 @@ def test_ac3_sofortvergleich_serverstunde_ueber_14_ortsstunde_darunter(client, m
             "oben, statt die Stundenschwelle ISOLIERT zu pruefen. Ortstag "
             f"{ortszeit.date()}, Servertag {jetzt_utc.date()}"
         )
-        resp = client.get(f"/api/compare?location_ids={ort.id}")
+        resp = client.get(f"/api/compare?location_ids={ort.id}&user_id=zonen-tester")
 
     assert resp.status_code == 200, resp.text
     daten = resp.json()
