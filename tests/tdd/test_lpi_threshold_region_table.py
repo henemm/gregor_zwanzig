@@ -73,7 +73,9 @@ def test_ac1_lpi_thresholds_table_has_exactly_two_entries():
         f"gefunden {len(LPI_THRESHOLDS_JKG)}: {sorted(LPI_THRESHOLDS_JKG)}"
     )
     assert LPI_THRESHOLDS_JKG.get("DE_ALPEN") == (1.0, 30.0, 50.0)
-    assert LPI_THRESHOLDS_JKG.get("EU_REST") == (5.0, 20.0, 50.0)
+    # Issue #1678: EU_REST bekommt die belegte Schroeder/Goecke/Koehler-Leiter
+    # (7.14/23.81/86.16) statt der Interim-Werte (5.0/20.0/50.0).
+    assert LPI_THRESHOLDS_JKG.get("EU_REST") == (7.14, 23.81, 86.16)
     assert "FR" not in LPI_THRESHOLDS_JKG, (
         "FR darf KEINEN Eintrag haben -- AROME liefert Blitzdichte, kein LPI"
     )
@@ -83,7 +85,7 @@ def test_ac1_lpi_thresholds_table_has_exactly_two_entries():
     "region, erwartet",
     [
         ("DE_ALPEN", (1.0, 30.0, 50.0)),
-        ("EU_REST", (5.0, 20.0, 50.0)),
+        ("EU_REST", (7.14, 23.81, 86.16)),  # Issue #1678: neue Leiter
         ("FR", None),
         (None, None),
     ],
@@ -159,11 +161,16 @@ def test_ac3_marker_lpi_thresholds_jkg_eu_rest_existiert_heute_noch_nicht():
     HEUTE (RED-Ursache): `model_registry.lpi_thresholds_jkg` existiert noch
     nicht -> `AttributeError`, bevor die `assert`-Zeile ueberhaupt erreicht
     wird.
+
+    Issue #1678: der Lookup existiert inzwischen (#1679 GREEN), der erwartete
+    Wert ist deshalb auf die neue EU_REST-Leiter (7.14/23.81/86.16)
+    umgestellt -- sonst wuerde dieser Test nach der #1678-Implementierung
+    faelschlich ROT, obwohl er nur die Existenz des Lookups belegen soll.
     """
     import app.model_registry as model_registry
 
     ergebnis = model_registry.lpi_thresholds_jkg("EU_REST")
-    assert ergebnis == (5.0, 20.0, 50.0)
+    assert ergebnis == (7.14, 23.81, 86.16)
 
 
 # ────────────── AC-4 — unbekannte/fehlende Region: kein Signal, kein Fallback
@@ -265,7 +272,8 @@ def test_ac6_lpi_thresholds_jkg_fr_liefert_none():
     "name, lat, lon, erwartete_region, erwartete_leiter",
     [
         ("Mayrhofen/Zillertal", 47.16, 11.87, "DE_ALPEN", (1.0, 30.0, 50.0)),
-        ("Abisko/Nordschweden", 68.35, 18.83, "EU_REST", (5.0, 20.0, 50.0)),
+        # Issue #1678: neue EU_REST-Leiter statt der Interim-Werte 5/20/50.
+        ("Abisko/Nordschweden", 68.35, 18.83, "EU_REST", (7.14, 23.81, 86.16)),
     ],
 )
 def test_f001_schwellen_fuer_reihe_loest_gebiet_aus_echten_koordinaten_auf(
@@ -276,8 +284,9 @@ def test_f001_schwellen_fuer_reihe_loest_gebiet_aus_echten_koordinaten_auf(
     Leiter -- wie die AC-2/AC-3-Tests -- von Hand vorzugeben.
 
     Warum noetig: die bisherigen Produktionspfad-Tests arbeiten mit
-    LPI-Rohwerten, die in BEIDEN Leitern (DE_ALPEN 1/30/50, EU_REST 5/20/50)
-    dieselbe Stufe ergeben. Eine fest verdrahtete oder vertauschte Region in
+    LPI-Rohwerten, die in BEIDEN Leitern (DE_ALPEN 1/30/50, EU_REST seit
+    Issue #1678 7,14/23,81/86,16) dieselbe Stufe ergeben. Eine fest
+    verdrahtete oder vertauschte Region in
     `_schwellen_fuer_reihe()` bliebe dort strukturell unsichtbar (Mutation 5
     des Adversary: "NICHT GEFANGEN"). Hier trennen die beiden Koordinaten die
     Leitern eindeutig.
@@ -313,3 +322,34 @@ def test_f001_schwellen_fuer_reihe_loest_gebiet_aus_echten_koordinaten_auf(
         f"eine fest verdrahtete oder vertauschte Gebiets-Aufloesung"
     )
     assert cape_schwelle is None
+
+
+# ────────────── AC-7 (Issue #1678) — Bestandspruefung inkl. Monotonie ─────
+
+def test_ac7_lpi_thresholds_jkg_traegt_genau_zwei_gebiete_streng_monoton():
+    """AC-7 (Issue #1678): `LPI_THRESHOLDS_JKG` traegt GENAU die zwei Gebiete
+    `DE_ALPEN` (1,0/30,0/50,0) und `EU_REST` (7,14/23,81/86,16), je Gebiet
+    streng monoton steigend (`low < med < high`), und kein `FR`.
+
+    Ersetzt die bis Issue #1679 auf 5/20/50 festgenagelte Zusicherung
+    (Spec `feat_1678_lpi_eu_schwellenleiter.md` AC-7).
+
+    HEUTE (RED-Ursache): `EU_REST` ist noch `(5.0, 20.0, 50.0)` -- die
+    Wertepruefung schlaegt fehl, bis die Registry auf `(7.14, 23.81, 86.16)`
+    umgestellt ist. Die Monotonie- und Vollstaendigkeits-Zusicherungen sind
+    schon heute erfuellt.
+    """
+    from app.model_registry import LPI_THRESHOLDS_JKG
+
+    assert set(LPI_THRESHOLDS_JKG) == {"DE_ALPEN", "EU_REST"}, (
+        f"Erwartet genau die Gebiete DE_ALPEN und EU_REST, kein FR, "
+        f"gefunden {sorted(LPI_THRESHOLDS_JKG)}"
+    )
+    assert LPI_THRESHOLDS_JKG["DE_ALPEN"] == (1.0, 30.0, 50.0)
+    assert LPI_THRESHOLDS_JKG["EU_REST"] == (7.14, 23.81, 86.16)
+
+    for region, (low, med, high) in LPI_THRESHOLDS_JKG.items():
+        assert low < med < high, (
+            f"Leiter fuer {region} ist nicht streng monoton steigend: "
+            f"({low}, {med}, {high})"
+        )

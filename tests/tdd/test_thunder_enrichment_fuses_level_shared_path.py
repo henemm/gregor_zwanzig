@@ -447,9 +447,13 @@ def test_1680_herkunft_teilt_die_ueberschreib_bedingung_der_stufe():
         cape_jkg=None, lightning_potential_lpi_jkg=None,
         thunder_level_signals=["cape"],
     )
+    # Issue #1678: EU_REST-Hoch-Sprosse jetzt 86,16 J/kg (zuvor 50) -- 90.0
+    # statt der frueheren 60.0, damit die Gegenprobe-Vorbedingung "ergibt
+    # HIGH" unveraendert erhalten bleibt (dieser Test prueft die
+    # Herkunfts-Kopplung, nicht die Leiter selbst).
     laut = ForecastDataPoint(
         ts=ts, thunder_level=None, lightning_density_per_km2_3h=None,
-        cape_jkg=None, lightning_potential_lpi_jkg=60.0,
+        cape_jkg=None, lightning_potential_lpi_jkg=90.0,
         thunder_level_signals=["cape"],
     )
 
@@ -462,7 +466,7 @@ def test_1680_herkunft_teilt_die_ueberschreib_bedingung_der_stufe():
         f"{stumm.thunder_level_signals!r}"
     )
     assert laut.thunder_level == ThunderLevel.HIGH, (
-        f"Gegenprobe-Vorbedingung: 60 J/kg Blitzpotenzial muessen ueber die "
+        f"Gegenprobe-Vorbedingung: 90 J/kg Blitzpotenzial muessen ueber die "
         f"EU_REST-Leiter 'hoch' ergeben, erhalten {laut.thunder_level!r}"
     )
     assert laut.thunder_level_signals == ["blitzpotenzial"], (

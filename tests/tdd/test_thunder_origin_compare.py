@@ -230,7 +230,10 @@ def test_ac7_eu_rest_nennt_nur_blitzpotenzial_ohne_eichungshinweis():
     das Blitzpotenzial (unbelegte Interim-Schwelle), When die Herkunft
     erscheint, Then steht dort ausschliesslich "Blitzpotenzial" -- kein
     Eichungs-Hinweis, keine Bewertung (ADR-0007/ADR-0048)."""
-    html, _ = _mail(_ort("Nordort", 60.0, 25.0, [_dp(14, lpi=60.0)], modell="icon_eu"))
+    # Issue #1678: EU_REST-Hoch-Sprosse jetzt 86,16 J/kg (zuvor 50) -- 90.0
+    # statt der frueheren 60.0, damit der Ort weiterhin "hoch" erreicht
+    # (dieser Test prueft die Herkunfts-Anzeige, nicht die Leiter selbst).
+    html, _ = _mail(_ort("Nordort", 60.0, 25.0, [_dp(14, lpi=90.0)], modell="icon_eu"))
     assert _html_zellen(html)[0] == "hoch · Blitzpotenzial", (
         f"EU_REST-LPI wird genannt wie jede andere Zutat -- ohne Zusatz zur "
         f"Guete der Eichung: {_html_zellen(html)[0]!r}")
@@ -241,6 +244,9 @@ def test_ac10_tagesmaximum_vereinigt_die_zutaten_mehrerer_stunden():
     Hoechststufe ueber unterschiedliche Zutaten (14 Uhr CAPE, 18 Uhr
     Blitzpotenzial), When die Vergleichsmatrix gerendert wird, Then nennt sie
     BEIDE -- nicht nur die der ersten passenden Stunde."""
+    # Issue #1678 geprueft und AUSGESCHLOSSEN: Zweiort (47.0, 12.0) loest zu
+    # DE_ALPEN auf (thunder_region_for), dessen Leiter unveraendert 1/30/50
+    # ist -- 60.0 J/kg bleibt dort unabhaengig von #1678 HIGH.
     html, _ = _mail(_ort("Zweiort", 47.0, 12.0,
                          [_dp(14, cape=1500.0, cin=5.0), _dp(18, lpi=60.0)]))
     assert _teile(_html_zellen(html)[0]) == ("hoch", {"CAPE", "Blitzpotenzial"}), (

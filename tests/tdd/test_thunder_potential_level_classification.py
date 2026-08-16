@@ -4,8 +4,11 @@ SPEC: docs/specs/modules/feat_1474c_blitzpotenzial_stufen.md
 
 `thunder_level_from_signals()` bekommt einen VIERTEN Parameter
 `lightning_potential_jkg` (DWD-Blitzpotenzial, J/kg) mit einer EIGENEN
-Schwellentabelle (5 / 20 / 50 J/kg) -- eine andere Groesse auf einer anderen
-Skala als die Blitzdichte (#1419 Abs. 3.1, ADR-0025).
+Schwellentabelle -- eine andere Groesse auf einer anderen Skala als die
+Blitzdichte (#1419 Abs. 3.1, ADR-0025). Die Tabelle selbst kommt seit
+Issue #1679 gebietsabhaengig aus `app.model_registry.lpi_thresholds_jkg()`;
+diese Datei prueft weiterhin am Gebiet EU_REST, dessen Leiter seit Issue
+#1678 7,14/23,81/86,16 J/kg traegt (zuvor Interim-Werte 5/20/50).
 
 RED-Ursache (heute): `thunder_level_from_signals()` kennt den Parameter
 `lightning_potential_jkg` noch nicht -> jeder Aufruf mit diesem Keyword
@@ -55,32 +58,37 @@ def _fusion(**kwargs):
 @pytest.mark.parametrize(
     "wert, erwartet",
     [
-        (4.9, NONE),
-        (5.0, LOW),
-        (19.9, LOW),
-        (20.0, MED),
-        (49.9, MED),
-        (50.0, HIGH),
-        # PO-Messwerte 2026-08-02 (Spec Abschnitt AC-1):
+        # Issue #1678: EU_REST traegt seither die belegte Leiter
+        # 7,14/23,81/86,16 J/kg (Schroeder/Goecke/Koehler 2022) statt der
+        # Interim-Werte 5/20/50 -- jede Sprosse von beiden Seiten bewacht.
+        (7.13, NONE),
+        (7.14, LOW),
+        (23.80, LOW),
+        (23.81, MED),
+        (86.15, MED),
+        (86.16, HIGH),
+        # PO-Messwerte 2026-08-02 (Spec Abschnitt AC-1, weiterhin gueltig --
+        # 88.2 liegt ueber der neuen Hoch-Sprosse 86.16 wie zuvor ueber 50):
         (88.2, HIGH),  # GR20 / Refuge de Petra Piana -- reales Gewitter
         (0.9, NONE),   # Zillertal, ruhiges Wetter
     ],
 )
 def test_ac1_blitzpotenzial_dreiteilung_nach_po_tabelle(wert, erwartet):
     """AC-1: NUR das Blitzpotenzial-Signal gesetzt (Wettercode, Blitzdichte,
-    CAPE alle None) -- die Schwellen 5/20/50 J/kg entscheiden allein.
+    CAPE alle None) -- die EU_REST-Leiter (7,14/23,81/86,16 J/kg seit
+    Issue #1678) entscheidet allein.
 
     Gegenprobe (Spec): liest die Implementierung faelschlich die
     Blitzdichte-Schwellen (0,003/0,015/0,075) statt der eigenen
-    Blitzpotenzial-Schwellen, liefert bereits 4,9 J/kg faelschlich HIGH
-    (weit ueber 0,075) -- dieser Test faengt das, weil 4,9 hier NONE
+    Blitzpotenzial-Schwellen, liefert bereits 7,13 J/kg faelschlich HIGH
+    (weit ueber 0,075) -- dieser Test faengt das, weil 7,13 hier NONE
     erwartet.
     """
     ergebnis = _fusion(lightning_potential_jkg=wert)
     erwartet_name = erwartet.name if erwartet is not None else None
     assert ergebnis == erwartet, (
         f"Blitzpotenzial {wert} J/kg muss {erwartet_name} liefern "
-        f"(Schwellen 5/20/50), erhalten {ergebnis!r}"
+        f"(Schwellen 7,14/23,81/86,16), erhalten {ergebnis!r}"
     )
 
 
@@ -106,7 +114,7 @@ def test_ac3_kein_signal_liefert_none_aktiv_geprueft_liefert_thunderlevel_none()
         f"erhalten {kein_signal!r}"
     )
     assert aktiv_und_unauffaellig == NONE, (
-        f"lightning_potential_jkg=0.0 (aktiv geprueft, unter 5 J/kg) muss "
+        f"lightning_potential_jkg=0.0 (aktiv geprueft, unter der untersten Sprosse) muss "
         f"ThunderLevel.NONE liefern, erhalten {aktiv_und_unauffaellig!r}"
     )
     assert kein_signal != aktiv_und_unauffaellig, (

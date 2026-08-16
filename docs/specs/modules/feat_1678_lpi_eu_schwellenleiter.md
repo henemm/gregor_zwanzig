@@ -12,7 +12,7 @@ tags: [gewitter, lpi, icon-eu, model-registry, thunder-fusion, issue-1678]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-08-16)
 
 ## Purpose
 

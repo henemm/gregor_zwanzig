@@ -98,10 +98,16 @@ THUNDER_PARAMS = ("lpi_con_max", "cape_ml", "cape_con", "cin_ml")
 
 # Abrufname beim Dienst -> INTERNER Signalname des gemeinsamen Protokolls.
 # `lpi_con_max` ist der externe Parametername; nach aussen liefert dieser
-# Provider unter demselben Signalschluessel `lpi` wie ICON-D2, weil es
-# fachlich dieselbe Groesse (Blitzpotenzial in J/kg) ist. Dadurch greift die
-# bestehende Zeile in `thunder_enrichment._SIGNAL_ZU_FELD` unveraendert und
-# der gemeinsame Anschluss muss fuer S2c NICHT angefasst werden (Spec AC-9).
+# Provider unter demselben Signalschluessel `lpi` wie ICON-D2 -- NICHT weil
+# es fachlich dieselbe Groesse waere (ist es nicht, s. `model_registry.py`
+# Kommentar zu `LPI_THRESHOLDS_JKG`: `lpi_con_max` stammt aus dem
+# Bechtold-Tiedtke-Konvektionsschema, `lpi` aus aufgeloester Stroemung),
+# sondern weil die Unterscheidung ausschliesslich ueber das GEBIET laeuft
+# (`thunder_routing._REGIONS`, first-match-wins) und `lpi_thresholds_jkg()`
+# je Gebiet die eigene, dafuer geeichte Leiter auswaehlt (Issue #1678).
+# Dadurch greift die bestehende Zeile in `thunder_enrichment._SIGNAL_ZU_FELD`
+# unveraendert und der gemeinsame Anschluss musste fuer S2c NICHT angefasst
+# werden (Spec AC-9).
 # `cape_ml`/`cape_con`/`cin_ml` behalten ihren Abrufnamen 1:1 als Signalname
 # -- keine Umbenennung noetig, weil es dieselben Groessen wie bei ICON-D2 sind.
 _SIGNAL_KEYS: Dict[str, str] = {
