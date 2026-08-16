@@ -30,7 +30,8 @@ export function newDefaultRule(): AlertRule {
 // und liefert das Array, das an AlertRulesEditor.updateRules(index, ...)
 // weitergereicht wird.
 //
-//   mode='absolute'                  -> [rule mit kind='absolute', threshold=absThreshold]
+//   mode='absolute' (Standard-Metrik) -> [rule mit kind='absolute', threshold=absThreshold]
+//   mode='absolute' (Delta-only)     -> [rule mit kind='delta'] (Guard greift, #1488)
 //   mode='delta'                     -> [rule mit kind='delta', threshold=deltaThreshold,
 //                                        delta_window=deltaWindow]
 //   mode='both' (Standard-Metrik)    -> [absolute (orig-ID, pair_id),
@@ -60,6 +61,13 @@ export function expandRules(
 	deltaWindow: string = '6h'
 ): AlertRule[] {
 	if (mode === 'absolute') {
+		if (DELTA_ONLY_METRICS.has(rule.metric)) {
+			// #1488 Scheibe A (AC-3): dieselbe Behandlung wie im 'both'-Zweig — eine
+			// Delta-only-Metrik darf nie als kind='absolute' persistiert werden, weil
+			// der Alarm-Dienst deren absolute Schwelle nie auswertet.
+			const { pair_id: _pid, ...rest } = rule;
+			return [{ ...rest, kind: 'delta', threshold: deltaThreshold, delta_window: deltaWindow }];
+		}
 		// F001: pair_id + delta_window explizit entfernen — beim Mode-Wechsel von
 		// 'both'/'delta' nach 'absolute' duerfen diese Felder nicht ueberleben.
 		const { pair_id: _pid, delta_window: _dw, ...rest } = rule;

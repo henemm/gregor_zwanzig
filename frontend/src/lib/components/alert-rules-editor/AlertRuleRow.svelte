@@ -15,10 +15,7 @@
 	import { Btn, Pill } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
-	import {
-		ALERT_METRIC_LABELS,
-		thunderLevelLabel
-	} from '$lib/utils/alertMetricLabels';
+	import { ALERT_METRIC_LABELS } from '$lib/utils/alertMetricLabels';
 	import { DELTA_ONLY_METRICS, expandRules, type AlertRuleMode } from './alertRuleDefaults';
 	import ModeCard from './ModeCard.svelte';
 	import { effectiveAlertChannels, toggleAlertChannel } from './alertChannels';
@@ -52,16 +49,25 @@
 
 	let info = $derived(ALERT_METRIC_LABELS[rule.metric]);
 	let editChannels = $derived(effectiveAlertChannels(draft, activeChannels));
-	let valueText = $derived(
-		rule.metric === 'thunder_level'
-			? thunderLevelLabel(rule.threshold)
-			: `${rule.threshold} ${info?.unit ?? ''}`.trim()
-	);
+	// #1488 Scheibe A: kein Thunder-Sonderfall mehr — die Stufenwoerter MITTEL/HOCH
+	// waren falsch beschriftet und ihre Schwelle wird nie ausgewertet.
+	let valueText = $derived(`${rule.threshold} ${info?.unit ?? ''}`.trim());
 
 	// Issue #179: Hinweistext wenn 'both' bei Delta-only Metrik auf 'delta' zurueckfaellt.
 	let deltaOnlyHint = $derived(
 		editing && editMode === 'both' && DELTA_ONLY_METRICS.has(draft.metric)
 	);
+
+	// #1488 Scheibe A: fuer Delta-only-Metriken gibt es keine 'Absolut'-Karte mehr.
+	// editMode koennte trotzdem auf 'absolute' stehen — beim Metrik-Wechsel im
+	// Select ebenso wie beim Oeffnen einer Altregel mit kind='absolute' via
+	// startEdit(). Ohne diesen Guard haenge der Modus auf einer Auswahl, die der
+	// Nutzer weder sieht noch abwaehlen kann.
+	$effect(() => {
+		if (editing && DELTA_ONLY_METRICS.has(draft.metric) && editMode === 'absolute') {
+			editMode = 'delta';
+		}
+	});
 
 	// Alle bekannten Metrics fuer das Select im Edit-Mode
 	const METRIC_OPTIONS: AlertMetric[] = [
@@ -126,21 +132,20 @@
 		onSave([{ ...rule, enabled: checked }]);
 	}
 
-	function onThunderChange(e: Event) {
-		// Number-Coercion: Select liefert Strings — wir wollen number im draft
-		draft.threshold = parseFloat((e.target as HTMLSelectElement).value);
-	}
 </script>
 
 {#if info}
 	{#if editing}
 		<div class="alert-rule-edit" data-testid="alert-rule-edit">
 			<div class="mode-selector" role="radiogroup" aria-label="Alarm-Modus">
-				<ModeCard
-					mode="absolute"
-					selected={editMode === 'absolute'}
-					onSelect={() => (editMode = 'absolute')}
-				/>
+				<!-- #1488 Scheibe A: Delta-only-Metriken kennen keinen Absolut-Modus. -->
+				{#if !DELTA_ONLY_METRICS.has(draft.metric)}
+					<ModeCard
+						mode="absolute"
+						selected={editMode === 'absolute'}
+						onSelect={() => (editMode = 'absolute')}
+					/>
+				{/if}
 				<ModeCard
 					mode="delta"
 					selected={editMode === 'delta'}
@@ -169,16 +174,7 @@
 					{/each}
 				</Select>
 
-				{#if draft.metric === 'thunder_level'}
-					<Select
-						value={draft.threshold}
-						onchange={onThunderChange}
-						data-testid="alert-rule-threshold"
-					>
-						<option value={1.0}>MITTEL</option>
-						<option value={2.0}>HOCH</option>
-					</Select>
-				{:else if editMode === 'both'}
+				{#if editMode === 'both'}
 					<!-- Issue #297 AC-3: drei Felder bei mode='both' — abs + delta + zeitfenster. -->
 					<input
 						type="number"

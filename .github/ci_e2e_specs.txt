@@ -136,6 +136,7 @@ e2e/dnd-helper-finalize-wait.spec.ts
 e2e/email-preview-header.spec.ts
 e2e/epic-138-block-b.spec.ts
 e2e/font-weights.spec.ts
+e2e/gewitter-absolutregel-gesperrt.spec.ts
 e2e/issue-1059-trip-resume-error-feedback.spec.ts
 e2e/issue-1071-tier-change-request.spec.ts
 e2e/issue-1093-unit.spec.ts

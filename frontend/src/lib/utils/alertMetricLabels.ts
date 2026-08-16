@@ -51,15 +51,9 @@ export const SEVERITY_LABEL_DE: Record<AlertSeverity, string> = {
 	critical: 'Kritisch'
 };
 
-/**
- * Wandelt einen THUNDER_LEVEL-Threshold (1.0 / 2.0) in einen menschenlesbaren
- * Label fuer die AlertRow-Anzeige. >=2.0 → "HOCH", >=1.0 → "MITTEL", sonst "KEINE".
- */
-export function thunderLevelLabel(threshold: number): string {
-	if (threshold >= 2.0) return 'HOCH';
-	if (threshold >= 1.0) return 'MITTEL';
-	return 'KEINE';
-}
+// #1488 Scheibe A: `thunderLevelLabel()` ersatzlos entfernt. Die Stufenwoerter
+// MITTEL/HOCH alarmierten eine Stufe frueher als beschriftet und gehoerten zu
+// einer Absolut-Schwelle, die der Alarm-Dienst fuer Gewitter nie auswertet.
 
 // Bug #317 — Legacy-AlertMetric-IDs auf aktuelle AlertMetric-Enum-Werte abbilden.
 // Spec: docs/specs/modules/bug_317_alert_rules_editor_metrics.md

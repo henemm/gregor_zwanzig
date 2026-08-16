@@ -289,44 +289,10 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		}
 	});
 
-	// Issue #319: Kebab-Trigger öffnen vor Edit-Klick
-	test('AC-10: THUNDER_LEVEL — View zeigt "HOCH", Edit zeigt Select mit MITTEL/HOCH', async ({
-		page,
-		request
-	}) => {
-		const id = tripId('ac10');
-		await createTrip(request, id, [
-			{
-				id: 'r1',
-				kind: 'absolute',
-				metric: 'thunder_level',
-				threshold: 2.0,
-				unit: '',
-				severity: 'critical',
-				enabled: true
-			}
-		]);
-		try {
-			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
-			const row = page.locator('[data-testid="alert-rule-row"]').first();
-			await expect(row).toContainText('HOCH');
-			await expect(row).not.toContainText('> 2');
-
-			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
-			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
-			const select = page.locator('[data-testid="alert-rule-threshold"]').first();
-			await expect(select).toBeVisible();
-			// Tag-Name verifizieren: select (nicht number-input)
-			const tag = await select.evaluate((el) => el.tagName.toLowerCase());
-			expect(tag).toBe('select');
-			await expect(select.locator('option')).toHaveCount(2);
-			await expect(select.locator('option', { hasText: 'MITTEL' })).toHaveCount(1);
-			await expect(select.locator('option', { hasText: 'HOCH' })).toHaveCount(1);
-		} finally {
-			await deleteTrip(request, id);
-		}
-	});
+	// #1488 Scheibe A: AC-10 („THUNDER_LEVEL — View zeigt HOCH, Edit zeigt Select
+	// mit MITTEL/HOCH") ist entfallen. Der Testfall kodierte exakt das Verhalten,
+	// das diese Scheibe entfernt: den Absolut-Modus fuer Gewitter samt der
+	// falsch beschrifteten Stufenwoerter.
 });
 
 test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Feldern', () => {

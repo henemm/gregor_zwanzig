@@ -9,8 +9,7 @@
 		ALERT_METRIC_LABELS,
 		ALERT_SEVERITY_TONE,
 		SEVERITY_LABEL_DE,
-		normalizeAlertMetric,
-		thunderLevelLabel
+		normalizeAlertMetric
 	} from '$lib/utils/alertMetricLabels';
 
 	interface Props {
@@ -26,7 +25,7 @@
 		const key = normalizeAlertMetric(rule.metric);
 		const meta = key ? ALERT_METRIC_LABELS[key] : undefined;
 		if (!meta) return rule.metric;
-		if (key === 'thunder_level') return `Gewitter ${thunderLevelLabel(rule.threshold)}`;
+		// #1488 Scheibe A: kein thunder_level-Sonderfall mehr — generischer Pfad.
 		const unit = meta.unit ? ` ${meta.unit}` : '';
 		return `${meta.label_de} ${meta.comparison} ${rule.threshold}${unit}`;
 	}
