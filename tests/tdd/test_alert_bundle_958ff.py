@@ -128,7 +128,9 @@ def test_ac2_render_email_change_wording_and_datablock():
     """AC-2: Given dasselbe Event (Bug-Report-Werte) / When render_email() die
     Single-Metrik-Verdict-Pill und den Datenblock rendert / Then enthält der
     Verdict-Text 'Änderung über deiner Alarm-Schwelle (400 m)' (nicht mehr
-    'jetzt über Schwelle 400 m') und der Datenblock zeigt 'Änderung über ✗'
+    'jetzt über Schwelle 400 m') und der Datenblock zeigt den vollstaendigen
+    Satz 'jetzt darüber ✗' (#1865-Fix — Fragment 'Änderung über ✗' war
+    unverstaendlich, over_thr()/side_label() selbst bleiben unveraendert)
     in der Alarm-Schwelle-Zeile — in html UND plain."""
     from output.renderers.alert.model import AlertEvent, AlertMessage
     from output.renderers.alert.render import render_email
@@ -145,8 +147,12 @@ def test_ac2_render_email_change_wording_and_datablock():
             f"Verdikt-Text fehlt oder ist noch die alte Formulierung "
             f"('jetzt über Schwelle ...'): {content!r}"
         )
-        assert "Änderung über ✗" in content, (
-            f"Datenblock-Zeile 'Alarm-Schwelle' zeigt nicht 'Änderung über ✗': {content!r}"
+        assert "jetzt darüber ✗" in content, (
+            f"Datenblock-Zeile 'Alarm-Schwelle' zeigt nicht den vollstaendigen "
+            f"Satz 'jetzt darüber ✗' (#1865): {content!r}"
+        )
+        assert "Änderung über ✗" not in content, (
+            f"Altes Fragment 'Änderung über ✗' (#1865-Bug) noch vorhanden: {content!r}"
         )
 
 

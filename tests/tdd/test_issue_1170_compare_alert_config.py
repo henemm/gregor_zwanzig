@@ -416,3 +416,15 @@ def test_ac7_single_location_two_metrics_no_per_row_location_prefix():
     assert location_name in plain, (
         f"Einzel-Ort-Kontext (Footer/Where) fehlt komplett:\n{plain}"
     )
+    # Issue #1861 (Adversary-Finding F002): der neue per-Ereignis-Ort-/Zeit-
+    # Zusatz im Mehr-Metrik-Zweig darf den Compare-Buendelpfad NICHT treffen.
+    # Dessen Ereignisse tragen als `segment_id` die Orts-ID ("loc-a") — keine
+    # verwertbare Etappen-Kennung —, weshalb `_where_when()` auf die km-Spanne
+    # zurueckfiele und jede Zeile ein sinnloses "km 0–0" bekaeme (der Punkt hat
+    # keinen km-Kontext). Die Bedingung dafuer sitzt in
+    # `render._per_event_where_when()`; ohne diese Assertion bliebe der Test
+    # gruen, wenn sie bedingungslos True lieferte.
+    assert "km 0" not in plain, (
+        f"Compare-Buendelpfad zeigt eine km-Angabe, obwohl der Punkt keinen "
+        f"km-Kontext hat (#1861-Zusatz greift faelschlich):\n{plain}"
+    )
