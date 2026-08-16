@@ -21,16 +21,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = str(REPO_ROOT / "fixtures" / "openmeteo")
 
 
-def _find_test_trip() -> tuple[str | None, str | None]:
-    """Ersten vorhandenen echten Trip finden (Alpen bevorzugt für Plausibilität)."""
-    from app.loader import get_trips_dir
-
-    for uid, tid in (("henning", "5f534011"), ("default", "gr221-mallorca")):
-        if (get_trips_dir(uid) / f"{tid}.json").exists():
-            return uid, tid
-    return None, None
-
-
 # ---------- AC-1: Protocol-Erfüllung ----------
 
 def test_ac1_fixture_provider_satisfies_protocol():
@@ -115,10 +105,23 @@ def test_ac5_timestamps_restamped_to_today():
 # ---------- AC-6: PreviewService rendert ohne echten Open-Meteo-Call ----------
 
 def test_ac6_preview_renders_without_real_api_call(monkeypatch, tmp_path):
-    """AC-6: render_email_preview läuft mit gesetzter ENV-Var offline (kein open-meteo-Call)."""
-    uid, tid = _find_test_trip()
-    if not uid:
-        pytest.skip("Kein echter Test-Trip in data/users vorhanden")
+    """AC-6: render_email_preview läuft mit gesetzter ENV-Var offline (kein open-meteo-Call).
+
+    #1708 B1: die Trip-Fixture wird selbst in der isolierten Datenwurzel
+    angelegt statt im toten trips/-Pfad gesucht (dort ist sie unter Isolation
+    nie vorhanden -- der Test skippte deshalb IMMER, unabhaengig vom
+    Bestand). Kopiert das committete Referenz-Trip gr221-mallorca nach
+    briefings/ -- Vorbild
+    tests/tdd/test_epic_140_preview_endpoints.py::_seed_trip_fixture.
+    """
+    import shutil
+    from app.loader import get_briefings_dir
+
+    uid, tid = "b1-346-preview-proof", "gr221-mallorca"
+    src = REPO_ROOT / "tests" / "fixtures" / "data_root" / "users" / "default" / "trips" / f"{tid}.json"
+    dst = get_briefings_dir(uid) / f"{tid}.json"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
 
     monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", FIXTURE_DIR)
 

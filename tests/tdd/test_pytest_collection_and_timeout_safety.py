@@ -23,6 +23,18 @@ Erweiterung Scheibe 2c (#1211c): 10 Dateien mit bislang modul-weitem
 Netz-Sperre-Probe-gruene Tests + 2 aus test_issue_338 kommen in die
 Standard-Selektion zurueck); 6 Voll-Dialer-Dateien bleiben unveraendert
 modul-live. Spec: docs/specs/modules/rework_1211c_live_feinschnitt.md
+
+#1708 B1 (2026-08-16): test_bug_338_openmeteo_call_counter.py wandert von
+den 6 Voll-Dialern (_C2_KEEP_MODULE_LIVE) nach _C2_SPLIT_FILES. Erste
+Messung (nur `--disable-socket`) ergab faelschlich 5 live/1 offline -- nach
+Ruecksprache und gezielter Nachmessung je Test (`@pytest.mark.disable_socket`
++ erzwungener echter Provider statt FixtureProvider) zeigte sich: 3 Tests
+(ac2_trend, ac2_preview, ac4) bestehen offline beweiskraeftig, weil
+`_build_stage_trend`/`_build_report` mit Default `enrich_ensemble=True`
+einen Ensemble-Spread-Fallback ausloesen, dessen `except Exception` breiter
+faengt als der primaere Forecast-Call und den Log-Eintrag liefert. Die
+verbleibenden 3 (ac1, ac2_alarm, ac3) rufen mit `enrich_ensemble=False`
+direkt/ohne diesen Fallback und bleiben live. Nur noch 5 Voll-Dialer-Dateien.
 """
 from __future__ import annotations
 
@@ -147,19 +159,42 @@ _C2_SPLIT_FILES = (
     ("tests/tdd/test_go_api_setup.py", 5, "live"),
     ("tests/tdd/test_snowgrid.py", 1, "live"),
     ("tests/tdd/test_issue_338_go_geosphere_counter.py", 2, "live"),
+    # #1708 B1: von _C2_KEEP_MODULE_LIVE hierher verschoben -- die dortige
+    # Begruendung ("Voll-Dialer, 100% Netzcall", #1211 Scheibe 2c) war
+    # zirkulaer gemessen (unter dem eigenen live-Marker, der den
+    # Offline-Fixture-Modus abschaltet, conftest.py:25-29).
+    #
+    # Erste Nachmessung (nur `--disable-socket -o addopts=`) ergab
+    # faelschlich nur 1 offline-faehigen Test (ac4) -- diese Messung deckte
+    # nicht auf, dass der Fixture-Modus die eigentliche Ursache war (siehe
+    # #1708-B1-Ruecksprache). Zweite, gezielte Messung je Einzeltest (echter
+    # Provider erzwungen via `monkeypatch.delenv("GZ_TEST_FIXTURE_DIR")` +
+    # `@pytest.mark.disable_socket` statt globalem CLI-Flag) zeigt: 3 Tests
+    # bestehen offline beweiskraeftig -- ac2_trend/ac2_preview (Default
+    # `enrich_ensemble=True` loest zusaetzlich zum primaeren Forecast-Call
+    # einen Ensemble-Spread-Fallback aus, dessen `except Exception` breiter
+    # faengt als `except httpx.RequestError` und darum trotz gesperrtem
+    # Socket protokolliert) sowie ac4 (reine Dateiarbeit). Die restlichen 3
+    # (ac1, ac2_alarm, ac3) rufen mit `enrich_ensemble=False` (Bug #288,
+    # Quotenschutz) OHNE diesen Fallback -- der primaere Call scheitert dort
+    # ungeloggt (httpx erkennt die pytest-socket-Exception nicht als
+    # `httpx.RequestError`) und bleibt live. Details je Test:
+    # test_bug_338_openmeteo_call_counter.py.
+    ("tests/tdd/test_bug_338_openmeteo_call_counter.py", 3, "live"),
 )
 _C2_SPLIT_PATHS = tuple(f for f, _, _ in _C2_SPLIT_FILES)
 
-# Scheibe 2c: 6 Voll-Dialer-Dateien (per Probe/Code 100% Netzcall) behalten
+# Scheibe 2c: 5 Voll-Dialer-Dateien (per Probe/Code 100% Netzcall) behalten
 # ihren Modul-Marker unveraendert -- Regressions-Waechter gegen
-# versehentliches Mit-Zurueckholen.
+# versehentliches Mit-Zurueckholen. test_bug_338_openmeteo_call_counter.py
+# ist #1708 B1 nach _C2_SPLIT_FILES gewandert (dort feingeschnitten, ein
+# Test bleibt im Standardlauf).
 _C2_KEEP_MODULE_LIVE = (
     "tests/integration/test_snapshot_plausibility.py",
     "tests/tdd/test_geosphere_parsing.py",
     "tests/integration/test_segment_weather_metrics.py",
     "tests/integration/test_segment_weather_cache.py",
     "tests/integration/test_cli_wintersport.py",
-    "tests/tdd/test_bug_338_openmeteo_call_counter.py",
 )
 
 # addopts liefert bereits ein "-q" -> Quiet-Level 2 -> kompaktes "pfad: N"-Format
@@ -472,29 +507,37 @@ def test_811_gate_test_skips_when_hook_missing(tmp_path):
 def test_c2_returned_tests_in_default_selection(
     default_collect, live_collect, c2_split_total_collect,
 ):
-    """GIVEN die 10 Scheibe-2c-teilgeschnittenen Dateien (74 Netz-Sperre-Probe-
-    gruene Tests + 2 aus test_issue_338, je Datei feinsortiert) WHEN
-    Standardlauf und `-m live`-Lauf gemeinsam betrachtet werden THEN zeigt
-    jede Datei im Standardlauf mindestens die erwartete Mindestzahl UND
+    """GIVEN die 11 Scheibe-2c/#1708-B1-teilgeschnittenen Dateien (74
+    Netz-Sperre-Probe-gruene Tests + 2 aus test_issue_338 + 3 aus
+    test_bug_338, je Datei feinsortiert) WHEN Standardlauf und `-m
+    live`-Lauf gemeinsam betrachtet werden THEN zeigt jede Datei im
+    Standardlauf EXAKT die erwartete Zahl (#1708 B1 Adversary F001: eine
+    Untergrenze faengt eine Verkleinerung des Tabellenwerts nicht) UND
     Standardlauf + `-m live` == marker-neutraler Gesamt-Count
-    (Partitionsnachweis, Muster test_b3_partial_files_partition) (AC-1/AC-5).
-    Schlaegt heute fehl, weil alle 10 Dateien noch den kompletten
+    (Partitionsnachweis, Muster test_b3_partial_files_partition) (AC-1/AC-5/AC-8).
+    Schlaegt heute fehl, weil alle 11 Dateien noch den kompletten
     Modul-Marker tragen -- der Standardlauf zeigt fuer jede 0 Tests statt
-    der erwarteten Mindestzahl."""
+    der erwarteten Zahl."""
     assert c2_split_total_collect.returncode == 0, c2_split_total_collect.stderr
 
     default_counts = _collected_counts(default_collect.stdout)
     marker_counts = {"live": _collected_counts(live_collect.stdout)}
     total_counts = _full_id_counts(c2_split_total_collect.stdout, _C2_SPLIT_PATHS)
 
-    for f, min_standard, marker in _C2_SPLIT_FILES:
+    for f, expected_standard, marker in _C2_SPLIT_FILES:
         std_n = default_counts.get(f, 0)
         marker_n = marker_counts[marker].get(f, 0)
         total_n = total_counts.get(f, 0)
         assert total_n > 0, f"{f}: marker-neutraler Gesamt-Count ist 0 -- Collect kaputt?"
-        assert std_n >= min_standard, (
-            f"{f}: Standardlauf zeigt {std_n} Tests, erwartet mindestens "
-            f"{min_standard} zurueckgeholte Tests."
+        # #1708 B1 Adversary F001: EXAKT statt `>=` -- eine Untergrenze faengt
+        # die eigentliche Mutation nicht (Tabellenwert runter auf 1 bei real 3
+        # gesammelten Tests blieb gruen). Gemessen 2026-08-16: `==` haelt fuer
+        # ALLE bestehenden Eintraege (kein zweiter, laxerer Waechter auf
+        # derselben Konstante noetig) -- die Tabellenwerte SIND bereits die
+        # exakten Standardlauf-Counts, nicht bloss Untergrenzen.
+        assert std_n == expected_standard, (
+            f"{f}: Standardlauf zeigt {std_n} Tests, erwartet EXAKT "
+            f"{expected_standard} zurueckgeholte Tests."
         )
         assert std_n + marker_n == total_n, (
             f"{f}: Standardlauf ({std_n}) + `-m {marker}` ({marker_n}) muss den "
@@ -504,14 +547,16 @@ def test_c2_returned_tests_in_default_selection(
 
 
 def test_c2_full_live_files_stay_excluded(default_collect):
-    """GIVEN die 6 Voll-Dialer-Dateien (per Netz-Sperre-Probe bzw. Code-Beleg
+    """GIVEN die 5 Voll-Dialer-Dateien (per Netz-Sperre-Probe bzw. Code-Beleg
     100% Netzcall: snapshot_plausibility, geosphere_parsing,
-    segment_weather_metrics, segment_weather_cache, cli_wintersport, bug_338)
-    WHEN der Standardlauf sammelt THEN bleiben alle 6 unveraendert bei 0
+    segment_weather_metrics, segment_weather_cache, cli_wintersport)
+    WHEN der Standardlauf sammelt THEN bleiben alle 5 unveraendert bei 0
     gesammelten Tests -- kein versehentliches Mit-Zurueckholen (AC-2,
     Regressions-Waechter, Muster test_offline_files_remain_in_default_selection).
     Darf schon heute gruen sein -- die Dateien tragen bereits ihren
-    Modul-Marker und sind davon durch Scheibe 2c nicht betroffen."""
+    Modul-Marker und sind davon durch Scheibe 2c nicht betroffen. bug_338
+    ist #1708 B1 nach _C2_SPLIT_FILES gewandert (test_c2_returned_tests_
+    in_default_selection deckt sie jetzt ab)."""
     assert default_collect.returncode == 0, default_collect.stderr
     default_counts = _collected_counts(default_collect.stdout)
     leaked = {

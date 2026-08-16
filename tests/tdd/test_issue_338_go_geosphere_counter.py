@@ -19,6 +19,7 @@ Geosphere-Instrumentierung sowie die analyze-Skript-Erweiterung noch fehlen.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -39,6 +40,21 @@ def _read_jsonl(path: Path):
     if not path.exists():
         return []
     return [json.loads(ln) for ln in path.read_text().splitlines() if ln.strip()]
+
+
+def subprozess_lauf_ist_beweiskraeftig(proc: "subprocess.CompletedProcess") -> bool:
+    """#1708 B1 AC-7: Exit-Code 0 allein beweist nichts -- ein komplett
+    uebersprungener Lauf liefert ebenfalls Exit 0 (Befund #1708 B1: genau das
+    verdeckte den Skip aus test_bug_338_openmeteo_call_counter.py:211-213
+    bisher). Beweiskraeftig ist nur ein Lauf mit returncode 0, OHNE einen
+    einzigen Skip und mit mindestens einem tatsaechlich ausgefuehrten Test.
+    """
+    if proc.returncode != 0:
+        return False
+    if re.search(r"\bskipped\b", proc.stdout, re.IGNORECASE):
+        return False
+    match = re.search(r"(\d+) passed", proc.stdout)
+    return bool(match) and int(match.group(1)) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -81,23 +97,40 @@ def test_ac2_geosphere_clouds_logs_source_geosphere_clouds(tmp_path, monkeypatch
 # AC-3: Die 6 bestehenden Tests aus bd8e1e2 bleiben grün (Konsolidierung)
 # ---------------------------------------------------------------------------
 
-@pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
+@pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live.
+# #1708 B1: weiterhin berechtigt -- `-o addopts=` neutralisiert die
+# Marker-Filterung im Subprozess, 3 der 6 Zieltests (ac1, ac2_alarm, ac3)
+# brauchen echten Netzzugriff -- sie rufen mit `enrich_ensemble=False` ohne
+# den Ensemble-Spread-Fallback, der bei den anderen 3 (ac2_trend,
+# ac2_preview, ac4) den Offline-Log-Nachweis traegt (gemessen 2026-08-16,
+# Details s. test_bug_338_openmeteo_call_counter.py). Ein Standardlauf ohne
+# Marker wuerde also entweder haengen/timeouten (kein Netz im
+# deterministischen Kern) oder faelschlich "beweiskraeftig" aussehen, ohne
+# echten Netzzugriff gehabt zu haben.
 def test_ac3_existing_six_tests_still_green():
     """
     AC-3: Nach der Konsolidierung der Logging-Logik in `providers.call_log`
     müssen die 6 bestehenden Tests aus tests/tdd/test_bug_338_openmeteo_call_counter.py
     weiterhin grün sein (identisches Verhalten).
 
-    Wir führen sie als Sub-Prozess aus und prüfen den Exit-Code.
+    Wir führen sie als Sub-Prozess aus und prüfen mit
+    `subprozess_lauf_ist_beweiskraeftig` (#1708 B1 AC-7), dass der Lauf
+    tatsaechlich etwas bewiesen hat -- ein reiner Exit-Code-0-Check waere
+    auch bei einem komplett uebersprungenen Lauf gruen (Befund #1708 B1).
 
-    Scheibe 2c (#1211) Vakuum-Test-Fix: die Zieldatei traegt selbst
-    `pytestmark = pytest.mark.live`, daher deselektiert die geerbte
+    Scheibe 2c (#1211) Vakuum-Test-Fix: die Zieldatei trug frueher selbst
+    `pytestmark = pytest.mark.live`, daher deselektierte die geerbte
     pyproject-addopts (`-m 'not email and not live and not staging'`) ALLE
     6 Zieltests -- ohne `-o addopts=` lief dieser Subprozess bislang mit
     Exit 5 (no tests collected) durch: Zieltests wurden deselektiert, Lauf
     verifizierte nichts (Adversary F002, #1211-2c, empirisch korrigiert).
     `-o addopts=` neutralisiert die Marker-Filterung, damit die 6 Tests
-    tatsaechlich ausgefuehrt werden.
+    tatsaechlich ausgefuehrt werden -- das gilt nach #1708 B1 unveraendert,
+    weil der Modul-Marker der Zieldatei durch 6 Funktions-Marker ersetzt
+    wurde (3 live + 3 disable_socket/offline), die `-o addopts=` weiterhin
+    fuer die live-markierten neutralisiert (die 3 disable_socket-Tests
+    laufen ohnehin, unabhaengig von addopts, da das ein eigener Mechanismus
+    von pytest-socket ist).
     """
     existing = REPO_ROOT / "tests" / "tdd" / "test_bug_338_openmeteo_call_counter.py"
     assert existing.exists(), f"Bestehende Testdatei fehlt: {existing}"
@@ -108,9 +141,10 @@ def test_ac3_existing_six_tests_still_green():
         capture_output=True,
         text=True,
     )
-    assert proc.returncode == 0, (
+    assert subprozess_lauf_ist_beweiskraeftig(proc), (
         "Die 6 bestehenden bd8e1e2-Tests müssen nach der call_log-Konsolidierung "
-        f"grün bleiben.\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
+        f"grün bleiben (nicht nur Exit 0 -- kein Skip, mindestens 1 passed).\n"
+        f"STDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
     )
 
 
