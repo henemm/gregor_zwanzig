@@ -189,6 +189,7 @@ Verfahren, Abbruchgrenze).
 | Test-Pfadregel-Ratsche (#1409) | 2026-10-27 | — |
 | Frontend-Browser-Gate (#1558) | 2026-11-05 | #1552 (Kernseite unbedienbar bei grüner Ampel) |
 | 6. Check `e2e` (#1771 S2) | 2026-11-11 | offen — Kriterium: eine Regression, die die anderen fünf durchlassen |
+| staging_gate — `frontend/e2e/` nicht als Code klassifiziert (#1197) | 2026-11-15 | Live erlebt 2026-08-15 (PR-Stack #1736/#1852/#1881/#1882), Fix folgt |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.

@@ -34,7 +34,10 @@ Log weist die Ancestor-Relaxierung aus.
 
 **AC-3:** Given dieselbe Ancestor-Konstellation, aber der Zuwachs C..HEAD enthält
 mindestens eine Datei unter `frontend/`, When `gate_check` läuft, Then Exit 1
-(keine Relaxierung bei echtem Frontend-Code).
+(keine Relaxierung bei echtem Frontend-Code). Präzisierung durch
+`docs/specs/modules/fix_1197_staging_gate_e2e_scope.md`: „Datei unter `frontend/`"
+meint ausgelieferten Produktivcode (`frontend/src/`, `frontend/static/` usw.),
+nicht die Playwright-Testinfrastruktur unter `frontend/e2e/`.
 
 **AC-4:** Given dieselbe Ancestor-Konstellation, aber der Zuwachs C..HEAD enthält
 mindestens eine Datei unter `src/`, `api/`, `internal/` oder `cmd/`, When

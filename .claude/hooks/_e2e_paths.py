@@ -223,7 +223,16 @@ def _detect_scope_from_git_diff(base, target, repo_dir) -> str:
     has_frontend = False
     has_backend = False
     for path in changed:
-        if path.startswith("frontend/"):
+        # Playwright-Testinfrastruktur (Specs, Setup, Configs, Fixtures,
+        # Helfer) — kein ausgelieferter Produktivcode, wird von keinem
+        # laufenden Dienst geladen, also kein Deploy-Drift-Risiko. Symmetrisch
+        # zur bereits bestehenden tests/-Ausnahme weiter unten. MUSS vor dem
+        # generischen frontend/-Zweig stehen, sonst greift dieser zuerst
+        # (#1197: e2e-only-Diff wurde fälschlich frontend-only und blockte den
+        # Deploy-Gate).
+        if path.startswith("frontend/e2e/"):
+            pass
+        elif path.startswith("frontend/"):
             has_frontend = True
         elif (
             path.startswith("src/")
