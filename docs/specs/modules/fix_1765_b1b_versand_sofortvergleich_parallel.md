@@ -141,14 +141,53 @@ result = run_comparison_parallel(
   - Test: `threading.Barrier` wie AC-1, ueber den echten Router (`TestClient`); geprueft
     wird die Ortsreihenfolge im JSON-Antwortkoerper.
 
-- **AC-8:** Given ein Versand mit mehreren Orten / When die Wetterabrufe laufen / Then
-  traegt jeder Abruf im Aufruf-Journal die Quelle `vergleich`, auch aus dem Worker-Thread
-  - Test: `resolve_call_source()` innerhalb der Fake-Engine auslesen und je Ort pruefen.
-    Pflichtmutation: `call_source` weglassen muss den Test rot machen.
+- **AC-8:** Given ein Versand **oder ein Sofortvergleich** mit mehreren Orten / When die
+  Wetterabrufe laufen / Then traegt jeder Abruf im Aufruf-Journal die Quelle `vergleich`,
+  auch aus dem Worker-Thread
+  - Test: `resolve_call_source()` innerhalb der Fake-Engine auslesen und je Ort pruefen —
+    **je einmal fuer BEIDE Aufrufstellen** (`scheduler_dispatch_service.py` und
+    `api/routers/compare.py`, letzteres ueber den echten Router).
+    Pflichtmutation: `call_source` weglassen muss den Test rot machen — **an jeder der
+    beiden Stellen einzeln**.
+
+  ⚠️ Diese Formulierung ist die Korrektur eines Spec-Fehlers (Adversary-Finding F001,
+  CRITICAL): AC-8 war urspruenglich nur auf „Given ein Versand" zugeschnitten, waehrend die
+  Implementation Details `call_source` ohne Einschraenkung fuer **beide** Aufrufstellen
+  verlangen. Die Mutation „`call_source` am Sofortvergleich entfernen" liess daraufhin die
+  gesamte Suite gruen — die Zusicherung war nur an einer von zwei Wirkstellen geprueft.
 
 - **AC-9:** Given die Bestands-Testsuite des Versandpfads / When die Umstellung erfolgt ist
-  / Then bleiben alle 14 Testdateien mit Engine-Stub unveraendert gruen
-  - Test: Die betroffenen Dateien werden benannt ausgefuehrt; keine Datei wird angepasst.
+  / Then bleiben die Bestands-Testdateien mit Engine-Stub gruen, mit **genau einer benannten
+  Ausnahme** (s.u.)
+  - Test: Die betroffenen Dateien werden benannt ausgefuehrt; ausser der benannten Ausnahme
+    wird keine Datei angepasst.
+
+  **Benannte Ausnahme — `tests/tdd/test_vorschau_anzeige_folgen_ortszone.py`:** Die Sonde
+  `_leeres_vergleichsergebnis()` (Z.425-430) liefert `ComparisonResult(locations=[])` — also
+  **null** Ortsergebnisse fuer **einen** angeforderten Ort. Das widerspricht dem Vertrag der
+  Engine, die in `comparison_engine.py:127` ueber `for loc in locations:` je Ort **genau
+  ein** Ergebnis anhaengt (Z.143/337/378); ein leeres `locations` bei nicht-leerer Ortsliste
+  kann die echte Engine nicht erzeugen. Seriell fiel das nie auf (der Router iterierte ueber
+  eine leere Liste); parallel liest `comparison_parallel._run_one_location` (Z.83)
+  `result.locations[0]` und laeuft in einen `IndexError`.
+
+  **Korrektur:** der Stub liefert ein `LocationResult` fuer den angeforderten Ort. Die
+  Zusicherung der drei betroffenen Tests (`target_date` folgt dem **Ortstag**, nicht der
+  Serveruhr) bleibt woertlich unveraendert.
+
+  **Gegenprobe (korrigiert):** Die Verfaelschung muss am **Wirkort** ansetzen, nicht in der
+  Sonde. Das `target_date` der Sonde zu verfaelschen bleibt folgenlos — `api/routers/compare.py`
+  baut den Antwortwert aus dem selbst berechneten `td`, **nicht** aus `result.target_date`;
+  der Sondenwert erreicht die Zusicherung nie. (Der Docstring der Sonde behauptete das
+  Gegenteil und war schon vor dieser Scheibe falsch.) Gueltig ist stattdessen die
+  Verfaelschung in der Produktion:
+  `local_now = local_dt(datetime.now(timezone.utc), zone)` → `local_now = datetime.now()`
+  ⇒ genau die drei korrigierten Tests werden rot. Damit ist belegt, dass die Stub-Korrektur
+  Vertragstreue herstellt und nicht gruen faerbt.
+
+  **Bewusst nicht gewaehlt:** `comparison_parallel.py` gegen ein leeres Engine-Ergebnis zu
+  haerten. Das haette Robustheit gegen einen vertraglich ausgeschlossenen Fall in
+  gemeinsam genutzten Live-Code gebaut und wuerde kuenftig echte Fehler verdecken.
 
 ## Known Limitations
 

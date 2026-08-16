@@ -395,7 +395,8 @@ def send_one_compare_preset(
         render_compare_email, render_compare_sms, render_compare_telegram,
     )
     from services.compare_preview_service import order_locations_by_ids
-    from services.comparison_engine import COMPARE_FORECAST_HOURS, ComparisonEngine
+    from services.comparison_engine import COMPARE_FORECAST_HOURS
+    from services.comparison_parallel import run_comparison_parallel
     from services.notification_service import NotificationService
     from services.report_config_resolver import (
         resolve_compare_render_options, resolve_compare_time_window,
@@ -448,13 +449,21 @@ def send_one_compare_preset(
     # dieselbe Quelle wie der Trip-Zweig (day_window.resolve_configured_window).
     # Die deprecateten Preset-Werte hour_from/hour_to bleiben wirkungslos —
     # nur noch zur Bestandswahrung persistiert (#1361 Befund 1).
-    result = ComparisonEngine.run(
+    # Issue #1765 Scheibe B1b: die Orte werden gleichzeitig statt nacheinander
+    # gerechnet (ein Engine-Lauf JE ORT) -- sonst riss der Versand ab drei Orten
+    # die 60-Sekunden-Grenze zwischen Go-API und nginx. Alle uebrigen Parameter
+    # unveraendert; ``comparison_engine.py`` bleibt unangetastet.
+    # ``call_source`` MUSS ausdruecklich gesetzt werden: ein ThreadPoolExecutor
+    # reicht den ContextVar-Kontext nicht an seine Arbeiter weiter, die
+    # Stack-Marker des Aufruf-Journals liefen im Worker-Thread ins Leere.
+    result = run_comparison_parallel(
         locations=locations,
         time_window=resolve_compare_time_window(preset),
         target_date=target_date,
         forecast_hours=COMPARE_FORECAST_HOURS,  # Issue #1305: geteilte Konstante statt 48 fest
         profile=profile,
         official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
+        call_source="vergleich",
     )
 
     top_ort = result.locations[0].location.name if result.locations else None
