@@ -1081,3 +1081,87 @@ def test_record_official_alerts_reported_mit_leerer_liste_ist_ein_no_op():
         )
     finally:
         _clean_user(user_id)
+
+
+# ══════════ Issue #1467 Scheibe S4b-1 — AC-14 (Register-Reset, T5) ═══════════
+# SPEC: docs/specs/modules/rework_1467_s4b_entdopplung.md
+#
+# Zwei getrennte Testfunktionen (laut Spawn-Auftrag bewusst getrennt):
+#  * Regression (heute schon gruen, KEIN RED-Nachweis) -- Bestandsverhalten
+#    von reset() bleibt unveraendert: nur der 'official_alert:'-Praefix
+#    ueberlebt, alles andere faellt weg -- unabhaengig davon, WAS sonst noch
+#    im Melde-Gedaechtnis steht.
+#  * RED -- der neue Praefix 'event_identity:' existiert als Konstante noch
+#    nicht (ImportError). Sobald er existiert, braucht reset() laut Spec
+#    KEINE Logik-Aenderung (der bestehende Filter behaelt schon heute NUR
+#    OFFICIAL_ALERT_KEY_PREFIX-Eintraege) -- dieser Test beweist, dass genau
+#    das auch fuer den neuen Praefix zutrifft.
+
+
+def test_s4b_ac14_regression_reset_beruehrt_bestehende_official_alert_eintraege_nicht():
+    """#1467 S4b-1 AC-14 (Regressionstest, KEIN RED-Nachweis -- heute schon
+    gruen). Bestandsverhalten aus S4a/#1460 bleibt unveraendert: reset()
+    schont den 'official_alert:'-Praefix, unabhaengig davon, was sonst noch
+    im Melde-Gedaechtnis steht. Bewusst OHNE Bezug auf den neuen
+    'event_identity:'-Praefix -- der wird im zweiten Testfall unten (RED)
+    separat abgesichert."""
+    from services.alert_state import OFFICIAL_ALERT_KEY_PREFIX, AlertStateService
+
+    user_id = _fresh_user("s4b-ac14-reg")
+    _clean_user(user_id)
+    try:
+        trip_id = "trip-1467-s4b-ac14-reg"
+        official_key = f"{OFFICIAL_ALERT_KEY_PREFIX}region:Gailtal:thunderstorm:x:y"
+        official_value = {"last_reported_value": 3.0, "reported_at": "2026-08-11T14:22:03+00:00"}
+        other_key = "irgendein_anderer_schluessel:1"
+
+        svc = AlertStateService(user_id=user_id)
+        svc.save(trip_id, {official_key: official_value, other_key: {"x": 1}})
+
+        svc.reset(trip_id)
+
+        after = AlertStateService(user_id=user_id).load(trip_id)
+        assert after == {official_key: official_value}, (
+            f"Bestandsverhalten: nur der official_alert:-Eintrag darf "
+            f"ueberleben: {after!r}"
+        )
+    finally:
+        _clean_user(user_id)
+
+
+def test_s4b_ac14_neuer_event_identity_praefix_wird_vom_reset_erfasst():
+    """#1467 S4b-1 AC-14 (RED-Nachweis). Der NEUE Praefix 'event_identity:'
+    muss beim Briefing-Reset MITGELOESCHT werden -- ein alter
+    Nowcast-Registereintrag darf eine spaetere amtliche Warnung nach einem
+    neuen Briefing nicht mehr unterdruecken (T5).
+
+    RED-Ursache (heute): EVENT_IDENTITY_KEY_PREFIX existiert noch nicht in
+    services.alert_state -> ImportError."""
+    from services.alert_state import (
+        EVENT_IDENTITY_KEY_PREFIX, OFFICIAL_ALERT_KEY_PREFIX, AlertStateService,
+    )
+
+    user_id = _fresh_user("s4b-ac14-neu")
+    _clean_user(user_id)
+    try:
+        trip_id = "trip-1467-s4b-ac14-neu"
+        event_key = f"{EVENT_IDENTITY_KEY_PREFIX}wet:3:2026-08-11T14:22:00+00:00"
+        official_key = f"{OFFICIAL_ALERT_KEY_PREFIX}region:Gailtal:thunderstorm:x:y"
+        event_value = {"hazard_class": "wet", "reported_at": "2026-08-11T14:22:03+00:00"}
+        official_value = {"last_reported_value": 3.0, "reported_at": "2026-08-11T14:22:03+00:00"}
+
+        svc = AlertStateService(user_id=user_id)
+        svc.save(trip_id, {event_key: event_value, official_key: official_value})
+
+        svc.reset(trip_id)
+
+        after = AlertStateService(user_id=user_id).load(trip_id)
+        assert event_key not in after, (
+            f"Der event_identity:-Eintrag muss den Briefing-Reset NICHT "
+            f"ueberleben: {sorted(after)!r}"
+        )
+        assert after.get(official_key) == official_value, (
+            f"Der official_alert:-Eintrag muss unveraendert erhalten bleiben: {after!r}"
+        )
+    finally:
+        _clean_user(user_id)

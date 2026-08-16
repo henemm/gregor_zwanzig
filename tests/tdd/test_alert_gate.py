@@ -32,6 +32,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from app.loader import save_location
 
 from tests.helpers.nowcast_gate_fixtures import (
@@ -383,3 +385,673 @@ def test_ac15_tageslimit_wirkt_nicht_ueber_die_nutzergrenze():
     finally:
         clean_uid(a)
         clean_uid(b)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Issue #1467 Scheibe S4b-1 — quellenuebergreifende Ereignis-Identitaet
+# SPEC: docs/specs/modules/rework_1467_s4b_entdopplung.md
+#
+# ``check_event_identity_gate``/``record_event_identity``/
+# ``resolve_hazard_class`` existieren heute nicht -- RED-Grund fuer JEDEN
+# Test unten ist ein ``ImportError``, solange die Bausteine fehlen. Sobald
+# sie existieren, pruefen die Tests das tatsaechliche Verhalten (echte
+# ``AlertStateService``-Dateien auf Platte, kein Mock).
+#
+# Angenommene Signaturen (von diesen Tests VORGEGEBEN, nicht im Quellcode
+# gesehen -- die Implementierung muss sie erfuellen):
+#
+#     resolve_hazard_class(*, is_convective=None, hazard=None) -> str | None
+#     check_event_identity_gate(
+#         *, user_id, entity_id, hazard_class, segment_ids, severity, now,
+#         point_at=None, window_start=None, window_end=None,
+#         cooldown_minutes=None,
+#     ) -> GateResult
+#     record_event_identity(
+#         *, user_id, entity_id, hazard_class, segment_ids, severity, now,
+#         point_at=None, window_start=None, window_end=None,
+#     ) -> None
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+# ─────────────── Gefahrenart-Kanon (T2) — AC-4 + AC-4b ──────────────────────
+
+
+def test_ac4_resolve_hazard_class_kennt_nowcast_immer_als_wet():
+    """AC-4b (Baustein): ``resolve_hazard_class(is_convective=...)`` liefert
+    in BEIDEN Faellen (True/False) dieselbe Klasse ``HAZARD_CLASS_WET`` — ein
+    Nowcast ist immer Niederschlag, ``is_convective`` unterscheidet nur die
+    Erscheinungsform derselben Zelle (PO-Entscheid 2026-08-16, s. Spec
+    Implementation Details T2).
+
+    RED heute: ImportError."""
+    from services.alert_gate import HAZARD_CLASS_WET, resolve_hazard_class
+
+    assert resolve_hazard_class(is_convective=True) == HAZARD_CLASS_WET
+    assert resolve_hazard_class(is_convective=False) == HAZARD_CLASS_WET
+
+
+@pytest.mark.parametrize("hazard", ["thunderstorm", "flood", "rain"])
+def test_ac4b_amtliche_wet_hazards_erhalten_dieselbe_klasse(hazard):
+    """AC-4b: alle drei amtlichen ``wet``-Hazards (``thunderstorm``, ``flood``,
+    ``rain``) muessen auf dieselbe Klasse abbilden wie der Nowcast — sonst
+    liefe die quellenuebergreifende Entdopplung fuer diese Paare ins Leere."""
+    from services.alert_gate import HAZARD_CLASS_WET, resolve_hazard_class
+
+    assert resolve_hazard_class(hazard=hazard) == HAZARD_CLASS_WET
+
+
+@pytest.mark.parametrize("hazard", [
+    "wind_gust", "snow", "black_ice", "extreme_heat",
+    "extreme_cold", "wildfire_risk", "access_ban",
+])
+def test_ac4_nicht_wet_hazards_bekommen_keine_klasse(hazard):
+    """AC-4: die sieben Hazards ausserhalb des ``wet``-Kanons liefern ``None``
+    — ``resolve_hazard_class`` kennt keine andere Klasse, die Ereignis-
+    Identitaet greift fuer diese Gefahrenarten grundsaetzlich nie."""
+    from services.alert_gate import resolve_hazard_class
+
+    assert resolve_hazard_class(hazard=hazard) is None
+
+
+def test_ac4_check_event_identity_gate_laesst_hazard_class_none_immer_durch():
+    """AC-4 (integriert): ``hazard_class=None`` lässt IMMER durch, egal was im
+    Register steht — ``resolve_hazard_class`` hat vorher schon entschieden,
+    dass es fuer diese Gefahrenart keinen Kandidaten geben kann."""
+    from services.alert_gate import check_event_identity_gate
+
+    uid = fresh_uid("s4b-ac4")
+    clean_uid(uid)
+    try:
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac4", hazard_class=None,
+            segment_ids=["1"], severity="HIGH",
+            now=datetime.now(timezone.utc),
+        )
+        assert ergebnis.allowed is True
+        assert ergebnis.reason is None
+    finally:
+        clean_uid(uid)
+
+
+@pytest.mark.parametrize("is_convective,hazard", [
+    (True, "thunderstorm"), (True, "rain"),
+    (False, "thunderstorm"), (False, "rain"),
+])
+def test_ac4b_kreuzprobe_konvektiv_und_niederschlag_entdoppeln_sich_gegenseitig(
+    is_convective, hazard,
+):
+    """AC-4b (Kreuzprobe, Pflicht laut Spec) + Mutations-Gegenprobe.
+
+    GIVEN einen registrierten Nowcast-Eintrag mit ``is_convective=<param>``
+    WHEN  eine amtliche Warnung mit ``hazard=<param>`` desselben Orts und
+          ueberlappenden Zeitfensters eintrifft
+    THEN  wird sie unterdrueckt (``allowed=False``) — in ALLEN vier
+          Kombinationen. Die Radar-Einstufung konvektiv/nicht-konvektiv
+          trennt KEINE Ereignisse (PO-Entscheid 2026-08-16).
+
+    Mutations-Gegenprobe (Pflicht laut AC-4b): wuerde ``resolve_hazard_class``
+    wieder auf zwei Klassen (``"convective"``/``"precipitation"``﻿) aufgespalten,
+    lieferten ``is_convective=False``+``hazard="thunderstorm"`` bzw.
+    ``is_convective=True``+``hazard="rain"`` UNTERSCHIEDLICHE Klassen — kein
+    Registereintrag matcht mehr, die amtliche Warnung ginge faelschlich durch
+    (``allowed=True``), und genau diese zwei der vier Parametrisierungen
+    werden dann rot.
+
+    RED heute: ImportError."""
+    from services.alert_gate import (
+        check_event_identity_gate, record_event_identity, resolve_hazard_class,
+    )
+
+    uid = fresh_uid("s4b-ac4b")
+    clean_uid(uid)
+    try:
+        onset = datetime.now(timezone.utc) - timedelta(minutes=8, seconds=12)
+        record_event_identity(
+            user_id=uid, entity_id="trip-ac4b",
+            hazard_class=resolve_hazard_class(is_convective=is_convective),
+            segment_ids=["7"], severity="HIGH", point_at=onset, now=onset,
+        )
+
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac4b",
+            hazard_class=resolve_hazard_class(hazard=hazard),
+            segment_ids=["7"], severity="HIGH",
+            window_start=onset - timedelta(minutes=10),
+            window_end=onset + timedelta(minutes=45),
+            now=datetime.now(timezone.utc),
+        )
+
+        assert ergebnis.allowed is False, (
+            f"is_convective={is_convective} gegen hazard={hazard!r} muss "
+            f"entdoppeln: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ─────────────────── Baustein-Struktur — AC-1 (Teil) / AC-2 / AC-3 ──────────
+
+
+def test_ac1_check_event_identity_gate_liefert_eine_echte_gateresult_instanz():
+    """AC-1 (Typ-Nachweis): der Rueckgabewert ist eine echte ``GateResult``-
+    Instanz, nicht nur ein Objekt mit gleichnamigen Attributen. Der zweite
+    Teil von AC-1 (beide Trip-Pfade rufen DENSELBEN Baustein, per
+    Aufrufzaehler) steht end-to-end in
+    ``tests/tdd/test_issue_1088_official_alert_triggers.py`` — dort sind
+    echte Trip-/Versand-Fixtures ohnehin vorhanden, ein zweiter Nachbau hier
+    waere doppelte Testinfrastruktur ohne zusaetzliche Aussagekraft."""
+    from services.alert_gate import GateResult, check_event_identity_gate
+
+    uid = fresh_uid("s4b-ac1")
+    clean_uid(uid)
+    try:
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac1", hazard_class="wet",
+            segment_ids=["1"], severity="HIGH",
+            now=datetime.now(timezone.utc),
+        )
+        assert isinstance(ergebnis, GateResult), (
+            f"Erwartet eine echte GateResult-Instanz, erhalten: {type(ergebnis)!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_ac2_record_event_identity_legt_genau_einen_registereintrag_an():
+    """AC-2: eine erfolgreich zugestellte Meldung legt GENAU EINEN
+    Registereintrag unter dem Praefix ``event_identity:<hazard_class>:`` an,
+    mit Gefahrenklasse, Ortskennungen, Zeitbezug, Dringlichkeit und
+    Zeitpunkt."""
+    from services.alert_gate import record_event_identity
+    from services.alert_state import EVENT_IDENTITY_KEY_PREFIX, AlertStateService
+
+    uid = fresh_uid("s4b-ac2")
+    clean_uid(uid)
+    try:
+        now = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-ac2", hazard_class="wet",
+            segment_ids=["3", "4"], severity="HIGH", point_at=now, now=now,
+        )
+
+        state = AlertStateService(user_id=uid).load("trip-ac2")
+        neue = {k: v for k, v in state.items() if k.startswith(EVENT_IDENTITY_KEY_PREFIX)}
+        assert len(neue) == 1, (
+            f"Erwartet genau EINEN neuen event_identity:-Schluessel, "
+            f"gefunden {len(neue)}: {sorted(state)!r}"
+        )
+        (eintrag,) = neue.values()
+        assert eintrag["hazard_class"] == "wet"
+        assert set(eintrag["segment_ids"]) == {"3", "4"}
+        assert eintrag["severity"] == "HIGH"
+        assert "reported_at" in eintrag
+    finally:
+        clean_uid(uid)
+
+
+def test_ac3_check_event_identity_gate_ist_rein_lesend_kein_registereintrag():
+    """AC-3 (Baustein-Ebene, F001-Symmetrie): ein reiner Freigabe-Check darf
+    NIE selbst einen Registereintrag anlegen — Registrierung ist
+    ausschliesslich Sache von ``record_event_identity()``, aufgerufen NACH
+    erfolgreicher Zustellung (analog ``record_nowcast_sent``). Der
+    End-to-End-Nachweis fuer eine technisch gescheiterte Zustellung liegt
+    im AC-11/AC-17-Umfeld von ``test_issue_1088_official_alert_triggers.py``."""
+    from services.alert_gate import check_event_identity_gate
+    from services.alert_state import AlertStateService
+
+    uid = fresh_uid("s4b-ac3")
+    clean_uid(uid)
+    try:
+        vorher = AlertStateService(user_id=uid).load("trip-ac3")
+        check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac3", hazard_class="wet",
+            segment_ids=["1"], severity="HIGH",
+            point_at=datetime.now(timezone.utc), now=datetime.now(timezone.utc),
+        )
+        nachher = AlertStateService(user_id=uid).load("trip-ac3")
+        assert vorher == nachher == {}, (
+            f"check_event_identity_gate() darf selbst NIE einen "
+            f"Registereintrag anlegen: vorher={vorher!r} nachher={nachher!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_ac13_aenderungsalarm_guard_eintraege_erzeugen_keinen_event_identity_key():
+    """AC-13 (T7-Ergaenzung): ein Aenderungsalarm-Guard-Eintrag
+    (``precip:<segment>``/``thunder_level_max:<segment>``, geschrieben vom
+    Δ-Pfad) erzeugt KEINEN ``event_identity:``-Registereintrag — der neue
+    Baustein ist fuer diese Paarung strukturell nicht zustaendig (T7:
+    Nowcast↔Δ bleibt allein Sache des bestehenden Doppel-Alert-Guards,
+    ``trip_alert.py:1081-1099``). Der Bestandsschutz des Guards selbst bleibt
+    unveraendert in
+    ``tests/tdd/test_issue_818_radar_briefing_integration.py::
+    test_ac4_double_alert_guard_suppresses_radar_when_forecast_recent``
+    (hier NICHT erneut nachgebaut)."""
+    from services.alert_state import EVENT_IDENTITY_KEY_PREFIX, AlertStateService
+
+    uid = fresh_uid("s4b-ac13")
+    clean_uid(uid)
+    try:
+        AlertStateService(user_id=uid).save("trip-ac13", {
+            "precip:1": {
+                "last_reported_value": 5.0,
+                "reported_at": datetime.now(timezone.utc).isoformat(),
+            },
+        })
+        state = AlertStateService(user_id=uid).load("trip-ac13")
+        event_keys = [k for k in state if k.startswith(EVENT_IDENTITY_KEY_PREFIX)]
+        assert event_keys == [], (
+            f"Ein Aenderungsalarm-Guard-Eintrag darf keinen event_identity:-"
+            f"Schluessel erzeugen (andere Paarung, T7): {event_keys!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ───────────────────────── Ortsbezug (T3) — AC-5 ─────────────────────────────
+
+
+def test_ac5_disjunkte_segment_mengen_erzeugen_kein_match():
+    """AC-5: gleiche Gefahrenklasse, ueberlappendes Zeitfenster, aber
+    DISJUNKTE Segment-Mengen -> kein Match, die neue Meldung wird
+    zugestellt."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("s4b-ac5a")
+    clean_uid(uid)
+    try:
+        now = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-ac5a", hazard_class="wet",
+            segment_ids=["1", "2"], severity="HIGH", point_at=now, now=now,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac5a", hazard_class="wet",
+            segment_ids=["9"], severity="HIGH",
+            window_start=now - timedelta(minutes=10),
+            window_end=now + timedelta(minutes=30),
+            now=now + timedelta(minutes=5),
+        )
+        assert ergebnis.allowed is True, (
+            f"Disjunkte Segment-Mengen duerfen NICHT als Match zaehlen: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_ac5_leere_segment_kennung_erzeugt_niemals_ein_match():
+    """AC-5 (Bruchstelle): eine leere/fehlende Segment-Kennung auf EINER Seite
+    darf niemals ein Match erzeugen — sonst passte "kein Ort bekannt" auf
+    "jeden Ort"."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("s4b-ac5b")
+    clean_uid(uid)
+    try:
+        now = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-ac5b", hazard_class="wet",
+            segment_ids=[], severity="HIGH", point_at=now, now=now,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac5b", hazard_class="wet",
+            segment_ids=["3"], severity="HIGH",
+            window_start=now - timedelta(minutes=10),
+            window_end=now + timedelta(minutes=30),
+            now=now + timedelta(minutes=5),
+        )
+        assert ergebnis.allowed is True, (
+            f"Ein Registereintrag ohne Segment-Kennung darf kein Match "
+            f"erzeugen: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ────────────────────── Zeitfenster (T4) — AC-6 / AC-7 ───────────────────────
+
+
+def test_ac6_kernfall_nowcast_gefolgt_von_amtlicher_warnung_8_2_min_spaeter():
+    """AC-6: Reproduktion des gemessenen Falls ``5f534011`` (2026-08-11,
+    14:22 UTC Nowcast, +8,2 Min amtliche Warnung, s. Spec Purpose).
+
+    GIVEN ein registrierter Nowcast-Eintrag (Klasse 'wet', Segment '3', Onset
+          14:22 UTC)
+    WHEN  8,2 Min spaeter eine amtliche Warnung derselben Klasse/desselben
+          Segments eintrifft, deren Fenster den Onset-Punkt (mit 60-Min-
+          Puffer) ueberlappt UND das abgedeckte Ende NICHT wesentlich
+          ueberschreitet (keine V1-Ausnahme) UND keine hoehere Dringlichkeit
+          traegt (keine V2-Eskalation)
+    THEN  wird sie unterdrueckt."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+    from services.alert_log import REASON_EVENT_DUPLICATE
+
+    uid = fresh_uid("s4b-ac6")
+    clean_uid(uid)
+    try:
+        onset = datetime(2026, 8, 11, 14, 22, 0, tzinfo=timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-ac6", hazard_class="wet",
+            segment_ids=["3"], severity="HIGH", point_at=onset, now=onset,
+        )
+        amtlich_zeit = onset + timedelta(minutes=8, seconds=12)
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac6", hazard_class="wet",
+            segment_ids=["3"], severity="HIGH",
+            window_start=onset - timedelta(minutes=10),
+            window_end=onset + timedelta(minutes=45),
+            now=amtlich_zeit,
+        )
+        assert ergebnis.allowed is False
+        assert ergebnis.reason == REASON_EVENT_DUPLICATE, (
+            f"Erwartet {REASON_EVENT_DUPLICATE!r}, erhalten {ergebnis.reason!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_ac7_neue_meldung_ohne_zeitbezug_erzeugt_kein_match():
+    """AC-7 (fail-soft, erste Seite): fehlt der neuen Meldung jeder
+    vergleichbare Zeitbezug (weder ``point_at`` noch ``window_start``/
+    ``window_end``), entsteht kein Match — die Meldung wird zugestellt."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("s4b-ac7a")
+    clean_uid(uid)
+    try:
+        onset = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-ac7a", hazard_class="wet",
+            segment_ids=["1"], severity="HIGH", point_at=onset, now=onset,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac7a", hazard_class="wet",
+            segment_ids=["1"], severity="HIGH", now=onset + timedelta(minutes=5),
+        )
+        assert ergebnis.allowed is True, (
+            f"Ohne vergleichbaren Zeitbezug darf keine Unterdrueckung "
+            f"entstehen: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_ac7_unparsbares_zeitfeld_im_registereintrag_erzeugt_kein_match():
+    """AC-7 (fail-soft, zweite Seite): ein Registereintrag mit unparsbarem
+    ``point_at`` darf nicht zum Absturz fuehren UND erzeugt fail-soft kein
+    Match — die neue Meldung wird zugestellt."""
+    from services.alert_gate import check_event_identity_gate
+    from services.alert_state import AlertStateService
+
+    uid = fresh_uid("s4b-ac7b")
+    clean_uid(uid)
+    try:
+        now = datetime.now(timezone.utc)
+        AlertStateService(user_id=uid).save("trip-ac7b", {
+            "event_identity:wet:1:kaputt": {
+                "hazard_class": "wet", "segment_ids": ["1"], "severity": "HIGH",
+                "point_at": "nicht-geparst-2026-13-99", "window_start": None,
+                "window_end": None, "reported_at": now.isoformat(),
+            },
+        })
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac7b", hazard_class="wet",
+            segment_ids=["1"], severity="HIGH", point_at=now, now=now,
+        )
+        assert ergebnis.allowed is True, (
+            f"Ein unparsbares Zeitfeld im Register darf kein Match erzeugen "
+            f"(fail-soft): {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ──────────── V1 — zeitliche Prioritaet + Abdeckungs-Vorbehalt — AC-8/AC-9 ───
+
+
+def test_ac8_zweite_meldung_vollstaendig_innerhalb_des_abgedeckten_fensters():
+    """AC-8: keine Eskalation, keine wesentliche Erweiterung -> die zweite
+    Meldung wird unterdrueckt (Intervall-gegen-Intervall-Fall, isoliert
+    getestet, s. Spec T4)."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("s4b-ac8")
+    clean_uid(uid)
+    try:
+        now = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-ac8", hazard_class="wet",
+            segment_ids=["2"], severity="MODERATE",
+            window_start=now, window_end=now + timedelta(hours=2), now=now,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac8", hazard_class="wet",
+            segment_ids=["2"], severity="MODERATE",
+            window_start=now + timedelta(minutes=30),
+            window_end=now + timedelta(hours=1),
+            now=now + timedelta(minutes=10),
+        )
+        assert ergebnis.allowed is False, (
+            f"Ein vollstaendig abgedecktes Fenster ohne Eskalation muss "
+            f"unterdrueckt werden: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_ac9_valid_to_reicht_wesentlich_ueber_das_abgedeckte_ende_hinaus():
+    """AC-9 (V1-Ausnahme) + Mutations-Gegenprobe (PFLICHT laut Spec).
+
+    GIVEN ein registrierter Nowcast-Eintrag (abgedeckt bis Onset+60 Min)
+    WHEN  eine amtliche Warnung derselben Klasse/desselben Orts eintrifft,
+          deren ``valid_to`` MEHR ALS 60 Min ueber das abgedeckte Ende
+          hinausreicht — OHNE hoehere Dringlichkeit
+    THEN  wird sie zugestellt (neue Information).
+
+    Mutations-Gegenprobe: wird ``NOWCAST_HORIZON_MIN`` durch eine deutlich
+    groessere Zahl (z. B. 600) ersetzt, deckt das verfaelschte Fenster
+    ``covered_until + 600min`` das hier verwendete ``valid_to`` (nur +90 Min
+    ueber ``covered_until``) weiterhin ab — die V1-Ausnahme greift dann
+    NICHT mehr, ``allowed`` wird ``False`` statt ``True``, und dieser Test
+    wird rot."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("s4b-ac9")
+    clean_uid(uid)
+    try:
+        onset = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-ac9", hazard_class="wet",
+            segment_ids=["4"], severity="MODERATE", point_at=onset, now=onset,
+        )
+        # covered_until = onset + NOWCAST_HORIZON_MIN (60 Min)
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac9", hazard_class="wet",
+            segment_ids=["4"], severity="MODERATE",  # keine hoehere Dringlichkeit
+            window_start=onset,
+            window_end=onset + timedelta(minutes=150),  # 90 Min ueber covered_until
+            now=onset + timedelta(minutes=5),
+        )
+        assert ergebnis.allowed is True, (
+            f"Ein Fenster, das wesentlich ueber das abgedeckte Ende "
+            f"hinausreicht, muss durchkommen (V1-Ausnahme): {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ─────────────── V2 — Verschaerfung durchbricht immer — AC-10 ───────────────
+
+
+def test_ac10_hoehere_dringlichkeit_durchbricht_auch_ohne_zeitliche_erweiterung():
+    """AC-10 (V2-Eskalation) + Mutations-Gegenprobe (PFLICHT laut Spec).
+
+    GIVEN eine registrierte Meldung mit Dringlichkeit MODERATE
+    WHEN  eine zweite Meldung derselben Klasse/desselben Orts mit HOEHERER
+          Dringlichkeit (HIGH) eintrifft, deren Zeitfenster VOLLSTAENDIG
+          innerhalb des abgedeckten Fensters liegt (die V1-Ausnahme greift
+          hier ausdruecklich NICHT — nur die Eskalation)
+    THEN  wird sie zugestellt.
+
+    Mutations-Gegenprobe: wird der Eskalations-Zweig entfernt oder HINTER
+    die V1-Ausnahme verschoben, prueft die Funktion zuerst "wesentlich mehr
+    abgedeckt?" — das Zeitfenster liegt hier bewusst VOLLSTAENDIG innerhalb
+    des abgedeckten Fensters, die V1-Ausnahme greift also nicht, und ohne den
+    strukturell ERSTEN Eskalations-Zweig bliebe die Warnung faelschlich
+    unterdrueckt (``allowed=False``). Dieser Test wird dann rot — das ist die
+    Absicherung gegen die gefaehrlichste Fehlerrichtung "Alarm bleibt aus"
+    bei einer echten Verschaerfung."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("s4b-ac10")
+    clean_uid(uid)
+    try:
+        now = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-ac10", hazard_class="wet",
+            segment_ids=["5"], severity="MODERATE",
+            window_start=now, window_end=now + timedelta(hours=3), now=now,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac10", hazard_class="wet",
+            segment_ids=["5"], severity="HIGH",  # Eskalation
+            window_start=now + timedelta(minutes=30),
+            window_end=now + timedelta(hours=1),  # vollstaendig innerhalb
+            now=now + timedelta(minutes=10),
+        )
+        assert ergebnis.allowed is True, (
+            f"Eine echte Verschaerfung muss IMMER durchkommen, auch ohne "
+            f"zeitliche Erweiterung: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ───────────────────────── Mandantentrennung — AC-18 ────────────────────────
+
+
+def test_ac18_registereintrag_von_nutzer_a_wirkt_nicht_auf_nutzer_b():
+    """AC-18: zwei verschiedene Nutzer, gleiche Trip-Kennung, unabhaengig
+    gefuehrte Register — Nutzer A registriert einen Nowcast, Nutzer B erhaelt
+    seine amtliche Warnung trotzdem (kein Rueckfall auf ``"default"``)."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    a, b = fresh_uid("s4b-ac18-a"), fresh_uid("s4b-ac18-b")
+    clean_uid(a)
+    clean_uid(b)
+    try:
+        onset = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=a, entity_id="trip-geteilt", hazard_class="wet",
+            segment_ids=["9"], severity="HIGH", point_at=onset, now=onset,
+        )
+        ergebnis_b = check_event_identity_gate(
+            user_id=b, entity_id="trip-geteilt", hazard_class="wet",
+            segment_ids=["9"], severity="HIGH",
+            window_start=onset - timedelta(minutes=10),
+            window_end=onset + timedelta(minutes=30),
+            now=onset + timedelta(minutes=5),
+        )
+        assert ergebnis_b.allowed is True, (
+            f"Nutzer B (user_id={b!r}) darf durch den Registereintrag von "
+            f"Nutzer A (user_id={a!r}) nicht beeinflusst werden: {ergebnis_b!r}"
+        )
+    finally:
+        clean_uid(a)
+        clean_uid(b)
+
+
+# ─────────────────── Bestandsdaten / fail-soft — AC-19 ──────────────────────
+
+
+def test_ac19_registereintrag_mit_fehlendem_severity_feld_wird_wie_kein_match_behandelt():
+    """AC-19: ein Registereintrag ohne ``severity`` (kaputtes/altes/kuenftiges
+    Schema) darf nicht zum Absturz fuehren und zaehlt fail-soft NICHT als
+    Match — die neue Meldung wird zugestellt."""
+    from services.alert_gate import check_event_identity_gate
+    from services.alert_state import AlertStateService
+
+    uid = fresh_uid("s4b-ac19")
+    clean_uid(uid)
+    try:
+        onset = datetime.now(timezone.utc)
+        AlertStateService(user_id=uid).save("trip-ac19", {
+            f"event_identity:wet:6:{onset.isoformat()}": {
+                "hazard_class": "wet", "segment_ids": ["6"],
+                # 'severity' fehlt bewusst — kaputtes/altes Format
+                "point_at": onset.isoformat(), "window_start": None,
+                "window_end": None, "reported_at": onset.isoformat(),
+            },
+        })
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac19", hazard_class="wet",
+            segment_ids=["6"], severity="HIGH",
+            point_at=onset + timedelta(minutes=5), now=onset + timedelta(minutes=5),
+        )
+        assert ergebnis.allowed is True, (
+            f"Ein kaputter Registereintrag darf nicht als Match zaehlen "
+            f"(fail-soft, kein Absturz): {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ─────────────────────── Regression zu S4a — AC-20 ───────────────────────────
+
+
+def test_ac20_check_official_alert_gate_signatur_bleibt_ohne_cooldown_parameter():
+    """AC-20 (Regression zu S4a, HEUTE SCHON GRUEN — kein RED-Nachweis): die
+    Funktionssignatur von ``check_official_alert_gate`` bleibt durch S4b-1
+    UNVERAENDERT — kein Cooldown-/Sperrzeit-Parameter wandert nachtraeglich
+    hinein. Die neue Ereignis-Identitaet-Pruefung ist ein EIGENER,
+    nachgelagerter Aufruf, keine Erweiterung des Gates selbst."""
+    import inspect
+
+    from services.alert_gate import check_official_alert_gate
+
+    params = set(inspect.signature(check_official_alert_gate).parameters)
+    verbotene = {"cooldown_minutes", "cooldown", "throttle_scope", "throttle_key"}
+    getroffen = params & verbotene
+    assert not getroffen, (
+        f"check_official_alert_gate hat einen Cooldown-aehnlichen Parameter "
+        f"bekommen: {getroffen!r} (voller Parametersatz: {sorted(params)!r})"
+    )
+
+
+# ───────────────────────── Dokumentation — AC-21 ─────────────────────────────
+
+
+def test_ac21_adr_0021_traegt_einen_datierten_s4b_nachtrag():
+    """AC-21. ``# doc-compliance-test`` (Ausnahme von der
+    Dateiinhalt-Regel, CLAUDE.md). GIVEN den bestehenden ADR-0021-Nachtrag
+    aus S4a (#1467), WHEN diese Scheibe abgeschlossen ist, THEN traegt
+    ADR-0021 einen weiteren, datierten Nachtrag mit Bezug auf '#1467' UND
+    'S4b', der die neue quellenuebergreifende Ereignis-Identitaet-Pruefung
+    festhaelt, ohne die S4a-Aussage zur Unterdrueckungs-Protokollierung zu
+    widerrufen.
+
+    RED heute: der Nachtrag fehlt noch."""
+    from pathlib import Path
+
+    adr_path = (
+        Path(__file__).resolve().parents[2]
+        / "docs" / "adr" / "0021-shared-deviation-alert-engine.md"
+    )
+    text = adr_path.read_text(encoding="utf-8")
+
+    assert "S4b" in text, (
+        f"ADR-0021 muss einen Nachtrag mit Bezug auf 'S4b' tragen: {adr_path}"
+    )
+    assert "#1467" in text, (
+        f"ADR-0021 muss den Nachtrag auf '#1467' beziehen: {adr_path}"
+    )
+    # Der neue Nachtrag muss NACH dem S4a-Nachtrag stehen (Reihenfolge =
+    # Chronologie der Nachtraege in diesem ADR).
+    s4a_pos = text.find("Issue #1467 S4a")
+    s4b_pos = text.find("Issue #1467 S4b")
+    assert s4a_pos != -1, "Der bestehende S4a-Nachtrag darf nicht verschwinden"
+    assert s4b_pos != -1 and s4b_pos > s4a_pos, (
+        f"Der neue S4b-Nachtrag muss NACH dem S4a-Nachtrag stehen "
+        f"(s4a_pos={s4a_pos}, s4b_pos={s4b_pos})"
+    )

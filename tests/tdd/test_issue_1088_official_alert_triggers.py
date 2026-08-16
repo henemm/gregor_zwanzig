@@ -21,6 +21,7 @@ RED-Ursache (heute, vor der Implementierung):
 """
 from __future__ import annotations
 
+import json
 import shutil
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -671,3 +672,407 @@ class TestAC7SmsWithoutParity:
             assert sms_after == sms_before, "SMS-Ausgabe darf sich durch official_notices NICHT verändern"
         finally:
             _clean_user(user_id)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Issue #1467 Scheibe S4b-1 — Verdrahtung der Ereignis-Identitaet in BEIDE
+# Trip-Richtungen (Nowcast + amtlich).
+# SPEC: docs/specs/modules/rework_1467_s4b_entdopplung.md
+#
+# ``services.alert_gate.check_event_identity_gate``/``record_event_identity``
+# existieren heute nicht -- RED-Grund ist durchgaengig ein ``ImportError``
+# beim Aufbau der Spione. ``trip_alert.py`` importiert seine Gate-Bausteine
+# per ``from services.alert_gate import (...)`` (benannter Import) -- ein
+# Patch auf ``services.alert_gate.check_event_identity_gate`` waere an den
+# Aufrufstellen WIRKUNGSLOS. Gepatcht wird deshalb der Name im
+# Modul-Namespace von ``services.trip_alert`` selbst (Erwartung an die
+# Implementierung: sie importiert die neue Funktion genau so, wie es die
+# bestehenden Bausteine bereits tun).
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _order_spy(monkeypatch, module, name: str, order: list, label: str):
+    """Haengt einen Aufruf-Reihenfolge-Spion an ``module.<name>`` -- delegiert
+    unveraendert an die Originalfunktion, zeichnet aber ZUERST das Label auf.
+    Kein Mock: die reale Implementierung laeuft unveraendert mit."""
+    original = getattr(module, name)
+
+    def _wrapped(*args, **kwargs):
+        order.append(label)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(module, name, _wrapped)
+
+
+class TestS4bEventIdentityWiring:
+    """AC-1 (Verdrahtungsteil), AC-11, AC-12, AC-17."""
+
+    def test_ac1_beide_trip_pfade_rufen_denselben_baustein_auf(self, monkeypatch):
+        """AC-1 (Verdrahtungsteil): sowohl der Nowcast-Trip-Pfad
+        (``check_radar_alerts``) als auch der amtliche Trip-Pfad
+        (``_send_official_alert_only``) rufen fuer eine Meldung der Klasse
+        'wet' DENSELBEN ``check_event_identity_gate``-Baustein auf --
+        mindestens 1x je Pfad und Lauf mit zutreffender Gefahrenklasse.
+
+        RED heute: ImportError beim Aufbau des Spions."""
+        import services.trip_alert as trip_alert_mod
+        from services.alert_gate import GateResult
+        from services.alert_gate import check_event_identity_gate as _real_identity
+        from services.official_alerts import OfficialAlert, register_official_alert_source
+        from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import (
+            CountingFrameSource, make_trip, settings_email_only, trip_alert_service,
+        )
+
+        results: list = []
+
+        def _spy(*args, **kwargs):
+            ergebnis = _real_identity(*args, **kwargs)
+            results.append(ergebnis)
+            return ergebnis
+
+        monkeypatch.setattr(trip_alert_mod, "check_event_identity_gate", _spy)
+
+        uid = _fresh_user("s4b-ac1")
+        _clean_user(uid)
+        oa_base, backup = _registered_sources_backup()
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            # ── Nowcast-Pfad ──
+            trip_nowcast = make_trip("trip-s4b-ac1-nowcast")
+            raus = trip_alert_service(
+                uid, settings_email_only(), CountingFrameSource(onset_minutes=8),
+                lambda s, b: None,
+            ).check_radar_alerts()
+            assert raus == 1, f"Voraussetzung: der Nowcast muss zustellen ({raus!r})"
+            assert len(results) >= 1, (
+                "check_event_identity_gate wurde im Nowcast-Pfad nicht gerufen"
+            )
+            assert isinstance(results[-1], GateResult), (
+                f"Rueckgabewert muss eine echte GateResult-Instanz sein: "
+                f"{type(results[-1])!r}"
+            )
+            results.clear()
+
+            # ── amtlicher Pfad ──
+            trip_amtlich = _minimal_trip("trip-s4b-ac1-amtlich")
+            _save_cached(uid, trip_amtlich.id, [_data(1, precip_sum_mm=2.0)])
+            alert = OfficialAlert(
+                source="tdd-s4b-ac1", hazard="thunderstorm", level=3,
+                label="AC-1-Warnung",
+            )
+            register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
+            svc = TripAlertService(user_id=uid, mail_sink=lambda s, b: None)
+            notices = svc.check_official_alert_triggers(trip_amtlich)
+            assert len(notices) == 1, "Voraussetzung: die amtliche Warnung muss neu sein"
+
+            sent = svc._send_official_alert_only(trip_amtlich, notices)
+            assert sent is True, f"Voraussetzung: der amtliche Versand muss gelingen ({sent!r})"
+            assert len(results) >= 1, (
+                "check_event_identity_gate wurde im amtlichen Pfad nicht gerufen"
+            )
+            assert isinstance(results[-1], GateResult), (
+                f"Rueckgabewert muss eine echte GateResult-Instanz sein: "
+                f"{type(results[-1])!r}"
+            )
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
+            _clean_user(uid)
+
+    def test_ac12_nowcast_pfad_ruft_das_gate_als_letzte_stufe_vor_dem_versand(
+        self, monkeypatch,
+    ):
+        """AC-12 (Nowcast-Aequivalent): ``check_event_identity_gate`` laeuft
+        NACH ``check_nowcast_gate`` UND VOR dem tatsaechlichen Versand
+        (``mail_sink``) -- beobachtet zur LAUFZEIT ueber eine echte
+        Aufruf-Sequenz, ein reiner Quellcode-Grep genuegt laut Spec nicht.
+
+        RED heute: ImportError beim Patchen von ``check_event_identity_gate``."""
+        import services.trip_alert as trip_alert_mod
+        from services.alert_gate import check_event_identity_gate as _real_identity
+        from tests.helpers.nowcast_gate_fixtures import (
+            CountingFrameSource, make_trip, settings_email_only, trip_alert_service,
+        )
+
+        order: list[str] = []
+        _order_spy(monkeypatch, trip_alert_mod, "check_nowcast_gate", order, "check_nowcast_gate")
+
+        def _spy_identity(*args, **kwargs):
+            order.append("check_event_identity_gate")
+            return _real_identity(*args, **kwargs)
+
+        monkeypatch.setattr(trip_alert_mod, "check_event_identity_gate", _spy_identity)
+
+        uid = _fresh_user("s4b-ac12-nowcast")
+        _clean_user(uid)
+        try:
+            trip = make_trip("trip-s4b-ac12-nowcast")
+
+            def _mail_sink(subject, body):
+                order.append("mail_sink")
+
+            raus = trip_alert_service(
+                uid, settings_email_only(), CountingFrameSource(onset_minutes=8), _mail_sink,
+            ).check_radar_alerts()
+
+            assert raus == 1, f"Voraussetzung: der Nowcast muss zustellen ({raus!r})"
+            assert order == ["check_nowcast_gate", "check_event_identity_gate", "mail_sink"], (
+                f"Falsche Aufruf-Reihenfolge: {order!r}"
+            )
+        finally:
+            _clean_user(uid)
+
+    def test_ac12_amtlicher_pfad_ruft_das_gate_als_letzte_stufe_vor_dem_versand(
+        self, monkeypatch,
+    ):
+        """AC-12: ``check_event_identity_gate`` laeuft NACH
+        ``check_official_alert_gate`` UND NACH ``_is_briefing_imminent``, VOR
+        dem tatsaechlichen Versand -- gleiche Beobachtungsmethode wie oben.
+
+        ``_is_briefing_imminent`` ist eine gebundene Methode -- der Spion
+        sitzt auf einer echten Unterklasse (kein Mock, Vorbild
+        ``_RecordingScheduler`` in test_alert_state_briefing_reset.py), die
+        an ``super()`` delegiert.
+
+        RED heute: ImportError beim Patchen von ``check_event_identity_gate``."""
+        import services.trip_alert as trip_alert_mod
+        from services.alert_gate import check_event_identity_gate as _real_identity
+        from services.official_alerts import OfficialAlert, register_official_alert_source
+        from services.trip_alert import TripAlertService
+
+        order: list[str] = []
+        _order_spy(
+            monkeypatch, trip_alert_mod, "check_official_alert_gate", order,
+            "check_official_alert_gate",
+        )
+
+        def _spy_identity(*args, **kwargs):
+            order.append("check_event_identity_gate")
+            return _real_identity(*args, **kwargs)
+
+        monkeypatch.setattr(trip_alert_mod, "check_event_identity_gate", _spy_identity)
+
+        class _RecordingTripAlertService(TripAlertService):
+            def _is_briefing_imminent(self, trip, now_utc):
+                order.append("_is_briefing_imminent")
+                return super()._is_briefing_imminent(trip, now_utc)
+
+        uid = _fresh_user("s4b-ac12-amtlich")
+        _clean_user(uid)
+        oa_base, backup = _registered_sources_backup()
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            trip = _minimal_trip("trip-s4b-ac12-amtlich")
+            _save_cached(uid, trip.id, [_data(1, precip_sum_mm=2.0)])
+            alert = OfficialAlert(
+                source="tdd-s4b-ac12", hazard="thunderstorm", level=3,
+                label="AC-12-Warnung",
+            )
+            register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
+
+            def _mail_sink(subject, body):
+                order.append("mail_sink")
+
+            svc = _RecordingTripAlertService(user_id=uid, mail_sink=_mail_sink)
+            notices = svc.check_official_alert_triggers(trip)
+            assert len(notices) == 1, "Voraussetzung: die amtliche Warnung muss neu sein"
+
+            sent = svc._send_official_alert_only(trip, notices)
+
+            assert sent is True, f"Voraussetzung: der amtliche Versand muss gelingen ({sent!r})"
+            assert order == [
+                "check_official_alert_gate", "_is_briefing_imminent",
+                "check_event_identity_gate", "mail_sink",
+            ], f"Falsche Aufruf-Reihenfolge: {order!r}"
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
+            _clean_user(uid)
+
+    def test_ac11_unterdrueckte_amtliche_warnung_ruft_split_by_threshold_fuer_keinen_kanal_auf(
+        self, monkeypatch,
+    ):
+        """AC-11 (V3, kanaluebergreifend): wird die amtliche Warnung durch
+        ``check_event_identity_gate`` unterdrueckt, wird
+        ``alert_channel_threshold.split_by_threshold()`` fuer KEINEN Kanal
+        aufgerufen. Gegenprobe im selben Test: eine andere Gefahrenart (keine
+        Klasse) desselben Trips geht durch das Gate hindurch --
+        ``split_by_threshold()`` WIRD aufgerufen.
+
+        ``trip_alert.py`` importiert ``alert_channel_threshold`` als MODUL
+        (``from services import alert_channel_threshold``, kein benannter
+        Funktions-Import) -- ein Patch auf das echte Modulattribut wirkt hier
+        also direkt an der Aufrufstelle.
+
+        RED heute: ImportError bei ``record_event_identity``."""
+        import services.alert_channel_threshold as threshold_mod
+        from services.alert_gate import record_event_identity
+        from services.official_alerts import OfficialAlert, register_official_alert_source
+        from services.trip_alert import TripAlertService
+
+        calls: list = []
+        original = threshold_mod.split_by_threshold
+
+        def _spy(*args, **kwargs):
+            calls.append(args)
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(threshold_mod, "split_by_threshold", _spy)
+
+        uid = _fresh_user("s4b-ac11")
+        _clean_user(uid)
+        oa_base, backup = _registered_sources_backup()
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            now = datetime.now(timezone.utc)
+            record_event_identity(
+                user_id=uid, entity_id="trip-s4b-ac11", hazard_class="wet",
+                segment_ids=["1"], severity="HIGH", point_at=now, now=now,
+            )
+
+            trip = _minimal_trip("trip-s4b-ac11")
+            _save_cached(uid, trip.id, [_data(1, precip_sum_mm=2.0)])
+            alert = OfficialAlert(
+                source="tdd-s4b-ac11", hazard="thunderstorm", level=3,
+                label="AC-11-Warnung", valid_from=now - timedelta(minutes=5),
+                valid_to=now + timedelta(minutes=30),
+            )
+            register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
+
+            svc = TripAlertService(user_id=uid, mail_sink=lambda s, b: None)
+            notices = svc.check_official_alert_triggers(trip)
+            assert len(notices) == 1, "Voraussetzung: die Warnung muss als NEU erkannt werden"
+
+            sent = svc._send_official_alert_only(trip, notices)
+
+            assert sent is False, (
+                f"Voraussetzung: die Ereignis-Identitaet muss die Warnung "
+                f"unterdruecken ({sent!r})"
+            )
+            assert calls == [], (
+                f"split_by_threshold() darf bei einer unterdrueckten Warnung "
+                f"fuer KEINEN Kanal aufgerufen werden: {calls!r}"
+            )
+
+            # Gegenprobe: eine andere Gefahrenart (keine Klasse) desselben
+            # Trips geht durch -- split_by_threshold() WIRD gerufen.
+            calls.clear()
+            alert2 = OfficialAlert(
+                source="tdd-s4b-ac11b", hazard="extreme_heat", level=3,
+                label="AC-11-Gegenprobe",
+            )
+            register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert2))
+            notices2 = svc.check_official_alert_triggers(trip)
+            hazards2 = {a.hazard for a, _seg in notices2}
+            assert "extreme_heat" in hazards2, (
+                f"Voraussetzung: die Gegenprobe-Warnung muss neu sein: {notices2!r}"
+            )
+
+            sent2 = svc._send_official_alert_only(trip, notices2)
+            assert sent2 is True, f"Gegenprobe: der Versand muss gelingen ({sent2!r})"
+            assert len(calls) >= 1, (
+                "Gegenprobe: split_by_threshold() muss bei einer freigegebenen "
+                "Warnung aufgerufen werden, wurde aber 0x gerufen"
+            )
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
+            _clean_user(uid)
+
+    def test_ac17_batch_mit_zwei_amtlichen_warnungen_unterdrueckt_nur_das_duplikat(self):
+        """AC-17 (Batch-Filterung, Bruchstelle).
+
+        GIVEN zwei amtliche Warnungen im selben Lauf -- eine ein Duplikat
+              eines bereits registrierten Nowcast-Ereignisses (thunderstorm
+              -> Klasse 'wet'), die andere eigenstaendig (extreme_heat, keine
+              Klasse)
+        WHEN  ``_send_official_alert_only`` laeuft
+        THEN  wird NUR die duplizierte Warnung unterdrueckt, die andere wird
+              zugestellt -- beide in getrennter Betrachtung, nicht als
+              Alles-oder-Nichts-Entscheidung ueber den ganzen Lauf.
+
+        RED heute: ImportError bei ``record_event_identity``."""
+        from services.alert_gate import record_event_identity
+        from services.alert_log import REASON_EVENT_DUPLICATE, REASON_OFFICIAL_ALERT
+        from services.official_alerts import OfficialAlert, register_official_alert_source
+        from services.trip_alert import TripAlertService
+
+        uid = _fresh_user("s4b-ac17")
+        _clean_user(uid)
+        oa_base, backup = _registered_sources_backup()
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            now = datetime.now(timezone.utc)
+            record_event_identity(
+                user_id=uid, entity_id="trip-s4b-ac17", hazard_class="wet",
+                segment_ids=["1"], severity="HIGH", point_at=now, now=now,
+            )
+
+            trip = _minimal_trip("trip-s4b-ac17")
+            _save_cached(uid, trip.id, [_data(1, precip_sum_mm=2.0)])
+
+            duplikat = OfficialAlert(
+                source="tdd-s4b-ac17-dup", hazard="thunderstorm", level=3,
+                label="AC-17-Duplikat", valid_from=now - timedelta(minutes=5),
+                valid_to=now + timedelta(minutes=30),
+            )
+            eigenstaendig = OfficialAlert(
+                source="tdd-s4b-ac17-eigen", hazard="extreme_heat", level=3,
+                label="AC-17-Eigenstaendig",
+            )
+            register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, duplikat))
+            register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, eigenstaendig))
+
+            mail_calls: list = []
+            svc = TripAlertService(
+                user_id=uid,
+                mail_sink=lambda subject, body: mail_calls.append((subject, body)),
+            )
+            notices = svc.check_official_alert_triggers(trip)
+            hazards = {a.hazard for a, _seg in notices}
+            assert hazards == {"thunderstorm", "extreme_heat"}, (
+                f"Voraussetzung: beide Warnungen muessen als NEU erkannt werden: {notices!r}"
+            )
+
+            sent = svc._send_official_alert_only(trip, notices)
+
+            assert sent is True, (
+                f"Die eigenstaendige Warnung muss trotz Teil-Unterdrueckung "
+                f"zugestellt werden ({sent!r})"
+            )
+            assert len(mail_calls) == 1, (
+                f"Erwartet genau 1 Mail-Versand (nur die eigenstaendige "
+                f"Warnung), erhalten: {len(mail_calls)}"
+            )
+            _, body = mail_calls[0]
+            from output.renderers.alert.official_alerts import _display_label
+
+            assert _display_label(eigenstaendig) in body, (
+                f"Die eigenstaendige Warnung (extreme_heat) muss im Body "
+                f"stehen: {body!r}"
+            )
+            assert _display_label(duplikat) not in body, (
+                f"Das Duplikat (thunderstorm) darf NICHT im Body stehen: {body!r}"
+            )
+
+            log_path = DATA_ROOT / uid / "alert_log.json"
+            log = json.loads(log_path.read_text())
+            passend = [
+                e for e in log.get("not_delivered", [])
+                if isinstance(e, dict) and e.get("entity_id") == trip.id
+                and e.get("reason") == REASON_OFFICIAL_ALERT
+                and any(
+                    item.get("reason") == REASON_EVENT_DUPLICATE
+                    for item in e.get("channels_not_sent", [])
+                    if isinstance(item, dict)
+                )
+            ]
+            assert len(passend) == 1, (
+                f"Erwartet GENAU EINEN not_delivered-Eintrag mit gate_reason="
+                f"{REASON_EVENT_DUPLICATE!r} fuer das Duplikat: {log!r}"
+            )
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
+            _clean_user(uid)
