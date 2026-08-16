@@ -181,8 +181,11 @@ _HEUTE_TRAEGER = {"date", "datetime", "date_type", "datetime_type"}
 #    einzige Fix im ganzen Slice, der ueber ALLE 1440 Minuten eines Tages
 #    deterministisch bewacht wird —
 #    `test_radar_fixture_ist_zu_jeder_tageszeit_kein_mitternachtsfenster`
-#    iteriert 1440+3 synthetische Zeitpunkte, ohne gestellte Uhr. Der Schutz
-#    ist hier also NICHT schwaecher als die Ratsche, sondern staerker.
+#    iteriert 1440+3 synthetische Zeitpunkte, ohne gestellte Uhr. Urspruenglich
+#    deckte dieser Waechter nur die Fensterwahl ab (start_hour/end_hour/
+#    Ortsdatum) — NICHT die W1-vs-W2-Wegpunktfolge, die #1871 als Bug traf.
+#    Seit #1871 prueft dieselbe Schleife zusaetzlich `start_local <=
+#    arrival_local` und deckt damit auch die W1-vs-W2-Sequenz ab.
 #
 # 2) test_starkregen_kurzfristhinweis.py::_trip_with_segment_offset
 #    Die Pruefaussage IST die exakte Vorlaufzeit: 90 Minuten (jenseits von
