@@ -33,7 +33,7 @@ def run_comparison(
 ):
     from app.loader import load_all_locations
     from app.profile import ActivityProfile
-    from services.comparison_engine import ComparisonEngine
+    from services.comparison_parallel import run_comparison_parallel
 
     all_locations = load_all_locations()
 
@@ -68,12 +68,19 @@ def run_comparison(
         except ValueError:
             pass  # Invalid profile → default to allgemein
 
-    result = ComparisonEngine.run(
+    # Issue #1765 Scheibe B1b: die Orte werden gleichzeitig statt nacheinander
+    # gerechnet (ein Engine-Lauf JE ORT) -- sonst riss der Sofortvergleich ab
+    # drei Orten die 60-Sekunden-Grenze zwischen Go-API und nginx. Alle uebrigen
+    # Parameter unveraendert; ``comparison_engine.py`` bleibt unangetastet.
+    # ``call_source`` MUSS ausdruecklich gesetzt werden: ein ThreadPoolExecutor
+    # reicht den ContextVar-Kontext nicht an seine Arbeiter weiter.
+    result = run_comparison_parallel(
         locations=selected,
         time_window=(time_window_start, time_window_end),
         target_date=td,
         forecast_hours=forecast_hours,
         profile=profile,
+        call_source="vergleich",
     )
 
     # Convert to JSON-serializable dict

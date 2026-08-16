@@ -422,12 +422,24 @@ def client():
     return TestClient(app)
 
 
-def _leeres_vergleichsergebnis(target_date: date) -> ComparisonResult:
-    """Minimaler, echter ``ComparisonResult`` OHNE Orte -- die Sonde
-    interessiert sich nur fuer das ``target_date``, mit dem ``run_comparison``
-    die Engine aufruft bzw. das direkt im JSON-Response landet
-    (``api/routers/compare.py:120``)."""
-    return ComparisonResult(locations=[], time_window=(9, 16), target_date=target_date)
+def _vergleichsergebnis(**kwargs) -> ComparisonResult:
+    """Minimaler, echter ``ComparisonResult`` -- JE angefordertem Ort GENAU EIN
+    ``LocationResult``, so wie es die echte Engine tut
+    (``comparison_engine.py:127`` haengt in ``for loc in locations:`` je Ort
+    eines an). Die Sonde interessiert sich nur fuer das ``target_date``, mit dem
+    ``run_comparison`` die Engine aufruft bzw. das direkt im JSON-Response
+    landet (``api/routers/compare.py:120``).
+
+    Issue #1765 B1b: gab vorher ``locations=[]`` zurueck -- null Ergebnisse fuer
+    einen angeforderten Ort, was die echte Engine nie erzeugt. Seriell fiel das
+    nicht auf (der Router iterierte ueber eine leere Liste), bei einem
+    Engine-Lauf JE ORT laeuft ein solcher Doppelgaenger in einen IndexError.
+    Die Zusicherung der drei Tests bleibt unveraendert."""
+    return ComparisonResult(
+        locations=[LocationResult(location=loc) for loc in kwargs["locations"]],
+        time_window=(9, 16),
+        target_date=kwargs.get("target_date"),
+    )
 
 
 def test_ac3_sofortvergleich_ortszeit_ist_dem_servertag_bereits_voraus(client, monkeypatch):
@@ -454,7 +466,7 @@ def test_ac3_sofortvergleich_ortszeit_ist_dem_servertag_bereits_voraus(client, m
     monkeypatch.setattr(loader_mod, "load_all_locations", lambda *a, **kw: [ort])
     monkeypatch.setattr(
         ComparisonEngine, "run",
-        staticmethod(lambda **kwargs: _leeres_vergleichsergebnis(kwargs.get("target_date"))),
+        staticmethod(_vergleichsergebnis),
     )
 
     jetzt_utc = datetime(2026, 8, 20, 13, 0, tzinfo=timezone.utc)
@@ -498,7 +510,7 @@ def test_ac3_sofortvergleich_ortszeit_hinkt_dem_servertag_hinterher(client, monk
     monkeypatch.setattr(loader_mod, "load_all_locations", lambda *a, **kw: [ort])
     monkeypatch.setattr(
         ComparisonEngine, "run",
-        staticmethod(lambda **kwargs: _leeres_vergleichsergebnis(kwargs.get("target_date"))),
+        staticmethod(_vergleichsergebnis),
     )
 
     jetzt_utc = datetime(2026, 8, 20, 0, 30, tzinfo=timezone.utc)
@@ -562,7 +574,7 @@ def test_ac3_sofortvergleich_serverstunde_ueber_14_ortsstunde_darunter(client, m
     monkeypatch.setattr(loader_mod, "load_all_locations", lambda *a, **kw: [ort])
     monkeypatch.setattr(
         ComparisonEngine, "run",
-        staticmethod(lambda **kwargs: _leeres_vergleichsergebnis(kwargs.get("target_date"))),
+        staticmethod(_vergleichsergebnis),
     )
 
     jetzt_utc = datetime(2026, 8, 20, 14, 30, tzinfo=timezone.utc)
