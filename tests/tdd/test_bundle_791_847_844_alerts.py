@@ -69,9 +69,11 @@ def _make_waypoint(name: str, lat: float, lon: float, arrival_hhmm: str) -> Wayp
 def _save_trip_direct(trip: Trip, user_id: str) -> None:
     """Schreibt Trip-JSON direkt — umgeht Naismith-Compute-on-Save.
 
-    Issue #1133: get_trips_dir() folgt dem autouse-isolierten Daten-Root,
-    denselben Pfad, unter dem TripAlertService via app.loader.load_all_trips()
-    liest — statt des modulweiten DATA_ROOT-Konstante (echter Baum).
+    Issue #1133: get_briefings_dir() (get_trips_dir() ist seit #1708
+    Scheibe B2 entfernter Altbestand) folgt dem autouse-isolierten
+    Daten-Root, denselben Pfad, unter dem TripAlertService via
+    app.loader.load_all_trips() liest — statt des modulweiten
+    DATA_ROOT-Konstante (echter Baum).
     """
     import json
     from app.loader import get_briefings_dir

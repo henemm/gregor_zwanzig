@@ -38,7 +38,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 def test_ac1_fixture_isolation_path_resolution_and_roundtrip(tmp_path, monkeypatch):
     """AC-1: Given die neue autouse-Fixture ist aktiv (kein real_data_root-
-    Marker) / When ein Test get_trips_dir()/save_trip() ohne data_dir=
+    Marker) / When ein Test get_briefings_dir()/save_trip() ohne data_dir=
     aufruft / Then landet die Datei ausschliesslich im temporaeren
     Fixture-Root, und der echte data/users/-Baum bleibt unveraendert.
 
@@ -55,10 +55,11 @@ def test_ac1_fixture_isolation_path_resolution_and_roundtrip(tmp_path, monkeypat
     Fix haengt er ausschliesslich vom (unabhaengigen) Fixture-Root ab.
 
     #1708 B1 (AC-6): die Sonde haengt hier bewusst an get_briefings_dir(),
-    nicht mehr an get_trips_dir() -- save_trip() schreibt bereits seit dem
-    #1250-Cutover (ADR-0023) nach briefings/, nicht mehr nach trips/.
-    get_trips_dir() faellt in Scheibe B2 komplett weg; die Sonde muss das
-    ueberstehen (Nachweis: tests/test_stillgelegte_testdateien.py::
+    nicht an get_trips_dir() -- save_trip() schreibt bereits seit dem
+    #1250-Cutover (ADR-0023) nach briefings/, nicht nach trips/.
+    get_trips_dir() ist seit #1708 Scheibe B2 vollstaendig entfernter
+    Altbestand; die Sonde uebersteht das (Nachweis:
+    tests/test_stillgelegte_testdateien.py::
     test_ac6_isolationssonde_uebersteht_wegfall_von_get_trips_dir, ruft
     diese Funktion mit per monkeypatch entferntem get_trips_dir auf).
     """

@@ -230,7 +230,7 @@ def test_ac4_radar_alert_convective_marked_once_then_throttles():
         assert "Gewitter" in blob
     finally:
         EmailOutput.send = original_send
-        from app.loader import get_trips_dir
-        p = get_trips_dir() / f"{_TRIP_ID}.json"
+        from app.loader import get_briefings_dir
+        p = get_briefings_dir() / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()

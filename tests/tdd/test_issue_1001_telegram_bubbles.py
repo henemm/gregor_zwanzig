@@ -433,8 +433,8 @@ def _make_ac4_trip():
 
 @pytest.fixture
 def _clean_ac4_user():
-    from app.loader import get_trips_dir
-    d = get_trips_dir(_AC4_USER)
+    from app.loader import get_briefings_dir
+    d = get_briefings_dir(_AC4_USER)
     shutil.rmtree(d, ignore_errors=True)
     yield
     shutil.rmtree(d, ignore_errors=True)
@@ -499,8 +499,10 @@ def _ac7_client():
 @pytest.mark.real_data_root
 class TestAC7PreviewEndpointBubbles:
     """Issue #1133: liest das echte, committete Trip-Fixture data/users/default/
-    trips/gr221-mallorca.json über PreviewService (echter get_trips_dir()-Pfad,
-    kein Test-User) — bewusstes Opt-out aus der autouse-Isolation."""
+    trips/gr221-mallorca.json über PreviewService -- per tests/conftest.py nach
+    briefings/ gespiegelt (get_trips_dir() ist seit #1708 Scheibe B2 entfernter
+    Altbestand und lag hier nie im Lesepfad; PreviewService liest ohnehin aus
+    briefings/), kein Test-User — bewusstes Opt-out aus der autouse-Isolation."""
 
     def test_telegram_preview_endpoint_returns_bubbles_alongside_body(self, _ac7_client):
         resp = _ac7_client.get(
@@ -853,9 +855,9 @@ def _f003_trip_and_log():
     import json as _json
     from datetime import timedelta
 
-    from app.loader import get_trips_dir
+    from app.loader import get_briefings_dir
 
-    trips_dir = get_trips_dir(_F003_USER)
+    trips_dir = get_briefings_dir(_F003_USER)
     trips_dir.mkdir(parents=True, exist_ok=True)
     future = (date.today() + timedelta(days=5)).isoformat()
     trip_path = trips_dir / f"{_F003_TRIP_ID}.json"

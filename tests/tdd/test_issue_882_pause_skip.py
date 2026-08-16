@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from app.loader import get_trips_dir, save_trip  # noqa: E402
+from app.loader import get_briefings_dir, save_trip  # noqa: E402
 from app.models import TripReportConfig  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from services.trip_command_processor import InboundMessage, TripCommandProcessor  # noqa: E402
@@ -66,7 +66,7 @@ def _msg(text: str) -> InboundMessage:
 
 @pytest.fixture(autouse=True)
 def clean_user_dir():
-    trips_dir = get_trips_dir(_USER)
+    trips_dir = get_briefings_dir(_USER)
     shutil.rmtree(trips_dir, ignore_errors=True)
     yield
     shutil.rmtree(trips_dir, ignore_errors=True)

@@ -105,9 +105,16 @@ def _full_trip_dict(trip_id: str, name: str = "Test-Tour", kind: str | None = "r
 
 
 def _briefings_dir(user_id: str) -> Path:
-    """Analog `loader.get_trips_dir` (loader.py:1006) -- vor S7a existiert
-    kein eigener Loader-Helper fuer `briefings/` (s. Anker-Liste im Auftrag)."""
-    return loader.get_trips_dir(user_id).parent / "briefings"
+    return loader.get_briefings_dir(user_id)
+
+
+def _legacy_trips_dir(user_id: str) -> Path:
+    """Bildet den toten #1708-Pfad ``trips/`` bewusst testlokal literal ueber
+    ``get_data_dir()`` (der frühere Loader-Helfer ``get_trips_dir()`` ist seit
+    #1708 Scheibe B2 entfernter Altbestand, existiert also nicht mehr) --
+    diese Datei belegt (AC-25/AC-26), dass der lebende Lesepfad diesen Pfad
+    ignoriert und save_trip ihn byte-unveraendert laesst."""
+    return loader.get_data_dir(user_id) / "trips"
 
 
 def _write_json(path: Path, data: dict) -> None:
@@ -127,7 +134,7 @@ def test_load_all_trips_reads_briefings_dir_not_trips_dir():
     trip_id = "gr20-2026"
 
     _write_json(_briefings_dir(uid) / f"{trip_id}.json", _full_trip_dict(trip_id, name="Briefings-Version"))
-    _write_json(loader.get_trips_dir(uid) / f"{trip_id}.json", _full_trip_dict(trip_id, name="Alt-Trips-Version"))
+    _write_json(_legacy_trips_dir(uid) / f"{trip_id}.json", _full_trip_dict(trip_id, name="Alt-Trips-Version"))
 
     loaded = loader.load_all_trips(uid)
 
@@ -146,7 +153,7 @@ def test_load_trip_by_id_reads_briefings_dir_not_trips_dir():
     root = loader.get_data_root()
 
     _write_json(_briefings_dir(uid) / f"{trip_id}.json", _full_trip_dict(trip_id, name="Briefings-Via-ID"))
-    _write_json(loader.get_trips_dir(uid) / f"{trip_id}.json", _full_trip_dict(trip_id, name="Alt-Via-ID"))
+    _write_json(_legacy_trips_dir(uid) / f"{trip_id}.json", _full_trip_dict(trip_id, name="Alt-Via-ID"))
 
     trip = loader.load_trip(trip_id, data_dir=str(root), user_id=uid)
 
@@ -168,7 +175,7 @@ def test_save_trip_writes_briefings_and_leaves_trips_file_untouched():
     uid = "cutover-route-d"
     trip_id = "vanoise-2026"
 
-    trips_dir = loader.get_trips_dir(uid)
+    trips_dir = _legacy_trips_dir(uid)
     _write_json(trips_dir / f"{trip_id}.json", _full_trip_dict(trip_id, name="Alt-Version"))
     original_bytes = (trips_dir / f"{trip_id}.json").read_bytes()
 

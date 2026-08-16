@@ -25,8 +25,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 # Issue #1133: die gesamte Datei liest das echte, committete Trip-Fixture
-# data/users/default/trips/gr221-mallorca.json (echter get_trips_dir()-Pfad)
-# — bewusstes Opt-out aus der autouse-Isolation für das gesamte Modul.
+# data/users/default/trips/gr221-mallorca.json -- per tests/conftest.py nach
+# briefings/ gespiegelt (get_trips_dir() ist seit #1708 Scheibe B2 entfernter
+# Altbestand und lag hier nie im Lesepfad) — bewusstes Opt-out aus der
+# autouse-Isolation für das gesamte Modul.
 pytestmark = pytest.mark.real_data_root
 
 TRIP_ID = "gr221-mallorca"

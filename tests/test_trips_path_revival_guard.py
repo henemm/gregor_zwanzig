@@ -64,6 +64,7 @@ from __future__ import annotations
 
 import ast
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -84,15 +85,11 @@ CARRIER_FILES = {
 }
 
 # Restliste, Schluesselform "pfad::symbol::ordinal" (Hausnorm,
-# tests/test_guard_findings_survive_line_shifts.py:52). Genau EIN Eintrag --
-# kein Inline-Ausnahmeventil, jede Ausnahme muss hier stehen, sonst waere sie
-# in der Taeterdatei fuer einen Reviewer unsichtbar mitzuschmuggeln.
-KNOWN_VIOLATIONS: dict[str, str] = {
-    "src/app/loader.py::get_trips_dir::0": (
-        "UEBERGANG #1708 Scheibe B -- 12 Testdateien rufen sie; entfaellt mit "
-        "deren Umstellung auf get_briefings_dir(). KEINE Dauerausnahme."
-    ),
-}
+# tests/test_guard_findings_survive_line_shifts.py:52). Leer seit #1708
+# Scheibe B2 -- get_trips_dir() (der einzige je gelistete Eintrag) ist aus
+# src/app/loader.py entfernt, die Ausnahme entfaellt im selben Commit
+# (KEINE Dauerausnahme, siehe frueherer Kommentar hier).
+KNOWN_VIOLATIONS: dict[str, str] = {}
 
 _TRIPS_SEGMENT_RE = re.compile(r"(?:^|/|\*/)trips(?:/|$)")
 _GO_STRING_LITERAL_RE = re.compile(r'"([^"]*)"')
@@ -433,6 +430,62 @@ def test_ac7_known_violations_hard_upper_bound():
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# AC-5 (#1708 B2): Trefferkraft-Nachweis -- der Scanner muss auf ECHTEN
+# Dateien noch etwas finden. Mit leerer KNOWN_VIOLATIONS (seit B2) gibt es
+# sonst keinen Test mehr, der das belegt -- ein Scanner, der lautlos []
+# liefert (verschluckter Lesefehler, kaputte Pfadaufloesung), waere
+# vollstaendig unbemerkt gruen.
+# ---------------------------------------------------------------------------
+
+
+def test_trefferkraft_scanner_detects_real_violations_on_disk(tmp_path, monkeypatch):
+    """AC-5 (#1708 B2): legt zwei echte Verstoss-Dateien in tmp_path an --
+    eine Go-Datei im Slice-Muster (dem Muster, das die Falle real herstellte,
+    internal/store/user.go:84) und eine Python-Datei im Divisions-Muster
+    (dem Muster des inzwischen entfernten get_trips_dir()) -- und biegt
+    REPO_ROOT per monkeypatch auf diesen temporaeren Baum um. Traegt, weil
+    REPO_ROOT ein Modul-Global ist, das _go_scan_files()/_py_scan_files() bei
+    JEDEM Aufruf neu aufloesen (:181/:194), nicht als Signaturparameter --
+    deshalb per monkeypatch umbiegbar, ohne den Scanner selbst anzufassen.
+    Deckt beide Sprachpfade ab; die verlorene KNOWN_VIOLATIONS-Kontrolle
+    bewies nur die Python-Seite."""
+    go_dir = tmp_path / "internal" / "store"
+    go_dir.mkdir(parents=True)
+    (go_dir / "user.go").write_text(
+        "package store\n\n"
+        'func (s *Store) ProvisionUserDirs(id string) error {\n'
+        "\tbase := s.UserDir(id)\n"
+        '\tfor _, sub := range []string{"locations", "trips", "gpx"} {\n'
+        "\t\tos.MkdirAll(filepath.Join(base, sub), 0755)\n"
+        "\t}\n"
+        "\treturn nil\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    py_dir = tmp_path / "src" / "app"
+    py_dir.mkdir(parents=True)
+    (py_dir / "loader.py").write_text(
+        "def get_trips_dir(user_id='default'):\n"
+        '    return get_data_dir(user_id) / "trips"\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(sys.modules[__name__], "REPO_ROOT", tmp_path)
+
+    findings = _all_violations()
+
+    assert findings == {
+        "internal/store/user.go::ProvisionUserDirs::0": ("trips", 5),
+        "src/app/loader.py::get_trips_dir::0": ("trips", 2),
+    }, (
+        "Der Scanner findet auf echten Dateien nicht mehr die erwarteten "
+        f"zwei Verstoesse: {findings} -- ein Scanner, der auf realem "
+        "Bestand nichts (mehr) liefert, muss diesen Test rot machen."
+    )
+
+
 def test_ac8_scan_area_excludes_tests_and_scripts():
     """Schuetzt tests/test_briefing_route_cutover.py (Lockvogel-Datei fuer
     den Cutover-Beweis) und die Migrations-Skripte, deren Aufgabe der
@@ -456,10 +509,11 @@ def test_keine_unlisted_trips_pfad_funde():
     THEN ist das ein neuer/bestehender toter 'trips'-Pfad in Produktivcode
     (#1708) -- der Test benennt Datei, Symbol und Fundtext.
 
-    Erwartung in der TDD-RED-Phase: ROT, benennt
+    Erwartung in der TDD-RED-Phase (Scheibe A): ROT, benannte
     internal/store/trip.go:15 (TripsDir) und internal/store/user.go:84
-    (ProvisionUserDirs). src/app/loader.py:1163 (get_trips_dir) ist ueber
-    KNOWN_VIOLATIONS gedeckt und erscheint NICHT in der Fehlermeldung.
+    (ProvisionUserDirs). Seit #1708 Scheibe B2 existiert
+    ``src/app/loader.py::get_trips_dir`` nicht mehr (entfernter Altbestand)
+    -- KNOWN_VIOLATIONS ist leer, es gibt keinen Fund mehr zu decken.
     """
     found = _all_violations()
     unlisted = {k: v for k, v in found.items() if k not in KNOWN_VIOLATIONS}
