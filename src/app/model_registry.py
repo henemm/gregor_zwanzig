@@ -142,18 +142,38 @@ def cape_threshold_jkg(model_id: Optional[str], region: Optional[str]) -> Option
     return CAPE_THRESHOLDS_JKG.get((model_id, region))
 
 
-# Blitzpotenzial-Schwellen je Gebiet (Issue #1679). Belegt: Bina et al.,
-# Atmospheric Research 2022 / ASR Copernicus 2022, COSMO-D2 (2,2 km,
-# dieselbe Modellfamilie wie ICON-D2): "skilful forecast ... for LPI
-# thresholds 30, 40 and 50 J/kg", Nachweisschwelle "LPI > 1 J/kg".
-# EU_REST: UNVERAENDERTER Interim-Wert (5/20/50) -- ICON-EU (lpi_con_max)
-# liefert strukturell deutlich hoehere Werte als ICON-D2 (Faktor 51x am
-# unteren Ende, Issue #1678); eine eigene, eingemessene Leiter folgt dort.
+# Blitzpotenzial-Schwellen je Gebiet (Issue #1679, EU_REST-Leiter #1678).
+# DE_ALPEN belegt: Bina et al., Atmospheric Research 2022 / ASR Copernicus
+# 2022, COSMO-D2 (2,2 km, dieselbe Modellfamilie wie ICON-D2): "skilful
+# forecast ... for LPI thresholds 30, 40 and 50 J/kg", Nachweisschwelle
+# "LPI > 1 J/kg".
+#
+# EU_REST (Issue #1678): eigene Leiter, weil `lpi_con_max` (ICON-EU) eine
+# ANDERE physikalische Groesse ist als `lpi` (ICON-D2) -- gleiche
+# Formelstruktur, aber Aufwind und Hydrometeore stammen aus dem
+# Bechtold-Tiedtke-Konvektionsschema statt aus aufgeloester Stroemung (DWD
+# Database Reference Manual Kap. 6.5: "the LPI can be calculated only in a
+# convection-permitting model setup"). Quelle aller drei Sprossen:
+# Schroeder, Goecke, Koehler (2022), "Subgrid scale Lightning Potential
+# Index for ICON with parameterized convection", Reports on ICON Issue 010,
+# DOI 10.5676/DWD_pub/nwv/icon_010 -- die DWD-Arbeit, mit der `LPI_CON_MAX`
+# am 23.11.2022 fuer ICON-EU eingefuehrt wurde:
+#   7,14  = Tab. 3, p=1/3, empfindlichste kalibrierte Nachweisschwelle
+#           ("blitzt es ueberhaupt") -- die einzige als Schwelle publizierte
+#           Sprosse, direkte Entsprechung zur ICON-D2-Nachweisschwelle > 1.
+#   23,81 = Tab. 3, p=1, Punkt an dem die Flaeche mit Schwellenueberschreitung
+#           im Jahresmittel gleich gross ist wie die von LINET beobachtete
+#           Blitzflaeche.
+#   86,16 = `LPI_c`, Saettigungskonstante der Arbeit; oberes Ende des
+#           sinnvollen Wertebereichs.
+# Die beiden oberen Sprossen sind damit belegte INTERPRETATION, nicht
+# publizierte Warnschwellen der Quelle (Spec Known Limitations #1).
+#
 # FR bekommt bewusst KEINEN Eintrag -- AROME liefert dort Blitzdichte,
 # kein LPI (thunder_routing._REGIONS).
 LPI_THRESHOLDS_JKG: Dict[str, Tuple[float, float, float]] = {
     "DE_ALPEN": (1.0, 30.0, 50.0),
-    "EU_REST": (5.0, 20.0, 50.0),
+    "EU_REST": (7.14, 23.81, 86.16),
 }
 
 

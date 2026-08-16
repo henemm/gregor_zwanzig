@@ -571,14 +571,24 @@ ein sicheres Zeichen, dass im dünnen Ausläufer der Verteilung gerechnet wurde.
 **Der Grund ist die Datenbasis, nicht das Verfahren:** eine einzelne, ruhige Wetterlage ist
 keine Klimatologie. Nötig ist mindestens **eine Konvektionssaison (April–September)**.
 
-🟢 **Und dafür braucht es kein eigenes Archiv:** Open-Meteo stellt mit der **Historical
-Forecast API / Previous Runs API** genau diese historischen Modellläufe bereit. Die Eichung ist
-damit **sofort rechenbar** und nicht, wie zuvor angenommen, durch wochenlanges Sammeln
-blockiert. Das verschiebt die Feineichung (Rang 7) nach vorn.
+🔴 **Korrektur (Issue #1678, 2026-08-16): der hier zuvor vorgeschlagene Weg über die Open-Meteo
+Historical Forecast API ist NICHT gangbar.** Open-Meteo lädt LPI ausschließlich für ICON-D2 und
+dort das Feld `lpi` (`Sources/App/Icon/IconVariableDownloadable.swift:184-185`:
+`return domain == .iconD2 ? ("lpi", …) : nil // only in icon d2`). `lpi_con_max` (ICON-EU) kommt
+dort **nicht** vor — die ICON-EU-Seite eines Historical-Vergleichs existiert nicht und entsteht
+auch durch Warten nicht. Diese Grenze gilt nur für LPI; für CAPE (Abschnitt 3.4b, #1592) trifft
+sie nicht zu, dort liefert Open-Meteo beide Modelle.
 
-⇒ **Antwort auf E1b: ja, ICON-EU braucht eine eigene Leiter** — aber sie wird nicht geraten,
-sondern aus gesammelten Daten geeicht. Bis dahin darf die ICON-EU-Stufe nicht so behandelt
-werden, als wäre sie mit der ICON-D2-Stufe gleichbedeutend.
+⇒ **Tatsächlich gewählte Lösung:** statt einer selbst gerechneten Eichung eine **publizierte
+Leiter** aus der DWD-Arbeit, die `LPI_CON_MAX` für ICON-EU eingeführt hat (Schröder, Göcke,
+Köhler 2022, "Subgrid scale Lightning Potential Index for ICON with parameterized convection",
+Reports on ICON Issue 010): **7,14 / 23,81 / 86,16 J/kg** statt der Interim-Werte 5/20/50 (Details
+und Herleitung jeder Sprosse: `docs/specs/modules/feat_1678_lpi_eu_schwellenleiter.md`). Nur die
+unterste Sprosse ist dort als Schwelle publiziert, die beiden oberen sind belegte Interpretation
+derselben Arbeit — schwächer als eine echte Klimatologie-Eichung, aber ohne die oben belegte
+Datenlücke umsetzbar.
+
+⇒ **Antwort auf E1b: ja, ICON-EU braucht eine eigene Leiter** — sie steht seit #1678 fest.
 
 ### 4.5 Die Lösung steht bei den Wetterdiensten — Bedeutung harmonisieren, nicht Zahlen
 
@@ -843,14 +853,18 @@ genannten Lücken (Rang 2/3/4/7/10) sind davon unberührt und bleiben offen.
 umgesetzt — Issue **#1679**, adversary-VERIFIED, Spec
 `docs/specs/modules/feat_1679_lpi_schwellen_region_tabelle.md`: `app.model_registry.LPI_THRESHOLDS_JKG`
 liefert DE_ALPEN (ICON-D2) jetzt die belegte 1/30/50-Leiter (Bína et al.), EU_REST (ICON-EU)
-bleibt bewusst auf dem Interim-Wert 5/20/50 bis #1678. Die beiden ANDEREN Teile von Rang 2 — CAPE-
+blieb bis dahin bewusst auf dem Interim-Wert 5/20/50. Die beiden ANDEREN Teile von Rang 2 — CAPE-
 Ladder 1000/2500/4000 statt binär und die CIN-Paarung −25/−50/−100/−200 — sind davon NICHT
 betroffen und bleiben offen (CIN hängt zusätzlich an #1531). Rang 2 ist damit nur **teilweise**
-erledigt — die weiterhin offenen Ränge sind 2 (CAPE-Ladder/CIN-Rest), 3, 4, 7, 10.
+erledigt — die weiterhin offenen Ränge sind 2 (CAPE-Ladder/CIN-Rest), 3, 4, 10.
 
-Zur Eichung selbst (Rang 7): Abschnitt 4.4 stellt bereits richtig, dass die Historical
-Forecast API die Eichung **sofort rechenbar** macht — kein wochenlanges Sammeln nötig, keine
-Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
+🟢 **Dritter Nachtrag, 2026-08-16:** Rang 7 (Feineichung EU_REST) ist jetzt ebenfalls umgesetzt —
+Issue **#1678**, Spec `docs/specs/modules/feat_1678_lpi_eu_schwellenleiter.md`: EU_REST trägt
+seither die belegte Leiter 7,14/23,81/86,16 J/kg (Schröder/Göcke/Köhler 2022) statt der
+Interim-Werte 5/20/50. Der in Abschnitt 4.4 zuvor vorgeschlagene Weg über die Open-Meteo
+Historical Forecast API erwies sich als nicht gangbar (Open-Meteo liefert LPI nur für ICON-D2) —
+Details und die Korrektur dort. Rang 8 (`sdi_2`) ist damit nicht mehr durch fehlende Eichung
+blockiert.
 
 | Rang | Scheibe | Warum hier | Stand |
 |---|---|---|---|
@@ -861,7 +875,7 @@ Abhängigkeit von #1531 (das andere Felder holt). Tracking-Ticket: **#1678**.
 | **4** | **Herkunft mitführen** — die Stufe trägt sichtbar, worauf sie beruht | Macht im Ortsvergleich erkennbar, dass Korsika und Alpen auf verschiedenen Größen fußen | 🟡 **Scheiben 1–4 live (2026-08-12/13)** — Ortsvergleich (PR #1780), Trip-Kurzzusammenfassung + GEWITTER-Kommando (PR #1797), Pille + Timeline + GLANCE + Ortsvergleich-Stundentabelle (PR #1806), Trip-Stundentabelle inkl. strukturell mit-vererbter Telegram-rich-Ansicht (#1680 S4). Ticket **#1680** bleibt offen für Mehrtages-Ausblick und Gewitter-Vorschau; Go-DTO und Frontend sind ersatzlos entfallen (kein Verbraucher). Hier stand bis 2026-08-10 fälschlich „✅ E1": das markierte nur die Entscheidung, nicht die Umsetzung |
 | **5** | ✅ **CAPE unsichtbar gemacht** (`selectable=False`, **#1585**) | **Umgesetzt und live** (2026-08-10): CAPE (`cape_jkg`) ist an jeder Nutzerkontakt-Stelle unsichtbar (Trip-Editor, E-Mail, SMS, Ortsvergleich inkl. Alt-Vergleich, Aktivitäts-Vorlagen, Wertebereichs-Korridor, jede Alarmwirkung inkl. #1592 Delta-Alarm) und bleibt ausschließlich interne Zutat der Fusion. Adversary-VERIFIED | ✅ erledigt |
 | **6** | **Radar hebt die Stufe an** | Beseitigt den Widerspruch aus Abschnitt 5 | ✅ E3 |
-| **7** | **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max`, kalibriert auf gleiche Überschreitungshäufigkeit | Sofort rechenbar über die Historical Forecast API (4.4) — unabhängig von #1531 | 🔴 offen, Ticket **#1678** |
+| **7** | ✅ **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max` | EU_REST bekommt eine belegte, publizierte Leiter (Schröder/Göcke/Köhler 2022) statt der Interim-Werte 5/20/50 — die zunächst vorgesehene Eichung über die Historical Forecast API (4.4) war nicht gangbar | ✅ erledigt — **#1678** |
 | **8** | **`sdi_2` einhängen** | Publizierte DWD-Schwelle vorhanden; erst sinnvoll, wenn die Skala geeicht ist | nach Rang 7 |
 | **9** | **Amtliche Warnung + Änderungsalarm zusammenführen** (E5); Radar-Nowcast bleibt eigener Kanal | Unabhängig von der Signalkette | ✅ E5 |
 | **10** | **Deutschland an den Meteoalarm-Feed** — `MeteoAlarmFeedSource("DE")` | Der Weg läuft produktiv für IT/AT und ist kontingentfrei. Offen: Punkt→Zone-Auflösung für DE, und 13,5 MB je Abruf ohne gzip | ✅ E6 |

@@ -3476,6 +3476,16 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-16: Issue #1678 — `EU_REST` (ICON-EU, `lpi_con_max`) bekommt eine eigene, belegte
+  LPI-Schwellenleiter **(7,14 / 23,81 / 86,16 J/kg)** und löst damit den Interim-Wert 5/20/50
+  ab, den #1679 dort bewusst stehen ließ. Quelle aller drei Sprossen: Schröder/Göcke/Köhler
+  (2022), Reports on ICON Issue 010 — die DWD-Arbeit, mit der `LPI_CON_MAX` für ICON-EU
+  eingeführt wurde. Grund: `lpi_con_max` ist eine andere Diagnostik als ICON-D2s `lpi`
+  (Konvektionsparametrisierung statt aufgelöster Strömung). `DE_ALPEN` bleibt bei 1/30/50,
+  `FR` weiterhin ohne LPI-Signal. Kein DTO-/Feld-Wechsel, nur die interne Schwellenquelle
+  (`app.model_registry.LPI_THRESHOLDS_JKG`). Nutzersichtbar: Orte in Nord-, Ost- und
+  Südeuropa werden seltener hochgestuft. Siehe
+  `docs/specs/modules/feat_1678_lpi_eu_schwellenleiter.md`.
 - 2026-08-11: Issue #1745 Scheibe A — Premium-SMS als vierter Kanal in der Alarm-Kanal-Auswahl
   (Alarme-Reiter, Trip UND Ortsvergleich). **Keine DTO-/Feld-Änderung** — `alert_channels.premium_sms`
   und `alert_channel_thresholds.premium_sms` (s. Abschnitte unten) existieren bereits seit #1701 S2b;
