@@ -13,7 +13,10 @@ workflow: fix-1857-e6-temp-register
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe („go") am 2026-08-16, inklusive der Auslegung des
+  `WC`-Entscheids: Die Regel „verschieden von `FD` ⇒ bleibt" wurde dem Sinn nach
+  angewendet, weil die gemessene Redundanz gegen `FK` besteht (identisches Feld,
+  Fenster und Aggregation). `WC` entfällt.
 
 ## Purpose
 
