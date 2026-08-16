@@ -325,41 +325,45 @@ _THUNDER_JE_ORDINAL = {thunder_ordinal(stufe): stufe for stufe in ThunderLevel}
 def _gedaempft_durch_cin(
     basis: ThunderLevel, cin_jkg: Optional[float]
 ) -> ThunderLevel:
-    """Daempft eine CAPE-Stufe anhand der Konvektionshemmung CIN (Issue #1679).
+    """Daempft eine CAPE-Stufe anhand der Konvektionshemmung CIN (#1679;
+    Baender auf ICON umgestellt mit #1896).
 
-    Vier belegte Baender (Penn State/COMET, SPC -- Gesamtkonzept 3.7 Schritt 2):
-    schwacher Deckel (Betrag < 25) laesst die Leiter voll zaehlen, moderat
-    (25 <= Betrag < 50) nimmt genau eine Stufe, grosser Deckel
-    (50 <= Betrag <= 100) deckelt auf LOW, darueber traegt CAPE nichts mehr bei.
-    Ein Grenzwert gehoert dabei immer ins staerker daempfende Band.
+    Drei Baender aus der ICON-naechsten publizierten Quelle -- ECMWF Technical
+    Memorandum No. 852 (Groenemeijer, Pucik, Tsonevsky, Bechtold 2019), Fig. 2:
+    *"CIN (hatched areas where CIN > 50 J/kg, contour at CIN = 100 J/kg)"*.
+    Betrag < 50 laesst die Leiter voll zaehlen, bis EINSCHLIESSLICH 100 faellt
+    genau eine Stufe, darueber greift die STAERKERE von "eine Stufe" und
+    "Deckel LOW"; der Grenzwert gehoert immer ins staerker daempfende Band.
+    Das oberste Band ist bewusst kein reiner Deckel: ein absoluter Deckel
+    neben einem relativen Band ist an der 100er-Naht nicht monoton -- eine
+    Basis LOW faellt bei 100 auf NONE und wuerde bei MEHR Hemmung wieder auf
+    LOW angehoben (Adversary-Befund F001). Ein Band "CAPE traegt gar nichts
+    bei" gibt es NICHT -- dafuer kennt die Quelle keinen Stuetzpunkt.
 
-    Unbekanntes CIN (``None``, strukturell der Fall bei Meteo-France/AROME;
-    ebenso der DWD-Fehlwert -999,9 "kein Ausloesepunkt gefunden", der VOR
-    dieser Funktion zu ``None`` gefiltert wird, `dwd.py:206`/`:240`,
-    `dwd_eu.py:261`) faellt auf die Bestands-Notbremse "hoechstens LOW"
-    zurueck -- NICHT auf "kein Deckel": eine fehlende Hemmungsangabe ist
-    keine schwache Hemmung.
+    Warum 50 nur EINE Stufe nimmt statt auf LOW zu deckeln: TM 852 rechnet
+    pseudoadiabatisch, ICON reversibel, und reversible CIN ist betragsmaessig
+    GROESSER (TM 852 Abschnitt 4.3.3; Murdzek, Markowski, Richardson, Kumjian
+    2021, J. Atmos. Sci. 78(10)) -- ohne festen Umrechnungsfaktor. Die
+    1:1-Lesart wuerde zu frueh daempfen; dem begegnet die STRUKTUR der Kaskade.
 
-    Vorzeichen der Eingabe ist MODELLABHAENGIG, GRIB2 (Parameter 0/7/7 der
-    WMO-Registry) legt keines fest -- nur Name und Einheit (J/kg) sind
-    standardisiert. Der DWD (ICON-D2/ICON-EU) liefert ``cin_ml`` als
-    POSITIVEN Betrag: ICON-Quellcode
-    `src/atm_phy_nwp/mo_opt_nwp_diagnostics.f90:3957-3958`, Kommentar
-    ``! make CIN positive``, gefolgt von ``ABS(...)``. GFS/US-Modelle
-    liefern dagegen negativ -- die US-Literatur (Penn State/SPC), aus der
-    die vier Baender oben stammen, bezieht sich auf **MLCIN ueber 100 hPa**
-    negativ gezaehlt. Deshalb vergleicht diese Funktion den BETRAG der
-    Hemmung, nicht ihr Vorzeichen (Issue #1760) -- ein reiner
-    Vorzeichenvergleich (``cin_jkg > -25``) waere fuer JEDEN positiven
-    ICON-Wert immer wahr und die Daempfung wuerde nie feuern.
+    Unbekanntes CIN (``None``, strukturell bei Meteo-France/AROME; ebenso der
+    DWD-Fehlwert -999,9, VOR dieser Funktion zu ``None`` gefiltert,
+    `dwd.py:206`/`:240`, `dwd_eu.py:261`) faellt auf die Notbremse "hoechstens
+    LOW" -- NICHT auf "kein Deckel": eine fehlende Hemmungsangabe ist keine
+    schwache Hemmung.
 
-    🔴 Bekannte Einschraenkung (Issue #1760 Known Limitations): die Baender
-    selbst sind fuer ICON NICHT geeicht. ICON mischt CIN ueber **50 hPa**
-    (ICON-Code Z. 2701-2702, "Depth of mixed surface layer: 50hPa following
-    Huntrieser, 1997"), reversibel, ohne Entrainment (ECMWF TM 852,
-    Groenemeijer et al. 2019) -- eine andere Rechnung als die US-MLCIN, aus
-    der -25/-50/-100/-200 stammen. Die Schwellen liegen in der richtigen
-    Groessenordnung, sind aber keine ICON-Eichung (Feineichung: #1678).
+    Vorzeichen ist MODELLABHAENGIG, GRIB2 (Parameter 0/7/7 der WMO-Registry)
+    legt keines fest. Der DWD (ICON-D2/ICON-EU) liefert ``cin_ml`` POSITIV:
+    `src/atm_phy_nwp/mo_opt_nwp_diagnostics.f90:3957-3958`, ``! make CIN
+    positive`` gefolgt von ``ABS(...)``; GFS/US-Modelle liefern negativ.
+    Deshalb vergleicht diese Funktion den BETRAG (Issue #1760).
+
+    🔴 Verbleibende Einschraenkung (#1896, loest die des #1760 ab): naechste
+    belegte Quelle, KEINE ICON-Eichung. TM 852 teilt mit ICON die 50-hPa-
+    Mischschicht und den Verzicht auf Entrainment, nicht die Adiabatik --
+    Richtung belegt (s.o.), Betrag unbekannt; "ICON rechnet reversibel" fusst
+    allein auf TM 852 Table 1. Eigene Eichung fruehestens nach der Saison 2027
+    (Archivluecke, s. `fix_1896_cin_baender_icon.md`).
 
     CIN ist Ausloese-Filter, kein Schweremass (Rasmussen & Blanchard 1998) --
     diese Funktion daempft deshalb ausschliesslich und hebt nie an.
@@ -367,13 +371,12 @@ def _gedaempft_durch_cin(
     if cin_jkg is None:
         return min(basis, ThunderLevel.LOW, key=thunder_ordinal)
     betrag = abs(cin_jkg)
-    if betrag < 25:
-        return basis
     if betrag < 50:
-        return _THUNDER_JE_ORDINAL[max(thunder_ordinal(basis) - 1, 0)]
+        return basis
+    eine_stufe = _THUNDER_JE_ORDINAL[max(thunder_ordinal(basis) - 1, 0)]
     if betrag <= 100:
-        return min(basis, ThunderLevel.LOW, key=thunder_ordinal)
-    return ThunderLevel.NONE
+        return eine_stufe
+    return min(eine_stufe, ThunderLevel.LOW, key=thunder_ordinal)
 
 
 def _signal_levels(

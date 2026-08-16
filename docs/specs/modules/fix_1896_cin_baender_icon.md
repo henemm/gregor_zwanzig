@@ -12,7 +12,7 @@ tags: [gewitter, cin, icon, schwellen, eichung]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-16 ('go')
 
 ## Purpose
 
@@ -79,8 +79,15 @@ Neue Kaskade in `_gedaempft_durch_cin()`:
 cin_jkg is None      -> hoechstens LOW        (Notbremse, UNVERAENDERT)
 betrag < 50          -> keine Daempfung       (TM852: Hemmung beginnt bei 50)
 betrag <= 100        -> eine Stufe herunter   (TM852: "hatched where CIN > 50")
-betrag > 100         -> hoechstens LOW        (TM852: Kontur "starker Deckel")
+betrag > 100         -> die STAERKERE von     (TM852: Kontur "starker Deckel")
+                        „eine Stufe herunter" und „Deckel LOW"
 ```
+
+Das oberste Band ist bewusst **nicht** ein reiner Deckel bei LOW, sondern die staerkere der beiden
+Daempfungen. Ein reiner Deckel waere an der 100er-Naht nicht monoton: eine Basis LOW faellt im Band darunter
+auf NONE, wuerde aber bei *mehr* Hemmung wieder auf LOW angehoben — mehr Hemmung ergaebe mehr Gewitter
+(Adversary-Befund F001, 2026-08-16). Die staerkere-von-beiden-Regel schliesst diese Naht (AC-9), ohne an
+den Baendern selbst etwas zu aendern: bei Basis HIGH und MED ist das Ergebnis unveraendert LOW.
 
 Das Band `NONE` („CAPE traegt gar nichts mehr bei") **entfaellt ersatzlos**. Begruendung: Es ist die
 staerkste denkbare Daempfung und braeuchte den staerksten Beleg; die ICON-nahe Quelle kennt oberhalb von
@@ -136,10 +143,18 @@ rechnen. ADR-0048 verbietet das Tragen einer Schwelle ueber **Modellgrenzen**; h
   die Stufe hoechstens LOW.
   - Test: Fusion mit 104,47 und 767,8 J/kg; Ergebnis LOW statt wie bisher NONE.
 
-- **AC-4:** Given einen beliebig grossen CIN-Betrag / When die Gewitterstufe fusioniert wird / Then wird das
-  CAPE-Signal **nie** vollstaendig auf NONE gesetzt, solange die Basis mindestens LOW ist — das frühere
-  Band „CAPE traegt gar nichts bei" existiert nicht mehr.
-  - Test: Fusion mit 101, 200, 1000 und 10000 J/kg bei Basis HIGH/MED/LOW; Ergebnis nie unter LOW.
+- **AC-4:** Given einen beliebig grossen CIN-Betrag / When die Gewitterstufe fusioniert wird / Then schaltet
+  die Hemmung das CAPE-Signal **nicht mehr basis-unabhaengig** ab: bei Basis HIGH und MED ist das Ergebnis
+  mindestens LOW. Eine Basis LOW darf weiterhin um ihre eine Stufe auf NONE sinken — das ist die normale
+  Ein-Stufen-Daempfung aus AC-2, nicht das abgeschaffte Band.
+  - Test: Fusion mit 101, 200, 1000 und 10000 J/kg bei Basis HIGH und MED; Ergebnis mindestens LOW. Bei
+    Basis LOW: Ergebnis NONE, und zwar **denselben** Wert wie im Band darunter (siehe AC-9).
+
+- **AC-9:** Given zwei CIN-Betraege, von denen einer groesser ist / When beide mit derselben Basisstufe
+  gedaempft werden / Then ist das Ergebnis beim groesseren Betrag **niemals hoeher** als beim kleineren —
+  mehr Hemmung fuehrt nie zu mehr Gewitter.
+  - Test: monoton fallende Gegenprobe ueber alle vier Basisstufen mit einer aufsteigenden Wertereihe, die
+    die Bandnaehte ausdruecklich einschliesst (49,9 / 50,0 / 99,9 / 100,0 / 100,1 / 200 / 10000).
 
 - **AC-5:** Given einen Datenpunkt, dessen CIN unbekannt ist (`None`, strukturell der Fall im
   Meteo-France-Gebiet, sowie nach dem Filtern des DWD-Fehlwerts -999,9) / When die Gewitterstufe fusioniert
@@ -208,3 +223,5 @@ rechnen. ADR-0048 verbietet das Tragen einer Schwelle ueber **Modellgrenzen**; h
 ## Changelog
 
 - 2026-08-16: Initial spec created (#1896)
+- 2026-08-16: AC-4 auf ihre Absicht zugespitzt und AC-9 (Monotonie) ergaenzt, nach Adversary-Befund F001 —
+  das oberste Band ist die staerkere der beiden Daempfungen statt eines reinen Deckels. PO-Freigabe 'go'.
