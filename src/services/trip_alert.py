@@ -20,9 +20,12 @@ from services import alert_channel_threshold, alert_daily_limit, alert_log
 from services.alert_briefing_anchor import record_alert_anchor_rejected
 import services.alert_urgency as alert_urgency
 from services.alert_gate import (
+    check_event_identity_gate,
     check_nowcast_gate,
     check_official_alert_gate,
+    record_event_identity,
     record_nowcast_sent,
+    resolve_hazard_class,
 )
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import (
@@ -1168,6 +1171,39 @@ class TripAlertService:
                 effective_channels, _radar_urgency, trip.alert_channel_thresholds,
             )
 
+            # Issue #1467 S4b-1: quellenuebergreifende Ereignis-Identitaet --
+            # LETZTE Stufe vor dem Versand (AC-12), kanaluebergreifend (V3,
+            # daher NACH der Kanal-Schwelle oben berechnet, aber VOR dem
+            # eigentlichen Versand geprueft). Ein Nowcast ist immer Klasse
+            # 'wet' (T2, AC-4b) -- `resolve_hazard_class` bekommt hier NIE
+            # `None`.
+            _identity_gate = check_event_identity_gate(
+                user_id=self._user_id, entity_id=trip.id,
+                hazard_class=resolve_hazard_class(is_convective=_radar_request.is_convective),
+                segment_ids=(
+                    [_radar_request.segment_id] if _radar_request.segment_id else []
+                ),
+                severity=_radar_urgency, now=now_utc, point_at=_onset_dt,
+            )
+            if not _identity_gate.allowed:
+                logger.debug(
+                    f"Radar alert suppressed ({_identity_gate.reason}) for trip {trip.id}"
+                )
+                try:
+                    alert_log.append_suppressed_entry(
+                        self._user_id, entity_id=trip.id, entity_type="trip",
+                        reason=alert_log.REASON_NOWCAST, gate_reason=_identity_gate.reason,
+                        effective_channels=effective_channels,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Radar alert: Unterdrueckungs-Protokoll (Ereignis-"
+                        "Identitaet) fuer Trip %s fehlgeschlagen (%s) — der "
+                        "Alarm blieb aus, nur der Protokoll-Eintrag fehlt.",
+                        trip.id, e,
+                    )
+                continue
+
             # Best-Effort-Zustellung über NotificationService (Issue #1023)
             result = self._notification_service.send_radar_alert(
                 trip=trip,
@@ -1214,6 +1250,19 @@ class TripAlertService:
                 throttle_key=trip.id, now=datetime.now(timezone.utc),
                 zone=anchor_tz(trip, now_utc),
                 throttle_store=self._throttle_store,
+            )
+            # Issue #1467 S4b-1 (AC-2/AC-3, F001-Symmetrie): NUR nach
+            # erfolgreicher Zustellung -- ein spaeterer amtlicher Alarm
+            # fuer dasselbe Ereignis findet diesen Eintrag ueber
+            # `check_event_identity_gate()`.
+            record_event_identity(
+                user_id=self._user_id, entity_id=trip.id,
+                hazard_class=resolve_hazard_class(is_convective=_radar_request.is_convective),
+                segment_ids=(
+                    [_radar_request.segment_id] if _radar_request.segment_id else []
+                ),
+                severity=_radar_urgency, point_at=_onset_dt,
+                now=datetime.now(timezone.utc),
             )
             sent += 1
 
@@ -1509,6 +1558,49 @@ class TripAlertService:
             return False
 
         effective_channels = self._effective_alert_channels(trip)
+
+        # Issue #1467 S4b-1: Ereignis-Identitaet PRO Alert (Batch-Filterung,
+        # AC-17) -- ein Gate-Aufruf ueber die GANZE Liste waere in beide
+        # Richtungen falsch: alles durchlassen liesse die Nowcast-Dublette
+        # bestehen, alles sperren wuerde eine zweite, eigenstaendige Warnung
+        # im selben Lauf mit verschlucken (Fehlerrichtung "Alarm bleibt
+        # aus"). `_official_urgency` wird deshalb ERST NACH dem Filtern aus
+        # der verbleibenden Liste neu berechnet. Letzte Stufe vor dem Versand
+        # (AC-12), kanaluebergreifend (V3: VOR `split_by_threshold`, AC-11).
+        _filtered_notices = []
+        for _alert, _segment_ids in official_notices:
+            _hazard_class = resolve_hazard_class(hazard=_alert.hazard)
+            _severity = alert_urgency.urgency_from_official_level(_alert.level)
+            _identity_gate = check_event_identity_gate(
+                user_id=self._user_id, entity_id=trip.id,
+                hazard_class=_hazard_class, segment_ids=_segment_ids,
+                severity=_severity, now=now_utc,
+                window_start=_alert.valid_from, window_end=_alert.valid_to,
+            )
+            if _identity_gate.allowed:
+                _filtered_notices.append((_alert, _segment_ids))
+                continue
+            logger.debug(
+                f"Official alert suppressed ({_identity_gate.reason}) for trip {trip.id}"
+            )
+            try:
+                alert_log.append_suppressed_entry(
+                    self._user_id, entity_id=trip.id, entity_type="trip",
+                    reason=alert_log.REASON_OFFICIAL_ALERT,
+                    gate_reason=_identity_gate.reason,
+                    effective_channels=effective_channels,
+                )
+            except Exception as e:
+                logger.error(
+                    "Official alert: Unterdrueckungs-Protokoll (Ereignis-"
+                    "Identitaet) fuer Trip %s fehlgeschlagen (%s) — der "
+                    "Alarm blieb aus, nur der Protokoll-Eintrag fehlt.",
+                    trip.id, e,
+                )
+        if not _filtered_notices:
+            return False
+        official_notices = _filtered_notices
+
         # Issue #1461 S3b-2a: dieselbe Naht wie in `_send_alert()` -- die
         # Schwelle filtert nur den Versand, `effective_channels` bleibt ROH
         # fuers Protokoll (rote Linie #638).
@@ -1548,6 +1640,24 @@ class TripAlertService:
             alert_daily_limit.increment(
                 self._user_id, now_utc, anchor_tz(trip, now_utc),
             )
+            # Issue #1467 S4b-1 (AC-2/AC-3, F001-Symmetrie): NUR nach
+            # erfolgreicher Zustellung -- ein spaeterer Nowcast fuer dasselbe
+            # Ereignis findet diesen Eintrag ueber
+            # `check_event_identity_gate()`. Hazards ausserhalb des
+            # `wet`-Kanons (hazard_class=None) werden bewusst NICHT
+            # registriert -- ein Registereintrag ohne Klasse kaeme nie zum
+            # Zuge (kein Praefix-Match moeglich).
+            for _alert, _segment_ids in official_notices:
+                _hazard_class = resolve_hazard_class(hazard=_alert.hazard)
+                if _hazard_class is None:
+                    continue
+                record_event_identity(
+                    user_id=self._user_id, entity_id=trip.id,
+                    hazard_class=_hazard_class, segment_ids=_segment_ids,
+                    severity=alert_urgency.urgency_from_official_level(_alert.level),
+                    window_start=_alert.valid_from, window_end=_alert.valid_to,
+                    now=datetime.now(timezone.utc),
+                )
         return result.sent
 
     def _effective_alert_channels(self, trip: "Trip") -> set[str]:

@@ -33,13 +33,16 @@ ein fehlgeschlagener Versuch darf weder Budget noch Sperrzeit verbrauchen
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
-from typing import Callable, NamedTuple, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Callable, Iterable, NamedTuple, Optional
 from zoneinfo import ZoneInfo
 
+import services.alert_urgency as alert_urgency
 from services import alert_daily_limit, alert_log
 from services.alert_briefing_anchor import last_briefing_at
+from services.alert_state import AlertStateService
 from services.deviation_alert_engine import DeviationAlertEngine
+from services.radar_service import NOWCAST_HORIZON_MIN
 from services.throttle_store import ThrottleStore
 from utils.timezone import local_fmt
 
@@ -372,3 +375,280 @@ def record_nowcast_sent(
     """
     alert_daily_limit.increment(user_id, now, zone)
     _resolve_store(user_id, throttle_store).record(throttle_scope, throttle_key, now)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Issue #1467 Scheibe S4b-1 — quellenuebergreifende Ereignis-Identitaet
+# SPEC: docs/specs/modules/rework_1467_s4b_entdopplung.md
+#
+# `check_event_identity_gate()` ist die LETZTE Stufe an beiden Trip-
+# Aufrufstellen (Nowcast `check_radar_alerts`, amtlich
+# `_send_official_alert_only`) -- nach allen bestehenden, billigeren
+# Pruefungen. Sie entdoppelt EIN UND DASSELBE Ereignis, wenn es ueber ZWEI
+# verschiedene Quellen gemeldet wird (Nowcast und amtliche Warnung), anhand
+# von Gefahrenklasse + Ortsbezug + ueberlappendem Zeitfenster. Anders als
+# `check_nowcast_gate()`/`check_official_alert_gate()` ist sie
+# entitaetsparametrisiert von Anfang an (Trip UND Compare, S4b-2 haengt nur
+# noch an).
+# ═══════════════════════════════════════════════════════════════════════════
+
+# T2-Kanon (PO-Entscheid 2026-08-16): EINE Gefahrenklasse statt zwei. Die
+# Messung am Produktivprotokoll (Spec Implementation Details) zeigt, dass die
+# Radar-Einstufung konvektiv/nicht-konvektiv nur die Erscheinungsform
+# DERSELBEN Zelle unterscheidet, nicht das Ereignis -- eine Aufspaltung in
+# zwei Klassen liesse drei von vier gemessenen quellenuebergreifenden Paaren
+# aneinander vorbeilaufen.
+HAZARD_CLASS_WET = "wet"
+_WET_HAZARDS = frozenset({"thunderstorm", "flood", "rain"})
+
+
+def resolve_hazard_class(
+    *, is_convective: Optional[bool] = None, hazard: Optional[str] = None,
+) -> Optional[str]:
+    """T2-Kanon. Genau EIN Identifikationsweg pro Aufrufer: Nowcast liefert
+    `is_convective`, amtlich liefert `hazard`. Unbekannter/anderer Hazard
+    -> None (keine Klasse, nie entdoppelt, AC-4).
+
+    Ein Nowcast ist IMMER Niederschlag — `is_convective` unterscheidet nur
+    die Erscheinungsform derselben Zelle, nicht das Ereignis (PO-Entscheid
+    2026-08-16, Messung s. Spec Implementation Details T2, AC-4b)."""
+    if is_convective is not None:
+        return HAZARD_CLASS_WET
+    if hazard in _WET_HAZARDS:
+        return HAZARD_CLASS_WET
+    return None
+
+
+def _parse_event_ts(raw: object) -> Optional[datetime]:
+    """Fail-soft (AC-7/AC-19): ein fehlendes oder unparsbares Zeitfeld liefert
+    `None` statt zu knallen — der Aufrufer behandelt `None` als "kein
+    Zeitbezug", nie als Absturz."""
+    if raw is None:
+        return None
+    try:
+        ts = datetime.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        return None
+    return ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+
+
+def _covered_until(
+    point_at: Optional[datetime], window_end: Optional[datetime],
+) -> Optional[datetime]:
+    """"Abgedecktes Ende" einer Meldung (V1): ein Zeitpunkt deckt sich selbst
+    plus den Nowcast-Horizont ab, ein Intervall bis zu seinem Ende. Gilt fuer
+    BEIDE Seiten des Vergleichs (Registereintrag UND neue Meldung) -- dieselbe
+    Funktion, damit die V1-Ausnahme symmetrisch bleibt."""
+    if point_at is not None:
+        return point_at + timedelta(minutes=NOWCAST_HORIZON_MIN)
+    return window_end
+
+
+def _times_overlap(
+    entry_point_at: Optional[datetime],
+    entry_window_start: Optional[datetime],
+    entry_window_end: Optional[datetime],
+    point_at: Optional[datetime],
+    window_start: Optional[datetime],
+    window_end: Optional[datetime],
+    cooldown_minutes: Optional[int],
+) -> bool:
+    """T4 — drei Vergleichsfaelle (Spec Implementation Details).
+
+    Punkt gegen Punkt: Differenz <= `cooldown_minutes` (Vollstaendigkeits-
+    fall, ueber die Trip-Aufrufstellen dieser Scheibe nicht end-to-end
+    erreichbar). Punkt gegen Intervall: Ueberlappung mit `NOWCAST_HORIZON_MIN`-
+    Puffer auf der Punkt-Seite -- der gemessene Kernfall (AC-6). Intervall
+    gegen Intervall: echte Ueberlappung ohne Puffer, analog
+    `official_alert_revision_verdict()`.
+
+    Fehlt einer Seite jeder vergleichbare Zeitbezug -> kein Match, fail-soft
+    (AC-7)."""
+    if entry_point_at is not None and point_at is not None:
+        limit_min = (
+            cooldown_minutes if cooldown_minutes is not None else NOWCAST_HORIZON_MIN
+        )
+        return abs((point_at - entry_point_at).total_seconds()) <= limit_min * 60
+
+    if entry_point_at is not None:
+        entry_start = entry_point_at - timedelta(minutes=NOWCAST_HORIZON_MIN)
+        entry_end = entry_point_at + timedelta(minutes=NOWCAST_HORIZON_MIN)
+    elif entry_window_start is not None and entry_window_end is not None:
+        entry_start, entry_end = entry_window_start, entry_window_end
+    else:
+        return False
+
+    if point_at is not None:
+        new_start = point_at - timedelta(minutes=NOWCAST_HORIZON_MIN)
+        new_end = point_at + timedelta(minutes=NOWCAST_HORIZON_MIN)
+    elif window_start is not None and window_end is not None:
+        new_start, new_end = window_start, window_end
+    else:
+        return False
+
+    return entry_start < new_end and new_start < entry_end
+
+
+def _find_matching_entry(
+    state: dict,
+    hazard_class: str,
+    segment_ids: list,
+    point_at: Optional[datetime],
+    window_start: Optional[datetime],
+    window_end: Optional[datetime],
+    cooldown_minutes: Optional[int],
+) -> Optional[dict]:
+    """Scannt das Register nach einem Kandidaten derselben Gefahrenklasse
+    (T3/T4). Fail-soft ueberall (AC-7/AC-19): ein einzelner kaputter
+    Registereintrag (fehlende Felder, unparsbare Zeit) wird uebersprungen,
+    nie zum Absturz -- die naechsten Kandidaten werden trotzdem geprueft.
+
+    AC-5 (Bruchstelle): eine leere Segment-Menge -- auf der neuen ODER der
+    registrierten Seite -- erzeugt NIE ein Match."""
+    new_segments = {s for s in (segment_ids or []) if s}
+    if not new_segments:
+        return None
+
+    prefix = f"event_identity:{hazard_class}:"
+    for key, entry in state.items():
+        if not isinstance(key, str) or not key.startswith(prefix):
+            continue
+        if not isinstance(entry, dict):
+            continue
+        try:
+            entry_segments = {s for s in (entry.get("segment_ids") or []) if s}
+            if not entry_segments or new_segments.isdisjoint(entry_segments):
+                continue
+
+            entry_point_at = _parse_event_ts(entry.get("point_at"))
+            entry_window_start = _parse_event_ts(entry.get("window_start"))
+            entry_window_end = _parse_event_ts(entry.get("window_end"))
+            if not _times_overlap(
+                entry_point_at, entry_window_start, entry_window_end,
+                point_at, window_start, window_end, cooldown_minutes,
+            ):
+                continue
+
+            severity = entry["severity"]
+            covered_until = _covered_until(entry_point_at, entry_window_end)
+            if covered_until is None:
+                continue
+            return {"severity": severity, "covered_until": covered_until}
+        except (KeyError, TypeError, ValueError):
+            # AC-19: ein kaputter/unbekannter Registereintrag zaehlt fail-soft
+            # als "kein Match" -- nicht als Absturz.
+            continue
+    return None
+
+
+def _covers_materially_more(
+    entry_covered_until: datetime,
+    point_at: Optional[datetime],
+    window_end: Optional[datetime],
+) -> bool:
+    """V1-Ausnahme (AC-9): reicht die neue Meldung "wesentlich" -- mehr als
+    `NOWCAST_HORIZON_MIN` -- ueber das bereits abgedeckte Ende des
+    Registereintrags hinaus, kommt sie durch. Dieselbe `_covered_until()`
+    wie oben, jetzt auf die neue Meldung angewendet -- symmetrische
+    Definition von "abgedeckt"."""
+    new_covered_until = _covered_until(point_at, window_end)
+    if new_covered_until is None:
+        return False
+    return new_covered_until > entry_covered_until + timedelta(minutes=NOWCAST_HORIZON_MIN)
+
+
+def check_event_identity_gate(
+    *,
+    user_id: str,
+    entity_id: str,
+    hazard_class: Optional[str],
+    segment_ids: Iterable[str],
+    severity: str,
+    now: datetime,
+    point_at: Optional[datetime] = None,
+    window_start: Optional[datetime] = None,
+    window_end: Optional[datetime] = None,
+    cooldown_minutes: Optional[int] = None,
+) -> GateResult:
+    """Darf diese Meldung raus, oder ist sie ein quellenuebergreifendes
+    Duplikat einer bereits gemeldeten Meldung (Issue #1467 Scheibe S4b-1)?
+
+    Reiner Lesevorgang (AC-3) -- Registrierung ist ausschliesslich Sache von
+    `record_event_identity()`, aufgerufen NACH erfolgreicher Zustellung
+    (F001-Symmetrie zu `record_nowcast_sent`).
+
+    `hazard_class=None` (T2: Gefahrenart ausserhalb des `wet`-Kanons) laesst
+    IMMER durch (AC-4) -- die Pruefung greift fuer diese Gefahrenart
+    strukturell nie, ohne das Register ueberhaupt zu lesen.
+
+    Reihenfolge nach Fund eines Kandidaten, strukturell fest (Spec V1/V2):
+
+        Eskalation (V2, IMMER zuerst) -> V1-Ausnahme -> Unterdrueckung
+
+    Die Eskalationspruefung ist der ERSTE Zweig mit eigenem `return` -- vor
+    der V1-Ausnahme und vor der eigentlichen Unterdrueckung. Eine echte
+    Verschaerfung (hoehere Dringlichkeit) muss IMMER durchkommen, auch wenn
+    ihr Zeitfenster das bereits abgedeckte NICHT wesentlich erweitert
+    (AC-10) -- das ist die Absicherung gegen die gefaehrlichste
+    Fehlerrichtung "Alarm bleibt aus"."""
+    if hazard_class is None:
+        return _ALLOWED
+
+    state = AlertStateService(user_id=user_id).load(entity_id)
+    match = _find_matching_entry(
+        state, hazard_class, list(segment_ids or []),
+        point_at, window_start, window_end, cooldown_minutes,
+    )
+    if match is None:
+        return _ALLOWED
+
+    if alert_urgency.exceeds(severity, match["severity"]):
+        return _ALLOWED  # V2 — struktureller erster Zweig, bricht IMMER durch
+
+    if _covers_materially_more(match["covered_until"], point_at, window_end):
+        return _ALLOWED  # V1-Ausnahme
+
+    logger.debug(
+        "Ereignis-Identitaet unterdrueckt (%s) fuer %s/%s", hazard_class,
+        entity_id, user_id,
+    )
+    return GateResult(False, alert_log.REASON_EVENT_DUPLICATE)
+
+
+def record_event_identity(
+    *,
+    user_id: str,
+    entity_id: str,
+    hazard_class: str,
+    segment_ids: Iterable[str],
+    severity: str,
+    now: datetime,
+    point_at: Optional[datetime] = None,
+    window_start: Optional[datetime] = None,
+    window_end: Optional[datetime] = None,
+) -> None:
+    """Legt GENAU EINEN Registereintrag an (AC-2) -- AUSSCHLIESSLICH nach
+    erfolgreicher Zustellung aufzurufen (F001-Symmetrie zu
+    `record_nowcast_sent`). Read-Modify-Write mit Merge (CLAUDE.md): laedt
+    den vollen Zustand der Entitaet, ergaenzt den neuen Schluessel, schreibt
+    alles zurueck -- bestehende Eintraege (amtliches Melde-Gedaechtnis,
+    Doppel-Alert-Guard) bleiben unangetastet.
+
+    Registerschluessel `event_identity:<hazard_class>:<segment_ids>:<now>`
+    (analog `_identity_hazard_prefix()` in `official_alerts.py`) -- eindeutig
+    je Meldung, damit spaetere Registrierungen einander nicht ueberschreiben."""
+    segments = sorted({s for s in (segment_ids or []) if s})
+    key = f"event_identity:{hazard_class}:{','.join(segments)}:{now.isoformat()}"
+
+    service = AlertStateService(user_id=user_id)
+    state = service.load(entity_id)
+    state[key] = {
+        "hazard_class": hazard_class,
+        "segment_ids": segments,
+        "severity": severity,
+        "point_at": point_at.isoformat() if point_at is not None else None,
+        "window_start": window_start.isoformat() if window_start is not None else None,
+        "window_end": window_end.isoformat() if window_end is not None else None,
+        "reported_at": now.isoformat(),
+    }
+    service.save(entity_id, state)

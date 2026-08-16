@@ -186,3 +186,21 @@ dieser Scheibe (Scheibe 2, #1169).
   eigener Aufruf unmittelbar NACH dem Baustein, `is_silenced` bleibt
   Compare-eigen und außerhalb. Kein neues Architekturprinzip. Details:
   `docs/specs/modules/rework_1467_s4a_amtlich.md`.
+- **Nachtrag (Issue #1467 S4b, 2026-08-16):** seit dieser Scheibe existiert eine
+  **quellenübergreifende** Ereignis-Identität-Prüfung — `services/alert_gate.py::
+  check_event_identity_gate()` —, als **letzte, gemeinsame** Stufe für Nowcast-
+  UND amtliche Trip-Alarme (`trip_alert.py::check_radar_alerts`,
+  `_send_official_alert_only`). Anders als die bisherigen Stufen (Ruhezeit,
+  Sperrzeit, Tages-Obergrenze), die je Quelle in getrennten Töpfen laufen,
+  entdoppelt diese Stufe **über beide Quellen hinweg**: gleiche Gefahrenklasse
+  (T2-Kanon, EINE Klasse `wet`) + gleicher Ortsbezug + überlappendes Zeitfenster
+  ⇒ nur die erste Meldung geht raus, außer eine echte Verschärfung (V2,
+  strukturell erster Zweig) oder eine wesentliche zeitliche Erweiterung (V1-
+  Ausnahme) durchbricht die Unterdrückung. Der amtliche Pfad protokolliert für
+  diesen EINEN neuen Grund (`REASON_EVENT_DUPLICATE`) erstmals eine
+  Unterdrückung — die Aussage aus dem S3-Nachtrag zur
+  Unterdrückungs-Protokollierung bleibt für Ruhezeit/Tageslimit unverändert
+  gültig (der amtliche Pfad protokolliert dafür weiterhin nichts). Kein neues
+  Architekturprinzip: derselbe geteilte-Baustein-Ansatz aus diesem ADR,
+  erstmals angewandt auf einen Vergleich ÜBER Quellen hinweg statt innerhalb
+  einer Quelle. Details: `docs/specs/modules/rework_1467_s4b_entdopplung.md`.

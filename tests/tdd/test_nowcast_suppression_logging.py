@@ -28,7 +28,7 @@ Kein Netz.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -643,3 +643,141 @@ def test_ac9_amtlicher_alarm_bekommt_keinen_unterdrueckungs_grund():
         base._REGISTERED_SOURCES.extend(quellen)
         clean_uid(kontrolle)
         clean_uid(gesperrt)
+
+
+# ═══ Issue #1467 Scheibe S4b-1 — Ereignis-Identitaet-Unterdrueckung (T6) ═════
+# SPEC: docs/specs/modules/rework_1467_s4b_entdopplung.md, AC-15/AC-16
+#
+# `record_event_identity`/`check_event_identity_gate` existieren heute
+# nicht -> ImportError. Diese Erweiterung von append_suppressed_entry() auf
+# den amtlichen Pfad ist bewusst NUR fuer REASON_EVENT_DUPLICATE gedacht --
+# der bestehende Waechter oben (test_ac9_amtlicher_alarm_bekommt_keinen_
+# unterdrueckungs_grund) bleibt fuer Ruhezeit/Tageslimit unveraendert gruen,
+# weil `suppression_reasons()`/`_gate_reasons_in_log()` NUR die drei
+# S3/S4a-Gate-Gruende zaehlen (REASON_EVENT_DUPLICATE ist bewusst NICHT in
+# dieser Menge, s. Helper oben) — AC-16 grenzt das explizit ab.
+
+
+def test_ac15_trip_nowcast_protokolliert_ereignis_identitaet_unterdrueckung():
+    """AC-15 (Beobachtbarkeit Nowcast, Erweiterung ggu. S3): ein durch
+    ``check_event_identity_gate`` unterdrueckter Trip-Nowcast erzeugt GENAU
+    EINEN Protokoll-Eintrag mit ``reason=REASON_NOWCAST`` und
+    ``gate_reason=REASON_EVENT_DUPLICATE``.
+
+    RED heute: ImportError (``services.alert_gate.record_event_identity``
+    fehlt)."""
+    from services.alert_gate import record_event_identity
+    from services.alert_log import REASON_EVENT_DUPLICATE
+
+    uid, trip_id = fresh_uid("s4b-ac15"), "trip-1467s4b-ac15"
+    clean_uid(uid)
+    try:
+        write_user_tier(uid, "premium")
+        now = datetime.now(timezone.utc)
+        # Bereits registrierte amtliche Warnung derselben Klasse/desselben
+        # Segments ("1", s. trip_segments.py::segment_id=i+1 fuer die
+        # Einzeletappe von make_trip()) -- der nachfolgende Nowcast gilt als
+        # Duplikat.
+        record_event_identity(
+            user_id=uid, entity_id=trip_id, hazard_class="wet",
+            segment_ids=["1"], severity="HIGH",
+            window_start=now - timedelta(minutes=10),
+            window_end=now + timedelta(hours=4), now=now,
+        )
+        assert _run_trip(uid, trip_id) == 0, (
+            "Voraussetzung: die Ereignis-Identitaet muss den Nowcast unterdruecken"
+        )
+        unterdrueckt = entries_for(uid, trip_id, bucket="not_delivered")
+        passend = [
+            e for e in unterdrueckt
+            if any(
+                item.get("reason") == REASON_EVENT_DUPLICATE
+                for item in e.get("channels_not_sent", [])
+                if isinstance(item, dict)
+            )
+        ]
+        assert len(passend) == 1, (
+            f"Erwartet GENAU EINEN Protokoll-Eintrag mit gate_reason="
+            f"{REASON_EVENT_DUPLICATE!r}, gefunden {len(passend)}: {read_log(uid)!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_ac16_amtliche_ereignis_identitaet_unterdrueckung_erzeugt_protokoll_eintrag():
+    """AC-16 (a): eine durch ``check_event_identity_gate`` unterdrueckte
+    amtliche Warnung erzeugt GENAU EINEN Protokoll-Eintrag mit
+    ``reason=REASON_OFFICIAL_ALERT`` und ``gate_reason=REASON_EVENT_DUPLICATE``
+    -- bewusste Erweiterung ggu. S4a E3, wo der amtliche Pfad NIE
+    protokollierte.
+
+    RED heute: ImportError (``record_event_identity``)."""
+    from services.alert_gate import record_event_identity
+    from services.alert_log import REASON_EVENT_DUPLICATE, REASON_OFFICIAL_ALERT
+    from services.official_alerts import OfficialAlert, register_official_alert_source
+    from services.trip_alert import TripAlertService
+    from services.weather_snapshot import WeatherSnapshotService
+
+    uid = fresh_uid("s4b-ac16")
+    clean_uid(uid)
+    quellen = list(base_mod()._REGISTERED_SOURCES)
+    base_mod()._REGISTERED_SOURCES.clear()
+    try:
+        now = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-s4b-ac16", hazard_class="wet",
+            segment_ids=["1"], severity="HIGH", point_at=now, now=now,
+        )
+        trip = gust_alert_trip("trip-s4b-ac16")
+        # Issue #1467 S4b-1 Test-Fix: `gust_alert_trip()` ist fuer die
+        # Aenderungsalarm-Tests gebaut und setzt bewusst
+        # `official_alert_triggers_enabled = False` (Zeile 162 der
+        # gemeinsamen Helferfunktion, tests/helpers/alert_log_fixtures.py) --
+        # das wuerde `check_official_alert_triggers()` fuer JEDEN Trip
+        # blockieren, unabhaengig vom Ereignis-Identitaets-Gate, das dieser
+        # Test eigentlich prueft. Nur auf DIESER Instanz zurueckgesetzt, die
+        # geteilte Helferfunktion bleibt unveraendert (andere Tests haengen
+        # an ihrem Bestandsverhalten).
+        trip.official_alert_triggers_enabled = None
+        WeatherSnapshotService(user_id=uid).save_dated(
+            trip.id, date.today(), [weather(1, precip_sum_mm=2.0)],
+        )
+        alert = OfficialAlert(
+            source="tdd-s4b-ac16", hazard="thunderstorm", level=3,
+            label="AC-16-Warnung", valid_from=now - timedelta(minutes=5),
+            valid_to=now + timedelta(minutes=30), region_label="AC16-Region",
+        )
+        register_official_alert_source(_FakeOfficialSource([alert]))
+
+        svc = TripAlertService(user_id=uid, mail_sink=lambda s, b: None)
+        notices = svc.check_official_alert_triggers(trip)
+        assert len(notices) == 1, "Voraussetzung: die Warnung muss als neu erkannt werden"
+
+        sent = svc._send_official_alert_only(trip, notices)
+        assert sent is False, f"Voraussetzung: die Warnung muss unterdrueckt werden ({sent!r})"
+
+        unterdrueckt = entries_for(uid, trip.id, bucket="not_delivered")
+        passend = [
+            e for e in unterdrueckt
+            if e.get("reason") == REASON_OFFICIAL_ALERT
+            and any(
+                item.get("reason") == REASON_EVENT_DUPLICATE
+                for item in e.get("channels_not_sent", [])
+                if isinstance(item, dict)
+            )
+        ]
+        assert len(passend) == 1, (
+            f"Erwartet GENAU EINEN Protokoll-Eintrag mit reason="
+            f"{REASON_OFFICIAL_ALERT!r} und gate_reason={REASON_EVENT_DUPLICATE!r}: "
+            f"{read_log(uid)!r}"
+        )
+    finally:
+        base_mod()._REGISTERED_SOURCES.clear()
+        base_mod()._REGISTERED_SOURCES.extend(quellen)
+        clean_uid(uid)
+
+
+def base_mod():
+    import services.official_alerts.base as base
+
+    return base
