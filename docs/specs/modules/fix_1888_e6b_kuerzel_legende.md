@@ -46,9 +46,27 @@ amtliche Warnungen im selben Reiter (`officialAlertsToggle`,
 - **LoC:** ~40–80 Produktivcode (ein Snippet + zwei Aufrufstellen in derselben
   Datei), ~120–180 Testcode (Vitest-Struktur für AC-1–AC-5 + Playwright für
   AC-6/AC-7).
-- **Files:** 1 Produktivdatei geändert (`WeatherMetricsTab.svelte`), 0 neu;
-  ~2–3 Testdateien (1 Vitest-Struktur-/Datenfluss-Test, 1 Playwright-Test
+- **Files:** 1 Produktivdatei geändert (`WeatherMetricsTab.svelte`) **+ 1 neu**
+  (`weather-metrics-tab/kuerzelLegende.ts`, s. Nachtrag unten);
+  ~2–3 Testdateien (1 Struktur-/Datenfluss-Test im Kern, 1 Playwright-Test
   gegen Staging, optional Erweiterung des bestehenden Sichtbarkeits-Tests).
+
+> **Nachtrag 2026-08-16 (RED-Phase, Tech-Lead-Entscheid — ACs unberührt):**
+> Die Ableitung der Legenden-Einträge zieht in ein eigenes Modul
+> `frontend/src/lib/components/shared/weather-metrics-tab/kuerzelLegende.ts`
+> mit `buildKuerzelLegende(kuerzelById, metricById) -> {kuerzel, bedeutung}[]`.
+> **Grund:** AC-1/AC-2/AC-2a sind Aussagen über Mengen und Texte („kein Kürzel
+> ohne Bedeutung", „`D` genau zweimal"). An der `.svelte`-Datei sind sie in der
+> Kern-Schicht nicht messbar — die Kataloge kommen über `$effect`/`onMount`,
+> und ein SSR-Test führt beides nie aus und wäre damit **strukturell immer
+> grün** (Falle aus #1717). Ohne diese Naht bliebe von AC-1/AC-2/AC-2a nur
+> Struktur-Prosa. Das Muster ist hausüblich: derselbe Ordner hält bereits
+> `channelMetricLayouts.ts`, `compareMetricSelection.ts`,
+> `compareMetricOrder.ts` und weitere Ableitungs-Module.
+> **Die Zusicherungen bleiben unberührt:** Die Legende selbst bleibt EIN
+> Snippet in `WeatherMetricsTab.svelte` (AC-5, durch Strukturtests erzwungen),
+> das Modul liefert nur die Ableitung aus den bereits vorhandenen Katalogen
+> (AC-3). Es entsteht kein zweites Vokabular und keine compare-eigene Kopie.
 - **Effort:** low–medium. Der Produktivcode-Kern ist klein und additiv
   (fail-soft, kein neuer State, keine neue Ladelogik); der Aufwand liegt im
   Nachweis für zwei Kontexte mit unterschiedlichem Kürzel-Vokabular und in
@@ -301,10 +319,15 @@ RED-Phase erneut zu verifizieren, nicht blind zu übernehmen:
 2. **Kürzel-Kardinalität im Ortsvergleich (M2):** erneut gegen
    `get_compare_metric_catalog()` auszählen, ob weiterhin genau `D` und `TF`
    doppelt vorkommen und keine dritte Kollision hinzugekommen ist.
-3. **Kürzel-Trennschärfe Trip/Vergleich (M3):** erneut prüfen, dass
-   `N/K/D/FN/FK/FD` weiterhin ausschließlich im Trip-Katalog existieren und
-   im Compare-Katalog nicht vorkommen — sonst wäre AC-2a hinfällig und AC-2
-   müsste neu gefasst werden.
+3. **Kürzel-Trennschärfe Trip/Vergleich (M3):** erneut prüfen, dass die
+   **Größen** `temperature_night`/`_day_low`/`_day_high` und
+   `wind_chill_night`/`_day_low`/`_day_high` weiterhin ausschließlich im
+   Trip-Katalog existieren — sonst wäre AC-2a hinfällig und AC-2 müsste neu
+   gefasst werden. Präzisierung (Nachprüfung RED-Phase): Das **Zeichen** `D`
+   kommt sehr wohl auch im Compare-Katalog vor, dort aber für eine andere
+   Größe (`temp_max_c`/`temp_min_c`); `K`/`N`/`FK`/`FD`/`FN` fehlen dort ganz.
+   Die Trennung AC-2 / AC-2a trägt dadurch unverändert — sie unterscheidet
+   Größen, nicht Zeichen.
 4. **Auswertungszeichen in der zugestellten SMS (M2b):** erneut prüfen,
    dass `comparison.py` weiterhin ein Auswertungszeichen an `sms_code`
    anhängt, bevor „die zugestellte Ausgabe ist eindeutig" als Begründung für

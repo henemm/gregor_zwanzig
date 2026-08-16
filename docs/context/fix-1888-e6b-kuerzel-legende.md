@@ -118,7 +118,7 @@ Nicht nur die Quelle unterscheidet sich, sondern der Inhalt:
 |---|---|---|
 | Schlüssel | `metric_id` | Compare-Key = Paar (metric_id, Auswertung) |
 | Kardinalität | mehrere Kürzel je Größe möglich (`thunder` → `TH`, `TH+`) | 0..1 Kürzel je Zeile, dafür **mehrere Zeilen mit demselben Kürzel** |
-| `N/K/D/FN/FK/FD` | vorhanden | **kommen dort gar nicht vor** |
+| Größen hinter `N/K/D/FN/FK/FD` | vorhanden | **kommen dort gar nicht vor** — Präzisierung: das Zeichen `D` erscheint im Compare-Katalog sehr wohl, aber für eine **andere** Größe (`temp_max_c`/`temp_min_c`); `K`/`N`/`FK`/`FD`/`FN` fehlen dort ganz |
 | `TF` | nicht vorhanden | vorhanden |
 
 **Folge für AC-2:** Die Zusicherung „der Nutzer erkennt, dass `FK`/`FD`/`FN` dieselbe Größe in
@@ -219,8 +219,26 @@ davon NICHT in /api/metrics (selectable=False): 1
    ('cape', ['CP'], 'Gewitterenergie (CAPE)')
 ```
 
-Gegenprobe im Frontend: `grep -n "cape\|CP" WeatherMetricsTab.svelte weather-metrics-tab/*` →
-**keine Fundstelle**. `cape` hat im Reiter keine Zeile (die Zeilen stammen aus `/api/metrics`,
+Gegenprobe im Frontend: **keine Fundstelle** für `cape` oder `CP` in
+`WeatherMetricsTab.svelte` und `weather-metrics-tab/*`.
+
+> ⚠️ **Zur Suchmethode — nicht `grep` benutzen.** Die erste Fassung dieser Gegenprobe stützte
+> sich auf `grep` und war damit wertlos: `grep` ist auf `WeatherMetricsTab.svelte` in dieser
+> Umgebung vollständig blind. Positivkontrolle, gemessen 2026-08-16:
+>
+> ```
+> grep -c .          WeatherMetricsTab.svelte              -> keine Ausgabe, exit 1
+> grep -c div        WeatherMetricsTab.svelte              -> keine Ausgabe, exit 1
+> grep -c .          weather-metrics-tab/kuerzelLegende.ts -> 66   (grep funktioniert hier)
+> awk 'END{print NR}' WeatherMetricsTab.svelte             -> 2062
+> awk '/kuerzelLegende/{n++} END{print n+0}'               -> 6
+> ```
+>
+> `grep -c .` zählt Zeilen mit irgendeinem Zeichen — null Treffer bei 2062 Zeilen ist ein
+> Werkzeugausfall, kein Suchergebnis. **Auf dieser Datei gilt „nichts gefunden" nur mit
+> danebenstehender Positivkontrolle.** Verlässlich sind `awk`, `sed -n`, `wc -l`, `od`,
+> `git diff` und der AST-Weg über `svelte/compiler`. Die obige Gegenprobe ist mit `awk`
+> wiederholt worden und hält (`cape` 0, `CP` 0, Positivkontrolle `kuerzelLegende` 6). `cape` hat im Reiter keine Zeile (die Zeilen stammen aus `/api/metrics`,
 das `selectable=False` herausfiltert) und erscheint deshalb auch nicht als Marke.
 
 **Folge:** Wird die Legende aus der Menge der **gerenderten** Größen gespeist statt aus dem rohen
