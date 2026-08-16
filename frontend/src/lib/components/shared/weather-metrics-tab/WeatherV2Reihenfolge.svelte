@@ -26,6 +26,14 @@
 	import LTCutLine from '$lib/components/shared/layout-tab/LTCutLine.svelte';
 	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
 	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
+	// Issue #1888 (E6 Scheibe B, Staging-Befund): die Legende sitzt in DERSELBEN
+	// Komponente wie die Marken und wird aus DENSELBEN Props gespeist. Vorher
+	// hing sie einmalig in WeatherMetricsTab am Reihenfolge-Block — die Seite
+	// traegt aber mehrere Marken-Bloecke (Trip: Reihenfolge + Ausblick;
+	// Vergleich: zusaetzlich Stundenverlauf), und deren Marken blieben
+	// unerklaert. Hier ist „Marke ohne Erklaerung" baulich unmoeglich statt nur
+	// getestet: jeder Block bringt seine Legende mit.
+	import { buildKuerzelLegende } from './kuerzelLegende.ts';
 
 	interface Props {
 		primaryColumns: string[];
@@ -65,6 +73,14 @@
 	function itemLabel(id: string, i: number): string {
 		return `${i + 1}. ${metricById[id]?.label ?? id}`;
 	}
+
+	// Issue #1888: die Zeilen der Kuerzel-Legende dieses Blocks — aus GENAU den
+	// Groessen, die er zeigt (sortierbare Liste plus Aus-Gruppe), und aus GENAU
+	// den Props, aus denen auch die Marken kommen. Damit kann die Legende nicht
+	// von den Marken daneben abweichen.
+	const legende = $derived(
+		buildKuerzelLegende([...primaryColumns, ...(offColumns ?? [])], kuerzelById, metricById)
+	);
 </script>
 
 <div class="reihenfolge" data-testid="wm2-reihenfolge">
@@ -195,9 +211,62 @@
 			{/each}
 		</div>
 	{/if}
+	<!-- Issue #1888 (E6 Scheibe B): Legende zu den Marken DIESES Blocks. Sie
+	     steht hier und nicht beim Aufrufer, damit jeder Marken-Block sie
+	     mitbringt — der Staging-Befund entstand daran, dass eine einzelne
+	     Legende weiter oben die Marken der Bloecke „Ausblick" und
+	     „Stundenverlauf" nicht abdeckte. Fail-soft wie die Warnungs-Legende:
+	     ohne Zeilen erscheint gar nichts, statt einer leeren Liste (AC-4). -->
+	{#if legende.eintraege.length}
+		<div data-testid="metric-kuerzel-legend" class="kuerzel-legende text-xs">
+			<p>So heißen diese Größen in SMS und Telegram-Kurzform:</p>
+			<ul class="legend-symbols">
+				{#each legende.eintraege as eintrag, i (eintrag.kuerzel + ' ' + eintrag.bedeutung + ' ' + i)}
+					<li data-testid="metric-kuerzel-legend-row"><code>{eintrag.kuerzel}</code> <span>{eintrag.bedeutung}</span></li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
 </div>
 
 <style>
+	/* Issue #1888: Kuerzel-Legende. Farbe bewusst --g-ink-muted (6,91:1 auf
+	   Weiss, im Browser gegen Staging gemessen) und NICHT --g-ink-4 (2,85:1) —
+	   Design-Leitprinzip: --g-ink-4 nur fuer Placeholder/Disabled, nie fuer
+	   Daten-Labels (AC-7, WCAG AA 4.5:1).
+	   Umbruch statt Ueberlauf: die Zeilen fliessen und brechen innerhalb des
+	   Blocks, damit auch bei 320 px nichts abgeschnitten wird (AC-6). */
+	.kuerzel-legende {
+		color: var(--g-ink-muted);
+		line-height: 1.5;
+		padding: 10px 16px 14px;
+		border-top: 1px solid var(--g-rule-soft);
+	}
+	.kuerzel-legende p {
+		margin: 0 0 4px;
+	}
+	.kuerzel-legende .legend-symbols {
+		display: flex;
+		flex-wrap: wrap;
+		column-gap: 16px;
+		row-gap: 2px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.kuerzel-legende li {
+		display: flex;
+		gap: 6px;
+		max-width: 100%;
+	}
+	.kuerzel-legende code {
+		flex: none;
+		font-weight: 600;
+	}
+	.kuerzel-legende li span {
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
 	.reihenfolge {
 		display: flex;
 		flex-direction: column;

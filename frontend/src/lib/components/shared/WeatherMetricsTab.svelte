@@ -48,11 +48,10 @@
 		splitChannelMetricsForDisplay, mergeAllChannelLayoutsForSave,
 		type ChannelOverride,
 	} from './weather-metrics-tab/channelMetricLayouts.ts';
-	// Issue #1888 (E6 Scheibe B): Ableitung der Kuerzel-Legende — ein Datenfluss
-	// fuer beide Kontexte, gespeist aus denselben Katalogen wie die Marken.
-	import {
-		buildKuerzelLegende, type KuerzelLegendeEintrag,
-	} from './weather-metrics-tab/kuerzelLegende.ts';
+	// Issue #1888 (E6 Scheibe B): die Kuerzel-Legende sitzt seit dem
+	// Staging-Befund IN der Marken-Komponente (WeatherV2Reihenfolge) — jeder
+	// Marken-Block bringt sie mit, aus denselben Props wie die Marken. Hier
+	// bleibt deshalb nichts davon uebrig.
 	import ThresholdMetricRow from './weather-metrics-tab/ThresholdMetricRow.svelte';
 	// Fix #1613: Mehrfach-Symbol-Metriken (temperature/temperature_night/wind_chill)
 	// haben keinen Schwellwert -- eigene, schlanke Zeile ohne Segmented-Control.
@@ -1130,23 +1129,6 @@
 		splitChannelMetricsForDisplay(materializedActiveMetricKeys, compareChannelPrimary(compareChannel))
 	);
 
-	// Issue #1888 (E6 Scheibe B): die Zeilen der Kuerzel-Legende, je Kontext aus
-	// GENAU den Quellen, die auch die Marken daneben speisen (AC-3) — und
-	// beschraenkt auf die Groessen, die der Reihenfolge-Block WIRKLICH zeigt.
-	// Adversary F001: `metricById`/`compareMetricById` ist der VOLLE Katalog
-	// (29 Groessen), der Block zeigt aber nur `active` + die Aus-Gruppe `off`
-	// (frische Tour: 9). Eine Legende aus dem vollen Katalog erklaerte Zeichen,
-	// die nirgends auf dem Schirm stehen. Die Aus-Gruppe gehoert dazu — sie
-	// wird gerendert (WeatherV2Reihenfolge.svelte:174-178).
-	const kuerzelLegendeRoute = $derived(buildKuerzelLegende(
-		[...activeChannelSections.active, ...activeChannelSections.off],
-		metricSymbols, metricById
-	));
-	const kuerzelLegendeVergleich = $derived(buildKuerzelLegende(
-		[...compareChannelSections.active, ...compareChannelSections.off],
-		compareKuerzelById, compareMetricById
-	));
-
 	// Copy-on-write auf den AKTIVEN Kanal-Reiter — Vorbild `editActiveChannel`
 	// (Z. 677-691). Ohne bestehenden Override startet der Eintrag als Klon der
 	// globalen Reihenfolge, nicht leer.
@@ -1245,24 +1227,6 @@
 			</div>
 		{/if}
 	</UiCard.Root>
-{/snippet}
-
-<!-- Issue #1888 (Etappe E6, Scheibe B): Legende zu den Kuerzel-Marken am
-     Reihenfolge-Block. EIN Snippet fuer beide Kontexte (AC-5) — der Inhalt ist
-     je Flaeche ein anderer, weil er aus der jeweils eigenen Katalog-Quelle
-     kommt (AC-3). Fail-soft wie die Warnungs-Legende darueber: ohne Zeilen
-     erscheint gar nichts, statt einer leeren Liste (AC-4). -->
-{#snippet kuerzelLegende(eintraege: KuerzelLegendeEintrag[])}
-	{#if eintraege.length}
-		<div data-testid="metric-kuerzel-legend" class="kuerzel-legende text-xs">
-			<p>So heißen diese Größen in SMS und Telegram-Kurzform:</p>
-			<ul class="legend-symbols">
-				{#each eintraege as eintrag, i (eintrag.kuerzel + ' ' + eintrag.bedeutung + ' ' + i)}
-					<li><code>{eintrag.kuerzel}</code> <span>{eintrag.bedeutung}</span></li>
-				{/each}
-			</ul>
-		</div>
-	{/if}
 {/snippet}
 
 {#if context === 'vergleich'}
@@ -1378,7 +1342,6 @@
 							onRestore={onCompareRestore}
 							kuerzelById={compareKuerzelById}
 						/>
-						{@render kuerzelLegende(kuerzelLegendeVergleich)}
 					</Card>
 				{/snippet}
 			</LayoutTab>
@@ -1542,7 +1505,6 @@
 							onRestore={onRestoreMetric}
 							kuerzelById={metricSymbols}
 						/>
-						{@render kuerzelLegende(kuerzelLegendeRoute)}
 					</Card>
 				{/snippet}
 			</LayoutTab>
@@ -1949,42 +1911,6 @@
 		display: flex;
 		justify-content: flex-end;
 		gap: var(--g-s-2);
-	}
-	/* Issue #1888 (E6 Scheibe B): Kuerzel-Legende am Reihenfolge-Block.
-	   Farbe bewusst --g-ink-muted (6.9:1 auf Weiss) und NICHT --g-ink-4
-	   (2.85:1) — Design-Leitprinzip: --g-ink-4 nur fuer Placeholder/Disabled,
-	   nie fuer Daten-Labels (AC-7, WCAG AA 4.5:1).
-	   Umbruch statt Ueberlauf: die Zeilen fliessen und brechen innerhalb der
-	   Karte, damit auch bei 320 px nichts abgeschnitten wird (AC-6). */
-	.kuerzel-legende {
-		color: var(--g-ink-muted);
-		line-height: 1.5;
-		padding: var(--g-s-2) var(--g-s-3) var(--g-s-3);
-	}
-	.kuerzel-legende p {
-		margin: 0 0 var(--g-s-1);
-	}
-	.kuerzel-legende .legend-symbols {
-		display: flex;
-		flex-wrap: wrap;
-		column-gap: var(--g-s-4);
-		row-gap: var(--g-s-1);
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-	.kuerzel-legende li {
-		display: flex;
-		gap: var(--g-s-1);
-		max-width: 100%;
-	}
-	.kuerzel-legende code {
-		flex: none;
-		font-weight: 600;
-	}
-	.kuerzel-legende li span {
-		min-width: 0;
-		overflow-wrap: anywhere;
 	}
 	/* Conflict 6 resolved: v2-CSS + #624-Klassen, ohne telegram-options */
 	.option-hint {

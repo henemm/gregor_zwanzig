@@ -60,9 +60,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from 'svelte/compiler';
 import { toCompareSelectionEntries } from '../weather-metrics-tab/compareMetricSelection.ts';
 
@@ -87,6 +87,9 @@ const SECHS = [
 
 type Knoten = Record<string, any>;
 type Eintrag = { kuerzel: string; bedeutung: string };
+/** Rueckgabe der Ableitung: die Zeilen UND der laute Ausgang fuer Groessen,
+ *  deren Bedeutung sich nicht aufloesen laesst (frueher ein stummes `continue`). */
+type Legende = { eintraege: Eintrag[]; unaufloesbar: string[] };
 
 // ═══════════════════════════════════════════════════════════════════════════
 // (A) DATENSCHICHT — echte Backend-Kataloge, kein Fixture
@@ -175,7 +178,7 @@ async function ableitung(): Promise<(
 	ids: string[] | null | undefined,
 	kuerzelById: Record<string, string[]> | null | undefined,
 	metricById: Record<string, Knoten> | null | undefined
-) => Eintrag[]> {
+) => Legende> {
 	assert.ok(
 		existsSync(BAUTEIL),
 		`RED: die Ableitung \`${BAUTEIL_SPEC}\` gibt es noch nicht. Die Legende ` +
@@ -197,7 +200,22 @@ async function baue(
 	kuerzelById: Record<string, string[]> | null | undefined,
 	metricById: Record<string, Knoten> | null | undefined
 ): Promise<Eintrag[]> {
-	return (await ableitung())(ids, kuerzelById, metricById);
+	return (await ableitung())(ids, kuerzelById, metricById).eintraege;
+}
+
+/** Alle Quelldateien unterhalb frontend/src (ohne Tests) — fuer den
+ *  Klassen-Waechter „keine Marke ohne Legende". */
+function frontendQuellen(dir = join(REPO, 'frontend', 'src'), acc: string[] = []): string[] {
+	for (const eintrag of readdirSync(dir)) {
+		const voll = join(dir, eintrag);
+		if (statSync(voll).isDirectory()) {
+			if (eintrag === '__tests__' || eintrag === 'node_modules') continue;
+			frontendQuellen(voll, acc);
+		} else if (/\.(svelte|ts|js)$/.test(eintrag)) {
+			acc.push(voll);
+		}
+	}
+	return acc;
 }
 
 /** Probe-Zeilen fuer die Guard-Auswertung (F004): ECHTE Kuerzel und Labels aus
@@ -441,18 +459,73 @@ describe('AC-4: fehlende Quelle erzeugt keine Leerzeilen', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// (B) STRUKTURSCHICHT — echter Svelte-5-AST von WeatherMetricsTab.svelte
+// (A2) DER LAUTE AUSGANG — Staging-Befund, zweite Haelfte
+//
+// Frueher verschwand eine gerenderte Groesse ohne aufloesbare Bedeutung
+// spurlos (`if (!label) continue`). Eine Luecke, die niemand sehen kann,
+// faellt auch keinem Test auf. Sie verlaesst die Ableitung jetzt als eigenes
+// Feld `unaufloesbar` — und dieser Test bewacht, dass sie es tut.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const QUELLE = readFileSync(TAB, 'utf-8');
+describe('Kein stilles Verschwinden: unaufloesbare Groessen werden gemeldet', () => {
+	test('Kuerzel ohne Bedeutung: kein Eintrag, aber ein Vermerk', async () => {
+		const bauen = await ableitung();
+		const kuerzelById = tripKuerzelById();
+		const metricById = tripMetricById();
+		const gerendert = gerendertRoute();
+		// Eine Groesse, die WIRKLICH ein Kuerzel traegt — ohne Kuerzel gaebe es
+		// auch keine Marke, und dann ist das Ueberspringen richtig und stumm.
+		const ersteId = gerendert.find((id) => (kuerzelById[id] ?? []).length > 0);
+		assert.ok(ersteId, 'Keine gerenderte Groesse mit Kuerzel gefunden.');
+
+		const sauber = bauen(gerendert, kuerzelById, metricById);
+		assert.deepEqual(
+			sauber.unaufloesbar, [],
+			`Mit echten Katalogen darf nichts unaufloesbar sein — gemeldet: ` +
+				`${JSON.stringify(sauber.unaufloesbar)}.`
+		);
+
+		// Bedeutung entziehen, Kuerzel behalten: genau der Fall, den der Reiter
+		// als Marke rendern wuerde („m" ist da, das Label leer).
+		const ohneLabel = { ...metricById, [ersteId]: { ...metricById[ersteId], label: '' } };
+		const kaputt = bauen(gerendert, kuerzelById, ohneLabel);
+		assert.ok(
+			kaputt.unaufloesbar.includes(ersteId),
+			`FAIL: "${ersteId}" traegt ein Kuerzel, aber keine Bedeutung — und die ` +
+				`Ableitung meldet das nicht (unaufloesbar=${JSON.stringify(kaputt.unaufloesbar)}). ` +
+				`Genau dieses stille Ueberspringen hat den Staging-Befund verdeckt.`
+		);
+		assert.ok(
+			!kaputt.eintraege.some((e) => (kuerzelById[ersteId] ?? []).includes(e.kuerzel)),
+			`FAIL: die Ableitung erfindet fuer "${ersteId}" trotzdem einen Erklaertext. ` +
+				`Ohne Bedeutung darf keine Zeile entstehen (AC-1) — der Fall gehoert ` +
+				`gemeldet, nicht ausgefuellt.`
+		);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// (B) STRUKTURSCHICHT — echter Svelte-5-AST der MARKEN-Komponente
+//
+// Seit dem Staging-Befund steht die Legende in `WeatherV2Reihenfolge.svelte` —
+// derselben Komponente, die die Marken rendert, gespeist aus denselben Props.
+// Vorher hing sie einmalig im Reiter am Reihenfolge-Block, waehrend die Seite
+// mehrere Marken-Bloecke traegt (Trip: Reihenfolge + Ausblick; Vergleich:
+// zusaetzlich Stundenverlauf) — deren Marken blieben unerklaert. Die Barriere
+// gehoert an den Gefahrenpunkt, nicht acht Bloecke weiter oben.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MARKEN_DATEI = join(SHARED, 'weather-metrics-tab', 'WeatherV2Reihenfolge.svelte');
+const QUELLE = readFileSync(MARKEN_DATEI, 'utf-8');
 const AST: Knoten = parse(QUELLE, { modern: true });
+
+/** Testid der Kurzform-Marke — der Anker, an dem die Legende haengen muss. */
+const MARKE_TESTID = 'wm2-kurzform-badge';
 
 interface Bedingung { quelle: string; test: Knoten; negiert: boolean }
 
 /** Tiefensuche mit Elternkette UND den WIRKSAMEN {#if}-Bedingungen: im
- *  {:else}-Zweig gilt die Bedingung NEGIERT, nicht etwa gar nicht. Genau
- *  daran haengt die Kontext-Zuordnung — der Reiter ist ein einziges
- *  `{#if context === 'vergleich'} … {:else} … {/if}` (:1228/:1422/:1824). */
+ *  {:else}-Zweig gilt die Bedingung NEGIERT, nicht etwa gar nicht. */
 function gehe(
 	node: unknown,
 	besuch: (n: Knoten, eltern: Knoten[], bed: Bedingung[]) => void,
@@ -504,176 +577,117 @@ function attributWert(n: Knoten, name: string): string | null {
 	return null;
 }
 
-function legendenElemente(): { knoten: Knoten; eltern: Knoten[]; bed: Bedingung[] }[] {
+function elementeMitTestid(testid: string): { knoten: Knoten; eltern: Knoten[]; bed: Bedingung[] }[] {
 	const treffer: { knoten: Knoten; eltern: Knoten[]; bed: Bedingung[] }[] = [];
 	gehe(AST.fragment, (n, eltern, bed) => {
 		if (n.type !== 'RegularElement' && n.type !== 'Component') return;
-		if (attributWert(n, 'data-testid') === LEGENDE_TESTID) treffer.push({ knoten: n, eltern, bed });
+		if (attributWert(n, 'data-testid') === testid) treffer.push({ knoten: n, eltern, bed });
 	});
 	return treffer;
 }
 
-/** Die eine Legende — mit sprechendem Fehlschlag statt Absturz, solange es sie nicht gibt. */
+/** Die eine Legende — mit sprechendem Fehlschlag statt Absturz. */
 function dieLegende() {
-	const treffer = legendenElemente();
+	const treffer = elementeMitTestid(LEGENDE_TESTID);
 	assert.equal(
 		treffer.length, 1,
-		`RED: es muss GENAU EIN Element mit data-testid="${LEGENDE_TESTID}" in ` +
-			`WeatherMetricsTab.svelte geben (gefunden: ${treffer.length}). Null bedeutet ` +
-			`keine Legende, mehr als eins bedeutet eine kontexteigene Kopie statt eines ` +
-			`geteilten Bausteins (AC-5).`
+		`FAIL: es muss GENAU EIN Element mit data-testid="${LEGENDE_TESTID}" in ` +
+			`WeatherV2Reihenfolge.svelte geben (gefunden: ${treffer.length}). Null heisst: ` +
+			`ein Marken-Block ohne Legende — genau der Staging-Befund. Mehr als eins heisst: ` +
+			`eine Kopie statt des geteilten Bausteins.`
 	);
 	return treffer[0];
 }
 
-const istVergleich = (bed: Bedingung[]) =>
-	bed.some((b) => !b.negiert && /context\s*===\s*['"]vergleich['"]/.test(b.quelle));
-const istRoute = (bed: Bedingung[]) =>
-	bed.some((b) => b.negiert && /context\s*===\s*['"]vergleich['"]/.test(b.quelle));
-
-/** Alle `{@render <name>(…)}`-Stellen samt wirksamen Bedingungen. */
-function renderStellen(name: string): { knoten: Knoten; bed: Bedingung[] }[] {
-	const stellen: { knoten: Knoten; bed: Bedingung[] }[] = [];
-	gehe(AST.fragment, (n, _e, bed) => {
-		if (n.type === 'RenderTag' && QUELLE.slice(n.start, n.end).includes(name + '('))
-			stellen.push({ knoten: n, bed });
-	});
-	return stellen;
-}
-
-/** Namen, die eine Aufrufstelle erreicht: ihre Argumente plus — einen Schritt
- *  tief — die Herleitung der dort genannten Bezeichner (Muster
- *  weather_metric_kuerzel_marken.test.ts::kuerzelQuelle). */
-function erreichteNamen(stelle: Knoten): Set<string> {
-	const direkt = geleseneNamen(stelle);
-	const alle = new Set(direkt);
-	gehe(AST.instance?.content?.body, (n) => {
-		if (n.type !== 'VariableDeclarator') return;
-		const name = n.id?.type === 'Identifier' ? n.id.name : null;
-		if (!name || !direkt.has(name)) return;
-		for (const g of geleseneNamen(n.init)) alle.add(g);
-	});
-	return alle;
-}
-
-describe('AC-5: ein Snippet, an beiden Reihenfolge-Bloecken', () => {
-	test('die Legende steht genau einmal, in einem Snippet', () => {
-		const legende = dieLegende();
-		const snippet = legende.eltern.filter((e) => e.type === 'SnippetBlock').pop();
+describe('AC-5: die Legende sitzt in der Komponente, die die Marken rendert', () => {
+	test('Marken und Legende stehen in DERSELBEN Komponente', () => {
+		const marken = elementeMitTestid(MARKE_TESTID);
 		assert.ok(
-			snippet,
-			`AC-5 FAIL: das Legenden-Markup liegt in keinem {#snippet} — dann kann es ` +
-				`nicht an zwei Stellen wiederverwendet werden, ohne kopiert zu werden ` +
-				`(Vorbild: officialAlertsToggle, WeatherMetricsTab.svelte:1189-1226).`
+			marken.length > 0,
+			`FAIL: WeatherV2Reihenfolge rendert keine Kurzform-Marke (${MARKE_TESTID}) mehr — ` +
+				`dann bewacht dieser Test nichts. Wanderten die Marken in eine andere ` +
+				`Komponente, muss die Legende mitwandern.`
 		);
+		dieLegende();
 	});
 
-	test('dasselbe Snippet wird in BEIDEN Kontexten gerendert', () => {
-		const legende = dieLegende();
-		const snippet = legende.eltern.filter((e) => e.type === 'SnippetBlock').pop();
-		assert.ok(snippet, 'AC-5 FAIL: kein Snippet — s. Test darueber.');
-		const name = String(snippet!.expression?.name ?? '');
-		const stellen = renderStellen(name);
-		assert.ok(
-			stellen.some((s) => istVergleich(s.bed)),
-			`AC-5 FAIL: \`${name}\` wird im Ortsvergleich-Zweig nicht gerendert. ` +
-				`Gefundene Aufrufstellen: ${stellen.length}.`
-		);
-		assert.ok(
-			stellen.some((s) => istRoute(s.bed)),
-			`AC-5 FAIL: \`${name}\` wird im Trip-Zweig ({:else} von ` +
-				`\`context === 'vergleich'\`) nicht gerendert. Aufrufstellen: ${stellen.length}.`
-		);
-	});
-
-	test('beide Aufrufstellen haengen am Reihenfolge-Abschnitt', () => {
-		const legende = dieLegende();
-		const snippet = legende.eltern.filter((e) => e.type === 'SnippetBlock').pop();
-		assert.ok(snippet, 'AC-5 FAIL: kein Snippet — s. Test darueber.');
-		const name = String(snippet!.expression?.name ?? '');
-		for (const [flaeche, waehle] of [['Ortsvergleich', istVergleich], ['Trip', istRoute]] as const) {
-			const stelle = renderStellen(name).find((s) => waehle(s.bed));
-			assert.ok(stelle, `AC-5 FAIL: keine Aufrufstelle im ${flaeche}-Zweig.`);
-			assert.ok(
-				stelle!.bed.some((b) => !b.negiert && /sections\.includes\(\s*'reihenfolge'\s*\)/.test(b.quelle)),
-				`AC-5 FAIL: die ${flaeche}-Aufrufstelle haengt nicht am Reihenfolge-Abschnitt. ` +
-					`Nur dieser Block zeigt ALLE Groessen inklusive der abgewaehlten und ist ` +
-					`der einzige Ort, den beide Kontexte teilen. Bedingungen: ` +
-					`${JSON.stringify(stelle!.bed.map((b) => (b.negiert ? '!' : '') + b.quelle))}`
-			);
+	test('KEINE Datei rendert Marken ohne Legende', () => {
+		// Der Klassen-Waechter zum Staging-Befund: dort lagen Marken (in
+		// WeatherV2Reihenfolge) und Legende (in WeatherMetricsTab) in
+		// VERSCHIEDENEN Dateien, und drei Einbindungen der Marken-Komponente
+		// hatten deshalb keine Legende. Wer kuenftig irgendwo eine Kurzform-Marke
+		// rendert, muss sie an derselben Stelle auch erklaeren.
+		// Auf das VOLLE Attribut geprueft, nicht auf die blosse Zeichenkette:
+		// `data-testid="metric-kuerzel-legend-ZZ"` enthaelt den Anker als
+		// Teilzeichenkette und haette eine Teilprüfung getäuscht (gemessen).
+		const markeAttr = `data-testid="${MARKE_TESTID}"`;
+		const legendeAttr = `data-testid="${LEGENDE_TESTID}"`;
+		const ohneLegende: string[] = [];
+		for (const datei of frontendQuellen()) {
+			const src = readFileSync(datei, 'utf-8');
+			if (!src.includes(markeAttr)) continue;
+			if (!src.includes(legendeAttr)) ohneLegende.push(datei.slice(datei.indexOf('/src/') + 1));
 		}
+		assert.deepEqual(
+			ohneLegende, [],
+			`FAIL: diese Dateien rendern Kurzform-Marken, erklaeren sie aber nicht:\n  ` +
+				`${ohneLegende.join('\n  ')}\n` +
+				`Genau so entstand der Staging-Befund: die Seite traegt mehrere ` +
+				`Marken-Bloecke (Trip: Reihenfolge + Ausblick; Vergleich: zusaetzlich ` +
+				`Stundenverlauf), die Legende hing nur an einem. Sechs Marken blieben ` +
+				`im Ortsvergleich unerklaert.`
+		);
+	});
+
+	test('Der Reiter fuehrt keine zweite, eigene Legende mehr', () => {
+		const reiter = readFileSync(join(SHARED, 'WeatherMetricsTab.svelte'), 'utf-8');
+		assert.ok(
+			!reiter.includes(LEGENDE_TESTID),
+			'FAIL: WeatherMetricsTab.svelte rendert weiterhin eine eigene Legende. Zwei ' +
+				'Legenden je Block koennen auseinanderlaufen — die Erklaerung gehoert an ' +
+				'die Marke, und zwar genau einmal.'
+		);
 	});
 });
 
-describe('AC-3: die Legende speist sich aus der Marken-Quelle, nicht aus einer zweiten Liste', () => {
-	const TRIP_QUELLEN = ['metricSymbols', 'smsSymbols', 'sms_symbols'];
-	const TRIP_BEDEUTUNG = ['metricById', 'catalog'];
-	const VERGLEICH_QUELLEN = ['compareKuerzelById', 'compareCatalog'];
-	const VERGLEICH_BEDEUTUNG = ['compareMetricById', 'compareCatalog'];
-
-	test('Trip-Aufrufstelle: Kuerzel UND Bedeutung aus den Trip-Katalogen', () => {
-		const legende = dieLegende();
-		const snippet = legende.eltern.filter((e) => e.type === 'SnippetBlock').pop();
-		assert.ok(snippet, 'AC-3 FAIL: kein Legenden-Snippet.');
-		const stelle = renderStellen(String(snippet!.expression?.name ?? '')).find((s) => istRoute(s.bed));
-		assert.ok(stelle, 'AC-3 FAIL: keine Trip-Aufrufstelle.');
-		const erreicht = erreichteNamen(stelle!.knoten);
-		assert.ok(
-			TRIP_QUELLEN.some((q) => erreicht.has(q)),
-			`AC-3 FAIL: die Trip-Legende erreicht keine der Kuerzel-Quellen ` +
-				`${TRIP_QUELLEN.join('/')} — sie zeigte dann andere Kuerzel als die Marken ` +
-				`daneben. Erreichbar: ${JSON.stringify([...erreicht].sort())}`
-		);
-		assert.ok(
-			TRIP_BEDEUTUNG.some((q) => erreicht.has(q)),
-			`AC-3 FAIL: die Trip-Legende erreicht weder \`metricById\` noch \`catalog\` — ` +
-				`ohne die Menge der GERENDERTEN Groessen bleibt nur der rohe Kuerzel-Katalog ` +
-				`als Quelle, und der bringt \`CP\` ohne Bedeutung mit (Messung M1). ` +
-				`Erreichbar: ${JSON.stringify([...erreicht].sort())}`
-		);
-		const fremd = VERGLEICH_QUELLEN.filter((q) => erreicht.has(q));
-		assert.deepEqual(fremd, [], `AC-3 FAIL: die Trip-Legende erreicht Vergleichs-Quellen (${fremd.join(', ')}).`);
-	});
-
-	test('Vergleichs-Aufrufstelle: Kuerzel UND Bedeutung aus den Compare-Katalogen', () => {
-		const legende = dieLegende();
-		const snippet = legende.eltern.filter((e) => e.type === 'SnippetBlock').pop();
-		assert.ok(snippet, 'AC-3 FAIL: kein Legenden-Snippet.');
-		const stelle = renderStellen(String(snippet!.expression?.name ?? '')).find((s) => istVergleich(s.bed));
-		assert.ok(stelle, 'AC-3 FAIL: keine Vergleichs-Aufrufstelle.');
-		const erreicht = erreichteNamen(stelle!.knoten);
-		for (const gruppe of [VERGLEICH_QUELLEN, VERGLEICH_BEDEUTUNG]) {
+describe('AC-3: die Legende speist sich aus den Props der Marken', () => {
+	test('die Ableitung erreicht genau die Quellen, aus denen auch die Marken kommen', () => {
+		const aufruf = aufrufKnoten();
+		const erreicht = geleseneNamen(aufruf);
+		for (const quelle of ['primaryColumns', 'offColumns', 'kuerzelById', 'metricById']) {
 			assert.ok(
-				gruppe.some((q) => erreicht.has(q)),
-				`AC-3 FAIL: die Vergleichs-Legende erreicht keine von ${gruppe.join('/')}. ` +
-					`Erreichbar: ${JSON.stringify([...erreicht].sort())}`
+				erreicht.has(quelle),
+				`AC-3 FAIL: die Legende erreicht \`${quelle}\` nicht. Sie muss aus DENSELBEN ` +
+					`Props kommen wie die Marken — sonst kann sie von ihnen abweichen, und ` +
+					`genau das ist auf Staging passiert. Erreichbar: ` +
+					`${JSON.stringify([...erreicht].sort())}`
 			);
 		}
-		const fremd = ['metricSymbols', 'smsSymbols'].filter((q) => erreicht.has(q));
-		assert.deepEqual(
-			fremd, [],
-			`AC-3 FAIL: die Vergleichs-Legende erreicht die TRIP-Quelle (${fremd.join(', ')}). ` +
-				`Trip und Vergleich senden aus verschiedenen Tabellen — die Legende zeigte ` +
-				`Kuerzel, die der Vergleich nie sendet.`
+	});
+
+	test('die Aus-Gruppe ist mitgedeckt', () => {
+		const quelltext = QUELLE.slice(aufrufKnoten().start, aufrufKnoten().end);
+		assert.ok(
+			/offColumns/.test(quelltext),
+			`AC-1 FAIL: die Legende deckt \`offColumns\` nicht ab. Die Aus-Gruppe wird ` +
+				`gerendert und traegt Marken — ohne sie blieben deren Kuerzel unerklaert. ` +
+				`Aufruf: ${quelltext}`
 		);
 	});
 
 	test('im Legenden-Markup steht kein Kuerzel und kein Label als fester Text', () => {
 		const legende = dieLegende();
-		const snippet = legende.eltern.filter((e) => e.type === 'SnippetBlock').pop();
-		assert.ok(snippet, 'AC-3 FAIL: kein Legenden-Snippet.');
 		const verboten = new Set<string>([
 			...Object.values(tripKuerzelById()).flat(),
 			...Object.values(tripMetricById()).map((m) => String(m.label)),
 			...SECHS
 		]);
-		const treffer = festeTexte(snippet).filter((t) => verboten.has(t));
+		const treffer = festeTexte(legende.knoten).filter((t) => verboten.has(t));
 		assert.deepEqual(
 			treffer, [],
-			`AC-3 FAIL: das Legenden-Snippet fuehrt feste Kuerzel/Labels ` +
-				`(${treffer.join(', ')}) — das ist die zweite Liste im Frontend, die der ` +
-				`Waechter officialAlertLegend.test.ts:395-415 fuer die Warnungs-Legende ` +
-				`bereits verbietet. Kuerzel und Bedeutung muessen aus den Katalogen kommen.`
+			`AC-3 FAIL: das Legenden-Markup fuehrt feste Kuerzel/Labels (${treffer.join(', ')}) ` +
+				`— das ist die zweite Liste im Frontend, die der Waechter ` +
+				`officialAlertLegend.test.ts:395-415 fuer die Warnungs-Legende bereits verbietet.`
 		);
 	});
 });
@@ -684,308 +698,452 @@ describe('AC-4: der Guard haengt an den Daten, nicht am Kontext', () => {
 		const wirksam = legende.bed.filter((b) => !b.negiert);
 		assert.ok(
 			wirksam.length > 0,
-			'AC-4 FAIL: das Legenden-Markup steht in keinem {#if}. Ohne Katalog erschiene ' +
-				'eine leere Legende statt gar keiner (Vorbild: `{#if smsSymbols}`, :1210).'
+			'AC-4 FAIL: das Legenden-Markup steht in keinem {#if}. Ohne Zeilen erschiene ' +
+				'ein leeres Geruest statt gar nichts.'
 		);
 		const kontextGuard = legende.bed.find((b) => /\bcontext\b/.test(b.quelle));
 		assert.equal(
 			kontextGuard, undefined,
-			`AC-4/AC-5 FAIL: die Legende haengt an einer Kontext-Bedingung ` +
-				`(${kontextGuard?.quelle}) — sie muss in BEIDEN Flaechen erscheinen und nur ` +
-				`an der geladenen Quelle haengen.`
+			`AC-4 FAIL: die Legende haengt an einer Kontext-Bedingung (${kontextGuard?.quelle}).`
 		);
 		const inhalt = geleseneNamen(legende.knoten);
 		assert.ok(
 			wirksam.some((b) => [...geleseneNamen(b.test)].some((name) => inhalt.has(name))),
 			`AC-4 FAIL: die Bedingung prueft etwas anderes, als die Legende anzeigt ` +
-				`(Bedingungen ${JSON.stringify(wirksam.map((b) => b.quelle))}, Legende liest ` +
-				`${JSON.stringify([...inhalt])}). Dann kann trotz wahrer Bedingung eine leere ` +
-				`Legende erscheinen.`
+				`(Bedingungen ${JSON.stringify(wirksam.map((b) => b.quelle))}).`
 		);
 	});
 
-	// Adversary F003: der Test darueber prueft nur, ob die Bedingung denselben
-	// NAMEN liest wie der Inhalt — nicht, ob sie auf Leere prueft. Eine
-	// Tautologie wie `eintraege.length >= 0` liest denselben Namen, wird nie
-	// falsch und rendert bei leerer Quelle ein leeres Geruest (Intro-Satz plus
-	// leere Liste). Dieselbe Klasse wie F002: geprueft, wo der Code steht, nicht
-	// wo er wirkt. Also wird die Bedingung hier AUSGEFUEHRT — mit demselben
-	// Mechanismus wie Schicht C, gegen leere und nichtleere Daten.
 	test('die Bedingung wertet bei leerer Legende WIRKLICH falsch aus', () => {
 		const legende = dieLegende();
-		const snippet = legende.eltern.filter((e) => e.type === 'SnippetBlock').pop();
-		assert.ok(snippet, 'AC-4 FAIL: kein Legenden-Snippet.');
-		const parameter = ((snippet!.parameters ?? []) as Knoten[])
-			.map((p) => (p.type === 'Identifier' ? String(p.name) : null))
-			.filter((n): n is string => Boolean(n));
-		assert.ok(
-			parameter.length > 0,
-			'AC-4 FAIL: das Legenden-Snippet nimmt keinen benannten Parameter entgegen. ' +
-				'Dann laesst sich seine Bedingung nicht gegen leere und nichtleere Daten ' +
-				'ausfuehren — die Wirksamkeit des Guards bliebe ungeprueft, und genau das ' +
-				'ist der Zustand, den dieser Test beendet (F003).'
-		);
-		assert.ok(
-			legende.bed.length > 0,
-			'AC-4 FAIL: ueber dem Legenden-Markup steht keine Bedingung. Bei leerer Quelle ' +
-				'erschiene dann ein leeres Legenden-Geruest statt gar nichts.'
-		);
+		assert.ok(legende.bed.length > 0, 'AC-4 FAIL: keine Bedingung ueber der Legende.');
 		const ausdruck = legende.bed
 			.map((b) => (b.negiert ? `!(${b.quelle})` : `(${b.quelle})`))
 			.join(' && ');
+		const gebunden = [...geleseneNamen(legende.bed[0].test)];
 
-		/** Wertet die ECHTE Bedingung aus, mit den Snippet-Parametern auf die
-		 *  Probe-Daten gebunden. Ein Bezeichner, der nicht zum Legenden-Inhalt
-		 *  gehoert, fliegt als ReferenceError auf statt still durchzulaufen. */
+		/** Wertet die ECHTE Bedingung aus. Der Name, unter dem die Zeilen reisen,
+		 *  wird aus der Bedingung selbst gelesen — nicht hier festgelegt. */
 		function auswerten(eintraege: Eintrag[]): unknown {
-			const umgebung = Object.fromEntries(parameter.map((name) => [name, eintraege]));
+			const umgebung: Knoten = {};
+			for (const name of gebunden) umgebung[name] = { eintraege, unaufloesbar: [] };
+			// Die Bedingung darf sowohl `legende.eintraege.length` als auch einen
+			// direkt uebergebenen Zeilen-Namen pruefen — beide Formen werden bedient.
+			for (const name of gebunden) if (/eintraege|zeilen|rows/i.test(name)) umgebung[name] = eintraege;
 			try {
 				return new Function('u', `with (u) { return ${ausdruck}; }`)(umgebung);
 			} catch (e) {
 				return assert.fail(
-					`AC-4 FAIL: die Bedingung \`${ausdruck}\` laesst sich nicht gegen die Daten ` +
-						`der Legende ausfuehren: ${(e as Error).message}. Sie haengt dann an ` +
-						`etwas anderem als an dem Inhalt, den sie schuetzen soll.`
+					`AC-4 FAIL: die Bedingung \`${ausdruck}\` laesst sich nicht gegen die Zeilen ` +
+						`der Legende ausfuehren: ${(e as Error).message}.`
 				);
 			}
 		}
 
 		assert.ok(
 			!auswerten([]),
-			`AC-4 FAIL: die Bedingung \`${ausdruck}\` ist bei LEERER Legende WAHR. Der ` +
-				`Reiter zeigte dann ohne Katalog ein leeres Geruest (Intro-Satz plus leere ` +
-				`Liste) statt gar nichts. Eine namensgleiche, aber wirkungslose Bedingung ` +
-				`(\`length >= 0\`) besteht die Namensprobe darueber und faellt nur hier auf.`
+			`AC-4 FAIL: die Bedingung \`${ausdruck}\` ist bei LEERER Legende WAHR — der Block ` +
+				`zeigte dann ein leeres Geruest statt gar nichts.`
 		);
-
-		// F004: zwei Probepunkte (0 und 1) reichen nicht — `length === 1` traf
-		// beide zufaellig und blieb ungefangen, obwohl die Legende damit im
-		// Betrieb praktisch nie erschiene (eine frische Tour rendert 9 Groessen).
-		// Geprueft wird deshalb eine REIHE von Groessen, ausdruecklich mit
-		// * mehr als einer Zeile (faengt `=== 1`),
-		// * der Zahl, die im Betrieb wirklich auftritt, und dem Doppelten davon
-		//   (faengt jede obere Schranke wie `>= 1 && <= 2` oder `< 20`),
-		// * einer Primzahl neben Vielfachen (faengt Rest-Bedingungen wie `% 3`).
+		// F004: eine Reihe von Groessen, nicht zwei Punkte — `=== 1` und obere
+		// Schranken bestehen sonst zufaellig.
 		const echteAnzahl = gerendertRoute().reduce(
 			(n, id) => n + (tripKuerzelById()[id] ?? []).length, 0
 		);
-		assert.ok(echteAnzahl > 2, `Messgrundlage weg: nur ${echteAnzahl} echte Legenden-Zeilen.`);
 		for (const anzahl of [...new Set([1, 2, 3, 4, 6, echteAnzahl, echteAnzahl * 2])]) {
 			assert.ok(
 				auswerten(probeEintraege(anzahl)),
-				`AC-4 FAIL: die Bedingung \`${ausdruck}\` ist bei ${anzahl} Zeilen FALSCH. ` +
-					`Die Legende erschiene dann nicht, obwohl Zeilen vorliegen — eine ` +
-					`Bedingung mit fester Zahl (\`=== 1\`) oder oberer Schranke faellt genau ` +
-					`hier auf. Im Betrieb entstehen ${echteAnzahl} Zeilen.`
+				`AC-4 FAIL: die Bedingung \`${ausdruck}\` ist bei ${anzahl} Zeilen FALSCH.`
 			);
 		}
-		// Und sie darf nicht am INHALT der Zeilen haengen, nur an ihrer Zahl:
-		// eine Bedingung wie `eintraege[0].kuerzel === 'X'` bestuende sonst jede
-		// Groessen-Probe, die zufaellig dieselben Daten benutzt.
 		for (const anzahl of [1, echteAnzahl]) {
 			assert.equal(
 				Boolean(auswerten(probeEintraege(anzahl, 1))),
 				Boolean(auswerten(probeEintraege(anzahl, 0))),
-				`AC-4 FAIL: die Bedingung \`${ausdruck}\` haengt bei ${anzahl} Zeilen am ` +
-					`INHALT der Zeilen, nicht an ihrer Zahl. Dann entscheidet ueber die ` +
-					`Sichtbarkeit der Legende, WELCHE Groessen der Nutzer gewaehlt hat.`
+				`AC-4 FAIL: die Bedingung haengt bei ${anzahl} Zeilen am INHALT der Zeilen.`
 			);
 		}
-	});
-
-	// F005: die Ausfuehrungsprobe darueber ist eine STICHPROBE, und jede endliche
-	// Stichprobe laesst sich umgehen — `eintraege.length && eintraege.length % 5
-	// !== 0` besteht alle geprueften Groessen [0,1,2,3,4,6,9,18] und waere bei 5,
-	// 10, 15 Zeilen trotzdem falsch. Ein Modulo-5-Punkt erzeugt eine
-	// Modulo-7-Luecke: Wettruesten ohne Ende.
-	//
-	// Deshalb hier keine weitere Stichprobe, sondern eine FORM-Pruefung, die die
-	// ganze Klasse schliesst. Verhalten und Form gemeinsam konvergieren: die
-	// Ausfuehrungsprobe allein ist per Stichprobe umgehbar (F005), die Form
-	// allein pruefte nur den Namen und nicht die Wirkung (F003).
-	test('die Bedingung ist ein schlichter Leere-Test — bewusst, nicht zufaellig', () => {
-		const legende = dieLegende();
-		const snippet = legende.eltern.filter((e) => e.type === 'SnippetBlock').pop();
-		assert.ok(snippet, 'AC-4 FAIL: kein Legenden-Snippet.');
-		const parameter = ((snippet!.parameters ?? []) as Knoten[])
-			.map((p) => (p.type === 'Identifier' ? String(p.name) : null))
-			.filter((n): n is string => Boolean(n));
-		assert.ok(parameter.length > 0, 'AC-4 FAIL: das Legenden-Snippet hat keinen benannten Parameter.');
-		assert.equal(
-			legende.bed.length, 1,
-			`AC-4 FAIL: ueber dem Legenden-Markup stehen ${legende.bed.length} Bedingungen ` +
-				`(${JSON.stringify(legende.bed.map((b) => (b.negiert ? '!' : '') + b.quelle))}). ` +
-				`Erwartet ist genau eine: der Leere-Test auf die Legenden-Zeilen.`
-		);
-		assert.equal(legende.bed[0].negiert, false, 'AC-4 FAIL: die Legende haengt in einem {:else}-Zweig.');
-
-		/** `<parameter>.length` — ohne Optional Chaining, ohne Index-Zugriff. */
-		function istLaenge(n: Knoten | null | undefined): boolean {
-			return !!n && n.type === 'MemberExpression' && !n.computed && !n.optional
-				&& n.object?.type === 'Identifier' && parameter.includes(String(n.object.name))
-				&& n.property?.type === 'Identifier' && n.property.name === 'length';
-		}
-		const istNull = (n: Knoten | null | undefined) => !!n && n.type === 'Literal' && n.value === 0;
-
-		const test = legende.bed[0].test as Knoten;
-		const schlicht =
-			istLaenge(test) ||
-			(test?.type === 'BinaryExpression' && (
-				(['>', '!==', '!='].includes(test.operator) && istLaenge(test.left) && istNull(test.right)) ||
-				(['<', '!==', '!='].includes(test.operator) && istNull(test.left) && istLaenge(test.right))
-			));
-
-		assert.ok(
-			schlicht,
-			`AC-4 FAIL: die Bedingung \`${legende.bed[0].quelle}\` ist kein schlichter ` +
-				`Leere-Test auf ${parameter.join('/')}. Erlaubt sind genau ` +
-				`\`${parameter[0]}.length\` und der Vergleich gegen 0 (\`> 0\`, \`!== 0\`) — ` +
-				`nichts sonst: keine weiteren Operanden, keine andere Konstante, kein Modulo, ` +
-				`kein Optional Chaining, kein zweiter Bezeichner.\n` +
-				`WARUM SO STRENG: die Ausfuehrungsprobe darueber ist eine Stichprobe ueber ` +
-				`einzelne Zeilenzahlen, und jede endliche Stichprobe hat Luecken — ` +
-				`\`length && length % 5 !== 0\` besteht sie und waere bei 5, 10, 15 Zeilen ` +
-				`trotzdem falsch (Adversary F005). Erst Form UND Verhalten zusammen schliessen ` +
-				`die Klasse. Die Schlichtheit ist damit eine bewusste Invariante, kein Zufall.\n` +
-				`WENN DU SIE AENDERN WILLST: nicht diesen Test aufweichen, sondern hier ` +
-				`bewusst die neue Schreibweise aufnehmen und begruenden, warum sie ` +
-				`ausschliesslich an der Leere haengt.`
-		);
 	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// (C) VERDRAHTUNGSSCHICHT — die ECHTE Aufrufstelle, gegen echte Kataloge
+// (C) VERDRAHTUNGSSCHICHT — der ECHTE Aufruf, gegen die Regel der Marken
 //
-// Adversary F002: Schicht (A) ruft die Ableitung mit selbst sortierten
-// Argumenten auf, Schicht (B) prueft nur, welche Bezeichner eine Aufrufstelle
-// ERREICHT — nicht, an welcher Stelle sie stehen. Vertauscht man an der
-// route-Aufrufstelle die Argumente, ist die Trip-Legende in Produktion leer,
-// und beide Schichten bleiben gruen. Die Zusicherung war dort geprueft, wo der
-// Code steht, nicht dort, wo er wirkt.
-//
-// Hier wird deshalb der Quelltext des `buildKuerzelLegende(...)`-Aufrufs aus
-// dem AST gelesen und AUSGEFUEHRT — mit der echten Funktion und den echten
-// Katalogen unter ihren echten Namen. Nichts daran ist nachgebaut: dreht
-// jemand die Argumente, aendert sich das Ergebnis dieses Aufrufs.
+// Die Erwartung kommt hier NICHT mehr aus den Katalogen (das war der Fehler,
+// den der externe Validator aufgedeckt hat: Test und Pruefling teilten die
+// Quelle). Sie kommt aus der ANZEIGE-REGEL der Marken-Komponente: eine Marke
+// erscheint genau dann, wenn die Zeile eine Bedeutung hat UND ein Kuerzel
+// (`{#if m}` … `{#if kurzform && kurzform.length}`, WeatherV2Reihenfolge).
+// Gegen genau diese Regel wird der echte Aufruf gemessen.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Quelltext des `buildKuerzelLegende(...)`-Aufrufs, der die Legende an DIESER
- *  Aufrufstelle speist: Renderstelle -> uebergebener Bezeichner -> dessen
- *  Deklaration -> der Aufruf darin. */
-function aufrufQuelltext(waehle: (bed: Bedingung[]) => boolean, flaeche: string): string {
-	const legende = dieLegende();
-	const snippet = legende.eltern.filter((e) => e.type === 'SnippetBlock').pop();
-	assert.ok(snippet, 'kein Legenden-Snippet.');
-	const stelle = renderStellen(String(snippet!.expression?.name ?? '')).find((s) => waehle(s.bed));
-	assert.ok(stelle, `keine ${flaeche}-Aufrufstelle der Legende.`);
-	const uebergeben = geleseneNamen(stelle!.knoten);
-	let quelltext: string | null = null;
+/** Der `buildKuerzelLegende(...)`-Aufruf der Komponente, aus dem AST. */
+function aufrufKnoten(): Knoten {
+	let treffer: Knoten | null = null;
 	gehe(AST.instance?.content?.body, (n) => {
-		if (n.type !== 'VariableDeclarator' || quelltext) return;
-		if (n.id?.type !== 'Identifier' || !uebergeben.has(n.id.name)) return;
-		gehe(n.init, (k) => {
-			if (quelltext) return;
-			if (k.type === 'CallExpression' && k.callee?.name === 'buildKuerzelLegende') {
-				quelltext = QUELLE.slice(k.start, k.end);
-			}
-		});
+		if (treffer) return;
+		if (n.type === 'CallExpression' && n.callee?.name === 'buildKuerzelLegende') treffer = n;
 	});
 	assert.ok(
-		quelltext,
-		`F002 FAIL: an der ${flaeche}-Aufrufstelle laesst sich kein ` +
-			`\`buildKuerzelLegende(...)\`-Aufruf finden (uebergeben: ` +
-			`${JSON.stringify([...uebergeben].sort())}). Ohne ihn kann dieser Test die ` +
-			`Argumentreihenfolge der echten Verdrahtung nicht pruefen.`
+		treffer,
+		'FAIL: in WeatherV2Reihenfolge.svelte gibt es keinen `buildKuerzelLegende(...)`-Aufruf. ' +
+			'Ohne ihn kann dieser Test die echte Verdrahtung nicht pruefen.'
 	);
-	return quelltext!;
+	return treffer!;
 }
 
-/** Fuehrt den Aufruf-Quelltext gegen echte Kataloge aus. Unbekannte Namen
- *  fliegen als ReferenceError auf — eine Legende darf sich nur aus den
- *  Quellen speisen, die auch die Marken speisen (AC-3). */
-async function fuehreAufrufAus(quelltext: string, umgebung: Knoten): Promise<Eintrag[]> {
-	const alle = { ...umgebung, buildKuerzelLegende: await ableitung() };
-	try {
-		return new Function('u', `with (u) { return ${quelltext}; }`)(alle) as Eintrag[];
-	} catch (e) {
-		assert.fail(
-			`F002 FAIL: der echte Aufruf \`${quelltext}\` laeuft nicht gegen die ` +
-				`Katalog-Quellen der Marken: ${(e as Error).message}. Bekannt sind hier ` +
-				`${JSON.stringify(Object.keys(alle).sort())}.`
-		);
+/** Marken, die die Komponente nach ihrer eigenen Regel rendern wuerde. */
+function markenNachAnzeigeRegel(
+	ids: string[], kuerzelById: Record<string, string[]>, metricById: Record<string, Knoten>
+): string[] {
+	const marken: string[] = [];
+	for (const id of [...new Set(ids)]) {
+		if (!metricById[id]) continue;                 // `{#if m}` — sonst nur die rohe Id
+		for (const k of kuerzelById[id] ?? []) marken.push(k); // `{#if kurzform && kurzform.length}`
 	}
+	return marken.sort();
 }
 
-describe('F002: die ECHTE Aufrufstelle liefert eine richtige Legende', () => {
-	test('Trip: der Aufruf aus der Komponente erklaert die gerenderten Kuerzel', async () => {
-		const kuerzelById = tripKuerzelById();
-		const metricById = tripMetricById();
-		const aktiv = gerendertRoute(SECHS);
-		const abgewaehlt = Object.keys(metricById).filter((id) => !aktiv.includes(id)).slice(0, 2);
-		const erwartet = erwarteteZuordnung([...aktiv, ...abgewaehlt], kuerzelById, metricById);
+describe('AC-1: der echte Aufruf erklaert GENAU die Marken seines Blocks', () => {
+	for (const [flaeche, daten] of [
+		['Trip', () => {
+			const kuerzelById = tripKuerzelById();
+			const metricById = tripMetricById();
+			const primary = gerendertRoute(SECHS);
+			const off = Object.keys(metricById).filter((id) => !primary.includes(id)).slice(0, 3);
+			return { kuerzelById, metricById, primary, off };
+		}],
+		['Vergleich', () => {
+			const { kuerzelById, metricById } = vergleichPaar();
+			const alle = gerendertVergleich();
+			return { kuerzelById, metricById, primary: alle.slice(0, -2), off: alle.slice(-2) };
+		}]
+	] as const) {
+		test(`${flaeche}: Marken-Menge == Legenden-Menge`, async () => {
+			const { kuerzelById, metricById, primary, off } = daten();
+			const quelltext = QUELLE.slice(aufrufKnoten().start, aufrufKnoten().end);
+			const bauen = await ableitung();
+			const umgebung = {
+				primaryColumns: primary, offColumns: off, kuerzelById, metricById,
+				buildKuerzelLegende: bauen
+			};
+			let ergebnis: Knoten;
+			try {
+				ergebnis = new Function('u', `with (u) { return ${quelltext}; }`)(umgebung);
+			} catch (e) {
+				return assert.fail(
+					`FAIL: der echte Aufruf \`${quelltext}\` laeuft nicht gegen die Props der ` +
+						`Marken-Komponente: ${(e as Error).message}.`
+				);
+			}
 
-		const eintraege = await fuehreAufrufAus(aufrufQuelltext(istRoute, 'Trip'), {
-			// Die Namen sind die der Komponente; die Werte sind echt. `active` und
-			// `off` sind beide gerendert (Aus-Gruppe, WeatherV2Reihenfolge:174-178).
-			activeChannelSections: { active: aktiv, off: abgewaehlt },
-			metricSymbols: kuerzelById,
-			metricById,
-			catalog: live().metrics,
-			smsSymbols: live().sms
-		});
-
-		assert.ok(
-			eintraege.length > 0,
-			`F002 FAIL: die Trip-Legende ist bei voll geladenen Katalogen LEER. Genau das ` +
-				`passiert, wenn an der Aufrufstelle die Argumente vertauscht sind — dem ` +
-				`Nutzer fehlt dann die ganze Legende, ohne dass irgendetwas rot wird. ` +
-				`Aufruf: ${aufrufQuelltext(istRoute, 'Trip')}`
-		);
-		assert.deepEqual(
-			[...new Set(eintraege.map((e) => e.kuerzel))].sort(),
-			[...erwartet.keys()].sort(),
-			`F002/F001 FAIL: die echte Verdrahtung liefert nicht die Kuerzel der ` +
-				`gerenderten Groessen. Zu viel heisst: die Menge haengt am vollen Katalog ` +
-				`(${Object.keys(metricById).length} Groessen) statt am Reihenfolge-Block ` +
-				`(${aktiv.length + abgewaehlt.length}).`
-		);
-		for (const e of eintraege) {
-			assert.ok(
-				erwartet.get(e.kuerzel)?.has(e.bedeutung),
-				`F002 FAIL: "${e.kuerzel}" wird als ${JSON.stringify(e.bedeutung)} erklaert, ` +
-					`der Katalog kennt ${JSON.stringify([...(erwartet.get(e.kuerzel) ?? [])])}.`
+			const erwartet = markenNachAnzeigeRegel([...primary, ...off], kuerzelById, metricById);
+			assert.ok(erwartet.length > 2, `Messgrundlage weg: nur ${erwartet.length} Marken.`);
+			assert.deepEqual(
+				ergebnis.eintraege.map((e: Eintrag) => e.kuerzel).sort(), erwartet,
+				`AC-1 FAIL (${flaeche}): die Legende erklaert nicht genau die Marken dieses ` +
+					`Blocks. Fehlende Eintraege heissen: der Nutzer sieht ein Zeichen, das ` +
+					`nirgends erklaert wird — genau der Staging-Befund (Trip: R/PR/G aus dem ` +
+					`Ausblick-Block; Vergleich: PR/TF/TH/VS/W/WD aus Stundenverlauf und Ausblick).`
 			);
-		}
-	});
-
-	test('Vergleich: der Aufruf aus der Komponente erklaert die gerenderten Kuerzel', async () => {
-		const { kuerzelById, metricById } = vergleichPaar();
-		const aktiv = gerendertVergleich();
-		const erwartet = erwarteteZuordnung(aktiv, kuerzelById, metricById);
-
-		const eintraege = await fuehreAufrufAus(aufrufQuelltext(istVergleich, 'Vergleich'), {
-			compareChannelSections: { active: aktiv, off: [] },
-			compareKuerzelById: kuerzelById,
-			compareMetricById: metricById,
-			compareCatalog: toCompareSelectionEntries({ metrics: live().compare } as never)
+			assert.deepEqual(
+				ergebnis.unaufloesbar, [],
+				`AC-1 FAIL (${flaeche}): unaufloesbare Groessen: ` +
+					`${JSON.stringify(ergebnis.unaufloesbar)}.`
+			);
 		});
-
-		assert.ok(
-			eintraege.length > 0,
-			'F002 FAIL: die Vergleichs-Legende ist bei geladenem Katalog LEER.'
-		);
-		assert.deepEqual(
-			[...new Set(eintraege.map((e) => e.kuerzel))].sort(),
-			[...erwartet.keys()].sort(),
-			'F002/F001 FAIL: die echte Verdrahtung liefert nicht die Kuerzel der ' +
-				'gerenderten Vergleichszeilen.'
-		);
-		// AC-2a an der echten Verdrahtung: `D` bleibt zweimal stehen.
-		assert.equal(
-			eintraege.filter((e) => e.kuerzel === 'D').length, 2,
-			'F002/AC-2a FAIL: die echte Verdrahtung entdoppelt `D` — die Marken zeigen ' +
-				'das Kuerzel an beiden Zeilen.'
-		);
-	});
+	}
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// (D) DIE VIER ECHTEN EINBETTUNGEN — Adversary F007
+//
+// Schicht C fuehrt den Aufruf der Marken-Komponente aus, aber gegen eine hier
+// gebaute Umgebung. Was sie NICHT sieht: ob die vier Einbettungsstellen der
+// Komponente ihr ueberhaupt brauchbare Props reichen. Gemessen: an
+// `CompareHourlyLayoutControls.svelte` `metricById={hourlyMetricById}` durch
+// `metricById={{}}` ersetzt -> 17/17 gruen. Der Block verloere lautlos
+// Beschriftung, Marken UND Legende auf einmal.
+//
+// (Einordnung, unveraendert gueltig: das ist NICHT mehr die urspruengliche
+// Fehlerklasse. Marke und Legende kommen jetzt aus denselben Props derselben
+// Instanz, sie koennen nicht mehr auseinanderlaufen — sie verschwaenden
+// gemeinsam. Genau dafuer war Weg A da. Bewacht gehoert es trotzdem.)
+//
+// Gemessen wird deshalb die ECHTE Herleitung je Datei: die Deklarationen des
+// Instanz-Skripts werden der Reihe nach ausgewertet — mit den echten Importen
+// der Datei und den echten Katalogen als Saat —, danach die vier
+// Attribut-Ausdruecke der Einbettung. Nichts davon ist hier nachgebaut.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LIB = resolve(HIER, '..', '..', '..');
+
+/** Wertet einen Quelltext-Ausdruck gegen eine Umgebung aus. */
+function werte(ausdruck: string, umgebung: Knoten): unknown {
+	return new Function('u', `with (u) { return (${ausdruck}); }`)(umgebung);
+}
+
+/** Der Quelltext eines Knotens OHNE TypeScript-Annotationen — `new Function`
+ *  versteht kein TS, und die Herleitungen der Komponenten sind typisiert
+ *  (`const map: Record<string, MetricEntry> = {}`). Ausgeblendet wird per AST
+ *  (Zeichen durch Leerzeichen ersetzt, Offsets bleiben gueltig), nicht per
+ *  Textmuster — geraten wird hier nichts. */
+function ohneTypen(quelle: string, knoten: Knoten): string {
+	const loecher: [number, number][] = [];
+	function lauf(n: unknown): void {
+		if (n === null || typeof n !== 'object') return;
+		if (Array.isArray(n)) { n.forEach(lauf); return; }
+		const k = n as Knoten;
+		for (const feld of ['typeAnnotation', 'returnType', 'typeParameters', 'typeArguments']) {
+			const t = k[feld] as Knoten | undefined;
+			if (t && typeof t.start === 'number') loecher.push([t.start, t.end]);
+		}
+		// `x as T` / `x satisfies T`: das Schluesselwort mit wegnehmen.
+		if ((k.type === 'TSAsExpression' || k.type === 'TSSatisfiesExpression')
+			&& k.expression && k.typeAnnotation) {
+			loecher.push([k.expression.end, k.typeAnnotation.end]);
+		}
+		if (k.type === 'TSNonNullExpression' && k.expression) loecher.push([k.expression.end, k.end]);
+		for (const key of Object.keys(k)) { if (key !== 'parent' && key !== 'loc') lauf(k[key]); }
+	}
+	lauf(knoten);
+	const zeichen = [...quelle];
+	for (const [a, b] of loecher) for (let i = a; i < b && i < zeichen.length; i++) zeichen[i] = ' ';
+	return zeichen.slice(knoten.start, knoten.end).join('');
+}
+
+/** Baut die Umgebung einer Komponentendatei: Runen-Attrappen, ihre ECHTEN
+ *  Modul-Importe und ihre eigenen Deklarationen, der Reihe nach ausgewertet.
+ *  Was sich nicht auswerten laesst, bleibt weg — fehlt es spaeter, scheitert
+ *  der Ausdruck LAUT (keine stille Entwarnung). */
+async function umgebungFuer(datei: string, saat: Knoten): Promise<{ ast: Knoten; quelle: string; u: Knoten }> {
+	const quelle = readFileSync(datei, 'utf-8');
+	const ast: Knoten = parse(quelle, { modern: true });
+	const u: Knoten = { ...saat };
+	const derived = ((v: unknown) => v) as Knoten;
+	derived.by = (fn: () => unknown) => fn();
+	u.$derived = derived;
+	u.$state = (v: unknown) => v;
+	u.$props = () => ({});
+	u.$effect = () => {};
+
+	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
+		if (stmt.type !== 'ImportDeclaration') continue;
+		const q = String(stmt.source?.value ?? '');
+		if (q.endsWith('.svelte')) continue;
+		const spec = q.startsWith('.')
+			? pathToFileURL(resolve(dirname(datei), q)).href
+			: q.startsWith('$lib/') ? q : null;
+		if (!spec) continue;
+		// Gebunden wird NUR, was diese Deklaration wirklich nennt — und Typ-Importe
+		// binden zur Laufzeit gar nichts.
+		//
+		// Frueher kippte jeder Import alle Exporte seines Moduls in den Namensraum.
+		// `CompareHourlyLayoutControls.svelte` importiert
+		// `compareAggregationGrouping.ts` ZWEIMAL (Zeile 31 den Wert, Zeile 32 einen
+		// Typ) — brach man den Wert-Import, lieferte der Typ-Import die Bindung
+		// nach, und der Waechter blieb gruen (Adversary F008). Ein Falsch-Gruen im
+		// Waechter selbst; genau die Klasse, gegen die er gebaut wurde.
+		//
+		// Laesst sich ein Modul nicht laden oder fehlt ihm der Name, bleibt der
+		// Bezeichner UNGEBUNDEN — der Ausdruck scheitert dann laut, statt still
+		// durchzulaufen.
+		if (stmt.importKind === 'type') continue;
+		let mod: Knoten | null = null;
+		try { mod = (await import(spec)) as Knoten; } catch { mod = null; }
+		if (!mod) continue;
+		for (const s of (stmt.specifiers ?? []) as Knoten[]) {
+			if (s.importKind === 'type') continue;
+			const lokal = s.local?.name as string | undefined;
+			if (!lokal || lokal in u) continue;
+			if (s.type === 'ImportNamespaceSpecifier') { u[lokal] = mod; continue; }
+			const quelle = s.type === 'ImportDefaultSpecifier' ? 'default' : (s.imported?.name ?? lokal);
+			if (quelle in mod) u[lokal] = mod[quelle];
+		}
+	}
+	// Funktionsdeklarationen zuerst — sie werden in JS gehoben, und die
+	// Herleitungen rufen sie auf (`$derived(channelListSections(activeChannel))`).
+	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
+		if (stmt.type !== 'FunctionDeclaration' || stmt.id?.type !== 'Identifier') continue;
+		if (stmt.id.name in u) continue;
+		// Eine Funktions-DEKLARATION ist keine Ausdrucks-Position — sie wird als
+		// Anweisung ausgefuehrt und der Name danach zurueckgegeben.
+		try {
+			u[stmt.id.name] = new Function(
+				'u', `with (u) { ${ohneTypen(quelle, stmt)}\n return ${stmt.id.name}; }`
+			)(u);
+		} catch { /* s.o. */ }
+	}
+	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
+		if (stmt.type !== 'VariableDeclaration') continue;
+		for (const d of stmt.declarations as Knoten[]) {
+			if (d.id?.type !== 'Identifier' || !d.init || d.id.name in u) continue;
+			try { u[d.id.name] = werte(ohneTypen(quelle, d.init), u); } catch { /* s.o. */ }
+		}
+	}
+	return { ast, quelle, u };
+}
+
+/** Die `<WeatherV2Reihenfolge …>`-Einbettung, auf die `waehle` passt. */
+function findeEinbettung(ast: Knoten, quelle: string, waehle: (eltern: Knoten[]) => boolean): Knoten {
+	const treffer: Knoten[] = [];
+	function lauf(node: unknown, eltern: Knoten[]): void {
+		if (node === null || typeof node !== 'object') return;
+		if (Array.isArray(node)) { node.forEach((n) => lauf(n, eltern)); return; }
+		const n = node as Knoten;
+		if (n.type === 'Component' && n.name === 'WeatherV2Reihenfolge' && waehle(eltern)) treffer.push(n);
+		const kette = n.type ? [...eltern, n] : eltern;
+		for (const key of Object.keys(n)) { if (key !== 'parent' && key !== 'loc') lauf(n[key], kette); }
+	}
+	lauf(ast.fragment, []);
+	assert.equal(
+		treffer.length, 1,
+		`F007 FAIL: das Erkennungsmerkmal trifft ${treffer.length} Einbettungen statt einer. ` +
+			`Verschwindet eine Aufrufstelle, muss dieser Test LAUT scheitern — nicht still ` +
+			`durchlaufen.`
+	);
+	return treffer[0];
+}
+
+/** Der `context`-Wert des naechsten umschliessenden `LayoutTab`. */
+function layoutKontext(eltern: Knoten[]): string | null {
+	for (let i = eltern.length - 1; i >= 0; i--) {
+		const e = eltern[i];
+		if (e.type === 'Component' && e.name === 'LayoutTab') {
+			for (const a of e.attributes ?? []) {
+				if (a.type === 'Attribute' && a.name === 'context') {
+					const v = Array.isArray(a.value) ? a.value : [a.value];
+					const lit = v.find((x: Knoten) => x?.type === 'Text');
+					return lit ? String(lit.data) : null;
+				}
+			}
+		}
+	}
+	return null;
+}
+
+function attributAusdruck(einbettung: Knoten, quelle: string, name: string): string | null {
+	for (const a of (einbettung.attributes ?? []) as Knoten[]) {
+		if (a.type !== 'Attribute' || a.name !== name) continue;
+		const v = a.value;
+		if (v?.type === 'ExpressionTag') return quelle.slice(v.expression.start, v.expression.end);
+		// Kurzform `{metricById}` — der Wert IST der Bezeichner.
+		return name;
+	}
+	return null;
+}
+
+const EINBETTUNGEN = [
+	{
+		name: 'Trip-Reihenfolge (WeatherMetricsTab)',
+		datei: () => join(SHARED, 'WeatherMetricsTab.svelte'),
+		waehle: (eltern: Knoten[]) => layoutKontext(eltern) === 'route',
+		saat: () => ({
+			smsSymbols: live().sms,
+			catalog: live().metrics,
+			compareCatalog: toCompareSelectionEntries({ metrics: live().compare } as never),
+			buckets: { primary: gerendertRoute(SECHS), secondary: [], off: [] },
+			channelBuckets: {}, activeChannel: 'email', compareChannel: 'email',
+			friendlyMap: {}, highlight: null, wiz: undefined, trip: undefined
+		})
+	},
+	{
+		name: 'Vergleichs-Reihenfolge (WeatherMetricsTab)',
+		datei: () => join(SHARED, 'WeatherMetricsTab.svelte'),
+		waehle: (eltern: Knoten[]) => layoutKontext(eltern) === 'vergleich',
+		saat: () => ({
+			smsSymbols: live().sms,
+			catalog: live().metrics,
+			compareCatalog: toCompareSelectionEntries({ metrics: live().compare } as never),
+			buckets: { primary: [], secondary: [], off: [] },
+			channelBuckets: {}, activeChannel: 'email', compareChannel: 'email',
+			friendlyMap: {}, highlight: null,
+			wiz: { activeMetricKeys: gerendertVergleich(), channelActiveMetricKeys: {} }
+		})
+	},
+	{
+		name: 'Ausblick (CompareOutlookLayoutControls)',
+		datei: () => join(SHARED, 'CompareOutlookLayoutControls.svelte'),
+		waehle: () => true,
+		saat: () => ({
+			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
+			metricKeys: null
+		})
+	},
+	{
+		name: 'Stundenverlauf (CompareHourlyLayoutControls)',
+		datei: () => join(SHARED, 'CompareHourlyLayoutControls.svelte'),
+		waehle: () => true,
+		saat: () => ({
+			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
+			wiz: { hourlyMetricKeys: null }
+		})
+	}
+] as const;
+
+describe('F007: alle VIER Einbettungen reichen brauchbare Props durch', () => {
+	for (const fall of EINBETTUNGEN) {
+		test(`${fall.name}: die echte Herleitung liefert Marken UND Legende`, async () => {
+			const datei = fall.datei();
+			const { ast, quelle, u } = await umgebungFuer(datei, fall.saat() as Knoten);
+			const einbettung = findeEinbettung(ast, quelle, fall.waehle);
+
+			const hole = (name: string, pflicht: boolean): unknown => {
+				const ausdruck = attributAusdruck(einbettung, quelle, name);
+				if (ausdruck === null) {
+					assert.ok(!pflicht, `F007 FAIL: ${fall.name} uebergibt kein \`${name}\`.`);
+					return undefined;
+				}
+				try {
+					return werte(ausdruck, u);
+				} catch (e) {
+					return assert.fail(
+						`F007 FAIL: ${fall.name} — \`${name}={${ausdruck}}\` laesst sich nicht ` +
+							`auswerten: ${(e as Error).message}. Die Einbettung reicht dann etwas ` +
+							`durch, das es in ihrem Skript nicht (mehr) gibt.\n` +
+							`Herleitbar waren: ${JSON.stringify(Object.keys(u).sort())}`
+					);
+				}
+			};
+
+			const primary = (hole('primaryColumns', true) ?? []) as string[];
+			const off = (hole('offColumns', false) ?? []) as string[];
+			const kuerzelById = (hole('kuerzelById', true) ?? {}) as Record<string, string[]>;
+			const metricById = (hole('metricById', true) ?? {}) as Record<string, Knoten>;
+
+			assert.ok(
+				primary.length > 0,
+				`F007 FAIL: ${fall.name} reicht eine LEERE Metrik-Liste durch — der Block ` +
+					`zeigte gar keine Zeile.`
+			);
+			const marken = markenNachAnzeigeRegel([...primary, ...off], kuerzelById, metricById);
+			assert.ok(
+				marken.length > 0,
+				`F007 FAIL: ${fall.name} erzeugt KEINE einzige Marke. Entweder ist ` +
+					`\`kuerzelById\` leer (${Object.keys(kuerzelById).length} Schluessel) oder ` +
+					`\`metricById\` (${Object.keys(metricById).length} Schluessel) — der Block ` +
+					`verloere Beschriftung, Marken und Legende auf einmal, ohne dass es ` +
+					`auffiele. Gerendert werden ${primary.length + off.length} Groessen.`
+			);
+
+			const ergebnis = (await ableitung())([...primary, ...off], kuerzelById, metricById);
+			assert.deepEqual(
+				ergebnis.eintraege.map((e) => e.kuerzel).sort(), marken,
+				`F007 FAIL: ${fall.name} — Legende und Marken laufen auseinander.`
+			);
+			assert.deepEqual(
+				ergebnis.unaufloesbar, [],
+				`F007 FAIL: ${fall.name} — unaufloesbare Groessen: ` +
+					`${JSON.stringify(ergebnis.unaufloesbar)}.`
+			);
+			for (const e of ergebnis.eintraege) {
+				assert.ok(
+					e.bedeutung.trim().length > 1,
+					`F007 FAIL: ${fall.name} — "${e.kuerzel}" wird als ` +
+						`${JSON.stringify(e.bedeutung)} erklaert; das ist keine Bedeutung.`
+				);
+			}
+		});
+	}
+});
+
