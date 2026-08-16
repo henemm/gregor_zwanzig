@@ -935,10 +935,31 @@ async function umgebungFuer(datei: string, saat: Knoten): Promise<{ ast: Knoten;
 			? pathToFileURL(resolve(dirname(datei), q)).href
 			: q.startsWith('$lib/') ? q : null;
 		if (!spec) continue;
-		try {
-			const mod: Knoten = await import(spec);
-			for (const [name, wert] of Object.entries(mod)) if (!(name in u)) u[name] = wert;
-		} catch { /* nicht aufloesbar: faellt beim Ausdruck auf, nicht hier */ }
+		// Gebunden wird NUR, was diese Deklaration wirklich nennt — und Typ-Importe
+		// binden zur Laufzeit gar nichts.
+		//
+		// Frueher kippte jeder Import alle Exporte seines Moduls in den Namensraum.
+		// `CompareHourlyLayoutControls.svelte` importiert
+		// `compareAggregationGrouping.ts` ZWEIMAL (Zeile 31 den Wert, Zeile 32 einen
+		// Typ) — brach man den Wert-Import, lieferte der Typ-Import die Bindung
+		// nach, und der Waechter blieb gruen (Adversary F008). Ein Falsch-Gruen im
+		// Waechter selbst; genau die Klasse, gegen die er gebaut wurde.
+		//
+		// Laesst sich ein Modul nicht laden oder fehlt ihm der Name, bleibt der
+		// Bezeichner UNGEBUNDEN — der Ausdruck scheitert dann laut, statt still
+		// durchzulaufen.
+		if (stmt.importKind === 'type') continue;
+		let mod: Knoten | null = null;
+		try { mod = (await import(spec)) as Knoten; } catch { mod = null; }
+		if (!mod) continue;
+		for (const s of (stmt.specifiers ?? []) as Knoten[]) {
+			if (s.importKind === 'type') continue;
+			const lokal = s.local?.name as string | undefined;
+			if (!lokal || lokal in u) continue;
+			if (s.type === 'ImportNamespaceSpecifier') { u[lokal] = mod; continue; }
+			const quelle = s.type === 'ImportDefaultSpecifier' ? 'default' : (s.imported?.name ?? lokal);
+			if (quelle in mod) u[lokal] = mod[quelle];
+		}
 	}
 	// Funktionsdeklarationen zuerst — sie werden in JS gehoben, und die
 	// Herleitungen rufen sie auf (`$derived(channelListSections(activeChannel))`).
