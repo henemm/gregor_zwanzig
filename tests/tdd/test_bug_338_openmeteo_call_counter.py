@@ -21,8 +21,6 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.live
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -36,14 +34,23 @@ def _make_location(lat: float = 47.27, lon: float = 11.39):
 
 
 def _make_segment(lat: float = 47.27, lon: float = 11.39):
+    """#1708 B1 AC-3: Fenster relativ zu ``now`` statt fest auf 06:00-14:00 UTC
+    -- sonst ueberspringt trip_alert.py:1247-1249 das Segment ausserhalb dieses
+    Fensters (Kippkante 14:00 UTC). start liegt 1h VOR now (start.date() bleibt
+    auch um 00:xx UTC <= heute), end liegt 7h NACH now (end > now zu jeder
+    Uhrzeit) -- die vom Alarm-Pfad geprüfte Eigenschaft gilt so unabhaengig von
+    der Tageszeit.
+    """
     from app.models import GPXPoint, TripSegment
-    now = datetime.now(timezone.utc).replace(hour=6, minute=0, second=0, microsecond=0)
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(hours=1)
+    end = now + timedelta(hours=7)
     return TripSegment(
         segment_id=1,
         start_point=GPXPoint(lat=lat, lon=lon, elevation_m=800),
         end_point=GPXPoint(lat=lat + 0.05, lon=lon + 0.05, elevation_m=1200),
-        start_time=now,
-        end_time=now + timedelta(hours=8),
+        start_time=start,
+        end_time=end,
         duration_hours=8.0,
         distance_km=12.0,
         ascent_m=500,
@@ -98,6 +105,15 @@ def _read_jsonl(path: Path):
 # AC-1: Erfolgreicher/429-fetch_forecast() haengt genau eine JSONL-Zeile an
 # ---------------------------------------------------------------------------
 
+# #1708 B1: `enrich_ensemble=False` (direkter Aufruf, kein Fallback-Pfad) --
+# gemessen mit `@pytest.mark.disable_socket` 2026-08-16: die primaere
+# httpx-Anfrage wirft eine pytest-socket-eigene RuntimeError-Unterklasse
+# (SocketBlockedError/SocketConnectBlockedError), die httpx NICHT als
+# httpx.RequestError erkennt (`_make_request`s `except httpx.RequestError`
+# in providers/openmeteo.py greift nicht) -- der Aufruf propagiert unge-
+# loggt. Ohne einen zweiten (Ensemble-)Aufruf, der das breiter faengt
+# (s. test_ac2_trend/test_ac2_preview), bleibt AC-1 offline unbeweisbar.
+@pytest.mark.live
 def test_ac1_fetch_forecast_appends_one_jsonl_line(tmp_path, monkeypatch):
     """
     AC-1: Ein echter fetch_forecast()-Aufruf (200 ODER 429) protokolliert genau
@@ -149,6 +165,19 @@ def test_ac1_fetch_forecast_appends_one_jsonl_line(tmp_path, monkeypatch):
 # AC-2: Quellen-Bestimmung — alarm (Alarm-Pfad) und trend (Mehrtages-Trend)
 # ---------------------------------------------------------------------------
 
+# #1708 B1: `_fetch_fresh_weather` ruft `fetch_segment_weather(..., enrich_
+# ensemble=False, ...)` -- bewusst (Bug #288, Quotenschutz im Alarm-Pfad).
+# Gemessen mit `@pytest.mark.disable_socket` 2026-08-16: OHNE die
+# Ensemble-Anreicherung gibt es keinen zweiten (breiter gefangenen)
+# Aufrufversuch, der den Log-Eintrag noch retten koennte (Befund identisch
+# zu test_ac1 -- der primaere httpx-Call wirft eine von httpx nicht als
+# RequestError erkannte pytest-socket-Exception und propagiert ungeloggt
+# bis trip_report_scheduler.py:1989). test_ac2_trend/test_ac2_preview
+# koennen offline bestehen, WEIL sie (anders als hier) mit `enrich_
+# ensemble=True` zusaetzlich einen Ensemble-Spread-Aufruf ausloesen, dessen
+# `except Exception` (statt `except httpx.RequestError`) auch diese
+# Exception faengt und protokolliert -- dieser Fallback fehlt hier absichtlich.
+@pytest.mark.live
 def test_ac2_alarm_path_sets_source_alarm(tmp_path, monkeypatch):
     """
     AC-2 (Alarm): Ein Abruf aus dem echten Alarm-Pfad
@@ -172,13 +201,39 @@ def test_ac2_alarm_path_sets_source_alarm(tmp_path, monkeypatch):
     )
 
 
+@pytest.mark.disable_socket  # #1708 B1: offline beweiskraeftig, s. Docstring
 def test_ac2_trend_path_sets_source_trend(tmp_path, monkeypatch):
     """
     AC-2 (Trend): Ein Abruf aus dem echten Mehrtages-Trend-Pfad
     TripReportSchedulerService._build_stage_trend liefert source == "trend".
+
+    #1708 B1: statt echtem Netz oder FixtureProvider (der NIE loggt, s.
+    providers/fixture.py) erzwingt dieser Test einen echten OpenMeteoProvider
+    UND sperrt jeden Socket (`@pytest.mark.disable_socket`). Gemessen
+    2026-08-16: der primaere Forecast-Call scheitert ungeloggt (httpx
+    erkennt die pytest-socket-Exception nicht als RequestError), ABER
+    `_build_stage_trend` loest mit dem Default `enrich_ensemble=True`
+    zusaetzlich einen Ensemble-Spread-Aufruf aus (`_fetch_ensemble_spread`,
+    providers/openmeteo.py:706), dessen `except Exception` (breiter als
+    `except httpx.RequestError`) JEDE Exception faengt und ueber
+    `_log_api_call` protokolliert -- mit `source == "trend"`, weil der
+    Stack weiterhin `_build_stage_trend` traegt. Deterministisch (Millise-
+    kunden, kein Netz), weil `enrich_ensemble=True` hier IMMER gesetzt ist.
+
+    Adversary F002 (#1708 B1): `@pytest.mark.disable_socket` ist hier keine
+    Nebensaechlichkeit, sondern schuetzt vor einem ZWEITEN, teureren
+    Netzpfad. Gemessen OHNE den Marker: gelingt der primaere Forecast-Call
+    (echtes Netz erreichbar), ruft `fetch_forecast()` im Erfolgsfall
+    `_enrich_thunder()` (providers/openmeteo.py:1209) -> `providers.
+    thunder_enrichment.enrich_thunder()` -> `providers/dwd.py` auf -- eine
+    ECHTE DWD-Radar-Dekompression, die im Adversary-Lauf ~30s dauerte und
+    damit fast exakt an den pytest-timeout(30s) stiess. Mit gesperrtem
+    Socket wird dieser Pfad nie erreicht (der primaere Call scheitert schon
+    vorher), das ist Teil der Absicherung, nicht nur der Ensemble-Fallback.
     """
     import providers.openmeteo as om
 
+    monkeypatch.delenv("GZ_TEST_FIXTURE_DIR", raising=False)  # echter Provider statt FixtureProvider (der nie loggt)
     log_path = tmp_path / "openmeteo_calls.jsonl"
     monkeypatch.setattr(om, "DIAGNOSTICS_PATH", log_path, raising=False)
 
@@ -196,22 +251,39 @@ def test_ac2_trend_path_sets_source_trend(tmp_path, monkeypatch):
     )
 
 
+@pytest.mark.disable_socket  # #1708 B1: offline beweiskraeftig, s. Docstring (Muster wie test_ac2_trend)
 def test_ac2_preview_path_sets_source_vorschau(tmp_path, monkeypatch):
     """
     AC-2 (Vorschau, F002-Fix): Ein Abruf aus dem echten Vorschau-Pfad
     PreviewService.render_email_preview liefert source == "vorschau"
     (NICHT "briefing"), obwohl intern _fetch_weather laeuft.
 
-    Echter Trip henning/5f534011 (KHW 403), echte Pipeline, kein Mock.
+    #1708 B1: die Trip-Fixture wird selbst in der isolierten Datenwurzel
+    angelegt statt im toten trips/-Pfad gesucht (dort ist sie unter
+    Isolation nie vorhanden -- der Test skippte deshalb IMMER). Kopiert das
+    committete Referenz-Trip gr221-mallorca nach briefings/ -- Vorbild
+    tests/tdd/test_epic_140_preview_endpoints.py::_seed_trip_fixture.
+
+    Socket-Sperre + echter Provider wie bei test_ac2_trend_path_sets_
+    source_trend (identischer Mechanismus: PreviewService._build_report
+    ruft _fetch_weather() mit Default enrich_ensemble=True, dessen
+    Ensemble-Spread-Fallback breiter faengt als der primaere Forecast-Call
+    und den Log-Eintrag liefert). Gemessen 2026-08-16, offline gruen.
     """
+    import shutil
     import providers.openmeteo as om
-    from app.loader import get_trips_dir
+    from app.loader import get_briefings_dir
 
-    trip_id, user_id = "5f534011", "henning"
-    trip_file = get_trips_dir(user_id) / f"{trip_id}.json"
-    if not trip_file.exists():
-        pytest.skip(f"Echter Trip {user_id}/{trip_id} nicht vorhanden")
+    trip_id, user_id = "gr221-mallorca", "b1-preview-proof"
+    src = (
+        REPO_ROOT / "tests" / "fixtures" / "data_root" / "users"
+        / "default" / "trips" / f"{trip_id}.json"
+    )
+    dst = get_briefings_dir(user_id) / f"{trip_id}.json"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
 
+    monkeypatch.delenv("GZ_TEST_FIXTURE_DIR", raising=False)  # echter Provider statt FixtureProvider (der nie loggt)
     log_path = tmp_path / "openmeteo_calls.jsonl"
     monkeypatch.setattr(om, "DIAGNOSTICS_PATH", log_path, raising=False)
 
@@ -240,6 +312,15 @@ def test_ac2_preview_path_sets_source_vorschau(tmp_path, monkeypatch):
 # AC-3: Schreibfehler beim Logging wird geschluckt, fetch laeuft weiter
 # ---------------------------------------------------------------------------
 
+# #1708 B1: direkter Aufruf mit `enrich_ensemble=False` -- derselbe Befund
+# wie bei test_ac1 (gemessen 2026-08-16 mit @pytest.mark.disable_socket):
+# ohne Ensemble-Fallback bleibt der Log-Nachweis offline unerreichbar, UND
+# die eigentliche Zusicherung (Schreibfehler wird geschluckt, KEIN
+# FileNotFoundError/NotADirectoryError propagiert) wuerde durch die
+# zusaetzliche Socket-Exception verfaelscht (isinstance-Check schlaegt auf
+# die SocketBlockedError an statt auf die zu pruefende Schreibfehler-
+# Behandlung).
+@pytest.mark.live
 def test_ac3_unwritable_log_target_is_swallowed(tmp_path, monkeypatch):
     """
     AC-3: Ist das Diagnose-Ziel nicht beschreibbar, schluckt _log_api_call die

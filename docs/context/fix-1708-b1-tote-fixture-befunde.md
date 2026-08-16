@@ -184,6 +184,15 @@ Nachgemessen mit `--disable-socket --allow-hosts=127.0.0.1,::1`:
 | `test_ac3_unwritable_log_target_is_swallowed` | **ja** |
 | `test_ac4_analyze_script_breaks_down_by_source_endpoint_hour` | **nein** — reine Dateiarbeit |
 
+**Praezisierung (2026-08-16, nach der GREEN-Messung):** Die Spalte oben ist irrefuehrend, weil sie
+**mit** gesetztem Modul-Marker gemessen wurde — also mit echtem `OpenMeteoProvider`. Dass Trend
+ohne Socket besteht, liegt daran, dass `_log_api_call` den Eintrag **auch beim gescheiterten
+Aufruf** schreibt; die Zusicherung wird dabei echt geprueft. Schaltet man den Marker ab, liefert
+`get_provider("openmeteo")` den `FixtureProvider` — und der ruft `call_log` **nirgends** auf
+(`src/providers/fixture.py`, verifiziert). Dann steht ueberhaupt kein Eintrag im Log und die drei
+Quellen-Tests scheitern, unabhaengig vom Netz. Richtig gelesen heisst die Tabelle also: „braucht
+einen echten Provider-**Aufrufversuch**", nicht „braucht eine erreichbare Gegenstelle".
+
 „100 % Netzcall" ist damit widerlegt. Schwerer wiegt: die Messung von damals lief **mit** gesetztem
 `live`-Marker — und `tests/conftest.py:25-29` entzieht `live`-Tests genau den Offline-Fixture-Modus.
 Der Marker stellt die Bedingung her, mit der er begruendet wird. Ohne ihn setzt

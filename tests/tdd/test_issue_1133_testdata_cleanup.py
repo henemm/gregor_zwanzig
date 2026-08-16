@@ -42,7 +42,7 @@ def test_ac1_fixture_isolation_path_resolution_and_roundtrip(tmp_path, monkeypat
     aufruft / Then landet die Datei ausschliesslich im temporaeren
     Fixture-Root, und der echte data/users/-Baum bleibt unveraendert.
 
-    Teil A prueft reine Pfad-Auflösung (kein Schreiben): get_trips_dir()
+    Teil A prueft reine Pfad-Auflösung (kein Schreiben): get_briefings_dir()
     muss auf einen absoluten Pfad AUSSERHALB des Repos zeigen — das
     Erkennungsmerkmal fuer eine aktive Fixture-Isolation. Schlaegt fehl,
     weil get_data_dir() aktuell immer den relativen "data/users"-Pfad
@@ -53,24 +53,32 @@ def test_ac1_fixture_isolation_path_resolution_and_roundtrip(tmp_path, monkeypat
     den echten Baum niemals verschmutzen). Vor dem Fix haengt der
     geschriebene Pfad vom (versehentlich sicheren) chdir-Ziel ab; nach dem
     Fix haengt er ausschliesslich vom (unabhaengigen) Fixture-Root ab.
+
+    #1708 B1 (AC-6): die Sonde haengt hier bewusst an get_briefings_dir(),
+    nicht mehr an get_trips_dir() -- save_trip() schreibt bereits seit dem
+    #1250-Cutover (ADR-0023) nach briefings/, nicht mehr nach trips/.
+    get_trips_dir() faellt in Scheibe B2 komplett weg; die Sonde muss das
+    ueberstehen (Nachweis: tests/test_stillgelegte_testdateien.py::
+    test_ac6_isolationssonde_uebersteht_wegfall_von_get_trips_dir, ruft
+    diese Funktion mit per monkeypatch entferntem get_trips_dir auf).
     """
-    from app.loader import get_trips_dir, save_trip
+    from app.loader import get_briefings_dir, save_trip
     from app.trip import Trip
 
     # --- Teil A: Pfad-Auflösung, kein Schreiben ---------------------------
-    trips_dir = get_trips_dir("tdd-1133-proof")
-    assert trips_dir.is_absolute(), (
-        f"AC-1 verletzt: get_trips_dir() liefert relativen Pfad {trips_dir!r} "
-        "— autouse-Fixture existiert noch nicht"
+    briefings_dir = get_briefings_dir("tdd-1133-proof")
+    assert briefings_dir.is_absolute(), (
+        f"AC-1 verletzt: get_briefings_dir() liefert relativen Pfad "
+        f"{briefings_dir!r} — autouse-Fixture existiert noch nicht"
     )
-    assert not str(trips_dir.resolve()).startswith(str(REPO_ROOT)), (
-        f"AC-1 verletzt: get_trips_dir() zeigt weiterhin auf den echten "
-        f"Repo-Baum: {trips_dir}"
+    assert not str(briefings_dir.resolve()).startswith(str(REPO_ROOT)), (
+        f"AC-1 verletzt: get_briefings_dir() zeigt weiterhin auf den echten "
+        f"Repo-Baum: {briefings_dir}"
     )
 
     # --- Teil B: echter Roundtrip, sicher via chdir -------------------------
     real_trip_path = (
-        REPO_ROOT / "data" / "users" / "tdd-1133-proof" / "trips"
+        REPO_ROOT / "data" / "users" / "tdd-1133-proof" / "briefings"
         / "tdd-1133-proof.json"
     )
     assert not real_trip_path.exists(), (
@@ -79,7 +87,7 @@ def test_ac1_fixture_isolation_path_resolution_and_roundtrip(tmp_path, monkeypat
 
     monkeypatch.chdir(tmp_path)
     cwd_relative_path = (
-        tmp_path / "data" / "users" / "tdd-1133-proof" / "trips"
+        tmp_path / "data" / "users" / "tdd-1133-proof" / "briefings"
         / "tdd-1133-proof.json"
     )
     trip = Trip(id="tdd-1133-proof", name="RED-Proof", stages=[])
