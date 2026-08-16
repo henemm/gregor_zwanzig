@@ -32,6 +32,21 @@ interface BedeutungsQuelle {
 	aggregation_label?: string;
 }
 
+/** Ergebnis der Ableitung. `unaufloesbar` ist der LAUTE Ausgang fuer den Fall,
+ *  den frueher ein stummes `continue` verschluckt hat: eine gerenderte Groesse
+ *  traegt ein Kuerzel, aber keine aufloesbare Bedeutung.
+ *
+ *  Warum kein `throw`: AC-4 verlangt fail-soft — ein Ladefehler darf den Reiter
+ *  nicht unbedienbar machen. Warum trotzdem nicht stumm: eine Luecke, die
+ *  niemand sehen kann, faellt auch keinem Test auf (genau so ist der
+ *  Staging-Befund entstanden). Der Fall verlaesst die Funktion deshalb als
+ *  eigenes Feld, das die Tests bewachen — und die Zeile bekommt trotzdem
+ *  KEINEN erfundenen Erklaertext (AC-1). */
+export interface KuerzelLegende {
+	eintraege: KuerzelLegendeEintrag[];
+	unaufloesbar: string[];
+}
+
 /**
  * Verknuepft die im Reihenfolge-Block gerenderten Groessen mit Kuerzel- und
  * Bedeutungs-Katalog zu den Zeilen der Legende.
@@ -55,30 +70,40 @@ interface BedeutungsQuelle {
  * Fail-soft (AC-4): fehlt eine der drei Seiten, entstehen gar keine Zeilen —
  * lieber keine Legende als eine mit leeren Feldern.
  *
- * @param gerenderteIds Die Groessen des Reihenfolge-Blocks, in seiner Reihenfolge
- *                      (route: `activeChannelSections.active` + `.off` ·
- *                      vergleich: `compareChannelSections.active` + `.off`)
- * @param kuerzelById   Kuerzel je Groesse (route: `metricSymbols` · vergleich: `compareKuerzelById`)
- * @param metricById    Bedeutung je Groesse (route: `metricById` · vergleich: `compareMetricById`)
+ * KEIN stummes Ueberspringen: traegt eine gerenderte Groesse ein Kuerzel, laesst
+ * sich ihre Bedeutung aber nicht aufloesen, landet ihre Id in `unaufloesbar`.
+ * Frueher verschwand genau dieser Fall spurlos (`if (!label) continue`) — eine
+ * Luecke, die niemand sehen kann, faellt auch keinem Test auf.
+ *
+ * @param gerenderteIds Die Groessen des Blocks, in seiner Reihenfolge
+ *                      (`primaryColumns` + `offColumns` der Marken-Komponente)
+ * @param kuerzelById   Kuerzel je Groesse — DIESELBE Prop, die die Marken speist
+ * @param metricById    Bedeutung je Groesse — DIESELBE Prop, die die Zeilen beschriftet
  */
 export function buildKuerzelLegende(
 	gerenderteIds: string[] | null | undefined,
 	kuerzelById: Record<string, string[]> | null | undefined,
 	metricById: Record<string, BedeutungsQuelle> | null | undefined
-): KuerzelLegendeEintrag[] {
+): KuerzelLegende {
 	const eintraege: KuerzelLegendeEintrag[] = [];
+	const unaufloesbar: string[] = [];
 	const gesehen = new Set<string>();
 	for (const id of gerenderteIds ?? []) {
 		if (typeof id !== 'string' || gesehen.has(id)) continue;
 		gesehen.add(id);
+		const kuerzel = (kuerzelById?.[id] ?? []).filter((k) => !!k);
 		const quelle = metricById?.[id];
 		const label = (quelle?.label ?? '').trim();
-		if (!label) continue;
+		if (!label) {
+			// Ohne Bedeutung kein Eintrag — aber auch kein stilles Verschwinden.
+			// Traegt die Groesse ein Kuerzel, ist das eine echte Luecke: die
+			// Marken-Komponente zeigt dann eine Marke, die niemand aufloesen kann.
+			if (kuerzel.length > 0) unaufloesbar.push(id);
+			continue;
+		}
 		const auswertung = (quelle?.aggregation_label ?? '').trim();
 		const bedeutung = auswertung ? `${label} (${auswertung})` : label;
-		for (const kuerzel of kuerzelById?.[id] ?? []) {
-			if (kuerzel) eintraege.push({ kuerzel, bedeutung });
-		}
+		for (const k of kuerzel) eintraege.push({ kuerzel: k, bedeutung });
 	}
-	return eintraege;
+	return { eintraege, unaufloesbar };
 }

@@ -248,6 +248,22 @@ async function messeLegende(legende: Locator): Promise<Messung> {
 	});
 }
 
+/** Misst ALLE Legenden der Flaeche, nicht nur die erste: seit dem
+ *  Staging-Befund traegt jeder Marken-Block seine eigene, und eine davon
+ *  koennte ueberlaufen, waehrend die andere sauber umbricht. */
+async function messeAlleLegenden(wurzel: Locator): Promise<Messung> {
+	const alle = wurzel.locator(LEGENDE);
+	const anzahl = await alle.count();
+	const zusammen: Messung = { zeilen: 0, laengster: '', befunde: [] };
+	for (let i = 0; i < anzahl; i++) {
+		const m = await messeLegende(alle.nth(i));
+		zusammen.zeilen += m.zeilen;
+		if (m.laengster.length > zusammen.laengster.length) zusammen.laengster = m.laengster;
+		zusammen.befunde.push(...m.befunde);
+	}
+	return zusammen;
+}
+
 /** Waagerechte Seitenscroll-Leiste? Bei Ueberlauf werden die Verursacher
  *  mitgemeldet — sonst weiss niemand, ob die Legende schuld ist oder ein
  *  fremdes, vorbestehendes Bauteil. */
@@ -390,6 +406,47 @@ function berichteKontrast(wo: string, werte: Kontrastwert[]): void {
 // Tests
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Zaehlt JE MARKEN-BLOCK die Kuerzel der Marken gegen die der Legende.
+ *
+ *  Dieser Vergleich hat im ersten Anlauf gefehlt — und genau er haette den
+ *  Staging-Befund gefunden: die Seite traegt mehrere Marken-Bloecke (Trip:
+ *  Reihenfolge + Ausblick; Vergleich: zusaetzlich Stundenverlauf), die Legende
+ *  hing nur an einem. Im Trip blieben R/PR/G unerklaert, im Ortsvergleich
+ *  PR/TF/TH/VS/W/WD. Geprueft wird deshalb BLOCKWEISE, nicht seitenweit:
+ *  seitenweit koennte ein Block die Luecke eines anderen zufaellig zudecken. */
+async function messeBlockDeckung(wurzel: Locator): Promise<string[]> {
+	return wurzel.evaluate((el) => {
+		const befunde: string[] = [];
+		const bloecke = Array.from(
+			el.querySelectorAll('[data-testid="wm2-reihenfolge"]')
+		) as HTMLElement[];
+		if (bloecke.length === 0) return ['Kein einziger Marken-Block (wm2-reihenfolge) gefunden'];
+
+		bloecke.forEach((block, i) => {
+			const marken = (Array.from(block.querySelectorAll('[data-testid="wm2-kurzform-badge"]')) as HTMLElement[])
+				.flatMap((m) => {
+					const wert = m.querySelector('.badge-val');
+					return ((wert ?? m).textContent ?? '').trim().split(/\s+/).filter(Boolean);
+				});
+			const eintraege = (Array.from(block.querySelectorAll('[data-testid="metric-kuerzel-legend-row"] code')) as HTMLElement[])
+				.map((c) => (c.textContent ?? '').trim())
+				.filter(Boolean);
+			if (marken.length === 0) return; // Block ohne Marken braucht keine Legende
+			const fehlend = [...new Set(marken)].filter((k) => !eintraege.includes(k)).sort();
+			const ueberzaehlig = [...new Set(eintraege)].filter((k) => !marken.includes(k)).sort();
+			if (fehlend.length || ueberzaehlig.length) {
+				befunde.push(
+					`Block ${i + 1}: Marken=[${[...new Set(marken)].sort().join(', ')}] ` +
+						`Legende=[${[...new Set(eintraege)].sort().join(', ')}]` +
+						(fehlend.length ? ` · UNERKLAERT=[${fehlend.join(', ')}]` : '') +
+						(ueberzaehlig.length ? ` · ohne Marke=[${ueberzaehlig.join(', ')}]` : '')
+				);
+			}
+		});
+		return befunde;
+	});
+}
+
 test.describe('Issue #1888: die Kuerzel-Legende ist auf dem Handy lesbar', () => {
 	test.afterAll(async ({ request }) => {
 		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
@@ -399,6 +456,39 @@ test.describe('Issue #1888: die Kuerzel-Legende ist auf dem Handy lesbar', () =>
 		for (const id of aufgeraeumt.orte) {
 			await request.delete(`/api/locations/${id}`).catch(() => {});
 		}
+	});
+
+	test('AC-1: Trip-Editor — JEDER Marken-Block erklaert seine Kuerzel', async ({
+		page,
+		request
+	}) => {
+		await createTrip(request);
+		const tab = await oeffneTourenEditor(page);
+		const befunde = await messeBlockDeckung(tab);
+		expect(
+			befunde,
+			`AC-1 FAIL (Trip): ein Marken-Block erklaert seine Kuerzel nicht.\n  ` +
+				`${befunde.join('\n  ')}\n` +
+				`Der Trip-Reiter traegt ZWEI Bloecke: „Reihenfolge" und „Ausblick" ` +
+				`(weatherMetricsTabSections.ts: 'ausblick' ist shared). Genau hier fehlten ` +
+				`auf Staging R, PR und G.`
+		).toEqual([]);
+	});
+
+	test('AC-1: Ortsvergleich-Editor — JEDER Marken-Block erklaert seine Kuerzel', async ({
+		page,
+		request
+	}) => {
+		const presetId = await createVergleich(request);
+		const panel = await oeffneVergleichsEditor(page, presetId);
+		const befunde = await messeBlockDeckung(panel);
+		expect(
+			befunde,
+			`AC-1 FAIL (Ortsvergleich): ein Marken-Block erklaert seine Kuerzel nicht.\n  ` +
+				`${befunde.join('\n  ')}\n` +
+				`Der Vergleich traegt DREI Bloecke: „Reihenfolge", „Stundenverlauf" und ` +
+				`„Ausblick". Auf Staging blieben dort PR, TF, TH, VS, W und WD unerklaert.`
+		).toEqual([]);
 	});
 
 	test('AC-6: Trip-Editor — jede Legenden-Zeile bleibt in 320-899 px vollstaendig lesbar', async ({
@@ -419,10 +509,10 @@ test.describe('Issue #1888: die Kuerzel-Legende ist auf dem Handy lesbar', () =>
 				`AC-6 FAIL: die Legende ist bei ${width}px nicht sichtbar`
 			).toBeVisible();
 
-			const messung = await messeLegende(legende);
+			const messung = await messeAlleLegenden(tab);
 			expect(
 				messung.zeilen,
-				`AC-6: bei ${width}px enthaelt die Legende keine Zeile — dann misst dieser ` +
+				`AC-6: bei ${width}px enthaelt keine Legende eine Zeile — dann misst dieser ` +
 					`Test nichts und waere folgenlos gruen`
 			).toBeGreaterThan(0);
 			for (const b of messung.befunde) {
@@ -468,10 +558,10 @@ test.describe('Issue #1888: die Kuerzel-Legende ist auf dem Handy lesbar', () =>
 				`AC-6 FAIL: die Vergleichs-Legende ist bei ${width}px nicht sichtbar`
 			).toBeVisible();
 
-			const messung = await messeLegende(legende);
+			const messung = await messeAlleLegenden(panel);
 			expect(
 				messung.zeilen,
-				`AC-6: bei ${width}px enthaelt die Vergleichs-Legende keine Zeile — dann ` +
+				`AC-6: bei ${width}px enthaelt keine Vergleichs-Legende eine Zeile — dann ` +
 					`misst dieser Test nichts und waere folgenlos gruen`
 			).toBeGreaterThan(0);
 			for (const b of messung.befunde) {
