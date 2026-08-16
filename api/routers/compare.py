@@ -25,6 +25,7 @@ def get_compare_metrics():
 @router.get("/api/compare")
 def run_comparison(
     location_ids: str = Query(..., description="Comma-separated location IDs, or '*' for all"),
+    user_id: str = Query(..., description="Session-User (vom Go-Proxy injiziert)"),
     target_date: Optional[str] = Query(None, description="YYYY-MM-DD, defaults to today/tomorrow based on time"),
     time_window_start: int = Query(9),
     time_window_end: int = Query(16),
@@ -35,7 +36,7 @@ def run_comparison(
     from app.profile import ActivityProfile
     from services.comparison_parallel import run_comparison_parallel
 
-    all_locations = load_all_locations()
+    all_locations = load_all_locations(user_id=user_id)
 
     if location_ids == '*':
         selected = all_locations

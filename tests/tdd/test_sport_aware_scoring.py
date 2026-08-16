@@ -248,7 +248,9 @@ class TestCompareAPI:
         WHEN: Called with activity_profile=wandern
         THEN: Returns 200 (not 422 validation error)
         """
-        resp = client.get("/api/compare?location_ids=*&activity_profile=wandern")
+        resp = client.get(
+            "/api/compare?location_ids=*&user_id=sport-tester&activity_profile=wandern"
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert "locations" in data

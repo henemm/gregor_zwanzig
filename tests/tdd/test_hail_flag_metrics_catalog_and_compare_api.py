@@ -100,7 +100,7 @@ def test_ac10_compare_api_serialisiert_hail_flag_im_hourly_eintrag(client, monke
     monkeypatch.setattr(loader_mod, "load_all_locations", lambda *a, **kw: [ort])
     monkeypatch.setattr(ComparisonEngine, "run", staticmethod(lambda **kwargs: fixture_ergebnis))
 
-    resp = client.get("/api/compare?location_ids=hagel-testort")
+    resp = client.get("/api/compare?location_ids=hagel-testort&user_id=hagel-tester")
     assert resp.status_code == 200
     data = resp.json()
 

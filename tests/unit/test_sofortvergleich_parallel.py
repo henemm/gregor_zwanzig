@@ -100,7 +100,8 @@ def _abfrage(client):
     zusammen und die Zusicherung ist eindeutig."""
     ids = ",".join(o.id for o in ORTE)
     return client.get(
-        f"/api/compare?location_ids={ids}&target_date={ZIELDATUM.isoformat()}"
+        f"/api/compare?location_ids={ids}&user_id=parallel-tester"
+        f"&target_date={ZIELDATUM.isoformat()}"
         "&time_window_start=9&time_window_end=16"
     )
 
