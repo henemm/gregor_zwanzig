@@ -4,7 +4,7 @@ type: module
 created: 2026-08-16
 updated: 2026-08-16
 status: draft
-version: "1.0"
+version: "2.0"
 tags: [scheduler, monitoring, go, issue-1912]
 ---
 
@@ -12,162 +12,172 @@ tags: [scheduler, monitoring, go, issue-1912]
 
 ## Approval
 
-- [x] Approved (PO, 2026-08-16)
+- [ ] Approved
 
 ## Purpose
 
-Der Go-Scheduler soll einen abgelaufenen HTTP-Timeout nicht länger mit einem
-Briefing-Totalausfall verwechseln. Der Alarm „Trip-Briefing-Totalausfall (#1346)" darf nur
-noch feuern, wenn der Versand nachweislich **nicht** stattgefunden hat.
+Ein abgelaufener HTTP-Timeout ist kein Beweis für einen Briefing-Ausfall. Der Go-Scheduler
+soll aufhören, ihn als solchen zu werten, und den Alarm „Trip-Briefing-Totalausfall (#1346)"
+nur noch bei einer **echten Fehlerantwort** des Python-Cores feuern. Die Erkennung eines
+tatsächlichen Ausfalls übernimmt der bereits vorhandene Heartbeat.
 
 ## Source
 
-- **File:** `internal/scheduler/scheduler.go` (Go-API), neu `internal/scheduler/briefing_slots.go`
-- **Identifier:** `Scheduler.tripReports()`, `Scheduler.client`
+- **File:** `internal/scheduler/scheduler.go` (Go-API)
+- **Identifier:** `Scheduler.triggerEndpointForUser()`, `Scheduler.client`
 
-Schicht: **Go-API** (`internal/`). Kein Python-Anteil — der Scheduler liest die Slot-Datei
-direkt vom Dateisystem, wie `internal/scheduler/briefing_health.go` es für die
-Provider-Diagnose bereits tut. Kein Frontend-Anteil.
+Schicht: **Go-API** (`internal/`). Kein Python-, kein Frontend-Anteil.
 
 ## Estimated Scope
 
-- **LoC:** ~180 Produktivcode, ~120 Tests → **~300 gesamt** (LoC-Limit 250 wird voraussichtlich
-  gerissen, Override durch den PO nötig)
-- **Files:** 4 (2 neu, 2 geändert)
-- **Effort:** medium
+- **LoC:** ~60 Produktivcode, ~120 Tests → **~180 gesamt** (unter dem Limit von 250)
+- **Files:** 2 (`scheduler.go`, `scheduler_test.go`)
+- **Effort:** low
 
 ## Dependencies
 
 | Entity | Type | Purpose |
 |---|---|---|
-| `internal/store` | genutzt | Nutzerliste (`ListUserIDs()`), user-scoped Pfad zur Datenwurzel |
-| `src/services/briefing_slots.py` | gelesen | Schreibt `briefing_slots.json`; Format ist der Vertrag |
+| `partialRunError` (`scheduler.go:48-53`) | genutzt | Bestehender Zustand „Teilerfolg" aus #1447 S1 |
+| `briefingDispatch()` (`scheduler.go:250-263`) | genutzt | Pingt den Heartbeat nur, wenn beide Teil-Jobs `ok` sind |
 | `internal/notify/mq.go` | genutzt | MQ-Alarm an `infra` |
-| `internal/scheduler/briefing_health.go` | Vorbild | Muster für direkten Dateizugriff aus Go |
 
 ## Implementation Details
 
-### Der Defekt
+### Warum Fassung 1.0 verworfen wurde
 
-`internal/scheduler/scheduler.go:115` trägt `Timeout: 120 * time.Second`. Die
-Briefing-Generierung brauchte am 2026-08-16 real 278 s. `tripReports()` (Z. 271-304) wertet
-den Timeout als `error` und feuert auf der ok→error-Flanke den MQ-Alarm.
+Die erste Fassung wollte bei Timeout am Slot nachfragen, ob `outcome: "sent"` steht. Zwei am
+Code belegte Gründe kippen das:
 
-`internal/handler/proxy.go:277` trägt seit #1756 für denselben Vorgang 300 s, mit dem
-Kommentar „der reguläre Erfolgsfall braucht 3-4 Minuten". Der Scheduler war also nie lang
-genug.
+1. **Gescheiterte Versuche hinterlassen keine Spur.** `trip_report_scheduler.py:607-614` ruft
+   bei Ausnahme und bei jedem Ausgang außerhalb `VERMERK_AUSGAENGE` (z. B.
+   `channels_unreachable`) `store.release(...)` — der Eintrag wird **gelöscht**. Ein Lauf, in
+   dem alles scheiterte, hinterlässt null Einträge, und „alle Einträge tragen `sent`" ist über
+   der leeren Menge trivial wahr. Die Regel hätte bei einem **echten Totalausfall entwarnt**.
+2. **300 s hätten nicht gereicht.** `briefing_slots.py:44-50`: „Untergrenze aus 22 realen
+   Versandläufen (längster **Einzelversand 319 s**)". Ein einzelner Trip überschreitet den
+   vorgeschlagenen Wert bereits.
 
-### Warum die naheliegende Lösung nicht reicht
+### Der Ansatz: Timeout ist kein Ausfallsignal
 
-Eine Nachfrage im Moment des Timeouts (18:02) findet den Slot noch ohne `outcome` — der
-Versand endet erst 18:04:38. Die Positivkontrolle braucht deshalb einen **späteren**
-Zeitpunkt, nicht nur einen Nachweis.
+`triggerEndpointForUser()` (`scheduler.go:545-584`) gibt heute bei jedem Transportfehler
+`fmt.Errorf("HTTP error: %w", err)` zurück; `runForAllUsers()` wertet das als harten Fehler,
+`recordRun()` setzt `error`, `tripReports()` alarmiert.
 
-### Die Regel: Entwarnung nur mit Positivkontrolle
-
-Jeder Trip, den ein Lauf anfasst, erhält beim Start einen **Claim** in `briefing_slots.json`
-(`outcome: null`, `src/services/briefing_slots.py:153-176`); nach dem Versandversuch schreibt
-`record_outcome()` (Z. 197-209) den Ausgang. Der Lauf weiß damit genau, welche Trips zu prüfen
-sind.
+Künftig wird **im Transportfehler unterschieden**:
 
 ```
-Timeout beim Aufruf von /api/scheduler/trip-reports
-  → Lauf gilt zunächst als UNENTSCHIEDEN (nicht error)
-  → begrenztes Nachfassen: Slot-Datei je Nutzer erneut lesen
-      Intervall 15 s, Obergrenze 120 s nach dem Timeout
-  → Auswertung:
-      alle Claims dieses Laufs tragen outcome == "sent"  → kein Alarm, Status "partial"
-      irgendein Claim ohne "sent"                        → Alarm, Status "error"
-      Datei fehlt / nicht lesbar / Slot unbekannt        → Alarm, Status "error"
-      Nachfassfrist abgelaufen, noch offene Claims       → Alarm, Status "error"
+Timeout (context.DeadlineExceeded bzw. net.Error mit Timeout() == true)
+    → partialRunError  → Job-Status "partial" → KEIN MQ-Alarm
+                                              → KEIN Heartbeat-Ping
+alles andere (Verbindung verweigert, DNS, HTTP 5xx, failed > 0)
+    → harter Fehler    → Job-Status "error"   → MQ-Alarm wie bisher
 ```
 
-Die Richtung ist bewusst asymmetrisch: **nur ein positiv belegtes `sent` unterdrückt.** Jede
-Unsicherheit führt zum Alarm. Ein Wachhund, der im Zweifel schweigt, ist schlimmer als einer,
-der im Zweifel bellt.
+Der Unterschied ist inhaltlich, nicht formal: Ein Timeout heißt „der Core antwortet mir nicht
+**rechtzeitig**" — er kann dabei erfolgreich arbeiten, wie am 2026-08-16 geschehen. Eine
+verweigerte Verbindung heißt „der Core ist nicht da"; das ist ein echter Ausfall.
 
-### Teil 1: Timeout
+### Die Positivkontrolle bleibt erhalten — über den Heartbeat
 
-`scheduler.go:115` von 120 s auf 300 s, analog #1756. Der Client wird von drei Jobs geteilt
-(`scheduler.go:415` Trip-Reports, `:547` Alert-Checks, `:594` Compare) — die Änderung wirkt
-bewusst auf alle drei, weil alle denselben Core rufen. Die Overlap-Sperre in `recordRun()`
-(`TryLock`, Z. 481-499) verhindert, dass ein langsamer Lauf den Folgetick blockiert.
+`briefingDispatch()` pingt BetterStack **nur**, wenn `trip_reports_hourly` **und**
+`compare_presets_daily` auf `ok` stehen (`scheduler.go:259-262`). Ein `partial` pingt nicht.
+Ein dauerhaft hängender Core erzeugt also weiterhin einen Alarm — über den ausbleibenden
+Heartbeat statt über eine MQ-Nachricht, die auf einer Fehlannahme beruht. Entwarnt wird
+weiterhin nur bei echtem Erfolg.
+
+### Der Timeout muss trotzdem hoch — sonst kippt es in den nächsten Fehlalarm
+
+Bliebe der Timeout bei 120 s, liefe künftig **jeder** Lauf in `partial` (319 s Einzelversand),
+der Heartbeat pingte **nie** und BetterStack meldete Dauerausfall. Der Wert steigt deshalb auf
+**3000 s (50 min)** — knapp unter dem stündlichen Cron-Abstand. Die Overlap-Sperre in
+`recordRun()` (`TryLock`, Z. 481-499) verhindert, dass ein langsamer Lauf den Folgetick
+blockiert; sie zählt übersprungene Ticks stattdessen.
+
+Damit wird ein Timeout wieder das, was er sein soll: ein Ausnahmeereignis, das „der Core hängt
+seit fast einer Stunde" bedeutet.
+
+### Geteilter Client
+
+`s.client` bedient drei Jobs (`scheduler.go:415` Trip-Reports, `:547` Alert-Checks, `:594`
+Compare). Beide Änderungen — höherer Timeout und Timeout-als-`partial` — wirken bewusst auf
+alle drei: „Timeout ist kein Ausfallbeweis" gilt dort genauso.
 
 ## Expected Behavior
 
-- **Input:** Ergebnis des HTTP-Aufrufs an `/api/scheduler/trip-reports` je Nutzer; Inhalt von
-  `briefing_slots.json` je Nutzer
-- **Output:** Job-Status in `/api/scheduler/status` (`ok` | `partial` | `error`); MQ-Alarm an
-  `infra` nur bei `error` auf der ok→error-Flanke
-- **Side effects:** MQ-Nachricht; keine Schreibzugriffe auf `briefing_slots.json` — der
-  Scheduler liest ausschließlich
+- **Input:** Ergebnis des HTTP-Aufrufs an `/api/scheduler/trip-reports` je Nutzer
+- **Output:** Job-Status in `/api/scheduler/status` (`ok` | `partial` | `error`); MQ-Alarm nur
+  bei `error` auf der ok→error-Flanke; Heartbeat-Ping nur bei `ok`
+- **Side effects:** keine Dateizugriffe, keine Schreibvorgänge
 
 ## Acceptance Criteria
 
-- **AC-1:** Given der Aufruf an den Python-Core läuft in den Timeout / When die Slot-Datei für
-  alle Trips dieses Laufs `outcome: "sent"` trägt / Then wird **kein** MQ-Alarm gesendet und
-  der Job-Status ist `partial`, nicht `error`.
-  - Test: Go-Test mit `httptest`-Server, der nicht antwortet, und vorbereiteter Slot-Datei mit
-    `sent`; injizierter `notifier` zählt die Alarme — erwartet: 0.
+- **AC-1:** Given der Aufruf an den Python-Core läuft in den Timeout / When der Lauf endet /
+  Then wird **kein** MQ-Alarm gesendet und der Job-Status ist `partial`, nicht `error`.
+  - Test: Go-Test mit `httptest`-Server, der die Antwort über den Client-Timeout hinaus
+    verzögert; injizierter `notifier` zählt Alarme — erwartet: 0, Status `partial`.
 
-- **AC-2:** Given der Aufruf läuft in den Timeout / When mindestens ein Claim dieses Laufs
-  **kein** `outcome: "sent"` trägt / Then wird der MQ-Alarm „Trip-Briefing-Totalausfall (#1346)"
-  mit `priority=high` an `infra` gesendet und der Job-Status ist `error`.
-  - Test: wie AC-1, aber ein Claim mit `outcome: null` — erwartet: genau 1 Alarm an `infra`.
+- **AC-2:** Given ein Lauf endete wegen Timeout als `partial` / When `briefingDispatch()` den
+  Heartbeat auswertet / Then wird **nicht** gepingt — ein dauerhafter Ausfall bleibt über
+  BetterStack sichtbar. Entwarnung gibt es weiterhin nur bei echtem Erfolg.
+  - Test: Heartbeat-Ziel als `httptest`-Server; nach Timeout-Lauf erwartet: 0 Aufrufe.
 
-- **AC-3:** Given der Aufruf läuft in den Timeout / When die Slot-Datei fehlt, unlesbar ist
-  oder keinen Eintrag für diesen Lauf enthält / Then wird alarmiert. Fehlende Information
-  entwarnt **nie**.
-  - Test: drei Go-Testfälle (Datei fehlt, kaputtes JSON, leere Einträge) — jeder erwartet
-    einen Alarm.
+- **AC-3:** Given der Python-Core antwortet mit HTTP 500 / When der Lauf endet / Then wird der
+  Alarm „Trip-Briefing-Totalausfall (#1346)" mit `priority=high` an `infra` gesendet und der
+  Status ist `error` — unverändert zu heute.
+  - Test: `httptest`-Server mit Status 500; erwartet: genau 1 Alarm an `infra`.
 
-- **AC-4:** Given ein echter Ausfall ohne Timeout (Python-Core antwortet mit Fehler) / When der
-  Lauf endet / Then verhält sich der Alarm **unverändert** wie vor dieser Änderung — die
-  Positivkontrolle greift ausschließlich im Timeout-Fall.
-  - Test: bestehende Scheduler-Tests bleiben grün; zusätzlicher Test mit HTTP 500 erwartet
-    weiterhin einen Alarm.
+- **AC-4:** Given der Python-Core ist nicht erreichbar (Verbindung verweigert, kein Timeout) /
+  When der Lauf endet / Then wird alarmiert und der Status ist `error`. Ein toter Core ist ein
+  echter Ausfall und darf **nicht** als `partial` durchgehen.
+  - Test: geschlossener Port als `pythonURL`; erwartet: genau 1 Alarm.
 
-- **AC-5:** Given der Versand schließt während der Nachfassfrist ab / When der Slot erst nach
-  dem Timeout auf `sent` wechselt / Then wird das erkannt und nicht alarmiert. Eine Prüfung
-  ausschließlich im Moment des Timeouts erfüllt dieses AC nicht.
-  - Test: Slot-Datei wird während der Nachfassphase auf `sent` geändert; erwartet: 0 Alarme.
-    Zeitquelle injiziert, damit der Test nicht real 120 s wartet.
+- **AC-5:** Given die Antwort trägt `failed > 0` oder `status: "partial"` im Körper / When der
+  Lauf endet / Then bleibt das bestehende Verhalten aus #1447 unverändert.
+  - Test: bestehende Scheduler-Tests bleiben grün; zusätzlicher Test mit `failed: 2` erwartet
+    weiterhin `error` plus Alarm.
 
-- **AC-6:** Given die Nachfassfrist von 120 s / When die Claims bis dahin offen bleiben / Then
-  endet das Nachfassen und es wird alarmiert — der Scheduler hängt nicht unbegrenzt.
-  - Test: Slot bleibt offen; erwartet: genau 1 Alarm, Laufzeit begrenzt durch injizierte
-    Zeitquelle.
+- **AC-6:** Given der Client-Timeout / When ein regulärer Lauf 319 s oder länger dauert / Then
+  läuft er **nicht** in den Timeout — der Wert liegt bei 3000 s statt 120 s.
+  - Test: Der gesetzte Timeout-Wert wird über einen Lauf beobachtet, der länger als 120 s
+    simuliert wird (verkürzte Zeitbasis im Test), und schlägt nicht fehl.
 
-- **AC-7:** Given mehrere Nutzer / When der Lauf für Nutzer A erfolgreich, für Nutzer B im
-  Timeout ohne `sent` endet / Then wird alarmiert, und die Prüfung erfolgt je Nutzer — der
-  Erfolg von A entwarnt B nicht.
-  - Test: zwei Nutzer im Store, Slot-Dateien getrennt; erwartet: Alarm.
+- **AC-7:** Given mehrere Nutzer / When der Lauf für Nutzer A erfolgreich und für Nutzer B im
+  Timeout endet / Then ist der Gesamtstatus `partial` (Rangfolge error > partial > ok, #1447
+  S2a) und es wird nicht alarmiert.
+  - Test: zwei Nutzer im Store, einer schnell, einer verzögert; erwartet: 0 Alarme, `partial`.
 
-- **AC-8:** Given der Slot ist nach **Ortstag** geschlüsselt, der Scheduler rechnet in
-  Serverzeit / When beide auseinanderfallen / Then prüft die Positivkontrolle den Ortstag des
-  Trips, nicht den Servertag.
-  - Test: Trip in abweichender Zeitzone, Slot unter dem Ortstag abgelegt; erwartet: `sent`
-    wird gefunden, kein Alarm.
+- **AC-8:** Given ein Timeout-Lauf, gefolgt von einem echten Fehler-Lauf / When die Flanke
+  ausgewertet wird / Then feuert der Alarm beim Übergang nach `error` — die Flankenerkennung
+  bleibt funktionsfähig und wird durch den neuen `partial`-Zustand nicht verschluckt.
+  - Test: zwei aufeinanderfolgende Läufe (erst Timeout, dann HTTP 500); erwartet: genau 1
+    Alarm beim zweiten Lauf.
 
 ## Known Limitations
 
-- Der Timeout von 300 s ist weiterhin eine feste Zahl. Wächst die Generierungsdauer mit
-  Nutzer-/Trip-Zahl über 300 s, greift künftig die Nachfass-Mechanik statt des Timeouts —
-  der Fehlalarm bleibt aus, aber die Laufzeit sollte beobachtet werden.
+- Ein echter Totalausfall wird künftig **später** gemeldet: nicht mehr sofort per MQ, sondern
+  über den ausbleibenden BetterStack-Heartbeat nach dessen `period`/`grace`. Das ist der
+  bewusst eingegangene Preis dafür, dass der sofortige Alarm nachweislich falsch lag.
+- Der Timeout bleibt eine feste Zahl. Läuft die Generierung künftig länger als 50 Minuten,
+  greift er erneut — dann ist das aber ein echter Befund, kein Fehlalarm.
 - Die Timeout-Konstante bleibt an vier Stellen verstreut (`scheduler.go:115`, `proxy.go:108`,
-  `proxy.go:277`, `compare_preset.go:676`). Eine gemeinsame Quelle ist sinnvoll, gehört aber
-  als Nebenbefund nach #1199, nicht in diese Scheibe.
-- Der #1346-Wachhund bleibt auf **Totalausfall** ausgelegt. Ein Teilausfall (einzelne Trips
-  scheitern, andere nicht) wird durch AC-2 künftig ebenfalls alarmiert — das ist strenger als
-  vorher und beabsichtigt.
+  `proxy.go:277`, `compare_preset.go:676`). Gemeinsame Quelle → Nebenbefund #1199.
+- Ein **Teil**ausfall (einzelne Trips scheitern, Core antwortet aber sauber) wird von dieser
+  Scheibe nicht berührt; dafür ist der bestehende `failed`-Pfad aus #1447 zuständig.
 
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** keine
-- **Rationale:** Keine Entscheidungsfläche berührt (Kanäle, Provider, Datenmodell, Auth,
-  Editor-Paradigma, Test-/Deploy-Strategie bleiben unverändert). Der Scheduler liest eine
-  bestehende Datei über ein bereits etabliertes Muster (`briefing_health.go`).
+- **Rationale:** Keine Entscheidungsfläche berührt. Der Fix nutzt mit `partialRunError` und der
+  Heartbeat-Konsolidierung ausschließlich Mechanik, die #1447 und #1346 bereits eingeführt
+  haben.
 
 ## Changelog
 
 - 2026-08-16: Initial spec created (#1912)
+- 2026-08-16: **Fassung 2.0** — Ansatz gewechselt. Fassung 1.0 (Positivkontrolle am Slot nach
+  Timeout) verworfen: gescheiterte Versuche löschen ihren Slot-Eintrag
+  (`trip_report_scheduler.py:607-614`), damit hätte die Regel bei einem echten Totalausfall
+  entwarnt; zudem reicht der dort vorgeschlagene Timeout von 300 s nicht (längster gemessener
+  Einzelversand 319 s, `briefing_slots.py:48`). Neu: Timeout wird als `partial` gewertet, der
+  Alarm hängt nur noch an echten Fehlerantworten, die Ausfallerkennung trägt der Heartbeat.
