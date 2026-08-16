@@ -163,9 +163,13 @@ def test_ac_s6_3_catalog_union_is_complete_subset_of_priority():
     design) ist vollstaendig in PRIORITY vertreten."""
     katalog_union = _katalog_union()
 
-    assert len(katalog_union) == 30, (
+    # Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+    # fix_1887_e6a_sms_kuerzel_register.md): 30 -> 29. 'WC' entfaellt
+    # ERSATZLOS (verdoppelte nachweislich 'FK') -- ein Multi-Wert weniger:
+    # 22 Single + 8 Multi - 1 Ueberschneidung 'TH:' = 29.
+    assert len(katalog_union) == 29, (
         f"Katalog-Union hat {len(katalog_union)} eindeutige Symbole, "
-        f"erwartet 30 (22 Single + 9 Multi - 1 Ueberschneidung 'TH:'): "
+        f"erwartet 29 (22 Single + 8 Multi - 1 Ueberschneidung 'TH:'): "
         f"{sorted(katalog_union)!r}"
     )
 
@@ -252,7 +256,9 @@ def _build_full_coverage_forecast() -> tuple[NormalizedForecast, list[MetricSpec
         for sym in (
             "N", "K", "D", "FN", "FK", "FD", "R", "PR", "W", "G", "TH:", "TH+:",
             "HU", "DP", "WD", "CP", "PT", "CT", "CL", "CM", "CH", "VS", "SU",
-            "UV", "HP", "NL", "SD", "NS24+", "SL", "AV", "WC",
+            "UV", "HP", "NL", "SD", "NS24+", "SL", "AV",
+            # Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS
+            # (verdoppelte nachweislich 'FK') -- kein MetricSpec mehr hier.
         )
     ]
     return forecast, config

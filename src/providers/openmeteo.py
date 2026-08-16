@@ -391,6 +391,9 @@ class OpenMeteoProvider:
     # Mapping: OpenMeteo API param → ForecastDataPoint field
     _PARAM_TO_FIELD = {
         "temperature_2m": "t2m_c",
+        # AC-8 (Fix #1887 E6 Scheibe A): Open-Meteo liefert hier tatsaechlich
+        # 'apparent_temperature' (gefuehlte Temperatur, herstellereigene
+        # Formel) -- keine berechnete Windchill-Groesse wie bei Geosphere.
         "apparent_temperature": "wind_chill_c",
         "relative_humidity_2m": "humidity_pct",
         "dewpoint_2m": "dewpoint_c",
@@ -907,6 +910,8 @@ class OpenMeteoProvider:
                     swe_kgm2=None,
                     precip_type=None,
                     freezing_level_m=get_val("freezing_level_height", i),
+                    # AC-8 (Fix #1887 E6 Scheibe A): 'apparent_temperature',
+                    # nicht berechneter Windchill (s. Kommentar _PARAM_TO_FIELD).
                     wind_chill_c=get_val("apparent_temperature", i),
                     visibility_m=get_val("visibility", i),
                 )

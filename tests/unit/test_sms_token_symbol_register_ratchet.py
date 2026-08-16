@@ -30,11 +30,13 @@ Regel-Budget (CLAUDE.md): Pruefdatum 2026-10-30.
 """
 from __future__ import annotations
 
+import ast
 import dataclasses
 from pathlib import Path
 
 import pytest
 
+from app import metric_catalog as catalog_mod
 from app.metric_catalog import (
     SMS_NULLFORM_METRIC_IDS, get_all_metrics, get_sms_code,
 )
@@ -60,13 +62,15 @@ EXEMPT_FORECAST_FIELDS: dict[str, str] = {
     # 'AV' — Lawinenstufe. Das Register fuehrt dafuer ueberhaupt keine
     # Groesse (keine Katalog-Metrik), also gibt es kein Soll-Kuerzel.
     "avalanche_level": "AV: Lawinenstufe, kein Registereintrag",
-    # 'WC' — gefuehlte Temperatur. Eine Groesse (Register: 'TF') traegt im
-    # SMS-Format DREI Kuerzel (WC/FK/FD, Tageskennzahl/Tiefst/Hoechst) und
-    # ist damit strukturell nicht aus einem einzelnen sms_code-Feld
-    # ableitbar. Bewusster Sonderfall, s. Known Limitations. Fix #1660
-    # Scheibe A: 'FN' (Nacht) ist zur eigenen Groesse "wind_chill_night"
-    # gewandert (vorher vier Kuerzel).
-    "wind_chill_c": "WC: drei Kuerzel fuer eine Groesse (Register: TF)",
+    # Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+    # fix_1887_e6a_sms_kuerzel_register.md): der vormalige 'WC'-Eintrag fuer
+    # "wind_chill_c" entfaellt ERSATZLOS, nicht nur umformuliert -- 'WC'
+    # verdoppelte nachweislich den Wert von 'FK' (identisches Feld, Fenster,
+    # Aggregation) und wird von _wintersport() nach dieser Scheibe fuer
+    # dieses Feld gar nicht mehr abgetastet. Ohne einen Eintrag hier bleibt
+    # "wind_chill_c" (dp_field von "wind_chill", sms_code="TF") im
+    # Register-Vergleich sichtbar: die Zelle zeigt weiterhin Stundenwerte
+    # (col_key="felt"), nicht das entfallene SMS-Kuerzel.
 }
 
 # metric_id -> Begruendung. Ausnahmen der Register-Herrschaft ueber
@@ -388,11 +392,17 @@ def test_extended_metric_tables_carry_the_symbol_the_builder_emits():
         )
 
 
-@pytest.mark.parametrize("legacy_symbol", ["SN", "SN24+", "SFL"])
+@pytest.mark.parametrize("legacy_symbol", ["SN", "SN24+", "SFL", "WC"])
 def test_legacy_snow_symbols_are_absent_from_all_tables(legacy_symbol: str):
     """#1435 E3b: die drei Alt-Kuerzel duerfen in keiner Metrik-Tabelle mehr
     stehen. ('SN' bleibt ausschliesslich die amtliche Schneewarnung in
-    `hazard_symbols.py` — eine andere Tabelle, hier nicht geprueft.)"""
+    `hazard_symbols.py` — eine andere Tabelle, hier nicht geprueft.)
+
+    Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+    fix_1887_e6a_sms_kuerzel_register.md, AC-4): 'WC' verdoppelte
+    nachweislich 'FK' (identisches Feld, Fenster, Aggregation) und entfaellt
+    ERSATZLOS — kein Ersatzkuerzel wie bei SN/SN24+/SFL (die durch SD/NS24+/
+    SL abgeloest wurden)."""
     positional_symbols = {s for s, _cat in POSITIONAL}
     default_cfg = {s.symbol for s in _wintersport_default_config()}
 
@@ -525,3 +535,169 @@ def test_kollisionspruefung_beisst_zu_und_ueberspringt_leere_kuerzel():
         assert unbeteiligt not in text, (
             f"{unbeteiligt!r} ist keine Kollision, wird aber gemeldet: {text!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Fix #1887 E6 Scheibe A — AC-1, AC-4, AC-9.
+# SPEC: docs/specs/modules/fix_1887_e6a_sms_kuerzel_register.md
+#
+# Sechs Groessen, deren Trip-SMS-Kuerzel bisher NUR in der handgetippten
+# SMS_MULTI_SYMBOLS_BY_METRIC stand, bekommen ein Register-Feld
+# `sms_multi_symbols`; die Tabelle wird zur reinen Ableitung. 'WC'
+# (wind_chill) entfaellt ersatzlos (PO-Entscheid, verdoppelt nachweislich
+# 'FK').
+# ---------------------------------------------------------------------------
+
+# AC-9: von Hand getippt -- darf NICHT aus SMS_MULTI_SYMBOLS_BY_METRIC oder
+# MetricDefinition.sms_multi_symbols selbst berechnet werden, sonst ist die
+# Zusicherung eine Tautologie (Mutations-Gegenprobe Punkt 1).
+_AC9_ERWARTUNG: dict[str, str] = {
+    "temperature_day_low": "K",
+    "temperature_day_high": "D",
+    "temperature_night": "N",
+    "wind_chill_day_low": "FK",
+    "wind_chill_day_high": "FD",
+    "wind_chill_night": "FN",
+}
+
+
+def test_sms_multi_symbols_feld_traegt_die_getippte_ac9_erwartungstabelle():
+    """AC-9: vertauscht das Register eine Zuordnung, wird dieser Waechter rot
+    und nennt die betroffene Groesse beim Namen (Mutations-Gegenprobe Punkt
+    1)."""
+    from app.metric_catalog import _METRICS_BY_ID
+
+    abweichungen = []
+    for metric_id, erwartetes_kuerzel in _AC9_ERWARTUNG.items():
+        metrik = _METRICS_BY_ID.get(metric_id)
+        assert metrik is not None, (
+            f"Register kennt {metric_id!r} nicht (mehr) — Testvoraussetzung "
+            "verletzt."
+        )
+        tatsaechlich = getattr(metrik, "sms_multi_symbols", ())
+        if tatsaechlich != (erwartetes_kuerzel,):
+            abweichungen.append(
+                f"  - {metric_id}: erwartet {(erwartetes_kuerzel,)!r}, "
+                f"gefunden {tatsaechlich!r}"
+            )
+
+    assert not abweichungen, (
+        "MetricDefinition.sms_multi_symbols weicht von der getippten "
+        "AC-9-Erwartungstabelle ab:\n" + "\n".join(abweichungen)
+    )
+
+
+def test_sms_multi_symbols_by_metric_ableitung_stimmt_mit_ac9_erwartung_ueberein():
+    """AC-1, ergaenzender Wertevergleich: die ABGELEITETE Tabelle
+    SMS_MULTI_SYMBOLS_BY_METRIC muss dieselben sechs Werte fuehren wie die
+    getippte AC-9-Tabelle -- unabhaengig davon, ob die Ableitung ueberhaupt
+    schon existiert."""
+    from app.metric_catalog import SMS_MULTI_SYMBOLS_BY_METRIC
+
+    abweichungen = []
+    for metric_id, erwartetes_kuerzel in _AC9_ERWARTUNG.items():
+        gefunden = SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id)
+        if gefunden != (erwartetes_kuerzel,):
+            abweichungen.append(
+                f"  - {metric_id}: erwartet {(erwartetes_kuerzel,)!r}, "
+                f"SMS_MULTI_SYMBOLS_BY_METRIC liefert {gefunden!r}"
+            )
+    assert not abweichungen, (
+        "SMS_MULTI_SYMBOLS_BY_METRIC weicht von der getippten "
+        "AC-9-Erwartungstabelle ab:\n" + "\n".join(abweichungen)
+    )
+
+    assert "wind_chill" not in SMS_MULTI_SYMBOLS_BY_METRIC, (
+        "'wind_chill' fuehrt weiterhin einen Eintrag in "
+        "SMS_MULTI_SYMBOLS_BY_METRIC — 'WC' sollte ersatzlos entfallen "
+        f"(PO-Entscheid): {SMS_MULTI_SYMBOLS_BY_METRIC.get('wind_chill')!r}"
+    )
+
+
+# Die sechs Groessen, fuer die AC-1 ein hartkodiertes Kuerzel in der
+# Dict-DEFINITION verbietet -- 'wind_chill' zaehlt bewusst NICHT dazu, weil
+# es nach dieser Scheibe ueberhaupt keinen sms_multi_symbols-Eintrag mehr hat.
+_AC1_SECHS_GROESSEN = frozenset(_AC9_ERWARTUNG)
+
+
+def test_sms_multi_symbols_by_metric_ist_ableitung_kein_literal_fuer_die_sechs_groessen():
+    """AC-1: an der Zuweisung von SMS_MULTI_SYMBOLS_BY_METRIC darf fuer die
+    sechs betroffenen Groessen kein Dict-Literal mit getippten Kuerzeln mehr
+    stehen -- die Tabelle muss aus dem Register (MetricDefinition.
+    sms_multi_symbols) abgeleitet werden (Muster SMS_SYMBOL_BY_METRIC seit
+    E3b). Kein Regex ueber Quelltext -- echter AST, analog zu
+    tests/helpers/metrik_listen_scan.py::_seiten()."""
+    quelle = Path(catalog_mod.__file__).resolve().read_text(encoding="utf-8")
+    baum = ast.parse(quelle, filename=catalog_mod.__file__)
+
+    zuweisung = None
+    for knoten in ast.walk(baum):
+        if (isinstance(knoten, ast.Assign)
+                and any(isinstance(t, ast.Name)
+                        and t.id == "SMS_MULTI_SYMBOLS_BY_METRIC"
+                        for t in knoten.targets)):
+            zuweisung = knoten
+            break
+        # Die Zuweisung traegt eine Typannotation (`dict[str, tuple[str, ...]]`)
+        # -- das ist ast.AnnAssign, nicht ast.Assign.
+        if (isinstance(knoten, ast.AnnAssign)
+                and isinstance(knoten.target, ast.Name)
+                and knoten.target.id == "SMS_MULTI_SYMBOLS_BY_METRIC"
+                and knoten.value is not None):
+            zuweisung = knoten
+            break
+    assert zuweisung is not None, (
+        "Testvoraussetzung verletzt: keine Zuweisung an "
+        "SMS_MULTI_SYMBOLS_BY_METRIC gefunden — wurde der Name geaendert?"
+    )
+
+    def _ist_literale_zeichenkette(wert: ast.expr) -> bool:
+        return isinstance(wert, ast.Constant) and isinstance(wert.value, str)
+
+    def _ist_literales_tupel(wert: ast.expr) -> bool:
+        return (isinstance(wert, ast.Tuple)
+                and bool(wert.elts)
+                and all(_ist_literale_zeichenkette(e) for e in wert.elts))
+
+    literale_treffer = []
+    for teilbaum in ast.walk(zuweisung.value):
+        if not isinstance(teilbaum, ast.Dict):
+            continue
+        for schluessel, wert in zip(teilbaum.keys, teilbaum.values):
+            if not (isinstance(schluessel, ast.Constant)
+                    and schluessel.value in _AC1_SECHS_GROESSEN):
+                continue
+            if _ist_literale_zeichenkette(wert) or _ist_literales_tupel(wert):
+                literale_treffer.append(schluessel.value)
+
+    assert not literale_treffer, (
+        "SMS_MULTI_SYMBOLS_BY_METRIC traegt fuer diese Groessen noch ein "
+        f"getipptes Kuerzel statt einer Ableitung aus dem Register: "
+        f"{sorted(literale_treffer)!r}. Nach Implementation Details Punkt 1 "
+        "der Spec muss die Tabelle eine Comprehension ueber "
+        "MetricDefinition.sms_multi_symbols sein (Muster SMS_SYMBOL_BY_METRIC "
+        "seit E3b)."
+    )
+
+
+def test_sms_symbols_endpoint_fuehrt_wind_chill_nicht_mehr():
+    """AC-4: /api/sms-symbols serialisiert SMS_MULTI_SYMBOLS_BY_METRIC
+    generisch (kein eigener Code-Pfad, s. Spec) — nach dem Wegfall von 'WC'
+    verschwindet 'wind_chill' vollstaendig aus der Metrik-Liste statt mit
+    leerem sms_symbols-Eintrag zu erscheinen (AC-4, Spec Punkt 7)."""
+    from api.routers.config import get_sms_symbols
+
+    antwort = get_sms_symbols()
+    metrik_ids = {eintrag["metric_id"] for eintrag in antwort["metrics"]}
+    alle_symbole = {
+        symbol for eintrag in antwort["metrics"] for symbol in eintrag["sms_symbols"]
+    }
+
+    assert "wind_chill" not in metrik_ids, (
+        "'wind_chill' erscheint weiterhin in /api/sms-symbols, obwohl 'WC' "
+        f"ersatzlos entfallen ist: {sorted(metrik_ids)!r}"
+    )
+    assert "WC" not in alle_symbole, (
+        f"Kuerzel 'WC' erscheint weiterhin in /api/sms-symbols: "
+        f"{antwort['metrics']!r}"
+    )

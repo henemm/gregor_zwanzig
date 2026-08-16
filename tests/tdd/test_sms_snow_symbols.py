@@ -7,10 +7,14 @@ Verhalten unter Test:
   Neuschnee          SN24+ -> NS24+(Register: fresh_snow "NS" + Grammatik "24+")
   Schneefallgrenze   SFL   -> SL   (Register: snowfall_limit)
 
-Unveraendert: AV (Lawinenstufe, kein Registereintrag), WC (gefuehlte
-Temperatur), TH: (Grammatikform) und HAZARD_SMS_SYMBOLS["snow"] == "SN" --
-die AMTLICHE Schneewarnung. Genau deren Doppelbedeutung mit der Schneehoehe
-ist der Grund dieser Etappe (AC-7).
+Unveraendert: AV (Lawinenstufe, kein Registereintrag), TH: (Grammatikform)
+und HAZARD_SMS_SYMBOLS["snow"] == "SN" -- die AMTLICHE Schneewarnung. Genau
+deren Doppelbedeutung mit der Schneehoehe ist der Grund dieser Etappe (AC-7).
+
+Fix #1887 E6 Scheibe A (docs/specs/modules/fix_1887_e6a_sms_kuerzel_register.md):
+WC (gefuehlte Temperatur, Wintersport-Tageskennzahl) entfaellt ERSATZLOS
+(PO-Entscheid, verdoppelte nachweislich 'FK') -- alle Stellen dieser Datei,
+die WC als Nachbar-Kuerzel erwarteten, sind entsprechend angepasst.
 
 Keine Mocks: echte DailyForecast/NormalizedForecast, echter build_token_line(),
 echter render_line(), echter FastAPI-Router.
@@ -46,7 +50,10 @@ def _winter_day(
     snow_new_24h_cm: float | None = 25.0,
     snowfall_limit_m: float | None = 1800.0,
 ) -> DailyForecast:
-    """Wintertag mit allen drei Schneegroessen (plus AV/WC als Nachbarn)."""
+    """Wintertag mit allen drei Schneegroessen (plus AV als Nachbar; das
+    Feld wind_chill_c bleibt gesetzt, weil es weiterhin die Stundentabelle
+    speist -- erzeugt nach dieser Scheibe aber KEIN Token mehr, s. Modul-
+    Docstring)."""
     return DailyForecast(
         temp_min_c=-12.0, temp_max_c=-4.0, night_temp_min_c=-15.0,
         wind_hourly=(HourlyValue(8, 45.0),),
@@ -349,9 +356,14 @@ def _full_disabled_specs_like_trip_report(
     return specs
 
 
-def test_f001_deselected_wind_chill_has_no_wc_token():
-    """Adversary F001: 'Gefuehlte Temperatur' (wind_chill) abgewaehlt ->
-    kein WC-Token trotz vorhandener Gefuehlt-Daten im Segment."""
+def test_wind_chill_hat_nie_mehr_ein_wc_token_ab_oder_zugewaehlt():
+    """Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+    fix_1887_e6a_sms_kuerzel_register.md, AC-4) macht den urspruenglichen
+    Adversary-F001-Nachweis (#1450, 'WC verschwindet bei Abwahl von
+    wind_chill') gegenstandslos: 'WC' verdoppelte nachweislich 'FK'
+    (identisches Feld, Fenster, Aggregation) und entfaellt ERSATZLOS. Der
+    Token darf deshalb WEDER bei aktiver NOCH bei abgewaehlter Metrik
+    'wind_chill' erscheinen — Positivnachweis statt stiller Loeschung."""
     from output.renderers.sms_trip import SMSTripFormatter
 
     disabled = _full_disabled_specs_like_trip_report(
@@ -359,19 +371,17 @@ def test_f001_deselected_wind_chill_has_no_wc_token():
     )
     segments = [_winter_segment()]
 
-    # Nicht-Leerlauf-Nachweis: ohne Abwahl erscheint WC.
     unfiltered = SMSTripFormatter().format_sms(segments, stage_name="Etappe 1")
-    assert "WC" in unfiltered, (
-        "F001 Vorbedingung: ohne Abwahl MUSS WC erscheinen — sonst misst "
-        f"dieser Test nichts: {unfiltered!r}"
+    assert "WC" not in unfiltered, (
+        "'WC' erscheint weiterhin ohne Abwahl, obwohl das Kuerzel ersatzlos "
+        f"entfallen ist (PO-Entscheid): {unfiltered!r}"
     )
 
     sms = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe 1", disabled_specs=disabled,
     )
     assert "WC" not in sms, (
-        "F001: wind_chill ist nicht in active_metric_ids — der WC-Token darf "
-        f"trotz vorhandener gefuehlter Temperatur nicht erscheinen: {sms!r}"
+        f"'WC' erscheint weiterhin mit Abwahl von 'wind_chill': {sms!r}"
     )
 
 
@@ -406,8 +416,13 @@ def test_f001_deselected_fresh_snow_has_no_ns24_token():
 # ---------------------------------------------------------------------------
 
 def test_ac5_wintersport_block_order_unchanged():
-    """AC-5: SD, NS24+, SL, AV, WC in genau dieser relativen Reihenfolge —
-    wie vor der Umstellung (dort SN, SN24+, SFL, AV, WC)."""
+    """AC-5: SD, NS24+, SL, AV in genau dieser relativen Reihenfolge — wie
+    vor der Umstellung (dort SN, SN24+, SFL, AV).
+
+    Fix #1887 E6 Scheibe A: 'WC' folgte hier bislang auf AV, ist aber
+    ERSATZLOS entfallen (PO-Entscheid) -- der Block schrumpft von 5 auf 4
+    Positionen, die relative Reihenfolge der verbleibenden vier bleibt
+    unangetastet."""
     rendered = _line(_winter_day()).render(400)
     tokens = _tokens(rendered)
 
@@ -419,17 +434,21 @@ def test_ac5_wintersport_block_order_unchanged():
             f"AC-5: Token mit Praefix {prefix!r} fehlt in {rendered!r}"
         )
 
-    order = [_index(p) for p in ("SD", "NS24+", "SL", "AV", "WC")]
+    order = [_index(p) for p in ("SD", "NS24+", "SL", "AV")]
     assert order == sorted(order), (
-        "AC-5: Wintersport-Block nicht in der Reihenfolge SD, NS24+, SL, AV, "
-        f"WC. Positionen={order!r} Zeile={rendered!r}"
+        "AC-5: Wintersport-Block nicht in der Reihenfolge SD, NS24+, SL, AV. "
+        f"Positionen={order!r} Zeile={rendered!r}"
     )
     # Der Block ist zusammenhaengend und steht am Ende der Zeile (§2).
-    assert order == list(range(order[0], order[0] + 5)), (
+    assert order == list(range(order[0], order[0] + 4)), (
         f"AC-5: Wintersport-Block ist nicht mehr zusammenhaengend: {rendered!r}"
     )
     assert order[-1] == len(tokens) - 1, (
         f"AC-5: Wintersport-Block steht nicht mehr am Zeilenende: {rendered!r}"
+    )
+    assert "WC" not in tokens, (
+        f"AC-4: 'WC' steht trotz ersatzlosem Entfallen weiterhin in der "
+        f"gerenderten Zeile: {rendered!r}"
     )
 
 
@@ -473,20 +492,26 @@ def test_ac6_truncation_drops_snow_tokens_in_unchanged_order():
 
 def test_ac6_drop_order_positions_of_snow_symbols_unchanged():
     """AC-6: die Schnee-Kuerzel behalten ihre RELATIVE Reihenfolge in
-    DROP_ORDER (WC vor AV vor SL vor NS24+ vor SD vor Z: vor MAX vor M:) —
-    nur die Namen aendern sich, nicht die Rangfolge untereinander.
+    DROP_ORDER (AV vor SL vor NS24+ vor SD vor Z: vor MAX vor M:) — nur die
+    Namen aendern sich, nicht die Rangfolge untereinander.
 
     Issue #1660 Scheibe B (DEC-4): 14 neue Symbole werden zwischen 'DBG' und
     'WC' eingefuegt -- die urspruenglichen ABSOLUTEN Indizes (3/4/5) sind
     dadurch bewusst verschoben, die RELATIVE Reihenfolge der hier geprueften
     Bestandssymbole bleibt aber unangetastet.
+
+    Fix #1887 E6 Scheibe A: 'WC' stand hier bislang VOR 'AV', ist aber
+    ERSATZLOS entfallen (PO-Entscheid) und deshalb nicht mehr Teil der
+    geprueften Kette (Abwesenheit deckt bereits
+    test_sms_token_symbol_register_ratchet.py::
+    test_legacy_snow_symbols_are_absent_from_all_tables[WC] ab).
     """
     from output.tokens.render import DROP_ORDER
 
     assert DROP_ORDER[0] == "DBG", (
         f"AC-6: Kopf der Drop-Reihenfolge veraendert: {DROP_ORDER!r}"
     )
-    tail_symbols = ["WC", "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:"]
+    tail_symbols = ["AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:"]
     tail_indices = [DROP_ORDER.index(sym) for sym in tail_symbols]
     assert tail_indices == sorted(tail_indices), (
         "AC-6: die relative Kuerzungs-Reihenfolge der Bestandssymbole hat "
@@ -604,14 +629,19 @@ def test_ac8_sms_symbols_endpoint_keeps_official_snow_hazard():
 # fehlen strukturell im /api/sms-symbols-Endpoint
 # ---------------------------------------------------------------------------
 
-def test_ac1_wind_chill_reports_all_four_symbols():
-    """AC-1: wind_chill fehlt heute strukturell -- nach dem Fix liefert der
-    Endpoint alle vier Kuerzel in der dokumentierten Reihenfolge.
+def test_ac1_wind_chill_reports_three_symbols_without_wc():
+    """AC-1: wind_chill fehlte strukturell -- der Fix (#1613) liefert die
+    gefuehlten Kuerzel in der dokumentierten Reihenfolge.
 
     Issue #1660 Scheibe A: 'FN' ist zur eigenen waehlbaren Groesse
     "wind_chill_night" gewandert (SMS_MULTI_SYMBOLS_BY_METRIC-Aufteilung) --
     "wind_chill" liefert seitdem drei statt vier Kuerzel, 'FN' erscheint
     unter eigenem metric_id-Eintrag.
+
+    Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS
+    (verdoppelte nachweislich 'FK') -- "wind_chill" selbst hat danach
+    UEBERHAUPT keinen Eintrag mehr in /api/sms-symbols (kein leeres
+    sms_symbols-Array, s. AC-4).
     """
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -622,11 +652,10 @@ def test_ac1_wind_chill_reports_all_four_symbols():
     app.include_router(config_router.router)
     metrics = TestClient(app).get("/sms-symbols").json()["metrics"]
 
-    # Issue #1728 Scheibe 1: 'FK'/'FD' haengen an eigenen Groessen, 'WC'
-    # bleibt bei "wind_chill" (E3, haelt #1450). Die Zusicherung dieses AC --
-    # der Endpoint meldet je Groesse GENAU EINEN Eintrag und alle vier
-    # gefuehlten Kuerzel bleiben ueber den Katalog erreichbar -- ist
-    # unveraendert; nur ihre Traeger sind aufgeteilt.
+    # Issue #1728 Scheibe 1: 'FK'/'FD' haengen an eigenen Groessen. Die
+    # Zusicherung dieses AC -- der Endpoint meldet je Groesse GENAU EINEN
+    # Eintrag und die gefuehlten Kuerzel bleiben ueber den Katalog erreichbar
+    # -- ist unveraendert; nur ihre Traeger sind aufgeteilt.
     by_id = {}
     for m in metrics:
         assert m["metric_id"] not in by_id, (
@@ -635,12 +664,16 @@ def test_ac1_wind_chill_reports_all_four_symbols():
         by_id[m["metric_id"]] = m["sms_symbols"]
     erwartet = {
         "wind_chill_day_low": ["FK"], "wind_chill_day_high": ["FD"],
-        "wind_chill": ["WC"],
     }
     ist = {mid: by_id.get(mid) for mid in erwartet}
     assert ist == erwartet, (
         f"AC-1: die gefuehlten Tages-Kuerzel haengen falsch: {ist} statt "
         f"{erwartet}"
+    )
+    assert "wind_chill" not in by_id, (
+        "AC-4: 'wind_chill' fuehrt weiterhin einen Eintrag in "
+        f"/api/sms-symbols, obwohl 'WC' ersatzlos entfallen ist: "
+        f"{by_id.get('wind_chill')!r}"
     )
 
     night_entries = [m for m in metrics if m["metric_id"] == "wind_chill_night"]
@@ -736,9 +769,13 @@ def test_ac6_endpoint_reports_eleven_metrics_total():
     # hinzu, "temperature" faellt weg (fuehrt kein eigenes Kuerzel mehr):
     # 26 - 1 + 4 = 29. Die Zusicherung -- der Endpoint meldet JEDE Groesse
     # mit Kuerzel genau einmal -- ist unveraendert.
-    assert len(metrics) == 29, (
-        f"AC-6: erwarte 29 Metrik-Eintraege (8 Register + 14 neue + "
-        f"7 Kuerzel-Traeger der Temperatur-Familie, thunder nur einmal "
+    # Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+    # fix_1887_e6a_sms_kuerzel_register.md): 29 -> 28. 'WC' entfaellt
+    # ERSATZLOS (verdoppelte nachweislich 'FK') -- "wind_chill" fuehrt seither
+    # wie "temperature" kein eigenes Kuerzel mehr: 29 - 1 = 28.
+    assert len(metrics) == 28, (
+        f"AC-6: erwarte 28 Metrik-Eintraege (8 Register + 14 neue + "
+        f"6 Kuerzel-Traeger der Temperatur-Familie, thunder nur einmal "
         f"gezaehlt), gefunden {len(metrics)}: {metrics!r}"
     )
     by_metric = {m["metric_id"]: m["sms_symbols"] for m in metrics}

@@ -180,7 +180,12 @@ def _partner_of(metric_id: str) -> str:
 # Auswahl-/Reihenfolge-Assertion gegen ein Kuerzel, das die Groesse nicht
 # fuehrt, waere strukturell unerfuellbar -- die Zusicherung ist nicht
 # entfallen, sie ist umgezogen.
-_SMS_WITHOUT_OWN_SYMBOL = {"temperature"}
+# Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS
+# (verdoppelte nachweislich 'FK') -- ``wind_chill`` fuehrt seither wie
+# ``temperature`` kein eigenes Kurzform-Kuerzel mehr; 'FK'/'FD' haengen an
+# ``wind_chill_day_low``/``_high``, die als eigene Parametrisierungen
+# geprueft werden.
+_SMS_WITHOUT_OWN_SYMBOL = {"temperature", "wind_chill"}
 
 # Die zwei Groessen, deren Kuerzel bei gemeinsamer Auswahl zu EINEM
 # Bereichs-Token verschmelzen (#1824: 'K3 D20' -> 'D3/20'). Sie duerfen
@@ -733,10 +738,14 @@ def test_ac8_non_selectable_metrics_stay_out_unless_exempt(metric_id):
 # des realen KHW-Trips (trip_id ersetzt), geladen ueber den ECHTEN Loader
 # (app.loader._parse_display_config, NICHT im Speicher gebaut -- vermeidet
 # Konstruktionsfehler #1/#3 des Vorgaenger-Waechters, s. Kontext-Dokument
-# Abschnitt 5). Traegt die volle Katalogbreite (26 Eintraege je Ebene, 15
-# global aktiv inkl. wind_chill AN, 13 SMS-Kanal-aktiv, wind_chill AUS) --
-# genau der reale Widerspruch, der Trip KHW 5f534011 eine falsche SMS-
-# Kurzform lieferte.
+# Abschnitt 5). Traegt die volle Katalogbreite (26 Eintraege in der globalen
+# Ebene, 15 global aktiv inkl. wind_chill AN, 13 SMS-Kanal-aktiv, wind_chill
+# AUS) -- genau der reale Widerspruch, der Trip KHW 5f534011 eine falsche
+# SMS-Kurzform lieferte. Fix #1887 E6 Scheibe A: die SMS-Kanal-Ebene traegt
+# seither 28 Eintraege (26 + zwei ergaenzte, disabled-per-Default:
+# wind_chill_day_low/-high, s. AC-8-Zuwahl-Nachweis unten -- die
+# urspruengliche Fixture kannte diese beiden erst seit #1728 Scheibe 1
+# eigenstaendig waehlbaren Groessen noch nicht).
 #
 # Wetterdaten: F.segment()/F.night_weather() UNVERAENDERT (keine Schnee-
 # Injektion aus _matrix_segment() oben -- Konstruktionsfehler #5). Drei
@@ -959,7 +968,13 @@ def test_kaskade_ac5_sms_deselect_as_omission_matches_enabled_false():
 def test_kaskade_ac6_wind_chill_contradiction_baseline_stays_green():
     dc = _load_cascade_dc()
     sms = _kaskade_sms_text(dc)
-    for symbol in SMS_MULTI_SYMBOLS_BY_METRIC["wind_chill"]:
+    # Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS --
+    # "wind_chill" fuehrt seither UEBERHAUPT keinen Eintrag mehr in
+    # SMS_MULTI_SYMBOLS_BY_METRIC (nicht nur ein leeres Tupel). `.get(...,
+    # ())` haelt die Schleife wirkungslos statt mit KeyError abzustuerzen --
+    # sie hat nichts mehr zu pruefen, weil die Groesse kein Kuerzel mehr
+    # traegt, das trotz Abwahl auftauchen koennte.
+    for symbol in SMS_MULTI_SYMBOLS_BY_METRIC.get("wind_chill", ()):
         assert _first_index_starting_with(sms, symbol) is None, (
             f"AC-6: wind_chill-Symbol {symbol!r} erscheint trotz enabled:false im SMS-Kanal-Layout: {sms!r}"
         )
@@ -998,7 +1013,7 @@ def test_kaskade_ac7_sms_channel_must_not_add_globally_disabled_metric():
     )
 
 
-# --- AC-8: alle Kuerzel einer Metrik toggeln gemeinsam (wind_chill FK/FD/WC) ---
+# --- AC-8: alle Kuerzel einer Metrik toggeln gemeinsam (wind_chill FK/FD) ---
 
 # Issue #1824 (A): das gefuehlte Bereichs-Token ('FD1/18') traegt den
 # Tiefstwert in seiner ersten Haelfte.
@@ -1007,18 +1022,27 @@ _RANGE_TOKEN_FD = re.compile(rf"(?:^|\s)FD(?:{_RANGE_HALF})/(?:{_RANGE_HALF})(?:
 
 def test_kaskade_ac8_all_wind_chill_symbols_toggle_together():
     """Issue #1728 Scheibe 1: 'FK'/'FD' haengen seit dieser Scheibe an eigenen
-    Groessen, 'WC' bleibt an ``wind_chill`` (E3, haelt #1450). Die Zusicherung
-    dieses AC — die Zuwahl der gefuehlten Temperatur macht ALLE ihre Kuerzel
-    sichtbar, die Abwahl entfernt sie alle — gilt unveraendert; sie umfasst
-    jetzt drei Groessen statt einer, und genau deshalb wird sie hier aus der
-    Kuerzel-Tabelle GELESEN statt getippt."""
-    traeger = ("wind_chill", "wind_chill_day_low", "wind_chill_day_high")
+    Groessen. Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+    fix_1887_e6a_sms_kuerzel_register.md): 'WC' (vormals an ``wind_chill``
+    selbst) entfaellt ERSATZLOS -- ``wind_chill`` traegt danach ueberhaupt
+    keinen Eintrag mehr in SMS_MULTI_SYMBOLS_BY_METRIC, deshalb bleibt nur
+    noch dieser Traeger uebrig. Die Zusicherung dieses AC — die Zuwahl der
+    gefuehlten Temperatur macht ALLE ihre Kuerzel sichtbar, die Abwahl
+    entfernt sie alle — gilt unveraendert; sie umfasst zwei Groessen, und
+    genau deshalb wird sie hier aus der Kuerzel-Tabelle GELESEN statt
+    getippt."""
+    traeger = ("wind_chill_day_low", "wind_chill_day_high")
     symbols = tuple(
         sym for mid in traeger for sym in SMS_MULTI_SYMBOLS_BY_METRIC[mid]
     )
-    assert set(symbols) == {"FK", "FD", "WC"}, (
+    assert set(symbols) == {"FK", "FD"}, (
         f"Die gefuehlten Tages-Kuerzel haben ihren Traeger gewechselt: "
         f"{symbols!r}"
+    )
+    assert "wind_chill" not in SMS_MULTI_SYMBOLS_BY_METRIC, (
+        "'wind_chill' fuehrt weiterhin einen Eintrag in "
+        "SMS_MULTI_SYMBOLS_BY_METRIC — 'WC' sollte ersatzlos entfallen "
+        f"(PO-Entscheid): {SMS_MULTI_SYMBOLS_BY_METRIC.get('wind_chill')!r}"
     )
 
     sms_off = _kaskade_sms_text(_load_cascade_dc())

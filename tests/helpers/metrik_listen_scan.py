@@ -59,7 +59,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Iterator, Mapping, Optional
 
-from app.metric_catalog import _METRICS, get_all_metrics
+from app.metric_catalog import (
+    _METRICS, SMS_MULTI_SYMBOLS_BY_METRIC, get_all_metrics,
+)
 from output.renderers.channel_layout import METRIC_PRIORITY
 from output.renderers.compare_hourly_metric_ids import HOURLY_EXCLUSION_REASON
 
@@ -306,7 +308,11 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     ("src/app/metric_catalog.py", "SMS_NULLFORM_METRIC_IDS", "element"),
     ("src/app/metric_catalog.py", "_SMS_SYMBOL_METRIC_IDS", "element"),
     ("src/app/metric_catalog.py", "SMS_SYMBOL_GRAMMAR", "schluessel"),
-    ("src/app/metric_catalog.py", "SMS_MULTI_SYMBOLS_BY_METRIC", "schluessel"),
+    # Fix #1887 E6 Scheibe A: SMS_MULTI_SYMBOLS_BY_METRIC wird zur
+    # Dict-Comprehension ueber MetricDefinition.sms_multi_symbols -- eine
+    # Comprehension liefert in ``_seiten()`` keine konstanten Strings mehr.
+    # Registrierung wandert deshalb unten zum Laufzeit-Eintrag (Muster
+    # METRIC_PRIORITY/HOURLY_EXCLUSION_REASON).
     ("src/app/metric_catalog.py", "COMPACT_LABEL_EXCEPTIONS", "schluessel"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['alpen-trekking']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['wandern']['metrics']", "element"),
@@ -402,6 +408,18 @@ REGISTERED_LISTS["compare_hourly_metric_ids.HOURLY_EXCLUSION_REASON"] = (
         ist=lambda: set(HOURLY_EXCLUSION_REASON),
         ort="src/output/renderers/compare_hourly_metric_ids.py:69",
     )
+)
+
+# Fix #1887 E6 Scheibe A: dritter Laufzeit-Eintrag. SMS_MULTI_SYMBOLS_BY_METRIC
+# wird ab dieser Scheibe aus MetricDefinition.sms_multi_symbols abgeleitet
+# (Dict-Comprehension + literaler thunder-Merge) statt handgetippt zu sein --
+# ``_seiten()`` erkennt nur ast.Dict/Set/List/Tuple, keine ast.DictComp
+# (SPEC docs/specs/modules/fix_1887_e6a_sms_kuerzel_register.md, Implementation
+# Details Punkt 4). Ohne diesen Laufzeit-Eintrag zeigt die Registrierung ins
+# Leere und die Ratsche prueft nichts mehr, statt still gruen zu bleiben.
+REGISTERED_LISTS["metric_catalog.SMS_MULTI_SYMBOLS_BY_METRIC"] = RegisteredList(
+    ist=lambda: set(SMS_MULTI_SYMBOLS_BY_METRIC),
+    ort="src/app/metric_catalog.py:778",
 )
 
 def _ort_passt(fund: Fundstelle, ort: str) -> bool:

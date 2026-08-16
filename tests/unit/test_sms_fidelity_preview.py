@@ -45,8 +45,11 @@ from output.tokens.render import render_line
 # Issue #1660 Scheibe A: dieselbe Trennung jetzt auch auf der gefuehlten
 # Seite -- "FN" haengt an der eigenen metric_id "wind_chill_night".
 # Issue #1728 Scheibe 1: "K"/"D" bzw. "FK"/"FD" haengen an je eigenen
-# metric_ids; "temperature" traegt gar kein Symbol mehr, "wind_chill" nur
-# noch "WC".
+# metric_ids; "temperature" traegt gar kein Symbol mehr. "wind_chill" bleibt
+# in der Liste (deckt weiterhin die 160-Zeichen-Kuerzungs-Vorbedingung ab),
+# traegt aber ab Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+# fix_1887_e6a_sms_kuerzel_register.md) KEIN Symbol mehr -- 'WC' entfaellt
+# ERSATZLOS (verdoppelte nachweislich 'FK'), s. METRIC_TO_SYMBOLS unten.
 ALL_SMS_METRIC_IDS = [
     "temperature_day_low", "temperature_day_high", "temperature_night",
     "wind_chill", "wind_chill_day_low", "wind_chill_day_high",
@@ -64,7 +67,11 @@ METRIC_TO_SYMBOLS = {
     "temperature_day_low": ("K",),
     "temperature_day_high": ("D",),
     "temperature_night": ("N",),
-    "wind_chill": ("WC",),
+    # Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS
+    # (verdoppelte nachweislich 'FK') -- "wind_chill" traegt danach
+    # ueberhaupt kein SMS-Token mehr (weder in SMS_MULTI_SYMBOLS_BY_METRIC
+    # noch SMS_SYMBOL_BY_METRIC, s. _symbols_for_metric()).
+    "wind_chill": (),
     "wind_chill_day_low": ("FK",),
     "wind_chill_day_high": ("FD",),
     "wind_chill_night": ("FN",),
@@ -337,9 +344,11 @@ class TestAC9_RenderLineUnchangedByAdditiveFunction:
     ausschließlich am Kürzungs-Rückgabepfad blieb dadurch unentdeckt
     (Mutationsprobe 2 im Adversary-Dialog). Diese Klasse nutzt jetzt
     SMS_FIDELITY_SAMPLE_FORECAST + ALL_SMS_METRIC_IDS (bereits an anderer
-    Stelle in AC-2 verwendet, RAW-Länge nachgemessen 161 Zeichen > 160) —
-    dieselbe Vorbedingungs-Assertion wie bei AC-2 stellt sicher, dass der
-    Kürzungszweig auch künftig tatsächlich durchlaufen wird."""
+    Stelle in AC-2 verwendet, RAW-Länge nachgemessen 176 Zeichen > 160,
+    Stand nach Fix #1887 E6 Scheibe A -- ursprünglich 161, s. Kommentar an
+    der Baseline unten) — dieselbe Vorbedingungs-Assertion wie bei AC-2
+    stellt sicher, dass der Kürzungszweig auch künftig tatsächlich
+    durchlaufen wird."""
 
     def _truncating_line(self):
         from services.validator_render_service import (
@@ -375,10 +384,22 @@ class TestAC9_RenderLineUnchangedByAdditiveFunction:
         # weiterhin über 160 Zeichen liegt (s. Kommentar an
         # SMS_FIDELITY_SAMPLE_FORECAST). Die Zusicherung selbst ist unverändert:
         # render_line() darf sich durch die additive Nachbarfunktion nicht ändern.
+        #
+        # Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+        # fix_1887_e6a_sms_kuerzel_register.md): 'WC-18' (~6 Zeichen) entfaellt
+        # ERSATZLOS aus der gerenderten Zeile -- die AC-2/AC-9-Vorbedingung
+        # (>160 Zeichen roh, damit ueberhaupt gekuerzt wird) riss dadurch von
+        # 161 auf 155 Zeichen. Der PO hat freigegeben, SMS_FIDELITY_SAMPLE_
+        # FORECAST (Zeile ~206) um die drei Schnee-Werte gleichmaessig
+        # anzuheben (kein Einzel-Ausreisser), damit die Vorbedingung wieder
+        # erfuellt ist (roh jetzt 176 Zeichen). Nachgemessen: die gekuerzte
+        # Zeile trifft die 160er-Grenze jetzt EXAKT (kein Puffer mehr) --
+        # dieser Golden-Wert ist der neue, gemessene Ist-Stand nach der
+        # Erweiterung, kein Rueckschluss aus alter Logik.
         baseline = (
             "Etappe: N-15 D-12/28 FN-21 FD-18/24 R245.0@6(845.0@14) "
             "PR25%@7(98%@14) W850@6(1420@16) G1200@6(2080@16) TH:L@8(H@12) "
-            "TH+:M@10 SD245000 NS24+185000 SL980000"
+            "TH+:M@10 SD2450000000000 NS24+1850000000000"
         )
         line = self._truncating_line()
         out = render_line(line, 160)

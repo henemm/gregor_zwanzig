@@ -74,7 +74,11 @@ def _stubaier_token_line() -> TokenLine:
         MetricSpec(symbol="NS24+", enabled=True),
         MetricSpec(symbol="SL", enabled=True),
         MetricSpec(symbol="AV", enabled=True),
-        MetricSpec(symbol="WC", enabled=True),
+        # Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+        # fix_1887_e6a_sms_kuerzel_register.md): 'WC' entfaellt ERSATZLOS
+        # (verdoppelte nachweislich 'FK') -- kein MetricSpec mehr hier.
+        # Golden tests/golden/text_report/stubaier-skitour-evening.txt
+        # entsprechend ohne den vormaligen 'WC-28'-Endtoken angepasst.
     ]
     return build_token_line(
         forecast, config,

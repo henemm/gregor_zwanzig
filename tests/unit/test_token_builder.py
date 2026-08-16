@@ -131,7 +131,8 @@ def _build_default_line(
         MetricSpec(symbol="NS24+", enabled=True),
         MetricSpec(symbol="SL", enabled=True),
         MetricSpec(symbol="AV", enabled=True),
-        MetricSpec(symbol="WC", enabled=True),
+        # Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS
+        # (verdoppelte nachweislich 'FK') -- kein MetricSpec mehr hier.
     ]
     return build_token_line(
         forecast, config, report_type=report_type, stage_name=stage_name,
@@ -251,7 +252,8 @@ _WINTERSPORT_CONFIG = [
     MetricSpec(symbol="NS24+", enabled=True),
     MetricSpec(symbol="SL", enabled=True),
     MetricSpec(symbol="AV", enabled=True),
-    MetricSpec(symbol="WC", enabled=True),
+    # Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS
+    # (verdoppelte nachweislich 'FK') -- kein MetricSpec mehr hier.
 ]
 
 
@@ -274,7 +276,7 @@ def test_wintersport_never_shows_unknown_marker_on_gap():
         _WINTERSPORT_CONFIG, report_type="evening", stage_name="E1",
     )
     rendered_missing = line_missing.render(300)
-    for sym in ("SD", "NS24+", "SL", "AV", "WC"):
+    for sym in ("SD", "NS24+", "SL", "AV"):
         assert f"{sym}?" not in rendered_missing, (
             f"Wintersport-Kuerzel `{sym}` darf bei fehlendem Rohwert nie "
             f"`?` zeigen (auch nicht bei Datenluecke).\n{rendered_missing!r}"
@@ -294,7 +296,7 @@ def test_wintersport_never_shows_unknown_marker_on_gap():
         _WINTERSPORT_CONFIG, report_type="evening", stage_name="E1",
     )
     rendered_present = line_present.render(300)
-    for sym in ("SD", "NS24+", "SL", "AV", "WC"):
+    for sym in ("SD", "NS24+", "SL", "AV"):
         assert f"{sym}?" not in rendered_present, (
             f"Wintersport-Kuerzel `{sym}` darf bei vorhandenem Rohwert "
             f"nie `?` zeigen, auch nicht bei Datenluecke.\n"

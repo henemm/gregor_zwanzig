@@ -49,7 +49,9 @@ PRIORITY = {
     # Issue #1435 E3b: Schnee-Kuerzel folgen dem Wetter-Register
     # (SL/NS24+/SD statt SFL/SN24+/SN) -- 'SN' bezeichnet ausschliesslich die
     # amtliche Schneewarnung (hazard_symbols.py).
-    "DBG": 1, "WC": 2, "AV": 2, "SL": 2, "NS24+": 2, "SD": 2,
+    # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
+    # nachweislich 'FK') -- kein Eintrag mehr.
+    "DBG": 1, "AV": 2, "SL": 2, "NS24+": 2, "SD": 2,
     "Z:": 3, "MAX": 3, "M:": 3, "PR": 5,
     # Issue #1410: das gefuehlte Trio rangiert unter PR (5) -- es faellt aber
     # ohnehin schon im dedizierten Schritt in render.py::_truncate(), bevor der
@@ -105,8 +107,10 @@ POSITIONAL = [
     (VIGI_HR, "vigilance"), (VIGI_TH, "vigilance"),
     ("Z:", "fire"), ("MAX", "fire"), ("M:", "fire"),
     # Issue #1435 E3b: Register-Kuerzel, Reihenfolge unveraendert.
+    # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
+    # nachweislich 'FK') -- kein Eintrag mehr.
     ("SD", "wintersport"), ("NS24+", "wintersport"),
-    ("SL", "wintersport"), ("AV", "wintersport"), ("WC", "wintersport"),
+    ("SL", "wintersport"), ("AV", "wintersport"),
     (UNAVAILABLE_SYMBOL, "unavailable"),
     ("DBG", "debug"),
 ]
@@ -270,7 +274,8 @@ def _wintersport(day: DailyForecast, by_sym: dict[str, MetricSpec],
         ("NS24+", day.snow_new_24h_cm),
         ("SL", day.snowfall_limit_m),
         ("AV", float(day.avalanche_level) if day.avalanche_level is not None else None),
-        ("WC", day.wind_chill_c),
+        # Fix #1887 E6 Scheibe A: 'WC'-Paar entfaellt ERSATZLOS (verdoppelte
+        # nachweislich 'FK', identisches Feld/Fenster/Aggregation).
     ]
     out: list[Token] = []
     for sym, val in pairs:

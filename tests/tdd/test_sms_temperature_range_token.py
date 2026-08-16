@@ -263,24 +263,29 @@ class TestAC10NightTokenUnchanged:
 
 
 class TestAC11WindChillDayValueUnchanged:
-    """AC-11: Given ``wind_chill_c`` −22 °C / When die SMS gerendert wird /
-    Then steht unveraendert ``WC-22``, ohne Trenner und ohne Zusammenfuehrung
-    mit ``FD``."""
+    """AC-11 urspruenglich (E3/#1435): Given ``wind_chill_c`` −22 °C / When
+    die SMS gerendert wird / Then steht unveraendert ``WC-22``, ohne Trenner
+    und ohne Zusammenfuehrung mit ``FD``.
 
-    def test_wintersport_day_value_is_not_merged(self):
+    Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+    fix_1887_e6a_sms_kuerzel_register.md) macht diesen Testzweck
+    gegenstandslos: 'WC' entfaellt ERSATZLOS (verdoppelte nachweislich
+    'FK'). Neufassung als Positivnachweis statt stiller Loeschung: 'WC'
+    entsteht NIE mehr, auch nicht mit gesetztem ``wind_chill_c``."""
+
+    def test_wintersport_day_value_never_produces_wc(self):
         sms = F.sms(
             *_TEMP_BOTH, *_FELT_BOTH,
             segments=[F.segment(temp_min=-12.0, temp_max=-4.0,
                                 felt_min=-22.0, felt_max=-14.0)],
         )
 
-        assert "WC-22" in F.tokens(sms), (
-            "'WC' haengt nicht an der Auswertungswahl und bleibt "
-            f"eigenstaendig.\nSMS: {sms}"
+        assert "WC-22" not in F.tokens(sms), (
+            "'WC' erscheint weiterhin, obwohl das Kuerzel ersatzlos "
+            f"entfallen ist (PO-Entscheid).\nSMS: {sms}"
         )
-        wc = F.token_with_symbol(sms, "WC")
-        assert wc is not None and "/" not in wc, (
-            f"'WC' darf keine Bereichsform annehmen: {wc!r}\nSMS: {sms}"
+        assert F.token_with_symbol(sms, "WC") is None, (
+            f"'WC' erscheint weiterhin in irgendeiner Form.\nSMS: {sms}"
         )
 
 
@@ -324,17 +329,22 @@ class TestAC16RangeTokenIsAtomicUnderTruncation:
 
 class TestAC17SmsSymbolCatalogUnchanged:
     """AC-17: Given die Abfrage ``/api/sms-symbols`` / When der Endpoint
-    antwortet / Then sind alle sechs Temperatur-Kuerzel weiterhin gelistet
-    (Regressionsschutz — der Editor zeigt weiterhin jedes Badge).
+    antwortet / Then sind alle FUENF verbleibenden Temperatur-Kuerzel
+    weiterhin gelistet (Regressionsschutz — der Editor zeigt weiterhin jedes
+    Badge).
 
     Umgeschrieben mit #1728 Scheibe 1: die Kuerzel haengen nicht mehr
     gebuendelt an ``temperature``/``wind_chill``, sondern je an ihrer eigenen
     Groesse. Die Zusicherung ist dieselbe (kein Kuerzel verschwindet aus dem
     Editor), nur ihr Traeger hat sich geaendert; das alte Buendel abzufragen
     haette den Wechsel als Verlust gemeldet, den es nicht gibt.
+
+    Fix #1887 E6 Scheibe A (PO-Entscheid): ``wind_chill``/``"WC"`` faellt
+    ERSATZLOS aus dieser Liste — es gibt keinen Traeger mehr, der es
+    ersetzt (verdoppelte nachweislich 'FK').
     """
 
-    def test_editor_badges_keep_both_temperature_symbols(self):
+    def test_editor_badges_keep_remaining_temperature_symbols_without_wc(self):
         from api.routers.config import get_sms_symbols
 
         by_metric = {
@@ -344,12 +354,17 @@ class TestAC17SmsSymbolCatalogUnchanged:
         erwartet = {
             "temperature_day_low": ["K"], "temperature_day_high": ["D"],
             "wind_chill_day_low": ["FK"], "wind_chill_day_high": ["FD"],
-            "wind_chill": ["WC"], "temperature_night": ["N"],
+            "temperature_night": ["N"],
         }
         ist = {mid: by_metric.get(mid) for mid in erwartet}
         assert ist == erwartet, (
             f"Ein Temperatur-Kuerzel ist aus /api/sms-symbols verschwunden "
             f"oder haengt an der falschen Groesse: {ist} statt {erwartet}"
+        )
+        assert "wind_chill" not in by_metric, (
+            "'wind_chill' fuehrt weiterhin einen Eintrag in "
+            "/api/sms-symbols, obwohl 'WC' ersatzlos entfallen ist "
+            f"(PO-Entscheid): {by_metric.get('wind_chill')!r}"
         )
 
 

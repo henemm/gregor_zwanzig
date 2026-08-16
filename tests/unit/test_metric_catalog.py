@@ -14,18 +14,26 @@ kein Netz, keine Persistenz.
 from __future__ import annotations
 
 
-def test_ac4_temperature_night_hat_sms_code_tn():
-    """AC-4 GIVEN der Katalog-Eintrag ``temperature_night``
-    WHEN ``get_sms_code("temperature_night")`` aufgerufen wird
-    THEN liefert er ``"TN"`` (nicht-leer, deckt sich mit dem bereits
-    vorhandenen ``compact_label="TN"`` derselben Metrik und mit dem in
-    ``SMS_MULTI_SYMBOLS_BY_METRIC`` tatsaechlich verwendeten Symbol)."""
-    from app.metric_catalog import get_sms_code
+def test_ac4_temperature_night_sms_code_ist_jetzt_leer():
+    """Fix #1887 E6 Scheibe A (docs/specs/modules/
+    fix_1887_e6a_sms_kuerzel_register.md, AC-3): der historische #923b-Bug
+    (leeres Token in der SMS-Fidelity-Vorschau) kann nicht wiederkehren --
+    ``_symbols_for_metric()`` (validator_render_service.py) liest
+    ``SMS_MULTI_SYMBOLS_BY_METRIC`` VOR ``sms_code``. Der tote Wert "TN"
+    (erreicht keinen der beiden ``get_sms_code()``-Leser) ist entfernt;
+    ``sms_code`` ist jetzt leer, das gesendete Kuerzel "N" traegt
+    ausschliesslich ``sms_multi_symbols``."""
+    from app.metric_catalog import SMS_MULTI_SYMBOLS_BY_METRIC, get_sms_code
 
-    assert get_sms_code("temperature_night") == "TN", (
-        "temperature_night traegt noch keinen sms_code -- die Metrik "
-        "erscheint dadurch mit leerem Token in der SMS-Fidelity-Vorschau, "
-        "obwohl sie im Renderer bereits ein Symbol traegt."
+    assert get_sms_code("temperature_night") == "", (
+        "temperature_night traegt noch den toten sms_code 'TN' -- er "
+        "erreicht keinen der beiden get_sms_code()-Leser (AC-3) und muss "
+        "leer sein."
+    )
+    assert SMS_MULTI_SYMBOLS_BY_METRIC.get("temperature_night") == ("N",), (
+        "Das tatsaechlich gesendete Kuerzel 'N' fuer temperature_night muss "
+        "in SMS_MULTI_SYMBOLS_BY_METRIC stehen (Fidelity-Vorschau-Quelle), "
+        f"gefunden: {SMS_MULTI_SYMBOLS_BY_METRIC.get('temperature_night')!r}"
     )
 
 

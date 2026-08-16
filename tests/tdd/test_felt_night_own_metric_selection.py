@@ -19,9 +19,12 @@ durch den echten Lade-Pfad (``loader._parse_display_config``) und den echten
 API-Endpoint (``GET /api/metrics``). Keine Mocks, kein Netz, keine
 Dateiinhalt-Pruefungen.
 
-Abgrenzung laut Spec: ``WC`` (Wintersport-Tageskennzahl) bleibt bei
-"wind_chill" (Regression #1450 waere sonst die Folge). Die E-Mail-Nacht-
-Stundentabelle bleibt an ``show_night_block``.
+Fix #1887 E6 Scheibe A (docs/specs/modules/fix_1887_e6a_sms_kuerzel_register.md,
+PO-Entscheid): ``WC`` (Wintersport-Tageskennzahl) entfaellt ERSATZLOS
+(verdoppelte nachweislich ``FK``) -- die urspruengliche Abgrenzung „WC bleibt
+bei wind_chill" (Regression #1450) ist damit ueberholt; die Zusicherungen
+dieser Datei sind entsprechend auf FK/FD/FN OHNE WC umgestellt. Die
+E-Mail-Nacht-Stundentabelle bleibt an ``show_night_block``.
 """
 from __future__ import annotations
 
@@ -38,7 +41,6 @@ from tests.tdd import _min_temp_felt_fixtures as F
 NIGHT_METRIC = "wind_chill_night"
 _SAVE_TEST_USER = "tdd-1660a-save"
 _FELT = ("FN", "FK", "FD")
-_FELT_WITH_WC = ("FN", "FK", "FD", "WC")
 _DASH = "–"  # En-Dash der Kurzzusammenfassungs-Spannen
 
 
@@ -71,9 +73,10 @@ def _compact(report_type: str, *metric_ids: str) -> str:
 # ---------------------------------------------------------------------------
 
 # Issue #1728 Scheibe 1: „Gefuehlte Temperatur gewaehlt" umfasst seither ihre
-# beiden Tagesrichtungen (FK/FD); 'WC' bleibt an der Elterngroesse (E3,
-# haelt #1450). Die Zusicherung dieser Suite (FN folgt der EIGENEN
-# Nachtgroesse) ist unveraendert.
+# beiden Tagesrichtungen (FK/FD). Fix #1887 E6 Scheibe A: 'WC' ist ERSATZLOS
+# entfallen (PO-Entscheid), erscheint also in KEINEM der folgenden Faelle
+# mehr. Die Zusicherung dieser Suite (FN folgt der EIGENEN Nachtgroesse) ist
+# unveraendert.
 _FELT_TAG_GEWAEHLT = (
     "wind_chill", "wind_chill_day_low", "wind_chill_day_high",
 )
@@ -83,19 +86,21 @@ class TestSmsFeltNightTokenFollowsOwnSelection:
 
     def test_day_tokens_present_without_night_metric(self):
         """AC-1: Gefuehlte Temperatur AN, gefuehlte Nachtgroesse AUS ->
-        FK/FD/WC ja, FN nein."""
+        FK/FD ja, FN nein. 'WC' entfaellt ERSATZLOS (Fix #1887 E6 Scheibe A,
+        PO-Entscheid) und wird deshalb NIE erwartet."""
         sms = _sms("evening", *_FELT_TAG_GEWAEHLT, "precipitation")
 
-        present = F.present_symbols(sms, _FELT_WITH_WC)
-        assert present == {"FK", "FD", "WC"}, (
-            f"Erwartet nur FK/FD/WC bei abgewaehlter gefuehlter "
-            f"Nachtgroesse, gefunden {sorted(present)} — FN haengt offenbar "
-            f"weiter an „Gefuehlte Temperatur“.\nSMS: {sms}"
+        present = F.present_symbols(sms, ("FN", "FK", "FD", "WC"))
+        assert present == {"FK", "FD"}, (
+            f"Erwartet nur FK/FD bei abgewaehlter gefuehlter Nachtgroesse "
+            f"(WC entfaellt ersatzlos), gefunden {sorted(present)} — FN "
+            f"haengt offenbar weiter an „Gefuehlte Temperatur“, oder WC "
+            f"erscheint trotz PO-Entscheid.\nSMS: {sms}"
         )
 
     def test_night_token_present_without_day_metric(self):
         """AC-2: gefuehlte Nachtgroesse AN, gefuehlte Temperatur AUS ->
-        FN ja (Nachtfenster-Wert), FK/FD/WC nein."""
+        FN ja (Nachtfenster-Wert), FK/FD nein."""
         sms = _sms("evening", NIGHT_METRIC, "precipitation")
 
         assert F.sms_token_value(sms, "FN") == str(int(F.FELT_NIGHT_MIN_C)), (
@@ -103,18 +108,21 @@ class TestSmsFeltNightTokenFollowsOwnSelection:
             f"Nachtgroesse gewaehlt ist (erwartet FN{int(F.FELT_NIGHT_MIN_C)})"
             f".\nSMS: {sms}"
         )
-        leaked = F.present_symbols(sms, ("FK", "FD", "WC"))
+        leaked = F.present_symbols(sms, ("FK", "FD"))
         assert not leaked, (
-            f"FK/FD/WC erscheinen {sorted(leaked)}, obwohl „Gefuehlte "
+            f"FK/FD erscheinen {sorted(leaked)}, obwohl „Gefuehlte "
             f"Temperatur“ abgewaehlt ist.\nSMS: {sms}"
         )
 
-    def test_both_selected_keeps_all_four_tokens(self):
-        """Nichtregression: beide AN -> FN/FK/FD/WC wie vor dem Schnitt."""
+    def test_both_selected_keeps_three_tokens_without_wc(self):
+        """Nichtregression: beide AN -> FN/FK/FD wie vor dem Schnitt. 'WC'
+        erscheint NICHT mehr (Fix #1887 E6 Scheibe A, PO-Entscheid: verdoppelte
+        nachweislich 'FK')."""
         sms = _sms("evening", *_FELT_TAG_GEWAEHLT, NIGHT_METRIC, "precipitation")
 
-        assert F.present_symbols(sms, _FELT_WITH_WC) == {"FN", "FK", "FD", "WC"}, (
-            f"Beide Groessen gewaehlt — alle vier Kuerzel erwartet.\nSMS: {sms}"
+        assert F.present_symbols(sms, ("FN", "FK", "FD", "WC")) == {"FN", "FK", "FD"}, (
+            f"Beide Groessen gewaehlt — genau drei Kuerzel erwartet (kein "
+            f"WC).\nSMS: {sms}"
         )
         assert F.sms_token_value(sms, "FN") == str(int(F.FELT_NIGHT_MIN_C))
         assert F.sms_token_value(sms, "FK") == str(int(F.FELT_HIKE_MIN_C))
@@ -233,10 +241,10 @@ class TestLegacyTripsDeriveFeltNightFromWindChill:
             f"Ableitung ueberstimmen.\nSMS: {sms}"
         )
         present = F.present_symbols(sms, ("FK", "FD", "WC"))
-        assert present == {"FK", "FD", "WC"}, (
+        assert present == {"FK", "FD"}, (
             f"Die Tagesgroesse bleibt von der expliziten Nacht-Abwahl "
-            f"unberuehrt — erwartet FK/FD/WC, gefunden {sorted(present)}."
-            f"\nSMS: {sms}"
+            f"unberuehrt — erwartet FK/FD (WC entfaellt ersatzlos, Fix "
+            f"#1887 E6 Scheibe A), gefunden {sorted(present)}.\nSMS: {sms}"
         )
 
     def test_explicit_enabled_entry_overrides_parent_deselection(self):
@@ -255,8 +263,9 @@ class TestLegacyTripsDeriveFeltNightFromWindChill:
         )
         leaked = F.present_symbols(sms, ("FK", "FD", "WC"))
         assert not leaked, (
-            f"FK/FD/WC erscheinen {sorted(leaked)}, obwohl „Gefuehlte "
-            f"Temperatur“ abgewaehlt ist.\nSMS: {sms}"
+            f"FK/FD erscheinen {sorted(leaked)}, obwohl „Gefuehlte "
+            f"Temperatur“ abgewaehlt ist ('WC' entfaellt ohnehin ersatzlos, "
+            f"Fix #1887 E6 Scheibe A).\nSMS: {sms}"
         )
 
     def test_save_after_derivation_does_not_write_back_and_preserves_other_fields(

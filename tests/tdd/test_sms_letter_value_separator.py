@@ -158,7 +158,8 @@ def _line(max_length: int) -> str:
     NICHT im Test getippt.
     """
     return SMSTripFormatter().format_sms(
-        [F.segment(wind_dir_deg=F.NW_DEGREES, precip_type=PrecipType.SNOW)],
+        [F.segment(wind_dir_deg=F.NW_DEGREES, precip_type=PrecipType.SNOW,
+                   snow_depth_cm=180.0)],
         stage_name=F.STAGE_NAME, report_type="evening", tz=F.TZ,
         night_weather=F.night_weather(), max_length=max_length,
         disabled_specs=build_extended_metric_specs(
@@ -170,7 +171,18 @@ def _line(max_length: int) -> str:
 # Metrik-Token (Wintersport, Peak-Bloecke, gefuehltes Trio, PR, gemessenes
 # Trio). Solange 'WD:'/'PT:' in der Zeile stehen, muss deshalb jedes dieser
 # Token noch dastehen.
-_OUTRANKS_THE_FOURTEEN = ("WC10", "PR40%@5(95%@11)", "FN7", "FD10/20",
+#
+# Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+# fix_1887_e6a_sms_kuerzel_register.md): 'WC10' entfaellt ERSATZLOS ('WC'
+# verdoppelte nachweislich 'FK') und taugt nicht mehr als Wintersport-Anker.
+# ``F.segment()`` setzte bislang weder ``snow_depth_cm`` noch
+# ``avalanche_level``, weshalb 'WC' hier der EINZIGE je gerenderte
+# Wintersport-Token war -- die Fixture ist deshalb um einen echten
+# Wintersport-Wert (``snow_depth_cm=180.0`` in ``_line()`` oben) erweitert,
+# der jetzt als Anker ``SD180`` dient. Bewusst NICHT auf einen strukturellen
+# ``POS_INDEX``-Vergleich ausgewichen -- das verschoebe den Pruefort von der
+# gerenderten Zeile auf die Tabelle.
+_OUTRANKS_THE_FOURTEEN = ("SD180", "PR40%@5(95%@11)", "FN7", "FD10/20",
                           "N9", "D13/27", "R0.5@5(8.4@11)")
 
 
@@ -233,12 +245,13 @@ class TestPositionalKnowsTheGrammarColon:
         for sym in ("WD:NW", "PT:S"):
             assert sym in toks, f"Vorbedingung: {sym!r} fehlt in {line}"
 
-        assert toks.index("TH+:-") < toks.index("WD:NW") < toks.index("WC10"), (
+        assert toks.index("TH+:-") < toks.index("WD:NW") < toks.index("SD180"), (
             "Der erweiterte Metrik-Block steht nach 'TH+:' und vor den "
             f"Wintersport-Token (sms_format.md §2): {line}"
         )
-        assert toks.index("WD:NW") < toks.index("PT:S") < toks.index("WC10"), (
-            f"'WD:' steht vor 'PT:', beide vor 'WC': {line}"
+        assert toks.index("WD:NW") < toks.index("PT:S") < toks.index("SD180"), (
+            f"'WD:' steht vor 'PT:', beide vor 'SD' (Wintersport-Anker seit "
+            f"Fix #1887 E6 Scheibe A, 'WC' entfaellt ersatzlos): {line}"
         )
 
 

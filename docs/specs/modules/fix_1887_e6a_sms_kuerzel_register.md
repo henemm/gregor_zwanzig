@@ -43,6 +43,11 @@ Provider-Zuweisungen, ohne es umzubenennen.
 - **Identifier:** `DROP_ORDER` (Zeile 21)
 - **File:** `src/output/adapters/trip_result.py`
 - **Identifier:** `_wintersport_default_config()` (Zeile 211)
+- **File:** `src/output/renderers/sms_trip.py` (**RED-Neufund 2026-08-16**)
+- **Identifier:** `wind_chill_c=felt_min` (Zeile 471) — wird toter Code, sobald
+  `_wintersport()` das `WC`-Paar nicht mehr erzeugt; einziger Leser des
+  DTO-Felds `DailyForecast.wind_chill_c` (`tokens/dto.py:35`) ist
+  `builder.py:273`. Muss mitentfernt werden, samt Kommentaren (438–442, 655).
 - **File:** `src/providers/openmeteo.py` (Zeile 394, 910), `src/providers/geosphere.py` (Zeile 552, 573)
 - **Identifier:** Feldzuweisung `wind_chill_c`
 - **File:** `tests/helpers/metrik_listen_scan.py`
@@ -289,11 +294,21 @@ nicht verlangt.
   noch in `/api/sms-symbols` (das den Endpunkt generisch aus
   `SMS_MULTI_SYMBOLS_BY_METRIC` serialisiert, kein eigener Code-Pfad nötig).
   - Test: `tests/unit/test_sms_token_symbol_register_ratchet.py::
-    test_all_symbol_tables_carry_the_same_wintersport_symbols` (bestehend,
-    erkennt asymmetrisches Entfernen) plus
-    `test_legacy_snow_symbols_are_absent_from_all_tables`-Muster für `"WC"`;
-    API-Contract-Test gegen `/api/sms-symbols`, dass kein Eintrag mehr
-    `sms_symbol="WC"` führt.
+    test_legacy_snow_symbols_are_absent_from_all_tables[WC]` (um `"WC"`
+    erweitert) plus API-Contract-Test gegen `/api/sms-symbols`, dass kein
+    Eintrag mehr `sms_symbol="WC"` führt.
+    **Korrektur nach Adversary-Befund F001 (2026-08-16):** Frühere Fassungen
+    nannten hier `test_all_symbol_tables_carry_the_same_wintersport_symbols`
+    als Wächter gegen asymmetrisches Entfernen. Die Mutations-Gegenprobe
+    (Punkt 2: nur den `PRIORITY`-Eintrag zurückbauen) hat isoliert
+    nachgewiesen, dass dieser Test **grün bleibt** — seine Prüfung läuft nur
+    in eine Richtung (`probed − PRIORITY`), nicht zurück
+    (`PRIORITY − probed`). Gefangen wird die Verfälschung ausschließlich vom
+    erweiterten `test_legacy_snow_symbols_are_absent_from_all_tables[WC]`.
+    AC-4 ist damit bewacht, aber von einem anderen Test als ursprünglich
+    behauptet. Die fehlende Rücklaufprüfung ist ein eigenständiger,
+    vorbestehender Befund (nicht durch diese Scheibe verursacht) — gehört
+    als Sammel-Eintrag nach #1196, nicht in diese Scheibe.
 
 - **AC-5:** Given ein Bestands-Trip, in dem `wind_chill` für die SMS aktiv
   ist / When die Änderung ausgeliefert ist / Then zeigt seine
@@ -403,6 +418,42 @@ erneut verifizieren**, nicht blind übernehmen:
    nachvollzogen, nicht durch tatsächliches Ausführen der Ratsche gegen
    einen probeweise umgestellten Stand bestätigt** — genau das ist Teil des
    RED-Nachweises für AC-2.
+   *RED-Nachmessung 2026-08-16: am Code bestätigt.* `_seiten()`
+   (`metrik_listen_scan.py:103-113`) kennt nur `ast.Dict`/`ast.Set`/
+   `ast.List`/`ast.Tuple`, keinen `ast.DictComp`-Zweig; `_literal()`
+   (Zeilen 272-274) wirft dann `LookupError("… steht nicht mehr in … —
+   umbenannt oder geloescht?")`, den `pruefe_registrierte_liste()`
+   (422-427) als „Die Registrierung zeigt ins Leere." meldet. Bestehende
+   `_BESTAND`-Zeile: 309. Vorlage für die Laufzeit-Registrierung:
+   `METRIC_PRIORITY` (369-392) bzw. schlanker `HOURLY_EXCLUSION_REASON`
+   (400-405). Der Ausführungsnachweis bleibt Teil von RED.
+6. **RED-Nachmessung 2026-08-16 — Reichweite des Alarm-Lesers ist GRÖSSER
+   als in Punkt 1 aufgezählt.** `alert/render.py:93` wird nicht nur für
+   `AlertEvent` (Delta-Pfad, `_resolve_metric_id`) aufgerufen, sondern auch
+   produktiv für `CorridorEvent` (`render.py:152` →
+   `_resolve_corridor_metric_id`, `project.py:110-151`), der über
+   `_ALERT_METRIC_TO_SUMMARY_FIELD` (`weather_change_detection.py:38-53`)
+   und einen additiven Compare-Key-Fallback (`corridor_threshold.py:47-53`)
+   deutlich mehr Katalog-IDs erreichen kann. **Folgenlos für diese
+   Scheibe:** beide Resolver filtern über `summary_fields`, und
+   `temperature_day_high`/`temperature_night` haben keine (`metric_catalog.py:
+   139-150, 177-185`) — sie bleiben über JEDEN Pfad unerreichbar. Die
+   Kernaussage „`TD`/`TN` sind tot" ist damit breiter belegt als zuvor; nur
+   die enge Aufzählung „Alarm erreicht genau `temperature` und
+   `temperature_cold`" ist zu korrigieren.
+7. **RED-Nachmessung 2026-08-16 — kein Fallback-Schaden in der
+   SMS-Fidelity-Vorschau.** Befürchtung war, dass
+   `_symbols_for_metric()` (`validator_render_service.py:254-259`) nach dem
+   Wegfall auf `sms_code="TF"` zurückfällt und die Vorschau ein Kürzel
+   behauptet, das die Trip-SMS gar nicht mehr sendet. **Widerlegt:** der
+   Fallback geht auf `SMS_SYMBOL_BY_METRIC`, das ausschließlich aus der
+   Whitelist `_SMS_SYMBOL_METRIC_IDS` (`metric_catalog.py:700-713`) gebaut
+   wird — `wind_chill` steht dort nicht (zur Laufzeit geprüft:
+   `SMS_SYMBOL_BY_METRIC.get("wind_chill")` → `None`, trotz
+   `sms_code="TF"`). Ergebnis nach der Änderung: `()`, keine Verfälschung.
+   Ebenso `GET /sms-symbols` (`api/routers/config.py:56-58`): `wind_chill`
+   verschwindet vollständig aus der Metrik-Liste statt leer zu erscheinen —
+   gewollt und deckungsgleich mit AC-4.
 5. **Uniqueness-Prüfung mit Leerwert — Ergebnis der Nachmessung
    (2026-08-16):** drei Fundstellen filtern `sms_code` bereits heute auf
    Wahrheitswert, bevor sie auf Kollision prüfen:
@@ -559,6 +610,45 @@ nach der Korrektur-Nachmessung, 2026-08-16):**
   begleitende Test `test_ac4_temperature_cold_bleibt_unveraendert_n`
   (Zeile 32ff.) bleibt unverändert grün.
 
+**RED-Neufunde 2026-08-16 (in der Spec-Erhebung ÜBERSEHEN, verbindlich):**
+
+- `tests/tdd/test_sms_extended_metric_tokens.py:366,370` — byte-genauer
+  Vergleich ganzer SMS-Strings mit `… TH:M@15 WC-3`. `WC` erscheint dort
+  **ohne** eigene `MetricSpec`, weil `_visible(spec=None)` `True` liefert,
+  sobald `wind_chill_c` gesetzt ist. War mit `\bWC\b` auffindbar, in der
+  Spec-Erhebung aber nicht gelistet.
+- `tests/unit/test_sms_fidelity_preview.py:49,67` —
+  `METRIC_TO_SYMBOLS["wind_chill"] = ("WC",)`, bewusst aus dem Register
+  **gespiegelte** Testdaten, genutzt in
+  `test_carried_ids_match_symbols_surviving_truncation`. Mit dem Wegfall
+  muss auch `"wind_chill"` aus `ALL_SMS_METRIC_IDS` (Zeile 44) fallen.
+- `tests/golden/test_sms_golden.py:58` und
+  `tests/golden/text_report/test_text_report_golden.py:77` — die
+  **Erzeuger** der beiden Golden-Dateien tragen je ein
+  `MetricSpec(symbol="WC", enabled=True)`. Ohne diese beiden Stellen
+  bleiben die Goldens unerklärlich rot.
+- `src/app/metric_catalog.py:803` — Begründungstext in
+  `COMPACT_LABEL_EXCEPTIONS["wind_chill"]` nennt `'WC'` als
+  Wintersport-Tageskennzahl; wird sachlich falsch. Der Wächter
+  `test_telegram_kuerzel_folgt_register.py` verlangt eine lesbare
+  Begründung — Text muss mitgezogen werden.
+- `tests/unit/test_sms_token_symbol_register_ratchet.py:59-69` — die
+  Begründung zu `EXEMPT_FORECAST_FIELDS["wind_chill_c"]` behauptet
+  „DREI Kuerzel (WC/FK/FD)". Nach dem Wegfall sind es zwei, und das Feld
+  wird von `_wintersport()` gar nicht mehr abgetastet — der Eintrag ist
+  dann verwaist und muss entfallen (nicht nur umformuliert).
+
+**Ersatz-Anker in `test_sms_letter_value_separator.py` — Entscheidung:**
+`"WC10"` ist dort **nicht** durch simplen String-Tausch ersetzbar: die
+Fixture `F.segment()` (`tests/tdd/_sms_token_format_fixtures.py:88-121`)
+setzt weder `snow_depth_cm` noch `avalanche_level`, weshalb `WC` der
+einzige je gerenderte Wintersport-Token dieses Tests ist. Vorgabe: die
+Fixture um einen echten Wintersport-Wert erweitern, sodass ein anderer
+Token (z. B. `SD`) **tatsächlich gerendert** wird und als Anker dient.
+**Nicht** auf einen strukturellen `POS_INDEX`-Vergleich ausweichen — das
+verschöbe den Prüfort von der gerenderten Zeile auf die Tabelle und
+schwächte die Zusicherung genau dort, wo sie wirkt.
+
 **Nur Fundstelle gelesen, Änderungsnotwendigkeit NICHT abschließend
 bewertet — Entwickler muss in RED erneut grep + einzeln entscheiden:**
 
@@ -580,11 +670,20 @@ bewertet — Entwickler muss in RED erneut grep + einzeln entscheiden:**
 - **`thunder`s Doppel-Kürzel (`TH:`/`TH+:`) bleibt der seit #1482/E3b
   dokumentierte Sonderfall** — nicht in die neue `sms_multi_symbols`-Logik
   überführt, weiterhin literal gemergt (s. Implementation Details Punkt 1).
-- **Der AC-5-Roundtrip-Test für `wind_chill` existiert nach heutiger Messung
-  nicht** — bestehende Roundtrip-Abdeckung wurde nur für
-  `temperature_day_low`/`-high` gefunden, nicht nachweislich für
-  `wind_chill_day_low`/`-high`. Diese Scheibe MUSS ihn ergänzen, nicht nur
-  voraussetzen (s. „Zu messen, nicht zu raten" Punkt 3).
+- ~~**Der AC-5-Roundtrip-Test für `wind_chill` existiert nach heutiger Messung
+  nicht**~~ — **in der RED-Nachmessung 2026-08-16 widerlegt.** Der Test
+  existiert bereits:
+  `tests/tdd/test_temp_tagesrichtung_bestandsableitung.py::
+  TestLoaderDerivesDayDirectionsFromParent::
+  test_stored_default_keeps_both_felt_directions` (Zeilen 133-155) — legt
+  einen Trip mit ausschließlich `{"metric_id": "wind_chill", "enabled":
+  true}` an und prüft nach `load_trip()` beide Richtungen als aktiv sowie
+  die SMS-Token `FK`/`FD`. AC-5 ist damit durch Bestandsabdeckung erfüllt.
+  **Folge für RED:** Für AC-5 wird **kein** neuer Test geschrieben — ein von
+  Anfang an grüner Test in der RED-Phase zementiert nur Bestandsverhalten
+  und beweist nichts. Der Wirksamkeitsnachweis läuft ausschließlich über
+  Mutations-Gegenprobe Punkt 5 (Ableitungsregel entfernen ⇒ dieser
+  bestehende Test muss rot werden).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -621,3 +720,18 @@ bewertet — Entwickler muss in RED erneut grep + einzeln entscheiden:**
   `test_metric_catalog.py`) als Pflicht-Änderung aufgenommen, Uniqueness-
   Prüfung mit Leerwert nachgewiesen (drei Tests filtern bereits falsy),
   Mutations-Gegenprobe um Regrowth-Schutz (Punkt 7) ergänzt.
+- 2026-08-16 (RED-Nachmessung, Phase 5): Die fünf Punkte aus „Zu messen,
+  nicht zu raten" gegen den aktuellen Stand nachgemessen. **Keine
+  AC-Änderung** — alle neun Acceptance Criteria bleiben unverändert
+  gültig, die PO-Freigabe trägt weiter. Ergebnis: (1) weiterhin genau zwei
+  produktive `get_sms_code()`-Leser, keine dritte Stelle durch #1728 S3
+  dazugekommen; `TD`/`TN` als tot bestätigt. (2) Alarm-Leser-Reichweite
+  größer als beschrieben, für diese Scheibe folgenlos (neuer Punkt 6).
+  (3) Der in AC-5 geforderte Roundtrip-Test **existiert bereits** —
+  „Known Limitations" entsprechend korrigiert, kein neuer Test in RED.
+  (4) E7-Registrierungs-Mechanik am Code bestätigt. (5) Uniqueness-Filter
+  bestätigt, keine ungefilterte vierte Prüfstelle. Zusätzlich: kein
+  Fallback-Schaden in der SMS-Fidelity-Vorschau (neuer Punkt 7), eine
+  **sechste Produktivdatei** (`sms_trip.py:471`, wird toter Code) und
+  fünf übersehene Testfundstellen aufgenommen, Ersatz-Anker-Entscheidung
+  für `test_sms_letter_value_separator.py` festgelegt.

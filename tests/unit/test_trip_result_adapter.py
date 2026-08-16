@@ -344,12 +344,14 @@ def test_summary_to_rows_omits_none_fields():
     )
 
 
-def test_wintersport_default_config_enables_av_wc_snow_symbols():
+def test_wintersport_default_config_enables_av_snow_symbols_without_wc():
     """
     GIVEN: Aufruf von _wintersport_default_config().
     WHEN:  Rückgabewert inspiziert.
-    THEN:  Liste enthält MetricSpec für AV, WC, SD, NS24+, SL — alle
-           enabled=True.
+    THEN:  Liste enthält MetricSpec für AV, SD, NS24+, SL — alle
+           enabled=True. KEIN MetricSpec fuer WC mehr (Fix #1887 E6
+           Scheibe A, PO-Entscheid: 'WC' entfaellt ERSATZLOS, verdoppelte
+           nachweislich 'FK').
 
     #1435 E3b: die Schnee-Kürzel folgen dem Register (SD/NS24+/SL); die
     früheren Trip-Eigennamen SN/SN24+/SFL dürfen nicht mehr vorkommen.
@@ -363,7 +365,7 @@ def test_wintersport_default_config_enables_av_wc_snow_symbols():
     specs = _wintersport_default_config()
     assert isinstance(specs, list)
     by_sym = {s.symbol: s for s in specs}
-    for required in ("AV", "WC", "SD", "NS24+", "SL"):
+    for required in ("AV", "SD", "NS24+", "SL"):
         assert required in by_sym, (
             f"Wintersport-Default-Config muss Symbol {required!r} enthalten: "
             f"{sorted(by_sym.keys())!r}"
@@ -372,9 +374,9 @@ def test_wintersport_default_config_enables_av_wc_snow_symbols():
             f"Wintersport-Default-Config: {required!r} muss enabled=True haben."
         )
         assert isinstance(by_sym[required], MetricSpec)
-    for forbidden in ("SN", "SN24+", "SFL"):
+    for forbidden in ("SN", "SN24+", "SFL", "WC"):
         assert forbidden not in by_sym, (
-            f"#1435 E3b: Alt-Kuerzel {forbidden!r} darf in der "
-            f"Wintersport-Default-Config nicht mehr vorkommen: "
+            f"#1435 E3b bzw. Fix #1887 E6 Scheibe A: Kuerzel {forbidden!r} "
+            f"darf in der Wintersport-Default-Config nicht mehr vorkommen: "
             f"{sorted(by_sym.keys())!r}"
         )

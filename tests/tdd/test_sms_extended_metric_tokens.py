@@ -361,13 +361,20 @@ def test_ac11_golden_byte_identity_without_the_14_new_metrics():
     # jetzt als Bereichs-Token ('D8/19' statt 'K8 D19', 'FD-3/5' statt
     # 'FK-3 FD5'). Alles Uebrige bleibt zeichengleich -- genau das ist die
     # Zusicherung, die dieser Test weiterhin bewacht.
+    #
+    # Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+    # fix_1887_e6a_sms_kuerzel_register.md): 'WC-3' entfaellt ERSATZLOS
+    # (verdoppelte nachweislich 'FK'). Die Falle: 'WC' entstand hier OHNE
+    # eigene MetricSpec, allein weil ``wind_chill_c`` gesetzt ist
+    # (``_visible(spec=None, rt)`` liefert True) -- der eingefrorene String
+    # traegt es trotzdem, und muss deshalb explizit angepasst werden.
     assert evening == (
         "Etappe 3 B: N- D8/19 FD-3/5 R0.3@6(1.8@15) PR35%@10(80%@16) "
-        "W15@11(22@14) G20@11(35@14) TH:M@15 WC-3"
+        "W15@11(22@14) G20@11(35@14) TH:M@15"
     ), f"Byte-Identitaet gebrochen (evening): {evening!r}"
     assert morning == (
         "Etappe 3 B: D8/19 FD-3/5 R0.3@6(1.8@15) PR35%@10(80%@16) "
-        "W15@11(22@14) G20@11(35@14) TH:M@15 WC-3"
+        "W15@11(22@14) G20@11(35@14) TH:M@15"
     ), f"Byte-Identitaet gebrochen (morning): {morning!r}"
 
 

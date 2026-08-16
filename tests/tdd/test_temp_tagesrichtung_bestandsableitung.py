@@ -230,8 +230,10 @@ class TestRealLegacyTripKeepsItsTokens:
 
     def test_gr221_mallorca_keeps_all_day_direction_tokens(self):
         """S3 AC-2: ``gr221-mallorca.json`` (``temperature:
-        ["min","max","avg"]``, ``wind_chill: ["min"]``) traegt jetzt die
-        VOLLE Token-Menge N/K/D/FN/FK/FD/WC.
+        ["min","max","avg"]``, ``wind_chill: ["min"]``) traegt die VOLLE
+        Token-Menge N/K/D/FN/FK/FD — OHNE WC (Fix #1887 E6 Scheibe A,
+        PO-Entscheid: 'WC' entfaellt ERSATZLOS, verdoppelte nachweislich
+        'FK').
 
         Umkehrung der S1-Zusicherung (dort AC-11: FD fehlte, weil
         ``wind_chill: ["min"]`` die Ableitung von ``wind_chill_day_high``
@@ -246,11 +248,12 @@ class TestRealLegacyTripKeepsItsTokens:
         sms = _sms(trip.display_config)
 
         vorhanden = F.present_symbols(sms, ("N", "K", "D", "FN", "FK", "FD", "WC"))
-        assert vorhanden == {"N", "K", "D", "FN", "FK", "FD", "WC"}, (
+        assert vorhanden == {"N", "K", "D", "FN", "FK", "FD"}, (
             f"Token-Menge des realen Bestandstrips: {sorted(vorhanden)} — "
-            f"erwartet N/K/D/FN/FK/FD/WC. Fehlt FD, wertet die Ableitung "
-            f"``wind_chill.aggregations`` noch aus (S3 DEC-1 nicht "
-            f"umgesetzt).\nSMS: {sms}"
+            f"erwartet N/K/D/FN/FK/FD (kein WC mehr). Fehlt FD, wertet die "
+            f"Ableitung ``wind_chill.aggregations`` noch aus (S3 DEC-1 nicht "
+            f"umgesetzt); steht WC weiterhin, ist das PO-Entscheid aus Fix "
+            f"#1887 nicht umgesetzt.\nSMS: {sms}"
         )
 
 

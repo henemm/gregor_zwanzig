@@ -645,8 +645,11 @@ class TestAC9RegressionGuard:
     'SN'/'SN24+') als "unveränderliche Briefing-Kürzel" ein. Für die drei
     Schnee-Größen gilt das nicht mehr — sie folgen dem zentralen Register.
     Bestehen bleibt die Ausnahme für 'TH:' (Doppelpunkt = Grammatik, keine
-    Register-ID) und für das WC/FN/FK/FD-Quartett.
-    Quelle: docs/specs/modules/fix_1435_e3b_sms_kuerzel.md.
+    Register-ID) und für das FN/FK/FD-Trio. Fix #1887 E6 Scheibe A
+    (PO-Entscheid): 'WC' gehörte vormals ebenfalls dazu, ist aber ERSATZLOS
+    entfallen (verdoppelte nachweislich 'FK').
+    Quelle: docs/specs/modules/fix_1435_e3b_sms_kuerzel.md,
+    docs/specs/modules/fix_1887_e6a_sms_kuerzel_register.md.
     """
 
     def test_thunder_symbol_unchanged(self):
