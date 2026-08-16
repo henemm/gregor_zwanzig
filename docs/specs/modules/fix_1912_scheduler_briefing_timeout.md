@@ -12,7 +12,7 @@ tags: [scheduler, monitoring, go, issue-1912]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-08-16)
 
 ## Purpose
 
