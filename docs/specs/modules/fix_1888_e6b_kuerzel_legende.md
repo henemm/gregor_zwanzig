@@ -180,7 +180,7 @@ wird in dieser Scheibe nicht angefasst (s. „Bewusste Grenzen").
     erscheint (`weather_metric_kuerzel_marken.test.ts`-Muster).
 
 - **AC-2:** Given im Trip-Editor die drei Kürzel-Paare `K`/`D`/`N` und
-  `FK`/`FD`/`FN` im Trip-Editor / When der Nutzer die Legende liest / Then
+  `FK`/`FD`/`FN` / When der Nutzer die Legende liest / Then
   erkennt er anhand der Klartext-Bedeutungen (z. B. „Tages-Tiefsttemperatur
   (Gehzeit)" für `K`, „Gefühlte Tages-Tiefsttemperatur (Gehzeit)" für `FK`),
   dass `FK`/`FD`/`FN` dieselben drei Größen wie `K`/`D`/`N` in gefühlter
