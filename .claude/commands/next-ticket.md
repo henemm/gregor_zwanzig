@@ -19,7 +19,7 @@ neu bewerten:
 - **Innerhalb derselben Sitzung:** Stehen Ergebnisse aus Schritt 2/3 bereits im
   Gesprächsverlauf dieser Sitzung (kein `/clear` dazwischen, keine `workflow.py finish`
   seither), diese direkt wiederverwenden statt die Befehle erneut auszuführen.
-- **Über Sitzungsstarts hinweg (Cache-Datei):** `.claude/next_ticket_cache.json`
+- **Über Sitzungsstarts hinweg (Cache-Datei):** `docs/artifacts/next_ticket_cache.json`
   (worktree-lokal, gitignored) prüfen. Ist die Datei jünger als 5 Minuten:
   ```bash
   gh issue list --repo henemm/gregor_zwanzig --state open --json number,updatedAt --limit 300 \
