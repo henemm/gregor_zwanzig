@@ -3,7 +3,7 @@ entity_id: fix_1888_e6b_kuerzel_legende
 type: feature
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: approved
 version: "1.1"
 tags: [frontend, weather-metrics-tab, sms, legende, compare, trip]
 workflow: fix-1888-e6b-kuerzel-legende
@@ -13,7 +13,9 @@ workflow: fix-1888-e6b-kuerzel-legende
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-16 („go"). Freigegeben wurde ausdrücklich auch
+  die Teilung von AC-2 (Trip-Editor) und AC-2a (Ortsvergleich) gegenüber dem
+  Ticket-Text, begründet durch Messung M3 im Kontext-Dokument.
 
 ## Purpose
 
