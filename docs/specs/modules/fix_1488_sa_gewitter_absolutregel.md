@@ -162,13 +162,21 @@ entfernen — die Funktion fällt sonst auf einen nicht mehr existierenden Impor
     neuer Fall `expandRules > mode=absolute + thunder_level → fällt auf delta zurück
     (Bugfix #1488 AC-3)`.
 
-- **AC-4:** Given ein Bestandstrip hat bereits eine gespeicherte Gewitter-Alarmregel
-  im Modus „Absolut" (z. B. Schwelle 1.0), When der Trip unverändert über die API
-  gelesen wird, Then ist die gespeicherte Regel byte-identisch zu der, die gespeichert
-  wurde — kein automatisches Umschreiben, kein Datenverlust.
-  - Test: `frontend/e2e/fix-1488-gewitter-absolutregel-gesperrt.spec.ts`,
-    Testfall „Bestandsregel überlebt PUT→GET unverändert" (reiner API-Roundtrip,
-    kein UI nötig; legt einen Testtrip an und räumt ihn im `finally` wieder ab).
+- **AC-4:** ~~Bestandsregel überlebt PUT→GET unverändert~~ — **gestrichen (PO 2026-08-16)**,
+  weil in der RED-Phase gemessen wurde, dass die Given-Bedingung nicht herstellbar ist:
+  Der Go-Store normalisiert `alert_rules` bei **jedem** Laden und Speichern
+  (`internal/store/trip.go:206` und `:238` → `model.SyncAlertRules`;
+  `internal/model/trip.go:383` setzt hart `rule.Kind = AlertRuleKindDelta`, Regeln zu
+  nicht-aktiven Metriken entfallen ganz). Einen Bestandstrip mit `kind='absolute'` gibt
+  es im Go-Pfad nicht — weder über die API noch per Datei auf Platte.
+  Ein Test dafür würde nicht Scheibe A prüfen, sondern fremdes Serververhalten
+  festschreiben, und wäre in RED grün. Beleg:
+  `docs/artifacts/fix-1488-gewitterstufen/red_ac4_go_store_normalizes_alert_rules.txt`.
+  Der Befund selbst ist in [#1895](https://github.com/henemm/gregor_zwanzig/issues/1895)
+  nachgetragen. Die Zusicherung „Scheibe A fügt keinen Umschreibe-Code hinzu" bleibt als
+  Unterlassung unter „Was darf sich NICHT ändern" bestehen — dort, wo sie hingehört.
+  **Der zugehörige Testfall ist in Phase 6 aus
+  `frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts` zu entfernen.**
 
 - **AC-5:** Given die Empfindlichkeitsstufen-Fläche für Gewitter (`?tab=alarme`),
   When Scheibe A umgesetzt ist, Then zeigt diese Fläche unverändert weiterhin die
@@ -210,9 +218,11 @@ entfernen — die Funktion fällt sonst auf einen nicht mehr existierenden Impor
 
 ## Was darf sich NICHT ändern
 
-- **Bestandsdaten:** kein Trip mit vorhandenen `alert_rules` wird beim Laden,
-  Speichern oder Anzeigen automatisch umgeschrieben. Scheibe A fügt keinen
-  Migrations- oder Normalisierungscode für gespeicherte Regeln hinzu.
+- **Bestandsdaten:** Scheibe A fügt **keinen** Migrations- oder Normalisierungscode für
+  gespeicherte Regeln hinzu und ändert die bestehende serverseitige Behandlung nicht.
+  ⚠️ Präzisierung nach der Messung (s. gestrichenes AC-4): „unangetastet" wäre falsch —
+  der Go-Store normalisiert `alert_rules` schon heute bei jedem Laden und Speichern.
+  Die PO-Vorgabe lautet, dass **wir** daran nichts ändern, nicht dass nichts geschieht.
 - **Empfindlichkeitsstufen-Fläche** (`?tab=alarme`, `AlarmeTab` →
   `AlertMetricLevelRow`) bleibt vollständig unberührt — kein Datei-Zugriff, kein
   Verhaltensunterschied.

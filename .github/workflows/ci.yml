@@ -229,7 +229,7 @@ jobs:
       # alle den storageState (login() in helpers.ts:97-106 kehrt sofort
       # zurueck, wenn die Sitzung schon steht), holen sich also keinen
       # eigenen Login -- nachgemessen in denselben 3 Zyklen, 0 unexpected.
-      E2E_MIN_SPECS: 45     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
+      E2E_MIN_SPECS: 46     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
       E2E_MIN_EXECUTED_HAUPT: 224      # Hauptlauf: 44 Dateien + global.setup -- exakt belegt, kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Zweitlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:

@@ -13,22 +13,13 @@ import assert from 'node:assert/strict';
 import {
 	ALERT_METRIC_LABELS,
 	ALERT_SEVERITY_TONE,
-	thunderLevelLabel,
 	normalizeAlertMetric,
 } from './alertMetricLabels.ts';
 import type { AlertMetric } from '$lib/types';
 
-test('thunderLevelLabel: threshold 2.0 → HOCH (AC-6)', () => {
-	assert.equal(thunderLevelLabel(2.0), 'HOCH');
-});
-
-test('thunderLevelLabel: threshold 1.0 → MITTEL', () => {
-	assert.equal(thunderLevelLabel(1.0), 'MITTEL');
-});
-
-test('thunderLevelLabel: threshold 0.5 → KEINE (sub-MITTEL)', () => {
-	assert.equal(thunderLevelLabel(0.5), 'KEINE');
-});
+// #1488 Scheibe A: die drei `thunderLevelLabel`-Faelle sind entfallen — sie
+// zementierten die falschen Stufenwoerter MITTEL/HOCH; die Funktion selbst ist
+// mit dem Absolut-Modus fuer Gewitter geloescht worden.
 
 test('ALERT_SEVERITY_TONE: critical → danger (AC-6)', () => {
 	assert.equal(ALERT_SEVERITY_TONE['critical'], 'danger');
