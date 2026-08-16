@@ -67,6 +67,13 @@ class MetricDefinition:
     selectable: bool = True
     # Issue #914 Slice 1: Alert-Render-Stammdaten (Single Source of Truth)
     sms_code: str = ""           # GSM-7-tauglicher Token (1–2 Großbuchstaben, ASCII), kollisionsfrei
+    # Fix #1887 E6 Scheibe A: das tatsaechlich in der Trip-Kurzform gesendete
+    # Kuerzel dieser Groesse -- bewusst GETRENNT von sms_code (das fuer
+    # Compare-/Alarm-SMS gilt und mit demselben Kuerzel wie eine andere
+    # Groesse kollidieren darf, s. temperature/temperature_cold/wind_chill).
+    # Quelle fuer SMS_MULTI_SYMBOLS_BY_METRIC (dort abgeleitet, nicht mehr
+    # danebengepflegt).
+    sms_multi_symbols: tuple[str, ...] = ()
     decimals: Optional[int] = None  # Rundungsstellen für Darstellung; None => Einheit-Heuristik
     cmp: str = ""                # "über" | "unter" — Seite, auf der die Schwelle alarmiert
     # Issue #952: Kurzform-Label für Nicht-SMS-Alert-Renderer (E-Mail/Telegram/Betreff).
@@ -142,10 +149,14 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("min",),
         compact_label="TN", col_key="temp_night", col_label="Nacht",
         providers={"openmeteo": True, "geosphere": True},
-        # Fix #923b AC-4: SMS_MULTI_SYMBOLS_BY_METRIC (sms_trip.py) fuehrt
-        # bereits das Symbol "N" fuer diese Metrik -- ohne sms_code erschien
-        # sie mit leerem Token in carried_ids der SMS-Fidelity-Vorschau.
-        sms_code="TN",
+        # Fix #1887 E6 Scheibe A (AC-3): der DEC-8-Kompromiss "TN" ist
+        # aufgehoben, nicht nur verschoben -- "TN" erreichte KEINEN der
+        # beiden get_sms_code()-Leser (comparison.py:647, alert/render.py:93)
+        # und war damit ein toter Wert. Das tatsaechlich gesendete Kuerzel
+        # "N" traegt jetzt ausschliesslich sms_multi_symbols; sms_code ist
+        # leer (deckt sich mit "nicht gesetzt", get_sms_code() liefert "").
+        sms_code="",
+        sms_multi_symbols=("N",),
         decimals=0,
     ),
     # Issue #1728 Scheibe 1: Tages-Tief und Tages-Hoch der GEMESSENEN
@@ -164,14 +175,15 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("min",),
         compact_label="K", col_key="temp_day_low", col_label="TagMin",
         providers={"openmeteo": True, "geosphere": True},
-        sms_code="K", decimals=0,
+        sms_code="K", sms_multi_symbols=("K",), decimals=0,
         trip_default_rank=8,  # Issue #1728: neue Rangstufe, keine Umnummerierung
     ),
-    # Wie temperature_day_low, Gegenrichtung. DEC-8: sms_code "TD" statt "D"
-    # -- "D" ist seit #914 von "temperature" selbst belegt (:113) und die
-    # Eindeutigkeits-Ratsche unterscheidet inerte Felder nicht. Der
-    # gerenderte SMS-Token bleibt "D" (aus SMS_MULTI_SYMBOLS_BY_METRIC),
-    # exakt wie bei temperature_night ("TN" im Register, "N" in der SMS).
+    # Wie temperature_day_low, Gegenrichtung. Fix #1887 E6 Scheibe A (AC-3):
+    # der DEC-8-Kompromiss "TD" ist aufgehoben, nicht nur verschoben -- "TD"
+    # erreichte KEINEN der beiden get_sms_code()-Leser (comparison.py:647,
+    # alert/render.py:93) und war damit ein toter Wert. Das tatsaechlich
+    # gesendete Kuerzel "D" traegt jetzt ausschliesslich sms_multi_symbols;
+    # sms_code ist leer.
     # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
     # Tagesfenster 04-19 von temperature_min/temperature_max.
     MetricDefinition(
@@ -180,7 +192,9 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("max",),
         compact_label="D", col_key="temp_day_high", col_label="TagMax",
         providers={"openmeteo": True, "geosphere": True},
-        sms_code="TD", decimals=0,
+        sms_code="",
+        sms_multi_symbols=("D",),
+        decimals=0,
         trip_default_rank=9,
     ),
     MetricDefinition(
@@ -215,8 +229,9 @@ _METRICS: list[MetricDefinition] = [
     # nicht aus einem Etappen-Aggregat -- deshalb keine summary_fields (=
     # keine Auswertungs-Pill, keine Tabellenspalte) und keine
     # Alarm-Deklaration (Kaeltealarm bleibt temperature_cold, der gefuehlte
-    # Risikowert bleibt bei "wind_chill"). "WC" (Wintersport-Tageskennzahl)
-    # bleibt bewusst bei "wind_chill" (Regression #1450, Spec-Abgrenzung 1).
+    # Risikowert bleibt bei "wind_chill"). Fix #1887 E6 Scheibe A
+    # (PO-Entscheid): "WC" (vormals Wintersport-Tageskennzahl bei
+    # "wind_chill") entfaellt ERSATZLOS -- verdoppelte nachweislich "FK".
     MetricDefinition(
         id="wind_chill_night", label_de="Gefühlte Nacht-Tiefsttemperatur",
         unit="°C", dp_field="wind_chill_c", category="temperature",
@@ -227,6 +242,7 @@ _METRICS: list[MetricDefinition] = [
         # Groesse traegt (#1435 E3b Registerkonformitaet) -- kollisionsfrei
         # geprueft gegen alle heutigen sms_code-Werte des Katalogs.
         sms_code="FN",
+        sms_multi_symbols=("FN",),
         decimals=0,
     ),
     # Issue #1728 Scheibe 1: dieselbe Aufloesung auf der GEFUEHLTEN Seite
@@ -234,7 +250,9 @@ _METRICS: list[MetricDefinition] = [
     # reine Sichtbarkeits-Gates ohne summary_fields und ohne Alarm.
     # KEIN trip_default_rank -- folgt exakt der heutigen Lage von
     # "wind_chill" (waehlbar, aber bei neuen Trips nicht vorbelegt, DEC-7).
-    # "WC" (Wintersport-Tageskennzahl) bleibt bei "wind_chill" (E3, #1450).
+    # Fix #1887 E6 Scheibe A (PO-Entscheid): "WC" (vormals Wintersport-
+    # Tageskennzahl bei "wind_chill") entfaellt ERSATZLOS -- verdoppelte
+    # nachweislich "FK" (identisches Feld, Fenster, Aggregation).
     # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
     # Tagesfenster 04-19 von temperature_min/temperature_max.
     MetricDefinition(
@@ -244,7 +262,7 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("min",),
         compact_label="FK", col_key="felt_day_low", col_label="TagMinF",
         providers={"openmeteo": True, "geosphere": True},
-        sms_code="FK", decimals=0,
+        sms_code="FK", sms_multi_symbols=("FK",), decimals=0,
     ),
     # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
     # Tagesfenster 04-19 von temperature_min/temperature_max.
@@ -255,7 +273,7 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("max",),
         compact_label="FD", col_key="felt_day_high", col_label="TagMaxF",
         providers={"openmeteo": True, "geosphere": True},
-        sms_code="FD", decimals=0,
+        sms_code="FD", sms_multi_symbols=("FD",), decimals=0,
     ),
     MetricDefinition(
         id="humidity", label_de="Luftfeuchtigkeit", unit="%",
@@ -768,23 +786,24 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
 # sind zwei unabhaengige Auswahl-Entscheidungen (Zelt vs. Huette).
 # Fix #1660 Scheibe A: dieselbe Trennung jetzt auch auf der gefuehlten Seite --
 # 'FN' wandert von "wind_chill" zur eigenen waehlbaren Groesse
-# "wind_chill_night". 'WC' (Wintersport-Tageskennzahl) bleibt bewusst bei
-# "wind_chill" (Regression #1450, Spec-Abgrenzung 1).
+# "wind_chill_night".
 # Fix #1728 Scheibe 1 (PO-Entscheidung 2026-08-11): 'K'/'D' bzw. 'FK'/'FD'
 # wandern von den Elterngroessen zu je eigenen waehlbaren Tagesrichtungen --
 # Tages-Tief und Tages-Hoch sind zwei unabhaengige Auswahl-Entscheidungen.
-# 'WC' (Wintersport-Tageskennzahl) bleibt als eigener Ein-Symbol-Eintrag bei
-# "wind_chill" (E3, PO: „WC soll bleiben"; Regression #1450).
+# Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+# fix_1887_e6a_sms_kuerzel_register.md): die Tabelle ist jetzt eine reine
+# ABLEITUNG aus MetricDefinition.sms_multi_symbols (Muster SMS_SYMBOL_BY_METRIC
+# seit E3b) statt einer eigenstaendig gepflegten Dict-Konstante -- kein
+# hartkodiertes Kuerzel mehr fuer diese sechs Groessen. 'WC' (vormals
+# Ein-Symbol-Eintrag bei "wind_chill", Wintersport-Tageskennzahl) entfaellt
+# ERSATZLOS: verdoppelte nachweislich 'FK' (identisches Feld, Fenster,
+# Aggregation) -- "wind_chill" traegt seitdem UEBERHAUPT keinen Eintrag mehr.
+# 'thunder' bleibt bewusst AUSSERHALB der Feld-Ableitung: 'TH:' kommt
+# weiterhin aus SMS_SYMBOL_GRAMMAR (zentrale Quelle seit E3b), 'TH+:' bleibt
+# der seit #1482 dokumentierte literale Sonderfall (kein sms_code-Pendant).
 SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
-    "temperature_day_low": ("K",),
-    "temperature_day_high": ("D",),
-    "temperature_night": ("N",),
-    "wind_chill_day_low": ("FK",),
-    "wind_chill_day_high": ("FD",),
-    "wind_chill": ("WC",),
-    "wind_chill_night": ("FN",),
-    "thunder": ("TH:", "TH+:"),
-}
+    m.id: m.sms_multi_symbols for m in _METRICS if m.sms_multi_symbols
+} | {"thunder": (SMS_SYMBOL_GRAMMAR["thunder"], "TH+:")}
 
 # #1719 S4: die einzigen Größen, deren Telegram-Kürzel vom Kurzform-Kürzel
 # abweichen DARF. Wert = Begründung (Muster: SMS_SYMBOL_GRAMMAR oben,
@@ -800,8 +819,9 @@ COMPACT_LABEL_EXCEPTIONS: dict[str, str] = {
     ),
     "wind_chill": (
         "Wie 'temperature': die Zelle zeigt einen Stundenwert, das Register "
-        "führt Tagesauswertungen ('FK'/'FD' Tiefst/Höchst, 'WC' "
-        "Wintersport-Tageskennzahl)."
+        "führt Tagesauswertungen ('FK'/'FD' Tiefst/Höchst der gefühlten "
+        "Temperatur). Fix #1887 E6 Scheibe A: das frühere Wintersport-"
+        "Kürzel 'WC' entfällt ersatzlos (verdoppelte 'FK')."
     ),
 }
 

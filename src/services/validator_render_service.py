@@ -240,9 +240,21 @@ SMS_FIDELITY_SAMPLE_FORECAST = NormalizedForecast(
                     range(6, 18), (0, 0, 1, 1, 2, 2, 3, 3, 3, 2, 1, 0),
                 )
             ),
-            snow_depth_cm=245000.0,
-            snowfall_limit_m=980000.0,
-            snow_new_24h_cm=185000.0,
+            # Fix #1887 E6 Scheibe A: der Wegfall von 'WC-18' (~6 Zeichen)
+            # drueckte die volle Zeile von vormals 161 auf 155 Zeichen --
+            # unter die 160er-Kuerzungsgrenze, wodurch die Vorschau gar
+            # nichts mehr kuerzt und ihren Zweck verliert. Die 1-Zeichen-
+            # Reserve von vorher war selbst die Ursache: ein einzelnes
+            # entfallendes Kuerzel konnte sie kippen. Alle drei Schnee-
+            # Groessen (s. Issue #1824 (A) oben) tragen deshalb je eine
+            # weitere Stelle mehr -- dieselbe Technik, nur wiederholt
+            # angewendet, kein neues Muster. Ergebnis (s. Testnachweis):
+            # volle Zeile 176 Zeichen, gekuerzte Zeile genau 160 -- die
+            # Kuerzung reizt die Grenze wieder aus, statt sie deutlich zu
+            # unterschreiten.
+            snow_depth_cm=2450000000000.0,
+            snowfall_limit_m=9800000000000.0,
+            snow_new_24h_cm=1850000000000.0,
         ),
         DailyForecast(thunder_hourly=(HourlyValue(10, 2.0),)),
     ),

@@ -95,6 +95,7 @@ def segment(
     wind_dir_deg: Optional[int] = None,
     precip_type: Optional[PrecipType] = None,
     day: int = DAY,
+    snow_depth_cm: Optional[float] = None,
 ) -> SegmentWeatherData:
     """Wander-Segment lokal 08:00-12:00 mit voller 24h-Zeitreihe.
 
@@ -103,6 +104,12 @@ def segment(
     Segment-Aggregat-Pfad zurueck (``sms_trip.py::_agg``), in dem Tiefst- und
     Hoechstwert UNABHAENGIG voneinander fehlen koennen — der einzige reale
     Weg zu einer halb besetzten Temperatur-Spanne (AC-6/AC-8).
+
+    ``snow_depth_cm``: optionaler echter Wintersport-Wert (Default ``None``
+    -- unveraendertes Verhalten fuer alle bestehenden Aufrufer). Fix #1887
+    E6 Scheibe A: seit ``WC`` ersatzlos entfaellt, ist dies der einzige Weg,
+    ueberhaupt einen Wintersport-Token (``SD``) aus diesem Segment zu
+    erzeugen -- ohne ihn bleibt der Wintersport-Block leer.
     """
     seg = TripSegment(
         segment_id=1,
@@ -146,6 +153,7 @@ def segment(
             wind_max_kmh=45.0, gust_max_kmh=70.0, precip_sum_mm=8.9,
             pop_max_pct=95, cloud_avg_pct=50,
             thunder_level_max=ThunderLevel.MED,
+            snow_depth_cm=snow_depth_cm,
         ),
         fetched_at=datetime(YEAR, MONTH, day, 6, 0, tzinfo=timezone.utc),
         provider="openmeteo",

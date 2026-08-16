@@ -117,15 +117,20 @@ class TestSmsTokensFollowDayDirectionMetrics:
 
 
 # ---------------------------------------------------------------------------
-# AC-3 / AC-4 — E3: 'WC' bleibt an der Elterngroesse "wind_chill"
+# AC-3 / AC-4 — Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+# fix_1887_e6a_sms_kuerzel_register.md): 'WC' entfaellt ERSATZLOS
+# (verdoppelte nachweislich 'FK'). Diese Klasse bewies frueher (E3, #1450),
+# dass 'WC' an der Elterngroesse "wind_chill" haengt, nicht an einer
+# Tagesrichtung -- dieser Testzweck ist durch den PO-Entscheid ueberholt.
+# Neufassung als Positivnachweis: 'WC' erscheint in KEINEM der beiden
+# Zustaende mehr (Elterngroesse an/aus, Tagesrichtung an/aus).
 # ---------------------------------------------------------------------------
 
-class TestWindChillDayDirectionsLeaveWcAlone:
+class TestWindChillDayDirectionsNeverProduceWc:
 
-    def test_felt_day_high_off_keeps_fk_and_wc(self):
-        """AC-3: ``wind_chill_day_low`` AN, ``wind_chill_day_high`` AUS ->
-        FK und WC stehen, FD nicht. Die Abwahl EINER Tagesrichtung darf die
-        Wintersport-Tageskennzahl nicht mitnehmen (Regression #1450)."""
+    def test_felt_day_high_off_keeps_fk_without_wc(self):
+        """AC-4: ``wind_chill_day_low`` AN, ``wind_chill_day_high`` AUS ->
+        FK steht, FD nicht, WC entsteht NIE mehr (ersatzlos entfallen)."""
         dc = _dc(("wind_chill", True), (FELT_LOW, True), (FELT_HIGH, False),
                  ("wind_chill_night", True), ("precipitation", True))
         sms = _report(dc).sms_text
@@ -142,25 +147,17 @@ class TestWindChillDayDirectionsLeaveWcAlone:
         assert F.sms_token_value(sms, "FD") is None, (
             f"FD erscheint, obwohl {FELT_HIGH!r} abgewaehlt ist.\nSMS: {sms}"
         )
-        assert F.sms_token_value(sms, "WC") is not None, (
-            f"WC ist verschwunden, obwohl „Gefuehlte Temperatur“ selbst "
-            f"aktiv ist — E3 verletzt (WC haengt an der Elterngroesse, "
-            f"nicht an einer Tagesrichtung).\nSMS: {sms}"
+        assert F.sms_token_value(sms, "WC") is None, (
+            f"WC erscheint trotz PO-Entscheid, das Kuerzel ersatzlos zu "
+            f"entfernen (verdoppelte 'FK'): {sms}"
         )
 
-    def test_parent_off_removes_wc_but_day_direction_stays(self):
-        """AC-4 (korrigierte Fassung, PO 2026-08-15): Elterngroesse AUS,
-        ``wind_chill_day_high`` ausdruecklich AN -> WC fehlt, FD erscheint
-        dennoch. Gegenstueck zu AC-3, das denselben Sachverhalt (E3) aus der
-        anderen Richtung misst: WC haengt an der Elterngroesse, die
-        Tagesrichtungen haengen an sich selbst.
-
-        PO 2026-08-15: Tagesrichtungen sind unabhaengig von der Elterngroesse
-        (DEC-3/DEC-4, generische Gate-Schleife ueber
-        ``SMS_MULTI_SYMBOLS_BY_METRIC``) — dasselbe Verhalten, das
-        ``temperature_night`` seit #1484 zeigt. WC bleibt unveraendert an
-        ``wind_chill`` gebunden (haelt Regression #1450).
-        """
+    def test_parent_off_keeps_day_direction_without_wc(self):
+        """AC-4: Elterngroesse AUS, ``wind_chill_day_high`` ausdruecklich AN
+        -> FD erscheint dennoch (Tagesrichtungen sind unabhaengig von der
+        Elterngroesse, DEC-3/DEC-4, dasselbe Verhalten wie
+        ``temperature_night`` seit #1484); WC entsteht in KEINEM der beiden
+        Faelle mehr."""
         dc = _dc(("wind_chill", False), (FELT_HIGH, True),
                  ("temperature", True), ("precipitation", True))
         sms = _report(dc).sms_text
@@ -172,8 +169,8 @@ class TestWindChillDayDirectionsLeaveWcAlone:
             f"SMS: {sms}"
         )
         assert F.sms_token_value(sms, "WC") is None, (
-            f"WC erscheint trotz abgewaehlter Elterngroesse — genau die "
-            f"Regression, die #1450 behoben hat.\nSMS: {sms}"
+            f"WC erscheint trotz abgewaehlter Elterngroesse UND trotz "
+            f"PO-Entscheid, das Kuerzel ersatzlos zu entfernen.\nSMS: {sms}"
         )
 
 
@@ -306,10 +303,17 @@ class TestCatalogSmsCodesStayUnique:
                 f"{_METRICS_BY_ID[mid].category!r} statt 'temperature' — der "
                 f"Editor gruppiert die Groesse sonst nicht neben ihrer Eltern."
             )
-        assert _METRICS_BY_ID[TEMP_HIGH].sms_code == "TD", (
+        # Fix #1887 E6 Scheibe A (docs/specs/modules/
+        # fix_1887_e6a_sms_kuerzel_register.md, AC-3): der DEC-8-Kompromiss
+        # "TD" ist aufgehoben, nicht nur verschoben -- "TD" erreichte KEINEN
+        # der beiden get_sms_code()-Leser (comparison.py:647,
+        # alert/render.py:93) und war damit ein toter Wert. Das tatsaechlich
+        # gesendete Kuerzel "D" traegt jetzt ausschliesslich
+        # sms_multi_symbols; sms_code ist leer.
+        assert _METRICS_BY_ID[TEMP_HIGH].sms_code == "", (
             f"{TEMP_HIGH!r} traegt sms_code "
-            f"{_METRICS_BY_ID[TEMP_HIGH].sms_code!r} statt 'TD' (DEC-8) — "
-            f"'D' ist bereits von 'temperature' belegt."
+            f"{_METRICS_BY_ID[TEMP_HIGH].sms_code!r} statt '' — der tote "
+            f"DEC-8-Wert 'TD' muss entfernt sein (AC-3)."
         )
         codes = [m.sms_code for m in _METRICS if m.sms_code]
         doppelt = sorted({c for c in codes if codes.count(c) > 1})

@@ -116,17 +116,16 @@ def _felt_temp_segment(
     )
 
 
-def test_enabled_wind_chill_appears_in_sms_as_wc():
-    """Bug #1450 Nachweis (WC): Metrik `wind_chill` aktiviert (keine
-    disabled_specs), Segment liefert eine gefuehlte Tiefst-/Hoechsttemperatur
-    -> das WC-Token MUSS im SMS-Text erscheinen.
-
-    Vor dem Fix: `DailyForecast.wind_chill_c` wurde in
-    `_segments_to_normalized_forecast()` nie gesetzt (blieb None) ->
-    `_wintersport()` liess WC IMMER aus, unabhaengig von der Metrik-Auswahl.
-    Nach dem Fix: WC nutzt den bereits berechneten Gehzeit-Tiefstwert (FK-
-    Quelle) als Tages-Einzelwert.
-    """
+def test_wind_chill_erzeugt_kein_wc_token_mehr():
+    """Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+    fix_1887_e6a_sms_kuerzel_register.md, AC-4): 'WC' entfaellt ERSATZLOS --
+    es verdoppelte nachweislich den Wert von 'FK' (identisches Feld, Fenster,
+    Aggregation). Diese Testfassung loest den urspruenglichen Bug-#1450-
+    Nachweis ab (der bewies, dass WC bei aktiver Metrik erscheint) mit dem
+    umgekehrten Positivnachweis: 'wind_chill' aktiv + gefuehlte Temperatur
+    vorhanden -> KEIN 'WC'-Token im SMS-Text, unabhaengig von der
+    Metrik-Auswahl (die Zahl selbst bleibt ueber FK/FD sichtbar, s.
+    test_felt_night_own_metric_selection.py)."""
     from output.renderers.sms_trip import SMSTripFormatter
 
     segments = [_felt_temp_segment()]
@@ -134,10 +133,9 @@ def test_enabled_wind_chill_appears_in_sms_as_wc():
 
     sms = formatter.format_sms(segments, stage_name="Etappe 1")
 
-    assert "WC" in sms, (
-        f"Bug #1450: 'WC'-Token fehlt trotz aktivierter Metrik 'wind_chill' "
-        f"und vorhandener gefuehlter Temperatur (day.wind_chill_c blieb "
-        f"unbefuellt): {sms!r}"
+    assert "WC" not in sms, (
+        f"'WC'-Token erscheint weiterhin trotz PO-Entscheid, das Kuerzel "
+        f"ersatzlos zu entfernen (verdoppelte 'FK'): {sms!r}"
     )
 
 

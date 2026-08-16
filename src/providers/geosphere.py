@@ -546,7 +546,11 @@ class GeoSphereProvider:
             precip_1h = (rr or 0) - prev_rr
             prev_rr = rr or 0
 
-            # Wind chill
+            # Wind chill: AC-8 (Fix #1887 E6 Scheibe A) -- Geosphere liefert
+            # hier einen BERECHNETEN Wert nach der nordamerikanischen
+            # Windchill-Formel, gueltig nur fuer T <= 10 °C (s. Docstring
+            # _calculate_wind_chill) -- fachlich etwas anderes als
+            # Open-Meteos 'apparent_temperature'.
             wind_chill = None
             if temp is not None and wind_kmh > 0:
                 wind_chill = _calculate_wind_chill(temp, wind_kmh)

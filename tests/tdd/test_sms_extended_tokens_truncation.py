@@ -63,14 +63,16 @@ def _baseline_config() -> list[MetricSpec]:
         MetricSpec(symbol="NS24+", enabled=True),
         MetricSpec(symbol="SL", enabled=True),
         MetricSpec(symbol="AV", enabled=True),
-        MetricSpec(symbol="WC", enabled=True),
+        # Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS
+        # (verdoppelte nachweislich 'FK') -- kein MetricSpec mehr hier.
     ]
 
 
 def test_ac12_new_tokens_drop_before_any_wintersport_token():
     """AC-12: bei Ueberlaenge (>160 Zeichen) fallen die 14 neuen Token
-    VOLLSTAENDIG weg, bevor auch nur ein Wintersport-Token (SD/NS24+/SL/AV/WC)
-    entfernt wird.
+    VOLLSTAENDIG weg, bevor auch nur ein Wintersport-Token (SD/NS24+/SL/AV)
+    entfernt wird. Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' ist ERSATZLOS
+    entfallen und gehoert nicht mehr zum Wintersport-Block dieses Tests.
 
     Konstruktions-Invariante (robust gegen die exakte Zeichenlaenge der
     einzelnen neuen Token, die erst die Implementierung festlegt): die
@@ -145,7 +147,7 @@ def test_ac12_new_tokens_drop_before_any_wintersport_token():
         f"-- irgendetwas MUSS entfernt worden sein: {truncated!r}"
     )
 
-    for wintersport_token in ("SD180", "NS24+25", "SL1800", "AV3", "WC-22"):
+    for wintersport_token in ("SD180", "NS24+25", "SL1800", "AV3"):
         assert wintersport_token in truncated, (
             f"Wintersport-Token {wintersport_token!r} darf bei dieser Ueberlaenge "
             f"NICHT vor den 14 neuen Token entfernt werden: {truncated!r}"

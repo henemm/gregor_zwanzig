@@ -208,7 +208,8 @@ def _wintersport_default_config() -> list[MetricSpec]:
         MetricSpec(symbol="NS24+", enabled=True),
         MetricSpec(symbol="SL", enabled=True),
         MetricSpec(symbol="AV", enabled=True),
-        MetricSpec(symbol="WC", enabled=True),
+        # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
+        # nachweislich 'FK') -- kein MetricSpec mehr.
     ]
 
 

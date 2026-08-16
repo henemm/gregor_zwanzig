@@ -435,11 +435,11 @@ def _segments_to_normalized_forecast(
     # unabhaengig vom (inzwischen entfernten) Profil-Gate im Token-Builder.
     # AV (Lawinenstufe) hat in SegmentWeatherSummary keine Entsprechung --
     # bleibt unveraendert None (kein Provider liefert Lawinenbulletins, s.
-    # trip_result.py:54). WC (gefuehlte Einzeltemperatur) nutzt denselben
-    # bereits berechneten Gehzeit-Extremwert wie FK (`felt_min`) -- fuer
-    # eine einzelne Tageskennzahl ist der Tiefstwert die konservativere,
-    # sicherheitsrelevantere Wahl (analog zur Schneefallgrenze, die ebenfalls
-    # MIN aggregiert, s. Kommentar oben).
+    # trip_result.py:54). Fix #1887 E6 Scheibe A: die vormalige WC-Aggregation
+    # (gefuehlte Einzeltemperatur, `DailyForecast.wind_chill_c`) entfaellt --
+    # 'WC' verdoppelte nachweislich 'FK' und wird von _wintersport() nicht
+    # mehr abgetastet; `DailyForecast.wind_chill_min_c`/`wind_chill_max_c`
+    # (FK/FD) bleiben unveraendert und unberuehrt.
     _snow_depths = [s.aggregated.snow_depth_cm for s in segments
                     if s.aggregated.snow_depth_cm is not None]
     # Issue #1391: Schneefallgrenze ist die kanonische Trip-Regel MIN.
@@ -468,7 +468,6 @@ def _segments_to_normalized_forecast(
         snow_depth_cm=day_snow_depth,
         snowfall_limit_m=day_snowfall_limit,
         snow_new_24h_cm=day_snow_new,
-        wind_chill_c=felt_min,
         # Issue #1475 S5a: Prioritaet ja > unbekannt > nein ueber die rohen
         # Werte -- der EINE geteilte Aggregations-Helfer (kein zweiter
         # Rechenweg neben `weather_metrics._compute_hail_flag`).
@@ -652,8 +651,9 @@ class SMSTripFormatter:
                     config.append(MetricSpec(symbol=sym, threshold=thr))
 
         # Bug #944: explizit deaktivierte Metriken (enabled=False) ans Config-Ende
-        # hängen. Seit #1450 entstehen Wintersport-Token (SD/SL/NS24+/AV/WC)
-        # regulär wie jeder andere Metrik-Block -- ohne diesen Eintrag würden
+        # hängen. Seit #1450 entstehen Wintersport-Token (SD/SL/NS24+/AV,
+        # Fix #1887 E6 Scheibe A: ohne WC) regulär wie jeder andere
+        # Metrik-Block -- ohne diesen Eintrag würden
         # sie bei vorhandenen Schneedaten erscheinen. _visible(spec_with_
         # enabled_false) -> False unterdrückt sie genau wie jede andere Metrik.
         # Issue #1677 Fix-Loop F001 (Adversary CRITICAL): `disabled_specs`

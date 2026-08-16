@@ -18,7 +18,9 @@ DROP_ORDER = [
     # Kuerzungsdruck NIE mehr (stiller Kuerzungs-Regressionsfall).
     "HU", "DP", "WD:", "CP", "PT:", "CT", "CL", "CM", "CH", "VS", "SU", "UV",
     "HP", "NL",
-    "WC", "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:",
+    # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
+    # nachweislich 'FK') -- kein Eintrag mehr.
+    "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:",
 ]
 
 

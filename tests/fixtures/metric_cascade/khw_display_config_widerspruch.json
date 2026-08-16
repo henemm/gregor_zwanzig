@@ -353,6 +353,28 @@
         "use_friendly_format": true
       },
       {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "wind_chill_day_low",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "enabled": false,
+        "horizons": {
+          "day_after": true,
+          "today": true,
+          "tomorrow": true
+        },
+        "metric_id": "wind_chill_day_high",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
         "bucket": "primary",
         "enabled": true,
         "horizons": {

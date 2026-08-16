@@ -120,7 +120,11 @@ def _regular_segment(
 
 
 # Ausdrueckliche Abwahl von Temperatur (K/D) und gefuehlter Temperatur
-# (FN/FK/FD/WC) fuer die Direktaufrufe unten. ``format_sms()`` ist die
+# (FN/FK/FD) fuer die Direktaufrufe unten. 'WC' ist Fix #1887 E6 Scheibe A
+# (PO-Entscheid) ERSATZLOS entfallen -- die Abwahl eines nicht mehr
+# existierenden Symbols ist wirkungslos, aber harmlos; hier stehen gelassen
+# als reine Dokumentation der historischen Symbolliste. ``format_sms()``
+# ist die
 # Low-Level-API: sie kennt vertragsgemaess KEINE ``display_config``, die
 # Metrik-Auswahl wird ihr als ``disabled_specs`` uebergeben (genau so baut
 # ``trip_report.py:272-287`` sie aus der Nutzer-Konfiguration). Fuer die
