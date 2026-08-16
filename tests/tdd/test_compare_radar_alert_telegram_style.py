@@ -182,10 +182,20 @@ def _telegram_only_settings() -> Settings:
     """Nur Telegram sendebereit — `effective_compare_channels()` nimmt zwar
     immer `"email"` auf, aber ohne SMTP-Konfiguration schlaegt der E-Mail-
     Versuch lediglich fehl (Best-Effort, `_log_error`) und beeinflusst die
-    Telegram-Assertions nicht."""
+    Telegram-Assertions nicht.
+
+    `telegram_test_chat_id` ist BEWUSST identisch zu `telegram_chat_id`
+    gesetzt: die Herkunftssperre (`TelegramOutput._guard_code_origin()`,
+    Issue #1476, `src/app/origin_guard.py`) verlangt aus jedem
+    Nicht-Prod-/Staging-Checkout eine konfigurierte Test-Chat-ID, sonst
+    `OutputConfigError` VOR jedem HTTP-Request. Ohne dieses Feld lief der
+    Test nur lokal (per zufaelligem `.env`-Wert), nicht auf dem
+    GitHub-Actions-Runner (kein `.env`) -- die Guard-Ausnahme verschwand
+    silent im breiten `except Exception` von `_dispatch_alert_message()`."""
     return Settings().model_copy(update={
         "smtp_host": None, "smtp_user": None, "smtp_pass": None, "mail_to": None,
         "telegram_bot_token": "test-token-1914-cmp", "telegram_chat_id": "99999",
+        "telegram_test_chat_id": "99999",
         "sms_gateway_url": None, "seven_api_key": None, "sms_to": None,
     })
 

@@ -107,10 +107,25 @@ class _TelegramStub:
 
 def _telegram_only_settings() -> Settings:
     """Nur Telegram sendebereit (kein E-Mail-/SMS-Versuch — vereinfacht die
-    Assertions auf den einen relevanten Kanal)."""
+    Assertions auf den einen relevanten Kanal).
+
+    `telegram_test_chat_id` ist BEWUSST identisch zu `telegram_chat_id`
+    gesetzt: die Herkunftssperre (`TelegramOutput._guard_code_origin()`,
+    Issue #1476, `src/app/origin_guard.py`) verlangt aus jedem
+    Nicht-Prod-/Staging-Checkout (jeder Worktree UND jeder CI-Runner) eine
+    konfigurierte Test-Chat-ID, sonst `OutputConfigError` — VOR jedem HTTP-
+    Request, ausserhalb des `try`/`except` in `send()`. Ohne dieses Feld lief
+    der Test hier nur, weil das lokale Dev-`.env` zufaellig
+    `GZ_TELEGRAM_TEST_CHAT_ID` setzt (per `env_file=".env"` in
+    `Settings.model_config`) -- der GitHub-Actions-Runner hat kein `.env` und
+    die leere Default-Chat-ID liess die Guard-Ausnahme silent in
+    `_dispatch_alert_message()`s breitem `except Exception` verschwinden
+    (`sent_channels.append("telegram")` steht VOR dem `try`, also zaehlte der
+    Kanal trotzdem als "zugestellt")."""
     return Settings().model_copy(update={
         "smtp_host": None, "smtp_user": None, "smtp_pass": None, "mail_to": None,
         "telegram_bot_token": "test-token-1914", "telegram_chat_id": "99999",
+        "telegram_test_chat_id": "99999",
         "sms_gateway_url": None, "seven_api_key": None, "sms_to": None,
     })
 
