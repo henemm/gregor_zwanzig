@@ -20,7 +20,7 @@ from .model import (
     AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, arrow, delta_pct,
     km_span, over_thr, severity, side_label,
 )
-from .segments import format_alert_location
+from .segments import _renderable_segment_ids, format_alert_location
 
 
 def _sorted(msg: AlertMessage) -> list[AlertEvent]:
@@ -115,6 +115,29 @@ def _location_of(events, location_label: str | None = None) -> str:
 
 def _km_str(msg: AlertMessage) -> str:
     return _location_of(msg.events, msg.location_label)
+
+
+def _where_when(e: AlertEvent) -> str:
+    """Ort + Uhrzeit EINES Ereignisses (Issue #1861) — bewusst OHNE
+    `location_label`-Parameter: der Multi-Event-Zweig fuehrt den Ortsnamen
+    bereits als `loc_prefix`, und der Compare-Buendelpfad wird gar nicht erst
+    hier hindurchgeschickt (`segment_id`-Bedingung an der Aufrufstelle)."""
+    when = _location_of((e,))
+    if e.occurred_at:
+        when += f" · {e.occurred_at}"
+    return when
+
+
+def _per_event_where_when(evs) -> bool:
+    """Darf der Multi-Event-Zweig je Ereignis einen Ort-/Zeit-Zusatz tragen?
+
+    Nur wenn JEDES Ereignis eine verwertbare Segment-Kennung hat (Issue #1744
+    AC-7, "alles oder nichts"): traegt eines keine, nennt die Mail eine
+    Teilliste und verschweigt eine tatsaechlich betroffene Etappe. Der
+    Compare-Buendelpfad (`to_multi_point_alert_message`) setzt `segment_id`
+    nie und faellt damit hier heraus (#1170-Invariante).
+    """
+    return bool(_renderable_segment_ids([e.segment_id for e in evs]))
 
 
 def _km_str_onset(e: OnsetEvent) -> str:
@@ -372,6 +395,11 @@ def _verdict_single(e: AlertEvent) -> str:
     )
 
 
+# Issue #1865: aus dem Fragment "Änderung über ✗" wird ein vollstaendiger
+# Satz. side_label() selbst bleibt unveraendert (#958-Kernsemantik).
+_SIDE_ADVERB = {"über": "darüber", "unter": "darunter"}
+
+
 def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[tuple[str, str]]:
     """3 (label, value)-Zeilen: Wert-Vergleich / Schwellwert-Status / Wo & wann.
 
@@ -388,7 +416,7 @@ def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[
     mark = "✓" if not over_thr(e) else "✗"
     row2 = (
         f"Alarm-Schwelle {_val(e, e.threshold)}",
-        f"Änderung {side_label(e)} {mark}",
+        f"jetzt {_SIDE_ADVERB[side_label(e)]} {mark}",
     )
     # Issue #1744 A1 (AC-6): DIESELBE Aufloesung wie im Betreff — vorher stand
     # hier ein dritter, eigener km-Bauer (`_km_str_events`), weshalb der
@@ -501,6 +529,9 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         # Einheit -- ausser bei "%", wo sie zur Unterscheidung mitgefuehrt
         # wird (exaktes Vorbild Design-Vorlage Zeilen 220-233).
         data_rows = []
+        # Issue #1861: mehrere Ereignisse DERSELBEN Metrik waren als Zeilen
+        # ununterscheidbar — Segment-/Zeit-Bezug je Zeile behebt das.
+        with_where_when = _per_event_where_when(evs)
         for e in evs:
             unit = _unit_display(e)
             unit_suffix = f" {unit}" if unit else ""
@@ -510,10 +541,12 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
             # Trip-Fall (location_label immer None) bleibt unverändert (leerer
             # Prefix, AC-7-Invariante).
             loc_prefix = f"{e.location_label} · " if e.location_label else ""
+            where_when = f" · {_where_when(e)}" if with_where_when else ""
             if over_thr(e):
                 threshold_suffix = " %" if unit == "%" else ""
                 data_rows.append((
-                    f"{loc_prefix}{_label(e)} · Schwelle {_num(e, e.threshold)}{threshold_suffix}",
+                    f"{loc_prefix}{_label(e)}{where_when} · "
+                    f"Schwelle {_num(e, e.threshold)}{threshold_suffix}",
                     f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
                     f"{unit_suffix} {side_label(e)}",
                 ))
@@ -522,7 +555,7 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
                 # Schwellen-Zahl, Wert mit neutralem Pfeil, kein über/unter-Suffix
                 # (Design-Vorlage Zeilen 231-234).
                 data_rows.append((
-                    f"{loc_prefix}{_label(e)} · unter Schwelle",
+                    f"{loc_prefix}{_label(e)}{where_when} · unter Schwelle",
                     f"{_num(e, e.value_from)} → {_num(e, e.value_to)}{unit_suffix}",
                 ))
         km = _km_str(msg)
@@ -593,8 +626,12 @@ def render_telegram(msg: AlertMessage) -> str:
         # bereits in der fetten Kopfzeile), keine Einheiten ausser "%";
         # severity-absteigende Reihenfolge, kanal-konsistent mit Betreff/
         # E-Mail-Datenblock.
+        # Issue #1861: derselbe Ort-/Zeit-Zusatz wie im E-Mail-Datenblock
+        # (Kanalkonsistenz, Issue #978-Praezedenz).
+        with_where_when = _per_event_where_when(evs)
         metric_line = " · ".join(
-            f"{_label(e)} {_num(e, e.value_from)}→{_num(e, e.value_to)}"
+            f"{_label(e)}{f' {_where_when(e)}' if with_where_when else ''} "
+            f"{_num(e, e.value_from)}→{_num(e, e.value_to)}"
             f"{'%' if _unit_display(e) == '%' else ''}"
             for e in evs
         )
