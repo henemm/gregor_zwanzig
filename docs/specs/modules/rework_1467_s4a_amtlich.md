@@ -12,7 +12,7 @@ tags: [alerts, trip, compare, epic-1458, issue-1467, s4a, amtlich]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-„go" 2026-08-16 (Beleg: Workflow-State `rework-1467-s4a-amtlich`, `phase4_approved`)
 
 ## Purpose
 
