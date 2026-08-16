@@ -35,6 +35,14 @@ logger = logging.getLogger("alert_state")
 # official_alerts.py) baut seine Schlüssel damit, `reset()` schneidet daran.
 OFFICIAL_ALERT_KEY_PREFIX = "official_alert:"
 
+# Issue #1467 S4b-1 (T5): Schluesselraum der quellenuebergreifenden
+# Ereignis-Identitaet-Pruefung (`services.alert_gate.record_event_identity`/
+# `check_event_identity_gate`). BEWUSST OHNE eigenen Schutz in `reset()` --
+# der bestehende Filter dort behaelt NUR `official_alert:`-Schluessel und
+# verwirft automatisch jeden anderen Praefix, auch diesen neuen. Siehe
+# Docstring von `reset()`.
+EVENT_IDENTITY_KEY_PREFIX = "event_identity:"
+
 
 class AlertStateService:
     """Lädt/speichert/löscht das Alert-Melde-Gedächtnis pro Trip (mandantengetrennt)."""
@@ -82,6 +90,19 @@ class AlertStateService:
 
         Bleibt nach dem Schnitt kein amtlicher Eintrag übrig, verschwindet die
         Datei wie bisher vollständig.
+
+        Issue #1467 S4b-1 (T5): der Filter unten behält NUR den
+        ``official_alert:``-Präfixraum -- jeder andere Präfix, auch der
+        neuere ``event_identity:`` (Ereignis-Identität-Register, s.
+        ``EVENT_IDENTITY_KEY_PREFIX`` oben), wird beim Briefing-Reset
+        AUTOMATISCH mitgelöscht, ohne dass dieser Code je angefasst wurde.
+        Das ist beabsichtigt: nach einem Briefing ist der Informationsstand
+        neu, ein alter Nowcast-Registereintrag darf eine spätere amtliche
+        Warnung nicht mehr unterdrücken. Ein künftiger Umbau, der einen
+        zweiten Präfix "aus Symmetrie zu ``official_alert:``" schonen will,
+        würde dieses Verhalten versehentlich umdrehen -- AC-14
+        (``docs/specs/modules/rework_1467_s4b_entdopplung.md``) sichert
+        genau das mit einem eigenen Test ab.
         """
         path = self._path(entity_id)
         try:

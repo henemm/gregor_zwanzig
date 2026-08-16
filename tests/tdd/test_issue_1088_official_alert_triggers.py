@@ -721,7 +721,7 @@ class TestS4bEventIdentityWiring:
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
         from tests.helpers.nowcast_gate_fixtures import (
-            CountingFrameSource, make_trip, settings_email_only, trip_alert_service,
+            CountingFrameSource, make_trip, save_trip, settings_email_only, trip_alert_service,
         )
 
         results: list = []
@@ -740,6 +740,7 @@ class TestS4bEventIdentityWiring:
         try:
             # ── Nowcast-Pfad ──
             trip_nowcast = make_trip("trip-s4b-ac1-nowcast")
+            save_trip(trip_nowcast, uid)
             raus = trip_alert_service(
                 uid, settings_email_only(), CountingFrameSource(onset_minutes=8),
                 lambda s, b: None,
@@ -792,7 +793,7 @@ class TestS4bEventIdentityWiring:
         import services.trip_alert as trip_alert_mod
         from services.alert_gate import check_event_identity_gate as _real_identity
         from tests.helpers.nowcast_gate_fixtures import (
-            CountingFrameSource, make_trip, settings_email_only, trip_alert_service,
+            CountingFrameSource, make_trip, save_trip, settings_email_only, trip_alert_service,
         )
 
         order: list[str] = []
@@ -808,6 +809,7 @@ class TestS4bEventIdentityWiring:
         _clean_user(uid)
         try:
             trip = make_trip("trip-s4b-ac12-nowcast")
+            save_trip(trip, uid)
 
             def _mail_sink(subject, body):
                 order.append("mail_sink")
@@ -1056,7 +1058,15 @@ class TestS4bEventIdentityWiring:
                 f"Das Duplikat (thunderstorm) darf NICHT im Body stehen: {body!r}"
             )
 
-            log_path = DATA_ROOT / uid / "alert_log.json"
+            # Issue #1467 S4b-1 Test-Fix: DATA_ROOT ist eine Modul-Konstante
+            # (Zeile 49), die am isolierten `app.loader._DATA_ROOT` der
+            # autouse-Fixture `_isolate_data_root` (tests/conftest.py)
+            # vorbeizeigt -- ueber `get_data_dir()` liest dieser Test denselben
+            # Pfad, den `alert_log.append_suppressed_entry()`/`append_entry()`
+            # tatsaechlich beschrieben haben.
+            from app.loader import get_data_dir
+
+            log_path = get_data_dir(uid) / "alert_log.json"
             log = json.loads(log_path.read_text())
             passend = [
                 e for e in log.get("not_delivered", [])
@@ -1071,6 +1081,121 @@ class TestS4bEventIdentityWiring:
             assert len(passend) == 1, (
                 f"Erwartet GENAU EINEN not_delivered-Eintrag mit gate_reason="
                 f"{REASON_EVENT_DUPLICATE!r} fuer das Duplikat: {log!r}"
+            )
+        finally:
+            oa_base._REGISTERED_SOURCES.clear()
+            oa_base._REGISTERED_SOURCES.extend(backup)
+            _clean_user(uid)
+
+    def test_ac3_nowcast_gescheiterte_zustellung_registriert_keinen_event_identity_eintrag(
+        self,
+    ):
+        """F001 (Fix-Loop, Adversary CRITICAL) -- AC-3-Verdrahtungsteil,
+        Nowcast-Pfad. Vorbild:
+        `test_ac13_gescheiterte_zustellung_bucht_weder_sperrzeit_noch_
+        tageszaehler` (test_alert_gate.py, S3).
+
+        Der isolierte Baustein-Test `test_ac3_check_event_identity_gate_
+        ist_rein_lesend_kein_registereintrag` (test_alert_gate.py) prueft
+        nur, dass `check_event_identity_gate()` selbst nie schreibt --
+        offen blieb, OB der Aufrufer `record_event_identity()` ueberhaupt
+        an die erfolgreiche Zustellung bindet. Der Adversary hat genau
+        diese Bindung im Nowcast-Pfad aufgeloest (Registrierung VOR den
+        Erfolgs-Guard `if not delivered: continue` verschoben) und alle 87
+        Tests blieben gruen -- ein nicht zugestellter Nowcast haette einen
+        Phantom-Eintrag hinterlassen, an dem eine spaeter eintreffende
+        amtliche Warnung zum selben Ereignis faelschlich unterdrueckt
+        wuerde, obwohl der Nutzer nie etwas bekommen hat.
+
+        GIVEN einen Trip ohne erreichbaren Kanal
+        WHEN  `check_radar_alerts()` einen faelligen Nowcast findet
+        THEN  scheitert die Zustellung UND es entsteht KEIN
+              `event_identity:`-Registereintrag.
+
+        Mutations-Gegenprobe (Pflicht): `record_event_identity()` im
+        Nowcast-Pfad VOR den Erfolgs-Guard verschieben MUSS diesen Test rot
+        machen."""
+        from services.alert_state import AlertStateService, EVENT_IDENTITY_KEY_PREFIX
+        from tests.helpers.nowcast_gate_fixtures import (
+            CountingFrameSource, make_trip, save_trip, settings_no_channel_reachable,
+            trip_alert_service,
+        )
+
+        uid = _fresh_user("s4b-f001-nowcast")
+        _clean_user(uid)
+        try:
+            trip = make_trip("trip-s4b-f001-nowcast")
+            save_trip(trip, uid)
+            raus = trip_alert_service(
+                uid, settings_no_channel_reachable(),
+                CountingFrameSource(onset_minutes=8), lambda s, b: None,
+            ).check_radar_alerts()
+            assert raus == 0, (
+                f"Voraussetzung: ohne erreichbaren Kanal darf kein Nowcast "
+                f"als zugestellt gelten ({raus!r})"
+            )
+            state = AlertStateService(user_id=uid).load(trip.id)
+            event_keys = [k for k in state if k.startswith(EVENT_IDENTITY_KEY_PREFIX)]
+            assert event_keys == [], (
+                f"Eine gescheiterte Nowcast-Zustellung darf keinen "
+                f"event_identity:-Eintrag hinterlassen: {event_keys!r}"
+            )
+        finally:
+            _clean_user(uid)
+
+    def test_ac3_amtlich_gescheiterte_zustellung_registriert_keinen_event_identity_eintrag(
+        self,
+    ):
+        """F001 (Fix-Loop, Adversary CRITICAL) -- AC-3-Verdrahtungsteil,
+        amtlicher Pfad. Analog zum Nowcast-Gegenstueck oben: der Adversary
+        hat `record_event_identity()` auch im amtlichen Pfad vor den
+        Erfolgs-Guard `if result.sent:` verschoben, ohne dass ein Test rot
+        wurde.
+
+        GIVEN eine amtliche Warnung der Klasse 'wet' (thunderstorm) UND
+              keinen erreichbaren Kanal
+        WHEN  `_send_official_alert_only()` laeuft
+        THEN  scheitert die Zustellung UND es entsteht KEIN
+              `event_identity:`-Registereintrag.
+
+        Mutations-Gegenprobe (Pflicht): `record_event_identity()` im
+        amtlichen Pfad VOR `if result.sent:` verschieben MUSS diesen Test
+        rot machen."""
+        from services.alert_state import AlertStateService, EVENT_IDENTITY_KEY_PREFIX
+        from services.official_alerts import OfficialAlert, register_official_alert_source
+        from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_no_channel_reachable
+
+        uid = _fresh_user("s4b-f001-amtlich")
+        _clean_user(uid)
+        oa_base, backup = _registered_sources_backup()
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            trip = _minimal_trip("trip-s4b-f001-amtlich")
+            _save_cached(uid, trip.id, [_data(1, precip_sum_mm=2.0)])
+            alert = OfficialAlert(
+                source="tdd-f001-amtlich", hazard="thunderstorm", level=3,
+                label="F001-Warnung",
+            )
+            register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
+            svc = TripAlertService(
+                user_id=uid, settings=settings_no_channel_reachable(),
+                mail_sink=lambda s, b: None,
+            )
+            notices = svc.check_official_alert_triggers(trip)
+            assert len(notices) == 1, "Voraussetzung: die Warnung muss als neu erkannt werden"
+
+            sent = svc._send_official_alert_only(trip, notices)
+            assert sent is False, (
+                f"Voraussetzung: ohne erreichbaren Kanal darf nichts als "
+                f"zugestellt gelten ({sent!r})"
+            )
+
+            state = AlertStateService(user_id=uid).load(trip.id)
+            event_keys = [k for k in state if k.startswith(EVENT_IDENTITY_KEY_PREFIX)]
+            assert event_keys == [], (
+                f"Eine gescheiterte amtliche Zustellung darf keinen "
+                f"event_identity:-Eintrag hinterlassen: {event_keys!r}"
             )
         finally:
             oa_base._REGISTERED_SOURCES.clear()

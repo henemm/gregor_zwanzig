@@ -629,10 +629,22 @@ nicht über „auf ein echtes Gewitter warten".
   - Test: zweite Meldung mit höherer Dringlichkeit UND Zeitfenster
     vollständig innerhalb des abgedeckten Fensters (die V1-Ausnahme
     greift hier NICHT, nur die Eskalation), `allowed=True`.
-  - Mutations-Gegenprobe (PFLICHT): den Eskalations-Zweig entfernen bzw.
-    hinter die V1-Ausnahme verschieben MUSS diesen Test rot machen — das
-    ist die Absicherung gegen die gefährlichste Fehlerrichtung „Alarm
-    bleibt aus" bei einer echten Verschärfung.
+  - Mutations-Gegenprobe (PFLICHT): den Eskalations-Zweig **entfernen**
+    MUSS diesen Test rot machen — das ist die Absicherung gegen die
+    gefährlichste Fehlerrichtung „Alarm bleibt aus" bei einer echten
+    Verschärfung.
+  - **Nachtrag 2026-08-16 (Adversary-Befund, Präzisierung):** Die
+    ursprüngliche Fassung verlangte zusätzlich, dass ein **Verschieben**
+    des Eskalations-Zweigs hinter die V1-Ausnahme den Test rot macht. Das
+    ist bei der gebauten Codeform nicht erfüllbar — und zwar, weil sie
+    **stärker** ist als gefordert: V2 und V1 sind zwei unabhängige,
+    seiteneffektfreie Ausstiege (`return _ALLOWED`,
+    `alert_gate.py:605-609`). Ihre Reihenfolge ist verhaltensgleich, V1
+    kann V2 gar nicht überstimmen. Eine Reihenfolge-Abhängigkeit, die man
+    testen könnte, existiert nicht mehr. Wird der Baustein später so
+    umgebaut, dass einer der beiden Zweige einen Seiteneffekt bekommt,
+    lebt die Reihenfolge-Anforderung wieder auf und braucht dann einen
+    eigenen Test.
 
 **V3 — kanalübergreifend**
 

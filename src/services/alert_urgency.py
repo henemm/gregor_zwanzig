@@ -60,6 +60,15 @@ def highest_urgency(*urgencies: str) -> str:
     return max(urgencies, key=lambda u: _RANK.get(u, 0))
 
 
+def exceeds(a: str, b: str) -> bool:
+    """Echtes Groesser-als auf der bestehenden LOW/MODERATE/HIGH-Skala
+    (Issue #1467 S4b-1, V2-Eskalation). Nutzt dieselbe `_RANK`-Tabelle wie
+    `highest_urgency()`/`meets_or_exceeds()` -- keine zweite Rangfolge
+    (Wiederholungs-Klasse #1481). Unbekannte Werte gelten konservativ als
+    niedrigste Stufe."""
+    return _RANK.get(a, 0) > _RANK.get(b, 0)
+
+
 def meets_or_exceeds(urgency: str, threshold: str) -> bool:
     """Rangvergleich fuer die Kanal-Schwelle (#1461 S3b-2a): erreicht/uebertrifft
     `urgency` den `threshold`? Nutzt dieselbe `_RANK`-Tabelle wie

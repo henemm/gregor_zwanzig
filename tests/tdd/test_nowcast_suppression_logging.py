@@ -729,6 +729,16 @@ def test_ac16_amtliche_ereignis_identitaet_unterdrueckung_erzeugt_protokoll_eint
             segment_ids=["1"], severity="HIGH", point_at=now, now=now,
         )
         trip = gust_alert_trip("trip-s4b-ac16")
+        # Issue #1467 S4b-1 Test-Fix: `gust_alert_trip()` ist fuer die
+        # Aenderungsalarm-Tests gebaut und setzt bewusst
+        # `official_alert_triggers_enabled = False` (Zeile 162 der
+        # gemeinsamen Helferfunktion, tests/helpers/alert_log_fixtures.py) --
+        # das wuerde `check_official_alert_triggers()` fuer JEDEN Trip
+        # blockieren, unabhaengig vom Ereignis-Identitaets-Gate, das dieser
+        # Test eigentlich prueft. Nur auf DIESER Instanz zurueckgesetzt, die
+        # geteilte Helferfunktion bleibt unveraendert (andere Tests haengen
+        # an ihrem Bestandsverhalten).
+        trip.official_alert_triggers_enabled = None
         WeatherSnapshotService(user_id=uid).save_dated(
             trip.id, date.today(), [weather(1, precip_sum_mm=2.0)],
         )

@@ -709,6 +709,48 @@ def test_ac5_leere_segment_kennung_erzeugt_niemals_ein_match():
         clean_uid(uid)
 
 
+def test_ac5_leere_segment_kennung_der_neuen_meldung_erzeugt_niemals_ein_match():
+    """AC-5 (Bruchstelle, zweite Richtung, Fix-Loop F002): ein Registereintrag
+    MIT echter Segment-Kennung gegen eine NEUE Meldung OHNE Segment-Kennung
+    (``segment_ids=[]``) darf ebenfalls NIE ein Match erzeugen — die
+    Bruchstelle gilt fuer BEIDE Seiten, nicht nur den Registereintrag.
+
+    Der vorhandene Test oben deckt nur die Richtung „Registereintrag ohne
+    Kennung, neue Meldung MIT Kennung" ab. Der Adversary hat den fail-soft-
+    Wächter am ANDEREN Ende (`if not new_segments: return None` in
+    `_find_matching_entry`, `alert_gate.py`) per Wildcard-Match ersetzt, und
+    keiner der 87 Tests wurde davon rot — obwohl der Pfad produktiv
+    erreichbar ist: `trip_alert.py` liefert bei fehlendem `segment_id` eine
+    leere Liste an `check_event_identity_gate()` weiter (Nowcast-Pfad).
+
+    Mutations-Gegenprobe (Pflicht): den fruehen Ausstieg bei leerer neuer
+    Segment-Menge durch einen Wildcard-Match (jede Segment-Menge, auch eine
+    leere, matcht) ersetzen MUSS diesen Test rot machen."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("s4b-f002")
+    clean_uid(uid)
+    try:
+        now = datetime.now(timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-f002", hazard_class="wet",
+            segment_ids=["3"], severity="HIGH", point_at=now, now=now,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-f002", hazard_class="wet",
+            segment_ids=[], severity="HIGH",
+            window_start=now - timedelta(minutes=10),
+            window_end=now + timedelta(minutes=30),
+            now=now + timedelta(minutes=5),
+        )
+        assert ergebnis.allowed is True, (
+            f"Eine neue Meldung OHNE Segment-Kennung darf gegen einen "
+            f"Registereintrag MIT Kennung kein Match erzeugen: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
 # ────────────────────── Zeitfenster (T4) — AC-6 / AC-7 ───────────────────────
 
 

@@ -50,6 +50,10 @@ REASON_COOLDOWN = "cooldown"
 # Issue #1461 S3b-2a: Kanal war eingeschaltet, die Meldung lag aber unter der
 # dort eingestellten Dringlichkeits-Schwelle.
 REASON_BELOW_THRESHOLD = "below_channel_threshold"
+# Issue #1467 S4b-1: quellenuebergreifende Ereignis-Identitaet
+# (`services.alert_gate.check_event_identity_gate`) hat dieselbe Meldung
+# bereits ueber eine ANDERE Quelle gesehen (Nowcast <-> amtlich).
+REASON_EVENT_DUPLICATE = "event_duplicate"
 
 # Ausloeser der Meldung selbst (`reason` des Eintrags).
 REASON_FORECAST_CHANGE = "forecast_change"
