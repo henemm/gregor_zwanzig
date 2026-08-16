@@ -182,8 +182,14 @@ Umgekehrte Reihenfolge (erst löschen) macht den Wächter **grün geboren** — 
   When der Wächter läuft / Then wird er rot; und Given jemand fügt der Restliste einen zweiten Eintrag hinzu
   / Then wird er ebenfalls rot
   - Test: „nur schrumpfen"-Ratsche und harte Obergrenze `len(KNOWN_VIOLATIONS) <= 1` als zwei getrennte
-    Tests. Ohne die Obergrenze könnte jeder künftige Fund mit zwei Zeilen stillgelegt werden — der Weg, auf
-    dem Wächter im Feld sterben.
+    Tests. **Reichweite, präzise:** Die Obergrenze fängt *akzidentelles* Wachstum — jemand trägt einen
+    Fund ein und zieht die Zahl nicht mit. Gegen eine *koordinierte* Manipulation in einem Commit
+    (Wiederbelebung + passender Restlisten-Eintrag + angehobene Obergrenze) schützt sie **nicht**, weil
+    Liste und Schranke in derselben, editierbaren Datei liegen. Dagegen wirken zwei andere Dinge: der
+    unabhängige Go-Verhaltenstest `TestRegisterCreatesNoLegacyTripsDir`, der am Wirkort misst statt am
+    Quelltext (nachgewiesen: er fängt diesen Fall), und die Review-Pflicht — wer eine Ausnahme will, muss
+    die Wächterdatei anfassen, und das sieht ein Reviewer. Nachgewiesen durch Adversary-Mutation M7b
+    (#1708 A, 2026-08-16).
 
 - **AC-8:** Given `tests/` und `scripts/` liegen bewusst außerhalb der Scanfläche / When der Wächter läuft /
   Then werden die dortigen legitimen `trips`-Vorkommen nicht gemeldet, und dieser Ausschluss ist als eigener

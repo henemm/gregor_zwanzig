@@ -7,8 +7,9 @@ Endpoints:
 - GET /api/preview/{trip_id}/sms — liefert JSON {subject, token_line, char_count}
 
 Auth: user_id-Query-Param wird vom Go-Proxy aus der Session injiziert (Bug #199).
-Trip-Owner-Check: Loader-Pfad ist user-scoped (`data/users/<user>/trips/<id>.json`),
-damit gilt: wer fremde user_id schickt, kommt nicht an fremde Trips.
+Trip-Owner-Check: Loader-Pfad ist user-scoped (`data/users/<user>/briefings/<id>.json`,
+Issue #1250 Cutover, ADR-0023), damit gilt: wer fremde user_id schickt, kommt nicht an
+fremde Trips.
 """
 from __future__ import annotations
 
