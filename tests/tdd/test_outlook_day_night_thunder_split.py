@@ -602,7 +602,8 @@ class TestPlainDayWordComesFromDayToken:
         row = self._first_row(render_outlook_plain([
             _stage(hourly_thunder=(), thunder="MED"),
         ]))
-        assert row.endswith("⚡MED"), f"Got: {row!r}"
+        # Issue #1488 B: Aggregatwort kommt aus THUNDER_LABEL_DE ("mittel").
+        assert row.endswith("⚡mittel"), f"Got: {row!r}"
 
 
 # ---------------------------------------------------------------------------

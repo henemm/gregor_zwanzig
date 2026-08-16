@@ -714,7 +714,7 @@ class TestThunderEnumAlerts:
         assert len(changes) == 0
 
     def test_thunder_high_to_none_detected(self):
-        """Thunder HIGH→NONE (ordinal 2→0, threshold 1.0) → decrease detected."""
+        """Thunder HIGH→NONE (ordinal 3→0, threshold 1.0) → decrease detected."""
         from services.weather_change_detection import WeatherChangeDetectionService
 
         cached = _make_segment_weather(
