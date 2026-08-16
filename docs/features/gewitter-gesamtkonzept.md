@@ -252,13 +252,32 @@ konsistenten Korridor, darunter zwei Primärquellen:
 | **ECMWF** Forecast User Guide | ab **50 J/kg** wird CAPE auf Karten grau maskiert — eine **Darstellungs**schwelle, keine Kausalregel | belegt |
 | **DWD** | „Je größer die CIN-Werte sind, desto unwahrscheinlicher ist die Auslöse von Gewittern" — **ohne Zahl** | qualitativ |
 
-⇒ Belegte Eckpunkte sind **−25 / −50 / −100 / −200 J/kg**. Vorschlag für die Paarung:
-schwächer als −25 → CAPE zählt voll · −25 bis −50 → leicht gedämpft · −50 bis −100 → stark
-gedämpft, nur mit kräftigem Auslöser · unter −100 → kein Beitrag.
+🔴 **Ersetzt am 2026-08-16 (#1896).** Alle Quellen oben beziehen sich auf **MLCIN über 100 hPa,
+pseudoadiabatisch** — eine andere Rechnung als die unsrige. Unsere CIN-Werte kommen
+ausschließlich aus **ICON** (DWD), das über **50 hPa** mischt, **reversibel** und **ohne
+Entrainment** rechnet. Dieselbe Zahl bedeutet damit etwas anderes (dieselbe Fehlerklasse wie
+ADR-0048 „CAPE ≠ CAPE", eine Ebene tiefer). Maßgeblich ist seither die ICON-nächste publizierte
+Quelle:
+
+| Quelle | Aussage | CIN-Definition |
+|---|---|---|
+| **ECMWF TM 852** (Groenemeijer, Púčik, Tsonevsky, Bechtold 2019, ESSL), Figure 2 | „CIN (hatched areas where CIN > 50 J/kg, contour at CIN = 100 J/kg)" | MLCIN über **50 hPa**, ohne Entrainment, pseudoadiabatisch — trifft **zwei von drei** Bestandteilen der ICON-Definition (die US-Quellen oben nur einen) |
+
+⇒ Belegte Eckpunkte sind seither **50 / 100 J/kg** (Beträge, s. Schritt 2). Der vierte Eckpunkt
+−200 der SPC-STP-Formel entfällt: er war im Code nie implementiert, und für die stärkste
+denkbare Dämpfung kennt die ICON-nahe Quelle oberhalb von 100 keinen Stützpunkt.
+
+🔴 **Richtung der verbleibenden Abweichung, belegt:** reversibel gerechnete CIN ist
+betragsmäßig **größer** als pseudoadiabatische (TM 852 Abschnitt 4.3.3 qualitativ; Murdzek,
+Markowski, Richardson, Kumjian 2021, *J. Atmos. Sci.* 78(10) quantitativ). Ein fester
+Umrechnungsfaktor existiert nicht — 50/100 1:1 übernommen dämpft also eher **zu früh**. Dem
+begegnet die **Struktur** der Kaskade (50 nimmt nur eine Stufe), nicht eine erfundene
+Korrekturzahl. Eine echte ICON-Eichung bleibt offen (Archivlücke, frühestens nach der
+Konvektionssaison 2027).
 
 🔴 **Korrektur einer verbreiteten Angabe:** Die kursierenden Werte „CIN > −10 = frei
 auslösbar" und „genau −50 als Schaltschwelle" sind **so nicht belegt** — sie klingen präzise,
-haben aber keine Quelle. Die tatsächlich belegten Grenzen sind die vier oben.
+haben aber keine Quelle.
 
 🔴 **Gegenbefund, der mitgeschrieben gehört:** Rasmussen & Blanchard (1998), die
 meistzitierte Klimatologie dazu, findet **CIN als eigenständigen Schwere-Prädiktor nur schwach**
@@ -318,7 +337,7 @@ ersetzt die heutige Fassung aus 3.1.
 | **Blitzdichte** (Frankreich inkl. Korsika, Blitze/km²/3 h) | < 0,003 | ≥ 0,003 | ≥ 0,015 | ≥ 0,075 | ECMWF; **oberste Grenze interpoliert** |
 | **Blitzpotenzial ICON-D2** (J/kg) | < 1 | ≥ 1 | ≥ 30 | ≥ 50 | Bína et al., COSMO-D2 — **alle drei belegt** |
 | **Blitzpotenzial ICON-EU** (J/kg) | eigene Leiter — **zu eichen** (Rang 7), bis dahin nicht gleichwertig | | | | Faktor 235 gemessen |
-| **CAPE, gepaart mit Hemmung** | s. Schritt 2 | | | | NWS/SPC + Penn State |
+| **CAPE, gepaart mit Hemmung** | s. Schritt 2 | | | | CAPE: NWS/SPC · Hemmung: ECMWF TM 852 (#1896) |
 | **Superzellen-Index** (Betrag, 1/s) | < 0,0003 | — | ≥ 0,0003 | ≥ 0,003 | DWD publiziert |
 | **Radar-Beobachtung** | nicht konvektiv | — | konvektiv | — | #1419 §4 |
 | **Updraft-Helizität** | trägt vorerst **nichts** bei — keine übertragbare Schwelle | | | | — |
@@ -338,13 +357,20 @@ AC-4/AC-5/AC-6, adversary-VERIFIED per Mutationsprobe) legen den Randwert jeweil
 dämpfende** Band — Tabelle unten entsprechend präzisiert, an der fachlichen Bedeutung ändert sich
 nichts.
 
+🔴 **Neueichung 2026-08-16 (#1896):** Die Bänder stehen seither auf der ICON-nächsten Quelle
+ECMWF TM 852 (Herleitung s. 3.5). Verglichen wird der **Betrag** der Hemmung — ICON liefert
+`cin_ml` positiv, US-Modelle negativ (#1760). Das Band „kein Beitrag" ist **ersatzlos
+entfallen**; der Randwert gehört weiterhin ins stärker dämpfende Band. Das oberste Band ist
+bewusst **kein reiner Deckel**, sondern die stärkere von „eine Stufe herunter" und „höchstens
+leicht" — sonst wäre die Kaskade an der 100er-Naht nicht monoton und *mehr* Hemmung ergäbe
+*mehr* Gewitter (Adversary-Befund F001, 2026-08-16).
+
 | Hemmung (CIN) | Bedeutung | CAPE darf höchstens |
 |---|---|---|
-| über −25 J/kg (d. h. `cin > -25`) | schwacher Deckel | **voll wirken** — Leiter 1000 / 2500 / 4000 J/kg |
-| −50 bis −25 J/kg (d. h. `-50 < cin <= -25`) | moderat | **eine Stufe weniger** |
-| −100 bis −50 J/kg (d. h. `-100 <= cin <= -50`) | großer Deckel | **höchstens „leicht"** (heutiges Verhalten) |
-| unter −100 J/kg (d. h. `cin < -100`) | Deckel hält | **kein Beitrag** |
-| Hemmung unbekannt | keine Aussage | **höchstens „leicht"** — die heutige Notbremse bleibt als sicherer Rückfall |
+| Betrag unter 50 J/kg | keine nennenswerte Hemmung | **voll wirken** — Leiter 1000 / 2500 / 4000 J/kg |
+| Betrag 50 bis einschließlich 100 J/kg | Deckel | **eine Stufe weniger** |
+| Betrag über 100 J/kg | starker Deckel | **höchstens „leicht"** — und nie weniger gedämpft als im Band darunter (die stärkere beider Dämpfungen gewinnt; eine Basis „leicht" fällt also auf „kein") |
+| Hemmung unbekannt | keine Aussage | **höchstens „leicht"** — die Notbremse bleibt als sicherer Rückfall |
 
 ⚠️ **Ausdrücklich:** Die Hemmung ist ein **Auslöse-Filter**, kein Schweremaß. Rasmussen &
 Blanchard (1998) zeigen, dass CIN die Schwere nur schwach vorhersagt — sie darf die Stufe

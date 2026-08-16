@@ -4,8 +4,21 @@ SPEC: docs/specs/modules/feat_1679_cin_paarung_cape_leiter.md
 
 Testet AC-1 bis AC-8 der CAPE-Leiter (1000/2500/4000 J/kg, NWS/SPC, regions-/
 modellskaliert ueber `model_registry.cape_ladder_thresholds_jkg()`), gepaart
-mit der Konvektionshemmung CIN (`dp.convective_inhibition_jkg`, #1531) in vier
-belegten Baendern (Penn State/COMET, SPC: -25/-50/-100/-200 J/kg).
+mit der Konvektionshemmung CIN (`dp.convective_inhibition_jkg`, #1531).
+
+🔴 Issue #1896 (SPEC: docs/specs/modules/fix_1896_cin_baender_icon.md) stellt die
+CIN-Baender auf die ICON-nahe Quelle ECMWF TM 852 um (frueher 25/50/100 plus
+Band "CAPE traegt nichts bei"):
+
+    None            -> hoechstens LOW   (Notbremse, UNVERAENDERT)
+    Betrag < 50     -> keine Daempfung
+    Betrag <= 100   -> genau eine Stufe herunter
+    Betrag > 100    -> hoechstens LOW   (Band NONE entfaellt ersatzlos)
+
+Die Tests, die die ALTEN Grenzen festschrieben, sind darauf neu verankert --
+am neuen Sollwert, nicht abgeschwaecht. Eichungsunabhaengige Zusicherungen
+(Notbremse `None`, Sentinel-Filter -999,9, Vorzeichen-Symmetrie #1760,
+"daempft nie nach oben") bleiben unveraendert bestehen.
 
 RED-Ursache (heute):
 - `app.model_registry.cape_ladder_thresholds_jkg()` existiert noch nicht ->
@@ -127,16 +140,34 @@ def test_ac2_cape_ladder_thresholds_jkg_unbekannte_kombination_liefert_none(
 
 # ────────────── AC-3 — schwacher Deckel: CAPE zaehlt voll, erreicht HIGH ──
 
-@pytest.mark.parametrize("cin", [0.0, -10.0, -24.9])
+@pytest.mark.parametrize("cin", [0.0, -10.0, -26.07, -49.9])
 def test_ac3_schwacher_deckel_cape_erreicht_med_unveraendert(cin):
-    """AC-3: CIN im Band 'schwacher Deckel' (>= -25) daempft NICHT -- CAPE
-    im MED-Bereich der vollen Leiter (>= 2500) liefert MED, unabhaengig vom
-    genauen CIN-Wert innerhalb des Bandes.
+    """AC-3 (#1896 AC-1, neu verankert): CIN unterhalb von 50 J/kg daempft
+    NICHT -- CAPE im MED-Bereich der vollen Leiter (>= 2500) liefert MED.
+    -26,07 ist der real gemessene ICON-D2-Wert vom Karnischen Hoehenweg
+    (Kontextdokument Befund 4); er lag bisher im 25er-Band und nahm eine
+    Stufe. Die Obergrenze 49,9 ersetzt die alte 24,9.
     """
     ergebnis = _call_cape(2600.0, cin)
     assert ergebnis == MED, (
-        f"CAPE 2600 J/kg mit CIN={cin} (schwacher Deckel) muss MED liefern, "
-        f"erhalten {ergebnis!r}"
+        f"CAPE 2600 J/kg mit CIN={cin} (unter 50 J/kg, keine Hemmung) muss "
+        f"MED liefern, erhalten {ergebnis!r}"
+    )
+
+
+def test_1896_ac1_echter_icon_d2_wert_26_07_laesst_die_cape_leiter_unveraendert():
+    """#1896 AC-1: der real gemessene ICON-D2-Wert 26,07 J/kg (Karnischer
+    Hoehenweg, 46.40N/12.52O) liefert ueber die FUSION dieselbe Stufe wie ein
+    Datenpunkt ganz ohne Hemmung -- er senkt sie nicht mehr um eine Stufe.
+    Prueft am Wirkort (`thunder_level_from_signals()`) und vergleicht gegen
+    die ungehemmte Leiter statt gegen eine hart notierte Stufe.
+    """
+    ohne_hemmung = _call_cape(4500.0, 0.0)
+    mit_26_07 = _call_cape(4500.0, 26.07)
+    assert ohne_hemmung == HIGH, "Vorbedingung: CAPE 4500 J/kg ist HIGH"
+    assert mit_26_07 == ohne_hemmung, (
+        f"CIN=26,07 J/kg (real gemessen, ICON-D2) muss die CAPE-Stufe "
+        f"unveraendert lassen ({ohne_hemmung!r}), erhalten {mit_26_07!r}"
     )
 
 
@@ -159,43 +190,53 @@ def test_ac3_schwacher_deckel_cape_erreicht_high_kern_regressionsanker():
 
 # ────────────── AC-4 — moderater Deckel: eine Stufe weniger ───────────────
 
-@pytest.mark.parametrize("cin", [-25.0, -40.0, -49.9])
-def test_ac4_moderater_deckel_eine_stufe_weniger_von_high(cin):
-    """AC-4: CIN im Band 'moderat' (-50 bis -25) daempft CAPE um GENAU eine
-    Stufe -- CAPE im HIGH-Bereich der vollen Leiter liefert MED, nicht HIGH
-    und nicht LOW.
+@pytest.mark.parametrize("cin", [-50.0, -75.0, -100.0])
+@pytest.mark.parametrize(
+    "cape, erwartet", [(4500.0, MED), (2600.0, LOW), (1100.0, NONE)],
+    ids=["basis_high", "basis_med", "basis_low"],
+)
+def test_ac4_moderater_deckel_eine_stufe_weniger_von_high(cin, cape, erwartet):
+    """AC-4 (#1896 AC-2, neu verankert): CIN von 50 bis EINSCHLIESSLICH
+    100 J/kg nimmt GENAU eine Stufe -- fuer jede Basisstufe der vollen Leiter.
+    HIGH wird MED (nicht LOW, wie es die alten Baender taten), MED wird LOW,
+    LOW faellt auf NONE.
+
+    Der Grenzwert 100,0 liegt im staerker daempfenden Band ("<= 100"), 50,0
+    ist die untere, inklusive Kante.
     """
-    ergebnis = _call_cape(4500.0, cin)
-    assert ergebnis == MED, (
-        f"CAPE 4500 J/kg (volle Leiter: HIGH) mit CIN={cin} (moderat) muss "
-        f"MED liefern (eine Stufe weniger), erhalten {ergebnis!r}"
+    ergebnis = _call_cape(cape, cin)
+    assert ergebnis == erwartet, (
+        f"CAPE {cape} J/kg mit CIN={cin} (Band 50..100) muss {erwartet!r} "
+        f"liefern (genau eine Stufe herunter), erhalten {ergebnis!r}"
     )
 
 
 def test_ac4_moderater_deckel_boden_bei_none_nicht_negativ():
-    """AC-4 Bodenfall: CAPE im LOW-Bereich der vollen Leiter mit moderatem
-    CIN liefert NONE (eine Stufe unter LOW), nicht LOW und keinen Fehler.
+    """AC-4 Bodenfall (#1896 AC-2): CAPE im LOW-Bereich der vollen Leiter mit
+    CIN im Band 50..100 liefert NONE (eine Stufe unter LOW), nicht LOW und
+    keinen Fehler.
 
     Gegenprobe (Spec): Wuerde 'eine Stufe weniger' faelschlich als
     'hoechstens LOW' (statt relativ zur Basisstufe) interpretiert, laege
     dieser Fall weiterhin bei LOW statt NONE.
     """
-    ergebnis = _call_cape(1000.0, -30.0)
+    ergebnis = _call_cape(1000.0, -75.0)
     assert ergebnis == NONE, (
-        f"CAPE 1000 J/kg (volle Leiter: LOW) mit CIN=-30.0 (moderat) muss "
-        f"NONE liefern (eine Stufe unter LOW, Boden erreicht), erhalten "
-        f"{ergebnis!r}"
+        f"CAPE 1000 J/kg (volle Leiter: LOW) mit CIN=-75.0 muss NONE liefern "
+        f"(eine Stufe unter LOW, Boden erreicht), erhalten {ergebnis!r}"
     )
 
 
 # ────── AC-5 — grosser Deckel + unbekannt: hoechstens LOW (Regression) ────
 
-@pytest.mark.parametrize("cin", [-50.0, -75.0, -99.9, None])
+@pytest.mark.parametrize("cin", [None])
 def test_ac5_grosser_deckel_und_unbekannt_hoechstens_low(cin):
-    """AC-5 (wichtigster Regressionstest): CIN im Band 'grosser Deckel'
-    (-100 bis -50) ODER unbekannt (`None`) daempft CAPE auf hoechstens LOW --
-    identisch zum Verhalten VOR dieser Aenderung (`feat_1474` AC-6), jetzt
-    aber nur noch fuer diese beiden Faelle statt generell.
+    """AC-5 (#1896 AC-5, Notbremse UNVERAENDERT): unbekanntes CIN (`None`)
+    daempft CAPE auf hoechstens LOW -- identisch zum Verhalten VOR dieser
+    Aenderung (`feat_1474` AC-6). Die frueher hier mitgepruefte Bandreihe
+    -50/-75/-99,9 gehoert seit #1896 ins Band "eine Stufe herunter" und wird
+    in `test_ac4_moderater_deckel_eine_stufe_weniger_von_high` geprueft --
+    die Notbremse selbst ist von der Eichung unberuehrt.
 
     Gegenprobe (Spec): Laege `cin_jkg=None` versehentlich im Band
     'schwacher Deckel' (z.B. durch ein `or 0`-Muster), wuerde CAPE bei
@@ -211,29 +252,33 @@ def test_ac5_grosser_deckel_und_unbekannt_hoechstens_low(cin):
 
 # ────────────── AC-6 — Deckel haelt: kein Beitrag ─────────────────────────
 
-@pytest.mark.parametrize("cin", [-100.1, -150.0, -200.0])
+@pytest.mark.parametrize("cin", [-100.1, -104.47, -767.8])
 def test_ac6_deckel_haelt_kein_beitrag_unabhaengig_von_cape_hoehe(cin):
-    """AC-6: CIN unter -100 J/kg ('Deckel haelt') laesst CAPE NICHTS
-    beitragen -- unabhaengig davon, wie hoch CAPE liegt.
-
-    Gegenprobe (Spec): Wuerde 'kein Beitrag' faelschlich als 'hoechstens
-    LOW' (statt NONE) umgesetzt, laege das Ergebnis bei LOW statt NONE.
+    """AC-6 (#1896 AC-3, neu verankert): CIN ueber 100 J/kg deckelt auf
+    hoechstens LOW -- das frueher hier gepruefte Band "CAPE traegt gar nichts
+    bei" (NONE) entfaellt ersatzlos, weil TM 852 oberhalb von 100 keinen
+    weiteren Stuetzpunkt kennt. -104,47 ist der real gemessene ICON-EU-Wert
+    aus den Abruzzen (`test_dwd_eu_thunder_energy_signals_fetch.py:17`),
+    -767,8 der Bestands-Extremwert dieser Datei. Selbst bei extremem CAPE
+    (10000 J/kg) bleibt LOW stehen.
     """
     ergebnis = _call_cape(10000.0, cin)
-    assert ergebnis == NONE, (
-        f"CAPE 10000 J/kg (extrem) mit CIN={cin} (Deckel haelt) muss NONE "
-        f"liefern, erhalten {ergebnis!r}"
+    assert ergebnis == LOW, (
+        f"CAPE 10000 J/kg (extrem) mit CIN={cin} (ueber 100 J/kg) muss LOW "
+        f"liefern (nicht NONE -- das Band entfaellt), erhalten {ergebnis!r}"
     )
 
 
 def test_ac6_grenzwert_minus_100_liegt_noch_im_grossen_deckel_nicht_haelt():
-    """AC-6 Grenzfall: CIN=-100.0 EXAKT liegt noch im Band 'grosser Deckel'
-    (>= -100), NICHT im Band 'haelt' (< -100) -- Grenze ist inklusiv am
-    schwaecheren Ende, exklusiv am staerkeren."""
+    """AC-6 Grenzfall (#1896 AC-2/AC-3): CIN=-100.0 EXAKT gehoert ins
+    staerker daempfende der beiden angrenzenden Baender -- also noch in
+    "eine Stufe herunter" (`<= 100`), NICHT in "hoechstens LOW" (`> 100`).
+    Aus Basis HIGH wird damit MED.
+    """
     ergebnis = _call_cape(4500.0, -100.0)
-    assert ergebnis == LOW, (
-        f"CIN=-100.0 (exakt) muss noch als 'grosser Deckel' gelten (LOW), "
-        f"nicht als 'haelt' (NONE) -- erhalten {ergebnis!r}"
+    assert ergebnis == MED, (
+        f"CIN=-100.0 (exakt) muss noch 'eine Stufe herunter' bedeuten (MED "
+        f"aus HIGH), nicht den Deckel LOW -- erhalten {ergebnis!r}"
     )
 
 
@@ -327,19 +372,16 @@ def test_ac8_thunder_level_from_signals_ohne_cin_parameter_bricht_mit_typeerror(
 @pytest.mark.parametrize(
     "cin_positiv, erwartet",
     [
-        # 7.29 J/kg: Betrag < 25 -- schwacher Deckel, CAPE zaehlt VOLL.
+        # 7.29 J/kg (ICON-D2, KHW): Betrag < 50 -- keine Hemmung, CAPE voll.
         (7.29, HIGH),
-        # 104.47 J/kg: Betrag > 100 -- nach der Tabelle in
-        # docs/features/gewitter-gesamtkonzept.md ("unter -100 J/kg: Deckel
-        # haelt, kein Beitrag") liegt das NEGATIVE Pendant -104.47 ebenfalls
-        # in diesem Band, nicht im Band "grosser Deckel" (-100 bis -50).
-        # Die Spec-Prosa zu AC-1 nennt hierfuer "hoechstens 'leicht'" --
-        # das ist mit NONE (schwaecher als LOW) technisch weiterhin erfuellt
-        # ("hoechstens" = Obergrenze), aber NICHT das Band "grosser Deckel"
-        # selbst. S. Bericht: Unstimmigkeit in der Spec-Illustration.
-        (104.47, NONE),
-        # 767.8 J/kg: Betrag weit > 100 -- ebenfalls "Deckel haelt".
-        (767.8, NONE),
+        # 26.07 J/kg (ICON-D2, KHW, Positivkontrolle #1896 Befund 4): seit
+        # #1896 ebenfalls unter 50 -- keine Daempfung mehr (vorher eine Stufe).
+        (26.07, HIGH),
+        # 104.47 J/kg (ICON-EU, Abruzzen): Betrag > 100 -- Deckel auf LOW.
+        # Bis #1896 lag dieser Wert im inzwischen entfallenen NONE-Band.
+        (104.47, LOW),
+        # 767.8 J/kg: Betrag weit ueber 100 -- ebenfalls Deckel LOW.
+        (767.8, LOW),
     ],
 )
 def test_1760_ac1_ac5_positiver_cin_daempft_fusionierte_stufe_echte_dwd_werte(
@@ -387,8 +429,10 @@ def test_1760_ac3_gefilterter_sentinel_faellt_ueber_fuse_auf_hoechstens_low():
     Gegenprobe (Mutation): Wird der Sentinel-Filter in `dwd.py`/`dwd_eu.py`
     entfernt und ein rohes -999.9 erreicht `convective_inhibition_jkg`
     unveraendert, liefert `_gedaempft_durch_cin()` (Betrag 999.9 > 100)
-    zwar IMMER NOCH `NONE` -- das ist der Fund, den die Mutations-Gegenprobe
-    im Bericht dokumentiert, s. dort.
+    zwar IMMER NOCH den staerksten Deckel -- das ist der Fund, den die
+    Mutations-Gegenprobe im Bericht dokumentiert, s. dort. (Seit #1896 ist
+    dieser staerkste Deckel LOW statt NONE; der Fund bleibt derselbe, den
+    Filter selbst prueft `test_1760_f001_...` weiter unten.)
     """
     from app.model_registry import cape_ladder_thresholds_jkg
     from app.models import ForecastDataPoint
@@ -547,4 +591,168 @@ def test_1760_ac6_daempfung_hebt_die_stufe_nie_ueber_die_basis(cin_positiv):
     assert thunder_ordinal(ergebnis) <= thunder_ordinal(HIGH), (
         f"CIN={cin_positiv} (positiv) darf die Stufe NIE ueber HIGH heben, "
         f"erhalten {ergebnis!r}"
+    )
+
+
+# ===========================================================================
+# Issue #1896 -- CIN-Baender auf die ICON-nahe Quelle ECMWF TM 852 umgestellt
+# (Groenemeijer, Pucik, Tsonevsky, Bechtold 2019, Figure 2). Das Band "CAPE
+# traegt gar nichts bei" (NONE) entfaellt ersatzlos.
+# SPEC: docs/specs/modules/fix_1896_cin_baender_icon.md
+#
+# AC-1/AC-2/AC-3/AC-5 sind oben an den bestehenden Bandtests neu verankert.
+# Hier stehen die ACs, fuer die es keinen Bestandstest gab.
+# ===========================================================================
+
+# CAPE-Werte der nominalen Leiter (1000/2500/4000) je Basisstufe -- die Basis
+# wird NICHT behauptet, sondern im Test gegen den ungehemmten Lauf geprueft.
+_CAPE_JE_BASIS = {NONE: 500.0, LOW: 1100.0, MED: 2600.0, HIGH: 4500.0}
+
+
+@pytest.mark.parametrize("cin", [101.0, 200.0, 1000.0, 10000.0])
+@pytest.mark.parametrize("basis", [HIGH, MED])
+def test_1896_ac4_beliebig_grosses_cin_setzt_das_cape_signal_nie_auf_none(
+    basis, cin,
+):
+    """#1896 AC-4 (zugespitzt nach Adversary-Befund F001): die Hemmung
+    schaltet das CAPE-Signal nicht mehr basis-unabhaengig ab -- bei Basis HIGH
+    und MED bleibt fuer JEDEN Betrag ueber 100 J/kg mindestens LOW stehen.
+
+    Basis LOW ist bewusst NICHT hier: sie darf um ihre eine Stufe auf NONE
+    sinken (normale Ein-Stufen-Daempfung aus AC-2), s. den Test darunter.
+    Geprueft am Wirkort (Fusion `thunder_level_from_signals()`).
+    """
+    ergebnis = _call_cape(_CAPE_JE_BASIS[basis], cin)
+    assert thunder_ordinal(ergebnis) >= thunder_ordinal(LOW), (
+        f"Basis {basis!r} mit CIN={cin} darf nie unter LOW fallen -- das Band "
+        f"'CAPE traegt nichts bei' existiert seit #1896 nicht mehr, erhalten "
+        f"{ergebnis!r}"
+    )
+
+
+@pytest.mark.parametrize("cin", [101.0, 200.0, 1000.0, 10000.0])
+def test_1896_ac4_basis_low_faellt_ueber_100_auf_denselben_wert_wie_darunter(cin):
+    """#1896 AC-4/AC-9: eine Basis LOW ergibt oberhalb von 100 J/kg NONE --
+    und zwar DENSELBEN Wert wie im Band darunter (50..100). Ein reiner Deckel
+    auf LOW wuerde sie hier wieder anheben; genau diese Naht ist der
+    Adversary-Befund F001.
+    """
+    darunter = _call_cape(_CAPE_JE_BASIS[LOW], 75.0)
+    ergebnis = _call_cape(_CAPE_JE_BASIS[LOW], cin)
+    assert darunter == NONE, "Vorbedingung: Basis LOW faellt im Band 50..100 auf NONE"
+    assert ergebnis == darunter, (
+        f"Basis LOW mit CIN={cin} (ueber 100) muss {darunter!r} liefern -- "
+        f"denselben Wert wie im Band darunter, nicht mehr; erhalten "
+        f"{ergebnis!r}"
+    )
+
+
+@pytest.mark.parametrize("basis", [NONE, LOW, MED, HIGH])
+def test_1896_ac9_mehr_hemmung_ergibt_nie_mehr_gewitter_ueber_die_bandnaehte(
+    basis,
+):
+    """#1896 AC-9 (Adversary-Befund F001): ueber eine aufsteigende Wertereihe,
+    die die Bandnaehte ausdruecklich einschliesst, faellt das Ergebnis monoton
+    -- ein groesserer CIN-Betrag liefert NIE eine hoehere Stufe als ein
+    kleinerer.
+
+    RED-Ursache: das oberste Band war ein ABSOLUTER Deckel auf LOW, das
+    mittlere rechnet RELATIV zur Basis. An der 100er-Naht ueberholen sie sich:
+    Basis LOW faellt bei 100,0 auf NONE, wird bei 100,1 aber wieder auf LOW
+    angehoben -- mehr Hemmung ergaebe mehr Gewitter.
+
+    Geprueft am Wirkort (Fusion `thunder_level_from_signals()`).
+    """
+    reihe = [49.9, 50.0, 99.9, 100.0, 100.1, 200.0, 10000.0]
+    cape = _CAPE_JE_BASIS[basis]
+    stufen = [_call_cape(cape, cin) for cin in reihe]
+    for (cin_klein, stufe_klein), (cin_gross, stufe_gross) in zip(
+        zip(reihe, stufen), zip(reihe[1:], stufen[1:]),
+    ):
+        assert thunder_ordinal(stufe_gross) <= thunder_ordinal(stufe_klein), (
+            f"Basis {basis!r}: CIN={cin_gross} liefert {stufe_gross!r}, aber "
+            f"das kleinere CIN={cin_klein} nur {stufe_klein!r} -- mehr Hemmung "
+            f"darf nie mehr Gewitter ergeben (ganze Reihe: "
+            f"{list(zip(reihe, stufen))!r})"
+        )
+
+
+@pytest.mark.parametrize(
+    "cin", [None, 0.0, 10.0, 49.9, 50.0, 100.0, 100.1, 500.0, 10000.0],
+)
+@pytest.mark.parametrize("basis", [NONE, LOW, MED, HIGH])
+def test_1896_ac6_daempfung_liefert_nie_mehr_als_die_ungehemmte_basis(
+    basis, cin,
+):
+    """#1896 AC-6: ueber alle vier Basisstufen und die ganze Wertereihe
+    (inklusive `None`) gilt Ergebnis <= Basis -- die Hemmung daempft
+    ausschliesslich und hebt nie an (Rasmussen & Blanchard 1998,
+    Gesamtkonzept 3.7); eichungsunabhaengig. Die Basis stammt aus DEMSELBEN
+    Fusionsaufruf ohne Hemmung, nicht aus einer hart notierten Stufe.
+    """
+    cape = _CAPE_JE_BASIS[basis]
+    ungehemmt = _call_cape(cape, 0.0)
+    ergebnis = _call_cape(cape, cin)
+    assert thunder_ordinal(ergebnis) <= thunder_ordinal(ungehemmt), (
+        f"CAPE {cape} J/kg (ungehemmt {ungehemmt!r}) mit CIN={cin!r} liefert "
+        f"{ergebnis!r} -- die Hemmung darf die Stufe NIE anheben"
+    )
+
+
+@pytest.mark.parametrize(
+    "betrag, erwartet",
+    [(10.0, HIGH), (49.0, HIGH), (50.0, MED), (100.0, MED), (150.0, LOW)],
+)
+def test_1896_ac8_gleicher_betrag_mit_beiden_vorzeichen_daempft_identisch(
+    betrag, erwartet,
+):
+    """#1896 AC-8: derselbe Betrag positiv (ICON-Konvention) und negativ
+    (US-Modelle) liefert dasselbe Ergebnis -- die Betragslogik aus #1760
+    bleibt wirksam. Zusaetzlich wird das ERGEBNIS am neuen Band festgemacht:
+    ein Test, der nur `positiv == negativ` prueft, waere auch mit den alten
+    Baendern gruen und bewiese fuer #1896 nichts.
+    """
+    positiv = _call_cape(4500.0, betrag)
+    negativ = _call_cape(4500.0, -betrag)
+    assert positiv == negativ == erwartet, (
+        f"CIN=+{betrag} und CIN=-{betrag} muessen beide {erwartet!r} liefern "
+        f"(Basis HIGH, TM-852-Baender), erhalten positiv={positiv!r}, "
+        f"negativ={negativ!r}"
+    )
+
+
+def test_1896_ac7_icon_d2_und_icon_eu_teilen_eine_cin_baenderleiter():
+    """#1896 AC-7: derselbe CIN-Betrag fuehrt bei ICON-D2 und ICON-EU zur
+    GLEICHEN Daempfung -- beide teilen denselben ICON-Code und damit dieselbe
+    CIN-Definition (Spec, Abgrenzung zu ADR-0048).
+
+    Gemessen am Produktionspfad `_fuse_thunder_levels()` mit den echten,
+    getrennt kalibrierten CAPE-Leitern beider Modelle -- kein Netz, kein
+    Mock. Der Provider-Unterschied (`dwd.py`/`dwd_eu.py`) endet fachlich beim
+    Rohwert `cin_ml`: beide liefern denselben positiven Betrag in dasselbe
+    Feld (`convective_inhibition_jkg`), und die Baender wirken erst dahinter
+    -- ein HTTP-Abruf wuerde hier nur die Providerschicht doppelt testen.
+    Geprueft wird nicht nur Gleichheit (die waere auch mit den alten Baendern
+    erfuellt), sondern die neue Sollstufe LOW fuer 104,47 J/kg.
+    """
+    from app.model_registry import cape_ladder_thresholds_jkg
+    from app.models import ForecastDataPoint
+    from providers.thunder_enrichment import _fuse_thunder_levels
+
+    ts = datetime.now(timezone.utc)
+    ergebnisse = {}
+    for model_id in ("icon_d2", "icon_eu"):
+        ladder = cape_ladder_thresholds_jkg(model_id, "DE_ALPEN")
+        assert ladder is not None, f"Vorbedingung: {model_id}/DE_ALPEN kalibriert"
+        dp = ForecastDataPoint(
+            ts=ts, thunder_level=None, cape_jkg=ladder[2] + 500.0,
+            convective_inhibition_jkg=104.47,
+        )
+        _fuse_thunder_levels([dp], ladder, None)
+        ergebnisse[model_id] = dp.thunder_level
+
+    assert ergebnisse["icon_d2"] == ergebnisse["icon_eu"] == LOW, (
+        f"CIN=104,47 J/kg (real gemessen, ICON-EU/Abruzzen) muss bei BEIDEN "
+        f"ICON-Modellen dieselbe Stufe LOW ergeben (eine Baenderleiter), "
+        f"erhalten {ergebnisse!r}"
     )

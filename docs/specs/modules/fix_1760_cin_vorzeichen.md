@@ -96,6 +96,14 @@ steigt nirgends — die Dämpfung dämpft ausschließlich.
 
 ## Known Limitations (bewusst NICHT in dieser Scheibe)
 
+> ✅ **Abgelöst am 2026-08-16 durch #1896** (`fix_1896_cin_baender_icon.md`). Die unten
+> festgehaltene Nicht-Eichung ist erledigt: Die Bänder stehen seither auf der ICON-nächsten
+> publizierten Quelle (ECMWF TM 852, 50-hPa-Mischschicht ohne Entrainment) — 25/50/100 wurde zu
+> 50/100, das Band „kein Beitrag" entfiel ersatzlos. Der Text unten bleibt als Historie stehen;
+> die verbleibende Einschränkung (Adiabatik: ICON reversibel, TM 852 pseudoadiabatisch —
+> Richtung belegt, Betrag unbekannt) ist in der Spec von #1896 dokumentiert. Der dort genannte
+> Verweis auf #1678 ist überholt: die Feineichung lief unter #1896.
+
 🔴 **Die Bänder sind für ICON nicht geeicht.** Die Beträge 25/50/100/200 stammen aus US-Praxis für
 **MLCIN über 100 hPa**; ICON mischt über **50 hPa** (ICON-Code Z. 2701-2702: *„Depth of mixed
 surface layer: 50hPa following Huntrieser, 1997"*), rechnet **reversibel** statt pseudoadiabatisch
