@@ -392,7 +392,7 @@ func TestRegisterCreatesUserDirs(t *testing.T) {
 
 	// THEN: User directories are created
 	base := filepath.Join(s.DataDir, "users", "newuser")
-	for _, sub := range []string{"locations", "trips", "gpx", "weather_snapshots"} {
+	for _, sub := range []string{"locations", "gpx", "weather_snapshots"} {
 		path := filepath.Join(base, sub)
 		info, err := os.Stat(path)
 		if err != nil {

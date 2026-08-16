@@ -11,10 +11,6 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 )
 
-func (s *Store) TripsDir() string {
-	return filepath.Join(s.DataDir, "users", s.UserID, "trips")
-}
-
 // normalizeTrip coerces nil slice fields (Corridors, Stages, per-stage
 // Waypoints, AlertRules) to empty slices in place. Single source of truth
 // for both the read path (LoadTrip/LoadTrips) and the write path (SaveTrip).

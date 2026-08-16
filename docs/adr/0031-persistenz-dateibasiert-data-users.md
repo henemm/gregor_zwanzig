@@ -13,7 +13,7 @@ Prozessgrenzen hinweg (Go-API ist der einzige Schreiber, Python liest).
 ## Entscheidung
 
 Persistenz ist ein dateibasierter JSON-Store unter `data/users/{user_id}/`
-(`user.json`, `trips/`, `briefings/` (kind=route|vergleich, ADR-0023), `gpx/`,
+(`user.json`, `briefings/` (kind=route|vergleich, ADR-0023), `gpx/`,
 `locations.json`, `alert_state/`, Snapshot-/Throttle-Dateien). Der Go-Store
 (`internal/store/`) ist die einzige Schreib-Autorität; Normalisierung beim
 Load (`normalizeTrip`, `NormalizeComparePreset`). Es gibt keine Datenbank.
