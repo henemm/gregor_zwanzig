@@ -234,6 +234,19 @@ Detailablauf, WIP-Sicherung beim Deploy: `docs/reference/operations_playbook.md`
 
 Diese Instanz heißt `gregor`. Siehe `~/.claude/CLAUDE.md` → „Inter-Instance Messaging".
 
+**🔴 VERBOTEN: MQ-Nachrichten `gregor` → `gregor`.** Alle Parallelsitzungen dieses Projekts
+teilen sich dieselbe MQ-Adresse `gregor` — eine Nachricht an `gregor` landet also bei einem
+selbst, benachrichtigt aber den PO per Telegram. Das ist Lärm, kein Kanal (PO-Ansage
+2026-08-16).
+
+| Empfänger | Weg |
+|---|---|
+| **Andere Sitzung im selben Projekt** (paralleler Worktree/Tab) | `ListAgents` → `SendMessage({to: "<Name aus der Liste>", message: "…"})` — direkt, sofort, ohne PO-Benachrichtigung |
+| **Andere Instanz** (`infra`, `n8n`, `website`, `nightjet`, `security`) | `/home/hem/claude-mq/send.sh gregor <empfaenger> …` |
+
+MQ ist ausschließlich der **Instanz-übergreifende** Weg. Innerhalb von `gregor` gilt immer
+`SendMessage`.
+
 # Compact instructions
 
 Diese Sektion wird von `/compact` automatisch als Zusammenfassungs-Anleitung gelesen — nie einen langen `/compact <Text>` tippen, einfaches `/compact` genügt.
