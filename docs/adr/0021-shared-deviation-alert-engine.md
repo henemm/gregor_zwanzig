@@ -112,8 +112,9 @@ dieser Scheibe (Scheibe 2, #1169).
   Scope `compare_radar`). Das **Alert-Log** ist ebenfalls kein Trip-Sonderweg
   mehr: beide Nowcast-Pfade protokollieren jetzt auch, WARUM eine Meldung
   unterdrückt wurde (`REASON_QUIET_HOURS`/`REASON_COOLDOWN`/
-  `REASON_DAILY_LIMIT`) — Änderungs- und amtlicher Alarm bewusst weiterhin
-  nicht (offene Lücke O3 in `feat_1459_alert_protokoll.md`). Kein neues
+  `REASON_DAILY_LIMIT`) —
+  Änderungs- und amtlicher Alarm bewusst weiterhin nicht
+  (offene Lücke O3 in `feat_1459_alert_protokoll.md`). Kein neues
   Architekturprinzip: das bestehende aus diesem ADR wird auf den letzten noch
   abweichenden Pfad angewandt. Details:
   `docs/specs/modules/rework_1467_s3_nowcast.md`.
@@ -162,3 +163,26 @@ dieser Scheibe (Scheibe 2, #1169).
   Eine Unterdrückung durch diese Stufe erzeugt **keinen** Protokolleintrag (Lücke
   O3 aus dem vorigen Nachtrag bleibt bewusst offen). Details:
   `docs/specs/modules/fix_1594_alarm_vorlauf_sperre.md`.
+- **Nachtrag (Issue #1467 S4a, 2026-08-16):** was der Nachtrag zu #1467 S3 für die
+  beiden **Nowcast**-Pfade vollzogen hat, gilt jetzt auch für die beiden
+  **amtlichen** Pfade. `trip_alert.py::_send_official_alert_only` und
+  `compare_official_alert.py::_check_one_preset` führten bis dahin je eine eigene
+  Inline-Prüfkette; beide laufen seit dieser Scheibe über denselben geteilten
+  Ablauf-Baustein `services/alert_gate.py::check_official_alert_gate()` mit der
+  festen Reihenfolge Ruhezeit → Tages-Obergrenze. Der Satz zur
+  Unterdrückungs-Protokollierung aus dem S3-Nachtrag bleibt unverändert richtig
+  (der amtliche Pfad protokolliert weiterhin keine Gründe); überholt ist allein,
+  was er zusätzlich implizierte — dass der amtliche Pfad keinen geteilten
+  Ablauf-Baustein nutzt.
+  Zwei bewusste Verhaltensänderungen: (1) Der amtliche **Trip**-Pfad **liest** den
+  geteilten Sperrzeit-Topf `"trip"` nicht mehr — ein zugestellter Änderungsalarm
+  verschluckte bis dahin bis zu 120 Minuten lang jede amtliche Eskalation;
+  **geschrieben** wird der Topf weiterhin, die harmlose Gegenrichtung bleibt
+  also zu. Der Baustein kennt deshalb **keinen** Cooldown-Parameter: die
+  Zusicherung ist eine Eigenschaft des Funktionstyps, nicht eine Disziplin der
+  Aufrufstelle. (2) Der **Ortsvergleich** prüft die Tages-Obergrenze jetzt VOR dem
+  Warnungs-Abruf statt danach — ein erschöpftes Kontingent kostet keinen
+  Fremd-Abruf mehr. `check_briefing_imminent()` bleibt in beiden Pfaden ein
+  eigener Aufruf unmittelbar NACH dem Baustein, `is_silenced` bleibt
+  Compare-eigen und außerhalb. Kein neues Architekturprinzip. Details:
+  `docs/specs/modules/rework_1467_s4a_amtlich.md`.

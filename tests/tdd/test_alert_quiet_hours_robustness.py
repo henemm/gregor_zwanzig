@@ -1013,8 +1013,14 @@ _QUIET_CALL_NAMES = {"is_quiet_hours", "_is_quiet_hours"}
 # Leere und die Sicherung 1 unten (mindestens eine Aufrufstelle gefunden)
 # wuerde ihn zu Recht als Testfehler melden. `trip_alert.py` bleibt in der
 # Liste: dort rufen der Aenderungs- und der amtliche Pfad weiterhin selbst.
+#
+# Issue #1467 S4a: aus demselben Grund faellt jetzt `compare_official_alert.py`
+# aus der Liste — die Ruhezeit-Aufrufstelle des amtlichen Ortsvergleichs ist in
+# `check_official_alert_gate()` umgezogen, also in `alert_gate.py`, das bereits
+# in der Liste steht und die Aufrufstelle damit weiter bewacht. `trip_alert.py`
+# bleibt: der Aenderungspfad ruft `_is_quiet_hours()` dort unveraendert selbst
+# (der amtliche Trip-Pfad fragt jetzt ebenfalls ueber den Baustein).
 _GUARDED_FILES = [
-    "compare_official_alert.py",
     "alert_gate.py",
     "trip_alert.py",
     "compare_alert.py",

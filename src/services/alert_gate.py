@@ -158,6 +158,62 @@ def check_nowcast_gate(
     return _ALLOWED
 
 
+def check_official_alert_gate(
+    *,
+    user_id: str,
+    quiet_from: Optional[str],
+    quiet_to: Optional[str],
+    context_label: str,
+    now: datetime,
+    zone: ZoneInfo,
+) -> GateResult:
+    """Darf fuer diese Entitaet jetzt ein AMTLICHER Alarm rausgehen?
+    (Issue #1467 Scheibe S4a)
+
+    EIN Baustein fuer BEIDE amtlichen Pfade — den Trip-Zweig
+    (`trip_alert.py::_send_official_alert_only`) und den Vergleichs-Zweig
+    (`compare_official_alert.py::_check_one_preset`).
+
+    Feste Reihenfolge, Abbruch bei der ERSTEN zutreffenden Stufe:
+
+        Ruhezeit  ->  Tages-Obergrenze
+
+    🔴 KEIN Cooldown-Parameter, und das ist hier kein Weglassen aus
+    Sparsamkeit: „ein amtlicher Alarm scheitert nie an einer Sperrzeit" ist
+    eine Eigenschaft des Funktionstyps, nicht eine Disziplin der Aufrufstelle
+    (AC-3). Der Trip-Pfad las bis S4a den geteilten Sperrzeit-Topf `"trip"`
+    mit — ein zugestellter Aenderungsalarm verschluckte damit bis zu 120
+    Minuten lang jede amtliche Eskalation (E1). Geschrieben wird der Topf
+    weiterhin, nur gelesen nicht mehr.
+
+    Die Tages-Obergrenze prueft rein lesend (`is_allowed`); gebucht wird
+    ausschliesslich per `alert_daily_limit.increment()` nach erfolgreicher
+    Zustellung — beide Aufrufstellen behalten diese Buchung an ihrer Stelle
+    (AC-15). Deshalb ist es wirkungsfrei, dass die Obergrenze mit diesem
+    Baustein in beiden Pfaden VOR die Briefing-Sperre wandert (AC-12b).
+
+    `is_quiet_hours()` wird UNVERAENDERT durchgereicht, wie bei
+    `check_nowcast_gate()`: kein eigenes `try/except` an dieser Aufrufstelle.
+
+    Der Grund im `GateResult` ist Diagnose, kein Protokoll-Auftrag: der
+    amtliche Pfad schreibt weiterhin KEINE Unterdrueckungsgruende ins
+    `alert_log` (E3, Geltungsbereich bleibt Nowcast-only).
+    """
+    if DeviationAlertEngine.is_quiet_hours(
+        now, quiet_from, quiet_to, zone, context_label=context_label
+    ):
+        logger.debug("Amtlicher Alarm unterdrueckt (Ruhezeit) fuer %s", context_label)
+        return GateResult(False, alert_log.REASON_QUIET_HOURS)
+
+    if not alert_daily_limit.is_allowed(user_id, now, zone):
+        logger.debug(
+            "Amtlicher Alarm unterdrueckt (Tages-Obergrenze) fuer %s", context_label
+        )
+        return GateResult(False, alert_log.REASON_DAILY_LIMIT)
+
+    return _ALLOWED
+
+
 def _naechste_faelligkeit(
     now: datetime,
     briefing_due_at: Callable[[datetime], bool],
