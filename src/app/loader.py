@@ -1152,17 +1152,6 @@ def get_locations_dir(user_id: str = "default") -> Path:
     return get_data_dir(user_id) / "locations"
 
 
-def get_trips_dir(user_id: str = "default") -> Path:
-    """Get the (legacy, pre-Cutover) trips directory for a user.
-
-    Issue #1250 Scheibe 7a: load_all_trips/load_trip/save_trip no longer
-    read/write here (see get_briefings_dir) -- this stays as a reference to
-    the old location (Rollback-Fähigkeit, AC-26) and for the historical
-    per-user directory bootstrap.
-    """
-    return get_data_dir(user_id) / "trips"
-
-
 def get_briefings_dir(user_id: str = "default") -> Path:
     """Get the briefings directory for a user (Issue #1250 Cutover, ADR-0023).
     Seit S7a leben route-Entitäten (Trips) hier; seit S7b (AC-31) leben auch

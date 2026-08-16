@@ -108,16 +108,23 @@ def test_ac3_alarm_segment_eigenschaft_ist_zeitunabhaengig():
 def test_ac6_isolationssonde_uebersteht_wegfall_von_get_trips_dir(tmp_path):
     """AC-6: Die Isolationssonde in test_issue_1133_testdata_cleanup.py
     (:57-75) muss den Wegfall von get_trips_dir() in Scheibe B2 ueberstehen
-    -- das gelingt nur, wenn sie stattdessen get_briefings_dir() befragt.
+    -- das gelingt nur, weil sie get_briefings_dir() befragt statt
+    get_trips_dir().
 
     Gewaehlter Weg (gleichwertig zur im Auftrag skizzierten
     Subprozess/`-p`-Variante -- ein conftest-freies Vorschalt-Skript waere
-    hier fragiler als der direkte Verhaltensbeweis, und conftest.py selbst
-    ruft an mehreren Stellen get_trips_dir() zur Session-Fixture-Zeit, was
-    ein sauberes Vorschalten erschweren wuerde): get_trips_dir() wird per
-    monkeypatch.delattr aus app.loader entfernt, danach wird die betroffene
-    Sondenfunktion direkt aufgerufen. Heute wirft das AttributeError, weil
-    Teil A der Sonde (:61-69) get_trips_dir() direkt aufruft -> rot.
+    hier fragiler als der direkte Verhaltensbeweis): get_trips_dir() wird
+    per monkeypatch.delattr aus app.loader entfernt (raising=False, da die
+    Funktion seit #1708 Scheibe B2 ohnehin nicht mehr existiert), danach
+    wird die betroffene Sondenfunktion direkt aufgerufen. Zum Zeitpunkt
+    dieses B1-Nachweises rief Teil A der Sonde (:61-69) noch get_trips_dir()
+    direkt auf und brach dabei mit AttributeError ab -- seit der
+    B1-Umstellung der Sonde auf get_briefings_dir() (und seit B2 dem
+    tatsaechlichen Wegfall der Funktion aus app.loader) bleibt dieser Test
+    gruen, weil kein Aufruf mehr auf den entfernten Attributnamen trifft.
+    (Korrektur der urspruenglichen, sachlich falschen Begruendung ueber
+    conftest.py -- ``grep get_trips_dir tests/conftest.py`` liefert keinen
+    Treffer, die Session-Fixture ruft die Funktion nie auf.)
     """
     import app.loader as loader
     from tests.tdd.test_issue_1133_testdata_cleanup import (

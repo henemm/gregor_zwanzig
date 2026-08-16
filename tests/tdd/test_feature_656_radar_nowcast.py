@@ -184,8 +184,8 @@ def test_ac3_now_command_returns_nowcast_under_10s():
         )
         assert "uelle" in body or "Quelle" in body
     finally:
-        from app.loader import get_trips_dir
-        p = get_trips_dir() / f"{_TRIP_ID}.json"
+        from app.loader import get_briefings_dir
+        p = get_briefings_dir() / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()
 
@@ -211,8 +211,8 @@ def test_ac3_now_command_without_today_stage_gives_clear_message():
         body = result.confirmation_body.lower()
         assert any(kw in body for kw in ("etappe", "standort", "position", "heute"))
     finally:
-        from app.loader import get_trips_dir
-        p = get_trips_dir() / f"{_TRIP_ID}.json"
+        from app.loader import get_briefings_dir
+        p = get_briefings_dir() / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()
 
@@ -298,7 +298,7 @@ def test_ac4_check_radar_alerts_sends_once_then_throttles():
         assert len(radar_entries) == 1
         assert radar_entries[0].get("severity") == "HIGH"
     finally:
-        from app.loader import get_trips_dir
-        p = get_trips_dir() / f"{_TRIP_ID}.json"
+        from app.loader import get_briefings_dir
+        p = get_briefings_dir() / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()

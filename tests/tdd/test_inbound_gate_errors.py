@@ -14,7 +14,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from app.loader import get_trips_dir, save_trip
+from app.loader import get_briefings_dir, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.inbound_email_reader import InboundEmailReader
 
@@ -45,7 +45,7 @@ def _make_trip() -> Trip:
 @pytest.fixture(autouse=True)
 def cleanup():
     yield
-    trip_path = get_trips_dir() / f"{_TRIP_ID}.json"
+    trip_path = get_briefings_dir() / f"{_TRIP_ID}.json"
     if trip_path.exists():
         trip_path.unlink()
 

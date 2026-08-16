@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.loader import get_trips_dir, save_trip
+from app.loader import get_briefings_dir, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.trip_command_processor import InboundMessage, TripCommandProcessor
 
@@ -152,7 +152,7 @@ def _save_user_trip() -> Trip:
 
 
 def _cleanup_user_trip() -> None:
-    trip_path = get_trips_dir(_TEST_USER_ID) / f"{_TEST_TRIP_ID}.json"
+    trip_path = get_briefings_dir(_TEST_USER_ID) / f"{_TEST_TRIP_ID}.json"
     if trip_path.exists():
         trip_path.unlink()
     user_dir = Path("data/users") / _TEST_USER_ID
@@ -290,7 +290,7 @@ class TestF002ReportTypeCaseInsensitive:
 
     def teardown_method(self):
         _cleanup_user_trip()
-        default_path = get_trips_dir("default") / f"{_TEST_TRIP_ID}.json"
+        default_path = get_briefings_dir("default") / f"{_TEST_TRIP_ID}.json"
         if default_path.exists():
             default_path.unlink()
 
@@ -324,7 +324,7 @@ class TestAC5InvalidReportType:
     def teardown_method(self):
         _cleanup_user_trip()
         # Default-User-Trip aufräumen
-        default_path = get_trips_dir("default") / f"{_TEST_TRIP_ID}.json"
+        default_path = get_briefings_dir("default") / f"{_TEST_TRIP_ID}.json"
         if default_path.exists():
             default_path.unlink()
 

@@ -240,8 +240,8 @@ class TestLoadAllTripsResilience:
         (trips_dir / "bad-date.json").write_text(json.dumps(bad_data))
 
         # Pfad-Helper auf tmp_path umbiegen (Issue #1250 Scheibe 7a:
-        # load_all_trips liest seit dem Cutover get_briefings_dir(), nicht
-        # mehr get_trips_dir()).
+        # load_all_trips liest seit dem Cutover get_briefings_dir() --
+        # get_trips_dir() ist seit #1708 Scheibe B2 entfernter Altbestand).
         monkeypatch.setattr(
             loader_mod,
             "get_briefings_dir",

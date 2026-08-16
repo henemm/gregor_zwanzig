@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from app.loader import get_data_dir, get_snapshots_dir, get_trips_dir, save_trip
+from app.loader import get_briefings_dir, get_data_dir, get_snapshots_dir, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.trip_command_processor import (
     CommandResult,
@@ -70,7 +70,7 @@ def _save_test_trip(**kwargs) -> Trip:
 
 def _cleanup_test_trip(trip_id: str = _TRIP_ID) -> None:
     """Remove test trip file and command log entries."""
-    trip_path = get_trips_dir() / f"{trip_id}.json"
+    trip_path = get_briefings_dir() / f"{trip_id}.json"
     if trip_path.exists():
         trip_path.unlink()
 
