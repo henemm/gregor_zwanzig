@@ -1212,6 +1212,7 @@ class TripAlertService:
                 cooldown_display=cooldown_display,
                 effective_channels=_radar_allowed,
                 mail_sink=self._mail_sink,
+                telegram_style=_trip_telegram_style(trip),
             )
             # Issue #1459: Protokoll VOR dem Zustellbarkeits-Guard; die
             # Ziel-Liste (`entries` vs. `not_delivered`) entscheidet

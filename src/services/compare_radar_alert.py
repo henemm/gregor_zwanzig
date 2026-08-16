@@ -30,7 +30,10 @@ import services.alert_urgency as alert_urgency
 from services.alert_gate import check_nowcast_gate, record_nowcast_sent
 from utils.timezone import first_resolvable_tz
 from services.alert_state import AlertStateService
-from services.compare_alert_channels import effective_compare_channels
+from services.compare_alert_channels import (
+    effective_compare_channels,
+    effective_compare_telegram_style,
+)
 from services.compare_alert_guard import is_silenced
 from services.compare_preset_access import (
     load_compare_alert_presets,
@@ -204,6 +207,7 @@ class CompareRadarAlertService:
         notif_result = notification_service.send_multi_location_radar_alert(
             entities=entities, effective_channels=allowed, mail_sink=self._mail_sink,
             cooldown_display=_format_cooldown_display(cooldown_minutes),
+            telegram_style=effective_compare_telegram_style(preset),
         )
         # Issue #1459: gemischt konvektive/nicht-konvektive Orte ergeben BEIDE
         # Register-Paare in EINEM Eintrag.

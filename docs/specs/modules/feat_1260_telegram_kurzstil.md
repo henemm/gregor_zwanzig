@@ -2,7 +2,7 @@
 entity_id: feat_1260_telegram_kurzstil
 type: feature
 created: 2026-07-15
-updated: 2026-07-15
+updated: 2026-08-16
 status: draft
 version: "1.0"
 tags: [telegram, sms, notification, dispatch, multi-user]
@@ -176,6 +176,11 @@ bleibt unverändert; eine neue kleine Hilfsfunktion `_effective_telegram_style(p
 
 ## Known Limitations
 
+- **Nachtrag (2026-08-16, Fix #1914):** Der Regen-/Radar-Nowcast-Alarm gehörte nicht zu den
+  vier oben genannten Scope-Pfaden und respektierte `telegram_style` deshalb nicht — er
+  renderte auf Telegram immer im reichen Format, unabhängig vom konfigurierten Stil. Behoben in
+  `docs/specs/modules/fix_1914_radar_telegram_style.md` (Trip- und Ortsvergleich-Pfad, gleiches
+  Durchreiche-Muster wie die vier hier beschriebenen Dispatch-Stellen).
 - Im Kurzstil entfallen die Telegram-Inline-Knöpfe/Aktionen (z.B. Weiterblättern, PAUSE/SKIP) —
   inhärent zu „SMS-Stil = eine Zeile ohne Bedienelemente". Bewusster Kompromiss, kein Bug.
 - Reguläre Ortsvergleich-Briefings und -Abweichungs-/Radar-Alarme bleiben E-Mail-only (kein
@@ -215,3 +220,7 @@ keine Mocks als Verhaltensnachweis — echte Fixture-Trips/-Presets, echte Rende
 ## Changelog
 
 - 2026-07-15: Initial spec created — Issue #1260
+- 2026-08-16: Known Limitations um Nachtrag zu Fix #1914 ergänzt (Radar-/Nowcast-Alarm
+  respektierte `telegram_style` nicht — war kein Scope-Pfad dieser Spec, jetzt in
+  `fix_1914_radar_telegram_style.md` behoben; reine Cross-Reference, kein Verhaltensinhalt
+  dieser Spec geändert)
