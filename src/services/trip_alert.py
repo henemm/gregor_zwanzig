@@ -19,7 +19,11 @@ from app.models import SegmentWeatherData, WeatherChange
 from services import alert_channel_threshold, alert_daily_limit, alert_log
 from services.alert_briefing_anchor import record_alert_anchor_rejected
 import services.alert_urgency as alert_urgency
-from services.alert_gate import check_nowcast_gate, record_nowcast_sent
+from services.alert_gate import (
+    check_nowcast_gate,
+    check_official_alert_gate,
+    record_nowcast_sent,
+)
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import (
     NotificationResult,
@@ -1476,28 +1480,32 @@ class TripAlertService:
     def _send_official_alert_only(self, trip: "Trip", official_notices: list) -> bool:
         """Issue #1088: Standalone-Versand einer amtlichen Warnung ohne Wetter-Delta.
 
-        Reproduziert nur die generischen Sicherheits-Gates (QuietHours, Throttle/
-        Cooldown, Tageslimit) — NICHT die weather-delta-spezifischen Gates
+        Reproduziert nur die generischen Sicherheits-Gates (QuietHours,
+        Tageslimit) — NICHT die weather-delta-spezifischen Gates
         (has_active_rules, _filter_significant_changes), da ein eigenständiger
         amtlicher Trigger laut PO-Entscheidung unabhängig vom Wetter-Delta feuern soll.
+
+        Issue #1467 S4a: die beiden verbliebenen Stufen stehen im geteilten
+        Baustein `check_official_alert_gate` — derselbe, den auch der amtliche
+        Ortsvergleich-Pfad ruft. Die Sperrzeit ist dabei ersatzlos ENTFALLEN
+        (E1): sie las den Topf `"trip"`, den der Änderungsalarm befüllt, und
+        verschluckte damit bis zu 120 Minuten lang jede amtliche Eskalation.
+        Geschrieben wird der Topf weiterhin (s. unten) — nur gelesen nicht mehr.
         """
         now_utc = datetime.now(timezone.utc)
-        if self._is_quiet_hours(trip, now_utc):
-            logger.debug(f"Official alert suppressed: quiet hours active for trip {trip.id}")
+        if not check_official_alert_gate(
+            user_id=self._user_id,
+            quiet_from=trip.alert_quiet_from, quiet_to=trip.alert_quiet_to,
+            context_label=trip.id, now=now_utc, zone=anchor_tz(trip, now_utc),
+        ).allowed:
             return False
         # Issue #1594: dieselbe Stufe wie im Aenderungspfad, gleiche Position
         # (nach der Ruhezeit) — die Warnung erscheint im Briefing, das
         # unmittelbar folgt (AC-16), statt zusaetzlich als eigene Nachricht.
+        # Bleibt ein EIGENER Aufruf nach dem Gate (#1467 S4a AC-12), nicht in
+        # den Baustein verschmolzen.
         if self._is_briefing_imminent(trip, now_utc):
             logger.debug(f"Official alert suppressed: briefing imminent for trip {trip.id}")
-            return False
-        if self._is_throttled_with_cooldown(trip):
-            logger.debug(f"Official alert throttled for trip {trip.id}")
-            return False
-        if not alert_daily_limit.is_allowed(
-            self._user_id, now_utc, anchor_tz(trip, now_utc),
-        ):
-            logger.debug(f"Official alert suppressed: daily limit reached for trip {trip.id}")
             return False
 
         effective_channels = self._effective_alert_channels(trip)

@@ -30,7 +30,7 @@ Quelle: `docs/specs/_archive/modules/issue_1034_official_alerts_foundation.md` (
 
 Ein Test, der zusichert „Alarm wird zugestellt", muss den Trip so bauen, dass
 **kein geplantes Briefing fällig ist** — sonst greift die Vorlaufsperre aus
-#1594 (`src/services/trip_alert.py:241` → `src/services/alert_gate.py:200` →
+#1594 (`src/services/trip_alert.py:241` → `src/services/alert_gate.py:256` →
 `trip_briefing_due_at`), der Alarm wird planmäßig durch das Briefing **ersetzt**
 (ADR-0009), und der Test scheitert an einer nirgends ausgesprochenen Annahme.
 Weil die Vorgabezeiten 07:00/18:00 Ortszeit bei drei Stunden Fälligkeitsfenster

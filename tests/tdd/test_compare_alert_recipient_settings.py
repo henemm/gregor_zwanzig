@@ -113,7 +113,16 @@ def _preset(preset_id: str, location_ids: list[str], **extra) -> dict:
 def _recorded_settings(module):
     """Zeichnet die Settings auf, mit denen der Dienst seinen
     `NotificationService` tatsaechlich baut — echte Subklasse, die das echte
-    Verhalten weiterfuehrt (kein Mock)."""
+    Verhalten weiterfuehrt (kein Mock).
+
+    Issue #1467 S4a: die drei Compare-Alarmpfade bauen ihren
+    `NotificationService` seither im geteilten Helfer
+    `services.compare_preset_access`; die Aufzeichnung sitzt deshalb DORT.
+    Das uebergebene `module` (der jeweilige Alarmdienst) wird weiterhin
+    mitgetauscht — nur so faellt auf, wenn einer der drei doch wieder eine
+    eigene Fassung baut. Der Messpunkt wandert mit der Naht, die Zusicherung
+    bleibt dieselbe."""
+    from services import compare_preset_access
     from services.notification_service import NotificationService as _Real
 
     recorded: list[dict] = []
@@ -128,12 +137,16 @@ def _recorded_settings(module):
             })
             super().__init__(settings, user_id)
 
-    original = module.NotificationService
-    module.NotificationService = _Recording
+    ziele = [m for m in (module, compare_preset_access)
+             if getattr(m, "NotificationService", None) is not None]
+    originale = [m.NotificationService for m in ziele]
+    for m in ziele:
+        m.NotificationService = _Recording
     try:
         yield recorded
     finally:
-        module.NotificationService = original
+        for m, original in zip(ziele, originale):
+            m.NotificationService = original
 
 
 def _assert_settings_recipient(recorded: list[dict], expected: str, label: str) -> None:

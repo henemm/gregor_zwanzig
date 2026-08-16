@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from app.config import Settings
-from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
+from app.loader import load_all_locations
 from services import alert_channel_threshold, alert_log
 import services.alert_urgency as alert_urgency
 from services.alert_gate import check_nowcast_gate, record_nowcast_sent
@@ -32,6 +32,10 @@ from utils.timezone import first_resolvable_tz
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import effective_compare_channels
 from services.compare_alert_guard import is_silenced
+from services.compare_preset_access import (
+    load_compare_alert_presets,
+    notification_service_for_preset,
+)
 from services.notification_service import NotificationService
 from services.trip_alert import radar_alert_due
 
@@ -272,18 +276,11 @@ class CompareRadarAlertService:
             state_svc.save(entity_id, state)
 
     def _notification_service_for(self, preset: dict) -> NotificationService:
-        """Empfänger ausschliesslich aus den Konto-Settings — Muster
-        `compare_alert.py::_notification_service_for`. Issue #1452:
-        `preset.empfaenger` ist inert; fehlt `mail_to`, wird laut gemeldet, der
-        Lauf bricht aber nicht ab (Spec AC-4)."""
-        if not self._settings.mail_to:
-            logger.warning(
-                "Compare-Alert (Radar): Nutzer %s hat keine Empfaenger-Adresse "
-                "(mail_to) in den Konto-Settings — Preset %s kann keine E-Mail "
-                "zustellen.",
-                self._user_id, preset.get("id", ""),
-            )
-        return NotificationService(self._settings, self._user_id)
+        """Dünner Wrapper (Issue #1467 S4a) auf den geteilten Helfer
+        `compare_preset_access.notification_service_for_preset`."""
+        return notification_service_for_preset(
+            self._settings, self._user_id, preset, log_label="Compare-Alert (Radar):",
+        )
 
     def _get_radar_service(self):
         if self._radar_service is None:
@@ -292,5 +289,6 @@ class CompareRadarAlertService:
         return self._radar_service
 
     def _load_presets(self) -> list[dict]:
-        # Issue #1250 Scheibe 1: zentraler Loader statt rohem json.loads.
-        return [compare_preset_to_dict(p) for p in load_compare_presets(user_id=self._user_id)]
+        """Dünner Wrapper (Issue #1467 S4a) auf den geteilten Helfer
+        `compare_preset_access.load_compare_alert_presets`."""
+        return load_compare_alert_presets(self._user_id)

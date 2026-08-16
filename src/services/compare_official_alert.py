@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import Settings
-from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
+from app.loader import load_all_locations
 from output.renderers.alert.official_alerts import (
     dedupe_official_alerts,
     official_alert_revision_verdict,
@@ -34,15 +34,18 @@ from output.renderers.alert.official_alerts import (
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
-from services.alert_gate import check_briefing_imminent
+from services.alert_gate import check_briefing_imminent, check_official_alert_gate
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import (
     effective_compare_channels,
     effective_compare_telegram_style,
 )
 from services.compare_alert_guard import is_silenced
+from services.compare_preset_access import (
+    load_compare_alert_presets,
+    notification_service_for_preset,
+)
 from services.compare_slot_scheduler import presets_due_for_hour
-from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
 from services.official_alerts import get_official_alerts_for_location
 from utils.timezone import first_resolvable_tz
@@ -125,14 +128,25 @@ class CompareOfficialAlertService:
         )
         # #1233: Ruhezeit unterdrueckt frueh -> kein State-Verbrauch der Warnung,
         # damit sie nach Ende der Ruhezeit noch als "neu" zugestellt wird (AC-2).
-        if DeviationAlertEngine.is_quiet_hours(
-            datetime.now(timezone.utc),
-            preset.get("alert_quiet_from"),
-            preset.get("alert_quiet_to"),
-            zone,
+        #
+        # Issue #1467 S4a: Ruhezeit UND Tages-Obergrenze stehen seither im
+        # geteilten Baustein `check_official_alert_gate` — demselben, den auch
+        # der amtliche Trip-Pfad ruft. Die Tages-Obergrenze wandert damit VOR
+        # `_detect()` (E2): ein erschoepftes Kontingent kostet keinen
+        # Warnungs-Abruf mehr gegen eine Quelle, die produktiv ohnehin an ihrem
+        # Tagesbudget haengt. Rein lesend — gebucht wird weiterhin erst nach
+        # erfolgreicher Zustellung (`alert_daily_limit.increment`, AC-15).
+        # `is_silenced` bleibt bewusst AUSSERHALB des Bausteins (AC-9): Trips
+        # kennen den Riegel nicht, und ein pausierter Trip soll weiter
+        # alarmieren (#995).
+        if not check_official_alert_gate(
+            user_id=self._user_id,
+            quiet_from=preset.get("alert_quiet_from"),
+            quiet_to=preset.get("alert_quiet_to"),
             context_label=preset_id,
-        ):
-            logger.debug(f"Compare official alert quiet hours active for preset {preset_id}")
+            now=datetime.now(timezone.utc),
+            zone=zone,
+        ).allowed:
             return False
 
         # Issue #1594: dieselbe Stufe wie im Vergleichs-Aenderungspfad, gleiche
@@ -161,10 +175,6 @@ class CompareOfficialAlertService:
             return False
 
         now = datetime.now(timezone.utc)
-        if not alert_daily_limit.is_allowed(self._user_id, now, zone):
-            logger.debug(f"Compare official alert suppressed: daily limit for preset {preset_id}")
-            return False
-
         notification_service = self._notification_service_for(preset)
         effective_channels = self._effective_channels(preset)
         # Issue #1461 S3b-2b: die Dringlichkeit wird VOR dem Versand
@@ -320,19 +330,13 @@ class CompareOfficialAlertService:
         return effective_compare_channels(preset, self._settings, self._user_id)
 
     def _notification_service_for(self, preset: dict) -> NotificationService:
-        """Empfaenger ausschliesslich aus den Konto-Settings (Muster
-        `compare_alert.py::_notification_service_for`). Issue #1452:
-        `preset.empfaenger` ist inert; fehlt `mail_to`, wird laut gemeldet, der
-        Lauf bricht aber nicht ab (Spec AC-4)."""
-        if not self._settings.mail_to:
-            logger.warning(
-                "Compare-Alert (amtlich): Nutzer %s hat keine Empfaenger-Adresse "
-                "(mail_to) in den Konto-Settings — Preset %s kann keine E-Mail "
-                "zustellen.",
-                self._user_id, preset.get("id", ""),
-            )
-        return NotificationService(self._settings, self._user_id)
+        """Duenner Wrapper (Issue #1467 S4a) auf den geteilten Helfer
+        `compare_preset_access.notification_service_for_preset`."""
+        return notification_service_for_preset(
+            self._settings, self._user_id, preset, log_label="Compare-Alert (amtlich):",
+        )
 
     def _load_presets(self) -> list[dict]:
-        # Issue #1250 Scheibe 1: zentraler Loader statt rohem json.loads.
-        return [compare_preset_to_dict(p) for p in load_compare_presets(user_id=self._user_id)]
+        """Duenner Wrapper (Issue #1467 S4a) auf den geteilten Helfer
+        `compare_preset_access.load_compare_alert_presets`."""
+        return load_compare_alert_presets(self._user_id)
