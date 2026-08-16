@@ -115,7 +115,7 @@ unten).
 
 `src/app/loader.py:1155-1163` fällt vollständig. Gemessen: kein Produktivaufrufer
 (`grep -rn "get_trips_dir" src/ api/ internal/ cmd/ scripts/ .claude/` liefert nur die
-Definition; Positivkontrolle mit `get_briefings_dir` auf demselben Befehl: 12 Treffer, echte
+Definition; Positivkontrolle mit `get_briefings_dir` auf demselben Befehl: 11 Treffer, echte
 Aufrufer). Die Funktion unterscheidet sich von `get_briefings_dir()` ausschließlich im
 Verzeichnisnamen — kein `mkdir`, kein sonstiger Seiteneffekt.
 

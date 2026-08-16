@@ -19,7 +19,7 @@ Ausnahme. Die Go-Seite ist bereits leer.
 
 `get_trips_dir()` hat **keinen Produktivaufrufer**. Belegt:
 `grep -rn "get_trips_dir" src/ api/ internal/ cmd/ scripts/ .claude/` liefert nur die
-Definition. Positivkontrolle mit demselben Befehl auf `get_briefings_dir`: 12 Treffer,
+Definition. Positivkontrolle mit demselben Befehl auf `get_briefings_dir`: 11 Treffer,
 echte Aufrufer u. a. in `src/services/trip_report_scheduler.py:315`,
 `src/services/preview_service.py:18`, `api/routers/validator.py:23`. Die Suchmethode ist
 nicht blind.
