@@ -12,7 +12,7 @@ tags: [tests, issue-1708, trips-pfad, stillgelegte-tests]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-08-16, 'go' auf alle 8 ACs)
 
 ## Purpose
 
