@@ -41,6 +41,14 @@ logger = logging.getLogger("briefing_slots")
 #: wartet die vollen 2 s (Spec, Known Limitations zu T13).
 LOCK_TIMEOUT_SECONDS = file_lock.LOCK_TIMEOUT_SECONDS
 
+#: Issue #1897: Frist, nach der ein Vermerk OHNE Ausgang als verwaist gilt --
+#: der schreibende Prozess ist dann mit hoher Wahrscheinlichkeit hart beendet
+#: worden (Deploy, SIGKILL, OOM). Wie ``LOCK_TIMEOUT_SECONDS`` zur LAUFZEIT als
+#: Modul-Attribut gelesen, damit Tests die Frist unterschreiten koennen.
+#: Untergrenze aus 22 realen Versandlaeufen (laengster Einzelversand 319 s),
+#: Obergrenze der Cron-Abstand von einer Stunde -- 900 s liegt mittig.
+CLAIM_TTL = 900  # Sekunden (15 min)
+
 _STATE_FILENAME = "briefing_slots.json"
 _LOCK_SUFFIX = ".lock"
 _BRIEFING_LOG_FILENAME = "briefing_log.json"
@@ -69,36 +77,122 @@ class BriefingSlotStore:
         self, trip_id: str, slot: str, local_day: date,
         zone: Optional[ZoneInfo] = None,
     ) -> bool:
-        """Liegt ein Vermerk vor?
+        """Ist der Slot ABGESCHLOSSEN?
+
+        Issue #1897: abgeschlossen heisst ``outcome`` gesetzt -- ein Vermerk
+        ohne Ausgang zaehlt NICHT mehr, denn dann kam beim Nutzer nichts an.
+        Geprueft wird bewusst nur „gesetzt" und nicht die Zugehoerigkeit zu
+        ``VERMERK_AUSGAENGE``: sonst entschiede dieser Speicher ueber die
+        Ausgangs-Auswahl des Schedulers mit und ein kuenftiger fuenfter Ausgang
+        fiele still auf „nicht erledigt" zurueck.
 
         Schliesst die Rueckwaerts-Ableitung aus ``briefing_log.json`` ein
         (AC-9) — die greift aber nur, solange dieser Speicher noch keine
         eigene Datei hat (s. :meth:`_log_bezeugt_versand`).
         """
-        if self._find(self._load(), trip_id, slot, local_day) is not None:
+        eintrag = self._find(self._load(), trip_id, slot, local_day)
+        if eintrag is not None and eintrag.get("outcome") is not None:
             return True
+        return self._log_bezeugt_versand(trip_id, slot, local_day, zone)
+
+    def is_recorded_or_claimed(
+        self, trip_id: str, slot: str, local_day: date,
+        zone: Optional[ZoneInfo] = None, *, moment: datetime,
+    ) -> bool:
+        """Ist der Slot abgeschlossen ODER LEBENDIG in Arbeit? (Issue #1897)
+
+        Das zweite, eigenstaendige Praedikat fuer ``_collect_due_trips`` — es
+        beantwortet „wird jetzt ein Versand stattfinden?". Ein Vermerk ohne
+        Ausgang, dessen ``recorded_at`` juenger als :data:`CLAIM_TTL` ist,
+        gehoert zu einem laufenden Versand und haelt den Trip aus der
+        Faelligkeitsliste; ein verwaister bringt ihn zurueck.
+
+        Bewusst NICHT mit :meth:`is_recorded` vereinheitlicht: dort lautet die
+        Frage „steht noch ein Briefing aus?" (Alarm-Sperre #1594), und die
+        Antwort haengt allein am Ausgang, nicht am Alter.
+
+        Args:
+            moment: Zeitpunkt des Laufs (UTC) — PFLICHT, kein
+                ``datetime.now()``-Rueckfall (ADR-0051 Regel 3).
+        """
+        eintrag = self._find(self._load(), trip_id, slot, local_day)
+        if eintrag is not None:
+            if eintrag.get("outcome") is not None:
+                return True
+            return not self._ist_verwaist(eintrag, moment)
         return self._log_bezeugt_versand(trip_id, slot, local_day, zone)
 
     def reserve(
         self, trip_id: str, slot: str, local_day: date,
-        zone: Optional[ZoneInfo] = None,
+        zone: Optional[ZoneInfo] = None, *, moment: datetime,
     ) -> bool:
-        """``True`` nur bei FRISCHER Reservierung.
+        """``True`` nur bei FRISCHER Reservierung oder UEBERNAHME (#1897).
 
-        ``False`` bei bestehendem Vermerk, beim Rollout-Nachweis aus
+        ``False`` bei abgeschlossenem Vermerk, bei einem lebendigen Claim
+        (juenger als :data:`CLAIM_TTL`), beim Rollout-Nachweis aus
         ``briefing_log.json`` (AC-9) UND bei nicht erhaltener Sperre (AC-13).
+
+        Ein VERWAISTER Claim (``outcome: null``, aelter als :data:`CLAIM_TTL`)
+        wird uebernommen: ``recorded_at`` wandert auf ``moment``, ``outcome``
+        bleibt ``null``. Bezeugt ``briefing_log.json`` fuer diesen Ortstag
+        jedoch bereits einen regulaeren Versand, starb der Prozess ZWISCHEN
+        Versand und ``record_outcome`` — dann wird der Claim direkt mit
+        ``sent`` abgeschlossen und NICHT uebernommen (sonst ginge das Briefing
+        ein zweites Mal an echte Empfaenger, Premium-SMS inklusive).
+
+        🔴 Alterspruefung und Uebernahme liegen zusammen in EINER
+        :meth:`_update`-Closure, also unter derselben Sidecar-Sperre. Ein
+        getrennter Lese-dann-Schreib-Schritt liesse zwei gleichzeitige Laeufe
+        denselben verwaisten Claim beide beanspruchen — genau der teure
+        Doppelversand-Pfad, den diese Methode verhindert.
+
+        Args:
+            moment: Zeitpunkt des Laufs (UTC) — PFLICHT, kein
+                ``datetime.now()``-Rueckfall (ADR-0051 Regel 3).
         """
+        stand = {"reserviert": False}
+
         def _op(data: dict) -> bool:
-            if self._find(data, trip_id, slot, local_day) is not None:
-                return False
+            eintrag = self._find(data, trip_id, slot, local_day)
+            if eintrag is not None:
+                if eintrag.get("outcome") is not None:
+                    return False
+                if not self._ist_verwaist(eintrag, moment):
+                    return False
+                if self._log_traegt_versand(trip_id, slot, local_day, zone):
+                    eintrag["outcome"] = "sent"
+                    return True  # schreiben, aber NICHT reserviert
+                eintrag["recorded_at"] = moment.isoformat()
+                stand["reserviert"] = True
+                return True
             if self._log_bezeugt_versand(trip_id, slot, local_day, zone):
                 return False
             data.setdefault("entries", []).append(
-                self._eintrag(trip_id, slot, local_day, None)
+                self._eintrag(trip_id, slot, local_day, None, moment)
             )
+            stand["reserviert"] = True
             return True
 
-        return self._update(_op)
+        return self._update(_op) and stand["reserviert"]
+
+    # --- Alters-Dimension (Issue #1897) ---
+
+    def _ist_verwaist(self, eintrag: dict, moment: datetime) -> bool:
+        """Ist dieser Vermerk OHNE Ausgang aelter als :data:`CLAIM_TTL`?
+
+        ``CLAIM_TTL`` wird hier als Modul-Attribut zur LAUFZEIT gelesen — eine
+        lokale Bindung machte die Frist fuer Tests unerreichbar.
+
+        Ein unlesbarer oder fehlender ``recorded_at`` gilt als NICHT verwaist:
+        fail-closed wie ueberall in diesem Speicher — lieber ein ausgelassener
+        Slot als ein Doppelversand.
+        """
+        recorded_at = self._parse(eintrag.get("recorded_at"))
+        if recorded_at is None:
+            return False
+        if recorded_at.tzinfo is None:
+            recorded_at = recorded_at.replace(tzinfo=timezone.utc)
+        return (moment - recorded_at).total_seconds() > CLAIM_TTL
 
     def record_outcome(
         self, trip_id: str, slot: str, local_day: date, outcome: str,
@@ -134,12 +228,20 @@ class BriefingSlotStore:
     # --- Schluessel ---
 
     @staticmethod
-    def _eintrag(trip_id: str, slot: str, local_day: date, outcome: Optional[str]) -> dict:
+    def _eintrag(
+        trip_id: str, slot: str, local_day: date, outcome: Optional[str],
+        moment: Optional[datetime] = None,
+    ) -> dict:
+        """``moment`` ist der Lauf-Zeitpunkt (Issue #1897): ``recorded_at``
+        traegt ihn, damit die Verwaisungs-Frist gegen DENSELBEN Zeitstrahl
+        misst, den der Aufrufer benutzt. Ohne ``moment`` (``record_outcome``,
+        wo der Ausgang die Frist ohnehin beendet) bleibt es bei der Systemuhr.
+        """
         return {
             "trip_id": trip_id,
             "slot": slot,
             "local_day": local_day.isoformat(),
-            "recorded_at": datetime.now(tz=timezone.utc).isoformat(),
+            "recorded_at": (moment or datetime.now(tz=timezone.utc)).isoformat(),
             "outcome": outcome,
         }
 
@@ -198,6 +300,20 @@ class BriefingSlotStore:
         """
         if self._path.exists():
             return False
+        return self._log_traegt_versand(trip_id, slot, local_day, zone)
+
+    def _log_traegt_versand(
+        self, trip_id: str, slot: str, local_day: date, zone: Optional[ZoneInfo],
+    ) -> bool:
+        """Der reine Protokoll-Blick OHNE die Existenz-Bedingung — derselbe
+        Leser, den :meth:`_log_bezeugt_versand` benutzt.
+
+        Issue #1897 braucht ihn getrennt: beim Uebernahme-Versuch existiert
+        ``briefing_slots.json`` per Definition (der verwaiste Vermerk steht
+        drin), die Existenz-Bedingung schwiege dort also immer. Genau in diesem
+        Fall — Prozess gestorben ZWISCHEN Versand und ``record_outcome`` — ist
+        die Mail aber bereits draussen und darf nicht erneut rausgehen.
+        """
         pfad = self._dir / _BRIEFING_LOG_FILENAME
         if not pfad.exists():
             return False

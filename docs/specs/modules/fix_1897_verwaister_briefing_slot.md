@@ -214,3 +214,5 @@ Begründung, gemessen an 22 realen Versandläufen des Trips KHW (05.–15.08.202
 ## Changelog
 
 - 2026-08-16: Initial spec created (Issue #1897)
+- 2026-08-16: Implementiert. Adversary-Verdict VERIFIED. 23 Tests über 9 Acceptance Criteria
+  (AC-1 bis AC-9).

@@ -357,7 +357,10 @@ def test_ac3_versandfehler_zaehlt_weiterhin_als_fehlschlag_und_wird_protokollier
     with caplog.at_level(logging.ERROR, logger="dispatch_orchestrator"):
         # Issue #1725: `collect_due` liefert (trip, report_type, ORTSTAG) —
         # das dritte Glied des Idempotenz-Schluessels.
-        strategy.dispatch_one((trip, "morning", stage_date(LAT, LON)))
+        # Issue #1897: `dispatch_one` reicht den Lauf-Zeitpunkt durch.
+        strategy.dispatch_one(
+            (trip, "morning", stage_date(LAT, LON)), _zeitpunkt_ortsstunde(7),
+        )
 
     assert strategy.result() == (0, 1), (
         "Ein Versandfehler muss weiterhin als fehlgeschlagener Lauf zaehlen "
@@ -1238,7 +1241,9 @@ def test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos(monkeyp
         f"zustellen (Doppel-Nachricht): {zugestellt!r} (#1662 AC-5)"
     )
 
-    strategy.dispatch_one((trip, "morning", stage_date(LAT, LON)))
+    strategy.dispatch_one(
+        (trip, "morning", stage_date(LAT, LON)), _zeitpunkt_ortsstunde(7),
+    )
 
     assert len(zugestellt) == 1, (
         f"Der Nutzer muss genau EINE Nachricht bekommen, erhalten: "
@@ -1277,7 +1282,9 @@ def test_erneut_gescheiterter_regulaerer_versand_haelt_den_vermerk_am_leben():
     # Issue #1725: dritte Stelle = Ortstag (Idempotenz-Schluessel).
     due = [(trip, "morning", stage_date(LAT, LON))]
     strategy.pre_pass(now_utc=_zeitpunkt_ortsstunde(7), due=due)
-    strategy.dispatch_one((trip, "morning", stage_date(LAT, LON)))
+    strategy.dispatch_one(
+        (trip, "morning", stage_date(LAT, LON)), _zeitpunkt_ortsstunde(7),
+    )
 
     assert strategy.result() == (0, 1), (
         f"Vorbedingung: der Lauf muss als gescheitert zaehlen, erhalten: "

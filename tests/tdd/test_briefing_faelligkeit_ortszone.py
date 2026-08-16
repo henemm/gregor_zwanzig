@@ -129,7 +129,8 @@ def _lauf(scheduler, now_utc: datetime) -> set[tuple[str, str, date]]:
     """
     gesammelt = list(scheduler._collect_due_trips(now_utc))
     for trip, report_type, ortstag in gesammelt:
-        scheduler._dispatch_due_item(trip, report_type, ortstag)
+        # Issue #1897: derselbe Lauf-Zeitpunkt wandert bis in `reserve`.
+        scheduler._dispatch_due_item(trip, report_type, ortstag, now_utc=now_utc)
     return {(t.id, rt, tag) for t, rt, tag in gesammelt}
 
 
@@ -445,7 +446,7 @@ def test_ac7_sommerzeit_umstellung_liefert_genau_ein_briefing():
         while t < ende.astimezone(timezone.utc):
             gesammelt = list(scheduler._collect_due_trips(t))
             for trip, report_type, ortstag in gesammelt:
-                scheduler._dispatch_due_item(trip, report_type, ortstag)
+                scheduler._dispatch_due_item(trip, report_type, ortstag, now_utc=t)
             if ("korsika", "morning") in [(x.id, rt) for x, rt, _ in gesammelt]:
                 n += 1
             t += timedelta(hours=1)

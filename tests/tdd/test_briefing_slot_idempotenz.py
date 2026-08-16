@@ -216,7 +216,8 @@ def _lauf(scheduler, now_utc: datetime) -> list[tuple[str, str]]:
     """
     gesammelt = list(scheduler._collect_due_trips(now_utc))
     for trip, report_type, ortstag in gesammelt:
-        scheduler._dispatch_due_item(trip, report_type, ortstag)
+        # Issue #1897: derselbe Lauf-Zeitpunkt wandert bis in `reserve`.
+        scheduler._dispatch_due_item(trip, report_type, ortstag, now_utc=now_utc)
     return [(t.id, rt) for t, rt, _ in gesammelt]
 
 
@@ -655,11 +656,12 @@ def test_t8_ausnahme_nimmt_die_reservierung_zurueck():
         "slot-t8-ausnahme", ausnahme=RuntimeError("Kanal wirft"),
     )
 
-    trip, report_type, ortstag = scheduler._collect_due_trips(
-        _zeitpunkt(PARIS, date(2026, 8, 20), 7)
-    )[0]
+    lauf_zeitpunkt = _zeitpunkt(PARIS, date(2026, 8, 20), 7)
+    trip, report_type, ortstag = scheduler._collect_due_trips(lauf_zeitpunkt)[0]
     with pytest.raises(RuntimeError):
-        scheduler._dispatch_due_item(trip, report_type, ortstag)
+        scheduler._dispatch_due_item(
+            trip, report_type, ortstag, now_utc=lauf_zeitpunkt,
+        )
 
     assert ("korsika", "morning") in _sammlung(
         scheduler, _zeitpunkt(PARIS, date(2026, 8, 20), 8)
@@ -891,7 +893,7 @@ def test_t11_ortsvergleich_kennt_keinen_vermerk(monkeypatch):
     protokoll: list = []
 
     class _MitgeschriebenerVergleich(orchestrator.CompareDispatchStrategy):
-        def dispatch_one(self, item) -> None:
+        def dispatch_one(self, item, now_utc=None) -> None:
             protokoll.append(item[0].get("id"))
 
     monkeypatch.setitem(orchestrator._STRATEGY, "vergleich", _MitgeschriebenerVergleich)
@@ -976,7 +978,7 @@ def test_t12_on_demand_schreibt_keinen_vermerk_und_liest_keinen(caplog):
     )
 
     # b) Ein bestehender Vermerk macht den Test-Knopf nicht tot.
-    assert store.reserve("korsika", "evening", ortstag), (
+    assert store.reserve("korsika", "evening", ortstag, moment=jetzt), (
         "Testaufbau prueft nichts: die Reservierung muss frisch gelingen."
     )
     store.record_outcome("korsika", "evening", ortstag, "sent")
@@ -1251,9 +1253,8 @@ def test_t13_ohne_sperre_wird_nicht_gesendet(monkeypatch):
 
     monkeypatch.setattr(briefing_slots, "LOCK_TIMEOUT_SECONDS", 0.05, raising=False)
 
-    trip, report_type, ortstag = scheduler._collect_due_trips(
-        _zeitpunkt(PARIS, date(2026, 8, 20), 7)
-    )[0]
+    lauf_zeitpunkt = _zeitpunkt(PARIS, date(2026, 8, 20), 7)
+    trip, report_type, ortstag = scheduler._collect_due_trips(lauf_zeitpunkt)[0]
 
     verzeichnis = get_data_dir("slot-t13")
     verzeichnis.mkdir(parents=True, exist_ok=True)
@@ -1261,7 +1262,9 @@ def test_t13_ohne_sperre_wird_nicht_gesendet(monkeypatch):
     fd = os.open(sperrdatei, os.O_CREAT | os.O_RDWR, 0o644)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        ergebnis = scheduler._dispatch_due_item(trip, report_type, ortstag)
+        ergebnis = scheduler._dispatch_due_item(
+            trip, report_type, ortstag, now_utc=lauf_zeitpunkt,
+        )
     finally:
         fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)

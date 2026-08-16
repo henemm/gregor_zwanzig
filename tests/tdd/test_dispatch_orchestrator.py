@@ -162,7 +162,7 @@ def test_compare_pauses_between_presets_but_not_after_the_last():
         def pre_pass(self, hour, due):
             return None
 
-        def dispatch_one(self, item):
+        def dispatch_one(self, item, now_utc=None):
             self.dispatch_times.append(time.monotonic())
 
     user_id = _fresh_user_id("delay")
