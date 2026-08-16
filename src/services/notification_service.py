@@ -755,6 +755,7 @@ class NotificationService:
         stand_at: Optional[str] = None,
         mail_sink: Optional[object] = None,
         cooldown_display: Optional[str] = None,
+        telegram_style: str = "rich",
     ) -> NotificationResult:
         """Gebündelter Onset-Alert-Versand für MEHRERE gleichzeitig auslösende
         Vergleichs-Orte EINES Compare-Presets (Issue #1041 Slice 1a).
@@ -812,6 +813,7 @@ class NotificationService:
             target_name=target_name,
             radar_mode=True,
             alert_tz=alert_tz,
+            telegram_style=telegram_style,
         )
 
     def send_official_alert(
@@ -1269,6 +1271,7 @@ class NotificationService:
         cooldown_display: str,
         effective_channels: set[str],
         mail_sink: Optional[object] = None,
+        telegram_style: str = "rich",
     ) -> NotificationResult:
         """Radar-Onset-Alert: rendern und über konfigurierte Kanäle versenden."""
         onset_event = OnsetEvent(
@@ -1300,6 +1303,7 @@ class NotificationService:
             target_name=trip.id,
             radar_mode=True,
             alert_tz=alert_tz,
+            telegram_style=telegram_style,
         )
 
     def _dispatch_alert_message(
