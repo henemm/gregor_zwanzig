@@ -93,7 +93,10 @@ Folgt dem bestehenden Persistence-Pattern von `alert_throttle.json`:
    Timeseries — das haelt die Snapshot-Dateien klein (~1-2 KB pro Trip)
 2. **Ein Snapshot pro Trip** (nicht pro Stage/Segment) — wird bei jedem Report ueberschrieben
 3. **Multiuser via `user_id` Parameter** — folgt bestehendem Pattern aus `loader.py`:
-   `get_data_dir(user_id="default")`, `get_trips_dir(user_id="default")`, etc.
+   `get_data_dir(user_id="default")`, `get_briefings_dir(user_id="default")`, etc.
+   (Stand zum Schreibzeitpunkt hieß der Trip-Helfer `get_trips_dir`; seit
+   ADR-0023 / #1250 S7a ist `get_briefings_dir` der lebende Pfad, `trips/`
+   ist toter Bestand.)
 4. **Keine Historisierung** — nur der letzte Snapshot wird gespeichert.
    Fuer History koennte spaeter ein Timestamp ins Filename (z.B. `{trip_id}_{date}.json`)
 
@@ -120,6 +123,10 @@ Deserialisierung:
 
 ### Bestehendes Multi-Tenant Layout (Referenz)
 
+> Stand zum Schreibzeitpunkt (vor dem Cutover ADR-0023 / #1250 S7a,
+> 2026-07-15). Trips liegen seither unter `briefings/<id>.json`;
+> `trips/` ist toter Bestand (Issue #1708).
+
 ```
 data/users/{user_id}/
 ├── alert_throttle.json
@@ -127,7 +134,7 @@ data/users/{user_id}/
 ├── gpx/
 ├── locations/
 │   └── {location_id}.json
-├── trips/
+├── briefings/                   ← Trips (seit ADR-0023 / #1250 S7a; war `trips/`)
 │   └── {trip_id}.json
 └── weather_snapshots/           ← NEU
     └── {trip_id}.json
@@ -140,8 +147,8 @@ data/users/{user_id}/
 def get_data_dir(user_id: str = "default") -> Path:
     return Path("data/users") / user_id
 
-def get_trips_dir(user_id: str = "default") -> Path:
-    return get_data_dir(user_id) / "trips"
+def get_briefings_dir(user_id: str = "default") -> Path:
+    return get_data_dir(user_id) / "briefings"
 
 # NEU:
 def get_snapshots_dir(user_id: str = "default") -> Path:

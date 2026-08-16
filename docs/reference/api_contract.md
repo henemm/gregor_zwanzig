@@ -736,7 +736,7 @@ Feld-Definitionen und Validierungsregeln: massgeblich sind die Go-Structs in
 
 ## 10.5) Trip Model and Activity Types (Issue #674)
 
-Trip-Daten werden als JSON unter `data/users/{userID}/trips/{trip_id}.json` gespeichert. Das Kernmodell definiert Etappen, Wegpunkte und Konfiguration.
+Trip-Daten werden als JSON unter `data/users/{userID}/briefings/{trip_id}.json` gespeichert (seit ADR-0023 / #1250 S7a; `trips/` ist toter Bestand, Issue #1708). Das Kernmodell definiert Etappen, Wegpunkte und Konfiguration.
 
 ### Trip DTO
 
@@ -1334,7 +1334,7 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 
 **Multi-Tenant Behavior:**
 - `user_id` query parameter determines which user's data (trip, email config) is used
-- Trip must exist in `data/users/{user_id}/trips/` directory
+- Trip must exist in `data/users/{user_id}/briefings/` directory (seit ADR-0023 / #1250 S7a; `trips/` ist toter Bestand, Issue #1708)
 - Email sent to `settings.mail_to` for that user (set via `/api/auth/profile`)
 - Default `user_id="default"` provided for backwards compatibility (e.g. test-mode without auth)
 

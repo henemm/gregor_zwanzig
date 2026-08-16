@@ -44,7 +44,7 @@ und nicht für Frontend/Endbenutzer.
 | `src.formatters.trip_report.TripReportFormatter.format_email` | aufgerufen | SSoT-Renderer für Endpoint #2 (`report_type="alert"`, `changes=…`). |
 | `src.services.trip_alert.TripAlertService._select_change_detector` | aufgerufen | Kanonische Detector-Auswahllogik für Endpoint #3 (alert_rules > display_config > report_config > defaults). |
 | `src.services.weather_change_detection.WeatherChangeDetectionService` | konsumiert | Endpoint #3 liest `_thresholds`-Dict des gewählten Detectors. |
-| `src.app.loader._parse_trip` + `get_trips_dir` | aufgerufen | User-scoped Trip-Lookup für Endpoint #2 + #3 via Helper `_load_trip_for_validator` (Begründung siehe Implementation Details). |
+| `src.app.loader._parse_trip` + `get_briefings_dir` | aufgerufen | User-scoped Trip-Lookup für Endpoint #2 + #3 via Helper `_load_trip_for_validator` (Begründung siehe Implementation Details; seit ADR-0023 / #1250 S7a `briefings/<id>.json`, nicht mehr `trips/`). |
 | `src.app.models.WeatherChange, SegmentWeatherData, SegmentWeatherSummary, TripSegment, NormalizedTimeseries, ForecastMeta, Provider` | konsumiert | DTOs für Stub-Konstruktion im Body von Endpoint #2. |
 | `internal/middleware/auth.go::AuthMiddleware` | genutzt | Globale `gz_session`-Cookie-Auth — `_validator/`- und `alert-preview`-Pfade NICHT auf die Whitelist. |
 | `internal/handler/proxy.go::appendUserID` | genutzt | Anti-Spoofing-Pattern (Bug #199) — Go-Proxy injiziert authentifizierten `user_id` als Query-Param. |
@@ -73,7 +73,8 @@ Auto-Transformationen aus, die für Validator-Beobachtung problematisch sind:
 Lösung im Router:
 
 - **`_load_trip_raw(user_id, trip_id) → dict | None`**: liest die JSON-Datei via
-  `get_trips_dir(user_id)` direkt (kein Parsing, keine Migration).
+  `get_briefings_dir(user_id)` direkt (kein Parsing, keine Migration; seit
+  ADR-0023 / #1250 S7a, nicht mehr `get_trips_dir`).
 - **`_load_trip_for_validator(user_id, trip_id) → Trip | None`**: ruft
   `_load_trip_raw` und delegiert an `_parse_trip`. **Wenn** `data["stages"]` leer
   ist, wird **nur dann** ein einzelner Placeholder-Stage injiziert (mit einem
