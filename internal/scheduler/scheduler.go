@@ -7,11 +7,13 @@ package scheduler
 import (
 	_ "time/tzdata" // Embed timezone data for portability
 
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -46,11 +48,35 @@ type jobOverlapState struct {
 }
 
 // partialRunError signalisiert, dass ein Job-Lauf teilweise erfolgreich war
-// (status: "partial" ohne failed > 0 aus der Python-Antwort, Issue #1447 S1)
-// — recordRun verbucht das als jobResult.Status "partial", nicht "error".
-type partialRunError struct{ msg string }
+// (status: "partial" ohne failed > 0 aus der Python-Antwort, Issue #1447 S1;
+// oder ein Transport-Timeout, Issue #1912) — recordRun verbucht das als
+// jobResult.Status "partial", nicht "error".
+//
+// wrapped haelt (falls vorhanden) den zugrundeliegenden Fehler fuer
+// errors.As-Traversal — Issue #1912 braucht das, damit ein Aufrufer per
+// errors.As gleichzeitig "ist ein Timeout" (net.Error) UND "ist partial"
+// (*partialRunError) am selben err feststellen kann.
+type partialRunError struct {
+	msg     string
+	wrapped error
+}
 
 func (e *partialRunError) Error() string { return e.msg }
+func (e *partialRunError) Unwrap() error { return e.wrapped }
+
+// isTimeoutTransportError klassifiziert einen Transportfehler aus
+// (*http.Client).Post: ein echter Timeout (net.Error mit Timeout()==true,
+// bzw. context.DeadlineExceeded) heisst "der Core antwortet nicht
+// rechtzeitig" und ist kein Ausfallbeweis (Issue #1912). Alles andere
+// (Verbindung verweigert, DNS-Fehler) bleibt ein harter Fehler — ein toter
+// Core darf NICHT als "partial" durchgehen, sonst wird der Wachhund blind.
+func isTimeoutTransportError(err error) bool {
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	return errors.Is(err, context.DeadlineExceeded)
+}
 
 // jobMeta holds the human-readable identity of a cron job.
 //
@@ -84,6 +110,20 @@ type Scheduler struct {
 	// "skipped"-Zeitstempel. Geschuetzt durch s.mu wie lastRuns.
 	overlapState map[string]*jobOverlapState
 
+	// lastHardStatus haelt je jobID den zuletzt erreichten NICHT-"partial"-
+	// Status ("ok" oder "error"), GETRENNT vom unmittelbaren Vorlauf in
+	// lastRuns (Issue #1912 F002/F003). Ein "partial"-Zwischenlauf (Timeout)
+	// laesst diesen Wert unangetastet -- die Flankenerkennung in
+	// tripReports() fragt lastHardStatus statt lastRuns[...].Status, damit
+	// eine fortlaufende Stoerung mit Timeout-Blip (error->partial->error)
+	// nicht als zwei getrennte Vorfaelle gezaehlt wird und eine Erholung
+	// (error->partial->ok) die Recovery-Notiz weiterhin ausloest. Eine Kette
+	// aus lauter "partial" friert den Wert NICHT dauerhaft ein: jeder "ok"-
+	// oder "error"-Lauf schreibt ihn frisch, ein neu auftretender Fehler nach
+	// "ok" alarmiert also weiterhin sofort. Geschuetzt durch s.mu wie
+	// lastRuns.
+	lastHardStatus map[string]string
+
 	// jobLocksMu/jobLocks: lazy-initialisierte Sperren je jobID (Issue #1447
 	// S2a), analog zum onceMissingHB-Muster unten. TryLock() statt Lock() —
 	// ein blockierendes Lock() wuerde die Cron-Goroutine des zweiten Ticks
@@ -112,11 +152,18 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		cron:                    cron.New(cron.WithLocation(loc)),
 		pythonURL:               cfg.PythonCoreURL,
 		heartbeatComparePresets: cfg.HeartbeatComparePresets,
-		client:                  &http.Client{Timeout: 120 * time.Second},
+		// Issue #1912: 120s reichte fuer den regulaeren Versand nicht mehr
+		// (laengster gemessener Einzelversand 319s, briefing_slots.py:48) und
+		// riss Laeufe als Timeout ab, die tatsaechlich noch liefen. 3000s (50
+		// min) liegt knapp unter dem stuendlichen Cron-Abstand; die
+		// Overlap-Sperre in recordRun() verhindert, dass ein langsamer Lauf
+		// den Folgetick blockiert.
+		client: &http.Client{Timeout: 3000 * time.Second},
 		store:                   st,
 		lastRuns:                make(map[string]*jobResult),
 		entryMap:                make(map[cron.EntryID]jobMeta),
 		overlapState:            make(map[string]*jobOverlapState),
+		lastHardStatus:          make(map[string]string),
 		jobLocks:                make(map[string]*sync.Mutex),
 		notifier: func(sender, recipient, priority, subject, body string) error {
 			return notify.SendMQ(sender, recipient, priority, subject, body)
@@ -268,32 +315,40 @@ func (s *Scheduler) briefingDispatch() {
 // Totalausfall (alle Touren scheitern am Wetterabruf) muss aktiv an infra
 // gemeldet werden statt still zu bleiben, weil der Heartbeat allein den
 // Ausfall nicht mehr sichtbar macht (er hängt jetzt an briefingDispatch()).
+//
+// Issue #1912 F002/F003: die Flanke wird gegen lastHardStatus statt gegen
+// den unmittelbaren Vorlauf geprüft — ein "partial"-Zwischenlauf (Timeout)
+// darf eine fortlaufende Störung weder verdoppeln (error->partial->error)
+// noch die Recovery-Notiz verschlucken (error->partial->ok).
 func (s *Scheduler) tripReports() {
 	s.mu.RLock()
-	prevStatus := ""
-	if lr := s.lastRuns["trip_reports_hourly"]; lr != nil {
-		prevStatus = lr.Status
-	}
+	prevHardStatus := s.lastHardStatus["trip_reports_hourly"]
 	s.mu.RUnlock()
 
 	s.recordRun("trip_reports_hourly", func() error {
 		return s.runForAllUsers("trip_reports_hourly", "/api/scheduler/trip-reports")
 	})
 
-	s.mu.RLock()
+	s.mu.Lock()
 	cur := s.lastRuns["trip_reports_hourly"]
-	s.mu.RUnlock()
+	if cur != nil && cur.Status != "partial" {
+		// "partial" bleibt bewusst aussen vor -- s. Dokumentation an
+		// lastHardStatus-Feld weiter oben.
+		s.lastHardStatus["trip_reports_hourly"] = cur.Status
+	}
+	s.mu.Unlock()
+
 	if cur == nil || s.notifier == nil {
 		return
 	}
 	// ok→error (inkl. erster Lauf ohne Vorzustand) → Alarm high
-	if cur.Status == "error" && prevStatus != "error" {
+	if cur.Status == "error" && prevHardStatus != "error" {
 		subject := "Trip-Briefing-Totalausfall (#1346)"
 		body := fmt.Sprintf("Job trip_reports_hourly: Trip-Briefing-Versand fehlgeschlagen.\n%s", cur.Error)
 		if err := s.notifier("gregor", "infra", "high", subject, body); err != nil {
 			log.Printf("[scheduler] WARN: trip-reports alert notifier failed: %v", err)
 		}
-	} else if cur.Status == "ok" && prevStatus == "error" {
+	} else if cur.Status == "ok" && prevHardStatus == "error" {
 		// error→ok: Recovery-Notiz
 		subject := "Trip-Briefing wieder OK (#1346)"
 		body := "Job trip_reports_hourly: Trip-Briefing-Versand läuft wieder erfolgreich."
@@ -414,6 +469,15 @@ func (s *Scheduler) triggerPremiumSmsPollEndpoint() error {
 	url := s.pythonURL + "/api/scheduler/inbound-sms"
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
+		// Issue #1912: Timeout-Klassifikation gilt fuer den geteilten Client
+		// s.client an allen drei Aufrufstellen (Spec, Abschnitt "Geteilter
+		// Client") — nicht nur fuer triggerEndpointForUser().
+		if isTimeoutTransportError(err) {
+			return &partialRunError{
+				msg:     fmt.Sprintf("/api/scheduler/inbound-sms timed out: %v", err),
+				wrapped: err,
+			}
+		}
 		return fmt.Errorf("HTTP error: %w", err)
 	}
 	defer resp.Body.Close()
@@ -546,6 +610,15 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	url := s.pythonURL + path + "?user_id=" + userID
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
+		// Issue #1912: ein Timeout ist kein Ausfallbeweis — der Core kann
+		// dabei erfolgreich weiterarbeiten. Nur eine tatsaechlich verweigerte
+		// Verbindung (kein Timeout) bleibt ein harter Fehler.
+		if isTimeoutTransportError(err) {
+			return &partialRunError{
+				msg:     fmt.Sprintf("%s?user_id=%s timed out: %v", path, userID, err),
+				wrapped: err,
+			}
+		}
 		return fmt.Errorf("HTTP error: %w", err)
 	}
 	defer resp.Body.Close()
@@ -593,6 +666,14 @@ func (s *Scheduler) triggerGlobalEndpoint(path string) error {
 	url := s.pythonURL + path
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
+		// Issue #1912: siehe triggerEndpointForUser() — Timeout ist kein
+		// Ausfallbeweis, gilt auch fuer den geteilten Client an dieser Stelle.
+		if isTimeoutTransportError(err) {
+			return &partialRunError{
+				msg:     fmt.Sprintf("%s timed out: %v", path, err),
+				wrapped: err,
+			}
+		}
 		return fmt.Errorf("HTTP error: %w", err)
 	}
 	defer resp.Body.Close()
