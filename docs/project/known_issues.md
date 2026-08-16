@@ -336,6 +336,12 @@ getriggertes Alerting (kein `sync.Once`, damit ein späterer Re-Onset nicht vers
 optional eine Recovery-Notiz (Priorität `normal`). Kein neuer BetterStack-Heartbeat (Quota
 erschöpft).
 
+> **Korrektur 2026-08-16 (#1708):** `probeDataWritable()` traversiert seit dem
+> Persistenz-Cutover (ADR-0023 / #1250 S7a, 2026-07-15) `users/<id>/briefings/`,
+> nicht mehr `users/<id>/trips/` (`internal/scheduler/selftest.go:13-15,42`).
+> Der Fix-Text oben beschreibt den Stand zum Implementierungszeitpunkt
+> (2026-07-08, vor dem Cutover) und wurde nicht nachgezogen.
+
 ### Files Changed
 
 - `internal/scheduler/selftest.go` (NEU) — `probeDataWritable(dataDir string) error`

@@ -316,7 +316,7 @@ Katalog-Default (`default_enabled=True`) mitführt.
   - Test: SMS-Rendering mit `aggregations=["avg"]`, Assertion auf beide Symbole abwesend; dazu ein E-Mail-Rendering, das den Mittelwert-Pill weiterhin nachweist (DEC-1, kein stiller Totalverlust der Größe über alle Kanäle).
 
 - **AC-8:** Given ein gespeicherter Bestands-Trip mit aktivierter „Gefühlter Temperatur" und **ohne** `wind_chill_night`-Eintrag / When der Trip geladen und das Abend-Briefing erzeugt wird / Then erscheint `FN` genau wie vor der Änderung, und ein anschließender Config-Save erhält alle übrigen `display_config`-Felder (Merge, kein Replace, kein Zurückschreiben des abgeleiteten Eintrags).
-  - Test: Roundtrip mit echtem Bestands-JSON-Fixture (Format wie `data/users/<uid>/trips/*.json`); geprüft wird sowohl das gerenderte Token als auch die gespeicherte Datei nach dem Save.
+  - Test: Roundtrip mit echtem Bestands-JSON-Fixture (Format wie `data/users/<uid>/briefings/*.json`, seit ADR-0023 / #1250 S7a); geprüft wird sowohl das gerenderte Token als auch die gespeicherte Datei nach dem Save.
 
 - **AC-9:** Given ein gespeicherter Bestands-Trip mit **deaktivierter** „Gefühlter Temperatur" / When der Trip geladen wird / Then ist „Gefühlte Nacht-Tiefsttemperatur" abgeleitet AUS — es taucht kein neues Token unangefordert im Briefing auf.
   - Test: Ableitung beide Richtungen, zusätzlich der Fall „Metrikliste komplett leer" (Altbestand ohne `display_config`) — dort wird **kein** Eintrag erfunden.

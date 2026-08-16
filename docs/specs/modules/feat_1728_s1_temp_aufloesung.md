@@ -476,7 +476,7 @@ keine Änderung nötig).
   - Test: `TripReportFormatter().format_email().email_compact`, Parsing der Kachel-Zeile; dritter der drei Wirkort-Nachweise für DEC-5 (nicht `build_metrics_summary_pills()` direkt aufrufen).
 
 - **AC-8:** Given ein gespeicherter Bestands-Trip mit `temperature: {enabled: true, aggregations: ["min"]}` und **ohne** explizite Einträge für `temperature_day_low`/`temperature_day_high` / When der Trip geladen und das Abend-Briefing als SMS erzeugt wird / Then enthält die SMS `K`, aber kein `D` — die Bestands-Ableitung wirkt im Ladepfad (`loader.py`), nicht nur im Katalog-Default.
-  - Test: Roundtrip mit echtem Bestands-JSON-Fixture (Format wie `data/users/<uid>/trips/*.json`), Rendering-Assertion.
+  - Test: Roundtrip mit echtem Bestands-JSON-Fixture (Format wie `data/users/<uid>/briefings/*.json`, seit ADR-0023 / #1250 S7a; die versionierte Fixture-Quelle liegt unter `tests/fixtures/data_root/.../trips/` und wird von der Session-Fixture nach `briefings/` gespiegelt), Rendering-Assertion.
 
 - **AC-9:** Given ein gespeicherter Bestands-Trip mit `wind_chill: {enabled: true}` (impliziter Default `["min","max"]`) und ohne explizite Tagesrichtungs-Einträge / When der Trip geladen und das Briefing erzeugt wird / Then enthält die SMS `FK` **und** `FD` — der Default-Fall (16 von 17 Bestandstrips) verliert keine Tagesrichtung.
   - Test: wie AC-8, Default-Fall statt Einzelauswahl.
@@ -484,7 +484,7 @@ keine Änderung nötig).
 - **AC-10:** Given ein geladener Bestands-Trip ohne explizite Tagesrichtungs-Einträge / When der Trip ohne inhaltliche Änderung erneut gespeichert wird / Then enthält die gespeicherte Datei weiterhin **keine** expliziten Einträge für die vier neuen IDs, und alle übrigen `display_config`-Felder bleiben unverändert (Merge, kein Replace, kein Zurückschreiben abgeleiteter Einträge).
   - Test: Load → Save-Roundtrip gegen ein Fixture-Verzeichnis, Diff der gespeicherten JSON gegen das Original abzüglich absichtlicher Änderungen.
 
-- **AC-11:** Given `data/users/default/trips/gr221-mallorca.json` (`temperature: ["min","max","avg"]`, `wind_chill: ["min"]`) / When der Trip geladen und das Abend-Briefing als SMS erzeugt wird / Then enthält die SMS `K` **und** `D` (der entfallende Mittelwert kostet keine Tagesrichtung) sowie `FK`, aber **nicht** `FD`.
+- **AC-11:** Given `data/users/default/briefings/gr221-mallorca.json` (seit ADR-0023 / #1250 S7a; die Fixture-Quelle liegt unter `tests/fixtures/data_root/.../trips/gr221-mallorca.json` und wird testseitig nach `briefings/` gespiegelt — `load_trip` liest ausschließlich dort) (`temperature: ["min","max","avg"]`, `wind_chill: ["min"]`) / When der Trip geladen und das Abend-Briefing als SMS erzeugt wird / Then enthält die SMS `K` **und** `D` (der entfallende Mittelwert kostet keine Tagesrichtung) sowie `FK`, aber **nicht** `FD`.
   - Test: Rendering direkt gegen die reale Bestandsdatei (kein synthetisches Fixture), vollständige Token-Assertion für alle sechs Temperatur-Symbole (inkl. `N`/`FN`/`WC` unverändert).
 
 - **AC-12:** Given zwei verschiedene Nutzer mit entgegengesetzter Auswahl (Nutzer A: nur `temperature_day_high` und `wind_chill_day_low`; Nutzer B: nur `temperature_day_low` und `wind_chill_day_high`) / When beide ihr Abend-Briefing erzeugen / Then wirkt jeweils nur die eigene Auswahl — keine Vermischung über `user_id`-Grenzen.

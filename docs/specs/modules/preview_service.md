@@ -32,7 +32,7 @@ Detail-Spec: `docs/specs/_archive/modules/epic_140_output_vorschau.md` (Master).
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `app.config.Settings` | bestehend | User-Profil-Routing |
-| `app.loader.load_trip` / `get_trips_dir` | bestehend | Trip-File laden |
+| `app.loader.load_trip` / `get_briefings_dir` | bestehend | Trip-File laden (seit ADR-0023 / #1250 S7a `briefings/<id>.json`, nicht mehr `trips/`) |
 | `services.trip_report_scheduler.TripReportSchedulerService` | bestehend | Pipeline-Helper (Segments, Wetter) |
 | `formatters.trip_report.TripReportFormatter` | bestehend | Email-Render |
 
@@ -54,7 +54,7 @@ class PreviewService:
 ## Acceptance Criteria
 
 - **AC-1:** Given gültiger Trip + Stage am Zieldatum / When `render_email_preview` läuft / Then liefert es das `email_html` aus `TripReportFormatter.format_email()`
-- **AC-2:** Given Trip-ID nicht in `data/users/<user>/trips/` / When der Service aufgerufen wird / Then `FileNotFoundError`
+- **AC-2:** Given Trip-ID nicht in `data/users/<user>/briefings/` (seit ADR-0023 / #1250 S7a; vorher `trips/`) / When der Service aufgerufen wird / Then `FileNotFoundError`
 - **AC-3:** Given Trip ohne Stage am Zieldatum / When der Service aufgerufen wird / Then `LookupError` mit "Keine Stage am ..." Meldung. Abgrenzung (Issue #990): existiert am Zieldatum eine Stage, hat sie aber weniger als 2 Wegpunkte, wirft der Service ebenfalls `LookupError`, jedoch mit einem Text, der das Wort „waypoints" enthält — dieser Fall ist von „keine Stage am Datum" zu unterscheiden. Details: `docs/specs/_archive/modules/fix_990_preview_empty_waypoints.md`.
 - **AC-4:** Given Wetter-Provider liefert keine Daten (Rate-Limit etc.) / When der Service aufgerufen wird / Then `RuntimeError`
 - **AC-5:** Given `report_type` weder "morning" noch "evening" / When der Service aufgerufen wird / Then `ValueError`
