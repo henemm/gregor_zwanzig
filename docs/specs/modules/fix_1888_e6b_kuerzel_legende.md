@@ -251,11 +251,28 @@ wird in dieser Scheibe nicht angefasst (s. „Bewusste Grenzen").
     dass kein Legenden-Markup gerendert wird, während der übrige Reiter
     (Reihenfolge-Block selbst) weiterhin erscheint.
 
-- **AC-5:** Given die Legende ist als ein Snippet in `WeatherMetricsTab.svelte`
-  implementiert / When sie in beiden Kontexten (`route` und `vergleich`)
-  aufgerufen wird / Then teilen sich beide Aufrufstellen dasselbe Markup und
+- **AC-5:** Given die Legende ist als **ein** Baustein in der Marken-Komponente
+  `WeatherV2Reihenfolge.svelte` implementiert / When sie in beiden Kontexten
+  (`route` und `vergleich`) und an **jeder** Einbindung dieser Komponente
+  gerendert wird / Then teilen sich alle Einbindungen dasselbe Markup und
   denselben Rendering-Code — es gibt keine zweite, kontexteigene
-  Legenden-Komponente oder -Implementierung.
+  Legenden-Komponente oder -Implementierung. **Geändert 2026-08-16 (PO-„go")**
+  gegenüber der Erstfassung („ein Snippet in `WeatherMetricsTab.svelte`"): Der
+  Ort wandert dorthin, wo die Marken entstehen, weil die Marken-Komponente
+  mehrfach je Seite eingebunden wird (s. Korrektur unter „Bewusste Grenzen").
+  **Die Substanz bleibt unverändert** — ein geteilter Baustein, keine
+  compare-eigene Kopie.
+
+- **AC-5a:** Given eine Seite rendert mehrere Marken-Blöcke (Reihenfolge,
+  Ausblick, im Ortsvergleich zusätzlich Stundenverlauf) / When der Nutzer die
+  Seite betrachtet / Then trägt **jeder** dieser Blöcke seine eigene Legende,
+  die genau die dort gerenderten Kürzel erklärt — die Menge der Marken eines
+  Blocks und die Menge seiner Legenden-Einträge stimmen überein. Eine Marke
+  ohne Erklärung in **irgendeinem** Block verletzt AC-1.
+  - Test: Kern-Test zählt je Einbindung Marken gegen Legenden-Einträge, wobei
+    die Erwartung **nicht** aus denselben Katalogen stammt wie der Prüfling;
+    zusätzlich Playwright gegen Staging, der denselben Abgleich am gerenderten
+    DOM je Block führt (dieser Abgleich fehlte und ließ den Befund durch).
   - Test: Vitest-Test prüft strukturell (AST oder Quelltext-Scan), dass genau
     ein Legenden-Snippet definiert und an beiden Reihenfolge-Blöcken
     referenziert wird (Muster: `officialAlertLegend.test.ts:213-292`,
@@ -347,11 +364,38 @@ RED-Phase erneut zu verifizieren, nicht blind zu übernehmen:
 - **Kein Angleich der Marken-Anzeige an die zugestellte SMS.** Die Lücke
   „Editor zeigt `D`, SMS zeigt `D+`/`D-`" ist ein eigenständiger, in dieser
   Scheibe nicht zu behebender Befund (s. „Known Limitations").
-- **Keine zweite Legende bei „04 — Schwellwerte".** Nur der
-  Reihenfolge-Block bekommt die Legende — er ist der einzige von beiden
-  Kontexten geteilte Ort mit vollständiger Größen-Liste; „04 — Schwellwerte"
-  existiert nur im Trip-Kontext und zeigt eine Teilmenge, die von derselben
-  Legende bereits miterklärt wird.
+- **Keine zweite Legende bei „04 — Schwellwerte".** Der dortige Marken-Satz
+  ist eine Teilmenge des Reihenfolge-Blocks und wird miterklärt.
+
+> **🔴 Korrektur 2026-08-16, nach Staging-Verdict BROKEN (PO-Freigabe „go"):**
+> Die ursprüngliche Fassung dieses Punktes lautete „**Nur** der
+> Reihenfolge-Block bekommt die Legende — er ist der einzige von beiden
+> Kontexten geteilte Ort mit vollständiger Größen-Liste". **Das war
+> sachlich falsch und hat AC-1 gebrochen.**
+>
+> Gemessen: `WeatherV2Reihenfolge` ist die einzige Komponente, die
+> Kürzel-Marken rendert, wird aber **mehrfach je Seite** eingebunden — mit je
+> eigenem Metrik-Satz und eigener Kürzel-Quelle:
+>
+> | Block | Ort | Quelle |
+> |---|---|---|
+> | Reihenfolge (Trip) | `WeatherMetricsTab.svelte:1532-1544` | `metricSymbols` + `metricById` |
+> | Reihenfolge (Vergleich) | `WeatherMetricsTab.svelte:1368-1380` | `compareKuerzelById` + `compareMetricById` |
+> | **Ausblick** (Trip **und** Vergleich) | `CompareOutlookLayoutControls.svelte:185-195` | `outlookKuerzelById` + `outlookMetricById` |
+> | **Stundenverlauf** (nur Vergleich) | `CompareHourlyLayoutControls.svelte:232-242` | `hourlyKuerzelById` + `hourlyMetricById` |
+>
+> Die Trip-Seite trägt damit **zwei** Marken-Blöcke, die Vergleichs-Seite
+> **drei**. Die Legende hing an genau einem. Auf Staging gemessen: Trip 9
+> erklärte gegen 12 gerenderte Kürzel (fehlend `R`, `PR`, `G` — exakt der
+> Ausblick-Satz `DEFAULT_OUTLOOK_METRIC_KEYS`), Vergleich 7 gegen 13
+> (fehlend `PR`, `TF`, `TH`, `VS`, `W`, `WD` — Ausblick plus Stundenverlauf).
+>
+> **Auflösung:** Die Legende zieht in `WeatherV2Reihenfolge.svelte` — die
+> Komponente, die die Marken rendert, erklärt sie auch, gespeist aus
+> **denselben Props** (`kuerzelById` + `metricById`), die sie für die Marken
+> bereits erhält. Damit bringt jeder Marken-Block seine Legende mit, auch
+> künftige Einbindungen, und AC-1 ist **baulich** unverletzbar statt nur
+> getestet. Die Barriere liegt am Gefahrenpunkt, nicht mehrere Blöcke darüber.
 - **Register- und Katalog-Änderungen sind Scheibe A (#1887), bereits
   gemerged.** Diese Scheibe fasst `metric_catalog.py` und verwandte
   Python-Dateien nicht an.
