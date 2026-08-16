@@ -73,8 +73,8 @@ _COL: Final[dict[str, int]] = {
 
 # ─────────────── Issue #1460 (P1b): Niveau statt Sprunggroesse ──────────────
 #
-# Gefahrenstufen-Groessen (aktuell nur THUNDER_LEVEL, Skala NONE=0/MED=1/
-# HIGH=2) lassen sich nicht ueber eine Delta-Zahl steuern: "Mittelstufe
+# Gefahrenstufen-Groessen (aktuell nur THUNDER_LEVEL, Skala NONE=0/LOW=1/
+# MED=2/HIGH=3) lassen sich nicht ueber eine Delta-Zahl steuern: "Mittelstufe
 # erreicht" und "Hoechststufe von der Mittelstufe erreicht" sind derselbe
 # Sprung (1), sollen aber unterschiedlich melden. Massgeblich ist deshalb das
 # erreichte (Verschaerfung) bzw. verlassene (Entwarnung) NIVEAU.

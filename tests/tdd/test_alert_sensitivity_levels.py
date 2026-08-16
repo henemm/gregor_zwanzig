@@ -3,7 +3,7 @@ Gefahrenstufen-Groessen ueber das erreichte NIVEAU, nicht ueber die Sprunggroess
 
 SPEC: docs/specs/modules/rework_1460_t1_relevanzfilter.md v1.2 (AC-4 .. AC-19)
 
-Zielsemantik (Ordinalwerte NONE=0 / MED=1 / HIGH=2) — beide Richtungen melden,
+Zielsemantik (Ordinalwerte NONE=0 / LOW=1 / MED=2 / HIGH=3) — beide Richtungen melden,
 symmetrisch je Stufe (PO-go 2026-08-03):
 
     sensibel   -> Verschaerfung: `neu > alt`               Entwarnung: `neu < alt`

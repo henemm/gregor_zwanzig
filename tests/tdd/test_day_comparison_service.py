@@ -5,7 +5,7 @@ Kein Mock: Tests bauen echte SegmentWeatherData-Objekte.
 
 AC-1: compare() gibt DayComparison mit einem Eintrag pro heutigem Segment zurück
 AC-2: Niederschlag weniger = BETTER, delta = heute - gestern
-AC-3: ThunderLevel-Ordinal-Vergleich (NONE=0, MED=1, HIGH=2)
+AC-3: ThunderLevel-Ordinal-Vergleich (NONE=0, LOW=1, MED=2, HIGH=3)
 AC-4: Segment-ID fehlt in yesterday-Liste → alle Directions MISSING
 AC-5: Temperatur ist neutral → direction immer EQUAL, delta gesetzt
 

@@ -812,7 +812,8 @@ class WeatherChangeDetectionService:
                 new_value = thunder_ordinal(new_value)
             comparison = _ALERT_METRIC_COMPARISON[rule.metric]
             # Issue #222 F003: THUNDER_LEVEL uses >= for above (user intent
-            # "ab Stufe MED alarmieren" — threshold=1.0 must match MED=1).
+            # "ab Stufe X alarmieren" — the threshold must match the level
+            # itself; scale NONE=0/LOW=1/MED=2/HIGH=3 since #1474).
             # Other numeric metrics keep strict > to avoid spurious noise.
             if rule.metric == AlertMetric.THUNDER_LEVEL:
                 triggered = (

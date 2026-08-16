@@ -355,7 +355,10 @@ def test_unzerlegbarer_tagestoken_faellt_auf_kein_gewitter_zurueck():
 # ``_kompakt_ausblick_zeile()`` -- KEIN zweiter Aufruf desselben Codes zur
 # Testlaufzeit (Spec AC-5, Begruendung woertlich aus
 # tests/tdd/test_trip_outlook_parity.py).
-_AC5_ALT_ZEILE_SOLL = "Mi  Alte Etappe                9-21C   1.5mm NW22  TMED"
+# Issue #1488 Scheibe B: Sollwert neu aufgezeichnet -- das Aggregatwort kommt
+# jetzt aus THUNDER_LABEL_DE ("mittel" statt "MED"). Geprueft bleibt die
+# Zweigwahl (Rueckfall auf `thunder_plain` ohne Stundenreihe), nicht das Vokabular.
+_AC5_ALT_ZEILE_SOLL = "Mi  Alte Etappe                9-21C   1.5mm NW22  Tmittel"
 
 _AC5_ALT_ZEILE = dict(
     weekday="Mi", name="Alte Etappe", note=None,

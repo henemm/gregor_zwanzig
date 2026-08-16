@@ -34,6 +34,7 @@ from app.models import (
 from utils.geo import degrees_to_compass
 from utils.timezone import local_dt, local_fmt, local_hour
 
+from output.metric_format import THUNDER_LABEL_DE
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.design_tokens import FONT_DATA
 
@@ -870,34 +871,23 @@ def shorten_stage_name(name: str, max_len: int = 25) -> str:
 
 # Issue #623: Shared trend-token function — single source of truth for all channels.
 _THUNDER_MAP = {
+    # NONE zeigt bewusst kein Wort, sondern einen Gedankenstrich (Issue #1488 B).
     "NONE": {
-        "word": "kein",
-        "sq_color": "#9a958a",
-        "word_color": "#6b675c",
+        "word": THUNDER_LABEL_DE[ThunderLevel.NONE],
         "plain": "⚡–",
-        "sms": None,
     },
-    # Issue #1474: neue Stufe "leicht" (LOW), Farbe zwischen NONE und MED.
+    # Issue #1474: neue Stufe "leicht" (LOW).
     "LOW": {
-        "word": "leicht",
-        "sq_color": "#c9a45a",
-        "word_color": "#8c6d2a",
-        "plain": "⚡leicht",
-        "sms": "GEW-LOW",
+        "word": THUNDER_LABEL_DE[ThunderLevel.LOW],
+        "plain": f"⚡{THUNDER_LABEL_DE[ThunderLevel.LOW]}",
     },
     "MED": {
-        "word": "MED",
-        "sq_color": "#c08a1a",
-        "word_color": "#8c3e1a",
-        "plain": "⚡MED",
-        "sms": "GEW-MED",
+        "word": THUNDER_LABEL_DE[ThunderLevel.MED],
+        "plain": f"⚡{THUNDER_LABEL_DE[ThunderLevel.MED]}",
     },
     "HIGH": {
-        "word": "HIGH",
-        "sq_color": "#a83232",
-        "word_color": "#a83232",
-        "plain": "⚡HIGH",
-        "sms": "GEW-HIGH",
+        "word": THUNDER_LABEL_DE[ThunderLevel.HIGH],
+        "plain": f"⚡{THUNDER_LABEL_DE[ThunderLevel.HIGH]}",
     },
 }
 
@@ -928,11 +918,8 @@ def format_trend_tokens(stage: dict) -> dict:
             wind_str        — 'W20' / '20'
             wind_highlight  — bool (wind_kmh > 30)
             wind_risk       — bool (wind_kmh >= 50)
-            thunder_word    — 'kein' / 'leicht' / 'MED' / 'HIGH'
-            thunder_sq_color — HTML hex for ampel square
-            thunder_word_color — HTML hex for word text
-            thunder_plain   — '⚡–' / '⚡MED' / '⚡HIGH'
-            thunder_sms     — 'GEW-MED' / 'GEW-HIGH' / None (absent for NONE)
+            thunder_word    — 'kein' / 'leicht' / 'mittel' / 'hoch'
+            thunder_plain   — '⚡–' / '⚡leicht' / '⚡mittel' / '⚡hoch'
             precip_token    — '{erst}@{h}({peak}@{h})' or '-' (#640)
             wind_token      — '{v}@{h}(...)' or '-' (#640)
             gust_token      — '{v}@{h}(...)' or '-' (#640)
@@ -1072,10 +1059,7 @@ def format_trend_tokens(stage: dict) -> dict:
         "wind_highlight": wind_highlight,
         "wind_risk": wind_risk,
         "thunder_word": t_data["word"],
-        "thunder_sq_color": t_data["sq_color"],
-        "thunder_word_color": t_data["word_color"],
         "thunder_plain": t_data["plain"],
-        "thunder_sms": t_data["sms"],
         # Issue #640: @-time tokens (single source of truth)
         "precip_token": precip_token,
         "wind_token": wind_token,
