@@ -62,7 +62,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from 'svelte/compiler';
 import { toCompareSelectionEntries } from '../weather-metrics-tab/compareMetricSelection.ts';
 
@@ -851,6 +851,277 @@ describe('AC-1: der echte Aufruf erklaert GENAU die Marken seines Blocks', () =>
 				`AC-1 FAIL (${flaeche}): unaufloesbare Groessen: ` +
 					`${JSON.stringify(ergebnis.unaufloesbar)}.`
 			);
+		});
+	}
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// (D) DIE VIER ECHTEN EINBETTUNGEN — Adversary F007
+//
+// Schicht C fuehrt den Aufruf der Marken-Komponente aus, aber gegen eine hier
+// gebaute Umgebung. Was sie NICHT sieht: ob die vier Einbettungsstellen der
+// Komponente ihr ueberhaupt brauchbare Props reichen. Gemessen: an
+// `CompareHourlyLayoutControls.svelte` `metricById={hourlyMetricById}` durch
+// `metricById={{}}` ersetzt -> 17/17 gruen. Der Block verloere lautlos
+// Beschriftung, Marken UND Legende auf einmal.
+//
+// (Einordnung, unveraendert gueltig: das ist NICHT mehr die urspruengliche
+// Fehlerklasse. Marke und Legende kommen jetzt aus denselben Props derselben
+// Instanz, sie koennen nicht mehr auseinanderlaufen — sie verschwaenden
+// gemeinsam. Genau dafuer war Weg A da. Bewacht gehoert es trotzdem.)
+//
+// Gemessen wird deshalb die ECHTE Herleitung je Datei: die Deklarationen des
+// Instanz-Skripts werden der Reihe nach ausgewertet — mit den echten Importen
+// der Datei und den echten Katalogen als Saat —, danach die vier
+// Attribut-Ausdruecke der Einbettung. Nichts davon ist hier nachgebaut.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LIB = resolve(HIER, '..', '..', '..');
+
+/** Wertet einen Quelltext-Ausdruck gegen eine Umgebung aus. */
+function werte(ausdruck: string, umgebung: Knoten): unknown {
+	return new Function('u', `with (u) { return (${ausdruck}); }`)(umgebung);
+}
+
+/** Der Quelltext eines Knotens OHNE TypeScript-Annotationen — `new Function`
+ *  versteht kein TS, und die Herleitungen der Komponenten sind typisiert
+ *  (`const map: Record<string, MetricEntry> = {}`). Ausgeblendet wird per AST
+ *  (Zeichen durch Leerzeichen ersetzt, Offsets bleiben gueltig), nicht per
+ *  Textmuster — geraten wird hier nichts. */
+function ohneTypen(quelle: string, knoten: Knoten): string {
+	const loecher: [number, number][] = [];
+	function lauf(n: unknown): void {
+		if (n === null || typeof n !== 'object') return;
+		if (Array.isArray(n)) { n.forEach(lauf); return; }
+		const k = n as Knoten;
+		for (const feld of ['typeAnnotation', 'returnType', 'typeParameters', 'typeArguments']) {
+			const t = k[feld] as Knoten | undefined;
+			if (t && typeof t.start === 'number') loecher.push([t.start, t.end]);
+		}
+		// `x as T` / `x satisfies T`: das Schluesselwort mit wegnehmen.
+		if ((k.type === 'TSAsExpression' || k.type === 'TSSatisfiesExpression')
+			&& k.expression && k.typeAnnotation) {
+			loecher.push([k.expression.end, k.typeAnnotation.end]);
+		}
+		if (k.type === 'TSNonNullExpression' && k.expression) loecher.push([k.expression.end, k.end]);
+		for (const key of Object.keys(k)) { if (key !== 'parent' && key !== 'loc') lauf(k[key]); }
+	}
+	lauf(knoten);
+	const zeichen = [...quelle];
+	for (const [a, b] of loecher) for (let i = a; i < b && i < zeichen.length; i++) zeichen[i] = ' ';
+	return zeichen.slice(knoten.start, knoten.end).join('');
+}
+
+/** Baut die Umgebung einer Komponentendatei: Runen-Attrappen, ihre ECHTEN
+ *  Modul-Importe und ihre eigenen Deklarationen, der Reihe nach ausgewertet.
+ *  Was sich nicht auswerten laesst, bleibt weg — fehlt es spaeter, scheitert
+ *  der Ausdruck LAUT (keine stille Entwarnung). */
+async function umgebungFuer(datei: string, saat: Knoten): Promise<{ ast: Knoten; quelle: string; u: Knoten }> {
+	const quelle = readFileSync(datei, 'utf-8');
+	const ast: Knoten = parse(quelle, { modern: true });
+	const u: Knoten = { ...saat };
+	const derived = ((v: unknown) => v) as Knoten;
+	derived.by = (fn: () => unknown) => fn();
+	u.$derived = derived;
+	u.$state = (v: unknown) => v;
+	u.$props = () => ({});
+	u.$effect = () => {};
+
+	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
+		if (stmt.type !== 'ImportDeclaration') continue;
+		const q = String(stmt.source?.value ?? '');
+		if (q.endsWith('.svelte')) continue;
+		const spec = q.startsWith('.')
+			? pathToFileURL(resolve(dirname(datei), q)).href
+			: q.startsWith('$lib/') ? q : null;
+		if (!spec) continue;
+		try {
+			const mod: Knoten = await import(spec);
+			for (const [name, wert] of Object.entries(mod)) if (!(name in u)) u[name] = wert;
+		} catch { /* nicht aufloesbar: faellt beim Ausdruck auf, nicht hier */ }
+	}
+	// Funktionsdeklarationen zuerst — sie werden in JS gehoben, und die
+	// Herleitungen rufen sie auf (`$derived(channelListSections(activeChannel))`).
+	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
+		if (stmt.type !== 'FunctionDeclaration' || stmt.id?.type !== 'Identifier') continue;
+		if (stmt.id.name in u) continue;
+		// Eine Funktions-DEKLARATION ist keine Ausdrucks-Position — sie wird als
+		// Anweisung ausgefuehrt und der Name danach zurueckgegeben.
+		try {
+			u[stmt.id.name] = new Function(
+				'u', `with (u) { ${ohneTypen(quelle, stmt)}\n return ${stmt.id.name}; }`
+			)(u);
+		} catch { /* s.o. */ }
+	}
+	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
+		if (stmt.type !== 'VariableDeclaration') continue;
+		for (const d of stmt.declarations as Knoten[]) {
+			if (d.id?.type !== 'Identifier' || !d.init || d.id.name in u) continue;
+			try { u[d.id.name] = werte(ohneTypen(quelle, d.init), u); } catch { /* s.o. */ }
+		}
+	}
+	return { ast, quelle, u };
+}
+
+/** Die `<WeatherV2Reihenfolge …>`-Einbettung, auf die `waehle` passt. */
+function findeEinbettung(ast: Knoten, quelle: string, waehle: (eltern: Knoten[]) => boolean): Knoten {
+	const treffer: Knoten[] = [];
+	function lauf(node: unknown, eltern: Knoten[]): void {
+		if (node === null || typeof node !== 'object') return;
+		if (Array.isArray(node)) { node.forEach((n) => lauf(n, eltern)); return; }
+		const n = node as Knoten;
+		if (n.type === 'Component' && n.name === 'WeatherV2Reihenfolge' && waehle(eltern)) treffer.push(n);
+		const kette = n.type ? [...eltern, n] : eltern;
+		for (const key of Object.keys(n)) { if (key !== 'parent' && key !== 'loc') lauf(n[key], kette); }
+	}
+	lauf(ast.fragment, []);
+	assert.equal(
+		treffer.length, 1,
+		`F007 FAIL: das Erkennungsmerkmal trifft ${treffer.length} Einbettungen statt einer. ` +
+			`Verschwindet eine Aufrufstelle, muss dieser Test LAUT scheitern — nicht still ` +
+			`durchlaufen.`
+	);
+	return treffer[0];
+}
+
+/** Der `context`-Wert des naechsten umschliessenden `LayoutTab`. */
+function layoutKontext(eltern: Knoten[]): string | null {
+	for (let i = eltern.length - 1; i >= 0; i--) {
+		const e = eltern[i];
+		if (e.type === 'Component' && e.name === 'LayoutTab') {
+			for (const a of e.attributes ?? []) {
+				if (a.type === 'Attribute' && a.name === 'context') {
+					const v = Array.isArray(a.value) ? a.value : [a.value];
+					const lit = v.find((x: Knoten) => x?.type === 'Text');
+					return lit ? String(lit.data) : null;
+				}
+			}
+		}
+	}
+	return null;
+}
+
+function attributAusdruck(einbettung: Knoten, quelle: string, name: string): string | null {
+	for (const a of (einbettung.attributes ?? []) as Knoten[]) {
+		if (a.type !== 'Attribute' || a.name !== name) continue;
+		const v = a.value;
+		if (v?.type === 'ExpressionTag') return quelle.slice(v.expression.start, v.expression.end);
+		// Kurzform `{metricById}` — der Wert IST der Bezeichner.
+		return name;
+	}
+	return null;
+}
+
+const EINBETTUNGEN = [
+	{
+		name: 'Trip-Reihenfolge (WeatherMetricsTab)',
+		datei: () => join(SHARED, 'WeatherMetricsTab.svelte'),
+		waehle: (eltern: Knoten[]) => layoutKontext(eltern) === 'route',
+		saat: () => ({
+			smsSymbols: live().sms,
+			catalog: live().metrics,
+			compareCatalog: toCompareSelectionEntries({ metrics: live().compare } as never),
+			buckets: { primary: gerendertRoute(SECHS), secondary: [], off: [] },
+			channelBuckets: {}, activeChannel: 'email', compareChannel: 'email',
+			friendlyMap: {}, highlight: null, wiz: undefined, trip: undefined
+		})
+	},
+	{
+		name: 'Vergleichs-Reihenfolge (WeatherMetricsTab)',
+		datei: () => join(SHARED, 'WeatherMetricsTab.svelte'),
+		waehle: (eltern: Knoten[]) => layoutKontext(eltern) === 'vergleich',
+		saat: () => ({
+			smsSymbols: live().sms,
+			catalog: live().metrics,
+			compareCatalog: toCompareSelectionEntries({ metrics: live().compare } as never),
+			buckets: { primary: [], secondary: [], off: [] },
+			channelBuckets: {}, activeChannel: 'email', compareChannel: 'email',
+			friendlyMap: {}, highlight: null,
+			wiz: { activeMetricKeys: gerendertVergleich(), channelActiveMetricKeys: {} }
+		})
+	},
+	{
+		name: 'Ausblick (CompareOutlookLayoutControls)',
+		datei: () => join(SHARED, 'CompareOutlookLayoutControls.svelte'),
+		waehle: () => true,
+		saat: () => ({
+			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
+			metricKeys: null
+		})
+	},
+	{
+		name: 'Stundenverlauf (CompareHourlyLayoutControls)',
+		datei: () => join(SHARED, 'CompareHourlyLayoutControls.svelte'),
+		waehle: () => true,
+		saat: () => ({
+			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
+			wiz: { hourlyMetricKeys: null }
+		})
+	}
+] as const;
+
+describe('F007: alle VIER Einbettungen reichen brauchbare Props durch', () => {
+	for (const fall of EINBETTUNGEN) {
+		test(`${fall.name}: die echte Herleitung liefert Marken UND Legende`, async () => {
+			const datei = fall.datei();
+			const { ast, quelle, u } = await umgebungFuer(datei, fall.saat() as Knoten);
+			const einbettung = findeEinbettung(ast, quelle, fall.waehle);
+
+			const hole = (name: string, pflicht: boolean): unknown => {
+				const ausdruck = attributAusdruck(einbettung, quelle, name);
+				if (ausdruck === null) {
+					assert.ok(!pflicht, `F007 FAIL: ${fall.name} uebergibt kein \`${name}\`.`);
+					return undefined;
+				}
+				try {
+					return werte(ausdruck, u);
+				} catch (e) {
+					return assert.fail(
+						`F007 FAIL: ${fall.name} — \`${name}={${ausdruck}}\` laesst sich nicht ` +
+							`auswerten: ${(e as Error).message}. Die Einbettung reicht dann etwas ` +
+							`durch, das es in ihrem Skript nicht (mehr) gibt.\n` +
+							`Herleitbar waren: ${JSON.stringify(Object.keys(u).sort())}`
+					);
+				}
+			};
+
+			const primary = (hole('primaryColumns', true) ?? []) as string[];
+			const off = (hole('offColumns', false) ?? []) as string[];
+			const kuerzelById = (hole('kuerzelById', true) ?? {}) as Record<string, string[]>;
+			const metricById = (hole('metricById', true) ?? {}) as Record<string, Knoten>;
+
+			assert.ok(
+				primary.length > 0,
+				`F007 FAIL: ${fall.name} reicht eine LEERE Metrik-Liste durch — der Block ` +
+					`zeigte gar keine Zeile.`
+			);
+			const marken = markenNachAnzeigeRegel([...primary, ...off], kuerzelById, metricById);
+			assert.ok(
+				marken.length > 0,
+				`F007 FAIL: ${fall.name} erzeugt KEINE einzige Marke. Entweder ist ` +
+					`\`kuerzelById\` leer (${Object.keys(kuerzelById).length} Schluessel) oder ` +
+					`\`metricById\` (${Object.keys(metricById).length} Schluessel) — der Block ` +
+					`verloere Beschriftung, Marken und Legende auf einmal, ohne dass es ` +
+					`auffiele. Gerendert werden ${primary.length + off.length} Groessen.`
+			);
+
+			const ergebnis = (await ableitung())([...primary, ...off], kuerzelById, metricById);
+			assert.deepEqual(
+				ergebnis.eintraege.map((e) => e.kuerzel).sort(), marken,
+				`F007 FAIL: ${fall.name} — Legende und Marken laufen auseinander.`
+			);
+			assert.deepEqual(
+				ergebnis.unaufloesbar, [],
+				`F007 FAIL: ${fall.name} — unaufloesbare Groessen: ` +
+					`${JSON.stringify(ergebnis.unaufloesbar)}.`
+			);
+			for (const e of ergebnis.eintraege) {
+				assert.ok(
+					e.bedeutung.trim().length > 1,
+					`F007 FAIL: ${fall.name} — "${e.kuerzel}" wird als ` +
+						`${JSON.stringify(e.bedeutung)} erklaert; das ist keine Bedeutung.`
+				);
+			}
 		});
 	}
 });
