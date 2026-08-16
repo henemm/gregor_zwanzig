@@ -12,7 +12,7 @@ tags: [briefing, alert-gate, idempotenz, bugfix]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-16 ('go')
 
 ## Purpose
 
