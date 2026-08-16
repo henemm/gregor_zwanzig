@@ -66,6 +66,27 @@ festen Zone und war damit zufällig umstellungs-immun.
 | `tests/tdd/test_briefing_slot_idempotenz.py` | CREATE | T1–T14, Verhaltensname statt Issue-Nummer (`test_naming_gate.py`) |
 | `tests/tdd/test_briefing_faelligkeit_ortszone.py` | MODIFY | AC-7-Test (`:312-348`) wird von „0 Treffer / 2 Treffer" auf „1 Treffer / 1 Treffer" umgeschrieben — planmäßiges RED dieser Datei ist Teil des Vorhabens |
 
+### Nachtrag #1897 (2026-08-16) — Verwaisungs-Regel, MODIFY
+
+Ein Vermerk mit `outcome: null` zählte bislang als erledigt, sobald er nur *existierte*
+(`is_recorded()`, siehe oben). Stirbt der Prozess hart (Deploy, SIGKILL, OOM, Crash) zwischen
+`reserve()` und `record_outcome()`, blieb genau ein solcher Vermerk zurück — das Briefing fiel
+für den Rest des Ortstags aus, und die Alarm-Vorlauf-Sperre aus #1594 hob sich fälschlich auf,
+obwohl nie ein Briefing zugestellt wurde. Real eingetreten auf Trip KHW `5f534011` am 14.08. und
+16.08.2026. Behoben und spezifiziert in
+`docs/specs/modules/fix_1897_verwaister_briefing_slot.md`.
+
+| File | Change Type | Description |
+|------|-------------|--------------|
+| `src/services/briefing_slots.py` | MODIFY | `CLAIM_TTL` (900 s) als Modul-Attribut; `reserve(..., moment)` übernimmt einen fremden Vermerk mit `outcome: null`, dessen `recorded_at` älter als `CLAIM_TTL` ist (neues `recorded_at`, `outcome` bleibt `null`), innerhalb derselben Sperren-Closure wie die bestehende Prüfung; ein zweites, eigenständiges Prädikat „abgeschlossen ODER lebendig in Arbeit" tritt neben `is_recorded()`. |
+| `src/services/trip_report_scheduler.py` | MODIFY | `_collect_due_trips()` nutzt das neue zweite Prädikat (Alter zählt); `trip_briefing_due_at()` bleibt bei `is_recorded()` (Alter zählt nicht — die Alarm-Sperre muss halten, solange kein `outcome` gesetzt ist). |
+| `src/services/dispatch_orchestrator.py` | MODIFY | `dispatch_one()` reicht `now_utc` als `moment` an `reserve()` durch. |
+
+Präzisiert diese Spec, löst sie **nicht** ab: Der Doppelversand-Schutz bleibt in `reserve()`,
+fail-closed bleibt die Fehlerrichtung (AC-13 gilt unverändert fort) — ergänzt wird einzig, dass
+ein hinreichend alter offener Vermerk (`outcome: null`, älter als `CLAIM_TTL`) keine dauerhafte
+Blockade mehr ist, sondern beim nächsten Lauf übernommen und der Versand nachgeholt wird.
+
 ### Estimated Changes
 
 - Files: 5 (3 Produktivcode, 2 Tests)
@@ -480,3 +501,6 @@ Skelett verschieben, Vermerk nach `_send_trip_report_outcome` statt in den Wrapp
 
 - 1.0 (2026-08-11): Initial spec created, aus `docs/context/fix-1725-faelligkeit-idempotenz.md`
   auf Basis der Vorlage `fix_1724_faelligkeit_in_der_ortszone.md`.
+- 2026-08-16: Scope-Nachtrag zu #1897 (Verwaisungs-Regel) ergänzt — präzisiert diese Spec,
+  löst sie nicht ab. Siehe „Nachtrag #1897" unter Scope sowie
+  `docs/specs/modules/fix_1897_verwaister_briefing_slot.md`.

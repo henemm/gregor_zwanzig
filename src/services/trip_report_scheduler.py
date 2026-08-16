@@ -193,6 +193,10 @@ def trip_briefing_due_at(
         # bereits zugestellten Briefing. Nach einem GESCHEITERTEN Versand
         # traegt er nicht (reserve-then-release, `:565-571`); dort endet die
         # Sperre ueber den Briefing-Anker (`check_briefing_imminent`, R6).
+        # Issue #1897: `is_recorded` heisst ABGESCHLOSSEN. Ein Vermerk ohne
+        # Ausgang (hart beendeter Prozess) beendet das Fenster NICHT mehr --
+        # solange nichts rausging, muss die Alarm-Sperre halten, unabhaengig
+        # vom Alter des Vermerks.
         if store.is_recorded(
             trip.id, report_type, vor_ort.date(), zone=vor_ort.tzinfo,
         ):
@@ -550,8 +554,12 @@ class TripReportSchedulerService:
                 if not stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN:
                     continue
                 ortstag = vor_ort.date()
-                if store.is_recorded(
+                # Issue #1897: hier zaehlt „wird jetzt ein Versand
+                # stattfinden?" -- ein LEBENDIGER Vermerk (Versand laeuft) haelt
+                # den Trip aus der Liste, ein VERWAISTER bringt ihn zurueck.
+                if store.is_recorded_or_claimed(
                     trip.id, report_type, ortstag, zone=vor_ort.tzinfo,
+                    moment=now_utc,
                 ):
                     continue
                 due.append((trip, report_type, ortstag))
@@ -559,6 +567,7 @@ class TripReportSchedulerService:
 
     def _dispatch_due_item(
         self, trip: "Trip", report_type: str, local_day: date,
+        *, now_utc: datetime,
     ) -> Optional[str]:
         """Versand EINES faelligen Slots, abgesichert durch den Vermerk (#1725).
 
@@ -572,6 +581,11 @@ class TripReportSchedulerService:
         Legacy-CLI) vom Vermerk unberuehrt, ohne dass ein zusaetzliches Flag
         noetig waere (AC-12) -- sie rufen `_send_trip_report_outcome` direkt.
 
+        Issue #1897: `now_utc` ist der Lauf-Zeitpunkt und wird an `reserve`
+        durchgereicht -- EIN Moment pro Lauf, keine zweite Zeitabfrage. Er
+        entscheidet, ob ein Vermerk ohne Ausgang zu einem laufenden Versand
+        gehoert (blockiert) oder verwaist ist (wird uebernommen).
+
         Returns:
             Den Ausgang des Versandversuchs -- oder `None`, wenn gar keiner
             stattfand (Slot bereits vermerkt oder Sperre nicht zu bekommen,
@@ -581,7 +595,9 @@ class TripReportSchedulerService:
         from services.trip_day import trip_tz
 
         store = BriefingSlotStore(self._user_id)
-        if not store.reserve(trip.id, report_type, local_day, zone=trip_tz(trip)):
+        if not store.reserve(
+            trip.id, report_type, local_day, zone=trip_tz(trip), moment=now_utc,
+        ):
             logger.warning(
                 "Slot %s/%s am %s nicht reservierbar -- kein Versandversuch",
                 trip.id, report_type, local_day,

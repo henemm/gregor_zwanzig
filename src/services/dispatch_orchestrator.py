@@ -66,7 +66,7 @@ class TripDispatchStrategy:
         due_trip_ids_now = {trip.id for trip, _, _ in due}
         self._sent += self._service._process_pending_markers(now_utc, due_trip_ids_now)
 
-    def dispatch_one(self, item) -> None:
+    def dispatch_one(self, item, now_utc: "datetime") -> None:
         trip, report_type, local_day = item
         try:
             # Issue #1725: NICHT direkt `_send_trip_report_outcome` -- der
@@ -74,7 +74,12 @@ class TripDispatchStrategy:
             # und gibt ihn je nach Ausgang frei. Er ist bewusst die EINZIGE
             # Stelle, die den Vermerk anfasst: die On-Demand-Pfade rufen
             # weiterhin `_send_trip_report_outcome` und bleiben unberuehrt.
-            outcome = self._service._dispatch_due_item(trip, report_type, local_day)
+            # Issue #1897: `now_utc` ist DER Zeitpunkt dieses Laufs, nicht eine
+            # frische Uhrabfrage -- er entscheidet in `reserve`, ob ein Vermerk
+            # ohne Ausgang zu einem laufenden Versand gehoert oder verwaist ist.
+            outcome = self._service._dispatch_due_item(
+                trip, report_type, local_day, now_utc=now_utc,
+            )
             if outcome is None:
                 # Kein Versandversuch (Slot bereits vermerkt oder Sperre nicht
                 # zu bekommen). Weder gesendet noch technisch fehlgeschlagen --
@@ -158,7 +163,10 @@ class CompareDispatchStrategy:
             now_utc, self._all_locations or [],
         )
 
-    def dispatch_one(self, item) -> None:
+    def dispatch_one(self, item, now_utc: "datetime | None" = None) -> None:
+        # `now_utc` gehoert zur geteilten Strategie-Schnittstelle (Issue #1897,
+        # Trip-Seite). Der Compare-Pfad traegt seinen Tagesbezug bereits im
+        # `item` (`target_date`, `tage_ab_ortstag`) und braucht ihn nicht.
         from app.loader import load_all_locations
         from services.scheduler_dispatch_service import _dispatch_due_preset
 
@@ -227,7 +235,7 @@ def run_briefing_dispatch(
     strategy.pre_pass(now_utc, due)
 
     for i, item in enumerate(due):
-        strategy.dispatch_one(item)
+        strategy.dispatch_one(item, now_utc)
         # 2s Pause zwischen aufeinanderfolgenden Mails (nicht nach der
         # letzten) -- Rate-Limit-Schutz: Trip seit #766, Compare seit
         # 2026-07-16 (#1207, drei Kanaele pro Preset seit #1270). Beide 2.0s.
