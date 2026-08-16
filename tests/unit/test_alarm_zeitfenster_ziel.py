@@ -369,6 +369,21 @@ def radar_fixture_ort(arrival_utc: datetime, heute: date | None = None) -> tuple
     return AUCKLAND_LAT, AUCKLAND_LON
 
 
+def radar_fixture_start_local(arrival_utc: datetime, heute: date | None = None) -> datetime:
+    """Startzeitpunkt (W1) der Radar-Fixture — REINE Funktion, analog zu
+    ``radar_fixture_window/_tz/_ort``.
+
+    Klemmt auf lokalen Tagesbeginn (``00:00`` desselben Ortstags) statt
+    ``arrival - 4h`` naiv zu rechnen, wenn das ueber Mitternacht zurueck auf
+    den Vortag ueberschiessen wuerde (#1871).
+    """
+    dest_tz = radar_fixture_tz(arrival_utc, heute)
+    arrival_local = arrival_utc.astimezone(dest_tz)
+    if arrival_local.hour < 4:
+        return arrival_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    return arrival_local - timedelta(hours=4)
+
+
 def _radar_mails_fuer_spaetankunft() -> list:
     """Baut einen Trip mit Spaetankunft RELATIV ZUM TAGESFENSTER und laesst den
     echten ``check_radar_alerts()`` darueber laufen. Gibt die zugestellten
@@ -395,7 +410,7 @@ def _radar_mails_fuer_spaetankunft() -> list:
     dest_tz = radar_fixture_tz(arrival, heute)
     start_hour, end_hour = radar_fixture_window(arrival, heute)
     arrival_local = arrival.astimezone(dest_tz)
-    start_local = (arrival - timedelta(hours=4)).astimezone(dest_tz)
+    start_local = radar_fixture_start_local(arrival, heute)
 
     trip_id = f"radar-{uuid.uuid4().hex[:8]}"
     stage = Stage(
@@ -604,6 +619,17 @@ def test_radar_fixture_ist_zu_jeder_tageszeit_kein_mitternachtsfenster():
             f"F004: Ortsdatum {lokal.date()} != Etappendatum {heute} bei "
             f"{arrival.isoformat()} ({tz}) — check_radar_alerts() sucht die "
             "Etappe ueber date.today() und faende sie nicht."
+        )
+
+        # #1871: radar_fixture_start_local() klemmt W1 (start_local) so, dass
+        # es NIE nach W2 (arrival_local) faellt — sonst kollabiert das
+        # Zielsegment (Ende <= Start) und der Radar-Pfad faellt still aus der
+        # Ueberwachung.
+        start_local = radar_fixture_start_local(arrival, heute)
+        assert start_local.strftime("%H:%M") <= lokal.strftime("%H:%M"), (
+            f"F1871: start_local={start_local.strftime('%H:%M')} liegt NACH "
+            f"arrival_local={lokal.strftime('%H:%M')} bei {arrival.isoformat()} "
+            f"({tz}) — W1 nach W2 laesst das Zielsegment kollabieren."
         )
 
 
