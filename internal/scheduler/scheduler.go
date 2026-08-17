@@ -305,6 +305,14 @@ func (s *Scheduler) briefingDispatch() {
 
 	if tripLR != nil && tripLR.Status == "ok" &&
 		compareLR != nil && compareLR.Status == "ok" {
+		// Issue #1931: HEARTBEAT_COMPARE_PRESETS ist in Prod bewusst dauerhaft
+		// leer (Ueberwachung laeuft stattdessen ueber den bestehenden
+		// "Gregor20 Core"-Heartbeat, #1898) — dafuer darf keine MQ-Warnung an
+		// infra mehr ausgeloest werden, nur noch ein lokaler Log-Hinweis.
+		if s.heartbeatComparePresets == "" {
+			log.Printf("[scheduler] briefing_dispatch: Heartbeat-URL absichtlich leer (#1898), kein MQ-Versand")
+			return
+		}
 		s.pingHeartbeat("briefing_dispatch", s.heartbeatComparePresets)
 	}
 }
