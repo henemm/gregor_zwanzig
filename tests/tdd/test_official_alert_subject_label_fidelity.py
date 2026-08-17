@@ -235,7 +235,10 @@ def test_ac6_sms_unchanged():
     from output.renderers.alert.official_alerts import render_official_alert_sms
     _ab, _vig, n_ab, n_vig = _ab_and_vigilance_notices()
     sms = render_official_alert_sms([n_ab, n_vig], sms_prefix="KHW403")
-    assert sms == "KHW403 AMT: HT ORANGE Fr ges.Route + CL GELB Sa15-21 ges.Route", (
+    # #1929: Ganztags-Token traegt jetzt Tag UND Monat ('Fr10.07.' statt 'Fr';
+    # F002 ergaenzte den Monat) -- bewusst geaendertes Ausgabeformat, kein
+    # aufgeweichter Wachhund: der Pin bleibt eine exakte Volltext-Gleichheit.
+    assert sms == "KHW403 AMT: HT ORANGE Fr10.07. ges.Route + CL GELB Sa15-21 ges.Route", (
         f"SMS hat sich veraendert: {sms!r}"
     )
 
