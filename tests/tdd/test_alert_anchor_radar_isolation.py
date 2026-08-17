@@ -13,7 +13,7 @@ weder inhaltlich noch zeitlich (mtime) anfasst.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from app.loader import get_snapshots_dir
 

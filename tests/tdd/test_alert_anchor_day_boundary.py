@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 from tests.helpers.alert_log_fixtures import gust_alert_trip, settings_email_only, weather
 
