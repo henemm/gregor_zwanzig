@@ -128,10 +128,11 @@ def test_ac2_render_email_change_wording_and_datablock():
     """AC-2: Given dasselbe Event (Bug-Report-Werte) / When render_email() die
     Single-Metrik-Verdict-Pill und den Datenblock rendert / Then enthält der
     Verdict-Text 'Änderung über deiner Alarm-Schwelle (400 m)' (nicht mehr
-    'jetzt über Schwelle 400 m') und der Datenblock zeigt den vollstaendigen
-    Satz 'jetzt darüber ✗' (#1865-Fix — Fragment 'Änderung über ✗' war
-    unverstaendlich, over_thr()/side_label() selbst bleiben unveraendert)
-    in der Alarm-Schwelle-Zeile — in html UND plain."""
+    'jetzt über Schwelle 400 m') und der Datenblock zeigt den Änderungsbetrag
+    gegen die Schwelle ('über Alarm-Schwelle 400 m ✗', Issue #1935/#1779 E1 —
+    loest den fruehreren Satz 'jetzt darüber ✗' ab, over_thr()/side_label()
+    selbst bleiben unveraendert) in der Alarm-Schwelle-Zeile — in html UND
+    plain."""
     from output.renderers.alert.model import AlertEvent, AlertMessage
     from output.renderers.alert.render import render_email
 
@@ -147,9 +148,15 @@ def test_ac2_render_email_change_wording_and_datablock():
             f"Verdikt-Text fehlt oder ist noch die alte Formulierung "
             f"('jetzt über Schwelle ...'): {content!r}"
         )
-        assert "jetzt darüber ✗" in content, (
-            f"Datenblock-Zeile 'Alarm-Schwelle' zeigt nicht den vollstaendigen "
-            f"Satz 'jetzt darüber ✗' (#1865): {content!r}"
+        assert "über Alarm-Schwelle 400 m ✗" in content, (
+            f"Datenblock-Zeile 'Alarm-Schwelle' zeigt nicht den Änderungsbetrag "
+            f"gegen die Schwelle (Issue #1935/#1779 E1): {content!r}"
+        )
+        assert "Änderung 430 m" in content, (
+            f"Datenblock-Zeile nennt nicht den Änderungsbetrag (430 m): {content!r}"
+        )
+        assert "jetzt darüber ✗" not in content, (
+            f"Altes Fragment 'jetzt darüber ✗' (vor #1935/#1779) noch vorhanden: {content!r}"
         )
         assert "Änderung über ✗" not in content, (
             f"Altes Fragment 'Änderung über ✗' (#1865-Bug) noch vorhanden: {content!r}"
@@ -252,7 +259,9 @@ def test_ac10_multi_datablock_under_threshold_row_format():
     When der E-Mail-Datenblock gerendert wird / Then zeigt die Zeile links
     'Regen% · unter Schwelle' (OHNE Schwellen-Zahl) und rechts '70 → 90 %'
     (neutraler Pfeil, KEIN über/unter-Wort am Ende) — exakt wie Design-Vorlage
-    Zeile 231-234."""
+    Zeile 231-234. Ergaenzung (Issue #1935/#1779 E2): die über-Schwelle-Zeile
+    derselben Nachricht (Böen 30→80, Schwelle 40, Δ=50) traegt zusaetzlich zur
+    Schwelle den Änderungsbetrag."""
     from output.renderers.alert.render import render_email
 
     html, plain = render_email(_bundle_multi_msg())
@@ -267,6 +276,10 @@ def test_ac10_multi_datablock_under_threshold_row_format():
         assert "Regen% · Schwelle" not in content, (
             f"Alte Zeile mit Schwellen-Zahl ('Regen% · Schwelle ...') noch "
             f"vorhanden: {content!r}"
+        )
+        assert "Böen · Änderung 50 · Schwelle 40" in content, (
+            f"Ueber-Schwelle-Zeile nennt nicht den Änderungsbetrag (Issue "
+            f"#1935/#1779 E2): {content!r}"
         )
 
 

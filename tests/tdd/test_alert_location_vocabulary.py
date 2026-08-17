@@ -36,6 +36,7 @@ NICHT Gegenstand dieser Datei: AC-8 bis AC-12 (Mail-Koerper, Scheibe A2).
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -362,7 +363,14 @@ def test_ortsvergleich_aenderungsalarm_nennt_weiterhin_den_ortsnamen():
 
 def test_ortsvergleich_mehrere_orte_nennen_weiterhin_ihre_namen():
     """AC-4 (HEUTE GRUEN, Invariante): derselbe Nachweis fuer den gebuendelten
-    Mehr-Orte-Alarm (`to_multi_point_alert_message`, #1170)."""
+    Mehr-Orte-Alarm (`to_multi_point_alert_message`, #1170).
+
+    Issue #1935/#1779 E5 (nachgezogen, PO-Entscheid 2026-08-17): der
+    Top-3-Ausdruck haengt seither die Einheit IMMER an (nicht mehr nur bei
+    '%'), auch im Ortsvergleich-Pfad -- 'Böen' (km/h) traegt sie deshalb
+    seither. Die eigentliche AC-4-Zusicherung dieses Tests -- die Ortsnamen
+    ('Toulon, Hyères') bleiben ERHALTEN, die Segment-Sprache verdraengt sie
+    NICHT -- ist davon unberuehrt und bleibt als exakte Gleichheit bestehen."""
     from output.renderers.alert.project import to_multi_point_alert_message
     from output.renderers.alert.render import render_subject, render_telegram
 
@@ -376,7 +384,7 @@ def test_ortsvergleich_mehrere_orte_nennen_weiterhin_ihre_namen():
     )
 
     assert render_subject(msg) == (
-        "[Toulon, Hyères] Toulon, Hyères · ↑ 2 über Schwelle: Böen 80, Böen 70"
+        "[Toulon, Hyères] Toulon, Hyères · ↑ 2 über Schwelle: Böen 80 km/h, Böen 70 km/h"
     )
     assert render_telegram(msg).splitlines()[0] == (
         "<b>Toulon, Hyères · Toulon, Hyères · 2 über Schwelle</b>"
@@ -460,12 +468,95 @@ def test_ortsname_schlaegt_die_segment_kennung():
 
 
 # ---------------------------------------------------------------------------
-# AC-5 — Kurznachricht nennt keinen Ort und bleibt <= 140 Zeichen
+# AC-5 — Kurznachricht-Ortsbezug
 # ---------------------------------------------------------------------------
+#
+# PO-Entscheid 2026-08-04 (#1467 S2 AG3b) hatte hier zunaechst festgelegt:
+# Alarm-Kurznachrichten nennen KEINEN Ort. PO-Entscheid 2026-08-17 nimmt das
+# fuer den TRIP-Δ-PFAD ausdruecklich zurueck (Spec
+# `docs/specs/modules/fix_1935_1779_alarm_nachricht_klarheit.md`, AC-5/AC-8,
+# loest AC-5 von `fix_1744_alarm_format_angleichen.md` fuer diesen Pfad ab):
+# die Kurznachricht nennt seither DENSELBEN Ortstext wie der Betreff (Segment-
+# /Ziel-Sprache statt km-Spanne), aber weiterhin KEINEN Trip-Namen. Der
+# Radar-/Nowcast-Pfad (`_render_sms_onset` ohne `location_label`) ist von
+# dieser Ablösung NICHT betroffen und bleibt bei der km-Spanne (AC-10/AC-12).
+
+
+def _strip_leading_pictograph(text: str) -> str:
+    """Entfernt ein fuehrendes Piktogramm (z.B. 🏁) samt folgendem Leerzeichen.
+
+    Unabhaengige Testerwartung -- KEINE Wiederverwendung von Produktivcode
+    (Vorbild `test_alert_sms_segment_head.py::_strip_leading_pictograph`)."""
+    if not text:
+        return text
+    if unicodedata.category(text[0]) == "So":
+        return text[1:].lstrip()
+    return text
+
+
+def _assert_kurznachricht_nennt_ortstext_wie_betreff(sms: str, ort_im_betreff: str) -> None:
+    """Issue #1935/#1779 AC-5/AC-8 (PO-Entscheid 2026-08-17): die Kurznachricht
+    des Trip-Δ-Pfads beginnt mit demselben (emoji-freien, ASCII-gefalteten)
+    Ortstext wie der Betreff, statt einer km-Spanne, und bleibt <= 140 Zeichen.
+    Der Gedankenstrich in Segment-Bereichen ('Segment 3–5') wird auf der SMS
+    zu einem einfachen Bindestrich gefaltet (GSM-7) -- dieselbe, andernorts
+    bereits bewachte Faltungsregel, hier nur zur Vergleichsbildung nachgebaut."""
+    erwartet = ort_im_betreff.replace("–", "-")
+    assert sms.startswith(f"{erwartet}: "), (
+        f"Kurznachricht beginnt nicht mit dem Betreff-Ortstext {erwartet!r}: {sms!r}"
+    )
+    assert not re.search(r"km\d", sms), (
+        f"Kurznachricht nennt noch eine km-Spanne statt der Betreff-Ortssprache: {sms!r}"
+    )
+    # Alarm-Grenze ist 140, NICHT 160 (render.py:285/621, official_alerts.py:1836).
+    assert len(sms) <= 140, f"Kurznachricht ist {len(sms)} Zeichen lang: {sms!r}"
+
+
+def test_kurznachricht_des_abweichungsalarms_nennt_denselben_ort_wie_der_betreff():
+    """AC-5/AC-8 (Issue #1935/#1779, PO-Entscheid 2026-08-17): Given ein
+    Trip-Abweichungsalarm auf dem Ziel-Segment / When die Kurznachricht
+    gerendert wird / Then beginnt sie mit demselben Ortstext wie der Betreff
+    ('Ziel', ohne Emoji) statt einer km-Spanne, und traegt weiterhin KEINEN
+    Trip-Namen.
+
+    Dreht die vormalige Invariante dieser Datei ('nennt keinen Ort') fuer
+    genau diesen Pfad um -- s. Spec `fix_1935_1779_alarm_nachricht_klarheit.md`
+    AC-5, die `fix_1744_alarm_format_angleichen.md` AC-5 hierfuer ablöst.
+    """
+    from output.renderers.alert.render import render_sms, render_subject
+
+    msg = _delta_message([("Ziel", 8.0, 8.0)])
+    ort_im_betreff = _strip_leading_pictograph(_location_slot(render_subject(msg)))
+    sms = render_sms(msg)
+
+    _assert_kurznachricht_nennt_ortstext_wie_betreff(sms, ort_im_betreff)
+    assert msg.trip_short not in sms, (
+        f"Kurznachricht traegt weiterhin den Trip-Namen: {sms!r}"
+    )
+
+
+def test_kurznachricht_des_abweichungsalarms_ueber_mehrere_segmente_nennt_denselben_ort_wie_der_betreff():
+    """AC-5/AC-8 (Issue #1935/#1779, PO-Entscheid 2026-08-17): dieselbe
+    Zusicherung fuer den Mehr-Segment-Fall aus AC-2 ('Segment 3–5' im
+    Betreff) -- loest `fix_1744_alarm_format_angleichen.md` AC-5 fuer den
+    Trip-Δ-Pfad ab."""
+    from output.renderers.alert.render import render_sms, render_subject
+
+    msg = _delta_message([("3", 4.0, 6.0), ("4", 6.0, 8.0), ("5", 8.0, 10.0)])
+    ort_im_betreff = _strip_leading_pictograph(_location_slot(render_subject(msg)))
+    sms = render_sms(msg)
+
+    _assert_kurznachricht_nennt_ortstext_wie_betreff(sms, ort_im_betreff)
+    assert msg.trip_short not in sms, (
+        f"Kurznachricht traegt weiterhin den Trip-Namen: {sms!r}"
+    )
+
 
 def _assert_kurznachricht_ohne_ort(sms: str) -> None:
     """PO-Entscheid 2026-08-04 (#1467 S2 AG3b): Alarm-Kurznachrichten nennen
-    keinen Ort. SMS und Premium-SMS teilen denselben gerenderten Text
+    keinen Ort. Gilt seit PO-Entscheid 2026-08-17 NUR NOCH fuer den
+    Radar-/Nowcast-Pfad ohne `location_label` (Trip-Δ-Pfad s.o. abgeloest,
+    AC-10/AC-12). SMS und Premium-SMS teilen denselben gerenderten Text
     (`render_alert_sms`, notification_service.py:1318 -> :1488 SMS / :1502
     Premium-SMS) — ein Nachweis deckt beide Kanaele.
     """
@@ -479,32 +570,10 @@ def _assert_kurznachricht_ohne_ort(sms: str) -> None:
     assert len(sms) <= 140, f"Kurznachricht ist {len(sms)} Zeichen lang: {sms!r}"
 
 
-def test_kurznachricht_des_abweichungsalarms_nennt_keinen_ort():
-    """AC-5 (HEUTE GRUEN, Invariante): Given ein Trip-Abweichungsalarm auf dem
-    Ziel-Segment / When die Kurznachricht gerendert wird / Then nennt sie
-    weiterhin keinen Ortsnamen und bleibt <= 140 Zeichen.
-
-    Der Alarm laeuft ueber `to_alert_message()` mit einer echten Etappe
-    `segment_id='Ziel'` — also genau der Eingabe, aus der der BETREFF nach
-    AC-1 kuenftig '🏁 Ziel' bildet. Der Test bewacht, dass diese Umstellung
-    NICHT in die Kurznachricht durchschlaegt.
-    """
-    from output.renderers.alert.render import render_sms
-
-    _assert_kurznachricht_ohne_ort(render_sms(_delta_message([("Ziel", 8.0, 8.0)])))
-
-
-def test_kurznachricht_des_abweichungsalarms_ueber_mehrere_segmente_nennt_keinen_ort():
-    """AC-5 (HEUTE GRUEN, Invariante): dieselbe Zusicherung fuer den
-    Mehr-Segment-Fall aus AC-2 ('Segment 3–5' im Betreff)."""
-    from output.renderers.alert.render import render_sms
-
-    msg = _delta_message([("3", 4.0, 6.0), ("4", 6.0, 8.0), ("5", 8.0, 10.0)])
-    _assert_kurznachricht_ohne_ort(render_sms(msg))
-
-
 def test_kurznachricht_des_nowcasts_nennt_keinen_ort():
-    """AC-5: dieselbe Zusicherung fuer den Radar-Nowcast.
+    """AC-5 (weiterhin GRUEN, Invariante fuer den Radar-/Nowcast-Pfad):
+    dieselbe Zusicherung fuer den Radar-Nowcast -- dieser Pfad ist von der
+    Ablösung 2026-08-17 NICHT betroffen (AC-10/AC-12).
 
     ROT bis der RED-Vertrag Punkt 1 erfuellt ist (`OnsetEvent.segment_id`):
     ohne das Feld laesst sich der Fall „Nowcast KENNT das Ziel-Segment" gar

@@ -217,7 +217,11 @@ der Zusicherung, nicht die Zusicherung.
   - Test: die bestehenden Golden-Vergleiche des Ortsvergleichs laufen unverändert grün
     (`tests/tdd/test_issue_1169_compare_alert_consumer.py`).
 
-- **AC-5:** Given ein Trip-Abweichungs- oder Nowcast-Alarm / When die Kurznachricht (SMS und
+> Abgelöst durch fix_1935_1779_alarm_nachricht_klarheit.md, AC-5/AC-6
+> (PO-Entscheid 2026-08-17) — AC-5 dieser Spec gilt nicht mehr für den Trip-Δ-Pfad.
+
+- **AC-5 (ABGELÖST für den Trip-Δ-Pfad, s. Hinweis oben):** Given ein Trip-Abweichungs- oder
+  Nowcast-Alarm / When die Kurznachricht (SMS und
   Premium-SMS) über `render_sms` gerendert wird / Then nennt sie weiterhin **keinen** Ortsbezug
   und bleibt innerhalb von 140 Zeichen — der PO-Entscheid vom 2026-08-04 bleibt unangetastet.
   - Test: Kurznachricht für einen Trip-Alarm mit Ziel-Segment rendern; sie darf weder `Ziel`

@@ -1804,12 +1804,18 @@ _GEWITTER_ID = _ALERT_METRIC_TO_CATALOG_ID[AlertMetric.THUNDER_LEVEL][0]
 _UNIT_PROBE_VALUE = 12.0
 _EINHEITEN_UNTER_BEOBACHTUNG = sorted({m.unit for m in _METRICS} | set(_HANDLED_UNITS))
 
-# Alarm-SMS-Tokengrammatik (render.py:596-601 ``_sms_token``,
-# render.py:136-137 ``_sms_corridor_token``): {Vorzeichen}{Kuerzel}{Wert}[@HH],
-# optional mit vorangestellter Ortsposition "{n}:". Eine reine Teilstring-Suche
-# waere hier unbrauchbar -- 'N' (temperature_cold) ist Wortanfang von 'NL'
-# (freezing_level) und 'NS' (fresh_snow), s. AC-S1-2-Gegenprobe.
-_ALERT_SMS_TOKEN = re.compile(r"^(?:\d+:)?[+\-!]([A-Za-z][A-Za-z/]*)-?\d+(?:@\d+)?$")
+# Alarm-SMS-Tokengrammatik (render.py ``_sms_token`` / ``_sms_corridor_token``):
+# {Vorzeichen}{Kuerzel}{Wert}[>{Bis}][@HH], optional mit vorangestellter
+# Ortsposition "{n}:". Der ``>{Bis}``-Teil ist neu seit #1935/#1779 (AC-6):
+# der Trip-Δ-Pfad ohne Ortsposition fuehrt seither Von- UND Bis-Wert
+# ("+VS1400>280"), damit der Ausschlag ohne Kenntnis des letzten Mailstands
+# lesbar ist; der Ortsvergleich-Aenderungspfad (Ortsposition gesetzt) bleibt
+# beim reinen Bis-Wert (AC-9, #1467 S2 AG3b). Eine reine Teilstring-Suche
+# waere hier unbrauchbar -- 'N' (temperature_cold) ist Wortanfang von 'NS'
+# (fresh_snow), s. AC-S1-2-Gegenprobe.
+_ALERT_SMS_TOKEN = re.compile(
+    r"^(?:\d+:)?[+\-!]([A-Za-z][A-Za-z/]*)-?\d+(?:>-?\d+)?(?:@\d+)?$"
+)
 
 
 def _alert_sms_codes(sms: str) -> list[str]:
