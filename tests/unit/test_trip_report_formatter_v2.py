@@ -297,7 +297,10 @@ class TestHTMLColorCoding:
         Issue #759: gust cells in HTML now render as 4-level ampel dot instead
         of the previous red background-color tint (c62828/ffebee).
         Issue #1222: the ampel dot itself is a gestylter CSS-Dot (fill
-        #b91c1c) statt eines Kreis-Emojis (vormals 🔴).
+        #a8104a) statt eines Kreis-Emojis (vormals 🔴).
+        Fix #1801 S2 / Issue #1927: Rot der Ampel-Palette ist #a8104a. Der
+        Risk-Dot am Zeilenende zog erst mit #1927 nach (vormals #b91c1c) --
+        ueber ihn blieb dieser Test bis dahin zufaellig gruen.
         """
         seg = _make_segment_weather(1, start_hour=8, end_hour=10, gust_max=95.0)
         # Override timeseries to have high gusts at 09:00
@@ -308,7 +311,7 @@ class TestHTMLColorCoding:
         report = formatter.format_email([seg], "Test", "morning")
         # Issue #1222: high gusts render as red ampel CSS-Dot in HTML table cells.
         assert (
-            "#b91c1c" in report.email_html
+            "#a8104a" in report.email_html
             or "c62828" in report.email_html
             or "ffebee" in report.email_html
         )
@@ -317,8 +320,11 @@ class TestHTMLColorCoding:
         """GIVEN thunder_level=MED, THEN orangener Ampel-Kreis im HTML-Output.
 
         Issue #1491: die Gewitterspalte ist eine reguläre Ampel-Spalte
-        geworden -- MED zeigt den orangenen CSS-Dot (fill #c2410c) statt des
+        geworden -- MED zeigt den orangenen CSS-Dot (fill #d4530a) statt des
         vormaligen Blitzsymbols ⚡.
+        Fix #1801 S2 / Issue #1927: Orange der Ampel-Palette ist #d4530a. Der
+        Risk-Dot am Zeilenende zog erst mit #1927 nach (vormals #c2410c) --
+        ueber ihn blieb dieser Test bis dahin zufaellig gruen.
         """
         seg = _make_segment_weather(1, thunder=ThunderLevel.MED)
         for dp in seg.timeseries.data:
@@ -326,7 +332,7 @@ class TestHTMLColorCoding:
                 dp.thunder_level = ThunderLevel.MED
         formatter = TripReportFormatter()
         report = formatter.format_email([seg], "Test", "morning")
-        assert "#c2410c" in report.email_html
+        assert "#d4530a" in report.email_html
 
 
 class TestPlainTextParity:
