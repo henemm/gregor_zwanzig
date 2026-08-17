@@ -177,7 +177,7 @@ def test_trip_briefing_sms_stays_gsm7_clean_with_dense_token_line():
                         # nicht verfuegbar" heisst "X?", vormals "W?"
                         # (UNAVAILABLE_SYMBOL, builder.py:84).
                         "TH:", "TH+:", "X?", "HU", "DP", "CP", "UV", "CT",
-                        "VS", "SU", "HP", "NL", "WD", "PT", "SD", "SL")
+                        "VS", "SU", "HP", "FZ", "WD", "PT", "SD", "SL")
         if sym not in full
     ]
     assert not fehlend, (

@@ -44,10 +44,11 @@ from output.tokens.render import render_line
 # metric_id "temperature_night", nicht mehr an "temperature".
 # Issue #1660 Scheibe A: dieselbe Trennung jetzt auch auf der gefuehlten
 # Seite -- "FN" haengt an der eigenen metric_id "wind_chill_night".
-# Issue #1728 Scheibe 1: "K"/"D" bzw. "FK"/"FD" haengen an je eigenen
-# metric_ids; "temperature" traegt gar kein Symbol mehr. "wind_chill" bleibt
-# in der Liste (deckt weiterhin die 160-Zeichen-Kuerzungs-Vorbedingung ab),
-# traegt aber ab Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
+# Issue #1728 Scheibe 1: "L"/"D" bzw. "FL"/"FD" haengen an je eigenen
+# metric_ids (Fix #1926: Symbole vormals "K"/"FK"); "temperature" traegt gar
+# kein Symbol mehr. "wind_chill" bleibt in der Liste (deckt weiterhin die
+# 160-Zeichen-Kuerzungs-Vorbedingung ab), traegt aber ab Fix #1887 E6
+# Scheibe A (PO-Entscheid, docs/specs/modules/
 # fix_1887_e6a_sms_kuerzel_register.md) KEIN Symbol mehr -- 'WC' entfaellt
 # ERSATZLOS (verdoppelte nachweislich 'FK'), s. METRIC_TO_SYMBOLS unten.
 ALL_SMS_METRIC_IDS = [
@@ -64,7 +65,7 @@ ALL_SMS_METRIC_IDS = [
 # dupliziert (nicht importiert), damit der Test unabhängig von der internen
 # Ableitung bleibt und wirklich das SICHTBARE Symbol im Rendertext prüft.
 METRIC_TO_SYMBOLS = {
-    "temperature_day_low": ("K",),
+    "temperature_day_low": ("L",),
     "temperature_day_high": ("D",),
     "temperature_night": ("N",),
     # Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS
@@ -72,7 +73,7 @@ METRIC_TO_SYMBOLS = {
     # ueberhaupt kein SMS-Token mehr (weder in SMS_MULTI_SYMBOLS_BY_METRIC
     # noch SMS_SYMBOL_BY_METRIC, s. _symbols_for_metric()).
     "wind_chill": (),
-    "wind_chill_day_low": ("FK",),
+    "wind_chill_day_low": ("FL",),
     "wind_chill_day_high": ("FD",),
     "wind_chill_night": ("FN",),
     "precipitation": ("R",),
@@ -117,6 +118,26 @@ def _independent_line_and_survivors(metric_ids: list[str]) -> tuple[str, set[str
         report_type="evening", stage_name="Etappe",
     )
     return render_line_with_survivors(token_line, 160)
+
+
+def _symbol_present_in_line(sym: str, line: str) -> bool:
+    """Wortweiser Praefix-Match: `sym` muss am Anfang eines
+    leerzeichengetrennten Tokens stehen. Symbole, die auf ':' enden (TH:,
+    TH+:), sind durch den Doppelpunkt bereits eindeutig abgegrenzt -- der
+    danach folgende Wert (z.B. Gewitterstufe 'L'/'M'/'H') darf mit einem
+    Buchstaben beginnen. Bei allen anderen Symbolen darf kein weiterer
+    Buchstabe folgen (sonst waere es ein anderes, laengeres Symbol, z.B.
+    'N' vs 'NS24+'). Verhindert False Positives durch Teilstring-Treffer
+    MITTEN in einem Token (z.B. 'L' in 'TH:L@8', Fix #1926 Blocker 4)."""
+    for word in line.split():
+        if not word.startswith(sym):
+            continue
+        if sym.endswith(":"):
+            return True
+        rest = word[len(sym):]
+        if not rest or not rest[0].isalpha():
+            return True
+    return False
 
 
 # ─── AC-1 ────────────────────────────────────────────────────────────────────
@@ -185,7 +206,9 @@ class TestAC2_TruncationByteIdenticalAndCarriedIdsCorrect:
 
         for metric_id in ALL_SMS_METRIC_IDS:
             symbols = METRIC_TO_SYMBOLS[metric_id]
-            symbol_present = any(sym in line for sym in symbols)
+            symbol_present = any(
+                _symbol_present_in_line(sym, line) for sym in symbols
+            )
             if metric_id in carried_ids:
                 assert symbol_present, (
                     f"AC-2: '{metric_id}' steht in carried_ids, aber keines "

@@ -31,8 +31,8 @@ from output.renderers.trip_report import TripReportFormatter
 
 from tests.tdd import _min_temp_felt_fixtures as F
 
-_MEASURED = ("N", "K", "D")
-_FELT = ("FN", "FK", "FD")
+_MEASURED = ("N", "L", "D")
+_FELT = ("FN", "FL", "FD")
 # Issue #1728 Scheibe 1: „die Temperatur ist gewaehlt" heisst seither, dass
 # auch ihre Tagesrichtungen gewaehlt sind -- sie tragen K/D. Die Zusicherung
 # dieser Suite (die Kuerzel folgen der Auswahl) ist unveraendert, nur die
@@ -153,7 +153,7 @@ class TestMeasuredTemperatureFollowsSelection:
             # gemessenen ist damit Folge der Abwahl, nicht Folge fehlender
             # Daten oder einer gekuerzten Zeile.
             felt = F.present_symbols(sms, _FELT)
-            assert "FK" in felt and "FD" in felt, (
+            assert "FL" in felt and "FD" in felt, (
                 f"[{report_type}] Die gefuehlten Temperaturwerte fehlen "
                 "bereits — der Nachweis ueber die gemessenen waere damit "
                 f"nicht aussagekraeftig.\nSMS: {sms}"
@@ -173,12 +173,12 @@ class TestMeasuredTemperatureFollowsSelection:
         for report_type in ("morning", "evening"):
             sms = _sms(report_type, *_TEMP_GEWAEHLT, "precipitation")
 
-            expected = {"K", "D"}
+            expected = {"L", "D"}
             assert F.present_symbols(sms, _MEASURED) == expected, (
                 f"[{report_type}] Erwartet {sorted(expected)} bei aktivierter "
                 f"Temperatur.\nSMS: {sms}"
             )
-            assert F.sms_token_value(sms, "K") == str(int(F.HIKE_MIN_C)), (
+            assert F.sms_token_value(sms, "L") == str(int(F.HIKE_MIN_C)), (
                 f"[{report_type}] Tiefsttemperatur unterwegs falsch.\nSMS: {sms}"
             )
             assert F.sms_token_value(sms, "D") == str(int(F.HIKE_MAX_C)), (
@@ -219,7 +219,7 @@ class TestSelectedButNoValueKeepsNullForm:
                 segment=_templess_segment(), night=_templess_night(),
             )
 
-            expected = {"K", "D"}  # N: eigene Groesse seit #1484
+            expected = {"L", "D"}  # N: eigene Groesse seit #1484
             present = F.present_symbols(sms, _MEASURED)
             assert present == expected, (
                 f"[{report_type}] Erwartet {sorted(expected)} als Null-Form, "
@@ -248,7 +248,7 @@ class TestSelectedButNoValueKeepsNullForm:
             segment=_templess_segment(), night=_templess_night(),
         )
 
-        assert F.present_symbols(selected, _MEASURED) == {"K", "D"}, (
+        assert F.present_symbols(selected, _MEASURED) == {"L", "D"}, (
             f"Gewaehlt ohne Wert -> Null-Formen erwartet (N: eigene Groesse "
             f"seit #1484).\nSMS: {selected}"
         )
@@ -275,7 +275,7 @@ class TestNullFormsUnaffected:
                 f"erscheinen.\nSMS: {sms}"
             )
         # Und die gewaehlte Temperatur steht weiterhin daneben.
-        assert F.present_symbols(sms, _MEASURED) == {"K", "D"}, (
+        assert F.present_symbols(sms, _MEASURED) == {"L", "D"}, (
             f"Die gewaehlte Temperatur ist verschwunden.\nSMS: {sms}"
         )
 

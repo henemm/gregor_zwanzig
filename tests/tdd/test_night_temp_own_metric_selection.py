@@ -32,7 +32,7 @@ from output.renderers.trip_report import TripReportFormatter
 from tests.tdd import _min_temp_felt_fixtures as F
 
 NIGHT_METRIC = "temperature_night"
-_MEASURED = ("N", "K", "D")
+_MEASURED = ("N", "L", "D")
 _DASH = "–"  # En-Dash der Kurzzusammenfassungs-Spannen
 
 
@@ -99,7 +99,7 @@ class TestSmsNightTokenFollowsOwnSelection:
         sms = _sms("evening", *_TAG_GEWAEHLT, "precipitation")
 
         present = F.present_symbols(sms, _MEASURED)
-        assert present == {"K", "D"}, (
+        assert present == {"L", "D"}, (
             f"Erwartet nur K/D bei abgewaehlter Nachtgroesse, gefunden "
             f"{sorted(present)} — N haengt offenbar weiter an „Temperatur“.\n"
             f"SMS: {sms}"
@@ -113,7 +113,7 @@ class TestSmsNightTokenFollowsOwnSelection:
             f"N fehlt oder traegt den falschen Wert, obwohl die Nachtgroesse "
             f"gewaehlt ist (erwartet N{int(F.NIGHT_MIN_C)}).\nSMS: {sms}"
         )
-        leaked = F.present_symbols(sms, ("K", "D"))
+        leaked = F.present_symbols(sms, ("L", "D"))
         assert not leaked, (
             f"K/D erscheinen {sorted(leaked)}, obwohl „Temperatur“ "
             f"abgewaehlt ist.\nSMS: {sms}"
@@ -123,11 +123,11 @@ class TestSmsNightTokenFollowsOwnSelection:
         """Nichtregression: beide AN -> N/K/D wie bisher."""
         sms = _sms("evening", *_TAG_GEWAEHLT, NIGHT_METRIC, "precipitation")
 
-        assert F.present_symbols(sms, _MEASURED) == {"N", "K", "D"}, (
+        assert F.present_symbols(sms, _MEASURED) == {"N", "L", "D"}, (
             f"Beide Groessen gewaehlt — alle drei Kuerzel erwartet.\nSMS: {sms}"
         )
         assert F.sms_token_value(sms, "N") == str(int(F.NIGHT_MIN_C))
-        assert F.sms_token_value(sms, "K") == str(int(F.HIKE_MIN_C))
+        assert F.sms_token_value(sms, "L") == str(int(F.HIKE_MIN_C))
         assert F.sms_token_value(sms, "D") == str(int(F.HIKE_MAX_C))
 
     def test_morning_never_shows_night_token(self):
@@ -338,7 +338,7 @@ class TestLegacyTripsDeriveNightFromTemperature:
         sms = self._evening_sms(dc)
 
         present = F.present_symbols(sms, _MEASURED)
-        assert present == {"K", "D"}, (
+        assert present == {"L", "D"}, (
             f"Explizit abgewaehlte Nachtgroesse muss die Ableitung "
             f"ueberstimmen — gefunden {sorted(present)}.\nSMS: {sms}"
         )
@@ -412,7 +412,7 @@ class TestSelectionIsPerConfig:
         assert F.present_symbols(sms_night, _MEASURED) == {"N"}, (
             f"Konfiguration A (nur Nacht) zeigt {sorted(F.present_symbols(sms_night, _MEASURED))}."
         )
-        assert F.present_symbols(sms_day, _MEASURED) == {"K", "D"}, (
+        assert F.present_symbols(sms_day, _MEASURED) == {"L", "D"}, (
             f"Konfiguration B (nur Temperatur) zeigt "
             f"{sorted(F.present_symbols(sms_day, _MEASURED))} — die Auswahl "
             f"von A faerbt ab."

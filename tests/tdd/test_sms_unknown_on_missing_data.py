@@ -119,8 +119,8 @@ def _regular_segment(
     )
 
 
-# Ausdrueckliche Abwahl von Temperatur (K/D) und gefuehlter Temperatur
-# (FN/FK/FD) fuer die Direktaufrufe unten. 'WC' ist Fix #1887 E6 Scheibe A
+# Ausdrueckliche Abwahl von Temperatur (L/D) und gefuehlter Temperatur
+# (FN/FL/FD) fuer die Direktaufrufe unten. 'WC' ist Fix #1887 E6 Scheibe A
 # (PO-Entscheid) ERSATZLOS entfallen -- die Abwahl eines nicht mehr
 # existierenden Symbols ist wirkungslos, aber harmlos; hier stehen gelassen
 # als reine Dokumentation der historischen Symbolliste. ``format_sms()``
@@ -133,9 +133,14 @@ def _regular_segment(
 # um sie zu verlaengern. Issue #1483 (weiter unten in dieser Datei) prueft
 # die Temperatur-Token selbst und baut dafuer eigene, gezielt aktivierte
 # ``MetricSpec``-Listen statt dieser Konstante.
+# Diese Liste spiegelt das eigene Trip-Token-Vokabular von
+# ``output/tokens/builder.py`` (Schichtgrenze, s. metric_catalog.py Zeile
+# ~692) -- die Symbole sind die GATING-Schluessel fuer den `by_sym`-Lookup.
+# Seit dem AC-8-Nachtrag von Fix #1926 emittiert builder.py 'L'/'FL'/'FZ'
+# statt 'K'/'FK'/'NL'; die Liste ist entsprechend nachgezogen.
 _TEMPERATURE_OFF: list[MetricSpec] = [
     MetricSpec(symbol=sym, enabled=False)
-    for sym in ("N", "K", "D", "FN", "FK", "FD", "WC")
+    for sym in ("N", "L", "D", "FN", "FL", "FD", "WC")
 ]
 
 # Issue #1660 Scheibe B: dieselbe Abwahl-Notwendigkeit fuer die 14 neuen
@@ -146,7 +151,7 @@ _TEMPERATURE_OFF: list[MetricSpec] = [
 _NEW_14_OFF: list[MetricSpec] = [
     MetricSpec(symbol=sym, enabled=False) for sym in (
         "HU", "DP", "WD", "CP", "PT", "CT", "CL", "CM", "CH", "VS", "SU",
-        "UV", "HP", "NL",
+        "UV", "HP", "FZ",
     )
 ]
 
@@ -324,12 +329,14 @@ class TestAC4LengthBudget:
 
 # Issue #1483: dieselbe verschaerfte Regel wie oben (jede Entwarnung `-` wird
 # bei einer Datenluecke im Fenster zu `?`) gilt bisher NICHT fuer die sechs
-# Temperatur-Kuerzel N/K/D/FN/FK/FD -- sie durchlaufen render_temperature(),
+# Temperatur-Kuerzel N/L/D/FN/FL/FD -- sie durchlaufen render_temperature(),
 # das `has_gap` nicht kennt. Eigene, gezielt aktivierte MetricSpec-Listen
 # statt `_TEMPERATURE_OFF` (siehe Kommentar oben).
+# Symbole spiegeln builder.py's Vokabular (seit Fix #1926 AC-8: 'L'/'FL'),
+# s. Kommentar bei _TEMPERATURE_OFF.
 _TEMPERATURE_ON: list[MetricSpec] = [
     MetricSpec(symbol=sym, enabled=True)
-    for sym in ("N", "K", "D", "FN", "FK", "FD")
+    for sym in ("N", "L", "D", "FN", "FL", "FD")
 ]
 
 
@@ -338,7 +345,7 @@ def _total_segment_failure() -> list[SegmentWeatherData]:
     Komplettausfall der Etappe. Anders als die Mischform (ein Error- + ein
     Regular-Segment, wie ``TestAC1ShowsUnknownTokenOnSegmentError`` sie
     nutzt) liefert diese Fixture fuer ALLE sechs Temperatur-Kuerzel `None`:
-    das Gehzeit-Fenster (``hiking_field_min_max()``, Quelle von N/K/D/FN/FK/
+    das Gehzeit-Fenster (``hiking_field_min_max()``, Quelle von N/L/D/FN/FL/
     FD) hat dann keinerlei verwertbare Datenpunkte mehr, waehrend die
     Mischform ueber das verbleibende Regular-Segment noch einen echten
     Temperaturwert liefert (siehe die zweite Testklasse unten)."""
@@ -349,7 +356,7 @@ def _total_segment_failure() -> list[SegmentWeatherData]:
 
 
 class TestTemperatureShowsUnknownOnGap:
-    """Issue #1483: N/K/D/FN/FK/FD sollen bei einer Datenluecke im Fenster
+    """Issue #1483: N/L/D/FN/FL/FD sollen bei einer Datenluecke im Fenster
     dieselbe `?`-Kennzeichnung bekommen wie R/PR/W/G/TH: (#1328) -- bislang
     zeigen sie faelschlich `-`, nicht unterscheidbar von "geprueft, nichts
     vorhergesagt"."""
@@ -361,7 +368,7 @@ class TestTemperatureShowsUnknownOnGap:
                        disabled_specs=_TEMPERATURE_ON)
 
         # Issue #1824 (A): Tiefst- UND Hoechstwert sind gewaehlt, also tragen
-        # 'K'/'D' bzw. 'FK'/'FD' EINEN gemeinsamen Bereichs-Token -- die
+        # 'L'/'D' bzw. 'FL'/'FD' EINEN gemeinsamen Bereichs-Token -- die
         # Unbekannt-Kennzeichnung steht dort je Haelfte ('D?/?'). Die
         # Zusicherung ist unveraendert: keine der sechs Groessen darf bei
         # Komplettausfall als Entwarnung erscheinen.
@@ -371,10 +378,10 @@ class TestTemperatureShowsUnknownOnGap:
                 f"stattdessen faelschliche Entwarnung.\nSMS: {sms}"
             )
         # Einzelner Gesamt-Check statt sechsfacher Substring-Subtraktion:
-        # "K-" ist z.B. Teilstring von "FK-", ein Ersetzen pro Symbol wuerde
+        # "L-" ist z.B. Teilstring von "FL-", ein Ersetzen pro Symbol wuerde
         # sich gegenseitig verfaelschen. Nach dem Fix darf keines der sechs
         # Kuerzel mehr in seiner `-`-Form auftauchen.
-        for dash_form in ("N-", "K-", "D-", "FN-", "FK-", "FD-"):
+        for dash_form in ("N-", "L-", "D-", "FN-", "FL-", "FD-"):
             assert dash_form not in sms, (
                 f"Fehl-Entwarnung `{dash_form}` darf bei Komplettausfall "
                 f"nicht erscheinen.\nSMS: {sms}"
@@ -383,9 +390,9 @@ class TestTemperatureShowsUnknownOnGap:
     def test_found_measured_value_survives_partial_gap_while_missing_felt_becomes_unknown(self):
         """Ergaenzung zu AC-1 (Sicherheitsregel, analog
         TestAC2KeepsFoundRiskDespiteGap): bei der Mischform (ein Error- + ein
-        Regular-Segment) liefert das Gehzeit-Fenster fuer N/K/D einen ECHTEN
+        Regular-Segment) liefert das Gehzeit-Fenster fuer N/L/D einen ECHTEN
         Wert ueber das verbleibende Regular-Segment -- der darf trotz
-        `has_gap=True` NIE zu `?` werden. FN/FK/FD haben in der Test-Fixture
+        `has_gap=True` NIE zu `?` werden. FN/FL/FD haben in der Test-Fixture
         dagegen grundsaetzlich keine Windchill-Daten (`_dp()` setzt
         `wind_chill_c` nie) und muessen deshalb bei vorliegender
         Datenluecke zu `?` werden."""
@@ -394,8 +401,8 @@ class TestTemperatureShowsUnknownOnGap:
                        disabled_specs=_TEMPERATURE_ON)
 
         # Tokenweiser statt Substring-Vergleich: "N?" ist Teilstring von
-        # "FN?" (ebenso "K?"/"FK?", "D?"/"FD?") -- eine naive `in sms`-Pruefung
-        # wuerde sich an der eigenen Positiv-Erwartung fuer FN/FK/FD
+        # "FN?" (ebenso "L?"/"FL?", "D?"/"FD?") -- eine naive `in sms`-Pruefung
+        # wuerde sich an der eigenen Positiv-Erwartung fuer FN/FL/FD
         # verschlucken. Der Kommentar bei ``TestTemperatureShowsUnknownOnGap.
         # test_all_six_show_unknown_on_total_segment_failure`` beschreibt
         # dieselbe Falle fuer die `-`-Form; hier gilt sie fuer `?`.
@@ -407,7 +414,7 @@ class TestTemperatureShowsUnknownOnGap:
                 f"Erwartet den gefundenen Wert `{token}` aus dem "
                 f"verbleibenden Regular-Segment.\nSMS: {sms}"
             )
-        for sym in ("N", "K", "D"):
+        for sym in ("N", "L", "D"):
             assert f"{sym}?" not in tokens, (
                 f"Ein gefundener Temperaturwert darf nie durch `?` "
                 f"verschluckt werden.\nSMS: {sms}"
@@ -429,13 +436,13 @@ class TestTemperatureShowsUnknownOnGap:
                        report_type="evening",
                        disabled_specs=_TEMPERATURE_ON)
 
-        # Issue #1824 (A): 'FK'/'FD' stehen als EIN Bereichs-Token ('FD-/-'),
+        # Issue #1824 (A): 'FL'/'FD' stehen als EIN Bereichs-Token ('FD-/-'),
         # die Null-Form je Haelfte einmal.
         for token in ("FN-", "FD-/-"):
             assert token in sms.split(), (
                 f"Erwartet weiterhin `{token}` ohne Datenluecke.\nSMS: {sms}"
             )
-        for sym in ("FN", "FK", "FD"):
+        for sym in ("FN", "FL", "FD"):
             assert f"{sym}?" not in sms, (
                 f"Kein `?` ohne Datenluecke erwartet.\nSMS: {sms}"
             )
@@ -447,7 +454,7 @@ class TestTemperatureShowsUnknownOnGap:
         sms = _format(segments, report_type="evening",
                        disabled_specs=_TEMPERATURE_OFF)
 
-        for sym in ("N", "K", "D", "FN", "FK", "FD"):
+        for sym in ("N", "L", "D", "FN", "FL", "FD"):
             assert f"{sym}?" not in sms, (
                 f"Abgewaehltes Kuerzel `{sym}` darf auch bei Luecke nicht "
                 f"als `?` erscheinen.\nSMS: {sms}"

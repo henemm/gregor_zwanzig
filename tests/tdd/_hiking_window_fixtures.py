@@ -467,8 +467,10 @@ def mail_felt(report) -> Extrema:
 # Issue #1824 (A): siehe _min_temp_felt_fixtures.py — bei gewaehltem Tiefst-
 # UND Hoechstwert steht EIN Bereichs-Token ('D13/27'). 'K'/'FK' bezeichnen
 # weiterhin den Tiefstwert, 'D'/'FD' den Hoechstwert.
+# Fix #1926: temperature_day_low/wind_chill_day_low SMS-Wire-Token K->L,
+# FK->FL (PO-Konsistenzentscheid 2026-08-17, Kollisionsvermeidung).
 _HALF = r"-?\d+|-|\?"
-_RANGE_PARTNER = {"K": "D", "FK": "FD"}
+_RANGE_PARTNER = {"L": "D", "FL": "FD"}
 
 
 def sms_token_value(sms: str, symbol: str) -> Optional[str]:
@@ -503,15 +505,16 @@ def _sms_num(sms: str, symbol: str) -> Optional[float]:
 
 
 def sms_temp(report) -> Extrema:
-    """Gehzeit-Extrema der SMS (Token ``K``/``D``)."""
+    """Gehzeit-Extrema der SMS (Token ``L``/``D``, Fix #1926: vormals ``K``)."""
     sms = report.sms_text or ""
-    return Extrema(_sms_num(sms, "K"), _sms_num(sms, "D"), sms)
+    return Extrema(_sms_num(sms, "L"), _sms_num(sms, "D"), sms)
 
 
 def sms_felt(report) -> Extrema:
-    """Gefuehlte Gehzeit-Extrema der SMS (Token ``FK``/``FD``)."""
+    """Gefuehlte Gehzeit-Extrema der SMS (Token ``FL``/``FD``, Fix #1926:
+    vormals ``FK``)."""
     sms = report.sms_text or ""
-    return Extrema(_sms_num(sms, "FK"), _sms_num(sms, "FD"), sms)
+    return Extrema(_sms_num(sms, "FL"), _sms_num(sms, "FD"), sms)
 
 
 def sms_night(report) -> Extrema:

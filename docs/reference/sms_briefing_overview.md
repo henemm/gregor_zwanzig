@@ -47,17 +47,17 @@ der fachliche Grund hinter Issue #1317.
 Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 
 ```
-{Name}: N K D FN FK FD R PR W G TH: TH+: C  HR:TH:  Z: M:  [SD NS24+ SL AV]  DBG
+{Name}: N L D FN FL FD R PR W G TH: TH+: C  HR:TH:  Z: M:  [SD NS24+ SL AV]  DBG
 ```
 
 | Kürzel | Bedeutung | Wert-Format | Immer da? |
 |---|---|---|---|
 | `{Name}:` | Etappen-/Ortsname (max. 10 Zeichen, km-Bereich bleibt) | `Paliri:` / `GR221 km0-11:` | ja |
 | `N` | Nacht-Tief-Temperatur °C am Schlafplatz | `N8`, `N-12` | nur abends (Issue #1319 Scheibe D) — im Morgenbriefing entfällt der Token komplett |
-| `K` | Tiefst-Temperatur °C **unterwegs** (kälteste Gehzeit-Stunde) — beantwortet eine andere Frage als `N` | `K6`, `K-12`, `K-` | nur wenn die eigene Wettergröße „Tages-Tiefsttemperatur (Gehzeit)" im Trip aktiviert ist (`temperature_day_low`, Issue #1728, 2026-08-15). **Korrektur:** hier stand bisher unbedingt „ja (Issue #1410, morgens und abends)" — das war bereits vor dieser Scheibe veraltet (das Kürzel hing spätestens seit Issue #1415, 2026-08-03, an einer aktivierten Metrik „Temperatur", diese Tabelle wurde nie nachgezogen); mit #1728 hängt es jetzt an der eigenen, unabhängig wählbaren Größe statt an „Temperatur" |
-| `D` | Tag-/Höchst-Temperatur °C | `D24`, `D-` | nur wenn „Tages-Höchsttemperatur (Gehzeit)" aktiviert ist (`temperature_day_high`, Issue #1728, 2026-08-15; dieselbe Korrektur wie bei `K` oben) |
+| `L` (bis 2026-08-17 `K`, Fix #1926) | Tiefst-Temperatur °C **unterwegs** (kälteste Gehzeit-Stunde) — beantwortet eine andere Frage als `N` | `L6`, `L-12`, `L-` | nur wenn die eigene Wettergröße „Tages-Tiefsttemperatur (Gehzeit)" im Trip aktiviert ist (`temperature_day_low`, Issue #1728, 2026-08-15). **Korrektur:** hier stand bisher unbedingt „ja (Issue #1410, morgens und abends)" — das war bereits vor dieser Scheibe veraltet (das Kürzel hing spätestens seit Issue #1415, 2026-08-03, an einer aktivierten Metrik „Temperatur", diese Tabelle wurde nie nachgezogen); mit #1728 hängt es jetzt an der eigenen, unabhängig wählbaren Größe statt an „Temperatur" |
+| `D` | Tag-/Höchst-Temperatur °C | `D24`, `D-` | nur wenn „Tages-Höchsttemperatur (Gehzeit)" aktiviert ist (`temperature_day_high`, Issue #1728, 2026-08-15; dieselbe Korrektur wie bei `L` oben) |
 | `FN` | **Gefühlte** Nacht-Tief-Temperatur °C am Schlafplatz | `FN6`, `FN-` | nur abends, nur wenn die eigene Wettergröße „Gefühlte Nacht-Tiefsttemperatur" im Trip aktiviert ist (`wind_chill_night`, Issue #1660; vorher an „Gefühlte Temperatur" gekoppelt, Issue #1410) |
-| `FK` | **Gefühlte** Tiefst-Temperatur °C unterwegs | `FK4`, `FK-` | nur wenn „Gefühlte Tages-Tiefsttemperatur (Gehzeit)" aktiviert ist (`wind_chill_day_low`, Issue #1728, 2026-08-15; vorher an „Gefühlte Temperatur" gekoppelt, Issue #1660 A) |
+| `FL` (bis 2026-08-17 `FK`, Fix #1926) | **Gefühlte** Tiefst-Temperatur °C unterwegs | `FL4`, `FL-` | nur wenn „Gefühlte Tages-Tiefsttemperatur (Gehzeit)" aktiviert ist (`wind_chill_day_low`, Issue #1728, 2026-08-15; vorher an „Gefühlte Temperatur" gekoppelt, Issue #1660 A) |
 | `FD` | **Gefühlte** Höchst-Temperatur °C | `FD13`, `FD-` | nur wenn „Gefühlte Tages-Höchsttemperatur (Gehzeit)" aktiviert ist (`wind_chill_day_high`, Issue #1728, 2026-08-15; vorher an „Gefühlte Temperatur" gekoppelt) |
 | `R` | Regen (mm) | `R0.2@6(1.4@16)` / `R-` | ja |
 | `PR` | Regenwahrscheinlichkeit (%) | `PR20%@11(100%@17)` / `PR-` | ja |

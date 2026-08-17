@@ -52,6 +52,9 @@ def _baseline_today() -> DailyForecast:
 
 def _baseline_config() -> list[MetricSpec]:
     return [
+        # Fix #1926 Fund: 'K' bewusst NICHT auf 'L' umgestellt -- Gating-
+        # Schluessel gegen builder.py's eigenes Vokabular (Schichtgrenze),
+        # von der Registeraenderung unberuehrt.
         MetricSpec(symbol="K", enabled=True),
         MetricSpec(symbol="D", enabled=True),
         MetricSpec(symbol="R", enabled=True, threshold=0.2),

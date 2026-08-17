@@ -354,8 +354,9 @@ def test_total_failure_yields_null_form_in_all_channels():
     ausgefallen sind / When alle vier Ausgaben gerendert werden / Then zeigen
     alle uebereinstimmend die Null-Form und keiner erfindet einen Wert.
 
-    GRUEN erwartet: die SMS zeigt `K-`/`D-`, Kachelzeile,
-    Kurzzusammenfassungssatz und Telegram-Zeile nennen keine Zahl.
+    GRUEN erwartet: die SMS zeigt `L-`/`D-` (Fix #1926: vormals `K-`),
+    Kachelzeile, Kurzzusammenfassungssatz und Telegram-Zeile nennen keine
+    Zahl.
     """
     report = F.render_report(
         [F.failed_segment(1, 8, 10), F.failed_segment(2, 10, 12)],
@@ -369,7 +370,7 @@ def test_total_failure_yields_null_form_in_all_channels():
             f"ganze Etappe ohne Daten ist.\n" + F.describe(channels)
         )
     sms = report.sms_text or ""
-    for symbol in ("K", "D"):
+    for symbol in ("L", "D"):
         assert F.sms_token_value(sms, symbol) == "-", (
             f"Die Kurznachricht zeigt fuer `{symbol}` nicht die Null-Form "
             f"`{symbol}-`.\nSMS: {sms!r}"

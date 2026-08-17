@@ -235,6 +235,11 @@ class TestNightBlock:
         morning = formatter.format_email(
             [seg], "Test", "morning", night_weather=night_ts,
         )
+        # "Nacht" stammt hier aus der hartkodierten Nachtblock-Ueberschrift,
+        # nicht aus col_label -- die sechs Temperaturgroessen aus Fix #1926
+        # haben keine eigene Tabellenspalte. AC-1 beweist stattdessen
+        # test_col_label_der_sechs_temperaturgroessen_ist_englisch in
+        # tests/unit/test_sms_token_symbol_register_ratchet.py.
         assert "Nacht" in evening.email_html
         assert "Nacht" in morning.email_html
 

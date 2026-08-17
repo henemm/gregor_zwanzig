@@ -59,9 +59,10 @@ _GOLDEN_FILES = [
     _REPO / "tests/golden/text_report/stubaier-skitour-evening.txt",
 ]
 
-# AC-19: 'K\\d'/'FK\\d' inkl. Vorzeichen ('K-12' ist derselbe Einzelwert-Token).
+# AC-19: 'L\\d'/'FL\\d' inkl. Vorzeichen ('L-12' ist derselbe Einzelwert-Token).
+# Fix #1926: Symbol vormals 'K'/'FK', jetzt 'L'/'FL' (Kollisionsvermeidung).
 # Tokenanfang-verankert, damit Fliesstext wie 'SKITOUR' nie mitzaehlt.
-_LONE_COLD_TOKEN = re.compile(r"(?:^|\s)(F?K)(-?\d+)", re.MULTILINE)
+_LONE_COLD_TOKEN = re.compile(r"(?:^|\s)(F?L)(-?\d+)", re.MULTILINE)
 _RANGE_TOKEN = re.compile(r"(?:^|\s)(F?D)(-?\d+)/(-?\d+)", re.MULTILINE)
 
 # Issue #1728 Scheibe 1: die Sichtbarkeit von K/D bzw. FK/FD haengt seit
@@ -86,10 +87,10 @@ class TestAC1BothAggregationsMerge:
             "Bei gewaehltem Tiefst- UND Hoechstwert muss EIN Bereichs-Token "
             f"'D13/27' stehen.\nSMS: {sms}"
         )
-        assert "K13" not in F.tokens(sms), (
-            "Der getrennte Tiefstwert-Token 'K13' darf im 'beide "
-            "gewaehlt'-Fall nicht mehr erscheinen — er steckt im "
-            f"Bereichs-Token.\nSMS: {sms}"
+        assert "L13" not in F.tokens(sms), (
+            "Der getrennte Tiefstwert-Token 'L13' (Fix #1926: vormals "
+            "'K13') darf im 'beide gewaehlt'-Fall nicht mehr erscheinen "
+            f"— er steckt im Bereichs-Token.\nSMS: {sms}"
         )
         assert "D27" not in F.tokens(sms), (
             "Der getrennte Hoechstwert-Token 'D27' darf im 'beide "
@@ -111,8 +112,9 @@ class TestAC2NegativeRange:
             "Bindestrich als Trenner ('D-12--4') waere nicht eindeutig "
             f"parsbar.\nSMS: {sms}"
         )
-        assert "K-12" not in F.tokens(sms), (
-            f"'K-12' darf im 'beide gewaehlt'-Fall nicht mehr stehen.\nSMS: {sms}"
+        assert "L-12" not in F.tokens(sms), (
+            f"'L-12' (Fix #1926: vormals 'K-12') darf im 'beide "
+            f"gewaehlt'-Fall nicht mehr stehen.\nSMS: {sms}"
         )
 
 
@@ -132,22 +134,23 @@ class TestAC3OnlyMaxUnchanged:
             f"Ohne gewaehlten Tiefstwert darf kein Bereich entstehen: "
             f"{d_token!r}\nSMS: {sms}"
         )
-        assert F.token_with_symbol(sms, "K") is None, (
+        assert F.token_with_symbol(sms, "L") is None, (
             f"Der abgewaehlte Tiefstwert darf gar nicht erscheinen.\nSMS: {sms}"
         )
 
 
 class TestAC4OnlyMinUnchanged:
     """AC-4: Given NUR die Auswertung „Tiefstwert" gewaehlt / When die SMS
-    gerendert wird / Then steht ``K13`` — PO-Entscheid 2026-08-13: KEIN
-    Wechsel auf ``D13``, weil ``D`` sonst ueberall den Hoechstwert bedeutet."""
+    gerendert wird / Then steht ``L13`` (Fix #1926: vormals ``K13``) — PO-
+    Entscheid 2026-08-13: KEIN Wechsel auf ``D13``, weil ``D`` sonst
+    ueberall den Hoechstwert bedeutet."""
 
     def test_only_min_keeps_cold_symbol(self):
         sms = F.sms("temperature", "temperature_day_low")
 
-        assert "K13" in F.tokens(sms), (
+        assert "L13" in F.tokens(sms), (
             "Bei nur gewaehltem Tiefstwert bleibt die heutige Einzelform "
-            f"'K13'.\nSMS: {sms}"
+            f"'L13'.\nSMS: {sms}"
         )
         assert F.token_with_symbol(sms, "D") is None, (
             "'D' bedeutet im Format den Hoechstwert — ein 'D13' mit "
@@ -166,8 +169,8 @@ class TestAC5OnlyAverageNoToken:
         assert F.token_with_symbol(sms, "D") is None, (
             f"'avg' kennt die SMS nicht — kein 'D'-Token.\nSMS: {sms}"
         )
-        assert F.token_with_symbol(sms, "K") is None, (
-            f"'avg' kennt die SMS nicht — kein 'K'-Token.\nSMS: {sms}"
+        assert F.token_with_symbol(sms, "L") is None, (
+            f"'avg' kennt die SMS nicht — kein 'L'-Token.\nSMS: {sms}"
         )
 
 
@@ -235,8 +238,9 @@ class TestAC9FeltRange:
             "Die gefuehlte Spanne folgt derselben Regel wie die gemessene.\n"
             f"SMS: {sms}"
         )
-        assert "FK10" not in F.tokens(sms), (
-            f"'FK10' darf im 'beide gewaehlt'-Fall nicht mehr stehen.\nSMS: {sms}"
+        assert "FL10" not in F.tokens(sms), (
+            f"'FL10' (Fix #1926: vormals 'FK10') darf im 'beide "
+            f"gewaehlt'-Fall nicht mehr stehen.\nSMS: {sms}"
         )
         assert "FD20" not in F.tokens(sms), (
             f"'FD20' darf im 'beide gewaehlt'-Fall nicht mehr stehen.\nSMS: {sms}"
@@ -315,7 +319,7 @@ class TestAC16RangeTokenIsAtomicUnderTruncation:
             )
             toks = F.tokens(sms)
             d_token = F.token_with_symbol(sms, "D")
-            if {"K13", "D13", "D27"} & set(toks):
+            if {"L13", "D13", "D27"} & set(toks):
                 offenders.append((max_length, sms))
             elif d_token is not None and d_token != "D13/27":
                 offenders.append((max_length, sms))
@@ -352,8 +356,8 @@ class TestAC17SmsSymbolCatalogUnchanged:
             for entry in get_sms_symbols()["metrics"]
         }
         erwartet = {
-            "temperature_day_low": ["K"], "temperature_day_high": ["D"],
-            "wind_chill_day_low": ["FK"], "wind_chill_day_high": ["FD"],
+            "temperature_day_low": ["L"], "temperature_day_high": ["D"],
+            "wind_chill_day_low": ["FL"], "wind_chill_day_high": ["FD"],
             "temperature_night": ["N"],
         }
         ist = {mid: by_metric.get(mid) for mid in erwartet}
@@ -370,8 +374,9 @@ class TestAC17SmsSymbolCatalogUnchanged:
 
 class TestAC19GoldenFixturesCarryNoLoneColdToken:
     """AC-19: Given die sechs betroffenen Golden-Fixtures / When sie nach der
-    Implementierung neu erzeugt werden / Then enthaelt keines mehr ``K\\d``
-    oder ``FK\\d``, und jedes enthaelt stattdessen die Bereichsform."""
+    Implementierung neu erzeugt werden / Then enthaelt keines mehr ``L\\d``
+    oder ``FL\\d`` (Fix #1926: vormals ``K\\d``/``FK\\d``), und jedes enthaelt
+    stattdessen die Bereichsform."""
 
     @pytest.mark.parametrize(
         "golden", _GOLDEN_FILES, ids=lambda p: p.name,

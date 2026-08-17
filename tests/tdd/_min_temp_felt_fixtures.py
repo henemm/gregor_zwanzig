@@ -196,7 +196,9 @@ def dc(*metric_ids: str) -> UnifiedWeatherDisplayConfig:
 # Beobachtungs-Helfer (lesen ausschliesslich gerenderten Text)
 # ---------------------------------------------------------------------------
 
-TEMP_SYMBOLS = ("N", "K", "D", "FN", "FK", "FD")
+# Fix #1926: temperature_day_low/wind_chill_day_low SMS-Wire-Token K->L,
+# FK->FL (PO-Konsistenzentscheid 2026-08-17, Kollisionsvermeidung).
+TEMP_SYMBOLS = ("N", "L", "D", "FN", "FL", "FD")
 
 
 def sms_body(sms: str) -> str:
@@ -210,7 +212,7 @@ def sms_body(sms: str) -> str:
 # Hoechstwert; sie lesen ihn nur zusaetzlich aus der jeweiligen Haelfte des
 # Bereichs-Tokens, wenn kein eigenstaendiges Kuerzel mehr in der Zeile steht.
 _HALF = r"-?\d+|-|\?"
-_RANGE_PARTNER = {"K": "D", "FK": "FD"}
+_RANGE_PARTNER = {"L": "D", "FL": "FD"}
 
 
 def sms_token_value(sms: str, symbol: str) -> Optional[str]:

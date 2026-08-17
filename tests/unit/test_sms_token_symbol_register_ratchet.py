@@ -48,7 +48,9 @@ from output.tokens import builder as builder_mod
 from output.tokens.builder import (
     POSITIONAL, PRIORITY, _wintersport, build_token_line,
 )
-from output.tokens.dto import DailyForecast, HourlyValue, NormalizedForecast
+from output.tokens.dto import (
+    DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
+)
 from output.tokens.render import DROP_ORDER
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -551,11 +553,15 @@ def test_kollisionspruefung_beisst_zu_und_ueberspringt_leere_kuerzel():
 # AC-9: von Hand getippt -- darf NICHT aus SMS_MULTI_SYMBOLS_BY_METRIC oder
 # MetricDefinition.sms_multi_symbols selbst berechnet werden, sonst ist die
 # Zusicherung eine Tautologie (Mutations-Gegenprobe Punkt 1).
+#
+# Fix #1926 (PO-Konsistenzentscheid 2026-08-17): temperature_day_low K->L,
+# wind_chill_day_low FK->FL (Kollisionsvermeidung, kein Sprach-Thema --
+# ADR-0042 Klasse 1 bleibt von Sprachfragen ausgenommen).
 _AC9_ERWARTUNG: dict[str, str] = {
-    "temperature_day_low": "K",
+    "temperature_day_low": "L",
     "temperature_day_high": "D",
     "temperature_night": "N",
-    "wind_chill_day_low": "FK",
+    "wind_chill_day_low": "FL",
     "wind_chill_day_high": "FD",
     "wind_chill_night": "FN",
 }
@@ -700,4 +706,198 @@ def test_sms_symbols_endpoint_fuehrt_wind_chill_nicht_mehr():
     assert "WC" not in alle_symbole, (
         f"Kuerzel 'WC' erscheint weiterhin in /api/sms-symbols: "
         f"{antwort['metrics']!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fix #1926 (PO-Freigabe 2026-08-17) -- AC-1: col_label MUSS englisch sein
+# (ADR-0042 Klasse 2). Sechs nach dem ADR-Beschluss (2026-08-02) eingefuehrte
+# col_label-Werte verletzten die Regel.
+# SPEC: docs/specs/modules/fix_1926_metrik_kuerzel_englisch.md
+# ---------------------------------------------------------------------------
+
+# Von Hand getippt -- Mutations-Gegenprobe analog _AC9_ERWARTUNG oben (darf
+# NICHT aus MetricDefinition.col_label selbst berechnet werden).
+_AC1_COL_LABEL_ERWARTUNG: dict[str, str] = {
+    "temperature_night": "Night",
+    "temperature_day_low": "DayMin",
+    "temperature_day_high": "DayMax",
+    "wind_chill_night": "NightF",
+    "wind_chill_day_low": "DayMinF",
+    "wind_chill_day_high": "DayMaxF",
+}
+
+
+def test_col_label_der_sechs_temperaturgroessen_ist_englisch():
+    """AC-1: getippte Erwartungstabelle fuer die sechs Groessen, deren
+    col_label nach dem ADR-0042-Beschluss deutsch eingefuehrt wurde."""
+    from app.metric_catalog import _METRICS_BY_ID
+
+    abweichungen = []
+    for metric_id, erwartet in _AC1_COL_LABEL_ERWARTUNG.items():
+        metrik = _METRICS_BY_ID.get(metric_id)
+        assert metrik is not None, (
+            f"Register kennt {metric_id!r} nicht (mehr) — Testvoraussetzung "
+            "verletzt."
+        )
+        if metrik.col_label != erwartet:
+            abweichungen.append(
+                f"  - {metric_id}: erwartet {erwartet!r}, gefunden "
+                f"{metrik.col_label!r}"
+            )
+    assert not abweichungen, (
+        "col_label weicht von der englischen ADR-0042-Erwartung ab:\n"
+        + "\n".join(abweichungen)
+    )
+
+
+# Negativliste statt Positivliste (Spec Known Limitations): eine
+# Positivliste bekannter englischer Fachbegriffe braeuchte laufende Pflege
+# pro neuem Wort; die Negativliste trifft nur die vier tatsaechlich
+# aufgetretenen deutschen Wortbestandteile und laesst Fachbegriffe wie
+# CAPE/UV unbehelligt (keines der Fragmente kommt darin vor, gemessen
+# gegen alle 32 heutigen col_label-Werte).
+_GERMAN_COL_LABEL_FRAGMENTS = ("nacht", "tag", "grenze", "grad")
+
+
+def test_col_label_traegt_keine_deutschen_wortbestandteile():
+    """AC-1, generische Ratsche (Spec Test Plan Punkt 1): verhindert, dass
+    ein KUENFTIGER Katalog-Eintrag erneut ein deutsches col_label
+    einfuehrt."""
+    from app.metric_catalog import _METRICS
+
+    treffer = []
+    for m in _METRICS:
+        label = (m.col_label or "").lower()
+        for fragment in _GERMAN_COL_LABEL_FRAGMENTS:
+            if fragment in label:
+                treffer.append(
+                    f"  - {m.id}: col_label={m.col_label!r} enthaelt "
+                    f"deutschen Wortbestandteil {fragment!r}"
+                )
+    assert not treffer, (
+        "col_label verletzt ADR-0042 Klasse 2 (muss englisch sein, "
+        "<=6 Zeichen):\n" + "\n".join(treffer)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fix #1926 -- AC-5: tote compact_label-Literale (cape/snowfall_limit/
+# freezing_level) muessen mit dem zur Laufzeit tatsaechlich abgeleiteten
+# Wert uebereinstimmen (kein abweichendes Quelltext-Literal mehr).
+# ---------------------------------------------------------------------------
+
+def test_compact_label_quelltext_literal_folgt_der_ableitung_bei_toten_kuerzeln():
+    """AC-5: cape/snowfall_limit/freezing_level fuehren zur LAUFZEIT bereits
+    das abgeleitete Kuerzel (compact_label wird durch die
+    List-Comprehension am Ende von metric_catalog.py ueberschrieben, s.
+    _kurzform_kuerzel()) -- das QUELLTEXT-Literal darf davon nicht mehr
+    abweichen (reine Lesbarkeit, kein funktionaler Effekt). Echter AST-Zugriff
+    auf die MetricDefinition(...)-Aufrufe, kein Regex."""
+    from app.metric_catalog import _kurzform_kuerzel
+
+    ziel_ids = ("cape", "snowfall_limit", "freezing_level")
+    quelle = Path(catalog_mod.__file__).resolve().read_text(encoding="utf-8")
+    baum = ast.parse(quelle, filename=catalog_mod.__file__)
+
+    literale: dict[str, tuple[str, str]] = {}
+    for knoten in ast.walk(baum):
+        if not (isinstance(knoten, ast.Call)
+                and isinstance(knoten.func, ast.Name)
+                and knoten.func.id == "MetricDefinition"):
+            continue
+        kwargs = {kw.arg: kw.value for kw in knoten.keywords if kw.arg}
+        id_node = kwargs.get("id")
+        if not (isinstance(id_node, ast.Constant) and id_node.value in ziel_ids):
+            continue
+        cl_node = kwargs.get("compact_label")
+        sc_node = kwargs.get("sms_code")
+        assert (isinstance(cl_node, ast.Constant)
+                and isinstance(sc_node, ast.Constant)), (
+            f"{id_node.value!r}: compact_label/sms_code sind keine "
+            "literalen Konstanten im Quelltext — Testvoraussetzung verletzt."
+        )
+        literale[id_node.value] = (cl_node.value, sc_node.value)
+
+    assert set(literale) == set(ziel_ids), (
+        f"Nicht alle Ziel-Groessen im Quelltext gefunden: {sorted(literale)!r} "
+        f"statt {sorted(ziel_ids)!r} — wurden Namen/Struktur geaendert?"
+    )
+
+    abweichungen = []
+    for metric_id, (cl_literal, sms_code) in literale.items():
+        abgeleitet = _kurzform_kuerzel(metric_id, sms_code)
+        if cl_literal != abgeleitet:
+            abweichungen.append(
+                f"  - {metric_id}: Quelltext-Literal compact_label={cl_literal!r}, "
+                f"zur Laufzeit abgeleitet wird aber {abgeleitet!r} (aus "
+                f"sms_code={sms_code!r}) — totes, abweichendes Literal."
+            )
+    assert not abweichungen, (
+        "compact_label-Quelltext-Literal weicht vom zur Laufzeit tatsaechlich "
+        "abgeleiteten Wert ab (AC-5):\n" + "\n".join(abweichungen)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fix #1926 -- AC-8 (RED-Phase-Korrektur 2026-08-17, PO-Entscheid): die
+# Schichtgrenze `output/tokens/builder.py` <-> `app/metric_catalog.py` bleibt
+# architektonisch bestehen (Entkopplungsfrage ausgegliedert nach #1934).
+# `builder.py` (`PRIORITY`/`POSITIONAL`/`build_token_line()`, Zeilen
+# ~60/96/325-330/378/426) fuehrt fuer die sechs Temperatur-Positionaltoken
+# (N/K/D/FN/FK/FD) und fuer die Invers-Min-Groesse VS/NL BEWUSST eigene,
+# vom Register unabhaengige Literale (#1435 E3b) -- dieselbe Kategorie
+# Handarbeit, die 'WC' (Fix #1887 E6) bereits entfernt und 'FN' (#1660 A)
+# bereits eingefuehrt hat. Diese Tabelle macht die drei fuer #1926
+# betroffenen Faelle explizit, statt sie stillschweigend unbewacht zu
+# lassen -- vorher gab es dafuer KEINE Ratsche: `_wintersport()`
+# (oben, `test_wintersport_token_symbols_match_register`) deckt nur
+# SD/NS24+/SL/AV ab, nicht die Positional-/Invers-Min-Bloecke.
+# alt/neu je Groesse -- 'alt' ist der Wert, den builder.py HEUTE noch
+# hartkodiert; 'neu' der Zielwert nach der (GREEN-)Handnachfuehrung.
+_AC8_BUILDER_LITERALE_ERWARTUNG: dict[str, tuple[str, str]] = {
+    "temperature_day_low": ("K", "L"),
+    "wind_chill_day_low": ("FK", "FL"),
+    "freezing_level": ("NL", "FZ"),
+}
+
+
+def test_builder_positionaltoken_literale_noch_nicht_auf_fix_1926_nachgezogen():
+    """AC-8: `build_token_line()`s TATSAECHLICH erzeugter Token-Text fuer
+    temperature_day_low/wind_chill_day_low/freezing_level muss die NEUEN
+    Kuerzel (L/FL/FZ) tragen -- rot, solange builder.py noch die alten
+    Literale (K/FK/NL) fuehrt (GREEN-Arbeit, s. Spec AC-8 Implementation
+    Details). 'D'/'FD' werden bewusst explizit ABGEWAEHLT: ohne Gegenwert
+    wuerden K/D bzw. FK/FD sonst zum Bereichs-Token verschmelzen (Issue
+    #1824 A) und das gesuchte Einzelsymbol waere nicht mehr isoliert
+    pruefbar. Das ist reine Test-Isolation -- 'D'/'FD' sind unveraendert
+    'D'/'FD' und bleiben von #1926 unberuehrt, deshalb duerfen sie hier als
+    Gating-Schluessel stehen (kein Widerspruch zur RED-Phase-Regel bei
+    _TEMPERATURE_OFF/_TEMPERATURE_ON in test_sms_unknown_on_missing_data.py).
+    """
+    day = DailyForecast(
+        temp_min_c=13.0,
+        wind_chill_min_c=-22.0,
+        freezing_level_hourly=(HourlyValue(12, 2400.0),),
+    )
+    line = build_token_line(
+        NormalizedForecast(days=(day,)),
+        [MetricSpec(symbol="D", enabled=False), MetricSpec(symbol="FD", enabled=False)],
+        report_type="evening", stage_name="E1",
+    )
+    symbole = {t.symbol for t in line.tokens}
+
+    abweichungen = []
+    for metric_id, (alt, neu) in _AC8_BUILDER_LITERALE_ERWARTUNG.items():
+        if neu not in symbole:
+            gefunden = alt if alt in symbole else "(kein Token erzeugt)"
+            abweichungen.append(
+                f"  - {metric_id}: erwartet Token-Symbol {neu!r}, "
+                f"builder.py erzeugt weiterhin {gefunden!r}"
+            )
+    assert not abweichungen, (
+        "builder.py fuehrt fuer diese Groessen noch die ALTEN, vom Register "
+        "unabhaengigen Literale (AC-8, #1926 GREEN-Arbeit, NICHT #1934):\n"
+        + "\n".join(abweichungen)
+        + f"\n  erzeugte Token-Symbole insgesamt: {sorted(symbole)!r}"
     )

@@ -166,13 +166,13 @@ def test_ac4_visibility_invers_gate_not_triggered_above_threshold():
 
 
 def test_ac5_freezing_level_without_threshold_always_visible():
-    """AC-5: NL ohne Schwelle -> Tiefstwert (1800 m um 6 Uhr) unbedingt sichtbar."""
+    """AC-5: FZ ohne Schwelle -> Tiefstwert (1800 m um 6 Uhr) unbedingt sichtbar."""
     today = DailyForecast(freezing_level_hourly=(
         HourlyValue(6, 1800), HourlyValue(12, 2400),
     ))
-    config = [MetricSpec(symbol="NL", enabled=True)]
+    config = [MetricSpec(symbol="FZ", enabled=True)]
     line = _render(today, config)
-    assert "NL1800@6" in line, f"NL-Token fehlt/falsch: {line!r}"
+    assert "FZ1800@6" in line, f"FZ-Token fehlt/falsch: {line!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +343,10 @@ def test_ac11_golden_byte_identity_without_the_14_new_metrics():
         thunder_hourly=(HourlyValue(15, 2),),
         wind_chill_c=-3.0, wind_chill_min_c=-3.0, wind_chill_max_c=5.0,
     )
+    # Fix #1926 Fund: 'K'/'FK' bewusst NICHT auf 'L'/'FL' umgestellt -- dieser
+    # Test bewacht Byte-Identitaet gegen builder.py's eigenes, hartkodiertes
+    # Vokabular (Schichtgrenze), das von der Registeraenderung unberuehrt
+    # bleibt.
     config = [
         MetricSpec(symbol="K", enabled=True),
         MetricSpec(symbol="D", enabled=True),
