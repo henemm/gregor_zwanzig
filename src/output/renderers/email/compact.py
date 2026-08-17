@@ -20,6 +20,7 @@ from utils.timezone import local_fmt
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
+from output.renderers.compare_outlook_metric_ids import outlook_columns
 from output.renderers.email.helpers import (
     _AMPEL_STAGE_TONES, _THUNDER_MAP,
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
@@ -132,6 +133,10 @@ def render_compact(
     segments: list[SegmentWeatherData],
     dc: UnifiedWeatherDisplayConfig,
     multi_day_trend: Optional[list[dict]],
+    # #1720 S2: fertig aufgeloeste Ausblick-Spalten (trip_report.py, aus dem
+    # UNGEKOLLABIERTEN dc) -- None = Altbestand (feste Felder), [] = bewusst
+    # geleerte Auswahl (ganzer Block entfaellt).
+    outlook_metrics: Optional[list[dict]] = None,
     outlook_state: Optional["OutlookState"] = None,
     outlook_horizon_days: Optional[int] = None,
     stability_result: Optional["StabilityResult"],
@@ -255,27 +260,46 @@ def render_compact(
         lines.append(_ascii(confidence_hint))
         lines.append("")
 
-    if multi_day_trend:
-        lines.append("Naechste Etappen")
-        for stage in multi_day_trend:
-            tok = format_trend_tokens(stage)
-            weekday = stage.get("weekday", "")
-            name = stage.get("name", "")
-            thunder_field = _compact_thunder_field(tok, stage)
-            line = (
-                f"{weekday:<3} {name:<26} {tok['temp_str']:<8} "
-                f"{tok['precip_str']:<5} {tok['wind_str']:<5} {thunder_field}"
-            )
-            lines.append(_ascii(line))
-        lines.append("")
-    elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
-        # Fix #1486: benannter Zustand statt stiller Leerstelle. ascii_safe,
-        # weil der Compact-Body durchgaengig ASCII ist ("!!" statt "⚠️").
-        lines.append("Naechste Etappen")
-        lines.append(_ascii(render_outlook_state_plain(
-            outlook_state, outlook_horizon_days, ascii_safe=True,
-        )))
-        lines.append("")
+    # #1720 S2: eine bewusst geleerte Auswahl ([]) laesst den GESAMTEN
+    # Ausblick entfallen -- auch den Zustands-Fallback. Der Nutzer hat den
+    # Abschnitt abgewaehlt, nicht nur die Spalten. None (Altbestand) faellt
+    # unveraendert in die bisherigen Zweige.
+    if outlook_metrics != []:
+        if multi_day_trend:
+            lines.append("Naechste Etappen")
+            if outlook_metrics is not None:
+                # Label-Wert-Muster wie render_outlook_plain() (outlook.py:333)
+                # -- kein drittes Format. Bei 1..N frei gewaehlten Spalten
+                # traegt das Label die Zuordnung, nicht die Spaltenposition.
+                columns = outlook_columns(outlook_metrics)
+                for stage in multi_day_trend:
+                    weekday = stage.get("weekday", "")
+                    cells = stage.get("cells") or []
+                    values = "  ".join(
+                        f"{c['label']} {cells[i] if i < len(cells) else '–'}"
+                        for i, c in enumerate(columns)
+                    )
+                    lines.append(_ascii(f"{weekday:<3} {values}".rstrip()))
+            else:
+                for stage in multi_day_trend:
+                    tok = format_trend_tokens(stage)
+                    weekday = stage.get("weekday", "")
+                    name = stage.get("name", "")
+                    thunder_field = _compact_thunder_field(tok, stage)
+                    line = (
+                        f"{weekday:<3} {name:<26} {tok['temp_str']:<8} "
+                        f"{tok['precip_str']:<5} {tok['wind_str']:<5} {thunder_field}"
+                    )
+                    lines.append(_ascii(line))
+            lines.append("")
+        elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
+            # Fix #1486: benannter Zustand statt stiller Leerstelle. ascii_safe,
+            # weil der Compact-Body durchgaengig ASCII ist ("!!" statt "⚠️").
+            lines.append("Naechste Etappen")
+            lines.append(_ascii(render_outlook_state_plain(
+                outlook_state, outlook_horizon_days, ascii_safe=True,
+            )))
+            lines.append("")
 
     # Issue #1461 S3b-1: "E-Mail" heisst BEIDE Mail-Formate — das Kurzformat
     # zeigt denselben Abschnitt (AC-9), ascii_safe wie der uebrige Body.

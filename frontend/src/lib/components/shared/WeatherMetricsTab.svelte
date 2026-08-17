@@ -1780,6 +1780,7 @@
 						catalog={compareCatalog}
 						onMetricKeys={onOutlookMetricKeys}
 						title="3-Tages-Vorschau"
+						showEmailOnlyHint={false}
 					/>
 				</div>
 				{/if}

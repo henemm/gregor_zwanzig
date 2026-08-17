@@ -34,6 +34,7 @@ from output.renderers.day_window import (
     hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
 )
 from output.metric_format import THUNDER_LABEL_DE
+from output.renderers.compare_outlook_metric_ids import outlook_columns
 from output.renderers.email.helpers import _THUNDER_MAP, fmt_val, format_trend_tokens
 from output.renderers.email.thunder_branch import resolve_thunder_day_branch
 from output.renderers.email.unavailable_hint import (
@@ -569,9 +570,32 @@ def _segment_mini_header(seg_data: SegmentWeatherData) -> str:
     return f"{label} · {km_range} · {height_range}"
 
 
-def _outlook_lines(multi_day_trend: list[dict]) -> list[str]:
-    """3-Tage-Trend-Zeilen (Issue #623/#640-Rechenlogik, jetzt Ausblick-Bubble)."""
+def _outlook_lines(
+    multi_day_trend: list[dict],
+    outlook_metrics: Optional[list[dict]] = None,
+) -> list[str]:
+    """3-Tage-Trend-Zeilen (Issue #623/#640-Rechenlogik, jetzt Ausblick-Bubble).
+
+    ``outlook_metrics`` (#1720 S2): gesetzte Auswahl ersetzt die fuenf festen
+    Felder durch die gewaehlten Groessen -- MIT Katalog-Label je Zelle, weil
+    die Positionsgarantie der festen Reihenfolge dann entfaellt. ``None``
+    (Altbestand) laesst die Zeile byte-identisch.
+    """
     lines: list[str] = ["Ausblick"]
+    if outlook_metrics is not None:
+        columns = outlook_columns(outlook_metrics)
+        for stage in multi_day_trend:
+            weekday = stage.get("weekday", "")
+            cells = stage.get("cells") or []
+            values = "  ".join(
+                f"{c['label']}: {cells[i] if i < len(cells) else '–'}"
+                for i, c in enumerate(columns)
+            )
+            lines.extend(_wrap(f"{weekday}  {values}", _TG_PROSE_WIDTH))
+            note = stage.get("note")
+            if note:
+                lines.extend(_wrap(f"    ↳ {note}", _TG_PROSE_WIDTH))
+        return lines
     for stage in multi_day_trend:
         tok = format_trend_tokens(stage)
         weekday = stage.get("weekday", "")
@@ -643,6 +667,9 @@ def render_telegram_bubbles(
     friendly_keys: Optional[set[str]] = None,
     stability_result: Optional[StabilityResult] = None,
     multi_day_trend: Optional[list[dict]] = None,
+    # #1720 S2: fertig aufgeloeste Ausblick-Spalten (trip_report.py, aus dem
+    # UNGEKOLLABIERTEN dc) -- None = Altbestand, [] = bewusst geleerte Auswahl.
+    outlook_metrics: Optional[list[dict]] = None,
     outlook_state: Optional["OutlookState"] = None,
     outlook_horizon_days: Optional[int] = None,
     day_comparison: Optional["DayComparison"] = None,
@@ -830,16 +857,20 @@ def render_telegram_bubbles(
         bubbles.append(TelegramBubble(text="\n".join(text_lines)))
 
     # 5. Ausblick-Bubble (nur wenn multi_day_trend nicht leer).
-    if multi_day_trend:
-        outlook = [_esc(ln) for ln in _outlook_lines(multi_day_trend)]
-        bubbles.append(TelegramBubble(text="\n".join(outlook)))
-    elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
-        # Fix #1486: der vierte, gern vergessene Ausgabeweg — Telegram liess
-        # die Bubble bisher kommentarlos weg. Reiner Text, kein HTML-Kasten.
-        state_line = _esc(render_outlook_state_plain(
-            outlook_state, outlook_horizon_days,
-        ))
-        bubbles.append(TelegramBubble(text="Ausblick\n" + state_line))
+    # #1720 S2: eine bewusst geleerte Auswahl ([]) laesst die Bubble GANZ
+    # entfallen -- auch den Zustands-Fallback (identisch zu compact.py).
+    if outlook_metrics != []:
+        if multi_day_trend:
+            outlook = [_esc(ln) for ln in
+                       _outlook_lines(multi_day_trend, outlook_metrics)]
+            bubbles.append(TelegramBubble(text="\n".join(outlook)))
+        elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
+            # Fix #1486: der vierte, gern vergessene Ausgabeweg — Telegram liess
+            # die Bubble bisher kommentarlos weg. Reiner Text, kein HTML-Kasten.
+            state_line = _esc(render_outlook_state_plain(
+                outlook_state, outlook_horizon_days,
+            ))
+            bubbles.append(TelegramBubble(text="Ausblick\n" + state_line))
 
     # 6. Aktionen-Bubble — einzige Bubble mit reply_markup.
     bubbles.append(TelegramBubble(text="Aktionen", reply_markup=ACTIONS_BUBBLE_BUTTONS))

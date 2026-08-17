@@ -136,8 +136,15 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 		expect(fehler, `AC-6: Konsolenfehler waehrend des Klickpfads: ${fehler.join(' | ')}`).toEqual([]);
 	});
 
-	// ── AC-7 ────────────────────────────────────────────────────────────────
-	test('AC-7 (#1720 S1): der Abschnitt traegt den Hinweis "Erscheint nur in der E-Mail"', async ({
+	// ── AC-7 (S1), fortgeschrieben durch AC-6 der Scheibe 2 ─────────────────
+	// Scheibe 1 verlangte hier den Hinweis "Erscheint nur in der E-Mail", weil
+	// die Trip-Auswahl damals wirklich nur die E-Mail erreichte. Mit Scheibe 2
+	// (Spec: docs/specs/modules/feat_1720_s2_ausblick_kompakt_telegram.md,
+	// AC-6) wirkt dieselbe Auswahl in allen vier Ausgabeorten — der Hinweis
+	// waere im Trip jetzt schlicht falsch und ist dort abgeschaltet
+	// (`showEmailOnlyHint={false}`). Im Ortsvergleich bleibt er unveraendert;
+	// das deckt compare-outlook-metric-selection.staging.spec.ts ab.
+	test('AC-6 (#1720 S2): der Trip-Abschnitt traegt KEINEN Hinweis "Erscheint nur in der E-Mail"', async ({
 		page,
 		request
 	}) => {
@@ -146,22 +153,26 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 		const abschnitt = vorschauAbschnitt(reiter);
 		await expect(abschnitt).toBeVisible({ timeout: 10000 });
 
-		// Mindestens eine Groesse gewaehlt (Bedingung des Hinweises, Muster
-		// CompareOutlookLayoutControls.svelte:159-161).
+		// Mindestens eine Groesse gewaehlt — das ist die Bedingung, unter der
+		// der Hinweis im Ortsvergleich erscheint. Nur so ist die Abwesenheit im
+		// Trip eine Aussage und kein Nebeneffekt einer leeren Auswahl.
 		const niederschlag = abschnitt
 			.getByTestId('compare-layout-outlook-metric-precipitation')
 			.locator('input');
 		if (!(await niederschlag.isChecked())) await niederschlag.check();
+		await expect(niederschlag, 'Vorbedingung: mindestens eine Groesse ist gewaehlt').toBeChecked();
 
-		const hinweis = abschnitt.getByTestId('compare-layout-outlook-email-only-hint');
 		await expect(
-			hinweis,
-			'AC-7: Kompakt-Mail und Telegram folgen erst in Scheibe 2 — bis dahin muss der Abschnitt denselben Hinweis tragen wie beim Ortsvergleich'
-		).toBeVisible();
-		await expect(hinweis).toContainText('Erscheint nur in der E-Mail');
+			abschnitt.getByTestId('compare-layout-outlook-email-only-hint'),
+			'AC-6 (S2): der Trip-Abschnitt zeigt weiterhin den E-Mail-only-Hinweis, obwohl die Auswahl dort jetzt Kompakt-Mail und Telegram mitsteuert'
+		).toHaveCount(0);
+		await expect(
+			abschnitt.getByText('Erscheint nur in der E-Mail', { exact: false }),
+			'AC-6 (S2): der Hinweistext taucht im Trip-Abschnitt noch auf (ggf. ohne Testid gerendert)'
+		).toHaveCount(0);
 
 		await page.screenshot({
-			path: '../docs/artifacts/feat-1720-vorschau-metriken/ac-7-email-hinweis.png'
+			path: '../docs/artifacts/feat-1720-vorschau-metriken/ac-7-kein-email-hinweis.png'
 		});
 	});
 

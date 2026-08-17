@@ -53,10 +53,17 @@
 		 *  waere eine widerspruechliche Bedienflaeche (#1720 S1, AC-13). */
 		enabled?: boolean;
 		onEnabledChange?: (checked: boolean) => void;
+		/** Hinweis „Erscheint nur in der E-Mail" (#1720 S2, AC-6). Vorgabe
+		 *  `true` haelt den Ortsvergleich unveraendert — dort erscheint der
+		 *  Ausblick weiterhin nur in `render_compare_email()`. Der Trip
+		 *  uebergibt `false`: seine Auswahl wirkt seit dieser Scheibe in
+		 *  allen vier Ausgabeorten. */
+		showEmailOnlyHint?: boolean;
 	}
 	let {
 		metricKeys, catalog, onMetricKeys, onOutlookCommit,
-		title = '3-Tages-Ausblick', enabled = true, onEnabledChange
+		title = '3-Tages-Ausblick', enabled = true, onEnabledChange,
+		showEmailOnlyHint = true
 	}: Props = $props();
 
 	// „Nie eingestellt" (`null`) = die heutigen sieben Ausblick-Spalten; eine
@@ -178,9 +185,11 @@
      activeChannel="email": der Ausblick existiert nur in der E-Mail
      (render_compare_email), analog der Begruendung im Stundenverlauf-Block. -->
 {#if materializedOutlookKeys.length > 0}
-	<p class="outlook-email-hint" data-testid="compare-layout-outlook-email-only-hint">
-		Erscheint nur in der E-Mail.
-	</p>
+	{#if showEmailOnlyHint}
+		<p class="outlook-email-hint" data-testid="compare-layout-outlook-email-only-hint">
+			Erscheint nur in der E-Mail.
+		</p>
+	{/if}
 	<Card padding={0} style="margin-top: 6px">
 		<WeatherV2Reihenfolge
 			primaryColumns={materializedOutlookKeys}
