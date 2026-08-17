@@ -206,30 +206,46 @@ class _FakeActiveSegment:
 
 
 def test_radar_alert_trip_short_survives_double_truncation():
-    """AC-7: Given ein Trip-Name mit Umlaut nahe der 16-Zeichen-Grenze
-    (`Wandergruppe München`) / When der SMS-Titelzeilen-Pfad ueber
-    `radar_alert_service.py::build_onset_alert_message` (roh vorgekuerztes
-    `trip.name[:16]`, Zeile 71) UND den kanonischen SMS-Renderer laeuft /
-    Then entspricht das Ergebnis `fold_ascii(trip.name)[:16]` -- ERST falten,
-    DANN kuerzen (sms_format.md:66), statt der heutigen Doppelkuerzung (roh
-    kuerzen, dann falten, dann nochmal kuerzen), die Buchstaben frisst, weil
-    'ü' -> 'ue' beim Falten waechst."""
+    """AC-7: Given einen Namen mit Umlaut nahe der 16-Zeichen-Grenze
+    (`Wandergruppe München`) als `trip_short` / When der kanonische
+    SMS-Renderer (`_render_sms_onset`) den Kopf baut / Then entspricht das
+    Ergebnis `fold_ascii(trip_short)[:16]` -- ERST falten, DANN kuerzen
+    (sms_format.md:66), statt der aelteren Doppelkuerzung (roh kuerzen, dann
+    falten, dann nochmal kuerzen), die Buchstaben frisst, weil 'ü' -> 'ue'
+    beim Falten waechst.
+
+    Retargeted (Issue #1935/#1779 E4, PO-Entscheid 2026-08-17): der reine
+    TRIP-Radar/Onset-Pfad (`OnsetEvent.location_label=None`, wie ihn
+    `radar_alert_service.py::build_onset_alert_message` baut) fuehrt seither
+    KEINEN Namen mehr im SMS-Kopf — die urspruengliche Fixture ueber
+    `build_onset_alert_message` wuerde den Pruefling (die Doppelkuerzungs-
+    Logik `_ascii(msg.trip_short)[:16].rstrip(...)`) gar nicht mehr
+    durchlaufen und still bedeutungslos gruen bleiben (kein `trip_short` mehr
+    im Kopf, also nichts mehr zu kuerzen). Dieselbe Kuerzungslogik greift
+    unveraendert im Compare-Radar-Buendel-Pfad (`OnsetEvent.location_label`
+    gesetzt, Issue #1935/#1779 AC-10/AC-12 — dort ist `trip_short` der
+    Orts-Sammelname und bleibt bewusst stehen), dorthin verlegt dieser Test
+    die Fixture, ohne die Pruefling-Logik selbst zu aendern."""
+    from output.renderers.alert.model import AlertMessage, OnsetEvent
     from output.renderers.alert.render import render_sms
-    from services.radar_alert_service import build_onset_alert_message
     from utils.ascii_fold import fold_ascii
 
-    trip = _FakeTripForRadar("Wandergruppe München")
-    active = _FakeActiveSegment()
-
-    msg = build_onset_alert_message(
-        trip, active, onset_minutes=12, onset_time="14:00",
-        intensity_label="leichter Regen", source_label="Radar",
+    trip_short = "Wandergruppe München"
+    onset = OnsetEvent(
+        onset_minutes=12, onset_time="14:00", km_from=0.0, km_to=5.0,
+        is_convective=False, intensity_label="leichter Regen",
+        source_label="Radar", location_label="Buendel-Ort",
     )
+    msg = AlertMessage(
+        trip_short=trip_short, stand_at="14:00", events=(onset,),
+        source="Radar", cooldown_display="60 Min",
+    )
+
     sms = render_sms(msg)
-    expected_prefix = fold_ascii(trip.name)[:16].rstrip(" (-_")
+    expected_prefix = fold_ascii(trip_short)[:16].rstrip(" (-_")
 
     assert sms.startswith(expected_prefix), (
-        f"Doppelkuerzung verstuemmelt den Trip-Namen mitten im Wort: "
+        f"Doppelkuerzung verstuemmelt den Ortsnamen mitten im Wort: "
         f"SMS={sms!r} erwarteter Kopf={expected_prefix!r}"
     )
 

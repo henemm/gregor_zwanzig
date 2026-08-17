@@ -96,7 +96,8 @@ EXPECTED_HTML = (
 EXPECTED_TELEGRAM = (
     '<b>GR20-Test · km 5–18 · Regen in 12 Min</b>\n14:35 · leichter Regen · Radar (DWD)'
 )
-EXPECTED_SMS = 'GR20-Test km5-18: R!12'
+# Issue #1935/#1779 (E4): Trip-Radar/Onset-Kopf verliert den Trip-Namen.
+EXPECTED_SMS = 'km5-18: R!12'
 
 
 def _fresh_user(prefix: str) -> str:

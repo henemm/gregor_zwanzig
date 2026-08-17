@@ -5,6 +5,7 @@ der Metrik-Registry. Unicode-Pfeile NUR Email/Telegram; SMS rein ASCII/GSM-7.
 """
 from __future__ import annotations
 
+import unicodedata
 from datetime import datetime, timezone
 
 from app.metric_catalog import (
@@ -71,6 +72,17 @@ def _num(e: AlertEvent, value: float) -> str:
         return f"{n:,}".replace(",", ".") if abs(n) >= 1000 else str(n)
     int_part, _, frac_part = f"{rounded:,.{decimals}f}".partition(".")
     return f"{int_part.replace(',', '.')},{frac_part}"
+
+
+def _unit_suffix(e: AlertEvent) -> str:
+    """Einheiten-Suffix fuer Betreff/Telegram (Issue #1935/#1779 E5): immer
+    angehaengt (nicht mehr nur bei '%') -- dieselbe Regel wie im E-Mail-Zweig
+    (`_val()`). '%' klebt ohne Leerzeichen am Wert, alle anderen Einheiten mit
+    einem Leerzeichen davor (Katalog-Konvention, z.B. '80 km/h')."""
+    unit = _unit_display(e)
+    if not unit:
+        return ""
+    return unit if unit == "%" else f" {unit}"
 
 
 def _unit_display(e: AlertEvent) -> str:
@@ -320,11 +332,21 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
 
 
 def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
+    """Issue #1935/#1779 (E4): der Trip-Radar/Onset-Kopf verliert den
+    Trip-Namen -- er trug auf einer Kurznachricht an den Trip-Teilnehmer
+    selbst keine Information. AUSNAHME (AC-10/AC-12): traegt das fuehrende
+    Event ein `location_label` (gebuendelter Ortsvergleich-Onset,
+    `to_multi_location_onset_alert_message`), ist `msg.trip_short` in
+    Wahrheit der Orts-Sammelname (z.B. 'Zermatt, Chamoni') und bleibt
+    unangetastet -- die Trip/Compare-Weiche selbst."""
     e = msg.events[0]
     token = f"TH!{e.onset_minutes}" if e.is_convective else f"R!{e.onset_minutes}"
-    trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
     a, b = int(round(e.km_from)), int(round(e.km_to))
-    body = f"{trip} km{a}-{b}: {token}"
+    if getattr(e, "location_label", None):
+        trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
+        body = f"{trip} km{a}-{b}: {token}"
+    else:
+        body = f"km{a}-{b}: {token}"
     return body if len(body) <= limit else body[:limit]
 
 
@@ -355,8 +377,10 @@ def render_subject(msg: AlertMessage) -> str:
     # Issue #978 (PO-Nachtrag): Top-3-Auswahl UND Anzeige-Reihenfolge sind
     # severity-absteigend (kritischster zuerst), kanal-konsistent mit
     # render_email() und render_telegram().
+    # Issue #1935/#1779 (E5): Einheit immer anhaengen (nicht mehr nur bei
+    # '%') -- dieselbe Regel wie im E-Mail-Zweig (AC-11).
     top3 = ", ".join(
-        f"{_label(e)} {_num(e, e.value_to)}{'%' if _unit_display(e) == '%' else ''}"
+        f"{_label(e)} {_num(e, e.value_to)}{_unit_suffix(e)}"
         for e in over_evs[:3]
     )
     return f"[{msg.trip_short}] {km} · {arrow(over_evs[0])} {n} über Schwelle: {top3}"
@@ -395,16 +419,18 @@ def _verdict_single(e: AlertEvent) -> str:
     )
 
 
-# Issue #1865: aus dem Fragment "Änderung über ✗" wird ein vollstaendiger
-# Satz. side_label() selbst bleibt unveraendert (#958-Kernsemantik).
-_SIDE_ADVERB = {"über": "darüber", "unter": "darunter"}
-
-
 def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[tuple[str, str]]:
     """3 (label, value)-Zeilen: Wert-Vergleich / Schwellwert-Status / Wo & wann.
 
     Issue #1169: gesetztes `location_label` (Compare-Punkt-Alert) ersetzt die
     km-Spanne; Trip-Pfad übergibt es nie (bit-identisch, AC-7).
+
+    Issue #1935/#1779 (E1): Zeile 2 nannte bisher `Alarm-Schwelle {wert}` als
+    Label und `jetzt {über|unter} {mark}` als Wert -- beides zeigte auf den
+    MESSWERT, obwohl `threshold` per ADR-0013 (#958) immer die Δ-Schwelle
+    ist. Neu: Label nennt den tatsaechlichen Aenderungsbetrag, Wert stellt ihn
+    der Schwelle gegenueber -- deckungsgleich mit `_verdict_single` eine Zeile
+    hoeher (AC-3). `over_thr()`/`side_label()` bleiben unveraendert.
     """
     unit = get_metric(e.metric_id).unit
     d = _delta_text(e)
@@ -415,8 +441,8 @@ def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[
     )
     mark = "✓" if not over_thr(e) else "✗"
     row2 = (
-        f"Alarm-Schwelle {_val(e, e.threshold)}",
-        f"jetzt {_SIDE_ADVERB[side_label(e)]} {mark}",
+        f"Änderung {_val(e, abs(e.value_to - e.value_from))}",
+        f"{side_label(e)} Alarm-Schwelle {_val(e, e.threshold)} {mark}",
     )
     # Issue #1744 A1 (AC-6): DIESELBE Aufloesung wie im Betreff — vorher stand
     # hier ein dritter, eigener km-Bauer (`_km_str_events`), weshalb der
@@ -550,9 +576,15 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
             loc_prefix = f"{e.location_label} · " if e.location_label else ""
             where_when = f" · {_where_when(e)}" if with_where_when else ""
             if over_thr(e):
+                # Issue #1935/#1779 (E2): dieselbe Ambiguitaet wie E1, nur im
+                # gebuendelten Fall -- Label nennt zusaetzlich zur Schwelle
+                # den tatsaechlichen Aenderungsbetrag (zwei unterscheidbare
+                # Zahlen in derselben Zeile, AC-4).
                 threshold_suffix = " %" if unit == "%" else ""
+                delta = abs(e.value_to - e.value_from)
                 data_rows.append((
                     f"{loc_prefix}{_label(e)}{where_when} · "
+                    f"Änderung {_num(e, delta)}{threshold_suffix} · "
                     f"Schwelle {_num(e, e.threshold)}{threshold_suffix}",
                     f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
                     f"{unit_suffix} {side_label(e)}",
@@ -640,10 +672,11 @@ def render_telegram(msg: AlertMessage) -> str:
         # Issue #1861: derselbe Ort-/Zeit-Zusatz wie im E-Mail-Datenblock
         # (Kanalkonsistenz, Issue #978-Praezedenz).
         with_where_when = _per_event_where_when(evs)
+        # Issue #1935/#1779 (E5): Einheit immer anhaengen (AC-11).
         metric_line = " · ".join(
             f"{_label(e)}{f' {_where_when(e)}' if with_where_when else ''} "
             f"{_num(e, e.value_from)}→{_num(e, e.value_to)}"
-            f"{'%' if _unit_display(e) == '%' else ''}"
+            f"{_unit_suffix(e)}"
             for e in evs
         )
         lines = [f"<b>{_esc(verdict)}</b>", metric_line]
@@ -661,10 +694,21 @@ def _sms_token(
     `to_multi_point_alert_message()` nur im gebuendelten Mehr-Orte-Fall
     (`project.py:215`) —, wird die Ortsposition als ZAHL vorangestellt (PO E2:
     Orte werden als Zahl gefuehrt, nicht ausgeschrieben). Ohne den Parameter
-    bleibt das Token byte-identisch zum bisherigen Verhalten (Trip-Δ,
-    Trip-Radar, Compare-Radar — AC-26-Zusicherung fuer SMS)."""
+    bleibt das Token byte-identisch zum bisherigen Verhalten fuer Trip-Radar
+    und Compare-Radar — AC-26-Zusicherung fuer SMS.
+
+    Issue #1935/#1779 (E3): traegt das Ereignis KEINE Ortsposition (also der
+    Trip-Δ-Pfad, `location_positions is None`), fuehrt das Token zusaetzlich
+    den Von-Wert (`{sign}{code}{von}>{bis}` statt nur `{sign}{code}{bis}`) --
+    der Ausschlag wird lesbar, ohne dass der Empfaenger den letzten Mailstand
+    kennen muss (AC-6). Der Ortsvergleich-Aenderungspfad (`location_positions`
+    gesetzt) behaelt sein Token byte-identisch (AC-9, #1467 S2 AG3b).
+    """
     sign = "+" if e.value_to >= e.value_from else "-"
-    tok = f"{sign}{_code(e)}{int(round(e.value_to))}"
+    if location_positions is None:
+        tok = f"{sign}{_code(e)}{int(round(e.value_from))}>{int(round(e.value_to))}"
+    else:
+        tok = f"{sign}{_code(e)}{int(round(e.value_to))}"
     if e.occurred_at:
         tok = tok + f"@{e.occurred_at[:2]}"
     pos = (location_positions or {}).get(e.location_label or "")
@@ -705,9 +749,16 @@ def render_sms(
     im Mehr-Orte-Fall stand die Ortsliste doppelt (`trip_short` UND
     `location_label` tragen denselben `collective_label`,
     `project.py:217-220`), im Ein-Ort-Fall der Name zweimal hintereinander
-    (`'Graz Graz: '`). Aufrufer OHNE `location_positions` (Trip-Δ,
-    Trip-Radar, Compare-Radar, amtliche Warnungen) behalten ihren Kopf
-    byte-identisch.
+    (`'Graz Graz: '`). Aufrufer OHNE `location_positions` UND OHNE
+    `location_label`/`multi_location` (Trip-Radar, Compare-Radar, amtliche
+    Warnungen) behalten ihren Kopf byte-identisch.
+
+    Issue #1935/#1779 (E3/E4): der Trip-Δ-Kopf (kein `location_positions`,
+    kein `multi_location`, kein `msg.location_label`) spricht seither
+    dieselbe Ortssprache wie Betreff/E-Mail/Telegram (`_km_str`/
+    `format_alert_location`) statt einer km-Spanne, und fuehrt keinen
+    Trip-Namen mehr -- PO-Entscheid 2026-08-17, hebt AC-5 von
+    `fix_1744_alarm_format_angleichen.md` fuer diesen Pfad auf.
     """
     if msg.source is not None:
         return _render_sms_onset(msg, limit)
@@ -730,8 +781,10 @@ def render_sms(
     elif msg.location_label:
         head = f"{trip} {_ascii(msg.location_label)[:24]}: "
     else:
-        a, b = km_span(msg.events)
-        head = f"{trip} km{int(round(a))}-{int(round(b))}: "
+        # Issue #1935/#1779 (E3/E4): Trip-Δ-Pfad -- dieselbe Ortsaufloesung
+        # wie Betreff/E-Mail/Telegram (`_km_str`), Emoji ENTFERNT statt
+        # transliteriert (AC-7), kein Trip-Name mehr (AC-5).
+        head = f"{_ascii_alert_location(_km_str(msg))}: "
     # Issue #1916 (AC-3/AC-4): der Referenz-Zeitpunkt gehoert in den KOPF
     # (immer enthalten), NICHT in die Token-Liste -- sonst wuerde er bei
     # Laengendruck wie ein normales Event-Token weggekuerzt statt "notfalls
@@ -788,6 +841,32 @@ def _ascii(text: str) -> str:
     for bad, good in _ASCII_EXTENSION_REPLACEMENTS:
         text = text.replace(bad, good)
     return fold_ascii(text)
+
+
+def _strip_pictographs(text: str) -> str:
+    """Entfernt Piktogramm-Zeichen (Unicode-Kategorie 'So', z.B. 🏁) samt
+    einem direkt folgenden Leerzeichen (Issue #1935/#1779 AC-7): das Emoji
+    wird ENTFERNT statt transliteriert -- `fold_ascii()`/`anyascii` wuerde
+    sonst z.B. ':checkered_flag:' bauen, was auf einer SMS unlesbar waere."""
+    out: list[str] = []
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if unicodedata.category(ch) == "So":
+            i += 1
+            if i < len(text) and text[i] == " ":
+                i += 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _ascii_alert_location(text: str) -> str:
+    """SMS-Kopf-Ortstext (Issue #1935/#1779 AC-5/AC-7/AC-8): Piktogramme
+    ZUERST entfernen, danach dieselbe ASCII/GSM-7-Faltung wie jeder andere
+    SMS-Text -- sonst faellt die Reihenfolge in `fold_ascii()`."""
+    return _ascii(_strip_pictographs(text))
 
 
 def _esc(text: str) -> str:

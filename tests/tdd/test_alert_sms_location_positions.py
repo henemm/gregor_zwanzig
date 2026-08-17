@@ -916,7 +916,10 @@ def test_regression_trip_deviation_alert_sms_text_unchanged():
             trip=_trip(), weather=[_segment_weather_data()], changes=[_change()],
             effective_channels={"sms"},
         )
-        assert stub.texts() == ["ProbeTrip km12-18: +R30"], (
+        # Issue #1935/#1779 (E3/E4): Kopf spricht seither die Segment-Sprache
+        # statt einer km-Spanne (kein Trip-Name mehr), Token traegt Von- UND
+        # Bis-Wert (`_trip_segment().segment_id=1` -> "Segment 1").
+        assert stub.texts() == ["Segment 1: +R2>30"], (
             "Regression: der SMS-Text des Trip-Aenderungsalarms muss ohne "
             "Orts-Positionszuordnung unveraendert bleiben, gemessen: "
             f"{stub.texts()!r}"
@@ -941,7 +944,9 @@ def test_regression_trip_radar_alert_sms_text_unchanged():
             trip=_trip(), request=req, source="Radar (DWD)",
             cooldown_display="2 Stunden", effective_channels={"sms"},
         )
-        assert stub.texts() == ["ProbeTrip km5-18: R!12"], (
+        # Issue #1935/#1779 (E4): Trip-Radar/Onset-Kopf verliert den Trip-Namen,
+        # km-Spanne bleibt (kein Segment-Bezug im Radar-Request dieser Fixture).
+        assert stub.texts() == ["km5-18: R!12"], (
             "Regression: der SMS-Text des Trip-Radar-Alarms muss unveraendert "
             f"bleiben, gemessen: {stub.texts()!r}"
         )

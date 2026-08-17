@@ -141,11 +141,11 @@ def _thousand_cape_msg() -> AlertMessage:
 class TestAC1EmailMultiLineUnitOnce:
     def test_email_datablock_line_unit_once_and_threshold_without_unit(self):
         html, plain = render_email(_multi_msg())
-        assert "Böen · Schwelle 40" in html, (
+        assert "Böen · Änderung 60 · Schwelle 40" in html, (
             f"Schwelle ohne Einheit fehlt (SOLL laut Design-Vorlage "
             f"Zeile 220): {html!r}"
         )
-        assert "Böen · Schwelle 40" in plain
+        assert "Böen · Änderung 60 · Schwelle 40" in plain
         assert "20 ↑ 80 km/h" in html, (
             f"Wertespanne mit Einheit genau einmal fehlt (SOLL laut Design-"
             f"Vorlage Zeile 221): {html!r}"
@@ -217,10 +217,14 @@ class TestAC2RoundingNoiseAndThousandSeparator:
 
 class TestAC3SubjectTop3JustNumbers:
     def test_subject_top3_exact_literal(self):
+        # Issue #1935/#1779 E5: Einheit immer anhaengen (nicht mehr nur bei
+        # '%') -- Niedersch (mm) und Böen (km/h) tragen seither ihre Einheit,
+        # Gewitter (Einheit "") bleibt unveraendert ohne Suffix.
         subject = render_subject(_multi_msg())
-        assert "Niedersch 30, Gewitter 90, Böen 80" in subject, (
+        assert "Niedersch 30 mm, Gewitter 90, Böen 80 km/h" in subject, (
             f"Betreff-Top3 nicht im SOLL-Format (PO-Nachtrag 2026-07-02: "
-            f"kritischster zuerst, severity-absteigend): {subject!r}"
+            f"kritischster zuerst, severity-absteigend; Issue #1935/#1779 E5: "
+            f"Einheit immer): {subject!r}"
         )
 
 
@@ -231,10 +235,12 @@ class TestAC3SubjectTop3JustNumbers:
 
 class TestAC4TelegramMultiLineNoUnitsExceptPercent:
     def test_telegram_multiline_exact_literal(self):
+        # Issue #1935/#1779 E5: Einheit immer anhaengen (analog Betreff).
         tg = render_telegram(_multi_msg())
-        assert "Niedersch 2→30 · Gewitter 20→90 · Böen 20→80" in tg, (
+        assert "Niedersch 2→30 mm · Gewitter 20→90 · Böen 20→80 km/h" in tg, (
             f"Telegram-Multi-Zeile nicht im SOLL-Format (PO-Nachtrag "
-            f"2026-07-02: kritischster zuerst, severity-absteigend): {tg!r}"
+            f"2026-07-02: kritischster zuerst, severity-absteigend; Issue "
+            f"#1935/#1779 E5: Einheit immer): {tg!r}"
         )
 
     def test_metric_line_has_no_schwelle_word(self):
@@ -271,12 +277,15 @@ class TestChannelOrderConsistency:
         )
 
         html, plain = render_email(msg)
-        email_order = re.findall(r"(Niedersch|Gewitter|Böen) · Schwelle", plain)
+        # Issue #1935/#1779 E2: die Zeile nennt seither zusaetzlich den
+        # Änderungsbetrag vor "Schwelle" -- die Reihenfolge-Zusicherung
+        # zielt auf "Änderung", nicht mehr direkt auf "Schwelle".
+        email_order = re.findall(r"(Niedersch|Gewitter|Böen) · Änderung", plain)
         assert email_order == expected_order, (
             f"E-Mail-Datenblock-Reihenfolge nicht severity-absteigend: "
             f"{email_order!r} (erwartet {expected_order!r}) — {plain!r}"
         )
-        html_order = re.findall(r"(Niedersch|Gewitter|Böen) · Schwelle", html)
+        html_order = re.findall(r"(Niedersch|Gewitter|Böen) · Änderung", html)
         assert html_order == expected_order
 
         tg = render_telegram(msg)
@@ -331,8 +340,12 @@ class TestMixedOverUnderOrdering:
 
         _, plain = render_email(_mixed_over_under_msg())
         # Issue #980: unter-Schwelle-Zeilen tragen das Label "· unter Schwelle"
-        # (ohne Schwellen-Zahl), über-Schwelle "· Schwelle N" — beide erfassen.
-        order = re.findall(r"(Niedersch|Gewitter|Regen%|Böen) · (?:unter )?Schwelle", plain)
+        # (ohne Schwellen-Zahl), über-Schwelle "· Änderung N · Schwelle N"
+        # (Issue #1935/#1779 E2) — beide erfassen.
+        order = re.findall(
+            r"(Niedersch|Gewitter|Regen%|Böen) · (?:Änderung \S+(?: %)? · )?(?:unter )?Schwelle",
+            plain,
+        )
         assert order == ["Böen", "Gewitter", "Regen%", "Niedersch"], (
             f"unter-Schwelle-Event (Niedersch) muss trotz hoher abs(severity) "
             f"gedämpft zuletzt stehen: {order!r} — {plain!r}"
@@ -349,10 +362,12 @@ class TestMixedOverUnderOrdering:
         )
 
     def test_subject_top3_excludes_under_threshold_event(self):
+        # Issue #1935/#1779 E5: Böen (km/h) traegt seither seine Einheit;
+        # Regen% traegt "%" bereits seit jeher (Prozent-Metrik, unveraendert).
         subject = render_subject(_mixed_over_under_msg())
-        assert "Böen 80, Gewitter 55, Regen% 55%" in subject, (
+        assert "Böen 80 km/h, Gewitter 55, Regen% 55%" in subject, (
             f"Top-3 muss die drei über-Schwelle-Events severity-absteigend "
-            f"zeigen: {subject!r}"
+            f"zeigen (Issue #1935/#1779 E5: Einheit immer): {subject!r}"
         )
         assert "Niedersch 2" not in subject, (
             f"unter-Schwelle-Event (höchste severity) darf NICHT im Top-3 "
@@ -370,7 +385,7 @@ class TestMixedOverUnderOrdering:
 class TestAC6HtmlPlainStructuralParity:
     def test_html_and_plain_share_same_kuerzel_schwelle_content(self):
         html, plain = render_email(_multi_msg())
-        for literal in ("Böen · Schwelle 40", "20 ↑ 80 km/h"):
+        for literal in ("Böen · Änderung 60 · Schwelle 40", "20 ↑ 80 km/h"):
             assert literal in html, f"{literal!r} fehlt im HTML: {html!r}"
             assert literal in plain, f"{literal!r} fehlt im Plain-Text: {plain!r}"
 

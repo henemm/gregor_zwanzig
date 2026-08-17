@@ -714,10 +714,12 @@ def test_ac7_trip_alert_rendering_unchanged():
     ausgeführte Rendering-Ergebnis — dieser Test ist bereits heute grün und
     MUSS es nach der Implementierung bleiben.
 
-    Ausnahme (#1861/#1865, nachgezogen): die "Alarm-Schwelle"-Datenblock-Zeile
-    wechselt von Fragment ("Änderung über ✗") zu vollstaendigem Satz ("jetzt
-    darüber ✗") — reine Textaenderung, `over_thr()`/`side_label()` bleiben
-    unveraendert (#958-Invariante). Alle anderen Zeilen bleiben byte-identisch.
+    Ausnahme (#1935/#1779, nachgezogen): die "Alarm-Schwelle"-Datenblock-Zeile
+    nennt seither den Änderungsbetrag statt eines Messwert-Bezugs ("Änderung
+    16,0 mm: über Alarm-Schwelle 10,0 mm ✗" statt "Alarm-Schwelle 10,0 mm:
+    jetzt darüber ✗") — reine Textaenderung, `over_thr()`/`side_label()`
+    bleiben unveraendert (#958-Invariante). Alle anderen Zeilen bleiben
+    byte-identisch.
     """
     from output.renderers.alert.project import to_alert_message
     from output.renderers.alert.render import render_email, render_subject, render_telegram
@@ -754,7 +756,7 @@ def test_ac7_trip_alert_rendering_unchanged():
         "Niedersch +800% seit dem Briefing\n\n"
         "↑ +800 % · Änderung über deiner Alarm-Schwelle (10,0 mm)\n\n"
         "Niedersch · mm: 2,0 mm ↑ 18,0 mm +800 %\n"
-        "Alarm-Schwelle 10,0 mm: jetzt darüber ✗\n"
+        "Änderung 16,0 mm: über Alarm-Schwelle 10,0 mm ✗\n"
         "Wo & wann: Segment 1\n\n"
         "Stand: heute 14:00 · verglichen mit dem letzten Briefing"
         # Issue #1241: geteilte Herkunfts-Fußzeile (deviation-alert). Zeile 2
