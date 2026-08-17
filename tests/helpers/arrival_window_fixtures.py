@@ -125,6 +125,13 @@ def fenster_minuten(minuten_jetzt: int, *offsets_min: int) -> tuple[int, ...]:
        die Uhrzeit identisch und der Tageswechsel wuerde verschluckt — die
        Rollover-Erkennung in ``convert_trip_to_segments`` greift nur bei
        STRIKT fallender Uhrzeit.
+    4. Ein NEGATIV gewuenschter Versatz liegt bei oder vor ``minuten_jetzt``
+       (Issue #1940). Ist das an der gegebenen Ortsminute nicht darstellbar,
+       wird :class:`ValueError` geworfen statt still ein Fenster geliefert, in
+       dem der Wegpunkt in der Zukunft liegt. Die Zusicherung gilt ueber den
+       ganzen Wertebereich, auch fuer negatives ``minuten_jetzt``: hat der
+       lokale Etappentag noch gar nicht begonnen, ist dort ueberhaupt kein
+       Vergangenheits-Wegpunkt darstellbar.
     """
     if len(offsets_min) < 2:
         raise ValueError(
@@ -132,7 +139,8 @@ def fenster_minuten(minuten_jetzt: int, *offsets_min: int) -> tuple[int, ...]:
             f"erhalten: {offsets_min!r}"
         )
 
-    roh = [int(minuten_jetzt) + int(v) for v in offsets_min]
+    jetzt = int(minuten_jetzt)
+    roh = [jetzt + int(v) for v in offsets_min]
 
     # Hat der lokale Etappentag noch gar nicht begonnen (westliche Zeitzonen
     # kurz nach UTC-Mitternacht), wird das GANZE Fenster nach vorne geschoben
@@ -150,6 +158,28 @@ def fenster_minuten(minuten_jetzt: int, *offsets_min: int) -> tuple[int, ...]:
         vorher = minuten[-1]
         # Zusicherungen 2 und 3.
         minuten.append(min(max(r, vorher + 1), vorher + MINUTEN_PRO_TAG - 1))
+
+    # Zusicherung 4 (#1940). Geprueft wird das FERTIGE Fenster, nicht die
+    # Zwischenrechnung: auch die Klemmungen oben koennen einen Wegpunkt nach
+    # hinten schieben.
+    verloren = [
+        (int(v), m)
+        for v, m in zip(offsets_min, minuten)
+        if int(v) < 0 and m > jetzt
+    ]
+    if verloren:
+        raise ValueError(
+            f"An Ortsminute {jetzt} des Etappentags ist die gewuenschte "
+            f"VERGANGENHEIT nicht darstellbar: die Versaetze "
+            f"{[v for v, _ in verloren]} wurden vor *jetzt* verlangt, liegen "
+            f"im geklemmten Fenster aber bei {[m for _, m in verloren]} und "
+            f"damit dahinter (vollstaendiges Fenster: {tuple(minuten)}). Der "
+            "lokale Tag ist noch nicht weit genug fortgeschritten, und ein "
+            "Wegpunkt vor Ortszeit-Mitternacht ist im Datenmodell nicht "
+            "darstellbar. Abhilfe: die Uhr des Tests auf eine Ortszeit in der "
+            "Tagesmitte stellen (freeze_time) ODER Koordinaten waehlen, deren "
+            "Etappentag zu jeder UTC-Uhrzeit weit genug fortgeschritten ist."
+        )
     return tuple(minuten)
 
 
@@ -186,17 +216,22 @@ def active_window_offsets(lat: float, lon: float, *offsets_min: int) -> tuple[st
     Tagesgrenzen es erzwingen; in der Tagesmitte kommen sie unveraendert
     heraus.
 
-    🔴 **Das Vorzeichen eines Versatzes ist keine Zusicherung.** Nahe der
-    Ortszeit-Mitternacht ist "zwei Stunden vor jetzt" auf dem Etappentag nicht
-    darstellbar; der Wegpunkt rutscht dann nach vorne und kann NACH *jetzt*
-    liegen. Ein Test, der ein bereits VERGANGENES erstes Segment braucht (z.B.
-    "der Nowcast muss die Koordinaten des ZWEITEN Segments nehmen"), darf sich
-    darauf nicht verlassen — er braucht Koordinaten weit oestlich von
-    Greenwich, damit der Etappentag am Ort immer weit genug fortgeschritten
-    ist. Nachgemessen an
-    ``test_issue_822_radar_nowcast_segment.py::test_ac3_...``: in Ligurien
-    (UTC+1) war das erste Segment um 00:00:01 UTC noch aktiv und der Test
-    fiel auf die Wegpunkt-0-Koordinaten zurueck.
+    🔴 **Das Vorzeichen eines Versatzes IST eine Zusicherung — seit Issue
+    #1940 durchgesetzt statt nur erbeten.** Nahe der Ortszeit-Mitternacht ist
+    "zwei Stunden vor jetzt" auf dem Etappentag nicht darstellbar. Frueher
+    rutschte der Wegpunkt dann still nach vorne und lag NACH *jetzt*; ein
+    Test, der ein bereits VERGANGENES erstes Segment brauchte, pruefte danach
+    eine Konstellation, die er gar nicht hergestellt hatte (nachgemessen an
+    ``test_issue_822_radar_nowcast_segment.py``: AC-3 taeglich 12:00-13:30 UTC
+    rot, AC-2 taeglich 23:00-00:00 UTC — unabhaengig vom PR-Inhalt).
+
+    Heute scheitert :func:`fenster_minuten` in diesem Fall laut mit
+    :class:`ValueError`. Ein Aufrufer mit Vergangenheits-Bedarf hat zwei Wege:
+    die Uhr selbst auf eine Ortszeit in der Tagesmitte stellen (``freeze_time``
+    — so machen es die drei Stellen in ``test_issue_822_...``), oder
+    Koordinaten waehlen, deren Etappentag zu jeder UTC-Uhrzeit weit genug
+    fortgeschritten ist. Ein Ort allein genuegt nicht: auch Neuseeland
+    (UTC+12) hat eine Ortszeit-Mitternacht, sie liegt nur bei 12:00 UTC.
     """
     tagesbeginn, minuten_jetzt = _tagesbezug(lat, lon)
     return tuple(
@@ -233,10 +268,16 @@ def past_window_offsets(lat: float, lon: float, *offsets_min: int) -> tuple[str,
     Ende vor der Ankunft liegt — dann faellt das Ziel-Segment auf das minimale
     Fenster von einer Stunde nach Ankunft zurueck.
 
-    Reicht der Platz auf dem Etappentag nicht fuer die gewuenschten Abstaende
-    (fruehe Ortszeit), wird das Fenster gestaucht statt zu scheitern; ist gar
-    kein Platz mehr, wird :class:`ValueError` geworfen — laut scheitern statt
-    still ein Fenster liefern, das die Zusicherung nicht traegt.
+    🔴 **Die gewuenschte Spanne wird eingehalten oder gar nicht geliefert**
+    (Issue #1940 AC-7). Reicht der bereits vergangene Teil des Etappentags
+    nicht fuer die gewuenschten Abstaende (fruehe Ortszeit), wird
+    :class:`ValueError` geworfen. Bis 2026-08-17 wurde hier still auf den
+    verfuegbaren Platz **gestaucht** — der letzte Wegpunkt landete dann eine
+    Minute vor *jetzt*, das Ziel-Segment blieb nach dem Randfall-Guard aber
+    noch eine Stunde offen, und der Trip galt genau dann NICHT als „vorbei",
+    wenn der Test das Gegenteil pruefen wollte. Nachgemessen an
+    ``test_issue_818_radar_briefing_integration.py::test_ac5_...``: taeglich
+    12:00-16:00 UTC rot (Neuseeland, Ortsminute 0-239).
     """
     if len(offsets_min) < 2:
         raise ValueError(
@@ -252,13 +293,6 @@ def past_window_offsets(lat: float, lon: float, *offsets_min: int) -> tuple[str,
 
     anzahl = len(offsets_min)
     obergrenze = min(MINUTEN_PRO_TAG - 1, minuten_jetzt - 1)
-    if obergrenze < anzahl - 1:
-        raise ValueError(
-            f"Auf dem Etappentag {tag} ist an dieser Ortszeit noch kein "
-            f"vergangenes Fenster mit {anzahl} Wegpunkten darstellbar "
-            f"(Platz: {obergrenze + 1} Minuten). Die Fixture braucht eine "
-            "Zeitzone, deren Etappentag weiter fortgeschritten ist."
-        )
 
     roh = [minuten_jetzt + int(v) for v in offsets_min]
     for i in range(1, anzahl):
@@ -267,11 +301,25 @@ def past_window_offsets(lat: float, lon: float, *offsets_min: int) -> tuple[str,
     # vor jetzt liegt (nach vorne wird nicht geschoben — das machte es spaeter).
     verschiebung = min(0, obergrenze - roh[-1])
     roh = [r + verschiebung for r in roh]
+
+    # EINE Bedingung statt zweier: der frueher separat gepruefte Fall „gar kein
+    # Platz mehr" (obergrenze < anzahl - 1) ist hierin enthalten — die Folge ist
+    # nach der Monotonie-Korrektur mindestens ``anzahl - 1`` Minuten lang, ihr
+    # Anfang liegt also erst recht vor Tagesbeginn. Zwei Bedingungen, von denen
+    # eine die andere umfasst, laden nur dazu ein, die falsche zu pflegen.
     if roh[0] < 0:
-        # Passt die gewuenschte Spanne nicht mehr auf den bisher vergangenen
-        # Teil des Etappentags: gleichmaessig auf [0, obergrenze] stauchen.
-        roh = [round(obergrenze * i / (anzahl - 1)) for i in range(anzahl)]
-        for i in range(1, anzahl):
-            roh[i] = max(roh[i], roh[i - 1] + 1)
+        raise ValueError(
+            f"Auf dem Etappentag {tag} ist an Ortsminute {minuten_jetzt} kein "
+            f"vergangenes Fenster mit {anzahl} Wegpunkten ueber "
+            f"{roh[-1] - roh[0]} Minuten darstellbar: vor *jetzt* liegen nur "
+            f"{max(obergrenze + 1, 0)} Minuten dieses Tages, und ein Wegpunkt "
+            "vor Ortszeit-Mitternacht ist im Datenmodell nicht darstellbar. "
+            "Frueher wurde hier still auf den verfuegbaren Platz gestaucht — "
+            "der letzte Wegpunkt landete dann eine Minute vor jetzt und das "
+            "Ziel-Segment blieb noch eine Stunde offen, der Trip war also "
+            "gerade NICHT vorbei (Issue #1940). Abhilfe: die Uhr des Tests "
+            "auf eine spaete Ortszeit stellen (freeze_time) ODER kuerzere "
+            "Versaetze waehlen."
+        )
 
     return tuple((tagesbeginn + timedelta(minutes=m)).strftime("%H:%M") for m in roh)
