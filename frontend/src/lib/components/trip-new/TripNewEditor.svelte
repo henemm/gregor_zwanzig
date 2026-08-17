@@ -7,11 +7,12 @@
 	// Design: docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2-mobile.jsx
 	// Factory-Pattern für alle Event-Handler (Safari-Closure-Schutz, CLAUDE.md).
 
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { api } from '$lib/api.js';
 	import { Eyebrow, Btn, Input, TopoBg } from '$lib/components/atoms';
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
+	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import { AlertRulesEditor } from '$lib/components/organisms';
@@ -34,6 +35,28 @@
 		buildCreateTripPayload,
 	} from './tripNewLogic.ts';
 
+	// ── Test-Seam (Issue #1738, Muster `profileOverride` aus #1510) ──────────
+	// Der gesamte Anlege-Zustand lebt in internem `$state`; `isMobileViewport`
+	// entsteht sogar erst in `onMount`, das `svelte/server` nie ausfuehrt. Ohne
+	// Vorbelegung ist der Zeitplan-Tab serverseitig gar nicht erreichbar und die
+	// Ein-Instanz-Zusicherung (AC-5) nicht messbar. OHNE Uebergabe ist das
+	// Verhalten unveraendert — insbesondere kommt `isMobileViewport` dann
+	// weiterhin aus `matchMedia`.
+	interface TripNewStateOverride {
+		activeTab?: TabId;
+		isMobileViewport?: boolean;
+		channels?: { email: boolean; telegram: boolean; sms: boolean };
+		reportConfig?: ReportConfig;
+		name?: string;
+		startDate?: string;
+		stageNames?: string[];
+	}
+	let { stateOverride }: { stateOverride?: TripNewStateOverride } = $props();
+	// Einmal-Lesung beim Erzeugen (untrack, wie `profileOverride` in
+	// VTBriefingChannels.svelte) — die Vorbelegung ist ein Startwert, kein
+	// reaktiver Bezug.
+	const seed: TripNewStateOverride = untrack(() => stateOverride ?? {});
+
 	// ── Tab-Definitionen (1:1 TN_TAB_DEFS) ──────────────────────────────────
 	const TAB_DEFS: { id: TabId; label: string; lockHint: string | null; optional: boolean }[] = [
 		{ id: 'route',     label: 'Route',            lockHint: null,                             optional: false },
@@ -45,21 +68,25 @@
 	];
 
 	// ── Lokaler Anlege-State ──────────────────────────────────────────────────
-	let name = $state('');
+	let name = $state(seed.name ?? '');
 	let region = $state('');
-	let startDate = $state('');
+	let startDate = $state(seed.startDate ?? '');
 
 	interface StageLocal { id: number; name: string; gpx: { file: string; km: number; asc: number } | null; waypoints: Waypoint[] }
-	let stages = $state<StageLocal[]>([
-		{ id: 1, name: '', gpx: null, waypoints: [] },
-		{ id: 2, name: '', gpx: null, waypoints: [] },
-	]);
+	let stages = $state<StageLocal[]>(
+		seed.stageNames
+			? seed.stageNames.map((n, i) => ({ id: i + 1, name: n, gpx: null, waypoints: [] }))
+			: [
+					{ id: 1, name: '', gpx: null, waypoints: [] },
+					{ id: 2, name: '', gpx: null, waypoints: [] },
+				]
+	);
 	// Bug #708 — Etappen-Löschen mit Bestätigungs-Dialog
 	let pendingRemoveStageId = $state<number | null>(null);
 
 	let weatherMetrics = $state<WeatherConfigMetric[]>([]);
-	let channels = $state({ email: true, telegram: true, sms: false });
-	let reportConfig = $state<ReportConfig | undefined>(undefined);
+	let channels = $state(seed.channels ?? { email: true, telegram: true, sms: false });
+	let reportConfig = $state<ReportConfig | undefined>(seed.reportConfig);
 	let alertRules = $state<AlertRule[]>([]);
 	// Issue #674 — Aktivitätstyp aus WeatherMetricsTab übernehmen (Fahrrad/Wanderer).
 	let selectedActivity = $state<ActivityType | undefined>(undefined);
@@ -68,13 +95,16 @@
 	let wtVisited = $state(false);
 	let ztVisited = $state(false);
 
-	let activeTab = $state<TabId>('route');
+	let activeTab = $state<TabId>(seed.activeTab ?? 'route');
 
 	// Issue #932 — Viewport-Flag, damit das Aktivitätstyp-Dropdown nur EINMAL
 	// im DOM existiert (desktop XOR mobile). Spiegelt die CSS-Breakpoint-Grenze
 	// (≤899px = mobile) der .tn-mobile/.tn-desktop-Umschaltung.
-	let isMobileViewport = $state(false);
+	let isMobileViewport = $state(seed.isMobileViewport ?? false);
 	onMount(() => {
+		// Issue #1738: nur der Test-Seam schaltet die Viewport-Erkennung ab —
+		// ohne Uebergabe bleibt matchMedia die einzige Quelle.
+		if (seed.isMobileViewport !== undefined) return;
 		const mq = window.matchMedia('(max-width: 899px)');
 		isMobileViewport = mq.matches;
 		const onChange = (e: MediaQueryListEvent) => { isMobileViewport = e.matches; };
@@ -82,11 +112,16 @@
 		return () => mq.removeEventListener('change', onChange);
 	});
 
-	// Stub-Trip für WeatherMetricsTab (createMode — kein PUT)
+	// Stub-Trip für WeatherMetricsTab und VersandTab (createMode — kein PUT).
+	// Issue #1738: `stages` ist nicht mehr leer — VTLaufzeitRoute leitet das
+	// Trip-Ende über `computeTripEnd` aus `stage.date` (ISO) ab. Quelle ist
+	// dieselbe Datums-Arithmetik wie im Speicher-Payload (`stageDateISO` /
+	// `addDaysISO`, beide UTC + idx Tage); `stageDate()` liefert `dd.mm.` ohne
+	// Jahr und ist dafür unbrauchbar.
 	const stubTrip = $derived<Trip>({
 		id: '__new__',
 		name: name || 'Neue Tour',
-		stages: [],
+		stages: buildEditorStages(),
 		activity: selectedActivity,
 		display_config: { channels, metrics: weatherMetrics } as unknown as Trip['display_config'],
 		report_config: reportConfig,
@@ -291,6 +326,16 @@
 	function makeEtappenContinueHandler(target: TabId) {
 		return () => switchTab(target);
 	}
+
+	// ── Sprung aus dem geteilten VersandTab (Issue #1738) ─────────────────────
+	// VTLaufzeitRoute meldet den Sprungwunsch unter dem Trip-Detail-Tabnamen
+	// 'stages'; im Anlege-Flow heißt derselbe Tab 'etappen'.
+	function makeVersandJumpHandler() {
+		return function doJump(tab: string) {
+			if (tab === 'stages' || tab === 'etappen') switchTab('etappen');
+		};
+	}
+	const onVersandJump = makeVersandJumpHandler();
 
 	// ── Kanal-Änderung aus WeatherMetricsTab ──────────────────────────────────
 	function handleChannelsChange(c: { email: boolean; telegram: boolean; sms: boolean }) {
@@ -795,10 +840,21 @@
 			</div>
 
 		{:else if activeTab === 'zeitplan'}
-			<!-- Zeitplan-Tab: reuse EditReportConfigSection im create-Modus -->
+			<!-- Zeitplan-Tab — Issue #1738: Kanäle + Zeitplan + Laufzeit kommen aus
+			     dem geteilten VersandTab (context="route", Teilungsregel/Epic #1230).
+			     EditReportConfigSection bleibt nur noch für die Mail-Inhalt-Karte
+			     (showChannels/showSchedule=false, Muster WeatherMetricsTab.svelte).
+			     Damit hängt kein Versandkanal mehr an der Wetter-Metrik-Auswahl.
+			     Das isMobileViewport-Gate hält — wie bei WeatherMetricsTab unten —
+			     nur EINE Instanz im DOM: zwei gleichzeitig gemountete Instanzen
+			     halten je einen eigenen Schnappschuss von report_config und
+			     überschreiben sich gegenseitig (Last-Write-Wins, Fix-Loop 4). -->
+			{#if !isMobileViewport}
 			<div style="padding: 32px 40px 60px; max-width: 720px;">
-				<EditReportConfigSection bind:reportConfig mode="create" weatherChannels={channels} />
+				<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} />
+				<EditReportConfigSection bind:reportConfig mode="create" showChannels={false} showSchedule={false} />
 			</div>
+			{/if}
 
 		{:else if activeTab === 'alerts'}
 			<!-- Alerts-Tab: reuse AlertRulesEditor mit bind:rules -->
@@ -1031,10 +1087,14 @@
 				</div>
 
 			{:else if activeTab === 'zeitplan'}
-				<!-- Mobile Zeitplan-Tab: Wrapper mit mobilem Padding -->
+				<!-- Mobile Zeitplan-Tab: Wrapper mit mobilem Padding.
+				     Issue #1738 — geteilter VersandTab, XOR zum Desktop-Mount oben. -->
+				{#if isMobileViewport}
 				<div style="padding: 16px 16px 60px;">
-					<EditReportConfigSection bind:reportConfig mode="create" weatherChannels={channels} />
+					<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} />
+					<EditReportConfigSection bind:reportConfig mode="create" showChannels={false} showSchedule={false} />
 				</div>
+				{/if}
 
 			{:else if activeTab === 'alerts'}
 				<!-- Mobile Alerts-Tab: Wrapper mit mobilem Padding -->
