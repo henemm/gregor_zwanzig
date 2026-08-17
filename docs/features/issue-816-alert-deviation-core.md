@@ -67,14 +67,19 @@ und werden dann wie vor #1685 allein über den exakten Schlüsseltreffer bewerte
 - **Stagnation:** `|current - last_reported| < threshold` → unterdrückt (keine E-Mail).
 - **Eskalation:** `|current - last_reported| >= threshold` → erneut Alert, Wert aktualisiert.
 
-**Re-Alert-Logik (amtliche Warnungen, #1685):** entscheidet
-`official_alert_revision_verdict()` — geteilt von Trip und Ortsvergleich. Überlappt das
-Gültigkeitsfenster einer Warnung **echt** mit dem eines bereits gemeldeten Eintrags gleicher
-Identität + Gefahr, bleibt sie **still**; Ausnahmen: die Stufe ist gestiegen ODER der Beginn
-liegt **≥ 2 h früher**. Aneinandergrenzende Fenster (A endet 22:00, B beginnt 22:00) gelten
-**nicht** als Überlappung und bleiben zwei Warnungen (#1245 AC-4, dort präzisiert zu „T2
-überlappt T1 nicht"). Bei stiller Revision wird der Eintrag fortgeschrieben — der alte
-Schlüssel entfällt, `reported_at` bleibt das Datum der **tatsächlichen** Meldung.
+**Re-Alert-Logik (amtliche Warnungen, #1685, präzisiert durch #1657 am 2026-08-17):**
+entscheidet `official_alert_revision_verdict()` — geteilt von Trip und Ortsvergleich.
+Überlappt das Gültigkeitsfenster einer Warnung mit dem eines bereits gemeldeten Eintrags
+gleicher Identität + Gefahr, bleibt sie **still**; Ausnahmen: die Stufe ist gestiegen ODER
+der Beginn liegt **≥ 2 h früher**. **Seit #1657 zählt Berührung als Überlappung:**
+aneinandergrenzende Fenster (A endet 22:00, B beginnt 22:00) gelten als dieselbe Warnung
+und bleiben still — das revidiert die vormalige #1245-AC-4-Präzisierung „T2 überlappt T1
+nicht"; nur eine echte Lücke bleibt eigenständig. #1657 erkennt außerdem **Containment**:
+umschließt das neue Fenster einen Bestandskandidaten vollständig und ist dessen
+`reported_at` höchstens 6 h alt, bleibt der Fall trotz früherem Beginn still (reiner
+Granularitätswechsel, Eskalation bei Stufenanstieg bleibt wirksam); bei einem älteren
+Kandidaten greift Containment nicht. Bei stiller Revision wird der Eintrag fortgeschrieben
+— der alte Schlüssel entfällt, `reported_at` bleibt das Datum der **tatsächlichen** Meldung.
 
 **Reset:** siehe Punkt 3 — er trifft **nur** den Δ-Raum, nicht die amtlichen Warnungen.
 

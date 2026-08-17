@@ -225,6 +225,11 @@ Mock-Theater. Testdatei nach Verhalten benannt (`test_naming_gate.py`).
 
 - **AC-11:** Given zwei aneinandergrenzende, NICHT überlappende Fenster derselben Identität+Gefahr+Stufe (A endet 22:00, B beginnt exakt 22:00), When B geprüft wird, Then meldet der Checker B als eigenständige, neue Warnung — Präzisierung von #1245 AC-4 zu „T2 überlappt T1 nicht".
   - Test: Test 11.
+  - **Präzisiert durch #1657 (2026-08-17):** Die Annahme „aneinandergrenzend = keine
+    Überlappung" wird revidiert — Berührung zählt seither als Überlappung und bleibt
+    still (`docs/specs/modules/fix_1657_warnfenster_identitaet.md` AC-1/AC-2). Diese AC-11
+    ist damit als Beschreibung des Ist-Zustands überholt; sie bleibt hier stehen, weil sie
+    die #1245-Herkunft der Regel dokumentiert.
 
 - **AC-12:** Given zwei getrennt gemeldete Perioden derselben Identität+Gefahr (überlappend oder aneinandergrenzend), When die Anzeige-Funktion `dedupe_official_alerts` läuft, Then zeigt sie weiterhin beide Perioden getrennt — die neue Regel wirkt ausschließlich im Melde-Gedächtnis, nicht in der Anzeige.
   - Test: Test 12.
@@ -238,7 +243,7 @@ Diese Änderung darf keine der folgenden bestehenden Zusicherungen brechen
 |---|---|---|
 | #1245 AC-1 | Zwei Perioden gleicher Region+Gefahr bleiben in `dedupe_official_alerts` **zwei Einträge** | Unverändert — AC-12 sichert das explizit ab, die Anzeige-Funktion wird nicht angefasst |
 | #1245 Known Limitation | Kein Interval-Merging: überlappende Perioden werden NICHT zu einem Gesamtzeitraum verschmolzen | Unverändert — die Fortschreibung ersetzt nur den State-EINTRAG (Melde-Gedächtnis), sie verschmilzt keine angezeigten Zeiträume |
-| **#1245 AC-4 — PRÄZISIERT** | Bisher: „Neue Periode T2 ≠ T1 erzeugt eigenen Zustands-Key ohne A zu überschreiben." Neu: „T2 **überlappt T1 nicht**" — nur dann bleiben beide State-Keys unabhängig; überlappt T2 T1 (ohne Eskalation/≥2h-Vorverlegung), wird T1 durch die Fortschreibung ersetzt. Der bewachende Test `tests/tdd/test_official_alert_dedup_timespan.py:271` (`TestAC4TriggerNewPeriodFiresIndependently`) nutzt Perioden, die exakt aneinandergrenzen (Periode B beginnt exakt dort, wo Periode A endet — `period_b_from = period_a_to`) und bleibt damit ohne Änderung grün, weil aneinandergrenzende Fenster nach dieser Spec (AC-11) weiterhin KEINE echte Überlappung sind. |
+| **#1245 AC-4 — PRÄZISIERT, seit #1657 (2026-08-17) ERNEUT PRÄZISIERT** | Bisher: „Neue Periode T2 ≠ T1 erzeugt eigenen Zustands-Key ohne A zu überschreiben." Diese Spec (#1685): „T2 **überlappt T1 nicht**" — nur dann bleiben beide State-Keys unabhängig; überlappt T2 T1 (ohne Eskalation/≥2h-Vorverlegung), wird T1 durch die Fortschreibung ersetzt. Der damalige Test `tests/tdd/test_official_alert_dedup_timespan.py:271` nutzte exakt aneinandergrenzende Perioden (`period_b_from = period_a_to`) als Gegenprobe für „keine echte Überlappung". **#1657 kippt genau diese Annahme:** Berührung zählt seither als Überlappung und bleibt still; die Testdatei wurde im Zuge von #1657 entsprechend angepasst (siehe `docs/specs/modules/fix_1657_warnfenster_identitaet.md`). |
 | #1245 AC-2/AC-3 | Eskalation am selben Zeitraum bzw. Massiv-Sperren kollabieren auf Maximum | Unverändert — betrifft `dedupe_official_alerts`, nicht die neue Melde-Entscheidung |
 | #1460 AC-20/AC-22 | `official_alert:`-Einträge überleben den Briefing-Reset | Unverändert — Fortschreibungs-Einträge tragen weiterhin denselben Präfix, `AlertStateService.reset()` behandelt sie identisch |
 | #1614 AC-1/AC-2 | Im Briefing gemeldete Warnung feuert im Alarm-Checker nicht erneut; Eskalation feuert weiterhin | Erweitert, nicht ersetzt — #1614 deckte den Doppelversand zwischen Briefing-Schreibpfad und Checker-Lesepfad ab, diese Spec deckt die Revision-Erkennung INNERHALB des Checkers selbst ab |
@@ -299,3 +304,6 @@ Diese Änderung darf keine der folgenden bestehenden Zusicherungen brechen
 ## Changelog
 
 - 2026-08-11: Initial spec created (Issue #1685, PO-Entscheidung 2026-08-10 aus dem Dialog übernommen).
+- 2026-08-17: Präzisiert durch #1657 — „aneinandergrenzend = keine Überlappung" (AC-11,
+  #1245-AC-4-Präzisierung) gilt nicht mehr; Berührung zählt jetzt als Überlappung. Details
+  und zusätzliche Containment-Regel: `docs/specs/modules/fix_1657_warnfenster_identitaet.md`.
