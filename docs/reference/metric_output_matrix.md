@@ -265,6 +265,22 @@ Modul-Docstring sind nachgezogen. Spec:
 > (Pillen, mobile Zeilen, Fließtext-Zusammenfassung, Telegram-Kurzübersicht), nicht
 > dieser separate Trend-Block. Der „→ Scheibe 4"-Verweis ist damit nur teilweise
 > eingelöst; der Trend-/Ausblick-Pfad in Telegram und Kompakt-Mail bleibt unbewacht.
+>
+> 🔴 **ÜBERHOLT seit #1720 S2 (2026-08-17).** Der obige Absatz beschreibt den
+> Stand vor dieser Lieferung: „eigene Implementierungen, die `outlook.py`
+> nicht importieren" und „bleibt unbewacht" gelten so nicht mehr.
+> `narrow.py:_outlook_lines()` und `email/compact.py`s Trend-Block haben seit
+> #1720 S2 einen zweiten, katalog-getriebenen Zweig, der dieselbe
+> `resolve_trip_outlook_metrics()`/`outlook_columns()`-Auflösung wie
+> HTML/Klartext liest, sobald `display_config.outlook_metrics` gesetzt ist —
+> `outlook.py` wird zwar weiterhin nicht importiert (Formatierung bleibt
+> eigenständig, Label-Wert-Muster statt Legende), aber die Auswahl wirkt
+> jetzt auch hier. Der Legacy-Zweig (`outlook_metrics is None`) bleibt
+> unverändert bestehen und weiterhin unbewacht in diesem Sinn. Neue Wächter:
+> Charakterisierungstest für den Legacy-Zustand plus Wirkort-Dispatch-Tests
+> für den Katalog-Zweig (Muster `test_trip_outlook_dispatch_mail.py`,
+> `test_telegram_rate_limit.py:274`). Details:
+> `docs/specs/modules/feat_1720_s2_ausblick_kompakt_telegram.md`.
 
 **Fläche 3 — Nicht-wählbare Register-Metriken.** `metric_catalog.py:695` —
 `get_all_metrics()` gibt `[m for m in _METRICS if m.selectable]` zurück. Jeder

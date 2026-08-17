@@ -113,6 +113,7 @@ def render_email(
             segments=segments,
             dc=display_config,
             multi_day_trend=multi_day_trend,
+            outlook_metrics=outlook_metrics,
             outlook_state=outlook_state,
             outlook_horizon_days=outlook_horizon_days,
             stability_result=stability_result,

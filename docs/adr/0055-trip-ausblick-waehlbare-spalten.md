@@ -164,6 +164,18 @@ bleibt. Eine Vereinheitlichung muss ihn **hineinziehen**, nicht danebenlegen.
   „Erscheint nur in der E-Mail". Beide haben **keinen** Byte-Wächter
   (`metric_output_matrix.md:237-243`) — Scheibe 2 legt deshalb zuerst einen
   Charakterisierungstest des Ist-Zustands an, bevor sie etwas ändert.
+
+  > **Nachtrag 2026-08-17 (Issue #1720 Scheibe 2, verifiziert, validiert):**
+  > Geliefert wie hier angekündigt. Kompakt-Mail und Telegram sind jetzt
+  > ebenfalls katalog-getrieben — dieselbe, bereits gespeicherte Auswahl
+  > (`display_config.outlook_metrics`) wirkt seither in **allen vier**
+  > Trip-Ausgabeorten mit Ausblick (HTML, Klartext, Kompakt-Mail, Telegram).
+  > Der Hinweistext „Erscheint nur in der E-Mail" ist im Trip-Kontext
+  > entfernt (Compare-Kontext behält ihn, dort gilt die Einschränkung
+  > weiterhin unverändert). Details, Implementierung, ACs:
+  > `docs/specs/modules/feat_1720_s2_ausblick_kompakt_telegram.md`. Diese
+  > historische Ankündigung bleibt oben unverändert stehen — sie war zum
+  > Zeitpunkt von Scheibe 1 richtig.
 - Der stärkste Bestandswächter des Trip-Ausblicks,
   `tests/tdd/test_trip_outlook_parity.py`, ruft die Renderer **isoliert** auf
   und durchläuft die neue Verdrahtung nie — belegt durch eine Mutation, die ihn

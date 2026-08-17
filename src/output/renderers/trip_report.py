@@ -200,6 +200,13 @@ class TripReportFormatter:
             day_comparison = None
         # Issue #623 AC-5: Sendezeit für das Kontext-Label im HTML-Trend-Block.
         _sent_at = datetime.now(timezone.utc)
+        # Issue #1720 S1 (F001) / S2: Ausblick-Spalten GENAU EINMAL aufloesen,
+        # aus dem UNGEKOLLABIERTEN Stand (Muster #1575) -- der Ausblick hat
+        # keine Kanal-Ebene. Dieselbe Variable geht an render_email() (HTML,
+        # Klartext, Kompakt) UND an render_telegram_bubbles(); ein zweiter
+        # Aufruf koennte die beiden Konsumenten spaeter auseinanderlaufen
+        # lassen (ADR-0055 Punkt 4).
+        _outlook_metrics = resolve_trip_outlook_metrics(_dc_uncollapsed, report_type)
         email_html, email_plain = render_email(
             token_line,
             segments=segments,
@@ -214,12 +221,7 @@ class TripReportFormatter:
             multi_day_trend=effective_trend,
             outlook_state=outlook_state,
             outlook_horizon_days=outlook_horizon_days,
-            # Issue #1720 S1 (F001): Ausblick-Spalten HIER einmal aufloesen,
-            # aus dem UNGEKOLLABIERTEN Stand (Muster #1575) -- der Ausblick
-            # hat keine Kanal-Ebene. Renderer bekommen nur das Ergebnis.
-            outlook_metrics=resolve_trip_outlook_metrics(
-                _dc_uncollapsed, report_type,
-            ),
+            outlook_metrics=_outlook_metrics,
             changes=changes,
             stage_name=stage_name,
             stage_stats=stage_stats,
@@ -301,6 +303,9 @@ class TripReportFormatter:
             multi_day_trend=effective_trend,
             outlook_state=outlook_state,
             outlook_horizon_days=outlook_horizon_days,
+            # #1720 S2: DIESELBE Aufloesung wie fuer render_email() -- der
+            # Ausblick hat keine Kanal-Ebene, also NICHT aus _dc_telegram.
+            outlook_metrics=_outlook_metrics,
             day_comparison=day_comparison,
             night_weather=night_weather,
             trip=trip,
