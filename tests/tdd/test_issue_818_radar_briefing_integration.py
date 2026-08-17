@@ -286,6 +286,7 @@ def test_ac2_unannounced_rain_triggers_radar_alert():
     RED-Treiber: check_radar_alerts sendet Alert, aber der Body enthält den neuen
     Text "im Briefing nicht angekündigt" noch nicht → AssertionError.
     """
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
@@ -303,6 +304,10 @@ def test_ac2_unannounced_rain_triggers_radar_alert():
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="x@example.com",
+            ),
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
 
@@ -332,6 +337,7 @@ def test_ac3_missing_snapshot_fallback_sends_alert():
     Schützt vor Regression: Briefing-Check darf fehlenden Snapshot nicht als
     "kein Regen" interpretieren. Kann vor Implementierung bereits grün sein.
     """
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
@@ -347,6 +353,10 @@ def test_ac3_missing_snapshot_fallback_sends_alert():
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="x@example.com",
+            ),
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
 
@@ -508,6 +518,7 @@ def test_ac6_radar_throttle_via_alert_state_cooldown():
 
     Teil 2: Zweiter Lauf innerhalb Cooldown → kein Alert (unverändert).
     """
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
     from services.throttle_store import ThrottleStore
@@ -519,10 +530,16 @@ def test_ac6_radar_throttle_via_alert_state_cooldown():
         trip_id = f"tdd-818-ac6-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
 
+        settings = Settings(
+            smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+            mail_to="x@example.com",
+        )
+
         captured: list = []
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=settings,
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
 
@@ -544,6 +561,7 @@ def test_ac6_radar_throttle_via_alert_state_cooldown():
         svc2 = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=settings,
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
         count2 = svc2.check_radar_alerts()
@@ -558,11 +576,19 @@ def test_ac6_radar_throttle_via_alert_state_cooldown():
 # AC-7: Mandantentrennung — REGRESSION-GUARD
 # --------------------------------------------------------------------------
 
-def test_ac7_mandantentrennung_isolated():
+def test_ac7_mandantentrennung_isolated(caplog):
     """AC-7: REGRESSION-GUARD — Lauf unter uid_a berührt data/users/uid_b/ nicht.
 
     Kann vor Implementierung bereits grün sein.
+
+    #1697 Egress-Guard: ohne `mail_sink` baut notification_service.py einen
+    echten `EmailOutput(...).send()` auf — SMTP-Egress gegen die (ggf.
+    produktive) Host-Konfiguration statt eines DI-Seams. `smtp_host=
+    "test.invalid"` (RFC 2606, garantiert nicht auflösbar) macht den
+    Fehlversuch DNS-seitig sofort sichtbar, ohne echtes Netz zu benötigen
+    und unabhängig davon, ob eine Host-`.env` echte SMTP-Creds bereitstellt.
     """
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
@@ -582,12 +608,39 @@ def test_ac7_mandantentrennung_isolated():
         dir_b = _data_root_users() / uid_b
         files_before = {p: p.stat().st_mtime for p in dir_b.rglob("*") if p.is_file()}
 
-        # Lauf unter uid_a
-        svc_a = TripAlertService(
-            throttle_hours=2, user_id=uid_a,
-            radar_service=RadarNowcastService(frame_source=_wet_frames),
+        # #1697 Egress-Guard: Dummy-SMTP macht can_send_email() deterministisch
+        # True, unabhängig von Host-.env (Muster aus test_feature_656).
+        settings = Settings(
+            smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+            mail_to="x@example.com",
         )
-        svc_a.check_radar_alerts()
+        assert settings.can_send_email() is True, (
+            "AC-7: Dummy-SMTP-Settings müssen can_send_email() deterministisch "
+            "True liefern, unabhängig von Host-.env (Adversary-Finding F002)."
+        )
+
+        # Lauf unter uid_a
+        captured: list = []
+        with caplog.at_level("ERROR"):
+            svc_a = TripAlertService(
+                throttle_hours=2, user_id=uid_a,
+                radar_service=RadarNowcastService(frame_source=_wet_frames),
+                settings=settings,
+                mail_sink=lambda subject, body: captured.append((subject, body)),
+            )
+            svc_a.check_radar_alerts()
+
+        assert len(captured) == 1, (
+            "AC-7: mail_sink muss für den ausgelösten Radar-Alert genau einmal "
+            "aufgerufen werden — sonst prüft die Egress-Guard-Assertion nur einen "
+            "vacuous pass (Adversary-Finding F001)."
+        )
+
+        assert "Radar alert email failed" not in caplog.text, (
+            "AC-7 Egress-Guard (#1697): ohne mail_sink versucht der Alarm "
+            "echten SMTP-Versand (EmailOutput) statt des DI-Seams zu "
+            f"nutzen — Fehlerlog: {caplog.text}"
+        )
 
         # uid_b-Dateien müssen unberührt bleiben
         for p in dir_b.rglob("*"):

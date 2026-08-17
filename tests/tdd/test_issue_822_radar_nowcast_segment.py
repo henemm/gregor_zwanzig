@@ -472,6 +472,7 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
     Kein SMTP nötig (mail_sink fängt Body ab). Kein Mock.
     """
     import math
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
@@ -512,6 +513,10 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="x@example.com",
+            ),
             mail_sink=_sink,
         )
         svc.clear_radar_throttle(trip_id)
@@ -624,6 +629,7 @@ def test_ac6_cooldown_display_reflects_trip_setting():
 
     Kein SMTP (mail_sink), kein Mock.
     """
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
@@ -661,6 +667,10 @@ def test_ac6_cooldown_display_reflects_trip_setting():
         svc_90 = TripAlertService(
             throttle_hours=2, user_id=uid_90,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="x@example.com",
+            ),
             mail_sink=_sink_90,
         )
         svc_90.clear_radar_throttle(trip_id_90)
@@ -690,6 +700,10 @@ def test_ac6_cooldown_display_reflects_trip_setting():
         svc_2h = TripAlertService(
             throttle_hours=2, user_id=uid_2h,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="x@example.com",
+            ),
             mail_sink=_sink_2h,
         )
         svc_2h.clear_radar_throttle(trip_id_2h)
