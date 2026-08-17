@@ -412,6 +412,17 @@ def test_prod_selftest_survives_mixed_findings_without_crash(tmp_path, monkeypat
     monkeypatch.setattr(mod, "REPO_DIR", root)
     recorder = _HealthOkRecorder(mod)
     monkeypatch.setattr(mod, "_http_get", recorder)
+    # Phase 5 (#1708 Scheibe C) sonst als echter sudo-find-Aufruf gegen
+    # /var/lib/gregor/users — nicht Gegenstand dieses Bugs (AC-5).
+    monkeypatch.setattr(
+        mod,
+        "check_dead_trips_guard",
+        lambda **kwargs: {
+            "check": "dead_trips_guard",
+            "status": "SKIPPED",
+            "detail": "stub (Test #1689 AC-5)",
+        },
+    )
 
     valid_finding = {
         "ac": "AC-1",

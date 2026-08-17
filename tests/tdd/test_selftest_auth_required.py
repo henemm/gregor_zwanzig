@@ -148,6 +148,17 @@ def _run_selftest_with_routes(mod, monkeypatch, tmp_path, routes, findings, work
                 "detail": "stub (Test #1367)",
             },
         )
+        # Phase 5 (#1708 Scheibe C) sonst als echter sudo-find-Aufruf gegen
+        # /var/lib/gregor/users — nicht Gegenstand dieses Bugs.
+        monkeypatch.setattr(
+            mod,
+            "check_dead_trips_guard",
+            lambda **kwargs: {
+                "check": "dead_trips_guard",
+                "status": "SKIPPED",
+                "detail": "stub (Test #1367)",
+            },
+        )
 
         e2e_data = {
             "verified_commit": mod._head_sha(),
