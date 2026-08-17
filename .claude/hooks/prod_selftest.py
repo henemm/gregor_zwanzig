@@ -807,9 +807,18 @@ def run_selftest(
     if menu_finding["status"] == "FAIL":
         verdict = "FAIL"
 
+    # Phase 5: Tote-Trips-Wächter (additiv, #1708 Scheibe C)
+    dead_trips_finding = check_dead_trips_guard()
+    dead_trips_line = (
+        f"\n## Tote-Trips-Wächter (#1708 Scheibe C)\n\n"
+        f"Status: **{dead_trips_finding['status']}** — {dead_trips_finding['detail']}\n"
+    )
+    if dead_trips_finding["status"] == "FAIL":
+        verdict = "FAIL"
+
     report_content = _render_full_report(
         workflow, head, health_msg, verdict, probes, unusable_findings
-    ) + menu_line
+    ) + menu_line + dead_trips_line
     _write_report(report_path, report_content)
 
     _log(f"Verdict={verdict} (Bericht: {report_path})")
@@ -863,6 +872,53 @@ def _load_bot_commands() -> list[dict] | None:
         return None  # BOT_COMMANDS nicht gefunden
     except Exception:  # noqa: BLE001
         return None
+
+
+def check_dead_trips_guard(users_root: Path = Path("/var/lib/gregor/users")) -> dict:
+    """Additive Phase 5 (#1708 Scheibe C): sucht per `sudo -n find` nach
+    verbliebenen `trips`/`trips.TOT-legacy-…`-Ordnern unter `users_root/*/`.
+
+    Fund -> FAIL, kein Fund -> PASS. Ist der Check selbst nicht ausführbar
+    (sudo-/find-Fehler, z.B. weil users_root nicht existiert) -> SKIPPED,
+    fail-open analog `_check_bot_menu_prod()` bei fehlendem Token — eine
+    unabhängige Nicht-Prüfbarkeit darf keinen Prod-Deploy blockieren.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "sudo", "-n", "find", str(users_root), "-maxdepth", "2",
+                "-type", "d", "(", "-name", "trips", "-o", "-name", "trips.TOT-legacy-*", ")",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {
+            "check": "dead_trips_guard",
+            "status": "SKIPPED",
+            "detail": f"find nicht ausführbar: {exc}",
+        }
+
+    if result.returncode != 0:
+        return {
+            "check": "dead_trips_guard",
+            "status": "SKIPPED",
+            "detail": f"find fehlgeschlagen (Exit {result.returncode}): {result.stderr.strip()}",
+        }
+
+    found = [line for line in result.stdout.splitlines() if line.strip()]
+    if found:
+        return {
+            "check": "dead_trips_guard",
+            "status": "FAIL",
+            "detail": f"tote trips-Ablage gefunden: {', '.join(found)}",
+        }
+    return {
+        "check": "dead_trips_guard",
+        "status": "PASS",
+        "detail": f"keine trips/trips.TOT-legacy-…-Ordner unter {users_root}",
+    }
 
 
 def main() -> int:

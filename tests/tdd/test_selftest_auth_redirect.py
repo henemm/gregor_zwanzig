@@ -239,6 +239,17 @@ class TestAC5AllLoginRedirectsMustNotYieldPassVerdict:
                     "detail": "stub (RED-Test #1353)",
                 },
             )
+            # Phase 5 (#1708 Scheibe C) sonst als echter sudo-find-Aufruf
+            # gegen /var/lib/gregor/users — nicht Gegenstand dieses Bugs.
+            monkeypatch.setattr(
+                mod,
+                "check_dead_trips_guard",
+                lambda **kwargs: {
+                    "check": "dead_trips_guard",
+                    "status": "SKIPPED",
+                    "detail": "stub (RED-Test #1353)",
+                },
+            )
 
             head = mod._head_sha()
             e2e_data = {

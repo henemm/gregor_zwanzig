@@ -6,6 +6,44 @@ Details stehen hier — bei Bedarf gezielt nachlesen.
 
 ---
 
+## Tote trips-Ablage archivieren und löschen (#1708 Scheibe C)
+
+`users/<id>/trips/` bzw. `users/<id>/trips.TOT-legacy-1250-nicht-lesen/` ist seit #1250
+Scheibe 7a (2026-07-15) durch `briefings/` abgelöst und seit #1708 Scheibe A/B
+produktivcodeseitig ohne Leser/Schreiber. `scripts/cleanup_1708c_dead_trips.py` sichert
+(tar.gz) und löscht diesen Alt-Bestand je Wurzel — Dry-Run per Default, `--execute` schreibt
+zuerst ein Backup, danach erst die Löschung:
+
+```bash
+python3 scripts/cleanup_1708c_dead_trips.py --root <users_root>              # Dry-Run
+python3 scripts/cleanup_1708c_dead_trips.py --root <users_root> --execute    # Backup + Löschung
+```
+
+`prod_selftest.py` prüft in Phase 5 (`check_dead_trips_guard`), ob unter
+`/var/lib/gregor/users/*/` noch ein `trips`- oder `trips.TOT-legacy-…`-Ordner existiert, und
+läuft bei **jedem** Prod-Deploy. Daraus folgt eine verbindliche Reihenfolge — die Prod-Löschung
+ist ein **manueller** Schritt, der vor dem ersten Deploy mit scharfer Phase 5 liegen muss,
+sonst schlägt der erste Selftest-Lauf nach dem Merge fehl:
+
+1. **lokal** bereinigen — `data/users/*/trips/` im eigenen Worktree-Checkout
+   (`--root data/users --execute`), unabhängig von Prod/Staging.
+2. **Staging** validieren — Cleanup-Lauf gegen `/var/lib/gregor-staging/users` ausführen und
+   Ergebnis (0 verbleibende Ordner) verifizieren.
+3. **Prod-Cleanup** (manuell, **vor** dem eigentlichen Deploy-Schritt): `sudo -n python3
+   scripts/cleanup_1708c_dead_trips.py --root /var/lib/gregor/users --execute` ausführen,
+   Ergebnis verifizieren.
+4. Erst danach `deploy-gregor-prod.sh` ausführen — der darin laufende Selftest trifft mit
+   scharfer Phase 5 auf bereits bereinigten Bestand und meldet PASS.
+
+**Rollback:** Jeder `--execute`-Lauf schreibt vor der Löschung ein `tar.gz`-Backup nach
+`backup_dir / cleanup-1708c-<timestamp>.tar.gz` (Default `backup_dir`:
+`users_root.parent / .backups`). Wiederherstellen mit `tar xzf <backup_path> -C <ziel>`.
+
+Details (Muster-Liste statt Positivliste, Konten-Check vs. informative Zeit-Warnung,
+Idempotenz): Spec `docs/specs/modules/fix_1708_c_tote_ablage_loeschen.md`.
+
+---
+
 ## E2E-Verifikation (`/e2e-verify`) — Detailablauf
 
 Die echte "funktioniert es wirklich"-Verifikation läuft **nach** dem Push gegen die
