@@ -1893,10 +1893,29 @@ def render_official_alert_telegram(
     return "\n".join(lines)
 
 
+def _tag_hour(d: "datetime") -> str:
+    """Stundenteil eines Zeit-Tokens (#1929): Minuten nur, wenn sie nicht auf
+    ':00' liegen -- '15' bzw. '15:20'. Zwei stundengleiche Fenster kollidieren
+    nur, wenn beide Grenzen voll sind; dann sind es dieselben Uhrzeiten. Die
+    Regel ist damit pro Token fuer sich entscheidbar (kein Vergleich mit
+    anderen Tokens der Nachricht) und kostet nur dort Zeichen, wo sie traegt."""
+    return d.strftime("%H:%M") if d.minute else d.strftime("%H")
+
+
 def _tag_time(alert: "OfficialAlert", tz: "ZoneInfo | None" = None) -> str:
-    """Kompakte SMS-Zeitangabe: 'Fr' (ganztaegig) bzw. 'Sa15-21'. Tagesuebergang
-    (F006): zweites Wochentagskuerzel statt nur der zweiten Stunde, z.B.
-    'Fr22-Sa03' statt des irrefuehrenden 'Fr22-03'.
+    """Kompakte SMS-Zeitangabe: 'Fr10.07.' (ganztaegig, mit Tag UND Monat) bzw.
+    'Sa15-21' -- mit Minuten, wo diese nicht ':00' sind ('Sa15:20-21:40').
+    Tagesuebergang (F006): zweites Wochentagskuerzel statt nur der zweiten
+    Stunde, z.B. 'Fr22-Sa03' statt des irrefuehrenden 'Fr22-03'.
+
+    Issue #1929: beide Kollisionsquellen gehaertet -- ohne Minuten trugen
+    15:00-21:00 und 15:20-21:40 denselben Text, ohne Datum zwei Ganztags-
+    Warnungen am selben Wochentag verschiedener Wochen.
+
+    Issue #1929 F002: das Ganztags-Token traegt zusaetzlich den Monat. Der Tag
+    im Monat allein bleibt mehrdeutig, sobald derselbe Wochentag mit demselben
+    Datum in verschiedenen Monaten auftritt (Sa 14.02. und Sa 14.03. ergaben
+    beide 'Sa14.'); das kostet drei Zeichen nur im Ganztags-Fall.
 
     `tz` (Issue #1216 F001, optional): lokalisiert wie `_format_validity`.
 
@@ -1912,10 +1931,10 @@ def _tag_time(alert: "OfficialAlert", tz: "ZoneInfo | None" = None) -> str:
     vt = alert.valid_to.astimezone(tz) if tz else alert.valid_to
     tag = _de_weekday_short(vf)
     if vf.date() != vt.date():
-        return f"{tag}{vf.strftime('%H')}-{_de_weekday_short(vt)}{vt.strftime('%H')}"
+        return f"{tag}{_tag_hour(vf)}-{_de_weekday_short(vt)}{_tag_hour(vt)}"
     if (vf.hour, vf.minute, vt.hour, vt.minute) == (0, 0, 23, 59):
-        return tag
-    return f"{tag}{vf.strftime('%H')}-{vt.strftime('%H')}"
+        return f"{tag}{vf.strftime('%d.%m')}."
+    return f"{tag}{_tag_hour(vf)}-{_tag_hour(vt)}"
 
 
 def _sms_pack(head: str, tokens: list[str], limit: int, suffix: str = "") -> tuple[str, int]:
