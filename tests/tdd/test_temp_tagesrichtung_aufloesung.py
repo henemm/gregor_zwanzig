@@ -94,7 +94,7 @@ class TestSmsTokensFollowDayDirectionMetrics:
             f"N (eigene Groesse, #1484) ist von der Abwahl einer "
             f"Tagesrichtung mitgenommen worden.\nSMS: {sms}"
         )
-        assert F.sms_token_value(sms, "K") is None, (
+        assert F.sms_token_value(sms, "L") is None, (
             f"K erscheint, obwohl {TEMP_LOW!r} abgewaehlt ist — die "
             f"SMS-Kette gated die Tages-Token noch ueber "
             f"MetricConfig.aggregations der Elterngroesse statt ueber die "
@@ -107,7 +107,7 @@ class TestSmsTokensFollowDayDirectionMetrics:
                  ("precipitation", True))
         sms = _report(dc).sms_text
 
-        assert F.sms_token_value(sms, "K") == str(int(F.HIKE_MIN_C)), (
+        assert F.sms_token_value(sms, "L") == str(int(F.HIKE_MIN_C)), (
             f"K fehlt oder traegt den falschen Wert, obwohl {TEMP_LOW!r} "
             f"gewaehlt ist.\nSMS: {sms}"
         )
@@ -135,7 +135,7 @@ class TestWindChillDayDirectionsNeverProduceWc:
                  ("wind_chill_night", True), ("precipitation", True))
         sms = _report(dc).sms_text
 
-        assert F.sms_token_value(sms, "FK") == str(int(F.FELT_HIKE_MIN_C)), (
+        assert F.sms_token_value(sms, "FL") == str(int(F.FELT_HIKE_MIN_C)), (
             f"FK fehlt, obwohl {FELT_LOW!r} gewaehlt ist.\nSMS: {sms}"
         )
         # Uebernommen aus dem geloeschten test_sms_temp_aggregation_gate.py:
@@ -464,7 +464,7 @@ class TestTelegramOverviewSurvivesTheCatalogChange:
             f"Bubble:\n{bubble}"
         )
         leere = [z for z in bubble.splitlines()
-                 if z.split(" ")[0] in ("K", "D", "FK", "FD")]
+                 if z.split(" ")[0] in ("L", "D", "FL", "FD")]
         assert not leere, (
             f"Die vier Sichtbarkeits-Gates erzeugen eigene Zeilen in der "
             f"Kurzuebersicht: {leere!r} — sie tragen dort keinen Wert.\n"

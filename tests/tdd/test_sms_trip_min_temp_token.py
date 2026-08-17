@@ -39,7 +39,7 @@ class TestAC1MorningShowsHikingLow:
     def test_morning_shows_hiking_low(self):
         sms = _sms("morning")
 
-        hiking_low = F.sms_token_value(sms, "K")
+        hiking_low = F.sms_token_value(sms, "L")
         assert hiking_low is not None, (
             "Die Morgen-SMS zeigt keine Tiefsttemperatur unterwegs — der Wert "
             "der kaeltesten Gehzeit-Stunde fehlt komplett.\n"
@@ -76,7 +76,7 @@ class TestAC2EveningShowsBothHikingAndNightLow:
         sms = _sms("evening")
 
         night_low = F.sms_token_value(sms, "N")
-        hiking_low = F.sms_token_value(sms, "K")
+        hiking_low = F.sms_token_value(sms, "L")
 
         assert night_low == str(int(F.NIGHT_MIN_C)), (
             f"Die Nacht-Tiefsttemperatur am Schlafplatz zeigt {night_low} "
@@ -109,8 +109,8 @@ class TestAC6TruncationDropsFeltBeforeMeasured:
     (kaelteste Stunde unterwegs, Nacht-Tiefst, Hoechst) bleiben so lange wie
     moeglich erhalten."""
 
-    _MEASURED = ("N", "K", "D")
-    _FELT = ("FN", "FK", "FD")
+    _MEASURED = ("N", "L", "D")
+    _FELT = ("FN", "FL", "FD")
 
     def test_truncation_drops_felt_before_measured(self):
         full = _sms("evening", max_length=1000)

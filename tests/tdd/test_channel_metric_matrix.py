@@ -1035,7 +1035,8 @@ def test_kaskade_ac8_all_wind_chill_symbols_toggle_together():
     symbols = tuple(
         sym for mid in traeger for sym in SMS_MULTI_SYMBOLS_BY_METRIC[mid]
     )
-    assert set(symbols) == {"FK", "FD"}, (
+    # Fix #1926: wind_chill_day_low SMS-Wire-Token FK->FL.
+    assert set(symbols) == {"FL", "FD"}, (
         f"Die gefuehlten Tages-Kuerzel haben ihren Traeger gewechselt: "
         f"{symbols!r}"
     )
@@ -1057,11 +1058,12 @@ def test_kaskade_ac8_all_wind_chill_symbols_toggle_together():
     sms_on = _kaskade_sms_text(on_dc)
     for symbol in symbols:
         # Issue #1824 (A): sind beide Auswertungen gewaehlt, steht der
-        # gefuehlte Tiefstwert nicht mehr als eigenes 'FK'-Token, sondern als
-        # ERSTE HAELFTE des Bereichs-Tokens 'FD{min}/{max}'. Die Zusicherung
-        # dieses AC bleibt dieselbe -- die Groesse muss mit ihrer Zuwahl
-        # sichtbar werden -- nur ihr Traeger hat sich geaendert.
-        if symbol == "FK" and _RANGE_TOKEN_FD.search(sms_on):
+        # gefuehlte Tiefstwert nicht mehr als eigenes 'FL'-Token (Fix #1926:
+        # vormals 'FK'), sondern als ERSTE HAELFTE des Bereichs-Tokens
+        # 'FD{min}/{max}'. Die Zusicherung dieses AC bleibt dieselbe -- die
+        # Groesse muss mit ihrer Zuwahl sichtbar werden -- nur ihr Traeger
+        # hat sich geaendert.
+        if symbol == "FL" and _RANGE_TOKEN_FD.search(sms_on):
             continue
         assert _first_index_starting_with(sms_on, symbol) is not None, (
             f"AC-8: {symbol!r} fehlt trotz Zuwahl: {sms_on!r}"

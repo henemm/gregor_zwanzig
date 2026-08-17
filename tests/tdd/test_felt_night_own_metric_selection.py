@@ -40,7 +40,8 @@ from tests.tdd import _min_temp_felt_fixtures as F
 
 NIGHT_METRIC = "wind_chill_night"
 _SAVE_TEST_USER = "tdd-1660a-save"
-_FELT = ("FN", "FK", "FD")
+# Fix #1926: wind_chill_day_low SMS-Wire-Token FK->FL.
+_FELT = ("FN", "FL", "FD")
 _DASH = "–"  # En-Dash der Kurzzusammenfassungs-Spannen
 
 
@@ -90,9 +91,9 @@ class TestSmsFeltNightTokenFollowsOwnSelection:
         PO-Entscheid) und wird deshalb NIE erwartet."""
         sms = _sms("evening", *_FELT_TAG_GEWAEHLT, "precipitation")
 
-        present = F.present_symbols(sms, ("FN", "FK", "FD", "WC"))
-        assert present == {"FK", "FD"}, (
-            f"Erwartet nur FK/FD bei abgewaehlter gefuehlter Nachtgroesse "
+        present = F.present_symbols(sms, ("FN", "FL", "FD", "WC"))
+        assert present == {"FL", "FD"}, (
+            f"Erwartet nur FL/FD bei abgewaehlter gefuehlter Nachtgroesse "
             f"(WC entfaellt ersatzlos), gefunden {sorted(present)} — FN "
             f"haengt offenbar weiter an „Gefuehlte Temperatur“, oder WC "
             f"erscheint trotz PO-Entscheid.\nSMS: {sms}"
@@ -108,9 +109,9 @@ class TestSmsFeltNightTokenFollowsOwnSelection:
             f"Nachtgroesse gewaehlt ist (erwartet FN{int(F.FELT_NIGHT_MIN_C)})"
             f".\nSMS: {sms}"
         )
-        leaked = F.present_symbols(sms, ("FK", "FD"))
+        leaked = F.present_symbols(sms, ("FL", "FD"))
         assert not leaked, (
-            f"FK/FD erscheinen {sorted(leaked)}, obwohl „Gefuehlte "
+            f"FL/FD erscheinen {sorted(leaked)}, obwohl „Gefuehlte "
             f"Temperatur“ abgewaehlt ist.\nSMS: {sms}"
         )
 
@@ -120,12 +121,12 @@ class TestSmsFeltNightTokenFollowsOwnSelection:
         nachweislich 'FK')."""
         sms = _sms("evening", *_FELT_TAG_GEWAEHLT, NIGHT_METRIC, "precipitation")
 
-        assert F.present_symbols(sms, ("FN", "FK", "FD", "WC")) == {"FN", "FK", "FD"}, (
+        assert F.present_symbols(sms, ("FN", "FL", "FD", "WC")) == {"FN", "FL", "FD"}, (
             f"Beide Groessen gewaehlt — genau drei Kuerzel erwartet (kein "
             f"WC).\nSMS: {sms}"
         )
         assert F.sms_token_value(sms, "FN") == str(int(F.FELT_NIGHT_MIN_C))
-        assert F.sms_token_value(sms, "FK") == str(int(F.FELT_HIKE_MIN_C))
+        assert F.sms_token_value(sms, "FL") == str(int(F.FELT_HIKE_MIN_C))
         assert F.sms_token_value(sms, "FD") == str(int(F.FELT_HIKE_MAX_C))
 
     def test_morning_never_shows_felt_night_token(self):
@@ -240,10 +241,10 @@ class TestLegacyTripsDeriveFeltNightFromWindChill:
             f"Explizit abgewaehlter wind_chill_night-Eintrag muss die "
             f"Ableitung ueberstimmen.\nSMS: {sms}"
         )
-        present = F.present_symbols(sms, ("FK", "FD", "WC"))
-        assert present == {"FK", "FD"}, (
+        present = F.present_symbols(sms, ("FL", "FD", "WC"))
+        assert present == {"FL", "FD"}, (
             f"Die Tagesgroesse bleibt von der expliziten Nacht-Abwahl "
-            f"unberuehrt — erwartet FK/FD (WC entfaellt ersatzlos, Fix "
+            f"unberuehrt — erwartet FL/FD (WC entfaellt ersatzlos, Fix "
             f"#1887 E6 Scheibe A), gefunden {sorted(present)}.\nSMS: {sms}"
         )
 
@@ -261,9 +262,9 @@ class TestLegacyTripsDeriveFeltNightFromWindChill:
             f"Explizit aktivierter wind_chill_night-Eintrag muss FN zeigen, "
             f"auch bei abgewaehlter Elternmetrik.\nSMS: {sms}"
         )
-        leaked = F.present_symbols(sms, ("FK", "FD", "WC"))
+        leaked = F.present_symbols(sms, ("FL", "FD", "WC"))
         assert not leaked, (
-            f"FK/FD erscheinen {sorted(leaked)}, obwohl „Gefuehlte "
+            f"FL/FD erscheinen {sorted(leaked)}, obwohl „Gefuehlte "
             f"Temperatur“ abgewaehlt ist ('WC' entfaellt ohnehin ersatzlos, "
             f"Fix #1887 E6 Scheibe A).\nSMS: {sms}"
         )

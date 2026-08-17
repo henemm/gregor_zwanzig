@@ -122,7 +122,7 @@ class TestLoaderDerivesDayDirectionsFromParent:
             f"einschraenken (required_agg-Filter entfaellt)."
         )
         sms = _sms(dc)
-        assert F.sms_token_value(sms, "K") == str(int(F.HIKE_MIN_C)), (
+        assert F.sms_token_value(sms, "L") == str(int(F.HIKE_MIN_C)), (
             f"K fehlt im Briefing des Bestands-Trips.\nSMS: {sms}"
         )
         assert F.sms_token_value(sms, "D") == str(int(F.HIKE_MAX_C)), (
@@ -148,7 +148,7 @@ class TestLoaderDerivesDayDirectionsFromParent:
             f"anschalten.\nGeladen: {[m.metric_id for m in dc.metrics]}"
         )
         sms = _sms(dc)
-        fehlend = [s for s in ("FK", "FD") if F.sms_token_value(sms, s) is None]
+        fehlend = [s for s in ("FL", "FD") if F.sms_token_value(sms, s) is None]
         assert not fehlend, (
             f"Der Default-Bestandsfall verliert {fehlend} im Briefing.\n"
             f"SMS: {sms}"
@@ -247,8 +247,8 @@ class TestRealLegacyTripKeepsItsTokens:
         assert trip is not None
         sms = _sms(trip.display_config)
 
-        vorhanden = F.present_symbols(sms, ("N", "K", "D", "FN", "FK", "FD", "WC"))
-        assert vorhanden == {"N", "K", "D", "FN", "FK", "FD"}, (
+        vorhanden = F.present_symbols(sms, ("N", "L", "D", "FN", "FL", "FD", "WC"))
+        assert vorhanden == {"N", "L", "D", "FN", "FL", "FD"}, (
             f"Token-Menge des realen Bestandstrips: {sorted(vorhanden)} — "
             f"erwartet N/K/D/FN/FK/FD (kein WC mehr). Fehlt FD, wertet die "
             f"Ableitung ``wind_chill.aggregations`` noch aus (S3 DEC-1 nicht "
@@ -283,14 +283,14 @@ class TestTwoUsersOppositeDayDirections:
         sms_a = _sms(_load(tmp_path, "alpha", "tour").display_config)
         sms_b = _sms(_load(tmp_path, "beta", "tour").display_config)
 
-        ist_a = F.present_symbols(sms_a, ("K", "D", "FK", "FD"))
-        ist_b = F.present_symbols(sms_b, ("K", "D", "FK", "FD"))
-        assert ist_a == {"D", "FK"}, (
-            f"Nutzer alpha zeigt {sorted(ist_a)} statt ['D', 'FK'].\n"
+        ist_a = F.present_symbols(sms_a, ("L", "D", "FL", "FD"))
+        ist_b = F.present_symbols(sms_b, ("L", "D", "FL", "FD"))
+        assert ist_a == {"D", "FL"}, (
+            f"Nutzer alpha zeigt {sorted(ist_a)} statt ['D', 'FL'].\n"
             f"SMS A: {sms_a}\nSMS B: {sms_b}"
         )
-        assert ist_b == {"K", "FD"}, (
-            f"Nutzer beta zeigt {sorted(ist_b)} statt ['FD', 'K'] — die "
+        assert ist_b == {"L", "FD"}, (
+            f"Nutzer beta zeigt {sorted(ist_b)} statt ['FD', 'L'] — die "
             f"Auswahl von alpha faerbt offenbar ab.\n"
             f"SMS A: {sms_a}\nSMS B: {sms_b}"
         )
@@ -339,7 +339,7 @@ class TestCascadeKeepsDerivedDayDirections:
             f"weggeschnitten."
         )
         sms = _sms(dc)
-        fehlende_token = [s for s in ("K", "D")
+        fehlende_token = [s for s in ("L", "D")
                           if F.sms_token_value(sms, s) is None]
         assert not fehlende_token, (
             f"Der kanal-konfigurierte Trip verliert {fehlende_token} im "
@@ -379,7 +379,7 @@ class TestCascadeKeepsDerivedDayDirections:
             f"{fehlend} fallen aus dem per-Report-SMS-Schnitt heraus: {ids!r}"
         )
         sms = _sms(dc)
-        fehlende_token = [s for s in ("K", "D")
+        fehlende_token = [s for s in ("L", "D")
                           if F.sms_token_value(sms, s) is None]
         assert not fehlende_token, (
             f"Der Trip mit Abend-Sonderlayout verliert {fehlende_token}.\n"

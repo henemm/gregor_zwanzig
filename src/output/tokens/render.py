@@ -17,7 +17,7 @@ DROP_ORDER = [
     # Doppelpunkt hier faenden _drop_first() die Token nie und sie fielen unter
     # Kuerzungsdruck NIE mehr (stiller Kuerzungs-Regressionsfall).
     "HU", "DP", "WD:", "CP", "PT:", "CT", "CL", "CM", "CH", "VS", "SU", "UV",
-    "HP", "NL",
+    "HP", "FZ",
     # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
     # nachweislich 'FK') -- kein Eintrag mehr.
     "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:",
@@ -86,7 +86,7 @@ def _truncate(tokens: list[Token], stage: str, mx: int) -> tuple[list[Token], bo
     # Issue #1410 §3b: die gefuehlte Temperatur ist eine Komfort-Zusatzangabe
     # und faellt deshalb noch VOR PR -- die sicherheitsrelevanten
     # Planungsgroessen (R/PR/W/G/TH) bleiben laenger stehen.
-    for sym in ("FN", "FK", "FD"):
+    for sym in ("FN", "FL", "FD"):
         if _drop_first(tokens, sym):
             truncated = True
             if len(_draw(stage, tokens)) <= mx:
@@ -95,9 +95,9 @@ def _truncate(tokens: list[Token], stage: str, mx: int) -> tuple[list[Token], bo
         truncated = True
         if len(_draw(stage, tokens)) <= mx:
             return tokens, True
-    # Innerhalb des gemessenen Trios faellt K zuerst (neuester Wert), dann D,
+    # Innerhalb des gemessenen Trios faellt L zuerst (neuester Wert), dann D,
     # dann N zuletzt (bestehende Reihenfolge unveraendert).
-    for sym in ("K", "D", "N"):
+    for sym in ("L", "D", "N"):
         if _drop_first(tokens, sym):
             truncated = True
             if len(_draw(stage, tokens)) <= mx:

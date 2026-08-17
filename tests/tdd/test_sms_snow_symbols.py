@@ -663,7 +663,7 @@ def test_ac1_wind_chill_reports_three_symbols_without_wc():
         )
         by_id[m["metric_id"]] = m["sms_symbols"]
     erwartet = {
-        "wind_chill_day_low": ["FK"], "wind_chill_day_high": ["FD"],
+        "wind_chill_day_low": ["FL"], "wind_chill_day_high": ["FD"],
     }
     ist = {mid: by_id.get(mid) for mid in erwartet}
     assert ist == erwartet, (
@@ -779,9 +779,9 @@ def test_ac6_endpoint_reports_eleven_metrics_total():
         f"gezaehlt), gefunden {len(metrics)}: {metrics!r}"
     )
     by_metric = {m["metric_id"]: m["sms_symbols"] for m in metrics}
-    assert by_metric.get("temperature_day_low") == ["K"], (
+    assert by_metric.get("temperature_day_low") == ["L"], (
         f"AC-6: temperature_day_low liefert "
-        f"{by_metric.get('temperature_day_low')!r}, erwartet ['K']"
+        f"{by_metric.get('temperature_day_low')!r}, erwartet ['L']"
     )
     assert by_metric.get("temperature_day_high") == ["D"], (
         f"AC-6: temperature_day_high liefert "

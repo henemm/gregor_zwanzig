@@ -147,7 +147,7 @@ _METRICS: list[MetricDefinition] = [
         id="temperature_night", label_de="Nacht-Tiefsttemperatur", unit="°C",
         dp_field="t2m_c", category="temperature",
         default_aggregations=("min",),
-        compact_label="TN", col_key="temp_night", col_label="Nacht",
+        compact_label="TN", col_key="temp_night", col_label="Night",
         providers={"openmeteo": True, "geosphere": True},
         # Fix #1887 E6 Scheibe A (AC-3): der DEC-8-Kompromiss "TN" ist
         # aufgehoben, nicht nur verschoben -- "TN" erreichte KEINEN der
@@ -173,9 +173,9 @@ _METRICS: list[MetricDefinition] = [
         id="temperature_day_low", label_de="Tages-Tiefsttemperatur (Gehzeit)",
         unit="°C", dp_field="t2m_c", category="temperature",
         default_aggregations=("min",),
-        compact_label="K", col_key="temp_day_low", col_label="TagMin",
+        compact_label="L", col_key="temp_day_low", col_label="DayMin",
         providers={"openmeteo": True, "geosphere": True},
-        sms_code="K", sms_multi_symbols=("K",), decimals=0,
+        sms_code="L", sms_multi_symbols=("L",), decimals=0,
         trip_default_rank=8,  # Issue #1728: neue Rangstufe, keine Umnummerierung
     ),
     # Wie temperature_day_low, Gegenrichtung. Fix #1887 E6 Scheibe A (AC-3):
@@ -190,7 +190,7 @@ _METRICS: list[MetricDefinition] = [
         id="temperature_day_high", label_de="Tages-Höchsttemperatur (Gehzeit)",
         unit="°C", dp_field="t2m_c", category="temperature",
         default_aggregations=("max",),
-        compact_label="D", col_key="temp_day_high", col_label="TagMax",
+        compact_label="D", col_key="temp_day_high", col_label="DayMax",
         providers={"openmeteo": True, "geosphere": True},
         sms_code="",
         sms_multi_symbols=("D",),
@@ -236,7 +236,7 @@ _METRICS: list[MetricDefinition] = [
         id="wind_chill_night", label_de="Gefühlte Nacht-Tiefsttemperatur",
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("min",),
-        compact_label="TFN", col_key="felt_night", col_label="NachtF",
+        compact_label="TFN", col_key="felt_night", col_label="NightF",
         providers={"openmeteo": True, "geosphere": True},
         # sms_code = "FN": identisch mit dem SMS-Token-Symbol, das die
         # Groesse traegt (#1435 E3b Registerkonformitaet) -- kollisionsfrei
@@ -260,9 +260,9 @@ _METRICS: list[MetricDefinition] = [
         label_de="Gefühlte Tages-Tiefsttemperatur (Gehzeit)",
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("min",),
-        compact_label="FK", col_key="felt_day_low", col_label="TagMinF",
+        compact_label="FL", col_key="felt_day_low", col_label="DayMinF",
         providers={"openmeteo": True, "geosphere": True},
-        sms_code="FK", sms_multi_symbols=("FK",), decimals=0,
+        sms_code="FL", sms_multi_symbols=("FL",), decimals=0,
     ),
     # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
     # Tagesfenster 04-19 von temperature_min/temperature_max.
@@ -271,7 +271,7 @@ _METRICS: list[MetricDefinition] = [
         label_de="Gefühlte Tages-Höchsttemperatur (Gehzeit)",
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("max",),
-        compact_label="FD", col_key="felt_day_high", col_label="TagMaxF",
+        compact_label="FD", col_key="felt_day_high", col_label="DayMaxF",
         providers={"openmeteo": True, "geosphere": True},
         sms_code="FD", sms_multi_symbols=("FD",), decimals=0,
     ),
@@ -433,7 +433,7 @@ _METRICS: list[MetricDefinition] = [
         id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
         dp_field="cape_jkg", category="precipitation",
         default_aggregations=("max",),
-        compact_label="CE", col_key="cape", col_label="CAPE",
+        compact_label="CP", col_key="cape", col_label="CAPE",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="\U0001f7e2\U0001f7e1\U0001f534",
@@ -466,7 +466,7 @@ _METRICS: list[MetricDefinition] = [
         id="snowfall_limit", label_de="Schneefallgrenze", unit="m",
         dp_field="snowfall_limit_m", category="precipitation",
         default_aggregations=("min", "max"),
-        compact_label="SG", col_key="snow_limit", col_label="SnowL",
+        compact_label="SL", col_key="snow_limit", col_label="SnowL",
         providers={"openmeteo": False, "geosphere": True},
         # Issue #1391: MIN -- _compute_snowfall_limit() (weather_metrics.py)
         # rechnet das Minimum ueber die Segment-Stunden (kanonische Trip-Regel).
@@ -629,14 +629,14 @@ _METRICS: list[MetricDefinition] = [
         id="freezing_level", label_de="Nullgradgrenze", unit="m",
         dp_field="freezing_level_m", category="winter",
         default_aggregations=("min", "max"),
-        compact_label="0G", col_key="freeze_lvl", col_label="0°Line",
+        compact_label="FZ", col_key="freeze_lvl", col_label="0°Line",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         # Single field on SegmentWeatherSummary (not min/max split)
         summary_fields={"min": "freezing_level_m"},
         default_change_threshold=200,
         alert_metrics={"min": "freezing_level"},  # #1435 E1a
-        sms_code="NL", decimals=0, cmp="unter", alert_label="Nullgradgrenze",
+        sms_code="FZ", decimals=0, cmp="unter", alert_label="Nullgradgrenze",
         trip_default_rank=6,  # Issue #1552: Trip-Anlege-Standard, Rang 6
     ),
     MetricDefinition(

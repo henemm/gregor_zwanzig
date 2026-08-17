@@ -18,8 +18,8 @@ from output.renderers.trip_report import TripReportFormatter
 
 from tests.tdd import _min_temp_felt_fixtures as F
 
-_MEASURED = ("N", "K", "D")
-_FELT = ("FN", "FK", "FD")
+_MEASURED = ("N", "L", "D")
+_FELT = ("FN", "FL", "FD")
 
 
 def _sms(report_type: str, *, felt_enabled: bool) -> str:
@@ -61,7 +61,7 @@ class TestAC3FeltHikingLowAndHighPresent:
         for report_type in ("morning", "evening"):
             sms = _sms(report_type, felt_enabled=True)
 
-            felt_low = F.sms_token_value(sms, "FK")
+            felt_low = F.sms_token_value(sms, "FL")
             felt_high = F.sms_token_value(sms, "FD")
 
             assert felt_low is not None, (
@@ -111,7 +111,7 @@ class TestAC4FeltNightLowUsesDestinationNightValue:
             f"{int(F.FELT_HIKE_MIN_C)} waere die gefuehlte Tiefsttemperatur "
             f"unterwegs — die falsche Quelle.\nSMS: {sms}"
         )
-        assert felt_night != F.sms_token_value(sms, "FK"), (
+        assert felt_night != F.sms_token_value(sms, "FL"), (
             "Gefuehlter Nachtwert und gefuehlte Tiefsttemperatur unterwegs "
             f"sind identisch — sie stammen offenbar aus derselben Quelle.\n"
             f"SMS: {sms}"
@@ -152,7 +152,7 @@ class TestAC5FeltTokensAbsentWhenMetricDisabled:
             )
 
             # Die gemessenen Werte bleiben davon unberuehrt.
-            expected = {"K", "D"} | ({"N"} if report_type == "evening" else set())
+            expected = {"L", "D"} | ({"N"} if report_type == "evening" else set())
             assert F.present_symbols(without_felt, _MEASURED) == expected, (
                 f"[{report_type}] Die gemessenen Temperaturwerte haben sich "
                 "veraendert, obwohl nur die gefuehlte Temperatur abgeschaltet "

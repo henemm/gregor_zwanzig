@@ -57,8 +57,8 @@ PRIORITY = {
     # ohnehin schon im dedizierten Schritt in render.py::_truncate(), bevor der
     # Last-Resort-Pfad greift. Der Eintrag ist Pflicht, weil build_token_line()
     # `PRIORITY[sym]` ungeschuetzt liest.
-    "FD": 4, "FK": 4, "FN": 4,
-    "D": 6, "N": 6, "K": 6, "R": 7,
+    "FD": 4, "FL": 4, "FN": 4,
+    "D": 6, "N": 6, "L": 6, "R": 7,
     "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, FORECAST_TH: 10,
     # Issue #1660 Scheibe B: 14 waehlbare Metriken ohne bisherigen SMS-Token,
     # gleiche Prioritaetsstufe wie die Wintersport-Token (DEC-4). Pflicht,
@@ -66,7 +66,7 @@ PRIORITY = {
     # Issue #1824 (B): 'WD:'/'PT:' tragen den Grammatik-Doppelpunkt im Symbol
     # (wie 'TH:'), deshalb lautet der Schluessel hier ebenfalls mit Doppelpunkt.
     "HU": 2, "DP": 2, "WD:": 2, "CP": 2, "PT:": 2, "CT": 2, "CL": 2, "CM": 2,
-    "CH": 2, "VS": 2, "SU": 2, "UV": 2, "HP": 2, "NL": 2,
+    "CH": 2, "VS": 2, "SU": 2, "UV": 2, "HP": 2, "FZ": 2,
 }
 
 # Issue #1318: amtliche Warnungen faellen beim Kuerzen ZULETZT — hoeher als
@@ -93,8 +93,8 @@ UNAVAILABLE_PRIORITY = OFFICIAL_ALERT_PRIORITY + 1
 POSITIONAL = [
     # Issue #1410 §3a: gemessenes Trio, dann gefuehltes Trio (Paritaet
     # N<->FN, K<->FK, D<->FD), dann die uebrigen Vorhersage-Token unveraendert.
-    ("N", "forecast"), ("K", "forecast"), ("D", "forecast"),
-    ("FN", "forecast"), ("FK", "forecast"), ("FD", "forecast"),
+    ("N", "forecast"), ("L", "forecast"), ("D", "forecast"),
+    ("FN", "forecast"), ("FL", "forecast"), ("FD", "forecast"),
     ("R", "forecast"),
     ("PR", "forecast"), ("W", "forecast"), ("G", "forecast"),
     (FORECAST_TH, "forecast"), (FORECAST_THP, "forecast"),
@@ -103,7 +103,7 @@ POSITIONAL = [
     ("CP", "forecast"), ("PT:", "forecast"), ("CT", "forecast"),
     ("CL", "forecast"), ("CM", "forecast"), ("CH", "forecast"),
     ("VS", "forecast"), ("SU", "forecast"), ("UV", "forecast"),
-    ("HP", "forecast"), ("NL", "forecast"),
+    ("HP", "forecast"), ("FZ", "forecast"),
     (VIGI_HR, "vigilance"), (VIGI_TH, "vigilance"),
     ("Z:", "fire"), ("MAX", "fire"), ("M:", "fire"),
     # Issue #1435 E3b: Register-Kuerzel, Reihenfolge unveraendert.
@@ -323,10 +323,10 @@ def build_token_line(
     # abends (DEC-1 unveraendert).
     for sym, val, evening_only, needs_spec in (
         ("N", today.night_temp_min_c, True, False),
-        ("K", today.temp_min_c, False, False),
+        ("L", today.temp_min_c, False, False),
         ("D", today.temp_max_c, False, False),
         ("FN", today.night_wind_chill_min_c, True, True),
-        ("FK", today.wind_chill_min_c, False, True),
+        ("FL", today.wind_chill_min_c, False, True),
         ("FD", today.wind_chill_max_c, False, True),
     ):
         spec = by_sym.get(sym)
@@ -375,7 +375,7 @@ def build_token_line(
     # tourenentscheidungs-relevanten Kanal Falschinformation.
     # Nebeneffekt (Spec Known Limitations): der Bereich faellt beim Kuerzen als
     # EINE Einheit, weil das 'K'-Token gar nicht erst in der Liste steht.
-    for cold_sym, warm_sym in (("K", "D"), ("FK", "FD")):
+    for cold_sym, warm_sym in (("L", "D"), ("FL", "FD")):
         cold = next((t for t in tokens if t.symbol == cold_sym), None)
         warm = next((t for t in tokens if t.symbol == warm_sym), None)
         if cold is None or warm is None:
@@ -423,7 +423,7 @@ def build_token_line(
     # Issue #1660 Scheibe B, Klasse (b) Invers-Min — VS/NL (Tages-Tiefstwert).
     for sym, samples, unit_factor, decimals in (
         ("VS", today.visibility_hourly, 0.001, 1),
-        ("NL", today.freezing_level_hourly, 1.0, 0),
+        ("FZ", today.freezing_level_hourly, 1.0, 0),
     ):
         spec = by_sym.get(sym)
         if spec is None and not samples:
