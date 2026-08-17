@@ -11,6 +11,25 @@ tags: [issue-1667, tests, fixtures, day-window, freezegun, radar-alerts]
 
 # S1 — Zeitfensterabhängige Test-Fixtures entschärfen (Mitternachts-Wanduhr)
 
+> **🔴 Teilweise abgelöst durch `fix_1940_fixture_zeitkippkante.md` (2026-08-17, Merge
+> `ba1bec92`).** Diese Spec beschreibt die stille Klemmung/Verschiebung als *die* Zusicherung,
+> die den damaligen Fund verhindert. Genau daran hat sich gezeigt, dass sie zu viel verspricht:
+> die Klemmung erhält zwar den **Abstand** zwischen Wegpunkten, nicht aber das **Vorzeichen**
+> eines Versatzes. Ein bewusst in die Vergangenheit gelegter Wegpunkt landete dadurch in der
+> Zukunft, und die CI-Ampel fiel täglich mehrere Stunden aus (#1940: drei gemessene Fenster,
+> 12:00–13:30, 12:00–16:00 und 23:00–00:00 UTC).
+>
+> **Was seit #1940 gilt:** `fenster_minuten` und `past_window_offsets` **verweigern laut**
+> (`ValueError`), sobald die Klemmung bzw. Stauchung die vom Aufrufer verlangte Konstellation
+> zerstören würde, statt still ein Fenster zu liefern, das die Zusicherung nicht trägt.
+> Aufrufer, die einen Wegpunkt in der Vergangenheit brauchen, stellen ihre Uhr selbst
+> (`freeze_time` auf Ortsmittagszeit) — eine Koordinatenwahl allein genügt nicht, denn auch
+> Neuseeland hat eine Ortszeit-Mitternacht, sie liegt nur bei 12:00 UTC.
+>
+> **Unberührt bleibt** die Grundentscheidung dieser Spec: relative Ankunftsfenster aus einem
+> gemeinsamen Hilfsbaustein statt roher `now ± timedelta`-Arithmetik je Testdatei, samt der
+> AST-Ratsche aus `fix_1709_wallclock_ratsche_indirekt.md`.
+
 ## Approval
 
 - [x] Approved — PO „freigabe" 2026-08-10
@@ -375,3 +394,6 @@ Fang belegt? Kein Fang → Rückbau prüfen (die punktuellen DI-Uhren
 ## Changelog
 
 - 2026-08-10: Initial spec created
+- 2026-08-17: Ablöse-Vermerk ergänzt — die stille Klemmung/Verschiebung ist durch die laute
+  Verweigerung aus `fix_1940_fixture_zeitkippkante.md` ersetzt (Merge `ba1bec92`). Die
+  Grundentscheidung „gemeinsamer Hilfsbaustein statt roher Wanduhr-Arithmetik" bleibt gültig.
