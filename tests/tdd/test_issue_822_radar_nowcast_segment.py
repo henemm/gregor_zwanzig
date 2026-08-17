@@ -30,6 +30,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+from freezegun import freeze_time
 
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
@@ -58,6 +59,18 @@ DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 WP0_LAT, WP0_LON = -41.29, 174.78   # Wellington — waypoints[0] (alter Pfad)
 SEG_LAT, SEG_LON = -41.19, 174.93   # Start-Punkt aktives Segment (neuer Pfad)
 SEG_END_LAT, SEG_END_LON = -41.09, 175.08
+
+# #1940: Die drei Tests, die ein bereits VERGANGENES erstes Segment brauchen,
+# stellen ihre Uhr selbst — ein Ort allein genuegt nicht, denn auch Neuseeland
+# hat eine Ortszeit-Mitternacht (sie liegt bei 12:00 UTC, weshalb die CI-Ampel
+# taeglich 12:00-13:30 UTC rot war). Gewaehlt ist je Aufrufstelle der
+# UTC-Zeitpunkt, zu dem am jeweiligen Ort GENAU 12:00 Ortszeit ist: maximaler
+# Abstand zu beiden Tagesgrenzen, innerhalb des Tagesfensters (4-19 Uhr
+# Ortszeit, #1584) und fern jeder Ruhezeit. Das Datum ist bewusst fest, sonst
+# verschoebe die jeweilige Sommerzeit den Ortsbezug wieder.
+UHR_TIROL = "2026-08-18T10:00:00+00:00"       # Europe/Vienna  UTC+2 -> 12:00
+UHR_LONDON = "2026-08-18T11:00:00+00:00"      # Europe/London  UTC+1 -> 12:00
+UHR_WELLINGTON = "2026-08-18T00:00:00+00:00"  # Pacific/Auckland UTC+12 -> 12:00
 
 
 # --------------------------------------------------------------------------
@@ -166,6 +179,7 @@ def _ensure_real_user_dir(uid: str) -> None:
 # AC-1: Segment-Helfer-Roundtrip (RED: ImportError)
 # --------------------------------------------------------------------------
 
+@freeze_time(UHR_TIROL, tick=True)
 def test_ac1_segment_helper_roundtrip_bit_identical():
     """AC-1: `services.trip_segments.convert_trip_to_segments` existiert noch
     NICHT → ImportError = RED-Treiber.
@@ -231,6 +245,7 @@ def test_ac1_segment_helper_roundtrip_bit_identical():
 # AC-2: Segment-Auswahl nach Zeit (RED: falsches Segment gewählt)
 # --------------------------------------------------------------------------
 
+@freeze_time(UHR_LONDON, tick=True)
 def test_ac2_segment_selection_by_time():
     """AC-2: check_radar_alerts wählt das zeitlich aktive Segment.
 
@@ -369,6 +384,7 @@ def test_ac2_segment_selection_by_time():
 # AC-3: Nowcast an Segment-Koordinaten (RED: waypoints[0] statt start_point)
 # --------------------------------------------------------------------------
 
+@freeze_time(UHR_WELLINGTON, tick=True)
 def test_ac3_nowcast_called_at_segment_coordinates():
     """AC-3: get_nowcast wird mit active.start_point.lat/lon aufgerufen, NICHT
     mit stage.waypoints[0]-Koordinaten (wenn diese abweichen).
@@ -481,8 +497,15 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
     _ensure_real_user_dir(uid)
     try:
         now = datetime.now(timezone.utc)
-        today = now.date()
         lat, lon = 51.50, 0.00  # lon=0 → tz_for_coords returns Europe/London (BST in summer)
+        # #1940 AC-6: der Etappentag ist der ORTStag, nicht das Serverdatum.
+        # Mit ``now.date()`` liefen Etappendatum und die aus dem Helfer
+        # stammenden Ankunftszeiten ab 23:00 UTC auseinander (London UTC+1
+        # zeigt dann schon auf den Folgetag), die Etappe wurde nicht gefunden
+        # und es entstand gar kein Alarm — dieser Test war taeglich
+        # 23:00-00:00 UTC rot. Alle uebrigen Stellen dieser Datei nehmen
+        # stage_date() bereits.
+        today = stage_date(lat, lon)
         lat1, lon1 = lat + 0.10, lon + 0.10
         # #1667 S1: Ortszeit-Umrechnung und Tagesgrenzen-Klemmung im Helfer.
         arr0, arr1 = active_window_offsets(lat, lon, -60, 60)

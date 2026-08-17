@@ -30,11 +30,20 @@ from datetime import date as date_type, datetime, time, timedelta, timezone
 from pathlib import Path
 
 import pytest
+from freezegun import freeze_time
 
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
 from tests.helpers.arrival_window_fixtures import past_window_offsets, stage_date
+
+# #1940 AC-7: 12:00 Ortszeit in Pacific/Auckland (UTC+12, August). Die Uhr
+# gestellt statt der Zeitzone vertraut: ein oestlicher Ort allein garantiert
+# NICHT, dass der Etappentag weit genug fortgeschritten ist — auch Neuseeland
+# hat eine Ortszeit-Mitternacht, sie liegt bei 12:00 UTC. Genau deshalb war
+# test_ac5 taeglich 12:00-16:00 UTC rot. Festes Datum, sonst verschoebe die
+# neuseelaendische Sommerzeit den Ortsbezug wieder.
+UHR_WELLINGTON = "2026-08-18T00:00:00+00:00"
 
 def _data_root_users() -> Path:
     """Nutzer-Wurzel der Compare-Preset-Ablage — Funktion statt Konstante
@@ -427,6 +436,7 @@ def test_ac4_double_alert_guard_suppresses_radar_when_forecast_recent():
 # AC-5: Alle Segmente zeitlich abgelaufen → kein Alert (Guard aus #822)
 # --------------------------------------------------------------------------
 
+@freeze_time(UHR_WELLINGTON, tick=True)
 def test_ac5_past_segment_no_alert_guard_test():
     """AC-5: REGRESSION-GUARD aus #822 — alle Segmente vorbei → kein Alert.
 
@@ -458,9 +468,12 @@ def test_ac5_past_segment_no_alert_guard_test():
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
-    # Neuseeland (UTC+12): der lokale Etappentag liegt zu jeder UTC-Uhrzeit
-    # mindestens zwölf Stunden zurück, es ist also immer Platz fuer ein
-    # vergangenes Fenster.
+    # Neuseeland (UTC+12). Die frühere Begründung „der lokale Etappentag liegt
+    # zu jeder UTC-Uhrzeit weit genug zurück, es ist also immer Platz" war
+    # falsch: zwischen 12:00 und 16:00 UTC ist der Ortstag erst 0-239 Minuten
+    # alt, für das 240-Minuten-Fenster unten also zu jung. Seit #1940 AC-7
+    # sagt der Helfer das laut; die gestellte Uhr oben (12:00 Ortszeit) stellt
+    # die Voraussetzung her, statt sie zu hoffen.
     past_lat, past_lon = -41.29, 174.78
 
     uid = f"tdd-818-ac5-{uuid.uuid4().hex[:6]}"
