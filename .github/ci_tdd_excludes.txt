@@ -74,8 +74,6 @@ tests/tdd/test_issue_685_selftest_menu_gate.py
 tests/tdd/test_issue_695_test_briefing_send.py
 tests/tdd/test_issue_764_compare_forecast_hours_consume.py
 tests/tdd/test_issue_816_alert_deviation.py
-tests/tdd/test_issue_818_radar_briefing_integration.py
-tests/tdd/test_issue_822_radar_nowcast_segment.py
 tests/tdd/test_issue_833_gate.py
 tests/tdd/test_issue_883_acute_danger_override.py
 tests/tdd/test_issue_995_scheduler_pause.py
