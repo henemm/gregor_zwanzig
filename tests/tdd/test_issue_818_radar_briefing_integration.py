@@ -286,6 +286,7 @@ def test_ac2_unannounced_rain_triggers_radar_alert():
     RED-Treiber: check_radar_alerts sendet Alert, aber der Body enthält den neuen
     Text "im Briefing nicht angekündigt" noch nicht → AssertionError.
     """
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
@@ -303,6 +304,10 @@ def test_ac2_unannounced_rain_triggers_radar_alert():
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="x@example.com",
+            ),
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
 
@@ -332,6 +337,7 @@ def test_ac3_missing_snapshot_fallback_sends_alert():
     Schützt vor Regression: Briefing-Check darf fehlenden Snapshot nicht als
     "kein Regen" interpretieren. Kann vor Implementierung bereits grün sein.
     """
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
@@ -347,6 +353,10 @@ def test_ac3_missing_snapshot_fallback_sends_alert():
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="x@example.com",
+            ),
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
 
@@ -508,6 +518,7 @@ def test_ac6_radar_throttle_via_alert_state_cooldown():
 
     Teil 2: Zweiter Lauf innerhalb Cooldown → kein Alert (unverändert).
     """
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
     from services.throttle_store import ThrottleStore
@@ -519,10 +530,16 @@ def test_ac6_radar_throttle_via_alert_state_cooldown():
         trip_id = f"tdd-818-ac6-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
 
+        settings = Settings(
+            smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+            mail_to="x@example.com",
+        )
+
         captured: list = []
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=settings,
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
 
@@ -544,6 +561,7 @@ def test_ac6_radar_throttle_via_alert_state_cooldown():
         svc2 = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=settings,
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
         count2 = svc2.check_radar_alerts()
