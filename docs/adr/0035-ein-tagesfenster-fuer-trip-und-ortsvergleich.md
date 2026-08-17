@@ -89,3 +89,19 @@ die Stundentabelle zeigte durchgehend 24 Zeilen.
   **Grenze:** Tagesfenster über Mitternacht (`start_hour > end_hour`) werden am
   Zielsegment nicht abgebildet; dort greift ein Mindestfenster von einer Stunde
   (PO-Entscheidung 2026-08-08, Spec `docs/specs/modules/fix_1584_alarm_zeitfenster.md`).
+- **Randstunden-Semantik (#1599, PO-Entscheidung 2026-08-17):** Die Obergrenze
+  `day_window_end_hour` ist **inklusiv** — „bis 19" heißt, die Stunde 19 zählt
+  vollständig mit. Zeitlich entspricht das inklusive Stundenband
+  `[start_h .. end_h]` dem halboffenen Intervall `[start_h:00, (end_h+1):00)`.
+  Genau diese Festlegung fehlte hier bisher, und genau deshalb lief die Kante
+  auseinander: die Anzeige las durchgehend inklusiv, die drei Alarm-Stellen
+  (`trip_segments.py`, `compare_location_weather_source.py`,
+  `compare_official_alert.py`) rechneten exklusiv — ein Gewitter um 19:30
+  erschien im Briefing, löste aber keinen Alarm aus. Die Umrechnung
+  „Stundenzahl → Zeitgrenze" gehört seither **einmal** nach
+  `app/day_window.py::window_end_utc_exclusive()`; die konfigurierten
+  Stundenzahlen selbst (`resolve_configured_window()`) bleiben unberührt. Die
+  sichtbare Ausgabe bleibt unverändert — dafür sorgt
+  `app/day_window.py::display_end_time()`, das die gewonnene Randstunde
+  ausschließlich am Ziel-Segment aus der Anzeige heraushält
+  (Spec `docs/specs/modules/fix_1599_tagesfenster_randstunde.md`).

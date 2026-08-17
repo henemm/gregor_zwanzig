@@ -25,6 +25,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import Settings
+import app.day_window as day_window
 from app.loader import load_all_locations
 from output.renderers.alert.official_alerts import (
     dedupe_official_alerts,
@@ -293,7 +294,12 @@ class CompareOfficialAlertService:
         hinter uns (Abruf nach Feierabend), wird auf `now` geklemmt statt ein
         rueckwaerts laufendes Fenster zu bilden -- dann bleiben genau die
         gerade gueltigen Warnungen sichtbar, statt dass der Ortsvergleich
-        abends taub wird."""
+        abends taub wird.
+
+        Issue #1599: Die Endstunde ist INKLUSIV -- der Horizont reicht bis
+        (end_hour+1):00 Ortszeit. Umgerechnet wird ueber denselben Helfer wie
+        im Trip-Alarmpfad und im Ortsvergleich-Δ-Alarm, statt hier ein drittes
+        Mal selbst zu rechnen."""
         from output.renderers.day_window import resolve_configured_window
         from utils.timezone import tz_for_coords
 
@@ -305,10 +311,12 @@ class CompareOfficialAlertService:
         )
         tz = tz_for_coords(loc.lat, loc.lon) or timezone.utc
         local_now = now.astimezone(tz)
-        end_local = local_now.replace(hour=end_hour, minute=0, second=0, microsecond=0)
-        if start_hour > end_hour and end_local <= local_now:
-            end_local += timedelta(days=1)
-        return max(end_local.astimezone(timezone.utc), now)
+        end_utc = day_window.window_end_utc_exclusive(local_now.date(), end_hour, tz)
+        if start_hour > end_hour and end_utc <= now:
+            end_utc = day_window.window_end_utc_exclusive(
+                local_now.date() + timedelta(days=1), end_hour, tz
+            )
+        return max(end_utc, now)
 
     def _record_state(self, preset_id: str, per_location_new: dict) -> None:
         now_iso = datetime.now(timezone.utc).isoformat()

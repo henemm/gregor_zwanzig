@@ -25,6 +25,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+import app.day_window as day_window
 from app.models import GPXPoint, TripSegment
 from services.point_weather import PointWeatherData, TripSegmentWeatherAdapter
 from services.segment_weather import SegmentWeatherService
@@ -33,8 +34,9 @@ logger = logging.getLogger("compare_location_weather_source")
 
 
 def _window_bound(local_day: date, hour: int, tz: ZoneInfo) -> datetime:
-    """Ortszeit-Stunde eines lokalen Kalendertags -> UTC. Exakt das Muster aus
-    `trip_segments.py:269-273` — kein zweiter Zeitbegriff."""
+    """Ortszeit-Stunde eines lokalen Kalendertags -> UTC. Seit #1599 nur noch
+    fuer die UNTERgrenze — die Obergrenze baut
+    `app.day_window.window_end_utc_exclusive()` (inklusive Endstunde)."""
     return (
         datetime.combine(local_day, time(hour))
         .replace(tzinfo=tz)
@@ -122,10 +124,13 @@ class CompareLocationWeatherSource:
         else:
             window_day = target_date or local_today
         window_start = _window_bound(window_day, start_hour, tz)
-        # Obergrenze EXKLUSIV: `end_hour = 19` heisst Fensterende um 19:00,
-        # Stunde 19 liegt draussen — genau wie `segment_weather.py` filtert
-        # (`< end_floor`, Bug #806) und wie der Trip-Alarmpfad rechnet.
-        window_end = _window_bound(window_day, end_hour, tz)
+        # Issue #1599: Obergrenze INKLUSIV — `end_hour = 19` heisst, die Stunde
+        # 19 zaehlt vollstaendig mit; zeitlich endet das Fenster um 20:00
+        # Ortszeit (exklusiv). Der Filter in `segment_weather.py` bleibt
+        # unveraendert halboffen (`< end_floor`, Bug #806) — er bekommt jetzt
+        # nur die richtige Grenze. Dieselbe Umrechnung wie im Trip-Alarmpfad,
+        # aus derselben Quelle (`app/day_window.py`).
+        window_end = day_window.window_end_utc_exclusive(window_day, end_hour, tz)
 
         if window_end <= window_start:
             # Tagesfenster ueber Mitternacht (`start > end`, seit #1361

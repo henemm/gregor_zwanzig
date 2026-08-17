@@ -23,7 +23,9 @@ if TYPE_CHECKING:
 from app.profile import ActivityProfile
 from utils.timezone import local_fmt
 
-from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.day_window import (
+    DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, display_end_time,
+)
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
@@ -279,7 +281,7 @@ def render_plain(
         s_elev = int(seg.start_point.elevation_m or 0)
         e_elev = int(seg.end_point.elevation_m or 0)
         if seg.segment_id == "Ziel":
-            lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {s_elev}m ━━")
+            lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {local_fmt(seg.start_time, tz)}–{local_fmt(display_end_time(seg), tz)} | {s_elev}m ━━")
         else:
             elev_arrow = "↑" if e_elev >= s_elev else "↓"
             _km_range = format_km_range(
@@ -295,7 +297,7 @@ def render_plain(
     if night_rows:
         last_seg = segments[-1].segment
         lines.append(f"━━ Nacht am Ziel ({int(last_seg.end_point.elevation_m or 0)}m) ━━")
-        lines.append(f"Ankunft {local_fmt(last_seg.end_time, tz)} → Morgen 06:00")
+        lines.append(f"Ankunft {local_fmt(display_end_time(last_seg), tz)} → Morgen 06:00")
         lines.append(_render_text_table(night_rows, friendly_keys=friendly_keys,
                                          col_order=_col_order))
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):

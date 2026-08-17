@@ -387,3 +387,13 @@ am Ziel wirkt statt auf das Mindestfenster zu fallen.
   als Wächter ohne eigenen RED-Nachweis gekennzeichnet, analog zu AC-2b/
   AC-3. Mutations-Block entsprechend aufgeteilt (`timedelta(hours=2)` →
   AC-1/AC-2a, hartcodiertes `(4, 19)` → AC-6).
+- 2026-08-17: **AC-2b abgelöst durch #1599** (PO-Entscheidung 2026-08-17:
+  Obergrenze inklusiv). „19:15 Ortszeit → kein Alarm" gilt nicht mehr — die
+  Stunde 19 zählt vollständig mit, das Alarmfenster reicht zeitlich bis 20:00
+  statt bis 19:00. Der fachliche Zweck („kein nächtlicher Alarm auf der
+  Hüttenwanderung") bleibt unverändert gewahrt, die Prüfgrenze wandert von
+  19:15 auf 20:15 (`docs/specs/modules/fix_1599_tagesfenster_randstunde.md`,
+  AC-1/AC-2). Aus demselben Grund verschoben: AC-5 (Ziel-Segment-Ende 19:00 →
+  20:00 Ortszeit), AC-3/AC-3b (Kippkante der Spätankunft von 19:00 auf 20:00)
+  und AC-6 (konfiguriertes Fenster 6-16: Prüfzeitpunkt 16:30 → 17:30, weil die
+  Stunde 16 jetzt innerhalb liegt).

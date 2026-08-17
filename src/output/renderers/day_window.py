@@ -26,6 +26,7 @@ from utils.timezone import local_dt, local_hour
 from app.day_window import (  # noqa: F401  (Re-Export)
     DAY_WINDOW_END_HOUR,
     DAY_WINDOW_START_HOUR,
+    display_end_time,
     resolve_configured_window,
 )
 
@@ -133,7 +134,9 @@ def build_day_window_points(
         if seg.has_error or ts is None or not ts.data:
             continue
         start_h = local_hour(seg.segment.start_time, tz)
-        end_h = local_hour(seg.segment.end_time, tz)
+        # Issue #1599: Anzeige-Ende, nicht die (seit #1599 eine Stunde spaetere)
+        # Alarm-Obergrenze des Ziel-Segments.
+        end_h = local_hour(display_end_time(seg.segment), tz)
         if idx == 0:
             start_h = start_hour
         for dp in ts.data:
@@ -144,7 +147,7 @@ def build_day_window_points(
 
     wraps = start_hour > end_hour
     if night_weather is not None and night_weather.data:
-        arrival_dt = segments[-1].segment.end_time
+        arrival_dt = display_end_time(segments[-1].segment)
         arrival_hour = local_hour(arrival_dt, tz)
         # Issue #1402: NIE .astimezone(tz) direkt auf einem naiven dp.ts/
         # arrival_dt aufrufen -- das deutet die Prozess-Zeitzone statt der
@@ -210,7 +213,10 @@ def collect_hiking_window_points(
     for idx, seg_data in enumerate(usable):
         s = seg_data.segment
         s_h = s.start_time.hour
-        e_h = s.end_time.hour
+        # Issue #1599: Anzeige-Ende — die Randstunde, die das Ziel-Segment fuer
+        # den Alarm hinzugewonnen hat, bleibt aus Kachelzeile/SMS/Telegram-
+        # Kurzuebersicht draussen.
+        e_h = display_end_time(s).hour
         is_last = idx == last_idx
         for dp in seg_data.timeseries.data:
             h = dp.ts.hour
@@ -259,7 +265,7 @@ def _night_min_of_field(
     """
     if not night_weather or not night_weather.data or not segments:
         return None
-    arrival_dt = segments[-1].segment.end_time
+    arrival_dt = display_end_time(segments[-1].segment)
     arrival_hour = local_hour(arrival_dt, tz)
     # Issue #1402: local_dt() statt rohem .astimezone(tz) -- s. Begruendung
     # oben in extract_day_window_hours().

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Optional
 import logging
 
 from app.config import Location
+from app.day_window import display_end_time
 from app.debug import DebugBuffer
 from app.models import SegmentWeatherData, SegmentWeatherSummary, TripSegment
 
@@ -449,7 +450,12 @@ def fetch_night_weather(
     from providers.base import get_provider
 
     seg = last_segment.segment
-    arrival = seg.end_time
+    # Issue #1599: das ANZEIGE-Ende des Ziel-Segments, nicht dessen (seit
+    # #1599 eine Stunde spaetere) Alarm-Obergrenze — sonst begaenne die
+    # Tabelle „Nacht am Ziel“ eine Stunde spaeter als bisher, und ihre erste
+    # Stunde fehlte in den Daten. Der halboffene Filter dieses Moduls
+    # (`start_floor <= ts < end_floor`, Bug #806/#856) bleibt unberuehrt.
+    arrival = display_end_time(seg)
     next_morning = datetime.combine(
         arrival.date() + timedelta(days=1),
         datetime.min.time(),

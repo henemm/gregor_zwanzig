@@ -14,6 +14,7 @@ import math
 from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
+import app.day_window as day_window
 from app.day_window import resolve_configured_window
 from app.models import GPXPoint, TripSegment
 from utils.geo import haversine_km
@@ -273,26 +274,30 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         # in UTC schon auf den Folgetag, waehrend es am Ziel noch derselbe
         # Tag ist — der UTC-Tag wuerde das Fenster um 24 h verschieben.
         arrival_local_date = arrival_time.astimezone(dest_tz).date()
-        window_end = (
-            datetime.combine(arrival_local_date, time(end_hour))
-            .replace(tzinfo=dest_tz)
-            .astimezone(timezone.utc)
+        # Issue #1599: Die Obergrenze ist INKLUSIV — die Endstunde zaehlt
+        # vollstaendig mit, das Fenster endet zeitlich bei (end_hour+1):00
+        # Ortszeit. Die Umrechnung wohnt in app/day_window.py, damit sie nicht
+        # zum vierten Mal auseinanderlaeuft.
+        window_end = day_window.window_end_utc_exclusive(
+            arrival_local_date, end_hour, dest_tz
         )
 
-        if window_end <= arrival_time:
-            # Ankunft liegt bereits nach day_window_end_hour (Spaetankunft,
-            # z. B. 20:30 bei Fenster bis 19:00) — oder das Fenster laeuft
-            # ueber Mitternacht (s. o.). Anders als der Mitternachts-
-            # Guard oben wird hier NICHT uebersprungen: ein fehlendes
-            # Ziel-Segment laesst den Trip still aus der Ueberwachung fallen
-            # (genau der Fehler aus #1584). Stattdessen ein minimales, aber
-            # gueltiges Fenster.
+        # Issue #1599: Mindestfenster von 1 h ab Ankunft — UNABHAENGIG von der
+        # Fenstergrenze. Vorher griff es nur, wenn das Fenster zur Ankunft
+        # schon zu war; mit der eine Stunde spaeteren Grenze haette eine
+        # Ankunft um 19:30 nur noch 30 Minuten Ueberwachung statt garantiert
+        # 60. Anders als der Mitternachts-Guard oben wird hier NICHT
+        # uebersprungen: ein fehlendes Ziel-Segment laesst den Trip still aus
+        # der Ueberwachung fallen (genau der Fehler aus #1584).
+        min_end_time = arrival_time + timedelta(hours=1)
+        if window_end <= min_end_time:
             logger.warning(
-                f"Ziel-Segment: Ankunft {arrival_time.isoformat()} liegt nach "
-                f"dem Tagesfenster-Ende ({end_hour}:00 Ortszeit) — minimales "
-                "Fenster von 1 h wird verwendet"
+                f"Ziel-Segment: Ankunft {arrival_time.isoformat()} laesst bis "
+                f"zum Tagesfenster-Ende (bis einschliesslich {end_hour}:00 "
+                "Ortszeit) weniger als eine Stunde — minimales Fenster von "
+                "1 h wird verwendet"
             )
-            dest_end_time = arrival_time + timedelta(hours=1)
+            dest_end_time = min_end_time
         else:
             dest_end_time = window_end
 

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
+from app.day_window import display_end_time
 from app.models import SegmentWeatherSummary
 from services.weather_snapshot import WeatherSnapshotService
 
@@ -92,7 +93,8 @@ class WeatherExtractor:
             )
         points = [
             TimelinePoint(
-                arrival_time=seg.segment.end_time,
+                # Issue #1599: Anzeige-Ende statt Alarm-Obergrenze.
+                arrival_time=display_end_time(seg.segment),
                 elevation_m=seg.segment.end_point.elevation_m,
                 label=str(seg.segment.segment_id),
                 metrics=seg.aggregated,

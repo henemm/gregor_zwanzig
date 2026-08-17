@@ -529,34 +529,87 @@ def test_ac2a_gewitter_1845_knapp_vor_fensterende_wird_zugestellt():
     )
 
 
-def test_ac2b_gewitter_1915_knapp_nach_fensterende_bleibt_aus():
-    """AC-2b: Gewitter 19:15 Ortszeit — knapp ausserhalb 19:00. Bewacht die
-    PO-Vorgabe „kein naechtlicher Alarm" an der tatsaechlichen Grenze.
+def test_1599_ac1_gewitter_in_der_randstunde_19_wird_zugestellt():
+    """#1599 AC-1 — UMGEDREHT, abgeloest durch #1599: hier stand
+    ``test_ac2b_…`` aus #1584 („Gewitter 19:15 -> kein Alarm").
 
-    #1851 AC-4: seit der Fixture-Haertung in ``_trip()`` (``enabled=False``)
-    besteht dieser Test aus dem RICHTIGEN Grund — Gewitter ausserhalb des
-    Tagesfensters, nicht generell unterdrueckte Alarme. Beleg ist das Paar
-    mit ``test_ac2a_…`` (identische Fixture-Familie, Gewitter 18:45
-    INNERHALB des Fensters, erwartet eine Mail): waeren unter der gehaerteten
-    Fixture generell keine Alarme mehr moeglich, muesste ``test_ac2a_…`` rot
-    sein. Sein Gruen-Status im selben Lauf ist der Beleg.
+    PO-Entscheidung 2026-08-17: die Obergrenze ist INKLUSIV, das Alarmfenster
+    endet zeitlich bei 20:00 Ortszeit. Der fachliche Zweck („kein naechtlicher
+    Alarm") wandert unveraendert auf die neue Grenze und wird von
+    ``test_1599_ac2_gewitter_stunde_20_bleibt_aus`` bewacht. Die Stunde 19
+    (Spec: 19:30) trennt die beiden Welten: innerhalb 20:00, ausserhalb 19:00.
     """
     mails = _alarm_mails(ALPEN_LAT, ALPEN_LON, "13:18", 19)
+    assert mails, (
+        "#1599 AC-1: Ein Gewitter (HIGH) in der Randstunde 19 (19:30 "
+        "Ortszeit) liegt INNERHALB des inklusiven Tagesfensters 4-19 (Ende "
+        "20:00 Ortszeit) und muss einen zugestellten Alarm ausloesen. Es kam "
+        "KEINE Mail an — das Ziel-Segment endet weiterhin exklusiv um 19:00, "
+        "die Randstunde faellt heraus (trip_segments.py:276-280)."
+    )
+
+
+def test_1599_ac2_gewitter_stunde_20_bleibt_aus():
+    """#1599 AC-2 (Waechter): Gewitter in der Stunde 20 (Spec: 20:15) — knapp
+    JENSEITS der neuen Grenze 20:00. Positivkontrolle dafuer, dass es weiterhin
+    eine Obergrenze gibt; ohne sie stuende das Fenster bis Mitternacht offen.
+    Loest die #1584-Grenze bei 19:15 ab, gleicher Zweck eine Stunde spaeter.
+    Diskriminierend zu AC-1: 19 innen, 20 aussen.
+    """
+    mails = _alarm_mails(ALPEN_LAT, ALPEN_LON, "13:18", 20)
     assert not mails, (
-        "AC-2b: Ein Gewitter um 19:15 Ortszeit liegt ausserhalb der "
-        "Fenster-Obergrenze 19:00 — es darf KEIN Alarm zugestellt werden. "
-        f"Tatsaechlich zugestellt: {[s for s, _ in mails]} (das Ziel-Segment "
-        "reicht zu weit, z.B. bis Mitternacht oder unbegrenzt)."
+        "#1599 AC-2: Ein Gewitter in der Stunde 20 (20:15 Ortszeit) liegt "
+        "AUSSERHALB der neuen Fenster-Obergrenze 20:00 — es darf KEIN Alarm "
+        f"zugestellt werden. Tatsaechlich zugestellt: {[s for s, _ in mails]} "
+        "— die Obergrenze wurde um mehr als eine Stunde verschoben oder ganz "
+        "aufgehoben."
+    )
+
+
+def test_1599_ac16_spaetankunft_1930_behaelt_mindestens_eine_stunde():
+    """#1599 AC-16 (Waechter): Ankunft 19:30 Ortszeit, Tagesfenster 4-19.
+
+    Heute greift der Randfall-Guard (Fensterende 19:00 liegt vor der Ankunft)
+    -> [19:30, 20:30]. Mit der neuen Grenze 20:00 liegt das Fensterende NACH
+    der Ankunft; ein unvollstaendiger Fix (Guard weiterhin nur „wenn das
+    Fenster schon zu ist") liesse nur 30 Minuten Ueberwachung. Einziger AC,
+    der diese Verkuerzung sieht.
+    """
+    day = date.today()
+    trip = _trip(f"t-{uuid.uuid4().hex[:8]}", ALPEN_LAT, ALPEN_LON, day, "19:30")
+    dest = convert_trip_to_segments(trip, day)[-1]
+    assert dest.segment_id == "Ziel"
+    assert dest.end_time - dest.start_time >= timedelta(hours=1), (
+        "#1599 AC-16: Bei Ankunft 19:30 Ortszeit muss das Ziel-Segment "
+        f"mindestens eine Stunde umfassen, ist aber {dest.end_time - dest.start_time} "
+        f"({dest.start_time.isoformat()}..{dest.end_time.isoformat()}) — der "
+        "Spaetankunfts-Guard wurde nicht auf 'mindestens 1 h ab Ankunft' "
+        "umgestellt."
+    )
+
+
+def test_1599_ac17_spaetankunft_2030_behaelt_genau_das_mindestfenster():
+    """#1599 AC-17 (Waechter): Ankunft 20:30 Ortszeit liegt jenseits JEDER
+    Fenstergrenze (alt 19:00, neu 20:00) — das Mindestfenster bleibt exakt
+    eine Stunde. Unveraendertes Regressionsverhalten gegenueber #1584; der
+    nachgezogene Guard darf das Fenster hier nicht wachsen lassen."""
+    day = date.today()
+    trip = _trip(f"t-{uuid.uuid4().hex[:8]}", ALPEN_LAT, ALPEN_LON, day, "20:30")
+    dest = convert_trip_to_segments(trip, day)[-1]
+    assert dest.end_time - dest.start_time == timedelta(hours=1), (
+        "#1599 AC-17: Bei Ankunft 20:30 Ortszeit muss das Ziel-Segment genau "
+        f"eine Stunde umfassen. Tatsaechlich: {dest.end_time - dest.start_time}."
     )
 
 
 def test_ac3_spaetankunft_2030_faellt_nicht_aus_der_ueberwachung():
-    """AC-3: Ankunft 20:30 Ortszeit (NACH day_window_end_hour), Gewitter
+    """AC-3: Ankunft 20:30 Ortszeit (NACH day_window_end_hour — seit #1599
+    zeitlich 20:00 statt 19:00; die Kippkante wandert, der Fall bleibt), Gewitter
     20:45 -> Alarm geht trotzdem raus; der Randfall-Guard haelt ein
     minimales, gueltiges Fenster statt eines kollabierten Segments."""
     mails = _alarm_mails(ALPEN_LAT, ALPEN_LON, "20:30", 20)
     assert mails, (
-        "AC-3: Bei Ankunft 20:30 Ortszeit (nach dem Tagesfenster-Ende 19:00) "
+        "AC-3: Bei Ankunft 20:30 Ortszeit (nach dem Tagesfenster-Ende 20:00) "
         "muss ein Gewitter um 20:45 weiterhin einen zugestellten Alarm "
         "ausloesen. Es kam keine Mail an — das Ziel-Segment ist kollabiert "
         "oder laeuft rueckwaerts, der Trip faellt still aus der Ueberwachung."
@@ -683,8 +736,9 @@ def test_ac3b_spaetankunft_mindestfenster_reicht_nicht_in_die_nacht():
     Nachgerechnet fuer den 08.08. (CEST = UTC+2):
 
         Ankunft 20:30 Ortszeit         = 18:30 UTC
-        Fensterende 19:00 Ortszeit     = 17:00 UTC  -> <= Ankunft,
+        Fensterende 20:00 Ortszeit     = 18:00 UTC  -> <= Ankunft,
                                          also greift der Randfall-Guard
+                                         (Grenze seit #1599 inklusiv)
         Mindestfenster RICHTIG (1 h)   = 19:30 UTC = 21:30 Ortszeit
         Mindestfenster AUFGEWEICHT(6h) = 00:30 UTC = 02:30 Ortszeit (Folgetag)
 
@@ -698,7 +752,7 @@ def test_ac3b_spaetankunft_mindestfenster_reicht_nicht_in_die_nacht():
     Genau das ist der blinde Fleck von AC-3.
 
     Fachlich ist das die Spaetankunfts-Haelfte derselben PO-Vorgabe, die
-    AC-2b fuer den Normalfall bewacht: nachts geht kein teurer Alarm raus.
+    #1599 AC-2 fuer den Normalfall bewacht: nachts geht kein teurer Alarm raus.
     """
     mails = _alarm_mails(ALPEN_LAT, ALPEN_LON, "20:30", 22)
     assert not mails, (
@@ -781,10 +835,10 @@ def test_ac4b_westzone_spaete_ankunft_fenster_endet_am_ortstag():
 
         Ankunft 18:00 Ortszeit      = 09.08. 01:00 UTC  (UTC-Datum 09.08.,
                                                          Ortsdatum 08.08.)
-        Fensterende RICHTIG (Ortstag) = 08.08. 19:00 Ortszeit
-                                      = 09.08. 02:00 UTC
-        Fensterende FALSCH  (UTC-Tag) = 09.08. 19:00 Ortszeit
-                                      = 10.08. 02:00 UTC   -> 24 h zu lang
+        Fensterende RICHTIG (Ortstag) = 08.08. 20:00 Ortszeit  (#1599: inklusiv)
+                                      = 09.08. 03:00 UTC
+        Fensterende FALSCH  (UTC-Tag) = 09.08. 20:00 Ortszeit
+                                      = 10.08. 03:00 UTC   -> 24 h zu lang
 
     Das Gewitter liegt um 22:00 Ortszeit am Ankunftstag (= 09.08. 05:00 UTC):
     drei Stunden NACH dem richtigen Fensterende und damit klar ausserhalb —
@@ -793,7 +847,7 @@ def test_ac4b_westzone_spaete_ankunft_fenster_endet_am_ortstag():
     innerhalb, 20:00 Ortszeit des Folgetages in BEIDEN ausserhalb; beide
     bewiesen nichts (derselbe Fehler wie beim urspruenglichen AC-2).
 
-    Fachlich bewacht der Test dieselbe PO-Vorgabe wie AC-2b: nachts geht kein
+    Fachlich bewacht der Test dieselbe PO-Vorgabe wie #1599 AC-2: nachts geht kein
     Alarm raus. Ein um einen ganzen Tag verschobenes Fenster wuerde das
     Tagesziel die komplette Nacht und den Folgetag hindurch ueberwachen.
     """
@@ -801,7 +855,7 @@ def test_ac4b_westzone_spaete_ankunft_fenster_endet_am_ortstag():
     assert not mails, (
         "AC-4b: Das Fensterende muss am LOKALEN Ankunftstag am Ziel gebildet "
         "werden. Ein Gewitter um 22:00 Ortszeit liegt nach dem Fensterende "
-        "19:00 desselben Tages und darf KEINEN Alarm ausloesen. Tatsaechlich "
+        "20:00 desselben Tages und darf KEINEN Alarm ausloesen. Tatsaechlich "
         f"zugestellt: {[s for s, _ in mails]} — der Kalendertag stammt "
         "offenbar aus dem UTC-Zeitstempel der Ankunft (arrival_time.date()) "
         "statt aus arrival_time.astimezone(dest_tz).date(); westlich von "
@@ -812,7 +866,11 @@ def test_ac4b_westzone_spaete_ankunft_fenster_endet_am_ortstag():
 def test_ac5_alt_trip_ohne_tagesfenster_nutzt_default_4_19():
     """AC-5 (strukturell, von der Spec ausdruecklich als Ausnahme von der
     Wirkungs-Regel ausgewiesen): Alt-Trip ohne ``day_window_*`` -> Default
-    4/19, Fensterende 19:00 Ortszeit am Ankunftstag."""
+    4/19.
+
+    Erwartungswert VERSCHOBEN — abgeloest durch #1599: die Obergrenze ist
+    inklusiv, „bis 19" endet zeitlich um 20:00 Ortszeit am Ankunftstag.
+    """
     tz = tz_for_coords(ALPEN_LAT, ALPEN_LON)
     day = date.today()
     trip = _trip("t-ac5-alttrip", ALPEN_LAT, ALPEN_LON, day, "13:18")
@@ -820,31 +878,36 @@ def test_ac5_alt_trip_ohne_tagesfenster_nutzt_default_4_19():
     assert trip.report_config.day_window_end_hour is None
 
     dest = convert_trip_to_segments(trip, day)[-1]
-    expected = _utc(tz, day, 19)
+    expected = _utc(tz, day, 20)
     assert dest.segment_id == "Ziel"
     assert dest.end_time == expected, (
         "AC-5: Ein Trip ohne konfiguriertes Tagesfenster muss den Default "
         f"4/19 verwenden — das Ziel-Segment muss um {expected.isoformat()} "
-        f"(19:00 Ortszeit) enden, tatsaechlich: {dest.end_time.isoformat()} "
-        "(= Ankunft + 2 h)."
+        f"(20:00 Ortszeit, Randstunde 19 inklusive) enden, tatsaechlich: "
+        f"{dest.end_time.isoformat()}."
     )
 
 
-def test_ac6_konfiguriertes_fenster_6_16_schliesst_gewitter_1630_aus():
+def test_ac6_konfiguriertes_fenster_6_16_schliesst_gewitter_1730_aus():
     """AC-6 (Waechter, kein RED-Test — s. Spec): Tagesfenster abweichend auf
-    6-16 Uhr konfiguriert, Ankunft 13:18, Gewitter 16:30 Ortszeit.
+    6-16 Uhr konfiguriert, Ankunft 13:18, Gewitter 17:30 Ortszeit.
 
-    16:30 liegt ZWISCHEN der konfigurierten Obergrenze (16:00) und der
-    Default-Obergrenze (19:00) — genau deshalb trennt dieser Zeitpunkt die
+    Pruefzeitpunkt VERSCHOBEN — abgeloest durch #1599: die Obergrenze ist
+    inklusiv, „bis 16" endet zeitlich um 17:00. Die Stunde 16 liegt damit
+    INNERHALB; der frueher hier geprueften 16:30 fehlt seitdem die
+    Trennschaerfe.
+
+    17:30 liegt weiterhin ZWISCHEN der konfigurierten Obergrenze (17:00) und
+    der Default-Obergrenze (20:00) — genau deshalb trennt dieser Zeitpunkt die
     Faelle: bei hartcodiertem ``(4, 19)`` laege er innerhalb, der Alarm ginge
-    faelschlich raus. 15:30 laege in beiden Varianten innerhalb, 19:30 in
+    faelschlich raus. 15:30 laege in beiden Varianten innerhalb, 20:30 in
     beiden ausserhalb; beide bewiesen nichts (derselbe Fehler wie beim
     urspruenglichen AC-2).
     """
-    mails = _alarm_mails(ALPEN_LAT, ALPEN_LON, "13:18", 16, day_window=(6, 16))
+    mails = _alarm_mails(ALPEN_LAT, ALPEN_LON, "13:18", 17, day_window=(6, 16))
     assert not mails, (
         "AC-6: Bei konfiguriertem Tagesfenster 6-16 Uhr liegt ein Gewitter um "
-        "16:30 Ortszeit AUSSERHALB — es darf kein Alarm zugestellt werden. "
+        "17:30 Ortszeit AUSSERHALB — es darf kein Alarm zugestellt werden. "
         f"Tatsaechlich zugestellt: {[s for s, _ in mails]}. Das Ziel-Segment "
         "reicht bis zur Default-Obergrenze 19:00 statt bis zur konfigurierten "
         "16:00 — resolve_configured_window() wird nicht (oder mit einem "

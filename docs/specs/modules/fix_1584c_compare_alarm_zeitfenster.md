@@ -379,3 +379,12 @@ Implementierung gleichermaßen grün bliebe, ist wertlos (s. Mutations-Block).
 ## Changelog
 
 - 2026-08-08: Initial spec created
+- 2026-08-17: Die hier offen benannte Known Limitation zur Randstunde der
+  Obergrenze ist mit #1599 erledigt
+  (`docs/specs/modules/fix_1599_tagesfenster_randstunde.md`): die Obergrenze
+  ist seither inklusiv, `_window_bound()` baut nur noch die Untergrenze, die
+  Obergrenze kommt aus dem geteilten
+  `app/day_window.py::window_end_utc_exclusive()`. `test_ac3b_…stunde_19_
+  liegt_ausserhalb…` ist entsprechend umgedreht (Stunde 19 liegt jetzt
+  innerhalb); `test_ac8b_…stunde_20_ausserhalb` bleibt unverändert gültig und
+  ist die Positivkontrolle für die neue Kante.
