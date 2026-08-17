@@ -502,6 +502,95 @@ class TestJsonStructure:
 
 
 # ---------------------------------------------------------------------------
+# Issue #1699: Herkunftsmerkmal `briefing_backed` (AC-5 Lesemethode, AC-8)
+#
+# SPEC: docs/specs/modules/fix_1699_anker_ohne_briefing.md. Additives Feld nach
+# dem `target_date`-Praezedenzfall aus #1661: eigene schlanke Lesemethode, die
+# NUR dieses Feld liest. Unterschied zu `load_target_date()`: ein fehlendes
+# Feld ergibt hier `True` (Altbestand gilt als briefing-gestuetzt), nicht
+# `None` — das ist die freigegebene PO-Auslegung der Spec.
+# ---------------------------------------------------------------------------
+
+class TestBriefingBackedHerkunft:
+    """AC-5 (Lesemethode) + AC-8 (Persistenz-Roundtrip)."""
+
+    def test_ac8_save_mit_briefing_backed_false_wird_gespeichert_und_gelesen(
+        self, tmp_path: Path
+    ) -> None:
+        """
+        AC-8: GIVEN `save(..., briefing_backed=False)` — der Aufruf, den
+        `trip_command_processor._fetch_and_save_snapshot` fuer reine Abfragen
+        macht / WHEN die Lesemethode das Feld liest / THEN liefert sie `False`,
+        und das Feld steht auch so im JSON. Vor dem Fix fehlte beides.
+        """
+        from services.weather_snapshot import WeatherSnapshotService
+
+        service = WeatherSnapshotService(user_id="default")
+        service._snapshots_dir = tmp_path
+
+        service.save(
+            "abfrage-trip", [_make_segment_weather()], date(2026, 2, 14),
+            briefing_backed=False,
+        )
+
+        assert service.load_briefing_backed("abfrage-trip") is False
+        raw = json.loads((tmp_path / "abfrage-trip.json").read_text())
+        assert raw["briefing_backed"] is False, (
+            f"Das Herkunftsmerkmal muss im JSON stehen: {raw.keys()}"
+        )
+
+    def test_ac8_regulaeres_save_ohne_angabe_gilt_als_briefing_gestuetzt(
+        self, tmp_path: Path
+    ) -> None:
+        """
+        AC-8: GIVEN `save()` ohne Herkunftsangabe — so schreibt der regulaere
+        Briefing-Lauf (`trip_report_scheduler.py:1509`) / WHEN die Lesemethode
+        das Feld liest / THEN liefert sie `True`. Vor dem Fix rot allein wegen
+        der fehlenden Lesemethode; der Default ist die Bestandsbedeutung.
+        """
+        from services.weather_snapshot import WeatherSnapshotService
+
+        service = WeatherSnapshotService(user_id="default")
+        service._snapshots_dir = tmp_path
+
+        service.save("briefing-trip", [_make_segment_weather()], date(2026, 2, 14))
+
+        assert service.load_briefing_backed("briefing-trip") is True
+
+    def test_ac5_altbestand_ohne_feld_gilt_als_briefing_gestuetzt(
+        self, tmp_path: Path
+    ) -> None:
+        """
+        AC-5 (Lesemethoden-Teil): GIVEN eine vor dem Deploy geschriebene Datei
+        OHNE den Schluessel `briefing_backed` — bewusst DIREKT geschrieben, nicht
+        ueber `save()`, sonst pruefte der Test nur die eigene Annahme / WHEN die
+        Lesemethode sie liest / THEN liefert sie `True`.
+
+        Gilt genauso fuer fehlende und unlesbare Dateien: fail-soft nach `True`,
+        nie `None`/`False` — sonst verwuerfe der erste Alarmlauf nach dem Deploy
+        flaechendeckend Anker. Der Verhaltensteil von AC-5 steht am Wirkort in
+        `tests/tdd/test_alert_anchor_day_guard.py`.
+        """
+        from services.weather_snapshot import WeatherSnapshotService
+
+        service = WeatherSnapshotService(user_id="default")
+        service._snapshots_dir = tmp_path
+
+        (tmp_path / "altbestand.json").write_text(json.dumps({
+            "trip_id": "altbestand",
+            "target_date": "2026-02-14",
+            "snapshot_at": "2026-02-14T07:00:00+00:00",
+            "provider": "openmeteo",
+            "segments": [],
+        }))
+        (tmp_path / "kaputt.json").write_text("{kein json!!!")
+
+        assert service.load_briefing_backed("altbestand") is True
+        assert service.load_briefing_backed("kaputt") is True
+        assert service.load_briefing_backed("gibt-es-nicht") is True
+
+
+# ---------------------------------------------------------------------------
 # Test: Loader helper
 # ---------------------------------------------------------------------------
 
