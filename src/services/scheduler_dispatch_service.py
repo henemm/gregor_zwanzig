@@ -544,7 +544,7 @@ def send_one_compare_preset(
     # ausschliesslich den Versandaufruf (AC-10), danach fliegt die Ausnahme
     # unveraendert weiter.
     try:
-        NotificationService(settings, user_id).send_compare_report(
+        send_result = NotificationService(settings, user_id).send_compare_report(
             subject=subject,
             html_body=html_body,
             text_body=text_body,
@@ -573,6 +573,20 @@ def send_one_compare_preset(
         )
         _anchor_and_reset()
         raise
+
+    # Issue #1714: im Briefing gezeigte amtliche Warnungen als „gemeldet"
+    # vermerken, damit der unabhaengige Checker sie nicht kurz darauf erneut
+    # als eigenen Alarm verschickt (Trip-Gegenstueck seit #1614 Teil 1).
+    if send_result.sent and not on_demand:
+        from services import alert_briefing_anchor
+
+        for loc_result in result.locations:
+            if loc_result.official_alerts:
+                alert_briefing_anchor.record_official_alerts_reported(
+                    user_id=user_id,
+                    entity_id=f"{preset_id}:{loc_result.location.id}",
+                    alerts=loc_result.official_alerts,
+                )
 
     _anchor_and_reset()
 
