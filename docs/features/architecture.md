@@ -305,17 +305,27 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      - Neu (kein Eintrag): Alert sent, Eintrag angelegt
      - Stagnation (`|current - last| < threshold`): unterdrückt
      - Eskalation (`|current - last| >= threshold`): erneut Alert, Wert aktualisiert
-   - **Re-Alert-Logik (amtlicher Raum) seit #1685 (2026-08-11):** entscheidet
-     `official_alert_revision_verdict()` in `output/renderers/alert/official_alerts.py` —
-     **geteilt** von Trip (`trip_alert.check_official_alert_triggers`) und Ortsvergleich
-     (`compare_official_alert._detect`). Überlappt das Gültigkeitsfenster einer Warnung **echt**
-     mit dem eines gemeldeten Eintrags gleicher Identität + Gefahr, bleibt sie **still**;
+   - **Re-Alert-Logik (amtlicher Raum) seit #1685 (2026-08-11), präzisiert durch #1657
+     (2026-08-17):** entscheidet `official_alert_revision_verdict()` in
+     `output/renderers/alert/official_alerts.py` — **geteilt** von Trip
+     (`trip_alert.check_official_alert_triggers`) und Ortsvergleich
+     (`compare_official_alert._detect`). Überlappt das Gültigkeitsfenster einer Warnung mit
+     dem eines gemeldeten Eintrags gleicher Identität + Gefahr, bleibt sie **still**;
      Ausnahmen: Stufe gestiegen ODER Beginn **≥ 2 h früher** (PO-Entscheidung: ein früher
-     eintretendes Ereignis zwingt zum Umplanen). Aneinandergrenzende Fenster sind **keine**
-     Überlappung und bleiben zwei Warnungen — präzisiert #1245 AC-4 zu „T2 überlappt T1 nicht".
-     Bei stiller Revision wird fortgeschrieben (alter Schlüssel entfällt, `reported_at` bleibt
-     das Datum der tatsächlichen Meldung); ohne diese Fortschreibung meldete das dritte Glied
-     einer Revisionskette fälschlich erneut. Die **Anzeige** (`dedupe_official_alerts`) ist davon
+     eintretendes Ereignis zwingt zum Umplanen). **Seit #1657 zählt Berührung als
+     Überlappung** (`<=` statt `<`): aneinandergrenzende Fenster (A endet 14:00, B beginnt
+     14:00) gelten als dieselbe Warnung und bleiben still — das revidiert die vormalige
+     #1245-AC-4-Präzisierung „T2 überlappt T1 nicht". Nur eine echte Lücke, und sei sie nur
+     eine Sekunde, bleibt eigenständig und meldet weiterhin. Zusätzlich erkennt #1657
+     **Containment**: umschließt das neue Fenster einen Bestandskandidaten vollständig UND
+     ist dessen `reported_at` höchstens 6 h alt, entfällt die ≥2h-Vorverlegungs-Ausnahme —
+     der Fall gilt als reiner Granularitätswechsel und bleibt still (die
+     Eskalations-Ausnahme bei Stufenanstieg bleibt davon unberührt wirksam). Ist der
+     Kandidat älter als 6 h, greift Containment nicht — Schutz gegen einen nie bereinigten
+     Alt-Eintrag (#1614), der sonst eine echte neue Warnung verschlucken würde. Bei stiller
+     Revision wird fortgeschrieben (alter Schlüssel entfällt, `reported_at` bleibt das Datum
+     der tatsächlichen Meldung); ohne diese Fortschreibung meldete das dritte Glied einer
+     Revisionskette fälschlich erneut. Die **Anzeige** (`dedupe_official_alerts`) ist davon
      unberührt — beide Perioden bleiben in der Mail sichtbar.
    - **Reset seit #1460 T1 (2026-08-03, ADR-0043):** beim Briefing-Versand wird nur noch der
      Änderungs-Raum (`<feld>:<segment>`) gelöscht — der amtliche Raum überlebt den Reset, damit

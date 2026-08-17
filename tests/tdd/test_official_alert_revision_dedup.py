@@ -203,7 +203,12 @@ REVISION_CASES = [
     pytest.param(-2, -2, 0, True, id="ac3-exakt-2h-frueher-meldet"),
     pytest.param(-4, -4, 0, True, id="ac4-4h-frueher-meldet"),
     pytest.param(4, 5, 1, True, id="ac5-stufe-gestiegen-meldet"),
-    pytest.param(24, 24, 0, True, id="ac6-kein-zeit-ueberlapp-meldet"),
+    # Issue #1657 "Zu revidierende Zusicherung": der frueher pauschale Fall
+    # `ac6-kein-zeit-ueberlapp-meldet` zerfaellt in zwei Teilfaelle. Die echte
+    # Luecke bleibt eine eigenstaendige Warnung (#1657 AC-2), die exakte
+    # Beruehrung gilt kuenftig als dieselbe Warnung (#1657 AC-1).
+    pytest.param(24, 24, 0, True, id="ac6-echte-luecke-meldet"),
+    pytest.param(8, 8, 0, False, id="ac6b-beruehrung-still"),
 ]
 
 
@@ -536,9 +541,18 @@ def test_ac1_ac3_ac10_ac11_trip_checker_real_entry():
     assert chain[1] == [], f"Zweites Glied muss still bleiben: {chain[1]!r}"
     assert chain[2] == [], f"Drittes Glied muss (Fortschreibung) still bleiben: {chain[2]!r}"
 
+    # Issue #1657 AC-1 REVIDIERT diese Zusicherung am echten Einstieg: das
+    # zweite Fenster beginnt exakt dort, wo das erste endet (`base_to` ==
+    # `base_from + 8h`). #1685 AC-11 verlangte hier eine erneute Meldung,
+    # #1657 AC-1 verlangt Stille ("Beruehrung zaehlt als Ueberlappung").
+    # Beide Zusicherungen koennen nicht gleichzeitig gelten -- die freigegebene
+    # Spec fix_1657_warnfenster_identitaet.md gewinnt.
     adjacent = _run_trip_chain("ac11", [(0, 0, 2), (8, 8, 2)])
     assert len(adjacent[0]) == 1
-    assert len(adjacent[1]) == 1, f"AC-11: angrenzend/nicht-ueberlappend muss neu gemeldet werden: {adjacent[1]!r}"
+    assert adjacent[1] == [], (
+        f"#1657 AC-1: exakt angrenzendes Fenster darf am echten Einstieg NICHT "
+        f"erneut gemeldet werden: {adjacent[1]!r}"
+    )
 
 
 def test_ac13_mandantentrennung_fortschreibung_beruehrt_nur_den_eigenen_nutzer():
@@ -647,6 +661,517 @@ def test_ac14_compare_orts_isolation_keine_fortschreibung_ueber_die_location_id_
         _, per_loc_second = svc._detect(preset_id, [loc_a, loc_b])
         assert "loc-b-1685" in per_loc_second, f"Ort B muss trotz identischem Fenster neu gelten: {per_loc_second!r}"
         assert "loc-a-1685" not in per_loc_second, f"Ort A darf nicht erneut als neu gelten: {per_loc_second!r}"
+    finally:
+        oa_base._REGISTERED_SOURCES.clear()
+        oa_base._REGISTERED_SOURCES.extend(backup)
+        _clean_user(user_id)
+
+
+# =====================================================================
+# Issue #1657 -- Beruehrende und umschliessende Warnfenster sind dieselbe
+# amtliche Warnung. SPEC: docs/specs/modules/fix_1657_warnfenster_identitaet.md
+# KONTEXT: docs/context/fix-1657-warnung-identitaet.md
+#
+# Zeit wird INJIZIERT, nie gemessen: jeder Test, der den 6h-Frische-Guard
+# beruehrt, reicht `now` explizit herein und setzt `reported_at` als festen
+# Wert relativ dazu (Spec-Abschnitt "Test-Schicht"). Der Guard ist die
+# einzige Sicherung dagegen, dass eine echte neue Warnung verschluckt wird --
+# ein an der Grenze sporadisch roter Test wuerde als "flaky" abgetan und die
+# Sicherung fiele still aus.
+# =====================================================================
+
+R1657 = "Kartitsch-1657"
+
+
+def _entry_1657(alert: OfficialAlert, reported_at: datetime) -> dict:
+    """Melde-Gedaechtnis-Eintrag wie ihn `official_alert_state_entry` schreibt
+    -- hier mit explizit gesetztem `reported_at`, damit der 6h-Guard exakt
+    und nicht gegen die Laufzeituhr geprueft wird."""
+    return {
+        "last_reported_value": float(alert.level),
+        "reported_at": reported_at.isoformat(),
+        "valid_from": alert.valid_from.isoformat(),
+        "valid_to": alert.valid_to.isoformat(),
+    }
+
+
+def _verdict_round(state: dict, alert: OfficialAlert, reported_at: datetime, now: datetime) -> bool:
+    """Ein Prueflauf inklusive der Fortschreibung, die die BEIDEN echten
+    Aufrufstellen (`trip_alert.py:1499-1508`, `compare_official_alert.py:
+    268-279`) identisch ausfuehren: melden -> neuer Eintrag; stille Revision
+    -> `stale_key` raus, `merged_entry` unter dem neuen Schluessel rein."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(alert, state, now=now)
+    if should_report:
+        state[official_alert_state_key(alert)] = _entry_1657(alert, reported_at)
+    elif merged_entry is not None:
+        del state[stale_key]
+        state[official_alert_state_key(alert)] = merged_entry
+    return should_report
+
+
+def _utc(day: int, hour: int, minute: int = 0, second: int = 0, *, month: int = 8) -> datetime:
+    return datetime(2026, month, day, hour, minute, second, tzinfo=timezone.utc)
+
+
+def _containment_state(now: datetime, kandidat_alter: timedelta) -> tuple[dict, datetime, datetime]:
+    """Zwei frische Schmaleintraege derselben Identitaet+Gefahr (`08:00-09:00Z`
+    und `09:00-10:00Z`). Der spaeter gemeldete gewinnt den Tie-Break; sein
+    Beginn liegt 4h nach dem des breiten Fensters `05:00-13:00Z`, damit die
+    #1685-Vorverlegungs-Ausnahme (>=2h) ohne die #1657-Containment-Regel
+    zwingend greifen wuerde."""
+    schmal_a = _mk_alert(_utc(16, 8), _utc(16, 9), 2, region=R1657)
+    schmal_b = _mk_alert(_utc(16, 9), _utc(16, 10), 2, region=R1657)
+    state = {
+        official_alert_state_key(schmal_a): _entry_1657(schmal_a, now - kandidat_alter - timedelta(minutes=30)),
+        official_alert_state_key(schmal_b): _entry_1657(schmal_b, now - kandidat_alter),
+    }
+    return state, _utc(16, 5), _utc(16, 13)
+
+
+def test_beruehrendes_folgefenster_meldet_nicht_erneut():
+    """Test 1/AC-1 (RED): `14:00-15:00Z` beginnt exakt dort, wo `13:00-14:00Z`
+    endet -- dieselbe durchgehende Gefahr in stundenfeiner Ausgabe. Heute
+    faellt der Fall durch `alert_vf < cand_vt` (strikt) aus der
+    Kandidatensuche und wird als voellig neue Warnung gemeldet."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    bestand = _mk_alert(_utc(16, 13), _utc(16, 14), 2, region=R1657)
+    bestand_key = official_alert_state_key(bestand)
+    state = {bestand_key: _entry_1657(bestand, _utc(16, 13, 15, 14))}
+    folge = _mk_alert(_utc(16, 14), _utc(16, 15), 2, region=R1657)
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(folge, state)
+
+    assert should_report is False, (
+        "AC-1: exakt anschliessendes Fenster ist dieselbe amtliche Warnung und darf "
+        f"nicht erneut melden: {should_report!r}"
+    )
+    assert stale_key == bestand_key, f"Stille Revision muss den alten Schluessel markieren: {stale_key!r}"
+    assert merged_entry["valid_from"] == folge.valid_from.isoformat()
+    assert merged_entry["valid_to"] == folge.valid_to.isoformat()
+    assert merged_entry["reported_at"] == _utc(16, 13, 15, 14).isoformat(), (
+        f"Fortschreibung darf den urspruenglichen reported_at nicht veraendern: {merged_entry!r}"
+    )
+
+
+def test_eine_sekunde_luecke_bleibt_eine_eigenstaendige_warnung():
+    """Test 2/AC-2 (Non-Regression, gruen): die ausdrueckliche Grenze der
+    Revision. Eine Luecke von einer einzigen Sekunde macht die Warnung wieder
+    zu einer eigenstaendigen Warnung -- sonst waere `<=` ein Freibrief."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    bestand = _mk_alert(_utc(16, 13), _utc(16, 14), 2, region=R1657)
+    state = {official_alert_state_key(bestand): _entry_1657(bestand, _utc(16, 13, 15, 14))}
+    nach_luecke = _mk_alert(_utc(16, 14, 0, 1), _utc(16, 15), 2, region=R1657)
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(nach_luecke, state)
+
+    assert should_report is True, (
+        f"AC-2: eine Sekunde echte Luecke bleibt eine eigenstaendige Warnung: {should_report!r}"
+    )
+    assert stale_key is None and merged_entry is None
+
+
+def test_umschliessendes_breitfenster_mit_frischem_kandidaten_bleibt_still():
+    """Test 3/AC-3 (RED): das breite Fenster `05:00-13:00Z` umschliesst beide
+    Schmaleintraege vollstaendig -- reiner Granularitaetswechsel derselben
+    Gefahr. Heute wertet die Funktion den 4h frueheren Beginn als
+    "Vorverlegung >=2h" (#1685) und meldet erneut."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    now = _utc(16, 16, 30, 2)
+    state, breit_vf, breit_vt = _containment_state(now, timedelta(minutes=10))
+    breit = _mk_alert(breit_vf, breit_vt, 2, region=R1657)
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(breit, state, now=now)
+
+    assert should_report is False, (
+        "AC-3: umschliessendes Breitfenster mit frischem Kandidaten ist eine stille "
+        f"Granularitaets-Revision, keine Vorverlegung: {should_report!r}"
+    )
+    assert merged_entry is not None and stale_key in state, f"stale_key={stale_key!r}"
+
+
+def test_umschliessendes_breitfenster_mit_veraltetem_kandidaten_meldet():
+    """Test 4/AC-4 (RED): der 6h-Zeitnaehe-Guard. `AlertStateService.reset()`
+    behaelt `official_alert:`-Eintraege ueber den Briefing-Reset hinweg
+    (#1614) -- ohne Guard wuerde ein Wochen alter Eintrag eine voellig neue,
+    unabhaengige Warnung derselben Region+Gefahr verschlucken."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    now = _utc(16, 16, 30, 2)
+    state, breit_vf, breit_vt = _containment_state(now, timedelta(hours=7))
+    breit = _mk_alert(breit_vf, breit_vt, 2, region=R1657)
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(breit, state, now=now)
+
+    assert should_report is True, (
+        "AC-4: Containment darf einen >6h alten Bestandskandidaten NICHT still "
+        f"fortschreiben -- sonst verschluckt ein Alt-Eintrag eine echte neue Warnung: {should_report!r}"
+    )
+    assert stale_key is None and merged_entry is None
+
+
+def test_containment_guard_grenze_liegt_bei_sechs_stunden_nicht_darunter():
+    """Test 5 (RED): Grenzfall des Guards -- 5h59min ist noch frisch. Die
+    Grenze liegt bei ">6h", nicht bei ">=6h" und nicht bei "5h"."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    now = _utc(16, 16, 30, 2)
+    state, breit_vf, breit_vt = _containment_state(now, timedelta(hours=5, minutes=59))
+    breit = _mk_alert(breit_vf, breit_vt, 2, region=R1657)
+
+    should_report, _stale_key, _merged = official_alert_revision_verdict(breit, state, now=now)
+
+    assert should_report is False, (
+        f"Guard-Grenze: 5h59min alter Kandidat ist noch frisch, Containment greift: {should_report!r}"
+    )
+
+
+def test_stufenerhoehung_meldet_trotz_containment():
+    """Test 6/AC-5 (Non-Regression, gruen): die Eskalations-Zusicherung aus
+    #1685 bleibt unter Containment wirksam.
+
+    Der Vorverlegungs-Abstand ist hier bewusst auf 1h30 gesetzt (Kandidat
+    `06:30-07:30Z` gegen Breitfenster `05:00-13:00Z`) -- damit traegt die
+    Meldung ALLEIN die gestiegene Stufe. Waere der Abstand >=2h, bliebe der
+    Test auch dann gruen, wenn die Eskalations-Bedingung ersatzlos entfiele,
+    und wuerde gar nichts bewachen. Kein `now`: der Eskalations-Zweig liegt
+    vor dem 6h-Guard und erreicht ihn nie."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    schmal_a = _mk_alert(_utc(16, 5, 30), _utc(16, 6, 30), 2, region=R1657)
+    schmal_b = _mk_alert(_utc(16, 6, 30), _utc(16, 7, 30), 2, region=R1657)
+    state = {
+        official_alert_state_key(schmal_a): _entry_1657(schmal_a, _utc(16, 5, 35)),
+        official_alert_state_key(schmal_b): _entry_1657(schmal_b, _utc(16, 6, 35)),
+    }
+    breit_orange = _mk_alert(_utc(16, 5), _utc(16, 13), 3, region=R1657)
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(breit_orange, state)
+
+    assert should_report is True, (
+        f"AC-5: Stufenerhoehung ueberlebt Containment und meldet als Alarm: {should_report!r}"
+    )
+    assert stale_key is None and merged_entry is None
+
+
+def test_echte_vorverlegung_ohne_containment_meldet_weiterhin():
+    """Test 7/AC-6 (Non-Regression, gruen): `12:00-20:00Z` gegen Bestand
+    `14:00-22:00Z` -- 2h frueherer Beginn, aber KEIN Containment (das Ende
+    liegt frueher). Die #1685-Vorverlegungs-Ausnahme bleibt unangetastet."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    now = _utc(16, 12, 30)
+    bestand = _mk_alert(_utc(16, 14), _utc(16, 22), 2, region=R1657)
+    state = {official_alert_state_key(bestand): _entry_1657(bestand, now - timedelta(minutes=10))}
+    vorverlegt = _mk_alert(_utc(16, 12), _utc(16, 20), 2, region=R1657)
+
+    # Kein `now`: ohne Containment erreicht der Fall den 6h-Guard nie -- der
+    # Test muss schon vor der Implementierung gruen sein (Non-Regression).
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(vorverlegt, state)
+
+    assert should_report is True, (
+        f"AC-6: echte Vorverlegung >=2h ohne Containment meldet wie vor dieser Spec: {should_report!r}"
+    )
+    assert stale_key is None and merged_entry is None
+
+
+def test_kirchbach_drei_fenster_melden_genau_einmal():
+    """Test 8/AC-7 (RED): die drei realen Kirchbach-Fenster vom 2026-08-16,
+    alle Stufe 2.0, in der realen Reihenfolge mit den realen Ausgabezeiten.
+    Der PO erhielt drei Meldungen fuer eine durchgehende Gewitterwarnung."""
+    state: dict = {}
+    fenster = [
+        (_utc(16, 13), _utc(16, 14), _utc(16, 13, 15, 14)),
+        (_utc(16, 14), _utc(16, 15), _utc(16, 13, 45, 2)),
+        (_utc(16, 11), _utc(16, 20), _utc(16, 16, 30, 2)),
+    ]
+    meldungen = [
+        _verdict_round(state, _mk_alert(vf, vt, 2, region=R1657), reported_at, reported_at)
+        for vf, vt, reported_at in fenster
+    ]
+
+    assert meldungen == [True, False, False], (
+        f"AC-7: Kirchbach muss GENAU EINMAL melden (erstes Fenster), danach still "
+        f"fortgeschrieben werden: {meldungen!r}"
+    )
+
+
+def test_obertilliach_drei_fenster_melden_genau_zweimal():
+    """Test 9/AC-8 (RED): Obertilliach 2026-08-11. Zwischen Fenster 1
+    (`15:00-16:00Z`) und Fenster 2 (`17:00-18:00Z`) liegt eine ECHTE
+    einstuendige Luecke -- Fenster 2 bleibt deshalb eine eigenstaendige
+    Warnung. Erst das dritte, umschliessende Fenster ist eine stille
+    Revision. Zwei Meldungen, nicht eine: das Ergebnis ist nachgerechnet,
+    nicht auf "genau einmal" geschoent."""
+    state: dict = {}
+    fenster = [
+        (_utc(11, 15), _utc(11, 16), _utc(11, 14, 30, 14)),
+        (_utc(11, 17), _utc(11, 18), _utc(11, 15, 45, 22)),
+        (_utc(11, 13), _utc(11, 19), _utc(11, 17, 45, 9)),
+    ]
+    meldungen = [
+        _verdict_round(state, _mk_alert(vf, vt, 2, region=R1657), reported_at, reported_at)
+        for vf, vt, reported_at in fenster
+    ]
+
+    assert meldungen == [True, True, False], (
+        f"AC-8: Obertilliach muss GENAU ZWEIMAL melden (echte Luecke zwischen Fenster 1 "
+        f"und 2), nur das dritte, umschliessende Fenster bleibt still: {meldungen!r}"
+    )
+
+
+def test_stufenerhoehung_bei_reiner_ueberlappung_meldet_weiterhin():
+    """Test 11 (Non-Regression #1685 AC-5, gruen): ueberlappendes, NICHT
+    umschliessendes Fenster mit gestiegener Stufe meldet wie bisher."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    now = _utc(16, 12)
+    bestand = _mk_alert(_utc(16, 10), _utc(16, 14), 2, region=R1657)
+    state = {official_alert_state_key(bestand): _entry_1657(bestand, now - timedelta(minutes=5))}
+    eskaliert = _mk_alert(_utc(16, 12), _utc(16, 16), 3, region=R1657)
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(eskaliert, state)
+
+    assert should_report is True, f"Stufenerhoehung bei reiner Ueberlappung meldet: {should_report!r}"
+    assert stale_key is None and merged_entry is None
+
+
+def test_zeitlose_warnung_umgeht_beruehrungs_und_containment_pruefung():
+    """Test 12/AC-10 (Non-Regression, gruen): fehlen `valid_from`/`valid_to`,
+    entscheidet ausschliesslich der exakte Schluesseltreffer -- weder die neue
+    Beruehrungs- noch die neue Containment-Pruefung darf dort greifen."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    zeitlos = OfficialAlert(source="test-1657", hazard="wildfire", level=2,
+                            label="Waldbrand-Gefahr (#1657 AC-10)", region_label="Var-1657")
+    state = {official_alert_state_key(zeitlos): {
+        "last_reported_value": 2.0, "reported_at": "2026-08-16T05:01:19+00:00",
+    }}
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(zeitlos, state)
+
+    assert should_report is False, f"Unveraenderte zeitlose Warnung darf nicht erneut melden: {should_report!r}"
+    assert stale_key is None and merged_entry is None
+
+
+# ---------------------------------------------------------------------
+# Adversary-Fix-Loop #1657 -- Mutations-Gegenprobe hatte drei unbewachte
+# Zweige gefunden (Protokoll: docs/artifacts/fix-1657-warnung-identitaet/
+# adversary-dialog.md, Runde 2). Die folgenden Tests schliessen sie. Jeder
+# traegt eine POSITIVKONTROLLE im selben Test: dieselbe Konstellation mit
+# genau einem umgestellten Merkmal muss das ANDERE Ergebnis liefern -- sonst
+# waere nicht belegt, dass die gepruefte Grenze das Ergebnis ueberhaupt traegt.
+# ---------------------------------------------------------------------
+
+F003_UNBRAUCHBARER_REPORTED_AT = [
+    pytest.param("__schluessel-fehlt__", id="reported_at-fehlt-ganz"),
+    pytest.param(None, id="reported_at-none"),
+    pytest.param("", id="reported_at-leerer-string"),
+    pytest.param("kein-zeitstempel", id="reported_at-unparsebar"),
+]
+
+
+@pytest.mark.parametrize("kaputter_wert", F003_UNBRAUCHBARER_REPORTED_AT)
+def test_f003_containment_mit_unbrauchbarem_reported_at_meldet_statt_zu_verschlucken(kaputter_wert):
+    """Adversary F003 (#1657 Fix-Loop, CRITICAL): der `except`-Zweig des
+    6h-Frische-Guards (`official_alerts.py:533-534`) war von KEINEM der 102
+    Tests bewacht -- die Mutation `kandidat_frisch = True` (Containment greift
+    ⇒ echte neue Warnung wird VERSCHLUCKT) blieb komplett gruen. Genau die
+    gefaehrliche Richtung an der Stelle, die die Spec "die einzige Sicherung
+    dagegen, dass eine echte neue Warnung verschluckt wird" nennt.
+
+    `test_f002_tie_break_und_merge_ueberleben_reported_at_null` erreicht den
+    Zweig nicht: dort ist `is_containment` in BEIDEN Teilfaellen `False`, der
+    Guard wird nie betreten.
+
+    Vier Ausfallarten eines migrierten/korrupten State-Eintrags (#1614 haelt
+    `official_alert:`-Eintraege ueber den Briefing-Reset hinweg): Schluessel
+    fehlt ganz, `None`, leerer String, unparsebarer Text. Erwartung jedes Mal:
+    NICHT frisch ⇒ Containment greift nicht ⇒ die #1685-Vorverlegungs-Ausnahme
+    bleibt wirksam ⇒ es wird gemeldet. Im Zweifel melden, nicht schlucken."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    now = _utc(16, 16, 30, 2)
+    schmal = _mk_alert(_utc(16, 8), _utc(16, 9), 2, region=R1657)
+    schmal_key = official_alert_state_key(schmal)
+    breit = _mk_alert(_utc(16, 5), _utc(16, 13), 2, region=R1657)
+
+    def _state(reported_at_wert) -> dict:
+        entry = {
+            "last_reported_value": 2.0,
+            "valid_from": schmal.valid_from.isoformat(),
+            "valid_to": schmal.valid_to.isoformat(),
+        }
+        if reported_at_wert != "__schluessel-fehlt__":
+            entry["reported_at"] = reported_at_wert
+        return {schmal_key: entry}
+
+    # POSITIVKONTROLLE: identische Fenster, nur mit BRAUCHBAREM, frischem
+    # `reported_at`. Sie beweist, dass `is_containment` hier tatsaechlich True
+    # ist und der Guard-Zweig ueberhaupt erreicht wird -- ohne sie koennte der
+    # Haupt-Assert auch aus einem ganz anderen Grund gruen sein.
+    kontroll_state = {schmal_key: _entry_1657(schmal, now - timedelta(minutes=10))}
+    kontrolle, _k_stale, _k_merged = official_alert_revision_verdict(breit, kontroll_state, now=now)
+    assert kontrolle is False, (
+        "Vorbedingung: mit frischem reported_at MUSS dieselbe Konstellation still bleiben "
+        f"(sonst prueft der Test unten gar nicht den Guard-Zweig): {kontrolle!r}"
+    )
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(
+        breit, _state(kaputter_wert), now=now,
+    )
+
+    assert should_report is True, (
+        f"F003: Kandidat mit unbrauchbarem reported_at ({kaputter_wert!r}) darf NICHT als "
+        f"frisch gelten -- sonst verschluckt ein korrupter Alt-Eintrag eine echte neue "
+        f"Gewitterwarnung: {should_report!r}"
+    )
+    assert stale_key is None and merged_entry is None, (
+        f"Melden liefert kein stale_key/merged_entry: {stale_key!r} / {merged_entry!r}"
+    )
+
+
+def test_f001_beruehrung_aus_der_gegenrichtung_zaehlt_ebenfalls_als_ueberlappung():
+    """Adversary F001 (#1657 Fix-Loop, MEDIUM): die Ueberlappungsbedingung
+    `alert_vf <= cand_vt and cand_vf <= alert_vt` (`official_alerts.py:503`)
+    besteht aus zwei unabhaengigen Grenzen. Die erste war bewacht (Mutation
+    von 4 Tests gefangen), die ZWEITE nicht -- alle bisherigen
+    Beruehrungs-Tests legen das neue Fenster HINTER den Bestand.
+
+    Hier der umgekehrte Fall: das neue Fenster `13:00-14:00Z` endet exakt
+    dort, wo der Bestandskandidat `14:00-15:00Z` beginnt (die Behoerde
+    ergaenzt eine Stunde nach VORN). Auch das ist AC-1 -- dieselbe
+    durchgehende Gefahr, keine neue Warnung."""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    bestand = _mk_alert(_utc(16, 14), _utc(16, 15), 2, region=R1657)
+    bestand_key = official_alert_state_key(bestand)
+    state = {bestand_key: _entry_1657(bestand, _utc(16, 13, 50))}
+    davor = _mk_alert(_utc(16, 13), _utc(16, 14), 2, region=R1657)
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(davor, state)
+
+    assert should_report is False, (
+        "AC-1 (Gegenrichtung): ein Fenster, das exakt dort ENDET, wo der Bestand beginnt, "
+        f"ist dieselbe amtliche Warnung und darf nicht erneut melden: {should_report!r}"
+    )
+    assert stale_key == bestand_key, f"Stille Revision muss den alten Schluessel markieren: {stale_key!r}"
+
+    # POSITIVKONTROLLE: eine Sekunde echte Luecke davor -- Spiegelbild von
+    # test_eine_sekunde_luecke_bleibt_eine_eigenstaendige_warnung. Ohne sie
+    # waere nicht belegt, dass oben die BERUEHRUNG traegt und nicht etwa jedes
+    # beliebige frueher liegende Fenster still bliebe.
+    mit_luecke = _mk_alert(_utc(16, 12), _utc(16, 13, 59, 59), 2, region=R1657)
+    luecke_report, luecke_stale, luecke_merged = official_alert_revision_verdict(
+        mit_luecke, {bestand_key: _entry_1657(bestand, _utc(16, 13, 50))},
+    )
+    assert luecke_report is True, (
+        f"AC-2 (Gegenrichtung): eine Sekunde echte Luecke bleibt eigenstaendig: {luecke_report!r}"
+    )
+    assert luecke_stale is None and luecke_merged is None
+
+
+def test_f002_containment_greift_auch_bei_exakt_gleichem_fensterende():
+    """Adversary F002 (#1657 Fix-Loop, MEDIUM): die Gleichheitsgrenze
+    `alert_vt >= kandidat_vt` in `is_containment` (`official_alerts.py:525`)
+    war ungetestet -- die Verschaerfung auf `>` blieb gruen.
+
+    Konstellation, in der die Grenze das Ergebnis TATSAECHLICH kippt: der
+    Kandidat `08:00-13:00Z` endet exakt mit dem neuen Fenster `05:00-13:00Z`,
+    der Beginn liegt 3h frueher. Ohne Containment griffe die
+    #1685-Vorverlegungs-Ausnahme (>=2h) und meldete erneut; mit Containment
+    und frischem Kandidaten ist es ein reiner Granularitaetswechsel.
+
+    (Die Schwester-Grenze `alert_vf <= kandidat_vf` ist NICHT auf diese Weise
+    pruefbar -- s. Bericht: dort ist `<=` vs. `<` ein aequivalenter Mutant,
+    weil bei `alert_vf == kandidat_vf` die Vorverlegung ohnehin 0h betraegt
+    und Containment am Ergebnis nichts mehr aendern kann.)"""
+    from output.renderers.alert.official_alerts import official_alert_revision_verdict
+
+    now = _utc(16, 16, 30, 2)
+    kandidat = _mk_alert(_utc(16, 8), _utc(16, 13), 2, region=R1657)
+    kandidat_key = official_alert_state_key(kandidat)
+    state = {kandidat_key: _entry_1657(kandidat, now - timedelta(minutes=10))}
+    breit_gleiches_ende = _mk_alert(_utc(16, 5), _utc(16, 13), 2, region=R1657)
+
+    should_report, stale_key, merged_entry = official_alert_revision_verdict(
+        breit_gleiches_ende, state, now=now,
+    )
+
+    assert should_report is False, (
+        "AC-3: gleiches Fensterende zaehlt als vollstaendiges Umschliessen -- der 3h "
+        f"fruehere Beginn ist dann Granularitaet, keine Vorverlegung: {should_report!r}"
+    )
+    assert stale_key == kandidat_key and merged_entry is not None, (
+        f"Stille Revision erwartet: stale_key={stale_key!r} merged_entry={merged_entry!r}"
+    )
+
+    # POSITIVKONTROLLE: EINE SEKUNDE vor dem Kandidatenende -- damit ist das
+    # Umschliessen nicht mehr vollstaendig, die Vorverlegungs-Ausnahme lebt
+    # wieder auf. Beweist, dass oben die Gleichheitsgrenze das Ergebnis traegt.
+    knapp_kuerzer = _mk_alert(_utc(16, 5), _utc(16, 12, 59, 59), 2, region=R1657)
+    kontroll_report, kontroll_stale, kontroll_merged = official_alert_revision_verdict(
+        knapp_kuerzer, {kandidat_key: _entry_1657(kandidat, now - timedelta(minutes=10))}, now=now,
+    )
+    assert kontroll_report is True, (
+        "Eine Sekunde vor dem Kandidatenende ist KEIN Containment mehr -- die "
+        f"Vorverlegung >=2h muss dann wieder melden: {kontroll_report!r}"
+    )
+    assert kontroll_stale is None and kontroll_merged is None
+
+
+def test_compare_pfad_behandelt_containment_wie_der_trip_pfad(monkeypatch):
+    """Test 10/AC-9 (RED): Ortsvergleich-Paritaet ueber den echten Einstieg
+    `CompareOfficialAlertService._detect`. Beide Lesepfade teilen sich
+    dieselbe Funktion -- dieser Test beweist, dass der Compare-Pfad die
+    Containment-Regel tatsaechlich erbt und nicht nur der Trip-Pfad sie hat.
+
+    `reported_at` der vorbelegten Schmaleintraege steht auf der ECHTEN
+    Wanduhr minus 10 Minuten (nicht auf der eingefrorenen Compare-Zeit): der
+    Compare-Aufrufer reicht kein `now` herein, dort gilt der Default
+    `datetime.now(timezone.utc)`. So ist der Guard hier deterministisch
+    frisch, unabhaengig vom Kalendertag des Testlaufs."""
+    from app.config import Settings
+    from services.alert_state import AlertStateService
+    from services.compare_official_alert import CompareOfficialAlertService
+    from services.official_alerts import register_official_alert_source
+
+    user_id = _fresh_user("t1657-compare")
+    _clean_user(user_id)
+    oa_base, backup = _registered_sources_backup()
+    oa_base._REGISTERED_SOURCES.clear()
+    try:
+        frozen = datetime(2026, 8, 11, 6, 0, tzinfo=timezone.utc)
+        _freeze_compare_now(monkeypatch, frozen)
+        wall_now = datetime.now(timezone.utc)
+        breit = _mk_alert(frozen - timedelta(hours=1), frozen + timedelta(hours=7), 2, region=R1657)
+        schmal_a = _mk_alert(frozen + timedelta(hours=2), frozen + timedelta(hours=3), 2, region=R1657)
+        schmal_b = _mk_alert(frozen + timedelta(hours=3), frozen + timedelta(hours=4), 2, region=R1657)
+
+        loc = SavedLocation(id="loc-1657", name="Kartitsch-1657", lat=LAT, lon=LON, elevation_m=1000)
+        register_official_alert_source(_RevisableOfficialAlertSource(LAT, LON, breit))
+        preset_id = "preset-1657"
+        state_svc = AlertStateService(user_id=user_id)
+        state_svc.save(f"{preset_id}:{loc.id}", {
+            official_alert_state_key(schmal_a): _entry_1657(schmal_a, wall_now - timedelta(minutes=40)),
+            official_alert_state_key(schmal_b): _entry_1657(schmal_b, wall_now - timedelta(minutes=10)),
+        })
+
+        settings = Settings(smtp_host="dummy.invalid", smtp_user="dummy", smtp_pass="dummy",
+                            mail_to="dummy@example.com")
+        svc = CompareOfficialAlertService(settings=settings, user_id=user_id, mail_sink=lambda *a: None)
+
+        new_or_escalated, per_loc = svc._detect(preset_id, [loc])
+
+        assert new_or_escalated == [], (
+            f"AC-9: der Ortsvergleichs-Pfad muss das umschliessende Breitfenster genauso "
+            f"still fortschreiben wie der Trip-Pfad: {new_or_escalated!r}"
+        )
+        assert per_loc == {}, f"Kein Ort darf als neu gelten: {per_loc!r}"
     finally:
         oa_base._REGISTERED_SOURCES.clear()
         oa_base._REGISTERED_SOURCES.extend(backup)

@@ -291,8 +291,16 @@ class TestAC4TriggerNewPeriodFiresIndependently:
             now = datetime.now(timezone.utc)
             period_a_from = now - timedelta(hours=1)
             period_a_to = now + timedelta(hours=18)
-            period_b_from = period_a_to
-            period_b_to = period_a_to + timedelta(hours=24)
+            # Issue #1657 (AC-1): exakte Beruehrung zweier Zeitfenster
+            # (period_b_from == period_a_to) gilt seither als DIESELBE Warnung
+            # -- eine Verlaengerung, kein neuer Alarm. Siehe
+            # docs/specs/modules/fix_1657_warnfenster_identitaet.md.
+            # Dieser Test prueft bewusst den anderen Fall: zwei ECHT getrennte
+            # Zeitraeume. Die Stunde Abstand ist deshalb Absicht und kein
+            # Zufall -- sie entspricht der Fensterbreite, mit der dieser Test
+            # ohnehin rechnet, und haelt die Perioden klar auseinander.
+            period_b_from = period_a_to + timedelta(hours=1)
+            period_b_to = period_b_from + timedelta(hours=24)
 
             # Issue #1460 (P4): Die Tour muss BEIDE Perioden ueberhaupt
             # abdecken -- seit dem Etappen-Zeitfenster gehoert eine Warnung

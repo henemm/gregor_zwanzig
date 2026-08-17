@@ -426,7 +426,7 @@ def _identity_hazard_prefix(alert: "OfficialAlert") -> str:
 
 
 def official_alert_revision_verdict(
-    alert: "OfficialAlert", state: dict,
+    alert: "OfficialAlert", state: dict, now: "datetime | None" = None,
 ) -> tuple[bool, Optional[str], Optional[dict]]:
     """Issue #1685: Melde-Entscheidung fuer eine amtliche Warnung, die eine
     reine Fenster-Revision einer bereits gemeldeten Warnung derselben
@@ -455,7 +455,23 @@ def official_alert_revision_verdict(
     triggers` faengt das NICHT ab, sodass der Trip fuer den Lauf ALLE amtlichen
     Warnungen verliert. Deshalb werden hier ALLE verglichenen Zeitpunkte --
     Kandidat UND `alert` selbst -- vor jedem Vergleich normalisiert, und der
-    Vergleich steht im selben geschuetzten Block wie das Parsen."""
+    Vergleich steht im selben geschuetzten Block wie das Parsen.
+
+    Issue #1657 (PO-Entscheidung 2026-08-17): zwei Praezisierungen.
+    (1) Beruehrung zaehlt als Ueberlappung -- ein Fenster, das exakt dort
+    beginnt, wo das andere endet, ist dieselbe durchgehende Gefahr in
+    stundenfeiner Ausgabe. Eine echte Luecke (und sei sie eine Sekunde)
+    bleibt eine eigenstaendige Warnung.
+    (2) Umschliesst das neue Fenster den gewaehlten Kandidaten vollstaendig,
+    ist das ein reiner Granularitaetswechsel und keine Vorverlegung -- die
+    >=2h-Vorverlegungs-Ausnahme entfaellt dann. Die Eskalations-Bedingung
+    bleibt davon unberuehrt. Ein 6h-Frische-Guard auf `reported_at` des
+    Kandidaten verhindert, dass ein alter, nie bereinigter State-Eintrag
+    (`AlertStateService.reset()` behaelt `official_alert:`-Eintraege ueber
+    den Briefing-Reset hinweg, #1614) eine echte neue Warnung verschluckt.
+    Referenzzeit `now` ist injizierbar (Default `datetime.now(timezone.utc)`),
+    damit die 6h-Grenze exakt und nicht gegen die Laufzeituhr geprueft wird --
+    beide Aufrufstellen bleiben dadurch unveraendert."""
     from services.official_alerts.base import _as_aware_utc
 
     key = official_alert_state_key(alert)
@@ -472,7 +488,7 @@ def official_alert_revision_verdict(
     alert_vt = _as_aware_utc(alert.valid_to)
 
     prefix = _identity_hazard_prefix(alert)
-    candidates: list[tuple[str, dict, datetime]] = []
+    candidates: list[tuple[str, dict, datetime, datetime]] = []
     for cand_key, entry in state.items():
         if not cand_key.startswith(prefix):
             continue
@@ -482,20 +498,52 @@ def official_alert_revision_verdict(
         try:
             cand_vf = _as_aware_utc(datetime.fromisoformat(vf_raw))
             cand_vt = _as_aware_utc(datetime.fromisoformat(vt_raw))
-            if alert_vf < cand_vt and cand_vf < alert_vt:
-                candidates.append((cand_key, entry, cand_vf))
+            # Issue #1657 AC-1: `<=` statt `<` -- Beruehrung zaehlt als
+            # Ueberlappung. Eine echte Luecke faellt weiterhin heraus (AC-2).
+            if alert_vf <= cand_vt and cand_vf <= alert_vt:
+                candidates.append((cand_key, entry, cand_vf, cand_vt))
         except (TypeError, ValueError):
             continue
 
     if not candidates:
         return _exact_match_verdict()
 
-    stale_key, kandidat, kandidat_vf = max(
+    stale_key, kandidat, kandidat_vf, kandidat_vt = max(
         candidates,
         key=lambda c: (c[1].get("last_reported_value", 0), c[1].get("reported_at") or ""),
     )
     kandidat_level = kandidat.get("last_reported_value", 0)
-    if alert.level > kandidat_level or (kandidat_vf - alert_vf) >= timedelta(hours=2):
+
+    # Issue #1657 AC-3/AC-4: Containment = das neue Fenster umschliesst den
+    # Kandidaten vollstaendig. Dann ist der frueher liegende Beginn eine
+    # Granularitaets-Aenderung, keine Vorverlegung. Der Guard laesst das nur
+    # fuer einen FRISCHEN Kandidaten gelten; ein Eintrag ohne verwertbaren
+    # `reported_at` gilt bewusst als NICHT frisch, damit im Zweifel gemeldet
+    # statt verschluckt wird. Das Parsen steht im selben geschuetzten Block
+    # wie die Normalisierung (Adversary F001: naiv-vs-aware wirft sonst
+    # `TypeError`, den der Aufrufer nicht abfaengt).
+    is_containment = alert_vf <= kandidat_vf and alert_vt >= kandidat_vt
+    kandidat_frisch = False
+    if is_containment:
+        try:
+            ref_now = _as_aware_utc(now) if now is not None else datetime.now(timezone.utc)
+            reported_raw = kandidat.get("reported_at") or ""
+            kandidat_reported = _as_aware_utc(datetime.fromisoformat(reported_raw))
+            kandidat_frisch = (ref_now - kandidat_reported) <= timedelta(hours=6)
+        except (TypeError, ValueError):
+            kandidat_frisch = False
+
+    # Der Guard unterdrueckt AUSSCHLIESSLICH die Containment-Ausnahme: nur ein
+    # FRISCHES Containment entschaerft die Vorverlegung. Ein veralteter
+    # Kandidat faellt damit auf das unveraenderte #1685-Verhalten zurueck
+    # (Vorverlegung >=2h meldet). Der Guard darf NICHT zusaetzlich stille
+    # Faelle umdrehen, die auch ohne Containment still waeren -- sonst wuerde
+    # z.B. "nur verlaengert" (#1685 AC-2, gleicher Beginn, spaeteres Ende) mit
+    # altem `reported_at` faelschlich erneut melden.
+    escalated = alert.level > kandidat_level
+    containment_greift = is_containment and kandidat_frisch
+    vorverlegung = (not containment_greift) and (kandidat_vf - alert_vf) >= timedelta(hours=2)
+    if escalated or vorverlegung:
         return True, None, None
 
     merged_entry = {
