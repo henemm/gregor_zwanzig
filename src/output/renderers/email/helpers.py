@@ -35,7 +35,9 @@ from utils.geo import degrees_to_compass
 from utils.timezone import local_dt, local_fmt, local_hour
 
 from output.metric_format import THUNDER_LABEL_DE
-from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.day_window import (
+    DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, display_end_time,
+)
 from output.renderers.email.design_tokens import FONT_DATA
 
 logger = logging.getLogger(__name__)
@@ -149,7 +151,8 @@ def extract_hourly_rows(seg_data, dc: UnifiedWeatherDisplayConfig,
     if seg_data.has_error or seg_data.timeseries is None:
         return []
     start_h = seg_data.segment.start_time.hour
-    end_h = seg_data.segment.end_time.hour
+    # Issue #1599: Anzeige-Ende statt Alarm-Obergrenze (Ziel-Segment).
+    end_h = display_end_time(seg_data.segment).hour
     rows = []
     for dp in seg_data.timeseries.data:
         h = dp.ts.hour

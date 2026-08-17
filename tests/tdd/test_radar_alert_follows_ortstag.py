@@ -799,7 +799,8 @@ def _radar_lauf(uid: str, trip, *, mails: list | None = None):
 
 def _nacht_trip(trip_id: str, tag: date_type, *, folgeetappe=None):
     """Etappe 22:00->02:00 Ortszeit (Reykjavik, UTC+0): der Modulo-Wrap aus S2
-    legt das Ziel-Segment auf ``tag+1``, 02:00 bis Tagesfenster-Ende 19:00."""
+    legt das Ziel-Segment auf ``tag+1``, 02:00 bis Tagesfenster-Ende 20:00
+    (Obergrenze inklusiv seit #1599, vorher 19:00)."""
     return make_trip(
         trip_id, stage_date=tag, lat=REYKJAVIK_LAT, lon=REYKJAVIK_LON,
         arrival_start="22:00", arrival_end="02:00",
@@ -814,7 +815,7 @@ def test_heutiges_segment_gewinnt_gegen_noch_aktives_vortagssegment():
     """S3 AC-1 (Vorrangkette): Bei echter Ueberlappung gewinnt das HEUTIGE
     Segment; ist heute nichts aktiv, gewinnt das noch laufende gestrige.
 
-    Fixture: Etappe 10.8. 22:00->02:00 (Ziel-Segment 11.8. 02:00-19:00 UTC),
+    Fixture: Etappe 10.8. 22:00->02:00 (Ziel-Segment 11.8. 02:00-20:00 UTC),
     Folgeetappe 11.8. 03:00->12:00 UTC, 1 Grad noerdlich versetzt.
 
     Beide Haelften noetig, keine ist fuer sich diskriminierend:
@@ -947,15 +948,20 @@ def test_schnappschuss_wird_unter_dem_datum_des_gewaehlten_segments_gelesen():
 def test_ein_etappen_trip_bleibt_nach_mitternacht_im_zielfenster_ueberwacht():
     """S3 AC-4 (Kernmotivation): Ein Trip mit genau EINER Etappe, deren Gehzeit
     ueber Mitternacht reicht, wird nach Mitternacht weiter ueberwacht — aber nur
-    innerhalb des berechneten Ziel-Segment-Fensters (11.8. 02:00-19:00 UTC).
+    innerhalb des berechneten Ziel-Segment-Fensters (11.8. 02:00-20:00 UTC).
 
     - 03:00 UTC (innerhalb): Abruf an der Ziel-Koordinate. RED heute:
       ``convert_trip_to_segments(trip, 11.8.)`` liefert ``[]`` -> ``continue``
       -> 0 Abrufe, bis zu 11 h 50 min ohne jede Ueberwachung.
-    - 20:00 UTC (nach ``window_end``): weiterhin 0 Abrufe — heute schon gruen,
+    - 21:00 UTC (nach ``window_end``): weiterhin 0 Abrufe — heute schon gruen,
       haelt die Rueckwaerts-Suche davon ab, ein abgelaufenes Fenster
       wiederzubeleben. Bewusst der ``window_end``-Fall statt "vor Start": ein
       Zeitpunkt vor 22:00 wuerde den Horizont-Guard messen, nicht das Fenster.
+
+    VERSCHOBEN durch #1599 (2026-08-17): die Obergrenze des Tagesfensters ist
+    seither inklusiv, das Ziel-Segment endet also 20:00 statt 19:00 UTC. Der
+    Aussen-Zeitpunkt wandert entsprechend von 20:00 auf 21:00 UTC — er liegt
+    damit weiterhin klar hinter dem Fensterende und weiterhin vor 22:00.
     """
     tag = date_type(2026, 8, 10)
 
@@ -965,18 +971,18 @@ def test_ein_etappen_trip_bleibt_nach_mitternacht_im_zielfenster_ueberwacht():
         )
     assert fs_innen.calls == pytest.approx([ZIEL_GESTERN]), (
         f"S3 AC-4: um 03:00 UTC laeuft das Ziel-Segment der Etappe vom {tag} "
-        f"(02:00-19:00 UTC) — erwartet war genau ein Abruf an {ZIEL_GESTERN!r}, "
+        f"(02:00-20:00 UTC) — erwartet war genau ein Abruf an {ZIEL_GESTERN!r}, "
         f"war {fs_innen.calls!r}. RED: der heutige Kalendertag traegt keine "
         "Etappe, der Trip wird per `continue` uebersprungen."
     )
 
-    with freeze_time("2026-08-11T20:00:00+00:00"):
+    with freeze_time("2026-08-11T21:00:00+00:00"):
         fs_aussen, _ = _radar_lauf(
             fresh_uid("s3ac4-aussen"), _nacht_trip(f"trip-s3ac4-a-{uuid.uuid4().hex[:8]}", tag),
         )
     assert fs_aussen.calls == [], (
-        "S3 AC-4 (Zeitfenster-Nachweis): um 20:00 UTC ist auch das Ziel-Segment "
-        f"vorbei (Ende 19:00 UTC) — es darf kein Abruf erfolgen, war "
+        "S3 AC-4 (Zeitfenster-Nachweis): um 21:00 UTC ist auch das Ziel-Segment "
+        f"vorbei (Ende 20:00 UTC) — es darf kein Abruf erfolgen, war "
         f"{fs_aussen.calls!r}."
     )
 

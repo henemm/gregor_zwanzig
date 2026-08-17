@@ -11,7 +11,11 @@ alle drei Namen unveraendert (bestehende Importe bleiben gueltig).
 """
 from __future__ import annotations
 
-from typing import Optional
+from datetime import date, datetime, time, timedelta, timezone, tzinfo
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:  # pragma: no cover - nur fuer Typpruefer
+    from app.models import TripSegment
 
 DAY_WINDOW_START_HOUR = 4
 DAY_WINDOW_END_HOUR = 19
@@ -48,6 +52,66 @@ def resolve_configured_window(
     if day_window_start_hour == day_window_end_hour:
         return DAY_WINDOW_START_HOUR, DAY_WINDOW_END_HOUR
     return day_window_start_hour, day_window_end_hour
+
+
+def window_end_utc_exclusive(
+    local_date: date, end_hour: int, tz: tzinfo,
+) -> datetime:
+    """Endstunde des Tagesfensters -> EXKLUSIVE UTC-Obergrenze (Issue #1599).
+
+    Die Obergrenze ist INKLUSIV gemeint (PO-Entscheidung 2026-08-17, ADR-0035):
+    ``end_hour = 19`` heisst „die Stunde 19 zaehlt vollstaendig mit", das
+    Fenster endet zeitlich also um 20:00 Ortszeit. Das inklusive Stundenband
+    ``[start_h .. end_h]`` entspricht dem halboffenen Intervall
+    ``[start_h:00, (end_h+1):00)``.
+
+    EINE Umrechnung fuer alle drei Alarm-Stellen (``trip_segments``,
+    ``compare_location_weather_source``, ``compare_official_alert``) — vorher
+    rechnete jede fuer sich, und genau deshalb lief die Kante auseinander
+    (#1599). Die konfigurierten Stundenzahlen selbst bleiben unberuehrt, dafuer
+    bleibt ``resolve_configured_window()`` zustaendig.
+
+    Reihenfolge ist BINDEND: erst ``.astimezone(timezone.utc)``, dann
+    ``+ 1 h``. ``time(end_hour + 1)`` gibt es bei ``end_hour = 23`` nicht, und
+    eine Addition VOR der Umrechnung verschoebe die Grenze in einer
+    Zeitumstellungsnacht um eine Stunde.
+    """
+    return (
+        datetime.combine(local_date, time(end_hour))
+        .replace(tzinfo=tz)
+        .astimezone(timezone.utc)
+        + timedelta(hours=1)
+    )
+
+
+def display_end_time(segment: "TripSegment") -> datetime:
+    """Das ANZEIGE-Ende eines Segments — die letzte zum Segment gehoerende
+    Stunde statt der exklusiven Alarm-Obergrenze (Issue #1599).
+
+    Seit #1599 endet das ZIEL-Segment eine Stunde spaeter, damit die Randstunde
+    des Tagesfensters bewertet wird (``window_end_utc_exclusive()``). Die
+    sichtbare Ausgabe darf diese Stunde NICHT gewinnen: Stundentabelle,
+    Kopfzeile „Wetter am Ziel", Nacht-Block, Ankunft-Zeilen und die
+    Kurzform-Kanaele zeigen unveraendert dasselbe wie vorher. Jeder
+    Anzeige-Konsument liest deshalb hier statt direkt ``segment.end_time``.
+
+    Wirkt AUSSCHLIESSLICH auf das Ziel-Segment (``segment_id == "Ziel"``, der
+    etablierte Diskriminator). Regulaere Etappen enden zu krummen Zeiten aus
+    Naismith/``arrival_override``; dort gehoert die Ankunftsstunde bewusst dem
+    FOLGE-Segment (Bug #806/#1146), eine pauschale Verschiebung wuerde eine
+    Stunde doppelt zaehlen oder verlieren.
+
+    Die Stunde wird nur zurueckgenommen, wenn danach noch ein echtes Fenster
+    bleibt (``> start_time``). Das trennt exakt die beiden Faelle in
+    ``trip_segments``: Fenstergrenze (Ende = Fensterende + 1 h, Anzeige nimmt
+    die Stunde zurueck) und Spaetankunfts-Mindestfenster (Ende = Ankunft + 1 h,
+    Anzeige laesst es unveraendert — genau der Wert, den sie vor #1599 zeigte).
+    """
+    end = segment.end_time
+    if str(getattr(segment, "segment_id", "")) != "Ziel":
+        return end
+    zurueckgenommen = end - timedelta(hours=1)
+    return zurueckgenommen if zurueckgenommen > segment.start_time else end
 
 
 def night_addendum(

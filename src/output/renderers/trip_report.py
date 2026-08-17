@@ -42,7 +42,7 @@ from app.models import (
     WeatherChange,
 )
 from app.profile import ActivityProfile
-from output.renderers.day_window import resolve_configured_window
+from output.renderers.day_window import display_end_time, resolve_configured_window
 import services.alert_urgency as alert_urgency
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
@@ -151,13 +151,15 @@ class TripReportFormatter:
         if night_weather and dc.show_night_block:
             last_seg = segments[-1]
             # Bug #398: Nacht-Block beginnt bei der LOKALEN Ankunftsstunde.
-            arrival_hour = local_hour(last_seg.segment.end_time, self._tz)
+            # Issue #1599: Anzeige-Ende statt Alarm-Obergrenze.
+            arrival_dt = display_end_time(last_seg.segment)
+            arrival_hour = local_hour(arrival_dt, self._tz)
             # Issue #1347: kanonisches Ankunftsdatum aus derselben Quelle wie
             # arrival_hour ableiten (analog day_window-Fix 0b2cc5ed) -- nicht
             # aus dem kontaminierbaren night_weather.data[0].ts.
             # Issue #1402: local_dt() statt rohem .astimezone() -- ein naives
             # end_time (Hausnorm UTC, #1345) sonst als Prozess-Lokalzeit gedeutet.
-            arrival_date = local_dt(last_seg.segment.end_time, self._tz).date()
+            arrival_date = local_dt(arrival_dt, self._tz).date()
             night_rows = self._extract_night_rows(
                 night_weather, arrival_hour, dc.night_interval_hours, dc,
                 arrival_date=arrival_date,
@@ -480,7 +482,8 @@ class TripReportFormatter:
             return []
 
         start_h = seg_data.segment.start_time.hour
-        end_h = seg_data.segment.end_time.hour
+        # Issue #1599: Anzeige-Ende statt Alarm-Obergrenze (Ziel-Segment).
+        end_h = display_end_time(seg_data.segment).hour
         rows = []
         for dp in seg_data.timeseries.data:
             h = dp.ts.hour
@@ -742,7 +745,7 @@ class TripReportFormatter:
             if seg_data.has_error or seg_data.timeseries is None:
                 continue
             sh = seg_data.segment.start_time.hour
-            eh = seg_data.segment.end_time.hour
+            eh = display_end_time(seg_data.segment).hour
             for dp in seg_data.timeseries.data:
                 if sh <= dp.ts.hour <= eh and dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
                     elev = int(seg_data.segment.start_point.elevation_m or 0)
@@ -761,7 +764,7 @@ class TripReportFormatter:
             if seg_data.has_error or seg_data.timeseries is None:
                 continue
             sh = seg_data.segment.start_time.hour
-            eh = seg_data.segment.end_time.hour
+            eh = display_end_time(seg_data.segment).hour
             for dp in seg_data.timeseries.data:
                 if dp.gust_kmh is not None and dp.gust_kmh > max_gust_val:
                     max_gust_val = dp.gust_kmh
@@ -798,7 +801,7 @@ class TripReportFormatter:
             if seg_data.has_error or seg_data.timeseries is None:
                 continue
             sh = seg_data.segment.start_time.hour
-            eh = seg_data.segment.end_time.hour
+            eh = display_end_time(seg_data.segment).hour
             for dp in seg_data.timeseries.data:
                 if dp.wind10m_kmh is not None and dp.wind10m_kmh > max_wind_val:
                     max_wind_val = dp.wind10m_kmh

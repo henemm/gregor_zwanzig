@@ -109,6 +109,10 @@ class TestSchedulerDestinationSegment:
         ``gr221-mallorca.json`` setzt kein ``day_window_end_hour``, also gilt
         der dokumentierte Default 19 Uhr (``app.day_window``), aufgeloest in
         der Zeitzone des letzten Wegpunkts.
+
+        Erwartungswert VERSCHOBEN — abgeloest durch #1599 (PO-Entscheidung
+        2026-08-17): die Obergrenze ist INKLUSIV, die Endstunde 19 zaehlt
+        vollstaendig mit. Zeitlich endet das Fenster damit um 20:00 Ortszeit.
         """
         from zoneinfo import ZoneInfo
 
@@ -124,13 +128,14 @@ class TestSchedulerDestinationSegment:
         arrival_local = last_normal_end.astimezone(tz)
         expected_end = (
             datetime.datetime.combine(
-                arrival_local.date(), datetime.time(19, 0)
+                arrival_local.date(), datetime.time(20, 0)
             )
             .replace(tzinfo=tz)
             .astimezone(datetime.timezone.utc)
         )
         assert dest[0].end_time == expected_end, (
-            "Ziel-Segment muss bis 19:00 Ortszeit (Default-Tagesfenster) "
+            "Ziel-Segment muss bis 20:00 Ortszeit (Default-Tagesfenster 4-19, "
+            "Obergrenze inklusiv) "
             f"reichen, erwartet {expected_end.isoformat()}, tatsaechlich "
             f"{dest[0].end_time.isoformat()}"
         )

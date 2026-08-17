@@ -185,8 +185,14 @@ def test_ac8_freies_kontingent_stellt_unveraendert_zu(nutzer):
 #: Ein einziges geaendertes Zeichen — auch Einrueckung oder Kommentar — bricht
 #: diesen Waechter. Genau das ist gewollt: die Methode ist ausdruecklich
 #: Nicht-Ziel (R-E), und ihr Abendverhalten haelt sonst kein Test.
+#:
+#: NEU GEPINNT am 2026-08-17 (#1599): dort ist ``_day_window_end()`` ERKLAERTES
+#: Ziel (Umrechnungsstelle 3 von dreien) und baut den Sichtbarkeits-Horizont
+#: seither ueber den gemeinsamen Helfer
+#: ``app.day_window.window_end_utc_exclusive()``. Der Waechter bleibt
+#: unveraendert scharf — er bewacht ab jetzt den #1599-Stand.
 DAY_WINDOW_END_HASH_VOR_S4A = (
-    "01c0741eba359d1d9aab55c017c609c88deb5fac3d65b8844d96cc8807beae99"
+    "18f3343e80291d35eb4df4fa747f7f88e839eb9cd92c3309870b4bc9fd84cf33"
 )
 
 
@@ -210,6 +216,12 @@ def test_ac17_day_window_end_bleibt_zeichengleich_unveraendert():
     Hash ist hier kein Dateiinhalt-Check als Verhaltensnachweis, sondern die von
     AC-17 verlangte Unveraenderlichkeits-Zusicherung; der Verhaltensfall
     darunter traegt die fachliche Aussage.
+
+    Durch #1599 abgeloest (2026-08-17): ``_day_window_end()`` nutzt jetzt den
+    gemeinsamen Helfer ``window_end_utc_exclusive()`` — die inklusive
+    Obergrenze war dort ausdrueckliches Ziel, nicht Kollateral. Der Hash wurde
+    entsprechend neu gepinnt; die Zusicherung selbst („nicht unbemerkt
+    mitwandern") gilt unveraendert weiter.
     """
     assert _day_window_end_hash() == DAY_WINDOW_END_HASH_VOR_S4A, (
         f"``_day_window_end()`` wurde veraendert — ausdrueckliches Nicht-Ziel "

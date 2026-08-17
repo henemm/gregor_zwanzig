@@ -506,25 +506,66 @@ def test_ac3a_aenderung_in_stunde_18_liegt_innerhalb_des_fensters(monkeypatch, t
 
 # ═════════════════════════════════ AC-3b ═════════════════════════════════════
 
-def test_ac3b_aenderung_in_stunde_19_liegt_ausserhalb_des_fensters(monkeypatch, tmp_path):
-    """AC-3b: Given denselben Aufbau wie AC-3a, aber die Aenderung liegt in
-    Stunde 19 (Obergrenze exklusiv, analog ``segment_weather.py`` Bug #806) /
-    When der Check laeuft / Then bleibt der Alarm aus.
+def test_1599_ac3_aenderung_in_stunde_19_liegt_innerhalb_des_fensters(monkeypatch, tmp_path):
+    """#1599 AC-3 — UMGEDREHT, abgeloest durch #1599: hier stand
+    ``test_ac3b_…stunde_19_liegt_ausserhalb…`` aus #1584 C.
 
-    HEUTE ROT, weil der heutige Code faelschlich ZUSTELLT — nicht wegen der
-    Aenderung in Stunde 19, sondern wegen des Tagesgangs zwischen Anker (07:00)
-    und Frisch-Abruf (15:00). Der Tagesgang ist hier Absicht: mit flacher
-    Temperatur waere dieser Test heute schon gruen (heute sieht der Alarm
-    Stunde 19 ohnehin nicht) und bewachte nichts.
+    Die Obergrenze ist seit #1599 INKLUSIV: bei Fenster 4-19 zaehlt die Stunde
+    19 mit (Fensterende zeitlich 20:00 Ortszeit), eine echte Aenderung um 19:40
+    muss zugestellt werden. Flache Temperatur ist Pflicht — mit Tagesgang loeste
+    schon der Tagesgang zwischen Anker (07:00) und Frisch-Abruf (15:00) aus und
+    der Test bewiese nichts. Die Aussen-Haelfte des Paars ist
+    ``test_1599_ac4_…stunde_20_liegt_ausserhalb…`` direkt darunter — derselbe
+    Ortsvergleich mit demselben ausdruecklich gesetzten Fenster.
+    """
+    sz = Szenario(monkeypatch, tmp_path, ALPEN_LAT, ALPEN_LON, fenster=(4, 19))
+    sz.anker(flach(sz), 7)
+    mails = sz.lauf(flach(sz, ((0, 19, REGEN_MM),)), 15)
+    assert mails, (
+        "#1599 AC-3: Stunde 19 liegt INNERHALB des inklusiven Tagesfensters "
+        "4-19 (Fensterende 20:00 Ortszeit) — eine echte Aenderung dort (30 mm "
+        "gegen Schwelle 10 mm) muss zugestellt werden. Es kam keine Mail an: "
+        "die obere Fenstergrenze wird weiterhin exklusiv bei 19:00 gebildet "
+        "(compare_location_weather_source.py::_window_bound)."
+    )
+
+
+# ════════════════════════════ #1599 AC-4 ═════════════════════════════════════
+
+def test_1599_ac4_aenderung_in_stunde_20_liegt_ausserhalb_des_fensters(
+    monkeypatch, tmp_path,
+):
+    """#1599 AC-4: Given DENSELBEN Ortsvergleich wie #1599 AC-3 (ausdruecklich
+    gesetztes Tagesfenster 4-19) und dieselbe Wetteraenderung, nur um 20:10
+    Ortszeit / When der Compare-Alert-Check laeuft / Then bleibt der Alarm aus.
+
+    Die Innen-Haelfte des Grenzwert-Paars steht direkt darueber. Beide Haelften
+    muessen am SELBEN, ausdruecklich konfigurierten Fenster haengen: das
+    inklusive Ende verschiebt die Kante von 19:00 auf 20:00, und eine
+    Zusicherung „bis genau hierhin und keinen Schritt weiter" ist nur bewiesen,
+    wenn beide Seiten derselben Kante an derselben Konfiguration gemessen
+    werden. ``test_ac8b_…ist_stunde_20_ausserhalb`` prueft dieselbe Stunde am
+    DEFAULT-Fenster (Preset ohne die Felder) — wertgleich, aber ein anderer
+    Aufloesungspfad; er bleibt als eigener Fall bestehen.
+
+    Tagesgang statt flacher Kurve, nach der Konvention dieses Moduls fuer
+    „kein Alarm"-Tests (s. Modul-Docstring): so faellt der Test zusaetzlich auf,
+    wenn Anker (07:00) und Frisch-Abruf (15:00) wieder verschiedene Tagesstunden
+    abdecken. Mit gleichem Fenster auf beiden Seiten hebt sich der Tagesgang
+    exakt auf; ausloesen kann nur der Regen in Stunde 20.
+    Rot bei ``window_end_utc_exclusive()`` mit ``+ 2 h`` statt ``+ 1 h``: das
+    Fenster reichte dann bis 21:00 Ortszeit, Stunde 20 laege faelschlich
+    innerhalb und die Aenderung ginge raus.
     """
     sz = Szenario(monkeypatch, tmp_path, ALPEN_LAT, ALPEN_LON, fenster=(4, 19))
     sz.anker(tagesgang(sz), 7)
-    mails = sz.lauf(tagesgang(sz, ((0, 19, REGEN_MM),)), 15)
+    mails = sz.lauf(tagesgang(sz, ((0, 20, REGEN_MM),)), 15)
     assert not mails, (
-        "AC-3b: Stunde 19 liegt AUSSERHALB des Tagesfensters 4-19 (Obergrenze "
-        f"exklusiv) — es darf kein Alarm rausgehen. Zugestellt: {[s for s, _ in mails]}. "
-        "Entweder ist die Obergrenze inklusive/unbegrenzt, oder Anker und "
-        "Frisch-Abruf decken weiterhin verschiedene Tagesstunden ab."
+        "#1599 AC-4: Stunde 20 liegt AUSSERHALB des inklusiven Tagesfensters "
+        "4-19 (Fensterende 20:00 Ortszeit) — eine Aenderung dort darf keinen "
+        f"Alarm ausloesen. Zugestellt: {[s for s, _ in mails]}. Entweder "
+        "reicht die obere Fenstergrenze eine Stunde zu weit, oder Anker und "
+        "Frisch-Abruf decken verschiedene Tagesstunden ab."
     )
 
 
@@ -744,4 +785,93 @@ def test_ac8b_ohne_gesetztes_tagesfenster_ist_stunde_20_ausserhalb(monkeypatch, 
         f"darf kein Alarm rausgehen. Zugestellt: {[s for s, _ in mails]}. "
         "Entweder wird der ganze Tag bewertet, oder Anker und Frisch-Abruf "
         "decken weiterhin verschiedene Tagesstunden ab."
+    )
+
+
+# ═══════ #1599 Gruppe C — amtliche Warnungen (Umrechnungsstelle 3) ══════════
+#
+# Der Sichtbarkeits-Horizont fuer amtliche Warnungen im Ortsvergleich
+# (`compare_official_alert.py::_day_window_end`) ist die dritte Stelle, die
+# die Endstunde in eine Zeitgrenze umrechnet. Die Fixtures dafuer wohnen in
+# `tests/tdd/test_compare_official_alert.py` (echte Fake-Quelle ueber die
+# Quellen-Registry, echte Presets/Orte auf Platte, `mail_sink`-Naht) und
+# werden hier wiederverwendet statt kopiert.
+
+def _amtliche_warnung_mails(monkeypatch, gueltig_ab_utc, gueltig_bis_utc) -> list:
+    """Ein vollstaendiger Lauf des echten `CompareOfficialAlertService`-
+    Sendepfads; gibt die zugestellten Mails zurueck. Uhr eingefroren auf
+    2026-07-12 10:00 UTC = 12:00 Ortszeit Hermagor (Europe/Vienna, UTC+2);
+    `morning_time` 16:00 liegt ausserhalb des Vorlauf-Fensters aus #1594."""
+    from services.compare_official_alert import CompareOfficialAlertService
+    from services.official_alerts import register_official_alert_source
+
+    from tests.tdd.test_compare_official_alert import (
+        LAT_A, LON_A, _alert, _clean_user, _FakeOfficialAlertSource, _location,
+        _preset, _settings_all_channels, _sources_backup, _uid, _write_presets,
+    )
+    from tests.tdd.test_compare_official_alert import (
+        _freeze_compare_official_alert_now as _friere_uhr,
+    )
+    from app.loader import save_location
+
+    uid = _uid("1599c")
+    _clean_user(uid)
+    b, backup = _sources_backup()
+    b._REGISTERED_SOURCES.clear()
+    try:
+        save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
+        _write_presets(uid, [_preset(
+            "p-1599", ["loc-a"], ["e@x.invalid"], morning_time="16:00:00",
+        )])
+        _friere_uhr(monkeypatch, datetime(2026, 7, 12, 10, 0, tzinfo=timezone.utc))
+        register_official_alert_source(_FakeOfficialAlertSource(
+            LAT_A, LON_A, [_alert(vf=gueltig_ab_utc, vt=gueltig_bis_utc)],
+        ))
+        mails: list = []
+        CompareOfficialAlertService(
+            settings=_settings_all_channels(), user_id=uid,
+            mail_sink=lambda subject, body: mails.append((subject, body)),
+        ).check_all_compare_presets()
+        return mails
+    finally:
+        b._REGISTERED_SOURCES.clear()
+        b._REGISTERED_SOURCES.extend(backup)
+        _clean_user(uid)
+
+
+def test_1599_ac5_amtliche_warnung_ab_1945_liegt_im_sichtbarkeits_horizont(monkeypatch):
+    """#1599 AC-5: Eine amtliche Warnung, deren Gueltigkeit um 19:45 Ortszeit
+    beginnt, liegt bei Tagesfenster 4-19 INNERHALB des Sichtbarkeits-Horizonts
+    — der reicht mit der inklusiven Obergrenze bis 20:00 Ortszeit, nicht bis
+    19:00. Sie muss zugestellt werden."""
+    mails = _amtliche_warnung_mails(
+        monkeypatch,
+        datetime(2026, 7, 12, 17, 45, tzinfo=timezone.utc),   # 19:45 Ortszeit
+        datetime(2026, 7, 12, 19, 0, tzinfo=timezone.utc),    # 21:00 Ortszeit
+    )
+    assert mails, (
+        "#1599 AC-5: Eine amtliche Warnung ab 19:45 Ortszeit liegt im "
+        "Sichtbarkeits-Horizont des Tagesfensters 4-19 (bis 20:00 Ortszeit) "
+        "und muss zugestellt werden. Es kam keine Mail an — der Horizont "
+        "endet weiterhin exklusiv um 19:00 "
+        "(compare_official_alert.py::_day_window_end)."
+    )
+
+
+def test_1599_ac6_amtliche_warnung_ab_2015_bleibt_ausserhalb(monkeypatch):
+    """#1599 AC-6 (Waechter): dieselbe Warnung, Gueltigkeitsbeginn 20:15
+    Ortszeit — knapp jenseits der neuen Grenze 20:00. Sie bleibt ausserhalb
+    des Sichtbarkeits-Horizonts und darf NICHT zugestellt werden.
+    Diskriminierende Aussen-Haelfte zu AC-5."""
+    mails = _amtliche_warnung_mails(
+        monkeypatch,
+        datetime(2026, 7, 12, 18, 15, tzinfo=timezone.utc),   # 20:15 Ortszeit
+        datetime(2026, 7, 12, 19, 30, tzinfo=timezone.utc),   # 21:30 Ortszeit
+    )
+    assert not mails, (
+        "#1599 AC-6: Eine amtliche Warnung ab 20:15 Ortszeit liegt jenseits "
+        "des Sichtbarkeits-Horizonts (bis 20:00 Ortszeit) und darf nicht "
+        f"zugestellt werden. Tatsaechlich zugestellt: {[s for s, _ in mails]} "
+        "— der Horizont wurde um mehr als eine Stunde verschoben oder ganz "
+        "aufgehoben."
     )

@@ -30,7 +30,9 @@ if TYPE_CHECKING:
 from app.profile import ActivityProfile
 from utils.timezone import local_dt, local_fmt, tz_abbrev
 
-from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
+from output.renderers.day_window import (
+    DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, display_end_time,
+)
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
@@ -1187,7 +1189,7 @@ def render_html(
             # AC-6: Wetter am Ziel — eigene abgesetzte Sektion
             ziel_time = (
                 local_fmt(seg.start_time, tz)
-                + "–" + local_fmt(seg.end_time, tz)
+                + "–" + local_fmt(display_end_time(seg), tz)
                 + " · " + str(s_elev) + " m"
             )
             desktop_div = (
@@ -1303,7 +1305,7 @@ def render_html(
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
             '<p style="color:' + G_INK_MUTED + ';font-size:13px">Ankunft '
-            + local_fmt(last_seg.end_time, tz) + " → Morgen 06:00</p>"
+            + local_fmt(display_end_time(last_seg), tz) + " → Morgen 06:00</p>"
             + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks)
             + night_hint
             + "</div>"
