@@ -164,7 +164,21 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # Text/Reihenfolge/Struktur aller Spans identisch (span-weiser Vergleich).
 # Klartext bleibt byte-identisch (Farbe steckt nur im HTML). Alter Digest
 # 5a453eaa…, neuer 1769ef8f….
-_EXPECTED_SHA256 = "1769ef8f9bd71b2c85795098a2d71bbbc2a0b510d4d935cb2d469bd049667023"
+#
+# Fix #1927 (2026-08-17): erneut fortgeschrieben, wieder AUSDRUECKLICH. Der
+# Risk-Dot am Zeilenende der Stundentabelle hatte als einzige Stelle noch eine
+# eigene Palette (`html._RISK_DOT_COLORS`), die Fix #1801 S2 ausgenommen hatte;
+# er bezieht seine Farbe jetzt aus derselben Quelle wie alle uebrigen
+# Ampel-Spalten (`helpers._AMPEL_DOT_COLORS`, "watch" -> orange #d4530a,
+# "risk" -> rot #a8104a). NACHGEMESSEN gegen den unveraenderten HEAD-Stand von
+# `html.py` (Renderer getauscht, identisches Fixture gerendert): der HEAD-Lauf
+# reproduziert exakt den alten Digest 1769ef8f…; der Byte-Diff HTML besteht aus
+# ausschliesslich 14 Hunks, die alle innerhalb zweier Risk-Dot-Spans liegen
+# (#c2410c/rgba(194,65,12,0.20) -> #d4530a/rgba(212,83,10,0.20)) -- gleiche
+# Gesamtlaenge, keine Text-/Struktur-/Reihenfolgeaenderung. Klartext bleibt
+# byte-identisch (Farbe steckt nur im HTML). Alter Digest 1769ef8f…, neuer
+# 3aae0e13….
+_EXPECTED_SHA256 = "3aae0e13f34842a2edc3330373f63fca193b451e08e94273b17b2a2de924e0e7"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

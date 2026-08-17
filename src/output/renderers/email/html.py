@@ -34,6 +34,7 @@ from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HO
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.email.helpers import (
+    _AMPEL_DOT_COLORS,
     _HAIL_RING_COLOR,
     ampel_level,
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
@@ -142,11 +143,10 @@ def _eyebrow(text: str, *, accent: bool = False) -> str:
 
 def _risk_dot(color: str) -> str:
     """JSX RiskDot — colored circle with border-radius:50%."""
-    ring_map = {
-        "#15803d": "rgba(21,128,61,0.18)",
-        "#c2410c": "rgba(194,65,12,0.20)",
-        "#b91c1c": "rgba(185,28,28,0.22)",
-    }
+    # Fix #1927: Ringfarbe wird aus derselben Quelle wie die Fuellfarbe
+    # abgeleitet (_AMPEL_DOT_COLORS, helpers.py) — keine dritte Hex-Kopie mehr,
+    # damit Fuell- und Ringfarbe nicht erneut auseinanderlaufen koennen.
+    ring_map = {fill: ring for fill, ring in _AMPEL_DOT_COLORS.values()}
     ring = ring_map.get(color, "transparent")
     return (
         f'<span style="display:inline-block;width:10px;height:10px;'
@@ -211,7 +211,10 @@ def _row_risk(r: dict) -> str:
     if thunder_level == "risk":
         return "risk"
 
-    vis_raw = r.get("vis")
+    # Fix #1927: Katalog-Spaltenschluessel ist "visibility"
+    # (metric_catalog.py:556, col_key="visibility") — "vis" existiert in keiner
+    # Produktionszeile und fiel deshalb immer auf den Default 99 km zurueck.
+    vis_raw = r.get("visibility")
     vis_num = _safe_float(vis_raw, 99.0)
     vis_m = vis_num if vis_num > 100 else vis_num * 1000
 
@@ -232,10 +235,20 @@ def _row_risk(r: dict) -> str:
     return "ok"
 
 
+# Fix #1927: Der Risk-Punkt hat keine eigene Palette mehr. Das dreiwertige
+# Risk-Vokabular (_row_risk: ok/watch/risk) wird auf die vierwertige
+# Ampel-Palette (_AMPEL_DOT_COLORS, helpers.py) abgebildet; "watch" -> orange
+# ist eine PO-bestaetigte Design-Entscheidung (die schaerfere der beiden
+# Nachbarfarben, damit eine echte Warnung nicht optisch verwaessert wird).
+_RISK_LEVEL_TO_AMPEL = {"ok": "green", "watch": "orange", "risk": "red"}
+
+# Abgeleitete Sicht auf dieselbe Quelle — KEINE eigene Palette mehr (das war
+# der Bug #1927). Bleibt als Name erhalten, weil der Bestandstest
+# `tests/tdd/test_thunder_risk_dot_and_tint.py` (Issue #1418) seine
+# Erwartungswerte bewusst aus dem Renderer bezieht statt Hex zu duplizieren;
+# durch die Ableitung folgt er jeder kuenftigen Palettenaenderung automatisch.
 _RISK_DOT_COLORS = {
-    "ok":    ("#15803d", "rgba(21,128,61,0.18)"),
-    "watch": ("#c2410c", "rgba(194,65,12,0.20)"),
-    "risk":  ("#b91c1c", "rgba(185,28,28,0.22)"),
+    level: _AMPEL_DOT_COLORS[ampel] for level, ampel in _RISK_LEVEL_TO_AMPEL.items()
 }
 
 
@@ -846,7 +859,7 @@ def _render_html_table(
             else:
                 tds += f'<td{mark_cls} style="{_td_grid}{mark_extra}" data-label="{label}">{cell}</td>'
         # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende (keine border-right — letzte Spalte).
-        _dot_color = _RISK_DOT_COLORS[_row_risk(r)][0]
+        _dot_color = _AMPEL_DOT_COLORS[_RISK_LEVEL_TO_AMPEL[_row_risk(r)]][0]
         tds += (
             f'<td style="padding:8px 4px;text-align:center;'
             f'border-bottom:1px solid #f0ece1;">'

@@ -247,16 +247,20 @@ def test_ac4_riskdot_watch_row():
     """
     GIVEN eine Zeile mit gust=35 km/h (über watch-Schwelle 30)
     WHEN render_html() called
-    THEN enthält die Tabelle eine Zelle mit orangem RiskDot (#c2410c).
+    THEN enthält die Tabelle eine Zelle mit orangem RiskDot (#d4530a).
+
+    Issue #1927: Der Risk-Dot hat keine eigene Palette mehr, sondern bezieht
+    seine Farbe aus `_AMPEL_DOT_COLORS` (helpers.py) — "watch" → orange
+    #d4530a (PO-bestaetigte Design-Entscheidung), vormals #c2410c.
     """
     html = _render(gust_kmh=35.0)
-    # Farbe #c2410c für "watch" — darf nicht nur im Highlighting-Span sein,
+    # Farbe #d4530a für "watch" — darf nicht nur im Highlighting-Span sein,
     # sondern muss auch als RiskDot-Hintergrund erscheinen
     risk_dot_pattern = re.compile(
-        r'border-radius:50%[^;]*;background:#c2410c', re.DOTALL
+        r'border-radius:50%[^;]*;background:#d4530a', re.DOTALL
     )
     assert risk_dot_pattern.search(html), (
-        "AC-4 FAIL: Oranger RiskDot (border-radius:50%;background:#c2410c) "
+        "AC-4 FAIL: Oranger RiskDot (border-radius:50%;background:#d4530a) "
         "nicht in Tabelle gefunden bei gust=35 km/h."
     )
 
