@@ -71,7 +71,7 @@ bzw. in den Specs unter `docs/specs/`.
 | [0006](0006-no-mocked-tests-e2e-staging.md) | Keine gemockten Tests; echte E2E-Verifikation gegen Staging | Akzeptiert |
 | [0007](0007-daten-statt-empfehlungen.md) | Daten statt Empfehlungen — keine paternalistische Bewertung | Akzeptiert |
 | [0008](0008-kontrast-vor-optik.md) | Lesbarkeit/Kontrast vor weicher Optik | Akzeptiert |
-| [0009](0009-alerts-als-abweichungs-waechter.md) | Alerts sind Abweichungs-Wächter, keine absoluten Schwellen | Akzeptiert |
+| [0009](0009-alerts-als-abweichungs-waechter.md) | Alerts sind Abweichungs-Wächter, keine absoluten Schwellen | Teilweise abgelöst durch ADR-0056 |
 | [0010](0010-vorboten-metriken-kein-alert-ausloeser.md) | Vorboten-Metriken sind keine Alert-Auslöser | Akzeptiert |
 | [0011](0011-alert-render-single-backend-renderer.md) | Alert-Render-System — ein Backend-Renderer, Registry als Single Source | Akzeptiert |
 | [0012](0012-telegram-parse-mode-html.md) | Telegram-Formatierung — parse_mode=HTML statt Markdown/MarkdownV2 | Akzeptiert |
@@ -118,3 +118,4 @@ bzw. in den Specs unter `docs/specs/`.
 | [0053](0053-compare-kanal-eigene-metrikauswahl-uebersicht.md) | Der Ortsvergleich bekommt kanal-eigene Metrikauswahl für die Übersichtstabelle zurück — ganze Kette statt Oberfläche allein (löst #1287/#1291/#1351 ab, schreibt 0050 fort, Issue #1703 Scheibe 8) | Akzeptiert |
 | [0054](0054-playwright-e2e-in-ci-ampel-positivliste.md) | Playwright-E2E-Klickpfade in die CI-Ampel — isolierter Stack, Positivliste statt Ausschlussliste (schreibt 0006/0028 fort, Issue #1771 Scheibe 2) | Akzeptiert |
 | [0055](0055-trip-ausblick-waehlbare-spalten.md) | Die 3-Tages-Vorschau des Trip-Briefings bekommt wählbare Spalten — global ohne Kanal-Ebene, an die Grundauswahl gebunden, EINE Auflösung statt drei (löst 0037 Punkt 2 ab, schreibt 0050 fort, Issue #1720 Scheibe 1) | Akzeptiert |
+| [0056](0056-rollierender-alarm-anker-statt-briefing-only-snapshot.md) | Der Δ-Vergleichsanker ist nicht mehr ausschließlich an einen erfolgreichen Briefing-Versand gebunden, sondern rollt zusätzlich bei jedem Alarmversand und bei Überschreiten einer Alterungs-Ceiling nach (löst Teil von 0009 ab, Issue #1916) | Akzeptiert |

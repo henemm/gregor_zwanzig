@@ -65,6 +65,7 @@ def _fmt_occurred_at(value, tz) -> str | None:
 
 def to_alert_message(
     changes, segments, trip_name, *, tz, stand_at, corridor_hits=None,
+    reference_at=None,
 ) -> AlertMessage:
     """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None.
 
@@ -103,7 +104,7 @@ def to_alert_message(
     )
     return AlertMessage(
         trip_short=trip_name, stand_at=stand_at, events=tuple(events), source=None,
-        corridor_events=corridor_events,
+        corridor_events=corridor_events, reference_at=reference_at,
     )
 
 
@@ -182,7 +183,7 @@ def to_corridor_events(hits, segments, *, tz) -> tuple[CorridorEvent, ...]:
     return tuple(events)
 
 
-def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
+def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> AlertMessage:
     """WeatherChange-Events MEHRERER gleichzeitig betroffener Vergleichs-Orte
     (Issue #1170, AC-7-Bündelung) → EINE kanonische AlertMessage.
 
@@ -223,7 +224,7 @@ def to_multi_point_alert_message(groups, *, tz, stand_at) -> AlertMessage:
     collective_label = ", ".join(name for name, _changes, _point in groups)
     return AlertMessage(
         trip_short=collective_label, stand_at=stand_at, events=tuple(events), source=None,
-        location_label=collective_label,
+        location_label=collective_label, reference_at=reference_at,
     )
 
 

@@ -90,6 +90,12 @@ class AlertMessage:
     # gebuendelt (Muster #1088). Bestehende Aufrufer setzen dieses Feld nie
     # (Default leer, Regressions-Invariante).
     corridor_events: tuple[CorridorEvent, ...] = ()
+    # Issue #1916 (AC-1..AC-4): additiv, optional. Referenz-Zeitpunkt der
+    # tatsaechlich verglichenen Vergleichsbasis (Ortszeit, ggf. mit Tagesbezug
+    # wie "gestern 18:03 Uhr"), NICHT der aktuelle Abrufzeitpunkt (`stand_at`).
+    # `None` -> Renderer behalten den generischen Text "verglichen mit dem
+    # letzten Briefing" (Regressions-Invariante, AC-5).
+    reference_at: str | None = None
 
 
 def direction(e: AlertEvent) -> str:

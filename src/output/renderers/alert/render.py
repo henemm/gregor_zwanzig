@@ -514,7 +514,14 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         # geht dem kollektiven `msg.location_label` vor; für Trip/Einzel-Ort
         # sind beide identisch bzw. beide None (bit-identisch, AC-7).
         data_rows = _datablock_single(e, e.location_label or msg.location_label)
-        footer = f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing"
+        # Issue #1916 (AC-1/AC-2): gesetztes `reference_at` ersetzt den
+        # generischen Text durch den Referenz-Zeitpunkt der tatsaechlich
+        # verglichenen Vergleichsbasis. `None` -> Regressions-Invariante AC-5.
+        footer = (
+            f"Stand: heute {msg.stand_at} · verglichen mit {msg.reference_at}"
+            if msg.reference_at
+            else f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing"
+        )
         any_over = over_thr(e)
         plain_data = [f"{k}: {v}" for k, v in data_rows]
     else:
@@ -559,7 +566,11 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
                     f"{_num(e, e.value_from)} → {_num(e, e.value_to)}{unit_suffix}",
                 ))
         km = _km_str(msg)
-        footer = f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing · {km}"
+        footer = (
+            f"Stand: heute {msg.stand_at} · verglichen mit {msg.reference_at} · {km}"
+            if msg.reference_at
+            else f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing · {km}"
+        )
         any_over = over_count > 0
         plain_data = [f"{k}: {v}" for k, v in data_rows]
 
@@ -721,6 +732,13 @@ def render_sms(
     else:
         a, b = km_span(msg.events)
         head = f"{trip} km{int(round(a))}-{int(round(b))}: "
+    # Issue #1916 (AC-3/AC-4): der Referenz-Zeitpunkt gehoert in den KOPF
+    # (immer enthalten), NICHT in die Token-Liste -- sonst wuerde er bei
+    # Laengendruck wie ein normales Event-Token weggekuerzt statt "notfalls
+    # weiter verkuerzt" (Spec AC-3) zu bleiben. `None` -> unveraendert
+    # (Regressions-Invariante).
+    if msg.reference_at:
+        head += f"@{msg.reference_at} "
     # Issue #1444 S1 (AC-6): Schwellen-Treffer-Tokens desselben Laufs mit.
     tokens = [_sms_token(e, location_positions) for e in evs] + [
         _sms_corridor_token(ce) for ce in msg.corridor_events

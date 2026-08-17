@@ -134,6 +134,24 @@ def tz_abbrev(dt: datetime, tz: ZoneInfo) -> str:
     return local_dt(dt, tz).strftime("%Z") or "UTC"
 
 
+def format_reference_at(
+    fetched_at: datetime, tz: ZoneInfo, *, now: Optional[datetime] = None,
+) -> str:
+    """Referenz-Zeitpunkt einer Vergleichsbasis lesbar formatiert (Issue #1916
+    AC-1/AC-2): reine Uhrzeit, solange der Anker vom selben Ortstag stammt,
+    sonst mit explizitem Tagesbezug ("gestern HH:MM Uhr") — eine nackte
+    Uhrzeit waere sonst mehrdeutig, sobald der Anker von einem anderen
+    Kalendertag stammt."""
+    now = now or datetime.now(timezone.utc)
+    time_str = local_fmt(fetched_at, tz)
+    day_diff = (local_dt(now, tz).date() - local_dt(fetched_at, tz).date()).days
+    if day_diff <= 0:
+        return time_str
+    if day_diff == 1:
+        return f"gestern {time_str} Uhr"
+    return f"vor {day_diff} Tagen {time_str} Uhr"
+
+
 def local_stamp(dt: datetime, tz: ZoneInfo, fmt: str = "%H:%M") -> str:
     """Ortszeit MIT erkennbarem Zeitzonen-Kuerzel, z.B. ``06:58 (CEST)`` bzw.
     ``04:58 (UTC)`` — eine Formatier-Quelle fuer HTML- und Klartext-Kopfzeile

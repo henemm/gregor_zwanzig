@@ -635,6 +635,7 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         telegram_style: str = "rich",
         corridor_hits: Optional[list] = None,
+        reference_at: Optional[str] = None,
     ) -> NotificationResult:
         """Wetter-Änderungs-Alert: rendern und über konfigurierte Kanäle versenden.
 
@@ -642,6 +643,9 @@ class NotificationService:
         Issue #1088: optionale amtliche Warnungen werden in dieselbe Nachricht
         gebündelt (kein zweiter Versand). Issue #1444 S1: `corridor_hits`
         (Schwellen-Treffer) buendeln sich genauso in dieselbe Nachricht.
+        Issue #1916: `reference_at` ist der bereits formatierte Referenz-
+        Zeitpunkt der tatsaechlich verglichenen Vergleichsbasis (Aufrufer:
+        `TripAlertService`) -- additiv, `None` laesst den Footer unveraendert.
         """
         from utils.timezone import tz_for_coords
 
@@ -652,7 +656,7 @@ class NotificationService:
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
         alert_msg = to_alert_message(
             changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
-            corridor_hits=corridor_hits,
+            corridor_hits=corridor_hits, reference_at=reference_at,
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
@@ -695,6 +699,7 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         location_positions: Optional[dict[str, int]] = None,
         telegram_style: str = "rich",
+        reference_at: Optional[str] = None,
     ) -> NotificationResult:
         """Gebündelter Deviation-Alert-Versand für MEHRERE gleichzeitig
         betroffene Orte EINES Compare-Presets (Issue #1170, Adversary F001).
@@ -715,6 +720,9 @@ class NotificationService:
         defaultiert auf `"rich"` — der Ortsvergleich-Änderungspfad reicht
         damit den Kurzstil-Schalter (#1260) durch, der auf diesem Weg bisher
         wirkungslos war. Aufrufer, die ihn nicht setzen, bleiben rich.
+
+        Issue #1916: `reference_at` ist additiv, analog `send_deviation_alert()`
+        — kein bestehender Aufrufer setzt ihn, Verhalten bleibt unveraendert.
         """
         from utils.timezone import tz_for_coords
 
@@ -725,7 +733,9 @@ class NotificationService:
             (name, changes, points[0] if points else None)
             for name, points, changes in entities
         ]
-        alert_msg = to_multi_point_alert_message(groups, tz=alert_tz, stand_at=stand_at)
+        alert_msg = to_multi_point_alert_message(
+            groups, tz=alert_tz, stand_at=stand_at, reference_at=reference_at,
+        )
         target_name = ", ".join(name for name, _points, _changes in entities)
         # Issue #1467 S2 AG3a: NUR dieser Aufrufer (Ortsvergleich-
         # Aenderungsalarm) reicht `telegram_groups` durch -- damit faechert

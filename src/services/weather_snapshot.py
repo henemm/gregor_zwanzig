@@ -165,6 +165,81 @@ class WeatherSnapshotService:
             except OSError as e:
                 logger.warning(f"Failed to prune dated snapshot {old_file}: {e}")
 
+    def save_alarm_anchor(
+        self,
+        trip_id: str,
+        target_date: date,
+        segments: List[SegmentWeatherData],
+    ) -> None:
+        """Rollierender Alarm-Anker (Issue #1916, ADR-0056) — EIGENER,
+        undatierter Speicherort (EIN File je Trip, ueberschrieben statt
+        aufgehaeuft), getrennt von `save_dated()`/`load_dated()`: ein
+        rollierender Schreibvorgang darf die eingefrorene Briefing-Referenz
+        der Radar-Unterdrueckung (#818/#1667) niemals veraendern (AC-11)."""
+        try:
+            self._snapshots_dir.mkdir(parents=True, exist_ok=True)
+
+            snapshot = {
+                "trip_id": trip_id,
+                "target_date": target_date.isoformat(),
+                "snapshot_at": datetime.now(timezone.utc).isoformat(),
+                "provider": segments[0].provider if segments else "unknown",
+                "segments": [
+                    _serialize_segment(seg)
+                    for seg in segments
+                ],
+            }
+
+            filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+            filepath.write_text(json.dumps(snapshot, indent=2))
+            logger.info(f"Alarm anchor saved: {trip_id}")
+        except Exception as e:
+            logger.warning(f"Failed to save alarm anchor {trip_id}: {e}")
+
+    def load_alarm_anchor(self, trip_id: str) -> Optional[List[SegmentWeatherData]]:
+        """Rollierenden Alarm-Anker laden (Issue #1916) — s. `save_alarm_anchor`."""
+        filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+
+        if not filepath.exists():
+            logger.debug(f"No alarm anchor for {trip_id}")
+            return None
+
+        try:
+            data = json.loads(filepath.read_text())
+            snapshot_at = datetime.fromisoformat(data["snapshot_at"])
+            provider = data.get("provider", "unknown")
+
+            result: List[SegmentWeatherData] = []
+            for seg_data in data["segments"]:
+                segment = _reconstruct_segment(seg_data)
+                aggregated = _deserialize_summary(seg_data["aggregated"])
+                timeseries = _deserialize_timeseries(seg_data, provider)
+                result.append(
+                    SegmentWeatherData(
+                        segment=segment,
+                        timeseries=timeseries,
+                        aggregated=aggregated,
+                        fetched_at=snapshot_at,
+                        provider=provider,
+                    )
+                )
+            return result
+        except (json.JSONDecodeError, ValueError, KeyError, OSError) as e:
+            logger.warning(f"Corrupt alarm anchor {trip_id}: {e}")
+            return None
+
+    def alarm_anchor_target_date(self, trip_id: str) -> Optional[date]:
+        """Gespeicherten Tagesbezug des rollierenden Alarm-Ankers lesen
+        (Issue #1916, AC-10) — analog `load_target_date()` fuer den
+        undatierten Rueckfall."""
+        filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+        try:
+            data = json.loads(filepath.read_text())
+            return date.fromisoformat(str(data["target_date"]))
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError, OSError) as e:
+            logger.debug(f"No readable target_date in alarm anchor {trip_id}: {e}")
+            return None
+
     def load_target_date(self, trip_id: str) -> Optional[date]:
         """Den beschriebenen Tag des UNDATIERTEN Snapshots lesen (Issue #1661).
 
