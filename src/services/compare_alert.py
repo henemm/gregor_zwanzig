@@ -42,7 +42,7 @@ from services.notification_service import NotificationService
 from services.point_weather import AlertEvaluationConfig
 from services.report_config_resolver import resolve_compare_time_window
 from services.throttle_store import ThrottleStore
-from utils.timezone import first_resolvable_tz
+from utils.timezone import first_resolvable_tz, format_reference_at, tz_for_coords
 
 logger = logging.getLogger("compare_alert")
 
@@ -276,6 +276,25 @@ class CompareAlertService:
             for ids_key, channels in groups_by_ids.items():
                 group = [entity_by_id[eid] for eid in ids_key]
                 entities = [(t["loc"].name, [t["fresh_point"]], t["changes"]) for t in group]
+                # Issue #1916 (AC-4): Referenz-Zeitpunkt des ERSTEN Ortes
+                # dieser Buendel-Gruppe -- analog zur `alert_tz`-Herleitung in
+                # `NotificationService.send_multi_location_deviation_alert()`
+                # (`entities[0]`). Die Compare-eigene Snapshot-Quelle
+                # (`CompareWeatherSnapshotService`) bleibt dabei unveraendert
+                # (AC-13); nur ihr bereits geladener `fetched_at`-Wert wird
+                # hier zusaetzlich formatiert durchgereicht.
+                reference_at = None
+                first_anchor_fetched_at = group[0].get("anchor_fetched_at")
+                if first_anchor_fetched_at is not None:
+                    if first_anchor_fetched_at.tzinfo is None:
+                        first_anchor_fetched_at = first_anchor_fetched_at.replace(
+                            tzinfo=timezone.utc
+                        )
+                    first_loc = group[0]["loc"]
+                    reference_at = format_reference_at(
+                        first_anchor_fetched_at,
+                        tz_for_coords(first_loc.lat, first_loc.lon),
+                    )
                 notif_result = notification_service.send_multi_location_deviation_alert(
                     entities=entities,
                     effective_channels=channels,
@@ -286,6 +305,7 @@ class CompareAlertService:
                     # wird er ueber DENSELBEN Aufloeser wie beim amtlichen
                     # Ortsvergleich-Alarm (ADR-0021, keine zweite Fassung).
                     telegram_style=telegram_style,
+                    reference_at=reference_at,
                 )
                 delivered_all |= set(notif_result.delivered_channels)
                 reachable_all |= set(notif_result.sent_channels)
@@ -434,6 +454,11 @@ class CompareAlertService:
             "entity_id": entity_id,
             "state_svc": state_svc,
             "alert_state": alert_state,
+            # Issue #1916 (AC-4): Referenz-Zeitpunkt der Compare-eigenen
+            # Snapshot-Quelle (`CompareWeatherSnapshotService`) fuer den
+            # Alarm-Footer -- `None`, wenn kein Anker geladen wurde
+            # (Bootstrap-Fall, `cached=[]`).
+            "anchor_fetched_at": cached[0].fetched_at if cached else None,
         }
 
     @staticmethod

@@ -1,6 +1,10 @@
 # ADR-0009: Alerts sind Abweichungs-Wächter, keine absoluten Schwellen
 
-- **Status:** Akzeptiert
+- **Status:** Teilweise abgelöst durch ADR-0056 (2026-08-16) — das Grundprinzip
+  "Abweichungs-Wächter, nicht absolute Schwelle, nicht Vortagsvergleich" bleibt unverändert
+  gültig; abgelöst ist nur die enge Kopplung "Snapshot wird ausschließlich beim
+  Briefing-Versand persistiert, ohne Briefing kein Anker" (Zeile 22-23, 41-43 unten) — siehe
+  ADR-0056 für den rollierenden, briefing-unabhängigen Anker (Issue #1916).
 - **Datum:** 2026-06-16 (Epic #813)
 - **Bezug:** GitHub-Epic #813 (Slices #816, #817), Issues #821, #822, #864/#859
 
@@ -40,7 +44,8 @@ gegen eine absolute Schwelle und **nicht** gegen den Vortag.
   bisherige Planung umwirft.
 - **Negativ / Preis:** Erfordert Briefing-Snapshots als zusätzlichen Persistenz-Zustand
   (`alert_state`) und eine saubere Dedup-/Cooldown-Mechanik; ohne gesendetes Briefing gibt es keinen
-  Vergleichsanker.
+  Vergleichsanker. *(Seit ADR-0056 nicht mehr vollständig zutreffend: ein rollierender,
+  briefing-unabhängiger Anker ergänzt den Briefing-Anker, s. Status-Zeile oben.)*
 - **Folgepflichten:** Neue Alert-Funktionen müssen am Abweichungs-Modell andocken (Snapshot-Vergleich),
   nicht absolute Schwellen einführen. Der Briefing-Snapshot muss bei jedem Versand aktuell gehalten
   werden.

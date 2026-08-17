@@ -40,7 +40,7 @@ from services.throttle_store import ThrottleStore
 from services.trip_day import anchor_tz, trip_local_today
 from services.user_tier import premium_sms_allowed, sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
-from utils.timezone import tz_for_coords
+from utils.timezone import format_reference_at, tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -68,6 +68,16 @@ _RADAR_THROTTLE_SCOPE = "radar"
 # 1-2x/Tag) — geteilt wird der WERT, nicht der Code: die Trip-Seite hat mit
 # `target_date` ein schaerferes Kriterium als der Ortsvergleich (Spec A2/A3).
 _MAX_UNDATED_ANCHOR_AGE = timedelta(hours=26)
+
+# Issue #1916 (ADR-0056): Alterungs-Ceiling fuer den opportunistischen
+# Schreibtrigger (b) des rollierenden Alarm-Ankers. Kein vom PO bestaetigter
+# Fixwert (Spec "Known Limitations"), deshalb benannte Konstante statt
+# Hartverdrahtung. 4h ≈ 16 Check-Laeufe (15-Min-Takt, scheduler.go:145) —
+# gross genug, um das Δ-Vergleichsfenster nicht auf einen einzelnen Lauf zu
+# verkleinern (Trend-Erkennungs-Invariante, AC-9), klein genug, um das
+# #1916-Symptom (~24h alte Basis nach gescheitertem Briefing) zuverlaessig
+# zu kappen (AC-8).
+_ALARM_ANCHOR_CEILING = timedelta(hours=4)
 
 # Issue #1460 (P1a, loest #1444 S1 ab): der Wertebereich (`corridors[].notify`)
 # ist KEIN Alarm-Ausloeser mehr -- eine absolute Grenze widerspricht ADR-0009
@@ -308,16 +318,42 @@ class TripAlertService:
             logger.debug(
                 f"No changes for trip {trip.id}: {eval_result.suppressed_reason}"
             )
+            # Issue #1916 Trigger (b): opportunistische Auffrischung, wenn der
+            # wirksame Anker (Briefing- ODER rollierender Anker, der juengere
+            # von beiden) die Alterungs-Ceiling ueberschreitet — auch ohne
+            # ausgeloesten Alarm (AC-7/AC-8). Die Vergleichsbasis selbst bleibt
+            # dabei UNVERAENDERT, solange die Ceiling nicht ueberschritten ist
+            # (Trend-Erkennungs-Invariante, AC-9).
+            age = self._effective_anchor_age(trip.id, cached_weather)
+            if age is not None and age > _ALARM_ANCHOR_CEILING:
+                self._write_rolling_alarm_anchor(
+                    trip.id, trip_local_today(trip, now_utc), fresh_weather,
+                )
             return False
 
         logger.info(
             f"Detected {len(to_report)} significant changes for trip {trip.id}"
         )
 
+        # Issue #1916 (AC-1..AC-4): Referenz-Zeitpunkt der TATSAECHLICH
+        # verglichenen Vergleichsbasis (nicht der aktuelle Abrufzeitpunkt) —
+        # sichtbar im Alarm-Footer statt des generischen Texts.
+        reference_at = None
+        anchor_fetched = _as_aware_utc(cached_weather[0].fetched_at) if cached_weather else None
+        if anchor_fetched is not None:
+            reference_at = format_reference_at(
+                anchor_fetched,
+                tz_for_coords(
+                    cached_weather[0].segment.start_point.lat,
+                    cached_weather[0].segment.start_point.lon,
+                ),
+            )
+
         # 5. Send alert; guard: only record throttle/log when at least one
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
         notif_result = self._send_alert(
             trip, fresh_weather, to_report, official_notices=official_notices,
+            reference_at=reference_at,
         )
         # Issue #1459: Alarm-Protokoll VOR dem Zustellbarkeits-Guard — die
         # Funktion entscheidet selbst, ob der Eintrag nach `entries` (mindestens
@@ -366,6 +402,13 @@ class TripAlertService:
         # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
         alert_daily_limit.increment(
             self._user_id, now_utc, anchor_tz(trip, now_utc),
+        )
+
+        # Issue #1916 Trigger (a): jeder TATSAECHLICH versendete Alarm
+        # schreibt einen frischen rollierenden Anker (AC-6), unabhaengig von
+        # einem vorherigen Briefing.
+        self._write_rolling_alarm_anchor(
+            trip.id, trip_local_today(trip, now_utc), fresh_weather,
         )
 
         return True
@@ -611,6 +654,26 @@ class TripAlertService:
             dated = svc.load_dated(trip.id, today)
             if dated is not None:
                 return dated
+
+            # Issue #1916 (ADR-0056): rollierender Alarm-Anker als ZWEITE
+            # Quelle, VOR dem alten undatierten Rueckfall (Prioritaet:
+            # Briefing-Anker > rollierender Anker > undatierter Rueckfall,
+            # Spec "Anker-Prioritaetskette"). Unterliegt derselben
+            # #823-Tagesgrenze wie der Briefing-Anker (AC-10) — ein Anker vom
+            # falschen Tag wird verworfen, NICHT zurueckgegeben; die Funktion
+            # faellt dann auf den bestehenden undatierten Rueckfall weiter
+            # unten zurueck.
+            rolling = svc.load_alarm_anchor(trip.id)
+            if rolling is not None:
+                if not tagesgleicher_anker_noetig:
+                    return rolling
+                if svc.alarm_anchor_target_date(trip.id) == today:
+                    return rolling
+                logger.debug(
+                    "Rollierender Alarm-Anker fuer Trip %s verworfen "
+                    "(falscher Tag).", trip.id,
+                )
+
             # Fallback: undated snapshot (may be stale after evening briefing)
             undated = svc.load(trip.id)
             anchor_date = (
@@ -693,6 +756,38 @@ class TripAlertService:
         record_alert_anchor_rejected(
             user_id=self._user_id, entity_id=trip.id, reason="missing",
         )
+
+    def _write_rolling_alarm_anchor(
+        self, trip_id: str, target_date: date, weather: List[SegmentWeatherData],
+    ) -> None:
+        """Schreibt NUR den rollierenden Alarm-Anker (Issue #1916, ADR-0056)
+        — bewusst OHNE `write_anchor_and_reset_memory()`: dieser Schreibpfad
+        darf das Melde-Gedaechtnis NICHT zuruecksetzen (AC-12)."""
+        from services.weather_snapshot import WeatherSnapshotService
+
+        WeatherSnapshotService(user_id=self._user_id).save_alarm_anchor(
+            trip_id, target_date, weather,
+        )
+
+    def _effective_anchor_age(
+        self, trip_id: str, cached_weather: List[SegmentWeatherData],
+    ) -> Optional[timedelta]:
+        """Alter des juengeren der beiden Anker (Briefing- ODER rollierender
+        Anker) — Trigger (b), Issue #1916 AC-7/AC-8."""
+        from services.weather_snapshot import WeatherSnapshotService
+
+        candidates: List[datetime] = []
+        cached_fetched = _as_aware_utc(cached_weather[0].fetched_at) if cached_weather else None
+        if cached_fetched is not None:
+            candidates.append(cached_fetched)
+        rolling = WeatherSnapshotService(user_id=self._user_id).load_alarm_anchor(trip_id)
+        if rolling:
+            rolling_fetched = _as_aware_utc(rolling[0].fetched_at)
+            if rolling_fetched is not None:
+                candidates.append(rolling_fetched)
+        if not candidates:
+            return None
+        return datetime.now(timezone.utc) - max(candidates)
 
     def _is_quiet_hours(self, trip: "Trip", now: datetime) -> bool:
         """Check if current time falls within the trip's configured quiet hours.
@@ -1333,6 +1428,7 @@ class TripAlertService:
         changes: List[WeatherChange],
         official_notices: Optional[list] = None,
         corridor_hits: Optional[List[CorridorHit]] = None,
+        reference_at: Optional[str] = None,
     ) -> "NotificationResult":
         """
         Format and send alert via all configured effective channels.
@@ -1379,6 +1475,7 @@ class TripAlertService:
             mail_sink=self._mail_sink,
             telegram_style=_trip_telegram_style(trip),
             corridor_hits=corridor_hits or [],
+            reference_at=reference_at,
         )
 
         if result.sent:
