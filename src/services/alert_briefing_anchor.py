@@ -62,8 +62,11 @@ def record_alert_anchor_rejected(
         user_id: echte Nutzer-Kennung (Mandantentrennung, nie `"default"`).
         entity_id: Trip- bzw. Preset-Kennung.
         reason: `"wrong_day"` (Anker beschreibt einen anderen Tag),
-            `"too_old"` (kein lesbarer Tag UND jenseits der Altersgrenze) oder
-            `"missing"` (laufende Tour ohne jeden Anker).
+            `"too_old"` (kein lesbarer Tag UND jenseits der Altersgrenze),
+            `"missing"` (laufende Tour ohne jeden Anker) oder
+            `"not_briefing_backed"` (#1699: der Anker stammt aus einer reinen
+            Abfrage, nicht aus einem Briefing — er taugt nicht als
+            Abweichungs-Vergleichsbasis, ADR-0009).
 
     Warum überhaupt: bis hierher wurde ein unbrauchbarer Anker kommentarlos
     benutzt oder kommentarlos verworfen. Am 08.08.2026 lief die Wache einer

@@ -305,7 +305,13 @@ def _fetch_and_save_snapshot(trip, user_id: str, today, tomorrow) -> None:
             return
         segment_weather = scheduler._fetch_weather(all_segments)
         if segment_weather:
-            WeatherSnapshotService(user_id).save(trip.id, segment_weather, today)
+            # Issue #1699: Dieser Snapshot entsteht aus einer reinen ABFRAGE,
+            # nicht aus einem Briefing — er dient der Anzeige (AC-6), taugt
+            # aber nicht als Abweichungs-Vergleichsbasis (ADR-0009). Der
+            # einzige Aufrufer mit `briefing_backed=False`.
+            WeatherSnapshotService(user_id).save(
+                trip.id, segment_weather, today, briefing_backed=False,
+            )
     except Exception as exc:
         logger.warning("on-demand fetch fehlgeschlagen für trip %s: %s", trip.id, exc)
 

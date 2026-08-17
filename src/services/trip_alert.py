@@ -693,10 +693,24 @@ class TripAlertService:
         if not tagesgleicher_anker_noetig:
             # Amtliche Warnungen: Geometrie genuegt, s. Docstring.
             return undated
-        if anchor_date == today:
+        # Issue #1699: HERKUNFT vor Datum. Ein Snapshot aus einer reinen
+        # Abfrage (`glance` u.a., `trip_command_processor`) traegt
+        # `target_date = heute` und bestuende die #1661-Pruefung anstandslos —
+        # obwohl ihm nie ein Briefing zugrunde lag: der Vergleichspunkt waere
+        # nicht verschoben, sondern ERFUNDEN (ADR-0009).
+        # Diese Pruefung sitzt bewusst NACH dem amtlichen Ausstieg direkt
+        # darueber: fuer amtliche Warnungen liefert derselbe Snapshot nur die
+        # Geometrie und ist einwandfrei. Stuende sie davor, verstummten
+        # amtliche Warnungen (#1701) — die Gegenrichtung dieses Fixes.
+        if not svc.load_briefing_backed(trip.id):
+            reason = "not_briefing_backed"
+            detail = (
+                "stammt aus einer reinen Abfrage, nicht aus einem Briefing "
+                "(briefing_backed=false)"
+            )
+        elif anchor_date == today:
             return undated
-
-        if anchor_date is None:
+        elif anchor_date is None:
             # Altersnetz (A3): NUR bei fehlendem/unlesbarem Datum. Ein fehlender
             # Schreibzeitpunkt ist ebenso wenig vertrauenswuerdig wie ein zu
             # alter — beides taugt nicht als Vergleichspunkt (ADR-0009).

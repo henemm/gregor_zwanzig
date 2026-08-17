@@ -39,6 +39,7 @@ from app.loader import save_trip
 from app.models import GPXPoint, SegmentWeatherData, SegmentWeatherSummary, TripSegment
 from app.trip import Stage, Trip, Waypoint
 from services.trip_alert import TripAlertService
+from services.trip_day import trip_local_today
 from services.trip_report_scheduler import TripReportSchedulerService
 from services.weather_snapshot import WeatherSnapshotService
 from tests.tdd.conftest import WP_KORSIKA, WP_NZ, _anker, trip_two_zones
@@ -847,7 +848,7 @@ def test_ac7_fehlertext_nennt_den_tatsaechlich_benutzten_zieltag():
 # ══════════════════════ AC-8: Anker-Schluessel ══════════════════════
 
 
-def test_ac8_anker_traegt_den_ortstag_und_wird_vom_alarm_pfad_akzeptiert():
+def test_ac8_anker_traegt_den_ortstag_und_ist_als_geometrie_ladbar():
     """AC-8.
 
     GIVEN eine Tour im Mismatch-Fenster hat noch keinen ladbaren
@@ -855,10 +856,19 @@ def test_ac8_anker_traegt_den_ortstag_und_wird_vom_alarm_pfad_akzeptiert():
     WHEN  ``_handle_query`` daraufhin ``_fetch_and_save_snapshot`` ausloest
           (echter Fetch ueber die autouse-``GZ_TEST_FIXTURE_DIR``, kein
           Mock),
-    THEN  traegt die geschriebene Ankerdatei ``target_date`` = Ortstag
-          (nicht UTC-Tag), und ein anschliessender Aufruf von
-          ``trip_alert._get_cached_weather`` verwirft sie NICHT MEHR mit
-          ``reason="wrong_day"``.
+    THEN  traegt die geschriebene Ankerdatei ``target_date`` = Ortstag D21
+          (nicht UTC-Tag D20) -- und zwar genau den Tag, den der Alarm-Pfad
+          als "heute" dieser Tour ansieht --, und sie ist ladbar.
+
+    Frueher indirekt gemessen ueber ``_get_cached_weather(...,
+    tagesgleicher_anker_noetig=True) is not None``. Das traegt seit #1699
+    nicht mehr: ein Anker aus einer reinen ABFRAGE wird im Abweichungs-Pfad
+    jetzt mit ``reason="not_briefing_backed"`` abgelehnt -- unabhaengig von
+    seinem Datum und ausdruecklich gewollt. Wer hier landet, sucht also
+    vergeblich nach ``wrong_day``. Der Tagesbezug wird deshalb DIREKT
+    gelesen, und dass die #1661-Datumspruefung nichts zu beanstanden haette,
+    zeigt der Vergleich mit ``trip_local_today`` -- genau der Groesse, gegen
+    die sie prueft.
     """
     with freeze_time(NACHTS_UTC):
         _anker(NACHTS_UTC, KORSIKA_ZONE, D21)
@@ -871,15 +881,25 @@ def test_ac8_anker_traegt_den_ortstag_und_wird_vom_alarm_pfad_akzeptiert():
         ergebnis = _befehl(trip, "### query: glance", NACHTS_UTC)
         assert ergebnis.success is True, ergebnis.confirmation_body
 
-        cached = TripAlertService(user_id="default")._get_cached_weather(
-            trip, tagesgleicher_anker_noetig=True, now_utc=NACHTS_UTC,
+        geometrie = TripAlertService(user_id="default")._get_cached_weather(
+            trip, tagesgleicher_anker_noetig=False, now_utc=NACHTS_UTC,
         )
+        ortstag = trip_local_today(trip, NACHTS_UTC)
 
-    assert cached is not None, (
-        "AC-8: der von _fetch_and_save_snapshot geschriebene Anker wurde vom "
-        "Alarm-Pfad verworfen (reason=wrong_day) -- er traegt noch den "
-        f"UTC-Tag der Nachricht ({NACHTS_UTC.date().isoformat()}) statt des "
-        f"Ortstags ({D21.isoformat()})"
+    ankertag = WeatherSnapshotService(user_id="default").load_target_date("ac8-anker")
+    assert ankertag == D21, (
+        "AC-8: der von _fetch_and_save_snapshot geschriebene Anker muss den "
+        f"ORTSTAG {D21.isoformat()} tragen, nicht den UTC-Tag der Nachricht "
+        f"({NACHTS_UTC.date().isoformat()}); gelesen: {ankertag}"
+    )
+    assert ankertag == ortstag, (
+        "AC-8: der Tagesbezug muss dem entsprechen, was der Alarm-Pfad als "
+        "'heute' dieser Tour ansieht -- sonst verwuerfe die #1661-Pruefung ihn "
+        f"mit reason=wrong_day. Anker {ankertag}, Ortstag {ortstag}"
+    )
+    assert geometrie is not None, (
+        "AC-8: die Ankerdatei muss ladbar sein -- der amtliche Pfad liest sie "
+        "als Geometrie (dort greift die #1699-Herkunftspruefung bewusst nicht)"
     )
 
 

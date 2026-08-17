@@ -63,8 +63,18 @@ class WeatherSnapshotService:
         trip_id: str,
         segments: List[SegmentWeatherData],
         target_date: date,
+        *,
+        briefing_backed: bool = True,
     ) -> None:
-        """Save aggregated weather snapshot to JSON file."""
+        """Save aggregated weather snapshot to JSON file.
+
+        Issue #1699: `briefing_backed` haelt die HERKUNFT fest — nur ein
+        Snapshot aus einem regulaeren Briefing taugt als Abweichungs-
+        Vergleichsbasis (ADR-0009). Default `True`, damit die bestehenden
+        Aufrufer (Briefing-Lauf, Compare-Presets) unveraendert bleiben;
+        `False` setzt ausschliesslich der reine Abfrage-Pfad
+        (`trip_command_processor._fetch_and_save_snapshot`).
+        """
         try:
             self._snapshots_dir.mkdir(parents=True, exist_ok=True)
 
@@ -73,6 +83,7 @@ class WeatherSnapshotService:
                 "target_date": target_date.isoformat(),
                 "snapshot_at": datetime.now(timezone.utc).isoformat(),
                 "provider": segments[0].provider if segments else "unknown",
+                "briefing_backed": briefing_backed,
                 "segments": [
                     _serialize_segment(seg)
                     for seg in segments
@@ -267,6 +278,31 @@ class WeatherSnapshotService:
         except (json.JSONDecodeError, ValueError, KeyError, TypeError, OSError) as e:
             logger.debug(f"No readable target_date in snapshot {trip_id}: {e}")
             return None
+
+    def load_briefing_backed(self, trip_id: str) -> bool:
+        """Herkunft des UNDATIERTEN Snapshots lesen (Issue #1699).
+
+        Bauart wie `load_target_date()`: liest ausschliesslich das eine Feld
+        aus `{trip_id}.json`, rekonstruiert bewusst keine Segmente.
+
+        Returns:
+            `False` NUR, wenn in der Datei ausdruecklich `briefing_backed:
+            false` steht. Jeder andere Fall — fehlendes Feld (Altbestand vor
+            #1699), fehlende Datei, korruptes JSON — ergibt `True`, nie
+            `None`/`False`. Das ist der bewusste Unterschied zu
+            `load_target_date()`: die strenge Auslegung ("unbekannt =
+            verwerfen") wuerde beim ersten Alarmlauf nach dem Deploy JEDEN
+            legitim geschriebenen Altanker verwerfen und flaechendeckend
+            Alarme unterdruecken — schwerer als der behobene Schaden
+            (freigegebene PO-Auslegung, Spec AC-5).
+        """
+        filepath = self._snapshots_dir / f"{trip_id}.json"
+        try:
+            data = json.loads(filepath.read_text())
+            return data.get("briefing_backed", True) is not False
+        except (json.JSONDecodeError, ValueError, TypeError, AttributeError, OSError) as e:
+            logger.debug(f"No readable briefing_backed in snapshot {trip_id}: {e}")
+            return True
 
     def load(self, trip_id: str) -> Optional[List[SegmentWeatherData]]:
         """Load aggregated weather snapshot from JSON file."""
