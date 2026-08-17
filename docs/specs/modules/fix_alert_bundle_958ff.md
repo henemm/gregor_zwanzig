@@ -487,6 +487,28 @@ vollständige Liste — die TDD-RED-Phase muss weitere Fälle aufdecken:
 - `tests/tdd/test_trip_alert_profile.py:122-166` — **bewusster** Soll-Bruch
   (siehe AC-8/AC-9), kein Kollateralschaden.
 
+## Teilweise abgelöst (2026-08-17)
+
+Diese Spec legt in ihrer **Implementation Details**-Sektion (#958, Zeile 116-120) den
+Wortlaut für den Datenblock-Wert fest: `"Änderung {über|unter} {mark}"` (dabei das
+Zeitwort „jetzt" und die Einheit direkt am Schwellwert beibehaltend: `"jetzt über ✗"` als
+Vorher-Zustand). **Diese Wortlaut-Festlegung wird abgelöst durch**
+`docs/specs/modules/fix_1935_1779_alarm_nachricht_klarheit.md` (Issues #1935/#1779,
+PO-Entscheid 2026-08-17), die denselben Text neu als
+`"Änderung {über|unter} Alarm-Schwelle {threshold} {mark}"` definiert.
+
+**Begründung:** Das Zeitwort „jetzt" und die Einheit direkt am Schwellwert-Label
+täuschen einen Absolutwert-Vergleich vor, während die tatsächliche Logik (ADR-0013,
+`over_thr() = abs(value_to - value_from) >= threshold`) eine Δ-Aussage ist. Der neue
+Wortlaut nennt explizit die Schwelle und den Vergleich-Bezug (Änderung vs. Schwelle),
+nicht nur die Richtung.
+
+**Was gültig bleibt:** Alle anderen Festlegungen dieser Spec bleiben bestehen: die
+Δ-Semantik von `over_thr()`/`side_label()`/`delta_pct()` (AC-1, #958), die
+Nullgradgrenze-Konsolidierung (#959), die Gefiltert/Gedämpft/Sortiert-Regel für
+Multi-Event-Nachrichten (#980/#981/#982), die Outlook-kompatiblen Tabellen-Rows
+(#986), alle Regressionsschutz-ACs und Bestandstest-Migrationen.
+
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** Vorschlag `ADR-0013` — „Alert-Renderer: `threshold` ist immer

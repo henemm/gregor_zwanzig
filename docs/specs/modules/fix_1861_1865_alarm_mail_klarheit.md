@@ -220,6 +220,26 @@ where_when = f" {_where_when(e)}" if e.segment_id else ""
   Wert theoretisch ununterscheidbar sein — aus dieser Spec ausgeklammert (kein
   PO-Bug-Report dafür, Risiko einer #1170-Regression bei ungeprüfter Erweiterung).
 
+## Teilweise abgelöst (2026-08-17)
+
+Diese Spec legt in ihrer **Implementation Details**-Sektion den Wortlaut der Datenzeile als
+`"Alarm-Schwelle {threshold}: jetzt {über|unter} {✓|✗}"` fest (Zeile 73-74, AC-2/AC-3 in
+Acceptance Criteria). **Diese Festlegung wird abgelöst durch**
+`docs/specs/modules/fix_1935_1779_alarm_nachricht_klarheit.md` (Issues #1935/#1779,
+PO-Entscheid 2026-08-17).
+
+**Begründung:** Das Zeitwort „jetzt" und die Einheit direkt am Schwellwert-Label lesen sich
+wie ein Absolutwert-Vergleich („der heutige Wert ist 1.400 m, und 1.400 > 1.000, also über"),
+während die tatsächliche Tatsache dahinter eine Δ-Aussage ist: „die Änderung von 280 bis
+1.400 m beträgt 1.120 m, und 1.120 >= 1.000, also über der Schwelle" (ADR-0013).
+Der neue Wortlaut heißt `"Änderung {über|unter} Alarm-Schwelle {threshold} {✓|✗}"` und
+macht die Δ-Semantik explizit sichtbar.
+
+**Was gültig bleibt:** Alle anderen Festlegungen dieser Spec bleiben bestehen: die
+Differenzierung von Multi-Event-Zeilen durch `segment_id`/`occurred_at` (AC-1, #1861),
+die Kanalkonsistenz zwischen E-Mail und Telegram (AC-2), der Regressionsschutz für
+Compare-Bündel-Pfade (AC-5), die unveränderten `over_thr()`/`side_label()`-Semantik (AC-4).
+
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** keine
