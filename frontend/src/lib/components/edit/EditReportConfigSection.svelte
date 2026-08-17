@@ -11,6 +11,10 @@
 	} from '../shared/versand-tab/channelConnectionStatus';
 	import { channelContactLabel } from '../shared/versand-tab/channelContactLabel';
 	import { premiumSmsChannelState } from '../shared/versand-tab/premiumSmsChannelState';
+	// Issue #1738 Fix-Loop 1 (F001/F002): die Read-Modify-Write-Regel des
+	// report_config-Blobs steht als reine, pruefbare Funktion neben beiden
+	// Schreibern statt zweimal im jeweiligen Effect-Rumpf.
+	import { mergeReportConfig } from '../shared/versand-tab/mergeReportConfig.ts';
 	import { Dot } from '$lib/components/atoms';
 	import {
 		DEFAULT_DAILY_SUMMARY_METRICS,
@@ -228,42 +232,66 @@
 
 		// Original-Blob als Basis -> UI-Felder darueber mergen.
 		// So bleiben change_threshold_* und alle anderen unbekannten Felder erhalten.
-		const merged: Record<string, unknown> = {
-			...originalReportConfig,
-			enabled: morning_enabled || evening_enabled,
-			morning_enabled,
-			evening_enabled,
-			morning_time: toHHMMSS(morning_time),
-			evening_time: toHHMMSS(evening_time),
-			send_email,
-			send_telegram,
-			send_sms,
-			// Issue #1717 S3 — vierter Briefing-Kanal, gleicher Write-Back-Pfad.
-			send_premium_sms,
-			multi_day_trend_morning,
-			multi_day_trend_evening,
-			multi_day_trend_reports,
-			show_compact_summary,
-			wind_exposition_min_elevation_m,
-			// Issue #619: E-Mail-Elemente
-			show_stage_stats,
-			show_quick_take_tags,
-			show_stability,
-			show_highlights,
-			daily_summary_metrics: [...dailySummaryMetrics],
-			// Issue #664: Metriken-Überblick
-			show_metrics_summary,
-			// Issue #721/#723: Ausblick-Block
-			show_outlook,
-			// Issue #722: E-Mail-Format
-			email_format,
-			// Issue #785: Vortag-Vergleich
-			show_yesterday_comparison,
-		};
+		// Issue #1738: Basis ist der LEBENDE Blob (untrack -> kein Selbst-Trigger),
+		// nicht mehr nur der Mount-Schnappschuss. Seit /trips/new den geteilten
+		// VersandTab daneben mountet, schreiben zwei Komponenten in dasselbe
+		// report_config; der Schnappschuss ist veraltet, sobald der Nachbar etwas
+		// geaendert hat, und wuerde dessen Aenderung beim naechsten Lauf still
+		// ueberschreiben. originalReportConfig bleibt Rueckfall (erster Lauf,
+		// bevor onMount gelaufen ist).
+		// Issue #1738 Fix-Loop 1: Regel und Gating liegen in mergeReportConfig.ts —
+		// derselbe Helfer, den VersandTab.svelte benutzt. Zeitplan- und
+		// Kanal-Felder gehoeren dieser Instanz nur, wenn sie die zugehoerigen
+		// Bedienelemente auch zeigt. Sonst besitzt sie der Nachbar (VersandTab) —
+		// sie hier trotzdem mitzuschreiben waere ein zweiter, unabhaengiger
+		// Schreibpfad auf fremde Felder (Fehlerklasse Fix-Loop 4) und setzt z.B.
+		// einen frisch gesetzten Premium-SMS-Schalter beim naechsten
+		// Mail-Inhalt-Klick still zurueck.
+		const merged = mergeReportConfig({
+			snapshot: originalReportConfig as Record<string, unknown>,
+			live: untrack(() => reportConfig) as Record<string, unknown> | undefined,
+			own: {
+				show_compact_summary,
+				wind_exposition_min_elevation_m,
+				// Issue #619: E-Mail-Elemente
+				show_stage_stats,
+				show_quick_take_tags,
+				show_stability,
+				show_highlights,
+				daily_summary_metrics: [...dailySummaryMetrics],
+				// Issue #664: Metriken-Überblick
+				show_metrics_summary,
+				// Issue #721/#723: Ausblick-Block
+				show_outlook,
+				// Issue #722: E-Mail-Format
+				email_format,
+				// Issue #785: Vortag-Vergleich
+				show_yesterday_comparison,
+			},
+			showSchedule,
+			schedule: {
+				enabled: morning_enabled || evening_enabled,
+				morning_enabled,
+				evening_enabled,
+				morning_time: toHHMMSS(morning_time),
+				evening_time: toHHMMSS(evening_time),
+				multi_day_trend_morning,
+				multi_day_trend_evening,
+				multi_day_trend_reports,
+			},
+			showChannels,
+			channels: {
+				send_email,
+				send_telegram,
+				send_sms,
+				// Issue #1717 S3 — vierter Briefing-Kanal, gleicher Write-Back-Pfad.
+				send_premium_sms,
+			},
+		});
 
 		// Issue #617: verwaiste Kanäle (nicht Wetter-aktiv) auf false synchronisieren.
 		// syncSendFlags gibt merged unverändert zurück wenn weatherChannels undefined.
-		reportConfig = syncSendFlags(merged, weatherChannels) as ReportConfig;
+		reportConfig = syncSendFlags(merged, showChannels ? weatherChannels : undefined) as ReportConfig;
 	});
 
 	// --- VTSchedulePlan-Verdrahtung (Factory Pattern fuer Safari-Closure-Schutz,

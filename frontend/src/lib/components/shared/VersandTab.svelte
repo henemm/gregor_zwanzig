@@ -20,6 +20,10 @@
 	import VTSchedulePlan from './versand-tab/VTSchedulePlan.svelte';
 	import VTLaufzeitRoute from './versand-tab/VTLaufzeitRoute.svelte';
 	import VTLaufzeitVergleich from './versand-tab/VTLaufzeitVergleich.svelte';
+	// Issue #1738 Fix-Loop 1 (F001/F002): die Read-Modify-Write-Regel des
+	// report_config-Blobs steht als reine, pruefbare Funktion neben beiden
+	// Schreibern statt zweimal im jeweiligen Effect-Rumpf.
+	import { mergeReportConfig } from './versand-tab/mergeReportConfig.ts';
 	// Issue #1258 Scheibe S4 (E5): die komplette Alert-Zustellungs-Sektion des
 	// vergleich-Zweigs (Cooldown-/Quiet-Karten + Beispiel-Warnung) zog atomar
 	// in AlarmeTab.svelte um (Radar/Metrik-Level-Tabelle waren dort nie).
@@ -127,23 +131,34 @@
 		const multi_day_trend_reports: string[] = [];
 		if (multi_day_trend_morning) multi_day_trend_reports.push('morning');
 		if (multi_day_trend_evening) multi_day_trend_reports.push('evening');
-		const merged: Record<string, unknown> = {
-			...originalReportConfig,
-			enabled: morning_enabled || evening_enabled,
-			morning_enabled,
-			evening_enabled,
-			morning_time: toHHMMSS(morning_time),
-			evening_time: toHHMMSS(evening_time),
-			send_email,
-			send_telegram,
-			send_sms,
-			// Issue #1717 S3 — derselbe Write-Back-Pfad wie die drei darueber.
-			send_premium_sms,
-			telegram_style,
-			multi_day_trend_morning,
-			multi_day_trend_evening,
-			multi_day_trend_reports
-		};
+		// Issue #1738: Read-Modify-Write ueber den geteilten Helfer, Basis ist der
+		// LEBENDE Blob (untrack -> kein Selbst-Trigger) und nicht mehr nur der
+		// Mount-Schnappschuss. Seit /trips/new diese Komponente neben
+		// EditReportConfigSection auf dasselbe bind:reportConfig mountet, wuerde
+		// eine Zuweisung aus dem veralteten Schnappschuss jede Mail-Inhalt-
+		// Einstellung des Nachbarn (email_format, show_outlook, ...) und jedes
+		// unbekannte Bestandsfeld (change_threshold_*) still loeschen.
+		// originalReportConfig bleibt Rueckfall fuer den ersten Lauf vor onMount.
+		const merged = mergeReportConfig({
+			snapshot: originalReportConfig as Record<string, unknown>,
+			live: untrack(() => reportConfig) as Record<string, unknown> | undefined,
+			own: {
+				enabled: morning_enabled || evening_enabled,
+				morning_enabled,
+				evening_enabled,
+				morning_time: toHHMMSS(morning_time),
+				evening_time: toHHMMSS(evening_time),
+				send_email,
+				send_telegram,
+				send_sms,
+				// Issue #1717 S3 — derselbe Write-Back-Pfad wie die drei darueber.
+				send_premium_sms,
+				telegram_style,
+				multi_day_trend_morning,
+				multi_day_trend_evening,
+				multi_day_trend_reports
+			}
+		});
 		reportConfig = merged as ReportConfig;
 	});
 
