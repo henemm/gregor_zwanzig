@@ -58,8 +58,11 @@ _ICON_D2_LAT_MAX = 58.0
 _ICON_D2_LON_MIN = 2.0
 _ICON_D2_LON_MAX = 19.0
 
-# Onset threshold: frames within 60 min from now considered "nowcast"
-_NOWCAST_HORIZON_MIN = 60
+# Onset threshold: frames within 180 min from now considered "nowcast"
+# Issue #1945: 180 statt 60 — die GeoSphere-INCA-Quelle liefert live 3 Stunden
+# im 15-Min-Raster; der alte 60-Min-Deckel liess den Alarm praktisch immer erst
+# beim naechsten Rasterpunkt (~8 Min Vorlauf) ausloesen.
+_NOWCAST_HORIZON_MIN = 180
 # Issue #1439: oeffentlicher Alias, damit der Scheduler-Zeitfenster-Guard
 # dieselbe Zahl referenziert statt eine zweite Kopie zu pflegen.
 NOWCAST_HORIZON_MIN = _NOWCAST_HORIZON_MIN

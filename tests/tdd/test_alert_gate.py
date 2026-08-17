@@ -885,17 +885,17 @@ def test_ac8_zweite_meldung_vollstaendig_innerhalb_des_abgedeckten_fensters():
 def test_ac9_valid_to_reicht_wesentlich_ueber_das_abgedeckte_ende_hinaus():
     """AC-9 (V1-Ausnahme) + Mutations-Gegenprobe (PFLICHT laut Spec).
 
-    GIVEN ein registrierter Nowcast-Eintrag (abgedeckt bis Onset+60 Min)
+    GIVEN ein registrierter Nowcast-Eintrag (abgedeckt bis Onset+180 Min)
     WHEN  eine amtliche Warnung derselben Klasse/desselben Orts eintrifft,
-          deren ``valid_to`` MEHR ALS 60 Min ueber das abgedeckte Ende
+          deren ``valid_to`` MEHR ALS 180 Min ueber das abgedeckte Ende
           hinausreicht — OHNE hoehere Dringlichkeit
     THEN  wird sie zugestellt (neue Information).
 
     Mutations-Gegenprobe: wird ``NOWCAST_HORIZON_MIN`` durch eine deutlich
     groessere Zahl (z. B. 600) ersetzt, deckt das verfaelschte Fenster
     ``covered_until + 600min`` das hier verwendete ``valid_to`` (nur +90 Min
-    ueber ``covered_until``) weiterhin ab — die V1-Ausnahme greift dann
-    NICHT mehr, ``allowed`` wird ``False`` statt ``True``, und dieser Test
+    ueber ``covered_until + Horizont``) weiterhin ab — die V1-Ausnahme greift
+    dann NICHT mehr, ``allowed`` wird ``False`` statt ``True``, und dieser Test
     wird rot."""
     from services.alert_gate import check_event_identity_gate, record_event_identity
 
@@ -907,12 +907,12 @@ def test_ac9_valid_to_reicht_wesentlich_ueber_das_abgedeckte_ende_hinaus():
             user_id=uid, entity_id="trip-ac9", hazard_class="wet",
             segment_ids=["4"], severity="MODERATE", point_at=onset, now=onset,
         )
-        # covered_until = onset + NOWCAST_HORIZON_MIN (60 Min)
+        # covered_until = onset + NOWCAST_HORIZON_MIN (180 Min, #1945)
         ergebnis = check_event_identity_gate(
             user_id=uid, entity_id="trip-ac9", hazard_class="wet",
             segment_ids=["4"], severity="MODERATE",  # keine hoehere Dringlichkeit
             window_start=onset,
-            window_end=onset + timedelta(minutes=150),  # 90 Min ueber covered_until
+            window_end=onset + timedelta(minutes=450),  # 90 Min ueber covered_until+180
             now=onset + timedelta(minutes=5),
         )
         assert ergebnis.allowed is True, (
