@@ -37,6 +37,8 @@ if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 from app.models import ForecastDataPoint  # noqa: E402
+from providers import base as provider_base  # noqa: E402
+from providers import geosphere  # noqa: E402
 from providers import openmeteo as om  # noqa: E402
 from providers import thunder_enrichment  # noqa: E402
 from tests.tdd._dwd_eu_fixtures import (  # noqa: E402
@@ -46,6 +48,28 @@ from tests.tdd._dwd_eu_fixtures import (  # noqa: E402
 from tests.tdd.test_dwd_thunder_new_signals_fetch import (  # noqa: E402
     _KARNISCH, _NEUE_EINZEL_FIXTUREN, _server as _d2_server,
 )
+
+
+class _GeosphereZusatzStub:
+    """#1758 (ADR-0057): `geosphere` ist seit dieser Aenderung eine additive
+    Zusatzquelle fuer das Gebiet DE_ALPEN -- der Karnische Hoehenweg
+    (46.40/12.52) liegt sowohl in DE_ALPEN als auch im AROME-Gitter, bekommt
+    also seither zusaetzlich zum DWD einen GeoSphere-Abruf zugewiesen.
+    Dieser Test prueft ausschliesslich den DWD-Datenweg (Fixtures oben) --
+    ohne diesen Stub wuerde der reguraere Weg (`fetch_forecast`) hier einen
+    ECHTEN, ungestubbten Netzversuch gegen `dataset.api.hub.geosphere.at`
+    ausloesen (fail-soft abgefangen, aber ~7s langsam und ein echter
+    Netzzugriff aus der Kern-Schicht -- beides unerwuenscht)."""
+
+    @property
+    def name(self) -> str:
+        return "geosphere"
+
+    def fetch_thunder_signals(self, location, start=None, end=None):
+        return {}
+
+    def fetch_thunder_signals_named(self, location, start=None, end=None):
+        return {"cape": {}, "cin": {}}
 
 # Sieben neue Signal->Feld-Paare (Spec "Implementation Details" 1/4). Als
 # TEST-LOKALE Erwartung notiert, NICHT aus dem Produktivcode gelesen --
@@ -131,6 +155,26 @@ def test_ac1_regulaerer_weg_traegt_die_sieben_neuen_werte_an_den_datenpunkt(
     Datenpunkte an mindestens einer Stunde `convective_inhibition_jkg` und
     `cape_ml_jkg` mit den Rohwerten der Aufzeichnung -- kein Ausfall, keine
     Sonderweiche."""
+    # #1758: GeoSphere ist seit ADR-0057 additive Zusatzquelle fuer DE_ALPEN
+    # (s. `_GeosphereZusatzStub`-Docstring) -- gestubbt, damit dieser Test
+    # weiterhin ausschliesslich den DWD-Datenweg prueft, ohne einen echten
+    # Netzversuch auszuloesen.
+    if not provider_base._PROVIDER_FACTORIES:
+        provider_base._load_providers()
+    monkeypatch.setitem(
+        provider_base._PROVIDER_FACTORIES, "geosphere", _GeosphereZusatzStub
+    )
+    # Nebenbefund bei der #1758-Untersuchung, VORBESTEHEND und unabhaengig
+    # von GeoSphere als Gewitterquelle: `OpenMeteoProvider._enrich_snow`
+    # instanziiert `GeoSphereProvider` fuer Alpen-Punkte wie diesen DIREKT
+    # (openmeteo.py:475-477, NICHT ueber die Provider-Registry) und macht
+    # dabei einen echten SNOWGRID-Netzabruf, den der Registry-Stub oben
+    # NICHT erreicht. Gebucht in #1199 (Nebenbefund-Sammel-Issue).
+    monkeypatch.setattr(
+        geosphere.GeoSphereProvider, "fetch_snowgrid",
+        lambda self, lat, lon: (None, None), raising=True,
+    )
+
     with hauptquelle_laeuft(monkeypatch, _KARNISCH), _d2_server(monkeypatch):
         reihe = om.OpenMeteoProvider().fetch_forecast(_KARNISCH, enrich_ensemble=False)
 
