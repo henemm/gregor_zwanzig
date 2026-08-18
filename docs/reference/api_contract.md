@@ -3279,6 +3279,70 @@ export interface AlertRule {
 
 ---
 
+## 22.5) Alert Preview Endpoint (Issue #918, ADR-0011; Testmeldungs-Einspeisung Issue #1948 S2)
+
+Zustandsloser, nicht versionsstabiler Validator-/Vorschau-Endpoint (Python-Core,
+`api/routers/validator.py`). Rendert eine Alarm-Meldung über alle Kanäle (Subject, E-Mail
+HTML/Plain, Telegram, SMS) aus **testweise eingespeisten** Rohdaten — kein Wetterdaten-Fetch,
+kein Versand, keine Nutzerdaten-Persistenz. Ursprünglich nur für Δ-Alarm und Onset-Nowcast
+(Issue #918); seit Issue #1948 Scheibe S2 um die zwei amtlichen/Nowcast-Zweige b/c erweitert,
+sodass alle drei Alarm-Zweige (a/b/c) testweise durchspielbar sind, gespeist aus dem
+S1-Eingangsprotokoll (`src/services/alert_input_capture.py`, siehe
+`docs/specs/modules/alarm_eingangsprotokoll.md`).
+
+**Handler:** `api/routers/validator.py::alert_preview` → `src/services/validator_render_service.py::render_alert_preview`
+
+### POST /api/trips/{trip_id}/alert-preview
+
+**Query Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| user_id | string | yes | Session-User; wie bei allen Validator-Endpoints zustandslos verwendet (kein Trip-/Nutzerdaten-Fetch außer Name/Config des geladenen Trips) |
+
+**Request Body (`AlertPreviewBody`) — genau EINER von vier Payload-Typen (sonst HTTP 422):**
+
+| Feld | Typ | Beschreibung |
+|------|-----|------|
+| changes | `ChangePayload[]` | Zweig a (Δ-Alarm): rohe Änderungswerte je Etappe (`metric`, `old_value`, `new_value`, `delta`, `threshold`, `severity`, `direction`, `segment_id`) |
+| segment_times | `SegmentTimePayload[]` | Optional bei `changes` — fehlt es, synthetisiert der Endpoint die Etappen-Zeitfenster aus dem geladenen Trip über dieselbe Produktions-Segmentierung wie der Versandpfad (`convert_trip_to_segments`) |
+| onset | `OnsetPayload` \| null | Radar-Onset (Zweig c, Alt-Form vor S2): `onset_minutes`, `onset_time`, `km_from`, `km_to`, `is_convective`, `intensity_label`, `source_label`, `cooldown_display?` |
+| official | `OfficialAlertPayload[]` \| null | **NEU (#1948 S2), Zweig b:** amtliche Warnung(en), Feldspiegel von `OfficialAlert` — `source`, `hazard`, `level: int`, `label`, `valid_from?`, `valid_to?`, `url?`, `region_label?`, `dedup_id?`, `segment_ids: string[]` |
+| nowcast_frames | `NowcastFramesPayload` \| null | **NEU (#1948 S2), Zweig c:** Replay eines S1-Nowcast-Mitschnitts — `source`, `frames: [{timestamp, precip_mm_h, is_convective}]`, `km_from`, `km_to` |
+
+**Response 200 (`changes`/`onset`/`official`):**
+
+```json
+{
+  "subject": "...",
+  "email_html": "...",
+  "email_plain": "...",
+  "telegram": "...",
+  "sms": "..."
+}
+```
+
+**Response 200 (`nowcast_frames`, additiv):** wie oben, plus `"onset_detected": bool`. Leitet
+der eingespeiste Frame-Mitschnitt über dieselbe `_derive_result`-Ableitung wie der Live-Radar-
+Pfad **keinen** Onset innerhalb des Fensters ab, ist `onset_detected: false` und alle
+Render-Felder (`subject`/`email_html`/`email_plain`/`telegram`/`sms`) sind `null` — expliziter
+Leerbefund statt Exception/HTTP 500.
+
+**Error Responses:**
+- `404` — Trip nicht gefunden für `user_id`
+- `422` — Body enthält nicht genau einen der vier Payload-Typen, oder eine `segment_id` in
+  `changes` existiert nicht im Trip
+
+**Notes:**
+- Zustandslos wie `compare-email-preview`/`sms-fidelity-preview` — kein Wetterdaten-Fetch, kein
+  Versand, keine Persistenz.
+- `official` ruft `services/official_alerts/*` ausschließlich auf (Render-Sequenz gespiegelt aus
+  `notification_service.send_official_alert`), ändert keine Zeile in der #1929-Sperrzone
+  (`official_alerts.py:1896-2104`).
+- Spec S2 (`official`/`nowcast_frames`, `segment_times`-Synthese): `docs/specs/modules/alarm_testeinspeisung.md`.
+
+---
+
 ## 23) Stage-Weather Internal Endpoint (Issue #1212, Slice R1)
 
 Interner, nicht versionsstabiler Endpoint (Python FastAPI, Port 8000, **kein** Go-Proxy in
@@ -3476,6 +3540,15 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-18: Issue #1948 Scheibe S2 — `POST /api/trips/{trip_id}/alert-preview` (Section 22.5,
+  neu dokumentiert) bekommt zwei additive, exklusive Payload-Typen neben `changes`/`onset`:
+  `official` (Zweig b, amtliche Warnung(en) als `OfficialAlertPayload[]`) und `nowcast_frames`
+  (Zweig c, Replay eines S1-Nowcast-Mitschnitts, Antwort zusätzlich `onset_detected: bool`).
+  `segment_times` ist bei `changes` jetzt optional — fehlt es, synthetisiert der Endpoint die
+  Etappen-Zeitfenster aus dem geladenen Trip. Vier-Wege-Exklusivität (`HTTP 422` bei ≠1 gesetztem
+  Payload-Typ) ersetzt das alte binäre `onset` XOR `changes`-Gate. Der S1-Nowcast-Mitschnitt
+  (`src/services/alert_input_capture.py`) trägt seither zusätzlich `is_convective` je Frame.
+  Spec: `docs/specs/modules/alarm_testeinspeisung.md`.
 - 2026-08-16: Issue #1678 — `EU_REST` (ICON-EU, `lpi_con_max`) bekommt eine eigene, belegte
   LPI-Schwellenleiter **(7,14 / 23,81 / 86,16 J/kg)** und löst damit den Interim-Wert 5/20/50
   ab, den #1679 dort bewusst stehen ließ. Quelle aller drei Sprossen: Schröder/Göcke/Köhler

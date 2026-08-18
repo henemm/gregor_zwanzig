@@ -7,7 +7,7 @@ directly.
 from __future__ import annotations
 
 from datetime import date as date_type
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Any
 
 from app.models import (
@@ -93,7 +93,15 @@ def render_alert_preview(
     """Render alert preview across all channels.
 
     Returns a dict with subject, email_html, email_plain, telegram, sms.
+    Issue #1948 Scheibe S2: ``official`` (Zweig b) und ``nowcast_frames``
+    (Zweig c) sind zwei weitere exklusive Payload-Typen neben ``onset``
+    und ``changes`` — der Router garantiert bereits Vier-Wege-Exklusivitaet.
     """
+    if getattr(body, "official", None):
+        return _render_official_preview(trip_obj, body.official)
+    if getattr(body, "nowcast_frames", None) is not None:
+        return _render_nowcast_replay(trip_obj, body.nowcast_frames)
+
     alert_tz = _alert_tz_for_trip(trip_obj)
     stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
     has_onset = body.onset is not None
@@ -146,6 +154,109 @@ def render_alert_preview(
         "telegram": telegram,
         "sms": sms,
     }
+
+
+def _parse_official_dt(value: "str | None") -> "datetime | None":
+    return None if value is None else datetime.fromisoformat(value)
+
+
+def _render_official_preview(trip_obj: Trip, payloads: list) -> dict:
+    """Issue #1948 Scheibe S2 (Zweig b): Render-Sequenz aus
+    ``notification_service.send_official_alert`` (Z. 846-882) gespiegelt --
+    der zustandslose Preview braucht weder Versandkanaele noch
+    Trip-Notification-Historie. #1929-Sperrzone (``official_alerts.py``:
+    1896-2104) wird ausschliesslich AUFGERUFEN, keine Zeile darin geaendert.
+    """
+    from services.official_alerts.models import OfficialAlert
+    from output.renderers.alert.official_alerts import (
+        build_official_alert_notices, render_official_alert_mail_plain,
+        render_official_alert_sms, render_official_alert_subject,
+        render_official_alert_telegram, render_warn_block,
+    )
+    from services.notification_service import (
+        _official_source_label_for, _official_source_url_for,
+    )
+
+    alert_tz = _alert_tz_for_trip(trip_obj)
+    tagged = [
+        (
+            OfficialAlert(
+                source=p.source, hazard=p.hazard, level=p.level, label=p.label,
+                valid_from=_parse_official_dt(p.valid_from),
+                valid_to=_parse_official_dt(p.valid_to),
+                url=p.url, region_label=p.region_label, dedup_id=p.dedup_id,
+            ),
+            p.segment_ids,
+        )
+        for p in payloads
+    ]
+    dto_notices = build_official_alert_notices(trip_obj, tagged)
+    source_label = _official_source_label_for(dto_notices)
+    source_url = _official_source_url_for(dto_notices)
+    stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+    subject = render_official_alert_subject(dto_notices, prefix=trip_obj.name, tz=alert_tz)
+    html = render_warn_block(
+        dto_notices, variant="standalone", source_label=source_label,
+        source_url=source_url, stand_at=stand_at, tz=alert_tz,
+        context_label=trip_obj.name,
+    )
+    plain = render_official_alert_mail_plain(
+        dto_notices, source_label=source_label, stand_at=stand_at,
+        tz=alert_tz, context_label=trip_obj.name,
+    )
+    telegram = render_official_alert_telegram(
+        dto_notices, prefix=trip_obj.name, source_label=source_label, tz=alert_tz,
+    )
+    sms = render_official_alert_sms(dto_notices, sms_prefix=trip_obj.name, tz=alert_tz)
+    return {
+        "subject": subject, "email_html": html, "email_plain": plain,
+        "telegram": telegram, "sms": sms,
+    }
+
+
+def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
+    """Issue #1948 Scheibe S2 (Zweig c): Replay eines Frame-Mitschnitts ueber
+    dieselbe ``_derive_result``-Ableitung wie der Live-Radar-Pfad. Kein
+    Onset im Fenster -> expliziter Leerbefund statt Exception/HTTP 500."""
+    from types import SimpleNamespace
+
+    from providers.brightsky import RadarFrame
+    from services.radar_service import RadarNowcastService
+
+    frames = [
+        RadarFrame(
+            timestamp=datetime.fromisoformat(f.timestamp),
+            precip_mm_h=f.precip_mm_h, is_convective=f.is_convective,
+        )
+        for f in body_nf.frames
+    ]
+    svc = RadarNowcastService()
+    now = datetime.now(timezone.utc)
+    result = svc._derive_result(frames, body_nf.source, now=now)
+    if result.onset_minutes is None:
+        return {
+            "onset_detected": False, "subject": None, "email_html": None,
+            "email_plain": None, "telegram": None, "sms": None,
+        }
+
+    alert_tz = _alert_tz_for_trip(trip_obj)
+    onset_time = now + timedelta(minutes=result.onset_minutes)
+    onset_ns = SimpleNamespace(
+        onset_minutes=result.onset_minutes,
+        onset_time=local_fmt(onset_time, alert_tz)[-5:],  # "HH:MM"-Anteil
+        km_from=body_nf.km_from, km_to=body_nf.km_to,
+        is_convective=result.is_convective,
+        intensity_label=result.intensity_label,
+        source_label=RadarNowcastService._SOURCE_LABELS.get(
+            result.source, result.source,
+        ),
+        cooldown_display=None,
+    )
+    out = render_alert_preview(
+        trip_obj, SimpleNamespace(onset=onset_ns, official=None, nowcast_frames=None),
+    )
+    out["onset_detected"] = True
+    return out
 
 
 def render_compare_email_preview(body: Any) -> str:
