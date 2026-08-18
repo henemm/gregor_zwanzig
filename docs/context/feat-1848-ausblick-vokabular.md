@@ -127,9 +127,58 @@ Der Ortsvergleich (Scheibe B) behält das Paar-Vokabular vorerst.
 `outlook_columns()` und der Compare-Katalog werden weiter von beiden Flächen
 benutzt — die Vereinheitlichung ist erst nach B abgeschlossen.
 
-## Offene Entscheidung (PO)
+## PO-Entscheid 2026-08-18 — Zuschnitt festgelegt
 
-Aus R1 folgt: Scheibe A ist **nicht** mechanisch ausführbar. Es braucht eine
-Festlegung, wie „Temperatur Minimum" und „Temperatur Maximum" künftig als
-zwei getrennte Ausblick-Spalten ausdrückbar bleiben — oder ob sie es nicht
-mehr sein sollen. Siehe Analyse-Phase.
+Aus R1 folgt: Scheibe A ist **nicht** mechanisch ausführbar. Vorgelegt wurden
+drei Wege; der PO hat entschieden:
+
+> **Nur die Doppelpflege beseitigen.** Die Auswahl bleibt für den Nutzer exakt
+> wie heute — getrennte Minimum-/Maximum-Spalten im Ausblick bleiben möglich.
+> Beseitigt wird ausschließlich, dass dieselbe Auswahlregel (ADR-0050) an zwei
+> Stellen gepflegt wird. Dazu ein Wächter, der eine erneute Zweitschrift
+> verhindert.
+
+**Ausdrücklich NICHT Teil dieser Scheibe** (eigenes Ticket im Wetter-Register-
+Epic #1435):
+
+- Umstellung des Speicherformats `outlook_metrics` von Paaren auf Kennungen
+- Neue Katalog-Kennungen je Auswertungsrichtung (`temperature_min` o. ä.)
+- Rückführung des Ortsvergleich-Katalogs (Scheibe B des Issues)
+- Jede Änderung an Frontend, API-Vertrag oder gespeicherten Daten
+
+**Folge für die Risiken:** R1 entfällt (keine Vokabular-Änderung), R3/R4
+entfallen (keine Migration — zusätzlich gemessen: auf Produktion und Staging
+ist heute **keine einzige** `outlook_metrics`-Auswahl gespeichert, bei
+positiver Gegenprobe über `display_config`), R5 entfällt (Frontend unberührt).
+R2 und R6 bleiben als Beobachtung bestehen, ohne in dieser Scheibe behandelt
+zu werden.
+
+## Technischer Ansatz (Analyse)
+
+Heute existiert die Kaskadenregel zweimal, verhaltensgleich:
+
+| Ort | Eingabe | Schnittmenge |
+|---|---|---|
+| `models.py:898-921` `_clip_to_global_maximum()` | `list[MetricConfig]` | `mc.metric_id` |
+| `compare_outlook_metric_ids.py:78-102` `resolve_trip_outlook_metrics()` | `list[dict]` | `e["metric_id"]` |
+
+Beide bilden dieselben Regeln D1–D4 ab, nur über verschiedene Trägertypen.
+Der gemeinsame Kern ist **die erlaubte Kennungsmenge**, nicht der Träger:
+
+- **Eine Quelle:** `UnifiedWeatherDisplayConfig` erhält eine öffentliche
+  Methode, die die erlaubte Kennungsmenge für einen Report-Typ liefert —
+  einschließlich Regel D4 („keine Grundauswahl" ⇒ kein Maximum, ausgedrückt
+  als eigener Rückgabewert, nicht als leere Menge; die Unterscheidung ist der
+  ganze Punkt von D4).
+- **Zwei Aufrufer:** `_clip_to_global_maximum()` und
+  `resolve_trip_outlook_metrics()` filtern beide über diese Menge und
+  enthalten selbst keine Regel mehr.
+- Kein neuer Import in Richtung `models.py` nötig: der Ausblick-Resolver
+  bekommt das `dc`-Objekt bereits übergeben.
+
+**Wächter (Verhalten, nicht Dateiinhalt):** ein Test, der dieselben
+Kaskaden-Fälle — inklusive D4 und des `selectable`-Gates — durch **beide**
+Flächen schickt (Kanal-Layout und Ausblick) und identische Entscheidungen
+verlangt. Die Erwartungswerte werden im Test fest hinterlegt und **nicht** aus
+dem Prüfling abgeleitet, sonst bliebe die Mutations-Gegenprobe grün
+(Lehre aus #1467: Test und Prüfling dürfen nicht dieselbe Quelle teilen).
