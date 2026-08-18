@@ -192,6 +192,161 @@ im alten Stand an" liegen vor — sie werden von `detect_changes()` nur nicht ge
 - **#1948 S2** — keine Überschneidung. Fasst `api/routers/validator.py`,
   `src/services/validator_render_service.py`, `src/services/radar_service.py` an.
   Sperrzone `official_alerts.py:1896-2104` (#1929, fremde Session) notiert.
-- **#1954** — keine Dateikollision (nur `src/services/alert_log.py`), aber Kopplung über die
-  `WeatherChange`-Feldform, siehe Risiko 4. Branch `fix-1954-alarm-wert-protokollieren`,
-  Adversary VERIFIED, noch nicht gepusht.
+- **#1954** — **auf `main` seit 2026-08-18** (Merge `e677aee2`, PR #1963, Prod-Selftest PASS).
+  Keine Dateikollision (nur `src/services/alert_log.py`), aber Kopplung über die
+  `WeatherChange`-Feldform, siehe Risiko 4 und Analyse-Abschnitt „Register-Paar".
+
+---
+
+# Analysis (Phase 2, 2026-08-18)
+
+## Type
+
+**Feature** — neue Alarm-Größe, kein Fehlverhalten bestehenden Codes.
+
+## Die drei Entwurfs-Entscheidungen
+
+### E1 — Der Beginn wird ein eigenes Summary-Feld je Größe
+
+Zwei neue Felder in `SegmentWeatherSummary`, befüllt in
+`WeatherMetricsService.compute_basis_metrics()` (`src/services/weather_metrics.py:397-470`)
+nach dem Muster der bestehenden `_compute_*`-Methoden:
+
+| Feld | Bedeutung | Schwelle |
+|---|---|---|
+| `thunder_onset_utc` | erste Stunde mit `thunder_level >= LOW` | `ThunderLevel.LOW` (wie `render_threshold_peak_value("TH", …, threshold=1.0)`) |
+| `precip_heavy_onset_utc` | erste Stunde mit `precip_rate_mmph >= 4.0` | **4,0 mm/h** — PO-Entscheid, identisch mit `INTENSITY_HEAVY` (`radar_service.py:77`) |
+
+Typ: `Optional[datetime]` (UTC, naiv — Hausnorm `src/utils/timezone.py:107-109`).
+**Nicht** eine nackte Stundenzahl: Die Verschiebung 23:00 → 01:00 ist 2 Stunden, nicht 22
+(Risiko 8). Nur ein echter Zeitstempel rechnet das richtig.
+
+**Warum ein eigenes Feld je Größe und nicht ein gemeinsames:** Das Alarm-Protokoll bildet
+sein Register-Paar über `metric_and_aggregation_for_field(c.metric)`
+(`src/app/metric_catalog.py:1166-1196`) — Schlüssel ist der **Summary-Feldname**. Ein eigenes
+Feld ergibt automatisch ein eigenes Paar `("thunder", "onset")` und damit die von #1954
+geforderte Trennung von der Stufen-Änderung `("thunder", "max")`. Ohne eigenen
+Katalog-Eintrag liefert der Reverse-Lookup `None` und die Beginn-Änderung fällt **still**
+aus dem Protokoll (`alert_log.py:132-134`) — Fehlerfall ohne Fehlermeldung, gehört bewacht.
+
+**Compare erbt automatisch:** `summarize_points()` (`weather_metrics.py:1108-1160`) ist ein
+dünner Wrapper um `compute_basis_metrics()`. Trip und Ortsvergleich teilen den Code, die
+Teilungs-Invariante ist ohne Zusatzarbeit erfüllt.
+
+**Bestandsdaten:** `_deserialize_summary()` (`weather_snapshot.py:357-373`) filtert über
+`dataclasses.fields()`. Alte Anker ohne die Felder laden weiter, das Feld ist dann `None`.
+
+### E2 — Der Beginn ist eine LOKALE, tagesfenster-gefilterte Größe
+
+**🔴 Die Falle:** Die Aggregation ist heute **zeitzonen- und fensterblind**
+(`weather_metrics.py:397-470` kennt weder `tz` noch `day_window_*`). Das Tagesfenster
+(Default 4–19 Uhr, `src/app/day_window.py:20-21`) wird erst in der Render-Schicht angewendet
+(`helpers.py:1005-1007`). Ein naiv in der Aggregation berechnetes Onset wäre die erste
+Überschreitung **im gesamten Zeitraum inklusive Nachtstunden**.
+
+Das ergäbe zwei verschiedene Zahlen, die beide „Gewitterbeginn" heißen: Das Briefing zeigt
+„Gewitter mittel ab 14:00" (gefiltert), der Alarm meldete „03:00 → 01:00" (ungefiltert). Der
+Wanderer bekäme einen Alarm über eine Verschiebung, die in seinem Briefing nie stand.
+
+**Entscheidung:** Der Alarm vergleicht **dieselbe Zahl, die im Briefing steht.** Der Zweck
+des Tickets ist wörtlich *„das Briefing hat 17 Uhr geschrieben und der Forecast ändert sich
+auf 15 Uhr"* — eine andere Bezugsgröße macht den Alarm unbrauchbar. Zeitzone und
+Tagesfenster müssen die Onset-Berechnung also erreichen.
+
+**Absicherung als AC (Muster von #1493 AC-9):** Aus **derselben Fixture** muss die
+Onset-Stunde im gerenderten Briefing und der Wert im Summary-Feld **gleich** sein — geprüft
+als Gleichheit beider Größen, nicht als zwei getrennte Textprüfungen. Driften Anzeige und
+Alarm auseinander, wird der Test rot.
+
+**Wichtig:** Ein global berechnetes Onset lässt sich **nicht** nachträglich in ein
+fenster-gefiltertes umrechnen — die erste Überschreitung nachts und die erste im Tagesfenster
+sind verschiedene Stunden. Nachrüsten geht also nicht; das muss von Anfang an stimmen.
+
+### E3 — Asymmetrie über eine dritte Weiche, kein neuer Regeltyp
+
+`detect_changes()` hat bei `weather_change_detection.py:692-696` bereits genau die Weiche,
+die gebraucht wird:
+
+```python
+level = self._ordinal_levels.get(metric)
+if level is not None:
+    triggered = self._ordinal_change_triggers(old_value, new_value, level)
+else:
+    triggered = abs(delta) > threshold
+```
+
+Der Beginn-Vergleich fügt sich als dritter Zweig nach demselben Muster ein (eigenes
+`_onset_levels`-Dict, eigenes Prädikat), Severity analog bei `:705-708`. **Kein neuer
+`AlertRuleKind`** nötig — das spart die Verzweigungsstellen bei `:513/517/535` und
+`loader.py:376`.
+
+Die Asymmetrie selbst ist echtes Neuland (das Muster „zwei Schwellen je nach Vorzeichen"
+existiert nirgends). Sie sitzt in der Preset-Tabelle, die pro Stufe **zwei** Werte trägt:
+
+| Stufe | früher (vorgezogen) | später (verschoben) |
+|---|---|---|
+| entspannt | ab 2 h | ab 4 h |
+| standard | ab 1 h | ab 3 h |
+| sensibel | ab 1 h | ab 2 h |
+
+*(Vorschlag — die Zahlen gehören in die Spec-Freigabe. Ausgangspunkt ist der Issue-Text
+„entspannt ab 3 h, standard ab 2 h, sensibel ab 1 h", nach vorn verschärft und nach hinten
+gelockert.)*
+
+## Affected Files
+
+| Datei | Änderung | Beschreibung |
+|---|---|---|
+| `src/app/models.py` | MODIFY | 2 Summary-Felder, 2 `AlertMetric`-Werte |
+| `src/services/weather_metrics.py` | MODIFY | 2 `_compute_*_onset()`, Aufruf in `compute_basis_metrics`, Regel in `aggregate_stage` |
+| `src/app/metric_catalog.py` | MODIFY | `summary_fields`/`alert_metrics` um `"onset"` erweitern (`thunder`, `precipitation`), `alert_label`, `sms_code` |
+| `src/services/weather_change_detection.py` | MODIFY | `_ALERT_METRIC_TO_SUMMARY_FIELD`, `_ALERT_METRIC_TO_CATALOG_ID`, `_ALERTABLE_METRIC_VALUES`, Onset-Weiche + Prädikat + Severity |
+| `src/services/alert_preset.py` | MODIFY | `_PRESET_TABLE` (zwei Schwellen je Stufe), `ONSET_METRICS`-Set, `_make_rule` |
+| `src/output/renderers/alert/project.py` | MODIFY | Zeitpunkt-Wert nach Vorbild `_fmt_occurred_at()` (`:56-63`) |
+| `src/output/renderers/alert/render.py` | MODIFY | eigener Formatierpfad — `_val()` würde „15 h" statt „15:00" liefern |
+| `internal/model/trip.go` | MODIFY | Go-Spiegel: `AlertMetric`-Konstanten, `AlertableMetrics`, `DefaultDeltaThreshold` |
+| `frontend/src/lib/generated/alertPresetThresholds.generated.json` | REGENERATE | `scripts/generate_alert_preset_table.py` |
+| `scripts/generate_alert_metric_mapping.py`-Ausgaben | REGENERATE | sonst reißt `tests/tdd/test_alert_metric_mapping_parity.py` |
+| `frontend/…/alerts-tab/alertMetricTable.ts` | MODIFY | `METRIC_DEFAULTS`, `ALL_ALERT_METRICS`, `ALERTABLE_METRICS`, `_METRIC_UNITS`, `CATALOG_TO_ALERT_METRICS` |
+| `frontend/src/lib/utils/alertMetricLabels.ts` | MODIFY | Label + Reverse-Mapping (nicht generiert, separat gepflegt) |
+| `tests/…` | CREATE | Verhaltenstests, siehe unten |
+
+## Scope Assessment
+
+- **Dateien:** ~12 produktiv + 2 generierte + Tests
+- **LoC produktiv:** geschätzt **+200 bis +250** — das **LoC-Limit von 250 wird voraussichtlich
+  gerissen**, `loc_limit_override 500` ist einzuplanen
+- **Risiko: HIGH** — Alarm-Pfad, Persistenz-Schema, Go/Python-Parität, 4 Kanäle, 18+
+  Registrierungsstellen
+
+## Offene Punkte für die Spec
+
+1. **Doppelmeldung** (Risiko 5): Gewitter kommt früher **und** wird stärker ⇒ zwei
+   `WeatherChange`. Vorschlag: beide melden, aber im Text zusammenfassen — die PO-Linie aus
+   `feat_1493` verbietet doppelte Textform für dieselbe Information.
+2. **Erscheinen/Verschwinden** (Risiko 7): `None → 15:00` ist kein Beginn-Alarm, sondern
+   von der Stufen-Änderung abgedeckt. Vorschlag: Onset-Vergleich feuert **nur**, wenn beide
+   Seiten gesetzt sind.
+3. **Melde-Gedächtnis** (`deviation_alert_engine.py:242`): filtert über
+   `abs(new_value - last)`. Bei Uhrzeiten läuft das über die Tagesgrenze falsch — zweite
+   Stelle mit demselben Fehler wie der Vergleich selbst.
+4. **Aktivierungs-Kopplung:** Der Alarme-Tab zeigt nur Metriken, deren Katalog-Größe im
+   Wetter-Tab aktiv ist (`activeAlertMetricsFromCatalog.ts:22-29`,
+   `weather_change_detection.is_alert_metric_active()`). Da der Beginn an den bestehenden
+   Katalog-IDs `thunder`/`precipitation` hängt, erbt er deren Gate — gewollt: wer Gewitter
+   nicht beobachtet, will auch keinen Gewitterbeginn-Alarm.
+5. **Konkrete Stundenwerte** der Preset-Tabelle (siehe E3).
+
+## Test-Strategie (Kern, deterministisch)
+
+- **Verschiebung meldet:** Anker 17:00, neuer Stand 15:00, Stufe standard ⇒ genau ein Alarm.
+- **Gegenprobe Richtung:** dieselbe Verschiebung nach hinten (17:00 → 19:00) ⇒ **kein**
+  Alarm bei standard (2 h < 3 h Schwelle für später). Bewacht die Asymmetrie.
+- **Tagesgrenze:** 23:00 → 01:00 ⇒ 2 h Verschiebung, nicht 22 h.
+- **Anzeige-Gleichheit (E2):** dieselbe Fixture ⇒ Onset im Briefing-Text == Summary-Feld.
+- **Bestandsanker:** Anker ohne das Feld ⇒ kein Alarm, keine Ausnahme.
+- **Erscheinen:** `None → 15:00` ⇒ kein Beginn-Alarm.
+- **Protokoll-Trennung:** Stufen- und Beginn-Änderung derselben Größe erzeugen **zwei**
+  getrennte Protokoll-Einträge (Register-Paare `("thunder","max")` vs. `("thunder","onset")`).
+- **Textform:** „15:00", nicht „15 h"; „2 h früher", nicht „−2 h".
+- **Vier Kanäle:** Beginn-Alarm erscheint in E-Mail, Telegram, SMS und Premium-SMS.
