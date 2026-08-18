@@ -21,7 +21,7 @@ from app.models import SegmentWeatherData, SegmentWeatherSummary, TripSegment
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from app.models import NormalizedTimeseries
+    from app.models import NormalizedTimeseries, TripReportConfig
     from providers.base import WeatherProvider
     from services.weather_cache import WeatherCacheService
 
@@ -80,6 +80,7 @@ class SegmentWeatherService:
         enrich_ensemble: bool = True,
         enrich_snow: bool = True,
         priority: str = "user_briefing",
+        report_config: "TripReportConfig | None" = None,
     ) -> SegmentWeatherData:
         """
         Fetch weather forecast for a trip segment.
@@ -222,13 +223,16 @@ class SegmentWeatherService:
         self._cache.put(segment, timeseries, enrich_ensemble, enrich_snow, model_id)
 
         # Step 6+7: Aggregate over THIS segment's own window and wrap
-        return self._aggregate_for_segment(segment, timeseries, fetched_at=fetched_at)
+        return self._aggregate_for_segment(
+            segment, timeseries, fetched_at=fetched_at, report_config=report_config,
+        )
 
     def _aggregate_for_segment(
         self,
         segment: TripSegment,
         timeseries: "NormalizedTimeseries",
         fetched_at: datetime,
+        report_config: "TripReportConfig | None" = None,
     ) -> SegmentWeatherData:
         """Filtert eine (moeglicherweise breitere, gecachte) Zeitreihe auf
         GENAU dieses Segment-Fenster und aggregiert NUR darueber (Issue
@@ -278,12 +282,25 @@ class SegmentWeatherService:
         from services.weather_metrics import WeatherMetricsService
 
         metrics_service = WeatherMetricsService(debug=self._debug)
-        # Issue #1468 (E2): die Beginn-Felder sind ORTSZEIT-Groessen -- die
-        # Zone kommt aus den Segment-Koordinaten ueber denselben einen
-        # Aufloeser wie ueberall sonst (`resolve_location_tz`, #1378 E3).
+        # Issue #1468 (E2): die Beginn-Felder sind ORTSZEIT-Groessen im
+        # TAGESFENSTER DIESES TRIPS -- sonst nennt der Alarm eine andere
+        # Stunde als das Briefing. Die Zone kommt aus den Segment-Koordinaten
+        # ueber denselben einen Aufloeser wie ueberall sonst
+        # (`resolve_location_tz`, #1378 E3), die Fenstergrenzen ueber die EINE
+        # Aufloesungsstelle `resolve_configured_window()` (ADR-0035): fehlende
+        # oder ungueltige Werte fallen dort auf den Default 4-19 zurueck,
+        # `start > end` bleibt ein gueltiges Fenster ueber Mitternacht
+        # (#1361/#1372 S1b). Der Segment-Vorschnitt oben ersetzt das NICHT --
+        # die Etappengrenzen folgen den Gehzeiten, nicht dem Fenster.
+        from app.day_window import resolve_configured_window
         from utils.timezone import location_tz
+        window_start, window_end = resolve_configured_window(
+            getattr(report_config, "day_window_start_hour", None),
+            getattr(report_config, "day_window_end_hour", None),
+        )
         basis_summary = metrics_service.compute_basis_metrics(
             filtered_ts, tz=location_tz(segment.start_point),
+            day_window_start_hour=window_start, day_window_end_hour=window_end,
         )
         extended_summary = metrics_service.compute_extended_metrics(filtered_ts, basis_summary)
 
