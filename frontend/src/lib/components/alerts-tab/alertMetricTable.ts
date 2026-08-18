@@ -36,6 +36,9 @@ export const METRIC_DEFAULTS: Record<AlertMetric, number> = {
 	humidity: 15,
 	// Issue #946: Nullgradgrenze (freezing_level).
 	freezing_level: 200,
+	// Issue #1468: Beginn-Verschiebung in Stunden (Fallback-Defaults).
+	thunder_onset: 1,
+	precipitation_heavy_onset: 1,
 };
 
 // Issue #846 / Fix #1435 Etappe E4: Preset-Schwellwert-Tabelle wird aus der
@@ -196,6 +199,9 @@ export const ALERTABLE_METRICS: readonly AlertMetric[] = [
 	'visibility',
 	'humidity',
 	'freezing_level',
+	// Issue #1468: Beginn-Verschiebung von Gewitter und Starkregen.
+	'thunder_onset',
+	'precipitation_heavy_onset',
 ];
 
 /** Metriken die THRESHOLD_CROSSING verwenden (absoluter Schwellwert, nicht Delta).
@@ -222,6 +228,9 @@ const _METRIC_UNITS: Record<AlertMetric, string> = {
 	visibility: 'm',
 	humidity: '%',
 	freezing_level: 'm',
+	// Issue #1468: die Schwelle ist eine Verschiebung, gemessen in Stunden.
+	thunder_onset: 'h',
+	precipitation_heavy_onset: 'h',
 };
 
 /**
@@ -307,8 +316,9 @@ const CATALOG_TO_ALERT_METRICS: Record<string, readonly AlertMetric[]> = {
 	// Kurz-IDs aus dem Catalog
 	gust:          ['wind_gust'],
 	wind:          ['wind_change'],
-	precipitation: ['precipitation_sum', 'precipitation_change'],
-	thunder:       ['thunder_level'],
+	// Issue #1468: der Beginn erbt die Sichtbarkeit seiner Register-Groesse.
+	precipitation: ['precipitation_sum', 'precipitation_change', 'precipitation_heavy_onset'],
+	thunder:       ['thunder_level', 'thunder_onset'],
 	// Issue #959: snow_line/snowfall_limit aktivieren die konsolidierte Metrik freezing_level.
 	snowfall_limit: ['freezing_level'],
 	temperature:   ['temperature_min', 'temperature_max', 'temperature_change'],

@@ -278,7 +278,13 @@ class SegmentWeatherService:
         from services.weather_metrics import WeatherMetricsService
 
         metrics_service = WeatherMetricsService(debug=self._debug)
-        basis_summary = metrics_service.compute_basis_metrics(filtered_ts)
+        # Issue #1468 (E2): die Beginn-Felder sind ORTSZEIT-Groessen -- die
+        # Zone kommt aus den Segment-Koordinaten ueber denselben einen
+        # Aufloeser wie ueberall sonst (`resolve_location_tz`, #1378 E3).
+        from utils.timezone import location_tz
+        basis_summary = metrics_service.compute_basis_metrics(
+            filtered_ts, tz=location_tz(segment.start_point),
+        )
         extended_summary = metrics_service.compute_extended_metrics(filtered_ts, basis_summary)
 
         return SegmentWeatherData(

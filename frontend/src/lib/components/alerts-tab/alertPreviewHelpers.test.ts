@@ -24,9 +24,11 @@ import type { AlertRule, Stage } from '../../types.ts';
 // =============================================================================
 
 // #846: 4 neue Metriken (fresh_snow, cape, visibility, humidity) + #946: freezing_level
-// -> METRIC_MAP ist seither auf 14 Eintraege gewachsen (9 Basis + 4 aus #846 + 1 aus #946).
-test('METRIC_MAP > hat genau 14 Eintraege', () => {
-	assert.equal(Object.keys(METRIC_MAP).length, 14);
+// + #1468: die beiden Beginn-Groessen
+// -> METRIC_MAP ist seither auf 16 Eintraege gewachsen
+//    (9 Basis + 4 aus #846 + 1 aus #946 + 2 aus #1468).
+test('METRIC_MAP > hat genau 16 Eintraege', () => {
+	assert.equal(Object.keys(METRIC_MAP).length, 16);
 });
 
 test('METRIC_MAP > wind_gust mappt auf gust_max_kmh / above (Spec §Data Model)', () => {

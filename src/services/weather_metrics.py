@@ -916,6 +916,14 @@ class WeatherMetricsService:
             humidity_avg_pct=basis_summary.humidity_avg_pct,
             thunder_level_max=basis_summary.thunder_level_max,
             visibility_min_m=basis_summary.visibility_min_m,
+            # Issue #1468: die beiden Beginn-Zeitpunkte MUESSEN mitkopiert
+            # werden -- diese Funktion baut ein NEUES Summary, und ihr
+            # Ergebnis ist das, was der Trip-Pfad als `aggregated` weitergibt
+            # (segment_weather.py:282). Ohne die Uebernahme waere der
+            # Beginn-Alarm im Trip-Pfad strukturell tot (dieselbe Naht wie
+            # #1391/#1392, s. hail_flag).
+            thunder_onset_utc=basis_summary.thunder_onset_utc,
+            precip_heavy_onset_utc=basis_summary.precip_heavy_onset_utc,
             # Felder aus compute_basis_metrics() die bisher fehlten (Issue #226)
             dominant_wmo_code=basis_summary.dominant_wmo_code,
             dni_avg_wm2=basis_summary.dni_avg_wm2,
