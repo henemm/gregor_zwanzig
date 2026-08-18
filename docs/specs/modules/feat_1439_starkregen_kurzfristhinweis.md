@@ -22,14 +22,17 @@ tags: [radar-nowcast, trip-briefing, email, telegram, alerts]
 Das planmäßige Trip-Briefing (Morgen-/Abend-Mail + Telegram) bekommt eine
 kurze Hinweiszeile, wenn der bereits produktiv laufende `RadarNowcastService`
 (Issue #656) für den Startpunkt des aktiven/nächsten Segments **Starkregen
-innerhalb der nächsten 60 Minuten** erkennt. Das ist eine **Änderung**, kein
-Neubau: die Nowcast-Infrastruktur existiert bereits (u.a. im 15-Minuten-
-Alarm-Poll, `trip_alert.py`); es fehlt nur die Einbindung in den
-**planmäßigen** Briefing-Versandpfad.
+innerhalb der nächsten `NOWCAST_HORIZON_MIN` Minuten** erkennt (Wert bei
+Erstellung dieser Spec: 60 — seit Issue #1945 auf **180** angehoben, s.
+Changelog). Das ist eine **Änderung**, kein Neubau: die Nowcast-
+Infrastruktur existiert bereits (u.a. im 15-Minuten-Alarm-Poll,
+`trip_alert.py`); es fehlt nur die Einbindung in den **planmäßigen**
+Briefing-Versandpfad.
 
 **Wichtige Grenze (durch die Nowcast-Technologie selbst gesetzt, keine
 Implementierungslücke):** `RadarNowcastService` erkennt Regen ausschließlich
-innerhalb eines 60-Minuten-Fensters ab Abrufzeitpunkt. Der Hinweis kann daher
+innerhalb eines `NOWCAST_HORIZON_MIN`-Fensters (180 Min, s. Changelog) ab
+Abrufzeitpunkt. Der Hinweis kann daher
 **keine** Tage- oder Stunden-vorher-Vorhersage für morgen leisten — bei einer
 Abend-Mail (die die Etappe des Folgetags beschreibt) erscheint er nur, wenn
 die Etappe zufällig kurz nach Versandzeit beginnt. Der reguläre
@@ -55,9 +58,10 @@ weiterhin die maßgebliche Vorschau für spätere Stunden/Tage.
   einbauen (`render_telegram_bubbles`, analog dem bestehenden
   „Amtliche Warnungen nicht abrufbar"-Block)
 - **File:** `src/services/radar_service.py` (MODIFY, minimal) — bestehende
-  private `_NOWCAST_HORIZON_MIN = 60` bekommt einen öffentlichen Alias
-  `NOWCAST_HORIZON_MIN`, damit der Zeitfenster-Guard im Scheduler dieselbe
-  Zahl referenziert statt eine zweite Kopie zu pflegen
+  private `_NOWCAST_HORIZON_MIN` (Wert bei Erstellung dieser Spec: 60, seit
+  #1945: 180) bekommt einen öffentlichen Alias `NOWCAST_HORIZON_MIN`, damit
+  der Zeitfenster-Guard im Scheduler dieselbe Zahl referenziert statt eine
+  zweite Kopie zu pflegen
 - **File:** `docs/specs/data_sources.md` (MODIFY, Governance-Nachtrag) —
   Eintrag für `minutely_15` als bereits seit #656 produktiv genutzte Quelle
 
@@ -95,7 +99,7 @@ def _build_starkregen_hint(self, trip, segments, tz, now_utc) -> Optional[str]:
     # 1. Aktives/naechstes Segment waehlen — dieselbe Auswahl wie
     #    TripAlertService.check_radar_alerts() (trip_alert.py:730-745)
     # 2. Naehe-Guard: Segment muss aktiv sein ODER innerhalb
-    #    NOWCAST_HORIZON_MIN (60 Min) starten, sonst -> None
+    #    NOWCAST_HORIZON_MIN (180 Min, #1945) starten, sonst -> None
     # 3. Budget-Gate: alert_daily_limit.is_allowed(user_id, now_utc,
     #    reason="nowcast") -- False -> None, KEIN Fetch
     # 4. get_nowcast(lat, lon, priority="polling") -- Exception -> None
@@ -159,7 +163,8 @@ ab; der Eintrag bleibt bewusst auf eine Zeile beschränkt.
 ## Expected Behavior
 
 - **Input:** Trip mit aktivem/nächstem Segment, dessen Startpunkt-Koordinate
-  Starkregen (mm/h >= 4.0) innerhalb der nächsten 60 Minuten zeigt
+  Starkregen (mm/h >= 4.0) innerhalb der nächsten `NOWCAST_HORIZON_MIN`
+  Minuten (180, #1945) zeigt
 - **Output:** Hinweiszeile „Starker Regen ab ca. HH:MM (in ~N Min)." in
   E-Mail (HTML + Plain) und Telegram-Bubble des planmäßigen Briefings;
   ohne Treffer/außerhalb des Fensters/ohne Budget entfällt die Zeile
@@ -181,16 +186,19 @@ ab; der Eintrag bleibt bewusst auf eine Zeile beschränkt.
     aufgerufen wurde.
 
 - **AC-2:** Given die aktive/nächste Etappe eines Trips beginnt erst in
-  mehr als `NOWCAST_HORIZON_MIN` (60) Minuten / When das planmäßige
-  Briefing gerendert wird / Then erscheint kein Starkregen-Kurzfristhinweis
-  und `RadarNowcastService.get_nowcast()` wird für diesen Trip nicht
-  aufgerufen, selbst wenn ein injizierter Nowcast Starkregen melden würde.
-  - Test: Segment-Startzeit auf „in 90 Minuten" setzen, Fetch-Spy prüft
-    Nicht-Aufruf; Segment-Startzeit auf „in 30 Minuten" setzen, Fetch wird
-    aufgerufen (Gegenprobe im selben Test).
+  mehr als `NOWCAST_HORIZON_MIN` (180, #1945) Minuten / When das
+  planmäßige Briefing gerendert wird / Then erscheint kein
+  Starkregen-Kurzfristhinweis und `RadarNowcastService.get_nowcast()` wird
+  für diesen Trip nicht aufgerufen, selbst wenn ein injizierter Nowcast
+  Starkregen melden würde.
+  - Test: Segment-Startzeit auf „in 200 Minuten" (> 180) setzen, Fetch-Spy
+    prüft Nicht-Aufruf; Segment-Startzeit auf „in 30 Minuten" (<= 180)
+    setzen, Fetch wird aufgerufen (Gegenprobe im selben Test,
+    `tests/tdd/test_starkregen_kurzfristhinweis.py::test_ac2_zeitfenster_guard_kein_fetch_ausserhalb_horizon`).
 
 - **AC-3:** Given ein Trip, dessen aktive/nächste Etappe innerhalb der
-  nächsten 60 Minuten beginnt UND `get_nowcast()` für den
+  nächsten `NOWCAST_HORIZON_MIN` Minuten (180, #1945) beginnt UND
+  `get_nowcast()` für den
   Etappen-Startpunkt `INTENSITY_HEAVY` mit gesetztem `onset_minutes`
   liefert / When das planmäßige Briefing versendet wird / Then enthalten
   sowohl die E-Mail (HTML und Plain) als auch die Telegram-Nachricht eine
@@ -252,12 +260,13 @@ ab; der Eintrag bleibt bewusst auf eine Zeile beschränkt.
 
 ## Known Limitations
 
-- **Kein Tage-vorher-Hinweis:** Durch das 60-Minuten-Nowcast-Fenster von
-  `RadarNowcastService` greift der Kurzfristhinweis bei Abend-Mails
-  (Etappe = Folgetag) praktisch nur, wenn die Etappe zufällig kurz nach
-  Versandzeit beginnt. Das ist eine bewusste, technisch bedingte Grenze,
-  keine Implementierungslücke — für eine echte Vorabend-Vorhersage bleibt
-  die reguläre Stundentabelle maßgeblich.
+- **Kein Tage-vorher-Hinweis:** Durch das `NOWCAST_HORIZON_MIN`-Fenster von
+  `RadarNowcastService` (180 Min seit #1945, vorher 60 Min) greift der
+  Kurzfristhinweis bei Abend-Mails (Etappe = Folgetag) weiterhin praktisch
+  nur, wenn die Etappe zufällig innerhalb weniger Stunden nach Versandzeit
+  beginnt. Das ist eine bewusste, technisch bedingte Grenze, keine
+  Implementierungslücke — für eine echte Vorabend-Vorhersage bleibt die
+  reguläre Stundentabelle maßgeblich.
 - **SMS nicht im Scope:** Token-Format-Aufwand für SMS wird als eigenes
   Folge-Issue vorgemerkt (PO-Entscheidung, Deadline-getrieben).
 - **Konsistenz-Mechanismus ist ein Cooldown, keine Wortlaut-Korrektur:**
@@ -282,3 +291,12 @@ ab; der Eintrag bleibt bewusst auf eine Zeile beschränkt.
 ## Changelog
 
 - 2026-08-07: Initial spec erstellt — Issue #1439
+- 2026-08-18: `NOWCAST_HORIZON_MIN` von 60 auf 180 Minuten angehoben —
+  Issue #1945. Grund: Der Countdown-Alarm zeigte strukturell fast immer
+  denselben Wert (~8 Min), weil die GeoSphere-INCA-Daten auf einem
+  15-Min-Raster liegen, der Scheduler alle 15 Min prüft und der alte
+  60-Min-Deckel den Alarm fast nur beim unmittelbar nächsten Rasterpunkt
+  auslösen ließ. Reine Konstanten-Änderung in `radar_service.py`, kein
+  neues Architektur-Muster; alle numerischen Erwähnungen des alten
+  60-Min-Werts oben sind entsprechend aktualisiert. Details:
+  `docs/specs/modules/fix_1945_nowcast_horizon.md`.

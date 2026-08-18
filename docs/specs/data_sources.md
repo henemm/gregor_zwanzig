@@ -234,7 +234,8 @@ zusaetzlich eine laengere Rueckschau (5,8 Tage statt 23 h) und deutschsprachige 
 
 **Zusammenfassung:** `minutely_15` (Open-Meteo, Parameter `precipitation`/`weather_code`) ist der
 globale Fallback des bereits produktiven `RadarNowcastService` (Issue #656, `src/services/radar_service.py`)
-fuer den 60-Minuten-Regen-/Gewitter-Nowcast — ausserhalb der RADOLAN/INCA/DPC/AROME-Bounding-Boxen sowie
+fuer den Regen-/Gewitter-Nowcast (Horizont `NOWCAST_HORIZON_MIN`, 180 Min seit #1945, zuvor 60 Min) —
+ausserhalb der RADOLAN/INCA/DPC/AROME-Bounding-Boxen sowie
 als Sidecar-Quelle fuer den Konvektions-Check. War in dieser Spec bisher nicht eingetragen; kein neuer
 Parameter, reiner Nachtrag.
 
