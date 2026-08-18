@@ -97,6 +97,85 @@ def observe_fetch_failure() -> Iterator[dict]:
     finally:
         _fetch_failure_sink.reset(token)
 
+
+# Issue #1944: zweiter, gleich gebauter Rueckkanal fuer die Kennung des
+# Eingangs-Mitschnitts (``alert_input_capture.capture_system``, #1948 S1).
+# ``cached_fetch()`` behaelt seinen Rueckgabewert UNVERAENDERT -- die Kennung
+# reist ausschliesslich als Seiteninformation hier entlang, damit der
+# ``alert_log``-Eintrag der versendeten Warnung auf genau den Roh-Datensatz
+# zeigt, der sie ausgeloest hat (Vorfall #1929). Ohne aktiven Kontext ein
+# No-Op, exakt wie ``_record_fetch_failure()``.
+_capture_id_sink: contextvars.ContextVar[Optional[dict]] = contextvars.ContextVar(
+    "warn_capture_id_sink", default=None
+)
+
+
+def _record_capture_id(capture_id: Optional[str]) -> None:
+    """Meldet die Kennung des gerade verwerteten Mitschnitts an den aktiven
+    Beobachtungs-Kontext. Ohne Kennung oder ohne Kontext ein No-Op."""
+    if not capture_id:
+        return
+    sink = _capture_id_sink.get()
+    if sink is not None:
+        sink["capture_ids"].append(capture_id)
+
+
+@contextmanager
+def observe_capture_id() -> Iterator[dict]:
+    """Beobachtet, welche Mitschnitt-Kennungen innerhalb des Kontexts von
+    ``cached_fetch()`` verwertet wurden -- sowohl bei einem echten Abruf als
+    auch bei einem Treffer im Zwischenspeicher (der die Kennung seines
+    Ursprungsabrufs mitfuehrt). Liefert ein Dict mit Schluessel
+    ``capture_ids`` (Liste in Melde-Reihenfolge, initial leer).
+
+    Verschachtelbar und thread-/task-sicher (``contextvars``)."""
+    sink: dict = {"capture_ids": []}
+    token = _capture_id_sink.set(sink)
+    try:
+        yield sink
+    finally:
+        _capture_id_sink.reset(token)
+
+
+@contextmanager
+def collect_capture_ids(collected: list) -> Iterator[None]:
+    """Fail-open-Mantel um ``observe_capture_id()`` fuer Aufrufer, die die
+    beobachteten Kennungen nur SAMMELN wollen (Issue #1944, AC-7).
+
+    Faellt der Rueckkanal selbst aus, laeuft der umschlossene Abruf
+    unveraendert weiter -- ``collected`` bleibt dann leer. Beweisaufnahme darf
+    einen Alarm nie verhindern."""
+    try:
+        ctx = observe_capture_id()
+        sink = ctx.__enter__()
+    except Exception:
+        logger.warning("Herkunfts-Rueckkanal nicht nutzbar", exc_info=True)
+        yield
+        return
+    try:
+        yield
+    finally:
+        try:
+            ctx.__exit__(None, None, None)
+            collected.extend(sink["capture_ids"])
+        except Exception:
+            logger.warning("Herkunfts-Kennungen nicht auswertbar", exc_info=True)
+
+
+def _store_entry(
+    cache: dict, cache_key: str, *, data: Any, fetched_at: float, ttl: float,
+    capture_id: Optional[str],
+) -> None:
+    """Schreibt den Zwischenspeicher-Eintrag und meldet die Herkunft.
+
+    ``capture_id`` ist rein additiv (Issue #1944): ohne Kennung entsteht das
+    Feld gar nicht erst, bestehende Leser des Eintrags bleiben unberuehrt."""
+    entry: dict = {"data": data, "fetched_at": fetched_at, "ttl": ttl}
+    if capture_id is not None:
+        entry["capture_id"] = capture_id
+    cache[cache_key] = entry
+    _record_capture_id(capture_id)
+
 # Append-only JSONL für jeden Warn-Dienst-Egress (Cache-Hit wie echter Call).
 # Issue #1633: Test-Override (Path) oder None. Der frühere Modul-Konstanten-Name
 # `WARN_CALLS_PATH` steuert NICHTS mehr — er band beim Import einen
@@ -361,8 +440,16 @@ def cached_fetch(
         log_warn_service_call(service, host, status=None, cache_hit=True, ok=cached_ok)
         if not cached_ok:
             _record_fetch_failure()
+        # Issue #1944 (Luecke a): der Treffer meldet die Kennung SEINES
+        # Ursprungsabrufs -- kein zusaetzlicher Mitschnitt noetig.
+        _record_capture_id(entry.get("capture_id"))
         return entry["data"]
 
+    # Issue #1944: Kennung des jeweils letzten echten Abrufs. Bei einer
+    # Ratenbremsen-Wiederholung ueberschreibt jeder Durchlauf sie -- nach
+    # ``break`` steht hier exakt die Kennung des Abrufs, dessen Antwort den
+    # finalen Zwischenspeicher-Eintrag erzeugt (AC-5).
+    capture_id: Optional[str] = None
     attempt = 1
     while True:
         try:
@@ -390,7 +477,7 @@ def cached_fetch(
         # Antwort -- nur geparster Body plus Service/Host/Cache-Key/Status,
         # KEINE Header/Auth (strukturell nicht uebergeben).
         try:
-            alert_input_capture.capture_system(
+            capture_id = alert_input_capture.capture_system(
                 branch="official_alert", source_key=service,
                 payload={
                     "body": resp.json(), "service": service, "host": host,
@@ -398,6 +485,12 @@ def cached_fetch(
                 },
             )
         except Exception as e:
+            # Adversary-Fund F002 (Issue #1944, AC-5): die Kennung MUSS hier
+            # fallen -- sonst erbt der aktuelle Versuch die eines frueheren,
+            # VERWORFENEN Zwischenversuchs (429-Retry) und der finale
+            # Zwischenspeicher-Eintrag zeigte auf den falschen Roh-Datensatz.
+            # Eine falsche Zuordnung ist schlimmer als keine (AC-4).
+            capture_id = None
             log.warning("%s: Eingangs-Mitschnitt fehlgeschlagen (%s)", service, e)
 
         status = resp.status_code
@@ -449,7 +542,8 @@ def cached_fetch(
             "(Retry-After=%s)",
             service, backoff, logged_retry_after,
         )
-        cache[cache_key] = {"data": None, "fetched_at": now, "ttl": backoff}
+        _store_entry(cache, cache_key, data=None, fetched_at=now, ttl=backoff,
+                     capture_id=capture_id)
         log_warn_service_call(service, host, status=429, cache_hit=False,
                               retry_after=logged_retry_after, ok=False)
         _record_fetch_failure()
@@ -464,7 +558,8 @@ def cached_fetch(
             service, status,
         )
         neutral_value: Any = {}
-        cache[cache_key] = {"data": neutral_value, "fetched_at": now, "ttl": WARN_NOT_COVERED_TTL}
+        _store_entry(cache, cache_key, data=neutral_value, fetched_at=now,
+                     ttl=WARN_NOT_COVERED_TTL, capture_id=capture_id)
         # Issue #1422 S1: "nicht zustaendig" ist fachlich ein ERFOLG (ok=True),
         # auch wenn der Statuscode 404 sonst ein Fehlschlag waere.
         log_warn_service_call(service, host, status=status, cache_hit=False, ok=True)
@@ -472,7 +567,8 @@ def cached_fetch(
 
     if status >= 400:
         log.warning("%s-Abruf fehlgeschlagen (%s, HTTP %s)", service, host, status)
-        cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
+        _store_entry(cache, cache_key, data=None, fetched_at=now,
+                     ttl=failure_ttl, capture_id=capture_id)
         log_warn_service_call(service, host, status=status, cache_hit=False, ok=False)
         _record_fetch_failure()
         return None
@@ -481,11 +577,13 @@ def cached_fetch(
         data = parse_fn(resp)
     except Exception:
         log.warning("%s-Abruf fehlgeschlagen (%s, Parse)", service, host, exc_info=True)
-        cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
+        _store_entry(cache, cache_key, data=None, fetched_at=now,
+                     ttl=failure_ttl, capture_id=capture_id)
         log_warn_service_call(service, host, status=status, cache_hit=False, ok=False)
         _record_fetch_failure()
         return None
 
-    cache[cache_key] = {"data": data, "fetched_at": now, "ttl": success_ttl}
+    _store_entry(cache, cache_key, data=data, fetched_at=now,
+                 ttl=success_ttl, capture_id=capture_id)
     log_warn_service_call(service, host, status=status, cache_hit=False, ok=True)
     return data

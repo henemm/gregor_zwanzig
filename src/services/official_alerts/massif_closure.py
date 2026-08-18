@@ -20,6 +20,7 @@ SPEC: docs/specs/modules/issue_1037_official_alerts_massif_closure.md
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -130,12 +131,23 @@ class MassifClosureSource:
         _STATUS["last_run"] = datetime.now(timezone.utc).isoformat()
         best_alert: Optional[OfficialAlert] = None
         for hit in hits:
-            data = _get_cached_daily_json(hit.src, ymd)
+            # Issue #1944: EIN Abruf je Massiv, aber nur EINE gewinnende
+            # Meldung -- die Kennung wird deshalb hier, in der eigenen
+            # Iteration, an den jeweiligen Kandidaten gebunden. Die generische
+            # Naht in ``base.py`` saehe nur einen mehrdeutigen Mehrfach-Abruf
+            # und liesse die Herkunft fallen (AC-4).
+            kennungen: list[str] = []
+            with warn_egress.collect_capture_ids(kennungen):
+                data = _get_cached_daily_json(hit.src, ymd)
             if data is None:
                 _STATUS["last_error"] = f"fetch failed for src={hit.src}"
                 _STATUS["error_count"] += 1
                 continue
+            eindeutig = set(kennungen)
+            capture_id = eindeutig.pop() if len(eindeutig) == 1 else None
             for alert in _extract_alert(data, hit):
+                if capture_id is not None:
+                    alert = replace(alert, capture_id=capture_id)
                 if best_alert is None or alert.level > best_alert.level:
                     best_alert = alert
         return [best_alert] if best_alert is not None else []

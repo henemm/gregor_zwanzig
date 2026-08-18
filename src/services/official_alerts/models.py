@@ -31,3 +31,9 @@ class OfficialAlert:
     # eine über Stufen konstante Kennung, damit Eskalationen nicht als zwei
     # verschiedene Warnungen erscheinen. None -> Fallback auf region_label/label.
     dedup_id: Optional[str] = None
+    # Issue #1944: Kennung des Eingangs-Mitschnitts (#1948 S1), aus dem diese
+    # Warnung stammt -- mitgefuehrt vom Abruf bis zum `alert_log`-Eintrag,
+    # damit fuer jede versendete Warnung der ausloesende Roh-Datensatz
+    # nachweisbar ist (Vorfall #1929). None = Herkunft nicht eindeutig
+    # feststellbar; eine falsche Zuordnung waere schlimmer als keine.
+    capture_id: Optional[str] = None
