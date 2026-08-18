@@ -222,6 +222,9 @@ Verhalten benannt, nicht nach Issue-Nummer.
 - `official_alerts.py:1896-2104` (#1929-Sperrzone) bleibt unangetastet.
 - Diese Scheibe ändert KEIN sichtbares Alarm-Format (SMS/E-Mail/Telegram bleiben bit-identisch) —
   reines Beobachtungs-Feature für S1; die Format-Konsolidierung folgt in S3+.
+- **Seit Scheibe S2 (#1948, `alarm_testeinspeisung.md`):** der Zweig-c-Mitschnitt trägt je Frame
+  zusätzlich `is_convective` — Voraussetzung für den `nowcast_frames`-Replay über `alert-preview`
+  (dort AC-8).
 
 ## Architektur-Entscheidung (ADR)
 
