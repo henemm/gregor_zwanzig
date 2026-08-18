@@ -210,7 +210,6 @@ def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
     sie DIESELBE ``capture_id``. Faengt die Mutation
     ``capture_id=_nowcast_capture_id`` -> ``capture_id=None`` in
     ``trip_alert.py`` (Zeile ~1373)."""
-    from datetime import date as date_type
     from datetime import datetime, timedelta, timezone
     from datetime import time as time_type
 
@@ -222,20 +221,19 @@ def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
     from services.radar_cache import RadarNowcastCacheService
     from services.radar_service import RadarNowcastService, _nowcast_source_key
     from services.trip_alert import TripAlertService
-    from utils.timezone import tz_for_coords
 
     from tests.helpers.alert_log_fixtures import fresh_user
+    from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 
     uid = fresh_user("ac4-e2e-c")
     trip_id = "trip-ac4-e2e-c"
     lat, lon = 42.20, 9.10
 
-    # Aktives Segment JETZT (Vorbild _trip_with_active_segment,
-    # tests/tdd/test_952_onset_alert_fidelity.py).
-    tz = tz_for_coords(lat, lon)
-    now_local = datetime.now(tz)
-    start_str = (now_local - timedelta(hours=1)).strftime("%H:%M")
-    end_str = (now_local + timedelta(hours=3)).strftime("%H:%M")
+    # Wanduhr-robustes aktives Segment (#1940/#1667 S1): rohe
+    # (now +/- timedelta).strftime()-Arithmetik wird von
+    # tests/tdd/test_fixture_wallclock_ratchet.py verboten -- sie wird
+    # zwischen ~22:00 und 00:00 UTC reproduzierbar rot (Bezugstag-Bruch).
+    start_str, end_str = active_window_offsets(lat, lon, -60, 180)
     wp0 = Waypoint(
         id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0,
         time_window=TimeWindow(start=time_type(0, 0), end=time_type(23, 57)),
@@ -246,10 +244,7 @@ def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
         time_window=TimeWindow(start=time_type(23, 58), end=time_type(23, 59)),
         arrival_override=end_str,
     )
-    stage = Stage(
-        id="T1", name="Tag 1", date=date_type.today(),
-        start_time=time_type(now_local.hour, now_local.minute), waypoints=[wp0, wp1],
-    )
+    stage = Stage(id="T1", name="Tag 1", date=stage_date(lat, lon), waypoints=[wp0, wp1])
     trip = Trip(id=trip_id, name="AC4-E2E-C", stages=[stage])
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=False, send_sms=False,
