@@ -47,7 +47,7 @@ Tests) ist für diese Spec **vorab ausgeschlossen**. Gemessen gegen `GET
 | Punkt 46.66/12.74 (Karnischer Höhenweg), 56 h | `cape` 0,5 … 380,8, Nachmittagsanstieg vorhanden · `cin` 0,0 bis −0,1 |
 | Punkt außerhalb des Modellgitters (42.22/9.07, Korsika) | HTTP 400 `"Requested point ... is outside of dataset bounds!"` |
 | Unbekannter Parametername im selben Abruf | HTTP 400 `"Parameters {'gibtesnicht'} do not exist or access is denied"` — **der gesamte Abruf scheitert** |
-| Antwortzeit je Abruf | ~7 s gemessen |
+| Antwortzeit je Abruf (Produktiv-Endpunkt, 2026-08-18) | Karnischer Höhenweg (46.66/12.74) 0,291 s gesamt, davon 0,038 s Verbindungsaufbau · Innsbruck (47.26/11.39) 0,254 s gesamt, davon 0,021 s Verbindungsaufbau |
 
 **Einheiten-Falle:** `m2 s-2` und `J kg-1` sind dimensionsgleich (1 J/kg = 1 m²/s²). Die Zahlen
 sind identisch, es darf **nicht** umgerechnet werden.
@@ -205,10 +205,13 @@ eine eigene Bounds-Prüfung (z. B. `arome_grid_covers(lat, lon)` in `geosphere.p
 `thunder_routing` importiert) statt "einfach abrufen und HTTP 400 abfangen" — Letzteres würde
 bei jedem Lauf für jeden Punkt außerhalb des Gitters sinnlose Last erzeugen.
 
-Der Zusatzabruf bekommt ein **eigenes Zeitbudget**, das die Primärquelle (DWD,
+Der Zusatzabruf bekommt ein **eigenes Zeitbudget von 3,0 s**, das die Primärquelle (DWD,
 `THUNDER_FETCH_DEADLINE_SECONDS`, `dwd.py`) weder teilt noch aufzehrt (Invariante 8). Gemessen
-wurden ~7 s je GeoSphere-Abruf; verzögert oder scheitert er, bleiben nur die GeoSphere-Felder
-leer, DWD wird nicht berührt und der Gesamtlauf bricht nicht ab (AC-13).
+gegen den Produktiv-Endpunkt (2026-08-18): Karnischer Höhenweg 0,291 s gesamt, Innsbruck
+0,254 s gesamt — der Normalfall liegt bei rund 0,3 s, das Budget lässt damit den zehnfachen
+Normalfall zu (Begründung der Wahl s. Known Limitations). Verzögert oder scheitert der Abruf
+trotzdem, bleiben nur die GeoSphere-Felder leer, DWD wird nicht berührt und der Gesamtlauf
+bricht nicht ab (AC-13).
 
 Die bestehende Funktion `thunder_provider_for()` (Rückgabetyp `Optional[str]`, genutzt von
 `_fetch_lightning_density` für die **primäre** Quelle und von `thunder_vertretung_for`) bleibt
@@ -415,8 +418,13 @@ additiv erlaubt." Grenzt sich ab von:
   zeigt (AC-11 ist deshalb Pflicht, nicht Kür; Präzedenzfehler #874/#1275).
 - **Jeder Punkt innerhalb des AROME-Gitters kostet einen zusätzlichen HTTP-Abruf je
   Anreicherung**, begrenzt durch das eigene Zeitbudget des Zusatzabrufs (Invariante 8). Gemessen
-  ~7 s je Abruf — bei einem System mit bestehenden Timeout-Problemen (#1839, #1539) ist das ein
-  eigenständiges Ausfallrisiko, das AC-13 absichert, aber nicht beseitigt.
+  gegen den Produktiv-Endpunkt (2026-08-18): Karnischer Höhenweg 0,291 s gesamt, Innsbruck
+  0,254 s gesamt — der Normalfall liegt bei rund 0,3 s. Das gewählte Zeitbudget von 3,0 s lässt
+  damit den zehnfachen Normalfall zu und begrenzt den Schaden bei einem hängenden Dienst; bei
+  acht Etappen und einem zu großzügigen Budget stünde sonst mehr Wartezeit im Raum, als die
+  Trip-Vorschau überhaupt hat (30 s, #1839). Bei einem System mit bestehenden
+  Timeout-Problemen (#1839, #1539) bleibt das dennoch ein eigenständiges Ausfallrisiko, das
+  AC-13 absichert, aber nicht beseitigt.
 - **Modellnamen-Kollision bleibt bestehen.** `geosphere.py:501` setzt weiterhin
   `model="AROME"`; diese Spec umgeht die Kollision nur durch eigene Feldnamen (Invariante 3),
   behebt sie nicht. Nebenbefund bleibt in #1199 gebucht.
@@ -445,3 +453,6 @@ additiv erlaubt." Grenzt sich ab von:
 - 2026-08-18: AC-12/AC-13 sowie Invarianten 7/8 ergänzt — Entwurfsfehler aus der
   Implementierung: AROME-Gitter ist kleiner als das `DE_ALPEN`-Zuständigkeitsrechteck (gemessen
   `bbox = [42.981, 5.498, 51.819, 22.102]`), Zusatzabruf braucht ein eigenes Zeitbudget
+- 2026-08-18: Falsche Antwortzeit-Angabe (~7 s) korrigiert — die 7 s waren die Laufzeit eines
+  vorbestehenden, gestubbten Tests (#1531), nicht die Antwortzeit von GeoSphere. Echte Messung
+  gegen den Produktiv-Endpunkt: Karnischer Höhenweg 0,291 s, Innsbruck 0,254 s
