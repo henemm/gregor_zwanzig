@@ -171,6 +171,20 @@ andere Ausgabe, kein anderes Speicherformat.
     `selectable=False`-Größe wird in Kanal-Layout UND Ausblick-Auswahl
     eingetragen, beide gerenderten/aufgelösten Ergebnisse werden auf
     Abwesenheit dieser Größe geprüft.
+  - 🔴 **Nachgemessene Einschränkung (Adversary F001, 2026-08-18):** Die
+    Ausblick-Hälfte dieser Zusicherung ist **strukturell vakuos** und beweist
+    das Gate dort nicht. Positivkontrolle: `_is_selectable()` auf `return
+    True` mutiert — `confidence` bleibt trotzdem aus dem Ausblick draußen,
+    weil `compare_metric_catalog.py:284` jede `selectable=False`-Größe schon
+    beim Katalogbau ausschließt. Alle drei existierenden
+    `selectable=False`-Größen (`confidence`, `cape`, `temperature_cold`)
+    haben gar keinen Compare-Katalog-Eintrag; es gibt also keine Kennung, mit
+    der sich eine echte Ausblick-Gate-Assertion bauen ließe. **Tragend für
+    AC-3 sind daher die Zusicherung direkt auf
+    `allowed_metric_ids_for_report_type()` und die Kanal-Fläche** — beide
+    fangen die Mutation „Gate aus der gemeinsamen Methode entfernen"
+    (Gegenprobe M4: rot). Die Ausblick-Prüfung bleibt als redundante
+    Absicherung stehen, zählt aber nicht als Nachweis.
 
 - **AC-4:** Given eine Trip-Konfiguration mit einem
   `morning_enabled`/`evening_enabled`-Override, der eine Größe für

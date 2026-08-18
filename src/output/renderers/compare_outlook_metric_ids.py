@@ -80,14 +80,19 @@ def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[dict] | N
     geschnitten. Der Ortsvergleich ruft weiterhin ``resolve_outlook_metrics()``
     direkt -- er kennt bewusst kein globales Maximum (ADR-0053).
 
-    Nachbildung von ``UnifiedWeatherDisplayConfig._clip_to_global_maximum()``
-    fuer das ``{metric_id, aggregation}``-Vokabular (ADR-0050 Regel 1/2 auf die
-    Ausgabeflaeche "Vorschau" ausgeweitet, PO-Entscheid 2026-08-14) -- mit
-    denselben drei Regeln: Schnittmenge aus der report-typ-gefilterten Auswahl
-    (nicht aus rohen ``enabled``-Flags, damit Morgen-/Abend-Overrides und das
-    ``selectable``-Gate #1585 wirken), kein Schnitt bei leerer Grundauswahl
-    (D4: kein Maximum definiert heisst nicht "nichts erlaubt"), Reihenfolge der
-    Auswahl bleibt erhalten.
+    Geschnitten wird gegen dieselbe gemeinsame Quelle wie das Kanal-Layout:
+    ``UnifiedWeatherDisplayConfig.allowed_metric_ids_for_report_type()``
+    (ADR-0050 Regel 1/2 auf die Ausgabeflaeche "Vorschau" ausgeweitet,
+    PO-Entscheid 2026-08-14; EINE Quelle seit #1848 Scheibe A -- vorher trug
+    diese Funktion eine eigene Nachbildung der Regeln). Hier bleibt nur die
+    Anwendung auf das ``{metric_id, aggregation}``-Vokabular: ``None`` von der
+    gemeinsamen Quelle heisst "kein Maximum definiert" (D4) -> kein Schnitt,
+    die Reihenfolge der Auswahl bleibt erhalten.
+
+    Die Drei-Werte-Semantik von ``resolve_outlook_metrics()`` bleibt
+    unberuehrt: ``None`` (Feld fehlt) bleibt ``None``, ``[]`` (bewusst
+    geleert) bleibt ``[]`` -- der Schnitt wirkt nur auf einer bereits
+    aufgeloesten, nicht-leeren Liste.
 
     🔴 ``dc`` MUSS der ungekollabierte Stand sein: geschnitten wird gegen die
     kanal-neutrale ``get_metrics_for_report_type()``, denn der Ausblick hat
@@ -96,9 +101,11 @@ def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[dict] | N
     Groesse nicht aus der Vorschau schneiden (Adversary-Finding F001).
     """
     resolved = resolve_outlook_metrics(getattr(dc, "outlook_metrics", None))
-    if not resolved or not getattr(dc, "metrics", None):
+    if not resolved:
         return resolved
-    allowed = {mc.metric_id for mc in dc.get_metrics_for_report_type(report_type)}
+    allowed = dc.allowed_metric_ids_for_report_type(report_type)
+    if allowed is None:
+        return resolved
     return [e for e in resolved if e.get("metric_id") in allowed]
 
 

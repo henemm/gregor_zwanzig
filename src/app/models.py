@@ -841,6 +841,32 @@ class UnifiedWeatherDisplayConfig:
         """
         return _sorted_by_layout(_filter_metrics_by_report_type(self.metrics, report_type))
 
+    def allowed_metric_ids_for_report_type(self, report_type: str) -> Optional[set[str]]:
+        """Die erlaubten Kennungen dieses Report-Typs -- EINE Quelle fuer die
+        Trip-Kaskade (ADR-0050 D1-D4, Issue #1848 Scheibe A).
+
+        Einzige Umsetzung der Regeln D1-D4 fuer den Trip: sowohl das
+        Kanal-Layout (``_clip_to_global_maximum()``) als auch der 3-Tages-
+        Ausblick (``compare_outlook_metric_ids.resolve_trip_outlook_metrics()``)
+        fragen hier -- vorher trug jede Flaeche eine eigene, unabhaengig
+        gepflegte Kopie derselben Regel.
+
+        D2: die Menge kommt aus ``get_metrics_for_report_type(report_type)``,
+        nicht aus rohen ``enabled``-Flags -- so wirken morning_enabled/
+        evening_enabled (ADR-0050 Regel 3) und das selectable-Gate (#1585).
+
+        D4: ``self.metrics`` leer -> ``None`` ("kein Maximum definiert"),
+        NICHT die leere Menge. Wer beides verwechselt, macht daraus "nichts
+        erlaubt" und leert jeden Altbestands-Trip; die Aufrufer schneiden bei
+        ``None`` darum gar nicht.
+
+        Kennungsmenge ohne Traegertyp: die Aufrufer filtern damit ihre eigene
+        Struktur (``MetricConfig`` bzw. ``{metric_id, aggregation}``-Dicts).
+        """
+        if not self.metrics:
+            return None
+        return {mc.metric_id for mc in self.get_metrics_for_report_type(report_type)}
+
     def get_metrics_for_channel(self, channel: str, report_type: str) -> list[MetricConfig]:
         """Liefert die Metriken-Liste für einen Kanal (Issue #429 + #434).
 
@@ -905,19 +931,18 @@ class UnifiedWeatherDisplayConfig:
         ``get_metrics_for_channel()`` -- NIE aus dem global-Zweig, der selbst
         das Maximum ist (D1).
 
-        Schnittmenge sind die IDs aus
-        ``get_metrics_for_report_type(report_type)`` (D2) -- nicht rohe
-        ``enabled``-Flags, damit morning_enabled/evening_enabled-Overrides
-        und das selectable-Gate (#1585) im Schnitt wirken.
+        Die Regeln D1-D4 stehen NICHT mehr hier: welche Kennungen erlaubt
+        sind, beantwortet ausschliesslich
+        ``allowed_metric_ids_for_report_type()`` -- dieselbe Quelle, die auch
+        der Ausblick fragt (#1848 Scheibe A). Diese Methode ist nur noch der
+        schmale Adapter auf den Traegertyp ``list[MetricConfig]``.
 
-        D4: ``self.metrics`` leer -> kein Maximum definiert -> nicht
-        schneiden. Pruefort = Wirkort, keine Wiederverwendung von
-        ``_trip_metrics_altbestand`` (misst denselben Sachverhalt an anderer
-        Stelle fuer einen anderen Zweck).
+        ``None`` von der gemeinsamen Quelle heisst "kein Maximum definiert"
+        (D4) -> nicht schneiden, Eingabe unveraendert zurueck.
         """
-        if not self.metrics:
+        allowed_ids = self.allowed_metric_ids_for_report_type(report_type)
+        if allowed_ids is None:
             return metrics
-        allowed_ids = {mc.metric_id for mc in self.get_metrics_for_report_type(report_type)}
         return [mc for mc in metrics if mc.metric_id in allowed_ids]
 
     def cascade_source_for_channel(self, channel: str, report_type: str) -> CascadeSource:
