@@ -138,9 +138,37 @@ def thunder_providers_for(lat: float, lon: float) -> tuple[str, ...]:
     if primaer is None:
         return ()
     region = _region_fuer(lat, lon)
-    if region is not None and region.provider == primaer:
-        return (primaer, *region.zusatzquellen)
-    return (primaer,)
+    if region is None or region.provider != primaer:
+        return (primaer,)
+    zusatz = tuple(
+        quelle for quelle in region.zusatzquellen
+        if _zusatzquelle_zustaendig(quelle, lat, lon)
+    )
+    return (primaer, *zusatz)
+
+
+def _zusatzquelle_zustaendig(quelle: str, lat: float, lon: float) -> bool:
+    """Prueft, ob eine additive Zusatzquelle (lat, lon) innerhalb ihres
+    EIGENEN Modellgitters bedient -- nicht nur innerhalb des groesseren
+    Gebietsrechtecks der Primaerquelle (#1758 AC-12, Team-Lead-Korrektur nach
+    initialem GREEN).
+
+    Konkret: `DE_ALPEN` (Grundvorhersage-/DWD-Gebiet, bis 58.09 N) ist
+    ERHEBLICH groesser als das AROME-Gitter von GeoSphere (bis 51.819 N,
+    gemessen 2026-08-18) -- Hamburg/Berlin liegen in DE_ALPEN, aber
+    ausserhalb des AROME-Gitters. Ohne diese Pruefung wuerde dort bei jedem
+    Punkt ein GeoSphere-Abruf feuern, der garantiert mit HTTP 400 "outside
+    of dataset bounds" endet -- genau die sinnlose Last, die
+    `thunder_provider_for()` fuer die PRIMAERE Quelle bereits verhindert.
+
+    Lazy Import (Zyklus-Vermeidung, wie `region_routing`-Import-Regel oben):
+    `geosphere.py` importiert `thunder_routing` nicht, ein Modul-Import
+    waere unkritisch, bleibt hier trotzdem lazy fuer Konsistenz mit dem
+    uebrigen Modul."""
+    if quelle == "geosphere":
+        from providers.geosphere import arome_grid_covers
+        return arome_grid_covers(lat, lon)
+    return True
 
 
 # Benannte Ersatzquelle bei ECHTEM Ausfall einer Direktquelle (#1492 S2a,

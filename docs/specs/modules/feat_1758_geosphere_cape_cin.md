@@ -43,13 +43,19 @@ Tests) ist für diese Spec **vorab ausgeschlossen**. Gemessen gegen `GET
 
 | Prüfung | Ergebnis |
 |---|---|
-| Metadata-Endpoint | 19 Parameter, darunter `cape` (Einheit `m2 s-2`) und `cin` (Einheit `J kg-1`) |
+| Metadata-Endpoint | 19 Parameter, darunter `cape` (Einheit `m2 s-2`) und `cin` (Einheit `J kg-1`); Gitter-`bbox = [42.981, 5.498, 51.819, 22.102]` |
 | Punkt 46.66/12.74 (Karnischer Höhenweg), 56 h | `cape` 0,5 … 380,8, Nachmittagsanstieg vorhanden · `cin` 0,0 bis −0,1 |
 | Punkt außerhalb des Modellgitters (42.22/9.07, Korsika) | HTTP 400 `"Requested point ... is outside of dataset bounds!"` |
 | Unbekannter Parametername im selben Abruf | HTTP 400 `"Parameters {'gibtesnicht'} do not exist or access is denied"` — **der gesamte Abruf scheitert** |
+| Antwortzeit je Abruf | ~7 s gemessen |
 
 **Einheiten-Falle:** `m2 s-2` und `J kg-1` sind dimensionsgleich (1 J/kg = 1 m²/s²). Die Zahlen
 sind identisch, es darf **nicht** umgerechnet werden.
+
+**Gitter-Falle:** Das AROME-Gitter (`bbox = [42.981, 5.498, 51.819, 22.102]`, Metadata-Endpunkt,
+gemessen 2026-08-18) ist deutlich kleiner als das `DE_ALPEN`-Zuständigkeitsrechteck aus
+`thunder_routing._REGIONS` (`43.17…58.09 lat, −3.95…20.35 lon`) — Punkte wie Hamburg (53,55 N)
+oder Berlin (52,5 N) liegen in `DE_ALPEN`, aber außerhalb des AROME-Gitters.
 
 Rohdaten der Messung liegen im Kontext-Dokument `docs/context/feat-1758-geosphere-cape-cin.md`.
 
@@ -63,9 +69,11 @@ Rohdaten der Messung liegen im Kontext-Dokument `docs/context/feat-1758-geospher
   `_SIGNAL_ZU_FELD`. **Kein** Eintrag in `thunder_routing` — diese Scheibe allein ändert nichts
   am Live-Verhalten und ist deshalb isoliert testbar (AC-1 bis AC-5).
 - **Scheibe B — Wirksamkeit.** `thunder_routing` weist Österreich zusätzlich zu `de_direct`
-  eine zweite Quelle zu; der Fill-only-Wächter in `enrich_thunder` wird von "irgendein
-  bekanntes Feld befüllt" auf "diese Quelle hat bereits geliefert" umgestellt; neues ADR.
-  Dadurch entstehen GeoSphere-CAPE/CIN im Normalbetrieb (AC-6 bis AC-9).
+  eine zweite Quelle zu, begrenzt auf das tatsächliche AROME-Gitter (nicht das gesamte
+  `DE_ALPEN`-Rechteck); der Fill-only-Wächter in `enrich_thunder` wird von "irgendein bekanntes
+  Feld befüllt" auf "diese Quelle hat bereits geliefert" umgestellt; der Zusatzabruf bekommt ein
+  eigenes Zeitbudget; neues ADR. Dadurch entstehen GeoSphere-CAPE/CIN im Normalbetrieb (AC-6
+  bis AC-13).
 
 **Nicht in dieser Spec:**
 
@@ -97,6 +105,15 @@ Rohdaten der Messung liegen im Kontext-Dokument `docs/context/feat-1758-geospher
 5. **Leer bleibt leer, nie 0.** "Keine Aussage" ist nicht "keine Gefahr" (AC-4).
 6. **Der DWD bleibt für AT die Blitzpotenzial-Quelle.** GeoSphere kommt additiv hinzu und
    ersetzt nichts (AC-7).
+7. **Eine Zusatzquelle gilt nur innerhalb ihres eigenen Modellgitters**, nicht im gesamten
+   Gebietsrechteck der Primärquelle. Das AROME-Gitter (Metadata-Endpunkt, gemessen 2026-08-18:
+   `bbox = [42.981, 5.498, 51.819, 22.102]`) ist kleiner als `DE_ALPEN` — Punkte außerhalb des
+   Gitters (z. B. Hamburg, Berlin) bekommen `geosphere` gar nicht erst als zuständig zugewiesen,
+   statt bei jedem Lauf einen von vornherein aussichtslosen HTTP-400-Abruf zu erzeugen (AC-12).
+8. **Der Zusatzabruf hat ein eigenes Zeitbudget** und darf das Budget der Primärquelle (DWD,
+   `THUNDER_FETCH_DEADLINE_SECONDS`, `dwd.py`) weder teilen noch aufzehren — Vorbild dort.
+   Scheitert oder verzögert sich der Zusatzabruf, bleiben nur seine eigenen Felder leer; die
+   Primärquelle und der Gesamtlauf bleiben unberührt (AC-13).
 
 ## Implementation Details
 
@@ -167,22 +184,40 @@ MUSS dieselbe Konvention anwenden — ein naiver `enumerate()`-ab-0-Parser versc
 um eine Stunde, ohne dass ein reiner Wertevergleich (AC-1/AC-3) das bemerken würde (AC-11 prüft
 genau das).
 
-### 5. Scheibe B — mehrere Quellen je Gebiet (`thunder_routing.py`)
+### 5. Scheibe B — mehrere Quellen je Gebiet, nur innerhalb des tatsächlichen Modellgitters
+   (`thunder_routing.py`, `geosphere.py`)
 
 `_REGIONS` liefert heute genau einen Providernamen je Gebiet (`thunder_provider_for`,
 first-match-wins). Für Österreich braucht es **zwei** gleichzeitig gültige Quellen
 (`de_direct` UND `geosphere`), ohne die bestehende Zuordnung für FR/DE_ALPEN/EU_REST zu
-verändern. Die Region `DE_ALPEN` bekommt eine zweite, additive Quelle `geosphere` zugewiesen;
-für Punkte außerhalb des AROME-Gitters (z. B. Norddeutschland) liefert der gekapselte Abruf aus
-Scheibe A `{}` (HTTP 400, abgefangen) — fail-soft, kein Sonderfall nötig.
+verändern.
+
+**GeoSphere gilt NICHT für das gesamte `DE_ALPEN`-Rechteck**, sondern nur innerhalb des
+tatsächlichen AROME-Gitters (gemessen am Metadata-Endpunkt, 2026-08-18: `bbox = [42.981,
+5.498, 51.819, 22.102]`) — deutlich kleiner als `DE_ALPEN` (`43.17…58.09 lat, −3.95…20.35 lon`)
+und schließt z. B. Hamburg (53,55 N) und Berlin (52,5 N) aus. Ein Punkt außerhalb des
+AROME-Gitters bekommt `geosphere` deshalb gar nicht erst als zuständig zugewiesen — derselbe
+Grundsatz wie in `thunder_provider_for` für Gebiete ganz ohne Quelle ("kein Abruf ausserhalb
+eines Zustaendigkeitsgebiets"), jetzt zusätzlich für eine einzelne Zusatzquelle innerhalb eines
+größeren Primärquellen-Rechtecks angewendet (Invariante 7, AC-12). Umsetzung analog zum
+bestehenden `snowgrid_covers()` (`geosphere.py:96-99`, dort von `openmeteo.py:184` importiert):
+eine eigene Bounds-Prüfung (z. B. `arome_grid_covers(lat, lon)` in `geosphere.py`, von
+`thunder_routing` importiert) statt "einfach abrufen und HTTP 400 abfangen" — Letzteres würde
+bei jedem Lauf für jeden Punkt außerhalb des Gitters sinnlose Last erzeugen.
+
+Der Zusatzabruf bekommt ein **eigenes Zeitbudget**, das die Primärquelle (DWD,
+`THUNDER_FETCH_DEADLINE_SECONDS`, `dwd.py`) weder teilt noch aufzehrt (Invariante 8). Gemessen
+wurden ~7 s je GeoSphere-Abruf; verzögert oder scheitert er, bleiben nur die GeoSphere-Felder
+leer, DWD wird nicht berührt und der Gesamtlauf bricht nicht ab (AC-13).
 
 Die bestehende Funktion `thunder_provider_for()` (Rückgabetyp `Optional[str]`, genutzt von
 `_fetch_lightning_density` für die **primäre** Quelle und von `thunder_vertretung_for`) bleibt
 für Bestandsaufrufer unverändert und liefert weiterhin die primäre Quelle. Zusätzlich entsteht
 eine Abfrage aller zuständigen Quellen eines Gebiets (Rückgabe als Liste/Tupel), die
 `_fetch_lightning_density` durchläuft — Datenstruktur der Tabelle ist Implementierungsdetail der
-TDD-Phase, die beobachtbare Zuständigkeit ist es nicht: **ein AT-Punkt muss danach beide,
-`de_direct` und `geosphere`, als zuständig ausweisen** (AC-6).
+TDD-Phase, die beobachtbare Zuständigkeit ist es nicht: **ein Punkt innerhalb des AROME-Gitters
+muss danach beide, `de_direct` und `geosphere`, als zuständig ausweisen; ein Punkt in
+`DE_ALPEN`, aber außerhalb des Gitters, nur `de_direct`** (AC-6, AC-12).
 
 ### 6. Fill-only-Wächter je Quelle (`thunder_enrichment.py:222-231`)
 
@@ -216,7 +251,8 @@ additiv erlaubt." Grenzt sich ab von:
 - **Output:** zwei zusätzlich befüllte Felder je `ForecastDataPoint` für Orte im AROME-Gitter
   (v. a. Österreich), zusätzlich zu den bereits vom DWD befüllten Blitzpotenzial-Feldern
 - **Side effects:** ein zusätzlicher HTTP-Abruf gegen `dataset.api.hub.geosphere.at` je
-  Anreicherung eines AT-Punkts; **keine** Änderung an irgendeiner Nutzerausgabe
+  Anreicherung eines Punkts **innerhalb des AROME-Gitters**, begrenzt durch ein eigenes
+  Zeitbudget; **keine** Änderung an irgendeiner Nutzerausgabe
 
 ## Acceptance Criteria
 
@@ -315,6 +351,19 @@ additiv erlaubt." Grenzt sich ab von:
     diesen Test rot machen — genau der Fehlertyp aus #874/#1275 (Wert aus der falschen
     Stunde/Etappe), der ein reiner Wertevergleich (AC-1/AC-3) nicht fängt.
 
+- **AC-12:** Given ein Punkt innerhalb des Gebiets `DE_ALPEN`, aber außerhalb des AROME-Gitters
+  (Hamburg, 53.55/9.99) / When die zuständigen Gewitterquellen für diesen Punkt ermittelt
+  werden / Then ist `geosphere` nicht darunter, und es wird kein GeoSphere-Abruf versucht.
+  - Test: Zuständigkeitsabfrage für Hamburg ausführen — `geosphere` darf nicht enthalten sein.
+    Gegenprobe im selben Test mit einem Punkt im Gitter (Karnischer Höhenweg), der `geosphere`
+    enthalten muss; sonst wäre auch ein Filter grün, der pauschal alles verwirft.
+
+- **AC-13:** Given der GeoSphere-Zusatzabruf antwortet nicht innerhalb seiner Zeitgrenze / When
+  die Anreicherung läuft / Then bleiben beide GeoSphere-Felder leer, die Felder der
+  Primärquelle (DWD) sind vollständig befüllt, und der Gesamtlauf bricht nicht ab.
+  - Test: Zusatzabruf mit einer verzögerten Antwort ausführen; DWD-Felder müssen vollständig
+    sein, GeoSphere-Felder `None`, kein Abbruch.
+
 ## Estimated Scope
 
 **Scheibe A:**
@@ -325,15 +374,17 @@ additiv erlaubt." Grenzt sich ab von:
 - **Effort:** low
 
 **Scheibe B:**
-- **LoC:** ~60–100 (Produktivcode) + Tests + ADR-Datei (zählt nicht gegen das LoC-Limit,
+- **LoC:** ~70–110 (Produktivcode) + Tests + ADR-Datei (zählt nicht gegen das LoC-Limit,
   `docs/`)
-- **Files:** `thunder_routing.py` (+~30–40 LoC: Mehrfach-Zuständigkeit + Docstring-Update),
-  `thunder_enrichment.py` (+~25–40 LoC: Fill-only-Wächter je Quelle, Schleife über zuständige
-  Quellen in `_fetch_lightning_density`), `docs/adr/0057-*.md` (neu)
+- **Files:** `thunder_routing.py` (+~35–45 LoC: Mehrfach-Zuständigkeit + AROME-Bounds-Prüfung +
+  Docstring-Update), `geosphere.py` (+~10 LoC: `arome_grid_covers()`, analog
+  `snowgrid_covers()`), `thunder_enrichment.py` (+~25–40 LoC: Fill-only-Wächter je Quelle,
+  Schleife über zuständige Quellen samt eigenem Zeitbudget in `_fetch_lightning_density`),
+  `docs/adr/0057-*.md` (neu)
 - **Effort:** medium (Fill-only-Umbau berührt den gemeinsamen Anschlusspunkt für alle Gebiete,
   Regressionsrisiko für FR/DE_ALPEN/EU_REST — deshalb AC-7 als Mutationstest Pflicht)
 
-**Gesamt:** ~120–190 LoC Produktivcode, voraussichtlich über dem Standard-Workflow-Limit
+**Gesamt:** ~130–200 LoC Produktivcode, voraussichtlich über dem Standard-Workflow-Limit
 (250 inkl. Tests) — `loc_limit_override` ist wahrscheinlich nötig.
 
 ## Dependencies
@@ -362,6 +413,10 @@ additiv erlaubt." Grenzt sich ab von:
   neue GeoSphere-Parser (`_parse_cape_cin_response`) muss exakt dieselbe Konvention einhalten —
   ein Off-by-one verschiebt jeden Wert um eine Stunde, ohne dass ein reiner Wertevergleich das
   zeigt (AC-11 ist deshalb Pflicht, nicht Kür; Präzedenzfehler #874/#1275).
+- **Jeder Punkt innerhalb des AROME-Gitters kostet einen zusätzlichen HTTP-Abruf je
+  Anreicherung**, begrenzt durch das eigene Zeitbudget des Zusatzabrufs (Invariante 8). Gemessen
+  ~7 s je Abruf — bei einem System mit bestehenden Timeout-Problemen (#1839, #1539) ist das ein
+  eigenständiges Ausfallrisiko, das AC-13 absichert, aber nicht beseitigt.
 - **Modellnamen-Kollision bleibt bestehen.** `geosphere.py:501` setzt weiterhin
   `model="AROME"`; diese Spec umgeht die Kollision nur durch eigene Feldnamen (Invariante 3),
   behebt sie nicht. Nebenbefund bleibt in #1199 gebucht.
@@ -387,3 +442,6 @@ additiv erlaubt." Grenzt sich ab von:
 - 2026-08-18: Initial spec created
 - 2026-08-18: AC-11 (zeitliche Zuordnung, Offset-Konvention) nach Team-Lead-Review ergänzt —
   Lücke: AC-1/AC-3 prüften nur Werte, nicht die Stunde ihrer Zuordnung (Präzedenz #874/#1275)
+- 2026-08-18: AC-12/AC-13 sowie Invarianten 7/8 ergänzt — Entwurfsfehler aus der
+  Implementierung: AROME-Gitter ist kleiner als das `DE_ALPEN`-Zuständigkeitsrechteck (gemessen
+  `bbox = [42.981, 5.498, 51.819, 22.102]`), Zusatzabruf braucht ein eigenes Zeitbudget

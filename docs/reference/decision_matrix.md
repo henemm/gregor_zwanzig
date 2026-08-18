@@ -210,6 +210,23 @@ Fill-only-Wächter in `thunder_enrichment.py` gilt seit #1758 nur noch für
 die Primärquelle je Gebiet, sonst käme eine Zusatzquelle nie zum Zug, sobald
 die Primärquelle geliefert hat.
 
+**Zusatzquelle gilt nur im EIGENEN Modellgitter, eigenes Zeitbudget (#1758
+AC-12/AC-13, Nachbesserung nach initialem GREEN).** Das AROME-Gitter von
+GeoSphere (`geosphere.AROME_BOUNDS`, gemessen `bbox = [42.981, 5.498,
+51.819, 22.102]`) ist ERHEBLICH kleiner als das `DE_ALPEN`-Rechteck
+(43.17–58.09 lat) — Hamburg/Berlin liegen in `DE_ALPEN`, aber außerhalb des
+AROME-Gitters. `thunder_providers_for()` prüft deshalb für jede Zusatzquelle
+zusätzlich `geosphere.arome_grid_covers(lat, lon)` (Muster
+`snowgrid_covers()`), sonst würde außerhalb des Gitters bei jedem Lauf ein
+garantiert scheiternder HTTP-400-Abruf entstehen. Der GeoSphere-Zusatzabruf
+läuft zudem bewusst OHNE den Retry-Mechanismus der Grundvorhersage (bis zu 5
+Versuche, Backoff bis 60s würde ein knappes Budget sprengen) und mit einem
+eigenen, kurzen Timeout (`geosphere.THUNDER_FETCH_TIMEOUT_SECONDS`, 10s —
+reale Antwortzeit eines cape/cin-Abrufs ~7s gemessen) — das Projekt hat
+bereits bestehende Timeout-Probleme (#1839, #1539), ein zusätzlicher,
+fail-soft gedachter Abruf darf die Gesamtlaufzeit nicht in deren Nähe
+schieben.
+
 Jede Vertretung wird markiert (`ForecastMeta.fallback_model` /
 `fallback_reason="thunder_source_unavailable"` / `fallback_metrics`) und **seit
 #1492 S2b im Briefing angezeigt** — E-Mail (Vollversion + Kompakt) und

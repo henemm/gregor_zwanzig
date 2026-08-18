@@ -45,6 +45,32 @@ Mehrere Gewitter-Signalquellen je Gebiet sind **additiv erlaubt**:
   eigenen feldbasierten Wächter — sie werden bei jedem Anreicherungslauf versucht, solange sie
   zuständig sind.
 
+## Nachbesserung (nach initialem GREEN, 2026-08-18): eigenes Gitter + eigenes Zeitbudget
+
+Der erste GREEN-Stand trug `geosphere` additiv für das **gesamte** `DE_ALPEN`-Zuständigkeits-
+rechteck ein (`43.17…58.09 lat, −3.95…20.35 lon`, dasselbe Rechteck wie die Grundvorhersage-/
+DWD-Zuständigkeit). Das AROME-Gitter selbst ist gemessen (`GET /nwp-v1-1h-2500m/metadata`,
+2026-08-18) aber deutlich kleiner: `bbox = [42.981, 5.498, 51.819, 22.102]`. Punkte wie
+Hamburg (53,55 N) oder Berlin (52,5 N) liegen in `DE_ALPEN`, aber außerhalb des AROME-Gitters —
+ohne Korrektur hätte das System dort bei jedem Lauf einen garantiert scheiternden HTTP-400-
+Abruf ausgelöst, genau die "sinnlose Last", die `thunder_provider_for()` für die primäre Quelle
+bereits verhindert.
+
+Zwei Korrekturen (AC-12/AC-13):
+
+1. **Eigenes Gitter je Zusatzquelle.** `thunder_routing._zusatzquelle_zustaendig()` prüft für
+   `geosphere` zusätzlich `geosphere.arome_grid_covers(lat, lon)` (Muster `snowgrid_covers()`) —
+   eine Zusatzquelle gilt nur innerhalb ihres EIGENEN Modellgitters, nicht im gesamten
+   Gebietsrechteck der Primärquelle.
+2. **Eigenes Zeitbudget.** `GeoSphereProvider.fetch_thunder_signals_named` läuft bewusst OHNE
+   `_request()`/`@retry` (der Retry-Mechanismus mit bis zu 5 Versuchen und Backoff bis 60s würde
+   ein knappes Budget sofort sprengen) und mit einem eigenen, kurzen Timeout
+   (`THUNDER_FETCH_TIMEOUT_SECONDS`, 10s — die reale Antwortzeit eines cape/cin-Abrufs ist mit
+   ~7s gemessen, s. Spec "Vorbedingung"). Das Projekt hat bereits bestehende Timeout-Probleme
+   (#1839: Trip-Vorschau bricht nach 30s ab; #1539: sequenzielle Verarbeitung, Alarm-Ticks fallen
+   aus) — ein zusätzlicher, fail-soft gedachter Abruf je Etappe/Ort darf die Gesamtlaufzeit nicht
+   in die Nähe dieser Grenzen schieben.
+
 ## Abgrenzung
 
 - **ADR-0025** ("eine Gewitter-Quelle für alle Briefing-Kanäle") betrifft die **Kanal**-Ebene:
@@ -63,8 +89,14 @@ Mehrere Gewitter-Signalquellen je Gebiet sind **additiv erlaubt**:
 - Positiv: Österreich bekommt ein zweites, unabhängiges Konvektionssignal (cape/cin), ohne den
   produktiven DWD-Pfad zu gefährden. Andere Gebiete (FR, EU_REST) sind strukturell unverändert
   (keine Zusatzquelle eingetragen).
-- Bekannte Nebenwirkung: jeder reguläre Anreicherungslauf für einen Punkt im `DE_ALPEN`-Gebiet
-  löst jetzt zusätzlich einen GeoSphere-Abruf aus (fail-soft, best effort) — Bestandstests, die
-  Karnisch-/Alpen-Koordinaten über den regulären Weg ohne GeoSphere-Stub verwenden, sehen dadurch
-  einen zusätzlichen (scheiternden, aber abgefangenen) Netzversuch. Bleibt grün, aber langsamer;
-  gebucht als Nebenbefund in #1199.
+- Bekannte Nebenwirkung: jeder reguläre Anreicherungslauf für einen Punkt INNERHALB des
+  AROME-Gitters (nicht mehr das gesamte `DE_ALPEN`-Rechteck, s. Nachbesserung oben) löst jetzt
+  zusätzlich einen GeoSphere-Abruf aus (fail-soft, best effort, eigenes 10s-Zeitbudget) —
+  Bestandstests, die Karnisch-/Alpen-Koordinaten über den regulären Weg ohne GeoSphere-Stub
+  verwenden, sehen dadurch einen zusätzlichen Netzversuch (gestubbt in
+  `test_thunder_new_signals_enrichment.py`, s. dortiger Kommentar). Gebucht als Nebenbefund in
+  #1199.
+- Bei der #1758-Untersuchung entdeckter, UNABHÄNGIGER Nebenbefund: `OpenMeteoProvider._enrich_snow`
+  (`openmeteo.py:475-477`) instanziiert `GeoSphereProvider` für Alpen-Koordinaten direkt (nicht
+  über die Provider-Registry) und macht dabei einen echten SNOWGRID-Netzabruf — vorbestehend,
+  unabhängig von dieser Änderung, ebenfalls in #1199 gebucht.

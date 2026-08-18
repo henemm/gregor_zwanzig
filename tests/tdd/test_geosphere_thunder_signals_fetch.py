@@ -43,6 +43,7 @@ from __future__ import annotations
 import json
 import sys
 import threading
+import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -79,18 +80,33 @@ def _cape_cin_features(fixture_path: Path) -> Tuple[List[datetime], List[float],
 
 
 class _Server(ThreadingHTTPServer):
-    def __init__(self, addr, handler, *, cape_cin_status, cape_cin_body, base_body):
+    def __init__(self, addr, handler, *, cape_cin_status, cape_cin_body, base_body,
+                 verzoegerung_s: float = 0.0):
         super().__init__(addr, handler)
         self.cape_cin_status = cape_cin_status
         self.cape_cin_body = cape_cin_body
         self.base_body = base_body
+        self.verzoegerung_s = verzoegerung_s
         self.requests: list = []
         self._lock = threading.Lock()
+
+    def handle_error(self, request, client_address):
+        # AC-13: bei kurzem Client-Zeitbudget (< verzoegerung_s) trennt der
+        # Client die Verbindung, bevor der Server (noch schlafend) antworten
+        # kann -- ein erwarteter BrokenPipeError, kein Testfehler. Bewusst
+        # geschluckt statt Standard-Traceback auf stderr (Muster `log_message`
+        # unten).
+        pass
 
 
 class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         srv = self.server
+        if srv.verzoegerung_s:
+            # AC-13: simuliert einen langsamen/haengenden GeoSphere-Server --
+            # antwortet erst NACH der Verzoegerung, damit der eigene Zeit-
+            # budget-Wert (`geosphere.THUNDER_FETCH_TIMEOUT_SECONDS`) greift.
+            time.sleep(srv.verzoegerung_s)
         qs = parse_qs(urlparse(self.path).query)
         params = tuple(sorted((qs.get("parameters", [""])[0]).split(",")))
         with srv._lock:
@@ -110,16 +126,20 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 @contextmanager
-def _server(monkeypatch, *, cape_cin_status: int = 200, cape_cin_body=None, base_body=None):
+def _server(monkeypatch, *, cape_cin_status: int = 200, cape_cin_body=None, base_body=None,
+            verzoegerung_s: float = 0.0):
     """Lokaler Server unter `geosphere.BASE_URL`. Dispatch NUR ueber den
     `parameters`-Query-Parameter -- derselbe Endpunkt bedient sowohl den
     Grundvorhersage- als auch den cape/cin-Abruf (Spec Implementation Details
-    1: beide nutzen `ENDPOINTS["nwp"]`)."""
+    1: beide nutzen `ENDPOINTS["nwp"]`). `verzoegerung_s` (AC-13): laesst JEDE
+    Antwort um diese Zeit verzoegern, um das Zeitbudget des additiven Abrufs
+    zu pruefen."""
     cape_cin_body = cape_cin_body if cape_cin_body is not None else _FIXTURE_CAPE_CIN_KHW.read_bytes()
     base_body = base_body if base_body is not None else _FIXTURE_BASE.read_bytes()
     srv = _Server(
         ("127.0.0.1", 0), _Handler,
         cape_cin_status=cape_cin_status, cape_cin_body=cape_cin_body, base_body=base_body,
+        verzoegerung_s=verzoegerung_s,
     )
     thread = threading.Thread(target=srv.serve_forever, daemon=True)
     thread.start()

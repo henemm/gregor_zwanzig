@@ -325,13 +325,20 @@ Schwellen, keine Fusion, kein Renderer-Anschluss** (Scope-Abgrenzung der Spec
 | convective_inhibition_geosphere_jkg           | float \| None | Konvektionshemmung (`cin`, J kg-1) — GeoSphere AROME, dieselbe Begründung für das eigene Feld wie oben. Live gemessen durchgängig 0,0 bis −0,1 — kein Sentinel-Wert bekannt (Known Limitations der Spec). |
 
 Zuständigkeit: `thunder_routing._REGIONS`, Zeile `DE_ALPEN`, trägt seit #1758 die Zusatzquelle
-`geosphere` neben der Primärquelle `de_direct`. Abruf ist ein **eigener, gekapselter** Request
-(`GeoSphereProvider.fetch_thunder_signals_named`, Vorbild `fetch_snowgrid`) — NICHT Teil von
-`NWP_PARAMS`/`fetch_nwp_forecast`, damit ein künftiger Namenswechsel bei `cape`/`cin` nie die
-Grundvorhersage (Temperatur/Wind/Schnee) mitreißt: ein unbekannter Parametername lässt bei
-GeoSphere den **gesamten** Abruf mit HTTP 400 scheitern (live gemessen). Der Fill-only-Wächter
-gilt seit #1758 nur noch für die Primärquelle je Gebiet — Zusatzquellen wie `geosphere` werden
-bei jedem Anreicherungslauf versucht, solange sie zuständig sind (ADR-0057).
+`geosphere` neben der Primärquelle `de_direct` — **begrenzt auf das tatsächliche AROME-Gitter**
+(`geosphere.AROME_BOUNDS`/`arome_grid_covers()`, gemessen `bbox = [42.981, 5.498, 51.819,
+22.102]`), NICHT das gesamte, größere `DE_ALPEN`-Zuständigkeitsrechteck — Punkte wie Hamburg
+oder Berlin liegen in `DE_ALPEN`, aber außerhalb des AROME-Gitters und bekommen `geosphere`
+deshalb gar nicht erst zugewiesen (sonst garantierter HTTP-400-Abruf bei jedem Lauf). Abruf ist
+ein **eigener, gekapselter** Request (`GeoSphereProvider.fetch_thunder_signals_named`, Vorbild
+`fetch_snowgrid`) — NICHT Teil von `NWP_PARAMS`/`fetch_nwp_forecast`, damit ein künftiger
+Namenswechsel bei `cape`/`cin` nie die Grundvorhersage (Temperatur/Wind/Schnee) mitreißt: ein
+unbekannter Parametername lässt bei GeoSphere den **gesamten** Abruf mit HTTP 400 scheitern
+(live gemessen). Läuft bewusst OHNE Retry (der Grundvorhersage-Retry mit bis zu 5 Versuchen und
+Backoff bis 60s würde ein knappes Budget sprengen) und mit eigenem, kurzem Zeitbudget
+(`THUNDER_FETCH_TIMEOUT_SECONDS`, 10s — reale Antwortzeit ~7s gemessen, s. Spec). Der
+Fill-only-Wächter gilt seit #1758 nur noch für die Primärquelle je Gebiet — Zusatzquellen wie
+`geosphere` werden bei jedem Anreicherungslauf versucht, solange sie zuständig sind (ADR-0057).
 
 ### Provenance (Meta, Pflicht)
 - `provider`, `model`, `run`, `interp`, `grid_res_km`, optional `stations_used[]`

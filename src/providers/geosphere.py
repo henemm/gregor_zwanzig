@@ -93,6 +93,41 @@ NWP_PARAMS = [
 # Grundvorhersage (Temperatur/Wind/Schnee) deshalb nie mitreissen.
 CAPE_CIN_PARAMS = ["cape", "cin"]
 
+# AROME-Gitter (GeoSphere `nwp-v1-1h-2500m`), gemessen 2026-08-18 gegen
+# GET /nwp-v1-1h-2500m/metadata: bbox = [42.981, 5.498, 51.819, 22.102]
+# (lat_min, lon_min, lat_max, lon_max). Eigene, KLEINERE Grenze als das
+# `thunder_routing._REGIONS`-Rechteck `DE_ALPEN` (das Grundvorhersage-/
+# DWD-Gebiet reicht bis 58.09 N) -- Hamburg/Berlin liegen in DE_ALPEN, aber
+# ausserhalb des AROME-Gitters. Eine additive Zusatzquelle gilt NUR
+# innerhalb ihres EIGENEN Modellgitters (Team-Lead-Korrektur nach initialem
+# GREEN, #1758 AC-12) -- sonst feuert das System dort garantierte
+# HTTP-400-Abrufe ("outside of dataset bounds").
+AROME_BOUNDS = {"min_lat": 42.981, "max_lat": 51.819, "min_lon": 5.498, "max_lon": 22.102}
+
+
+def arome_grid_covers(lat: float, lon: float) -> bool:
+    """True wenn (lat, lon) im AROME-Abdeckungsgebiet liegt, inklusive Grenzen.
+    Muster: `snowgrid_covers()` oben."""
+    b = AROME_BOUNDS
+    return b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]
+
+
+# Eigenes, knappes Zeitbudget des additiven Gewittersignal-Abrufs (#1758 AC-13,
+# Team-Lead-Korrektur) -- BEWUSST kuerzer als TIMEOUT (30s) der Grundvorhersage
+# und BEWUSST ohne `_request()`/`@retry` (s. `fetch_thunder_signals_named`):
+# ein Retry mit exponentiellem Backoff (2-60s je Versuch, bis zu 5 Versuche)
+# wuerde dieses knappe Budget sofort sprengen. Das Projekt hat bereits #1839
+# (Trip-Vorschau bricht nach 30s ab) und #1539 (sequenzielle Verarbeitung,
+# Alarm-Ticks fallen aus) -- ein zusaetzlicher, fail-soft gedachter Abruf je
+# Etappe/Ort darf die Gesamtlaufzeit nicht in die Naehe der Timeout-Grenze
+# schieben. GEMESSENE reale Antwortzeit eines cape/cin-Abrufs: ~7s (Spec
+# "Vorbedingung", Tabellenzeile "Antwortzeit je Abruf") -- 5s waere KUERZER
+# als der Normalfall und liesse GeoSphere praktisch nie zu Ende antworten.
+# 10s laesst den gemessenen Normalfall durchlaufen und traegt trotzdem
+# Reserve fuer einen einzelnen langsameren Ausreisser, ohne selbst zum
+# Flaschenhals einer 30s-Gesamtlaufzeit zu werden.
+THUNDER_FETCH_TIMEOUT_SECONDS = 10.0
+
 # Snowgrid parameters
 SNOWGRID_PARAMS = ["snow_depth", "swe_tot"]
 
@@ -357,18 +392,33 @@ class GeoSphereProvider:
         """#1758: cape/cin als benannte Gewittersignale, additiv zu DWD.
 
         Eigener, gekapselter Abruf (Vorbild `fetch_snowgrid`) -- faellt er
-        aus (z.B. Punkt ausserhalb des AROME-Gitters, HTTP 400), bleiben
-        beide Signale leer; die Grundvorhersage ist davon unberuehrt (Spec
-        AC-2).
+        aus (z.B. Punkt ausserhalb des AROME-Gitters, HTTP 400, oder das
+        eigene Zeitbudget `THUNDER_FETCH_TIMEOUT_SECONDS` laeuft ab, AC-13),
+        bleiben beide Signale leer; die Grundvorhersage ist davon unberuehrt
+        (Spec AC-2).
+
+        BEWUSST ohne `self._request()` (kein `@retry`): ein additives,
+        best-effort-Signal soll bei einem Fehlschlag SOFORT leer bleiben,
+        nicht bis zu 5x mit wachsendem Backoff erneut versuchen -- das
+        wuerde das knappe Zeitbudget zunichtemachen (s. Konstante oben).
         """
+        params: Dict[str, Any] = {
+            "lat_lon": f"{location.latitude},{location.longitude}",
+            "parameters": ",".join(CAPE_CIN_PARAMS),
+            "output_format": "geojson",
+        }
+        if start:
+            params["start"] = start.strftime("%Y-%m-%dT%H:%M")
+        if end:
+            params["end"] = end.strftime("%Y-%m-%dT%H:%M")
+        url = f"{BASE_URL}{ENDPOINTS['nwp']}?{urlencode(params)}"
+
         try:
-            data = self._request(
-                ENDPOINTS["nwp"], location.latitude, location.longitude,
-                CAPE_CIN_PARAMS, start, end,
-            )
-        except httpx.HTTPStatusError:
+            response = self._client.get(url, timeout=THUNDER_FETCH_TIMEOUT_SECONDS)
+            response.raise_for_status()
+        except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.RequestError):
             return {"cape": {}, "cin": {}}
-        return self._parse_cape_cin_response(data, start)
+        return self._parse_cape_cin_response(response.json(), start)
 
     def _parse_cape_cin_response(
         self, data: Dict[str, Any], start: Optional[datetime] = None,
