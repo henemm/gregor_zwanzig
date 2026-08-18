@@ -9,6 +9,13 @@ die Gefahrenart amtlicher Warnungen als eigenes Feld `hazards`, den Ausloese-
 Grund `reason` und die Kanal-Aufschluesselung (zugestellt / nicht zugestellt
 mit Begruendung).
 
+Seit #1954 traegt jedes Register-Paar zusaetzlich den gemeldeten WERT:
+`value` (neu) und `previous_value` (alt). Beide Schluessel sind optional und
+fehlen vollstaendig, wo es keinen Messwert gibt (Radar-Nowcast) bzw. keinen
+Vorwert (Grenzwert-Treffer) -- eine `0` waere dort eine erfundene Zahl. Die
+Leseseite (`read_undelivered()`) bleibt bewusst zweigliedrig: der Wert
+erreicht den Mail-Renderer nicht (#1503/#1474).
+
 Seit #1467 S1 traegt jeder Eintrag GENAU EINE Kennung: `entity_id` plus das
 Typfeld `entity_type` (`"trip"` | `"compare"`). Die frueheren Doppelfelder
 `trip_id`/`preset_id` — von denen immer eins leer war — werden nicht mehr
@@ -63,21 +70,99 @@ REASON_OFFICIAL_ALERT = "official_alert"
 _ALL_CHANNELS = ("email", "telegram", "sms", "premium_sms")
 
 
+class MetricValue(tuple):
+    """Register-Paar `(metric_id, aggregation)` mit dem gemeldeten Wert (#1954).
+
+    Bleibt ein reines 2-Tupel: Gleichheit, Hash und Sortierung richten sich
+    ausschliesslich nach dem Paar. Der Wert haengt daran, gehoert aber
+    ausdruecklich NICHT zum Dedupe-Schluessel (E3) -- sonst zerfiele eine
+    Groesse an Fliesskomma-Rauschen (59.9 vs. 60.1) in mehrere
+    Register-Eintraege.
+
+    `rank` ist der Betrag der Aenderung und entscheidet bei mehreren Treffern
+    derselben Groesse, welcher Wert ins Protokoll kommt; `segment_id` loest
+    Gleichstand auf. Ein Wert von `None` bedeutet "nicht erhebbar" -- der
+    Schluessel fehlt dann im JSON vollstaendig (E2), er wird nicht auf `null`
+    gesetzt.
+    """
+
+    def __new__(cls, metric_id, aggregation, *, value=None,
+                previous_value=None, rank=None, segment_id=""):
+        paar = tuple.__new__(cls, (metric_id, aggregation))
+        paar.value = value
+        paar.previous_value = previous_value
+        paar.rank = rank
+        paar.segment_id = segment_id
+        return paar
+
+
+def _mit_werten(pair, **werte) -> "MetricValue | None":
+    """Aufloesungs-Ergebnis (2-Tupel oder `None`) um die Werte anreichern."""
+    return None if pair is None else MetricValue(pair[0], pair[1], **werte)
+
+
+def _ist_extremer(neu, alt) -> bool:
+    """Groesserer Betrag der Aenderung gewinnt; bei Gleichstand die kleinere
+    `segment_id` (E3). Ein Paar ohne Wert traegt den Betrag 0 und verliert
+    damit gegen jedes Paar mit Wert."""
+    r_neu = getattr(neu, "rank", None) or 0.0
+    r_alt = getattr(alt, "rank", None) or 0.0
+    if r_neu != r_alt:
+        return r_neu > r_alt
+    return str(getattr(neu, "segment_id", "")) < str(getattr(alt, "segment_id", ""))
+
+
 def _norm_pairs(pairs: Iterable) -> list[tuple[str, str]]:
     """Register-Paare dedupliziert und stabil sortiert; `None` faellt weg
-    (fail-soft: eine nicht aufloesbare Groesse laesst den Alarm-Lauf laufen)."""
-    return sorted({tuple(p) for p in pairs if p is not None})
+    (fail-soft: eine nicht aufloesbare Groesse laesst den Alarm-Lauf laufen).
+
+    Dedupliziert wird ueber das Paar allein -- mehrere Treffer derselben
+    Groesse ergeben EINEN Eintrag (AC-7), der den Wert des extremsten
+    Treffers traegt (AC-18).
+    """
+    besten: dict[tuple[str, str], tuple] = {}
+    for p in pairs or ():
+        if p is None:
+            continue
+        schluessel = (p[0], p[1])
+        vorhanden = besten.get(schluessel)
+        if vorhanden is None or _ist_extremer(p, vorhanden):
+            besten[schluessel] = p
+    return [besten[schluessel] for schluessel in sorted(besten)]
+
+
+def _metric_dict(pair) -> dict:
+    """Ein Register-Paar als JSON-Dict; Wert-Schluessel nur, wenn erhebbar.
+
+    Absenz heisst "nicht erhebbar" (E2) -- ein Radar-Nowcast hat keinen
+    Messwert, ein Grenzwert-Treffer keinen Vorwert. `None` waere hier falsch:
+    `json.dumps` schriebe daraus `null`, also eine Aussage ueber einen Wert,
+    den es nicht gibt.
+    """
+    eintrag = {"metric_id": pair[0], "aggregation": pair[1]}
+    for schluessel in ("value", "previous_value"):
+        wert = getattr(pair, schluessel, None)
+        if wert is not None:
+            eintrag[schluessel] = wert
+    return eintrag
 
 
 def register_pairs_from_changes(changes) -> list[tuple[str, str]]:
-    """Vorhersage-Aenderungen -> Register-Paare.
+    """Vorhersage-Aenderungen -> Register-Paare MIT neuem und altem Wert.
 
     `WeatherChange.metric` ist an allen erzeugenden Stellen bereits ein
     `SegmentWeatherSummary`-Feldname (O1, gemessen in
     `weather_change_detection.py`) -- eine einzige Aufloesungsregel genuegt.
     """
     return _norm_pairs(
-        metric_and_aggregation_for_field(c.metric) for c in changes or []
+        _mit_werten(
+            metric_and_aggregation_for_field(c.metric),
+            value=c.new_value,
+            previous_value=c.old_value,
+            rank=abs(c.delta or 0.0),
+            segment_id=c.segment_id,
+        )
+        for c in changes or []
     )
 
 
@@ -87,12 +172,21 @@ def register_pairs_from_corridor_hits(hits) -> list[tuple[str, str]]:
     `CorridorHit.metric` kann aus dem alten `AlertMetric`-Namensraum oder aus
     dem Compare-Katalog stammen; `resolve_corridor_summary_field()` (S2a-
     Baustein) vereinheitlicht beide auf den Summary-Feldnamen.
+
+    Der gerissene Wert kommt mit (E4), ein Vorwert NICHT: ein Korridor-Treffer
+    hat keinen -- und die Schwelle (`bound`) ist Konfiguration, kein Messwert.
     """
     from services.corridor_threshold import resolve_corridor_summary_field
 
-    fields = [resolve_corridor_summary_field(h.metric) for h in hits or []]
+    felder = [(h, resolve_corridor_summary_field(h.metric)) for h in hits or []]
     return _norm_pairs(
-        metric_and_aggregation_for_field(f) for f in fields if f
+        _mit_werten(
+            metric_and_aggregation_for_field(f),
+            value=h.value,
+            rank=abs(h.value or 0.0),
+            segment_id=h.segment_id,
+        )
+        for h, f in felder if f
     )
 
 
@@ -224,10 +318,7 @@ def append_entry(
         "sent_at": datetime.now(tz=timezone.utc).isoformat(),
         "changes_count": changes_count,
         "severity": severity,
-        "metrics": [
-            {"metric_id": metric_id, "aggregation": aggregation}
-            for metric_id, aggregation in _norm_pairs(metrics)
-        ],
+        "metrics": [_metric_dict(pair) for pair in _norm_pairs(metrics)],
         "hazards": sorted(set(hazards or ())),
         "reason": reason,
         "channels_sent": delivered,
