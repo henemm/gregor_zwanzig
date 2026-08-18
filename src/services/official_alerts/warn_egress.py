@@ -33,6 +33,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterator, Optional
 
+from services import alert_input_capture
+
 logger = logging.getLogger("warn_egress")
 
 WARN_SUCCESS_TTL = 1800.0  # Sekunden — Erfolgs-Fenster (30 min, warngerecht)
@@ -383,6 +385,20 @@ def cached_fetch(
                 on_response(resp)
             except Exception:
                 pass  # Beobachtungshaken darf den Abruf NIE beeintraechtigen
+
+        # Issue #1948 (S1, AC-2/AC-7): roher Eingangs-Datensatz der ECHTEN
+        # Antwort -- nur geparster Body plus Service/Host/Cache-Key/Status,
+        # KEINE Header/Auth (strukturell nicht uebergeben).
+        try:
+            alert_input_capture.capture_system(
+                branch="official_alert", source_key=service,
+                payload={
+                    "body": resp.json(), "service": service, "host": host,
+                    "cache_key": cache_key, "status": resp.status_code,
+                },
+            )
+        except Exception as e:
+            log.warning("%s: Eingangs-Mitschnitt fehlgeschlagen (%s)", service, e)
 
         status = resp.status_code
         # S1c-Nachbesserung (Tageskontingent-Fund): ein Tageskontingent
