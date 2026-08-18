@@ -127,3 +127,24 @@ strukturell mit.
   Regeln 1–4 tatsächlich einhält. Diese Entscheidung ist die Zusage; der
   Prüfstand aus Scheibe S1 zeigt den heutigen Widerspruch als reproduzierbar
   ROT, die Umsetzung folgt in S2.
+
+## Umsetzung (Stand 2026-08-18)
+
+Für den **Trip** haben die Regeln D1–D4 seit Issue #1848 Scheibe A genau
+**eine** Umsetzung: `UnifiedWeatherDisplayConfig.allowed_metric_ids_for_report_type()`
+(`src/app/models.py`). Sowohl das Kanal-Layout (`_clip_to_global_maximum()`)
+als auch der 3-Tages-Ausblick
+(`compare_outlook_metric_ids.resolve_trip_outlook_metrics()`) fragen dort an;
+vorher trug jede Fläche eine eigene, unabhängig gepflegte Kopie.
+
+Wer die Kaskade erweitert, ändert diese eine Methode — nicht die Aufrufer.
+Der Wächter `tests/unit/test_trip_metric_cascade_single_source.py` schickt
+dieselben Fälle durch beide Flächen und wird rot, sobald sie auseinanderlaufen.
+
+**Der Ortsvergleich ist bewusst NICHT eingemeindet.**
+`compare_metric_ids.resolve_channel_enabled_metrics()` setzt Regel 1/2 für
+Compare-Presets eigenständig um und entscheidet bei **leerer** Grundauswahl
+absichtlich anders: dort ist `[]` ein leeres Maximum und schneidet den Kanal
+auf leer (#1366), während D4 beim Trip „kein Maximum definiert" bedeutet und
+gar nicht schneidet. Zwei verschiedene Zusagen an zwei Flächen — eine
+Zusammenlegung bräche eine davon.

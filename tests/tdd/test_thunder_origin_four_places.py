@@ -43,6 +43,10 @@ ueber einen echt gespeicherten und wieder geladenen Wetter-Schnappschuss.
 
 🔴 Abweichung von der Spec bei AC-12 -- s. Docstring von
 ``test_ac12_compare_sms_und_telegram_zeigen_keine_stunden_herkunft``.
+
+#1493: die Pille nennt die Gewitterstufe als Wort ("Gewitter hoch ab
+14:00 ..."); die Soll-Texte unten tragen es entsprechend. Herkunft und
+Zeitfenster -- der Gegenstand dieser Datei -- sind unveraendert.
 """
 from __future__ import annotations
 
@@ -361,7 +365,7 @@ def test_ac1_pille_nennt_die_tragende_zutat():
     CAPE zustande, When die Trip-Mail gerendert wird, Then nennt die Pille die
     Zutat neben dem Zeitfenster."""
     seg = _segment([_dp(h, cape=1500.0, cin=5.0) for h in (14, 15, 16)])
-    assert _pille(_mail([seg])) == "Gewitter ab 14:00 · stärkste 14:00 · CAPE", (
+    assert _pille(_mail([seg])) == "Gewitter hoch ab 14:00 · stärkste 14:00 · CAPE", (
         f"Die Pille muss die tragende Zutat neben dem Zeitfenster nennen: "
         f"{_pille(_mail([seg]))!r}")
 
@@ -377,7 +381,7 @@ def test_ac5_pille_nennt_beide_zutaten_derselben_stunde():
         f"Vorbedingung: die ECHTE Fusion muss BEIDE Zutaten als tragend "
         f"ausweisen -- sonst prueft dieser Test nichts: {zutaten!r}")
     assert _pille(_mail([seg])) == (
-        "Gewitter ab 14:00 · stärkste 14:00 · CAPE, Blitzpotenzial"), (
+        "Gewitter hoch ab 14:00 · stärkste 14:00 · CAPE, Blitzpotenzial"), (
         f"Beide Traeger der Hoechststufe muessen erscheinen, CAPE vor "
         f"Blitzpotenzial (Katalogreihenfolge): {_pille(_mail([seg]))!r}")
 
@@ -397,7 +401,7 @@ def test_ac6_pille_vereinigt_die_zutaten_zweier_stunden():
         f"Vorbedingung: die beiden Stunden muessen VERSCHIEDENE Zutaten "
         f"tragen -- sonst belegt die Vereinigung nichts: {fruehe!r}/{spaete!r}")
     assert _pille(_mail([seg])) == (
-        "Gewitter ab 14:00 · stärkste 14:00 · CAPE, Blitzpotenzial"), (
+        "Gewitter hoch ab 14:00 · stärkste 14:00 · CAPE, Blitzpotenzial"), (
         f"Die Pille muss die Traeger ALLER Stunden mit der Hoechststufe "
         f"vereinigen: {_pille(_mail([seg]))!r}")
 
@@ -420,7 +424,7 @@ def test_ac8_pille_nennt_keine_zutat_ausserhalb_des_tagesfensters():
         f"Vorbedingung: das Segment-Aggregat MUSS die dritte Zutat kennen -- "
         f"sonst belegt dieser Test nichts: "
         f"{seg.aggregated.thunder_level_max_signals!r}")
-    assert _pille(_mail([seg])) == "Gewitter ab 14:00 · stärkste 14:00 · CAPE", (
+    assert _pille(_mail([seg])) == "Gewitter hoch ab 14:00 · stärkste 14:00 · CAPE", (
         f"Nur Zutaten aus dem Tagesfenster 04-19 duerfen erscheinen -- die "
         f"Blitzdichte liegt bei 02:00 ausserhalb: {_pille(_mail([seg]))!r}")
 
@@ -738,7 +742,7 @@ def test_ac16_ohne_gewitter_bleiben_pille_timeline_und_glance_zeichengleich(
         kommando.frage([ruhig], body="GLANCE"), "heute") == "kein", (
         "Ohne Gewitter bleibt die GLANCE-Zeile zeichengleich")
 
-    assert _pille(_mail([laut])) == "Gewitter ab 10:00 · stärkste 10:00 · CAPE", (
+    assert _pille(_mail([laut])) == "Gewitter hoch ab 10:00 · stärkste 10:00 · CAPE", (
         f"Gegenprobe gescheitert: mit erreichter Stufe MUSS die Pille die "
         f"Herkunft zeigen: {_pille(_mail([laut]))!r}")
     assert _timeline_gewitter(
@@ -811,7 +815,7 @@ def test_ac13_trip_sms_zeigt_die_stufe_aber_keine_herkunft():
             f"'{zutat}' darf nicht vorkommen: {zugestellt!r}")
 
     assert _pille(bericht) == (
-        "Gewitter ab 14:00 · stärkste 14:00 · CAPE, Blitzpotenzial"), (
+        "Gewitter hoch ab 14:00 · stärkste 14:00 · CAPE, Blitzpotenzial"), (
         f"Gegenprobe gescheitert: die Mail DERSELBEN Fixture MUSS die "
         f"Herkunft zeigen, sonst beweist die SMS-Abwesenheit nichts: "
         f"{_pille(bericht)!r}")
