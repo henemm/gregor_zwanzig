@@ -105,8 +105,8 @@ entfernt).
    unweigerlich diese Nahtstelle. Siehe #1455.
 5. **Der Ortsvergleich hinkt hinterher** (E5): kein Grenzwert-Melder. Eine Vereinheitlichung
    der Auslöser muss entscheiden, ob Compare mitzieht oder bewusst zurückbleibt.
-6. **Mengengerüst:** Juni 76 · Juli 31 · August (bis 02.) 3 Meldungen. Das ist die
-   Grundlage, an der sich jede Neuregelung messen lassen muss.
+6. **Mengengerüst:** Juni 76 · Juli 31 · August (bis 02.) 3 Meldungen. ⚠️ **Als Messlatte
+   abgelöst am 2026-08-18** — siehe Vermerk am Ende dieses Dokuments.
 
 ## Nächster Schritt
 
@@ -214,7 +214,8 @@ dann den eigentlichen PO-Wunsch liefern (3), dann aufräumen (4), dann Gleichsta
    diese Nahtstelle zwangsläufig. Siehe #1455, gleiches Muster wie #1257.
 4. **`alert_log.json` wird von Go read-only gelesen** — Erweiterung nur additiv.
 5. **Messlatte:** Juni 76 · Juli 31 · August (bis 02.) 3 Meldungen. Ziel ist weniger
-   Wiederholung, nicht weniger echte Warnung.
+   Wiederholung, nicht weniger echte Warnung. ⚠️ **Abgelöst am 2026-08-18** — siehe
+   Vermerk am Ende dieses Dokuments.
 
 ## Auswirkung auf #1444
 
@@ -296,3 +297,42 @@ Quellenkette (`radar_service.py:271-303`): Brightsky (DE) → GeoSphere INCA (AT
 3. **Schwelle je Kanal** (a)
 4. **Bedienung** im Reiter *Alarme* zusammenführen
 5. **Ortsvergleich** gleichziehen
+
+---
+
+## Ablöse-Vermerk 2026-08-18 — die Messlatte gilt nicht mehr
+
+**Die oben zweimal genannte Messlatte (Juni 76 · Juli 31 · August 3 Meldungen) ist abgelöst.**
+Wer sie zitiert, zitiert einen überholten Stand. Das Epic #1458 ist seit 2026-08-18
+geschlossen.
+
+**Warum sie nicht erfüllbar war:** Das Alarm-Protokoll führt je Meldung nur `metric_id` +
+`aggregation` (`src/services/alert_log.py:226-229`), **nicht den Wert** der gemeldeten Größe.
+Ob 17× „Gewitter" siebzehn echte Stufenwechsel waren oder siebzehnmal dieselbe Aussage, ist
+daraus nicht auflösbar — genau diese Unterscheidung verlangt aber „weniger Wiederholung".
+Befund B3 ist durch #1459 nur zur Hälfte geschlossen worden: die Größe kam dazu, der Wert
+nicht. Dazu kommt: vor dem 2026-08-02 fehlt auch die Größe, eine Rückrechnung auf Juni ist
+ausgeschlossen.
+
+**Was an ihre Stelle tritt** (PO-Entscheid 2026-08-17):
+
+| | Kennzahl | Stand |
+|---|---|---|
+| **K1'** | Anteil zugestellter Alarme mit ≤60 min Abstand zum vorigen derselben Entität (`not_delivered` ausgeschlossen) | sofort messbar · 27,4 % → 24,2 % → 22,2 % |
+| **K1** | dasselbe mit voller Signatur inkl. **Wert** | erst nach #1954 · Basislinie 66,7 % |
+| **K2** | je Auslöser mindestens ein zugestellter Alarm je Alarmwoche | erfüllt |
+
+**Zwei Fallen, die beim Nachrechnen auffielen — wer hier weiterrechnet, muss sie kennen:**
+
+1. **Zeilen sind keine Vorfälle.** `channels_not_sent` fächert je gesperrtem Kanal auf; eine
+   Sperrgrund-Zählung liefert doppelt so viele Zeilen wie Meldungen. Summenprobe: die
+   Vorfall-Summe muss die Zahl der `not_delivered`-Einträge treffen.
+2. **Die 85-%-Kontrollprobe auf Juni/Juli ist ein Artefakt.** Im Altformat fallen alle
+   Signaturen auf `(None, (), ())` zusammen, also zählt fast alles als Wiederholung.
+   **Kein Vergleichswert.**
+
+Vollständige Auswertung: `docs/context/epic-1458-messlatte.md`.
+Spec: `docs/specs/modules/fix_1458_messlatte_ersatz.md`.
+Abschluss- und Korrektur-Kommentar: Issue #1458.
+Offene Folgearbeit: **#1954** (Wert ins Protokoll). **#1955** (Ruhezeit vs. akute Gefahr)
+wurde vom PO nach Prüfung revidiert und geschlossen.
