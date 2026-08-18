@@ -115,10 +115,16 @@ eigenen Strukturdaten.
   dieser Zeile die Stufe mit Uhrzeit, gefolgt von `" · "` und der deutschen
   Bezeichnung der Zutat (z. B. `leicht @16 · CAPE`).
 
-- **AC-2:** Given dieselbe Etappe / When der Klartext-Ausblick derselben Mail
-  gerendert wird / Then trägt das Gewitterfeld denselben Zusatz im selben
-  Wortlaut (`⚡leicht · CAPE`) — der Klartext führt wie bisher keine
-  Tagesuhrzeit.
+- **AC-2:** ⚠️ **Teilweise abgelöst durch #1493**
+  (`docs/specs/modules/feat_1493_gewitter_onset_sichtbar.md` AC-3) — der
+  Klartext-Ausblick führt seit #1493 die Onset-Stunde (`⚡leicht@16 · CAPE`),
+  wie HTML-Zelle, Telegram und SMS es längst tun. Der Herkunfts-Zusatz und
+  seine Position (hinter der Stufe, vor einem etwaigen Hagel-Zusatz) — der
+  eigentliche Gegenstand dieses AC — bleiben unverändert in Kraft.
+  Ursprünglicher Wortlaut zur Historie: „Given dieselbe Etappe / When der
+  Klartext-Ausblick derselben Mail gerendert wird / Then trägt das
+  Gewitterfeld denselben Zusatz im selben Wortlaut (`⚡leicht · CAPE`) — der
+  Klartext führt wie bisher keine Tagesuhrzeit."
 
 - **AC-3:** Given dieselbe Etappe / When der Telegram-Trendblock gerendert wird
   / Then nennt auch er die Zutat hinter der Tagesstufe. Der Inhalt muss im
@@ -189,10 +195,18 @@ eigenen Strukturdaten.
   markieren), nicht per Wortsuche — mit Gegenprobe, dass die Sonde in E-Mail
   und Telegram anschlägt.
 
-- **AC-13:** Given ein Trip-Briefing im **Kompaktformat** / When die Mail
-  gerendert wird / Then bleibt deren Ausblick-Block („Naechste Etappen")
-  zeichengleich zu heute — er liest `thunder_plain` und wird von dieser
-  Scheibe nicht berührt.
+- **AC-13:** ⚠️ **Teilweise abgelöst durch #1493**
+  (`docs/specs/modules/feat_1493_gewitter_onset_sichtbar.md` AC-4) — der
+  Kompakt-Ausblick trägt seit #1493 die Onset-Stunde im Tagesteil
+  (`Tleicht@16`), ist also nicht mehr zeichengleich zum Stand von #1680.
+  **In Kraft bleibt** die eigentliche Zusicherung dieses AC: der
+  Kompakt-Ausblick nennt weiterhin KEINE der vier Zutat-Bezeichnungen
+  (`thunder_day_origin` wird dort nicht gelesen); der Wächter
+  `tests/tdd/test_thunder_origin_outlook.py::test_ac13_kompaktmail_bleibt_zeichengleich`
+  bleibt grün. Ursprünglicher Wortlaut zur Historie: „Given ein
+  Trip-Briefing im **Kompaktformat** / When die Mail gerendert wird / Then
+  bleibt deren Ausblick-Block („Naechste Etappen") zeichengleich zu heute —
+  er liest `thunder_plain` und wird von dieser Scheibe nicht berührt."
 
 ## Am Code gemessen (korrigiert gegenüber den Vorgängerscheiben)
 

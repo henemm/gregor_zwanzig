@@ -243,61 +243,119 @@ LoC-Limit von 250.
 
 ---
 
-# WIEDEREINSTIEG NACH `/clear` (Stand 2026-08-18)
+# WIEDEREINSTIEG NACH `/clear` (Stand 2026-08-18, RED abgeschlossen)
 
-**Status: Spec FREIGEGEBEN. Nächster Schritt ist `/40-tdd-red`.**
+**Status: TDD RED fertig. Nächster Schritt ist `/50-implement`.**
 
 | Was | Wert |
 |---|---|
 | Issue | **#1493** — Gewitter S7: Onset |
-| Workflow | `feat-1493-gewitter-onset`, Phase `phase4_approved`, `approved=true` |
+| Workflow | `feat-1493-gewitter-onset`, Phase **`phase6_implement`**, `approved=true`, 2 Test-Artefakte |
 | Worktree | `/home/hem/gregor_zwanzig/.claude/worktrees/issue-1493-onset` |
-| Branch | `feat-1493-gewitter-onset` auf `c37a71f6` (= `origin/main`), **noch kein eigener Commit** |
-| Spec | `docs/specs/modules/feat_1493_gewitter_onset_sichtbar.md` — validiert VALID, 8 ACs, PO-Freigabe „go" am 2026-08-18 |
+| Branch | `feat-1493-gewitter-onset`, **gepusht** — Commits `7f3901dd` (RED) + `d5168e67` (RED Ortsvergleich) |
+| Spec | `docs/specs/modules/feat_1493_gewitter_onset_sichtbar.md` — **9 ACs** (AC-9 am 2026-08-18 ergänzt), PO-freigegeben |
 | Workflow-Werkzeug | `python3 /home/hem/.claude/plugins/cache/henemm-private/agent-os-openspec/3.11.4/core/hooks/workflow.py` |
-| ENV-Variable | `OPENSPEC_ACTIVE_WORKFLOW` (**nicht** `GZ_ACTIVE_WORKFLOW` — CLAUDE.md ist an der Stelle veraltet) |
+| ENV-Variable | `OPENSPEC_ACTIVE_WORKFLOW` (**nicht** `GZ_ACTIVE_WORKFLOW`) |
 
-## Die drei Änderungen (PO-entschieden, nicht neu verhandeln)
+## Die drei Produktivänderungen (PO-entschieden, nicht neu verhandeln)
 
-1. `src/output/renderers/email/helpers.py:1774` — Stufenwort in den Pillen-Text.
-   Heute: `Gewitter ab 14:00 · stärkste 18:00 · CAPE`. Die Stufe hängt allein an
-   der Ampelfarbe `_tone` und fehlt im Klartext völlig. Wörter aus
-   `THUNDER_LABEL_DE` / `_TREND_THUNDER_LABELS` — **keine neue Wortliste** (#1480).
-2. `src/output/renderers/email/outlook.py:372` — `f"⚡{_dm[0]}{_dm[2]}"` →
-   `f"⚡{_dm[0]}@{_dm[1]}{_dm[2]}"`.
-3. `src/output/renderers/email/compact.py:103` — dieselbe Ergänzung im Tagesteil.
+1. `src/output/renderers/email/helpers.py:~1774` — Stufenwort in den Pillentext:
+   `Gewitter ab 14:00 · stärkste 18:00` → `Gewitter mittel ab 14:00 · stärkste 18:00`.
+   Wortquelle **ausschließlich** `THUNDER_LABEL_DE` (`src/output/metric_format.py:246-251`),
+   keine neue Wortliste (#1480).
+2. `src/output/renderers/email/outlook.py:372` — `f"⚡{_dm[0]}{_dm[2]}"` → `f"⚡{_dm[0]}@{_dm[1]}{_dm[2]}"`
+3. `src/output/renderers/email/compact.py:103` — `f"⚡{_d[0]}{_d[2]}"` → `f"⚡{_d[0]}@{_d[1]}{_d[2]}"`
 
 **KEIN neuer Prosa-Block.** **Telegram und SMS unverändert.**
+**`format_trend_tokens()` (`helpers.py:994-1015`) NICHT anfassen** — geteilt mit
+Ortsvergleich, SMS und Telegram.
 
-## Fallen, die schon Zeit gekostet haben
+## PO-Entscheid 2026-08-18: Der Ortsvergleich zieht mit
 
-- **`format_trend_tokens()` (`helpers.py:994-1015`) NICHT anfassen** — geteilt mit
-  Ortsvergleich UND SMS/Telegram. Eine Änderung dort verändert SMS/Telegram mit
-  und bricht AC-5.
-- **Renderer-Commit-Gate #811** erfasst alle `email/*.py`; `helpers.py` verlangt
-  zusätzlich den **Compare-Nachweis**. Validator-Lauf einplanen, nicht überrascht
-  werden.
-- **Bestandstest anpassen:** `tests/tdd/test_thunder_origin_outlook.py:329-334`
-  assertiert „ohne Tagesuhrzeit, wie bisher" — wird durch die Ablösung falsch.
-- **Golden-Fixture:** `tests/golden/email/outlook-thunder-day-night.txt:5-7`,
-  Regeneration über `tests/golden/email/regenerate.py` — nur nach inhaltlicher
-  Prüfung, nie blind.
-- **Ablöse-Vermerke schreiben:** `feat_1680_s5a_gewitter_herkunft_ausblick.md`
-  (AC-2, AC-13) und `fix_1671_kompaktmail_ausblick_tagesfenster.md` (dort steht
-  „AC-13 bewusst NICHT abgeloest" — gilt nicht mehr).
-- **Validator-Falle:** Tagesfenster ist 04–19, `briefing_mail_validator.py` prüft
-  aber 06–22 → eine Onset-Stunde 04:00/05:00 kann Fehlalarm auslösen.
-- **Worktree kann fremd gelöscht werden** (ist am 2026-08-17 passiert): Artefakte
-  sofort ins Session-Scratchpad kopieren.
+`comparison.py:47/360` importiert und ruft `render_outlook_plain()`. Änderung 2
+wirkt damit auch auf den Klartext-Block „3-Tages-Ausblick" der **Vergleichsmail**.
+Die ursprüngliche Spec behauptete fälschlich einen „unveränderten
+Compare-Mail-Output" — richtiggestellt, **AC-9** ergänzt. Begründung: Teilungs-
+Invariante; die Alternative wäre ein Unterdrückungs-Schalter im geteilten
+Zeilenbau und damit genau das Anti-Pattern aus CLAUDE.md.
+
+**Gegenprobe erledigt:** Die Compare-**Pille** ist NICHT betroffen.
+`_pill_for_metric()` ist nur über `build_metrics_summary_pills()` erreichbar
+(`helpers.py:1924`), deren drei Aufrufer (`html.py:1460`, `plain.py:206`,
+`compact.py:213`) allesamt Trip-Mail sind. Änderung 1 erreicht den Ortsvergleich
+nicht.
+
+## RED-Stand: 8 rot, 14 grün
+
+Testdateien: `tests/tdd/test_thunder_level_word_and_onset_hour.py` (neu),
+`tests/tdd/test_thunder_origin_outlook.py` (2 Tests abgelöst).
+Artefakt `docs/artifacts/feat-1493-gewitter-onset/test-red-output.txt`
+(**`docs/artifacts` ist gitignored** — Kopie im Session-Scratchpad).
+
+Lauf wiederholen mit:
+```
+uv run pytest tests/tdd/test_thunder_level_word_and_onset_hour.py tests/tdd/test_thunder_origin_outlook.py -v
+```
+
+| AC | Zusicherung | RED-Ist |
+|---|---|---|
+| AC-1/AC-2 | Pille nennt die Stufe als Wort (HTML **und** Klartext) | `Gewitter ab 14:00 · stärkste 18:00 · CAPE` |
+| AC-3 | Klartext-Ausblick führt die Onset-Stunde | `⚡leicht · CAPE` |
+| AC-4 | Kompakt-Ausblick dito (ASCII-gefaltet: `⚡`→`T`, `·`→`-`) | `Tleicht (hoch @18)` |
+| AC-6 | Leerfall ohne Stufe/Stunde — Pille `kein Gewitter`, Ausblick `⚡–` | Gegenprobe rot |
+| AC-9 | Ortsvergleich zeigt dasselbe Gewitterfeld wie der Trip | beide gemeinsam falsch |
+| **AC-5** | **grün, Invarianz-Wächter:** Telegram/SMS zeichengleich | `TH:M@14(H@18)` |
+| **AC-7** | **grün, Invarianz-Wächter:** Datenlücke bleibt `Gewitter ?` | erfüllt |
+| AC-8 | Staging-/IMAP-Nachweis — gehört in `/e2e-verify`, kein Unit-Test | — |
+
+**AC-5 und AC-7 sind absichtlich grün.** Wer sie für vergessene RED-Tests hält
+und „repariert", zerstört den Schutz von Telegram/SMS. Steht so in ihren
+Docstrings.
+
+**AC-9 hat eine Doppel-Assertion, und das ist der Punkt:** `compare_feld ==
+trip_feld` ist schon heute erfüllt, weil beide Flächen übereinstimmend FALSCH
+sind. Erst die danebenstehende Formatprüfung (`== "⚡mittel@14 (hoch @18) · CAPE"`)
+macht den Test rot. Gleichheit allein beweist nichts — die Formatprüfung nicht
+entfernen.
+
+## GREEN-Phase: erwartete Kollateral-Röte (KEIN eigener Fehler)
+
+Diese Stellen halten das ALTE Format per Exakt-/`endswith`-Zusicherung fest und
+müssen bewusst abgelöst werden. `in`-Prüfungen wie `'⚡hoch' in email` bleiben
+grün, weil `⚡hoch@15` das Teilstück enthält.
+
+- `tests/tdd/test_thunder_origin_outlook.py:415` (AC-5 Hagel-Variante)
+- `tests/tdd/test_outlook_day_night_thunder_split.py:594, 606` (`endswith("⚡leicht")` / `endswith("⚡mittel")`)
+- `tests/tdd/test_kompaktmail_ausblick_tagesfenster.py:199` (`endswith("Tleicht")`), `:361` (`_AC5_ALT_ZEILE_SOLL`)
+- `tests/tdd/test_thunder_origin_four_places.py:364, 423, 741` (exakter Pillentext — bekommt das Stufenwort)
+- Fixtures/Goldens, Regeneration **nur** über `tests/golden/email/regenerate.py` und **erst nach** inhaltlicher Prüfung:
+  `tests/golden/email/outlook-thunder-day-night.txt:5-7` ·
+  `tests/fixtures/outlook_trip_parity/trip_outlook_show_acc_true.txt:3,5` (+ `…_show_acc_false.txt`) ·
+  `tests/fixtures/trip_outlook_reference/outlook_block.txt:2,5`
+- **Nicht** betroffen: `test_thunder_night_addendum.py`, `endswith("T-")`-Leerfälle.
+
+## Noch zu erledigen (Restarbeit)
+
+- [ ] Ablöse-Vermerke in zwei Fremd-Specs (docs-only, zählt nicht gegen LoC):
+      `feat_1680_s5a_gewitter_herkunft_ausblick.md` (AC-2, AC-13) und
+      `fix_1671_kompaktmail_ausblick_tagesfenster.md` (dort steht „AC-13 bewusst
+      NICHT abgeloest" — gilt nicht mehr). Muster: `fix_1660b_sms_token_wiring.md:398`.
+- [ ] Renderer-Commit-Gate #811: alle `email/*.py` erfasst, `helpers.py` verlangt
+      zusätzlich den **Compare-Nachweis** → Modus-Matrix-Test + `briefing_mail_validator.py`
+      frisch grün, sonst blockt der Commit.
+- [ ] Validator-Falle: Tagesfenster ist 04–19, `briefing_mail_validator.py` prüft
+      06–22 → Onset 04:00/05:00 kann Fehlalarm auslösen. Mit einer 04-/05-Uhr-Fixture
+      messen, BEVOR „E2E bestanden" gesagt wird.
+- [ ] AC-8 in `/e2e-verify`: echte Staging-Mail per IMAP, Stufenwort + Onset-Stunde sichtprüfen.
 
 ## Abgrenzung zu Parallelsitzungen
 
 #1948 (Alarm-Format, `renderers/alert/`), #1945 (Radar-Nowcast, `_render_sms_onset`),
-#1929 (`official_alerts.py:1896-2104`) — **alle drei nicht anfassen.** #1493 liegt
-vollständig in `src/output/renderers/email/`.
+#1929 (`official_alerts.py`, PR #1953 **gemergt**) — **nicht anfassen.** #1493 liegt
+in `src/output/renderers/email/` plus dem einen Compare-Aufrufer `comparison.py:360`.
 
 ## Allgemeingültige PO-Regel aus diesem Ticket
 
-`docs/project/strategic-directions.md` (neu angelegt): „Die normale E-Mail (HTML)
-braucht keine Dopplung" + „was in HTML durch Farbe getragen wird, muss im Klartext
-als Wort dastehen".
+`docs/project/strategic-directions.md`: „Die normale E-Mail (HTML) braucht keine
+Dopplung" + „was in HTML durch Farbe getragen wird, muss im Klartext als Wort
+dastehen".

@@ -1771,7 +1771,13 @@ def _pill_for_metric(
             # hier bereits die hoechste Stufe der Stunden.
             _band = thunder_ampel_band(max_lvl)
             _tone = f"ampel_{_band}" if _band else "ampel_red"
-            return (f"Gewitter ab {first_hh:02d}:00 · stärkste {peak_hh:02d}:00"
+            # Issue #1493: die Stufe steckte bisher ausschliesslich im
+            # Ampelton -- im Klartext, wo Farbe nicht ankommt, war sie damit
+            # unsichtbar. Das Wort kommt aus THUNDER_LABEL_DE (SSoT, #1480),
+            # nicht aus einer lokalen Wortliste.
+            _stufe = THUNDER_LABEL_DE[max_lvl]
+            return (f"Gewitter {_stufe} ab {first_hh:02d}:00 · "
+                    f"stärkste {peak_hh:02d}:00"
                     f"{_origin_suffix}{_hail_suffix}", _tone)
         # Issue #1331: Ziel-Datenluecke (Ankunft->19 Uhr unbeobachtet) darf
         # keine positive Entwarnung "kein Gewitter" vortaeuschen.

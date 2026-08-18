@@ -412,7 +412,9 @@ def test_ac5_herkunft_steht_vor_dem_hagel_zusatz():
         f"Die Herkunft gehoert zwischen Uhrzeit und Hagel-Zusatz, der Hagel-"
         f"Zusatz bleibt wortgleich: {zelle!r}")
     zeile = _klartext_ausblick_zeile(bericht.email_plain)
-    assert "⚡leicht · CAPE · Hagel: ja" in zeile, (
+    # #1493: Onset-Stunde im Klartext-Ausblick; Reihenfolge Herkunft vor
+    # Hagel -- der Gegenstand dieses Tests -- unveraendert.
+    assert "⚡leicht@16 · CAPE · Hagel: ja" in zeile, (
         f"Dieselbe Reihenfolge im Klartext-Ausblick: {zeile!r}")
 
 

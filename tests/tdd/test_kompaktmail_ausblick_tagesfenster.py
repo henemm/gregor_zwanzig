@@ -196,9 +196,10 @@ def test_tagesgewitter_erscheint_trotz_leerem_24h_aggregat():
     zeile = _stage(hourly_thunder=(_hv(16, 1.0),), thunder="NONE")
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
-    assert ausblick.endswith("Tleicht"), (
+    # #1493: der Tagesteil traegt jetzt die Onset-Stunde (`@16`).
+    assert ausblick.endswith("Tleicht@16"), (
         f"Die Kompakt-Ausblick-Zeile muss auf das Tagesgewitter 'leicht' "
-        f"(ASCII-gefaltet 'Tleicht') enden, nicht auf das leere 24h-Aggregat: "
+        f"(ASCII-gefaltet 'Tleicht@16') enden, nicht auf das leere 24h-Aggregat: "
         f"{ausblick!r}")
 
 
@@ -241,8 +242,9 @@ def test_nachtgewitter_erscheint_mit_uhrzeit_im_kompaktformat():
     zeile = _stage(hourly_thunder=(_hv(14, 2.0), _hv(0, 3.0)), thunder="MED")
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
-    assert ausblick.endswith("Tmittel - nachts hoch @0"), (
-        f"Tagesteil 'Tmittel' und Nachtzusatz '- nachts hoch @0' (mit "
+    # #1493: Tagesteil mit Onset-Stunde, Nachtzusatz unveraendert.
+    assert ausblick.endswith("Tmittel@14 - nachts hoch @0"), (
+        f"Tagesteil 'Tmittel@14' und Nachtzusatz '- nachts hoch @0' (mit "
         f"Leerzeichen vor '@') muessen exakt so am Ende der Zeile stehen: "
         f"{ausblick!r}")
 
@@ -296,7 +298,8 @@ def test_tagesgewitter_eskalation_zeigt_spitzenstufe_im_kompaktformat():
     zeile = _stage(hourly_thunder=(_hv(5, 1.0), _hv(15, 3.0)), thunder="NONE")
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
-    assert ausblick.endswith("Tleicht (hoch @15)"), (
+    # #1493: Erst-Stufe mit Onset-Stunde, Peak-Zusatz unveraendert.
+    assert ausblick.endswith("Tleicht@5 (hoch @15)"), (
         f"Die Kompakt-Ausblick-Zeile muss die Erst-Stufe 'leicht' UND den "
         f"Peak-Zusatz '(hoch @15)' zeigen -- die Eskalation innerhalb des "
         f"Tagesfensters darf nicht auf die schwaechere Erst-Stufe "

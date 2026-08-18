@@ -32,6 +32,7 @@ Keine Mocks -- echte ``ForecastDataPoint``-Stundenreihe, echte
 """
 from __future__ import annotations
 
+import re
 import dataclasses
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -52,6 +53,13 @@ from app.models import (
 )
 
 _TZ = ZoneInfo("Europe/Berlin")
+
+# #1493: der Uhrzeit-Satz der Gewitter-Pille traegt seit Issue #1493 das
+# Stufenwort ("Gewitter mittel ab 14:00 · staerkste 18:00"). Abwesenheit
+# wird deshalb gegen dieses MUSTER geprueft -- die alte Zeichenkette
+# "Gewitter ab" ist heute auch im Positivfall abwesend und als
+# Negativ-Assertion damit blind.
+_UHRZEIT_SATZ_RE = re.compile(r"Gewitter (?:leicht|mittel|hoch) ab \d{2}:00")
 _MED_HOUR_UTC = 12  # 14:00 lokal (CEST, UTC+2) -- innerhalb des Tagesfensters 04-19
 
 
@@ -183,7 +191,9 @@ def test_configured_threshold_above_med_suppresses_gewitter_ab_sentence(renderer
     dc.metrics tatsaechlich lesen, nicht nur intern verdrahtet lassen."""
     dc = _dc_with_thunder_threshold(3.0)
     output = _RENDER_FUNCS[renderer_name](dc)
-    assert "Gewitter ab" not in output, (
+    # #1493: Muster statt Wortlaut -- "Gewitter ab" ist nach #1493 auch im
+    # Positivfall abwesend, die Pruefung waere sonst blind.
+    assert _UHRZEIT_SATZ_RE.search(output) is None, (
         f"F001/F003 ({renderer_name}): mit eingestellter Schwelle 3.0 "
         "('hoch') darf der Renderer bei einer Stundenreihe, die nur MED "
         f"erreicht (unter der Schwelle), den Satz 'Gewitter ab' NICHT "
@@ -200,7 +210,7 @@ def test_unconfigured_threshold_still_shows_gewitter_ab_sentence(renderer_name):
     Defekt, der den Satz immer unterdrueckt."""
     dc = _dc_with_thunder_threshold(None)
     output = _RENDER_FUNCS[renderer_name](dc)
-    assert "Gewitter ab" in output, (
+    assert _UHRZEIT_SATZ_RE.search(output) is not None, (
         f"Gegenprobe ({renderer_name}): ohne eigene Schwellen-Einstellung "
         "(Standard 1.0, 'ab leicht') muss der Renderer den Satz "
         f"'Gewitter ab' bei einer Stundenreihe zeigen, die MED erreicht.\n"
