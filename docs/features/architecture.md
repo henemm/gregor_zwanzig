@@ -445,7 +445,7 @@ check_radar_alerts(user_id)  [Issue #822 + #919, tagesübergreifend seit #1667 S
 _send_briefing_report() [trip_report_scheduler.py]
   ↓ WeatherSnapshotService.save(snapshot)
   ↓ AlertStateService.reset(trip_id)
-  ↓ _build_starkregen_hint() → Nähe-Guard (60 Min) + Budget-Gate ("nowcast") → get_nowcast() [Issue #1439]
+  ↓ _build_starkregen_hint() → Nähe-Guard (180 Min, #1945) + Budget-Gate ("nowcast") → get_nowcast() [Issue #1439]
   ↓ bei Treffer: Hinweiszeile in E-Mail/Telegram + ThrottleStore("radar").record(trip_id) (s. Punkt 5 oben)
 
 check_all_compare_presets(user_id)  [CompareAlertService, Issue #1169]

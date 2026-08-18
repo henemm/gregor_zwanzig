@@ -38,6 +38,7 @@ from datetime import date as date_type, datetime, time, timedelta, timezone
 from pathlib import Path
 
 import pytest
+from freezegun import freeze_time
 
 from app.config import Settings
 from app.models import TripReportConfig
@@ -337,28 +338,35 @@ def test_ac2_zeitfenster_guard_kein_fetch_ausserhalb_horizon(monkeypatch):
     Segment innerhalb -> Fetch UND Hinweis (Gegenprobe im selben Test)."""
     from services.radar_service import NOWCAST_HORIZON_MIN
 
-    assert NOWCAST_HORIZON_MIN == 60, (
-        f"Testvoraussetzung: NOWCAST_HORIZON_MIN muss 60 sein, war {NOWCAST_HORIZON_MIN!r}."
+    assert NOWCAST_HORIZON_MIN == 180, (
+        f"Testvoraussetzung: NOWCAST_HORIZON_MIN muss 180 sein, war {NOWCAST_HORIZON_MIN!r}."
     )
 
-    # Fern: Segment beginnt in 90 Minuten (> 60) -> kein Fetch, kein Hinweis.
-    uid_fern = _uid("ac2-fern")
-    trip_fern = _trip_with_segment_offset(f"trip-ac2-fern-{uuid.uuid4().hex[:6]}", start_in_min=90)
-    calls_fern: list = []
-    _install_fake_nowcast(monkeypatch, calls_fern, onset_minutes=10, intensity_label=INTENSITY_HEAVY)
-    rec_fern = _ReportRecorder()
-    rec_fern.install(monkeypatch)
-    _outcome_fern, report_fern = _run_briefing(rec_fern, uid_fern, trip_fern)
+    # Fern: Segment beginnt in 200 Minuten (> 180) -> kein Fetch, kein Hinweis.
+    # Feste Uhr (#1945): mit 200 Min Offset wuerde der Mitternachts-Guard in
+    # `_trip_with_segment_offset` den Fall ab ~20:20 UTC wegskippen statt beweisen.
+    with freeze_time("2026-08-17T10:00:00+00:00"):
+        uid_fern = _uid("ac2-fern")
+        trip_fern = _trip_with_segment_offset(
+            f"trip-ac2-fern-{uuid.uuid4().hex[:6]}", start_in_min=200
+        )
+        calls_fern: list = []
+        _install_fake_nowcast(
+            monkeypatch, calls_fern, onset_minutes=10, intensity_label=INTENSITY_HEAVY
+        )
+        rec_fern = _ReportRecorder()
+        rec_fern.install(monkeypatch)
+        _outcome_fern, report_fern = _run_briefing(rec_fern, uid_fern, trip_fern)
 
-    assert calls_fern == [], (
-        "AC-2: Segment beginnt erst in 90 Minuten (> NOWCAST_HORIZON_MIN=60) -> "
-        f"get_nowcast() darf NICHT aufgerufen werden, war {calls_fern!r}."
-    )
-    assert _HINT_MARKER not in report_fern.email_plain, (
-        f"AC-2: kein Hinweis erwartet ausserhalb des Horizonts.\n{report_fern.email_plain}"
-    )
+        assert calls_fern == [], (
+            "AC-2: Segment beginnt erst in 200 Minuten (> NOWCAST_HORIZON_MIN=180) -> "
+            f"get_nowcast() darf NICHT aufgerufen werden, war {calls_fern!r}."
+        )
+        assert _HINT_MARKER not in report_fern.email_plain, (
+            f"AC-2: kein Hinweis erwartet ausserhalb des Horizonts.\n{report_fern.email_plain}"
+        )
 
-    # Nah: Segment beginnt in 30 Minuten (<= 60) -> Fetch UND Hinweis.
+    # Nah: Segment beginnt in 30 Minuten (<= 180) -> Fetch UND Hinweis.
     uid_nah = _uid("ac2-nah")
     trip_nah = _trip_with_segment_offset(f"trip-ac2-nah-{uuid.uuid4().hex[:6]}", start_in_min=30)
     calls_nah: list = []

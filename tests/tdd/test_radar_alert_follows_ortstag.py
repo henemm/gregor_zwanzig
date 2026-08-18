@@ -401,7 +401,7 @@ def test_ac3_das_ehrliche_fenster_waehlt_die_folgetags_etappe(caplog):
 
 
 def test_ac4_horizont_guard_fern_kein_abruf_nah_ein_abruf():
-    """AC-4: Segment > ``NOWCAST_HORIZON_MIN`` (60 min) entfernt -> KEIN
+    """AC-4: Segment > ``NOWCAST_HORIZON_MIN`` (180 min) entfernt -> KEIN
     Nowcast-Abruf; Segment innerhalb -> genau EIN Abruf (Gegenprobe im
     selben Test — der Nah-Fall allein waere nicht diskriminierend, weil
     er auch ohne jeden Guard schon einen Abruf ausloest).
@@ -411,21 +411,21 @@ def test_ac4_horizont_guard_fern_kein_abruf_nah_ein_abruf():
     """
     from services.radar_service import NOWCAST_HORIZON_MIN
 
-    assert NOWCAST_HORIZON_MIN == 60, (
-        f"Testvoraussetzung: NOWCAST_HORIZON_MIN muss 60 sein, war {NOWCAST_HORIZON_MIN!r}"
+    assert NOWCAST_HORIZON_MIN == 180, (
+        f"Testvoraussetzung: NOWCAST_HORIZON_MIN muss 180 sein, war {NOWCAST_HORIZON_MIN!r}"
     )
 
     with freeze_time("2026-08-10T10:00:00+00:00"):
         heute = date_type.today()
 
-        # Fern: Segment beginnt in 90 Minuten (> 60) -> kein Abruf.
+        # Fern: Segment beginnt in 200 Minuten (> 180) -> kein Abruf.
         reset_radar_cache()
         frame_source_fern = CountingFrameSource(onset_minutes=10)
         uid_fern = fresh_uid("ac4-fern")
         trip_fern_id = f"trip-ac4-fern-{uuid.uuid4().hex[:8]}"
         trip_fern = make_trip(
             trip_fern_id, stage_date=heute, lat=REYKJAVIK_LAT, lon=REYKJAVIK_LON,
-            arrival_start="11:30", arrival_end="15:00",
+            arrival_start="13:20", arrival_end="15:00",
         )
         save_trip(trip_fern, uid_fern)
         TripAlertService(
@@ -434,7 +434,7 @@ def test_ac4_horizont_guard_fern_kein_abruf_nah_ein_abruf():
         ).check_radar_alerts()
 
         assert frame_source_fern.calls == [], (
-            "AC-4: Segment beginnt erst in 90 Minuten (> NOWCAST_HORIZON_MIN=60) "
+            "AC-4: Segment beginnt erst in 200 Minuten (> NOWCAST_HORIZON_MIN=180) "
             f"— get_nowcast() darf NICHT aufgerufen werden, war "
             f"{frame_source_fern.calls!r}. RED: check_radar_alerts() hat noch "
             "keinen Horizont-Guard."
