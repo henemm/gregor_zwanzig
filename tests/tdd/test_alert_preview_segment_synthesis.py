@@ -128,3 +128,63 @@ class TestAC2_SegmentTimesSynthesizedFromTrip:
             "muessen byte-identische Antworten liefern.\n"
             f"Synth: {resp_synth.text[:500]}\nExplizit: {resp_explicit.text[:500]}"
         )
+
+
+class TestGuard_SynthesizeSegmentTimesMatchesConvertTripToSegments:
+    """Waechter-Test (Fix-Loop, Adversary-Fund F001 HIGH): der AC-2-Byte-
+    Vergleich ueber den Endpoint prueft nur, dass BEIDE Requests gleich
+    rendern -- nicht, dass ``_synthesize_segment_times()`` die RICHTIGEN
+    start/end-Werte liefert (der Renderpfad konsumiert start/end aktuell gar
+    nicht: ``_stub_segment`` setzt km 0-0, ``to_alert_message`` liest nur
+    start_point/end_point/occurred_at). Eine vertauschte start/end-Zuordnung
+    waere durch den bisherigen Test NICHT gefangen worden. Dieser Test prueft
+    ``_synthesize_segment_times()`` DIREKT gegen ``convert_trip_to_segments()``
+    -- ohne HTTP-Umweg, an der Stelle, an der die Zusicherung wirkt."""
+
+    def test_synthesized_start_end_match_convert_trip_to_segments_exactly(
+        self, real_trip,
+    ):
+        from api.routers.validator import (
+            ChangePayload, _load_trip_for_validator, _synthesize_segment_times,
+        )
+        from services.trip_day import trip_local_today
+        from services.trip_segments import convert_trip_to_segments
+
+        user_id, trip_id = real_trip
+        trip_obj = _load_trip_for_validator(user_id, trip_id)
+        today = trip_local_today(trip_obj, datetime.now(timezone.utc))
+        real_segments = {
+            str(s.segment_id): s for s in convert_trip_to_segments(trip_obj, today)
+        }
+        assert real_segments, (
+            "Fixtur-Schutz: der Trip muss reale Segmente fuer heute liefern, "
+            f"sonst prueft dieser Test nichts. Bekam: {real_segments!r}"
+        )
+
+        changes = [
+            ChangePayload(**{**CHANGE_TEMPLATE, "segment_id": sid})
+            for sid in real_segments
+        ]
+        synthesized = _synthesize_segment_times(trip_obj, changes)
+        by_id = {st.segment_id: st for st in synthesized}
+        assert set(by_id) == set(real_segments), (
+            f"Synthetisierte segment_ids weichen ab: {sorted(by_id)} != "
+            f"{sorted(real_segments)}"
+        )
+
+        for sid, seg in real_segments.items():
+            expected_start = seg.start_time.strftime("%H:%M")
+            expected_end = seg.end_time.strftime("%H:%M")
+            assert by_id[sid].start == expected_start, (
+                f"Segment {sid}: start weicht von convert_trip_to_segments() "
+                f"ab: {by_id[sid].start!r} != {expected_start!r}"
+            )
+            assert by_id[sid].end == expected_end, (
+                f"Segment {sid}: end weicht von convert_trip_to_segments() "
+                f"ab: {by_id[sid].end!r} != {expected_end!r}"
+            )
+            assert by_id[sid].start < by_id[sid].end, (
+                f"Segment {sid}: start muss vor end liegen (start/end nicht "
+                f"vertauscht), bekam start={by_id[sid].start!r} "
+                f"end={by_id[sid].end!r}"
+            )
