@@ -65,11 +65,16 @@ Zwei Korrekturen (AC-12/AC-13):
 2. **Eigenes Zeitbudget.** `GeoSphereProvider.fetch_thunder_signals_named` läuft bewusst OHNE
    `_request()`/`@retry` (der Retry-Mechanismus mit bis zu 5 Versuchen und Backoff bis 60s würde
    ein knappes Budget sofort sprengen) und mit einem eigenen, kurzen Timeout
-   (`THUNDER_FETCH_TIMEOUT_SECONDS`, 10s — die reale Antwortzeit eines cape/cin-Abrufs ist mit
-   ~7s gemessen, s. Spec "Vorbedingung"). Das Projekt hat bereits bestehende Timeout-Probleme
-   (#1839: Trip-Vorschau bricht nach 30s ab; #1539: sequenzielle Verarbeitung, Alarm-Ticks fallen
-   aus) — ein zusätzlicher, fail-soft gedachter Abruf je Etappe/Ort darf die Gesamtlaufzeit nicht
-   in die Nähe dieser Grenzen schieben.
+   (`THUNDER_FETCH_TIMEOUT_SECONDS`, **3s**). Echte Messung gegen den Produktiv-Endpunkt
+   (2026-08-18): Karnischer Höhenweg (46.66/12.74) 0,291s total (0,038s connect), Innsbruck
+   (47.26/11.39) 0,254s total (0,021s connect) — GeoSphere antwortet im Normalfall in
+   ~0,25–0,29s. Eine zwischenzeitlich im Umlauf gewesene Zahl von 7s war eine Verwechslung
+   (gemeldete TESTLAUFZEIT statt tatsächlicher ANTWORTZEIT — wanderte durch drei Stationen und
+   verwandelte sich unterwegs fälschlich in eine Messung). 3s lässt den echten Normalfall rund
+   zehnfach durch. Das Projekt hat bereits bestehende Timeout-Probleme (#1839: Trip-Vorschau
+   bricht nach 30s ab; #1539: sequenzielle Verarbeitung, Alarm-Ticks fallen aus) — bei bis zu
+   acht Etappen je Tour hätte ein zu großzügiges Budget im Hängerfall (10s × 8 = 80s) die
+   Zusatzinformation in einen Ausfall der Hauptfunktion verwandelt.
 
 ## Abgrenzung
 
@@ -91,7 +96,7 @@ Zwei Korrekturen (AC-12/AC-13):
   (keine Zusatzquelle eingetragen).
 - Bekannte Nebenwirkung: jeder reguläre Anreicherungslauf für einen Punkt INNERHALB des
   AROME-Gitters (nicht mehr das gesamte `DE_ALPEN`-Rechteck, s. Nachbesserung oben) löst jetzt
-  zusätzlich einen GeoSphere-Abruf aus (fail-soft, best effort, eigenes 10s-Zeitbudget) —
+  zusätzlich einen GeoSphere-Abruf aus (fail-soft, best effort, eigenes 3s-Zeitbudget) —
   Bestandstests, die Karnisch-/Alpen-Koordinaten über den regulären Weg ohne GeoSphere-Stub
   verwenden, sehen dadurch einen zusätzlichen Netzversuch (gestubbt in
   `test_thunder_new_signals_enrichment.py`, s. dortiger Kommentar). Gebucht als Nebenbefund in

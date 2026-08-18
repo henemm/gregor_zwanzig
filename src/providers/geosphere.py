@@ -112,21 +112,26 @@ def arome_grid_covers(lat: float, lon: float) -> bool:
     return b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]
 
 
-# Eigenes, knappes Zeitbudget des additiven Gewittersignal-Abrufs (#1758 AC-13,
-# Team-Lead-Korrektur) -- BEWUSST kuerzer als TIMEOUT (30s) der Grundvorhersage
-# und BEWUSST ohne `_request()`/`@retry` (s. `fetch_thunder_signals_named`):
-# ein Retry mit exponentiellem Backoff (2-60s je Versuch, bis zu 5 Versuche)
-# wuerde dieses knappe Budget sofort sprengen. Das Projekt hat bereits #1839
-# (Trip-Vorschau bricht nach 30s ab) und #1539 (sequenzielle Verarbeitung,
-# Alarm-Ticks fallen aus) -- ein zusaetzlicher, fail-soft gedachter Abruf je
-# Etappe/Ort darf die Gesamtlaufzeit nicht in die Naehe der Timeout-Grenze
-# schieben. GEMESSENE reale Antwortzeit eines cape/cin-Abrufs: ~7s (Spec
-# "Vorbedingung", Tabellenzeile "Antwortzeit je Abruf") -- 5s waere KUERZER
-# als der Normalfall und liesse GeoSphere praktisch nie zu Ende antworten.
-# 10s laesst den gemessenen Normalfall durchlaufen und traegt trotzdem
-# Reserve fuer einen einzelnen langsameren Ausreisser, ohne selbst zum
-# Flaschenhals einer 30s-Gesamtlaufzeit zu werden.
-THUNDER_FETCH_TIMEOUT_SECONDS = 10.0
+# Eigenes, knappes Zeitbudget des additiven Gewittersignal-Abrufs (#1758 AC-13)
+# -- BEWUSST kuerzer als TIMEOUT (30s) der Grundvorhersage und BEWUSST ohne
+# `_request()`/`@retry` (s. `fetch_thunder_signals_named`): ein Retry mit
+# exponentiellem Backoff (2-60s je Versuch, bis zu 5 Versuche) wuerde dieses
+# knappe Budget sofort sprengen. Das Projekt hat bereits #1839 (Trip-Vorschau
+# bricht nach 30s ab) und #1539 (sequenzielle Verarbeitung, Alarm-Ticks
+# fallen aus) -- bei bis zu acht Etappen je Tour duerfte ein haengender
+# Zusatzabruf je Ort niemals mit vollen 10s zu Buche schlagen (80s waeren
+# das Vielfache des 30s-Budgets).
+#
+# ECHTE Messung gegen den Produktiv-Endpunkt (2026-08-18, Team-Lead):
+#   Karnischer Hoehenweg (46.66/12.74): total 0.291s (connect 0.038s)
+#   Innsbruck             (47.26/11.39): total 0.254s (connect 0.021s)
+# GeoSphere antwortet im Normalfall in ~0,25-0,29s. Eine frueher hier
+# eingetragene Zahl von 7s war eine VERWECHSLUNG (Testlaufzeit statt
+# Antwortzeit, s. ADR-0057 "Nachbesserung") -- diese Konstante beruht jetzt
+# auf der echten Messung, nicht auf dem vorherigen Fehlschluss. 3s laesst den
+# gemessenen Normalfall rund zehnfach durch und begrenzt den Schaden im
+# Haenger-Fall spuerbar staerker als die vorherigen 10s.
+THUNDER_FETCH_TIMEOUT_SECONDS = 3.0
 
 # Snowgrid parameters
 SNOWGRID_PARAMS = ["snow_depth", "swe_tot"]

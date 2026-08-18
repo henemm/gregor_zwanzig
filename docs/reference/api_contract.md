@@ -336,7 +336,8 @@ Namenswechsel bei `cape`/`cin` nie die Grundvorhersage (Temperatur/Wind/Schnee) 
 unbekannter Parametername lässt bei GeoSphere den **gesamten** Abruf mit HTTP 400 scheitern
 (live gemessen). Läuft bewusst OHNE Retry (der Grundvorhersage-Retry mit bis zu 5 Versuchen und
 Backoff bis 60s würde ein knappes Budget sprengen) und mit eigenem, kurzem Zeitbudget
-(`THUNDER_FETCH_TIMEOUT_SECONDS`, 10s — reale Antwortzeit ~7s gemessen, s. Spec). Der
+(`THUNDER_FETCH_TIMEOUT_SECONDS`, 3s — echte Antwortzeit gegen den Produktiv-Endpunkt gemessen
+2026-08-18: ~0,25–0,29s, s. ADR-0057). Der
 Fill-only-Wächter gilt seit #1758 nur noch für die Primärquelle je Gebiet — Zusatzquellen wie
 `geosphere` werden bei jedem Anreicherungslauf versucht, solange sie zuständig sind (ADR-0057).
 

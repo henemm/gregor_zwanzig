@@ -221,11 +221,11 @@ zusätzlich `geosphere.arome_grid_covers(lat, lon)` (Muster
 garantiert scheiternder HTTP-400-Abruf entstehen. Der GeoSphere-Zusatzabruf
 läuft zudem bewusst OHNE den Retry-Mechanismus der Grundvorhersage (bis zu 5
 Versuche, Backoff bis 60s würde ein knappes Budget sprengen) und mit einem
-eigenen, kurzen Timeout (`geosphere.THUNDER_FETCH_TIMEOUT_SECONDS`, 10s —
-reale Antwortzeit eines cape/cin-Abrufs ~7s gemessen) — das Projekt hat
-bereits bestehende Timeout-Probleme (#1839, #1539), ein zusätzlicher,
-fail-soft gedachter Abruf darf die Gesamtlaufzeit nicht in deren Nähe
-schieben.
+eigenen, kurzen Timeout (`geosphere.THUNDER_FETCH_TIMEOUT_SECONDS`, 3s —
+echte Antwortzeit gegen den Produktiv-Endpunkt gemessen 2026-08-18:
+~0,25–0,29s, s. ADR-0057) — das Projekt hat bereits bestehende
+Timeout-Probleme (#1839, #1539), ein zusätzlicher, fail-soft gedachter
+Abruf darf die Gesamtlaufzeit nicht in deren Nähe schieben.
 
 Jede Vertretung wird markiert (`ForecastMeta.fallback_model` /
 `fallback_reason="thunder_source_unavailable"` / `fallback_metrics`) und **seit
