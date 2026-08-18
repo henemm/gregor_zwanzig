@@ -47,6 +47,11 @@ _SIGNAL_ZU_FELD: Dict[str, str] = {
     "uh_max": "updraft_helicity_max_m2s2",
     "uh_max_med": "updraft_helicity_max_med_m2s2",
     "uh_max_low": "updraft_helicity_max_low_m2s2",
+    # #1758: GeoSphere AROME (Oesterreich) liefert cape/cin additiv zum DWD.
+    # Eigene Felder (Modul-Docstring `app.models` erklaert warum) -- daher
+    # eigene Signalnamen statt der DWD-Eintraege "cin_ml"/"cape_ml".
+    "cape": "cape_geosphere_jkg",
+    "cin": "convective_inhibition_geosphere_jkg",
 }
 
 # Feld der bestehenden Einzelwert-Quelle (S2a). Es steht NICHT in der Tabelle
@@ -218,18 +223,12 @@ def enrich_thunder(
     """
     if not reihe.data:
         return
-    # Fill-only (Muster `_enrich_snow`): traegt die Reihe schon IRGENDEIN
-    # bekanntes Gewittersignal, gibt es nichts zu holen -- die Fusion lief dann
-    # bereits in einem frueheren Aufruf. Bewusst ueber ALLE bekannten Felder
-    # (#1457 S2b, Spec AC-5) — waere der Waechter auf das Feld der
-    # Einzelwert-Quelle festgenagelt, griffe er fuer jede Quelle, die dieses
-    # Feld nie befuellt, ueberhaupt nicht: ein zweiter Aufruf auf dieselbe
-    # Reihe loeste dann unbemerkt einen zweiten vollstaendigen Abruf aus.
-    felder = _bekannte_felder()
-    if any(getattr(dp, feld, None) is not None
-           for dp in reihe.data for feld in felder):
-        return
-
+    # #1758 Scheibe B: der frueher HIER stehende globale Fill-Waechter
+    # ("traegt die Reihe schon IRGENDEIN bekanntes Signal, ganz abbrechen")
+    # ist in `_fetch_lightning_density()` gewandert und gilt dort NUR noch
+    # fuer die PRIMAERE Quelle -- sonst kaeme eine additive Zusatzquelle
+    # (GeoSphere fuer AT) nie zum Zug, sobald die primaere geliefert hat
+    # (Spec AC-7). Die Fusion unten laeuft deshalb immer.
     try:
         _fetch_lightning_density(reihe, location, bereits_befragt)
     except Exception:
@@ -288,38 +287,70 @@ def _hole_eintraege(
     return [(_EINZELWERT_FELD, signale or {})]
 
 
-def _fetch_lightning_density(
+def _wende_eintraege_an(
+    reihe: "NormalizedTimeseries", eintraege: list, basis: datetime,
+) -> int:
+    """Traegt `[(Feld, Werte)]` an die Datenpunkte der Reihe ein (dieselbe
+    Offset-Konvention wie `_bezugszeitpunkt`: Nullpunkt = `basis`, Offsets
+    beginnen bei 1) und liefert die Anzahl gesetzter Werte. Geteilter
+    Schreibweg fuer Primaer- UND Zusatzquellen (#1758) -- EIN Anschluss, kein
+    zweiter."""
+    nach_ts = {_naiv_utc(dp.ts): dp for dp in reihe.data}
+    gefuellt = 0
+    for feld, werte in eintraege:
+        for offset, wert in werte.items():
+            if wert is None:
+                continue  # AC-2: leer bleibt leer, nie 0
+            dp = nach_ts.get(basis + timedelta(hours=offset))
+            if dp is None:
+                continue
+            setattr(dp, feld, wert)
+            gefuellt += 1
+    return gefuellt
+
+
+def _primaerquelle_bereits_gefuellt(reihe: "NormalizedTimeseries") -> bool:
+    """Fill-only-Waechter der PRIMAEREN Quelle (Muster `_enrich_snow`,
+    unveraendert seit #1457 S2b): traegt die Reihe schon IRGENDEIN bekanntes
+    Gewittersignal, gibt es fuer die Primaerquelle nichts zu holen -- die
+    Fusion lief dann bereits in einem frueheren Aufruf. Bewusst ueber ALLE
+    bekannten Felder (Spec AC-5 des Vorgaenger-Moduls #1457 S2b) — waere der
+    Waechter auf das Feld der Einzelwert-Quelle festgenagelt, griffe er fuer
+    jede Quelle, die dieses Feld nie befuellt, ueberhaupt nicht.
+
+    Gilt seit #1758 NUR fuer die Primaerquelle. Zusatzquellen fuehren KEINEN
+    eigenen feldbasierten Waechter (Spec Implementation Details Punkt 6) --
+    sie werden stattdessen bei JEDEM Aufruf versuchtund sind dafuer PRO
+    Quelle fail-soft (s. `_fetch_lightning_density`)."""
+    felder = _bekannte_felder()
+    return any(getattr(dp, feld, None) is not None
+               for dp in reihe.data for feld in felder)
+
+
+def _fetch_primaerquelle(
     reihe: "NormalizedTimeseries",
     location: "Location",
+    quelle: str,
     bereits_befragt: Optional[str],
+    basis: datetime,
+    von: datetime,
+    bis: datetime,
 ) -> None:
-    """Ruft die zustaendige Quelle ab und fuellt deren Signalfelder in-place:
-    ``dp.lightning_density_per_km2_3h`` (Einzelwert-Quelle) bzw. die Felder aus
-    ``_SIGNAL_ZU_FELD`` (benannte Quelle, #1457 S2b). Extrahiert aus
-    ``enrich_thunder()``, damit dessen frueher ``return`` bei fehlender
-    Zustaendigkeit/leerer Antwort die nachfolgende Fusion
-    (``_fuse_thunder_levels``) nicht mehr uebersprungen wird.
+    """Primaerquellen-Pfad -- UNVERAENDERTES #1492-S2a-Verhalten (Vertretung
+    bei echtem Ausfall, ADR-0047). Extrahiert aus `_fetch_lightning_density`,
+    damit additive Zusatzquellen (#1758) denselben Schreibweg
+    (`_wende_eintraege_an`) nutzen koennen, OHNE die Vertretungslogik zu
+    erben -- GeoSphere bekommt bewusst KEINEN Vertretungs-Eintrag (Spec
+    Scope-Abgrenzung).
 
-    #1492 S2a: faellt die Primaerquelle ECHT aus (`ThunderSourceUnavailableError`,
-    Spec ADR-0047), wird die benannte Vertretung (`thunder_vertretung_for`)
-    EINMAL nachgefragt -- mit ihrem eigenen vollen Zeitbudget, keine
-    Restzeit-Weitergabe (Known Limitations 1). Scheitert sie selbst auch,
-    propagiert die Ausnahme zum bestehenden aeusseren Fang in
-    ``enrich_thunder()`` (Spec AC-5)."""
-    from providers.thunder_routing import thunder_provider_for, thunder_vertretung_for
-
-    quelle = thunder_provider_for(location.latitude, location.longitude)
-    if quelle is None:
-        return  # Spec AC-6: kein Abruf ausserhalb eines Zustaendigkeitsgebiets
-    if quelle == bereits_befragt:
-        return
-
+    #1492 S2a: faellt die Primaerquelle ECHT aus
+    (`ThunderSourceUnavailableError`, Spec ADR-0047), wird die benannte
+    Vertretung (`thunder_vertretung_for`) EINMAL nachgefragt -- mit ihrem
+    eigenen vollen Zeitbudget, keine Restzeit-Weitergabe (Known Limitations
+    1). Scheitert sie selbst auch, propagiert die Ausnahme zum bestehenden
+    aeusseren Fang in `enrich_thunder()` (Spec AC-5)."""
     from providers.base import ThunderSourceUnavailableError
-
-    basis = _bezugszeitpunkt(reihe)
-    letzter = max(_naiv_utc(dp.ts) for dp in reihe.data)
-    von = basis.replace(tzinfo=timezone.utc)
-    bis = letzter.replace(tzinfo=timezone.utc)
+    from providers.thunder_routing import thunder_vertretung_for
 
     aktive_quelle = quelle
     try:
@@ -334,17 +365,7 @@ def _fetch_lightning_density(
     if not any(werte for _feld, werte in eintraege):
         return
 
-    nach_ts = {_naiv_utc(dp.ts): dp for dp in reihe.data}
-    gefuellt = 0
-    for feld, werte in eintraege:
-        for offset, wert in werte.items():
-            if wert is None:
-                continue  # AC-2: leer bleibt leer, nie 0
-            dp = nach_ts.get(basis + timedelta(hours=offset))
-            if dp is None:
-                continue
-            setattr(dp, feld, wert)
-            gefuellt += 1
+    gefuellt = _wende_eintraege_an(reihe, eintraege, basis)
     if not gefuellt:
         return
 
@@ -369,3 +390,62 @@ def _fetch_lightning_density(
         "(nicht erreichbar): %d Zeitpunkte gefuellt",
         aktive_quelle, quelle, gefuellt,
     )
+
+
+def _fetch_lightning_density(
+    reihe: "NormalizedTimeseries",
+    location: "Location",
+    bereits_befragt: Optional[str],
+) -> None:
+    """Ruft ALLE fuer diesen Ort zustaendigen Quellen ab (#1758, ADR-0057:
+    additiv, first-match-wins-Region kann mehrere Quellen tragen) und fuellt
+    deren Signalfelder in-place: ``dp.lightning_density_per_km2_3h``
+    (Einzelwert-Quelle) bzw. die Felder aus ``_SIGNAL_ZU_FELD`` (benannte
+    Quelle, #1457 S2b). Extrahiert aus ``enrich_thunder()``, damit dessen
+    frueher ``return`` bei fehlender Zustaendigkeit/leerer Antwort die
+    nachfolgende Fusion (``_fuse_thunder_levels``) nicht mehr uebersprungen
+    wird.
+
+    Erste Quelle aus ``thunder_providers_for()`` ist die PRIMAERE (unveraen-
+    dertes #1492-S2a-Verhalten inkl. Vertretung, s. ``_fetch_primaerquelle``);
+    alle weiteren sind additive Zusatzquellen (Spec AC-6/AC-7), die IMMER
+    versucht werden -- der Fill-only-Waechter (``_primaerquelle_bereits_
+    gefuellt``) gilt seit #1758 nur noch fuer die Primaerquelle, sonst kaeme
+    eine Zusatzquelle nie zum Zug, sobald die Primaerquelle geliefert hat.
+    """
+    from providers.thunder_routing import thunder_providers_for
+
+    quellen = thunder_providers_for(location.latitude, location.longitude)
+    if not quellen:
+        return  # Spec AC-6: kein Abruf ausserhalb eines Zustaendigkeitsgebiets
+    primaer, *zusatz = quellen
+
+    basis = _bezugszeitpunkt(reihe)
+    letzter = max(_naiv_utc(dp.ts) for dp in reihe.data)
+    von = basis.replace(tzinfo=timezone.utc)
+    bis = letzter.replace(tzinfo=timezone.utc)
+
+    if primaer != bereits_befragt and not _primaerquelle_bereits_gefuellt(reihe):
+        _fetch_primaerquelle(reihe, location, primaer, bereits_befragt, basis, von, bis)
+
+    # #1758 Scheibe B: Zusatzquellen sind additiv und werden IMMER versucht,
+    # sobald sie zustaendig sind (Spec AC-7) -- fail-soft PRO Quelle, damit
+    # eine scheiternde Zusatzquelle weder die Primaerquelle noch andere
+    # Zusatzquellen mitreisst. Keine Vertretung fuer Zusatzquellen (Scope-
+    # Abgrenzung).
+    for quelle in zusatz:
+        if quelle == bereits_befragt:
+            continue
+        try:
+            eintraege = _hole_eintraege(quelle, location, von, bis)
+        except Exception:
+            logger.warning("Zusatzquelle '%s' fehlgeschlagen", quelle, exc_info=True)
+            continue
+        if not any(werte for _feld, werte in eintraege):
+            continue
+        gefuellt = _wende_eintraege_an(reihe, eintraege, basis)
+        if gefuellt:
+            logger.info(
+                "Gewittersignale von Zusatzquelle '%s': %d Zeitpunkte gefuellt",
+                quelle, gefuellt,
+            )

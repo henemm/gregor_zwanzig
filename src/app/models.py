@@ -177,6 +177,16 @@ class ForecastDataPoint:
     updraft_helicity_max_med_m2s2: Optional[float] = None    # m^2/s^2, mittlere Schicht (2-5 km)
     updraft_helicity_max_low_m2s2: Optional[float] = None    # m^2/s^2, untere Schicht
 
+    # Gewittersignale GeoSphere AROME Oesterreich (#1758, additiv zu #1457 S2b):
+    # CAPE und CIN sind bei GeoSphere dimensionsgleich zu J/kg (m2 s-2 == J/kg,
+    # 1 J/kg = 1 m^2/s^2) -- NICHT umrechnen. Eigene Felder statt cape_jkg /
+    # convective_inhibition_jkg mitzubenutzen: reihe.meta.model="AROME" wuerde
+    # ueber normalize_model_id() sonst die Meteo-France-CAPE-Eichleiter ziehen
+    # (model_registry.py:43), Fehlertyp #1678. Diese Scheibe reicht nur
+    # Rohwerte durch -- keine Einstufung.
+    cape_geosphere_jkg: Optional[float] = None                   # J/kg, AROME (GeoSphere)
+    convective_inhibition_geosphere_jkg: Optional[float] = None  # J/kg, AROME (GeoSphere)
+
     # Gewitter-Wahrscheinlichkeit (Issue #1474 Abschnitt 5, getrennte Achse von
     # thunder_level/"Staerke"): vorbereitetes, in dieser Scheibe von KEINER
     # Quelle befuelltes Feld, kein Renderer-Anschluss. Befuellung ist #1419 S6

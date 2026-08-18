@@ -86,6 +86,13 @@ NWP_PARAMS = [
     "sp",        # Surface pressure
 ]
 
+# Gewittersignale cape/cin (#1758): EIGENER, gekapselter Abruf -- NICHT Teil
+# von NWP_PARAMS/fetch_nwp_forecast (Spec Invariante 1). Ein unbekannter
+# Parametername laesst bei GeoSphere den GESAMTEN Abruf mit HTTP 400
+# scheitern (live gemessen) -- ein Namenswechsel bei cape/cin darf die
+# Grundvorhersage (Temperatur/Wind/Schnee) deshalb nie mitreissen.
+CAPE_CIN_PARAMS = ["cape", "cin"]
+
 # Snowgrid parameters
 SNOWGRID_PARAMS = ["snow_depth", "swe_tot"]
 
@@ -326,6 +333,84 @@ class GeoSphereProvider:
             return self._parse_snowgrid_response(data)
         except httpx.HTTPStatusError:
             return None, None
+
+    def fetch_thunder_signals(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[int, Optional[float]]:
+        """Pflichtteil des Protokolls `providers.base.ThunderSignalProvider`
+        (isinstance-Check in `thunder_enrichment._hole_eintraege`) -- der
+        eigentliche Datenweg ist der BENANNTE (`fetch_thunder_signals_named`),
+        der bei GeoSphere Vorrang hat (#1758, AC-5). Ein Einzelwert-
+        Aequivalent zu cape/cin gibt es fachlich nicht, deshalb liefert diese
+        Methode bewusst immer nichts."""
+        return {}
+
+    def fetch_thunder_signals_named(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[str, Dict[int, Optional[float]]]:
+        """#1758: cape/cin als benannte Gewittersignale, additiv zu DWD.
+
+        Eigener, gekapselter Abruf (Vorbild `fetch_snowgrid`) -- faellt er
+        aus (z.B. Punkt ausserhalb des AROME-Gitters, HTTP 400), bleiben
+        beide Signale leer; die Grundvorhersage ist davon unberuehrt (Spec
+        AC-2).
+        """
+        try:
+            data = self._request(
+                ENDPOINTS["nwp"], location.latitude, location.longitude,
+                CAPE_CIN_PARAMS, start, end,
+            )
+        except httpx.HTTPStatusError:
+            return {"cape": {}, "cin": {}}
+        return self._parse_cape_cin_response(data, start)
+
+    def _parse_cape_cin_response(
+        self, data: Dict[str, Any], start: Optional[datetime] = None,
+    ) -> Dict[str, Dict[int, Optional[float]]]:
+        """Ordnet cape/cin-Rohwerte Stunden-Offsets zu -- DIESELBE Konvention
+        wie `thunder_enrichment._hole_eintraege` erwartet: Offsets zaehlen ab
+        `start` (dem Bezugszeitpunkt, den die aufrufende Reihe vorgibt), NICHT
+        ab Index 0 der Antwort (Spec Implementation Details Punkt 4, AC-11).
+        Ein `enumerate()`-ab-0-Parser wuerde jeden Wert um genau eine Stunde
+        verschieben, ohne dass ein reiner Wertevergleich das zeigt.
+
+        Fehlt `start` (z.B. Direktaufruf ohne Bezugszeitpunkt), gilt der
+        erste Zeitstempel der Antwort minus eine Stunde als Ersatzbasis --
+        dieselbe "Nullpunkt eine Stunde vor dem ersten Zeitpunkt"-Regel wie
+        `thunder_enrichment._bezugszeitpunkt`.
+        """
+        timestamps = data.get("timestamps", [])
+        features = data.get("features", [])
+        cape_ergebnis: Dict[int, Optional[float]] = {}
+        cin_ergebnis: Dict[int, Optional[float]] = {}
+        if not features or not timestamps:
+            return {"cape": cape_ergebnis, "cin": cin_ergebnis}
+
+        params = features[0].get("properties", {}).get("parameters", {})
+        cape_data = params.get("cape", {}).get("data", [])
+        cin_data = params.get("cin", {}).get("data", [])
+
+        if start is not None:
+            basis = start
+        else:
+            erste_ts = datetime.fromisoformat(timestamps[0].replace("Z", "+00:00"))
+            basis = erste_ts - timedelta(hours=1)
+
+        for i, ts_str in enumerate(timestamps):
+            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+            offset = int(round((ts - basis).total_seconds() / 3600))
+            if i < len(cape_data) and cape_data[i] is not None:
+                cape_ergebnis[offset] = cape_data[i]
+            if i < len(cin_data) and cin_data[i] is not None:
+                cin_ergebnis[offset] = cin_data[i]
+
+        return {"cape": cape_ergebnis, "cin": cin_ergebnis}
 
     def fetch_nowcast(
         self,

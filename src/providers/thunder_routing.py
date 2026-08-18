@@ -31,6 +31,11 @@ class _ThunderRegion(NamedTuple):
     min_lon: float
     max_lon: float
     provider: str
+    # #1758: additive Zusatzquellen desselben Gebiets (ADR-0057) -- die
+    # PRIMAERE Quelle (`provider` oben) bleibt fuer Bestandsaufrufer
+    # unveraendert; Zusatzquellen kommen NUR ueber `thunder_providers_for()`
+    # zum Zug, nie ueber `thunder_provider_for()`.
+    zusatzquellen: tuple = ()
 
 
 # Erste treffende Region gewinnt. Das FR-Rechteck ist bewusst identisch zu
@@ -60,9 +65,14 @@ class _ThunderRegion(NamedTuple):
 # ICON-EU-Gitter deckt aber nur Europa ab (gemessen: -23,53..62,53 O /
 # 29,47..70,53 N). Ausserhalb liefert der Provider "keine Aussage" statt
 # eines geklemmten Randwerts (dwd_eu._read_point_value).
+# #1758 (ADR-0057): DE_ALPEN bekommt `geosphere` als ZUSAETZLICHE, additive
+# Gewitterquelle -- Oesterreich (Teil dieses Gebiets) hat mit dem AROME-Modell
+# (2,5 km) ein zweites, unabhaengiges Konvektionssignal (cape/cin), das der
+# DWD nicht ersetzt. FR/EU_REST bekommen bewusst KEINE Zusatzquelle in dieser
+# Spec (Scope-Abgrenzung).
 _REGIONS: tuple[_ThunderRegion, ...] = (
     _ThunderRegion("FR", 41.3, 51.1, -5.2, 9.7, "fr_direct"),
-    _ThunderRegion("DE_ALPEN", 43.17, 58.09, -3.95, 20.35, "de_direct"),
+    _ThunderRegion("DE_ALPEN", 43.17, 58.09, -3.95, 20.35, "de_direct", ("geosphere",)),
     _ThunderRegion("EU_REST", -90.0, 90.0, -180.0, 180.0, "eu_direct"),
 )
 
@@ -96,6 +106,41 @@ def thunder_provider_for(lat: float, lon: float) -> Optional[str]:
                 and region.min_lon <= lon <= region.max_lon):
             return region.provider
     return None
+
+
+def _region_fuer(lat: float, lon: float) -> Optional[_ThunderRegion]:
+    """Internes Gegenstueck zu `thunder_provider_for()`, liefert die GANZE
+    Region (inkl. Zusatzquellen) statt nur des Providernamens. Fragt DASSELBE
+    Raster ab, aber UNABHAENGIG von `thunder_provider_for()` -- so bleibt
+    `thunder_providers_for()` unten erkennbar, ob dessen primaere Quelle von
+    aussen ueberschrieben wurde (s. dort)."""
+    for region in _REGIONS:
+        if (region.min_lat <= lat <= region.max_lat
+                and region.min_lon <= lon <= region.max_lon):
+            return region
+    return None
+
+
+def thunder_providers_for(lat: float, lon: float) -> tuple[str, ...]:
+    """Alle fuer (lat, lon) zustaendigen Gewitterquellen, additiv (#1758,
+    ADR-0057) -- nicht nur die primaere.
+
+    Baut auf `thunder_provider_for()` auf (bleibt fuer Bestandsaufrufer und
+    -Tests patchbar, first-match-wins unveraendert) und ergaenzt die
+    REGION-eigenen Zusatzquellen aus `_REGIONS` NUR, wenn die Primaerquelle
+    NICHT von aussen ueberschrieben wurde. Ohne diese Absicherung wuerde ein
+    Test, der nur `thunder_provider_for()` patcht (z.B. auf eine Test-Quelle),
+    unbemerkt eine ECHTE Zweitquelle (GeoSphere) mit auf die Reise schicken --
+    genau das Regressionsrisiko, vor dem die Spec warnt (Fill-only-Waechter
+    sitzt am gemeinsamen Anschlusspunkt fuer ALLE Gebiete).
+    """
+    primaer = thunder_provider_for(lat, lon)
+    if primaer is None:
+        return ()
+    region = _region_fuer(lat, lon)
+    if region is not None and region.provider == primaer:
+        return (primaer, *region.zusatzquellen)
+    return (primaer,)
 
 
 # Benannte Ersatzquelle bei ECHTEM Ausfall einer Direktquelle (#1492 S2a,
