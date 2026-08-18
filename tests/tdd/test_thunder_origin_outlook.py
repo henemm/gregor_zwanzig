@@ -325,13 +325,22 @@ def test_ac1_html_ausblickzelle_nennt_die_tragende_zutat():
 def test_ac2_klartext_ausblick_traegt_denselben_zusatz():
     """AC-2: Given dieselbe Etappe / When der Klartext-Ausblick derselben Mail
     gerendert wird / Then traegt das Gewitterfeld denselben Zusatz im selben
-    Wortlaut ("⚡leicht · CAPE") — der Klartext fuehrt wie bisher keine
-    Tagesuhrzeit."""
+    Wortlaut, hinter der Onset-Stunde ("⚡leicht@16 · CAPE").
+
+    ⚠️ Abgeloest durch #1493 (2026-08-18): der urspruengliche Wortlaut dieses
+    AC lautete "… — der Klartext fuehrt wie bisher keine Tagesuhrzeit", und
+    die Zusicherung war "⚡leicht · CAPE" OHNE Stunde. #1493 fuehrt die
+    Onset-Stunde im Klartext- und Kompakt-Ausblick ein (Spec
+    ``feat_1493_gewitter_onset_sichtbar.md``, AC-3/AC-4; Ablose-Vermerk in
+    ``feat_1680_s5a_gewitter_herkunft_ausblick.md`` AC-2/AC-13). Unveraendert
+    bleibt die eigentliche Aussage dieses Tests: der Herkunfts-Zusatz "· CAPE"
+    steht HINTER dem Gewitterfeld und ist im Klartext derselbe wie im HTML.
+    """
     bericht = _mail([_ausblick_zeile([_dp(16, cape=400.0, cin=5.0)])])
     zeile = _klartext_ausblick_zeile(bericht.email_plain)
-    assert "⚡leicht · CAPE" in zeile, (
-        f"Der Klartext-Ausblick muss '⚡leicht · CAPE' zeigen (ohne "
-        f"Tagesuhrzeit, wie bisher): {zeile!r}")
+    assert "⚡leicht@16 · CAPE" in zeile, (
+        f"Der Klartext-Ausblick muss '⚡leicht@16 · CAPE' zeigen (Onset-Stunde "
+        f"am Gewitterfeld seit #1493): {zeile!r}")
 
 
 def test_ac3_telegram_trendblock_nennt_die_zutat():
