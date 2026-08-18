@@ -18,6 +18,8 @@ bei deutlicher Verschiebung alarmieren.
 |---|---|
 | Für welche Größen? | **Gewitter UND Starkregen zusammen** (nicht nur Gewitter) |
 | Wie wird der Beginn vergleichbar? | **Neues Feld im Datenmodell**, mitgespeichert — nicht zur Laufzeit aus der Stundenreihe abgeleitet |
+| Ab wann gilt Regen als „Starkregen"? | **≥ 4,0 mm/h — dieselbe Grenze wie im Radar** (`INTENSITY_HEAVY`, `radar_service.py:77`). Bewusst kein neues Vokabular: „Starker Regen" bedeutet auf beiden Wegen dasselbe. Basis ist die stündliche Intensität `precip_rate_mmph`, nicht die Menge. |
+| Richtung der Verschiebung | **Asymmetrisch — früher ist gefährlicher.** Ein früherer Beginn meldet bei kleinerer Verschiebung als ein späterer. Begründung: Wer um 15 statt 17 Uhr ins Gewitter läuft, ist bereits im Gelände. Erfordert Neu-Mechanik (Risiko 3). |
 
 ## Kernbefund: Die Vorarbeit liefert weniger als angenommen
 
