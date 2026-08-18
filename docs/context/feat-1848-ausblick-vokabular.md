@@ -176,6 +176,30 @@ Der gemeinsame Kern ist **die erlaubte Kennungsmenge**, nicht der Träger:
 - Kein neuer Import in Richtung `models.py` nötig: der Ausblick-Resolver
   bekommt das `dc`-Objekt bereits übergeben.
 
+### 🔴 Es gibt eine DRITTE Umsetzung — die NICHT eingemeindet werden darf
+
+`src/output/renderers/compare_metric_ids.py:200-243`
+`resolve_channel_enabled_metrics()` setzt dieselbe ADR-0050-Regel 1/2 für die
+Kanal-Auswahl des **Ortsvergleichs** um und verweist im Docstring selbst auf
+`_clip_to_global_maximum()`. Sie ist aber **nicht** wortgleich:
+
+| Fall | Trip (`_clip_to_global_maximum`, D4) | Ortsvergleich (`resolve_channel_enabled_metrics`) |
+|---|---|---|
+| Grundauswahl fehlt (`None`) | nicht schneiden | nicht schneiden |
+| Grundauswahl leer (`[]`) | **nicht schneiden** — „kein Maximum" | **auf leer schneiden** — „leer heißt leer" (#1366) |
+
+Beim Trip sind `None` und `[]` beide falsy und laufen in denselben Zweig; beim
+Ortsvergleich sind sie bewusst getrennt. Das ist kein Versehen, sondern zwei
+verschiedene Zusagen an zwei verschiedenen Flächen (AC-16 aus #1720 S1 hier,
+#1366 dort).
+
+**Folge für diese Scheibe:** Zusammengelegt werden ausschließlich die **zwei
+Trip-seitigen** Stellen (Kanal-Layout und Ausblick), die nachweislich
+verhaltensgleich sind. `resolve_channel_enabled_metrics()` bleibt unangetastet
+— eine Eingemeindung würde eine der beiden Zusagen brechen. Der Wächter muss
+diese Fläche deshalb ausdrücklich **aussparen**, sonst zementiert er einen
+Fehler.
+
 **Wächter (Verhalten, nicht Dateiinhalt):** ein Test, der dieselben
 Kaskaden-Fälle — inklusive D4 und des `selectable`-Gates — durch **beide**
 Flächen schickt (Kanal-Layout und Ausblick) und identische Entscheidungen
