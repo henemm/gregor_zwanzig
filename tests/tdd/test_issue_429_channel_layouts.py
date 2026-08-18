@@ -230,12 +230,18 @@ def test_ac3_per_channel_layout_wins_over_global():
     metrics = dc.get_metrics_for_channel("email", "evening")
     ids = [m.metric_id for m in metrics]
 
-    # Email-spezifische Reihenfolge (nicht die globale Reihenfolge!)
+    # Email-spezifische Reihenfolge (nicht die globale Reihenfolge!).
+    # Fix #1947: abgeleitete Kind-Groessen (temperature_night/_day_low/
+    # _day_high) erben jetzt bucket/order der Elterngroesse (loader.py::
+    # _append_derived_metrics) statt hartcodiert "secondary" -- sie stehen
+    # deshalb direkt HINTER ihrem Elter, nicht mehr strukturell am Ende.
     assert ids[0] == "temperature"
-    assert ids[1] == "wind_chill"
-    assert ids[2] == "wind"
-    assert ids[3] == "gust"
-    assert ids[4] == "precipitation"
+    assert ids[1:4] == ["temperature_night", "temperature_day_low", "temperature_day_high"]
+    assert ids[4] == "wind_chill"
+    assert ids[5:8] == ["wind_chill_night", "wind_chill_day_low", "wind_chill_day_high"]
+    assert ids[8] == "wind"
+    assert ids[9] == "gust"
+    assert ids[10] == "precipitation"
     assert "cloud_total" in ids  # secondary, aber in der Liste enthalten
 
 
