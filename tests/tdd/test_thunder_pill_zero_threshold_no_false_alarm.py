@@ -19,12 +19,20 @@ Keine Mocks -- echte ForecastDataPoint-Stundenreihe, echter Aufruf von
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from app.models import ForecastDataPoint, ThunderLevel
 
 TZ = ZoneInfo("Europe/Berlin")
+
+# #1493: der Uhrzeit-Satz der Gewitter-Pille traegt seit Issue #1493 das
+# Stufenwort ("Gewitter mittel ab 14:00 · staerkste 18:00"). Abwesenheit
+# wird deshalb gegen dieses MUSTER geprueft -- die alte Zeichenkette
+# "Gewitter ab" ist heute auch im Positivfall abwesend und als
+# Negativ-Assertion damit blind.
+_UHRZEIT_SATZ_RE = re.compile(r"Gewitter (?:leicht|mittel|hoch) ab \d{2}:00")
 
 
 def _dps_all_none() -> list:
@@ -47,7 +55,9 @@ def test_zero_threshold_does_not_trigger_gewitter_ab_for_thunder_free_stage():
     result = _pill_for_metric("thunder", {"thunder": 0.0}, _dps_all_none(), tz=TZ)
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
-    assert "Gewitter ab" not in text, (
+    # #1493: gegen das MUSTER pruefen ("Gewitter <stufe> ab HH:00"), sonst
+    # waere die Abwesenheit von "Gewitter ab" nach #1493 trivial wahr.
+    assert _UHRZEIT_SATZ_RE.search(text) is None, (
         "F002: bei Schwelle 0.0 und einer gewitterfreien Etappe (nur "
         f"ThunderLevel.NONE) darf 'Gewitter ab' nicht erscheinen. Erhalten: "
         f"{text!r}"

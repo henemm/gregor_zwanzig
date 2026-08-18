@@ -4399,7 +4399,8 @@ _S7_PILLEN_BASIS_KATALOGORDNUNG = [
     "!!! Boeen >20 km/h ab 04:00 - max 70 (10:00)",
     "!! Regen ab 05:00 - 8.9 mm",
     "!!! Regen-W. >20% ab 05:00 - max 95% (11:00)",
-    "!! Gewitter ab 11:00 - staerkste 11:00",
+    # #1493: Stufenwort in der Pille (Ampelpraefix und Reihenfolge unveraendert).
+    "!! Gewitter mittel ab 11:00 - staerkste 11:00",
     "50% bewoelkt - Max 08:00",
     "Feuchte 55-55% - Max 08:00",
     "Sonne 150 min",

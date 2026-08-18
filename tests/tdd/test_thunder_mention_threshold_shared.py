@@ -16,12 +16,20 @@ Scheibe), `_pill_for_metric()` (Mail-Prosa-Pille) und `format_trend_tokens()`
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from app.models import ForecastDataPoint, ThunderLevel
 
 TZ = ZoneInfo("Europe/Berlin")
+
+# #1493: der Uhrzeit-Satz der Gewitter-Pille traegt seit Issue #1493 das
+# Stufenwort ("Gewitter mittel ab 14:00 · staerkste 18:00"). Abwesenheit
+# wird deshalb gegen dieses MUSTER geprueft -- die alte Zeichenkette
+# "Gewitter ab" ist heute auch im Positivfall abwesend und als
+# Negativ-Assertion damit blind.
+_UHRZEIT_SATZ_RE = re.compile(r"Gewitter (?:leicht|mittel|hoch) ab \d{2}:00")
 
 
 def _dps_only_low() -> list:
@@ -97,7 +105,8 @@ def test_ac5_prosa_pille_meldet_gewitter_ab_leicht_am_standard_trip():
     result = _pill_for_metric("thunder", {}, _dps_only_low(), tz=TZ)
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
-    assert "Gewitter ab" in text, (
+    # #1493: der Satz traegt jetzt das Stufenwort ("Gewitter leicht ab ...").
+    assert "Gewitter leicht ab" in text, (
         "AC-5: Ein Trip ohne eigene Gewitter-Schwelle muss den Uhrzeit-Satz "
         f"schon bei reinem 'leicht' zeigen. Erhalten: {text!r}"
     )
@@ -116,7 +125,10 @@ def test_ac6_konfigurierte_schwelle_haelt_prosa_pille_bei_leicht_still():
     )
     assert result is not None
     text, _tone = result
-    assert "Gewitter ab" not in text, (
+    # #1493: gegen das MUSTER pruefen, nicht gegen den alten Wortlaut --
+    # "Gewitter ab" allein waere nach #1493 trivial abwesend und der Test
+    # damit blind.
+    assert _UHRZEIT_SATZ_RE.search(text) is None, (
         "AC-6: Mit eingestellter Schwelle 2.0 ('mittel') darf die Prosa-"
         f"Pille bei reinem 'leicht' NICHT ausloesen. Erhalten: {text!r}"
     )
@@ -150,7 +162,8 @@ def test_ac6_konfigurierte_schwelle_ueber_med_haelt_prosa_pille_bei_med_still():
     )
     assert result is not None
     text, _tone = result
-    assert "Gewitter ab" not in text, (
+    # #1493: Muster statt Wortlaut (siehe oben).
+    assert _UHRZEIT_SATZ_RE.search(text) is None, (
         "AC-6 (WIRKUNGS-Nachweis): Mit eingestellter Schwelle 3.0 ('hoch') "
         "darf die Prosa-Pille bei einer Stundenreihe, die nur MED erreicht "
         f"(unter der Schwelle), NICHT ausloesen. Erhalten: {text!r} -- "

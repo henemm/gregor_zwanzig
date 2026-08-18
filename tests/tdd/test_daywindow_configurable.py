@@ -337,7 +337,8 @@ class TestAC3ConfiguredWindowAppliesToAllFourChannelsAndGapCheck:
             f"Ereignis um 16:00 muss in der SMS erscheinen.\nSMS: {report.sms_text}"
         )
         assert "⚡" in compact and "16:00" in compact, f"Kompakt: {compact!r}"
-        assert "Gewitter ab 16:00 · stärkste 16:00" in report.email_plain, (
+        # #1493: die Pille nennt die Stufe als Wort.
+        assert "Gewitter hoch ab 16:00 · stärkste 16:00" in report.email_plain, (
             f"Plain:\n{report.email_plain}"
         )
         assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"

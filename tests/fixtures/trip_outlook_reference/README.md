@@ -32,6 +32,12 @@ Tages-Minimum **innerhalb des Wanderfensters**, nicht das naechtliche Tief
 Die Aufzeichnung bleibt damit authentisch (roher Ist-Stand) und die
 Abweichung steht zitierbar im Testcode statt still in der Fixture.
 
+## Nachgefuehrte Zellen
+
+| Datum | Datei | Zelle | Alt | Neu | Grund |
+|---|---|---|---|---|---|
+| 2026-08-18 | `outlook_block.txt` | Zeilen "Mo"/"Mi", Gewitter-Feld | `⚡mittel` / `⚡hoch` | `⚡mittel@10` / `⚡hoch@10` | #1493 AC-3 (freigegebene Spec `feat_1493_gewitter_onset_sichtbar.md`): der Klartext-Ausblick fuehrt die Onset-Stunde, wie HTML-Zelle, Telegram und SMS es laengst tun. `outlook_table.html` und `outlook_legend.html` sind unveraendert; die Di-Zeile (`⚡–`, kein Tagesgewitter) ebenfalls |
+
 ## Diese Dateien werden NICHT nachgezogen
 
 Wird ein Test gegen diese Referenz rot, hat sich die Trip-Mail veraendert --

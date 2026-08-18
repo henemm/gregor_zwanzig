@@ -87,10 +87,12 @@ def _compact_thunder_field(tok: dict, stage: dict) -> str:
 
     Nutzt denselben Entscheidungs-Helfer wie ``render_outlook_plain()`` und
     ``_outlook_lines()`` (thunder_branch.resolve_thunder_day_branch) -- Tagesteil
-    ohne Uhrzeit (Wort + optionaler Peak-Zusatz), Nachtteil als Zusatz MIT
-    Uhrzeit. KEIN Herkunfts-Zusatz (``thunder_day_origin`` wird bewusst
-    nicht gelesen, PO-Entscheidung 1 der Spec -- AC-13 aus #1680 S5a bleibt
-    fuer die Kompakt-Mail in Kraft).
+    mit Onset-Uhrzeit (Wort@Stunde + optionaler Peak-Zusatz -- #1493 loest
+    insoweit die Zeichengleichheits-Zusicherung AC-13 aus #1680 S5a ab),
+    Nachtteil als Zusatz MIT Uhrzeit. KEIN Herkunfts-Zusatz
+    (``thunder_day_origin`` wird bewusst nicht gelesen, PO-Entscheidung 1 der
+    Spec -- der Herkunfts-Teil von AC-13 bleibt fuer die Kompakt-Mail in
+    Kraft).
     """
     branch = resolve_thunder_day_branch(tok, stage)
     # Der Helfer entscheidet nur ueber `thunder_day_token != "-"`; ob der
@@ -100,7 +102,9 @@ def _compact_thunder_field(tok: dict, stage: dict) -> str:
     # faellt wie im Altcode auf "kein Gewitter" zurueck).
     _d = _thunder_token_parts(tok.get("thunder_day_token", "-")) if branch == "day" else None
     if _d:
-        field = f"⚡{_d[0]}{_d[2]}"
+        # Issue #1493: Onset-Stunde wie im Klartext-Ausblick (`_d[1]` wurde
+        # hier bisher verworfen).
+        field = f"⚡{_d[0]}@{_d[1]}{_d[2]}"
     elif branch in ("day", "none"):
         field = _THUNDER_MAP["NONE"]["plain"]
     else:
