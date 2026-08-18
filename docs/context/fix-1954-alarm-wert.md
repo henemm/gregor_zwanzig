@@ -21,7 +21,7 @@ teilweise messbar (Basislinie 66,7 % ist heute eine Obergrenze, kein exakter Wer
 | `src/services/alert_log.py:84-96` | `register_pairs_from_corridor_hits()` — **kein Produktiv-Aufrufer** (nur Test) |
 | `src/services/alert_log.py:99-109` | `register_pairs_for_nowcast()` — nimmt nur `bool`, **hat strukturell keinen Messwert** |
 | `src/services/alert_log.py:322` | `append_suppressed_entry()` schreibt bewusst `"metrics": []` (Gate-Zeitpunkt, nichts erkannt) |
-| `src/services/alert_log.py:444-460` | **Leseseite** `undelivered_incidents()`: extrahiert gezielt nur `(metric_id, aggregation)` |
+| `src/services/alert_log.py:444-460` | **Leseseite** `read_undelivered()`: extrahiert gezielt nur `(metric_id, aggregation)` |
 | `src/app/models.py:533-561` | `WeatherChange` mit `old_value`/`new_value`/`delta`/`threshold` (alle `float`) |
 | `src/services/corridor_threshold.py:56-65` | `CorridorHit` mit `value` + `bound` (`float`) |
 | `src/services/trip_alert.py:361-373` | Aufrufer Vorhersage-Aenderung → `register_pairs_from_changes(to_report)` |
@@ -55,7 +55,7 @@ teilweise messbar (Basislinie 66,7 % ist heute eine Obergrenze, kein exakter Wer
 - Radar-Nowcast: **kein** Wert im Signaturpfad (`is_convective: bool`).
 
 **Downstream** (wer liest `metrics`):
-- `src/services/alert_log.py:444-460` `undelivered_incidents()` → `UndeliveredIncident.metrics`
+- `src/services/alert_log.py:444-460` `read_undelivered()` → `UndeliveredIncident.metrics`
   als `tuple[tuple[str, str], ...]`. Liest **gezielt zwei Schluessel** aus jedem Dict —
   ein zusaetzlicher Schluessel wird still ignoriert, die Struktur bleibt zweigliedrig.
 - `src/output/renderers/email/undelivered_hint.py` `_subject()` (entpackt 2-Tupel) und
@@ -156,7 +156,7 @@ Zeilen. Grund: der Pfad soll bei einer Reaktivierung nicht als einziger ohne Wer
 
 - Rein additiv, keine Migration: Alt-Eintraege ohne die neuen Felder bleiben unveraendert und
   lesbar (Roundtrip-Test noetig).
-- Die Leseseite (`undelivered_incidents()`, `:444-460`) bleibt zweigliedrig — die Wert-Felder
+- Die Leseseite (`read_undelivered()`, `:444-460`) bleibt zweigliedrig — die Wert-Felder
   erreichen **nicht** den Mail-Renderer. Damit bleibt die Zusicherung #1503/#1474 („ordinale
   Groessen nie als Zahl anzeigen") unberuehrt, obwohl die Gewitterstufe intern als Rang
   (`thunder_ordinal()`) protokolliert wird.
