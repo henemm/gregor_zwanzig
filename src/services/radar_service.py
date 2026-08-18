@@ -665,7 +665,8 @@ def _capture_nowcast_frames(lat: float, lon: float, frames: list, source: str) -
             payload={
                 "source": source,
                 "frames": [
-                    {"timestamp": f.timestamp.isoformat(), "precip_mm_h": f.precip_mm_h}
+                    {"timestamp": f.timestamp.isoformat(), "precip_mm_h": f.precip_mm_h,
+                     "is_convective": f.is_convective}
                     for f in frames
                 ],
             },

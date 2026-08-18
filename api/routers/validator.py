@@ -234,10 +234,42 @@ class OnsetPayload(BaseModel):
     cooldown_display: str | None = None
 
 
+class OfficialAlertPayload(BaseModel):
+    """Issue #1948 Scheibe S2 (Zweig b): strukturierte Testmeldung fuer eine
+    amtliche Warnung — Feldspiegel von ``OfficialAlert``
+    (services/official_alerts/models.py:15) plus die betroffenen Segmente."""
+    source: str
+    hazard: str
+    level: int
+    label: str
+    valid_from: str | None = None
+    valid_to: str | None = None
+    url: str | None = None
+    region_label: str | None = None
+    dedup_id: str | None = None
+    segment_ids: list[str] = Field(default_factory=list)
+
+
+class NowcastFramePayload(BaseModel):
+    timestamp: str
+    precip_mm_h: float
+    is_convective: bool = False
+
+
+class NowcastFramesPayload(BaseModel):
+    """Issue #1948 Scheibe S2 (Zweig c): Replay eines S1-Nowcast-Mitschnitts."""
+    source: str
+    frames: list[NowcastFramePayload]
+    km_from: float = 0.0
+    km_to: float = 0.0
+
+
 class AlertPreviewBody(BaseModel):
     changes: list[ChangePayload] = Field(default_factory=list)
     segment_times: list[SegmentTimePayload] = Field(default_factory=list)
     onset: OnsetPayload | None = None
+    official: list[OfficialAlertPayload] | None = None
+    nowcast_frames: NowcastFramesPayload | None = None
 
 
 @router.post("/api/trips/{trip_id}/alert-preview")
@@ -253,15 +285,55 @@ def alert_preview(
             detail=f"Trip {trip_id} nicht gefunden für User {user_id}",
         )
 
-    has_onset = body.onset is not None
-    has_deviation = bool(body.changes and body.segment_times)
-    if has_onset == has_deviation:
+    # Issue #1948 Scheibe S2 (AC-1): Vier-Wege-Exklusivitaet statt binaerem
+    # Alt-Gate (onset XOR changes+segment_times). segment_times ist bei
+    # changes seit S2 optional (Zweig-a-Synthese aus dem Trip, s.u.).
+    provided = [
+        bool(body.onset), bool(body.changes), bool(body.official),
+        bool(body.nowcast_frames),
+    ]
+    if sum(provided) != 1:
         raise HTTPException(
             status_code=422,
-            detail="Body muss genau einen von 'onset' ODER 'changes'+'segment_times' enthalten",
+            detail=(
+                "Body muss genau einen von 'onset', 'changes', 'official' "
+                "oder 'nowcast_frames' enthalten"
+            ),
         )
 
+    if body.changes and not body.segment_times:
+        body.segment_times = _synthesize_segment_times(trip_obj, body.changes)
+
     return render_alert_preview(trip_obj, body)
+
+
+def _synthesize_segment_times(
+    trip_obj: Trip, changes: "list[ChangePayload]",
+) -> "list[SegmentTimePayload]":
+    """Issue #1948 Scheibe S2 (AC-2/AC-3): Segment-Zeiten der in ``changes``
+    genannten ``segment_id``s aus dem bereits geladenen Trip synthetisieren
+    — dieselbe Produktions-Segmentierung wie der Versandpfad."""
+    from services.trip_day import trip_local_today
+    from services.trip_segments import convert_trip_to_segments
+
+    today = trip_local_today(trip_obj, datetime.now(timezone.utc))
+    real_segments = {
+        str(s.segment_id): s for s in convert_trip_to_segments(trip_obj, today)
+    }
+    synthesized: list[SegmentTimePayload] = []
+    for c in changes:
+        seg = real_segments.get(c.segment_id)
+        if seg is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unbekannte segment_id '{c.segment_id}' im Trip",
+            )
+        synthesized.append(SegmentTimePayload(
+            segment_id=c.segment_id,
+            start=seg.start_time.strftime("%H:%M"),
+            end=seg.end_time.strftime("%H:%M"),
+        ))
+    return synthesized
 
 
 # ---------------------------------------------------------------------------
