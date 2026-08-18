@@ -39,7 +39,7 @@ exakt der Roh-Datensatz nachweisen, der sie ausgelöst hat — genau die Frage, 
   `src/services/official_alerts/massif_closure.py`, `src/services/trip_alert.py`,
   `src/services/compare_official_alert.py`) + 1 kleine additive Erweiterung in
   `src/services/alert_log.py` (neuer optionaler Parameter `capture_ids`, gleiches additives
-  Muster wie `capture_id` selbst, Z. 239/335 — siehe Implementation Details) plus Tests
+  Muster wie `capture_id` selbst, Z. 338/434 — siehe Implementation Details) plus Tests
 - **Effort:** medium
 
 ## Dependencies
@@ -53,7 +53,7 @@ exakt der Roh-Datensatz nachweisen, der sie ausgelöst hat — genau die Frage, 
 | `src/services/official_alerts/massif_closure.py::MassifClosureSource.fetch` | module | Einzige Quelle mit mehrfachem Abruf je Aufruf im Produktivpfad — muss die Kennung selbst an die gewinnende Meldung binden |
 | `src/services/trip_alert.py::_send_official_alert_only` | module | Versandpunkt Trip, `alert_log.append_entry(...)` Z. 1765 |
 | `src/services/compare_official_alert.py` (Z. 201-214) | module | Versandpunkt Ortsvergleich, Parität zum Trip-Pfad |
-| `src/services/alert_log.py::append_entry` | module | `capture_id` bereits additiv vorhanden (Z. 159/239); bekommt zusätzlich additiven `capture_ids`-Listenparameter für den Mehrfach-Mitschnitt-Fall |
+| `src/services/alert_log.py::append_entry` | module | `capture_id` bereits additiv vorhanden (Z. 261/338); bekommt zusätzlich additiven `capture_ids`-Listenparameter für den Mehrfach-Mitschnitt-Fall |
 
 ## Implementation Details
 
@@ -137,7 +137,7 @@ gesammelt (`{a.capture_id for a, _ in official_notices/tagged_alerts if a.captur
 
 `alert_log.append_entry()` bekommt dafür einen neuen, additiven Parameter
 `capture_ids: Optional[Iterable[str]] = None`, nach demselben Muster wie `capture_id` selbst
-ergänzt (`alert_log.py:239`: `if capture_id is not None: entry["capture_id"] = capture_id`) —
+ergänzt (`alert_log.py:338`: `if capture_id is not None: entry["capture_id"] = capture_id`) —
 `if capture_ids: entry["capture_ids"] = sorted(set(capture_ids))`. Alt-Einträge ohne dieses
 Feld bleiben unverändert lesbar (Read-Modify-Write, Bestandsschutz).
 
@@ -340,7 +340,7 @@ entsteht dort, wo sie eindeutig ist (am Ursprungsabruf), statt hinterher aus zwe
   `ContextVar` (identisch zu `_fetch_failure_sink`, `warn_egress.py:56-98`), additives
   dataclass-Feld (`OfficialAlert.capture_id`, gleiches Muster wie `dedup_id`) und additiver
   Listen-Parameter in `alert_log.append_entry` (gleiches Muster wie `capture_id` selbst,
-  `alert_log.py:239`). Keine neue Persistenztechnologie, keine neue externe Abhängigkeit,
+  `alert_log.py:338`). Keine neue Persistenztechnologie, keine neue externe Abhängigkeit,
   keine Rücknahme einer bestehenden Architekturentscheidung — dieselbe Einordnung wie die
   Vorgänger-Spec (`alarm_eingangsprotokoll.md`, #1948 S1).
 
