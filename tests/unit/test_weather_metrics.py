@@ -126,17 +126,19 @@ class TestWeatherMetricsServiceKnownValues:
         """
         GIVEN: Timeseries
         WHEN: compute_basis_metrics(timeseries)
-        THEN: aggregation_config has 14 entries with correct functions
+        THEN: aggregation_config has 16 entries with correct functions
 
         Issue #1475 S5a: 12 -> 13 Eintraege — `hail_flag` ("hail_priority")
         ist als Tages-/Etappen-Aggregat hinzugekommen (Spec AC-4).
         Issue #1680 S1: 13 -> 14 Eintraege — `thunder_level_max_signals`
         ("union_of_max_carriers") haelt fest, WELCHE Zutaten das
         Gewitter-Tagesmaximum tragen (Spec AC-10).
+        Issue #1468: 14 -> 16 Eintraege — die beiden Beginn-Zeitpunkte
+        ("onset") sind eigene Tages-Aggregate.
         """
         result = service.compute_basis_metrics(known_timeseries)
 
-        assert len(result.aggregation_config) == 14
+        assert len(result.aggregation_config) == 16
         assert result.aggregation_config["temp_min_c"] == "min"
         assert result.aggregation_config["temp_max_c"] == "max"
         assert result.aggregation_config["temp_avg_c"] == "avg"
@@ -156,6 +158,11 @@ class TestWeatherMetricsServiceKnownValues:
         # fuer "falscher Schluessel drin, thunder_level_max_signals fehlt".
         assert (result.aggregation_config["thunder_level_max_signals"]
                 == "union_of_max_carriers")
+        # Issue #1468: dieselbe Ueberlegung wie eine Zeile hoeher — ein reiner
+        # Zaehltest waere blind dafuer, dass ein Beginn-Feld fehlt und
+        # stattdessen ein falscher Schluessel drinsteht.
+        assert result.aggregation_config["thunder_onset_utc"] == "onset"
+        assert result.aggregation_config["precip_heavy_onset_utc"] == "onset"
 
 
 class TestWeatherMetricsServiceTemperature:

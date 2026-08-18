@@ -10,7 +10,7 @@ zentralen Register deklariert (``MetricDefinition.alert_metrics`` je Auswertung,
    erreichbar sein. Sonst waere sie ein Bedienelement ohne Wirkung
    (``is_alert_metric_active()`` liefert dann strukturell immer ``False``).
 2. **Vollstaendigkeit/Eindeutigkeit** — die deklarierten Identitaeten sind
-   exakt die 12 auswertbaren Ziel-Groessen, keine doppelt vergeben.
+   exakt die auswertbaren Ziel-Groessen, keine doppelt vergeben.
 
 Beide mit Wirkungsnachweis auf KUENSTLICH veraenderten Registry-Kopien
 (``dataclasses.replace``; die echte Registry wird nie mutiert) — Vorbild:
@@ -36,6 +36,12 @@ ALERTABLE_METRICS: tuple[str, ...] = (
     "temperature_max", "temperature_change", "wind_change",
     "precipitation_change", "fresh_snow", "cape", "visibility", "humidity",
     "freezing_level",
+    # Issue #1468: Beginn-Verschiebung von Gewitter und Starkregen. Haengt an
+    # denselben Register-Groessen (thunder/precipitation) wie die Stufe bzw.
+    # die Summe, ist aber eine EIGENE Auswertung ("onset") mit eigenem
+    # Summary-Feld — sonst konkurrierte sie im Alarm-Protokoll (#1954) mit
+    # der Stufen-Aenderung um denselben Eintrag.
+    "thunder_onset", "precipitation_heavy_onset",
 )
 EVALUABLE: set[str] = {m.value for m in _ALERT_METRIC_TO_CATALOG_ID}
 TARGET: set[str] = {m for m in ALERTABLE_METRICS if m in EVALUABLE}
