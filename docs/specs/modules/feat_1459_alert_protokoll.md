@@ -2,9 +2,9 @@
 entity_id: feat_1459_alert_protokoll
 type: module
 created: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-18
 status: draft
-version: "1.5"
+version: "1.6"
 tags: [alerts, logging, trips, compare, epic-1458]
 ---
 
@@ -268,6 +268,11 @@ muss), und strukturell identisch zum bereits etablierten Muster `alert_metrics={
 "wind_gust"}` aus #1435 E1a — dieselbe Formsprache (Groesse + Auswertung als getrennte
 Schluessel), nicht noch eine dritte Konvention.
 
+**Fortschreibung #1954 (v1.6):** Je Dict kommen zwei OPTIONALE Felder dazu, `value: float`
+und `previous_value: float` — s. „Erweiterung #1954" unten fuer Regeln und Beispiel. Die
+zweigliedrige Grundform (`metric_id`+`aggregation`) bleibt fuer alle Bestandsfaelle
+unveraendert bestehen.
+
 **Rueckwaerts-Aufloesung — OHNE neue Tabelle moeglich:** `metric_catalog.py` bietet bereits
 zwei Reverse-Lookups nach demselben Muster: `get_label_for_field(summary_field) ->
 (label_de, aggregation, unit)` (`:813`) und `get_compact_label_for_field(summary_field) ->
@@ -515,6 +520,12 @@ alert_log.append_entry(
 ) -> None
 ```
 
+**Fortschreibung #1954 (v1.6):** Die Signatur von `append_entry()` selbst bleibt
+unveraendert — `metrics` traegt weiterhin `list[tuple[str, str]]`. Den Wert liefern
+`register_pairs_from_changes()`/`register_pairs_from_corridor_hits()` NEBEN dem Tupel (s.
+„Erweiterung #1954"); `append_entry()` liest ihn separat und serialisiert ihn optional ins
+Ziel-Dict. Der Dedupe-/Aufruf-Vertrag der Funktion bleibt unberuehrt.
+
 `sent_channels` = tatsaechlich zugestellt (fuellt `channels_sent`/`channels_not_sent`),
 `reachable_channels` = konfigurierbar (`NotificationResult.sent_channels`, entscheidet
 `entries` vs. `not_delivered`, s. D4-Nachtrag v1.4). Ohne `reachable_channels` gilt
@@ -550,6 +561,90 @@ zusaetzlich in das zurueckgegebene Dict aufnehmen (heute nur `changes`) — Ein-
 Jede der sechs Aufrufstellen ruft `append_entry()` **einmal** nach dem jeweiligen
 Versandversuch auf (egal ob `result.sent` `True` oder `False` ist) — die Funktion selbst
 entscheidet ueber Ziel-Liste bzw. Auslassen (s.o.).
+
+### Erweiterung #1954 — der Wert der gemeldeten Groesse
+
+Das Register-Paar (`metric_id`+`aggregation`, O1) haelt fest, **welche** Groesse gemeldet
+wurde, aber nicht **welchen Wert** sie hatte — Kennzahl K1 aus Epic #1458 („Anteil der
+zugestellten Vorfaelle, die binnen 24h dieselbe fachliche Aussage wiederholen") blieb damit
+nur naeherungsweise messbar. #1954 ergaenzt zwei **optionale** Felder je Register-Eintrag:
+
+```json
+{"metric_id": "gust", "aggregation": "max", "value": 60.0, "previous_value": 20.0}
+```
+
+**E1 — Wertumfang.** `value` ist der neue, ausschlaggebende Wert; `previous_value` der Wert
+davor. Erst der alte Wert macht einen Stufenwechsel sichtbar: zweimal „Boeen 60" ist eine
+Wiederholung, „20→60" gefolgt von „60→85" sind zwei echte Informationen. Die
+Ausloese-Schwelle (`threshold`) kommt bewusst NICHT mit — sie steht in der
+Trip-Konfiguration, nicht im Ereignis-Protokoll.
+
+**E2 — beide Felder sind OPTIONAL, nicht immer beide gefuellt.** Ein Eintrag ohne
+Wert-Feld bedeutet „kein Wert erhebbar", NIEMALS „Wert 0" — eine K1-Auswertung darf beide
+Faelle nie gleichsetzen. Konkret pro Ausloeser:
+
+| Ausloeser | `value` | `previous_value` |
+|---|---|---|
+| Vorhersage-Aenderung (`WeatherChange`) | `new_value` der schwerwiegendsten Aenderung | `old_value` derselben Aenderung |
+| Korridor-Treffer (`CorridorHit`, toter Pfad, E4) | `value` | fehlt (ein `CorridorHit` hat keinen Vorwert) |
+| Radar-Nowcast (`register_pairs_for_nowcast()`) | fehlt | fehlt |
+
+Radar-Nowcast bleibt strukturell ohne Messwert: „Gewitter zieht auf" ist dieselbe Aussage,
+unabhaengig von der Staerke — ein erfundener Wert waere schlechter als keiner (PO-Entscheid).
+Kein Eingriff in `trip_alert.py`/`compare_radar_alert.py` fuer diesen Pfad.
+
+**E3 — Mehrfachtreffer: EIN Eintrag je Groesse, der Extremwert gewinnt, der Wert bleibt
+ausserhalb des Dedupe-Schluessels.** Loest dieselbe Groesse in einem Lauf mehrfach aus
+(z.B. Boeen auf zwei Etappen), bleibt es bei EINEM Register-Eintrag (unveraendert AC-7).
+Protokolliert wird der Wert der `WeatherChange` mit dem groessten `abs(delta)` — bei
+gleicher Groesse gilt dieselbe Schwelle, groesstes `abs(delta)` ist damit deckungsgleich mit
+der hoechsten `ChangeSeverity`. Bei Gleichstand entscheidet stabile Sortierung nach
+`segment_id`, damit das Ergebnis reproduzierbar ist. **Der Wert wird NICHT Teil des
+Dedupe-Schluessels** — `_norm_pairs()` dedupliziert weiterhin ausschliesslich ueber
+`(metric_id, aggregation)`; sonst zerfiele die Buendelung an Fliesskomma-Rauschen und AC-7
+waere gebrochen.
+
+**E4 — der tote Korridor-Pfad wird mitgezogen.** `register_pairs_from_corridor_hits()` hat
+heute keinen Produktiv-Aufrufer (nur `alert_log.py:84`, `tests/tdd/test_alert_log_metrics.py`
+— Symmetrie zu ADR-0043/#1460 P1a), bekommt aber ebenfalls die Wert-Durchreichung:
+`CorridorHit.value` → `value`; `CorridorHit.bound` bleibt draussen (das ist die Schwelle,
+s. E1). Ein `CorridorHit` hat keinen Vorwert, `previous_value` entfaellt dort strukturell.
+
+**Betroffene Funktionen:**
+
+- `_norm_pairs()` — nimmt weiterhin `(metric_id, aggregation)`-Tupel fuer die Dedupe-Menge
+  entgegen; der Wert wird DANEBEN, nicht IM Tupel gefuehrt (separate Zuordnung
+  Register-Paar → Extremwert vor der Deduplizierung).
+- `register_pairs_from_changes()` — ermittelt je Register-Paar zusaetzlich `value`/
+  `previous_value` aus der `WeatherChange` mit dem groessten `abs(delta)` (E3), stabil
+  sortiert nach `segment_id` bei Gleichstand.
+- `register_pairs_from_corridor_hits()` — reicht `CorridorHit.value` als `value` durch,
+  `previous_value` bleibt fuer diesen Pfad immer unbesetzt (E4).
+- Schreibstelle in `append_entry()` (`:226-229`) — serialisiert `value`/`previous_value`
+  je Metrik-Dict NUR, wenn vorhanden (kein `null`, kein `0` als Platzhalter).
+
+**Ausdruecklich UNVERAENDERT bleibt:**
+
+- Die Leseseite `read_undelivered()` (`:387ff`, Gruppierung `:444-460`)/`UndeliveredIncident.metrics` bleibt
+  zweigliedrig `tuple[tuple[str, str], ...]` — die neuen Wert-Felder erreichen den
+  Mail-Renderer NICHT. Damit bleibt die Zusicherung #1503/#1474 („ordinale Groessen nie als
+  Zahl anzeigen") unberuehrt, obwohl die Gewitterstufe intern als Rang (`thunder_ordinal()`)
+  protokolliert wird — ein spaeterer Umbau haertet sonst den falschen Pfad.
+- `append_suppressed_entry()` schreibt weiterhin `"metrics": []` — zum Gate-Zeitpunkt ist
+  nichts erkannt, ein erfundener Wert waere schlimmer als keiner.
+- Radar-Nowcast (`register_pairs_for_nowcast()`) — bleibt bei `is_convective: bool`, kein
+  Wert im Signaturpfad (s.o.).
+- Amtliche Warnungen (`hazards_from_official_alerts()`) — tragen weiterhin `hazards`, kein
+  `metrics`-Eintrag (O1-Grenze).
+- Rein additiv, keine Migration: Alt-Eintraege ohne `value`/`previous_value` bleiben
+  unveraendert lesbar (Roundtrip).
+- Go liest `metrics` nicht (`internal/store/log.go`) — keine Go-Aenderung noetig.
+
+**Nachzuziehende Fundstelle:** Die Docstring-Aussage in
+`src/output/renderers/email/undelivered_hint.py:89-91` („das Protokoll haelt ohnehin nur
+das Register-Paar fest, keinen Messwert, Spec v1.1 AC-15") wird durch #1954 falsch — beim
+Implementieren zu korrigieren (das Protokoll haelt jetzt optional einen Wert, die
+Leseseite gibt ihn nur weiterhin nicht an den Renderer weiter).
 
 ## Expected Behavior
 
@@ -721,6 +816,73 @@ entscheidet ueber Ziel-Liste bzw. Auslassen (s.o.).
     bleiben, wenn die Lage die Schreibfunktion nie erreicht (Waechter-Falle #1435 E3a).
     Nachgewiesen rot bei entfernter Guard-Klausel, gruen mit ihr.
 
+- **AC-17 (neu in v1.6, #1954 — Wert der Vorhersage-Aenderung):** Given eine
+  Tour-Vorhersage-Aenderung am Boeen-Feld mit `old_value=20.0`, `new_value=60.0` / When der
+  Eintrag geschrieben wird / Then enthaelt das zugehoerige `metrics`-Dict zusaetzlich
+  `"value": 60.0` und `"previous_value": 20.0`.
+  - Test: `WeatherChange(metric="gust_max_kmh", old_value=20.0, new_value=60.0, ...)` durch
+    `check_and_send_alerts()` schleusen, den neuesten Eintrag pruefen.
+
+- **AC-18 (neu in v1.6, #1954 — Extremwert bei Mehrfachtreffer):** Given zwei
+  `WeatherChange`-Objekte fuer dieselbe Groesse in einem Lauf (`abs(delta)` unterschiedlich
+  gross) / When protokolliert wird / Then entsteht **EIN** Register-Eintrag fuer diese
+  Groesse, dessen `value`/`previous_value` von der `WeatherChange` mit dem groessten
+  `abs(delta)` stammen — nicht von der zuerst oder zuletzt uebergebenen.
+  - Test: zwei `WeatherChange` mit `metric="gust_max_kmh"`, unterschiedlichem `delta`, durch
+    `register_pairs_from_changes()`/`check_and_send_alerts()` schleusen; Eintragszahl bleibt
+    1 (AC-7 unveraendert), `value` entspricht dem groesseren `abs(delta)`.
+
+- **AC-19 (neu in v1.6, #1954 — Wert nicht Teil des Dedupe-Schluessels):** Given zwei
+  `WeatherChange`-Objekte derselben Groesse mit fast gleichem, aber nicht identischem Wert
+  (z.B. `new_value=59.9` und `new_value=60.1`) / When protokolliert wird / Then bleibt es bei
+  **EINEM** Register-Eintrag (kein Zerfall in zwei Eintraege durch Fliesskomma-Rauschen).
+  Given umgekehrt zwei verschiedene Groessen mit unterschiedlichen Werten / When
+  protokolliert wird / Then bleiben es **ZWEI** Eintraege — sie kollabieren nicht.
+  - Test: `register_pairs_from_changes()` mit den beiden Szenarien aufrufen, Eintragszahl in
+    `metrics` pruefen.
+
+- **AC-20 (neu in v1.6, #1954 — Nowcast bleibt ohne Wert):** Given ein Radar-Alarm mit
+  `is_convective=True` / When protokolliert wird / Then enthaelt das zugehoerige
+  `metrics`-Dict WEDER den Schluessel `value` NOCH `previous_value` — die Felder fehlen
+  vollstaendig, sie sind nicht auf `0`/`null` gesetzt.
+  - Test: `check_radar_alerts()` ueber die vorhandene DI-Naht
+    `RadarNowcastService(frame_source=...)` mit echten `RadarFrame`-Objekten (KEIN Mock —
+    dieselbe Naht nutzt bereits `tests/tdd/test_alert_log_metrics.py`), den Log-Eintrag auf
+    Abwesenheit beider Schluessel pruefen (`"value" not in metrics_dict`).
+
+- **AC-21 (neu in v1.6, #1954 — Bestandsdaten ohne Wert bleiben lesbar):** Given eine
+  bestehende `alert_log.json` mit einem Alt-Eintrag, dessen `metrics`-Dicts nur
+  `metric_id`/`aggregation` tragen (kein `value`, kein `previous_value`, Spec-Stand v1.5)
+  / When ein neuer Eintrag angehaengt wird / Then bleibt der Alt-Eintrag byte-fuer-Feld
+  unveraendert lesbar (Read-Modify-Write, keine Migration).
+  - Test: Datei mit Alt-Eintrag im v1.5-Schema vorab schreiben, `append_entry()` aufrufen,
+    `json.loads()` auf Alt-Eintrag-Feldgleichheit pruefen.
+
+- **AC-22 (neu in v1.6, #1954 — Leseseite bleibt zweigliedrig):** Given ein Alt- oder
+  Neu-Eintrag mit gesetztem `value`/`previous_value` in `alert_log.json` / When
+  `undelivered_incidents()` ihn liest / Then bleibt `UndeliveredIncident.metrics` weiterhin
+  `tuple[tuple[str, str], ...]` — die Wert-Felder werden NICHT extrahiert und erreichen den
+  Mail-Renderer nicht. Damit bleibt die Zusicherung #1503/#1474 unberuehrt.
+  - Test: `read_undelivered()` mit einem Eintrag aufrufen, dessen `metrics`-Dicts `value`
+    tragen; `UndeliveredIncident.metrics` bleibt ein reines `(metric_id, aggregation)`-Tupel
+    ohne Wert-Anteil.
+
+- **AC-23 (neu in v1.6, #1954 — Unterdrueckte Meldung bleibt ohne Wert):** Given
+  `append_suppressed_entry()` wird fuer eine unterdrueckte Nowcast-Meldung aufgerufen / When
+  der Eintrag geschrieben wird / Then bleibt `"metrics": []` — unveraendert gegenueber dem
+  Bestand vor #1954.
+  - Test: `append_suppressed_entry()` aufrufen, `metrics`-Feld des geschriebenen Eintrags auf
+    leere Liste pruefen.
+
+- **AC-24 (neu in v1.6, #1954 — toter Korridor-Pfad traegt Wert ohne Vorwert):** Given ein
+  `CorridorHit` mit `value=45.0` / When `register_pairs_from_corridor_hits()` protokolliert
+  / Then enthaelt das zugehoerige `metrics`-Dict `"value": 45.0`, aber **keinen**
+  `previous_value`-Schluessel (ein `CorridorHit` hat keinen Vorwert) und keinen
+  `bound`-Wert (das ist die Schwelle, kommt nicht mit).
+  - Test: `register_pairs_from_corridor_hits([CorridorHit(..., value=45.0, bound=40.0)])`
+    aufrufen, Ergebnis-Dict auf `value` pruefen, Abwesenheit von `previous_value` und
+    `bound` pruefen.
+
 ## Known Limitations
 
 - **Ruhezeit/Cooldown/Tageslimit bleiben unprotokolliert** (O3) — **fuer den
@@ -783,6 +945,15 @@ entscheidet ueber Ziel-Liste bzw. Auslassen (s.o.).
 
 ## Changelog
 
+- 2026-08-18: **v1.6** — Erweiterung #1954 (Folgebefund B3 aus #1459, Epic #1458): je
+  Register-Eintrag zwei neue OPTIONALE Felder `value`/`previous_value` (PO-Entscheide
+  E1-E4). Vorhersage-Aenderung protokolliert neuen+alten Wert; bei Mehrfachtreffer
+  derselben Groesse gewinnt der Extremwert (groesstes `abs(delta)`), EIN Eintrag bleibt
+  (AC-7 unveraendert), der Wert bleibt ausserhalb des Dedupe-Schluessels; Radar-Nowcast
+  bleibt strukturell ohne Wert; der tote Korridor-Pfad wird mitgezogen (`CorridorHit.value`,
+  ohne Vorwert). Rein additiv, keine Migration, Leseseite bleibt zweigliedrig
+  (`UndeliveredIncident.metrics`), `append_suppressed_entry()` unveraendert. AC-17 bis
+  AC-24 neu, jetzt **24 ACs**.
 - 2026-08-08: O3-Hinweis praezisiert (Issue #1467 Scheibe S3, Doku-Nachzug) — die
   Nicht-Protokollierung von Ruhezeit/Cooldown/Tageslimit ist fuer die beiden
   Nowcast-Pfade (Tour-Radar, Vergleichs-Nowcast) geschlossen (`alert_gate.py`,
