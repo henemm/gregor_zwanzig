@@ -146,11 +146,15 @@ jeder Zahl aus dem Protokoll ausdrücklich mitschreiben, ob sie Zeilen oder Vorf
 
 ### Mengenvergleich (zulässig, aber störanfällig)
 
-| Monat | Zeilen | Alarmtage | Alarme je Alarmtag |
-|---|---|---|---|
-| Juni | 76 | 12 | 6,3 |
-| Juli | 31 | 14 | 2,2 |
-| August (bis 17.) | 50 | 16 | 3,1 |
+| Monat | Zeilen | Vorfälle | Alarmtage | Vorfälle je Alarmtag |
+|---|---|---|---|---|
+| Juni | 76 | 75 | 12 | **6,2** |
+| Juli | 31 | 31 | 14 | 2,2 |
+| August (bis 17.) | 50 | 50 | 16 | 3,1 |
+
+*Gezählt wird in **Vorfällen**, nicht in Zeilen (Messfalle M2). Nur im Juni fallen zwei Zeilen
+desselben Empfängers ins gleiche 2-Minuten-Fenster; in Juli und August sind Zeilen und Vorfälle
+deckungsgleich.*
 
 **Kein Trend.** Die Schwankung folgt Wetter- und Tourenlage, nicht der Liefer-Treppe des
 Epics — der stärkste Rückgang (Juni→Juli) liegt einen ganzen Monat **vor** der ersten Scheibe.
