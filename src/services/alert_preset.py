@@ -22,6 +22,12 @@ Schwellwert-Tabelle:
     fresh_snow              delta ↑              20          8         2
     cape                    delta ↑            1200        600       200
     visibility   threshold_crossing ↓           500       1000      3000
+    thunder_onset           delta (h)             2/4       1/3       1/2
+    precipitation_heavy_onset delta (h)           2/4       1/3       1/2
+
+Die beiden Beginn-Zeilen tragen ZWEI Schwellen je Stufe (frueher/spaeter,
+Issue #1468) — die Tabelle fuehrt die schaerfere („frueher"), das Paar steht
+in ONSET_SHIFT_BOUNDS.
 """
 from __future__ import annotations
 
@@ -61,6 +67,12 @@ _PRESET_TABLE: Final[list[tuple]] = [
     (AlertMetric.FRESH_SNOW,           AlertRuleKind.DELTA,              20,     8,     2),
     (AlertMetric.CAPE,                 AlertRuleKind.DELTA,            1200,   600,   200),
     (AlertMetric.VISIBILITY,           AlertRuleKind.THRESHOLD_CROSSING, 500,  1000,  3000),
+    # Issue #1468: Beginn-Verschiebung in STUNDEN. Die Spalte traegt die
+    # Schwelle fuer den VORGEZOGENEN Beginn (die schaerfere Richtung, siehe
+    # ONSET_SHIFT_BOUNDS) -- sie ist die Zahl, die der Alarme-Reiter als
+    # "Δ ≥ N h" anzeigt.
+    (AlertMetric.THUNDER_ONSET,        AlertRuleKind.DELTA,               2,     1,     1),
+    (AlertMetric.PRECIPITATION_HEAVY_ONSET, AlertRuleKind.DELTA,          2,     1,     1),
     # Issue #889 / ADR-0010: HUMIDITY ist Vorboten-Metrik — kein Preset-Alert mehr.
 ]
 
@@ -108,6 +120,29 @@ ORDINAL_LEVEL_BOUNDS: Final[dict[str, tuple[ThunderLevel, ThunderLevel]]] = {
 # Metriken, fuer die die Stufe als Niveau statt als Sprunggroesse gilt.
 ORDINAL_LEVEL_METRICS: Final[frozenset[str]] = frozenset({
     AlertMetric.THUNDER_LEVEL.value,
+})
+
+# ───────────── Issue #1468: Beginn-Verschiebung, ASYMMETRISCH ───────────────
+#
+# Je Empfindlichkeitsstufe: (frueher_h, spaeter_h) — gemeldet wird, sobald
+# sich der Beginn um mindestens so viele Stunden verschiebt. Zwei Zahlen statt
+# einer, weil ein VORGEZOGENER Beginn gefaehrlicher ist als ein
+# hinausgezoegerter: wer um 15 statt 17 Uhr ins Gewitter laeuft, ist bereits
+# im Gelaende. PO-freigegeben 2026-08-18 (Spec feat_1468).
+#
+#   entspannt: ab 2 h frueher / ab 4 h spaeter
+#   standard:  ab 1 h frueher / ab 3 h spaeter
+#   sensibel:  ab 1 h frueher / ab 2 h spaeter
+ONSET_SHIFT_BOUNDS: Final[dict[str, tuple[int, int]]] = {
+    "entspannt": (2, 4),
+    "standard":  (1, 3),
+    "sensibel":  (1, 2),
+}
+
+# Metriken, deren Stufe als Verschiebungs-Schwellenpaar gilt (Beginn-Alarm).
+ONSET_METRICS: Final[frozenset[str]] = frozenset({
+    AlertMetric.THUNDER_ONSET.value,
+    AlertMetric.PRECIPITATION_HEAVY_ONSET.value,
 })
 
 
@@ -220,7 +255,9 @@ def expand_per_metric_levels(
         )
         # Issue #1460 (P1b): Gefahrenstufen-Groessen tragen die gewaehlte Stufe
         # mit — der Detektor wertet sie als Niveau, nicht als Sprunggroesse.
-        if metric_str in ORDINAL_LEVEL_METRICS:
+        # Issue #1468: Beginn-Groessen ebenso -- dort loest die Stufe das
+        # Schwellenpaar (frueher/spaeter) aus ONSET_SHIFT_BOUNDS auf.
+        if metric_str in ORDINAL_LEVEL_METRICS or metric_str in ONSET_METRICS:
             rule.sensitivity_level = level
         return rule
 

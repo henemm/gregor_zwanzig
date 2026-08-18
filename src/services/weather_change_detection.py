@@ -9,7 +9,7 @@ SPEC: docs/specs/modules/weather_change_detection.md v2.0
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
@@ -52,7 +52,21 @@ _ALERT_METRIC_TO_SUMMARY_FIELD: dict[AlertMetric, str] = {
     AlertMetric.VISIBILITY: "visibility_min_m",
     # Issue #889 / ADR-0010: HUMIDITY ist Vorboten-Metrik — kein Field-Mapping mehr,
     # damit auch alt-persistierte humidity-AlertRules keinen Change-Eintrag erzeugen.
+    # Issue #1468: Beginn-Verschiebung (Zeitpunkt-Felder, eigene Weiche unten).
+    AlertMetric.THUNDER_ONSET: "thunder_onset_utc",
+    AlertMetric.PRECIPITATION_HEAVY_ONSET: "precip_heavy_onset_utc",
 }
+
+# Issue #1468: Summary-Felder, die einen ZEITPUNKT tragen statt eines
+# Messwerts. Sie duerfen NIE in den `abs(delta) > threshold`-Zweig geraten
+# (dort verglichen sich timedelta und float, TypeError) -- `detect_changes()`
+# zweigt sie vor der Delta-Rechnung in die Beginn-Weiche ab. Abgeleitet aus
+# dem Mapping darueber, damit eine dritte Beginn-Groesse nicht danebengepflegt
+# werden muss.
+_ONSET_SUMMARY_FIELDS: frozenset[str] = frozenset({
+    _ALERT_METRIC_TO_SUMMARY_FIELD[AlertMetric.THUNDER_ONSET],
+    _ALERT_METRIC_TO_SUMMARY_FIELD[AlertMetric.PRECIPITATION_HEAVY_ONSET],
+})
 
 # Delta-Rule metrics → tuple of summary fields (metric-aggregating)
 _ALERT_DELTA_METRIC_TO_FIELDS: dict[AlertMetric, tuple[str, ...]] = {
@@ -96,6 +110,11 @@ _ALERT_METRIC_TO_CATALOG_ID: dict[AlertMetric, tuple[str, ...]] = {
     AlertMetric.WIND_CHANGE: ("wind",),
     AlertMetric.PRECIPITATION_CHANGE: ("precipitation",),
     AlertMetric.VISIBILITY: ("visibility",),
+    # Issue #1468: haengt an denselben Katalog-Groessen wie der Stufen-/
+    # Summen-Alarm -- wer Gewitter nicht beobachtet, will auch keinen
+    # Gewitterbeginn-Alarm (Aktivierungs-Kopplung, Spec Known Limitations).
+    AlertMetric.THUNDER_ONSET: ("thunder",),
+    AlertMetric.PRECIPITATION_HEAVY_ONSET: ("precipitation",),
 }
 
 # Issue #961: VISIBILITY nutzt Threshold-Crossing (cmp="unter"), soll aber NICHT im
@@ -248,6 +267,20 @@ _RULE_SEVERITY_TO_CHANGE_SEVERITY: dict[AlertSeverity, ChangeSeverity] = {
 }
 
 
+def _epoch_seconds(value) -> "float | None":
+    """Issue #1468: `datetime` -> Epochensekunden (float), naiv = UTC.
+
+    Hausnorm ist naive UTC (`ForecastDataPoint.__post_init__`, #1345); ein
+    aware Zeitstempel wird korrekt umgerechnet statt umgedeutet. Nicht-
+    `datetime`-Werte liefern `None` (fail-soft im Alarm-Lauf).
+    """
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.timestamp()
+
+
 def _as_utc(ts: "datetime | None") -> "datetime | None":
     """Naiven Zeitstempel als UTC deuten (Issue #1386).
 
@@ -369,6 +402,7 @@ class WeatherChangeDetectionService:
         absolute_seeded_fields: Optional[set[str]] = None,
         threshold_crossing_rules: Optional[list["AlertRule"]] = None,
         ordinal_levels: Optional[dict[str, str]] = None,
+        onset_levels: Optional[dict[str, str]] = None,
     ):
         """
         Initialize with thresholds.
@@ -400,6 +434,9 @@ class WeatherChangeDetectionService:
         self._threshold_crossing_rules: list["AlertRule"] = list(threshold_crossing_rules) if threshold_crossing_rules else []
         # Issue #1460 (P1b): Felder mit Niveau- statt Delta-Semantik
         self._ordinal_levels: dict[str, str] = dict(ordinal_levels) if ordinal_levels else {}
+        # Issue #1468: Felder mit Beginn-Semantik (Zeitpunkt-Verschiebung,
+        # zwei richtungsabhaengige Schwellen aus `alert_preset.ONSET_SHIFT_BOUNDS`)
+        self._onset_levels: dict[str, str] = dict(onset_levels) if onset_levels else {}
 
     @classmethod
     def from_trip_config(cls, config: "TripReportConfig") -> "WeatherChangeDetectionService":
@@ -451,7 +488,7 @@ class WeatherChangeDetectionService:
         Returns:
             WeatherChangeDetectionService with filtered thresholds
         """
-        from app.metric_catalog import get_metric
+        from app.metric_catalog import ONSET_AGGREGATION, get_metric
         thresholds: dict[str, float] = {}
         for mc in display_config.metrics:
             if not mc.enabled:
@@ -467,7 +504,11 @@ class WeatherChangeDetectionService:
             if metric_def.is_precursor:
                 continue
             threshold = mc.alert_threshold if mc.alert_threshold is not None else metric_def.default_change_threshold
-            for field in metric_def.summary_fields.values():
+            for aggregation, field in metric_def.summary_fields.items():
+                # Issue #1468: Beginn-Felder tragen einen Zeitpunkt und haben
+                # keine Delta-Schwelle (s. get_change_detection_map()).
+                if aggregation == ONSET_AGGREGATION:
+                    continue
                 thresholds[field] = threshold
         return cls(thresholds=thresholds)
 
@@ -499,6 +540,8 @@ class WeatherChangeDetectionService:
         threshold_crossing_rules: list["AlertRule"] = []
         # Issue #1460 (P1b): {summary-field → Empfindlichkeitsstufe} für ordinale Größen
         ordinal_levels: dict[str, str] = {}
+        # Issue #1468: {summary-field → Empfindlichkeitsstufe} für Beginn-Größen
+        onset_levels: dict[str, str] = {}
 
         for rule in rules:
             if not rule.enabled:
@@ -565,7 +608,13 @@ class WeatherChangeDetectionService:
                     # entscheidet das Niveau, nicht die Sprunggroesse.
                     level = getattr(rule, "sensitivity_level", None)
                     if level:
-                        ordinal_levels[field_name] = level
+                        # Issue #1468: Beginn-Felder in ihr eigenes Register --
+                        # dort entscheidet ein RICHTUNGSABHAENGIGES
+                        # Schwellenpaar, nicht eine Niveau-Grenze.
+                        if field_name in _ONSET_SUMMARY_FIELDS:
+                            onset_levels[field_name] = level
+                        else:
+                            ordinal_levels[field_name] = level
                     # Issue #821: Explizite DELTA-Regel überschreibt Seed — das Feld
                     # ist nicht mehr rein-geseedet, darf nicht unterdrückt werden.
                     absolute_seeded.discard(field_name)
@@ -574,6 +623,7 @@ class WeatherChangeDetectionService:
             thresholds=thresholds,
             absolute_rules=absolute_rules,
             ordinal_levels=ordinal_levels,
+            onset_levels=onset_levels,
             absolute_seeded_fields=absolute_seeded,
             threshold_crossing_rules=threshold_crossing_rules,
         )
@@ -627,6 +677,19 @@ class WeatherChangeDetectionService:
 
             # Skip if either is None
             if old_value is None or new_value is None:
+                continue
+
+            # Issue #1468 (E3): DRITTE Weiche -- der BEGINN eines Ereignisses
+            # ist ein Zeitpunkt, kein Messwert. Er wird ueber echte
+            # Zeitspannen verglichen (23:00 -> 01:00 sind 2 h, nicht 22 h
+            # zurueck) und gegen ein RICHTUNGSABHAENGIGES Schwellenpaar
+            # gehalten. Der None-Guard eine Zeile hoeher deckt zugleich den
+            # Fall "Ereignis taucht erstmals auf" ab (AC-6): das meldet die
+            # Stufen-Aenderung, nicht diese Weiche.
+            if metric in _ONSET_SUMMARY_FIELDS:
+                onset_change = self._onset_change(metric, old_value, new_value, new_data)
+                if onset_change is not None:
+                    changes.append(onset_change)
                 continue
 
             # Issue #1592 Scheibe C3: CAPE-Aenderungsalarme rechnen die
@@ -733,6 +796,54 @@ class WeatherChangeDetectionService:
         changes.extend(self._detect_threshold_crossing_changes(old_summary, new_summary, new_data))
 
         return changes
+
+    def _onset_change(
+        self, metric: str, old_value, new_value,
+        new_data: "SegmentWeatherData",
+    ) -> "WeatherChange | None":
+        """Issue #1468: Beginn-Verschiebung -> `WeatherChange` oder None.
+
+        Werte und Schwelle wandern als SEKUNDEN in das `float`-typisierte DTO
+        (`WeatherChange.old_value`/`new_value`/`threshold`). Das ist kein
+        Kunstgriff, sondern die Bedingung dafuer, dass die Rechnung ueberall
+        stimmt: die Differenz zweier Epochensekunden IST die echte Zeitspanne,
+        auch ueber die Kalendergrenze -- und das Melde-Gedaechtnis
+        (`deviation_alert_engine._filter_against_alert_state`) rechnet mit
+        `abs(new_value - last) >= threshold` genau denselben Vergleich, ohne
+        dass es dafuer einen Sonderfall braucht. Die Uhrzeiten selbst baut
+        erst die Projektionsschicht daraus (`project._fmt_onset_at`), weil nur
+        dort die Ortszeit bekannt ist.
+
+        `None`, wenn keine Empfindlichkeitsstufe hinterlegt ist oder die
+        Verschiebung die fuer IHRE RICHTUNG geltende Schwelle nicht erreicht.
+        """
+        from services.alert_preset import ONSET_SHIFT_BOUNDS
+
+        bounds = ONSET_SHIFT_BOUNDS.get(self._onset_levels.get(metric) or "")
+        if bounds is None:
+            return None
+        old_ts, new_ts = _epoch_seconds(old_value), _epoch_seconds(new_value)
+        if old_ts is None or new_ts is None:
+            return None
+        delta = new_ts - old_ts
+        if delta == 0:
+            return None
+        earlier_h, later_h = bounds
+        threshold = float(later_h if delta > 0 else earlier_h) * 3600.0
+        if abs(delta) < threshold:
+            return None
+        return WeatherChange(
+            metric=metric,
+            old_value=old_ts,
+            new_value=new_ts,
+            delta=delta,
+            threshold=threshold,
+            severity=self._classify_severity(abs(delta), threshold),
+            direction="increase" if delta > 0 else "decrease",
+            segment_id=str(new_data.segment.segment_id),
+            # Kein Spitzenwert-Zeitpunkt: der Wert IST bereits ein Zeitpunkt.
+            occurred_at=None,
+        )
 
     @staticmethod
     def _ordinal_severity(old_value, new_value) -> ChangeSeverity:

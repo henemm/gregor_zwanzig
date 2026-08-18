@@ -40,6 +40,17 @@ _ENUM_FIELDS: dict[str, type] = {
     "precip_type_dominant": PrecipType,
 }
 
+# Issue #1468: Felder des Tages-Aggregats, die einen ZEITPUNKT tragen. Sie
+# gehen als ISO-Zeichenkette in den Anker und kommen als naives `datetime`
+# (UTC, Hausnorm) zurueck. Ohne diese Behandlung schluckt `save_alarm_anchor`
+# den Serialisierungsfehler still (`weather_snapshot.py:208`) -- der Anker
+# waere dann GAR NICHT geschrieben und jeder Folgelauf haette nichts zu
+# vergleichen.
+_DATETIME_FIELDS: frozenset[str] = frozenset({
+    "thunder_onset_utc",
+    "precip_heavy_onset_utc",
+})
+
 # Fields that hold Enum values in ForecastDataPoint
 _HOURLY_ENUM_FIELDS: dict[str, type] = {
     "thunder_level": ThunderLevel,
@@ -349,6 +360,8 @@ def _serialize_summary(summary: SegmentWeatherSummary) -> dict:
             continue
         if isinstance(value, Enum):
             result[field_name] = value.name
+        elif isinstance(value, datetime):
+            result[field_name] = value.isoformat()
         else:
             result[field_name] = value
     return result
@@ -368,6 +381,11 @@ def _deserialize_summary(data: dict) -> SegmentWeatherSummary:
             continue
         if key in _ENUM_FIELDS and isinstance(value, str):
             kwargs[key] = _ENUM_FIELDS[key](value)
+        elif key in _DATETIME_FIELDS and isinstance(value, str):
+            try:
+                kwargs[key] = datetime.fromisoformat(value)
+            except ValueError:
+                continue  # unlesbarer Zeitpunkt -> Feld bleibt None
         else:
             kwargs[key] = value
     return SegmentWeatherSummary(**kwargs)

@@ -9,6 +9,7 @@ SPEC: docs/specs/modules/weather_emoji_dni.md v1.0 (DNI-based emoji)
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone, tzinfo
 from typing import List, Optional
 
 import math
@@ -398,6 +399,10 @@ class WeatherMetricsService:
     def compute_basis_metrics(
         self,
         timeseries: NormalizedTimeseries,
+        *,
+        tz: Optional[tzinfo] = None,
+        day_window_start_hour: Optional[int] = None,
+        day_window_end_hour: Optional[int] = None,
     ) -> SegmentWeatherSummary:
         """
         Compute 8 basic hiking metrics from timeseries.
@@ -414,6 +419,12 @@ class WeatherMetricsService:
 
         Args:
             timeseries: Weather timeseries from provider
+            tz: Ortszeit-Zone fuer die Beginn-Felder (Issue #1468, E2). Ohne
+                Angabe gilt UTC.
+            day_window_start_hour / day_window_end_hour: Tagesfenster in
+                Ortszeit fuer die Beginn-Felder (Issue #1468, E2). Ohne
+                Angabe gilt der Default 4-19 Uhr
+                (``day_window.resolve_configured_window``).
 
         Returns:
             SegmentWeatherSummary with 8 basis metrics populated
@@ -440,6 +451,11 @@ class WeatherMetricsService:
         )
         hail_flag = self._compute_hail_flag(timeseries)
         visibility_min = self._compute_visibility(timeseries)
+        # Issue #1468 (E1/E2): Beginn der beiden Ereignisse, ORTSZEIT-gefiltert
+        # auf das Tagesfenster -- dieselbe Stunde, die das Briefing zeigt.
+        window = (tz, day_window_start_hour, day_window_end_hour)
+        thunder_onset = self._compute_thunder_onset(timeseries, *window)
+        precip_heavy_onset = self._compute_precip_heavy_onset(timeseries, *window)
 
         # DNI-based emoji aggregation (SPEC: weather_emoji_dni.md)
         dominant_wmo = compute_dominant_wmo(timeseries.data)
@@ -460,6 +476,8 @@ class WeatherMetricsService:
             humidity_avg_pct=humidity_avg,
             thunder_level_max=thunder_max,
             thunder_level_max_signals=thunder_max_signals,
+            thunder_onset_utc=thunder_onset,
+            precip_heavy_onset_utc=precip_heavy_onset,
             hail_flag=hail_flag,
             visibility_min_m=visibility_min,
             dominant_wmo_code=dominant_wmo,
@@ -476,6 +494,8 @@ class WeatherMetricsService:
                 "humidity_avg_pct": "avg",
                 "thunder_level_max": "max",
                 "thunder_level_max_signals": "union_of_max_carriers",
+                "thunder_onset_utc": "onset",
+                "precip_heavy_onset_utc": "onset",
                 "hail_flag": "hail_priority",
                 "visibility_min_m": "min",
                 "dominant_wmo_code": "max_wmo_severity",
@@ -591,6 +611,82 @@ class WeatherMetricsService:
             return None
 
         return round(sum(humidity_vals) / len(humidity_vals))
+
+    # --- Issue #1468: Beginn der beiden Ereignisse (E1/E2) ------------------
+
+    # Starkregen-Schwelle. Dieselbe Zahl und dieselbe Bedeutung wie im
+    # Radar-Nowcast (`radar_service.INTENSITY_HEAVY`) -- "Starker Regen" heisst
+    # auf beiden Wegen dasselbe (PO-Entscheid 2026-08-18, bewusst kein neues
+    # Vokabular).
+    _PRECIP_HEAVY_MMPH = 4.0
+
+    def _onset_of(
+        self, timeseries: NormalizedTimeseries, erreicht,
+        tz: Optional[tzinfo], start_hour: Optional[int], end_hour: Optional[int],
+    ) -> Optional[datetime]:
+        """Erste Stunde IM TAGESFENSTER, fuer die ``erreicht(dp)`` wahr ist.
+
+        Der Fensterschnitt geschieht in ORTSZEIT (``tz``), das Ergebnis bleibt
+        naive UTC (Hausnorm). Ohne diesen Schnitt waere der Beginn eine ANDERE
+        Zahl als die im Briefing (E2: eine nachts erstmals ueberschrittene
+        Schwelle ist nicht der Beginn, ueber den das Briefing schreibt) -- und
+        die Verschiebung, die der Alarm meldete, haette dort nie gestanden.
+        """
+        from app.day_window import hour_in_window, resolve_configured_window
+
+        zone = tz or timezone.utc
+        von, bis = resolve_configured_window(start_hour, end_hour)
+        treffer = [
+            dp.ts for dp in timeseries.data
+            if erreicht(dp) and hour_in_window(
+                (dp.ts if dp.ts.tzinfo else dp.ts.replace(tzinfo=timezone.utc))
+                .astimezone(zone).hour,
+                von, bis,
+            )
+        ]
+        return min(treffer) if treffer else None
+
+    def _compute_thunder_onset(
+        self, timeseries: NormalizedTimeseries, tz: Optional[tzinfo] = None,
+        start_hour: Optional[int] = None, end_hour: Optional[int] = None,
+    ) -> Optional[datetime]:
+        """Beginn des Gewitters: erste Tagesfenster-Stunde mit Stufe >= LOW.
+
+        Schwelle ueber die kanonische Ordnung (``thunder_ordinal``), nicht ueber
+        eine im Code getippte Zahl -- die Ordinale haben sich mit #1474 bereits
+        einmal verschoben.
+        """
+        from output.metric_format import thunder_ordinal
+
+        low = thunder_ordinal(ThunderLevel.LOW)
+        return self._onset_of(
+            timeseries,
+            lambda dp: (dp.thunder_level is not None
+                        and thunder_ordinal(dp.thunder_level) >= low),
+            tz, start_hour, end_hour,
+        )
+
+    def _compute_precip_heavy_onset(
+        self, timeseries: NormalizedTimeseries, tz: Optional[tzinfo] = None,
+        start_hour: Optional[int] = None, end_hour: Optional[int] = None,
+    ) -> Optional[datetime]:
+        """Beginn des Starkregens: erste Tagesfenster-Stunde >= 4,0 mm/h.
+
+        Quelle ist ``precip_rate_mmph``, wo der Provider sie liefert
+        (GeoSphere), sonst ``precip_1h_mm`` (Open-Meteo setzt die Rate hart auf
+        ``None``, ``openmeteo.py:885``). Bei Stundenaufloesung ist mm je Stunde
+        dieselbe Zahl wie mm/h -- GeoSphere setzt die Rate selbst auf den
+        Stundenwert (``geosphere.py:571``). Ohne diesen Rueckfall waere die
+        Starkregen-Haelfte beim Primaerprovider strukturell wirkungslos
+        (PO-Entscheid 2026-08-18).
+        """
+        def erreicht(dp) -> bool:
+            wert = dp.precip_rate_mmph
+            if wert is None:
+                wert = dp.precip_1h_mm
+            return wert is not None and wert >= self._PRECIP_HEAVY_MMPH
+
+        return self._onset_of(timeseries, erreicht, tz, start_hour, end_hour)
 
     def _compute_thunder_level(
         self,
