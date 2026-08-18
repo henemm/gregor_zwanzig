@@ -1775,6 +1775,11 @@ class TripAlertService:
             reachable_channels=result.sent_channels,
             below_threshold_channels=_official_suppressed,
             blocked_reason_codes=result.blocked_reason_codes,
+            # Issue #1944: Herkunft der versendeten Warnungen (ein Mitschnitt
+            # -> `capture_id`, mehrere -> `capture_ids`).
+            **alert_log.capture_kwargs_from_alerts(
+                [a for a, _segment_ids in official_notices]
+            ),
         )
         if result.sent:
             self._record_official_alert_state(trip.id, official_notices)
