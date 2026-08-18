@@ -361,6 +361,12 @@ def test_ac8_primaerauswahl_und_regionstabelle_bleiben_unveraendert():
 
     Gegenprobe: wuerde `_VERTRETUNG` versehentlich in `_REGIONS` verschmolzen
     oder `_REGIONS` umsortiert, wird dieser Test rot.
+
+    #1758: `_ThunderRegion` traegt seither eine 7. Spalte `zusatzquellen`
+    (additive Zweitquellen desselben Gebiets, ADR-0057). Die Erwartung unten
+    schreibt diese Spalte AUSDRUECKLICH mit fest -- statt sie wegzuschneiden --,
+    damit der Waechter auch dann rot wird, wenn jemand die Zusatzquellen-
+    Belegung still verschiebt (z. B. `geosphere` von DE_ALPEN nach EU_REST).
     """
     korsika = thunder_routing.thunder_provider_for(42.0, 9.0)
     zugspitze = thunder_routing.thunder_provider_for(47.42, 10.98)
@@ -368,9 +374,9 @@ def test_ac8_primaerauswahl_und_regionstabelle_bleiben_unveraendert():
     assert zugspitze == "de_direct", zugspitze
 
     erwartete_regionen = (
-        ("FR", 41.3, 51.1, -5.2, 9.7, "fr_direct"),
-        ("DE_ALPEN", 43.17, 58.09, -3.95, 20.35, "de_direct"),
-        ("EU_REST", -90.0, 90.0, -180.0, 180.0, "eu_direct"),
+        ("FR", 41.3, 51.1, -5.2, 9.7, "fr_direct", ()),
+        ("DE_ALPEN", 43.17, 58.09, -3.95, 20.35, "de_direct", ("geosphere",)),
+        ("EU_REST", -90.0, 90.0, -180.0, 180.0, "eu_direct", ()),
     )
     ist_regionen = tuple(tuple(r) for r in thunder_routing._REGIONS)
     assert ist_regionen == erwartete_regionen, ist_regionen
