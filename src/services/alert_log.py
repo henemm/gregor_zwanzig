@@ -102,9 +102,17 @@ def _mit_werten(pair, **werte) -> "MetricValue | None":
 
 
 def _ist_extremer(neu, alt) -> bool:
-    """Groesserer Betrag der Aenderung gewinnt; bei Gleichstand die kleinere
-    `segment_id` (E3). Ein Paar ohne Wert traegt den Betrag 0 und verliert
-    damit gegen jedes Paar mit Wert."""
+    """Groesserer Betrag der Aenderung gewinnt; bei GLEICHEM Betrag entscheidet
+    die kleinere `segment_id` als Textvergleich (E3).
+
+    Das gilt auch beim Betrag 0: ein Paar ohne Wert traegt 0 und verliert
+    deshalb NICHT grundsaetzlich gegen ein Paar mit Wert -- gegen ein
+    wertloses Paar (Nowcast) entscheidet dann allein die `segment_id`, und die
+    ist dort leer. Folgenlos ist das nur, weil wertlose und werttragende Paare
+    an keiner der vier Produktiv-Aufrufstellen in DERSELBEN `metrics`-Liste
+    landen (Vorhersage-Aenderung und Nowcast sind getrennte
+    `append_entry()`-Aufrufe). Wer das aendert, muss diese Regel zuerst
+    schaerfen."""
     r_neu = getattr(neu, "rank", None) or 0.0
     r_alt = getattr(alt, "rank", None) or 0.0
     if r_neu != r_alt:
