@@ -156,6 +156,7 @@ def append_entry(
     reachable_channels: Optional[Iterable[str]] = None,
     below_threshold_channels: Optional[Iterable[str]] = None,
     blocked_reason_codes: Optional[dict[str, str]] = None,
+    capture_id: Optional[str] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -235,6 +236,8 @@ def append_entry(
             blocked_reason_codes,
         ),
     }
+    if capture_id is not None:  # additiv (#1948), Alt-Eintraege unveraendert
+        entry["capture_id"] = capture_id
 
     _append(user_id, "entries" if reachable else "not_delivered", entry)
 
@@ -262,6 +265,7 @@ def append_suppressed_entry(
     reason: str,
     gate_reason: str,
     effective_channels: Iterable[str],
+    capture_id: Optional[str] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag fuer eine VOR dem Versand abgewiesene
     Meldung an (#1467 S3, Aenderung (d)).
@@ -310,7 +314,7 @@ def append_suppressed_entry(
     effective = set(effective_channels or ())
     if not effective:
         return
-    _append(user_id, "not_delivered", {
+    entry = {
         "entity_id": entity_id,
         "entity_type": entity_type,
         "sent_at": datetime.now(tz=timezone.utc).isoformat(),
@@ -327,7 +331,10 @@ def append_suppressed_entry(
             {"channel": channel, "reason": gate_reason}
             for channel in _ALL_CHANNELS if channel in effective
         ],
-    })
+    }
+    if capture_id is not None:  # additiv (#1948), siehe append_entry()
+        entry["capture_id"] = capture_id
+    _append(user_id, "not_delivered", entry)
 
 
 # ---------------------------------------------------------------------------

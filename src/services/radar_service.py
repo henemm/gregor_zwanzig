@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Callable, Optional
 from zoneinfo import ZoneInfo
 
+from services import alert_input_capture
+
 logger = logging.getLogger("radar_service")
 
 # RADOLAN bounding box (DE)
@@ -199,6 +201,7 @@ class RadarNowcastService:
         cached = self._cache.get(lat, lon, region, now=now)
         if cached is not None:
             self._budget_gate.record_cache_hit()
+            _capture_nowcast_frames(lat, lon, cached.frames, cached.source)
             return self._derive_result(cached.frames, cached.source, now=now)
 
         self._budget_gate.record_cache_miss()
@@ -212,6 +215,7 @@ class RadarNowcastService:
         if frames:
             self._cache.put(lat, lon, region, frames, source, now=now)
 
+        _capture_nowcast_frames(lat, lon, frames, source)
         return self._derive_result(frames, source, now=now)
 
     # Human-readable source labels (single source of truth — used by
@@ -643,3 +647,28 @@ def _region_bucket(lat: float, lon: float) -> str:
     if _within_icon_d2(lat, lon):
         return "icon_d2"
     return "global"
+
+
+def _nowcast_source_key(lat: float, lon: float) -> str:
+    """Korrelations-Schluessel fuer Zweig c (#1948, AC-4) -- dieselbe
+    Koordinaten+Region-Formel wie `RadarNowcastCacheService._key`, EINMAL
+    hier definiert fuer Schreib- (`get_nowcast`) und Lesepfad
+    (`trip_alert.py`-Lookup)."""
+    return f"{round(lat, 4)}_{round(lon, 4)}_{_region_bucket(lat, lon)}"
+
+
+def _capture_nowcast_frames(lat: float, lon: float, frames: list, source: str) -> None:
+    """Roher Eingangs-Datensatz VOR `_derive_result` (#1948, AC-3)."""
+    try:
+        alert_input_capture.capture_system(
+            branch="nowcast", source_key=_nowcast_source_key(lat, lon),
+            payload={
+                "source": source,
+                "frames": [
+                    {"timestamp": f.timestamp.isoformat(), "precip_mm_h": f.precip_mm_h}
+                    for f in frames
+                ],
+            },
+        )
+    except Exception as e:
+        logger.warning("radar_service: Eingangs-Mitschnitt fehlgeschlagen: %s", e)

@@ -425,6 +425,27 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      `src/output/renderers/email/compare_html.py`, Slice 7) — darf nur einmal implementiert sein.
      Diese Anzeige-Markierung ist von der oben beschriebenen Alarm-Abschaltung unberührt.
 
+8. **Alarm-Eingangsprotokoll (Issue #1948 Scheibe S1)**
+   - Rollierendes Begleit-Log des ROHEN Eingangszustands jeder Alarm-Meldung
+     (`src/services/alert_input_capture.py`), zusätzlich zum bestehenden
+     Entscheidungs-Log `alert_log.py` (#1459) — reines Beobachtungs-Feature, kein
+     Versand-/Format-Verhalten geändert.
+   - Drei Mount-Punkte: Zweig a (Δ-Alarm, vor `_send_alert` in `trip_alert.py`,
+     nutzerskopiert) · Zweig b (amtliche Warnung, `official_alerts/warn_egress.py::cached_fetch`,
+     System-Ablage) · Zweig c (Radar-Nowcast, vor `_derive_result` in
+     `radar_service.py::get_nowcast`, System-Ablage).
+   - Persistenz: `data/users/<user_id>/alert_input/` (Zweig a) bzw.
+     `data/debug/alert_input/<branch>/` (Zweig b/c, bewusst außerhalb `data/users/` —
+     an diesem Mount-Punkt koordinaten-, nicht nutzerskopiert). Retention 50 Dateien
+     je Ablage-Verzeichnis (Vorlage `WeatherSnapshotService._prune_dated_snapshots`),
+     fail-open (Schreibfehler loggt nur eine Warnung, blockiert nie den Alarmversand).
+   - Korrelation zum Entscheidungs-Eintrag über ein neues, additives, optionales
+     `capture_id`-Feld in `alert_log.append_entry`/`append_suppressed_entry`: Zweig a
+     reicht die `capture_id` direkt durch, Zweig c löst sie per Zeitfenster-Lookup
+     (`latest_capture_id()`) auf; für Zweig b ist die Korrelation in S1 zurückgestellt
+     (an der Aufrufstelle liegt kein provider-spezifischer Cache-Schlüssel vor).
+   - Spec: `docs/specs/modules/alarm_eingangsprotokoll.md`.
+
 **Datenfluss:**
 ```
 check_and_send_alerts(trip, cached_weather)
@@ -461,7 +482,7 @@ send_one_compare_preset() [scheduler_dispatch_service.py, nach Report-Versand]
 
 **Mandantentrennung:** `AlertStateService(user_id=...)`, `TripAlertService(user_id=...)` laden/speichern strikt unter `data/users/{user_id}/alert_state/` resp. `data/users/{user_id}/radar_alert_throttle.json`.
 
-Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`, `docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/_archive/modules/issue_883_acute_danger_override.md`
+Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`, `docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/_archive/modules/issue_883_acute_danger_override.md`, `docs/specs/modules/alarm_eingangsprotokoll.md`
 
 ---
 

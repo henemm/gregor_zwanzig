@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
 from app.models import SegmentWeatherData, WeatherChange
-from services import alert_channel_threshold, alert_daily_limit, alert_log
+from services import alert_channel_threshold, alert_daily_limit, alert_input_capture, alert_log
 from services.alert_briefing_anchor import record_alert_anchor_rejected
 import services.alert_urgency as alert_urgency
 from services.alert_gate import (
@@ -93,6 +93,20 @@ def _as_aware_utc(value: Optional[datetime]) -> Optional[datetime]:
     if value is not None and value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value
+
+
+def _change_to_capture_dict(change: WeatherChange) -> dict:
+    """Rohe Aenderungswerte im ChangePayload-Schema (#1948, AC-1/AC-9)."""
+    return {
+        "metric": change.metric,
+        "old_value": change.old_value,
+        "new_value": change.new_value,
+        "delta": change.delta,
+        "threshold": change.threshold,
+        "severity": change.severity.value,
+        "direction": change.direction,
+        "segment_id": change.segment_id,
+    }
 
 
 @dataclass(frozen=True)
@@ -335,6 +349,13 @@ class TripAlertService:
             f"Detected {len(to_report)} significant changes for trip {trip.id}"
         )
 
+        # Issue #1948 (S1, AC-1): roher Eingangs-Datensatz VOR dem Versand
+        # -- capture_user_scoped() ist selbst fail-open.
+        capture_id = alert_input_capture.capture_user_scoped(
+            self._user_id, entity_type="trip", entity_id=trip.id,
+            payload={"changes": [_change_to_capture_dict(c) for c in to_report]},
+        )
+
         # Issue #1916 (AC-1..AC-4): Referenz-Zeitpunkt der TATSAECHLICH
         # verglichenen Vergleichsbasis (nicht der aktuelle Abrufzeitpunkt) —
         # sichtbar im Alarm-Footer statt des generischen Texts.
@@ -377,6 +398,7 @@ class TripAlertService:
             reachable_channels=notif_result.sent_channels,
             below_threshold_channels=self._last_below_threshold_channels,
             blocked_reason_codes=notif_result.blocked_reason_codes,
+            capture_id=capture_id,
         )
         delivered = notif_result.sent
         if not delivered:
@@ -1328,6 +1350,13 @@ class TripAlertService:
             # `append_entry()` selbst (D4). `result` traegt hier bereits die
             # NotificationResult — die Nowcast-Auswertung steckt im Request.
             # `effective_channels` bleibt ROH (rote Linie #638).
+            # Issue #1948 (S1, AC-4): Korrelation ueber denselben
+            # Koordinaten-Schluessel wie get_nowcast() (Zeitfenster =
+            # Radar-Cache-TTL, 300s Default).
+            from services.radar_service import _nowcast_source_key
+            _nowcast_capture_id = alert_input_capture.latest_capture_id(
+                "nowcast", _nowcast_source_key(lat, lon), max_age=300.0,
+            )
             alert_log.append_entry(
                 self._user_id, entity_id=trip.id, entity_type="trip",
                 changes_count=1,
@@ -1341,6 +1370,7 @@ class TripAlertService:
                 reachable_channels=result.sent_channels,
                 below_threshold_channels=_radar_suppressed,
                 blocked_reason_codes=result.blocked_reason_codes,
+                capture_id=_nowcast_capture_id,
             )
             delivered = result.sent
             if not delivered:
