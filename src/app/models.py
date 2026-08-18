@@ -839,7 +839,7 @@ class UnifiedWeatherDisplayConfig:
           - None  -> fall back to global enabled
         For other report_types: return only globally enabled metrics.
         """
-        return _filter_metrics_by_report_type(self.metrics, report_type)
+        return _sorted_by_layout(_filter_metrics_by_report_type(self.metrics, report_type))
 
     def get_metrics_for_channel(self, channel: str, report_type: str) -> list[MetricConfig]:
         """Liefert die Metriken-Liste für einen Kanal (Issue #429 + #434).

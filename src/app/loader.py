@@ -785,9 +785,15 @@ def _append_derived_metrics(metrics: List["MetricConfig"]) -> List["MetricConfig
         parents = [mc for mc in metrics if mc.metric_id == parent_id]
         if not parents:
             continue
+        # Fix #1947: das Kind uebernimmt bucket/order der Elterngroesse statt
+        # hartcodiert "secondary" (Default-order 0) -- _sorted_by_layout()
+        # (models.py) sortiert primary IMMER vor secondary, ein secondary-Kind
+        # landete deshalb strukturell hinter jeder primary-Metrik, egal wo der
+        # Elter selbst per Kanal-Reihenfolge positioniert war (SMS-Symptom:
+        # FD/FN/FL am Ende statt an der vom Nutzer gezogenen Stelle).
         metrics.append(MetricConfig(
             metric_id=child_id, enabled=any(mc.enabled for mc in parents),
-            bucket="secondary", derived=True,
+            bucket=parents[0].bucket, order=parents[0].order, derived=True,
         ))
     return metrics
 
