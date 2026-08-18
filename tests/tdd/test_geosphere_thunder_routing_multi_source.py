@@ -409,7 +409,7 @@ def test_ac13_geosphere_zusatzabruf_ueberschreitet_zeitbudget_bleibt_fail_soft(
     Zeitgrenze wird fuer den Test auf 0.2s heruntergesetzt (echte Konstante
     `geosphere.THUNDER_FETCH_TIMEOUT_SECONDS` bleibt unberuehrt), der lokale
     Server verzoegert seine Antwort auf 0.5s -- deutlich darueber, aber der
-    Test bleibt trotzdem schnell (< 1s statt der produktiven 5s)."""
+    Test bleibt trotzdem schnell (< 1s statt der produktiven 3s)."""
     monkeypatch.setattr(geosphere, "THUNDER_FETCH_TIMEOUT_SECONDS", 0.2, raising=True)
 
     class _DwdErsatzAc13:
