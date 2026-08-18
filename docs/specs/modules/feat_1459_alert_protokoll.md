@@ -4,7 +4,7 @@ type: module
 created: 2026-08-02
 updated: 2026-08-18
 status: draft
-version: "1.6"
+version: "1.7"
 tags: [alerts, logging, trips, compare, epic-1458]
 ---
 
@@ -526,6 +526,15 @@ unveraendert — `metrics` traegt weiterhin `list[tuple[str, str]]`. Den Wert li
 „Erweiterung #1954"); `append_entry()` liest ihn separat und serialisiert ihn optional ins
 Ziel-Dict. Der Dedupe-/Aufruf-Vertrag der Funktion bleibt unberuehrt.
 
+**Fortschreibung #1944 (v1.7):** `append_entry()` bekommt zwei weitere, additive
+Keyword-Parameter ausserhalb des oben gedruckten Signatur-Blocks — `capture_id: str | None`
+(bereits seit #1948 S1 vorhanden, hier erstmals dokumentiert) und neu `capture_ids:
+Iterable[str] | None`. Beide identifizieren den/die Eingangs-Mitschnitt(e) amtlicher
+Warnungen, aus denen der Eintrag entstand — kein Ersatz fuer `metrics`/`hazards`, sondern
+ein zusaetzlicher Korrelations-Anker. Details, Mehrdeutigkeits-Regel und die
+Ein-versus-Mehrfach-Unterscheidung: „Erweiterung #1944" unten sowie
+`docs/specs/modules/feat_1944_warn_mitschnitt_herkunft.md`.
+
 `sent_channels` = tatsaechlich zugestellt (fuellt `channels_sent`/`channels_not_sent`),
 `reachable_channels` = konfigurierbar (`NotificationResult.sent_channels`, entscheidet
 `entries` vs. `not_delivered`, s. D4-Nachtrag v1.4). Ohne `reachable_channels` gilt
@@ -645,6 +654,30 @@ s. E1). Ein `CorridorHit` hat keinen Vorwert, `previous_value` entfaellt dort st
 das Register-Paar fest, keinen Messwert, Spec v1.1 AC-15") wird durch #1954 falsch — beim
 Implementieren zu korrigieren (das Protokoll haelt jetzt optional einen Wert, die
 Leseseite gibt ihn nur weiterhin nicht an den Renderer weiter).
+
+### Erweiterung #1944 — Herkunfts-Kennung des Mitschnitts
+
+`metrics`/`hazards`/`value` halten fest, WORUM es ging und mit welchem Wert — nicht, aus
+welchem rohen Eingangs-Mitschnitt (`capture_id`, seit #1948 S1,
+`alert_input_capture.capture_system()`) die versendete amtliche Warnung stammt. Ohne diese
+Angabe war eine Vorfallanalyse wie #1929 (zwei byte-identische Meldungen, keine Zuordnung
+moeglich) auf nachtraegliche Zeitfenster-/Namens-Rekonstruktion angewiesen, die #1944 als
+strukturell unzuverlaessig verwirft (`OfficialAlert.source` ≠ Mitschnitt-`service`-Schluessel,
+s. „Verworfene Alternative" in der dedizierten Spec). Volle Herleitung, Rueckkanal-Mechanik
+und AC-1 bis AC-9: `docs/specs/modules/feat_1944_warn_mitschnitt_herkunft.md`. Hier nur der
+fuer dieses Schema-Dokument relevante Ausschnitt:
+
+- **Ein Mitschnitt** → `capture_id: str` am Eintrag (additiv, gleiches Muster wie `value`).
+- **Mehrere Mitschnitte** in einem Versand (mehrere Quellen im Trip- bzw. mehrere Orte im
+  Ortsvergleich-Pfad) → `capture_ids: list[str]` (sortiert, entdoppelt); `capture_id` bleibt
+  dann bewusst UNGESETZT statt eine der Kennungen willkuerlich zu waehlen.
+- **Keine Kennung beobachtbar** (Mehrdeutigkeit an der `base.py`-Naht, fehlgeschlagener
+  Rueckkanal) → weder `capture_id` noch `capture_ids` im Eintrag — Bestandsverhalten, kein
+  `null`-Platzhalter.
+- Betrifft ausschliesslich `reason="official_alert"`-Eintraege (Trip UND Ortsvergleich,
+  Paritaet); `forecast_change`/`nowcast` bleiben unberuehrt. Rein additiv, keine Migration,
+  Alt-Eintraege ohne diese Felder bleiben unveraendert lesbar. Kein sichtbares
+  Alarm-Format aendert sich (SMS/E-Mail/Telegram bit-identisch).
 
 ## Expected Behavior
 
@@ -945,6 +978,13 @@ Leseseite gibt ihn nur weiterhin nicht an den Renderer weiter).
 
 ## Changelog
 
+- 2026-08-18: **v1.7** — Erweiterung #1944 (Scheibe 2 aus #1929, Folge-Ticket zu #1948 S1):
+  `append_entry()` bekommt einen additiven `capture_ids`-Listenparameter fuer den
+  Mehrfach-Mitschnitt-Fall (der bereits seit #1948 S1 vorhandene, bis hierhin undokumentierte
+  `capture_id`-Parameter wird bei dieser Gelegenheit nachdokumentiert). Betrifft nur
+  `reason="official_alert"`, Trip UND Ortsvergleich (Paritaet). Kein sichtbares Alarm-Format
+  aendert sich. Eigene, dedizierte Spec fuer Rueckkanal-Mechanik und ACs:
+  `docs/specs/modules/feat_1944_warn_mitschnitt_herkunft.md`.
 - 2026-08-18: **v1.6** — Erweiterung #1954 (Folgebefund B3 aus #1459, Epic #1458): je
   Register-Eintrag zwei neue OPTIONALE Felder `value`/`previous_value` (PO-Entscheide
   E1-E4). Vorhersage-Aenderung protokolliert neuen+alten Wert; bei Mehrfachtreffer
