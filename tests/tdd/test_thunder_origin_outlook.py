@@ -325,13 +325,22 @@ def test_ac1_html_ausblickzelle_nennt_die_tragende_zutat():
 def test_ac2_klartext_ausblick_traegt_denselben_zusatz():
     """AC-2: Given dieselbe Etappe / When der Klartext-Ausblick derselben Mail
     gerendert wird / Then traegt das Gewitterfeld denselben Zusatz im selben
-    Wortlaut ("⚡leicht · CAPE") — der Klartext fuehrt wie bisher keine
-    Tagesuhrzeit."""
+    Wortlaut, hinter der Onset-Stunde ("⚡leicht@16 · CAPE").
+
+    ⚠️ Abgeloest durch #1493 (2026-08-18): der urspruengliche Wortlaut dieses
+    AC lautete "… — der Klartext fuehrt wie bisher keine Tagesuhrzeit", und
+    die Zusicherung war "⚡leicht · CAPE" OHNE Stunde. #1493 fuehrt die
+    Onset-Stunde im Klartext- und Kompakt-Ausblick ein (Spec
+    ``feat_1493_gewitter_onset_sichtbar.md``, AC-3/AC-4; Ablose-Vermerk in
+    ``feat_1680_s5a_gewitter_herkunft_ausblick.md`` AC-2/AC-13). Unveraendert
+    bleibt die eigentliche Aussage dieses Tests: der Herkunfts-Zusatz "· CAPE"
+    steht HINTER dem Gewitterfeld und ist im Klartext derselbe wie im HTML.
+    """
     bericht = _mail([_ausblick_zeile([_dp(16, cape=400.0, cin=5.0)])])
     zeile = _klartext_ausblick_zeile(bericht.email_plain)
-    assert "⚡leicht · CAPE" in zeile, (
-        f"Der Klartext-Ausblick muss '⚡leicht · CAPE' zeigen (ohne "
-        f"Tagesuhrzeit, wie bisher): {zeile!r}")
+    assert "⚡leicht@16 · CAPE" in zeile, (
+        f"Der Klartext-Ausblick muss '⚡leicht@16 · CAPE' zeigen (Onset-Stunde "
+        f"am Gewitterfeld seit #1493): {zeile!r}")
 
 
 def test_ac3_telegram_trendblock_nennt_die_zutat():
@@ -403,7 +412,9 @@ def test_ac5_herkunft_steht_vor_dem_hagel_zusatz():
         f"Die Herkunft gehoert zwischen Uhrzeit und Hagel-Zusatz, der Hagel-"
         f"Zusatz bleibt wortgleich: {zelle!r}")
     zeile = _klartext_ausblick_zeile(bericht.email_plain)
-    assert "⚡leicht · CAPE · Hagel: ja" in zeile, (
+    # #1493: Onset-Stunde im Klartext-Ausblick; Reihenfolge Herkunft vor
+    # Hagel -- der Gegenstand dieses Tests -- unveraendert.
+    assert "⚡leicht@16 · CAPE · Hagel: ja" in zeile, (
         f"Dieselbe Reihenfolge im Klartext-Ausblick: {zeile!r}")
 
 
@@ -586,6 +597,17 @@ def test_ac11a_compare_ausblick_ohne_metrikauswahl_erbt_die_herkunft():
     Mail seit S1/S3 auch in der Uebersicht und in der Stundentabelle, deshalb
     wird gezielt die Gewitter-ZELLE des Ausblick-Blocks bzw. die Zeile unter
     "3-Tages-Ausblick" gemessen.
+
+    ⚠️ Abgeloest durch #1493 (PO-Entscheid 2026-08-18): die Klartext-Erwartung
+    lautete urspruenglich "⚡leicht · CAPE" — OHNE Tagesuhrzeit, in
+    Uebereinstimmung mit dem damals gueltigen #1680 S5a AC-2. Mit #1493 fuehrt
+    der geteilte Zeilenbau (``render_outlook_plain()``, aufgerufen aus
+    ``comparison.py:360``) die Onset-Stunde, und der Ortsvergleich erbt sie —
+    genau so, wie dieser Test es fuer die Herkunft schon festhaelt: der
+    geteilte Zeilenbau wird nicht trip-seitig abgeschaltet. Die
+    HTML-Zusicherung bleibt unveraendert, die Ausblickzelle fuehrte die Stunde
+    schon immer. Eigenstaendiger Waechter dieser Invariante:
+    ``test_thunder_level_word_and_onset_hour.py::test_ac9_…``.
     """
     html, text = _compare_mail([_dp(16, cape=400.0, cin=5.0)])
     zelle = _gew_zelle(html)
@@ -593,9 +615,9 @@ def test_ac11a_compare_ausblick_ohne_metrikauswahl_erbt_die_herkunft():
         f"Der Compare-Ausblick erbt den geteilten Zeilenbau und muss die "
         f"Herkunft ebenso nennen: {zelle!r}")
     zeile = _klartext_ausblick_zeile(text, _COMPARE_UEBERSCHRIFT)
-    assert "⚡leicht · CAPE" in zeile, (
-        f"Auch der Klartext-Ausblick der Vergleichsmail muss die Herkunft "
-        f"nennen: {zeile!r}")
+    assert "⚡leicht@16 · CAPE" in zeile, (
+        f"Auch der Klartext-Ausblick der Vergleichsmail muss Herkunft UND "
+        f"Onset-Stunde nennen (seit #1493): {zeile!r}")
 
 
 def test_ac11b_compare_ausblick_mit_metrikauswahl_nennt_die_herkunft():

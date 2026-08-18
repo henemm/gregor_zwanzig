@@ -167,6 +167,17 @@ Nachgemessen am Stand `e2b5269b` (== `origin/main`, 2026-08-14):
    keine Herkunft in der Kurzformat-Mail. Eine Ablösung von AC-13 wäre ein
    eigenes Ticket.
 
+   ⚠️ **Nachtrag 2026-08-18 — dieses Ticket ist #1493.** Der
+   Zeichengleichheits-Teil von `feat_1680_s5a` AC-13 ist durch
+   `docs/specs/modules/feat_1493_gewitter_onset_sichtbar.md` AC-4 abgelöst:
+   der Kompakt-Ausblick trägt jetzt die Onset-Stunde im Tagesteil
+   (`Tleicht@16`). Der oben festgehaltene PO-Entscheid selbst gilt
+   unverändert weiter — **kein Herkunfts-Zusatz im Kurzformat**;
+   `thunder_day_origin` wird in `_compact_thunder_field()` nach wie vor nicht
+   gelesen und `test_ac13_kompaktmail_bleibt_zeichengleich` bleibt grün.
+   Ursprünglicher Wortlaut zur Historie: „Diese Zusicherung wird **nicht**
+   abgelöst … Eine Ablösung von AC-13 wäre ein eigenes Ticket."
+
 2. **Darstellungsformat folgt der Klartext-Mail, nicht Telegram.**
    Tagesteil ohne Uhrzeit (Wort + optionaler Peak-Zusatz, wie
    `render_outlook_plain` Z. 373-383, aber ohne den Herkunfts-Zusatz aus

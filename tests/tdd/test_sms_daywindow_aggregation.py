@@ -25,6 +25,10 @@ ist, sondern weil night_weather/Fruehstunden heute GAR NICHT einfliessen.
 Sie sind als GUARD markiert und muessen nach dem Fix gruen BLEIBEN.
 
 Keine Mocks, keine Dateiinhalt-Checks. Reale Fixtures, reale Aufrufe.
+
+#1493: die Metriken-Ueberblick-Pille nennt die Gewitterstufe als Wort
+("Gewitter hoch ab 14:00 ..."). Alle Fixturen dieser Datei fahren
+ThunderLevel.HIGH; SMS-/Telegram-/Kompakt-Erwartungen sind unveraendert.
 """
 from __future__ import annotations
 
@@ -356,7 +360,7 @@ class TestAC1MorningReportShowsArrivalThunder:
         night = _night_weather(day=20, event_hour=14, thunder=ThunderLevel.HIGH)
         report = _report(segments, night, report_type="morning")
 
-        assert "Gewitter ab 14:00 · stärkste 14:00" in report.email_plain, (
+        assert "Gewitter hoch ab 14:00 · stärkste 14:00" in report.email_plain, (
             f"Metriken-Ueberblick-Pille zeigt kein Gewitter um 14:00.\n"
             f"Plain:\n{report.email_plain}"
         )
@@ -391,7 +395,7 @@ class TestAC2EveningReportShowsArrivalThunder:
 
         assert "TH:H@14" in report.sms_text, f"SMS: {report.sms_text}"
         assert "⚡" in compact and "14:00" in compact, f"Kompakt: {compact!r}"
-        assert "Gewitter ab 14:00 · stärkste 14:00" in report.email_plain
+        assert "Gewitter hoch ab 14:00 · stärkste 14:00" in report.email_plain
         assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"
 
 
@@ -444,7 +448,7 @@ class TestAC3CompanionValuesAtSameHour:
         report = _report(segments, night, dc=_dc(rain_probability=True))
         plain = report.email_plain
 
-        assert "Gewitter ab 14:00 · stärkste 14:00" in plain, f"Plain:\n{plain}"
+        assert "Gewitter hoch ab 14:00 · stärkste 14:00" in plain, f"Plain:\n{plain}"
         assert "Regen ab 14:00 · 0.5 mm" in plain, f"Regen-Pille fehlt.\nPlain:\n{plain}"
         assert "Regen-W. >20% ab 14:00 · max 30% (14:00)" in plain, (
             f"Regenwahrsch.-Pille fehlt.\nPlain:\n{plain}"
@@ -529,7 +533,7 @@ class TestAC4AllFiveOutputsAgree:
         assert "⚡" in compact and "14:00" in compact, (
             f"Kurzzusammenfassung widerspricht der Tabelle.\nKompakt: {compact!r}"
         )
-        assert "Gewitter ab 14:00 · stärkste 14:00" in report.email_plain, (
+        assert "Gewitter hoch ab 14:00 · stärkste 14:00" in report.email_plain, (
             "Kopf-Pille widerspricht der Tabelle."
         )
         assert "⚡ hoch" in telegram, f"Telegram widerspricht der Tabelle.\nTelegram:\n{telegram}"
@@ -558,7 +562,7 @@ class TestAC5UpperBoundExclusion:
         assert "TH:-" in report.sms_text, f"SMS: {report.sms_text}"
         assert "TH:H@20" not in report.sms_text, f"SMS: {report.sms_text}"
         assert "⚡" not in compact, f"Kompakt: {compact!r}"
-        assert "Gewitter ab 20:00" not in report.email_plain
+        assert "Gewitter hoch ab 20:00" not in report.email_plain
         assert "kein Gewitter" in report.email_plain
         assert "⚡ kein" in telegram, f"Telegram:\n{telegram}"
         assert "⚡ hoch" not in telegram, f"Telegram:\n{telegram}"
@@ -577,7 +581,7 @@ class TestAC6UpperBoundInclusion:
 
         assert "TH:H@18" in report.sms_text, f"SMS: {report.sms_text}"
         assert "⚡" in compact and "18:00" in compact, f"Kompakt: {compact!r}"
-        assert "Gewitter ab 18:00 · stärkste 18:00" in report.email_plain
+        assert "Gewitter hoch ab 18:00 · stärkste 18:00" in report.email_plain
         assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"
 
 
@@ -603,7 +607,7 @@ class TestAC7LowerBoundBeforeDeparture:
             f"nicht auf 4 abgesenkt.\nSMS: {report.sms_text}"
         )
         assert "⚡" in compact and "5:00" in compact, f"Kompakt: {compact!r}"
-        assert "Gewitter ab 05:00 · stärkste 05:00" in report.email_plain
+        assert "Gewitter hoch ab 05:00 · stärkste 05:00" in report.email_plain
         assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"
 
     def test_03_00_thunder_before_departure_stays_excluded(self):
@@ -646,7 +650,7 @@ class TestAC8WalkingWindowRegressionGuard:
 
         assert "TH:H@9" in report.sms_text, f"SMS: {report.sms_text}"
         assert "⚡" in compact and "9:00" in compact, f"Kompakt: {compact!r}"
-        assert "Gewitter ab 09:00 · stärkste 09:00" in report.email_plain
+        assert "Gewitter hoch ab 09:00 · stärkste 09:00" in report.email_plain
         assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"
 
 

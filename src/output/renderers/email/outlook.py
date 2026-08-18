@@ -369,10 +369,13 @@ def render_outlook_plain(
         # `_dm is None` abstuerzen (TypeError beim Subscript).
         _dm = _thunder_token_parts(tok.get("thunder_day_token", "-")) if branch == "day" else None
         if _dm:
-            thunder_word = f"⚡{_dm[0]}{_dm[2]}"
+            # Issue #1493: die Onset-Stunde (`_dm[1]`) wurde hier bisher
+            # verworfen, obwohl HTML-Ausblickzelle, Telegram und SMS sie
+            # laengst fuehren -- Tag- und Nachtteil sprechen jetzt dieselbe
+            # Grammatik (loest AC-2 aus #1680 S5a ab).
+            thunder_word = f"⚡{_dm[0]}@{_dm[1]}{_dm[2]}"
             # Issue #1680 S5a: derselbe Zusatz wie in der HTML-Zelle, aus
-            # demselben Token -- der Klartext fuehrt wie bisher keine
-            # Tagesuhrzeit (AC-2).
+            # demselben Token.
             _origin = tok.get("thunder_day_origin")
             if _origin:
                 thunder_word += f" · {_origin}"

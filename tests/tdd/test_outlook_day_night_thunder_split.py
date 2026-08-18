@@ -591,7 +591,10 @@ class TestPlainDayWordComesFromDayToken:
         row = self._first_row(render_outlook_plain([
             _stage(hourly_thunder=(_hv(9, 1.0),), thunder="HIGH"),
         ]))
-        assert row.endswith("⚡leicht"), (
+        # #1493: das Tageswort traegt jetzt die Onset-Stunde -- geprueft
+        # bleibt, dass Wort UND Stunde aus dem Tagestoken stammen (Stunde 9),
+        # nicht aus dem Aggregat ("HIGH").
+        assert row.endswith("⚡leicht@9"), (
             f"Wort stammt nicht aus dem Tagestoken: {row!r}"
         )
 

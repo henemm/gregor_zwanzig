@@ -59,7 +59,10 @@ def test_ac5_1474b_nur_leicht_loest_den_uhrzeit_satz_am_standard_trip_aus():
     result = _pill_for_metric("thunder", {}, _dps_only_low(), tz=TZ)
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
-    assert "Gewitter ab" in text, (
+    # #1493: der Satz traegt jetzt das Stufenwort ("Gewitter leicht ab
+    # HH:00") -- die Aussage dieses Tests (Satz erscheint bei reinem LOW)
+    # bleibt, das erwartete Zeichenmuster zieht mit.
+    assert "Gewitter leicht ab" in text, (
         "Der Uhrzeit-Satz muss am Standard-Trip schon bei reinem 'leicht' "
         f"(LOW) erscheinen. Erhalten: {text!r}"
     )
@@ -74,6 +77,7 @@ def test_ac3_mittel_loest_den_uhrzeit_satz_aus():
     result = _pill_for_metric("thunder", {}, _dps_reaching_med(), tz=TZ)
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
-    assert "Gewitter ab" in text, (
+    # #1493: Stufenwort im Satz (siehe oben).
+    assert "Gewitter mittel ab" in text, (
         f"Der Uhrzeit-Satz muss bei erreichtem MED erscheinen. Erhalten: {text!r}"
     )

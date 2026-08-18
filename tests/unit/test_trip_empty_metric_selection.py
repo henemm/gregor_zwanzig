@@ -333,7 +333,8 @@ class TestCreateFlowPayloadRendersExactlySevenDefaults:
         ("Wind >10 km/h", "wind"),
         ("Böen >20 km/h", "gust"),
         ("Regen ab 09:00", "precipitation"),
-        ("Gewitter ab 08:00", "thunder"),
+        # #1493: Stufenwort in der Pille -- Marker bleibt Pillen-exklusiv.
+        ("Gewitter mittel ab 08:00", "thunder"),
         ("0°-Linie 2.500 m", "freezing_level"),
         ("Sicht <2 km", "visibility"),
     )
