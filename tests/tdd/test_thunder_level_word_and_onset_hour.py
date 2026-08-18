@@ -74,6 +74,10 @@ from app.models import (  # noqa: E402
     SegmentWeatherData, SegmentWeatherSummary, ThunderLevel, TripReportConfig,
     TripSegment,
 )
+from app.user import (  # noqa: E402
+    ComparisonResult, LocationResult, SavedLocation,
+)
+from output.renderers.comparison import render_comparison_text  # noqa: E402
 from output.renderers.email.outlook import build_outlook_row  # noqa: E402
 from output.renderers.trip_report import TripReportFormatter  # noqa: E402
 from providers.thunder_enrichment import _fuse_thunder_levels  # noqa: E402
@@ -90,6 +94,7 @@ _MORGEN = date(2026, 8, 21)    # kuenftige Etappe    -> Ausblick-Zeile
 _WOCHENTAG = "Di"
 _AUSBLICK_PLAIN = "Nächste Etappen"      # Klartext-Vollmail
 _AUSBLICK_KOMPAKT = "Naechste Etappen"   # Kompakt-Mail ist ASCII-gefaltet
+_AUSBLICK_COMPARE = "3-Tages-Ausblick"   # im Ortsvergleich gibt es keine Etappen
 _KOMPAKT = TripReportConfig(email_format="compact")
 
 
@@ -274,6 +279,41 @@ def _ausblick_zeile_text(text: str, ueberschrift: str) -> str:
         f"Erwartet genau EINE Ausblick-Zeile unter '{ueberschrift}', "
         f"gefunden: {zeilen!r}")
     return zeilen[0]
+
+
+def _compare_klartext(punkte: list[ForecastDataPoint]) -> str:
+    """Die ECHTE Vergleichsmail (Klartext) fuer EINEN Ort mit Ausblick.
+
+    ``outlook_metrics=None`` = Altbestand ohne gespeicherte Spaltenauswahl;
+    das ist der Token-Pfad, der sich den Zeilenbau (``render_outlook_plain()``,
+    ``comparison.py:360``) mit dem Trip TEILT — genau die Flaeche, um die es
+    in AC-9 geht.
+    """
+    ort = LocationResult(
+        location=SavedLocation(id="ort-a", name="Ort A", lat=_LAT, lon=_LON,
+                               elevation_m=1000, timezone="UTC"),
+        score=50, hourly_data=punkte, outlook_hourly_data=punkte,
+    )
+    ergebnis = ComparisonResult(
+        locations=[ort], time_window=(0, 23), target_date=_MORGEN,
+        created_at=datetime(2026, 8, 20, 4, 1),
+    )
+    return render_comparison_text(ergebnis, outlook_enabled=True,
+                                  outlook_metrics=None)
+
+
+def _gewitterfeld(zeile: str) -> str:
+    """Das Gewitterfeld einer Klartext-Ausblickzeile — ab dem ``⚡`` bis zum
+    Zeilenende (inklusive Peak-, Herkunfts- und Nachtzusatz).
+
+    Ueber das Feld-EINLEITENDE Zeichen abgegrenzt, nicht ueber dessen Inhalt:
+    so bleibt die Sonde auch dann sehend, wenn sich der Feldinhalt aendert —
+    genau das ist hier der Fall. Trip- und Compare-Zeile unterscheiden sich
+    im Vorspann (Etappenname fuehrt nur der Trip, ``show_name=False`` im
+    Compare), das Gewitterfeld selbst muss identisch sein.
+    """
+    assert "⚡" in zeile, f"Kein Gewitterfeld in der Ausblickzeile: {zeile!r}"
+    return "⚡" + zeile.split("⚡", 1)[1].rstrip()
 
 
 def _telegram_ausblick(bericht) -> str:
@@ -550,3 +590,52 @@ def test_ac7_zieldatenluecke_zeigt_weiterhin_gewitter_fragezeichen():
         assert wort not in pille, (
             f"Eine Datenluecke darf nicht in eine Stufenaussage '{wort}' "
             f"verwandelt werden: {pille!r}")
+
+
+# ---------------------------------------------------------------------------
+# AC-9: der Ortsvergleich erbt die Onset-Stunde aus dem geteilten Zeilenbau
+# ---------------------------------------------------------------------------
+
+def test_ac9_ortsvergleich_zeigt_dieselbe_onset_stunde_wie_der_trip():
+    """AC-9 (PO-Entscheid 2026-08-18): Given ein Ortsvergleich mit einem Ort,
+    dessen Tagesgewitter um 14 Uhr beginnt / When die Vergleichsmail gerendert
+    wird / Then traegt die Gewitterspalte ihres Klartext-Ausblicks dieselbe
+    Onset-Stunde wie die Trip-Mail derselben Stundenreihe.
+
+    Warum das kein Nebeneffekt, sondern eine Zusicherung ist: Trip-Ausblick
+    und Compare-Ausblick teilen sich EINEN Zeilenbau — ``comparison.py:360``
+    ruft dasselbe ``render_outlook_plain()`` auf wie ``plain.py``. Die
+    Alternative waere ein Unterdrueckungs-Schalter im geteilten Baustein,
+    also genau das Anti-Pattern, das die Trip/Compare-Teilungs-Invariante
+    ausschliesst (CLAUDE.md; #1170).
+
+    Gemessen wird deshalb die GLEICHHEIT des Gewitterfelds beider Flaechen an
+    DERSELBEN Fixture, nicht zweimal derselbe Text. Zwei getrennte
+    Textpruefungen wuerden gruen bleiben, wenn beide Seiten gemeinsam auf ein
+    drittes, falsches Format abrutschten; die Gleichheits-Assertion faellt
+    dagegen, sobald eine Seite ohne die andere geaendert wird. Die zweite
+    Assertion pinnt zusaetzlich das SOLL-Format — sonst waere der Test heute
+    schon gruen (beide Seiten zeigen heute uebereinstimmend ``⚡mittel (hoch
+    @18) · CAPE``, also uebereinstimmend OHNE Onset-Stunde).
+    """
+    punkte = _fusioniere([_dp(14, tag=_MORGEN, cape=800.0, cin=5.0),
+                          _dp(18, tag=_MORGEN, cape=1500.0, cin=5.0)])
+    stufen = _stufen(punkte)
+    assert stufen[14] is ThunderLevel.MED and stufen[18] is ThunderLevel.HIGH, (
+        f"Vorbedingung: Onset-Stunde 14 Uhr 'mittel', Spitze 18 Uhr 'hoch': "
+        f"{stufen!r}")
+
+    trip = _mail([_etappe(_tagespunkte({}))], [_ausblick_zeile(punkte)])
+    trip_feld = _gewitterfeld(
+        _ausblick_zeile_text(trip.email_plain, _AUSBLICK_PLAIN))
+    compare_feld = _gewitterfeld(
+        _ausblick_zeile_text(_compare_klartext(punkte), _AUSBLICK_COMPARE))
+
+    assert compare_feld == trip_feld, (
+        f"Trip- und Compare-Ausblick teilen EINEN Zeilenbau — ihr "
+        f"Gewitterfeld muss zeichengleich sein. Trip: {trip_feld!r}, "
+        f"Compare: {compare_feld!r}")
+    assert compare_feld == "⚡mittel@14 (hoch @18) · CAPE", (
+        f"Beide Flaechen muessen die Onset-Stunde fuehren — Gleichheit allein "
+        f"genuegt nicht, weil sie auch bei gemeinsam falschem Format bestuende: "
+        f"{compare_feld!r}")

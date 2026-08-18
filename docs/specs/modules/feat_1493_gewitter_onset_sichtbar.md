@@ -2,7 +2,7 @@
 entity_id: feat_1493_gewitter_onset_sichtbar
 type: feature
 created: 2026-08-17
-updated: 2026-08-17
+updated: 2026-08-18
 status: draft
 version: "1.0"
 tags: [thunder, trip, email, onset, issue-1493, issue-1419]
@@ -64,9 +64,13 @@ ausdrücklich ausschließt (siehe „PO-Entscheid" unten).
 ## Estimated Scope
 
 - **LoC:** ~+40/-10 produktiv, plus Tests (weit unter dem Workflow-Limit 250)
-- **Files:** 3 Produktivdateien, 1 Bestandstest, 1 Golden-Fixture, 1 neue
-  TDD-Datei, 2 Fremd-Specs (Ablöse-Vermerk, zählt nicht als Code-LoC)
-- **Effort:** low
+- **Files:** 3 Produktivdateien, 1 neue TDD-Datei, 2 Fremd-Specs
+  (Ablöse-Vermerk, zählt nicht als Code-LoC) — **plus 5 Testdateien und
+  4 Fixture-Dateien mit Bestands-Zusicherungen auf dem alten Format**
+  (Umfang in der RED-Phase erhoben, Liste unter „Known Limitations";
+  die ursprüngliche Schätzung „1 Bestandstest, 1 Golden-Fixture" war zu
+  niedrig). Der Produktiv-Diff bleibt davon unberührt.
+- **Effort:** low für den Produktivcode, mittel durch die Bestands-Ablösung
 
 ## Dependencies
 
@@ -212,10 +216,15 @@ Prosa der Spec ändert sich.
 
 - **AC-6:** Given eine Etappe ohne jedes Gewitter im Tagesfenster / When der
   Empfänger Pille und Ausblick derselben Mail liest / Then zeigen beide
-  weiterhin „kein Gewitter" — ohne erfundenes Stufenwort und ohne eine
+  weiterhin ihre bestehende Leerfall-Aussage — die **Pille** die Prosa
+  „kein Gewitter", die **Ausblickzeile** das Bestandszeichen `⚡–`
+  (`_THUNDER_MAP["NONE"]["plain"]`, kompakt `T-`) — ohne erfundenes
+  Stufenwort und ohne eine
   Uhrzeit, die es mangels Ereignis nicht geben kann.
-  - Test: Fixture ohne Gewitterstunden rendern, Pille und Ausblickzeile auf
-    exakt „kein Gewitter" (kein `@`, kein Stufenwort außer „kein") prüfen.
+  - Test: Fixture ohne Gewitterstunden rendern, Pille auf exakt
+    „kein Gewitter" und Ausblickfeld auf exakt `⚡–` prüfen — in beiden
+    Fällen kein `@` und kein Stufenwort. Gegenprobe gegen die Positivfixture
+    im selben Test, sonst beweist die reine Abwesenheit nichts.
 
 - **AC-7:** Given eine Zieletappe mit Datenlücke zwischen Ankunft und 19 Uhr
   (`has_gap=True`, Ziel-Beobachtungslücke #1331) / When der Empfänger die
@@ -236,17 +245,43 @@ Prosa der Spec ändert sich.
     — Exit 0 UND manuelle/skriptgestützte Sichtprüfung von Stufenwort und
     Onset-Stunde im abgeholten Klartext-Teil.
 
+- **AC-9** (ergänzt 2026-08-18 nach PO-Entscheid, siehe „Known Limitations"):
+  Given einen Ortsvergleich mit einem Ort, dessen Tagesgewitter um 14 Uhr
+  beginnt / When der Empfänger den Klartext-Block „3-Tages-Ausblick" der
+  Vergleichsmail liest / Then trägt dessen Gewitterspalte dieselbe
+  Onset-Stunde in derselben Schreibweise wie die Trip-Mail — Trip und
+  Ortsvergleich sprechen über dasselbe Wetter in einer Grammatik.
+  - Test: Trip-Mail und Vergleichsmail aus **derselben** Fixture rendern und
+    die Gleichheit der beiden Gewitterfelder assertieren, nicht zwei
+    getrennte Textprüfungen. Damit ist die Teilungs-Invariante bewacht: Ein
+    späterer Unterdrückungs-Schalter im geteilten Zeilenbau würde diesen
+    Test rot machen, zwei getrennte Prüfungen nicht.
+
 ## Known Limitations / Risks
 
 - **Renderer-Commit-Gate #811** (`.claude/hooks/renderer_mail_gate.py:42-48`):
   erfasst alle `src/output/renderers/email/*.py`; `helpers.py` fällt
   zusätzlich unter `_SHARED_HELPER_PATTERNS` und verlangt formal auch den
-  Compare-Nachweis. Verifiziert (Grep, 2026-08-17): `compare_html.py` ruft
-  `_pill_for_metric()` **nicht** auf (nur `build_origin_footer`/
-  `render_origin_footer_html` aus `helpers.py`) — der Ortsvergleich ist von
-  dieser Änderung inhaltlich nicht betroffen. Der Compare-Nachweis im Gate
-  ist trotzdem Pflicht, weil das Gate dateibasiert und nicht aufrufbasiert
-  greift; die Erwartung ist ein unveränderter Compare-Mail-Output.
+  Compare-Nachweis.
+  - **Änderung 1 (Stufenwort in der Pille): Ortsvergleich nicht betroffen.**
+    Verifiziert (Grep, 2026-08-17): `compare_html.py` ruft
+    `_pill_for_metric()` **nicht** auf (nur `build_origin_footer`/
+    `render_origin_footer_html` aus `helpers.py`).
+  - **⚠️ Korrektur 2026-08-18 — Änderung 2 (Onset-Stunde im Ausblick):
+    Ortsvergleich IST betroffen.** Die ursprüngliche Fassung dieses
+    Abschnitts behauptete pauschal einen „unveränderten
+    Compare-Mail-Output". Das war falsch: `comparison.py:47/360` importiert
+    und ruft `render_outlook_plain()` — den Klartext-Ausblick, der hier
+    geändert wird. Der Block „3-Tages-Ausblick" der Vergleichsmail führt die
+    Onset-Stunde damit ebenfalls (`⚡leicht@16 · CAPE`). **PO-Entscheid
+    2026-08-18: gewollt so.** Begründung: Trip/Ortsvergleich-Teilungs-
+    Invariante (CLAUDE.md) — die Alternative wäre ein Unterdrückungs-Schalter
+    im geteilten Zeilenbau und damit genau das dort benannte Anti-Pattern.
+    Der Bestandstest
+    `test_thunder_origin_outlook.py::test_ac11a_compare_ausblick_nennt_die_herkunft`
+    wird dadurch rot und ist mit abzulösen; neu bewacht durch **AC-9**.
+  - Der Compare-Nachweis im Gate ist ohnehin Pflicht, weil das Gate
+    dateibasiert und nicht aufrufbasiert greift.
 - **`briefing_mail_validator.py`-Heuristik:** `_check_plausibility()`
   (Zeile 484-505) reklamiert `HH:00`-Stunden außerhalb 06–22 im HTML-Teil.
   Das Tagesfenster der Metrik-Pillen ist aber 04–19 (ADR-0025) — ein sehr
@@ -256,17 +291,33 @@ Prosa der Spec ändert sich.
   voraussichtlich nicht, ist aber nicht auf Nummer sicher geprüft. Muss in
   der Implementierungsphase mit einer 04-/05-Uhr-Fixture gegen den Validator
   gemessen werden, bevor „E2E bestanden" behauptet wird.
-- **Anzupassender Bestandstest:**
-  `tests/tdd/test_thunder_origin_outlook.py::test_ac2_klartext_ausblick_traegt_denselben_zusatz`
-  (Zeile 325-334) assertiert wörtlich „ohne Tagesuhrzeit, wie bisher" — muss
-  auf die neue Erwartung (`⚡leicht@16 · CAPE`) umgestellt werden, nicht
-  stillschweigend grün bleiben.
-- **Golden-Fixture:** `tests/golden/email/outlook-thunder-day-night.txt`
-  Zeilen 5-7 zeigen aktuell `⚡mittel · nachts hoch @0` bzw.
-  `⚡hoch · nachts mittel @22` ohne Tagesuhrzeit. Regeneration ausschließlich
-  über `tests/golden/email/regenerate.py`, **erst nach** inhaltlicher Prüfung
-  der neuen Zeilen (z. B. `⚡mittel@14 · nachts hoch @0`) — nie blind
-  committen.
+- **⚠️ Anzupassender Bestand — Umfang korrigiert 2026-08-18.** Diese Spec
+  veranschlagte ursprünglich „1 Bestandstest, 1 Golden-Fixture". In der
+  RED-Phase erhoben: **5 Testdateien und 4 Fixture-Dateien**. Betroffen sind
+  ausschließlich Exakt-/`endswith`-Zusicherungen auf dem alten Format;
+  `in`-Prüfungen wie `'⚡hoch' in email` bleiben grün, weil `⚡hoch@15` das
+  Teilstück enthält. Der Developer muss diese Liste im Briefing haben, sonst
+  hält er die erwartete Röte für einen eigenen Fehler:
+  - `tests/tdd/test_thunder_origin_outlook.py` — `test_ac2_…` (Z. 325-334,
+    „ohne Tagesuhrzeit, wie bisher"), `test_ac5_…` (Z. 415, Hagel-Variante),
+    `test_ac11a_…` (Z. 605, Ortsvergleich → siehe AC-9)
+  - `tests/tdd/test_outlook_day_night_thunder_split.py` — Z. 594, 606
+    (`endswith("⚡leicht")` / `endswith("⚡mittel")`)
+  - `tests/tdd/test_kompaktmail_ausblick_tagesfenster.py` — Z. 199
+    (`endswith("Tleicht")`), Z. 361 (`_AC5_ALT_ZEILE_SOLL`)
+  - `tests/tdd/test_thunder_origin_four_places.py` — Z. 364, 423, 741
+    (exakter Pillentext, bekommt das Stufenwort)
+  - **Nicht** betroffen: Nacht-Prosa-Block (`test_thunder_night_addendum.py`),
+    `endswith("T-")`-Leerfälle.
+- **Golden-/Referenz-Fixtures** (Regeneration ausschließlich über
+  `tests/golden/email/regenerate.py`, **erst nach** inhaltlicher Prüfung der
+  neuen Zeilen — nie blind committen):
+  - `tests/golden/email/outlook-thunder-day-night.txt` Z. 5-7 — heute
+    `⚡mittel · nachts hoch @0` bzw. `⚡hoch · nachts mittel @22`, künftig
+    z. B. `⚡mittel@14 · nachts hoch @0`
+  - `tests/fixtures/outlook_trip_parity/trip_outlook_show_acc_true.txt`
+    Z. 3, 5 — und das Gegenstück `…_show_acc_false.txt`
+  - `tests/fixtures/trip_outlook_reference/outlook_block.txt` Z. 2, 5
 - **Kein Frontend-/Go-Bezug:** weder `internal/` noch `frontend/` parsen den
   Gewitter-Text oder das Token-Format; keine Migration nötig.
 
@@ -283,3 +334,12 @@ Prosa der Spec ändert sich.
 ## Changelog
 
 - 2026-08-17: Initial spec created
+- 2026-08-18: PO-Freigabe („go")
+- 2026-08-18: **Korrektur nach RED-Befund.** Die Annahme „unveränderter
+  Compare-Mail-Output" war falsch — `comparison.py:47/360` ruft
+  `render_outlook_plain()`, der Ortsvergleich erbt die Onset-Stunde also
+  mit. PO-Entscheid 2026-08-18: gewollt so (Teilungs-Invariante). Daraus:
+  **AC-9** ergänzt, „Known Limitations" richtiggestellt. Zusätzlich
+  AC-6-Wortlaut präzisiert (Ausblick-Leerfall ist `⚡–`, nicht die Prosa
+  „kein Gewitter") und der Umfang des anzupassenden Bestands von „1 Test,
+  1 Fixture" auf 5 Testdateien / 4 Fixture-Dateien korrigiert.
