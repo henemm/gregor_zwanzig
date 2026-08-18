@@ -17,7 +17,7 @@ bbox = [42.981, 5.498, 51.819, 22.102]) ist ERHEBLICH kleiner als das
 liegt in DE_ALPEN, aber ausserhalb des AROME-Gitters -- ohne AC-12 haette
 das System dort bei jedem Punkt einen GeoSphere-Abruf gefeuert, der
 garantiert mit HTTP 400 scheitert. AC-13 begrenzt den zusaetzlichen Abruf
-zeitlich (5s, `geosphere.THUNDER_FETCH_TIMEOUT_SECONDS`), damit ein
+zeitlich (3s, `geosphere.THUNDER_FETCH_TIMEOUT_SECONDS`), damit ein
 langsamer/haengender Zusatzabruf die ohnehin knappe Gesamtlaufzeit (#1839,
 #1539) nicht ueber die Timeout-Grenze schiebt.
 
@@ -65,7 +65,7 @@ from app.models import (  # noqa: E402
     NormalizedTimeseries,
     Provider,
 )
-from providers import geosphere, thunder_enrichment, thunder_routing  # noqa: E402
+from providers import geosphere, thunder_routing  # noqa: E402
 from providers.thunder_enrichment import enrich_thunder  # noqa: E402
 from tests.tdd.test_geosphere_thunder_signals_fetch import _server  # noqa: E402
 
