@@ -1,22 +1,35 @@
 // TDD RED — E2E (Staging), Issue #1727 S5e (B): die Konto-Seite beschriftet
-// den Scheduler-Tick ehrlich und zeigt ihn in der Zone des Browsers.
+// den Scheduler-Tick ehrlich und behauptet keinen Termin, den es nicht gibt.
 //
 // Spec: docs/specs/modules/fix_1727_s5e_sperrcache_anzeige.md
 //   AC-4  sichtbarer Text "Nächste Prüfung" statt "Nächster"
-//   AC-7  zwei Browser-Zonen -> zwei verschiedene Uhrzeiten, je eigenes Kuerzel
+//   AC-9  kein Termin -> "—", kein aus dem Nullwert abgeleitetes Datum
 //
 // WARUM IM BROWSER UND NICHT PER GREP: Die Beschriftung ist statisches Markup
-// (`account/+page.svelte:599`), die Zone entsteht erst beim Formatieren im
-// Browser. Ein Dateiinhalt-Check auf `+page.svelte` ist als Nachweis
-// ausdruecklich untersagt (Spec AC-4; CLAUDE.md "Test-Politik") — er belegt
-// kein Verhalten. Geprueft wird der GERENDERTE Text der Zeile.
+// (`account/+page.svelte:599`), die Formatierung entsteht erst beim Rendern.
+// Ein Dateiinhalt-Check auf `+page.svelte` ist als Nachweis ausdruecklich
+// untersagt (Spec AC-4; CLAUDE.md "Test-Politik") — er belegt kein Verhalten.
 //
-// RED-Grund (gemessen): Staging traegt den alten Stand — die Zeile heisst dort
-// "Nächster:" und formatiert fest in `Europe/Vienna` (vier `timeZone`-Literale,
-// `:269-279`). Beide Zonen liefern deshalb heute denselben String.
+// WAS HIER BEWUSST NICHT GEPRUEFT WIRD: der Zonenwechsel (AC-7). Auf Staging
+// startet der Scheduler nie (`scheduler_gate.go:11-13`, `env=staging`, Issue
+// #1329 — geteiltes Open-Meteo-Kontingent), `/api/scheduler/status` liefert
+// dort fuer alle zehn Jobs dauerhaft `next_run: "0001-01-01T00:00:00Z"`. Es
+// gibt also keinen echten Termin, gegen den zwei Zonen vergleichbar waeren;
+// der lokale E2E-Stack faehrt aus demselben Grund ohne Scheduler
+// (`ci-stack.sh:57`), und Prod-Testlaeufe sind verboten. Ein Stub im Browser
+// hilft nicht, weil die Seite serverseitig laedt (`+page.server.ts:23`).
+// Der Zonenwechsel ist deshalb im Unit-Test belegt (AC-5, konkrete Sollwerte);
+// das Nachholen im Browser ist Issue #1972. Diese Datei behauptet ihn NICHT.
+//
+// Genau dieser Umstand macht aber AC-9 hier besonders gut pruefbar: der
+// Nullwert liegt auf Staging ECHT an, nicht gestellt.
+//
+// RED-Grund (gemessen 2026-08-19): Staging traegt den alten Stand und zeigt
+// "Nächster: 01.01., 01:05" — die alte Beschriftung UND der durchformatierte
+// Nullwert. Die krumme Uhrzeit stammt daher, dass Wien im Jahr 1 eine Ortszeit
+// von +01:05 gegenueber UTC hatte.
 //
 // Ausfuehren (aus frontend/, gegen Staging):
-//   set -a; source /home/hem/gregor_zwanzig/validator.env; set +a
 //   npx playwright test --config=e2e/playwright.konto-naechste-pruefung.staging.config.ts
 
 import { test, expect, type Browser, type Page } from '@playwright/test';
@@ -45,7 +58,11 @@ async function schedulerZeile(page: Page): Promise<string> {
 
 /** Konto-Seite in einem Browser-Kontext mit fest gesetzter Zeitzone oeffnen.
  *  `browser.newContext()` erbt die `use`-Optionen der Config NICHT — Basis-URL,
- *  nginx-Zugang und Anmeldezustand muessen hier explizit mitgegeben werden. */
+ *  nginx-Zugang und Anmeldezustand muessen hier explizit mitgegeben werden.
+ *
+ *  Die Zone wird gesetzt, obwohl AC-7 hier nicht geprueft wird: AC-4 und AC-9
+ *  muessen in JEDER Zone gelten, und ein zonenabhaengiges Ergebnis waere ein
+ *  Befund. */
 async function kontoSeiteInZone(browser: Browser, timezoneId: string): Promise<string> {
 	const ctx = await browser.newContext({
 		baseURL: BASE,
@@ -66,7 +83,7 @@ async function kontoSeiteInZone(browser: Browser, timezoneId: string): Promise<s
 	}
 }
 
-test.describe('#1727 S5e — Konto-Seite: "Nächste Prüfung" in der Browser-Zone', () => {
+test.describe('#1727 S5e — Konto-Seite: ehrliche Beschriftung und kein Fantasie-Termin', () => {
 	test.beforeAll(() => {
 		assertNotProdBaseURL(BASE);
 	});
@@ -86,59 +103,33 @@ test.describe('#1727 S5e — Konto-Seite: "Nächste Prüfung" in der Browser-Zon
 		).not.toMatch(/Nächster:/);
 	});
 
-	test('AC-7: zwei Browser-Zonen zeigen zwei verschiedene Uhrzeiten mit Kuerzel', async ({
+	test('AC-9: ohne echten Termin steht ein Gedankenstrich, kein abgeleitetes Datum', async ({
 		browser
 	}) => {
+		// Staging liefert echt den Go-Nullwert (siehe Kopf) — der Fall ist hier
+		// nicht gestellt, sondern der Normalzustand dieser Umgebung.
 		const wien = await kontoSeiteInZone(browser, 'Europe/Vienna');
 		const newYork = await kontoSeiteInZone(browser, 'America/New_York');
 
-		// Positivkontrolle: ohne echten Zeitwert ist der Vergleich wertlos.
-		// Steht dort "—", liefert der Scheduler kein `next_run` — dann ist das
-		// ein Fehlschlag des Testaufbaus, kein bestandener Nachweis.
 		for (const [zone, wert] of [
 			['Europe/Vienna', wien],
 			['America/New_York', newYork]
 		] as const) {
 			expect(
 				wert,
-				`In ${zone} steht ${JSON.stringify(wert)} — der Scheduler liefert kein ` +
-					`next_run. Ohne Zeitwert ist der Zonenvergleich nicht fuehrbar.`
-			).toMatch(/\d{2}:\d{2}/);
+				`In ${zone}: ${JSON.stringify(wert)} — erwartet "Nächste Prüfung: —". Eine ` +
+					`Uhrzeit an dieser Stelle ist der durchformatierte Nullwert und behauptet ` +
+					`einen Termin, den der Scheduler nie gesetzt hat.`
+			).not.toMatch(/\d{1,2}:\d{2}/);
+			expect(wert, `In ${zone} fehlt der Gedankenstrich: ${JSON.stringify(wert)}`).toContain('—');
 		}
 
-		// Kernzusicherung AC-7 steht bewusst VOR der Beschriftungspruefung: sonst
-		// bricht der Test schon an der noch offenen AC-4 ab und sagt ueber die
-		// Zone gar nichts aus. Die beiden ACs sollen unabhaengig voneinander
-		// diagnostizierbar sein.
-		const uhrzeit = (s: string) => s.match(/\d{2}:\d{2}/)?.[0] ?? '';
+		// Zonenunabhaengig: dieselbe Aussage in beiden Zonen. Waere sie es nicht,
+		// haenge die Nullwert-Erkennung an der Zone — das waere ein Befund.
 		expect(
-			uhrzeit(newYork),
-			`Wien zeigt ${JSON.stringify(wien)}, New York ${JSON.stringify(newYork)} — ` +
-				`gleiche Uhrzeit bedeutet: die Anzeige haengt weiterhin fest an ` +
-				`Europe/Vienna (oder der Zonenwechsel des Testbrowsers ist folgenlos). ` +
-				`Beides ist ein Fehlschlag, kein Grenzfall.`
-		).not.toBe(uhrzeit(wien));
-
-		// Jede Anzeige traegt ihr eigenes Zonenkuerzel, sonst ist die Zahl mehrdeutig.
-		const kuerzel = (s: string) => s.replace(/^.*\d{2}:\d{2}\s*/, '').trim();
-		for (const [zone, wert] of [
-			['Europe/Vienna', wien],
-			['America/New_York', newYork]
-		] as const) {
-			expect(
-				kuerzel(wert),
-				`In ${zone} folgt der Uhrzeit kein Zonenkuerzel (${JSON.stringify(wert)}) — ` +
-					`ohne feste Zone waere die Zahl allein nicht mehr eindeutig.`
-			).not.toBe('');
-		}
-		expect(
-			kuerzel(newYork),
-			`Beide Zonen zeigen dasselbe Kuerzel ${JSON.stringify(kuerzel(wien))} — es ist ` +
-				`nicht das der jeweiligen Browser-Zone.`
-		).not.toBe(kuerzel(wien));
-
-		// Zuletzt: die Beschriftung gilt zonenunabhaengig (AC-4, hier mitgeprueft).
-		expect(wien).toContain('Nächste Prüfung:');
-		expect(newYork).toContain('Nächste Prüfung:');
+			newYork,
+			`Wien zeigt ${JSON.stringify(wien)}, New York ${JSON.stringify(newYork)} — die ` +
+				`Erkennung "kein Termin" darf nicht von der Browser-Zone abhaengen.`
+		).toBe(wien);
 	});
 });

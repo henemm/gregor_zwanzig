@@ -155,3 +155,51 @@ describe('formatNextRun — Zone des Browsers statt fest Wien (#1727 S5e, AC-5)'
 		assert.equal(formatNextRun(''), '—');
 	});
 });
+
+describe('formatNextRun — kein Termin ist kein Datum (#1727 S5e, AC-9)', () => {
+	// Gemessen auf Staging am 2026-08-19: `/api/scheduler/status` liefert dort
+	// fuer alle zehn Jobs `next_run: "0001-01-01T00:00:00Z"` — den Go-Nullwert
+	// fuer `time.Time`, weil der Scheduler bei `env=staging` bewusst nie
+	// startet (`scheduler_gate.go:11-13`, Issue #1329). Die Konto-Seite zeigte
+	// daraufhin "Nächster: 01.01., 01:05": der Nullwert wird durchformatiert,
+	// als waere er ein Termin. Die krumme Uhrzeit stammt daher, dass Wien im
+	// Jahr 1 eine Ortszeit von +01:05 gegenueber UTC hatte.
+	const NULLWERT = '0001-01-01T00:00:00Z';
+
+	test('AC-9: der Go-Nullwert erscheint als Gedankenstrich, nicht als Datum', () => {
+		const wien = mitZone('Europe/Vienna', () => formatNextRun(NULLWERT));
+		const newYork = mitZone('America/New_York', () => formatNextRun(NULLWERT));
+
+		assert.equal(
+			wien,
+			'—',
+			`In Europe/Vienna: ${JSON.stringify(wien)} — erwartet '—'. Ein Wert wie ` +
+				`"01.01., 01:05" ist der durchformatierte Nullwert und behauptet einen ` +
+				`Termin, den es nicht gibt.`
+		);
+		assert.equal(newYork, '—', `In America/New_York: ${JSON.stringify(newYork)} — erwartet '—'.`);
+	});
+
+	test('AC-9: auch andere unplausibel fruehe Zeitstempel gelten als "kein Termin"', () => {
+		// Die Grenze wird am Jahr gezogen, nicht bei `getTime() <= 0`: sonst
+		// rutschten Zeitpunkte zwischen 1970 und heute durch, die ebenso wenig
+		// ein Termin sind. 1970-01-01 ist der Unix-Nullpunkt und liegt exakt
+		// auf der Kante, die eine `<= 0`-Pruefung noch faengt — 1985 nicht mehr.
+		assert.equal(mitZone('Europe/Vienna', () => formatNextRun('1970-01-01T00:00:00Z')), '—');
+		assert.equal(mitZone('Europe/Vienna', () => formatNextRun('1985-06-01T12:00:00Z')), '—');
+	});
+
+	test('Positivkontrolle: ein echter Zeitstempel wird weiterhin formatiert', () => {
+		// Ohne diese Gegenprobe waere AC-9 auch durch eine Grenze erfuellt, die
+		// ALLES verschluckt — die Zeile zeigte dann nie wieder eine Uhrzeit.
+		const echt = mitZone('Europe/Vienna', () => formatNextRun(ISO_FERN));
+
+		assert.notEqual(
+			echt,
+			'—',
+			`Ein echter Termin (${ISO_FERN}) wird als '—' angezeigt — die ` +
+				`Plausibilitaetsgrenze verschluckt gueltige Werte.`
+		);
+		assert.match(echt, /22:30/, `Erwartet die Wiener Uhrzeit 22:30, bekam ${JSON.stringify(echt)}`);
+	});
+});

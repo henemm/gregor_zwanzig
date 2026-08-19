@@ -15,6 +15,10 @@ tags: [official-alerts, massif-closure, account-page, adr-0051]
 - [x] Approved — PO (Henning) am 2026-08-19, Freigabe „go" nach zwei Nachschärfungen:
   Frontend-Zusagen im echten Browser (AC-7), Ausgabe-Zusagen an der zugestellten Nachricht
   inklusive SMS-Kurzstil über Telegram (AC-8).
+- [x] Nachtrag freigegeben — PO (Henning) am 2026-08-19, „go": AC-9 (Nullwert-Termin erscheint als
+  „—") aufgenommen, Zonenkürzel in **beiden** Anzeigefällen. Danach als nicht führbar erkannt und
+  vom PO entschieden: **AC-7 wird zurückgestellt** (Grenze dokumentiert, Nachholen über Issue #1972),
+  weil keine Testumgebung einen echten Termin liefert.
 
 ## Purpose
 
@@ -79,11 +83,21 @@ in der Zeitzone des Nutzers.
    zu allen übrigen Zeitanzeigen im Frontend (`compare/subscriptionHelpers.ts:54-58`,
    `_home/TripKachel.svelte:11`, `+page.svelte:50/141/407`), die schon heute ohne `timeZone`-Angabe
    arbeiten.
-3. **Zonenkürzel sichtbar:** die Uhrzeit-Formatierung (`:271`) erhält `timeZoneName: 'short'`, damit die
-   Zahl trotz wegfallender fester Zone eindeutig bleibt. Erstmalige Einführung dieser Option im
-   Frontend — Darstellung muss WCAG-AA-Kontrast einhalten (Design-Leitprinzipien, `CLAUDE.md`).
+3. **Zonenkürzel sichtbar:** **beide** Ausgabe-Formatierungen (`:271` naher Fall „heute/morgen um …",
+   `:279` ferner Fall „24.12., 22:30") erhalten `timeZoneName: 'short'`, damit die Zahl trotz
+   wegfallender fester Zone eindeutig bleibt. PO-Entscheid 2026-08-19: das Kürzel gilt in beiden Fällen
+   — eine Anzeige ohne Kürzel wäre nach Wegfall der festen Zone mehrdeutig, unabhängig davon, wie weit
+   der Termin entfernt ist. Erstmalige Einführung dieser Option im Frontend — Darstellung muss
+   WCAG-AA-Kontrast einhalten (Design-Leitprinzipien, `CLAUDE.md`).
 4. **Relativlogik unverändert:** `heute um …` / `morgen um …` bleibt erhalten, der Tagesvergleich
    (`:273-278`) rechnet nur noch ohne die feste Zonen-Option statt gegen `Europe/Vienna`.
+4b. 🔴 **Die Uhrzeit wird erst im Browser gesetzt.** Die Konto-Seite wird serverseitig vorgerendert
+   (`account/+page.server.ts`), der Node-Prozess läuft in `Etc/UTC`. Fällt die feste Wiener Zone weg,
+   formatiert also zuerst der Server in UTC; ob der Browser den Text beim Übernehmen zuverlässig
+   ersetzt, ist nicht garantiert. Bliebe der Servertext stehen, sähen **alle** Nutzer UTC statt Wien —
+   schlechter als der heutige Zustand. Die Zeitanzeige wird deshalb nach dem Mounten gesetzt (bis dahin
+   `—`). Das schließt die Serverzone durch die Bauweise aus. Nachweis: Adversary-Prüfpunkt, kein
+   Ausgabetest — ein solcher bräuchte den echten Terminwert, den keine Umgebung liefert (s. AC-7).
 5. 🔴 **Funktion auslagern, damit sie prüfbar wird.** `formatNextRun()` liegt heute als interne Funktion
    im `<script>`-Block von `+page.svelte` und ist damit **von außen nicht aufrufbar** — ein Unit-Test
    kann sie nicht importieren. Sie wandert unverändert in ein eigenes Modul
@@ -178,6 +192,45 @@ in der Zeitzone des Nutzers.
   - 🔴 Die beiden Uhrzeiten **müssen** sich unterscheiden. Wären sie gleich, wäre entweder die feste
     Zone noch drin oder der Zonenwechsel des Testbrowsers folgenlos — beides ist ein Fehlschlag, kein
     Grenzfall.
+  - 🔴 **NICHT FÜHRBAR — als Grenze dokumentiert, nicht erfüllt** (Nachtrag 2026-08-19, gemessen;
+    PO-Entscheid: später nachholen, Nachfolge-Issue #1972). In **keiner** verfügbaren Umgebung existiert
+    ein echter Termin, gegen den zwei Zonen verglichen werden könnten:
+    - **Staging:** `SchedulerEnabled()` (`internal/scheduler/scheduler_gate.go:11-13`) gibt für
+      `env=staging` `false` zurück — Staging teilt sich das tägliche Open-Meteo-Kontingent mit
+      Produktion (#1329). `/api/scheduler/status` liefert dort für alle zehn Jobs dauerhaft
+      `next_run: "0001-01-01T00:00:00Z"`, `last_run: null`.
+    - **Lokaler E2E-Stack:** startet die Go-API ebenfalls mit `GZ_ENV=staging`
+      (`frontend/e2e/ci-stack.sh:57`) — derselbe Ausschluss.
+    - **Produktion:** hätte echte Werte, Testläufe dagegen sind verboten.
+    - Ein Stub im Browser (`page.route()`) hilft **nicht**: die Konto-Seite lädt
+      `/api/scheduler/status` serverseitig (`account/+page.server.ts:23`), der Browser sieht nur
+      fertiges HTML. Den Scheduler im Testaufbau einzuschalten ist ausgeschlossen — es würde echte
+      Briefings und Alarme auslösen.
+    - **Ersatznachweis:** der Zonenwechsel wird in AC-5 mit konkreten Sollwerten belegt (22:30 MEZ
+      gegen 16:30 GMT-5), die Browser-Schicht prüft AC-4 und AC-9 in zwei Zonen. Ein Nachweis auf
+      einem erfundenen Wert wäre kein Nachweis.
+
+  - 🔴 **Anschlussrisiko, das AC-7 mitgenommen hätte** (siehe Implementation Details B.6): Die Seite
+    wird serverseitig vorgerendert, der Server läuft in `Etc/UTC`. Ohne feste Zone formatiert zuerst
+    der Node-Prozess in UTC. Das ist eine **Bauweise-Vorgabe, kein prüfbares AC** — ein Ausgabetest
+    dafür bräuchte denselben echten Zeitwert, den es nirgends gibt. Er wird deshalb bewusst nicht
+    behauptet, sondern durch die Umsetzung ausgeschlossen und ist expliziter Prüfpunkt des Adversary.
+
+- **AC-9:** Given `/api/scheduler/status` liefert für einen Job keinen Termin — in der Praxis den
+  Go-Nullwert `0001-01-01T00:00:00Z`, wie auf Staging dauerhaft der Fall (#1329) —, When die
+  Konto-Seite diese Zeile rendert, Then erscheint „Nächste Prüfung: —" und **kein** aus dem Nullwert
+  abgeleitetes Datum.
+  - Gemessener Ist-Zustand (2026-08-19, Staging): die Seite zeigt „Nächster: 01.01., 01:05". Die
+    Uhrzeit entsteht daraus, dass Wien im Jahr 1 eine Ortszeit von +01:05 gegenüber UTC hatte — der
+    Nullwert wird also als gültiges Datum durchformatiert. `formatNextRun()` prüft heute nur `if (!iso)`
+    und erkennt einen vorhandenen, aber bedeutungslosen Zeitstempel nicht.
+  - Umsetzung: `formatNextRun()` behandelt einen Zeitstempel vor einer Plausibilitätsgrenze wie einen
+    fehlenden Wert. Die Grenze wird am Jahr gezogen (`getFullYear() < 2000`), nicht an `getTime() <= 0`
+    — letzteres ließe Zeitpunkte zwischen 1970 und heute durch, die ebenso wenig ein Termin sind.
+  - Test: Unit-Test gegen `schedulerTime.ts` mit `'0001-01-01T00:00:00Z'` → `'—'`, und Browser-Test
+    (AC-7-Aufbau, Nullwert-Antwort) → die Zeile zeigt „Nächste Prüfung: —".
+  - 🔴 **Positivkontrolle Pflicht:** derselbe Test prüft mit, dass ein *echter* Zeitstempel weiterhin
+    formatiert wird. Eine Grenze, die versehentlich alles verschluckt, wäre sonst grün.
 
 - **AC-8:** Given eine amtliche Waldbrand-Zugangssperre liegt für ein Massiv des Test-Trips vor, When
   ein Briefing über Staging versendet wird, Then erscheint diese Sperre in der **zugestellten E-Mail**,
@@ -214,6 +267,15 @@ in der Zeitzone des Nutzers.
 - **Premium-SMS wird nicht eigens geprüft.** Sie teilt den Kurzstil-Renderweg mit SMS; geprüft wird
   hier der Inhalt, und der ist identisch. Eine Abweichung im Transportweg wäre ein eigener Befund,
   kein Regress dieser Scheibe.
+- **Der Zonenwechsel ist im echten Browser nicht nachweisbar** (AC-7, zurückgestellt auf #1972).
+  Keine verfügbare Umgebung liefert einen echten Termin: Staging und der lokale E2E-Stack fahren beide
+  mit `GZ_ENV=staging` und damit ohne Scheduler (#1329), Produktion ist für Testläufe gesperrt. Ein
+  Browser-Stub scheidet aus, weil die Seite serverseitig lädt. Belegt ist der Zonenwechsel deshalb im
+  Unit-Test mit konkreten Sollwerten (AC-5); im Browser sind Beschriftung (AC-4) und Nullwert-
+  Darstellung (AC-9) belegt. Wer daraus „im Browser verifiziert" macht, überdehnt den Nachweis.
+- **Dass die Serverzone nie sichtbar wird, ist durch die Bauweise sichergestellt, nicht durch einen
+  Test** (Implementation Details B.6) — derselbe fehlende Terminwert macht auch hier jeden
+  Ausgabetest unmöglich.
 - Der eigentliche nächste Versandzeitpunkt je Trip in dessen Ortszeit wird weiterhin **nicht** angezeigt
   — das bleibt ausdrücklich #1969 (PO-entschieden ausgelagert, größerer Umbau).
 - Ob externes Monitoring in `henemm-infra` den bisherigen Label-Text „Nächster" oder das ISO-Feld
@@ -235,6 +297,12 @@ in der Zeitzone des Nutzers.
 ## Changelog
 
 - 2026-08-19: Initial spec created
+- 2026-08-19 (Nachtrag, **erneut freigabepflichtig**): AC-9 ergänzt (Nullwert-Termin erscheint als
+  „—" statt als abgeleitetes Datum) und AC-7 präzisiert (Zeitwert wird per `page.route()` gesetzt,
+  weil Staging nach #1329 dauerhaft keinen Scheduler fährt). Auslöser: beim RED-Lauf gegen Staging
+  gemessen, dass die Zeile dort „Nächster: 01.01., 01:05" zeigt — der durchformatierte Go-Nullwert.
+  PO-Entscheid am 2026-08-19: in diese Scheibe aufnehmen statt eigenes Issue. Zusätzlich entschieden:
+  das Zonenkürzel erscheint in **beiden** Anzeigefällen (nah und fern), nicht nur im nahen.
 
 ## Offene Punkte
 
