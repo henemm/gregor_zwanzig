@@ -72,6 +72,9 @@ S3 hat #1744 AC-5 für Zweig a genauso abgelöst) — oder das Zielbild ist so n
 
 ## Offene Entscheidungsfragen für die Spec
 
+> **Stand Phase 2: alle beantwortet** — siehe PO-Entscheide-Tabelle im Analysis-Teil unten.
+> Der Zielkonflikt oben ist entschieden: der Test wird dokumentiert abgelöst.
+
 1. **Zieht der Regen-Zweig mit?** Konzept nennt nur `TH@15:40`. Ob `R!{min}` ebenfalls auf
    `R@{onset_time}` wechselt, ist nirgends entschieden. Bestimmt, wie viele Tests rot werden.
 2. **Compare-Onset mit genau EINEM Ort nennt den Ort heute gar nicht.** `location_label` bleibt
@@ -124,3 +127,102 @@ Einspeiseweg (S2), erprobt und deterministisch im Kern-Testlauf:
 `POST /api/trips/{trip_id}/alert-preview?user_id=…` mit `{"nowcast_frames": {source, frames[], km_from, km_to}}`
 → Antwort trägt `onset_detected` und das gerenderte `sms`. Der Replay nutzt dasselbe
 `_derive_result` wie der Live-Pfad, keinen Test-Sonderweg.
+
+---
+
+# Analysis (Phase 2)
+
+### Type
+Feature (Format-Konsolidierung innerhalb Epic #1948)
+
+### PO-Entscheide — verbindlich
+
+| # | Frage | Entscheid |
+|---|---|---|
+| 1 | Zieht der Regen-Zweig mit? | **Ja** — `R!{min}` → `R@{onset_time}`, gleiches Muster wie Gewitter |
+| 2 | Segment-Sprache im Kopf? | **Ja** — Zielbild `Ziel: TH@15:40`; `test_kurznachricht_des_nowcasts_nennt_keinen_ort` wird dokumentiert abgelöst |
+| 3 | Ortsvergleich mitheilen? | **Ja**, beide Fälle |
+| 3a | Ein-Ort-Compare (Sonderfall nötig) | **Ja, in S4 mitbauen** — trotz Empfehlung „eigenes Ticket"; PO wählte bewusst |
+| 3b | `+N`-Zähler bei mehreren Orten | **Nein** — die Nachricht wertet nur den führenden Ort aus; ein Zähler verspräche Vollständigkeit, die sie nicht einlöst |
+
+### Technical Approach
+
+Neuer Funktionskörper (`render.py:422`), Muster übernommen vom Trip-Δ-Kopf (`render.py:916`):
+
+```python
+token = f"TH@{e.onset_time}" if e.is_convective else f"R@{e.onset_time}"
+head = _ascii_alert_location(_location_of((e,), _onset_label(msg, e)))
+body = f"{head}: {token}"
+```
+
+Begründung der Bausteinwahl:
+- **Nicht** `_km_str_onset(e)` — die unterdrückt `location_label` absichtlich und wird von
+  Telegram/Betreff mitbenutzt (`render.py:416`, `render.py:284`); eine Änderung dort würde
+  ungefragt zwei weitere Kanäle verändern.
+- **Nicht** `_km_str(msg)` — liest `msg.location_label`, das für Onset-Nachrichten von **keinem**
+  Konstruktor je gesetzt wird und damit strukturell immer `None` ist.
+- Ein **lokaler** `_location_of((e,), <label>)`-Aufruf lässt die geteilten Bausteine unangetastet.
+
+### 🔴 Der Ein-Ort-Compare-Sonderfall (PO-Entscheid 3a)
+
+Belegte Ursache: `to_multi_location_onset_alert_message` setzt `location_label` nur bei mehr als
+einem Ort (`project.py:387`, `location_label=location_name if multi else None`); die Invariante ist
+explizit getestet (`test_multi_location_onset_alert.py:351`). Bei genau einem Ort steht der
+Ortsname ausschließlich in `msg.trip_short` (`project.py:392-393`), und `km_from=km_to=0.0`.
+
+Die nötige Fallunterscheidung hängt am Marker `msg.source == "compare-radar"` (`project.py:397`) —
+heute ein Freitext ohne Vertrag. **Härtung statt Hinnahme:** Der Marker wird zu einer benannten
+Konstante (z.B. `COMPARE_RADAR_SOURCE`) angehoben und an Setz- wie Lesestelle darüber referenziert.
+Damit bricht ein Umbenennen sichtbar, statt die Ortsanzeige still auf `km 0–0` zurückfallen zu
+lassen. Ein Wächter-Test muss genau diese stille Rückfall-Situation abdecken.
+
+### Gemessen, nicht vermutet
+
+**Zeichensatz — kein UCS-2-Risiko.** `_ascii_alert_location` (`render.py:989-992`) ruft
+`_strip_pictographs` (entfernt Unicode-Kategorie `So`) **vor** `fold_ascii`:
+
+```
+format_alert_location(None, ['Ziel'], 8, 8)  →  '🏁 Ziel'
+_ascii(...)                                  →  ':checkered_flag: Ziel'   ← falsch, nicht nutzen
+_ascii_alert_location(...)                   →  'Ziel'                    ← richtig
+```
+
+Der Unterschied ist der Grund, warum `_ascii_alert_location` als eigene Funktion existiert. Ein
+Charset-Problem entstünde nur durch Verwechslung der beiden — das gehört als Mutations-Kandidat
+in die Adversary-Runde.
+
+**Längen-Budget — unkritisch** (Limit 140, harter Endschnitt `body[:limit]`):
+
+| Szenario | alt | neu | Δ |
+|---|---|---|---|
+| Trip mit Segmentnamen | `km8-8: TH!8` (11) | `Ziel: TH@15:40` (14) | +3 |
+| Trip, km-Rückfall | `km5-18: R!12` (12) | `km 5-18: R@14:35` (16) | +4 |
+| Compare, kurzer Ortsname | `Vergleich km5-18: R!12` (22) | `Vergleich: R@14:08` (18) | **−4** |
+| Compare, 35-Zeichen-Ortsname | (Name auf 16 gekappt, 27) | **ungekappt** (45) | +18 |
+
+Geerbtes Restrisiko: `format_alert_location` Stufe 1 kappt den Ortsnamen **nicht** — der Trip-Δ-Pfad
+hat dieselbe Lücke (`render.py:916`). Wird nicht in S4 gelöst, aber in der Spec benannt.
+
+### Scope Assessment
+
+- Dateien: 1 Produktivdatei (+1 für die Marker-Konstante) + 8 Testdateien
+- Geschätzte LoC: ~30–40 Produktiv, ~90–130 Test → **~120–170**, unter dem Limit 250
+- Risk Level: **MEDIUM** — Kernlogik eines kritischen Nutzerpfads, aber eng umgrenzte Funktion
+
+Zwei Posten mit echter Schätzunsicherheit: `test_alert_sms_location_positions.py` und
+`test_alert_preview_nowcast_replay.py` prüfen künftig einen **wanduhr-abhängigen** Wert
+(`onset_time` statt Countdown-Minuten) und brauchen Zeitfenster-Toleranz statt Goldstring.
+
+### Reihenfolge
+
+1. TDD-RED gebündelt in **einem** neuen Testmodul (neue Zusicherung: `TH@`/`R@`-Form,
+   Segment-Kopf, GSM-7-Reinheit, Ein-Ort-Compare nennt den Ort)
+2. `_render_sms_onset` + Marker-Konstante implementieren
+3. Bestandstests fortschreiben, aufsteigend nach Komplexität: statische Goldstrings zuerst
+   (`test_issue_919…`, `test_multi_location_onset_alert`, `test_952…`), dann der Pendant-Wächter
+   `test_alert_sms_segment_head.py` AC-12 (**Differenzlogik erhalten, nicht nur Strings tauschen**),
+   dann die beiden zeitabhängigen, zuletzt die bewusste Ablösung in
+   `test_alert_location_vocabulary.py:573` mit Begründung im Docstring.
+
+### Open Questions
+- keine offen — alle fünf Entscheidungsfragen sind PO-beantwortet (Tabelle oben).
