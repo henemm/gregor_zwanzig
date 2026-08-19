@@ -93,6 +93,28 @@ Positivkontrolle je Tuer: derselbe Suchweg muss eine Kennung finden, die dort
 vorkommen MUSS (Tuer 1: temperature ueber temp_min_c). Ohne sie waere der Test
 auch gruen, wenn er am falschen Ort sucht.
 
+Nach den Adversary-Runden zusaetzlich (beide waren Luecken, keine Haertung):
+
+Tuer 1b  get_compare_metrics()             -> die ANTWORT des Endpoints, nicht
+         (api/routers/compare.py)             nur die Katalogfunktion. Zwischen
+                                              Funktion und Antwort passt eine
+                                              Aenderung (Runde 1, F001).
+                                              Geprueft werden ZWEI Felder:
+                                              `metric_id` UND der Zusatz
+                                              '(Gehzeit)' in `label` -- die
+                                              Bedienflaeche baut ihre Auswahl
+                                              aus key/label, `metric_id` ist
+                                              dort optional (Runde 2, F-ADV2-1).
+                                              Der Beschriftungs-Weg ist bewusst
+                                              UNABHAENGIG von der bewachten
+                                              Liste.
+
+Menge    Die vier Kennungen stehen nicht nur als Literal im Test. Die erwartete
+         Menge wird aus dem Zentralregister ABGELEITET (alle Eintraege mit
+         '(Gehzeit)' im label_de) und gegen das Literal verglichen, Differenz in
+         BEIDE Richtungen. Ohne das liess sich die bewachte Menge still von vier
+         auf zwei schrumpfen (Runde 1, F002).
+
 Mutations-Gegenprobe im Test selbst (Muster des bestehenden Drift-Waechters,
 :428/:463): eine KOPIE des Katalogs bekommt kuenstlich einen Eintrag mit
 metric_id="temperature_day_low"; der Waechter MUSS darauf anschlagen. Nie werden
@@ -168,7 +190,23 @@ die echten Katalog-Listen veraendert.
 
 - Der Wächter schützt gegen **Hinzufügen** der vier Kennungen zum Ortsvergleich. Er schützt nicht
   gegen eine Umbenennung der Kennungen selbst — dann zielt er ins Leere. Bewusst nicht adressiert,
-  weil eine Umbenennung ohnehin breit rot wird.
+  weil eine Umbenennung ohnehin breit rot wird. **Nachtrag Adversary-Runde 3:** Für eine echte
+  Umbenennung gemessen bestätigt (5 Tests rot). **Für einen additiven Klon gilt es nicht:** legt
+  jemand dieselbe Größe unter neuer Kennung mit `summary_fields` an, bleiben alle 33 Tests grün und
+  der Eintrag steht in der Endpoint-Antwort. Fachlich ist das kein Verstoß — der Ortsvergleich hat
+  keine Gehzeit, der Klon liefert den Tagesfenster-Wert —, aber die Begründung „wird ohnehin breit
+  rot" trägt diesen Fall nicht.
+- **Der Wächter bewacht seine Menge, aber nicht seine Quelle.** Stellt jemand die geprüfte Nutzlast
+  von der Endpoint-Antwort zurück auf die Katalogfunktion, ist der Befund F001 aus Adversary-Runde 1
+  wiederhergestellt und **kein Test merkt es**. Die Mengen-Ableitung schützt gegen das Schrumpfen
+  der bewachten Kennungen, nicht gegen das Zurückdrehen der Bezugsquelle. Adversary-Runde 3,
+  Stufe LOW.
+- **Der Beschriftungs-Weg ist ein buchstabengetreuer Textabgleich.** `(gehzeit)`, `(GEHZEIT)` oder
+  `(Gehzeit-Fenster)` laufen durch; ebenso ein Antwort-Eintrag ganz ohne Kennung und ohne den
+  Zusatz. Am Produktivpfad folgenlos, weil der Katalog `entry["metric_id"]` mit eckigen Klammern
+  liest (ein Eintrag ohne Kennung verlässt ihn gar nicht) und die Beschriftung danach aus dem
+  Register abgeleitet wird — beide Prüfungen feuern dort zwangsläufig gemeinsam. Gilt nur für einen
+  von Hand in die Endpoint-Antwort geschriebenen Eintrag. Adversary-Runde 3, Stufe LOW.
 - AC-5 prüft Namen, die wie Funktionsaufrufe geschrieben sind (`name()`). Ein Kommentar, der eine
   Funktion in Prosa ohne Klammern nennt, wird nicht erfasst.
 - AC-6 (c) ist nicht maschinell bewacht (siehe dort).
