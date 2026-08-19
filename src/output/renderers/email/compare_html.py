@@ -311,30 +311,32 @@ def _fmt_visibility_overview(v) -> str:
 # Beschriftung wird zur Renderzeit aus dem Register abgeleitet
 # (`derive_row_labels`, s.u.). Nur die Warn-Zeile traegt weiter einen festen
 # Text, weil sie keine Wettergroesse ist.
+# Issue #1848 Scheibe B: "unit" und "decimals" sind aus demselben Grund
+# ENTFALLEN -- das Register fuehrt beide je MetricDefinition, dieselbe
+# Ableitung (`derive_row_labels`) haengt sie an die Zeilen-Kopie. Getippt
+# bleiben hier nur noch die Angaben, die es im Register NICHT gibt: welche
+# Zeilen existieren, ihre Reihenfolge, "aggregation", "sev" und die drei
+# "fmt"-Ausnahmen fuer Nicht-Zahlwerte bzw. die m->km-Umrechnung.
 CV2_METRICS = [
     {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn"},
     {"key": "temp_max", "metric_id": "temperature", "aggregation": "max",
-     "unit": "°C", "sev": _sev_temp},
+     "sev": _sev_temp},
     {"key": "wind_max", "metric_id": "wind", "aggregation": "max",
-     "unit": "km/h", "sev": _sev_wind},
+     "sev": _sev_wind},
     {"key": "precip_sum", "metric_id": "precipitation", "aggregation": "sum",
-     "unit": "mm", "decimals": 1, "sev": _sev_rain},
+     "sev": _sev_rain},
     {"key": "pop_max", "metric_id": "rain_probability", "aggregation": "max",
-     "unit": "%", "sev": _sev_pop},
+     "sev": _sev_pop},
     {"key": "thunder_max", "metric_id": "thunder", "aggregation": "max",
      "fmt": _fmt_thunder, "sev": _sev_thunder},
-    {"key": "sunny_hours", "metric_id": "sunshine", "aggregation": "sum",
-     "unit": "h", "decimals": 1},
-    {"key": "cloud_avg", "metric_id": "cloud_total", "aggregation": "avg",
-     "unit": "%"},
+    {"key": "sunny_hours", "metric_id": "sunshine", "aggregation": "sum"},
+    {"key": "cloud_avg", "metric_id": "cloud_total", "aggregation": "avg"},
     {"key": "uv_max", "metric_id": "uv_index", "aggregation": "max",
-     "unit": "", "sev": _sev_uv},
+     "sev": _sev_uv},
     {"key": "visibility_min", "metric_id": "visibility", "aggregation": "min",
      "fmt": _fmt_visibility_overview, "sev": _sev_visibility},
-    {"key": "snow_depth_cm", "metric_id": "snow_depth", "aggregation": "max",
-     "unit": "cm"},
-    {"key": "snow_new_cm", "metric_id": "fresh_snow", "aggregation": "sum",
-     "unit": "cm"},
+    {"key": "snow_depth_cm", "metric_id": "snow_depth", "aggregation": "max"},
+    {"key": "snow_new_cm", "metric_id": "fresh_snow", "aggregation": "sum"},
     # Issue #1296: vier weitere bis 2026-07-17 STILL verworfene Zeilen (analog
     # #1285). freezing_level ohne "sev" (kein AC verlangt Faerbung, s. Spec
     # Known Limitations). Issue #1377 Scheibe B2: temp_min bekommt
@@ -344,39 +346,31 @@ CV2_METRICS = [
     # Tiefstwert automatisch die Kaelte-Seite. Ohne diese Verdrahtung bliebe
     # die Kaelte-Warnung in der Vergleichsmatrix unsichtbar (AC-5).
     {"key": "temp_min", "metric_id": "temperature", "aggregation": "min",
-     "unit": "°C", "sev": _sev_temp},
+     "sev": _sev_temp},
     {"key": "gust_max", "metric_id": "gust", "aggregation": "max",
-     "unit": "km/h", "sev": _sev_gust},
+     "sev": _sev_gust},
     # Issue #1585: die cape_max-Zeile ist ersatzlos entfallen. Ohne das zeigte
     # ein Alt-Vergleich ohne gespeicherte `active_metrics` (= kein Filter)
     # weiterhin eine CAPE-Zeile -- am Renderer gemessen, nicht vermutet.
-    {"key": "freezing_level", "metric_id": "freezing_level", "aggregation": "min",
-     "unit": "m"},
+    {"key": "freezing_level", "metric_id": "freezing_level",
+     "aggregation": "min"},
     # Issue #1324: zehn weitere additive Zeilen (keine Severity-Faerbung, s.
     # Spec Known Limitations). Klasse A (Renderer-ID = LocationResult-Feld):
-    {"key": "wind_direction_avg", "metric_id": "wind_direction", "aggregation": "avg",
-     "unit": "°"},
-    {"key": "wind_chill_min", "metric_id": "wind_chill", "aggregation": "min",
-     "unit": "°C"},
-    {"key": "wind_chill_max", "metric_id": "wind_chill", "aggregation": "max",
-     "unit": "°C"},
-    {"key": "cloud_low_avg", "metric_id": "cloud_low", "aggregation": "avg",
-     "unit": "%"},
-    {"key": "cloud_mid_avg", "metric_id": "cloud_mid", "aggregation": "avg",
-     "unit": "%"},
-    {"key": "cloud_high_avg", "metric_id": "cloud_high", "aggregation": "avg",
-     "unit": "%"},
+    {"key": "wind_direction_avg", "metric_id": "wind_direction",
+     "aggregation": "avg"},
+    {"key": "wind_chill_min", "metric_id": "wind_chill", "aggregation": "min"},
+    {"key": "wind_chill_max", "metric_id": "wind_chill", "aggregation": "max"},
+    {"key": "cloud_low_avg", "metric_id": "cloud_low", "aggregation": "avg"},
+    {"key": "cloud_mid_avg", "metric_id": "cloud_mid", "aggregation": "avg"},
+    {"key": "cloud_high_avg", "metric_id": "cloud_high", "aggregation": "avg"},
     # Klasse B (Live-Aggregat ueber _DAILY_AGGREGATE_FIELD):
-    {"key": "humidity_avg", "metric_id": "humidity", "aggregation": "avg",
-     "unit": "%"},
-    {"key": "dewpoint_avg", "metric_id": "dewpoint", "aggregation": "avg",
-     "unit": "°C"},
-    {"key": "pressure_avg", "metric_id": "pressure", "aggregation": "avg",
-     "unit": "hPa"},
+    {"key": "humidity_avg", "metric_id": "humidity", "aggregation": "avg"},
+    {"key": "dewpoint_avg", "metric_id": "dewpoint", "aggregation": "avg"},
+    {"key": "pressure_avg", "metric_id": "pressure", "aggregation": "avg"},
     {"key": "precip_type", "metric_id": "precip_type", "aggregation": "max",
      "fmt": _fmt_precip_type},
-    {"key": "snowfall_limit", "metric_id": "snowfall_limit", "aggregation": "min",
-     "unit": "m"},
+    {"key": "snowfall_limit", "metric_id": "snowfall_limit",
+     "aggregation": "min"},
 ]
 
 
@@ -493,6 +487,15 @@ def derive_row_labels(rows: list[dict], form: str = "short") -> list[dict]:
     Zeilen ohne ``metric_id`` (Warn-Zeile) behalten ihren festen Text.
     Rueckgabe sind KOPIEN -- die Modul-Konstanten bleiben unberuehrt.
 
+    Issue #1848 Scheibe B: dieselbe Ableitung liefert zusaetzlich ``unit`` und
+    ``decimals`` aus derselben ``MetricDefinition``, aus der schon die
+    Beschriftung kommt. ``CV2_METRICS`` tippt beides nicht mehr; die Leseseite
+    (``_render_overview_row`` -> ``_fmt_metric``) liest sie unveraendert aus
+    der Zeile, merkt von der Umstellung also nichts. Fuer die drei Zeilen mit
+    eigenem ``fmt`` (Gewitter, Sicht, Niederschlagsart) werden die Felder aus
+    Konsistenz mitgeliefert, ihr ``fmt``-Zweig ruft ``_fmt_metric`` aber gar
+    nicht auf -- dort ist die Ableitung ohne beobachtbare Wirkung.
+
     Ein unbekannter ``form``-Wert ist ein ``ValueError``, KEIN stiller Rueckfall
     auf die Kurzform (Adversary F001, #1453). Begruendung ist ein Muster, das in
     dieser Sitzung viermal auftrat: ein fehlender oder unbekannter Parameter
@@ -529,7 +532,11 @@ def derive_row_labels(rows: list[dict], form: str = "short") -> list[dict]:
             if lang:
                 zusatz = aggregation_label_de(zusatz) or zusatz
             label = f"{label} {zusatz}"
-        out.append({**row, "label": label})
+        abgeleitet: dict = {}
+        if row.get("metric_id"):
+            metric = get_metric(row["metric_id"])
+            abgeleitet = {"unit": metric.unit, "decimals": metric.decimals}
+        out.append({**row, "label": label, **abgeleitet})
     return out
 
 

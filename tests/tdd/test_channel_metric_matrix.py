@@ -109,7 +109,7 @@ from output.channels.premium_sms import PremiumSmsOutput
 from output.renderers.channel_layout import (
     CHANNEL_LIMITS, VISIBILITY_GATE_IDS, render_for_channel,
 )
-from output.renderers.email.compare_html import CV2_METRICS
+from output.renderers.email.compare_html import CV2_METRICS, derive_row_labels
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
 from output.renderers.comparison import (
@@ -3726,9 +3726,45 @@ def test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron(cv2_key, k
     ``get_metric(...).decimals``) und von ``CV2_METRICS``/``_fmt_metric``
     (HTML-Pfad) EINZELN ueberein -- rein struktureller Vergleich, kein
     Rendering noetig. Ein Fehlschlag benennt genau das betroffene Feld
-    (Feld-Granularitaets-Fang)."""
+    (Feld-Granularitaets-Fang).
+
+    Issue #1848 Scheibe B: der HTML-Wert wird dort gelesen, wo
+    ``_render_overview_row`` ihn holt -- aus der von ``derive_row_labels()``
+    zurueckgegebenen Zeilen-Kopie. ``CV2_METRICS`` selbst tippt seit dieser
+    Scheibe kein ``decimals`` mehr; ein Zugriff direkt auf die Modul-Konstante
+    laese jetzt still ``0`` statt des tatsaechlich gerenderten Wertes.
+
+    🔴 ENTSCHEIDENDE FOLGE -- dieser Waechter beweist seit Scheibe B nur noch
+    fuer 4 der 10 Faelle etwas. Die Kopie holt ihr ``decimals`` aus
+    ``get_metric(row["metric_id"])``; wo diese ID mit ``klartext_metric_id``
+    ZUSAMMENFAELLT, vergleicht der Test dieselbe Katalogquelle mit sich selbst
+    und kann strukturell nicht mehr fehlschlagen. TAUTOLOGISCH sind diese 6:
+    ``temp_max`` (temperature), ``temp_min`` (temperature), ``wind_max``
+    (wind), ``cloud_avg`` (cloud_total), ``snow_depth_cm`` (snow_depth),
+    ``sunny_hours`` (sunshine) -- sie duerfen NICHT als Absicherung der
+    Formatierung gelesen werden. Nachgewiesen: Register-``sunshine.decimals``
+    von 1 auf 4 verbogen, dieser Test bleibt gruen, obwohl die gerenderte
+    Zelle dann ``5.6000 h`` statt ``5.6 h`` zeigt.
+
+    Echten Biss behalten die 4 Zeilen, in denen ZWEI VERSCHIEDENE Metrik-IDs
+    gegeneinander stehen -- ``gust_max`` (gust vs. wind),
+    ``wind_chill_min`` und ``wind_chill_max`` (wind_chill vs. temperature),
+    ``dewpoint_avg`` (dewpoint vs. temperature). Fuer sie ist der Test eine
+    ABBILDUNGS-Pruefung: er faengt, wenn der Klartext-Lambda eine fremde
+    Groesse zum Formatieren heranzieht, deren Nachkommastellen von der
+    tatsaechlich gezeigten Groesse abweichen (Nebenbefund #1199 oben).
+
+    Der echte Formatier-Waechter ist seit Scheibe B
+    ``tests/unit/test_compare_mail_metric_format_from_register.py``, AC-7:
+    alle 22 Zeilen mit ``metric_id``, gemessen am GERENDERTEN HTML gegen fest
+    hinterlegte Erwartungswerte vom Stand VOR der Aenderung -- also gegen eine
+    Referenz ausserhalb des Prueflings, die eine Register-Verfaelschung
+    tatsaechlich rot faerbt."""
     katalog_decimals = get_metric(klartext_metric_id).decimals or 0
-    cv2_eintrag = next(m for m in CV2_METRICS if m["key"] == cv2_key)
+    cv2_eintrag = next(
+        m for m in derive_row_labels(CV2_METRICS, form="long")
+        if m["key"] == cv2_key
+    )
     cv2_decimals = cv2_eintrag.get("decimals") or 0
     assert katalog_decimals == cv2_decimals, (
         f"AC-S5-4: {cv2_key!r} zeigt im Klartext "
