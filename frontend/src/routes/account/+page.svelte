@@ -5,12 +5,14 @@
 	import { Btn } from '$lib/components/atoms';
 	import { api } from '$lib/api.js';
 	import { invalidateAll } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { MetricPreset, UserTier } from '$lib/types';
 	import { metricCountLabel, showDefaultBadge, isValidRename, applyRename, removePreset, isEmpty } from '$lib/utils/presetCardHelpers';
+	import { formatNextRun } from '$lib/utils/schedulerTime';
 	let { data } = $props();
 
 	let displayName = $state(data.profile?.display_name ?? '');
@@ -261,24 +263,12 @@
 		return `vor ${days} Tag${days > 1 ? 'en' : ''}`;
 	}
 
-	function formatNextRun(iso: string | null | undefined): string {
-		if (!iso) return '—';
-		try {
-			const date = new Date(iso);
-			const now = new Date();
-			const today = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Vienna' }));
-			const target = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Vienna' }));
-			const time = date.toLocaleString('de-AT', { timeZone: 'Europe/Vienna', hour: '2-digit', minute: '2-digit' });
-
-			const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-			const targetDate = new Date(target.getFullYear(), target.getMonth(), target.getDate());
-			const diffDays = Math.round((targetDate.getTime() - todayDate.getTime()) / 86400000);
-
-			if (diffDays === 0) return `heute um ${time}`;
-			if (diffDays === 1) return `morgen um ${time}`;
-			return date.toLocaleString('de-AT', { timeZone: 'Europe/Vienna', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-		} catch { return iso; }
-	}
+	// Issue #1727 S5e: Die Seite wird serverseitig vorgerendert und der Node-Prozess
+	// laeuft in Etc/UTC. Ohne feste Zone formatierte also zuerst der Server — alle
+	// Nutzer saehen UTC statt ihrer eigenen Zone. Die Uhrzeit entsteht deshalb erst
+	// nach dem Mounten im Browser; bis dahin steht dort '—'.
+	let imBrowser = $state(false);
+	onMount(() => { imBrowser = true; });
 
 	function getProvider(lat: number, lon: number): string {
 		return (lat >= 45 && lat <= 50 && lon >= 8 && lon <= 18)
@@ -596,7 +586,7 @@
 									<span class="font-medium">{userJobs[job.id]}</span>
 								</div>
 								<div class="flex items-center gap-4 text-sm text-muted-foreground">
-									<span>Nächster: {formatNextRun(job.next_run)}</span>
+									<span>Nächste Prüfung: {imBrowser ? formatNextRun(job.next_run) : '—'}</span>
 									<span>Zuletzt: {job.last_run?.time ? timeAgo(job.last_run.time) : '—'}</span>
 								</div>
 							</div>
