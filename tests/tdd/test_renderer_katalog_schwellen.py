@@ -329,16 +329,17 @@ def test_ac10_row_risk_wind_25_becomes_unauffaellig():
     )
 
 
-def test_ac10_row_risk_gust_30_becomes_achtung():
-    """AC-10: Given exakt 30 km/h Boeen, sonst unauffaellige Werte / When
-    der Risiko-Punkt am Zeilenende berechnet wird / Then zeigt er kuenftig
-    'watch' (Achtung) statt bisher 'ok' — die heutige Schwelle `gust>30`
-    ist exklusiv und laesst genau 30 km/h noch durch, die Katalog-Schwelle
-    (ab einschliesslich 30 km/h) nicht."""
+def test_ac1_row_risk_gust_30_becomes_yellow_not_orange():
+    """Issue #1927 Wiedereroeffnung, Spec fix_1927_risk_dot_kombi_regel AC-1
+    (loest diesen Test bewusst ab, vormals AC-10/#1377 Scheibe B):
+    Given exakt 30 km/h Boeen, sonst unauffaellige Werte (kein Paar-Partner
+    gelb) / When der Risiko-Punkt am Zeilenende berechnet wird / Then zeigt
+    er den Gelb-Level -- NICHT mehr 'watch'/Orange, wie es die inzwischen
+    abgeloeste 3-stufige Kollaps-Regel (gelb+orange -> watch) lieferte."""
     assert severity_for("gust", 30.0) == "yellow", "Erwartungs-Grundlage: 30 km/h Boeen erreicht die Katalog-Gelbschwelle"
     result = _row_risk({"gust": 30})
-    assert result == "watch", (
-        f"_row_risk({{'gust': 30}}) liefert {result!r}, erwartet 'watch' "
-        f"(Katalog-Schwelle Boeen ab einschliesslich 30 km/h). Heutige "
-        f"hartcodierte exklusive Schwelle (gust>30) liefert 'ok'."
+    assert result == "yellow", (
+        f"_row_risk({{'gust': 30}}) liefert {result!r}, erwartet 'yellow' "
+        f"(vorher 'watch'/Orange) -- echte 4-Stufigkeit statt Kollaps von "
+        f"gelb+orange auf Orange (Spec fix_1927_risk_dot_kombi_regel AC-1)."
     )

@@ -88,13 +88,21 @@ def test_ac11_trend_block_zeigt_leicht():
 # ───────────────────── 4. E-Mail Prosa-Risikofarbe ─────────────────────────
 
 def test_ac11_prosa_risikofarbe_kennt_low():
+    """Issue #1927 v1.1 loest den urspruenglichen AC-11-Erwartungswert ab:
+    `_thunder_risk_level('LOW')` lieferte bis dahin bewusst dieselbe
+    Dringlichkeit wie MED ('watch') -- Spec fix_1927_risk_dot_kombi_regel
+    (v1.1, AC-4) gibt LOW eine eigenstaendige Gelb-Stufe ('yellow'), damit
+    ein alleinstehendes LOW-Gewitter im Risk-Punkt nicht mehr wie MED wirkt.
+    LOW bleibt weiterhin erkannt (kein Rueckfall auf 'kein Gewitter'/None) --
+    das ist die eigentliche AC-11-Zusicherung dieser Datei."""
     from output.renderers.email.html import _thunder_risk_level
 
-    assert _thunder_risk_level("LOW") == "watch", (
-        f"_thunder_risk_level('LOW') muss 'watch' liefern (dieselbe "
-        f"Dringlichkeit wie MED), erhalten {_thunder_risk_level('LOW')!r}"
+    assert _thunder_risk_level("LOW") == "yellow", (
+        f"_thunder_risk_level('LOW') muss 'yellow' liefern (eigenstaendige "
+        f"Gelb-Stufe seit Spec fix_1927_risk_dot_kombi_regel v1.1 AC-4), "
+        f"erhalten {_thunder_risk_level('LOW')!r}"
     )
-    assert _thunder_risk_level(ThunderLevel.LOW) == "watch", (
+    assert _thunder_risk_level(ThunderLevel.LOW) == "yellow", (
         "_thunder_risk_level() muss auch die Enum-Instanz (nicht nur den "
         "rohen String) erkennen"
     )

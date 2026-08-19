@@ -83,12 +83,12 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 - **Struktur:** `<table>` mit einer `<tr>` pro Folge-Etappe
 - **Desktop:** 5 Spalten – Wochentag · Code · Name+Note+ggf. Gewitter-Badge · Temp-Range · Risk-Dot
 - **Mobile:** 3 Spalten – Wochentag · (Name+Code+Note gestapelt) · (Temp+Risk-Dot übereinander)
-- **Risk-Dot:** `border-radius:50%`, 10×10px, Farbe aus `format_trend_tokens()`:
-  - ok: `#15803d` + `rgba(21,128,61,0.18)`
-  - watch: `#c2410c` + `rgba(194,65,12,0.20)`
-  - risk: `#b91c1c` + `rgba(185,28,28,0.22)`
-  - Fallback: `#c8c4b8`
-- **Gewitter-Badge:** `⚡ Gewitter {zeitangabe}` in `#b91c1c` mit light-red Hintergrund und Border
+- **Risk-Dot:** `border-radius:50%`, 10×10px, Farbe aus `_AMPEL_DOT_COLORS` (4-stufig seit #1927):
+  - green (ok): `#15803d` + `rgba(21,128,61,0.18)`
+  - yellow (watch-mild): `#d69500` + `rgba(214,149,0,0.20)`
+  - orange (watch-mittel): `#d4530a` + `rgba(212,83,10,0.20)`
+  - red (risk): `#a8104a` + `rgba(168,16,74,0.22)`
+- **Gewitter-Badge:** `⚡ Gewitter {zeitangabe}` in `#a8104a` mit light-red Hintergrund und Border
 
 #### Antwort-Kommandos (Sektion 7 – NEU)
 - **Grid:** 3 Spalten, zeilenweise gefüllt via `<table>` (aktuell 10 Einträge → 4 Zeilen)

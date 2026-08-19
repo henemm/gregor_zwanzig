@@ -52,6 +52,7 @@ __all__ = [
     "format_value",
     "severity_for",
     "severity_from_thresholds",
+    "escalate_pair_watch",
     "label",
     "cloud_emoji",
     "thunder_ordinal",
@@ -194,6 +195,42 @@ def severity_from_thresholds(thresholds: dict, value: Optional[float]) -> Option
         down_level = "yellow"
 
     return up_level if _STAGES.index(up_level) >= _STAGES.index(down_level) else down_level
+
+
+# Issue #1927 Wiedereroeffnung (Spec fix_1927_risk_dot_kombi_regel S2,
+# Revision v1.1): drei fest definierte, fachlich begruendete Metrik-Paare.
+# Jedes Tupel-Element ist entweder ein einzelner Schluessel oder ein Tupel
+# von Alternativ-Schluesseln (mind. einer davon muss "yellow" sein). Bewusst
+# NICHT von den `col_key`-Namen aus metric_catalog.py abgeleitet -- eigenes,
+# an dieser Stelle gepflegtes Vokabular (s. Spec Implementation Details).
+# v1.1 (PO-Scope-Entscheid nach Adversary-Verdict BROKEN): das Nullgradgrenze-
+# Paar (`freezing_level` ohne display_thresholds, strukturell trip-relativ)
+# und die Schneehoehe-Alternative im dritten Paar (`snow_depth` ohne
+# belegbare Ampel-Absolutschwelle) entfallen ersatzlos, siehe Spec Non-Goals.
+_PAIR_WATCH_ESCALATIONS: tuple[tuple[object, object], ...] = (
+    ("precipitation", "temperature"),
+    ("thunder", ("wind", "gust")),
+    ("visibility", "fresh_snow"),
+)
+
+
+def _side_is_yellow(severities: dict, side) -> bool:
+    keys = side if isinstance(side, tuple) else (side,)
+    return any(severities.get(key) == "yellow" for key in keys)
+
+
+def escalate_pair_watch(severities: dict) -> Optional[str]:
+    """Eskaliert eine Zeile von 'yellow' auf 'orange', wenn beide Partner
+    eines der drei fest definierten Metrik-Paare gleichzeitig 'yellow' sind.
+
+    ``severities`` ist ein Dict ``{metrik_schluessel: severity_string_oder_None}``.
+    Liefert "orange" bei Treffer, sonst None -- keine weitere Eskalationsstufe
+    (Spec Non-Goals, `fix_1927_risk_dot_kombi_regel.md`).
+    """
+    for left, right in _PAIR_WATCH_ESCALATIONS:
+        if _side_is_yellow(severities, left) and _side_is_yellow(severities, right):
+            return "orange"
+    return None
 
 
 def label(metric_id: str, style: str = "label_de") -> str:

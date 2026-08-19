@@ -31,6 +31,7 @@ from src.output.renderers.email.html import _render_html_table
 
 # Zielwerte laut Spec: identisch zu _AMPEL_DOT_COLORS (helpers.py:588-593).
 _EXPECTED_OK = "#15803d"     # unveraendert (green)
+_EXPECTED_YELLOW = "#d69500"  # neu (Issue #1927 Wiedereroeffnung, echte 4-Stufigkeit)
 _EXPECTED_WATCH = "#d4530a"  # neu (bisher #c2410c)
 _EXPECTED_RISK = "#a8104a"   # neu (bisher #b91c1c)
 
@@ -73,6 +74,21 @@ def test_ok_risk_level_stays_green():
     color = _risk_dot_color(_render_one(row))
     assert color == _EXPECTED_OK, (
         f"Risk-Dot bei Gewitter NONE ist {color!r}, erwartet {_EXPECTED_OK!r} (gruen)."
+    )
+
+
+def test_yellow_risk_level_uses_new_ampel_yellow():
+    """Issue #1927 Wiedereroeffnung (Spec fix_1927_risk_dot_kombi_regel AC-1):
+    Given eine Zeile mit genau einer gelben Einzelmetrik ohne Paar-Partner
+    (precip=1.0mm, sonst harmlos, Gewitter NONE) / When gerendert wird / Then
+    traegt der Risk-Punkt die Ampel-Gelb-Farbe (#d69500, identisch zu
+    `_AMPEL_DOT_COLORS['yellow']`) — vor dieser Spec kollabierte 'yellow' auf
+    dieselbe Orange-Farbe wie 'watch'."""
+    row = {**_HARMLESS, "time": "14", "thunder": ThunderLevel.NONE, "precip": 1.0}
+    color = _risk_dot_color(_render_one(row))
+    assert color == _EXPECTED_YELLOW, (
+        f"Risk-Dot bei 'yellow' ist {color!r}, erwartet {_EXPECTED_YELLOW!r} "
+        f"(Ampel-Gelb, Spec fix_1927_risk_dot_kombi_regel AC-1)."
     )
 
 

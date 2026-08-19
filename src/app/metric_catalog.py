@@ -684,6 +684,12 @@ _METRICS: list[MetricDefinition] = [
         # Tourenentscheidung. "NS" = derselbe Wert wie der bestehende
         # compact_label dieser Metrik (kollisionsfrei, mnemonisch).
         sms_code="NS", decimals=0, cmp="über", alert_label="Schnee",
+        # Issue #1927 v1.1: erstmals display_thresholds fuer Neuschnee,
+        # abgeleitet aus den SLF/EAWS "kritischen Neuschneemengen" (europ.
+        # Lawinen-Gefahrenskala): 10-20 cm/24h (unguenstig), 20-30 cm
+        # (mittel), 30-50 cm (guenstig) -- konservative untere Bandgrenze je
+        # Stufe als Schwelle (gelb=10, orange=20, rot=30).
+        display_thresholds={"yellow": 10.0, "orange": 20.0, "red": 30.0},
     ),
 ]
 

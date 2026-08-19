@@ -245,15 +245,22 @@ def test_ac4_riskdot_ok_row():
 
 def test_ac4_riskdot_watch_row():
     """
-    GIVEN eine Zeile mit gust=35 km/h (über watch-Schwelle 30)
+    GIVEN eine Zeile mit gust=50 km/h (über orange-Schwelle 45)
     WHEN render_html() called
     THEN enthält die Tabelle eine Zelle mit orangem RiskDot (#d4530a).
 
     Issue #1927: Der Risk-Dot hat keine eigene Palette mehr, sondern bezieht
     seine Farbe aus `_AMPEL_DOT_COLORS` (helpers.py) — "watch" → orange
     #d4530a (PO-bestaetigte Design-Entscheidung), vormals #c2410c.
+
+    Issue #1927 Wiedereroeffnung (v1.1): `_row_risk()` ist seit der
+    Kombi-Eskalation echt vierstufig — ein ISOLIERTES gust=35 (Gelb-Schwelle
+    30, unter Orange-Schwelle 45, kein Eskalationspartner gelb) liefert
+    seither korrekt Gelb statt Orange (Spec `fix_1927_risk_dot_kombi_regel.md`
+    AC-1). Fuer einen echten "watch"/Orange-Fall ohne Paar-Abhaengigkeit
+    braucht es einen Wert JENSEITS der Orange-Schwelle selbst.
     """
-    html = _render(gust_kmh=35.0)
+    html = _render(gust_kmh=50.0)
     # Farbe #d4530a für "watch" — darf nicht nur im Highlighting-Span sein,
     # sondern muss auch als RiskDot-Hintergrund erscheinen
     risk_dot_pattern = re.compile(

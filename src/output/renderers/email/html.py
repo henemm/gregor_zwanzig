@@ -18,7 +18,7 @@ from app.models import (
     Corridor, SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
-from output.metric_format import severity_for, thunder_ampel_band
+from output.metric_format import escalate_pair_watch, severity_for, thunder_ampel_band
 from output.renderers.email.corridor_mark import (
     is_marked_any, mark_cell_style, mark_lookup_multi,
 )
@@ -167,26 +167,31 @@ def _safe_float(v, default: float = 0.0) -> float:
 
 def _thunder_risk_level(thunder) -> Optional[str]:
     """Bestimmt den Risiko-Beitrag von Gewitter fuer `_row_risk` (Issue #1418
-    Fehler 1). `r["thunder"]` traegt in beiden Produktionspfaden
-    (`trip_report.py: _dp_to_row` / `_aggregate_night_block`) einen
-    `ThunderLevel`-Stufenwert (NONE/LOW/MED/HIGH, Issue #1474), keinen
-    Zahlenwert — ein reiner
-    `> 20`-Zahlenvergleich (frueher via `_safe_float`) war deshalb immer
-    falsch. `ThunderLevel` erbt von `str`, daher deckt der String-Vergleich
-    sowohl die Enum-Instanz als auch die reine String-Form ("HIGH"/"MED",
-    s. `outlook.py`/`helpers.py`: `.upper()` auf `stage.get("thunder", ...)`)
-    ab. Der historische Zahlenwert (Regressionsschutz AC-7, #1377 — Gewitter
-    war dort ausdruecklich ausgenommen) bleibt als Fallback erhalten.
-    Liefert 'risk'/'watch'/None (kein Beitrag) — nie einen Absturz.
+    Fehler 1; Issue #1927 v1.1: eigenstaendige Gelb-Stufe fuer LOW). `r["thunder"]`
+    traegt in beiden Produktionspfaden (`trip_report.py: _dp_to_row` /
+    `_aggregate_night_block`) einen `ThunderLevel`-Stufenwert (NONE/LOW/MED/HIGH,
+    Issue #1474), keinen Zahlenwert — ein reiner `> 20`-Zahlenvergleich
+    (frueher via `_safe_float`) war deshalb immer falsch. `ThunderLevel` erbt
+    von `str`, daher deckt der String-Vergleich sowohl die Enum-Instanz als
+    auch die reine String-Form ("HIGH"/"MED"/"LOW", s. `outlook.py`/
+    `helpers.py`: `.upper()` auf `stage.get("thunder", ...)`) ab. Der
+    historische Zahlenwert (Regressionsschutz AC-7, #1377 — Gewitter war
+    dort ausdruecklich ausgenommen) bleibt als Fallback erhalten.
+
+    LOW liefert seit v1.1 eine eigenstaendige 'yellow'-Stufe statt wie zuvor
+    zusammen mit MED auf 'watch' verschmolzen zu werden — Angleichung an die
+    bereits bestehende `_THUNDER_AMPEL_BAND`-Zuordnung
+    (`metric_format.py`: NONE→green, LOW→yellow, MED→orange, HIGH→red).
+    Liefert 'risk'/'watch'/'yellow'/None (kein Beitrag) — nie einen Absturz.
     """
     if isinstance(thunder, str):
         level = thunder.upper()
         if level == "HIGH":
             return "risk"
-        if level in ("MED", "LOW"):
-            # Issue #1474: LOW ("leicht") bekommt dieselbe Dringlichkeit wie
-            # MED -- die Funktion kennt nur zwei Nicht-Null-Stufen (risk/watch).
+        if level == "MED":
             return "watch"
+        if level == "LOW":
+            return "yellow"
         if level == "NONE":
             return None
 
@@ -201,13 +206,17 @@ def _thunder_risk_level(thunder) -> Optional[str]:
 
 def _row_risk(r: dict) -> str:
     """Bestimmt Risk-Level pro Tabellenzeile aus Katalog-Schwellen (Issue #1377
-    Scheibe B, AC-10). Gewitter-Zellfaerbung bleibt hartcodiert (kein
-    `display_thresholds` im Katalog, s. Spec „Known Limitations") —
+    Scheibe B, AC-10; Issue #1927 Wiedereroeffnung, Spec
+    fix_1927_risk_dot_kombi_regel). Gewitter-Zellfaerbung bleibt hartcodiert
+    (kein `display_thresholds` im Katalog, s. Spec „Known Limitations") —
     Wind/Böen/Regen/Regenwahrsch./Sicht fragen dieselbe `severity_for`-Quelle
     wie die Einzelzellen; die schärfste der resultierenden Stufen entscheidet
     zusammen mit Gewitter (Stufenvergleich, s. `_thunder_risk_level`, Issue
-    #1418 Fehler 1). Das dreiwertige Punkt-Vokabular bleibt: green→ok,
-    yellow/orange→watch, red→risk (keine vierte Punktfarbe, s. Spec).
+    #1418 Fehler 1). Das Punkt-Vokabular ist seit #1927 echt vierwertig
+    (green→ok, yellow→yellow, orange→watch, red→risk); eine gelbe Zeile
+    eskaliert zusätzlich auf orange/watch, wenn eines der drei fest
+    definierten Metrik-Paare (`escalate_pair_watch`) beide Partner gleichzeitig
+    gelb liefert.
     """
     thunder_level = _thunder_risk_level(r.get("thunder"))
     if thunder_level == "risk":
@@ -220,29 +229,45 @@ def _row_risk(r: dict) -> str:
     vis_num = _safe_float(vis_raw, 99.0)
     vis_m = vis_num if vis_num > 100 else vis_num * 1000
 
+    gust_sev = severity_for("gust", _safe_float(r.get("gust")))
+    wind_sev = severity_for("wind", _safe_float(r.get("wind")))
+    precip_sev = severity_for("precipitation", _safe_float(r.get("precip")))
+    pop_sev = severity_for("rain_probability", _safe_float(r.get("pop")))
+    visibility_sev = severity_for("visibility", vis_m)
+
     _STAGES = ("green", "yellow", "orange", "red")
-    levels = [
-        severity_for("gust", _safe_float(r.get("gust"))),
-        severity_for("wind", _safe_float(r.get("wind"))),
-        severity_for("precipitation", _safe_float(r.get("precip"))),
-        severity_for("rain_probability", _safe_float(r.get("pop"))),
-        severity_for("visibility", vis_m),
-    ]
+    levels = [gust_sev, wind_sev, precip_sev, pop_sev, visibility_sev]
     worst = max((lvl for lvl in levels if lvl is not None), default="green", key=_STAGES.index)
+
+    if worst == "yellow":
+        severities = {
+            "precipitation": precip_sev,
+            "temperature": severity_for("temperature", _safe_float(r.get("temp"))),
+            "rain_probability": pop_sev,
+            "thunder": thunder_level,
+            "wind": wind_sev,
+            "gust": gust_sev,
+            "visibility": visibility_sev,
+            "fresh_snow": severity_for("fresh_snow", _safe_float(r.get("fresh_snow"))),
+        }
+        if escalate_pair_watch(severities) == "orange":
+            worst = "orange"
 
     if worst == "red":
         return "risk"
-    if worst in ("yellow", "orange") or thunder_level == "watch":
+    if worst == "orange" or thunder_level == "watch":
         return "watch"
+    if worst == "yellow" or thunder_level == "yellow":
+        return "yellow"
     return "ok"
 
 
-# Fix #1927: Der Risk-Punkt hat keine eigene Palette mehr. Das dreiwertige
-# Risk-Vokabular (_row_risk: ok/watch/risk) wird auf die vierwertige
+# Fix #1927: Der Risk-Punkt hat keine eigene Palette mehr. Das vierwertige
+# Risk-Vokabular (_row_risk: ok/yellow/watch/risk) wird auf die vierwertige
 # Ampel-Palette (_AMPEL_DOT_COLORS, helpers.py) abgebildet; "watch" -> orange
 # ist eine PO-bestaetigte Design-Entscheidung (die schaerfere der beiden
 # Nachbarfarben, damit eine echte Warnung nicht optisch verwaessert wird).
-_RISK_LEVEL_TO_AMPEL = {"ok": "green", "watch": "orange", "risk": "red"}
+_RISK_LEVEL_TO_AMPEL = {"ok": "green", "yellow": "yellow", "watch": "orange", "risk": "red"}
 
 # Abgeleitete Sicht auf dieselbe Quelle — KEINE eigene Palette mehr (das war
 # der Bug #1927). Bleibt als Name erhalten, weil der Bestandstest
