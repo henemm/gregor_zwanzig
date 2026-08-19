@@ -53,14 +53,14 @@ freezing_level	137.0	137 m	137	None
 freezing_level	1013.0	1013 m	1013	None
 freezing_level	20000	20000 m	20000	None
 fresh_snow	None	–	–	None
-fresh_snow	-12.5	-12 cm	-12	None
-fresh_snow	0	0 cm	0	None
-fresh_snow	0.4	0 cm	0	None
-fresh_snow	7.5	8 cm	8	None
-fresh_snow	42	42 cm	42	None
-fresh_snow	137.0	137 cm	137	None
-fresh_snow	1013.0	1013 cm	1013	None
-fresh_snow	20000	20000 cm	20000	None
+fresh_snow	-12.5	-12 cm	-12	green
+fresh_snow	0	0 cm	0	green
+fresh_snow	0.4	0 cm	0	green
+fresh_snow	7.5	8 cm	8	green
+fresh_snow	42	42 cm	42	red
+fresh_snow	137.0	137 cm	137	red
+fresh_snow	1013.0	1013 cm	1013	red
+fresh_snow	20000	20000 cm	20000	red
 gust	None	–	–	None
 gust	-12.5	-12 km/h	-12	green
 gust	0	0 km/h	0	green

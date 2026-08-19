@@ -344,6 +344,16 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "email/helpers.py", "_DAY_WINDOW_PILL_IDS", "element"),
     (_R + "email/html.py", "_COL_KEY_TO_METRIC_ID", "wert"),
     (_R + "email/html.py", "_FALLBACK_COL_KEY_TO_METRIC_ID", "wert"),
+    # Issue #1927 Wiedereroeffnung (v1.1, Spec fix_1927_risk_dot_kombi_regel.md):
+    # drei neue Fundstellen. ``_PAIR_WATCH_ESCALATIONS`` ist eine 3-Tupel-Liste
+    # von Metrik-Paaren; jedes Paar-Tupel qualifiziert einzeln als Sammlung
+    # (Muster ``_DERIVED_METRIC_RULES`` oben), das mittlere Paar hat als
+    # zweites Element selbst ein Alternativ-Tupel ([1][1]). ``severities`` in
+    # ``_row_risk`` ist das Dict, das ``escalate_pair_watch`` konsumiert.
+    ("src/output/metric_format.py", "_PAIR_WATCH_ESCALATIONS[0]", "element"),
+    ("src/output/metric_format.py", "_PAIR_WATCH_ESCALATIONS[1][1]", "element"),
+    ("src/output/metric_format.py", "_PAIR_WATCH_ESCALATIONS[2]", "element"),
+    (_R + "email/html.py", "severities", "schluessel"),
     ("src/services/compare_alert.py", "_SUMMARY_KEY_TO_CATALOG_ID", "wert"),
     ("src/services/day_comparison.py", "_METRIC_ID_TO_ENTRY_ATTR", "schluessel"),
     ("src/services/day_comparison.py", "_DIRECTION_WORDS", "schluessel"),
