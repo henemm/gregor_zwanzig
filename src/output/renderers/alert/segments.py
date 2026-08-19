@@ -36,27 +36,42 @@ def format_segment_reference(segment_ids: list[str]) -> str:
     wird NIE in die numerische Range/Aufzaehlung gemischt, sondern immer als
     eigenes Element '🏁 Ziel' angehaengt. Mehr als 4 betroffene Segmente
     insgesamt -> Verdichtung 'N Segmente' (Begriff bewusst 'Segmente', nicht
-    'Etappen')."""
-    has_ziel = "Ziel" in segment_ids
-    numeric = sorted({int(s) for s in segment_ids if s != "Ziel"})
+    'Etappen').
 
-    total = len(numeric) + (1 if has_ziel else 0)
+    Issue #1965: reale Trips koennen nicht-numerische Segment-IDs tragen
+    (z.B. "stage1") -- `int()` auf jeder Nicht-"Ziel"-ID crashte den
+    Versandpfad. Nicht-numerische IDs werden jetzt crashfrei in Original-
+    Reihenfolge angehaengt statt geworfen; rein numerische Faelle bleiben
+    byte-identisch zum Bestandsverhalten."""
+    has_ziel = "Ziel" in segment_ids
+    numeric = sorted({int(s) for s in segment_ids if s != "Ziel" and s.isdigit()})
+    other: list[str] = []
+    for s in segment_ids:
+        if s == "Ziel" or s.isdigit():
+            continue
+        if s not in other:
+            other.append(s)
+
+    total = len(numeric) + len(other) + (1 if has_ziel else 0)
     if total > 4:
         return f"{total} Segmente"
 
-    numeric_part = ""
+    parts: list[str] = []
     if numeric:
         is_consecutive = numeric == list(range(numeric[0], numeric[-1] + 1))
         if is_consecutive and len(numeric) > 1:
-            numeric_part = f"Segment {numeric[0]}–{numeric[-1]}"
+            parts.append(f"{numeric[0]}–{numeric[-1]}")
         else:
-            numeric_part = "Segment " + ", ".join(str(n) for n in numeric)
+            parts.extend(str(n) for n in numeric)
+    parts.extend(other)
 
-    if numeric_part and has_ziel:
-        return f"{numeric_part}, 🏁 Ziel"
+    main_part = "Segment " + ", ".join(parts) if parts else ""
+
+    if main_part and has_ziel:
+        return f"{main_part}, 🏁 Ziel"
     if has_ziel:
         return "🏁 Ziel"
-    return numeric_part
+    return main_part
 
 
 def _renderable_segment_ids(segment_ids) -> list[str]:
