@@ -3,7 +3,7 @@ entity_id: fix_1581_enrichment_health
 type: module
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: approved
 version: "1.0"
 tags: [observability, providers, health]
 ---
@@ -12,7 +12,7 @@ tags: [observability, providers, health]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO (Henning) am 2026-08-19
 
 ## Purpose
 
