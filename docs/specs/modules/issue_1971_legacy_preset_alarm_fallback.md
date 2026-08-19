@@ -54,12 +54,20 @@ entfernen würde.
 > (`src/services/`). Kein Go-, kein Frontend-Anteil — der Fix wirkt beim
 > Auswerten der Alarm-Kette, nicht beim Speichern/Laden des Presets.
 
+- **File:** `src/services/alert_preset.py`
+  - **Identifier:** `expand_per_metric_levels()`, neuer Supplement-Zweig im
+    `display_config is None`-Fall hinter dem Parameter
+    `supplement_missing_levels`.
 - **File:** `src/services/compare_alert.py`
-  - **Identifier:** `CompareAlertService._build_eval_config()`, konkret die
-    Konstruktion von `metric_alert_levels` (Zeile 530-533). Die Nachbar-
-    Methode `_display_config_from_active_metrics()` (Zeile 544-570) bleibt
-    UNVERÄNDERT — sie ist bewusst NICHT der Ansatzpunkt dieser Spec (siehe
-    „Verworfener Lösungsweg").
+  - **Identifier:** `CompareAlertService._build_eval_config()` — setzt den
+    Schalter (Zeile 541). Die Konstruktion von `metric_alert_levels`
+    (Zeile 530-533) und die Nachbar-Methode
+    `_display_config_from_active_metrics()` (Zeile 544-570) bleiben
+    UNVERÄNDERT — sie sind bewusst NICHT der Ansatzpunkt dieser Spec (siehe
+    „Verworfener Lösungsweg" und M9).
+- **Files (Durchreichung):** `src/services/point_weather.py`
+  (`AlertEvaluationConfig.supplement_missing_levels`, Default `False`) und
+  `src/services/deviation_alert_engine.py` (`_select_detector`).
 
 ## Estimated Scope
 
@@ -104,47 +112,79 @@ Weg wird verworfen.
 
 ### Umgesetzter Lösungsweg
 
-Ansatzpunkt ist `_build_eval_config()` (`compare_alert.py:508-542`), genau
-dort, wo der `_STANDARD_METRIC_LEVELS`-Fallback ohnehin schon sitzt
-(Zeile 530-533). `display_config` (Zeile 535,
-`_display_config_from_active_metrics(preset)`) bleibt **unverändert** —
+> **Wegwechsel in Phase 5 (M9):** Ein Dict-Merge in `_build_eval_config()`
+> (`effektiv = {**_STANDARD_METRIC_LEVELS, **(levels or {})}`) war der
+> ursprünglich hier festgeschriebene Weg. Der RED-Lauf hat ihn **widerlegt**:
+> nach dem Merge sind ergänzte und ausdrücklich gesetzte Einträge nicht mehr
+> unterscheidbar, und genau diese Unterscheidung braucht der
+> `claimed_fields`-Schutz. Folge: `wind_gust: "off"` verschwindet zwar aus der
+> Regelmenge, das Summary-Feld `gust_max_kmh` wird aber über `wind_change`
+> **neu** bewacht (gemessen: `None` → `25.0`) — der Fix führte einen eigenen
+> stillen Fehler ein und verletzte AC-7 auf Alarm-Ebene. Messbeleg:
+> `docs/context/fix-1971-legacy-preset-alarm.md`, Abschnitt M9.
+
+Ansatzpunkt ist stattdessen `expand_per_metric_levels()`
+(`alert_preset.py:178-425`) im `display_config is None`-Zweig — dort bleiben
+`levels` (explizit) und Nachfüllung (ergänzt) getrennt, sodass der
+bestehende `claimed_fields`-Schutz greifen kann.
+`_build_eval_config()` bleibt an der Level-Konstruktion (Zeile 530-533)
+**unverändert**, ebenso `_display_config_from_active_metrics()` (Zeile 535):
 fehlt `active_metrics`, liefert diese Methode weiterhin `None`, der
-#961-Filter/-Backfill in `expand_per_metric_levels()` bleibt also
-übersprungen, CAPE bleibt erhalten.
+#961-Filter/-Backfill bleibt übersprungen, CAPE bleibt erhalten.
 
-Stattdessen wird `metric_alert_levels` neu zusammengesetzt:
+Neu ist ein ausdrücklicher Parameter, mit dem der Aufrufer erklärt, dass
+`levels` nur eine TEIL-Angabe ist:
 
 ```
-active = (preset.get("display_config") or {}).get("active_metrics")
-levels = (preset.get("display_config") or {}).get("metric_alert_levels")
-if active is None:
-    # Kein active_metrics -> Standard-Levels als Grundlage, explizite
-    # Preset-Eintraege (auch "off") ueberschreiben sie gezielt.
-    effektiv = {**_STANDARD_METRIC_LEVELS, **(levels or {})}
-else:
-    effektiv = levels or _STANDARD_METRIC_LEVELS  # unveraendert
+def expand_per_metric_levels(levels, display_config=None,
+                             supplement_missing_levels=False):
+    ...
+    if display_config is None and supplement_missing_levels:
+        claimed_fields = Vereinigung der Felder ALLER explizit gesetzten Metriken
+        for row in _PRESET_TABLE:
+            if row.metric in levels:
+                continue                      # explizit gesetzt (inkl. "off")
+            if Felder(row.metric) vollstaendig in claimed_fields:
+                continue                      # Feld bereits belegt
+            Regel auf "standard" ergaenzen, kollidierende Felder unterdruecken
 ```
 
-`levels or {}` bzw. `levels or _STANDARD_METRIC_LEVELS` entsprechen der
-bisherigen `preset.get(...) or _STANDARD_METRIC_LEVELS`-Formulierung; neu
-ist ausschließlich die Fallunterscheidung nach `active is None` und das
-Merge mit „explizite Einträge gewinnen" (Python-Dict-Merge-Reihenfolge:
-`_STANDARD_METRIC_LEVELS` zuerst, `levels` zuletzt).
+Gesetzt wird der Schalter **allein** vom Vergleichs-Pfad
+(`CompareAlertService._build_eval_config`, `compare_alert.py:541`); der
+Trip-Pfad lässt den Default `False` stehen und bleibt damit nachweislich
+unverändert (`trip_alert.py:311`, `:446` übergeben ihn nicht). Durchgereicht
+wird er über das neue Feld `AlertEvaluationConfig.supplement_missing_levels`
+(`point_weather.py:77`) und `DeviationAlertEngine._select_detector`
+(`deviation_alert_engine.py:196-200`).
 
 **Wirkung entlang der Kette (nachvollzogen, gemessen, nicht nur behauptet):**
 
 | Fall | Ergebnis |
 |---|---|
-| AC-1: `metric_alert_levels` gesetzt ohne Onset, kein `active_metrics` | **14 Regeln, Onset ✓, CAPE ✓** (vorher: 3 Regeln, kein Onset — M3) |
+| AC-1: `metric_alert_levels` gesetzt ohne Onset, kein `active_metrics` | **13 Regeln, Onset ✓, CAPE ✓** (vorher: 3 Regeln, kein Onset — M3) |
 | AC-4: kein `metric_alert_levels`, kein `active_metrics` | **14 Regeln, CAPE ✓** — unverändert gegenüber M2 |
-| Abwahl-Probe: `{wind_gust: "off", precipitation_sum: "standard"}`, kein `active_metrics` | **13 Regeln, `wind_gust` NICHT dabei** — explizites `off` bleibt wirksam (AC-7) |
-| AC-2/AC-3: `active_metrics` vorhanden (leer `[]` oder Teil-Auswahl) | von dieser Änderung **nicht berührt** — nimmt weiterhin den `else`-Zweig |
+| Abwahl-Probe: `{wind_gust: "off", precipitation_sum: "standard"}`, kein `active_metrics` | **12 Regeln, `wind_gust` NICHT dabei**, `gust_max_kmh` bleibt unbewacht — explizites `off` bleibt wirksam (AC-7) |
+| AC-2/AC-3: `active_metrics` vorhanden (leer `[]` oder Teil-Auswahl) | von dieser Änderung **nicht berührt** — der Schalter wirkt nur bei `display_config is None` |
 
-Der `off`-Schutz ergibt sich strukturell aus dem Merge (das Preset-`levels`
-wird ZULETZT gemergt, sein `"off"`-Eintrag überschreibt den
-`_STANDARD_METRIC_LEVELS`-Eintrag) — kein Sonderfall-Code nötig, aber
-AC-7 macht das als eigenen Test verbindlich, damit eine spätere
-Umformulierung (z. B. vertauschte Merge-Reihenfolge) sofort rot wird.
+Die Zahlen sind gemessen, nicht geschätzt (Artefakte
+`docs/artifacts/fix-1971-legacy-preset-alarm/messung-varianz-und-ac-faelle.txt`
+und `messung-m9-wirkort.txt`). Zwei Zahlen liegen **niedriger** als der reine
+Standard-Satz erwarten ließe, beide aus demselben Grund: der
+`claimed_fields`-Feldschutz unterdrückt eine Ergänzung, deren Felder bereits
+von einem ausdrücklichen Eintrag belegt sind. Bei AC-1 entfällt so
+`precipitation_change` (Feld `precip_sum_mm` gehört dem gesetzten
+`precipitation_sum`), bei der Abwahl-Probe zusätzlich `wind_gust` selbst.
+Andernfalls überschriebe eine ergänzte `standard`-Schwelle eine bewusst
+gesetzte `entspannt`-Schwelle auf demselben Feld — was
+`test_issue_1170_compare_alert_config.py::test_ac5_stored_entspannt_level_makes_alert_less_sensitive`
+ausdrücklich verbietet.
+
+Der `off`-Schutz ergibt sich strukturell daraus, dass explizit gesetzte
+Metriken im Supplement-Zweig übersprungen werden UND ihre Felder für
+ergänzte Regeln gesperrt bleiben — kein Sonderfall-Code nötig. AC-7 macht
+das als eigenen Test verbindlich, und zwar **auf Feld-Ebene** (Schwellen des
+Detektors), nicht nur an der Regelmenge: nur dort zeigt sich, ob eine
+abgewählte Größe über eine zweite Regel wieder unter Überwachung gerät (M9).
 
 ### Wächter-Test: Register-Deckung (unverändert gegenüber dem ursprünglichen Entwurf)
 
@@ -200,6 +240,7 @@ hinter #1971, nicht nur den heutigen Symptomfall.
   / Then feuert für Niederschlag kein Alarm, während der Wind-Alarm
   unverändert feuert — die Teil-Auswahl bleibt vom Fix unberührt.
   - Test: `tests/tdd/test_compare_alert_missing_active_metrics_with_levels.py::test_partial_active_metrics_only_selected_metric_fires`.
+  - Test (Adversary-Finding F003): `…::test_partial_active_metrics_with_partial_levels_keeps_single_watched_field` — Teil-`active_metrics` UND partielles `metric_alert_levels` **gleichzeitig**. Der erste Test ist gegen ein Durchschlagen der Ergänzung blind, weil sein Preset über den vollen `_STANDARD_METRIC_LEVELS`-Fallback läuft und der Supplement-Zweig dann nichts mehr zu ergänzen findet. Der zweite prüft am Wirkort (`detektor._thresholds`) auf genau ein bewachtes Feld; bei einem Leck wären es elf (Rot-Nachweis per Doppel-Mutation, `docs/artifacts/fix-1971-legacy-preset-alarm/test-red-f003-mutation.txt`).
 
 - **AC-4:** Given ein Ortsvergleichs-Preset OHNE `active_metrics` UND OHNE
   `metric_alert_levels` (der bereits vor dem Fix funktionierende Fall, M2) /
@@ -234,7 +275,9 @@ hinter #1971, nicht nur den heutigen Symptomfall.
   Standard-Metriken (z. B. Niederschlag) weiterhin feuern — die Ergänzung
   darf eine bewusste Abwahl des Nutzers nie überschreiben (Schutz gegen
   Bevormundung, CLAUDE.md).
-  - Test: `tests/tdd/test_compare_alert_missing_active_metrics_with_levels.py::test_explicit_off_survives_standard_levels_merge` — Δ-Sprung in der abgewählten UND in einer ergänzten Metrik, nur letztere löst einen Alarm aus.
+  - Test: `tests/tdd/test_compare_alert_missing_active_metrics_with_levels.py::test_explicit_off_survives_standard_levels_merge` — Regelmengen-Ebene (12 Regeln, `wind_gust` fehlt).
+  - Test (Alarm-Ebene, M9): `…::test_explicit_off_wind_gust_stays_silent_while_supplemented_metric_fires` — Δ-Sprung in der abgewählten UND in einer ergänzten Metrik, nur letztere löst einen Alarm aus. **Dieser Test ist der eigentliche AC-7-Nachweis:** Nur auf Feld-Ebene zeigt sich, ob eine abgewählte Größe über eine zweite Regel (`wind_change` ⊃ `gust_max_kmh`) wieder unter Überwachung gerät — genau daran scheiterte der verworfene Lösungsweg.
+  - Test (Gegenbeleg): `…::test_explicit_off_collision_free_metric_stays_silent` — dieselbe Zusage für eine Metrik ohne Feld-Überschneidung; trennt die beiden Ursachen.
 
 ## Known Limitations
 
@@ -262,7 +305,7 @@ hinter #1971, nicht nur den heutigen Symptomfall.
   ausschließlich die Metrik-Namen; ein Summary-Key-Eintrag wie
   `gust_max_kmh: "off"` ist bereits heute wirkungslos.
 
-  **Der hier eingeführte Merge verstärkt diesen Defekt messbar** — das ist
+  **Die hier eingeführte Ergänzung verstärkt diesen Defekt messbar** — das ist
   ein bewusst in Kauf genommener Trade-off, keine Nebensache. Gemessen an
   einem Preset OHNE `active_metrics` mit `{temp_max_c: "off", wind_gust:
   "standard"}` (Temperatur im ignorierten Vokabular abgewählt):
@@ -304,6 +347,15 @@ hinter #1971, nicht nur den heutigen Symptomfall.
 ## Changelog
 
 - 2026-08-19: Initial spec created
+- 2026-08-19: **Lösungsweg erneut korrigiert (Phase 5, Befund M9)** — der
+  Dict-Merge in `_build_eval_config()` ist widerlegt (er löscht die
+  Unterscheidung explizit/ergänzt, die der `claimed_fields`-Schutz braucht,
+  und bewacht `gust_max_kmh` bei `wind_gust: "off"` neu). Umgesetzt wird
+  stattdessen ein Supplement-Zweig in `expand_per_metric_levels()` hinter dem
+  neuen Parameter `supplement_missing_levels`, den allein der Vergleichs-Pfad
+  setzt. Wirkungstabelle auf die gemessenen Zahlen korrigiert (AC-1 14→13,
+  Abwahl-Probe 13→12; Ursache: Feldschutz). Die 7 ACs sind unverändert —
+  keine erneute PO-Freigabe nötig. Adversary-Finding F002.
 - 2026-08-19: Lösungsweg korrigiert — display_config-Ansatz verworfen
   (CAPE-Regression, 14→13 Regeln, Messbeleg Team-Lead), umgestellt auf
   Level-Merge in `_build_eval_config()`; AC-6 (CAPE-Regressionsschutz) und

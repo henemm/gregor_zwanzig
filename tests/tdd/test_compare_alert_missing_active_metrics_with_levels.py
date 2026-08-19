@@ -133,9 +133,17 @@ def _eval_config(display_config: dict | None):
 
 
 def _regeln(config):
-    """Regelmenge GENAU so gebildet wie in `DeviationAlertEngine._select_detector`."""
+    """Regelmenge GENAU so gebildet wie in `DeviationAlertEngine._select_detector`.
+
+    Alle drei Argumente stammen aus der echten `_build_eval_config`-Ausgabe —
+    inklusive `supplement_missing_levels` (#1971), das der Vergleichs-Pfad setzt
+    und der Trip-Pfad beim Default `False` laesst. Wer diese Zeile von der
+    Produktions-Fassung entkoppelt, misst nicht mehr den Wirkort.
+    """
     return expand_per_metric_levels(
-        config.metric_alert_levels or {}, display_config=config.display_config
+        config.metric_alert_levels or {},
+        display_config=config.display_config,
+        supplement_missing_levels=config.supplement_missing_levels,
     )
 
 
@@ -230,6 +238,69 @@ def test_partial_active_metrics_only_selected_metric_fires():
     )
 
 
+def test_partial_active_metrics_with_partial_levels_keeps_single_watched_field():
+    """AC-3 (GUARD, Feld-Ebene) GIVEN eine Teil-Auswahl
+    `active_metrics=["gust_max_kmh"]` UND ZEITGLEICH ein partielles
+    `metric_alert_levels={"wind_gust": "standard"}` — die Kombination, die im
+    Editor entsteht, sobald der Nutzer sowohl Metriken abwaehlt als auch eine
+    Empfindlichkeitsstufe setzt.
+
+    WHEN der Produktions-Waehler `DeviationAlertEngine._select_detector()`
+    daraus einen Detektor baut.
+
+    THEN bewacht dieser GENAU EIN Summary-Feld: `gust_max_kmh`.
+
+    WARUM ES DEN BESTEHENDEN AC-3-TEST NICHT DOPPELT:
+    `test_partial_active_metrics_only_selected_metric_fires` setzt
+    `active_metrics` OHNE `metric_alert_levels`. Dadurch greift in
+    `CompareAlertService._build_eval_config` (`compare_alert.py:530-533`) der
+    volle `_STANDARD_METRIC_LEVELS`-Rueckfall — alle 14 Metriken stehen dann
+    schon als Schluessel in `levels`, und der #1971-Ergaenzungszweig
+    (`alert_preset.py:408`) findet strukturell nichts mehr zu ergaenzen. Der
+    bestehende Test kann die Regression also gar nicht ausloesen, die er
+    bewachen soll — nicht weil sie unmoeglich waere, sondern weil seine
+    Testdaten sie zufaellig umgehen. Erst ein PARTIELLES
+    `metric_alert_levels` laesst 13 der 14 Metriken offen und macht die
+    Ergaenzung ueberhaupt erreichbar.
+
+    ZU DEN ZAHLEN 1 UND 11 (gemessen, nicht geraten):
+      Ist-Verhalten          1 Feld  ['gust_max_kmh']
+      bei einem Leck        11 Felder ['cape_max_jkg', 'freezing_level_m',
+                                       'gust_max_kmh', 'precip_heavy_onset_utc',
+                                       'precip_sum_mm', 'snow_new_sum_cm',
+                                       'temp_max_c', 'temp_min_c',
+                                       'thunder_level_max', 'thunder_onset_utc',
+                                       'wind_max_kmh']
+    Das Leck entsteht, sobald die #1971-Ergaenzung trotz vorhandenem
+    `display_config` durchschlaegt — also wenn entweder
+    `deviation_alert_engine.py:188-197` `supplement_missing_levels`
+    durchreicht oder `alert_preset.py:408` seine `display_config is None`-
+    Bedingung verliert. Dann ergaenzt der Standard-Satz die 13 nicht
+    genannten Metriken; nur die vom expliziten `wind_gust`-Eintrag belegten
+    Felder bleiben verschont. Die Abwahl des Nutzers waere damit
+    unterwandert — Bevormundung, die AC-3 ausdruecklich ausschliesst.
+
+    PRUEFORT = WIRKORT: geprueft werden die Schwellen des fertigen Detektors
+    (`_thresholds`), nicht die Regelmenge davor — die Explosion zeigt sich
+    erst dort, wo die Regeln zu bewachten Feldern werden.
+    """
+    config = _eval_config({
+        "active_metrics": ["gust_max_kmh"],
+        "metric_alert_levels": {"wind_gust": "standard"},
+    })
+    detektor = DeviationAlertEngine._select_detector(config)
+    bewacht = sorted(detektor._thresholds)
+
+    assert bewacht == ["gust_max_kmh"], (
+        "Teil-Auswahl `active_metrics=['gust_max_kmh']` mit partiellem "
+        "`metric_alert_levels={'wind_gust': 'standard'}`: der Detektor "
+        f"bewacht {len(bewacht)} Felder statt genau eines — {bewacht!r}. Die "
+        "#1971-Ergaenzung (alert_preset.py:408) hat trotz vorhandenem "
+        "`display_config` durchgeschlagen und die Abwahl des Nutzers "
+        "unterwandert (AC-3: 'die Teil-Auswahl bleibt vom Fix unberuehrt')."
+    )
+
+
 # ══════════════════════════════ AC-4 (GUARD) ═════════════════════════════════
 
 def test_legacy_preset_without_levels_unchanged_rule_count():
@@ -309,14 +380,26 @@ def test_explicit_off_survives_standard_levels_merge():
     `metric_alert_levels` `wind_gust` ausdruecklich auf `"off"` setzt und
     `precipitation_sum` auf `"standard"`.
 
-    THEN entstehen 13 Regeln: der Standard-Satz ergaenzt die fehlenden
+    THEN entstehen 12 Regeln: der Standard-Satz ergaenzt die fehlenden
     Groessen (Beginn-Groessen, CAPE), `wind_gust` bleibt aber ABGEWAEHLT.
 
     RED heute: es entsteht genau 1 Regel (`precipitation_sum`) — die
-    Ergaenzung gibt es noch nicht. Die 13 sind gemessen (Spec-Tabelle
-    "Abwahl-Probe"), nicht geraten. Der Test sichert zugleich die
-    Merge-Reihenfolge ab: wuerde spaeter jemand `_STANDARD_METRIC_LEVELS`
-    ZULETZT mergen, kaeme `wind_gust` zurueck und der Test wird rot.
+    Ergaenzung gibt es noch nicht. Der Test sichert zugleich die Rangfolge ab:
+    wuerde spaeter jemand den Standard-Satz die expliziten Eintraege
+    ueberschreiben lassen, kaeme `wind_gust` zurueck und der Test wird rot.
+
+    ZUR ZAHL 12 (Phase 5, Team-Lead-Vorgabe M9): Die Spec-Tabelle nannte 13 —
+    gemessen am spaeter VERWORFENEN Dict-Merge in `_build_eval_config`, der
+    ergaenzte und explizite Eintraege ununterscheidbar macht. Der umgesetzte
+    Weg ergaenzt in `expand_per_metric_levels` und nimmt dabei den bestehenden
+    Feld-Schutz (`claimed_fields`) mit: `precipitation_change` belegt allein
+    `precip_sum_mm`, das der explizite `precipitation_sum`-Eintrag bereits
+    beansprucht — die Regel entfaellt deshalb komplett (dieselbe Regel wie im
+    `display_config`-Zweig, `alert_preset.py:379-380`). Ohne diesen Schutz
+    ueberschriebe die ergaenzte `standard`-Schwelle (7 mm) eine bewusst
+    gesetzte `entspannt`-Schwelle (20 mm) auf demselben Feld — genau das
+    verbietet `test_issue_1170_compare_alert_config.py::
+    test_ac5_stored_entspannt_level_makes_alert_less_sensitive`.
     """
     config = _eval_config({"metric_alert_levels": {
         "wind_gust": "off", "precipitation_sum": "standard",
@@ -332,9 +415,16 @@ def test_explicit_off_survives_standard_levels_merge():
             f"`{metrik}` wurde nicht ergaenzt. Erzeugt wurden "
             f"{len(namen)} Regeln: {namen!r}"
         )
-    assert len(namen) == 13, (
-        f"Erwartet 13 Regeln (14 Standard-Groessen minus das abgewaehlte "
-        f"`wind_gust`), erhalten {len(namen)}: {namen!r}"
+    assert "precipitation_change" not in namen, (
+        "`precipitation_change` wurde ergaenzt, obwohl sein einziges Feld "
+        "`precip_sum_mm` bereits vom expliziten `precipitation_sum`-Eintrag "
+        "belegt ist — die ergaenzte Standard-Schwelle wuerde die bewusst "
+        f"gesetzte ueberschreiben (#1170 AC-5). Erzeugt wurden: {namen!r}"
+    )
+    assert len(namen) == 12, (
+        f"Erwartet 12 Regeln (14 Standard-Groessen minus das abgewaehlte "
+        f"`wind_gust` minus das feld-belegte `precipitation_change`), "
+        f"erhalten {len(namen)}: {namen!r}"
     )
 
 

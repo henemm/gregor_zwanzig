@@ -178,6 +178,7 @@ def expand_preset(name: str) -> list[AlertRule]:
 def expand_per_metric_levels(
     levels: dict[str, str],
     display_config: "UnifiedWeatherDisplayConfig | None" = None,
+    supplement_missing_levels: bool = False,
 ) -> list[AlertRule]:
     """Konvertiert metric_alert_levels (metric → SensLevel) in AlertRule-Liste.
 
@@ -195,6 +196,13 @@ def expand_per_metric_levels(
         Backfill-Overwrite).
     Ohne `display_config` (Default None): altes Verhalten (Abwärtskompatibilität,
     keine Filterung, kein Backfill).
+
+    Issue #1971 — `supplement_missing_levels` (nur wirksam ohne `display_config`):
+    Der Aufrufer erklärt damit, dass `levels` eine TEIL-Angabe ist und fehlende
+    `_PRESET_TABLE`-Metriken auf 'standard' zu ergänzen sind. Gesetzt wird der
+    Schalter allein vom Vergleichs-Pfad (`CompareAlertService._build_eval_config`)
+    für Presets ohne `display_config.active_metrics`; der Trip-Pfad lässt ihn beim
+    Default `False` und bleibt unverändert.
 
     `levels` (die Trip-JSON-Quelle) wird NIE verändert — reine Auswertungslogik.
     """
@@ -378,6 +386,37 @@ def expand_per_metric_levels(
             remaining = metric_fields - blocked
             if metric_fields and not remaining:
                 continue  # alle Felder belegt/ab-gewählt → Regel komplett unterdrücken (AC-6)
+            rule = _make_rule(metric_str, "standard")
+            if rule is not None:
+                if colliding:
+                    rule.suppressed_fields = set(colliding)
+                rules.append(rule)
+
+    # Issue #1971: Ergänzung ohne `display_config`. Fehlt im Vergleichs-Preset
+    # `active_metrics`, bleibt `display_config` bewusst None (sonst schaltete der
+    # #961-Filter CAPE stumm, `selectable=False` seit #1585) — dann greift der
+    # Backfill oben nicht, und ein `metric_alert_levels`, das eine später
+    # eingeführte Metrik (Beginn-Alarme #1468) nicht auflistet, lässt sie still.
+    # Hier wird auf 'standard' ergänzt, mit DEMSELBEN Feld-Schutz wie oben:
+    # explizit gesetzte Metriken (jede Stufe, auch 'off') belegen ihre
+    # Summary-Felder, eine ergänzte Metrik armiert sie nicht nach. Sonst
+    # unterwanderte die Ergänzung die Nutzer-Entscheidung gleich doppelt — eine
+    # Abwahl (wind_change ⊃ gust_max_kmh bei wind_gust='off') ebenso wie eine
+    # bewusste Schwellenwahl (precipitation_change 'standard' überschriebe
+    # precipitation_sum 'entspannt' auf demselben Feld precip_sum_mm, Issue
+    # #1170 AC-5).
+    if display_config is None and supplement_missing_levels:
+        claimed_fields = set()
+        for metric_str in levels:
+            claimed_fields |= _fields_for(metric_str)
+        for row in _PRESET_TABLE:
+            metric_str = row[0].value
+            if metric_str in levels:
+                continue  # explizit gesetzt (inkl. 'off') → Nutzer entscheidet
+            metric_fields = _fields_for(metric_str)
+            colliding = metric_fields & claimed_fields
+            if metric_fields and not (metric_fields - claimed_fields):
+                continue  # jedes Feld belegt → Ergänzung komplett unterdrücken
             rule = _make_rule(metric_str, "standard")
             if rule is not None:
                 if colliding:
