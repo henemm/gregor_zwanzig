@@ -387,7 +387,9 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        2026-08-13 noch die km-Spanne)
      - `render_email(msg)` — HTML + Plain mit Onset-Uhrzeit, Intensity-Label, Quellenangabe, Cooldown-Block
      - `render_telegram(msg)` — Fettzeile + Detail mit Onset-Uhrzeit und Quelle
-     - `render_sms(msg)` — Token `R!<min>` (Regen) oder `TH!<min>` (Gewitter), ≤140 Zeichen GSM-7
+     - `render_sms(msg)` — Token `R@<hh:mm>` (Regen) oder `TH@<hh:mm>` (Gewitter), Zeitpunkt statt
+       Countdown (seit #1948 S4; Kurznachricht kürzt bei der Stunde die führende Null,
+       `TH@9:05` statt `TH@09:05`), ≤140 Zeichen GSM-7
      - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`
      - `AlertMessage.cooldown_display` trägt den dynamischen Cooldown-Text (z.B. „2 Stunden")
      - `src/outputs/radar_alert.py` ist gelöscht — kein separater Inline-Body-Bau mehr

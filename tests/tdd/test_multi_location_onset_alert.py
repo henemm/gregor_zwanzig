@@ -97,7 +97,9 @@ EXPECTED_TELEGRAM = (
     '<b>GR20-Test · km 5–18 · Regen in 12 Min</b>\n14:35 · leichter Regen · Radar (DWD)'
 )
 # Issue #1935/#1779 (E4): Trip-Radar/Onset-Kopf verliert den Trip-Namen.
-EXPECTED_SMS = 'km5-18: R!12'
+# FORTGESCHRIEBEN (Issue #1948 S4): Zeitpunkt statt Countdown, Kopf in
+# `format_alert_location`-Schreibweise. Telegram bleibt unveraendert.
+EXPECTED_SMS = 'km 5-18: R@14:35'
 
 
 def _fresh_user(prefix: str) -> str:

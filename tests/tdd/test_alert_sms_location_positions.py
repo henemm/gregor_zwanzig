@@ -949,7 +949,10 @@ def test_regression_trip_radar_alert_sms_text_unchanged():
         )
         # Issue #1935/#1779 (E4): Trip-Radar/Onset-Kopf verliert den Trip-Namen,
         # km-Spanne bleibt (kein Segment-Bezug im Radar-Request dieser Fixture).
-        assert stub.texts() == ["km5-18: R!12"], (
+        # FORTGESCHRIEBEN (Issue #1948 S4): km-Kopf in
+        # `format_alert_location`-Schreibweise + Zeitpunkt statt Countdown;
+        # `onset_time` ist in dieser Fixture fest ("14:35"), also goldstring-fest.
+        assert stub.texts() == ["km 5-18: R@14:35"], (
             "Regression: der SMS-Text des Trip-Radar-Alarms muss unveraendert "
             f"bleiben, gemessen: {stub.texts()!r}"
         )
@@ -980,9 +983,18 @@ def test_regression_compare_radar_alert_sms_text_unchanged():
         svc.send_multi_location_radar_alert(
             [("Zermatt", loc_a, nc_a), ("Chamonix", loc_b, nc_b)], {"sms"},
         )
-        assert stub.texts() == ["Zermatt, Chamoni km0-0: R!8"], (
-            "Regression: der SMS-Text des Ortsvergleich-Radar-Alarms muss "
-            f"unveraendert bleiben, gemessen: {stub.texts()!r}"
+        # FORTGESCHRIEBEN (Issue #1948 S4): der Buendel-Kopf nennt den Ortsnamen
+        # des fuehrenden Events statt des gekuerzten Sammelnamens mit km0-0.
+        # `onset_time` leitet der Konstruktor aus `datetime.now()` ab -> Struktur
+        # statt Goldstring (Wanduhr-Ratsche #1940).
+        texte = stub.texts()
+        assert len(texte) == 1, f"Erwartet genau eine SMS, bekam: {texte!r}"
+        assert re.fullmatch(r"Zermatt: R@\d{1,2}:\d{2}", texte[0]), (
+            "Regression: der SMS-Text des Ortsvergleich-Radar-Alarms muss dem "
+            f"S4-Zielbild 'Zermatt: R@HH:MM' folgen, gemessen: {texte!r}"
+        )
+        assert "km0" not in texte[0] and "Chamoni" not in texte[0], (
+            f"Buendel-SMS traegt noch km0-0 bzw. den Sammelnamen: {texte!r}"
         )
     finally:
         stub.stop()

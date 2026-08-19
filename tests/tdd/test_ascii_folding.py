@@ -214,31 +214,29 @@ def test_radar_alert_trip_short_survives_double_truncation():
     falten, dann nochmal kuerzen), die Buchstaben frisst, weil 'ü' -> 'ue'
     beim Falten waechst.
 
-    Retargeted (Issue #1935/#1779 E4, PO-Entscheid 2026-08-17): der reine
-    TRIP-Radar/Onset-Pfad (`OnsetEvent.location_label=None`, wie ihn
-    `radar_alert_service.py::build_onset_alert_message` baut) fuehrt seither
-    KEINEN Namen mehr im SMS-Kopf — die urspruengliche Fixture ueber
-    `build_onset_alert_message` wuerde den Pruefling (die Doppelkuerzungs-
-    Logik `_ascii(msg.trip_short)[:16].rstrip(...)`) gar nicht mehr
-    durchlaufen und still bedeutungslos gruen bleiben (kein `trip_short` mehr
-    im Kopf, also nichts mehr zu kuerzen). Dieselbe Kuerzungslogik greift
-    unveraendert im Compare-Radar-Buendel-Pfad (`OnsetEvent.location_label`
-    gesetzt, Issue #1935/#1779 AC-10/AC-12 — dort ist `trip_short` der
-    Orts-Sammelname und bleibt bewusst stehen), dorthin verlegt dieser Test
-    die Fixture, ohne die Pruefling-Logik selbst zu aendern."""
-    from output.renderers.alert.model import AlertMessage, OnsetEvent
+    Retargeted ZWEIMAL, jedesmal weil der VORHERIGE Traeger-Pfad die
+    Doppelkuerzung verlor — die Pruefling-Logik selbst blieb unveraendert:
+    (1) Issue #1935/#1779 E4: weg vom reinen Trip-Radar/Onset-Pfad, der
+    seither keinen Namen mehr im Kopf fuehrt, hin zum Compare-Radar-
+    Buendel-Pfad. (2) Issue #1948 S4 (2026-08-19): auch der Onset-Buendel-Kopf
+    fuehrt seither den Ortsnamen aus `location_label` statt des gekuerzten
+    `trip_short` — die Kuerzungslogik `_ascii(msg.trip_short)[:16].rstrip(...)`
+    lebt unveraendert im Schwellen-Alarm-Kopf (`_render_sms_corridor_only`,
+    render.py:872) und im Trip-Aenderungs-Kopf (render.py:922) weiter. Dorthin
+    verlegt dieser Test die Fixture — wieder ohne den Pruefling zu aendern.
+    Blieben wir am Onset-Pfad, waere der Test still bedeutungslos gruen."""
+    from output.renderers.alert.model import AlertMessage, CorridorEvent
     from output.renderers.alert.render import render_sms
     from utils.ascii_fold import fold_ascii
 
     trip_short = "Wandergruppe München"
-    onset = OnsetEvent(
-        onset_minutes=12, onset_time="14:00", km_from=0.0, km_to=5.0,
-        is_convective=False, intensity_label="leichter Regen",
-        source_label="Radar", location_label="Buendel-Ort",
+    corridor = CorridorEvent(
+        metric_id="temperature", value=31.0, bound=30.0, direction="above",
+        occurred_at="14:00", km_from=0.0, km_to=5.0,
     )
     msg = AlertMessage(
-        trip_short=trip_short, stand_at="14:00", events=(onset,),
-        source="Radar", cooldown_display="60 Min",
+        trip_short=trip_short, stand_at="14:00", events=(),
+        corridor_events=(corridor,), cooldown_display="60 Min",
     )
 
     sms = render_sms(msg)

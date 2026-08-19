@@ -102,16 +102,27 @@ class TestAC6_OnsetReplayDetectsOnset:
                 f"AC-6: '{field}' darf bei erkanntem Onset nicht leer sein: {data!r}"
             )
 
-        match = re.search(r"R!(\d+)", data["sms"])
-        assert match, (
-            f"AC-6: SMS muss ein nicht-konvektives 'R!<Minuten>'-Token "
+        # FORTGESCHRIEBEN (Issue #1948 S4): die Kurznachricht nennt seit S4
+        # den ZEITPUNKT (`R@HH:MM`) statt des Countdowns (`R!<Minuten>`). Die
+        # abgeleiteten Minuten bleiben ueber `email_plain`/`telegram` pruefbar,
+        # die dieselbe `_derive_result`-Ableitung wie der Live-Pfad tragen.
+        assert re.search(r"\bR@\d{1,2}:\d{2}\b", data["sms"]), (
+            f"AC-6: SMS muss ein nicht-konvektives 'R@HH:MM'-Zeitpunkt-Token "
             f"tragen: {data['sms']!r}"
+        )
+        assert not re.search(r"\b(TH|R)!\d+", data["sms"]), (
+            f"AC-6: das Countdown-Format ist abgeloest: {data['sms']!r}"
+        )
+        match = re.search(r"Regen in (\d+) Min", data["telegram"])
+        assert match, (
+            f"AC-6: Telegram muss die Countdown-Minuten weiter fuehren: "
+            f"{data['telegram']!r}"
         )
         actual_minutes = int(match.group(1))
         assert abs(actual_minutes - 20) <= 1, (
             f"AC-6: onset_minutes muss aus derselben _derive_result-"
             f"Ableitung stammen wie der Live-Radar-Pfad (erster nasser "
-            f"Frame bei ~20 Min), bekam R!{actual_minutes}"
+            f"Frame bei ~20 Min), bekam {actual_minutes}"
         )
         assert (
             "Mäßiger Regen" in data["email_plain"]

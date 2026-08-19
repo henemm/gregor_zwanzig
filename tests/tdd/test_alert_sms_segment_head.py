@@ -216,11 +216,18 @@ def test_ac12_trip_radar_sms_verliert_den_namen_compare_radar_sms_behaelt_ihn():
     sms_trip = render_sms(trip_msg)
     sms_compare = render_sms(compare_msg)
 
-    assert sms_trip.startswith("km5-18: "), (
+    # FORTGESCHRIEBEN (Issue #1948 S4 AC-9): das Format wechselte auf
+    # `format_alert_location`-Schreibweise + Zeitpunkt-Token; die
+    # DIFFERENZLOGIK zwischen beiden Ergebnissen bleibt die Zusicherung.
+    assert sms_trip.startswith("km 5-18: "), (
         f"Trip-Radar-SMS traegt weiterhin einen Namens-Kopf: {sms_trip!r}"
     )
     assert "KHW 403" not in sms_trip, f"Trip-Name noch in der SMS: {sms_trip!r}"
 
-    assert sms_compare.startswith("Vergleich km5-18: "), (
-        f"Compare-Radar-SMS hat ihren Sammelnamen verloren: {sms_compare!r}"
+    assert sms_compare.startswith("Vergleich: "), (
+        f"Compare-Radar-SMS hat ihren Ortsnamen verloren: {sms_compare!r}"
+    )
+    assert sms_trip != sms_compare, (
+        f"Trip- und Compare-Kopf duerfen nicht zusammenfallen: "
+        f"{sms_trip!r} / {sms_compare!r}"
     )
