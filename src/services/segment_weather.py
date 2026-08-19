@@ -17,6 +17,7 @@ from app.config import Location
 from app.day_window import display_end_time
 from app.debug import DebugBuffer
 from app.models import SegmentWeatherData, SegmentWeatherSummary, TripSegment
+from utils.timezone import to_utc
 
 logger = logging.getLogger(__name__)
 
@@ -252,10 +253,10 @@ class SegmentWeatherService:
         # tzinfo gestrippt wird -- ein reines .replace(tzinfo=None) wuerde
         # die lokale Uhrzeit als UTC missdeuten und falsche Stunden
         # zuordnen (analog zu app/models.py:155).
-        start_floor = segment.start_time.astimezone(timezone.utc).replace(
+        start_floor = to_utc(segment.start_time).replace(
             minute=0, second=0, microsecond=0, tzinfo=None
         )
-        end_floor = segment.end_time.astimezone(timezone.utc).replace(
+        end_floor = to_utc(segment.end_time).replace(
             minute=0, second=0, microsecond=0, tzinfo=None
         )
         # Bug #806: Randstunde exklusiv am Ende (< end_floor), damit jede Stunde

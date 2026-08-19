@@ -34,6 +34,7 @@ from threading import Lock
 from typing import Optional
 
 from app.models import NormalizedTimeseries, TripSegment
+from utils.timezone import to_utc
 
 
 @dataclass
@@ -123,8 +124,8 @@ class WeatherCacheService:
             - Moves the matched entry to end (LRU)
         """
         bucket = self._bucket_key(segment, enrich_ensemble, enrich_snow, model_id)
-        req_start = segment.start_time.astimezone(timezone.utc)
-        req_end = segment.end_time.astimezone(timezone.utc)
+        req_start = to_utc(segment.start_time)
+        req_end = to_utc(segment.end_time)
         prefix = bucket + "|"
 
         with self._lock:
@@ -174,8 +175,8 @@ class WeatherCacheService:
               already present (e.g. TTL-refresh of the same request)
         """
         bucket = self._bucket_key(segment, enrich_ensemble, enrich_snow, model_id)
-        window_start = segment.start_time.astimezone(timezone.utc)
-        window_end = segment.end_time.astimezone(timezone.utc)
+        window_start = to_utc(segment.start_time)
+        window_end = to_utc(segment.end_time)
         key = self._storage_key(bucket, window_start, window_end)
 
         with self._lock:
