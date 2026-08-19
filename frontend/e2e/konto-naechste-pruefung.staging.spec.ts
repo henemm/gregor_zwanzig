@@ -1,0 +1,144 @@
+// TDD RED — E2E (Staging), Issue #1727 S5e (B): die Konto-Seite beschriftet
+// den Scheduler-Tick ehrlich und zeigt ihn in der Zone des Browsers.
+//
+// Spec: docs/specs/modules/fix_1727_s5e_sperrcache_anzeige.md
+//   AC-4  sichtbarer Text "Nächste Prüfung" statt "Nächster"
+//   AC-7  zwei Browser-Zonen -> zwei verschiedene Uhrzeiten, je eigenes Kuerzel
+//
+// WARUM IM BROWSER UND NICHT PER GREP: Die Beschriftung ist statisches Markup
+// (`account/+page.svelte:599`), die Zone entsteht erst beim Formatieren im
+// Browser. Ein Dateiinhalt-Check auf `+page.svelte` ist als Nachweis
+// ausdruecklich untersagt (Spec AC-4; CLAUDE.md "Test-Politik") — er belegt
+// kein Verhalten. Geprueft wird der GERENDERTE Text der Zeile.
+//
+// RED-Grund (gemessen): Staging traegt den alten Stand — die Zeile heisst dort
+// "Nächster:" und formatiert fest in `Europe/Vienna` (vier `timeZone`-Literale,
+// `:269-279`). Beide Zonen liefern deshalb heute denselben String.
+//
+// Ausfuehren (aus frontend/, gegen Staging):
+//   set -a; source /home/hem/gregor_zwanzig/validator.env; set +a
+//   npx playwright test --config=e2e/playwright.konto-naechste-pruefung.staging.config.ts
+
+import { test, expect, type Browser, type Page } from '@playwright/test';
+import { assertNotProdBaseURL } from './prodUrlGuard';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const AUTH_STATE = path.join(__dirname, 'playwright', '.auth', 'staging-1727-s5e.json');
+const BASE = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+
+/** Die Zeile im Bereich "Deine Reports", die den naechsten Lauf zeigt.
+ *  Bewusst gegen BEIDE Beschriftungen gematcht (alt "Nächster:", neu
+ *  "Nächste Prüfung:") — sonst faende der Test im RED-Zustand gar nichts und
+ *  meldete "Element nicht da" statt des tatsaechlichen Ist-Textes. */
+async function schedulerZeile(page: Page): Promise<string> {
+	const zeile = page
+		.locator('#system-status span')
+		.filter({ hasText: /(Nächste Prüfung|Nächster):/ })
+		.first();
+	await expect(zeile, 'Zeile mit dem naechsten Lauf im Bereich "Deine Reports"').toBeVisible({
+		timeout: 20_000
+	});
+	return (await zeile.innerText()).trim();
+}
+
+/** Konto-Seite in einem Browser-Kontext mit fest gesetzter Zeitzone oeffnen.
+ *  `browser.newContext()` erbt die `use`-Optionen der Config NICHT — Basis-URL,
+ *  nginx-Zugang und Anmeldezustand muessen hier explizit mitgegeben werden. */
+async function kontoSeiteInZone(browser: Browser, timezoneId: string): Promise<string> {
+	const ctx = await browser.newContext({
+		baseURL: BASE,
+		timezoneId,
+		storageState: AUTH_STATE,
+		ignoreHTTPSErrors: true,
+		httpCredentials: {
+			username: process.env.GZ_VALIDATOR_USER ?? 'admin',
+			password: process.env.GZ_VALIDATOR_PASS ?? 'test1234'
+		}
+	});
+	try {
+		const page = await ctx.newPage();
+		await page.goto('/account', { waitUntil: 'domcontentloaded' });
+		return await schedulerZeile(page);
+	} finally {
+		await ctx.close();
+	}
+}
+
+test.describe('#1727 S5e — Konto-Seite: "Nächste Prüfung" in der Browser-Zone', () => {
+	test.beforeAll(() => {
+		assertNotProdBaseURL(BASE);
+	});
+
+	test('AC-4: die Zeile heisst "Nächste Prüfung", nicht "Nächster"', async ({ browser }) => {
+		const text = await kontoSeiteInZone(browser, 'Europe/Vienna');
+
+		expect(
+			text,
+			`Sichtbarer Text der Scheduler-Zeile: ${JSON.stringify(text)} — erwartet die ` +
+				`Beschriftung "Nächste Prüfung:". "Nächster:" gibt den generischen ` +
+				`stuendlichen Poll-Tick faelschlich als Versandtermin aus.`
+		).toContain('Nächste Prüfung:');
+		expect(
+			text,
+			`Die alte Beschriftung "Nächster:" steht noch in ${JSON.stringify(text)}.`
+		).not.toMatch(/Nächster:/);
+	});
+
+	test('AC-7: zwei Browser-Zonen zeigen zwei verschiedene Uhrzeiten mit Kuerzel', async ({
+		browser
+	}) => {
+		const wien = await kontoSeiteInZone(browser, 'Europe/Vienna');
+		const newYork = await kontoSeiteInZone(browser, 'America/New_York');
+
+		// Positivkontrolle: ohne echten Zeitwert ist der Vergleich wertlos.
+		// Steht dort "—", liefert der Scheduler kein `next_run` — dann ist das
+		// ein Fehlschlag des Testaufbaus, kein bestandener Nachweis.
+		for (const [zone, wert] of [
+			['Europe/Vienna', wien],
+			['America/New_York', newYork]
+		] as const) {
+			expect(
+				wert,
+				`In ${zone} steht ${JSON.stringify(wert)} — der Scheduler liefert kein ` +
+					`next_run. Ohne Zeitwert ist der Zonenvergleich nicht fuehrbar.`
+			).toMatch(/\d{2}:\d{2}/);
+		}
+
+		// Kernzusicherung AC-7 steht bewusst VOR der Beschriftungspruefung: sonst
+		// bricht der Test schon an der noch offenen AC-4 ab und sagt ueber die
+		// Zone gar nichts aus. Die beiden ACs sollen unabhaengig voneinander
+		// diagnostizierbar sein.
+		const uhrzeit = (s: string) => s.match(/\d{2}:\d{2}/)?.[0] ?? '';
+		expect(
+			uhrzeit(newYork),
+			`Wien zeigt ${JSON.stringify(wien)}, New York ${JSON.stringify(newYork)} — ` +
+				`gleiche Uhrzeit bedeutet: die Anzeige haengt weiterhin fest an ` +
+				`Europe/Vienna (oder der Zonenwechsel des Testbrowsers ist folgenlos). ` +
+				`Beides ist ein Fehlschlag, kein Grenzfall.`
+		).not.toBe(uhrzeit(wien));
+
+		// Jede Anzeige traegt ihr eigenes Zonenkuerzel, sonst ist die Zahl mehrdeutig.
+		const kuerzel = (s: string) => s.replace(/^.*\d{2}:\d{2}\s*/, '').trim();
+		for (const [zone, wert] of [
+			['Europe/Vienna', wien],
+			['America/New_York', newYork]
+		] as const) {
+			expect(
+				kuerzel(wert),
+				`In ${zone} folgt der Uhrzeit kein Zonenkuerzel (${JSON.stringify(wert)}) — ` +
+					`ohne feste Zone waere die Zahl allein nicht mehr eindeutig.`
+			).not.toBe('');
+		}
+		expect(
+			kuerzel(newYork),
+			`Beide Zonen zeigen dasselbe Kuerzel ${JSON.stringify(kuerzel(wien))} — es ist ` +
+				`nicht das der jeweiligen Browser-Zone.`
+		).not.toBe(kuerzel(wien));
+
+		// Zuletzt: die Beschriftung gilt zonenunabhaengig (AC-4, hier mitgeprueft).
+		expect(wien).toContain('Nächste Prüfung:');
+		expect(newYork).toContain('Nächste Prüfung:');
+	});
+});
