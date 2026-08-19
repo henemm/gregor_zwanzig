@@ -533,6 +533,12 @@ class CompareAlertService:
             ),
             channels=effective_compare_channels(preset, self._settings, self._user_id),
             display_config=self._display_config_from_active_metrics(preset),
+            # Issue #1971: das Preset-`metric_alert_levels` ist eine TEIL-Angabe —
+            # eine später eingeführte Metrik (Beginn-Alarme #1468) steht darin
+            # nicht und bliebe ohne `active_metrics` (display_config=None) still.
+            # Wirkt ausschliesslich in diesem Fall; sobald `active_metrics`
+            # vorliegt, schliesst der #961-Backfill die Lücke wie bisher.
+            supplement_missing_levels=True,
             # Issue #1726: Zone des ERSTEN aufloesbaren Orts (#1378 AC-4,
             # AC-15) — die EINE Stelle, an der der Vergleich sie bildet.
             zone=first_resolvable_tz(

@@ -3529,6 +3529,19 @@ gespeicherter Wert unter `display_config.metric_alert_levels.thunder_onset` /
 `.precipitation_heavy_onset` wirkt weiterhin, wird von der Oberfläche aber weder gezeigt noch
 gesetzt. Die eigene Bedienbarkeit gehört zu #1462.
 
+**Fehlt `display_config.active_metrics` ganz** (Schlüssel absent oder `None`), greift dieser
+Backfill NICHT — er sitzt hinter `if display_config is not None`. Ein Ortsvergleichs-Preset in
+diesem Zustand ließ deshalb jede Metrik still, die sein `metric_alert_levels` nicht namentlich
+auflistet (#1971). Seit #1971 ergänzt `expand_per_metric_levels()` in genau diesem Fall die
+fehlenden `_PRESET_TABLE`-Metriken auf **„standard"** — aktiviert über den Parameter
+`supplement_missing_levels`, den **allein** der Vergleichs-Pfad
+(`CompareAlertService._build_eval_config`) setzt; der Trip-Pfad lässt den Default `False`.
+Ausdrücklich gesetzte Einträge gewinnen dabei immer, auch `"off"`: sie werden übersprungen UND
+sperren ihre Summary-Felder gegen Ergänzungen (`claimed_fields`), damit eine Abwahl nicht über
+eine zweite Regel mit demselben Feld wieder scharf wird (`wind_change` ⊃ `gust_max_kmh`).
+`display_config` bleibt in diesem Fall bewusst `None` — sonst entfiele die CAPE-Regel, deren
+Katalog-Größe seit #1585 `selectable=False` trägt.
+
 **`corridors[].metric` trug zwei Namensräume** (#1444 S2a, aus `resolve_corridor_summary_field()`
 in `corridor_threshold.py`): eine `AlertMetric`-Kennung (die 5 fest verdrahteten Zeilen, z.B.
 `wind_gust`, `snow_line`) ODER einen Katalog-`key` (die 18 seit #1425 aus dem Katalog gespeisten

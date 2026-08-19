@@ -196,7 +196,11 @@ class DeviationAlertEngine:
             )
             return WeatherChangeDetectionService.from_alert_rules(rules)
 
-        rules = expand_per_metric_levels(config.metric_alert_levels or {}, display_config=None)
+        rules = expand_per_metric_levels(
+            config.metric_alert_levels or {},
+            display_config=None,
+            supplement_missing_levels=config.supplement_missing_levels,
+        )
         return WeatherChangeDetectionService.from_alert_rules(rules)
 
     @staticmethod

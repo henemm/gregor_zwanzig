@@ -70,6 +70,11 @@ class AlertEvaluationConfig:
     # Eintrag). None = kein Backfill (Abwärtskompatibilität für generische
     # Aufrufer ohne Weather-Tab-Kontext, z. B. reine metric_alert_levels-Nutzung).
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None
+    # Issue #1971: der Erbauer erklärt, dass `metric_alert_levels` nur eine
+    # TEIL-Angabe ist — fehlende Metriken sind auf 'standard' zu ergänzen.
+    # Wirkt nur bei `display_config is None` (sonst schließt der #961-Backfill
+    # die Lücke bereits). Der Trip-Pfad lässt den Default `False` stehen.
+    supplement_missing_levels: bool = False
     # Issue #1726: Ortszone des Gegenstands fuer die Ruhezeit-Pruefung (Trip:
     # `anchor_tz`, Vergleich: `first_resolvable_tz`). `None` = der Erbauer
     # kennt keine; die Engine rechnet dann in Weltzeit statt zu raten.
