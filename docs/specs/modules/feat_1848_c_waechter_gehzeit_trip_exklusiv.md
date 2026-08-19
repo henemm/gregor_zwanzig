@@ -176,6 +176,17 @@ die echten Katalog-Listen veraendert.
   unauflösbar, weil sie keine `summary_fields` tragen — nicht, weil der Ausblick sie namentlich
   ausschlösse. Der Wächter sichert diesen Zusammenhang nicht zu: entfernt jemand die Katalogprüfung
   im Ausblick, bleibt er grün. Adversary-Befund vom 2026-08-19, Stufe LOW.
+  **Nachtrag Adversary-Runde 2:** Die Grenze ist **weiter** als hier zunächst beschrieben — der
+  Schutz steht auf zwei Beinen (Katalogprüfung **und** `_summary_field`-Prüfung), und **jedes von
+  beiden ist einzeln entfernbar**, ohne dass ein Test rot wird. Der ursprüngliche Wortlaut nannte
+  nur das Katalog-Bein und hat damit untertrieben.
+- **Die Ableitung bewacht sich nicht selbst.** Die erwartete Menge wird aus dem Register abgeleitet
+  (alle `label_de` mit `(Gehzeit)`) und gegen das Literal im Wächter geprüft — das fängt jede
+  *einseitige* Änderung. Wer jedoch **drei Stellen im Einklang** ändert (Zusatz aus einem `label_de`
+  entfernen, Literal schrumpfen, Erwartungsliste der Gegenprobe mitziehen), macht eine Kennung
+  unbewacht, ohne dass etwas rot wird. Bewusst als Grenze benannt, nicht als Fehler behandelt: drei
+  abgestimmte Änderungen sind ein gewollter Rückbau, kein Versehen. Adversary-Runde 2 vom
+  2026-08-19, Stufe LOW.
 - **Eine Umgehung im Frontend-Code selbst fällt nicht auf.** Der Wächter deckt die Python-Seite ab
   (Katalog, Register, Endpoint-Antwort). Eine Gehzeit-Größe, die fest in `buildCompareMetricDefs()`
   (`frontend/src/lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts`) eingetragen

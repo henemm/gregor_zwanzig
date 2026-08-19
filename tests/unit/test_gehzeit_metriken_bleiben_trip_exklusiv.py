@@ -488,16 +488,43 @@ def test_f002_gegenprobe_geschrumpfte_und_gewachsene_menge_werden_benannt():
 # Aenderung. Reiner Funktionsaufruf: kein Netz, kein HTTP-Client, kein
 # TestClient-Server, kein Mock.
 # ---------------------------------------------------------------------------
+# Herkunft einer Fundstelle -- die Meldung muss unterscheidbar sagen, ueber
+# WELCHES Feld der Verstoss aufgefallen ist, sonst raetselt der naechste Leser.
+_FUND_UEBER_METRIC_ID = "ueber metric_id"
+_FUND_UEBER_LABEL = "ueber Beschriftung"
+
+
 def _verbotene_ids_in_endpoint_antwort(
     verboten: tuple[str, ...] = GEHZEIT_METRIC_IDS, payload: dict | None = None
 ) -> list[str]:
-    """Welche der genannten Kennungen traegt die Nutzlast von
-    `GET /api/compare/metrics` (`{"metrics": [...]}`)? Leer = in Ordnung."""
+    """Welche Eintraege der Nutzlast von `GET /api/compare/metrics`
+    (`{"metrics": [...]}`) tragen eine Gehzeit-Groesse an die Bedienflaeche?
+    Leer = in Ordnung.
+
+    ZWEI Wege, weil die Bedienflaeche zwei Felder liest (F-ADV2-1):
+    `compareMetricCatalogLoader.ts:57-58` baut Auswahl und Wertebereichs-Zeile
+    aus `key`/`label`, `metric_id` ist dort optional und nur Filterfeld (:136).
+    Ein Antwort-Eintrag OHNE `metric_id`, aber mit dem Zusatz '(Gehzeit)' in
+    der Beschriftung, erreicht den Wertebereichs-Editor und den Trip-Reiter
+    genauso -- ueber `metric_id` allein waere er unsichtbar.
+    """
     if payload is None:
         payload = get_compare_metrics()
     eintraege = payload.get("metrics") or []
-    vorhanden = {e.get("metric_id") for e in eintraege if e.get("metric_id")}
-    return sorted(set(verboten) & vorhanden)
+    fundstellen = {
+        f"{e['metric_id']} ({_FUND_UEBER_METRIC_ID})"
+        for e in eintraege
+        if e.get("metric_id") in set(verboten)
+    }
+    # Beschriftungs-Weg: unabhaengig von `verboten`, denn '(Gehzeit)' IST das
+    # Merkmal der Gehzeit-Fensterung im Register (vgl. _register_gehzeit_ids).
+    fundstellen |= {
+        f"{e.get('key') or e.get('metric_id') or '<ohne key>'} "
+        f"({_FUND_UEBER_LABEL}: {e.get('label')!r})"
+        for e in eintraege
+        if GEHZEIT_LABEL_ZUSATZ in (e.get("label") or "")
+    }
+    return sorted(fundstellen)
 
 
 def test_f001_endpoint_antwort_bietet_keine_gehzeit_kennung_an():
@@ -514,7 +541,8 @@ def test_f001_positivkontrolle_derselbe_suchweg_findet_temperature_in_der_antwor
     """Ohne sie waere die Zusicherung oben wieder nur 'gruen, weil am falschen
     Ort gesucht': derselbe Suchweg muss finden, was in der Antwort stehen MUSS
     (`temperature`, getragen vom Eintrag `temp_min_c`)."""
-    assert _verbotene_ids_in_endpoint_antwort(verboten=("temperature",)) == ["temperature"], (
+    erwartet = f"temperature ({_FUND_UEBER_METRIC_ID})"
+    assert _verbotene_ids_in_endpoint_antwort(verboten=("temperature",)) == [erwartet], (
         "Der Suchweg findet 'temperature' nicht in der Endpoint-Antwort -- das "
         "Gruen stammt dann nicht aus Abwesenheit, sondern aus dem falschen Ort."
     )
@@ -525,16 +553,50 @@ def test_f001_positivkontrolle_derselbe_suchweg_findet_temperature_in_der_antwor
 
 
 def test_f001_gegenprobe_an_die_antwort_gehaengte_kennung_wird_gemeldet():
-    """F001 Wirkungsnachweis: eine KOPIE der Nutzlast mit angehaengter
-    Gehzeit-Groesse -- genau die Mutation, die der Adversary gefahren hat."""
+    """F001 Wirkungsnachweis an KOPIEN der Nutzlast, auf BEIDEN Wegen -- (a) mit
+    `metric_id` (die Mutation des ersten Adversary), (b) OHNE `metric_id`, nur
+    mit '(Gehzeit)' in der Beschriftung (F-ADV2-1: dieser Eintrag erreichte den
+    Wertebereichs-Editor, ohne dass ein Test rot wurde)."""
     echt = get_compare_metrics()
-    kopie = {"metrics": list(echt.get("metrics") or []) + [
+
+    # (a) Weg ueber das Filterfeld `metric_id`.
+    kopie_a = {"metrics": list(echt.get("metrics") or []) + [
         {"key": "kunst_wind_chill_day_high", "unit": "°C", "decimals": 0, "kind": "range",
          "metric_id": "wind_chill_day_high", "aggregation": "max"}
     ]}
-    assert _verbotene_ids_in_endpoint_antwort(payload=kopie) == ["wind_chill_day_high"], (
-        "Der Waechter bemerkt eine an die Endpoint-Antwort gehaengte Kennung nicht."
+    assert _verbotene_ids_in_endpoint_antwort(payload=kopie_a) == [
+        f"wind_chill_day_high ({_FUND_UEBER_METRIC_ID})"
+    ], "Der Waechter bemerkt eine an die Endpoint-Antwort gehaengte Kennung nicht."
+
+    # (b) Weg ueber die Beschriftung -- Eintrag OHNE `metric_id`.
+    label = "Gefuehlte Tages-Hoechsttemperatur (Gehzeit)"
+    kopie_b = {"metrics": list(echt.get("metrics") or []) + [
+        {"key": "wind_chill_day_high_c", "unit": "°C", "decimals": 0, "kind": "range",
+         "label": label, "aggregation": "max"}
+    ]}
+    assert _verbotene_ids_in_endpoint_antwort(payload=kopie_b) == [
+        f"wind_chill_day_high_c ({_FUND_UEBER_LABEL}: {label!r})"
+    ], (
+        "Ein Antwort-Eintrag OHNE `metric_id`, aber mit '(Gehzeit)' in der "
+        "Beschriftung faellt nicht auf -- er erreicht die Bedienflaeche ueber "
+        "`key`/`label` trotzdem (compareMetricCatalogLoader.ts:57-58)."
     )
+
     assert _verbotene_ids_in_endpoint_antwort() == [], (
         "Die Gegenprobe hat die ECHTE Antwort veraendert."
+    )
+
+
+def test_f001_regulaerer_eintrag_ohne_gehzeit_zusatz_gilt_nicht_als_verstoss():
+    """Falsch-Positiv-Probe zum Beschriftungs-Weg: ein normaler Antwort-Eintrag
+    ohne '(Gehzeit)' im Label darf NICHT anschlagen -- sonst waere die Roete
+    des Waechters wertlos, weil jeder neue Ortsvergleich-Eintrag sie ausloest."""
+    echt = get_compare_metrics()
+    kopie = {"metrics": list(echt.get("metrics") or []) + [
+        {"key": "kunst_humidity", "unit": "%", "decimals": 0, "kind": "range",
+         "label": "Relative Luftfeuchte (Tagesfenster)", "aggregation": "max"}
+    ]}
+    assert _verbotene_ids_in_endpoint_antwort(payload=kopie) == [], (
+        "Der Waechter meldet einen regulaeren Eintrag ohne '(Gehzeit)'-Zusatz "
+        "als Verstoss -- Falsch-Positiv."
     )
