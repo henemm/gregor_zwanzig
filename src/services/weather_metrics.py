@@ -9,7 +9,7 @@ SPEC: docs/specs/modules/weather_emoji_dni.md v1.0 (DNI-based emoji)
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone, tzinfo
+from datetime import datetime, tzinfo
 from typing import List, Optional
 
 import math
