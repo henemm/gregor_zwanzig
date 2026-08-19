@@ -117,7 +117,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | Ausgabeort | Datei:Zeile | Quelle | Wächter |
 |---|---|---|---|
 | Compare-Katalog (Endpunkt/Frontend-Vokabular) | `src/output/renderers/compare_metric_catalog.py:51` (aus zentralem Katalog **abgeleitet**), `:251` `get_compare_metric_catalog()` | katalog-getrieben | Key-Drift-Assertions `compare_metric_catalog.py:171`, `:224` |
-| HTML-Übersichtstabelle (Orte = Spalten) | `src/output/renderers/email/compare_html.py:294` `CV2_METRICS`; Beschriftungen abgeleitet `compare_html.py:745` `derive_row_labels()` | handgeschriebene Zeilenliste, abgeleitete Labels | Zeilen-**Existenz** bewacht, **Zellwert unbewacht** (Fläche 4) |
+| HTML-Übersichtstabelle (Orte = Spalten) | `src/output/renderers/email/compare_html.py:294` `CV2_METRICS`; Beschriftungen/Einheit/Nachkommastellen abgeleitet `compare_html.py:745` `derive_row_labels()` | gemischt — handgeschrieben bleiben Zeilen-Existenz, Reihenfolge, `aggregation`, `sev` und die drei `fmt`-Ausnahmen; Einheit und Nachkommastellen leitet `derive_row_labels()` seit #1848 B (2026-08-19) aus dem zentralen Register (`get_metric()`) ab | Zeilen-**Existenz** bewacht, **Zellwert unbewacht** (Fläche 4) |
 | HTML-Stundentabelle | `compare_html.py:428` über `hourly_selectable_metric_ids()`; Ausnahmen `:384` `_HOUR_FMT_OVERRIDES` (10), `:400` `_HOUR_SEV_OVERRIDES` (3) | gemischt | `tests/unit/test_compare_hourly_catalog_columns.py:122` — der **einzige** echte Wirkungs-Vollständigkeitstest im Bestand |
 | Klartext-Teil derselben Mail | `src/output/renderers/comparison.py:70` `_DAILY_PLAIN_ROWS`, `:100` `_PLAIN_ROWS` (je Zeile ein getipptes Tupel aus ID, Label, Format-Lambda); gerendert `:237` | handgeschrieben | Reihenfolge eingefroren in `tests/unit/test_compare_metric_order.py`; Werte-Parität zum HTML nur durch geteilte Formatierer, nicht durch Assertion |
 | Compare Telegram | `comparison.py:668` `render_for_channel(channel, dc, …)`; Labels/Formate `comparison.py:498` `_PLAIN_ROWS_BY_ID` | katalog-getrieben | **unbewacht** — der Matrix-Test kennt Compare überhaupt nicht |
@@ -311,7 +311,7 @@ Stundentabelle (AC-6, Charakterisierung).
 | 5 | **Reihenfolge** in allen Kanälen außer E-Mail und Telegram-rich | `email/helpers.py:1908`, `comparison.py:127/729`, `compare_html.py:798` | 2 | ✅ Erledigt (2026-08-14, Epic #1703 Scheibe 7). 🔴 **Zwei Angaben dieser Zeile waren bei Nachmessung falsch und sind hier ersetzt:** (a) `tokens/builder.py:78` — die Trip-SMS-Reihenfolge ist seit #1677/#1660 B bewacht (`test_channel_metric_matrix.py::test_ac15_…` (c), paarweise über alle 26 Katalog-Metriken, `_POSITION_SORTABLE_CATEGORIES`); (b) „Compare-Klartext nutzt die Reihenfolge nur als Sichtbarkeitsfilter (#1356)" — überholt seit #1359, `_ordered_rows()` (`comparison.py:127-140`) setzt sie um, der HTML-Zwilling `_visible_metrics()` (`compare_html.py:798`) ebenso. Tatsächlich fehlte die **Katalog-Deckung** (bewacht waren 4 von 25 Metriken über `tests/unit/test_compare_metric_order.py`) und die **Kanal-Achse** aus Scheibe 8. Neuer Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S7-1 (Soll-Menge 25 gerechnet + Vakuum-Schutz), AC-S7-2/3 (HTML und Klartext derselben Sendung, alle 25 paarweise), AC-S7-4 (Altbestands-Divergenz HTML `CV2_METRICS` vs. Klartext `_PLAIN_ROWS` ab Position 3 — charakterisiert, nicht gefixt, → #1199), AC-S7-5 (drei Kanäle, drei Reihenfolgen, EINE Sendung — gemessen an der zugestellten Ausgabe über Versand- **und** Vorschaupfad), AC-S7-6 (**Produktivcode-Fix**, s.u.), AC-S7-7 (Trip-Telegram-Kurzübersicht; benennt die zwei Ordnungsquellen in `render_telegram_bubbles()`), AC-S7-8 (Compare-Telegram/SMS unter Kappung — Telegram 7 Spalten, SMS 153 Zeichen), AC-S7-9 (Kompakt-Zusammenfassung ohne Reihenfolge-Achse, benannte Ausnahme). Spec: `docs/specs/modules/fix_1703_s7_reihenfolge_matrix.md` |
 | 6 | Kurzform-Mail, mobile Kompaktzeilen und Kompakt-Zusammenfassung | `email/compact.py:96`, `email/html.py:878`, `compact_summary.py:567` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): **drei** verschiedene Orte, die alle „compact" heißen und regelmäßig verwechselt werden — `render_compact()` ist das eigene Kurzformat, `_render_mobile_compact_rows()` sitzt **in** der Vollmail, `CompactSummaryFormatter` erzeugt den Fließtext-Block ebendort — jetzt einzeln bewacht: `tests/tdd/test_channel_metric_matrix.py` AC-S4-1/2/3 (Ort 1), AC-S4-5 (Ort 2), AC-S4-6/6b/7/8-10 (Ort 3). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
 | 7 | **Telegram-Kurzform** als eigener Ausgabeort | `narrow.py:346`, `:528–532`, `:586–597` | 2 | ✅ Erledigt (2026-08-12, Epic #1703 Scheibe 4): Wächter `tests/tdd/test_channel_metric_matrix.py` AC-S4-12/13/14 (Auswahl/Abwahl generisch über alle wählbaren Metriken, Resolver-Divergenz zu Ort 1 als Charakterisierung, confidence-Absenz). Reine Charakterisierung, kein Produktivcode-Fix. Spec: `docs/specs/modules/fix_1703_s4_kompaktform_matrix.md` |
-| 8 | Einheiten und Nachkommastellen je Kanal | `metric_catalog.get_decimals()`, `compare_html.py:384` | 3 | nur die Compare-Legende ist bewacht |
+| 8 | Einheiten und Nachkommastellen je Kanal | `metric_catalog.get_decimals()`, `compare_html.py:384` | 3 | **Teilweise ✅ Erledigt (2026-08-19, #1848 B):** die Compare-HTML-Übersichtstabelle leitet Einheit und Nachkommastellen jetzt aus dem Register ab (`derive_row_labels()`) und ist über alle 22 fmt-losen Zeilen am gerenderten HTML bewacht (`tests/unit/test_compare_mail_metric_format_from_register.py`, AC-7). **Offen bleibt der Rest** — „je Kanal" heißt: für alle anderen Kanäle/Ausgabeorte (Klartext, Telegram, SMS, Trip) ist die Formatierung weiterhin unbewacht, nur die Compare-Legende war zuvor geprüft |
 | 9 | **Frontend** ohne Metrik×Kanal-Matrix | `WeatherMetricsTab.svelte:411`, `compareMetricDefs.ts` | 3 | das Frontend führt eigene Register; Drift zum Backend fällt erst im Betrieb auf |
 | 10 | **Trip-SMS liest die Kaskade nicht** | `sms_trip.py:606` `format_sms()` — kein Aufruf von `get_metrics_for_channel()`/`cascade_source_for_channel()`; Ersatz-Verdrahtung `trip_report.py:301` | 2 | dokumentiert in `fix_1575_channel_metric_selection.md`; Folge-Issue #1689 (`format_sms`-Merge verschluckt Spec-Felder) |
 
@@ -509,11 +509,28 @@ Umgesetzt als 6 ACs (AC-S5-1 bis AC-S5-6, 29 parametrisierte Testfälle) in
 die 15+10-Aufteilung der 25 Zeilen disjunkt und lückenlos; AC-S5-2 sichert die
 10 zuvor ungeprüften Zeilen wertmäßig ab (unabhängig aus rohen Stundenwerten
 gerechnet, nicht aus `summarize_points()` übernommen — Lehre aus AC-S2-8/F001);
-AC-S5-3 belegt den Engine-Vorrang vor Live-Ableitung; AC-S5-4 hält
+AC-S5-3 belegt den Engine-Vorrang vor Live-Ableitung; AC-S5-4 hielt
 `format_value()`-Dezimalstellen gegen `CV2_METRICS`-`decimals` für alle 10
 betroffenen Felder einzeln synchron (Nebenbefund: `wind_chill_min/max` und
 `dewpoint_avg` lesen im Klartext die `temperature`-Katalog-ID statt der
-eigenen — heute folgenlos, in #1199 gebucht); AC-S5-5 charakterisiert die
+eigenen — heute folgenlos, in #1199 gebucht).
+
+> 🔴 **Korrektur (2026-08-19, #1848 B):** `CV2_METRICS` tippt seit dieser
+> Scheibe kein `decimals` mehr ein — der Wert kommt aus der Kopie, die
+> `derive_row_labels()` aus dem Register (`get_metric()`) anhängt. Dadurch ist
+> AC-S5-4 für **6 der 10** parametrisierten Fälle tautologisch geworden:
+> `temp_max`, `temp_min`, `wind_max`, `cloud_avg`, `snow_depth_cm`,
+> `sunny_hours` lesen auf beiden Seiten dieselbe Katalogquelle und können nicht
+> mehr fehlschlagen. Echten Biss behalten nur die 4 Fälle mit abweichender
+> Metrik-ID — `gust_max` (`gust` vs. `wind`), `wind_chill_min`/`wind_chill_max`
+> (`wind_chill` vs. `temperature`), `dewpoint_avg` (`dewpoint` vs.
+> `temperature`) —, für die AC-S5-4 seither eine **Abbildungs-Prüfung** ist,
+> keine Formatier-Prüfung. Belegt: Register-`sunshine.decimals` probeweise von
+> 1 auf 4 verbogen — AC-S5-4 blieb grün, obwohl die Zelle dann `5.6000 h` statt
+> `5.6 h` zeigt. Der echte Formatier-Wächter ist seit #1848 B AC-7 in
+> `tests/unit/test_compare_mail_metric_format_from_register.py`.
+
+AC-S5-5 charakterisiert die
 Fehlzeichen-Divergenz (HTML `—` U+2014 vs. Klartext `-` U+002D) bewusst ohne
 Fix (PO-Entscheidung dieser Spec: kosmetisch); AC-S5-6 verankert die 15
 bereits gedeckten Zeilen gegen stillen Verlust ihrer Testabdeckung.
