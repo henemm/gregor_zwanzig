@@ -178,12 +178,23 @@ in der Zeitzone des Nutzers.
     Grenzfall.
 
 - **AC-8:** Given eine amtliche Waldbrand-Zugangssperre liegt für ein Massiv des Test-Trips vor, When
-  ein Briefing über Staging versendet wird, Then erscheint diese Sperre in der **zugestellten E-Mail**
-  und in der **zugestellten Telegram-Nachricht**.
+  ein Briefing über Staging versendet wird, Then erscheint diese Sperre in der **zugestellten E-Mail**,
+  in der **zugestellten Telegram-Nachricht im Vollformat** (`telegram_style: 'rich'`) und im
+  **SMS-Kurzstil** (`telegram_style: 'kurzform'`).
   - Test: Live-Schicht. Versand über Staging, E-Mail per IMAP aus `gregor-test@henemm.com` abgeholt und
     im Text nachgewiesen; Telegram-Nachricht im Zielchat nachgewiesen. Damit ist belegt, dass der
     geänderte Cache-Pfad die Ausgabe tatsächlich erreicht — nicht nur, dass ein Dict den richtigen
     Schlüssel trägt.
+  - 🔴 **SMS wird über den Telegram-Kurzstil geprüft, nicht durch echten SMS-Versand** (PO-Dauerregel).
+    Der Schalter „Telegram im SMS-Kurzstil" (`TelegramKurzstilToggle.svelte`, Feld
+    `report_config.telegram_style`, Werte `'rich'` | `'kurzform'`, Spec
+    `docs/specs/modules/feat_1260_telegram_kurzstil.md`) lässt Telegram denselben kurzen Ein-Zeilen-Text
+    ausliefern wie SMS. Damit ist das SMS-**Format** an einer echt zugestellten Nachricht belegt, ohne
+    Kosten und ohne Versand ans Satellitengerät. Der Nachweis ist mit beiden Stellungen des Schalters zu
+    führen, weil die Sperren-Darstellung im Kurzstil eine andere ist als im Vollformat.
+  - Grenze: Der Kurzstil belegt den **Inhalt** des SMS-Formats, nicht den **Transportweg** (Provider,
+    Zeichenzählung beim Versand, Zustellung am Gerät). Für diese Änderung genügt der Inhalt — der
+    Transport ist von ihr nicht berührt.
   - 🔴 **Ehrliche Grenze:** Ein echter Kalendertagwechsel ist auf Staging nicht herstellbar. AC-8 ist
     deshalb die **Positivkontrolle des Ausgabewegs** (die Sperre kommt an), nicht der Nachweis des
     Tageswechsels — den führt AC-1 in der Kern-Schicht. Beide zusammen decken die Zusicherung ab;
@@ -195,11 +206,12 @@ in der Zeitzone des Nutzers.
 - **Der Kalendertagwechsel ist auf Staging nicht herstellbar.** Er wird deshalb in der Kern-Schicht
   gegen einen lokalen Sentinel nachgewiesen (AC-1); Staging belegt den Ausgabeweg (AC-8). Wer nur eines
   von beiden vorzeigt, hat die Zusicherung nicht belegt.
-- **Nachgewiesene Ausgabekanäle sind E-Mail und Telegram** (AC-8, PO-Vorgabe 2026-08-19). SMS und
-  Premium-SMS durchlaufen denselben Renderweg für amtliche Warnungen, werden hier aber nicht
-  eigens versendet — Begründung: kein zusätzlicher Erkenntnisgewinn für diese Änderung, dafür echter
-  Versand an ein Satellitengerät. Falls die Sperren-Darstellung in den Kurzformaten später abweicht,
-  ist das ein eigener Befund, kein Regress dieser Scheibe.
+- **Nachgewiesene Ausgabeformate sind E-Mail, Telegram-Vollformat und SMS-Kurzstil** (AC-8). Das
+  SMS-Format wird über den Telegram-Kurzstil geprüft — echter SMS-Versand findet nicht statt und ist
+  für einen Inhaltsnachweis auch nicht nötig (PO-Dauerregel 2026-08-19).
+- **Premium-SMS wird nicht eigens geprüft.** Sie teilt den Kurzstil-Renderweg mit SMS; geprüft wird
+  hier der Inhalt, und der ist identisch. Eine Abweichung im Transportweg wäre ein eigener Befund,
+  kein Regress dieser Scheibe.
 - Der eigentliche nächste Versandzeitpunkt je Trip in dessen Ortszeit wird weiterhin **nicht** angezeigt
   — das bleibt ausdrücklich #1969 (PO-entschieden ausgelagert, größerer Umbau).
 - Ob externes Monitoring in `henemm-infra` den bisherigen Label-Text „Nächster" oder das ISO-Feld
