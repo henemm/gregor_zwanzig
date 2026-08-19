@@ -2,6 +2,13 @@
 
 Scheibe A1 von #1848 Teil A. Erstellt 2026-08-19, Phase 1.
 
+> 🔴 **ZUSCHNITT GEAENDERT nach der Analyse (PO-Entscheid 2026-08-19, Phase 2).**
+> **Scheibe A1 entfaellt ersatzlos — es kommen KEINE neuen Registerkennungen.**
+> Workflow-Name und Dateiname bleiben aus technischen Gruenden stehen (aktiver
+> Workflow-State); der Branch heisst `feat-1848-a-ausblick-kanal-modul`.
+> Was stattdessen gilt, steht unten unter „Analysis". Alles ab „Related Files" bis
+> „Risks" ist als **Recherche-Fundus** weiter gueltig, die Zielsetzung nicht.
+
 ## Request Summary
 
 Tages-Tief und Tages-Hoch sollen im 3-Tages-Ausblick **getrennte, einzeln waehlbare
@@ -121,3 +128,82 @@ Eintrag plus Pflege von `CENTRAL_METRICS_COVERED_ELSEWHERE`
 Auf Produktion und Staging ist keine einzige `outlook_metrics`-Auswahl gespeichert
 (Messung 2026-08-18). Die `None`/`[]`/gefuellt-Semantik traegt trotzdem weiter und darf
 nicht durch unbedachtes Schreiben kippen (BUG-DATALOSS-GR221, #102).
+
+---
+
+# Analysis (Phase 2, 2026-08-19)
+
+## Type
+
+Feature.
+
+## 🟢 PO-Entscheid, der den Zuschnitt festlegt
+
+Vorgelegt wurde die Frage, ob Tief und Hoch im Ausblick einzeln **waehlbar** sein sollen
+oder nur gemeinsam **angezeigt**. Entscheid: **gemeinsam angezeigt, eine Zeile.**
+
+> Der Nutzer waehlt im Ausblick „Temperatur" — eine Zeile, wie bei den Kanaelen — und
+> sieht Tief UND Hoch als Spanne (`8–19°`). Nur-das-Hoch-Zeigen entfaellt.
+
+**Folge: Scheibe A1 (neue Registerkennungen) entfaellt vollstaendig.** Damit fallen auch
+alle daran haengenden Probleme weg:
+
+| Problem aus der Analyse | Status |
+|---|---|
+| Doppelte Spalten — neue Kennung und `temperature` zeigen dasselbe Feld; **keine Dedup-Logik** in `resolve_metric_col_order()` (`email/helpers.py:311-324`), nur `col_key`-Eindeutigkeit je Kennung | entfaellt |
+| Namensverwechslung „Tages-Hoch" vs. „Tages-Hoch (Gehzeit)" | entfaellt |
+| 54 register-abhaengige Listen im Repo, davon **2 mechanisch erzwungen** (`METRIC_PRIORITY` via `soll_vollstaendig`; `COMPARE_METRIC_CATALOG`/`CENTRAL_METRICS_COVERED_ELSEWHERE` via `test_every_selectable_central_metric_has_a_compare_entry`) und ~15 „kommt drauf an" | entfaellt |
+| Bruch von `test_kaskade_ac9_fixture_carries_full_catalog_width` (`tests/tdd/test_channel_metric_matrix.py:1088-1106`) — eingefrorene Fixture gegen dynamisch gezaehlte Katalogbreite | entfaellt |
+| R-A1-1 (Waechter aus Scheibe C wird faelschlich rot) und R-A1-4 | entfallen |
+
+**Weiter gueltig bleiben** R-A1-3 (ohne `summary_fields` kein Ausblick-Wert — betrifft jetzt
+die Frage, wie eine Kennung ohne Paar ihre Spalte bekommt) und R-A1-6 (Drei-Werte-Semantik).
+
+## Was stattdessen zu tun ist
+
+| Scheibe | Inhalt |
+|---|---|
+| **A2 — Backend** | `outlook_metrics` speichert **reine Kennungen** statt `{metric_id, aggregation}`-Paare · Bestandsableitung Paar→Kennung, **dedupliziert** (`{temperature,min}` + `{temperature,max}` ⇒ ein `temperature`) · `outlook_columns()` rendert fuer eine Kennung mit mehreren Auswertungen **eine Spalte als Spanne** statt zwei Spalten |
+| **A3 — Frontend** | `CompareOutlookLayoutControls.svelte` bekommt das Kanal-Modul-Verhalten: **nur abwaehlbar** aus der Grundauswahl statt freier Katalog-Checkbox-Liste · sichtbare „Aus"-Gruppe mit Zurueckholen · gleiche Beschriftungsquelle wie die Kanaele · **beide Flaechen** (Trip + Ortsvergleich) |
+
+## Affected Files (Scheibe A2)
+
+| Datei | Change | Beschreibung |
+|---|---|---|
+| `src/app/models.py:844` | MODIFY | `outlook_metrics: Optional[list[dict]]` → Kennungsliste |
+| `src/app/loader.py:948, 1558-1561` | MODIFY | Lese-/Schreibpfad; Paar→Kennung ableiten, Drei-Werte-Semantik (`None`/`[]`/gefuellt) erhalten |
+| `src/output/renderers/compare_outlook_metric_ids.py:45-149` | MODIFY | `resolve_outlook_metrics()` auf Kennungen; `outlook_columns()` Spanne statt Doppelspalte |
+| `src/services/report_config_resolver.py:249, 291` | MODIFY | Aufrufer nachziehen |
+| `frontend/src/lib/types.ts:299` | MODIFY | Typ auf Kennungsliste |
+| Tests | CREATE/MODIFY | u.a. `tests/tdd/test_compare_outlook_metric_selection.py`, `test_trip_outlook_metrics_persistence.py`, `test_trip_outlook_metric_selection.py` |
+
+## Scope Assessment
+
+- Dateien: ~8 (A2), ~6 (A3)
+- Risk Level: **MEDIUM** — nutzersichtbare Ausgabe aendert sich (zwei Spalten → eine Spanne)
+- Erleichterung: **keine Bestandsdaten** — auf Produktion und Staging ist keine einzige
+  `outlook_metrics`-Auswahl gespeichert (Messung 2026-08-18, positive Gegenprobe ueber
+  `display_config`). Die Ableitung ist trotzdem zu bauen (Drei-Werte-Semantik, kuenftige
+  Bestaende), aber ohne Migrationsdruck.
+
+## Technical Approach
+
+Der Ausblick verliert sein eigenes Vokabular und wird eine **weitere Flaeche derselben
+Metrik-Kaskade** — Grundauswahl als Maximum, die Flaeche darf nur abwaehlen und ordnen.
+Die Kaskadenregel dafuer existiert bereits an genau einer Stelle
+(`allowed_metric_ids_for_report_type()`, seit #1848 Scheibe A) und muss nicht erweitert
+werden — `resolve_trip_outlook_metrics()` ruft sie schon auf.
+
+Die Fensterung bleibt flaechen-eigen (Trip: Etappengrenzen, Ortsvergleich: Tagesfenster).
+Die Kennung transportiert sie nicht — das ist bestehende, dokumentierte Bauart
+(„bedeutungsgleich, nicht wertgleich", `test_compare_catalog_derives_from_central_catalog.py:62-71`).
+
+## Open Questions (gehen mit der Spec an den PO)
+
+- [ ] **Schreibweise der Spanne** — `8–19°` in einer Zelle? Der PO hat diesen Entwurf in
+      der Entscheidungsvorlage gesehen und gewaehlt; Trennzeichen und Einheiten-Wiederholung
+      gehoeren als AC festgeschrieben.
+- [ ] **`wind_chill`** verhaelt sich wie `temperature` (min/max) — gleiche Behandlung,
+      in den ACs mit abdecken.
+- [ ] **`avg` bei `temperature`** — der Mittelwert ist heute als eigenes Paar waehlbar.
+      Faellt er im Ausblick weg, oder erscheint er zusaetzlich? **Braucht PO-Entscheid.**
