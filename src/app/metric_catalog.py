@@ -177,7 +177,7 @@ _METRICS: list[MetricDefinition] = [
     # SMS-Token K/D: KEINE summary_fields (= keine Auswertungs-Pills, keine
     # Tabellenspalte), keine Alarm-Deklaration. Der Zahlenwert kommt
     # unveraendert aus der Gehzeit-Aggregation in sms_trip.py.
-    # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
+    # 🔴 Gehzeit-Fensterung (collect_hiking_window_points()), NICHT das
     # Tagesfenster 04-19 von temperature_min/temperature_max
     # (Alarm-Vokabular, models.py:1123-1124) -- zwei fachlich verschiedene
     # Dinge mit aehnlichem Namen, in getrennten Namensraeumen.
@@ -196,7 +196,7 @@ _METRICS: list[MetricDefinition] = [
     # alert/render.py:93) und war damit ein toter Wert. Das tatsaechlich
     # gesendete Kuerzel "D" traegt jetzt ausschliesslich sms_multi_symbols;
     # sms_code ist leer.
-    # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
+    # 🔴 Gehzeit-Fensterung (collect_hiking_window_points()), NICHT das
     # Tagesfenster 04-19 von temperature_min/temperature_max.
     MetricDefinition(
         id="temperature_day_high", label_de="Tages-Höchsttemperatur (Gehzeit)",
@@ -265,7 +265,7 @@ _METRICS: list[MetricDefinition] = [
     # Fix #1887 E6 Scheibe A (PO-Entscheid): "WC" (vormals Wintersport-
     # Tageskennzahl bei "wind_chill") entfaellt ERSATZLOS -- verdoppelte
     # nachweislich "FK" (identisches Feld, Fenster, Aggregation).
-    # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
+    # 🔴 Gehzeit-Fensterung (collect_hiking_window_points()), NICHT das
     # Tagesfenster 04-19 von temperature_min/temperature_max.
     MetricDefinition(
         id="wind_chill_day_low",
@@ -276,7 +276,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         sms_code="FL", sms_multi_symbols=("FL",), decimals=0,
     ),
-    # 🔴 Gehzeit-Fensterung (_collect_hiking_window_dps()), NICHT das
+    # 🔴 Gehzeit-Fensterung (collect_hiking_window_points()), NICHT das
     # Tagesfenster 04-19 von temperature_min/temperature_max.
     MetricDefinition(
         id="wind_chill_day_high",
