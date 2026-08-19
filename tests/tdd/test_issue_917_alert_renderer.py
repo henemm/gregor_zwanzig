@@ -460,15 +460,23 @@ class TestAC5SMS:
         assert k >= 1, f"k muss ≥1 sein: {k}"
 
     def test_token_format_sign_code_value(self):
-        """Token-Format: +/-CODE<to> im SMS-Output."""
+        """Token-Format im Trip-Δ-Pfad: CODE{von}->{bis} im SMS-Output.
+
+        Issue #1948 S3: das Vorzeichen-Praefix ist hier entfallen (es las sich
+        als Rechenzeichen); der Ausschlag steht jetzt als Von->Bis da. Der
+        Compare-Pfad behaelt sein `{sign}{code}{bis}` -- das prueft
+        `test_alert_sms_delta_notation.py::test_ac4_...`.
+        """
         from src.output.renderers.alert.render import render_sms
         from app.metric_catalog import get_sms_code
         msg = self._make_msg_single()
         result = render_sms(msg)
         code = get_sms_code("gust")
-        # "+" (increase) + Code + Wert
-        assert f"+{code}" in result or f"-{code}" in result, (
-            f"Token '+{code}' oder '-{code}' nicht in SMS: {result!r}"
+        assert f"{code}50->80" in result, (
+            f"Token '{code}50->80' nicht in SMS: {result!r}"
+        )
+        assert f"+{code}" not in result and f"-{code}" not in result, (
+            f"Vorzeichen-Praefix im Trip-Δ-Pfad noch vorhanden: {result!r}"
         )
 
 

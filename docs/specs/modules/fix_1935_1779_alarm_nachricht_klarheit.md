@@ -9,6 +9,14 @@ workflow: fix-1935-1779-alarm-nachricht-klarheit
 
 # Alarm-Nachricht klar formulieren: Änderungsbetrag statt Messwert, Ortsbezug statt Kilometerspanne (#1935, #1779)
 
+> **Teilweise überholt durch `docs/specs/modules/fix_1948_s3_sms_sofortfix.md`
+> (#1948 Scheibe S3):** Die hier dokumentierten SMS-Token-Beispiele mit
+> Vorzeichen-Präfix und `>`-Notation (`-VS1400>280`) gelten seit S3 nur noch
+> für den Ortsvergleich-Änderungspfad. Der Trip-Δ-Pfad (dieselben Beispiele
+> hier) schreibt seither `VS1400->280` ohne Vorzeichen. Diese Datei bleibt als
+> historischer Nachweis für Ortsbezug/Änderungsbetrag (#1935/#1779) unverändert
+> — nur die Notation ist an der genannten Stelle abgelöst.
+
 ## Approval
 
 - [ ] Approved

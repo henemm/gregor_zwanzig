@@ -15,6 +15,7 @@ from app.metric_catalog import (
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_DANGER, G_INK, G_INK_MUTED, G_SUCCESS,
 )
+from output.tokens.metrics import LEVELS
 from utils.ascii_fold import fold_ascii
 
 from .model import (
@@ -103,6 +104,15 @@ def _unit_display(e: AlertEvent) -> str:
 
 def _code(e: AlertEvent) -> str:
     return get_sms_code(e.metric_id) or e.metric_id
+
+
+def _is_level_metric(metric_id: str) -> bool:
+    """Stufenleiter statt Messzahl (Issue #1948 S3). Unbekannte Kennungen
+    bleiben numerisch -- derselbe Nachsichtigkeits-Vertrag wie in `_code()`."""
+    try:
+        return get_metric(metric_id).is_level
+    except KeyError:
+        return False
 
 
 def _label(e: AlertEvent) -> str:
@@ -805,15 +815,26 @@ def _sms_token(
 
     Issue #1935/#1779 (E3): traegt das Ereignis KEINE Ortsposition (also der
     Trip-Δ-Pfad, `location_positions is None`), fuehrt das Token zusaetzlich
-    den Von-Wert (`{sign}{code}{von}>{bis}` statt nur `{sign}{code}{bis}`) --
-    der Ausschlag wird lesbar, ohne dass der Empfaenger den letzten Mailstand
-    kennen muss (AC-6). Der Ortsvergleich-Aenderungspfad (`location_positions`
-    gesetzt) behaelt sein Token byte-identisch (AC-9, #1467 S2 AG3b).
+    den Von-Wert statt nur den Bis-Wert -- der Ausschlag wird lesbar, ohne
+    dass der Empfaenger den letzten Mailstand kennen muss (AC-6). Der
+    Ortsvergleich-Aenderungspfad (`location_positions` gesetzt) behaelt sein
+    Token byte-identisch (AC-9, #1467 S2 AG3b).
+
+    Issue #1948 S3: der Trip-Δ-Pfad schreibt `{code}{von}->{bis}` OHNE
+    Vorzeichen-Praefix (`>` las sich als "groesser als"); Stufen-Metriken
+    (`is_level`, z.B. Gewitter) sprechen dabei dieselbe Buchstabenleiter wie
+    das Briefing (`TH:M->H`). Der Compare-Pfad bleibt bei `{sign}{code}{bis}`.
     """
-    sign = "+" if e.value_to >= e.value_from else "-"
     if location_positions is None:
-        tok = f"{sign}{_code(e)}{int(round(e.value_from))}>{int(round(e.value_to))}"
+        if _is_level_metric(e.metric_id):
+            tok = (
+                f"{_code(e)}:{LEVELS.get(int(round(e.value_from)), '-')}"
+                f"->{LEVELS.get(int(round(e.value_to)), '-')}"
+            )
+        else:
+            tok = f"{_code(e)}{int(round(e.value_from))}->{int(round(e.value_to))}"
     else:
+        sign = "+" if e.value_to >= e.value_from else "-"
         tok = f"{sign}{_code(e)}{int(round(e.value_to))}"
     if e.occurred_at:
         tok = tok + f"@{e.occurred_at[:2]}"
@@ -893,13 +914,6 @@ def render_sms(
         # wie Betreff/E-Mail/Telegram (`_km_str`), Emoji ENTFERNT statt
         # transliteriert (AC-7), kein Trip-Name mehr (AC-5).
         head = f"{_ascii_alert_location(_km_str(msg))}: "
-    # Issue #1916 (AC-3/AC-4): der Referenz-Zeitpunkt gehoert in den KOPF
-    # (immer enthalten), NICHT in die Token-Liste -- sonst wuerde er bei
-    # Laengendruck wie ein normales Event-Token weggekuerzt statt "notfalls
-    # weiter verkuerzt" (Spec AC-3) zu bleiben. `None` -> unveraendert
-    # (Regressions-Invariante).
-    if msg.reference_at:
-        head += f"@{msg.reference_at} "
     # Issue #1444 S1 (AC-6): Schwellen-Treffer-Tokens desselben Laufs mit.
     tokens = (
         [_sms_token(e, location_positions) for e in evs]

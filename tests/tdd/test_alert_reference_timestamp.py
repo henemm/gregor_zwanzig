@@ -158,9 +158,13 @@ def test_ac3_sms_referenz_zeitpunkt_haelt_160_zeichen_budget_ein():
         f"AC-3: SMS/Premium-SMS duerfen 160 Zeichen nie ueberschreiten "
         f"(gemessen: {len(sms)}). Text: {sms!r}"
     )
-    assert "18:03" in sms, (
-        f"AC-3: der Referenz-Zeitpunkt muss trotz Kuerzungsdruck im Text "
-        f"erscheinen. Text: {sms!r}"
+    # Issue #1948 Scheibe S3: der Referenz-Zeitpunkt-Kopf-Praefix entfaellt
+    # ersatzlos aus der SMS (loest #1948/#1939 strukturell) -- die
+    # urspruengliche AC-3-Zusicherung ("muss trotz Kuerzungsdruck erscheinen")
+    # ist damit ueberholt und ins Gegenteil gedreht.
+    assert "18:03" not in sms, (
+        f"AC-3 (S3-ueberholt): der Referenz-Zeitpunkt darf NICHT mehr im "
+        f"SMS-Text erscheinen. Text: {sms!r}"
     )
 
 
@@ -198,9 +202,12 @@ def test_ac4_compare_pfad_zeigt_referenz_zeitpunkt_ueber_denselben_renderer():
         f"AC-4: der Referenz-Zeitpunkt der Compare-Snapshot-Quelle muss im "
         f"E-Mail-Footer erscheinen. Mail-Body:\n{plain}"
     )
-    assert "13:10" in sms, (
-        f"AC-4: derselbe Referenz-Zeitpunkt muss auch im SMS-Text erscheinen. "
-        f"Text: {sms!r}"
+    # Issue #1948 Scheibe S3: der SMS-Kopf-Praefix entfaellt ersatzlos --
+    # ueberholt die urspruengliche Zusicherung "muss auch im SMS-Text
+    # erscheinen" (E-Mail bleibt unveraendert, nur SMS aendert sich).
+    assert "13:10" not in sms, (
+        f"AC-4 (S3-ueberholt): der Referenz-Zeitpunkt darf NICHT mehr im "
+        f"SMS-Text erscheinen. Text: {sms!r}"
     )
 
 
