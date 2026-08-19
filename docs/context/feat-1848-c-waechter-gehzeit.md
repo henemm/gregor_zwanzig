@@ -55,7 +55,14 @@ erzeugt die Bedingung, mit der er begründet wird.
    vom 2026-08-19 sagt das Gegenteil: sie bleiben trip-exklusiv.
 2. **Vier Einzelvermerke** (`:79-82`): jeder der vier Einträge trägt zusätzlich den Text
    `Rueckbau mit #1848`. Auch das ist überholt — es genügt nicht, nur den Blockkommentar zu ändern.
-3. **Falscher Funktionsname** (`src/app/metric_catalog.py:168,187,256,267`): Die Blockkommentare
+3. **Überholter Docstring am Endpoint** (`api/routers/compare.py:13-19`): behauptet, der Endpoint
+   werde „vom Frontend noch nicht konsumiert (compareMetricDefs.ts bleibt Quelle bis Teil 2)".
+   Nachgemessen falsch: `compareMetricCatalogLoader.ts:101` konsumiert ihn produktiv, die Migration
+   ist mit #1350 Teil 3 gelaufen. **Zweiter Fall derselben Klasse wie der Rückbaupfad-Kommentar** —
+   eine Feststellung, die bei Abfassung stimmte und deren Voraussetzung eine spätere Scheibe
+   aufgehoben hat, ohne den Satz mitzuziehen. Genau die Klasse, die die abgetrennte Auditfrage
+   systematisch sucht.
+4. **Falscher Funktionsname** (`src/app/metric_catalog.py:168,187,256,267`): Die Blockkommentare
    nennen `_collect_hiking_window_dps()`. **Diese Funktion existiert nicht.** Sie heißt
    `collect_hiking_window_points()` (`src/output/renderers/day_window.py:186`). Gefunden beim
    Auszählen dieser Scheibe — der Kommentar, den der PO-Entscheid ausdrücklich für „tragend"
@@ -90,6 +97,12 @@ erzeugt die Bedingung, mit der er begründet wird.
   vorkommen muss (z. B. `temperature`). Vgl. [[reference_erreichbarkeit_vor_schwere_pruefen]]
 - **Drei Wege in die Ortsvergleich-Auswahl** (Katalog, Stundenverlauf, 3-Tages-Ausblick). Ein
   Wächter, der nur den Katalog prüft, lässt zwei Türen offen.
+- **Die Bedienfläche hängt am Python-Katalog — nachgemessen, nicht angenommen.**
+  `frontend/.../corridor-editor/compareMetricCatalogLoader.ts:101` holt
+  `GET /api/compare/metrics` und baut daraus die `CompareMetricDef`-Objekte
+  (`fetchCompareMetricCatalogOnce().then(buildCompareMetricDefs)`); der Endpoint liefert
+  `get_compare_metric_catalog()` (`api/routers/compare.py:20-22`). **Folge:** ein Wächter auf der
+  Python-Seite deckt die Auswahl-Oberfläche mit ab, es braucht keinen zweiten im Frontend.
 - **Kommentar-Zusicherungen nicht an feste Zeilennummern hängen** — ein absoluter Zeilenanker bricht
   beim nächsten Einschub. Muster #1466: laufzeitaufgelöst prüfen.
   Vgl. [[reference_formataenderung_macht_test_hilfsparser_blind]]
@@ -108,6 +121,67 @@ erzeugt die Bedingung, mit der er begründet wird.
 - `docs/specs/modules/feat_1848_a_kaskade_eine_quelle.md` — Scheibe A dieses Epics
 - `docs/specs/modules/feat_1848_b_einheiten_register.md` — Scheibe B dieses Epics
 - `docs/specs/modules/feat_1680_s5a_gewitter_herkunft_ausblick.md` — trägt die „compare-exklusiv"-Zusage, die laut Issue-Kommentar vom 2026-08-15 neu zu messen ist (abgetrennt als eigene Scheibe)
+
+## Analysis
+
+### Type
+
+**Feature** (Wächter + Kommentar-Korrekturen). Kein Bug: es funktioniert heute nichts falsch — die
+Invariante hält, sie ist nur unbewacht.
+
+### Technical Approach
+
+Vier Zusicherungen, alle in der Kern-Schicht (kein Netz, kein Mock, kein Datei-I/O am Prüfling):
+
+1. **Ausnahmeliste bewachen, statt sie zu glauben.** Für jede der vier Kennungen wird zugesichert,
+   dass **kein** Ortsvergleich-Eintrag sie als `metric_id` trägt. Das ist die Umkehrung der heutigen
+   Prüfung: heute werden sie abgezogen, künftig werden sie geprüft. Gebaut nach dem Vorbild von
+   `test_aggregation_exemptions_only_shrink` (`:317`), das die Schwesterliste schon so bewacht.
+2. **Positivkontrolle im Test selbst.** Derselbe Suchweg muss eine Kennung finden, die dort
+   vorkommen MUSS (`temperature` über `temp_min_c`). Ohne das wäre der Test auch grün, wenn er am
+   falschen Ort sucht — die Fehlerklasse, die in dieser Scheibe zweimal aufgetreten ist.
+3. **Alle drei Türen, nicht nur die vordere.** Geprüft werden Katalog, Stundenverlauf
+   (`HOURLY_EXCLUDED_METRIC_IDS`) und 3-Tages-Ausblick. Die Bedienfläche braucht keinen eigenen
+   Wächter, weil sie den Python-Katalog über den Endpoint bezieht (oben nachgemessen).
+4. **„(Gehzeit)" an den Daten festnageln, nicht am Kommentar.** Die Zusicherung greift auf
+   `MetricDefinition.label_de` zu — das ist Daten, kein Fließtext, und überlebt jede
+   Zeilenverschiebung.
+
+**Für den falschen Funktionsnamen die verallgemeinerte Form**, nach dem Muster #1466
+(`tests/test_guard_findings_survive_line_shifts.py`: Schlüssel `pfad::funktion::ordinal`, Auflösung
+per `ast` zur Laufzeit statt über Zeilennummern): Der Wächter prüft nicht „in Zeile 168 steht der
+richtige Name", sondern **dass jeder in den Kommentaren von `metric_catalog.py` genannte
+Funktionsname im Code auflösbar ist**. Diese Form hätte `_collect_hiking_window_dps()` gefangen und
+fängt den nächsten Umbenennungs-Rückstand mit. Ein Zeilenanker hätte beim ersten Einschub gerissen.
+
+### Affected Files
+
+| Datei | Änderung | Beschreibung |
+|---|---|---|
+| `tests/unit/test_gehzeit_metriken_bleiben_trip_exklusiv.py` | CREATE | Der Wächter: vier Kennungen in keiner der drei Ortsvergleich-Türen, Positivkontrolle, „(Gehzeit)"-Festnagelung, Mutations-Gegenproben |
+| `tests/unit/test_compare_catalog_derives_from_central_catalog.py` | MODIFY | Rückbaupfad-Blockkommentar (`:72-78`) und vier Einzelvermerke (`:79-82`) auf den PO-Entscheid umschreiben |
+| `src/app/metric_catalog.py` | MODIFY | Vier Blockkommentare: `_collect_hiking_window_dps()` → `collect_hiking_window_points()` |
+| `api/routers/compare.py` | MODIFY | Überholten Docstring (`:13-19`) richtigstellen — Frontend konsumiert den Endpoint seit #1350 Teil 3 |
+
+### Scope Assessment
+
+- Dateien: 4 (1 neu, 3 geändert)
+- Geschätzt: +200/−15 LoC, davon ~180 Test
+- **Produktivcode-Verhaltensänderung: keine.** Die drei Änderungen an `src/`/`api/` sind
+  ausschließlich Kommentare und Docstrings.
+- Risiko: **LOW**. Ein falsch gebauter Wächter blockt Commits, verändert aber keine Ausgabe.
+
+### Dependencies
+
+- **Reihenfolge mit #1468 vereinbart:** #1468 (`feat-1468-onset-verschiebung`) zuerst, weil klein und
+  additiv. Konsequenz für den Wächter: er zielt auf die **vier namentlich genannten** Kennungen, nie
+  auf ein Namensmuster wie „alles mit `_day_`" — sonst macht ihn ein neuer Register-Eintrag rot.
+- Kein Frontend-Anteil, kein Go-Anteil.
+
+### Open Questions
+
+Keine offenen fachlichen Fragen — der Fenster-Entscheid vom 2026-08-19 hat den einzigen Blocker
+aufgelöst.
 
 ## Abgrenzung
 
