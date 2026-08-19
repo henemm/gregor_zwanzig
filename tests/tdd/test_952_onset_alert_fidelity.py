@@ -589,14 +589,19 @@ class TestAC6SmsOnlyRadarDispatch:
             import urllib.parse
             payload = urllib.parse.unquote_plus(stub.received[0].decode())
             # FORTGESCHRIEBEN (Issue #1948 S4): Zeitpunkt-Token statt
-            # Countdown, und der Kopf spricht `format_alert_location` — dieses
-            # Trip-Fixture traegt Etappen, der Kopf ist also die Segment-Sprache
-            # ("Segment 1"), nicht mehr der km-Rueckfall. `onset_time` leitet
-            # der Live-Pfad aus der Wanduhr ab -> Struktur statt Goldstring.
+            # Countdown. Geprueft wird bewusst der AUFBAU `<Ort>: <Token>` und
+            # NICHT der konkrete Ortsname: `onset_time` stammt aus der Wanduhr,
+            # und welche Stufe von `format_alert_location` den Kopf liefert,
+            # haengt am Segment-Schnitt dieses Fixtures — beides ist kein
+            # Goldstring-Material. Der Kopf muss aber nichtleer und
+            # doppelpunktfrei sein, sonst waere der Aufbau gar nicht bewacht.
             match = re.search(
-                r"text=[^&]+: (R|TH)@\d{1,2}:\d{2}(?:&|$)", payload,
+                r"text=([^&:]+): (R|TH)@\d{1,2}:\d{2}(?:&|$)", payload,
             )
             assert match, f"SMS-Body-Token-Format falsch: {payload!r}"
+            assert not re.search(r"(R|TH)!\d", payload), (
+                f"Altes Countdown-Token im SMS-Body: {payload!r}"
+            )
         finally:
             stub.close()
             _clean_user(uid)
