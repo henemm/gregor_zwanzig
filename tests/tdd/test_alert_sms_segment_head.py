@@ -31,9 +31,10 @@ from output.renderers.alert.render import render_sms, render_subject
 
 _SUBJECT_RE = re.compile(r"^\[[^\]]*\]\s+(?P<where>.+?)\s+·\s+.+$")
 
-# Token-Muster nach AC-6: Vorzeichen + 1-2 Buchstaben-Kuerzel + Von-Wert +
-# '>' + Bis-Wert, optional '@HH'-Suffix.
-_TOKEN_RE = re.compile(r"[+-][A-Z]{1,2}\d+>\d+(?:@\d{2})?")
+# Token-Muster (Issue #1948 S3): 1-2 Buchstaben-Kuerzel + Von-Wert + '->' +
+# Bis-Wert, optional '@HH'-Suffix. KEIN Vorzeichen-Praefix mehr (loeste die
+# alte '>'-Notation ab).
+_TOKEN_RE = re.compile(r"[A-Z]{1,2}\d+->\d+(?:@\d{2})?")
 
 
 def _location_slot(subject: str) -> str:
@@ -98,14 +99,18 @@ def test_ac5_sms_kopf_nennt_denselben_ortstext_wie_der_betreff():
 
 def test_ac6_sms_token_traegt_von_und_bis_wert():
     """AC-6: Given denselben Fall wie AC-5 / When das Token gerendert wird /
-    Then lautet es exakt '-VS1400>280' -- Von- UND Bis-Wert, nicht mehr nur
-    der Bis-Wert von heute ('-VS280')."""
+    Then lautet es exakt 'VS1400->280' -- Von- UND Bis-Wert, nicht mehr nur
+    der Bis-Wert von heute ('-VS280').
+
+    Issue #1948 S3: die urspruengliche Vorzeichen+'>'-Notation ('-VS1400>280')
+    ist durch die vorzeichenfreie '->'-Notation abgeloest."""
     msg = _delta_msg(_delta_event(segment_id="Ziel", value_from=1400.0, value_to=280.0))
     sms = render_sms(msg)
 
     match = _TOKEN_RE.search(sms)
-    assert match, f"Kein Von>Bis-Token im Muster [+-][A-Z]{{1,2}}\\d+>\\d+ gefunden: {sms!r}"
-    assert match.group() == "-VS1400>280", f"Token: {match.group()!r} (SMS: {sms!r})"
+    assert match, f"Kein Von->Bis-Token im Muster [A-Z]{{1,2}}\\d+->\\d+ gefunden: {sms!r}"
+    assert match.group() == "VS1400->280", f"Token: {match.group()!r} (SMS: {sms!r})"
+    assert "-VS1400>280" not in sms, f"Alte Vorzeichen+'>'-Notation noch vorhanden: {sms!r}"
     assert "-VS280" not in sms, f"Alter Nur-Bis-Wert-Token noch vorhanden: {sms!r}"
 
 
@@ -168,9 +173,9 @@ def test_ac8_sms_buendelkopf_traegt_zusammengefasste_segmentsprache():
     assert ":checkered_flag:" not in sms, f"Ziel-Emoji transliteriert: {sms!r}"
 
     tokens = _TOKEN_RE.findall(sms)
-    assert "+G30>80@15" in tokens, f"Boeen-Token fehlt/falsch: {sms!r} ({tokens!r})"
-    assert "-VS1400>280@14" in tokens, f"Sicht-Token fehlt/falsch: {sms!r} ({tokens!r})"
-    assert "+R2>30@16" in tokens, f"Niederschlags-Token fehlt/falsch: {sms!r} ({tokens!r})"
+    assert "G30->80@15" in tokens, f"Boeen-Token fehlt/falsch: {sms!r} ({tokens!r})"
+    assert "VS1400->280@14" in tokens, f"Sicht-Token fehlt/falsch: {sms!r} ({tokens!r})"
+    assert "R2->30@16" in tokens, f"Niederschlags-Token fehlt/falsch: {sms!r} ({tokens!r})"
 
 
 # ---------------------------------------------------------------------------

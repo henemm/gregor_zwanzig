@@ -919,7 +919,10 @@ def test_regression_trip_deviation_alert_sms_text_unchanged():
         # Issue #1935/#1779 (E3/E4): Kopf spricht seither die Segment-Sprache
         # statt einer km-Spanne (kein Trip-Name mehr), Token traegt Von- UND
         # Bis-Wert (`_trip_segment().segment_id=1` -> "Segment 1").
-        assert stub.texts() == ["Segment 1: +R2>30"], (
+        # Issue #1948 S3: das Vorzeichen-Praefix ist im Trip-Δ-Pfad entfallen
+        # und `>` durch `->` ersetzt -- der Compare-Pfad (unten) behaelt beides,
+        # deshalb aendert sich hier genau ein Goldstring und keiner der anderen.
+        assert stub.texts() == ["Segment 1: R2->30"], (
             "Regression: der SMS-Text des Trip-Aenderungsalarms muss ohne "
             "Orts-Positionszuordnung unveraendert bleiben, gemessen: "
             f"{stub.texts()!r}"

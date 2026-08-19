@@ -1804,17 +1804,26 @@ _GEWITTER_ID = _ALERT_METRIC_TO_CATALOG_ID[AlertMetric.THUNDER_LEVEL][0]
 _UNIT_PROBE_VALUE = 12.0
 _EINHEITEN_UNTER_BEOBACHTUNG = sorted({m.unit for m in _METRICS} | set(_HANDLED_UNITS))
 
-# Alarm-SMS-Tokengrammatik (render.py ``_sms_token`` / ``_sms_corridor_token``):
-# {Vorzeichen}{Kuerzel}{Wert}[>{Bis}][@HH], optional mit vorangestellter
-# Ortsposition "{n}:". Der ``>{Bis}``-Teil ist neu seit #1935/#1779 (AC-6):
-# der Trip-Δ-Pfad ohne Ortsposition fuehrt seither Von- UND Bis-Wert
-# ("+VS1400>280"), damit der Ausschlag ohne Kenntnis des letzten Mailstands
-# lesbar ist; der Ortsvergleich-Aenderungspfad (Ortsposition gesetzt) bleibt
-# beim reinen Bis-Wert (AC-9, #1467 S2 AG3b). Eine reine Teilstring-Suche
-# waere hier unbrauchbar -- 'N' (temperature_cold) ist Wortanfang von 'NS'
-# (fresh_snow), s. AC-S1-2-Gegenprobe.
+# Alarm-SMS-Tokengrammatik (render.py ``_sms_token`` / ``_sms_corridor_token``),
+# vier Formen -- die Grammatik muss alle vier zerlegen, ohne zur Teilstring-
+# Suche zu verwaessern ('N' (temperature_cold) ist Wortanfang von 'NS'
+# (fresh_snow), s. AC-S1-2-Gegenprobe):
+#
+#   {n}:{+|-}{Kuerzel}{Bis}[@HH]      Ortsvergleich-Aenderung (#1467 S2 AG3b)
+#   !{Kuerzel}{Wert}                  Schwellen-Treffer (#1444 S1)
+#   {Kuerzel}{Von}->{Bis}[@HH]        Trip-Δ numerisch (#1935/#1779, #1948 S3)
+#   {Kuerzel}:{Stufe}->{Stufe}[@HH]   Trip-Δ Stufenleiter (#1948 S3, LEVELS)
+#
+# Issue #1948 S3 hat die beiden Trip-Δ-Formen geaendert: das Vorzeichen-Praefix
+# ist dort entfallen (es las sich als Rechenzeichen) und Stufen-Groessen tragen
+# Doppelpunkt + Buchstaben statt Rohzahlen. Der Ortsvergleich-Aenderungspfad
+# behaelt sein Vorzeichen -- eine vorangestellte Ortsposition ist deshalb NUR
+# zusammen mit einem Vorzeichen zulaessig.
 _ALERT_SMS_TOKEN = re.compile(
-    r"^(?:\d+:)?[+\-!]([A-Za-z][A-Za-z/]*)-?\d+(?:>-?\d+)?(?:@\d+)?$"
+    r"^(?:(?:\d+:)?[+-]|!)?"
+    r"([A-Za-z][A-Za-z/]*)"
+    r"(?::[-LMH]->[-LMH]|-?\d+(?:->-?\d+)?)"
+    r"(?:@\d+)?$"
 )
 
 

@@ -60,6 +60,11 @@ class MetricDefinition:
     # Erlaubte Werte: "raw" | "scale" | "simplified" | "symbol"
     format_modes: tuple[str, ...] = ("raw",)
     default_format_mode: str = "raw"
+    # Issue #1948 S3: die Groesse ist eine Stufenleiter (0-3), keine Messzahl --
+    # Alarm-SMS rendert sie als Buchstaben (LEVELS, output/tokens/metrics.py)
+    # statt als Rohzahl. Bewusst getrennt von default_format_mode="symbol", das
+    # auch nicht-stufige Groessen wie CAPE traegt.
+    is_level: bool = False
     # Issue #710/#715: selectable=False excludes a metric from the user-visible
     # catalog (get_all_metrics(), /api/metrics) while keeping it in _METRICS for
     # internal computation/aggregation (e.g. confidence for forecast hints).
@@ -438,6 +443,7 @@ _METRICS: list[MetricDefinition] = [
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
         sms_code="TH", decimals=0, cmp="über", alert_label="Gewitter",
+        is_level=True,  # Issue #1948 S3
         trip_default_rank=5,  # Issue #1552: Trip-Anlege-Standard, Rang 5
     ),
     MetricDefinition(
