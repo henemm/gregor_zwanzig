@@ -3,7 +3,7 @@ entity_id: fix_1987_kanal_anker
 type: bugfix
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: approved
 workflow: fix-1987-kanal-anker
 version: "1.1"
 tags: [alerts, trip, channels, anchor, issue-1987, notification]
@@ -13,7 +13,7 @@ tags: [alerts, trip, channels, anchor, issue-1987, notification]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO (Henning) am 2026-08-19, Freigabe der 11 Akzeptanzkriterien mit „go"
 
 ## Purpose
 
