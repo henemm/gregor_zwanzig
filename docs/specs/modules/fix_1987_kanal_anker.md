@@ -186,8 +186,8 @@ ADR-Amendment.
 Die bestehende Kette in `_get_cached_weather` (`trip_alert.py:671-763`)
 bleibt strukturell erhalten (`load_dated` → rollierender Anker →
 undatierter Rückfall). Sie wird um eine **Kandidaten-Auflösung je Kanal**
-erweitert: für jeden Kanal aus `effective_channels` (nach Schwellenfilter,
-s. AC-6) wird sein eigener Kandidaten-Merker bestimmt —
+erweitert: für jeden Kanal aus `effective_channels` wird sein eigener
+Kandidaten-Merker bestimmt —
 `load_alarm_anchor(trip.id, channel)`, mit Tagesgrenzen-Prüfung (AC-8) und
 Alterungsgrenze (AC-4); fehlt er ganz (weder kanalspezifisch noch kanallose
 Altdatei), fällt der Kandidat direkt auf den taggleichen Tier-1-\
@@ -214,6 +214,20 @@ Ausdrücklich verworfen:
 - **ein fester Kanal-Vorrang** (z. B. immer E-Mail zuerst) — willkürlich,
   ohne fachliche Rechtfertigung, und würde bei abgeschaltetem
   Vorrangs-Kanal überraschend versagen.
+
+**Klarstellung zum Schwellenfilter im Lesepfad (Präzisierung während der
+RED-Phase, keine AC-Änderung).** In die AC-11-Aggregation geht das **rohe**
+`effective_channels` ein — also OHNE Vorab-Anwendung von
+`split_by_threshold()`. Grund: der Schwellenfilter braucht die
+Dringlichkeitsstufe, und die steht erst nach der Change-Detection fest — also
+NACH dem Zeitpunkt, zu dem der `cached`-Stand gebraucht wird. Eine
+Filterung wäre dort schlicht nicht berechenbar. Fachlich ist das die
+konservative Richtung: ein schwellengefilterter Kanal kann die
+Vergleichsbasis nur nach HINTEN ziehen (älterer Kandidat) — es geht dadurch
+keine Änderung verloren, und gegen Wiederholungen schützt weiterhin
+`alert_state`. AC-6 bleibt davon unberührt: es betrifft ausschließlich den
+**Schreibpfad**, wo `delivered_channels` den gefilterten Kanal von selbst
+nicht enthält.
 
 Der im Alarmtext ausgewiesene `reference_at` (`trip_alert.py:359-371`,
 `:373-378`) bleibt dabei EIN gemeinsamer Wert für den gesamten Alarm — der
