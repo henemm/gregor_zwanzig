@@ -301,10 +301,77 @@ def alert_preview(
             ),
         )
 
-    if body.changes and not body.segment_times:
-        body.segment_times = _synthesize_segment_times(trip_obj, body.changes)
+    if body.official:
+        _validate_official_segment_ids(trip_obj, body.official)
+    if body.changes:
+        _validate_change_metrics(body.changes)
+        _validate_change_segment_ids(trip_obj, body.changes)
+        if not body.segment_times:
+            body.segment_times = _synthesize_segment_times(trip_obj, body.changes)
 
     return render_alert_preview(trip_obj, body)
+
+
+def _real_segment_ids_for_today(trip_obj: Trip) -> set[str]:
+    """Echte Segment-IDs des Trips fuer HEUTE (dieselbe Quelle wie AC-3:
+    ``convert_trip_to_segments``). Leer, wenn der Trip fuer heute keine
+    echten Segmente hat (Stub-/Test-Trip) -- die Aufrufer behandeln das
+    dann als No-Op (fix-1948-s2-preview-eingaben: sonst brechen die
+    bestehenden S2-Tests, die durchgaengig ``stages: []``-Trips nutzen)."""
+    from services.trip_day import trip_local_today
+    from services.trip_segments import convert_trip_to_segments
+
+    today = trip_local_today(trip_obj, datetime.now(timezone.utc))
+    return {str(s.segment_id) for s in convert_trip_to_segments(trip_obj, today)}
+
+
+def _reject_unknown_segment_id(real_ids: set[str], segment_id: str) -> None:
+    if real_ids and segment_id not in real_ids:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unbekannte segment_id '{segment_id}' im Trip",
+        )
+
+
+def _validate_official_segment_ids(
+    trip_obj: Trip, payloads: "list[OfficialAlertPayload]",
+) -> None:
+    """fix-1948-s2-preview-eingaben (Bug B Teil 1): ``official[].segment_ids``
+    gegen die echten Trip-Segmente pruefen -- unbekannte ID (bei einem Trip
+    MIT echten Segmenten) -> 422 mit der ID. Leere Liste bleibt erlaubt."""
+    real_ids = _real_segment_ids_for_today(trip_obj)
+    for p in payloads:
+        for sid in p.segment_ids:
+            _reject_unknown_segment_id(real_ids, sid)
+
+
+def _validate_change_metrics(changes: "list[ChangePayload]") -> None:
+    """fix-1948-s2-preview-eingaben (Bug A): ``changes[].metric`` gegen den
+    Metrik-Katalog pruefen (gleiche Quelle wie ``project.py:_resolve_metric_id``)
+    -- unbekannte Metrik -> 422 mit dem Namen, statt spaeter als KeyError zu
+    crashen."""
+    from app.metric_catalog import _METRICS
+
+    known = {f for m in _METRICS for f in m.summary_fields.values()}
+    for c in changes:
+        if c.metric not in known:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unbekannte Metrik '{c.metric}' in changes",
+            )
+
+
+def _validate_change_segment_ids(
+    trip_obj: Trip, changes: "list[ChangePayload]",
+) -> None:
+    """fix-1948-s2-preview-eingaben: dieselbe Pruefung wie bei ``official``,
+    aber fuer ``changes[].segment_id`` -- schliesst die Luecke, dass bei
+    EXPLIZIT mitgeliefertem ``segment_times`` (kein Aufruf von
+    ``_synthesize_segment_times``, dessen AC-3-Pruefung sonst greift) eine
+    unbekannte ``segment_id`` bislang ungeprueft blieb."""
+    real_ids = _real_segment_ids_for_today(trip_obj)
+    for c in changes:
+        _reject_unknown_segment_id(real_ids, c.segment_id)
 
 
 def _synthesize_segment_times(

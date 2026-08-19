@@ -44,6 +44,14 @@ Nachbesserung zu #1948 S2 (Staging-E2E BROKEN 2026-08-18) — behebt zugleich #1
 - [ ] `format_segment_reference(["stage1","Ziel"])` ⇒ crashfrei, „Ziel" separat; numerischer
       Bestandsfall byte-identisch (Wächter direkt an der Funktion)
 
+## Acceptance Criteria
+
+- **AC-1:** Given ein alert-preview-Request mit `changes`, dessen `metric` kein Katalog-`summary_field` ist, When der Endpoint aufgerufen wird (mit ODER ohne explizite `segment_times`), Then antwortet er mit HTTP 422 und der Fehlertext nennt die unbekannte Metrik.
+- **AC-2:** Given ein `changes`-Request mit EXPLIZIT mitgelieferten `segment_times` und einer `segment_id`, die im Trip (mit echten Segmenten) nicht existiert, When der Endpoint aufgerufen wird, Then antwortet er mit HTTP 422 mit der ID im Text — die Prüfung läuft also auch außerhalb des Synthese-Falls (Lückenschluss zu Staging-Finding #1).
+- **AC-3:** Given ein `official`-Request mit `segment_ids`, die nicht zu den echten Trip-Segment-IDs gehören (Trip MIT echten Segmenten), When der Endpoint aufgerufen wird, Then 422 mit der ID; Given eine leere `segment_ids`-Liste ODER ein Trip ohne echte Segmente (Stub), Then bleibt das Bestandsverhalten unverändert (200, „gesamte Route"-Semantik).
+- **AC-4:** Given `format_segment_reference` erhält nicht-numerische Segment-IDs (außer „Ziel"), When formatiert wird, Then kein Crash: nicht-numerische IDs werden in Original-Reihenfolge aufgezählt, „Ziel" bleibt separates Element, die „>4 ⇒ N Segmente"-Verdichtung zählt alle; für rein numerische Eingaben ist die Ausgabe byte-identisch zum Ist-Stand.
+- **AC-5:** Given der Fix ist implementiert, When die 15 S2-Tests, `tests/tdd/test_alert_segment_reference.py` und die Bestands-Tests (`test_issue_221`, `test_issue_918`) unverändert laufen, Then sind alle grün und `src/output/renderers/alert/official_alerts.py` ist laut `git diff` unberührt.
+
 ## Scope
 
 ~40–60 LoC produktiv in 2 Dateien (`api/routers/validator.py`, `src/output/renderers/alert/segments.py`) + Tests. Schließt #1965 mit (gleicher Wirkort); Issue-Close erst nach Prod-Selftest Exit 0.
