@@ -23,6 +23,11 @@ export const METRIC_MAP: Record<AlertMetric, { metric: string; direction: string
 	humidity:             { metric: 'humidity_avg_pct',  direction: 'above' },
 	// Issue #946: Nullgradgrenze (freezing_level).
 	freezing_level:       { metric: 'freezing_level_m',  direction: 'below' },
+	// Issue #1468: Beginn-Verschiebung. `direction` ist hier nur der
+	// Vorschau-Vorgabewert; die echte Richtung entscheidet der Wert-Vergleich
+	// im Backend (frueher = decrease, spaeter = increase).
+	thunder_onset:             { metric: 'thunder_onset_utc',      direction: 'decrease' },
+	precipitation_heavy_onset: { metric: 'precip_heavy_onset_utc', direction: 'decrease' },
 };
 
 export const SEVERITY_MAP: Record<string, string> = {

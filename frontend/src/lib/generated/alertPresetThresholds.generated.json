@@ -23,6 +23,12 @@
     "sensibel": 3,
     "standard": 7
   },
+  "precipitation_heavy_onset": {
+    "entspannt": 2,
+    "kind": "delta",
+    "sensibel": 1,
+    "standard": 1
+  },
   "precipitation_sum": {
     "entspannt": 20,
     "kind": "delta",
@@ -49,6 +55,12 @@
   },
   "thunder_level": {
     "entspannt": 1,
+    "kind": "delta",
+    "sensibel": 1,
+    "standard": 1
+  },
+  "thunder_onset": {
+    "entspannt": 2,
     "kind": "delta",
     "sensibel": 1,
     "standard": 1

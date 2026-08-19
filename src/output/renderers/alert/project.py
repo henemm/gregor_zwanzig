@@ -9,9 +9,13 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
-from app.metric_catalog import _METRICS, get_cmp
+from app.metric_catalog import (
+    _METRICS, ONSET_AGGREGATION, get_cmp, metric_and_aggregation_for_field,
+)
 from utils.timezone import local_fmt, resolve_location_tz
-from .model import AlertEvent, AlertMessage, CorridorEvent, OnsetEvent
+from .model import (
+    AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, OnsetShiftEvent,
+)
 from .segments import normalize_segment_id
 
 logger = logging.getLogger("alert_project")
@@ -63,6 +67,53 @@ def _fmt_occurred_at(value, tz) -> str | None:
     return local_fmt(value, tz)
 
 
+# --- Issue #1468: Beginn-Verschiebung (eigener Formatierpfad) ---------------
+
+def _is_onset_change(ch) -> bool:
+    """Traegt diese `WeatherChange` eine Beginn-Verschiebung?
+
+    Entschieden ueber den KATALOG (Auswertung des Summary-Felds), nicht ueber
+    eine zweite Feldliste im Renderer -- sonst waere eine dritte Beginn-Groesse
+    genau die Danebenpflege, die #1435 abgeschafft hat.
+    """
+    paar = metric_and_aggregation_for_field(ch.metric)
+    return bool(paar) and paar[1] == ONSET_AGGREGATION
+
+
+def _fmt_onset_at(epoch_seconds: float, tz) -> str:
+    """Beginn-Zeitpunkt (Epochensekunden, s. `_onset_change()`) -> "HH:MM" in
+    ORTSZEIT. Vorbild `_fmt_occurred_at()` -- bewusst NICHT ueber
+    `format_metric_value()`, das aus einer Uhrzeit "15 h" machte."""
+    return local_fmt(datetime.fromtimestamp(epoch_seconds, timezone.utc), tz)
+
+
+def _onset_shift_text(delta_seconds: float) -> str:
+    """Verschiebung als WORT, nicht als Vorzeichen: "2 h früher"/"2 h später".
+
+    Positives Delta heisst spaeter (der Beginn wandert nach hinten). Der
+    Betrag steht ohne Vorzeichen -- die Richtung traegt das Wort.
+    """
+    stunden = abs(delta_seconds) / 3600.0
+    betrag = (f"{stunden:.0f}" if abs(stunden - round(stunden)) < 0.05
+              else f"{stunden:.1f}".replace(".", ","))
+    return f"{betrag} h {'später' if delta_seconds > 0 else 'früher'}"
+
+
+def _to_onset_shift_event(
+    ch, *, tz, km_from: float, km_to: float,
+    segment_id: str | None = None, location_label: str | None = None,
+) -> OnsetShiftEvent:
+    metric_id, _aggregation = metric_and_aggregation_for_field(ch.metric)
+    return OnsetShiftEvent(
+        metric_id=metric_id,
+        from_time=_fmt_onset_at(ch.old_value, tz),
+        to_time=_fmt_onset_at(ch.new_value, tz),
+        shift_text=_onset_shift_text(ch.delta),
+        km_from=km_from, km_to=km_to,
+        segment_id=segment_id, location_label=location_label,
+    )
+
+
 def to_alert_message(
     changes, segments, trip_name, *, tz, stand_at, corridor_hits=None,
     reference_at=None,
@@ -78,14 +129,24 @@ def to_alert_message(
     `changes` kann dabei leer sein (Korridor als einzige Alarmquelle, AC-5).
     """
     events: list[AlertEvent] = []
+    onset_events: list[OnsetShiftEvent] = []
     for ch in changes:
+        match = _find_segment(segments, ch.segment_id)
+        km_from = match.segment.start_point.distance_from_start_km
+        km_to = match.segment.end_point.distance_from_start_km
+        # Issue #1468: Beginn-Verschiebungen tragen einen ZEITPUNKT und gehen
+        # deshalb NICHT durch den Zahlen-Formatierer (s. `OnsetShiftEvent`).
+        if _is_onset_change(ch):
+            onset_events.append(_to_onset_shift_event(
+                ch, tz=_tz_for_location(match.segment.start_point, tz),
+                km_from=km_from, km_to=km_to,
+                segment_id=normalize_segment_id(match.segment.segment_id),
+            ))
+            continue
         metric_id = _resolve_metric_id(ch.metric, ch.direction)
         cmp = get_cmp(metric_id)
         if not cmp:
             raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
-        match = _find_segment(segments, ch.segment_id)
-        km_from = match.segment.start_point.distance_from_start_km
-        km_to = match.segment.end_point.distance_from_start_km
         events.append(AlertEvent(
             metric_id=metric_id, value_from=ch.old_value, value_to=ch.new_value,
             threshold=ch.threshold, cmp=cmp,
@@ -104,7 +165,8 @@ def to_alert_message(
     )
     return AlertMessage(
         trip_short=trip_name, stand_at=stand_at, events=tuple(events), source=None,
-        corridor_events=corridor_events, reference_at=reference_at,
+        corridor_events=corridor_events,
+        onset_shift_events=tuple(onset_events), reference_at=reference_at,
     )
 
 
@@ -206,10 +268,19 @@ def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> 
     redundanten Orts-Präfix vor JEDER Metrik-Zeile (Issue #1170 Finding F007).
     """
     events: list[AlertEvent] = []
+    onset_events: list[OnsetShiftEvent] = []
     multi = len(groups) > 1
     for location_name, changes, point in groups:
         point_tz = _tz_for_location(point, tz)
         for ch in changes:
+            # Issue #1468: derselbe eigene Formatierpfad wie im Trip-Zweig --
+            # der Ortsvergleich erbt den Beginn-Alarm ohne Zweitlogik.
+            if _is_onset_change(ch):
+                onset_events.append(_to_onset_shift_event(
+                    ch, tz=point_tz, km_from=0.0, km_to=0.0,
+                    location_label=location_name if multi else None,
+                ))
+                continue
             metric_id = _resolve_metric_id(ch.metric, ch.direction)
             cmp = get_cmp(metric_id)
             if not cmp:
@@ -224,7 +295,8 @@ def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> 
     collective_label = ", ".join(name for name, _changes, _point in groups)
     return AlertMessage(
         trip_short=collective_label, stand_at=stand_at, events=tuple(events), source=None,
-        location_label=collective_label, reference_at=reference_at,
+        location_label=collective_label,
+        onset_shift_events=tuple(onset_events), reference_at=reference_at,
     )
 
 

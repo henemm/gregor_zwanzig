@@ -91,10 +91,10 @@ class TestWeatherMetricsServiceKnownValues:
     def test_compute_basis_metrics_known_values(self, service, known_timeseries):
         """
         GIVEN: Timeseries with known values
-        WHEN: compute_basis_metrics(timeseries)
+        WHEN: compute_basis_metrics(timeseries, tz=None)
         THEN: All 8 metrics match expected calculations
         """
-        result = service.compute_basis_metrics(known_timeseries)
+        result = service.compute_basis_metrics(known_timeseries, tz=None)
 
         # Temperature
         assert result.temp_min_c == 10.0
@@ -125,18 +125,20 @@ class TestWeatherMetricsServiceKnownValues:
     def test_aggregation_config_populated(self, service, known_timeseries):
         """
         GIVEN: Timeseries
-        WHEN: compute_basis_metrics(timeseries)
-        THEN: aggregation_config has 14 entries with correct functions
+        WHEN: compute_basis_metrics(timeseries, tz=None)
+        THEN: aggregation_config has 16 entries with correct functions
 
         Issue #1475 S5a: 12 -> 13 Eintraege — `hail_flag` ("hail_priority")
         ist als Tages-/Etappen-Aggregat hinzugekommen (Spec AC-4).
         Issue #1680 S1: 13 -> 14 Eintraege — `thunder_level_max_signals`
         ("union_of_max_carriers") haelt fest, WELCHE Zutaten das
         Gewitter-Tagesmaximum tragen (Spec AC-10).
+        Issue #1468: 14 -> 16 Eintraege — die beiden Beginn-Zeitpunkte
+        ("onset") sind eigene Tages-Aggregate.
         """
-        result = service.compute_basis_metrics(known_timeseries)
+        result = service.compute_basis_metrics(known_timeseries, tz=None)
 
-        assert len(result.aggregation_config) == 14
+        assert len(result.aggregation_config) == 16
         assert result.aggregation_config["temp_min_c"] == "min"
         assert result.aggregation_config["temp_max_c"] == "max"
         assert result.aggregation_config["temp_avg_c"] == "avg"
@@ -156,6 +158,11 @@ class TestWeatherMetricsServiceKnownValues:
         # fuer "falscher Schluessel drin, thunder_level_max_signals fehlt".
         assert (result.aggregation_config["thunder_level_max_signals"]
                 == "union_of_max_carriers")
+        # Issue #1468: dieselbe Ueberlegung wie eine Zeile hoeher — ein reiner
+        # Zaehltest waere blind dafuer, dass ein Beginn-Feld fehlt und
+        # stattdessen ein falscher Schluessel drinsteht.
+        assert result.aggregation_config["thunder_onset_utc"] == "onset"
+        assert result.aggregation_config["precip_heavy_onset_utc"] == "onset"
 
 
 class TestWeatherMetricsServiceTemperature:
@@ -168,7 +175,7 @@ class TestWeatherMetricsServiceTemperature:
     def test_temperature_min_max_avg(self, service):
         """
         GIVEN: Timeseries with varying temperatures
-        WHEN: compute_basis_metrics(timeseries)
+        WHEN: compute_basis_metrics(timeseries, tz=None)
         THEN: MIN/MAX/AVG calculated correctly
         """
         meta = ForecastMeta(
@@ -195,7 +202,7 @@ class TestWeatherMetricsServiceTemperature:
         ]
 
         timeseries = NormalizedTimeseries(meta=meta, data=data)
-        result = service.compute_basis_metrics(timeseries)
+        result = service.compute_basis_metrics(timeseries, tz=None)
 
         assert result.temp_min_c == -5.0
         assert result.temp_max_c == 10.0
@@ -212,7 +219,7 @@ class TestWeatherMetricsServicePrecipitation:
     def test_precipitation_sum_not_avg(self, service):
         """
         GIVEN: Timeseries with hourly precipitation
-        WHEN: compute_basis_metrics(timeseries)
+        WHEN: compute_basis_metrics(timeseries, tz=None)
         THEN: precip_sum_mm is SUM of all values, not AVG
         """
         meta = ForecastMeta(
@@ -242,7 +249,7 @@ class TestWeatherMetricsServicePrecipitation:
         ]
 
         timeseries = NormalizedTimeseries(meta=meta, data=data)
-        result = service.compute_basis_metrics(timeseries)
+        result = service.compute_basis_metrics(timeseries, tz=None)
 
         # SUM, not AVG!
         assert result.precip_sum_mm == 11.0  # 2.5 + 3.0 + 1.5 + 0.0 + 4.0
@@ -258,7 +265,7 @@ class TestWeatherMetricsServiceThunderLevel:
     def test_thunder_level_ordering_high(self, service):
         """
         GIVEN: Timeseries with mixed thunder levels including HIGH
-        WHEN: compute_basis_metrics(timeseries)
+        WHEN: compute_basis_metrics(timeseries, tz=None)
         THEN: thunder_level_max = HIGH
         """
         meta = ForecastMeta(
@@ -293,14 +300,14 @@ class TestWeatherMetricsServiceThunderLevel:
         ]
 
         timeseries = NormalizedTimeseries(meta=meta, data=data)
-        result = service.compute_basis_metrics(timeseries)
+        result = service.compute_basis_metrics(timeseries, tz=None)
 
         assert result.thunder_level_max == ThunderLevel.HIGH
 
     def test_thunder_level_ordering_med(self, service):
         """
         GIVEN: Timeseries with NONE and MED (no HIGH)
-        WHEN: compute_basis_metrics(timeseries)
+        WHEN: compute_basis_metrics(timeseries, tz=None)
         THEN: thunder_level_max = MED
         """
         meta = ForecastMeta(
@@ -327,7 +334,7 @@ class TestWeatherMetricsServiceThunderLevel:
         ]
 
         timeseries = NormalizedTimeseries(meta=meta, data=data)
-        result = service.compute_basis_metrics(timeseries)
+        result = service.compute_basis_metrics(timeseries, tz=None)
 
         assert result.thunder_level_max == ThunderLevel.MED
 
@@ -342,7 +349,7 @@ class TestWeatherMetricsServiceSparseData:
     def test_sparse_data_with_none_values(self, service):
         """
         GIVEN: Timeseries with 50% None values for temperature
-        WHEN: compute_basis_metrics(timeseries)
+        WHEN: compute_basis_metrics(timeseries, tz=None)
         THEN: Metrics computed from available values only
         """
         meta = ForecastMeta(
@@ -369,7 +376,7 @@ class TestWeatherMetricsServiceSparseData:
         ]
 
         timeseries = NormalizedTimeseries(meta=meta, data=data)
-        result = service.compute_basis_metrics(timeseries)
+        result = service.compute_basis_metrics(timeseries, tz=None)
 
         # Computed from 10.0 and 20.0 only (ignore None)
         assert result.temp_min_c == 10.0
@@ -379,7 +386,7 @@ class TestWeatherMetricsServiceSparseData:
     def test_all_none_values_for_metric(self, service):
         """
         GIVEN: Timeseries where all t2m_c are None
-        WHEN: compute_basis_metrics(timeseries)
+        WHEN: compute_basis_metrics(timeseries, tz=None)
         THEN: temp_min/max/avg all None, no error
         """
         meta = ForecastMeta(
@@ -404,7 +411,7 @@ class TestWeatherMetricsServiceSparseData:
         ]
 
         timeseries = NormalizedTimeseries(meta=meta, data=data)
-        result = service.compute_basis_metrics(timeseries)
+        result = service.compute_basis_metrics(timeseries, tz=None)
 
         # Temperature all None
         assert result.temp_min_c is None
@@ -425,7 +432,7 @@ class TestWeatherMetricsServiceEdgeCases:
     def test_empty_timeseries_raises_error(self, service):
         """
         GIVEN: Timeseries with empty data list
-        WHEN: compute_basis_metrics(timeseries)
+        WHEN: compute_basis_metrics(timeseries, tz=None)
         THEN: ValueError raised
         """
         meta = ForecastMeta(
@@ -439,14 +446,14 @@ class TestWeatherMetricsServiceEdgeCases:
         timeseries = NormalizedTimeseries(meta=meta, data=[])
 
         with pytest.raises(ValueError) as exc_info:
-            service.compute_basis_metrics(timeseries)
+            service.compute_basis_metrics(timeseries, tz=None)
 
         assert "empty" in str(exc_info.value).lower()
 
     def test_percentage_rounding(self, service):
         """
         GIVEN: Timeseries with cloud_total_pct values that average to non-integer
-        WHEN: compute_basis_metrics(timeseries)
+        WHEN: compute_basis_metrics(timeseries, tz=None)
         THEN: cloud_avg_pct is rounded to int
         """
         meta = ForecastMeta(
@@ -470,7 +477,7 @@ class TestWeatherMetricsServiceEdgeCases:
         ]
 
         timeseries = NormalizedTimeseries(meta=meta, data=data)
-        result = service.compute_basis_metrics(timeseries)
+        result = service.compute_basis_metrics(timeseries, tz=None)
 
         # (45 + 50 + 56) / 3 = 50.333... → rounds to 50
         assert isinstance(result.cloud_avg_pct, int)

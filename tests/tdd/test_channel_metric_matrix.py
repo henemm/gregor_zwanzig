@@ -2707,7 +2707,7 @@ def test_ac_s2_5_beide_tagesaggregationen_fuellen_dieselben_felder():
         data=list(punkte),
     )
     trip = _s2_aggregat_felder(
-        dienst.compute_extended_metrics(reihe, dienst.compute_basis_metrics(reihe))
+        dienst.compute_extended_metrics(reihe, dienst.compute_basis_metrics(reihe, tz=None))
     )
     vergleich = _s2_aggregat_felder(summarize_points(punkte))
 
@@ -3478,7 +3478,7 @@ def _s5_location(hourly: list[ForecastDataPoint]):
     den Engine-Vorrang."""
     from app.user import LocationResult, SavedLocation
 
-    basis = WeatherMetricsService().compute_basis_metrics(_s5_timeseries(hourly))
+    basis = WeatherMetricsService().compute_basis_metrics(_s5_timeseries(hourly), tz=None)
     return LocationResult(
         location=SavedLocation(
             id="s5-ort", name="S5-Ort", lat=47.0, lon=11.0, elevation_m=500,
@@ -3522,7 +3522,7 @@ def _s5_erwartete_werte(hourly: list[ForecastDataPoint]) -> dict[str, float]:
     Fehler in deren ``_compute_*``-Regeln die Renderer-Ausgabe gegen sich
     selbst, und eine vertauschte Zuweisung bliebe unsichtbar (Lehre
     AC-S2-8/F001)."""
-    basis = WeatherMetricsService().compute_basis_metrics(_s5_timeseries(hourly))
+    basis = WeatherMetricsService().compute_basis_metrics(_s5_timeseries(hourly), tz=None)
     return {
         "temp_max": basis.temp_max_c,
         "wind_max": basis.wind_max_kmh,

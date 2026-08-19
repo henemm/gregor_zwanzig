@@ -37,6 +37,14 @@ export const ALERT_METRIC_LABELS: Record<
 	humidity: { label_de: 'Luftfeuchtigkeit', unit: '%', comparison: '>' },
 	// Issue #946: Nullgradgrenze
 	freezing_level: { label_de: 'Nullgradgrenze', unit: 'm', comparison: '<' },
+	// Issue #1468: die Schwelle ist eine Verschiebung in Stunden, nicht ein
+	// Absolutwert — Vergleichssymbol darum '≥' wie bei Gewitter.
+	thunder_onset: { label_de: 'Gewitter (Beginn)', unit: 'h', comparison: '≥' },
+	precipitation_heavy_onset: {
+		label_de: 'Starkregen (Beginn)',
+		unit: 'h',
+		comparison: '≥'
+	},
 };
 
 export const ALERT_SEVERITY_TONE: Record<AlertSeverity, 'info' | 'warning' | 'danger'> = {

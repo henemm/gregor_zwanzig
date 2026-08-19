@@ -120,7 +120,7 @@ def _result() -> ComparisonResult:
 
     ts = NormalizedTimeseries(meta=meta, data=hourly)
     svc = WeatherMetricsService()
-    s = svc.compute_basis_metrics(ts)
+    s = svc.compute_basis_metrics(ts, tz=None)
     loc = LocationResult(
         location=SavedLocation(
             id="andermatt", name="Andermatt", lat=39.76, lon=2.71, elevation_m=200,

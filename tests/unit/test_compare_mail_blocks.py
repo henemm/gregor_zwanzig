@@ -104,7 +104,7 @@ def _location_result(name: str, hourly: list[ForecastDataPoint]) -> LocationResu
     visibility_min_m) bleiben bewusst ungesetzt (None) -- genau das ist das
     ``Given`` von AC-3: die Matrix muss sie LIVE aus ``hourly_data``
     ableiten, kein Engine-Lauf hat sie vorberechnet."""
-    s = WeatherMetricsService().compute_basis_metrics(_timeseries(hourly))
+    s = WeatherMetricsService().compute_basis_metrics(_timeseries(hourly), tz=None)
     return LocationResult(
         location=_saved_location(name),
         score=50,

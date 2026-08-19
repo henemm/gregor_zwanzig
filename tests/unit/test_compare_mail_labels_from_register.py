@@ -159,7 +159,7 @@ def _result() -> ComparisonResult:
     from services.weather_metrics import WeatherMetricsService
 
     s = WeatherMetricsService().compute_basis_metrics(
-        NormalizedTimeseries(meta=meta, data=hourly)
+        NormalizedTimeseries(meta=meta, data=hourly), tz=None,
     )
     loc = LocationResult(
         location=SavedLocation(

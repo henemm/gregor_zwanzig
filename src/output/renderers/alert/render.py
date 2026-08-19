@@ -18,8 +18,8 @@ from output.renderers.email.design_tokens import (
 from utils.ascii_fold import fold_ascii
 
 from .model import (
-    AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, arrow, delta_pct,
-    km_span, over_thr, severity, side_label,
+    AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, OnsetShiftEvent,
+    arrow, delta_pct, km_span, over_thr, severity, side_label,
 )
 from .segments import _renderable_segment_ids, format_alert_location
 
@@ -188,6 +188,84 @@ def _sms_corridor_token(ce: CorridorEvent) -> str:
     return tok + f"@{ce.occurred_at[:2]}" if ce.occurred_at else tok
 
 
+# --- Beginn-Verschiebung (Issue #1468, ADR-0013: eigener Render-Vertrag --
+# NIE durch _val()/_num(), sonst stuende "15 h" statt "15:00" im Text) -------
+
+def _onset_shift_where(oe: OnsetShiftEvent) -> str:
+    return format_alert_location(
+        oe.location_label, [oe.segment_id], oe.km_from, oe.km_to,
+    )
+
+
+def _onset_shift_line(oe: OnsetShiftEvent) -> str:
+    """Eine Zeile Klartext: Groesse, alte und neue Uhrzeit, Richtungswort."""
+    return (
+        f"{_label(oe)}-Beginn: {oe.from_time} → {oe.to_time} "
+        f"({oe.shift_text} · {_onset_shift_where(oe)})"
+    )
+
+
+def _onset_shift_location(msg: AlertMessage) -> str:
+    """Ortsangabe der Beginn-Ereignisse -- dieselbe Aufloesung wie ueberall
+    sonst (`segments.format_alert_location`), damit eine Mail nicht zwei
+    Ortssprachen spricht (Issue #1744 AC-6)."""
+    evs = msg.onset_shift_events
+    return format_alert_location(
+        msg.location_label, [oe.segment_id for oe in evs],
+        min(oe.km_from for oe in evs), max(oe.km_to for oe in evs),
+    )
+
+
+def _onset_shift_h1(msg: AlertMessage) -> str:
+    n = len(msg.onset_shift_events)
+    if n == 1:
+        return f"{_label(msg.onset_shift_events[0])}-Beginn verschiebt sich"
+    return f"{n} Beginn-Zeiten verschieben sich"
+
+
+def _sms_onset_shift_token(oe: OnsetShiftEvent) -> str:
+    """Kurznachricht-Token: Kuerzel + neue Uhrzeit + Verschiebung im Klartext.
+
+    Die Richtung MUSS als Wort mit -- ein Vorzeichen an einer Uhrzeit ist auf
+    einer Kurznachricht nicht entzifferbar, und die Verschiebung ist genau die
+    Aussage, um derentwillen die Meldung verschickt wird.
+    """
+    return f"{_code(oe)}{oe.to_time} {oe.shift_text}"
+
+
+def _render_email_onset_shift_only(msg: AlertMessage) -> tuple[str, str]:
+    """Reine Beginn-Verschiebung ohne Wert-Aenderungs-Anteil -- Bauform 1:1
+    wie `_render_email_corridor_only` (Issue #1444 S1)."""
+    h1 = _onset_shift_h1(msg)
+    footer = f"Stand: heute {msg.stand_at}"
+    plain = "\n".join(
+        [h1, "", *[_onset_shift_line(oe) for oe in msg.onset_shift_events], "", footer]
+    )
+    rows = [
+        _datarow_html(
+            f"{_label(oe)}-Beginn · {_onset_shift_where(oe)}",
+            f"{oe.from_time} → {oe.to_time} ({oe.shift_text})", G_DANGER, i == 0,
+        )
+        for i, oe in enumerate(msg.onset_shift_events)
+    ]
+    html = (
+        "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
+        f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
+        f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
+        f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
+        "</body></html>"
+    )
+    return _with_origin(html, plain, "deviation-alert", "Open-Meteo")
+
+
+def _render_sms_onset_shift_only(msg: AlertMessage, limit: int) -> str:
+    head = f"{_ascii_alert_location(_onset_shift_location(msg))}: "
+    body = head + " ".join(
+        _sms_onset_shift_token(oe) for oe in msg.onset_shift_events
+    )
+    return body if len(body) <= limit else body[:limit]
+
+
 def _render_subject_onset(msg: AlertMessage) -> str:
     # Issue #1041 Slice 1a: Sammel-Betreff nur bei MEHR ALS EINEM Event
     # (Bündel-Alarm); Ein-Ort-Fall bleibt byte-identisch (AC-2/AC-5).
@@ -353,6 +431,15 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
 def render_subject(msg: AlertMessage) -> str:
     if msg.source is not None:
         return _render_subject_onset(msg)
+    if not msg.events and not msg.corridor_events and msg.onset_shift_events:
+        # Issue #1468: reine Beginn-Verschiebung ohne Wert-Aenderungs-Anteil.
+        oe = msg.onset_shift_events[0]
+        mehr = (f" +{len(msg.onset_shift_events) - 1}"
+                if len(msg.onset_shift_events) > 1 else "")
+        return (
+            f"[{msg.trip_short}] {_onset_shift_where(oe)} · {_label(oe)}-Beginn "
+            f"{oe.to_time} ({oe.shift_text}){mehr}"
+        )
     if not msg.events and msg.corridor_events:
         # Issue #1444 S1 (AC-1/2/5): reiner Schwellen-Alarm ohne Aenderungs-Anteil.
         n = len(msg.corridor_events)
@@ -527,6 +614,8 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         # AC-5 (Befund 4a): reale Quelle des ersten (fuehrenden) Onset-Events.
         onset_source = getattr(msg.events[0], "source_label", None) or "Open-Meteo"
         return _with_origin(html, plain, "radar-alert", onset_source)
+    if not msg.events and not msg.corridor_events and msg.onset_shift_events:
+        return _render_email_onset_shift_only(msg)
     if not msg.events and msg.corridor_events:
         return _render_email_corridor_only(msg)
     evs = _sorted(msg)
@@ -610,7 +699,12 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
     # Issue #1444 S1 (AC-6): Schwellen-Treffer desselben Laufs in dieselbe
     # Nachricht buendeln -- eigener Wortlaut, kein erfundenes "vorher".
     corridor_lines = [_corridor_line(ce) for ce in msg.corridor_events]
+    # Issue #1468 (PO-Entscheid): Beginn- UND Stufenaenderung werden beide
+    # gemeldet, aber im Text DERSELBEN Nachricht zusammengefasst.
+    onset_lines = [_onset_shift_line(oe) for oe in msg.onset_shift_events]
     plain_parts = [h1, "", verdict_text, ""] + plain_data
+    if onset_lines:
+        plain_parts += ["", *onset_lines]
     if corridor_lines:
         plain_parts += ["", *corridor_lines]
     plain_parts += ["", footer]
@@ -626,6 +720,11 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         for e, (label, value) in zip(evs, data_rows):
             value_color = G_DANGER if over_thr(e) else G_INK_MUTED
             rows.append(_datarow_html(label, value, value_color, not rows))
+    for oe in msg.onset_shift_events:
+        rows.append(_datarow_html(
+            f"{_label(oe)}-Beginn · {_onset_shift_where(oe)}",
+            f"{oe.from_time} → {oe.to_time} ({oe.shift_text})", G_DANGER, not rows,
+        ))
     for ce in msg.corridor_events:
         rows.append(_datarow_html(_label(ce), _corridor_value_str(ce), G_DANGER, not rows))
 
@@ -647,6 +746,11 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
 def render_telegram(msg: AlertMessage) -> str:
     if msg.source is not None:
         return _render_telegram_onset(msg)
+    if not msg.events and not msg.corridor_events and msg.onset_shift_events:
+        # Issue #1468: reine Beginn-Verschiebung.
+        lines = [f"<b>{_esc(f'{msg.trip_short} · {_onset_shift_h1(msg)}')}</b>"]
+        lines += [_onset_shift_line(oe) for oe in msg.onset_shift_events]
+        return "\n".join(lines)
     if not msg.events and msg.corridor_events:
         # Issue #1444 S1 (AC-1/2/5): reiner Schwellen-Alarm.
         lines = [f"<b>{_esc(msg.trip_short)}</b>"]
@@ -680,7 +784,9 @@ def render_telegram(msg: AlertMessage) -> str:
             for e in evs
         )
         lines = [f"<b>{_esc(verdict)}</b>", metric_line]
-    # Issue #1444 S1 (AC-6): Schwellen-Treffer desselben Laufs anhaengen.
+    # Issue #1468 / #1444 S1 (AC-6): Beginn-Verschiebungen und Schwellen-
+    # Treffer desselben Laufs anhaengen -- eine Nachricht, nicht drei.
+    lines += [_onset_shift_line(oe) for oe in msg.onset_shift_events]
     lines += [_corridor_line(ce) for ce in msg.corridor_events]
     return "\n".join(lines)
 
@@ -762,6 +868,8 @@ def render_sms(
     """
     if msg.source is not None:
         return _render_sms_onset(msg, limit)
+    if not msg.events and not msg.corridor_events and msg.onset_shift_events:
+        return _render_sms_onset_shift_only(msg, limit)
     if not msg.events and msg.corridor_events:
         return _render_sms_corridor_only(msg, limit)
     evs = _sorted(msg)
@@ -793,9 +901,11 @@ def render_sms(
     if msg.reference_at:
         head += f"@{msg.reference_at} "
     # Issue #1444 S1 (AC-6): Schwellen-Treffer-Tokens desselben Laufs mit.
-    tokens = [_sms_token(e, location_positions) for e in evs] + [
-        _sms_corridor_token(ce) for ce in msg.corridor_events
-    ]
+    tokens = (
+        [_sms_token(e, location_positions) for e in evs]
+        + [_sms_onset_shift_token(oe) for oe in msg.onset_shift_events]
+        + [_sms_corridor_token(ce) for ce in msg.corridor_events]
+    )
 
     kept: list[str] = []
     for tok in tokens:

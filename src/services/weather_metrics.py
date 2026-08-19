@@ -9,6 +9,7 @@ SPEC: docs/specs/modules/weather_emoji_dni.md v1.0 (DNI-based emoji)
 """
 from __future__ import annotations
 
+from datetime import datetime, tzinfo
 from typing import List, Optional
 
 import math
@@ -398,6 +399,10 @@ class WeatherMetricsService:
     def compute_basis_metrics(
         self,
         timeseries: NormalizedTimeseries,
+        *,
+        tz: Optional[tzinfo],
+        day_window_start_hour: Optional[int] = None,
+        day_window_end_hour: Optional[int] = None,
     ) -> SegmentWeatherSummary:
         """
         Compute 8 basic hiking metrics from timeseries.
@@ -414,6 +419,18 @@ class WeatherMetricsService:
 
         Args:
             timeseries: Weather timeseries from provider
+            tz: Ortszeit-Zone fuer die Beginn-Felder (Issue #1468, E2).
+                PFLICHT (keyword-only, KEIN Default): der Aufrufer muss sich
+                entscheiden. `None` heisst ausdruecklich "dieser Aufrufer hat
+                keinen Ortsbezug" und laesst die Beginn-Felder leer (Abstain)
+                -- es wird KEINE Zone angenommen. Ein stiller UTC-Rueckfall
+                waere genau die Bugklasse, die `tests/
+                test_output_timezone_guard.py` seit #1402 verankert: eine
+                Ortszeit-Groesse, die in Wahrheit Serverzeit zeigt.
+            day_window_start_hour / day_window_end_hour: Tagesfenster in
+                Ortszeit fuer die Beginn-Felder (Issue #1468, E2). Ohne
+                Angabe gilt der Default 4-19 Uhr
+                (``day_window.resolve_configured_window``).
 
         Returns:
             SegmentWeatherSummary with 8 basis metrics populated
@@ -440,6 +457,11 @@ class WeatherMetricsService:
         )
         hail_flag = self._compute_hail_flag(timeseries)
         visibility_min = self._compute_visibility(timeseries)
+        # Issue #1468 (E1/E2): Beginn der beiden Ereignisse, ORTSZEIT-gefiltert
+        # auf das Tagesfenster -- dieselbe Stunde, die das Briefing zeigt.
+        window = (tz, day_window_start_hour, day_window_end_hour)
+        thunder_onset = self._compute_thunder_onset(timeseries, *window)
+        precip_heavy_onset = self._compute_precip_heavy_onset(timeseries, *window)
 
         # DNI-based emoji aggregation (SPEC: weather_emoji_dni.md)
         dominant_wmo = compute_dominant_wmo(timeseries.data)
@@ -460,6 +482,8 @@ class WeatherMetricsService:
             humidity_avg_pct=humidity_avg,
             thunder_level_max=thunder_max,
             thunder_level_max_signals=thunder_max_signals,
+            thunder_onset_utc=thunder_onset,
+            precip_heavy_onset_utc=precip_heavy_onset,
             hail_flag=hail_flag,
             visibility_min_m=visibility_min,
             dominant_wmo_code=dominant_wmo,
@@ -476,6 +500,8 @@ class WeatherMetricsService:
                 "humidity_avg_pct": "avg",
                 "thunder_level_max": "max",
                 "thunder_level_max_signals": "union_of_max_carriers",
+                "thunder_onset_utc": "onset",
+                "precip_heavy_onset_utc": "onset",
                 "hail_flag": "hail_priority",
                 "visibility_min_m": "min",
                 "dominant_wmo_code": "max_wmo_severity",
@@ -591,6 +617,87 @@ class WeatherMetricsService:
             return None
 
         return round(sum(humidity_vals) / len(humidity_vals))
+
+    # --- Issue #1468: Beginn der beiden Ereignisse (E1/E2) ------------------
+
+    # Starkregen-Schwelle. Dieselbe Zahl und dieselbe Bedeutung wie im
+    # Radar-Nowcast (`radar_service.INTENSITY_HEAVY`) -- "Starker Regen" heisst
+    # auf beiden Wegen dasselbe (PO-Entscheid 2026-08-18, bewusst kein neues
+    # Vokabular).
+    _PRECIP_HEAVY_MMPH = 4.0
+
+    def _onset_of(
+        self, timeseries: NormalizedTimeseries, erreicht,
+        tz: Optional[tzinfo], start_hour: Optional[int], end_hour: Optional[int],
+    ) -> Optional[datetime]:
+        """Erste Stunde IM TAGESFENSTER, fuer die ``erreicht(dp)`` wahr ist.
+
+        Der Fensterschnitt geschieht in ORTSZEIT, das Ergebnis bleibt naive
+        UTC (Hausnorm). Ohne diesen Schnitt waere der Beginn eine ANDERE Zahl
+        als die im Briefing (E2: eine nachts erstmals ueberschrittene Schwelle
+        ist nicht der Beginn, ueber den das Briefing schreibt) -- und die
+        Verschiebung, die der Alarm meldete, haette dort nie gestanden.
+
+        ``tz is None`` heisst "kein Ortsbezug" und liefert ``None``: ohne Zone
+        gibt es keine Ortszeit-Stunde, und eine angenommene waere Serverzeit
+        im Gewand einer Ortszeit -- die Bugklasse aus #1402. Die Umrechnung
+        laeuft ueber ``utils.timezone.local_hour()``, die EINE Stelle, die
+        naiv/aware korrekt deutet; ein rohes ``.astimezone()`` hier waere eine
+        zweite Auslegung derselben Frage.
+        """
+        from app.day_window import hour_in_window, resolve_configured_window
+        from utils.timezone import local_hour
+
+        if tz is None:
+            return None
+        von, bis = resolve_configured_window(start_hour, end_hour)
+        treffer = [
+            dp.ts for dp in timeseries.data
+            if erreicht(dp) and hour_in_window(local_hour(dp.ts, tz), von, bis)
+        ]
+        return min(treffer) if treffer else None
+
+    def _compute_thunder_onset(
+        self, timeseries: NormalizedTimeseries, tz: Optional[tzinfo],
+        start_hour: Optional[int] = None, end_hour: Optional[int] = None,
+    ) -> Optional[datetime]:
+        """Beginn des Gewitters: erste Tagesfenster-Stunde mit Stufe >= LOW.
+
+        Schwelle ueber die kanonische Ordnung (``thunder_ordinal``), nicht ueber
+        eine im Code getippte Zahl -- die Ordinale haben sich mit #1474 bereits
+        einmal verschoben.
+        """
+        from output.metric_format import thunder_ordinal
+
+        low = thunder_ordinal(ThunderLevel.LOW)
+        return self._onset_of(
+            timeseries,
+            lambda dp: (dp.thunder_level is not None
+                        and thunder_ordinal(dp.thunder_level) >= low),
+            tz, start_hour, end_hour,
+        )
+
+    def _compute_precip_heavy_onset(
+        self, timeseries: NormalizedTimeseries, tz: Optional[tzinfo],
+        start_hour: Optional[int] = None, end_hour: Optional[int] = None,
+    ) -> Optional[datetime]:
+        """Beginn des Starkregens: erste Tagesfenster-Stunde >= 4,0 mm/h.
+
+        Quelle ist ``precip_rate_mmph``, wo der Provider sie liefert
+        (GeoSphere), sonst ``precip_1h_mm`` (Open-Meteo setzt die Rate hart auf
+        ``None``, ``openmeteo.py:885``). Bei Stundenaufloesung ist mm je Stunde
+        dieselbe Zahl wie mm/h -- GeoSphere setzt die Rate selbst auf den
+        Stundenwert (``geosphere.py:571``). Ohne diesen Rueckfall waere die
+        Starkregen-Haelfte beim Primaerprovider strukturell wirkungslos
+        (PO-Entscheid 2026-08-18).
+        """
+        def erreicht(dp) -> bool:
+            wert = dp.precip_rate_mmph
+            if wert is None:
+                wert = dp.precip_1h_mm
+            return wert is not None and wert >= self._PRECIP_HEAVY_MMPH
+
+        return self._onset_of(timeseries, erreicht, tz, start_hour, end_hour)
 
     def _compute_thunder_level(
         self,
@@ -820,6 +927,14 @@ class WeatherMetricsService:
             humidity_avg_pct=basis_summary.humidity_avg_pct,
             thunder_level_max=basis_summary.thunder_level_max,
             visibility_min_m=basis_summary.visibility_min_m,
+            # Issue #1468: die beiden Beginn-Zeitpunkte MUESSEN mitkopiert
+            # werden -- diese Funktion baut ein NEUES Summary, und ihr
+            # Ergebnis ist das, was der Trip-Pfad als `aggregated` weitergibt
+            # (segment_weather.py:282). Ohne die Uebernahme waere der
+            # Beginn-Alarm im Trip-Pfad strukturell tot (dieselbe Naht wie
+            # #1391/#1392, s. hail_flag).
+            thunder_onset_utc=basis_summary.thunder_onset_utc,
+            precip_heavy_onset_utc=basis_summary.precip_heavy_onset_utc,
             # Felder aus compute_basis_metrics() die bisher fehlten (Issue #226)
             dominant_wmo_code=basis_summary.dominant_wmo_code,
             dni_avg_wm2=basis_summary.dni_avg_wm2,
@@ -1130,7 +1245,13 @@ def summarize_points(points: list) -> Optional[SegmentWeatherSummary]:
         meta=ForecastMeta(provider=Provider.OPENMETEO, model="aggregate", grid_res_km=0.0),
         data=list(points),
     )
-    summary = svc.compute_basis_metrics(ts)
+    # Issue #1468: `tz=None` ist hier eine AUSDRUECKLICHE Entscheidung, keine
+    # Auslassung -- dieser Compare-ANZEIGE-Helfer bekommt nur Stundenpunkte,
+    # keinen Ort. Ohne Ortsbezug gibt es keine Ortszeit und damit keine
+    # Beginn-Aussage (Abstain). Der Compare-ALARM-Pfad laeuft NICHT hier
+    # durch, sondern ueber `SegmentWeatherService._aggregate_for_segment()`,
+    # wo die Zone aus den Segment-Koordinaten kommt.
+    summary = svc.compute_basis_metrics(ts, tz=None)
     summary.pop_max_pct = svc._compute_pop(ts)
     summary.uv_index_max = svc._compute_uv_index(ts)
     summary.cape_max_jkg = svc._compute_cape(ts)

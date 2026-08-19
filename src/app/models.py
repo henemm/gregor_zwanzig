@@ -418,6 +418,16 @@ class TripSegment:
     # Optional fields for Story 1 (Feature 1.5)
     adjusted_to_waypoint: bool = False
     waypoint: Optional["DetectedWaypoint"] = None
+    # Issue #1468 (E2): Tagesfenster in ORTSZEIT, unter dem die Aggregation
+    # dieses Segments ausgewertet wird. Das Segment traegt es, NICHT die
+    # Aufrufkette: Briefing-/Anker-Pfad und Alarm-Pfad benutzen dieselben
+    # Segmente, damit ist die Symmetrie beider Vergleichsseiten strukturell
+    # gesichert statt an vier Aufrufstellen per Disziplin. `None` = keine
+    # Angabe -> Default 4-19 ueber `day_window.resolve_configured_window()`;
+    # das ist zugleich das Verhalten fuer Bestandsdaten und fuer jedes
+    # Segment, das ohne Trip-Bezug entsteht.
+    day_window_start_hour: Optional[int] = None
+    day_window_end_hour: Optional[int] = None
 
 
 @dataclass
@@ -493,6 +503,19 @@ class SegmentWeatherSummary:
     # Additiv, schnappschuss-sicher (`weather_snapshot._deserialize_summary`
     # filtert Unbekanntes bereits ueber `dataclasses.fields()`).
     cape_model_id: Optional[str] = None
+
+    # Issue #1468 (E1): BEGINN der beiden Ereignisse als eigene, vergleichbare
+    # Groesse -- erste Stunde IM TAGESFENSTER mit Gewitterstufe >= LOW bzw.
+    # Regenintensitaet >= 4,0 mm/h. Typ `datetime` (naive UTC, Hausnorm
+    # src/utils/timezone.py) und NICHT eine nackte Stundenzahl: 23:00 -> 01:00
+    # ist eine Verschiebung um 2 Stunden, nicht um 22 zurueck. Je Groesse ein
+    # EIGENES Feld, damit das Alarm-Protokoll (#1954) ueber
+    # `metric_and_aggregation_for_field()` die Paare ("thunder","onset") bzw.
+    # ("precipitation","onset") getrennt von ("thunder","max") bildet.
+    # Additiv, Default None -- alte Anker laden unveraendert weiter
+    # (`weather_snapshot._deserialize_summary` filtert ueber `dataclasses.fields()`).
+    thunder_onset_utc: Optional[datetime] = None
+    precip_heavy_onset_utc: Optional[datetime] = None
 
     # Metadata
     aggregation_config: dict[str, str] = field(default_factory=dict)
@@ -1171,6 +1194,11 @@ class AlertMetric(str, Enum):
     # Der Enum-Wert bleibt bewusst als toter Eintrag erhalten, damit alt-persistierte
     # AlertRules mit metric="humidity" ohne Lade-Crash deserialisieren (Backward-Compat).
     HUMIDITY = "humidity"
+    # Issue #1468: Beginn-Verschiebung als eigene Alarm-Groesse (E1). Haengt an
+    # denselben Katalog-IDs wie die Stufen-/Summen-Alarme (thunder /
+    # precipitation) und erbt damit deren Wetter-Tab-Sichtbarkeits-Gate.
+    THUNDER_ONSET = "thunder_onset"
+    PRECIPITATION_HEAVY_ONSET = "precipitation_heavy_onset"
 
 
 @dataclass

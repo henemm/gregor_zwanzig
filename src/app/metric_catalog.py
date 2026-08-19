@@ -94,6 +94,13 @@ class MetricDefinition:
         return bool(self.friendly_label)
 
 
+# Issue #1468: Auswertung "Beginn des Ereignisses". Bewusst KEIN Eintrag in
+# `_AGGREGATION_ORDER` -- der Beginn ist keine vom Nutzer waehlbare
+# Zusammenfassung einer Stundenreihe, sondern ein Zeitpunkt. Er traegt
+# trotzdem einen `summary_fields`-Schluessel, weil das Alarm-Protokoll (#1954)
+# seine Register-Paare ueber genau diese Zuordnung bildet.
+ONSET_AGGREGATION: str = "onset"
+
 # --- Metric Registry ---
 
 _METRICS: list[MetricDefinition] = [
@@ -367,9 +374,11 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("sum",),
         compact_label="R", col_key="precip", col_label="Rain",
         providers={"openmeteo": True, "geosphere": True},
-        summary_fields={"sum": "precip_sum_mm"},
+        summary_fields={"sum": "precip_sum_mm",
+                        ONSET_AGGREGATION: "precip_heavy_onset_utc"},  # #1468
         default_change_threshold=10.0,
-        alert_metrics={"sum": "precipitation_sum"},  # #1435 E1a
+        alert_metrics={"sum": "precipitation_sum",
+                       ONSET_AGGREGATION: "precipitation_heavy_onset"},  # #1435 E1a, #1468
         change_alert_metric="precipitation_change",
         display_thresholds={"yellow": 1.0, "orange": 5.0, "red": 10.0},
         risk_thresholds={"medium": 20.0},
@@ -416,9 +425,11 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("max",),
         compact_label="⚡", col_key="thunder", col_label="Thdr",
         providers={"openmeteo": True, "geosphere": False},
-        summary_fields={"max": "thunder_level_max"},
+        summary_fields={"max": "thunder_level_max",
+                        ONSET_AGGREGATION: "thunder_onset_utc"},  # #1468
         default_change_threshold=1.0,
-        alert_metrics={"max": "thunder_level"},  # #1435 E1a
+        alert_metrics={"max": "thunder_level",
+                       ONSET_AGGREGATION: "thunder_onset"},  # #1435 E1a, #1468
         friendly_label="⚡",
         # Issue #814 AC-6: "raw" in format_modes erlaubt explizites format_mode="raw"
         # im Renderer (matrix test setzt mc.format_mode="raw"). Der #435-Fallback-Test
@@ -1122,7 +1133,13 @@ def get_change_detection_map() -> dict[str, float]:
         # Schwelle stehen, obwohl die Größe nirgends mehr wählbar ist.
         if not m.selectable:
             continue
-        for summary_field in m.summary_fields.values():
+        for aggregation, summary_field in m.summary_fields.items():
+            # Issue #1468: Beginn-Felder tragen einen ZEITPUNKT, keinen
+            # Messwert -- `abs(delta) > threshold` waere dort ein Vergleich
+            # von timedelta mit float (TypeError). Der Beginn-Alarm laeuft
+            # ueber seine eigene Weiche in `detect_changes()`.
+            if aggregation == ONSET_AGGREGATION:
+                continue
             result[summary_field] = m.default_change_threshold
     return result
 
