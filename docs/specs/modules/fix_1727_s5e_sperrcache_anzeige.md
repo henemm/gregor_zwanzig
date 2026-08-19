@@ -31,9 +31,13 @@ in der Zeitzone des Nutzers.
 
 ## Estimated Scope
 
-- **LoC:** ~45 Produktivcode (A: ~10, B: ~15 plus ~20 verschobene Zeilen) + ~100 Tests
+- **LoC:** ~45 Produktivcode (A: ~10, B: ~15 plus ~20 verschobene Zeilen) + ~140 Tests
 - **Files:** 3 Produktivdateien (`massif_closure.py`, `account/+page.svelte`, neu
-  `lib/utils/schedulerTime.ts`) + 3 Testdateien (Kern-Test A, Unit-Test B, Browser-Test B)
+  `lib/utils/schedulerTime.ts`) + 4 Testdateien (Kern-Test A, Unit-Test B, **Playwright-Test B**,
+  **Live-Ausgabe-Test A**)
+- **Nachweis-Schichten:** Kern (deterministisch) für den Tageswechsel · Browser (Playwright gegen
+  Staging, zwei Zeitzonen) für die Anzeige · Live-Ausgabe (echte Staging-Mail per IMAP + echte
+  Telegram-Nachricht) für die Wirkung der Sperre auf das Briefing
 - **Effort:** low
 
 ## Dependencies
@@ -149,6 +153,8 @@ in der Zeitzone des Nutzers.
     überhaupt wirkt. Ein Testgerüst, in dem `TZ` folgenlos bleibt, liefert zwei identische Strings und
     wäre auch bei fest verdrahtetem Wien grün — der Nachweis wäre wertlos. Die beiden erwarteten
     Uhrzeiten sind deshalb als konkrete Werte zu prüfen, nicht nur auf Ungleichheit.
+  - 🔴 **Der Unit-Test allein genügt nicht** — die Wirkung ist zusätzlich im echten Browser zu belegen,
+    siehe AC-7.
 
 - **AC-6:** Given die bestehende Versandkette (nackte Eingabe-Uhrzeit → naive Speicherung → Auswertung
   als Ortszeit des Trip-Startpunkts über `trip_report_scheduler.py:180-189`) ist ADR-0051-konform und
@@ -159,9 +165,41 @@ in der Zeitzone des Nutzers.
     als eigene zählt) zeigt ausschließlich `massif_closure.py`, `account/+page.svelte`,
     `lib/utils/schedulerTime.ts` plus die zugehörigen Testdateien; bestehende
     `trip_report_scheduler`-Tests laufen unmodifiziert durch.
+- **AC-7:** Given die Konto-Seite läuft auf Staging und ein Browser wird einmal mit der Zeitzone
+  `Europe/Vienna` und einmal mit `America/New_York` gestartet, When dieselbe Seite in beiden Fällen
+  geöffnet wird, Then zeigt die Scheduler-Zeile beide Male den Text „Nächste Prüfung", **verschiedene**
+  Uhrzeiten und jeweils das zur Browser-Zone passende Zonenkürzel.
+  - Test: Playwright gegen `https://staging.gregor20.henemm.com`, zwei Browser-Kontexte mit
+    `timezoneId: 'Europe/Vienna'` bzw. `timezoneId: 'America/New_York'`; der sichtbare Text der Zeile
+    wird ausgelesen und verglichen. Das ist der Nachweis für AC-4 **und** AC-5 an der Stelle, an der die
+    Änderung wirkt — im gerenderten Browser, nicht in einer Testumgebung.
+  - 🔴 Die beiden Uhrzeiten **müssen** sich unterscheiden. Wären sie gleich, wäre entweder die feste
+    Zone noch drin oder der Zonenwechsel des Testbrowsers folgenlos — beides ist ein Fehlschlag, kein
+    Grenzfall.
+
+- **AC-8:** Given eine amtliche Waldbrand-Zugangssperre liegt für ein Massiv des Test-Trips vor, When
+  ein Briefing über Staging versendet wird, Then erscheint diese Sperre in der **zugestellten E-Mail**
+  und in der **zugestellten Telegram-Nachricht**.
+  - Test: Live-Schicht. Versand über Staging, E-Mail per IMAP aus `gregor-test@henemm.com` abgeholt und
+    im Text nachgewiesen; Telegram-Nachricht im Zielchat nachgewiesen. Damit ist belegt, dass der
+    geänderte Cache-Pfad die Ausgabe tatsächlich erreicht — nicht nur, dass ein Dict den richtigen
+    Schlüssel trägt.
+  - 🔴 **Ehrliche Grenze:** Ein echter Kalendertagwechsel ist auf Staging nicht herstellbar. AC-8 ist
+    deshalb die **Positivkontrolle des Ausgabewegs** (die Sperre kommt an), nicht der Nachweis des
+    Tageswechsels — den führt AC-1 in der Kern-Schicht. Beide zusammen decken die Zusicherung ab;
+    einzeln tut es keines von beiden. Liegt zum Testzeitpunkt für kein Massiv eine Sperre vor, ist das
+    als SKIP mit Begründung zu dokumentieren, **niemals** als bestanden zu melden.
 
 ## Known Limitations
 
+- **Der Kalendertagwechsel ist auf Staging nicht herstellbar.** Er wird deshalb in der Kern-Schicht
+  gegen einen lokalen Sentinel nachgewiesen (AC-1); Staging belegt den Ausgabeweg (AC-8). Wer nur eines
+  von beiden vorzeigt, hat die Zusicherung nicht belegt.
+- **Nachgewiesene Ausgabekanäle sind E-Mail und Telegram** (AC-8, PO-Vorgabe 2026-08-19). SMS und
+  Premium-SMS durchlaufen denselben Renderweg für amtliche Warnungen, werden hier aber nicht
+  eigens versendet — Begründung: kein zusätzlicher Erkenntnisgewinn für diese Änderung, dafür echter
+  Versand an ein Satellitengerät. Falls die Sperren-Darstellung in den Kurzformaten später abweicht,
+  ist das ein eigener Befund, kein Regress dieser Scheibe.
 - Der eigentliche nächste Versandzeitpunkt je Trip in dessen Ortszeit wird weiterhin **nicht** angezeigt
   — das bleibt ausdrücklich #1969 (PO-entschieden ausgelagert, größerer Umbau).
 - Ob externes Monitoring in `henemm-infra` den bisherigen Label-Text „Nächster" oder das ISO-Feld
