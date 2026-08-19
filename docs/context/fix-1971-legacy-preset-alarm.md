@@ -89,6 +89,34 @@ sind getrennt gepflegt. Eine künftige Metrik, die nur in `_ALERT_METRIC_TO_CATA
 landet, wäre im Legacy-Pfad still — das ist die eigentliche, dauerhafte Fehlerquelle hinter
 diesem Issue.
 
+### M5 — Der Legacy-Zustand ist **nicht** historisch, er kann neu entstehen
+
+Das Issue behandelt fehlendes `active_metrics` als Altlast („Alt-Ortsvergleiche", „vor der
+Migration"). Das trifft nicht zu:
+
+- `frontend/src/lib/.../compareEditorSave.ts:407-409` lässt den Schlüssel `active_metrics`
+  **weg**, solange `fields.activeMetricKeys === null` — und `null` ist der Init-Wert
+  (`compareWizardState.svelte.ts:32`).
+- `internal/handler/compare_preset.go:193-277` (`CreateComparePresetHandler`) setzt zwar
+  Defaults für `weekday`, `forecast_hours`, `morning_time`, `official_warnings` — aber
+  **keinen** für `active_metrics`.
+- Weder `internal/store/compare_preset.go:89-132` (`normalizeLoadedComparePreset`) noch
+  `src/app/loader.py:262` heilen das Feld beim Laden.
+
+Ein heute angelegter Ortsvergleich, bei dem der Nutzer die Metrik-Auswahl nie anfasst, wird
+also **ohne** `active_metrics` persistiert. Trifft das mit einem gesetzten
+`metric_alert_levels` zusammen (Nutzer stellt im Alarme-Reiter Empfindlichkeiten ein, ohne
+den Metriken-Reiter zu berühren), steht genau die Konstellation aus M3 — und neue Metriken
+bleiben still.
+
+Für den **Render**-Pfad ist das abgefedert: `resolve_enabled_metrics(None)` bedeutet „alle
+Metriken sichtbar" (`compare_metric_ids.py:168-169`). Nur der **Alarm**-Pfad hat diesen
+Auffang nicht.
+
+> Damit verschiebt sich die Bewertung: Weg 3 des Issues („dokumentieren, wenn die
+> Produktionszahl 0 ist") stützt sich auf einen Bestand, der jederzeit wieder wachsen kann.
+> Die Zahl 0 ist eine Momentaufnahme, keine Eigenschaft des Systems.
+
 ## Related Files
 
 | Datei | Relevanz |
