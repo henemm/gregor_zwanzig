@@ -94,7 +94,7 @@ def _timeseries_eine_hagelstunde_drei_unbekannt() -> NormalizedTimeseries:
 
 def test_ac4_compute_basis_metrics_traegt_true_trotz_umgebender_unbekannt():
     ts = _timeseries_eine_hagelstunde_drei_unbekannt()
-    summary = WeatherMetricsService().compute_basis_metrics(ts)
+    summary = WeatherMetricsService().compute_basis_metrics(ts, tz=None)
 
     assert summary.hail_flag is True, (
         f"Eine einzelne bestaetigte Hagelstunde (True) darf nicht von drei "

@@ -74,7 +74,7 @@ def _trip_sentence(
 ) -> str:
     """Erzeugt den Satz ueber den ECHTEN Trip-Pfad (CompactSummaryFormatter)."""
     ts = _timeseries(hourly)
-    summary = WeatherMetricsService().compute_basis_metrics(ts)
+    summary = WeatherMetricsService().compute_basis_metrics(ts, tz=None)
     seg = TripSegment(
         segment_id=1,
         start_point=GPXPoint(lat=39.75, lon=2.65, elevation_m=100.0),

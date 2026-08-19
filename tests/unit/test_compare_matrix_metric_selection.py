@@ -73,7 +73,7 @@ def _location(name: str, hourly: list[ForecastDataPoint]) -> LocationResult:
     hourly_data"). Der UV-Tageswert wird heute bereits genau so live aus
     ``hourly_data`` abgeleitet (``compare_html._metric_value``).
     """
-    s = WeatherMetricsService().compute_basis_metrics(_timeseries(hourly))
+    s = WeatherMetricsService().compute_basis_metrics(_timeseries(hourly), tz=None)
     return LocationResult(
         location=SavedLocation(id=name.lower(), name=name, lat=39.76, lon=2.71, elevation_m=200),
         score=50,
@@ -274,7 +274,7 @@ def test_daily_aggregate_matches_trip_path_computation():
     hourly = _hourly()
     svc = WeatherMetricsService()
     ts = _timeseries(hourly)
-    trip = svc.compute_basis_metrics(ts)
+    trip = svc.compute_basis_metrics(ts, tz=None)
     trip_pop = svc._compute_pop(ts)
     trip_uv = svc._compute_uv_index(ts)
 
@@ -389,7 +389,7 @@ def test_engine_fills_daily_aggregates_into_location_result():
     hourly = _hourly()
     svc = WeatherMetricsService()
     ts = _timeseries(hourly)
-    trip = svc.compute_basis_metrics(ts)
+    trip = svc.compute_basis_metrics(ts, tz=None)
 
     lr = _run_engine_with_recorded_hourly(hourly)
 

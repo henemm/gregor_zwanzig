@@ -54,7 +54,7 @@ def test_ac2_trip_aggregat_traegt_normalisierten_modell_schluessel():
     ts = NormalizedTimeseries(meta=meta, data=[_minimal_point(cape_jkg=840.0)])
 
     svc = WeatherMetricsService()
-    basis = svc.compute_basis_metrics(ts)
+    basis = svc.compute_basis_metrics(ts, tz=None)
     result = svc.compute_extended_metrics(ts, basis)
 
     assert result.cape_model_id == "meteofrance_arome", (
@@ -77,7 +77,7 @@ def test_ac2_gegenprobe_rohwert_wird_normalisiert_nicht_unveraendert_durchgereic
     ts = NormalizedTimeseries(meta=meta, data=[_minimal_point(cape_jkg=840.0)])
 
     svc = WeatherMetricsService()
-    basis = svc.compute_basis_metrics(ts)
+    basis = svc.compute_basis_metrics(ts, tz=None)
     result = svc.compute_extended_metrics(ts, basis)
 
     assert result.cape_model_id == "meteofrance_arome", (

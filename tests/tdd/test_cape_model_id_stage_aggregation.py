@@ -59,7 +59,7 @@ def _segment_mit_herkunft(model: str, start_hour: int, cape_jkg: float) -> Segme
         )],
     )
     svc = WeatherMetricsService()
-    basis = svc.compute_basis_metrics(ts)
+    basis = svc.compute_basis_metrics(ts, tz=None)
     aggregiert = svc.compute_extended_metrics(ts, basis)
     return SegmentWeatherData(
         segment=seg, timeseries=ts, aggregated=aggregiert,

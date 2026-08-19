@@ -400,7 +400,7 @@ class WeatherMetricsService:
         self,
         timeseries: NormalizedTimeseries,
         *,
-        tz: Optional[tzinfo] = None,
+        tz: Optional[tzinfo],
         day_window_start_hour: Optional[int] = None,
         day_window_end_hour: Optional[int] = None,
     ) -> SegmentWeatherSummary:
@@ -419,8 +419,14 @@ class WeatherMetricsService:
 
         Args:
             timeseries: Weather timeseries from provider
-            tz: Ortszeit-Zone fuer die Beginn-Felder (Issue #1468, E2). Ohne
-                Angabe gilt UTC.
+            tz: Ortszeit-Zone fuer die Beginn-Felder (Issue #1468, E2).
+                PFLICHT (keyword-only, KEIN Default): der Aufrufer muss sich
+                entscheiden. `None` heisst ausdruecklich "dieser Aufrufer hat
+                keinen Ortsbezug" und laesst die Beginn-Felder leer (Abstain)
+                -- es wird KEINE Zone angenommen. Ein stiller UTC-Rueckfall
+                waere genau die Bugklasse, die `tests/
+                test_output_timezone_guard.py` seit #1402 verankert: eine
+                Ortszeit-Groesse, die in Wahrheit Serverzeit zeigt.
             day_window_start_hour / day_window_end_hour: Tagesfenster in
                 Ortszeit fuer die Beginn-Felder (Issue #1468, E2). Ohne
                 Angabe gilt der Default 4-19 Uhr
@@ -626,28 +632,33 @@ class WeatherMetricsService:
     ) -> Optional[datetime]:
         """Erste Stunde IM TAGESFENSTER, fuer die ``erreicht(dp)`` wahr ist.
 
-        Der Fensterschnitt geschieht in ORTSZEIT (``tz``), das Ergebnis bleibt
-        naive UTC (Hausnorm). Ohne diesen Schnitt waere der Beginn eine ANDERE
-        Zahl als die im Briefing (E2: eine nachts erstmals ueberschrittene
-        Schwelle ist nicht der Beginn, ueber den das Briefing schreibt) -- und
-        die Verschiebung, die der Alarm meldete, haette dort nie gestanden.
+        Der Fensterschnitt geschieht in ORTSZEIT, das Ergebnis bleibt naive
+        UTC (Hausnorm). Ohne diesen Schnitt waere der Beginn eine ANDERE Zahl
+        als die im Briefing (E2: eine nachts erstmals ueberschrittene Schwelle
+        ist nicht der Beginn, ueber den das Briefing schreibt) -- und die
+        Verschiebung, die der Alarm meldete, haette dort nie gestanden.
+
+        ``tz is None`` heisst "kein Ortsbezug" und liefert ``None``: ohne Zone
+        gibt es keine Ortszeit-Stunde, und eine angenommene waere Serverzeit
+        im Gewand einer Ortszeit -- die Bugklasse aus #1402. Die Umrechnung
+        laeuft ueber ``utils.timezone.local_hour()``, die EINE Stelle, die
+        naiv/aware korrekt deutet; ein rohes ``.astimezone()`` hier waere eine
+        zweite Auslegung derselben Frage.
         """
         from app.day_window import hour_in_window, resolve_configured_window
+        from utils.timezone import local_hour
 
-        zone = tz or timezone.utc
+        if tz is None:
+            return None
         von, bis = resolve_configured_window(start_hour, end_hour)
         treffer = [
             dp.ts for dp in timeseries.data
-            if erreicht(dp) and hour_in_window(
-                (dp.ts if dp.ts.tzinfo else dp.ts.replace(tzinfo=timezone.utc))
-                .astimezone(zone).hour,
-                von, bis,
-            )
+            if erreicht(dp) and hour_in_window(local_hour(dp.ts, tz), von, bis)
         ]
         return min(treffer) if treffer else None
 
     def _compute_thunder_onset(
-        self, timeseries: NormalizedTimeseries, tz: Optional[tzinfo] = None,
+        self, timeseries: NormalizedTimeseries, tz: Optional[tzinfo],
         start_hour: Optional[int] = None, end_hour: Optional[int] = None,
     ) -> Optional[datetime]:
         """Beginn des Gewitters: erste Tagesfenster-Stunde mit Stufe >= LOW.
@@ -667,7 +678,7 @@ class WeatherMetricsService:
         )
 
     def _compute_precip_heavy_onset(
-        self, timeseries: NormalizedTimeseries, tz: Optional[tzinfo] = None,
+        self, timeseries: NormalizedTimeseries, tz: Optional[tzinfo],
         start_hour: Optional[int] = None, end_hour: Optional[int] = None,
     ) -> Optional[datetime]:
         """Beginn des Starkregens: erste Tagesfenster-Stunde >= 4,0 mm/h.
@@ -1234,7 +1245,13 @@ def summarize_points(points: list) -> Optional[SegmentWeatherSummary]:
         meta=ForecastMeta(provider=Provider.OPENMETEO, model="aggregate", grid_res_km=0.0),
         data=list(points),
     )
-    summary = svc.compute_basis_metrics(ts)
+    # Issue #1468: `tz=None` ist hier eine AUSDRUECKLICHE Entscheidung, keine
+    # Auslassung -- dieser Compare-ANZEIGE-Helfer bekommt nur Stundenpunkte,
+    # keinen Ort. Ohne Ortsbezug gibt es keine Ortszeit und damit keine
+    # Beginn-Aussage (Abstain). Der Compare-ALARM-Pfad laeuft NICHT hier
+    # durch, sondern ueber `SegmentWeatherService._aggregate_for_segment()`,
+    # wo die Zone aus den Segment-Koordinaten kommt.
+    summary = svc.compute_basis_metrics(ts, tz=None)
     summary.pop_max_pct = svc._compute_pop(ts)
     summary.uv_index_max = svc._compute_uv_index(ts)
     summary.cape_max_jkg = svc._compute_cape(ts)
