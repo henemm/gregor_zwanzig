@@ -204,6 +204,18 @@ plus Plausibilitätsprüfung gegen `datetime.now()`) statt eines exakten Textver
     unverändert grün (Verhaltensnachweis); ergänzend ein struktureller Importe-Check, dass
     `render.py` `app.day_window` nicht importiert (kein Verhaltensnachweis, nur Nicht-Berührung).
 
+- **AC-11:** Given einen Onset-Alarm, dessen `onset_time` in eine Vormittagsstunde mit führender
+  Null fällt (Feldwert `"09:05"`, wie ihn `strftime("%H:%M")` an allen Setzstellen erzeugt) /
+  When derselbe Alarm einmal über `render_sms` und einmal über `_render_email_onset` bzw.
+  `_render_telegram_onset` gerendert wird / Then trägt allein die Kurznachricht die Stunde **ohne**
+  führende Null (`TH@9:05`, Zeichenbudget), während E-Mail und Telegram die volle Form `09:05`
+  behalten — die Minuten bleiben in allen Kanälen zweistellig, und das Feld `onset_time` selbst
+  wird nicht verändert, nur seine Darstellung in der Kurznachricht.
+  - Test: Vergleichstest über alle drei Renderer mit demselben `OnsetEvent` (`onset_time="09:05"`);
+    geprüft wird `TH@9:05` in der SMS **und** `09:05` in E-Mail und Telegram — ein Test, der beide
+    Seiten gegeneinander stellt, damit eine Kürzung an der falschen Stelle rot schlägt.
+    PO-Entscheid 2026-08-19, `issuecomment-5345456988`.
+
 ## Zusätzliche Prüfpunkte (aus der Abhängigkeitsanalyse, Phase 2 Step 2a)
 
 **Bestehender ASCII-Wächter muss grün bleiben.** `tests/tdd/test_ascii_folding.py:101-123` prüft am
