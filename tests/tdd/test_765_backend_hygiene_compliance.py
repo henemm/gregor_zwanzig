@@ -113,6 +113,20 @@ _SELF_EXEMPT = {
     # gehoert dieser Eintrag wieder raus.
     # Spec: docs/specs/modules/feat_1717_s3_premium_sms_ui.md
     "test_premium_sms_ttl_drift.py",
+    # #1848 Scheibe C AC-5 (Tech-Lead-Freigabe 2026-08-19): Kommentar-Waechter
+    # liest die Kommentare in src/app/metric_catalog.py als DATEN, um per AST
+    # zu pruefen, ob die dort genannten Funktionsnamen im Code tatsaechlich
+    # aufloesbar sind — kein Verhaltensnachweis auf Code-Strings, gleiche
+    # Werkzeug-Klasse wie test_alert_metric_mapping_parity.py (#1435 E5 AC-8),
+    # der ebenfalls Kommentare in Produkt-Python gegen den echten Mechanismus
+    # stellt. Nachweisbarer Fang: der Test fand den toten Namen
+    # `_collect_hiking_window_dps()`, der 4x in Kommentaren stand und auf
+    # keine existierende Funktion zeigte (korrekt ist
+    # `collect_hiking_window_points()`).
+    # Pruefdatum: 2026-11-17 — kein weiterer nachweisbarer Fang bis dahin =>
+    # Eintrag zurueckbauen (Regel-Budget, CLAUDE.md "Backlog & Nebenbefunde").
+    # Spec: docs/specs/modules/feat_1848_c_waechter_gehzeit_trip_exklusiv.md
+    "test_gehzeit_metriken_bleiben_trip_exklusiv.py",
 }
 # #1408 F005 / #1469: `test_validator_log_unique_filenames.py` stand hier als
 # ausdruecklicher FEHLALARM-Eintrag, weil `_collect_listed_product_paths()`

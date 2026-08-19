@@ -63,23 +63,28 @@ CENTRAL_METRICS_COVERED_ELSEWHERE: dict[str, str] = {
     # verschieden und liefern deshalb VERSCHIEDENE ZAHLEN:
     #   * Trip K/D: `collect_hiking_window_points()` -- die GEHZEIT entlang
     #     der Route, Segmentgrenzen inklusiv/exklusiv gemischt
-    #     (sms_trip.py:237-239, renderers/day_window.py:183).
+    #     (sms_trip.py:237-239, renderers/day_window.py:186).
     #   * Compare temp_min_c/temp_max_c: `resolve_configured_window()` --
     #     ein KONFIGURIERTES Tagesfenster (Vorgabe 04-19) am festen Ort
     #     (services/compare_location_weather_source.py:110, app/day_window.py:20).
     # Eine fruehere Fassung dieses Kommentars behauptete "buchstaeblich
     # dieselbe Zahl". Das war falsch und ist nachgemessen widerlegt.
     #
-    # Rueckbaupfad: #1848 (Zusammenfuehrung von Ortsvergleich-Katalog,
-    # 3-Tages-Ausblick und Trip-Katalog auf EIN Vokabular, PO-Entscheid E4
-    # zu #1728). Danach fallen diese vier Zeilen ersatzlos weg. WER DAS TUT,
-    # MUSS DEN FENSTERUNTERSCHIED ZUERST AUFLOESEN: zwei Kennungen mit
-    # gleicher Bedeutung, aber verschiedener Fensterung zusammenzufuehren
-    # erzeugt eine Groesse, die je nach Aufrufer eine andere Zahl liefert.
-    "temperature_day_low": "#1728 — bedeutungsgleich mit temp_min_c (temperature/min), anderes Zeitfenster (s. Blockkommentar); Rueckbau mit #1848",
-    "temperature_day_high": "#1728 — bedeutungsgleich mit temp_max_c (temperature/max), anderes Zeitfenster (s. Blockkommentar); Rueckbau mit #1848",
-    "wind_chill_day_low": "#1728 — bedeutungsgleich mit wind_chill_min_c (wind_chill/min), anderes Zeitfenster (s. Blockkommentar); Rueckbau mit #1848",
-    "wind_chill_day_high": "#1728 — bedeutungsgleich mit wind_chill_max_c (wind_chill/max), anderes Zeitfenster (s. Blockkommentar); Rueckbau mit #1848",
+    # KEIN Rueckbaupfad -- die vier bleiben trip-exklusiv (PO-Entscheid
+    # 2026-08-19 zu #1848, Scheibe C). Die frueher hier angekuendigte
+    # Zusammenfuehrung auf EIN Vokabular umfasst diese vier NICHT: auf Tour
+    # zaehlt das Wetter, WAEHREND man geht -- die vier fenstern ueber die
+    # Gehzeit entlang der Route. Der Ortsvergleich hat keine Route und damit
+    # keine Gehzeit; er nutzt ein konfiguriertes Tagesfenster (Vorgabe 04-19).
+    # Zwei verschiedene Fragen, keine Dopplung. Ein Zusammenfuehren erzeugte
+    # eine Kennung, die je nach Aufrufer eine andere Zahl liefert -- genau der
+    # Fensterunterschied oben. Die vier Zeilen bleiben deshalb stehen; der
+    # Ortsvergleich bietet die Groessen nie an (Waechter:
+    # tests/unit/test_gehzeit_metriken_bleiben_trip_exklusiv.py).
+    "temperature_day_low": "#1728 — bedeutungsgleich mit temp_min_c (temperature/min), anderes Zeitfenster (s. Blockkommentar); bleibt trip-exklusiv (PO-Entscheid 2026-08-19, #1848)",
+    "temperature_day_high": "#1728 — bedeutungsgleich mit temp_max_c (temperature/max), anderes Zeitfenster (s. Blockkommentar); bleibt trip-exklusiv (PO-Entscheid 2026-08-19, #1848)",
+    "wind_chill_day_low": "#1728 — bedeutungsgleich mit wind_chill_min_c (wind_chill/min), anderes Zeitfenster (s. Blockkommentar); bleibt trip-exklusiv (PO-Entscheid 2026-08-19, #1848)",
+    "wind_chill_day_high": "#1728 — bedeutungsgleich mit wind_chill_max_c (wind_chill/max), anderes Zeitfenster (s. Blockkommentar); bleibt trip-exklusiv (PO-Entscheid 2026-08-19, #1848)",
 }
 
 # ---------------------------------------------------------------------------
