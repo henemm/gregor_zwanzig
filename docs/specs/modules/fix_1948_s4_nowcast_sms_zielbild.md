@@ -12,7 +12,7 @@ tags: [alarm, sms, nowcast, format]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe („go") am 2026-08-19, alle 11 Akzeptanzkriterien.
 
 ## Purpose
 
