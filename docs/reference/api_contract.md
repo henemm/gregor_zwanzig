@@ -312,6 +312,35 @@ Schichtgrenzen nicht auffindbar ist (s. Spec „Known Limitations"). ICON-EU lie
 `cape_con` providerintern (`src/providers/dwd_eu.py`), aber **ohne** eigenes Modellfeld —
 kein Zwilling zu `cape_ml_jkg`.
 
+#### Gewitter-Rohgrößen GeoSphere AROME Österreich (optional, Issue #1758)
+Zwei zusätzliche, **additive** Größen (ADR-0057) — reiner Datenabruf, **keine Einstufung, keine
+Schwellen, keine Fusion, kein Renderer-Anschluss** (Scope-Abgrenzung der Spec
+`docs/specs/modules/feat_1758_geosphere_cape_cin.md`). Ergänzt den DWD für das Gebiet
+`DE_ALPEN` (inkl. Österreich), ohne ihn zu verdrängen — beide Quellen liefern gleichzeitig
+(`providers/thunder_routing.py::thunder_providers_for`).
+
+| Feld                                          | Typ           | Beschreibung                                   |
+|------------------------------------------------|---------------|-------------------------------------------------|
+| cape_geosphere_jkg                            | float \| None | CAPE (`cape`, dimensionsgleich zu J/kg, `m2 s-2`) — GeoSphere AROME, 2,5 km. **Eigenes** Feld getrennt von `cape_jkg` (Open-Meteo) **und** `cape_ml_jkg` (DWD): `reihe.meta.model="AROME"` würde über `normalize_model_id()` sonst die **Météo-France**-CAPE-Eichleiter ziehen (`model_registry.py:43`, Fehlertyp #1678) — mitbenutzen von `cape_jkg` ist deshalb strukturell verboten, nicht nur unerwünscht. Keine Umrechnung: `m2 s-2` und `J kg-1` sind dimensionsgleich, die Zahl bleibt unverändert. |
+| convective_inhibition_geosphere_jkg           | float \| None | Konvektionshemmung (`cin`, J kg-1) — GeoSphere AROME, dieselbe Begründung für das eigene Feld wie oben. Live gemessen durchgängig 0,0 bis −0,1 — kein Sentinel-Wert bekannt (Known Limitations der Spec). |
+
+Zuständigkeit: `thunder_routing._REGIONS`, Zeile `DE_ALPEN`, trägt seit #1758 die Zusatzquelle
+`geosphere` neben der Primärquelle `de_direct` — **begrenzt auf das tatsächliche AROME-Gitter**
+(`geosphere.AROME_BOUNDS`/`arome_grid_covers()`, gemessen `bbox = [42.981, 5.498, 51.819,
+22.102]`), NICHT das gesamte, größere `DE_ALPEN`-Zuständigkeitsrechteck — Punkte wie Hamburg
+oder Berlin liegen in `DE_ALPEN`, aber außerhalb des AROME-Gitters und bekommen `geosphere`
+deshalb gar nicht erst zugewiesen (sonst garantierter HTTP-400-Abruf bei jedem Lauf). Abruf ist
+ein **eigener, gekapselter** Request (`GeoSphereProvider.fetch_thunder_signals_named`, Vorbild
+`fetch_snowgrid`) — NICHT Teil von `NWP_PARAMS`/`fetch_nwp_forecast`, damit ein künftiger
+Namenswechsel bei `cape`/`cin` nie die Grundvorhersage (Temperatur/Wind/Schnee) mitreißt: ein
+unbekannter Parametername lässt bei GeoSphere den **gesamten** Abruf mit HTTP 400 scheitern
+(live gemessen). Läuft bewusst OHNE Retry (der Grundvorhersage-Retry mit bis zu 5 Versuchen und
+Backoff bis 60s würde ein knappes Budget sprengen) und mit eigenem, kurzem Zeitbudget
+(`THUNDER_FETCH_TIMEOUT_SECONDS`, 3s — echte Antwortzeit gegen den Produktiv-Endpunkt gemessen
+2026-08-18: ~0,25–0,29s, s. ADR-0057). Der
+Fill-only-Wächter gilt seit #1758 nur noch für die Primärquelle je Gebiet — Zusatzquellen wie
+`geosphere` werden bei jedem Anreicherungslauf versucht, solange sie zuständig sind (ADR-0057).
+
 ### Provenance (Meta, Pflicht)
 - `provider`, `model`, `run`, `interp`, `grid_res_km`, optional `stations_used[]`
 

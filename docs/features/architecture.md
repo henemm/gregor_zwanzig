@@ -444,6 +444,15 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      reicht die `capture_id` direkt durch, Zweig c löst sie per Zeitfenster-Lookup
      (`latest_capture_id()`) auf; für Zweig b ist die Korrelation in S1 zurückgestellt
      (an der Aufrufstelle liegt kein provider-spezifischer Cache-Schlüssel vor).
+   - **Nachtrag #1944 (Scheibe 2 aus #1929):** Zweig b ist inzwischen korreliert — NICHT
+     per Zeitfenster-Lookup wie hier ursprünglich vorgesehen (verworfen: `OfficialAlert.source`
+     und der Mitschnitt-`service`-Schlüssel stimmen strukturell nicht überein, siehe
+     „Verworfene Alternative" in der Folge-Spec), sondern indem die `capture_id` vom Abruf
+     bis zum Versandpunkt MITGEFÜHRT wird (Rückkanal in `warn_egress.cached_fetch`, additive
+     Anreicherung an der `base.py`-Naht). `alert_log.append_entry` bekommt dafür zusätzlich
+     einen `capture_ids`-Listenparameter für den Fall mehrerer gebündelter Mitschnitte (z.B.
+     mehrere Warnquellen im selben Trip). Spec:
+     `docs/specs/modules/feat_1944_warn_mitschnitt_herkunft.md`.
    - Spec: `docs/specs/modules/alarm_eingangsprotokoll.md`.
 
 **Datenfluss:**

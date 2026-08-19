@@ -243,6 +243,35 @@ def _channels_not_sent(
     return result
 
 
+def capture_kwargs_from_alerts(alerts: Iterable) -> dict:
+    """Herkunfts-Argumente fuer ``append_entry()`` aus den TATSAECHLICH
+    versendeten amtlichen Warnungen (Issue #1944) -- geteilter Baustein
+    beider Flaechen (Trip und Ortsvergleich, Paritaet #1533).
+
+    Regel ueber den entdoppelten ``capture_id``-Werten:
+
+    * keine Kennung -> ``{}`` (Bestandsverhalten, kein Herkunfts-Feld),
+    * genau eine -> ``{"capture_id": ...}`` (bestehendes skalares Feld),
+    * mehrere -> ``{"capture_ids": [...]}`` sortiert; das skalare Feld bleibt
+      BEWUSST ungesetzt. Eine willkuerliche Auswahl wuerde genau die Frage
+      wieder verschliessen, die dieses Ticket beantworten soll (#1929).
+
+    Fail-open (AC-7): laesst sich die Herkunft nicht auswerten, entsteht kein
+    Feld -- ein Fehler in der Beweisaufnahme darf den Alarm nie verhindern."""
+    try:
+        ids = {a.capture_id for a in alerts if a.capture_id is not None}
+        if len(ids) == 1:
+            return {"capture_id": ids.pop()}
+        if ids:
+            return {"capture_ids": sorted(ids)}
+    except Exception as e:
+        logger.warning(
+            "alert_log: Herkunfts-Kennungen nicht auswertbar (%s) -- der "
+            "Eintrag entsteht ohne Herkunfts-Feld.", e,
+        )
+    return {}
+
+
 def append_entry(
     user_id: str,
     *,
@@ -259,6 +288,7 @@ def append_entry(
     below_threshold_channels: Optional[Iterable[str]] = None,
     blocked_reason_codes: Optional[dict[str, str]] = None,
     capture_id: Optional[str] = None,
+    capture_ids: Optional[Iterable[str]] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -337,6 +367,8 @@ def append_entry(
     }
     if capture_id is not None:  # additiv (#1948), Alt-Eintraege unveraendert
         entry["capture_id"] = capture_id
+    if capture_ids:  # additiv (#1944): Versand aus MEHREREN Mitschnitten
+        entry["capture_ids"] = sorted(set(capture_ids))
 
     _append(user_id, "entries" if reachable else "not_delivered", entry)
 

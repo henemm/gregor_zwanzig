@@ -86,6 +86,53 @@ NWP_PARAMS = [
     "sp",        # Surface pressure
 ]
 
+# Gewittersignale cape/cin (#1758): EIGENER, gekapselter Abruf -- NICHT Teil
+# von NWP_PARAMS/fetch_nwp_forecast (Spec Invariante 1). Ein unbekannter
+# Parametername laesst bei GeoSphere den GESAMTEN Abruf mit HTTP 400
+# scheitern (live gemessen) -- ein Namenswechsel bei cape/cin darf die
+# Grundvorhersage (Temperatur/Wind/Schnee) deshalb nie mitreissen.
+CAPE_CIN_PARAMS = ["cape", "cin"]
+
+# AROME-Gitter (GeoSphere `nwp-v1-1h-2500m`), gemessen 2026-08-18 gegen
+# GET /nwp-v1-1h-2500m/metadata: bbox = [42.981, 5.498, 51.819, 22.102]
+# (lat_min, lon_min, lat_max, lon_max). Eigene, KLEINERE Grenze als das
+# `thunder_routing._REGIONS`-Rechteck `DE_ALPEN` (das Grundvorhersage-/
+# DWD-Gebiet reicht bis 58.09 N) -- Hamburg/Berlin liegen in DE_ALPEN, aber
+# ausserhalb des AROME-Gitters. Eine additive Zusatzquelle gilt NUR
+# innerhalb ihres EIGENEN Modellgitters (Team-Lead-Korrektur nach initialem
+# GREEN, #1758 AC-12) -- sonst feuert das System dort garantierte
+# HTTP-400-Abrufe ("outside of dataset bounds").
+AROME_BOUNDS = {"min_lat": 42.981, "max_lat": 51.819, "min_lon": 5.498, "max_lon": 22.102}
+
+
+def arome_grid_covers(lat: float, lon: float) -> bool:
+    """True wenn (lat, lon) im AROME-Abdeckungsgebiet liegt, inklusive Grenzen.
+    Muster: `snowgrid_covers()` oben."""
+    b = AROME_BOUNDS
+    return b["min_lat"] <= lat <= b["max_lat"] and b["min_lon"] <= lon <= b["max_lon"]
+
+
+# Eigenes, knappes Zeitbudget des additiven Gewittersignal-Abrufs (#1758 AC-13)
+# -- BEWUSST kuerzer als TIMEOUT (30s) der Grundvorhersage und BEWUSST ohne
+# `_request()`/`@retry` (s. `fetch_thunder_signals_named`): ein Retry mit
+# exponentiellem Backoff (2-60s je Versuch, bis zu 5 Versuche) wuerde dieses
+# knappe Budget sofort sprengen. Das Projekt hat bereits #1839 (Trip-Vorschau
+# bricht nach 30s ab) und #1539 (sequenzielle Verarbeitung, Alarm-Ticks
+# fallen aus) -- bei bis zu acht Etappen je Tour duerfte ein haengender
+# Zusatzabruf je Ort niemals mit vollen 10s zu Buche schlagen (80s waeren
+# das Vielfache des 30s-Budgets).
+#
+# ECHTE Messung gegen den Produktiv-Endpunkt (2026-08-18, Team-Lead):
+#   Karnischer Hoehenweg (46.66/12.74): total 0.291s (connect 0.038s)
+#   Innsbruck             (47.26/11.39): total 0.254s (connect 0.021s)
+# GeoSphere antwortet im Normalfall in ~0,25-0,29s. Eine frueher hier
+# eingetragene Zahl von 7s war eine VERWECHSLUNG (Testlaufzeit statt
+# Antwortzeit, s. ADR-0057 "Nachbesserung") -- diese Konstante beruht jetzt
+# auf der echten Messung, nicht auf dem vorherigen Fehlschluss. 3s laesst den
+# gemessenen Normalfall rund zehnfach durch und begrenzt den Schaden im
+# Haenger-Fall spuerbar staerker als die vorherigen 10s.
+THUNDER_FETCH_TIMEOUT_SECONDS = 3.0
+
 # Snowgrid parameters
 SNOWGRID_PARAMS = ["snow_depth", "swe_tot"]
 
@@ -326,6 +373,99 @@ class GeoSphereProvider:
             return self._parse_snowgrid_response(data)
         except httpx.HTTPStatusError:
             return None, None
+
+    def fetch_thunder_signals(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[int, Optional[float]]:
+        """Pflichtteil des Protokolls `providers.base.ThunderSignalProvider`
+        (isinstance-Check in `thunder_enrichment._hole_eintraege`) -- der
+        eigentliche Datenweg ist der BENANNTE (`fetch_thunder_signals_named`),
+        der bei GeoSphere Vorrang hat (#1758, AC-5). Ein Einzelwert-
+        Aequivalent zu cape/cin gibt es fachlich nicht, deshalb liefert diese
+        Methode bewusst immer nichts."""
+        return {}
+
+    def fetch_thunder_signals_named(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[str, Dict[int, Optional[float]]]:
+        """#1758: cape/cin als benannte Gewittersignale, additiv zu DWD.
+
+        Eigener, gekapselter Abruf (Vorbild `fetch_snowgrid`) -- faellt er
+        aus (z.B. Punkt ausserhalb des AROME-Gitters, HTTP 400, oder das
+        eigene Zeitbudget `THUNDER_FETCH_TIMEOUT_SECONDS` laeuft ab, AC-13),
+        bleiben beide Signale leer; die Grundvorhersage ist davon unberuehrt
+        (Spec AC-2).
+
+        BEWUSST ohne `self._request()` (kein `@retry`): ein additives,
+        best-effort-Signal soll bei einem Fehlschlag SOFORT leer bleiben,
+        nicht bis zu 5x mit wachsendem Backoff erneut versuchen -- das
+        wuerde das knappe Zeitbudget zunichtemachen (s. Konstante oben).
+        """
+        params: Dict[str, Any] = {
+            "lat_lon": f"{location.latitude},{location.longitude}",
+            "parameters": ",".join(CAPE_CIN_PARAMS),
+            "output_format": "geojson",
+        }
+        if start:
+            params["start"] = start.strftime("%Y-%m-%dT%H:%M")
+        if end:
+            params["end"] = end.strftime("%Y-%m-%dT%H:%M")
+        url = f"{BASE_URL}{ENDPOINTS['nwp']}?{urlencode(params)}"
+
+        try:
+            response = self._client.get(url, timeout=THUNDER_FETCH_TIMEOUT_SECONDS)
+            response.raise_for_status()
+        except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.RequestError):
+            return {"cape": {}, "cin": {}}
+        return self._parse_cape_cin_response(response.json(), start)
+
+    def _parse_cape_cin_response(
+        self, data: Dict[str, Any], start: Optional[datetime] = None,
+    ) -> Dict[str, Dict[int, Optional[float]]]:
+        """Ordnet cape/cin-Rohwerte Stunden-Offsets zu -- DIESELBE Konvention
+        wie `thunder_enrichment._hole_eintraege` erwartet: Offsets zaehlen ab
+        `start` (dem Bezugszeitpunkt, den die aufrufende Reihe vorgibt), NICHT
+        ab Index 0 der Antwort (Spec Implementation Details Punkt 4, AC-11).
+        Ein `enumerate()`-ab-0-Parser wuerde jeden Wert um genau eine Stunde
+        verschieben, ohne dass ein reiner Wertevergleich das zeigt.
+
+        Fehlt `start` (z.B. Direktaufruf ohne Bezugszeitpunkt), gilt der
+        erste Zeitstempel der Antwort minus eine Stunde als Ersatzbasis --
+        dieselbe "Nullpunkt eine Stunde vor dem ersten Zeitpunkt"-Regel wie
+        `thunder_enrichment._bezugszeitpunkt`.
+        """
+        timestamps = data.get("timestamps", [])
+        features = data.get("features", [])
+        cape_ergebnis: Dict[int, Optional[float]] = {}
+        cin_ergebnis: Dict[int, Optional[float]] = {}
+        if not features or not timestamps:
+            return {"cape": cape_ergebnis, "cin": cin_ergebnis}
+
+        params = features[0].get("properties", {}).get("parameters", {})
+        cape_data = params.get("cape", {}).get("data", [])
+        cin_data = params.get("cin", {}).get("data", [])
+
+        if start is not None:
+            basis = start
+        else:
+            erste_ts = datetime.fromisoformat(timestamps[0].replace("Z", "+00:00"))
+            basis = erste_ts - timedelta(hours=1)
+
+        for i, ts_str in enumerate(timestamps):
+            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+            offset = int(round((ts - basis).total_seconds() / 3600))
+            if i < len(cape_data) and cape_data[i] is not None:
+                cape_ergebnis[offset] = cape_data[i]
+            if i < len(cin_data) and cin_data[i] is not None:
+                cin_ergebnis[offset] = cin_data[i]
+
+        return {"cape": cape_ergebnis, "cin": cin_ergebnis}
 
     def fetch_nowcast(
         self,

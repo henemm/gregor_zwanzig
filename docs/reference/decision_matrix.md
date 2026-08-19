@@ -193,6 +193,40 @@ nie in dem der Primärquelle — bei `fr_direct → eu_direct` wechselt damit di
 Messgröße von Blitz**dichte** auf Blitz**potenzial** (verschiedene Skalen, je
 eigene Schwellentabelle).
 
+**Mehrere Quellen je Gebiet, additiv (#1758, ADR-0057).** `_REGIONS` bleibt
+first-match-wins für die **primäre** Zuständigkeit (`thunder_provider_for`,
+unverändert), trägt aber seit #1758 pro Zeile zusätzlich `zusatzquellen:
+tuple`. `DE_ALPEN` (inkl. Österreich) trägt `("geosphere",)` — GeoSphere
+(AROME, 2,5 km) liefert dort **zusätzlich** zum DWD `cape`/`cin` als zweites,
+unabhängiges Konvektionssignal (eigene Felder `cape_geosphere_jkg`/
+`convective_inhibition_geosphere_jkg`, s. `docs/reference/api_contract.md`).
+Die neue Funktion `thunder_providers_for(lat, lon) -> tuple[str, ...]`
+liefert **alle** zuständigen Quellen; sie baut auf `thunder_provider_for()`
+auf und ergänzt Zusatzquellen nur, wenn die Primärquelle nicht von außen
+überschrieben wurde (Regressionsschutz für Bestandsaufrufer). Zusatzquellen
+bekommen **keinen** Vertretungs-Eintrag (fail-soft, bleiben bei Ausfall
+einfach leer) und werden **immer** versucht, sobald sie zuständig sind — der
+Fill-only-Wächter in `thunder_enrichment.py` gilt seit #1758 nur noch für
+die Primärquelle je Gebiet, sonst käme eine Zusatzquelle nie zum Zug, sobald
+die Primärquelle geliefert hat.
+
+**Zusatzquelle gilt nur im EIGENEN Modellgitter, eigenes Zeitbudget (#1758
+AC-12/AC-13, Nachbesserung nach initialem GREEN).** Das AROME-Gitter von
+GeoSphere (`geosphere.AROME_BOUNDS`, gemessen `bbox = [42.981, 5.498,
+51.819, 22.102]`) ist ERHEBLICH kleiner als das `DE_ALPEN`-Rechteck
+(43.17–58.09 lat) — Hamburg/Berlin liegen in `DE_ALPEN`, aber außerhalb des
+AROME-Gitters. `thunder_providers_for()` prüft deshalb für jede Zusatzquelle
+zusätzlich `geosphere.arome_grid_covers(lat, lon)` (Muster
+`snowgrid_covers()`), sonst würde außerhalb des Gitters bei jedem Lauf ein
+garantiert scheiternder HTTP-400-Abruf entstehen. Der GeoSphere-Zusatzabruf
+läuft zudem bewusst OHNE den Retry-Mechanismus der Grundvorhersage (bis zu 5
+Versuche, Backoff bis 60s würde ein knappes Budget sprengen) und mit einem
+eigenen, kurzen Timeout (`geosphere.THUNDER_FETCH_TIMEOUT_SECONDS`, 3s —
+echte Antwortzeit gegen den Produktiv-Endpunkt gemessen 2026-08-18:
+~0,25–0,29s, s. ADR-0057) — das Projekt hat bereits bestehende
+Timeout-Probleme (#1839, #1539), ein zusätzlicher, fail-soft gedachter
+Abruf darf die Gesamtlaufzeit nicht in deren Nähe schieben.
+
 Jede Vertretung wird markiert (`ForecastMeta.fallback_model` /
 `fallback_reason="thunder_source_unavailable"` / `fallback_metrics`) und **seit
 #1492 S2b im Briefing angezeigt** — E-Mail (Vollversion + Kompakt) und

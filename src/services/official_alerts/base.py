@@ -12,6 +12,7 @@ Spec) — nur Standardlib und eigene Modelle.
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Protocol
 
@@ -87,6 +88,34 @@ def filter_alerts_to_window(
     return kept
 
 
+def _enrich_with_capture_id(
+    alerts: list[OfficialAlert], capture_ids: list[str]
+) -> list[OfficialAlert]:
+    """Bindet die waehrend EINES ``fetch()``-Aufrufs beobachtete Mitschnitt-
+    Kennung an dessen Warnungen (Issue #1944).
+
+    GENAU EINE beobachtete Kennung -> sie wird an jede Warnung gehaengt, die
+    noch keine eigene traegt (rein additiv). KEINE oder MEHRERE -> nichts wird
+    angehaengt: bei einem Mehrfach-Abruf je ``fetch()`` ist nicht bestimmbar,
+    welcher Abruf die Warnung erzeugt hat, und eine falsche Zuordnung waere
+    schlimmer als keine (AC-4). Quellen, die ihre Kennung selbst binden
+    (``massif_closure``), behalten sie unveraendert.
+
+    Fail-open: ein Fehler hier liefert die Warnungen unveraendert zurueck."""
+    try:
+        eindeutig = set(capture_ids)
+        if len(eindeutig) != 1:
+            return alerts
+        capture_id = eindeutig.pop()
+        return [
+            a if a.capture_id is not None else replace(a, capture_id=capture_id)
+            for a in alerts
+        ]
+    except Exception:
+        logger.warning("official_alerts: Herkunfts-Anreicherung fehlgeschlagen", exc_info=True)
+        return alerts
+
+
 def get_official_alerts_with_status(
     lat: float,
     lon: float,
@@ -143,13 +172,22 @@ def get_official_alerts_with_status(
         if not does_cover:
             continue
         covering += 1
+        # Issue #1944: derselbe Zuschnitt wie die Fehlschlag-Beobachtung --
+        # ein Kontext je Quellen-Abruf. Die darin gemeldeten Mitschnitt-
+        # Kennungen sagen, aus welchem Roh-Datensatz diese Warnungen stammen.
+        capture_ids: list[str] = []
+        source_alerts: list[OfficialAlert] = []
         with warn_egress.observe_fetch_failure() as fetch_status:
-            try:
-                results.extend(source.fetch(lat, lon))
-            except Exception:
-                logger.warning("official_alerts: %s fetch failed", source_name, exc_info=True)
-                failed += 1
-                continue
+            with warn_egress.collect_capture_ids(capture_ids):
+                try:
+                    source_alerts = list(source.fetch(lat, lon))
+                except Exception:
+                    logger.warning(
+                        "official_alerts: %s fetch failed", source_name, exc_info=True
+                    )
+                    failed += 1
+                    continue
+        results.extend(_enrich_with_capture_id(source_alerts, capture_ids))
         # Kein Throw, aber ein interner cached_fetch-Fehlschlag (Real-Pfad):
         # die Quelle lieferte fail-soft [], war aber real nicht abrufbar.
         if fetch_status["failed"]:
