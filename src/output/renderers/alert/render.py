@@ -22,6 +22,7 @@ from .model import (
     AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, OnsetShiftEvent,
     arrow, delta_pct, km_span, over_thr, severity, side_label,
 )
+from .project import COMPARE_RADAR_SOURCE
 from .segments import _renderable_segment_ids, format_alert_location
 
 
@@ -419,22 +420,46 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
     return "\n".join([first, second])
 
 
+def _sms_onset_time(onset_time: str) -> str:
+    """Zeitpunkt-Darstellung der Kurznachricht (Issue #1948 S4, AC-11): die
+    Stunde OHNE fuehrende Null (`09:05` -> `9:05`, Zeichenbudget), die Minuten
+    bleiben zweistellig. Gilt AUSSCHLIESSLICH hier -- E-Mail, Telegram und
+    Betreff lesen `e.onset_time` unveraendert, und das Feld selbst wird nicht
+    angefasst."""
+    hour, sep, rest = onset_time.partition(":")
+    if not sep:
+        return onset_time
+    return f"{hour.lstrip('0') or '0'}:{rest}"
+
+
 def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
-    """Issue #1935/#1779 (E4): der Trip-Radar/Onset-Kopf verliert den
-    Trip-Namen -- er trug auf einer Kurznachricht an den Trip-Teilnehmer
-    selbst keine Information. AUSNAHME (AC-10/AC-12): traegt das fuehrende
-    Event ein `location_label` (gebuendelter Ortsvergleich-Onset,
-    `to_multi_location_onset_alert_message`), ist `msg.trip_short` in
-    Wahrheit der Orts-Sammelname (z.B. 'Zermatt, Chamoni') und bleibt
-    unangetastet -- die Trip/Compare-Weiche selbst."""
+    """Issue #1948 S4: die Nowcast-/Onset-Kurznachricht nennt einen ZEITPUNKT
+    (`TH@15:40`) statt eines Countdowns (`TH!8`) und spricht im Kopf dieselbe
+    Ortssprache wie Betreff und E-Mail (`format_alert_location`: Ortsname ->
+    Segment -> km-Rueckfall) statt der selbstgebauten `km8-8`-Notation.
+
+    Drei Kopf-Faelle:
+      * `location_label` gesetzt -> gebuendelter Ortsvergleich (>1 Ort), Kopf
+        ist der Ortsname des fuehrenden Events (Issue #1935/#1779 E4-Weiche).
+      * `msg.source == COMPARE_RADAR_SOURCE` -> Ortsvergleich mit GENAU einem
+        Ort; dort bleibt `location_label` laut Konstruktor-Invariante `None`,
+        der Ortsname steht allein in `msg.trip_short` (AC-6).
+      * sonst -> Trip-Radar, dieselbe Ortsaufloesung wie die anderen Kanaele.
+
+    `_ascii_alert_location` (nicht `_ascii`) entfernt Piktogramme VOR der
+    ASCII-Faltung -- sonst stuende `:checkered_flag:` in der SMS (AC-8).
+    `_km_str_onset` bleibt bewusst unangetastet: Telegram und Betreff lesen
+    ihn mit (AC-10)."""
     e = msg.events[0]
-    token = f"TH!{e.onset_minutes}" if e.is_convective else f"R!{e.onset_minutes}"
-    a, b = int(round(e.km_from)), int(round(e.km_to))
+    kuerzel = "TH" if e.is_convective else "R"
+    token = f"{kuerzel}@{_sms_onset_time(e.onset_time)}"
     if getattr(e, "location_label", None):
-        trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
-        body = f"{trip} km{a}-{b}: {token}"
+        head = _ascii_alert_location(e.location_label)
+    elif msg.source == COMPARE_RADAR_SOURCE:
+        head = _ascii_alert_location(msg.trip_short)
     else:
-        body = f"km{a}-{b}: {token}"
+        head = _ascii_alert_location(_location_of((e,), None))
+    body = f"{head}: {token}"
     return body if len(body) <= limit else body[:limit]
 
 

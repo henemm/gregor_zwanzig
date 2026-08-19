@@ -20,6 +20,14 @@ from .segments import normalize_segment_id
 
 logger = logging.getLogger("alert_project")
 
+# Marker im `source`-Feld eines Ortsvergleich-Onset-Alarms (Issue #1948 S4).
+# Gesetzt in `to_multi_location_onset_alert_message`, GELESEN in
+# `render._render_sms_onset` — nur so kann der Ein-Ort-Fall (Invariante:
+# `location_label is None`) den Ortsnamen aus `trip_short` zeigen statt der
+# sinnlosen km-0-0-Spanne. Benannte Konstante statt Freitext, damit ein
+# Auseinanderdriften von Setz- und Lesestelle sichtbar bricht.
+COMPARE_RADAR_SOURCE = "compare-radar"
+
 
 def _resolve_metric_id(field: str, direction: str) -> str:
     """summary_field → catalog metric_id, disambiguiert per Richtung.
@@ -346,8 +354,10 @@ def to_multi_location_onset_alert_message(
 
     INVARIANTE: bei GENAU einer Gruppe bleibt `location_label=None` — fällt
     damit auf den unveränderten Single-Onset-Renderpfad zurück (AC-5).
-    `source` trägt den festen Marker "compare-radar", damit die Renderer
-    weiterhin über den Onset-Zweig (`msg.source is not None`) routen.
+    `source` trägt den Marker `COMPARE_RADAR_SOURCE`, damit die Renderer
+    weiterhin über den Onset-Zweig (`msg.source is not None`) routen — und
+    damit `_render_sms_onset` den Ein-Ort-Fall an genau dieser Konstante
+    erkennt (Issue #1948 S4, AC-6/AC-7).
 
     `cooldown_display`: optionaler, bereits formatierter Cooldown-Hinweis-Text
     (Issue Pflicht-Fix, analog `send_radar_alert()`s `cooldown_display`) —
@@ -394,7 +404,7 @@ def to_multi_location_onset_alert_message(
     )
     return AlertMessage(
         trip_short=trip_short, stand_at=stand_at, events=tuple(events),
-        source="compare-radar", cooldown_display=cooldown_display,
+        source=COMPARE_RADAR_SOURCE, cooldown_display=cooldown_display,
     )
 
 

@@ -138,7 +138,13 @@ class TestAC4Telegram:
 # ---------------------------------------------------------------------------
 
 class TestAC5SMS:
-    """AC-5: render_sms — '!'-Onset-Token, ≤140 Zeichen, GSM-7-only."""
+    """AC-5: render_sms — Onset-Token, ≤140 Zeichen, GSM-7-only.
+
+    FORTGESCHRIEBEN (Issue #1948 S4, 2026-08-19): das Token nennt seither den
+    ZEITPUNKT (`R@14:35`) statt des Countdowns (`R!12`) — PO-Zielbild aus
+    `docs/analysis/alarm-format-konzept-2026-08.md`. Laenge und GSM-7-Reinheit
+    sind unveraendert zugesichert und bleiben hier der eigentliche Wachposten.
+    """
 
     def test_ac5_render_sms_onset_regen_token(self):
         from src.output.renderers.alert.render import render_sms
@@ -146,7 +152,7 @@ class TestAC5SMS:
         msg = _make_onset_msg(is_convective=False, onset_minutes=12)
         sms = render_sms(msg)
 
-        assert "R!12" in sms, f"Regen-Onset-Token 'R!12' fehlt: {sms!r}"
+        assert "R@14:35" in sms, f"Regen-Onset-Token 'R@14:35' fehlt: {sms!r}"
         assert len(sms) <= 140, f"SMS zu lang ({len(sms)}): {sms!r}"
         assert set(sms) <= GSM7_BASIC, (
             f"Nicht-GSM-7-Zeichen: {set(sms) - GSM7_BASIC!r} in {sms!r}"
@@ -158,7 +164,9 @@ class TestAC5SMS:
         msg = _make_onset_msg(is_convective=True, onset_minutes=8)
         sms = render_sms(msg)
 
-        assert "TH!8" in sms, f"Gewitter-Onset-Token 'TH!8' fehlt: {sms!r}"
+        assert "TH@14:35" in sms, (
+            f"Gewitter-Onset-Token 'TH@14:35' fehlt: {sms!r}"
+        )
         assert len(sms) <= 140, f"SMS zu lang ({len(sms)}): {sms!r}"
         assert set(sms) <= GSM7_BASIC, (
             f"Nicht-GSM-7-Zeichen: {set(sms) - GSM7_BASIC!r} in {sms!r}"

@@ -334,7 +334,10 @@ class TestAC2KmRoundingConsistentAcrossChannels:
         subj_m = KM_RE.search(subject)
         plain_m = KM_RE.search(plain)
         tg_m = KM_RE.search(telegram)
-        sms_m = re.search(r"km(\d+)-(\d+)", sms)
+        # FORTGESCHRIEBEN (Issue #1948 S4): die SMS fuehrt den km-Kopf seit
+        # S4 in `format_alert_location`-Schreibweise (`km 10-15`) — dieselben
+        # gerundeten Zahlen, ein Leerzeichen mehr.
+        sms_m = re.search(r"km ?(\d+)-(\d+)", sms)
 
         assert subj_m, f"km-Format fehlt im Betreff: {subject!r}"
         assert plain_m, f"km-Format fehlt im Plain-Text: {plain!r}"
@@ -585,7 +588,14 @@ class TestAC6SmsOnlyRadarDispatch:
             # Fehlerklasse wie AC-1: Anzeige-Text vs. Kodierungs-Ebene).
             import urllib.parse
             payload = urllib.parse.unquote_plus(stub.received[0].decode())
-            match = re.search(r"km\d+-\d+: (R|TH)!\d+", payload)
+            # FORTGESCHRIEBEN (Issue #1948 S4): Zeitpunkt-Token statt
+            # Countdown, und der Kopf spricht `format_alert_location` — dieses
+            # Trip-Fixture traegt Etappen, der Kopf ist also die Segment-Sprache
+            # ("Segment 1"), nicht mehr der km-Rueckfall. `onset_time` leitet
+            # der Live-Pfad aus der Wanduhr ab -> Struktur statt Goldstring.
+            match = re.search(
+                r"text=[^&]+: (R|TH)@\d{1,2}:\d{2}(?:&|$)", payload,
+            )
             assert match, f"SMS-Body-Token-Format falsch: {payload!r}"
         finally:
             stub.close()
@@ -677,8 +687,10 @@ class TestAC7AlertPreviewOnsetPayload:
             assert "Radar-Nowcast" in data["email_html"], (
                 f"Onset-Badge fehlt im Preview-HTML: {data['email_html']!r}"
             )
-            assert re.search(r"!\d+", data["sms"]), (
-                f"SMS-Token (R!/TH!) fehlt im Preview-SMS: {data['sms']!r}"
+            # FORTGESCHRIEBEN (Issue #1948 S4): Zeitpunkt-Token statt Countdown.
+            assert re.search(r"\b(TH|R)@\d{1,2}:\d{2}\b", data["sms"]), (
+                f"SMS-Zeitpunkt-Token (R@/TH@) fehlt im Preview-SMS: "
+                f"{data['sms']!r}"
             )
         finally:
             _clean_user(uid)

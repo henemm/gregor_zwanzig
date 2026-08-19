@@ -552,37 +552,47 @@ def test_kurznachricht_des_abweichungsalarms_ueber_mehrere_segmente_nennt_densel
     )
 
 
-def _assert_kurznachricht_ohne_ort(sms: str) -> None:
-    """PO-Entscheid 2026-08-04 (#1467 S2 AG3b): Alarm-Kurznachrichten nennen
-    keinen Ort. Gilt seit PO-Entscheid 2026-08-17 NUR NOCH fuer den
-    Radar-/Nowcast-Pfad ohne `location_label` (Trip-Δ-Pfad s.o. abgeloest,
-    AC-10/AC-12). SMS und Premium-SMS teilen denselben gerenderten Text
-    (`render_alert_sms`, notification_service.py:1318 -> :1488 SMS / :1502
-    Premium-SMS) — ein Nachweis deckt beide Kanaele.
+def _assert_kurznachricht_spricht_segment_sprache(sms: str) -> None:
+    """FORTGESCHRIEBEN (Issue #1948 S4, 2026-08-19): der Radar-/Nowcast-Pfad
+    spricht in der Kurznachricht seit S4 DIESELBE Ortssprache wie Betreff und
+    E-Mail (`format_alert_location`: Ortsname -> Segment -> km-Rueckfall). Die
+    Vorgaenger-Zusicherung „Kurznachricht nennt keinen Ort" (PO-Entscheid
+    2026-08-04, #1467 S2 AG3b) ist damit fuer diesen Pfad abgeloest — nicht
+    gebrochen: der PO-Entscheid zu S4 loest sie ausdruecklich ab.
+
+    Was BLEIBT: die Kurznachricht ist GSM-7-rein (Piktogramm ENTFERNT, nicht
+    transliteriert) und haelt das 140-Zeichen-Alarmlimit. SMS und Premium-SMS
+    teilen denselben gerenderten Text — ein Nachweis deckt beide Kanaele.
     """
-    assert "Segment" not in sms, f"Kurznachricht nennt ein Segment: {sms!r}"
-    assert "Ziel" not in sms, f"Kurznachricht nennt das Ziel: {sms!r}"
-    assert "🏁" not in sms, f"Kurznachricht traegt das Ziel-Symbol: {sms!r}"
-    assert re.search(r"km\d", sms), (
-        f"Kurznachricht hat ihren km-Kopf verloren: {sms!r}"
+    assert sms.startswith("Ziel: "), (
+        f"Kurznachricht muss die Segment-Sprache des Betreffs sprechen: {sms!r}"
     )
+    assert "🏁" not in sms, f"Kurznachricht traegt das Ziel-Symbol: {sms!r}"
+    assert ":checkered_flag:" not in sms, (
+        f"Piktogramm wurde transliteriert statt entfernt: {sms!r}"
+    )
+    assert not re.search(r"km\d", sms), (
+        f"Mit Segment-Kennung darf kein km-Kopf mehr erscheinen: {sms!r}"
+    )
+    assert sms.isascii(), f"Kurznachricht ist nicht ASCII-rein: {sms!r}"
     # Alarm-Grenze ist 140, NICHT 160 (render.py:285/621, official_alerts.py:1836).
     assert len(sms) <= 140, f"Kurznachricht ist {len(sms)} Zeichen lang: {sms!r}"
 
 
-def test_kurznachricht_des_nowcasts_nennt_keinen_ort():
-    """AC-5 (weiterhin GRUEN, Invariante fuer den Radar-/Nowcast-Pfad):
-    dieselbe Zusicherung fuer den Radar-Nowcast -- dieser Pfad ist von der
-    Ablösung 2026-08-17 NICHT betroffen (AC-10/AC-12).
+def test_kurznachricht_des_nowcasts_nennt_das_segment():
+    """AC-5 (FORTGESCHRIEBEN, Issue #1948 S4): Given ein Radar-Nowcast-Alarm,
+    dessen Ereignis die Segment-Kennung „Ziel" traegt / When die Kurznachricht
+    gerendert wird / Then nennt ihr Kopf dasselbe Segment wie der Betreff
+    (`Ziel: `), piktogrammfrei und ASCII-rein.
 
-    ROT bis der RED-Vertrag Punkt 1 erfuellt ist (`OnsetEvent.segment_id`):
-    ohne das Feld laesst sich der Fall „Nowcast KENNT das Ziel-Segment" gar
-    nicht herstellen. Danach ist es eine reine Invariante — der Betreff wechselt
-    auf '🏁 Ziel', die Kurznachricht bleibt bei 'km8-8'.
+    Vorher (bis S4): der Betreff wechselte auf '🏁 Ziel', die Kurznachricht
+    blieb bei 'km8-8' — genau diese Trennung entfaellt mit S4.
     """
     from output.renderers.alert.render import render_sms
 
-    _assert_kurznachricht_ohne_ort(render_sms(_onset_message(segment_id="Ziel")))
+    _assert_kurznachricht_spricht_segment_sprache(
+        render_sms(_onset_message(segment_id="Ziel")),
+    )
 
 
 # ---------------------------------------------------------------------------
