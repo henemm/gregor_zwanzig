@@ -367,6 +367,55 @@ def test_ac6_alter_aufruf_mit_dem_bestehenden_argumentmuster_laeuft_weiter():
 
 
 # =============================================================================
+# F002 (Adversary-Befund 2026-08-19): die Auswahl greift JE DATENPUNKT
+# =============================================================================
+
+def test_f002_auswahl_greift_je_datenpunkt_nicht_je_reihe():
+    """F002: eine Reihe kann stundenweise zwischen beiden Statistiken
+    wechseln -- die Auswahl muss deshalb JE DATENPUNKT fallen, nicht einmal
+    je Reihe.
+
+    Warum das real vorkommt (Fundstelle des Adversary): ``src/providers/dwd.py``
+    ruft die Gewittersignale je ZEITSCHRITT in fester Reihenfolge ab
+    (``THUNDER_PARAMS``, ``dwd.py:91-94``) -- ``lpi`` an Position 1,
+    ``lpi_max`` an Position 6 -- und bricht bei erschoepftem Zeitbudget MITTEN
+    im Zeitschritt ab. Zusaetzlich zaehlt ein 404 je Signal als einzelne
+    fehlende Stunde. Eine Reihe kann damit fruehe Stunden MIT und spaete
+    Stunden OHNE Stundenmaximum tragen.
+
+    Given eine Reihe aus zwei Stunden -- Stunde 1 mit beiden Feldern (40,0 /
+    12,0 J/kg), Stunde 2 nur mit dem Momentanwert (12,0 J/kg) / When
+    ``_fuse_thunder_levels()` ueber BEIDE laeuft / Then traegt Stunde 1 MED
+    (aus dem Stundenmaximum) und Stunde 2 LOW (aus dem Rueckfall).
+
+    Die Ratsche dahinter: wuerde die Auswahl einmal je Reihe getroffen (etwa
+    "hat irgendein Datenpunkt ein Stundenmaximum?"), waeren beide Stunden
+    gleich eingestuft und dieser Test rot.
+    """
+    mit_max = _punkt(
+        lightning_potential_max_lpi_jkg=40.0,
+        lightning_potential_lpi_jkg=12.0,
+    )
+    ohne_max = _punkt(
+        lightning_potential_max_lpi_jkg=None,
+        lightning_potential_lpi_jkg=12.0,
+    )
+
+    _fuse_thunder_levels([mit_max, ohne_max], None, _DE_ALPEN)
+
+    assert mit_max.thunder_level == ThunderLevel.MED, (
+        "Die Stunde MIT Stundenmaximum muss aus 40,0 J/kg MED ergeben, "
+        f"erhalten {mit_max.thunder_level!r}"
+    )
+    assert ohne_max.thunder_level == ThunderLevel.LOW, (
+        "Die Stunde OHNE Stundenmaximum muss aus dem Momentanwert 12,0 J/kg "
+        f"LOW ergeben, erhalten {ohne_max.thunder_level!r}. MED bedeutet: die "
+        "Auswahl wurde einmal je REIHE statt je Datenpunkt getroffen und hat "
+        "das Stundenmaximum der Nachbarstunde mitverwendet."
+    )
+
+
+# =============================================================================
 # AC-8: die beiden Bestandsdokumente sind nachgezogen
 # =============================================================================
 # doc-compliance-test

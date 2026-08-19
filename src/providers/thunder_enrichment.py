@@ -112,9 +112,14 @@ def _blitzpotenzial_wert(dp) -> Optional[float]:
     ausschliesslich von ICON-D2 befuellt. Faellt der Rueckfall auf den
     Momentanwert weg, verloere JEDES Gebiet ausserhalb DE_ALPEN das
     Blitzpotenzial-Signal ersatzlos -- eine stille Regression. Ausserhalb der
-    Alpen ist der "Momentanwert" ohnehin schon ein Stundenmaximum:
-    ``src/providers/dwd_eu.py:114`` bildet ICON-EUs ``lpi_con_max`` auf den
-    Signalnamen ``lpi`` ab.
+    Alpen ist der "Momentanwert" ohnehin schon ein Stundenmaximum: die dortige
+    ICON-EU-Groesse wird unter dem Signalnamen ``lpi`` eingehaengt (Nachweis:
+    ``src/providers/dwd_eu.py``). Ihr Abrufname steht hier BEWUSST NICHT --
+    diese Datei ist der gemeinsame, quellenblinde Anschlussweg und darf keinen
+    providerspezifischen Groessennamen kennen (#1457 S2a/S2c AC-8, bewacht von
+    ``test_thunder_enrichment_shared_path.py``
+    ``::test_ac8_anschlussweg_kennt_keinen_providernamen``). Wer den Namen zur
+    Verdeutlichung nachtragen will: nicht hier, sondern in ``dwd_eu.py``.
 
     ``0.0``-FALLE -- NICHT zu ``a or b`` kuerzen: ``0.0`` heisst "in dieser
     Stunde kein Blitzpotenzial" und ist ein gueltiger Messwert, in Python aber

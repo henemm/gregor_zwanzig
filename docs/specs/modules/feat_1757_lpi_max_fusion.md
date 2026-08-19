@@ -222,6 +222,22 @@ andere Statistik gemessen.
   Schröder-Zitat für EU_REST). Diese Spec trifft dazu KEINE Aussage in die eine oder andere
   Richtung — die Umstellung erfolgt trotz dieser offenen Frage, weil die gemessene Trefferquote
   (Recall 5,6 %) das dringlichere, belegte Problem ist.
+- **Eine Reihe kann stundenweise zwischen beiden Statistiken wechseln (F002, in der
+  Adversary-Phase gefunden, 2026-08-19).** `src/providers/dwd.py` ruft die Gewittersignale je
+  ZEITSCHRITT in der festen Reihenfolge `THUNDER_PARAMS` ab (`dwd.py:91-94`): `lpi` steht an
+  Position 1, `lpi_max` an Position 6. Ist das Gewitter-Zeitbudget erschöpft, bricht die
+  Schleife MITTEN im Zeitschritt ab (`dwd.py`, `_thunder_budget_erschoepft()` in der
+  Offset-/Parameter-Doppelschleife) — die hinteren Signale fallen dann aus, nicht die hinteren
+  Stunden. Zusätzlich gilt ein 404 je Signal als einzelne fehlende Stunde, nicht als fehlender
+  Lauf. Beides zusammen heißt: eine einzelne Vorhersagereihe kann für die frühen Stunden das
+  Stundenmaximum und für die späten nur den Momentanwert tragen, und die Fusion wechselt dann
+  von Stunde zu Stunde die zugrundeliegende Statistik. Bei einer 4,6- bis 6,6-fach
+  unterschiedlichen Überschreitungshäufigkeit (s. voriger Punkt) ist das ein spürbarer Sprung
+  innerhalb derselben Reihe. **Kein Spec-Verstoß** — Expected Behavior beschreibt die Auswahl
+  ausdrücklich je Datenpunkt, und ein Rückfall auf den Momentanwert ist immer noch besser als
+  gar kein Signal; der Punkt war bis zur Adversary-Phase nur unbenannt. Bewacht wird die
+  Je-Datenpunkt-Auswahl von
+  `tests/tdd/test_thunder_fusion_prefers_hourly_max.py::test_f002_auswahl_greift_je_datenpunkt_nicht_je_reihe`.
 - **Eine Nachkalibrierung der Leiter auf das Stundenmaximum ist mit den verfügbaren
   Datenquellen nicht machbar.** Open-Meteo liefert für ICON-D2 nur den Momentanwert, kein
   Stundenmaximum; `lpi_max` kommt ausschließlich von `opendata.dwd.de` ohne Langzeitarchiv.
