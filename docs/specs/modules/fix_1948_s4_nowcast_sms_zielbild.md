@@ -280,9 +280,12 @@ Preview-Abhängigkeit vom Onset-Pfad.
   3b. Bei mehreren gleichzeitig auslösenden Orten verschweigt die Nachricht die übrigen; das
   ist gewollt (ein Zähler würde Vollständigkeit versprechen, die er nicht einlöst), gehört aber
   als bekannte Grenze dokumentiert.
-- **AC-10 hat keinen eigenen dedizierten Test** — nur indirekt über die unveränderten
-  E-Mail-/Telegram-/Betreff-Regressionstests mitgeprüft. Lückenbefund, gehört nach #1196/#1199,
-  nicht in diese Scheibe.
+- **AC-10 ist in der Umsetzung geschlossen** — der ursprünglich erwartete Lückenbefund
+  („kein eigener dedizierter Test") ist überholt. `tests/tdd/test_alert_sms_onset_zeitpunkt.py`
+  enthält jetzt zwei dedizierte AC-10-Tests: `test_ac10_email_telegram_betreff_bleiben_am_countdown_format`
+  (Zeile 432, Verhaltensnachweis über Betreff/E-Mail/Telegram am unveränderten Countdown-Format)
+  und `test_ac10_render_modul_importiert_day_window_nicht` (Zeile 463, struktureller
+  Nicht-Berührungs-Nachweis über `app.day_window`).
 
 ## Verifikation
 
