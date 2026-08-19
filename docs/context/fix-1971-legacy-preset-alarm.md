@@ -158,6 +158,50 @@ Abwahlen.** Belegt, dass die Abwahl schaden kann: Metrik im Metriken-Reiter akti
 Nicht Teil dieser Lieferung (Le Var hat `active_metrics`, ist also nicht der #1971-Fall).
 Als eigenes Issue **#1981** geführt (Triage a: nutzersichtbares Fehlverhalten).
 
+### M9 — 🔴 Der Merge-Ansatz kann AC-7 auf Alarm-Ebene NICHT erfüllen (Phase 4, offen)
+
+Gefunden beim RED-Testlauf. `wind_gust: "off"` verschwindet zwar aus der **Regelmenge**, die
+Böen-Größe wird aber weiterhin **überwacht** — eingeschleust über `wind_change`, das dasselbe
+Summary-Feld abdeckt (`weather_change_detection.py:73`,
+`WIND_CHANGE: ("wind_max_kmh", "gust_max_kmh")`). Gemessen:
+
+```
+Preset ohne active_metrics, {wind_gust: "off", precipitation_sum: "standard"}
+  VORHER   1 Regel   → gust_max_kmh bewacht: None
+  NACHHER 13 Regeln  → gust_max_kmh bewacht: 25.0     ⇒ der Fix FÜHRT das EIN
+```
+
+**Entscheidend:** Das ist kein Fremddefekt. Der `display_config`-Pfad hat den Schutz bereits:
+
+```
+MIT    display_config → wind_change trägt suppressed_fields ['gust_max_kmh'] → nicht bewacht
+OHNE   display_config → suppressed_fields leer                               → bewacht (25.0)
+```
+
+Der Mechanismus ist `claimed_fields` (`alert_preset.py:347-358`): Felder von Metriken, die
+**explizit** in `levels` stehen (auch mit `"off"`), werden vor dem Nachfüllen geschützt. Er
+sitzt hinter `if display_config is not None` — derselbe Riegel wie beim Backfill.
+
+**Warum der Merge das nicht heilen kann:** Nach `{**_STANDARD_METRIC_LEVELS, **levels}` sind
+ergänzte und ausdrücklich gesetzte Einträge nicht mehr unterscheidbar. `claimed_fields` braucht
+genau diese Unterscheidung. Der Merge in `_build_eval_config` löscht die Information, die der
+Schutz benötigt.
+
+**Konsequenz — Lösungsweg muss wechseln:** Statt in `_build_eval_config` zu mergen, gehört das
+Nachfüllen in `expand_per_metric_levels` in den `display_config is None`-Zweig, wo `levels`
+(explizit) und Nachfüllung (ergänzt) getrennt bleiben und `claimed_fields` greifen kann. Der
+`is_alert_metric_active`-Filter bleibt dort weiterhin übersprungen → CAPE bleibt erhalten
+(AC-4/AC-6 unberührt).
+
+**Offene Randbedingung, vor der Implementierung zu klären:** Das Nachfüllen darf **nicht**
+bedingungslos im `None`-Zweig laufen — ein Trip ohne `display_config` und ohne `levels` bekäme
+sonst 14 Regeln statt heute 0. Vorschlag: ein ausdrücklicher Parameter, den nur der
+Vergleichs-Pfad setzt, damit der Trip-Pfad nachweislich unberührt bleibt.
+
+> Der RED-Agent ist im AC-7-Alarmtest auf kollisionsfreie Größen ausgewichen (`fresh_snow`
+> statt `wind_gust`). Das umgeht den Defekt, statt ihn zu zeigen — der Test ist auf `wind_gust`
+> zurückzuführen, sonst bewacht AC-7 die Zusage nicht, die freigegeben wurde.
+
 ## Related Files
 
 | Datei | Relevanz |
