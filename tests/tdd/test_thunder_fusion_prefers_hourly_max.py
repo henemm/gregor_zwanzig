@@ -111,6 +111,18 @@ def test_ac2_stundenmaximum_null_komma_null_gilt_und_faellt_nicht_zurueck():
     Der Test prueft zusaetzlich, dass die Stufe ``ThunderLevel.NONE`` ist und
     nicht ``None``: ``0.0`` ist "aktiv geprueft, unauffaellig", nicht "keine
     Aussage" (Bestandsunterscheidung aus #1474c/F001).
+
+    ZUR TRAEGERLISTE -- bitte NICHT "korrigierend" zurueckbauen (Befund und
+    PO-Entscheid 2026-08-19): bei Stufe ``NONE`` ist ``thunder_level_signals``
+    ABSICHTLICH LEER. Ein gemessenes Stundenmaximum von 0,0 J/kg ist zwar sehr
+    wohl geprueft, es TRAEGT aber keine Stufe -- und ``thunder_signal_carriers()``
+    nennt ausschliesslich Traeger (``metric_format.py:471-472``, PO-Entscheidung
+    Issue #1680 S1: "'— · CAPE' waere ein Widerspruch"). Die Zusicherung steht
+    hier als ``== []`` statt gestrichen zu werden, weil sie in dieser Form etwas
+    Eigenes festnagelt: dass die Umstellung auf das Stundenmaximum die
+    HERKUNFTSREGEL nicht nebenbei mitveraendert. Die Schaerfe gegen die
+    ``or``-Mutation steckt vollstaendig in der ERSTEN Zusicherung (NONE statt
+    HIGH) -- hier geht dadurch nichts verloren.
     """
     dp = _punkt(
         lightning_potential_max_lpi_jkg=0.0,
@@ -128,10 +140,15 @@ def test_ac2_stundenmaximum_null_komma_null_gilt_und_faellt_nicht_zurueck():
         "ausschliesst. `None` bedeutet: das Stundenmaximum wurde gar nicht "
         "gelesen."
     )
-    assert dp.thunder_level_signals == ["blitzpotenzial"], (
-        "Ein Stundenmaximum von 0,0 J/kg ist ein geprueftes Signal und muss "
-        "als Traeger genannt werden, sobald die Fusion ein Ergebnis liefert: "
-        f"erwartet ['blitzpotenzial'], erhalten {dp.thunder_level_signals!r}"
+    # Stufe NONE => LEERE Traegerliste (#1680 S1, s. Docstring). Diese
+    # Zusicherung bewacht, dass #1757 die Herkunftsregel unangetastet laesst.
+    assert dp.thunder_level_signals == [], (
+        "Bei Stufe NONE darf KEIN Traeger genannt werden -- 'kein Gewitter' "
+        "hat keine Herkunft (thunder_signal_carriers(), metric_format.py:"
+        "471-472, PO-Entscheidung #1680 S1). Ein gemessenes Stundenmaximum "
+        "von 0,0 J/kg ist geprueft, traegt aber keine Stufe. Erwartet [], "
+        f"erhalten {dp.thunder_level_signals!r} -- die Umstellung auf das "
+        "Stundenmaximum hat die Herkunftsregel mitveraendert."
     )
 
 
@@ -347,3 +364,48 @@ def test_ac6_alter_aufruf_mit_dem_bestehenden_argumentmuster_laeuft_weiter():
     assert traeger == ["blitzpotenzial"], (
         f"Erwartet ['blitzpotenzial'] als Traeger, erhalten {traeger!r}"
     )
+
+
+# =============================================================================
+# AC-8: die beiden Bestandsdokumente sind nachgezogen
+# =============================================================================
+# doc-compliance-test
+#
+# Ausnahme vom Verbot des Dateiinhalt-Checks (CLAUDE.md, Test-Politik): hier
+# IST die Dokumentation der Pruefling, der Test ersetzt keinen
+# Verhaltensnachweis. Er bewacht die Projektregel "eine dokumentierte
+# Entscheidung wird nie still rueckgaengig gemacht" -- beide Dokumente
+# behaupten den Stand VOR #1757 und muessen den Verweis tragen, sonst liest
+# ein Spaeterer dort das Gegenteil des laufenden Codes.
+
+_REPO = Path(__file__).resolve().parents[2]
+
+_NACHZUZIEHENDE_DOKUMENTE = {
+    "docs/features/gewitter-gesamtkonzept.md":
+        'sagt in §11 Rang 3 bis heute, ein Wechsel auf `lpi_max` sei "kein '
+        'offener Arbeitsauftrag mehr" -- das galt fuer das Ziel Gebietsbruch, '
+        "nicht fuer das Ziel Trefferquote",
+    "docs/specs/modules/feat_1679_lpi_schwellen_region_tabelle.md":
+        "bindet die Leiter 1/30/50 in den Known Limitations an den "
+        "Momentanwert -- seit #1757 misst sie gegen das Stundenmaximum",
+}
+
+
+def test_ac8_beide_bestandsdokumente_verweisen_auf_1757():
+    """AC-8: `docs/features/gewitter-gesamtkonzept.md` und
+    `docs/specs/modules/feat_1679_lpi_schwellen_region_tabelle.md` tragen den
+    Verweis `#1757` woertlich.
+
+    Die Dateien werden RELATIV zu dieser Testdatei aufgeloest, nie ueber einen
+    festen Hauptrepo-Pfad -- sonst kaeme im Worktree falsches Gruen aus dem
+    Doku-Stand eines fremden Baums.
+    """
+    for relativ, warum in _NACHZUZIEHENDE_DOKUMENTE.items():
+        pfad = _REPO / relativ
+        assert pfad.is_file(), f"{relativ} nicht gefunden unter {pfad}"
+        inhalt = pfad.read_text(encoding="utf-8")
+        assert "#1757" in inhalt, (
+            f"{relativ} traegt keinen Verweis auf #1757. Das Dokument {warum}. "
+            "Ohne den Nachzug widerspricht die Doku dem laufenden Code "
+            "(Spec AC-8)."
+        )
