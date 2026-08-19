@@ -347,6 +347,19 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
   landen weiterhin im selben Feld `lightning_potential_lpi_jkg`. Die neue Region-Tabelle ändert
   daran nichts, weil DE_ALPEN weiterhin ausschließlich von ICON-D2 und EU_REST weiterhin
   ausschließlich von ICON-EU beliefert wird.
+  🔄 **Nachtrag 2026-08-19 (#1757):** Die Eingabe der Fusion ist inzwischen umgestellt — seit
+  Issue **#1757** (PO-Entscheid Variante A, Spec
+  `docs/specs/modules/feat_1757_lpi_max_fusion.md`) bevorzugt `_fuse_thunder_levels()` das
+  DWD-Stundenmaximum `lightning_potential_max_lpi_jkg` und greift nur bei dessen Fehlen auf
+  `lightning_potential_lpi_jkg` zurück. Für DE_ALPEN wird die Leiter damit gegen ein
+  Stundenmaximum statt gegen einen Momentanwert gemessen; für EU_REST ändert sich nichts,
+  weil ICON-EU das Feld nicht befüllt und der dortige Wert ohnehin schon ein
+  60-Minuten-Maximum ist (`dwd_eu.py:114` bildet `lpi_con_max` auf `lpi` ab).
+  **Die hier festgelegte Leiter 1/30/50 blieb dabei auf PO-Vorgabe unverändert** — die oben
+  beschriebene Kalibrierungsfrage ist damit NICHT gelöst, sondern verschärft: die Schwellen
+  treffen seither eine andere Statistik als die, auf die sie bezogen wurden. #1757 hält das
+  unter Known Limitations ausdrücklich fest und begründet die Umstellung mit dem belegten
+  Recall-Problem des Momentanwerts (5,6 %, Backtest 2026-08-11).
 - **CIN-Paarung nicht Teil dieser Scheibe** — hängt an #1531 (liefert `cin_ml`), separates
   Ticket.
 - **Herkunfts-Anzeige der Stufe im Ortsvergleich nicht Teil dieser Scheibe** — das ist #1680.
