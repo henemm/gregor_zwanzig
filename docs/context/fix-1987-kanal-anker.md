@@ -257,3 +257,19 @@ eigenen Test und ist ein Pflicht-Punkt der Mutations-Gegenprobe.
    Auslöse-Entscheidung.
 3. **Scope-Grenze:** Der Briefing-Anker bleibt kanalagnostisch. Ein Kanal ohne eigenen Tier-2-Eintrag
    vergleicht gegen den Tagesstand, den er möglicherweise selbst nie erhalten hat.
+
+### PO-Entscheide 2026-08-19 (Phase 2, Abschluss)
+
+**E1 — AC-2 gilt nur für Ebene 2 (rollierender Alarm-Anker).**
+Der Briefing-Anker (Tier 1) bleibt unbedingt und kanalagnostisch; #1629 wird nicht zurückgedreht,
+die Radar-Unterdrückungs-Referenz bleibt unangetastet. Ein Kanal ohne eigenen Tier-2-Eintrag fällt
+auf den Tagesstand zurück und bekommt weiterhin Alarme, nur mit gröberer Vergleichsbasis.
+
+**E2 — Ein gemeinsamer Auswertungslauf, getrennte Merker.**
+Die Auslöse-Entscheidung bleibt gemeinsam. Kanalgetrennt sind ausschließlich: (1) welcher Kanal seinen
+Merker fortschreibt, (2) welcher Vergleichsstand im Text ausgewiesen wird (`reference_at`, #1916 AC-1..5).
+Der geteilte `DeviationAlertEngine`-Pfad (ADR-0021), den auch amtliche Warnungen nutzen, wird nicht
+angefasst. Eine getrennte Auswertung je Kanal wäre eine eigene Scheibe.
+
+Damit sind die offenen Fragen 1 und 2 geschlossen; Frage 3 (Scope-Grenze) ist die dokumentierte Folge
+von E1 und geht als solche in die Spec.
