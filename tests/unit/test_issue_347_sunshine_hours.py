@@ -315,7 +315,7 @@ class TestAC9SegmentSummaryPrecomputed:
         ts = NormalizedTimeseries(meta=meta, data=dps)
 
         svc = WeatherMetricsService()
-        summary = svc.compute_basis_metrics(ts)
+        summary = svc.compute_basis_metrics(ts, tz=None)
 
         direct = WeatherMetricsService.calculate_sunny_hours(dps)
         assert summary.sunny_hours == direct, (

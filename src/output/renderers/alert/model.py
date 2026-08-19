@@ -57,6 +57,29 @@ class OnsetEvent:
 
 
 @dataclass(frozen=True)
+class OnsetShiftEvent:
+    """Eine Beginn-Verschiebung (Issue #1468) -- eigener Render-Vertrag nach
+    dem Vorbild von `CorridorEvent` (ADR-0013).
+
+    Bewusst KEIN `AlertEvent`: dessen Werte laufen durch den Zahlen-
+    Formatierer (`render._val`/`_num`, Katalog-Einheit angehaengt, Vorzeichen
+    statt Richtungswort). Eine Uhrzeit erschiene dort als "15 h" und eine
+    Verschiebung als "-2 h" -- beides Unfug. Die Uhrzeiten sind hier bereits
+    ORTSZEIT-formatiert ("HH:MM"), die Verschiebung ist bereits Text
+    ("2 h frueher"/"2 h spaeter"): die Umrechnung passiert in der
+    Projektionsschicht, wo die Koordinaten bekannt sind.
+    """
+    metric_id: str            # catalog metric_id (NICHT summary_field)
+    from_time: str            # "HH:MM" Ortszeit -- Beginn im letzten Stand
+    to_time: str              # "HH:MM" Ortszeit -- Beginn im frischen Stand
+    shift_text: str           # "2 h früher" | "2 h später"
+    km_from: float
+    km_to: float
+    segment_id: str | None = None
+    location_label: str | None = None
+
+
+@dataclass(frozen=True)
 class CorridorEvent:
     """Ein Schwellen-Treffer (Issue #1444 S1) -- eigener Render-Vertrag
     (ADR-0013): KEIN `WeatherChange`-Missbrauch mit erfundenem
@@ -90,6 +113,11 @@ class AlertMessage:
     # gebuendelt (Muster #1088). Bestehende Aufrufer setzen dieses Feld nie
     # (Default leer, Regressions-Invariante).
     corridor_events: tuple[CorridorEvent, ...] = ()
+    # Issue #1468: additiv, optional. Beginn-Verschiebungen desselben Laufs --
+    # in DERSELBE Nachricht wie die Stufen-/Wert-Aenderungen (PO-Entscheid:
+    # beide melden, im Text zusammenfassen, nicht zwei getrennte Nachrichten).
+    # Bestehende Aufrufer setzen dieses Feld nie (Regressions-Invariante).
+    onset_shift_events: tuple[OnsetShiftEvent, ...] = ()
     # Issue #1916 (AC-1..AC-4): additiv, optional. Referenz-Zeitpunkt der
     # tatsaechlich verglichenen Vergleichsbasis (Ortszeit, ggf. mit Tagesbezug
     # wie "gestern 18:03 Uhr"), NICHT der aktuelle Abrufzeitpunkt (`stand_at`).

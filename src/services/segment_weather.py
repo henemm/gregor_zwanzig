@@ -278,7 +278,35 @@ class SegmentWeatherService:
         from services.weather_metrics import WeatherMetricsService
 
         metrics_service = WeatherMetricsService(debug=self._debug)
-        basis_summary = metrics_service.compute_basis_metrics(filtered_ts)
+        # Issue #1468 (E2): die Beginn-Felder sind ORTSZEIT-Groessen im
+        # TAGESFENSTER DIESES TRIPS -- sonst nennt der Alarm eine andere
+        # Stunde als das Briefing. Die Zone kommt aus den Segment-Koordinaten
+        # ueber denselben einen Aufloeser wie ueberall sonst
+        # (`resolve_location_tz`, #1378 E3), die Fenstergrenzen VOM SEGMENT
+        # (`trip_segments.convert_trip_to_segments()` setzt sie aus
+        # `trip.report_config`) ueber die EINE Aufloesungsstelle
+        # `resolve_configured_window()` (ADR-0035): fehlende oder ungueltige
+        # Werte fallen dort auf den Default 4-19 zurueck, `start > end` bleibt
+        # ein gueltiges Fenster ueber Mitternacht (#1361/#1372 S1b).
+        #
+        # Warum am SEGMENT und nicht als Parameter dieser Methode: Briefing-/
+        # Anker-Pfad und Alarm-Pfad benutzen dieselben Segmente. Traegt das
+        # Segment das Fenster, koennen die beiden Vergleichsseiten gar nicht
+        # mit verschiedenen Fenstern rechnen -- ein Alarm, der allein aus der
+        # Fensterwahl entsteht, ist damit strukturell ausgeschlossen statt an
+        # jeder Aufrufstelle per Disziplin.
+        #
+        # Der Segment-Vorschnitt oben ersetzt den Fensterschnitt NICHT -- die
+        # Etappengrenzen folgen den Gehzeiten, nicht dem Fenster.
+        from app.day_window import resolve_configured_window
+        from utils.timezone import location_tz
+        window_start, window_end = resolve_configured_window(
+            segment.day_window_start_hour, segment.day_window_end_hour,
+        )
+        basis_summary = metrics_service.compute_basis_metrics(
+            filtered_ts, tz=location_tz(segment.start_point),
+            day_window_start_hour=window_start, day_window_end_hour=window_end,
+        )
         extended_summary = metrics_service.compute_extended_metrics(filtered_ts, basis_summary)
 
         return SegmentWeatherData(

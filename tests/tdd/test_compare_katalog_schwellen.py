@@ -83,7 +83,7 @@ def _timeseries(hourly: list[ForecastDataPoint]) -> NormalizedTimeseries:
 
 def _location(name: str, **overrides) -> LocationResult:
     hourly = _hourly(**overrides)
-    s = WeatherMetricsService().compute_basis_metrics(_timeseries(hourly))
+    s = WeatherMetricsService().compute_basis_metrics(_timeseries(hourly), tz=None)
     return LocationResult(
         location=SavedLocation(id=name.lower(), name=name, lat=39.76, lon=2.71, elevation_m=200),
         score=50,

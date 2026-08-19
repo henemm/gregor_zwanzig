@@ -21,7 +21,11 @@ export const ALERT_METRIC_TO_CATALOG_ID: Partial<Record<AlertMetric, string>> = 
 	// Zwei Auswertungen derselben Register-Groesse — die Unterscheidung traegt
 	// der label_de-Text ("Temperatur (Minimum)"/"(Maximum)"), nicht die ID.
 	temperature_min: 'temperature',
-	temperature_max: 'temperature'
+	temperature_max: 'temperature',
+	// Issue #1468: der Beginn haengt an derselben Register-Groesse wie die
+	// Stufe bzw. die Summe — unterschieden wird ueber den label_de-Text.
+	thunder_onset: 'thunder',
+	precipitation_heavy_onset: 'precipitation'
 };
 
 /**

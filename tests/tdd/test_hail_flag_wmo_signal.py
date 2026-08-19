@@ -133,7 +133,7 @@ def test_ac1_gerenderter_text_zeigt_hagel_hinweis_fuer_true_stunde(
     from services.weather_metrics import WeatherMetricsService
 
     reihe = om.OpenMeteoProvider().fetch_forecast(_ORT, enrich_ensemble=False)
-    summary = WeatherMetricsService().compute_basis_metrics(reihe)
+    summary = WeatherMetricsService().compute_basis_metrics(reihe, tz=None)
 
     assert summary.hail_flag is True, (
         "Die Tagesaggregation traegt kein hail_flag=True, obwohl eine "

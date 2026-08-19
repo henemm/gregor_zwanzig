@@ -111,7 +111,7 @@ def _location(name: str, hourly: list[ForecastDataPoint]) -> LocationResult:
     ``LocationResult``-Felder existieren (s. Spec Dependencies), aber noch
     kein Mapping/CV2_METRICS-Eintrag haben.
     """
-    s = WeatherMetricsService().compute_basis_metrics(_timeseries(hourly))
+    s = WeatherMetricsService().compute_basis_metrics(_timeseries(hourly), tz=None)
     return LocationResult(
         location=SavedLocation(id=name.lower(), name=name, lat=39.76, lon=2.71, elevation_m=200),
         score=50,
@@ -307,7 +307,7 @@ def test_selected_humidity_metric_appears_in_overview_matrix():
     html = render_compare_html(result, enabled_metrics=enabled)
     row = _assert_row_with_values(html, _IS_HUMIDITY, "Luftfeuchtigkeit")
 
-    expected = WeatherMetricsService().compute_basis_metrics(_timeseries(_hourly())).humidity_avg_pct
+    expected = WeatherMetricsService().compute_basis_metrics(_timeseries(_hourly()), tz=None).humidity_avg_pct
     assert _number(row["cells"][0]) == expected, (
         f"Luftfeuchtigkeit-Tageswert stimmt nicht mit dem Trip-Pfad-Aggregat "
         f"ueberein: {row['cells'][0]!r} != {expected}"
@@ -459,7 +459,7 @@ def test_plaintext_shows_all_ten_new_rows():
     hourly = _hourly()
     svc = WeatherMetricsService()
     ts = _timeseries(hourly)
-    basis = svc.compute_basis_metrics(ts)
+    basis = svc.compute_basis_metrics(ts, tz=None)
 
     wind_dir_line = _plain_row_value(text, "windrichtung")
     assert wind_dir_line is not None, (

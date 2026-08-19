@@ -2,7 +2,7 @@
 // Zuordnung AlertMetric → Metrik-Register-ID.
 // Spec: docs/specs/modules/fix_1401b_register_stundenverlauf_alarme.md
 //
-// Zweck: jede der 14 Alarm-Groessen ist genau einmal eingeordnet — entweder sie
+// Zweck: jede der 16 Alarm-Groessen ist genau einmal eingeordnet — entweder sie
 // hat eine Register-Entsprechung (Crosswalk) oder sie ist bewusst als
 // registerlos vermerkt (Aenderungs-Metriken). Damit kann kein neuer Eintrag
 // still ohne Entscheidung dazukommen.
@@ -33,8 +33,8 @@ const CATALOG_IDS = new Set([
 const ALL_ALERT_METRICS = Object.keys(ALERT_METRIC_LABELS);
 
 describe('#1401b AC-5: jede Alarm-Groesse ist genau einmal eingeordnet', () => {
-	test('Es gibt 14 Alarm-Groessen (Vakuum-Schutz)', () => {
-		assert.equal(ALL_ALERT_METRICS.length, 14);
+	test('Es gibt 16 Alarm-Groessen (Vakuum-Schutz)', () => {
+		assert.equal(ALL_ALERT_METRICS.length, 16);
 	});
 
 	test('Genau drei Groessen sind als registerlos vermerkt', () => {
@@ -57,7 +57,7 @@ describe('#1401b AC-5: jede Alarm-Groesse ist genau einmal eingeordnet', () => {
 		}
 	});
 
-	test('Registerlose Menge und Crosswalk ergeben zusammen exakt alle 14 — ohne Ueberschneidung', () => {
+	test('Registerlose Menge und Crosswalk ergeben zusammen exakt alle 16 — ohne Ueberschneidung', () => {
 		const crosswalkKeys = Object.keys(ALERT_METRIC_TO_CATALOG_ID);
 		const overlap = crosswalkKeys.filter((k) => NON_CATALOG_ALERT_METRICS.has(k as never));
 		assert.deepEqual(overlap, [], 'Groesse ist gleichzeitig registerlos und zugeordnet');

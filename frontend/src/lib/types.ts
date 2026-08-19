@@ -85,7 +85,10 @@ export type AlertMetric =
 	| 'visibility'
 	| 'humidity'
 	// Issue #946: Nullgradgrenze
-	| 'freezing_level';
+	| 'freezing_level'
+	// Issue #1468: Beginn-Verschiebung von Gewitter und Starkregen
+	| 'thunder_onset'
+	| 'precipitation_heavy_onset';
 
 export interface AlertRule {
 	id: string;

@@ -139,4 +139,9 @@ def test_alarm_evaluation_crosswalks_stay_untouched():
         "cape": ("cape",), "temperature_change": ("temperature",),
         "wind_change": ("wind",), "precipitation_change": ("precipitation",),
         "visibility": ("visibility",),
+        # Issue #1468: die beiden Beginn-Groessen erben die Wetter-Tab-
+        # Aktivierung ihrer Register-Groesse — wer Gewitter nicht beobachtet,
+        # bekommt auch keinen Gewitterbeginn-Alarm.
+        "thunder_onset": ("thunder",),
+        "precipitation_heavy_onset": ("precipitation",),
     }

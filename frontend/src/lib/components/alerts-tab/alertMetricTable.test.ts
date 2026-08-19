@@ -23,12 +23,13 @@ import {
 import type { AlertRule, AlertMetric } from '../../types.ts';
 
 // =============================================================================
-// METRIC_DEFAULTS — 14 Eintraege mit korrekten Standardwerten (Spec §Implementation)
-// (Issue #946: freezing_level ergänzt → 14 statt 13.)
+// METRIC_DEFAULTS — 16 Eintraege mit korrekten Standardwerten (Spec §Implementation)
+// (Issue #946: freezing_level ergänzt → 14 statt 13.
+//  Issue #1468: thunder_onset + precipitation_heavy_onset → 16 statt 14.)
 // =============================================================================
 
-test('METRIC_DEFAULTS > hat genau 14 Eintraege', () => {
-	assert.equal(Object.keys(METRIC_DEFAULTS).length, 14);
+test('METRIC_DEFAULTS > hat genau 16 Eintraege', () => {
+	assert.equal(Object.keys(METRIC_DEFAULTS).length, 16);
 });
 
 test('METRIC_DEFAULTS > wind_gust default ist 50', () => {

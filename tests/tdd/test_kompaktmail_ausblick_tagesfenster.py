@@ -137,7 +137,7 @@ def _heutige_etappe() -> SegmentWeatherData:
     )
     return SegmentWeatherData(
         segment=seg, timeseries=reihe,
-        aggregated=WeatherMetricsService().compute_basis_metrics(reihe),
+        aggregated=WeatherMetricsService().compute_basis_metrics(reihe, tz=None),
         fetched_at=datetime.now(timezone.utc), provider="openmeteo",
     )
 

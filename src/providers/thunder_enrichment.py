@@ -97,6 +97,49 @@ def _bezugszeitpunkt(reihe: "NormalizedTimeseries") -> datetime:
     return max(erster, jetzt_volle_stunde) - timedelta(hours=1)
 
 
+def _blitzpotenzial_wert(dp) -> Optional[float]:
+    """Waehlt den EINEN Blitzpotenzial-Wert, den die Fusion sieht (Issue #1757,
+    Variante A, PO-Entscheid 2026-08-19).
+
+    VORRANGREGEL: das Stundenmaximum ``lightning_potential_max_lpi_jkg``
+    (ICON-D2/DE_ALPEN, abgerufen seit #1531) schlaegt den Momentanwert
+    ``lightning_potential_lpi_jkg``. Grund: der Backtest vom 2026-08-11 hat
+    fuer den Momentanwert einen Recall von 5,6 % gemessen (1 von 18 echten
+    Gewitterstunden) -- der Momentanwert am Stundenrand verfehlt Gewitter
+    systematisch.
+
+    RUECKFALL, NICHT ERSATZLOS: ``lightning_potential_max_lpi_jkg`` wird
+    ausschliesslich von ICON-D2 befuellt. Faellt der Rueckfall auf den
+    Momentanwert weg, verloere JEDES Gebiet ausserhalb DE_ALPEN das
+    Blitzpotenzial-Signal ersatzlos -- eine stille Regression. Ausserhalb der
+    Alpen ist der "Momentanwert" ohnehin schon ein Stundenmaximum: die dortige
+    ICON-EU-Groesse wird unter dem Signalnamen ``lpi`` eingehaengt (Nachweis:
+    ``src/providers/dwd_eu.py``). Ihr Abrufname steht hier BEWUSST NICHT --
+    diese Datei ist der gemeinsame, quellenblinde Anschlussweg und darf keinen
+    providerspezifischen Groessennamen kennen (#1457 S2a/S2c AC-8, bewacht von
+    ``test_thunder_enrichment_shared_path.py``
+    ``::test_ac8_anschlussweg_kennt_keinen_providernamen``). Wer den Namen zur
+    Verdeutlichung nachtragen will: nicht hier, sondern in ``dwd_eu.py``.
+
+    ``0.0``-FALLE -- NICHT zu ``a or b`` kuerzen: ``0.0`` heisst "in dieser
+    Stunde kein Blitzpotenzial" und ist ein gueltiger Messwert, in Python aber
+    unwahr. Mit ``or`` fiele die Auswahl bei exakt 0,0 still auf den
+    Momentanwert zurueck und meldete Gewitter, wo das Stundenmaximum keines
+    sieht. Deshalb die ausdrueckliche ``is not None``-Pruefung; der Wachhund
+    dagegen ist
+    ``tests/tdd/test_thunder_fusion_prefers_hourly_max.py::test_ac2_stundenmaximum_null_komma_null_gilt_und_faellt_nicht_zurueck``.
+
+    Die Auswahl wohnt HIER beim Aufrufer, nicht in ``metric_format.py``: die
+    Fusion bekommt EINE Zahl und EINE Leiter und bleibt statistik-blind
+    (ADR-0025). Die Schwellenleiter ``LPI_THRESHOLDS_JKG`` bleibt unveraendert
+    -- dieselben Sprossen, gegen eine andere Statistik gemessen (Spec
+    Known Limitations).
+    """
+    if dp.lightning_potential_max_lpi_jkg is not None:
+        return dp.lightning_potential_max_lpi_jkg
+    return dp.lightning_potential_lpi_jkg
+
+
 def _fuse_thunder_levels(
     data: list,
     cape_ladder: Optional[Tuple[float, float, float]],
@@ -132,6 +175,10 @@ def _fuse_thunder_levels(
     ``None`` ("keine Aussage"), bleibt ein bereits vorhandener Wert an
     ``dp.thunder_level`` erhalten (s. Spec Abschnitt 3, letzter Absatz).
 
+    Issue #1757: welche der beiden Blitzpotenzial-Zahlen einfliesst, entscheidet
+    ``_blitzpotenzial_wert()`` (Stundenmaximum vor Momentanwert) -- die Fusion
+    selbst bleibt statistik-blind.
+
     Issue #1680 S1: zusaetzlich wird festgehalten, WELCHE Zutaten die Stufe
     tragen (``dp.thunder_level_signals``) -- aus DEMSELBEN Argumentsatz und
     unter DERSELBEN Ueberschreib-Bedingung, damit Stufe und Herkunft nie aus
@@ -143,7 +190,7 @@ def _fuse_thunder_levels(
     lpi_low, lpi_med, lpi_high = lpi_thresholds or (None, None, None)
     for dp in data:
         werte = (dp.thunder_level, dp.lightning_density_per_km2_3h, dp.cape_jkg,
-                 dp.lightning_potential_lpi_jkg)
+                 _blitzpotenzial_wert(dp))
         leitern = dict(
             cape_threshold_jkg=cape_low,
             cape_med_min=cape_med, cape_high_min=cape_high,

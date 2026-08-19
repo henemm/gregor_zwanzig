@@ -44,13 +44,21 @@ def _capture_records() -> list[dict]:
 
 
 def _kennung_fuer_cache_key(cache_key: str) -> str:
-    treffer = [
-        r for r in _capture_records()
-        if r.get("payload", {}).get("cache_key") == cache_key
-    ]
+    # #1727 S5e: der Massiv-Schluessel traegt seit dem tagesbewussten Umbau den
+    # Kalendertag (``"83:20260601"``). Der Aufrufer uebergibt weiterhin die
+    # Quelle (``Massif.src``), darum passt ein Datensatz, dessen ``cache_key``
+    # exakt gleich ist ODER mit ``f"{cache_key}:"`` beginnt. Der Doppelpunkt
+    # gehoert zwingend zum Praefix -- sonst wuerde Quelle "8" auf "83:..."
+    # passen. Die Zusicherung "genau EIN Mitschnitt je Abruf" bleibt unberuehrt.
+    praefix = f"{cache_key}:"
+    treffer = []
+    for r in _capture_records():
+        k = r.get("payload", {}).get("cache_key")
+        if k == cache_key or (isinstance(k, str) and k.startswith(praefix)):
+            treffer.append(r)
     assert len(treffer) == 1, (
-        f"Erwartet genau EINEN Mitschnitt fuer cache_key={cache_key!r}, "
-        f"gefunden {len(treffer)}."
+        f"Erwartet genau EINEN Mitschnitt fuer cache_key={cache_key!r} "
+        f"(exakt oder mit Tages-Suffix {praefix!r}), gefunden {len(treffer)}."
     )
     return treffer[0]["capture_id"]
 

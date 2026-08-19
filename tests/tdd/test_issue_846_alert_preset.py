@@ -195,24 +195,46 @@ def test_ac4_visibility_already_below_threshold_no_realert():
 
 
 # ═════════════════════════════ AC-6 ═════════════════════════════════════════
-# Preset "entspannt" → exakt 12 Regeln inkl. der neuen Metriken.
+# Preset "entspannt" → exakt 14 Regeln inkl. der neuen Metriken.
 # Issue #889 / ADR-0010: HUMIDITY als Vorboten-Metrik aus dem Preset entfernt
 # (war zuvor 13 Regeln inkl. humidity).
 
 
-def test_ac6_entspannt_has_exactly_12_rules():
-    """AC-6: `expand_preset("entspannt")` liefert exakt 12 Regeln.
+def test_ac6_entspannt_has_exactly_14_rules():
+    """AC-6: `expand_preset("entspannt")` liefert exakt 14 Regeln.
 
     Issue #889: humidity entfernt → 12.
     Issue #946: freezing_level ergänzt → 13.
     Issue #959: snow_line + freezing_level zu EINER Nullgradgrenze-Zeile
     konsolidiert (snow_line-Zeile entfernt) → 12.
+    Issue #1468: die beiden Beginn-Größen (thunder_onset,
+    precipitation_heavy_onset) ergänzt → 14. Sie tragen je Stufe ZWEI
+    Schwellen (entspannt 2 h früher / 4 h später); die Preset-Tabelle führt
+    die schärfere, das Paar steht in `alert_preset.ONSET_SHIFT_BOUNDS`.
+
+    Die Zahl allein wäre blind dafür, WELCHE Regeln es sind — deshalb prüft
+    der Test zusätzlich die Metrik-Menge. Ohne das hätte eine versehentlich
+    verlorene Bestandsregel neben einer neu hinzugekommenen dieselbe Summe
+    ergeben.
     """
+    from app.models import AlertMetric
     from services.alert_preset import expand_preset
 
     rules = expand_preset("entspannt")
-    assert len(rules) == 12, (
-        f"Preset 'entspannt' muss exakt 12 Regeln liefern, erhielt: {len(rules)}"
+    assert len(rules) == 14, (
+        f"Preset 'entspannt' muss exakt 14 Regeln liefern, erhielt: {len(rules)}"
+    )
+    assert {r.metric for r in rules} == {
+        AlertMetric.WIND_GUST, AlertMetric.PRECIPITATION_SUM,
+        AlertMetric.THUNDER_LEVEL, AlertMetric.FREEZING_LEVEL,
+        AlertMetric.TEMPERATURE_MIN, AlertMetric.TEMPERATURE_MAX,
+        AlertMetric.TEMPERATURE_CHANGE, AlertMetric.WIND_CHANGE,
+        AlertMetric.PRECIPITATION_CHANGE, AlertMetric.FRESH_SNOW,
+        AlertMetric.CAPE, AlertMetric.VISIBILITY,
+        AlertMetric.THUNDER_ONSET, AlertMetric.PRECIPITATION_HEAVY_ONSET,
+    }, (
+        "Die Metrik-Menge des Presets weicht ab: "
+        f"{sorted(str(r.metric) for r in rules)}"
     )
 
 
