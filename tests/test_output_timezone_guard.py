@@ -638,18 +638,9 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/official_alerts/meteoalarm_budget.py::_now_ts::0": "raw_astimezone (:167) — Kontingent-Zeitstempel bewusst in UTC.",
     "src/services/official_alerts/meteoalarm_budget.py::_today_utc::0": "raw_astimezone (:176) — Kontingent-Tag bewusst in UTC.",
     "src/services/scheduler_dispatch_service.py::run_compare_presets_daily::0": "raw_astimezone (:179) — Faelligkeit in der Ortszone des Presets (#1724).",
-    "src/services/segment_weather.py::_aggregate_for_segment::0": "raw_astimezone (:254) — Segmentbeginn auf volle UTC-Stunde.",
-    "src/services/segment_weather.py::_aggregate_for_segment::1": "raw_astimezone (:257) — Segmentende auf volle UTC-Stunde.",
     "src/services/stage_weather.py::_to_utc_date::0": "raw_astimezone (:62) — Etappendatum in UTC.",
     "src/services/trip_alert.py::_briefing_precip_for_onset::0": "raw_astimezone (:872) — Einsetzstunde auf volle UTC-Stunde.",
     "src/services/trip_alert.py::check_radar_alerts::0": "raw_astimezone (:1092) — Einsetzzeit in der Ortszone ausgegeben.",
-    "src/services/trip_segments.py::convert_trip_to_segments::0": "raw_astimezone (:184) — Segmentstart aus Etappentag + Startstunde.",
-    "src/services/trip_segments.py::convert_trip_to_segments::1": "raw_astimezone (:189) — Segmentende aus Folgetag + Startstunde.",
-    "src/services/trip_segments.py::convert_trip_to_segments::2": "raw_astimezone (:275) — Ankunftstag in der Zielortzone.",
-    "src/services/weather_cache.py::get::0": "raw_astimezone (:126) — Cache-Schluessel Fensterbeginn in UTC.",
-    "src/services/weather_cache.py::get::1": "raw_astimezone (:127) — Cache-Schluessel Fensterende in UTC.",
-    "src/services/weather_cache.py::put::0": "raw_astimezone (:177) — Cache-Ablage Fensterbeginn in UTC.",
-    "src/services/weather_cache.py::put::1": "raw_astimezone (:178) — Cache-Ablage Fensterende in UTC.",
     "src/services/weather_extractor.py::_to_naive_utc::0": "raw_astimezone (:32) — Naiv-Guard nach Hausnorm #1345 (naiv == UTC).",
 }
 

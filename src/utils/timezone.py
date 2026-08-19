@@ -111,6 +111,15 @@ def _as_utc(dt: datetime) -> datetime:
     return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
 
 
+def to_utc(dt: datetime) -> datetime:
+    """Zentraler Helfer fuer rohe ``.astimezone(timezone.utc)``-Aufrufe (Fix
+    #1727 S5f). Naive Zeitstempel werden nach Hausnorm (#1345) als UTC
+    gelabelt (kein Wert-Sprung); aware Zeitstempel in Nicht-UTC-Zonen werden
+    echt konvertiert (Regressionsschutz Adversary-Fund F001, nicht nur ein
+    ``tzinfo``-Ersatz)."""
+    return _as_utc(dt).astimezone(timezone.utc)
+
+
 def local_dt(dt: datetime, tz: ZoneInfo) -> datetime:
     """UTC datetime → aware datetime in local timezone."""
     return _as_utc(dt).astimezone(tz)

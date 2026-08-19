@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import app.day_window as day_window
 from app.day_window import resolve_configured_window
 from app.models import GPXPoint, TripSegment
 from utils.geo import haversine_km
-from utils.timezone import tz_for_coords
+from utils.timezone import local_dt, to_utc, tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -188,15 +188,13 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
             wp2_start = wp1_start
 
         seg_tz = tz_for_coords(wp1.lat, wp1.lon)
-        start_dt = (
+        start_dt = to_utc(
             datetime.combine(target_date + timedelta(days=wp_days[i]), wp1_start)
             .replace(tzinfo=seg_tz)
-            .astimezone(timezone.utc)
         )
-        end_dt = (
+        end_dt = to_utc(
             datetime.combine(target_date + timedelta(days=wp_days[i + 1]), wp2_start)
             .replace(tzinfo=seg_tz)
-            .astimezone(timezone.utc)
         )
 
         if end_dt <= start_dt:
@@ -284,7 +282,7 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         # UTC-Tag: bei einem Ziel westlich von Greenwich faellt die Ankunft
         # in UTC schon auf den Folgetag, waehrend es am Ziel noch derselbe
         # Tag ist — der UTC-Tag wuerde das Fenster um 24 h verschieben.
-        arrival_local_date = arrival_time.astimezone(dest_tz).date()
+        arrival_local_date = local_dt(arrival_time, dest_tz).date()
         # Issue #1599: Die Obergrenze ist INKLUSIV — die Endstunde zaehlt
         # vollstaendig mit, das Fenster endet zeitlich bei (end_hour+1):00
         # Ortszeit. Die Umrechnung wohnt in app/day_window.py, damit sie nicht
