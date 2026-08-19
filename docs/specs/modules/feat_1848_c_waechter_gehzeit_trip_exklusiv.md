@@ -172,6 +172,15 @@ die echten Katalog-Listen veraendert.
 - AC-5 prüft Namen, die wie Funktionsaufrufe geschrieben sind (`name()`). Ein Kommentar, der eine
   Funktion in Prosa ohne Klammern nennt, wird nicht erfasst.
 - AC-6 (c) ist nicht maschinell bewacht (siehe dort).
+- **Tür 3 (3-Tages-Ausblick) ist nur als Nebeneffekt geschützt.** Die vier Kennungen sind dort
+  unauflösbar, weil sie keine `summary_fields` tragen — nicht, weil der Ausblick sie namentlich
+  ausschlösse. Der Wächter sichert diesen Zusammenhang nicht zu: entfernt jemand die Katalogprüfung
+  im Ausblick, bleibt er grün. Adversary-Befund vom 2026-08-19, Stufe LOW.
+- **Eine Umgehung im Frontend-Code selbst fällt nicht auf.** Der Wächter deckt die Python-Seite ab
+  (Katalog, Register, Endpoint-Antwort). Eine Gehzeit-Größe, die fest in `buildCompareMetricDefs()`
+  (`frontend/src/lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts`) eingetragen
+  wird, erreicht die Bedienfläche am geprüften Weg vorbei. Adversary-Befund vom 2026-08-19,
+  Stufe LOW.
 
 ## Architektur-Entscheidung (ADR)
 

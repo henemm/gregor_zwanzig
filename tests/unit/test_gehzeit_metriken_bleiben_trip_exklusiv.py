@@ -34,6 +34,7 @@ import tokenize
 from dataclasses import replace
 from pathlib import Path
 
+from api.routers.compare import get_compare_metrics
 from app.metric_catalog import MetricDefinition, get_all_metrics
 from output.renderers.compare_hourly_metric_ids import HOURLY_EXCLUDED_METRIC_IDS
 from output.renderers.compare_metric_catalog import get_compare_metric_catalog
@@ -388,4 +389,152 @@ def test_ac7_neuer_register_eintrag_mit_day_im_namen_macht_nicht_rot():
     assert _gehzeit_labels_ohne_zusatz(register_kopie) == [], (
         f"Die '(Gehzeit)'-Zusicherung verlangt den Zusatz auch von '{fremd}' -- "
         "sie zielt auf ein Namensmuster statt auf die vier benannten Kennungen."
+    )
+
+
+# ---------------------------------------------------------------------------
+# F002 -- die bewachte Menge selbst ist bewacht
+#
+# Adversary-Befund: `GEHZEIT_METRIC_IDS` auf zwei Kennungen zu kuerzen liess
+# ALLE Tests gruen -- `temperature_day_high` und `wind_chill_day_low` haetten
+# danach ausser dem Literal keinen Anker mehr gehabt. Genau die Fehlerklasse,
+# gegen die diese Scheibe gebaut ist: eine Liste, deren Zusicherung still zur
+# Luege wird. Die erwartete Menge wird deshalb aus dem ZENTRALREGISTER
+# abgeleitet und gegen das Literal gestellt.
+# ---------------------------------------------------------------------------
+def _register_gehzeit_ids(
+    definitionen: list[MetricDefinition] | None = None,
+) -> list[str]:
+    """Welche Registereintraege tragen den Zusatz '(Gehzeit)' im `label_de`?
+    Das ist die im Register erkennbare Menge der Gehzeit-Groessen -- unabhaengig
+    davon, was dieser Waechter oben als Literal fuehrt."""
+    if definitionen is None:
+        definitionen = get_all_metrics()
+    return sorted(
+        m.id for m in definitionen
+        if GEHZEIT_LABEL_ZUSATZ in (getattr(m, "label_de", "") or "")
+    )
+
+
+def _mengen_abweichung(
+    bewacht: tuple[str, ...] | list[str], abgeleitet: list[str]
+) -> tuple[list[str], list[str]]:
+    """Differenz in BEIDE Richtungen: (fehlt im Waechter, fehlt im Register).
+    EIN Aufbau fuer Zusicherung und Gegenprobe."""
+    return (
+        sorted(set(abgeleitet) - set(bewacht)),
+        sorted(set(bewacht) - set(abgeleitet)),
+    )
+
+
+def test_f002_bewachte_menge_deckt_sich_mit_den_gehzeit_eintraegen_des_registers():
+    """Die vier Kennungen stehen nicht mehr allein als Literal da: die erwartete
+    Menge kommt aus dem Register (`label_de` traegt '(Gehzeit)'). Schrumpft das
+    Literal, wird das rot -- kommt ueber #1468 eine neue Gehzeit-Groesse dazu,
+    die hier nicht mitbewacht wird, ebenfalls."""
+    abgeleitet = _register_gehzeit_ids()
+    assert abgeleitet, (
+        "Positivkontrolle: das Register liefert keinen einzigen Eintrag mit dem "
+        f"Zusatz '{GEHZEIT_LABEL_ZUSATZ}' -- die Ableitung traegt dann nichts und "
+        "eine Uebereinstimmung waere ueber die leere Menge trivial wahr."
+    )
+    fehlt_im_waechter, fehlt_im_register = _mengen_abweichung(GEHZEIT_METRIC_IDS, abgeleitet)
+    assert (fehlt_im_waechter, fehlt_im_register) == ([], []), (
+        "Die bewachte Menge deckt sich nicht mit den Gehzeit-Eintraegen des "
+        f"Zentralregisters. Im Waechter (GEHZEIT_METRIC_IDS) fehlen: {fehlt_im_waechter} "
+        f"-- im Register fehlt der '{GEHZEIT_LABEL_ZUSATZ}'-Eintrag zu: {fehlt_im_register}. "
+        "Beides ist ein Befund: eine hier stillschweigend entfernte Kennung waere "
+        "unbewacht, eine neue Gehzeit-Groesse im Register muss mitbewacht werden."
+    )
+
+
+def test_f002_gegenprobe_geschrumpfte_und_gewachsene_menge_werden_benannt():
+    """F002 Wirkungsnachweis an KOPIEN, in beide Richtungen -- ohne ihn waere
+    nicht bewiesen, dass die Abweichung ueberhaupt auffaellt."""
+    abgeleitet = _register_gehzeit_ids()
+
+    # (a) Waechter geschrumpft: zwei Kennungen ohne Anker.
+    geschrumpft = ("temperature_day_low", "wind_chill_day_high")
+    fehlt_im_waechter, fehlt_im_register = _mengen_abweichung(geschrumpft, abgeleitet)
+    assert fehlt_im_waechter == ["temperature_day_high", "wind_chill_day_low"], (
+        f"Eine geschrumpfte Waechter-Menge faellt nicht auf: {fehlt_im_waechter}"
+    )
+    assert fehlt_im_register == [], f"Falschmeldung in der Gegenrichtung: {fehlt_im_register}"
+
+    # (b) Register um eine neue Gehzeit-Groesse gewachsen, Waechter unveraendert.
+    vorbild = next(m for m in get_all_metrics() if m.id == "temperature_day_low")
+    register_kopie = list(get_all_metrics()) + [
+        replace(vorbild, id="humidity_day_high", label_de="Tages-Höchstfeuchte (Gehzeit)")
+    ]
+    fehlt_im_waechter, fehlt_im_register = _mengen_abweichung(
+        GEHZEIT_METRIC_IDS, _register_gehzeit_ids(register_kopie)
+    )
+    assert fehlt_im_waechter == ["humidity_day_high"], (
+        f"Eine neue Gehzeit-Groesse im Register faellt nicht auf: {fehlt_im_waechter}"
+    )
+    assert _register_gehzeit_ids() == abgeleitet, (
+        "Die Gegenprobe hat das ECHTE Register veraendert."
+    )
+
+
+# ---------------------------------------------------------------------------
+# F001 -- geprueft wird die LEITUNG, nicht nur die Funktion
+#
+# Adversary-Befund: haengt `GET /api/compare/metrics` eine Gehzeit-Groesse an
+# die ANTWORT, blieb alles gruen -- der Waechter prueft nur
+# `get_compare_metric_catalog()`. Die Spec begruendet den Verzicht auf einen
+# Frontend-Waechter aber damit, dass die Bedienflaeche den ENDPOINT liest
+# (compareMetricCatalogLoader.ts:101). Zwischen Funktion und Antwort passt eine
+# Aenderung. Reiner Funktionsaufruf: kein Netz, kein HTTP-Client, kein
+# TestClient-Server, kein Mock.
+# ---------------------------------------------------------------------------
+def _verbotene_ids_in_endpoint_antwort(
+    verboten: tuple[str, ...] = GEHZEIT_METRIC_IDS, payload: dict | None = None
+) -> list[str]:
+    """Welche der genannten Kennungen traegt die Nutzlast von
+    `GET /api/compare/metrics` (`{"metrics": [...]}`)? Leer = in Ordnung."""
+    if payload is None:
+        payload = get_compare_metrics()
+    eintraege = payload.get("metrics") or []
+    vorhanden = {e.get("metric_id") for e in eintraege if e.get("metric_id")}
+    return sorted(set(verboten) & vorhanden)
+
+
+def test_f001_endpoint_antwort_bietet_keine_gehzeit_kennung_an():
+    """Die Antwort selbst -- nicht die dahinterliegende Funktion -- fuehrt keine
+    der vier Kennungen. Das ist die Leitung, die die Bedienflaeche liest."""
+    gefunden = _verbotene_ids_in_endpoint_antwort()
+    assert gefunden == [], (
+        "GET /api/compare/metrics liefert Gehzeit-Kennungen an die "
+        f"Bedienflaeche aus: {gefunden} -- " + _verstoss_meldung(gefunden)
+    )
+
+
+def test_f001_positivkontrolle_derselbe_suchweg_findet_temperature_in_der_antwort():
+    """Ohne sie waere die Zusicherung oben wieder nur 'gruen, weil am falschen
+    Ort gesucht': derselbe Suchweg muss finden, was in der Antwort stehen MUSS
+    (`temperature`, getragen vom Eintrag `temp_min_c`)."""
+    assert _verbotene_ids_in_endpoint_antwort(verboten=("temperature",)) == ["temperature"], (
+        "Der Suchweg findet 'temperature' nicht in der Endpoint-Antwort -- das "
+        "Gruen stammt dann nicht aus Abwesenheit, sondern aus dem falschen Ort."
+    )
+    keys = {e.get("key") for e in get_compare_metrics().get("metrics") or []}
+    assert "temp_min_c" in keys, (
+        f"Erwarteter Traeger-Eintrag temp_min_c fehlt in der Antwort: {sorted(keys)[:5]}"
+    )
+
+
+def test_f001_gegenprobe_an_die_antwort_gehaengte_kennung_wird_gemeldet():
+    """F001 Wirkungsnachweis: eine KOPIE der Nutzlast mit angehaengter
+    Gehzeit-Groesse -- genau die Mutation, die der Adversary gefahren hat."""
+    echt = get_compare_metrics()
+    kopie = {"metrics": list(echt.get("metrics") or []) + [
+        {"key": "kunst_wind_chill_day_high", "unit": "°C", "decimals": 0, "kind": "range",
+         "metric_id": "wind_chill_day_high", "aggregation": "max"}
+    ]}
+    assert _verbotene_ids_in_endpoint_antwort(payload=kopie) == ["wind_chill_day_high"], (
+        "Der Waechter bemerkt eine an die Endpoint-Antwort gehaengte Kennung nicht."
+    )
+    assert _verbotene_ids_in_endpoint_antwort() == [], (
+        "Die Gegenprobe hat die ECHTE Antwort veraendert."
     )
