@@ -105,8 +105,20 @@ def _get_cached_daily_json(src: str, ymd: str) -> Optional[dict]:
     def _do_request() -> httpx.Response:
         return httpx.get(_ENDPOINT.format(src=src, ymd=ymd), timeout=TIMEOUT)
 
+    # Issue #1727 S5e: der Tag gehoert in den Schluessel (Vorbild meteoalarm.py:768),
+    # sonst liefert der Zwischenspeicher ueber Mitternacht hinweg den Vortag.
+    cache_key = f"{src}:{ymd}"
+    # ``warn_egress`` kennt keine Invalidierung (Ablauf nur beim Zugriff auf
+    # DENSELBEN Schluessel) -- ohne Aufraeumen wuechse ``_cache`` in einem
+    # langlebigen Prozess pro Quelle und Kalendertag unbegrenzt.
+    for alt_key in [
+        k for k in _cache
+        if k.startswith(f"{src}:") and k != cache_key
+    ]:
+        _cache.pop(alt_key, None)
+
     return warn_egress.cached_fetch(
-        cache=_cache, cache_key=src, service="massif_closure",
+        cache=_cache, cache_key=cache_key, service="massif_closure",
         host="www.risque-prevention-incendie.fr", request_fn=_do_request,
         parse_fn=lambda resp: resp.json(), log=logger,
     )

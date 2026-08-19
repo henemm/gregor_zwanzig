@@ -151,7 +151,10 @@ _CONFIGS = [
         "service": "massif_closure",
         "host": "www.risque-prevention-incendie.fr",
         "keyed": True,
-        "cache_key": lambda mod: "83",
+        # #1727 S5e: der Schluessel traegt den Kalendertag -- er MUSS denselben
+        # Tag nennen wie der ``call`` darueber, sonst legt der Test den Eintrag
+        # unter einem anderen Schluessel ab als der Code sucht (Miss statt Hit).
+        "cache_key": lambda mod: "83:20260101",
         "needs_mf_key": False,
     },
     {
