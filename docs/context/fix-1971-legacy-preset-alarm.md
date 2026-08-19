@@ -117,6 +117,47 @@ Auffang nicht.
 > Produktionszahl 0 ist") stützt sich auf einen Bestand, der jederzeit wieder wachsen kann.
 > Die Zahl 0 ist eine Momentaufnahme, keine Eigenschaft des Systems.
 
+### M6 — Der naheliegende Fix erzeugt einen NEUEN stillen Ausfall (verworfen)
+
+Erste Spec-Fassung schlug vor, `_display_config_from_active_metrics()` im `None`-Fall ein
+voll-aktiviertes `UnifiedWeatherDisplayConfig` liefern zu lassen. Simuliert und gemessen:
+
+```
+AC-4-Fall (kein metric_alert_levels): VORHER 14 Regeln → NACHHER 13
+   verloren: ['cape']
+```
+
+Sobald `display_config` nicht mehr `None` ist, greift der #961-Filter (`alert_preset.py:315-321`),
+der bisher übersprungen wurde. `is_alert_metric_active()` behandelt CAPE seit #1585 als **nie
+aktiv** (alle gemappten Katalog-Größen `selectable=False`). Ein Fix gegen stille Alarm-Ausfälle,
+der selbst einen erzeugt, ist nicht lieferbar. **Weg verworfen.**
+
+### M7 — Gewählter Weg: Ergänzung auf der Level-Ebene
+
+Ansatzpunkt `_build_eval_config()` (`compare_alert.py:530-533`) — dort, wo der
+`_STANDARD_METRIC_LEVELS`-Fallback ohnehin sitzt. Fehlt `active_metrics`, werden gesetzte
+`metric_alert_levels` mit dem Standard-Satz **ergänzt** statt allein verwendet; explizite
+Einträge (auch `off`) gewinnen. `display_config` bleibt `None`, der Filter bleibt übersprungen.
+
+| Fall | Ergebnis |
+|---|---|
+| AC-1: levels ohne Onset, kein `active_metrics` | **14 Regeln, Onset ✓, CAPE ✓** (vorher 3) |
+| AC-4: keine levels | **14 Regeln, CAPE ✓** — unverändert |
+| Abwahl-Probe `{wind_gust: off, …}` | **13 Regeln, `wind_gust` fehlt** — `off` bleibt wirksam |
+| AC-2/AC-3: `active_metrics` vorhanden | von der Änderung nicht berührt |
+
+### M8 — Nebenbefund: `metric_alert_levels` mischt zwei Vokabulare → Issue #1981
+
+Am echten Prod-Preset `cp-eb6ba0b239d90e37` („Le Var") gemessen: das Feld enthält
+Summary-Keys (`temp_max_c`, `gust_max_kmh`, …) **und** Metrik-Namen (`wind_gust`, …).
+`expand_per_metric_levels` löst über `AlertMetric(metric_str)` auf — Summary-Keys werfen
+`ValueError` und werden verworfen. **8 von 11 Einträgen wirkungslos, darunter vier bewusste
+Abwahlen.** Belegt, dass die Abwahl schaden kann: Metrik im Metriken-Reiter aktiv +
+`temp_max_c: off` → Temperatur-Alarm feuert trotzdem.
+
+Nicht Teil dieser Lieferung (Le Var hat `active_metrics`, ist also nicht der #1971-Fall).
+Als eigenes Issue **#1981** geführt (Triage a: nutzersichtbares Fehlverhalten).
+
 ## Related Files
 
 | Datei | Relevanz |
