@@ -24,8 +24,17 @@ PRUEFORT = WIRKORT. Gefahren wird die echte Kette
 RED (neues Verhalten, schlaegt HEUTE fehl):
   - test_onset_alarm_fires_without_active_metrics_key                (AC-1)
   - test_cape_rule_survives_missing_active_metrics_with_levels_set   (AC-6, zweite Haelfte)
-  - test_explicit_off_survives_standard_levels_merge                 (AC-7)
-  - test_explicit_off_metric_stays_silent_while_supplemented_metric_fires (AC-7)
+  - test_explicit_off_survives_standard_levels_merge                 (AC-7, Regel-Ebene)
+  - test_explicit_off_wind_gust_stays_silent_while_supplemented_metric_fires
+                                                                     (AC-7, Feld-Ebene)
+  - test_explicit_off_collision_free_metric_stays_silent             (AC-7, Gegenbeleg)
+
+Der `wind_gust`-Test der Feld-Ebene bleibt auch nach einem reinen
+Level-Merge rot: die nachgefuellte `wind_change`-Regel deckt dasselbe
+Summary-Feld `gust_max_kmh` ab. Das ist Absicht — er bewacht, dass das
+Nachfuellen den bestehenden Feld-Schutz (`claimed_fields`, alert_preset.py)
+in den `display_config is None`-Zweig mitnimmt, statt die Abwahl des Nutzers
+zu unterwandern.
 
 GUARD (bestehendes Verhalten, HEUTE schon gruen, darf nicht kippen):
   - test_partial_active_metrics_only_selected_metric_fires           (AC-3)
@@ -329,29 +338,81 @@ def test_explicit_off_survives_standard_levels_merge():
     )
 
 
-def test_explicit_off_metric_stays_silent_while_supplemented_metric_fires():
-    """AC-7 (RED) — dieselbe Zusicherung, aber bis zum Alarm durchgefahren.
+def test_explicit_off_wind_gust_stays_silent_while_supplemented_metric_fires():
+    """AC-7 (RED) — der Fall, der in der Praxis vorkommt, bis zum Alarm
+    durchgefahren.
 
     GIVEN ein Preset ohne `active_metrics` mit `metric_alert_levels =
-    {fresh_snow: "off", precipitation_sum: "standard"}`.
+    {wind_gust: "off", precipitation_sum: "standard"}`.
+
+    WHEN die Boeen (20 -> 60 km/h) und die Nullgradgrenze (2500 -> 1500 m,
+    Δ=1000 > 400) ZEITGLEICH springen.
+
+    THEN meldet nur die vom Fix ERGAENZTE Nullgradgrenze; die ausdruecklich
+    abgewaehlten Boeen bleiben still.
+
+    ROT UND ROT BLEIBEND — dieser Test bewacht die FELD-Ebene, nicht die
+    Regel-Ebene. Gemessen:
+
+        HEUTE               1 Regel   | gust_max_kmh bewacht: None
+                                      | gemeldet: []
+        NAIVER LEVEL-MERGE  13 Regeln | gust_max_kmh bewacht: 25.0
+                                      | gemeldet: ['freezing_level_m',
+                                                   'gust_max_kmh']
+
+    Heute faellt er ueber die Nullgradgrenze (nichts ist ergaenzt). Ein
+    blosser `{**_STANDARD_METRIC_LEVELS, **levels}`-Merge macht ihn NICHT
+    gruen, sondern verschiebt den Fehlschlag auf die zweite Zusicherung: die
+    nachgefuellte `wind_change`-Regel deckt laut
+    `_ALERT_DELTA_METRIC_TO_FIELDS` (`weather_change_detection.py:74`)
+    DASSELBE Summary-Feld `gust_max_kmh` ab und stellt es mit 25.0 wieder
+    scharf — die Abwahl des Nutzers waere unterwandert, obwohl die Regelmenge
+    (Test darueber) richtig aussieht.
+
+    Gruen wird er erst, wenn das Nachfuellen den bereits vorhandenen
+    Feld-Schutz mitbenutzt: `claimed_fields`/`suppressed_fields`
+    (`alert_preset.py:347-358`) schuetzen die Felder ausdruecklich gesetzter
+    Metriken — bisher nur im Zweig `display_config is not None`.
+    """
+    config = _eval_config({"metric_alert_levels": {
+        "wind_gust": "off", "precipitation_sum": "standard",
+    }})
+    gemeldet = _gemeldet(
+        config,
+        alt={"gust_max_kmh": 20.0, "freezing_level_m": 2500.0},
+        neu={"gust_max_kmh": 60.0, "freezing_level_m": 1500.0},
+    )
+    assert "freezing_level_m" in gemeldet, (
+        "Die vom Standard-Satz ergaenzte Nullgradgrenze meldet nicht "
+        f"(Δ=1000 m > 400 m). Gemeldet wurde: {sorted(gemeldet)!r}"
+    )
+    assert "gust_max_kmh" not in gemeldet, (
+        "Die ausdruecklich abgewaehlten Boeen (`wind_gust: 'off'`) melden "
+        f"trotzdem (Δ=40 km/h). Gemeldet wurde: {sorted(gemeldet)!r} — die "
+        "nachgefuellte `wind_change`-Regel deckt dasselbe Summary-Feld "
+        "`gust_max_kmh` ab und unterwandert die Abwahl. Der Feld-Schutz "
+        "(`claimed_fields`/`suppressed_fields`, alert_preset.py:347-358) "
+        "greift im Zweig `display_config is None` noch nicht."
+    )
+
+
+def test_explicit_off_collision_free_metric_stays_silent():
+    """AC-7 (RED, kollisionsfreier Gegenbeleg) — dieselbe Zusicherung mit
+    einer Groesse, deren Summary-Feld KEINE zweite Metrik teilt.
+
+    GIVEN `metric_alert_levels = {fresh_snow: "off", precipitation_sum:
+    "standard"}` ohne `active_metrics`.
 
     WHEN Neuschnee (0 -> 40 cm, Δ=40 weit ueber der Standard-Schwelle 8) und
-    die Nullgradgrenze (2500 -> 1500 m, Δ=1000 > 400) ZEITGLEICH springen.
+    die Nullgradgrenze (2500 -> 1500 m) ZEITGLEICH springen.
 
-    THEN meldet nur die vom Fix ERGAENZTE Nullgradgrenze; der ausdruecklich
-    abgewaehlte Neuschnee bleibt still.
+    THEN meldet nur die ergaenzte Nullgradgrenze.
 
-    RED heute: heute ist nur `precipitation_sum` scharf, die Nullgradgrenze
-    also ebenfalls still -> die erste Zusicherung schlaegt fehl.
-
-    WARUM NICHT `wind_gust` WIE IN DER SPEC-ILLUSTRATION: `wind_change` deckt
-    laut `_ALERT_DELTA_METRIC_TO_FIELDS` DASSELBE Summary-Feld `gust_max_kmh`
-    ab. Ein Boeen-Sprung meldet daher auch bei `wind_gust: "off"` — ueber die
-    ergaenzte `wind_change`-Regel, nicht ueber eine kaputte Abwahl. Der
-    Nachweis "abgewaehlt bleibt still" braucht deshalb eine Groesse mit
-    EIGENEM Feld; `fresh_snow` (`snow_new_sum_cm`) und `freezing_level`
-    (`freezing_level_m`) sind kollisionsfrei. Die Regelmengen-Zusicherung fuer
-    `wind_gust` steht unveraendert im Test darueber.
+    Er ERSETZT den `wind_gust`-Test oben NICHT, sondern trennt zwei Ursachen:
+    `fresh_snow` haengt allein an `snow_new_sum_cm`, `freezing_level` allein
+    an `freezing_level_m`. Bleibt dieser Test rot, waehrend der obere gruen
+    ist, liegt es an der Ergaenzung selbst; bleibt nur der obere rot, liegt es
+    ausschliesslich an der Feld-Kollision `wind_change` ⊃ `gust_max_kmh`.
     """
     config = _eval_config({"metric_alert_levels": {
         "fresh_snow": "off", "precipitation_sum": "standard",
