@@ -157,3 +157,103 @@ Die Migration muss also ohne vorherige Bestandsaufnahme sicher sein — Read-Mod
 3. Definition „frischester verfügbarer Stand" für AC-3. (R3)
 4. Behandlung schwellengefilterter Kanäle. (R4)
 5. Bekommt der Briefing-Pfad überhaupt eine Kanal-Dimension, oder nur der rollierende Anker? (R2)
+
+---
+
+## Analysis (Phase 2)
+
+### Type
+Bug mit Umbaucharakter (Label `type:bug`, `triage:a` — nutzersichtbares Fehlverhalten), umgesetzt als
+Erweiterung eines bestehenden Mechanismus (ADR-0056), nicht als Neubau.
+
+### Der Schlüsselbefund: die #1629-Garantie hängt gar nicht am rollierenden Anker
+
+Selbst nachgeprüft (`trip_report_scheduler.py:1543` und `:1651`): `_anchor_and_reset()` — und damit
+`save()` + `save_dated()` — wird **zweimal unbedingt** aufgerufen: einmal im `except`-Zweig um den
+Versandaufruf, einmal im regulären Weg außerhalb jeder `sent`-Verzweigung.
+
+Daraus folgt die Auflösung des Zielkonflikts aus R1:
+
+- **Tier 1** (datierter Briefing-Anker) trägt die #1629-Garantie gegen die stille Wache. Er bleibt
+  unbedingt und kanalagnostisch — ohnehin zwingend, weil er zugleich die Radar-Unterdrückungs-Referenz
+  ist (ADR-0056 AC-11).
+- **Tier 2** (rollierender Alarm-Anker) kann daher **vollständig** kanalscharf und zustellungsgebunden
+  werden, ohne die stille Wache zurückzuholen: fehlt einem Kanal sein Tier-2-Eintrag, fällt die Kette
+  auf Tier 1 zurück, der taggleich immer vorhanden ist.
+
+Das macht Variante (ii) aus der Vorüberlegung — ein zusätzlicher „technischer" kanalloser Anker —
+überflüssig. Er existiert bereits.
+
+### Gewählte Umsetzungsvariante: eine Datei je Kanal
+
+`{trip_id}_alarm_anchor_{channel}.json` statt verschachteltem JSON.
+
+Begründung: `weather_snapshot.py` führt seine drei Rollen bereits als drei separate Dateien
+(`:104`, `:131`, `:215`), jede Methode überschreibt vollständig — es gibt **keinen** Merge-Pfad im Modul.
+Verschachteltes JSON bräuchte einen neuen Read-Modify-Write-Mechanismus, weil die vier Kanäle nie
+gleichzeitig geschrieben werden. Variante (a) verlängert das etablierte Muster um eine Achse.
+Unterverzeichnis je Kanal bringt keinen Zusatznutzen.
+
+Der vervierfachte Platzbedarf (der Anker hält vollständige Stundenreihen aller Etappen) ist **nicht**
+vermeidbar und auch nicht durch verschachteltes JSON zu umgehen: divergierende Zustellung bedeutet
+fachlich verschiedene Wetterstände je Kanal — genau der Zweck des Tickets. Deduplizierung wäre falsch.
+
+### AC-4 (Bestandsdaten) — Korrektur zur Agenten-Empfehlung
+
+Die strategische Bewertung schlug vor, die alte kanallose `{trip_id}_alarm_anchor.json` verwaisen zu
+lassen (reiner Ableitungs-Cache). **Das widerspricht AC-4.** Richtig ist:
+`load_alarm_anchor(trip_id, channel)` fällt auf die kanallose Altdatei zurück, wenn die kanalspezifische
+fehlt — damit dient der Bestand beim ersten Lauf allen Kanälen als Ausgangsbasis, ohne Migrationsskript
+und ohne Datenverlust. Der Rückfall ist zugleich der natürliche Zustand für jeden Kanal, der noch nie
+zugestellt hat.
+
+### Schwellengefilterte Kanäle (R4) — geklärt, keine Sonderregel nötig
+
+Ein von `split_by_threshold()` entfernter Kanal (`trip_alert.py:1508-1511`) erscheint weder in
+`sent_channels` noch in `failed_channels`, also nie in `delivered_channels`
+(`notification_service.py:142-144`). Unter der zustellungsgebundenen Regel bekommt er damit von selbst
+keinen frischen Merker — fachlich richtig, denn der Empfänger hat auf diesem Kanal nichts bekommen.
+
+Die Fehlerquelle liegt in der Umsetzung, nicht im Konzept: iteriert der Schreibpfad versehentlich über
+`effective_channels` statt `delivered_channels`, bricht die Zusicherung **still**. Das braucht einen
+eigenen Test und ist ein Pflicht-Punkt der Mutations-Gegenprobe.
+
+### AC-3 „frischester verfügbarer Stand" — Empfehlung (c)
+
+| Option | Folge |
+|---|---|
+| (a) jüngster Merker eines **anderen** Kanals | Kontamination: SMS vergliche gegen einen Stand, den nur die E-Mail erhalten hat — unterläuft den Ticket-Zweck |
+| (b) der aktuelle `fresh_weather` | Vergleich gegen sich selbst ⇒ strukturell Nulldifferenz ⇒ der Kanal meldet dauerhaft „keine Änderung": ein stiller Ausfall anderer Bauart |
+| **(c) der taggleiche Tier-1-Briefing-Anker** | **empfohlen** — behauptet keine Zustellung, ist immer vorhanden, ist bereits Teil der bestehenden Kette; keine neue Logik |
+
+### Affected Files
+
+| Datei | Änderung | Beschreibung |
+|---|---|---|
+| `src/services/weather_snapshot.py` | MODIFY | `save_alarm_anchor` / `load_alarm_anchor` / `alarm_anchor_target_date` um `channel` erweitern; Dateinamensschema; Rückfall auf kanallose Altdatei (AC-4) |
+| `src/services/trip_alert.py` | MODIFY | `_write_rolling_alarm_anchor` über `delivered_channels` schleifen; Tier-2-Schritt der Kette kanalscharf; `_effective_anchor_age` je Kanal |
+| 5 Bestandstests (Dateiname/JSON direkt) | MODIFY | `test_alert_rolling_anchor.py`, `test_alert_anchor_day_guard.py`, `test_onset_anchor_fresh_window_symmetry.py`, `test_onset_shift_alert.py`, `test_compare_alert_anchor_unaffected.py` |
+| 4 Bestandstests (nur API) | ggf. unverändert | überleben, wenn `channel` einen Default bekommt |
+| neue Tests | CREATE | AC-1 bis AC-4 + Schwellenfilter-Fall |
+| `docs/adr/ADR-0056` | MODIFY | Amendment (Weiterentwicklung desselben Mechanismus, keine Ablösung, kein neues ADR) |
+
+**Refactoring-Oberfläche im Produktivcode ist klein:** außerhalb von `weather_snapshot.py` kennt nur
+`trip_alert.py` den Anker (`:343`, `:432`, `:688`, `:796`, `:804`, `:819`).
+
+### Scope Assessment
+- Produktivdateien: 2
+- Geschätzte LoC: +100 bis +160 (Limit 250; Tests und `docs/` zählen nicht)
+- Risiko: **MITTEL** für Speicher- und Gating-Änderung (etabliertes Muster, dichtes Testnetz)
+
+### Open Questions — PO-Entscheid nötig
+
+1. **AC-2 wörtlich würde #1629 brechen.** AC-2 verweist auf den Briefing-Anker
+   (`trip_report_scheduler.py:1527-1531`). Genau dieser unbedingte Write ist die #1629-Absicherung.
+   Vorschlag: AC-2 gilt für den **rollierenden** Anker (Tier 2), Tier 1 bleibt unbedingt.
+2. **Ein Evaluierungslauf oder einer je Kanal?** Heute wertet die Engine **einmal** gegen **einen**
+   `cached`-Stand aus (`trip_alert.py:311-329`), das Ergebnis geht an alle Kanäle. Kanalscharfe Anker
+   werfen die Frage auf, ob je Kanal getrennt ausgewertet wird. Vorschlag für S1: ein gemeinsamer Lauf;
+   die Kanal-Präzision wirkt auf Schreib-/Lesepfad und die Nachweiszeile, nicht auf die
+   Auslöse-Entscheidung.
+3. **Scope-Grenze:** Der Briefing-Anker bleibt kanalagnostisch. Ein Kanal ohne eigenen Tier-2-Eintrag
+   vergleicht gegen den Tagesstand, den er möglicherweise selbst nie erhalten hat.
