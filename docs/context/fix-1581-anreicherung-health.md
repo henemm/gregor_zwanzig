@@ -113,3 +113,158 @@ ausschließlich Open-Meteo-Abrufe.
    (`onset_time`, ~Z. 274). Zeitformat und `onset_minutes` bleiben unberührt — abgestimmt.
 8. **Nebenbefund aus #1197 (von Peer gemeldet):** `staging_gate.py` stuft Backend-Änderungen
    gelegentlich fälschlich als `docs-only` ein. Beim Deploy Scope selbst gegenprüfen.
+
+---
+
+## Analysis (Phase 2)
+
+### Type
+Bug (fehlende Folgepflicht aus ADR-0018) — umzusetzen als additive Beobachtbarkeit.
+
+### Entscheidung 1: eigener Top-Level-Kanal `enrichment_health`
+
+**Empfehlung: eigener Kanal**, strukturell wie `warn_service_health` — ein neues
+Top-Level-Feld in `internal/scheduler/scheduler.go:830f`, eigener Aggregator, eigenes
+Journal. NICHT als zusätzliche Schlüssel innerhalb von `briefing_health`.
+
+Begründung: `check-gregor20.sh` liest `briefing_health` als „ist das Briefing gesund".
+Zusätzliche Schlüssel dort zwingen jeden künftigen Leser, zwischen briefing-kritischen und
+nicht-kritischen Schlüsseln **innerhalb desselben Objekts** zu unterscheiden — die
+Vermengung, vor der ADR-0018 warnt. Ein eigenes Objekt macht die Trennung strukturell statt
+konventionell. Präzedenzfall existiert: `warn_service_health` ist genau so ein eigener
+Kanal für einen nicht-briefing-kritischen Dienst.
+
+Wichtig: **keine eigene Schwere-Berechnung in Go.** Sonst gäbe es drei Muster für dieselbe
+Frage („wie lange schon degradiert").
+
+### Entscheidung 2: Rohdaten — der Widerspruch im Ticket ist auflösbar
+
+Der Issue-Text („analog `provider_error_streak_since`") und AC-S2-4 („Schwellen bleiben
+außerhalb") widersprechen sich nur scheinbar. „Mit der Ausfalldauer wachsen" ist eine
+Aussage über die **Wirkung**, nicht über die **Bauart**: `last_success_at` wächst
+automatisch, sobald außen `jetzt − last_success_at` gebildet wird — genau das tut
+`check-gregor20.sh:495-497` heute für `warn_service_health`.
+
+**Empfehlung: Rohdaten** (`last_attempt_at`, `last_success_at`, `last_fallback_at`,
+`self_throttled`), keine Streak-Rechnung in Go. Der Streak-Bauart steckt eine feste
+2 h-Lücken-Schwelle **innen** (`briefing_health.go:404`); die ist beim Briefing sinnvoll,
+beim Radar mit seinem Cache aber schwer zu wählen und nur per Deploy korrigierbar.
+
+Preis: „wächst mit der Dauer" ist dann keine in diesem Repo testbare Eigenschaft mehr,
+sondern eine der externen Auswertung. Genau das verlangt AC-S2-4.
+Diese Auflösung gehört als Entscheidungssatz ins ADR-0047-Addendum, sonst wird der
+scheinbare Widerspruch bei der nächsten Lesung erneut aufgemacht.
+
+### Entscheidung 3: eigenes Journal, kein `call_log.py`-Ausbau
+
+`call_log.py` ist an HTTP-Abrufe gegen Open-Meteo gebunden: Quellenerkennung über
+Aufrufer-Stack-Marker (Z. 44-56), Schema `{ts, endpoint, status, source, error}`.
+Weder die Gewitter-Vertretung (kein Open-Meteo-Request) noch der Radar-Fall (fünf Quellen
+über verschiedene Fetch-Pfade) passen hinein. Schwerwiegender: `call_log` schreibt nach
+`openmeteo_calls.jsonl` — **dieselbe Datei, die `briefing_health` liest**. Ein Ausbau dort
+würde `coreBriefingSources` berühren und genau die Vermengung erzeugen, die vermieden
+werden soll.
+
+Stattdessen neues Modul analog `warn_egress.py:304-346`, Journal
+`data/diagnostics/enrichment_calls.jsonl`, Pfad bei **jedem** Aufruf über
+`get_data_root()` aufgelöst (Falle #1633: Modulkonstante bindet vor der Testfixture).
+
+### Der gemeinsame Baustein (AC-S2-3)
+
+Ein Schreibweg, zwei Aufrufer:
+
+```
+log_enrichment_call(path, outcome, detail=None)
+  path:    "thunder" | "radar_nowcast"
+  outcome: "ok" | "fallback" | "unavailable" | "self_throttled"
+```
+
+Der Dreischnitt „gelungen / gescheitert / selbst gedrosselt" existiert in beiden Pfaden
+bereits fachlich — Radar trennt ihn heute schon (`radar_service.py:559` vs. `:567-571`),
+Gewitter kennt zusätzlich „Vertretung sprang ein".
+
+Go-Seite: `internal/scheduler/enrichment_health.go` mit `aggregateEnrichmentCalls()` und
+`EnrichmentHealth()`, gruppiert nach `path`, Schema 1:1 wie `WarnServiceHealth()`
+(`nilIfEmpty`, fehlende Datei ≠ Fehler, `journal_read_error` nur bei echtem Lesefehler).
+
+### 🔴 Befund beim Gegenprüfen: ein stiller Rückzug, den das Ticket nicht kennt
+
+`thunder_enrichment.py:406-409` — fällt die Primärquelle aus und ist **keine** Vertretung
+verfügbar (oder die Vertretung wurde bereits befragt), kehrt die Funktion **wortlos**
+zurück: kein Marker, kein `fallback_model`, **nicht einmal ein `logger.warning`**.
+Der im Issue genannte `logger.warning` (Z. 281) greift nur, wenn eine Ausnahme bis nach
+außen propagiert — also wenn die Vertretung es *versucht* und scheitert.
+
+Damit ist der blindeste Fall nicht der beschriebene, sondern dieser. Er gehört als
+`outcome="unavailable"` ins Journal.
+
+Die Funktion hat fünf Ausgänge, nicht drei: stiller Rückzug (Z. 407-409), leere Antwort
+(Z. 414), nichts gefüllt (Z. 418), Erfolg mit Primärquelle (Z. 421-426), Erfolg über
+Vertretung (Z. 428-441) — plus die nach außen propagierende Ausnahme.
+
+### Zwei Fallen, gegengeprüft und bestätigt
+
+1. **Cache-Verzerrung im Radar-Pfad ist real.** `_derive_result()` wird bei Cache-Hit
+   (`radar_service.py:205`) **und** Cache-Miss (`:219`) aufgerufen. Ein dort platzierter
+   Journal-Aufruf würde jeden Cache-Hit als „ok" buchen — ein Dauerausfall, der aus dem
+   Cache weiterbedient wird, sähe lebendig aus. Der Aufruf gehört in `get_nowcast()` in
+   den Miss-Zweig, nicht in `_derive_result()`.
+2. **Fail-soft braucht einen eigenen inneren Fang.** Läuft der Journal-Aufruf im
+   bestehenden `except Exception` von `enrich_thunder()` (Z. 279-281) mit, verschleiert ein
+   Diagnosefehler einen echten Anreicherungsfehler. Eigener `try/except Exception: pass`
+   je Schreibaufruf, wie `warn_egress.py:329-347`.
+
+### 🔴 Ehrliche Einschätzung zu AC-S2-2
+
+In der empfohlenen Bauart ist AC-S2-2 („ein Ausfall meldet nicht Briefing-Ausfall")
+**strukturell trivial wahr**: getrennte Journale und getrennte Aggregatoren haben gar
+keinen gemeinsamen Codepfad, über den sich das eine ins andere durchschlagen könnte.
+Ein Test, der das prüft, bewacht nichts.
+
+Vorschlag für einen Test, der wirklich etwas fängt: ein Wächter über `coreBriefingSources`
+selbst — die Map enthält **genau** `{briefing, briefing_nacht}`. Trägt jemand später eine
+Anreicherungsquelle dort ein, wird er rot. Das ist die Mutation, die im Betrieb wehtut,
+und der einzige Weg, auf dem die Grenze noch fallen kann.
+
+### Scope
+
+| Datei | Aktion | LoC (ca.) | Scheibe |
+|---|---|---|---|
+| `src/providers/enrichment_health.py` | CREATE | 60-80 | 1 |
+| `src/providers/thunder_enrichment.py` | MODIFY (5 Ausgänge) | 20-25 | 1 |
+| `tests/tdd/test_thunder_enrichment_health_journal.py` | CREATE | 120-150 | 1 |
+| `internal/scheduler/enrichment_health.go` | CREATE | 130-160 | 1 |
+| `internal/scheduler/enrichment_health_test.go` | CREATE | 150-200 | 1 |
+| `internal/scheduler/briefing_health_test.go` | MODIFY (Wächter über `coreBriefingSources`) | 20-30 | 1 |
+| `internal/scheduler/scheduler.go` | MODIFY (ein Schlüssel) | 1-2 | 1 |
+| `src/services/radar_service.py` | MODIFY (Miss-Zweig) | 15-25 | 2 |
+| `tests/tdd/test_radar_nowcast_health_journal.py` | CREATE | 100-140 | 2 |
+| `internal/scheduler/enrichment_health_test.go` | MODIFY (Radar-Fälle) | 60-80 | 2 |
+| `docs/adr/0047-*.md`, `docs/adr/0018-*.md` | MODIFY (Addendum) | 30-45 | 1+2 |
+
+**Summe ohne Doku: ~700-900 LoC.** Das Limit von 500 reicht nicht; auf 900 anzuheben ist
+ehrlicher, als den Nachweis zu verkürzen. Der Löwenanteil sind Tests.
+
+Reihenfolge: Scheibe 1 bringt den **vollständigen** gemeinsamen Baustein; Scheibe 2 fügt
+nur den zweiten Aufrufer und Testfälle hinzu — kein zweiter Mechanismus.
+
+### Repo-übergreifend
+
+`henemm-infra/scripts/check-gregor20.sh` braucht einen eigenen Abschnitt. Anreicherung ist
+**nicht** briefing-kritisch, also:
+- `fallback` erfolgreich / `self_throttled` → höchstens Soft-WARN, kein Heartbeat-Block
+- `unavailable` über ein **langes** Frischefenster (24-48 h, nicht die 3 h des
+  Warn-Dienstes) → EXT-FAIL, sichtbar, aber ohne „Gregor ist down"
+- CORE nur bei `journal_read_error` (unser eigener Fehler, analog `warn_service_health`)
+
+Das lange Fenster ist fachlich begründet: der Issue-Text nennt selbst „drei Tage
+Dauerausfall sind ein Befund" — Tage, nicht Stunden.
+
+Die Änderung dort geht per MQ an `infra`, inhaltlich nach Scheibe 1 abgestimmt, final nach
+Scheibe 2.
+
+### Open Questions (PO)
+
+- [ ] Entscheidungen 1-3 bestätigen
+- [ ] AC-S2-2 durch den `coreBriefingSources`-Wächter ersetzen?
+- [ ] LoC-Limit auf 900
