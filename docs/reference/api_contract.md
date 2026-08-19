@@ -579,6 +579,8 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | snow_depth_cm         | float \| None        | Schneehöhe [cm] (optional, Winter)               |
 | freezing_level_m      | int \| None          | Nullgradgrenze [m] (optional, Winter)            |
 | snowfall_limit_m      | int \| None          | Schneefallgrenze [m] — MIN über das Segment (#1391) |
+| thunder_onset_utc     | datetime \| None     | **Beginn** des Gewitters (#1468): erste Stunde **im Tagesfenster** mit Gewitterstufe ≥ `LOW`, als naiver UTC-Zeitstempel (Hausnorm `src/utils/timezone.py`), **keine** Stundenzahl. `None`, wenn im Fenster kein Gewitter auftritt — ebenso bei Wetter-Ankern aus der Zeit vor #1468 (additives Feld, alte Anker laden unverändert). Maßgeblich ist das **für die Tour konfigurierte** Tagesfenster (`day_window_start_hour`/`day_window_end_hour`), damit Alarm und Briefing dieselbe Uhrzeit nennen |
+| precip_heavy_onset_utc | datetime \| None    | **Beginn** des Starkregens (#1468), gleiche Semantik: erste Stunde im Tagesfenster mit einer Regenintensität ≥ 4,0 mm/h (dieselbe Schwelle wie `radar_service.INTENSITY_HEAVY`). Datenquelle ist `precip_rate_mmph`, wo der Provider sie liefert (Geosphere), sonst der Stundenwert `precip_1h_mm` (Open-Meteo führt keine Rate) — bei 1-Stunden-Auflösung dieselbe Zahl |
 | aggregation_config    | dict[str, str]       | Metadata: Aggregations-Funktionen pro Metrik     |
 
 #### SegmentWeatherCache
@@ -601,6 +603,19 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | direction   | str               | "increase", "decrease"                             |
 | segment_id  | str               | ID der Etappe, in der die Änderung erkannt wurde (z.B. "1", "2", "Ziel"); Default `""`, wird vom Detector befüllt (Issue #131). |
 | occurred_at | datetime \| None  | Zeitpunkt des auslösenden Spitzenwerts, UTC-aware; `None` wenn nicht bestimmbar (Best-effort). Die Formatierung in die Ortszeit passiert erst in der Projektionsschicht (`output/renderers/alert/project.py`), nicht beim Erzeugen dieses DTOs (Issue #1386). |
+
+**Beginn-Verschiebungen (#1468) nutzen dasselbe DTO mit anderer Werte-Bedeutung.**
+Trägt `metric` eines der beiden Beginn-Felder (`thunder_onset_utc`,
+`precip_heavy_onset_utc`), dann sind `old_value`/`new_value` **Epochensekunden**
+(nicht Messwerte) und `delta`/`threshold` **Sekunden** (nicht Einheiten der Größe).
+Grund: die Differenz zweier Epochensekunden ist die echte Zeitspanne, auch über die
+Kalendergrenze — 23:00 → 01:00 sind 2 Stunden später, nicht 22 Stunden früher.
+`direction` ist `"decrease"` für einen **vorgezogenen** und `"increase"` für einen
+**verzögerten** Beginn; `occurred_at` bleibt `None`, weil der Wert selbst bereits ein
+Zeitpunkt ist. Uhrzeiten und Richtungswort entstehen erst in der Projektionsschicht
+(`output/renderers/alert/project.py`), wo die Ortszeit bekannt ist — deshalb erscheinen
+die Werte im Alarm-Protokoll (`value`/`previous_value`, #1954) als **rohe
+Epochensekunden**; die lesbare Aufbereitung dort ist als Nebenbefund in #1199 notiert.
 
 #### TripWeatherConfig
 | Feld            | Typ           | Beschreibung                                |
@@ -1527,7 +1542,7 @@ Returns catalog of all available weather metrics with format mode options and de
 | metrics[].trip_default_enabled | bool | **Neu Issue #1552.** Ob die Größe zur Vorbelegung eines **neu angelegten Trips** gehört — unabhängig von `default_enabled` (das weiterhin die Orte-/Abonnement-Konfiguration über `build_default_display_config()` versorgt; vor #1552 zeigte der Anlege-Dialog `default_enabled` als Vorbelegung an, während der Versand eines nie eingestellten Trips tatsächlich einem anderen Siebener-Satz folgte — Überschneidung nur 5 von 10). Quelle: `MetricDefinition.trip_default_rank is not None` (`metric_catalog.py`). **Seit Issue #1728 Scheibe 1 (2026-08-15) tragen neun statt sieben Größen einen Rang:** `temperature`(1), `wind`(2), `gust`(3), `precipitation`(4), `thunder`(5), `freezing_level`(6), `visibility`(7), `temperature_day_low`(8), `temperature_day_high`(9) — die beiden neuen Ränge sind angehängt, die ursprünglichen sieben unverändert. `wind_chill_day_low`/`wind_chill_day_high` bekommen bewusst **keinen** Rang (folgen der Lage von `wind_chill` selbst, das ebenfalls keinen Rang trägt) — dieselbe Rangfolge, aus der `DEFAULT_TRIP_METRIC_IDS` (`src/output/renderers/trip_metric_ids.py`) abgeleitet wird, statt sie hart zu listen |
 | metrics[].sms_code | string | GSM-7-safe short token for the metric in SMS/Subject/Telegram alert tokens (e.g., `W`, `G`, `R`, `PR`, `TH`, `CP`, `SL`, `VS`, `HU`). Single source for alert renderers (Issue #914 Slice 1); the metric catalog is the only place these are defined |
 | metrics[].decimals | int \| null | Rounding precision for display (e.g., `precipitation: 1`, `visibility: 1`, most metrics `0`). `null` ⇒ fall back to the unit-based heuristic in `format_metric_value()` |
-| metrics[].aggregations | `{id, label, alert_metric}[]` | **Neu Issue #1357, `alert_metric` neu #1435 E1a:** die für diese Größe tatsächlich berechenbaren Tagesauswertungen in fester Reihenfolge (`min`, `max`, `avg`, `sum`), mit deutschem Label. Quelle: `metric_catalog.available_aggregations()`/`aggregation_label_de()` über `MetricDefinition.summary_fields` — **nicht** `default_aggregations` (verspricht bei `snowfall_limit`/`freezing_level` mehr, als berechenbar ist). Weniger als zwei Einträge ⇒ der Editor zeigt keine Auswahl (kein wirkungsloses Bedienelement). **Korrektur 2026-08-15 (Issue #1728 Scheibe 2):** Diese editor-seitige Bedingung ist gegenstandslos geworden — der Bedienabschnitt „05 — Auswertungen", der dieses Feld auswertete, ist ersatzlos entfernt (`docs/specs/modules/feat_1728_s2_editor.md`). Der Editor zeigt für **keine** Größe mehr eine Auswertungswahl, unabhängig vom Inhalt dieses Felds. Das Feld selbst bleibt in `GET /api/metrics` bestehen (kein Backend-Change), hat aber keinen Leser mehr im Frontend |
+| metrics[].aggregations | `{id, label, alert_metric}[]` | **Neu Issue #1357, `alert_metric` neu #1435 E1a:** die für diese Größe tatsächlich berechenbaren Tagesauswertungen in fester Reihenfolge (`min`, `max`, `avg`, `sum`), mit deutschem Label. Quelle: `metric_catalog.available_aggregations()`/`aggregation_label_de()` über `MetricDefinition.summary_fields` — **nicht** `default_aggregations` (verspricht bei `snowfall_limit`/`freezing_level` mehr, als berechenbar ist). Weniger als zwei Einträge ⇒ der Editor zeigt keine Auswahl (kein wirkungsloses Bedienelement). **Korrektur 2026-08-15 (Issue #1728 Scheibe 2):** Diese editor-seitige Bedingung ist gegenstandslos geworden — der Bedienabschnitt „05 — Auswertungen", der dieses Feld auswertete, ist ersatzlos entfernt (`docs/specs/modules/feat_1728_s2_editor.md`). Der Editor zeigt für **keine** Größe mehr eine Auswertungswahl, unabhängig vom Inhalt dieses Felds. Das Feld selbst bleibt in `GET /api/metrics` bestehen (kein Backend-Change), hat aber keinen Leser mehr im Frontend. **Ergänzung #1468:** die Auswertung `onset` (Ereignis-Beginn, `summary_fields["onset"]` bei `thunder`/`precipitation`) erscheint hier bewusst **nicht** — sie steht nicht in `_AGGREGATION_ORDER`, weil ein Zeitpunkt keine wählbare Tages-Auswertung einer Stundenreihe ist. Folge: die beiden Alarm-Identitäten `thunder_onset`/`precipitation_heavy_onset` sind über dieses Feld nicht erreichbar und erscheinen deshalb auch nicht als eigene Zeile im Alarme-Reiter (s. Section 24) |
 | metrics[].aggregations[].alert_metric | string \| null | **Neu #1435 E1a.** Die absolute Alarm-Identität DIESER Auswertung (`MetricDefinition.alert_metrics.get(aggregation_id)`), `null` wenn diese Auswertung keinen eigenen Alarm auslöst. Bewusst **ohne** den `change_alert_metric`-Rückfall aus `alert_metric_for()` — der gehört zur Größe als Ganzes, nicht zu einer einzelnen Auswertung, und steht als eigenes Feld (`metrics[].change_alert_metric`) daneben. Beispiel (Staging verifiziert): `gust.aggregations` → `{id: "max", alert_metric: "wind_gust"}`; `wind.aggregations` → `{id: "max", alert_metric: null}` (Wind selbst hat keinen absoluten Alarm, nur den Änderungs-Alarm über `change_alert_metric`) |
 | metrics[].change_alert_metric | string \| null | **Neu #1435 E1a.** Der Änderungsraten-Alarm der Größe (`MetricDefinition.change_alert_metric`), `null` wenn die Größe keinen kennt. Orthogonal zu `aggregations[].alert_metric` — Änderungsraten sind keine Auswertung, sondern an die Größe als Ganzes gekoppelt (analog `default_change_threshold`). Beispiele (Staging verifiziert): `temperature.change_alert_metric = "temperature_change"`, `wind.change_alert_metric = "wind_change"`, `humidity.change_alert_metric = null` (Luftfeuchtigkeit ist bewusst nicht alarmfähig, Issue #889/ADR-0010 — die Auswertungskette `weather_change_detection.py::_ALERT_METRIC_TO_CATALOG_ID` kennt `AlertMetric.HUMIDITY` nicht) |
 | metrics[].cmp | string | Comparison direction: `"über"` or `"unter"`. Single source for the direction/arrow used by deviation and absolute alert detection (Issue #914 Slice 1) — replaces the former hand-coded `_ALERT_METRIC_COMPARISON` dict. **Not** a threshold comparator for the deviation-alert (live) path: per ADR-0013, an event triggers there when `abs(value_to − value_from) ≥ threshold` regardless of `cmp`; `cmp` remains a literal exceeds/falls-below comparator only for `ABSOLUTE`-kind rules (`_detect_absolute_changes()`), which is unused in the send path (`include_absolute=False`) |
@@ -3240,7 +3255,7 @@ export interface AlertRule {
 |------|-----|------------|
 | id | string | Eindeutige Alert-ID (z.B. `alert-gust-1`) |
 | kind | enum | `"absolute"` (Schwellenwert überschritten) oder `"delta"` (Änderung größer als Schwelle) |
-| metric | enum | Gemessene Metrik (AlertMetric-Werte, klein): wind_gust, precipitation_sum, temperature_min/max, thunder_level, snow_line, temperature/wind/precipitation_change. Hinweis: `freezing_level` ist KEINE AlertMetric-Konstante, sondern eine Katalog-ID, die via `catalogIDToAlertMetrics` auf `snow_line` mappt (ADR-0019). Seit Issue #1435 Etappe E5 ist `catalogIDToAlertMetrics` (`internal/model/trip.go`) kein Go-Literal mehr, sondern wird per `go:embed` aus der generierten Datei `internal/model/alert_metric_mapping.generated.json` geladen, die wiederum aus der Python-Quelle `catalog_id_to_alert_metrics()` erzeugt wird (ADR-0046). |
+| metric | enum | Gemessene Metrik (AlertMetric-Werte, klein): wind_gust, precipitation_sum, temperature_min/max, thunder_level, snow_line, temperature/wind/precipitation_change. Hinweis: `freezing_level` ist KEINE AlertMetric-Konstante, sondern eine Katalog-ID, die via `catalogIDToAlertMetrics` auf `snow_line` mappt (ADR-0019). Seit Issue #1435 Etappe E5 ist `catalogIDToAlertMetrics` (`internal/model/trip.go`) kein Go-Literal mehr, sondern wird per `go:embed` aus der generierten Datei `internal/model/alert_metric_mapping.generated.json` geladen, die wiederum aus der Python-Quelle `catalog_id_to_alert_metrics()` erzeugt wird (ADR-0046). **Neu #1468:** zwei Beginn-Metriken `thunder_onset` und `precipitation_heavy_onset` (Schwelle in **Stunden Verschiebung**, nicht in der Einheit der Größe) — sie hängen an denselben Katalog-Größen `thunder`/`precipitation` wie der Stufen-/Summen-Alarm und erben deren Sichtbarkeits-Gate aus dem Wetter-Reiter. |
 | threshold | float | Schwellenwert (z.B. `50.0` für 50 km/h Wind-Böen) |
 | severity | enum | `"info"`, `"warning"`, `"critical"` — nur noch Label am Alert, **nicht mehr** für Versand-Filterung (behebt Severity-Falle: Info-Alerts werden nicht mehr still verschluckt) |
 | enabled | bool | Alert aktiv? (default: true) |
@@ -3365,6 +3380,12 @@ Leerbefund statt Exception/HTTP 500.
 **Notes:**
 - Zustandslos wie `compare-email-preview`/`sms-fidelity-preview` — kein Wetterdaten-Fetch, kein
   Versand, keine Persistenz.
+- **Zwei verschiedene Dinge heißen „onset".** Der Payload-Typ `onset` hier ist der
+  **Radar-Nowcast** („Regen beginnt in ~20 Minuten", Minuten seit jetzt). Die
+  **Beginn-Verschiebung** aus #1468 (Uhrzeit, zu der Gewitter/Starkregen im Tagesfenster
+  einsetzt) ist davon unabhängig und läuft über den Payload-Typ **`changes`**: `metric` ist dort
+  `thunder_onset_utc` bzw. `precip_heavy_onset_utc`, und `old_value`/`new_value`/`delta` sind
+  Epochensekunden bzw. Sekunden (s. `WeatherChange` in Story 2).
 - `official` ruft `services/official_alerts/*` ausschließlich auf (Render-Sequenz gespiegelt aus
   `notification_service.send_official_alert`), ändert keine Zeile in der #1929-Sperrzone
   (`official_alerts.py:1896-2104`).
@@ -3476,6 +3497,38 @@ Empfindlichkeitsstufe seit #1460 T1 über das erreichte Niveau, nicht über die 
 für Verschärfung UND Entwarnung**. `weather_change_detection.py::detect_changes()` vergleicht für
 alle anderen (stetigen) Größen unverändert `abs(delta) > threshold`. Details: ADR-0043.
 
+**Bei den beiden Beginn-Größen (#1468, `thunder_onset`/`precipitation_heavy_onset`) wirkt die
+Empfindlichkeitsstufe über ein richtungsabhängiges Schwellen-PAAR** — die dritte Weiche neben
+Delta und Niveau, ohne neuen `AlertRuleKind`. Gemeldet wird, sobald sich der Beginn im Vergleich
+zum letzten Wetter-Anker um mindestens die für **seine Richtung** geltende Stundenzahl verschiebt:
+
+| Stufe | Beginn vorgezogen | Beginn verzögert |
+|---|---|---|
+| entspannt | ab 2 h | ab 4 h |
+| standard | ab 1 h | ab 3 h |
+| sensibel | ab 1 h | ab 2 h |
+
+Die Asymmetrie ist gewollt (PO-Entscheid): wer statt um 17 Uhr schon um 15 Uhr ins Gewitter läuft,
+ist bereits im Gelände — ein hinausgezögerter Beginn ist die harmlosere Nachricht. Quelle der
+Zahlen: `alert_preset.ONSET_SHIFT_BOUNDS`; die Preset-Tabelle (`_PRESET_TABLE`, gespiegelt nach
+`frontend/src/lib/generated/alertPresetThresholds.generated.json`) führt je Stufe die schärfere
+der beiden Zahlen. War der Beginn im Anker `None` (Ereignis tauchte neu auf), meldet diese Weiche
+nicht — das Erscheinen ist Sache des Stufen-Alarms, sonst stünde derselbe Vorgang zweimal in der
+Meldung. Ändern sich Beginn und Stufe gleichzeitig, erscheinen beide **in einer** Nachricht,
+im Alarm-Protokoll dagegen als zwei getrennte Register-Paare (`("thunder","onset")` neben
+`("thunder","max")`).
+
+**Die Stufe ist für die Beginn-Größen derzeit nicht einzeln einstellbar.** Der Alarme-Reiter
+leitet seine Zeilen aus den Auswertungen des Registers ab (`aggregations[].alert_metric` aus
+`GET /api/metrics` bzw. `alertMetric` aus `GET /api/compare/metrics`), und die Auswertung `onset`
+ist bewusst nicht Teil von `_AGGREGATION_ORDER` — ein Zeitpunkt ist keine wählbare Tages-
+Auswertung. Damit erreicht keine Beginn-Zeile die Oberfläche, und der Backfill in
+`expand_per_metric_levels()` stellt die beiden Größen still auf **„standard"** (1 h früher /
+3 h später), sobald Gewitter bzw. Niederschlag im Wetter-Reiter aktiv ist. Ein explizit
+gespeicherter Wert unter `display_config.metric_alert_levels.thunder_onset` /
+`.precipitation_heavy_onset` wirkt weiterhin, wird von der Oberfläche aber weder gezeigt noch
+gesetzt. Die eigene Bedienbarkeit gehört zu #1462.
+
 **`corridors[].metric` trug zwei Namensräume** (#1444 S2a, aus `resolve_corridor_summary_field()`
 in `corridor_threshold.py`): eine `AlertMetric`-Kennung (die 5 fest verdrahteten Zeilen, z.B.
 `wind_gust`, `snow_line`) ODER einen Katalog-`key` (die 18 seit #1425 aus dem Katalog gespeisten
@@ -3569,6 +3622,20 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-19: Issue #1468 — der **Beginn** von Gewitter und Starkregen ist eine eigene,
+  vergleichbare Alarmgröße. `SegmentWeatherSummary` bekommt zwei additive Felder
+  (`thunder_onset_utc`, `precip_heavy_onset_utc`, beide `datetime|None`, naives UTC, gefiltert auf
+  das für die Tour konfigurierte Tagesfenster); Bestands-Anker ohne diese Felder laden unverändert
+  weiter. Zwei neue `AlertMetric`-Werte (`thunder_onset`, `precipitation_heavy_onset`) mit
+  Schwellen in **Stunden Verschiebung** und einem richtungsabhängigen Paar je Empfindlichkeitsstufe
+  (2/4 · 1/3 · 1/2 — vorgezogen/verzögert, asymmetrisch nach PO-Entscheid). Sie reisen durch das
+  bestehende `WeatherChange`-DTO, dort aber als **Epochensekunden** statt Messwerten (Section
+  „WeatherChange"), und erscheinen im Alarm-Protokoll (#1954) als eigenes Register-Paar
+  `("thunder","onset")` neben `("thunder","max")`. Die Auswertung `onset` bleibt bewusst aus
+  `GET /api/metrics → aggregations[]` heraus; die Stufe ist deshalb heute nicht einzeln
+  einstellbar und läuft auf „standard" (offen in #1462). **Nicht verwechseln** mit dem
+  Radar-Nowcast-`onset` in Section 22.5 — anderes Konzept, andere Einheit.
+  Spec: `docs/specs/modules/feat_1468_onset_verschiebung_alarm.md`.
 - 2026-08-18: Issue #1948 Scheibe S2 — `POST /api/trips/{trip_id}/alert-preview` (Section 22.5,
   neu dokumentiert) bekommt zwei additive, exklusive Payload-Typen neben `changes`/`onset`:
   `official` (Zweig b, amtliche Warnung(en) als `OfficialAlertPayload[]`) und `nowcast_frames`

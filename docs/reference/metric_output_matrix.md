@@ -212,6 +212,15 @@ Modul-Docstring sind nachgezogen. Spec:
 - `OnsetEvent` (Radar-Beginn) bleibt unbewacht — strukturell metrik-los: die
   Datenstruktur hat kein `metric_id`-Feld (`alert/model.py:30-46`), der Renderer
   verzweigt binär über `is_convective` mit festen Wörtern.
+- **Nachtrag 2026-08-19 (Issue #1468):** `OnsetShiftEvent` (Beginn-Verschiebung) bleibt
+  ebenfalls unbewacht — **nicht dasselbe wie `OnsetEvent`
+  eine Zeile darüber**: dort der Radar-Nowcast („in ~20 Minuten"),
+  hier die Vorhersage-Uhrzeit, zu der Gewitter oder Starkregen im Tagesfenster einsetzt.
+  Der Ereignistyp trägt zwar ein `metric_id` (`alert/model.py`), läuft aber bewusst **nicht**
+  durch `_val()`/`_num()` und damit nicht durch `_HANDLED_UNITS` — Uhrzeit und Richtungswort
+  entstehen schon in der Projektionsschicht (`alert/project.py`). Der Matrix-Wächter fasst
+  diesen Pfad deshalb nicht an; abgesichert ist er durch die eigenen Beginn-Tests
+  (u. a. `tests/tdd/test_onset_shift_alert.py`).
 - Für `snowfall_limit`, `temperature_cold` und `wind` kann **kein** Test bemerken, wenn
   sie aus der Rückwärts-Abbildung entfernt werden: sie deklarieren im Katalog kein
   `alert_metrics` und hängen allein an `_ALERT_METRIC_TO_CATALOG_ID`. Die
