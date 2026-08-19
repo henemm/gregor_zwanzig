@@ -26,7 +26,7 @@ tags: [alarm, ortsvergleich, bug]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe („go") am 2026-08-19, alle 7 ACs
 
 ## Purpose
 
