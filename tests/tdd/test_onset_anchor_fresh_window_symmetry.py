@@ -274,9 +274,9 @@ def test_gespeicherter_anker_behaelt_das_fenster_seines_segments():
     """
     dienst = WeatherSnapshotService(user_id="onset-fenster-anker")
     segment = _segmente(*ENG)[0]
-    dienst.save_alarm_anchor("fenster-trip", _tag(), [_aggregiert(segment)])
+    dienst.save_alarm_anchor("fenster-trip", _tag(), [_aggregiert(segment)], "email")
 
-    geladen = dienst.load_alarm_anchor("fenster-trip")
+    geladen = dienst.load_alarm_anchor("fenster-trip", "email")
     assert geladen, "Anker liess sich nicht laden"
     zurueck = geladen[0].segment
     assert (zurueck.day_window_start_hour, zurueck.day_window_end_hour) == ENG, (
@@ -301,16 +301,16 @@ def test_alt_anker_ohne_fensterfelder_laedt_unveraendert():
 
     dienst = WeatherSnapshotService(user_id="onset-fenster-altanker")
     segment = _segmente(*ENG)[0]
-    dienst.save_alarm_anchor("alt-trip", _tag(), [_aggregiert(segment)])
+    dienst.save_alarm_anchor("alt-trip", _tag(), [_aggregiert(segment)], "email")
 
-    pfad = dienst._snapshots_dir / "alt-trip_alarm_anchor.json"
+    pfad = dienst._snapshots_dir / "alt-trip_alarm_anchor_email.json"
     daten = json.loads(pfad.read_text())
     for eintrag in daten["segments"]:
         eintrag.pop("day_window_start_hour", None)
         eintrag.pop("day_window_end_hour", None)
     pfad.write_text(json.dumps(daten, indent=2))
 
-    geladen = dienst.load_alarm_anchor("alt-trip")
+    geladen = dienst.load_alarm_anchor("alt-trip", "email")
     assert geladen, "Alt-Anker ohne die Fensterfelder liess sich nicht laden"
     zurueck = geladen[0].segment
     assert zurueck.day_window_start_hour is None, (

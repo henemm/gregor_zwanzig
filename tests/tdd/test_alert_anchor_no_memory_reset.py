@@ -39,7 +39,15 @@ def test_ac12_rollierender_schreibpfad_setzt_melde_gedaechtnis_nicht_zurueck():
     state_svc.save(trip_id, {"gust:99": unberuehrter_eintrag})
 
     trip = gust_alert_trip(trip_id)
-    svc = TripAlertService(settings=settings_email_only(), user_id=user_id)
+    # Issue #1987 (S1): der rollierende Anker rueckt seither NUR fuer
+    # tatsaechlich ZUGESTELLTE Kanaele vor. Ohne die `mail_sink`-Naht
+    # scheitert der E-Mail-Versand am Egress-Waechter, `delivered_channels`
+    # bliebe leer und der Fixtur-Schutz unten haette nichts zu finden --
+    # kein Mock, dieselbe Transportnaht wie in `test_alert_anchor_day_guard`.
+    svc = TripAlertService(
+        settings=settings_email_only(), user_id=user_id,
+        mail_sink=lambda subject, body: None,
+    )
     ausgeloest = svc.check_and_send_alerts(
         trip, [weather(1, gust_max_kmh=10.0)],
         fresh_weather=[weather(1, gust_max_kmh=150.0)],
@@ -48,7 +56,7 @@ def test_ac12_rollierender_schreibpfad_setzt_melde_gedaechtnis_nicht_zurueck():
     assert ausgeloest, "Fixtur-Schutz: der Alarm muss ausgeloest haben."
     # HEUTE ROT: load_alarm_anchor() existiert nicht -> AttributeError,
     # ein direkter Beleg, dass der neue Schreibpfad (Trigger a) fehlt.
-    anker = WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id)
+    anker = WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id, "email")
     assert anker, "Fixtur-Schutz: Trigger (a) muss einen rollierenden Anker erzeugt haben."
 
     nachher = state_svc.load(trip_id)

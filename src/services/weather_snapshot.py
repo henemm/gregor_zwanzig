@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import date, datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -56,6 +57,11 @@ _HOURLY_ENUM_FIELDS: dict[str, type] = {
     "thunder_level": ThunderLevel,
     "precip_type": PrecipType,
 }
+
+# Issue #1987: erkennt den DATIERTEN Snapshot `{trip_id}_{YYYY-MM-DD}.json` —
+# und nur ihn. Trennt die Aufraeumung von den Nachbardateien desselben Trips
+# (rollierende Alarm-Anker), s. `_prune_dated_snapshots`.
+_DATED_SUFFIX = re.compile(r"_\d{4}-\d{2}-\d{2}\.json$")
 
 # Provider string → Provider enum mapping
 _PROVIDER_MAP: dict[str, Provider] = {p.value.lower(): p for p in Provider}
@@ -174,10 +180,24 @@ class WeatherSnapshotService:
             return None
 
     def _prune_dated_snapshots(self, trip_id: str) -> None:
-        """Delete oldest dated snapshots for trip_id, keeping max 7."""
-        pattern = f"{trip_id}_*.json"
+        """Delete oldest dated snapshots for trip_id, keeping max 7.
+
+        Issue #1987: Das Glob-Muster `{trip_id}_*.json` erfasst NICHT nur die
+        datierten Snapshots, sondern jede Nachbardatei desselben Trips — also
+        auch die rollierenden Alarm-Anker. Gemessen: von vier kanalscharfen
+        Ankern (`{trip_id}_alarm_anchor_{channel}.json`) ueberlebten nach acht
+        Briefing-Laeufen genau EINER; die uebrigen drei fuellten das
+        7er-Kontingent und wurden als "aelteste" geloescht. Getroffen haette
+        es bevorzugt die Kanaele, die laenger nichts zugestellt bekommen haben
+        (aeltester mtime) — exakt jene, deren eigenen Stand dieses Ticket
+        erhalten soll. Deshalb greift die Aufraeumung jetzt ausschliesslich
+        auf Dateien mit echtem Datums-Suffix.
+        """
         dated_files = sorted(
-            self._snapshots_dir.glob(pattern),
+            (
+                p for p in self._snapshots_dir.glob(f"{trip_id}_*.json")
+                if _DATED_SUFFIX.search(p.name)
+            ),
             key=lambda p: (p.stat().st_mtime, p.name),
         )
         for old_file in dated_files[:-7]:
@@ -187,17 +207,42 @@ class WeatherSnapshotService:
             except OSError as e:
                 logger.warning(f"Failed to prune dated snapshot {old_file}: {e}")
 
+    def _alarm_anchor_path(self, trip_id: str, channel: str) -> Path:
+        """Ablageort des rollierenden Alarm-Ankers dieses Kanals (Issue #1987).
+
+        Faellt auf die KANALLOSE Altdatei `{trip_id}_alarm_anchor.json`
+        zurueck, solange der Kanal noch keine eigene besitzt (AC-5): der
+        Bestand vor dieser Scheibe bleibt damit ohne Migrationsskript als
+        Vergleichsbasis lesbar. Die Ableitung sitzt bewusst hier statt in den
+        drei Methoden — sonst faelle der Rueckfall in einer von ihnen
+        irgendwann auseinander.
+        """
+        kanalscharf = self._snapshots_dir / f"{trip_id}_alarm_anchor_{channel}.json"
+        if kanalscharf.exists():
+            return kanalscharf
+        return self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+
     def save_alarm_anchor(
         self,
         trip_id: str,
         target_date: date,
         segments: List[SegmentWeatherData],
+        channel: str,
     ) -> None:
         """Rollierender Alarm-Anker (Issue #1916, ADR-0056) — EIGENER,
-        undatierter Speicherort (EIN File je Trip, ueberschrieben statt
-        aufgehaeuft), getrennt von `save_dated()`/`load_dated()`: ein
+        undatierter Speicherort (EIN File je Trip UND Kanal, ueberschrieben
+        statt aufgehaeuft), getrennt von `save_dated()`/`load_dated()`: ein
         rollierender Schreibvorgang darf die eingefrorene Briefing-Referenz
-        der Radar-Unterdrueckung (#818/#1667) niemals veraendern (AC-11)."""
+        der Radar-Unterdrueckung (#818/#1667) niemals veraendern (AC-11).
+
+        Issue #1987 (S1): `channel` ist PFLICHT und hat bewusst KEINEN
+        Vorgabewert — dasselbe Muster wie `tagesgleicher_anker_noetig` aus
+        #1661. Ein vergessenes Argument mit stillschweigendem Default
+        erzeugte eine Kanal-Verwechslung, die kein Test faengt, solange nur
+        EIN Kanal konfiguriert ist. Geschrieben wird ausschliesslich die
+        kanalscharfe Datei; die kanallose Altdatei bleibt liegen und
+        veraltet (sie dient nur noch als Lese-Rueckfall).
+        """
         try:
             self._snapshots_dir.mkdir(parents=True, exist_ok=True)
 
@@ -212,18 +257,22 @@ class WeatherSnapshotService:
                 ],
             }
 
-            filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+            filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor_{channel}.json"
             filepath.write_text(json.dumps(snapshot, indent=2))
-            logger.info(f"Alarm anchor saved: {trip_id}")
+            logger.info(f"Alarm anchor saved: {trip_id} ({channel})")
         except Exception as e:
-            logger.warning(f"Failed to save alarm anchor {trip_id}: {e}")
+            logger.warning(f"Failed to save alarm anchor {trip_id} ({channel}): {e}")
 
-    def load_alarm_anchor(self, trip_id: str) -> Optional[List[SegmentWeatherData]]:
-        """Rollierenden Alarm-Anker laden (Issue #1916) — s. `save_alarm_anchor`."""
-        filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+    def load_alarm_anchor(
+        self, trip_id: str, channel: str,
+    ) -> Optional[List[SegmentWeatherData]]:
+        """Rollierenden Alarm-Anker DIESES Kanals laden (Issue #1916/#1987)
+        — s. `save_alarm_anchor` und `_alarm_anchor_path` (Rueckfall auf die
+        kanallose Altdatei, AC-5)."""
+        filepath = self._alarm_anchor_path(trip_id, channel)
 
         if not filepath.exists():
-            logger.debug(f"No alarm anchor for {trip_id}")
+            logger.debug(f"No alarm anchor for {trip_id} ({channel})")
             return None
 
         try:
@@ -247,19 +296,24 @@ class WeatherSnapshotService:
                 )
             return result
         except (json.JSONDecodeError, ValueError, KeyError, OSError) as e:
-            logger.warning(f"Corrupt alarm anchor {trip_id}: {e}")
+            logger.warning(f"Corrupt alarm anchor {trip_id} ({channel}): {e}")
             return None
 
-    def alarm_anchor_target_date(self, trip_id: str) -> Optional[date]:
-        """Gespeicherten Tagesbezug des rollierenden Alarm-Ankers lesen
-        (Issue #1916, AC-10) — analog `load_target_date()` fuer den
-        undatierten Rueckfall."""
-        filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+    def alarm_anchor_target_date(self, trip_id: str, channel: str) -> Optional[date]:
+        """Gespeicherten Tagesbezug des rollierenden Alarm-Ankers DIESES
+        Kanals lesen (Issue #1916, AC-10; Issue #1987) — analog
+        `load_target_date()` fuer den undatierten Rueckfall. Liest dieselbe
+        Datei wie `load_alarm_anchor()` (inkl. Altdatei-Rueckfall), sonst
+        koennte die Tagesgrenze einen anderen Anker pruefen als den, der
+        tatsaechlich verwendet wird."""
+        filepath = self._alarm_anchor_path(trip_id, channel)
         try:
             data = json.loads(filepath.read_text())
             return date.fromisoformat(str(data["target_date"]))
         except (json.JSONDecodeError, ValueError, KeyError, TypeError, OSError) as e:
-            logger.debug(f"No readable target_date in alarm anchor {trip_id}: {e}")
+            logger.debug(
+                f"No readable target_date in alarm anchor {trip_id} ({channel}): {e}"
+            )
             return None
 
     def load_target_date(self, trip_id: str) -> Optional[date]:

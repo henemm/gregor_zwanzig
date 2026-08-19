@@ -1066,9 +1066,9 @@ def test_ac3_amtliche_warnung_ueberlebt_auch_die_stufe_2_weiche():
     trip.official_alert_triggers_enabled = True
     save_trip(trip, user_id=user_id)
     svc = WeatherSnapshotService(user_id=user_id)
-    svc.save_alarm_anchor(trip_id, date.today(), [_wetter(ANKER_BOE_KMH)])
+    svc.save_alarm_anchor(trip_id, date.today(), [_wetter(ANKER_BOE_KMH)], "email")
 
-    assert svc.alarm_anchor_target_date(trip_id) == date.today(), (
+    assert svc.alarm_anchor_target_date(trip_id, "email") == date.today(), (
         "Fixtur-Schutz: nur ein TAGESGLEICHER rollierender Anker laesst die "
         "Kette ueberhaupt in die Stufe-2-Weiche laufen."
     )
@@ -1264,7 +1264,7 @@ def test_ac7_regulaeres_briefing_heilt_den_abfrage_anker(caplog):
 # Anker-Schreiber (200 km/h) statt der echten Abfrage: nur so ergaebe die
 # verworfene Basis ueberhaupt ein Delta, das Trigger (a) ausloesen WUERDE.
 def rollierender_anker_pfad(user_id: str, trip_id: str) -> Path:
-    return get_snapshots_dir(user_id) / f"{trip_id}_alarm_anchor.json"
+    return get_snapshots_dir(user_id) / f"{trip_id}_alarm_anchor_email.json"
 
 
 def _ac10_lauf(user_id: str, trip_id: str, *, herkunft):
@@ -1313,7 +1313,7 @@ def test_ac10_verworfene_basis_erzeugt_keinen_rollierenden_alarm_anker():
 
     ergebnis, mails = _ac10_lauf(user_id, trip_id, herkunft=False)
 
-    assert WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id) is None, (
+    assert WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id, "email") is None, (
         "AC-10: Aus einer wegen fehlenden Briefings verworfenen Basis darf kein "
         "rollierender Alarm-Anker entstehen."
     )
@@ -1439,6 +1439,7 @@ def test_ac10_abgelaufener_rollierender_anker_bleibt_unveraendert():
     save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
     WeatherSnapshotService(user_id=user_id).save_alarm_anchor(
         trip_id, date.today() - timedelta(days=1), [_wetter(ANKER_BOE_KMH)],
+        "email",
     )
     pfad = rollierender_anker_pfad(user_id, trip_id)
     vorher = pfad.read_text()
@@ -1539,7 +1540,7 @@ def test_torbedingung_matrix_basis_mal_amtliche_warnung(basis_gueltig, amtlich):
         f"{lage}: genau {1 if versand else 0} Versand erwartet, gezaehlt "
         f"{ergebnis.alerts_sent}, zugestellt {[s for s, _ in mails]}"
     )
-    rollierend = WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id)
+    rollierend = WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id, "email")
     assert (rollierend is not None) is basis_gueltig, (
         f"{lage}: ein rollierender Alarm-Anker darf NUR aus gueltiger Basis "
         f"entstehen (#1916 Trigger (a)) — ein amtlicher Alleinversand keinen."

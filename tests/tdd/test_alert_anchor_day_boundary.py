@@ -8,7 +8,7 @@ Anker (Issue #823/#1661): ein rollierender Anker vom FALSCHEN Kalendertag
 (Ortszeit) darf nicht als "heute" durchgehen.
 
 Angenommene API (Spec Zeile 69, "z.B."): ``WeatherSnapshotService.
-save_alarm_anchor(trip_id, target_date, segments)``/``load_alarm_anchor()``,
+save_alarm_anchor(trip_id, target_date, segments, channel)``/``load_alarm_anchor()``,
 Signatur analog ``save_dated()``/``load_dated()`` -- der einzige Weg, diesen
 neuen Anker-Typ ueberhaupt mit einem Tagesbezug zu erzeugen.
 """
@@ -34,7 +34,7 @@ def test_ac10_rollierender_anker_vom_falschen_tag_wird_verworfen(caplog):
     trip = gust_alert_trip(trip_id)
     gestern = date.today() - timedelta(days=1)
     WeatherSnapshotService(user_id=user_id).save_alarm_anchor(
-        trip_id, gestern, [weather(1, gust_max_kmh=10.0)],
+        trip_id, gestern, [weather(1, gust_max_kmh=10.0)], "email",
     )
 
     with caplog.at_level(logging.DEBUG):
@@ -62,7 +62,7 @@ def test_ac10_regression_rollierender_anker_vom_heutigen_tag_bleibt_gueltig():
     trip = gust_alert_trip(trip_id)
     heute = date.today()
     WeatherSnapshotService(user_id=user_id).save_alarm_anchor(
-        trip_id, heute, [weather(1, gust_max_kmh=17.0)],
+        trip_id, heute, [weather(1, gust_max_kmh=17.0)], "email",
     )
 
     ergebnis = TripAlertService(
