@@ -204,3 +204,19 @@ dieser Scheibe (Scheibe 2, #1169).
   Architekturprinzip: derselbe geteilte-Baustein-Ansatz aus diesem ADR,
   erstmals angewandt auf einen Vergleich ÜBER Quellen hinweg statt innerhalb
   einer Quelle. Details: `docs/specs/modules/rework_1467_s4b_entdopplung.md`.
+- **Nachtrag (Issue #1917 S4b-2, 2026-08-19):** die quellenübergreifende
+  Ereignis-Identität-Prüfung gilt seit dieser Scheibe auch für den
+  **Ortsvergleich** — `compare_radar_alert.py::_check_one_preset` und
+  `compare_official_alert.py::_check_one_preset` rufen denselben,
+  **unveränderten** Baustein (`check_event_identity_gate()`/
+  `record_event_identity()`) an derselben Position im Ablauf wie die
+  Trip-Pfade. Alle Aussagen des S4b-1-Nachtrags oben bleiben unverändert
+  gültig; diese Scheibe fügt keine neue Kernlogik hinzu, sondern verdrahtet
+  den bereits entitätsparametrisiert gebauten Baustein an zwei zusätzlichen
+  Aufrufstellen. Zwei Compare-Eigenheiten: (1) die Registertrennung läuft über
+  die Ort-Datei `f"{preset_id}:{loc_id}"`, `segment_ids` trägt trotzdem die
+  Ortskennung (eine leere Segment-Menge erzeugt strukturell nie ein Match und
+  wäre ein stiller No-Op); (2) ein amtlicher Alert kann mehrere Orte
+  betreffen — er wird pro Ort geprüft und auf die verbleibende Orts-Teilmenge
+  reduziert statt als Ganzes verworfen. Details:
+  `docs/specs/modules/rework_1917_s4b2_compare_entdopplung.md`.

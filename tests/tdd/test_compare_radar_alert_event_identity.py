@@ -747,10 +747,19 @@ def test_ac12_nur_der_duplizierte_ort_faellt_aus_dem_buendel():
             f"{gesendete_orte!r}"
         )
         assert len(mails) == 1, f"Genau eine Mail erwartet: {len(mails)}"
-        _subject, body = mails[0]
-        assert "OrtEigenstaendig" in body, f"Der eigenstaendige Ort fehlt: {body!r}"
-        assert "OrtDuplikat" not in body, (
-            f"Der duplizierte Ort darf nicht mehr in der Mail stehen: {body!r}"
+        # Geprueft wird der BETREFF, nicht der Rumpf: bleibt nach dem Filtern
+        # genau EIN Ort uebrig, faellt der Buendel-Renderer per Invariante aus
+        # #1041 AC-5 auf den Single-Onset-Pfad zurueck
+        # (`output/renderers/alert/project.py`, `location_label=None`) — der
+        # Ortsname steht dann ausschliesslich im Betreff. Unabhaengig von
+        # dieser Scheibe: ein Ortsvergleich mit nur einem Ort rendert heute
+        # schon so.
+        subject, _body = mails[0]
+        assert "OrtEigenstaendig" in subject, (
+            f"Der eigenstaendige Ort fehlt: {subject!r}"
+        )
+        assert "OrtDuplikat" not in subject, (
+            f"Der duplizierte Ort darf nicht mehr in der Mail stehen: {subject!r}"
         )
 
         protokoll = _event_duplicate_log_entries(uid)

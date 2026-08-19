@@ -35,7 +35,13 @@ from output.renderers.alert.official_alerts import (
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
-from services.alert_gate import check_briefing_imminent, check_official_alert_gate
+from services.alert_gate import (
+    check_briefing_imminent,
+    check_event_identity_gate,
+    check_official_alert_gate,
+    record_event_identity,
+    resolve_hazard_class,
+)
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import (
     effective_compare_channels,
@@ -178,6 +184,64 @@ class CompareOfficialAlertService:
         now = datetime.now(timezone.utc)
         notification_service = self._notification_service_for(preset)
         effective_channels = self._effective_channels(preset)
+
+        # Issue #1917 S4b-2: quellenuebergreifende Ereignis-Identitaet, EIN
+        # Gate-Aufruf PRO betroffenem Ort — anders als im Trip-Pfad (#1467
+        # S4b-1, EIN Aufruf je Alert), weil die Registertrennung bei Compare
+        # ueber die Ort-Datei `f"{preset_id}:{loc_id}"` laeuft. Betrifft ein
+        # Alert mehrere Orte und ist er nur an einem davon eine Dublette,
+        # wird das Paar auf die verbleibenden Orte REDUZIERT — es ganz zu
+        # verwerfen kostete den anderen Orten ihre berechtigte Warnung
+        # (Fehlerrichtung „Alarm bleibt aus"). Gefiltert wird VOR der
+        # Dringlichkeits-Berechnung, sonst bestimmte eine unterdrueckte
+        # Warnung noch die Kanal-Schwelle mit.
+        filtered_alerts: list = []
+        for alert, loc_ids in tagged_alerts:
+            hazard_class = resolve_hazard_class(hazard=alert.hazard)
+            alert_severity = alert_urgency.urgency_from_official_level(alert.level)
+            remaining_loc_ids: list[str] = []
+            for loc_id in loc_ids:
+                identity_gate = check_event_identity_gate(
+                    user_id=self._user_id, entity_id=f"{preset_id}:{loc_id}",
+                    hazard_class=hazard_class, segment_ids=[loc_id],
+                    severity=alert_severity, now=now,
+                    window_start=alert.valid_from, window_end=alert.valid_to,
+                )
+                if identity_gate.allowed:
+                    remaining_loc_ids.append(loc_id)
+                    continue
+                logger.debug(
+                    f"Compare official alert unterdrueckt ({identity_gate.reason}) "
+                    f"fuer {preset_id}:{loc_id}"
+                )
+                # Eine unterdrueckte Warnung darf das amtliche Melde-
+                # Gedaechtnis nicht verbrauchen (Muster Trip-Pfad: dort geht
+                # ebenfalls nur die GEFILTERTE Liste in die Zustands-
+                # Fortschreibung) — sonst bliebe sie nach dem naechsten
+                # Register-Reset dauerhaft aus.
+                for_loc = per_location_new.get(loc_id) or []
+                if alert in for_loc:
+                    for_loc.remove(alert)
+                try:
+                    alert_log.append_suppressed_entry(
+                        self._user_id, entity_id=preset_id, entity_type="compare",
+                        reason=alert_log.REASON_OFFICIAL_ALERT,
+                        gate_reason=identity_gate.reason,
+                        effective_channels=effective_channels,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Compare official alert: Unterdrueckungs-Protokoll "
+                        "(Ereignis-Identitaet) fuer %s:%s fehlgeschlagen (%s) "
+                        "— der Alarm blieb aus, nur der Protokoll-Eintrag fehlt.",
+                        preset_id, loc_id, e,
+                    )
+            if remaining_loc_ids:
+                filtered_alerts.append((alert, remaining_loc_ids))
+        if not filtered_alerts:
+            return False
+        tagged_alerts = filtered_alerts
+
         # Issue #1461 S3b-2b: die Dringlichkeit wird VOR dem Versand
         # hochgezogen (bisher entstand sie erst inline im `append_entry`-
         # Argument, also NACH dem Versand) -- `split_by_threshold()` braucht
@@ -221,6 +285,22 @@ class CompareOfficialAlertService:
 
         self._record_state(preset_id, per_location_new)
         alert_daily_limit.increment(self._user_id, now, zone)
+        # Issue #1917 S4b-2 (F001-Symmetrie): NUR nach erfolgreicher
+        # Zustellung. Gefahrenarten ausserhalb des `wet`-Kanons
+        # (hazard_class=None) werden bewusst NICHT registriert — ein Eintrag
+        # ohne Klasse kaeme nie zum Zuge (kein Praefix-Match moeglich).
+        for alert, loc_ids in tagged_alerts:
+            hazard_class = resolve_hazard_class(hazard=alert.hazard)
+            if hazard_class is None:
+                continue
+            for loc_id in loc_ids:
+                record_event_identity(
+                    user_id=self._user_id, entity_id=f"{preset_id}:{loc_id}",
+                    hazard_class=hazard_class, segment_ids=[loc_id],
+                    severity=alert_urgency.urgency_from_official_level(alert.level),
+                    window_start=alert.valid_from, window_end=alert.valid_to,
+                    now=datetime.now(timezone.utc),
+                )
         return True
 
     def _detect(
