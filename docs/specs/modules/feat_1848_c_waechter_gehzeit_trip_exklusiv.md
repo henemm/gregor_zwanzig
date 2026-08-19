@@ -12,7 +12,7 @@ tags: [metrik-register, ortsvergleich, waechter, 1848]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO (Henning), 2026-08-19, „freigabe"
 
 ## Purpose
 
