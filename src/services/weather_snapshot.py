@@ -409,6 +409,17 @@ def _serialize_segment(seg: SegmentWeatherData) -> dict:
         "ascent_m": seg.segment.ascent_m,
         "descent_m": seg.segment.descent_m,
         "duration_hours": seg.segment.duration_hours,
+        # Issue #1468 (E2): das Auswertungsfenster gehoert MIT in den Anker.
+        # Wird aus einem geladenen Anker-Segment je neu aggregiert, muss
+        # dasselbe Fenster gelten wie beim Schreiben -- sonst faellt es still
+        # auf den Default zurueck und die Vergleichsbasis waere wieder schief.
+        # `None` bleibt weg (Absenz heisst "keine Angabe", nicht "0 Uhr").
+        **{
+            k: v for k, v in (
+                ("day_window_start_hour", seg.segment.day_window_start_hour),
+                ("day_window_end_hour", seg.segment.day_window_end_hour),
+            ) if v is not None
+        },
         "aggregated": _serialize_summary(seg.aggregated),
     }
     if seg.timeseries is not None:
@@ -477,4 +488,8 @@ def _reconstruct_segment(seg_data: dict) -> TripSegment:
         distance_km=seg_data.get("distance_km", 0.0),
         ascent_m=seg_data.get("ascent_m", 0.0),
         descent_m=seg_data.get("descent_m", 0.0),
+        # Issue #1468 (E2): fehlender Schluessel -> None -> Default 4-19.
+        # Alt-Anker ohne die Felder laden dadurch unveraendert.
+        day_window_start_hour=seg_data.get("day_window_start_hour"),
+        day_window_end_hour=seg_data.get("day_window_end_hour"),
     )

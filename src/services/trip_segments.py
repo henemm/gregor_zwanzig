@@ -129,6 +129,13 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         stage = compute_stage_arrivals(stage, trip.activity)
 
     segments: List[TripSegment] = []
+    # Issue #1468 (E2): die eingestellten Fenstergrenzen der Tour, unveraendert
+    # weitergereicht. Die AUFLOESUNG (Default 4-19, Gueltigkeitsregeln) wohnt
+    # am Auswertungsort (`segment_weather._aggregate_for_segment`) -- eine
+    # zweite Aufloesung hier waere genau die Doppelung, die ADR-0035 vermeidet.
+    _trip_rc = getattr(trip, "report_config", None)
+    _win_start = getattr(_trip_rc, "day_window_start_hour", None)
+    _win_end = getattr(_trip_rc, "day_window_end_hour", None)
     waypoints = stage.waypoints
     default_start = stage.start_time if stage.start_time else time(8, 0)
 
@@ -219,6 +226,8 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         elev_diff = elev2 - elev1
         dist_km = haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
 
+        # Issue #1468 (E2): das Auswertungsfenster der Tour reist mit dem
+        # Segment -- jeder spaetere Aggregations-Aufrufer erbt es dadurch.
         segment = TripSegment(
             segment_id=i + 1,
             start_point=GPXPoint(
@@ -239,6 +248,8 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
             distance_km=round(dist_km, 1),
             ascent_m=float(max(0, elev_diff)),
             descent_m=float(max(0, -elev_diff)),
+            day_window_start_hour=_win_start,
+            day_window_end_hour=_win_end,
         )
         cumulative_dist_km += round(dist_km, 1)
         segments.append(segment)
@@ -321,6 +332,12 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
             distance_km=0.0,
             ascent_m=0.0,
             descent_m=0.0,
+            # Dasselbe Fenster wie die uebrigen Segmente. Das ZEIT-Ende oben
+            # (`window_end`) folgt bereits dem Fenster (#1584) -- die
+            # Auswertungsgrenzen gehoeren trotzdem mit, weil die Aggregation
+            # in ORTSZEIT filtert und nicht am Segment-Ende haengt.
+            day_window_start_hour=_win_start,
+            day_window_end_hour=_win_end,
         )
         segments.append(destination_segment)
 

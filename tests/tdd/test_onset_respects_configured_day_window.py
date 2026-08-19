@@ -2,14 +2,23 @@
 
 SPEC: docs/specs/modules/feat_1468_onset_verschiebung_alarm.md (E2, AC-4)
 
-GEMESSENER IST-STAND (2026-08-18, dieser Branch): `compute_basis_metrics()`
-nimmt Zeitzone und Tagesfenster inzwischen an, aber die Trip-Konfiguration
-erreicht sie nicht. `SegmentWeatherService._aggregate_for_segment()` reicht
-nur die Zeitzone durch; das Fenster faellt still auf den Default 4-19
-(`day_window.resolve_configured_window`). Der Segment-Vorschnitt faengt das
-NICHT ab: die Etappen-Grenzen folgen den GEHZEITEN, nicht dem Fenster — das
-Fenster erreicht `trip_segments.py` an genau einer Stelle (:266-282) und dort
-nur das ENDE des ZIEL-Segments (#1584).
+GEMESSENER IST-STAND VOR DIESER AENDERUNG (2026-08-18):
+`compute_basis_metrics()` nahm Zeitzone und Tagesfenster bereits an, aber die
+Trip-Konfiguration erreichte sie nicht. `SegmentWeatherService.
+_aggregate_for_segment()` reichte nur die Zeitzone durch; das Fenster fiel
+still auf den Default 4-19 (`day_window.resolve_configured_window`). Der
+Segment-Vorschnitt faengt das NICHT ab: die Etappen-Grenzen folgen den
+GEHZEITEN, nicht dem Fenster — das Fenster erreichte `trip_segments.py` an
+genau einer Stelle (:266-282) und dort nur das ENDE des ZIEL-Segments (#1584).
+
+TRAEGER IST DAS SEGMENT, nicht die Aufrufkette: `TripSegment` fuehrt
+`day_window_start_hour`/`_end_hour`, gesetzt in
+`trip_segments.convert_trip_to_segments()` aus `trip.report_config`. Grund:
+Briefing-/Anker-Pfad und Alarm-Pfad benutzen DIESELBEN Segmente — damit
+koennen die beiden Seiten des Vergleichs gar nicht mit verschiedenen Fenstern
+rechnen. Ein Alarm, der allein aus der Fensterwahl entsteht, ist strukturell
+ausgeschlossen statt an jeder Aufrufstelle per Disziplin (bewacht in
+test_onset_anchor_fresh_window_symmetry.py).
 
 Folge fuer jeden Trip mit abweichendem Fenster — und das ist ein echtes
 Bedienelement (`shared/weather-metrics-tab/DayWindowCard.svelte`,
@@ -29,10 +38,13 @@ Methode, der die Trip-Konfiguration heute fehlt —, und die Erwartung ist
 die GLEICHHEIT mit der Stunde im gerenderten Briefing aus DERSELBEN Fixture
 (Muster AC-4/#1493 AC-9), nicht eine im Test getippte Zahl.
 
-Die Signatur wird NICHT vorgeschrieben, nur benutzt (`inspect.signature`,
-wie in AC-4): nimmt die Methode die Konfiguration nicht an, bleibt die
-Rechnung beim Default und die Gleichheitspruefung schlaegt fehl. Die
-Anpassung kann also kein falsches Gruen erzeugen, nur ein ehrliches Rot.
+Die Onset-Zahl wird hier WIRKLICH GERECHNET, nicht als fertiger Wert ins
+Aggregat gesetzt: `_aggregate_for_segment()` faehrt intern
+`compute_basis_metrics()`, und das Briefing rendert aus GENAU diesem
+Aggregat. Waere die Zahl gesetzt, koennte der Unterschied "Briefing 03:00 /
+Alarmbasis 05:00", mit dem dieser Test vor der Aenderung rot war, gar nicht
+entstehen. (Das ist dieselbe Blindstelle, die die Mutations-Gegenprobe an
+den AC-Tests aufgedeckt hat -- s. test_onset_computation_sources.py.)
 
 Kein Mock (CLAUDE.md, Kern-Schicht): Gewitterstufen entstehen ueber die
 ECHTE Fusion aus CAPE-Rohwerten. Pfadregel #1409: Prueling relativ zu
@@ -40,7 +52,6 @@ DIESER Datei aufgeloest.
 """
 from __future__ import annotations
 
-import inspect
 import re
 import sys
 from datetime import date, datetime, timezone
@@ -58,7 +69,7 @@ from app.model_registry import (  # noqa: E402
 from app.models import (  # noqa: E402
     ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
     SegmentWeatherData, ThunderLevel, TripReportConfig, TripSegment,
-)
+)  # TripReportConfig: nur noch fuer das gerenderte Briefing (report_config=)
 from output.renderers.trip_report import TripReportFormatter  # noqa: E402
 from providers.thunder_enrichment import _fuse_thunder_levels  # noqa: E402
 from providers.thunder_routing import thunder_region_for  # noqa: E402
@@ -105,10 +116,13 @@ def _reihe(punkte) -> NormalizedTimeseries:
     )
 
 
-def _ganztags_segment() -> TripSegment:
-    """Segment ueber den vollen Tag: der Segment-Vorschnitt in
-    `_aggregate_for_segment` darf hier nichts wegnehmen, sonst liesse sich
-    Fenster-Wirkung und Vorschnitt-Wirkung nicht auseinanderhalten."""
+def _ganztags_segment(start: int | None = None, ende: int | None = None) -> TripSegment:
+    """Segment ueber den vollen Tag, mit dem Auswertungsfenster der Tour.
+
+    Voller Tag, damit der Segment-Vorschnitt in `_aggregate_for_segment`
+    nichts wegnimmt -- sonst liessen sich Fenster-Wirkung und
+    Vorschnitt-Wirkung nicht auseinanderhalten.
+    """
     return TripSegment(
         segment_id=1,
         start_point=GPXPoint(lat=ISLAND_LAT, lon=ISLAND_LON, elevation_m=100.0,
@@ -118,34 +132,41 @@ def _ganztags_segment() -> TripSegment:
         start_time=datetime(TAG.year, TAG.month, TAG.day, 0, 0, tzinfo=timezone.utc),
         end_time=datetime(TAG.year, TAG.month, TAG.day, 23, 59, tzinfo=timezone.utc),
         duration_hours=24.0, distance_km=8.0, ascent_m=300.0, descent_m=300.0,
+        day_window_start_hour=start, day_window_end_hour=ende,
     )
 
 
-def _alarmbasis(punkte, report_config: TripReportConfig | None):
+def _alarmbasis(punkte, rc: TripReportConfig | None):
     """Das Tages-Aggregat ueber den PRODUKTIVEN Trip-Weg.
 
-    Die Trip-Konfiguration wird durchgereicht, SOBALD
-    `_aggregate_for_segment()` sie annimmt (das ist der Gegenstand dieses
-    Tests). Nimmt sie sie nicht an, rechnet die Aggregation mit dem Default
-    weiter und die Gleichheitspruefung unten schlaegt fehl.
+    Das Fenster kommt vom SEGMENT -- genau so, wie
+    `trip_segments.convert_trip_to_segments()` es aus `trip.report_config`
+    setzt. Der Test baut das Segment mit denselben Werten, statt eine zweite
+    Uebergabeform zu erfinden.
     """
     from providers.base import get_provider
 
     dienst = SegmentWeatherService(get_provider("openmeteo"))
-    parameter = inspect.signature(dienst._aggregate_for_segment).parameters
-    kwargs = {}
-    if "report_config" in parameter and report_config is not None:
-        kwargs["report_config"] = report_config
     return dienst._aggregate_for_segment(
-        _ganztags_segment(), _reihe(punkte),
-        fetched_at=datetime.now(timezone.utc), **kwargs,
+        _segment_fuer(rc), _reihe(punkte),
+        fetched_at=datetime.now(timezone.utc),
     ).aggregated
+
+
+def _segment_fuer(rc: TripReportConfig | None) -> TripSegment:
+    """Das Segment, das `convert_trip_to_segments()` fuer diese
+    Trip-Konfiguration bauen wuerde -- unaufgeloest weitergereicht, die
+    Aufloesung gehoert an den Auswertungsort."""
+    return _ganztags_segment(
+        getattr(rc, "day_window_start_hour", None),
+        getattr(rc, "day_window_end_hour", None),
+    )
 
 
 def _briefing_stunde(aggregat, punkte, report_config: TripReportConfig | None) -> int:
     """Die Gewitter-Beginnstunde, wie sie IM BRIEFING steht."""
     segment = SegmentWeatherData(
-        segment=_ganztags_segment(), timeseries=_reihe(punkte),
+        segment=_segment_fuer(report_config), timeseries=_reihe(punkte),
         aggregated=aggregat, fetched_at=datetime.now(timezone.utc),
         provider="openmeteo",
     )
@@ -193,9 +214,9 @@ def test_fixture_traegt_in_jedem_fenster_eine_andere_erste_gewitterstunde():
 def test_alarmbasis_nennt_dieselbe_stunde_wie_das_briefing(start, ende, erwartet, fall):
     """AC-4 mit ABWEICHENDEM Fenster: Briefing-Stunde == Summary-Feld.
 
-    ROT heute: `_aggregate_for_segment()` kennt die Trip-Konfiguration nicht,
-    rechnet mit dem Default 4-19 und liefert in beiden Faellen 05:00 —
-    waehrend das Briefing 03:00 bzw. 12:00 zeigt.
+    ROT vor der Aenderung: das Segment trug kein Fenster,
+    `_aggregate_for_segment()` rechnete mit dem Default 4-19 und lieferte in
+    beiden Faellen 05:00 — waehrend das Briefing 03:00 bzw. 12:00 zeigt.
     """
     punkte = _tagesreihe()
     rc = _config(start, ende)

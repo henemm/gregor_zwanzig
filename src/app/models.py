@@ -418,6 +418,16 @@ class TripSegment:
     # Optional fields for Story 1 (Feature 1.5)
     adjusted_to_waypoint: bool = False
     waypoint: Optional["DetectedWaypoint"] = None
+    # Issue #1468 (E2): Tagesfenster in ORTSZEIT, unter dem die Aggregation
+    # dieses Segments ausgewertet wird. Das Segment traegt es, NICHT die
+    # Aufrufkette: Briefing-/Anker-Pfad und Alarm-Pfad benutzen dieselben
+    # Segmente, damit ist die Symmetrie beider Vergleichsseiten strukturell
+    # gesichert statt an vier Aufrufstellen per Disziplin. `None` = keine
+    # Angabe -> Default 4-19 ueber `day_window.resolve_configured_window()`;
+    # das ist zugleich das Verhalten fuer Bestandsdaten und fuer jedes
+    # Segment, das ohne Trip-Bezug entsteht.
+    day_window_start_hour: Optional[int] = None
+    day_window_end_hour: Optional[int] = None
 
 
 @dataclass

@@ -158,6 +158,16 @@ class CompareLocationWeatherSource:
             distance_km=0.0,
             ascent_m=0,
             descent_m=0,
+            # Issue #1468 (E2): dasselbe Fenster, das oben schon `window_start`/
+            # `window_end` bestimmt hat -- hier bereits ueber
+            # `resolve_configured_window()` aufgeloest, also kein zweiter
+            # Aufloeser, nur die Weitergabe. Ohne diese Angabe filterte die
+            # Beginn-Berechnung zusaetzlich gegen den Default 4-19 und schnitte
+            # bei einem WEITEREN Vergleichs-Fenster Stunden weg, die der
+            # Ortsvergleich sehr wohl zeigt. Trip und Ortsvergleich verhalten
+            # sich damit gleich (Teilungs-Invariante).
+            day_window_start_hour=start_hour,
+            day_window_end_hour=end_hour,
         )
         segment_weather = service.fetch_segment_weather(
             segment,
