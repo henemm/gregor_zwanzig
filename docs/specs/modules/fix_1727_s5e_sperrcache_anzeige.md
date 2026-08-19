@@ -12,7 +12,9 @@ tags: [official-alerts, massif-closure, account-page, adr-0051]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO (Henning) am 2026-08-19, Freigabe „go" nach zwei Nachschärfungen:
+  Frontend-Zusagen im echten Browser (AC-7), Ausgabe-Zusagen an der zugestellten Nachricht
+  inklusive SMS-Kurzstil über Telegram (AC-8).
 
 ## Purpose
 
