@@ -13,7 +13,7 @@ workflow: fix-1927-risk-dot-kombi-regel
 
 ## Approval
 
-- [ ] Approved (Revision v1.1 — wartet auf Freigabe der geänderten ACs)
+- [x] Approved (Revision v1.1, Henning, 2026-08-19) — Freigabe der geänderten ACs im Workflow-State erfasst (`spec_approved: true`, Übergang zu `phase4_approved` 2026-08-19T14:29:41), Checkbox nachträglich am 2026-08-19 nachgetragen.
 - [x] Approved (Henning, 2026-08-19) — **galt für v1.0**, durch Adversary-Verdict
   BROKEN und PO-Scope-Entscheid vom 2026-08-19 abgelöst (siehe Changelog).
 
