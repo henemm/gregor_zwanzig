@@ -20,14 +20,20 @@ SPEC: docs/specs/modules/issue_1041b_compare_radar_alert_service.md
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import Settings
 from app.loader import load_all_locations
 from services import alert_channel_threshold, alert_log
 import services.alert_urgency as alert_urgency
-from services.alert_gate import check_nowcast_gate, record_nowcast_sent
+from services.alert_gate import (
+    check_event_identity_gate,
+    check_nowcast_gate,
+    record_event_identity,
+    record_nowcast_sent,
+    resolve_hazard_class,
+)
 from utils.timezone import first_resolvable_tz
 from services.alert_state import AlertStateService
 from services.compare_alert_channels import (
@@ -53,6 +59,24 @@ _DEFAULT_COOLDOWN_MINUTES = 120
 # Aenderungsalarm auf demselben Preset-Schluessel — ein gemeinsamer Scope
 # liesse die beiden Alarmarten einander gegenseitig unterdruecken).
 _THROTTLE_SCOPE = "compare_radar"
+
+
+def _identity_inputs(nowcast, now_utc: datetime) -> tuple:
+    """Issue #1917 S4b-2: `(Gefahrenklasse, Dringlichkeit, Onset-Zeitpunkt)`
+    einer Nowcast-Meldung — EINE Ableitung fuer Pruefung UND Registrierung,
+    damit beide Seiten nie auseinanderlaufen koennen."""
+    onset_at = (
+        now_utc + timedelta(minutes=nowcast.onset_minutes)
+        if nowcast.onset_minutes is not None else None
+    )
+    return (
+        resolve_hazard_class(is_convective=nowcast.is_convective),
+        alert_urgency.urgency_from_radar(
+            is_convective=nowcast.is_convective,
+            intensity_label=nowcast.intensity_label,
+        ),
+        onset_at,
+    )
 
 
 def _format_cooldown_display(cooldown_minutes: int) -> str:
@@ -184,6 +208,49 @@ class CompareRadarAlertService:
         if not triggered:
             return False
 
+        # Issue #1917 S4b-2: quellenuebergreifende Ereignis-Identitaet, PRO
+        # getriggertem Ort (Batch-Teilfilterung) — derselbe geteilte Baustein
+        # wie im Trip-Nowcast-Pfad (`trip_alert.py`, #1467 S4b-1). Die
+        # Registertrennung laeuft bei Compare ueber die Ort-Datei
+        # `f"{preset_id}:{loc.id}"`, `segment_ids` traegt trotzdem die
+        # Ortskennung: eine LEERE Segment-Menge erzeugt strukturell nie ein
+        # Match (`alert_gate.py::_find_matching_entry`) und waere ein stiller
+        # No-Op. Gefiltert wird VOR der Dringlichkeits-Berechnung, sonst
+        # bestimmte ein unterdrueckter Ort noch die Kanal-Schwelle mit.
+        now_utc = datetime.now(timezone.utc)
+        allowed_triggered: list[tuple] = []
+        for name, loc, nowcast in triggered:
+            hazard_class, urgency, onset_at = _identity_inputs(nowcast, now_utc)
+            identity_gate = check_event_identity_gate(
+                user_id=self._user_id, entity_id=f"{preset_id}:{loc.id}",
+                hazard_class=hazard_class, segment_ids=[loc.id],
+                severity=urgency, now=now_utc, point_at=onset_at,
+            )
+            if identity_gate.allowed:
+                allowed_triggered.append((name, loc, nowcast))
+                continue
+            logger.debug(
+                f"Compare-Radar-Alert unterdrueckt ({identity_gate.reason}) "
+                f"fuer {preset_id}:{loc.id}"
+            )
+            try:
+                alert_log.append_suppressed_entry(
+                    self._user_id, entity_id=preset_id, entity_type="compare",
+                    reason=alert_log.REASON_NOWCAST,
+                    gate_reason=identity_gate.reason,
+                    effective_channels=effective_channels,
+                )
+            except Exception as e:
+                logger.error(
+                    "Compare-Radar-Alert: Unterdrueckungs-Protokoll (Ereignis-"
+                    "Identitaet) fuer %s:%s fehlgeschlagen (%s) — der Alarm "
+                    "blieb aus, nur der Protokoll-Eintrag fehlt.",
+                    preset_id, loc.id, e,
+                )
+        if not allowed_triggered:
+            return False
+        triggered = allowed_triggered
+
         notification_service = self._notification_service_for(preset)
         # Die Dringlichkeit wird VOR dem Versand hochgezogen (bisher entstand
         # sie erst inline im `append_entry`-Argument, also NACH dem Versand) --
@@ -229,6 +296,19 @@ class CompareRadarAlertService:
             return False
 
         self._finalize_triggered_state(preset_id, triggered)
+        # Issue #1917 S4b-2 (F001-Symmetrie): NUR nach erfolgreicher
+        # Zustellung — eine spaetere amtliche Warnung fuer dasselbe Ereignis
+        # findet diesen Eintrag ueber `check_event_identity_gate()`.
+        for _name, loc, nowcast in triggered:
+            hazard_class, urgency, onset_at = _identity_inputs(nowcast, now_utc)
+            if hazard_class is None:
+                continue
+            record_event_identity(
+                user_id=self._user_id, entity_id=f"{preset_id}:{loc.id}",
+                hazard_class=hazard_class, segment_ids=[loc.id],
+                severity=urgency, point_at=onset_at,
+                now=datetime.now(timezone.utc),
+            )
         # Issue #1467 S3: Tageszaehler + Sperrzeit im geteilten Speicher, erst
         # NACH erfolgreicher Zustellung (F001-Semantik, unveraendert).
         record_nowcast_sent(

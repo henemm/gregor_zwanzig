@@ -129,8 +129,14 @@ def test_ac12_ortsvergleich_protokolliert_alle_drei_ausloeser():
     try:
         _setup_compare_user(uid)
         now = datetime.now(timezone.utc)
+        # Issue #1917 S4b-2: hazard bewusst AUSSERHALB des `wet`-Kanons
+        # (nicht "thunderstorm") — sonst wuerde die neue quellenuebergreifende
+        # Ereignis-Identitaet diesen amtlichen Alarm als Duplikat des Radar-
+        # Nowcasts (ebenfalls `wet`, ueberlappendes Fenster) korrekt
+        # unterdruecken; dieser Test prueft die Protokoll-Struktur, nicht die
+        # Entdopplung.
         register_official_alert_source(_FakeOfficialSource([OfficialAlert(
-            source="tdd-1459", hazard="thunderstorm", level=2, label="Gewitter",
+            source="tdd-1459", hazard="extreme_heat", level=2, label="Hitze",
             valid_from=now - timedelta(hours=1), valid_to=now + timedelta(hours=6),
             region_label="Testregion",
         )]))

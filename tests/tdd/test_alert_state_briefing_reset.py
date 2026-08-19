@@ -1165,3 +1165,67 @@ def test_s4b_ac14_neuer_event_identity_praefix_wird_vom_reset_erfasst():
         )
     finally:
         _clean_user(user_id)
+
+
+# ═══════ Issue #1917 Scheibe S4b-2 — AC-16 (Register-Reset, Compare) ═════════
+# SPEC: docs/specs/modules/rework_1917_s4b2_compare_entdopplung.md
+#
+# Pendant zu AC-14 aus S4b-1 (oben), aber auf einer COMPARE-Entitaet: dort
+# heisst die Registerdatei `f"{preset_id}:{loc_id}"` statt `trip_id`. Der
+# Reset-Filter kennt keine Entitaetsart -- er arbeitet rein auf dem
+# Schluessel-Praefix. Genau das sichert dieser Test ab, damit ein kuenftiger
+# Umbau ("Compare-Entitaeten anders behandeln") nicht still eine
+# Compare-Dublette ueber ein Briefing hinweg konservieren kann.
+#
+# Als "bestehender Compare-Dedup-Eintrag", der den Reset UEBERLEBEN muss, ist
+# bewusst der amtliche Warnstufen-Schluessel gewaehlt (`official_alert:`): das
+# ist der einzige Praefix, den `reset()` schont. Der Radar-Onset-Eintrag
+# (`radar_onset`) faellt -- wie jeder andere Nicht-`official_alert:`-Schluessel
+# -- mit weg; das ist Bestandsverhalten und nicht Gegenstand dieser Scheibe.
+
+
+def test_s4b2_ac16_compare_ort_event_identity_faellt_amtlicher_eintrag_bleibt():
+    """#1917 S4b-2 AC-16: Fuer einen COMPARE-Ort (`preset_id:loc_id`) mit
+    einem `event_identity:`-Registereintrag UND einem bestehenden amtlichen
+    Melde-Gedaechtnis-Eintrag verschwindet nach `AlertStateService.reset()`
+    der `event_identity:`-Eintrag, der amtliche bleibt unveraendert erhalten.
+
+    Regressionstest (kein RED-Nachweis): der geteilte Baustein leistet das
+    seit S4b-1 ohne Code-Aenderung -- dieser Fall beweist, dass die Zusicherung
+    auch fuer die Ortsvergleich-Entitaetsform gilt."""
+    from services.alert_state import (
+        EVENT_IDENTITY_KEY_PREFIX, OFFICIAL_ALERT_KEY_PREFIX, AlertStateService,
+    )
+
+    user_id = _fresh_user("s4b2-ac16")
+    _clean_user(user_id)
+    try:
+        preset_id, loc_id = "cp-1917-ac16", "loc-hermagor"
+        entity_id = f"{preset_id}:{loc_id}"
+        event_key = f"{EVENT_IDENTITY_KEY_PREFIX}wet:{loc_id}:2026-08-18T14:22:00+00:00"
+        official_key = f"{OFFICIAL_ALERT_KEY_PREFIX}region:Gailtal:thunderstorm:x:y"
+        event_value = {
+            "hazard_class": "wet", "segment_ids": [loc_id], "severity": "HIGH",
+            "point_at": "2026-08-18T14:30:00+00:00",
+            "reported_at": "2026-08-18T14:22:03+00:00",
+        }
+        official_value = {
+            "last_reported_value": 3.0, "reported_at": "2026-08-18T14:22:03+00:00",
+        }
+
+        svc = AlertStateService(user_id=user_id)
+        svc.save(entity_id, {event_key: event_value, official_key: official_value})
+
+        svc.reset(entity_id)
+
+        after = AlertStateService(user_id=user_id).load(entity_id)
+        assert event_key not in after, (
+            f"Der event_identity:-Eintrag eines COMPARE-Orts muss den "
+            f"Briefing-Reset NICHT ueberleben: {sorted(after)!r}"
+        )
+        assert after.get(official_key) == official_value, (
+            f"Der bestehende amtliche Compare-Dedup-Eintrag muss unveraendert "
+            f"erhalten bleiben: {after!r}"
+        )
+    finally:
+        _clean_user(user_id)
