@@ -2602,7 +2602,15 @@ def test_ac_s2_3_keine_zwei_spalten_mit_gleicher_beschriftung():
     Auswertung derselben Groesse (Vorbild fuer ein kuenftiges ``avg`` bei
     Temperatur, Scheibe A3): min+max mergen weiterhin, die dritte bleibt
     eine eigene, disambiguierte Spalte -- GENAU der Zweig, den dieser Test
-    bewacht."""
+    bewacht.
+
+    🔴 Der synthetische Ausschnitt ist ABSICHTLICH synthetisch, keine
+    Verlegenheitsloesung: liefe die Vakuum-Gegenprobe stattdessen ueber den
+    REALEN Katalog, bewiese sie ab jetzt nur noch, dass der Merge wirkt --
+    der Ausschluss wuerde die Bedingung erzeugen, mit der er begruendet
+    ist, und die Disambiguierung waere totes, ungetestetes Recht (bis A3
+    tatsaechlich eine dritte Auswertung einfuehrt). NICHT auf den realen
+    Katalog "vereinfachen"."""
     _temp_max_zeile = next(e for e in COMPARE_METRIC_CATALOG if e["key"] == "temp_max_c")
     _synthetische_dritte_auswertung = {
         **_temp_max_zeile, "key": "temp_avg_c_ac_s2_3_synthetisch", "aggregation": "avg",
