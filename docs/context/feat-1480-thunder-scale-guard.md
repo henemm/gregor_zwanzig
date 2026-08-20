@@ -308,6 +308,24 @@ Testdateien**. Technisch: Kommentar-Extraktion muss Zeilenumbrüche und Kommenta
 normalisieren, sonst zerreißt ein mehrzeiliger Wortlaut und die schärfste Formulierung im Bestand
 bliebe unerkannt.
 
+### Regel D in Python: null Fänge — und wird trotzdem gebaut
+
+Gemessen mit Positivkontrolle: 25 Stufen-Literale in `tests/` gefunden, **keines** trägt eine
+Paritäts-Behauptung; historisch (`860a3baf^`) ebenfalls **null**. Die Python-Testsuite behauptet
+Parität über *Verhaltensvergleiche* (ruft die echte Quelle auf), nicht über kommentierte
+Katalog-Duplikate. Der Messende empfahl daher, sie im Python-Teil wegzulassen.
+
+**Entscheidung dagegen, begründet:** Dasselbe Argument („0 Fang heute") würde den **gesamten
+Frontend-Wächter** erledigen — dort ist der Bestand sauber, Regel A und P fangen aktuell ebenfalls
+null. Der Wächter ist **präventiv**; „fängt heute nichts" ist bei ihm der Normalzustand, den er
+verteidigt, kein Ausschlusskriterium. Regel D kommt deshalb auch in den Python-Teil, aber als
+**Fähigkeit des geteilten Kerns**, nicht als eigene Regel mit eigenem Budget — Kosten marginal
+(`tokenize` ist einfacher als die TS-Kommentar-Extraktion), Nutzen ist Symmetrie. Eine geprüfte
+Paritäts-Behauptung im Frontend und eine ungeprüfte in Python liest der Nächste als Versehen.
+
+**Für das Prüfdatum festgehalten:** Regel D hat im Python-Teil bei Einführung null Fänge, aktuell
+wie historisch. Am 2026-11-01 wird sie damit bewertet.
+
 ## Was strukturell unfangbar bleibt (bewusst nicht verfolgt)
 
 | Form | Warum nicht verfolgt |
