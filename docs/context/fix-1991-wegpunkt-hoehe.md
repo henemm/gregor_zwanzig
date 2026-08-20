@@ -8,9 +8,11 @@
 ## Request Summary
 
 Die Geländehöhe eines Wegpunkts wird bis an die Providergrenze mitgeführt, dort aber beim Bau der
-HTTP-Anfrage verworfen. Open-Meteo rechnet deshalb mit seiner Modellgitter-Höhe statt mit der
-echten Wegpunkt-Höhe — Gipfel- und Passprognosen sind systematisch zu warm. Der Fix reicht die
-Höhe an alle Provider durch, die sie annehmen können.
+HTTP-Anfrage verworfen. Open-Meteo rechnet deshalb mit der Höhe seiner eigenen, geglätteten
+Geländekarte statt mit der echten Wegpunkt-Höhe. Der Fehler geht dadurch in **beide** Richtungen:
+Gipfel werden abgetragen (Prognose zu warm), Talpunkte und Hütten aufgefüllt (Prognose zu kalt) —
+siehe Messreihe im Analyse-Teil. Der Fix reicht die Höhe an alle Provider durch, die sie
+annehmen können.
 
 ## Live-Gegenprobe (2026-08-20, eigenständig reproduziert)
 
@@ -123,8 +125,9 @@ Schaufelspitze 47.0614 N / 11.1211 E, echte Höhe 3333 m, Endpunkt `api.open-met
    (`src/services/weather_change_detection.py:757`, `abs(delta) > threshold`) kann nicht
    unterscheiden zwischen „das Wetter hat sich geändert" und „wir fragen seit heute anders".
    Die Schwellen (`src/services/alert_preset.py:53ff`): Temperatur-Minimum Δ 8/5/3 °C,
-   Nullgradgrenze Δ 600/400/200 m (entspannt/standard/sensibel). Ein 3-°C-Sprung bleibt bei
-   „standard" **unter** der Temperaturschwelle, bei „sensibel" löst er aus. Der gefährdetere
+   Nullgradgrenze Δ 600/400/200 m (entspannt/standard/sensibel). **Durch die Messung überholt:**
+   die tatsächlichen Sprünge reichen bis 6,2 °C (Temperatur) und 460 m (Nullgradgrenze) und
+   reißen damit auch die Standardschwellen — nicht nur die sensiblen. Der gefährdetere
    Kandidat ist die **Nullgradgrenze**: 200 m sind bei einer höhenkorrigierten
    `freezing_level_height` schnell erreicht. Dämpfer: das Melde-Gedächtnis
    (`deviation_alert_engine.py:234`) unterdrückt Wiederholungen, der Sprung feuert höchstens
@@ -153,3 +156,147 @@ Schaufelspitze 47.0614 N / 11.1211 E, echte Höhe 3333 m, Endpunkt `api.open-met
    ohne `elevation`-Parameter abgefragt werden — kein erfundener Wert, kein Absturz. Und die
    Fixtures (`fixtures/openmeteo/*.json`) sind bereits normalisiert und enthalten keine
    Request-URL, sind also vom Zusatzparameter nicht betroffen.
+
+---
+
+# Analysis (Phase 2)
+
+## Type
+
+**Bug** — mit Anteilen einer Grundsatzentscheidung (Höhen-Soll war nie festgelegt), daher zusätzlich ein ADR.
+
+## Messung vor der Spec (2026-08-20, echte API, echte Wegpunkte)
+
+| Punkt | echte Höhe | Höhe im Modell | ΔT max | ΔT min |
+|---|---|---|---|---|
+| Dresdner Hütte (Stubai) | 2302 m | 3078 m | **+6,2 °C** | +5,8 °C |
+| Obstanserseehütte (KHW) | 2304 m | 1794 m | −4,8 °C | −3,3 °C |
+| Schaufelspitze (Stubai) | 3333 m | 2925 m | −3,5 °C | −2,8 °C |
+| Sillianer Hütte (KHW) | 2447 m | 2028 m | −2,6 °C | −1,9 °C |
+| Bocca di Foggiale (GR20) | 1962 m | 1716 m | −1,6 °C | −1,6 °C |
+| Refuge de Tighjettu (GR20) | 1683 m | 1411 m | −0,4 °C | +0,1 °C |
+
+**Der Fehler geht in beide Richtungen.** Die Höhenkarte, auf die Open-Meteo ohne `elevation`
+zurückfällt, glättet das Gelände: Gipfel werden abgetragen (Prognose zu warm), Talpunkte
+aufgefüllt (Prognose zu kalt). Die Formulierung „systematisch zu warm" im Issue beschreibt nur
+den Gipfelfall. Die **größte** gemessene Abweichung trifft eine Hütte, und zwar nach unten
+(6,2 °C zu kalt an der Dresdner Hütte; mit drei Koordinaten im Umkreis gegengeprüft, also kein
+Koordinatenfehler der Beispieldatei).
+
+**Betroffen ist mehr als die Temperatur** (stundenscharfer Vergleich, 48 h):
+
+| Größe | Schaufelspitze | Obstanserseehütte | Bocca di Foggiale |
+|---|---|---|---|
+| Nullgradgrenze, Bandbreite der Änderung | −260 … +150 m | **−460 … +10 m** | 0 m |
+| Stunden mit veränderter Nullgradgrenze | 47/48 | 40/48 | 0/48 |
+| Niederschlag, größte Änderung | 2,40 mm | 1,00 mm | 0,00 mm |
+| Stunden mit verändertem Wettercode | 11/48 | 7/48 | 0/48 |
+
+Achtung, Messfalle: Ein Vergleich der *Tagesmaxima* zeigt für die Nullgradgrenze nur 0–90 m und
+suggeriert Entwarnung. Erst der **stundenweise** Vergleich zeigt Verschiebungen bis 460 m — mehr
+als die Standard-Alarmschwelle von 400 m. Der Alpenraum ist durchgehend betroffen, Korsika (GR20)
+in dieser Probe gar nicht.
+
+Alle drei produktiv genutzten Modell-Endpunkte (`dwd-icon`, `meteofrance`, `ecmwf`) nehmen
+`elevation` an und melden die verwendete Höhe zurück.
+
+## Affected Files
+
+| Datei | Änderung | Beschreibung |
+|---|---|---|
+| `src/providers/openmeteo.py` | MODIFY | Ein gemeinsamer Params-Erbauer `_punkt_params(location, **rest)`; 4 Baustellen (`:973`, `:1175`, `:724`, `:807`) darauf umstellen; `_fetch_uv_data` von `lat, lon` auf `location` heben |
+| `src/app/models.py` | MODIFY | `ForecastMeta.model_elevation_m` — die von der API gemeldete Höhe als Wirksamkeitsnachweis |
+| `src/providers/geosphere.py` | MODIFY | `_fetch_openmeteo_clouds` (`:508`) — Höhe in den hartkodierten Open-Meteo-URL |
+| `src/services/weather_cache.py` | MODIFY | Höhe in `_bucket_key` (`:226`) |
+| `src/services/point_weather.py` | MODIFY | `LocationWeatherSource.fetch` — Höhe im Protokoll |
+| `src/services/compare_location_weather_source.py` | MODIFY | `:150` — Höhe nicht mehr auf `None` setzen |
+| `src/services/compare_alert.py`, `src/services/scheduler_dispatch_service.py` | MODIFY | Höhe aus `SavedLocation` durchreichen |
+| `src/services/segment_weather.py` | MODIFY | Diagnosezeile „angefordert/gemeldet" im bestehenden Debug-Kanal |
+| `src/services/radar_service.py` | MODIFY | Nowcast-Kette (`get_nowcast` + 6 interne Methoden + `:458`) — Scheibe S3 |
+| `docs/specs/data_sources.md` | MODIFY | Antrag #4: `elevation` auf die Positivliste |
+| `docs/adr/0058-*.md` | CREATE | Höhen-Soll als Grundsatzentscheidung |
+| `docs/reference/decision_matrix.md` | MODIFY | Provider-Asymmetrie vermerken |
+| Tests | CREATE | MockTransport-Request-Test, AST-Aufrufstellen-Wächter, Cache-Bucket, Compare-Höhe, Doc-Compliance |
+
+## Scope Assessment
+
+- Produktiv: ~90–110 LoC über 9 Dateien (S3 eingerechnet) — **unter** dem Limit von 250
+- Tests: ~280 LoC — unter dem eigenen Testbudget von 500
+- `docs/`/`*.md` zählen nicht mit
+- Risiko: **MEDIUM** — kleiner Eingriff, große Reichweite (jeder Wert in jedem Kanal)
+
+## Technische Entscheidungen
+
+**E1 — Wo durchreichen.** Ein gemeinsamer Params-Erbauer in `openmeteo.py`, **nicht** in
+`_request()`: `_request` (`:598`) kennt die `Location` gar nicht und deckt nur 4 von 6
+Baustellen ab — ein Engpass, der sich als einer anfühlt, aber leckt. Abgesichert wird die
+Vollständigkeit stattdessen durch einen **AST-Wächter** nach dem Hausmuster
+`tests/test_onset_callsite_timezone_guard.py`: kein Dict-Literal in `src/`/`api/` darf
+`"latitude"` tragen, ohne über den Erbauer zu laufen oder namentlich mit Begründung in der
+Ausnahmeliste zu stehen. Das ist die einzige Bauform, die den **sechsten** Aufrufer fängt, den
+noch niemand geschrieben hat — der fünfte (`radar_service.py:458`) existiert bereits.
+
+**E2 — Provider ohne Höhenannahme.** Nichts tun, Asymmetrie dokumentieren. DWD-GRIB2 und DWD-EU
+liefern im Regelbetrieb gar keine Temperatur, sondern Gewittersignale; GeoSphere liefert Schnee
+und CAPE. Der Alpen-Normalfall ist Open-Meteo/ICON-D2 — also genau der Pfad, der die Höhe kann.
+Die Asymmetrie greift praktisch nur beim Totalausfall aller Open-Meteo-Kandidaten, und dort gilt
+ADR-0018 („Fallback ohne Kaschieren") bereits mit ausgewiesenem `fallback_reason`. Eine eigene
+Höhenphysik ist durch den PO-Entscheid ausgeschlossen.
+
+**E3 — Cache und Ortsvergleich zusammen.** Beides, nicht eines: Der Bucket-Key
+(`weather_cache.py:226`) trennt die Kollision nur, er repariert den Ortsvergleich nicht. Heute
+teilen sich Trip-Pfad (mit Höhe) und Compare-Pfad (Höhe hart auf `None`) denselben Cache-Eintrag
+am selben Punkt — wer zuerst fragt, entscheidet für die TTL-Dauer, was der andere sieht. Nicht
+deterministisch, kein Test fängt das. Die Höhe ist an beiden Stellen verfügbar
+(`GPXPoint.elevation_m`, `SavedLocation.elevation_m` ist sogar Pflichtfeld).
+
+**E4 — Anker beim Deploy NICHT löschen.** Ohne Anker liefert `trip_alert.py:720-723` keinen
+Vergleichspunkt und damit **gar keinen** Abweichungsalarm — bis zum nächsten Briefing-Versand,
+also bei laufender Tour bis zu ~12 h blinde Wache, plus eine Ablehnungsmeldung je Tour und Lauf.
+Dem steht ein einmaliger Fehlalarm gegenüber, den das Melde-Gedächtnis
+(`deviation_alert_engine.py:234`) auf einmal je Metrik und Segment begrenzt. Die Projektregel
+„ausbleibender Alarm ist der gefährlichere Fehler" entscheidet das. Der Sprung ist nach der
+Messung allerdings **größer als zunächst angenommen**: die Nullgradgrenze verschiebt sich bis
+460 m und reißt damit auch die Standardschwelle (400 m). Es wird also beim Umschalten sichtbar
+Alarme geben — einmalig, und das gehört so in den Deploy-Text, damit der erste Rückfrage-Fall
+nicht als Regression gelesen wird.
+
+**E5 — Wirksamkeit nachweisbar machen.** Open-Meteo meldet die verwendete Höhe in jeder Antwort
+zurück; heute liest das niemand. Minimal erfassen: `ForecastMeta.model_elevation_m` (wird
+nirgends serialisiert, also kein Snapshot-Formatbruch) plus eine Zeile im bestehenden
+Debug-Kanal von `segment_weather.py`. **Nicht** ins `enrichment_health`-Journal — das hat ein
+geschlossenes Vokabular und würde Go-Aggregator und API-Vertrag nachziehen.
+
+**E6 — Nowcast-Pfad als eigene Scheibe S3.** `radar_service.py` führt nur `lat`/`lon` durch acht
+Signaturen; die Höhe fehlt dort komplett. Das Issue verlangt `elevation` in **allen**
+Open-Meteo-Requests, und die Messung zeigt, dass Niederschlag (bis 2,4 mm) und Wettercode
+(11 von 48 Stunden) tatsächlich reagieren — bei einem Kurzfristhinweis entscheidet das über
+„Regen" oder „Schnee". Daher enthalten, aber als klar abgegrenzte dritte Scheibe, damit S1/S2
+unabhängig liefern können. Der Nowcast-Cache (`radar_cache.py:72`) braucht dann dieselbe
+Key-Erweiterung wie der Wetter-Cache.
+
+## Umsetzungsreihenfolge
+
+1. Governance zuerst: Antrag #4 in `data_sources.md` + Doc-Compliance-Test — sonst sendet der
+   erste GREEN-Commit einen Parameter, der nicht auf der Positivliste steht
+2. ADR-0058 (Höhen-Soll, Asymmetrie, Verweis auf ADR-0018)
+3. **S1 Trip-Pfad:** Params-Erbauer, 4 Baustellen, `geosphere.py`, Meta-Erfassung, AST-Wächter
+4. **S2 Ortsvergleich + Cache:** Protokoll-Durchreichung und Bucket-Key gemeinsam
+5. **S3 Nowcast:** Höhe durch die `radar_service`-Kette, Cache-Key nachziehen
+6. Deploy ohne Anker-Löschung, mit Beobachtung der neuen Diagnosezeile
+
+## Testbauform (kein Netz, kein Mock-Theater)
+
+`httpx.MockTransport` nach dem Vorbild `tests/test_provider_tz_normalization.py:184` — der
+Handler bekommt ein echtes `httpx.Request` samt fertig kodierter Query. Vier Behauptungen:
+(1) `elevation` steht in der Query, wenn eine Höhe vorliegt; (2) `elevation` ist **abwesend** —
+nicht leer — wenn keine vorliegt; (3) auch der Ensemble-Request trägt sie; (4) die gemeldete
+Höhe landet in `meta`.
+
+**Pflicht-Mutation:** Den Erbauer-Aufruf in `fetch_forecast` durch das alte Dict-Literal
+ersetzen. Die Unit-Tests des Erbauers bleiben dabei grün — nur Behauptung 1 fällt. Genau die
+Lücke zwischen „die Funktion kann es" und „die Zusicherung wirkt an der Stelle, wo sie zählt".
+
+## Open Questions
+
+Keine offenen technischen Fragen — E1–E6 sind entschieden. Freigabepflichtig sind allein die ACs.
