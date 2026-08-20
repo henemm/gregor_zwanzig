@@ -183,6 +183,8 @@ def _thunder_severity(level: Optional[ThunderLevel]) -> int:
 # Issue #1474 (F003-Nachbesserung): Inverse der kanonischen Ordinalskala
 # (thunder_ordinal() -> {NONE:0, LOW:1, MED:2, HIGH:3}), NUR fuer die
 # Ruecklookup-Stelle in _tg_day_footer -- Index == thunder_ordinal(Level).
+# gz-thunder-scale: geduldete Inverse der kanonischen Ordinalskala, reine
+# Rueck-Lookup-Stelle ohne eigene Stufen-Wahrheit (#1480 Duldungsliste)
 _SEV_TO_THUNDER_LEVEL: tuple[ThunderLevel, ...] = (
     ThunderLevel.NONE, ThunderLevel.LOW, ThunderLevel.MED, ThunderLevel.HIGH,
 )

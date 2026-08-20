@@ -163,14 +163,47 @@ geprüft (AC-19), nicht angenommen.
 
 ### Duldung und Verstoßmeldung
 
-Ausnahmen werden **an der Fundstelle** per Marker-Kommentar `# gz-thunder-scale: <Begründung>`
-(Backend) bzw. `// gz-thunder-scale: <Begründung>` (Frontend) eingetragen — nie über eine
-zentrale Liste, nie über Zeilennummern (#1466). Ein Marker ohne Begründungstext oder mit einer
-Alibi-Begründung unter 15 sinnvollen Zeichen zählt nicht. Der heutige Bestand braucht **genau
-einen** Marker: `src/output/renderers/narrow.py::_SEV_TO_THUNDER_LEVEL` — ein Tupel aller vier
-Stufen, das die Ordnung positional statt über `_THUNDER_ORDER` nachbaut und strukturell nicht von
-einer echten Kopie unterscheidbar ist. Bei jedem neuen, unbegründeten Fund schlägt der jeweilige
-Wächter fehl und meldet `Code reference: <Datei>:<Zeile>`.
+Geduldet wird **dreistufig**. Die Stufen sagen bewusst Verschiedenes aus — wer alles über einen
+Marker regelt, behauptet an neun Stellen „diese Kopie ist gerechtfertigt", obwohl mehrere davon
+nutzersichtbare Defekte sind (#2010, #2011).
+
+1. **Whitelist kanonischer Quellen** (`ScaleSpec.canonical_symbols` bzw. `CANONICAL_SYMBOLS` im
+   Frontend) — **symbolscharf**, als `(Datei, Symbol)`-Paare, nie dateiweit. Eine dateiweite
+   Whitelist ließe die kanonischen Dateien vollständig unbewacht; die nächste Kopie entsteht
+   erfahrungsgemäß **neben** der Quelle (die neunte #1474-Stelle entstand beim Reparieren der
+   vierten), und `metric_format.py` führt außerdem Wolken-, Wind- und weitere Metriken. Die
+   Kontextanalyse spricht ebenfalls symbolweise („`_THUNDER_AMPEL_BAND` fehlte auf der
+   Whitelist"). Eine kanonische Quelle ist kein geduldeter Verstoß, sondern die Wahrheit; ein
+   Wächter ohne sie meldet seine eigene Bezugsquelle (Kontextanalyse Z. 56/57). Parametrisiert,
+   damit AC-24 trägt — **kein** Marker im Produktivcode.
+   Inhalt (gemessen, nur Einträge die ohne Whitelist wirklich anschlagen):
+   `thunder_scale.py::_THUNDER_ORDER`, `thunder_scale.py::_THUNDER_LABEL_VALUE`,
+   `metric_format.py::THUNDER_LABEL_DE`, `metric_format.py::_THUNDER_AMPEL_BAND`,
+   `corridorEditorState.ts::ORDINAL_ENUM`. **Nicht** aufgenommen sind
+   `models.py::ThunderLevel` (Enum-Klassenrumpf), `compare_metric_catalog.py::_THUNDER_ORDINAL_LABELS`
+   sowie `types.ts::ThunderLevel` und die Ableitungen in `compareMetricCatalogLoader.ts` — sie
+   erzeugen heute keinen Fund; ein Eintrag dafür wäre Leerlauf, und schlüge einer künftig doch an,
+   wäre das ein echtes Signal (Rückfall hinter #1911). Für beide Whitelists gilt derselbe
+   **Nicht-Leerlauf-Test** wie für die Basislinie, dazu ein **Granularitäts-Nachweis**: eine
+   konstruierte Kopie in einer kanonischen Datei unter anderem Symbolnamen **muss** gemeldet
+   werden.
+2. **Benannte Altlasten-Basislinie** (`ALTLASTEN` im Backend-Wächter, 9 Einträge): die bekannten
+   Kopien aus #1474. **Symbolgeschlüsselt** über `(Datei, Symbol-/Funktionsname, Regel)` —
+   **niemals** über Zeilennummern (#1466); jeder Eintrag trägt Grund und Tracking-Issue. Die Liste
+   darf nur schrumpfen. Gegen Verrotten schützt ein **Nicht-Leerlauf-Test**: erzeugt ein Eintrag
+   heute keinen echten Fund mehr (Symbol saniert, umbenannt, verschoben), wird der Wächter **rot**
+   statt still. Die Gegenrichtung ist ebenso geprüft — die Basislinie darf keine Stelle
+   stillstellen, die nicht namentlich in ihr steht. Das Frontend braucht **keine** Basislinie: sein
+   Bestand ist seit #1488/#1911 frei von aktiven Kopien.
+3. **Marker-Kommentar an der Fundstelle**: `# gz-thunder-scale: <Begründung>` (Backend) bzw.
+   `// gz-thunder-scale: <Begründung>` (Frontend), mindestens 15 sinnvolle Zeichen Begründung.
+   Das ist die echte, begründete Duldung — der heutige Bestand hat **genau eine**:
+   `src/output/renderers/narrow.py::_SEV_TO_THUNDER_LEVEL` (Kategorie B: liest die Quelle, führt
+   bewusst eine positionale Teilmenge). Sie ist zugleich der einzige Nachweis, dass der
+   Marker-Pfad am **echten** Baum wirkt und nicht nur an In-Memory-Fixtures.
+
+Bei jedem neuen, ungedeckten Fund schlägt der jeweilige Wächter fehl und meldet
+`Code reference: <Datei>:<Zeile>`.
 
 ### Prüfdatum
 
@@ -251,6 +284,14 @@ der Tabelle „Regel-Budget: Prüfdaten im Überblick" (`docs/reference/gates_un
     gemeldet. Ohne diesen Fall wäre der AC auch von einer Implementierung erfüllt, die
     verschachtelte Funktionen pauschal übergeht — geprüft werden soll aber die fehlende
     *Vererbung*, nicht eine generelle Blindheit für innere Funktionen.
+  - Die Nicht-Vererbung wird in **beiden** Wächtern geprüft, mit Positivfall und Umkehrprobe je
+    Sprachraum: der Frontend-Wächter trägt dieselbe Schutzmaßnahme im Regel-C-Pfad (kein Abstieg
+    in verschachtelte `function`/Arrow-Bodies) und braucht dafür einen eigenen Nachweis — ohne ihn
+    ließe sich sie dort entfernen, ohne dass ein Test rot wird (Adversary-Mutation F7). Im Frontend
+    wird die Nicht-Vererbung für **alle drei** Funktionsformen geprüft, die der Kern kennt
+    (Function-Deklaration, Arrow-Function, Function-Expression), je mit Positivfall und
+    Umkehrprobe — sonst bliebe eine Verengung der Sperre auf `ts.isFunctionDeclaration`
+    unbemerkt (Adversary-Mutation F-FRONTEND-2).
 
 - **AC-10:** Given ein `match/case`-Konstrukt, das strukturell einer Regel-B-Verzweigung
   entspricht (Match auf eine Stufen-Variable, mindestens ein `case`-Zweig mit eigenem rohen
@@ -275,12 +316,17 @@ der Tabelle „Regel-Budget: Prüfdaten im Überblick" (`docs/reference/gates_un
     manchen Fixtures mehrere Fehlfunde und bei anderen keinen liefert, könnte zufällig auf acht
     summieren und bestünde einen reinen Summentest.
 
-- **AC-12:** Given der unveränderte Bestand von `src/**/*.py` + `api/**/*.py` (204 Dateien) / When
-  der Backend-Wächter über den echten Repo-Baum läuft / Then entsteht genau **ein** unbegründeter
-  Fund weniger als ohne den Marker an `narrow.py::_SEV_TO_THUNDER_LEVEL` — mit gesetztem Marker
-  bleibt der Lauf grün, entfernt man den Marker probeweise, wird genau diese eine Stelle rot
-  - Test: Wächterlauf gegen den echten Baum ist grün; ein temporär entfernter Marker (in einer
-    Kopie, nicht im Repo) macht denselben Lauf an genau dieser Stelle rot.
+- **AC-12:** Given der unveränderte Bestand von `src/**/*.py` + `api/**/*.py` / When der
+  Backend-Wächter über den echten Repo-Baum läuft / Then ist der Lauf grün, weil jeder Fund
+  entweder auf der Whitelist kanonischer Quellen steht, in der benannten Altlasten-Basislinie
+  geführt wird oder einen Marker-Kommentar trägt — und **jede** dieser Duldungen ist nachweislich
+  wirksam: entfernt man einen einzelnen Basislinien-Eintrag bzw. den `narrow.py`-Marker (in einer
+  Kopie, nicht im Repo), wird genau diese eine Stelle rot, keine andere
+  - Test: Wächterlauf gegen den echten Baum ist grün. Ein Lauf **ohne** die Basislinie liefert
+    exakt die neun namentlich geführten Stellen — daraus folgt beides: kein Eintrag läuft leer
+    (Nicht-Leerlauf, **Pflicht**), und keine Stelle wird stillgestellt, die nicht in der Liste
+    steht. Ein Lauf ohne Whitelist meldet die kanonischen Quellen selbst; ein temporär entfernter
+    Marker (in einer Kopie, nicht im Repo) macht `narrow.py::_SEV_TO_THUNDER_LEVEL` rot.
 
 **Frontend — Regel A, P, C**
 
@@ -358,9 +404,25 @@ der Tabelle „Regel-Budget: Prüfdaten im Überblick" (`docs/reference/gates_un
   (`# gz-thunder-scale: <Begründung>` bzw. `// gz-thunder-scale: <Begründung>`) mit mindestens
   15 sinnvollen Zeichen direkt an der Fundstelle / When der jeweilige Wächter läuft / Then wird
   dieser Fund durchgelassen; derselbe Marker ohne Begründungstext oder mit einer Alibi-Begründung
-  unter 15 Zeichen bleibt rot
-  - Test: Je zwei Fixtures (mit ausreichender, mit unzureichender Begründung) pro Wächter zeigen
-    das jeweils erwartete Ergebnis.
+  unter 15 sinnvollen Zeichen bleibt rot
+  - **„Sinnvolle Zeichen" sind Buchstaben und Ziffern.** Leerraum, Interpunktion und Unterstriche
+    zählen nicht mit — identische Regel wie beim Vorbild-Ratchet
+    `tests/tdd/test_repo_path_hardcoding_ratchet.py` (`_UNWORT = re.compile(r"[\W_]+")`, dort vor
+    demselben `>= 15`-Vergleich angewendet). Im Frontend das Unicode-Pendant
+    `/[^\p{L}\p{N}]+/gu`: **deutsche Umlaute zählen als sinnvolle Zeichen**, unsere Begründungen
+    sind auf Deutsch.
+  - **Zusätzlich zum Vorbild:** die Begründung muss mindestens **5 verschiedene** sinnvolle Zeichen
+    tragen. Ohne diese Bedingung überlebt eine reine Zeichen-Wiederholung (`aaaaaaaaaaaaaaa`) die
+    Filterung mit voller Länge 15. Schwelle 5 mit großem Abstand nach beiden Seiten (gemessen
+    2026-08-20: echte Begründungen 11–20 verschiedene Zeichen, entartete Wiederholungen 1–2).
+  - Begründung: Der Marker ist der **Notausgang der Ratsche**. Ließe er sich mit fünfzehn Punkten
+    öffnen, könnte jeder unter Zeitdruck den Wächter stillstellen, ohne eine Begründung zu
+    formulieren — genau davor schützt die Regel.
+  - Test: Pro Wächter je eine Fixture mit (a) 15 Punkten, (b) 15 Bindestrichen, (c) 15 gleichen
+    Buchstaben und (d) einer deutschen Begründung mit Umlauten knapp über der Grenze; (a)–(c)
+    bleiben rot, (d) wird durchgelassen. Dazu die Grenzprobe von beiden Seiten (14 sinnvolle
+    Zeichen → rot, 15 → grün) sowie die bestehenden Fixtures mit ausreichender/unzureichender
+    Begründung.
 
 - **AC-22:** Given die Prüfdatum-Konstante `EXPIRY = "2026-11-01"` in beiden Wächterdateien / When
   der Bestand durchsucht wird / Then lässt sich das Prüfdatum maschinell per `grep` in beiden
@@ -415,6 +477,11 @@ Frontend-Läufe erfolgen über
   erwarteter Output: Exit 0, keine Erwähnung einer unbegründeten Stelle außer
   `narrow.py::_SEV_TO_THUNDER_LEVEL` (die durch den Marker bereits grün ist). Gegenprobe mit
   temporär entferntem Marker **nur an einer Kopie im Scratchpad**, nie am Repo-Stand.
+  Die Positivkontrolle zum Nullbefund prüft die **besuchte Dateimenge**, nicht „mindestens ein
+  Fund": die von `scan_tree` gescannten Dateien müssen exakt der zur Laufzeit aus `rglob("*.py")`
+  abgeleiteten Soll-Menge entsprechen (Mengen-, kein Zählvergleich — die Fehlermeldung nennt so
+  die fehlende Datei; eine feste Zahl wäre bei jeder neuen `.py`-Datei ein Fehlalarm). „Mindestens
+  ein Fund" allein bliebe auch dann wahr, wenn der Wächter nur die halbe Baumfläche liefe.
 - **AC-13 bis AC-15, AC-17 (Frontend-Regeln):** Scan-Funktion des Frontend-Wächters auf
   In-Memory-AST-Fixtures anwenden; je Fixture erwarteten Fund-/Kein-Fund-Status prüfen.
 - **AC-16 (Live-Bezug der Ordnung):** die Ordnungsquelle per Injektion durch
@@ -428,8 +495,10 @@ Frontend-Läufe erfolgen über
   `frontend/.../__tests__/fixtures/` ausführen; erwarteter Output: 0 Funde trotz vollem
   Stufen-Wortschatz in den Dateien.
 - **AC-20 (Wirkungsnachweis):** `len(funde) > 0` gegen eine Fixture mit bekanntem Verstoß prüfen.
-- **AC-21 (Marker-Duldung):** zwei Fixtures (ausreichende/unzureichende Begründung) je Wächter
-  durch die Scan-Funktion laufen lassen.
+- **AC-21 (Marker-Duldung):** acht Fixtures je Wächter durch die Scan-Funktion laufen lassen —
+  ausreichende Begründung, Alibi-Begründung (`x`), 15 Punkte, 15 Bindestriche, 15 gleiche
+  Buchstaben, deutsche Begründung mit Umlauten sowie die Grenzproben mit 14 und 15 sinnvollen
+  Zeichen. Erwarteter Output: Füllzeichen und 14 Zeichen liefern je einen Fund, die übrigen `[]`.
 - **AC-22 (Prüfdatum):** `grep -n "2026-11-01" tests/tdd/test_thunder_scale_local_copy_guard.py
   frontend/src/lib/components/shared/weather-metrics-tab/__tests__/thunderScaleLocalCopyGuard.test.ts
   docs/reference/gates_und_ratschen.md` ausführen; erwarteter Output: mindestens ein Treffer je
@@ -445,7 +514,10 @@ Frontend-Läufe erfolgen über
   Fixture aufrufen — einmal mit `RiskLevel`-Parametern (Fund erwartet), einmal mit
   Gewitter-Parametern (kein Fund erwartet). Beide Erwartungen sind nötig: der Fund allein wiese
   nicht nach, dass der Kern sich wirklich nach den Parametern richtet und nicht ohnehin alles
-  meldet.
+  meldet. Das Paar wird **zweimal** gefahren, für zwei verschiedene Regeln: über eine Regel-A-
+  Fixture (Stufen-Token aus `member_names`) **und** über eine Regel-C-Fixture (Namens-Scope aus
+  `name_scope_tokens`). Nur Regel A zu prüfen genügt nicht — die Scope-Kette bliebe dann
+  unberührt und dürfte hartkodiert sein, ohne dass ein Test rot wird (Adversary-Mutation B11).
 
 ## Known Limitations
 
@@ -459,9 +531,10 @@ unfangbar bleibt" — bewusst nicht Teil dieser Lieferung:
    Formen, für die es im Repo keinen Anhaltspunkt gibt — der reale #1474-Fehler war versehentlich
    und wird gefangen. `match/case` ist die einzige Ausnahme aus dieser Liste: es wird verfolgt,
    weil es strukturell nah an Regel B liegt.
-2. **Die Duldungsliste (Marker-Kommentare) verifiziert die geduldeten Kopien nicht auf
-   Korrektheit.** Driftet `narrow.py::_SEV_TO_THUNDER_LEVEL` erneut (z. B. bei einer fünften
-   Stufe), bleibt der Wächter still, solange der Symbolname überlebt.
+2. **Die Duldung verifiziert die geduldeten Kopien nicht auf Korrektheit.** Driftet
+   `narrow.py::_SEV_TO_THUNDER_LEVEL` erneut (z. B. bei einer fünften Stufe), bleibt der Wächter
+   still, solange der Symbolname überlebt. Der Nicht-Leerlauf-Test der Basislinie weist nach, dass
+   ein Eintrag **noch existiert** — nicht, dass die Kopie richtig ist.
 3. **Regel D hat im Python-Teil bei Einführung null Fänge** — 25 Stufen-Literale in `tests/`
    geprüft, keines trägt eine Paritäts-Behauptung; historisch (`860a3baf^`) ebenfalls null. Sie
    wird trotzdem gebaut, als Fähigkeit des geteilten Kerns ohne eigenes Regel-Budget: „fängt
@@ -473,7 +546,9 @@ unfangbar bleibt" — bewusst nicht Teil dieser Lieferung:
    angewandt — ein späterer `RiskLevel`-Wächter kostet dadurch ~20–30 LoC statt Neubau.
 5. **Die 10 bestehenden Kopien im Produktivcode werden nicht saniert.** Das ist ausdrücklich
    nicht Teil dieses Workflows (#2010, #2011 decken zwei davon in eigenen PRs ab). Der Wächter
-   startet als Ratsche mit benannter, nur schrumpfender Duldungsliste (heute: ein Eintrag).
+   startet als Ratsche mit benannter, nur schrumpfender Duldungsliste — heute **neun**
+   Basislinien-Einträge (davon 7 in `src/services/`, 2 in `email/html.py`) plus der eine
+   Marker-Fall in `narrow.py`. Die beiden Go-Kopien liegen außerhalb der Python-Scanfläche.
 6. **Regel A/P laufen nicht auf Testdateien** — eine korrekte Fixture führt zwangsläufig alle
    vier Stufen-Wörter und würde 16 Dauerfeuer-Treffer erzeugen. Nur Regel D läuft dort.
 7. **Ein falsch schlagender Wächter blockiert jeden PR jeder Session** — beide CI-Jobs (`test`,
@@ -491,8 +566,54 @@ unfangbar bleibt" — bewusst nicht Teil dieser Lieferung:
 
 - 2026-08-20: Initial spec erstellt — Issue #1480, auf Basis der am selben Tag neu vermessenen
   Kontextanalyse (`docs/context/feat-1480-thunder-scale-guard.md`, Stand `bc6897a7`).
+- 2026-08-20: AC-12 nach der GREEN-Messung korrigiert — der echte Baum liefert 14 Funde
+  (4 kanonisch, 9 Altlasten, 1 Marker-Fall), nicht 1; die ursprüngliche Fassung verwechselte die
+  gemessene Fehlalarmzahl (1) mit der Zahl der zu duldenden Stellen. Duldung dreistufig:
+  Whitelist / benannte Basislinie / Marker. Abschnitt „Duldung und Verstoßmeldung" entsprechend
+  neu gefasst (symbolgeschlüsselte Basislinie mit Nicht-Leerlauf-Test).
+- 2026-08-20: Whitelist kanonischer Quellen von datei- auf **symbolscharf** umgestellt
+  (`canonical_files` → `canonical_symbols` bzw. `CANONICAL_FILES` → `CANONICAL_SYMBOLS`,
+  Team-Lead-Befund): dateiweit waren `thunder_scale.py`, `metric_format.py` & Co. vollständig
+  unbewacht, obwohl die nächste Kopie erfahrungsgemäß genau dort entsteht. Dazu je ein
+  Nicht-Leerlauf-Test und ein Granularitäts-Nachweis (Kopie in kanonischer Datei unter anderem
+  Symbolnamen wird gemeldet) pro Wächter; beide Nachweise sind mit einer Gegenmutation auf
+  dateiweites Verhalten geprüft (dort melden beide Wächter `[]` und die Tests werden rot).
 - 2026-08-20: Nachbesserung nach Review (Team-Lead) — AC-16 von einem Dateiinhalt-Check auf einen
   echten Verhaltensnachweis per Injektion einer abweichenden Stufenordnung umgestellt; AC-24
   (parametrisierter Kern gegen `RiskLevel`-Parameter nachgewiesen) ergänzt; Gegenproben für
   AC-10/AC-14/AC-17 sowie eine begründete `# doc-compliance-test`-Ausnahme für den
   Prüfdatum-Nachweis (AC-22) ergänzt. 23 → 24 ACs.
+- 2026-08-20: Nach der Adversary-Runde (Verdict BROKEN, 21 Mutationen) drei **Nachweise**
+  geschärft — die ACs selbst bleiben inhaltlich gleich, sie waren nur unzureichend belegt:
+  1. **AC-24** wird jetzt für **zwei** Regeln geführt statt nur für Regel A. Neu ist ein
+     Regel-C-Paar über die Fixture `f24-risklevel-zahlen-schwelle`: mit
+     `name_scope_tokens=("risk","risiko")` Fund, mit Gewitter-Parametern gegen denselben Quelltext
+     still. Vorher blieb eine in `_im_namens_scope` hartkodierte Annahme unentdeckt (Mutation B11
+     ließ alle 49 Tests grün), obwohl der AC-Wortlaut das Gegenteil behauptet.
+  2. **AC-9** gilt ausdrücklich für **beide** Wächter. Der Frontend-Wächter bekommt Positivfall
+     und Umkehrprobe für die Nicht-Vererbung des Namens-Scope an verschachtelte Funktionen;
+     vorher war diese Schutzmaßnahme dort ohne jeden Test (Mutation F7 ließ alle 24 Tests grün).
+  3. **AC-12** prüft in der Positivkontrolle die **besuchte Dateimenge** statt „mindestens ein
+     Fund". Vorher wurde ein auf die halbe Baumfläche verkürzter Lauf (Mutation B9) nur zufällig
+     rot, weil ein Altlasten-Eintrag in der weggeschnittenen Hälfte lag. `scan_tree` bekommt dafür
+     einen optionalen Sammel-Parameter `besucht`; die Soll-Menge wird zur Laufzeit aus `rglob`
+     abgeleitet, nie als Zahl festgeschrieben.
+  Alle drei Mutationen wurden nach der Nachbesserung erneut gefahren und werden jetzt jeweils von
+  genau dem dafür vorgesehenen Test gefangen.
+- 2026-08-20: Nach Adversary-Runde 2 (Finding F-FRONTEND-2, MEDIUM) der **AC-9-Nachweis im
+  Frontend** auf alle drei Funktionsformen ausgeweitet. Vorher deckten beide Fixtures nur
+  `function`-Deklarationen ab; eine Verengung der Vererbungssperre auf `ts.isFunctionDeclaration`
+  ließ alle 26 Frontend-Tests grün. Das AC-9-Pendant ist jetzt über Arrow-Function,
+  Function-Expression und Function-Deklaration parametrisiert (je Positivfall + Umkehrprobe,
+  26 → 30 Frontend-Tests); dieselbe Verengung macht seither zwei Tests rot.
+- 2026-08-20: Nach Adversary-Runde 3 (Findings F-BACKEND-1-R3 / F-FRONTEND-4, MEDIUM) **AC-21
+  präzisiert und in beiden Wächtern gehärtet**. Beide Längenprüfungen entfernten vor dem
+  `>= 15`-Vergleich nur Leerraum, keine Interpunktion — `# gz-thunder-scale: ...............`
+  (15 Punkte), 15 Bindestriche und 15 gleiche Buchstaben öffneten den Notausgang der Ratsche.
+  Übernommen ist jetzt die Filterung des Vorbild-Ratchets
+  `tests/tdd/test_repo_path_hardcoding_ratchet.py` (`_UNWORT = re.compile(r"[\W_]+")`, im Frontend
+  `/[^\p{L}\p{N}]+/gu` — Umlaute zählen), ergänzt um eine Mindestzahl **verschiedener** Zeichen,
+  weil eine Zeichen-Wiederholung die Unwort-Filterung mit voller Länge überlebt. Der bestehende
+  Marker in `src/output/renderers/narrow.py` besteht die verschärfte Prüfung unverändert
+  (47 sinnvolle Zeichen, 16 verschiedene). Neue Fixtures und Grenzproben von beiden Seiten
+  (14 → rot, 15 → grün): 50 → 56 Backend-, 30 → 36 Frontend-Tests.

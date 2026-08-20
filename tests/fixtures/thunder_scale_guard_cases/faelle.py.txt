@@ -239,6 +239,11 @@ _TEST_ORDER = ["NONE", "MED", "LOW", "HIGH"]
 # Stand der kanonischen Quelle
 _TEST_ORDER = ["NONE", "MED", "LOW", "HIGH"]
 
+# === d18-phrase-reisst-mitten-im-wortlaut ===
+# eingefroren
+# aus dem heutigen Stand der kanonischen Quelle
+_TEST_ORDER = ["NONE", "MED", "LOW", "HIGH"]
+
 # === e21-marker-ausreichend ===
 # gz-thunder-scale: bewusst geduldete Kopie fuer die schmale Rueck-Lookup-Stelle
 _RANG_GEDULDET = {
@@ -257,6 +262,73 @@ _RANG_UNGEDULDET = {
     ThunderLevel.HIGH: 3,
 }
 
+# === e21-marker-nur-punkte ===
+# gz-thunder-scale: ...............
+_RANG_PUNKTE = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-nur-striche ===
+# gz-thunder-scale: ---------------
+_RANG_STRICHE = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-nur-wiederholung ===
+# gz-thunder-scale: aaaaaaaaaaaaaaa
+_RANG_WIEDERHOLUNG = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-umlaute ===
+# gz-thunder-scale: Zählt für Rücklauf
+_RANG_UMLAUTE = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-grenze-14 ===
+# gz-thunder-scale: Späte Kopie, Naht.
+_RANG_GRENZE_14 = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-grenze-15 ===
+# gz-thunder-scale: Späte Kopie, Nähte.
+_RANG_GRENZE_15 = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
 # === f24-risklevel-liste ===
 # AC-24: Kern mit RiskLevel-Parametern statt ThunderLevel.
 _RISK_REIHENFOLGE = [RiskLevel.LOW, RiskLevel.MODERATE, RiskLevel.HIGH]
+
+# === f24-risklevel-zahlen-schwelle ===
+# AC-24 fuer REGEL C: derselbe Kern, aber ueber die Namens-Scope-Kette. Der
+# Funktionsname traegt "risiko" (aus name_scope_tokens der RiskLevel-Spec) und
+# ausdruecklich KEIN thunder/gewitter -- mit Gewitter-Parametern muss dieselbe
+# Vorlage still bleiben. Die Zweig-Woerter sind bewusst weder Thunder- noch
+# RiskLevel-Token, damit allein Regel C und nicht Regel A/B antwortet.
+def _risiko_stufe_aus_zahl(wert):
+    if wert > 8:
+        return "hoch"
+    elif wert > 4:
+        return "mittel"
+    return "gering"

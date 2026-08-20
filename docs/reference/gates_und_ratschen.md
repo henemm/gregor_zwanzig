@@ -176,6 +176,51 @@ Einzelfallarbeit. **Diese Messung nicht wiederholen.**
 Specs: `fix_1771_s2_playwright_ci_ampel.md` (Lane), `fix_1771_s3_e2e_listen_wachstum.md` (Wachstum,
 Verfahren, Abbruchgrenze).
 
+## Thunder-Scale-Wächter (#1480, seit 2026-08-20)
+
+Zwei Tests blockieren jede **neue** lokale Kopie der Gewitter-Stufenskala (`NONE`/`LOW`/`MED`/
+`HIGH`) — egal ob als Dict/Liste/Tupel, als if/elif-Kette, als `match/case` oder als Zahlen-
+Schwellenwert-Kette. Hintergrund: #1474 fand **neun** Stellen, die diese Zuordnung selbst
+nachgebaut hatten, statt sie aus der kanonischen Quelle (`src/app/thunder_scale.py`) zu lesen —
+drei stürzten ab, drei sagten Falsches, eine hatte die Reihenfolge vertauscht.
+
+| Sprachraum | Wächter-Datei | Scanfläche |
+|---|---|---|
+| Backend | `tests/tdd/test_thunder_scale_local_copy_guard.py` | `src/**/*.py` + `api/**/*.py` (Produktivcode), zusätzlich `tests/**/*.py` (nur Paritäts-Behauptungen) |
+| Frontend | `frontend/src/lib/components/shared/weather-metrics-tab/__tests__/thunderScaleLocalCopyGuard.test.ts` | `frontend/src/**/*.{ts,svelte}` (Produktivcode), zusätzlich `frontend/**/*.test.ts` (nur Paritäts-Behauptungen) |
+
+Schlägt einer der beiden Tests fehl, meldet er `Code reference: <Datei>:<Zeile>` — an genau der
+Stelle, die eine eigene Kopie der Stufenskala anlegt.
+
+**Was tun bei einem roten Fund:** Der saubere Weg ist fast immer, den Wert **aus der kanonischen
+Quelle zu lesen** statt ihn selbst zu benennen (`src/app/thunder_scale.py` im Backend,
+`frontend/src/lib/types.ts::ThunderLevel` im Frontend). Erst wenn das aus einem echten fachlichen
+Grund nicht geht, kommt eine der drei Duldungsstufen infrage:
+
+| Stufe | Wofür | Wer trägt sie ein |
+|---|---|---|
+| 1. Whitelist kanonischer Quellen (`ScaleSpec.canonical_symbols` / `CANONICAL_SYMBOLS`) | Ausschließlich für die kanonischen Quell-Dateien selbst (z. B. `thunder_scale.py`), symbolscharf, nicht dateiweit | Bereits gepflegt — im Alltag nicht anzufassen |
+| 2. Benannte Altlasten-Basislinie (`ALTLASTEN`, nur Backend) | Ausschließlich die neun bekannten #1474-Fundstellen, symbolgeschlüsselt, darf nur **schrumpfen** | Bereits gepflegt — nie neue Einträge hinzufügen, nur sanieren und entfernen |
+| 3. Marker-Kommentar an der Fundstelle | Der **einzig normale Weg für neuen Code**: eine bewusste, begründete Ausnahme | Wer die Zeile schreibt |
+
+**Duldung per Marker-Kommentar** (Stufe 3, der einzige Weg für neue Fundstellen):
+
+```python
+# gz-thunder-scale: <mindestens 15 sinnvolle, mindestens 5 verschiedene Zeichen Begründung>
+```
+bzw. im Frontend `// gz-thunder-scale: <Begründung>`. „Sinnvolle Zeichen" sind Buchstaben und
+Ziffern (Umlaute zählen mit), Leerzeichen/Satzzeichen/Unterstriche nicht. Eine zu kurze oder aus
+Wiederholungen bestehende Begründung (`...............` oder `aaaaaaaaaaaaaaa`) bleibt rot. Der
+einzige heutige Produktivcode-Fall: `src/output/renderers/narrow.py::_SEV_TO_THUNDER_LEVEL`.
+
+**Regel D (Paritäts-Behauptung):** In Testdateien greift der Wächter nur, wenn eine Fixture per
+Kommentar behauptet, mit der echten Quelle übereinzustimmen („1:1 aus …", „identische Reihenfolge"
+u. Ä.) und dabei tatsächlich abweicht — eine bewusst vereinfachte Fixture ohne solche Behauptung
+ist erlaubt.
+
+*Regel-Budget: Prüfdatum 2026-11-01, siehe Tabelle unten. Detailmechanik, alle 24 Acceptance
+Criteria und bekannte Grenzen: `docs/specs/modules/thunder_scale_guard.md`.*
+
 ## Regel-Budget: Prüfdaten im Überblick
 
 | Regel / Gate | Prüfdatum | Fang-Beleg bei Einführung |
@@ -190,6 +235,7 @@ Verfahren, Abbruchgrenze).
 | Frontend-Browser-Gate (#1558) | 2026-11-05 | #1552 (Kernseite unbedienbar bei grüner Ampel) |
 | 6. Check `e2e` (#1771 S2) | 2026-11-11 | offen — Kriterium: eine Regression, die die anderen fünf durchlassen |
 | staging_gate — `frontend/e2e/` nicht als Code klassifiziert (#1197) | 2026-11-15 | Live erlebt 2026-08-15 (PR-Stack #1736/#1852/#1881/#1882), Fix folgt |
+| Thunder-Scale-Wächter — keine neue lokale Kopie der Gewitter-Stufenskala (#1480, Backend + Frontend) | 2026-11-01 | 8 von 8 Python-Verstößen aus #1474 (`860a3baf^`) gefangen; Frontend 8 von 8 SYNTH-Formen inkl. der neunten Stelle (`['NONE','MED','HIGH','LOW']`) |
 | `_SELF_EXEMPT`-Eintrag `test_gehzeit_metriken_bleiben_trip_exklusiv.py` in `test_765_backend_hygiene_compliance.py` (#1848 C) | 2026-11-17 | Kommentar-Wächter liest `src/app/metric_catalog.py` als DATEN für eine AST-Prüfung (sind in Kommentaren genannte Funktionsnamen auflösbar?) — kein Verhaltensnachweis auf Code-Strings; Freigabe Tech-Lead 2026-08-19 |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:

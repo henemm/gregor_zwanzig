@@ -35,7 +35,9 @@
 // ('A'|'P'|'C'|'D') und `.symbol`.
 //
 // Duldung: `// gz-thunder-scale: <Begruendung>` (>= 15 sinnvolle Zeichen) an
-// der Fundstelle laesst den Fund durch.
+// der Fundstelle laesst den Fund durch. "Sinnvoll" = Buchstaben/Ziffern;
+// Interpunktion, Leerraum und Unterstriche zaehlen nicht, eine reine
+// Zeichen-Wiederholung ebenfalls nicht.
 //
 // Scanflaeche des Produktionswaechters (GREEN, unterhalb dieser Tests):
 // `frontend/src/**/*.{ts,svelte}` fuer Regel A/P/C, zusaetzlich
@@ -50,9 +52,13 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readFileSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { dirname, join, resolve, extname } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
+import ts from 'typescript';
+import { parse as svelteParse } from 'svelte/compiler';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = join(here, 'fixtures');
@@ -220,6 +226,59 @@ describe('Regel C -- Zahlen-Schwellenkette im thunder/gewitter-Namens-Scope (AC-
 		const findings = scanThunderScaleCopies(quelle, '<c17-kontrolle>', { rules: ['C'] }); // eslint-disable-line
 		assert.deepEqual(findings, [], `Windstaerke-Formatierung darf keinen Fund ausloesen: ${refs(findings)}`);
 	});
+
+	test('Der Namens-Scope traegt die Gegenprobe wirklich: DIESELBE Fixture, nur umbenannt, wird still', () => {
+		// Die Kontroll-Fixture oben unterscheidet sich nicht nur im Namen,
+		// sondern auch in den Woertern ('stark'/'still' sind keine Stufen) --
+		// sie bliebe also auch bei voellig fehlendem Scope-Filter gruen. Hier
+		// wird die FUND-Fixture umbenannt: gleiche Woerter, gleiche Struktur,
+		// nur der thunder-Bezug im Namen faellt weg.
+		const quelle = fall('c17-zahlen-schwelle-thunder').replace(/thunderLevelLabel/g, 'gustLevelLabel');
+		const findings = scanThunderScaleCopies(quelle, '<c17-umbenannt>', { rules: ['C'] }); // eslint-disable-line
+		assert.deepEqual(
+			findings,
+			[],
+			`Ohne thunder/gewitter im Namen darf Regel C nicht melden: ${refs(findings)}`
+		);
+	});
+});
+
+describe('Regel C -- verschachtelte Funktionen erben den Namens-Scope nicht (AC-9, Frontend-Pendant)', () => {
+	// Alle DREI Funktionsformen, die der Kern kennt: Deklaration,
+	// Arrow-Function und Function-Expression. Nur mit allen dreien faellt eine
+	// Verengung der Sperre (etwa auf `ts.isFunctionDeclaration`) auf.
+	const formen = [
+		{ label: 'Function-Deklaration', slug: 'func' },
+		{ label: 'Arrow-Function', slug: 'arrow' },
+		{ label: 'Function-Expression', slug: 'funcexpr' }
+	];
+
+	for (const { label, slug } of formen) {
+		test(`Innere ${label} OHNE eigenen thunder/gewitter-Namensbezug bleibt gruen, auch wenn die aeussere im Scope liegt`, () => {
+			// Dieselbe Vererbungssperre wie im Backend (AC-9): ohne sie zoege eine
+			// beliebige Zahlen-Schwellenkette in einer Hilfsfunktion den Scope der
+			// umgebenden Funktion an sich -- genau der Fehlalarm, an dem im Backend
+			// html.py::_confidence_dot_color haengt.
+			const quelle = fall(`c9-innere-${slug}-ohne-vererbten-scope`);
+			const findings = scanThunderScaleCopies(quelle, `<c9-kein-erbe-${slug}>`, { rules: ['C'] }); // eslint-disable-line
+			assert.deepEqual(
+				findings,
+				[],
+				`Innere ${label} ohne eigenen Namensbezug darf keinen Fund erben: ${refs(findings)}`
+			);
+		});
+
+		test(`Umkehrprobe (${label}): traegt die innere Funktion den Namensteil SELBST, wird sie gemeldet`, () => {
+			// Ohne diese Umkehrprobe waere der Test darueber auch von einer
+			// Implementierung erfuellt, die verschachtelte Funktionen pauschal
+			// uebergeht -- die Sperre soll aber nur die VERERBUNG unterbinden, nicht
+			// den eigenen Scope-Check der inneren Funktion.
+			const quelle = fall(`c9-innere-${slug}-mit-eigenem-scope`);
+			const findings = scanThunderScaleCopies(quelle, `<c9-eigener-scope-${slug}>`, { rules: ['C'] }); // eslint-disable-line
+			assert.equal(findings.length, 1, `erwartet 1 Fund, bekommen: ${refs(findings)}`);
+			assert.equal(findings[0].symbol, 'thunderZahl');
+		});
+	}
 });
 
 // ---------------------------------------------------------------------------
@@ -274,6 +333,34 @@ describe('Marker-Duldung (AC-21)', () => {
 		const findings = scanThunderScaleCopies(quelle, '<e21-alibi>', { rules: ['A'] }); // eslint-disable-line
 		assert.equal(findings.length, 1, `Alibi-Marker darf nicht durchlassen: ${refs(findings)}`);
 	});
+
+	// Fuellzeichen haben Laenge 15, aber null sinnvolle Zeichen; 15 gleiche
+	// Buchstaben nur ein einziges verschiedenes. Waere der Notausgang der
+	// Ratsche so zu oeffnen, stellte ihn jeder unter Zeitdruck still, ohne
+	// eine Begruendung zu formulieren.
+	for (const [name, was] of [
+		['e21-marker-nur-punkte', '15 Punkte'],
+		['e21-marker-nur-striche', '15 Bindestriche'],
+		['e21-marker-nur-wiederholung', '15 gleiche Buchstaben'],
+		['e21-marker-grenze-14', '14 sinnvolle Zeichen']
+	]) {
+		test(`Gegenprobe: ${was} sind keine Begruendung`, () => {
+			const findings = scanThunderScaleCopies(fall(name), `<${name}>`, { rules: ['A'] }); // eslint-disable-line
+			assert.equal(findings.length, 1, `${name} darf nicht durchlassen: ${refs(findings)}`);
+		});
+	}
+
+	// Umlaute zaehlen als sinnvolle Zeichen -- unsere Begruendungen sind auf
+	// Deutsch, ein zu scharfer Filter wiese echte Duldungen ab.
+	for (const [name, was] of [
+		['e21-marker-umlaute', 'deutsche Begruendung mit Umlauten (16 Zeichen)'],
+		['e21-marker-grenze-15', 'exakt 15 sinnvolle Zeichen']
+	]) {
+		test(`${was} laesst durch`, () => {
+			const findings = scanThunderScaleCopies(fall(name), `<${name}>`, { rules: ['A'] }); // eslint-disable-line
+			assert.deepEqual(findings, [], `${name} muss durchlassen: ${refs(findings)}`);
+		});
+	}
 });
 
 // ---------------------------------------------------------------------------
@@ -290,3 +377,471 @@ describe('Pruefdatum (AC-22)', () => {
 		assert.ok(text.includes('2026-11-01'), 'Pruefdatum 2026-11-01 fehlt als Text in dieser Datei');
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Die eigentliche Scanflaeche: frontend/src/**/*.{ts,svelte}
+// ---------------------------------------------------------------------------
+
+describe('Fehlalarm-Obergrenze gegen den echten Frontend-Baum', () => {
+	test('frontend/src ist unter Regel A/P/C frei von unbegruendeten Funden', () => {
+		const findings = scanThunderScaleTree([FRONTEND_SRC], { rules: ['A', 'P', 'C'] }); // eslint-disable-line
+		assert.deepEqual(
+			findings.map((f) => `${f.file}:${f.line} ${f.rule} (${f.symbol})`),
+			[],
+			'Fehlalarm auf dem echten Frontend-Baum -- erwartet 0 unbegruendete Funde'
+		);
+	});
+
+	test('Die Whitelist kanonischer Quellen hat keinen Leerlauf-Eintrag', () => {
+		// Wie im Backend: jeder Eintrag muss heute noch einen echten Fund
+		// erzeugen. Ein umbenanntes/entfallenes Symbol macht ROT statt still --
+		// sonst stellt die Whitelist irgendwann etwas anderes stumm als gedacht.
+		const ohne = scanThunderScaleTree([FRONTEND_SRC], { // eslint-disable-line
+			rules: ['A', 'P', 'C'],
+			canonicalSymbols: []
+		});
+		const gefunden = new Set(ohne.map((f) => `${f.file.replace(/\\/g, '/')}|${f.symbol}`));
+		const tot = CANONICAL_SYMBOLS.filter(
+			([datei, symbol]) => ![...gefunden].some((g) => g.endsWith(`/${datei}|${symbol}`))
+		);
+		assert.deepEqual(
+			tot,
+			[],
+			`Whitelist-Eintraege ohne echten Fund (umbenannt/verschoben/entfallen?): ${JSON.stringify(tot)}`
+		);
+	});
+
+	test('Die Whitelist wirkt symbolscharf, nicht dateiweit', () => {
+		// Der eigentliche Punkt: eine Kopie IN der kanonischen Datei, aber unter
+		// ANDEREM Symbolnamen, wird gemeldet. Bei dateiweiter Whitelist bliebe
+		// dieser Test gruen -- er unterscheidet die Bauweisen am Verhalten.
+		// Die eingeschmuggelte Kopie stammt aus der ausgelagerten
+		// Vorlagendatei (a13-fund -> STUFEN), damit diese Datei kein eigenes
+		// Stufen-Literal zusammensetzt.
+		const [kanonischRel] = CANONICAL_SYMBOLS[0];
+		const tmp = mkdtempSync(join(tmpdir(), 'gz-1480-'));
+		try {
+			const ziel = join(tmp, kanonischRel);
+			mkdirSync(dirname(ziel), { recursive: true });
+			const original = readFileSync(join(FRONTEND_ROOT, kanonischRel), 'utf-8');
+			writeFileSync(ziel, `${original}\n\n${fall('a13-fund')}`, 'utf-8');
+
+			const funde = scanThunderScaleTree([tmp], { rules: ['A'] }); // eslint-disable-line
+			assert.deepEqual(
+				funde.map((f) => f.symbol).sort(),
+				['STUFEN'],
+				`Erwartet: die fremde Kopie STUFEN wird gemeldet, ORDINAL_ENUM nicht. Bekommen: ${refs(funde)}`
+			);
+		} finally {
+			rmSync(tmp, { recursive: true, force: true });
+		}
+	});
+
+	test('Regel D ueber die Frontend-Testdateien meldet keine unerfuellte Paritaets-Behauptung', () => {
+		const findings = scanThunderScaleTree([FRONTEND_ROOT], { rules: ['D'], includeTests: true }); // eslint-disable-line
+		assert.deepEqual(
+			findings.map((f) => `${f.file}:${f.line} (${f.symbol})`),
+			[],
+			'Behauptete Paritaet ohne Deckung in den Frontend-Testdateien'
+		);
+	});
+
+	test('Positivkontrolle zum Nullbefund: derselbe Lauf mit Regel A trifft sehr wohl -- der Baumlauf erreicht die Testdateien wirklich', () => {
+		// Ohne diese Kontrolle waere der Nullbefund oben auch dann wahr, wenn
+		// der Walk gar keine Datei besucht haette. Regel A auf Testdateien ist
+		// genau das Dauerfeuer, wegen dem dort NUR Regel D laeuft.
+		const treffer = scanThunderScaleTree([FRONTEND_ROOT], { rules: ['A'], includeTests: true }); // eslint-disable-line
+		assert.ok(
+			treffer.length > 0,
+			'Der Testdatei-Lauf hat keine einzige Datei erreicht -- der Nullbefund oben waere wertlos'
+		);
+	});
+});
+
+// ===========================================================================
+// Erkennungs-Kern (#1480) -- GREEN
+//
+// Bewusst NUR im Frontend-Sprachraum: kein Python-Parsing hier, kein
+// TS-Parsing im Backend-Waechter (tests/unit/test_compare_metric_catalog_
+// consistency.py:19-21 -- TS-Parsing aus Python heraus hat am 2026-07-24 die
+// gesamte pytest-Collection zerstoert). Die kanonische Stufenordnung wird
+// LIVE gelesen (execFileSync gegen src/app/thunder_scale.py) und ist ueber
+// `opts.order` injizierbar -- eine hartkodierte Erwartungsliste waere kein
+// Drift-Waechter (Praezedenz #1424 F001, #1351 F003).
+// ===========================================================================
+
+// __tests__ -> weather-metrics-tab -> shared -> components -> lib -> src
+const FRONTEND_SRC = resolve(here, ...Array(5).fill('..'));
+// Regel D laeuft auf `frontend/**/*.test.ts` -- also eine Ebene weiter oben
+// als A/P/C, damit auch Testdateien ausserhalb von `src/` erfasst sind.
+const FRONTEND_ROOT = resolve(FRONTEND_SRC, '..');
+// ... -> frontend -> Repo-Wurzel (relativ zur eigenen Datei, damit ein
+// Worktree seinen EIGENEN Baum misst und nicht den des Hauptcheckouts).
+const REPO_ROOT = resolve(here, ...Array(7).fill('..'));
+
+// Kanonische Quellen des Frontends als [Datei, Symbol]-Paare: die Stellen,
+// die die Stufenskala fuehren DUERFEN. Keine Duldung eines Verstosses,
+// sondern die Bezugsquelle selbst -- deshalb Whitelist im Waechter statt
+// Marker im Produktivcode (Entscheid Team-Lead 2026-08-20; Backend-Pendant:
+// ScaleSpec.canonical_symbols).
+//
+// SYMBOLscharf, nicht dateiweit: eine dateiweite Whitelist liesse die
+// kanonischen Dateien vollstaendig unbewacht, und die naechste Kopie entsteht
+// erfahrungsgemaess NEBEN der Quelle (die neunte #1474-Stelle entstand beim
+// Reparieren der vierten).
+//
+// NICHT enthalten, obwohl in der Kontextanalyse als kanonische Quelle
+// gefuehrt: `types.ts::ThunderLevel` (Typ-Union, kein Array-Literal) und
+// `compareMetricCatalogLoader.ts::deriveThunderThresholdLevels` /
+// `thunderThresholdLevelsFromCatalog` (leiten zur Laufzeit ab). Beide
+// erzeugen heute KEINEN Fund -- ein Eintrag dafuer waere ein Leerlauf-Eintrag
+// (gemessen 2026-08-20), und schluege einer kuenftig doch an, waere das ein
+// echtes Signal (Rueckfall hinter #1911).
+//
+// Eine Altlasten-Basislinie wie im Backend braucht das Frontend NICHT: der
+// Bestand ist seit #1488/#1911 frei von aktiven Kopien.
+const CANONICAL_SYMBOLS: Array<[string, string]> = [
+	['src/lib/components/shared/corridor-editor/corridorEditorState.ts', 'ORDINAL_ENUM']
+];
+
+const MARKER = 'gz-thunder-scale';
+// Sinnvolle Zeichen = Buchstaben/Ziffern. `\p{L}` haelt deutsche Umlaute
+// drin (unsere Begruendungen sind auf Deutsch), Interpunktion, Leerraum und
+// Unterstriche fallen weg -- Pendant zu `_UNWORT` im Backend-Waechter und in
+// tests/tdd/test_repo_path_hardcoding_ratchet.py.
+const NON_WORD_RE = /[^\p{L}\p{N}]+/gu;
+const MARKER_MIN_LENGTH = 15;
+// Zusaetzlich: eine Wiederholung EINES Zeichens ueberlebt die Filterung mit
+// voller Laenge, ist aber genauso wenig eine Begruendung wie 15 Punkte.
+const MARKER_MIN_DISTINCT = 5;
+// Schwelle 3, nicht 2: Schwelle 2 erzeugte drei Fehlalarme auf
+// alertChannelState.ts (['LOW','MODERATE','HIGH'] -- fremde Skala).
+const RULE_A_THRESHOLD = 3;
+const NAME_SCOPE_TOKENS = ['thunder', 'gewitter'];
+
+// Belegte Wortlaute aus dem Bestand (Regel D), keine erfundenen.
+const PARITY_CLAIM_RE = /1:1|wortw(oe|ö)rt|identische reihenfolge|eingefroren aus dem|unver(ae|ä)ndert (aus|uebernommen)/i;
+
+// Deutsche und englische Schreibweisen zeigen auf denselben Enum-Namen; die
+// RANGFOLGE steckt ausschliesslich in der uebergebenen `order`.
+const ALIASES: Record<string, string> = {
+	none: 'NONE',
+	kein: 'NONE',
+	keine: 'NONE',
+	keins: 'NONE',
+	low: 'LOW',
+	leicht: 'LOW',
+	med: 'MED',
+	medium: 'MED',
+	mittel: 'MED',
+	'mäßig': 'MED',
+	maessig: 'MED',
+	high: 'HIGH',
+	hoch: 'HIGH'
+};
+
+const PY_SCRIPT =
+	'import sys, json\n' +
+	"sys.path.insert(0, 'src')\n" +
+	'from app.thunder_scale import thunder_ordinal\n' +
+	'from app.models import ThunderLevel\n' +
+	'print(json.dumps([l.name for l in sorted(ThunderLevel, key=thunder_ordinal)]))\n';
+
+let canonicalOrderCache: string[] | null = null;
+
+/** Kanonische Stufenordnung, LIVE aus src/app/thunder_scale.py gelesen. */
+function canonicalOrder(): string[] {
+	if (canonicalOrderCache === null) {
+		const stdout = execFileSync('uv', ['run', 'python3', '-c', PY_SCRIPT], {
+			cwd: REPO_ROOT,
+			encoding: 'utf-8'
+		});
+		canonicalOrderCache = JSON.parse(stdout.trim()) as string[];
+	}
+	return canonicalOrderCache;
+}
+
+interface ScanOptions {
+	order?: string[];
+	rules?: string[];
+	includeTests?: boolean;
+	canonicalSymbols?: Array<[string, string]>;
+}
+
+/** Pfadvergleich ueber das Repo-relative Ende -- ein Worktree misst so seinen
+ *  EIGENEN Baum, ohne dass irgendwo ein absoluter Pfad steht. */
+function istPfad(kandidat: string, relativ: string): boolean {
+	return kandidat.replace(/\\/g, '/').endsWith('/' + relativ.replace(/^\//, ''));
+}
+
+function canonIndex(raw: string, order: string[]): number {
+	const name = ALIASES[String(raw).trim().toLowerCase()];
+	return name === undefined ? -1 : order.indexOf(name);
+}
+
+function distinctIndices(values: string[], order: string[]): number[] {
+	const set = new Set<number>();
+	for (const v of values) {
+		const idx = canonIndex(v, order);
+		if (idx >= 0) set.add(idx);
+	}
+	return [...set].sort((a, b) => a - b);
+}
+
+/** Regel P: Positions-Abgleich. Greift NUR, wenn die Folge beansprucht, beim
+ *  ersten Rang (NONE/"kein") zu beginnen -- eine bewusste Teilfolge ab "leicht"
+ *  (thunderThresholdLevels.test.ts::slice(1)) ist kein Positionsfehler. */
+function positionVerdict(values: string[], order: string[]): 'n/a' | 'ok' | 'mismatch' {
+	const idxs = values.map((v) => canonIndex(v, order)).filter((i) => i >= 0);
+	if (idxs.length < 2 || idxs[0] !== 0) return 'n/a';
+	return idxs.every((v, i) => v === i) ? 'ok' : 'mismatch';
+}
+
+function hasParityClaim(comment: string): boolean {
+	// Zeilenumbrueche und Kommentarmarker normalisieren, sonst zerreisst ein
+	// mehrzeiliger Wortlaut mitten in der Formulierung.
+	const normalized = (comment ?? '')
+		.replace(/\/\/|\/\*|\*\//g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+	return PARITY_CLAIM_RE.test(normalized);
+}
+
+/** Traegt der Text genug SINNVOLLE Zeichen fuer eine Duldung (AC-21)?
+ *  Fuellzeichen ("..............." ) fallen auf 0, eine Zeichen-Wiederholung
+ *  ("aaaaaaaaaaaaaaa") auf ein einziges verschiedenes Zeichen. */
+function istBegruendung(text: string): boolean {
+	const kern = text.replace(NON_WORD_RE, '');
+	return kern.length >= MARKER_MIN_LENGTH && new Set(kern.toLowerCase()).size >= MARKER_MIN_DISTINCT;
+}
+
+/** Duldung an der Fundstelle -- nie ueber eine zentrale Liste, nie ueber
+ *  Zeilennummern (#1466). Eine Alibi-Begruendung unter 15 Zeichen zaehlt nicht. */
+function markerCovers(lines: string[], line: number): boolean {
+	const re = new RegExp(`//\\s*${MARKER}\\s*:(.*)`);
+	const candidates: string[] = [];
+	let idx = line - 1;
+	if (idx >= 0 && idx < lines.length) candidates.push(lines[idx]);
+	idx -= 1;
+	while (idx >= 0 && lines[idx].trim().startsWith('//')) {
+		candidates.push(lines[idx]);
+		idx -= 1;
+	}
+	return candidates.some((l) => {
+		const m = re.exec(l);
+		return m !== null && istBegruendung(m[1]);
+	});
+}
+
+// --- TypeScript-Adapter ----------------------------------------------------
+
+function tsStringValue(node: ts.Node): string | undefined {
+	return ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) ? node.text : undefined;
+}
+
+function tsSymbolOf(node: ts.Node): string {
+	let cur: ts.Node | undefined = node;
+	while (cur) {
+		if (ts.isVariableDeclaration(cur) && ts.isIdentifier(cur.name)) return cur.name.text;
+		if (ts.isFunctionDeclaration(cur) && cur.name) return cur.name.text;
+		if (ts.isPropertyAssignment(cur) && ts.isIdentifier(cur.name)) return cur.name.text;
+		cur = cur.parent;
+	}
+	return '<anonym>';
+}
+
+function tsFunctionName(node: ts.Node): string | undefined {
+	if (ts.isFunctionDeclaration(node) && node.name) return node.name.text;
+	if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) return node.name.text;
+	const eltern = node.parent;
+	if (eltern && ts.isVariableDeclaration(eltern) && ts.isIdentifier(eltern.name)) return eltern.name.text;
+	return undefined;
+}
+
+function inNameScope(name: string | undefined): boolean {
+	if (!name) return false;
+	const klein = name.toLowerCase();
+	return NAME_SCOPE_TOKENS.some((t) => klein.includes(t));
+}
+
+/** Beschriftungen aus Verzweigungs-/switch-Zweigen EINER Funktion -- ohne die
+ *  Koerper verschachtelter Funktionen (die bekommen ihren eigenen Scope-Check,
+ *  Vererbungssperre analog zum Backend, AC-9). */
+function tsBranchWords(body: ts.Node): { words: string[]; anchor: ts.Node | undefined } {
+	const words: string[] = [];
+	let anchor: ts.Node | undefined;
+	const sammle = (n: ts.Node) => {
+		const wert = tsStringValue(n);
+		if (wert !== undefined) words.push(wert);
+		ts.forEachChild(n, sammle);
+	};
+	const gehe = (n: ts.Node) => {
+		if (n !== body && (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n))) {
+			return;
+		}
+		if (ts.isIfStatement(n) || ts.isSwitchStatement(n)) {
+			if (anchor === undefined) anchor = n;
+			sammle(n);
+			return;
+		}
+		ts.forEachChild(n, gehe);
+	};
+	gehe(body);
+	return { words, anchor };
+}
+
+function scanTsSource(
+	source: string,
+	filename: string,
+	order: string[],
+	rules: string[],
+	out: Finding[]
+): void {
+	const sf = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+	const lineOf = (node: ts.Node) => sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
+	const melde = (node: ts.Node, rule: string) =>
+		out.push({ file: filename, line: lineOf(node), rule, symbol: tsSymbolOf(node) });
+
+	const visit = (node: ts.Node) => {
+		if (ts.isArrayLiteralExpression(node)) {
+			const values = node.elements
+				.map((el) => tsStringValue(el))
+				.filter((v): v is string => v !== undefined);
+			if (rules.includes('A') && distinctIndices(values, order).length >= RULE_A_THRESHOLD) {
+				melde(node, 'A');
+			}
+			if (rules.includes('P') && positionVerdict(values, order) === 'mismatch') melde(node, 'P');
+			if (rules.includes('D')) {
+				const ranges = ts.getLeadingCommentRanges(sf.text, tsDeclStart(node)) ?? [];
+				const kommentar = ranges.map((r) => sf.text.slice(r.pos, r.end)).join('\n');
+				if (hasParityClaim(kommentar) && positionVerdict(values, order) === 'mismatch') {
+					melde(node, 'D');
+				}
+			}
+		}
+		if (ts.isObjectLiteralExpression(node) && rules.includes('A')) {
+			const keys: string[] = [];
+			for (const prop of node.properties) {
+				if (!ts.isPropertyAssignment(prop)) continue;
+				if (ts.isIdentifier(prop.name) || ts.isStringLiteral(prop.name)) keys.push(prop.name.text);
+			}
+			if (distinctIndices(keys, order).length >= RULE_A_THRESHOLD) melde(node, 'A');
+		}
+		if (
+			rules.includes('C') &&
+			(ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isMethodDeclaration(node)) &&
+			node.body &&
+			inNameScope(tsFunctionName(node))
+		) {
+			const { words, anchor } = tsBranchWords(node.body);
+			if (anchor && distinctIndices(words, order).length >= 2) {
+				out.push({
+					file: filename,
+					line: lineOf(anchor),
+					rule: 'C',
+					symbol: tsFunctionName(node) ?? '<anonym>'
+				});
+			}
+		}
+		ts.forEachChild(node, visit);
+	};
+	visit(sf);
+}
+
+/** Position, an der ein Paritaets-Kommentar haengen wuerde: der naechste
+ *  deklarationsartige Vorfahre (``const X = [...]``). */
+function tsDeclStart(node: ts.Node): number {
+	let n: ts.Node | undefined = node;
+	while (n && !ts.isVariableStatement(n) && !ts.isExpressionStatement(n) && !ts.isSourceFile(n)) {
+		n = n.parent;
+	}
+	return n ? n.getFullStart() : node.getFullStart();
+}
+
+/** Svelte: der echte Compiler bestimmt die Script-Bereiche, alles ausserhalb
+ *  wird zeilentreu ausmaskiert -- so bleiben Zeilennummern exakt und der
+ *  TS-Parser sieht nur echtes Script. (Template-Ausdruecke bleiben damit
+ *  ausserhalb der Reichweite; Stufen-Kataloge stehen im Script-Block.) */
+function svelteScriptOnly(source: string): string {
+	const ast = svelteParse(source, { modern: true }) as unknown as {
+		instance?: { content: { start: number; end: number } };
+		module?: { content: { start: number; end: number } };
+	};
+	const zeichen: string[] = source.split('').map((c) => (c === '\n' ? '\n' : ' '));
+	for (const block of [ast.instance, ast.module]) {
+		if (!block) continue;
+		for (let i = block.content.start; i < block.content.end; i++) zeichen[i] = source[i];
+	}
+	return zeichen.join('');
+}
+
+/** Scannt EINEN Quelltext (TS oder Svelte, je nach `filename`-Endung). */
+export function scanThunderScaleCopies(
+	source: string,
+	filename: string,
+	opts: ScanOptions = {}
+): Finding[] {
+	const order = opts.order ?? canonicalOrder();
+	const rules = opts.rules ?? ['A', 'P', 'C'];
+	const roh: Finding[] = [];
+	let text = source;
+	if (filename.endsWith('.svelte')) {
+		try {
+			text = svelteScriptOnly(source);
+		} catch {
+			return [];
+		}
+	}
+	scanTsSource(text, filename, order, rules, roh);
+	const zeilen = source.split('\n');
+	const gesehen = new Set<string>();
+	return roh
+		.filter((f) => !markerCovers(zeilen, f.line))
+		.filter((f) => {
+			const key = `${f.line}|${f.rule}|${f.symbol}`;
+			if (gesehen.has(key)) return false;
+			gesehen.add(key);
+			return true;
+		})
+		.sort((a, b) => a.line - b.line || a.rule.localeCompare(b.rule));
+}
+
+const EXCLUDE_DIRS = new Set(['node_modules', '.svelte-kit', 'build', 'dist', '.git']);
+
+function istTestdatei(name: string, voll: string): boolean {
+	return name.endsWith('.test.ts') || name.endsWith('.spec.ts') || voll.includes('__tests__');
+}
+
+/** Durchsucht alle ``*.ts``/``*.svelte`` unter den Wurzeln rekursiv. Regel
+ *  A/P/C laufen auf Produktivcode; Testdateien kommen NUR mit `includeTests`
+ *  (dort ist allein Regel D sinnvoll -- eine korrekte Fixture fuehrt
+ *  zwangslaeufig alle vier Stufen-Woerter und erzeugte 16 Dauerfeuer-Treffer). */
+export function scanThunderScaleTree(roots: string[], opts: ScanOptions = {}): Finding[] {
+	const kanonisch = opts.canonicalSymbols ?? CANONICAL_SYMBOLS;
+	const funde: Finding[] = [];
+	const walk = (dir: string) => {
+		for (const eintrag of readdirSync(dir).sort()) {
+			if (EXCLUDE_DIRS.has(eintrag)) continue;
+			const voll = join(dir, eintrag);
+			if (statSync(voll).isDirectory()) {
+				walk(voll);
+				continue;
+			}
+			const ext = extname(eintrag);
+			if (ext !== '.ts' && ext !== '.svelte') continue;
+			if (eintrag.endsWith('.d.ts')) continue;
+			const test = istTestdatei(eintrag, voll);
+			if (test !== Boolean(opts.includeTests)) continue;
+			// SYMBOLscharf filtern statt die Datei zu ueberspringen -- die
+			// uebrige Datei bleibt bewacht.
+			for (const fund of scanThunderScaleCopies(readFileSync(voll, 'utf-8'), voll, opts)) {
+				if (kanonisch.some(([datei, symbol]) => fund.symbol === symbol && istPfad(fund.file, datei))) {
+					continue;
+				}
+				funde.push(fund);
+			}
+		}
+	};
+	for (const root of roots) walk(root);
+	return funde;
+}
