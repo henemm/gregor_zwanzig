@@ -20,12 +20,28 @@ ueber `arrival_calculated`), echter `CountingFrameSource`-Frame ueber den
 `frame_source`-DI-Seam, Zustellung ueber den `mail_sink`-Zaehler.
 
 Zeitbezug: `check_radar_alerts()` bietet keinen `now`-Injektions-Seam (liest
-`datetime.now(timezone.utc)` selbst, `trip_alert.py:1140`) -- die
-Segment-Zeiten werden deshalb relativ zur echten Uhr gebaut (Muster
-`nowcast_gate_fixtures.py::quiet_window_now`), in der UTC-Ortszeit von
-Reykjavik (`TRIP_LAT`/`TRIP_LON`, ganzjaehrig UTC+0 -- `make_trip()`s
-Default-Koordinaten), damit HH:MM Ortszeit ohne Zonenumrechnung direkt aus
-UTC "jetzt" ablesbar ist.
+`datetime.now(timezone.utc)` selbst, `trip_alert.py:1140`) -- die Uhr wird
+deshalb GESTELLT (`freeze_time`, Muster `test_radar_alert_follows_
+ortstag.py`) und die Segmentzeiten relativ zu diesem festen, mitternachts-
+fernen Zeitpunkt gebaut. Koordinaten sind Reykjavik (`TRIP_LAT`/`TRIP_LON`,
+ganzjaehrig UTC+0 -- `make_trip()`s Default), damit HH:MM Ortszeit ohne
+Zonenumrechnung direkt aus der gestellten UTC-Zeit ablesbar ist.
+
+🔴 Warum NICHT die echte Wanduhr (Messung 2026-08-20,
+`tests/helpers/wanduhr_matrix.py`, 24 Datenpunkte): mit `now` aus
+`datetime.now()` kippte der erste Fall bei genau einem Datenpunkt (00:00
+UTC). Dort ergibt `now - 10 min`/`now + 15 min` die HH:MM-Angaben
+23:50/00:15 -- eine Etappe, die vom Etappendatum aus erst am ABEND beginnt
+und ueber Mitternacht laeuft. Der Kontrollfall traf damit kein aktives
+Segment mehr, sondern den Horizont-Guard (#1697). Das ist eine Grenze der
+FIXTURE (`arrival_calculated` traegt nur HH:MM, das Etappendatum kommt aus
+`make_trip(stage_date=...)`), kein Produktfehler -- die Segmentbildung
+fuehrt den Tagesuebertrag korrekt mit (`trip_segments.py:159-167` bildet
+`wp_days`, `:191-198` kombiniert ihn mit `target_date` zu vollen
+UTC-Zeitstempeln). Nachgemessen 2026-08-20: eine echte Etappe 23:50->00:15
+am VORTAG wird um 00:00 UTC als aktives Segment gefunden
+(`2026-08-11T23:50` -> `2026-08-12T00:15`), und der Guard entscheidet dort
+richtig -- Onset 00:10 loest aus, Onset 00:53 wird unterdrueckt.
 """
 from __future__ import annotations
 
@@ -43,6 +59,36 @@ def _hhmm(dt_utc: datetime) -> str:
     return dt_utc.strftime("%H:%M")
 
 
+# Gestellter Bezugszeitpunkt aller Faelle dieser Datei: mittags, weit von
+# jeder Tagesgrenze entfernt (s. Modul-Docstring). Reykjavik = UTC+0, die
+# HH:MM-Angaben der Etappe sind damit direkt hieraus ablesbar.
+_MITTAGS = "2026-08-11T12:00:00+00:00"
+
+
+def _guard_lauf(uid: str, trip_id: str, *, ende_in_minuten: int, onset_minutes: int) -> tuple[int, list]:
+    """Ein echter `check_radar_alerts()`-Lauf unter gestellter Uhr: Etappe
+    beginnt 10 Min vor dem Bezugszeitpunkt und endet `ende_in_minuten`
+    danach. Liefert `(Anzahl Alarme, zugestellte Mails)`."""
+    clean_uid(uid)
+    with freeze_time(_MITTAGS):
+        now = datetime.now(timezone.utc)
+        write_user_tier(uid, "premium")
+        trip = make_trip(
+            trip_id,
+            arrival_start=_hhmm(now - timedelta(minutes=10)),
+            arrival_end=_hhmm(now + timedelta(minutes=ende_in_minuten)),
+        )
+        save_trip(trip, uid)
+        reset_radar_cache()
+        mails: list = []
+        svc = trip_alert_service(
+            uid, settings_email_only(),
+            CountingFrameSource(onset_minutes=onset_minutes),
+            lambda subject, body: mails.append((subject, body)),
+        )
+        return svc.check_radar_alerts(), mails
+
+
 def test_ac6_segment_end_guard_suppresses_late_onset():
     """AC-6: Given ein Trip, dessen aktives Segment vor dem berechneten
     Onset-Zeitpunkt endet (Segment endet in 15 Min, Onset laege bei 53 Min)
@@ -50,30 +96,16 @@ def test_ac6_segment_end_guard_suppresses_late_onset():
     Kontrollfall im selben Testlauf: liegt der Onset VOR dem Segmentende
     (Segment endet erst in 90 Min), loest derselbe Onset weiterhin regulaer
     aus."""
-    now = datetime.now(timezone.utc)
     onset_minutes = 53  # erreichbarer Rasterwert, <= 55 (neue Schwelle) -> loest grundsaetzlich aus
 
     # ---- Fall 1: Segment endet VOR dem Onset (in 15 Min < 53 Min) -> Guard
     #      muss den Alarm unterdruecken.
     uid_suppressed = fresh_uid("ac6-suppressed")
-    trip_id_suppressed = "trip-ac6-suppressed"
-    clean_uid(uid_suppressed)
     try:
-        write_user_tier(uid_suppressed, "premium")
-        trip = make_trip(
-            trip_id_suppressed,
-            arrival_start=_hhmm(now - timedelta(minutes=10)),
-            arrival_end=_hhmm(now + timedelta(minutes=15)),
+        sent, mails = _guard_lauf(
+            uid_suppressed, "trip-ac6-suppressed",
+            ende_in_minuten=15, onset_minutes=onset_minutes,
         )
-        save_trip(trip, uid_suppressed)
-        reset_radar_cache()
-        mails: list = []
-        svc = trip_alert_service(
-            uid_suppressed, settings_email_only(),
-            CountingFrameSource(onset_minutes=onset_minutes),
-            lambda subject, body: mails.append((subject, body)),
-        )
-        sent = svc.check_radar_alerts()
         assert sent == 0, (
             f"Segment endet in 15 Min, Onset laege erst in {onset_minutes} "
             f"Min (danach) -- der Alarm haette unterdrueckt werden muessen, "
@@ -88,24 +120,11 @@ def test_ac6_segment_end_guard_suppresses_late_onset():
     # ---- Fall 2 (Kontrolle): Segment endet NACH dem Onset (in 90 Min >
     #      53 Min) -> regulaerer Alarm, unveraendertes Verhalten.
     uid_control = fresh_uid("ac6-control")
-    trip_id_control = "trip-ac6-control"
-    clean_uid(uid_control)
     try:
-        write_user_tier(uid_control, "premium")
-        trip = make_trip(
-            trip_id_control,
-            arrival_start=_hhmm(now - timedelta(minutes=10)),
-            arrival_end=_hhmm(now + timedelta(minutes=90)),
+        sent, mails = _guard_lauf(
+            uid_control, "trip-ac6-control",
+            ende_in_minuten=90, onset_minutes=onset_minutes,
         )
-        save_trip(trip, uid_control)
-        reset_radar_cache()
-        mails: list = []
-        svc = trip_alert_service(
-            uid_control, settings_email_only(),
-            CountingFrameSource(onset_minutes=onset_minutes),
-            lambda subject, body: mails.append((subject, body)),
-        )
-        sent = svc.check_radar_alerts()
         assert sent == 1, (
             f"Segment endet erst in 90 Min, Onset liegt bei {onset_minutes} "
             f"Min (davor) -- Kontrollfall muss weiterhin regulaer ausloesen, "
@@ -141,7 +160,7 @@ def test_ac6_onset_exakt_am_segmentende_loest_noch_aus():
     uid = fresh_uid("ac6-randwert")
     clean_uid(uid)
     try:
-        with freeze_time("2026-08-11T12:00:00+00:00"):
+        with freeze_time(_MITTAGS):
             now = datetime.now(timezone.utc)
             segment_ende = now + timedelta(minutes=onset_minutes)
 
