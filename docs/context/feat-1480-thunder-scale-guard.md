@@ -213,3 +213,160 @@ Die Zwei-von-vier-Regel trennt LOW/MODERATE/HIGH sauber ab (kennt nur zwei der v
   „Known Limitations"; Vorlage für Struktur und Abgrenzung.
 - `docs/specs/modules/thunder_threshold_katalog.md` — Spec von #1911, definiert die Ableitung.
 - Korpus-Quelle „VORHER": Commit `860a3baf` (#1474, vierte Stufe).
+
+---
+
+# Analysis
+
+**Type:** Feature (neuer Wächter, zwei Artefakte). Enthält vier abgeleitete Bug-Befunde, die
+bereits als eigene Issues bzw. Sammel-Einträge abgelegt sind (s. Nebenbefunde oben).
+
+Die Regeln wurden an **Prototypen gegen drei Korpora gemessen**, nicht entworfen. Prototypen im
+Scratchpad (`regel_prototyp.py`, `frontend_regel_prototyp.mjs`, `regel_d_messung.mjs`) — sie sind
+Messwerkzeug und Vorlage, kein Lieferbestandteil.
+
+## Messergebnis Backend (Python)
+
+**Treffsicherheit gegen die acht Python-Verstöße von #1474: 8 von 8 gefangen.**
+
+| # | Verstoß (Stand `860a3baf^`) | Regel |
+|---|---|---|
+| 1 | `trip_report_scheduler.py:1536` `_NUM={NONE:0,MED:1,HIGH:2}` | A |
+| 2 | `trip_report_scheduler.py:1671` `_ORD` + if/elif `:1705` | A + B |
+| 3–4 | `trip_command_processor.py:810`, `:904` `[TL.NONE,TL.MED,TL.HIGH]` | A |
+| 5 | `trip_command_processor.py:680` `str(v) in ("MED","ThunderLevel.MED")` | B |
+| 6 | `trip_command_processor.py:134` `_THUNDER_LABEL` | A |
+| 7 | `trip_command_processor.py:168-169` `_MAP_EMOJI`/`_MAP_PLAIN` | A |
+| 8 | `comparison_engine.py:280` `level_rank={...}` | A |
+
+**Fehlalarme über die volle Scanfläche (204 Dateien in `src/` + `api/`): genau 1.**
+`narrow.py:186` (`_SEV_TO_THUNDER_LEVEL`) — ein Tupel aller vier Stufen, strukturell nicht von
+einer echten Kopie unterscheidbar. Wird per Marker geduldet, **die Regel wird dafür nicht
+aufgeweicht.**
+
+### Die sechs Verfeinerungen sind Pflicht, nicht Kür
+
+Ohne sie steigt die Fehlalarmzahl von 1 auf mindestens 4 — bei 8 echten Treffern nicht tragbar.
+
+1. **Werte-Delegation:** Ein Dict zählt nur als Verstoß, wenn **alle** Werte rohe Literale sind.
+   Delegiert auch nur einer an die Quelle (`THUNDER_LABEL_DE["LOW"]`), gilt das ganze Dict als
+   „liest die Quelle". Ohne: Fehlalarm auf `email/helpers.py`, `outlook.py`, `compare_html.py`.
+2. **Distinktive Tokens:** Dict-Keys brauchen mindestens ein `MED`- oder `NONE`-Token. `LOW`/`HIGH`
+   allein ist kein Gewitter-Vokabular (`RiskLevel`, `alert_urgency` nutzen dieselben Wörter).
+3. **List/Tuple/Set brauchen ≥3 distinkte Tokens** (keine 2er-Ausnahme wie bei Dicts).
+   Ohne: Fehlalarm auf `alert_preset.py` (2er-Tupel als Bereichsgrenze).
+4. **Membership-Operanden ausschließen:** Ein Tupel rechts von `x in (...)` zählt nicht für A —
+   das ist Regel Bs Aufgabe, die zusätzlich ein eigenes Literal im Zweig verlangt.
+   Ohne: Fehlalarm auf `outlook.py:229` (reine Nicht-NONE-Wächterbedingung).
+5. **Regel C nur im Namens-Scope** (`thunder`/`gewitter`) **und mit Scope-Vererbungs-Sperre** —
+   verschachtelte `def`s dürfen den Scope nicht vom umgebenden erben. Ohne: Fehlalarme auf
+   `weather_metrics.format_wind_strength()` und `html.py:_confidence_dot_color()`.
+6. **Ketten aus separaten `if`-Statements** erfassen, nicht nur `elif` — sonst greift
+   `html.py:187-196` nicht. Ebenso **BoolOp-Rekursion**, sonst entgeht Verstoß #5.
+
+## Messergebnis Frontend (TS/Svelte)
+
+Der heutige Bestand ist **leer** — eine Regel, die nur gegen ihn misst, misst null und wäre auch
+dann grün, wenn sie nichts erkennt. Der Nachweis läuft deshalb über konstruierte Verstöße und die
+git-Geschichte.
+
+**8 von 8 SYNTH-Formen gefangen**, darunter die beiden entscheidenden:
+
+| Form | Warum sie zählt | Regel |
+|---|---|---|
+| `['NONE','MED','HIGH','LOW']` | die echte neunte #1474-Stelle: **alle vier da, falsche Position**. Anwesenheits- **und** Längenprüfung wären grün geblieben | **P** |
+| `['NONE','MED','HIGH']` | die vierte fehlt — der #1474-Kernfehler | A + P |
+| if/else Zahlen-Schwellen → `HOCH`/`MITTEL`/`KEINE` | die Form aus `alertMetricLabels.ts`, aus `46ff82c2` rekonstruiert; **keine** Wortliste hätte sie gefangen | C |
+
+**Fehlalarme: 3** — alle aus derselben fremden Skala (`alertChannelState.ts`,
+`['LOW','MODERATE','HIGH']`). **Schwelle 3 statt 2 eliminiert alle drei**, ohne einen der acht
+Pflichtfälle zu verlieren. Kalibrierung deshalb: **≥3 kanonische Wörter, nicht ≥2.**
+
+**Regel P nur ab Index 0:** greift nur, wenn die Folge beansprucht, bei `NONE`/„kein" zu beginnen.
+Sonst meldet sie `thunderThresholdLevels.test.ts` fälschlich, das bewusst mit `slice(1)` bei
+„leicht" startet.
+
+## Regel D — die Test-Double-Parität (PO-Kernpunkt, gemessen)
+
+Die naheliegende Umsetzung („Testdateien mitscannen") ist **unbrauchbar**: 16 Dauerfeuer-Treffer,
+weil eine korrekte Fixture zwangsläufig alle vier Wörter führt. Die naheliegende Gegenreaktion
+(„Testdateien ausklammern") fällt jedoch den Punkt fallen, den der PO als **den eigentlich
+interessanten** bezeichnet hat.
+
+Auflösung — was der PO tatsächlich verlangt: **Eine Fixture darf vereinfachen. Behauptet ihr
+Kommentar aber Übereinstimmung mit der echten Quelle, muss sie sie einlösen.**
+
+| Messung | Ergebnis |
+|---|---|
+| Paritäts-Behauptungen im Bestand | **8 von 16** Fixtures, mit belegten Wortlauten („1:1 aus …", „Wortwörtlicher Ausschnitt der ECHTEN Antwort", „eingefroren aus dem HEUTIGEN Stand", „identische Reihenfolge") |
+| Historischer Nachweis | **3 von 3** — alle drei Fixtures, die #1474 verdeckten, behaupteten damals bereits Parität und führten trotzdem nur drei Stufen |
+| Fehlalarme heute | **0** |
+| Wirkungsnachweis | Paritäts-Fixture verfälscht → rot. Dieselbe Verfälschung ohne Behauptung → still |
+
+**Konsequenz:** Regel A/P/C laufen auf Produktivcode, **Regel D separat und zusätzlich auf
+Testdateien**. Technisch: Kommentar-Extraktion muss Zeilenumbrüche und Kommentarmarker
+normalisieren, sonst zerreißt ein mehrzeiliger Wortlaut und die schärfste Formulierung im Bestand
+bliebe unerkannt.
+
+## Was strukturell unfangbar bleibt (bewusst nicht verfolgt)
+
+| Form | Warum nicht verfolgt |
+|---|---|
+| `match/case` statt if/elif | **Ausnahme: wird verfolgt** — ein `ast.Match`-Handler ist strukturell nah an Regel B und billig |
+| Enum-Iteration / `dict(genexpr)` | bräuchte Datenflussanalyse |
+| `.append()`-Aufbau, `+`-Konkatenation | dito |
+| `getattr(ThunderLevel, "MED")` | dito |
+| Zahlen-Keys ohne Wortbezug | kein Stufen-Token erkennbar |
+| Skala in JSON/YAML statt Code | außerhalb jeder AST-Reichweite |
+| vollständige String-Konkatenation | Verschleierung; gegen Absicht hilft kein Syntax-Wächter |
+
+Alle sind **absichtliche Umgehungen oder exotische Formen**, für die es im Repo keinen Anhaltspunkt
+gibt. Der reale Fehler von #1474 war versehentlich und wird gefangen. Sie zu verfolgen träfe das
+Regel-Budget, nicht den Fehler.
+
+## Technical Approach
+
+**Zwei Wächter, Ratsche statt Vorsanierung, parametrisierter Kern.**
+
+| Artefakt | Regeln | Läuft in |
+|---|---|---|
+| `tests/tdd/`-Python-AST-Wächter | A (+6 Verfeinerungen) · B · C · `match/case` · D auf `tests/` | CI-Job `test` |
+| Frontend-Wächter (`node --test`, TS-/Svelte-AST) | A (Schwelle 3) · P (ab Index 0) · C · D auf `*.test.ts` | CI-Job `frontend-test` |
+
+- **Kanonische Ordnung live lesen**, nicht abschreiben: `uv run python3 -c "…_THUNDER_ORDER…"` →
+  `['NONE','LOW','MED','HIGH']` (verifiziert). CI-seitig durch `uv sync` im `frontend-test`-Job
+  bereits abgesichert.
+- **Duldung per Marker-Kommentar mit Mindestbegründung**, nie per Zeilennummer (#1466).
+- **Kern parametrisiert** (kanonisches Modul/Symbol, Mitgliedsnamen, Scan-Wurzeln als Argumente);
+  ein späterer `RiskLevel`-Wächter kostet dann ~20–30 LoC statt Neubau.
+- **Nichtteilung begründen:** `tests/helpers/metrik_listen_scan.py` wird bewusst nicht
+  wiederverwendet (Gründe oben). Der Bestand hat mit `data_root` vs. `repo_path` bereits einen
+  **unbegründeten** Präzedenzfall — den nicht wiederholen.
+- **Selbsttest-Pflicht:** an konstruierten Verstößen nachweislich rot werden **und** die
+  Trefferzahl selbst behaupten (`> 0`).
+
+## Scope Assessment
+
+| | |
+|---|---|
+| Dateien | 2 neue Wächter + 2 Fixture-Ablagen (außerhalb der Scanfläche) + Doku-Einträge |
+| Geschätzte LoC | **~400–500** (Backend-Prototyp allein 423 Z.) — **LoC-Limit-Erhöhung nötig** |
+| Risiko | **Hoch** — läuft in zwei CI-Jobs und blockiert jeden PR jeder Session |
+| Produktivcode | **keiner.** Reine Testartefakte |
+
+## Scheiben
+
+| # | Inhalt | Umfang |
+|---|---|---|
+| **S1** | Backend-Wächter (Python-AST, A+B+C+match/case+D, Marker-Duldung, Prüfdatum) | ~250–300 LoC |
+| **S2** | Frontend-Wächter (TS/Svelte-AST, A+P+C+D, Live-Read der Ordnung) | ~150–200 LoC |
+| **S3+** | Sanierung der 10 Altlasten kanalweise — **außerhalb dieses Workflows**, je eigener PR (#2010, #2011 decken zwei davon ab) |
+
+## Entschiedene Fragen (keine PO-Vorlage nötig)
+
+- **Altlasten jetzt sanieren?** Nein. Berührt Mail, Telegram, SMS, Ortsvergleich und Go
+  gleichzeitig, reißt das LoC-Limit und lässt den Schutzzweck tagelang unerfüllt. Ratsche mit
+  benannter, nur schrumpfender Duldungsliste.
+- **Gleich `RiskLevel` mitnehmen?** Nein. Kern parametrisiert, angewandt zunächst nur auf Gewitter —
+  genau das verlangt der Issue-Text („falls ja, generisch anlegen, sonst bewusst beschränken").
+- **Testdateien scannen?** Ja, aber **nur mit Regel D**. A/P dort sind unbrauchbar (16 Dauerfeuer).
