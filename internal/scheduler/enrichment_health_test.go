@@ -401,3 +401,45 @@ func TestStatusEnthaeltEnrichmentHealthAlsGeschwisterVonBriefingHealth(t *testin
 		t.Errorf("warn_service_health ist aus dem Status verschwunden")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// AC-8 (#1992): neue path-Werte erscheinen automatisch, ohne diese Datei zu
+// aendern -- der Aggregator gruppiert bereits generisch ueber entry.Path.
+// ---------------------------------------------------------------------------
+
+// AC-8: zwei neue path-Werte (snowgrid, thunder_additive, #1992) tauchen im
+// Aggregat auf, obwohl enrichment_health.go sie an keiner Stelle kennt --
+// kein Enum, kein switch ueber erlaubte path-Werte. Belegt die Spec-
+// Architektur-Entscheidung 3 (aggregateEnrichmentCalls gruppiert generisch
+// nach Path, nicht nach einem geschlossenen Vokabular).
+func TestEnrichmentHealthNeuePathWerteErscheinenAutomatisch(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newEnrichmentHealthTestScheduler(t, tmpDir)
+
+	now := time.Now().UTC()
+	snowgridErfolg := now.Add(-30 * time.Minute)
+	thunderAdditiveAusfall := now.Add(-10 * time.Minute)
+	writeEnrichmentJournal(t, tmpDir,
+		enrichmentLine(snowgridErfolg, "snowgrid", "ok", ""),
+		enrichmentLine(thunderAdditiveAusfall, "thunder_additive", "unavailable", "geosphere"),
+	)
+
+	health := sched.EnrichmentHealth()
+
+	snowgrid := enrichmentEntry(t, health, "snowgrid")
+	if got, want := snowgrid["last_success_at"], snowgridErfolg.Format(time.RFC3339); got != want {
+		t.Errorf("snowgrid.last_success_at: erwartet %v, bekommen %#v", want, got)
+	}
+	if _, ok := snowgrid["self_throttled"].(bool); !ok {
+		t.Errorf("snowgrid: erwartet dieselben Rohdaten-Felder wie thunder/radar_nowcast (self_throttled fehlt oder falscher Typ): %#v", snowgrid)
+	}
+
+	thunderAdditive := enrichmentEntry(t, health, "thunder_additive")
+	if got := thunderAdditive["last_success_at"]; got != nil {
+		t.Errorf("thunder_additive.last_success_at: erwartet nil (nur ein Ausfall im Journal), bekommen %#v", got)
+	}
+	attempt, ok := thunderAdditive["last_attempt_at"].(string)
+	if !ok || attempt != thunderAdditiveAusfall.Format(time.RFC3339) {
+		t.Errorf("thunder_additive.last_attempt_at: erwartet %v, bekommen %#v", thunderAdditiveAusfall.Format(time.RFC3339), thunderAdditive["last_attempt_at"])
+	}
+}
