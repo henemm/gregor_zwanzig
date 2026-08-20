@@ -335,3 +335,15 @@ angefasst werden:
   Prüfung ergab, dass AC-2 einen Nachweis versprach, den kein bestehender Test führt
 - 2026-08-20: Spec-Validator VALID, keine Blocker; Testnamen in AC-5/AC-7 daraufhin festgelegt
 - 2026-08-20: **PO-Freigabe erteilt („go")** — Umsetzung freigegeben
+- 2026-08-20: Adversary-Finding **F001** (HIGH, `spec_violation`) behoben. Die Mutations-Gegenprobe
+  hatte widerlegt, dass der in AC-2 zitierte Test
+  `test_ac4_fenster_wird_in_der_ortszeit_am_ort_aufgeloest` die Mutation
+  `local_dt(now, tz).date()` → `to_utc(now).date()` (Kandidat 3,
+  `compare_location_weather_source.py::fetch`) fängt: die Passage prüft um 09:00
+  America/Los_Angeles, wo Ortstag und UTC-Tag auf denselben Kalendertag fallen — die Mutation
+  erzeugt dort keine Werte-Differenz. Behebung: derselbe Test bekommt eine **zweite Passage** in
+  Pacific/Auckland (UTC+12/+13), wo 07:00/09:00 Ortszeit in UTC noch auf dem Vortag liegen; eine
+  Vorbedingungs-Prüfung belegt die Kalendertag-Kippkante im Test selbst. Produktivcode unverändert
+  (er war korrekt) — es fehlte nur der Nachweis. Damit ist AC-2 wörtlich wahr: mit der Mutation
+  wird genau der zitierte Test rot (nachgemessen), ohne Mutation bleiben beide Pflichtsuiten grün
+  (49 + 68). Dieselbe Blindstelle, für die diese Scheibe bei Kandidat 4 eigens AC-7 eingeführt hat.
