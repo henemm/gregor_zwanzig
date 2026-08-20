@@ -352,4 +352,78 @@ resolve_outlook_metrics([{"metric_id":"temperature","aggregation":"avg"}])  → 
 ```
 Die Picker-Liste zeigt fuer Temperatur daher nur zwei Kaestchen. **Die Open Question
 „faellt avg weg oder kommt er dazu?" ist damit falsch gestellt** — er ist heute schon nicht da;
-die Frage lautet, ob er neu dazukommen soll.
+die Frage lautet, ob er neu dazukommen soll. → **Nicht in A1.** Das Zielbild „Grundauswahl ist
+das MAXIMUM, der Kanal darf nur abwaehlen" macht das zu einem Punkt fuer **A3** (Kanal-Modul
+im Ausblick), nicht zu einer A1-Aenderung am Katalog.
+
+---
+
+# 🔴 WERT-MESSUNG (2026-08-20): Etappenwert vs. Gehzeit-Wert
+
+Messkript (Wegwerf, Scratchpad): `measure_ausblick_vs_gehzeit.py`.
+
+## Mechanik der Abweichung
+
+| Pfad | Fensterung | Fundstelle |
+|---|---|---|
+| Ausblick heute | `[start_floor, end_floor)` je Segment — **Endstunde EXKLUSIV** | `segment_weather.py:266-273`, gelesen ueber `aggregate_stage()` in `trip_report_scheduler.py:2286` → `outlook.py:503-504` |
+| SMS `L`/`D` | wie oben, **ausser beim letzten Segment: Ankunftsstunde INKLUSIV** | `day_window.py:210-229` → `hiking_field_min_max()`, `sms_trip.py:238-239` |
+
+Die Abweichung ist also die **Randbehandlung der Ankunftsstunde**, kein Rundungs- oder
+Aggregationsunterschied.
+
+## Messwerte (Varianz ausgewiesen, nicht nur Trefferzahl)
+
+| Block | Fenster verschieden | Werte verschieden | Δ |
+|---|---|---|---|
+| 6 bestehende #1417-Konstellationen (`tests/tdd/_hiking_window_fixtures.py`) | **3/6** | 3 | bis **-9,0 °C** (adversarisch konstruiert) |
+| Sweep 60 Kombis (Segmente 1-3 × Start 6-9 × Ankunft 13-20, glatter Tagesgang) | **60/60** strukturell | **24/60** | Median **1,23 °C**, Max **1,66 °C** |
+
+Die 36 deckungsgleichen Faelle sind **zufaellig** gleich (Ankunftsstunde traegt dort nicht das
+Extremum) — nicht Beleg fuer Gleichheit.
+
+**Gerichtet:** `Etappe - Gehzeit <= 0` in **allen 84** Faellen. Die Etappen-Fensterung kann der
+Gehzeit-Fensterung nur einen Datenpunkt VORENTHALTEN, nie einen hinzugewinnen. ⇒ **Der Ausblick
+zeigt systematisch ein zu kuehles Hoch.** Beim Tief 0/84 — die Ankunft liegt in realistischen
+Etappenzeiten nie am Tagestiefpunkt (strukturell moeglich, praktisch selten).
+
+## 🔴 Das ist ein Nachzug zu #1417, keine Feature-Luecke
+
+**#1417 („Mail und Kurznachricht zeigen fuer dieselbe Etappe verschiedene Temperaturen") ist
+CLOSED.** Der Fix hat SMS, Telegram-Kurzuebersicht und E-Mail-Kurzzusammenfassung auf
+`collect_hiking_window_points()` umgestellt — **der 3-Tages-Ausblick war nicht dabei** und liest
+weiter `summary.temp_min_c`/`temp_max_c`. Dieselbe Ursache (exklusive Ankunftsstunde), dieselbe
+Richtung, eine uebersehene Flaeche.
+
+`segment_weather.py` bleibt dabei bewusst unveraendert (#1329: rein pro Segment, darf nicht
+wissen, an welcher Stelle des Berichts es steht) — deshalb wurde schon #1146 nicht dort behoben.
+
+## Naht fuer den Fix (~20-25 LoC)
+
+`trip_report_scheduler.py:2286-2338` hat `seg_weather` bereits vorliegen — dort zusaetzlich
+`collect_hiking_window_points()` + `hiking_field_min_max(..., "t2m_c")` aufrufen (dieselben
+Funktionen, die `sms_trip.py` nutzt) und als optionale Parameter an `build_outlook_row()`
+durchreichen; in `outlook.py:503-504` `temp_lo`/`temp_hi` daraus ableiten, **fail-soft** zurueck
+auf `summary.temp_*`. Diskriminator `trip_display_config is not None`, analog dem bestehenden
+#1841-Muster fuer die Gewitterspalte (`outlook.py:~612-639`).
+
+---
+
+# 🟢 PO-ENTSCHEID 2026-08-20 — Darstellung im Ausblick
+
+**Gewaehlt: EINE Zelle mit SCHRAEGSTRICH** (die SMS-Schreibweise), wenn Tief und Hoch beide
+gewaehlt sind.
+
+```
+Temperatur          Minusgrade eindeutig      nur eine Haelfte
+9/27                -12/-4                    13/-
+```
+
+Der PO hat mit dem ausdruecklichen Hinweis gewaehlt, dass der Ausblick-**Klartext** heute die
+andere Schreibweise fuehrt (`9–20°C`, Halbgeviertstrich, `helpers.py:943`) und **mit angeglichen
+werden muss** — sonst stehen zwei Schreibweisen fuer dieselbe Sache nebeneinander.
+
+⚠️ Zu klaeren beim Zuschnitt: die Halbgeviertstrich-Schreibweise sitzt in der **festen
+7-Spalten-Altform**. Ob deren Klartext mit angeglichen wird oder nur der konfigurierbare Pfad,
+haengt an den Golden-Fixtures (`test_compare_outlook.py:205` erwartet `"9–20°C"`) — technischer
+Zuschnitt, keine PO-Frage.
