@@ -207,3 +207,68 @@ Die Kennung transportiert sie nicht — das ist bestehende, dokumentierte Bauart
       in den ACs mit abdecken.
 - [ ] **`avg` bei `temperature`** — der Mittelwert ist heute als eigenes Paar waehlbar.
       Faellt er im Ausblick weg, oder erscheint er zusaetzlich? **Braucht PO-Entscheid.**
+
+---
+
+# 🔴 KORREKTUR des Zuschnitts (PO, 2026-08-20)
+
+**Der Abschnitt „Analysis" oben ist in seiner Schlussfolgerung ueberholt. Scheibe A1
+entfaellt NICHT.** Grund: Die Entscheidungsvorlage, auf der „A1 entfaellt" beruhte, hat das
+SMS-Ist-Verhalten falsch wiedergegeben. Der PO hat richtiggestellt: „exakt so wie
+Temperatur bei SMS heute."
+
+## Das SMS-Ist-Verhalten, nachgelesen (Issue #1824, `docs/reference/sms_format.md:67, 136-139`)
+
+| Fall | Ausgabe |
+|---|---|
+| Tief **und** Hoch gewaehlt | **ein** Bereichs-Token unter dem Hoch-Kuerzel: `D13/27` |
+| nur Tief gewaehlt | `L13` |
+| nur Hoch gewaehlt | `D27` |
+
+🔴 **Trennzeichen ist ein Schraegstrich, NICHT ein Bindestrich.** Begruendung im Doku-Text:
+bei Minusgraden waere der Bindestrich zugleich Trenner und Vorzeichen (nicht eindeutig
+parsbar); der Schraegstrich ist GSM-7-sicher. Beispiele aus der Doku: `D13/27`, `D-12/-4`,
+`D13/-`. Jede Haelfte kann unabhaengig Wert, Null-Form oder Lueckenform sein.
+
+**Die frueher hier vorgeschlagene Schreibweise mit Bindestrich und Gradzeichen ist damit
+falsch** und darf nicht in die ACs.
+
+## Was das fuer den Zuschnitt heisst
+
+Getrennte Waehlbarkeit von Tief und Hoch braucht **eigene Kennungen** — das Kanal-Modul
+kennt nur Kennungen, keine Paare aus Kennung und Auswertung. Also lebt A1.
+
+Das frueher als Blocker notierte **Doppelspalten-Problem ist keiner**: #1728 hat es fuer die
+SMS bereits geloest, indem die Kuerzel zu den neuen Kennungen wanderten und
+`temperature`/`wind_chill` „nur noch den Stundenwert fuer Stundentabelle und Telegram-Zelle"
+liefern (`sms_format.md:94`). Dasselbe Muster traegt hier.
+
+## 🟢 PO-Entscheid 2026-08-20 — welche Groessen der Trip-Ausblick benutzt
+
+> **Der Trip-Ausblick benutzt dieselben Groessen wie die SMS** — die vier bestehenden
+> Gehzeit-Kennungen. Eine Groesse, ein Wert, kanaluebergreifend gleich.
+> Fuer den Ortsvergleich (keine Route, keine Gehzeit) kommen eigene Tief/Hoch-Groessen
+> ueber das Tagesfenster dazu.
+
+Damit bleibt der Waechter aus Scheibe C unveraendert gueltig: die Gehzeit-Groessen bleiben
+trip-exklusiv, die neuen Tagesfenster-Groessen sind ein **separates** Paar.
+
+## 🔴 Offener technischer Kernpunkt fuer die A1-Spec
+
+Die vier Gehzeit-Kennungen tragen heute **keine** `summary_fields` — im Ausblick entsteht
+fuer sie deshalb **keine Spalte** (`compare_outlook_metric_ids.py:56-68, 128-134` verwerfen
+sie ersatzlos, `summary_field_for()` hat keinen Fallback). Ein Tabellenwert muss erst
+nutzbar gemacht werden.
+
+⚠️ **Dabei nicht annehmen, dass `temp_min_c` der gesuchte Wert ist.** Gemessen:
+
+| Wert | Fensterung | Quelle |
+|---|---|---|
+| `SegmentWeatherSummary.temp_min_c` | **Etappengrenzen** (Segment-Start bis -Ende) | `segment_weather.py:266-276` → `weather_metrics.py:525-540` |
+| SMS-Token `L`/`D` | **Gehzeit** — enger als die Etappengrenzen | `collect_hiking_window_points()` → `hiking_field_min_max()`, `sms_trip.py:238-258` |
+
+Beide sind aehnlich, aber **nicht nachweislich gleich**. Die Spec muss festlegen, welcher
+Wert im Ausblick erscheint — und wenn es der Gehzeit-Wert sein soll (PO-Entscheid: „dieselben
+wie die SMS"), muss der Weg dorthin gebaut werden. **Vor der Umsetzung ist auszumessen, in
+wie vielen Faellen die beiden Werte ueberhaupt auseinanderliegen** — sonst ist jeder
+Gleichheitsbefund trivial wahr.
