@@ -34,7 +34,7 @@ import json
 import re
 import shutil
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -127,12 +127,25 @@ def _rumpf(sms: str) -> str:
 def _trip(name: str = "KHW 403", waypoints: int = 7) -> Trip:
     """Trip mit ``waypoints-1`` Zwischensegmenten + Ziel — genug, damit
     Segment 4 existiert und NICHT als 'gesamte Route' gilt."""
+    # HAERTUNG (Wanduhr-Ratsche `test_fixture_wallclock_ratchet.py`
+    # AC-5/AC-10: haerten statt eintragen): FESTES Etappen-Datum, explizite
+    # `start_time` UND explizite Ankunftszeit je Wegpunkt. Ohne all das faellt
+    # die Segment-Ableitung auf die Prozessuhr zurueck -- die Fixture waere
+    # dann davon abhaengig, WANN der Lauf stattfindet (Spec-Warnung
+    # "Wanduhr-Abhaengigkeit", Known Limitations).
+    #
+    # Bewusste Arbeitsteilung mit dem "heute"-Fall: die Wanduhr steckt
+    # ausschliesslich in `_heute()`/`_morgen()`, also in `valid_from`/
+    # `valid_to` der WARNUNG -- genau dort verlangt AC-8 sie. Der TRIP
+    # dagegen ist vollstaendig fest verdrahtet und traegt keine Wanduhr mehr.
     stage = Stage(
-        id="S1", name="Etappe 1", date=datetime.now(TZ).date(),
+        id="S1", name="Etappe 1", date=date(2026, 7, 11),
+        start_time=time(8, 0),
         waypoints=[
             Waypoint(
                 id=f"W{i}", name=f"WP {i}",
                 lat=46.60 + i / 100, lon=13.30 + i / 100, elevation_m=1400,
+                arrival_calculated=f"{7 + i:02d}:00",
             )
             for i in range(1, waypoints + 1)
         ],

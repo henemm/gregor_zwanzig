@@ -115,6 +115,9 @@ def render_alert_preview(
             is_convective=body.onset.is_convective,
             intensity_label=body.onset.intensity_label,
             source_label=body.onset.source_label,
+            # #1948 S5 (AC-15): die Segment-Kennung des Payloads erreicht das
+            # Event -- sonst faellt der Ortskopf auf "km N-M" zurueck.
+            segment_id=getattr(body.onset, "segment_id", None),
         )
         msg = AlertMessage(
             trip_short=trip_obj.name,
@@ -207,7 +210,7 @@ def _render_official_preview(trip_obj: Trip, payloads: list) -> dict:
     telegram = render_official_alert_telegram(
         dto_notices, prefix=trip_obj.name, source_label=source_label, tz=alert_tz,
     )
-    sms = render_official_alert_sms(dto_notices, sms_prefix=trip_obj.name, tz=alert_tz)
+    sms = render_official_alert_sms(dto_notices, tz=alert_tz)
     return {
         "subject": subject, "email_html": html, "email_plain": plain,
         "telegram": telegram, "sms": sms,
@@ -251,6 +254,7 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
             result.source, result.source,
         ),
         cooldown_display=None,
+        segment_id=getattr(body_nf, "segment_id", None),
     )
     out = render_alert_preview(
         trip_obj, SimpleNamespace(onset=onset_ns, official=None, nowcast_frames=None),

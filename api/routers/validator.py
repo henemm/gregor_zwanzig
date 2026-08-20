@@ -224,6 +224,10 @@ class SegmentTimePayload(BaseModel):
 
 
 class OnsetPayload(BaseModel):
+    """Issue #1948 S5 (AC-15, Vorbedingung aus S4): `segment_id` additiv
+    nachgezogen -- `OfficialAlertPayload` transportiert die Segment-Kennung
+    ueber `segment_ids` schon heute, dieser Zweig fiel ohne sie auf den
+    km-Rueckfall zurueck."""
     onset_minutes: int
     onset_time: str
     km_from: float
@@ -232,6 +236,7 @@ class OnsetPayload(BaseModel):
     intensity_label: str
     source_label: str
     cooldown_display: str | None = None
+    segment_id: str | None = None
 
 
 class OfficialAlertPayload(BaseModel):
@@ -262,6 +267,9 @@ class NowcastFramesPayload(BaseModel):
     frames: list[NowcastFramePayload]
     km_from: float = 0.0
     km_to: float = 0.0
+    # #1948 S5 (AC-15): wie `OnsetPayload` -- ohne Segment-Kennung nennt der
+    # Frame-Replay nur den km-Rueckfall statt des Segments.
+    segment_id: str | None = None
 
 
 class AlertPreviewBody(BaseModel):
