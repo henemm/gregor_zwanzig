@@ -246,7 +246,9 @@ Goldstring für den „heute"-Fall wäre wanduhr-abhängig rot, sobald der Testl
   direkter Aufruf von `alert_urgency.urgency_from_official_level(1)` im selben
   Testlauf / When beide Pfade nacheinander ausgeführt werden / Then liefert
   die SMS-Darstellung den Buchstaben „-" für GRÜN, UND
-  `urgency_from_official_level(1)` liefert weiterhin „LOW" ohne `KeyError`,
+  `urgency_from_official_level(1)` liefert weiterhin seinen unveränderten Wert
+  ohne `KeyError` (gemessen: **„HIGH"**, konservativer Rückfall — die
+  ursprüngliche Freigabe-Fassung schrieb hier irrtümlich „LOW", s. Nachtrag N-1),
   weil `hazard_symbols.LEVEL_LETTERS` von dieser Scheibe nicht angefasst wird.
   - Test: Wächter-Unit-Test, der beide Funktionen im selben Testkörper
     aufruft — ein Mutant, der `1: "-"` in `LEVEL_LETTERS` einschleust, muss
@@ -433,7 +435,67 @@ Goldstring für den „heute"-Fall wäre wanduhr-abhängig rot, sobald der Testl
   S4 (`fix_1948_s4_nowcast_sms_zielbild.md`) traf dieselbe Einschätzung für
   den strukturell gleichartigen Nowcast-Umbau.
 
+## Nachtrag aus Phase 5 (RED) — Tech-Lead-Entscheide 2026-08-20
+
+Die RED-Phase hat vier Lücken der Implementation Details aufgedeckt, die dort
+offen blieben. Sie ändern **keinen freigegebenen AC**, sondern legen fest, wie
+die freigegebenen ACs erreicht werden. Belege je Punkt in der Quelle geprüft.
+
+**N-1 — AC-5 nennt den falschen Vergleichswert (Spec-Fehler, korrigiert).**
+`urgency_from_official_level(1)` liefert `"HIGH"`, nicht `"LOW"`:
+`LEVEL_LETTERS.get(1, "H")` fällt konservativ auf „H" zurück
+(`src/services/alert_urgency.py:28`, dokumentiert als AC-3 von #1461). Die
+Zusicherung des ACs — kein `KeyError`, unveränderter Wert — bleibt unberührt;
+nur der genannte Wert war falsch. AC-5 ist oben entsprechend korrigiert.
+
+**N-2 — Das `"nur "`-Präfix entfällt im SMS-Kopf.**
+`build_official_alert_notices` setzt bei genau einer Warnung `"nur "` vor den
+`sms_scope` (`official_alerts.py:2170-2171`), heute also `nur S4`. Mit der in
+den Implementation Details vorgesehenen Ein-Zeilen-Änderung entstünde
+`nur Seg 4: !TH:M 15-21`. Die PO-Zielbild-Tabelle zeigt für **beide** Fälle —
+eine Warnung (`Seg 4: !TH:L 12-22`) wie zwei (`Seg 4: !TH:L 12-22 HT:L`) —
+den Kopf **ohne** `nur`; AC-1 fordert den Kopf „exakt `Seg 4: `". Das
+`"nur "`-Präfix fällt für `sms_scope` deshalb ersatzlos weg. Gefahrlos lokal:
+`sms_scope` wird ausschließlich vom SMS-Renderer gelesen, `scope_label`
+(E-Mail/Betreff) trägt das Präfix ohnehin nicht.
+
+**N-3 — Der Ortskopf braucht eine eigene Rückfallebene (F004-Garantie).**
+Bisher stand der Ort im droppbaren `suffix`; im Zielformat steht er im Kopf,
+und `_sms_pack_with_fallback` kürzt den Kopf nie. Bei extrem langen Ortsnamen
+liefe die bestehende Rückfallkette damit ins Leere — gemessen entsteht
+`nur Saint-Julien-…-Territoire:...` bzw. `nur...` **ohne jedes
+Gefahren-Kürzel**. Genau das verbieten
+`test_official_alert_channel_scope.py::test_ac15_sms_survives_when_leading_location_overflows_budget`
+und `::test_ac16_sms_survives_single_location_longer_than_entire_limit`
+(F004, Adversary-Runde 3). Beide Wächter bleiben **unverändert** und sind
+Abnahmebedingung: Gefahr und Stufe überleben jede Kopflänge. Die Rückfallkette
+bekommt dafür eine vorgelagerte Stufe „Kopf kürzen bzw. weglassen, bevor ein
+Gefahren-Token fällt" — die Reihenfolge der bestehenden Stufen (Ort weglassen
+→ Zeit weglassen → nur Kürzel) bleibt darunter unangetastet.
+
+**N-4 — `_ascii()` gilt auch für die führenden Varianten.**
+Der Renderer-Rumpf in den Implementation Details faltet `head` und `tokens`,
+lässt die `leading_variants` aber ungefaltet. Im uneinheitlichen Umfang trägt
+die führende Variante den Ortsnamen — ohne Faltung landet ein Umlaut
+ungefaltet in der SMS. Im Bestand laufen `lead_code`/`lead_time`/
+`lead_location` durch `_ascii`; das bleibt so. Die GSM-7-Wächter
+(`test_trip_sms_gsm7_charset.py`) erzwingen es.
+
+**N-5 — Die „heute"-Regel gilt mechanisch für ALLE Zeitformen.**
+PO-Entscheid 3 lautet „Wochentag nur wenn nicht heute" und ist auf das
+Fenster-Token (`Do12-22` → `12-22`) formuliert. Er wird unverändert auf die
+beiden übrigen Formen der Ist-Basislinie angewandt, ohne Sonderregel:
+ganztägig `Fr10.07.` → `10.07.`, Tagesübergang `Fr22-Sa03` → `22-Sa03`. Das
+End-Tageskürzel (`Sa`) bleibt in jedem Fall stehen — es bezeichnet einen
+anderen Tag als heute und ist bei amtlichen Warnungen sicherheitsrelevant.
+Betroffen sind 10 der 27 echten Warnungen der Ist-Basislinie (9 ganztägig,
+1 Tagesübergang), die Regel ist also nicht theoretisch.
+
+
 ## Changelog
 
+- 2026-08-20: Nachtrag N-1..N-5 aus Phase 5 (RED) — vier offene Stellen der
+  Implementation Details entschieden, AC-5-Vergleichswert korrigiert. Keine
+  Änderung an den 17 freigegebenen ACs.
 - 2026-08-20: Initial spec created (S5 des Alarm-Format-Konzepts #1948, Zweig
   b amtliche Warn-SMS-Zielbild).
