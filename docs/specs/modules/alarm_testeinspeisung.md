@@ -195,7 +195,7 @@ und Spec `fix_1744_alarm_format_angleichen.md`):**
 }
 ```
 
-Erwartete SMS-Form (bestehender Renderer, unverändert): `KHW403 AMT GELB1/3: TH …`.
+Erwartete SMS-Form (seit #1948 S5, `fix_1948_s5_amtliche_sms_zielbild.md`): `Seg 1-2: !TH:M`.
 
 ### Zweig c (NEU): Replay `nowcast_frames`
 
