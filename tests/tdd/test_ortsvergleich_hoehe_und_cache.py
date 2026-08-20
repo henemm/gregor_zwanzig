@@ -45,6 +45,7 @@ from providers.openmeteo import OpenMeteoProvider
 from services.compare_location_weather_source import CompareLocationWeatherSource
 from services.segment_weather import SegmentWeatherService
 from services.weather_cache import get_shared_weather_cache, reset_shared_weather_cache_for_tests
+from utils.timezone import local_dt, tz_for_coords
 
 _OM_ALL_MODEL_IDS = [
     "meteofrance_arome", "icon_d2", "metno_nordic", "icon_eu", "ecmwf_ifs04",
@@ -73,11 +74,26 @@ def _prepare_availability(monkeypatch, tmp_path) -> None:
     )
 
 
-def _handler(seen: List[httpx.Request]):
+def _mittag_heute_am_ort(lat: float, lon: float) -> str:
+    """N3-Nachbesserung: Kalendertag AM ORT, Mittagsstunde -- dieselbe
+    Zeitzonen-Aufloesung wie `CompareLocationWeatherSource.fetch()`
+    (`tz_for_coords` + `local_dt(datetime.now(timezone.utc), tz)`), damit der
+    Zeitstempel IMMER im Default-Tagesfenster 4-19 Uhr liegt, unabhaengig
+    davon, an welchem Kalendertag/zu welcher Uhrzeit der Testlauf startet.
+    Ein fest verdrahtetes Datum (z. B. "2026-08-21") liegt ausserhalb dieses
+    real-clock-basierten Fensters, sobald der Testlauf an einem anderen Tag
+    stattfindet -- die Zeitreihe waere dann leer (ValueError) statt die
+    Hoehe zu pruefen."""
+    tz = tz_for_coords(lat, lon)
+    heute = local_dt(datetime.now(timezone.utc), tz).date()
+    return f"{heute.isoformat()}T12:00"
+
+
+def _handler(seen: List[httpx.Request], lat: float, lon: float):
     def _respond(request: httpx.Request) -> httpx.Response:
         seen.append(request)
         return httpx.Response(200, json={
-            "hourly": {"time": ["2026-08-21T12:00"], "temperature_2m": [5.0]}
+            "hourly": {"time": [_mittag_heute_am_ort(lat, lon)], "temperature_2m": [5.0]}
         })
     return _respond
 
@@ -117,10 +133,12 @@ def test_ac6_ortsvergleich_ort_traegt_seine_hoehe_fuer_zwei_nutzer(monkeypatch, 
     for user_id, loc in orte.items():
         seen: List[httpx.Request] = []
 
-        def _fake_get_provider(name, _seen=seen):
+        def _fake_get_provider(name, _seen=seen, _loc=loc):
             assert name == "openmeteo"
             provider = OpenMeteoProvider()
-            provider._client = httpx.Client(transport=httpx.MockTransport(_handler(_seen)))
+            provider._client = httpx.Client(
+                transport=httpx.MockTransport(_handler(_seen, _loc.lat, _loc.lon))
+            )
             return provider
 
         monkeypatch.setattr("providers.base.get_provider", _fake_get_provider)

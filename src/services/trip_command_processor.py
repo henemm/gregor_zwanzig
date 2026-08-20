@@ -1372,7 +1372,9 @@ class TripCommandProcessor:
         svc = RadarNowcastService()
         # Issue #1329 C2: /jetzt ist eine Nutzeraktion -- explizit
         # user_briefing (Default, nie gedrosselt), zur Dokumentation der Absicht.
-        result = svc.get_nowcast(wp.lat, wp.lon, priority="user_briefing")
+        result = svc.get_nowcast(
+            wp.lat, wp.lon, elevation_m=wp.elevation_m, priority="user_briefing"
+        )
         # Issue #1402: ohne tz faellt format_now_text() auf das argumentlose
         # .astimezone() zurueck -- deutet die Onset-Zeit in der PROZESS-
         # Zeitzone des Servers statt der Ortszeit des Wegpunkts.

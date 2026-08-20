@@ -489,7 +489,8 @@ class GeoSphereProvider:
             return None
 
     def _fetch_openmeteo_clouds(
-        self, lat: float, lon: float, hours: int = 48
+        self, lat: float, lon: float, hours: int = 48,
+        elevation_m: Optional[int] = None,
     ) -> Dict[datetime, Tuple[Optional[int], Optional[int], Optional[int]]]:
         """
         Fetch cloud layer data from Open-Meteo API.
@@ -501,16 +502,23 @@ class GeoSphereProvider:
             lat: Latitude
             lon: Longitude
             hours: Hours to fetch (default 48)
+            elevation_m: Issue #1991 (AC-3) — Wegpunkt-Hoehe, NUR gesetzt wenn
+                bekannt (kein Platzhalter-Wert).
 
         Returns:
             Dict mapping datetime -> (cloud_low, cloud_mid, cloud_high) percentages
         """
-        url = (
-            f"https://api.open-meteo.com/v1/forecast?"
-            f"latitude={lat}&longitude={lon}&"
-            f"hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high&"
-            f"timezone=Europe/Vienna&forecast_hours={hours}"
-        )
+        base_url = "https://api.open-meteo.com/v1/forecast"
+        # Issue #1991 (N1-Nachbesserung): Koordinaten/Hoehe ueber den
+        # EINZIGEN produktiven Erbauer aus openmeteo.py -- kein eigener
+        # Dict-/Zuweisungs-Aufbau mehr an dieser Stelle (AST-Waechter
+        # tests/test_openmeteo_callsite_elevation_guard.py).
+        from providers.openmeteo import _koordinaten_params
+
+        params = _koordinaten_params(lat, lon, elevation_m)
+        params["hourly"] = "cloud_cover_low,cloud_cover_mid,cloud_cover_high"
+        params["timezone"] = "Europe/Vienna"
+        params["forecast_hours"] = hours
 
         # Issue #338: jeden ausgehenden Open-Meteo-Clouds-Abruf zählen
         # (source="geosphere_clouds"). Fail-soft, kein Verhaltenswandel.
@@ -518,11 +526,9 @@ class GeoSphereProvider:
 
         responded = False
         try:
-            response = self._client.get(url, timeout=10.0)
+            response = self._client.get(base_url, params=params, timeout=10.0)
             responded = True
-            log_api_call(
-                "https://api.open-meteo.com/v1/forecast", response.status_code
-            )
+            log_api_call(base_url, response.status_code)
             response.raise_for_status()
             data = response.json()
 
@@ -558,9 +564,7 @@ class GeoSphereProvider:
             # Issue #338: Request-Fehler vor Response (kein Status) eigens
             # protokollieren; nach erfolgreichem get() ist bereits geloggt.
             if not responded:
-                log_api_call(
-                    "https://api.open-meteo.com/v1/forecast", None, error=str(e)
-                )
+                log_api_call(base_url, None, error=str(e))
             # Silently fail - cloud layers are optional
             return {}
 

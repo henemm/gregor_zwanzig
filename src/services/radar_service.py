@@ -21,7 +21,8 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Dict, Optional
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from services import alert_input_capture
@@ -167,7 +168,10 @@ class RadarNowcastService:
         """Return True if WMO weather code indicates convective activity (thunderstorm/hail)."""
         return code in (95, 96, 99)
 
-    def get_nowcast(self, lat: float, lon: float, priority: str = "user_briefing") -> NowcastResult:
+    def get_nowcast(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None,
+        priority: str = "user_briefing",
+    ) -> NowcastResult:
         """
         Fetch frames (cache-first) and derive nowcast result.
 
@@ -198,7 +202,7 @@ class RadarNowcastService:
         # faelschlich einen Eintrag der jeweils anderen Region teilen.
         region = _region_bucket(lat, lon)
 
-        cached = self._cache.get(lat, lon, region, now=now)
+        cached = self._cache.get(lat, lon, region, now=now, elevation_m=elevation_m)
         if cached is not None:
             self._budget_gate.record_cache_hit()
             _capture_nowcast_frames(lat, lon, cached.frames, cached.source)
@@ -210,10 +214,10 @@ class RadarNowcastService:
             frames = self._frame_source(lat, lon)
             source = "radar"
         else:
-            frames, source = self._fetch_frames_with_fallback(lat, lon)
+            frames, source = self._fetch_frames_with_fallback(lat, lon, elevation_m)
 
         if frames:
-            self._cache.put(lat, lon, region, frames, source, now=now)
+            self._cache.put(lat, lon, region, frames, source, now=now, elevation_m=elevation_m)
 
         _capture_nowcast_frames(lat, lon, frames, source)
         result = self._derive_result(frames, source, now=now)
@@ -325,7 +329,7 @@ class RadarNowcastService:
     # ------------------------------------------------------------------
 
     def _fetch_frames_with_fallback(
-        self, lat: float, lon: float
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
     ) -> tuple[list, str]:
         """Try source chain; return (frames, source_label)."""
         if _within_radolan(lat, lon):
@@ -334,26 +338,26 @@ class RadarNowcastService:
                 return frames, "radar"
 
         if _within_inca(lat, lon):
-            frames = self._fetch_geosphere_inca(lat, lon)
+            frames = self._fetch_geosphere_inca(lat, lon, elevation_m)
             if frames:
                 return frames, "INCA"
 
         if _within_italy_radar(lat, lon):
-            frames = self._fetch_italy_arpae(lat, lon)
+            frames = self._fetch_italy_arpae(lat, lon, elevation_m)
             if frames:
                 return frames, "ARPAE-2I"
 
         if _within_arome_france(lat, lon):
-            frames = self._fetch_arome_france_hd(lat, lon)
+            frames = self._fetch_arome_france_hd(lat, lon, elevation_m)
             if frames:
                 return frames, "AROME-FR"
 
         if _within_icon_d2(lat, lon):
-            frames = self._fetch_icon_d2(lat, lon)
+            frames = self._fetch_icon_d2(lat, lon, elevation_m)
             if frames:
                 return frames, "ICON-D2"
 
-        frames = self._fetch_openmeteo_minutely15(lat, lon)
+        frames = self._fetch_openmeteo_minutely15(lat, lon, elevation_m)
         return frames, "minutely_15"
 
     def _fetch_brightsky(self, lat: float, lon: float) -> list:
@@ -368,7 +372,9 @@ class RadarNowcastService:
             logger.warning(f"BrightSky failed, falling back: {e}")
             return []
 
-    def _fetch_geosphere_inca(self, lat: float, lon: float) -> list:
+    def _fetch_geosphere_inca(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         if _offline_fixture_active():
             # Issue #1329 C2 Abschnitt 8: kein Netz zu GeoSphere im Offline-Modus
             # (auch der Sidecar-open-meteo-Call unten wird dadurch nie erreicht).
@@ -389,7 +395,7 @@ class RadarNowcastService:
                 frames.append(RadarFrame(timestamp=ts_val, precip_mm_h=mm_h))
             # Convective sidecar: INCA carries no thunderstorm/hail field, so reuse the
             # global Open-Meteo best_match nowcast solely for the is_convective flag.
-            sidecar = self._fetch_openmeteo_15(lat, lon)
+            sidecar = self._fetch_openmeteo_15(lat, lon, elevation_m=elevation_m)
             if sidecar:
                 self._merge_convective(frames, sidecar)
             else:
@@ -410,23 +416,34 @@ class RadarNowcastService:
             if abs(nearest.timestamp - frame.timestamp) <= tolerance:
                 frame.is_convective = nearest.is_convective
 
-    def _fetch_openmeteo_minutely15(self, lat: float, lon: float) -> list:
-        return self._fetch_openmeteo_15(lat, lon)
+    def _fetch_openmeteo_minutely15(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
+        return self._fetch_openmeteo_15(lat, lon, elevation_m=elevation_m)
 
-    def _fetch_arome_france_hd(self, lat: float, lon: float) -> list:
+    def _fetch_arome_france_hd(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         """Fetch AROME-HD (1.5 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
-        return self._fetch_openmeteo_15(lat, lon, models="arome_france_hd")
+        return self._fetch_openmeteo_15(lat, lon, models="arome_france_hd", elevation_m=elevation_m)
 
-    def _fetch_icon_d2(self, lat: float, lon: float) -> list:
+    def _fetch_icon_d2(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         """Fetch DWD ICON-D2 (~2 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
-        return self._fetch_openmeteo_15(lat, lon, models="icon_d2")
+        return self._fetch_openmeteo_15(lat, lon, models="icon_d2", elevation_m=elevation_m)
 
-    def _fetch_italy_arpae(self, lat: float, lon: float) -> list:
+    def _fetch_italy_arpae(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         """Fetch ARPAE ICON-2I (2 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
-        return self._fetch_openmeteo_15(lat, lon, models="italia_meteo_arpae_icon_2i")
+        return self._fetch_openmeteo_15(
+            lat, lon, models="italia_meteo_arpae_icon_2i", elevation_m=elevation_m
+        )
 
     def _fetch_openmeteo_15(
-        self, lat: float, lon: float, models: Optional[str] = None
+        self, lat: float, lon: float, models: Optional[str] = None,
+        elevation_m: Optional[int] = None,
     ) -> list:
         """Shared Open-Meteo minutely_15 fetch/parse. Optional explicit model. Fail-soft -> [].
 
@@ -453,14 +470,19 @@ class RadarNowcastService:
         try:
             import httpx
             from providers.brightsky import RadarFrame
-            model_param = f"&models={models}" if models else ""
-            url = (
-                f"https://api.open-meteo.com/v1/forecast"
-                f"?latitude={lat}&longitude={lon}"
-                f"{model_param}"
-                f"&minutely_15=precipitation,weather_code"
-                f"&timezone=UTC&forecast_minutely_15=96"
-            )
+            # Issue #1991 (N1-Nachbesserung): Query-Koordinaten/-Hoehe ueber
+            # den EINZIGEN produktiven Erbauer aus openmeteo.py -- kein
+            # eigener Dict-/Zuweisungs-Aufbau mehr an dieser Stelle
+            # (AST-Waechter tests/test_openmeteo_callsite_elevation_guard.py).
+            from providers.openmeteo import _koordinaten_params
+
+            query = _koordinaten_params(lat, lon, elevation_m)
+            if models:
+                query["models"] = models
+            query["minutely_15"] = "precipitation,weather_code"
+            query["timezone"] = "UTC"
+            query["forecast_minutely_15"] = 96
+            url = "https://api.open-meteo.com/v1/forecast?" + urlencode(query)
             self._budget_gate.record_call()  # unmittelbar vor dem echten Fetch
             with httpx.Client(timeout=HTTPX_TIMEOUT) as client:
                 resp = client.get(url)

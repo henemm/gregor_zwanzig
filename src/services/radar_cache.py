@@ -69,15 +69,22 @@ class RadarNowcastCacheService:
         self._lock = Lock()
         self._ttl_seconds = ttl_seconds
 
-    def _key(self, lat: float, lon: float, region: str) -> str:
+    def _key(
+        self, lat: float, lon: float, region: str, elevation_m: Optional[int] = None
+    ) -> str:
         # Gerundete Koordinaten (~11m Aufloesung) + Region-Bucket
-        # (Adversary-Fund F001) -- beide zusammen bilden den Schluessel.
-        return f"{round(lat, 4)}_{round(lon, 4)}_{region}"
+        # (Adversary-Fund F001) + Hoehe (Issue #1991 AC-9: dieselbe Koordinate
+        # mit unterschiedlicher Hoehe fragt beim Provider unterschiedliche
+        # Werte ab) -- alle zusammen bilden den Schluessel.
+        return f"{round(lat, 4)}_{round(lon, 4)}_{region}_{elevation_m}"
 
-    def get(self, lat: float, lon: float, region: str, now: datetime) -> Optional[RadarCacheEntry]:
+    def get(
+        self, lat: float, lon: float, region: str, now: datetime,
+        elevation_m: Optional[int] = None,
+    ) -> Optional[RadarCacheEntry]:
         """Treffer nur wenn (now - entry.cached_at).total_seconds() <= ttl_seconds
-        UND dieselbe Region."""
-        key = self._key(lat, lon, region)
+        UND dieselbe Region UND dieselbe Hoehe."""
+        key = self._key(lat, lon, region, elevation_m)
         with self._lock:
             entry = self._cache.get(key)
             if entry is None:
@@ -88,11 +95,12 @@ class RadarNowcastCacheService:
             return entry
 
     def put(
-        self, lat: float, lon: float, region: str, frames: list, source: str, now: datetime
+        self, lat: float, lon: float, region: str, frames: list, source: str, now: datetime,
+        elevation_m: Optional[int] = None,
     ) -> None:
         if not frames:
             return  # Negativ-Ergebnisse werden NIE gecacht (Alarm-Blindheit vermeiden)
-        key = self._key(lat, lon, region)
+        key = self._key(lat, lon, region, elevation_m)
         with self._lock:
             self._cache[key] = RadarCacheEntry(frames=frames, source=source, cached_at=now)
 

@@ -204,7 +204,7 @@ def test_ac3_jetzt_nimmt_den_wegpunkt_der_ortstag_etappe(monkeypatch):
         Pruefling sie ruft. Kein Mock: die Zusicherung prueft die Entscheidung
         des Produktivcodes, nicht die eigene Annahme."""
 
-        def get_nowcast(self, lat, lon, priority="user_briefing"):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
             aufrufe.append((lat, lon))
             return NowcastResult(onset_minutes=None,
                                  intensity_label="Kein Niederschlag",
@@ -537,7 +537,7 @@ def _fall_jetzt(monkeypatch):
     aufrufe: list[tuple[float, float]] = []
 
     class _AufzeichnenderNowcast(RadarNowcastService):
-        def get_nowcast(self, lat, lon, priority="user_briefing"):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
             aufrufe.append((round(lat, 4), round(lon, 4)))
             return NowcastResult(onset_minutes=None,
                                  intensity_label="Kein Niederschlag",

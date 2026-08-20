@@ -30,6 +30,7 @@ AC-Test-Mapping:
 from __future__ import annotations
 
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List
 from urllib.parse import parse_qs, urlparse
@@ -78,13 +79,25 @@ class _ScriptedClient:
         return _RESPONDER[0](url)
 
 
+def _bald_utc() -> str:
+    """N3-Nachbesserung: Zeitstempel relativ zur tatsaechlichen Laufzeit
+    (`datetime.now(timezone.utc)`), nicht hart verdrahtet -- `_derive_result`
+    (radar_service.py:574) filtert Frames auf das Fenster
+    `[self._now_fn(), self._now_fn() + _NOWCAST_HORIZON_MIN]`. Ein fest
+    verdrahtetes Datum liegt ausserhalb dieses real-clock-basierten Fensters,
+    sobald der Testlauf an einem anderen Tag stattfindet -- der Frame wuerde
+    dann herausgefiltert und `intensity_label` faelschlich immer 'Kein
+    Niederschlag' liefern, unabhaengig vom angefragten Niederschlag."""
+    return (datetime.now(timezone.utc) + timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M")
+
+
 def _erfolgreiche_antwort(precip_mm_h: float):
     def _responder(url: str) -> httpx.Response:
         return httpx.Response(
             200, request=httpx.Request("GET", url),
             json={
                 "minutely_15": {
-                    "time": ["2026-08-21T12:00"],
+                    "time": [_bald_utc()],
                     "precipitation": [precip_mm_h / 4.0],  # mm/15min -> *4 = mm/h
                     "weather_code": [61],
                 }

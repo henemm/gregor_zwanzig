@@ -13,22 +13,26 @@ werden, die Open-Meteo mit Koordinaten anspricht — sonst leckt eine neue
 Stelle die Höhe unbemerkt weiter. Dieser Wächter erzwingt das statisch, über
 `src/` und `api/`.
 
-Zwei Baumuster werden erkannt (beide bereits im Produktivcode vorhanden):
+Drei Baumuster werden erkannt:
 
 1. Ein `ast.Dict`-Literal mit dem Schlüssel `"latitude"` (die vier
    openmeteo.py-Baustellen: `probe_model_availability`, `_fetch_uv_data`,
-   `fetch_forecast`, `_fetch_ensemble_spread`).
+   `fetch_forecast`, `_fetch_ensemble_spread`, sowie der EINZIGE freigegebene
+   Erbauer `_koordinaten_params`).
 2. Ein f-String (`ast.JoinedStr`), dessen literaler Textanteil `"latitude="`
-   enthält (`geosphere.py::_fetch_openmeteo_clouds`,
-   `radar_service.py::_fetch_openmeteo_15` — beide hartkodierte URLs).
+   enthält (hartkodierte URLs, z. B. per f-String zusammengesetzt).
+3. Eine Schlüssel-ZUWEISUNG (`ast.Assign` mit einem `ast.Subscript`-Ziel und
+   konstantem Schlüssel `"latitude"`, also `irgendwas["latitude"] = …`).
+   Issue #1991 (Nachbesserung N1): dieses Muster war urspruenglich das Loch,
+   ueber das `_punkt_params()` UND die primitiven Aufrufer in geosphere.py /
+   radar_service.py den Waechter umgangen haben ("der AST-Waechter prueft
+   nur Dict-LITERALE"). Alle drei Stellen bauen ihre Koordinaten inzwischen
+   ueber den EINEN freigegebenen Erbauer `_koordinaten_params()`
+   (openmeteo.py) -- die Zuweisungsform kommt im Produktivcode nicht mehr
+   vor, wird aber weiterhin erkannt, damit ein KUENFTIGER Aufrufer, der
+   dasselbe Loch erneut ausnutzt, gefangen wird.
 
 Statische AST-Analyse: kein Netz, kein Mock, keine Marker — Kern-Schicht.
-
-Erwartete Rotfärbung heute: der Erbauer existiert noch nicht, also läuft
-JEDE der o.g. Stellen (ausser den zwei bewusst dokumentierten Ausnahmen)
-noch direkt über ein Dict-Literal bzw. einen f-String — der Wächter meldet
-sie alle als Verstoß. Das ist erwartet (fehlender Erbauer-Eintrag, kein
-Import-/Tippfehler) und wird erst nach S1 grün.
 """
 from __future__ import annotations
 
@@ -41,9 +45,7 @@ API = REPO_ROOT / "api"
 
 _MODULE_SCOPE = "<module>"
 
-# Benannte, BEWUSSTE Ausnahmen. Schluessel: "<pfad>::<funktion>". Beide aus
-# der Spec (Implementation Details, S1): weder Stelle hat einen Ortsbezug,
-# der eine Wegpunkt-Hoehe tragen koennte bzw. annehmen wuerde.
+# Benannte, BEWUSSTE Ausnahmen. Schluessel: "<pfad>::<funktion>".
 BEWUSSTE_AUSNAHMEN: dict[str, str] = {
     "src/providers/openmeteo.py::probe_model_availability": (
         "Faehigkeits-Probe mit festen Sondier-Koordinaten (Modell-Bounding-"
@@ -53,6 +55,19 @@ BEWUSSTE_AUSNAHMEN: dict[str, str] = {
     "src/providers/openmeteo.py::_fetch_uv_data": (
         "Luftqualitaets-/CAMS-Endpunkt (Air-Quality-API) kennt keinen "
         "elevation-Parameter -- Issue #1991 AC-13, Spec Known Limitations."
+    ),
+    "src/providers/openmeteo.py::_koordinaten_params": (
+        "Der EINE freigegebene Erbauer (Issue #1991, Nachbesserung N1): "
+        "_punkt_params() UND die primitiven lat/lon-Aufrufer in "
+        "geosphere.py/radar_service.py bauen ihre Koordinaten ausschliesslich "
+        "hierueber -- kein zweiter, unregistrierter Aufbau-Ort im Code."
+    ),
+    "src/app/cli.py::main": (
+        "`overrides['latitude'] = args.lat` fuellt das CLI-Override-Dict fuer "
+        "`Settings(**overrides)` -- kein Open-Meteo-Request-Params-Dict. Die "
+        "eigentliche Anfrage baut spaeter, ueber die aufgeloeste Location, "
+        "ausschliesslich `_koordinaten_params()`; hier wird nichts an die "
+        "Wire-Anfrage durchgereicht (Legacy-CLI, Debug-Werkzeug)."
     ),
 }
 
@@ -93,6 +108,20 @@ def _joinedstr_traegt_latitude(knoten: ast.JoinedStr) -> bool:
     )
 
 
+def _assign_traegt_latitude(knoten: ast.Assign) -> bool:
+    """N1-Nachbesserung: `irgendwas["latitude"] = …` -- die Zuweisungsform,
+    ueber die `_punkt_params()` und geosphere.py/radar_service.py den
+    Waechter urspruenglich umgangen haben."""
+    for ziel in knoten.targets:
+        if (
+            isinstance(ziel, ast.Subscript)
+            and isinstance(ziel.slice, ast.Constant)
+            and ziel.slice.value == "latitude"
+        ):
+            return True
+    return False
+
+
 def _funde(pfad: Path) -> dict[str, str]:
     """Fundstellen in EINER Datei -> {"<pfad>::<funktion>::<zeile>": Art}."""
     try:
@@ -112,6 +141,8 @@ def _funde(pfad: Path) -> dict[str, str]:
             art = "dict_literal"
         elif isinstance(knoten, ast.JoinedStr) and _joinedstr_traegt_latitude(knoten):
             art = "f_string"
+        elif isinstance(knoten, ast.Assign) and _assign_traegt_latitude(knoten):
+            art = "subscript_assign"
         if art is None:
             continue
         schluessel = f"{rel}::{raum.get(id(knoten), _MODULE_SCOPE)}"
@@ -156,20 +187,15 @@ def test_produktive_aufrufer_verwenden_den_gemeinsamen_hoehe_erbauer():
     )
 
 
-def test_bekannte_verstoesse_werden_am_richtigen_ort_gefunden():
-    """Positivkontrolle (Scan=Verdacht, Entwarnung nur mit Positivkontrolle):
-    ohne diesen Nachweis koennte der Scanner aus einem Pfad-, Parser- oder
-    Namensfehler leer laufen und die vorherige Zusicherung waere trivial
-    gruen, weil sie eine leere Menge prueft."""
-    gefundene_orte = {k.rsplit("::", 1)[0] for k in _alle_funde()}
-    erwartet = {
-        "src/providers/openmeteo.py::fetch_forecast",
-        "src/providers/openmeteo.py::_fetch_ensemble_spread",
-        "src/providers/geosphere.py::_fetch_openmeteo_clouds",
-        "src/services/radar_service.py::_fetch_openmeteo_15",
-    }
-    fehlend = erwartet - gefundene_orte
-    assert not fehlend, f"Scanner findet bekannte Verstoesse nicht: {fehlend}"
+# Issue #1991 (N4-Nachbesserung): Die fruehere Positivkontrolle
+# `test_bekannte_verstoesse_werden_am_richtigen_ort_gefunden` pruefte, dass
+# vier konkrete Produktivstellen weiterhin Verstoesse SIND -- nach der
+# Implementierung (alle vier laufen ueber `_koordinaten_params()`) ist das
+# per Konstruktion falsch und der Test wuerde konsequent rot bleiben. Die
+# Funktionsfaehigkeit des Scanners selbst ist unabhaengig davon durch die
+# `test_scanner_erkennt_*`-Tests unten belegt (SYNTHETISCHE Dateien je
+# Baumuster, nicht auf den aktuellen Produktivstand angewiesen) -- deshalb
+# bewusst ersatzlos entfernt statt zu einem wirkungslosen Test umgebaut.
 
 
 def test_jede_eingetragene_ausnahme_existiert_noch():
@@ -219,6 +245,46 @@ def test_scanner_erkennt_fstring_in_synthetischer_datei(tmp_path):
     funde = _funde(datei)
     assert any(v == "f_string" for v in funde.values()), (
         f"Scanner hat den f-String nicht erkannt: {funde}"
+    )
+
+
+def test_scanner_erkennt_zuweisung_in_synthetischer_datei(tmp_path):
+    """N1-Nachbesserung: das urspruengliche Loch -- `params["latitude"] = …`
+    statt eines Dict-Literals -- muss ebenfalls erkannt werden."""
+    datei = tmp_path / "synthetischer_aufrufer_zuweisung.py"
+    datei.write_text(
+        "def hole(lat, lon):\n"
+        "    params = {}\n"
+        "    params['latitude'] = lat\n"
+        "    params['longitude'] = lon\n"
+        "    return client.get(url, params=params)\n",
+        encoding="utf-8",
+    )
+    funde = _funde(datei)
+    assert any(v == "subscript_assign" for v in funde.values()), (
+        f"Scanner hat die Schluessel-Zuweisung nicht erkannt: {funde}"
+    )
+
+
+def test_scanner_erkennt_zuweisung_vor_urlencode_in_synthetischer_datei(tmp_path):
+    """N1-Nachbesserung: dieselbe Zuweisungsform, hier fuer ein Dict, das
+    anschliessend per `urlencode()` in eine URL uebersetzt wird (Vorbild
+    radar_service.py::_fetch_openmeteo_15 vor der Umstellung auf den
+    gemeinsamen Erbauer)."""
+    datei = tmp_path / "synthetischer_aufrufer_urlencode_zuweisung.py"
+    datei.write_text(
+        "from urllib.parse import urlencode\n"
+        "def hole(lat, lon):\n"
+        "    query = {}\n"
+        "    query['latitude'] = lat\n"
+        "    query['longitude'] = lon\n"
+        "    url = 'https://api.open-meteo.com/v1/forecast?' + urlencode(query)\n"
+        "    return client.get(url)\n",
+        encoding="utf-8",
+    )
+    funde = _funde(datei)
+    assert any(v == "subscript_assign" for v in funde.values()), (
+        f"Scanner hat die Zuweisung vor urlencode() nicht erkannt: {funde}"
     )
 
 

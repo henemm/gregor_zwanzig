@@ -508,7 +508,7 @@ class TestAC8RadarAlertRespectsTier:
                     source="radar", is_convective=False,
                 )
 
-            def get_nowcast(self, lat: float, lon: float, priority: str = "user_briefing") -> NowcastResult:
+            def get_nowcast(self, lat: float, lon: float, elevation_m=None, priority: str = "user_briefing") -> NowcastResult:
                 # Issue #1329 C2: get_nowcast() akzeptiert seit Scheibe C2
                 # zusaetzlich `priority` (trip_alert.py ruft jetzt
                 # priority="polling"). Dieses Fake ignoriert die

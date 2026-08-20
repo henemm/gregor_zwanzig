@@ -66,7 +66,7 @@ class SpionierendeQuelle(CompareLocationWeatherSource):
         self.aufrufe: list[dict] = []
 
     def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
-              target_date=None, tage_ab_ortstag=None):
+              target_date=None, tage_ab_ortstag=None, elevation_m=None):
         self.aufrufe.append({
             "point_id": point_id,
             "start_hour": start_hour,
@@ -80,6 +80,8 @@ class SpionierendeQuelle(CompareLocationWeatherSource):
             zusatz["target_date"] = target_date
         if "tage_ab_ortstag" in parameter and tage_ab_ortstag is not None:
             zusatz["tage_ab_ortstag"] = tage_ab_ortstag
+        if "elevation_m" in parameter:
+            zusatz["elevation_m"] = elevation_m
         return super().fetch(point_id, lat, lon, start_hour, end_hour, **zusatz)
 
 

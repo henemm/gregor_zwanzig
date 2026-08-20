@@ -114,6 +114,7 @@ class LocationWeatherSource(Protocol):
         lon: float,
         start_hour: Optional[int] = None,
         end_hour: Optional[int] = None,
+        elevation_m: Optional[int] = None,
     ) -> PointWeatherData:
         ...
 
