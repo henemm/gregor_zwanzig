@@ -21,9 +21,22 @@ fuer dasselbe Muster).
 from __future__ import annotations
 
 import re
+from datetime import date as date_type
+from zoneinfo import ZoneInfo
 
+from freezegun import freeze_time
+
+from app.loader import save_location
 from output.renderers.alert.model import AlertMessage, OnsetEvent
+from output.renderers.alert.project import to_multi_location_onset_alert_message
 from output.renderers.alert.render import render_email, render_sms, render_telegram
+from services.radar_service import NowcastResult
+
+from tests.helpers.nowcast_gate_fixtures import (
+    TRIP_LAT, TRIP_LON, CountingFrameSource, clean_uid, compare_radar_service,
+    fresh_uid, location, make_trip, radar_preset, reset_radar_cache, save_trip,
+    settings_email_only, trip_alert_service, write_presets, write_user_tier,
+)
 
 
 def _onset_event(**kw) -> OnsetEvent:
@@ -125,6 +138,189 @@ def test_ac5_sms_token_carries_day_suffix():
     )
     assert "+1" not in control_sms, (
         f"Ohne Tageswechsel darf kein Tages-Suffix erscheinen: {control_sms!r}"
+    )
+
+
+# ═══════════ Fix-Loop F001 (Adversary, CRITICAL) — der WIRKORT ════════════
+#
+# Die beiden ACs oben pruefen die Renderer mit handgebauten `OnsetEvent`s.
+# Damit blieb offen, ob `onset_day_offset` an den ECHTEN Versandpfaden
+# ueberhaupt berechnet wird: die Mutation `utils.timezone.day_offset() ->
+# return 0` liess die gesamte Zielsuite gruen. Berechnet wurde der Offset
+# bis zu diesem Fix nur in `services/radar_alert_service.py`, das
+# ausschliesslich der Debug-Endpunkt `api/routers/debug.py` aufruft — kein
+# produktiver Alarm kam dort je vorbei.
+#
+# Die beiden Tests unten fahren deshalb die echten Versandpfade:
+#   * Trip:         `TripAlertService.check_radar_alerts()`
+#   * Ortsvergleich: `CompareRadarAlertService.check_all_compare_presets()`
+# Zustellung ueber den `mail_sink`-Zaehler (kein Netz, kein echter Versand,
+# #1477), Uhr ueber `freeze_time` (Muster `test_radar_alert_follows_
+# ortstag.py`), Frames ueber die echte `frame_source`-DI-Naht.
+
+
+def _trip_radar_klartext(zeitpunkt: str, *, ankunft_start: str, ankunft_ende: str) -> str:
+    """Ein echter `check_radar_alerts()`-Lauf unter gestellter Uhr; liefert
+    den KLARTEXT der zugestellten Mail (`mail_sink` bekommt `plain`,
+    notification_service.py:1439).
+
+    Reykjavik-Koordinaten (`make_trip`-Default, ganzjaehrig UTC+0): die
+    Ortszeit ist damit direkt aus der gestellten UTC-Zeit ablesbar, ohne
+    Zonenrechnung im Test.
+    """
+    uid = fresh_uid("f001-trip")
+    clean_uid(uid)
+    try:
+        with freeze_time(zeitpunkt):
+            write_user_tier(uid, "premium")
+            trip = make_trip(
+                "trip-f001-rollover", stage_date=date_type.today(),
+                arrival_start=ankunft_start, arrival_end=ankunft_ende,
+            )
+            save_trip(trip, uid)
+            reset_radar_cache()
+            mails: list = []
+            svc = trip_alert_service(
+                uid, settings_email_only(), CountingFrameSource(onset_minutes=53),
+                lambda subject, body: mails.append((subject, body)),
+            )
+            sent = svc.check_radar_alerts()
+        assert sent == 1 and len(mails) == 1, (
+            f"Testvoraussetzung bei {zeitpunkt}: genau EIN Alarm haette "
+            f"zugestellt werden muessen, war sent={sent}, mails={len(mails)}"
+        )
+        return mails[0][1]
+    finally:
+        clean_uid(uid)
+
+
+def test_f001_trip_versandpfad_traegt_den_tagesbezug():
+    """F001: der Tagesbezug entsteht im ECHTEN Trip-Versandpfad, nicht nur im
+    Renderer.
+
+    Hauptfall: 23:30 Ortszeit (Reykjavik = UTC), Onset 53 Min -> 00:23 des
+    Folgetags. Die Etappe laeuft 22:00->02:00, das aktive Segment endet also
+    erst NACH dem Onset (sonst unterdrueckte der Segment-Ende-Guard aus AC-6
+    den Alarm, und der Test maesse diesen statt des Tagesbezugs).
+
+    Gegenprobe im selben Test: derselbe Onset mittags (12:00 -> 12:53) bleibt
+    ohne Zusatz. Ohne sie wuerde ein Renderer, der IMMER "morgen" schreibt,
+    unbemerkt durchgehen.
+
+    ROT bei der Mutation `utils.timezone.day_offset() -> return 0` (und
+    ebenso, wenn `check_radar_alerts()` das Feld gar nicht erst befuellt).
+    """
+    rollover = _trip_radar_klartext(
+        "2026-08-11T23:30:00+00:00", ankunft_start="22:00", ankunft_ende="02:00",
+    )
+    assert "ab morgen 00:23" in rollover, (
+        f"Der Trip-Versandpfad haette den Onset als 'ab morgen 00:23' "
+        f"ausweisen muessen (23:30 Ortszeit + 53 Min). Mail:\n{rollover}"
+    )
+
+    kontrolle = _trip_radar_klartext(
+        "2026-08-11T12:00:00+00:00", ankunft_start="11:00", ankunft_ende="14:00",
+    )
+    assert "ab 12:53" in kontrolle and "morgen" not in kontrolle, (
+        f"Ohne Tageswechsel (12:00 + 53 Min = 12:53) muss der Text "
+        f"unveraendert bleiben. Mail:\n{kontrolle}"
+    )
+
+
+def test_f001_compare_versandpfad_traegt_den_tagesbezug_je_ort():
+    """F001: derselbe Nachweis fuer den Ortsvergleichs-Versandpfad — und
+    zusaetzlich, dass JEDER Ort seine EIGENE Zone benutzt.
+
+    Ein Buendel kann Orte in verschiedenen Zonen tragen. Gestellte Zeit
+    21:30 UTC: Wien (UTC+2 im August) steht auf 23:30, der Onset (+53 Min)
+    rutscht dort auf 00:23 des Folgetags; Reykjavik (UTC+0) steht auf 21:30,
+    der Onset bleibt mit 22:23 am selben Tag. In EINER Mail muessen deshalb
+    beide Formen nebeneinander stehen — eine gemeinsame Buendel-Zone waere
+    fuer einen der beiden Orte still falsch.
+
+    ROT bei `day_offset() -> return 0` (Wien verliert "morgen") und ebenso
+    bei einer Zone, die nicht je Ort aufgeloest wird (dann traegt entweder
+    kein Ort oder trage BEIDE den Zusatz).
+    """
+    uid = fresh_uid("f001-compare")
+    clean_uid(uid)
+    try:
+        with freeze_time("2026-08-11T21:30:00+00:00"):
+            write_user_tier(uid, "premium")
+            save_location(location("loc-wien", "Wien"), user_id=uid)
+            save_location(
+                location("loc-rvk", "Reykjavik", lat=TRIP_LAT, lon=TRIP_LON),
+                user_id=uid,
+            )
+            write_presets(uid, [radar_preset(
+                "cp-f001", ["loc-wien", "loc-rvk"], user_id=uid,
+            )])
+            reset_radar_cache()
+            mails: list = []
+            svc = compare_radar_service(
+                uid, settings_email_only(), CountingFrameSource(onset_minutes=53),
+                lambda subject, body: mails.append((subject, body)),
+            )
+            sent = svc.check_all_compare_presets()
+        assert sent == 1 and len(mails) == 1, (
+            f"Testvoraussetzung: genau EIN Buendel-Alarm haette zugestellt "
+            f"werden muessen, war sent={sent}, mails={len(mails)}"
+        )
+        klartext = mails[0][1]
+    finally:
+        clean_uid(uid)
+
+    assert "ab morgen 00:23" in klartext, (
+        f"Wien (23:30 Ortszeit + 53 Min) haette den Tagesbezug tragen "
+        f"muessen. Mail:\n{klartext}"
+    )
+    assert "ab 22:23" in klartext and "morgen 22:23" not in klartext, (
+        f"Reykjavik (21:30 Ortszeit + 53 Min = 22:23) bleibt am selben Tag "
+        f"und darf KEINEN Tagesbezug tragen — sonst rechnet das Buendel alle "
+        f"Orte in einer gemeinsamen Zone. Mail:\n{klartext}"
+    )
+
+
+def test_f001_compare_kurznachricht_traegt_das_tages_suffix():
+    """F001, SMS-Halfte: die Kurznachricht des Ortsvergleichs-Onset-Alarms
+    traegt das `+1`-Suffix, wenn der fuehrende Ort ueber Mitternacht rutscht
+    — und NICHT, wenn er es nicht tut.
+
+    Wirkort ist `to_multi_location_onset_alert_message()` selbst: dort
+    entsteht der Offset des Ortsvergleichs-Pfades (`check_all_compare_
+    presets()` -> `send_multi_location_radar_alert()` -> genau diese
+    Funktion). Der Kurznachrichten-Renderer zeigt den FUEHRENDEN Ort
+    (`render._render_sms_onset`, `msg.events[0]`), deshalb wird die
+    Reihenfolge zwischen den beiden Haelften getauscht — das prueft in einem
+    Zug, dass die Zone je Ort aufgeloest wird.
+    """
+    wien = location("loc-wien", "Wien")
+    rvk = location("loc-rvk", "Reykjavik", lat=TRIP_LAT, lon=TRIP_LON)
+    nc = NowcastResult(
+        onset_minutes=53, intensity_label="Starker Regen", source="INCA",
+    )
+
+    with freeze_time("2026-08-11T21:30:00+00:00"):
+        wien_fuehrt = render_sms(to_multi_location_onset_alert_message(
+            [("Wien", wien, nc), ("Reykjavik", rvk, nc)],
+            tz=ZoneInfo("Europe/Vienna"), stand_at="23:30",
+        ))
+        rvk_fuehrt = render_sms(to_multi_location_onset_alert_message(
+            [("Reykjavik", rvk, nc), ("Wien", wien, nc)],
+            tz=ZoneInfo("Europe/Vienna"), stand_at="23:30",
+        ))
+
+    assert "R@0:23+1" in wien_fuehrt, (
+        f"Wien rutscht auf 00:23 des Folgetags — die Kurznachricht haette "
+        f"'R@0:23+1' tragen muessen: {wien_fuehrt!r}"
+    )
+    assert len(wien_fuehrt) <= 160, (
+        f"Kurznachricht ueberschreitet die 160-Zeichen-Grenze: "
+        f"{len(wien_fuehrt)} — {wien_fuehrt!r}"
+    )
+    assert "R@22:23" in rvk_fuehrt and "+1" not in rvk_fuehrt, (
+        f"Reykjavik bleibt am selben Tag (22:23) — kein Tages-Suffix "
+        f"erlaubt, und die Zone muss je Ort aufgeloest werden: {rvk_fuehrt!r}"
     )
 
 

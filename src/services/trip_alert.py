@@ -40,7 +40,9 @@ from services.throttle_store import ThrottleStore
 from services.trip_day import anchor_tz, trip_local_today
 from services.user_tier import premium_sms_allowed, sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
-from utils.timezone import format_reference_at, local_fmt, to_utc, tz_for_coords
+from utils.timezone import (
+    day_offset, format_reference_at, local_fmt, to_utc, tz_for_coords,
+)
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -1380,10 +1382,15 @@ class TripAlertService:
             # Adjektiv, daher ist [:1].lower() hier immer korrekt.
             _label = result.intensity_label
             _label = _label[:1].lower() + _label[1:]
-            _onset_time_str = local_fmt(now_utc + timedelta(minutes=result.onset_minutes), tz)
+            # Issue #2009: Uhrzeit und Tagesbezug aus DEMSELBEN Zeitpunkt
+            # (`_onset_dt`, oben fuer den Segment-Ende-Guard berechnet) und
+            # DERSELBEN Zone — eine zweite Herleitung koennte auseinander-
+            # laufen und "00:23" wieder mehrdeutig machen.
+            _onset_time_str = local_fmt(_onset_dt, tz)
             _radar_request = RadarAlertRequest(
                 onset_minutes=result.onset_minutes,
                 onset_time=_onset_time_str,
+                onset_day_offset=day_offset(now_utc, _onset_dt, tz),
                 km_from=active.start_point.distance_from_start_km,
                 km_to=active.end_point.distance_from_start_km,
                 # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne

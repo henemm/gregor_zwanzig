@@ -31,6 +31,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from freezegun import freeze_time
+
 from tests.helpers.nowcast_gate_fixtures import (
     CountingFrameSource, clean_uid, fresh_uid, make_trip, reset_radar_cache,
     save_trip, settings_email_only, trip_alert_service, write_user_tier,
@@ -114,3 +116,76 @@ def test_ac6_segment_end_guard_suppresses_late_onset():
         )
     finally:
         clean_uid(uid_control)
+
+
+# ═══════════ Fix-Loop F002 (Adversary, MEDIUM) — der RANDWERT ═════════════
+
+
+def test_ac6_onset_exakt_am_segmentende_loest_noch_aus():
+    """F002: der Gleichheitsfall ist eine ENTSCHEIDUNG, kein Zufall — ein
+    Onset EXAKT zum Segmentende trifft einen Abschnitt, auf dem der Nutzer
+    zu diesem Zeitpunkt noch steht, und loest deshalb aus
+    (`trip_alert.py`: `_onset_dt > _segment_end`, bewusst nicht `>=`).
+
+    Die beiden Faelle oben lassen die Richtung offen: 15 bzw. 90 Minuten
+    Abstand entscheiden dieselbe Frage bei `>` wie bei `>=`. Erst dieser
+    Fall nagelt sie fest — die Mutation `>` -> `>=` macht ihn rot.
+
+    Gestellte Uhr (`freeze_time`) statt Wanduhr: die Segmentzeiten kommen
+    aus `arrival_calculated` ("HH:MM", Sekunde 0), der Onset-Zeitpunkt aus
+    `now + 53 Min`. Exakte Gleichheit gibt es nur, wenn "jetzt" selbst auf
+    einer vollen Minute steht. Reykjavik-Koordinaten (`make_trip`-Default,
+    ganzjaehrig UTC+0): Ortszeit == gestellte UTC-Zeit, keine Zonenrechnung.
+    """
+    onset_minutes = 53
+    uid = fresh_uid("ac6-randwert")
+    clean_uid(uid)
+    try:
+        with freeze_time("2026-08-11T12:00:00+00:00"):
+            now = datetime.now(timezone.utc)
+            segment_ende = now + timedelta(minutes=onset_minutes)
+
+            write_user_tier(uid, "premium")
+            trip = make_trip(
+                "trip-ac6-randwert",
+                arrival_start=_hhmm(now - timedelta(minutes=60)),
+                arrival_end=_hhmm(segment_ende),
+            )
+            save_trip(trip, uid)
+
+            # Testvoraussetzung: das aktive Segment muss GENAU zum
+            # Onset-Zeitpunkt enden — sonst prueft der Fall den Randwert
+            # nicht (die Segmentzeiten koennen durch Tagesfenster-Guards
+            # verschoben werden, #1584).
+            from services.trip_segments import resolve_current_segment
+            from services.trip_day import trip_local_today
+
+            aufgeloest = resolve_current_segment(
+                trip, now, trip_local_today(trip, now),
+            )
+            assert aufgeloest is not None, (
+                "Testvoraussetzung: es muss ein aktives Segment geben"
+            )
+            assert aufgeloest[0].end_time == segment_ende, (
+                f"Testvoraussetzung: das aktive Segment muss exakt zum "
+                f"Onset-Zeitpunkt {segment_ende.isoformat()} enden, endet "
+                f"aber {aufgeloest[0].end_time.isoformat()}"
+            )
+
+            reset_radar_cache()
+            mails: list = []
+            svc = trip_alert_service(
+                uid, settings_email_only(),
+                CountingFrameSource(onset_minutes=onset_minutes),
+                lambda subject, body: mails.append((subject, body)),
+            )
+            sent = svc.check_radar_alerts()
+
+        assert sent == 1 and len(mails) == 1, (
+            f"Onset exakt zum Segmentende ({segment_ende.isoformat()}): der "
+            f"Nutzer ist dann noch im Segment, der Alarm MUSS ausloesen. "
+            f"Erhalten: sent={sent}, mails={len(mails)}. Genau das waere das "
+            f"Verhalten der Mutation `_onset_dt >= _segment_end`."
+        )
+    finally:
+        clean_uid(uid)
