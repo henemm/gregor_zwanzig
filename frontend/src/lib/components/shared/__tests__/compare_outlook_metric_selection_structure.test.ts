@@ -316,69 +316,92 @@ describe('AC-3: Einzel-Options-Gruppen rendern weiterhin nur eine einfache Check
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AC-2 / AC-4: Mehrfach-Options-Gruppen ueber AggregationMetricRow mode="multiple"
+// AC-2 / AC-4 — UMGESTELLT in Issue #1848 Scheibe A2
+//
+// Vorher stand hier: "Mehrfach-Options-Gruppen (Temperatur, gefuehlte
+// Temperatur) rendern je Auswertung ein eigenes Kaestchen ueber
+// AggregationMetricRow mode='multiple'". Genau dieses Verhalten hat A2
+// abgeschafft (Spec AC-8, PO-Entscheid 2026-08-20): der Ausblick speichert die
+// KENNUNG, eine Halbauswahl laesst sich gar nicht mehr ablegen, und seit
+// #1848 A1 stehen Tief und Hoch ohnehin in EINER Spannen-Zelle der Mail. Zwei
+// Kaestchen wuerden etwas anderes versprechen, als herauskommt.
+//
+// Die Zusicherung ist deshalb UMGEDREHT statt geloescht: es darf keinen
+// Mehrfach-Zweig mehr geben, und jede Gruppe -- auch die mit mehreren
+// Auswertungen -- haengt an genau EINEM Kaestchen, das die Kennung schaltet.
+// Dieselbe Nachweistiefe wie vorher (AST der echten Komponente), nur mit dem
+// heutigen Sollzustand.
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-2: Mehrfach-Options-Gruppen (Temperatur, gefuehlte Temperatur) ueber AggregationMetricRow mode="multiple"', () => {
-	test('im Gruppierungs-Block wird AggregationMetricRow mit mode="multiple" und options={group.options} aufgerufen', () => {
+describe('AC-2 [#1848 A2]: kein Mehrfach-Auswertungs-Zweig mehr — ein Kaestchen je Groesse', () => {
+	test('im Gruppierungs-Block gibt es keinen AggregationMetricRow-Aufruf mehr', () => {
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
 		assert.ok(
 			eachBlocks.length >= 1,
-			'AC-2 FAIL (RED): ohne den groupCompareCatalog-Block (AC-1) gibt es keine Gruppe, in der ' +
-				'AggregationMetricRow mode="multiple" haengen koennte.'
+			'AC-2 FAIL: ohne den groupCompareCatalog-Block (AC-1) gibt es keine Gruppe zu pruefen.'
 		);
-		if (eachBlocks.length === 0) return;
 
 		const rows = eachBlocks.flatMap((block) => findComponentsNamed(block.body, 'AggregationMetricRow'));
-		assert.ok(
-			rows.length >= 1,
-			'AC-2 FAIL (RED): kein `AggregationMetricRow`-Aufruf im Ausblick-Gruppierungs-Block gefunden.'
+		assert.equal(
+			rows.length,
+			0,
+			`AC-2 FAIL (#1848 A2): es haengen noch ${rows.length} AggregationMetricRow-Aufrufe im ` +
+				'Ausblick-Gruppierungs-Block. Temperatur und gefuehlte Temperatur bekaemen damit ' +
+				'weiterhin je Auswertung ein eigenes Kaestchen — eine Auswahl, die das Backend seit ' +
+				'A2 gar nicht mehr speichern kann.'
 		);
-		if (rows.length === 0) return;
+	});
 
-		const withMultipleMode = rows.filter((row) => attrIsStaticText(findAttr(row, 'mode'), 'multiple'));
-		assert.ok(
-			withMultipleMode.length >= 1,
-			'AC-2 FAIL (RED): kein AggregationMetricRow-Aufruf mit `mode="multiple"` im Ausblick.'
+	test('genau EIN Kaestchen je Gruppe, und es schaltet die Kennung (`group.metric_id`)', () => {
+		const ast = parseComponent(OUTLOOK_COMPONENT);
+		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
+		assert.ok(eachBlocks.length >= 1, 'AC-2 FAIL: kein groupCompareCatalog-Block (s. AC-1).');
+
+		const inputs = eachBlocks.flatMap((block) => findElementsNamed(block.body, 'input'));
+		assert.equal(
+			inputs.length,
+			1,
+			`AC-2 FAIL (#1848 A2): der Gruppierungs-Block enthaelt ${inputs.length} Eingabefelder — ` +
+				'erwartet genau eines (ein Kaestchen je Groesse, ohne Sonderzweig).'
 		);
 
-		const withOptionsFromGroup = withMultipleMode.some((row) => {
-			const optionsAttr = findAttr(row, 'options');
-			return optionsAttr && attributeReferencesIdentifier(optionsAttr, 'group');
-		});
+		const onchange = findAttr(inputs[0], 'onchange');
 		assert.ok(
-			withOptionsFromGroup,
-			'AC-2 FAIL (RED): `options`-Prop des AggregationMetricRow-Aufrufs verweist nicht auf `group` ' +
-				'(erwartet `options={group.options}`, die tatsaechlichen Katalog-Optionen der Gruppe).'
+			onchange && attributeReferencesIdentifier(onchange, 'makeOutlookMetricHandler'),
+			'AC-2/AC-4 FAIL: das Kaestchen ruft beim Umschalten nicht `makeOutlookMetricHandler` auf.'
+		);
+		assert.ok(
+			onchange && attributeReferencesIdentifier(onchange, 'group'),
+			'AC-2 FAIL (#1848 A2): der Umschalt-Handler bekommt seinen Schluessel nicht aus `group` ' +
+				'(erwartet `makeOutlookMetricHandler(group.metric_id)` — die KENNUNG, nicht mehr ' +
+				'`group.options[0].key`, den Katalog-Schluessel einer einzelnen Auswertung).'
 		);
 	});
 });
 
-describe('AC-4: beide Zweige leiten checked/selectedChoiceIds weiterhin aus materializedOutlookKeys ab', () => {
-	test('AggregationMetricRow selectedChoiceIds={materializedOutlookKeys} — direkte Bindung, keine neue Zwischenvariable', () => {
+describe('AC-4 [#1848 A2]: Anzeige und Umschalten lesen weiterhin aus DERSELBEN Quelle', () => {
+	test('jedes Kaestchen haengt mit `checked` an isOutlookMetricActive — keine zweite Quelle daneben', () => {
+		// Die Kette Anzeige/Umschalten aus EINER Materialisierung (#1366 F001)
+		// ist unveraendert tragend -- nur der Schluessel ist jetzt die Kennung.
+		// AC-3 zeigt, dass es die Bindung GIBT; hier wird geprueft, dass KEIN
+		// Kaestchen daneben eine andere Quelle benutzt.
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(eachBlocks.length >= 1, 'AC-4 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
-		if (eachBlocks.length === 0) return;
+		assert.ok(eachBlocks.length >= 1, 'AC-4 FAIL: kein groupCompareCatalog-Block (s. AC-1).');
 
-		const rows = eachBlocks.flatMap((block) => findComponentsNamed(block.body, 'AggregationMetricRow'));
-		const wired = rows.some((row) => {
-			const attr = findAttr(row, 'selectedChoiceIds');
-			return attr && attributeReferencesIdentifier(attr, 'materializedOutlookKeys');
-		});
-		assert.ok(
-			wired,
-			'AC-4 FAIL (RED): kein AggregationMetricRow-Aufruf mit `selectedChoiceIds`, das ' +
-				'`materializedOutlookKeys` referenziert — die Mehrfach-Auswertung wuerde aus einer ' +
-				'anderen/neuen Quelle als die bisherige Checkbox-Liste lesen (Datenverlust-Risiko AC-4).'
-		);
+		const inputs = eachBlocks.flatMap((block) => findElementsNamed(block.body, 'input'));
+		assert.ok(inputs.length >= 1, 'AC-4 FAIL: kein Kaestchen im Gruppierungs-Block.');
+		for (const input of inputs) {
+			const checkedAttr = findAttr(input, 'checked');
+			assert.ok(
+				checkedAttr && attributeReferencesIdentifier(checkedAttr, 'isOutlookMetricActive'),
+				'AC-4 FAIL: ein Kaestchen im Gruppierungs-Block liest seinen Haken nicht aus ' +
+					'`isOutlookMetricActive` — Anzeige und Umschalten liefen damit auf verschiedene ' +
+					'Quellen (Fehlerklasse #1366 F001).'
+			);
+		}
 	});
-
-	// Die Einzel-Zweig-Haelfte von AC-4 (checked aus isOutlookMetricActive, das
-	// intern materializedOutlookKeys.includes(...) nutzt, Zeilen 47-51,
-	// UNVERAENDERT) ist bereits durch den AC-3-Test oben bewiesen — kein
-	// zweiter Nachweis derselben Kette noetig.
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -445,19 +468,40 @@ describe('AC-5 [REGRESSIONSSCHUTZ, bereits GRUEN]: Reihenfolge-/„Aus"-Block (W
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('AC-8: Ausblick uebergibt einen testidPrefix ungleich dem Uebersichts-Default (kein doppeltes data-testid)', () => {
-	test('der Ausblick-Aufruf von AggregationMetricRow traegt eine testidPrefix-Prop', () => {
+	test('die Ausblick-Zeile traegt ein eigenes Testid-Praefix, das nicht mit dem der Uebersicht kollidiert', () => {
+		// #1848 A2 umgestellt: frueher lief diese Zusicherung ueber die
+		// `testidPrefix`-Prop des Ausblick-Aufrufs von AggregationMetricRow.
+		// Den Aufruf gibt es nicht mehr (s. AC-2) — die Kollisionsgefahr, die
+		// hier bewacht wird, entsteht damit gar nicht erst. Der Sache nach
+		// geprueft wird weiterhin dasselbe: die Ausblick-Zeilen tragen ein
+		// EIGENES Praefix, nicht das der Uebersicht.
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(eachBlocks.length >= 1, 'AC-8 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
-		if (eachBlocks.length === 0) return;
+		assert.ok(eachBlocks.length >= 1, 'AC-8 FAIL: kein groupCompareCatalog-Block (s. AC-1).');
 
 		const rows = eachBlocks.flatMap((block) => findComponentsNamed(block.body, 'AggregationMetricRow'));
-		const withPrefix = rows.some((row) => findAttr(row, 'testidPrefix'));
+		assert.equal(
+			rows.length,
+			0,
+			'AC-8 FAIL: der Ausblick mountet wieder AggregationMetricRow — dann braucht er auch ' +
+				'wieder eine eigene `testidPrefix`-Prop, sonst kollidiert das Testid mit dem der ' +
+				'Uebersicht (`aggregation-metric-row-temperature` doppelt im DOM).'
+		);
+
+		const testids: any[] = [];
+		for (const block of eachBlocks) {
+			for (const el of findElementsNamed(block.body, 'label').concat(findElementsNamed(block.body, 'input'))) {
+				const attr = findAttr(el, 'data-testid') ?? findAttr(el, 'testid');
+				if (attr) testids.push(attr);
+			}
+		}
 		assert.ok(
-			withPrefix,
-			'AC-8 FAIL (RED): kein AggregationMetricRow-Aufruf im Ausblick uebergibt eine ' +
-				'`testidPrefix`-Prop — ohne sie kollidiert das Testid mit dem der Uebersicht ' +
-				'(`aggregation-metric-row-temperature` doppelt im DOM).'
+			testids.some((attr) =>
+				attributeHasPrefixAndIdentifier(attr, 'compare-layout-outlook-metric-', 'group')
+			),
+			'AC-8 FAIL: keine Ausblick-Zeile mit dem eigenen Praefix ' +
+				'`compare-layout-outlook-metric-` gefunden — ohne eigenes Praefix waeren ' +
+				'Ausblick- und Uebersichts-Zeile im DOM nicht auseinanderzuhalten.'
 		);
 	});
 
