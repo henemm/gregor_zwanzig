@@ -27,6 +27,9 @@ export interface CompareSelectionEntry {
 	hourlyDefault?: boolean;
 	hourlyMergeOnly?: boolean;
 	hourly_legacy_keys?: string[];
+	// Issue #1911: Ordinal-Beschriftungen (z.B. Gewitter "kein"/"leicht"/
+	// "mittel"/"hoch"), unveraendert aus der Katalogantwort durchgereicht.
+	ordinalLabels?: string[];
 }
 
 /**
@@ -68,7 +71,8 @@ export function toCompareSelectionEntries(
 		...(m.hourlyMergeOnly !== undefined ? { hourlyMergeOnly: m.hourlyMergeOnly } : {}),
 		...(m.hourly_legacy_keys !== undefined
 			? { hourly_legacy_keys: m.hourly_legacy_keys }
-			: {})
+			: {}),
+		...(m.ordinalLabels !== undefined ? { ordinalLabels: m.ordinalLabels } : {})
 	}));
 	// Issue #1373 (S2 Scheibe B): dieselbe geladene Katalogantwort ist die
 	// EINZIGE Quelle für die Übersetzung Auswahl-Schlüssel <-> Größe+Auswertung

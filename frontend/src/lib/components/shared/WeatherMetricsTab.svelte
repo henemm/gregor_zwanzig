@@ -97,7 +97,9 @@
 	// Anfrage pro Seiten-Load fuer Auswahlliste, Schwellen-Editor und
 	// Hub-Hydration; `toCompareSelectionEntries()` darin fuellt den Umkehr-Index
 	// Auswahl-Schluessel <-> Groesse+Auswertung.
-	import { loadCompareSelectionEntries } from './corridor-editor/compareMetricCatalogLoader.ts';
+	import {
+		loadCompareSelectionEntries, deriveThunderThresholdLevels
+	} from './corridor-editor/compareMetricCatalogLoader.ts';
 	// Issue #1359 Scheibe 1: reihenfolge-erhaltendes An-/Abwaehlen als reine,
 	// testbare Funktion (Muster: weatherMetricsTabSections.ts nebenan).
 	// Issue #1366 F002: materializeActiveMetricKeys/toggleCompareMetricKeyFromState
@@ -1627,18 +1629,21 @@
 								/>
 								{/if}
 								{#if !buckets.off.includes('thunder')}
+								{#if compareCatalogLoaded && !compareCatalogError}
 								<ThresholdMetricRow
 									metricId="thunder"
 									smsSymbol={metricSymbols['thunder']?.[0]}
 									label="Gewitter"
-									levels={[
-										{ id: 'leicht', label: 'Leicht', float: 1.0 },
-										{ id: 'mittel', label: 'Mittel', float: 2.0 },
-										{ id: 'hoch', label: 'Hoch', float: 3.0 }
-									]}
+									levels={deriveThunderThresholdLevels(compareCatalog.find((e) => e.metric === 'thunder_level_max')?.ordinalLabels)}
 									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
+								{:else}
+								<tr data-testid="threshold-metric-row-thunder-placeholder">
+									<td class="metric-label">Gewitter</td>
+									<td class="segmented-control">{compareCatalogError ? 'Schwellen nicht ladbar' : 'Lädt…'}</td>
+								</tr>
+								{/if}
 								{/if}
 								{#if !buckets.off.includes('snow_depth')}
 								<ThresholdMetricRow
