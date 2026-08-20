@@ -335,10 +335,10 @@ def _check_metric_plausibility(html: str) -> list[str]:
     """AC-4: Sonne-Pill vs. Σ Sonnenstunden; ‚kein Regen' vs. Regen-Summe."""
     errors: list[str] = []
     for pill in _pills(html):
-        m = re.search(r"Sonne\s+(\d+)\s*min", pill)
+        m = re.search(r"Sonne\s+(\d+(?:\.\d+)?)h", pill)
         if not m:
             continue
-        pill_min = int(m.group(1))
+        pill_min = round(float(m.group(1)) * 60)
         sun_h = _column_hours_sum(html, "Sonne", "Sun")
         if sun_h is None:
             # Emoji-Modus (#1432): keine 'X h'-Zahlen — statt (wie früher)

@@ -120,11 +120,11 @@ class TestAC1SunshinePillPositiveMinutes:
         text, _tone = pills[0]
         assert text.startswith("Sonne "), f"Pille soll mit 'Sonne ' beginnen: {text!r}"
         import re
-        m = re.search(r"(\d+) min", text)
-        assert m, f"Keine Minutenzahl in Pille: {text!r}"
-        minutes = int(m.group(1))
-        assert minutes > 0, (
-            f"RED: 0 Minuten trotz sonniger Datenpunkte — hasattr-Bug nicht gefixt: {text!r}"
+        m = re.search(r"(\d+(?:\.\d+)?)h", text)
+        assert m, f"Keine Stundenzahl in Pille: {text!r}"
+        hours = float(m.group(1))
+        assert hours > 0, (
+            f"RED: 0 Stunden trotz sonniger Datenpunkte — hasattr-Bug nicht gefixt: {text!r}"
         )
 
 

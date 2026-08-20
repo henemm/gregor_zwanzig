@@ -13,7 +13,7 @@ Arlberg: 17–19°C, gef. 12–13°C, ⛅, trocken, mäßiger Wind 18 km/h, Böe
   kein Regen
   kein Gewitter
   50% bewölkt · Max 10:00
-  Sonne 180 min
+  Sonne 3.0h
 
 ━━ Segment 1: km 0.0–0.0 | 10:00–15:00 | ↑1500m → 2300m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun   TmpMin 

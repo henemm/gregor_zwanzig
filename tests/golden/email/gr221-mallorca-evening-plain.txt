@@ -13,7 +13,7 @@ GR221 Tag1: 18–19°C, gef. 12–13°C, ⛅, trocken, mäßiger Wind 19 km/h, B
   kein Regen
   kein Gewitter
   50% bewölkt · Max 11:00
-  Sonne 180 min
+  Sonne 3.0h
 
 ━━ Segment 1: km 0.0–0.0 | 11:00–16:00 | ↑200m → 900m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun   TmpMin 

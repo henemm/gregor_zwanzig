@@ -311,6 +311,20 @@ def test_ac8_dewpoint_and_sunshine_pill_stay_neutral():
     assert pill_sun[1] == _PILL_NEUTRAL_TONE
 
 
+def test_sunshine_pill_zeigt_stunden_nicht_minuten():
+    """Regressionsschutz #1998: Given ein DNI-Wert, der eine Sonnenschein-
+    Kachel erzeugt / When die Klartext-Kachel gerendert wird / Then zeigt der
+    Text Stunden mit einer Nachkommastelle ('X.Xh'), NICHT Minuten ('X min')
+    — der Katalog definiert unit='h' mit decimals=1 fuer 'sunshine'."""
+    dp_sun = _dp(dni_wm2=800.0, cloud_total_pct=10)
+    pill_sun = _pill_for_metric("sunshine", {}, [dp_sun], tz=TZ)
+    assert pill_sun is not None, "Erwartungs-Grundlage: DNI-Wert erzeugt eine Sonnenschein-Kachel"
+    text = pill_sun[0]
+    assert "min" not in text, f"Zeigt noch Minuten: {text!r}"
+    assert re.fullmatch(r"Sonne \d+[.,]\dh", text), \
+        f"Erwartetes Muster 'Sonne X.Xh' nicht gefunden: {text!r}"
+
+
 # ===========================================================================
 # AC-10: _row_risk bekommt einen direkten Test (Wind 25 / Boeen 30)
 # ===========================================================================
