@@ -12,6 +12,7 @@ from app.metric_catalog import (
     format_metric_value, get_alert_label, get_decimals, get_label_for_field,
     get_metric, get_sms_code,
 )
+from output.metric_format import THUNDER_LABEL_DE, _THUNDER_JE_ORDINAL
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_DANGER, G_INK, G_INK_MUTED, G_SUCCESS,
 )
@@ -20,7 +21,7 @@ from utils.ascii_fold import fold_ascii
 
 from .model import (
     AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, OnsetShiftEvent,
-    arrow, delta_pct, km_span, over_thr, severity, side_label,
+    arrow, km_span, over_thr, severity, side_label,
 )
 from .project import COMPARE_RADAR_SOURCE
 from .segments import _renderable_segment_ids, format_alert_location
@@ -39,8 +40,29 @@ def _sorted(msg: AlertMessage) -> list[AlertEvent]:
 _HANDLED_UNITS = {"m", "km", "hPa", "%", "km/h", "°C", "mm"}
 
 
-def _val(e: AlertEvent, value: float) -> str:
-    """Wert MIT Einheit via Katalog (Email/Telegram/Betreff).
+def _thunder_word(value: float) -> str | None:
+    """Uebersetzt einen thunder-Ordinalwert (POSITION auf der Gewitter-
+    Leiter) in sein deutsches Wort (Issue #1948 S6). Rundung `round(v, 0)`
+    (kaufmaennisch-gerade Bankersrundung), exakt wie bisher (AC-17). Werte
+    ausserhalb 0-3 (nur ueber den Vorschau-Pfad erreichbar) liefern `None`
+    -- der Aufrufer faellt dann auf die bisherige Zahlform zurueck, NIEMALS
+    auf 'kein' (AC-13, `_THUNDER_JE_ORDINAL.get(4)` -> `None`)."""
+    ordinal = int(round(value, 0))
+    level = _THUNDER_JE_ORDINAL.get(ordinal)
+    return THUNDER_LABEL_DE[level] if level is not None else None
+
+
+def _stufe_unit(value: float) -> str:
+    """Deutsches Einheitswort fuer einen Stufen-ABSTAND (threshold, |Δ| einer
+    Stufenmetrik) -- Singular bei genau 1, sonst Plural (Issue #1948 S6,
+    AC-6-Waechter: ein Abstand ist NIE ein Stufenwort)."""
+    return "Stufe" if abs(round(value)) == 1 else "Stufen"
+
+
+def _val_raw(e: AlertEvent, value: float) -> str:
+    """Wert MIT Einheit via Katalog, OHNE Stufenwort-Weiche -- gemeinsamer
+    Zahlen-Fallback fuer `_val()` (Positionen) und `_val_delta()` (Abstaende,
+    Issue #1948 S6).
 
     format_metric_value() formatiert nur die o.g. Einheiten mit Suffix; fuer
     alle anderen (z.B. J/kg bei CAPE) baut dieser Renderer selbst einen
@@ -56,8 +78,33 @@ def _val(e: AlertEvent, value: float) -> str:
     return f"{formatted} {unit}".strip()
 
 
-def _num(e: AlertEvent, value: float) -> str:
-    """Zahl OHNE Einheit fuer die Multi-Metrik-Zeile (Issue #978).
+def _val(e: AlertEvent, value: float) -> str:
+    """Wert MIT Einheit fuer eine POSITION (value_from/value_to, Korridor-
+    bound/value) — Email/Telegram/Betreff. Bei Stufenmetriken (`is_level`)
+    das deutsche Stufenwort statt der Ordinalzahl (Issue #1948 S6, Leit-
+    unterscheidung Positionen vs. Abstaende); Werte ausserhalb 0-3 fallen auf
+    die bisherige Zahlform zurueck (AC-13)."""
+    if _is_level_metric(e.metric_id):
+        word = _thunder_word(value)
+        if word is not None:
+            return word
+    return _val_raw(e, value)
+
+
+def _val_delta(e: AlertEvent, value: float) -> str:
+    """Wert MIT Einheit fuer einen ABSTAND (threshold, |Δ|) -- bei
+    Stufenmetriken NIE ein Wort, sondern Zahl + 'Stufe(n)' (Issue #1948 S6,
+    AC-6-Waechter: 'Schwelle leicht' ist eine sachlich falsche Aussage)."""
+    if _is_level_metric(e.metric_id):
+        rounded = round(value, get_decimals(e.metric_id))
+        formatted = str(int(rounded)) if float(rounded).is_integer() else str(rounded)
+        return f"{formatted} {_stufe_unit(rounded)}"
+    return _val_raw(e, value)
+
+
+def _num_raw(value: float, decimals: int) -> str:
+    """Zahl OHNE Einheit, OHNE Stufenwort-Weiche -- gemeinsamer Zahlen-
+    Fallback fuer `_num()` (Positionen) und `_num_delta()` (Abstaende).
 
     Integer-Display bei glattem Rundungsergebnis (kein ',0'-Rauschen), sonst
     1 Nachkommastelle mit Komma -- Tausender-Punkt bleibt in beiden Zweigen
@@ -65,15 +112,32 @@ def _num(e: AlertEvent, value: float) -> str:
     aus metric_catalog lokal nach statt sie zu importieren, damit die
     geteilte Katalogfunktion fuer andere Aufrufer (format_change_line)
     unveraendert bleibt (Issue #952 Finding F001, analog zur Begruendung bei
-    _val() oben).
+    _val_raw() oben).
     """
-    decimals = get_decimals(e.metric_id)
     rounded = round(value, decimals)
     if float(rounded).is_integer():
         n = int(rounded)
         return f"{n:,}".replace(",", ".") if abs(n) >= 1000 else str(n)
     int_part, _, frac_part = f"{rounded:,.{decimals}f}".partition(".")
     return f"{int_part.replace(',', '.')},{frac_part}"
+
+
+def _num(e: AlertEvent, value: float) -> str:
+    """Zahl OHNE Einheit fuer eine POSITION in der Multi-Metrik-Zeile (Issue
+    #978) -- bei Stufenmetriken das deutsche Stufenwort statt der Ordinal-
+    zahl (Issue #1948 S6, AC-3/AC-4), sonst wie bisher."""
+    if _is_level_metric(e.metric_id):
+        word = _thunder_word(value)
+        if word is not None:
+            return word
+    return _num_raw(value, get_decimals(e.metric_id))
+
+
+def _num_delta(e: AlertEvent, value: float) -> str:
+    """Zahl OHNE Einheit fuer einen ABSTAND (threshold, |Δ|) in der Multi-
+    Metrik-Zeile -- NIE ein Wort, auch nicht bei Stufenmetriken (Issue #1948
+    S6, AC-6-Waechter)."""
+    return _num_raw(value, get_decimals(e.metric_id))
 
 
 def _unit_suffix(e: AlertEvent) -> str:
@@ -523,35 +587,32 @@ def render_subject(msg: AlertMessage) -> str:
 
 
 def _h1(msg: AlertMessage) -> str:
+    """Issue #1948 S6 (AC-9): nennt Von-/Bis-Wert statt der entfallenen
+    berechneten Prozent-Änderung -- die inhaltsleere Form 'Gewitter seit dem
+    Briefing' (frueherer value_from==0-Sonderfall) entsteht dadurch nicht
+    mehr, `_val()` liefert fuer Stufenmetriken ohnehin ein Wort statt '0'."""
     evs = _sorted(msg)
     if len(evs) == 1:
         e = evs[0]
-        d = delta_pct(e)
-        suffix = f" {d:+d}%" if d is not None else ""
-        return f"{_label(e)}{suffix} seit dem Briefing"
+        return f"{_label(e)} {_val(e, e.value_from)} → {_val(e, e.value_to)} seit dem Briefing"
     return f"{len(evs)} Werte über der Alarm-Schwelle"
 
 
 def _email_line(e: AlertEvent) -> str:
     return (
-        f"{_label(e)} · Schwelle {_val(e, e.threshold)} · "
+        f"{_label(e)} · Schwelle {_val_delta(e, e.threshold)} · "
         f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)} · "
         f"Änderung {side_label(e)}"
     )
 
 
-def _delta_text(e: AlertEvent) -> str:
-    """'-50 %'/'+12 %' — leer wenn value_from==0 (analog _h1-Sonderfall)."""
-    d = delta_pct(e)
-    return f"{d:+d} %" if d is not None else ""
-
-
 def _verdict_single(e: AlertEvent) -> str:
-    d = _delta_text(e)
-    tail = f"{d} · " if d else ""
+    """Issue #1948 S6 (AC-8): keine berechnete Prozent-Änderung mehr im
+    Badge -- nur noch Richtung, Über/Unter-Schwelle-Aussage und der
+    tatsaechliche Schwellenwert (Abstand, daher `_val_delta`)."""
     return (
-        f"{arrow(e)} {tail}Änderung {side_label(e)} deiner Alarm-Schwelle "
-        f"({_val(e, e.threshold)})"
+        f"{arrow(e)} Änderung {side_label(e)} deiner Alarm-Schwelle "
+        f"({_val_delta(e, e.threshold)})"
     )
 
 
@@ -569,16 +630,14 @@ def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[
     hoeher (AC-3). `over_thr()`/`side_label()` bleiben unveraendert.
     """
     unit = get_metric(e.metric_id).unit
-    d = _delta_text(e)
-    d_suffix = f" {d}" if d else ""
     row1 = (
         f"{_label(e)} · {unit}",
-        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}{d_suffix}",
+        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}",
     )
     mark = "✓" if not over_thr(e) else "✗"
     row2 = (
-        f"Änderung {_val(e, abs(e.value_to - e.value_from))}",
-        f"{side_label(e)} Alarm-Schwelle {_val(e, e.threshold)} {mark}",
+        f"Änderung {_val_delta(e, abs(e.value_to - e.value_from))}",
+        f"{side_label(e)} Alarm-Schwelle {_val_delta(e, e.threshold)} {mark}",
     )
     # Issue #1744 A1 (AC-6): DIESELBE Aufloesung wie im Betreff — vorher stand
     # hier ein dritter, eigener km-Bauer (`_km_str_events`), weshalb der
@@ -718,12 +777,18 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
                 # gebuendelten Fall -- Label nennt zusaetzlich zur Schwelle
                 # den tatsaechlichen Aenderungsbetrag (zwei unterscheidbare
                 # Zahlen in derselben Zeile, AC-4).
-                threshold_suffix = " %" if unit == "%" else ""
                 delta = abs(e.value_to - e.value_from)
+                if _is_level_metric(e.metric_id):
+                    # Issue #1948 S6 (AC-4/AC-6): Abstaende einer Stufen-
+                    # metrik sind Zahl + 'Stufe(n)', NIE ein Stufenwort.
+                    delta_suffix = f" {_stufe_unit(delta)}"
+                    schwelle_suffix = f" {_stufe_unit(e.threshold)}"
+                else:
+                    delta_suffix = schwelle_suffix = " %" if unit == "%" else ""
                 data_rows.append((
                     f"{loc_prefix}{_label(e)}{where_when} · "
-                    f"Änderung {_num(e, delta)}{threshold_suffix} · "
-                    f"Schwelle {_num(e, e.threshold)}{threshold_suffix}",
+                    f"Änderung {_num_delta(e, delta)}{delta_suffix} · "
+                    f"Schwelle {_num_delta(e, e.threshold)}{schwelle_suffix}",
                     f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
                     f"{unit_suffix} {side_label(e)}",
                 ))
@@ -837,6 +902,15 @@ def render_telegram(msg: AlertMessage) -> str:
     # Treffer desselben Laufs anhaengen -- eine Nachricht, nicht drei.
     lines += [_onset_shift_line(oe) for oe in msg.onset_shift_events]
     lines += [_corridor_line(ce) for ce in msg.corridor_events]
+    # Issue #1948 S6 (AC-11): dieselbe Stand-/Vergleichszeile wie die E-Mail
+    # -- AUSSCHLIESSLICH hier, niemals in render_sms (AC-12, der Telegram-
+    # Kurzstil sendet render_sms()s Text unveraendert weiter).
+    footer = (
+        f"Stand: heute {msg.stand_at} · verglichen mit {msg.reference_at}"
+        if msg.reference_at
+        else f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing"
+    )
+    lines.append(footer)
     return "\n".join(lines)
 
 

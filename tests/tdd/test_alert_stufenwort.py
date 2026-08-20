@@ -350,3 +350,47 @@ def test_ac17_rundung_bankers_2_5_ergibt_mittel_nicht_hoch():
     assert W_HIGH not in first_line, (
         f"2,5 darf NICHT auf {W_HIGH} runden: {first_line!r}"
     )
+
+
+# ===========================================================================
+# Mutations-Gegenprobe 1 (Spec): SSoT-Bindung an THUNDER_LABEL_DE
+# ===========================================================================
+
+def test_mutation1_ssot_bindung_an_thunder_label_de():
+    """Mutations-Gegenprobe 1 der Spec: `render.py` MUSS `THUNDER_LABEL_DE`
+    (SSoT, `output/metric_format.py`) importieren, nicht eine wertgleiche
+    lokale Kopie halten. Ein Test, der sein Erwartungswort selbst aus
+    `THUNDER_LABEL_DE` ableitet (wie alle anderen Tests in dieser Datei via
+    `W_MED`/`W_HIGH` usw.), ist gegenueber genau dieser Bindung tautologisch
+    -- beide Seiten des Vergleichs kommen aus derselben Quelle. Dieser Test
+    mutiert daher den INHALT der echten SSoT-Tabelle zur Laufzeit und prueft,
+    dass der Renderer-Output den Marker zeigt.
+
+    Rebinding (`output.metric_format.THUNDER_LABEL_DE = {...neues Dict...}`)
+    wuerde NICHT durchschlagen: `render.py` bindet den Namen per
+    `from output.metric_format import THUNDER_LABEL_DE` an einen EIGENEN
+    Modul-Attribut-Namen, der weiterhin auf das ALTE Dict-Objekt zeigt. Nur
+    eine Mutation des Dict-INHALTS (`THUNDER_LABEL_DE[...] = ...`) ist fuer
+    beide Module sichtbar -- genau das ist die Bindung, die dieser Test
+    beweist. Wiederherstellung ZWINGEND per try/finally, sonst verseucht ein
+    haengengebliebener Marker jeden nachfolgenden Test im selben Lauf."""
+    marker = "MUTATIONS-MARKER-1948-S6"
+    original = THUNDER_LABEL_DE[ThunderLevel.MED]
+    THUNDER_LABEL_DE[ThunderLevel.MED] = marker
+    try:
+        msg = _single_thunder_msg(value_from=2.0, value_to=3.0, threshold=1.0)
+        html, plain = render_email(msg)
+        tg = render_telegram(msg)
+        assert marker in plain, (
+            f"E-Mail-Plaintext spiegelt die SSoT-Mutation nicht -- render.py "
+            f"haelt vermutlich eine lokale Kopie statt der importierten "
+            f"THUNDER_LABEL_DE-Tabelle: {plain!r}"
+        )
+        assert marker in html, (
+            f"E-Mail-HTML spiegelt die SSoT-Mutation nicht: {html!r}"
+        )
+        assert marker in tg, (
+            f"Telegram spiegelt die SSoT-Mutation nicht: {tg!r}"
+        )
+    finally:
+        THUNDER_LABEL_DE[ThunderLevel.MED] = original

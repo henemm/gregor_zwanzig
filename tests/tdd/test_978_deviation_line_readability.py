@@ -341,9 +341,12 @@ class TestMixedOverUnderOrdering:
         _, plain = render_email(_mixed_over_under_msg())
         # Issue #980: unter-Schwelle-Zeilen tragen das Label "· unter Schwelle"
         # (ohne Schwellen-Zahl), über-Schwelle "· Änderung N · Schwelle N"
-        # (Issue #1935/#1779 E2) — beide erfassen.
+        # (Issue #1935/#1779 E2) — beide erfassen. Issue #1948 S6: bei der
+        # Stufenmetrik Gewitter traegt der Änderungsbetrag seither die
+        # Einheit "Stufe(n)" statt "%" (AC-6) -- Regex erfasst beide Suffixe.
         order = re.findall(
-            r"(Niedersch|Gewitter|Regen%|Böen) · (?:Änderung \S+(?: %)? · )?(?:unter )?Schwelle",
+            r"(Niedersch|Gewitter|Regen%|Böen) · "
+            r"(?:Änderung \S+(?: %| Stufen?)? · )?(?:unter )?Schwelle",
             plain,
         )
         assert order == ["Böen", "Gewitter", "Regen%", "Niedersch"], (

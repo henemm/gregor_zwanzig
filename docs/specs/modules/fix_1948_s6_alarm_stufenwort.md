@@ -94,86 +94,86 @@ Diese Unterscheidung trägt die halbe Spec:
 
 ## Acceptance Criteria
 
-**AC-1:** Given ein Änderungs-Alarm mit einem einzelnen `thunder`-Ereignis von Stufe 2 auf
-Stufe 3, When die E-Mail gerendert wird, Then enthält die erste Datenzeile `mittel ↑ hoch`
-und an keiner Stelle der Zeile die Ziffernfolge `2 ↑ 3`.
+- **AC-1:** Given ein Änderungs-Alarm mit einem einzelnen `thunder`-Ereignis von Stufe 2 auf
+  Stufe 3, When die E-Mail gerendert wird, Then enthält die erste Datenzeile `mittel ↑ hoch`
+  und an keiner Stelle der Zeile die Ziffernfolge `2 ↑ 3`.
 
-**AC-2:** Given derselbe Alarm, When der ausführliche Telegram-Text gerendert wird, Then
-lautet die Metrik-Zeile `Gewitter · Schwelle 1 Stufe · mittel ↑ hoch · Änderung über`.
+- **AC-2:** Given derselbe Alarm, When der ausführliche Telegram-Text gerendert wird, Then
+  lautet die Metrik-Zeile `Gewitter · Schwelle 1 Stufe · mittel ↑ hoch · Änderung über`.
 
-**AC-3:** Given ein Änderungs-Alarm mit mehreren Ereignissen, darunter `thunder` von Stufe 2
-auf Stufe 3, When der ausführliche Telegram-Text gerendert wird, Then steht in der
-Metrik-Zeile `mittel→hoch` und nicht `2→3`, während Nicht-Stufen-Metriken unverändert ihre
-Messzahl mit Einheit behalten (z. B. `1.400→280 m`).
+- **AC-3:** Given ein Änderungs-Alarm mit mehreren Ereignissen, darunter `thunder` von Stufe 2
+  auf Stufe 3, When der ausführliche Telegram-Text gerendert wird, Then steht in der
+  Metrik-Zeile `mittel→hoch` und nicht `2→3`, während Nicht-Stufen-Metriken unverändert ihre
+  Messzahl mit Einheit behalten (z. B. `1.400→280 m`).
 
-**AC-4:** Given derselbe Mehr-Ereignis-Alarm, When die E-Mail gerendert wird, Then trägt die
-Gewitter-Zeile `mittel ↑ hoch` als Wertteil und `Änderung 1 Stufe · Schwelle 1 Stufe` im
-Labelteil.
+- **AC-4:** Given derselbe Mehr-Ereignis-Alarm, When die E-Mail gerendert wird, Then trägt die
+  Gewitter-Zeile `mittel ↑ hoch` als Wertteil und `Änderung 1 Stufe · Schwelle 1 Stufe` im
+  Labelteil.
 
-**AC-5:** Given ein Änderungs-Alarm mit `thunder`, When die Betreffzeile gerendert wird, Then
-erscheint die Stufe als Wort und niemals als nackte Ordinalzahl — bei **einem** Ereignis
-lautet der Betreff `[KHW 403] km 0–4 · ↑ Gewitter: mittel→hoch`, bei **mehreren** Ereignissen
-trägt die Aufzählung der Bis-Werte die Wörter, also
-`[KHW 403] Segment 1, 🏁 Ziel · ↑ 2 über Schwelle: Gewitter hoch, Gewitter mittel`.
+- **AC-5:** Given ein Änderungs-Alarm mit `thunder`, When die Betreffzeile gerendert wird, Then
+  erscheint die Stufe als Wort und niemals als nackte Ordinalzahl — bei **einem** Ereignis
+  lautet der Betreff `[KHW 403] km 0–4 · ↑ Gewitter: mittel→hoch`, bei **mehreren** Ereignissen
+  trägt die Aufzählung der Bis-Werte die Wörter, also
+  `[KHW 403] Segment 1, 🏁 Ziel · ↑ 2 über Schwelle: Gewitter hoch, Gewitter mittel`.
 
-**AC-6:** Given ein `thunder`-Alarm mit Änderungsschwelle 1, When irgendein Kanal gerendert
-wird, Then erscheinen Schwelle und Änderungsbetrag als Zahl mit der Einheit `Stufe` bzw.
-`Stufen` und **niemals** als Stufenwort — der Text `Schwelle leicht` darf in keiner Ausgabe
-vorkommen. Dieses Kriterium ist ein Wächter gegen die naheliegende Fehlumsetzung.
+- **AC-6:** Given ein `thunder`-Alarm mit Änderungsschwelle 1, When irgendein Kanal gerendert
+  wird, Then erscheinen Schwelle und Änderungsbetrag als Zahl mit der Einheit `Stufe` bzw.
+  `Stufen` und **niemals** als Stufenwort — der Text `Schwelle leicht` darf in keiner Ausgabe
+  vorkommen. Dieses Kriterium ist ein Wächter gegen die naheliegende Fehlumsetzung.
 
-**AC-7:** Given ein Grenzwert-/Korridor-Alarm auf `thunder` mit Grenze Stufe 1 und aktuellem
-Wert Stufe 3, When E-Mail oder Telegram gerendert werden, Then lautet die Zeile
-`Gewitter: deine Grenze leicht ist gerissen — jetzt hoch` — dort sind **beide** Werte
-Positionen und daher **beide** Wörter.
+- **AC-7:** Given ein Grenzwert-/Korridor-Alarm auf `thunder` mit Grenze Stufe 1 und aktuellem
+  Wert Stufe 3, When E-Mail oder Telegram gerendert werden, Then lautet die Zeile
+  `Gewitter: deine Grenze leicht ist gerissen — jetzt hoch` — dort sind **beide** Werte
+  Positionen und daher **beide** Wörter.
 
-**AC-8:** Given ein Änderungs-Alarm mit einem einzelnen Ereignis beliebiger Metrik, When
-E-Mail HTML und Klartext gerendert werden, Then enthält weder die Überschrift noch der Badge
-noch die Datenzeile eine berechnete prozentuale Änderung — die Zeichenfolgen `+50 %`,
-`+50%`, `-60 %` und ihresgleichen kommen nicht mehr vor.
+- **AC-8:** Given ein Änderungs-Alarm mit einem einzelnen Ereignis beliebiger Metrik, When
+  E-Mail HTML und Klartext gerendert werden, Then enthält weder die Überschrift noch der Badge
+  noch die Datenzeile eine berechnete prozentuale Änderung — die Zeichenfolgen `+50 %`,
+  `+50%`, `-60 %` und ihresgleichen kommen nicht mehr vor.
 
-**AC-9:** Given ein Änderungs-Alarm mit einem einzelnen Ereignis, When die E-Mail-Überschrift
-gerendert wird, Then nennt sie den Von- und den Bis-Wert statt der entfallenen Prozentzahl,
-also `Gewitter mittel → hoch seit dem Briefing` bzw. `Niedersch 2,0 mm → 18,0 mm seit dem
-Briefing`; die inhaltsleere Form `Gewitter seit dem Briefing` entsteht nicht mehr.
+- **AC-9:** Given ein Änderungs-Alarm mit einem einzelnen Ereignis, When die E-Mail-Überschrift
+  gerendert wird, Then nennt sie den Von- und den Bis-Wert statt der entfallenen Prozentzahl,
+  also `Gewitter mittel → hoch seit dem Briefing` bzw. `Niedersch 2,0 mm → 18,0 mm seit dem
+  Briefing`; die inhaltsleere Form `Gewitter seit dem Briefing` entsteht nicht mehr.
 
-**AC-10:** Given eine Metrik, deren Katalog-Einheit `%` ist (z. B. Regenwahrscheinlichkeit),
-When ein Alarm dafür in irgendeinem Kanal gerendert wird, Then bleibt das Prozentzeichen als
-**Einheit** am Messwert erhalten (`60 % ↑ 90 %`, Betreff `90%`) — der Wegfall betrifft
-ausschließlich die berechnete Änderung, niemals die Einheit.
+- **AC-10:** Given eine Metrik, deren Katalog-Einheit `%` ist (z. B. Regenwahrscheinlichkeit),
+  When ein Alarm dafür in irgendeinem Kanal gerendert wird, Then bleibt das Prozentzeichen als
+  **Einheit** am Messwert erhalten (`60 % ↑ 90 %`, Betreff `90%`) — der Wegfall betrifft
+  ausschließlich die berechnete Änderung, niemals die Einheit.
 
-**AC-11:** Given ein Änderungs-Alarm, When der ausführliche Telegram-Text gerendert wird,
-Then schließt er mit derselben Stand-Zeile, die die E-Mail führt — bei **bekanntem**
-Vergleichszeitpunkt `Stand: heute 10:00 · verglichen mit 18:03`, bei **fehlendem**
-(`reference_at is None`) `Stand: heute 10:00 · verglichen mit dem letzten Briefing`. Beide
-Fälle sind real erreichbar: der Ortsvergleich-Einzelpunkt und der Vorschau-Pfad reichen
-`reference_at` nie durch (`project.py:411-424`, `validator_render_service.py:144-147`).
+- **AC-11:** Given ein Änderungs-Alarm, When der ausführliche Telegram-Text gerendert wird,
+  Then schließt er mit derselben Stand-Zeile, die die E-Mail führt — bei **bekanntem**
+  Vergleichszeitpunkt `Stand: heute 10:00 · verglichen mit 18:03`, bei **fehlendem**
+  (`reference_at is None`) `Stand: heute 10:00 · verglichen mit dem letzten Briefing`. Beide
+  Fälle sind real erreichbar: der Ortsvergleich-Einzelpunkt und der Vorschau-Pfad reichen
+  `reference_at` nie durch (`project.py:411-424`, `validator_render_service.py:144-147`).
 
-**AC-12:** Given ein Trip mit Telegram-Kurzstil, When ein Änderungs-Alarm versendet wird,
-Then ist der gesendete Telegram-Text weiterhin **byte-identisch** mit dem SMS-Text und
-enthält **keine** Stand-Zeile — die neue Zeile entsteht ausschließlich in `render_telegram`,
-niemals in `render_sms`. Wächter gegen ein Auslaufen der Zeile in die Kurznachricht.
+- **AC-12:** Given ein Trip mit Telegram-Kurzstil, When ein Änderungs-Alarm versendet wird,
+  Then ist der gesendete Telegram-Text weiterhin **byte-identisch** mit dem SMS-Text und
+  enthält **keine** Stand-Zeile — die neue Zeile entsteht ausschließlich in `render_telegram`,
+  niemals in `render_sms`. Wächter gegen ein Auslaufen der Zeile in die Kurznachricht.
 
-**AC-13:** Given ein `thunder`-Ereignis mit einem Wert außerhalb 0–3 (über den Vorschau-Pfad
-erreichbar, der keinen Wertebereich prüft), When ein Kanal gerendert wird, Then fällt die
-Darstellung auf die bisherige Zahlform zurück und meldet **niemals** `kein` — eine
-Entwarnung für einen unbekannten Wert wäre eine sicherheitsrelevante Falschaussage.
+- **AC-13:** Given ein `thunder`-Ereignis mit einem Wert außerhalb 0–3 (über den Vorschau-Pfad
+  erreichbar, der keinen Wertebereich prüft), When ein Kanal gerendert wird, Then fällt die
+  Darstellung auf die bisherige Zahlform zurück und meldet **niemals** `kein` — eine
+  Entwarnung für einen unbekannten Wert wäre eine sicherheitsrelevante Falschaussage.
 
-**AC-14:** Given ein `thunder`-Alarm von Stufe 2 auf Stufe 3, When die SMS gerendert wird,
-Then lautet sie unverändert `km 0-4: TH:M->H@15` — S6 ändert an der Kurznachricht nichts.
+- **AC-14:** Given ein `thunder`-Alarm von Stufe 2 auf Stufe 3, When die SMS gerendert wird,
+  Then lautet sie unverändert `km 0-4: TH:M->H@15` — S6 ändert an der Kurznachricht nichts.
 
-**AC-15:** Given ein Alarm für eine Metrik ohne Stufencharakter (alle 31 übrigen
-Katalogeinträge), When irgendein Kanal gerendert wird, Then bleibt die Zahlformatierung
-einschließlich Einheit, Tausenderpunkt und Nachkommastellen unverändert gegenüber dem
-Prod-Stand `b31acb40`.
+- **AC-15:** Given ein Alarm für eine Metrik ohne Stufencharakter (alle 31 übrigen
+  Katalogeinträge), When irgendein Kanal gerendert wird, Then bleibt die Zahlformatierung
+  einschließlich Einheit, Tausenderpunkt und Nachkommastellen unverändert gegenüber dem
+  Prod-Stand `b31acb40`.
 
-**AC-16:** Given ein Ortsvergleich-Änderungsalarm mit einem `thunder`-Ereignis, When E-Mail
-und Telegram gerendert werden, Then erscheint die Stufe dort ebenso als Wort — die geteilten
-Renderer bedienen Trip und Ortsvergleich, ohne dass ortsvergleich-eigener Code entsteht.
+- **AC-16:** Given ein Ortsvergleich-Änderungsalarm mit einem `thunder`-Ereignis, When E-Mail
+  und Telegram gerendert werden, Then erscheint die Stufe dort ebenso als Wort — die geteilten
+  Renderer bedienen Trip und Ortsvergleich, ohne dass ortsvergleich-eigener Code entsteht.
 
-**AC-17:** Given ein `thunder`-Wert mit Nachkommaanteil, When er in ein Wort übersetzt wird,
-Then greift **exakt** die bisherige Rundung (`round(v, 0)`, kaufmännisch-gerade
-Bankersrundung), sodass 2,5 auf 2 rundet und damit `mittel` ergibt — **nicht** `hoch`. Die
-Wort-Darstellung darf an keinem Wert eine andere Stufe treffen als die heutige Zahlform.
+- **AC-17:** Given ein `thunder`-Wert mit Nachkommaanteil, When er in ein Wort übersetzt wird,
+  Then greift **exakt** die bisherige Rundung (`round(v, 0)`, kaufmännisch-gerade
+  Bankersrundung), sodass 2,5 auf 2 rundet und damit `mittel` ergibt — **nicht** `hoch`. Die
+  Wort-Darstellung darf an keinem Wert eine andere Stufe treffen als die heutige Zahlform.
 
 ## Betroffene Dateien (erwartet)
 

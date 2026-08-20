@@ -47,16 +47,20 @@ class TestSingleEventVerdictAndDatablock:
         assert "Schwelle" in html, f"'Schwelle'-Bezug fehlt im Verdikt: {html!r}"
 
     def test_verdict_delta_matches_computed_value(self):
-        """Δ% im Verdikt muss aus delta_pct() berechnet sein, kein Literal."""
-        from output.renderers.alert.model import delta_pct
+        """Issue #1948 S6 (AC-8): die berechnete Prozent-Änderung ist aus dem
+        Verdikt entfallen -- delta_pct() fliesst nicht mehr in render_email()
+        ein. Statt eines berechneten Δ% nennt der Badge den tatsaechlichen
+        Schwellenwert MIT Einheit (Abstand, keine berechnete Änderung)."""
+        from output.renderers.alert.model import side_label
         msg = _single_event_msg(value_from=1000.0, value_to=400.0, threshold=500.0)
         e = msg.events[0]
-        expected = delta_pct(e)
         html, plain = render_email(msg)
-        assert f"{expected:+d} %" in html, (
-            f"Berechnetes Δ% ({expected:+d} %) fehlt im HTML: {html!r}"
+        expected = f"Änderung {side_label(e)} deiner Alarm-Schwelle (500 J/kg)"
+        assert expected in html, f"Badge-Text weicht ab: {html!r}"
+        assert expected in plain, f"Badge-Text weicht ab: {plain!r}"
+        assert "-60 %" not in html, (
+            f"Berechnete Prozent-Änderung darf nicht mehr im Badge stehen: {html!r}"
         )
-        assert f"{expected:+d} %" in plain
 
     def test_datablock_has_three_rows(self):
         """3 separate Datenzeilen: Wert-Vergleich, Schwellwert-Status, Wo & wann."""
