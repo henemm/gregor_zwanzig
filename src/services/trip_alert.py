@@ -1286,13 +1286,23 @@ class TripAlertService:
             # Segment-Ende-Guard (Issue #2009 AC-6): ein Onset jenseits des
             # Endes des aktiven Segments trifft einen Abschnitt, den der
             # Nutzer dann laengst hinter sich hat.
-            # 🔴 AUSGLEICHSMASSNAHME MIT VERFALLSDATUM: richtig nur, solange
-            # der Nowcast am START-Punkt des Segments abgefragt wird (oben,
-            # `active.start_point`). Mit dem Merge von #2017 (Abruf am
-            # interpolierten Aufenthaltsort zum Onset-Zeitpunkt) kehrt sich
-            # die Wirkung um — der Guard ist dann ersatzlos zu entfernen,
-            # zusammen mit AC-6 und
+            # 🔴 AUSGLEICHSMASSNAHME MIT VERFALLSBEDINGUNG — die Bedingung
+            # haengt am CODE, nicht an einer Ticketnummer: Der Guard ist
+            # richtig nur, solange der Nowcast oben am START-Punkt des
+            # Segments abgefragt wird (`active.start_point`, Zeile ~1260).
+            # ERSATZLOS ZU ENTFERNEN ist er erst, wenn genau dieser Abruf auf
+            # den interpolierten Aufenthaltsort zum Onset-Zeitpunkt umgestellt
+            # ist (`services.trip_segments.position_at_time()` hier
+            # verdrahtet) — dann laege der Onset per Konstruktion dort, wo der
+            # Nutzer tatsaechlich sein wird, und der Guard verwuerfe KORREKTE
+            # Alarme. Zusammen mit ihm fallen dann AC-6 und
             # tests/tdd/test_radar_alert_segment_end_guard.py.
+            # 🔴 NICHT am Merge-Ereignis festmachen: #2017 Scheibe A (PR
+            # #2022) ist gemergt und `position_at_time()` existiert seither
+            # (`trip_segments.py:469`) — der Abruf hier laeuft aber
+            # unveraendert ueber `active.start_point`. Wer den Guard auf
+            # "#2017 ist doch gemergt" hin entfernt, reisst genau das Loch
+            # auf, das er schliesst. Pruefe die Zeile, nicht das Ticket.
             _segment_end = _as_aware_utc(active.end_time)
             if _segment_end is not None and _onset_dt > _segment_end:
                 logger.debug(
