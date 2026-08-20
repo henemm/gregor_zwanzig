@@ -166,3 +166,110 @@ SMS seit S3 nicht mehr. Erzeugung `utils/timezone.py:146-162` `format_reference_
 
 Ersatz für die H1 (in Frage 2 mit vorgelegt): `Gewitter mittel → hoch seit dem Briefing`,
 `Niedersch 2,0 mm → 18,0 mm seit dem Briefing`.
+
+---
+
+# Analyse (Phase 2) — gemessene Befunde
+
+## 🔴 A. Positionen vs. Abstände — die Korrektur am PO-Entscheid
+
+In derselben Zeile stehen zwei Sorten Zahl, die gleich aussehen:
+
+```
+Gewitter · Schwelle 1 · 2 ↑ 3 · Änderung über
+             ^Abstand    ^Positionen
+```
+
+| Wert | Bedeutung | Fundstellen | Zielform |
+|---|---|---|---|
+| `value_from`, `value_to` | **Position** auf der Leiter | `render.py:491,505,524,562,713,722,817` | **Wort** |
+| `threshold` | **Abstand** („ab 1 Stufe alarmieren") | `render.py:523,540,567,712` | Zahl **+ „Stufe(n)"** |
+| `abs(value_to-value_from)` | **Abstand** („um 1 Stufe geändert") | `render.py:566,711` | Zahl **+ „Stufe(n)"** |
+| Korridor `bound`, `value` | **Positionen** | `render.py:185,192-193` | **Wort** |
+
+`Schwelle leicht` (mein ursprünglicher Vorschlag) wäre eine **sachlich falsche Aussage** —
+Abstand 1 ist nicht Stufe 1. Herkunft `threshold`: `default_change_threshold=1.0`
+(`metric_catalog.py:435`) → `project.py:298`. Begründung der Zeilenbauart: Docstring
+`render.py:550-556` (ADR-0013: `threshold` ist immer die Δ-Schwelle).
+
+## 🔴 B. Rückfall bei unbekanntem Stufenwert — Sicherheitsfrage
+
+- **Produktiv sind nur 0–3 erreichbar:** `thunder_scale.py:48-57` `_THUNDER_ORDER.get(level, 0)`,
+  aufgerufen in `weather_change_detection.py:742-745,919-923,946-948`. Immer `int` 0–3.
+- **Der Vorschau-/Validator-Pfad prüft KEINEN Wertebereich:** `validator_render_service.py:130-147`
+  baut `WeatherChange` direkt aus `body.changes`; `api/routers/validator.py` prüft nur die
+  Metrik-Kennung (422 bei unbekannt, `tests/tdd/test_alert_preview_input_validation.py:96-110`).
+  Bestandsfixtures nutzen faktisch 10/20/30/55/70/80/90 als „thunder"-Werte.
+- **Umkehrfunktion existiert:** `_THUNDER_JE_ORDINAL` (`metric_format.py:359`) = `{0:NONE,1:LOW,2:MED,3:HIGH}`.
+  Gemessen: `.get(4)` → `None`, `.get(90)` → `None`. `THUNDER_LABEL_DE` ist **enum**-, nicht int-geschlüsselt.
+- **Gemessene Altlast:** der SMS-Zweig fällt für 4 auf `'-'` zurück (`render.py:856-857`,
+  `LEVELS.get(int(round(v)), '-')`) — **derselbe Glyph wie Stufe 0**. Gemessen: `TH:M->-` für 2→4,
+  `TH:-->-` für 20→90.
+- ⇒ **Ein Wort-Rückfall auf `"kein"` wäre gefährlich** (meldet Entwarnung, wo Unbekanntes steht).
+  Der Rückfall muss als *unbekannt* erkennbar sein.
+
+## C. Rundung
+
+`get_decimals("thunder") == 0`; `_val`:50 und `_num`:68 nutzen `round(v, 0)`,
+`_sms_token`:856-863 `int(round(v))` — Python-Bankersrundung. Gemessen: `2.5` → `2` (nicht 3).
+
+## D. Telegram-Kurzstil zieht die Stand-Zeile NICHT mit
+
+`_dispatch_alert_message` rendert alle Kanäle vorab (`notification_service.py:1355-1360`);
+der Kurzstil-Zweig (`:1447-1463`) sendet **`sms_body`**, nicht `telegram_body`, und steht
+bewusst **vor** dem Fan-out (`:1464`). ⇒ Die Stand-Zeile darf ausschließlich in
+`render_telegram` entstehen. Wächter dagegen: `test_telegram_kurzstil_trip_alert.py:315`
+(`payload["text"] == sms_text`) — er würde melden, wenn sie in `render_sms` landete.
+
+## E. Escaping
+
+Telegram escapt **nur die fette Kopfzeile** (`render.py:786,791,799,821`); `_email_line`,
+`metric_line`, `_corridor_line` gehen **unescapt** mit `parse_mode="HTML"` raus. Die vier
+Stufenwörter und alle drei `reference_at`-Varianten sind reines ASCII ohne `& < >` — unkritisch,
+aber die neue Zeile landet im unescapten Bereich.
+
+## F. `_email_line` ist falsch benannt
+
+`render.py:521-526` heißt „email", wird aber **ausschließlich** von `render_telegram`
+(`:799`) aufgerufen (verifiziert: nur zwei Treffer im Repo). Die E-Mail nutzt sie nicht.
+
+## G. Legacy-Shim ist toter Code
+
+`render_deviation_alert` (`render.py:1047-1069`) hat **keinen** Aufrufer in `src/` — nur drei
+Bestandstests (`test_issue_816_alert_deviation.py:437`, `test_bundle_791_847_844_alerts.py:299`,
+`test_trip_alert_profile.py:106`). Er hat einen **eigenen** Footer (`:1030-1059`), daher sind
+diese drei Tests von S6 nicht betroffen. **Nicht anfassen.**
+
+## H. Ortsvergleich bringt keine eigene Stelle mit
+
+`to_multi_point_alert_message` (`project.py:256-308`) hat **keinen eigenen Renderer-Code** —
+läuft durch dieselben Zeilen. Einzige compare-eigene Zahlenstelle ist der SMS-Zweig
+`render.py:863` (`2:+TH3@16`). Bei genau einem Ort landet man im Ein-Event-Zweig.
+
+## I. Regressionsfläche — Basislinie verifiziert grün (50 passed)
+
+`tests/tdd/{test_978_deviation_line_readability,test_957_alert_mail_literal_structure,`
+`test_alert_multi_event_where_when,test_alert_change_amount_wording,test_alert_renderer_format_bugs}.py`
+
+**Wird ROT (bewusst nachzuziehen):**
+
+| Datei:Zeile | Auslöser | Art |
+|---|---|---|
+| `test_978_deviation_line_readability.py:224,240,273,292,358,368` | Stufenwort | Teilstring + Regex `(Gewitter) \d` |
+| `test_957_alert_mail_literal_structure.py:56,59` | Prozent | berechneter Teilstring, importiert `delta_pct` in `:51` |
+| `test_issue_1169_compare_alert_consumer.py:755-769` | Prozent (3 Fundstellen) | **byte-genau** |
+| `test_issue_1169_compare_alert_consumer.py:770-773` | Stand-Zeile | **byte-genau** |
+| `test_alert_multi_event_where_when.py:129-134` | Stand-Zeile (`splitlines()[-1]`) | Position |
+
+**🔴 MUSS GRÜN BLEIBEN — Trennlinie Einheit vs. Änderung:**
+`test_channel_metric_matrix.py:2202-2220` (`%` als Einheit am Zeilenende) · `:2174-2199` ·
+`test_alert_change_amount_wording.py:290-303` (`90%` Regenwahrscheinlichkeit) ·
+`test_952_alert_mail_design_fidelity.py:73`.
+
+**Scheinwächter:** `test_957_alert_mail_literal_structure.py:46` (`"%" in html`) ist faktisch
+durch `width="100%"` (`render.py:588`) erfüllt und bewacht die Trennlinie **nicht**.
+
+**Bleibt grün, obwohl es nah dranliegt:** `test_alert_bundle_958ff.py:147` (`tail` ist bereits
+konditional) · `test_alert_change_amount_wording.py:283` (`splitlines()[1]`, nicht `[-1]`) ·
+`test_alert_location_vocabulary.py:359,386` (nur Zeile 0) · `test_alert_sms_delta_notation.py:82-95`
+(SMS bleibt Buchstaben) · `test_channel_metric_matrix.py:2107-2160` (Fixture `0.0→2.0`, hatte nie Prozent).
