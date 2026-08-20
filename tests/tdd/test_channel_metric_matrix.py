@@ -94,7 +94,7 @@ from bs4 import BeautifulSoup
 from app.loader import _parse_display_config
 from app.metric_catalog import (
     _METRICS, build_default_display_config, format_metric_value, get_all_metrics,
-    get_alert_label, get_cmp, get_metric, get_sms_code,
+    get_alert_label, get_cmp, get_metric, get_sms_code, summary_field_for,
 )
 from app.models import (
     AlertMetric, ForecastDataPoint, ForecastMeta, MetricConfig, NormalizedTimeseries,
@@ -2354,9 +2354,12 @@ _S2_TAGE = ((6.0, 18.0), (9.0, 27.0), (11.0, 23.0))
 # Klartext, an jedem der drei Tage) -- der ROTE Anteil von AC-S2-4. Die Liste
 # bleibt nach dem Fix stehen: sie begrenzt die Charakterisierung in AC-S2-6 auf
 # die 20 bereits gefuellten Zellen und bleibt der Beleg des roten Anteils.
+# #1848 A1: wind_chill_min_c/wind_chill_max_c teilen sich seit dem Merge
+# ebenfalls EINEN Soll-Eintrag -- dasselbe Tupel-Prinzip wie bei
+# _S2_UNVERAENDERTE_ZELLEN oben.
 _S2_DEFEKTE_FELDER = frozenset({
     "snow_depth_cm", "snow_new_sum_cm", "wind_direction_avg_deg",
-    "wind_chill_min_c", "wind_chill_max_c",
+    ("wind_chill_min_c", "wind_chill_max_c"),
 })
 
 
@@ -2776,10 +2779,17 @@ def test_ac_s2_5_beide_tagesaggregationen_fuellen_dieselben_felder():
 # 2026-08-11 am ersten Ausblickstag der Mail aus ``_s2_mail()``. Schluessel ist
 # der ``SegmentWeatherSummary``-Feldname (stabiler als die Beschriftung, die
 # AC-S2-1 ohnehin bewacht).
+#
+# #1848 A1: temp_min_c/temp_max_c teilen sich seit dem Merge EINEN
+# Soll-Eintrag mit ``summary_field`` als Tupel ``(min_feld, max_feld)``
+# (``_merge_min_max_soll``) -- der Schluessel hier zieht das nach, sonst
+# ginge die Mengen-Gleichheit unten NICHT auf (kein Zufallstreffer: ein
+# fehlender/verschwundener Soll-Eintrag faellt weiterhin auf, weil dann
+# GENAU dieses Tupel auf der einen Seite fehlt).
 _S2_UNVERAENDERTE_ZELLEN = {
     "sunny_hours": "4.0 h", "wind_max_kmh": "15 km/h", "cloud_avg_pct": "50 %",
     "visibility_min_m": "20000 m", "precip_sum_mm": "4.4 mm", "uv_index_max": "4",
-    "temp_max_c": "18 °C", "thunder_level_max": "mittel", "temp_min_c": "6 °C",
+    ("temp_min_c", "temp_max_c"): "6/18", "thunder_level_max": "mittel",
     "gust_max_kmh": "25 km/h", "freezing_level_m": "3000 m", "pop_max_pct": "55 %",
     "humidity_avg_pct": "70 %", "dewpoint_avg_c": "5 °C",
     "snowfall_limit_m": "2200 m", "precip_type_dominant": "Regen",
@@ -2999,16 +3009,115 @@ def _s2_zellenzahl(zelle: str) -> float:
     return float(treffer.group().replace(",", "."))
 
 
+def _s2_zellenseiten(zelle: str) -> tuple[str, str]:
+    """#1848 A1: zerlegt eine zusammengefuehrte Spannen-Zelle (``"min/max"``)
+    in ``(min_teil, max_teil)`` -- GENAU EIN Trenn-Schraegstrich erwartet,
+    sonst ``AssertionError`` statt stillem Vorbeigehen (haelt insbesondere
+    negative Werte wie ``"-12/-4"`` aus, ohne am fuehrenden Minuszeichen zu
+    splitten). Die fehlende Seite (``"13/-"``) bleibt als String ``"-"``
+    erhalten -- die Zahl-Interpretation ist Sache des Aufrufers, ein
+    stilles Ueberspringen hier waere selbst wieder ein verstummter
+    Schutz."""
+    teile = zelle.strip().split("/")
+    assert len(teile) == 2, (
+        f"Erwartet genau EINEN Trenner '/' in der Spannen-Zelle {zelle!r}, "
+        f"gefunden: {len(teile) - 1}"
+    )
+    return teile[0], teile[1]
+
+
+def test_s2_zellenseiten_haelt_negative_werte_aus():
+    """#1848 A1: ``-12/-4`` (AC-4) darf NICHT am fuehrenden Minuszeichen
+    splitten -- ein spaeterer Trennerwechsel oder eine naive
+    Split-Implementierung faellt hier auf, nicht erst live in AC-S2-8."""
+    assert _s2_zellenseiten("-12/-4") == ("-12", "-4")
+
+
+def test_s2_zellenseiten_fehlende_seite_bleibt_als_strich_sichtbar():
+    """#1848 A1 (AC-6): ``13/-`` -- die fehlende Seite bleibt der String
+    ``"-"``, wird NICHT stillschweigend uebersprungen oder als Zahl
+    interpretiert. ``_s2_seiten_wert`` MUSS an dieser Seite laut
+    scheitern (kein ``except``/``continue``, der den Fall verstummt) --
+    genau das ist die Zusicherung, kein Nebeneffekt."""
+    min_teil, max_teil = _s2_zellenseiten("13/-")
+    assert min_teil == "13"
+    assert max_teil == "-"
+    with pytest.raises(AssertionError):
+        _s2_seiten_wert("13/-", "max")
+
+
+def _s2_seite_von_feld(spalte: dict, feld: str) -> str:
+    """#1848 A1: ``"min"``/``"max"`` -- welche Seite der zusammengefuehrten
+    Spannen-Spalte ``spalte`` das Rohfeld ``feld`` besetzt. ``None``, wenn
+    ``spalte`` gar keine Spannen-Spalte ist (``summary_field`` kein Tupel)."""
+    if not isinstance(spalte["summary_field"], tuple):
+        return None
+    lo_feld, hi_feld = spalte["summary_field"]
+    if feld == lo_feld:
+        return "min"
+    if feld == hi_feld:
+        return "max"
+    raise AssertionError(
+        f"Feld {feld!r} gehoert nicht zur Spannen-Spalte {spalte['key']!r} "
+        f"({spalte['summary_field']!r})"
+    )
+
+
+def _s2_seiten_wert(zelle: str, seite: str) -> float:
+    """#1848 A1: der numerische Wert EINER Seite (``"min"``/``"max"``) einer
+    Spannen-Zelle -- fuer den Anti-Vertauschungs-Schutz AC-S2-8, der pro
+    Feld die EIGENE Seite prueft statt nur die fuehrende Zahl der Zelle
+    (die waere bei einer Spannen-Zelle immer die Min-Seite, egal welches
+    der beiden Felder gerade geprueft wird -- der Vertauschungs-Schutz
+    waere strukturell blind fuer die Max-Seite)."""
+    min_teil, max_teil = _s2_zellenseiten(zelle)
+    roh = {"min": min_teil, "max": max_teil}[seite]
+    treffer = _S2_ZELLENZAHL.match(roh.strip())
+    assert treffer is not None, (
+        f"AC-S2-8: die {seite}-Seite der Spannen-Zelle {zelle!r} traegt "
+        f"keine Zahl ({roh!r}) -- ohne Zahl ist der Wert nicht pruefbar"
+    )
+    return float(treffer.group().replace(",", "."))
+
+
 def test_ac_s2_8_ausblick_zelle_zeigt_den_gerechneten_wert():
     """AC-S2-8 (Wirkort): derselbe gerechnete Tageswert steht in der Zelle der
     ECHTEN Vergleichs-Mail -- HTML UND Klartext, an jedem der drei Tage. Der
     Nachweis an ``summarize_points()`` allein zeigte nur, dass das Aggregat
     stimmt, nicht dass der Nutzer den richtigen Wert sieht (Pruefort =
-    Wirkort)."""
+    Wirkort).
+
+    #1848 A1: wind_chill_min_c/wind_chill_max_c teilen sich seit dem Merge
+    EINE Spannen-Zelle (``"min/max"``) statt zweier eigener Spalten. Der
+    Anti-Vertauschungs-Schutz (Adversary-Finding F001) prueft deshalb NICHT
+    mehr nur die fuehrende Zahl der Zelle (die waere fuer beide Felder
+    identisch -- die Min-Seite -- und liesse eine Vertauschung von
+    Min/Max unsichtbar), sondern splittet die Zelle und prueft JEDE Seite
+    gegen ihren EIGENEN gerechneten Wert (``_s2_seiten_wert``). Mutations-
+    Gegenprobe (String-Ersetzung in weather_metrics.py, Sicherungskopie,
+    kein git-checkout/-stash/-reset): mit vertauschten wind_chill_min_c/
+    wind_chill_max_c-Zuweisungen wird dieser Test ROT -- Protokoll in der
+    Commit-Message."""
     erwartungen = _s2_erwartungen_je_ausblickstag()
     _s2_erwartungen_sind_unterscheidbar(erwartungen)
-    nach_feld = {s["summary_field"]: s for s in _S2_SOLL}
-    dezimalen = {e["key"]: e.get("decimals") or 0 for e in get_compare_metric_catalog()}
+    # #1848 A1: `summary_field` ist fuer gemergte Spalten ein Tupel beider
+    # Rohfelder -- BEIDE muessen auf dieselbe Spalte zeigen, damit
+    # `_S2_NEUE_FELDER_REGEL["wind_chill_min_c"]` UND
+    # `_S2_NEUE_FELDER_REGEL["wind_chill_max_c"]` dieselbe Zelle finden.
+    nach_feld: dict[str, dict] = {}
+    for s in _S2_SOLL:
+        felder = s["summary_field"] if isinstance(s["summary_field"], tuple) else (s["summary_field"],)
+        for f in felder:
+            nach_feld[f] = s
+    # #1848 A1: Schluessel MUSS der SegmentWeatherSummary-Feldname sein (wie
+    # `feld` unten aus `_S2_NEUE_FELDER_REGEL`) -- der Katalog-``key`` weicht
+    # fuer wind_direction_avg_deg vom Feldnamen ab (``key`` "wind_direction_
+    # deg"), und ein gemergter Soll-Eintrag hat gar keinen einzelnen ``key``
+    # mehr, der beide Seiten trueg.
+    dezimalen = {
+        summary_field_for(e["metric_id"], e["aggregation"]): e.get("decimals") or 0
+        for e in get_compare_metric_catalog()
+    }
 
     html, text = _s2_mail()
     kopf, zeilen = _s2_html_ausblick(html)
@@ -3022,17 +3131,21 @@ def test_ac_s2_8_ausblick_zelle_zeigt_den_gerechneten_wert():
     for nummer, (tag, soll) in enumerate(erwartungen):
         for feld, regel in _S2_NEUE_FELDER_REGEL.items():
             spalte = nach_feld[feld]
-            erwartet = round(soll[feld], dezimalen[spalte["key"]])
+            erwartet = round(soll[feld], dezimalen[feld])
+            seite = _s2_seite_von_feld(spalte, feld)
             for form, zelle in (
                 ("HTML", zeilen[nummer][kopf.index(spalte["ueberschrift"])]),
                 ("KLARTEXT", klartext[nummer][spalte["ueberschrift"]]),
             ):
-                assert _s2_zellenzahl(zelle) == erwartet, (
+                ist = _s2_seiten_wert(zelle, seite) if seite else _s2_zellenzahl(zelle)
+                assert ist == erwartet, (
                     f"AC-S2-8: die {form}-Zelle der Spalte "
                     f"{spalte['ueberschrift']!r} ({spalte['key']} -> "
-                    f"SegmentWeatherSummary.{feld}) zeigt am Ausblickstag {tag} "
-                    f"{zelle!r}; aus den Stundenwerten gerechnet ({regel}) "
-                    f"gehoert dort {erwartet!r} hin.\nSoll des Tages: {soll}\n"
+                    f"SegmentWeatherSummary.{feld}"
+                    f"{f', Seite {seite}' if seite else ''}) zeigt am "
+                    f"Ausblickstag {tag} {ist!r} (Zelle {zelle!r}); aus den "
+                    f"Stundenwerten gerechnet ({regel}) gehoert dort "
+                    f"{erwartet!r} hin.\nSoll des Tages: {soll}\n"
                     "Haeufigster Grund: vertauschte Zuweisungen in "
                     "summarize_points() -- bei Gefuehlter Temperatur "
                     "Minimum/Maximum zeigen dann beide Spalten einen "
