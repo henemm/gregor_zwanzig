@@ -247,6 +247,10 @@ der Tabelle „Regel-Budget: Prüfdaten im Überblick" (`docs/reference/gates_un
   die innere Funktion den Namens-Scope **nicht**, eine dortige unabhängige Zahlen-Schwellenkette
   bleibt unbemeldet
   - Test: Fixture mit verschachtelter `def` ohne eigenen Gewitter-Namensbezug bleibt grün.
+  - Test (Umkehrprobe): eine verschachtelte `def`, die den Namensteil **selbst** trägt, wird
+    gemeldet. Ohne diesen Fall wäre der AC auch von einer Implementierung erfüllt, die
+    verschachtelte Funktionen pauschal übergeht — geprüft werden soll aber die fehlende
+    *Vererbung*, nicht eine generelle Blindheit für innere Funktionen.
 
 - **AC-10:** Given ein `match/case`-Konstrukt, das strukturell einer Regel-B-Verzweigung
   entspricht (Match auf eine Stufen-Variable, mindestens ein `case`-Zweig mit eigenem rohen
@@ -265,8 +269,11 @@ der Tabelle „Regel-Budget: Prüfdaten im Überblick" (`docs/reference/gates_un
   `str(v) in ("MED","ThunderLevel.MED")`, `_THUNDER_LABEL`, `_MAP_EMOJI`/`_MAP_PLAIN`,
   `level_rank={...}`) als Fixture-Vorlagen / When der Backend-Wächter über diese Vorlagen läuft /
   Then meldet er alle acht als Fund
-  - Test: Acht Fixtures (Quelltext-Vorlagen, keine lauffähigen Module) aus
-    `faelle.py.txt` erzeugen zusammen acht Funde, einen je Verstoß.
+  - Test: Acht Fixtures (Quelltext-Vorlagen, keine lauffähigen Module) aus `faelle.py.txt` werden
+    **einzeln** geprüft — jede erzeugt **genau einen** Fund an **der erwarteten Fundstelle**.
+    Ausdrücklich **nicht** genügt die Summe „acht Funde insgesamt": eine Implementierung, die bei
+    manchen Fixtures mehrere Fehlfunde und bei anderen keinen liefert, könnte zufällig auf acht
+    summieren und bestünde einen reinen Summentest.
 
 - **AC-12:** Given der unveränderte Bestand von `src/**/*.py` + `api/**/*.py` (204 Dateien) / When
   der Backend-Wächter über den echten Repo-Baum läuft / Then entsteht genau **ein** unbegründeter
@@ -402,7 +409,8 @@ Frontend-Läufe erfolgen über
 - **AC-6 bis AC-10 (Regel B/C/match-case):** dieselbe Vorgehensweise, Fixtures nach den in den
   ACs genannten realen Vorbildern.
 - **AC-11 (Treffsicherheit):** die acht Fixture-Vorlagen aus `faelle.py.txt` einzeln durch die
-  Scan-Funktion laufen lassen; Summe der Funde muss 8 sein.
+  Scan-Funktion laufen lassen; **je Vorlage genau ein Fund an der erwarteten Fundstelle** — nicht
+  bloß eine Gesamtsumme von acht, die auch bei ungleich verteilten Fehlfunden zustande käme.
 - **AC-12 (Fehlalarm-Obergrenze):** vollen Backend-Scan gegen den echten Repo-Baum ausführen;
   erwarteter Output: Exit 0, keine Erwähnung einer unbegründeten Stelle außer
   `narrow.py::_SEV_TO_THUNDER_LEVEL` (die durch den Marker bereits grün ist). Gegenprobe mit
