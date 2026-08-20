@@ -1,7 +1,10 @@
 """TDD RED — Issue #2017 Scheibe A: interpolierte Position statt Segment-Startpunkt.
 
-RED-Treiber (alle acht Tests): ``services.trip_segments.position_at_time``
-existiert noch nicht → ImportError beim Aufloesen des Prueflings.
+RED-Treiber — fuer JEDEN Test dieser Datei derselbe, ohne Ausnahme:
+``services.trip_segments.position_at_time`` existiert noch nicht → Fehler beim
+Aufloesen des Prueflings in ``_resolve_position_at_time()``. Wer hier einen Test
+ergaenzt, erbt das ueber denselben Helfer; eine Zahl steht bewusst nicht hier,
+sie waere beim naechsten Zuwachs still falsch.
 
 Kein Mock: Trip/Stage/Waypoint sind echte Modelle, die Segmente entstehen ueber
 den produktiven ``convert_trip_to_segments()``. Die erwarteten Werte sind von
