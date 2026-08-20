@@ -12,7 +12,7 @@ tags: [ausblick, metriken, persistenz, issue-1848]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO (Henning), 2026-08-20
 
 ## Purpose
 
