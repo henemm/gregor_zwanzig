@@ -12,7 +12,7 @@ tags: [alarm, sms, official-alert, format]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO Henning, 2026-08-20)
 
 ## Purpose
 
