@@ -1812,7 +1812,9 @@ class TripReportSchedulerService:
             radar_svc = RadarNowcastService()
             # Issue #1329 C2: der Scheduler ist ein Hintergrund-/Cron-Prozess
             # wie der 15-Minuten-Alarm-Poll, kein direkter Nutzerklick.
-            result = radar_svc.get_nowcast(lat, lon, priority="polling")
+            result = radar_svc.get_nowcast(
+                lat, lon, elevation_m=active.start_point.elevation_m, priority="polling"
+            )
         except Exception as e:
             logger.warning(f"Starkregen-Kurzfristhinweis: Nowcast fehlgeschlagen fuer {trip.id}: {e}")
             return None

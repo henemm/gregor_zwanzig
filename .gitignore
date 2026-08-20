@@ -102,6 +102,10 @@ test-results/
 .claude/stop_lock.json
 data/diagnostics/
 
+# Nowcast-/Alert-Mitschnitte aus lokalen Testlaeufen (#1991: versehentlich
+# committete Laufzeitartefakte in data/debug/alert_input/nowcast/)
+data/debug/
+
 # Test-Residuen (pytest-Wegwerf-User, #1013) und briefings/ (per-Host von der
 # Migration befüllt, service-verwaltet): beides durch die Regel `data/users/*`
 # weiter oben abgedeckt (#1602). Die frühere Einzelaufzählung war der Grund,

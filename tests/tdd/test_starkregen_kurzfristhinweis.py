@@ -236,7 +236,7 @@ def _install_fake_nowcast(
     echtes `NowcastResult` liefert (Transport-Grenze, kein Live-Netz, kein Mock-Objekt).
     `calls` haelt (lat, lon, priority)-Tupel jedes Aufrufs fest (AC-1/AC-2-Nachweis)."""
 
-    def _fake_get_nowcast(self, lat, lon, priority="user_briefing"):
+    def _fake_get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
         calls.append((lat, lon, priority))
         if raise_exc is not None:
             raise raise_exc

@@ -219,6 +219,12 @@ class SegmentWeatherService:
         # SegmentWeatherData).
         self._debug.add(f"forecast.points: {len(timeseries.data)}")
         self._debug.add(f"forecast.model: {timeseries.meta.model}")
+        # Issue #1991: angeforderte vs. vom Provider gemeldete Hoehe -- kein
+        # neuer Diagnosekanal, dieselbe Zeile wie die bestehenden Debug-Eintraege.
+        self._debug.add(
+            f"elevation: angefordert={location.elevation_m} "
+            f"gemeldet={timeseries.meta.model_elevation_m}"
+        )
         fetched_at = datetime.now(timezone.utc)
         self._cache.put(segment, timeseries, enrich_ensemble, enrich_snow, model_id)
 

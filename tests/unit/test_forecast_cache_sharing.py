@@ -506,7 +506,14 @@ def test_end_to_end_real_call_paths_trip_alert_and_compare_share_cache_with_own_
     assert len(trip_results) == 1, "Trip-Alarmpfad haette genau 1 Ergebnis liefern muessen"
     assert trip_results[0].segment.segment_id == "trip-real-leg-3h"
 
-    compare_result = CompareLocationWeatherSource().fetch("compare-point-99", lat, lon)
+    # Issue #1991 (AC-7): der Cache-Schluessel traegt seit der Wegpunkt-Hoehe
+    # auch die Hoehe -- "derselbe Ort" heisst jetzt auch "dieselbe Hoehe".
+    # `_segment()` oben setzt elevation_m=1200.0 (Konstante dort); derselbe
+    # Wert hier macht Trip- und Compare-Abruf wieder densselben physischen
+    # Punkt, statt eine kuenstliche Hoehen-Diskrepanz zu simulieren.
+    compare_result = CompareLocationWeatherSource().fetch(
+        "compare-point-99", lat, lon, elevation_m=1200
+    )
 
     assert compare_result.id == "compare-point-99", (
         "F001-Regression (Adversary-Fund, woertlich reproduziert): "

@@ -66,10 +66,12 @@ class TestFetchUvData:
         """_fetch_uv_data() returns dict with hourly.uv_index for valid coords."""
         from providers.openmeteo import OpenMeteoProvider
 
+        from app.config import Location
+
         provider = OpenMeteoProvider()
         now = datetime.now(tz=timezone.utc)
         result = provider._fetch_uv_data(
-            39.77, 2.71, now, now + timedelta(days=1),
+            Location(latitude=39.77, longitude=2.71), now, now + timedelta(days=1),
         )
 
         assert result is not None
@@ -84,9 +86,13 @@ class TestFetchUvData:
         """UV values from AQ API must be in WHO range 0-15."""
         from providers.openmeteo import OpenMeteoProvider
 
+        from app.config import Location
+
         provider = OpenMeteoProvider()
         now = datetime.now(tz=timezone.utc)
-        result = provider._fetch_uv_data(39.77, 2.71, now, now + timedelta(days=1))
+        result = provider._fetch_uv_data(
+            Location(latitude=39.77, longitude=2.71), now, now + timedelta(days=1)
+        )
 
         assert result is not None
         uv_vals = [v for v in result["hourly"]["uv_index"] if v is not None]

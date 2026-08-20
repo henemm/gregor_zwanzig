@@ -93,6 +93,10 @@ class ForecastMeta:
     # ("model_5xx") from the WEATHER-05b per-metric gap fill ("metric_gap"), so
     # the two mechanisms don't silently overwrite each other's fallback_model.
     fallback_reason: Optional[str] = None
+    # Issue #1991 AC-5: die vom Provider tatsaechlich verwendete Hoehe (Open-Meteo
+    # meldet sie im Response-Feld "elevation" zurueck) -- None wenn unbekannt/
+    # nicht gemeldet.
+    model_elevation_m: Optional[float] = None
 
 
 @dataclass
