@@ -372,13 +372,84 @@ def test_ac5_kanallose_altdatei_dient_jedem_kanal_als_rueckfall():
 
 
 # ═════════════════ AC-3 (Regressionsschutz #1629, Gegenprobe) ════════════════
+#
+# AC-3 nennt ZWEI gleichwertige #1629-Szenarien, und der Scheduler bedient sie
+# an ZWEI verschiedenen Stellen. Beide muessen bewacht sein: eine Kopplung des
+# Tier-1-Writes an eine Zustellbedingung waere an jeder von ihnen einzeln
+# moeglich, und je Naht faellt nur der Test, der genau sie durchlaeuft
+# (Adversary-Befund F001).
+#
+# Die Briefing-Laeufe werden nicht nachgebaut, sondern ueber die erprobten,
+# mockfreien Helfer des #1629-Tests gefahren (echte Kanal-Guards, echter
+# Scheduler mit Fixture-Wetterquelle) — ein zweiter Nachbau wuerde nur eine
+# zweite Fehlerquelle schaffen.
 
 
-def test_ac3_briefing_ohne_jede_zustellung_schreibt_tier1_aber_keinen_kanal_merker():
+def _briefing_lauf_mit_ausnahme(user_id: str):
+    """Naht 1 (`trip_report_scheduler.py:1543`): der Versandaufruf WIRFT.
+
+    Der Fehler entsteht am echten Konfigurations-Guard des echten
+    E-Mail-Kanals — dieselbe Ausnahmeklasse, aus demselben Modul, wie im
+    Produktivfall vom 08.08.2026.
+    """
+    from tests.tdd.test_briefing_anchor_survives_dispatch_failure import (
+        _run_failing_briefing,
+        _trip as _briefing_trip,
+    )
+
+    trip = _briefing_trip(f"trip-1987-ac3a-{uuid.uuid4().hex[:6]}", with_levels=True)
+    _run_failing_briefing(user_id, trip, gust=25.0)
+    return trip
+
+
+def _briefing_lauf_ohne_zustellung(user_id: str):
+    """Naht 2 (`trip_report_scheduler.py:1651`): KEIN Kanal erreichbar, aber
+    auch KEINE Ausnahme — der regulaere Pfad laeuft bis zum Ende durch und
+    endet mit ``result.sent == False``.
+
+    Aufbau: E-Mail ist fuer die Tour aus, Telegram an und garantiert
+    scheiternd (echter ``TelegramOutput``-Guard #1363, wirft VOR jedem
+    Netzaufruf). Telegram ist fail-soft, die Ausnahme kommt also nie beim
+    Scheduler an — genau der Unterschied zu Naht 1.
+    """
+    from tests.tdd.test_briefing_anchor_survives_dispatch_failure import (
+        _fixture_scheduler,
+        _trip as _briefing_trip,
+    )
+
+    trip = _briefing_trip(
+        f"trip-1987-ac3b-{uuid.uuid4().hex[:6]}", with_levels=True,
+        send_email=False, send_telegram=True,
+    )
+    ergebnis = _fixture_scheduler(25.0)(
+        settings=settings_email_and_failing_telegram(), user_id=user_id,
+    )._send_trip_report_outcome(trip, "morning", on_demand=False)
+    assert ergebnis == "channels_unreachable", (
+        "Fixtur-Schutz: dieser Lauf muss OHNE Ausnahme enden und ehrlich als "
+        f"nicht zugestellt gelten, erhalten: {ergebnis!r} — sonst prueft er "
+        "dieselbe Naht wie die Ausnahme-Variante und der zweite Fall bleibt "
+        "unbewacht."
+    )
+    return trip
+
+
+@pytest.mark.parametrize(
+    "briefing_lauf, naht",
+    [
+        (_briefing_lauf_mit_ausnahme, "Ausnahme aus dem Versandaufruf (:1543)"),
+        (_briefing_lauf_ohne_zustellung, "kein Kanal erreichbar, ohne Ausnahme (:1651)"),
+    ],
+    ids=["naht_ausnahme", "naht_unerreichbar"],
+)
+def test_ac3_briefing_ohne_jede_zustellung_schreibt_tier1_aber_keinen_kanal_merker(
+    briefing_lauf, naht,
+):
     """AC-3.
 
-    GIVEN ein Briefing-Lauf, dessen Versand mit einer Ausnahme scheitert — auf
-          keinem Kanal wird etwas zugestellt (das gemessene #1629-Muster).
+    GIVEN ein Briefing-Lauf, bei dem auf keinem Kanal etwas zugestellt wird —
+          einmal, weil der Versandaufruf mit einer Ausnahme abbricht, einmal,
+          weil der regulaere Pfad mit ``result.sent == False`` endet. Die Spec
+          nennt beide Faelle ausdruecklich gleichwertig.
     WHEN  der Briefing-Lauf abgeschlossen ist.
     THEN  ist der Tier-1-Briefing-Anker TROTZDEM geschrieben und ein
           anschliessender Abweichungs-Alarm-Check findet eine gueltige
@@ -387,39 +458,36 @@ def test_ac3_briefing_ohne_jede_zustellung_schreibt_tier1_aber_keinen_kanal_merk
           dieser Scheibe gilt fuer Tier 2, der unbedingte Tier-1-Write
           bleibt unveraendert bestehen (E1).
 
-    HEUTE ROT: ``load_alarm_anchor()`` kennt keinen ``channel``-Parameter
-    (TypeError). Der Tier-1-Teil dieser Zusicherung ist Bestandsverhalten und
-    MUSS es bleiben.
+    Der Tier-1-Teil dieser Zusicherung ist Bestandsverhalten und MUSS es
+    bleiben.
 
     Mutations-Gegenprobe (Spec Nr. 2): koppelt eine Verfaelschung den
     Tier-1-Write an eine Zustellbedingung, kehrt die #1629-Regression zurueck
     (Vergleichsbasis ``None``, Abweichungs-Wache strukturell blind) und
-    dieser Test wird rot.
-
-    Der gescheiterte Briefing-Lauf wird nicht nachgebaut, sondern ueber die
-    erprobten, mockfreien Helfer des #1629-Tests gefahren (echter
-    Konfigurations-Guard des echten E-Mail-Kanals, echter Scheduler mit
-    Fixture-Wetterquelle) — ein zweiter Nachbau wuerde nur eine zweite
-    Fehlerquelle schaffen.
+    dieser Test wird rot. Beide Parameter sind noetig: die Mutation ist an
+    jeder der beiden Nahtstellen EINZELN moeglich, und je Naht faellt nur der
+    Fall, der genau sie durchlaeuft (Adversary-Befund F001).
     """
+    from app.loader import get_data_dir
     from services.trip_alert import TripAlertService
     from services.weather_snapshot import WeatherSnapshotService
     from tests.helpers.alert_log_fixtures import settings_email_only
-    from tests.tdd.test_briefing_anchor_survives_dispatch_failure import (
-        _run_failing_briefing,
-        _trip as _briefing_trip,
-    )
 
     user_id = _nutzer("ac3")
-    trip = _briefing_trip(f"trip-1987-ac3-{uuid.uuid4().hex[:6]}", with_levels=True)
-
-    _run_failing_briefing(user_id, trip, gust=25.0)
+    # Im Betrieb existiert die Nutzerablage laengst (der Nutzer hat Touren).
+    # Hier legt sie sonst erst der Anker-Write selbst an — und dann scheitert
+    # bei einer Mutation, die genau ihn ausschaltet, der nachfolgende
+    # Nachliefer-Vermerk mit einem FileNotFoundError. Der Test waere zwar rot,
+    # aber am falschen Grund: er wuerde die Reihenfolge zweier Schreibvorgaenge
+    # messen statt der Vergleichsbasis. Deshalb Vorbedingung statt Zufall.
+    get_data_dir(user_id).mkdir(parents=True, exist_ok=True)
+    trip = briefing_lauf(user_id)
 
     basis = TripAlertService(
         settings=settings_email_only(), user_id=user_id,
     )._get_cached_weather(trip, tagesgleicher_anker_noetig=True)
     assert basis, (
-        "AC-3: nach einem Briefing ohne jede Zustellung muss der "
+        f"AC-3 ({naht}): nach einem Briefing ohne jede Zustellung muss der "
         "Tier-1-Briefing-Anker trotzdem geschrieben sein und eine gueltige "
         "Vergleichsbasis liefern — sonst ist die Abweichungs-Wache den "
         "ganzen Tag blind (#1629)."
@@ -428,7 +496,7 @@ def test_ac3_briefing_ohne_jede_zustellung_schreibt_tier1_aber_keinen_kanal_merk
     svc = WeatherSnapshotService(user_id=user_id)
     for channel in ALLE_KANAELE:
         assert svc.load_alarm_anchor(trip.id, channel=channel) is None, (
-            f"AC-3: ein Briefing ohne jede Zustellung darf fuer {channel!r} "
-            "KEINEN rollierenden Tier-2-Merker anlegen — dieser Empfaenger "
-            "hat nichts bekommen. Nur Tier 1 bleibt unbedingt (E1)."
+            f"AC-3 ({naht}): ein Briefing ohne jede Zustellung darf fuer "
+            f"{channel!r} KEINEN rollierenden Tier-2-Merker anlegen — dieser "
+            "Empfaenger hat nichts bekommen. Nur Tier 1 bleibt unbedingt (E1)."
         )
