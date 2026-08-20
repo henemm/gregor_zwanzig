@@ -425,17 +425,32 @@ def test_ac22_pruefdatum_ist_in_beiden_waechterdateien_und_der_ratschen_tabelle_
     dieser Test bleibt bis dahin rot, weil die dritte Fundstelle fehlt.
     Ausdrueckliche Ausnahme von der Dateiinhalt-Check-Regel (CLAUDE.md): hier
     wird reine Metadaten-Praesenz gezaehlt, kein Laufzeitverhalten.
+
+    Die Ratschen-Tabelle traegt BEREITS zwei fremde Eintraege mit demselben
+    Datum (Mutations-Gegenprobe, Breiter Testlauf gesperrt) -- eine reine
+    ``"2026-11-01" in text``-Pruefung waere dort unabhaengig von dieser
+    Lieferung immer schon wahr und damit ein Scheinbefund. Verlangt wird
+    deshalb eine ZEILE, die BEIDES traegt: das Datum UND einen erkennbaren
+    Bezug auf diesen Waechter (Thunder-Scale/Gewitter-Stufenskala).
     """  # doc-compliance-test
-    ziele = [
+    waechterdateien = [
         REPO_ROOT / "tests/tdd/test_thunder_scale_local_copy_guard.py",
         REPO_ROOT
         / "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/thunderScaleLocalCopyGuard.test.ts",
-        REPO_ROOT / "docs/reference/gates_und_ratschen.md",
     ]
-    fehlend = [str(z) for z in ziele if "2026-11-01" not in z.read_text("utf-8")]
-    assert not fehlend, (
-        f"Pruefdatum 2026-11-01 fehlt in: {fehlend}"
-    )
+    fehlend = [str(z) for z in waechterdateien if "2026-11-01" not in z.read_text("utf-8")]
+
+    ratschen = REPO_ROOT / "docs/reference/gates_und_ratschen.md"
+    eigene_zeile = [
+        zeile
+        for zeile in ratschen.read_text("utf-8").splitlines()
+        if "2026-11-01" in zeile
+        and ("thunder" in zeile.lower() or "gewitter" in zeile.lower())
+    ]
+    if not eigene_zeile:
+        fehlend.append(f"{ratschen} (keine Zeile mit 2026-11-01 UND Thunder-/Gewitter-Bezug)")
+
+    assert not fehlend, f"Pruefdatum 2026-11-01 fehlt in: {fehlend}"
 
 
 def test_ac23_backend_waechter_enthaelt_keine_node_tsc_svelte_referenz():
