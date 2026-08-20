@@ -166,6 +166,26 @@ letzten verwertbaren Teils inklusiv, innere Segmentgrenzen genau einmal.**
 Ausgefallene Etappenteile werden bei der Bestimmung des „letzten" Teils
 uebersprungen.
 
+> **Nachtrag 2026-08-20 (#1848 Scheibe A1):** Die Aussage „eine Berechnung fuer alle
+> Kanaele" galt bis dahin **nicht vollstaendig** — #1417 hat SMS, Telegram-Kurzuebersicht
+> und E-Mail-Kurzzusammenfassung umgestellt, den **3-Tages-Ausblick** aber uebersehen. Der
+> las weiter das Etappenaggregat (`SegmentWeatherSummary.temp_min_c`/`temp_max_c`,
+> Endstunde exklusiv) und zeigte dadurch ein **systematisch zu kuehles Hoch**: gemessen
+> ueber 60 Konstellationen wichen 24 ab, Median 1,23 °C, Maximum 1,66 °C, und die Richtung
+> war immer dieselbe (die Etappen-Fensterung kann der Gehzeit-Fensterung nur einen
+> Datenpunkt vorenthalten, nie einen hinzugewinnen). Unbemerkt blieb das, weil der Ausblick
+> **nie den heutigen Tag** zeigt (`get_future_stages()` filtert `s.date > from_date`) —
+> der Widerspruch war innerhalb einer Mail strukturell unsichtbar.
+>
+> Seit #1848 A1 liest auch der Ausblick `collect_hiking_window_points()` +
+> `hiking_field_min_max()`, fuer Temperatur **und** gefuehlte Temperatur. Bewacht wird die
+> Verdrahtung jetzt am **Wirkort** (`tests/tdd/test_outlook_scheduler_wires_hiking_window.py`,
+> echter `_build_stage_trend()`-Pfad) — vorher blieben 625 Tests gruen, wenn man die
+> Datenquelle im Scheduler abschaltete.
+>
+> **Wind und Boeen (`W`/`G`) sind davon nicht betroffen** — sie stammen aus dem geteilten
+> Tagesfenster 04–19 (Epic #1319/#1317), nicht aus der Gehzeit.
+
 **`D` ist NICHT das Tagesmaximum.** Trotz des Namens „Tag-Max" bezieht sich `D`
 — wie `L`/`FL`/`FD` — ausschliesslich auf die **Gehzeit**. Die tatsaechliche
 Tageshoechsttemperatur am Ziel kann deutlich hoeher liegen (belegtes Beispiel:
