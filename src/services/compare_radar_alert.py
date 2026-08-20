@@ -46,11 +46,11 @@ from services.compare_preset_access import (
     notification_service_for_preset,
 )
 from services.notification_service import NotificationService
+from services import radar_service as radar_service_mod
 from services.trip_alert import radar_alert_due
 
 logger = logging.getLogger("compare_radar_alert")
 
-_RADAR_ONSET_THRESHOLD_MIN = 20
 _DEFAULT_COOLDOWN_MINUTES = 120
 # Issue #1467 S3: eigener Sperrzeit-Scope im geteilten `ThrottleStore`.
 # NICHT `radar` (dort liegen Trip-Kennungen; seit dem #1250-Cutover sind Trip-
@@ -345,7 +345,11 @@ class CompareRadarAlertService:
             except Exception as e:
                 logger.error(f"Compare-Radar-Alert nowcast failed for {preset_id}/{location_id}: {e}")
                 continue
-            if not radar_alert_due(result, _RADAR_ONSET_THRESHOLD_MIN):
+            # Issue #2009: geteilte Schwelle aus `services.radar_service`,
+            # ueber die Modul-Referenz gelesen (kein `from ... import` — eine
+            # gebundene Kopie waere eine stille Kopie). Alias, weil der lokale
+            # Name `radar_service` hier bereits die Dienst-Instanz traegt.
+            if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
                 continue
             triggered.append((loc.name, loc, result))
         return triggered

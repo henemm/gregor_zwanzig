@@ -399,9 +399,15 @@ def test_bundled_alert_uses_each_locations_own_timezone():
 
 def test_no_alert_when_all_locations_dry_or_late_onset():
     """AC-2: ein Preset mit `radar_alert_enabled=true`, dessen Orte alle
-    trocken sind oder deren Onset > 20 Min liegt → kein Alarm, kein Versand.
+    trocken sind oder deren Onset jenseits der Alarmschwelle liegt → kein
+    Alarm, kein Versand.
 
     RED: `services.compare_radar_alert` existiert noch nicht (ImportError).
+
+    Issue #2009: die Schwelle ist von 20 auf 55 Min gestiegen. Der
+    „Spätregen"-Ort behält seine Aussage nur, wenn sein Onset MIT der
+    Schwelle mitwandert — 45 Min lägen jetzt innerhalb des Alarmfensters und
+    der Negativtest würde stumm sein Gegenteil prüfen. Daher 100 Min.
     """
     from services.compare_radar_alert import CompareRadarAlertService
     from services.radar_service import RadarNowcastService
@@ -420,7 +426,7 @@ def test_no_alert_when_all_locations_dry_or_late_onset():
 
         frame_source = _CoordFrameSource({
             (47.0, 11.0): _dry_frames(),
-            (47.2, 11.2): _wet_frame(45),
+            (47.2, 11.2): _wet_frame(100),  # #2009: > Schwelle 55
         })
         radar_service = RadarNowcastService(frame_source=frame_source)
         mail_calls: list[tuple[str, str]] = []

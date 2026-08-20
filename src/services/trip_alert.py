@@ -1269,7 +1269,36 @@ class TripAlertService:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
                 continue
 
-            if not radar_alert_due(result, threshold_min=20):
+            # Issue #2009: EINE geteilte Schwelle statt zweier Literale
+            # (ADR-0021). Bewusst ueber die Modul-Referenz gelesen, nicht als
+            # `from ... import RADAR_ONSET_THRESHOLD_MIN` gebunden — eine
+            # gebundene Kopie waere eine stille Kopie und wuerde beim
+            # Nachziehen der Quelle auseinanderlaufen.
+            from services import radar_service as radar_service_mod
+
+            if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
+                continue
+
+            _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
+
+            # Segment-Ende-Guard (Issue #2009 AC-6): ein Onset jenseits des
+            # Endes des aktiven Segments trifft einen Abschnitt, den der
+            # Nutzer dann laengst hinter sich hat.
+            # 🔴 AUSGLEICHSMASSNAHME MIT VERFALLSDATUM: richtig nur, solange
+            # der Nowcast am START-Punkt des Segments abgefragt wird (oben,
+            # `active.start_point`). Mit dem Merge von #2017 (Abruf am
+            # interpolierten Aufenthaltsort zum Onset-Zeitpunkt) kehrt sich
+            # die Wirkung um — der Guard ist dann ersatzlos zu entfernen,
+            # zusammen mit AC-6 und
+            # tests/tdd/test_radar_alert_segment_end_guard.py.
+            _segment_end = _as_aware_utc(active.end_time)
+            if _segment_end is not None and _onset_dt > _segment_end:
+                logger.debug(
+                    f"Radar alert suppressed: Onset "
+                    f"{_onset_dt.isoformat()} liegt nach dem Ende des aktiven "
+                    f"Segments {active.segment_id} "
+                    f"({_segment_end.isoformat()}) fuer {trip.id}"
+                )
                 continue
 
             # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)
@@ -1281,7 +1310,6 @@ class TripAlertService:
             # der angekuendigte Regen unerkannt.
             from services.weather_snapshot import WeatherSnapshotService
             _snapshot = WeatherSnapshotService(self._user_id).load_dated(trip.id, segment_date)
-            _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
             _briefing_precip = self._briefing_precip_for_onset(_snapshot, active.segment_id, _onset_dt)
             _briefing_announced = (_briefing_precip is not None and _briefing_precip >= 0.5)
             # Sicherheits-Override (Slice 4, #883): konvektive Gefahr (Gewitter/Hagel)
