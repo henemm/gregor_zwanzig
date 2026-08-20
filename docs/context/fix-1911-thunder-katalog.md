@@ -141,13 +141,99 @@ Keine Spec referenziert #1911.
 - Beide sind Aufräumarbeit, nicht die Katalog-Frage. Vorschlag: als eigene Scheibe oder
   Sammel-Eintrag, nicht in diesen Workflow ziehen (LoC-Limit 250).
 
-## 🔴 Offene Entscheidung für die Analyse-/Spec-Phase
+## Analysis
 
-**Reicht „Frontend liest Backend-Literal", oder muss `compare_metric_catalog.py` seine
-`ordinalLabels` für `thunder_level_max` aus `THUNDER_LABEL_DE` ableiten?**
+### Type
 
-- **Nur Frontend:** kleiner Eingriff, erfüllt den Ticket-Wortlaut, lässt aber eine handgepflegte
-  Kopie im Backend stehen — die, die nachweislich schon einmal gedriftet ist.
-- **Frontend + Backend-Ableitung:** erfüllt das Ticket-Ziel („kanonische Quelle"), ist die
-  Voraussetzung dafür, dass der Wächter aus #1480 später überhaupt etwas Sinnvolles bewachen
-  kann, kostet aber Änderungen an einer Datei mit eigener Spec-Historie.
+Feature (Wartbarkeit/Code-Teilung) — kein nutzersichtbares Fehlverhalten heute.
+
+### Entschiedener Zuschnitt
+
+**Frontend-Ableitung UND Backend-Ableitung.** Begründung: Der Ticket-Kern ist „kanonische Quelle
+statt Kopie". Stellt man nur das Frontend um, sinkt die Zahl handgepflegter Stellen von zwei auf
+eine — das Ziel ist dann nicht erreicht, und der Wächter aus #1480 (nächster Workflow) müsste
+ausgerechnet die kanonische Quelle als geduldete Ausnahme führen. Die Backend-Ableitung kostet
+~8 LoC.
+
+### Affected Files
+
+| Datei | Typ | Beschreibung | LoC |
+|---|---|---|---|
+| `src/output/renderers/compare_metric_catalog.py` | MODIFY | Literal Z.111 → Ableitung aus `THUNDER_LABEL_DE` | +8/-3 |
+| `frontend/.../weather-metrics-tab/compareMetricSelection.ts` | MODIFY | `ordinalLabels`-Durchreichung (Interface Z.7-30 + Mapping Z.60ff.) | +3 |
+| `frontend/.../corridor-editor/compareMetricCatalogLoader.ts` | MODIFY | neue Exportfunktion `deriveThunderThresholdLevels` | +10 |
+| `frontend/.../shared/WeatherMetricsTab.svelte` | MODIFY | Z.1634-1638 Literal → Funktionsaufruf | +2/-5 |
+| `frontend/.../__tests__/thunderThresholdLevels.test.ts` | MODIFY | Regex-Parsing → echte Funktion gegen Live-Backend-Antwort | +40/-60 |
+
+**Scope:** 5 Dateien, ~70-90 LoC netto. Risiko **MEDIUM** — nicht wegen Umfang, sondern wegen
+Punkt „Bestandsdaten" unten.
+
+### Technischer Ansatz
+
+**Backend.** `THUNDER_LABEL_DE` (`metric_format.py:283-288`) ist ein `dict[ThunderLevel, str]`.
+Die Reihenfolge **nicht** über die Dict-Einfügereihenfolge nehmen (impliziter Vertrag), sondern
+über die öffentliche Funktion `thunder_ordinal()` (`src/app/thunder_scale.py:47-57`, re-exportiert
+und in `metric_format.__all__`):
+
+```python
+_THUNDER_ORDINAL_LABELS = [
+    THUNDER_LABEL_DE[lvl] for lvl in sorted(ThunderLevel, key=thunder_ordinal)
+]
+```
+
+Zyklenfrei: `metric_format.py` importiert nur aus `app.*`, nie aus `output.renderers.*`.
+Präzedenz für genau diesen Import besteht (`renderers/narrow.py:36`, `renderers/comparison.py:48`).
+
+**Frontend.** 🔴 **Lücke gegenüber dem Kontext-Teil oben:** `compareCatalog`
+(`WeatherMetricsTab.svelte:206`) ist vom Typ `CompareSelectionEntry[]`, erzeugt von
+`toCompareSelectionEntries()` (`compareMetricSelection.ts:41-80`) — und diese Funktion reicht
+`ordinalLabels` **nicht** durch. Die Rohinfo ist im Trip-Kontext also noch nicht verfügbar; die
+Durchreichung ist ein eigener, additiver Schritt (Muster wie `sms_code`).
+
+Danach eine Ableitungsfunktion, die die Nullstufe verwirft und `float` = Ordinalindex setzt —
+Index 1/2/3 für leicht/mittel/hoch, also **wertgleich zum heutigen Literal**.
+
+### 🔴 Bestandsdaten: der Fehler, der still wirken würde
+
+Der gewählte Wert landet als `sms_threshold` am `MetricConfig` des Trips
+(`WeatherMetricsTab.svelte:235,424-426`) und wird backendseitig als Zahl interpretiert:
+`email/helpers.py:993` (`sms_threshold_thunder`), verglichen in `src/output/tokens/metrics.py:52`
+(`s.value >= threshold`).
+
+**Verschiebt die Ableitung die Zahlen um eins (0/1/2 statt 1/2/3), passiert Folgendes:** Wer
+bewusst „Hoch" eingestellt hat, bekäme `2` gespeichert und würde ab da schon bei *mittel*
+alarmiert — genau die Stufenverschiebung, die in #1474 schon einmal auftrat. Nichts daran ist
+sichtbar; es fällt erst bei einem Fehlalarm auf.
+
+**Befund:** `tests/tdd/test_thunder_mention_threshold_shared.py:172-219` prüft nur die
+Backend-*Interpretation* eines übergebenen Werts und bekommt literale `1.0`/`2.0` — eine falsche
+Frontend-Ableitung macht ihn **nicht** rot. Eine Ende-zu-Ende-Absicherung von der
+Frontend-Ableitung bis zur Backend-Auswertung existiert heute nicht.
+
+### Mutations-Gegenprobe (vorbereitet)
+
+| Verfälschung | muss rot machen |
+|---|---|
+| Nullstufe nicht verworfen | umgebauter `thunderThresholdLevels.test.ts` — „genau 3 Stufen" |
+| `float`-Offset um 1 verschoben | derselbe Test — Zuordnung Label↔float |
+| Reihenfolge umgedreht | derselbe Test |
+| Backend-Ableitung wieder durch Literal ersetzt | 🔴 **kein bestehender Test** — `compareMetricCatalogParity.test.ts` vergleicht den *Wert*, nicht die *Herkunft*. Braucht einen eigenen Test, sonst driftet B2 lautlos erneut |
+
+### Reihenfolge (kein deploybarer Zwischenzustand mit verschobenen Schwellen)
+
+1. Backend auf Ableitung umstellen — die Endpoint-Antwort bleibt **wertgleich**, nichts im
+   Frontend ändert sich.
+2. `ordinalLabels`-Durchreichung in `compareMetricSelection.ts` — rein additiv.
+3. Ableitungsfunktion schreiben und **vor** der Verdrahtung gegen den umgebauten Test nachweisen,
+   dass sie 1.0/2.0/3.0 liefert.
+4. Erst dann `WeatherMetricsTab.svelte:1634-1638` umstellen — der einzige Schritt, der die
+   gerenderten Schwellen anfasst.
+
+### Open Questions
+
+- [ ] Rendert der Gewitter-Block schon, bevor `compareCatalog` befüllt ist? (`compareCatalogLoaded`
+      existiert, aber die Bedingung am Block ist nicht verifiziert.) → in der TDD-Phase klären,
+      nicht raten.
+- [ ] Soll der Test „Backend-Ableitung darf kein Literal sein" in dieser Scheibe entstehen oder
+      dem Wächter aus #1480 überlassen bleiben? → Vorschlag: hier ein schmaler, gezielter Test;
+      der generische Wächter bleibt #1480.
