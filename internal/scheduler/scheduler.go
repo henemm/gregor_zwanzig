@@ -829,6 +829,7 @@ func (s *Scheduler) Status() map[string]any {
 		"timezone":            s.cron.Location().String(),
 		"briefing_health":     s.BriefingHealth(),
 		"warn_service_health": s.WarnServiceHealth(),
+		"enrichment_health":   s.EnrichmentHealth(),
 		"forecast_budget":     s.ForecastBudgetHealth(),
 		"tier_request_health": s.TierRequestHealth(),
 	}
