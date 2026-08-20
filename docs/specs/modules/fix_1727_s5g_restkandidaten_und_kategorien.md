@@ -227,10 +227,15 @@ angefasst werden:
   Begründung, die nach Unwort-Bereinigung unter 15 Zeichen bleibt (z. B. `"DAUERHAFT — x"` oder ein
   einzelnes Emoji), When der Kategorie-Test auf diesen Eintrag angewendet wird, Then meldet der Test
   einen Verstoß — die Prüfung ist nicht bloß eine Präfix-Existenzprüfung.
-  - Test: isolierter Testfall im neuen Testmodul, der die Prüffunktion direkt gegen ein Fixture-Dict
-    mit dem Alibi-Eintrag aufruft (Muster: `_fixture`/`_scan` in
-    `tests/tdd/test_repo_path_hardcoding_ratchet.py`) — Assertion erwartet einen gemeldeten
-    Verstoß, kein leeres Ergebnis.
+  - Test: `uv run pytest tests/test_output_timezone_guard.py -k
+    test_alibi_begruendung_zaehlt_nicht` (Name festgelegt). Isolierter Testfall, der die
+    Prüffunktion direkt gegen ein **Fixture-Dict** mit dem Alibi-Eintrag aufruft — nicht gegen das
+    echte `KNOWN_VIOLATIONS`. Muster: `_fixture`/`_scan` in
+    `tests/tdd/test_repo_path_hardcoding_ratchet.py`, dort belegt durch
+    `test_ac5_marker_ohne_begruendung_bleibt_rot` (`:172`) und
+    `test_ac8_alibi_begruendung_zaehlt_nicht` (`:180`). Assertion erwartet einen **gemeldeten
+    Verstoss**, kein leeres Ergebnis — die Prüffunktion muss also einen Befund zurückgeben, den der
+    Test einsammeln kann, statt selbst zu assertieren.
 
 - **AC-6:** Given die sechs geänderten Produktivdateien, When der Umbau abgeschlossen ist, Then
   enthält keine einen unbenutzten Import — je Datei ist geprüft, ob `timezone` aus `datetime` nach
@@ -247,8 +252,12 @@ angefasst werden:
   `_day_window_end` das Tagesfenster-Ende bestimmt, Then bezieht es sich auf den **Ortstag** des
   Vergleichsorts, nicht auf den UTC-Tag — der Test wird rot, sobald `local_dt(now, tz)` durch
   `to_utc(now)` oder eine fest verdrahtete Zone ersetzt wird.
-  - Test: **neu zu schreiben** in `tests/tdd/test_compare_alert_day_window.py`, mit fest gewähltem
-    Ort und fest gesetztem Zeitpunkt (keine Laufzeit-Ortswahl). Begründung, warum ein neuer Test
+  - Test: **neu zu schreiben** in `tests/tdd/test_compare_alert_day_window.py` als
+    `test_day_window_end_folgt_dem_ortstag_nicht_dem_utc_tag` (Name festgelegt), mit fest gewähltem
+    Ort und fest gesetztem Zeitpunkt (keine Laufzeit-Ortswahl). 🔴 **Der Ort MUSS ausserhalb der
+    Wiener Zone liegen und der Zeitpunkt so gewählt sein, dass Ortstag und UTC-Tag
+    auseinanderfallen** — sonst prüft der Test dieselbe Blindstelle wie die bestehenden und ist
+    wertlos. Begründung, warum ein neuer Test
     nötig ist: die vorhandenen Grenzwert-Tests `test_1599_ac5`/`test_1599_ac6` (`:840`/`:861`)
     prüfen `_day_window_end` ausschließlich mit fest kodierten Zeiten in Wiener Zone (17:45 UTC als
     „19:45 Ortszeit"). Dort fallen Ortstag und UTC-Tag auf **denselben** Kalendertag, und
