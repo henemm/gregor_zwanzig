@@ -89,6 +89,34 @@ Zwei Korrekturen (AC-12/AC-13):
   fällt es aus, bleiben seine zwei Felder einfach leer (fail-soft), wie jede Quelle ohne Eintrag
   dort heute auch.
 
+## Nachtrag 2026-08-20 (#1759): Post-Fusion-Deckel ist bewusst KEIN zweiter Fusionsort
+
+Diese ADR hält für die additiven Zusatzquellen fest, dass es **keinen zweiten Fusionsort**
+geben soll — Zusatzquellen liefern zusätzliche Rohsignale, aber `_fuse_thunder_levels()` bzw.
+`thunder_level_from_signals()` bleibt die alleinige Stelle, an der aus Signalen eine Stufe wird.
+
+Issue #1759 führt in `thunder_enrichment.py` eine neue Funktion `_apply_radar_override()` ein,
+die **nach** `_fuse_thunder_levels()` läuft und deren Ergebnis (`dp.thunder_level`) unter
+zwei Bedingungen — aktuelle Radar-Konvektion oder Blitzdichte über einer eigenen
+Override-Schwelle, beides nur im ±90-Minuten-Fenster um `jetzt` — auf mindestens `MED` anhebt.
+Das ist strukturell kein gleichrangiges fünftes `max()`-Signal, sondern ein bedingter
+**Deckel nach der Fusion**: er kann eine Stufe nur anheben, nie senken, und wirkt nur in einem
+engen Zeitfenster statt für die ganze Reihe.
+
+**Warum das keinen Widerspruch zu „kein zweiter Fusionsort" darstellt:** Ein zweiter Fusionsort
+wäre eine zweite Stelle, an der aus mehreren Rohsignalen eine Stufe **neu berechnet** wird — mit
+eigener Gewichtung, eigener Symmetrie, potenziell abweichendem Ergebnis zur ersten Fusion. Der
+Override tut das nicht: er nimmt das bereits fusionierte Ergebnis als gegeben und wendet darauf
+eine einzige, strukturell asymmetrische Regel an („Beobachtung schlägt Vorhersage", Regel 1 des
+Gewitter-Gesamtkonzepts, `docs/features/gewitter-gesamtkonzept.md` Abschnitt 3.7 Schritt 4). Die
+Fusion selbst — Schwellen, Leitern, `max()`-Symmetrie über die vier Signale — bleibt exakt an
+ihrem bisherigen Ort und unverändert.
+
+Diese Unterscheidung gilt als **bewusste Ausnahme**, nicht als Präzedenzfall für beliebige
+weitere Post-Fusion-Anpassungen: Eine künftige Änderung, die aus mehreren Rohsignalen eine neue
+Stufe berechnet (statt eine bestehende nur zu deckeln), fällt weiterhin unter „zweiter
+Fusionsort" und ist untersagt.
+
 ## Konsequenzen
 
 - Positiv: Österreich bekommt ein zweites, unabhängiges Konvektionssignal (cape/cin), ohne den
