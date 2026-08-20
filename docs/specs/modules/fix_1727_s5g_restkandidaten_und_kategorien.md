@@ -12,7 +12,7 @@ tags: [timezone, adr-0051, output-timezone-guard, alert-anchor, compare, radar-a
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe („go") am 2026-08-20, alle 7 ACs auf Deutsch vorgelegt.
 
 ## Purpose
 
@@ -331,3 +331,7 @@ angefasst werden:
 ## Changelog
 
 - 2026-08-20: Initial spec created
+- 2026-08-20: AC-7 ergänzt (deterministischer Ortszonen-Test für `_day_window_end`), nachdem die
+  Prüfung ergab, dass AC-2 einen Nachweis versprach, den kein bestehender Test führt
+- 2026-08-20: Spec-Validator VALID, keine Blocker; Testnamen in AC-5/AC-7 daraufhin festgelegt
+- 2026-08-20: **PO-Freigabe erteilt („go")** — Umsetzung freigegeben
