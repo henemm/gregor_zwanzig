@@ -24,18 +24,23 @@ export function materializeActiveMetricKeys(keys: string[] | null): string[] {
 	return keys === null ? COMPARE_METRIC_KEYS : keys;
 }
 
-// Issue #1361/#1368: die sieben Groessen, die der 3-Tages-Ausblick heute fest
-// zeigt (email/outlook.py, Kopfzeile Tag/N/D/R/PR/Wind/Böen/Gew). Sie sind die
+// Issue #1361/#1368: die Groessen, die der 3-Tages-Ausblick fest zeigt
+// (email/outlook.py, Kopfzeile Tag/N/D/R/PR/Wind/Böen/Gew). Sie sind die
 // Anzeige-Vorgabe fuer „nie eingestellt" (`null`) — die Bedienflaeche zeigt
 // damit genau das an, was in der Mail steht, statt einer erfundenen Menge.
+//
+// Issue #1848 A2: KENNUNGEN statt Katalog-Schluessel. Temperatur-Tief und
+// -Hoch waren zwei Schluessel (`temp_min_c`/`temp_max_c`), sind aber EINE
+// Groesse und stehen in der Mail seit A1 in EINER Spannen-Spalte — als
+// Kennung ist das genau ein Eintrag. Aus sieben Schluesseln werden damit
+// sechs Groessen, ohne dass eine Spalte verschwindet.
 export const DEFAULT_OUTLOOK_METRIC_KEYS = [
-	'temp_min_c',
-	'temp_max_c',
-	'precip_sum_mm',
-	'pop_max_pct',
-	'wind_max_kmh',
-	'gust_max_kmh',
-	'thunder_level_max'
+	'temperature',
+	'precipitation',
+	'rain_probability',
+	'wind',
+	'gust',
+	'thunder'
 ];
 
 /** `null` (nie eingestellt) -> die heutigen sieben Ausblick-Spalten,

@@ -150,6 +150,40 @@ export function normalizeStoredActiveMetrics(
 }
 
 /**
+ * Lesenormalisierung des AUSBLICKS (#1848 A2): gespeicherte Auswahl -> reine
+ * Kennungen, jede genau einmal, Reihenfolge des ersten Auftretens erhalten.
+ *
+ * Bewusst getrennt von `normalizeStoredActiveMetrics()`: die Übersichts-
+ * Grundauswahl (`active_metrics`) spricht weiterhin Katalog-Schlüssel und
+ * speichert Paare (ADR-0037). Der Ausblick dagegen speichert seit A2 die
+ * Kennung — Temperatur-Tief und -Hoch sind dort EIN Eintrag, weil sie in der
+ * Mail EINE Spannen-Spalte ergeben. Beide Formate werden gelesen: die
+ * Paar-Altform, der Katalog-Schlüssel eines Bestands-Presets und die Kennung
+ * selbst.
+ *
+ * `null` heißt „kein Array" (Feld fehlt → die sieben festen Spalten) und
+ * bleibt von `[]` („bewusst geleert") unterscheidbar.
+ */
+export function normalizeStoredOutlookMetrics(
+	stored: unknown,
+	catalog: CompareSelectionEntry[] = registeredCatalog
+): string[] | null {
+	if (!Array.isArray(stored)) return null;
+	const kennungen: string[] = [];
+	for (const item of stored) {
+		let metricId: string | null = null;
+		if (typeof item === 'string') {
+			metricId = catalog.find((e) => e.metric === item)?.metric_id ?? item;
+		} else if (item && typeof item === 'object') {
+			const { metric_id } = item as { metric_id?: unknown };
+			if (typeof metric_id === 'string') metricId = metric_id;
+		}
+		if (metricId !== null && !kennungen.includes(metricId)) kennungen.push(metricId);
+	}
+	return kennungen;
+}
+
+/**
  * Schreibübersetzung: Auswahl-Schlüssel -> Größe + Auswertung (Neuformat).
  * Reihenfolge positionsgetreu (#1335/#1359), keine Deduplizierung, kein `set()`
  * — „Temperatur max" und „Temperatur min" teilen die Größe und dürfen niemals

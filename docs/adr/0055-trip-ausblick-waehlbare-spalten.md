@@ -64,6 +64,41 @@ Nutzer die neue Fläche bedient. Ohne Bedienung bleibt sie byte-identisch — da
 ist keine Nebenwirkung, sondern zugesichert und mit AC-1 am **echten
 Versandpfad** geprüft, nicht am isolierten Renderer.
 
+> **Nachtrag 2026-08-20 (Issue #1848 Scheibe A2) — die Speicherform wechselt
+> auf die Kennung.** `display_config.outlook_metrics` hält seither reine
+> Kennungen (`["temperature", "gust"]`) statt der Paare aus Größe und
+> Auswertung. Welche Auswertungen eine Kennung zeigt, leitet der Katalog ab
+> (`compare_outlook_metric_ids.derived_aggregations()`: alle Auswertungen aus
+> `available_aggregations()`, die eine Compare-Katalogzeile haben, in dieser
+> Reihenfolge). Der Grund ist Vokabular-Einheit, nicht Technik: Kanal-An/Aus,
+> Reihenfolge, SMS-Kürzel und Schwellwerte sind sämtlich über die Kennung
+> verdrahtet — der Ausblick war die letzte Fläche mit einem eigenen, vierten
+> Vokabular.
+>
+> **Die Entscheidung dieses ADR bleibt wörtlich gültig.** Katalog-getriebene
+> Auswahl, keine Kanal-Ebene, Bindung an die Grundauswahl, Drei-Werte-Semantik
+> — alles unverändert. Nur die Elementform ist eine andere; deshalb ein
+> Nachtrag und kein ablösendes ADR.
+>
+> Drei Punkte, die dabei festzuhalten sind:
+>
+> 1. **Die Paar-Altform bleibt dauerhaft lesbar**, nicht als
+>    Übergangskrücke: der Leser normalisiert sie auf die Kennung, zwei Paare
+>    derselben Größe werden zu EINEM Eintrag. Geschrieben wird sie nicht mehr.
+> 2. **Präzisierung der Drei-Werte-Semantik:** eine gefüllte, aber vollständig
+>    unauflösbare Auswahl liefert `None` (die festen Spalten) und **nicht**
+>    `[]`. Vorher kollabierte sie zu `[]` und schaltete den Block ab — eine
+>    stille Abwesenheit statt eines Rückfalls. „Unauflösbar" und „bewusst
+>    geleert" sind verschiedene Zustände.
+> 3. **Die Halbauswahl entfällt** (PO-Entscheid 2026-08-20): für Temperatur
+>    und gefühlte Temperatur lässt sich nicht mehr „nur das Hoch" anzeigen —
+>    die Kennung liefert zwangsläufig die Spanne `9/27` (#1848 A1). Das ist
+>    der einzige gemessene Informationsverlust der Umstellung. Der
+>    Einzelwert-Zweig bleibt bestehen und trägt weiterhin alle Größen mit nur
+>    einer Auswertung.
+>
+> Spec: `docs/specs/modules/feat_1848_a2_ausblick_kennungen.md`.
+
 **2. Die Auswahl ist global — keine Kanal-Ebene.** Ein Abschnitt
 „3-Tages-Vorschau" im Wetter-Reiter, eine Liste, keine Kanal-Reiter.
 

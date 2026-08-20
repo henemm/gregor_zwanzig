@@ -20,7 +20,6 @@
 	import { SectionH, Card } from '$lib/components/atoms';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import WeatherV2Reihenfolge from './weather-metrics-tab/WeatherV2Reihenfolge.svelte';
-	import AggregationMetricRow from './weather-metrics-tab/AggregationMetricRow.svelte';
 	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts';
 	import type { MetricEntry } from '../trip-detail/metricsEditor.ts';
 	import type { CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
@@ -86,15 +85,25 @@
 		onEnabledChange?.(checked);
 	}
 
+	// Issue #1848 A2: die Reihenfolge-/„Aus"-Karte arbeitet auf denselben
+	// Eintraegen wie die Auswahl — also auf KENNUNGEN. Der Schluessel ist
+	// deshalb `metric_id`, nicht mehr der Katalog-Schluessel; sonst faende
+	// WeatherV2Reihenfolge zu keinem Eintrag eine Beschriftung. Bei mehreren
+	// Auswertungen gewinnt die erste Katalogzeile der Groesse (gleiche
+	// `label`/`col_label`/`sms_code`, es unterscheidet sich nur die
+	// Auswertung — die traegt die Kennung nicht mehr).
 	const outlookMetricById = $derived.by(() => {
 		const map: Record<string, MetricEntry> = {};
 		// Issue #1401 (A1): Auswertung als eigenes Element mitgeben.
 		// Issue #1453 (AC-7): alle drei Namensformen mitgeben.
-		for (const e of catalog)
-			map[e.metric] = {
-				id: e.metric, label: e.label, aggregation_label: e.aggregation_label,
+		for (const e of catalog) {
+			const id = e.metric_id ?? e.metric;
+			if (map[id]) continue;
+			map[id] = {
+				id, label: e.label, aggregation_label: e.aggregation_label,
 				col_label: e.col_label, sms_code: e.sms_code
 			} as MetricEntry;
+		}
 		return map;
 	});
 
@@ -103,7 +112,11 @@
 	// Trip-SMS-Tabellen.
 	const outlookKuerzelById = $derived.by(() => {
 		const map: Record<string, string[]> = {};
-		for (const e of catalog) if (e.sms_code) map[e.metric] = [e.sms_code];
+		// #1848 A2: nach Kennung geschluesselt, analog outlookMetricById.
+		for (const e of catalog) {
+			const id = e.metric_id ?? e.metric;
+			if (e.sms_code && !map[id]) map[id] = [e.sms_code];
+		}
 		return map;
 	});
 
@@ -141,42 +154,31 @@
 >
 	<!-- Issue #1406 Scheibe A (Epic #1372 S4b Scheibe 2): eine Zeile je
 	     Wettergroesse (24 statt 26) — analog zur Vergleichs-Uebersicht seit
-	     #1411 (WeatherMetricsTab.svelte:918-948). Groessen mit nur einer
-	     Auswertung (22 von 24) bleiben die einfache Checkbox-Zeile von heute;
-	     Groessen mit mehreren Auswertungen (Temperatur, gefuehlte Temperatur)
-	     bekommen je Auswertung ein unabhaengiges Kaestchen ueber
-	     AggregationMetricRow mode='multiple'. Jedes Kaestchen ruft weiterhin
-	     denselben Umschalt-Pfad (makeOutlookMetricHandler) mit dem jeweiligen
-	     einzelnen Katalog-key auf — Speicherformat/Reihenfolge unveraendert. -->
+	     #1411 (WeatherMetricsTab.svelte:918-948).
+
+	     Issue #1848 A2: EIN Kaestchen je Groesse, angehakt und umgeschaltet
+	     ueber die KENNUNG (`group.metric_id`). Die frueheren Sonderzeilen fuer
+	     Temperatur und gefuehlte Temperatur (je Auswertung ein eigenes
+	     Kaestchen ueber AggregationMetricRow mode='multiple') entfallen: seit
+	     A1 stehen Tief und Hoch in EINER Spannen-Zelle der Mail, und seit A2
+	     laesst sich die Halbauswahl gar nicht mehr speichern. Zwei Kaestchen
+	     wuerden etwas anderes versprechen, als herauskommt. Die Auswertung
+	     bleibt sichtbar, wo sie eindeutig ist (eine Auswertung je Groesse). -->
 	{#each groupCompareCatalog(catalog) as group (group.metric_id)}
-		{#if group.options.length === 1}
-			<label class="outlook-metric-row" data-testid={`compare-layout-outlook-metric-${group.metric_id}`}>
-				<input
-					type="checkbox"
-					checked={isOutlookMetricActive(group.options[0].key)}
-					onchange={makeOutlookMetricHandler(group.options[0].key)}
-				/>
-				<span>{group.label}</span>
-				<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen. -->
-				{#if group.options[0].aggregation_label}
-					<span class="outlook-aggregation" data-testid={`compare-layout-outlook-aggregation-${group.metric_id}`}>{group.options[0].aggregation_label}</span>
-				{/if}
-			</label>
-		{:else}
-			<table class="outlook-metric-row-multi">
-				<tbody>
-					<AggregationMetricRow
-						metricId={group.metric_id}
-						label={group.label}
-						mode="multiple"
-						options={group.options}
-						selectedChoiceIds={materializedOutlookKeys}
-						onToggle={(_mid, key) => makeOutlookMetricHandler(key)()}
-						testidPrefix="compare-layout-outlook"
-					/>
-				</tbody>
-			</table>
-		{/if}
+		<label class="outlook-metric-row" data-testid={`compare-layout-outlook-metric-${group.metric_id}`}>
+			<input
+				type="checkbox"
+				checked={isOutlookMetricActive(group.metric_id)}
+				onchange={makeOutlookMetricHandler(group.metric_id)}
+			/>
+			<span>{group.label}</span>
+			<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen. Bei
+			     mehreren Auswertungen (Temperatur, gefuehlte Temperatur) traegt
+			     die Zeile keine — die Kennung zeigt beide Tagesenden. -->
+			{#if group.options.length === 1 && group.options[0].aggregation_label}
+				<span class="outlook-aggregation" data-testid={`compare-layout-outlook-aggregation-${group.metric_id}`}>{group.options[0].aggregation_label}</span>
+			{/if}
+		</label>
 	{/each}
 </div>
 
@@ -218,15 +220,6 @@
 		gap: 8px;
 		font-size: var(--g-text-sm);
 		color: var(--g-ink);
-	}
-	/* Issue #1406 Scheibe A: Mehrfach-Options-Zeile (Temperatur/gefuehlte
-	   Temperatur) nutzt AggregationMetricRow (threshold-table-Machform)
-	   statt der einfachen Label-Zeile — analog WeatherMetricsTab.svelte
-	   .vergleich-metric-row-multi. */
-	.outlook-metric-row-multi {
-		width: 100%;
-		border-collapse: collapse;
-		margin: 0;
 	}
 	/* Issue #1401: Auswertung als eigenes, abgesetztes Element. */
 	.outlook-aggregation {

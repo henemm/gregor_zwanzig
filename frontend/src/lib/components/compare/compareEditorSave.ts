@@ -168,11 +168,15 @@ export function buildComparePresetSavePayload(
 	}
 
 	if (edits.outlookMetricKeys !== undefined && edits.outlookMetricKeys !== null) {
-		// Issue #1361/#1368: Ausblick-Auswahl im Neuformat, dieselbe Übersetzung
-		// wie active_metrics (#1373). Leere Auswahl EXPLIZIT als [] persistieren
-		// — der Server-Merge (mergeConfigMap) überschreibt Keys nur, löscht sie
-		// nie; ein weggelassener Key bliebe wirkungslos (analog #1191/#1299).
-		displayConfig.outlook_metrics = toStoredActiveMetrics(edits.outlookMetricKeys);
+		// Issue #1361/#1368: Leere Auswahl EXPLIZIT als [] persistieren — der
+		// Server-Merge (mergeConfigMap) überschreibt Keys nur, löscht sie nie;
+		// ein weggelassener Key bliebe wirkungslos (analog #1191/#1299).
+		//
+		// Issue #1848 A2: ungewandelt als reine Kennungen, genau wie
+		// `hourly_metrics` eine Zeile weiter oben. Der Ausblick war das letzte
+		// Feld, das noch durch die Paar-Übersetzung `toStoredActiveMetrics()`
+		// lief; `active_metrics` behält sie (ADR-0037).
+		displayConfig.outlook_metrics = edits.outlookMetricKeys;
 	}
 
 	// Issue #1170: metric_alert_levels lebt in display_config (analog Trip).
@@ -421,8 +425,9 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 			// Issue #1361/#1368: analog hourly_metrics -- `null` laesst den
 			// Schluessel weg (Resolver erkennt "Feld fehlt" = sieben Spalten),
 			// eine echte Leerauswahl (`[]`) wird gesendet.
+			// Issue #1848 A2: reine Kennungen, ungewandelt (s. Hub-Speicherweg).
 			...(fields.outlookMetricKeys != null
-				? { outlook_metrics: toStoredActiveMetrics(fields.outlookMetricKeys) }
+				? { outlook_metrics: fields.outlookMetricKeys }
 				: {}),
 			...(Object.keys(fields.metricAlertLevels).length > 0
 				? { metric_alert_levels: fields.metricAlertLevels }
