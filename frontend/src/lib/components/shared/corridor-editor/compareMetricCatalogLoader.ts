@@ -219,3 +219,18 @@ export function deriveThunderThresholdLevels(
 		float: index + 1
 	}));
 }
+
+/**
+ * Kapselt die GANZE Naht Katalog -> Gewitter-Schwellenliste (Adversary-Runde
+ * 2, Findings F003/F004): Katalog-Suche nach `thunder_level_max` UND Aufruf
+ * von `deriveThunderThresholdLevels(...)` in EINER testbaren Funktion statt
+ * verstreut im Template (WeatherMetricsTab.svelte), wo nur AST-Formpruefung
+ * moeglich war. Fehlender Eintrag/fehlende/leere/`undefined` `ordinalLabels`
+ * -> leeres Array, kein Absturz (AC-7).
+ */
+export function thunderThresholdLevelsFromCatalog(
+	entries: CompareSelectionEntry[]
+): ThunderThresholdLevel[] {
+	const entry = (entries ?? []).find((e) => e.metric === 'thunder_level_max');
+	return deriveThunderThresholdLevels(entry?.ordinalLabels);
+}

@@ -98,7 +98,7 @@
 	// Hub-Hydration; `toCompareSelectionEntries()` darin fuellt den Umkehr-Index
 	// Auswahl-Schluessel <-> Groesse+Auswertung.
 	import {
-		loadCompareSelectionEntries, deriveThunderThresholdLevels
+		loadCompareSelectionEntries, thunderThresholdLevelsFromCatalog
 	} from './corridor-editor/compareMetricCatalogLoader.ts';
 	// Issue #1359 Scheibe 1: reihenfolge-erhaltendes An-/Abwaehlen als reine,
 	// testbare Funktion (Muster: weatherMetricsTabSections.ts nebenan).
@@ -1634,7 +1634,7 @@
 									metricId="thunder"
 									smsSymbol={metricSymbols['thunder']?.[0]}
 									label="Gewitter"
-									levels={deriveThunderThresholdLevels(compareCatalog.find((e) => e.metric === 'thunder_level_max')?.ordinalLabels)}
+									levels={thunderThresholdLevelsFromCatalog(compareCatalog)}
 									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>

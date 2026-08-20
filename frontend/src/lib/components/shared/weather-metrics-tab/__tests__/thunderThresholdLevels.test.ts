@@ -55,6 +55,33 @@ async function loadDerive(): Promise<DeriveFn> {
 	return fn as DeriveFn;
 }
 
+interface CatalogEntry {
+	metric: string;
+	label: string;
+	ordinalLabels?: string[];
+}
+
+type FromCatalogFn = (entries: CatalogEntry[]) => Level[];
+
+/**
+ * Laedt `thunderThresholdLevelsFromCatalog` (Adversary-Runde 2, Findings
+ * F003/F004: die Naht Katalog-Suche + Ableitung ist aus dem Template in
+ * diese eine, direkt aufrufbare Funktion gewandert -- Vorbild `loadDerive`
+ * oben).
+ */
+async function loadFromCatalog(): Promise<FromCatalogFn> {
+	const mod = await import(MODULE_SPECIFIER);
+	const fn = (mod as Record<string, unknown>).thunderThresholdLevelsFromCatalog;
+	if (typeof fn !== 'function') {
+		assert.fail(
+			'#1911 Runde-2-FAIL: `thunderThresholdLevelsFromCatalog` ist in ' +
+				'shared/corridor-editor/compareMetricCatalogLoader.ts nicht exportiert -- ' +
+				'die Naht Katalog-Suche + Ableitung fehlt noch.'
+		);
+	}
+	return fn as FromCatalogFn;
+}
+
 // Live-Read gegen den ECHTEN Backend-Katalog UND die kanonische Stufenquelle
 // (kein Fixture -- Issue #1424 F001 Praezedenz: eine hartkodierte
 // Erwartungsliste ist kein Drift-Waechter).
@@ -205,5 +232,77 @@ describe('#1911 AC-7 (Funktionsebene): kein Absturz bei fehlendem/leerem Katalog
 		const derive = await loadDerive();
 		assert.doesNotThrow(() => derive(undefined));
 		assert.deepEqual(derive(undefined), []);
+	});
+});
+
+describe('#1911 Adversary-Runde-2 F004 (HIGH): thunderThresholdLevelsFromCatalog kapselt Katalog-Suche + Ableitung', () => {
+	test('findet "thunder_level_max" in einem mehrteiligen Katalog (Range-Metriken ohne ordinalLabels daneben) -> exakt leicht/mittel/hoch, 1.0/2.0/3.0', async () => {
+		const fromCatalog = await loadFromCatalog();
+		const live = fetchLive();
+		// Realistischer Katalog: mehrere Range-Metriken ohne `ordinalLabels`
+		// (wie sie echte Katalog-Eintraege liefern) UND der echte
+		// thunder_level_max-Eintrag, NICHT an erster Stelle.
+		const catalog: CatalogEntry[] = [
+			{ metric: 'wind_max_kmh', label: 'Wind (km/h)' },
+			{ metric: 'precipitation', label: 'Niederschlag (mm)' },
+			{ metric: 'thunder_level_max', label: 'Gewitter', ordinalLabels: live.ordinalLabels },
+			{ metric: 'temperature_max', label: 'Temperatur (°C)' }
+		];
+
+		const levels = fromCatalog(catalog);
+
+		// Feldweise, nicht nur Laenge -- ein angehaengtes `.slice(1)` auf die
+		// Labels wuerfe "leicht" raus und verschoebe "mittel"->1.0, "hoch"->2.0,
+		// ohne dass ein reiner Laengen-Check das bemerkt (Mutation M9).
+		assert.deepEqual(
+			levels.map((l) => l.label.toLowerCase()),
+			['leicht', 'mittel', 'hoch'],
+			`F004 FAIL: Labels weichen von leicht/mittel/hoch ab: ${JSON.stringify(levels)}`
+		);
+		assert.deepEqual(
+			levels.map((l) => l.float),
+			[1.0, 2.0, 3.0],
+			`F004 FAIL: floats weichen von 1.0/2.0/3.0 ab (Bestandsdaten-Risiko!): ${JSON.stringify(levels)}`
+		);
+	});
+
+	test('kein thunder_level_max-Eintrag im Katalog -> leere Liste, kein Wurf', async () => {
+		const fromCatalog = await loadFromCatalog();
+		const catalog: CatalogEntry[] = [{ metric: 'wind_max_kmh', label: 'Wind (km/h)' }];
+		assert.doesNotThrow(() => fromCatalog(catalog));
+		assert.deepEqual(fromCatalog(catalog), []);
+	});
+
+	test('leerer Katalog -> leere Liste, kein Wurf', async () => {
+		const fromCatalog = await loadFromCatalog();
+		assert.doesNotThrow(() => fromCatalog([]));
+		assert.deepEqual(fromCatalog([]), []);
+	});
+});
+
+describe('#1911 Adversary-Runde-2 F005 (MEDIUM): das id-Feld ist konsistent zu float/label', () => {
+	test('Nachschlagen ueber float liefert dieselbe id; id == kleingeschriebenes Label', async () => {
+		const derive = await loadDerive();
+		const levels = derive(['kein', 'leicht', 'mittel', 'hoch']);
+
+		// Mutation M10: `id` gegen `float`/`label` vertauscht/verschoben bliebe
+		// unentdeckt, solange nur `.label`/`.float` isoliert geprueft werden --
+		// ThresholdMetricRow.svelte:28 loest den aktiven Button ueber
+		// `levels.find(l => l.float === currentFloat)?.id` auf. Ein
+		// Bestandstrip mit float=3.0 muss ueber diesen Weg auf id "hoch" landen.
+		levels.forEach((l) => {
+			const byFloat = levels.find((x) => x.float === l.float);
+			assert.equal(
+				byFloat?.id,
+				l.id,
+				`F005 FAIL: Nachschlagen ueber float=${l.float} liefert eine andere id ` +
+					`("${byFloat?.id}") als das Level selbst ("${l.id}").`
+			);
+			assert.equal(
+				l.id,
+				l.label.toLowerCase(),
+				`F005 FAIL: id ("${l.id}") entspricht nicht dem kleingeschriebenen Label ("${l.label.toLowerCase()}").`
+			);
+		});
 	});
 });
