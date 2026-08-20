@@ -147,3 +147,111 @@ GSM-7-Faltung.
 3. **Gefahren-Kürzel:** Konzept Abschnitt 5 empfiehlt Option 3 (nur `TH`
    bereinigen, übrige Register-Kollisionen stehen lassen) — als Empfehlung
    ohne PO-Bindung.
+
+---
+
+# Analysis (Phase 2, 2026-08-20)
+
+## Type
+
+Feature (Format-Umbau eines bestehenden Renderers), Full Process.
+
+## Ist-Basislinie aus ECHTEN Aufzeichnungen
+
+50 Mitschnitte von Prod (2026-08-20, Kärnten/KHW), geparst mit den
+Produktivparsern `geosphere_warn._extract_alerts` (`:107`) und
+`meteoalarm_feed._alerts_for_zone` (`:218`), gerendert über
+`build_official_alert_notices` → `render_official_alert_sms` mit dem echten
+Trip „KHW 403". Alle Texte unten sind tatsächliche Renderer-Ausgaben.
+
+| # | Fall | Ist-SMS | Zeichen |
+|---|---|---|---|
+| 1 | Gewitter, Stundenfenster | `KHW403 AMT GELB1/3: TH Do12-22, ges.Route` | 41 |
+| 2 | Hitze, ganztägig | `KHW403 AMT GELB1/3: HT Do20.08., ges.Route` | 42 |
+| 3 | Bündel aus einer Antwort, 3 Warnungen | `KHW403 AMT GELB1/3: HT Do20.08. + TH Do02-03 + TH Do12-22, ges.Route` | 68 |
+| 5 | 3× Gewitter, verschiedene Fenster | `KHW403 AMT GELB1/3: TH So13-22 + TH Mo09-19 + TH Do12-22, ges.Route` | 67 |
+| 6 | Hitze + Gewitter | `KHW403 AMT GELB1/3: HT Do20.08. + TH Do12-22, ges.Route` | 55 |
+| 7 | Tagesübergang | `KHW403 AMT GELB1/3: TH Do16-Fr00, ges.Route` | 43 |
+
+**Inventur:** 27 eindeutige Warnungen, ausschließlich `thunderstorm` und
+`extreme_heat`, **ausschließlich Stufe 2 (gelb)**. Zeitraum-Muster: 17
+Stundenfenster, 9 ganztägig, 1 Tagesübergang.
+
+**Zeichenbudget:** Minimum 41, Median 42,5, Maximum 68 von 140 Zeichen. Kein
+einziges Token wurde je gedroppt (`+N` kam nie vor). Das Budget ist im realen
+Betrieb zu **maximal 49 %** ausgelastet — die Zeichenersparnis ist damit
+**kein** treibendes Argument für Formatentscheidungen.
+
+**Nicht in den echten Daten vorhanden** (nicht erfunden, sondern als Lücke
+markiert): gemischte Warnstufen, Stufe 3/4, `access_ban`, Warnungen mit
+unterschiedlichem Segment-Umfang. Der mixed-level-Zweig des Renderers ist
+gegen echte Daten **nicht** belegbar.
+
+## Gemessene Korrekturen an Annahmen
+
+1. **🔴 `MIN_SMS_LEVEL = 3` filtert den Standalone-Alarm NICHT.** Es ist der
+   Vorgabewert des Briefing-Warnblocks (`official_alerts_to_sms_entries`,
+   `official_alerts.py:346`). Der Standalone-Pfad
+   (`trip_alert.py:_send_official_alert_only`, ab :1671) kennt Ruhezeit,
+   Tageslimit, Identitäts-Gate und `split_by_threshold` — **keinen
+   Stufenfilter**. `split_by_threshold` fällt ohne gesetzten Wert auf `LOW`
+   zurück (`alert_channel_threshold.py:25,30`), und
+   `min_official_level_for_threshold("LOW")` ergibt **2** (gemessen).
+   ⇒ **Gelbe Warnungen erreichen SMS und Premium-SMS bei Standardeinstellung.**
+   Der Stufenbuchstabe `L` ist die *häufigste* reale Ausprägung, kein toter
+   Zweig — der Kommentar `hazard_symbols.py:32-33` („durch MIN_SMS_LEVEL nie
+   sichtbar") gilt nur fürs Briefing und ist für den Alarm irreführend.
+2. **🔴 `LEVEL_LETTERS` darf NICHT um GRÜN→`-` ergänzt werden.** Gemessen:
+   `LEVEL_LETTERS[1] = "-"` lässt `alert_urgency.urgency_from_official_level(1)`
+   mit `KeyError: '-'` abstürzen (`alert_urgency.py:29`,
+   `_LETTER_TO_URGENCY[letter]` kennt nur `L`/`M`/`H`) — mitten im
+   Alarm-Auslösepfad. Die Tabelle ist eine **Dringlichkeits**-Abbildung mit
+   zweitem Konsumenten, keine Darstellungstabelle.
+   ⇒ Die vierstufige Darstellungsleiter gehört in eine eigene Funktion im
+   SMS-Renderer (`{1:"-", 2:"L", 3:"M", 4:"H"}`), getrennt von `LEVEL_LETTERS`.
+   Damit ist PO-Entscheid „Option 1" vollständig erfüllt, ohne die
+   Dringlichkeits-Ableitung anzufassen.
+
+## Technischer Ansatz
+
+Ein Bau-Pfad statt zwei. Der heutige Renderer verzweigt in „einheitliche
+Stufe" (gemeinsamer `AMT {WORT}{Pos}/3`-Kopf) und „gemischte Stufen"
+(Stufenwort je Token). Da im Zielformat **jedes Token seinen Stufenbuchstaben
+selbst trägt** (`TH:H`), verliert diese Weiche ihren Zweck für die
+Token-Darstellung. Sie bleibt allein für die **Kopf-Frage** relevant:
+gemeinsamer Ortskopf nur, wenn alle Warnungen denselben Umfang haben
+(`_uniform_scope`, identitätsbasiert über `scope_ids`); sonst trägt jedes
+Token seinen eigenen Ortszusatz — genau wie heute schon im mixed-Zweig.
+
+Die Zeichenbudget-Kette (`_sms_pack`, `_sms_leading_variants`,
+`_sms_pack_with_fallback`) ist rein textbasiert und bleibt unverändert
+nutzbar. Der `suffix`-Mechanismus (Ort am Ende) wird für den einheitlichen
+Fall überflüssig, weil der Kopf die Ortsfunktion übernimmt.
+
+`sms_prefix` entfällt aus der Ausgabe — das ändert die Signatur und trifft
+sieben Aufrufer (sechs in `notification_service.py`, einer in
+`validator_render_service.py:210`).
+
+## Entscheidungen für die Spec
+
+| Frage | Entscheidung | Begründung |
+|---|---|---|
+| Mehrere Warnungen | Tokens mit ` + ` verkettet wie heute; gemeinsamer Ortskopf nur bei einheitlichem Umfang, sonst Ort je Token | kleinste Änderung an bewährter Logik; ein einzelner Kopf würde bei verschiedenen Segmenten suggerieren, alle Warnungen gälten für denselben Ort |
+| Zeitangabe | **Fenster behalten** (`13-22`), nicht auf `@Beginn` umstellen | bei einer amtlichen Warnung ist das Ende sicherheitsrelevant; das Budget ist mit max. 49 % ohnehin nicht knapp; entspricht dem PO-finalisierten Zielbild |
+| Führende Null | Stunde ohne (`6-20`), Minuten zweistellig (`15:20-21:40`) | PO-Entscheid; Muster von `_sms_onset_time` (S4) |
+| Stufenleiter GRÜN→`-` | eigene Darstellungsfunktion im Renderer, `LEVEL_LETTERS` unangetastet | sonst Absturz, s. gemessene Korrektur 2 |
+| `access_ban` (stufenlos) | Kürzel **ohne** Stufenbuchstaben (`CL`), wie im Briefing-Warnblock (`official_alerts.py:373-374`) | eine binäre Zugangssperre hat keine Warnstufe; `CL:H` wäre eine erfundene Schwere |
+| Unbekannte Gefahrenart | Fallback-Kürzel aus `sms_symbol_for` **mit** Stufenbuchstaben | die Stufe ist bekannt, auch wenn die Art es nicht ist |
+| Fehlender Zeitraum | Zeit-Token entfällt ersatzlos (`Ziel: TH:H`) | bestehende Konvention, `_tag_time` liefert `""` |
+| Telegram-Kurzstil | zieht mit, byte-gleich zur SMS | der Kurzstil ist definitionsgemäß der SMS-Text (per Test erzwungen); PO-Entscheid „Telegram mit führender Null" betrifft die ausführliche Variante |
+| Trip + Ortsvergleich | eine Scheibe | es ist **eine** Funktion, die beide Zweige bedienen; ein Split hieße Renderer-Kopie und verstößt gegen die Teilungs-Invariante |
+
+## Scope Assessment
+
+- Produktivdateien: **3** (`official_alerts.py` Kernumbau, `notification_service.py`
+  6 Aufrufer, `validator_render_service.py` 1 Aufrufer) + Vorbedingung
+  `api/routers/validator.py` (Segment-Feld Onset)
+- Geschätzte LoC: **~120–150** Produktivcode
+- Testdateien mit echtem Anpassungsbedarf: **8–10** von 14 betroffenen
+- Risk Level: **HIGH** (nutzersichtbarer Alarmpfad, alle Kanäle des amtlichen
+  Zweigs, Snapshot-Fixture)
