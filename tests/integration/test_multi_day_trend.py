@@ -496,7 +496,8 @@ class TestTrendRendering:
 
         assert "Nächste Etappen" in report.email_plain
         assert "Tossals Verds" in report.email_plain
-        assert "6–14°C" in report.email_plain
+        # #1848 A1 AC-9: Schraegstrich statt Halbgeviertstrich (SMS-Trenner).
+        assert "6/14°C" in report.email_plain
 
     def test_trend_no_future_stages(self):
         """No trend block when multi_day_trend is None.

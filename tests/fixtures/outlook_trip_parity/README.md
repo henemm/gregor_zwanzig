@@ -24,6 +24,7 @@ Default-Parameter abgeschirmte Erweiterungen.
 | 2026-08-10 | `...txt` | Zeile "Di", Gewitter-Feld | `⚡–` | `⚡mittel` | #1653/F004 |
 | 2026-08-14 | `...html` | alle Zellen mit gelber/oranger Ampel-Toenung (Regenwahrsch./Gewitter, Zeilen "Mo"/"Di") | `#fbeeb8`/`#fad6b8` | `#fdf4cd`/`#fbe3cc` | #1801 S2 (design_tokens.tone_css() ist die geteilte Farbquelle von `render_outlook_table()`; `.txt`-Gegenstueck traegt keine Farben, unveraendert) |
 | 2026-08-18 | `...txt` | Zeilen "Mo" und "Di", Gewitter-Feld | `⚡mittel` | `⚡mittel@16` | #1493 (AC-3: der Klartext-Ausblick fuehrt die Onset-Stunde wie HTML-Zelle, Telegram und SMS; `...html` traegt `mittel @16` bereits seit #1653 und ist unveraendert) |
+| 2026-08-20 | `...txt` | Zeilen "Mo" und "Di", Temperatur-Feld | `9–21°C`/`11–19°C` | `9/21°C`/`11/19°C` | #1848 A1 AC-9 (Altform-Klartext auf denselben Schraegstrich-Trenner wie die SMS-Schreibweise gezogen; `...html` traegt keinen Trenner in dieser Zelle, unveraendert) |
 
 Beide Eingabezeilen tragen `hourly_thunder` mit "mittel" um 16 Uhr — im
 Tagesfenster 4-19 —, waehrend das Aggregat `thunder` einmal `MED` und einmal
