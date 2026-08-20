@@ -3,7 +3,7 @@ entity_id: fix_2009_nowcast_vorlauf
 type: bugfix
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: approved
 version: "1.0"
 tags: [alerts, radar, nowcast, trip, compare]
 ---
@@ -12,7 +12,7 @@ tags: [alerts, radar, nowcast, trip, compare]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-08-20 („approved"), AC-1 bis AC-6 auf Deutsch vorgelegt.
 
 ## Purpose
 
