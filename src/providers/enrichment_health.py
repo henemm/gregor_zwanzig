@@ -19,10 +19,17 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 
-# Pfad-Vokabular: die beiden degradierbaren Anreicherungs-Pfade. Der
-# Go-Aggregator gruppiert nach genau diesen Werten.
+# Pfad-Vokabular: die degradierbaren Anreicherungs-Pfade. Der Go-Aggregator
+# gruppiert bereits generisch nach `path` als freiem String -- ein neuer Wert
+# hier erscheint automatisch als eigener Schluessel, ohne Aenderung an
+# `internal/scheduler/enrichment_health.go` (#1992 AC-8).
 PATH_THUNDER = "thunder"
+PATH_THUNDER_ADDITIVE = "thunder_additive"  # #1992: additive Zusatzquelle
+# (geosphere in DE_ALPEN, #1758) -- eigener Pfad statt `detail` unter
+# `thunder`, damit ein Ausfall der additiven Quelle nicht von einem
+# zeitgleichen Erfolg der Primaerquelle im Aggregat ueberdeckt wird.
 PATH_RADAR_NOWCAST = "radar_nowcast"
+PATH_SNOWGRID = "snowgrid"  # #1992: SNOWGRID-Schneetiefe
 
 # Ausgangs-Vokabular:
 #   ok             -- die Quelle hat regulaer geantwortet (auch leer:

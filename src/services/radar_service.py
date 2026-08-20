@@ -138,6 +138,7 @@ class RadarNowcastService:
         self._cache = cache
         self._openmeteo_unavailable_this_call = False
         self._budget_throttled_this_call = False
+        self._inca_unavailable_this_call = False
         self._priority = "user_briefing"
         self._budget_gate = None
 
@@ -190,6 +191,7 @@ class RadarNowcastService:
         self._convective_checked = True
         self._openmeteo_unavailable_this_call = False
         self._budget_throttled_this_call = False
+        self._inca_unavailable_this_call = False
         self._priority = priority
         from services.forecast_budget import ForecastBudgetGate
         self._budget_gate = ForecastBudgetGate()
@@ -233,13 +235,15 @@ class RadarNowcastService:
         # Vermengung liesse das externe Auswertungsskript einen selbst
         # gewaehlten Rueckzug als Fremdausfall eskalieren (AC-8/AC-10).
         from providers.enrichment_health import (
-            OUTCOME_OK, OUTCOME_SELF_THROTTLED, OUTCOME_UNAVAILABLE,
-            PATH_RADAR_NOWCAST, log_enrichment_call,
+            OUTCOME_FALLBACK, OUTCOME_OK, OUTCOME_SELF_THROTTLED,
+            OUTCOME_UNAVAILABLE, PATH_RADAR_NOWCAST, log_enrichment_call,
         )
         if result.throttled:
             log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_SELF_THROTTLED)
         elif result.data_unavailable:
             log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_UNAVAILABLE)
+        elif self._inca_unavailable_this_call:
+            log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_FALLBACK, source)
         else:
             log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_OK)
         return result
@@ -404,6 +408,7 @@ class RadarNowcastService:
             return frames
         except Exception as e:
             logger.warning(f"GeoSphere INCA failed, falling back: {e}")
+            self._inca_unavailable_this_call = True
             return []
 
     def _merge_convective(self, inca_frames: list, sidecar_frames: list) -> None:
