@@ -696,6 +696,77 @@ def test_known_violations_only_shrink():
     )
 
 
+def test_jeder_eintrag_traegt_kategorie_und_begruendung():
+    """GIVEN die Werte in KNOWN_VIOLATIONS
+    WHEN sie auf Kategorie-Präfix und Mindestbegründung geprüft werden
+    THEN trägt jeder Wert genau eines der drei Präfixe DAUERHAFT /
+    AUFRUFSEITE(#1402) / BEWUSST-UTC(#1345), gefolgt von einer Begründung mit
+    mindestens 15 Buchstaben/Ziffern (nach Entfernen aller Nicht-Wort-Zeichen).
+
+    Issue #1727 S5g Teil B (AC-4): heute beginnen die bewusst-UTC-Einträge mit
+    der FUNDART des Scanners (``raw_astimezone (:130) — …``) statt mit einer
+    Kategorie und sehen dadurch aus wie ein noch offener Kandidat. Der
+    Unterschied „dauerhaft so gewollt" vs. „noch nicht behoben" muss laut #1727
+    zitierbar sein — also maschinell geprüft statt reiner Prosa.
+
+    Muster: `_MARKER`/`_UNWORT`/`_MIN_BEGRUENDUNG` aus
+    `tests/tdd/test_repo_path_hardcoding_ratchet.py:346-352`.
+    """
+    assert KNOWN_VIOLATIONS, (
+        "Leeres Register — die Prüfung wäre dann trivial grün und bewiese "
+        "nichts. Entweder ist die Liste versehentlich geleert worden, oder "
+        "dieser Wächter gehört mit ihr zurückgebaut."
+    )
+    befunde = _kategorie_verstoesse(KNOWN_VIOLATIONS)
+    assert not befunde, (
+        "Diese KNOWN_VIOLATIONS-Einträge tragen keine gültige Kategorie oder "
+        "keine ausreichende Begründung (Issue #1727 S5g Teil B). Jeder Wert "
+        "beginnt mit DAUERHAFT, AUFRUFSEITE(#1402) oder BEWUSST-UTC(#1345) "
+        "und nennt danach den Grund:\n" + "\n".join(befunde)
+    )
+
+
+def test_alibi_begruendung_zaehlt_nicht():
+    """Ein einzelnes Zeichen oder ein Emoji ist keine bewusste Entscheidung,
+    sondern das billigste Mittel, die Kategorie-Pflicht zu erfüllen, ohne etwas
+    zu begründen (Vorbild: `test_ac8_alibi_begruendung_zaehlt_nicht`,
+    `tests/tdd/test_repo_path_hardcoding_ratchet.py:180`).
+
+    Prüft die Prüffunktion gegen ein FIXTURE-Dict statt gegen das echte
+    Register — sonst hinge der Wirkungsnachweis daran, dass zufällig gerade ein
+    schlechter Eintrag im Bestand steht. Diskriminierend: der gute
+    Kontrolleintrag darf NICHT gemeldet werden, sonst wäre auch eine Funktion
+    grün, die pauschal alles beanstandet.
+    """
+    fixture = {
+        "src/x.py::gut::0": (
+            "AUFRUFSEITE(#1402) — Wächter sitzt am Aufrufer statt an der "
+            "Signatur (test_production_callsites_pass_tz_explicitly)."
+        ),
+        "src/x.py::alibi::0": "DAUERHAFT — x",
+        "src/x.py::emoji::0": "BEWUSST-UTC(#1345) — 👍",
+        "src/x.py::ohne_praefix::0": (
+            "raw_astimezone (:130) — Kontingent-Tag bewusst in UTC gerechnet, "
+            "Zählwerk statt Nutzerdatum."
+        ),
+    }
+    befunde = _kategorie_verstoesse(fixture)
+    gemeldet = {k for k in fixture if any(k in b for b in befunde)}
+    assert gemeldet == {
+        "src/x.py::alibi::0",
+        "src/x.py::emoji::0",
+        "src/x.py::ohne_praefix::0",
+    }, (
+        "Erwartet werden genau die drei schlechten Einträge (Alibi-Text, "
+        "Emoji, fehlendes Kategorie-Präfix) — der gute Kontrolleintrag darf "
+        f"nicht darunter sein. Gemeldet: {sorted(gemeldet)}\n"
+        + "\n".join(befunde)
+    )
+    assert len(befunde) == 3, (
+        f"Ein Befund je schlechtem Eintrag erwartet, bekommen: {befunde}"
+    )
+
+
 def test_production_callsites_pass_tz_explicitly():
     """PO-Entscheidung #1402: statt die Signatur der 6 grossflaechigen
     Funktionen (+ ihrer official_alerts.py-Kettenhelfer) umzubauen (250+

@@ -875,3 +875,71 @@ def test_1599_ac6_amtliche_warnung_ab_2015_bleibt_ausserhalb(monkeypatch):
         "— der Horizont wurde um mehr als eine Stunde verschoben oder ganz "
         "aufgehoben."
     )
+
+
+def test_day_window_end_folgt_dem_ortstag_nicht_dem_utc_tag():
+    """#1727 S5g AC-7: `_day_window_end` bestimmt das Tagesfenster-Ende auf dem
+    ORTSTAG des Vergleichsorts, nicht auf dem UTC-Tag.
+
+    Warum dieser Test noetig ist: `test_1599_ac5`/`test_1599_ac6` (:842/:861)
+    pruefen `_day_window_end` ausschliesslich in Wiener Zone (17:45 UTC als
+    "19:45 Ortszeit"). Dort fallen Ortstag und UTC-Tag auf DENSELBEN
+    Kalendertag — und weil die Funktion genau `local_now.date()` auswertet,
+    bliebe eine Verwechslung der Ortszone mit UTC dort gruen. Sie bewachen die
+    Fenster-Formel, nicht die Zone.
+
+    Aufbau: Auckland (Pacific/Auckland, im Juli NZST = UTC+12) bei fest
+    gesetztem `now` = 2026-07-12 13:00 UTC -> Ortszeit 2026-07-13 01:00. Ortstag
+    ist der 13., UTC-Tag der 12. — sie fallen auseinander. Kein
+    `datetime.now()`, keine Laufzeit-Ortswahl (die bestehende
+    `_daytime_location()` in `test_official_alert_time_window.py:497-508` waehlt
+    den Ort wanduhrabhaengig und hat Wien an erster Stelle — als Nachweis
+    untauglich).
+
+    MUTATIONS-ERWARTUNG: Wird `now.astimezone(tz)` in
+    `compare_official_alert.py::_day_window_end` durch `to_utc(now)` ersetzt
+    oder die Zone fest verdrahtet, faellt der ausgewertete Kalendertag auf den
+    12. zurueck; das Fensterende springt damit um einen ganzen Tag (bzw. wird
+    auf `now` geklemmt) und dieser Test wird rot.
+    """
+    from app.day_window import window_end_utc_exclusive
+    from services.compare_official_alert import CompareOfficialAlertService
+    from tests.tdd.test_compare_official_alert import (
+        _clean_user, _location, _settings_all_channels, _uid,
+    )
+
+    lat, lon = -36.85, 174.76          # Auckland
+    tz = tz_for_coords(lat, lon)
+    assert tz is not None, "Ortszone von Auckland nicht aufloesbar"
+    now = datetime(2026, 7, 12, 13, 0, tzinfo=timezone.utc)
+    assert now.astimezone(tz).date() == date(2026, 7, 13), (
+        "Vorbedingung verletzt: Ortstag und UTC-Tag muessen auseinanderfallen, "
+        f"Ortszeit ist {now.astimezone(tz)}"
+    )
+
+    # Beide Kandidaten explizit, mit derselben Fenster-Formel wie im Prueflings-
+    # Code (Default-Fenster 4-19, weil das Preset nicht existiert).
+    ende_ortstag = window_end_utc_exclusive(date(2026, 7, 13), 19, tz)
+    ende_utc_tag = window_end_utc_exclusive(date(2026, 7, 12), 19, tz)
+    assert ende_ortstag != ende_utc_tag, (
+        "Probe ohne Varianz: beide Kandidaten liefern denselben Zeitpunkt "
+        f"({ende_ortstag}) — dann beweist der Vergleich unten nichts."
+    )
+
+    uid = _uid("1727s5g")
+    _clean_user(uid)
+    try:
+        ende = CompareOfficialAlertService(
+            settings=_settings_all_channels(), user_id=uid,
+        )._day_window_end("gibt-es-nicht", _location("loc-nz", "Auckland", lat, lon), now)
+    finally:
+        _clean_user(uid)
+
+    assert ende == ende_ortstag, (
+        "#1727 S5g AC-7: Das Tagesfenster-Ende muss dem ORTSTAG des "
+        f"Vergleichsorts folgen ({ende_ortstag}), tatsaechlich: {ende}."
+    )
+    assert ende != ende_utc_tag, (
+        "#1727 S5g AC-7: Das Fensterende folgt dem UTC-Tag "
+        f"({ende_utc_tag}) statt dem Ortstag des Vergleichsorts."
+    )
