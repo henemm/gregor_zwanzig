@@ -75,3 +75,38 @@ gewählte Umsetzung.
   nur den Briefing-Anker annehmen. Die Trend-Erkennungs-Invariante (AC-9 in
   `docs/specs/modules/trip_alert.md`) ist bei jeder künftigen Änderung an der Schreiblogik als
   Regressionstest zu erhalten.
+
+## Amendment 2026-08-19 (Issue #1987 S1): Kanal-Dimension, Trigger (b) entfällt
+
+Der rollierende Anker aus der Entscheidung oben war **kanalagnostisch** — genau EIN Stand für
+alle vier Kanäle. Damit trug er einen stillen Ausfall in sich: rückte er nach einem Alarm vor,
+der nur auf einem Teil der Kanäle zustellbar war, verlor der nicht bediente Kanal die Änderung
+dauerhaft. Er wurde gegen einen Stand verglichen, den sein Empfänger nie erhalten hat. Auf dem
+Karnischen Höhenweg trifft das den Regelfall, nicht den Ausnahmefall: auf der Hütte kommt nur
+Premium-SMS an, auf dem Pass nur E-Mail und Telegram.
+
+**Ergänzung:** Der rollierende Anker (Tier 2) wird ab #1987 S1 **je Kanal** geführt —
+eine Datei `{trip_id}_alarm_anchor_{channel}.json` je Kanal. Fortgeschrieben wird ein
+Kanal-Merker ausschließlich, wenn dieser Kanal im selben Lauf tatsächlich **zugestellt** hat
+(`NotificationResult.delivered_channels`).
+
+**Ablösung von Trigger (b):** Der opportunistische Auffrisch-Schreibvorgang aus der
+Entscheidung oben entfällt für den kanalscharfen Tier-2-Merker **ersatzlos**. Er lief im Zweig
+„kein Alarm gefeuert" — dort wurde nichts versendet, es gibt also keine Zustellinformation, und
+ein dort geschriebener Merker wäre genau das, was S1 verbietet: ein Stand, den kein Empfänger je
+bekam. Die Schutzwirkung gegen eine veraltete Vergleichsbasis bleibt vollständig erhalten, sie
+wandert vom Schreib- in den **Lesepfad**: ein Kanal-Merker jenseits der Alterungs-Ceiling (4h)
+wird als Kandidat nicht mehr herangezogen, und die Kette fällt für diesen Kanal auf den
+taggleichen Tier-1-Briefing-Anker zurück — ausdrücklich **nicht** auf den Merker eines anderen
+Kanals (Kontaminationsverbot).
+
+**Unverändert:** Trigger (a) (Fortschreibung bei tatsächlichem Versand), der Tier-1-Briefing-
+Anker (`save()`/`save_dated()`, weiterhin unbedingt und kanalagnostisch — die #1629-Garantie),
+die #823-Tagesgrenze (gilt jetzt je Kanal), die Radar-Unterdrückung über die datierte
+Briefing-Datei, und die Auslöse-Entscheidung selbst: `DeviationAlertEngine.evaluate()` bleibt
+EIN gemeinsamer Lauf (ADR-0021). Er bekommt weiterhin genau eine Vergleichsbasis — den
+**ältesten** gültigen Kandidaten unter den effektiven Kanälen, damit keinem Kanal eine Änderung
+verlorengeht; gegen Wiederholungen schützt weiterhin das Melde-Gedächtnis (`alert_state`).
+
+Details und Akzeptanzkriterien: `docs/specs/modules/fix_1987_kanal_anker.md`.
+Der Ortsvergleichs-Δ-Anker bleibt kanalagnostisch (Scheibe S2, zurückgestellt).

@@ -528,7 +528,7 @@ def test_ac5_bestandsanker_ohne_onset_felder_laedt_und_alarmiert_nicht():
         json.dumps(_ALT_ANKER, indent=2)
     )
 
-    geladen = dienst.load_alarm_anchor("trip-alt")
+    geladen = dienst.load_alarm_anchor("trip-alt", "email")
     assert geladen is not None and len(geladen) == 1, (
         f"AC-5: Bestandsanker liess sich nicht laden: {geladen!r}"
     )
@@ -551,8 +551,8 @@ def test_ac5_bestandsanker_ohne_onset_felder_laedt_und_alarmiert_nicht():
         f"Beginn-Alarm aus einem Anker ohne Onset-Wert: {changes!r}"
     )
 
-    dienst.save_alarm_anchor("trip-neu", TAG, [frisch])
-    zurueck = dienst.load_alarm_anchor("trip-neu")
+    dienst.save_alarm_anchor("trip-neu", TAG, [frisch], "email")
+    zurueck = dienst.load_alarm_anchor("trip-neu", "email")
     assert zurueck is not None, (
         "AC-5: ein Anker MIT Onset-Wert liess sich nicht speichern/laden -- "
         "`save_alarm_anchor` verschluckt Serialisierungsfehler still."

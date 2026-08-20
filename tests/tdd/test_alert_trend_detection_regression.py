@@ -63,7 +63,7 @@ def test_ac9_kumulativer_trend_ueber_mehrere_laeufe_loest_dennoch_aus():
         fresh = [_wetter(wert, datetime.now(timezone.utc))]
         ausgeloest = svc.check_and_send_alerts(trip, aktueller_anker, fresh_weather=fresh)
         ausgeloest_je_lauf.append(ausgeloest)
-        rollierend = snap_svc.load_alarm_anchor(trip_id)
+        rollierend = snap_svc.load_alarm_anchor(trip_id, "email")
         if rollierend:
             aktueller_anker = rollierend
 
