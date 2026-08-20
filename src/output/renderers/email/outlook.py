@@ -678,7 +678,7 @@ def build_outlook_row(
 
     if metrics is not None:
         from output.renderers.compare_outlook_metric_ids import (
-            format_outlook_value, outlook_columns,
+            format_outlook_range_cell, format_outlook_value, outlook_columns,
         )
 
         # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 4): der Hagel-Wert
@@ -728,6 +728,16 @@ def build_outlook_row(
         cell_bg: list[str] = []
         for col in outlook_columns(metrics):
             ordinal = col.get("kind") == "ordinal"
+            # #1848 A1 (AC-4..AC-8): eine zusammengefuehrte Spannen-Spalte
+            # traegt `field_min`/`field_max` statt `field` -- BEIDE Seiten
+            # gehen (mit demselben Gehzeit-Fenster-Override wie der
+            # Einzelwert-Fall) in EINE Zelle "{min}/{max}".
+            if "field_min" in col or "field_max" in col:
+                raw_min = _hiking_or_summary(summary, col.get("field_min"), hiking_extrema)
+                raw_max = _hiking_or_summary(summary, col.get("field_max"), hiking_extrema)
+                cells.append(format_outlook_range_cell(raw_min, raw_max, col))
+                cell_bg.append(_metric_column_bg(col, raw_max))
+                continue
             raw = (
                 _thunder_value if ordinal
                 else _hiking_or_summary(summary, col.get("field"), hiking_extrema)

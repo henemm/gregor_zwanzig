@@ -49,7 +49,9 @@ def nicht_waehlbare_compare_keys(entries: list[dict] | None = None) -> list[str]
 
 
 def compare_outlook_soll_spalten(entries: list[dict] | None = None) -> list[dict]:
-    """Je ausgeliefertem Katalog-Paar ein Soll-Eintrag, in Katalog-Reihenfolge.
+    """Je ausgeliefertem Katalog-Paar ein Soll-Eintrag, in Katalog-Reihenfolge
+    -- MIT Ausnahme: min+max derselben Groesse ergeben EINE zusammengefuehrte
+    Spalte (``_merge_min_max_soll``, s. dort).
 
     ``entries`` injiziert eine Testkopie der Katalogzeilen (Vorbild
     ``get_compare_metric_catalog(entries=...)``), damit die
@@ -58,12 +60,12 @@ def compare_outlook_soll_spalten(entries: list[dict] | None = None) -> list[dict
     """
     geliefert = get_compare_metric_catalog(entries)
     haeufigkeit = Counter(e["label"] for e in geliefert)
-    soll: list[dict] = []
+    roh: list[dict] = []
     for eintrag in geliefert:
         label = eintrag["label"]
         auswertung_label = eintrag.get("aggregation_label", "")
         mehrdeutig = haeufigkeit[label] > 1 and bool(auswertung_label)
-        soll.append({
+        roh.append({
             "key": eintrag["key"],
             "metric_id": eintrag["metric_id"],
             "aggregation": eintrag["aggregation"],
@@ -73,17 +75,77 @@ def compare_outlook_soll_spalten(entries: list[dict] | None = None) -> list[dict
                 eintrag["metric_id"], eintrag["aggregation"],
             ),
             "kind": eintrag.get("kind", "range"),
+            # Die Paare, die dieser Soll-Eintrag repraesentiert -- fuer
+            # unveraenderte Eintraege genau eines, fuer Merges (s.u.) zwei.
+            "paare": [{"metric_id": eintrag["metric_id"], "aggregation": eintrag["aggregation"]}],
         })
-    return soll
+    return _merge_min_max_soll(roh)
+
+
+def _merge_min_max_soll(roh: list[dict]) -> list[dict]:
+    """#1848 A1 (PO-Entscheid 2026-08-20): min+max derselben Groesse ergeben
+    in der Produktivauswahl EINE Spalte (Schraegstrich-Zelle), nicht mehr
+    zwei mit Minimum-/Maximum-Suffix -- loest fuer diesen Fall die rein
+    paarbasierte Soll-Menge aus Epic #1703 Scheibe 2 ab (dieselbe Merge-
+    Regel wie die Produktivfunktion
+    ``compare_outlook_metric_ids._merge_min_max_pairs()``).
+
+    „Jede waehlbare GROESSE ergibt genau eine Spalte" (AC-S2-1) bleibt dabei
+    wahr -- nur die Menge der Paare, die eine Groesse ausmacht, aendert
+    sich. Die Disambiguierungs-Logik (Minimum-/Maximum-Suffix bei
+    mehrdeutigem Label) bleibt fuer den Fall bestehen, dass eine Groesse
+    KUENFTIG mehr als zwei Auswertungen traegt (z. B. ``avg`` bei
+    Temperatur, Scheibe A3): dann mergen min+max weiterhin zur Spanne, aber
+    die dritte Auswertung bleibt eine eigene, disambiguierte Spalte.
+    """
+    by_metric: dict[str, dict[str, int]] = {}
+    for i, s in enumerate(roh):
+        if s["kind"] == "range" and s["aggregation"] in ("min", "max"):
+            by_metric.setdefault(s["metric_id"], {})[s["aggregation"]] = i
+
+    merge_at: dict[int, int] = {}
+    consumed: set[int] = set()
+    for aggs in by_metric.values():
+        if "min" in aggs and "max" in aggs:
+            first_idx, second_idx = sorted((aggs["min"], aggs["max"]))
+            merge_at[first_idx] = second_idx
+            consumed.add(second_idx)
+
+    merged: list[dict] = []
+    for i, s in enumerate(roh):
+        if i in consumed:
+            continue
+        if i not in merge_at:
+            merged.append(s)
+            continue
+        partner = roh[merge_at[i]]
+        lo = s if s["aggregation"] == "min" else partner
+        hi = s if s["aggregation"] == "max" else partner
+        merged.append({
+            "key": f"{s['key']}+{partner['key']}",
+            "metric_id": s["metric_id"],
+            "aggregation": None,
+            "label": s["label"],
+            "ueberschrift": s["label"],
+            # Truthy UND informativ (statt None): ein Tupel beider Felder --
+            # der Vakuum-Schutz `ohne_feld` in
+            # `assert_soll_menge_ist_plausibel()` prueft nur auf Wahrheits-
+            # wert, ein `None` wuerde den Merge selbst faelschlich als
+            # "kein SegmentWeatherSummary-Feld" melden.
+            "summary_field": (lo["summary_field"], hi["summary_field"]),
+            "kind": "range",
+            "paare": s["paare"] + partner["paare"],
+        })
+    return merged
 
 
 def compare_outlook_soll_paare(entries: list[dict] | None = None) -> list[dict]:
     """Die Auswahl im Speicherformat der Bedienflaeche (#1373-Vokabular) —
-    genau das, was ein Nutzer waehlt, der alles waehlt."""
-    return [
-        {"metric_id": s["metric_id"], "aggregation": s["aggregation"]}
-        for s in compare_outlook_soll_spalten(entries)
-    ]
+    genau das, was ein Nutzer waehlt, der alles waehlt. Bleibt die FLACHE
+    Paar-Menge (ein Eintrag je Katalog-Paar) auch nach dem Merge in
+    ``compare_outlook_soll_spalten()`` -- die Auswahl selbst aendert sich
+    nicht, nur wie viele SPALTEN daraus entstehen."""
+    return [p for s in compare_outlook_soll_spalten(entries) for p in s["paare"]]
 
 
 def assert_soll_menge_ist_plausibel(entries: list[dict] | None = None) -> list[dict]:
@@ -110,9 +172,14 @@ def assert_soll_menge_ist_plausibel(entries: list[dict] | None = None) -> list[d
         f"- {len(zurueckgehalten)} nicht waehlbare ({zurueckgehalten}) "
         f"!= {len(geliefert)} ausgelieferte"
     )
-    assert len(soll) == len(geliefert), (
-        f"Soll-Menge ({len(soll)}) und ausgelieferter Katalog "
-        f"({len(geliefert)}) sind auseinandergelaufen"
+    # #1848 A1: min+max derselben Groesse ergeben EINEN Soll-Eintrag mit
+    # ZWEI Paaren (``paare``) -- "ein Eintrag je geliefertem Paar" gilt
+    # seither nur noch auf PAAR-Ebene (jedes gelieferte Paar erscheint in
+    # genau einem Soll-Eintrag), nicht mehr 1:1 auf Spalten-Ebene.
+    paare_gesamt = sum(len(s["paare"]) for s in soll)
+    assert paare_gesamt == len(geliefert), (
+        f"Paar-Menge ueber alle Soll-Eintraege ({paare_gesamt}) und "
+        f"ausgelieferter Katalog ({len(geliefert)}) sind auseinandergelaufen"
     )
     assert zurueckgehalten, (
         "Der Compare-Katalog haelt keine einzige Zeile mehr wegen "

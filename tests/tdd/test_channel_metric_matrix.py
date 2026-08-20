@@ -2561,9 +2561,13 @@ def test_ac_s2_2_soll_menge_wird_gerechnet_und_ist_plausibel():
     from output.renderers.compare_outlook_metric_ids import resolve_outlook_metrics
 
     aufgeloest = resolve_outlook_metrics(list(_S2_SOLL_PAARE))
-    assert aufgeloest is not None and len(aufgeloest) == len(_S2_SOLL), (
+    # #1848 A1: ``resolve_outlook_metrics()`` arbeitet auf PAAR-Ebene (vor
+    # dem Spalten-Merge) -- Massstab ist deshalb die flache Paar-Menge
+    # ``_S2_SOLL_PAARE``, nicht mehr die (seither kleinere) Spalten-Menge
+    # ``_S2_SOLL``.
+    assert aufgeloest is not None and len(aufgeloest) == len(_S2_SOLL_PAARE), (
         f"AC-S2-2: ``resolve_outlook_metrics()`` verwirft "
-        f"{len(_S2_SOLL) - len(aufgeloest or [])} der {len(_S2_SOLL)} "
+        f"{len(_S2_SOLL_PAARE) - len(aufgeloest or [])} der {len(_S2_SOLL_PAARE)} "
         "Katalog-Paare -- Katalog-Zugehoerigkeit und Feld-Aufloesung sind "
         "auseinandergelaufen, die verworfenen Groessen haetten gar keine Spalte"
     )
@@ -2583,13 +2587,31 @@ def test_ac_s2_3_keine_zwei_spalten_mit_gleicher_beschriftung():
     Beschriftung. Die Unterscheidung entsteht dadurch, dass die Auswertung
     angehaengt wird, sobald derselbe Name mehrfach vorkommt -- die
     Vakuum-Gegenprobe stellt sicher, dass dieser Zweig ueberhaupt greift
-    (sonst prueft der Test eine Regel, die nie zur Anwendung kommt)."""
-    mehrfach = [n for n, anzahl in Counter(s["label"] for s in _S2_SOLL).items()
+    (sonst prueft der Test eine Regel, die nie zur Anwendung kommt).
+
+    #1848 A1 (PO-Entscheid 2026-08-20): die frueher EINZIGEN zwei mehrfach
+    vorkommenden Groessen (Temperatur, Gefuehlte Temperatur -- beide
+    min+max) werden seither zu je EINER Spannen-Spalte zusammengefuehrt
+    (``_merge_min_max_soll``) und loesen die Minimum-/Maximum-
+    Disambiguierung damit nicht mehr aus -- der reale Katalog liefert
+    heute keine Mehrfach-Beschriftung mehr. Die Vakuum-Gegenprobe braucht
+    deshalb einen synthetischen Katalog-Ausschnitt mit einer DRITTEN
+    Auswertung derselben Groesse (Vorbild fuer ein kuenftiges ``avg`` bei
+    Temperatur, Scheibe A3): min+max mergen weiterhin, die dritte bleibt
+    eine eigene, disambiguierte Spalte -- GENAU der Zweig, den dieser Test
+    bewacht."""
+    _temp_max_zeile = next(e for e in COMPARE_METRIC_CATALOG if e["key"] == "temp_max_c")
+    _synthetische_dritte_auswertung = {
+        **_temp_max_zeile, "key": "temp_avg_c_ac_s2_3_synthetisch", "aggregation": "avg",
+    }
+    synthetisch = list(COMPARE_METRIC_CATALOG) + [_synthetische_dritte_auswertung]
+    soll_synthetisch = compare_outlook_soll_spalten(entries=synthetisch)
+    mehrfach = [n for n, anzahl in Counter(s["label"] for s in soll_synthetisch).items()
                 if anzahl > 1]
     assert mehrfach, (
-        "Vakuum: keine Groesse kommt im Ausblick-Katalog mehrfach vor -- die "
-        "Auswertungs-Unterscheidung waere nie aktiv und dieser Test bewachte "
-        "nichts (gemessen 2026-08-11: 'Temperatur' und 'Gefuehlte Temperatur')"
+        "Vakuum: auch mit einer synthetischen dritten Auswertung derselben "
+        "Groesse kommt kein Label mehrfach vor -- die Auswertungs-"
+        "Unterscheidung waere nie aktiv und dieser Test bewachte nichts"
     )
 
     html, _ = _s2_mail()

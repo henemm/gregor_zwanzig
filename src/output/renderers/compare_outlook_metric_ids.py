@@ -135,18 +135,69 @@ def outlook_columns(metrics: object) -> list[dict]:
         columns.append({
             "label": catalog["label"],
             "metric_id": metric_id,
+            "aggregation": aggregation,
             "field": field,
             "unit": catalog.get("unit", ""),
             "decimals": catalog.get("decimals", 0),
             "kind": catalog.get("kind", "range"),
             "aggregation_label": catalog.get("aggregation_label", ""),
         })
+    columns = _merge_min_max_pairs(columns)
     mehrfach = {c["label"] for c in columns
                 if sum(1 for other in columns if other["label"] == c["label"]) > 1}
     for column in columns:
-        if column["label"] in mehrfach and column["aggregation_label"]:
+        if column["label"] in mehrfach and column.get("aggregation_label"):
             column["label"] = f"{column['label']} {column['aggregation_label']}"
     return columns
+
+
+def _merge_min_max_pairs(columns: list[dict]) -> list[dict]:
+    """#1848 A1 (PO-Entscheid 2026-08-20, AC-4..AC-8): sind fuer dieselbe
+    Groesse Tief UND Hoch gewaehlt (``kind == "range"``), werden die beiden
+    Spalten zu EINER Spannen-Spalte (``field_min``/``field_max`` statt
+    ``field``) zusammengefuehrt -- Schraegstrich-Zelle statt zweier Spalten
+    mit Minimum-/Maximum-Suffix. Loest fuer diesen Fall die rein paarbasierte
+    Soll-Menge aus Epic #1703 Scheibe 2 ab (Gegenzahl:
+    ``tests/helpers/outlook_columns.py::_merge_min_max_soll``, dieselbe
+    Regel). Alles andere bleibt additiv unveraendert: nur eine Auswertung
+    gewaehlt (AC-5), ordinal/enum-Groessen, oder mehr als zwei Auswertungen
+    einer Groesse (z. B. kuenftiges ``avg`` bei Temperatur, A3) -- dann
+    greift weiterhin die bestehende Minimum-/Maximum-Disambiguierung
+    unveraendert."""
+    by_metric: dict[str, dict[str, int]] = {}
+    for i, col in enumerate(columns):
+        if col.get("kind") == "range" and col.get("aggregation") in ("min", "max"):
+            by_metric.setdefault(col["metric_id"], {})[col["aggregation"]] = i
+
+    merge_at: dict[int, int] = {}
+    consumed: set[int] = set()
+    for aggs in by_metric.values():
+        if "min" in aggs and "max" in aggs:
+            first_idx, second_idx = sorted((aggs["min"], aggs["max"]))
+            merge_at[first_idx] = second_idx
+            consumed.add(second_idx)
+
+    merged: list[dict] = []
+    for i, col in enumerate(columns):
+        if i in consumed:
+            continue
+        if i not in merge_at:
+            merged.append(col)
+            continue
+        partner = columns[merge_at[i]]
+        lo = col if col["aggregation"] == "min" else partner
+        hi = col if col["aggregation"] == "max" else partner
+        merged.append({
+            "label": col["label"],
+            "metric_id": col["metric_id"],
+            "field_min": lo["field"],
+            "field_max": hi["field"],
+            "unit": col.get("unit", ""),
+            "decimals": col.get("decimals", 0),
+            "kind": "range",
+            "aggregation_label": "",
+        })
+    return merged
 
 
 def format_outlook_value(value: object, column: dict) -> str:
@@ -184,9 +235,44 @@ def format_outlook_value(value: object, column: dict) -> str:
     return f"{text} {unit}".strip()
 
 
+def format_outlook_range_cell(raw_min: object, raw_max: object, column: dict) -> str:
+    """Tief/Hoch-Zelle einer zusammengefuehrten Spannen-Spalte (#1848 A1,
+    AC-4/AC-6/AC-7/AC-8) -- ASCII-Schraegstrich, kein Leerzeichen,
+    vorhandenes Minuszeichen bleibt an der Trennstelle erhalten
+    (``"-12/-4"``). Kein Einheiten-Suffix in der Zelle selbst (anders als
+    die feste Altform, AC-9).
+
+    Sind BEIDE Seiten vorhanden, ist die Reihenfolge Tief/Hoch (``"9/27"``).
+    Fehlt EINE Seite (Datenluecke, nicht Konfigurationsauswahl -- die bleibt
+    Einzelwert, AC-5), zeigt die Zelle PO-Vorgabe-konform die vorhandene
+    Seite zuerst und ``"-"`` fuer die fehlende (``"13/-"``, spec-woertlich
+    "zeigt die Zelle die vorhandene Seite und '-' fuer die fehlende") --
+    NICHT die feste Tief/Hoch-Position mit einer Luecke."""
+    decimals = column.get("decimals") or 0
+
+    def _num(value: object) -> str | None:
+        if value is None:
+            return None
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return str(value)
+        return f"{number:.{int(decimals)}f}"
+
+    min_str, max_str = _num(raw_min), _num(raw_max)
+    if min_str is not None and max_str is not None:
+        return f"{min_str}/{max_str}"
+    if min_str is not None:
+        return f"{min_str}/-"
+    if max_str is not None:
+        return f"{max_str}/-"
+    return "-/-"
+
+
 __all__ = [
     "resolve_outlook_metrics",
     "resolve_trip_outlook_metrics",
     "outlook_columns",
     "format_outlook_value",
+    "format_outlook_range_cell",
 ]
