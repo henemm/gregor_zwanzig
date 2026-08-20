@@ -218,7 +218,7 @@ Erzwungene Invarianten (alle hart, Exit 1):
 |---|---|---|
 | **Viewport-Render** (AC-1) | `_check_rendered` | Bei einer Breite ist keine Wetter-Tabelle sichtbar **oder** der für die Breite falsche Block ist sichtbar (≤390px → `.desktop-only`; ≥1000px → `.mobile-compact`) — Dual-Render/#794-Klasse. Konditional: flache Tabellen ohne responsive Wrapper bleiben gültig. |
 | **Ebenen-Konsistenz** (AC-3) | `_check_layer_consistency` | Pill-Spitzenwert ≠ Tabellen-Spalten-Max (> ±3 km/h), Mapping über th-Spaltenindex (#807). |
-| **Metrik-Plausibilität** (AC-4) | `_check_metric_plausibility` | „Sonne X min" ≠ Σ Sonnenstunden·60 (±5 min, nur Roh-Tabelle); „kein Regen" bei Regensumme ≥ 0.1 mm (#808). |
+| **Metrik-Plausibilität** (AC-4) | `_check_metric_plausibility` | „Sonne X.Xh" ≠ Σ Sonnenstunden (±5 min, nur Roh-Tabelle; Pille seit #1998 in Stunden statt Minuten); „kein Regen" bei Regensumme ≥ 0.1 mm (#808). |
 | **Lokalisierung** (AC-5) | `_check_localization` | Englische Spaltenköpfe (Gust/Rain/Sun/Feels/Cloud/Thunder/Visib/Humid) in der deutschen Mail; Homograph „Wind" ausgenommen (#94). |
 
 Der Mobile-Vertrag (#831) wird zusätzlich im Matrix-Test über `_data_cells_mobile()`
