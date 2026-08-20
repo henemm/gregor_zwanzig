@@ -162,10 +162,95 @@ Entdopplung.
 - **Blindstelle:** Kein einziger Test prüft, dass `onset_minutes` überhaupt **variieren** kann.
   Der Default 8 maskiert das Problem suiteweit.
 
-## Offene Produktentscheidung (für `/30-write-spec`)
+## Analysis
 
-Nicht technisch, sondern PO-Sache: **ein früherer Alarm — oder zwei Alarme (Vorwarnung + akut)?**
-Variante 1 ist eine Zahl, Variante 2 verlangt zusätzlich eine Eskalationsregel in der
-Ereignis-Identität (Näherrücken muss als Verschärfung zählen). Dazu kommt die Frage, wie weit
-das Fenster reicht (Datenquelle gibt ~150 Min her) und ob die Vorwarnung auf konvektive Lagen
-beschränkt bleibt. Vorlage mit gemessenen Zahlen erfolgt in der Spec-Phase.
+### Type
+
+Bug (type:bug, priority:high) — der Alarm liefert strukturell nicht die Vorwarnzeit, die seine
+Datenquelle hergibt. Kein Wunschfeature.
+
+### Messung (2026-08-20, 13:45:47 UTC, 24 Punkte AT, davon 8 auf dem KHW)
+
+Alle gemessenen Onset-Werte: **14, 29, 44, 59, 89, 104** — sämtlich kongruent zum Abstand bis
+zum nächsten Rasterpunkt (14:00). Zur Scheduler-Minute `:52` ergäbe dieselbe Wetterlage exakt
+**8, 23, 38, 53, 83, 98**. Damit ist die 8 arithmetisch belegt: sie ist die Uhrzeit des
+Prüflaufs, nicht das Wetter.
+
+- 24 von 24 Punkten hatten Regen im Datenfenster (verbreitete Regenlage — Stichprobe zeigt das
+  Raster zuverlässig, taugt aber **nicht** als Häufigkeitsschätzung für Alarmvolumen).
+- **8 von 24 Punkten** lagen jenseits des 20-Min-Tors (29–104 Min) — dort hätte es in diesem
+  Moment **gar keinen** Alarm gegeben, erst wenn die Zelle auf 8 Min herangerückt wäre.
+- Datenreichweite in der Probe: **149 Min**.
+- Erreichbare Onset-Werte am Cron-Takt sind damit genau: 8, 23, 38, 53, 68, 83, 98, 113, 128, 143.
+
+### Verworfene Variante V2 („Vorwarnung + Akut-Alarm", zwei Meldungen)
+
+Fachlich attraktiv, technisch dreifach blockiert — **verifiziert, nicht referiert**:
+
+1. **Sperrzeit vor Schwelle:** `check_nowcast_gate()` läuft bei `trip_alert.py:1221`,
+   `radar_alert_due()` erst bei `:1270`. Eine Vorwarnung verbraucht die Sperrzeit.
+2. **Dringlichkeit hat keine Kopffreiheit:** `urgency_from_radar(is_convective=True)` gibt
+   **immer** `"HIGH"` (`src/services/alert_urgency.py:37-39`), `exceeds()` ist echtes
+   Größer-als (`:63-69`). Der Eskalations-Durchbruch in `alert_gate.py:605-606` ist für
+   Gewitter — den Ticket-Kernfall — strukturell unerreichbar.
+3. **Kopplung an ADR-0046:** derselbe Dringlichkeitswert speist `split_by_threshold`
+   (`trip_alert.py:1381`). Eine onset-getriebene Anhebung würde still die vom Nutzer gesetzten
+   Kanal-Schwellen überschreiben.
+
+Zusätzlich widerspricht ein zweiter Alarmtyp ADR-0043 (Alarmschärfe ist ein **Niveau**, kein
+zweiter Typ). V2 bleibt als **Folgeticket** möglich, braucht dann aber einen eigenen
+Annäherungs-Zweig im Identitäts-Gate mit Opt-in-Parameter (die Funktion ist geteilt, u.a.
+`compare_official_alert.py:204`) plus Durchbrüche durch Sperrzeit und Doppel-Alarm-Guard —
+drei Scheiben, nicht ein Workflow.
+
+### Gewählter Ansatz
+
+**Eine geteilte, bewusst gewählte Onset-Schwelle statt zweier hartkodierter Literale** —
+plus die Begleitschäden, die eine größere Vorlaufzeit erst erzeugt.
+
+Kein neues Bedienelement: `metric_alert_levels` ist **pro Metrik** organisiert
+(`alert_preset.py:183`), der Radar-`OnsetEvent` ist aber strukturell metriklos
+(`docs/reference/metric_output_matrix.md:212-223`) und erscheint nicht im Alarme-Reiter
+(`api_contract.md:3543-3549`). Ein Niveau darauf wäre ein Knopf, den niemand drehen kann.
+Erst wenn der PO die Schärfe wirklich einstellen will, lohnt die UI-Scheibe.
+
+**Schwellenwahl:** Die Zahl muss knapp **oberhalb** eines erreichbaren Rasterwerts liegen,
+sonst wiederholt sich der #1945-Fehler (Grenze gesetzt, die kein Frame erfüllt). Vorschlag
+**55** → lässt 8/23/38/53 durch, also bis zu ~53 Min Vorlauf. Begründung gegen „so weit wie
+möglich": INCA ist ein Extrapolationsprodukt; jenseits ~60 Min sinkt die Ortsschärfe deutlich,
+und jede Fehlwarnung kostet beim Satelliten-Nutzer echtes Geld und Vertrauen.
+
+### Zwingend mitzuerledigen (sonst richtet die Änderung neuen Schaden an)
+
+| Was | Ort | Warum |
+|---|---|---|
+| Datumsbezug für den Zeitpunkt | `render.py:371`, SMS-Token `:435-455` (`local_fmt "%H:%M"`) | greift ab ~50 Min Schwelle: 23:30 + 53 Min = 00:23 ohne Tagesangabe |
+| Segment-Ende-Guard | Aufrufstelle `trip_alert.py` (`active.end_time` liegt vor) | sonst Warnung für einen Abschnitt, den der Nutzer hinter sich hat |
+| Eine geteilte Schwelle statt zwei Literale | `trip_alert.py:1270`, `compare_radar_alert.py:53` | ADR-0021-Driftrisiko |
+| Test gegen die Blindstelle | neu | heute prüft **kein** Test, dass `onset_minutes` variieren kann |
+| Doku nachziehen | `radar_nowcast.md:19,75,94`, `starkregen_hint.py:1-27`, `radar_service.py:292`, `fix_1584c_…:344` | die Begründung „≤ 20 min inhärent 'jetzt'" trägt dann nicht mehr |
+
+### Bewusst NICHT in diesem Workflow (eigene Tickets)
+
+- **Laufender Frame ausgeschlossen** (`radar_service.py:556`, `f.timestamp >= now`): es regnet
+  bereits, gemeldet wird „in 8 Min". Eigenständiger Korrektheitsdefekt, 1 Zeile, erzeugt aber
+  den neuen Textfall „in 0 Min".
+- **Zweiter Akut-Alarm (V2)** — s.o.
+- **Briefing-Unterdrückung #818** trifft bei größerem Fenster häufiger; der #883-Konvektions-
+  Override (`trip_alert.py:1288`) schützt den Gewitterfall, nicht-konvektiver Regen verschwindet
+  öfter.
+- **Entdopplung gegen den #1468-Verschiebungs-Alarm.**
+
+### Scope Assessment
+
+- Dateien: ~7 (2 Services, 1 Renderer, 1 Modul-Spec, 3 Testdateien)
+- Geschätzte LoC: Produktiv +40/-15, Tests +150
+- Risiko: **MEDIUM** — Alarm-Auslösung auf dem kritischen Pfad, aber keine neue Mechanik,
+  keine Persistenz-Änderung, keine Go-Beteiligung, kein Frontend.
+
+### Offene Produktentscheidung (Freigabe in `/30-write-spec`)
+
+Der Alarm wandert **nach vorn**, er verdoppelt sich nicht: Wegen der Ereignis-Identitäts-Sperre
+(`alert_gate.py:559-628`) gibt es weiterhin **eine** Meldung pro Zelle — künftig ~53 Min vorher
+statt 8 Min vorher. Der Erinnerungs-Alarm kurz vor dem Einschlag entfällt damit. Das ist der
+Handel, den der PO bestätigen muss; die zweite Meldung ist als Folgeticket machbar.
