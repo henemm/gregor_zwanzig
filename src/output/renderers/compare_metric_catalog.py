@@ -49,12 +49,23 @@ im Resolver, schlaegt der Import fehl.
 from __future__ import annotations
 
 from app.metric_catalog import aggregation_label_de, alert_metric_for, get_metric
+from app.models import ThunderLevel
+from output.metric_format import THUNDER_LABEL_DE, thunder_ordinal
 from output.renderers.compare_hourly_metric_ids import (
     HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS, HOURLY_EXCLUSION_REASON,
     HOURLY_LEGACY_KEYS_BY_METRIC_ID, HOURLY_MERGE_ONLY_METRIC_IDS,
 )
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
+
+# #1911 (Befund B2): ordinalLabels war ein handgepflegtes Literal, das seit
+# der Ordinalverschiebung schon einmal driftete (#1474 F001). Ableitung aus
+# der kanonischen Quelle THUNDER_LABEL_DE, sortiert ueber thunder_ordinal()
+# (NICHT ueber die Dict-Einfuegereihenfolge) -- Ergebnis bleibt wertgleich
+# zum vorherigen Literal ["kein", "leicht", "mittel", "hoch"].
+_THUNDER_ORDINAL_LABELS: list[str] = [
+    THUNDER_LABEL_DE[level] for level in sorted(ThunderLevel, key=thunder_ordinal)
+]
 
 # #1401 A1: deutsche Beschriftung der Auswertung -- eigenes Anzeige-Element
 # neben dem Namen, nicht Teil des Namens.
@@ -108,7 +119,7 @@ COMPARE_METRIC_CATALOG: list[dict] = [
      # Schieberegler-Bereich im Frontend wird aus len(ordinalLabels) abgeleitet
      # (compareMetricCatalogLoader.ts::buildCompareMetricDefs), eine dritte
      # Stelle hier war seit der Ordinalverschiebung um eine Stufe zu kurz.
-     "ordinalLabels": ["kein", "leicht", "mittel", "hoch"],
+     "ordinalLabels": _THUNDER_ORDINAL_LABELS,
      "metric_id": "thunder", "aggregation": "max"},
     {"key": "temp_min_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -30, "rangeMax": 30, "step": 1,
