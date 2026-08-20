@@ -840,12 +840,18 @@ class UnifiedWeatherDisplayConfig:
     # Frontend (AlertsTab) und trip_alert._select_change_detector lesen dieses Feld.
     alert_preset: Optional[str] = None
     metric_alert_levels: Optional[dict[str, str]] = None  # metric → SensLevel (off|entspannt|standard|sensibel)
-    # Issue #1720 S1: Spaltenauswahl der 3-Tages-Vorschau im Neuformat
-    # [{"metric_id": ..., "aggregation": ...}] (#1373), dasselbe Vokabular wie
-    # der Ortsvergleich. Drei-Werte-Semantik (ADR-0037): None/fehlt = die
-    # bisherigen sieben festen Spalten · [] = der Ausblick-Block entfaellt ganz
-    # · gefuellt = gewaehlte Spalten in Auswahlreihenfolge.
-    outlook_metrics: Optional[list[dict]] = None
+    # Issue #1720 S1 / #1848 A2: Spaltenauswahl der 3-Tages-Vorschau als reine
+    # KENNUNGEN (["temperature", "gust"]) -- dasselbe Vokabular wie Kanal-
+    # An/Aus, Reihenfolge, SMS-Kuerzel und Schwellwerte, und dasselbe wie im
+    # Ortsvergleich. Welche Auswertungen eine Kennung zeigt, leitet der Katalog
+    # ab (compare_outlook_metric_ids.derived_aggregations()); die Paar-Altform
+    # [{"metric_id": ..., "aggregation": ...}] (#1373/ADR-0037) bleibt dauerhaft
+    # lesbar und wird im Ladepfad normalisiert (metric_catalog.
+    # normalize_outlook_metric_ids()).
+    # Drei-Werte-Semantik (ADR-0037/ADR-0055): None/fehlt = die bisherigen
+    # sieben festen Spalten · [] = der Ausblick-Block entfaellt ganz · gefuellt
+    # = gewaehlte Groessen in Auswahlreihenfolge.
+    outlook_metrics: Optional[list[str]] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:
