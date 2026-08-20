@@ -1924,12 +1924,18 @@ def _tag_time(alert: "OfficialAlert", tz: "ZoneInfo | None" = None) -> str:
     (`render_official_alert_sms`, beide Zweige) lassen das Zeit-Token dann
     ganz weg (kein doppelter Leerraum, kein sinnfreies "?"), statt einen
     Platzhalter zu senden, der im knappen SMS-Budget nur Zeichen kostet ohne
-    Information zu tragen (Gleichlauf mit F001/Mail #1238 AC-7)."""
+    Information zu tragen (Gleichlauf mit F001/Mail #1238 AC-7).
+
+    Issue #1948 S5 (PO-Entscheid 3, Nachtrag N-5): beginnt die Gueltigkeit am
+    HEUTIGEN Tag (verglichen in `tz`), entfaellt das Wochentagskuerzel VOR der
+    Beginnzeit ersatzlos -- 'Do12-22' wird zu '12-22', 'Fr10.07.' zu '10.07.',
+    'Fr22-Sa03' zu '22-Sa03'. Das END-Tageskuerzel bleibt in jedem Fall stehen:
+    es bezeichnet einen anderen Tag als heute und ist sicherheitsrelevant."""
     if not alert.valid_from or not alert.valid_to:
         return ""
     vf = alert.valid_from.astimezone(tz) if tz else alert.valid_from
     vt = alert.valid_to.astimezone(tz) if tz else alert.valid_to
-    tag = _de_weekday_short(vf)
+    tag = "" if vf.date() == datetime.now(tz).date() else _de_weekday_short(vf)
     if vf.date() != vt.date():
         return f"{tag}{_tag_hour(vf)}-{_de_weekday_short(vt)}{_tag_hour(vt)}"
     if (vf.hour, vf.minute, vt.hour, vt.minute) == (0, 0, 23, 59):
@@ -1953,24 +1959,26 @@ def _sms_pack(head: str, tokens: list[str], limit: int, suffix: str = "") -> tup
     for tok in tokens:
         omitted = len(tokens) - len(kept) - 1
         marker = f" +{omitted}" if omitted > 0 else ""
-        candidate = head + " + ".join(kept + [tok]) + marker + suffix
+        candidate = head + " ".join(kept + [tok]) + marker + suffix
         if len(candidate) <= limit:
             kept.append(tok)
         else:
             break
     omitted = len(tokens) - len(kept)
     marker = f" +{omitted}" if omitted > 0 else ""
-    body = head + " + ".join(kept) + marker + suffix
+    body = head + " ".join(kept) + marker + suffix
     return (body if len(body) <= limit else body[:limit]), len(kept)
 
 
 def _word_boundary_truncate(text: str, limit: int) -> str:
     """Letztes Sicherheitsnetz (#1249 Runde 3, Stufe 4): kuerzt `text` auf
     `limit` Zeichen an einer WORTGRENZE (nie mitten im Wort) und haengt "..."
-    an, wenn dadurch gekuerzt wurde. Nur erreichbar, wenn selbst Kopf +
-    blankes Gefahren-Kuerzel (Stufe 3 in `_sms_pack_with_fallback`) das Limit
-    sprengt -- praktisch nur bei einem absurd langen `sms_prefix` denkbar,
-    in der Praxis nicht beobachtet. Findet sich KEINE Wortgrenze (das
+    an, wenn dadurch gekuerzt wurde. Nur erreichbar, wenn selbst das blanke
+    Gefahren-Kuerzel allein (letzte Stufe in `_sms_pack_with_fallback`) das
+    Limit sprengt. Seit #1948 S5 ist das praktisch unerreichbar: der Kopf
+    darf vorher weggelassen werden (Nachtrag N-3), und der frueher denkbare
+    Ausloeser -- ein absurd langer Trip-/Preset-Name als `sms_prefix` --
+    existiert nicht mehr. Findet sich KEINE Wortgrenze (das
     "Wort" allein ist schon laenger als `limit`), bleibt als letzter Ausweg
     nur der harte Schnitt -- die einzige Situation, in der die Wortgrenzen-
     Garantie logisch nicht mehr einhaltbar ist, ohne komplett leer zu werden."""
@@ -1992,13 +2000,15 @@ def _sms_leading_variants(code: str, time_part: str, location: str) -> list[str]
 
     1. `code` + Zeit + Ort (Normalfall, unveraendert)
     2. `code` + Zeit, OHNE Ort -- lieber ohne Ort als ohne Inhalt
-    3. nur `code` (Gefahren-Kuerzel, im Mixed-Level-Zweig inkl. Stufen-Wort)
+    3. nur `code` -- seit #1948 S5 ist das `{Kuerzel}:{Stufe}`-Token
+       (`_sms_hazard_token`), das die Stufe selbst traegt; den frueheren
+       Mixed-Level-Zweig mit separatem Stufen-WORT gibt es nicht mehr.
 
     Liefert IMMER genau 3 Eintraege, auch wenn `location`/`time_part` leer
     sind (dann sind Stufe 1/2 textgleich) -- der Aufrufer `_sms_pack_with_
-    fallback` steuert den eigentlichen Rueckfall zusaetzlich ueber `suffix`
-    (der geteilte Ortszusatz des uniform-Scope-Zweigs), nicht nur ueber den
-    Token-Text."""
+    fallback` steuert den eigentlichen Rueckfall zusaetzlich ueber die
+    vorgelagerte Kopf-Stufe (N-3) und, bei Alt-Aufrufern, ueber `suffix`,
+    nicht nur ueber den Token-Text."""
     with_time = f"{code} {time_part}" if time_part else code
     primary = f"{with_time} {location}" if location else with_time
     return [primary, with_time, code]
@@ -2023,104 +2033,105 @@ def _sms_pack_with_fallback(
     `full_suffix` (der geteilte Ortszusatz des uniform-Scope-Zweigs) gilt NUR
     bei Stufe 1 -- er traegt dieselbe Ortsinformation wie ein Token-eigener
     Ort und wird von derselben Stufe (2) entfernt, sonst bliebe der Ort ueber
-    den Suffix bestehen, waehrend der Token ihn schon verloren hat."""
+    den Suffix bestehen, waehrend der Token ihn schon verloren hat.
+
+    Issue #1948 S5 (Nachtrag N-3): seit der Ort im KOPF steht statt im
+    droppbaren Suffix, bekommt jede Stufe eine VORGELAGERTE Kopf-Rueckfallebene
+    -- passt Kopf + Variante nicht, wird erst der Kopf weggelassen, bevor die
+    naechst-aermere Token-Variante greift. Damit ueberleben Gefahr und Stufe
+    jede Kopflaenge (Wachhunde: `test_official_alert_channel_scope.py`
+    AC-15/AC-16, F004)."""
     for i, variant in enumerate(leading_variants):
         suffix = full_suffix if i == 0 else ""
-        body, kept = _sms_pack(head, [variant] + tail_tokens, limit, suffix)
-        if kept >= 1:
-            return body
-    # Stufe 4: selbst das blanke Kuerzel passt nicht neben dem Kopf -- in der
-    # Praxis nur bei einem absurd langen `sms_prefix` erreichbar.
-    minimal = head + leading_variants[-1]
+        for head_variant in dict.fromkeys((head, "")):
+            body, kept = _sms_pack(head_variant, [variant] + tail_tokens, limit, suffix)
+            if kept >= 1:
+                return body
+    # Stufe 4: selbst das blanke Kuerzel passt nicht -- praktisch unerreichbar,
+    # seit der Kopf weggelassen werden darf.
+    minimal = leading_variants[-1]
     return minimal if len(minimal) <= limit else _word_boundary_truncate(minimal, limit)
 
 
+# Vierstufige SMS-DARSTELLUNGS-Leiter (#1948 S5, Randbedingung 1): eigene,
+# lokale Tabelle -- `hazard_symbols.LEVEL_LETTERS` bleibt exakt {2,3,4} und
+# damit TABU. Eine Ergaenzung dort um `1: "-"` liesse
+# `alert_urgency.urgency_from_official_level(1)` mit `KeyError: '-'` abstuerzen
+# (`_LETTER_TO_URGENCY` kennt nur L/M/H).
+_SMS_LEVEL_LETTERS: dict[int, str] = {1: "-", 2: "L", 3: "M", 4: "H"}
+
+
+def _sms_hazard_token(alert: "OfficialAlert", time_part: str) -> str:
+    """`{Kuerzel}:{Stufe}[ {Zeit}]` -- die Token-Grammatik, die
+    Trip-Briefing-SMS und Nowcast-Alarm bereits sprechen (#1948 S5).
+    `access_ban` bleibt als blankes Kuerzel stehen (LEVELLESS_HAZARDS): ein
+    binaerer Zustand hat weder Schweregrad noch Stunde."""
+    symbol = sms_symbol_for(alert.hazard)
+    if alert.hazard in LEVELLESS_HAZARDS:
+        return symbol
+    letter = _SMS_LEVEL_LETTERS.get(alert.level, "H")
+    token = f"{symbol}:{letter}"
+    return f"{token} {time_part}" if time_part else token
+
+
 def render_official_alert_sms(
-    notices: list["OfficialAlertNotice"], *, sms_prefix: str, limit: int = 140,
+    notices: list["OfficialAlertNotice"], *, limit: int = 140,
     tz: "ZoneInfo | None" = None,
 ) -> str:
-    """GSM-7/ASCII, <=limit. Einheitliche Stufe: gemeinsamer Kopf + Reichweite
-    am Ende. Gemischte Stufen: jede Warnung mit eigenem Stufen-Wort + Segment.
-    Bei Ueberlauf werden ganze Tokens gedroppt statt mitten im Token
-    abzuschneiden (`_sms_pack`, F002).
+    """GSM-7/ASCII, <=limit, Zielbild `Seg 4: !TH:L 12-22 HT:L` (#1948 S5).
 
-    `tz` (F001, optional): lokalisiert `_tag_time` wie die anderen Kanaele.
+    EIN Bau-Pfad statt zwei: jedes Token traegt seinen Stufenbuchstaben selbst,
+    damit verliert die alte Stufen-Verzweigung (`AMT {WORT}{Pos}/3` vs.
+    Stufenwort je Token) ihren Zweck und entfaellt. Uebrig bleibt die
+    Umfangs-Verzweigung `_uniform_scope` (geteilt mit Betreff/Headline/
+    Quelle-Box, unangetastet): einheitlicher Umfang -> EIN gemeinsamer
+    Ortskopf; uneinheitlicher Umfang -> kein Kopf, jedes Token traegt seinen
+    eigenen `sms_scope`. Der alte Ortszusatz am Satzende (`suffix`) ist damit
+    ueberfluessig -- die Ortsfunktion sitzt vollstaendig im Kopf.
 
-    Issue #1249 (S1/S2): der gemeinsame Ortszusatz am Ende (`suffix`) galt im
-    uniform-STUFE-Zweig fuer ALLE Warnungen, auch wenn diese unterschiedliche
-    Umfaenge hatten -- der Empfaenger las ", nur Toulon" und darueber Gefahren,
-    die Toulon gar nicht betreffen. Stufe und Umfang sind unabhaengige
-    Dimensionen: `_uniform_scope` (geteilt mit Mail/Telegram) entscheidet ueber
-    den Ortszusatz. Ist der Umfang uneinheitlich, traegt jedes Token seinen
-    eigenen `sms_scope` -- nach demselben Muster, das der mixed-level-Zweig
-    schon nutzt -- und der gemeinsame Suffix entfaellt. Das Zeichenbudget
-    bleibt bei `_sms_pack` (S2): ganze Tokens fallen vom schwaechsten Ende
-    her weg (`+N`), die schwerste Warnung samt Ort bleibt erhalten. Das
-    SMS-Kuerzel (`_hazard_display(...)[1]`) bleibt unveraendert (AC-5).
+    `sms_prefix` (Trip-/Preset-Name) und der Quellen-Marker `AMT` sind
+    ersatzlos entfallen: das Format folgt dem PHAENOMEN, nicht der Quelle.
 
-    Issue #1249 Runde 2 F003: fehlt einer Warnung der Gueltigkeitszeitraum,
-    liefert `_tag_time` "" statt "?" -- das Zeit-Token entfaellt dann ganz
-    (kein sinnfreies "?", spart Zeichen im knappen Budget), statt eines
-    Platzhalters.
+    `tz` (F001, optional): lokalisiert `_tag_time` wie die anderen Kanaele;
+    dieselbe Zeitzone entscheidet auch ueber die "heute"-Regel (N-5).
 
-    Issue #1249 Runde 3 (Adversary F004, CRITICAL): die schwerste Warnung
-    durchlaeuft zusaetzlich `_sms_pack_with_fallback` -- eine abgestufte
-    Rueckfallebene (Ort weglassen -> nur Kuerzel), die garantiert, dass sie
-    IMMER mit greifbarem Inhalt in der SMS steht, auch wenn ein sehr langer
-    (nutzereingegebener, im Modell laengenunbegrenzter) Ortsname Kopf + Token
-    ueber das Limit treibt."""
+    Das "!" wird ERST nach der Variantenbildung vorangestellt, damit die
+    Rueckfallkette (`_sms_leading_variants`/`_sms_pack_with_fallback`,
+    Ort weglassen -> Zeit weglassen -> nur Kuerzel) unveraendert bleibt. Sie
+    garantiert weiterhin, dass die schwerste Warnung IMMER mit greifbarem
+    Inhalt in der SMS steht (Adversary F004), jetzt zusaetzlich abgesichert
+    durch die Kopf-Rueckfallebene (N-3)."""
     from .render import _ascii
 
     ordered = _sort_notices(notices)
-    uniform = len({n.alert.level for n in ordered}) == 1
     uniform_scope = _uniform_scope(ordered)
     leading = ordered[0]
-    if uniform:
-        _emoji, word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
-        pos = _LEVEL_POSITION.get(leading.alert.level, 0)
-        scopes = ["" if uniform_scope else f" {n.sms_scope}" for n in ordered]
-        tokens = []
-        for n, scope in zip(ordered, scopes):
-            time_part = _tag_time(n.alert, tz)
-            token = f"{_hazard_display(n.alert)[1]}"
-            if time_part:
-                token += f" {time_part}"
-            tokens.append(f"{token}{scope}")
-        head = f"{sms_prefix} AMT {word}{pos}/3: "
-        suffix = f", {leading.sms_scope}" if uniform_scope else ""
-        lead_code = _hazard_display(leading.alert)[1]
-        lead_time = _tag_time(leading.alert, tz)
-        # Bei uniform_scope steckt der Ort im geteilten `suffix`, nicht im
-        # Token -- die Fallback-Varianten duerfen ihn dann nicht zusaetzlich
-        # in den Ort-Slot des Tokens schreiben (sonst stuende er doppelt).
-        lead_location = "" if uniform_scope else leading.sms_scope
-    else:
-        tokens = []
-        for n in ordered:
-            time_part = _tag_time(n.alert, tz)
-            token = (
-                f"{_hazard_display(n.alert)[1]} "
-                f"{_LEVEL_WORDS.get(n.alert.level, ('🔴', 'ROT'))[1]}"
-            )
-            if time_part:
-                token += f" {time_part}"
-            token += f" {n.sms_scope}"
-            tokens.append(token)
-        head = f"{sms_prefix} AMT: "
-        suffix = ""
-        lead_code = (
-            f"{_hazard_display(leading.alert)[1]} "
-            f"{_LEVEL_WORDS.get(leading.alert.level, ('🔴', 'ROT'))[1]}"
+
+    tokens = [
+        _ascii(
+            _sms_hazard_token(n.alert, _tag_time(n.alert, tz))
+            + ("" if uniform_scope else f" {n.sms_scope}")
         )
-        lead_time = _tag_time(leading.alert, tz)
-        lead_location = leading.sms_scope
+        for n in ordered
+    ]
+    head = _ascii(f"{leading.sms_scope}: ") if uniform_scope else ""
+    # `access_ban` traegt nie eine Stunde -- auch nicht als Fallback-Variante.
+    leading_time = (
+        "" if leading.alert.hazard in LEVELLESS_HAZARDS
+        else _tag_time(leading.alert, tz)
+    )
     # ASCII-Konvertierung VOR der Kuerzung (nicht danach), damit die
     # Laengen-Buchhaltung in `_sms_pack` mit der finalen Laenge uebereinstimmt.
-    head, tokens, suffix = _ascii(head), [_ascii(t) for t in tokens], _ascii(suffix)
-    lead_code, lead_time = _ascii(lead_code), _ascii(lead_time)
-    lead_location = _ascii(lead_location)
-    leading_variants = _sms_leading_variants(lead_code, lead_time, lead_location)
-    return _sms_pack_with_fallback(head, leading_variants, tokens[1:], limit, suffix)
+    # Nachtrag N-4: die Faltung gilt auch fuer die fuehrenden Varianten -- im
+    # uneinheitlichen Umfang tragen sie den nutzereingegebenen Ortsnamen.
+    leading_variants = [
+        _ascii(f"!{v}")
+        for v in _sms_leading_variants(
+            _sms_hazard_token(leading.alert, ""), leading_time,
+            "" if uniform_scope else leading.sms_scope,
+        )
+    ]
+    return _sms_pack_with_fallback(head, leading_variants, tokens[1:], limit, "")
 
 
 def _trip_total_segment_ids(trip: "Trip | None") -> list[str]:
@@ -2161,13 +2172,16 @@ def build_official_alert_notices(
             scope_label, sms_scope = "gesamte Route", "ges.Route"
         else:
             scope_label = format_segment_reference(segment_ids) or "unbekannt"
+            # #1948 S5: "Seg 4" statt des Kurzcodes "S4" -- dieselbe
+            # Ortssprache, die Trip-Briefing und Nowcast-Alarm sprechen
+            # (`render._ascii_alert_location`). Das fruehere "nur "-Praefix bei
+            # genau einer Warnung entfaellt ersatzlos (Nachtrag N-2): die
+            # PO-Zielbild-Tabelle zeigt den Kopf in BEIDEN Faellen ohne "nur".
             sms_scope = (
-                scope_label.replace("Segment ", "S")
+                scope_label.replace("Segment ", "Seg ")
                 .replace("–", "-")
                 .replace("🏁 Ziel", "Ziel")
             )
-            if len(deduped) == 1:
-                sms_scope = f"nur {sms_scope}"
         if is_full:
             # Volle Route -> ein sauberer Chip statt format_segment_reference()s
             # "N Segmente"-Verdichtung ab >4 Segmenten (Issue #1216 F005).

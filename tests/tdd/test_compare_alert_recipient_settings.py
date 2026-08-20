@@ -184,6 +184,7 @@ class _ScriptedSource:
     def fetch(
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
+        elevation_m: int | None = None,
     ):
         return _point(point_id, point_id, lat, lon, **self._values.get(point_id, {}))
 

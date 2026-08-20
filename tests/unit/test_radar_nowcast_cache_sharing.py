@@ -355,7 +355,7 @@ def test_boundary_coordinates_do_not_share_cache_across_region_change(monkeypatc
         now = datetime.now(timezone.utc)
         return [RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=0.0)]
 
-    def _fake_geosphere(self, lat, lon):
+    def _fake_geosphere(self, lat, lon, elevation_m=None):
         calls.append(("geosphere", lat, lon))
         now = datetime.now(timezone.utc)
         return [RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=0.0)]

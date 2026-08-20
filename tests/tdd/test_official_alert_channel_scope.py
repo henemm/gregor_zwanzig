@@ -66,9 +66,11 @@ def _compare_notices(tagged, all_ids=None, names=None):
     )
 
 
-def _sms(notices, prefix="GZ", limit=SMS_LIMIT) -> str:
+def _sms(notices, limit=SMS_LIMIT) -> str:
+    # FORTGESCHRIEBEN (#1948 S5): `sms_prefix` (Trip-/Preset-Name) ist ersatzlos
+    # entfallen — die Ortsangabe steht jetzt im Kopf, nicht der Trip-Name.
     from output.renderers.alert.official_alerts import render_official_alert_sms
-    return render_official_alert_sms(notices, sms_prefix=prefix, limit=limit, tz=UTC)
+    return render_official_alert_sms(notices, limit=limit, tz=UTC)
 
 
 def _telegram(notices, prefix="Le Var") -> str:
@@ -267,7 +269,7 @@ def test_ac2_sms_uniform_scope_same_level_bit_identical():
     / When die SMS gerendert wird / Then bleibt ihr Text bit-identisch zum Stand
     vor diesem Fix (gemeinsamer Ortszusatz am Ende)."""
     sms = _sms(_uniform_scope_same_level_notices())
-    assert sms == "GZ AMT ORANGE2/3: HT Fr06-20 + W Sa15-21, Toulon+Hyeres", (
+    assert sms == "Toulon+Hyeres: !HT:M Fr06-20 W:M Sa15-21", (
         f"SMS bei einheitlichem Umfang veraendert: {sms!r}"
     )
 
@@ -279,7 +281,7 @@ def test_ac2_sms_uniform_scope_mixed_level_bit_identical():
     gerendert wird / Then bleibt der Umfang je Token wie im Bestand (Stufe +
     Ort pro Warnung), ohne sinnfreies "?"-Zeit-Token bei fehlender Zeit."""
     sms = _sms(_uniform_scope_mixed_level_notices())
-    assert sms == "GZ AMT: FR ORANGE alleOrte + HT GELB Sa15-21 alleOrte", (
+    assert sms == "alleOrte: !FR:M HT:L Sa15-21", (
         f"SMS bei einheitlichem Umfang + gemischter Stufe veraendert: {sms!r}"
     )
 
@@ -369,9 +371,13 @@ def test_ac5_sms_hazard_shortcodes_unchanged():
     aus dem geteilten Katalog `hazard_symbols.py` (Issue #1318 AC-13/AC-14:
     Hitze HT, Gewitter TH, Zugangssperre CL, Waldbrand FR)."""
     sms = _sms(_mixed_scope_notices())
+    # FORTGESCHRIEBEN (#1948 S5): der Token traegt die Stufe direkt am Kuerzel
+    # (`FR:M`), die stufenlose Zugangssperre bleibt blank (`CL`), und dem
+    # ersten Token geht das `!` voraus. Die bewachte Zusicherung — die Kuerzel
+    # selbst stammen unveraendert aus `hazard_symbols.py` — ist dieselbe.
     for code, hazard in (("CL", "Zugangssperre"), ("FR", "Waldbrand"),
                          ("TH", "Gewitter"), ("HT", "Hitze")):
-        assert re.search(rf"(?:^|[ :]){code} ", sms), (
+        assert re.search(rf"(?:^|[ :!]){code}(?::[LMH-]|[ ]|$)", sms), (
             f"SMS-Kuerzel {code!r} ({hazard}) fehlt/veraendert: {sms!r}"
         )
     # Der ausgeschriebene Anzeigetext gehoert NICHT in die SMS (Zeichenbudget).
@@ -615,7 +621,14 @@ def test_ac15_sms_survives_when_leading_location_overflows_budget():
     deren Ortsname so lang ist, dass Kopf + Token + Ort das 140-Zeichen-Budget
     sprengt / When die SMS gerendert wird / Then enthaelt sie weiterhin die
     Gefahr und ihre Stufe, ist NICHT leer, haelt das Limit und bricht NICHT
-    mitten im Wort ab -- statt einer inhaltsleeren SMS wie 'GZ AMT:  +1'."""
+    mitten im Wort ab -- statt einer inhaltsleeren SMS wie 'GZ AMT:  +1'.
+
+    #1948 S5 (ACHTUNG bei der Umsetzung): der Ort wandert vom droppbaren
+    `suffix` in den KOPF. `_sms_pack_with_fallback` kuerzt den Kopf nie -- die
+    Rueckfallkette (Ort weglassen -> nur Kuerzel) laeuft damit ins Leere,
+    solange der Kopf selbst laenger ist als das Limit. Dieser Test bleibt
+    unveraendert und verlangt weiterhin, dass Gefahr und Zeit ueberleben; das
+    Zielformat braucht dafuer eine Kopf-Rueckfallebene."""
     notices = _huge_location_notices()
     sms = _sms(notices)
 
@@ -654,7 +667,7 @@ def test_ac15_sms_normal_location_names_unaffected():
     die Ausgabe unveraendert (Ort bleibt Teil der schwersten Warnung) -- die
     Rueckfallebene greift NICHT, wenn sie nicht gebraucht wird."""
     sms = _sms(_uniform_scope_same_level_notices())
-    assert sms == "GZ AMT ORANGE2/3: HT Fr06-20 + W Sa15-21, Toulon+Hyeres", (
+    assert sms == "Toulon+Hyeres: !HT:M Fr06-20 W:M Sa15-21", (
         f"Normalfall (kein Overflow) veraendert durch die Rueckfallebene: {sms!r}"
     )
     sms2 = _sms(_overflow_notices())
@@ -676,7 +689,7 @@ def test_ac11_trip_path_sms_and_telegram_show_own_scope():
     ordered = _ordered(notices)
     leading = ordered[0]
 
-    sms = _sms(notices, prefix="KHW")
+    sms = _sms(notices)
     for n in notices:
         assert n.sms_scope in sms, (
             f"Trip-SMS nennt den Abschnitt {n.sms_scope!r} der Warnung "

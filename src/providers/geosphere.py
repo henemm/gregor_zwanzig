@@ -264,6 +264,7 @@ class GeoSphereProvider:
                 start=start,
                 end=end,
                 include_snow=True,
+                elevation_m=location.elevation_m,
             )
         except httpx.HTTPStatusError as e:
             raise ProviderRequestError(
@@ -362,6 +363,9 @@ class GeoSphereProvider:
         Returns:
             Tuple of (snow_depth_cm, swe_kgm2) or (None, None) if unavailable
         """
+        from providers.enrichment_health import (
+            OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_SNOWGRID, log_enrichment_call,
+        )
         try:
             # SNOWGRID requires start/end dates - fetch last 7 days
             end = datetime.now(timezone.utc)
@@ -370,8 +374,11 @@ class GeoSphereProvider:
                 ENDPOINTS["snowgrid"], lat, lon, SNOWGRID_PARAMS,
                 start=start, end=end
             )
-            return self._parse_snowgrid_response(data)
-        except httpx.HTTPStatusError:
+            result = self._parse_snowgrid_response(data)
+            log_enrichment_call(PATH_SNOWGRID, OUTCOME_OK)
+            return result
+        except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.RequestError) as e:
+            log_enrichment_call(PATH_SNOWGRID, OUTCOME_UNAVAILABLE, detail=str(e)[:200])
             return None, None
 
     def fetch_thunder_signals(
@@ -489,7 +496,8 @@ class GeoSphereProvider:
             return None
 
     def _fetch_openmeteo_clouds(
-        self, lat: float, lon: float, hours: int = 48
+        self, lat: float, lon: float, hours: int = 48,
+        elevation_m: Optional[int] = None,
     ) -> Dict[datetime, Tuple[Optional[int], Optional[int], Optional[int]]]:
         """
         Fetch cloud layer data from Open-Meteo API.
@@ -501,16 +509,23 @@ class GeoSphereProvider:
             lat: Latitude
             lon: Longitude
             hours: Hours to fetch (default 48)
+            elevation_m: Issue #1991 (AC-3) — Wegpunkt-Hoehe, NUR gesetzt wenn
+                bekannt (kein Platzhalter-Wert).
 
         Returns:
             Dict mapping datetime -> (cloud_low, cloud_mid, cloud_high) percentages
         """
-        url = (
-            f"https://api.open-meteo.com/v1/forecast?"
-            f"latitude={lat}&longitude={lon}&"
-            f"hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high&"
-            f"timezone=Europe/Vienna&forecast_hours={hours}"
-        )
+        base_url = "https://api.open-meteo.com/v1/forecast"
+        # Issue #1991 (N1-Nachbesserung): Koordinaten/Hoehe ueber den
+        # EINZIGEN produktiven Erbauer aus openmeteo.py -- kein eigener
+        # Dict-/Zuweisungs-Aufbau mehr an dieser Stelle (AST-Waechter
+        # tests/test_openmeteo_callsite_elevation_guard.py).
+        from providers.openmeteo import _koordinaten_params
+
+        params = _koordinaten_params(lat, lon, elevation_m)
+        params["hourly"] = "cloud_cover_low,cloud_cover_mid,cloud_cover_high"
+        params["timezone"] = "Europe/Vienna"
+        params["forecast_hours"] = hours
 
         # Issue #338: jeden ausgehenden Open-Meteo-Clouds-Abruf zählen
         # (source="geosphere_clouds"). Fail-soft, kein Verhaltenswandel.
@@ -518,11 +533,9 @@ class GeoSphereProvider:
 
         responded = False
         try:
-            response = self._client.get(url, timeout=10.0)
+            response = self._client.get(base_url, params=params, timeout=10.0)
             responded = True
-            log_api_call(
-                "https://api.open-meteo.com/v1/forecast", response.status_code
-            )
+            log_api_call(base_url, response.status_code)
             response.raise_for_status()
             data = response.json()
 
@@ -558,9 +571,7 @@ class GeoSphereProvider:
             # Issue #338: Request-Fehler vor Response (kein Status) eigens
             # protokollieren; nach erfolgreichem get() ist bereits geloggt.
             if not responded:
-                log_api_call(
-                    "https://api.open-meteo.com/v1/forecast", None, error=str(e)
-                )
+                log_api_call(base_url, None, error=str(e))
             # Silently fail - cloud layers are optional
             return {}
 
@@ -572,6 +583,7 @@ class GeoSphereProvider:
         end: Optional[datetime] = None,
         include_snow: bool = True,
         include_cloud_layers: bool = True,
+        elevation_m: Optional[float] = None,
     ) -> NormalizedTimeseries:
         """
         Fetch combined forecast with optional snow and cloud layer data.
@@ -585,6 +597,9 @@ class GeoSphereProvider:
             end: End time
             include_snow: Whether to include SNOWGRID data
             include_cloud_layers: Whether to include Open-Meteo cloud layers
+            elevation_m: Issue #1991 (F003) — Wegpunkt-Hoehe, wird an den
+                Open-Meteo-Wolken-Abruf (`_fetch_openmeteo_clouds`)
+                durchgereicht, NUR wenn bekannt.
 
         Returns:
             NormalizedTimeseries with all available data
@@ -594,7 +609,16 @@ class GeoSphereProvider:
 
         # Enrich with snow data if requested
         if include_snow and ts.data:
-            snow_depth_cm, swe_kgm2 = self.fetch_snowgrid(lat, lon)
+            try:
+                snow_depth_cm, swe_kgm2 = self.fetch_snowgrid(lat, lon)
+            except Exception as e:
+                from providers.enrichment_health import (
+                    OUTCOME_UNAVAILABLE, PATH_SNOWGRID, log_enrichment_call,
+                )
+                log_enrichment_call(
+                    PATH_SNOWGRID, OUTCOME_UNAVAILABLE, detail=f"combined:{e}"[:200],
+                )
+                snow_depth_cm, swe_kgm2 = None, None
             if snow_depth_cm is not None:
                 # Add snow depth to all data points (it's a snapshot)
                 for dp in ts.data:
@@ -604,7 +628,9 @@ class GeoSphereProvider:
         # Enrich with cloud layer data from Open-Meteo (ONLY approved parameters)
         if include_cloud_layers and ts.data:
             hours = len(ts.data)
-            cloud_data = self._fetch_openmeteo_clouds(lat, lon, hours)
+            cloud_data = self._fetch_openmeteo_clouds(
+                lat, lon, hours, elevation_m=elevation_m
+            )
             if cloud_data:
                 for dp in ts.data:
                     # Find matching hour (ignore minutes/seconds)

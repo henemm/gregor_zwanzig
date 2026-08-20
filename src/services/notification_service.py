@@ -907,10 +907,7 @@ class NotificationService:
                 # Issue #1260 S3: Kurzstil sendet den SMS-Text (Plaintext,
                 # parse_mode=None) statt der reichen Telegram-Warnvorlage.
                 if telegram_style == "kurzform":
-                    kurz_body = render_official_alert_sms(
-                        dto_notices, sms_prefix=trip.name.replace(" ", ""),
-                        tz=alert_tz,
-                    )
+                    kurz_body = render_official_alert_sms(dto_notices, tz=alert_tz)
                     TelegramOutput(self._settings).send(
                         subject=subject, body=kurz_body,
                         parse_mode=None, suppress_subject_line=True,
@@ -927,10 +924,7 @@ class NotificationService:
         if "sms" in effective_channels and self._settings.can_send_sms():
             sent_channels.append("sms")
             try:
-                sms_prefix = trip.name.replace(" ", "")
-                sms_text = render_official_alert_sms(
-                    dto_notices, sms_prefix=sms_prefix, tz=alert_tz,
-                )
+                sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
                 if sms_sink is not None:
                     sms_sink(sms_text)
                 else:
@@ -946,10 +940,7 @@ class NotificationService:
         if "premium_sms" in effective_channels:
             sent_channels.append("premium_sms")
             try:
-                sms_prefix = trip.name.replace(" ", "")
-                premium_text = render_official_alert_sms(
-                    dto_notices, sms_prefix=sms_prefix, tz=alert_tz,
-                )
+                premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
                 PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
             except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                 blocked_channels["premium_sms"] = str(e)
@@ -1203,9 +1194,7 @@ class NotificationService:
             # parse_mode=None, keine Inline-Knöpfe) statt der reichen Compare-
             # Warnvorlage. Default "rich" bleibt unverändert.
             if telegram_style == "kurzform":
-                kurz_body = render_official_alert_sms(
-                    dto_notices, sms_prefix=preset_name.replace(" ", ""), tz=alert_tz,
-                )
+                kurz_body = render_official_alert_sms(dto_notices, tz=alert_tz)
                 if telegram_sink is not None:
                     telegram_sink(kurz_body)
                 else:
@@ -1237,8 +1226,7 @@ class NotificationService:
         from output.renderers.alert.official_alerts import render_official_alert_sms
 
         try:
-            sms_prefix = preset_name.replace(" ", "")
-            sms_text = render_official_alert_sms(dto_notices, sms_prefix=sms_prefix, tz=alert_tz)
+            sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
             if sms_sink is not None:
                 sms_sink(sms_text)
             else:
@@ -1260,10 +1248,7 @@ class NotificationService:
         from output.renderers.alert.official_alerts import render_official_alert_sms
 
         try:
-            sms_prefix = preset_name.replace(" ", "")
-            premium_text = render_official_alert_sms(
-                dto_notices, sms_prefix=sms_prefix, tz=alert_tz,
-            )
+            premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
             PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
         except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
             blocked_channels["premium_sms"] = str(e)

@@ -411,3 +411,139 @@ def resolve_current_segment(
 
     preview = select_active_segment(segments_today, now_utc)
     return (preview, today) if preview is not None else None
+
+
+# Issue #2017: die Vorwaertssuche laedt hoechstens EINEN Folgetag nach. Die im
+# Betrieb verwendeten Zieloffsets sind <= 90 Minuten (NOWCAST_HORIZON_MIN // 2),
+# ein zweiter Tagessprung ist damit strukturell unerreichbar.
+#
+# Die Zahl ist eine OBERGRENZE, kein Richtwert: jeder zusaetzliche Tag kostet
+# eine weitere ``convert_trip_to_segments()``-Konversion pro Aufruf und wuerde
+# die Position eines Wanderers ueber eine ganze Nacht hinweg fortschreiben, statt
+# ihn an der Unterkunft zu belassen. Beide Enden sind bewacht:
+# ``test_ac6_crosses_day_boundary`` faellt bei 0, ``test_forward_search_stops_
+# after_one_lookahead_day`` bei >= 2. Wer die Zahl erhoeht, braucht dafuer einen
+# Aufrufer mit einem Zieloffset > 1 Tag — den gibt es heute nicht.
+_LOOKAHEAD_DAYS = 1
+
+
+def _interpolate_point(seg: TripSegment, at: datetime) -> GPXPoint:
+    """Linear zwischen ``seg.start_point`` und ``seg.end_point`` nach dem
+    Zeitanteil von ``at``.
+
+    Dieselbe Naeherung wie die Zeit-Interpolation in
+    ``_interpolate_missing_times()`` — dort fuer Zeiten, hier fuer Geometrie.
+    """
+    span_s = (seg.end_time - seg.start_time).total_seconds()
+    p = 0.0 if span_s <= 0 else (at - seg.start_time).total_seconds() / span_s
+    # DEFENSIV, heute unerreichbar (Adversary F003): beide Aufrufstellen in
+    # ``position_at_time()`` schliessen ueber die Verzweigung davor bereits
+    # ``p < 0`` bzw. ``p > 1`` aus. Die Klemme bleibt trotzdem stehen, weil
+    # Scheibe B (#2017 Wiring) neue Aufrufer bringt und ein ungeklemmter
+    # Fortschritt dort still EXTRAPOLIEREN wuerde — eine Position weit vor oder
+    # hinter der Etappe, die kein Aufrufer als Fehler erkennen koennte.
+    # Das Grenzverhalten von ``position_at_time()`` selbst bewacht
+    # ``test_ac11_boundary_clamp_regression`` (Vorschau-Zweig unten,
+    # Fail-soft-Klemmung oben) — NICHT diese Zeile.
+    p = max(0.0, min(1.0, p))
+
+    a, b = seg.start_point, seg.end_point
+    if a.elevation_m is None and b.elevation_m is None:
+        elev = None
+    else:
+        elev_a = a.elevation_m if a.elevation_m is not None else b.elevation_m
+        elev_b = b.elevation_m if b.elevation_m is not None else a.elevation_m
+        elev = elev_a + p * (elev_b - elev_a)
+
+    return GPXPoint(
+        lat=a.lat + p * (b.lat - a.lat),
+        lon=a.lon + p * (b.lon - a.lon),
+        elevation_m=elev,
+        distance_from_start_km=(
+            a.distance_from_start_km
+            + p * (b.distance_from_start_km - a.distance_from_start_km)
+        ),
+    )
+
+
+def position_at_time(
+    trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+) -> GPXPoint:
+    """Interpolierte Position innerhalb/nach dem aktiven Segment zum Zeitpunkt `at`.
+
+    Onset-frei (#2017): `at` ist ein FESTER Zeitpunkt (Fenstermitte), kein aus
+    dem Nowcast-Ergebnis abgeleiteter — sonst Zirkelschluss (siehe Spec).
+
+    Die Segmentwahl bleibt beim Aufrufer: ``active``/``segment_date`` kommen
+    unveraendert aus ``resolve_current_segment()`` bzw. der lokalen Auswahl in
+    ``trip_report_scheduler.py``. Geteilt wird ausschliesslich die
+    Positionsberechnung.
+
+    Fail-soft: der Aufrufer bekommt in JEDEM Fall einen ``GPXPoint`` — laeuft
+    ``at`` ueber alle bekannten Segmente hinaus, wird auf den zuletzt
+    erreichten ``end_point`` geklemmt und der Grund geloggt.
+
+    Die Hoehe wird roh interpoliert (keine Rundung) — die Normalisierung auf
+    ganze Meter fuer ``get_nowcast(elevation_m=...)`` wohnt an der Aufrufstelle.
+    """
+    # 1. Ortsfestes Ziel-Segment: dort bewegt sich der Wanderer nicht.
+    if not isinstance(active.segment_id, int) or active.distance_km == 0.0:
+        return active.start_point
+
+    # 2. Vorschau-Zweig: noch nicht losgelaufen → Fortschritt 0.
+    if at <= active.start_time:
+        return active.start_point
+
+    # 3. Innerhalb des aktiven Segments.
+    if at <= active.end_time:
+        return _interpolate_point(active, at)
+
+    # 4. Vorwaertssuche ueber Segment- und Tagesgrenze. Bereits durchlaufene
+    #    Segmente werden ueber ihr Ende erkannt, nicht ueber Objektidentitaet —
+    #    ``active`` stammt aus einer frueheren Konversion und ist mit den hier
+    #    frisch erzeugten Segmenten wertgleich, nicht identisch.
+    last_end_time = active.end_time
+    last_end_point = active.end_point
+    for day_offset in range(_LOOKAHEAD_DAYS + 1):
+        day = segment_date + timedelta(days=day_offset)
+        for seg in convert_trip_to_segments(trip, day):
+            # ``<=`` und nicht ``<``: der Gleichstand ist der Regelfall, denn
+            # beim ersten Durchlauf trifft die Liste ``active`` selbst wieder —
+            # dessen Ende IST ``last_end_time``. Mit ``<`` bliebe genau dieses
+            # Segment stehen; folgenlos waere das, weil ``at > last_end_time``
+            # gilt und es damit weder ``at`` enthalten (``at > seg.end_time``)
+            # noch nach ``at`` beginnen kann — es wuerde nur ``last_end_point``
+            # auf seinen eigenen, unveraenderten Wert setzen. Das ist kein
+            # Zufall, sondern erschoepfend: die Segmente EINES Tages haben
+            # strikt steigende Enden (jedes endet, wo das naechste beginnt;
+            # nicht vorwaerts laufende Paare fallen im Kollaps-Guard oben raus),
+            # und Segmente verschiedener Tage koennen zeitlich nicht
+            # zusammenfallen. Ein zweites Segment mit demselben Ende, aber einem
+            # ANDEREN Endpunkt — der einzige Fall, in dem die Wahl sichtbar
+            # wuerde — kann hier also nicht auftreten (Adversary F001).
+            if seg.end_time <= last_end_time:
+                continue  # liegt vollstaendig hinter uns
+            if at < seg.start_time:
+                # 5. Luecke zwischen zwei Segmenten (Tagesende/Unterkunft):
+                #    der Wanderer bleibt am zuletzt erreichten Punkt.
+                logger.debug(
+                    "position_at_time: %s liegt in der Luecke vor Segment %s "
+                    "(%s) — klemme auf letzten Endpunkt",
+                    at.isoformat(), seg.segment_id, day.isoformat(),
+                )
+                return last_end_point
+            if at <= seg.end_time:
+                return _interpolate_point(seg, at)
+            last_end_time = seg.end_time
+            last_end_point = seg.end_point
+
+    # 5. Fail-soft: kein Folgesegment, kein Folgetag (Tour zu Ende, Ruhetag
+    #    ohne Stage, uebersprungene Segmentkette) — klemmen statt werfen.
+    logger.warning(
+        "position_at_time: %s liegt hinter dem letzten bekannten Segment "
+        "(Trip %s, ab %s, %d Tag(e) vorausgeschaut) — klemme auf letzten "
+        "Endpunkt (%.4f, %.4f)",
+        at.isoformat(), getattr(trip, "id", "?"), segment_date.isoformat(),
+        _LOOKAHEAD_DAYS, last_end_point.lat, last_end_point.lon,
+    )
+    return last_end_point

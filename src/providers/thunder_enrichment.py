@@ -253,7 +253,8 @@ def _apply_radar_override(data: list, location: "Location") -> None:
         from services.radar_service import RadarNowcastService
 
         beobachtung = RadarNowcastService().get_nowcast(
-            location.latitude, location.longitude, priority="user_briefing",
+            location.latitude, location.longitude,
+            elevation_m=location.elevation_m, priority="user_briefing",
         )
     except Exception:
         logger.warning("Beobachtungs-Override fehlgeschlagen", exc_info=True)
@@ -586,6 +587,10 @@ def _fetch_lightning_density(
     # eine scheiternde Zusatzquelle weder die Primaerquelle noch andere
     # Zusatzquellen mitreisst. Keine Vertretung fuer Zusatzquellen (Scope-
     # Abgrenzung).
+    from providers.enrichment_health import (
+        OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_THUNDER_ADDITIVE, log_enrichment_call,
+    )
+
     for quelle in zusatz:
         if quelle == bereits_befragt:
             continue
@@ -593,10 +598,13 @@ def _fetch_lightning_density(
             eintraege = _hole_eintraege(quelle, location, von, bis)
         except Exception:
             logger.warning("Zusatzquelle '%s' fehlgeschlagen", quelle, exc_info=True)
+            log_enrichment_call(PATH_THUNDER_ADDITIVE, OUTCOME_UNAVAILABLE, quelle)
             continue
         if not any(werte for _feld, werte in eintraege):
+            log_enrichment_call(PATH_THUNDER_ADDITIVE, OUTCOME_OK, quelle)
             continue
         gefuellt = _wende_eintraege_an(reihe, eintraege, basis)
+        log_enrichment_call(PATH_THUNDER_ADDITIVE, OUTCOME_OK, quelle)
         if gefuellt:
             logger.info(
                 "Gewittersignale von Zusatzquelle '%s': %d Zeitpunkte gefuellt",

@@ -2,6 +2,7 @@
 from dataclasses import asdict
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -43,12 +44,17 @@ def get_forecast(
     lat: float = Query(..., ge=-90, le=90),
     lon: float = Query(..., ge=-180, le=180),
     hours: int = Query(default=48, ge=1, le=168),
+    # Issue #1991: optionaler Hoehen-Override fuer diesen ad-hoc
+    # Koordinaten-Endpunkt (kein Wegpunkt-Objekt vorhanden, aus dem sich
+    # die Hoehe ableiten liesse). Ohne Angabe unveraendertes Verhalten
+    # (Open-Meteo ermittelt die Hoehe selbst aus dem DEM).
+    elevation_m: Optional[int] = Query(default=None),
 ):
     from app.config import Location
     from providers.openmeteo import OpenMeteoProvider
     from services.forecast import ForecastService
 
-    location = Location(latitude=lat, longitude=lon)
+    location = Location(latitude=lat, longitude=lon, elevation_m=elevation_m)
     service = ForecastService(OpenMeteoProvider())
 
     # F002 fix: Structured error response for provider failures

@@ -56,6 +56,7 @@ class CompareLocationWeatherSource:
         end_hour: Optional[int] = None,
         target_date: Optional[date] = None,
         tage_ab_ortstag: Optional[int] = None,
+        elevation_m: Optional[int] = None,
     ) -> PointWeatherData:
         """Issue #1584 Scheibe C: das synthetische Segment deckt das
         TAGESFENSTER des laufenden lokalen Kalendertags am Ort ab, nicht mehr
@@ -146,7 +147,9 @@ class CompareLocationWeatherSource:
             window_start = now.replace(minute=0, second=0, microsecond=0)
             window_end = window_start + timedelta(hours=1)
 
-        point = GPXPoint(lat=lat, lon=lon, elevation_m=None, distance_from_start_km=0.0)
+        # Issue #1991 (AC-6): Ort-Hoehe (SavedLocation.elevation_m) wird nicht
+        # mehr hart auf None gesetzt, sondern durchgereicht.
+        point = GPXPoint(lat=lat, lon=lon, elevation_m=elevation_m, distance_from_start_km=0.0)
         segment = TripSegment(
             segment_id=point_id,
             start_point=point,

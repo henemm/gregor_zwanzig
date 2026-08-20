@@ -29,6 +29,13 @@ Wetterdaten über `get_provider("openmeteo")` — Registry in
 | ~~`radar_dpc`~~ | **Seit #1648 ersatzlos entfernt** (2026-08-11). Der Radar-Nowcast Italien lief über die Protezione Civile und lieferte strukturell immer nur eine Vergangenheits-Momentaufnahme, die `_derive_result` nie ins Nowcast-Fenster ließ. Der Italien-Zweig läuft jetzt direkt auf ARPAE ICON-2I (Open-Meteo, kein eigener Provider). **Nicht zu verwechseln** mit der amtlichen DPC-Warnquelle `DpcSource` (`src/services/official_alerts/dpc.py`, Issue #1427) — die bleibt unverändert in Betrieb und war nie Teil dieser Tabelle (s.u.). |
 | `fixture` | Offline-Testmodus: aktiv wenn `GZ_TEST_FIXTURE_DIR` gesetzt (#346) — bedient `openmeteo`-Anfragen aus versionierten Fixtures |
 
+**Wegpunkt-Höhe (Issue #1991, ADR-0058):** nur Open-Meteo (alle Endpunkte außer der
+Luftqualität/CAMS-Anfrage) nimmt den Wegpunkt-`elevation_m` als Anfrage-Parameter entgegen. Die
+Direktanbieter `de_direct` (DWD-GRIB2), `eu_direct` (DWD-EU), `geosphere` (Zeitreihen/INCA) und
+`fr_direct` (MeteoFrance-WCS) kennen keinen Höhenparameter — praktisch folgenlos, da diese vier im
+Regelbetrieb nur Gewitter-/Schneesignale liefern, keine Temperatur; die Asymmetrie greift nur beim
+in ADR-0018 bereits abgesicherten Cross-Provider-Totalausfall.
+
 Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm, DPC, Vigilance,
 Météo des forêts, Massiv-Sperren) sind **nicht** Teil dieser Tabelle — sie sind kein
 Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,

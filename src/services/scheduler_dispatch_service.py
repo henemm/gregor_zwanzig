@@ -680,9 +680,19 @@ def _write_compare_alert_snapshots(
     snapshot_service = CompareWeatherSnapshotService(user_id=user_id)
     for loc in locations:
         try:
+            # Issue #1991 (AC-6, N2-Nachbesserung): `elevation_m` wird
+            # BEDINGUNGSLOS uebergeben -- das `LocationWeatherSource.fetch`-
+            # Protocol (services/point_weather.py:84) traegt den Parameter
+            # ohnehin. Eine konditionale Weitergabe wuerde eine
+            # Implementierung ohne den Parameter still ohne Hoehe
+            # weiterlaufen lassen -- genau der Fehler, den dieses Ticket
+            # beseitigt.
+            zusatz = {
+                "tage_ab_ortstag": tage_ab_ortstag,
+                "elevation_m": loc.elevation_m,
+            }
             point = source.fetch(
-                loc.id, loc.lat, loc.lon, start_hour, end_hour,
-                tage_ab_ortstag=tage_ab_ortstag,
+                loc.id, loc.lat, loc.lon, start_hour, end_hour, **zusatz
             )
             snapshot_service.save(preset_id, loc.id, point)
         except Exception as e:

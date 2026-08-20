@@ -500,11 +500,37 @@ def _assert_kurznachricht_nennt_ortstext_wie_betreff(sms: str, ort_im_betreff: s
     Ortstext wie der Betreff, statt einer km-Spanne, und bleibt <= 140 Zeichen.
     Der Gedankenstrich in Segment-Bereichen ('Segment 3–5') wird auf der SMS
     zu einem einfachen Bindestrich gefaltet (GSM-7) -- dieselbe, andernorts
-    bereits bewachte Faltungsregel, hier nur zur Vergleichsbildung nachgebaut."""
-    erwartet = ort_im_betreff.replace("–", "-")
+    bereits bewachte Faltungsregel, hier nur zur Vergleichsbildung nachgebaut.
+
+    NEU GEFASST (#1948 S5, AC-14): die Invariante ist NICHT mehr
+    "SMS-Kopf == Betreff-Ortstext" -- AC-14 bricht die Gleichheit bewusst.
+    Sie lautet jetzt: **dieselbe Ortsaufloesung, zwei Schreibweisen** -- die
+    SMS nennt denselben Ort in der Kurzform ('Seg 3-5'), der Betreff schreibt
+    ihn AUS ('Segment 3–5'). Geprueft werden deshalb BEIDE Richtungen, sonst
+    bewachte der Test nach dem Bruch nichts mehr: der Betreff MUSS
+    ausschreiben, die SMS MUSS kuerzen. Ein Renderer, der beide Seiten auf
+    dieselbe Schreibweise zoege (egal welche), faellt hier auf."""
+    erwartet = ort_im_betreff.replace("–", "-").replace("Segment ", "Seg ")
     assert sms.startswith(f"{erwartet}: "), (
         f"Kurznachricht beginnt nicht mit dem Betreff-Ortstext {erwartet!r}: {sms!r}"
     )
+    # Beide Richtungen der neuen Invariante. Die Ersetzung oben allein waere
+    # ein reiner String-Tausch: sie bliebe auch dann gruen, wenn Betreff UND
+    # SMS auf DIESELBE Schreibweise zusammenfielen. Die Bedingung greift
+    # deshalb, sobald EINE der beiden Seiten von Segmenten spricht -- egal
+    # welche -- und verlangt dann von JEDER Seite ihre eigene Schreibweise.
+    # (Segmentlose Orte wie "Ziel" haben keine zwei Schreibweisen und fallen
+    # bewusst heraus.)
+    if sms.startswith("Seg ") or "Segment " in ort_im_betreff:
+        assert "Segment " in ort_im_betreff, (
+            f"Betreff schreibt 'Segment' nicht mehr aus, obwohl die SMS die "
+            f"Kurzform nutzt (AC-14 verlangt BEIDE Schreibweisen): "
+            f"Betreff-Ort {ort_im_betreff!r}, SMS {sms!r}"
+        )
+        assert "Segment " not in sms, (
+            f"Kurznachricht schreibt 'Segment' aus statt der SMS-Kurzform "
+            f"'Seg' (AC-14): {sms!r}"
+        )
     assert not re.search(r"km\d", sms), (
         f"Kurznachricht nennt noch eine km-Spanne statt der Betreff-Ortssprache: {sms!r}"
     )
