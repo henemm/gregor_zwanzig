@@ -216,7 +216,29 @@ class RadarNowcastService:
             self._cache.put(lat, lon, region, frames, source, now=now)
 
         _capture_nowcast_frames(lat, lon, frames, source)
-        return self._derive_result(frames, source, now=now)
+        result = self._derive_result(frames, source, now=now)
+
+        # Issue #1581 Scheibe 2: Health-Journal des Nowcast-Pfades. Der Aufruf
+        # steht bewusst HIER im Miss-Zweig und NICHT in `_derive_result()` --
+        # das laeuft bei Cache-Treffer UND -Fehltreffer, ein dort platzierter
+        # Aufruf buchte jeden Treffer als lebendigen Abruf und liesse einen aus
+        # dem Cache weiterbedienten Dauerausfall gesund aussehen (Spec AC-9).
+        # Die Unterscheidung throttled (eigene Budget-Drosselung) vs.
+        # data_unavailable (echter Anbieterausfall) existiert bereits im
+        # Feldpaar von NowcastResult und wird hier nur abgebildet -- eine
+        # Vermengung liesse das externe Auswertungsskript einen selbst
+        # gewaehlten Rueckzug als Fremdausfall eskalieren (AC-8/AC-10).
+        from providers.enrichment_health import (
+            OUTCOME_OK, OUTCOME_SELF_THROTTLED, OUTCOME_UNAVAILABLE,
+            PATH_RADAR_NOWCAST, log_enrichment_call,
+        )
+        if result.throttled:
+            log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_SELF_THROTTLED)
+        elif result.data_unavailable:
+            log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_UNAVAILABLE)
+        else:
+            log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_OK)
+        return result
 
     # Human-readable source labels (single source of truth — used by
     # format_now_text and by the body-builder in trip_alert.check_radar_alerts).

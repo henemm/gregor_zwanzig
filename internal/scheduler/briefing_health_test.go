@@ -86,6 +86,42 @@ func callStatusEndpoint(t *testing.T, sched *Scheduler) (int, map[string]any, st
 	return w.Code, body, rawBody
 }
 
+// AC-6 (Issue #1581): Waechter ueber coreBriefingSources selbst.
+//
+// coreBriefingSources entscheidet, welcher Diagnose-Quellname als ECHTER
+// Briefing-Ausfall zaehlt. Traegt jemand dort eine Anreicherungsquelle ein
+// ("thunder", "radar_nowcast", "geosphere_clouds", ...), meldet
+// check-gregor20.sh kuenftig einen Briefing-Ausfall, obwohl nur eine
+// nicht-briefing-kritische Anreicherung ausgefallen ist — genau die
+// Vermengung, vor der ADR-0018 warnt und die #1581 mit einem EIGENEN Kanal
+// (enrichment_health) vermeidet.
+//
+// Geprueft wird auf GLEICHHEIT der Map, nicht nur auf Anwesenheit der beiden
+// Kernquellen: sonst faengt der Test einen zusaetzlichen Eintrag nicht.
+func TestCoreBriefingSourcesEnthaeltGenauDieBeidenBriefingQuellen(t *testing.T) {
+	erwartet := map[string]bool{"briefing": true, "briefing_nacht": true}
+
+	if len(coreBriefingSources) != len(erwartet) {
+		t.Fatalf("coreBriefingSources hat %d Eintraege statt %d: %#v — eine Anreicherungsquelle gehoert in enrichment_health (#1581), nicht hierher",
+			len(coreBriefingSources), len(erwartet), coreBriefingSources)
+	}
+	for name, want := range erwartet {
+		got, vorhanden := coreBriefingSources[name]
+		if !vorhanden {
+			t.Errorf("coreBriefingSources[%q] fehlt — beide Briefing-Abrufe (Tag und Nacht) sind briefing-kritisch (#1115 F002)", name)
+			continue
+		}
+		if got != want {
+			t.Errorf("coreBriefingSources[%q] = %v, erwartet %v", name, got, want)
+		}
+	}
+	for name := range coreBriefingSources {
+		if _, erlaubt := erwartet[name]; !erlaubt {
+			t.Errorf("coreBriefingSources enthaelt den zusaetzlichen Schluessel %q — ein Ausfall dort waere ab sofort ein gemeldeter BRIEFING-Ausfall. Anreicherungs-Pfade gehoeren nach enrichment_health (#1581 AC-6)", name)
+		}
+	}
+}
+
 // AC-1: null state, no markers anywhere.
 func TestBriefingHealthNullStateWhenNoMarkers(t *testing.T) {
 	tmpDir := t.TempDir()

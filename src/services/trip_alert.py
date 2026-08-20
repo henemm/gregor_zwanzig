@@ -12,7 +12,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Iterable, List, Optional
 
 from app.config import Settings
 from app.models import SegmentWeatherData, WeatherChange
@@ -332,17 +332,16 @@ class TripAlertService:
             logger.debug(
                 f"No changes for trip {trip.id}: {eval_result.suppressed_reason}"
             )
-            # Issue #1916 Trigger (b): opportunistische Auffrischung, wenn der
-            # wirksame Anker (Briefing- ODER rollierender Anker, der juengere
-            # von beiden) die Alterungs-Ceiling ueberschreitet — auch ohne
-            # ausgeloesten Alarm (AC-7/AC-8). Die Vergleichsbasis selbst bleibt
-            # dabei UNVERAENDERT, solange die Ceiling nicht ueberschritten ist
-            # (Trend-Erkennungs-Invariante, AC-9).
-            age = self._effective_anchor_age(trip.id, cached_weather)
-            if age is not None and age > _ALARM_ANCHOR_CEILING:
-                self._write_rolling_alarm_anchor(
-                    trip.id, trip_local_today(trip, now_utc), fresh_weather,
-                )
+            # Issue #1987 (S1): der frueher hier stehende opportunistische
+            # Ceiling-Schreibtrigger (ADR-0056 Trigger b) entfaellt ersatzlos.
+            # Er lief in genau diesem Zweig — "kein Alarm gefeuert", also ohne
+            # jede Zustellung — und schrieb damit einen Stand fort, den kein
+            # Empfaenger je bekommen hat: exakt das, was diese Scheibe
+            # verbietet. Die Schutzwirkung gegen eine veraltete
+            # Vergleichsbasis geht nicht verloren, sie wandert in den
+            # LESEPFAD (`_kanal_anker_kandidat`): ein gealterter Kanal-Merker
+            # wird dort nicht mehr als Kandidat herangezogen, statt ihn hier
+            # kuenstlich aufzufrischen.
             return False
 
         logger.info(
@@ -428,9 +427,12 @@ class TripAlertService:
 
         # Issue #1916 Trigger (a): jeder TATSAECHLICH versendete Alarm
         # schreibt einen frischen rollierenden Anker (AC-6), unabhaengig von
-        # einem vorherigen Briefing.
+        # einem vorherigen Briefing. Issue #1987 (S1): und zwar NUR fuer die
+        # Kanaele, die ihn wirklich zugestellt bekommen haben — der einzige
+        # verbleibende Schreibtrigger.
         self._write_rolling_alarm_anchor(
             trip.id, trip_local_today(trip, now_utc), fresh_weather,
+            notif_result.delivered_channels,
         )
 
         return True
@@ -685,16 +687,23 @@ class TripAlertService:
             # falschen Tag wird verworfen, NICHT zurueckgegeben; die Funktion
             # faellt dann auf den bestehenden undatierten Rueckfall weiter
             # unten zurueck.
-            rolling = svc.load_alarm_anchor(trip.id)
-            if rolling is not None:
-                if not tagesgleicher_anker_noetig:
+            # Issue #1987 (S1): der Anker wird je Kanal gefuehrt, die Auswahl
+            # deshalb je Kanal aufgeloest und danach zu EINEM Stand
+            # zusammengefuehrt (s. `_rollierender_anker_kandidat`).
+            kanaele = self._effective_alert_channels(trip)
+            if not tagesgleicher_anker_noetig:
+                # Amtliche Warnungen brauchen aus dem Anker NUR die
+                # Routen-Geometrie (s. Docstring) — die ist in jedem
+                # Kanal-Merker dieselbe. Erster gefundener genuegt, keine
+                # Tages- oder Alterspruefung (unveraendertes Verhalten).
+                for channel in sorted(kanaele):
+                    rolling = svc.load_alarm_anchor(trip.id, channel)
+                    if rolling is not None:
+                        return rolling
+            else:
+                rolling = self._rollierender_anker_kandidat(svc, trip, today, kanaele)
+                if rolling is not None:
                     return rolling
-                if svc.alarm_anchor_target_date(trip.id) == today:
-                    return rolling
-                logger.debug(
-                    "Rollierender Alarm-Anker fuer Trip %s verworfen "
-                    "(falscher Tag).", trip.id,
-                )
 
             # Fallback: undated snapshot (may be stale after evening briefing)
             undated = svc.load(trip.id)
@@ -762,6 +771,85 @@ class TripAlertService:
         )
         return None
 
+    def _kanal_anker_kandidat(
+        self, svc, trip_id: str, today: date, channel: str,
+    ) -> Optional[tuple[datetime, List[SegmentWeatherData]]]:
+        """Der GUELTIGE rollierende Merker eines Kanals mit seinem Alter —
+        oder `None` (Issue #1987, AC-4/AC-7/AC-8).
+
+        Drei Ausschlussgruende, alle rein LESEND (kein Schreibeffekt, anders
+        als der entfallene Trigger b):
+
+        * kein eigener Merker und keine kanallose Altdatei (AC-7),
+        * `target_date` ungleich heute — die #823/#1916-Tagesgrenze gilt je
+          Kanal, nicht global (AC-8),
+        * aelter als `_ALARM_ANCHOR_CEILING` (AC-4).
+
+        Ausgeschlossen heisst IMMER: dieser Kanal faellt auf den
+        Tier-1-Briefing-Anker zurueck — nie auf den Merker eines ANDEREN
+        Kanals. Das waere eine Vergleichsbasis, die dieser Empfaenger nie
+        erhalten hat (Kontaminationsverbot).
+        """
+        merker = svc.load_alarm_anchor(trip_id, channel)
+        if merker is None:
+            return None
+        if svc.alarm_anchor_target_date(trip_id, channel) != today:
+            logger.debug(
+                "Rollierender Alarm-Anker fuer Trip %s (%s) verworfen "
+                "(falscher Tag).", trip_id, channel,
+            )
+            return None
+        fetched_at = _as_aware_utc(merker[0].fetched_at)
+        if fetched_at is None:
+            return None
+        alter = datetime.now(timezone.utc) - fetched_at
+        if alter > _ALARM_ANCHOR_CEILING:
+            logger.debug(
+                "Rollierender Alarm-Anker fuer Trip %s (%s) verworfen "
+                "(%.1f h alt, Grenze %.0f h).", trip_id, channel,
+                alter.total_seconds() / 3600,
+                _ALARM_ANCHOR_CEILING.total_seconds() / 3600,
+            )
+            return None
+        return fetched_at, merker
+
+    def _rollierender_anker_kandidat(
+        self, svc, trip: "Trip", today: date, channels: set,
+    ) -> Optional[List[SegmentWeatherData]]:
+        """Die EINE gemeinsame Vergleichsbasis aus den Kanal-Kandidaten
+        (Issue #1987, AC-11) — oder `None` fuer den Tier-1-Rueckfall.
+
+        Die Ausloese-Entscheidung bleibt EIN gemeinsamer
+        `DeviationAlertEngine.evaluate()`-Lauf (E2, ADR-0021) und braucht
+        deshalb genau EINEN `cached`-Stand. Gewaehlt wird der AELTESTE
+        gueltige Kandidat: nur so geht keinem Kanal eine Aenderung verloren,
+        die er noch nicht kennt. Ein bereits aktuellerer Kanal bekommt
+        hoechstens eine Wiederholung im Vergleich — davor schuetzt das
+        Melde-Gedaechtnis (`alert_state`, ADR-0056 AC-12).
+
+        `channels` ist das ROHE `effective_channels` ohne
+        `split_by_threshold()`: der Schwellenfilter braucht die
+        Dringlichkeitsstufe, die erst NACH der Change-Detection feststeht —
+        hier waere sie nicht berechenbar (Spec, "Klarstellung zum
+        Schwellenfilter im Lesepfad").
+
+        Hat auch nur EIN Kanal keinen gueltigen eigenen Merker, faellt die
+        Auswahl auf den Tier-1-Briefing-Anker durch (`None`): dieser Kanal
+        kennt den Tier-1-Stand als letzten, und der ist auf diesem Pfad
+        immer der aeltere — lief naemlich ein Briefing, hat bereits
+        `load_dated()` weiter oben zurueckgegeben und diese Methode wird gar
+        nicht erreicht.
+        """
+        if not channels:
+            return None
+        kandidaten: List[tuple[datetime, List[SegmentWeatherData]]] = []
+        for channel in sorted(channels):
+            kandidat = self._kanal_anker_kandidat(svc, trip.id, today, channel)
+            if kandidat is None:
+                return None
+            kandidaten.append(kandidat)
+        return min(kandidaten, key=lambda paar: paar[0])[1]
+
     def _report_missing_anchor(self, trip: "Trip", today: date) -> None:
         """Issue #1661 (Teil C, C2): „gar kein Anker" ist zwei verschiedene Dinge.
 
@@ -795,35 +883,26 @@ class TripAlertService:
 
     def _write_rolling_alarm_anchor(
         self, trip_id: str, target_date: date, weather: List[SegmentWeatherData],
+        channels: Iterable[str],
     ) -> None:
         """Schreibt NUR den rollierenden Alarm-Anker (Issue #1916, ADR-0056)
         — bewusst OHNE `write_anchor_and_reset_memory()`: dieser Schreibpfad
-        darf das Melde-Gedaechtnis NICHT zuruecksetzen (AC-12)."""
+        darf das Melde-Gedaechtnis NICHT zuruecksetzen (AC-12).
+
+        Issue #1987 (S1): je Kanal ein eigener Merker, und `channels` MUSS
+        `NotificationResult.delivered_channels` sein — NICHT `sent_channels`
+        (nur "betreten", enthaelt auch gescheiterte Transporte, Anti-Pattern
+        #656) und NICHT `effective_channels` (konfiguriert, aber nicht
+        notwendig zugestellt). Die Vergleichsbasis eines Empfaengers ist das,
+        was dieser Empfaenger auf DIESEM Kanal zuletzt tatsaechlich
+        zugestellt bekommen hat; ein leeres `channels` schreibt folgerichtig
+        gar nichts (AC-1, AC-2, AC-6).
+        """
         from services.weather_snapshot import WeatherSnapshotService
 
-        WeatherSnapshotService(user_id=self._user_id).save_alarm_anchor(
-            trip_id, target_date, weather,
-        )
-
-    def _effective_anchor_age(
-        self, trip_id: str, cached_weather: List[SegmentWeatherData],
-    ) -> Optional[timedelta]:
-        """Alter des juengeren der beiden Anker (Briefing- ODER rollierender
-        Anker) — Trigger (b), Issue #1916 AC-7/AC-8."""
-        from services.weather_snapshot import WeatherSnapshotService
-
-        candidates: List[datetime] = []
-        cached_fetched = _as_aware_utc(cached_weather[0].fetched_at) if cached_weather else None
-        if cached_fetched is not None:
-            candidates.append(cached_fetched)
-        rolling = WeatherSnapshotService(user_id=self._user_id).load_alarm_anchor(trip_id)
-        if rolling:
-            rolling_fetched = _as_aware_utc(rolling[0].fetched_at)
-            if rolling_fetched is not None:
-                candidates.append(rolling_fetched)
-        if not candidates:
-            return None
-        return datetime.now(timezone.utc) - max(candidates)
+        svc = WeatherSnapshotService(user_id=self._user_id)
+        for channel in channels:
+            svc.save_alarm_anchor(trip_id, target_date, weather, channel)
 
     def _is_quiet_hours(self, trip: "Trip", now: datetime) -> bool:
         """Check if current time falls within the trip's configured quiet hours.
