@@ -190,6 +190,7 @@ def run_compare_presets_daily(
     from datetime import timezone as _timezone
 
     from services.dispatch_orchestrator import CompareDispatchStrategy, run_briefing_dispatch
+    from utils.timezone import to_utc
 
     # Issue #1724: der Orchestrator nimmt einen ZEITPUNKT statt einer Stunde.
     # Issue #1726: die Faelligkeit haengt jetzt je Preset an der Ortszone
@@ -205,9 +206,9 @@ def run_compare_presets_daily(
         from zoneinfo import ZoneInfo
 
         zone = ZoneInfo(CompareDispatchStrategy.MANUAL_TRIGGER_REFERENCE_ZONE)
-        now_utc = _datetime.now(zone).replace(
+        now_utc = to_utc(_datetime.now(zone).replace(
             hour=hour, minute=0, second=0, microsecond=0,
-        ).astimezone(_timezone.utc)
+        ))
 
     return run_briefing_dispatch("vergleich", user_id, now_utc, data_root=data_root)
 

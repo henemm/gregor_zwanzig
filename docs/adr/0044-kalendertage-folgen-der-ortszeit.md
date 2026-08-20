@@ -167,6 +167,25 @@ Regelverstoß — genau das war der Zustand vor #1697.
   aufzulösen. Die siebte Fundstelle, `comparison_engine.py::dict_to_comparison_result`,
   wurde NICHT korrigiert, sondern als toter Code (0 Aufrufer im gesamten Repo) ersatzlos
   entfernt.
+- **`raw_astimezone`-Formbereinigung, dritte Fundart des Wächters** (#1727 S5f, live
+  2026-08-19; S5g, live 2026-08-20): S5f führt den zentralen Helfer `to_utc()` in
+  `src/utils/timezone.py` ein und stellt 9 Fundstellen in `weather_cache.py`,
+  `segment_weather.py` und `trip_segments.py` darauf um (Register 43→34); der Ankunftstag am
+  Ziel bleibt bewusst bei `local_dt()` statt `to_utc()`, weil ein pauschaler Umbau dort einen
+  Westziel-Tagesverschiebungsfehler eingeführt hätte, wo heute keiner ist. S5g stellt die
+  restlichen 8 Fundstellen um — `alert_briefing_anchor.py`, `compare_location_weather_source.py`
+  (x2), `compare_official_alert.py`, `scheduler_dispatch_service.py`, `stage_weather.py`,
+  `trip_alert.py` (x2): fünf auf `to_utc()`, drei auf `local_dt()`/`local_fmt()`, weil sie in
+  die **Ortszone** rechnen (Register 34→26). Beide Scheiben sind reine Formbereinigung, kein
+  Bugfix — alle 17 Stellen rechneten schon vor dem Umbau korrekt.
+
+  S5g macht außerdem die Unterscheidung „noch offener Kandidat" vs. „bewusst so dauerhaft"
+  für alle 26 verbleibenden `KNOWN_VIOLATIONS`-Einträge maschinell prüfbar: jeder Wert trägt
+  seither ein Pflicht-Präfix (`DAUERHAFT` / `AUFRUFSEITE(#1402)` / `BEWUSST-UTC(#1345)`) mit
+  erzwungener Mindestbegründung. Die 4 `BEWUSST-UTC(#1345)`-Einträge sind dieselben Fälle, die
+  oben unter „Bewusst NICHT betroffen" bereits in Prosa stehen (`forecast_budget._today_utc`,
+  `meteoalarm_budget._today_utc`/`_now_ts`, `weather_extractor._to_naive_utc`) — die Kategorie
+  ersetzt die bisher ungeprüfte Prosa-Konvention, ist also kein Netto-Zuwachs an Regeln.
 
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,

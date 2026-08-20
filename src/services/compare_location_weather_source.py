@@ -29,6 +29,7 @@ import app.day_window as day_window
 from app.models import GPXPoint, TripSegment
 from services.point_weather import PointWeatherData, TripSegmentWeatherAdapter
 from services.segment_weather import SegmentWeatherService
+from utils.timezone import local_dt, to_utc
 
 logger = logging.getLogger("compare_location_weather_source")
 
@@ -37,10 +38,8 @@ def _window_bound(local_day: date, hour: int, tz: ZoneInfo) -> datetime:
     """Ortszeit-Stunde eines lokalen Kalendertags -> UTC. Seit #1599 nur noch
     fuer die UNTERgrenze — die Obergrenze baut
     `app.day_window.window_end_utc_exclusive()` (inklusive Endstunde)."""
-    return (
-        datetime.combine(local_day, time(hour))
-        .replace(tzinfo=tz)
-        .astimezone(timezone.utc)
+    return to_utc(
+        datetime.combine(local_day, time(hour)).replace(tzinfo=tz)
     )
 
 
@@ -115,7 +114,7 @@ class CompareLocationWeatherSource:
         # Der Kalendertag ist der LOKALE Tag am Ort, nicht der UTC-Tag —
         # sonst verschoebe sich das Fenster bei jedem Ort mit UTC-Versatz
         # (analog `trip_segments.py:264-268`).
-        local_today = now.astimezone(tz).date()
+        local_today = local_dt(now, tz).date()
         # Issue #1661 (B1): der angeforderte Tag gewinnt gegen den laufenden.
         # Der Versatz wird gegen den ORTSTAG gerechnet (F002) — nie gegen den
         # Systemtag des Aufrufers.

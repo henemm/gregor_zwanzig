@@ -44,12 +44,18 @@ lässt den Test rot werden — jeder behobene Fund MUSS aus der Liste entfernt
 werden (sonst meldet der Shrink-Test ihn als "veraltet"). Die Liste kann
 dadurch nur kleiner werden, nie wachsen.
 
-Zwei Arten der verbleibenden Einträge (s. Kommentar-Blöcke in
-KNOWN_VIOLATIONS):
+Drei Arten der verbleibenden Einträge (s. Kommentar-Blöcke in
+KNOWN_VIOLATIONS). Seit #1727 S5g trägt JEDER Wert seine Art als
+maschinell geprüftes Präfix — `_kategorie_verstoesse()` unten erzwingt eine
+der drei Kategorien plus eine Mindestbegründung, damit "dauerhaft so
+gewollt" und "noch nicht behoben" nicht länger gleich aussehen:
 - **DAUERHAFT**: `tz=None` ist hier ein legitimer Domänen-Zustand (z. B.
   "Compare-Ort ohne Zeitzone"), kein vergessener Aufruf — bleibt bewusst
   Optional, keine Scheibe soll das je schließen.
-- **Aufrufseite abgesichert (PO-Entscheidung #1402)**: für Funktionen mit
+- **BEWUSST-UTC(#1345)**: die Umrechnung geht absichtlich nach Weltzeit —
+  Zählwerke (Kontingent-Tag) und Naiv-Guards, nie eine Nutzeranzeige. Der
+  Scanner unterscheidet das strukturell nicht, deshalb gelistet.
+- **AUFRUFSEITE(#1402) (PO-Entscheidung #1402)**: für Funktionen mit
   GROSSER Test-Aufrufer-Fläche (>3 Dateien, teils >40) wird NICHT die
   Signatur umgebaut (Regressionsrisiko in der Golden-/Formatter-Suite ohne
   Sicherheitsgewinn — beide echten Produktiv-Aufrufer übergaben `tz` immer
@@ -554,30 +560,30 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # deckte er bereits 3 echte fehlende Aufrufe auf (comparison.py:501,
     # compare_html.py Warn-Banner, trip_command_processor.py "/jetzt") —
     # sofort gefixt, s. Commit-Historie.
-    "src/output/renderers/sms_trip.py::format_sms::0": "Aufrufseite abgesichert (vormals :258) — format_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/trip_report.py::<module>::0": "Aufrufseite abgesichert (vormals :55) — TripReportFormatter._tz Klassenattribut (Klassenrumpf = Modulraum), an format_email gekoppelt.",
-    "src/output/renderers/trip_report.py::format_email::0": "Aufrufseite abgesichert (vormals :70) — format_email (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/trip_report.py::format_email::1": "Aufrufseite abgesichert (vormals :120) — Mid-Body-Rückfall zum Default von format_email, daran gekoppelt.",
-    "src/output/renderers/alert/official_alerts.py::_format_validity::0": "Aufrufseite abgesichert (vormals :636) — _format_validity (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py::_format_validity::1": "Aufrufseite abgesichert (vormals :642) — '… if tz else roh'-Zweig zum Default von _format_validity.",
-    "src/output/renderers/alert/official_alerts.py::_format_validity::2": "Aufrufseite abgesichert (vormals :643) — '… if tz else roh'-Zweig zum Default von _format_validity.",
-    "src/output/renderers/alert/official_alerts.py::_typ_tag::0": "Aufrufseite abgesichert (vormals :666) — _typ_tag (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py::_typ_tag::1": "Aufrufseite abgesichert (vormals :676) — '… if tz else roh'-Zweig zum Default von _typ_tag.",
-    "src/output/renderers/alert/official_alerts.py::render_official_alert_subject::0": "Aufrufseite abgesichert (vormals :713) — render_official_alert_subject (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py::render_official_alert_subject::1": "Aufrufseite abgesichert (vormals :749) — if-None-Guard zum Default von render_official_alert_subject. Fällt jetzt ehrlich auf UTC zurück (war Europe/Vienna geraten, PO-Fund).",
-    "src/output/renderers/alert/official_alerts.py::render_warn_block::0": "Aufrufseite abgesichert (vormals :1473) — render_warn_block (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py::render_official_alert_telegram::0": "Aufrufseite abgesichert (vormals :1505) — render_official_alert_telegram (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/output/renderers/alert/official_alerts.py::_tag_time::0": "Aufrufseite abgesichert (vormals :1565) — _tag_time (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/sms_trip.py::format_sms::0": "AUFRUFSEITE(#1402) (vormals :258) — format_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/trip_report.py::<module>::0": "AUFRUFSEITE(#1402) (vormals :55) — TripReportFormatter._tz Klassenattribut (Klassenrumpf = Modulraum), an format_email gekoppelt.",
+    "src/output/renderers/trip_report.py::format_email::0": "AUFRUFSEITE(#1402) (vormals :70) — format_email (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/trip_report.py::format_email::1": "AUFRUFSEITE(#1402) (vormals :120) — Mid-Body-Rückfall zum Default von format_email, daran gekoppelt.",
+    "src/output/renderers/alert/official_alerts.py::_format_validity::0": "AUFRUFSEITE(#1402) (vormals :636) — _format_validity (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::_format_validity::1": "AUFRUFSEITE(#1402) (vormals :642) — '… if tz else roh'-Zweig zum Default von _format_validity.",
+    "src/output/renderers/alert/official_alerts.py::_format_validity::2": "AUFRUFSEITE(#1402) (vormals :643) — '… if tz else roh'-Zweig zum Default von _format_validity.",
+    "src/output/renderers/alert/official_alerts.py::_typ_tag::0": "AUFRUFSEITE(#1402) (vormals :666) — _typ_tag (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::_typ_tag::1": "AUFRUFSEITE(#1402) (vormals :676) — '… if tz else roh'-Zweig zum Default von _typ_tag.",
+    "src/output/renderers/alert/official_alerts.py::render_official_alert_subject::0": "AUFRUFSEITE(#1402) (vormals :713) — render_official_alert_subject (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::render_official_alert_subject::1": "AUFRUFSEITE(#1402) (vormals :749) — if-None-Guard zum Default von render_official_alert_subject. Fällt jetzt ehrlich auf UTC zurück (war Europe/Vienna geraten, PO-Fund).",
+    "src/output/renderers/alert/official_alerts.py::render_warn_block::0": "AUFRUFSEITE(#1402) (vormals :1473) — render_warn_block (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::render_official_alert_telegram::0": "AUFRUFSEITE(#1402) (vormals :1505) — render_official_alert_telegram (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::_tag_time::0": "AUFRUFSEITE(#1402) (vormals :1565) — _tag_time (Wächter: test_production_callsites_pass_tz_explicitly).",
     # Die zwei rohen .astimezone() standen bis #1466 als ':1580'/':1581' mit
     # dem Vermerk 'in render_warn_block' in der Liste — der Vermerk war durch
     # die Zeilendrift falsch geworden: beide stehen im Rumpf von _tag_time
     # (heute :1586/:1587). Der funktionsbezogene Schlüssel korrigiert die
     # Zuordnung; es sind unverändert dieselben zwei Codestellen.
-    "src/output/renderers/alert/official_alerts.py::_tag_time::1": "Aufrufseite abgesichert (vormals :1580) — roher .astimezone() im Rumpf von _tag_time, an dessen Default gekoppelt.",
-    "src/output/renderers/alert/official_alerts.py::_tag_time::2": "Aufrufseite abgesichert (vormals :1581) — roher .astimezone() im Rumpf von _tag_time, an dessen Default gekoppelt.",
-    "src/output/renderers/alert/official_alerts.py::render_official_alert_sms::0": "Aufrufseite abgesichert (vormals :1690) — render_official_alert_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/services/radar_service.py::format_now_text::0": "Aufrufseite abgesichert (vormals :219) — format_now_text (Wächter: test_production_callsites_pass_tz_explicitly).",
-    "src/services/trip_report_scheduler.py::_build_stage_trend::0": "Aufrufseite abgesichert (vormals :1365) — _build_stage_trend (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/output/renderers/alert/official_alerts.py::_tag_time::1": "AUFRUFSEITE(#1402) (vormals :1580) — roher .astimezone() im Rumpf von _tag_time, an dessen Default gekoppelt.",
+    "src/output/renderers/alert/official_alerts.py::_tag_time::2": "AUFRUFSEITE(#1402) (vormals :1581) — roher .astimezone() im Rumpf von _tag_time, an dessen Default gekoppelt.",
+    "src/output/renderers/alert/official_alerts.py::render_official_alert_sms::0": "AUFRUFSEITE(#1402) (vormals :1690) — render_official_alert_sms (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/services/radar_service.py::format_now_text::0": "AUFRUFSEITE(#1402) (vormals :219) — format_now_text (Wächter: test_production_callsites_pass_tz_explicitly).",
+    "src/services/trip_report_scheduler.py::_build_stage_trend::0": "AUFRUFSEITE(#1402) (vormals :1365) — _build_stage_trend (Wächter: test_production_callsites_pass_tz_explicitly).",
     # ORDINAL-RUECKVERSCHIEBUNG (#1727 S5b): der Muster-A-Fund in
     # _build_stage_trend (`today = date.today()`) ist behoben — er folgt jetzt
     # `trip_local_today(trip, now_utc)`. Damit entfaellt der Eintrag ::1, und
@@ -586,7 +592,7 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # DIESELBE Codestelle wie bisher, nur mit kleinerem Ordinal; ohne diese
     # Umbenennung meldete der Waechter ::2 als veraltet UND ::1 als neuen,
     # unbekannten Verstoss, ohne dass sich dort etwas geaendert haette.
-    "src/services/trip_report_scheduler.py::_build_stage_trend::1": "Aufrufseite abgesichert (vormals :1427/:1869, Ordinal vormals ::2) — Ternary-Rückfall zum Default von _build_stage_trend, daran gekoppelt.",
+    "src/services/trip_report_scheduler.py::_build_stage_trend::1": "AUFRUFSEITE(#1402) (vormals :1427/:1869, Ordinal vormals ::2) — Ternary-Rückfall zum Default von _build_stage_trend, daran gekoppelt.",
     # -----------------------------------------------------------------------
     # ENTSCHEIDUNGS-SCHICHT (Issue #1723, Epic #1722 S1) — Bestandsaufnahme
     # von `src/services/**` + `api/**`, gemessen am 2026-08-11 gegen
@@ -626,23 +632,81 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # abgeraeumt (beide `VIENNA`-Konstanten ersatzlos entfallen). Bleibt als
     # Rubrik stehen: ein neuer Fund dieser Art gehoert behoben, nicht gelistet.
     # --- Bestehende Fundart `raw_astimezone` auf der NEU hinzugekommenen
-    # Flaeche: kein neuer Detektor, nur groesserer Geltungsbereich. Viele davon
-    # sind Umrechnungen NACH UTC (nach Hausnorm #1345 unauffaellig) — der
-    # Scanner unterscheidet das strukturell nicht, deshalb gelistet statt
-    # ausgenommen.
-    "src/services/alert_briefing_anchor.py::record_briefing_sent::0": "raw_astimezone (:195) — Normalisierung des Sendezeitpunkts nach UTC.",
-    "src/services/compare_location_weather_source.py::_window_bound::0": "raw_astimezone (:39) — Fenstergrenze aus lokalem Tag + Stunde.",
-    "src/services/compare_location_weather_source.py::fetch::0": "raw_astimezone (:116) — lokaler Tag des Vergleichsorts.",
-    "src/services/compare_official_alert.py::_day_window_end::0": "raw_astimezone (:271) — lokales 'jetzt' des Vergleichsorts.",
-    "src/services/forecast_budget.py::_today_utc::0": "raw_astimezone (:130) — Kontingent-Tag bewusst in UTC (Zaehlwerk, kein Nutzerdatum).",
-    "src/services/official_alerts/meteoalarm_budget.py::_now_ts::0": "raw_astimezone (:167) — Kontingent-Zeitstempel bewusst in UTC.",
-    "src/services/official_alerts/meteoalarm_budget.py::_today_utc::0": "raw_astimezone (:176) — Kontingent-Tag bewusst in UTC.",
-    "src/services/scheduler_dispatch_service.py::run_compare_presets_daily::0": "raw_astimezone (:179) — Faelligkeit in der Ortszone des Presets (#1724).",
-    "src/services/stage_weather.py::_to_utc_date::0": "raw_astimezone (:62) — Etappendatum in UTC.",
-    "src/services/trip_alert.py::_briefing_precip_for_onset::0": "raw_astimezone (:872) — Einsetzstunde auf volle UTC-Stunde.",
-    "src/services/trip_alert.py::check_radar_alerts::0": "raw_astimezone (:1092) — Einsetzzeit in der Ortszone ausgegeben.",
-    "src/services/weather_extractor.py::_to_naive_utc::0": "raw_astimezone (:32) — Naiv-Guard nach Hausnorm #1345 (naiv == UTC).",
+    # Flaeche: kein neuer Detektor, nur groesserer Geltungsbereich. Diese vier
+    # rechnen BEWUSST nach UTC (Hausnorm #1345) — Zaehlwerke und Naiv-Guards,
+    # kein Nutzerdatum; der Scanner unterscheidet das strukturell nicht,
+    # deshalb gelistet statt ausgenommen. Sie tragen deshalb die Kategorie
+    # BEWUSST-UTC(#1345) statt der Scanner-Fundart, die sie frueher wie einen
+    # noch offenen Kandidaten aussehen liess (#1727 S5g Teil B).
+    #
+    # ABGERAEUMT mit #1727 S5g Teil A (Formbereinigung, kein Bugfix): die acht
+    # uebrigen Eintraege dieser Rubrik folgen jetzt den zentralen Helfern aus
+    # `src/utils/timezone.py` — `to_utc()` bei den fuenf UTC-Stellen,
+    # `local_dt()`/`local_fmt()` bei den drei, die in die ORTSZONE rechnen
+    # (ein pauschaler to_utc()-Umbau haette dort einen Zeitzonenfehler
+    # eingefuehrt, wo keiner war). Eintraege entfallen:
+    #   src/services/alert_briefing_anchor.py::record_briefing_sent::0
+    #   src/services/compare_location_weather_source.py::_window_bound::0
+    #   src/services/compare_location_weather_source.py::fetch::0
+    #   src/services/compare_official_alert.py::_day_window_end::0
+    #   src/services/scheduler_dispatch_service.py::run_compare_presets_daily::0
+    #   src/services/stage_weather.py::_to_utc_date::0
+    #   src/services/trip_alert.py::_briefing_precip_for_onset::0
+    #   src/services/trip_alert.py::check_radar_alerts::0
+    "src/services/forecast_budget.py::_today_utc::0": "BEWUSST-UTC(#1345) (vormals :130) — Kontingent-Tag bewusst in UTC gerechnet: Zaehlwerk fuer das Anfrage-Budget, kein Nutzerdatum.",
+    "src/services/official_alerts/meteoalarm_budget.py::_now_ts::0": "BEWUSST-UTC(#1345) (vormals :167) — Kontingent-Zeitstempel bewusst in UTC, reines Zaehlwerk ohne Nutzeranzeige.",
+    "src/services/official_alerts/meteoalarm_budget.py::_today_utc::0": "BEWUSST-UTC(#1345) (vormals :176) — Kontingent-Tag bewusst in UTC, reines Zaehlwerk ohne Nutzeranzeige.",
+    "src/services/weather_extractor.py::_to_naive_utc::0": "BEWUSST-UTC(#1345) (vormals :32) — Naiv-Guard nach Hausnorm #1345: naiv == UTC, keine Ortszeit-Ausgabe.",
 }
+
+
+# ---------------------------------------------------------------------------
+# Kategorie-Pflicht je Registereintrag (#1727 S5g Teil B). Bis dahin war der
+# Unterschied zwischen "dauerhaft so gewollt" und "noch nicht behoben" reine
+# Prosa: die bewusst-UTC-Eintraege begannen mit der FUNDART des Scanners
+# (``raw_astimezone (:130) — …``) und sahen dadurch aus wie ein offener
+# Kandidat. Issue #1727 verlangt, dass dieser Unterschied zitierbar ist —
+# also maschinell geprueft. Muster (Marker + Mindestbegruendung):
+# ``tests/tdd/test_repo_path_hardcoding_ratchet.py:346-352``.
+#
+# Regel-Budget (CLAUDE.md): ersetzt die ungepruefte Prosa-Konvention, traegt
+# dennoch ein Pruefdatum 2026-11-18. Faengt der Waechter bis dahin keinen
+# Eintrag ohne gueltige Kategorie/Begruendung, wird er zurueckgebaut.
+# ---------------------------------------------------------------------------
+_KATEGORIEN = ("DAUERHAFT", "AUFRUFSEITE(#1402)", "BEWUSST-UTC(#1345)")
+
+# Mindestlaenge der Begruendung, gemessen in Buchstaben/Ziffern — haelt
+# Alibi-Texte wie "— x" oder ein einzelnes Emoji draussen. Eine Ausnahme soll
+# Arbeit kosten.
+_MIN_BEGRUENDUNG = 15
+_UNWORT = re.compile(r"[\W_]+")
+
+
+def _kategorie_verstoesse(register: dict[str, str]) -> list[str]:
+    """Registereintraege ohne gueltige Kategorie oder ohne Begruendung.
+
+    Gibt die Befunde ZURUECK (eine Zeile je schlechtem Eintrag), statt selbst
+    zu assertieren — nur so laesst sich die Pruefung gegen ein Fixture-Dict
+    richten und damit ihre eigene Wirkung nachweisen (AC-5), ohne dass
+    zufaellig gerade ein schlechter Eintrag im echten Bestand stehen muss.
+    """
+    befunde: list[str] = []
+    for schluessel, wert in sorted(register.items()):
+        treffer = [k for k in _KATEGORIEN if wert.startswith(k)]
+        if len(treffer) != 1:
+            befunde.append(
+                f"{schluessel}: kein gueltiges Kategorie-Praefix aus "
+                f"{list(_KATEGORIEN)} — der Wert beginnt mit {wert[:40]!r}"
+            )
+            continue
+        begruendung = _UNWORT.sub("", wert[len(treffer[0]):])
+        if len(begruendung) < _MIN_BEGRUENDUNG:
+            befunde.append(
+                f"{schluessel}: Begruendung zu duenn ({len(begruendung)} < "
+                f"{_MIN_BEGRUENDUNG} Buchstaben/Ziffern nach Unwort-"
+                f"Bereinigung) — {wert!r}"
+            )
+    return befunde
 
 
 def test_scan_list_paths_all_exist():
@@ -693,6 +757,77 @@ def test_known_violations_only_shrink():
         "Diese Stellen sind inzwischen behoben (Scanner findet sie nicht "
         f"mehr): {stale} — aus KNOWN_VIOLATIONS entfernen (die Liste darf "
         "nur schrumpfen)."
+    )
+
+
+def test_jeder_eintrag_traegt_kategorie_und_begruendung():
+    """GIVEN die Werte in KNOWN_VIOLATIONS
+    WHEN sie auf Kategorie-Präfix und Mindestbegründung geprüft werden
+    THEN trägt jeder Wert genau eines der drei Präfixe DAUERHAFT /
+    AUFRUFSEITE(#1402) / BEWUSST-UTC(#1345), gefolgt von einer Begründung mit
+    mindestens 15 Buchstaben/Ziffern (nach Entfernen aller Nicht-Wort-Zeichen).
+
+    Issue #1727 S5g Teil B (AC-4): heute beginnen die bewusst-UTC-Einträge mit
+    der FUNDART des Scanners (``raw_astimezone (:130) — …``) statt mit einer
+    Kategorie und sehen dadurch aus wie ein noch offener Kandidat. Der
+    Unterschied „dauerhaft so gewollt" vs. „noch nicht behoben" muss laut #1727
+    zitierbar sein — also maschinell geprüft statt reiner Prosa.
+
+    Muster: `_MARKER`/`_UNWORT`/`_MIN_BEGRUENDUNG` aus
+    `tests/tdd/test_repo_path_hardcoding_ratchet.py:346-352`.
+    """
+    assert KNOWN_VIOLATIONS, (
+        "Leeres Register — die Prüfung wäre dann trivial grün und bewiese "
+        "nichts. Entweder ist die Liste versehentlich geleert worden, oder "
+        "dieser Wächter gehört mit ihr zurückgebaut."
+    )
+    befunde = _kategorie_verstoesse(KNOWN_VIOLATIONS)
+    assert not befunde, (
+        "Diese KNOWN_VIOLATIONS-Einträge tragen keine gültige Kategorie oder "
+        "keine ausreichende Begründung (Issue #1727 S5g Teil B). Jeder Wert "
+        "beginnt mit DAUERHAFT, AUFRUFSEITE(#1402) oder BEWUSST-UTC(#1345) "
+        "und nennt danach den Grund:\n" + "\n".join(befunde)
+    )
+
+
+def test_alibi_begruendung_zaehlt_nicht():
+    """Ein einzelnes Zeichen oder ein Emoji ist keine bewusste Entscheidung,
+    sondern das billigste Mittel, die Kategorie-Pflicht zu erfüllen, ohne etwas
+    zu begründen (Vorbild: `test_ac8_alibi_begruendung_zaehlt_nicht`,
+    `tests/tdd/test_repo_path_hardcoding_ratchet.py:180`).
+
+    Prüft die Prüffunktion gegen ein FIXTURE-Dict statt gegen das echte
+    Register — sonst hinge der Wirkungsnachweis daran, dass zufällig gerade ein
+    schlechter Eintrag im Bestand steht. Diskriminierend: der gute
+    Kontrolleintrag darf NICHT gemeldet werden, sonst wäre auch eine Funktion
+    grün, die pauschal alles beanstandet.
+    """
+    fixture = {
+        "src/x.py::gut::0": (
+            "AUFRUFSEITE(#1402) — Wächter sitzt am Aufrufer statt an der "
+            "Signatur (test_production_callsites_pass_tz_explicitly)."
+        ),
+        "src/x.py::alibi::0": "DAUERHAFT — x",
+        "src/x.py::emoji::0": "BEWUSST-UTC(#1345) — 👍",
+        "src/x.py::ohne_praefix::0": (
+            "raw_astimezone (:130) — Kontingent-Tag bewusst in UTC gerechnet, "
+            "Zählwerk statt Nutzerdatum."
+        ),
+    }
+    befunde = _kategorie_verstoesse(fixture)
+    gemeldet = {k for k in fixture if any(k in b for b in befunde)}
+    assert gemeldet == {
+        "src/x.py::alibi::0",
+        "src/x.py::emoji::0",
+        "src/x.py::ohne_praefix::0",
+    }, (
+        "Erwartet werden genau die drei schlechten Einträge (Alibi-Text, "
+        "Emoji, fehlendes Kategorie-Präfix) — der gute Kontrolleintrag darf "
+        f"nicht darunter sein. Gemeldet: {sorted(gemeldet)}\n"
+        + "\n".join(befunde)
+    )
+    assert len(befunde) == 3, (
+        f"Ein Befund je schlechtem Eintrag erwartet, bekommen: {befunde}"
     )
 
 

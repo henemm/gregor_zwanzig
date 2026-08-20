@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date as date_type, timezone
+from datetime import date as date_type
 from typing import TYPE_CHECKING, Optional
 
 from app.models import RiskLevel, SegmentWeatherData
@@ -21,6 +21,7 @@ from services.segment_weather import SegmentWeatherService
 from services.trip_segments import convert_trip_to_segments
 from services.weather_metrics import aggregate_stage
 from services.wind_exposition import WindExpositionService
+from utils.timezone import to_utc
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -59,7 +60,7 @@ def _fetch_one(service: SegmentWeatherService, segment) -> Optional[SegmentWeath
 
 def _to_utc_date(ts) -> date_type:
     if ts.tzinfo is not None:
-        return ts.astimezone(timezone.utc).date()
+        return to_utc(ts).date()
     return ts.date()
 
 
