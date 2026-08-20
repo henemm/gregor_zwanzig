@@ -66,6 +66,14 @@ def _stage_day2() -> Stage:
     ])
 
 
+def _stage_day4() -> Stage:
+    """Etappe zwei Tage NACH Tag 1 — hinter der Vorausschau-Grenze."""
+    return Stage(id="S4", name="Tag 4", date=DAY1 + timedelta(days=2), waypoints=[
+        _wp("F", 51.80, 0.40, 300, "09:00"),
+        _wp("G", 51.90, 0.60, 400, "11:00"),
+    ])
+
+
 def _trip(*stages: Stage) -> Trip:
     return Trip(id="tdd-2017-trip", name="2017 Trip", stages=list(stages))
 
@@ -101,6 +109,14 @@ def test_ac1_interpolates_within_active_segment():
     )
     assert result.lon == pytest.approx(-0.95, abs=1e-9), (
         f"AC-1: lon={result.lon!r}; erwartet -0.95 (p=0.25 zwischen A und B)."
+    )
+    # Adversary F005: `distance_from_start_km` wandert mit, statt still auf dem
+    # Default 0.0 stehen zu bleiben. Seg 1 spannt 0.0 -> 17.9 km (Haversine
+    # A->B, gemessen), p = 0.25 → 4.475.
+    assert result.distance_from_start_km == pytest.approx(4.475, abs=1e-9), (
+        f"AC-1: distance_from_start_km={result.distance_from_start_km!r}; "
+        f"erwartet 4.475 (p=0.25 der 17.9-km-Spanne). 0.0 = Default, nicht "
+        f"mitinterpoliert."
     )
 
 
@@ -293,11 +309,87 @@ def test_ac7_fail_soft_clamps_without_exception(caplog):
 
 
 # --------------------------------------------------------------------------
-# AC-11: beide Enden der [0,1]-Klemmung
+# AC-7 (Fortsetzung): Uebernachtungsluecke zwischen zwei Etappentagen
+# --------------------------------------------------------------------------
+
+def test_ac7b_overnight_gap_clamps_to_day_destination():
+    """AC-7-Familie: `at` faellt in die NACHT zwischen zwei Etappentagen.
+
+    Adversary F002: Dieser Zweig war von keinem Test erreicht. Die Mutation
+    `if False and at < seg.start_time:` liess alle acht Tests gruen und lieferte
+    statt des Tagesziels C den Startpunkt D des Folgetags — 26,2 km daneben.
+
+    Aufbau: Tag 1 endet mit dem Ziel-Segment um 19:00 UTC, Tag 2 beginnt erst
+    um 08:00 UTC. `at` = 21:00 UTC liegt dazwischen: der Wanderer ist auf der
+    Unterkunft am Tagesziel und laeuft nicht ueber Nacht weiter.
+    Erwartet: C (51.20, -0.60, 1800) — der zuletzt erreichte Endpunkt.
+    Falsch waere D (51.40, -0.40, 500), der Startpunkt des naechsten Morgens.
+    """
+    position_at_time = _resolve_position_at_time()
+
+    trip = _trip(_stage_day1(), _stage_day2())
+    segs_day1 = _segments(trip, DAY1)
+    active = segs_day1[1]
+    at = segs_day1[-1].end_time + timedelta(hours=2)
+    assert at < _segments(trip, DAY2)[0].start_time, (
+        "Fixture-Fehler: `at` liegt nicht in der Luecke, sondern schon im Folgetag"
+    )
+
+    result = position_at_time(trip, active, DAY1, at)
+
+    assert result.lat == pytest.approx(51.20, abs=1e-9), (
+        f"AC-7b: lat={result.lat!r}; erwartet 51.20 (Tagesziel C). "
+        f"51.40 = in den Folgetag vorgesprungen, Luecken-Zweig fehlt."
+    )
+    assert result.lon == pytest.approx(-0.60, abs=1e-9), (
+        f"AC-7b: lon={result.lon!r}; erwartet -0.60 (Tagesziel C)."
+    )
+    assert result.elevation_m == pytest.approx(1800.0, abs=1e-9), (
+        f"AC-7b: elevation_m={result.elevation_m!r}; erwartet 1800.0 (Tagesziel C). "
+        f"500.0 = Hoehe des Folgetags-Startpunkts."
+    )
+
+
+# --------------------------------------------------------------------------
+# Vorausschau-Grenze: hoechstens EIN Folgetag
+# --------------------------------------------------------------------------
+
+def test_forward_search_stops_after_one_lookahead_day():
+    """Adversary F004: `_LOOKAHEAD_DAYS` ist nach oben unbewacht.
+
+    Trip: Tag 1, dann eine Luecke (kein Ruhetags-Stage), dann eine Etappe zwei
+    Tage spaeter. `at` liegt in deren erstem Segment. Mit der dokumentierten
+    Grenze von einem Folgetag wird sie NICHT mehr erreicht → Klemmung auf das
+    Tagesziel C von Tag 1. Ab `_LOOKAHEAD_DAYS >= 2` kaeme 51.85 heraus.
+    """
+    position_at_time = _resolve_position_at_time()
+
+    trip = _trip(_stage_day1(), _stage_day4())
+    at = _segments(trip, DAY1 + timedelta(days=2))[0].start_time + timedelta(minutes=60)
+
+    result = position_at_time(trip, _segments(trip, DAY1)[1], DAY1, at)
+
+    assert result.lat == pytest.approx(51.20, abs=1e-9), (
+        f"Vorausschau-Grenze: lat={result.lat!r}; erwartet 51.20 (Tagesziel C von "
+        f"Tag 1). 51.85 = zwei Tage vorausgeschaut — die Position eines Wanderers "
+        f"ueber zwei Naechte fortzuschreiben ist keine Aussage, die dieser "
+        f"Baustein treffen kann."
+    )
+
+
+# --------------------------------------------------------------------------
+# AC-11: beide Enden des Grenzverhaltens
 # --------------------------------------------------------------------------
 
 def test_ac11_boundary_clamp_regression():
     """AC-11: Segment kuerzer als der Zieloffset, kein Folgesegment/-tag.
+
+    Geprueft wird das GRENZVERHALTEN VON ``position_at_time()`` an beiden
+    Enden — nicht der Klemm-Ausdruck in ``_interpolate_point()``, der von hier
+    aus gar nicht erreicht wird (Adversary F003, Docstring hier und AC-11 der
+    Spec entsprechend praezisiert). Unten greift der Vorschau-Zweig, oben die
+    Fail-soft-Klemmung; beides sind eigenstaendige Zusicherungen und keine
+    schwaechere Fassung der urspruenglichen.
 
     Trip: ein Segment 18:30-18:50 UTC (20 Min) + Ziel-Segment bis 19:50 UTC
     (Mindestfenster 1 h ab Ankunft). Der groesste im Betrieb verwendete Offset

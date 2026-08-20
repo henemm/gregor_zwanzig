@@ -268,8 +268,14 @@ Segment-Startpunkt.
   kein Crash) — UND ein Kontrollfall mit `at` exakt auf `start_time` liefert weiterhin exakt
   `start_point` (Fortschritt 0 an der unteren Grenze, keine Verschiebung durch Klemmung).
   - Test: zwei Aufrufe im selben Testlauf — Grenzfall unten (`at == start_time` →
-    `start_point`) und der bereits in AC-7 geprüfte Grenzfall oben, um beide Enden der
-    `[0,1]`-Klemmung nachzuweisen.
+    `start_point`) und der bereits in AC-7 geprüfte Grenzfall oben, um **beide Enden des
+    Grenzverhaltens von `position_at_time()`** nachzuweisen: unten greift der Vorschau-Zweig,
+    oben die Fail-soft-Klemmung. Nicht gemeint ist der Klemm-Ausdruck
+    `max(0.0, min(1.0, p))` in `_interpolate_point()` — der wird von diesen beiden Aufrufen
+    gar nicht erreicht (beide Aufrufstellen schließen `p` außerhalb `[0,1]` schon durch die
+    Verzweigung davor aus; er bleibt als defensive Absicherung für die in Scheibe B
+    hinzukommenden Aufrufer stehen). Die Zusicherung ist dadurch nicht schwächer, sondern
+    genauer benannt.
 
 - **AC-12 (Budget-Invariante):** Given ein Lauf von `check_radar_alerts()` für einen Trip mit
   aktivem Geh-Segment / When der Radar-Alarm-Pfad vollständig durchläuft / Then erfolgt **genau
@@ -392,3 +398,10 @@ Segment-Startpunkt.
 ## Changelog
 
 - 2026-08-20: Initial spec created (Issue #2017)
+- 2026-08-20: AC-11 präzisiert (Adversary-Finding F003, Scheibe A) — geprüft werden beide
+  Enden des **Grenzverhaltens von `position_at_time()`** (Vorschau-Zweig unten, Fail-soft-
+  Klemmung oben), nicht der von dort unerreichbare Klemm-Ausdruck in `_interpolate_point()`.
+  Zusicherung unverändert stark, nur genauer benannt. Zusätzlich abgedeckt seit demselben
+  Fix-Loop: Übernachtungslücke zwischen zwei Etappentagen (F002) und die Vorausschau-Grenze
+  von einem Folgetag (F004) — beide gehören zur AC-7-Familie „Fail-soft-Klemmung" und ändern
+  keine Zusicherung, sondern schließen Testlücken.

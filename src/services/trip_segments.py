@@ -416,18 +416,35 @@ def resolve_current_segment(
 # Issue #2017: die Vorwaertssuche laedt hoechstens EINEN Folgetag nach. Die im
 # Betrieb verwendeten Zieloffsets sind <= 90 Minuten (NOWCAST_HORIZON_MIN // 2),
 # ein zweiter Tagessprung ist damit strukturell unerreichbar.
+#
+# Die Zahl ist eine OBERGRENZE, kein Richtwert: jeder zusaetzliche Tag kostet
+# eine weitere ``convert_trip_to_segments()``-Konversion pro Aufruf und wuerde
+# die Position eines Wanderers ueber eine ganze Nacht hinweg fortschreiben, statt
+# ihn an der Unterkunft zu belassen. Beide Enden sind bewacht:
+# ``test_ac6_crosses_day_boundary`` faellt bei 0, ``test_forward_search_stops_
+# after_one_lookahead_day`` bei >= 2. Wer die Zahl erhoeht, braucht dafuer einen
+# Aufrufer mit einem Zieloffset > 1 Tag — den gibt es heute nicht.
 _LOOKAHEAD_DAYS = 1
 
 
 def _interpolate_point(seg: TripSegment, at: datetime) -> GPXPoint:
     """Linear zwischen ``seg.start_point`` und ``seg.end_point`` nach dem
-    Zeitanteil von ``at``, Fortschritt auf ``[0,1]`` geklemmt.
+    Zeitanteil von ``at``.
 
     Dieselbe Naeherung wie die Zeit-Interpolation in
     ``_interpolate_missing_times()`` — dort fuer Zeiten, hier fuer Geometrie.
     """
     span_s = (seg.end_time - seg.start_time).total_seconds()
     p = 0.0 if span_s <= 0 else (at - seg.start_time).total_seconds() / span_s
+    # DEFENSIV, heute unerreichbar (Adversary F003): beide Aufrufstellen in
+    # ``position_at_time()`` schliessen ueber die Verzweigung davor bereits
+    # ``p < 0`` bzw. ``p > 1`` aus. Die Klemme bleibt trotzdem stehen, weil
+    # Scheibe B (#2017 Wiring) neue Aufrufer bringt und ein ungeklemmter
+    # Fortschritt dort still EXTRAPOLIEREN wuerde — eine Position weit vor oder
+    # hinter der Etappe, die kein Aufrufer als Fehler erkennen koennte.
+    # Das Grenzverhalten von ``position_at_time()`` selbst bewacht
+    # ``test_ac11_boundary_clamp_regression`` (Vorschau-Zweig unten,
+    # Fail-soft-Klemmung oben) — NICHT diese Zeile.
     p = max(0.0, min(1.0, p))
 
     a, b = seg.start_point, seg.end_point
@@ -490,6 +507,20 @@ def position_at_time(
     for day_offset in range(_LOOKAHEAD_DAYS + 1):
         day = segment_date + timedelta(days=day_offset)
         for seg in convert_trip_to_segments(trip, day):
+            # ``<=`` und nicht ``<``: der Gleichstand ist der Regelfall, denn
+            # beim ersten Durchlauf trifft die Liste ``active`` selbst wieder —
+            # dessen Ende IST ``last_end_time``. Mit ``<`` bliebe genau dieses
+            # Segment stehen; folgenlos waere das, weil ``at > last_end_time``
+            # gilt und es damit weder ``at`` enthalten (``at > seg.end_time``)
+            # noch nach ``at`` beginnen kann — es wuerde nur ``last_end_point``
+            # auf seinen eigenen, unveraenderten Wert setzen. Das ist kein
+            # Zufall, sondern erschoepfend: die Segmente EINES Tages haben
+            # strikt steigende Enden (jedes endet, wo das naechste beginnt;
+            # nicht vorwaerts laufende Paare fallen im Kollaps-Guard oben raus),
+            # und Segmente verschiedener Tage koennen zeitlich nicht
+            # zusammenfallen. Ein zweites Segment mit demselben Ende, aber einem
+            # ANDEREN Endpunkt — der einzige Fall, in dem die Wahl sichtbar
+            # wuerde — kann hier also nicht auftreten (Adversary F001).
             if seg.end_time <= last_end_time:
                 continue  # liegt vollstaendig hinter uns
             if at < seg.start_time:
