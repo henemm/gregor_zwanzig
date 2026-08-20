@@ -262,7 +262,10 @@ def test_plain_outlook_shows_same_selection_as_html():
     )
 
     joined = "\n".join(body)
-    assert "9–27°C" not in joined, (
+    # #1848 A1 AC-9: neuer Trenner "/" statt "–" -- Negativprobe muss gegen
+    # den AKTUELLEN Altform-Trenner pruefen, sonst waere sie gegen einen
+    # bereits abgeloesten Trenner trivial wahr.
+    assert "9/27°C" not in joined, (
         "Der Klartext-Ausblick zeigt weiterhin den festen Temperatur-Spannen-Token "
         f"der abgewaehlten Sieben-Spalten-Form: {day2_line!r} (AC-2)"
     )

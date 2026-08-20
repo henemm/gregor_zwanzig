@@ -202,8 +202,10 @@ def test_compare_plain_shows_outlook_per_location():
 
     text = render_comparison_text(result, outlook_enabled=True)
 
-    assert "9–20°C" in text, "Innsbruck-Ausblick (Tag 2: 9-20°C) fehlt im Klartext"
-    assert "21–33°C" in text, "Fréjus-Ausblick (Tag 2: 21-33°C) fehlt im Klartext"
+    # #1848 A1 AC-9: Trenner auf den SMS-Schraegstrich gezogen (vorher Halb-
+    # geviertstrich "9–20°C") -- RED bis der Altform-Klartext mitgezogen ist.
+    assert "9/20°C" in text, "Innsbruck-Ausblick (Tag 2: 9/20°C) fehlt im Klartext"
+    assert "21/33°C" in text, "Fréjus-Ausblick (Tag 2: 21/33°C) fehlt im Klartext"
 
 
 # ---------------------------------------------------------------------------
@@ -394,8 +396,9 @@ def test_outlook_enabled_false_suppresses_both_formats(compare_env, tmp_path):
         "Ausblick-Tabelle sichtbar trotz outlook_enabled=False"
     )
     assert _OUTLOOK_TABLE_MARKER in html_on, "Ausblick-Tabelle fehlt trotz outlook_enabled=True"
-    assert "9–20°C" not in text_off, "Klartext-Ausblick sichtbar trotz outlook_enabled=False"
-    assert "9–20°C" in text_on, "Klartext-Ausblick fehlt trotz outlook_enabled=True"
+    # #1848 A1 AC-9: neuer Trenner "/" statt "–" (s. Kommentar oben).
+    assert "9/20°C" not in text_off, "Klartext-Ausblick sichtbar trotz outlook_enabled=False"
+    assert "9/20°C" in text_on, "Klartext-Ausblick fehlt trotz outlook_enabled=True"
 
 
 # ---------------------------------------------------------------------------
