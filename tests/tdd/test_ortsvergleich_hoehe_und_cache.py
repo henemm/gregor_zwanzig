@@ -159,6 +159,114 @@ def test_ac6_ortsvergleich_ort_traegt_seine_hoehe_fuer_zwei_nutzer(monkeypatch, 
         )
 
 
+def test_ac6_alarmlauf_ueber_compare_alert_service_traegt_hoehe(monkeypatch, tmp_path):
+    """F005-Nachbesserung (Adversary Runde 2): AC-6 verlangt woertlich einen
+    Test "ueber den Ortsvergleichs-Einstieg" -- der obige Test rief nur
+    `CompareLocationWeatherSource.fetch()` DIREKT auf. Dieser Test steigt am
+    ECHTEN Alarmlauf-Einstieg ein: `CompareAlertService._evaluate_one_location()`
+    (compare_alert.py:435) -- dem einzigen produktiven Aufrufer des
+    15-Minuten-Delta-Checks.
+
+    ROT bei Mutation: wird `zusatz["elevation_m"]` aus compare_alert.py:435
+    entfernt, traegt die abgesetzte Anfrage kein `elevation` mehr.
+    """
+    _prepare_availability(monkeypatch, tmp_path)
+    from services.compare_alert import CompareAlertService
+    from services.point_weather import AlertEvaluationConfig
+
+    uid = "tdd-1991-f005-alarm"
+    _clean_user(uid)
+    try:
+        loc = SavedLocation(
+            id="alarm-ort", name="Alarm-Ort", lat=47.0614, lon=11.1211,
+            elevation_m=3333, timezone="Europe/Vienna",
+        )
+
+        seen: List[httpx.Request] = []
+
+        def _fake_get_provider(name, _seen=seen, _loc=loc):
+            assert name == "openmeteo"
+            provider = OpenMeteoProvider()
+            provider._client = httpx.Client(
+                transport=httpx.MockTransport(_handler(_seen, _loc.lat, _loc.lon))
+            )
+            return provider
+
+        monkeypatch.setattr("providers.base.get_provider", _fake_get_provider)
+
+        service = CompareAlertService(user_id=uid)
+        service._evaluate_one_location(
+            "cp-f005-alarm", loc.id, loc, AlertEvaluationConfig(), (4, 19),
+        )
+
+        main = [r for r in seen if r.url.host == "api.open-meteo.com"]
+        assert main, "kein Open-Meteo-Request ueber den Alarmlauf-Einstieg beobachtet"
+        query = parse_qs(main[0].url.query.decode(), keep_blank_values=True)
+        assert query.get("elevation") == [str(loc.elevation_m)], (
+            f"F005/AC-6 (Alarmlauf): Anfrage traegt nicht Hoehe {loc.elevation_m} "
+            f"(war {query.get('elevation')!r}) -- compare_alert.py:435 reicht "
+            "elevation_m nicht mehr durch."
+        )
+    finally:
+        _clean_user(uid)
+
+
+def test_ac6_versand_anker_ueber_scheduler_dispatch_traegt_hoehe(monkeypatch, tmp_path):
+    """F005-Nachbesserung: der zweite echte Aufrufer von
+    `CompareLocationWeatherSource.fetch()` ist `_write_compare_alert_snapshots()`
+    (scheduler_dispatch_service.py:690-693) -- der Delta-Anker-Schreibpfad
+    beim Report-Versand.
+
+    ROT bei Mutation: wird `zusatz["elevation_m"]` aus
+    scheduler_dispatch_service.py:690-693 entfernt, traegt die abgesetzte
+    Anfrage kein `elevation` mehr.
+    """
+    _prepare_availability(monkeypatch, tmp_path)
+    from services.scheduler_dispatch_service import _write_compare_alert_snapshots
+
+    uid = "tdd-1991-f005-versand"
+    _clean_user(uid)
+    try:
+        loc = SavedLocation(
+            id="versand-ort", name="Versand-Ort", lat=47.26, lon=11.39,
+            elevation_m=650, timezone="Europe/Vienna",
+        )
+
+        seen: List[httpx.Request] = []
+
+        def _fake_get_provider(name, _seen=seen, _loc=loc):
+            assert name == "openmeteo"
+            provider = OpenMeteoProvider()
+            provider._client = httpx.Client(
+                transport=httpx.MockTransport(_handler(_seen, _loc.lat, _loc.lon))
+            )
+            return provider
+
+        monkeypatch.setattr("providers.base.get_provider", _fake_get_provider)
+
+        _write_compare_alert_snapshots(
+            "cp-f005-versand", [loc], uid, {}, tage_ab_ortstag=0,
+        )
+
+        main = [r for r in seen if r.url.host == "api.open-meteo.com"]
+        assert main, "kein Open-Meteo-Request ueber den Versand-Anker-Einstieg beobachtet"
+        query = parse_qs(main[0].url.query.decode(), keep_blank_values=True)
+        assert query.get("elevation") == [str(loc.elevation_m)], (
+            f"F005/AC-6 (Versand-Anker): Anfrage traegt nicht Hoehe {loc.elevation_m} "
+            f"(war {query.get('elevation')!r}) -- scheduler_dispatch_service.py:690-693 "
+            "reicht elevation_m nicht mehr durch."
+        )
+    finally:
+        _clean_user(uid)
+
+
+def _clean_user(user_id: str) -> None:
+    import shutil
+    d = Path(__file__).resolve().parents[2] / "data" / "users" / user_id
+    if d.exists():
+        shutil.rmtree(d)
+
+
 # ---------------------------------------------------------------------------
 # AC-7
 # ---------------------------------------------------------------------------

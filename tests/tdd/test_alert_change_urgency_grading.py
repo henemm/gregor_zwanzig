@@ -450,6 +450,7 @@ class _ScriptedSource:
     def fetch(
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
+        elevation_m: int | None = None,
     ):
         from services.point_weather import PointWeatherData
 
