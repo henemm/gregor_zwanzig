@@ -108,8 +108,8 @@ def test_ac1_gpx_rueckfalltag_folgt_der_zone_des_ersten_wegpunkts(tmp_path):
     """
     from services.gpx_processing import gpx_to_stage_data
 
-    now_utc = datetime(2026, 8, 19, 20, 0, 0, tzinfo=timezone.utc)
-    erwarteter_ortstag = date(2026, 8, 20)
+    now_utc = datetime(2026, 5, 1, 20, 0, 0, tzinfo=timezone.utc)
+    erwarteter_ortstag = date(2026, 5, 2)
     _anker(now_utc, KIRITIMATI_ZONE, erwarteter_ortstag)
 
     content = _mini_gpx_bytes(*KIRITIMATI)
@@ -304,8 +304,8 @@ def test_ac6_debug_trigger_radar_alert_today_folgt_trip_local_today(monkeypatch)
     from app.loader import save_trip
     from app.trip import Stage, Trip, Waypoint
 
-    now_utc = datetime(2026, 8, 19, 20, 0, 0, tzinfo=timezone.utc)
-    erwarteter_ortstag = date(2026, 8, 20)
+    now_utc = datetime(2026, 5, 1, 20, 0, 0, tzinfo=timezone.utc)
+    erwarteter_ortstag = date(2026, 5, 2)
     _anker(now_utc, KIRITIMATI_ZONE, erwarteter_ortstag)
 
     user_id = "tdd-1727-s5d-debug"
