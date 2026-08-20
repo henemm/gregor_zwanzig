@@ -183,3 +183,35 @@ def test_ac9_gleiche_koordinate_unterschiedliche_hoehe_liefert_unterschiedliche_
         f"({result_a.intensity_label!r}) obwohl 3333 m und 100 m angefragt "
         "wurden -- der zweite Abruf hat das Ergebnis des ersten geerbt."
     )
+
+
+def test_ac9_gleiche_hoehe_int_und_float_teilt_sich_einen_abruf():
+    """AC-9 (Gegenprobe): Given derselbe Punkt UND dieselbe Höhe, einmal als
+    `int` (Ortsvergleich, `SavedLocation.elevation_m`) und einmal als
+    `float` (Trip-Wegpunkt, `trip_segments.py:234`) / When der Nowcast für
+    beide läuft / Then teilen sie sich EINEN Abruf -- kein doppelter
+    Provider-Call fürs Aufruf-Budget (#1329), nur weil derselbe Wert einmal
+    `1000` und einmal `1000.0` heißt.
+
+    ROT ohne Normalisierung: `RadarNowcastCacheService._key()`
+    (radar_cache.py) schreibt `elevation_m` roh in den Schlüssel --
+    `1000` und `1000.0` ergeben zwei verschiedene Schlüssel-Strings
+    (`f"..._1000"` vs. `f"..._1000.0"`), obwohl es dieselbe Höhe ist.
+    """
+    cache = RadarNowcastCacheService(ttl_seconds=300)
+    service = RadarNowcastService(cache=cache)
+
+    _RESPONDER[0] = _erfolgreiche_antwort(precip_mm_h=1.5)
+    result_int = service.get_nowcast(_ATLANTIC_LAT, _ATLANTIC_LON, elevation_m=1000)
+    result_float = service.get_nowcast(_ATLANTIC_LAT, _ATLANTIC_LON, elevation_m=1000.0)
+
+    assert len(_CALL_URLS) == 1, (
+        f"AC-9-Gegenprobe: erwartet GENAU 1 Open-Meteo-Request (dieselbe "
+        f"Hoehe, nur unterschiedlicher Typ int/float), beobachtet "
+        f"{len(_CALL_URLS)} -- der Cache-Schluessel normalisiert die Hoehe "
+        "nicht auf ganze Meter (radar_cache.py::_key)."
+    )
+    assert result_int.intensity_label == result_float.intensity_label, (
+        "AC-9-Gegenprobe: beide Nowcasts muessen identisch sein -- derselbe "
+        "Punkt, dieselbe Hoehe, nur unterschiedlicher Zahlentyp."
+    )

@@ -44,7 +44,7 @@ from app.user import SavedLocation
 from providers.openmeteo import OpenMeteoProvider
 from services.compare_location_weather_source import CompareLocationWeatherSource
 from services.segment_weather import SegmentWeatherService
-from services.weather_cache import get_shared_weather_cache, reset_shared_weather_cache_for_tests
+from services.weather_cache import reset_shared_weather_cache_for_tests
 from utils.timezone import local_dt, tz_for_coords
 
 _OM_ALL_MODEL_IDS = [

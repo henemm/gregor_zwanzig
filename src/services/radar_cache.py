@@ -70,17 +70,22 @@ class RadarNowcastCacheService:
         self._ttl_seconds = ttl_seconds
 
     def _key(
-        self, lat: float, lon: float, region: str, elevation_m: Optional[int] = None
+        self, lat: float, lon: float, region: str, elevation_m: Optional[float] = None
     ) -> str:
         # Gerundete Koordinaten (~11m Aufloesung) + Region-Bucket
         # (Adversary-Fund F001) + Hoehe (Issue #1991 AC-9: dieselbe Koordinate
         # mit unterschiedlicher Hoehe fragt beim Provider unterschiedliche
-        # Werte ab) -- alle zusammen bilden den Schluessel.
-        return f"{round(lat, 4)}_{round(lon, 4)}_{region}_{elevation_m}"
+        # Werte ab) -- alle zusammen bilden den Schluessel. Auf ganze Meter
+        # normalisiert (analog `weather_cache.py::_bucket_key`) -- sonst
+        # wuerden 1000 (int, Ortsvergleich) und 1000.0 (float, GPX-Trip) fuer
+        # DIESELBE Hoehe zwei verschiedene Schluessel bilden und denselben
+        # Punkt doppelt abrufen (Cache-Sharing-Ziel #1329 verfehlt).
+        norm_elevation = int(round(elevation_m)) if elevation_m is not None else None
+        return f"{round(lat, 4)}_{round(lon, 4)}_{region}_{norm_elevation}"
 
     def get(
         self, lat: float, lon: float, region: str, now: datetime,
-        elevation_m: Optional[int] = None,
+        elevation_m: Optional[float] = None,
     ) -> Optional[RadarCacheEntry]:
         """Treffer nur wenn (now - entry.cached_at).total_seconds() <= ttl_seconds
         UND dieselbe Region UND dieselbe Hoehe."""
@@ -96,7 +101,7 @@ class RadarNowcastCacheService:
 
     def put(
         self, lat: float, lon: float, region: str, frames: list, source: str, now: datetime,
-        elevation_m: Optional[int] = None,
+        elevation_m: Optional[float] = None,
     ) -> None:
         if not frames:
             return  # Negativ-Ergebnisse werden NIE gecacht (Alarm-Blindheit vermeiden)
