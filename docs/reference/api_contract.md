@@ -1209,6 +1209,20 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
     "alert_anchor_rejected_streak_since": "2026-08-10T11:15:00Z",
     "alert_anchor_rejected_recent_count": 4
   },
+  "enrichment_health": {
+    "thunder": {
+      "last_attempt_at": "2026-08-20T06:15:00Z",
+      "last_success_at": "2026-08-20T06:15:00Z",
+      "last_fallback_at": null,
+      "self_throttled": false
+    },
+    "radar_nowcast": {
+      "last_attempt_at": "2026-08-20T06:20:00Z",
+      "last_success_at": null,
+      "last_fallback_at": null,
+      "self_throttled": true
+    }
+  },
   "tier_request_health": {
     "open_count": 1,
     "oldest_open_age_hours": 192.4
@@ -1240,6 +1254,12 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 | briefing_health.briefing_dispatch_errors_recent_count | int (Issue #1629) | Count of briefing dispatch errors in the last 24 hours (recorded in `users/<uid>/diagnostics/briefing_dispatch_failures.jsonl`). |
 | briefing_health.alert_anchor_rejected_streak_since | string \| null (Issue #1661) | ISO-8601 UTC timestamp when the current unbroken series of **rejected deviation-alert anchors** started, or `null` if no streak is active. An anchor is rejected when it describes a different calendar day than today (`wrong_day`), is older than the 26 h fallback limit (`too_old`), or is missing entirely while the trip is already running (`missing`) — in each case the deviation guard has no valid comparison point and stays silent. Gap threshold: **60 minutes** (the alert check runs every 15 minutes, so an hour without a further rejection ends the series; the 26 h threshold used for briefings would keep the same fault invisible for days). |
 | briefing_health.alert_anchor_rejected_recent_count | int (Issue #1661) | Count of rejected deviation-alert anchors in the last 24 hours (recorded in `users/<uid>/diagnostics/alert_anchor_rejected.jsonl`). Only the timestamp is decoded on the Go side — neither the trip id nor the rejection reason leaves the Python core (#252). |
+| enrichment_health | object (Issue #1581, ADR-0018, ADR-0047 Addendum) | Raw call outcomes for degradable **enrichment** paths (thunder direct sources, radar nowcast) — a top-level sibling of `briefing_health`, never nested inside it, because an enrichment outage is explicitly not a briefing outage (`coreBriefingSources` stays unchanged). One key per path that has been called at least once; a path never called does not appear (no fabricated failure). No streak/threshold decision is made in Go — `check-gregor20.sh` forms `now − last_success_at` itself, exactly like `warn_service_health`. |
+| enrichment_health.\<path\>.last_attempt_at | string \| null | ISO-8601 UTC timestamp of the most recent call attempt for this path (`thunder` or `radar_nowcast`), regardless of outcome — including `self_throttled`, so a growing gap to `last_success_at` is externally visible. |
+| enrichment_health.\<path\>.last_success_at | string \| null | ISO-8601 UTC timestamp of the most recent outcome `"ok"`. A served-through-fallback call does **not** update this field, even though it delivered values — booking it as success would keep this timestamp fresh through a multi-day degradation and hide the exact state ADR-0018 wants visible. |
+| enrichment_health.\<path\>.last_fallback_at | string \| null | ISO-8601 UTC timestamp of the most recent outcome `"fallback"` (thunder: named substitute source, ADR-0047; radar: none currently produces this outcome). |
+| enrichment_health.\<path\>.self_throttled | bool | `true` if the journal contains at least one `"self_throttled"` outcome for this path — the call was skipped by our own budget gate rather than failing against the remote source. |
+| enrichment_health.journal_read_error | bool (present only on error) | `true` when `data/diagnostics/enrichment_calls.jsonl` exists but could not be read (e.g. path is a directory) — our own fault, distinct from a missing journal (fresh deploy, silently empty map). |
 | tier_request_health | object (Issue #1555) | Privacy-safe aggregate of open tier-change requests (`POST /api/auth/tier-change-request`, Issue #1071) across ALL users. Purely numeric — the endpoint is public, so no `user_id`, `display_name` or e-mail ever appears here (#252). A request counts as **done** when `requested_tier` is empty OR equals the effective `tier`; only otherwise it is **open**. |
 | tier_request_health.open_count | int | Number of currently open tier-change requests across all users. `0` when none are pending. |
 | tier_request_health.oldest_open_age_hours | float | Age in hours of the **oldest** open request (from its `requested_at`); `0.0` when `open_count` is 0 or no open request carries a `requested_at`. Raw hours only — the 7-day overdue threshold is evaluated by the external monitor (`check-gregor20.sh`), not here. |

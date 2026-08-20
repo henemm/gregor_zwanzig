@@ -151,8 +151,36 @@ wirkte dieses ADR wie ein Bruch von ADR-0025 — das ist es nicht.
     **Offen bleibt allein die Ortsvergleichs-Mail** (mehrere Orte mit je eigener Herkunft) —
     eigenes Folge-Issue **#1563**.
 
+## Addendum (2026-08-20, Issue #1581): Health-Signal für Anreicherungs-Pfade
+
+Löst die in den Folgepflichten benannte Lücke ein: das in [ADR-0018](0018-provider-fallback-ohne-kaschieren.md)
+geforderte, mit der Ausfalldauer wachsende Health-Signal war für die Gewitter-Domäne noch nicht
+nachgezogen. Mit #1581 wird es für die Gewitter-Direktquellen (diese ADR) **und** zusätzlich für
+den Radar-Nowcast-Pfad nachgeliefert. Spec: `docs/specs/modules/fix_1581_enrichment_health.md`.
+
+1. **Eigener Top-Level-Kanal `enrichment_health`, nicht innerhalb von `briefing_health`.**
+   `check-gregor20.sh` liest `briefing_health` als „ist das Briefing gesund". Zusätzliche
+   Schlüssel dort würden briefing-kritische und nicht-kritische Signale im selben Objekt
+   vermengen — genau das, wovor diese ADR (Abgrenzung zu ADR-0025) und ADR-0018 warnen. Ein
+   eigenes Objekt (Präzedenzfall: `warn_service_health`) macht die Trennung strukturell statt nur
+   konventionell.
+2. **Rohdaten (`last_attempt_at`, `last_success_at`) statt Streak-Berechnung in Go.** Der neue
+   Go-Aggregator (`internal/scheduler/enrichment_health.go`) berechnet keine Lücken-Schwelle. Die
+   Schwelle bleibt außerhalb des Repos: `check-gregor20.sh` bildet `jetzt − last_success_at`
+   selbst, wie es das bereits für `warn_service_health` tut. Preis: „wächst mit der Ausfalldauer"
+   ist damit keine im Repo testbare Eigenschaft mehr, sondern eine der externen Auswertung —
+   akzeptierte Abweichung vom wörtlichen ADR-0018-Vorbild (`provider_error_streak_since`), keine
+   offene Lücke.
+3. **Eigenes Journal (`data/diagnostics/enrichment_calls.jsonl`), kein Ausbau von
+   `call_log.py`.** `call_log.py` schreibt nach `openmeteo_calls.jsonl`, derselben Datei, die
+   `briefing_health` liest — ein Ausbau dort hätte `coreBriefingSources` berührt. Der gemeinsame
+   Schreibweg `log_enrichment_call()` (`src/providers/enrichment_health.py`) ist fail-soft:
+   Journalfehler dürfen den eigentlichen Anreicherungs-Abruf nie beeinträchtigen.
+
 ## Changelog
 
+- 2026-08-20: Addendum ergänzt (Issue #1581) — Health-Signal `enrichment_health` für
+  Gewitter-Direktquellen und Radar-Nowcast, Nachzug der ADR-0018-Folgepflicht.
 - 2026-08-06 (Nachbesserung nach team-lead-Review): Entscheidung 6 (kein Zeitbudget-Sonderweg,
   PO-Entscheidung, Verweis #1539) ergänzt; verworfene Alternative „auch `eu_direct` instrumentieren"
   ergänzt (`dwd_eu.py` bleibt unverändert); Folgepflicht zu `fallback_metrics` für Scheibe 2b

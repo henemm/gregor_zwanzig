@@ -351,6 +351,14 @@ def enrich_thunder(
     try:
         _fetch_lightning_density(reihe, location, bereits_befragt)
     except Exception:
+        # #1581 AC-12: der im Issue benannte "einzige Beobachtungspunkt".
+        # Hierher propagiert u.a. der Fall "auch die Vertretung wirft"; in
+        # ALLEN Faellen dieses Fangs hat die Anreicherung nicht geliefert,
+        # deshalb `unavailable`.
+        from providers.enrichment_health import (
+            OUTCOME_UNAVAILABLE, PATH_THUNDER, log_enrichment_call,
+        )
+        log_enrichment_call(PATH_THUNDER, OUTCOME_UNAVAILABLE)
         logger.warning("Gewitter-Anreicherung fehlgeschlagen", exc_info=True)
 
     cape_leiter, potenzial_leiter = _schwellen_fuer_reihe(reihe, location)
@@ -473,26 +481,45 @@ def _fetch_primaerquelle(
     1). Scheitert sie selbst auch, propagiert die Ausnahme zum bestehenden
     aeusseren Fang in `enrich_thunder()` (Spec AC-5)."""
     from providers.base import ThunderSourceUnavailableError
+    from providers.enrichment_health import (
+        OUTCOME_FALLBACK, OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_THUNDER,
+        log_enrichment_call,
+    )
     from providers.thunder_routing import thunder_vertretung_for
 
+    # #1581: jeder der Ausgaenge unten hinterlaesst eine Journalzeile. Ohne sie
+    # bleibt ein ANDAUERNDER Ausfall unsichtbar -- der stille Rueckzug (kein
+    # Ersatz verfuegbar) hinterliess bisher NICHTS, nicht einmal einen Log-
+    # Eintrag. `log_enrichment_call` ist selbst fail-soft, der Aufruf braucht
+    # hier also keine eigene Absicherung (Spec AC-4).
     aktive_quelle = quelle
     try:
         eintraege = _hole_eintraege(quelle, location, von, bis)
     except ThunderSourceUnavailableError:
         ersatz = thunder_vertretung_for(quelle)
         if ersatz is None or ersatz == bereits_befragt:
+            log_enrichment_call(PATH_THUNDER, OUTCOME_UNAVAILABLE)
             return
         aktive_quelle = ersatz
+        # Wirft die Vertretung selbst, propagiert die Ausnahme zum aeusseren
+        # Fang in `enrich_thunder()` -- DORT wird die Zeile geschrieben (AC-12),
+        # sonst entstuenden zwei fuer denselben Vorgang.
         eintraege = _hole_eintraege(ersatz, location, von, bis)
 
     if not any(werte for _feld, werte in eintraege):
+        # Gueltige, aber leere Antwort ("kein Gewitter in Sicht") -- ein
+        # Erfolg. Als Ausfall gebucht meldete jede ruhige Wetterlage einen
+        # Dauerausfall.
+        log_enrichment_call(PATH_THUNDER, OUTCOME_OK)
         return
 
     gefuellt = _wende_eintraege_an(reihe, eintraege, basis)
     if not gefuellt:
+        log_enrichment_call(PATH_THUNDER, OUTCOME_OK)
         return
 
     if aktive_quelle == quelle:
+        log_enrichment_call(PATH_THUNDER, OUTCOME_OK)
         logger.info(
             "Gewittersignale von '%s': %d Zeitpunkte gefuellt", quelle, gefuellt
         )
@@ -508,6 +535,9 @@ def _fetch_primaerquelle(
     if reihe.meta.fallback_model is None:
         reihe.meta.fallback_model = aktive_quelle
         reihe.meta.fallback_reason = "thunder_source_unavailable"
+    # #1581 AC-1: `detail` nennt die tatsaechlich verwendete Ersatzquelle --
+    # die Information, die aussen "laeuft noch, aber degradiert" traegt.
+    log_enrichment_call(PATH_THUNDER, OUTCOME_FALLBACK, aktive_quelle)
     logger.warning(
         "Gewittersignale von Ersatzquelle '%s' statt '%s' "
         "(nicht erreichbar): %d Zeitpunkte gefuellt",
