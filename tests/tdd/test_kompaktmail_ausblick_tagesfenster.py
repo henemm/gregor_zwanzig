@@ -361,7 +361,15 @@ def test_unzerlegbarer_tagestoken_faellt_auf_kein_gewitter_zurueck():
 # Issue #1488 Scheibe B: Sollwert neu aufgezeichnet -- das Aggregatwort kommt
 # jetzt aus THUNDER_LABEL_DE ("mittel" statt "MED"). Geprueft bleibt die
 # Zweigwahl (Rueckfall auf `thunder_plain` ohne Stundenreihe), nicht das Vokabular.
-_AC5_ALT_ZEILE_SOLL = "Mi  Alte Etappe                9-21C   1.5mm NW22  Tmittel"
+# Issue #1848 Scheibe A1: Sollwert erneut aufgezeichnet -- der Temperatur-Spannen-
+# Trenner ist vom Bindestrich auf den Schraegstrich gewechselt ("9-21C" -> "9/21C").
+# Grund: PO-Entscheid 2026-08-20, EIN Trenner ueber alle Klartext-Flaechen; der
+# Bindestrich ist bei Minusgraden zugleich Trenner und Vorzeichen und damit nicht
+# eindeutig lesbar. Gleiche Lage wie bei #1488 oben (MED -> mittel): geaendert hat
+# sich das VOKABULAR, nicht die hier bewachte Zweigwahl -- der Rueckfall auf
+# `thunder_plain` ohne Stundenreihe bleibt am abschliessenden "Tmittel" ablesbar
+# und unveraendert geprueft.
+_AC5_ALT_ZEILE_SOLL = "Mi  Alte Etappe                9/21C   1.5mm NW22  Tmittel"
 
 _AC5_ALT_ZEILE = dict(
     weekday="Mi", name="Alte Etappe", note=None,
