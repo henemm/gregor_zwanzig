@@ -229,6 +229,46 @@ prüft).
   — beide Tagesmengen sind disjunkt. Der Bug-Nachweis (AC-1) läuft deshalb auf Funktionsebene,
   nicht als Mail-interner Widerspruch.
 
+## 🔴 Abgelöste Entscheidung: die Paar-basierte Spalten-Sollmenge aus #1703 Scheibe 2
+
+Beim Umsetzen von AC-4..AC-8 kollidierte der Merge mit einer bestehenden, testbewachten
+Zusicherung — hier festgehalten, damit die Ablösung **nicht still** passiert.
+
+**Vorher (Epic #1703 S2, PO-Entscheidung 2026-07-27 „keine zwei gleich beschrifteten Spalten"):**
+`tests/tdd/test_channel_metric_matrix.py` baute die Soll-Spaltenmenge aus **Paaren**
+(`metric_id` + `aggregation`). Wählte der Nutzer alles, erschienen `temperature:min` und
+`temperature:max` als **zwei** Spalten mit den disambiguierten Überschriften „Temp Minimum" /
+„Temp Maximum" (`compare_outlook_metric_ids.py:144-148`). 26 parametrisierte Tests bewachten das.
+
+**Jetzt (PO-Entscheid 2026-08-20, diese Spec):** min+max desselben `metric_id` werden zu **einer**
+Zelle zusammengeführt. Damit fällt die Paar-basierte Sollmenge.
+
+**Warum das keine Aufweichung ist:** Der Testname lautet „jede wählbare **Größe** ergibt genau
+eine Spalte" — die Sollmenge war aber über **Paare** gebaut. Nach dem Merge ergibt die Größe
+`temperature` weiterhin genau **eine** Spalte; die Invariante im Sinne ihres Namens gilt
+unverändert. Angepasst wurde die Soll**menge** (`tests/helpers/outlook_columns.py`), **nicht** die
+Zusicherung — beide S2-Tests bleiben in Kraft, inklusive der Gegenrichtung
+(`html_und_klartext_zeigen_dieselbe_spaltenmenge`).
+
+**Was ausdrücklich BESTEHEN bleibt:**
+
+- Die Disambiguierungs-Logik (`compare_outlook_metric_ids.py:144-148`) wird **nicht**
+  zurückgebaut, obwohl sie durch den Merge vorerst ins Leere läuft (heute haben genau 2 von 29
+  wählbaren Größen mehr als eine Auswertung). Kommt mit **A3** `avg` bei Temperatur dazu, hat die
+  Größe drei Auswertungen: min+max mergen zur Spanne, `avg` bleibt eine eigene Spalte und braucht
+  das Suffix wieder. Ein Rückbau müsste in der nächsten Scheibe zurückgedreht werden.
+- Deshalb prüft die Vakuum-Gegenprobe in `test_ac_s2_3_*` seither einen **synthetischen**
+  Katalog-Ausschnitt (dritte Auswertung simuliert) statt des realen Katalogs. Am realen Katalog
+  wäre sie nach dem Merge **trivial wahr** geworden — der Ausschluss hätte die Bedingung erzeugt,
+  mit der er begründet wird, und die Disambiguierung wäre totes, ungetestetes Recht. Der
+  synthetische Ausschnitt ist **absichtlich** synthetisch und darf nicht auf den realen Katalog
+  „zurückkorrigiert" werden.
+- Die Anti-Vertauschungs-Prüfung (AC-S2-6/AC-S2-8) wurde **umgebaut, nicht abgeschwächt**: Die
+  Zelle wird an `/` geteilt und **jede Seite** gegen ihren eigenen gerechneten Sollwert geprüft.
+  Ohne diesen Umbau hätte die Prüfung nur noch die führende Zahl gelesen und wäre für eine
+  Vertauschung strukturell **blind** geworden — ein Wächter, der dasteht und nichts mehr fängt.
+  Wirksamkeit per Mutation belegt (vertauschte Zuweisungen ⇒ beide Tests rot).
+
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** keine
@@ -243,3 +283,11 @@ prüft).
 ## Changelog
 
 - 2026-08-20: Initial spec created (#1848 Scheibe A1)
+- 2026-08-20: Ablösung der Paar-basierten Spalten-Sollmenge aus #1703 S2 dokumentiert; Umbau der
+  Anti-Vertauschungs-Prüfung und der Vakuum-Gegenprobe festgehalten (beide wirksam belegt).
+- 2026-08-20: Nach Adversary-Verdict VERIFIED eine Wache für die Scheduler-Verdrahtung ergänzt
+  (`tests/tdd/test_outlook_scheduler_wires_hiking_window.py`). Grund: die Mutation
+  `segments=seg_weather` → `None` blieb bei 625 Tests **grün** — die Zusicherung war dort geprüft,
+  wo der Code steht, nicht dort, wo sie wirkt. Genau die Fehlerform, die A1 nötig machte (#1417
+  stellte drei Kanäle um und übersah den Ausblick). Divergenz gemessen: Etappenaggregat 15,0 °C
+  gegen Gehzeit-Fenster 22,0 °C; Mutation macht die Wache nachweislich rot.
