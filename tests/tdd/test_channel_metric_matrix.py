@@ -4591,7 +4591,7 @@ _S7_PILLEN_BASIS_KATALOGORDNUNG = [
     "!! Gewitter mittel ab 11:00 - staerkste 11:00",
     "50% bewoelkt - Max 08:00",
     "Feuchte 55-55% - Max 08:00",
-    "Sonne 150 min",
+    "Sonne 2.5h",
 ]
 
 

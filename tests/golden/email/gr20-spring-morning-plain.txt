@@ -13,7 +13,7 @@ GR20 E1: 17–18°C, gef. 11–12°C, ⛅, starker Regen max 8:00, mäßiger Win
   Regen ab 08:00 · 18.5 mm
   Gewitter mittel ab 04:00 · stärkste 04:00
   50% bewölkt · Max 08:00
-  Sonne 150 min
+  Sonne 2.5h
 
 ━━ Segment 1: km 0.0–0.0 | 08:00–12:00 | ↑400m → 1200m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thdr     SnowL   Cloud   Sun   TmpMin 
