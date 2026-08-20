@@ -236,12 +236,16 @@ class WeatherCacheService:
         Adversary-Fund F001).
 
         Bucket key format:
-        {lat}_{lon}_{model_id}_{enrich_ensemble}_{enrich_snow}
+        {lat}_{lon}_{elevation_m}_{model_id}_{enrich_ensemble}_{enrich_snow}
 
         Rationale:
         - segment_id was per-trip/per-preset -- two trips at the SAME place
           never shared a cache entry, defeating the point of caching.
         - lat/lon rounded to 4 decimals (~11m resolution).
+        - elevation_m (Issue #1991): dieselbe Koordinate mit unterschiedlicher
+          Hoehe (Trip-Wegpunkt vs. Ortsvergleichs-Ort) fragt beim Provider
+          unterschiedliche Werte ab -- ohne die Hoehe im Schluessel wuerde
+          der zweite Abruf den Cache-Treffer des ersten erben.
         - model_id distinguishes different regional models at coordinates
           near a model boundary; enrich_ensemble/enrich_snow distinguish
           enriched vs. bare fetches.
@@ -253,7 +257,13 @@ class WeatherCacheService:
         """
         lat = round(segment.start_point.lat, 4)
         lon = round(segment.start_point.lon, 4)
-        return f"{lat}_{lon}_{model_id}_{enrich_ensemble}_{enrich_snow}"
+        raw_elevation = segment.start_point.elevation_m
+        # Issue #1991: auf ganze Meter normalisiert (wie `_punkt_params()`,
+        # providers/openmeteo.py) -- sonst wuerden 1200 (int, Ortsvergleich)
+        # und 1200.0 (float, GPX-Trip) fuer DIESELBE Hoehe zwei verschiedene
+        # Schluessel bilden.
+        elevation_m = int(round(raw_elevation)) if raw_elevation is not None else None
+        return f"{lat}_{lon}_{elevation_m}_{model_id}_{enrich_ensemble}_{enrich_snow}"
 
     @staticmethod
     def _storage_key(bucket: str, window_start: datetime, window_end: datetime) -> str:

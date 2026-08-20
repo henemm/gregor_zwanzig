@@ -253,7 +253,8 @@ def _apply_radar_override(data: list, location: "Location") -> None:
         from services.radar_service import RadarNowcastService
 
         beobachtung = RadarNowcastService().get_nowcast(
-            location.latitude, location.longitude, priority="user_briefing",
+            location.latitude, location.longitude,
+            elevation_m=location.elevation_m, priority="user_briefing",
         )
     except Exception:
         logger.warning("Beobachtungs-Override fehlgeschlagen", exc_info=True)

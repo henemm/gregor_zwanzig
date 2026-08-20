@@ -131,6 +131,7 @@ Diese Tabelle definiert, welche Information aus welcher Quelle bezogen wird.
 | precipitation | precip_1h_mm | 2026-01-24 | approved |
 | weather_code | symbol | 2026-01-24 | approved |
 | models | - | 2026-01-24 | approved |
+| elevation | ForecastMeta.model_elevation_m (Antwort) | 2026-08-20 | approved (Antrag #4) |
 
 **Genehmigte Modelle:**
 - `meteofrance_arome` - AROME France & Balearen (1.3km)
@@ -242,6 +243,30 @@ Parameter, reiner Nachtrag.
 | Daten | Status | Bemerkung |
 |-------|--------|-----------|
 | `minutely_15` (precipitation, weather_code) | approved (Nachtrag) | Open-Meteo, seit #656 produktiv im Nowcast-Pfad (Fallback + Konvektions-Sidecar) |
+
+#### Antrag #4: Open-Meteo `elevation` — Wegpunkt-Hoehe an den Provider
+
+**Datum:** 2026-08-20
+**Status:** ✅ APPROVED (2026-08-20, Henning)
+**Antragsteller:** Claude (Issue #1991)
+**Spec:** `docs/specs/modules/wegpunkt_hoehe_provider.md`
+**ADR:** [ADR-0058](../adr/0058-wegpunkt-hoehe-an-provider-api.md)
+
+**Zusammenfassung:** `elevation` wird bei jeder Open-Meteo-Anfrage (Hauptvorhersage, Ensemble-
+Anreicherung, Wolken-Abruf ueber GeoSphere, Radar-Nowcast) mitgeschickt, wenn der angefragte
+Wegpunkt eine Hoehe kennt — damit rechnet der Provider seine Vorhersage auf die echte Hoehe
+herunter statt auf die Hoehe seiner eigenen, geglaetteten Geländekarte (gemessen bis 6,2 °C
+Abweichung an einem einzigen Punkt). Kein neuer Datenwert, sondern ein bestehender, bislang nicht
+gesendeter Anfrage-Parameter samt seines Antwort-Gegenstuecks `elevation` (die vom Modell
+tatsaechlich verwendete Hoehe, landet in `ForecastMeta.model_elevation_m`).
+
+| Daten | Status | Bemerkung |
+|-------|--------|-----------|
+| `elevation` (Anfrage-Parameter) | approved | NUR gesendet wenn die Hoehe des Wegpunkts bekannt ist; sonst kein Parameter (kein Platzhalter) |
+| `elevation` (Antwort-Feld, `ForecastMeta.model_elevation_m`) | approved | vom Provider gemeldete, tatsaechlich verwendete Hoehe |
+
+**Begruendung:** PO-Entscheid 2026-08-20 — Hoehe an die Schnittstelle durchreichen, Korrektur
+macht die Quelle, keine eigene Hoehenphysik (ADR-0058).
 
 #### Antrag #1: Open-Meteo Wetter-Parameter (Regional Models)
 

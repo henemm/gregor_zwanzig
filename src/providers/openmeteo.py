@@ -178,6 +178,36 @@ def is_within_forecast_horizon(stage_date: date, reference_date: date) -> bool:
     return (stage_date - reference_date).days <= OPENMETEO_MAX_FORECAST_DAYS
 
 
+def _koordinaten_params(
+    lat: float, lon: float, elevation_m: Optional[float] = None
+) -> Dict[str, Any]:
+    """Issue #1991 (N1-Nachbesserung): EINZIGER produktiver Ort, der ein
+    Open-Meteo-Params-Dict mit dem Schluessel ``latitude`` aufbaut --
+    registriert als BEWUSSTE_AUSNAHME in
+    tests/test_openmeteo_callsite_elevation_guard.py. ``elevation`` NUR wenn
+    ``elevation_m`` gesetzt ist (int, gerundet) -- fehlt die Hoehe, taucht der
+    Schluessel gar nicht im Dict auf (kein ``elevation=None``, das httpx sonst
+    zu einem leeren ``elevation=`` kodieren wuerde, AC-2). ``_punkt_params()``
+    (Location-Aufrufer) UND die primitiven lat/lon-Aufrufer in geosphere.py /
+    radar_service.py rufen ausschliesslich diese Funktion -- kein zweiter,
+    unregistrierter Aufbau-Ort mehr im Code."""
+    params: Dict[str, Any] = {"latitude": lat, "longitude": lon}
+    if elevation_m is not None:
+        params["elevation"] = int(round(elevation_m))
+    return params
+
+
+def _punkt_params(location: "Location", **rest: Any) -> Dict[str, Any]:
+    """Gemeinsamer Params-Erbauer (Issue #1991, Spec S1): latitude/longitude/
+    elevation aus ``location`` ueber ``_koordinaten_params()``. ``rest`` wird
+    darueber gelegt."""
+    params = _koordinaten_params(
+        location.latitude, location.longitude, location.elevation_m
+    )
+    params.update(rest)
+    return params
+
+
 def _should_enrich_snow(enrich_snow: bool, lat: float, lon: float) -> bool:
     """A3 (Epic #1301): True nur wenn enrich_snow=True UND (lat, lon) im
     SNOWGRID-Abdeckungsgebiet (Alpen) liegt. Reine, netzfreie Gating-Funktion."""
@@ -721,13 +751,12 @@ class OpenMeteoProvider:
         Spread is computed as stdev across ensemble members. Requires >=5 valid
         members per hour; otherwise that hour's spread is None.
         """
-        params = {
-            "latitude": location.latitude,
-            "longitude": location.longitude,
-            "hourly": "temperature_2m,precipitation",
-            "models": "ecmwf_ifs04,icon_seamless,gfs_seamless",
-            "timezone": "UTC",
-        }
+        params = _punkt_params(
+            location,
+            hourly="temperature_2m,precipitation",
+            models="ecmwf_ifs04,icon_seamless,gfs_seamless",
+            timezone="UTC",
+        )
         if start and end:
             params["start_date"] = start.strftime("%Y-%m-%d")
             params["end_date"] = end.strftime("%Y-%m-%d")
@@ -794,19 +823,24 @@ class OpenMeteoProvider:
             return {}
 
     def _fetch_uv_data(
-        self, lat: float, lon: float, start: datetime, end: datetime
+        self, location: "Location", start: datetime, end: datetime
     ) -> Optional[Dict[str, Any]]:
         """
         Fetch UV-Index from Air Quality API (CAMS).
 
         UV is unavailable from all weather models; CAMS provides global hourly data.
 
+        Issue #1991 AC-13 (Spec S1, bewusste Ausnahme): dieser Endpunkt kennt
+        KEINEN Hoehenparameter -- baut sein Params-Dict deshalb bewusst OHNE
+        ``_punkt_params()`` (siehe Ausnahmeliste in
+        tests/test_openmeteo_callsite_elevation_guard.py).
+
         Returns:
             AQ API response dict with hourly.uv_index, or None on failure.
         """
         params = {
-            "latitude": lat,
-            "longitude": lon,
+            "latitude": location.latitude,
+            "longitude": location.longitude,
             "hourly": "uv_index",
             "timezone": "UTC",
             "start_date": start.strftime("%Y-%m-%d"),
@@ -844,6 +878,9 @@ class OpenMeteoProvider:
             run_time = datetime.now(timezone.utc)
 
             # Build metadata
+            # Issue #1991 AC-5: Open-Meteo meldet die tatsaechlich verwendete
+            # Hoehe im Response-Feld "elevation" zurueck.
+            raw_elevation = data.get("elevation")
             meta = ForecastMeta(
                 provider=Provider.OPENMETEO,
                 model=model_id,
@@ -851,6 +888,9 @@ class OpenMeteoProvider:
                 grid_res_km=grid_res_km,
                 interp="grid_point",
                 stations_used=[],
+                model_elevation_m=(
+                    float(raw_elevation) if raw_elevation is not None else None
+                ),
             )
 
             # Parse data points
@@ -970,10 +1010,9 @@ class OpenMeteoProvider:
         deadline_at = time.monotonic() + FETCH_DEADLINE_SECONDS
 
         # Build request parameters (no "model" param needed — endpoint determines model)
-        params = {
-            "latitude": location.latitude,
-            "longitude": location.longitude,
-            "hourly": ",".join([
+        params = _punkt_params(
+            location,
+            hourly=",".join([
                 "temperature_2m",
                 "apparent_temperature",
                 "relative_humidity_2m",
@@ -996,8 +1035,8 @@ class OpenMeteoProvider:
                 "direct_normal_irradiance",
                 "is_day",
             ]),
-            "timezone": "UTC",
-        }
+            timezone="UTC",
+        )
 
         # Add time range if specified (both start and end required together)
         if start and end:
@@ -1105,7 +1144,7 @@ class OpenMeteoProvider:
 
         # WEATHER-06: Fetch UV from Air Quality API (no weather model provides UV)
         if start and end:
-            uv_data = self._fetch_uv_data(location.latitude, location.longitude, start, end)
+            uv_data = self._fetch_uv_data(location, start, end)
             if uv_data:
                 uv_times = uv_data.get("hourly", {}).get("time", [])
                 uv_values = uv_data.get("hourly", {}).get("uv_index", [])
@@ -1172,12 +1211,11 @@ class OpenMeteoProvider:
                     )
                     if fallback:
                         fb_id, fb_res, fb_endpoint = fallback
-                        fb_params = {
-                            "latitude": location.latitude,
-                            "longitude": location.longitude,
-                            "hourly": ",".join(missing),
-                            "timezone": "UTC",
-                        }
+                        fb_params = _punkt_params(
+                            location,
+                            hourly=",".join(missing),
+                            timezone="UTC",
+                        )
                         if start and end:
                             fb_params["start_date"] = start.strftime("%Y-%m-%d")
                             fb_params["end_date"] = end.strftime("%Y-%m-%d")

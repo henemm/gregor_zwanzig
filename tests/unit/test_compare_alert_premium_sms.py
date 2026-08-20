@@ -198,7 +198,8 @@ class _ScriptedWeatherSource:
     def __init__(self, values: dict[str, float]) -> None:
         self._values = dict(values)
 
-    def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None):
+    def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
+              elevation_m=None):
         return _pwd(point_id, point_id, lat, lon, self._values.get(point_id, 0.0))
 
 
