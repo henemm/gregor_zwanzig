@@ -444,6 +444,68 @@ def _metric_column_bg(col: dict, raw: object) -> str:
     return f"background:{tone_css(band)[0]};"
 
 
+
+# #1848 A1 (AC-1/AC-2/AC-3): Gehzeit-Fenster-Override je Summary-Feld.
+# `hiking_extrema` ist ein bereits fertiges hiking_field_min_max()-Mapping
+# (Vorbild sms_thresholds) -- dieselben Funktionen, die sms_trip.py fuer
+# D/FD nutzt (Issue #1417). Fail-soft: fehlt der Key oder ist
+# `hiking_extrema` None, bleibt das Etappenaggregat (AC-2). Berechnet wird
+# es entweder vom Aufrufer selbst UEBERGEBEN oder HIER aus `segments`
+# abgeleitet (s. `_resolve_hiking_extrema`) -- `trip_report_scheduler.py`
+# darf `output.renderers.day_window` nicht selbst importieren
+# (Architektur-Wache `test_scheduler_has_no_output_imports`), reicht daher
+# die rohen Segmente durch statt das Ergebnis vorzurechnen.
+_HIKING_FIELD_MAP = {
+    "temp_min_c": ("t2m_c", 0),
+    "temp_max_c": ("t2m_c", 1),
+    "wind_chill_min_c": ("wind_chill_c", 0),
+    "wind_chill_max_c": ("wind_chill_c", 1),
+}
+
+
+def _hiking_or_summary(
+    summary: "SegmentWeatherSummary", field: Optional[str], hiking_extrema: Optional[dict],
+) -> object:
+    """Wert fuer ``field`` aus dem Gehzeit-Fenster, wenn ein Override vorliegt
+    -- sonst faellt es fail-soft auf das Etappenaggregat zurueck (AC-2)."""
+    if field is None:
+        return None
+    hit = _HIKING_FIELD_MAP.get(field)
+    if hit is not None and hiking_extrema is not None:
+        extrema = hiking_extrema.get(hit[0])
+        if extrema is not None:
+            return extrema[hit[1]]
+    return getattr(summary, field, None)
+
+
+def _resolve_hiking_extrema(
+    hiking_extrema: Optional[dict], segments: Optional[list],
+) -> Optional[dict]:
+    """``hiking_extrema`` hat Vorrang; ohne es aber mit ``segments`` wird das
+    Gehzeit-Fenster HIER berechnet (``output.renderers.day_window`` ist ein
+    Renderer-Modul, der Import gehoert deshalb in diese Schicht, nicht in den
+    Zeitplaner). Segmentlose Teile (kein ``.segment``, nur Zeitreihe --
+    Test-Doubles) bleiben aussen vor statt die Berechnung abstuerzen zu
+    lassen."""
+    if hiking_extrema is not None or not segments:
+        return hiking_extrema
+    from output.renderers.day_window import (
+        collect_hiking_window_points, hiking_field_min_max,
+    )
+
+    usable = [s for s in segments if getattr(s, "segment", None) is not None]
+    hiking_points = collect_hiking_window_points(usable)
+    resolved = {
+        field: extrema
+        for field, extrema in (
+            ("t2m_c", hiking_field_min_max(hiking_points, "t2m_c")),
+            ("wind_chill_c", hiking_field_min_max(hiking_points, "wind_chill_c")),
+        )
+        if extrema is not None
+    }
+    return resolved or None
+
+
 def build_outlook_row(
     summary: "SegmentWeatherSummary",
     points: list["ForecastDataPoint"],
@@ -456,6 +518,8 @@ def build_outlook_row(
     report_type: Optional[str] = None,
     day_window_start_hour: Optional[int] = None,
     day_window_end_hour: Optional[int] = None,
+    hiking_extrema: Optional[dict] = None,
+    segments: Optional[list] = None,
 ) -> dict:
     """Baut ein Ausblick-Row-Dict aus einer SegmentWeatherSummary + Punktliste.
 
@@ -489,7 +553,25 @@ def build_outlook_row(
     Zellen dieser Zeile koennen nicht nach einer anderen Regel entstehen als
     die Ueberschriften darueber. Ein ausdrueckliches ``metrics`` hat Vorrang
     (Compare-Pfad unveraendert).
+
+    ``hiking_extrema`` (#1848 A1, AC-1/AC-2/AC-3): optionales Mapping
+    ``{"t2m_c": (min, max, max_ts), "wind_chill_c": (...)}`` --
+    ``hiking_field_min_max()``-Ergebnisse aus dem Gehzeit-Fenster
+    (``collect_hiking_window_points()``), das der Aufrufer SELBST berechnet
+    (er kennt Segmente, diese Funktion nicht). Wirkt an BEIDEN Wertequellen:
+    ``temp_lo``/``temp_hi`` des festen Altform-Pfads UND ``getattr(summary,
+    col["field"])`` der ``cells``-Schleife des konfigurierbaren Pfads.
+    Fehlender Key/``None`` faellt fail-soft auf das Etappenaggregat zurueck.
+
+    ``segments`` (#1848 A1, Alternative zu ``hiking_extrema``): der Aufrufer
+    (``trip_report_scheduler.py``) hat ``seg_weather`` bereits vorliegen,
+    darf aber ``output.renderers.day_window`` selbst nicht importieren
+    (Architektur-Wache ``test_scheduler_has_no_output_imports``) -- reicht
+    daher die rohen Segmente durch, die Ableitung passiert HIER
+    (``_resolve_hiking_extrema``). Ein explizites ``hiking_extrema`` hat
+    Vorrang vor ``segments``.
     """
+    hiking_extrema = _resolve_hiking_extrema(hiking_extrema, segments)
     if metrics is None and trip_display_config is not None:
         from output.renderers.compare_outlook_metric_ids import (
             resolve_trip_outlook_metrics,
@@ -500,8 +582,10 @@ def build_outlook_row(
     from output.tokens.dto import HourlyValue
     from utils.timezone import local_hour as _lh
 
-    temp_lo = int(summary.temp_min_c) if summary.temp_min_c is not None else None
-    temp_hi = int(summary.temp_max_c) if summary.temp_max_c is not None else None
+    _temp_lo_raw = _hiking_or_summary(summary, "temp_min_c", hiking_extrema)
+    _temp_hi_raw = _hiking_or_summary(summary, "temp_max_c", hiking_extrema)
+    temp_lo = int(_temp_lo_raw) if _temp_lo_raw is not None else None
+    temp_hi = int(_temp_hi_raw) if _temp_hi_raw is not None else None
     precip_mm = float(summary.precip_sum_mm or 0.0)
     wind_kmh = int(summary.wind_max_kmh or 0)
     wind_dir = degrees_to_compass(getattr(summary, "wind_direction_avg_deg", None))
@@ -644,7 +728,10 @@ def build_outlook_row(
         cell_bg: list[str] = []
         for col in outlook_columns(metrics):
             ordinal = col.get("kind") == "ordinal"
-            raw = _thunder_value if ordinal else getattr(summary, col["field"], None)
+            raw = (
+                _thunder_value if ordinal
+                else _hiking_or_summary(summary, col.get("field"), hiking_extrema)
+            )
             cells.append(format_outlook_value(
                 raw,
                 {**col, "hail": _hail,
