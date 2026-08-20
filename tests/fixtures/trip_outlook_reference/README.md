@@ -37,6 +37,7 @@ Abweichung steht zitierbar im Testcode statt still in der Fixture.
 | Datum | Datei | Zelle | Alt | Neu | Grund |
 |---|---|---|---|---|---|
 | 2026-08-18 | `outlook_block.txt` | Zeilen "Mo"/"Mi", Gewitter-Feld | `⚡mittel` / `⚡hoch` | `⚡mittel@10` / `⚡hoch@10` | #1493 AC-3 (freigegebene Spec `feat_1493_gewitter_onset_sichtbar.md`): der Klartext-Ausblick fuehrt die Onset-Stunde, wie HTML-Zelle, Telegram und SMS es laengst tun. `outlook_table.html` und `outlook_legend.html` sind unveraendert; die Di-Zeile (`⚡–`, kein Tagesgewitter) ebenfalls |
+| 2026-08-20 | `outlook_block.txt`/`compact_block.txt`/`telegram_bubble.txt` | alle Temperatur-Zellen | `9–21°C`/`9-21C`/`9–21°C` u.a. | `9/21°C`/`9/21C`/`9/21°C` u.a. | #1848 A1 AC-9 (Altform-Klartext auf denselben Schraegstrich-Trenner wie die SMS-Schreibweise gezogen -- betrifft `format_trend_tokens()`, `temp_str`, `helpers.py:943`, wirkt in alle drei Klartext-Renderer durch; `outlook_table.html`/`outlook_legend.html` sind unveraendert, das HTML rendert N/D als getrennte Spalten ohne Trennzeichen) |
 
 ## Diese Dateien werden NICHT nachgezogen
 

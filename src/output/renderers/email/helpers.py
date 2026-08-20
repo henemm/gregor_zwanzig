@@ -940,7 +940,11 @@ def format_trend_tokens(stage: dict) -> dict:
     tl = stage.get("temp_lo")
     th = stage.get("temp_hi")
     if tl is not None and th is not None:
-        temp_str = f"{tl}–{th}°C"
+        # #1848 A1 AC-9: Schraegstrich statt Halbgeviertstrich -- derselbe
+        # Trenner wie die SMS-Schreibweise (Punkt 2 dieser Spec), betrifft nur
+        # den festen Altform-Pfad (unkonfigurierter Trip/Compare ohne
+        # outlook_metrics).
+        temp_str = f"{tl}/{th}°C"
     elif th is not None:
         temp_str = f"{th}°C"
     else:

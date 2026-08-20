@@ -2335,6 +2335,17 @@ class TripReportSchedulerService:
                     trip_display_config=dc, report_type=report_type,
                     day_window_start_hour=_win_start,
                     day_window_end_hour=_win_end,
+                    # #1848 A1 (AC-1/AC-2/AC-3): Gehzeit-Fenster statt
+                    # Etappenaggregat fuer Temperatur/gefuehlte Temperatur --
+                    # derselbe Randbehandlungsfehler (exklusive
+                    # Ankunftsstunde), den #1417 bereits fuer SMS/Telegram/
+                    # Kachelzeile behoben hat. `seg_weather` liegt hier
+                    # bereits vor; die Ableitung (collect_hiking_window_points
+                    # + hiking_field_min_max, output.renderers.day_window)
+                    # passiert INNERHALB von build_outlook_row -- der
+                    # Zeitplaner darf dieses Renderer-Modul nicht selbst
+                    # importieren (test_scheduler_has_no_output_imports).
+                    segments=seg_weather,
                 )
                 # Issue #1275: explicit calendar date so the thunder forecast
                 # can reuse this row (matched by date, gap-safe) instead of
