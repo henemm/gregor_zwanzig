@@ -57,7 +57,8 @@ def _notice(alert: OfficialAlert, scope: str, scope_id: str) -> OfficialAlertNot
 
 
 def _sms(notices: list[OfficialAlertNotice]) -> str:
-    return render_official_alert_sms(notices, sms_prefix="GZ", limit=SMS_LIMIT, tz=UTC)
+    # FORTGESCHRIEBEN (#1948 S5): `sms_prefix` ist ersatzlos entfallen.
+    return render_official_alert_sms(notices, limit=SMS_LIMIT, tz=UTC)
 
 
 def _time_tokens(sms: str, *, expected: int) -> list[str]:

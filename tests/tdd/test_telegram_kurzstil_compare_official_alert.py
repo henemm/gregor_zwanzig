@@ -209,6 +209,18 @@ class TestAC5CompareOfficialKurzstil:
                 "nicht identisch zum render_official_alert_sms-Text.\n"
                 f"  Telegram={payload.get('text')!r}\n  SMS={sms_text!r}"
             )
+            # FORTGESCHRIEBEN (#1948 S5, AC-12): die Parität bleibt bestehen,
+            # aber BEIDE Texte tragen jetzt die neue Grammatik — Ortskopf statt
+            # Preset-Name, Kürzel:Stufe statt `AMT {WORT}{Pos}/3`.
+            assert "AMT" not in sms_text, (
+                f"Kurzstil/SMS tragen noch das alte AMT-Format: {sms_text!r}"
+            )
+            assert "Korsika-Vergleich" not in sms_text and (
+                "Korsika-Vergleich".replace("-", "") not in sms_text
+            ), f"Der Preset-Name ist ersatzlos entfallen: {sms_text!r}"
+            assert sms_text.count("!") == 1 and ": !" in sms_text, (
+                f"Erwartet '<Ortskopf>: !<Kuerzel>:<Stufe> …': {sms_text!r}"
+            )
         finally:
             tg_stub.stop()
             sms_stub.stop()

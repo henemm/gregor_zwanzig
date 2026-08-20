@@ -28,6 +28,7 @@ import http.server
 import json
 import socket
 import threading
+from collections import namedtuple
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -237,26 +238,59 @@ class TestAC7BriefingSpecialChars:
 
 
 # ---------------------------------------------------------------------------
-# AC-7 — Amtliche Trip-Warnung im Kurzstil mit Sonderzeichen im Trip-Namen
+# AC-7 — Amtliche Warnung im Kurzstil mit Sonderzeichen im ORTSNAMEN
+#
+# FORTGESCHRIEBEN (#1948 S5): der Trip-/Preset-Name (`sms_prefix`) ist aus
+# `render_official_alert_sms` ersatzlos entfallen (AC-9) — damit trägt er die
+# Sonderzeichen nicht mehr in den Kurzstil-Text. Die Zusicherung selbst (roh,
+# NICHT HTML-escaped, `parse_mode=None`) ist unverändert; sie wandert an die
+# Stelle, an der nutzereingegebener Text die amtliche Alarm-SMS heute
+# erreicht: den ORTSKOPF. Der Trip-Pfad leitet seinen Kopf ausschliesslich aus
+# Segmentnummern ab ("Seg 4"/"ges.Route") und kann strukturell keine
+# Sonderzeichen mehr tragen — der Ortsvergleich dagegen loest Ortsnamen auf.
 # ---------------------------------------------------------------------------
+
+_Loc = namedtuple("_Loc", ["id", "name", "lat", "lon"])
+
 
 class TestAC7OfficialAlertSpecialChars:
     def test_kurzform_official_alert_sends_raw_specials_without_parse_mode(
         self, monkeypatch,
     ) -> None:
+        """AC-7: Given eine amtliche Warnung fuer einen Ort, dessen NAME die
+        drei HTML-kritischen Zeichen traegt / When sie im Kurzstil ueber
+        Telegram geht / Then kommt der Text ROH an (nicht escaped) und ohne
+        `parse_mode`.
+
+        WARUM DER ORTSVERGLEICH-PFAD (#1948 S5): getestet wird die Fehlerklasse
+        "nutzereingegebener Text wird HTML-escaped ausgeliefert". Traeger war
+        bis S5 der Trip-Name; der ist mit `sms_prefix` ersatzlos entfallen
+        (AC-9). Im Trip-Pfad ist der Ortskopf seither SYSTEMGENERIERT
+        ("Seg 4"/"Ziel"/"ges.Route", abgeleitet aus Segmentnummern) und kann
+        strukturell gar keine Sonderzeichen mehr tragen -- ein Test dort
+        pruefte die Zusicherung nicht mehr, sondern nur noch ihre
+        Unerreichbarkeit. Der Ortsvergleich loest dagegen ORTSNAMEN auf
+        (`build_compare_official_alert_notices` -> `sms_scope`), und die gibt
+        der Nutzer ein. Der Pfad ist damit die einzige Stelle, an der die
+        Fehlerklasse heute noch entstehen KANN."""
         tg_stub = _TelegramStub()
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings()
             svc = NotificationService(settings=settings, user_id="tdd-1260-pm-official")
 
-            # Trip-Name (ohne Leerzeichen zusammengezogen) wird zum SMS-Prefix,
-            # der die Sonderzeichen in den amtlichen Kurzstil-Text trägt.
-            trip = _make_trip(name="Ort & <X>", telegram_style="kurzform")
-            result = svc.send_official_alert(
-                trip=trip,
-                notices=_make_official_notices(),
-                effective_channels={"telegram"},
+            # Der Ortsname (nutzereingegeben) wird zum Ortskopf der amtlichen
+            # Kurznachricht und traegt die Sonderzeichen dorthin.
+            locations = [
+                _Loc(id="loc-a", name="Ort & <X>", lat=42.51, lon=8.85),
+                _Loc(id="loc-b", name="Vizzavona", lat=42.11, lon=9.13),
+            ]
+            alert, _segments = _make_official_notices()[0]
+            result = svc.send_multi_location_official_alert(
+                "Korsika-Vergleich",
+                locations,
+                [(alert, ["loc-a"])],
+                {"telegram"},
                 telegram_style="kurzform",
             )
 

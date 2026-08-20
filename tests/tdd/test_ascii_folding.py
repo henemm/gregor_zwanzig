@@ -96,7 +96,7 @@ def test_official_alert_sms_folds_accented_location_hyeres():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("Hyères")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "Hyeres" in sms, f"Gefaltetes 'Hyeres' fehlt in der SMS: {sms!r}"
     assert "Hyres" not in sms, (
@@ -113,7 +113,7 @@ def test_official_alert_sms_folds_umlaut_location_muenchen():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("München")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "Muenchen" in sms, f"Gefaltetes 'Muenchen' fehlt in der SMS: {sms!r}"
     assert "Mnchen" not in sms, (
@@ -435,7 +435,7 @@ def test_official_alert_sms_stays_ascii_and_within_limit_with_special_chars():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("Hyères")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", limit=160, tz=UTC)
+    sms = render_official_alert_sms(notices, limit=160, tz=UTC)
 
     assert sms.isascii(), f"SMS ist nicht rein ASCII/GSM-7: {sms!r}"
     assert len(sms) <= 160, f"SMS ueberschreitet 160 Zeichen: {len(sms)} — {sms!r}"
@@ -529,7 +529,7 @@ def test_official_alert_sms_names_greek_location_real_send_path():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("Θεσσαλονίκη")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "Thessaloniki" in sms, (
         f"Transliterierter Ortsname fehlt in der SMS -- amtliche Warnung ohne "
@@ -554,7 +554,7 @@ def test_official_alert_sms_names_serbian_location_real_send_path():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("Ђердап")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "Djerdap" in sms, (
         f"Transliterierter serbischer Ortsname fehlt in der SMS -- amtliche "
@@ -597,7 +597,7 @@ def test_official_alert_sms_cyrillic_worst_case_length_budget():
             affected_chips=[name], free_chips=[], scope_kind="locations",
         ))
 
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", limit=160, tz=UTC)
+    sms = render_official_alert_sms(notices, limit=160, tz=UTC)
 
     assert sms.isascii(), f"SMS ist nicht rein ASCII/GSM-7: {sms!r}"
     assert len(sms) <= 160, f"SMS ueberschreitet 160 Zeichen: {len(sms)} — {sms!r}"
@@ -630,7 +630,7 @@ def test_official_alert_sms_mixed_scripts_worst_case_length_budget():
             affected_chips=[name], free_chips=[], scope_kind="locations",
         ))
 
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", limit=160, tz=UTC)
+    sms = render_official_alert_sms(notices, limit=160, tz=UTC)
 
     assert sms.isascii(), f"SMS ist nicht rein ASCII/GSM-7: {sms!r}"
     assert len(sms) <= 160, f"SMS ueberschreitet 160 Zeichen: {len(sms)} — {sms!r}"
@@ -673,7 +673,7 @@ def test_official_alert_sms_names_arabic_location_real_send_path():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("ا")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "nur " in sms, f"SMS traegt kein Scope-Praefix 'nur ': {sms!r}"
     assert "nur " not in sms or not sms.rstrip().endswith("nur"), (

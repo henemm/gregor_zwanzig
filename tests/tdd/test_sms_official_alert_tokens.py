@@ -425,9 +425,13 @@ _AC13_CASES = [
 
 @pytest.mark.parametrize("hazard,symbol", _AC13_CASES)
 def test_ac13_standalone_alert_sms_uses_new_symbols(hazard: str, symbol: str):
+    # FORTGESCHRIEBEN (#1948 S5): `sms_prefix` (Trip-/Preset-Name) ist aus
+    # `render_official_alert_sms` ersatzlos entfallen -- die Ortsangabe steht
+    # jetzt im Kopf. Die hier bewachte Zusicherung (Kuerzel-Katalog, keine
+    # Alt-Kuerzel) ist davon unberuehrt.
     from output.renderers.alert.official_alerts import render_official_alert_sms
     text = render_official_alert_sms(
-        [_notice(_alert(hazard, 3))], sms_prefix="GZ20", tz=_TZ,
+        [_notice(_alert(hazard, 3))], tz=_TZ,
     )
     assert _word_present(text, symbol), (
         f"Neues Kuerzel {symbol!r} fehlt in der Standalone-Warn-SMS: {text!r}"
@@ -453,7 +457,7 @@ def test_ac14_both_sms_paths_use_the_same_symbol(hazard: str, symbol: str):
 
     trip_sms = _sms([_alert(hazard, 3)])
     standalone = render_official_alert_sms(
-        [_notice(_alert(hazard, 3))], sms_prefix="GZ20", tz=_TZ,
+        [_notice(_alert(hazard, 3))], tz=_TZ,
     )
 
     trip_expected = "!CL" if hazard == "access_ban" else f"!{catalog_symbol}:M"
@@ -482,7 +486,7 @@ def test_unknown_hazard_same_symbol_in_both_sms_paths():
 
     trip_sms = _sms([_alert("volcanic_ash", 3)])
     standalone = render_official_alert_sms(
-        [_notice(_alert("volcanic_ash", 3))], sms_prefix="GZ20", tz=_TZ,
+        [_notice(_alert("volcanic_ash", 3))], tz=_TZ,
     )
     assert "!VO:M" in trip_sms, f"Trip-Briefing-SMS ohne 'VO': {trip_sms!r}"
     assert _word_present(standalone, "VO"), (
@@ -580,7 +584,7 @@ def test_f002_colliding_unknown_same_symbol_in_both_sms_paths(hazard: str):
     symbol = sms_symbol_for(hazard)
     trip_sms = _sms([_alert(hazard, 3)])
     standalone = render_official_alert_sms(
-        [_notice(_alert(hazard, 3))], sms_prefix="GZ20", tz=_TZ,
+        [_notice(_alert(hazard, 3))], tz=_TZ,
     )
     assert f"!{symbol}:M" in trip_sms, (
         f"Trip-Briefing-SMS ohne {symbol!r}: {trip_sms!r}"

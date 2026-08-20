@@ -1014,8 +1014,14 @@ def _strip_pictographs(text: str) -> str:
 def _ascii_alert_location(text: str) -> str:
     """SMS-Kopf-Ortstext (Issue #1935/#1779 AC-5/AC-7/AC-8): Piktogramme
     ZUERST entfernen, danach dieselbe ASCII/GSM-7-Faltung wie jeder andere
-    SMS-Text -- sonst faellt die Reihenfolge in `fold_ascii()`."""
-    return _ascii(_strip_pictographs(text))
+    SMS-Text -- sonst faellt die Reihenfolge in `fold_ascii()`.
+
+    Issue #1948 S5 (AC-14): "Segment N" wird im SMS-Kopf zu "Seg N" gekuerzt.
+    Diese Funktion ist SMS-only-Konsument (Onset-, Onset-Shift-, Trip-Delta-
+    SMS) -- die Kurzform an EINER Stelle trifft alle Alarm-SMS-Zweige, waehrend
+    E-Mail/Telegram/Betreff (`_km_str`/`_km_str_onset`) "Segment" weiter
+    ausschreiben."""
+    return _ascii(_strip_pictographs(text)).replace("Segment ", "Seg ")
 
 
 def _esc(text: str) -> str:
