@@ -203,6 +203,78 @@ def _fuse_thunder_levels(
             dp.thunder_level_signals = thunder_signal_carriers(*werte, **leitern)
 
 
+# Halbe Breite des Zeitfensters um `jetzt`, in dem eine Beobachtung ueberhaupt
+# etwas ueber die Vorhersage sagen kann (Issue #1759, PO-Entscheid 2026-08-19).
+_RADAR_OVERRIDE_FENSTER_MIN = 90
+
+# Eigene Ausloese-Schwelle der Blitzdichte fuer den Override, Blitze/km2/3h.
+# NOCH NICHT KALIBRIERT (Spec Known Limitations, TODO PO/Meteorologie) --
+# Platzhalter. BEWUSST getrennt von der Leiter der normalen Fusion
+# (`_LIGHTNING_*_MIN` in `output/metric_format.py`): das sind zwei
+# verschiedene Fusionsstufen, eine gemeinsame Zahl wuerde sie verwechselbar
+# machen. Wer hier kalibriert, aendert NICHT die Fusionsleiter mit.
+_RADAR_OVERRIDE_BLITZDICHTE_MIN = 0.005
+
+
+def _apply_radar_override(data: list, location: "Location") -> None:
+    """Regel 1 des Gewitter-Gesamtkonzepts, "Beobachtung schlaegt Vorhersage"
+    (Issue #1759): eine aktuelle konvektive Beobachtung im engen Zeitfenster um
+    `jetzt` hebt die fusionierte Stufe auf mindestens ``MED`` an.
+
+    DECKEL NACH UNTEN, NIE NACH OBEN: eine bereits als ``MED``/``HIGH``
+    fusionierte Stunde bleibt unveraendert -- der Override kann eine Stufe
+    anheben, aber niemals senken und auch nicht ueber ``MED`` hinaus treiben.
+
+    Laeuft NACH ``_fuse_thunder_levels()`` und BEWUSST nicht darin: er ist kein
+    gleichrangiges fuenftes ``max()``-Signal, sondern ein bedingter
+    Post-Fusion-Deckel mit eigenem Zeitfenster-Gate (Spec Abschnitt
+    "Architektur-Entscheidung", Ergaenzung zu ADR-0057).
+
+    ``dp.ts`` ist laut Hausnorm naiv-UTC (``ForecastDataPoint.__post_init__``),
+    der Vergleich laeuft deshalb ueber ``_naiv_utc()`` -- ein direkter Vergleich
+    mit ``datetime.now(timezone.utc)`` wuerde ``TypeError`` werfen.
+
+    Fail-soft wie der uebrige Anschlussweg: ein Ausfall der Beobachtungsquelle
+    laesst das Fusionsergebnis stehen und kippt die Vorhersage nicht.
+    """
+    from app.models import ThunderLevel
+    from output.metric_format import thunder_ordinal
+
+    jetzt = _naiv_utc(datetime.now(timezone.utc))
+    grenze = _RADAR_OVERRIDE_FENSTER_MIN * 60
+    fenster = [
+        dp for dp in data
+        if abs((_naiv_utc(dp.ts) - jetzt).total_seconds()) <= grenze
+    ]
+    if not fenster:
+        return  # kein Abruf ohne betroffenen Datenpunkt (1x je Reihe, nie je dp)
+
+    try:
+        from services.radar_service import RadarNowcastService
+
+        beobachtung = RadarNowcastService().get_nowcast(
+            location.latitude, location.longitude, priority="user_briefing",
+        )
+    except Exception:
+        logger.warning("Beobachtungs-Override fehlgeschlagen", exc_info=True)
+        return
+
+    mindest = thunder_ordinal(ThunderLevel.MED)
+    for dp in fenster:
+        dichte = dp.lightning_density_per_km2_3h
+        ausgeloest = beobachtung.is_convective or (
+            dichte is not None and dichte >= _RADAR_OVERRIDE_BLITZDICHTE_MIN
+        )
+        if not ausgeloest:
+            continue
+        if dp.thunder_level is None or thunder_ordinal(dp.thunder_level) < mindest:
+            dp.thunder_level = ThunderLevel.MED
+        if dp.thunder_level_signals is None:
+            dp.thunder_level_signals = []
+        if "radar" not in dp.thunder_level_signals:
+            dp.thunder_level_signals.append("radar")
+
+
 def _schwellen_fuer_reihe(
     reihe: "NormalizedTimeseries", location: "Location",
 ) -> Tuple[
@@ -287,6 +359,10 @@ def enrich_thunder(
     # Abruf-Fehlschlag) -- CAPE steht unabhaengig von der Blitzdichte-Quelle
     # an jedem Datenpunkt und kann allein schon "leicht" ausloesen.
     _fuse_thunder_levels(reihe.data, cape_leiter, potenzial_leiter)
+
+    # #1759: Beobachtung schlaegt Vorhersage -- laeuft NACH der Fusion und
+    # kann deren Ergebnis nur anheben, nie senken.
+    _apply_radar_override(reihe.data, location)
 
 
 def _hole_eintraege(
