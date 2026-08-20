@@ -37,7 +37,7 @@ import tenacity
 
 from app.config import Location
 from providers.geosphere import GeoSphereProvider
-from providers.openmeteo import OpenMeteoProvider
+from providers.openmeteo import OpenMeteoProvider, _koordinaten_params
 
 # Schaufelspitze (Stubai, echte Hoehe 3333 m, faellt in die ICON-D2-Box aus
 # providers/region_routing.py bzw. REGIONAL_MODELS: 43-56 lat, 2-18 lon --
@@ -141,6 +141,28 @@ def test_ac1_wegpunkt_mit_hoehe_traegt_elevation_in_der_anfrage(monkeypatch, tmp
     )
 
 
+def test_ac1_gpx_hoehe_mit_nachkommastelle_wird_kaufmaennisch_gerundet():
+    """AC-1 / Implementation Details S1 ("elevation NUR wenn ... (int,
+    gerundet)"): GPX-Hoehen sind Fliesskommazahlen -- `_koordinaten_params`
+    muss kaufmaennisch runden (`round()`), nicht trunkieren (`int()`).
+
+    Finding F001 (Adversary #1991): alle bisherigen Testfixturen trugen
+    bereits ganzzahlige Hoehen (3333, 650, 100) -- eine Mutation von
+    `int(round(x))` zu `int(x)` blieb unbemerkt. 2302.5 ist der erste
+    Grenzfall: `int(round(2302.5))` == 2302 (Python bankers' rounding rundet
+    zur naechsten GERADEN Zahl bei exakter .5-Mitte) -- `int(2302.5)`
+    (Trunkierung) waere ebenfalls 2302, deshalb 2303.6 als zweiter,
+    eindeutiger Fall: `round()` -> 2304, `int()` (Trunkierung) -> 2303.
+    """
+    params = _koordinaten_params(47.0614, 11.1211, elevation_m=2303.6)
+    assert params["elevation"] == 2304, (
+        f"AC-1/F001: elevation_m=2303.6 muss kaufmaennisch gerundet zu 2304 "
+        f"werden, war {params['elevation']!r} -- eine Umstellung auf "
+        "Trunkierung (int(x) statt int(round(x))) waere hier unbemerkt "
+        "geblieben."
+    )
+
+
 # ---------------------------------------------------------------------------
 # AC-2
 # ---------------------------------------------------------------------------
@@ -213,39 +235,57 @@ def test_ac3_haupt_und_ensemble_anfrage_tragen_beide_die_hoehe(monkeypatch, tmp_
     )
 
 
+_GEOSPHERE_NWP_FIXTURE = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "geosphere_nwp_innsbruck.json"
+)
+
+
 def test_ac3_wolken_abruf_ueber_geosphere_kennt_noch_keine_hoehe(monkeypatch):
     """AC-3 (Wolken-Anteil): `GeoSphereProvider._fetch_openmeteo_clouds`
     (geosphere.py:508) ist die zweite, hartkodierte Open-Meteo-URL ausserhalb
-    von `openmeteo.py` -- sie kennt heute weder `Location` noch Hoehe. Der
-    Test ruft die kuenftig erwartete Signatur (mit `elevation_m=`) und prueft
-    die abgesetzte Anfrage -- geschrieben GEGEN das Zielverhalten, nicht gegen
-    den heutigen Fehler (sonst waere der Test nach der Implementierung rot
-    statt gruen).
+    von `openmeteo.py`. Findung F003 (Adversary #1991): die Funktion nimmt
+    zwar ein `elevation_m`-Kwarg entgegen, aber KEIN produktiver Aufrufer hat
+    es je uebergeben -- ein direkter Aufruf der Methode beweist nur, dass sie
+    es KOENNTE, nicht dass es im echten Lauf ANKOMMT. Deshalb steigt dieser
+    Test jetzt am echten Wirkort ein: `GeoSphereProvider.fetch_forecast(location)`
+    (der Primaerpfad fuer AT-Regionen) -- genau die Kette, die
+    `location.elevation_m` bis zum Wolken-Request durchreichen muss:
+    `fetch_forecast` -> `fetch_combined` -> `_fetch_openmeteo_clouds`.
 
-    ROT heute (fehlender Parameter): die Methode nimmt noch kein
-    `elevation_m`-Schluesselwort entgegen -- der Aufruf bricht mit `TypeError`
-    ab, bevor ueberhaupt eine Anfrage gestellt wird.
+    ROT vor der F003-Nachbesserung: `fetch_forecast`/`fetch_combined` reichen
+    `location.elevation_m` nicht durch -- der beobachtete Wolken-Request traegt
+    kein `elevation`.
     """
     seen: List[httpx.Request] = []
+    nwp_payload = json.loads(_GEOSPHERE_NWP_FIXTURE.read_text())
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request)
-        return httpx.Response(200, json={
-            "hourly": {
-                "time": [], "cloud_cover_low": [], "cloud_cover_mid": [], "cloud_cover_high": [],
-            }
-        })
+        if request.url.host == "api.open-meteo.com":
+            return httpx.Response(200, json={
+                "hourly": {
+                    "time": [], "cloud_cover_low": [], "cloud_cover_mid": [], "cloud_cover_high": [],
+                }
+            })
+        if "snowgrid" in request.url.path:
+            return httpx.Response(200, json={"features": []})
+        return httpx.Response(200, json=nwp_payload)
 
     provider = GeoSphereProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
 
-    provider._fetch_openmeteo_clouds(47.0614, 11.1211, hours=1, elevation_m=3333)
+    provider.fetch_forecast(_SCHAUFELSPITZE)
 
-    assert seen, "kein Wolken-Request beobachtet"
-    query = parse_qs(seen[0].url.query.decode(), keep_blank_values=True)
+    wolken_requests = [r for r in seen if r.url.host == "api.open-meteo.com"]
+    assert wolken_requests, (
+        "kein Wolken-Request beobachtet -- fetch_forecast(location) muss "
+        "ueber fetch_combined() auch den Open-Meteo-Wolken-Abruf ausloesen."
+    )
+    query = parse_qs(wolken_requests[0].url.query.decode(), keep_blank_values=True)
     assert query.get("elevation") == ["3333"], (
-        f"AC-3: der Wolken-Abruf ueber GeoSphere muss elevation=3333 tragen, "
-        f"war {query.get('elevation')!r} (geosphere.py:508, hartkodierte URL "
-        "ohne Hoehenparameter)."
+        f"AC-3/F003: der Wolken-Abruf ueber GeoSphere muss elevation=3333 "
+        f"tragen, war {query.get('elevation')!r} -- location.elevation_m wird "
+        "nicht durch fetch_forecast -> fetch_combined -> "
+        "_fetch_openmeteo_clouds durchgereicht (geosphere.py)."
     )
 
 
@@ -255,9 +295,18 @@ def test_ac3_wolken_abruf_ueber_geosphere_kennt_noch_keine_hoehe(monkeypatch):
 
 
 def test_ac5_gemeldete_modellhoehe_landet_in_meta(monkeypatch, tmp_path):
-    """AC-5: die Antwort enthaelt `"elevation": 3333.0` (Open-Meteo meldet die
-    tatsaechlich verwendete Hoehe zurueck); nach dem Abruf traegt
-    `ts.meta.model_elevation_m` diesen Wert.
+    """AC-5: die Antwort enthaelt `"elevation": 2925.0` -- ABWEICHEND von der
+    angefragten Hoehe (3333, Schaufelspitze), der real gemessene Fall: das
+    Modellgitter rundet auf seine eigene, geglaettete Gelaendehoehe. Nach dem
+    Abruf muss `ts.meta.model_elevation_m` den GEMELDETEN Wert (2925.0)
+    tragen, NICHT den angefragten (3333).
+
+    Finding F002 (Adversary #1991): eine fruehere Fassung dieses Tests
+    verwendete `elevation_response=3333.0` -- identisch zur angefragten
+    Hoehe. Damit konnte eine Regression, die `model_elevation_m` direkt aus
+    der ANFRAGE statt aus der ANTWORT fuellt (Mutation: `location.elevation_m`
+    statt `data.get("elevation")`), nicht auffallen -- beide Werte waren
+    zufaellig gleich. Der abweichende Wert macht den Test trennscharf.
 
     ROT heute: `ForecastMeta` (app/models.py:81-95) kennt kein Feld
     `model_elevation_m` -- der Zugriff wirft `AttributeError`. `_parse_response`
@@ -266,14 +315,15 @@ def test_ac5_gemeldete_modellhoehe_landet_in_meta(monkeypatch, tmp_path):
     provider = _prepare_provider(monkeypatch, tmp_path)
     seen: List[httpx.Request] = []
     provider._client = httpx.Client(
-        transport=httpx.MockTransport(_handler(seen, elevation_response=3333.0))
+        transport=httpx.MockTransport(_handler(seen, elevation_response=2925.0))
     )
 
     ts = provider.fetch_forecast(_SCHAUFELSPITZE, enrich_ensemble=False)
 
-    assert ts.meta.model_elevation_m == 3333.0, (
-        "AC-5: ts.meta.model_elevation_m muss die von der API gemeldete "
-        f"Hoehe tragen, war {getattr(ts.meta, 'model_elevation_m', '<fehlt>')!r}."
+    assert ts.meta.model_elevation_m == 2925.0, (
+        "AC-5: ts.meta.model_elevation_m muss die von der API GEMELDETE "
+        f"Hoehe tragen (2925.0, nicht die angefragte 3333), war "
+        f"{getattr(ts.meta, 'model_elevation_m', '<fehlt>')!r}."
     )
 
 

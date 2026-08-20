@@ -264,6 +264,7 @@ class GeoSphereProvider:
                 start=start,
                 end=end,
                 include_snow=True,
+                elevation_m=location.elevation_m,
             )
         except httpx.HTTPStatusError as e:
             raise ProviderRequestError(
@@ -576,6 +577,7 @@ class GeoSphereProvider:
         end: Optional[datetime] = None,
         include_snow: bool = True,
         include_cloud_layers: bool = True,
+        elevation_m: Optional[float] = None,
     ) -> NormalizedTimeseries:
         """
         Fetch combined forecast with optional snow and cloud layer data.
@@ -589,6 +591,9 @@ class GeoSphereProvider:
             end: End time
             include_snow: Whether to include SNOWGRID data
             include_cloud_layers: Whether to include Open-Meteo cloud layers
+            elevation_m: Issue #1991 (F003) — Wegpunkt-Hoehe, wird an den
+                Open-Meteo-Wolken-Abruf (`_fetch_openmeteo_clouds`)
+                durchgereicht, NUR wenn bekannt.
 
         Returns:
             NormalizedTimeseries with all available data
@@ -608,7 +613,9 @@ class GeoSphereProvider:
         # Enrich with cloud layer data from Open-Meteo (ONLY approved parameters)
         if include_cloud_layers and ts.data:
             hours = len(ts.data)
-            cloud_data = self._fetch_openmeteo_clouds(lat, lon, hours)
+            cloud_data = self._fetch_openmeteo_clouds(
+                lat, lon, hours, elevation_m=elevation_m
+            )
             if cloud_data:
                 for dp in ts.data:
                     # Find matching hour (ignore minutes/seconds)
