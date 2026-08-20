@@ -55,7 +55,7 @@ from services.compare_preset_access import (
 from services.compare_slot_scheduler import presets_due_for_hour
 from services.notification_service import NotificationService
 from services.official_alerts import get_official_alerts_for_location
-from utils.timezone import first_resolvable_tz
+from utils.timezone import first_resolvable_tz, local_dt
 
 logger = logging.getLogger("compare_official_alert")
 
@@ -393,8 +393,8 @@ class CompareOfficialAlertService:
         start_hour, end_hour = resolve_configured_window(
             preset.get("day_window_start_hour"), preset.get("day_window_end_hour")
         )
-        tz = tz_for_coords(loc.lat, loc.lon) or timezone.utc
-        local_now = now.astimezone(tz)
+        tz = tz_for_coords(loc.lat, loc.lon)
+        local_now = local_dt(now, tz)
         end_utc = day_window.window_end_utc_exclusive(local_now.date(), end_hour, tz)
         if start_hour > end_hour and end_utc <= now:
             end_utc = day_window.window_end_utc_exclusive(

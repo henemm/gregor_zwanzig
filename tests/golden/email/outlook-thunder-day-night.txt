@@ -2,6 +2,6 @@
 ---
 
 Nächste Etappen
-Mo  Fall A – nur Nacht         12–24°C  1.2mm W18   ⚡– · nachts hoch @0
-Di  Fall B – Tag + Nacht       12–24°C  1.2mm W18   ⚡mittel@14 · nachts hoch @0
-Mi  Fall C – Tag stärker       12–24°C  1.2mm W18   ⚡hoch@14 · nachts mittel @22
+Mo  Fall A – nur Nacht         12/24°C  1.2mm W18   ⚡– · nachts hoch @0
+Di  Fall B – Tag + Nacht       12/24°C  1.2mm W18   ⚡mittel@14 · nachts hoch @0
+Mi  Fall C – Tag stärker       12/24°C  1.2mm W18   ⚡hoch@14 · nachts mittel @22

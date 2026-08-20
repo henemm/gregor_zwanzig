@@ -350,8 +350,11 @@ def test_ac11_jede_angebotene_groesse_erscheint_auch_als_spalte():
         f"Nur {len(soll)} Soll-Spalten -- Vakuum-Schutz: ein Waechter ueber "
         "einer geschrumpften Menge ist immer gruen."
     )
-    auswahl = [{"metric_id": e["metric_id"], "aggregation": e["aggregation"]}
-               for e in soll]
+    # #1848 A1: min+max derselben Groesse ergeben EINEN Soll-Eintrag mit
+    # ZWEI Paaren (``paare``) -- die AUSWAHL (was der Picker an den
+    # Renderer schickt) bleibt die FLACHE Paar-Menge, nur die Zahl der
+    # daraus entstehenden SPALTEN (``soll``) sinkt.
+    auswahl = [p for e in soll for p in e["paare"]]
     dc = display_config(enabled_ids={e["metric_id"] for e in soll},
                         outlook_metrics=auswahl)
     kopf = html_outlook_headers(render_trip_mail(dc, outlook_rows(metrics=auswahl))[0])

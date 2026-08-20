@@ -67,7 +67,7 @@ from zoneinfo import ZoneInfo
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from app.user import SavedLocation
 from services.weather_cache import reset_shared_weather_cache_for_tests
-from utils.timezone import tz_for_coords
+from utils.timezone import local_dt, to_utc, tz_for_coords
 
 from tests.helpers.alert_log_fixtures import settings_email_only
 from tests.helpers.compare_briefings import write_compare_briefings
@@ -80,6 +80,12 @@ ALPEN_LAT, ALPEN_LON = 47.0500, 11.5500
 # nur AC-4. Westlich ist Pflicht: bei fest verdrahtetem Europe/Vienna faellt
 # das dort berechnete Fenster auf einen ganz anderen Ortszeit-Abschnitt.
 SIERRA_LAT, SIERRA_LON = 39.1900, -120.2400
+# Deutlicher UTC-Versatz OESTLICH von Wien (Pacific/Auckland, UTC+12/+13) —
+# nur AC-4, zweite Passage (#1727 S5g, Adversary-Finding F001). Dort liegen die
+# Ortsstunden 07:00 und 09:00 in UTC noch auf dem VORTAG: Ortstag und UTC-Tag
+# fallen auseinander. Genau diese Kippkante fehlt der Sierra-Passage — dort
+# bleibt 09:00 Ortszeit (UTC-7/-8) auf demselben Kalendertag wie UTC.
+AUCKLAND_LAT, AUCKLAND_LON = -36.8500, 174.7600
 
 # Niederschlags-Delta weit ueber der Standard-Schwelle von 10,0 mm.
 REGEN_MM = 30.0
@@ -592,6 +598,24 @@ def test_ac4_fenster_wird_in_der_ortszeit_am_ort_aufgeloest(monkeypatch, tmp_pat
     dabei auf denselben Wiener Kalendertag, das Fenster ist also fuer beide
     Seiten dasselbe — der Test scheitert dann an der Zeitzone, nicht am
     Fenstervergleich.
+
+    ZWEITE PASSAGE (#1727 S5g, Adversary-Finding F001) — Kalendertag-Kippkante:
+    Die Sierra-Passage oben bewacht die Fenster-BILDUNG, nicht die Wahl des
+    KALENDERTAGS. Um 09:00 America/Los_Angeles (UTC-7/-8) liegen Ortstag und
+    UTC-Tag auf demselben Datum; die Mutation
+    ``local_dt(now, tz).date()`` -> ``to_utc(now).date()`` in
+    ``compare_location_weather_source.py::fetch`` blieb dort deshalb
+    unbemerkt gruen. Die zweite Passage wiederholt dasselbe Szenario in
+    Pacific/Auckland (UTC+12/+13): dort ist 09:00 Ortszeit noch der Vortag in
+    UTC. Unter der Mutation faellt der Fenstertag fuer Anker UND Frisch-Abruf
+    auf den UTC-Vortag; die Aenderung um 17:00 des ORTStages liegt dann
+    ausserhalb beider Fenster, das Delta ist 0 und es geht keine Mail raus —
+    der Test wird rot.
+
+    Warum weiterhin 09:00 und nicht 17:05 (dieselbe Falle wie oben): ab 17:05
+    Ortszeit umfasst schon das alte Ein-Stunden-Fenster die Aenderungsstunde 17,
+    der Test waere trivial gruen. Die Vorbedingungs-Asserts unten belegen die
+    Kippkante, statt sie anzunehmen.
     """
     sz = Szenario(monkeypatch, tmp_path, SIERRA_LAT, SIERRA_LON)
     sz.anker(flach(sz), 7)
@@ -601,6 +625,27 @@ def test_ac4_fenster_wird_in_der_ortszeit_am_ort_aufgeloest(monkeypatch, tmp_pat
         "(tz_for_coords(lat, lon)). Es kam keine Mail an — entweder gilt "
         "weiterhin das Ein-Stunden-Fenster bei now, oder das Fenster wurde in "
         "Europe/Vienna bzw. UTC statt in America/Los_Angeles gebildet."
+    )
+
+    # ── Zweite Passage: Ortstag != UTC-Tag (Adversary-Finding F001) ──────────
+    ost = Szenario(monkeypatch, tmp_path, AUCKLAND_LAT, AUCKLAND_LON)
+    for stunde in (7, 9):
+        moment = ortszeit(ost.tz, ost.basis_tag, stunde)
+        assert local_dt(moment, ost.tz).date() != to_utc(moment).date(), (
+            "Probe ohne Varianz: um {} Uhr Ortszeit ({}) muessen Ortstag und "
+            "UTC-Tag auseinanderfallen, sonst kann diese Passage einen Umbau "
+            "auf to_utc() nicht sehen. Ortszeit {}, UTC {}.".format(
+                stunde, ost.tz, local_dt(moment, ost.tz), to_utc(moment)
+            )
+        )
+    ost.anker(flach(ost), 7)
+    mails_ost = ost.lauf(flach(ost, ((0, 17, REGEN_MM),)), 9)
+    assert mails_ost, (
+        "AC-4 (Kalendertag): Der Fenstertag muss der ORTSTAG am Ort sein "
+        "(local_dt(now, tz).date() in compare_location_weather_source.py::"
+        "fetch). Um 09:00 Pacific/Auckland ist der UTC-Tag noch der Vortag — "
+        "es kam keine Mail an, also wurde das Fenster auf dem UTC-Tag gebildet "
+        "und die echte Aenderung um 17:00 Ortszeit liegt ausserhalb."
     )
 
 
@@ -874,4 +919,72 @@ def test_1599_ac6_amtliche_warnung_ab_2015_bleibt_ausserhalb(monkeypatch):
         f"zugestellt werden. Tatsaechlich zugestellt: {[s for s, _ in mails]} "
         "— der Horizont wurde um mehr als eine Stunde verschoben oder ganz "
         "aufgehoben."
+    )
+
+
+def test_day_window_end_folgt_dem_ortstag_nicht_dem_utc_tag():
+    """#1727 S5g AC-7: `_day_window_end` bestimmt das Tagesfenster-Ende auf dem
+    ORTSTAG des Vergleichsorts, nicht auf dem UTC-Tag.
+
+    Warum dieser Test noetig ist: `test_1599_ac5`/`test_1599_ac6` (:842/:861)
+    pruefen `_day_window_end` ausschliesslich in Wiener Zone (17:45 UTC als
+    "19:45 Ortszeit"). Dort fallen Ortstag und UTC-Tag auf DENSELBEN
+    Kalendertag — und weil die Funktion genau `local_now.date()` auswertet,
+    bliebe eine Verwechslung der Ortszone mit UTC dort gruen. Sie bewachen die
+    Fenster-Formel, nicht die Zone.
+
+    Aufbau: Auckland (Pacific/Auckland, im Juli NZST = UTC+12) bei fest
+    gesetztem `now` = 2026-07-12 13:00 UTC -> Ortszeit 2026-07-13 01:00. Ortstag
+    ist der 13., UTC-Tag der 12. — sie fallen auseinander. Kein
+    `datetime.now()`, keine Laufzeit-Ortswahl (die bestehende
+    `_daytime_location()` in `test_official_alert_time_window.py:497-508` waehlt
+    den Ort wanduhrabhaengig und hat Wien an erster Stelle — als Nachweis
+    untauglich).
+
+    MUTATIONS-ERWARTUNG: Wird `now.astimezone(tz)` in
+    `compare_official_alert.py::_day_window_end` durch `to_utc(now)` ersetzt
+    oder die Zone fest verdrahtet, faellt der ausgewertete Kalendertag auf den
+    12. zurueck; das Fensterende springt damit um einen ganzen Tag (bzw. wird
+    auf `now` geklemmt) und dieser Test wird rot.
+    """
+    from app.day_window import window_end_utc_exclusive
+    from services.compare_official_alert import CompareOfficialAlertService
+    from tests.tdd.test_compare_official_alert import (
+        _clean_user, _location, _settings_all_channels, _uid,
+    )
+
+    lat, lon = -36.85, 174.76          # Auckland
+    tz = tz_for_coords(lat, lon)
+    assert tz is not None, "Ortszone von Auckland nicht aufloesbar"
+    now = datetime(2026, 7, 12, 13, 0, tzinfo=timezone.utc)
+    assert now.astimezone(tz).date() == date(2026, 7, 13), (
+        "Vorbedingung verletzt: Ortstag und UTC-Tag muessen auseinanderfallen, "
+        f"Ortszeit ist {now.astimezone(tz)}"
+    )
+
+    # Beide Kandidaten explizit, mit derselben Fenster-Formel wie im Prueflings-
+    # Code (Default-Fenster 4-19, weil das Preset nicht existiert).
+    ende_ortstag = window_end_utc_exclusive(date(2026, 7, 13), 19, tz)
+    ende_utc_tag = window_end_utc_exclusive(date(2026, 7, 12), 19, tz)
+    assert ende_ortstag != ende_utc_tag, (
+        "Probe ohne Varianz: beide Kandidaten liefern denselben Zeitpunkt "
+        f"({ende_ortstag}) — dann beweist der Vergleich unten nichts."
+    )
+
+    uid = _uid("1727s5g")
+    _clean_user(uid)
+    try:
+        ende = CompareOfficialAlertService(
+            settings=_settings_all_channels(), user_id=uid,
+        )._day_window_end("gibt-es-nicht", _location("loc-nz", "Auckland", lat, lon), now)
+    finally:
+        _clean_user(uid)
+
+    assert ende == ende_ortstag, (
+        "#1727 S5g AC-7: Das Tagesfenster-Ende muss dem ORTSTAG des "
+        f"Vergleichsorts folgen ({ende_ortstag}), tatsaechlich: {ende}."
+    )
+    assert ende != ende_utc_tag, (
+        "#1727 S5g AC-7: Das Fensterende folgt dem UTC-Tag "
+        f"({ende_utc_tag}) statt dem Ortstag des Vergleichsorts."
     )
