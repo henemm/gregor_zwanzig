@@ -3,6 +3,12 @@
 Erhoben 2026-08-19 gegen `origin/main` `9300e634`, per drei parallelen Recherche-Agenten.
 Alle Zeilennummern in diesem Dokument sind **nachgemessen**, nicht aus dem Register übernommen.
 
+**Nachverifiziert 2026-08-20 gegen `origin/main` `0a95bb01`** (nach dem Merge von #1948 S4,
+PR #1990): Keine der sechs Kandidaten-Dateien wurde von den zwischenzeitlichen 10 Commits berührt
+(geändert wurden nur `alert/render.py`, `alert/project.py` und Testdateien). Positivkontrolle über
+alle sechs Dateien liefert **exakt 8 `astimezone`-Treffer an exakt den unten genannten Zeilen** —
+keine übersehene neunte Fundstelle, keine Verschiebung. Die Menge stimmt vollständig überein.
+
 ## Request Summary
 
 Issue #1727 (Epic #1722, ADR-0049/ADR-0051) räumt `KNOWN_VIOLATIONS` in
@@ -105,6 +111,59 @@ alle aus S5f.
 
 Für Kandidat 8 ist `local_fmt(dt, tz)`/`local_dt` der passende Helfer, nicht `to_utc()` — dort wird
 in die **Ortszone** gerechnet, nicht nach UTC.
+
+## Analyse-Ergebnis: Helferzuordnung — NICHT alles ist `to_utc()`
+
+Die zentrale Falle dieser Scheibe. `to_utc()` rechnet **nach UTC**, `local_dt()`/`local_fmt()`
+rechnen **in die Ortszone**. Drei der acht Stellen sind Ortszeit-Umrechnungen — sie pauschal auf
+`to_utc()` zu ziehen, würde einen Zeitzonenfehler *erzeugen*. S5f hat denselben Fehler an einer
+Stelle (Ankunftstag am Ziel) bewusst vermieden; hier betrifft es drei von acht.
+
+| # | Kandidat | Ist-Ausdruck | Richtung | Ziel-Helfer |
+|---|---|---|---|---|
+| 1 | `record_briefing_sent` | `(at or now).astimezone(timezone.utc)` | → UTC | `to_utc(...)` |
+| 2 | `_window_bound` | `datetime.combine(...).replace(tzinfo=tz).astimezone(timezone.utc)` | → UTC | `to_utc(...)` |
+| 3 | `fetch` | `now.astimezone(tz).date()` | **→ Ortszeit** | `local_dt(now, tz).date()` |
+| 4 | `_day_window_end` | `now.astimezone(tz)` | **→ Ortszeit** | `local_dt(now, tz)` |
+| 5 | `run_compare_presets_daily` | `datetime.now(zone).replace(...).astimezone(timezone.utc)` | → UTC | `to_utc(...)` |
+| 6 | `_to_utc_date` | `ts.astimezone(timezone.utc).date()` | → UTC | `to_utc(ts).date()` |
+| 7 | `_briefing_precip_for_onset` | `onset_dt.astimezone(timezone.utc).replace(...)` | → UTC | `to_utc(onset_dt).replace(...)` |
+| 8 | `check_radar_alerts` | `(...).astimezone(tz).strftime("%H:%M")` | **→ Ortszeit** | `local_fmt(dt, tz)` |
+
+**Summe: 5 × `to_utc`, 2 × `local_dt`, 1 × `local_fmt`.**
+
+Verhaltensgleichheit ist in allen acht Fällen gegeben, weil `_as_utc()` bei bereits aware Eingaben
+ein No-Op ist und alle acht Eingabewerte aware sind:
+- `local_dt(dt, tz)` = `_as_utc(dt).astimezone(tz)` ≡ `dt.astimezone(tz)` für aware `dt`
+- `local_fmt(dt, tz)` = `local_dt(dt, tz).strftime("%H:%M")` — Default-Format ist exakt `"%H:%M"`,
+  also deckungsgleich mit dem Ist-Ausdruck in Kandidat 8.
+
+## Analyse-Ergebnis: Kategorie-Mechanik (Tech-Lead-Entscheid 2026-08-20)
+
+**Warum überhaupt:** Die 4 bewusst-UTC-Einträge beginnen heute mit `"raw_astimezone (:130) — …"` —
+also mit der **Fundart des Scanners**, nicht mit einer Kategorie. Sie sehen dadurch exakt aus wie
+die 8 echten Kandidaten. Genau diese Ununterscheidbarkeit ist der Grund, warum die Restliste in
+jeder Scheibe neu von Hand klassifiziert werden musste, und warum eine Beschreibung veralten
+konnte, ohne dass es auffiel (`run_compare_presets_daily`, s.o.).
+
+**Umsetzung:** Jeder Wert in `KNOWN_VIOLATIONS` beginnt mit genau einer von drei Kategorien:
+
+| Präfix | Bedeutung | Anzahl nach S5g |
+|---|---|---|
+| `DAUERHAFT` | `tz=None` ist legitimer Domänenzustand, keine Scheibe schliesst das | 2 |
+| `AUFRUFSEITE(#1402)` | Signatur bleibt optional, Wächter sitzt an der Aufrufstelle | 20 |
+| `BEWUSST-UTC(#1345)` | Kontingent-/Zählwerk, UTC ist die fachlich richtige Antwort | 4 |
+| | **Summe** | **26** |
+
+Ein neuer Test erzwingt (a) dass jeder Eintrag eine der drei Kategorien trägt und (b) dass nach dem
+Präfix eine substanzielle Begründung steht — Mindestlänge nach Unwort-Bereinigung, im erprobten
+Muster von `gz-main-path` (`test_repo_path_hardcoding_ratchet.py:346-352`), damit ein Alibi-Text
+(`"x"`, Emoji) nicht durchgeht.
+
+**Regel-Budget:** Der Test ersetzt die bisherige, ungeprüfte Prosa-Konvention (kein Zuwachs an
+Regeln). Prüfdatum dennoch gesetzt: **2026-11-18**. Kriterium am Prüfdatum — hat der Test seit
+Einführung mindestens einen Eintrag ohne gültige Kategorie oder ohne Begründung gefangen? Wenn
+nein, ersatzlos zurückbauen.
 
 ## Testlage — wo die Scheibe eigenen Schutz mitbringen muss
 
