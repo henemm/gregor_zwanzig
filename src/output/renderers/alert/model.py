@@ -54,6 +54,12 @@ class OnsetEvent:
     # Gesetzt vom Trip-Radar-Pfad (`RadarAlertRequest` -> `send_radar_alert`);
     # der Ortsvergleich-Radar setzt sie nie. `None` -> km-Spanne (AC-7).
     segment_id: str | None = None
+    # Issue #2009: additiv, defaultet. 0 = onset_time liegt am selben
+    # Kalendertag wie "jetzt", 1 = am naechsten Tag (Mitternachts-Ueberlauf
+    # der ohne Datum mehrdeutigen "HH:MM"-Angabe). Byte-identisch im
+    # unveraenderten Normalfall (0). Beide Onset-Pfade setzen es (Trip UND
+    # Ortsvergleich-Buendel, ADR-0021).
+    onset_day_offset: int = 0
 
 
 @dataclass(frozen=True)

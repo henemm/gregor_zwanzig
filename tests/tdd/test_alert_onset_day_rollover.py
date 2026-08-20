@@ -126,3 +126,32 @@ def test_ac5_sms_token_carries_day_suffix():
     assert "+1" not in control_sms, (
         f"Ohne Tageswechsel darf kein Tages-Suffix erscheinen: {control_sms!r}"
     )
+
+
+# ══════════════════════ Zusatzfall: Sommerzeit-Umstellung ═════════════════
+
+
+def test_day_offset_survives_dst_transition():
+    """Zusatz (Team-Lead-Wunsch zu AC-4/AC-5): `utils.timezone.day_offset()`
+    vergleicht KALENDERTAGE in der Ortszone, nicht eine feste 24h-Distanz --
+    bleibt deshalb auch ueber die Sommerzeit-Umstellung hinweg korrekt (ein
+    "Tag" mit 23 Stunden aendert die Kalenderdatums-Differenz nicht).
+
+    Fall: Sommerzeit-Beginn Europe/Berlin 2026-03-29, 02:00 CET -> 03:00 CEST
+    (Umstellung bei 01:00 UTC). `now`=00:50 UTC (01:50 CET, VOR dem Sprung),
+    Onset +53 Min = 01:43 UTC (03:43 CEST, NACH dem Sprung) -- beide liegen
+    auf demselben Kalendertag (29.), day_offset muss 0 liefern, nicht
+    faelschlich 1 wegen des uebersprungenen 02:00-03:00-Fensters."""
+    from datetime import datetime, timedelta, timezone
+    from zoneinfo import ZoneInfo
+
+    from utils.timezone import day_offset
+
+    tz = ZoneInfo("Europe/Berlin")
+    now_utc = datetime(2026, 3, 29, 0, 50, tzinfo=timezone.utc)
+    onset_utc = now_utc + timedelta(minutes=53)
+
+    assert day_offset(now_utc, onset_utc, tz) == 0, (
+        "Sommerzeit-Sprung (23h-Tag) darf einen Onset am selben Kalendertag "
+        "nicht faelschlich als Tageswechsel zaehlen"
+    )
