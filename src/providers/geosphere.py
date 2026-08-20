@@ -363,6 +363,9 @@ class GeoSphereProvider:
         Returns:
             Tuple of (snow_depth_cm, swe_kgm2) or (None, None) if unavailable
         """
+        from providers.enrichment_health import (
+            OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_SNOWGRID, log_enrichment_call,
+        )
         try:
             # SNOWGRID requires start/end dates - fetch last 7 days
             end = datetime.now(timezone.utc)
@@ -371,8 +374,11 @@ class GeoSphereProvider:
                 ENDPOINTS["snowgrid"], lat, lon, SNOWGRID_PARAMS,
                 start=start, end=end
             )
-            return self._parse_snowgrid_response(data)
-        except httpx.HTTPStatusError:
+            result = self._parse_snowgrid_response(data)
+            log_enrichment_call(PATH_SNOWGRID, OUTCOME_OK)
+            return result
+        except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.RequestError) as e:
+            log_enrichment_call(PATH_SNOWGRID, OUTCOME_UNAVAILABLE, detail=str(e)[:200])
             return None, None
 
     def fetch_thunder_signals(
@@ -603,7 +609,16 @@ class GeoSphereProvider:
 
         # Enrich with snow data if requested
         if include_snow and ts.data:
-            snow_depth_cm, swe_kgm2 = self.fetch_snowgrid(lat, lon)
+            try:
+                snow_depth_cm, swe_kgm2 = self.fetch_snowgrid(lat, lon)
+            except Exception as e:
+                from providers.enrichment_health import (
+                    OUTCOME_UNAVAILABLE, PATH_SNOWGRID, log_enrichment_call,
+                )
+                log_enrichment_call(
+                    PATH_SNOWGRID, OUTCOME_UNAVAILABLE, detail=f"combined:{e}"[:200],
+                )
+                snow_depth_cm, swe_kgm2 = None, None
             if snow_depth_cm is not None:
                 # Add snow depth to all data points (it's a snapshot)
                 for dp in ts.data:
