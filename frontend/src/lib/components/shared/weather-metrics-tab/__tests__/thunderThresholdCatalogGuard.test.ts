@@ -110,6 +110,49 @@ function findThunderThresholdRow(fragment: unknown): {
 	return hit;
 }
 
+/**
+ * Sucht im Subtree nach einem `<catalog>.find((e) => e.<field> === '<literalValue>')`-
+ * Aufruf (Adversary-Finding F001: der bisherige Test prueft nur, DASS `levels` ein
+ * Funktionsaufruf ist, nicht WELCHER Katalog-Schluessel als Argument hineingeht --
+ * ein Katalog-Eintrag ohne `ordinalLabels`, z.B. `wind_max_kmh`, liefert eine leere
+ * Schwellenliste, ohne dass ein bestehender Test rot wird). Liefert den gefundenen
+ * `find(...)`-CallExpression-Knoten oder `null`.
+ */
+function findCatalogLookupComparingTo(node: unknown, literalValue: string): any {
+	let found: any = null;
+	function visit(n: unknown): void {
+		if (found || n === null || typeof n !== 'object') return;
+		if (Array.isArray(n)) {
+			n.forEach(visit);
+			return;
+		}
+		const rec = n as Record<string, any>;
+		if (
+			rec.type === 'CallExpression' &&
+			rec.callee?.type === 'MemberExpression' &&
+			rec.callee.property?.name === 'find'
+		) {
+			const arrowArg = (rec.arguments ?? [])[0];
+			const body = arrowArg?.body;
+			const comparesToLiteral =
+				body?.type === 'BinaryExpression' &&
+				(body.operator === '===' || body.operator === '==') &&
+				((body.left?.type === 'Literal' && body.left.value === literalValue) ||
+					(body.right?.type === 'Literal' && body.right.value === literalValue));
+			if (comparesToLiteral) {
+				found = rec;
+				return;
+			}
+		}
+		for (const key of Object.keys(rec)) {
+			if (key === 'parent') continue;
+			visit(rec[key]);
+		}
+	}
+	visit(node);
+	return found;
+}
+
 describe('#1911 AC-3 (Verdrahtung): die Gewitter-Zeile bezieht `levels` aus deriveThunderThresholdLevels(...)', () => {
 	test('`levels`-Attribut ist ein Aufruf von deriveThunderThresholdLevels, kein Array-Literal', () => {
 		const ast = parseComponent();
@@ -133,6 +176,28 @@ describe('#1911 AC-3 (Verdrahtung): die Gewitter-Zeile bezieht `levels` aus deri
 			'deriveThunderThresholdLevels',
 			`AC-3 FAIL: \`levels\` ruft nicht `+
 				`\`deriveThunderThresholdLevels\` auf, sondern \`${levelsExpr?.callee?.name}\`.`
+		);
+	});
+
+	test('das Argument von deriveThunderThresholdLevels stammt aus dem Katalog-Eintrag "thunder_level_max" (Adversary F001)', () => {
+		const ast = parseComponent();
+		const hit = findThunderThresholdRow(ast.fragment);
+		assert.ok(hit, 'Keine <ThresholdMetricRow metricId="thunder" .../> im Template gefunden.');
+
+		const levelsExpr = attrValue(hit!.component, 'levels') as { type?: string; arguments?: unknown } | undefined;
+		assert.equal(
+			levelsExpr?.type,
+			'CallExpression',
+			'Vorbedingung (s. vorheriger Test) nicht erfuellt -- `levels` ist kein Funktionsaufruf.'
+		);
+
+		const lookupCall = findCatalogLookupComparingTo(levelsExpr!.arguments, 'thunder_level_max');
+		assert.ok(
+			lookupCall,
+			'AC-3 FAIL: das Argument von `deriveThunderThresholdLevels(...)` enthaelt keinen ' +
+				'`....find((e) => e.metric === \'thunder_level_max\')`-Aufruf -- die Ableitung liest ' +
+				'moeglicherweise den falschen Katalog-Eintrag (z.B. einen Range-Eintrag ohne ' +
+				'`ordinalLabels`), was still eine leere Schwellenliste liefert.'
 		);
 	});
 });
@@ -169,6 +234,131 @@ describe('#1911 AC-7: definierter Lade-/Fehlerzustand statt kaputter/leerer Opti
 			'AC-7 FAIL: der Guard-Block um die Gewitter-Schwellenzeile hat keinen `{:else}`-Zweig -- ' +
 				'ohne geladenen Katalog gibt es keinen definierten Platzhalter-/Fehlerzustand, nur ein ' +
 				'stilles Nichts-Rendern (das Template zeigt dann weder die Zeile noch einen Hinweis).'
+		);
+	});
+});
+
+/**
+ * Minimaler boolescher Auswerter fuer den Guard-Test-Ausdruck (Adversary-Finding
+ * F002: der bisherige Test prueft nur, DASS ein `{#if}`-Block mit `{:else}`-Zweig
+ * existiert -- nicht die RICHTUNG der Bedingung. Eine Invertierung zu
+ * `{#if !compareCatalogLoaded || compareCatalogError}` behaelt Struktur und
+ * Zweige exakt bei, vertauscht aber, WELCHER Zweig bei geladenem/fehlerfreiem
+ * Katalog gerendert wird -- rein strukturelle Tests bleiben dafuer blind).
+ * Unterstuetzt nur die hier vorkommenden Knotentypen bewusst eng, damit ein
+ * unbekannter Ausdruckstyp den Test klar scheitern laesst statt still `false`
+ * zurueckzugeben.
+ */
+function evalGuardTest(node: any, env: Record<string, unknown>): boolean {
+	switch (node?.type) {
+		case 'Identifier':
+			return Boolean(env[node.name]);
+		case 'UnaryExpression':
+			if (node.operator === '!') return !evalGuardTest(node.argument, env);
+			throw new Error(`evalGuardTest: unsupported unary operator "${node.operator}"`);
+		case 'LogicalExpression':
+			if (node.operator === '&&') return evalGuardTest(node.left, env) && evalGuardTest(node.right, env);
+			if (node.operator === '||') return evalGuardTest(node.left, env) || evalGuardTest(node.right, env);
+			throw new Error(`evalGuardTest: unsupported logical operator "${node.operator}"`);
+		case 'Literal':
+			return Boolean(node.value);
+		default:
+			throw new Error(`evalGuardTest: unsupported node type "${node?.type}" -- Guard-Test-Ausdruck zu weit veraendert, um ihn auszuwerten.`);
+	}
+}
+
+/** Sucht in einem Fragment-Subtree (z.B. `IfBlock.consequent`/`.alternate`) nach
+ *  der `<ThresholdMetricRow metricId="thunder" .../>`-Komponente. */
+function fragmentContainsThunderRow(fragment: unknown): boolean {
+	return findThunderThresholdRow(fragment) !== null;
+}
+
+/** Sucht in einem Fragment-Subtree nach dem Platzhalter-`<tr>` der Gewitter-Zeile. */
+function fragmentContainsPlaceholder(fragment: unknown): boolean {
+	let found = false;
+	function visit(node: unknown): void {
+		if (found || node === null || typeof node !== 'object') return;
+		if (Array.isArray(node)) {
+			node.forEach(visit);
+			return;
+		}
+		const n = node as Record<string, any>;
+		if (n.type === 'RegularElement') {
+			const attrs = n.attributes ?? [];
+			const testIdAttr = attrs.find((a: any) => a.type === 'Attribute' && a.name === 'data-testid');
+			const val = Array.isArray(testIdAttr?.value) ? testIdAttr.value.map((v: any) => v.data ?? '').join('') : undefined;
+			if (val === 'threshold-metric-row-thunder-placeholder') {
+				found = true;
+				return;
+			}
+		}
+		for (const key of Object.keys(n)) {
+			if (key === 'parent') continue;
+			visit(n[key]);
+		}
+	}
+	visit(fragment);
+	return found;
+}
+
+describe('#1911 AC-7 Richtung (Adversary F002): der Guard-Test waehlt den echten Zweig genau dann, wenn der Katalog bereit ist', () => {
+	function findGuardBlock() {
+		const ast = parseComponent();
+		const hit = findThunderThresholdRow(ast.fragment);
+		assert.ok(hit, 'Keine <ThresholdMetricRow metricId="thunder" .../> im Template gefunden.');
+		const guardBlock = hit!.ancestorIfBlocks.find(
+			(block) => identifiers(block.test).has('compareCatalogLoaded') || identifiers(block.test).has('compareCatalogError')
+		);
+		assert.ok(guardBlock, 'Kein Guard-Block gefunden.');
+		return guardBlock;
+	}
+
+	test('Guard-Test ist wahr bei geladenem, fehlerfreiem Katalog und falsch waehrend des Ladens bzw. bei Fehler', () => {
+		const guardBlock = findGuardBlock();
+
+		const ready = evalGuardTest(guardBlock.test, { compareCatalogLoaded: true, compareCatalogError: undefined });
+		assert.equal(
+			ready,
+			true,
+			'AC-7 FAIL: bei compareCatalogLoaded=true und compareCatalogError=undefined (Katalog bereit) ' +
+				'muss der Guard-Test wahr sein -- sonst rendert der Platzhalter, obwohl der Katalog fertig ' +
+				'geladen ist (invertierte Bedingung).'
+		);
+
+		const stillLoading = evalGuardTest(guardBlock.test, { compareCatalogLoaded: false, compareCatalogError: undefined });
+		assert.equal(
+			stillLoading,
+			false,
+			'AC-7 FAIL: bei compareCatalogLoaded=false (noch am Laden) darf der Guard-Test nicht wahr sein -- ' +
+				'sonst rendert die echte Zeile mit ungeladenem Katalog statt des "Lädt…"-Platzhalters.'
+		);
+
+		const errored = evalGuardTest(guardBlock.test, { compareCatalogLoaded: true, compareCatalogError: 'Netzwerkfehler' });
+		assert.equal(
+			errored,
+			false,
+			'AC-7 FAIL: bei gesetztem compareCatalogError darf der Guard-Test nicht wahr sein -- sonst ' +
+				'rendert die echte Zeile trotz Ladefehler statt der Fehlermeldung.'
+		);
+	});
+
+	test('die echte Zeile steht im Wahr-Zweig (consequent), der Platzhalter im {:else}-Zweig -- nicht umgekehrt', () => {
+		const guardBlock = findGuardBlock();
+
+		const consequentHasRow = fragmentContainsThunderRow(guardBlock.consequent);
+		const alternateHasRow = fragmentContainsThunderRow(guardBlock.alternate);
+		assert.ok(
+			consequentHasRow && !alternateHasRow,
+			'AC-7 FAIL: die <ThresholdMetricRow metricId="thunder" .../> steht nicht (ausschliesslich) im ' +
+				`Wahr-Zweig des Guard-Blocks (consequent: ${consequentHasRow}, alternate: ${alternateHasRow}).`
+		);
+
+		const consequentHasPlaceholder = fragmentContainsPlaceholder(guardBlock.consequent);
+		const alternateHasPlaceholder = fragmentContainsPlaceholder(guardBlock.alternate);
+		assert.ok(
+			alternateHasPlaceholder && !consequentHasPlaceholder,
+			'AC-7 FAIL: der Platzhalter steht nicht (ausschliesslich) im {:else}-Zweig des Guard-Blocks ' +
+				`(consequent: ${consequentHasPlaceholder}, alternate: ${alternateHasPlaceholder}).`
 		);
 	});
 });
