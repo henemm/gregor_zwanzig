@@ -1,0 +1,161 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 14 items
+
+tests/tdd/test_outlook_metric_id_persistence.py FFFFF                    [ 35%]
+tests/tdd/test_outlook_columns_from_metric_ids.py FFFFFF                 [ 78%]
+tests/tdd/test_outlook_metric_id_all_channels.py F                       [ 85%]
+tests/tdd/test_compare_outlook_metric_id_roundtrip.py F                  [ 92%]
+tests/tdd/test_outlook_metric_id_contract_doc.py F                       [100%]
+
+=================================== FAILURES ===================================
+_____ test_ac1_gespeicherte_ausblick_auswahl_besteht_aus_reinen_kennungen ______
+tests/tdd/test_outlook_metric_id_persistence.py:163: in test_ac1_gespeicherte_ausblick_auswahl_besteht_aus_reinen_kennungen
+    assert gespeichert == KENNUNGEN, (
+E   AssertionError: Editor-Eingabe im Format 'Paare' landete als [{'metric_id': 'precipitation', 'aggregation': 'sum'}, {'metric_id': 'gust', 'aggregation': 'max'}] in der Datei statt als ['precipitation', 'gust']. Der Ausblick behaelt sein eigenes, viertes Vokabular (Groesse+Auswertung), statt wie Kanal-An/Aus, Reihenfolge, SMS-Kuerzel und Schwellwerte die reine Kennung zu speichern (AC-1).
+E   assert [{'aggregatio..._id': 'gust'}] == ['precipitation', 'gust']
+E     
+E     At index 0 diff: {'metric_id': 'precipitation', 'aggregation': 'sum'} != 'precipitation'
+E     Use -v to get more diff
+_________ test_ac2_altform_paare_werden_beim_laden_zu_je_einer_kennung _________
+tests/tdd/test_outlook_metric_id_persistence.py:204: in test_ac2_altform_paare_werden_beim_laden_zu_je_einer_kennung
+    assert fuer_die_flaeche == ["temperature", "precipitation"], (
+E   AssertionError: Die geladene Ausblick-Auswahl der Bestandsdatei lautet ['temperature', 'temperature', 'precipitation'] statt ['temperature', 'precipitation']. Tief und Hoch derselben Groesse muessen beim Lesen zu EINER Kennung werden (AC-2) — sonst erscheint 'Temperatur' doppelt in der Auswahl und erzeugt zwei Spalten.
+E   assert ['temperature...recipitation'] == ['temperature...recipitation']
+E     
+E     At index 1 diff: 'temperature' != 'precipitation'
+E     Left contains one more item: 'precipitation'
+E     Use -v to get more diff
+_ test_ac7a_nie_gewaehlte_auswahl_bleibt_abwesend_und_bleibt_von_gewaehlter_trennbar _
+tests/tdd/test_outlook_metric_id_persistence.py:255: in test_ac7a_nie_gewaehlte_auswahl_bleibt_abwesend_und_bleibt_von_gewaehlter_trennbar
+    assert _kennungen(aufgeloest) == KENNUNGEN, (
+E   AssertionError: Eine gefuellte Kennungsauswahl loest zu [] auf statt zu ['precipitation', 'gust']. Damit ist 'gewaehlt' nicht mehr von 'nie gewaehlt' bzw. 'bewusst geleert' zu trennen — genau der stille Fehlerpfad R-A2-3/M5 (AC-7).
+E   assert [] == ['precipitation', 'gust']
+E     
+E     Right contains 2 more items, first extra item: 'precipitation'
+E     Use -v to get more diff
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['precipitation', 'gust'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+_ test_ac7b_bewusst_geleerte_auswahl_bleibt_abgeschaltet_und_bleibt_von_gewaehlter_trennbar _
+tests/tdd/test_outlook_metric_id_persistence.py:288: in test_ac7b_bewusst_geleerte_auswahl_bleibt_abgeschaltet_und_bleibt_von_gewaehlter_trennbar
+    assert aufgeloest, (
+E   AssertionError: Eine gefuellte Kennungsauswahl ['precipitation', 'gust'] loest zu [] auf — zeichengleich zur bewusst geleerten Auswahl. 'Unaufloesbar' und 'bewusst geleert' duerfen nie denselben Zustand erzeugen, sonst schaltet eine gueltige Auswahl den Ausblick ab (AC-7, R-A2-3).
+E   assert []
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['precipitation', 'gust'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+___ test_ac10_zwei_nutzer_sehen_ausschliesslich_die_eigene_ausblick_auswahl ____
+tests/tdd/test_outlook_metric_id_persistence.py:319: in test_ac10_zwei_nutzer_sehen_ausschliesslich_die_eigene_ausblick_auswahl
+    assert a_sicht == a_auswahl, (
+E   AssertionError: Nutzer A sieht [] statt seiner eigenen Auswahl ['temperature'] (AC-10).
+E   assert [] == ['temperature']
+E     
+E     Right contains one more item: 'temperature'
+E     Use -v to get more diff
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['precipitation', 'gust'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+__________ test_ac5_niederschlag_ergibt_genau_eine_spalte_ohne_onset ___________
+tests/tdd/test_outlook_columns_from_metric_ids.py:126: in test_ac5_niederschlag_ergibt_genau_eine_spalte_ohne_onset
+    assert len(spalten) == 1, (
+E   AssertionError: Aus der Kennung 'precipitation' entstanden 0 Spalten ([]) statt genau einer. Erwartet ist die Summe; eine Ableitung ueber summary_fields.keys() statt ueber available_aggregations() erzeugt hier zusaetzlich eine onset-Spalte (AC-5, M1).
+E   assert 0 == 1
+E    +  where 0 = len([])
+____________ test_ac5_gewitter_ergibt_genau_eine_spalte_ohne_onset _____________
+tests/tdd/test_outlook_columns_from_metric_ids.py:147: in test_ac5_gewitter_ergibt_genau_eine_spalte_ohne_onset
+    assert len(spalten) == 1 and felder == ["thunder_level_max"], (
+E   AssertionError: Aus der Kennung 'thunder' entstanden 0 Spalten ([]) statt genau einer auf 'thunder_level_max' (AC-5).
+E   assert (0 == 1)
+E    +  where 0 = len([])
+____________ test_ac5_keine_abgeleitete_spalte_liest_ein_onset_feld ____________
+tests/tdd/test_outlook_columns_from_metric_ids.py:166: in test_ac5_keine_abgeleitete_spalte_liest_ein_onset_feld
+    assert spalten, (
+E   AssertionError: Keine der 23 Katalog-Kennungen ergab eine Spalte — die Ableitung aus der Kennung fehlt (AC-5).
+E   assert []
+_______ test_ac6_jeder_wert_steht_unter_der_beschriftung_seiner_groesse ________
+tests/tdd/test_outlook_columns_from_metric_ids.py:195: in test_ac6_jeder_wert_steht_unter_der_beschriftung_seiner_groesse
+    tabelle = zuordnung()
+              ^^^^^^^^^^^
+tests/tdd/test_outlook_columns_from_metric_ids.py:95: in zuordnung
+    raise AssertionError(
+E   AssertionError: Die Ausblick-Tabelle hat keine Wert-Spalten: kopf=['Tag'], zellen=['Mo']. Die Kennungsauswahl ['temperature', 'precipitation', 'gust', 'thunder'] wurde vollstaendig verworfen — der heutige Aufloeser kennt nur Paare (AC-6).
+_____ test_ac6_zuordnung_ist_ueber_frisch_gestartete_prozesse_unveraendert _____
+tests/tdd/test_outlook_columns_from_metric_ids.py:241: in test_ac6_zuordnung_ist_ueber_frisch_gestartete_prozesse_unveraendert
+    assert lauf.returncode == 0, (
+E   AssertionError: Der Lauf mit PYTHONHASHSEED=0 scheiterte (Exit 1):
+E     Traceback (most recent call last):
+E       File "<string>", line 1, in <module>
+E       File "/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/tests/tdd/test_outlook_columns_from_metric_ids.py", line 95, in zuordnung
+E         raise AssertionError(
+E     AssertionError: Die Ausblick-Tabelle hat keine Wert-Spalten: kopf=['Tag'], zellen=['Mo']. Die Kennungsauswahl ['temperature', 'precipitation', 'gust', 'thunder'] wurde vollstaendig verworfen — der heutige Aufloeser kennt nur Paare (AC-6).
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/.venv/bin/python', '-c', "import j...recipitation\', \'gust\', \'thunder\'] wurde vollstaendig verworfen — der heutige Aufloeser kennt nur Paare (AC-6).\n').returncode
+___ test_ac3_unaufloesbare_auswahl_zeigt_die_sieben_festen_spalten_und_warnt ___
+tests/tdd/test_outlook_columns_from_metric_ids.py:287: in test_ac3_unaufloesbare_auswahl_zeigt_die_sieben_festen_spalten_und_warnt
+    assert html_outlook_table(html) is not None, (
+E   AssertionError: Der 3-Tages-Ausblick fehlt in der HTML-Mail vollstaendig. Eine unaufloesbare Auswahl wurde wie 'bewusst geleert' behandelt und hat den Block abgeschaltet, statt auf die sieben festen Standardspalten zurueckzufallen (AC-3, R-A2-3/M5).
+E   assert None is not None
+E    +  where None = <function html_outlook_table at 0x7d554ecae980>('<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...iv>Etappen-Briefing · Vollversion</div><div style="color:#b5b1a6;">openmeteo</div></div>\n    </div>\n</body>\n</html>')
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['einhorn', 'confidence'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['einhorn', 'confidence'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['einhorn', 'confidence'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['einhorn', 'confidence'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+___ test_ac4_temperatur_kennung_zeigt_ueberall_dieselbe_eine_spannen_spalte ____
+tests/tdd/test_outlook_metric_id_all_channels.py:80: in test_ac4_temperatur_kennung_zeigt_ueberall_dieselbe_eine_spannen_spalte
+    assert kopf and zeilen, (
+E   AssertionError: HTML-Mail: Der 3-Tages-Ausblick fehlt vollstaendig. Die gespeicherte Kennungsauswahl ['temperature'] wurde verworfen und wie 'bewusst geleert' behandelt (AC-4).
+E   assert ([])
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+__ test_ac9_ortsvergleich_rundlauf_temperatur_als_spanne_wind_als_einzelwert ___
+tests/tdd/test_compare_outlook_metric_id_roundtrip.py:100: in test_ac9_ortsvergleich_rundlauf_temperatur_als_spanne_wind_als_einzelwert
+    assert opts.outlook_enabled, (
+E   AssertionError: Die Kennungsauswahl ['temperature', 'wind'] hat den Ausblick-Block abgeschaltet (outlook_enabled=False). Eine gefuellte Auswahl kollabiert im Aufloeser zu [] und wirkt dadurch wie 'bewusst geleert' (AC-9, M5).
+E   assert False
+E    +  where False = CompareRenderOptions(enabled_metrics=None, hourly_metrics=None, hourly_enabled=True, corridors=None, outlook_enabled=False, outlook_metrics=[], enabled_metrics_by_channel={'email': None, 'telegram': None, 'sms': None}).outlook_enabled
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:71 resolve_outlook_metrics: ['temperature', 'wind'] ohne Katalog-Entsprechung — Eintrag wird verworfen statt angezeigt (vgl. #1361 Befund 3)
+__ test_ac11_vertrag_nennt_kennungsformat_altform_und_den_trip_als_schreiber ___
+tests/tdd/test_outlook_metric_id_contract_doc.py:45: in test_ac11_vertrag_nennt_kennungsformat_altform_und_den_trip_als_schreiber
+    assert "KEIN Altformat" not in absatz, (
+E   AssertionError: Der Vertrag behauptet weiterhin 'KEIN Altformat'. Nach A2 liest der Aufloeser die Paar-Altform DAUERHAFT weiter — sie ist keine Uebergangskruecke, sondern Bestandsdaten-Vertraeglichkeit (AC-11).
+E   assert 'KEIN Altformat' not in '- `outlook_...rierbar.md`.'
+E     
+E     'KEIN Altformat' is contained here:
+E     ?           ^^^^^^
+E       it #1373, KEIN Altformat, kein viertes Vokabular. Ausgewählte Größen für den 3-TAGES-AUSBLICK-Block je Ort (Katalog: alle 24 `selectable=True`-Größen mit `summary_fields` aus `src/app/metric_catalog.py` — seit #1406 B derselbe Vorrat wie beim Stundenverlauf, der früher eigene 9er-Katalog ist entfallen). Aufgelöst über `src/output/renderers/compare_outlook_metric_ids.py` gegen `compare_metric_catalog.key_for()` + `metric_catalog._METRICS`; unbekannte/ungültige Paare werden verworfen und per `logger.warning` protokolliert, Reihen...
+E     
+E     ...Full output truncated (2 lines hidden), use '-vv' to show
+=========================== short test summary info ============================
+FAILED tests/tdd/test_outlook_metric_id_persistence.py::test_ac1_gespeicherte_ausblick_auswahl_besteht_aus_reinen_kennungen
+FAILED tests/tdd/test_outlook_metric_id_persistence.py::test_ac2_altform_paare_werden_beim_laden_zu_je_einer_kennung
+FAILED tests/tdd/test_outlook_metric_id_persistence.py::test_ac7a_nie_gewaehlte_auswahl_bleibt_abwesend_und_bleibt_von_gewaehlter_trennbar
+FAILED tests/tdd/test_outlook_metric_id_persistence.py::test_ac7b_bewusst_geleerte_auswahl_bleibt_abgeschaltet_und_bleibt_von_gewaehlter_trennbar
+FAILED tests/tdd/test_outlook_metric_id_persistence.py::test_ac10_zwei_nutzer_sehen_ausschliesslich_die_eigene_ausblick_auswahl
+FAILED tests/tdd/test_outlook_columns_from_metric_ids.py::test_ac5_niederschlag_ergibt_genau_eine_spalte_ohne_onset
+FAILED tests/tdd/test_outlook_columns_from_metric_ids.py::test_ac5_gewitter_ergibt_genau_eine_spalte_ohne_onset
+FAILED tests/tdd/test_outlook_columns_from_metric_ids.py::test_ac5_keine_abgeleitete_spalte_liest_ein_onset_feld
+FAILED tests/tdd/test_outlook_columns_from_metric_ids.py::test_ac6_jeder_wert_steht_unter_der_beschriftung_seiner_groesse
+FAILED tests/tdd/test_outlook_columns_from_metric_ids.py::test_ac6_zuordnung_ist_ueber_frisch_gestartete_prozesse_unveraendert
+FAILED tests/tdd/test_outlook_columns_from_metric_ids.py::test_ac3_unaufloesbare_auswahl_zeigt_die_sieben_festen_spalten_und_warnt
+FAILED tests/tdd/test_outlook_metric_id_all_channels.py::test_ac4_temperatur_kennung_zeigt_ueberall_dieselbe_eine_spannen_spalte
+FAILED tests/tdd/test_compare_outlook_metric_id_roundtrip.py::test_ac9_ortsvergleich_rundlauf_temperatur_als_spanne_wind_als_einzelwert
+FAILED tests/tdd/test_outlook_metric_id_contract_doc.py::test_ac11_vertrag_nennt_kennungsformat_altform_und_den_trip_als_schreiber
+============================== 14 failed in 1.91s ==============================
+
+# ---- Laufkopf (nachtraeglich angehaengt) ----
+# Befehl: uv run pytest tests/tdd/test_outlook_metric_id_persistence.py tests/tdd/test_outlook_columns_from_metric_ids.py tests/tdd/test_outlook_metric_id_all_channels.py tests/tdd/test_compare_outlook_metric_id_roundtrip.py tests/tdd/test_outlook_metric_id_contract_doc.py -v --tb=short
+# pytest exit code: 1
