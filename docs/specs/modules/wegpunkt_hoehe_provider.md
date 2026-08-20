@@ -12,7 +12,7 @@ tags: [provider, openmeteo, hoehe, trip, ortsvergleich, nowcast]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO Henning, 2026-08-20, "go")
 
 ## Purpose
 
