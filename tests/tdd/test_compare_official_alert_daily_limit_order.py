@@ -192,7 +192,7 @@ def test_ac8_freies_kontingent_stellt_unveraendert_zu(nutzer):
 #: ``app.day_window.window_end_utc_exclusive()``. Der Waechter bleibt
 #: unveraendert scharf — er bewacht ab jetzt den #1599-Stand.
 DAY_WINDOW_END_HASH_VOR_S4A = (
-    "18f3343e80291d35eb4df4fa747f7f88e839eb9cd92c3309870b4bc9fd84cf33"
+    "c4c9512f36bcb565b7d8675283847f72e91700805b9aa6459bf0fb5c7105d4fc"
 )
 
 
@@ -222,6 +222,15 @@ def test_ac17_day_window_end_bleibt_zeichengleich_unveraendert():
     Obergrenze war dort ausdrueckliches Ziel, nicht Kollateral. Der Hash wurde
     entsprechend neu gepinnt; die Zusicherung selbst („nicht unbemerkt
     mitwandern") gilt unveraendert weiter.
+
+    Durch #1727 S5g abgeloest (2026-08-20): ``_day_window_end()`` rechnet die
+    Ortszeit jetzt ueber den zentralen Helfer ``local_dt()`` statt ueber
+    ``now.astimezone(tz)`` mit vorgeschaltetem ``or timezone.utc``. Dieses
+    ``or timezone.utc`` war toter Code — ``tz_for_coords()`` faellt intern
+    selbst auf ``ZoneInfo("UTC")`` zurueck und liefert nie ``None`` —, das
+    Verhalten bleibt unveraendert. Der Hash wurde entsprechend neu gepinnt;
+    die Zusicherung selbst („nicht unbemerkt mitwandern") gilt unveraendert
+    weiter.
     """
     assert _day_window_end_hash() == DAY_WINDOW_END_HASH_VOR_S4A, (
         f"``_day_window_end()`` wurde veraendert — ausdrueckliches Nicht-Ziel "
