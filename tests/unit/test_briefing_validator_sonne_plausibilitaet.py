@@ -44,7 +44,7 @@ def _tbl(rows: list[tuple[str, str]]) -> str:
 def _mail(pill_min: int, desktop_tables: list[str]) -> str:
     """Baut das Renderer-Muster nach: Pill + je Tabelle Desktop- UND
     byte-identische Mobile-Fassung (nur anders gewickelt)."""
-    parts = [f"<span>Sonne {pill_min} min</span>"]
+    parts = [f"<span>Sonne {pill_min / 60:.1f}h</span>"]
     for tbl in desktop_tables:
         parts.append('<div class="section desktop-only">' + tbl + "</div>")
         parts.append(

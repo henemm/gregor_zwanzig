@@ -178,7 +178,14 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # Gesamtlaenge, keine Text-/Struktur-/Reihenfolgeaenderung. Klartext bleibt
 # byte-identisch (Farbe steckt nur im HTML). Alter Digest 1769ef8f…, neuer
 # 3aae0e13….
-_EXPECTED_SHA256 = "3aae0e13f34842a2edc3330373f63fca193b451e08e94273b17b2a2de924e0e7"
+#
+# Fix #1998 (2026-08-20): erneut fortgeschrieben, wieder AUSDRUECKLICH. Die
+# Sonne-Pille zeigte bislang "Sonne X min" statt der Katalog-Einheit Stunden
+# (unit="h", decimals=1) -- gefixt in helpers.py::_pill_for_metric. NACH-
+# GEMESSEN: einziger Unterschied im gerenderten Output dieses Fixtures ist
+# "Sonne 0.4h" statt "Sonne 24 min" (Direktvergleich HTML/Plain, s. PR #2014).
+# Alter Digest 3aae0e13…, neuer 66997d04….
+_EXPECTED_SHA256 = "66997d04443b4dc36588a992926b96e15354ec24cbfb1305c87d3a2db3b1a8bd"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

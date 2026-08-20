@@ -1627,10 +1627,12 @@ def _pill_for_metric(
 
     if metric_id == "sunshine":
         from services.weather_metrics import WeatherMetricsService
+        from output.metric_format import format_value
         total = WeatherMetricsService.calculate_sunny_hours(all_dps)
         if not all_dps or total == 0:
             return None
-        return (f"Sonne {int(round(total * 60))} min", _PILL_NEUTRAL_TONE)
+        return (f"Sonne {format_value('sunshine', total, style='bare')}h",
+                _PILL_NEUTRAL_TONE)
 
     # ---- Klasse 1 — Ereignis-Metriken (mit Uhrzeit, Ampel-gefaerbt) ----
     if metric_id in ("wind", "gust"):

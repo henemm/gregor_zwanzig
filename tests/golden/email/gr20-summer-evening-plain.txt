@@ -13,7 +13,7 @@ GR20 E3: 18–20°C, gef. 12–13°C, mäßiger Regen max 11:00, mäßiger Wind 
   Regen ab 11:00 · 2.5 mm
   kein Gewitter
   50% bewölkt · Max 11:00
-  Sonne 240 min
+  Sonne 4.0h
 
 ━━ Segment 1: km 0.0–0.0 | 11:00–14:00 | ↑400m → 1200m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun   TmpMin 
