@@ -5,7 +5,9 @@ entity_id: alert_render
 issue: 1948
 slice: S6
 created: 2026-08-20
-status: draft
+status: approved
+approved_by: PO Henning
+approved_at: 2026-08-20
 workflow: feat-1948-s6-telegram-paritaet
 ```
 
