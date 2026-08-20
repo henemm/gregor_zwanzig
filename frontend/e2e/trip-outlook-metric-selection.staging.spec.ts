@@ -110,9 +110,17 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 		// Serverstand ist die eigentliche Aussage, nicht nur der DOM.
 		const gespeichert = await page.request.get(`/api/trips/${trip.id}`);
 		const body = await gespeichert.json();
-		const auswahl = (body.display_config?.outlook_metrics ?? []) as CatalogEntry[];
+		// #1848 A2: gespeichert werden reine KENNUNGEN. Ein `m.metric_id`-Zugriff
+		// auf eine Zeichenkette liefert `undefined` — der Vergleich waere still
+		// immer falsch und die Abwahl-Zusicherung trivial erfuellt. Deshalb hier
+		// bewusst der direkte Wert-Vergleich.
+		const auswahl = (body.display_config?.outlook_metrics ?? []) as string[];
 		expect(
-			auswahl.some((m) => m.metric_id === 'gust'),
+			auswahl.every((m) => typeof m === 'string'),
+			`#1848 A2: display_config.outlook_metrics muss reine Kennungen fuehren: ${JSON.stringify(auswahl)}`
+		).toBe(true);
+		expect(
+			auswahl.includes('gust'),
 			`AC-6: 'gust' steht nach dem Speichern weiterhin in display_config.outlook_metrics: ${JSON.stringify(auswahl)}`
 		).toBe(false);
 		expect(
