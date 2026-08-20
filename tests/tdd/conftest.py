@@ -15,6 +15,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+from freezegun import freeze_time
 
 # .claude/hooks muss auf sys.path liegen, damit Hooks die importieren
 # (z.B. staging_gate, prod_selftest) `import _e2e_paths` auflösen können —
@@ -103,6 +104,21 @@ def _anker(now_utc: datetime, zone: str, erwarteter_ortstag: _date) -> None:
     DIESEM Zeitpunkt wirklich auseinanderfallen. Ohne ihn koennte die
     Hauptzusicherung strukturell nie fehlschlagen (Fehlerklasse #1726 F002).
     Der Sollwert wird aus der Zone gebildet, nicht aus dem Prueflingsweg.
+
+    Die dritte Zusicherung (Servertag) wird UNTER ``freeze_time(now_utc)``
+    ausgewertet statt gegen die echte, ungemockte Systemuhr (Issue #2004):
+    jeder Aufrufer dieses Ankers fuehrt den Pruefling anschliessend selbst
+    innerhalb von ``with freeze_time(now_utc): ...`` aus (Beleg: alle
+    Nutzer in ``tests/tdd/test_*_folgen_ortszone.py`` /
+    ``test_import_und_fremdquellen_folgen_ortstag.py``) -- ``date.today()``
+    liefert dem Pruefling in diesem Moment also GENAU den hier gefrorenen
+    Wert, nicht das reale Kalenderdatum des CI-Laufs. Ein Pruefling, der die
+    uebergebene Zeit ignoriert und stattdessen die Systemuhr abfraegt,
+    bekaeme exakt diesen (gegenueber ``erwarteter_ortstag`` bewusst
+    abweichenden) Wert und wuerde an der Hauptzusicherung scheitern. Vorher
+    verglich diese Zeile gegen das ECHTE, ungefrorene Tagesdatum -- an genau
+    einem Kalendertag im Jahr faelschlich blockierend, wenn Ortstag und
+    reales Serverdatum zufaellig zusammenfielen (#2004).
     """
     ortstag = now_utc.astimezone(ZoneInfo(zone)).date()
     assert ortstag == erwarteter_ortstag, (
@@ -113,9 +129,11 @@ def _anker(now_utc: datetime, zone: str, erwarteter_ortstag: _date) -> None:
         f"Testaufbau nicht diskriminierend: Ortstag ({ortstag}) und "
         f"Weltzeit-Tag ({now_utc.date()}) sind gleich (#1726 F002)"
     )
-    assert ortstag != _date.today(), (
+    with freeze_time(now_utc):
+        servertag = _date.today()
+    assert ortstag != servertag, (
         f"Testaufbau nicht diskriminierend: Ortstag ({ortstag}) und Servertag "
-        f"date.today() ({_date.today()}) sind gleich (#1726 F002)"
+        f"date.today() ({servertag}) sind gleich (#1726 F002)"
     )
 
 
