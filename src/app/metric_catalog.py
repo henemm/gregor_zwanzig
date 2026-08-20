@@ -954,6 +954,36 @@ def available_aggregations(metric_id: object) -> list[str]:
     return [a for a in _AGGREGATION_ORDER if a in definition.summary_fields]
 
 
+def normalize_outlook_metric_ids(stored: object) -> Optional[list[str]]:
+    """Gespeicherte Ausblick-Auswahl -> reine Kennungen (Issue #1848 A2).
+
+    Versteht BEIDE Speicherformen und zwar dauerhaft, nicht als
+    Uebergangskruecke: reine Kennungen (``"temperature"``, das Format seit A2)
+    und die Paar-Altform (``{"metric_id": ..., "aggregation": ...}``, ADR-0037).
+    Zwei Paare derselben Groesse (Tief UND Hoch) werden zu EINER Kennung --
+    die Auswertungen leitet der Katalog ab, sie sind kein Speicherinhalt mehr.
+
+    Reine Elementform-Normalisierung OHNE Katalogpruefung: sie gehoert hierher
+    (Vokabular), die Existenzpruefung dagegen in den Aufloeser des
+    Renderpfades. Reihenfolge des ersten Auftretens bleibt erhalten (kein
+    ``set``), ``None`` heisst "kein Array" und traegt die Drei-Werte-Semantik
+    unveraendert weiter.
+    """
+    if not isinstance(stored, list):
+        return None
+    kennungen: list[str] = []
+    for eintrag in stored:
+        if isinstance(eintrag, str):
+            metric_id: object = eintrag
+        elif isinstance(eintrag, dict):
+            metric_id = eintrag.get("metric_id")
+        else:
+            metric_id = None
+        if isinstance(metric_id, str) and metric_id not in kennungen:
+            kennungen.append(metric_id)
+    return kennungen
+
+
 def aggregation_label_de(aggregation: object) -> str:
     """Deutsche Beschriftung einer Auswertung (``""`` wenn unbekannt)."""
     return _AGGREGATION_LABELS_DE.get(aggregation, "") if isinstance(aggregation, str) else ""

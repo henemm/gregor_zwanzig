@@ -1,13 +1,16 @@
 """Aufloeser fuer die Ausblick-Spaltenauswahl des Ortsvergleichs (#1361/#1368).
 
-Struktureller Zwilling zu ``compare_hourly_metric_ids.py`` -- aber im
-NEUFORMAT (``{"metric_id": ..., "aggregation": ...}``, #1373), demselben
-Vokabular wie ``display_config.active_metrics``. Kein viertes Vokabular, keine
-zweite Uebersetzungstabelle: die Existenzpruefung laeuft ueber
-``compare_metric_catalog.key_for()``, der Feldbezug ueber
-``metric_catalog.MetricDefinition.summary_fields``.
+Struktureller Zwilling zu ``compare_hourly_metric_ids.py``. Gespeichert wird
+seit #1848 A2 die reine KENNUNG (``"temperature"``) -- dasselbe Vokabular, das
+Kanal-An/Aus, Reihenfolge, SMS-Kuerzel und Schwellwerte ohnehin benutzen. Die
+Auswertungen leitet der Katalog ab (``derived_aggregations()``); die
+Paar-Altform (``{"metric_id": ..., "aggregation": ...}``, ADR-0037) bleibt
+dauerhaft lesbar. Kein viertes Vokabular, keine zweite Uebersetzungstabelle:
+die Existenzpruefung laeuft ueber ``compare_metric_catalog.key_for()``, der
+Feldbezug ueber ``metric_catalog.MetricDefinition.summary_fields``.
 
 SPEC: docs/specs/modules/issue_1361_1368_ausblick_konfigurierbar.md
+      docs/specs/modules/feat_1848_a2_ausblick_kennungen.md
 """
 from __future__ import annotations
 
@@ -42,40 +45,88 @@ def _summary_field(metric_id: object, aggregation: object) -> str | None:
     return summary_field_for(metric_id, aggregation)
 
 
-def resolve_outlook_metrics(outlook_metrics: object) -> list[dict] | None:
-    """``None`` nur wenn das Feld fehlt (Altbestand = bisherige sieben Spalten).
+def derived_aggregations(metric_id: object) -> list[str]:
+    """Kennung -> die Auswertungen, die der Ausblick daraus zeigt (#1848 A2).
 
-    Eine bewusst geleerte oder vollstaendig unaufloesbare Auswahl liefert
-    ``[]`` ("leer heisst leer", analog #1366) -- der Aufrufer schaltet den
-    Block daraufhin ab. Unbekannte/ungueltige Paare werden verworfen und per
-    ``logger.warning`` sichtbar gemacht (#1361 Befund 3), die Auswahl-
-    Reihenfolge bleibt erhalten (kein ``set``)."""
-    if not isinstance(outlook_metrics, list):
+    Die Ableitungsregel der Spec, an genau EINER Stelle::
+
+        Kennung => alle Auswertungen aus available_aggregations(kennung),
+                   die eine Zeile im Compare-Katalog haben (key_for != None),
+                   in der Reihenfolge von available_aggregations()
+
+    🔴 Quelle ist ``available_aggregations()``, NICHT ``summary_fields``:
+    ``precipitation`` und ``thunder`` fuehren dort zusaetzlich ``onset``, und
+    ``summary_field_for('precipitation','onset')`` loest sehr wohl auf --
+    ueber ``summary_fields`` abgeleitet entstuenden also ``onset``-Spalten.
+    ``available_aggregations()`` filtert gegen ``_AGGREGATION_ORDER`` und
+    laesst ``onset`` fallen.
+
+    Streng deterministisch und reihenfolgestabil (kein ``set``, keine
+    Dict-Iteration): Kopfzeile und Wertzeilen der vier Renderer entstehen aus
+    ZWEI getrennten ``outlook_columns()``-Aufrufen und sind nur ueber den
+    Listenindex verbunden -- eine schwankende Reihenfolge verschoebe Werte
+    gegen Beschriftungen, still und ohne Ausnahme.
+    """
+    from app.metric_catalog import available_aggregations
+
+    return [a for a in available_aggregations(metric_id)
+            if _catalog_entry(metric_id, a) is not None
+            and _summary_field(metric_id, a) is not None]
+
+
+def resolve_outlook_metrics(outlook_metrics: object) -> list[str] | None:
+    """Gespeicherte Auswahl -> geordnete, gueltige Kennungen (#1848 A2).
+
+    Drei-Werte-Semantik (ADR-0037/ADR-0055), jetzt mit sauber getrenntem
+    drittem Fall:
+
+    * ``None`` -- Feld fehlt ODER die gespeicherte Auswahl ist zwar gefuellt,
+      aber KEIN Eintrag laesst sich aufloesen. Beides heisst "keine
+      verwertbare Auswahl" und faellt auf die bisherigen sieben festen
+      Spalten zurueck.
+    * ``[]`` -- die Auswahl ist ausdruecklich leer ("leer heisst leer", analog
+      #1366): der Aufrufer schaltet den Ausblick-Block ab.
+    * gefuellt -- die gueltigen Kennungen in Auswahlreihenfolge.
+
+    🔴 Warum der zweite Fall NICHT ``[]`` liefern darf (M5/R-A2-3): ``[]``
+    bedeutet "bewusst geleert" und schaltet den Block ab. Eine gefuellte, aber
+    unverstandene Auswahl (Altbestand nach Rueckroll, Tippfehler, entfernte
+    Groesse) liesse den 3-Tages-Ausblick damit kommentarlos VERSCHWINDEN statt
+    auf die Standardspalten zurueckzufallen -- nicht als Fehler sichtbar,
+    sondern als stille Abwesenheit. "Unaufloesbar" und "bewusst geleert"
+    duerfen nie denselben Zustand erzeugen.
+
+    Verworfene Eintraege werden per ``logger.warning`` sichtbar gemacht
+    (#1361 Befund 3); die Reihenfolge bleibt erhalten (kein ``set``).
+    """
+    from app.metric_catalog import normalize_outlook_metric_ids
+
+    kennungen = normalize_outlook_metric_ids(outlook_metrics)
+    if kennungen is None:
         return None
 
-    resolved: list[dict] = []
-    dropped: list = []
-    seen: set[tuple] = set()
-    for raw in outlook_metrics:
-        metric_id = raw.get("metric_id") if isinstance(raw, dict) else None
-        aggregation = raw.get("aggregation") if isinstance(raw, dict) else None
-        if _catalog_entry(metric_id, aggregation) is None or _summary_field(metric_id, aggregation) is None:
-            dropped.append(raw)
-            continue
-        if (metric_id, aggregation) in seen:
-            continue
-        seen.add((metric_id, aggregation))
-        resolved.append({"metric_id": metric_id, "aggregation": aggregation})
+    resolved: list[str] = []
+    dropped: list[str] = []
+    for metric_id in kennungen:
+        (resolved if derived_aggregations(metric_id) else dropped).append(metric_id)
 
     if dropped:
         logger.warning(
             "resolve_outlook_metrics: %s ohne Katalog-Entsprechung — Eintrag "
             "wird verworfen statt angezeigt (vgl. #1361 Befund 3)", dropped,
         )
+    if outlook_metrics and not resolved:
+        logger.warning(
+            "resolve_outlook_metrics: kein Eintrag von %s war aufloesbar — "
+            "Rueckfall auf die sieben festen Ausblick-Spalten statt Block aus "
+            "(#1848 A2: unaufloesbar ist NICHT bewusst geleert)",
+            outlook_metrics,
+        )
+        return None
     return resolved
 
 
-def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[dict] | None:
+def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[str] | None:
     """Trip-Vorschau (#1720 S1): aufgeloest UND gegen die Grundauswahl
     geschnitten. Der Ortsvergleich ruft weiterhin ``resolve_outlook_metrics()``
     direkt -- er kennt bewusst kein globales Maximum (ADR-0053).
@@ -90,9 +141,9 @@ def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[dict] | N
     die Reihenfolge der Auswahl bleibt erhalten.
 
     Die Drei-Werte-Semantik von ``resolve_outlook_metrics()`` bleibt
-    unberuehrt: ``None`` (Feld fehlt) bleibt ``None``, ``[]`` (bewusst
-    geleert) bleibt ``[]`` -- der Schnitt wirkt nur auf einer bereits
-    aufgeloesten, nicht-leeren Liste.
+    unberuehrt: ``None`` (Feld fehlt ODER nichts aufloesbar, #1848 A2) bleibt
+    ``None``, ``[]`` (bewusst geleert) bleibt ``[]`` -- der Schnitt wirkt nur
+    auf einer bereits aufgeloesten, nicht-leeren Liste.
 
     🔴 ``dc`` MUSS der ungekollabierte Stand sein: geschnitten wird gegen die
     kanal-neutrale ``get_metrics_for_report_type()``, denn der Ausblick hat
@@ -106,7 +157,7 @@ def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[dict] | N
     allowed = dc.allowed_metric_ids_for_report_type(report_type)
     if allowed is None:
         return resolved
-    return [e for e in resolved if e.get("metric_id") in allowed]
+    return [metric_id for metric_id in resolved if metric_id in allowed]
 
 
 def outlook_columns(metrics: object) -> list[dict]:
@@ -120,28 +171,46 @@ def outlook_columns(metrics: object) -> list[dict]:
     PO-Entscheidung 2026-07-27).
 
     #1401 A1: die Auswertung ist kein Namensbestandteil mehr. Eine Tabellen-
-    spalte traegt aber genau EINEN String -- waehlt der Nutzer dieselbe Groesse
-    zweimal (Temperatur max UND min), bekommen genau diese Spalten die
-    Auswertung angehaengt, damit die PO-Vorgabe "keine zwei gleich
-    beschrifteten Spalten" erhalten bleibt."""
+    spalte traegt aber genau EINEN String -- traegt eine Groesse mehr als eine
+    darstellbare Auswertung und werden die nicht ohnehin zur Spannen-Spalte
+    zusammengefuehrt (z. B. ein kuenftiges ``temperature/avg``, A3), bekommen
+    genau diese Spalten die Auswertung angehaengt, damit die PO-Vorgabe "keine
+    zwei gleich beschrifteten Spalten" erhalten bleibt.
+
+    #1848 A2: die Eingabe sind KENNUNGEN; welche Auswertungen daraus Spalten
+    werden, entscheidet ``derived_aggregations()`` -- der Katalog, nicht die
+    gespeicherte Auswahl. Die Paar-Altform wird weiterhin angenommen (auf ihre
+    Kennung reduziert), damit ein direkter Aufruf mit Bestandsdaten nicht
+    stillschweigend leer laeuft."""
+    from app.metric_catalog import normalize_outlook_metric_ids
+
     columns: list[dict] = []
-    for entry in metrics or []:
-        metric_id = entry.get("metric_id") if isinstance(entry, dict) else None
-        aggregation = entry.get("aggregation") if isinstance(entry, dict) else None
-        catalog = _catalog_entry(metric_id, aggregation)
-        field = _summary_field(metric_id, aggregation)
-        if catalog is None or field is None:
+    dropped: list[str] = []
+    for metric_id in normalize_outlook_metric_ids(metrics) or []:
+        aggregations = derived_aggregations(metric_id)
+        if not aggregations:
+            dropped.append(metric_id)
             continue
-        columns.append({
-            "label": catalog["label"],
-            "metric_id": metric_id,
-            "aggregation": aggregation,
-            "field": field,
-            "unit": catalog.get("unit", ""),
-            "decimals": catalog.get("decimals", 0),
-            "kind": catalog.get("kind", "range"),
-            "aggregation_label": catalog.get("aggregation_label", ""),
-        })
+        for aggregation in aggregations:
+            catalog = _catalog_entry(metric_id, aggregation)
+            columns.append({
+                "label": catalog["label"],
+                "metric_id": metric_id,
+                "aggregation": aggregation,
+                "field": _summary_field(metric_id, aggregation),
+                "unit": catalog.get("unit", ""),
+                "decimals": catalog.get("decimals", 0),
+                "kind": catalog.get("kind", "range"),
+                "aggregation_label": catalog.get("aggregation_label", ""),
+            })
+    if dropped:
+        # #1848 A2: die Verwerfung war hier bislang STUMM -- eine Spalte
+        # verschwand ohne jede Spur. Sie hat dieselbe Ursache wie die im
+        # Aufloeser und gehoert genauso protokolliert.
+        logger.warning(
+            "outlook_columns: %s ohne Katalog-Entsprechung — Spalte entfaellt "
+            "(vgl. #1361 Befund 3)", dropped,
+        )
     columns = _merge_min_max_pairs(columns)
     mehrfach = {c["label"] for c in columns
                 if sum(1 for other in columns if other["label"] == c["label"]) > 1}
@@ -270,6 +339,7 @@ def format_outlook_range_cell(raw_min: object, raw_max: object, column: dict) ->
 
 
 __all__ = [
+    "derived_aggregations",
     "resolve_outlook_metrics",
     "resolve_trip_outlook_metrics",
     "outlook_columns",
