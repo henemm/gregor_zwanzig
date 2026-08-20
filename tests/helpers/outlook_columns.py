@@ -140,12 +140,28 @@ def _merge_min_max_soll(roh: list[dict]) -> list[dict]:
 
 
 def compare_outlook_soll_paare(entries: list[dict] | None = None) -> list[dict]:
-    """Die Auswahl im Speicherformat der Bedienflaeche (#1373-Vokabular) —
-    genau das, was ein Nutzer waehlt, der alles waehlt. Bleibt die FLACHE
-    Paar-Menge (ein Eintrag je Katalog-Paar) auch nach dem Merge in
-    ``compare_outlook_soll_spalten()`` -- die Auswahl selbst aendert sich
-    nicht, nur wie viele SPALTEN daraus entstehen."""
+    """Die Katalog-Paare hinter der Soll-Menge (#1373-Vokabular).
+
+    Seit #1848 A2 ist das NICHT mehr das Speicherformat der Bedienflaeche --
+    gespeichert wird die Kennung (s. ``compare_outlook_soll_kennungen()``).
+    Die flache Paar-Menge bleibt als Rechengroesse fuer die
+    Vollstaendigkeits-Waechter erhalten: jedes ausgelieferte Katalog-Paar muss
+    in genau einem Soll-Eintrag auftauchen."""
     return [p for s in compare_outlook_soll_spalten(entries) for p in s["paare"]]
+
+
+def compare_outlook_soll_kennungen(entries: list[dict] | None = None) -> list[str]:
+    """Die Auswahl im Speicherformat der Bedienflaeche (#1848 A2) — genau das,
+    was ein Nutzer speichert, der alles waehlt: die Kennungen, in
+    Katalog-Reihenfolge, jede genau einmal.
+
+    Abgeleitet aus derselben Soll-Menge wie die Spalten und die Paare, damit
+    Auswahl und Erwartung nicht auseinanderlaufen koennen."""
+    kennungen: list[str] = []
+    for spalte in compare_outlook_soll_spalten(entries):
+        if spalte["metric_id"] not in kennungen:
+            kennungen.append(spalte["metric_id"])
+    return kennungen
 
 
 def assert_soll_menge_ist_plausibel(entries: list[dict] | None = None) -> list[dict]:

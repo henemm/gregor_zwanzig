@@ -32,11 +32,14 @@ from output.renderers.email.outlook import (
 )
 
 _UTC = timezone.utc
-_TEMP_BOTH = [
-    {"metric_id": "temperature", "aggregation": "max"},
-    {"metric_id": "temperature", "aggregation": "min"},
-]
-_TEMP_MAX_ONLY = [{"metric_id": "temperature", "aggregation": "max"}]
+# #1848 A2: gewaehlt wird die KENNUNG; welche Auswertungen sie zeigt, leitet
+# der Katalog ab. Fuer ``temperature`` sind das Tief UND Hoch -- die
+# Spannen-Zelle dieser Datei entsteht damit aus EINEM Auswahl-Eintrag statt
+# aus zwei.
+_TEMP_BOTH = ["temperature"]
+# Eine Groesse mit genau EINER darstellbaren Auswertung. Sie traegt seit A2 den
+# Einzelwert-Zweig, den frueher die Temperatur-Halbauswahl belegte (s. AC-5).
+_SINGLE_AGGREGATION = ["gust"]
 
 
 def _row(summary, metrics):
@@ -63,17 +66,24 @@ def test_ac4_negative_min_and_max_form_one_cell_with_slash():
 # AC-5 -- nur eine Auswertung gewaehlt bleibt Einzelwert (Regressionsschutz)
 # ---------------------------------------------------------------------------
 
-def test_ac5_single_selected_aggregation_stays_a_single_value():
-    """AC-5: Given nur Temperatur-Max gewaehlt (min NICHT gewaehlt) / When
-    die Ausblick-Zelle gerendert wird / Then zeigt sie weiterhin einen
-    Einzelwert ohne Schraegstrich -- eine reine Konfigurationsauswahl darf
-    nicht mit einer Datenluecke (AC-6) verwechselt werden.
+def test_ac5_metric_with_one_aggregation_stays_a_single_value():
+    """AC-5: Given eine Groesse mit genau EINER darstellbaren Auswertung
+    (Böen) / When die Ausblick-Zelle gerendert wird / Then zeigt sie einen
+    Einzelwert ohne Schraegstrich -- der Einzelwert-Zweig aus A1 bleibt
+    lebendig und darf nicht mit einer Datenluecke (AC-6) verwechselt werden.
 
-    GRUEN erwartet -- Bestandsverhalten, das erhalten bleiben MUSS."""
-    summary = SegmentWeatherSummary(temp_min_c=-12.0, temp_max_c=13.0)
-    row = _row(summary, _TEMP_MAX_ONLY)
-    assert len(row["cells"]) == 1 and "/" not in row["cells"][0], (
-        f"Einzelauswahl zeigt einen Schraegstrich oder mehrere Zellen: {row['cells']}"
+    🔴 Umgestellt in #1848 A2 (Spec „Known Limitations"): frueher stand hier
+    „nur Temperatur-Max gewaehlt". Diese Halbauswahl ist seit A2 nicht mehr
+    speicherbar -- die Kennung ``temperature`` liefert zwangslaeufig die
+    Spanne (PO-Entscheid „Nur-das-Hoch-Zeigen entfaellt"). Der Zweig SELBST
+    ist damit nicht tot, er traegt weiterhin alle 21 Groessen mit nur einer
+    Auswertung; genau die pruefen wir jetzt. Die Unterscheidungskraft gegen
+    AC-6 (Datenluecke ``13/-``) bleibt dadurch vollstaendig erhalten."""
+    summary = SegmentWeatherSummary(temp_min_c=-12.0, temp_max_c=13.0,
+                                    gust_max_kmh=44.0)
+    row = _row(summary, _SINGLE_AGGREGATION)
+    assert len(row["cells"]) == 1 and "/" not in row["cells"][0].replace("km/h", ""), (
+        f"Einzelauswertung zeigt einen Schraegstrich oder mehrere Zellen: {row['cells']}"
     )
 
 
