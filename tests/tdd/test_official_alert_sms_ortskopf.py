@@ -44,6 +44,8 @@ from app.config import Settings
 from app.trip import Stage, Trip, Waypoint
 from output.renderers.alert.official_alerts import (
     OfficialAlertNotice,
+    _sms_pack,
+    _sms_pack_with_fallback,
     build_compare_official_alert_notices,
     build_official_alert_notices,
     render_official_alert_sms,
@@ -900,3 +902,149 @@ def test_ac17_unbekannte_gefahrenart_behaelt_den_stufenbuchstaben():
         f"AC-17: das Fallback darf nicht mit 'TH' (thunderstorm) kollidieren: "
         f"{sms!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Nachtrag N-3 (F005, Adversary-Runde 2, CRITICAL) — die ABBAU-REIHENFOLGE
+#
+# N-3 sagt zu: "Kopf kuerzen bzw. weglassen, BEVOR ein Gefahren-Token faellt --
+# Gefahr und Stufe ueberleben jede Kopflaenge." Der Bestand (AC-15/AC-16 in
+# `test_official_alert_channel_scope.py`) prueft nur, dass ueberhaupt etwas
+# ueberlebt ("HT" in sms), nicht WAS zuerst geopfert wird. Der Adversary
+# vertauschte die beiden Schleifen in `_sms_pack_with_fallback` (Kopf aussen
+# statt Variante aussen) -- kein Test wurde rot, obwohl die SMS dann den ORT
+# behaelt und das ZEITFENSTER verliert. Bei einer amtlichen Warnung ist die
+# Zeit die handlungsleitende Angabe; die Reihenfolge ist damit selbst eine
+# Zusicherung und wird hier festgenagelt.
+# ---------------------------------------------------------------------------
+
+def _langer_ort_notices(namenslaenge: int = 125) -> list:
+    """Eine amtliche Warnung fuer EINEN sehr langen, nutzereingegebenen
+    Ortsnamen (Ortsvergleich-Pfad, echter Builder). Die Laenge ist so gewaehlt,
+    dass am echten 140-Zeichen-Budget genau der Divergenzfall entsteht:
+    Kopf + volles Token passt NICHT, Kopf + blankes Kuerzel passt SCHON."""
+    name = "Sankt" + "A" * (namenslaenge - len("Sankt"))
+    gewitter = _alert(level=3, von=_morgen(15), bis=_morgen(21))
+    return build_compare_official_alert_notices(
+        ["lang", "kurz"], {"lang": name, "kurz": "Toulon"},
+        [(gewitter, ["lang"])],
+    )
+
+
+def _tag_zeit(sms: str) -> str:
+    """Das Zeitfenster-Stueck des fuehrenden Tokens ("Fr15-21") -- aus der
+    UNGEKUERZTEN Ausgabe gelesen statt eingefroren (Wanduhr, s. Modulkopf)."""
+    m = re.search(r"(?:Mo|Di|Mi|Do|Fr|Sa|So)?\d{1,2}(?::\d\d)?-\S+", sms)
+    assert m, f"Kurznachricht ohne Zeitfenster: {sms!r}"
+    return m.group(0)
+
+
+def test_n3_kopf_faellt_bevor_das_zeitfenster_geopfert_wird():
+    """N-3/F005: Given eine amtliche Warnung, deren Ortskopf so lang ist, dass
+    Kopf + vollstaendiges Gefahren-Token das 140-Zeichen-Budget sprengt, Kopf +
+    blankes Kuerzel aber noch hineinpasste / When die SMS gerendert wird / Then
+    faellt der KOPF und das Gefahren-Token bleibt vollstaendig (Kuerzel, Stufe
+    UND Zeitfenster) -- nicht umgekehrt."""
+    notices = _langer_ort_notices()
+    voll = _render(notices, limit=1000)
+    assert ": " in voll, (
+        f"N-3: ohne Budgetdruck muss der Ortskopf noch dastehen: {voll!r}"
+    )
+    kopf, token = voll.split(": ", 1)
+    kopflaenge = len(kopf) + len(": ")
+    # Vorbedingung des Divergenzfalls -- ohne sie waere der Test trivial gruen.
+    assert kopflaenge + len(token) > 140 >= kopflaenge + len("!TH:M"), (
+        f"Fixture trifft den Divergenzfall nicht: Kopf {kopflaenge} Zeichen, "
+        f"Token {token!r}"
+    )
+
+    sms = _render(notices)
+
+    assert sms == token, (
+        f"N-3: bei zu langem Ortskopf muss der KOPF fallen und das Gefahren-"
+        f"Token {token!r} unversehrt bleiben, bekam {sms!r}"
+    )
+    assert _tag_zeit(voll) in sms, (
+        f"N-3: das Zeitfenster ist die handlungsleitende Angabe und darf nicht "
+        f"vor dem Ortskopf geopfert werden: {sms!r}"
+    )
+    assert "SanktA" not in sms and len(sms) <= 140, (
+        f"N-3: der Kopf muss ganz entfallen (kein Fragment) und das Limit "
+        f"halten: {sms!r}"
+    )
+
+
+@pytest.mark.parametrize("limit", list(range(3, 30)))
+def test_n3_abbau_reihenfolge_ueber_alle_budgets(limit: int):
+    """N-3/F005 (Zusicherung statt Einzelmutation): Given eine beliebige
+    Budget-Groesse / When die Rueckfallkette greift / Then steht in der SMS
+    IMMER die reichhaltigste Variante, die ohne Kopf noch hineinpasst -- der
+    Kopf kommt nur dazu, wenn er zusaetzlich passt.
+
+    Das ist die N-3-Garantie als Formel und faengt jede Umbauform, die die
+    Reihenfolge verdreht: vertauschte Schleifen, weggefallene Kopf-Stufe,
+    Kopf-Stufe vor der reichen Variante."""
+    head = "Seg 4: "
+    varianten = ["!TH:M Sa15-21 AAA", "!TH:M Sa15-21", "!TH"]
+    reichste = next(v for v in varianten if len(v) <= limit)
+    erwartet = head + reichste if len(head + reichste) <= limit else reichste
+
+    body = _sms_pack_with_fallback(head, varianten, [], limit, "")
+
+    assert body == erwartet, (
+        f"N-3: bei Budget {limit} muss {erwartet!r} herauskommen (reichste "
+        f"passende Variante, Kopf nur wenn er zusaetzlich passt), bekam "
+        f"{body!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F004 (Adversary-Runde 2, HIGH) — die BUDGET-KANTE (`<= limit`)
+#
+# `_sms_pack` behaelt ein Token, solange Kopf + Tokens + Marker `<= limit`
+# bleiben. Die Mutation zu `< limit` blieb ueber alle 244 Tests gruen: der
+# exakt ausgeschoepfte Fall war unbewacht. Er ist der Normalfall am oberen
+# Rand -- eine SMS, die das Budget punktgenau fuellt, muss vollstaendig
+# bleiben statt eine Warnung hinter einem " +1" verschwinden zu lassen.
+# ---------------------------------------------------------------------------
+
+def test_f004_sms_die_das_budget_exakt_ausschoepft_bleibt_vollstaendig():
+    """F004: Given eine amtliche Warn-SMS, die das Budget auf das Zeichen genau
+    ausschoepft / When sie gerendert wird / Then bleibt sie unveraendert
+    vollstaendig -- keine Warnung wird zugunsten eines ' +1'-Markers
+    weggelassen."""
+    notices = _zwei_warnungen_segment_4(_trip())
+    voll = _render(notices, limit=1000)
+
+    exakt = _render(notices, limit=len(voll))
+
+    assert exakt == voll, (
+        f"F004: bei einem Budget von exakt {len(voll)} Zeichen muss die "
+        f"vollstaendige SMS {voll!r} stehen bleiben, bekam {exakt!r}"
+    )
+    # Gegenprobe: ein Zeichen weniger MUSS kuerzen -- sonst waere die
+    # Gleichheit oben auch ohne Budget-Rechnung zu haben.
+    knapp = _render(notices, limit=len(voll) - 1)
+    assert knapp != voll and len(knapp) <= len(voll) - 1, (
+        f"F004-Gegenprobe: bei {len(voll) - 1} Zeichen muss gekuerzt werden, "
+        f"bekam {knapp!r}"
+    )
+
+
+@pytest.mark.parametrize(
+    "limit,erwartet_behalten",
+    [(20, 1), (21, 1), (19, 0)],
+)
+def test_f004_pack_behaelt_ein_exakt_passendes_token(
+    limit: int, erwartet_behalten: int,
+):
+    """F004 (Kante beidseitig): Given ein Token, das zusammen mit dem Kopf
+    exakt `limit` Zeichen ergibt / When `_sms_pack` das Budget rechnet / Then
+    wird es behalten (`<=`), bei einem Zeichen weniger Budget verworfen."""
+    body, behalten = _sms_pack("X" * 10, ["Y" * 10], limit)
+
+    assert behalten == erwartet_behalten, (
+        f"F004: bei Budget {limit} muessen {erwartet_behalten} von 1 Token "
+        f"behalten werden, bekam {behalten} ({body!r})"
+    )
+    assert len(body) <= limit, f"F004: {body!r} sprengt das Budget {limit}"
