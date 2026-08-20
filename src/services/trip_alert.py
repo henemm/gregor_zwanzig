@@ -40,7 +40,7 @@ from services.throttle_store import ThrottleStore
 from services.trip_day import anchor_tz, trip_local_today
 from services.user_tier import premium_sms_allowed, sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
-from utils.timezone import format_reference_at, tz_for_coords
+from utils.timezone import format_reference_at, local_fmt, to_utc, tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -1025,7 +1025,7 @@ class TripAlertService:
         """
         if snapshot is None:
             return None
-        onset_hour = onset_dt.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+        onset_hour = to_utc(onset_dt).replace(minute=0, second=0, microsecond=0)
         for seg_data in snapshot:
             if seg_data.segment.segment_id != segment_id:
                 continue
@@ -1271,7 +1271,7 @@ class TripAlertService:
             # Adjektiv, daher ist [:1].lower() hier immer korrekt.
             _label = result.intensity_label
             _label = _label[:1].lower() + _label[1:]
-            _onset_time_str = (now_utc + timedelta(minutes=result.onset_minutes)).astimezone(tz).strftime("%H:%M")
+            _onset_time_str = local_fmt(now_utc + timedelta(minutes=result.onset_minutes), tz)
             _radar_request = RadarAlertRequest(
                 onset_minutes=result.onset_minutes,
                 onset_time=_onset_time_str,

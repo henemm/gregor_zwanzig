@@ -28,6 +28,8 @@ import logging
 from datetime import date, datetime, timezone
 from typing import Callable, Iterable, Optional, Union
 
+from utils.timezone import to_utc
+
 logger = logging.getLogger("alert_briefing_anchor")
 
 # Eigene Ablage, bewusst NICHT als weiterer Top-Level-Schluessel in
@@ -202,7 +204,7 @@ def record_briefing_sent(
     Fail-soft: ein Schreibfehler darf einen bereits versandten Report nicht
     rueckwirkend zum Fehler machen.
     """
-    moment = (at or datetime.now(tz=timezone.utc)).astimezone(timezone.utc)
+    moment = to_utc(at or datetime.now(tz=timezone.utc))
     path = _anchor_path(user_id)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
