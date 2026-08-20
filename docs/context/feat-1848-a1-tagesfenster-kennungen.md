@@ -427,3 +427,46 @@ werden muss** — sonst stehen zwei Schreibweisen fuer dieselbe Sache nebeneinan
 7-Spalten-Altform**. Ob deren Klartext mit angeglichen wird oder nur der konfigurierbare Pfad,
 haengt an den Golden-Fixtures (`test_compare_outlook.py:205` erwartet `"9–20°C"`) — technischer
 Zuschnitt, keine PO-Frage.
+
+## Reichweite des falschen Werts (belegt)
+
+**Der Ausblick zeigt NIE den heutigen Tag.** `get_future_stages()` filtert `s.date > from_date`
+(`trip.py:275-280`), aufgerufen als `trip.get_future_stages(target_date)` und auf
+`future_stages[:3]` begrenzt (`trip_report_scheduler.py:2236, 2249`). Die Kachelzeile/
+Zusammenfassung derselben Mail deckt `target_date` ab (`trip_report_scheduler.py:1239`).
+
+⇒ **Der Widerspruch ist NICHT innerhalb einer Mail sichtbar** — die Tagesmengen sind strukturell
+disjunkt (`>`, nicht `>=`). Er zeigt sich **zeitversetzt**: die heutige Mail nennt im Ausblick
+fuer morgen `27`, die morgige Mail nennt fuer denselben Kalendertag in der Kachelzeile `28`.
+Das ist fuer die AC-Formulierung entscheidend — ein AC, das „in derselben Mail" prueft, waere
+strukturell nie erfuellbar.
+
+| Ausblick-Spalte | Von #1417 betroffen? | Beleg |
+|---|---|---|
+| Temperatur (`N`/`D` fix **und** gewaehlt) | **JA** | `outlook.py:503-504`, Messung oben |
+| Gefuehlte Temperatur (`wind_chill`, nur wenn gewaehlt) | **JA**, strukturell derselbe Fehler | `metric_catalog.py:213-218` → `outlook.py:647` liest dasselbe Etappenaggregat; SMS `FL`/`FD` nutzt `hiking_field_min_max(..., "wind_chill_c")` (`sms_trip.py:240`) |
+| Wind / Boeen | **NEIN** | `W`/`G` kommen aus dem geteilten **Tagesfenster 04-19** (`day_window.py:210-213`, Epic #1319/#1317), nicht aus der Gehzeit — andere Baustelle |
+
+🔸 **Nebenbefund (→ #1199, nicht in dieser Scheibe):** Die Boeen-Spalte des Ausblicks liest eine
+**dritte** Quelle — `hourly_gust` aus `_flat_points`, also rohe **ungefensterte** Zeitreihen
+aller Segmente (`trip_report_scheduler.py:2306-2309`), waehrend Wind daneben das Etappenaggregat
+nutzt. Zwei Spalten derselben Tabelle mit verschiedener Fensterung. Eigene Baustelle.
+
+---
+
+# 🟢 ZUSCHNITT A1 (final, Stand 2026-08-20)
+
+| # | Inhalt |
+|---|---|
+| **1** | Der Trip-Ausblick liest Temperatur **und** gefuehlte Temperatur aus dem **Gehzeit-Fenster** statt aus dem Etappenaggregat — Nachzug zu #1417, fail-soft zurueck auf `summary.temp_*` |
+| **2** | Sind Tief **und** Hoch gewaehlt: **eine** Zelle `{min}/{max}` (Schraegstrich, minusfest); nur eine gewaehlt ⇒ Einzelwert wie heute. Gilt HTML **und** Klartext, Trip **und** Ortsvergleich |
+| **3** | Der Ausblick-Klartext der Altform wird auf denselben Trenner gezogen (Golden-Anpassung) |
+
+**Nicht in A1:** neue Registerkennungen (reine Speicherform-Frage ⇒ **A2**) · `avg` (⇒ **A3**) ·
+Wind/Boeen-Fensterung (⇒ #1199) · Kanal-Modul im Ausblick (⇒ **A3**).
+
+**Ortsvergleich:** hat keine Gehzeit — dort bleibt das Tagesfenster richtig
+(`comparison_engine.py:43-86`). Nur Punkt 2 gilt dort, nicht Punkt 1.
+
+**Waechter aus Scheibe C bleibt unberuehrt:** A1 fasst die vier Gehzeit-**Kennungen** nicht an,
+sondern nur den **Wert**, den die bestehende Kennung `temperature` im Ausblick liefert.
