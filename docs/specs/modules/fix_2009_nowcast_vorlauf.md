@@ -278,6 +278,18 @@ Compare-Modell schlicht nicht vorhanden. Siehe Abschnitt „Architektur-Entschei
   bleibt durch das Datenraster der Quelle begrenzt — mit der höheren Schwelle verteilen sich die
   gezeigten Werte nur über mehr Rasterpunkte (8/23/38/53), werden aber nicht "krummer" (gleiche
   Beobachtung wie in `fix_1945_nowcast_horizon.md`).
+- 🔴 **Der Segment-Ende-Guard (AC-6) ist eine Ausgleichsmaßnahme mit Verfallsdatum.** Er
+  unterdrückt Alarme, deren Onset nach dem Ende des aktiven Segments liegt — richtig **nur**,
+  solange der Nowcast am **Startpunkt** des aktiven Segments abgefragt wird
+  (`trip_alert.py:1256-1259`). Der Guard gleicht also einen falschen Messpunkt aus, er behebt
+  ihn nicht. Sobald **#2017** den Abrufpunkt auf den interpolierten Aufenthaltsort zum
+  Onset-Zeitpunkt umstellt, kehrt sich seine Wirkung um: Der Onset läge dann per Konstruktion
+  dort, wo der Nutzer tatsächlich sein wird, und der Guard würde **korrekte** Alarme verwerfen.
+  **Er ist mit dem Merge von #2017 ersatzlos zu entfernen**, zusammen mit AC-6 und
+  `tests/tdd/test_radar_alert_segment_end_guard.py`. Das ist hiermit dokumentiert und daher
+  **kein** stiller Spec-Widerruf, sondern der vorgesehene Weg. Gemessene Grundlage für #2017:
+  Segmentdauer Median 69 Min, Ortsfehler während der Gehphasen Median 2,68 km, in 68 % der
+  Geh-Minuten liegt der Onset nicht mehr im abgefragten Segment.
 - **Ortsvergleich bleibt ohne Segment-Ende-Guard**, weil Compare-Presets strukturell keine
   Etappen/Segmente kennen — kein Implementierungsversäumnis, sondern Abbildung des
   Datenmodells (s. Implementation Details Punkt 3, Architektur-Entscheidung unten).
