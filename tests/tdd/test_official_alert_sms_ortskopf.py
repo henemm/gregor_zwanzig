@@ -199,6 +199,37 @@ def test_ac1_segment_kopf_lautet_seg_4_statt_kurzcode_s4():
     )
 
 
+def test_ac1_einzelne_warnung_traegt_denselben_kopf_ohne_nur_zusatz():
+    """AC-1 / Nachtrag N-2: Given eine EINZELNE amtliche Warnung mit Umfang
+    genau Segment 4 / When ueber den echten Builder gerendert wird / Then
+    lautet der Ortskopf ebenfalls exakt "Seg 4: " — der frueher bei genau
+    einer Warnung vorangestellte Zusatz "nur " entfaellt ersatzlos.
+
+    Eigener Test, weil `_zwei_warnungen_segment_4()` den Ein-Warnung-Fall
+    laut eigenem Docstring BEWUSST meidet: dort ist die Bedingung, die N-2
+    regelt, gar nicht erfuellt. Genau eine Warnung ist zugleich die
+    haeufigste Lage im Betrieb.
+    """
+    notices = build_official_alert_notices(
+        _trip(), [(_alert(level=3, von=_heute(15), bis=_heute(21)), ["4"])],
+    )
+    assert len(notices) == 1, f"Setup: genau eine Notice erwartet: {notices!r}"
+
+    sms = _render(notices)
+
+    assert sms.startswith("Seg 4: "), (
+        f"N-2: auch bei genau EINER Warnung lautet der Ortskopf exakt "
+        f"'Seg 4: ' — kein 'nur '-Zusatz davor, bekam {sms!r}"
+    )
+    assert _kopf(sms) == "Seg 4", (
+        f"N-2: der Kopf muss dem Zwei-Warnungen-Fall gleichen, bekam "
+        f"{_kopf(sms)!r}"
+    )
+    assert "nur " not in sms, (
+        f"N-2: der Zusatz 'nur ' ist ersatzlos entfallen: {sms!r}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # AC-2 — Zielsegment
 # ---------------------------------------------------------------------------
@@ -469,9 +500,13 @@ def test_ac10_trip_dispatch_versendet_die_neue_grammatik():
         f"AC-10: der Versandpfad sendet noch das alte AMT-Format: {sms!r}"
     )
     assert "KHW403" not in sms, f"AC-10: Trip-Name im Versandtext: {sms!r}"
-    assert "Seg 4" in _kopf(sms), (
-        f"AC-10: der Ortskopf muss das Segment in der Kurzform 'Seg 4' "
-        f"nennen, bekam Kopf {_kopf(sms)!r} aus {sms!r}"
+    # GLEICHHEIT, nicht Teilstring (Fix-Loop F001): "Seg 4" ist auch in
+    # "nur Seg 4" enthalten -- ein `in`-Vergleich laesst genau den Zusatz
+    # durch, den Nachtrag N-2 abschafft, und das ausgerechnet im haeufigsten
+    # Fall (genau eine Warnung) auf dem echten Versandpfad.
+    assert _kopf(sms) == "Seg 4", (
+        f"AC-10: der Ortskopf muss exakt 'Seg 4' lauten (kein Zusatz davor), "
+        f"bekam Kopf {_kopf(sms)!r} aus {sms!r}"
     )
     assert _rumpf(sms).startswith("!TH:M "), (
         f"AC-10: der Rumpf muss mit '!TH:M ' beginnen (Marker, Kuerzel, "
@@ -638,6 +673,49 @@ def test_ac14_amtliche_und_nowcast_sms_teilen_die_seg_kurzform():
     )
     assert "Segment 4" in render_subject(msg), (
         "AC-14 (Gegenprobe): der Betreff schreibt 'Segment' weiterhin AUS."
+    )
+
+
+def test_ac14_beginn_verschiebungs_sms_teilt_dieselbe_seg_kurzform():
+    """AC-14 (dritte Aufrufstelle, Fix-Loop F002): Given einen reinen
+    Beginn-Verschiebungs-Alarm (`OnsetShiftEvent`, kein `source`, keine
+    `events`) fuer Segment 4 / When `render_sms()` ihn ueber
+    `_render_sms_onset_shift_only` rendert / Then lautet auch dieser Kopf
+    "Seg 4" — waehrend die E-Mail desselben Alarms "Segment 4" ausschreibt.
+
+    Die Spec verspricht fuer die Kurzform "vier Aufrufstellen … trifft
+    automatisch alle vier"; dieser Zweig war bis hierher der einzige ohne
+    jede Testabdeckung (`project.py:177/307` befuellen
+    `onset_shift_events` produktiv).
+    """
+    from output.renderers.alert.model import AlertMessage, OnsetShiftEvent
+    from output.renderers.alert.render import render_email, render_sms
+
+    shift = OnsetShiftEvent(
+        metric_id="precipitation", from_time="17:00", to_time="15:00",
+        shift_text="2 h früher", km_from=8.0, km_to=8.0, segment_id="4",
+    )
+    msg = AlertMessage(
+        trip_short="KHW 403", stand_at="10:00", events=(),
+        onset_shift_events=(shift,),
+    )
+
+    sms = render_sms(msg)
+
+    assert _kopf(sms) == "Seg 4", (
+        f"AC-14: der Beginn-Verschiebungs-SMS-Kopf muss dieselbe Kurzform "
+        f"'Seg 4' nutzen wie amtliche und Nowcast-SMS, bekam {_kopf(sms)!r} "
+        f"aus {sms!r}"
+    )
+    assert "Segment" not in sms, (
+        f"AC-14: 'Segment' ausgeschrieben frisst auf der Kurznachricht "
+        f"Laengenbudget: {sms!r}"
+    )
+
+    html, plain = render_email(msg)
+    assert "Segment 4" in html and "Segment 4" in plain, (
+        "AC-14 (Gegenprobe): die E-Mail derselben Beginn-Verschiebung "
+        "schreibt 'Segment' weiterhin AUS."
     )
 
 
