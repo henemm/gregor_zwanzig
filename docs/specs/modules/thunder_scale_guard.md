@@ -483,3 +483,8 @@ unfangbar bleibt" — bewusst nicht Teil dieser Lieferung:
 
 - 2026-08-20: Initial spec erstellt — Issue #1480, auf Basis der am selben Tag neu vermessenen
   Kontextanalyse (`docs/context/feat-1480-thunder-scale-guard.md`, Stand `bc6897a7`).
+- 2026-08-20: Nachbesserung nach Review (Team-Lead) — AC-16 von einem Dateiinhalt-Check auf einen
+  echten Verhaltensnachweis per Injektion einer abweichenden Stufenordnung umgestellt; AC-24
+  (parametrisierter Kern gegen `RiskLevel`-Parameter nachgewiesen) ergänzt; Gegenproben für
+  AC-10/AC-14/AC-17 sowie eine begründete `# doc-compliance-test`-Ausnahme für den
+  Prüfdatum-Nachweis (AC-22) ergänzt. 23 → 24 ACs.
