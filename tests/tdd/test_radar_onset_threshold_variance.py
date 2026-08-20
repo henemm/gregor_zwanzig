@@ -19,10 +19,28 @@ Mock-frei: echte `RadarFrame`-Objekte ueber den `frame_source`-DI-Seam
 Test-Datenwurzel (`_isolate_data_root`, autouse), Zustellung ueber den
 `mail_sink`-Zaehler (kein Netz, kein echter Versand — Kern-Test im
 Commit-Gate, #1477).
+
+🔴 Warum die Uhr GESTELLT wird (nicht zurueckdrehen!): `make_trip()` baut
+seine Etappe standardmaessig von 00:00 bis 23:59 des KALENDERTAGS, an dem
+der Test laeuft. Der mit diesem Ticket eingefuehrte Segment-Ende-Guard
+(AC-6, `trip_alert.py`) vergleicht den berechneten Onset-Zeitpunkt gegen
+`active.end_time` — rutscht `jetzt + onset_minutes` ueber Mitternacht, liegt
+er hinter dem Etappenende und der Guard unterdrueckt den Alarm voellig
+korrekt. Gegen die echte Wanduhr wurden die Alarm-Faelle dieser Datei
+deshalb taeglich zwischen ~23:10 und 23:59 UTC rot (Messung 2026-08-20,
+`tests/helpers/wanduhr_matrix.py`, 10-Min-Raster: 23:10 ein Fall, ab 23:40
+vier Faelle). Das ist ein Test-Robustheitsdefekt, kein Produktfehler.
+Gestellt wird auf einen mittaeglichen, tagesgrenzen-fernen Zeitpunkt —
+dasselbe Muster und derselbe Bezugszeitpunkt wie in der Schwesterdatei
+`test_radar_alert_segment_end_guard.py`, die denselben Guard ueber denselben
+`make_trip()`-Pfad durchlaeuft. Reykjavik (`make_trip()`-Default,
+ganzjaehrig UTC+0) macht die Ortszeit direkt aus der gestellten UTC-Zeit
+ablesbar.
 """
 from __future__ import annotations
 
 import pytest
+from freezegun import freeze_time
 
 from app.loader import save_location
 
@@ -33,31 +51,50 @@ from tests.helpers.nowcast_gate_fixtures import (
 )
 
 
+# Gestellter Bezugszeitpunkt ALLER Laeufe dieser Datei: mittags, weit von
+# jeder Tagesgrenze entfernt (Begruendung im Modul-Docstring). Bewusst
+# derselbe Wert wie `_MITTAGS` in `test_radar_alert_segment_end_guard.py` —
+# beide Dateien fahren denselben Guard.
+_MITTAGS = "2026-08-11T12:00:00+00:00"
+
+
 # ═══════════════════════════════ AC-1 ═════════════════════════════════════
 
 
-def _trip_run(uid: str, trip_id: str, onset_minutes: int) -> int:
-    write_user_tier(uid, "premium")  # kein Tageslimit — nur die Schwelle wird gemessen
-    trip = make_trip(trip_id)
-    save_trip(trip, uid)
-    reset_radar_cache()
-    svc = trip_alert_service(
-        uid, settings_email_only(), CountingFrameSource(onset_minutes=onset_minutes),
-        lambda subject, body: None,
-    )
-    return svc.check_radar_alerts()
+def _trip_run(uid: str, trip_id: str, onset_minutes: int) -> tuple[int, list]:
+    """Ein echter `check_radar_alerts()`-Lauf unter gestellter Uhr. Liefert
+    `(Anzahl Alarme, zugestellte Mails)`."""
+    with freeze_time(_MITTAGS):
+        write_user_tier(uid, "premium")  # kein Tageslimit — nur die Schwelle wird gemessen
+        trip = make_trip(trip_id)
+        save_trip(trip, uid)
+        reset_radar_cache()
+        mails: list = []
+        svc = trip_alert_service(
+            uid, settings_email_only(), CountingFrameSource(onset_minutes=onset_minutes),
+            lambda subject, body: mails.append((subject, body)),
+        )
+        return svc.check_radar_alerts(), mails
 
 
-def _compare_run(uid: str, preset_id: str, onset_minutes: int) -> int:
-    write_user_tier(uid, "premium")
-    save_location(location("loc-ac1", "AC1-Ort"), user_id=uid)
-    write_presets(uid, [radar_preset(preset_id, ["loc-ac1"], user_id=uid)])
-    reset_radar_cache()
-    svc = compare_radar_service(
-        uid, settings_email_only(), CountingFrameSource(onset_minutes=onset_minutes),
-        lambda subject, body: None,
-    )
-    return svc.check_all_compare_presets()
+def _compare_run(uid: str, preset_id: str, onset_minutes: int) -> tuple[int, list]:
+    """Gegenstueck fuer den Ortsvergleichs-Pfad — dieselbe gestellte Uhr.
+
+    Der Ortsvergleich hat KEINEN Segment-Bezug und war in der Messung auch
+    nicht betroffen; er wird trotzdem gestellt, damit beide Haelften
+    desselben Tests denselben Zeitbezug haben und die Datei als Ganzes
+    wanduhr-frei ist."""
+    with freeze_time(_MITTAGS):
+        write_user_tier(uid, "premium")
+        save_location(location("loc-onset", "Onset-Ort"), user_id=uid)
+        write_presets(uid, [radar_preset(preset_id, ["loc-onset"], user_id=uid)])
+        reset_radar_cache()
+        mails: list = []
+        svc = compare_radar_service(
+            uid, settings_email_only(), CountingFrameSource(onset_minutes=onset_minutes),
+            lambda subject, body: mails.append((subject, body)),
+        )
+        return svc.check_all_compare_presets(), mails
 
 
 def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
@@ -85,8 +122,8 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
     clean_uid(uid_trip_base)
     clean_uid(uid_cmp_base)
     try:
-        sent_trip_base = _trip_run(uid_trip_base, "trip-ac1-base", onset)
-        sent_cmp_base = _compare_run(uid_cmp_base, "cp-ac1-base", onset)
+        sent_trip_base, _ = _trip_run(uid_trip_base, "trip-ac1-base", onset)
+        sent_cmp_base, _ = _compare_run(uid_cmp_base, "cp-ac1-base", onset)
         assert sent_trip_base == 1, (
             f"Voraussetzung: bei Default-Schwelle 55 muss Onset {onset} im "
             f"Trip-Pfad ausloesen, erhalten {sent_trip_base}"
@@ -107,8 +144,8 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
     clean_uid(uid_cmp_patched)
     monkeypatch.setattr(radar_service, "RADAR_ONSET_THRESHOLD_MIN", 30)
     try:
-        sent_trip_patched = _trip_run(uid_trip_patched, "trip-ac1-patched", onset)
-        sent_cmp_patched = _compare_run(uid_cmp_patched, "cp-ac1-patched", onset)
+        sent_trip_patched, _ = _trip_run(uid_trip_patched, "trip-ac1-patched", onset)
+        sent_cmp_patched, _ = _compare_run(uid_cmp_patched, "cp-ac1-patched", onset)
         assert sent_trip_patched == 0, (
             f"Fremdwert 30 statt 55 haette Onset {onset} im Trip-Pfad "
             f"unterdruecken muessen -- eine unabhaengige lokale Kopie der "
@@ -149,16 +186,7 @@ def test_ac2_trip_variance_over_grid_values(onset_minutes, expect_alert):
     trip_id = f"trip-ac2-{onset_minutes}"
     clean_uid(uid)
     try:
-        write_user_tier(uid, "premium")
-        trip = make_trip(trip_id)
-        save_trip(trip, uid)
-        reset_radar_cache()
-        mails: list = []
-        svc = trip_alert_service(
-            uid, settings_email_only(), CountingFrameSource(onset_minutes=onset_minutes),
-            lambda subject, body: mails.append((subject, body)),
-        )
-        sent = svc.check_radar_alerts()
+        sent, mails = _trip_run(uid, trip_id, onset_minutes)
         expected = 1 if expect_alert else 0
         assert sent == expected, (
             f"Onset {onset_minutes} Min bei Schwelle 55: erwartet {expected} "
@@ -183,16 +211,7 @@ def test_ac3_compare_variance_over_grid_values(onset_minutes, expect_alert):
     preset_id = f"cp-ac3-{onset_minutes}"
     clean_uid(uid)
     try:
-        write_user_tier(uid, "premium")
-        save_location(location("loc-ac3", "AC3-Ort"), user_id=uid)
-        write_presets(uid, [radar_preset(preset_id, ["loc-ac3"], user_id=uid)])
-        reset_radar_cache()
-        mails: list = []
-        svc = compare_radar_service(
-            uid, settings_email_only(), CountingFrameSource(onset_minutes=onset_minutes),
-            lambda subject, body: mails.append((subject, body)),
-        )
-        sent = svc.check_all_compare_presets()
+        sent, mails = _compare_run(uid, preset_id, onset_minutes)
         expected = 1 if expect_alert else 0
         assert sent == expected, (
             f"Onset {onset_minutes} Min bei Schwelle 55: erwartet {expected} "
