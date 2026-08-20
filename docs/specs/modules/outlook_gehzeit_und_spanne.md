@@ -3,7 +3,7 @@ entity_id: outlook_gehzeit_und_spanne
 type: bugfix
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: approved
 version: "1.0"
 tags: [outlook, trip, compare, gehzeit, "#1848"]
 ---
@@ -12,7 +12,8 @@ tags: [outlook, trip, compare, gehzeit, "#1848"]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-20 („go"). Freigegeben wurden alle 10 ACs inklusive AC-9
+      (Altform-Klartext wechselt auf den Schrägstrich; sichtbar auch ohne jede Nutzereinstellung).
 
 ## Purpose
 
