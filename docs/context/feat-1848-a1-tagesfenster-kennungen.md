@@ -272,3 +272,84 @@ Wert im Ausblick erscheint — und wenn es der Gehzeit-Wert sein soll (PO-Entsch
 wie die SMS"), muss der Weg dorthin gebaut werden. **Vor der Umsetzung ist auszumessen, in
 wie vielen Faellen die beiden Werte ueberhaupt auseinanderliegen** — sonst ist jeder
 Gleichheitsbefund trivial wahr.
+
+---
+
+# 🔴 IST-ZUSTAND GEMESSEN (2026-08-20) — die Anzeige-Praemisse von A1 traegt nicht
+
+Alles unten per **echtem Funktionsaufruf** belegt, nicht aus dem Code abgeleitet.
+
+## Es gibt ZWEI Ausblick-Formen, beide in Trip UND Ortsvergleich
+
+| Form | Wann | Temperatur-Darstellung |
+|---|---|---|
+| **A) Feste 7-Spalten-Form** (Altbestand, `metrics=None`) | keine Auswahl gespeichert | HTML: **zwei** Spalten `N`/`D`, je eine Zahl (`outlook.py:258-259`). Klartext: **ein Spannen-Token** `8–16°C` (`helpers.py:940-947`) |
+| **B) Konfigurierbare Spaltenauswahl** (#1361/#1368/#1373) | `metrics` gesetzt | jede Spalte **immer genau ein Wert**, nie eine Spanne |
+
+Form B ist der Pfad, den das Frontend-Bedienteil bedient (`CompareOutlookLayoutControls.svelte`,
+eingebunden ueber das geteilte `WeatherMetricsTab.svelte`). Trip via
+`resolve_trip_outlook_metrics()` (`trip_report.py:209`), Compare via `resolve_outlook_metrics()`
+(`report_config_resolver.py:249/291`).
+
+## 🔴 Tief und Hoch sind im Ausblick HEUTE SCHON getrennt waehlbar
+
+```
+outlook_columns([{"metric_id":"temperature","aggregation":"max"},
+                 {"metric_id":"temperature","aggregation":"min"}])
+→ [{'label': 'Temperatur Maximum', 'field': 'temp_max_c', 'unit': '°C', 'decimals': 0},
+   {'label': 'Temperatur Minimum', 'field': 'temp_min_c', 'unit': '°C', 'decimals': 0}]
+format_outlook_value(27.3, max) → '27 °C'   ·   format_outlook_value(8.9, min) → '9 °C'
+```
+
+Label-Kollisionsaufloesung haengt „Minimum"/„Maximum" an (`compare_outlook_metric_ids.py:144-148`).
+Frontend bestaetigt es woertlich: „Groessen mit mehreren Auswertungen (Temperatur, gefuehlte
+Temperatur) bekommen je Auswertung ein unabhaengiges Kaestchen"
+(`CompareOutlookLayoutControls.svelte:146-148`).
+
+**Folge fuer den Zuschnitt:** Die Begruendung „getrennte Waehlbarkeit braucht eigene Kennungen"
+gilt **nicht fuer die Anzeige** — die kann es schon. Sie gilt nur fuer die **Speicherform**,
+weil das Kanal-Modul ausschliesslich Kennungen kennt und keine Paare aus Kennung+Auswertung.
+Das ist exakt die Naht zu **Scheibe A2**, nicht zu A1.
+
+## Praezedenzfall Spannen-Zelle
+
+Der einzige Beleg im Ausblick ist der Klartext der **Alt-Form**: `f"{tl}–{th}°C"`
+(`helpers.py:943`, Halbgeviertstrich, EIN Einheiten-Suffix). Tests mit echten Zahlen:
+`test_compare_outlook.py:205` (`"9–20°C"`), `test_compare_outlook_metric_selection.py:265-267`
+(nennt es „festen Temperatur-Spannen-Token").
+
+🔴 **Zwei verschiedene Ist-Schreibweisen fuer dieselbe Sache:** SMS nutzt den **Schraegstrich**
+(`D13/27`, minusfest), der Ausblick-Klartext den **Halbgeviertstrich** (`8–16°C`). „Exakt wie
+die SMS" muss entscheiden, welche im Ausblick gilt — im HTML gibt es heute **gar keine**
+Spannen-Zelle.
+
+## `summary_fields` → Spalte, und warum die Gehzeit-Kennungen rausfallen
+
+Weg: `MetricDefinition.summary_fields` (`metric_catalog.py:42`) → `summary_field_for()`
+(`metric_catalog.py:899-910`, liefert `None` bei `selectable=False` oder fehlendem Key) →
+`_summary_field()` (`compare_outlook_metric_ids.py:34-42`) → Drop-Bedingungen Zeile **62**
+und **133**.
+
+**Bestaetigt per Ausfuehrung** — die vier Gehzeit-Kennungen werden ersatzlos verworfen:
+```
+resolve_outlook_metrics([{"metric_id":"temperature_day_low",  "aggregation":"min"},
+                         {"metric_id":"wind_chill_day_high", "aggregation":"max"}])
+WARNING: ... ohne Katalog-Entsprechung — Eintrag wird verworfen (vgl. #1361 Befund 3)
+→ []
+```
+Mehrfach-`summary_fields` gibt es: `temperature` traegt **drei** (`min`/`max`/`avg`,
+`metric_catalog.py:119`), `wind_chill` zwei (`:218`). Das erzeugt aber **keine** Spannen-Zelle,
+sondern mehrere separate waehlbare Spalten.
+
+## `avg` ist im Ausblick heute NICHT waehlbar
+
+Zentral vorhanden, im Compare-Katalog fehlend — `COMPARE_METRIC_CATALOG`
+(`compare_metric_catalog.py:76-162`) hat fuer `temperature` nur `temp_max_c` (`:101-103`) und
+`temp_min_c` (`:113-115`), **keine** `avg`-Zeile:
+```
+summary_field_for("temperature", "avg")                            → 'temp_avg_c'
+resolve_outlook_metrics([{"metric_id":"temperature","aggregation":"avg"}])  → []
+```
+Die Picker-Liste zeigt fuer Temperatur daher nur zwei Kaestchen. **Die Open Question
+„faellt avg weg oder kommt er dazu?" ist damit falsch gestellt** — er ist heute schon nicht da;
+die Frage lautet, ob er neu dazukommen soll.
