@@ -1645,7 +1645,7 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
       "decimals": 0,
       "higherIsBetter": false,
       "kind": "ordinal",
-      "ordinalLabels": ["kein", "mittel", "hoch"],
+      "ordinalLabels": ["kein", "leicht", "mittel", "hoch"],
       "metric_id": "thunder",
       "aggregation": "max",
       "alertMetric": "thunder_level",
@@ -1673,7 +1673,7 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
 | Field | Type | Description |
 |-------|------|-------------|
 | metrics[].key | string | Identisch zu `compare_metric_ids.FRONTEND_TO_RENDERER_METRIC_ID`-Keys (keine sechste Kopie der Keyliste) |
-| metrics[].kind | string | `range` (23 Einträge, mit `rangeMin`/`rangeMax`/`step`), `enum` (`precip_type_dominant`, mit `enumValues`) oder `ordinal` (`thunder_level_max`, mit `ordinalLabels` — übernimmt die im Editor tatsächlich sichtbare 3-Stufen-Darstellung statt des rohen Enum, PO-Entscheidung 2026-07-12) |
+| metrics[].kind | string | `range` (23 Einträge, mit `rangeMin`/`rangeMax`/`step`), `enum` (`precip_type_dominant`, mit `enumValues`) oder `ordinal` (`thunder_level_max`, mit `ordinalLabels` — übernimmt die im Editor tatsächlich sichtbare Stufen-Darstellung statt des rohen Enum, PO-Entscheidung 2026-07-12; seit #1474/#1911 vierstufig `["kein","leicht","mittel","hoch"]`, aus der kanonischen Quelle `THUNDER_LABEL_DE` abgeleitet) |
 | metrics[].higherIsBetter | bool | Richtung für die Compare-Winner-Box (`true` = höherer Wert gewinnt) |
 | metrics[].alertMetric | string \| null | **Neu #1435 E1a-1.** Die Alarm-Identität des Paares (Größe, Auswertung), aufgelöst über `metric_catalog.alert_metric_for(metric_id, aggregation)` — `null`, wenn diese Zeile keinen Alarm auslösen kann. Steht an **allen 26** Einträgen, auch den nicht alarmfähigen (dort `null`). Ersetzt die vorherige, unabhängig gepflegte Herkunft von `alarmCapable` |
 | metrics[].alarmCapable | bool | Seit Teil 3 (#1350). Ab #1435 E1a-1 die **Boolean-Sicht auf `alertMetric`** (`alertMetric is not None`), nicht mehr eine zweite, handgepflegte Liste — steuert unverändert die „Warnen"-Button-Sperre im Schwellen-Editor. Die Menge ist verhaltensneutral identisch geblieben: genau dieselben 10 Keys wie zuvor aus `compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID` (nachgewiesen in `tests/unit/test_alert_metric_identity_delivery.py`); `compare_alert.py` bleibt das tatsächlich alarmauslösende Modul und ist von dieser Etappe unverändert |
