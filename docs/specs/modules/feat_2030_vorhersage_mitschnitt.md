@@ -15,7 +15,8 @@ tags: [observability, diagnostics, adr-0018, forecast]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-„go" (Henning) 2026-08-21; die 12 Akzeptanzkriterien wurden auf Deutsch
+      vorgelegt und freigegeben. Beleg als Kommentar an Issue #2030.
 
 ## Purpose
 
