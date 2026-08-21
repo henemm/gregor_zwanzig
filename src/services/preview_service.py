@@ -240,14 +240,19 @@ class PreviewService:
             # bei Morgen-/Abend-Overrides, nur in der Vorschau).
             trend_result = scheduler._build_stage_trend(
                 trip, target, now_utc=now_utc, tz=trip_tz,
-                report_type=report_type,
+                report_type=report_type, persist=False,
             )
             multi_day_trend = trend_result.rows
             outlook_state = trend_result.state
             outlook_horizon_days = trend_result.horizon_days
+        # Issue #2036 CI-Nachschlag (PR #2055, Folgefund): beide Bauwege
+        # bauen Segmente auch fuer zukuenftige Etappen (Trend +3 Tage,
+        # Thunder-Fallback +1/+2) -- ohne persist=False schrieb die Vorschau
+        # ueber genau diesen Nebenpfad trotzdem in den echten Trip-Bestand.
         thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
             trip, target, now_utc=now_utc, tz=trip_tz,
             multi_day_trend=multi_day_trend, night_weather=night_weather,
+            persist=False,
         )
 
         # Issue #474: F12 Wetterlage-Label vor format_email berechnen.

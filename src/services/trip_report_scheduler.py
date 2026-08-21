@@ -2271,6 +2271,8 @@ class TripReportSchedulerService:
         now_utc: datetime,
         tz=None,
         report_type: str = "evening",
+        *,
+        persist: bool = True,
     ):
         """
         Build trend rows for each future stage (v4.0 column layout).
@@ -2293,6 +2295,13 @@ class TripReportSchedulerService:
         Wetterabruf mit Retry-Backoff liegt: eine eigene Aufloesung koennte
         bereits den naechsten Ortstag tragen, waehrend ``target_date`` noch auf
         dem alten steht.
+
+        Issue #2036 CI-Nachschlag (PR #2055, Folgefund): ``persist`` an
+        ``_convert_trip_to_segments`` durchgereicht -- der Trend baut
+        Segmente fuer BIS ZU DREI zukuenftige Etappen, nicht nur fuer
+        ``target_date``. Ohne diese Weitergabe schrieb der Vorschau-Pfad
+        (``persist=False`` am direkten Aufruf) ueber diesen Nebenpfad
+        trotzdem in den echten Trip-Bestand.
         """
         from app.models import OutlookState, TrendResult
         from providers.openmeteo import (
@@ -2328,7 +2337,9 @@ class TripReportSchedulerService:
                 horizon_days = OPENMETEO_MAX_FORECAST_DAYS
                 continue
             try:
-                segments = self._convert_trip_to_segments(trip, stage.date)
+                segments = self._convert_trip_to_segments(
+                    trip, stage.date, persist=persist,
+                )
                 if not segments:
                     # Fix #1486: bisher voellig stumm.
                     logger.warning(
@@ -2454,6 +2465,8 @@ class TripReportSchedulerService:
         tz: Optional[ZoneInfo],
         multi_day_trend=None,
         night_weather=None,
+        *,
+        persist: bool = True,
     ) -> Optional[dict]:
         """Issue #1275: derive the +1/+2 thunder forecast from the SAME data as
         the E-Mail-Outlook table.
@@ -2492,6 +2505,11 @@ class TripReportSchedulerService:
         diese Funktion trifft selbst KEINE Tagesentscheidung (kein eigener
         Fundort), sie haelt nur den Zeitpunkt auf demselben Weg wie der
         Rest des Briefing-Aufbaus.
+
+        Issue #2036 CI-Nachschlag (PR #2055, Folgefund): ``persist`` an
+        ``_collect_future_stage_weather`` durchgereicht -- der Fallback-Fetch
+        baut ebenfalls Segmente fuer zukuenftige Etappen (analog
+        ``_build_stage_trend``).
         """
         from app.day_window import resolve_configured_window
 
@@ -2531,6 +2549,7 @@ class TripReportSchedulerService:
         if missing_dates:
             fetched = self._collect_future_stage_weather(
                 trip, target_date, now_utc=now_utc, wanted_dates=missing_dates,
+                persist=persist,
             )
             fetched_fc = (
                 self._build_thunder_forecast(
@@ -2724,6 +2743,8 @@ class TripReportSchedulerService:
         target_date: date,
         now_utc: datetime,
         wanted_dates=None,
+        *,
+        persist: bool = True,
     ) -> List[SegmentWeatherData]:
         """Issue #1275: fetch weather for the actual next future stages,
         aggregated later across ALL their segments.
@@ -2781,7 +2802,9 @@ class TripReportSchedulerService:
             if not is_within_forecast_horizon(stage.date, today):
                 continue
             try:
-                segments = self._convert_trip_to_segments(trip, stage.date)
+                segments = self._convert_trip_to_segments(
+                    trip, stage.date, persist=persist,
+                )
                 if not segments:
                     continue
                 seg_weather = self._fetch_weather(segments)
