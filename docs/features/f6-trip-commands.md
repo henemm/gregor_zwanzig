@@ -296,3 +296,35 @@ Das Bot-Menü bietet zusätzlich strukturierte Abfragen (ähnlich Query-Keys), d
 | **hilfe** | ℹ️ Verfügbare Befehle |
 
 Klick den Button im Bot-Menü oder tippe `/glance`, `/heute_gewitter` etc.
+
+### Wenn für einen Tag keine Wetterdaten vorliegen (Issue #1818)
+
+Die vier Abfragen `timeline_heute`, `timeline_morgen`, `glance` und `heute_gewitter` lesen den
+undatierten Wetter-Anker `{trip_id}.json`. Der trägt strukturell nur **einen** Tag: jeder
+Briefing-Lauf überschreibt ihn komplett mit seinem eigenen `target_date` (Morgen-Lauf → heute,
+Abend-Lauf → morgen). Für den jeweils anderen Tag lösen die Abfragen deshalb gestuft auf:
+
+1. **Undatierter Anker** trägt für den Tag Punkte mit auswertbaren Tageswerten → diese gewinnen.
+2. Sonst **datierter Snapshot** `{trip_id}_{YYYY-MM-DD}.json` (`load_dated`) — rein lesend,
+   **ohne Wetterabruf**. Deckt strukturell die Abend-Hälfte: nach dem Abend-Briefing liegt der
+   fehlende Tag (heute) aus dem Morgen-Lauf datiert vor.
+3. Sonst **ehrliche Datenlücken-Meldung** mit Verweis auf `/heute` bzw. `/morgen`.
+
+**Wichtige Unterscheidung:** „Keine Etappe geplant" ist eine Aussage über die **Tourplanung** und
+erscheint nur, wenn `convert_trip_to_segments(trip, tag)` für den Tag wirklich leer ist (Ruhetag,
+Tag nach Tourende). Fehlen dagegen nur die **Daten**, sagt die Antwort das auch so — die frühere
+Vermengung beider Fälle war der Defekt aus #1818.
+
+Ein Punkt zählt nur als Abdeckung, wenn er mindestens eine auswertbare Tagesgröße trägt
+(`_traegt_tageswerte`). Inhaltsleere Platzhalter aus **teilweise** gescheiterten Abrufen
+verdrängen damit keine echten Werte mehr (Adversary-Befund F005).
+
+**Keine Schreibwirkung:** Diese Abfragen lösen keinen Wetterabruf aus und verändern keine
+Snapshot-Datei; die Ergänzung geschieht auf einer In-Memory-Kopie. Der undatierte Anker bleibt
+eintägig — er ist zugleich Vergleichsbasis des Abweichungs-Alarms (`briefing_backed`, ADR-0009),
+die dadurch strukturell unberührt bleibt.
+
+**Grenze:** Am Vormittag liegt für morgen weder im Anker noch datiert etwas vor (der datierte
+Snapshot für morgen entsteht erst im Abend-Briefing) — dort erscheint die Fehlanzeige. Das
+Kommando `/morgen` liefert dann ein volles Briefing, füllt aber die Timeline-Ansicht **nicht**:
+der On-Demand-Pfad schreibt bewusst keinen Anker (#1007).
