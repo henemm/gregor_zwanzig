@@ -4,7 +4,7 @@ type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
 status: draft
-version: "1.1"
+version: "1.2"
 tags: [alerts, trip, issue-2018, issue-1467, nachtrag, event-identity]
 ---
 
@@ -27,13 +27,19 @@ Gewitter-Alarme für dasselbe Segment (16:15 amtlich ORANGE, 16:37
 Radar-Nowcast), obwohl die Mail selbst "Cooldown: höchstens einmal in 30
 Minuten" versprach.
 
-**PO-Entscheid 2026-08-21 (bindend, nicht erneut aufzurollen) — GERICHTET:**
-Der PO wurde zu **einer** Richtung befragt: **amtliche Warnung zuerst,
-Radar-Nowcast danach.** Nur dafür liegt ein Entscheid vor. In dieser
-Richtung wird die zweite Meldung (der Nowcast) **nicht unterdrückt**. Sie
-wird **sofort** zugestellt, aber als **kurzer Nachtrag mit Bezug auf die
-vorige Meldung** statt als voller Alarm ("Ergänzung zur amtlichen Warnung
-von 16:15: Radar zeigt Beginn ab 16:45").
+**PO-Entscheid 2026-08-21 (bindend, nicht erneut aufzurollen) — GERICHTET
+UND MENGENERHALTEND:** Der PO wurde zu **einer** Richtung befragt: **amtliche
+Warnung zuerst, Radar-Nowcast danach.** Nur dafür liegt ein Entscheid vor.
+In dieser Richtung wird die zweite Meldung (der Nowcast) **nicht
+unterdrückt, wenn sie heute ohnehin als voller zweiter Alarm zugestellt
+würde** (V2-Eskalation — genau die gemeldete Fehlerursache). Statt eines
+zweiten vollen Alarms wird sie **sofort** zugestellt, aber als **kurzer
+Nachtrag mit Bezug auf die vorige Meldung** ("Ergänzung zur amtlichen
+Warnung von 16:15: Radar zeigt Beginn ab 16:45"). **Der PO-Entscheid ändert
+ausschließlich die FORM dieser einen Zustellung — nicht, OB überhaupt
+zugestellt wird.** Eine Konstellation, die heute STILLE bleibt (keine
+Eskalation, keine V1-Ausnahme), bleibt STILLE — dafür liegt kein
+PO-Entscheid vor (s. Invarianten, "Zustellmenge bleibt identisch").
 
 **Die Gegenrichtung (Nowcast zuerst, amtliche Warnung danach) ist NICHT
 Teil dieses Entscheids** und bleibt **vollständig unverändert**: sie ist
@@ -45,16 +51,17 @@ Anfangszeit statt Stundenfenster) — das rechtfertigt den Nachtrag. Eine
 amtliche Warnung nach einem Radar-Nowcast ist dagegen GRÖBER und fügt
 nichts hinzu. Der ausschlaggebende Grund: eine Umstellung auch der
 Gegenrichtung würde eine Nachricht ERZEUGEN, wo heute keine kommt — das
-Ticket beschwert sich über zu VIELE Meldungen, mehr Meldungen als Antwort
-darauf wäre falsch. Eine Erweiterung auf die Gegenrichtung bräuchte eine
-eigene, künftige PO-Entscheidung (s. Nicht-Ziele).
+Ticket beschwert sich über zu VIELE Meldungen. Eine Erweiterung auf die
+Gegenrichtung bräuchte eine eigene, künftige PO-Entscheidung (s.
+Nicht-Ziele).
 
-Diese Spec macht `check_event_identity_gate()` dreiwertig, aber **gerichtet**
-— der dritte Ausgang ("Nachtrag") ist ausschließlich in der Richtung
-amtlich→Nowcast erreichbar (**Teil A**) — und zieht das Ergebnis für den
-**Trip-Pfad, alle vier Kanäle** durch (**Teil B**). Der Ortsvergleich bleibt
-in dieser Lieferung **vollständig unverändert** (s. Korrektur unten). Teil C
-macht den bestehenden Cooldown-Satz ehrlich.
+Diese Spec macht `check_event_identity_gate()` dreiwertig, aber **gerichtet
+und mengenerhaltend** — der dritte Ausgang ("Nachtrag") ist ausschließlich
+in der Richtung amtlich→Nowcast UND ausschließlich für die Konstellation
+erreichbar, die heute ohnehin voll zugestellt würde (**Teil A**) — und
+zieht das Ergebnis für den **Trip-Pfad, alle vier Kanäle** durch (**Teil
+B**). Der Ortsvergleich bleibt in dieser Lieferung **vollständig
+unverändert**. Teil C macht den bestehenden Cooldown-Satz ehrlich.
 
 ## Source
 
@@ -75,14 +82,14 @@ Betroffene Schicht: ausschließlich **Python-Core** (`src/services/`,
 |--------|------|---------|
 | `rework_1467_s4b_entdopplung` | module | Vorgänger-Scheibe (live) — liefert `check_event_identity_gate`, `GateResult`, `resolve_hazard_class`, das Register-Schema, UND die eigenständig freigegebene Gegenrichtung (Kernfall-Test), die diese Scheibe unangetastet lässt |
 | `rework_1917_s4b2_compare_entdopplung` | module | Vorgänger-Scheibe (live) — verdrahtet `check_event_identity_gate` an den beiden Compare-Aufrufstellen. Diese Scheibe fasst die dortige Logik NICHT an, ergänzt nur eine Bestandsschutz-Bedingung (s. Teil B) |
-| `services.alert_urgency` | module | geteilte Dringlichkeits-Skala `"LOW"/"MODERATE"/"HIGH"`, `exceeds()` — unverändert genutzt für die Gegenrichtung/gleiche Quelle, in der Nachtrags-Richtung bewusst NICHT mehr als Freigabe-Kriterium verwendet |
+| `services.alert_urgency` | module | geteilte Dringlichkeits-Skala `"LOW"/"MODERATE"/"HIGH"`, `exceeds()` — bleibt in JEDER Konstellation die maßgebliche Freigabe-Prüfung, inklusive der Nachtrags-Richtung (dort ändert sich nur die FORM des Ergebnisses, nicht die Prüfung selbst) |
 | `services.alert_state.AlertStateService` | module | Register-Ablage (`event_identity:`-Präfix) — der neue Quellenvermerk ist ein zusätzliches Feld in der bestehenden Nutzlast, kein neuer Präfix |
 | `services.radar_service.NOWCAST_HORIZON_MIN` | module | bestehende Konstante (180 Min seit #1945) — V1-Ausnahme unverändert, in beiden Zweigen |
 | `output.metric_format.THUNDER_LABEL_DE` | module | einzige Quelle für Gewitterstufen-Wörter (#1948 S6); der Nachtragstext dieser Scheibe nennt bewusst KEINE Stufe (s. Implementation Details Teil B), falls eine künftige Änderung doch eine nennt, MUSS sie hierher importiert werden, nie lokal kopiert (Wächter #1480) |
 | `utils.timezone.local_fmt` | module | bereits in `alert_gate.py` importiert — formatiert `reported_at` als lokale `"HH:MM"` für den Nachtragstext, keine zweite Zeitformatierung |
 | `output.renderers.alert.model.AlertMessage` | module | bekommt additives Feld `addendum_reference` (Muster `reference_at`, #1916) |
-| `output.renderers.alert.official_alerts.OfficialAlertNotice` | module | bekommt additives Feld `addendum_reference` (Muster `scope_total`/`scope_ids`, #1239) |
-| `services.alert_log` | module | `append_entry()` bekommt additive Parameter für die Nachtrags-Markierung; `append_suppressed_entry`/`REASON_EVENT_DUPLICATE` bleiben für den (weiterhin bestehenden) Unterdrückungsfall unverändert |
+| `output.renderers.alert.official_alerts.OfficialAlertNotice` | module | bekommt **kein** entsprechendes Feld — amtliche Meldungen können durch diese Scheibe strukturell nie zum Nachtrag werden |
+| `services.alert_log` | module | `append_entry()` bekommt additive Parameter für die Nachtrags-Markierung; `append_suppressed_entry`/`REASON_EVENT_DUPLICATE` bleiben für den (weiterhin bestehenden, jetzt PRÄZISER abgegrenzten) Unterdrückungsfall unverändert |
 | `services.notification_service` | module | **kein Eingriff nötig** — der Kurzstil-Telegram-Zweig sendet bereits den `sms_body`/den SMS-Renderer-Output 1:1 weiter (`notification_service.py:915-920`, `:1454-1469`); die Nachtrags-Kennzeichnung im SMS-Text erreicht Kurzstil-Telegram dadurch automatisch, ohne dass dieser Fan-out angefasst wird |
 | `output.channels.premium_sms.PremiumSmsOutput` | module | **kein Eingriff nötig** — Premium-SMS liest denselben `sms_body`/`render_official_alert_sms(...)`-Output wie SMS (`notification_service.py:949`, `:1257`, `:1549`), die Kennzeichnung erreicht diesen Kanal aus demselben Grund automatisch mit |
 | `fix_1948_s6_alarm_stufenwort` | module | **Reihenfolge-Abhängigkeit:** landete als `cba7ffa3` und fügte in `render.py` oberhalb der hier betroffenen Funktionen +132 Zeilen ein. Diese Scheibe rebased zwingend auf den gelandeten Stand, bevor `render.py`/`official_alerts.py` angefasst werden — sonst zwei Sitzungen im selben Renderer-Zweig |
@@ -90,32 +97,30 @@ Betroffene Schicht: ausschließlich **Python-Core** (`src/services/`,
 
 ## Estimated Scope
 
-- **LoC produktiv:** Teil A ~55-65/-15 (`alert_gate.py`, netto EINFACHER als
-  im ersten Entwurf, da kein separater V2b-Zweig mehr nötig ist — die
-  Struktureigenschaft "amtlich wird nie Nachtrag" ergibt sich automatisch,
-  s. A4), Teil B ~120-140/-15 (`model.py`, `official_alerts.py`, `render.py`,
-  `alert_log.py`, `trip_alert.py` — NUR zwei statt vier Aufrufstellen —, plus
-  je EINE Zeile Bestandsschutz in `compare_radar_alert.py`/
-  `compare_official_alert.py`), Teil C ~10-15/-2 (`render.py`, additiv).
-  **Gesamt ~+185-220/-32 produktiv** (gegenüber der ersten Fassung reduziert,
-  weil der Ortsvergleich keine eigene Nachtrags-Logik mehr bekommt).
-- **LoC Tests:** Teil A ~170-210, Teil B ~260-330 (zwei Aufrufstellen × vier
-  Kanäle, jeweils am gerenderten Kanaltext geprüft, PLUS ein
-  Ortsvergleich-Regressionstest), Teil C ~15-30 (Golden-Update + neue
-  Substring-Assertion). **Gesamt ~445-570 Test-LoC — sprengt das 250er-
-  Budget weiterhin, `loc_limit_override` erforderlich** (Präzedenz S4a/S4b:
-  kritischer Alarmpfad, vier Kanäle, Mutations-Gegenproben Pflicht).
+- **LoC produktiv:** Teil A ~55-70/-15 (`alert_gate.py`), Teil B ~120-140/-15
+  (`model.py`, `official_alerts.py`, `render.py`, `alert_log.py`,
+  `trip_alert.py` — NUR zwei statt vier Aufrufstellen —, plus je EINE Zeile
+  Bestandsschutz in `compare_radar_alert.py`/`compare_official_alert.py`),
+  Teil C ~10-15/-2 (`render.py`, additiv). **Gesamt ~+185-225/-32
+  produktiv.**
+- **LoC Tests:** Teil A ~190-230 (inkl. der neuen Stille-Regressionsfälle
+  und des Zählnachweis-Tests über die volle Konstellations-Matrix), Teil B
+  ~260-330 (zwei Aufrufstellen × vier Kanäle, jeweils am gerenderten
+  Kanaltext geprüft, PLUS ein Ortsvergleich-Regressionstest), Teil C
+  ~15-30 (Golden-Update + neue Substring-Assertion). **Gesamt ~465-590
+  Test-LoC — sprengt das 250er-Budget weiterhin, `loc_limit_override`
+  erforderlich** (Präzedenz S4a/S4b: kritischer Alarmpfad, vier Kanäle,
+  Mutations-Gegenproben Pflicht).
 - **Files:** 0 neu, 7 produktiv geändert (davon 2 nur minimal:
   `compare_radar_alert.py`, `compare_official_alert.py`), 1 ADR-Nachtrag,
   ~5-7 Testdateien geändert/neu.
 - **Effort:** high.
 - **Risiko:** HOCH — kritischer Alarmpfad, alle vier Kanäle im Trip-Pfad, ein
-  bit-eingefrorenes Golden wird bewusst berührt. Reduziert gegenüber der
-  ersten Fassung, weil der Ortsvergleich draußen bleibt.
+  bit-eingefrorenes Golden wird bewusst berührt.
 
 ## Implementation Details
 
-### Teil A — Das Gate wird dreiwertig, aber GERICHTET
+### Teil A — Das Gate wird dreiwertig, gerichtet UND mengenerhaltend
 
 #### A1. Warum ein drittes Boolean-Feld statt eines Enums
 
@@ -133,9 +138,10 @@ class GateResult(NamedTuple):
     reason: Optional[str] = None
     # Issue #2018: additiv. True = die Meldung geht raus, aber als
     # NACHTRAG (Bezug auf eine bereits zugestellte amtliche Warnung),
-    # nicht als voller Alarm. NUR in der Richtung amtlich->Nowcast
-    # erreichbar (s. A3/A4). `allowed` bleibt "geht raus oder nicht" --
-    # bestehende `if not gate.allowed: ...`-Zweige unveraendert.
+    # statt als voller Alarm -- AUSSCHLIESSLICH fuer eine Zustellung, die
+    # ohnehin stattgefunden haette (s. A4). `allowed` bleibt "geht raus
+    # oder nicht" -- bestehende `if not gate.allowed: ...`-Zweige
+    # unveraendert.
     is_addendum: bool = False
     addendum_source: Optional[str] = None       # NUR "official" moeglich
     addendum_reported_at: Optional[datetime] = None
@@ -161,7 +167,7 @@ state[key] = {
 Keine neue Funktionssignatur — `record_event_identity` bekommt keinen neuen
 Parameter, `source` ist rein intern abgeleitet. Der Signatur-Wächter
 (`tests/tdd/test_compare_radar_alert_event_identity.py:842-882`) bleibt
-grün (AC-A10).
+grün (AC-A11).
 
 **Rückwärtskompatibilität (AC-A2):** Alt-Einträge ohne `"source"` (vor
 dieser Scheibe geschrieben) fallen beim Lesen auf dieselbe Ableitung
@@ -195,26 +201,41 @@ Der zurückgegebene Kandidat trägt neu `"source"` und `"reported_at"`
 ein fehlendes `reported_at` verhindert dann NICHT das Match selbst, aber
 lässt `addendum_reported_at` leer).
 
-#### A4. Die gerichtete Entscheidung — KORRIGIERT (2026-08-21, Coordinator-Nachtrag)
+#### A4. Die gerichtete, mengenerhaltende Entscheidung — DRITTE Korrektur (2026-08-21, Coordinator-Nachtrag)
 
-**Vorherige Fassung (verworfen):** Der erste Entwurf dieser Spec machte den
-dritten Ausgang RICHTUNGS-SYMMETRISCH erreichbar (jede Cross-Source-
-Konstellation) und stellte dafür `tests/tdd/test_alert_gate.py:757-793`
-(Kernfall: Nowcast zuerst, amtliche Warnung 8,2 Min später) von
-`allowed=False` auf `allowed=True, is_addendum=True` um. Das war eine
-Scope-Erweiterung über den PO-Entscheid hinaus — der PO wurde NUR zur
-Richtung amtlich→Nowcast befragt, die Gegenrichtung ist eigenständig
-PO-freigegeben (#1467 S4b) und wird nicht stillschweigend mitgeändert.
-**`test_alert_gate.py:757-793` bleibt in dieser Fassung unangetastet und
-unverändert grün.**
+**Erste Korrektur (Richtung, bereits eingearbeitet):** Der ursprüngliche
+Entwurf machte den dritten Ausgang richtungs-symmetrisch erreichbar und
+stellte dafür `tests/tdd/test_alert_gate.py:757-793` (Kernfall: Nowcast
+zuerst, amtliche Warnung danach) von `allowed=False` auf `is_addendum=True`
+um — eine Scope-Erweiterung über den PO-Entscheid hinaus (der PO wurde nur
+zur Richtung amtlich→Nowcast befragt). **Korrigiert:** dieser Test bleibt
+unangetastet und unverändert grün.
 
-**Korrigierte Struktur:** GENAU EINE Bedingung entscheidet, ob der neue
-Zweig überhaupt betreten wird — `match["source"] == "official" AND
-new_source == "nowcast"`. Für JEDE andere Konstellation (gleiche Quelle in
-beide Richtungen, UND die Gegenrichtung amtlich-nach-Nowcast-umgekehrt,
-also Nowcast zuerst/amtlich danach) läuft die **byte-identische
-Vor-#2018-Logik** aus S4b-1 — V2 (Eskalation, quellenblind) → V1
-(Abdeckung) → Unterdrückung:
+**Zweite Korrektur (Menge, NEU, aufgedeckt durch eine Rückfrage der
+Parallelsitzung #2020):** Die erste korrigierte Fassung ließ im
+Nachtrags-Zweig die V2-Prüfung (`exceeds`) ERSATZLOS entfallen und endete
+bedingungslos mit `is_addendum=True`. Dadurch wäre JEDE Konstellation
+amtlich→Nowcast zugestellt worden — auch solche, die HEUTE STILLE bleiben:
+
+- ein **nicht-konvektiver** Nowcast (`urgency_from_radar(is_convective=
+  False, ...)` liefert `MODERATE`/`LOW`) nach einer amtlichen Warnung
+  gleicher oder höherer Stufe — `exceeds` ist `False`, V1 greift nicht ⇒
+  heute Stille;
+- ein konvektiver Nowcast (`HIGH`) nach einer amtlichen **ROT**-Warnung
+  (`HIGH`) — `exceeds("HIGH","HIGH")` ist `False` ⇒ heute Stille.
+
+In beiden Fällen hätte die (nun verworfene) Zwischenfassung eine Nachricht
+erzeugt, wo heute keine kommt — eine Ausweitung über den PO-Entscheid
+hinaus. **Der PO hat entschieden: aus zwei vollen Alarmen wird einer plus
+ein Nachtrag. Er hat NICHT entschieden: aus Stille wird ein Nachtrag.**
+
+**Korrigierte Struktur — minimal und zielgenau:** Der Nachtrag ändert
+AUSSCHLIESSLICH die FORM einer Zustellung, die heute ohnehin stattfindet —
+NIE, OB zugestellt wird. `exceeds` wird deshalb weiterhin ZUERST geprüft,
+exakt wie in jeder anderen Konstellation; nur sein POSITIVES Ergebnis wird
+in der amtlich→Nowcast-Richtung als Nachtrag statt als Voll-Alarm
+ausgeliefert. Fällt `exceeds` negativ aus, entscheidet — unverändert — V1,
+danach — unverändert — Stille:
 
 ```python
 new_source = "nowcast" if point_at is not None else "official"
@@ -230,81 +251,89 @@ if not addendum_direction:
         return _ALLOWED  # V1, unveraendert
     return GateResult(False, alert_log.REASON_EVENT_DUPLICATE)  # unveraendert
 
-# NEU (#2018), AUSSCHLIESSLICH amtlich -> Nowcast: die quellenblinde
-# Eskalationspruefung (V2) entfaellt hier BEWUSST -- genau dieser
-# Vergleich war die gemeldete Fehlerursache. Nur eine WESENTLICHE
-# zeitliche Erweiterung bleibt Voll-Alarm (V1, unveraendert).
+# amtlich -> Nowcast: NUR die Form aendert sich, nie das Ob.
+if alert_urgency.exceeds(severity, match["severity"]):
+    # Heute: VOLLER Alarm (die gemeldete Fehlerursache -- zwei Skalen,
+    # gleiche Etiketten). Kuenftig: dieselbe Zustellung, als Nachtrag.
+    return GateResult(
+        True, None, is_addendum=True,
+        addendum_source=match["source"], addendum_reported_at=match["reported_at"],
+    )
 if _covers_materially_more(match["covered_until"], point_at, window_end):
-    return _ALLOWED  # V1, auch hier unveraendert
-return GateResult(
-    True, None, is_addendum=True,
-    addendum_source=match["source"], addendum_reported_at=match["reported_at"],
-)
+    return _ALLOWED          # V1: echte neue Zeitabdeckung, bleibt VOLLER Alarm (AC-A7)
+return GateResult(False, alert_log.REASON_EVENT_DUPLICATE)   # unveraendert Stille (AC-A8, NEU)
 ```
 
 **Ergebnis:**
 
-| Konstellation | V2 (Eskalation) | V1 (Abdeckung) | sonst |
+| Konstellation | V2 (`exceeds`) | V1 (Abdeckung) | sonst |
 |---|---|---|---|
 | gleiche Quelle (beide Richtungen) | Voll-Alarm | Voll-Alarm | Unterdrückt (unverändert) |
 | Nowcast zuerst, amtlich danach (Gegenrichtung) | Voll-Alarm | Voll-Alarm | Unterdrückt (unverändert, Kernfall-Test) |
-| **amtlich zuerst, Nowcast danach** (NEU) | **entfällt bewusst** | Voll-Alarm | **Nachtrag** |
+| **amtlich zuerst, Nowcast danach** | **Nachtrag statt Voll-Alarm** (dieselbe Zustellung, andere Form) | Voll-Alarm (unverändert) | **Unterdrückt (unverändert — NICHT Nachtrag, AC-A8)** |
 
-**Strukturelle Konsequenz (löst die ursprüngliche V2b-Frage auf, ersetzt
-Invariante 1 aus dem Erstentwurf):** Weil `is_addendum=True` NUR innerhalb
-des `addendum_direction`-Zweigs zurückgegeben werden kann, und dieser
-Zweig NUR erreichbar ist, wenn die NEUE Meldung ein Nowcast ist
-(`new_source == "nowcast"`), kann eine amtliche Meldung durch diese Scheibe
-**NIE** zum Nachtrag werden — unabhängig von ihrer Dringlichkeit. Ein
-eigener "amtlich ROT bricht durch"-Zweig (V2b) ist damit **überflüssig**:
-die Eigenschaft gilt durch Konstruktion, nicht durch eine explizite
-Sonderregel. AC-A8 sichert das strukturell mit einer Mutations-Gegenprobe
-ab (s. u.).
+**Harte, prüfbare Invariante (prominent, s. Invarianten-Abschnitt):** Die
+MENGE der zugestellten Meldungen ist vor und nach dieser Scheibe
+IDENTISCH — es kommt keine Meldung hinzu und keine fällt weg,
+ausschließlich die Darstellung GENAU EINER Meldungsart (amtlich→Nowcast MIT
+Eskalation) ändert sich von Voll-Alarm zu Nachtrag. Begründung:
+PO-Entscheid (Variante c) ändert die FORM der Zustellung, nicht die
+ZUSTELLMENGE. AC-A13 (Zählnachweis) sichert das über eine vollständige
+Konstellations-Matrix ab; AC-A8 sichert speziell die neu präzisierte
+Stille-Erhaltung innerhalb der Nachtrags-Richtung ab.
+
+**Strukturelle Konsequenz (unverändert gültig):** Weil `is_addendum=True`
+weiterhin AUSSCHLIESSLICH innerhalb des `addendum_direction`-Zweigs UND nur
+im `exceeds`-Treffer zurückgegeben werden kann, und dieser Zweig nur
+erreichbar ist, wenn die NEUE Meldung ein Nowcast ist, kann eine amtliche
+Meldung durch diese Scheibe NIE zum Nachtrag werden — unabhängig von ihrer
+Dringlichkeit (AC-A9, Mutations-Gegenprobe PFLICHT).
 
 #### A5. Kein Enum, kein zweiter Parameter
 
 `resolve_hazard_class`, `check_event_identity_gate`, `record_event_identity`
-behalten exakt ihre S4b-1-Signaturen (AC-A10, Signatur-Wächter). Die
+behalten exakt ihre S4b-1-Signaturen (AC-A11, Signatur-Wächter). Die
 Richtungsentscheidung (`addendum_direction`) ist reine interne Ableitung
 aus bereits vorhandenen Werten (`match["source"]`, `point_at`/`window_*`),
 kein neuer Parameter.
 
 ### Teil B — Die Nachtragsmeldung wird zugestellt (NUR Trip-Pfad)
 
-#### B0. Korrektur 2 (2026-08-21, Coordinator-Nachtrag): Ortsvergleich fliegt aus dieser Lieferung
+#### B0. Ortsvergleich fliegt aus dieser Lieferung
 
 `compare_radar_alert.py` und `compare_official_alert.py` bekommen in dieser
 Scheibe **keine neue Logik**. Begründung: Ortsvergleich-Themen sind
 PO-zurückgestellt, der Umfang sprengt sonst jedes vertretbare Liefermaß.
 
-**Wichtiger technischer Befund, transparent gemacht (wie beim A5-Konflikt):**
-Reines Nichtstun an den beiden Compare-Aufrufstellen würde die geforderte
-Eigenschaft "Ortsvergleich verhält sich exakt unverändert" NICHT von selbst
+**Wichtiger technischer Befund, transparent gemacht:** Reines Nichtstun an
+den beiden Compare-Aufrufstellen würde die geforderte Eigenschaft
+"Ortsvergleich verhält sich exakt unverändert" NICHT von selbst
 garantieren. Der Grund: das Gate ist ein GETEILTER Baustein — für die
-Konstellation "amtlich registriert, Ortsvergleich-Nowcast prüft ohne
-Eskalation/V1" kippt `.allowed` durch die neue Logik von `False`
-(Unterdrückung, Vor-#2018-Stand) auf `True` (Nachtrag) — UNABHÄNGIG davon,
-ob der Aufrufer Trip oder Ortsvergleich ist, weil das Gate selbst nicht
-weiß, wer es aufruft. Ein Compare-Aufrufer, der weiterhin nur `.allowed`
-liest, würde diese Meldung dadurch neu (und unmarkiert) zustellen, wo sie
-vorher unterdrückt wurde — das ist GENAU die Verhaltensänderung, die
-Korrektur 2 ausschließen will.
+Konstellation "amtlich registriert, Ortsvergleich-Nowcast prüft MIT
+Eskalation" kippt `.allowed` durch die neue Logik zwar nicht (es war und
+bleibt `True`), aber die FORM wechselt auf `is_addendum=True` — ein
+Compare-Aufrufer, der weiterhin nur `.allowed` liest, würde diese Meldung
+unverändert (unmarkiert) zustellen, was inhaltlich unverändert korrekt
+bleibt. **Die eigentliche Bruchstelle liegt woanders: der Ortsvergleich
+braucht trotzdem eine explizite Bestandsschutz-Zeile**, damit ein künftiger
+Compare-Umbau, der `is_addendum` auswertet, nicht versehentlich eine
+Ortsvergleich-eigene Nachtragsdarstellung erzeugt, ohne dass dafür je eine
+PO-Entscheidung getroffen wurde — die Bedingung macht das Nicht-Auswerten
+technisch verbindlich statt nur eine Absicht zu sein.
 
 **Minimale, mechanische Anpassung (keine neue Logik, kein Rendering, keine
 eigene Ortsvergleich-Nachtragsmeldung):** beide Compare-Aufrufstellen
 prüfen künftig `identity_gate.allowed and not identity_gate.is_addendum`
 statt bloß `identity_gate.allowed`. Das ist die EINZIGE Zeile, die sich an
 `compare_radar_alert.py:229` und `compare_official_alert.py:210` ändert —
-sie übersetzt ein Nachtrag-Ergebnis für den Ortsvergleich zurück in
-"unterdrückt", exakt wie vor dieser Scheibe. Kein `addendum_reference` wird
-für Compare je gesetzt, kein Compare-Renderer liest das neue Feld.
+sie stellt sicher, dass eine Nachtrag-Konstellation für den Ortsvergleich
+weiterhin exakt wie eine gewöhnliche Voll-Zustellung behandelt wird (sie
+IST ja eine Voll-Zustellung, nur mit einem für Compare irrelevanten Zusatz-
+Flag), OHNE dass Compare je `addendum_reference` liest oder rendert.
 
-Das ist bewusst KEIN "Ortsvergleich wertet den dritten Ausgang aus" — es
-ist eine Bestandsschutz-Bedingung, damit "ignorieren" tatsächlich
-"unverändert" bedeutet, statt es nur zu behaupten. AC-B15 sichert das mit
-einem eigenen Regressionstest ab.
+AC-B15 sichert das mit einem eigenen Regressionstest ab.
 
-#### B1. Designentscheid (Coordinator, 2026-08-21, bindend): Kennzeichnung sitzt im SMS-Text
+#### B1. Designentscheid: Kennzeichnung sitzt im SMS-Text
 
 Der Kurzstil-Telegram-Zweig sendet **den SMS-Text**, nicht den Telegram-
 Text (`notification_service.py:915-920` amtlich, `:1454-1469` generisch/
@@ -327,11 +356,10 @@ zusätzlich eine ausformulierte Bezugszeile.
 # model.py, nach `reference_at` (Zeile 132)
 # Issue #2018: additiv, optional. Gesetzt NUR wenn check_event_identity_gate
 # diese Meldung als Nachtrag zu einer bereits zugestellten AMTLICHEN
-# Meldung einstuft (die Gegenrichtung existiert strukturell nicht). Traegt
-# die AUSFORMULIERTE Bezugszeile fuer E-Mail/Voll-Telegram ("Ergaenzung zur
-# amtlichen Warnung von 16:15"). Der SMS-Renderer liest nur die
-# Wahrheitswert-Praesenz (nicht den Inhalt) fuer sein Kompakt-Token -- der
-# Satz selbst passt nicht ins SMS-Budget.
+# Meldung einstuft. Traegt die AUSFORMULIERTE Bezugszeile fuer E-Mail/Voll-
+# Telegram ("Ergaenzung zur amtlichen Warnung von 16:15"). Der SMS-Renderer
+# liest nur die Wahrheitswert-Praesenz (nicht den Inhalt) fuer sein
+# Kompakt-Token -- der Satz selbst passt nicht ins SMS-Budget.
 addendum_reference: str | None = None
 ```
 
@@ -368,7 +396,7 @@ gleiche Fehlerrichtung wie die bestehenden F001-Fail-soft-Regeln.
 
 Beide Fälle sind reine Add-on-Zeilen mit `if <feld>: ...`-Wächter — keine
 bestehende Zeile wird umgebaut (Regressions-Invariante für den Normalfall,
-AC-B9). Die amtlichen E-Mail-/Telegram-Renderer (`official_alerts.py`)
+AC-B8). Die amtlichen E-Mail-/Telegram-Renderer (`official_alerts.py`)
 bleiben **unangetastet** — sie können `addendum_reference` (kein Feld auf
 `OfficialAlertNotice`, s. B2) nie zu lesen bekommen.
 
@@ -416,13 +444,12 @@ auswertbar, ohne das bestehende Schema für den Regelfall zu verändern.
 | `compare_radar_alert.py:224-231` | pro getriggertem Ort | **NUR Bestandsschutz** (B0): `identity_gate.allowed and not identity_gate.is_addendum` statt `identity_gate.allowed` |
 | `compare_official_alert.py:204-212` | pro Ort im Filter-Loop | **KEINE Änderung nötig** — amtliche Meldungen können strukturell nie `is_addendum=True` werden, die bestehende `identity_gate.allowed`-Prüfung bleibt für amtliche Meldungen bereits korrekt |
 
-**Präzisierung gegenüber dem ersten Entwurf:** Der amtliche Trip-Pfad
-(`trip_alert.py:1838-1849`) und der amtliche Compare-Pfad
-(`compare_official_alert.py`) brauchen **gar keine Code-Änderung** — sie
-prüfen amtliche Meldungen, und amtliche Meldungen können den neuen Zweig
-per Konstruktion nie erreichen (A4). Nur der Trip-Nowcast-Pfad bekommt
-echte neue Logik (B2-B4); der Compare-Nowcast-Pfad bekommt ausschließlich
-die Bestandsschutz-Zeile aus B0.
+**Präzisierung:** Der amtliche Trip-Pfad (`trip_alert.py:1838-1849`) und
+der amtliche Compare-Pfad (`compare_official_alert.py`) brauchen **gar
+keine Code-Änderung** — sie prüfen amtliche Meldungen, und amtliche
+Meldungen können den neuen Zweig per Konstruktion nie erreichen (A4). Nur
+der Trip-Nowcast-Pfad bekommt echte neue Logik (B2-B4); der Compare-
+Nowcast-Pfad bekommt ausschließlich die Bestandsschutz-Zeile aus B0.
 
 ### Teil C — Der Cooldown-Satz wird ehrlich
 
@@ -468,13 +495,22 @@ String statt als Substring prüft.
 
 ## Invarianten
 
+- **🔴 Die Menge der zugestellten Meldungen ist vor und nach dieser Scheibe
+  IDENTISCH.** Es kommt keine Meldung hinzu und keine fällt weg —
+  ausschließlich die Darstellung GENAU EINER Meldungsart (amtlich→Nowcast
+  MIT V2-Eskalation) ändert sich von Voll-Alarm zu Nachtrag. Begründung:
+  PO-Entscheid (Variante c) ändert die FORM der Zustellung, nicht die
+  ZUSTELLMENGE — er hat entschieden, dass aus zwei vollen Alarmen einer
+  plus ein Nachtrag wird, NICHT, dass aus Stille ein Nachtrag wird.
+  Abgesichert durch AC-A8 (Einzelfälle) UND AC-A13 (vollständiger
+  Zählnachweis über die Konstellations-Matrix) — AC-A9 (strukturelle
+  Richtungs-Garantie) allein reicht dafür NICHT aus, sie sichert nur die
+  Richtung, nicht die Menge.
 - **Der gefährlichste Fehler ist der ausbleibende Alarm.** Jede
   Unsicherheit entscheidet fail-soft Richtung Zustellung (unverändert aus
   S3-S4b übernommen).
 - **Amtliche Meldungen können durch diese Scheibe NIE zum Nachtrag werden**
-  — strukturelle Eigenschaft (A4), Mutations-Gegenprobe PFLICHT (AC-A8).
-  Ersetzt die im Erstentwurf vorgesehene explizite "amtlich ROT bricht
-  durch"-Regel (V2b), die sich als überflüssig erwiesen hat.
+  — strukturelle Eigenschaft (A4), Mutations-Gegenprobe PFLICHT (AC-A9).
 - **Die Gegenrichtung (Nowcast zuerst, amtlich danach) bleibt vollständig
   unverändert** — sie ist eigenständig durch #1467 S4b PO-freigegeben und
   NICHT Teil des #2018-Entscheids. `test_alert_gate.py:757-793` bleibt
@@ -523,6 +559,12 @@ String statt als Substring prüft.
   Nachricht erzeugen, wo heute keine kommt — das Ticket beschwert sich über
   zu VIELE Meldungen. Eine Erweiterung auf diese Richtung bräuchte eine
   eigene, künftige PO-Entscheidung und wird hier nicht vorweggenommen.
+- **Nachtrag für Konstellationen, die heute Stille sind** (keine
+  Eskalation, keine V1-Ausnahme, auch in der amtlich→Nowcast-Richtung).
+  Der PO-Entscheid ändert die FORM einer ohnehin stattfindenden
+  Zustellung, nicht das OB. Eine Erweiterung, die auch stille
+  Konstellationen zu Nachträgen macht, bräuchte eine eigene,
+  künftige PO-Entscheidung.
 - **Ortsvergleich-Nachtrag.** Der geteilte Gate-Baustein ist bereits
   vorbereitet (er unterscheidet nicht zwischen Trip- und Compare-Aufrufern);
   eine Ortsvergleich-eigene Nachtragsmeldung (eigenes `addendum_reference`
@@ -548,8 +590,9 @@ String statt als Substring prüft.
 - **Reine Textkorrektur ohne Verhaltensänderung (O-A allein)** — vom PO
   abgelehnt zugunsten der Nachtragsmeldung; Teil C ist hier NUR die
   Cooldown-Satz-Präzisierung, kein Ersatz für Teil A/B.
-- **Unterdrückung der zweiten Meldung** (in der amtlich→Nowcast-Richtung)
-  — vom PO ausdrücklich abgelehnt, nicht wieder vorzulegen.
+- **Unterdrückung der zweiten Meldung** (in der amtlich→Nowcast-Richtung,
+  im eskalierenden Fall) — vom PO ausdrücklich abgelehnt, nicht wieder
+  vorzulegen.
 
 ## Reihenfolge der Arbeit
 
@@ -558,7 +601,9 @@ String statt als Substring prüft.
    Arbeitsbaum neu verifizieren.
 2. Teil A zuerst, isoliert in `alert_gate.py` fertigstellen und testen
    (A1-A5) — inklusive des Regressionsnachweises für die unangetastete
-   Gegenrichtung. Teil B baut auf dem gerichteten Rückgabewert auf.
+   Gegenrichtung UND des Stille-Regressionsnachweises innerhalb der
+   Nachtrags-Richtung (AC-A8) UND des Zählnachweises (AC-A13). Teil B baut
+   auf dem gerichteten, mengenerhaltenden Rückgabewert auf.
 3. Teil B: `model.py`-Erweiterung zuerst, dann die zwei Trip-Nowcast-
    Renderer-Add-ons (E-Mail/Telegram voll), dann das SMS-Präfix (B4)
    zuletzt — es ist der Fall mit der härtesten Nebenbedingung
@@ -570,15 +615,16 @@ String statt als Substring prüft.
 6. `alert_log`-Erweiterung (B5) — unabhängig, kann parallel entstehen.
 7. Teil C zuletzt, in derselben Datei wie B3/B4 — additiv, geringes Risiko,
    aber abhängig vom Rebase aus Schritt 1.
-8. Mutations-Gegenprobe (strukturelle Garantie "amtlich nie Nachtrag") und
-   Mandantentrennung zuletzt, wenn das Verhalten feststeht.
+8. Mutations-Gegenproben (strukturelle Garantie "amtlich nie Nachtrag" UND
+   "Stille bleibt Stille") und Mandantentrennung zuletzt, wenn das
+   Verhalten feststeht.
 9. ADR-0021-Nachtrag zuletzt.
 
 ## Wächter, die mitziehen müssen
 
 | Test | Warum |
 |---|---|
-| `tests/tdd/test_alert_gate.py:757-793` (Kernfall, Gegenrichtung) | bleibt **UNANGETASTET UND UNVERÄNDERT GRÜN** — Korrektur 2026-08-21: keine Umstellung, die Gegenrichtung ist eigenständig freigegeben |
+| `tests/tdd/test_alert_gate.py:757-793` (Kernfall, Gegenrichtung) | bleibt **UNANGETASTET UND UNVERÄNDERT GRÜN** — die Gegenrichtung ist eigenständig freigegeben |
 | `tests/tdd/test_alert_gate.py:885-923` (V1-Ausnahme, Gegenrichtung, alte AC-9) | bleibt unverändert grün — Teil des unveränderten alten Zweigs |
 | `tests/tdd/test_alert_gate.py:927-971` (V2 same-source, alte AC-10) | bleibt UNVERÄNDERT grün (Invariante "gleiche Quelle") |
 | `tests/tdd/test_compare_radar_alert_event_identity.py:842-882` (Signatur-Wächter) | bleibt grün — kein neuer Parameter an `check_event_identity_gate`/`record_event_identity`/`resolve_hazard_class` |
@@ -586,7 +632,7 @@ String statt als Substring prüft.
 | bestehende Ortsvergleich-Nowcast-/-amtlich-Tests (S4b-2/#1917) | bleiben unverändert grün — Bestandsschutz-Bedingung (B0) garantiert byte-identisches Verhalten |
 | `tests/tdd/test_alert_stufenwort.py::test_ac14_sms_bleibt_unveraendert_regressionswaechter` | prüft den SMS-Text eines GEWÖHNLICHEN Alarms auf exakt `"km 0-4: TH:M->H@15"` — erscheint das neue Token hier, ist das ein Befund an der Implementierung (Token leckt in einen Fall ohne Treffer), NICHT am Test; die Erwartung wird nicht aufgeweicht |
 | `tests/tdd/test_telegram_kurzstil_trip_alert.py:315` | prüft Byte-Identität Kurzstil-Telegram == SMS-Text bei einem gewöhnlichen Alarm — dieselbe Schärfe wie oben |
-| S6-Wächter zu `AC-12` (Stand-Zeile nur Telegram, Kurzstil byte-identisch zur SMS) | das neue Token heißt nicht `Stand:` und sitzt im SMS-Text — es wird vom Kurzstil miterbt, die Byte-Identität bleibt gewahrt (eigenes Regressions-AC hier, AC-B11) |
+| S6-Wächter zu `AC-12` (Stand-Zeile nur Telegram, Kurzstil byte-identisch zur SMS) | das neue Token heißt nicht `Stand:` und sitzt im SMS-Text — es wird vom Kurzstil miterbt, die Byte-Identität bleibt gewahrt (eigenes Regressions-AC hier, AC-B10) |
 | `tests/tdd/test_multi_location_onset_alert.py:39-48` | EINZIGES bewusst angefasstes Golden (Teil C) |
 | Alle übrigen Cooldown-Substring-Wächter (s. Teil C) | bleiben grün, weil der bestehende Substring erhalten bleibt |
 
@@ -599,17 +645,19 @@ nicht am bloßen Aufruf-Nachweis einer Funktion.
 
 | AC | Datei | Schicht |
 |---|---|---|
-| AC-A1 (Nachtrag: amtlich→Nowcast, reiner Duplikat-Fall) | `tests/tdd/test_alert_gate.py` (neu) | Kern |
+| AC-A1 (Nachtrag: amtlich→Nowcast MIT Eskalation) | `tests/tdd/test_alert_gate.py` (neu, Reproduktion des gemeldeten Falls) | Kern |
 | AC-A2 (Quellenvermerk + Fallback-Ableitung für Alt-Einträge) | `tests/tdd/test_alert_gate.py` (neu) | Kern |
 | AC-A3 (V2-Eskalation unverändert in JEDER Nicht-Nachtrags-Konstellation) | `test_alert_gate.py:927-971` unverändert + 1 neuer Fall (Nowcast zuerst, amtlich mit echter Eskalation danach) | Kern |
-| AC-A4 (keine Eskalation/kein V1 → Unterdrückung unverändert, allgemein) | `test_alert_gate.py:855-882` unverändert grün | Kern |
+| AC-A4 (keine Eskalation/kein V1 → Unterdrückung unverändert, gleiche Quelle) | `test_alert_gate.py:855-882` unverändert grün | Kern |
 | AC-A5 (Kernfall/Gegenrichtung bleibt UNANGETASTET) | `test_alert_gate.py:757-793`, **keine Änderung**, explizit gegengeprüft | Kern |
 | AC-A6 (V1-Ausnahme in der unveränderten Gegenrichtung) | `test_alert_gate.py:885-923` unverändert grün | Kern |
 | AC-A7 (V1-Ausnahme in der Nachtrags-Richtung bleibt Voll-Alarm) | `tests/tdd/test_alert_gate.py` (neu) | Kern |
-| AC-A8 (strukturelle Garantie: amtlich nie Nachtrag, Mutations-Gegenprobe) | `tests/tdd/test_alert_gate.py` (neu) | Kern |
-| AC-A9 (stärkster statt erstbester Treffer) | `tests/tdd/test_alert_gate.py` (neu, mehrere Kandidaten) | Kern |
-| AC-A10 (Signatur-Wächter) | `tests/tdd/test_compare_radar_alert_event_identity.py`, unverändert grün | Kern |
-| AC-A11 (Mandantentrennung, Nachtrag-Fall) | `tests/tdd/test_alert_gate.py` (zwei Nutzer) | Kern |
+| AC-A8 (Stille bleibt Stille innerhalb der Nachtrags-Richtung, NEU, Mutations-Gegenprobe) | `tests/tdd/test_alert_gate.py` (neu, zwei Testfälle) | Kern |
+| AC-A9 (strukturelle Garantie: amtlich nie Nachtrag, Mutations-Gegenprobe) | `tests/tdd/test_alert_gate.py` (neu) | Kern |
+| AC-A10 (stärkster statt erstbester Treffer) | `tests/tdd/test_alert_gate.py` (neu, mehrere Kandidaten) | Kern |
+| AC-A11 (Signatur-Wächter) | `tests/tdd/test_compare_radar_alert_event_identity.py`, unverändert grün | Kern |
+| AC-A12 (Mandantentrennung, Nachtrag-Fall) | `tests/tdd/test_alert_gate.py` (zwei Nutzer) | Kern |
+| AC-A13 (Zählnachweis: Zustellmenge identisch, NEU) | `tests/tdd/test_alert_gate.py` (neu, parametrisiert über volle Konstellations-Matrix) | Kern |
 | AC-B1 (Trip-Nowcast wertet dritten Ausgang aus) | `tests/tdd/test_issue_1088_official_alert_triggers.py`-Äquivalent für Nowcast | Kern |
 | AC-B2 (E-Mail Nowcast trägt ausformulierte Zeile) | `tests/tdd/test_952_onset_alert_fidelity.py` (neuer Fall) | Kern |
 | AC-B3 (Voll-Telegram Nowcast trägt ausformulierte Zeile) | Telegram-Renderer-Test, neuer Fall | Kern |
@@ -623,8 +671,8 @@ nicht am bloßen Aufruf-Nachweis einer Funktion.
 | AC-B11 (kein dritter `-`-Overload) | `tests/tdd/test_alert_addendum_sms.py` (Zeichen-Inspektion des Präfix-Literals) | Kern |
 | AC-B12 (amtlicher Trip-Pfad bleibt unangetastet) | bestehende amtliche Trip-Batch-Tests, unverändert grün | Kern |
 | AC-B13 (alert_log-Nachtrags-Markierung, additiv, Alt-Einträge unverändert) | `tests/tdd/test_alert_log_*.py` (neuer Fall) | Kern |
-| AC-B14 (Ortsvergleich verhält sich exakt unverändert) | bestehende Ortsvergleich-Nowcast-/-amtlich-Tests (S4b-2/#1917), unverändert grün + 1 neuer Fall mit einer Nachtrag-fähigen Konstellation, die für Compare weiterhin unterdrückt wird | Kern |
-| AC-B15 (Bestandsschutz-Bedingung technisch nachgewiesen) | `tests/tdd/test_compare_radar_alert*.py` (neu: `identity_gate.is_addendum=True` UND `identity_gate.allowed=True` im Rohergebnis, aber Compare liefert dennoch `allowed=False`-Effekt) | Kern |
+| AC-B14 (Ortsvergleich verhält sich exakt unverändert) | bestehende Ortsvergleich-Nowcast-/-amtlich-Tests (S4b-2/#1917), unverändert grün + 1 neuer Fall mit einer eskalierenden amtlich→Nowcast-Konstellation, die für Compare weiterhin als gewöhnliche Voll-Zustellung behandelt wird | Kern |
+| AC-B15 (Bestandsschutz-Bedingung technisch nachgewiesen) | `tests/tdd/test_compare_radar_alert*.py` (neu: `identity_gate.is_addendum=True` UND `identity_gate.allowed=True` im Rohergebnis, Compare-Bedingung wird direkt geprüft) | Kern |
 | AC-C1 (Cooldown-Satz-Präzisierung, additiv) | bestehende Substring-Wächter unverändert + neuer Substring-Test auf den Zusatz | Kern |
 | AC-C2 (Golden bewusst aktualisiert) | `tests/tdd/test_multi_location_onset_alert.py:39-48` | Kern |
 | AC-C3 (Reihenfolge-Nachweis: Rebase vor Renderer-Änderung) | `# doc-compliance-test` (Commit-Reihenfolge/Changelog) | Kern |
@@ -638,17 +686,19 @@ Test-Postfach bzw. Test-Chat.
 
 ## Acceptance Criteria
 
-**Teil A — Gerichtetes dreiwertiges Gate**
+**Teil A — Gerichtetes, mengenerhaltendes dreiwertiges Gate**
 
 - **AC-A1:** Given einen registrierten Registereintrag der Quelle
-  `"official"` und eine neue Nowcast-Meldung (`point_at` gesetzt)
-  derselben Gefahrenklasse/desselben Orts/überlappenden Zeitfensters, OHNE
-  V1-Erweiterung, When `check_event_identity_gate` geprüft wird, Then ist
+  `"official"` und eine neue Nowcast-Meldung (`point_at` gesetzt) mit ECHT
+  HÖHERER Dringlichkeit (`exceeds(severity, match["severity"])` ist
+  `True`) derselben Gefahrenklasse/desselben Orts/überlappenden
+  Zeitfensters, When `check_event_identity_gate` geprüft wird, Then ist
   das Ergebnis `allowed=True, is_addendum=True`, mit `addendum_source ==
   "official"` und `addendum_reported_at` gleich dem `reported_at` des
   Registereintrags.
-  - Test: amtliche Warnung registrieren, Nowcast mit passendem Zeitfenster
-    (kein V1-Vorbehalt) prüfen, `is_addendum is True`.
+  - Test: amtliche Warnung `MODERATE` registrieren, Nowcast `HIGH`
+    (konvektiv) mit überlappendem Zeitfenster prüfen — Reproduktion des
+    gemeldeten Falls (16:15/16:37) — `is_addendum is True`.
   - Schicht: Kern.
 
 - **AC-A2:** Given einen Registereintrag OHNE das Feld `"source"` (Alt-
@@ -673,10 +723,10 @@ Test-Postfach bzw. Test-Chat.
     `allowed=True, is_addendum=False`.
   - Schicht: Kern.
 
-- **AC-A4:** Given eine registrierte Meldung UND eine zweite Meldung ohne
-  Eskalation und ohne V1-Erweiterung, When das Gate geprüft wird UND die
-  Konstellation NICHT amtlich-zuerst/Nowcast-danach ist, Then bleibt sie
-  UNTERDRÜCKT (`allowed=False`) — unverändert gegenüber S4b-1.
+- **AC-A4:** Given eine registrierte Meldung UND eine zweite Meldung
+  DERSELBEN Quelle ohne Eskalation und ohne V1-Erweiterung, When das Gate
+  geprüft wird, Then bleibt sie UNTERDRÜCKT (`allowed=False`) —
+  unverändert gegenüber S4b-1.
   - Test: bestehender Test (`test_alert_gate.py:855-882`, S4b-1 AC-8)
     bleibt unverändert grün.
   - Schicht: Kern.
@@ -700,35 +750,54 @@ Test-Postfach bzw. Test-Chat.
   - Schicht: Kern.
 
 - **AC-A7:** Given einen registrierten amtlichen Registereintrag UND einen
-  neuen Nowcast, dessen Zeitfenster wesentlich (`>
-  NOWCAST_HORIZON_MIN`) über das bereits abgedeckte Ende hinausreicht, When
-  das Gate geprüft wird, Then bricht er als VOLLER Alarm durch
-  (`is_addendum=False`), NICHT als Nachtrag — die V1-Ausnahme bleibt auch
-  in der Nachtrags-Richtung quellenunabhängig gültig und liefert echte
-  neue Information voll aus.
+  neuen Nowcast OHNE höhere Dringlichkeit (`exceeds` ist `False`), dessen
+  Zeitfenster aber wesentlich (`> NOWCAST_HORIZON_MIN`) über das bereits
+  abgedeckte Ende hinausreicht, When das Gate geprüft wird, Then bricht er
+  als VOLLER Alarm durch (`is_addendum=False`), NICHT als Nachtrag — die
+  V1-Ausnahme bleibt auch in der Nachtrags-Richtung quellenunabhängig
+  gültig und liefert echte neue Information voll aus.
   - Test: amtliche Warnung registrieren (`window_end` = T), Nowcast mit
     `onset` so, dass `onset + NOWCAST_HORIZON_MIN` deutlich über `T +
     NOWCAST_HORIZON_MIN` hinausreicht, ohne höhere Dringlichkeit,
     `allowed=True, is_addendum=False`.
   - Schicht: Kern.
 
-- **AC-A8:** Given die Gate-Logik nach Abschluss dieser Scheibe, When man
+- **AC-A8 (NEU, dritte Korrektur):** Given eine Konstellation
+  amtlich→Nowcast, in der `exceeds(neu, registriert)` `False` ist UND die
+  V1-Ausnahme NICHT greift, When das Gate geprüft wird, Then wird
+  weiterhin UNTERDRÜCKT (`allowed=False`, `reason=REASON_EVENT_DUPLICATE`)
+  und KEIN Nachtrag erzeugt (`is_addendum=False`) — die Zustellung bleibt
+  Stille, exakt wie vor dieser Scheibe.
+  - Test: ZWEI getrennte Fälle im selben Testmodul: (a) ein NICHT-
+    konvektiver Nowcast (`severity` `MODERATE`/`LOW`) nach einer amtlichen
+    Warnung gleicher oder höherer Stufe; (b) ein konvektiver Nowcast
+    (`severity="HIGH"`) nach einer amtlichen ROT-Warnung
+    (`severity="HIGH"`) — `exceeds("HIGH","HIGH")` ist `False`. Beide
+    Fälle liefern `allowed=False, is_addendum=False`.
+  - Mutations-Gegenprobe (PFLICHT): entfernt man die `exceeds`-Bedingung
+    aus dem Nachtrags-Zweig (Rückfall auf den verworfenen bedingungslosen
+    Nachtrag), MUSS dieses AC in BEIDEN Fällen rot werden — das ist die
+    Absicherung gegen genau die Ausweitung, die durch die Rückfrage aus
+    #2020 aufgedeckt wurde.
+  - Schicht: Kern.
+
+- **AC-A9:** Given die Gate-Logik nach Abschluss dieser Scheibe, When man
   JEDE erreichbare Kombination aus `match["source"]` und `new_source`
   durchprobiert, Then ist `is_addendum=True` AUSSCHLIESSLICH erreichbar,
   wenn `match["source"] == "official"` UND `new_source == "nowcast"` — in
   KEINER anderen Kombination.
   - Test: alle vier Kombinationen (official→official, official→nowcast,
     nowcast→official, nowcast→nowcast) im selben Testmodul, nur
-    official→nowcast liefert `is_addendum=True`.
+    official→nowcast liefert (bei Eskalation) `is_addendum=True`.
   - Mutations-Gegenprobe (PFLICHT): die Bedingung `match["source"] ==
     "official"` aus `addendum_direction` entfernen (sodass JEDE Quelle als
     Vorgänger genügt) MUSS den Kernfall-Test (AC-A5,
     `test_alert_gate.py:757-793`) rot machen — das ist die Absicherung
-    gegen genau die Scope-Erweiterung, die in dieser Spec bereits einmal
+    gegen die Scope-Erweiterung, die in dieser Spec bereits einmal
     versehentlich passiert ist.
   - Schicht: Kern.
 
-- **AC-A9:** Given mehrere gültige Registereinträge derselben
+- **AC-A10:** Given mehrere gültige Registereinträge derselben
   Gefahrenklasse/desselben Orts mit UNTERSCHIEDLICHER Dringlichkeit, When
   `_find_matching_entry` aufgerufen wird, Then liefert sie den Eintrag mit
   der HÖCHSTEN Dringlichkeit als Treffer, nicht den zuerst im Register
@@ -737,7 +806,7 @@ Test-Postfach bzw. Test-Chat.
     (MODERATE, HIGH, LOW), Match liefert den HIGH-Eintrag.
   - Schicht: Kern.
 
-- **AC-A10:** Given die Funktionssignaturen von `check_event_identity_gate`,
+- **AC-A11:** Given die Funktionssignaturen von `check_event_identity_gate`,
   `record_event_identity` und `resolve_hazard_class` nach Abschluss dieser
   Scheibe, When man sie inspiziert, Then sind sie UNVERÄNDERT gegenüber
   S4b-1 — kein neuer Parameter wurde ergänzt.
@@ -746,7 +815,7 @@ Test-Postfach bzw. Test-Chat.
     unverändert grün.
   - Schicht: Kern.
 
-- **AC-A11:** Given zwei verschiedene Nutzer mit je einem Trip gleicher
+- **AC-A12:** Given zwei verschiedene Nutzer mit je einem Trip gleicher
   Kennung, When Nutzer A eine amtliche Meldung registriert und Nutzer B
   unabhängig davon einen Nowcast desselben Ereignisses auslöst, Then wirkt
   A's Registereintrag NICHT auf B's Gate-Ergebnis — B erhält seine eigene,
@@ -757,6 +826,22 @@ Test-Postfach bzw. Test-Chat.
     existiert).
   - Schicht: Kern.
 
+- **AC-A13 (NEU, dritte Korrektur — Zählnachweis):** Given eine
+  vollständige Konstellations-Matrix (4 Quellen-Kombinationen
+  official/nowcast × official/nowcast, jeweils kombiniert mit
+  eskalierend/nicht-eskalierend UND V1-greift/V1-greift-nicht), When man
+  die Zahl der Ergebnisse mit `allowed=True` VOR dieser Scheibe
+  (simulierte S4b-1-Logik) gegen die Zahl NACH dieser Scheibe vergleicht,
+  Then ist sie GLEICH — ausschließlich die Zahl der Ergebnisse mit
+  `is_addendum=True` steigt (von 0 auf die Zahl der amtlich→Nowcast-mit-
+  Eskalation-Fälle in der Matrix); die Gesamtzahl der `allowed=True`- bzw.
+  `allowed=False`-Ergebnisse bleibt unverändert.
+  - Test: parametrisierter Testlauf über die volle Matrix, zwei Zähler
+    (Alt-Logik-Simulation vs. Neu-Logik), Assertion, dass die Differenz
+    ausschließlich im `is_addendum`-Zähler liegt, nicht im `allowed`-
+    Zähler.
+  - Schicht: Kern.
+
 **Teil B — Nachtragsmeldung (Trip-Pfad) + Ortsvergleich-Bestandsschutz**
 
 - **AC-B1:** Given ein Gate-Ergebnis mit `is_addendum=True` am Trip-
@@ -764,8 +849,8 @@ Test-Postfach bzw. Test-Chat.
   Then wird die Meldung ZUGESTELLT (nicht unterdrückt, kein Eintrag in
   `alert_log` unter `not_delivered` über `REASON_EVENT_DUPLICATE`), mit
   gesetztem `addendum_reference` auf dem `AlertMessage`.
-  - Test: Nowcast-Nachtrag-Fall auslösen, Zustellung erfolgt,
-    `AlertMessage.addendum_reference` ist gesetzt.
+  - Test: Nowcast-Nachtrag-Fall (Eskalation, s. AC-A1) auslösen,
+    Zustellung erfolgt, `AlertMessage.addendum_reference` ist gesetzt.
   - Schicht: Kern.
 
 - **AC-B2:** Given eine Nowcast-Onset-Meldung mit gesetztem
@@ -878,14 +963,15 @@ Test-Postfach bzw. Test-Chat.
   - Schicht: Kern.
 
 - **AC-B14:** Given eine Konstellation, die am Trip-Pfad zum Nachtrag
-  würde (amtlich registriert, Nowcast danach ohne Eskalation/V1), When
+  würde (amtlich registriert, Nowcast danach MIT Eskalation), When
   dieselbe Konstellation über den Ortsvergleich-Nowcast-Pfad
-  (`compare_radar_alert.py`) läuft, Then wird die Meldung UNTERDRÜCKT
-  (kein Nachtrag, keine Zustellung) — exakt das Verhalten vor dieser
-  Scheibe.
+  (`compare_radar_alert.py`) läuft, Then wird die Meldung wie eine
+  gewöhnliche Voll-Zustellung behandelt — kein `addendum_reference` wird
+  irgendwo gesetzt, kein Compare-Renderer zeigt einen Nachtrags-Hinweis,
+  der Effekt ist identisch zum Stand vor dieser Scheibe.
   - Test: identische Registereintrag-/Anfrage-Parameter wie im Trip-
-    Nachtrag-Fall, aber über den Compare-Aufruf, Ergebnis-Effekt ist
-    Unterdrückung, kein `addendum_reference` irgendwo gesetzt; PLUS
+    Nachtrag-Fall (AC-B1), aber über den Compare-Aufruf, resultierender
+    Zustellungs-Effekt ist byte-identisch zum Vor-#2018-Stand; PLUS
     bestehende Ortsvergleich-Nowcast-/-amtlich-Tests (S4b-2/#1917)
     unverändert grün.
   - Schicht: Kern.
@@ -894,8 +980,7 @@ Test-Postfach bzw. Test-Chat.
   Konstellation (`identity_gate.allowed=True, identity_gate.is_addendum=
   True`), When `compare_radar_alert.py` seine Freigabe-Bedingung auswertet,
   Then lautet sie `identity_gate.allowed and not
-  identity_gate.is_addendum` — nicht bloß `identity_gate.allowed` — und
-  liefert für diesen Fall `False`.
+  identity_gate.is_addendum` — nicht bloß `identity_gate.allowed`.
   - Test: gezielter Test auf die Bedingung selbst (nicht nur den
     Endeffekt), damit ein künftiger Refactor, der die Bedingung
     versehentlich auf `identity_gate.allowed` verkürzt, hier rot wird,
@@ -935,12 +1020,13 @@ Test-Postfach bzw. Test-Chat.
 - **AC-D1:** Given den ADR-0021-Nachtrag aus S4b-1/S4b-2, When diese
   Scheibe abgeschlossen ist, Then trägt ADR-0021 einen weiteren, datierten
   Nachtrag mit Bezug auf "#2018", der festhält, dass die Ereignis-
-  Identität-Prüfung seither einen dritten, GERICHTETEN Ausgang kennt
-  (zustellen / als Nachtrag zustellen NUR amtlich→Nowcast / unterdrücken
-  in jeder anderen Konstellation) — ohne die S4b-1/S4b-2-Aussagen zu
-  widerrufen (deren Beschreibung des Registers und der Ortsvergleich-
-  Verdrahtung bleibt gültig; der Ortsvergleich bleibt zusätzlich explizit
-  unverändert, s. Nicht-Ziele).
+  Identität-Prüfung seither einen dritten, GERICHTETEN UND
+  MENGENERHALTENDEN Ausgang kennt (zustellen / als Nachtrag zustellen NUR
+  amtlich→Nowcast MIT Eskalation / unterdrücken in jeder anderen
+  Konstellation, einschließlich der stillen amtlich→Nowcast-Fälle) — ohne
+  die S4b-1/S4b-2-Aussagen zu widerrufen (deren Beschreibung des Registers
+  und der Ortsvergleich-Verdrahtung bleibt gültig; der Ortsvergleich
+  bleibt zusätzlich explizit unverändert, s. Nicht-Ziele).
   - Test: `tests/test_adr_index_drift.py` plus manuelle Sichtprüfung des
     Nachtrag-Absatzes, datiert nach 2026-08-21.
   - Schicht: Kern.
@@ -952,6 +1038,12 @@ Test-Postfach bzw. Test-Chat.
   Nowcast folgt, bleibt unterdrückt statt als (grobe) Bestätigung
   zugestellt zu werden. Bewusst so belassen (s. Nicht-Ziele) — eigene
   PO-Entscheidung nötig für eine Änderung.
+- **Stille Konstellationen amtlich→Nowcast bleiben still** — ein nicht-
+  konvektiver Nowcast nach einer gleich/höherstufigen amtlichen Warnung
+  oder ein konvektiver Nowcast nach amtlich ROT bleibt weiterhin
+  unterdrückt, bekommt KEINEN Nachtrag. Bewusst so belassen — der PO hat
+  nur die Form einer ohnehin stattfindenden Zustellung geändert, nicht das
+  Ob.
 - **Ortsvergleich bekommt keine eigene Nachtragsmeldung** — die
   Bestandsschutz-Bedingung stellt sicher, dass sich nichts ändert, aber
   löst nicht das ursprüngliche Ticket-Problem für den Ortsvergleich (der
@@ -962,26 +1054,28 @@ Test-Postfach bzw. Test-Chat.
 - **Änderungsalarm (Δ) bleibt außerhalb dieser Scheibe** (S4b-3, weiterhin
   offen) — der bestehende Doppel-Alert-Guard bleibt die einzige Absicherung
   für diese Paarung.
-- Ein Rückbau des dritten Ausgangs (Nachtrag → wieder Unterdrückung) oder
-  eine versehentliche Ausweitung auf die Gegenrichtung ist mit
-  Verhaltenstests NICHT vollständig automatisch fangbar außerhalb der
-  expliziten Mutations-Gegenprobe (AC-A8) — struktureller Schutz liegt
-  zusätzlich in Code-Review und PO-Bindung.
+- Ein Rückbau des dritten Ausgangs, eine versehentliche Ausweitung auf die
+  Gegenrichtung, ODER eine versehentliche Ausweitung auf stille
+  Konstellationen ist mit Verhaltenstests NICHT vollständig automatisch
+  fangbar außerhalb der expliziten Mutations-Gegenproben (AC-A8, AC-A9) —
+  struktureller Schutz liegt zusätzlich in Code-Review und PO-Bindung.
 
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** keine neue — ADR-0021 (geteilter Auswertungskern) bekommt
   einen weiteren Nachtrag im Anschluss an die S4b-1/S4b-2-Nachträge.
-- **Rationale:** Die gerichtete Ereignis-Identität-Prüfung ist konsequente
-  Fortsetzung des in ADR-0021 etablierten Musters — derselbe geteilte
-  Baustein bekommt einen dritten, differenzierteren Ausgang, statt eines
-  zweiten Bausteins. Neu ist, dass die Entscheidung erstmals ASYMMETRISCH
-  nach Richtung ist (amtlich→Nowcast anders behandelt als Nowcast→amtlich)
-  — eine bewusste fachliche Differenzierung, kein technischer
-  Kompromiss. Der Ortsvergleich bleibt bewusst außen vor (Bestandsschutz
-  statt Feature-Parität) — kein neues Architekturprinzip, aber eine
-  Erweiterung des Rückgabewert-Vokabulars innerhalb des bestehenden
-  Bausteins.
+- **Rationale:** Die gerichtete, mengenerhaltende Ereignis-Identität-
+  Prüfung ist konsequente Fortsetzung des in ADR-0021 etablierten Musters
+  — derselbe geteilte Baustein bekommt einen dritten, differenzierteren
+  Ausgang, statt eines zweiten Bausteins. Neu ist, dass die Entscheidung
+  erstmals ASYMMETRISCH nach Richtung ist (amtlich→Nowcast anders
+  behandelt als Nowcast→amtlich) UND dass der neue Ausgang strikt auf
+  Zustellungen beschränkt ist, die ohnehin stattgefunden hätten (Form
+  statt Menge) — eine bewusste fachliche Differenzierung, kein
+  technischer Kompromiss. Der Ortsvergleich bleibt bewusst außen vor
+  (Bestandsschutz statt Feature-Parität) — kein neues Architekturprinzip,
+  aber eine Erweiterung des Rückgabewert-Vokabulars innerhalb des
+  bestehenden Bausteins.
 
 ## Changelog
 
@@ -991,23 +1085,36 @@ Test-Postfach bzw. Test-Chat.
   SMS-Kompakt-Kennzeichnung, Bindestrich-Kollisionsvermeidung und der
   beiden Regressionswächter aus zwei Koordinator-Nachträgen eingearbeitet
   (Telegram-Kurzstil sendet SMS-Text, `_ADDENDUM_SMS_PREFIX` ohne `"-"`).
-- 2026-08-21 (Korrektur, gleicher Tag): Zwei Korrekturen eines dritten
-  Koordinator-Nachtrags eingearbeitet, VOR Freigabe. **Korrektur 1:** der
-  dritte Ausgang ist GERICHTET — nur amtlich→Nowcast wird zum Nachtrag,
-  die Gegenrichtung (Kernfall aus #1467 S4b, `test_alert_gate.py:757-793`)
-  bleibt vollständig unangetastet, weil dafür kein PO-Entscheid vorliegt
-  und eine Umstellung dort neue Meldungen erzeugt hätte, wo das Ticket sich
-  über zu viele beschwert. Die dadurch überflüssig gewordene explizite
-  "amtlich ROT bricht durch"-Regel (V2b) entfällt zugunsten einer
-  strukturellen Garantie (AC-A8). **Korrektur 2:** Ortsvergleich fliegt aus
-  der Lieferung — `compare_radar_alert.py`/`compare_official_alert.py`
-  bekommen keine neue Nachtrags-Logik. Bei der Umsetzung wurde zusätzlich
-  festgestellt und dokumentiert, dass reines Nichtstun an diesen beiden
-  Aufrufstellen die geforderte Verhaltensgleichheit NICHT von selbst
-  garantiert (der geteilte Gate-Baustein kennt seinen Aufrufer nicht) —
-  eine minimale Bestandsschutz-Bedingung (`allowed and not is_addendum`
-  statt `allowed`) wurde deshalb ergänzt und mit einem eigenen AC (AC-B15)
-  abgesichert. Zeilennummern in `src/output/renderers/alert/render.py` per
-  Text-Suche gegen den Arbeitsbaum (nach #1948 S6 `cba7ffa3` und #2009
-  `d7fad756`) neu verifiziert, alle übrigen Fundstellen gegen den
-  Arbeitsbaum zum Zeitpunkt der Spec-Erstellung verifiziert.
+- 2026-08-21 (Korrektur 1+2, gleicher Tag): **Korrektur 1:** der dritte
+  Ausgang ist GERICHTET — nur amtlich→Nowcast wird zum Nachtrag, die
+  Gegenrichtung (Kernfall aus #1467 S4b, `test_alert_gate.py:757-793`)
+  bleibt vollständig unangetastet, weil dafür kein PO-Entscheid vorliegt.
+  Die dadurch überflüssig gewordene explizite "amtlich ROT bricht
+  durch"-Regel (V2b) entfiel zugunsten einer strukturellen Garantie.
+  **Korrektur 2:** Ortsvergleich fliegt aus der Lieferung —
+  `compare_radar_alert.py`/`compare_official_alert.py` bekommen keine neue
+  Nachtrags-Logik; eine minimale Bestandsschutz-Bedingung
+  (`allowed and not is_addendum` statt `allowed`) wurde ergänzt, weil
+  reines Nichtstun die geforderte Verhaltensgleichheit nicht garantiert
+  hätte.
+- 2026-08-21 (Korrektur 3, gleicher Tag, Version 1.2): **Ein echter Fehler**
+  in der Fassung nach Korrektur 1+2, aufgedeckt durch eine Rückfrage der
+  Parallelsitzung #2020 (Frage: ändert diese Scheibe die Zahl ausgelöster
+  Meldungen?). Der Nachtrags-Zweig ließ die V2-Prüfung (`exceeds`)
+  ersatzlos entfallen und lieferte bedingungslos `is_addendum=True` — das
+  hätte auch STILLE Konstellationen (nicht-konvektiver Nowcast nach
+  gleich/höherstufiger amtlicher Warnung; konvektiver Nowcast nach
+  amtlicher ROT-Warnung, jeweils `exceeds` `False`) in Nachrichten
+  verwandelt, wo heute keine kommen — eine unbeabsichtigte Ausweitung über
+  den PO-Entscheid hinaus (der PO hat entschieden, dass aus zwei vollen
+  Alarmen einer plus ein Nachtrag wird, nicht, dass aus Stille ein
+  Nachtrag wird). Korrigiert: `exceeds` bleibt in JEDER Konstellation die
+  maßgebliche erste Prüfung; in der Nachtrags-Richtung ändert ein
+  positives Ergebnis nur noch die FORM (Nachtrag statt Voll-Alarm), nie
+  mehr das OB. Neue Invariante "Zustellmenge bleibt identisch" (prominent),
+  neues AC-A8 (Stille bleibt Stille, mit Mutations-Gegenprobe) und neues
+  AC-A13 (Zählnachweis über die volle Konstellations-Matrix) ergänzt.
+  Zeilennummern in `src/output/renderers/alert/render.py` per Text-Suche
+  gegen den Arbeitsbaum (nach #1948 S6 `cba7ffa3` und #2009 `d7fad756`)
+  neu verifiziert, alle übrigen Fundstellen gegen den Arbeitsbaum zum
+  Zeitpunkt der Spec-Erstellung verifiziert.
