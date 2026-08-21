@@ -289,6 +289,8 @@ def append_entry(
     blocked_reason_codes: Optional[dict[str, str]] = None,
     capture_id: Optional[str] = None,
     capture_ids: Optional[Iterable[str]] = None,
+    is_addendum: bool = False,
+    addendum_reported_at: Optional[str] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -324,6 +326,12 @@ def append_entry(
     wurde. `effective_channels` bleibt dabei das ROHE, unveraenderte Opt-in
     des Nutzers -- die Schwelle filtert nur den tatsaechlichen Versand
     (Aufrufer), nie das, was hier protokolliert wird (rote Linie #638).
+
+    `is_addendum`/`addendum_reported_at` (#2018): Markierung einer Meldung,
+    die als NACHTRAG zu einer bereits zugestellten amtlichen Warnung
+    zugestellt wurde, plus deren Meldezeitpunkt (ISO-String). Beide Felder
+    entstehen NUR bei `is_addendum=True` -- Normalfaelle und Alt-Eintraege
+    bleiben schema-identisch (Muster `capture_id`).
 
     `blocked_reason_codes` (D5, #1701): Kanal -> spezifische Sperr-Kennung
     (z.B. `premium_sms_no_reply_address`), aus
@@ -369,6 +377,9 @@ def append_entry(
         entry["capture_id"] = capture_id
     if capture_ids:  # additiv (#1944): Versand aus MEHREREN Mitschnitten
         entry["capture_ids"] = sorted(set(capture_ids))
+    if is_addendum:  # additiv (#2018): Nachtrag statt zweitem Voll-Alarm
+        entry["is_addendum"] = True
+        entry["addendum_reported_at"] = addendum_reported_at
 
     _append(user_id, "entries" if reachable else "not_delivered", entry)
 

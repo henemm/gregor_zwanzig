@@ -189,6 +189,12 @@ class RadarAlertRequest:
     # mehrdeutig. Berechnet wird er dort, wo `onset_time` entsteht
     # (`trip_alert.check_radar_alerts`), damit beide dieselbe Zone benutzen.
     onset_day_offset: int = 0
+    # Issue #2018: additiv, optional (Muster `briefing_context`). Traegt die
+    # ausformulierte Bezugszeile, wenn das Ereignis-Identitaets-Gate diese
+    # Meldung als NACHTRAG zu einer bereits zugestellten amtlichen Warnung
+    # eingestuft hat. `send_radar_alert()` reicht sie unveraendert auf die
+    # `AlertMessage` durch; ohne sie bleibt der Versand byte-identisch.
+    addendum_reference: str | None = None
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -1296,6 +1302,7 @@ class NotificationService:
             events=(onset_event,),
             source=source,
             cooldown_display=cooldown_display,
+            addendum_reference=request.addendum_reference,  # Issue #2018
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
