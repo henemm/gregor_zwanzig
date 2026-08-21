@@ -66,6 +66,16 @@ if _briefing_announced and not result.is_convective:
 - Greift erst **nach** `radar_alert_due(...)` (Onset ≤20 Min) und **nach** dem QuietHours- und Throttle-Check — diese bleiben also wirksam.
 - Der Doppel-Alert-Guard (≈691-709) bleibt **unverändert** aktiv: hat ein Forecast-Alert für dasselbe Segment innerhalb des Cooldowns gefeuert, wird auch der Override unterdrückt (max. eine Meldung).
 
+**Nachtrag #2020 A3 (2026-08-21) — zweite, gleichrangige Ausnahme.** Der oben gezeigte
+Ist-Stand ist nicht mehr vollständig: seit #2020 durchbricht **auch** eine mengenmäßige
+Überholung die Briefing-Unterdrückung, unabhängig von Konvektion. Die Bedingung lautet
+jetzt `if _briefing_announced and not result.is_convective and not _overtaking: continue`
+(`src/services/trip_alert.py`, bei `_briefing_announced`), wobei `_overtaking` verlangt,
+dass die real akkumulierte Nowcast-Menge sowohl das Doppelte des angekündigten
+Stundenwerts als auch eine absolute Untergrenze von 2,0 mm erreicht. Der konvektive
+Override dieses Slices bleibt davon **unberührt** und gilt weiterhin als eigenständige
+Bedingung. Maßgeblich ist `docs/specs/modules/fix_2020_alarm_ausloesung.md`.
+
 ### Mail-Wording fallabhängig
 
 **Umgesetzt 2026-08-07 unter #1310 — an anderer Stelle als hier ursprünglich geplant.**
@@ -100,7 +110,7 @@ ein bedingungsloses „jetzt akut" den Hinweis entwertet.
 ## Acceptance Criteria
 
 - **AC-1:** Given der Briefing-Snapshot für die Onset-Stunde des aktiven Segments enthält `precip_1h_mm >= 0.5` (Regen angekündigt) UND der injizierte `NowcastResult` ist konvektiv (`is_convective=True`) mit Onset ≤20 Min / When `check_radar_alerts()` läuft / Then wird ein Radar-Alert gesendet (Override greift: Gewitter durchbricht die Briefing-Unterdrückung), `alert_state["radar_throttle"]` wird gesetzt. Test: Snapshot mit `precip_1h_mm = 1.2` unter `data/users/tdd-883-ac1/`, konvektives `NowcastResult` via DI-Seam; nach Lauf Alert-Log-Eintrag + `radar_throttle.reported_at` nachweisbar. Kein Mock.
-- **AC-2:** Given derselbe Briefing-Snapshot (`precip_1h_mm >= 0.5`, Regen angekündigt) UND der `NowcastResult` ist **nicht** konvektiv (`is_convective=False`) / When `check_radar_alerts()` läuft / Then wird **kein** Alert gesendet (Override greift NICHT, das reine Abweichungs-Modell bleibt für normalen Regen erhalten). Test: Snapshot `precip_1h_mm = 1.2`, nicht-konvektives `NowcastResult` via DI-Seam unter `data/users/tdd-883-ac2/`; nach Lauf kein Alert-Log-Eintrag, kein `radar_throttle`. Kein Mock.
+- **AC-2:** Given derselbe Briefing-Snapshot (`precip_1h_mm >= 0.5`, Regen angekündigt) UND der `NowcastResult` ist **nicht** konvektiv (`is_convective=False`) / When `check_radar_alerts()` läuft / Then wird **kein** Alert gesendet (Override greift NICHT, das reine Abweichungs-Modell bleibt für normalen Regen erhalten). Test: Snapshot `precip_1h_mm = 1.2`, nicht-konvektives `NowcastResult` via DI-Seam unter `data/users/tdd-883-ac2/`; nach Lauf kein Alert-Log-Eintrag, kein `radar_throttle`. Kein Mock. — **Eingeschränkt seit #2020 A3 (2026-08-21):** gilt nur noch, solange der Nowcast die Ankündigung nicht mengenmäßig überholt (siehe Nachtrag unter „Kern-Eingriff"); der Testfall bleibt gültig, weil sein Nowcast unter beiden Überholungsschwellen liegt.
 - **AC-3:** Given ein Override-Alert (konvektiv + angekündigter Regen) wurde gerade gesendet und `alert_state["radar_throttle"]` ist gesetzt / When `check_radar_alerts()` mit identischen Bedingungen innerhalb des Cooldown-Fensters erneut läuft / Then wird **kein** zweiter Alert gesendet (Cooldown bleibt auch beim Override aktiv, max. 1 Meldung). Test: zwei aufeinanderfolgende Läufe unter `data/users/tdd-883-ac3/`; zweiter Lauf erzeugt keinen neuen Alert-Log-Eintrag. Kein Mock.
 - **AC-4:** Given der Override greift (konvektiv + `precip_1h_mm >= 0.5` angekündigt) / When die Radar-Alert-Mail gebaut wird / Then enthält der Mail-Text **nicht** die Phrase "im Briefing nicht angekündigt" (das wäre falsch) und stattdessen den Akut-Hinweis ("jetzt akut"). Test: Mail-Body über den `_mail_sink`-Seam abgreifen; Assertion auf An-/Abwesenheit der Phrasen. Kein Mock.
 - **AC-5:** Given konvektive akute Gefahr (`is_convective=True`, Onset ≤20 Min, Regen angekündigt) UND die aktuelle Uhrzeit liegt in den konfigurierten Quiet Hours des Trips / When `check_radar_alerts()` läuft / Then wird **kein** Alert gesendet (Nachtruhe wird respektiert, der Override durchbricht nur die Briefing-Unterdrückung, nicht die Quiet Hours). Test: Trip mit Quiet-Hours-Fenster, das `now` einschließt, unter `data/users/tdd-883-ac5/`; nach Lauf kein Alert. Kein Mock.
