@@ -343,22 +343,35 @@ def test_prune_removes_only_forecast_capture_files_older_than_30_days(monkeypatc
     """AC-6a. GIVEN alte und junge Tagesdateien sowie Nachbardateien im
     `diagnostics`-Ordner WHEN ein Datumswechsel den Prune ausloest THEN
     verschwinden ausschliesslich zu alte, DATIERTE `forecast_capture_*`-Dateien —
-    Nachbardateien und undatierte Namensvettern ueberleben (#1987-Falle)."""
+    Nachbardateien und undatierte Namensvettern ueberleben (#1987-Falle).
+
+    Die Nachbar-Marker stehen VOR dem ersten Mitschnitt: `enrichment_calls.jsonl`
+    waechst durch die von AC-10 geforderte Health-Meldung legitim mit. Nur so
+    weist die Zeile-1-Pruefung weiter Ueberschreiben/Abschneiden nach, statt
+    blosses Wachstum zu verbieten. Die `alt`/`jung`-Tagesdateien bleiben bewusst
+    NACH dem ersten Mitschnitt — laegen sie schon davor, koennte der Prune sie
+    bereits bei t=0 raeumen und ihr Verschwinden waere nicht mehr dem
+    Datumswechsel zuzuordnen."""
     modul = _uhr(monkeypatch, ANKER)
-    assert _mitschnitt(modul, aggregat=_aggregat(precip=1.0)) is True
     ordner = _diagnose_ordner()
+    ordner.mkdir(parents=True, exist_ok=True)
+    nachbarn = [
+        ordner / "openmeteo_calls.jsonl",
+        ordner / "enrichment_calls.jsonl",
+        ordner / "forecast_capture_ohne_datum.jsonl",  # kein Datum => kein Prune-Ziel
+    ]
+    for pfad in nachbarn:
+        with pfad.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"marker": pfad.name}) + "\n")
+
+    assert _mitschnitt(modul, aggregat=_aggregat(precip=1.0)) is True
 
     def _tagesdatei(tage: int) -> Path:
         return ordner / f"forecast_capture_{(ANKER - timedelta(days=tage)).date()}.jsonl"
 
     alt = [_tagesdatei(40), _tagesdatei(35)]
     jung = [_tagesdatei(5), _tagesdatei(1)]
-    nachbarn = [
-        ordner / "openmeteo_calls.jsonl",
-        ordner / "enrichment_calls.jsonl",
-        ordner / "forecast_capture_ohne_datum.jsonl",  # kein Datum => kein Prune-Ziel
-    ]
-    for pfad in alt + jung + nachbarn:
+    for pfad in alt + jung:
         with pfad.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps({"marker": pfad.name}) + "\n")
 
