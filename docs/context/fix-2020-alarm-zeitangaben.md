@@ -467,3 +467,9 @@ den Dateien dieser Scheibe:
 Berührt diese Scheibe direkt: `_onset_shift_line`/`_onset_shift_where` und `_corridor_when`
 sind Textstellen, in denen auch die Zeitangaben sitzen. **Nach dem Merge rebasen und die
 neue Fassung lesen**, nicht auf der alten weiterbauen.
+
+**Nachtrag #2036:** `_corridor_when` ist nach dem Merge **zweigeteilt** — die Ortsangabe zieht
+das neue `_corridor_where` (über `format_alert_location`), `_corridor_when` hängt nur noch
+`· {ce.occurred_at}` an. Der Zeitanteil sitzt dort also **isoliert**; die Ortslogik ist für
+diese Scheibe nicht mehr anzufassen. `_onset_shift_where` behält seine Bauart, bekommt nur
+`km_measured=` als zusätzliches Argument. `weather_change_detection.py` fasst #2036 nicht an.
