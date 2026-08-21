@@ -82,11 +82,23 @@ zusätzliches „heute" in jeder Zeile wäre Lärm.
 *Alternative, falls der PO es ausdrücklich will: „heute" immer ausschreiben. Das ist
 eine reine Wortentscheidung und ändert an der Mechanik nichts.*
 
-**Härtung des bestehenden Tagesbezugs:** `render.py:310` prüft heute auf Wahrheitswert
-(`if e.onset_day_offset`) und macht damit aus **jedem** Versatz ungleich null ein
-„morgen" — auch aus `-1`. Im Nowcast-Pfad unerreichbar, im Abweichungsalarm der
-Normalfall. Die Auflösung erfolgt künftig über den **exakten** Versatz:
-`-1 → gestern`, `0 → (kein Wort)`, `1 → morgen`, alles darüber/darunter → Wochentag.
+**Ein gemeinsamer Baustein für das Tageswort — nicht zwei.**
+Heute löst `_onset_time_label()` (`render.py:303-310`) den Tagesversatz auf, arbeitet
+aber auf `OnsetEvent` (Nowcast) und prüft nur auf **Wahrheitswert**:
+
+```
+render.py:310:  return f"morgen {e.onset_time}" if e.onset_day_offset else e.onset_time
+```
+
+Damit wird aus **jedem** Versatz ungleich null ein „morgen" — auch aus `-1`. Im
+Nowcast-Pfad ist das unerreichbar (Vorwärtsfenster, `radar_service.py:599-602`), im
+Abweichungsalarm wäre es der Normalfall.
+
+Deshalb: eine **typunabhängige Hilfsfunktion** `(hhmm: str, day_offset: int) -> str`
+löst den **exakten** Versatz in das Wort auf (`-1 → gestern`, `0 → kein Wort`,
+`1 → morgen`, sonst Wochentag). `_onset_time_label()` wird auf sie umgestellt, der
+Abweichungsalarm benutzt dieselbe. Eine zweite Auflösungstabelle daneben wäre genau die
+Doppelpflege, die das Projekt an anderer Stelle (#1435) abgeschafft hat.
 
 ## Expected Behavior
 
@@ -113,7 +125,8 @@ Normalfall. Die Auflösung erfolgt künftig über den **exakten** Versatz:
   ergibt „gestern", `+1` ergibt „morgen".
   - Test: Je ein Rendering mit Versatz `-1` und `+1` gegen dieselbe Uhrzeit; der
     `-1`-Fall darf unter keinen Umständen „morgen" ergeben (Regression zur
-    Wahrheitswert-Prüfung in `render.py:310`).
+    Wahrheitswert-Prüfung in `render.py:310`). Dieselbe Gegenprobe gilt für den
+    Nowcast-Pfad, der auf denselben Baustein umgestellt wird.
 
 - **AC-3:** Given ein Abweichungsalarm mit einer Wertänderung, deren Spitzenwert zu
   einer bestimmten Stunde auftritt / When die Nachricht gerendert wird / Then benennt
