@@ -153,8 +153,18 @@ class NowcastResult:
                                      # unabhaengiger Starkregen-Ausbruch darf
                                      # eine Ueberholung fuer ganz anderen,
                                      # schwachen Nahregen nicht legitimieren).
-                                     # Nur noch Relevanz-Untergrenze fuer die
-                                     # Ueberholungspruefung, kein Faktor-Vergleich.
+                                     # BEWUSST beschreibend (F008, PO-Entscheid
+                                     # 2026-08-21): die Ueberholungsregel in
+                                     # trip_alert.py liest dieses Feld NICHT
+                                     # mehr -- ihre Relevanz-Untergrenze haengt
+                                     # jetzt an window_precip_mm
+                                     # (_OVERTAKE_MIN_ABSOLUTE_MM), weil eine
+                                     # Spitzenrate anhaltenden, nicht-spitzen
+                                     # Regen strukturell aussperrte. Das Feld
+                                     # bleibt fuer Beobachtbarkeit/Tests
+                                     # (intensity_label-Nachbarwert) erhalten,
+                                     # absichtlich ohne Regel-Leser -- kein
+                                     # vergessener Anschluss.
     window_precip_mm: float = 0.0   # Issue #2020: akkumulierte Menge in der ERSTEN
                                      # STUNDE ab jetzt (eigenes Fenster, s.
                                      # _OVERTAKE_COMPARE_WINDOW_MIN) -- vergleichbar

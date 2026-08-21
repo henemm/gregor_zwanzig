@@ -86,6 +86,17 @@ _ALARM_ANCHOR_CEILING = timedelta(hours=4)
 # Konstante statt Hartverdrahtung.
 _BRIEFING_OVERTAKE_FACTOR = 2.0
 
+# Issue #2020 F008 (PO-Entscheid 2026-08-21): absolute Relevanz-Untergrenze
+# der Ueberholungsregel, in mm je Vergleichsstunde -- ersetzt die fruehere
+# Spitzenraten-Untergrenze (max_rate_mm_h >= HEAVY_RAIN_THRESHOLD_MM_H).
+# Zweck unveraendert (verhindert, dass Nieselregen alarmiert, nur weil die
+# Ankuendigung noch kleiner war), aber jetzt an derselben Groesse wie der
+# Faktor-Vergleich (window_precip_mm) gemessen statt an einer Spitzenrate:
+# anhaltender, nicht-spitzer Regen (F008: 3,9 mm/h ueber 50 Min) uebertraf
+# eine Ankuendigung deutlich, wurde aber von der alten Ratenschwelle
+# ausgesperrt, obwohl er real die Ankuendigung ueberholte.
+_OVERTAKE_MIN_ABSOLUTE_MM = 2.0
+
 # Issue #1460 (P1a, loest #1444 S1 ab): der Wertebereich (`corridors[].notify`)
 # ist KEIN Alarm-Ausloeser mehr -- eine absolute Grenze widerspricht ADR-0009
 # (Alarme sind Abweichungs-Waechter). Der frueher hier gefuehrte
@@ -1357,17 +1368,19 @@ class TripAlertService:
             # angekündigter Regen bleibt unterdrückt (reines Δ-Modell).
             #
             # #2020 A3: Ueberholungs-Pruefung statt binaerer Sperre. Menge gegen
-            # Menge (window_precip_mm vs. _briefing_precip), Rate nur als
-            # Relevanz-Untergrenze (max_rate_mm_h >= HEAVY_RAIN_THRESHOLD_MM_H).
-            # UND-Verknuepfung (nicht ODER) haelt die Regel fuer festen
-            # _briefing_precip monoton in beiden Groessen (AC-3). Bewusst ueber
-            # die Modul-Referenz gelesen (radar_service_mod), nicht als
-            # `from ... import` gebundene Kopie (analog RADAR_ONSET_THRESHOLD_MIN,
-            # ADR-0021).
+            # Menge (window_precip_mm vs. _briefing_precip), Relevanz-Untergrenze
+            # ebenfalls ueber die Menge (F008, PO-Entscheid 2026-08-21) --
+            # NICHT mehr ueber die Spitzenrate: anhaltender, nicht-spitzer Regen
+            # ist per Definition nicht spitz und fiel durch die alte
+            # Ratenschwelle durch, obwohl er die Ankuendigung real ueberholte
+            # (belegt: 3,9 mm/h ueber 50 Min = 3,575 mm gegen 1,0 mm Ankuendigung,
+            # 3,6-fach -- alte Regel: kein Alarm). UND-Verknuepfung (nicht ODER)
+            # haelt die Regel fuer festen _briefing_precip monoton in beiden
+            # Groessen (AC-3).
             _overtaking = (
                 _briefing_announced
                 and result.window_precip_mm >= _briefing_precip * _BRIEFING_OVERTAKE_FACTOR
-                and result.max_rate_mm_h >= radar_service_mod.HEAVY_RAIN_THRESHOLD_MM_H
+                and result.window_precip_mm >= _OVERTAKE_MIN_ABSOLUTE_MM
             )
             if _briefing_announced and not result.is_convective and not _overtaking:
                 logger.debug(

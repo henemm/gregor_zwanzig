@@ -165,6 +165,33 @@ def _wet_frames_ac7(lat: float, lon: float) -> list:
     ]
 
 
+def _sustained_moderate_rain_frames_ac8(lat: float, lon: float) -> list:
+    """F008-Fix-Loop (2026-08-21, PO-Entscheid): realistische, DICHTE
+    Frame-Serie im 5-Minuten-Raster -- KEIN Zwei-Frame-Konstrukt (daran
+    haben wir schon zweimal Zeit verloren). Elf Frames von +5 bis +55 Min,
+    durchgehend 3,9 mm/h (knapp UNTER der ehemaligen 4,0-mm/h-Untergrenze) --
+    akkumuliert ~3,575 mm, weit ueber jede Ankuendigung von 1,0 mm."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    return [
+        RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=3.9)
+        for m in range(5, 56, 5)
+    ]
+
+
+def _niesel_frames_ac9(lat: float, lon: float) -> list:
+    """F008-Fix-Loop (2026-08-21): vier Frames im 15-Min-Raster (+5/+20/+35/
+    +50 Min, 1,2 mm/h) -- akkumuliert exakt 1,1 mm. Erfuellt den Faktor
+    gegen eine kleine Ankuendigung (0,5 mm -> Schwelle 1,0 mm), bleibt aber
+    unter der absoluten Untergrenze von 2,0 mm."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    return [
+        RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=1.2)
+        for m in (5, 20, 35, 50)
+    ]
+
+
 def _far_burst_masks_weak_near_rain_frames_f001(lat: float, lon: float) -> list:
     """Schwacher Nahregen (+5/+20/+35/+50 Min, 1,1 mm/h -> window_precip_mm
     ~1,008 mm) PLUS ein Starkregen-Ausbruch weit ausserhalb des 60-Min-
@@ -465,6 +492,7 @@ def test_ac2_high_peak_rate_without_enough_amount_keeps_suppression():
     """
     from services.radar_service import RadarNowcastService
     from services import radar_service as radar_service_mod
+    from services import trip_alert as trip_alert_mod
 
     uid = f"tdd-2020-ac2-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
@@ -487,14 +515,18 @@ def test_ac2_high_peak_rate_without_enough_amount_keeps_suppression():
             f"betragen (war {getattr(direct_result, 'window_precip_mm', 'FEHLT')})."
         )
         assert radar_service_mod.HEAVY_RAIN_THRESHOLD_MM_H == pytest.approx(4.0), (
-            "AC-2: HEAVY_RAIN_THRESHOLD_MM_H muss als Modul-Konstante existieren "
-            "und denselben Wert tragen wie intensity_to_text()."
+            "AC-2: HEAVY_RAIN_THRESHOLD_MM_H bleibt als Modul-Konstante bestehen "
+            "(weiterhin gelesen von intensity_to_text()), auch ohne Leser mehr in "
+            "der Ueberholungsregel (F008-Fix-Loop, 2026-08-21)."
         )
-        # Untergrenze allein erfuellt (6.0 >= 4.0), Faktor auf die MENGE nicht
-        # (1.8 < 2 x 1.0 = 2.0) -> die Sperre darf NICHT brechen.
+        # Spitzenrate allein (6.0 mm/h) waere frueher die Untergrenze gewesen --
+        # seit dem F008-Fix-Loop irrelevant fuer die Regel (beide Bedingungen
+        # haengen jetzt an der MENGE). Faktor auf die Menge nicht erfuellt
+        # (1.8 < 2 x 1.0 = 2.0) -> die Sperre darf NICHT brechen, unabhaengig
+        # von der Spitzenrate.
         overtaking = (
             direct_result.window_precip_mm >= 2.0 * briefing_precip
-            and direct_result.max_rate_mm_h >= radar_service_mod.HEAVY_RAIN_THRESHOLD_MM_H
+            and direct_result.window_precip_mm >= trip_alert_mod._OVERTAKE_MIN_ABSOLUTE_MM
         )
         assert overtaking is False, (
             "AC-2 Testkonstruktion: die Menge muss den Faktor UNTERSCHREITEN, "
@@ -608,6 +640,7 @@ def test_ac4_high_peak_rate_alone_never_triggers_the_overtake():
     """
     from services.radar_service import RadarNowcastService
     from services import radar_service as radar_service_mod
+    from services import trip_alert as trip_alert_mod
 
     uid = f"tdd-2020-ac4-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
@@ -641,10 +674,11 @@ def test_ac4_high_peak_rate_alone_never_triggers_the_overtake():
             "Ratenvergleich in die Irre fuehren, sonst prueft der Test die "
             "Regression nicht, vor der die Spec warnt."
         )
-        # Die korrekte, mengenbasierte Regel darf hier NICHT ausloesen.
+        # Die korrekte, mengenbasierte Regel (F008-Fix-Loop: beide Bedingungen
+        # haengen an der MENGE, nicht mehr an der Rate) darf hier NICHT ausloesen.
         correct_overtaking = (
             direct_result.window_precip_mm >= 2.0 * briefing_precip
-            and direct_result.max_rate_mm_h >= radar_service_mod.HEAVY_RAIN_THRESHOLD_MM_H
+            and direct_result.window_precip_mm >= trip_alert_mod._OVERTAKE_MIN_ABSOLUTE_MM
         )
         assert correct_overtaking is False, (
             "AC-4 Testkonstruktion: die mengenbasierte Regel darf hier nicht "
@@ -810,6 +844,124 @@ def test_ac7_missing_briefing_value_leaves_behavior_unchanged():
 
 
 # --------------------------------------------------------------------------
+# AC-8 (F008-Fix-Loop, PO-Entscheid 2026-08-21): anhaltender maessiger
+# Regen loest aus
+# --------------------------------------------------------------------------
+
+def test_ac8_sustained_moderate_rain_breaks_suppression():
+    """AC-8: Given Briefing kuendigt 1,0 mm an, Nowcast zeigt eine
+    realistische, dichte Frame-Serie (5-Min-Raster, +5 bis +55 Min)
+    durchgehend 3,9 mm/h -- knapp UNTER der ehemaligen 4,0-mm/h-Untergrenze,
+    akkumuliert aber ~3,575 mm (ueber 2 x 1,0 mm = 2,0 mm UND ueber der
+    absoluten Untergrenze 2,0 mm).
+    When der Pruefzyklus laeuft.
+    Then durchbricht der Nowcast die Sperre -- obwohl KEINE einzelne
+    Starkregen-Spitze (>=4,0 mm/h) auftritt. Vor dem F008-Fix waere dieser
+    Fall unterdrueckt geblieben, weil die alte Ratenschwelle anhaltenden,
+    nicht-spitzen Regen strukturell aussperrte.
+    """
+    from services.radar_service import RadarNowcastService
+
+    uid = f"tdd-2020-ac8-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    _ensure_real_user_dir(uid)
+    try:
+        trip_id = f"tdd-2020-ac8-{uuid.uuid4().hex[:6]}"
+        _save_trip_direct(_make_active_trip(trip_id), uid)
+        briefing_precip = 1.0
+        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={_onset_hour(5): briefing_precip})
+
+        radar_svc = RadarNowcastService(frame_source=_sustained_moderate_rain_frames_ac8)
+
+        direct_result = radar_svc.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+        assert direct_result.max_rate_mm_h < 4.0, (
+            "AC-8 Testkonstruktion: KEINE Einzelrate darf die ehemalige "
+            f"4,0-mm/h-Untergrenze erreichen (war {direct_result.max_rate_mm_h}), "
+            "sonst prueft der Test nicht den Menge-statt-Rate-Fall."
+        )
+        assert direct_result.window_precip_mm == pytest.approx(3.575, abs=0.05), (
+            f"AC-8: akkumulierte Menge muss ~3,575 mm betragen "
+            f"(war {direct_result.window_precip_mm})."
+        )
+
+        captured: list = []
+        svc = _new_service(uid, radar_svc, captured)
+        count = svc.check_radar_alerts()
+
+        assert count >= 1, (
+            f"AC-8: anhaltender maessiger Regen (~3,575 mm, ueber 2 x "
+            f"{briefing_precip} mm = {2*briefing_precip} mm UND ueber der "
+            f"absoluten Untergrenze) muss die Sperre durchbrechen, obwohl "
+            f"keine Einzelrate die ehemalige Untergrenze erreicht. War count={count}."
+        )
+        assert len(captured) >= 1, "AC-8: mail_sink muss aufgerufen werden."
+    finally:
+        _clean_user(uid)
+
+
+# --------------------------------------------------------------------------
+# AC-9 (F008-Fix-Loop, PO-Entscheid 2026-08-21): absolute Untergrenze
+# gegen Nieselregen
+# --------------------------------------------------------------------------
+
+def test_ac9_absolute_floor_blocks_drizzle_even_when_factor_is_met():
+    """AC-9: Given Briefing kuendigt 0,5 mm an (Faktor-Schwelle 1,0 mm),
+    Nowcast akkumuliert real 1,1 mm -- der Faktor (2 x 0,5 mm = 1,0 mm)
+    ist damit erfuellt.
+    When der Pruefzyklus laeuft.
+    Then bleibt die Sperre bestehen -- KEIN Alarm, weil 1,1 mm die absolute
+    Relevanzgrenze von 2,0 mm unterschreitet. Ohne diese Untergrenze wuerde
+    Nieselregen alarmieren, sobald die Ankuendigung nur klein genug war.
+    """
+    from services.radar_service import RadarNowcastService
+    from services import trip_alert as trip_alert_mod
+
+    uid = f"tdd-2020-ac9-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    _ensure_real_user_dir(uid)
+    try:
+        trip_id = f"tdd-2020-ac9-{uuid.uuid4().hex[:6]}"
+        _save_trip_direct(_make_active_trip(trip_id), uid)
+        briefing_precip = 0.5
+        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={_onset_hour(5): briefing_precip})
+
+        radar_svc = RadarNowcastService(frame_source=_niesel_frames_ac9)
+
+        direct_result = radar_svc.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+        assert direct_result.window_precip_mm == pytest.approx(1.1, abs=0.02), (
+            f"AC-9: akkumulierte Menge muss ~1,1 mm betragen "
+            f"(war {direct_result.window_precip_mm})."
+        )
+        # Die Falle: der reine Faktor-Vergleich (ohne absolute Untergrenze)
+        # haette HIER faelschlich ausgeloest.
+        factor_only_would_trigger = (
+            direct_result.window_precip_mm >= 2.0 * briefing_precip
+        )
+        assert factor_only_would_trigger is True, (
+            "AC-9 Testkonstruktion: der Faktor allein muss hier erfuellt "
+            "sein, sonst prueft der Test nicht die absolute Untergrenze."
+        )
+        assert direct_result.window_precip_mm < trip_alert_mod._OVERTAKE_MIN_ABSOLUTE_MM, (
+            "AC-9 Testkonstruktion: die Menge muss UNTER der absoluten "
+            f"Untergrenze ({trip_alert_mod._OVERTAKE_MIN_ABSOLUTE_MM} mm) bleiben."
+        )
+
+        captured: list = []
+        svc = _new_service(uid, radar_svc, captured)
+        count = svc.check_radar_alerts()
+
+        assert count == 0, (
+            f"AC-9: Menge (~1,1 mm) unterschreitet die absolute Untergrenze "
+            f"({trip_alert_mod._OVERTAKE_MIN_ABSOLUTE_MM} mm), obwohl der Faktor-"
+            f"Vergleich allein erfuellt waere -- die Sperre muss bestehen bleiben. "
+            f"War count={count}."
+        )
+        assert len(captured) == 0, "AC-9: kein Versand erwartet."
+    finally:
+        _clean_user(uid)
+
+
+# --------------------------------------------------------------------------
 # F001-Waechter (Fix-Loop, Adversary-Fund 2026-08-21): Rate- und Mengen-
 # fenster muessen deckungsgleich sein
 # --------------------------------------------------------------------------
@@ -967,17 +1119,21 @@ def test_f003_frame_coverage_derives_from_immediate_neighbor_not_global_estimate
 def test_f004_exact_equality_at_both_thresholds_breaks_the_suppression():
     """F004: beide >=-Vergleiche in der Ueberholungsregel sind an der
     Gleichheitsgrenze ungetestet. Diese Konstruktion trifft
-    window_precip_mm EXAKT auf 2 x briefing_precip und max_rate_mm_h EXAKT
-    auf 4,0 mm/h (Zeit eingefroren via now_fn, damit beide get_nowcast()-
-    Aufrufe bitgenau dasselbe Ergebnis liefern).
+    window_precip_mm EXAKT auf 2 x briefing_precip UND EXAKT auf die
+    absolute Untergrenze `_OVERTAKE_MIN_ABSOLUTE_MM` (2,0 mm) -- seit dem
+    F008-Fix-Loop (2026-08-21) haengen BEIDE Bedingungen an derselben
+    Groesse (window_precip_mm), nicht mehr an Menge UND Rate getrennt.
+    Ein einzelner isolierter Frame (+2 Min, 8,0 mm/h), gedeckelt auf die
+    15-Minuten-Obergrenze (0,25 h * 8,0 mm/h = 2,0 mm exakt, IEEE754-exakt
+    da Potenz-von-2-Bruch), trifft beide Grenzen mit EINER Konstruktion.
 
-    Given window_precip_mm == 2 x briefing_precip UND max_rate_mm_h == 4,0.
+    Given window_precip_mm == 2 x briefing_precip == _OVERTAKE_MIN_ABSOLUTE_MM.
     When der Pruefzyklus laeuft.
     Then durchbricht der Nowcast die Sperre (Spec-Wortlaut: `>=`, nicht `>`).
     """
     from providers.brightsky import RadarFrame
     from services.radar_service import RadarNowcastService
-    from services import radar_service as radar_service_mod
+    from services import trip_alert as trip_alert_mod
 
     uid = f"tdd-2020-f004-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
@@ -989,16 +1145,13 @@ def test_f004_exact_equality_at_both_thresholds_breaks_the_suppression():
         fixed_now = datetime.now(timezone.utc)
 
         def _frame_source(lat: float, lon: float) -> list:
-            return [
-                RadarFrame(timestamp=fixed_now + timedelta(minutes=m), precip_mm_h=4.0)
-                for m in (5, 20, 35, 50)
-            ]
+            return [RadarFrame(timestamp=fixed_now + timedelta(minutes=2), precip_mm_h=8.0)]
 
         radar_svc = RadarNowcastService(frame_source=_frame_source, now_fn=lambda: fixed_now)
         direct_result = radar_svc.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
-        assert direct_result.max_rate_mm_h == radar_service_mod.HEAVY_RAIN_THRESHOLD_MM_H, (
-            f"F004 Testkonstruktion: max_rate_mm_h muss exakt der Schwelle "
-            f"entsprechen (war {direct_result.max_rate_mm_h})."
+        assert direct_result.window_precip_mm == trip_alert_mod._OVERTAKE_MIN_ABSOLUTE_MM, (
+            f"F004 Testkonstruktion: window_precip_mm muss exakt der absoluten "
+            f"Untergrenze entsprechen (war {direct_result.window_precip_mm})."
         )
         # x/2.0 gefolgt von 2.0*x ist fuer IEEE754-Floats exakt (keine
         # Rundung) -- briefing_precip so gewaehlt, dass 2 x briefing_precip
@@ -1006,15 +1159,15 @@ def test_f004_exact_equality_at_both_thresholds_breaks_the_suppression():
         briefing_precip = direct_result.window_precip_mm / 2.0
         assert 2.0 * briefing_precip == direct_result.window_precip_mm
 
-        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={_onset_hour(5): briefing_precip})
+        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={_onset_hour(2): briefing_precip})
 
         captured: list = []
         svc = _new_service(uid, radar_svc, captured)
         count = svc.check_radar_alerts()
 
         assert count >= 1, (
-            f"F004: window_precip_mm == 2 x briefing_precip UND max_rate_mm_h "
-            f"== HEAVY_RAIN_THRESHOLD_MM_H (beide exakt an der Grenze) muessen "
+            f"F004: window_precip_mm == 2 x briefing_precip UND window_precip_mm "
+            f"== _OVERTAKE_MIN_ABSOLUTE_MM (beide exakt an der Grenze) muessen "
             f"die Sperre nach Spec-Wortlaut (>=) durchbrechen. War count={count}."
         )
         assert len(captured) >= 1, "F004: mail_sink muss aufgerufen werden."

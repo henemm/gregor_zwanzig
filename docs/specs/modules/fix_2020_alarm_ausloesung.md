@@ -49,8 +49,9 @@ erstmals im Alarm-Protokoll sichtbar.
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `radar_service.NowcastResult` | Datenklasse | trägt künftig zwei neue Felder: `window_precip_mm` (akkumulierte Menge in der ersten Stunde ab jetzt — der Wert für den Faktor-Vergleich gegen `_briefing_precip`) und `max_rate_mm_h` (Spitzenrate **im selben 60-Min-Vergleichsfenster wie `window_precip_mm`**, korrigiert nach Fix-Loop-Fund F001 — nur noch die Untergrenze „ist das überhaupt Starkregen") (siehe Vorbedingungs-Prüfung unten, revidiert) |
-| `radar_service.HEAVY_RAIN_THRESHOLD_MM_H` (neu, extrahierte Konstante) | Schwelle | Relevanzfilter (Untergrenze auf `max_rate_mm_h`) der Überholungsregel; dieselbe Zahl, die `intensity_to_text()` bereits für „Starker Regen" nutzt — keine zweite, unabhängige Zahl |
+| `radar_service.NowcastResult` | Datenklasse | trägt zwei Felder: `window_precip_mm` (akkumulierte Menge in der ersten Stunde ab jetzt — der Wert für BEIDE Bedingungen der Überholungsregel, Faktor UND absolute Untergrenze) und `max_rate_mm_h` (Spitzenrate **im selben 60-Min-Vergleichsfenster wie `window_precip_mm`**, korrigiert nach Fix-Loop-Fund F001; seit dem F008-Fix-Loop 2026-08-21 bewusst OHNE Regel-Leser — bleibt für Beobachtbarkeit/`intensity_label`-Nachbarwert erhalten) |
+| `trip_alert._OVERTAKE_MIN_ABSOLUTE_MM` (neu, Fix-Loop F008, 2026-08-21) | Konstante | absolute Relevanz-Untergrenze der Überholungsregel in mm je Vergleichsstunde (2,0 mm) — **ersetzt** die frühere Spitzenraten-Untergrenze `max_rate_mm_h >= HEAVY_RAIN_THRESHOLD_MM_H`; misst jetzt dieselbe Größe wie der Faktor-Vergleich (Menge statt Rate), PO-Entscheid |
+| `radar_service.HEAVY_RAIN_THRESHOLD_MM_H` (bereits vorhanden, unverändert) | Schwelle | bleibt bestehen für `intensity_to_text()` (Anzeige-Schwelle „Starker Regen") — wird von der Überholungsregel seit dem F008-Fix-Loop NICHT mehr gelesen |
 | `alert_log.append_suppressed_entry()` | Funktion (bereits vorhanden, unverändert) | dritter Aufruf im Nowcast-Pfad; Signatur und Verhalten bleiben wie für die beiden bestehenden Aufrufe in `check_radar_alerts()` |
 | `alert_log.REASON_NOWCAST` | Konstante (bereits vorhanden) | `reason`-Wert für den neuen Protokoll-Eintrag |
 
@@ -209,19 +210,23 @@ return NowcastResult(
 
 ```
 # src/services/trip_alert.py — check_radar_alerts(), Ersatz der binaeren Sperre
-# Modul-Konstante (analog RADAR_ONSET_THRESHOLD_MIN-Muster, #2009/ADR-0021):
+# Modul-Konstanten (analog RADAR_ONSET_THRESHOLD_MIN-Muster, #2009/ADR-0021):
 _BRIEFING_OVERTAKE_FACTOR = 2.0
+_OVERTAKE_MIN_ABSOLUTE_MM = 2.0   # F008-Fix-Loop, 2026-08-21, PO-Entscheid
 
 _briefing_announced = (_briefing_precip is not None and _briefing_precip >= 0.5)
 
 # #2020 A3: Ueberholungs-Pruefung statt binaerer Sperre. Menge gegen Menge
-# (window_precip_mm vs. _briefing_precip), Rate nur als Relevanz-Untergrenze
-# (max_rate_mm_h). UND-Verknuepfung (nicht ODER) haelt die Regel fuer festen
-# _briefing_precip monoton in beiden Groessen (AC-3).
+# (window_precip_mm vs. _briefing_precip), Relevanz-Untergrenze ebenfalls
+# ueber die Menge (F008-Fix-Loop: NICHT mehr ueber die Spitzenrate --
+# anhaltender, nicht-spitzer Regen fiel durch die alte Ratenschwelle,
+# obwohl er die Ankuendigung real ueberholte). UND-Verknuepfung (nicht
+# ODER) haelt die Regel fuer festen _briefing_precip monoton in beiden
+# Groessen (AC-3).
 _overtaking = (
     _briefing_announced
     and result.window_precip_mm >= _briefing_precip * _BRIEFING_OVERTAKE_FACTOR
-    and result.max_rate_mm_h >= radar_service_mod.HEAVY_RAIN_THRESHOLD_MM_H
+    and result.window_precip_mm >= _OVERTAKE_MIN_ABSOLUTE_MM
 )
 if _briefing_announced and not result.is_convective and not _overtaking:
     logger.debug(f"Radar alert suppressed: briefing had {_briefing_precip} mm for {trip.id}")
@@ -246,15 +251,26 @@ bleibt als Fallback unverändert erhalten — sie wird nur um `and not _overtaki
 nicht ersetzt. `_briefing_context`-Textzuordnung (Zeilen darunter) bleibt unverändert; siehe
 Known Limitations zur Wortlaut-Grenze dieser Scheibe.
 
+**F008-Fix-Loop (2026-08-21, PO-Entscheid):** `HEAVY_RAIN_THRESHOLD_MM_H` bleibt in
+`radar_service.py` bestehen (weiterhin gelesen von `intensity_to_text()`), verliert aber
+ihren Leser in der Überholungsregel. `result.max_rate_mm_h` bleibt als Feld auf
+`NowcastResult` erhalten (Beobachtbarkeit, Testaussage), ebenfalls ohne Regel-Leser — beide
+Änderungen sind additiv, keine Löschung. Der Import `from services import radar_service as
+radar_service_mod` in `check_radar_alerts()` bleibt bestehen: er wird weiterhin für
+`RADAR_ONSET_THRESHOLD_MIN` gebraucht (zwei Lesestellen, unverändert).
+
 ## Expected Behavior
 
 - **Input:** Briefing-Ankündigung `_briefing_precip` (mm, Onset-Stunde) und aktueller
-  Nowcast `result.window_precip_mm` (mm, akkumuliert in der ersten Stunde ab jetzt) sowie
-  `result.max_rate_mm_h` (mm/h, Spitzenwert) für dasselbe Segment.
+  Nowcast `result.window_precip_mm` (mm, akkumuliert in der ersten Stunde ab jetzt) für
+  dasselbe Segment. `result.max_rate_mm_h` (mm/h, Spitzenwert) bleibt Teil des
+  `NowcastResult`, ist aber seit dem F008-Fix-Loop (2026-08-21, PO-Entscheid) kein Eingang
+  der Überholungsregel mehr (siehe Dependencies).
 - **Output:** Die Briefing-Sperre bricht (Alarm wird ausgewertet und ggf. versendet), wenn
-  `window_precip_mm >= 2 × _briefing_precip` UND `max_rate_mm_h >= HEAVY_RAIN_THRESHOLD_MM_H`
-  (4,0 mm/h) — zusätzlich zur bestehenden konvektiven Bedingung. Bleibt die Sperre bestehen,
-  entsteht ein `alert_log`-Suppressed-Eintrag mit `reason=REASON_NOWCAST`.
+  `window_precip_mm >= 2 × _briefing_precip` UND `window_precip_mm >= _OVERTAKE_MIN_ABSOLUTE_MM`
+  (2,0 mm) — zusätzlich zur bestehenden konvektiven Bedingung. Beide Bedingungen hängen jetzt
+  an derselben Größe (Menge), nicht mehr an zwei unterschiedlichen (Menge und Rate). Bleibt
+  die Sperre bestehen, entsteht ein `alert_log`-Suppressed-Eintrag mit `reason=REASON_NOWCAST`.
 - **Side effects:** Erhöhtes Alarmaufkommen im Nowcast-Pfad (Betrag vorab nicht messbar,
   siehe Analyse-Dokument `docs/context/fix-2020-alarm-ausloesung.md`, Abschnitt
   „Summenwirkung"). Erstmals sichtbare Protokoll-Spur für diese konkrete Unterdrückung.
@@ -275,12 +291,15 @@ Known Limitations zur Wortlaut-Grenze dieser Scheibe.
     Briefing-Schnappschuss ausführen; prüfen, dass ein Alarm tatsächlich versendet wird
     (nicht nur, dass die Sperre-Variable stimmt).
 
-- **AC-2 (Menge entscheidet, nicht allein die Rate):** Given dasselbe Briefing (1,0 mm
-  angekündigt), der Nowcast erreicht kurzzeitig eine Spitzenrate von 6,0 mm/h (über der
-  4,0-mm/h-Untergrenze), fällt aber im restlichen Stundenfenster ab, sodass insgesamt nur
-  1,8 mm akkumulieren (unter 2 × 1,0 mm = 2,0 mm) / When derselbe Prüfzyklus läuft / Then
-  bleibt die Sperre bestehen (kein Alarm) — die Untergrenze allein reicht nicht, die
-  akkumulierte Menge muss den Faktor ebenfalls erfüllen.
+- **AC-2 (Menge entscheidet, nicht die Rate):** Given dasselbe Briefing (1,0 mm
+  angekündigt), der Nowcast erreicht kurzzeitig eine Spitzenrate von 6,0 mm/h, fällt aber im
+  restlichen Stundenfenster ab, sodass insgesamt nur ≈ 1,768 mm akkumulieren (unter 2 × 1,0
+  mm = 2,0 mm) / When derselbe Prüfzyklus läuft / Then bleibt die Sperre bestehen (kein
+  Alarm) — die akkumulierte Menge unterschreitet den Faktor, eine kurze Spitzenrate allein
+  ändert daran nichts (F008-Fix-Loop, 2026-08-21: die Überholungsregel liest `max_rate_mm_h`
+  seit dem PO-Entscheid gar nicht mehr — dieser Fall zeigt trotzdem weiterhin, dass eine
+  hohe Spitzenrate für sich genommen nie ausreicht, weil beide Bedingungen der Regel jetzt
+  an derselben Größe hängen).
   - Test: Gleicher Aufbau wie AC-1 mit abklingender Frame-Serie (hohe Einzelrate, geringe
     Gesamtmenge); prüfen, dass `continue` greift und kein Versand stattfindet.
 
@@ -298,16 +317,16 @@ Known Limitations zur Wortlaut-Grenze dieser Scheibe.
 
 - **AC-4 (Fehlalarm-Wächter — Spitzenrate allein darf NIE auslösen):** Given das
   Morgen-Briefing hat 2,0 mm für die Onset-Stunde angekündigt und der Nowcast zeigt einen
-  kurzen, 10-minütigen Schauer mit einer Spitzenrate von 4,5 mm/h (über der 4,0-mm/h-
-  Untergrenze), danach bleibt das Stundenfenster trocken, sodass real nur ≈ 0,75 mm
-  akkumulieren (weit unter 2 × 2,0 mm = 4,0 mm) / When der Prüfzyklus läuft / Then bleibt
-  die Sperre bestehen und es geht KEIN Alarm raus — die tatsächliche Regenmenge unterschreitet
-  sogar die Ankündigung, ein Alarm wäre hier objektiv falsch. Dieser Fall MUSS rot werden,
-  falls die Implementierung je wieder auf einen reinen Raten-Vergleich zurückgebaut wird.
+  kurzen, 10-minütigen Schauer mit einer Spitzenrate von 4,5 mm/h, danach bleibt das
+  Stundenfenster trocken, sodass real nur ≈ 0,75 mm akkumulieren (weit unter 2 × 2,0 mm =
+  4,0 mm UND unter der absoluten Untergrenze von 2,0 mm) / When der Prüfzyklus läuft / Then
+  bleibt die Sperre bestehen und es geht KEIN Alarm raus — die tatsächliche Regenmenge
+  unterschreitet sogar die Ankündigung, ein Alarm wäre hier objektiv falsch. Dieser Fall MUSS
+  rot werden, falls die Implementierung je wieder auf einen reinen Raten-Vergleich (statt
+  Menge gegen Menge, s. F008-Fix-Loop) zurückgebaut wird.
   - Test: `check_radar_alerts()` mit einem einzelnen kurzen Hochrate-Frame (10 Min, 4,5
     mm/h) gefolgt von trockenen Frames für den Rest der Stunde; assert, dass `continue`
-    greift und explizit KEIN Versand stattfindet, obwohl `max_rate_mm_h` allein die
-    Untergrenze erfüllt hätte.
+    greift und explizit KEIN Versand stattfindet, obwohl eine hohe Spitzenrate vorlag.
 
 - **AC-5 (Konvektiv-Override bleibt unangetastet):** Given eine Situation mit
   `is_convective=True` und einer Briefing-Ankündigung, bei der die Überholungsbedingung
@@ -335,6 +354,30 @@ Known Limitations zur Wortlaut-Grenze dieser Scheibe.
   - Test: Bestehenden Pfad ohne Schnappschuss durchlaufen lassen; prüfen, dass der Alarm
     wie vor dieser Änderung ausgelöst wird und kein `REASON_NOWCAST`-Suppressed-Eintrag
     für diese Ursache entsteht.
+
+- **AC-8 (F008-Fix — anhaltender mäßiger Regen löst aus):** Given das Morgen-Briefing hat
+  1,0 mm für die Onset-Stunde angekündigt und der Nowcast zeigt eine realistische, dichte
+  Frame-Serie im 5-Minuten-Raster mit durchgehend 3,9 mm/h über rund 50 Minuten (≈ 3,575 mm,
+  über 2 × 1,0 mm = 2,0 mm UND über der absoluten Untergrenze von 2,0 mm) / When der
+  Prüfzyklus läuft / Then durchbricht der Nowcast die Sperre und der Wanderer wird gewarnt —
+  die Ankündigung wird um mehr als das Doppelte übertroffen, obwohl keine einzelne
+  Starkregen-Spitze (≥ 4,0 mm/h) auftritt. Vor dem F008-Fix wäre dieser Fall unterdrückt
+  geblieben, weil die alte Ratenschwelle anhaltenden, nicht-spitzen Regen strukturell
+  aussperrte.
+  - Test: `check_radar_alerts()` mit einer dichten, realistischen Frame-Serie (mehrere
+    Frames über die Stunde, kein Zwei-Frame-Konstrukt) durchgehend knapp unter der
+    ehemaligen Ratenschwelle; assert, dass ein Alarm tatsächlich versendet wird.
+
+- **AC-9 (absolute Untergrenze — Nieselregen löst NIE aus):** Given das Morgen-Briefing hat
+  0,5 mm für die Onset-Stunde angekündigt und der Nowcast akkumuliert real 1,1 mm (der
+  Faktor 2 × 0,5 mm = 1,0 mm wäre damit erfüllt) / When der Prüfzyklus läuft / Then bleibt
+  die Sperre bestehen — KEIN Alarm, weil 1,1 mm die absolute Relevanzgrenze von 2,0 mm
+  unterschreitet. Ohne diese Untergrenze würde Nieselregen alarmieren, sobald die
+  Ankündigung nur klein genug war — die Untergrenze verhindert das unabhängig vom
+  angekündigten Wert.
+  - Test: `check_radar_alerts()` mit einer Frame-Serie, die den Faktor erfüllt, aber unter
+    der absoluten Untergrenze bleibt; assert, dass `continue` greift und explizit KEIN
+    Versand stattfindet, obwohl der Faktor-Vergleich allein ausgelöst hätte.
 
 ## Known Limitations
 
@@ -420,3 +463,18 @@ Known Limitations zur Wortlaut-Grenze dieser Scheibe.
   Anschluss (eigene AC-Freigabe nötig). ACs dieses Fix-Loops inhaltlich unverändert.
   Details: `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`, Abschnitt
   „Runde 2".
+- 2026-08-21: F008-Fix-Loop (PO-Entscheid): die Relevanz-Untergrenze der Überholungsregel
+  wechselt von der Spitzenrate (`max_rate_mm_h >= HEAVY_RAIN_THRESHOLD_MM_H`) auf die
+  Regenmenge (`window_precip_mm >= _OVERTAKE_MIN_ABSOLUTE_MM`, 2,0 mm). Grund: anhaltender,
+  nicht-spitzer Regen ist per Definition nicht spitz und fiel durch die alte Ratenschwelle
+  durch, obwohl er die Ankündigung real überholte (F008-Beleg: 3,9 mm/h über 50 Min ≈
+  3,575 mm gegen 1,0 mm Ankündigung, 3,6-fach — alte Regel: kein Alarm). Beim Nachrechnen
+  zeigte sich zusätzlich: AC-2 und AC-4 (die beiden bestehenden Fehlalarm-Wächter) blockierten
+  bereits über die Menge, nicht über die Rate — die Ratenbedingung schützte nie das, wofür sie
+  gedacht war. `HEAVY_RAIN_THRESHOLD_MM_H` bleibt bestehen (weiter gelesen von
+  `intensity_to_text()`), `max_rate_mm_h` bleibt als Feld erhalten (Beobachtbarkeit), beide
+  ohne Leser mehr in der Überholungsregel — additiv, nichts entfernt. AC-2/AC-4 umformuliert
+  (Prüfzweck unverändert: kurze Spitze löst nie aus — Begründung jetzt die Menge statt die
+  Rate), **AC-8** (anhaltender mäßiger Regen löst aus) und **AC-9** (absolute Untergrenze
+  gegen Nieselregen) neu. Details: `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`,
+  Abschnitt F008.
