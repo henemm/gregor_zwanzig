@@ -1,5 +1,16 @@
 # Context: fix-2020-alarm-zeitangaben
 
+> ## ⚠️ UMSCHNITT 2026-08-21 — dieses Dokument beschreibt den ALTEN Zuschnitt
+>
+> **PO-Entscheid: #2020 wird auf die AUSLÖSUNG umgeschnitten.** Die hier analysierte
+> Formulierung der Zeitangaben ist inhaltlich weiterhin richtig, aber das **kleinere**
+> Problem. Sie wird **Scheibe 2**. Die freigegebene Spec
+> `docs/specs/modules/fix_2020_alarm_zeitangaben.md` bleibt als Scheibe-2-Vorlage
+> erhalten; ihre Freigabe gilt **nicht** für den neuen Zuschnitt.
+>
+> Warum umgeschnitten wurde, steht unten unter „Nachtrag: Was wirklich gefallen ist".
+> Der neue Zuschnitt bekommt ein eigenes Kontext-Dokument.
+
 Issue: [#2020](https://github.com/henemm/gregor_zwanzig/issues/2020) · `priority:critical` · `type:bug` · `session:alarm`
 Basis: `d7fad756` (enthält #2009 und #2017 A)
 
