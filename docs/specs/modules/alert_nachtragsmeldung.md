@@ -4,7 +4,7 @@ type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
 status: draft
-version: "1.2"
+version: "1.3"
 tags: [alerts, trip, issue-2018, issue-1467, nachtrag, event-identity]
 ---
 
@@ -81,7 +81,7 @@ Betroffene Schicht: ausschließlich **Python-Core** (`src/services/`,
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `rework_1467_s4b_entdopplung` | module | Vorgänger-Scheibe (live) — liefert `check_event_identity_gate`, `GateResult`, `resolve_hazard_class`, das Register-Schema, UND die eigenständig freigegebene Gegenrichtung (Kernfall-Test), die diese Scheibe unangetastet lässt |
-| `rework_1917_s4b2_compare_entdopplung` | module | Vorgänger-Scheibe (live) — verdrahtet `check_event_identity_gate` an den beiden Compare-Aufrufstellen. Diese Scheibe fasst die dortige Logik NICHT an, ergänzt nur eine Bestandsschutz-Bedingung (s. Teil B) |
+| `rework_1917_s4b2_compare_entdopplung` | module | Vorgänger-Scheibe (live) — verdrahtet `check_event_identity_gate` an den beiden Compare-Aufrufstellen. Diese Scheibe fasst die dortigen Aufrufstellen GAR NICHT an (B0, Korrektur 4) — Bestandsschutz rein testseitig |
 | `services.alert_urgency` | module | geteilte Dringlichkeits-Skala `"LOW"/"MODERATE"/"HIGH"`, `exceeds()` — bleibt in JEDER Konstellation die maßgebliche Freigabe-Prüfung, inklusive der Nachtrags-Richtung (dort ändert sich nur die FORM des Ergebnisses, nicht die Prüfung selbst) |
 | `services.alert_state.AlertStateService` | module | Register-Ablage (`event_identity:`-Präfix) — der neue Quellenvermerk ist ein zusätzliches Feld in der bestehenden Nutzlast, kein neuer Präfix |
 | `services.radar_service.NOWCAST_HORIZON_MIN` | module | bestehende Konstante (180 Min seit #1945) — V1-Ausnahme unverändert, in beiden Zweigen |
@@ -99,8 +99,8 @@ Betroffene Schicht: ausschließlich **Python-Core** (`src/services/`,
 
 - **LoC produktiv:** Teil A ~55-70/-15 (`alert_gate.py`), Teil B ~120-140/-15
   (`model.py`, `official_alerts.py`, `render.py`, `alert_log.py`,
-  `trip_alert.py` — NUR zwei statt vier Aufrufstellen —, plus je EINE Zeile
-  Bestandsschutz in `compare_radar_alert.py`/`compare_official_alert.py`),
+  `trip_alert.py` — NUR EINE echte Aufrufstelle, der Trip-Nowcast-Pfad;
+  die Compare-Dateien bleiben nach Korrektur 4 unangetastet),
   Teil C ~10-15/-2 (`render.py`, additiv). **Gesamt ~+185-225/-32
   produktiv.**
 - **LoC Tests:** Teil A ~190-230 (inkl. der neuen Stille-Regressionsfälle
@@ -111,9 +111,10 @@ Betroffene Schicht: ausschließlich **Python-Core** (`src/services/`,
   Test-LoC — sprengt das 250er-Budget weiterhin, `loc_limit_override`
   erforderlich** (Präzedenz S4a/S4b: kritischer Alarmpfad, vier Kanäle,
   Mutations-Gegenproben Pflicht).
-- **Files:** 0 neu, 7 produktiv geändert (davon 2 nur minimal:
-  `compare_radar_alert.py`, `compare_official_alert.py`), 1 ADR-Nachtrag,
-  ~5-7 Testdateien geändert/neu.
+- **Files:** 0 neu, 5 produktiv geändert (`alert_gate.py`, `model.py`,
+  `render.py`, `alert_log.py`, `trip_alert.py`) — `compare_radar_alert.py`
+  und `compare_official_alert.py` bleiben nach Korrektur 4 UNVERÄNDERT —,
+  1 ADR-Nachtrag, ~6-8 Testdateien geändert/neu.
 - **Effort:** high.
 - **Risiko:** HOCH — kritischer Alarmpfad, alle vier Kanäle im Trip-Pfad, ein
   bit-eingefrorenes Golden wird bewusst berührt.
@@ -314,24 +315,47 @@ Eskalation" kippt `.allowed` durch die neue Logik zwar nicht (es war und
 bleibt `True`), aber die FORM wechselt auf `is_addendum=True` — ein
 Compare-Aufrufer, der weiterhin nur `.allowed` liest, würde diese Meldung
 unverändert (unmarkiert) zustellen, was inhaltlich unverändert korrekt
-bleibt. **Die eigentliche Bruchstelle liegt woanders: der Ortsvergleich
-braucht trotzdem eine explizite Bestandsschutz-Zeile**, damit ein künftiger
-Compare-Umbau, der `is_addendum` auswertet, nicht versehentlich eine
-Ortsvergleich-eigene Nachtragsdarstellung erzeugt, ohne dass dafür je eine
-PO-Entscheidung getroffen wurde — die Bedingung macht das Nicht-Auswerten
-technisch verbindlich statt nur eine Absicht zu sein.
+bleibt. **Ein künftiger Compare-Umbau, der `is_addendum` auswertet, könnte
+allerdings eine Ortsvergleich-eigene Nachtragsdarstellung erzeugen, ohne
+dass dafür je eine PO-Entscheidung getroffen wurde — dagegen braucht es
+einen Wächter.** Welcher, s. Korrektur 4 direkt unten: ein
+Verhaltenswächter, KEINE Änderung der Freigabe-Bedingung.
 
-**Minimale, mechanische Anpassung (keine neue Logik, kein Rendering, keine
-eigene Ortsvergleich-Nachtragsmeldung):** beide Compare-Aufrufstellen
-prüfen künftig `identity_gate.allowed and not identity_gate.is_addendum`
-statt bloß `identity_gate.allowed`. Das ist die EINZIGE Zeile, die sich an
-`compare_radar_alert.py:229` und `compare_official_alert.py:210` ändert —
-sie stellt sicher, dass eine Nachtrag-Konstellation für den Ortsvergleich
-weiterhin exakt wie eine gewöhnliche Voll-Zustellung behandelt wird (sie
-IST ja eine Voll-Zustellung, nur mit einem für Compare irrelevanten Zusatz-
-Flag), OHNE dass Compare je `addendum_reference` liest oder rendert.
+**KORREKTUR 4 (2026-08-21, Coordinator-Entscheid — die zuvor hier
+vorgesehene Bedingung ist ZURÜCKGENOMMEN):** Der frühere Entwurf sah vor,
+beide Compare-Aufrufstellen künftig `identity_gate.allowed and not
+identity_gate.is_addendum` statt bloß `identity_gate.allowed` prüfen zu
+lassen. **Das war falsch und ist ersatzlos gestrichen.** Am Code
+nachgewiesen: für die Konstellation "amtlich registriert (`MODERATE`),
+Ortsvergleich-Nowcast danach MIT Eskalation (`HIGH`)" liefert das Gate
+heute über `exceeds` ein `_ALLOWED` (`alert_gate.py:605`), der Ort landet
+in `allowed_triggered` (`compare_radar_alert.py:229`) und **wird
+zugestellt**. Nach Teil A trägt dasselbe Ergebnis zusätzlich
+`is_addendum=True`; die vorgeschlagene Bedingung hätte den Ort damit in den
+`else`-Zweig fallen lassen — inklusive `append_suppressed_entry` — und
+diese heute zugestellte Meldung **künftig unterdrückt**. Das ist genau die
+Mengenänderung, die die harte Invariante ("Die Menge der zugestellten
+Meldungen ist vor und nach dieser Scheibe IDENTISCH", PO-Entscheid
+Korrektur 3) verbietet. Die frühere Begründung ("sie IST ja eine
+Voll-Zustellung, nur mit einem für Compare irrelevanten Zusatz-Flag")
+beschrieb das Gegenteil dessen, was `not is_addendum` mechanisch tut.
 
-AC-B15 sichert das mit einem eigenen Regressionstest ab.
+**Verbindliche Fassung: der Ortsvergleich bekommt in dieser Scheibe NULL
+Produktivänderung.** `compare_radar_alert.py:229` und
+`compare_official_alert.py:210` behalten `identity_gate.allowed`
+unverändert. Eine Nachtrag-Konstellation wird dort weiterhin als
+gewöhnliche Voll-Zustellung behandelt — was sie ist —, und Compare liest
+`is_addendum`/`addendum_reference` schlicht nie.
+
+Der in B0 ursprünglich befürchtete Fall (ein künftiger Compare-Umbau
+erzeugt eine Ortsvergleich-eigene Nachtragsdarstellung, ohne dass je eine
+PO-Entscheidung dafür vorlag) wird stattdessen **am beobachtbaren
+Verhalten** bewacht statt durch eine Bedingung, die eine Zustellung kostet
+— s. AC-B15 (neue Fassung): taucht in einem Compare-Ausgabetext jemals
+eine Nachtrags-Markierung auf, wird der Wächter rot. Dieser Schutz ist
+ohne jede Mengenänderung zu haben.
+
+AC-B14 und AC-B15 sichern das gemeinsam ab.
 
 #### B1. Designentscheid: Kennzeichnung sitzt im SMS-Text
 
@@ -441,7 +465,7 @@ auswertbar, ohne das bestehende Schema für den Regelfall zu verändern.
 |---|---|---|
 | `trip_alert.py:1437-1445` (Trip-Nowcast) | nach `check_event_identity_gate`, vor `send_radar_alert` | bei `is_addendum`: `addendum_reference` bauen (B2), in `_radar_request`/`AlertMessage` setzen statt der bestehenden Suppression-Logik |
 | `trip_alert.py:1838-1849` (Trip-amtlich, Batch) | pro Alert im Filter-Loop | **KEINE Änderung** — amtliche Meldungen können strukturell nie `is_addendum=True` bekommen (A4); der Filter-Loop bleibt exakt beim S4b-1-Verhalten (verwirft weiterhin nur bei `allowed=False`) |
-| `compare_radar_alert.py:224-231` | pro getriggertem Ort | **NUR Bestandsschutz** (B0): `identity_gate.allowed and not identity_gate.is_addendum` statt `identity_gate.allowed` |
+| `compare_radar_alert.py:224-231` | pro getriggertem Ort | **KEINE Änderung** (B0, Korrektur 4) — `identity_gate.allowed` bleibt; `not is_addendum` hätte eine heute zugestellte Meldung unterdrückt und die Mengen-Invariante gebrochen. Bestandsschutz rein testseitig (AC-B14/B15) |
 | `compare_official_alert.py:204-212` | pro Ort im Filter-Loop | **KEINE Änderung nötig** — amtliche Meldungen können strukturell nie `is_addendum=True` werden, die bestehende `identity_gate.allowed`-Prüfung bleibt für amtliche Meldungen bereits korrekt |
 
 **Präzisierung:** Der amtliche Trip-Pfad (`trip_alert.py:1838-1849`) und
@@ -449,7 +473,8 @@ der amtliche Compare-Pfad (`compare_official_alert.py`) brauchen **gar
 keine Code-Änderung** — sie prüfen amtliche Meldungen, und amtliche
 Meldungen können den neuen Zweig per Konstruktion nie erreichen (A4). Nur
 der Trip-Nowcast-Pfad bekommt echte neue Logik (B2-B4); der Compare-
-Nowcast-Pfad bekommt ausschließlich die Bestandsschutz-Zeile aus B0.
+Nowcast-Pfad bekommt nach Korrektur 4 GAR KEINE Änderung (B0) — sein
+Bestandsschutz wird ausschließlich testseitig bewacht (AC-B14/B15).
 
 ### Teil C — Der Cooldown-Satz wird ehrlich
 
@@ -525,9 +550,13 @@ String statt als Substring prüft.
 - **`hazard_class=None`** (Gefahrenart außerhalb `wet`) lässt weiterhin
   IMMER durch, ohne das Register zu lesen (S4b-1 AC-4, unverändert).
 - **Leere Segment-Menge erzeugt nie ein Match** (S4b-1 AC-5, unverändert).
-- **Der Ortsvergleich verhält sich exakt unverändert** — die Bestands-
-  schutz-Bedingung in `compare_radar_alert.py` garantiert das aktiv, nicht
-  durch bloßes Nichtstun (B0).
+- **Der Ortsvergleich verhält sich exakt unverändert** — er bekommt in
+  dieser Scheibe NULL Produktivänderung (B0, Korrektur 4).
+  `identity_gate.allowed` bleibt die Freigabe-Bedingung; die zwischenzeitlich
+  erwogene Verschärfung auf `and not is_addendum` ist zurückgenommen, weil
+  sie eine heute zugestellte Meldung unterdrückt und damit die Mengen-
+  Invariante bricht. Bewacht wird das Verhalten (AC-B14: Zustellung bleibt;
+  AC-B15: keine Nachtrags-Markierung in irgendeinem Compare-Ausgabetext).
 - **Mandantentrennung:** jeder neue Verzweigungspfad (Nachtrag) mit ZWEI
   verschiedenen Nutzern verifiziert, `user_id` nie auf `"default"`
   zurückfallen lassen.
@@ -610,7 +639,8 @@ String statt als Substring prüft.
    (160-Zeichen).
 4. Trip-Nowcast-Aufrufstelle verdrahten (B6) — die amtliche Trip-
    Aufrufstelle bleibt unangetastet (kein Nachtrag dort möglich).
-5. Bestandsschutz-Zeile in `compare_radar_alert.py` (B0) — unabhängig,
+5. Ortsvergleich: KEINE Produktivänderung (B0, Korrektur 4) — nur die
+   beiden Bestandsschutz-Tests AC-B14/AC-B15 schreiben, unabhängig,
    kann parallel zu 3/4 entstehen.
 6. `alert_log`-Erweiterung (B5) — unabhängig, kann parallel entstehen.
 7. Teil C zuletzt, in derselben Datei wie B3/B4 — additiv, geringes Risiko,
@@ -629,7 +659,7 @@ String statt als Substring prüft.
 | `tests/tdd/test_alert_gate.py:927-971` (V2 same-source, alte AC-10) | bleibt UNVERÄNDERT grün (Invariante "gleiche Quelle") |
 | `tests/tdd/test_compare_radar_alert_event_identity.py:842-882` (Signatur-Wächter) | bleibt grün — kein neuer Parameter an `check_event_identity_gate`/`record_event_identity`/`resolve_hazard_class` |
 | `tests/tdd/test_official_alert_cooldown_entkopplung.py` | bleibt grün — `check_official_alert_gate`-Signatur unverändert |
-| bestehende Ortsvergleich-Nowcast-/-amtlich-Tests (S4b-2/#1917) | bleiben unverändert grün — Bestandsschutz-Bedingung (B0) garantiert byte-identisches Verhalten |
+| bestehende Ortsvergleich-Nowcast-/-amtlich-Tests (S4b-2/#1917) | bleiben unverändert grün — der Ortsvergleich-Code wird nach Korrektur 4 überhaupt nicht angefasst; AC-B14/B15 bewachen das Verhalten zusätzlich |
 | `tests/tdd/test_alert_stufenwort.py::test_ac14_sms_bleibt_unveraendert_regressionswaechter` | prüft den SMS-Text eines GEWÖHNLICHEN Alarms auf exakt `"km 0-4: TH:M->H@15"` — erscheint das neue Token hier, ist das ein Befund an der Implementierung (Token leckt in einen Fall ohne Treffer), NICHT am Test; die Erwartung wird nicht aufgeweicht |
 | `tests/tdd/test_telegram_kurzstil_trip_alert.py:315` | prüft Byte-Identität Kurzstil-Telegram == SMS-Text bei einem gewöhnlichen Alarm — dieselbe Schärfe wie oben |
 | S6-Wächter zu `AC-12` (Stand-Zeile nur Telegram, Kurzstil byte-identisch zur SMS) | das neue Token heißt nicht `Stand:` und sitzt im SMS-Text — es wird vom Kurzstil miterbt, die Byte-Identität bleibt gewahrt (eigenes Regressions-AC hier, AC-B10) |
@@ -672,7 +702,7 @@ nicht am bloßen Aufruf-Nachweis einer Funktion.
 | AC-B12 (amtlicher Trip-Pfad bleibt unangetastet) | bestehende amtliche Trip-Batch-Tests, unverändert grün | Kern |
 | AC-B13 (alert_log-Nachtrags-Markierung, additiv, Alt-Einträge unverändert) | `tests/tdd/test_alert_log_*.py` (neuer Fall) | Kern |
 | AC-B14 (Ortsvergleich verhält sich exakt unverändert) | bestehende Ortsvergleich-Nowcast-/-amtlich-Tests (S4b-2/#1917), unverändert grün + 1 neuer Fall mit einer eskalierenden amtlich→Nowcast-Konstellation, die für Compare weiterhin als gewöhnliche Voll-Zustellung behandelt wird | Kern |
-| AC-B15 (Bestandsschutz-Bedingung technisch nachgewiesen) | `tests/tdd/test_compare_radar_alert*.py` (neu: `identity_gate.is_addendum=True` UND `identity_gate.allowed=True` im Rohergebnis, Compare-Bedingung wird direkt geprüft) | Kern |
+| AC-B15 (Bestandsschutz am VERHALTEN bewacht, Korrektur 4) | `tests/tdd/test_compare_radar_alert_event_identity.py` (neu: Rohergebnis `allowed=True` UND `is_addendum=True`, Compare stellt trotzdem voll zu, KEINE Nachtrags-Markierung in irgendeinem Compare-Ausgabetext) | Kern |
 | AC-C1 (Cooldown-Satz-Präzisierung, additiv) | bestehende Substring-Wächter unverändert + neuer Substring-Test auf den Zusatz | Kern |
 | AC-C2 (Golden bewusst aktualisiert) | `tests/tdd/test_multi_location_onset_alert.py:39-48` | Kern |
 | AC-C3 (Reihenfolge-Nachweis: Rebase vor Renderer-Änderung) | `# doc-compliance-test` (Commit-Reihenfolge/Changelog) | Kern |
@@ -976,15 +1006,28 @@ Test-Postfach bzw. Test-Chat.
     unverändert grün.
   - Schicht: Kern.
 
-- **AC-B15:** Given das rohe Gate-Ergebnis für die in AC-B14 beschriebene
-  Konstellation (`identity_gate.allowed=True, identity_gate.is_addendum=
-  True`), When `compare_radar_alert.py` seine Freigabe-Bedingung auswertet,
-  Then lautet sie `identity_gate.allowed and not
-  identity_gate.is_addendum` — nicht bloß `identity_gate.allowed`.
-  - Test: gezielter Test auf die Bedingung selbst (nicht nur den
-    Endeffekt), damit ein künftiger Refactor, der die Bedingung
-    versehentlich auf `identity_gate.allowed` verkürzt, hier rot wird,
-    nicht erst über einen indirekten Zustellungstest.
+- **AC-B15 (NEU GEFASST, vierte Korrektur):** Given das rohe Gate-Ergebnis
+  für die in AC-B14 beschriebene Konstellation (`identity_gate.allowed=
+  True`, `identity_gate.is_addendum=True`), When der Ortsvergleich-Nowcast-
+  Pfad (`compare_radar_alert.py`) damit läuft, Then gilt alles drei: (a)
+  das Rohergebnis trägt tatsächlich `allowed=True` UND `is_addendum=True`,
+  (b) der Ort wird TROTZDEM voll zugestellt — er bleibt in
+  `allowed_triggered`, es entsteht KEIN `append_suppressed_entry`-Eintrag,
+  die Zahl der zugestellten Orte ist identisch zum Vor-#2018-Stand, und (c)
+  in KEINEM Compare-Ausgabetext und auf keinem Compare-Objekt taucht eine
+  Nachtrags-Markierung oder ein `addendum_reference` auf.
+  - Test: echter Compare-Lauf mit präpariertem amtlichem Registereintrag;
+    (a) ist bis zum Abschluss von Teil A rot, (b) und (c) sind
+    Bestandsschutz-Wächter. Teilzusicherung (c) ist der eigentliche Schutz
+    gegen einen künftigen Compare-Umbau, der `is_addendum` auswertet und
+    eine Ortsvergleich-eigene Nachtragsdarstellung erzeugt — sie wird rot,
+    sobald so etwas im Ausgabetext erscheint.
+  - **Ausdrücklich NICHT geprüft wird die Freigabe-Bedingung als Literal.**
+    Die frühere Fassung dieses AC verlangte `identity_gate.allowed and not
+    identity_gate.is_addendum`; das ist zurückgenommen (B0, Korrektur 4),
+    weil diese Bedingung eine heute zugestellte Meldung unterdrückt und
+    damit die harte Mengen-Invariante bricht. Die Bedingung bleibt
+    `identity_gate.allowed`.
   - Schicht: Kern.
 
 **Teil C — Ehrlicher Cooldown-Satz**
@@ -1044,10 +1087,10 @@ Test-Postfach bzw. Test-Chat.
   unterdrückt, bekommt KEINEN Nachtrag. Bewusst so belassen — der PO hat
   nur die Form einer ohnehin stattfindenden Zustellung geändert, nicht das
   Ob.
-- **Ortsvergleich bekommt keine eigene Nachtragsmeldung** — die
-  Bestandsschutz-Bedingung stellt sicher, dass sich nichts ändert, aber
-  löst nicht das ursprüngliche Ticket-Problem für den Ortsvergleich (der
-  ohnehin PO-zurückgestellt ist).
+- **Ortsvergleich bekommt keine eigene Nachtragsmeldung** — sein Code
+  bleibt unangetastet (Korrektur 4), die Wächter AC-B14/AC-B15 sichern
+  das ab. Das löst das ursprüngliche Ticket-Problem für den Ortsvergleich
+  NICHT (der ohnehin PO-zurückgestellt ist).
 - **Der Nachtragstext nennt bewusst keine Gewitterstufe** — sollte eine
   künftige Iteration das ändern wollen, MUSS das Wort aus `THUNDER_LABEL_DE`
   kommen (#1480-Wächter), nie lokal kopiert werden.
@@ -1118,3 +1161,32 @@ Test-Postfach bzw. Test-Chat.
   gegen den Arbeitsbaum (nach #1948 S6 `cba7ffa3` und #2009 `d7fad756`)
   neu verifiziert, alle übrigen Fundstellen gegen den Arbeitsbaum zum
   Zeitpunkt der Spec-Erstellung verifiziert.
+- 2026-08-21 (Korrektur 4, gleicher Tag, Version 1.3, **während der
+  TDD-RED-Phase**): **Zweiter echter Fehler**, aufgedeckt vom RED-Agenten
+  beim Schreiben der Ortsvergleich-Tests und am Code gegengeprüft. Die in
+  Korrektur 2 ergänzte Bestandsschutz-Bedingung
+  (`identity_gate.allowed and not identity_gate.is_addendum`) bewirkt das
+  GEGENTEIL ihrer eigenen Begründung: für die Konstellation "amtlich
+  registriert, Ortsvergleich-Nowcast danach MIT Eskalation" liefert das
+  Gate heute über `exceeds` ein `_ALLOWED` (`alert_gate.py:605`), der Ort
+  landet in `allowed_triggered` (`compare_radar_alert.py:229`) und wird
+  ZUGESTELLT. Nach Teil A trägt dasselbe Ergebnis zusätzlich
+  `is_addendum=True`; `not is_addendum` hätte den Ort damit in den
+  `else`-Zweig fallen lassen (inklusive `append_suppressed_entry`) und
+  diese heute zugestellte Meldung künftig UNTERDRÜCKT — eine
+  Mengenänderung im Ortsvergleich, also genau das, was die in Korrektur 3
+  eingeführte harte Invariante ("Zustellmenge bleibt identisch",
+  PO-Entscheid) verbietet, und ein direkter Widerspruch zu AC-B14
+  ("Ortsvergleich verhält sich exakt unverändert"). Korrigiert: die
+  Bedingung ist ersatzlos zurückgenommen, `compare_radar_alert.py:229` und
+  `compare_official_alert.py:210` behalten `identity_gate.allowed`; der
+  Ortsvergleich bekommt in dieser Scheibe NULL Produktivänderung. Der
+  ursprünglich damit bezweckte Schutz (kein künftiger Compare-Umbau
+  erzeugt unbemerkt eine Ortsvergleich-eigene Nachtragsdarstellung) wandert
+  in AC-B15, neu gefasst als reiner VERHALTENS-Wächter: Rohergebnis trägt
+  `is_addendum=True`, Compare stellt trotzdem voll zu, und in keinem
+  Compare-Ausgabetext taucht je eine Nachtrags-Markierung auf. Damit ist
+  derselbe Schutz ohne jede Mengenänderung zu haben. Entschieden vom
+  Coordinator, nicht neu beim PO vorgelegt: der PO-Entscheid zur
+  Zustellmenge (Korrektur 3) lag bereits vor und ist eindeutig — die
+  AC-Formulierung verletzte ihn, nicht umgekehrt.
