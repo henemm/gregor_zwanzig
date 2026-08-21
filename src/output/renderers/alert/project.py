@@ -400,6 +400,12 @@ def to_multi_location_onset_alert_message(
             intensity_label=nc.intensity_label, source_label=nc.source,
             location_label=location_name if multi else None,
             onset_day_offset=day_offset(now, onset_dt, loc_tz),
+            # Issue #2046: die Mengenangabe der Kurznachricht kommt im
+            # Ortsvergleich-Buendel aus DEMSELBEN NowcastResult wie im
+            # Trip-Pfad -- sonst entstuende hier eine stille Luecke, weil
+            # dieser Pfad sein OnsetEvent selbst baut (ADR-0021: Trip und
+            # Ortsvergleich teilen die Ausgabe).
+            onset_precip_mm=nc.onset_precip_mm,
         ))
     trip_short = (
         ", ".join(name for name, _loc, _nc in valid_groups)

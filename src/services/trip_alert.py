@@ -1479,6 +1479,11 @@ class TripAlertService:
                 intensity_label=_label,
                 source_label=radar_svc.source_label(result.source),
                 briefing_context=_briefing_context,
+                # Issue #2046: die Menge der Stunde AB DEM BEGINN aus DEMSELBEN
+                # NowcastResult, das schon onset_minutes/intensity_label
+                # liefert (analog `is_convective=result.is_convective`) -- rein
+                # beschreibend, ohne Einfluss auf die Ausloeseregel.
+                onset_precip_mm=result.onset_precip_mm,
                 tz=tz,
             )
 

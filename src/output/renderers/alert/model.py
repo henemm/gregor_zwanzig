@@ -60,6 +60,13 @@ class OnsetEvent:
     # unveraenderten Normalfall (0). Beide Onset-Pfade setzen es (Trip UND
     # Ortsvergleich-Buendel, ADR-0021).
     onset_day_offset: int = 0
+    # Issue #2046: additiv, optional (Muster `onset_day_offset` o.). Erwartete
+    # Niederschlagsmenge (mm) der STUNDE AB DEM BEGINN — Quelle
+    # `NowcastResult.onset_precip_mm`. Gelesen AUSSCHLIESSLICH vom
+    # Kurznachrichten-Renderer (`_render_sms_onset`); E-Mail und
+    # Telegram-Langform bleiben bei `intensity_label` als Wort. `None` (oder
+    # unterhalb der Trockenschwelle) → zahlenlose Alt-Form `R@HH:MM`.
+    onset_precip_mm: float | None = None
 
 
 @dataclass(frozen=True)

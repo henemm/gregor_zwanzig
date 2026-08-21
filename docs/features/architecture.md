@@ -396,8 +396,15 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      - `render_telegram(msg)` — Fettzeile + Detail mit Onset-Uhrzeit und Quelle
      - `render_sms(msg)` — Token `R@<hh:mm>` (Regen) oder `TH@<hh:mm>` (Gewitter), Zeitpunkt statt
        Countdown (seit #1948 S4; Kurznachricht kürzt bei der Stunde die führende Null,
-       `TH@9:05` statt `TH@09:05`), ≤140 Zeichen GSM-7
-     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`
+       `TH@9:05` statt `TH@09:05`), ≤140 Zeichen GSM-7. **Seit #2046** trägt der Token bei
+       belastbarer Menge (≥ 0,1 mm, akkumuliert über 60 Min **ab dem Beginn**, nicht ab
+       Versandzeitpunkt) zusätzlich die erwartete Regenmenge: `R2.5@18:00` (Regen, Zahl
+       direkt hinter dem Kürzel) bzw. `TH@18:00 R2.5` (Gewitter, Zahl als eigenes Token
+       nach der Zeit — hinter `TH` bleibt die Stufen-Position frei). Ohne belastbare Zahl
+       (`None`, unter 0,1 mm, Daten nicht verfügbar) bleibt die zahlenlose Form
+       (`R@18:00`/`TH@18:00`) erhalten; E-Mail- und Telegram-Langform sind unverändert und
+       zeigen weiterhin `intensity_label` als Wort.
+     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst)
      - `AlertMessage.cooldown_display` trägt den dynamischen Cooldown-Text (z.B. „2 Stunden")
      - `src/outputs/radar_alert.py` ist gelöscht — kein separater Inline-Body-Bau mehr
    - **Throttle-Semantik unverändert** (Issue #773): `radar_alert_throttle.json` + `alert_log` auch bei Best-Effort-Versandfehlern

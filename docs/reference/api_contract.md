@@ -3370,7 +3370,7 @@ S1-Eingangsprotokoll (`src/services/alert_input_capture.py`, siehe
 |------|-----|------|
 | changes | `ChangePayload[]` | Zweig a (Δ-Alarm): rohe Änderungswerte je Etappe (`metric`, `old_value`, `new_value`, `delta`, `threshold`, `severity`, `direction`, `segment_id`) |
 | segment_times | `SegmentTimePayload[]` | Optional bei `changes` — fehlt es, synthetisiert der Endpoint die Etappen-Zeitfenster aus dem geladenen Trip über dieselbe Produktions-Segmentierung wie der Versandpfad (`convert_trip_to_segments`) |
-| onset | `OnsetPayload` \| null | Radar-Onset (Zweig c, Alt-Form vor S2): `onset_minutes`, `onset_time`, `km_from`, `km_to`, `is_convective`, `intensity_label`, `source_label`, `cooldown_display?`, `segment_id?` (additiv seit #1948 S5, AC-15 — ohne Segment-Kennung fiel der Zweig auf den km-Rückfall zurück) |
+| onset | `OnsetPayload` \| null | Radar-Onset (Zweig c, Alt-Form vor S2): `onset_minutes`, `onset_time`, `km_from`, `km_to`, `is_convective`, `intensity_label`, `source_label`, `cooldown_display?`, `segment_id?` (additiv seit #1948 S5, AC-15 — ohne Segment-Kennung fiel der Zweig auf den km-Rückfall zurück), `onset_precip_mm?` (additiv seit #2046 — Menge in mm, akkumuliert über 60 Min ab Ereignisbeginn; `None`/fehlend ⇒ SMS-Onset-Token ohne Zahl) |
 | official | `OfficialAlertPayload[]` \| null | **NEU (#1948 S2), Zweig b:** amtliche Warnung(en), Feldspiegel von `OfficialAlert` — `source`, `hazard`, `level: int`, `label`, `valid_from?`, `valid_to?`, `url?`, `region_label?`, `dedup_id?`, `segment_ids: string[]` |
 | nowcast_frames | `NowcastFramesPayload` \| null | **NEU (#1948 S2), Zweig c:** Replay eines S1-Nowcast-Mitschnitts — `source`, `frames: [{timestamp, precip_mm_h, is_convective}]`, `km_from`, `km_to`, `segment_id?` (additiv seit #1948 S5, AC-15, analog zu `OnsetPayload`) |
 
@@ -3655,6 +3655,12 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-21: Issue #2046 — `OnsetPayload` (Section 22.5, `POST /api/trips/{trip_id}/
+  alert-preview`) bekommt additiv das Feld `onset_precip_mm: float | null`. Speist die neue
+  Mengenangabe im SMS-/Premium-SMS-/Telegram-Kurzstil-Onset-Token (`R2.5@18:00` bzw.
+  `TH@18:00 R2.5`, akkumuliert über 60 Min ab Ereignisbeginn, nicht ab Versandzeitpunkt).
+  Reine additive Feld-Ergänzung, kein Formatwechsel der Antwortstruktur; E-Mail- und
+  Telegram-Langform unverändert. Spec: `docs/specs/modules/fix_2046_onset_menge.md`.
 - 2026-08-20: Issue #1948 Scheibe S5 — `OnsetPayload` und `NowcastFramesPayload` (Section 22.5,
   `POST /api/trips/{trip_id}/alert-preview`) bekommen additiv das Feld `segment_id: string | null`,
   analog zu `segment_ids` bei `OfficialAlertPayload` (Vorbedingung aus S4, AC-15) — ohne Segment-

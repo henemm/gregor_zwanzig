@@ -94,6 +94,14 @@ _OVERTAKE_COMPARE_WINDOW_MIN = 60
 # Deckung naher Frames nach oben oder unten verfaelschen).
 _MAX_FRAME_COVERAGE = timedelta(minutes=15)
 
+# Issue #2046: Laenge des Mengenfensters AB DEM BEGINN (Anzeige-Zahl der
+# Onset-Kurznachricht). Bewusst ein EIGENER Name neben
+# _OVERTAKE_COMPARE_WINDOW_MIN, obwohl beide heute 60 sind: die beiden Fenster
+# haben verschiedene Bezugspunkte (Beginn vs. jetzt) und verschiedene Zwecke
+# (Anzeige vs. Ueberholungsregel) -- ein geteilter Name wuerde die naechste
+# Aenderung des einen still auf das andere durchschlagen lassen.
+_ONSET_PRECIP_WINDOW_MIN = 60
+
 # Issue #2009: einzige Quelle der Onset-Alarmschwelle, ersetzt die bisher
 # doppelt gepflegten Literale in trip_alert.py und compare_radar_alert.py
 # (ADR-0021 — Trip und Ortsvergleich teilen den Code). Wert 55: am Cron-Takt
@@ -169,6 +177,17 @@ class NowcastResult:
                                      # STUNDE ab jetzt (eigenes Fenster, s.
                                      # _OVERTAKE_COMPARE_WINDOW_MIN) -- vergleichbar
                                      # mit precip_1h_mm im Briefing.
+    onset_precip_mm: Optional[float] = None
+    # Issue #2046: akkumulierte Menge der 60 Minuten AB DEM BEGINN (nicht ab
+    # jetzt wie window_precip_mm) -- Grundlage der SMS-Mengenangabe. `None`,
+    # wenn `onset_minutes` `None` ist ODER im Fenster ab dem Beginn keine
+    # Frames liegen. Eigenes Fenster, aber DIESELBE Akkumulationsmechanik wie
+    # window_precip_mm (gemeinsamer Rechenkern `_accumulate_precip_mm`:
+    # Frame-Dedup, _MAX_FRAME_COVERAGE-Deckel, Fensterende als harte Grenze).
+    # Der Alarm feuert bis RADAR_ONSET_THRESHOLD_MIN (55) Minuten vor dem
+    # Beginn -- das Fenster ab jetzt deckt dann fast nur Trockenzeit ab und
+    # untertriebe die Menge systematisch. BEWUSST beschreibend: kein Leser in
+    # radar_alert_due()/der #2020-Ueberholungsregel.
 
 
 def _offline_fixture_active() -> bool:
@@ -176,6 +195,51 @@ def _offline_fixture_active() -> bool:
     Aktivierungsregel wie providers/base.py:144. EIN Schalter fuer den
     gesamten Radar-Pfad, kein separater Radar-Env-Var (ADR-0033 Punkt 3)."""
     return bool(os.environ.get("GZ_TEST_FIXTURE_DIR", "").strip())
+
+
+def _accumulate_precip_mm(
+    frames: list, all_ts_sorted: list, start: datetime, end: datetime,
+) -> float:
+    """Akkumulierte Niederschlagsmenge (mm) im Zeitfenster [`start`, `end`).
+
+    Issue #2046: der bisher in `_derive_result` inline stehende Rechenkern des
+    #2020-Mengenfensters, unveraendert, nur um Fensterstart/-ende
+    parametrisiert. GEMEINSAM genutzt von `window_precip_mm` (ab jetzt) und
+    `onset_precip_mm` (ab dem Beginn) -- eine zweite Kopie wuerde beide
+    Mechaniken auseinanderlaufen lassen.
+
+    Die Mechanik im Einzelnen (Herleitung s. #2020, Adversary-Runden 2/3):
+      * Dedup auf EINEN Eintrag je Zeitstempel; bei widerspruechlichen Werten
+        gewinnt der HOEHERE (F010 -- sonst zaehlt derselbe Zeitabschnitt aus
+        Providerwiederholung/Sidecar-Merge doppelt).
+      * Dauer JE Frame aus seinem eigenen naechsten Nachbarn in der
+        VOLLSTAENDIGEN Frame-Liste (`all_ts_sorted`), nie aus einer globalen
+        Kadenz-Schaetzung (F006/F007).
+      * Gedeckelt auf `_MAX_FRAME_COVERAGE` UND nie ueber `end` hinaus: ein
+        einzelner Frame nach Datenausfall darf nicht bis zum Fensterende
+        gestreckt werden. Fehlende Frames machen die Menge dadurch eher zu
+        klein als zu gross (bewusst konservativ).
+      * Fenstergrenze ausschliessend (`<`): ein Frame exakt auf `end` bekaeme
+        ueber `frame_end` ohnehin Dauer null.
+    """
+    by_ts: dict[datetime, float] = {}
+    for frame in frames:
+        if not (start <= frame.timestamp < end):
+            continue
+        existing = by_ts.get(frame.timestamp)
+        if existing is None or frame.precip_mm_h > existing:
+            by_ts[frame.timestamp] = frame.precip_mm_h
+
+    total = 0.0
+    for ts, rate in sorted(by_ts.items()):
+        next_idx = bisect.bisect_right(all_ts_sorted, ts)
+        next_ts_full = (
+            all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted) else end
+        )
+        frame_end = min(next_ts_full, ts + _MAX_FRAME_COVERAGE, end)
+        duration_h = max(0.0, (frame_end - ts).total_seconds() / 3600.0)
+        total += rate * duration_h
+    return total
 
 
 class RadarNowcastService:
@@ -651,10 +715,17 @@ class RadarNowcastService:
 
         # onset_minutes: first frame with precip >= threshold
         onset_minutes: Optional[int] = None
+        # Issue #2046: der EXAKTE Zeitstempel desselben Frames -- Fensterstart
+        # der Mengenrechnung ab dem Beginn. Bewusst nicht aus `onset_minutes`
+        # zurueckgerechnet: das ist der GERUNDETE Anzeigewert, und ein Aufrunden
+        # (delta 49.6 -> 50) wuerde den Beginn-Frame aus seinem eigenen Fenster
+        # herausschieben.
+        onset_ts: Optional[datetime] = None
         for frame in sorted(window, key=lambda f: f.timestamp):
             if frame.precip_mm_h >= _DRY_THRESHOLD_MM_H:
                 delta = (frame.timestamp - now).total_seconds() / 60.0
                 onset_minutes = max(0, round(delta))
+                onset_ts = frame.timestamp
                 break
 
         # Max rate im 180-Min-Nowcast-Fenster -- speist NUR intensity_label
@@ -721,37 +792,26 @@ class RadarNowcastService:
             key=lambda f: f.timestamp,
         )
 
-        # Issue #2020 Adversary-Runde 3, F010: eine Providerwiederholung
-        # oder ein Sidecar-Merge (siehe Kommentar zu _MAX_FRAME_COVERAGE
-        # oben -- exakt diese Ursache) kann zwei Frames mit IDENTISCHEM
-        # Zeitstempel liefern. `all_ts_sorted` ist ein Set und dedupliziert
-        # bereits, die Akkumulationsschleife lief bisher aber ueber ALLE
-        # (nicht deduplizierten) Frames: bisect_right liefert fuer beide
-        # Duplikate denselben next_ts_full, also bekaeme JEDER der beiden
-        # unabhaengig die VOLLE Deckung bis dahin -- derselbe Zeitabschnitt
-        # wuerde zweimal gezaehlt. Vor der Summierung deshalb auf einen
-        # Eintrag je Zeitstempel reduziert. Bei widerspruechlichen Werten
-        # zum selben Zeitpunkt gewinnt bewusst der HOEHERE Regenwert: es ist
-        # derselbe Zeitabschnitt, er wird genau einmal gezaehlt, und unter
-        # widerspruechlichen Messwerten ist der hoehere Wert derjenige,
-        # dessen Verlust wehtaete -- dieses Ticket existiert, weil eine
-        # Warnung zu spaet kam.
-        compare_window_by_ts: dict[datetime, float] = {}
-        for frame in compare_window:
-            existing = compare_window_by_ts.get(frame.timestamp)
-            if existing is None or frame.precip_mm_h > existing:
-                compare_window_by_ts[frame.timestamp] = frame.precip_mm_h
+        # Der Rechenkern (Frame-Dedup mit "hoeherer Wert gewinnt", Dauer je
+        # Frame aus dem eigenen Nachbarn, _MAX_FRAME_COVERAGE-Deckel,
+        # Fensterende als harte Grenze) steht seit #2046 in
+        # `_accumulate_precip_mm` -- unveraendert, nur um die Fenstergrenzen
+        # parametrisiert, damit die Mengenzahl AB DEM BEGINN dieselbe Mechanik
+        # benutzt und nicht als zweite Kopie davon abdriften kann.
+        window_precip_mm = _accumulate_precip_mm(
+            frames, all_ts_sorted, now, compare_horizon,
+        )
 
-        window_precip_mm = 0.0
-        for ts, rate in sorted(compare_window_by_ts.items()):
-            next_idx = bisect.bisect_right(all_ts_sorted, ts)
-            next_ts_full = (
-                all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted)
-                else compare_horizon
+        # Issue #2046: Anzeige-Menge der Onset-Kurznachricht -- 60 Minuten AB
+        # DEM BEGINN statt ab jetzt. DIESELBE `frames`-Liste, kein zweiter
+        # Quellen-Abruf (AC-12); veraendert weder onset_minutes noch
+        # window_precip_mm noch max_rate_mm_h.
+        onset_precip_mm: Optional[float] = None
+        if onset_ts is not None:
+            onset_precip_mm = _accumulate_precip_mm(
+                frames, all_ts_sorted, onset_ts,
+                onset_ts + timedelta(minutes=_ONSET_PRECIP_WINDOW_MIN),
             )
-            frame_end = min(next_ts_full, ts + _MAX_FRAME_COVERAGE, compare_horizon)
-            duration_h = max(0.0, (frame_end - ts).total_seconds() / 3600.0)
-            window_precip_mm += rate * duration_h
 
         # Issue #2020 Adversary-Fund F001: max_rate_mm_h fuer die
         # Ueberholungspruefung MUSS aus demselben Fenster stammen wie
@@ -776,6 +836,7 @@ class RadarNowcastService:
             data_unavailable=data_unavailable,
             max_rate_mm_h=compare_window_max_rate_mm_h,
             window_precip_mm=window_precip_mm,
+            onset_precip_mm=onset_precip_mm,  # Issue #2046
         )
 
 
