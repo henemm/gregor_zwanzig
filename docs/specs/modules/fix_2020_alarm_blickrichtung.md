@@ -460,6 +460,19 @@ Kurzkanal zwei Schreibweisen für „Uhrzeit an einem anderen Tag" nebeneinander
 - **Kein Vier-Kanäle-Wächter für Zeit-/Restmengen-Label allgemein.** Es gibt keinen
   automatischen Test, der bei künftigen Textänderungen alle vier Kanäle einfordert. AC-7
   deckt den hier geänderten Fall ab, nicht die Gattung. → Eintrag für #1196.
+- **🔴 Der Ortsvergleich bekommt das WORT, aber nicht die Mechanik** (Adversary-Befund
+  F004, 2026-08-21). `to_multi_point_alert_message()`/`to_point_alert_message()`
+  (`project.py:336-387`/`:500-513`) nehmen **kein** `now_utc` entgegen — Tagesbezug,
+  Vergangenheits-Ausweis und Restmenge erreichen den Ortsvergleich also nie. Was dort
+  ankommt, ist allein die geteilte Wortkonstante „stärkste Stunde" aus dem gemeinsamen
+  Renderer (belegt durch die nachgezogene Zusicherung in
+  `test_alert_location_vocabulary.py:367-372`). Das ist ein **Zwischenzustand**: Der
+  Ortsvergleich sagt jetzt „stärkste Stunde 16:00", ohne Vergangenes als vergangen
+  auszuweisen. Bewusst so belassen, weil Ortsvergleich-Themen PO-seitig zurückgestellt
+  sind; die Source-Liste dieser Spec nennt ausschließlich den Trip-Pfad. AC-8/AC-9/AC-10
+  sind generisch formuliert („ein Abweichungsalarm"), gelten aber nur für den Trip-Pfad —
+  diese Einschränkung war in der Spec vor der Umsetzung **nicht** benannt und wird hier
+  nachgetragen. Nachziehen des Ortsvergleichs = eigenes Ticket.
 - **`CorridorEvent` bleibt unangetastet.** Der Schwellen-Alarm-Zweig (`render.py:263`,
   `_sms_corridor_token`) wirft ebenfalls Minuten weg, ist aber keine der beiden
   Ereignisarten aus dem gemeldeten Vorfall. Außerhalb des Zuschnitts dieser Scheibe.

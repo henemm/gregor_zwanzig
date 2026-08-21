@@ -45,20 +45,23 @@ unveraenderte Hauptrepo-Kopie und meldete falsches Gruen.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
 
+from app.config import Settings
 from app.day_window import resolve_configured_window, window_end_utc_exclusive
 from app.models import (
     ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
     SegmentWeatherData, SegmentWeatherSummary, TripSegment,
 )
+from app.trip import Stage, Trip, Waypoint
 from output.renderers.alert.project import to_alert_message
 from output.renderers.alert.render import (
     _render_sms_body, render_email, render_sms, render_telegram,
 )
+from services.notification_service import NotificationService
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import local_fmt
 
@@ -615,4 +618,212 @@ def test_unbestimmbare_restmenge_erfindet_keine_entwarnung():
     assert "Rest" not in unbestimmbar["sms"], (
         f"Kurzform darf kein Restmengen-Token erfinden; "
         f"bekam {unbestimmbar['sms']!r}"
+    )
+
+
+# --------------------------------------------------------------------------
+# Absicherung der Fenstergrenze (kein AC): die Stunde AUF `segment.end_time`
+# gehoert nicht mehr ins Fenster — sonst rechnet die Restmenge gegen eine
+# Fenster-Gesamtmenge, die diese Stunde gar nicht enthaelt.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "regenstunde, gesamtmenge, erwartet, verboten",
+    [
+        # 19:00 ist die LETZTE Stunde des Fensters 4-19 und zaehlt voll mit
+        # (`end_hour` inklusive, ADR-0035) -> sie steckt in der
+        # Fenster-Gesamtmenge (24 mm) UND in der Restmenge.
+        (19, SUMME_AC1 + 2.0, "noch ~24 mm, letzter Regen gegen 19:00", "gegen 17:00"),
+        # 20:00 ist das EXKLUSIVE Segment-Ende. `_aggregate_for_segment()`
+        # filtert `start_floor <= ts < end_floor` (segment_weather.py:276-282,
+        # Bug #806) -- die Stunde fehlt damit in der Fenster-Gesamtmenge, die
+        # deshalb bei 22 mm bleibt. Zaehlte die Restmenge sie trotzdem mit,
+        # ergaebe `new_value - remaining` einen NEGATIVEN Wert und die
+        # Restmenge (24 mm) uebertraefe die Gesamtmenge (22 mm) -- beides
+        # verbietet AC-2 ausdruecklich.
+        (20, SUMME_AC1, "noch ~22 mm, letzter Regen gegen 17:00", "gegen 20:00"),
+    ],
+    ids=["19_uhr_letzte_fensterstunde_zaehlt", "20_uhr_segmentende_zaehlt_nicht"],
+)
+def test_fenstergrenze_trennt_letzte_fensterstunde_vom_segmentende(
+    regenstunde, gesamtmenge, erwartet, verboten,
+):
+    """Absicherung der Fenstergrenze (gehoert zu keinem der 14 ACs — sie
+    schuetzt die Umsetzung von AC-2 und AC-6).
+
+    GIVEN Tagesfenster 4-19 (Segment-Ende 20:00) und die AC-1-Reihe, ergaenzt
+          um 2 mm einmal auf 19:00 (letzte Fensterstunde) und einmal auf
+          20:00 (exakt das Segment-Ende). Die Fenster-Gesamtmenge folgt
+          jeweils derselben Regel, nach der sie produktiv entsteht.
+    WHEN  bei Referenzzeit 10:00 gerendert wird
+    THEN  zaehlt die 19:00-Stunde mit (24 mm / 19:00) und die 20:00-Stunde
+          NICHT (22 mm / 17:00).
+
+    Beide Zeilen zusammen nageln die Grenze von BEIDEN Seiten fest: eine
+    Implementierung mit `<= seg_end` bricht an der zweiten, eine mit
+    `< seg_end - 1h` an der ersten.
+    """
+    reihe = {**REIHE_AC1, regenstunde: 2.0}
+    texte = _texte(reihe, now_utc=_uhr(10), neu=gesamtmenge)
+
+    for kanal, text in _langform(texte):
+        assert f"Ab jetzt: {erwartet}" in text, (
+            f"{kanal}: Regenstunde {regenstunde}:00 -> erwartet {erwartet!r}; "
+            f"bekam:\n{text}"
+        )
+        assert verboten not in text, (
+            f"{kanal}: {verboten!r} zeigt an, dass die Fenstergrenze um eine "
+            f"Stunde verrutscht ist; bekam:\n{text}"
+        )
+        assert "~-" not in text, (
+            f"{kanal}: Keine Teilmenge darf negativ werden — genau das "
+            f"passiert, wenn die Restmenge eine Stunde mitzaehlt, die in der "
+            f"Fenster-Gesamtmenge fehlt; bekam:\n{text}"
+        )
+
+
+# --------------------------------------------------------------------------
+# Absicherung des WIRKORTS (kein AC): der echte Versandweg reicht die
+# Referenzzeit durch. Ohne sie faellt die Ausgabe still auf die alte,
+# rueckwaertsgewandte Fassung zurueck — und genau das faengt kein Test, der
+# `to_alert_message()` direkt aufruft.
+# --------------------------------------------------------------------------
+
+def _trip_fuer_versand() -> Trip:
+    stage = Stage(
+        id="S1", name="Etappe 1", date=TAG,
+        waypoints=[
+            Waypoint(id="W1", name="Start", lat=ISLAND_LAT, lon=ISLAND_LON,
+                     elevation_m=800),
+            Waypoint(id="W2", name="Ziel", lat=ISLAND_LAT + 0.1,
+                     lon=ISLAND_LON + 0.1, elevation_m=900),
+        ],
+    )
+    return Trip(id="trip-2020-wirkort", name="ProbeTrip", stages=[stage])
+
+
+def _settings_nur_email() -> Settings:
+    """`can_send_email() == True`, Telegram und SMS ausdruecklich AUS.
+
+    `smtp_host` zeigt auf eine nicht aufloesbare `.invalid`-Domain (Muster
+    `tests/helpers/alert_log_fixtures.settings_email_only`); zusammen mit dem
+    `mail_sink` unten wird der SMTP-Weg gar nicht erst betreten.
+    """
+    return Settings(
+        smtp_host="dummy.invalid", smtp_user="dummy", smtp_pass="dummy",
+        mail_to="dummy@example.invalid",
+        telegram_bot_token="", telegram_chat_id="",
+        seven_api_key="", sms_to="",
+    )
+
+
+def _lauf_um_jetzt():
+    """Ein Etappen-Datenstand, dessen Fenster um die AKTUELLE Stunde liegt.
+
+    `send_deviation_alert()` liest seine Referenzzeit selbst aus der Systemuhr
+    (so entsteht sie produktiv) — der Test kann sie also nicht setzen und baut
+    stattdessen die Stundenreihe um sie herum. Die Mengen entsprechen exakt
+    dem AC-1-Szenario: 8 mm sind gefallen, 14 mm stehen noch aus.
+
+    Die Stunde, in der "jetzt" liegt, traegt bewusst KEINEN Regen. Damit ist
+    das Ergebnis auch dann stabil, wenn zwischen dem Bau der Reihe hier und
+    dem `datetime.now()` im Dienst ein Stundenwechsel faellt.
+    """
+    jetzt = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    beginn, ende = jetzt - timedelta(hours=2), jetzt + timedelta(hours=4)
+    regen = {jetzt - timedelta(hours=1): 8.0, jetzt + timedelta(hours=1): 10.0,
+             jetzt + timedelta(hours=2): 3.0, jetzt + timedelta(hours=3): 1.0}
+    segment = TripSegment(
+        segment_id="Ziel",
+        start_point=GPXPoint(lat=ISLAND_LAT, lon=ISLAND_LON, elevation_m=800.0,
+                             distance_from_start_km=0.0),
+        end_point=GPXPoint(lat=ISLAND_LAT + 0.1, lon=ISLAND_LON + 0.1,
+                           elevation_m=900.0, distance_from_start_km=9.0),
+        start_time=beginn, end_time=ende, duration_hours=6.0,
+        distance_km=9.0, ascent_m=100.0, descent_m=100.0,
+    )
+    punkte = [
+        ForecastDataPoint(
+            ts=beginn + timedelta(hours=i),
+            t2m_c=12.0, wind10m_kmh=15.0, gust_kmh=25.0,
+            precip_1h_mm=regen.get(beginn + timedelta(hours=i), 0.0),
+        )
+        for i in range(7)
+    ]
+
+    def _stand(summe: float) -> SegmentWeatherData:
+        return SegmentWeatherData(
+            segment=segment,
+            timeseries=NormalizedTimeseries(
+                meta=ForecastMeta(provider=Provider.OPENMETEO, model="test",
+                                  grid_res_km=1.0),
+                data=punkte,
+            ),
+            aggregated=SegmentWeatherSummary(temp_max_c=12.0, precip_sum_mm=summe),
+            fetched_at=jetzt, provider="openmeteo",
+        )
+
+    neu = _stand(SUMME_AC1)
+    changes = WeatherChangeDetectionService().detect_changes(
+        _stand(ANGEKUENDIGT), neu, include_absolute=False,
+    )
+    regen_changes = [c for c in changes if c.metric == "precip_sum_mm"]
+    assert regen_changes, (
+        f"Fixtur-Schutz: der Detektor muss ausloesen; bekam "
+        f"{[c.metric for c in changes]}"
+    )
+    return regen_changes, [neu]
+
+
+def test_versandweg_reicht_die_referenzzeit_durch():
+    """Absicherung des Wirkorts (gehoert zu keinem der 14 ACs — sie schuetzt
+    die Umsetzung von AC-1 an der Stelle, an der sie WIRKT).
+
+    GIVEN eine Niederschlags-Summen-Aenderung, deren Stundenreihe um die
+          aktuelle Stunde liegt (8 mm gefallen, 14 mm stehen aus)
+    WHEN  sie ueber den ECHTEN Versandweg `NotificationService.
+          send_deviation_alert()` laeuft — nicht ueber einen Direktaufruf von
+          `to_alert_message()` — und die Mail ueber die Transport-Naht
+          `mail_sink` abgefangen wird (kein SMTP, kein echter Versand)
+    THEN  traegt der zugestellte Text die vorwaertsgewandte Aussage.
+
+    WARUM DIESER TEST: `to_alert_message()` faellt ohne `now_utc` still auf
+    die alte, rueckwaertsgewandte Fassung zurueck (Regressions-Invariante fuer
+    Bestandsaufrufer). Wer die Uebergabe in `notification_service.py`
+    versehentlich entfernt, bekommt von jedem Test, der die Projektion direkt
+    aufruft, ein gruenes Licht — und der Alarm meldete wieder Vergangenheit,
+    also exakt den Fehler, den diese Scheibe behebt.
+
+    `mail_sink` ersetzt AUSSCHLIESSLICH den Transport: der Text, den es
+    bekommt, ist derselbe `render_email()`-Klartext, den sonst
+    `EmailOutput.send()` verschickt (`notification_service.py:1381/1456-1457`).
+    Der Renderpfad — und damit der Wirkort — wird also echt durchlaufen.
+    """
+    changes, wetter = _lauf_um_jetzt()
+    mails: list[tuple[str, str]] = []
+    ergebnis = NotificationService(
+        settings=_settings_nur_email(), user_id="tdd-2020-wirkort",
+    ).send_deviation_alert(
+        trip=_trip_fuer_versand(), weather=wetter, changes=changes,
+        effective_channels={"email"},
+        mail_sink=lambda subject, body: mails.append((subject, body)),
+    )
+
+    # Fixtur-Schutz: ohne betretenen E-Mail-Kanal waere jede Zusicherung
+    # unten leer -- der Test muesste dann rot sein, nicht still gruen.
+    assert "email" in ergebnis.sent_channels, (
+        f"Fixtur-Schutz: der E-Mail-Kanal muss betreten worden sein; "
+        f"bekam {ergebnis.sent_channels!r}"
+    )
+    assert mails, "Fixtur-Schutz: die Transport-Naht muss eine Mail gesehen haben"
+
+    _betreff, body = mails[-1]
+    assert "Bis jetzt: ~8 mm gefallen (angekündigt waren 5)" in body, (
+        f"Der Versandweg muss die Einordnung des bereits Gefallenen "
+        f"zustellen; bekam:\n{body}"
+    )
+    assert "Ab jetzt: noch ~14 mm" in body, (
+        f"Der Versandweg muss die Restmenge ab jetzt zustellen — fehlt sie, "
+        f"ist die Referenzzeit unterwegs verloren gegangen und der Alarm "
+        f"meldet wieder nur Vergangenheit; bekam:\n{body}"
     )
