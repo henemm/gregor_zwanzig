@@ -121,6 +121,36 @@ def test_ac1_zweiter_lauf_liest_den_von_lauf_eins_gebuchten_cooldown():
         _clean_user(uid); _clean_user(ctrl)
 
 
+def test_ac1b_jeder_lauf_bekommt_eine_eigene_service_instanz():
+    """Jeder `.lauf()` baut eine EIGENE `TripAlertService` — `mail_sink` wird
+    nur im Konstruktor gesetzt (`trip_alert.py:209`) und ist eine Closure
+    über die `mail_calls`-Liste GENAU DIESES Aufrufs. Bei einer über Läufe
+    wiederverwendeten Instanz schriebe der Service weiterhin in Lauf 1s
+    (bereits verlassene) Liste — Lauf 2s `.mail` bliebe strukturell leer,
+    obwohl er auslöst."""
+    uid = _uid("ac1b")
+    _clean_user(uid)
+    try:
+        _write_tier(uid, "standard")  # #1555: sonst blockt das Tageslimit den 2. Alarm
+        trip1, trip2 = _deviation_trip("trip-ac1b-a"), _deviation_trip("trip-ac1b-b")
+        trip1.report_config.send_email = trip2.report_config.send_email = True
+        cached, fresh = _cached_fresh()
+        strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
+        lauf1 = strecke.lauf(at=_AT, zweig="deviation", trip=trip1, cached_weather=cached, fresh_weather=fresh)
+        assert lauf1.triggered_count == 1 and lauf1.mail, "Voraussetzung: Lauf 1 muss auslösen und Mail liefern"
+
+        lauf2 = strecke.lauf(
+            at=_AT + timedelta(minutes=1), zweig="deviation", trip=trip2,
+            cached_weather=cached, fresh_weather=fresh,
+        )
+        assert lauf2.triggered_count == 1 and lauf2.mail, (
+            "Lauf 2 muss SEINE EIGENE Mail-Sink-Liste befüllt sehen — bei einer "
+            "über Läufe wiederverwendeten Service-Instanz bliebe lauf2.mail leer"
+        )
+    finally:
+        _clean_user(uid)
+
+
 def test_ac2_gleicher_lauf_innerhalb_und_ausserhalb_der_ruhezeit_entscheidet_unterschiedlich():
     """Identische Eingangsdaten, nur die gestellte Uhr wechselt zwischen
     Ruhezeit (22-06 Uhr lokal) und Normalzeit."""
