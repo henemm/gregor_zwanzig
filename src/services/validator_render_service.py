@@ -118,6 +118,10 @@ def render_alert_preview(
             # #1948 S5 (AC-15): die Segment-Kennung des Payloads erreicht das
             # Event -- sonst faellt der Ortskopf auf "km N-M" zurueck.
             segment_id=getattr(body.onset, "segment_id", None),
+            # Issue #2046: Mengenangabe der Kurznachricht. `getattr`, weil
+            # dieser Zweig sowohl den API-Payload (`OnsetPayload`) als auch
+            # den Replay-SimpleNamespace bedient -- Muster `segment_id` o.
+            onset_precip_mm=getattr(body.onset, "onset_precip_mm", None),
         )
         msg = AlertMessage(
             trip_short=trip_obj.name,
@@ -255,6 +259,10 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
         ),
         cooldown_display=None,
         segment_id=getattr(body_nf, "segment_id", None),
+        # Issue #2046: aus DEMSELBEN `_derive_result`-Ergebnis wie
+        # onset_minutes/intensity_label -- der Replay-Weg muss dieselbe Zahl
+        # zeigen wie der Produktivpfad (AC-10).
+        onset_precip_mm=result.onset_precip_mm,
     )
     out = render_alert_preview(
         trip_obj, SimpleNamespace(onset=onset_ns, official=None, nowcast_frames=None),

@@ -16,7 +16,7 @@ from output.metric_format import THUNDER_LABEL_DE, _THUNDER_JE_ORDINAL
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_DANGER, G_INK, G_INK_MUTED, G_SUCCESS,
 )
-from output.tokens.metrics import LEVELS
+from output.tokens.metrics import LEVELS, _fmt_num
 from utils.ascii_fold import fold_ascii
 
 from .model import (
@@ -550,6 +550,28 @@ def _sms_onset_time(onset_time: str, day_offset: int = 0) -> str:
     return f"{base}+{day_offset}" if day_offset else base
 
 
+# Issue #2046: Untergrenze, ab der eine Mengenangabe in der Kurznachricht
+# belastbar ist. Groessenordnung von `radar_service._DRY_THRESHOLD_MM_H`
+# (0,1 mm/h ueber eine Stunde ~ 0,1 mm) -- dieselbe Schwelle, die den Beginn
+# ueberhaupt erst als "nass" einstuft. BEWUSST hier als eigene Konstante und
+# nicht aus `services.radar_service` importiert: ein Renderer haengt sich nicht
+# an die Service-Schicht. Alles darunter (inklusive `0.0` und `None`) faellt
+# auf die zahlenlose Alt-Form zurueck -- `R0.0@18:00` darf nie entstehen, die
+# Anzeige unterscheidet nicht zwischen "nicht berechenbar" und "praktisch null".
+_SMS_ONSET_MENGE_MIN_MM = 0.1
+
+
+def _sms_onset_menge(value: float | None) -> str | None:
+    """Zahlanteil der Onset-Mengenangabe (Issue #2046) oder `None`.
+
+    Zahlform kommt aus `output.tokens.metrics._fmt_num` — DERSELBE Formatierer
+    wie im Briefing (`R{value:.1f}`), damit Kurznachricht und Briefing keine
+    zwei Zahlen-Dialekte sprechen. Keine Einheit im Text (Zeichenbudget)."""
+    if value is None or value < _SMS_ONSET_MENGE_MIN_MM:
+        return None
+    return _fmt_num("R", value)
+
+
 def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     """Issue #1948 S4: die Nowcast-/Onset-Kurznachricht nennt einen ZEITPUNKT
     (`TH@15:40`) statt eines Countdowns (`TH!8`) und spricht im Kopf dieselbe
@@ -570,7 +592,18 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     ihn mit (AC-10)."""
     e = msg.events[0]
     kuerzel = "TH" if e.is_convective else "R"
-    token = f"{kuerzel}@{_sms_onset_time(e.onset_time, e.onset_day_offset)}"
+    zeit = _sms_onset_time(e.onset_time, e.onset_day_offset)
+    menge = _sms_onset_menge(getattr(e, "onset_precip_mm", None))
+    if menge is None:
+        token = f"{kuerzel}@{zeit}"
+    elif kuerzel == "TH":
+        # Issue #2046: im Gewitter-Fall steht die Menge als EIGENES Token NACH
+        # der Zeit. Die Position unmittelbar hinter `TH` gehoert in der
+        # Briefing-Grammatik der Stufe (LEVELS: L/M/H) -- ein `TH2.5` dort
+        # waere als Stufe lesbar und damit missverstaendlich.
+        token = f"TH@{zeit} R{menge}"
+    else:
+        token = f"R{menge}@{zeit}"
     if getattr(e, "location_label", None):
         head = _ascii_alert_location(e.location_label)
     elif msg.source == COMPARE_RADAR_SOURCE:

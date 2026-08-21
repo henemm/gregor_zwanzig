@@ -82,10 +82,24 @@ onset_precip_mm: Optional[float] = None
 `window_precip_mm`-Schleife, Z. 745-754): dieselbe Struktur wie die
 `compare_window`/`compare_window_by_ts`-Berechnung (Z. 719-754), aber mit
 `onset_horizon = onset_time_dt + timedelta(minutes=60)` als Fensterende und
-`onset_time_dt` (aus `onset_minutes`, das bereits oben berechnet wird) als
-Fensterstart statt `now`. Nur wenn `onset_minutes is not None`; sonst bleibt
-`onset_precip_mm = None`. Kein zweiter Frame-Abruf — dieselbe `frames`-Liste, die
-auch `window_precip_mm` speist (AC-12).
+dem Zeitstempel des Beginn-Frames als Fensterstart statt `now`. Nur wenn
+`onset_minutes is not None`; sonst bleibt `onset_precip_mm = None`. Kein
+zweiter Frame-Abruf — dieselbe `frames`-Liste, die auch `window_precip_mm`
+speist (AC-12).
+
+> **Fensterstart ist der EXAKTE Frame-Zeitstempel, nicht `now +
+> onset_minutes`** (PO-bestätigt 2026-08-21, aus der Implementierung
+> nachgetragen). `onset_minutes` ist der GERUNDETE Anzeigewert
+> (`max(0, round(delta))`, `radar_service.py`) — bei einem echten Abstand von
+> 49,6 Minuten steht dort `50`. Ein daraus zurückgerechnetes `now +
+> timedelta(minutes=50)` läge NACH dem Beginn-Frame und schöbe ihn über die
+> `>=`-Fenstergrenze aus seinem eigenen Fenster heraus; die angezeigte Menge
+> fiele um den ersten Frame zu klein aus. Die Implementierung sammelt deshalb
+> `onset_ts` in derselben Schleife ein, die `onset_minutes` bestimmt. Bei
+> regelmäßiger Kadenz (5/15 Min) sind beide Varianten identisch — der
+> Unterschied tritt erst bei unregelmäßigen Produktivrastern auf. **Nicht
+> „an die Spec angleichen": der gerundete Anzeigewert darf die Messgrundlage
+> nicht verschieben.**
 
 **3. Additive Felder auf `OnsetEvent`** (`model.py`, Muster `onset_day_offset`
 #2009, Z. 56-62): `onset_precip_mm: float | None = None`.
@@ -358,3 +372,7 @@ unverändert grün oder werden am Goldstring fortgeschrieben:**
 
 - 2026-08-21: Initial spec created (#2046, Radar-Onset-Kurznachricht mit
   Mengenangabe).
+- 2026-08-21: Fensterstart der Mengenrechnung präzisiert — exakter
+  Beginn-Frame-Zeitstempel statt aus dem gerundeten `onset_minutes`
+  zurückgerechneter Zeitpunkt (PO-bestätigt, aus der Implementierung
+  nachgetragen). Akzeptanzkriterien unverändert.

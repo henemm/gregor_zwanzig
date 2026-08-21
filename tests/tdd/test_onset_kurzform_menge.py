@@ -34,8 +34,19 @@ from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import render_sms
 
 # Eine Ziffer UNMITTELBAR hinter dem Kuerzel — die Mengen-Schreibweise des
-# Regen-Falls. Im Gewitter-Fall darf sie NIE auftreten (Stufen-Position).
+# Regen-Falls. Wird von den ZAHLENLOSEN Faellen (AC-4a/AC-4c) benutzt: dort
+# darf hinter KEINEM der beiden Kuerzel eine Ziffer stehen.
 _ZIFFER_HINTER_KUERZEL_RE = re.compile(r"\b(TH|R)(\d)")
+# KORRIGIERT (PO-Entscheid 2026-08-21): eigene, auf `TH` verengte Fassung fuer
+# die Stufen-Zusicherung aus AC-2. Die urspruengliche Alternative `(TH|R)` an
+# jener Stelle war in sich unerfuellbar — sie traf das von AC-2 SELBST
+# geforderte Mengen-Token (`\bR2` in `Ziel: TH@18:00 R2.5`) und schloss damit
+# den Goldstring aus, den derselbe Test zwei Zeilen darueber verlangt. Die
+# Zusicherung selbst bleibt unveraendert: hinter `TH` steht NIE eine Ziffer,
+# weil diese Position in der Briefing-Grammatik der Stufe (L/M/H) gehoert.
+# Nur ihr fehlerhafter Ausdruck ist ersetzt; die allgemeine Fassung oben
+# bleibt fuer AC-4a/AC-4c in Kraft und bewacht dort weiterhin BEIDE Kuerzel.
+_ZIFFER_HINTER_TH_RE = re.compile(r"\bTH(\d)")
 # Vollstaendiger Regen-Mengen-Token: `R<zahl mit einer Nachkommastelle>@HH:MM`.
 _MENGEN_TOKEN_RE = re.compile(r"\bR(\d+)\.(\d)@(\d{1,2}):(\d{2})\b")
 
@@ -140,10 +151,10 @@ def test_ac2_gewitter_onset_traegt_die_menge_als_eigenes_token_nach_der_zeit():
     assert "TH2" not in sms and "TH2.5" not in sms, (
         f"Die Stufen-Position hinter 'TH' ist mit einer Menge belegt: {sms!r}"
     )
-    treffer = _ZIFFER_HINTER_KUERZEL_RE.search(sms)
+    treffer = _ZIFFER_HINTER_TH_RE.search(sms)
     assert treffer is None, (
-        f"Ziffer unmittelbar hinter dem Kuerzel {treffer.group(1)!r} im "
-        f"Gewitter-Fall: {sms!r}"
+        f"Ziffer unmittelbar hinter 'TH' im Gewitter-Fall — diese Position "
+        f"gehoert der Stufe (L/M/H), nicht der Menge: {sms!r}"
     )
 
 

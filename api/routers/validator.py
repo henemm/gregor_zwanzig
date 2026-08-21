@@ -237,6 +237,10 @@ class OnsetPayload(BaseModel):
     source_label: str
     cooldown_display: str | None = None
     segment_id: str | None = None
+    # Issue #2046: Mengenangabe der Onset-Kurznachricht (mm der Stunde ab dem
+    # Beginn), additiv und optional -- Muster `segment_id` o. Ohne sie rendert
+    # der Vorschauweg die zahlenlose Alt-Form.
+    onset_precip_mm: float | None = None
 
 
 class OfficialAlertPayload(BaseModel):

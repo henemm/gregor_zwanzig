@@ -195,6 +195,11 @@ class RadarAlertRequest:
     # eingestuft hat. `send_radar_alert()` reicht sie unveraendert auf die
     # `AlertMessage` durch; ohne sie bleibt der Versand byte-identisch.
     addendum_reference: str | None = None
+    # Issue #2046: additiv, optional. Erwartete Niederschlagsmenge (mm) der
+    # Stunde AB DEM BEGINN (`NowcastResult.onset_precip_mm`) -- die Zahl, die
+    # die Onset-Kurznachricht nennt. Ohne sie bleibt der Versand
+    # byte-identisch (zahlenlose Alt-Form).
+    onset_precip_mm: float | None = None
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -1292,6 +1297,7 @@ class NotificationService:
             briefing_context=request.briefing_context,
             segment_id=request.segment_id,  # Issue #1744 A1
             onset_day_offset=request.onset_day_offset,  # Issue #2009
+            onset_precip_mm=request.onset_precip_mm,  # Issue #2046
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.
