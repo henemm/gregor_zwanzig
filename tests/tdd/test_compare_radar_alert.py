@@ -178,14 +178,84 @@ def _fmt_window(start: datetime, end: datetime, tz, *, offset_minutes: int = 0) 
 
 
 def _onset_time_for(body: str, location_name: str) -> str | None:
-    """`ab HH:MM` aus der Bündel-Zeile GENAU dieses Ortes (Plain-Body,
-    `render.py::_render_email_onset_multi` — je Ort eine Zeile)."""
+    r"""`ab HH:MM` aus der Bündel-Zeile GENAU dieses Ortes (Plain-Body,
+    `render.py::_render_email_onset_multi` — je Ort eine Zeile).
+
+    Zeitbombe (Team-Lead-Fund 2026-08-21): `render.py::_onset_time_label`
+    stellt bei einem Onset, der über die Tagesgrenze der ORTSZEIT rutscht,
+    ein Tageswort voran (`f"morgen {onset_time}"`,
+    `render.py:374` — geprüft: das einzige je erzeugte Tageswort in diesem
+    Renderpfad, keine weiteren wie "übermorgen" oder Wochentagsnamen, `grep`
+    über `render.py` bestätigt). Das alte Muster `r"ab (\d{2}:\d{2})"`
+    verlangte eine Ziffer UNMITTELBAR hinter `ab ` und lieferte dann `None`
+    -- der Test schlug NICHT an der Fachlogik fehl, sondern täglich in dem
+    schmalen Zeitfenster, in dem irgendein Ort im Preset die Tagesgrenze
+    überschreitet. Das optionale `(?:\w+ )?` überspringt GENAU EIN
+    Tageswort-Token zwischen `ab ` und der Uhrzeit -- die Zusicherung
+    bleibt erhalten: es wird weiterhin exakt die Uhrzeit HINTER `ab`
+    gelesen (nicht irgendeine Uhrzeit irgendwo in der Zeile)."""
     for line in body.splitlines():
         if location_name in line:
-            m = re.search(r"ab (\d{2}:\d{2})", line)
+            m = re.search(r"ab (?:\w+ )?(\d{2}:\d{2})", line)
             if m:
                 return m.group(1)
     return None
+
+
+def test_onset_time_for_reads_same_time_with_and_without_day_word():
+    """Zeitbomben-Nachweis (Team-Lead-Fund 2026-08-21): der `test_bundled_
+    alert_uses_each_locations_own_timezone`-Fehlschlag ist nur in einem
+    schmalen, täglich wiederkehrenden Zeitfenster reproduzierbar (Onset
+    über die Ortstag-Grenze) -- statt auf die Wanduhr zu warten, prüft
+    dieser Test `_onset_time_for` DIREKT gegen beide Zeilenformen, die
+    `render.py::_onset_time_label` tatsächlich erzeugt (mit `onset_day_
+    offset == 0` bzw. `!= 0`, `render.py:374`).
+
+    Given zwei sonst identische Bündel-Zeilen -- eine ohne Tageswort
+          (`ab 00:07`), eine mit (`ab morgen 00:07`).
+    When _onset_time_for() beide ausliest.
+    Then liefern beide DIESELBE Uhrzeit UND (Regressionsschutz gegen eine
+         entwertete Prüfung) zwei VERSCHIEDENE Orte mit VERSCHIEDENEN
+         Uhrzeiten bleiben weiterhin unterscheidbar -- die Funktion liest
+         weiterhin gezielt die Uhrzeit HINTER `ab`, nicht irgendeine Zahl
+         in der Zeile.
+    """
+    body_without_day_word = (
+        "Zermatt-MTZ · Regen in 8 Min: ab 14:23 · Leichter Regen\n"
+        "Auckland-MTZ · Regen in 8 Min: ab 23:59 · Leichter Regen"
+    )
+    body_with_day_word = (
+        "Zermatt-MTZ · Regen in 8 Min: ab 14:23 · Leichter Regen\n"
+        "Auckland-MTZ · Regen in 8 Min: ab morgen 00:07 · Leichter Regen"
+    )
+
+    # Ohne Tageswort: beide Orte lesbar, verschiedene Uhrzeiten.
+    assert _onset_time_for(body_without_day_word, "Zermatt-MTZ") == "14:23"
+    assert _onset_time_for(body_without_day_word, "Auckland-MTZ") == "23:59"
+
+    # Mit Tageswort bei GENAU EINEM Ort (der reale Fehlerfall): beide Orte
+    # bleiben lesbar, Zermatt liefert unverändert dieselbe Uhrzeit wie oben
+    # (das Tageswort bei Auckland darf Zermatts Zeile nicht beeinflussen).
+    assert _onset_time_for(body_with_day_word, "Zermatt-MTZ") == "14:23"
+    time_akl_with_word = _onset_time_for(body_with_day_word, "Auckland-MTZ")
+    assert time_akl_with_word == "00:07", (
+        f"Muss die Uhrzeit HINTER dem Tageswort lesen, nicht None liefern "
+        f"(der urspruengliche Bug) und nicht das Tageswort selbst "
+        f"zurueckgeben (war {time_akl_with_word!r})."
+    )
+
+    # Regressionsschutz: das Muster darf nicht zu "irgendeine Uhrzeit
+    # irgendwo in der Zeile" entwertet werden -- unterschiedliche Orte
+    # bleiben unterscheidbar, mit und ohne Tageswort.
+    assert (
+        _onset_time_for(body_without_day_word, "Zermatt-MTZ")
+        != _onset_time_for(body_without_day_word, "Auckland-MTZ")
+    )
+    assert (
+        _onset_time_for(body_with_day_word, "Zermatt-MTZ")
+        != _onset_time_for(body_with_day_word, "Auckland-MTZ")
+    )
+    assert _onset_time_for(body_with_day_word, "Nicht-Vorhanden") is None
 
 
 def _quiet_hours_window_now(buffer_minutes: int = 3) -> tuple[str, str]:
