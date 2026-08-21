@@ -3,7 +3,7 @@ entity_id: alert_nachtragsmeldung
 type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.5"
 tags: [alerts, trip, issue-2018, issue-1467, nachtrag, event-identity]
 ---
@@ -12,7 +12,7 @@ tags: [alerts, trip, issue-2018, issue-1467, nachtrag, event-identity]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-'go' 2026-08-21; ausgeliefert mit `47c527ee`, Prod-Selftest PASS
 
 ## Purpose
 
