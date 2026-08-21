@@ -43,13 +43,13 @@ from tests.helpers.trip_outlook_selection import (  # noqa: E402
     render_trip_mail,
 )
 
-# Auswahl-Bausteine im Neuformat (#1373).
-NIEDERSCHLAG = {"metric_id": "precipitation", "aggregation": "sum"}
-BOEEN = {"metric_id": "gust", "aggregation": "max"}
-TEMPERATUR = {"metric_id": "temperature", "aggregation": "max"}
-GEWITTER = {"metric_id": "thunder", "aggregation": "max"}
-SCHNEEHOEHE = {"metric_id": "snow_depth", "aggregation": "max"}
-CONFIDENCE = {"metric_id": "confidence", "aggregation": "min"}
+# Auswahl-Bausteine: reine Kennungen (#1848 A2, vorher Paare aus #1373).
+NIEDERSCHLAG = "precipitation"
+BOEEN = "gust"
+TEMPERATUR = "temperature"
+GEWITTER = "thunder"
+SCHNEEHOEHE = "snow_depth"
+CONFIDENCE = "confidence"
 
 # Die EINE dokumentierte Abweichung zwischen Aufzeichnung und Sollstand
 # (AC-8 / Implementation Details 5): `temp_lo` ist `summary.temp_min_c`, das
@@ -204,9 +204,13 @@ def test_ac5_zellwerte_stehen_unter_der_richtigen_spalte():
 
     assert len(zeilen) == 3, f"Erwartet drei Ausblick-Zeilen: {zeilen!r}"
     assert [z[0] for z in zeilen] == ["Mo", "Di", "Mi"], zeilen
-    assert [z[2] for z in zeilen] == ["21 °C", "19 °C", "24 °C"], (
+    # #1848 A2: die Kennung 'temperature' zeigt Tief UND Hoch in EINER Zelle.
+    # Die Zusicherung ist unveraendert -- drei paarweise verschiedene Werte,
+    # jeder unter SEINER Spalte; ein Spaltenversatz faellt genauso auf wie
+    # vorher, die Zelle traegt jetzt nur beide Tagesenden statt nur des Hochs.
+    assert [z[2] for z in zeilen] == ["9/21", "11/19", "6/24"], (
         f"Temperatur-Spalte: {[z[2] for z in zeilen]!r} statt der "
-        "Tageshoechstwerte 21/19/24 °C -- Spaltenversatz (AC-5)."
+        "Tages-Spannen 9/21, 11/19, 6/24 -- Spaltenversatz (AC-5)."
     )
     assert [z[3] for z in zeilen] == ["2.5 mm", "0.0 mm", "7.1 mm"], (
         f"Niederschlag-Spalte: {[z[3] for z in zeilen]!r} statt der "

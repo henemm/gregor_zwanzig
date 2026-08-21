@@ -51,8 +51,9 @@ LAT, LON = 46.65, 12.85
 COMPACT_OUTLOOK_HEADING = "Naechste Etappen"
 TELEGRAM_OUTLOOK_HEADING = "Ausblick"
 
-NIEDERSCHLAG = {"metric_id": "precipitation", "aggregation": "sum"}
-BOEEN = {"metric_id": "gust", "aggregation": "max"}
+# #1848 A2: Auswahl-Bausteine sind reine Kennungen (vorher Paare, #1373).
+NIEDERSCHLAG = "precipitation"
+BOEEN = "gust"
 
 _MAIL_FIELDS: dict = {
     "smtp_host": "dummy.invalid", "smtp_port": 587,

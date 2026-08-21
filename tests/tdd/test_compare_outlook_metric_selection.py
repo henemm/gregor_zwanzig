@@ -30,10 +30,12 @@ _OUTLOOK_TABLE_MARKER = "border-top:2px solid #1d1c1a"
 # Kontext-Dokument, echte Staging-Mail vom 27.07.2026.
 _FIXED_SEVEN_HEADERS = ["Tag", "N", "D", "R", "PR", "Wind", "Böen", "Gew"]
 
-# Auswahl im Neuformat (Groesse + Auswertung), wie sie in
-# ``display_config.outlook_metrics`` gespeichert wird (#1373-Vokabular).
-SEL_TEMP_MAX = {"metric_id": "temperature", "aggregation": "max"}
-SEL_PRECIP_SUM = {"metric_id": "precipitation", "aggregation": "sum"}
+# Auswahl im Speicherformat von ``display_config.outlook_metrics``: seit
+# #1848 A2 die reine KENNUNG (vorher Groesse + Auswertung, #1373). Welche
+# Auswertungen eine Kennung zeigt, leitet der Katalog ab -- fuer
+# ``temperature`` sind das Tief UND Hoch in einer Spannen-Zelle.
+SEL_TEMPERATUR = "temperature"
+SEL_NIEDERSCHLAG = "precipitation"
 
 # Was die Ueberschrift einer gewaehlten Spalte lauten DARF: die Beschriftungen
 # der beiden Kataloge, aus denen die Spec sie speist (`col_label`/`label_de` aus
@@ -41,8 +43,8 @@ SEL_PRECIP_SUM = {"metric_id": "precipitation", "aggregation": "sum"}
 # keine der drei Varianten vor — er verlangt nur eine lesbare Katalog-
 # Beschriftung statt der Kuerzel N/D/R/PR.
 _ALLOWED_LABELS = {
-    "temperature:max": {"Temp", "Temperatur", "Temperatur max"},
-    "precipitation:sum": {"Rain", "Niederschlag"},
+    "temperature": {"Temp", "Temperatur"},
+    "precipitation": {"Rain", "Niederschlag"},
 }
 
 # Ausblick-Ueberschriften im Klartext: der Ist-Zustand ("Nächste Etappen",
@@ -198,7 +200,7 @@ def test_html_outlook_shows_only_selected_columns():
     Katalog-Ueberschriften — nicht die sieben festen Spalten mit den Kuerzeln
     N/D/R/PR/Wind/Böen/Gew.
     """
-    html, _text = _render_mail(outlook_metrics=[SEL_TEMP_MAX, SEL_PRECIP_SUM])
+    html, _text = _render_mail(outlook_metrics=[SEL_TEMPERATUR, SEL_NIEDERSCHLAG])
 
     tables = _outlook_tables(html)
     assert tables, "Kein 3-Tages-Ausblick in der HTML-Mail gefunden"
@@ -210,22 +212,24 @@ def test_html_outlook_shows_only_selected_columns():
         "+ Niederschlag (AC-1)."
     )
     assert headers[0] == "Tag", f"Erste Spalte soll der Wochentag bleiben: {headers}"
-    assert headers[1] in _ALLOWED_LABELS["temperature:max"], (
+    assert headers[1] in _ALLOWED_LABELS["temperature"], (
         f"Zweite Spalte traegt {headers[1]!r} statt einer lesbaren Katalog-"
-        f"Beschriftung fuer Temperatur max {sorted(_ALLOWED_LABELS['temperature:max'])}"
+        f"Beschriftung fuer Temperatur max {sorted(_ALLOWED_LABELS['temperature'])}"
     )
-    assert headers[2] in _ALLOWED_LABELS["precipitation:sum"], (
+    assert headers[2] in _ALLOWED_LABELS["precipitation"], (
         f"Dritte Spalte traegt {headers[2]!r} statt einer lesbaren Katalog-"
-        f"Beschriftung fuer Niederschlag {sorted(_ALLOWED_LABELS['precipitation:sum'])}"
+        f"Beschriftung fuer Niederschlag {sorted(_ALLOWED_LABELS['precipitation'])}"
     )
 
     body = _body_rows(tables[0])
     assert len(body) == 3, f"Erwartet drei Ausblick-Tageszeilen, erhalten: {body}"
     day2 = body[1]
     assert len(day2) == 3, f"Datenzeile hat nicht drei Zellen: {day2}"
-    assert "27" in day2[1], (
-        f"Temperatur-max-Zelle des zweiten Ausblick-Tages zeigt {day2[1]!r}, "
-        "erwartet den Tageshoechstwert 27 °C"
+    # #1848 A2: die Kennung 'temperature' zeigt Tief UND Hoch in EINER Zelle.
+    # Schaerfer als der frueher geprueft "27 kommt vor": beide Tagesenden.
+    assert day2[1] == "9/27", (
+        f"Temperatur-Zelle des zweiten Ausblick-Tages zeigt {day2[1]!r}, "
+        "erwartet die Tagesspanne '9/27' (Tief 9 °C, Hoch 27 °C)"
     )
     assert "4.4" in day2[2], (
         f"Niederschlags-Zelle des zweiten Ausblick-Tages zeigt {day2[2]!r}, "
@@ -243,7 +247,7 @@ def test_plain_outlook_shows_same_selection_as_html():
     gewaehlten Groessen — identisch zum HTML-Teil derselben Mail. Der
     Pflicht-Validator liest nur HTML und ist hier blind (#1366).
     """
-    html, text = _render_mail(outlook_metrics=[SEL_TEMP_MAX, SEL_PRECIP_SUM])
+    html, text = _render_mail(outlook_metrics=[SEL_TEMPERATUR, SEL_NIEDERSCHLAG])
 
     blocks = _plain_outlook_blocks(text)
     assert blocks, (
@@ -305,7 +309,7 @@ def test_plain_outlook_row_has_no_empty_stage_name_gap():
     ist_zeilen = ist_zustand[0][1] if ist_zustand else []
 
     try:
-        _html, text = _render_mail(outlook_metrics=[SEL_TEMP_MAX, SEL_PRECIP_SUM])
+        _html, text = _render_mail(outlook_metrics=[SEL_TEMPERATUR, SEL_NIEDERSCHLAG])
     except AssertionError as exc:
         raise AssertionError(
             f"{exc}\nIst-Zustand der Klartext-Ausblick-Zeilen im Ortsvergleich "
@@ -411,7 +415,7 @@ def test_unknown_outlook_selection_entry_is_dropped_and_logged(caplog):
     """
     preset = _preset(outlook_metrics=[
         {"metric_id": "einhorn", "aggregation": "max"},
-        SEL_TEMP_MAX,
+        SEL_TEMPERATUR,
         {"metric_id": "confidence", "aggregation": "min"},
     ])
 
@@ -431,6 +435,6 @@ def test_unknown_outlook_selection_entry_is_dropped_and_logged(caplog):
 
     html, _text = _render_mail(outlook_metrics=resolved)
     headers = _headers(_outlook_tables(html)[0])
-    assert len(headers) == 2 and headers[1] in _ALLOWED_LABELS["temperature:max"], (
+    assert len(headers) == 2 and headers[1] in _ALLOWED_LABELS["temperature"], (
         f"Nach dem Verwerfen soll genau die gueltige Spalte bleiben: {headers}"
     )

@@ -114,7 +114,11 @@ def test_ac1_configurable_path_temp_cell_matches_hiking_window():
 
     summary, segments = _summary_and_segments("extremwert_an_der_ankunftsstunde")
     hiking = _hiking(segments, "t2m_c")
-    metrics = [{"metric_id": "temperature", "aggregation": "max"}]
+    # #1848 A2: gewaehlt wird die KENNUNG; sie zeigt Tief UND Hoch in einer
+    # Spannen-Zelle. Die Zusicherung wird dadurch SCHAERFER statt schwaecher:
+    # jetzt muessen BEIDE Seiten aus dem Gehzeit-Fenster stammen, vorher nur
+    # das Hoch.
+    metrics = ["temperature"]
 
     row = build_outlook_row(
         summary, points=[], weekday="Mo", tz=F.TZ, metrics=metrics,
@@ -122,10 +126,14 @@ def test_ac1_configurable_path_temp_cell_matches_hiking_window():
     )
 
     cell = row["cells"][0]
-    zahl = cell.split()[0]
-    assert int(float(zahl)) == int(hiking[1]), (
+    tief, hoch = cell.split()[0].split("/")
+    assert int(float(hoch)) == int(hiking[1]), (
         f"Konfigurierbare Ausblick-Zelle {cell!r} zeigt nicht das Gehzeit-Hoch "
         f"{int(hiking[1])} (Etappenaggregat: {summary.temp_max_c})."
+    )
+    assert int(float(tief)) == int(hiking[0]), (
+        f"Konfigurierbare Ausblick-Zelle {cell!r} zeigt nicht das Gehzeit-Tief "
+        f"{int(hiking[0])} (Etappenaggregat: {summary.temp_min_c})."
     )
 
 
@@ -184,7 +192,9 @@ def test_ac3_configurable_path_wind_chill_cell_matches_hiking_window():
 
     summary, segments = _summary_and_segments("extremwert_an_der_ankunftsstunde")
     hiking = _hiking(segments, "wind_chill_c")
-    metrics = [{"metric_id": "wind_chill", "aggregation": "max"}]
+    # #1848 A2: siehe AC-1 -- die Kennung zeigt beide Tagesenden, beide
+    # muessen aus dem Gehzeit-Fenster stammen.
+    metrics = ["wind_chill"]
 
     row = build_outlook_row(
         summary, points=[], weekday="Mo", tz=F.TZ, metrics=metrics,
@@ -192,8 +202,12 @@ def test_ac3_configurable_path_wind_chill_cell_matches_hiking_window():
     )
 
     cell = row["cells"][0]
-    zahl = cell.split()[0]
-    assert int(float(zahl)) == int(hiking[1]), (
+    tief, hoch = cell.split()[0].split("/")
+    assert int(float(hoch)) == int(hiking[1]), (
         f"Konfigurierbare Ausblick-Zelle {cell!r} zeigt nicht das gefuehlte "
         f"Gehzeit-Hoch {int(hiking[1])} (Etappenaggregat: {summary.wind_chill_max_c})."
+    )
+    assert int(float(tief)) == int(hiking[0]), (
+        f"Konfigurierbare Ausblick-Zelle {cell!r} zeigt nicht das gefuehlte "
+        f"Gehzeit-Tief {int(hiking[0])} (Etappenaggregat: {summary.wind_chill_min_c})."
     )

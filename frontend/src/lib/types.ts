@@ -294,9 +294,12 @@ export interface DisplayConfig {
 	alert_preset?: string; // Issue #846: "deaktiviert" | "entspannt" | "standard" | "sensibel"
 	metric_alert_levels?: Record<string, SensLevel>; // Issue #864: metric → SensLevel
 	telegram_style?: 'rich' | 'kurzform'; // Issue #1260: Compare-amtliche Warnung im SMS-Kurzstil (opt-in)
-	// Issue #1720 S1: Spaltenauswahl der 3-Tages-Vorschau, Neuformat #1373.
+	// Issue #1720 S1 / #1848 A2: Spaltenauswahl der 3-Tages-Vorschau als reine
+	// Kennungen (`["temperature", "gust"]`); welche Auswertungen eine Kennung
+	// zeigt, leitet der Katalog serverseitig ab. Die Paar-Altform (#1373)
+	// bleibt lesbar, wird aber nicht mehr geschrieben.
 	// Feld fehlt = die sieben festen Spalten; `[]` = der Block entfaellt ganz.
-	outlook_metrics?: { metric_id: string; aggregation: string }[];
+	outlook_metrics?: string[];
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).
