@@ -4,7 +4,7 @@ type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
 status: draft
-version: "1.4"
+version: "1.5"
 tags: [alerts, trip, issue-2018, issue-1467, nachtrag, event-identity]
 ---
 
@@ -836,12 +836,23 @@ Test-Postfach bzw. Test-Chat.
   - Test: alle vier Kombinationen (official→official, official→nowcast,
     nowcast→official, nowcast→nowcast) im selben Testmodul, nur
     official→nowcast liefert (bei Eskalation) `is_addendum=True`.
-  - Mutations-Gegenprobe (PFLICHT): die Bedingung `match["source"] ==
-    "official"` aus `addendum_direction` entfernen (sodass JEDE Quelle als
-    Vorgänger genügt) MUSS den Kernfall-Test (AC-A5,
-    `test_alert_gate.py:757-793`) rot machen — das ist die Absicherung
-    gegen die Scope-Erweiterung, die in dieser Spec bereits einmal
-    versehentlich passiert ist.
+  - Mutations-Gegenprobe (PFLICHT, **Testreferenz korrigiert 2026-08-21,
+    Korrektur 6**): die Bedingung `match["source"] == "official"` aus
+    `addendum_direction` entfernen (sodass JEDE Quelle als Vorgänger
+    genügt) MUSS **den parametrisierten Fall dieses ACs** rot machen
+    (`test_alert_gate.py::test_aca9_nachtrag_entsteht_ausschliesslich_von_amtlich_zu_nowcast[nowcast-nowcast-False]`)
+    — er ist die Absicherung gegen die Scope-Erweiterung, die in dieser
+    Spec bereits einmal versehentlich passiert ist.
+  - **NICHT geeignet ist der Kernfall-Test aus AC-A5**
+    (`test_ac6_kernfall_nowcast_gefolgt_von_amtlicher_warnung_8_2_min_spaeter`).
+    Eine frühere Fassung dieses ACs verlangte genau das; am Code gemessen
+    ist es **strukturell unerfüllbar**: dort sind beide Dringlichkeiten
+    `HIGH`, `exceeds("HIGH","HIGH")` ist bereits `False`, der Code erreicht
+    den `addendum_direction`-Zweig in diesem Fall also nie — gleich wie die
+    Bedingung lautet. Der Test bleibt bei dieser Mutation zwangsläufig
+    grün, ohne dass die Implementierung fehlerhaft wäre. Merksatz: **eine
+    Mutations-Gegenprobe muss an einem Fall ansetzen, der den mutierten
+    Zweig überhaupt erreicht.**
   - Schicht: Kern.
 
 - **AC-A10:** Given mehrere gültige Registereinträge derselben
@@ -1057,12 +1068,20 @@ Test-Postfach bzw. Test-Chat.
   - Test: neuer Substring-Test auf den Zusatztext, PLUS alle vier
     bestehenden Substring-Wächter (S. Wächter-Tabelle) bleiben unverändert
     grün.
-  - **Auflage (Korrektur 5):** Der Zusatz steht in DERSELBEN Klartext-
-    Zeile wie der bestehende Satz (Leerzeichen als Fuge), nicht als eigene
-    Zeile — sonst kippen die zeilen-/blockweisen Reihenfolge-Wächter
-    `test_official_alert_plaintext_part.py:121` und
-    `test_alert_mail_body_alignment.py:135`. Beide laufen als Wächter mit
-    und bleiben grün.
+  - **Auflage (Korrektur 5, präzisiert durch Korrektur 6):** Der Zusatz
+    steht in DERSELBEN Klartext-Zeile wie der bestehende Satz (Leerzeichen
+    als Fuge), nicht als eigene Zeile.
+    **Richtigstellung:** Korrektur 5 behauptete, eine eigene Zeile kippe
+    BEIDE Reihenfolge-Wächter. Am Code gemessen (Adversary-Gegenprobe,
+    2026-08-21) trifft das nur auf
+    `test_alert_mail_body_alignment.py:135` zu.
+    `test_official_alert_plaintext_part.py:113-126` bleibt grün, weil sein
+    Klartext-Klassifizierer jede Zeile ignoriert, die keines seiner vier
+    festen Muster trifft — unabhängig von der Zeilenposition. Die Auflage
+    bleibt fachlich gültig; der fehlende Schutz wird durch einen eigenen
+    Wächter im Klartext-Pfad ergänzt (die Zeile mit „höchstens einmal in"
+    muss auch „greift dieser Cooldown nicht" enthalten), statt die Auflage
+    abzuschwächen.
   - Schicht: Kern.
 
 - **AC-C2 (präzisiert, Korrektur 5):** Given den bit-eingefrorenen
@@ -1234,3 +1253,24 @@ Test-Postfach bzw. Test-Chat.
   aufgenommen. Ausserdem festgelegt: `alert_log`-Feldnamen für AC-B13 sind
   `is_addendum` (bool) und `addendum_reported_at` (ISO-String), genau
   diese zwei Felder kommen hinzu.
+- 2026-08-21 (Korrektur 6, gleicher Tag, Version 1.5, **nach der
+  Adversary-Prüfung**): Drei Befunde des `implementation-validator`
+  eingearbeitet. **(a)** Die Mutations-Gegenprobe von AC-A9 nannte einen
+  Test, der bei dieser Mutation **strukturell nie** rot werden kann (im
+  Kernfall sind beide Dringlichkeiten `HIGH`, `exceeds` ist bereits
+  `False`, der mutierte Zweig wird nie erreicht). Testreferenz auf den
+  parametrisierten AC-A9-Fall `[nowcast-nowcast-False]` korrigiert, der
+  den Zweig tatsächlich erreicht und bei der Mutation rot wird. Merksatz
+  ergänzt: eine Gegenprobe muss an einem Fall ansetzen, der den mutierten
+  Zweig überhaupt erreicht. **(b)** Die Korrektur-5-Behauptung, eine eigene
+  Cooldown-Zeile kippe BEIDE Reihenfolge-Wächter, gilt nur für
+  `test_alert_mail_body_alignment.py`; der Klartext-Wächter bleibt grün.
+  Statt die Auflage abzuschwächen wird ein eigener Klartext-Wächter
+  ergänzt. **(c)** AC-D1 (ADR-0021-Nachtrag) war nicht geliefert —
+  `test_adr_index_drift.py` prüft nur Index↔Datei-Konsistenz, nicht
+  Inhalt, und blieb deshalb grün. Nachgeholt. Zusätzlich geschlossen:
+  der spec-mandierte Fail-soft-Vertrag aus B2 (`addendum_reported_at`
+  fehlt ⇒ Uhrzeit entfällt ersatzlos) war am WIRKORT in `trip_alert.py`
+  durch keinen Test bewacht — Entfernen des Wächters machte keinen von
+  101 Tests rot; ein End-to-End-Regressionstest mit Gegenprobe ist
+  ergänzt.
