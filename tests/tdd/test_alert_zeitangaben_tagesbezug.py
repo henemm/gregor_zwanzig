@@ -149,25 +149,10 @@ def _uhr(tag: date, stunde: int, minute: int = 0) -> datetime:
 
 
 def _nachricht(changes, segmente, *, now_utc: datetime):
-    """Projektion MIT Referenzzeit.
-
-    RED-Zustand: `to_alert_message()` kennt `now_utc` noch nicht. Der Aufruf
-    faellt dann auf die Bestandsform zurueck, damit die Tests unten an der
-    fehlenden AUSSAGE scheitern und nicht an der Signatur.
-    """
+    """Projektion MIT Referenzzeit -- fest uebergeben, nie aus der Systemuhr."""
     kwargs = dict(tz=TZ, stand_at=local_fmt(now_utc, TZ))
-    # 🔴 RED-ONLY (#2020 Scheibe 2, Phase 5): Dieser Fallback MUSS mit dem
-    # GREEN-Commit entfernt werden. Er existiert AUSSCHLIESSLICH, damit die
-    # Wortlaut-ACs an inhaltlichen Assertions scheitern statt am fehlenden
-    # Parameter `now_utc`. Bleibt er stehen, verdeckt er kuenftig das Fehlen
-    # von `now_utc`, statt es rot zu machen — eine eingebaute Erosionsstelle.
-    try:
-        return to_alert_message(changes, segmente, "Test-Trip",
-                                now_utc=now_utc, **kwargs)
-    except TypeError as exc:  # pragma: no cover - faellt mit dem Fix weg
-        if "now_utc" not in str(exc):
-            raise
-        return to_alert_message(changes, segmente, "Test-Trip", **kwargs)
+    return to_alert_message(changes, segmente, "Test-Trip",
+                            now_utc=now_utc, **kwargs)
 
 
 def _texte(msg) -> dict[str, str]:

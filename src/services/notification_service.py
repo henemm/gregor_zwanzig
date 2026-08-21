@@ -686,10 +686,15 @@ class NotificationService:
             weather[0].segment.start_point.lat,
             weather[0].segment.start_point.lon,
         )
-        stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+        # Issue #2020 Scheibe 2: EINE Referenzzeit fuer Stand-Zeile UND
+        # Blickrichtung -- sonst koennte die Fusszeile eine andere Stunde
+        # nennen als die Restmengen-Rechnung.
+        now_utc = datetime.now(timezone.utc)
+        stand_at = local_fmt(now_utc, alert_tz)
         alert_msg = to_alert_message(
             changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
             corridor_hits=corridor_hits, reference_at=reference_at,
+            now_utc=now_utc,
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,

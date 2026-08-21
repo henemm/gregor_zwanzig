@@ -157,6 +157,26 @@ def _data(stunden: dict[int, float], summe: float,
     )
 
 
+def _data_ohne_reihe(summe: float,
+                     fenster: tuple[int, int] = FENSTER_TAG) -> SegmentWeatherData:
+    """Ein Etappen-Datenstand OHNE Stundenreihe.
+
+    `SegmentWeatherData.timeseries` ist im DTO ausdruecklich optional
+    ("None bei Provider-Fehler", models.py:543) — das ist also kein
+    konstruierter Sonderfall, sondern der dokumentierte Datenmangel-Zustand
+    des Versandpfads. Dieselbe Lage entsteht beim Vorschau-Stub des
+    Validators (`validator_render_service._stub_segment`, `data=[]`).
+    """
+    return SegmentWeatherData(
+        segment=_segment(fenster),
+        timeseries=None,
+        aggregated=SegmentWeatherSummary(temp_max_c=12.0, precip_sum_mm=summe),
+        fetched_at=datetime(TAG.year, TAG.month, TAG.day, 6, 0,
+                            tzinfo=timezone.utc),
+        provider="openmeteo",
+    )
+
+
 def _aenderungen(stunden: dict[int, float], *, alt: float, neu: float,
                  fenster: tuple[int, int] = FENSTER_TAG,
                  schwelle: float | None = None):
@@ -194,18 +214,8 @@ def _nachricht(changes, segmente, *, now_utc: datetime,
     Stand-Zeile, und der Vergleich sagte nichts ueber die Restmenge aus.
     """
     kwargs = dict(tz=TZ, stand_at=stand_at or local_fmt(now_utc, TZ))
-    # 🔴 RED-ONLY (#2020 Scheibe 2, Phase 5): Dieser Fallback MUSS mit dem
-    # GREEN-Commit entfernt werden. Er existiert AUSSCHLIESSLICH, damit die
-    # Wortlaut-ACs an inhaltlichen Assertions scheitern statt am fehlenden
-    # Parameter `now_utc`. Bleibt er stehen, verdeckt er kuenftig das Fehlen
-    # von `now_utc`, statt es rot zu machen — eine eingebaute Erosionsstelle.
-    try:
-        return to_alert_message(changes, segmente, "Test-Trip",
-                                now_utc=now_utc, **kwargs)
-    except TypeError as exc:  # pragma: no cover - faellt mit dem Fix weg
-        if "now_utc" not in str(exc):
-            raise
-        return to_alert_message(changes, segmente, "Test-Trip", **kwargs)
+    return to_alert_message(changes, segmente, "Test-Trip",
+                            now_utc=now_utc, **kwargs)
 
 
 def _texte(stunden: dict[int, float], *, now_utc: datetime,
@@ -536,3 +546,73 @@ def test_kein_weiterer_regen_wird_auch_in_der_kurzform_gesagt():
         f"'Rest0' traegt kein Zeit-Suffix (es gibt keine Endzeit); bekam {kurz!r}"
     )
     assert len(kurz) <= 160, f"160-Zeichen-Grenze gerissen: {kurz!r}"
+
+
+# --------------------------------------------------------------------------
+# Absicherung der Umsetzung (kein AC): "weiss ich nicht" ist NICHT "kommt
+# nichts mehr". Ein Datenmangel darf keine Entwarnung erfinden.
+# --------------------------------------------------------------------------
+
+def test_unbestimmbare_restmenge_erfindet_keine_entwarnung():
+    """Absicherung zur Datenmangel-Unterscheidung (gehoert zu keinem der 14
+    ACs — sie schuetzt die Umsetzung von AC-3).
+
+    GIVEN denselben Abweichungsalarm wie AC-3 (Referenzzeit 18:15, nach der
+          letzten Regenstunde), einmal MIT vollstaendiger Stundenreihe und
+          einmal mit einem Etappen-Datenstand OHNE Zeitreihe (Provider-Fehler,
+          `SegmentWeatherData.timeseries is None`)
+    WHEN  beide Faelle gerendert werden
+    THEN  sagt NUR der bestimmbare Fall "kein weiterer Regen bis Tagesende"
+          (und in der Kurzform "Rest0"). Der unbestimmbare sagt ueber die
+          Restmenge GAR NICHTS und faellt auf den Bestands-Kopf zurueck —
+          eine Entwarnung aus einem technischen Defekt waere die gefaehrlichste
+          Falschaussage, die diese Nachricht ueberhaupt treffen kann.
+
+    Die Gegenueberstellung ist der Kern: eine Implementierung, die den
+    Fehlerfall auf `0.0` legt, macht beide Faelle textgleich und muss hier
+    brechen.
+    """
+    changes, segmente = _aenderungen(REIHE_AC1, alt=ANGEKUENDIGT, neu=SUMME_AC1)
+    now = _uhr(18, 15)
+
+    def _kanaele(segs):
+        msg = _nachricht(changes, segs, now_utc=now)
+        _html, plain = render_email(msg)
+        return {"email_plain": plain, "telegram": render_telegram(msg),
+                "sms": render_sms(msg, 160)}
+
+    bestimmbar = _kanaele(segmente)
+    unbestimmbar = _kanaele([_data_ohne_reihe(SUMME_AC1)])
+
+    # Gegenprobe zuerst: ohne sie waere der Waechter unten allein dadurch
+    # gruen, dass es den Satz ueberhaupt nicht (mehr) gibt.
+    for kanal, text in _langform(bestimmbar):
+        assert "kein weiterer Regen bis Tagesende" in text, (
+            f"{kanal}: Der BESTIMMBARE Fall muss die Entwarnung ausdruecklich "
+            f"aussprechen (AC-3); bekam:\n{text}"
+        )
+    assert "Rest0" in bestimmbar["sms"], (
+        f"Kurzform des bestimmbaren Falls: {bestimmbar['sms']!r}"
+    )
+
+    for kanal, text in _langform(unbestimmbar):
+        assert text.strip(), f"{kanal}: Die Meldung muss trotzdem rausgehen"
+        # Positiv-Anker: die Meldung ist vollstaendig, nur die Restmengen-
+        # Aussage fehlt — sonst waere dieser Test schon durch eine leere
+        # Nachricht zufrieden.
+        assert "stärkste Stunde" in text, (
+            f"{kanal}: Ohne Restmenge greift der Bestands-Kopf; bekam:\n{text}"
+        )
+        assert "kein weiterer Regen" not in text, (
+            f"{kanal}: Eine unbestimmbare Restmenge darf NICHT als Entwarnung "
+            f"erscheinen — das erfindet aus einem Datenfehler eine Aussage; "
+            f"bekam:\n{text}"
+        )
+        assert "Ab jetzt" not in text and "Bis jetzt" not in text, (
+            f"{kanal}: Ohne bestimmbare Restmenge gibt es keine der beiden "
+            f"Blickrichtungs-Zeilen; bekam:\n{text}"
+        )
+    assert "Rest" not in unbestimmbar["sms"], (
+        f"Kurzform darf kein Restmengen-Token erfinden; "
+        f"bekam {unbestimmbar['sms']!r}"
+    )
