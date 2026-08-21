@@ -345,6 +345,15 @@ def test_ortsvergleich_aenderungsalarm_nennt_weiterhin_den_ortsnamen():
     Die Erwartungen sind der HEUTIGE Wortlaut, byte-genau. Sie duerfen sich
     durch #1744 nicht bewegen; `location_label` bleibt die erste Stufe der
     Aufloesungsreihenfolge.
+
+    Nachgezogen mit Issue #2020 Scheibe 2: der ZEIT-Teil der "Wo & wann"-Zeile
+    benennt seither seine Groesse ("staerkste Stunde 16:00" statt der nackten
+    "16:00", AC-11) -- eine bewusste Wortlaut-Aenderung dieser Spec, die den
+    geteilten Renderer und damit BEIDE Flaechen trifft (Trip UND Ortsvergleich;
+    eine Zweiteilung des Wortlauts waere ein Verstoss gegen die
+    Teilungs-Invariante). Der von diesem Test bewachte ORTS-Teil ist davon
+    unberuehrt und bleibt byte-genau gepruefte Invariante -- deshalb steht er
+    unten in einer eigenen, unveraenderten Zusicherung.
     """
     from output.renderers.alert.project import to_point_alert_message
     from output.renderers.alert.render import (
@@ -358,7 +367,11 @@ def test_ortsvergleich_aenderungsalarm_nennt_weiterhin_den_ortsnamen():
 
     assert render_subject(msg) == "[Toulon] Toulon · ↑ Böen: 50 km/h→80 km/h"
     assert render_telegram(msg).splitlines()[0] == "<b>Toulon · Toulon · ↑ Böen</b>"
-    assert _wo_und_wann(render_email(msg)[1]) == "Toulon · 16:00"
+    plain = render_email(msg)[1]
+    # Die #1744-Invariante: der Ort steht vorn und ist der Ortsname.
+    assert _wo_ort(plain) == "Toulon"
+    # Der Zeit-Teil in seiner #2020-Fassung (Groesse benannt, Uhrzeit unveraendert).
+    assert _wo_und_wann(plain) == "Toulon · stärkste Stunde 16:00"
 
 
 def test_ortsvergleich_mehrere_orte_nennen_weiterhin_ihre_namen():

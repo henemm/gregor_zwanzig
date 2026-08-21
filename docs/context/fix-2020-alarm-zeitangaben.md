@@ -414,12 +414,26 @@ ein Folgeticket der #2046-Session, nicht Teil dieser Scheibe.
 - **Kein Leser von `onset_day_offset` außer** `_onset_time_label` und `_sms_onset_time`.
 - Die Kurzform des Δ-Zweigs wirft Minuten **weg**: `@{occurred_at[:2]}` (`render.py:990`),
   ebenso der Korridor (`render.py:263`). Der Tagesbezug muss dort vor die **Stunde**.
-- **Für „das ist die stärkste Stunde" gibt es im Bestand kein Wort.** Etablierte
-  Bedeutungs-Marker sind nur `ab` (Beginn), `-Beginn`, `jetzt`, `Stand:`,
-  `verglichen mit`, `Gültig:`. Der Trip-Report unterscheidet Erstüberschreitung und Spitze
-  rein über die Klammerstellung (`R@14(R@17)`, `output/tokens/metrics.py:65-67`) — eine
-  Positions-Konvention ohne Wort. AC-3 muss also ein Wort **neu** einführen; dafür gibt es
-  keine Vorlage, wohl aber die Nachbarwörter, an denen es sich ausrichten muss.
+- **🔴 KORREKTUR 2026-08-21 (PO-Rückfrage „ist das ein Begriff, den wir sonst verwenden?"):
+  Das Wort „stärkste" gibt es im Bestand sehr wohl** — `output/renderers/email/helpers.py:1786`
+  schreibt seit #795/#1493 `Gewitter {Stufe} ab {HH}:00 · stärkste {HH}:00` in die
+  Briefing-Mail. Die ursprüngliche Behauptung dieses Dokuments („dafür gibt es kein Wort")
+  war falsch; sie kam von einer Suche, die nur die Alarm-Renderer abgedeckt hat und die
+  Briefing-Fläche ausgelassen hat. **Lehre: Vokabular-Fragen über ALLE Ausgabeflächen
+  greppen, nicht nur über die gerade bearbeitete.**
+- Damit ist „stärkste Stunde" keine Neueinführung, sondern die Fortsetzung eines
+  bestehenden Sprachgebrauchs — mit Substantiv, weil „stärkste" allein grammatisch
+  unvollständig ist. Die verbleibende Uneinheitlichkeit (Briefing „stärkste 15:00" vs.
+  Alarm „stärkste Stunde 17:00") ist bewusst NICHT in dieser Scheibe angeglichen: die
+  Briefing-Zeile ist eine andere Fläche, und das Alarm-Vokabular wird in **#2050 B-2**
+  normiert („Beginn / stärkste Stunde / Ende"). Befund dort gebucht.
+- **`max.` ist im Bestand die Form für den WERT, nicht für den Zeitpunkt** (`Temp max`,
+  `Wind max X km/h (HH:00)`, `_AGGREGATION_LABELS_DE` in `metric_catalog.py:894-895`).
+  Deshalb scheidet `max. 17:00` aus: es setzt eine Zahl-Erwartung, liefert aber eine Uhrzeit.
+- Etablierte Bedeutungs-Marker der Alarm-Fläche bleiben `ab` (Beginn), `-Beginn`, `jetzt`,
+  `Stand:`, `verglichen mit`, `Gültig:`. Der Trip-Report unterscheidet Erstüberschreitung
+  und Spitze rein über die Klammerstellung (`R@14(R@17)`, `output/tokens/metrics.py:65-67`)
+  — eine Positions-Konvention ohne Wort.
 
 ### Zeichenbudget der Kurznachricht: Δ- und Onset-Zweig sind getrennt (belegt 2026-08-21)
 

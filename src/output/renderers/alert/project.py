@@ -12,10 +12,15 @@ from datetime import datetime, timedelta, timezone
 from app.metric_catalog import (
     _METRICS, ONSET_AGGREGATION, get_cmp, metric_and_aggregation_for_field,
 )
-from utils.timezone import day_offset, local_fmt, resolve_location_tz
+from utils.timezone import (
+    _as_utc, day_offset, local_dt, local_fmt, resolve_location_tz,
+)
 from .model import (
     AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, OnsetShiftEvent,
 )
+# Issue #2020 Scheibe 2: EIN Wochentagskuerzel-Erzeuger fuer die Kurzform --
+# derselbe, den die amtliche Warnung schon benutzt (kein Nachbau).
+from .official_alerts import _de_weekday_short
 from .segments import normalize_segment_id
 
 logger = logging.getLogger("alert_project")
@@ -120,8 +125,11 @@ def _onset_shift_text(delta_seconds: float) -> str:
 def _to_onset_shift_event(
     ch, *, tz, km_from: float, km_to: float,
     segment_id: str | None = None, location_label: str | None = None,
-    km_measured: bool = False,
+    km_measured: bool = False,   # Issue #2036
+    now_utc=None,                # Issue #2020 Scheibe 2
 ) -> OnsetShiftEvent:
+    to_utc = datetime.fromtimestamp(ch.new_value, timezone.utc)
+    to_offset, to_past, _weekday = _when_fields(to_utc, now_utc, tz)
     metric_id, _aggregation = metric_and_aggregation_for_field(ch.metric)
     return OnsetShiftEvent(
         metric_id=metric_id,
@@ -131,12 +139,78 @@ def _to_onset_shift_event(
         km_from=km_from, km_to=km_to,
         segment_id=segment_id, location_label=location_label,
         km_measured=km_measured,  # Issue #2036
+        to_day_offset=to_offset, to_is_past=to_past,
     )
+
+
+# --- Issue #2020 Scheibe 2: Tagesbezug + Blickrichtung ----------------------
+
+def _when_fields(target_utc, now_utc, tz) -> tuple[int, bool, str | None]:
+    """(Tagesversatz, vergangen?, DE-Wochentagskuerzel) einer Zeitangabe.
+
+    EINE Stelle fuer alle drei Groessen, damit Kalendertag und
+    Vergangenheits-Kennzeichen nie aus verschiedenen Zonen stammen. Ohne
+    Referenzzeit (Aufrufer ohne `now_utc`) bleibt alles auf dem neutralen
+    Bestandswert -- der Renderer schreibt dann wie bisher die nackte Uhrzeit.
+    """
+    if target_utc is None or now_utc is None:
+        return 0, False, None
+    target_utc = _as_utc(target_utc)
+    now_utc = _as_utc(now_utc)
+    offset = day_offset(now_utc, target_utc, tz)
+    weekday = _de_weekday_short(local_dt(target_utc, tz)) if offset else None
+    return offset, target_utc < now_utc, weekday
+
+
+def _remaining_fields(eintrag, ch, now_utc, tz) -> dict:
+    """Restmenge/Ende/Fensterende EINES Niederschlags-Summen-Ereignisses.
+
+    `eintrag` ist der ROHE Eintrag aus `_find_segment()` -- also die
+    `SegmentWeatherData` mit ihrer Stundenreihe, NICHT das ueber
+    `_trip_segment()` normalisierte `TripSegment` (Issue #2036). Ein blanker
+    Segment-Eintrag (Korridor-Pfad) traegt keine Reihe und faellt unten
+    still auf "nicht bestimmbar" zurueck -- richtig, weil dort nichts zu
+    rechnen ist.
+
+    Gerechnet wird in `weather_change_detection._precip_remaining()` -- also
+    an derselben Stelle und mit demselben Segmentfenster wie die "staerkste
+    Stunde" (`_peak_occurred_at()`), bindende Invariante der Spec. HIER
+    passiert nur die Umrechnung in Ortszeit und der Tagesbezug.
+
+    Leeres dict = das Ereignis behaelt seinen "staerkste Stunde"-Kopf und
+    sagt ueber die Restmenge nichts. Das gilt fuer alle drei Faelle, in denen
+    es nichts zu sagen GIBT: andere Metrik, keine Referenzzeit -- und
+    `remaining_mm is None`, also "nicht bestimmbar" (keine Stundenreihe,
+    Provider-Fehler; z. B. der Vorschau-Stub des Validators). Der Mangelfall
+    wird bewusst NUR in `_precip_remaining()` entschieden, nicht hier noch
+    einmal parallel: zwei Stellen wuerden auseinanderlaufen, und ein
+    unbestimmbares Ergebnis darf unter keinen Umstaenden als `0.0` (=
+    "es kommt nachweislich nichts mehr") beim Renderer ankommen.
+    """
+    if ch.metric != "precip_sum_mm" or now_utc is None:
+        return {}
+    from services.weather_change_detection import _precip_remaining
+
+    remaining_mm, ends_at = _precip_remaining(eintrag, now_utc)
+    if remaining_mm is None:
+        return {}
+    ende_offset, _ende_past, ende_weekday = _when_fields(ends_at, now_utc, tz)
+    fenster_offset, _f_past, _f_weekday = _when_fields(
+        eintrag.segment.end_time, now_utc, tz,
+    )
+    return {
+        "remaining_mm": remaining_mm,
+        "remaining_until_time": _fmt_occurred_at(ends_at, tz),
+        "remaining_until_day_offset": ende_offset,
+        "remaining_until_weekday": ende_weekday,
+        "window_end_time": local_fmt(_as_utc(eintrag.segment.end_time), tz),
+        "window_end_day_offset": fenster_offset,
+    }
 
 
 def to_alert_message(
     changes, segments, trip_name, *, tz, stand_at, corridor_hits=None,
-    reference_at=None,
+    reference_at=None, now_utc=None,
 ) -> AlertMessage:
     """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None.
 
@@ -147,11 +221,23 @@ def to_alert_message(
     Issue #1444 S1: `corridor_hits` (optional, `list[CorridorHit]`) buendelt
     Schwellen-Treffer desselben Laufs in DIESELBE Nachricht (Muster #1088) --
     `changes` kann dabei leer sein (Korridor als einzige Alarmquelle, AC-5).
+
+    Issue #2020 Scheibe 2: `now_utc` ist die REFERENZZEIT des Versands --
+    ohne sie kann niemand entscheiden, welche Stunde noch bevorsteht. Aus ihr
+    entstehen Tagesversatz und Vergangenheits-Kennzeichen jeder Zeitangabe
+    sowie die Restmenge des Niederschlags-Summen-Ereignisses. Sie wird
+    UEBERGEBEN, nie hier von der Systemuhr gelesen (AC-13); `None` laesst die
+    Ausgabe byte-identisch zum Bestand.
     """
     events: list[AlertEvent] = []
     onset_events: list[OnsetShiftEvent] = []
     for ch in changes:
-        match = _trip_segment(_find_segment(segments, ch.segment_id))
+        # Issue #2036 normalisiert auf das `TripSegment` (km, Kennung, Zone);
+        # Issue #2020 Scheibe 2 braucht daneben den ROHEINTRAG, weil Restmenge
+        # und Fensterende aus der Stundenreihe der `SegmentWeatherData`
+        # entstehen -- die das normalisierte Segment nicht mehr traegt.
+        eintrag = _find_segment(segments, ch.segment_id)
+        match = _trip_segment(eintrag)
         km_from = match.start_point.distance_from_start_km
         km_to = match.end_point.distance_from_start_km
         # Issue #2036: Herkunft der Spanne (gemessen vs. Luftlinie) reist mit.
@@ -164,19 +250,25 @@ def to_alert_message(
                 km_from=km_from, km_to=km_to,
                 segment_id=normalize_segment_id(match.segment_id),
                 km_measured=km_measured,
+                now_utc=now_utc,
             ))
             continue
         metric_id = _resolve_metric_id(ch.metric, ch.direction)
         cmp = get_cmp(metric_id)
         if not cmp:
             raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
+        ev_tz = _tz_for_location(match.start_point, tz)
+        occ_offset, occ_past, occ_weekday = _when_fields(
+            ch.occurred_at, now_utc, ev_tz,
+        )
         events.append(AlertEvent(
             metric_id=metric_id, value_from=ch.old_value, value_to=ch.new_value,
             threshold=ch.threshold, cmp=cmp,
-            occurred_at=_fmt_occurred_at(
-                ch.occurred_at, _tz_for_location(match.start_point, tz)
-            ),
+            occurred_at=_fmt_occurred_at(ch.occurred_at, ev_tz),
             km_from=km_from, km_to=km_to,
+            occurred_day_offset=occ_offset, occurred_is_past=occ_past,
+            occurred_weekday=occ_weekday,
+            **_remaining_fields(eintrag, ch, now_utc, ev_tz),
             # Issue #1744 A1: die Kennung der TATSAECHLICH aufgeloesten Etappe
             # (nicht `ch.segment_id` — `_find_segment` faellt bei nicht
             # aufloesbarer Kennung auf das erste Segment zurueck, und der Alarm

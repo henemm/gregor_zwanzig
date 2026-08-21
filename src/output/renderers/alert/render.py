@@ -211,15 +211,112 @@ def _km_str(msg: AlertMessage) -> str:
     return _location_of(msg.events, msg.location_label)
 
 
-def _where_when(e: AlertEvent) -> str:
-    """Ort + Uhrzeit EINES Ereignisses (Issue #1861) — bewusst OHNE
-    `location_label`-Parameter: der Multi-Event-Zweig fuehrt den Ortsnamen
-    bereits als `loc_prefix`, und der Compare-Buendelpfad wird gar nicht erst
-    hier hindurchgeschickt (`segment_id`-Bedingung an der Aufrufstelle)."""
-    when = _location_of((e,))
-    if e.occurred_at:
-        when += f" · {e.occurred_at}"
-    return when
+def _time_with_day(
+    hhmm: str, day_offset: int = 0, is_past: bool = False,
+    *, past_word: str = "seit",
+) -> str:
+    """Issue #2020 Scheibe 2: DER gemeinsame Tageswort-Baustein — typunabhaengig,
+    einer statt zweier.
+
+    Loest den Versatz EXAKT auf, nicht ueber seinen Wahrheitswert: `-1` ist
+    "gestern", nicht "morgen" (genau daran scheiterte `_onset_time_label()`,
+    im Nowcast-Vorwaertsfenster unerreichbar, im Abweichungsalarm der
+    Normalfall). Notation ist die Hausform aus `utils.timezone.
+    format_reference_at`, die die Fusszeile schon heute spricht.
+
+    Am Versandtag (`day_offset == 0`) entfaellt das Tageswort ersatzlos; ein
+    bereits verstrichener Zeitpunkt bekommt stattdessen `past_word`. Das Wort
+    ist Sache der Aufrufstelle, weil beide Ereignisarten es verschieden
+    sprechen: ein Beginn laeuft "seit 15:00", eine Spitze "war 17:00".
+    """
+    if day_offset == -1:
+        tag = f"gestern {hhmm}"
+    elif day_offset < -1:
+        tag = f"vor {-day_offset} Tagen {hhmm}"
+    elif day_offset == 1:
+        tag = f"morgen {hhmm}"
+    elif day_offset > 1:
+        tag = f"in {day_offset} Tagen {hhmm}"
+    else:
+        tag = hhmm
+    return f"{past_word} {tag}" if is_past else tag
+
+
+def _when_suffix(e: AlertEvent) -> str:
+    """Issue #2020 Scheibe 2: der Bedeutungs-Zusatz einer Ereignis-Zeile.
+
+    Eine nackte Uhrzeit sagt nicht, WELCHE Groesse sie meint. Fuer
+    Niederschlags-Summen-Ereignisse (`remaining_mm` gesetzt) traegt die Zeile
+    stattdessen die Blickrichtung — die Uhrzeiten stehen dort in den
+    Restmengen-Zeilen, wo sie hingehoeren; fuer alle uebrigen Metriken bleibt
+    es beim Zeitpunkt des staerksten Werts ("Restmenge" ergibt fuer Wind oder
+    Temperatur keine Aussage).
+    """
+    if e.remaining_mm is not None:
+        return " · mehr Regen als angekündigt"
+    if not e.occurred_at:
+        return ""
+    return " · stärkste Stunde " + _time_with_day(
+        e.occurred_at, e.occurred_day_offset, e.occurred_is_past,
+        past_word="war",
+    )
+
+
+def _mm(value: float) -> str:
+    """Millimeter als glatte Zahl -- die Restmenge ist eine Groessenordnung,
+    keine Messung auf die Nachkommastelle (deshalb steht "~" davor)."""
+    return f"{max(0.0, value):.0f}"
+
+
+def _precip_rows(e: AlertEvent) -> list[tuple[str, str]]:
+    """Issue #2020 Scheibe 2: die beiden Zeilen, die den Alarm nach vorn
+    drehen — was bis jetzt gefallen ist, und was ab jetzt noch kommt.
+
+    Das bereits Gefallene wird als `value_to - remaining_mm` abgeleitet und
+    NICHT zweitgerechnet: zwei getrennt summierte Teilmengen driften
+    auseinander, sobald eine von beiden eine Stunde anders zaehlt.
+
+    Ohne Endzeit kommt nichts mehr. Diese Meldung wird ausdruecklich
+    GESCHRIEBEN und nicht unterdrueckt (PO-Entscheid): mehr Regen als
+    angekuendigt aendert die Lage auch rueckblickend (nasse Ausruestung,
+    Wegzustand, Baeche) -- verschwiegen wuerde nur, wie weit die Aussage
+    reicht, deshalb nennt sie ihr Fensterende.
+    """
+    # KEIN `or 0.0`: beide Aufrufstellen betreten diesen Block nur unter
+    # `e.remaining_mm is not None`, und ein Rueckfall auf 0.0 wuerde genau
+    # die Unterscheidung einebnen, die `_precip_remaining()` aufmacht
+    # (unbestimmbar vs. nachweislich nichts mehr).
+    gefallen = e.value_to - e.remaining_mm
+    rows = [(
+        "Bis jetzt",
+        f"~{_mm(gefallen)} mm gefallen (angekündigt waren {_mm(e.value_from)})",
+    )]
+    if e.remaining_until_time:
+        bis = _time_with_day(e.remaining_until_time, e.remaining_until_day_offset)
+        rows.append((
+            "Ab jetzt",
+            f"noch ~{_mm(e.remaining_mm)} mm, letzter Regen gegen {bis}",
+        ))
+    elif e.window_end_time:
+        ende = _time_with_day(e.window_end_time, e.window_end_day_offset)
+        rows.append((
+            "Ab jetzt",
+            f"kein weiterer Regen bis Tagesende (Fensterende {ende} Ortszeit)",
+        ))
+    else:
+        rows.append(("Ab jetzt", "kein weiterer Regen bis Tagesende"))
+    return rows
+
+
+def _where_when(e: AlertEvent, location_label: str | None = None) -> str:
+    """Ort + Bedeutung/Uhrzeit EINES Ereignisses (Issue #1861).
+
+    Issue #2020 Scheibe 2: `location_label` ist NEU und defaultet -- der
+    Multi-Event-Zweig ruft weiterhin ohne ihn (er fuehrt den Ortsnamen bereits
+    als `loc_prefix`), der Einzel-Datenblock reicht ihn durch, damit beide
+    Zweige denselben Zeit-Baustein benutzen statt zweier Kopien.
+    """
+    return _location_of((e,), location_label) + _when_suffix(e)
 
 
 def _per_event_where_when(evs) -> bool:
@@ -294,10 +391,18 @@ def _onset_shift_where(oe: OnsetShiftEvent) -> str:
     )
 
 
+def _onset_shift_to(oe: OnsetShiftEvent) -> str:
+    """Issue #2020 Scheibe 2: die NEUE Beginn-Uhrzeit mit Tagesbezug und
+    Vergangenheits-Ausweis. EINE Stelle fuer alle drei Ausgabewege (Klartext,
+    HTML-Zeile, Telegram) -- sonst schriebe die Mail "seit 15:00" und die
+    HTML-Tabelle daneben weiterhin ein bevorstehend klingendes "15:00"."""
+    return _time_with_day(oe.to_time, oe.to_day_offset, oe.to_is_past)
+
+
 def _onset_shift_line(oe: OnsetShiftEvent) -> str:
     """Eine Zeile Klartext: Groesse, alte und neue Uhrzeit, Richtungswort."""
     return (
-        f"{_label(oe)}-Beginn: {oe.from_time} → {oe.to_time} "
+        f"{_label(oe)}-Beginn: {oe.from_time} → {_onset_shift_to(oe)} "
         f"({oe.shift_text} · {_onset_shift_where(oe)})"
     )
 
@@ -343,7 +448,8 @@ def _render_email_onset_shift_only(msg: AlertMessage) -> tuple[str, str]:
     rows = [
         _datarow_html(
             f"{_label(oe)}-Beginn · {_onset_shift_where(oe)}",
-            f"{oe.from_time} → {oe.to_time} ({oe.shift_text})", G_DANGER, i == 0,
+            f"{oe.from_time} → {_onset_shift_to(oe)} ({oe.shift_text})",
+            G_DANGER, i == 0,
         )
         for i, oe in enumerate(msg.onset_shift_events)
     ]
@@ -394,8 +500,14 @@ def _onset_time_label(e: OnsetEvent) -> str:
     `onset_time` ist reines "HH:MM" ohne Datum -- bei einem Onset, der ueber
     Mitternacht rutscht, ist "00:23" sonst mehrdeutig (heute Nacht oder in
     ueber 23 Stunden?). Additiv: bei `onset_day_offset == 0` (Normalfall)
-    byte-identisch zu `e.onset_time`."""
-    return f"morgen {e.onset_time}" if e.onset_day_offset else e.onset_time
+    byte-identisch zu `e.onset_time`.
+
+    Issue #2020 Scheibe 2: loest den Versatz ueber den GEMEINSAMEN Baustein
+    `_time_with_day()` auf statt ueber den Wahrheitswert -- vorher wurde jeder
+    Versatz ungleich null zu "morgen", auch `-1`. `OnsetEvent` kennt kein
+    Vergangenheits-Kennzeichen (Radar blickt nach vorn), daher `is_past=False`.
+    """
+    return _time_with_day(e.onset_time, e.onset_day_offset)
 
 
 def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
@@ -739,11 +851,15 @@ def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[
     # Issue #1744 A1 (AC-6): DIESELBE Aufloesung wie im Betreff — vorher stand
     # hier ein dritter, eigener km-Bauer (`_km_str_events`), weshalb der
     # Mailkoerper km sprach, waehrend der Betreff schon Segmente sprach.
-    when = _location_of((e,), location_label)
-    if e.occurred_at:
-        when += f" · {e.occurred_at}"
-    row3 = ("Wo & wann", when)
-    return [row1, row2, row3]
+    # Issue #2020 Scheibe 2: derselbe Zeit-/Bedeutungs-Baustein wie im
+    # Mehr-Ereignis-Zweig (`_where_when`) -- keine zweite Kopie.
+    row3 = ("Wo & wann", _where_when(e, location_label))
+    # Issue #2020 Scheibe 2: Niederschlags-Summen-Ereignisse bekommen die
+    # Blickrichtung als eigene Zeilen; alle uebrigen Metriken behalten den
+    # Block unveraendert dreizeilig.
+    if e.remaining_mm is None:
+        return [row1, row2, row3]
+    return [row1, row2, row3, *_precip_rows(e)]
 
 
 def _datarow_html(
@@ -934,7 +1050,8 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
     for oe in msg.onset_shift_events:
         rows.append(_datarow_html(
             f"{_label(oe)}-Beginn · {_onset_shift_where(oe)}",
-            f"{oe.from_time} → {oe.to_time} ({oe.shift_text})", G_DANGER, not rows,
+            f"{oe.from_time} → {_onset_shift_to(oe)} ({oe.shift_text})",
+            G_DANGER, not rows,
         ))
     for ce in msg.corridor_events:
         rows.append(_datarow_html(_label(ce), _corridor_value_str(ce), G_DANGER, not rows))
@@ -972,7 +1089,12 @@ def render_telegram(msg: AlertMessage) -> str:
     if len(evs) == 1:
         e = evs[0]
         verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_label(e)}"
-        lines = [f"<b>{_esc(verdict)}</b>", _email_line(e)]
+        # Issue #2020 Scheibe 2: Telegram traegt DIESELBEN Saetze wie die
+        # E-Mail (Kanal-Paritaet) -- vorher fehlte hier jede Zeitangabe, der
+        # Kanal konnte den Tagesbezug also gar nicht nennen.
+        lines = [f"<b>{_esc(verdict)}</b>", _email_line(e), _where_when(e)]
+        if e.remaining_mm is not None:
+            lines += [f"{k}: {v}" for k, v in _precip_rows(e)]
     else:
         # Issue #981: Kopfzeilen-Zähler nur über-Schwelle; null → Änderungs-Text.
         over_count = len([e for e in evs if over_thr(e)])
@@ -1047,9 +1169,38 @@ def _sms_token(
         sign = "+" if e.value_to >= e.value_from else "-"
         tok = f"{sign}{_code(e)}{int(round(e.value_to))}"
     if e.occurred_at:
-        tok = tok + f"@{e.occurred_at[:2]}"
+        # Issue #2020 Scheibe 2: liegt der Zeitpunkt an einem anderen Tag,
+        # klebt das Wochentagskuerzel vor die Stunde (`@Do15`) -- dieselbe
+        # Bestandsnotation wie die amtliche Warnung. Ein Zahlensuffix ist
+        # verworfen: "-" ist in der Kurzform bereits dreifach belegt.
+        tag = _sms_day_prefix(e.occurred_day_offset, e.occurred_weekday)
+        tok = tok + f"@{tag}{e.occurred_at[:2]}"
     pos = (location_positions or {}).get(e.location_label or "")
     return f"{pos}:{tok}" if pos else tok
+
+
+def _sms_day_prefix(day_offset: int, weekday: str | None) -> str:
+    """Wochentagskuerzel vor der Stunde -- nur bei Versatz != 0 (am Versandtag
+    entfaellt es ersatzlos, dieselbe Regel wie #1948 S5)."""
+    return (weekday or "") if day_offset else ""
+
+
+def _sms_rest_token(e: AlertEvent) -> str | None:
+    """Issue #2020 Scheibe 2: `Rest{mm}@{HH}` -- die Restmenge ab jetzt und
+    ihr Ende als Kompakt-Token. `None` fuer Metriken ohne Restmenge.
+
+    Ohne Endzeit steht `Rest0` OHNE Zeit-Suffix: die Kurzform verschweigt den
+    Sachverhalt nicht, sie kuerzt ihn nur.
+    """
+    if e.remaining_mm is None:
+        return None
+    tok = f"Rest{int(round(e.remaining_mm))}"
+    if e.remaining_until_time:
+        tag = _sms_day_prefix(
+            e.remaining_until_day_offset, e.remaining_until_weekday,
+        )
+        tok += f"@{tag}{e.remaining_until_time[:2]}"
+    return tok
 
 
 def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
@@ -1164,9 +1315,17 @@ def _render_sms_body(
         # transliteriert (AC-7), kein Trip-Name mehr (AC-5).
         head = f"{_ascii_alert_location(_km_str(msg))}: "
     # Issue #1444 S1 (AC-6): Schwellen-Treffer-Tokens desselben Laufs mit.
-    tokens = (
-        [_sms_token(e, location_positions) for e in evs]
-        + [_sms_onset_shift_token(oe) for oe in msg.onset_shift_events]
+    # Issue #2020 Scheibe 2: das Restmengen-Token steht DIREKT neben dem
+    # Delta-Token desselben Ereignisses -- sonst stuenden bei mehreren
+    # Ereignissen Menge und Rest an unzusammenhaengenden Stellen.
+    tokens: list[str] = []
+    for e in evs:
+        tokens.append(_sms_token(e, location_positions))
+        rest = _sms_rest_token(e)
+        if rest:
+            tokens.append(rest)
+    tokens += (
+        [_sms_onset_shift_token(oe) for oe in msg.onset_shift_events]
         + [_sms_corridor_token(ce) for ce in msg.corridor_events]
     )
 

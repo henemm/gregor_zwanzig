@@ -37,6 +37,36 @@ class AlertEvent:
     # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
     # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
     km_measured: bool = False
+    # --- Issue #2020 Scheibe 2: Zeitangaben tragen ihren Tag ---------------
+    # Alle additiv und defaultet -> im unveraenderten Normalfall (Versandtag,
+    # bevorstehender Zeitpunkt, Nicht-Niederschlags-Metrik) byte-identisch.
+    # GERECHNET wird in der Projektion aus der Referenzzeit `now_utc`
+    # (`day_offset()`), der Renderer setzt nur die Worte -- Muster #2009.
+    # Kalendertage zwischen Versandtag und `occurred_at` (0 = selber Tag,
+    # -1 = gestern, +1 = morgen).
+    occurred_day_offset: int = 0
+    # Liegt `occurred_at` zum Versandzeitpunkt bereits hinter uns?
+    occurred_is_past: bool = False
+    # DE-Wochentagskuerzel von `occurred_at` fuer die Kurzform ("Do15" statt
+    # des verworfenen Zahlensuffix "15-1"); nur bei Versatz != 0 gelesen.
+    occurred_weekday: str | None = None
+    # --- Niederschlags-Summen-Ereignisse: die Blickrichtung nach vorn -------
+    # Menge (mm), die ab dem Versandzeitpunkt im Tagesfenster noch faellt.
+    # `None` = diese Metrik kennt keine Restmenge (Wind, Temperatur, ...) ->
+    # der Renderer bleibt beim "staerkste Stunde"-Kopf.
+    remaining_mm: float | None = None
+    # "HH:MM" Ortszeit der letzten noch bevorstehenden Regenstunde des
+    # Fensters; `None` = es kommt nichts mehr (ausdrueckliche Meldung, KEINE
+    # Unterdrueckung -- PO-Entscheid).
+    remaining_until_time: str | None = None
+    remaining_until_day_offset: int = 0
+    remaining_until_weekday: str | None = None
+    # "HH:MM" Ortszeit des effektiven Tagesfenster-Endes (`end_hour` zaehlt
+    # voll mit, ADR-0035) -- die Grenze, bis zu der die Restmenge ueberhaupt
+    # blickt. Steht im "kein weiterer Regen"-Satz, damit die Aussage ihre
+    # Reichweite nennt statt sie zu verschweigen.
+    window_end_time: str | None = None
+    window_end_day_offset: int = 0
 
 
 @dataclass(frozen=True)
@@ -105,6 +135,12 @@ class OnsetShiftEvent:
     # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
     # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
     km_measured: bool = False
+    # Issue #2020 Scheibe 2: additiv, defaultet (Muster `AlertEvent` oben).
+    # Tagesversatz und Vergangenheit des NEUEN Beginns (`to_time`) -- eine
+    # nackte Uhrzeit sagt nicht, ob der Beginn noch bevorsteht oder laengst
+    # verstrichen ist, und genau das war der Vorwurf aus #2020.
+    to_day_offset: int = 0
+    to_is_past: bool = False
 
 
 @dataclass(frozen=True)

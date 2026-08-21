@@ -103,7 +103,10 @@ def render_alert_preview(
         return _render_nowcast_replay(trip_obj, body.nowcast_frames)
 
     alert_tz = _alert_tz_for_trip(trip_obj)
-    stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+    # Issue #2020 Scheibe 2: dieselbe Referenzzeit fuer Stand-Zeile und
+    # Zeitbezug der Vorschau (Muster `notification_service`).
+    now_utc = datetime.now(timezone.utc)
+    stand_at = local_fmt(now_utc, alert_tz)
     has_onset = body.onset is not None
 
     if has_onset:
@@ -147,7 +150,7 @@ def render_alert_preview(
         segments = [_stub_segment(st) for st in body.segment_times]
         msg = to_alert_message(
             changes, segments, trip_obj.name,
-            tz=alert_tz, stand_at=stand_at,
+            tz=alert_tz, stand_at=stand_at, now_utc=now_utc,
         )
 
     subject = render_subject(msg)
