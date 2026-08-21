@@ -371,3 +371,10 @@ Notation im selben Kanal. Das AC muss diese Frage ausdrücklich mitbeantworten �
 „gilt auch für den Onset-Suffix, Umstellung in eigenem Ticket" oder „Onset bleibt bewusst
 bei `+1`, Begründung X". Sonst entsteht die dritte Notation als Altbestand statt als
 Neubau. Die #2046-Session legt das Folgeticket an, sobald die Spec freigegeben ist.
+
+**Prüfpunkt aus dem Alarm-Versand-Audit (nur lesende Session, kein Ticket):**
+`docs/context/fix-2009-nowcast-vorlauf.md:162` hält fest, dass kein Test prüft, ob
+`onset_minutes` überhaupt variieren kann — der Default 8 maskiert das suiteweit. Betrifft
+den Nowcast-Vorlauf, nicht den Abweichungsalarm; **kein Ziel dieser Scheibe**. Wenn die
+Zeitangaben-Tests ohnehin eine Referenzzeit durchreichen, ist ein variierender Wert dort
+billig mitzunehmen — sonst liegen lassen und in #1196 buchen.
