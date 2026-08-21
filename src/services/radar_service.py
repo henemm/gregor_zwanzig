@@ -707,6 +707,15 @@ class RadarNowcastService:
         # Spec "Known Limitations").
         compare_horizon = now + timedelta(minutes=_OVERTAKE_COMPARE_WINDOW_MIN)
         all_ts_sorted = sorted({f.timestamp for f in frames})
+        # Issue #2020 Adversary-Runde 3, F012: die Fenstergrenze ist bewusst
+        # ausschliessend (`<`, nicht `<=`). Fuer die Mengenrechnung ist das
+        # folgenlos -- ein Frame exakt auf `compare_horizon` bekaeme ueber
+        # `frame_end = min(..., compare_horizon)` ohnehin Dauer null.
+        # Beobachtbar waere der Unterschied nur ueber `compare_window_max_rate_mm_h`
+        # (max() ueber genau diese gefilterte Menge) -- und dieses Feld ist
+        # seit #2020/F008 rein beschreibend, ohne Leser in der Alarmregel.
+        # Sobald max_rate_mm_h wieder in eine Entscheidung eingeht, braucht
+        # diese Grenze einen eigenen Test.
         compare_window = sorted(
             (f for f in frames if f.timestamp >= now and f.timestamp < compare_horizon),
             key=lambda f: f.timestamp,

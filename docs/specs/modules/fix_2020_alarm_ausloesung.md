@@ -455,6 +455,14 @@ Produktionscode) statt des geteilten Singletons.
   dieser Scheibe.
 - **Prognose-Zwischenstände** (wann genau sprang die Vorhersage von 7,4 auf 29,4 mm)
   bleiben unaufgezeichnet — eigenes Ticket #2030.
+- **Fenstergrenze `compare_horizon` (F012, Runde 3) ungetestet, bewusst.** Ein Frame exakt
+  auf `compare_horizon` trägt zu `window_precip_mm` ohnehin mit Dauer null bei (`frame_end =
+  min(..., compare_horizon)`) — für die Mengenrechnung folgenlos. Beobachtbar wäre der
+  Unterschied nur über `compare_window_max_rate_mm_h`, und dieses Feld ist seit F008 rein
+  beschreibend, ohne Leser in der Alarmregel — ein Test dafür würde eine Genauigkeit
+  vortäuschen, die nirgends wirkt. Sobald `max_rate_mm_h` wieder in eine Entscheidung
+  eingeht, braucht diese Grenze einen eigenen Test (Bedingung im Code kommentiert,
+  `radar_service.py` bei `compare_window`).
 
 ## Architektur-Entscheidung (ADR)
 
