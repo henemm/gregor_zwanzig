@@ -19,6 +19,8 @@ treffen, Nachbardateien und undatierte Namensvettern muessen ueberleben.
 from __future__ import annotations
 
 import json
+import sys
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -569,3 +571,161 @@ def test_resolve_call_source_called_only_after_write_decision(monkeypatch):
 
     assert _mitschnitt(modul, aggregat=_aggregat(precip=9.0)) is True
     assert zaehler["n"] == 1, "im schreibwuerdigen Fall muss genau einmal aufgeloest werden"
+
+
+# --- Adversary-Befunde: Nebenlaeufigkeit, Schluesselschnitt, Grenzfaelle ---
+# Die Grenzwerte 60/15/30 stehen hier BEWUSST als Literale und nicht als
+# `modul.TAKT_MINUTEN` o.ae.: eine Verschiebung der Konstante ist genau die
+# Regression, die diese Tests fangen sollen.
+def test_gleichzeitige_erstverbraucher_schreiben_genau_eine_zeile(monkeypatch):
+    """F008. GIVEN ein Schluessel ohne Grundlinie (kalter Zustand nach
+    Prozessstart) WHEN 50 Threads ihn gleichzeitig mit IDENTISCHEN Werten
+    verbrauchen THEN entsteht genau EINE Zeile. Lagen Pruefung und
+    Zustands-Update in getrennten kritischen Sektionen, sah jeder Thread "noch
+    keine Grundlinie" und schrieb — 50 Zeilen statt einer. Echte Threads,
+    `threading.Barrier` erzwingt den gleichzeitigen Start."""
+    modul = _uhr(monkeypatch, ANKER)
+    anzahl = 50
+    barriere = threading.Barrier(anzahl)
+    ergebnisse: list[bool] = []
+    sammel_sperre = threading.Lock()
+
+    def verbrauchen() -> None:
+        barriere.wait()
+        geschrieben = _mitschnitt(modul, aggregat=_aggregat(precip=7.4))
+        with sammel_sperre:
+            ergebnisse.append(geschrieben)
+
+    threads = [threading.Thread(target=verbrauchen) for _ in range(anzahl)]
+    for faden in threads:
+        faden.start()
+    for faden in threads:
+        faden.join(timeout=20)
+
+    assert sum(ergebnisse) == 1, f"{sum(ergebnisse)} Threads schrieben, erwartet genau 1"
+    assert len(_zeilen(ANKER)) == 1, f"mehr als eine Zeile: {_zeilen(ANKER)}"
+
+
+def test_dedup_schluessel_trennt_tag_und_beide_koordinaten(monkeypatch):
+    """F005. GIVEN drei Verbrauche mit IDENTISCHEN Werten innerhalb des Takts,
+    die sich NUR im Tag, nur in `lon` bzw. nur in `lat` unterscheiden WHEN sie
+    nacheinander eintreffen THEN traegt jeder seinen eigenen Schluessel und
+    erzeugt eine eigene Zeile. Die identischen Werte sind der Kern der Probe:
+    bei abweichenden Werten schriebe auch ein kollidierender Schluessel, die
+    Zusicherung waere trivial wahr. Der Tages-Fall ist Henningss Alltag — die
+    Tour ist mehrtaegig, dieselbe Uhrzeit kommt an jedem Tag vor."""
+    modul = _uhr(monkeypatch, ANKER)
+    grundlinie = _segment(lat=46.6, lon=12.9, start=ANKER)
+    varianten = [
+        _segment(lat=46.6, lon=12.9, start=ANKER + timedelta(days=1)),
+        _segment(lat=46.6, lon=13.9, start=ANKER),
+        _segment(lat=47.6, lon=12.9, start=ANKER),
+    ]
+
+    assert _mitschnitt(modul, segment=grundlinie, aggregat=_aggregat(precip=7.4)) is True
+    for segment in varianten:
+        assert _mitschnitt(modul, segment=segment, aggregat=_aggregat(precip=7.4)) is True
+
+    zeilen = _zeilen(ANKER)
+    assert len(zeilen) == 4, f"Schluessel kollidieren, nur {len(zeilen)} von 4 Zeilen"
+    assert {z["grund"] for z in zeilen} == {"aenderung"}
+
+
+def test_importfehler_des_mitschnitts_erreicht_die_wetterabfrage_nicht(monkeypatch):
+    """F006. GIVEN `services.forecast_capture` ist nicht importierbar WHEN
+    `fetch_segment_weather()` laeuft THEN kommt das regulaere Ergebnis zurueck.
+    Das AEUSSERE try/except an der Aufrufstelle ist die einzige Schicht, die
+    einen Importfehler ueberhaupt abfangen KANN — das innere im Writer wird
+    dabei nie erreicht (AC-8 verlangt beide). Positivkontrolle: mit heilem
+    Import entsteht unter sonst gleichen Bedingungen eine Zeile."""
+    import services.forecast_capture as echtes_modul
+
+    dienst = SegmentWeatherService(FakeProvider(), cache=WeatherCacheService())
+    heute = datetime.now(timezone.utc)
+
+    monkeypatch.setitem(sys.modules, "services.forecast_capture", None)
+    kaputt = dienst.fetch_segment_weather(_segment(lat=46.60))
+
+    assert kaputt.has_error is False, f"Importfehler schlug durch: {kaputt.error_message}"
+    assert kaputt.aggregated.precip_sum_mm is not None
+    assert kaputt.timeseries is not None
+    assert _zeilen(heute) == [], "ohne importierbares Modul kann nichts geschrieben werden"
+
+    monkeypatch.setitem(sys.modules, "services.forecast_capture", echtes_modul)
+    gut = dienst.fetch_segment_weather(_segment(lat=46.70))  # anderer Dedup-Schluessel
+
+    assert len(_zeilen(heute)) == 1, "Positivkontrolle: mit heilem Import muss es schreiben"
+    assert kaputt.aggregated == gut.aggregated, "Ergebnis haengt am Mitschnitt-Import"
+
+
+def test_fehlgeschlagenes_schreiben_vergiftet_die_grundlinie_nicht(monkeypatch):
+    """F007. GIVEN der Schreibvorgang fuer einen Schluessel schlaegt fehl WHEN
+    derselbe Schluessel kurz darauf mit UNVERAENDERTEN Werten erneut verbraucht
+    wird THEN wird geschrieben — ein Stand, der nie in der Datei landete, darf
+    nicht als "zuletzt geschrieben" gelten. Der Nachlauf liegt bewusst INNERHALB
+    des Takts: bei abgelaufenem Takt schriebe auch die vergiftete Variante, die
+    Probe haette keine Varianz."""
+    modul = _uhr(monkeypatch, ANKER)
+    _ziel_unbeschreibbar_machen(ANKER)
+    assert _mitschnitt(modul, aggregat=_aggregat(precip=7.4)) is False
+    _datei(ANKER).rmdir()
+
+    _uhr(monkeypatch, ANKER + timedelta(minutes=5))
+    assert _mitschnitt(modul, aggregat=_aggregat(precip=7.4)) is True
+
+    zeilen = _zeilen(ANKER)
+    assert len(zeilen) == 1, f"der gescheiterte Versuch verschluckte die Zeile: {zeilen}"
+    assert zeilen[0]["grund"] == "aenderung", "der gescheiterte Stand galt als Grundlinie"
+
+
+def test_takt_grenze_bei_exakt_60_minuten_schreibt_nicht(monkeypatch):
+    """F001. GIVEN identische Werte und ein Eintrag GENAU 60 Minuten alt WHEN
+    erneut verbraucht wird THEN entsteht keine Zeile: "aelter als 60 Minuten"
+    ist strikt, die Grenzminute gehoert noch zum ruhigen Fenster."""
+    modul = _uhr(monkeypatch, ANKER)
+    assert _mitschnitt(modul, aggregat=_aggregat(precip=7.4)) is True
+
+    _uhr(monkeypatch, ANKER + timedelta(minutes=60))
+    assert _mitschnitt(modul, aggregat=_aggregat(precip=7.4)) is False
+    assert len(_zeilen(ANKER)) == 1, "die Takt-Grenze loeste eine Zeile zu frueh aus"
+
+
+def test_health_drossel_meldet_bei_exakt_15_minuten_nicht_erneut(monkeypatch):
+    """F002. GIVEN eine Health-Meldung liegt GENAU 15 Minuten zurueck WHEN ein
+    weiterer Mitschnitt gelingt THEN bleibt es bei einer Meldung — "hoechstens
+    eine je 15 Minuten" schliesst die Grenzminute ein."""
+    from providers.enrichment_health import PATH_FORECAST_CAPTURE
+
+    modul = _uhr(monkeypatch, ANKER)
+    assert _mitschnitt(modul, aggregat=_aggregat(precip=1.0)) is True
+
+    _uhr(monkeypatch, ANKER + timedelta(minutes=15))
+    assert _mitschnitt(modul, aggregat=_aggregat(precip=2.0)) is True
+
+    meldungen = _health_meldungen(PATH_FORECAST_CAPTURE)
+    assert len(meldungen) == 1, f"die Drossel oeffnete eine Minute zu frueh: {meldungen}"
+
+
+def test_prune_grenze_genau_30_tage_bleibt_31_tage_geht(monkeypatch):
+    """F003. GIVEN eine Tagesdatei ist am Prune-Tag GENAU 30 Tage alt, eine
+    zweite 31 Tage WHEN der Datumswechsel den Prune ausloest THEN ueberlebt die
+    erste und die zweite verschwindet. Beide werden relativ zum PRUNE-Tag
+    datiert, nicht zum Anker — der Prune laeuft einen Tag spaeter."""
+    modul = _uhr(monkeypatch, ANKER)
+    assert _mitschnitt(modul, aggregat=_aggregat(precip=1.0)) is True
+    prune_tag = ANKER + timedelta(days=1)
+    ordner = _diagnose_ordner()
+
+    def _tagesdatei(tage: int) -> Path:
+        name = f"forecast_capture_{(prune_tag - timedelta(days=tage)).date()}.jsonl"
+        pfad = ordner / name
+        pfad.write_text(json.dumps({"marker": name}) + "\n", encoding="utf-8")
+        return pfad
+
+    genau_30, tag_31 = _tagesdatei(30), _tagesdatei(31)
+
+    _uhr(monkeypatch, prune_tag)
+    assert _mitschnitt(modul, aggregat=_aggregat(precip=2.0)) is True
+
+    assert genau_30.is_file(), "genau 30 Tage alt ist nicht 'aelter als 30 Tage'"
+    assert not tag_31.exists(), "31 Tage alt haette entfernt werden muessen"

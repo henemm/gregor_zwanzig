@@ -40,7 +40,9 @@ _DATUM_RE = re.compile(re.escape(DATEI_PRAEFIX) + r"(\d{4}-\d{2}-\d{2})\.jsonl$"
 # (Praezedenz `get_shared_weather_cache()`); nach einem Neustart schreibt jeder
 # Schluessel einmal — das ist die gewuenschte Grundlinie. Der Lock ist Pflicht:
 # `comparison_parallel.py:118` verbraucht aus mehreren Threads gleichzeitig.
-_lock = threading.Lock()
+# RLock, weil die kritische Sektion in `capture_segment_forecast` die Helfer
+# umschliesst, die den Lock ihrerseits nehmen (#2030 F008).
+_lock = threading.RLock()
 _letzte_werte: dict[str, tuple[dict, datetime]] = {}
 _letztes_prune_datum: Optional[date] = None
 _letzte_health: Optional[datetime] = None
@@ -186,33 +188,43 @@ def capture_segment_forecast(
         jetzt = _utcnow()
         werte = _werte(aggregated)
         schluessel = _dedup_schluessel(segment)
-        grund = _schreibgrund(schluessel, werte, jetzt)
-        if grund is None:
-            return False
-        # Erst JETZT aufloesen: `resolve_call_source()` nutzt `inspect.stack()`
-        # und ist teuer — im uebersprungenen Fall darf es nie laufen (AC-12).
-        zeile = json.dumps({
-            "written_at": jetzt.isoformat(),
-            "fetched_at": fetched_at.isoformat(),
-            "cache_hit": bool(cache_hit),
-            "grund": grund,
-            "lat": segment.start_point.lat,
-            "lon": segment.start_point.lon,
-            "segment_id": segment.segment_id,
-            "fenster_start": segment.start_time.isoformat(),
-            "fenster_ende": segment.end_time.isoformat(),
-            "day_window_start_hour": segment.day_window_start_hour,
-            "day_window_end_hour": segment.day_window_end_hour,
-            "provider": provider,
-            "model": model,
-            "source": call_log.resolve_call_source(),
-            "werte": werte,
-        })
-        _anhaengen(zeile, jetzt)
-        # Erst NACH erfolgreichem Schreiben fortschreiben: ein Stand, der nie in
-        # der Datei landete, darf nicht als "zuletzt geschrieben" gelten -- sonst
-        # verschluckt ein einzelner Schreibfehler die naechste echte Aenderung.
+        # Pruefung, Schreiben und Zustands-Update gehoeren in EINE kritische
+        # Sektion (#2030 F008): lagen sie auseinander, sah bei kaltem Zustand
+        # jeder gleichzeitige Verbraucher desselben Schluessels "noch keine
+        # Grundlinie" und schrieb — 50 Threads ergaben 50 Zeilen statt einer.
+        # Serialisiert werden nur kleine Anhaenge an eine lokale Datei, waehrend
+        # die Threads ohnehin am Netz haengen. Die Health-Meldung bleibt bewusst
+        # DRAUSSEN: `log_enrichment_call` ist selbst fail-soft und darf keinen
+        # anderen Thread aufhalten.
         with _lock:
+            grund = _schreibgrund(schluessel, werte, jetzt)
+            if grund is None:
+                return False
+            # Erst JETZT aufloesen: `resolve_call_source()` nutzt
+            # `inspect.stack()` und ist teuer — im uebersprungenen Fall darf es
+            # nie laufen (AC-12).
+            zeile = json.dumps({
+                "written_at": jetzt.isoformat(),
+                "fetched_at": fetched_at.isoformat(),
+                "cache_hit": bool(cache_hit),
+                "grund": grund,
+                "lat": segment.start_point.lat,
+                "lon": segment.start_point.lon,
+                "segment_id": segment.segment_id,
+                "fenster_start": segment.start_time.isoformat(),
+                "fenster_ende": segment.end_time.isoformat(),
+                "day_window_start_hour": segment.day_window_start_hour,
+                "day_window_end_hour": segment.day_window_end_hour,
+                "provider": provider,
+                "model": model,
+                "source": call_log.resolve_call_source(),
+                "werte": werte,
+            })
+            _anhaengen(zeile, jetzt)
+            # Erst NACH erfolgreichem Schreiben fortschreiben: ein Stand, der
+            # nie in der Datei landete, darf nicht als "zuletzt geschrieben"
+            # gelten -- sonst verschluckt ein einzelner Schreibfehler die
+            # naechste echte Aenderung.
             _letzte_werte[schluessel] = (werte, jetzt)
         _melde(OUTCOME_OK, jetzt)
         return True
