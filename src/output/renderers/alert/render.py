@@ -396,12 +396,24 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
     # jetzt die tatsächlich beteiligten, distinct Quell-Labels der Events.
     footer = f"Stand: heute {msg.stand_at} · Quelle: {_distinct_source_labels(msg)}"
     cooldown = (
-        f"Cooldown: Du erhältst diese Warnung höchstens einmal in {msg.cooldown_display}."
+        # Issue #2018 Teil C: der Cooldown haelt nur die jeweils EIGENE Quelle
+        # zurueck -- der Zusatz sagt das. Er steht in DERSELBEN Zeile wie der
+        # bestehende Satz (Leerzeichen als Fuge): die zeilen-/blockweisen
+        # Reihenfolge-Waechter des Mailkoerpers klassifizieren per Substring,
+        # eine eigene Zeile wuerde sie kippen.
+        f"Cooldown: Du erhältst diese Warnung höchstens einmal in "
+        f"{msg.cooldown_display}. Bei Meldungen aus anderen Quellen "
+        f"(amtliche Warnung/Radar) greift dieser Cooldown nicht."
         if msg.cooldown_display else ""
     )
     plain_parts = [h1, "", badge_text, ""] + [f"{k}: {v}" for k, v in data_rows] + ["", footer]
     if cooldown:
         plain_parts.append(cooldown)
+    # Issue #2018 (AC-B2): additive Bezugszeile, nur wenn diese Meldung ein
+    # Nachtrag zu einer bereits zugestellten amtlichen Warnung ist -- sonst
+    # unveraendert, ohne Leerzeile.
+    if msg.addendum_reference:
+        plain_parts.append(msg.addendum_reference)
     plain = "\n".join(plain_parts)
 
     rows = [
@@ -420,6 +432,12 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
         html += (
             f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
             f"font-family:{FONT_UI};color:{G_INK_MUTED};\">{_esc(cooldown)}</div>"
+        )
+    if msg.addendum_reference:  # Issue #2018 (AC-B2), additiv
+        html += (
+            f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
+            f"font-family:{FONT_UI};color:{G_INK_MUTED};\">"
+            f"{_esc(msg.addendum_reference)}</div>"
         )
     html += (
         f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
@@ -451,13 +469,25 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
 
     footer = f"Stand: heute {msg.stand_at}"
     cooldown = (
-        f"Cooldown: Du erhältst diese Warnung höchstens einmal in {msg.cooldown_display}."
+        # Issue #2018 Teil C: der Cooldown haelt nur die jeweils EIGENE Quelle
+        # zurueck -- der Zusatz sagt das. Er steht in DERSELBEN Zeile wie der
+        # bestehende Satz (Leerzeichen als Fuge): die zeilen-/blockweisen
+        # Reihenfolge-Waechter des Mailkoerpers klassifizieren per Substring,
+        # eine eigene Zeile wuerde sie kippen.
+        f"Cooldown: Du erhältst diese Warnung höchstens einmal in "
+        f"{msg.cooldown_display}. Bei Meldungen aus anderen Quellen "
+        f"(amtliche Warnung/Radar) greift dieser Cooldown nicht."
         if msg.cooldown_display else ""
     )
 
     plain_parts = [h1, "", badge_text, ""] + [f"{k}: {v}" for k, v in data_rows] + ["", footer]
     if cooldown:
         plain_parts.append(cooldown)
+    # Issue #2018 (AC-B2): additive Bezugszeile, nur wenn diese Meldung ein
+    # Nachtrag zu einer bereits zugestellten amtlichen Warnung ist -- sonst
+    # unveraendert, ohne Leerzeile.
+    if msg.addendum_reference:
+        plain_parts.append(msg.addendum_reference)
     plain = "\n".join(plain_parts)
 
     rows = [
@@ -478,6 +508,12 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
             f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
             f"font-family:{FONT_UI};color:{G_INK_MUTED};\">{_esc(cooldown)}</div>"
         )
+    if msg.addendum_reference:  # Issue #2018 (AC-B2), additiv
+        html += (
+            f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
+            f"font-family:{FONT_UI};color:{G_INK_MUTED};\">"
+            f"{_esc(msg.addendum_reference)}</div>"
+        )
     html += (
         f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
         "</body></html>"
@@ -491,6 +527,10 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
     km = _km_str_onset(e)
     first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} in {e.onset_minutes} Min')}</b>"
     second = f"{_onset_time_label(e)} · {e.intensity_label} · {e.source_label}"
+    # Issue #2018 (AC-B3): die Bezugszeile steht als EIGENE Zeile zwischen Kopf
+    # und Detailtext -- bei `None` bleibt der Text unveraendert.
+    if msg.addendum_reference:
+        return "\n".join([first, msg.addendum_reference, second])
     return "\n".join([first, second])
 
 
@@ -968,7 +1008,38 @@ def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
     return body if len(body) <= limit else body[:limit]
 
 
+# Issue #2018 (AC-B4/AC-B11): Kompakt-Token der Nachtragsmeldung fuer SMS,
+# Kurzstil-Telegram und Premium-SMS -- die drei Kanaele, die denselben
+# SMS-Text senden. Bewusst OHNE "-": die SMS-Grammatik ueberlaedt den
+# Bindestrich bereits zweifach (Stufen-Rueckfall `LEVELS.get(..., "-")` UND
+# der "->"-Pfeil bei Stufenaenderungen); eine dritte Bedeutung waere im
+# Fliesstext nicht mehr auseinanderzuhalten.
+_ADDENDUM_SMS_PREFIX = "Erg "
+
+
 def render_sms(
+    msg: AlertMessage,
+    limit: int = 140,
+    location_positions: dict[str, int] | None = None,
+    addendum: bool = False,
+) -> str:
+    """Kurznachricht ueber alle SMS-artigen Kanaele.
+
+    Issue #2018: traegt die Meldung eine Nachtrags-Bezugszeile
+    (`msg.addendum_reference`) -- oder verlangt ein Aufrufer `addendum=True`
+    ausdruecklich --, wird der Kern-Text mit einem um die Praefixlaenge
+    VERKLEINERTEN Limit gerendert und das Praefix danach vorangestellt. Die
+    Laengen-Zusicherung entsteht damit aus der bestehenden Kuerzungslogik,
+    nicht aus einer zweiten Laengenpruefung."""
+    if addendum or msg.addendum_reference is not None:
+        kern = _render_sms_body(
+            msg, limit - len(_ADDENDUM_SMS_PREFIX), location_positions,
+        )
+        return _ADDENDUM_SMS_PREFIX + kern
+    return _render_sms_body(msg, limit, location_positions)
+
+
+def _render_sms_body(
     msg: AlertMessage,
     limit: int = 140,
     location_positions: dict[str, int] | None = None,

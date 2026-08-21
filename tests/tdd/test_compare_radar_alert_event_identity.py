@@ -880,3 +880,199 @@ def test_ac17_signaturen_des_geteilten_bausteins_bleiben_unveraendert():
         ("is_convective", "KEYWORD_ONLY", True),
         ("hazard", "KEYWORD_ONLY", True),
     ], f"resolve_hazard_class: {_parameter_form(resolve_hazard_class)!r}"
+
+
+# ═══════ AC-B14/AC-B15 (Issue #2018) — Ortsvergleich-Bestandsschutz ═════════
+#
+# Issue #2018 gibt dem geteilten Baustein einen dritten Ausgang: eine
+# Nowcast-Meldung, die eine bereits zugestellte AMTLICHE Warnung eskaliert,
+# wird am TRIP-Pfad kuenftig als Nachtrag gekennzeichnet statt als zweiter
+# Voll-Alarm. Der Ortsvergleich bekommt in dieser Scheibe NULL
+# Produktivaenderung (Spec B0, Korrektur 4): dieselbe Konstellation bleibt
+# hier eine gewoehnliche Voll-Zustellung, und in KEINEM Compare-Ausgabetext
+# darf je eine Nachtrags-Markierung auftauchen.
+
+# Woerter, an denen eine Nachtrags-Darstellung im Ausgabetext erkennbar
+# waere (Spec B2/B4: ausformulierte Bezugszeile fuer E-Mail/Voll-Telegram,
+# Kompakt-Token `"Erg "` fuer SMS/Kurzstil/Premium-SMS).
+_NACHTRAGS_MARKER = ("Ergänzung", "Nachtrag", "addendum", "Erg ")
+
+
+def _ohne_nachtrags_markierung(text: str) -> list[str]:
+    """Welche Nachtrags-Marker stecken im Text? (leer = sauber)"""
+    return [m for m in _NACHTRAGS_MARKER if m.lower() in (text or "").lower()]
+
+
+def _eskalierende_konstellation(uid: str, preset_id: str):
+    """Amtliche Warnung mit Dringlichkeit LOW bereits registriert, danach ein
+    KONVEKTIVER Nowcast (Dringlichkeit HIGH) fuer denselben Ort — genau die
+    Konstellation, die am Trip-Pfad kuenftig zum Nachtrag wird (V2-Eskalation
+    ueber eine amtliche Meldung hinweg)."""
+    save_location(_location("loc-a", "OrtA", LAT_A, LON_A), user_id=uid)
+    _write_preset(uid, [_radar_preset(preset_id, ["loc-a"])])
+    _register_official_style_entry(uid, f"{preset_id}:loc-a", "loc-a", severity="LOW")
+
+
+def test_b14_eskalierender_nowcast_nach_amtlicher_warnung_bleibt_volle_zustellung():
+    """AC-B14: Die Konstellation, die am Trip-Pfad zum Nachtrag wird
+    (amtlich registriert, Nowcast danach MIT Eskalation), laeuft ueber den
+    Ortsvergleich-Nowcast-Pfad weiterhin als gewoehnliche Voll-Zustellung —
+    Zustell-Effekt identisch zum Stand vor #2018, kein Nachtrags-Hinweis in
+    der Compare-Mail.
+
+    GIVEN: Fuer einen Compare-Ort ist eine amtliche Warnung (LOW) registriert
+    WHEN:  Ein konvektiver Nowcast (HIGH) denselben Ort ausloest
+    THEN:  Der Alarm geht voll raus (eine Mail, ein Ort im Buendel), es
+           entsteht KEIN Unterdrueckungs-Protokoll, und der Ausgabetext
+           enthaelt keinerlei Nachtrags-Markierung
+
+    Bestandsschutz-Waechter (heute gruen): faellt, sobald der Ortsvergleich
+    die neue Nachtrags-Form auswertet und dadurch eine Zustellung verliert
+    oder eine eigene Nachtragsdarstellung erzeugt.
+
+    🔴 Die Freigabe-Bedingung in `compare_radar_alert.py` bleibt bewusst
+    `identity_gate.allowed` — `identity_gate.allowed and not
+    identity_gate.is_addendum` wuerde eine heute zugestellte Meldung
+    unterdruecken und damit die harte Mengen-Invariante brechen (#2018,
+    Korrektur 4). Wer hier „zurueck auf die Spec-Fassung" will, liest erst
+    diesen Grund."""
+    uid = _uid("b14")
+    _clean_user(uid)
+    try:
+        _eskalierende_konstellation(uid, "p-b14")
+
+        mails: list = []
+        svc = _RecordingCompareRadarAlertService(
+            settings=_settings_email_capable_dummy(), user_id=uid,
+            radar_service=_radar_service({
+                (LAT_A, LON_A): _wet_frame(8, is_convective=True),
+            }),
+            mail_sink=lambda subject, body: mails.append((subject, body)),
+        )
+        raus = svc.check_all_compare_presets()
+
+        assert raus == 1, (
+            f"Die Eskalation ueber die amtliche Warnung hinweg stellt heute zu "
+            f"und muss das weiter tun — die Zustellmenge des Ortsvergleichs "
+            f"aendert sich durch #2018 nicht ({raus!r})"
+        )
+        assert len(mails) == 1, f"Genau EINE Radar-Alarm-Mail erwartet: {mails!r}"
+        assert len(svc.sent_entities) == 1 and len(svc.sent_entities[0]) == 1, (
+            f"Genau EIN gebuendelter Versand mit GENAU EINEM Ort erwartet: "
+            f"{svc.sent_entities!r}"
+        )
+        assert _event_duplicate_log_entries(uid) == [], (
+            f"Es darf kein Unterdrueckungs-Protokoll entstehen: "
+            f"{_event_duplicate_log_entries(uid)!r}"
+        )
+        betreff, body = mails[0]
+        assert _ohne_nachtrags_markierung(betreff) == [], (
+            f"Kein Nachtrags-Hinweis im Betreff erlaubt "
+            f"({_ohne_nachtrags_markierung(betreff)!r}): {betreff!r}"
+        )
+        assert _ohne_nachtrags_markierung(body) == [], (
+            f"Kein Nachtrags-Hinweis im Compare-Ausgabetext erlaubt "
+            f"({_ohne_nachtrags_markierung(body)!r}): {body!r}"
+        )
+    finally:
+        _clean_user(uid)
+
+
+def test_b15_compare_stellt_trotz_nachtrags_form_des_gate_ergebnisses_voll_zu(monkeypatch):
+    """AC-B15 (neu gefasst): Der Ortsvergleich IGNORIERT die Nachtrags-Form
+    des Gate-Ergebnisses bewusst — gepruefte Zusicherung an genau der Stelle,
+    an der sie wirkt.
+
+    GIVEN: Dieselbe Konstellation wie AC-B14 (amtlich LOW registriert,
+           konvektiver Nowcast HIGH)
+    WHEN:  Der Compare-Nowcast-Pfad mit dem ROHEN Gate-Ergebnis laeuft
+    THEN:  (a) das Rohergebnis traegt `allowed=True` UND `is_addendum=True`,
+           (b) der Ort wird TROTZDEM voll zugestellt (kein
+           `append_suppressed_entry`, Zustellzahl wie vor #2018), und
+           (c) weder im Ausgabetext noch auf einem der uebergebenen
+           Compare-Objekte taucht eine Nachtrags-Markierung oder ein
+           `addendum_reference` auf
+
+    (a) ist RED bis Teil A steht (`GateResult` kennt `is_addendum` nicht),
+    (b)/(c) sind Bestandsschutz. (c) ist der eigentliche Schutz gegen einen
+    kuenftigen Compare-Umbau, der `is_addendum` auswertet und eine
+    Ortsvergleich-eigene Nachtragsdarstellung erzeugt — er wird rot, sobald
+    so etwas im Ausgabetext erscheint, ohne dass eine Zustellung dafuer
+    geopfert wird.
+
+    🔴 Die Freigabe-Bedingung bleibt bewusst `identity_gate.allowed` —
+    `identity_gate.allowed and not identity_gate.is_addendum` wuerde eine
+    heute zugestellte Meldung unterdruecken und die Mengen-Invariante
+    brechen (#2018, Korrektur 4). Genau diese Verkuerzung faengt
+    Teilzusicherung (b): sie wird rot, sobald jemand sie einbaut.
+
+    Spion auf dem Modul-Namensraum von `compare_radar_alert` (benannter
+    Import), delegiert an die ECHTE Funktion und reicht deren echtes
+    `GateResult` unveraendert durch — kein Mock."""
+    import services.compare_radar_alert as crm
+    from services.alert_gate import check_event_identity_gate as _echt
+
+    ergebnisse: list = []
+
+    def _spion(*args, **kwargs):
+        ergebnis = _echt(*args, **kwargs)
+        ergebnisse.append(ergebnis)
+        return ergebnis
+
+    monkeypatch.setattr(crm, "check_event_identity_gate", _spion)
+
+    uid = _uid("b15")
+    _clean_user(uid)
+    try:
+        _eskalierende_konstellation(uid, "p-b15")
+
+        mails: list = []
+        svc = _RecordingCompareRadarAlertService(
+            settings=_settings_email_capable_dummy(), user_id=uid,
+            radar_service=_radar_service({
+                (LAT_A, LON_A): _wet_frame(8, is_convective=True),
+            }),
+            mail_sink=lambda subject, body: mails.append((subject, body)),
+        )
+        raus = svc.check_all_compare_presets()
+
+        # (a) — das Rohergebnis IST die Nachtrags-Form.
+        assert len(ergebnisse) == 1, (
+            f"Genau EIN Gate-Aufruf fuer den einen getriggerten Ort erwartet: "
+            f"{ergebnisse!r}"
+        )
+        roh = ergebnisse[0]
+        assert roh.allowed is True, (
+            f"V2-Eskalation muss weiterhin freigeben: {roh!r}"
+        )
+        assert getattr(roh, "is_addendum", False) is True, (
+            f"Das Rohergebnis muss die Nachtrags-Form tragen — sonst prueft "
+            f"dieser Waechter die Gleichgueltigkeit des Ortsvergleichs gegen "
+            f"eine Form, die es gar nicht gibt (Positivkontrolle): {roh!r}"
+        )
+
+        # (b) — trotzdem volle Zustellung, keine Unterdrueckung.
+        assert raus == 1, (
+            f"Der Ortsvergleich darf die Nachtrags-Form NICHT als Sperre lesen "
+            f"— die Zustellmenge bleibt identisch zum Vor-#2018-Stand ({raus!r})"
+        )
+        assert len(mails) == 1, f"Genau EINE Radar-Alarm-Mail erwartet: {mails!r}"
+        assert _not_delivered(uid) == [], (
+            f"Kein Unterdrueckungs-Protokoll erlaubt: {_not_delivered(uid)!r}"
+        )
+
+        # (c) — keine Nachtrags-Markierung im Text UND auf keinem Objekt.
+        _betreff, body = mails[0]
+        assert _ohne_nachtrags_markierung(body) == [], (
+            f"Kein Nachtrags-Hinweis im Compare-Ausgabetext erlaubt "
+            f"({_ohne_nachtrags_markierung(body)!r}): {body!r}"
+        )
+        for buendel in svc.sent_entities:
+            for eintrag in buendel:
+                for teil in eintrag:
+                    assert getattr(teil, "addendum_reference", None) is None, (
+                        f"Kein Compare-Objekt darf ein `addendum_reference` "
+                        f"tragen: {teil!r}"
+                    )
+    finally:
+        _clean_user(uid)
