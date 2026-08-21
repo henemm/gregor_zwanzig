@@ -572,3 +572,17 @@ Produktionscode) statt des geteilten Singletons.
   Fixture, die diesen Fall auslöst — an das Team-Lead zur Entscheidung zurückgegeben, kein
   eigenmächtiger Test ergänzt. Details:
   `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`, Abschnitt „Runde 3".
+- 2026-08-21: **F013 (HIGH, Adversary-Runde 4, Commit `427fdef3`) geschlossen — reine
+  Testlücke, kein Fehler im Produktivcode.** Der F010-Wächter platzierte in seiner Fixture
+  den höheren Duplikat-Wert (5,0 mm/h) zufällig zuerst und den niedrigeren (3,0 mm/h) danach,
+  wodurch „der höhere Wert gewinnt" von „der erste Wert gewinnt" nicht unterscheidbar war
+  (Beleg: die Mutation `if existing is None or frame.precip_mm_h > existing:` →
+  `if existing is None:` färbte keinen der 31 Tests rot). Fix: zweite Fixture
+  `_duplicate_timestamp_frames_f010_reversed` mit vertauschter Ankunftsreihenfolge, bestehender
+  Wächter über beide Fixtures parametrisiert (`ids=["hoeherer-wert-zuerst",
+  "hoeherer-wert-danach"]`) statt als eigenständiger Zweittest — macht die Invariante
+  „Ergebnis unabhängig von der Ankunftsreihenfolge" direkt im Testkopf sichtbar. Nachgewiesen:
+  obige Mutation färbt jetzt `[hoeherer-wert-danach]` rot (0,75 mm statt 1,25 mm); die beiden
+  bereits gefangenen Mutationen (Entdopplung entfernt, „höherer" → „niedrigerer" gewinnt)
+  bleiben in beiden Parametrisierungen rot. Produktivcode (`radar_service.py`) unverändert.
+  Details: `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`, Abschnitt „Runde 4".

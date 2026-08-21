@@ -295,6 +295,28 @@ def _duplicate_timestamp_frames_f010(lat: float, lon: float) -> list:
     ]
 
 
+def _duplicate_timestamp_frames_f010_reversed(lat: float, lon: float) -> list:
+    """Wie `_duplicate_timestamp_frames_f010`, aber mit VERTAUSCHTER
+    Ankunftsreihenfolge (niedrigerer Wert 3,0 mm/h zuerst, hoeherer 5,0 mm/h
+    danach) -- Adversary-Fund F013 (Runde 4, 2026-08-21): die urspruengliche
+    Fixture platzierte den hoeheren Wert zufaellig ZUERST, wodurch "der
+    hoehere Wert gewinnt" von "der erste Wert gewinnt" nicht unterscheidbar
+    war (die Mutation `if existing is None or frame.precip_mm_h > existing:`
+    -> `if existing is None:` faerbte deshalb keinen Test rot). Beide
+    Reihenfolgen muessen auf denselben Mengenwert fuehren, sonst haengt die
+    Entdopplung von der Ankunftsreihenfolge des Providers ab -- und ein
+    spaeter eintreffender, KORRIGIERTER hoeherer Wert wuerde still
+    verworfen. Das ist die Unterzaehl-Richtung, aus der dieses Ticket
+    entstand (eine Warnung kam zu spaet)."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    ts = now + timedelta(minutes=10)
+    return [
+        RadarFrame(timestamp=ts, precip_mm_h=3.0),
+        RadarFrame(timestamp=ts, precip_mm_h=5.0),
+    ]
+
+
 def _near_frame_with_sparse_far_frames_f003(lat: float, lon: float) -> list:
     """EIN Frame im Vergleichsfenster (+10 Min, 8,0 mm/h) PLUS drei
     gleichmaessig verteilte, trockene Frames weit ausserhalb (+100/+160/
@@ -1340,32 +1362,44 @@ def test_f007_single_isolated_frame_is_bounded_by_max_frame_coverage():
 # --------------------------------------------------------------------------
 # F010-Waechter (Fix-Loop 3, Adversary-Runde 3, 2026-08-21): zwei Frames mit
 # identischem Zeitstempel duerfen denselben Zeitabschnitt nicht doppelt
-# zaehlen
+# zaehlen. Adversary-Runde 4, F013 (2026-08-21): ueber BEIDE Ankunfts-
+# reihenfolgen parametrisiert (hoeherer zuerst / hoeherer danach), denn nur
+# so ist "der hoehere Wert gewinnt" von "der erste Wert gewinnt"
+# unterscheidbar -- NICHT als Redundanz streichen, siehe Docstrings der
+# beiden Fixtures oben.
 # --------------------------------------------------------------------------
 
-def test_f010_duplicate_timestamp_frames_must_not_be_double_counted():
-    """F010: Liefert die Frame-Quelle zwei Frames mit EXAKT demselben
+@pytest.mark.parametrize(
+    "frame_source",
+    [_duplicate_timestamp_frames_f010, _duplicate_timestamp_frames_f010_reversed],
+    ids=["hoeherer-wert-zuerst", "hoeherer-wert-danach"],
+)
+def test_f010_duplicate_timestamp_frames_must_not_be_double_counted(frame_source):
+    """F010/F013: Liefert die Frame-Quelle zwei Frames mit EXAKT demselben
     Zeitstempel (Providerwiederholung/Sidecar-Merge), darf der zugehoerige
     15-Min-Zeitabschnitt nur EINMAL in window_precip_mm einfliessen, nicht
-    einmal je Duplikat.
+    einmal je Duplikat -- UNABHAENGIG davon, in welcher Reihenfolge die
+    beiden Duplikate eintreffen.
 
-    Given zwei Frames bei +10 Min, 5,0 und 3,0 mm/h, sonst keine Frames im
-          Horizont.
+    Given zwei Frames bei +10 Min, 5,0 und 3,0 mm/h (in beiden moeglichen
+          Ankunftsreihenfolgen), sonst keine Frames im Horizont.
     When get_nowcast() die Serie verarbeitet.
-    Then betraegt window_precip_mm ~1,25 mm (EIN 15-Min-Slot, hoeherer Wert
-         gewinnt: 5,0 mm/h * 0,25 h), NICHT ~2,0 mm (Summe beider
-         Einzelanteile -- die Doppelzaehlung).
+    Then betraegt window_precip_mm in BEIDEN Faellen ~1,25 mm (EIN 15-Min-
+         Slot, hoeherer Wert gewinnt: 5,0 mm/h * 0,25 h), NICHT ~2,0 mm
+         (Summe beider Einzelanteile -- die Doppelzaehlung), und die
+         Reihenfolge der Duplikate darf das Ergebnis nicht veraendern.
     """
     from services.radar_service import RadarNowcastService
 
-    radar = RadarNowcastService(frame_source=_duplicate_timestamp_frames_f010)
+    radar = RadarNowcastService(frame_source=frame_source)
     result = radar.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
 
     assert result.window_precip_mm == pytest.approx(1.25, abs=0.05), (
-        f"F010: EIN 15-Min-Slot mit dem hoeheren Duplikat-Wert (5,0 mm/h) "
-        f"muss ~1,25 mm ergeben (war {result.window_precip_mm})."
+        f"F010/F013: EIN 15-Min-Slot mit dem hoeheren Duplikat-Wert "
+        f"(5,0 mm/h) muss ~1,25 mm ergeben, UNABHAENGIG von der "
+        f"Ankunftsreihenfolge (war {result.window_precip_mm})."
     )
     assert result.window_precip_mm != pytest.approx(2.0, abs=0.1), (
-        f"F010: die Doppelzaehlung beider Duplikate (~2,0 mm) darf nicht "
-        f"mehr auftreten (war {result.window_precip_mm})."
+        f"F010/F013: die Doppelzaehlung beider Duplikate (~2,0 mm) darf "
+        f"nicht mehr auftreten (war {result.window_precip_mm})."
     )
