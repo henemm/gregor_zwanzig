@@ -1097,3 +1097,678 @@ def test_ac21_adr_0021_traegt_einen_datierten_s4b_nachtrag():
         f"Der neue S4b-Nachtrag muss NACH dem S4a-Nachtrag stehen "
         f"(s4a_pos={s4a_pos}, s4b_pos={s4b_pos})"
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Issue #2018 Teil A — gerichtetes, mengenerhaltendes dreiwertiges Gate
+# SPEC: docs/specs/modules/alert_nachtragsmeldung.md (AC-A1 … AC-A13)
+#
+# Neue Zusicherung: eine amtlich registrierte Meldung, der ein ESKALIERENDER
+# Nowcast folgt, wird nicht mehr als zweiter VOLLER Alarm zugestellt, sondern
+# als NACHTRAG — dieselbe Zustellung, andere Form. Die ZUSTELLMENGE bleibt
+# identisch (AC-A13): aus Stille wird nie ein Nachtrag (AC-A8), und in keiner
+# anderen Quellen-Richtung entsteht je einer (AC-A9).
+#
+# Die vier Bestandstests oberhalb (Kernfall Gegenrichtung, S4b-1 AC-8/AC-9/
+# AC-10) bleiben unangetastet und muessen GRUEN bleiben — sie sind Teil des
+# Nachweises, dass diese Scheibe nur EINE Konstellation beruehrt.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Der Nowcast-Horizont steht hier BEWUSST als eigene Zahl, nicht als Import
+# aus `radar_service`: Soll und Ist duerfen nicht aus derselben Quelle
+# stammen. Waere die Konstante importiert, wanderten Testeingaben und
+# Produktivlogik bei einer Verfaelschung gemeinsam — die Konstellationen
+# blieben passend und die Tests still gruen (F001-Lehre aus #1948 S6).
+_HORIZONT_MIN = 180
+
+
+def _konstellation(
+    *, entry_source: str, new_source: str, eskalation: bool, v1_greift: bool,
+    t0: datetime,
+) -> dict:
+    """Baut EINE Konstellation der Matrix: Zeitfelder des Registereintrags und
+    der neuen Meldung, so dass Segment- UND Zeitueberlappung IMMER gegeben
+    sind und ausschliesslich die beiden Schalter `eskalation`/`v1_greift`
+    variieren.
+
+    `eskalation` steuert allein die Dringlichkeit des REGISTEREINTRAGS (die
+    neue Meldung ist immer ``HIGH``): ``MODERATE`` -> Eskalation, ``HIGH`` ->
+    keine. `v1_greift` steuert allein, ob die neue Meldung wesentlich — mehr
+    als einen Horizont — ueber das abgedeckte Ende des Eintrags hinausreicht.
+    """
+    if entry_source == "official":
+        entry_zeiten = {
+            "window_start": t0, "window_end": t0 + timedelta(minutes=120),
+        }
+        abgedeckt_bis = t0 + timedelta(minutes=120)
+    else:
+        entry_zeiten = {"point_at": t0}
+        abgedeckt_bis = t0 + timedelta(minutes=_HORIZONT_MIN)
+
+    if new_source == "official":
+        ende = (
+            abgedeckt_bis + timedelta(minutes=_HORIZONT_MIN + 60)
+            if v1_greift else abgedeckt_bis
+        )
+        neue_zeiten = {"window_start": t0 + timedelta(minutes=10), "window_end": ende}
+    else:
+        punkt = (
+            abgedeckt_bis + timedelta(minutes=60)
+            if v1_greift else abgedeckt_bis - timedelta(minutes=60)
+        )
+        neue_zeiten = {"point_at": punkt}
+
+    return {
+        "entry_severity": "MODERATE" if eskalation else "HIGH",
+        "entry_zeiten": entry_zeiten,
+        "neue_zeiten": neue_zeiten,
+    }
+
+
+# ───────────── AC-A1 — Reproduktion des gemeldeten Falls (16:15/16:37) ───────
+
+
+def test_aca1_amtliche_warnung_dann_eskalierender_nowcast_wird_zum_nachtrag():
+    """AC-A1: Reproduktion des gemeldeten Falls aus #2018.
+
+    GIVEN eine amtliche Warnung (Quelle ``official``, Dringlichkeit
+          ``MODERATE``, Fenster 16:00-18:00) ist um 16:15 UTC zugestellt und
+          registriert
+    WHEN  um 16:37 UTC ein konvektiver Nowcast (``point_at`` gesetzt,
+          Dringlichkeit ``HIGH``) derselben Gefahrenklasse/desselben Orts mit
+          ueberlappendem Zeitfenster geprueft wird
+    THEN  geht er raus (``allowed is True``), aber als NACHTRAG
+          (``is_addendum is True``) mit Bezug auf die amtliche Warnung
+          (``addendum_source == "official"``) und deren Meldezeitpunkt
+          (``addendum_reported_at``).
+
+    Heute rot: ``GateResult`` kennt die drei Nachtrags-Felder nicht, das Gate
+    liefert an dieser Stelle einen gewoehnlichen Voll-Alarm."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("2018-aca1")
+    clean_uid(uid)
+    try:
+        amtlich_um = datetime(2026, 8, 20, 16, 15, 0, tzinfo=timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-aca1", hazard_class="wet",
+            segment_ids=["3"], severity="MODERATE",
+            window_start=datetime(2026, 8, 20, 16, 0, 0, tzinfo=timezone.utc),
+            window_end=datetime(2026, 8, 20, 18, 0, 0, tzinfo=timezone.utc),
+            now=amtlich_um,
+        )
+        nowcast_um = datetime(2026, 8, 20, 16, 37, 0, tzinfo=timezone.utc)
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-aca1", hazard_class="wet",
+            segment_ids=["3"], severity="HIGH",
+            point_at=nowcast_um + timedelta(minutes=20), now=nowcast_um,
+        )
+        assert ergebnis.allowed is True, (
+            f"Die eskalierende Nowcast-Meldung muss zugestellt werden: "
+            f"{ergebnis!r}"
+        )
+        assert ergebnis.is_addendum is True, (
+            f"Sie muss als NACHTRAG zugestellt werden, nicht als zweiter "
+            f"voller Alarm: {ergebnis!r}"
+        )
+        assert ergebnis.addendum_source == "official", (
+            f"Der Nachtrag muss die amtliche Warnung als Bezugsquelle "
+            f"tragen: {ergebnis!r}"
+        )
+        assert ergebnis.addendum_reported_at == amtlich_um, (
+            f"Der Nachtrag muss den Meldezeitpunkt der amtlichen Warnung "
+            f"({amtlich_um.isoformat()}) tragen: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ────────── AC-A2 — Quellenableitung fuer Registereintraege im Alt-Format ────
+
+
+def test_aca2_altformat_ohne_quellenfeld_wird_ueber_das_fenster_als_amtlich_gelesen():
+    """AC-A2 (erste Ableitungsrichtung): ein Registereintrag OHNE
+    ``"source"``-Schluessel — geschrieben VOR dieser Scheibe — traegt seine
+    Quelle in der Anwesenheit der Zeitfelder: nur ``window_start``/
+    ``window_end`` gesetzt bedeutet ``official``.
+
+    GIVEN einen Alt-Eintrag ohne ``"source"`` mit Fenster (Nutzer A) UND
+          einen gleichwertigen NEUEN Eintrag, per ``record_event_identity``
+          geschrieben (Nutzer B)
+    WHEN  beide gegen denselben eskalierenden Nowcast geprueft werden
+    THEN  ist die Gate-Entscheidung IDENTISCH — der Alt-Eintrag verliert
+          seine Quellen-Zuordnung nicht."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+    from services.alert_state import AlertStateService
+
+    alt, neu = fresh_uid("2018-aca2-alt"), fresh_uid("2018-aca2-neu")
+    clean_uid(alt)
+    clean_uid(neu)
+    try:
+        t0 = datetime(2026, 8, 20, 12, 0, 0, tzinfo=timezone.utc)
+        fenster_ende = t0 + timedelta(minutes=120)
+        AlertStateService(user_id=alt).save("trip-aca2", {
+            f"event_identity:wet:7:{t0.isoformat()}": {
+                "hazard_class": "wet", "segment_ids": ["7"],
+                "severity": "MODERATE",
+                # 'source' fehlt bewusst — Alt-Format vor #2018
+                "point_at": None, "window_start": t0.isoformat(),
+                "window_end": fenster_ende.isoformat(),
+                "reported_at": t0.isoformat(),
+            },
+        })
+        record_event_identity(
+            user_id=neu, entity_id="trip-aca2", hazard_class="wet",
+            segment_ids=["7"], severity="MODERATE",
+            window_start=t0, window_end=fenster_ende, now=t0,
+        )
+        gemeinsam = dict(
+            entity_id="trip-aca2", hazard_class="wet", segment_ids=["7"],
+            severity="HIGH", point_at=t0 + timedelta(minutes=60),
+            now=t0 + timedelta(minutes=30),
+        )
+        ergebnis_alt = check_event_identity_gate(user_id=alt, **gemeinsam)
+        ergebnis_neu = check_event_identity_gate(user_id=neu, **gemeinsam)
+
+        assert ergebnis_neu.is_addendum is True, (
+            f"Positivkontrolle: der NEUE Eintrag mit explizitem Quellenfeld "
+            f"muss einen Nachtrag erzeugen: {ergebnis_neu!r}"
+        )
+        assert ergebnis_alt == ergebnis_neu, (
+            f"Alt-Eintrag ohne 'source' muss dieselbe Entscheidung liefern "
+            f"wie der gleichwertige neue Eintrag: alt={ergebnis_alt!r}, "
+            f"neu={ergebnis_neu!r}"
+        )
+    finally:
+        clean_uid(alt)
+        clean_uid(neu)
+
+
+def test_aca2_altformat_ohne_quellenfeld_wird_ueber_point_at_als_nowcast_gelesen():
+    """AC-A2 (zweite Ableitungsrichtung, Gegenprobe): ein Alt-Eintrag ohne
+    ``"source"``, aber MIT ``point_at``, ist ein Nowcast — und ein zweiter
+    Nowcast darauf darf NIE ein Nachtrag werden (gleiche Quelle).
+
+    Ohne diese Gegenprobe waere die erste Ableitungsrichtung auch von einer
+    Implementierung erfuellt, die Alt-Eintraege pauschal als ``official``
+    liest."""
+    from services.alert_gate import check_event_identity_gate
+    from services.alert_state import AlertStateService
+
+    uid = fresh_uid("2018-aca2b")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 20, 12, 0, 0, tzinfo=timezone.utc)
+        AlertStateService(user_id=uid).save("trip-aca2b", {
+            f"event_identity:wet:8:{t0.isoformat()}": {
+                "hazard_class": "wet", "segment_ids": ["8"],
+                "severity": "MODERATE",
+                # 'source' fehlt bewusst — Alt-Format vor #2018
+                "point_at": t0.isoformat(), "window_start": None,
+                "window_end": None, "reported_at": t0.isoformat(),
+            },
+        })
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-aca2b", hazard_class="wet",
+            segment_ids=["8"], severity="HIGH",
+            point_at=t0 + timedelta(minutes=60), now=t0 + timedelta(minutes=30),
+        )
+        assert ergebnis.allowed is True, (
+            f"Die Eskalation muss wie bisher als voller Alarm durchbrechen: "
+            f"{ergebnis!r}"
+        )
+        assert ergebnis.is_addendum is False, (
+            f"Ein Alt-Eintrag MIT point_at ist ein Nowcast — daraus darf nie "
+            f"ein Nachtrag entstehen: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ───────── AC-A3 — V2-Eskalation ausserhalb der Nachtrags-Richtung ───────────
+
+
+def test_aca3_nowcast_registriert_amtliche_eskalation_danach_bleibt_voller_alarm():
+    """AC-A3 (NEUER Fall zur unveraenderten Gegenrichtung): ein registrierter
+    Nowcast, gefolgt von einer amtlichen Warnung mit ECHT hoeherer
+    Dringlichkeit.
+
+    GIVEN einen registrierten Nowcast-Eintrag (``MODERATE``)
+    WHEN  danach eine amtliche Warnung (``HIGH``) derselben Klasse/desselben
+          Orts mit ueberlappendem Fenster geprueft wird
+    THEN  bricht sie als VOLLER Alarm durch — ``allowed is True`` UND
+          ``is_addendum is False``. Die Nachtrags-Form ist gerichtet und
+          greift in dieser Richtung nicht."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("2018-aca3")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 20, 10, 0, 0, tzinfo=timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-aca3", hazard_class="wet",
+            segment_ids=["4"], severity="MODERATE", point_at=t0, now=t0,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-aca3", hazard_class="wet",
+            segment_ids=["4"], severity="HIGH",
+            window_start=t0 + timedelta(minutes=10),
+            window_end=t0 + timedelta(minutes=_HORIZONT_MIN),
+            now=t0 + timedelta(minutes=15),
+        )
+        assert ergebnis.allowed is True, (
+            f"Eine amtliche Eskalation muss durchkommen: {ergebnis!r}"
+        )
+        assert ergebnis.is_addendum is False, (
+            f"In der Richtung Nowcast->amtlich darf NIE ein Nachtrag "
+            f"entstehen: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ─────── AC-A7 — V1-Ausnahme bleibt auch in der Nachtrags-Richtung voll ──────
+
+
+def test_aca7_v1_ausnahme_in_der_nachtragsrichtung_bleibt_voller_alarm():
+    """AC-A7: echte NEUE Zeitabdeckung wird voll ausgeliefert, nicht als
+    Nachtrag verkuerzt.
+
+    GIVEN einen amtlichen Registereintrag (Fenster endet zu T, Dringlichkeit
+          ``MODERATE``)
+    WHEN  ein Nowcast OHNE hoehere Dringlichkeit (ebenfalls ``MODERATE``)
+          folgt, dessen abgedecktes Ende (``point_at`` + Horizont) wesentlich
+          ueber ``T`` hinausreicht
+    THEN  geht er als VOLLER Alarm raus (``allowed is True``,
+          ``is_addendum is False``) — die V1-Ausnahme ist quellenunabhaengig,
+          und ein Nachtrag entsteht ausschliesslich beim Eskalations-Treffer."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("2018-aca7")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 20, 9, 0, 0, tzinfo=timezone.utc)
+        fenster_ende = t0 + timedelta(minutes=120)
+        record_event_identity(
+            user_id=uid, entity_id="trip-aca7", hazard_class="wet",
+            segment_ids=["5"], severity="MODERATE",
+            window_start=t0, window_end=fenster_ende, now=t0,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-aca7", hazard_class="wet",
+            segment_ids=["5"], severity="MODERATE",  # keine Eskalation
+            # abgedeckt bis fenster_ende + 60 + Horizont — also mehr als einen
+            # vollen Horizont ueber das bereits abgedeckte Ende hinaus
+            point_at=fenster_ende + timedelta(minutes=60),
+            now=t0 + timedelta(minutes=30),
+        )
+        assert ergebnis.allowed is True, (
+            f"Wesentlich neue Zeitabdeckung muss durchkommen (V1): {ergebnis!r}"
+        )
+        assert ergebnis.is_addendum is False, (
+            f"Die V1-Ausnahme liefert einen VOLLEN Alarm, keinen Nachtrag: "
+            f"{ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ───── AC-A8 — Stille bleibt Stille, auch in der Nachtrags-Richtung ──────────
+
+
+def test_aca8_nicht_konvektiver_nowcast_nach_amtlicher_warnung_bleibt_stumm():
+    """AC-A8 Fall (a) + Mutations-Gegenprobe (PFLICHT laut Spec).
+
+    GIVEN eine amtliche Warnung (``HIGH``) ist registriert
+    WHEN  ein NICHT-konvektiver Nowcast (``MODERATE``, ``exceeds`` ist
+          ``False``) folgt, dessen Zeitfenster vollstaendig innerhalb des
+          bereits abgedeckten Endes liegt (V1 greift NICHT)
+    THEN  bleibt es bei UNTERDRUECKUNG (``allowed is False``,
+          ``reason == REASON_EVENT_DUPLICATE``) und es entsteht KEIN Nachtrag
+          — aus Stille wird nie eine Nachricht.
+
+    Mutations-Gegenprobe: entfernt man die ``exceeds``-Bedingung aus dem
+    Nachtrags-Zweig (bedingungsloser Nachtrag in der Richtung
+    amtlich->Nowcast), liefert das Gate hier ``allowed=True,
+    is_addendum=True`` — dieser Test wird rot. Das ist die Absicherung gegen
+    die Ausweitung der Zustellmenge ueber den PO-Entscheid hinaus."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+    from services.alert_log import REASON_EVENT_DUPLICATE
+
+    uid = fresh_uid("2018-aca8a")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 20, 14, 0, 0, tzinfo=timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-aca8a", hazard_class="wet",
+            segment_ids=["2"], severity="HIGH",
+            window_start=t0, window_end=t0 + timedelta(minutes=120), now=t0,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-aca8a", hazard_class="wet",
+            segment_ids=["2"], severity="MODERATE",  # nicht-konvektiv
+            point_at=t0 + timedelta(minutes=30),  # abgedeckt bis t0+210 < t0+300
+            now=t0 + timedelta(minutes=20),
+        )
+        assert ergebnis.allowed is False, (
+            f"Ohne Eskalation und ohne V1 bleibt es bei Stille: {ergebnis!r}"
+        )
+        assert ergebnis.reason == REASON_EVENT_DUPLICATE, (
+            f"Erwartet {REASON_EVENT_DUPLICATE!r}, erhalten {ergebnis.reason!r}"
+        )
+        assert ergebnis.is_addendum is False, (
+            f"Aus Stille darf kein Nachtrag werden: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_aca8_konvektiver_nowcast_nach_amtlicher_rot_warnung_bleibt_stumm():
+    """AC-A8 Fall (b) + Mutations-Gegenprobe (PFLICHT laut Spec).
+
+    GIVEN eine amtliche ROT-Warnung (``HIGH``) ist registriert
+    WHEN  ein konvektiver Nowcast mit ebenfalls ``HIGH`` folgt —
+          ``exceeds("HIGH", "HIGH")`` ist ``False`` — dessen Zeitfenster
+          vollstaendig innerhalb des abgedeckten Endes liegt
+    THEN  bleibt es bei UNTERDRUECKUNG, ohne Nachtrag.
+
+    Dieselbe Mutations-Gegenprobe wie in Fall (a): ohne die
+    ``exceeds``-Bedingung im Nachtrags-Zweig wird dieser Test rot."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+    from services.alert_log import REASON_EVENT_DUPLICATE
+
+    uid = fresh_uid("2018-aca8b")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 20, 14, 0, 0, tzinfo=timezone.utc)
+        record_event_identity(
+            user_id=uid, entity_id="trip-aca8b", hazard_class="wet",
+            segment_ids=["2"], severity="HIGH",
+            window_start=t0, window_end=t0 + timedelta(minutes=120), now=t0,
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-aca8b", hazard_class="wet",
+            segment_ids=["2"], severity="HIGH",  # gleiche Stufe, keine Eskalation
+            point_at=t0 + timedelta(minutes=30),
+            now=t0 + timedelta(minutes=20),
+        )
+        assert ergebnis.allowed is False, (
+            f"Gleiche Stufe ist keine Eskalation — es bleibt bei Stille: "
+            f"{ergebnis!r}"
+        )
+        assert ergebnis.reason == REASON_EVENT_DUPLICATE, (
+            f"Erwartet {REASON_EVENT_DUPLICATE!r}, erhalten {ergebnis.reason!r}"
+        )
+        assert ergebnis.is_addendum is False, (
+            f"Aus Stille darf kein Nachtrag werden: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ─────────── AC-A9 — der Nachtrag ist GERICHTET (alle vier Quellen) ──────────
+
+
+@pytest.mark.parametrize(
+    "entry_source,new_source,erwartet_nachtrag",
+    [
+        ("official", "official", False),
+        ("official", "nowcast", True),
+        ("nowcast", "official", False),
+        ("nowcast", "nowcast", False),
+    ],
+)
+def test_aca9_nachtrag_entsteht_ausschliesslich_von_amtlich_zu_nowcast(
+    entry_source, new_source, erwartet_nachtrag,
+):
+    """AC-A9 + Mutations-Gegenprobe (PFLICHT laut Spec): alle VIER erreichbaren
+    Quellen-Kombinationen, jeweils MIT Eskalation.
+
+    GIVEN einen Registereintrag der Quelle X (``MODERATE``)
+    WHEN  eine neue Meldung der Quelle Y mit ECHT hoeherer Dringlichkeit
+          (``HIGH``) derselben Klasse/desselben Orts geprueft wird, deren
+          Zeitfenster das bereits abgedeckte NICHT wesentlich erweitert
+    THEN  ist ``allowed`` in ALLEN vier Kombinationen ``True`` — und
+          ``is_addendum`` ist AUSSCHLIESSLICH in der Kombination
+          ``official -> nowcast`` ``True``.
+
+    Mutations-Gegenprobe: streicht man ``match["source"] == "official"`` aus
+    der Richtungsbedingung, wird die Kombination ``nowcast -> nowcast`` hier
+    rot (und zusaetzlich der unangetastete Kernfall-Test der Gegenrichtung,
+    ``test_ac6_kernfall_...``)."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid(f"2018-aca9-{entry_source}-{new_source}")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 20, 8, 0, 0, tzinfo=timezone.utc)
+        fall = _konstellation(
+            entry_source=entry_source, new_source=new_source,
+            eskalation=True, v1_greift=False, t0=t0,
+        )
+        record_event_identity(
+            user_id=uid, entity_id="trip-aca9", hazard_class="wet",
+            segment_ids=["6"], severity=fall["entry_severity"], now=t0,
+            **fall["entry_zeiten"],
+        )
+        ergebnis = check_event_identity_gate(
+            user_id=uid, entity_id="trip-aca9", hazard_class="wet",
+            segment_ids=["6"], severity="HIGH",
+            now=t0 + timedelta(minutes=5), cooldown_minutes=300,
+            **fall["neue_zeiten"],
+        )
+        assert ergebnis.allowed is True, (
+            f"Eine Eskalation muss in JEDER Quellen-Kombination durchkommen "
+            f"({entry_source}->{new_source}): {ergebnis!r}"
+        )
+        assert ergebnis.is_addendum is erwartet_nachtrag, (
+            f"Nachtrag ist ausschliesslich in der Richtung official->nowcast "
+            f"erlaubt; hier {entry_source}->{new_source}: {ergebnis!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ──────────────── AC-A10 — staerkster statt erstbester Treffer ───────────────
+
+
+def test_aca10_find_matching_entry_liefert_den_staerksten_statt_des_ersten_treffers():
+    """AC-A10: der Nachtrag zitiert einen KONKRETEN Registereintrag — ein
+    zufaellig erstbester statt des staerksten Treffers wuerde einen
+    schwaecheren Bezug nennen.
+
+    GIVEN drei gueltige Registereintraege derselben Gefahrenklasse/desselben
+          Orts mit ueberlappenden Fenstern, in unsortierter Reihenfolge
+          registriert (``MODERATE``, ``HIGH``, ``LOW``)
+    WHEN  ``_find_matching_entry`` gegen eine neue Meldung laeuft
+    THEN  liefert sie den ``HIGH``-Eintrag — und dessen Meldezeitpunkt, nicht
+          den des zuerst registrierten."""
+    from services.alert_gate import _find_matching_entry, record_event_identity
+    from services.alert_state import AlertStateService
+
+    uid = fresh_uid("2018-aca10")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 20, 7, 0, 0, tzinfo=timezone.utc)
+        zeitpunkte = {}
+        for versatz, stufe in ((0, "MODERATE"), (1, "HIGH"), (2, "LOW")):
+            gemeldet_um = t0 + timedelta(minutes=versatz)
+            zeitpunkte[stufe] = gemeldet_um
+            record_event_identity(
+                user_id=uid, entity_id="trip-aca10", hazard_class="wet",
+                segment_ids=["1"], severity=stufe,
+                window_start=t0, window_end=t0 + timedelta(minutes=120),
+                now=gemeldet_um,
+            )
+        state = AlertStateService(user_id=uid).load("trip-aca10")
+
+        treffer = _find_matching_entry(
+            state, "wet", ["1"],
+            None, t0 + timedelta(minutes=10), t0 + timedelta(minutes=90), None,
+        )
+        assert treffer is not None, (
+            "Positivkontrolle: die drei Eintraege muessen ueberhaupt matchen "
+            "— sonst prueft dieser Test nichts."
+        )
+        assert treffer["severity"] == "HIGH", (
+            f"Der staerkste Kandidat muss gewinnen, nicht der erste im "
+            f"Register: {treffer!r}"
+        )
+        assert treffer["reported_at"] == zeitpunkte["HIGH"], (
+            f"Der Treffer muss den Meldezeitpunkt des HIGH-Eintrags tragen "
+            f"({zeitpunkte['HIGH'].isoformat()}): {treffer!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ────────────────── AC-A12 — Mandantentrennung im Nachtrags-Fall ─────────────
+
+
+def test_aca12_amtlicher_registereintrag_von_nutzer_a_erzeugt_bei_b_keinen_nachtrag():
+    """AC-A12: zwei Nutzer, gleiche Trip-Kennung, unabhaengige Register.
+
+    GIVEN Nutzer A registriert eine amtliche Warnung (``MODERATE``)
+    WHEN  Nutzer B unabhaengig davon einen eskalierenden Nowcast desselben
+          Ereignisses prueft
+    THEN  erhaelt B seine eigene Entscheidung: ``allowed is True`` UND
+          ``is_addendum is False`` (kein Treffer, kein Rueckfall auf
+          ``"default"``).
+
+    Positivkontrolle im selben Test: derselbe Aufruf fuer Nutzer A liefert
+    ``is_addendum is True``. Ohne sie waere der Nullbefund bei B auch dann
+    erfuellt, wenn die Nachtrags-Logik gar nicht existierte."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    a, b = fresh_uid("2018-aca12-a"), fresh_uid("2018-aca12-b")
+    clean_uid(a)
+    clean_uid(b)
+    try:
+        t0 = datetime(2026, 8, 20, 6, 0, 0, tzinfo=timezone.utc)
+        record_event_identity(
+            user_id=a, entity_id="trip-geteilt-2018", hazard_class="wet",
+            segment_ids=["9"], severity="MODERATE",
+            window_start=t0, window_end=t0 + timedelta(minutes=120), now=t0,
+        )
+        gemeinsam = dict(
+            entity_id="trip-geteilt-2018", hazard_class="wet",
+            segment_ids=["9"], severity="HIGH",
+            point_at=t0 + timedelta(minutes=60), now=t0 + timedelta(minutes=30),
+        )
+        ergebnis_b = check_event_identity_gate(user_id=b, **gemeinsam)
+        ergebnis_a = check_event_identity_gate(user_id=a, **gemeinsam)
+
+        assert ergebnis_a.is_addendum is True, (
+            f"Positivkontrolle: fuer Nutzer A (user_id={a!r}) muss diese "
+            f"Konstellation einen Nachtrag erzeugen: {ergebnis_a!r}"
+        )
+        assert ergebnis_b.allowed is True, (
+            f"Nutzer B (user_id={b!r}) darf durch A's Registereintrag nicht "
+            f"beeinflusst werden: {ergebnis_b!r}"
+        )
+        assert ergebnis_b.is_addendum is False, (
+            f"Ohne eigenen Registereintrag darf bei B kein Nachtrag "
+            f"entstehen: {ergebnis_b!r}"
+        )
+        assert ergebnis_b.addendum_source is None, (
+            f"Ein Nachtrags-Bezug ueber die Nutzergrenze hinweg waere ein "
+            f"Cross-User-Datenleck: {ergebnis_b!r}"
+        )
+    finally:
+        clean_uid(a)
+        clean_uid(b)
+
+
+# ───────── AC-A13 — Zaehlnachweis ueber die volle Konstellations-Matrix ──────
+
+
+def test_aca13_zustellmenge_bleibt_identisch_nur_die_form_aendert_sich():
+    """AC-A13 (Zaehlnachweis): die MENGE der zugestellten Meldungen ist vor
+    und nach dieser Scheibe IDENTISCH.
+
+    GIVEN die volle Konstellations-Matrix — 4 Quellen-Kombinationen
+          (official/nowcast x official/nowcast) x eskalierend/nicht x
+          V1-greift/greift-nicht, also 16 Faelle, jeweils mit garantierter
+          Segment- und Zeitueberlappung
+    WHEN  jeder Fall gegen das echte Gate laeuft UND gegen die im Test
+          explizit nachgebaute Alt-Logik (V2 -> V1 -> Stille, quellenblind)
+    THEN  ist die Zahl der ``allowed=True``-Ergebnisse in beiden Zaehlungen
+          GLEICH — und zwar Fall fuer Fall, nicht nur in der Summe.
+          Ausschliesslich der ``is_addendum``-Zaehler steigt: von 0 (alt) auf
+          die Zahl der Faelle amtlich->Nowcast MIT Eskalation.
+
+    Die Alt-Logik wird aus den Konstellations-Schaltern des Tests abgeleitet,
+    NICHT aus dem Produktivmodul — sonst zoegen Soll und Ist aus derselben
+    Quelle und die Zusicherung waere trivial wahr (F001-Lehre aus #1948 S6)."""
+    from services.alert_gate import check_event_identity_gate, record_event_identity
+
+    uid = fresh_uid("2018-aca13")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 20, 5, 0, 0, tzinfo=timezone.utc)
+        zugestellt_alt = zugestellt_neu = 0
+        nachtrag_alt = nachtrag_neu = 0
+        stille_faelle = 0
+        abweichungen = []
+
+        nummer = 0
+        for entry_source in ("official", "nowcast"):
+            for new_source in ("official", "nowcast"):
+                for eskalation in (True, False):
+                    for v1_greift in (True, False):
+                        nummer += 1
+                        entity = f"trip-aca13-{nummer}"
+                        fall = _konstellation(
+                            entry_source=entry_source, new_source=new_source,
+                            eskalation=eskalation, v1_greift=v1_greift, t0=t0,
+                        )
+                        record_event_identity(
+                            user_id=uid, entity_id=entity, hazard_class="wet",
+                            segment_ids=["1"], severity=fall["entry_severity"],
+                            now=t0, **fall["entry_zeiten"],
+                        )
+                        ergebnis = check_event_identity_gate(
+                            user_id=uid, entity_id=entity, hazard_class="wet",
+                            segment_ids=["1"], severity="HIGH",
+                            now=t0 + timedelta(minutes=5),
+                            cooldown_minutes=300, **fall["neue_zeiten"],
+                        )
+
+                        # Alt-Logik (S4b-1), quellenblind nachgebaut:
+                        # Eskalation zuerst, dann V1-Ausnahme, sonst Stille.
+                        # Einen dritten Ausgang kannte sie nicht — ihr
+                        # Nachtrags-Zaehler bleibt strukturell bei 0.
+                        alt_zugestellt = eskalation or v1_greift
+
+                        zugestellt_alt += int(alt_zugestellt)
+                        zugestellt_neu += int(ergebnis.allowed)
+                        nachtrag_neu += int(ergebnis.is_addendum)
+                        if not alt_zugestellt:
+                            stille_faelle += 1
+                        if ergebnis.allowed is not alt_zugestellt:
+                            abweichungen.append(
+                                f"{entry_source}->{new_source} "
+                                f"eskalation={eskalation} v1={v1_greift}: "
+                                f"alt={alt_zugestellt}, neu={ergebnis!r}"
+                            )
+
+        assert nummer == 16, f"Die Matrix muss 16 Faelle umfassen, hat {nummer}"
+        assert stille_faelle == 4, (
+            f"Positivkontrolle: vier Faelle (je Quellen-Kombination einer) "
+            f"muessen unter der Alt-Logik STUMM bleiben, gezaehlt "
+            f"{stille_faelle} — sonst hat die Matrix keine Varianz."
+        )
+        assert not abweichungen, (
+            "Die Zustellmenge muss Fall fuer Fall unveraendert bleiben; "
+            "abweichend: " + " | ".join(abweichungen)
+        )
+        assert zugestellt_neu == zugestellt_alt, (
+            f"Zustellmenge veraendert: alt={zugestellt_alt}, neu={zugestellt_neu}"
+        )
+        assert nachtrag_alt == 0, "Die Alt-Logik kannte keinen Nachtrag"
+        assert nachtrag_neu == 2, (
+            f"Genau die zwei Faelle amtlich->Nowcast MIT Eskalation (V1 greift "
+            f"/ greift nicht) muessen Nachtraege sein, gezaehlt {nachtrag_neu}"
+        )
+    finally:
+        clean_uid(uid)
