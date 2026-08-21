@@ -364,21 +364,6 @@ Known Limitations zur Wortlaut-Grenze dieser Scheibe.
   dieser Scheibe.
 - **Prognose-Zwischenstände** (wann genau sprang die Vorhersage von 7,4 auf 29,4 mm)
   bleiben unaufgezeichnet — eigenes Ticket #2030.
-- **Starre 60-Minuten-Kante bei `max_rate_mm_h` (Adversary-Fund F008, Runde 2, nicht
-  behoben).** Die Relevanz-Untergrenze `max_rate_mm_h >= HEAVY_RAIN_THRESHOLD_MM_H` prüft
-  ausschließlich Frames innerhalb des starren 60-Minuten-Vergleichsfensters. Anhaltender
-  Regen, der die Schwelle (4,0 mm/h) erst wenige Minuten NACH diesem Schnitt überschreitet
-  (z. B. 3,9 mm/h über 50 Minuten, dann 4,5 mm/h ab Minute 65 — real derselbe,
-  zusammenhängende Regen), erfüllt die Untergrenze nicht, obwohl `window_precip_mm` die
-  Faktor-Schwelle bereits deutlich übersteigt (belegt: 3,575 mm gegen eine 1,0-mm-
-  Ankündigung, Faktor 3,6-fach) — kein Alarm. Das ist die bewusst zurückhaltende Richtung
-  dieser Regel (siehe oben, „eher zu klein als zu groß"), hier jedoch mit einem
-  nachweisbar realen, sich zuspitzenden Zusammenhang statt bloß fehlender Daten. Bewusst
-  nicht behoben in diesem Fix-Loop (Team-Lead-Auftrag Runde 2: „nicht trivial ohne neue
-  Regression auf F001 — braucht eigene Spec-Überlegung"); mögliche Richtung: `max_rate_mm_h`
-  aus einem geringfügig größeren Fenster ableiten oder über einen zweiten, unabhängigen
-  Pfad prüfen. Details: `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`,
-  Abschnitt F008.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -429,6 +414,9 @@ Known Limitations zur Wortlaut-Grenze dieser Scheibe.
   wurde `_infer_frame_cadence()` **ersatzlos entfernt** und durch eine
   nachbarschaftsbasierte Regel mit fester Obergrenze (`_MAX_FRAME_COVERAGE = 15 Min`)
   ersetzt — kein Wert außerhalb der unmittelbaren Nachbarschaft eines Frames kann dessen
-  Deckung mehr beeinflussen. **F008** (HIGH, bewusst nicht behoben) — siehe Known
-  Limitations. ACs inhaltlich unverändert. Details:
-  `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`, Abschnitt „Runde 2".
+  Deckung mehr beeinflussen. **F008** (HIGH) identifiziert, aber nicht Teil dieses
+  Fix-Loops — PO-Entscheid: anhaltender Regen, der die Untergrenze erst knapp nach dem
+  60-Min-Schnitt erreicht, soll warnen; Behebung folgt in einem eigenen Schritt direkt im
+  Anschluss (eigene AC-Freigabe nötig). ACs dieses Fix-Loops inhaltlich unverändert.
+  Details: `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`, Abschnitt
+  „Runde 2".
