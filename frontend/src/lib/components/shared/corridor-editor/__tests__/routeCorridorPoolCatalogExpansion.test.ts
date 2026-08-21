@@ -708,9 +708,22 @@ describe('AC-6 Test A-2: die Migration folgt einer VERSCHOBENEN ORDINAL_ENUM (Ko
 	const CORRIDOR_STATE_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'corridorEditorState.ts');
 	const ENUM_LINE = "export const ORDINAL_ENUM = ['NONE', 'LOW', 'MED', 'HIGH'] as const;";
 	const SHIFTED_ENUM_LINE = "export const ORDINAL_ENUM = ['NONE', 'LOW', 'SEVERE', 'MED', 'HIGH'] as const;";
+	// F003 (Adversary Runde 2): die temporaere Modulkopie darf NICHT in
+	// corridor-editor/ selbst liegen -- genau diesen Ordner scannt
+	// thunderScaleLocalCopyGuard.test.ts unter Regel A/P/C als Produktivcode.
+	// Bricht dieser Testprozess vor dem `finally` hart ab (CI-Timeout,
+	// SIGKILL), bleibt die Kopie liegen und der Waechter meldet sie
+	// faelschlich als neuen lokalen ORDINAL_ENUM-Nachbau -- ein fälschlich
+	// blockierendes Gate fuer eine ANDERE Sitzung. Ablage daher im eigenen
+	// __tests__-Verzeichnis: istTestdatei() in thunderScaleLocalCopyGuard
+	// schliesst jeden Pfad mit "__tests__" von der A/P/C-Scanflaeche aus
+	// (nur Regel D laeuft dort, und die verlangt eine Paritaets-BEHAUPTUNG im
+	// Kommentar, die diese Datei nicht traegt). corridorEditorState.ts
+	// importiert ausschliesslich ueber die $lib/*-Aliasse (global per
+	// test-lib-loader.mjs aufgeloest, nicht relativ zum Dateiort) -- die
+	// Ablage im __tests__-Ordner aendert an der Aufloesbarkeit nichts.
 	const TMP_PATH = resolve(
 		dirname(fileURLToPath(import.meta.url)),
-		'..',
 		`corridorEditorState.__tmp_ac6_shifted_${process.pid}.ts`
 	);
 
@@ -757,71 +770,12 @@ describe('AC-6 Test A-2: die Migration folgt einer VERSCHOBENEN ORDINAL_ENUM (Ko
 	});
 });
 
-// AC-6 Test B (Struktur, sekundaer zu Test A/A-2 oben) — #2012, Spec Punkt 2:
-// percentBoundToOrdinal() darf die beiden migrierten Zielstufen NICHT als
-// rohe Zahlenliterale 2/3 zurueckgeben, sondern muss sie ueber die
-// bewachte kanonische Quelle ORDINAL_ENUM.indexOf('MED'|'HIGH') ableiten —
-// sonst bleibt die Funktion dem lokalen Kopie-Waechter
-// thunderScaleLocalCopyGuard.test.ts (#1480) unsichtbar (Zahlen statt
-// Stufen-Woerter, kein "thunder"/"gewitter" im Funktionsnamen).
-// Bauform: reiner Quelltext-Scan wie thunderScaleLocalCopyGuard.test.ts —
-// ergaenzt Test A (Verhalten), ersetzt ihn nicht.
-describe('AC-6 Test B: percentBoundToOrdinal() gibt keine rohen Zahlenliterale 2/3 zurueck', () => {
-	const CORRIDOR_STATE_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'corridorEditorState.ts');
-
-	function extractFunctionBody(source: string, fnMarker: string): string {
-		const startIdx = source.indexOf(fnMarker);
-		assert.ok(startIdx >= 0, `AC-6 FAIL: "${fnMarker}" nicht in corridorEditorState.ts gefunden`);
-		const braceOpen = source.indexOf('{', startIdx);
-		let depth = 0;
-		let i = braceOpen;
-		for (; i < source.length; i++) {
-			if (source[i] === '{') depth++;
-			else if (source[i] === '}') {
-				depth--;
-				if (depth === 0) break;
-			}
-		}
-		return source.slice(braceOpen, i + 1);
-	}
-
-	// F001-Fix (Adversary): die alte Pruefung war zweigeteilt und GLOBAL ueber
-	// den ganzen Funktionskoerper — "kein nacktes Zahlenliteral irgendwo" UND
-	// "ORDINAL_ENUM.indexOf( kommt irgendwo vor" bestehen beide weiter, wenn
-	// NUR der MED-Zweig auf einen Ausdruck wie `(1 + 1)` verfaelscht wird
-	// (kein nacktes Literal, und der HIGH-Zweig liefert weiterhin ein
-	// "indexOf("-Vorkommen). Diese Fassung zerlegt die Funktion in ihre
-	// einzelnen return-Anweisungen und verlangt PRO ZWEIG exakt
-	// `ORDINAL_ENUM.indexOf('<STUFE>')` — kein Ausdruck, kein Zahlenliteral,
-	// keine andere Stufe.
-	test('jeder return-Zweig ist EXAKT ORDINAL_ENUM.indexOf(<eigene Stufe>) — kein Ausdruck, kein Zahlenliteral', () => {
-		const source = readFileSync(CORRIDOR_STATE_PATH, 'utf-8');
-		const body = extractFunctionBody(source, 'function percentBoundToOrdinal(');
-		const returns = [...body.matchAll(/return\s+([^;]+);/g)].map((m) => m[1].trim());
-		assert.equal(
-			returns.length,
-			4,
-			'Testannahme verletzt: percentBoundToOrdinal() hat nicht mehr genau 4 return-Anweisungen ' +
-				'(null-Guard + 3 Stufen-Zweige) — Test an die neue Struktur anpassen'
-		);
-		const [nullReturn, noneReturn, medReturn, highReturn] = returns;
-		assert.equal(nullReturn, 'null', 'AC-6 FAIL: der null-Guard gibt nicht mehr "null" zurueck');
-		assert.equal(
-			noneReturn,
-			"ORDINAL_ENUM.indexOf('NONE')",
-			'AC-6 FAIL: der NONE-Zweig ist kein reiner ORDINAL_ENUM.indexOf(\'NONE\')-Aufruf'
-		);
-		assert.equal(
-			medReturn,
-			"ORDINAL_ENUM.indexOf('MED')",
-			'AC-6 FAIL: der MED-Zweig ist kein reiner ORDINAL_ENUM.indexOf(\'MED\')-Aufruf — ein ' +
-				'wertgleicher Ausdruck wie "(1 + 1)" faellt hier durch, obwohl er nicht an die ' +
-				'kanonische Skalen-Quelle gekoppelt ist'
-		);
-		assert.equal(
-			highReturn,
-			"ORDINAL_ENUM.indexOf('HIGH')",
-			'AC-6 FAIL: der HIGH-Zweig ist kein reiner ORDINAL_ENUM.indexOf(\'HIGH\')-Aufruf'
-		);
-	});
-});
+// AC-6 Test B (reiner Quelltext-Scan auf percentBoundToOrdinal()) ist mit
+// #2012-Adversary-Runde-2/F002 ersatzlos entfernt: sechs Mutationen fanden
+// keinen Fall, den Test B fing und Test A-2 oben (Verhaltensprüfung gegen
+// eine VERSCHOBENE ORDINAL_ENUM) nicht auch fing — Test B blockierte
+// zugleich korrekten, aequivalenten Code (z. B. eine ausgelagerte Konstante
+// `const MED_STAGE = ORDINAL_ENUM.indexOf('MED'); return MED_STAGE;`) als
+// Falsch-Positiv. Test A-2 traegt die Zusicherung jetzt allein — Nachweis
+// (3 Mutationen, alle von Test A-2 gefangen) in
+// docs/specs/modules/fix_2012_gewitter_stufen_migration.md, AC-6.

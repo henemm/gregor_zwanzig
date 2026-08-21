@@ -249,11 +249,25 @@ unveraendert — kein Python-Eingriff (s. „Wirkung").
     `ORDINAL_ENUM.indexOf('HIGH')` statt gegen die Literale `2`/`3` — eine
     zusaetzliche Stufe in `ORDINAL_ENUM` verschiebt damit die Bedeutung der
     migrierten Grenzen nicht, sondern zieht die Erwartung mit.
-  - Test B (Struktur, sekundaer): Struktur-Test in
-    `corridorEditorState.test.ts` (analog `thunderScaleLocalCopyGuard.test.ts`)
-    prueft den Quelltext von `percentBoundToOrdinal` auf Abwesenheit roher
-    Zahlenliterale `2`/`3` als Rueckgabewert. Ergaenzt Test A, ersetzt ihn
-    nicht — ein reiner Quelltext-Scan ist kein Verhaltensnachweis.
+  - Test A-2 (Verhalten, Kopplungsnachweis) in
+    `routeCorridorPoolCatalogExpansion.test.ts`: importiert eine Kopie von
+    `corridorEditorState.ts` mit einer VERSCHOBENEN `ORDINAL_ENUM` (eine vor
+    `MED` eingeschobene Stufe verschiebt `MED` 2->3 und `HIGH` 3->4) und
+    verlangt, dass die Migration den neuen Indizes folgt — nur eine echte
+    `ORDINAL_ENUM.indexOf(...)`-Kopplung besteht das, ein Zahlenliteral (auch
+    ein zufaellig wertgleiches) faellt durch.
+  - Test B (Struktur, reiner Quelltext-Scan von `percentBoundToOrdinal`) ist
+    mit #2012-Adversary-Runde-2/F002 ersatzlos entfernt: sechs
+    Adversary-Mutationen fanden keinen Fall, den Test B fing und Test A-2
+    nicht auch fing, und Test B blockierte zugleich korrekten, aequivalenten
+    Code (z. B. eine ausgelagerte, korrekt an `ORDINAL_ENUM.indexOf('MED')`
+    gekoppelte Konstante) als Falsch-Positiv, weil er den woertlichen
+    Ausdruck `ORDINAL_ENUM.indexOf('MED')` pro Zweig verlangte. Test A-2
+    traegt die Zusicherung jetzt allein — belegt durch drei einzeln gefahrene
+    Mutationen (Entwickler-Rueckmeldung 2026-08-21): `return
+    ORDINAL_ENUM.indexOf('MED');` -> `return (1 + 1);`, -> `return 2;`, sowie
+    `indexOf('HIGH')` im HIGH-Zweig -> `indexOf('MED')` — alle drei liess
+    Test A-2 rot werden, keine blieb unentdeckt gruen.
 
 ## Known Limitations
 
@@ -296,3 +310,10 @@ unveraendert — kein Python-Eingriff (s. „Wirkung").
   `test_alert_metric_mapping_parity.py:135-137`), Klarstellung zum
   Idempotenz-Test (Zeile 639-651 bleibt unveraendert), Nebenbefund-Hinweis
   `corridorMarkSupport.test.ts:75`.
+- 2026-08-21: Adversary Runde 2, F002/F003 bereinigt. AC-6 Test B (reiner
+  Quelltext-Scan) ersatzlos entfernt — redundant zu Test A-2, blockierte
+  aequivalenten korrekten Code als Falsch-Positiv (F002, 3 Mutationen als
+  Nachweis, s. AC-6). Die temporaere Modulkopie in Test A-2 liegt jetzt im
+  eigenen `__tests__`-Verzeichnis statt in `corridor-editor/` selbst, damit
+  ein liegengebliebener Crash-Rest nicht faelschlich `thunderScaleLocalCopyGuard.test.ts`
+  ausloest (F003).
