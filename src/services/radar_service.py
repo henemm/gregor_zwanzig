@@ -16,6 +16,7 @@ SPEC: docs/specs/modules/radar_nowcast.md
 """
 from __future__ import annotations
 
+import bisect
 import logging
 import os
 from dataclasses import dataclass, field
@@ -70,6 +71,29 @@ _NOWCAST_HORIZON_MIN = 180
 # dieselbe Zahl referenziert statt eine zweite Kopie zu pflegen.
 NOWCAST_HORIZON_MIN = _NOWCAST_HORIZON_MIN
 
+# Issue #2020: extrahierte Schwelle -- war Inline-Literal in intensity_to_text().
+# Dieselbe Zahl, die die Ueberholungs-Pruefung in trip_alert.py als
+# Relevanz-Untergrenze auf max_rate_mm_h referenziert (keine zweite,
+# unabhaengige Zahl).
+HEAVY_RAIN_THRESHOLD_MM_H = 4.0
+
+# Issue #2020: eigenes, auf eine Stunde begrenztes Vergleichsfenster fuer die
+# Mengen-Ueberholungspruefung -- bewusst NICHT _NOWCAST_HORIZON_MIN (180 Min),
+# sonst wuerde ein Drei-Stunden-Wert gegen einen Ein-Stunden-Briefingwert
+# verglichen (precip_1h_mm).
+_OVERTAKE_COMPARE_WINDOW_MIN = 60
+
+# Issue #2020 Fix-Loop 2 (Adversary-Runde 2, F006/F007): feste Obergrenze fuer
+# die Deckung EINES Frames im Vergleichsfenster -- ersetzt die globale
+# Kadenz-Schaetzung (_infer_frame_cadence, entfernt). 15 Minuten ist das
+# GROEBSTE in Produktion vorkommende Raster (INCA, AROME-FR, ICON-D2, ARPAE,
+# `minutely_15`); RADOLAN liefert 5 Minuten. Ein Frame darf nie fuer mehr Zeit
+# einstehen, als das groebste Raster hergibt -- unabhaengig davon, was andere
+# Frames irgendwo in der Liste an Abstaenden aufweisen (das war die Schwaeche
+# jeder globalen Schaetzung, ob Minimum oder Median: ferne Frames konnten die
+# Deckung naher Frames nach oben oder unten verfaelschen).
+_MAX_FRAME_COVERAGE = timedelta(minutes=15)
+
 # Issue #2009: einzige Quelle der Onset-Alarmschwelle, ersetzt die bisher
 # doppelt gepflegten Literale in trip_alert.py und compare_radar_alert.py
 # (ADR-0021 — Trip und Ortsvergleich teilen den Code). Wert 55: am Cron-Takt
@@ -121,6 +145,30 @@ class NowcastResult:
                                      # (Issue #1628 S1). Pure observability signal --
                                      # radar_alert_due() treats onset_minutes=None
                                      # identically either way.
+    max_rate_mm_h: float = 0.0      # Issue #2020: Spitzenrate im 60-Min-
+                                     # Vergleichsfenster (compare_window, s.
+                                     # _OVERTAKE_COMPARE_WINDOW_MIN) -- NICHT
+                                     # das 180-Min-Nowcast-Fenster (Adversary-
+                                     # Fund F001, 2026-08-21: ein spaeter,
+                                     # unabhaengiger Starkregen-Ausbruch darf
+                                     # eine Ueberholung fuer ganz anderen,
+                                     # schwachen Nahregen nicht legitimieren).
+                                     # BEWUSST beschreibend (F008, PO-Entscheid
+                                     # 2026-08-21): die Ueberholungsregel in
+                                     # trip_alert.py liest dieses Feld NICHT
+                                     # mehr -- ihre Relevanz-Untergrenze haengt
+                                     # jetzt an window_precip_mm
+                                     # (_OVERTAKE_MIN_ABSOLUTE_MM), weil eine
+                                     # Spitzenrate anhaltenden, nicht-spitzen
+                                     # Regen strukturell aussperrte. Das Feld
+                                     # bleibt fuer Beobachtbarkeit/Tests
+                                     # (intensity_label-Nachbarwert) erhalten,
+                                     # absichtlich ohne Regel-Leser -- kein
+                                     # vergessener Anschluss.
+    window_precip_mm: float = 0.0   # Issue #2020: akkumulierte Menge in der ERSTEN
+                                     # STUNDE ab jetzt (eigenes Fenster, s.
+                                     # _OVERTAKE_COMPARE_WINDOW_MIN) -- vergleichbar
+                                     # mit precip_1h_mm im Briefing.
 
 
 def _offline_fixture_active() -> bool:
@@ -179,7 +227,7 @@ class RadarNowcastService:
             return INTENSITY_DRY
         if mm_per_h < 1.0:
             return INTENSITY_LIGHT
-        if mm_per_h < 4.0:
+        if mm_per_h < HEAVY_RAIN_THRESHOLD_MM_H:
             return INTENSITY_MODERATE
         return INTENSITY_HEAVY
 
@@ -609,7 +657,11 @@ class RadarNowcastService:
                 onset_minutes = max(0, round(delta))
                 break
 
-        # Max rate in window
+        # Max rate im 180-Min-Nowcast-Fenster -- speist NUR intensity_label
+        # (Anzeige). NICHT die Ueberholungspruefung: das NowcastResult-Feld
+        # max_rate_mm_h wird weiter unten separat aus dem 60-Min-Vergleichs-
+        # fenster gebildet (Adversary-Fund F001, 2026-08-21), damit Raten-
+        # und Mengenfenster deckungsgleich sind.
         max_rate = max((f.precip_mm_h for f in window), default=0.0)
 
         # Convective flag: any wet frame in window with convective indicator
@@ -637,6 +689,82 @@ class RadarNowcastService:
             and not frames
         )
 
+        # Issue #2020: eigenes 60-Min-Vergleichsfenster fuer die Mengen-
+        # Ueberholungspruefung (NICHT das 180-Min-Nowcast-Fenster oben -- das
+        # waere ein 3h-Wert gegen einen 1h-Briefingwert). Dauer JE Frame aus
+        # seiner UNMITTELBAREN NACHBARSCHAFT in der VOLLSTAENDIGEN Frame-Liste
+        # (Adversary-Runde 2, F006/F007, 2026-08-21: eine GLOBALE Kadenz-
+        # Schaetzung -- ob Minimum oder Median -- laesst sich immer durch
+        # Frames ausserhalb des Vergleichsfensters verfaelschen, in beide
+        # Richtungen. Ein Frame darf daher nur ueber seinen eigenen naechsten
+        # Nachbarn hinausreichen, NIE ueber eine globale Kennzahl). Zusaetzlich
+        # gedeckelt auf `_MAX_FRAME_COVERAGE` (groebstes Produktivraster) UND
+        # NIE ueber das Fensterende (compare_horizon) hinaus: ein einzelner
+        # Frame nach Datenausfall/Drosselung darf nicht bis zum vollen
+        # Fensterende gestreckt werden -- sonst wuerde ein einziges Radarbild
+        # zu einem hochgerechneten Alarm. Fehlende Frames machen die Menge
+        # dadurch eher zu klein als zu gross (bewusst konservative Richtung,
+        # Spec "Known Limitations").
+        compare_horizon = now + timedelta(minutes=_OVERTAKE_COMPARE_WINDOW_MIN)
+        all_ts_sorted = sorted({f.timestamp for f in frames})
+        # Issue #2020 Adversary-Runde 3, F012: die Fenstergrenze ist bewusst
+        # ausschliessend (`<`, nicht `<=`). Fuer die Mengenrechnung ist das
+        # folgenlos -- ein Frame exakt auf `compare_horizon` bekaeme ueber
+        # `frame_end = min(..., compare_horizon)` ohnehin Dauer null.
+        # Beobachtbar waere der Unterschied nur ueber `compare_window_max_rate_mm_h`
+        # (max() ueber genau diese gefilterte Menge) -- und dieses Feld ist
+        # seit #2020/F008 rein beschreibend, ohne Leser in der Alarmregel.
+        # Sobald max_rate_mm_h wieder in eine Entscheidung eingeht, braucht
+        # diese Grenze einen eigenen Test.
+        compare_window = sorted(
+            (f for f in frames if f.timestamp >= now and f.timestamp < compare_horizon),
+            key=lambda f: f.timestamp,
+        )
+
+        # Issue #2020 Adversary-Runde 3, F010: eine Providerwiederholung
+        # oder ein Sidecar-Merge (siehe Kommentar zu _MAX_FRAME_COVERAGE
+        # oben -- exakt diese Ursache) kann zwei Frames mit IDENTISCHEM
+        # Zeitstempel liefern. `all_ts_sorted` ist ein Set und dedupliziert
+        # bereits, die Akkumulationsschleife lief bisher aber ueber ALLE
+        # (nicht deduplizierten) Frames: bisect_right liefert fuer beide
+        # Duplikate denselben next_ts_full, also bekaeme JEDER der beiden
+        # unabhaengig die VOLLE Deckung bis dahin -- derselbe Zeitabschnitt
+        # wuerde zweimal gezaehlt. Vor der Summierung deshalb auf einen
+        # Eintrag je Zeitstempel reduziert. Bei widerspruechlichen Werten
+        # zum selben Zeitpunkt gewinnt bewusst der HOEHERE Regenwert: es ist
+        # derselbe Zeitabschnitt, er wird genau einmal gezaehlt, und unter
+        # widerspruechlichen Messwerten ist der hoehere Wert derjenige,
+        # dessen Verlust wehtaete -- dieses Ticket existiert, weil eine
+        # Warnung zu spaet kam.
+        compare_window_by_ts: dict[datetime, float] = {}
+        for frame in compare_window:
+            existing = compare_window_by_ts.get(frame.timestamp)
+            if existing is None or frame.precip_mm_h > existing:
+                compare_window_by_ts[frame.timestamp] = frame.precip_mm_h
+
+        window_precip_mm = 0.0
+        for ts, rate in sorted(compare_window_by_ts.items()):
+            next_idx = bisect.bisect_right(all_ts_sorted, ts)
+            next_ts_full = (
+                all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted)
+                else compare_horizon
+            )
+            frame_end = min(next_ts_full, ts + _MAX_FRAME_COVERAGE, compare_horizon)
+            duration_h = max(0.0, (frame_end - ts).total_seconds() / 3600.0)
+            window_precip_mm += rate * duration_h
+
+        # Issue #2020 Adversary-Fund F001: max_rate_mm_h fuer die
+        # Ueberholungspruefung MUSS aus demselben Fenster stammen wie
+        # window_precip_mm (60 Min compare_window), sonst legitimiert ein
+        # spaeter, voellig unabhaengiger Starkregen-Ausbruch (z. B. bei
+        # +150 Min, weit ausserhalb des Vergleichsfensters) die Ueberholung
+        # fuer ganz anderen, schwachen Nahregen. `max_rate` oben (180 Min)
+        # bleibt unveraendert fuer intensity_label -- NUR dieses Feld
+        # wechselt das Fenster.
+        compare_window_max_rate_mm_h = max(
+            (f.precip_mm_h for f in compare_window), default=0.0
+        )
+
         return NowcastResult(
             onset_minutes=onset_minutes,
             intensity_label=intensity_label,
@@ -646,6 +774,8 @@ class RadarNowcastService:
             convective_checked=self._convective_checked,
             throttled=throttled,
             data_unavailable=data_unavailable,
+            max_rate_mm_h=compare_window_max_rate_mm_h,
+            window_precip_mm=window_precip_mm,
         )
 
 

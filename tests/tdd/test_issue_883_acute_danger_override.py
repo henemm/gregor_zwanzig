@@ -62,12 +62,25 @@ def _convective_frames(lat: float, lon: float) -> list:
 
 
 def _nonconvective_frames(lat: float, lon: float) -> list:
-    """Regen-Frames (onset in 5 Min) ohne Konvektion → is_convective=False."""
+    """Regen-Frames (onset in 5 Min) ohne Konvektion → is_convective=False.
+
+    Issue #2020: die Ueberholungs-Pruefung (#2020 Scheibe 1) kann hier
+    strukturell nie greifen -- seit dem F008-Fix-Loop (2026-08-21,
+    Adversary-Runde 3) NICHT mehr weil die Rate unter
+    HEAVY_RAIN_THRESHOLD_MM_H bliebe (die Regel liest max_rate_mm_h dort
+    gar nicht mehr), sondern weil die akkumulierte Menge im 60-Min-
+    Vergleichsfenster (~1,25 mm) unter der absoluten Relevanz-Untergrenze
+    _OVERTAKE_MIN_ABSOLUTE_MM (2,0 mm) bleibt. Mit den frueheren 4.0/8.0
+    mm/h wuerde die reale Menge die Briefing-Ankuendigung (1,2 mm)
+    inzwischen um mehr als das Doppelte uebersteigen und den Alarm auch
+    OHNE Konvektions-Override ausloesen -- der Test wuerde dann nicht mehr
+    zeigen, dass die konvektive Bedingung eine EIGENSTAENDIGE Ausnahme ist.
+    """
     from providers.brightsky import RadarFrame
     now = datetime.now(timezone.utc)
     return [
-        RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=4.0, is_convective=False),
-        RadarFrame(timestamp=now + timedelta(minutes=20), precip_mm_h=8.0, is_convective=False),
+        RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=2.0, is_convective=False),
+        RadarFrame(timestamp=now + timedelta(minutes=20), precip_mm_h=3.0, is_convective=False),
     ]
 
 
@@ -270,7 +283,14 @@ def test_ac2_nonconvective_announced_rain_stays_suppressed():
     """AC-2: GUARD — Briefing 1.2 mm + nicht-konvektiv → kein Alert (Δ-Modell bleibt).
 
     Beweist: Override greift NUR bei Konvektion, nicht bei normalem angekündigtem Regen.
+
+    Issue #2020 (Team-Lead-Review): zusaetzlicher Nachweis, dass der
+    Unterdrueckungs-Zweig tatsaechlich durchlaufen wurde (nicht nur durch
+    einen fruehen `radar_alert_due()`-Ausstieg umgangen) -- ein
+    `REASON_NOWCAST`-Protokoll-Eintrag mit `briefing_announced:`-Grund
+    (#2020 AC-6).
     """
+    from services import alert_log
     from services.alert_state import AlertStateService
 
     uid = f"tdd-883-ac2-{uuid.uuid4().hex[:6]}"
@@ -292,6 +312,13 @@ def test_ac2_nonconvective_announced_rain_stays_suppressed():
         state = AlertStateService(uid).load(trip_id)
         assert "radar_throttle" not in state, (
             "AC-2: kein radar_throttle erwartet (kein Alert gesendet)."
+        )
+
+        incidents = alert_log.read_undelivered(uid, entity_id=trip_id, entity_type="trip")
+        gate_reasons = {r for i in incidents if i.trigger == alert_log.REASON_NOWCAST for r in i.reasons}
+        assert any(r.startswith("briefing_announced:") for r in gate_reasons), (
+            f"AC-2/#2020: erwarte einen 'briefing_announced:'-Protokoll-Eintrag als "
+            f"Nachweis, dass die Briefing-Sperre tatsaechlich griff. Gefunden: {gate_reasons!r}."
         )
     finally:
         _clean_user(uid)
