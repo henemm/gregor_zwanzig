@@ -206,15 +206,67 @@ class _CoordFrameSource:
     ``RadarNowcastService(frame_source=...)`` — liefert je (lat, lon) einen
     vorab festgelegten, echten ``RadarFrame``-Satz (Muster
     ``test_compare_radar_alert.py::_CoordFrameSource``). Kein Mock: ein reales
-    Objekt mit realen Rueckgabewerten, ohne Netz."""
+    Objekt mit realen Rueckgabewerten, ohne Netz.
 
-    def __init__(self, by_coord: dict[tuple[float, float], list]) -> None:
+    🔴 Eine UNBEKANNTE Koordinate scheitert laut (Issue #2017): frueher lieferte
+    sie stillschweigend ``[]``, also "trocken". Das uebersetzte einen
+    Verdrahtungsfehler in eine plausibel aussehende Fachaussage — genau die
+    Fehlerklasse, die #2017 an anderer Stelle 26 km Abweichung als sauberen
+    Wegpunkt durchgehen liess. Als der Messpunkt von ``start_point`` auf die
+    interpolierte Position wanderte, wurde ``test_ac3_...`` dadurch rot mit dem
+    Symptom "kein Alarm" statt mit dem Grund "an dieser Koordinate ist gar
+    nichts hinterlegt".
+
+    Der Ausfall des stillen Vorgabewerts kostet nichts: KEINE Zusicherung
+    dieser Datei benutzt ihn als Aussage. Wo "trocken" gemeint ist, steht es
+    ausdruecklich als Eintrag mit ``_dry_frames()`` (s. ``test_ac3_...``); alle
+    drei Aufrufstellen listen jede Koordinate, die real abgefragt wird.
+
+    ``toleranz`` faengt ausschliesslich Rechenrauschen ab (der interpolierte
+    Messpunkt haengt am Sekundenbruchteil zwischen Fixture-Bau und Abruf, das
+    sind < 1e-5 Grad). Sie ist um Groessenordnungen kleiner als jeder Abstand,
+    der eine falsche Etappen-/Ortswahl ausmacht — ein echter Fehlgriff faellt
+    weiterhin durch.
+    """
+
+    def __init__(
+        self,
+        by_coord: dict[tuple[float, float], list],
+        *,
+        toleranz: float = 0.001,
+    ) -> None:
         self._by_coord = by_coord
+        self._toleranz = toleranz
         self.calls: list[tuple[float, float]] = []
+        self.unbekannt: list[tuple[float, float]] = []
 
     def __call__(self, lat: float, lon: float) -> list:
         self.calls.append((lat, lon))
-        return self._by_coord.get((round(lat, 4), round(lon, 4)), [])
+        for (k_lat, k_lon), frames in self._by_coord.items():
+            if abs(lat - k_lat) <= self._toleranz and abs(lon - k_lon) <= self._toleranz:
+                return frames
+        self.unbekannt.append((lat, lon))
+        raise AssertionError(
+            f"_CoordFrameSource: fuer ({lat:.5f}, {lon:.5f}) ist nichts "
+            f"hinterlegt. Bekannt sind "
+            f"{sorted(self._by_coord)!r} (Toleranz {self._toleranz}). "
+            f"Das ist ein VERDRAHTUNGS-Befund, keine Wetteraussage — wer hier "
+            f"'trocken' meint, traegt die Koordinate mit `_dry_frames()` ein."
+        )
+
+
+def _keine_unbekannten_koordinaten(frame_source: "_CoordFrameSource") -> None:
+    """Der laute Fehlschlag aus ``_CoordFrameSource`` wird vom ``except
+    Exception`` der Alarm-Pfade geschluckt (``trip_alert.py``:
+    "Radar nowcast failed", ``compare_radar_alert.py`` analog) und kaeme sonst
+    nur als "kein Alarm" an. Diese Zusicherung holt den Grund zurueck an die
+    Oberflaeche — sie steht VOR der eigentlichen Fachzusicherung."""
+    assert not frame_source.unbekannt, (
+        f"Der Pruefling hat an {frame_source.unbekannt!r} abgefragt — dort ist "
+        f"in der Fixture nichts hinterlegt. Alle Abrufe: "
+        f"{frame_source.calls!r}. Ein nachfolgendes 'kein Alarm' waere die "
+        f"Folge dieses Verdrahtungs-Befunds, nicht der geprueften Fachlogik."
+    )
 
 
 def _wet_frames(onset_minutes: int = 8) -> list:
@@ -226,6 +278,42 @@ def _wet_frames(onset_minutes: int = 8) -> list:
 
 def _dry_frames() -> list:
     return []
+
+
+def _messpunkt_des_aktiven_segments(
+    user_id: str, trip_id: str,
+) -> tuple[float, float]:
+    """Die Koordinate, an der ``check_radar_alerts()`` seit Issue #2017
+    abfragt: die zur Mitte des Vorwarnfensters
+    (``RADAR_ONSET_THRESHOLD_MIN // 2``) interpolierte Position auf dem
+    aktiven Segment.
+
+    Die Schwelle kommt ueber die MODUL-Referenz, nie als ``from ... import``
+    gebunden — der Laufzeit-Drift-Waechter aus #2009 setzt sie zur Laufzeit um.
+
+    Reine FIXTURE-Berechnung, keine Zusicherung: dieser Test prueft die
+    Ruhezeit-Haertung (#1479), nicht den Messpunkt. Deshalb darf die
+    Segmentwahl hier aus dem Pruefling selbst kommen — der Nachweis, dass sie
+    stimmt, wohnt in ``test_radar_alert_follows_ortstag.py`` und
+    ``test_issue_822_radar_nowcast_segment.py``.
+    """
+    from app.loader import load_all_trips
+    from services import radar_service as radar_service_mod
+    from services.trip_day import trip_local_today
+    from services.trip_segments import position_at_time, resolve_current_segment
+
+    now_utc = datetime.now(timezone.utc)
+    trip = next(t for t in load_all_trips(user_id=user_id) if t.id == trip_id)
+    aufgeloest = resolve_current_segment(trip, now_utc, trip_local_today(trip, now_utc))
+    assert aufgeloest is not None, (
+        f"Fixture-Voraussetzung: {trip_id!r} muss ein aktives Segment haben"
+    )
+    active, segment_date = aufgeloest
+    at = now_utc + timedelta(
+        minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+    )
+    pos = position_at_time(trip, active, segment_date, at)
+    return (pos.lat, pos.lon)
 
 
 def _save_trip_direct(
@@ -479,9 +567,21 @@ def test_ac3_broken_quiet_value_does_not_abort_trip_radar_run():
 
     observed_order = [t.id for t in load_all_trips(user_id=uid)]
 
+    # Issue #2017: abgefragt wird nicht mehr der Segment-Startpunkt, sondern
+    # die zur Mitte des Vorwarnfensters interpolierte Position. Die Fixture
+    # rechnet ihn analytisch nach — er haengt an der Wanduhr (die Etappe wird
+    # relativ zu "jetzt" gebaut) und laesst sich deshalb nicht als Konstante
+    # hinterlegen. Die Zusicherung von #1479 ist davon unberuehrt: geprueft
+    # wird weiterhin, dass ein kaputter Ruhezeit-Wert den Lauf der ANDEREN
+    # Trips nicht mitreisst.
+    _mp_gesund = _messpunkt_des_aktiven_segments(uid, tid_healthy)
+    _mp_kaputt = _messpunkt_des_aktiven_segments(uid, tid_broken)
+
     frame_source = _CoordFrameSource({
-        (TRIP_LAT, TRIP_LON): _wet_frames(8),
-        (round(TRIP_LAT + 1.0, 4), round(TRIP_LON + 1.0, 4)): _dry_frames(),
+        _mp_gesund: _wet_frames(8),
+        # "trocken" ist hier eine AUSSAGE, kein Vorgabewert — deshalb als
+        # Eintrag, nicht als Luecke (s. Docstring von _CoordFrameSource).
+        _mp_kaputt: _dry_frames(),
     })
 
     mail_calls: list[tuple[str, str]] = []
@@ -492,6 +592,7 @@ def test_ac3_broken_quiet_value_does_not_abort_trip_radar_run():
     )
     sent = svc.check_radar_alerts()
 
+    _keine_unbekannten_koordinaten(frame_source)
     assert sent >= 1 and mail_calls, (
         f"Der gesunde Trip {tid_healthy!r} MUSS seinen Regen-Beginn-Alarm "
         f"zustellen, obwohl {tid_broken!r} einen unbrauchbaren Ruhezeit-Wert "
@@ -871,6 +972,7 @@ def test_ac8_effect_nowcast_compare_run_names_the_affected_preset(caplog):
         with caplog.at_level(logging.WARNING):
             svc.check_all_compare_presets()
 
+        _keine_unbekannten_koordinaten(frame_source)
         engine_warnings = _engine_quiet_warnings(caplog)
         assert engine_warnings, (
             "Die Engine hat beim echten Nowcast-Lauf keine Warnzeile "
