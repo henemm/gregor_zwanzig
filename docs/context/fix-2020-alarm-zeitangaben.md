@@ -441,3 +441,9 @@ kein gemeinsamer Messpunkt, kein Merge-Halt.
 🔴 **Grenze der Auskunft, ausdrücklich benannt:** Belegt ist die **Renderer-Weiche**, nicht
 der Versandweg. Würden zwei Alarmarten **vor** `render_sms` zu einer Sendung zusammengefasst,
 wäre das eine andere Frage. Im Renderer passiert es nachweislich nicht.
+
+**Folgeticket #2054** (von der #2046-Session angelegt): „Onset-Kurznachricht: Wochentagskürzel
+statt `+1` bei Mitternachts-Überlauf" — `_sms_onset_time` (`render.py:537`, Aufruf `:595`).
+Setzt die mit dieser Spec freigegebene Vereinheitlichung um; **nicht** Teil dieser Scheibe.
+GSM-7-Frage ist dort bereits beantwortbar: Die amtliche Warn-SMS versendet die Kürzel
+(`Do12-22`) seit #1948 S5 im selben Kanal — reine ASCII-Buchstaben, GSM-7-fähig.
