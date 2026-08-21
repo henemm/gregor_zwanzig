@@ -184,3 +184,102 @@ def test_append_alert_log_retains_fresh_entries():
 
     data = json.loads((user_dir / "alert_log.json").read_text())
     assert len(data["entries"]) == 3, "Alle frischen Einträge + neuer Eintrag sollen vorhanden sein"
+
+
+# --- AC-B13 (Issue #2018): Nachtrags-Markierung im Protokoll, rein additiv ---
+
+# Das Schema eines zugestellten Eintrags im Bestand, also VOR dieser Scheibe
+# (`alert_log.py::append_entry`). Die optionalen Herkunfts-Felder
+# (`capture_id`/`capture_ids`) sind bewusst NICHT dabei — sie entstehen nur
+# bei gesetztem Argument, nach demselben Muster wie die Nachtrags-Felder.
+BESTANDS_SCHEMA = {
+    "entity_id", "entity_type", "sent_at", "changes_count", "severity",
+    "metrics", "hazards", "reason", "channels_sent", "channels_not_sent",
+}
+
+
+def _entries(user_id: str) -> list:
+    from app.loader import get_data_dir
+
+    return json.loads(
+        (get_data_dir(user_id) / "alert_log.json").read_text()
+    )["entries"]
+
+
+def _append_nowcast(user_id: str, entity_id: str, **extra):
+    """Ein zugestellter Nowcast-Alarm — derselbe Aufruf wie am Trip-Pfad;
+    `extra` trägt die (heute noch nicht existierenden) Nachtrags-Parameter."""
+    from services import alert_log
+
+    alert_log.append_entry(
+        user_id, entity_id=entity_id, entity_type="trip",
+        changes_count=1, severity="HIGH",
+        reason=alert_log.REASON_NOWCAST,
+        effective_channels={"email"}, sent_channels=["email"],
+        **extra,
+    )
+
+
+def test_nachtrag_schreibt_die_markierung_in_den_protokolleintrag():
+    """
+    GIVEN: Eine per Nachtrag zugestellte Nowcast-Meldung, die sich auf eine
+           bereits gemeldete amtliche Warnung von 14:05 UTC bezieht
+    WHEN:  `append_entry(..., is_addendum=True, addendum_reported_at=…)`
+    THEN:  Der Protokolleintrag trägt die Nachtrags-Markierung UND den
+           referenzierten Meldezeitpunkt — rein additiv zum Bestandsschema,
+           kein Bestandsfeld fällt weg.
+
+    AC-B13 (Issue #2018). RED heute: `append_entry` kennt die Parameter nicht.
+    """
+    from app.loader import get_data_dir
+
+    uid = "test-user-b13-nachtrag"
+    get_data_dir(uid).mkdir(parents=True, exist_ok=True)
+    bezug = datetime(2026, 8, 21, 14, 5, tzinfo=timezone.utc).isoformat()
+
+    _append_nowcast(uid, "trip-b13", is_addendum=True, addendum_reported_at=bezug)
+
+    entry = _entries(uid)[-1]
+    assert entry.get("is_addendum") is True, (
+        f"Nachtrags-Markierung fehlt im Protokolleintrag: {entry!r}"
+    )
+    assert entry.get("addendum_reported_at") == bezug, (
+        f"Der referenzierte Meldezeitpunkt fehlt/weicht ab: {entry!r}"
+    )
+    assert BESTANDS_SCHEMA <= set(entry), (
+        f"Bestandsfelder dürfen nicht wegfallen, fehlend: "
+        f"{sorted(BESTANDS_SCHEMA - set(entry))!r}"
+    )
+    assert set(entry) - BESTANDS_SCHEMA == {"is_addendum", "addendum_reported_at"}, (
+        f"Der Nachtrag darf GENAU die zwei additiven Felder ergänzen, "
+        f"gefunden: {sorted(set(entry) - BESTANDS_SCHEMA)!r}"
+    )
+
+
+def test_normalfall_bleibt_schema_identisch_zum_bestand():
+    """
+    GIVEN: Ein gewöhnlicher Alarm ohne Nachtrag
+    WHEN:  `append_entry(...)` ohne Nachtrags-Argumente
+    THEN:  Die JSON-Struktur des Eintrags ist schema-identisch zum Bestand —
+           kein `is_addendum`, kein `addendum_reported_at`, überhaupt kein
+           neuer Schlüssel.
+
+    AC-B13 (Issue #2018), Bestandsinvariante. Heute grün; fällt, sobald
+    jemand die Nachtrags-Felder bedingungslos schreibt.
+    """
+    from app.loader import get_data_dir
+
+    uid = "test-user-b13-normal"
+    get_data_dir(uid).mkdir(parents=True, exist_ok=True)
+
+    _append_nowcast(uid, "trip-b13-normal")
+
+    entry = _entries(uid)[-1]
+    assert set(entry) == BESTANDS_SCHEMA, (
+        f"Der Normalfall muss schema-identisch zum Bestand bleiben. "
+        f"Zuviel: {sorted(set(entry) - BESTANDS_SCHEMA)!r}, "
+        f"fehlend: {sorted(BESTANDS_SCHEMA - set(entry))!r}"
+    )
+    assert not [k for k in entry if "addendum" in k], (
+        f"Kein Nachtrags-Feld im Normalfall erlaubt: {entry!r}"
+    )

@@ -99,9 +99,32 @@ class GateResult(NamedTuple):
 
     allowed: bool
     reason: Optional[str] = None
+    # Issue #2018: additiv, defaultet. `True` = die Meldung geht raus, aber
+    # als NACHTRAG zu einer bereits zugestellten AMTLICHEN Warnung, statt als
+    # zweiter voller Alarm -- ausschliesslich fuer eine Zustellung, die
+    # ohnehin stattgefunden haette (s. `check_event_identity_gate`).
+    # `allowed` bleibt "geht raus oder nicht"; bestehende
+    # `if not gate.allowed`-Zweige sind unveraendert (Muster
+    # `AlertMessage.reference_at`, #1916).
+    is_addendum: bool = False
+    addendum_source: Optional[str] = None       # nur "official" erreichbar
+    addendum_reported_at: Optional[datetime] = None
 
 
 _ALLOWED = GateResult(True, None)
+
+# Ersatz-Zeitpunkt fuer Kandidaten ohne (parsbares) `reported_at` -- sie
+# verlieren den Gleichstands-Vergleich, statt ihn zum Absturz zu bringen.
+_MIN_TS = datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _entry_source(entry: dict) -> str:
+    """Quelle eines Registereintrags. Alt-Eintraege (vor #2018) tragen kein
+    `"source"`-Feld -- ihre Quelle steckt fail-soft in der Anwesenheit der
+    Zeitfelder: Nowcast setzt NUR `point_at`, amtlich NUR `window_*`. Dieselbe
+    Ableitung wie beim Schreiben (`record_event_identity`), damit ein Eintrag
+    seine Quellen-Zuordnung nie durch sein Alter verliert (AC-A2)."""
+    return entry.get("source") or ("nowcast" if entry.get("point_at") else "official")
 
 
 def _resolve_store(user_id: str, throttle_store: Optional[ThrottleStore]) -> ThrottleStore:
@@ -504,11 +527,19 @@ def _find_matching_entry(
     nie zum Absturz -- die naechsten Kandidaten werden trotzdem geprueft.
 
     AC-5 (Bruchstelle): eine leere Segment-Menge -- auf der neuen ODER der
-    registrierten Seite -- erzeugt NIE ein Match."""
+    registrierten Seite -- erzeugt NIE ein Match.
+
+    Issue #2018 (AC-A10): gesammelt werden ALLE gueltigen Kandidaten, geliefert
+    wird der STAERKSTE (hoechste Dringlichkeit, bei Gleichstand der zuletzt
+    gemeldete) -- nicht mehr der erstbeste. Der Nachtrag zitiert einen
+    KONKRETEN Eintrag (Quelle + Uhrzeit im Text); ein zufaellig erstbester
+    Treffer wuerde einen schwaecheren Bezug nennen. Vorbild
+    `official_alerts.py::_pick_strongest`."""
     new_segments = {s for s in (segment_ids or []) if s}
     if not new_segments:
         return None
 
+    candidates: list[dict] = []
     prefix = f"event_identity:{hazard_class}:"
     for key, entry in state.items():
         if not isinstance(key, str) or not key.startswith(prefix):
@@ -533,12 +564,38 @@ def _find_matching_entry(
             covered_until = _covered_until(entry_point_at, entry_window_end)
             if covered_until is None:
                 continue
-            return {"severity": severity, "covered_until": covered_until}
+            candidates.append({
+                "severity": severity,
+                "covered_until": covered_until,
+                # Issue #2018: Quelle und Meldezeitpunkt tragen den Bezug des
+                # Nachtrags. `reported_at` ist fail-soft `None`, wenn das Feld
+                # fehlt oder unparsbar ist -- das verhindert das Match NICHT,
+                # laesst aber die Uhrzeit im Nachtragstext entfallen.
+                "source": _entry_source(entry),
+                "reported_at": _parse_event_ts(entry.get("reported_at")),
+            })
         except (KeyError, TypeError, ValueError):
             # AC-19: ein kaputter/unbekannter Registereintrag zaehlt fail-soft
-            # als "kein Match" -- nicht als Absturz.
+            # als "kein Match" -- nicht als Absturz. Issue #2018/#1405: der
+            # Ueberspringen-Fall wird protokolliert, damit ein kaputter
+            # Registereintrag nicht still ein Match verhindert -- sonst
+            # ginge wieder ein VOLLER zweiter Alarm raus statt des
+            # gerichteten Nachtrags.
+            logger.warning(
+                "Kaputter Registereintrag beim Auflösen übersprungen "
+                "(Issue #2018/#1405), Schlüssel=%s",
+                key,
+            )
             continue
-    return None
+    if not candidates:
+        return None
+    # Staerkster Treffer ueber die GETEILTE Rangordnung (`highest_urgency`),
+    # keine zweite Rangtabelle (#1481); bei Gleichstand der juengste Eintrag.
+    staerkste = alert_urgency.highest_urgency(*(c["severity"] for c in candidates))
+    return max(
+        (c for c in candidates if c["severity"] == staerkste),
+        key=lambda c: c["reported_at"] or _MIN_TS,
+    )
 
 
 def _covers_materially_more(
@@ -602,12 +659,32 @@ def check_event_identity_gate(
     if match is None:
         return _ALLOWED
 
+    # Issue #2018: die Richtung entscheidet ausschliesslich ueber die FORM der
+    # Zustellung, nie ueber ihr Ob. Nur "amtlich zuerst, Nowcast danach" kennt
+    # den dritten Ausgang -- die Gegenrichtung ist eigenstaendig ueber #1467
+    # S4b PO-freigegeben und bleibt hier unangetastet.
+    new_source = "nowcast" if point_at is not None else "official"
+    addendum_direction = match["source"] == "official" and new_source == "nowcast"
+
     if alert_urgency.exceeds(severity, match["severity"]):
-        return _ALLOWED  # V2 — struktureller erster Zweig, bricht IMMER durch
+        # V2 — struktureller erster Zweig, bricht IMMER durch. In der
+        # Nachtrags-Richtung geht DIESELBE Zustellung raus, nur als Nachtrag
+        # statt als zweiter voller Alarm (AC-A1); sonst unveraendert.
+        if addendum_direction:
+            return GateResult(
+                True, None, is_addendum=True,
+                addendum_source=match["source"],
+                addendum_reported_at=match["reported_at"],
+            )
+        return _ALLOWED
 
     if _covers_materially_more(match["covered_until"], point_at, window_end):
-        return _ALLOWED  # V1-Ausnahme
+        # V1-Ausnahme — quellenunabhaengig und weiterhin VOLLER Alarm (AC-A7):
+        # wesentlich neue Zeitabdeckung ist neue Information, kein Nachtrag.
+        return _ALLOWED
 
+    # Unveraendert Stille (AC-A8): aus Stille wird nie ein Nachtrag -- der
+    # PO-Entscheid aendert die Form einer ohnehin stattfindenden Zustellung.
     logger.debug(
         "Ereignis-Identitaet unterdrueckt (%s) fuer %s/%s", hazard_class,
         entity_id, user_id,
@@ -646,6 +723,11 @@ def record_event_identity(
         "hazard_class": hazard_class,
         "segment_ids": segments,
         "severity": severity,
+        # Issue #2018 (AC-A2): Quellenvermerk, abgeleitet aus derselben
+        # Fallunterscheidung, die T2/T4 bereits treffen -- Nowcast setzt NUR
+        # `point_at`, amtlich NUR `window_*`. Kein neuer Parameter, damit die
+        # Signatur unveraendert bleibt (AC-A11).
+        "source": "nowcast" if point_at is not None else "official",
         "point_at": point_at.isoformat() if point_at is not None else None,
         "window_start": window_start.isoformat() if window_start is not None else None,
         "window_end": window_end.isoformat() if window_end is not None else None,
