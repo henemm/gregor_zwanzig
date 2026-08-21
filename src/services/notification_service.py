@@ -183,6 +183,12 @@ class RadarAlertRequest:
     # (AC-7) — genau das taten bis 2026-08-12 ALLE Nowcast-Mails, waehrend die
     # amtliche Warnung zum selben Ort "🏁 Ziel" sagte.
     segment_id: str | None = None
+    # Issue #2009: Tagesbezug des Onset-Zeitpunkts (0 = heute, 1 = morgen).
+    # `onset_time` ist reines "HH:MM" — seit der Schwelle 55 rutscht der
+    # Zeitpunkt regelmaessig ueber Mitternacht und waere ohne den Offset
+    # mehrdeutig. Berechnet wird er dort, wo `onset_time` entsteht
+    # (`trip_alert.check_radar_alerts`), damit beide dieselbe Zone benutzen.
+    onset_day_offset: int = 0
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -1279,6 +1285,7 @@ class NotificationService:
             source_label=request.source_label,
             briefing_context=request.briefing_context,
             segment_id=request.segment_id,  # Issue #1744 A1
+            onset_day_offset=request.onset_day_offset,  # Issue #2009
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.

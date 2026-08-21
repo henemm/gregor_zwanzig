@@ -69,6 +69,24 @@ _NOWCAST_HORIZON_MIN = 180
 # Issue #1439: oeffentlicher Alias, damit der Scheduler-Zeitfenster-Guard
 # dieselbe Zahl referenziert statt eine zweite Kopie zu pflegen.
 NOWCAST_HORIZON_MIN = _NOWCAST_HORIZON_MIN
+
+# Issue #2009: einzige Quelle der Onset-Alarmschwelle, ersetzt die bisher
+# doppelt gepflegten Literale in trip_alert.py und compare_radar_alert.py
+# (ADR-0021 — Trip und Ortsvergleich teilen den Code). Wert 55: am Cron-Takt
+# `7,22,37,52` und dem 15-Min-Datenraster sind nur die Onset-Werte
+# 8/23/38/53/68/83 ... erreichbar; 55 liegt knapp oberhalb von 53, laesst also
+# bis zu ~53 Min Vorlauf durch und schliesst 68+ aus (jenseits ~60 Min sinkt
+# die Ortsschaerfe des INCA-Extrapolationsprodukts deutlich).
+#
+# BEWUSST NUR EIN NAME — kein privates `_RADAR_ONSET_THRESHOLD_MIN` daneben
+# (anders als beim Nachbarn `NOWCAST_HORIZON_MIN` oben, der einen echten
+# modulinternen Leser hat; hier gab es nie einen). Ein zweiter, privater Name
+# laedt dazu ein, ihn zu benutzen — und wer ihn benutzt, bindet den Wert beim
+# Import und umgeht damit den Laufzeit-Drift-Schutz aus AC-1: die Aufrufer in
+# trip_alert.py/compare_radar_alert.py lesen absichtlich ueber die
+# MODUL-Referenz (`radar_service_mod.RADAR_ONSET_THRESHOLD_MIN`), damit ein
+# Auseinanderlaufen der beiden Pfade auffaellt statt still zu bleiben.
+RADAR_ONSET_THRESHOLD_MIN = 55
 _DRY_THRESHOLD_MM_H = 0.1
 
 # Issue #1461 S3a: benannte Intensitaets-Label-Konstanten statt Inline-Strings
