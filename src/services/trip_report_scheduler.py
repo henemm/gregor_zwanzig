@@ -1942,8 +1942,21 @@ class TripReportSchedulerService:
 
         Behaviour is bit-identical to the previous inline implementation;
         the refactor is a pure Extract Function with no semantic change.
+
+        Issue #2036: davor die einmalige Nachruestung der gemessenen
+        Wegstrecke aus dem GPX-Bestand des Nutzers (AC-7). Sie ist der
+        Produktionspfad fuer BESTANDS-Trips -- der Import-Weg (AC-6) deckt
+        nur neu angelegte Etappen ab. Fail-soft und ohne Treffer folgenlos:
+        der Trip laeuft dann unveraendert weiter (AC-10).
         """
+        from services.track_resolution import backfill_stage_distances
         from services.trip_segments import convert_trip_to_segments
+        # `getattr`: die Segment-Umwandlung ist eine reine Funktion und wird
+        # auch an teilinitialisierten Instanzen gerufen -- ohne Nutzerbezug
+        # gibt es keinen GPX-Bestand, also auch nichts nachzutragen.
+        user_id = getattr(self, "_user_id", None)
+        if user_id:
+            trip = backfill_stage_distances(trip, user_id, target_date)
         return convert_trip_to_segments(trip, target_date)
 
     def _clamp_segments_to_today(

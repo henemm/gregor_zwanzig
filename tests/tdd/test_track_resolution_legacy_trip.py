@@ -105,7 +105,6 @@ def test_ac7_treffer_wird_additiv_zurueckgeschrieben_ohne_datenverlust(tmp_path)
     import dataclasses
 
     from app.loader import load_trip, save_trip
-    from app.trip import Stage
 
     gpx_dir = tmp_path / "gpx"
     gpx_dir.mkdir()

@@ -29,7 +29,7 @@ from output.tokens.hazard_symbols import (
 # `segments.py` die GEMEINSAME Ortsformatierung aller Alarmarten (vorher hier
 # definiert, faktisch der amtlichen Warnung vorbehalten). Der Import haelt
 # zugleich den Re-Export fuer Bestandsaufrufer (`email/html.py:53`).
-from .segments import format_segment_reference
+from .segments import format_alert_location, format_segment_reference
 
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData
@@ -2147,8 +2147,22 @@ def _trip_total_segment_ids(trip: "Trip | None") -> list[str]:
     return [str(i) for i in range(1, n + 1)] + ["Ziel"]
 
 
+def _measured_km_span(
+    segment_ids: list[str], segment_km: dict | None,
+) -> tuple[float, float] | None:
+    """Gemeinsame, GEMESSENE km-Spanne der betroffenen Segmente (Issue #2036)
+    -- oder `None`, sobald auch nur eines der Segmente keine gemessene Spanne
+    traegt. Ein Buendel, dessen Ortsangabe zur Haelfte geraten waere, bleibt
+    lieber ganz bei der Segment-Sprache (Fallback-Garantie AC-10)."""
+    spans = [(segment_km or {}).get(str(s)) for s in segment_ids]
+    if not spans or any(s is None for s in spans):
+        return None
+    return min(s[0] for s in spans), max(s[1] for s in spans)
+
+
 def build_official_alert_notices(
     trip: "Trip | None", tagged_alerts: list[tuple["OfficialAlert", list[str]]],
+    segment_km: dict[str, tuple[float, float]] | None = None,
 ) -> list["OfficialAlertNotice"]:
     """Baut die `OfficialAlertNotice`-DTOs fuer den Trip-Standalone-Alarm
     (Issue #1216): dedupliziert via `dedupe_official_alerts`, leitet
@@ -2156,7 +2170,14 @@ def build_official_alert_notices(
 
     Issue #1239 (AC-13): nach der Identitaets-Dedup buendelt `_bundle_by_hazard_
     level` gleichartige Warnungen (gleicher Typ + gleiche Stufe) zu einer Warnung
-    mit vereinigter Segmentliste."""
+    mit vereinigter Segmentliste.
+
+    Issue #2036: `segment_km` (additiv, Default aus) traegt die GEMESSENE
+    km-Spanne je Segment-Kennung. Nur damit spricht die amtliche Warnung
+    dieselbe Ortssprache wie Nowcast- und Abweichungsalarm (Teilungs-
+    Invariante #1744, AC-3) -- die Aufloesung selbst bleibt die EINE geteilte
+    Funktion `segments.format_alert_location`, kein zweiter Pfad. Ohne
+    Eintrag bleibt es byte-identisch bei "Segment N"."""
     all_ids = _trip_total_segment_ids(trip)
     deduped = _bundle_by_hazard_level(dedupe_official_alerts(tagged_alerts))
     notices = []
@@ -2171,7 +2192,16 @@ def build_official_alert_notices(
         if is_full:
             scope_label, sms_scope = "gesamte Route", "ges.Route"
         else:
-            scope_label = format_segment_reference(segment_ids) or "unbekannt"
+            # Issue #2036: dieselbe Aufloesung wie jeder andere Alarm -- die
+            # gemessene km-Spanne verdraengt die Segmentnummer, sonst bleibt
+            # alles wie bisher.
+            _span = _measured_km_span(segment_ids, segment_km)
+            if _span is not None:
+                scope_label = format_alert_location(
+                    None, segment_ids, _span[0], _span[1], km_measured=True,
+                )
+            else:
+                scope_label = format_segment_reference(segment_ids) or "unbekannt"
             # #1948 S5: "Seg 4" statt des Kurzcodes "S4" -- dieselbe
             # Ortssprache, die Trip-Briefing und Nowcast-Alarm sprechen
             # (`render._ascii_alert_location`). Das fruehere "nur "-Praefix bei

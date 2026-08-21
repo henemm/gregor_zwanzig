@@ -34,6 +34,7 @@ from services.notification_service import (
     RadarAlertRequest,
 )
 from output.renderers.alert.segments import normalize_segment_id
+from services.trip_segments import measured_segment_km  # Issue #2036
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
 from services.throttle_store import ThrottleStore
@@ -597,7 +598,9 @@ class TripAlertService:
                 elif official_notices:
                     # Kein Wetter-Delta-Alert gefeuert, aber neue/gestiegene amtliche
                     # Warnung(en) — eigenständiger Versand (PO-Entscheidung).
-                    if self._send_official_alert_only(trip, official_notices):
+                    if self._send_official_alert_only(
+                        trip, official_notices, segments=cached,
+                    ):
                         alerts_sent += 1
             except Exception as e:
                 logger.error(f"Alert check failed for trip {trip.id}: {e}")
@@ -1887,7 +1890,9 @@ class TripAlertService:
             alerts=[a for a, _segment_ids in official_notices],
         )
 
-    def _send_official_alert_only(self, trip: "Trip", official_notices: list) -> bool:
+    def _send_official_alert_only(
+        self, trip: "Trip", official_notices: list, segments: Optional[list] = None,
+    ) -> bool:
         """Issue #1088: Standalone-Versand einer amtlichen Warnung ohne Wetter-Delta.
 
         Reproduziert nur die generischen Sicherheits-Gates (QuietHours,
@@ -1978,6 +1983,10 @@ class TripAlertService:
             effective_channels=_official_allowed,
             mail_sink=self._mail_sink,
             telegram_style=_trip_telegram_style(trip),
+            # Issue #2036 (AC-3): dieselbe Ortsquelle wie Nowcast- und
+            # Abweichungsalarm. Ohne Segmente (kein Anker) bleibt die Karte
+            # leer und die Warnung bei der Segment-Sprache (AC-10).
+            segment_km=measured_segment_km(segments),
         )
         # Issue #1459: amtliche Warnungen tragen ihre Gefahrenart in `hazards`,
         # NICHT als Register-Kennung in `metrics` (eigenes Vokabular, O1).

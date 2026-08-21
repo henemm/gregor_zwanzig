@@ -25,6 +25,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("trip_segments")
 
+# Issue #2036: Zugabe der Plausibilitaetspruefung (gemessene Spanne gegen
+# Luftlinie). Deckt die Rundung persistierter km-Werte ab -- alles darueber
+# ist ein Nachbearbeitungs-Artefakt und macht die Etappe unvermessen.
+_MEASURED_SLACK_KM = 0.01
+
 
 def _parse_hhmm(value: str) -> Optional[time]:
     """Parse 'HH:MM' to a time object; returns None on malformed input."""
@@ -105,6 +110,67 @@ def _interpolate_missing_times(known_times: List[Optional[time]]) -> List[Option
     return result
 
 
+def stage_measured_distances(waypoints: List) -> Optional[List[float]]:
+    """Gemessene Wegstrecke je Wegpunkt, auf den Etappenstart normiert
+    (Issue #2036, AC-8/AC-9/AC-14) -- oder ``None``, wenn die Etappe als
+    UNVERMESSEN gilt.
+
+    Eine Etappe ist nur dann vermessen, wenn
+
+    1. JEDER ihrer Wegpunkte einen Wert traegt. ``0.0`` ist dabei eine
+       gueltige Messung (Etappenstart), ``None`` heisst "nicht gemessen" --
+       ein einziges ``None`` macht die ganze Etappe unvermessen (AC-14);
+    2. die Werte STRIKT monoton steigen; und
+    3. jede Teilstrecke mindestens so gross ist wie die Luftlinie zwischen
+       den beiden Wegpunkten -- ein Track kann nie kuerzer sein als die
+       direkte Verbindung (AC-8).
+
+    Verletzt EIN Paar die Regel, gilt die GESAMTE Etappe als unvermessen;
+    eine teilweise vermessene Etappe waere eine Ortsangabe, die an einer
+    Stelle stimmt und an der naechsten still falsch ist.
+
+    Die Normierung auf den Etappenstart ist PO-Vorgabe: "jeder Tag zaehlt
+    neu seine Kilometer" -- auch wenn die Messung aus einer durchlaufenden
+    Gesamt-GPX ueber alle Etappen stammt (AC-9).
+    """
+    values = [getattr(wp, "distance_from_start_km", None) for wp in waypoints]
+    if not values or any(v is None for v in values):
+        return None
+    for i in range(len(values) - 1):
+        span = values[i + 1] - values[i]
+        if span <= 0:  # nicht strikt monoton
+            return None
+        luftlinie = haversine_km(
+            waypoints[i].lat, waypoints[i].lon,
+            waypoints[i + 1].lat, waypoints[i + 1].lon,
+        )
+        # 10 m Zugabe faengt die Rundung gespeicherter Werte ab, nicht mehr.
+        if span + _MEASURED_SLACK_KM < luftlinie:
+            return None
+    base = values[0]
+    return [v - base for v in values]
+
+
+def measured_segment_km(segments) -> dict:
+    """Gemessene km-Spanne je Segment-Kennung (Issue #2036) -- NUR fuer
+    Segmente, deren Distanz aus echter Wegstrecke stammt.
+
+    Speist die Ortsangabe der amtlichen Warnung aus DERSELBEN Quelle wie
+    Nowcast- und Abweichungsalarm (Teilungs-Invariante #1744, AC-3).
+    Nimmt ``SegmentWeatherData`` ODER blanke ``TripSegment`` entgegen.
+    """
+    result: dict = {}
+    for entry in segments or ():
+        seg = getattr(entry, "segment", entry)
+        if not getattr(seg, "distance_measured", False):
+            continue
+        result[str(seg.segment_id)] = (
+            seg.start_point.distance_from_start_km,
+            seg.end_point.distance_from_start_km,
+        )
+    return result
+
+
 def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegment]:
     """Convert Trip waypoints to TripSegment DTOs for a given date.
 
@@ -168,6 +234,10 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
 
     cumulative_time = default_start
     cumulative_dist_km = 0.0
+    # Issue #2036: gemessene, auf den Etappenstart normierte Wegstrecke --
+    # `None`, wenn die Etappe unvermessen ist. Dann bleibt ALLES beim
+    # bisherigen Luftlinien-Verhalten (Terminschutz AC-10).
+    measured = stage_measured_distances(waypoints)
 
     for i in range(len(waypoints) - 1):
         wp1 = waypoints[i]
@@ -223,6 +293,17 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         elev2 = wp2.elevation_m if wp2.elevation_m else 0
         elev_diff = elev2 - elev1
         dist_km = haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
+        # Issue #2036: gemessene Spanne schlaegt Luftlinie -- aber NUR wenn
+        # die ganze Etappe vermessen ist. `km_start`/`km_end` sind die Werte,
+        # die spaeter als Ortsangabe erscheinen duerfen.
+        if measured is not None:
+            km_start = measured[i]
+            km_end = measured[i + 1]
+            seg_dist_km = round(km_end - km_start, 1)
+        else:
+            km_start = cumulative_dist_km
+            km_end = cumulative_dist_km + round(dist_km, 1)
+            seg_dist_km = round(dist_km, 1)
 
         # Issue #1468 (E2): das Auswertungsfenster der Tour reist mit dem
         # Segment -- jeder spaetere Aggregations-Aufrufer erbt es dadurch.
@@ -232,24 +313,25 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
                 lat=wp1.lat,
                 lon=wp1.lon,
                 elevation_m=float(elev1),
-                distance_from_start_km=cumulative_dist_km,
+                distance_from_start_km=km_start,
             ),
             end_point=GPXPoint(
                 lat=wp2.lat,
                 lon=wp2.lon,
                 elevation_m=float(elev2),
-                distance_from_start_km=cumulative_dist_km + round(dist_km, 1),
+                distance_from_start_km=km_end,
             ),
             start_time=start_dt,
             end_time=end_dt,
             duration_hours=duration_hours,
-            distance_km=round(dist_km, 1),
+            distance_km=seg_dist_km,
             ascent_m=float(max(0, elev_diff)),
             descent_m=float(max(0, -elev_diff)),
             day_window_start_hour=_win_start,
             day_window_end_hour=_win_end,
+            distance_measured=measured is not None,  # Issue #2036
         )
-        cumulative_dist_km += round(dist_km, 1)
+        cumulative_dist_km = km_end
         segments.append(segment)
 
     # Destination segment (Zielort)
@@ -324,6 +406,9 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
                 elevation_m=elev,
                 distance_from_start_km=cumulative_dist_km,
             ),
+            # Issue #2036: Das Ziel-Segment traegt km_from == km_to und behaelt
+            # deshalb im Renderer sein "🏁 Ziel" (AC-4) -- das Flag sagt nur,
+            # WOHER die Zahl stammt.
             start_time=arrival_time,
             end_time=dest_end_time,
             duration_hours=(dest_end_time - arrival_time).total_seconds() / 3600,
@@ -336,6 +421,7 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
             # in ORTSZEIT filtert und nicht am Segment-Ende haengt.
             day_window_start_hour=_win_start,
             day_window_end_hour=_win_end,
+            distance_measured=measured is not None,  # Issue #2036
         )
         segments.append(destination_segment)
 

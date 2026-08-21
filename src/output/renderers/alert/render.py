@@ -195,8 +195,15 @@ def _location_of(events, location_label: str | None = None) -> str:
     sinnlose km-Spanne eines Punktes ohne km-Kontext; der Trip-Pfad setzt das
     Feld nie."""
     a, b = km_span(events)
+    # Issue #2036: die km-Spanne verdraengt die Segmentnummer nur, wenn sie
+    # bei JEDEM beteiligten Ereignis aus echter Wegstrecke stammt -- eine
+    # gemischte Menge waere eine Ortsangabe, die zur Haelfte geraten ist.
+    measured = bool(events) and all(
+        getattr(e, "km_measured", False) for e in events
+    )
     return format_alert_location(
         location_label, [e.segment_id for e in events], a, b,
+        km_measured=measured,
     )
 
 
@@ -269,6 +276,7 @@ def _sms_corridor_token(ce: CorridorEvent) -> str:
 def _onset_shift_where(oe: OnsetShiftEvent) -> str:
     return format_alert_location(
         oe.location_label, [oe.segment_id], oe.km_from, oe.km_to,
+        km_measured=getattr(oe, "km_measured", False),  # Issue #2036
     )
 
 
@@ -288,6 +296,8 @@ def _onset_shift_location(msg: AlertMessage) -> str:
     return format_alert_location(
         msg.location_label, [oe.segment_id for oe in evs],
         min(oe.km_from for oe in evs), max(oe.km_to for oe in evs),
+        # Issue #2036: alles-oder-nichts wie in `_location_of`.
+        km_measured=all(getattr(oe, "km_measured", False) for oe in evs),
     )
 
 
@@ -1036,7 +1046,9 @@ def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
     else:
         a = min(ce.km_from for ce in msg.corridor_events)
         b = max(ce.km_to for ce in msg.corridor_events)
-        head = f"{trip} km{int(round(a))}-{int(round(b))}: "
+        # Issue #2036 (AC-5): Leerzeichen nach "km" -- dieselbe
+        # Schreibweise wie in `format_alert_location`.
+        head = f"{trip} km {int(round(a))}-{int(round(b))}: "
     body = head + " ".join(_sms_corridor_token(ce) for ce in msg.corridor_events)
     return body if len(body) <= limit else body[:limit]
 

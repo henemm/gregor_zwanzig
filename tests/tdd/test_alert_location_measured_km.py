@@ -20,8 +20,6 @@ from __future__ import annotations
 
 import re
 
-import pytest
-
 
 def _measured_event(
     segment_id: str | None = "3",

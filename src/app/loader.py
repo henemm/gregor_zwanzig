@@ -478,6 +478,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 confirmed=wp_data.get("confirmed"),
                 suggestion_reason=wp_data.get("suggestion_reason"),
                 arrival_override=wp_data.get("arrival_override"),
+                # Issue #2036 — gemessene Wegstrecke erhalten. Fehlender
+                # Schluessel -> None ("nicht gemessen"), NICHT 0.0.
+                distance_from_start_km=wp_data.get("distance_from_start_km"),
             )
             waypoints.append(waypoint)
 
@@ -1463,6 +1466,10 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
                 wp_dict["suggestion_reason"] = wp.suggestion_reason
             if wp.arrival_override:
                 wp_dict["arrival_override"] = wp.arrival_override
+            # Issue #2036 — `is not None` statt truthy: 0.0 km ist ein
+            # gueltiger Etappenstart und muss persistiert werden.
+            if wp.distance_from_start_km is not None:
+                wp_dict["distance_from_start_km"] = wp.distance_from_start_km
             waypoints_data.append(wp_dict)
 
         stage_dict = {

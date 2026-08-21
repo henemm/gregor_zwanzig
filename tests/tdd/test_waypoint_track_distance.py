@@ -19,7 +19,6 @@ fehl -- das IST der RED-Zustand.
 """
 from __future__ import annotations
 
-import dataclasses
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
@@ -104,7 +103,7 @@ def test_ac6_distanz_uebersteht_speicher_roundtrip(tmp_path):
     (save_trip berechnet arrival_calculated bit-identisch zu Go
     store.SaveTrip neu, #802)."""
     from app.loader import load_trip, save_trip
-    from app.trip import Stage, Trip
+    from app.trip import Trip
 
     wp0 = _waypoint("G1", 0.0)
     wp1 = _waypoint("G2", 2.9345, lat=46.61, lon=12.91)

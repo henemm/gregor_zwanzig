@@ -32,6 +32,11 @@ class AlertEvent:
     # setzt sie nie (ein Vergleichs-Ort hat keine Etappen). `None` -> Rueckfall
     # auf die km-Spanne (AC-7).
     segment_id: str | None = None
+    # Issue #2036: additiv, Default aus. `True` NUR, wenn `km_from`/`km_to`
+    # aus echter GPX-Wegstrecke stammen (`TripSegment.distance_measured`).
+    # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
+    # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
+    km_measured: bool = False
 
 
 @dataclass(frozen=True)
@@ -67,6 +72,11 @@ class OnsetEvent:
     # Telegram-Langform bleiben bei `intensity_label` als Wort. `None` (oder
     # unterhalb der Trockenschwelle) → zahlenlose Alt-Form `R@HH:MM`.
     onset_precip_mm: float | None = None
+    # Issue #2036: additiv, Default aus. `True` NUR, wenn `km_from`/`km_to`
+    # aus echter GPX-Wegstrecke stammen (`TripSegment.distance_measured`).
+    # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
+    # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
+    km_measured: bool = False
 
 
 @dataclass(frozen=True)
@@ -90,6 +100,11 @@ class OnsetShiftEvent:
     km_to: float
     segment_id: str | None = None
     location_label: str | None = None
+    # Issue #2036: additiv, Default aus. `True` NUR, wenn `km_from`/`km_to`
+    # aus echter GPX-Wegstrecke stammen (`TripSegment.distance_measured`).
+    # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
+    # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
+    km_measured: bool = False
 
 
 @dataclass(frozen=True)
@@ -106,6 +121,11 @@ class CorridorEvent:
     km_from: float
     km_to: float
     location_label: str | None = None
+    # Issue #2036: additiv, Default aus. `True` NUR, wenn `km_from`/`km_to`
+    # aus echter GPX-Wegstrecke stammen (`TripSegment.distance_measured`).
+    # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
+    # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
+    km_measured: bool = False
 
 
 @dataclass(frozen=True)
