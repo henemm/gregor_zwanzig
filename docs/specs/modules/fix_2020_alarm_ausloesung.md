@@ -49,7 +49,7 @@ erstmals im Alarm-Protokoll sichtbar.
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `radar_service.NowcastResult` | Datenklasse | trägt künftig zwei neue Felder: `window_precip_mm` (akkumulierte Menge in der ersten Stunde ab jetzt — der Wert für den Faktor-Vergleich gegen `_briefing_precip`) und `max_rate_mm_h` (Spitzenrate — nur noch die Untergrenze „ist das überhaupt Starkregen") (siehe Vorbedingungs-Prüfung unten, revidiert) |
+| `radar_service.NowcastResult` | Datenklasse | trägt künftig zwei neue Felder: `window_precip_mm` (akkumulierte Menge in der ersten Stunde ab jetzt — der Wert für den Faktor-Vergleich gegen `_briefing_precip`) und `max_rate_mm_h` (Spitzenrate **im selben 60-Min-Vergleichsfenster wie `window_precip_mm`**, korrigiert nach Fix-Loop-Fund F001 — nur noch die Untergrenze „ist das überhaupt Starkregen") (siehe Vorbedingungs-Prüfung unten, revidiert) |
 | `radar_service.HEAVY_RAIN_THRESHOLD_MM_H` (neu, extrahierte Konstante) | Schwelle | Relevanzfilter (Untergrenze auf `max_rate_mm_h`) der Überholungsregel; dieselbe Zahl, die `intensity_to_text()` bereits für „Starker Regen" nutzt — keine zweite, unabhängige Zahl |
 | `alert_log.append_suppressed_entry()` | Funktion (bereits vorhanden, unverändert) | dritter Aufruf im Nowcast-Pfad; Signatur und Verhalten bleiben wie für die beiden bestehenden Aufrufe in `check_radar_alerts()` |
 | `alert_log.REASON_NOWCAST` | Konstante (bereits vorhanden) | `reason`-Wert für den neuen Protokoll-Eintrag |
@@ -107,7 +107,14 @@ bleibt nur noch die Relevanz-Untergrenze.
    fehlende Frames hinaus hochgerechnet — eine unvollständige Datenlage macht die Regel
    eher zurückhaltender, nie alarmfreudiger (bewusste Richtung, siehe Known Limitations).
    `max_rate_mm_h` bleibt bestehen, dient aber nur noch als Relevanz-Untergrenze („ist das
-   überhaupt Starkregen"), nicht mehr für den Faktor-Vergleich.
+   überhaupt Starkregen"), nicht mehr für den Faktor-Vergleich. **Fix-Loop-Korrektur (Fund
+   F001, 2026-08-21):** `max_rate_mm_h` wird — wie `window_precip_mm` — aus dem 60-Min-
+   Vergleichsfenster gebildet, nicht aus dem 180-Min-Nowcast-Fenster. Ein Spitzenwert aus
+   dem größeren Fenster hätte einen späten, unabhängigen Starkregen-Ausbruch (z. B. bei
+   +150 Min) als Untergrenzen-Beleg für ganz anderen, schwachen Nahregen zugelassen —
+   genau das Gegenteil der hier beschriebenen Absicht, dass Rate und Menge dasselbe
+   Ereignis beschreiben. Der lokale `max_rate` aus dem 180-Min-Fenster bleibt unverändert
+   für `intensity_label` (reine Anzeige) erhalten.
 
 3. **`#883` (konvektiver Sicherheits-Override) ist KEIN ADR.** `grep -rl "883"
    docs/adr/` liefert keinen Treffer. Die Entscheidung ist ausschließlich als
@@ -167,6 +174,22 @@ return NowcastResult(
     window_precip_mm=window_precip_mm,
 )
 ```
+
+**Als implementiert (weicht vom vereinfachten Pseudocode oben ab, Fix-Loop-Funde F001–F003,
+2026-08-21):**
+
+- `max_rate_mm_h` im `NowcastResult` stammt aus `compare_window` (60 Min), nicht aus dem
+  180-Min-`window` oben — Begründung siehe Vorbedingungs-Prüfung Punkt 2 (Fix-Loop-
+  Korrektur F001). Der lokale `max_rate` bleibt für `intensity_label` unverändert.
+- Die Dauer je Frame wird nicht direkt aus dem Abstand zum nächsten Frame übernommen
+  (das obige `next_ts`-Pseudocode ist vereinfacht), sondern über eine separat abgeleitete
+  Kadenz `_infer_frame_cadence(frames)` gedeckelt: `frame_end = min(next_ts_in_window,
+  frame.timestamp + _cadence, compare_horizon)`. Die Kadenz selbst ist der **Median** der
+  positiven Abstände zwischen allen (sortierten, deduplizierten) Frame-Zeitstempeln — **nicht
+  das Minimum** (Fix-Loop-Korrektur F002/F003: ein einzelner Ausreißer-Abstand irgendwo im
+  180-Min-Horizont, z. B. eine Providerwiederholung, hätte das Minimum auf wenige Minuten
+  gedrückt und dadurch jeden Frame im Vergleichsfenster massiv unterzählt; der Median ist
+  gegen einen einzelnen Ausreißer robust, ohne den Lücken-Schutz der Deckelung aufzugeben).
 
 ```
 # src/services/trip_alert.py — check_radar_alerts(), Ersatz der binaeren Sperre
@@ -351,3 +374,14 @@ Known Limitations zur Wortlaut-Grenze dieser Scheibe.
   (illustrativer Stundenwert statt Tagessumme), AC-3 angepasst, AC-4 (Fehlalarm-Wächter)
   neu eingefügt — die bisherigen AC-4/AC-5/AC-6 (Konvektiv-Override/Sichtbarkeit/kein
   Briefing-Wert) rücken dadurch zu AC-5/AC-6/AC-7 auf.
+- 2026-08-21: Fix-Loop nach Adversary-Verdict BROKEN (Commit `559d4b5b`). Zwei CRITICAL
+  Funde behoben: **F001** — `max_rate_mm_h` stammte aus dem 180-Min-Nowcast-Fenster statt
+  aus demselben 60-Min-Vergleichsfenster wie `window_precip_mm`; ein später, unabhängiger
+  Starkregen-Ausbruch außerhalb des Vergleichsfensters konnte dadurch die Überholung für
+  ganz anderen, schwachen Nahregen legitimieren — jetzt beide Werte aus `compare_window`.
+  **F002** — `_infer_frame_cadence()` nahm das Minimum aller Frame-Abstände über den
+  gesamten, ungefilterten Frame-Satz; ein einzelner Ausreißer-Abstand irgendwo im
+  180-Min-Horizont (z. B. Providerwiederholung) drückte die Kadenz auf wenige Minuten und
+  unterzählte dadurch `window_precip_mm` im gesamten Vergleichsfenster (beobachtet:
+  13,75-fache Unterzählung) — jetzt Median statt Minimum. ACs inhaltlich unverändert,
+  Details siehe `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`.

@@ -133,8 +133,15 @@ class NowcastResult:
                                      # (Issue #1628 S1). Pure observability signal --
                                      # radar_alert_due() treats onset_minutes=None
                                      # identically either way.
-    max_rate_mm_h: float = 0.0      # Issue #2020: Spitzenrate im 180-Min-Fenster --
-                                     # nur noch Relevanz-Untergrenze fuer die
+    max_rate_mm_h: float = 0.0      # Issue #2020: Spitzenrate im 60-Min-
+                                     # Vergleichsfenster (compare_window, s.
+                                     # _OVERTAKE_COMPARE_WINDOW_MIN) -- NICHT
+                                     # das 180-Min-Nowcast-Fenster (Adversary-
+                                     # Fund F001, 2026-08-21: ein spaeter,
+                                     # unabhaengiger Starkregen-Ausbruch darf
+                                     # eine Ueberholung fuer ganz anderen,
+                                     # schwachen Nahregen nicht legitimieren).
+                                     # Nur noch Relevanz-Untergrenze fuer die
                                      # Ueberholungspruefung, kein Faktor-Vergleich.
     window_precip_mm: float = 0.0   # Issue #2020: akkumulierte Menge in der ERSTEN
                                      # STUNDE ab jetzt (eigenes Fenster, s.
@@ -144,33 +151,33 @@ class NowcastResult:
 
 def _infer_frame_cadence(frames: list) -> timedelta:
     """Leitet den Frame-Abstand aus den tatsaechlichen Zeitstempeln ab
-    (Issue #2020, Befund 1) -- Minimum-Ansatz: der kleinste positive
-    Abstand zwischen zwei (sortierten, deduplizierten) Zeitstempeln gilt
-    als Kadenz. RADOLAN liefert 5-Minuten-Schritte, alle anderen
-    Produktivquellen (INCA, AROME-FR, ICON-D2, ARPAE, `minutely_15`)
-    15-Minuten-Schritte -- das Minimum erkennt beide korrekt, ohne eine
-    feste Kadenz anzunehmen, und bleibt bei gemischten/unregelmaessigen
-    Serien konservativ (kuerzester beobachteter Abstand = engste, also
-    am wenigsten hochrechnende Annahme).
+    (Issue #2020, Befund 1) -- Median-Ansatz: der Median der positiven
+    Abstaende zwischen zwei (zeitlich sortierten, deduplizierten)
+    Zeitstempeln gilt als Kadenz. RADOLAN liefert 5-Minuten-Schritte, alle
+    anderen Produktivquellen (INCA, AROME-FR, ICON-D2, ARPAE, `minutely_15`)
+    15-Minuten-Schritte -- der Median erkennt beide korrekt, ohne eine feste
+    Kadenz anzunehmen.
 
     Weniger als zwei unterscheidbare Zeitstempel -> kein Abstand ableitbar,
     Rueckfall auf die kleinste in Produktion vorkommende Kadenz (RADOLAN,
     5 Min) als konservativste Annahme (verhindert Ueberextrapolation staerker
     als 15 Min).
 
-    Abwaegung Minimum vs. Median (Team-Lead-Review 2026-08-21): Minimum
-    gewinnt, weil eine zu SCHWACHE Menge nur Alarme unterdrueckt, nie
-    welche erfindet ("im Zweifel zurueckhaltend, nie alarmfreudig", Spec
-    Known Limitations) -- der sicherheitsrelevante Fehler dieses Tickets
-    (#2020) war ein zu spaeter, nicht ein zu frueher Alarm. Der Preis: bei
-    UNREGELMAESSIGER Frame-Folge zaehlt das Minimum systematisch zu wenig.
-    Liefert eine 15-Min-Quelle einmalig zwei Frames im 5-Min-Abstand, wird
-    die Kadenz faelschlich 5 Min -- JEDER Frame bekommt dann nur 5 statt
-    15 Minuten zugerechnet, die Stundenmenge faellt auf ein Drittel, und
-    eine echte Ueberholung koennte dadurch verfehlt werden. Bei den
-    heutigen Quellen unwahrscheinlich (je Quelle einheitliches Raster),
-    aber bewusst zugunsten der Fehlalarm-Vermeidung in Kauf genommen --
-    diese Abwaegung nicht stillschweigend zurueckbauen.
+    Median statt Minimum (Adversary-Fund F002/F003, Team-Lead-Review
+    2026-08-21): Das Minimum ist gegen einen EINZELNEN Ausreisser wehrlos --
+    zwei harmlose Frames irgendwo im 180-Minuten-Nowcast-Horizont mit z. B.
+    1 Minute Abstand (Providerwiederholung, Sidecar-Merge-Artefakt) senken
+    die GLOBAL abgeleitete Kadenz auf diese 1 Minute, und diese Kadenz wird
+    dann auf JEDEN Frame im 60-Minuten-Vergleichsfenster angewandt -- ein
+    real fallender Starkregen wuerde dadurch um ein Vielfaches unterzaehlt
+    (beobachtet: 13,75x bei zwei zusaetzlichen 1-Minuten-Frames weit
+    ausserhalb des Vergleichsfensters). Der Median ist gegen einen
+    einzelnen Ausreisser robust, ohne den Luecken-Schutz aufzugeben: Die
+    nachgelagerte Deckelung in `_derive_result()`
+    (`min(next_ts_in_window, frame.timestamp + _cadence, compare_horizon)`)
+    kappt weiterhin jeden Frame, auf den nicht innerhalb einer Kadenz ein
+    naechster folgt -- dieser Schutz haengt an der Deckelung, nicht am
+    Minimum, und bleibt deshalb unveraendert wirksam.
     """
     ts_sorted = sorted({f.timestamp for f in frames})
     gaps = [
@@ -179,7 +186,11 @@ def _infer_frame_cadence(frames: list) -> timedelta:
     ]
     if not gaps:
         return timedelta(minutes=5)
-    return min(gaps)
+    gaps_sorted = sorted(gaps)
+    mid = len(gaps_sorted) // 2
+    if len(gaps_sorted) % 2 == 1:
+        return gaps_sorted[mid]
+    return (gaps_sorted[mid - 1] + gaps_sorted[mid]) / 2
 
 
 def _offline_fixture_active() -> bool:
@@ -668,7 +679,11 @@ class RadarNowcastService:
                 onset_minutes = max(0, round(delta))
                 break
 
-        # Max rate in window
+        # Max rate im 180-Min-Nowcast-Fenster -- speist NUR intensity_label
+        # (Anzeige). NICHT die Ueberholungspruefung: das NowcastResult-Feld
+        # max_rate_mm_h wird weiter unten separat aus dem 60-Min-Vergleichs-
+        # fenster gebildet (Adversary-Fund F001, 2026-08-21), damit Raten-
+        # und Mengenfenster deckungsgleich sind.
         max_rate = max((f.precip_mm_h for f in window), default=0.0)
 
         # Convective flag: any wet frame in window with convective indicator
@@ -723,6 +738,18 @@ class RadarNowcastService:
             duration_h = max(0.0, (frame_end - frame.timestamp).total_seconds() / 3600.0)
             window_precip_mm += frame.precip_mm_h * duration_h
 
+        # Issue #2020 Adversary-Fund F001: max_rate_mm_h fuer die
+        # Ueberholungspruefung MUSS aus demselben Fenster stammen wie
+        # window_precip_mm (60 Min compare_window), sonst legitimiert ein
+        # spaeter, voellig unabhaengiger Starkregen-Ausbruch (z. B. bei
+        # +150 Min, weit ausserhalb des Vergleichsfensters) die Ueberholung
+        # fuer ganz anderen, schwachen Nahregen. `max_rate` oben (180 Min)
+        # bleibt unveraendert fuer intensity_label -- NUR dieses Feld
+        # wechselt das Fenster.
+        compare_window_max_rate_mm_h = max(
+            (f.precip_mm_h for f in compare_window), default=0.0
+        )
+
         return NowcastResult(
             onset_minutes=onset_minutes,
             intensity_label=intensity_label,
@@ -732,7 +759,7 @@ class RadarNowcastService:
             convective_checked=self._convective_checked,
             throttled=throttled,
             data_unavailable=data_unavailable,
-            max_rate_mm_h=max_rate,
+            max_rate_mm_h=compare_window_max_rate_mm_h,
             window_precip_mm=window_precip_mm,
         )
 

@@ -165,6 +165,49 @@ def _wet_frames_ac7(lat: float, lon: float) -> list:
     ]
 
 
+def _far_burst_masks_weak_near_rain_frames_f001(lat: float, lon: float) -> list:
+    """Schwacher Nahregen (+5/+20/+35/+50 Min, 1,1 mm/h -> window_precip_mm
+    ~1,008 mm) PLUS ein Starkregen-Ausbruch weit ausserhalb des 60-Min-
+    Vergleichsfensters (+150 Min, 10,0 mm/h, noch im 180-Min-Nowcast-
+    Fenster) -- der Ausbruch darf die Ueberholung fuer den Nahregen NICHT
+    legitimieren (Adversary-Fund F001, 2026-08-21)."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    frames = [
+        RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=1.1)
+        for m in (5, 20, 35, 50)
+    ]
+    frames.append(RadarFrame(timestamp=now + timedelta(minutes=150), precip_mm_h=10.0))
+    return frames
+
+
+def _clean_15min_series_f002(lat: float, lon: float) -> list:
+    """Zwei Frames frueh im Vergleichsfenster (+2/+17 Min, 6,0 mm/h) MIT
+    Luecke bis zum Fensterende (60 Min) -- nur so wird die Kadenz-
+    Deckelung ueberhaupt wirksam (Adversary-Fund F002: ein dichtes Raster
+    ohne Fensterrand-Luecke liefert mit/ohne Deckelung zufaellig fast
+    dasselbe Ergebnis). Referenzwert fuer den F002-Waechter."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    return [
+        RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=6.0)
+        for m in (2, 17)
+    ]
+
+
+def _clean_15min_series_with_far_outlier_pair_f002(lat: float, lon: float) -> list:
+    """Dieselbe saubere Serie PLUS zwei dicht beieinanderliegende, trockene
+    Frames weit ausserhalb des 60-Min-Vergleichsfensters (+170/+171 Min,
+    1 Min Abstand -- Providerwiederholung/Sidecar-Artefakt im 180-Min-
+    Horizont, Adversary-Fund F002, 2026-08-21)."""
+    frames = _clean_15min_series_f002(lat, lon)
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    frames.append(RadarFrame(timestamp=now + timedelta(minutes=170), precip_mm_h=0.0))
+    frames.append(RadarFrame(timestamp=now + timedelta(minutes=171), precip_mm_h=0.0))
+    return frames
+
+
 def _onset_hour(offset_min: int) -> int:
     """UTC-Stunde des Onsets -- muss zum ersten nassen Frame des jeweiligen
     Szenarios passen, sonst findet `_briefing_precip_for_onset` den
@@ -702,5 +745,214 @@ def test_ac7_missing_briefing_value_leaves_behavior_unchanged():
             f"AC-7: ohne Briefing-Wert darf kein 'briefing_announced:'-Grund "
             f"protokolliert werden. Gefunden: {gate_reasons!r}."
         )
+    finally:
+        _clean_user(uid)
+
+
+# --------------------------------------------------------------------------
+# F001-Waechter (Fix-Loop, Adversary-Fund 2026-08-21): Rate- und Mengen-
+# fenster muessen deckungsgleich sein
+# --------------------------------------------------------------------------
+
+def test_f001_late_unrelated_burst_must_not_legitimize_overtake_for_weak_near_rain():
+    """F001: max_rate_mm_h MUSS aus demselben 60-Min-Vergleichsfenster
+    stammen wie window_precip_mm, sonst legitimiert ein spaeter,
+    unabhaengiger Starkregen-Ausbruch (+150 Min, ausserhalb des Vergleichs-
+    fensters, noch im 180-Min-Nowcast-Fenster) die Ueberholung fuer ganz
+    anderen, schwachen Nahregen.
+
+    Given Briefing kuendigt 0,5 mm an (Faktor-Schwelle 1,0 mm), Nahregen der
+    ersten Stunde erreicht knapp window_precip_mm ~1,008 mm (Faktor knapp
+    erfuellt), Spitzenrate IM Vergleichsfenster bleibt bei 1,1 mm/h (unter
+    der 4,0-mm/h-Untergrenze) -- erst ein spaeterer, unabhaengiger Ausbruch
+    bei +150 Min erreicht 10,0 mm/h.
+    When der Pruefzyklus laeuft.
+    Then bleibt die Sperre bestehen -- kein Alarm.
+    """
+    from services.radar_service import RadarNowcastService
+    from services import radar_service as radar_service_mod
+
+    uid = f"tdd-2020-f001-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    _ensure_real_user_dir(uid)
+    try:
+        trip_id = f"tdd-2020-f001-{uuid.uuid4().hex[:6]}"
+        _save_trip_direct(_make_active_trip(trip_id), uid)
+        briefing_precip = 0.5
+        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={_onset_hour(5): briefing_precip})
+
+        radar_svc = RadarNowcastService(frame_source=_far_burst_masks_weak_near_rain_frames_f001)
+
+        direct_result = radar_svc.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+        assert direct_result.window_precip_mm >= 2.0 * briefing_precip, (
+            "F001 Testkonstruktion: die Menge im Vergleichsfenster muss die "
+            f"Faktor-Untergrenze erfuellen (war {direct_result.window_precip_mm}), "
+            "sonst haengt das Ergebnis nur an der Mengen-Bedingung."
+        )
+        assert direct_result.max_rate_mm_h < radar_service_mod.HEAVY_RAIN_THRESHOLD_MM_H, (
+            f"F001: max_rate_mm_h MUSS aus dem 60-Min-Vergleichsfenster stammen "
+            f"(dort max 1,1 mm/h), NICHT aus dem 180-Min-Nowcast-Fenster (dort "
+            f"10,0 mm/h durch den spaeten Ausbruch). War max_rate_mm_h="
+            f"{direct_result.max_rate_mm_h}."
+        )
+
+        captured: list = []
+        svc = _new_service(uid, radar_svc, captured)
+        count = svc.check_radar_alerts()
+
+        assert count == 0, (
+            f"F001: ein spaeter, unabhaengiger Starkregen-Ausbruch (+150 Min, "
+            f"ausserhalb des Vergleichsfensters) darf die Ueberholung fuer den "
+            f"schwachen Nahregen nicht legitimieren. War count={count}."
+        )
+        assert len(captured) == 0, "F001: kein Versand erwartet."
+    finally:
+        _clean_user(uid)
+
+
+# --------------------------------------------------------------------------
+# F002-Waechter (Fix-Loop, Adversary-Fund 2026-08-21): ein ferner
+# Ausreisser-Frame-Paar darf die Kadenz nicht global vergiften
+# --------------------------------------------------------------------------
+
+def test_f002_far_outlier_pair_must_not_poison_the_compare_window_amount():
+    """F002: zwei dicht beieinanderliegende, aber weit ausserhalb des
+    Vergleichsfensters liegende Frames (+170/+171 Min, 0 mm/h) duerfen die
+    abgeleitete Kadenz nicht auf 1 Min verfaelschen -- das wuerde die Menge
+    im 60-Min-Vergleichsfenster massiv unterzaehlen, obwohl die
+    Stoerframes selbst keinen Regen enthalten und ausserhalb des
+    bewerteten Fensters liegen.
+
+    Given zwei Frames frueh im Vergleichsfenster mit Luecke bis zum
+    Fensterende (window_precip_mm ~3,0 mm, Deckelung aktiv) UND dieselbe
+    Serie plus die zwei Stoerframes.
+    When get_nowcast() beide Serien direkt verarbeitet.
+    Then bleibt window_precip_mm zwischen beiden Faellen praktisch
+    unveraendert (Vergleich der beiden Werte gegeneinander, nicht gegen
+    eine hart notierte Zahl).
+    """
+    from services.radar_service import RadarNowcastService
+
+    radar_clean = RadarNowcastService(frame_source=_clean_15min_series_f002)
+    radar_poisoned = RadarNowcastService(frame_source=_clean_15min_series_with_far_outlier_pair_f002)
+
+    result_clean = radar_clean.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+    result_poisoned = radar_poisoned.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+
+    # Absolutwert-Beleg fuer die Kadenz-Deckelung selbst (Adversary-Fund
+    # F002): OHNE Deckelung wuerde der zweite Frame (+17 Min, keine
+    # weiteren Frames bis Fensterende) bis zum vollen Fensterende
+    # hochgerechnet und window_precip_mm auf ~5,8 mm statt ~3,0 mm springen
+    # -- die reine Clean-vs-Poisoned-Gegenprobe unten wuerde das NICHT
+    # fangen, weil beide Seiten gleichermassen betroffen waeren.
+    assert result_clean.window_precip_mm == pytest.approx(3.0, abs=0.1), (
+        f"F002: Mit wirksamer Kadenz-Deckelung muss window_precip_mm ~3,0 mm "
+        f"betragen (war {result_clean.window_precip_mm})."
+    )
+
+    assert result_poisoned.window_precip_mm == pytest.approx(
+        result_clean.window_precip_mm, rel=0.02
+    ), (
+        f"F002: zwei ferne, dicht beieinanderliegende Stoerframes duerfen die "
+        f"Menge im Vergleichsfenster nicht verfaelschen. Sauber="
+        f"{result_clean.window_precip_mm}, mit Stoerframes="
+        f"{result_poisoned.window_precip_mm}."
+    )
+
+
+# --------------------------------------------------------------------------
+# F003-Waechter (Fix-Loop, Adversary-Fund 2026-08-21): Median statt
+# Minimum bei der Kadenz-Schaetzung
+# --------------------------------------------------------------------------
+
+def test_f003_cadence_median_survives_a_single_far_outlier_gap():
+    """F003: Minimum und Median der Frame-Abstaende fallen bislang in
+    keinem Test auseinander (alle bisherigen Fixtures nutzen ein
+    einheitliches Raster) -- deshalb blieb F002 unentdeckt. Diese Serie hat
+    vier 15-Minuten-Abstaende, einen 120-Minuten-Sprung und einen
+    1-Minuten-Ausreisser: Minimum waere 1 Min, Median ist 15 Min.
+
+    Given eine Frame-Serie mit gemischten Abstaenden.
+    When _infer_frame_cadence() die Kadenz ableitet.
+    Then liefert sie den Median (15 Min), nicht das Minimum (1 Min).
+    """
+    from providers.brightsky import RadarFrame
+    from services.radar_service import _infer_frame_cadence
+
+    now = datetime.now(timezone.utc)
+    offsets = [0, 15, 30, 45, 60, 180, 181]
+    frames = [
+        RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=1.0)
+        for m in offsets
+    ]
+
+    cadence = _infer_frame_cadence(frames)
+
+    assert cadence == timedelta(minutes=15), (
+        f"F003: Median der Abstaende [15,15,15,15,120,1] muss 15 Min "
+        f"betragen (war {cadence}). Ein Minimum-Ansatz wuerde faelschlich "
+        f"1 Min liefern und jeden Frame im Vergleichsfenster unterzaehlen."
+    )
+
+
+# --------------------------------------------------------------------------
+# F004-Waechter (Fix-Loop, Adversary-Fund 2026-08-21): Gleichheitsgrenze
+# beider >=-Vergleiche
+# --------------------------------------------------------------------------
+
+def test_f004_exact_equality_at_both_thresholds_breaks_the_suppression():
+    """F004: beide >=-Vergleiche in der Ueberholungsregel sind an der
+    Gleichheitsgrenze ungetestet. Diese Konstruktion trifft
+    window_precip_mm EXAKT auf 2 x briefing_precip und max_rate_mm_h EXAKT
+    auf 4,0 mm/h (Zeit eingefroren via now_fn, damit beide get_nowcast()-
+    Aufrufe bitgenau dasselbe Ergebnis liefern).
+
+    Given window_precip_mm == 2 x briefing_precip UND max_rate_mm_h == 4,0.
+    When der Pruefzyklus laeuft.
+    Then durchbricht der Nowcast die Sperre (Spec-Wortlaut: `>=`, nicht `>`).
+    """
+    from providers.brightsky import RadarFrame
+    from services.radar_service import RadarNowcastService
+    from services import radar_service as radar_service_mod
+
+    uid = f"tdd-2020-f004-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    _ensure_real_user_dir(uid)
+    try:
+        trip_id = f"tdd-2020-f004-{uuid.uuid4().hex[:6]}"
+        _save_trip_direct(_make_active_trip(trip_id), uid)
+
+        fixed_now = datetime.now(timezone.utc)
+
+        def _frame_source(lat: float, lon: float) -> list:
+            return [
+                RadarFrame(timestamp=fixed_now + timedelta(minutes=m), precip_mm_h=4.0)
+                for m in (5, 20, 35, 50)
+            ]
+
+        radar_svc = RadarNowcastService(frame_source=_frame_source, now_fn=lambda: fixed_now)
+        direct_result = radar_svc.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+        assert direct_result.max_rate_mm_h == radar_service_mod.HEAVY_RAIN_THRESHOLD_MM_H, (
+            f"F004 Testkonstruktion: max_rate_mm_h muss exakt der Schwelle "
+            f"entsprechen (war {direct_result.max_rate_mm_h})."
+        )
+        # x/2.0 gefolgt von 2.0*x ist fuer IEEE754-Floats exakt (keine
+        # Rundung) -- briefing_precip so gewaehlt, dass 2 x briefing_precip
+        # window_precip_mm BITGENAU trifft, nicht nur ungefaehr.
+        briefing_precip = direct_result.window_precip_mm / 2.0
+        assert 2.0 * briefing_precip == direct_result.window_precip_mm
+
+        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={_onset_hour(5): briefing_precip})
+
+        captured: list = []
+        svc = _new_service(uid, radar_svc, captured)
+        count = svc.check_radar_alerts()
+
+        assert count >= 1, (
+            f"F004: window_precip_mm == 2 x briefing_precip UND max_rate_mm_h "
+            f"== HEAVY_RAIN_THRESHOLD_MM_H (beide exakt an der Grenze) muessen "
+            f"die Sperre nach Spec-Wortlaut (>=) durchbrechen. War count={count}."
+        )
+        assert len(captured) >= 1, "F004: mail_sink muss aufgerufen werden."
     finally:
         _clean_user(uid)
