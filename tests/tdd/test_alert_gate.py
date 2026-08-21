@@ -1772,3 +1772,120 @@ def test_aca13_zustellmenge_bleibt_identisch_nur_die_form_aendert_sich():
         )
     finally:
         clean_uid(uid)
+
+
+# ────────── Resolution-Guard-Regression — Issue #2018/#1405 ──────────────
+
+
+def test_2018_kaputter_registereintrag_wird_uebersprungen_und_geloggt(caplog):
+    """Issue #2018/#1405 (Resolution-Loss-Guard-Regression): ``_find_matching_
+    entry`` sammelt seit #2018 mehrere Kandidaten statt beim ersten Treffer
+    zurueckzukehren (AC-A10) -- der ``except``-Zweig, der einen kaputten
+    Registereintrag ueberspringt, schreibt seither in eine Ausgabesammlung
+    (``candidates.append``) und wurde vom Waechter
+    ``tests/test_resolution_loss_guard.py`` als stiller Auflösungsverlust
+    erkannt.
+
+    GIVEN ein Registereintrag OHNE ``severity`` (loest ``KeyError`` im
+          try-Block aus) NEBEN einem gueltigen Registereintrag derselben
+          Gefahrenklasse
+    WHEN  ``_find_matching_entry`` gegen eine neue Meldung laeuft, die auf
+          BEIDE Eintraege zeitlich/segmentmaessig passt
+    THEN  der kaputte Eintrag wird uebersprungen (fail-soft, AC-19,
+          UNVERAENDERT -- es wird weiterhin nicht geworfen), erzeugt aber
+          eine ``logger.warning``-Meldung, UND der gueltige Nachbar wird
+          trotzdem als Treffer geliefert -- der kaputte Eintrag darf das
+          Match nicht verhindern."""
+    import logging
+
+    from services.alert_gate import _find_matching_entry
+    from services.alert_state import AlertStateService
+
+    uid = fresh_uid("2018-resloss")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 21, 9, 0, 0, tzinfo=timezone.utc)
+        t1 = t0 + timedelta(minutes=1)
+        AlertStateService(user_id=uid).save("trip-2018-resloss", {
+            f"event_identity:wet:6:{t0.isoformat()}": {
+                "hazard_class": "wet", "segment_ids": ["6"],
+                # 'severity' fehlt bewusst -- loest KeyError im except-Zweig aus
+                "point_at": t0.isoformat(), "window_start": None,
+                "window_end": None, "reported_at": t0.isoformat(),
+            },
+            f"event_identity:wet:6:{t1.isoformat()}": {
+                "hazard_class": "wet", "segment_ids": ["6"], "severity": "HIGH",
+                "point_at": t1.isoformat(), "window_start": None,
+                "window_end": None, "reported_at": t1.isoformat(),
+            },
+        })
+        state = AlertStateService(user_id=uid).load("trip-2018-resloss")
+
+        with caplog.at_level(logging.WARNING, logger="alert_gate"):
+            treffer = _find_matching_entry(
+                state, "wet", ["6"],
+                t0 + timedelta(minutes=2), None, None, None,
+            )
+
+        assert treffer is not None, (
+            "Positivkontrolle: der gueltige Nachbar muss trotz kaputtem "
+            "Eintrag als Treffer geliefert werden -- sonst prueft dieser "
+            "Test nichts."
+        )
+        assert treffer["severity"] == "HIGH", (
+            f"Der gueltige Eintrag muss das Match liefern, der kaputte darf "
+            f"es nicht verhindern: {treffer!r}"
+        )
+        gewarnt = [r for r in caplog.records if r.name == "alert_gate"]
+        assert gewarnt, (
+            f"Der uebersprungene kaputte Registereintrag muss protokolliert "
+            f"werden (Issue #2018/#1405), Protokoll: {caplog.text!r}"
+        )
+        assert "2018" in gewarnt[0].getMessage() or "1405" in gewarnt[0].getMessage(), (
+            f"Die Warnung muss auf Issue #2018/#1405 verweisen: "
+            f"{gewarnt[0].getMessage()!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_2018_normalfall_ohne_kaputten_eintrag_loggt_keine_warnung(caplog):
+    """Issue #2018/#1405 Gegenprobe: mehrere GUELTIGE Kandidaten (AC-A10,
+    staerkster gewinnt) duerfen KEINE Warnung erzeugen -- sonst entsteht bei
+    jedem gewoehnlichen Nachtrag Log-Laerm."""
+    import logging
+
+    from services.alert_gate import _find_matching_entry, record_event_identity
+    from services.alert_state import AlertStateService
+
+    uid = fresh_uid("2018-resloss-clean")
+    clean_uid(uid)
+    try:
+        t0 = datetime(2026, 8, 21, 10, 0, 0, tzinfo=timezone.utc)
+        for versatz, stufe in ((0, "MODERATE"), (1, "HIGH")):
+            record_event_identity(
+                user_id=uid, entity_id="trip-2018-resloss-clean",
+                hazard_class="wet", segment_ids=["6"], severity=stufe,
+                window_start=t0, window_end=t0 + timedelta(minutes=120),
+                now=t0 + timedelta(minutes=versatz),
+            )
+        state = AlertStateService(user_id=uid).load("trip-2018-resloss-clean")
+
+        with caplog.at_level(logging.WARNING, logger="alert_gate"):
+            treffer = _find_matching_entry(
+                state, "wet", ["6"],
+                None, t0 + timedelta(minutes=10), t0 + timedelta(minutes=90), None,
+            )
+
+        assert treffer is not None, (
+            "Positivkontrolle: die beiden gueltigen Eintraege muessen "
+            "ueberhaupt matchen -- sonst prueft dieser Test nichts."
+        )
+        assert treffer["severity"] == "HIGH"
+        gewarnt = [r for r in caplog.records if r.name == "alert_gate"]
+        assert not gewarnt, (
+            f"Der Normalfall (mehrere gueltige Kandidaten, kein kaputter) "
+            f"darf KEINE Warnung loggen: {caplog.text!r}"
+        )
+    finally:
+        clean_uid(uid)

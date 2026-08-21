@@ -576,7 +576,16 @@ def _find_matching_entry(
             })
         except (KeyError, TypeError, ValueError):
             # AC-19: ein kaputter/unbekannter Registereintrag zaehlt fail-soft
-            # als "kein Match" -- nicht als Absturz.
+            # als "kein Match" -- nicht als Absturz. Issue #2018/#1405: der
+            # Ueberspringen-Fall wird protokolliert, damit ein kaputter
+            # Registereintrag nicht still ein Match verhindert -- sonst
+            # ginge wieder ein VOLLER zweiter Alarm raus statt des
+            # gerichteten Nachtrags.
+            logger.warning(
+                "Kaputter Registereintrag beim Auflösen übersprungen "
+                "(Issue #2018/#1405), Schlüssel=%s",
+                key,
+            )
             continue
     if not candidates:
         return None
