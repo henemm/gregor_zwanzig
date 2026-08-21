@@ -9,7 +9,11 @@ Für Telegram ausgewählte Metriken ab Slot 8 (sowie alle `secondary`-Größen) 
 der Telegram-Segment-Tabelle überhaupt nicht. Die Auswahl im Editor bleibt für diese
 Metriken wirkungslos.
 
-## Kernbefund: es ist eine Regression, kein liegengebliebener Altcode
+## Kernbefund: toter Pfad — Umsetzung eines PO-Entscheids, NICHT eine Regression
+
+> **Achtung, Lesereihenfolge:** Der erste Eindruck aus der Commit-Historie war „unbeabsichtigte
+> Regression". Die Analyse weiter unten widerlegt das: der Wegfall setzt die PO-Entscheidung
+> vom 2026-06-06 um. Dieser Abschnitt hält nur die Historie fest.
 
 `ChannelLayout.detail_metrics` wird berechnet (`channel_layout.py:127`) und **an keiner
 Stelle im Produktivcode gelesen**. Die zugehörige Renderfunktion `_detail_lines()`
@@ -33,8 +37,10 @@ Aus dem Diff von `6b27798f`:
 
 Die Spec des Redesigns (`docs/specs/modules/feat_1001_telegram_redesign.md:36-39`) nennt
 ausdrücklich nur die Entfernung von `_tg_extra_detail_line()` und reaktiviert
-`_narrow_table()`. Der Wegfall von `_detail_lines()` ist dort **nicht** als Entscheidung
-dokumentiert — er sieht nach Kollateralschaden des Rewrites aus.
+`_narrow_table()`. Der Wegfall von `_detail_lines()` ist dort **nicht** protokolliert —
+was den Eindruck eines Kollateralschadens erzeugt. Die Analyse zeigt: er folgt dem
+PO-Entscheid vom 2026-06-06 (#587), der die Detail-Zeile abgeschafft hat. Fehlend ist die
+Dokumentation, nicht die Entscheidung.
 
 **Seit 2026-07-03, also rund 7 Wochen, ist `detail_metrics` funktionslos.**
 
@@ -88,7 +94,8 @@ baut über `build_token_line` / `render_sms` aus
 | `src/output/renderers/narrow.py:111` | `_detail_lines()` — fertige Renderfunktion, null Aufrufstellen |
 | `src/output/renderers/narrow.py:700` | `render_for_channel("telegram", …)` — einziger Trip-Aufrufer |
 | `src/output/renderers/narrow.py:855-856` | einzige Nutzung von `layout.*` — nur `table_columns` |
-| `src/output/renderers/narrow.py:770-807` | Kurzübersicht-Bubble — liest `dc.get_enabled_metric_ids()`, also eine **andere Quelle** |
+| `src/output/renderers/narrow.py:770-807` | Kurzübersicht-Bubble — zeigt **alle** aktiven Telegram-Metriken als Tagesaussage |
+| `src/output/renderers/trip_report.py:275-292` | baut `_dc_telegram` (kanal-kaskadiert) — EINE Quelle für Tabelle + Kurzübersicht |
 | `src/output/renderers/channel_layout.py:86,127` | `detail_metrics` — Definition und einzige Befüllung |
 | `src/output/renderers/channel_layout.py:119-120` | SMS-Zweig `limit == 0`, unerreichbar |
 | `src/output/renderers/comparison.py:701,762,768-769` | Ortsvergleich — liest `table_columns` **und** `demoted_count` |
@@ -146,11 +153,12 @@ Kandidat und muss in der Spec ausdrücklich abgewogen werden.
    weil `grep` auf `WeatherMetricsTab.svelte` falsch-negative Treffer liefert). Wenn ja,
    ist das der eigentliche Beleg für „Bedienelement ohne Wirkung".
 
-4. **Zwei Quellen in einer Nachricht.** Die Kurzübersicht-Bubble liest
-   `dc.get_enabled_metric_ids()` (`narrow.py:780`), die Tabelle `layout.table_columns`.
-   Die Kurzübersicht ignoriert damit die **kanalspezifische** Auswahl. Vermutete
-   Konsequenz: eine für Telegram *abgewählte* Metrik erscheint dort trotzdem — das wäre
-   derselbe Fehler in der Gegenrichtung. Noch nicht verifiziert, gehört in `/20-analyse`.
+4. ~~**Zwei Quellen in einer Nachricht.**~~ **WIDERLEGT in der Analyse.** Die
+   Kurzübersicht liest zwar `dc.get_enabled_metric_ids()` (`narrow.py:780`), bekommt aber
+   ein bereits kanal-kaskadiertes `dc`: `trip_report.py:275-278` baut `_dc_telegram` aus
+   `get_metrics_for_channel("telegram", report_type)`. Der ausführliche Kommentar
+   `trip_report.py:280-292` hält fest, dass genau diese Falle als Adversary-Finding F004
+   (#1719 S2) gefangen wurde. Es gibt EINE Quelle für Tabelle, Kurzübersicht und Fußzeile.
 
 5. **Platzbudget ist real.** `_TG_TABLE_WIDTH` existiert, damit auf einem
    iPhone-Standardbildschirm kein Umbruch entsteht (`narrow.py:57-60`). Eine Detailzeile
@@ -165,3 +173,110 @@ Kandidat und muss in der Spec ausdrücklich abgewogen werden.
    Historie nicht mehr gleichwertig: Option 3 („ersatzlos entfernen") würde eine
    unbeabsichtigte Regression nachträglich zur Entscheidung erklären. Vorlage erfolgt mit
    der Spec.
+
+---
+
+## Analysis
+
+### Type
+
+Bug — aber mit deutlich kleinerem Schaden als das Ticket beschreibt, und teils auf einer
+falschen Prämisse.
+
+### Was wirklich passiert (Trip „KHW 403", 14 Telegram-Metriken)
+
+| Ort | Was erscheint |
+|---|---|
+| Kurzübersicht-Bubble (`narrow.py:780-807`) | **alle 14** Metriken, je eine Tagesaussage-Zeile |
+| Segment-Tabelle (`narrow.py:855-856`) | **7** Metriken, stündliche Werte |
+
+Verloren geht also **nicht die Metrik, sondern ihre stündliche Auflösung**. Die
+Ticket-Formulierung „verschwindet aus der Tabelle" trifft zu; „die Auswahl bleibt
+wirkungslos" trifft **nicht** zu.
+
+### Drei Ticket-Prämissen, die die Untersuchung nicht bestätigt
+
+1. **„ohne Hinweis" — falsch.** Der Editor warnt dreifach:
+   Chip `−N` am Kanalreiter (`LTChannelPicker.svelte:50-53`), gestrichelte Schnittlinie
+   „✂ ab hier Telegram-Limit (max 7)" (`LTCutLine.svelte:20`), warngefärbter Hinweis
+   „Telegram: N Metriken · zu breit — max 7, weiter vorne = sicherer"
+   (`ltChannels.ts:130-149`, gerendert `LTCapNote.svelte:47-49`). Der Versand-Reiter sagt
+   „Telegram die ersten 7" (`vtBriefingChannelsText.ts:34`).
+
+2. **„die dafür gebaute Detailzeile" — irreführend.** Es gibt eine dokumentierte
+   **PO-Entscheidung vom 2026-06-06**: „Kein ‚→ Detail'-Knopf, keine Detail-Zeile"
+   (`WeatherV2Reihenfolge.svelte:4`, Issue #587). Seither ist der `secondary`-Bucket
+   immer leer (`WeatherMetricsTab.svelte:220`, erzwungen `:436`/`:682`); die Design-Quelle
+   von #622 nennt den Editor-Screen ausdrücklich „(Roh/Einfach, kein Detail)".
+   ⇒ Der Wegfall in #1001 (`6b27798f`, 2026-07-03) setzt diesen Entscheid um. Er ist
+   **keine unbeabsichtigte Regression** — nur in der #1001-Spec nicht protokolliert.
+   Option 1 des Tickets („`_detail_lines()` aufrufen") widerspricht dem Entscheid direkt.
+
+3. **Tour-Relevanz — nicht gegeben.** `KHW 403` fährt `telegram_style = kurzform`
+   (siehe oben). Der Bubble-Renderer wird auf der Tour nicht ausgeliefert.
+
+### Die verbleibende echte Lücke
+
+**Die Telegram-Nachricht selbst trägt keinen Kappungshinweis.** Der Ortsvergleich hat auf
+demselben Kanal längst einen: `comparison.py:768-769` liest `demoted_count` und schreibt
+über `_telegram_metric_notice()` (`:854-867`) die Zeile „+N weitere Wettergrößen je Ort
+(Telegram-Limit)". Der Trip-Pfad hat kein Pendant, obwohl `demoted_count` dort berechnet
+wird und bereitliegt.
+
+Wer das Briefing liest, ohne den Editor offen zu haben — also unterwegs —, kann nicht
+wissen, dass die Tabelle beschnitten ist. Das ist der Rest von #1741, der Bestand hat.
+
+### Toter Code als Nebenwirkung
+
+`detail_metrics` (`channel_layout.py:127`) und `_detail_lines()` (`narrow.py:111`) sind
+seit `6b27798f` produziert-aber-nie-konsumiert. Genau diese Leiche hat das Ticket erzeugt:
+Sie sieht aus wie eine vorhandene, nur nicht verkabelte Fähigkeit, ist aber das Gegenteil —
+eine abgeschaffte. Solange sie steht, wird sie erneut als Bug gemeldet werden.
+
+Ebenfalls tot, gleiche Familie:
+- `applyChannel()`/`ChannelLayout` im Frontend (`metricsEditor.ts:379-405`) — nur Tests
+- SMS-Zweig `limit == 0` (`channel_layout.py:119-120`) — kein Renderer betritt ihn
+- `SavePresetDialog.svelte:205-213` zeigt dauerhaft „0 Detail" (`secondary` immer leer)
+
+### Affected Files (Vorschlag, abhängig von der PO-Richtung)
+
+| Datei | Change | Beschreibung |
+|---|---|---|
+| `src/output/renderers/narrow.py` | MODIFY | Kappungshinweis in der Segment-Bubble; `_detail_lines()` entfernen |
+| `src/output/renderers/comparison.py` | MODIFY | `_telegram_metric_notice()` zum geteilten Baustein heben |
+| `src/output/renderers/channel_layout.py` | MODIFY | `detail_metrics` entfernen; `demoted_count` bleibt |
+| `tests/tdd/test_issue_887_report_inkonsistenz.py:229` | MODIFY | prüft veraltetes Verhalten (trivial wahr) |
+| `tests/tdd/test_issue_360_channel_renderer.py`, `test_issue_429_channel_layouts.py`, `test_channel_metric_matrix.py`, `test_felt_night_catalog_exclusions.py`, `test_temp_tagesrichtung_aufloesung.py` | MODIFY | lesen `detail_metrics` |
+| `frontend/.../metricsEditor.ts` + `.test.ts` | MODIFY | tote `applyChannel()`/`ChannelLayout` |
+
+### Scope Assessment
+
+- Dateien: 4 Produktiv + ~7 Test (bei voller Aufräumung)
+- Geschätzte LoC: +40 / −90
+- Risiko: **LOW** — der Hinweistext ist additiv; das Entfernen betrifft ausschließlich
+  Code ohne Konsumenten. Einziges echtes Risiko: die Test-Anpassungen sind breit gestreut.
+
+### Technical Approach (Empfehlung)
+
+**Nicht Option 1.** Sie widerspricht dem PO-Entscheid vom 2026-06-06.
+
+Empfohlen ist die Kombination aus Option 2 und 3, in dieser Reihenfolge:
+
+1. **Kappungshinweis in der Trip-Telegram-Nachricht**, wortgleich zum Ortsvergleich, über
+   einen **geteilten Baustein** (`_telegram_metric_notice()` aus `comparison.py` heben).
+   Das erfüllt die Code-Teilungs-Vorgabe und schließt die einzige Lücke, die unterwegs
+   spürbar ist. Quelle ist `demoted_count`, das bereits berechnet wird.
+2. **`detail_metrics` + `_detail_lines()` ersatzlos entfernen**, damit der tote Pfad keine
+   abgeschaffte Fähigkeit mehr vortäuscht. Der Entscheid von 2026-06-06 wird dabei in der
+   Spec dokumentiert — das Versäumnis von #1001 wird nachgeholt.
+
+Nachweis-Pflicht: Der Test muss die **gerenderten Bubbles** prüfen, nicht das
+Layout-Ergebnis. Alle heutigen Tests prüfen die Berechnung (siehe Risiko 1) und würden
+eine erneute Entkopplung nicht bemerken.
+
+### Open Questions (PO)
+
+- [ ] Bestätigst du, dass die Detail-Zeile abgeschafft bleibt (Entscheid 2026-06-06)?
+- [ ] Soll die Telegram-Nachricht einen Kappungshinweis tragen — oder genügt die Warnung
+      im Editor, sodass #1741 als „so gewollt" geschlossen wird?
+- [ ] Bleibt #1741 im Milestone „Tour KHW 2026-08", obwohl der Tour-Trip im Kurzstil fährt?
