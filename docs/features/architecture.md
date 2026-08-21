@@ -360,6 +360,10 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      Compare UND Trip-Briefing), keine Δ-Abweichungslogik
 
 5. **Radar-/Regen-Nowcast-Alert segmentbewusst (Issue #822) — kanonischer Renderer seit Issue #919**
+   - **Verfeinerungskette des Abfrage-Messpunkts:** `waypoints[0]` (#656) → `active.start_point`
+     (#822, dieser Punkt) → seit **#2017** die zur Mitte des jeweiligen Vorwarnfensters
+     interpolierte Position (`services.trip_segments.position_at_time()`, inkl. Höhe) —
+     s. Punkt „Nowcast + Ort-Label" unten und `docs/specs/modules/fix_2017_nowcast_messpunkt.md`.
    - Gemeinsamer Segment-Helfer: `src/services/trip_segments.py:convert_trip_to_segments(trip, target_date) -> List[TripSegment]`
      - Extrahiert SSoT-Segmentlogik aus dem Briefing-Scheduler
      - Erzeugt konsistente Segmente mit `segment_id`, `start_point`/`end_point`, `start_time`/`end_time`
@@ -377,7 +381,10 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        (`WeatherSnapshotService.load_dated`, Punkt „Konvektiver Sicherheits-Override" unten)
        liest unter diesem Segment-Datum, nicht mehr zwingend unter `today`
    - **Nowcast + Ort-Label:**
-     - Ein `get_nowcast()`-Call am `segment.start_point` (nicht am alten Stage-Waypoint)
+     - Ein `get_nowcast()`-Call — seit **#2017** an der Position, die `position_at_time(trip,
+       active, segment_date, at=now + RADAR_ONSET_THRESHOLD_MIN // 2)` zur Mitte des
+       Vorwarnfensters auf dem aktiven Segment interpoliert (inkl. Höhe), statt wie zuvor
+       (#822) fest am `segment.start_point`
      - `tz_for_coords(lat, lon)` bestimmt Tour-Zeitzone; `format_now_text(result, tz=tz)` gibt Onset-Zeit in Tour-TZ aus
      - `build_segment_label()` erzeugt „Etappe N, km X–Y" mit echten Strecken-Kilometern
    - **Kanonischer Render-Pfad (Issue #919):** `check_radar_alerts` konstruiert `AlertMessage(OnsetEvent(...))` und leitet durch dieselben vier Renderer wie der Abweichungs-Alert:
@@ -468,7 +475,8 @@ check_and_send_alerts(trip, cached_weather)
 
 check_radar_alerts(user_id)  [Issue #822 + #919, tagesübergreifend seit #1667 S3]
   ↓ pro Trip: resolve_current_segment(trip, now_utc, today)  [heute → gestern → Vorschau → nichts]
-  ↓ get_nowcast(segment.start_point.lat, segment.start_point.lon)
+  ↓ position_at_time(trip, active, segment_date, now + RADAR_ONSET_THRESHOLD_MIN // 2)  [#2017, s. Punkt 5]
+  ↓ get_nowcast(pos.lat, pos.lon, elevation_m=pos.elevation_m)
   ↓ build_segment_label() + format_now_text(tz=tour_tz)
   ↓ AlertMessage(OnsetEvent(...))  [seit #919]
   ↓ render_subject / render_email / render_telegram / render_sms
