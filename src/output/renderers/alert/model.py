@@ -130,6 +130,13 @@ class AlertMessage:
     # `None` -> Renderer behalten den generischen Text "verglichen mit dem
     # letzten Briefing" (Regressions-Invariante, AC-5).
     reference_at: str | None = None
+    # Issue #2018: additiv, optional. Gesetzt NUR, wenn
+    # `check_event_identity_gate` diese Meldung als NACHTRAG zu einer bereits
+    # zugestellten AMTLICHEN Warnung einstuft. Traegt die AUSFORMULIERTE
+    # Bezugszeile ("Ergaenzung zur amtlichen Warnung von 16:15") fuer E-Mail
+    # und Voll-Telegram; der SMS-Renderer liest nur die Praesenz (nicht den
+    # Inhalt) fuer sein Kompakt-Token -- der Satz passt nicht ins SMS-Budget.
+    addendum_reference: str | None = None
 
 
 def direction(e: AlertEvent) -> str:

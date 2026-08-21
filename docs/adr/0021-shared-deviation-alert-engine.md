@@ -220,3 +220,35 @@ dieser Scheibe (Scheibe 2, #1169).
   betreffen — er wird pro Ort geprüft und auf die verbleibende Orts-Teilmenge
   reduziert statt als Ganzes verworfen. Details:
   `docs/specs/modules/rework_1917_s4b2_compare_entdopplung.md`.
+- **Nachtrag (Issue #2018, 2026-08-21):** die quellenübergreifende
+  Ereignis-Identität-Prüfung kennt seit dieser Scheibe einen **dritten,
+  GERICHTETEN und MENGENERHALTENDEN** Ausgang. `check_event_identity_gate()`
+  entscheidet nicht mehr nur „zustellen / unterdrücken", sondern zusätzlich
+  „**als Nachtrag zustellen**" — und das **ausschließlich** in der Richtung
+  **amtliche Warnung zuerst, Radar-Nowcast danach UND MIT echter Eskalation**
+  (`alert_urgency.exceeds`). Anlass war ein realer Fall: binnen 22 Minuten
+  gingen zwei volle Gewitter-Alarme für dasselbe Segment raus, weil die
+  V2-Eskalations-Ausnahme `HIGH` (Radar) und `MODERATE` (amtlich ORANGE) als
+  zwei Punkte EINER Skala verglich, obwohl es zwei Skalen mit gleichen
+  Etiketten sind. Die zweite Meldung wird deshalb nicht mehr als voller
+  Zweit-Alarm, sondern als kurzer Nachtrag mit Bezug auf die vorige Meldung
+  zugestellt („Ergänzung zur amtlichen Warnung von 16:15"). **Jede andere
+  Konstellation bleibt exakt wie zuvor**: gleiche Quelle, die Gegenrichtung
+  (Nowcast zuerst, amtlich danach — eigenständig über #1467 S4b freigegeben)
+  sowie die **stillen** amtlich→Nowcast-Fälle ohne Eskalation und ohne
+  V1-Abdeckungs-Ausnahme werden weiterhin **unterdrückt**; aus Stille wird nie
+  ein Nachtrag. Harte Invariante dieser Scheibe: die **Menge** der zugestellten
+  Meldungen ist vor und nach ihr identisch — es ändert sich allein die **Form**
+  genau einer Meldungsart. Alle Aussagen der Nachträge zu #1467 S4b-1 und
+  #1917 S4b-2 bleiben **unwiderrufen** gültig, insbesondere die Beschreibung
+  des Registers (der Quellenvermerk `source` ist ein additives Feld in der
+  bestehenden Nutzlast, kein neuer Präfix; Alt-Einträge ohne das Feld leiten
+  ihre Quelle aus `point_at` ab) und der Ortsvergleich-Verdrahtung. Der
+  **Ortsvergleich bleibt ausdrücklich unverändert**: die zwischenzeitlich
+  erwogene Bedingung `allowed and not is_addendum` an den beiden
+  Compare-Aufrufstellen wurde **zurückgenommen**, weil sie eine heute
+  zugestellte Meldung unterdrückt und damit die Mengen-Invariante gebrochen
+  hätte; Compare liest `is_addendum` schlicht nie. Kein neues
+  Architekturprinzip — derselbe geteilte Baustein, nur mit einem dritten,
+  eng umgrenzten Ausgang. Details:
+  `docs/specs/modules/alert_nachtragsmeldung.md`.

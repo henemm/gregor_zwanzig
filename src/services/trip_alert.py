@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
@@ -1529,6 +1529,19 @@ class TripAlertService:
                     )
                 continue
 
+            # Issue #2018: das Gate hat diese Meldung als NACHTRAG zu einer
+            # bereits zugestellten AMTLICHEN Warnung eingestuft — dieselbe
+            # Zustellung wie bisher, nur in anderer FORM. Fehlt der
+            # Meldezeitpunkt (fail-soft aus dem Register), entfaellt die
+            # Uhrzeit ersatzlos statt eines erfundenen Platzhalters.
+            if _identity_gate.is_addendum:
+                _bezug = "Ergänzung zur amtlichen Warnung"
+                if _identity_gate.addendum_reported_at is not None:
+                    _bezug += (
+                        f" von {local_fmt(_identity_gate.addendum_reported_at, tz)}"
+                    )
+                _radar_request = replace(_radar_request, addendum_reference=_bezug)
+
             # Best-Effort-Zustellung über NotificationService (Issue #1023)
             result = self._notification_service.send_radar_alert(
                 trip=trip,
@@ -1565,6 +1578,13 @@ class TripAlertService:
                 below_threshold_channels=_radar_suppressed,
                 blocked_reason_codes=result.blocked_reason_codes,
                 capture_id=_nowcast_capture_id,
+                # Issue #2018: Nachtraege bleiben im Protokoll auswertbar;
+                # ohne Nachtrag entstehen die Felder gar nicht erst.
+                is_addendum=_identity_gate.is_addendum,
+                addendum_reported_at=(
+                    _identity_gate.addendum_reported_at.isoformat()
+                    if _identity_gate.addendum_reported_at is not None else None
+                ),
             )
             delivered = result.sent
             if not delivered:

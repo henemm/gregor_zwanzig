@@ -30,6 +30,9 @@ PATH_THUNDER_ADDITIVE = "thunder_additive"  # #1992: additive Zusatzquelle
 # zeitgleichen Erfolg der Primaerquelle im Aggregat ueberdeckt wird.
 PATH_RADAR_NOWCAST = "radar_nowcast"
 PATH_SNOWGRID = "snowgrid"  # #1992: SNOWGRID-Schneetiefe
+PATH_FORECAST_CAPTURE = "forecast_capture"  # #2030: Vorhersage-Mitschnitt --
+# kein Provider-Fallback, aber ein degradierbarer Diagnose-Pfad: bleibt sein
+# Ausfall stumm, steht man beim naechsten Vorfall wieder ohne Daten da.
 
 # Ausgangs-Vokabular:
 #   ok             -- die Quelle hat regulaer geantwortet (auch leer:

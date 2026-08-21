@@ -546,3 +546,45 @@ Versand.
 Diese drei Bausteine zusammen liefern denselben Erkenntnisgewinn wie ein
 synthetischer Testversand — ohne dessen Risiko (Kunst-User im Scheduler,
 Test-Postfach über Resend, Kontingent-Verbrauch).
+
+## Vorhersage-Mitschnitt auslesen und abschalten (#2030)
+
+Seit #2030 schreibt der Python-Kern an der Verbrauchsstelle jedes Segment-Aggregats
+(`SegmentWeatherService._aggregate_for_segment`) mit, **was das System zu diesem Zeitpunkt für
+diesen Ort und dieses Zeitfenster erwartete**. Zweck ist die Nachbereitung eines Vorfalls wie
+#2020 („wann sprang die Vorhersage von 7,4 auf 29,4 mm?") — es gibt bewusst keinen Leser, kein
+Auswerte-Skript und keine UI dazu.
+
+**Ablage:** `<Datenwurzel>/diagnostics/forecast_capture_YYYY-MM-DD.jsonl` — Prod
+`/var/lib/gregor`, Staging `/var/lib/gregor-staging`. Eine Datei je Kalendertag, JSONL,
+angehängt. Aufbewahrung **30 Tage**; ältere Tagesdateien räumt der Writer selbst weg, ausgelöst
+beim ersten Schreibvorgang nach einem Datumswechsel. Nachbardateien im selben Ordner
+(`openmeteo_calls.jsonl`, `enrichment_calls.jsonl`) sind davon nicht betroffen.
+
+**Volumen:** rund 1 MB/Tag. Geschrieben wird nur, wenn sich ein alarmrelevanter Wert gegenüber
+dem letzten Stand desselben Orts und Zeitfensters geändert hat (`grund: "aenderung"`) oder der
+letzte Eintrag über 60 Minuten zurückliegt (`grund: "takt"`). Der erzwungene Takt ist die
+Grundlage der Auswertung: **eine fehlende Zeile bedeutet Fehler oder nicht abgerufener Ort**,
+nicht „unverändert".
+
+**Auswerten** — Verlauf einer Koordinate über einen Tag, Zeitpunkt gegen Regenmenge:
+
+```bash
+jq -r 'select(.lat==46.6 and .lon==12.9)
+       | [.written_at, .grund, .werte.precip_sum_mm, .werte.thunder_level_max] | @tsv' \
+   /var/lib/gregor/diagnostics/forecast_capture_2026-08-23.jsonl
+```
+
+`written_at` ist der Verbrauchszeitpunkt, `fetched_at` der tatsächliche Abrufzeitpunkt des Werts
+(bei `cache_hit: true` der ursprüngliche, nicht der Verbrauchszeitpunkt) — der Abstand beider
+zeigt, wie alt die Vorhersage war, auf der eine Entscheidung beruhte. Die Zeile trägt **keine
+Trip-Kennung**; die Zuordnung läuft über Koordinate und Fensterzeiten.
+
+**Abschalten ohne Deploy:** `GZ_FORECAST_CAPTURE=0` in der Unit setzen und den Dienst neu
+starten. Damit entfallen Dateizugriff und Health-Eintrag vollständig; ohne die Variable ist der
+Mitschnitt **an**. Das ist die Rückzugsoption, wenn der Mitschnitt in Produktion auffällt.
+
+**Ausfall sehen:** `/api/scheduler/status.enrichment_health` führt den Pfad `forecast_capture`
+(höchstens eine Meldung je 15 Minuten). Wächst der Abstand `now − last_success_at`, während
+Briefings weiterlaufen, schreibt der Mitschnitt nicht mehr — die Wetterausgabe ist davon
+unberührt, der Mitschnitt ist durchgehend fail-soft.

@@ -147,7 +147,8 @@ class SegmentWeatherService:
             self._debug.add("weather.cache: HIT (raw timeseries)")
             budget_gate.record_cache_hit()
             return self._aggregate_for_segment(
-                segment, cached.timeseries, fetched_at=cached.cached_at
+                segment, cached.timeseries, fetched_at=cached.cached_at,
+                cache_hit=True,
             )
 
         self._debug.add("weather.cache: MISS - fetching from provider")
@@ -229,13 +230,16 @@ class SegmentWeatherService:
         self._cache.put(segment, timeseries, enrich_ensemble, enrich_snow, model_id)
 
         # Step 6+7: Aggregate over THIS segment's own window and wrap
-        return self._aggregate_for_segment(segment, timeseries, fetched_at=fetched_at)
+        return self._aggregate_for_segment(
+            segment, timeseries, fetched_at=fetched_at, cache_hit=False
+        )
 
     def _aggregate_for_segment(
         self,
         segment: TripSegment,
         timeseries: "NormalizedTimeseries",
         fetched_at: datetime,
+        cache_hit: bool = False,
     ) -> SegmentWeatherData:
         """Filtert eine (moeglicherweise breitere, gecachte) Zeitreihe auf
         GENAU dieses Segment-Fenster und aggregiert NUR darueber (Issue
@@ -315,6 +319,24 @@ class SegmentWeatherService:
             day_window_start_hour=window_start, day_window_end_hour=window_end,
         )
         extended_summary = metrics_service.compute_extended_metrics(filtered_ts, basis_summary)
+
+        # Issue #2030: Vorhersage-Mitschnitt. Diese Stelle ist die EINZIGE, die
+        # Cache-Treffer und frischen Abruf gleichermassen durchlaeuft und alle
+        # alarm-/briefingrelevanten Konsumenten sieht. Eigenes try/except
+        # ZUSAETZLICH zum fail-soft im Writer -- es faengt auch einen
+        # Importfehler ab (Muster radar_service.py:727).
+        try:
+            from services.forecast_capture import capture_segment_forecast
+            capture_segment_forecast(
+                segment=segment, aggregated=extended_summary,
+                fetched_at=fetched_at, cache_hit=cache_hit,
+                provider=self._provider.name,
+                model=self._resolve_model_id(
+                    segment.start_point.lat, segment.start_point.lon
+                ),
+            )
+        except Exception:
+            pass  # Diagnose darf Briefing und Alarm NIE beeintraechtigen
 
         return SegmentWeatherData(
             segment=segment,
