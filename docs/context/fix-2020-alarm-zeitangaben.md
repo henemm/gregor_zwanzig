@@ -223,6 +223,53 @@ Etappenfenster reichte bis 20:00. Und er würde weiterhin wertvolle Meldungen
 verschlucken („es regnet seit einer Stunde, 29 mm bis heute Abend"). Der Fehler ist die
 Formulierung, nicht die Zustellung.
 
+### Testabdeckung — Bestandsaufnahme
+
+- **B3 ist empirisch bestätigt.** Ein Grep über den gesamten `tests/`-Baum nach einer
+  `AlertMessage` mit gleichzeitig befüllten `events=` **und** `onset_shift_events=`
+  ergibt **keinen einzigen Treffer**. Der kombinierte Fall — genau der aus dem
+  Screenshot — wird von keinem Test gesehen. `test_onset_shift_alert.py` prüft den
+  Onset-Alarm immer alleinstehend, `test_official_alert_sms_ortskopf.py:681-726` setzt
+  `events=()` sogar ausdrücklich leer.
+- **B4 ist empirisch bestätigt.** `tests/tdd/test_alert_onset_day_rollover.py` (#2009)
+  importiert weder `AlertEvent` noch `OnsetShiftEvent` noch `to_alert_message` — der
+  Abweichungsalarm kommt in der Datei nicht vor.
+- **Kein Vergangenheitsfilter-Test** existiert für den Abweichungsalarm. Der einzige
+  verwandte (`test_issue_822_radar_nowcast_segment.py:330-377`) sitzt im Nowcast-Pfad.
+- **Kein Vier-Kanäle-Wächter für Zeit-Label** existiert. Am nächsten kommt
+  `test_onset_shift_alert.py:732`, aber nur für den reinen Onset-Fall.
+- **Der stärkste bestehende Wert-Test** ist `tests/unit/test_alert_event_time_uses_local_timezone.py`:
+  er lässt `_peak_occurred_at()` über eine echte Stundenreihe laufen und prüft
+  `occurred_at == "15:00"` in Wellington-Ortszeit. **Dieser Test darf grün bleiben** —
+  siehe Entwurfsentscheidung unten.
+
+### Entwurfsentscheidung: additives Feld statt geänderter Wert
+
+Aus der Kollateral-Analyse (~13 Testdateien hängen an den Label-Texten) folgt der
+Zuschnitt:
+
+1. **`occurred_at` bleibt das nackte `HH:MM`.** Der Tagesbezug kommt als **eigenes,
+   additives Feld** aufs Modell — exakt die Bauform, die #2009 mit
+   `onset_time` + `onset_day_offset` schon etabliert hat. Damit bleiben die
+   bestehenden Wert-Tests grün, und die Anzeige entscheidet der Renderer.
+2. **Nur die Abweichungsalarm-Form wird angefasst** (`_datablock_single`,
+   `render.py:589`), **nicht** die Nowcast-Form (`render.py:381`, „· ab HH:MM"). Die
+   beiden einzigen exakten Verkettungs-Assertions
+   (`test_radar_alert_validator_location_forms.py:99`,
+   `test_alert_sms_onset_zeitpunkt.py:455`) sitzen auf der **Nowcast**-Zeile und
+   bleiben damit unberührt.
+3. Die übrigen Tests arbeiten mit Teilstring-Prüfungen; ein vorangestellter Tagesbezug
+   lässt `"17:00"` enthalten und bricht sie nicht.
+
+**Warnung aus der Analyse (gilt auch ohne Vergangenheitsfilter):**
+`test_onset_shift_alert.py` (fester `date(2026, 8, 20)`) und
+`test_alert_event_time_uses_local_timezone.py` (`2026-07-01`) übergeben **keine
+explizite Referenzzeit** und laufen ohne `freeze_time`. Beide Testdaten liegen heute
+schon in der Vergangenheit. Sobald der Tagesbezug aus `datetime.now()` abgeleitet wird,
+werden diese Tests **zeitabhängig rot**. Deshalb ist bindend: die Referenzzeit wird
+als **Parameter durchgereicht** (`now_utc`), nie aus der Systemuhr im Renderer gezogen —
+und die RED-Tests setzen sie explizit.
+
 ### Affected Files
 
 | Datei | Änderung | Beschreibung |
@@ -241,6 +288,9 @@ Formulierung, nicht die Zustellung.
   Anhebung auf 500 einplanen
 - Risiko: **MEDIUM–HIGH** — kritischer Pfad, vier Kanäle, `render.py` wird parallel
   von #1948 S6 angefasst
+- **Kollateral gering gehalten:** durch das additive Feld und die Beschränkung auf die
+  Abweichungsalarm-Form bleiben die ~13 label-abhängigen Testdateien unberührt. Ohne
+  diesen Zuschnitt wären sie alle von Hand nachzuziehen — es gibt keinen Sammel-Wächter.
 
 ### Open Questions
 
