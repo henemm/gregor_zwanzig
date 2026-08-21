@@ -73,12 +73,15 @@ def _wet_frames(lat: float, lon: float) -> list:
 
 
 def _wet_frames_below_overtake_floor(lat: float, lon: float) -> list:
-    """Issue #2020: gewoehnlicher angekuendigter Regen UNTER der
-    Starkregen-Untergrenze (HEAVY_RAIN_THRESHOLD_MM_H=4.0 mm/h) -- die neue
-    Ueberholungs-Pruefung in check_radar_alerts() kann hier strukturell nie
-    greifen (max_rate_mm_h < 4.0), unabhaengig von der akkumulierten Menge.
-    Bewacht weiterhin den reinen Briefing-Unterdrueckungs-Pfad aus #818
-    AC-1, ohne von der #2020-Ausnahme ueberholt zu werden."""
+    """Issue #2020: gewoehnlicher angekuendigter Regen. Die Ueberholungs-
+    Pruefung in check_radar_alerts() kann hier strukturell nie greifen --
+    seit dem F008-Fix-Loop (2026-08-21, Adversary-Runde 3) NICHT mehr weil
+    die Rate unter HEAVY_RAIN_THRESHOLD_MM_H bliebe (die Regel liest
+    max_rate_mm_h dort gar nicht mehr), sondern weil die akkumulierte Menge
+    im 60-Min-Vergleichsfenster (~1,25 mm) unter der absoluten
+    Relevanz-Untergrenze _OVERTAKE_MIN_ABSOLUTE_MM (2,0 mm) bleibt. Bewacht
+    weiterhin den reinen Briefing-Unterdrueckungs-Pfad aus #818 AC-1, ohne
+    von der #2020-Ausnahme ueberholt zu werden."""
     from providers.brightsky import RadarFrame
     now = datetime.now(timezone.utc)
     return [

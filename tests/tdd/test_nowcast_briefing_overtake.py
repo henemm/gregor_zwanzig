@@ -277,6 +277,24 @@ def _single_isolated_frame_f007(lat: float, lon: float) -> list:
     return [RadarFrame(timestamp=now + timedelta(minutes=2), precip_mm_h=6.0)]
 
 
+def _duplicate_timestamp_frames_f010(lat: float, lon: float) -> list:
+    """Zwei Frames mit EXAKT demselben Zeitstempel (+10 Min), unterschiedliche
+    Raten (5,0 und 3,0 mm/h) -- Adversary-Fund F010 (Runde 3, 2026-08-21):
+    eine Providerwiederholung oder ein Sidecar-Merge kann denselben
+    Zeitpunkt doppelt liefern. `all_ts_sorted` dedupliziert den Zeitstempel
+    zu EINEM Eintrag; ohne Entdopplung der Akkumulationsschleife selbst
+    bekaeme aber JEDER der beiden Frames unabhaengig die volle 15-Min-
+    Deckung bis zum (fehlenden) naechsten Zeitpunkt -- derselbe
+    Zeitabschnitt wuerde zweimal gezaehlt."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    ts = now + timedelta(minutes=10)
+    return [
+        RadarFrame(timestamp=ts, precip_mm_h=5.0),
+        RadarFrame(timestamp=ts, precip_mm_h=3.0),
+    ]
+
+
 def _near_frame_with_sparse_far_frames_f003(lat: float, lon: float) -> list:
     """EIN Frame im Vergleichsfenster (+10 Min, 8,0 mm/h) PLUS drei
     gleichmaessig verteilte, trockene Frames weit ausserhalb (+100/+160/
@@ -583,8 +601,18 @@ def test_ac3_stronger_or_equal_nowcast_never_alarms_less_than_a_weaker_one():
         _save_trip_direct(_make_active_trip(trip_id2), uid2)
         _write_snapshot(uid2, trip_id2, segment_id=1, hourly_precip={_onset_hour(5): briefing_precip})
 
-        radar1 = RadarNowcastService(frame_source=_hourlong_rain_frame_source(12.0))
-        radar2 = RadarNowcastService(frame_source=_hourlong_rain_frame_source(15.0))
+        # Issue #2020 Adversary-Runde 3, F009: eigene Cache-Instanz je Service
+        # -- ohne DI-Seam liest die zweite Instanz sonst still den Treffer der
+        # ersten aus dem geteilten Prozess-Cache (identische LAT/LON/ELEVATION_M),
+        # statt ihre eigene frame_source aufzurufen.
+        from services.radar_cache import RadarNowcastCacheService
+
+        radar1 = RadarNowcastService(
+            frame_source=_hourlong_rain_frame_source(12.0), cache=RadarNowcastCacheService()
+        )
+        radar2 = RadarNowcastService(
+            frame_source=_hourlong_rain_frame_source(15.0), cache=RadarNowcastCacheService()
+        )
 
         result1 = radar1.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
         result2 = radar2.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
@@ -1045,8 +1073,17 @@ def test_f002_far_outlier_pair_must_not_poison_the_compare_window_amount():
     """
     from services.radar_service import RadarNowcastService
 
-    radar_clean = RadarNowcastService(frame_source=_clean_15min_series_f002)
-    radar_poisoned = RadarNowcastService(frame_source=_clean_15min_series_with_far_outlier_pair_f002)
+    # Issue #2020 Adversary-Runde 3, F009: eigene Cache-Instanz je Service
+    # (s. Begruendung bei AC-3 oben) -- sonst liest radar_poisoned den
+    # Cache-Treffer von radar_clean statt der eigenen frame_source.
+    from services.radar_cache import RadarNowcastCacheService
+
+    radar_clean = RadarNowcastService(
+        frame_source=_clean_15min_series_f002, cache=RadarNowcastCacheService()
+    )
+    radar_poisoned = RadarNowcastService(
+        frame_source=_clean_15min_series_with_far_outlier_pair_f002, cache=RadarNowcastCacheService()
+    )
 
     result_clean = radar_clean.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
     result_poisoned = radar_poisoned.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
@@ -1197,8 +1234,17 @@ def test_f006_far_dry_frames_must_not_inflate_the_window_amount():
     """
     from services.radar_service import RadarNowcastService
 
-    radar_clean = RadarNowcastService(frame_source=_two_near_frames_f006)
-    radar_poisoned = RadarNowcastService(frame_source=_two_near_frames_with_far_dry_frames_f006)
+    # Issue #2020 Adversary-Runde 3, F009: eigene Cache-Instanz je Service
+    # (s. Begruendung bei AC-3 oben) -- sonst liest radar_poisoned den
+    # Cache-Treffer von radar_clean statt der eigenen frame_source.
+    from services.radar_cache import RadarNowcastCacheService
+
+    radar_clean = RadarNowcastService(
+        frame_source=_two_near_frames_f006, cache=RadarNowcastCacheService()
+    )
+    radar_poisoned = RadarNowcastService(
+        frame_source=_two_near_frames_with_far_dry_frames_f006, cache=RadarNowcastCacheService()
+    )
 
     result_clean = radar_clean.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
     result_poisoned = radar_poisoned.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
@@ -1287,5 +1333,39 @@ def test_f007_single_isolated_frame_is_bounded_by_max_frame_coverage():
     )
     assert result.window_precip_mm != pytest.approx(5.8, abs=0.3), (
         f"F007: die Hochrechnung bis zum Fensterende (~5,8 mm) darf nicht "
+        f"mehr auftreten (war {result.window_precip_mm})."
+    )
+
+
+# --------------------------------------------------------------------------
+# F010-Waechter (Fix-Loop 3, Adversary-Runde 3, 2026-08-21): zwei Frames mit
+# identischem Zeitstempel duerfen denselben Zeitabschnitt nicht doppelt
+# zaehlen
+# --------------------------------------------------------------------------
+
+def test_f010_duplicate_timestamp_frames_must_not_be_double_counted():
+    """F010: Liefert die Frame-Quelle zwei Frames mit EXAKT demselben
+    Zeitstempel (Providerwiederholung/Sidecar-Merge), darf der zugehoerige
+    15-Min-Zeitabschnitt nur EINMAL in window_precip_mm einfliessen, nicht
+    einmal je Duplikat.
+
+    Given zwei Frames bei +10 Min, 5,0 und 3,0 mm/h, sonst keine Frames im
+          Horizont.
+    When get_nowcast() die Serie verarbeitet.
+    Then betraegt window_precip_mm ~1,25 mm (EIN 15-Min-Slot, hoeherer Wert
+         gewinnt: 5,0 mm/h * 0,25 h), NICHT ~2,0 mm (Summe beider
+         Einzelanteile -- die Doppelzaehlung).
+    """
+    from services.radar_service import RadarNowcastService
+
+    radar = RadarNowcastService(frame_source=_duplicate_timestamp_frames_f010)
+    result = radar.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+
+    assert result.window_precip_mm == pytest.approx(1.25, abs=0.05), (
+        f"F010: EIN 15-Min-Slot mit dem hoeheren Duplikat-Wert (5,0 mm/h) "
+        f"muss ~1,25 mm ergeben (war {result.window_precip_mm})."
+    )
+    assert result.window_precip_mm != pytest.approx(2.0, abs=0.1), (
+        f"F010: die Doppelzaehlung beider Duplikate (~2,0 mm) darf nicht "
         f"mehr auftreten (war {result.window_precip_mm})."
     )

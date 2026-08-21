@@ -259,6 +259,54 @@ ihren Leser in der Überholungsregel. `result.max_rate_mm_h` bleibt als Feld auf
 radar_service_mod` in `check_radar_alerts()` bleibt bestehen: er wird weiterhin für
 `RADAR_ONSET_THRESHOLD_MIN` gebraucht (zwei Lesestellen, unverändert).
 
+**F010-Fix-Loop 3 (2026-08-21, Adversary-Runde 3): Entdopplung identischer Zeitstempel in
+`get_nowcast()`.** Vor F010 lief die Akkumulationsschleife für `window_precip_mm` über
+`compare_window` (die volle, ungefilterte Frame-Liste), während `all_ts_sorted` (dient nur
+der Nachbarschafts-Suche via `bisect_right`) bereits über ein `set` dedupliziert war. Zwei
+Frames mit identischem Zeitstempel (Providerwiederholung, Sidecar-Merge — dieselbe Ursache,
+die `_MAX_FRAME_COVERAGE` bereits als Motivation nennt) erhielten dadurch beide unabhängig
+voneinander die volle Deckung bis zum nächsten *echt verschiedenen* Zeitpunkt — derselbe
+Zeitabschnitt wurde zweimal gezählt.
+
+```
+# src/services/radar_service.py — get_nowcast(), Entdopplung vor der Summierung
+compare_window_by_ts: dict[datetime, float] = {}
+for frame in compare_window:
+    existing = compare_window_by_ts.get(frame.timestamp)
+    if existing is None or frame.precip_mm_h > existing:
+        compare_window_by_ts[frame.timestamp] = frame.precip_mm_h
+
+window_precip_mm = 0.0
+for ts, rate in sorted(compare_window_by_ts.items()):
+    next_idx = bisect.bisect_right(all_ts_sorted, ts)
+    next_ts_full = (
+        all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted)
+        else compare_horizon
+    )
+    frame_end = min(next_ts_full, ts + _MAX_FRAME_COVERAGE, compare_horizon)
+    duration_h = max(0.0, (frame_end - ts).total_seconds() / 3600.0)
+    window_precip_mm += rate * duration_h
+```
+
+Bei widersprüchlichen Werten zum selben Zeitstempel gewinnt bewusst der **höhere** Regenwert:
+es ist derselbe Zeitabschnitt, er wird genau einmal gezählt, und unter widersprüchlichen
+Messwerten ist der höhere Wert derjenige, dessen Verlust wehtäte — dieses Ticket existiert,
+weil eine Warnung zu spät kam. `compare_window` selbst (die Liste der Frame-Objekte, für
+`compare_window_max_rate_mm_h = max(...)` weiter unten) bleibt unverändert — ein Maximum ist
+gegenüber Duplikaten idempotent, solange bei widersprüchlichen Werten der höhere gewinnt;
+nachgemessen (`docs/artifacts/fix-2020-alarm-zeitangaben/`): kein bestehender Testwert
+verschiebt sich.
+
+**F009-Fix (Testinfrastruktur, kein Produktivcode):** `RadarNowcastService.get_nowcast()`
+prüft vor jedem Aufruf zuerst den prozessweiten `get_shared_radar_cache()`-Singleton
+(Schlüssel = Koordinate + Region + Höhe, ohne Bezug zur injizierten `frame_source`). Drei
+Tests in `test_nowcast_briefing_overtake.py` (AC-3-Monotonie, F002-Wächter,
+F006-Feldvariante) konstruierten je zwei `RadarNowcastService`-Instanzen mit identischen
+Koordinaten ohne Reset dazwischen — die zweite Instanz las dadurch den Cache-Treffer der
+ersten statt ihrer eigenen `frame_source`. Fix: jede der drei betroffenen Instanzen bekommt
+eine eigene `cache=RadarNowcastCacheService()` (bestehender DI-Seam, kein neuer
+Produktionscode) statt des geteilten Singletons.
+
 ## Expected Behavior
 
 - **Input:** Briefing-Ankündigung `_briefing_precip` (mm, Onset-Stunde) und aktueller
@@ -478,3 +526,41 @@ radar_service_mod` in `check_radar_alerts()` bleibt bestehen: er wird weiterhin 
   Rate), **AC-8** (anhaltender mäßiger Regen löst aus) und **AC-9** (absolute Untergrenze
   gegen Nieselregen) neu. Details: `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`,
   Abschnitt F008.
+- 2026-08-21: Fix-Loop 3 nach Adversary-Verdict BROKEN (Commit `fc4c2b2f`, Runde 3). Zwei
+  neue CRITICAL Funde behoben, keiner davon in der Überholungsregel selbst (die war laut
+  Runde-3-Mutationstabelle bereits scharf bewacht). **F010** — die Akkumulationsschleife für
+  `window_precip_mm` lief über die volle, nicht deduplizierte `compare_window`-Liste, während
+  `all_ts_sorted` bereits per `set` dedupliziert war: zwei Frames mit identischem Zeitstempel
+  (Providerwiederholung/Sidecar-Merge) bekamen dadurch unabhängig voneinander je die volle
+  Deckung bis zum nächsten echt verschiedenen Zeitpunkt — derselbe Zeitabschnitt wurde
+  zweimal gezählt (reproduziert: 2,0 mm statt der plausiblen 0,75–1,25 mm bei zwei Frames auf
+  identischem Zeitstempel mit 5,0/3,0 mm/h). Fix: Entdopplung je Zeitstempel vor der
+  Summierung, bei widersprüchlichen Werten gewinnt der höhere (derselbe Zeitabschnitt wird
+  genau einmal gezählt; unter widersprüchlichen Messwerten ist der höhere Wert derjenige,
+  dessen Verlust wehtäte). Neuer Regressionswächter
+  `test_f010_duplicate_timestamp_frames_must_not_be_double_counted`. **F009** (Testinfrastruktur,
+  kein Produktivfehler) — drei Tests (`test_ac3_stronger_or_equal_nowcast_never_alarms_less_than_a_weaker_one`,
+  `test_f002_far_outlier_pair_must_not_poison_the_compare_window_amount`,
+  `test_f006_far_dry_frames_must_not_inflate_the_window_amount`) konstruierten je zwei
+  `RadarNowcastService`-Instanzen mit identischen Koordinaten; der geteilte
+  Prozess-Cache-Singleton (Schlüssel ohne Bezug zur injizierten `frame_source`) ließ die
+  zweite Instanz den Cache-Treffer der ersten lesen statt der eigenen Testdaten — die
+  jeweilige Zusicherung war dadurch nicht (AC-3-Monotonie, F002) bzw. nur teilweise (F006)
+  geprüft. Fix: eigene `cache=RadarNowcastCacheService()` je betroffener Instanz (bestehender
+  DI-Seam). Nachgewiesen per instrumentierten `frame_source`-Wrappern: beide Quellen werden
+  jetzt tatsächlich aufgerufen, AC-3 liefert für die beiden Läufe echt unterschiedliche Werte
+  (`window_precip_mm`/`max_rate_mm_h`). **F011** (LOW/MEDIUM) — veraltete Kommentare in
+  `test_issue_818_radar_briefing_integration.py` und `test_issue_883_acute_danger_override.py`
+  begründeten die gewählten Frame-Raten noch mit der vor-F008 gültigen Ratenschwelle
+  (`max_rate_mm_h < HEAVY_RAIN_THRESHOLD_MM_H`); die Regel liest seit F008 keine Rate mehr,
+  tatsächlicher Grund ist die absolute Mengen-Untergrenze. Kommentare korrigiert, kein
+  Testverhalten geändert. **F012** (LOW, dokumentiert statt getestet) — die Fenstergrenze
+  `f.timestamp < compare_horizon` (exklusiv) ist an ihrer eigenen Grenze ungetestet; ein Frame
+  exakt auf `compare_horizon` trägt wegen `frame_end = min(..., compare_horizon)` ohnehin mit
+  Dauer null zu `window_precip_mm` bei — für dieses Feld folgenlos. Für
+  `compare_window_max_rate_mm_h` (gebildet aus derselben Filtermenge) ist eine `<=`-Mutation
+  an dieser Stelle theoretisch beobachtbar (ein Grenz-Frame mit höherer Rate als alle
+  eingeschlossenen Frames würde `max_rate_mm_h` anheben); dafür existiert aktuell keine
+  Fixture, die diesen Fall auslöst — an das Team-Lead zur Entscheidung zurückgegeben, kein
+  eigenmächtiger Test ergänzt. Details:
+  `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`, Abschnitt „Runde 3".

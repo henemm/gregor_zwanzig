@@ -711,16 +711,38 @@ class RadarNowcastService:
             (f for f in frames if f.timestamp >= now and f.timestamp < compare_horizon),
             key=lambda f: f.timestamp,
         )
-        window_precip_mm = 0.0
+
+        # Issue #2020 Adversary-Runde 3, F010: eine Providerwiederholung
+        # oder ein Sidecar-Merge (siehe Kommentar zu _MAX_FRAME_COVERAGE
+        # oben -- exakt diese Ursache) kann zwei Frames mit IDENTISCHEM
+        # Zeitstempel liefern. `all_ts_sorted` ist ein Set und dedupliziert
+        # bereits, die Akkumulationsschleife lief bisher aber ueber ALLE
+        # (nicht deduplizierten) Frames: bisect_right liefert fuer beide
+        # Duplikate denselben next_ts_full, also bekaeme JEDER der beiden
+        # unabhaengig die VOLLE Deckung bis dahin -- derselbe Zeitabschnitt
+        # wuerde zweimal gezaehlt. Vor der Summierung deshalb auf einen
+        # Eintrag je Zeitstempel reduziert. Bei widerspruechlichen Werten
+        # zum selben Zeitpunkt gewinnt bewusst der HOEHERE Regenwert: es ist
+        # derselbe Zeitabschnitt, er wird genau einmal gezaehlt, und unter
+        # widerspruechlichen Messwerten ist der hoehere Wert derjenige,
+        # dessen Verlust wehtaete -- dieses Ticket existiert, weil eine
+        # Warnung zu spaet kam.
+        compare_window_by_ts: dict[datetime, float] = {}
         for frame in compare_window:
-            next_idx = bisect.bisect_right(all_ts_sorted, frame.timestamp)
+            existing = compare_window_by_ts.get(frame.timestamp)
+            if existing is None or frame.precip_mm_h > existing:
+                compare_window_by_ts[frame.timestamp] = frame.precip_mm_h
+
+        window_precip_mm = 0.0
+        for ts, rate in sorted(compare_window_by_ts.items()):
+            next_idx = bisect.bisect_right(all_ts_sorted, ts)
             next_ts_full = (
                 all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted)
                 else compare_horizon
             )
-            frame_end = min(next_ts_full, frame.timestamp + _MAX_FRAME_COVERAGE, compare_horizon)
-            duration_h = max(0.0, (frame_end - frame.timestamp).total_seconds() / 3600.0)
-            window_precip_mm += frame.precip_mm_h * duration_h
+            frame_end = min(next_ts_full, ts + _MAX_FRAME_COVERAGE, compare_horizon)
+            duration_h = max(0.0, (frame_end - ts).total_seconds() / 3600.0)
+            window_precip_mm += rate * duration_h
 
         # Issue #2020 Adversary-Fund F001: max_rate_mm_h fuer die
         # Ueberholungspruefung MUSS aus demselben Fenster stammen wie

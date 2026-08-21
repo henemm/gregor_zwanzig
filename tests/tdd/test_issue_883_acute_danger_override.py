@@ -64,14 +64,17 @@ def _convective_frames(lat: float, lon: float) -> list:
 def _nonconvective_frames(lat: float, lon: float) -> list:
     """Regen-Frames (onset in 5 Min) ohne Konvektion → is_convective=False.
 
-    Issue #2020: Raten UNTER der Starkregen-Untergrenze
-    (HEAVY_RAIN_THRESHOLD_MM_H=4.0 mm/h) -- die neue Ueberholungs-Pruefung
-    (#2020 Scheibe 1) kann hier strukturell nie greifen, unabhaengig von
-    der akkumulierten Menge. Mit den frueheren 4.0/8.0 mm/h wuerde die
-    reale Menge die Briefing-Ankuendigung (1,2 mm) inzwischen um mehr als
-    das Doppelte uebersteigen und den Alarm auch OHNE Konvektions-Override
-    auslösen -- der Test wuerde dann nicht mehr zeigen, dass die
-    konvektive Bedingung eine EIGENSTAENDIGE Ausnahme ist.
+    Issue #2020: die Ueberholungs-Pruefung (#2020 Scheibe 1) kann hier
+    strukturell nie greifen -- seit dem F008-Fix-Loop (2026-08-21,
+    Adversary-Runde 3) NICHT mehr weil die Rate unter
+    HEAVY_RAIN_THRESHOLD_MM_H bliebe (die Regel liest max_rate_mm_h dort
+    gar nicht mehr), sondern weil die akkumulierte Menge im 60-Min-
+    Vergleichsfenster (~1,25 mm) unter der absoluten Relevanz-Untergrenze
+    _OVERTAKE_MIN_ABSOLUTE_MM (2,0 mm) bleibt. Mit den frueheren 4.0/8.0
+    mm/h wuerde die reale Menge die Briefing-Ankuendigung (1,2 mm)
+    inzwischen um mehr als das Doppelte uebersteigen und den Alarm auch
+    OHNE Konvektions-Override ausloesen -- der Test wuerde dann nicht mehr
+    zeigen, dass die konvektive Bedingung eine EIGENSTAENDIGE Ausnahme ist.
     """
     from providers.brightsky import RadarFrame
     now = datetime.now(timezone.utc)
