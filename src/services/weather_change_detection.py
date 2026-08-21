@@ -333,7 +333,8 @@ def _precip_remaining(
     ueber die ganze Reihe. Begruendung steht in
     `segment_weather._aggregate_for_segment()` (:292-308): sonst nennt der
     Alarm eine andere Stunde als das Briefing, und beide Vergleichsseiten
-    rechneten mit verschiedenen Fenstern.
+    rechneten mit verschiedenen Fenstern. Die Endgrenze ist dabei EXKLUSIV
+    (`< seg_end`) -- s. die Begruendung an der Filterzeile unten.
 
     Restmenge = Summe der `precip_1h_mm`-Stundenwerte des Fensters, deren
     Stunde nicht bereits VOLLSTAENDIG vergangen ist. Die angebrochene Stunde
@@ -367,7 +368,19 @@ def _precip_remaining(
             if p.ts is None:
                 continue
             ts = _as_utc(p.ts)
-            if not (seg_start <= ts <= seg_end):
+            # Endgrenze EXKLUSIV -- anders als in `_peak_occurred_at()` oben.
+            # Kein Versehen, sondern die einzige Grenze, die hier stimmen kann:
+            # `new_value` ist `aggregated.precip_sum_mm`, und diese Summe
+            # entsteht in `_aggregate_for_segment()` aus genau
+            # `start_floor <= ts < end_floor` (segment_weather.py:276-282,
+            # Bug #806: jede Stunde gehoert genau EINEM Segment). Die
+            # Projektion rechnet `bereits_gefallen = new_value - remaining` --
+            # zaehlte die Restmenge die Stunde AUF `end_time` mit, waere die
+            # Differenz negativ und die Restmenge groesser als die
+            # Fenster-Gesamtmenge (gemessen: 24 statt 22 mm, beides von AC-2
+            # ausdruecklich verboten). `_peak_occurred_at()` faellt das nicht
+            # auf, weil es nur eine Uhrzeit liefert und nichts verrechnet.
+            if not (seg_start <= ts < seg_end):
                 continue
             # Stunde vollstaendig vergangen -> zaehlt weder zur Restmenge
             # noch zum Ende (ihr Ende liegt bei ts + 1 h).
