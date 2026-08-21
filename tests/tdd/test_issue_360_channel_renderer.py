@@ -148,7 +148,6 @@ def test_ac1_signal_five_primary_all_in_table():
     assert layout.table_columns == [
         "temperature", "wind", "gust", "rain_probability", "precipitation",
     ]
-    assert layout.detail_metrics == []
     assert layout.demoted_count == 0
 
 
@@ -186,7 +185,6 @@ def test_ac3_email_no_limit_keeps_all_primary():
 
     assert layout.table_columns == [m[0] for m in _NINE_PRIMARY]
     assert len(layout.table_columns) == 9
-    assert layout.detail_metrics == []
     assert layout.demoted_count == 0
 
 
@@ -198,7 +196,8 @@ def test_ac3_email_no_limit_keeps_all_primary():
 def test_ac4_sms_pushes_everything_to_detail():
     """GIVEN derselbe dc mit 9 primary-Metriken
     WHEN render_for_channel("sms", dc, "morning") läuft
-    THEN ist table_columns == [] und alle Werte liegen flach in detail_metrics."""
+    THEN ist table_columns == [] und demoted_count == 9 (alle 9 primary
+    verdraengt, keine Tabellenspalte)."""
     from src.output.renderers.channel_layout import render_for_channel
 
     dc = _build_dc(_NINE_PRIMARY)
@@ -206,8 +205,7 @@ def test_ac4_sms_pushes_everything_to_detail():
     layout = render_for_channel("sms", dc, "morning")
 
     assert layout.table_columns == []
-    assert layout.detail_metrics == [m[0] for m in _NINE_PRIMARY]
-    assert len(layout.detail_metrics) == 9
+    assert layout.demoted_count == 9
 
 
 # ===========================================================================

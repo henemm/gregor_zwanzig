@@ -28,7 +28,9 @@ from utils.timezone import local_fmt, local_hour
 
 from output.renderers.alert.render import _esc
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
-from output.renderers.channel_layout import VISIBILITY_GATE_IDS, render_for_channel
+from output.renderers.channel_layout import (
+    VISIBILITY_GATE_IDS, render_for_channel, telegram_metric_notice,
+)
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
     hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
@@ -103,36 +105,6 @@ def _wrap(text: str, width: int) -> list[str]:
             lines.append(w[:width])
             w = w[width:]
         cur = w
-    if cur:
-        lines.append(cur)
-    return lines
-
-
-def _detail_lines(
-    metric_ids: list[str], row: dict, friendly_keys: set[str], width: int,
-) -> list[str]:
-    """Baue die ``·``-getrennte Detail-Zeile(n) fuer ``detail_metrics``.
-
-    Wird auf ``width`` umgebrochen, sodass auch Signal jede Zeile <=26 haelt.
-    """
-    parts: list[str] = []
-    for mid in metric_ids:
-        val = _cell(mid, row, friendly_keys)
-        parts.append(f"{_compact_label(mid)} {val}")
-
-    lines: list[str] = []
-    cur = ""
-    for part in parts:
-        candidate = part if not cur else f"{cur} · {part}"
-        if len(candidate) <= width:
-            cur = candidate
-            continue
-        if cur:
-            lines.append(cur)
-        # Ein Einzel-Part koennte breiter als width sein -> hart umbrechen.
-        for sub in _wrap(part, width):
-            lines.append(sub)
-        cur = ""
     if cur:
         lines.append(cur)
     return lines
@@ -842,6 +814,14 @@ def render_telegram_bubbles(
     if vortag_line:
         overview_lines.append("")
         overview_lines.extend(_wrap(_esc(vortag_line), _TG_PROSE_WIDTH))
+    # Issue #1741: Kappungshinweis (>7 primary-Metriken verlieren ihre
+    # stuendliche Aufloesung in der Segment-Tabelle) -- ans Ende der
+    # Kurzuebersicht, EINMAL fuer den ganzen Trip (dieselbe `layout`-
+    # Berechnung wie die Segment-Tabellen oben, nicht je Segment neu).
+    notice = telegram_metric_notice(layout.demoted_count, context="route")
+    if notice:
+        overview_lines.append("")
+        overview_lines.extend(_wrap(_esc(notice), _TG_PROSE_WIDTH))
     bubbles.append(TelegramBubble(text="\n".join(overview_lines)))
 
     # 3./4. Segment-/Ziel-Bubbles: Mini-Header + echte Monospace-Tabelle.

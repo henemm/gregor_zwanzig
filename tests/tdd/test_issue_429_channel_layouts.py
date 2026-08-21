@@ -273,11 +273,10 @@ def test_ac5_channel_limits_still_applied_with_per_channel_layouts():
 
     # CHANNEL_LIMITS["telegram"]["max_table_cols"] = 8 → 7 Metrik-Slots (Slot 0 = Zeit).
     assert len(layout.table_columns) == 7
-    # Die 3 überzähligen Metriken wandern in detail_metrics.
+    # Die 3 überzähligen Metriken werden verdrängt (demoted_count).
     assert layout.demoted_count == 3
     # Reihenfolge in table_columns muss der Telegram-Layout-Reihenfolge entsprechen.
     assert layout.table_columns == [f"metric_{i}" for i in range(7)]
-    assert layout.detail_metrics[:3] == [f"metric_{i}" for i in range(7, 10)]
 
 
 # ---------------------------------------------------------------------------
@@ -303,19 +302,17 @@ def test_ac6_legacy_trip_render_bit_identical():
         "temperature", "wind", "gust", "rain_probability", "precipitation",
         "wind_chill", "cloud_total", "thunder", "fresh_snow",
     ]
-    assert layout.detail_metrics == ["visibility"]
     assert layout.demoted_count == 0
 
-    # Telegram: limit 8 → 7 primaries + Rest in detail
+    # Telegram: limit 8 → 7 primaries + Rest verdrängt
     layout_tg = render_for_channel("telegram", dc, "evening")
     assert len(layout_tg.table_columns) == 7
     assert layout_tg.demoted_count == 2
-    assert layout_tg.detail_metrics == ["thunder", "fresh_snow", "visibility"]
 
-    # SMS: 0 Tabellen-Spalten
+    # SMS: 0 Tabellen-Spalten, alle 9 primaries verdrängt
     layout_sms = render_for_channel("sms", dc, "evening")
     assert layout_sms.table_columns == []
-    assert len(layout_sms.detail_metrics) >= 9  # alles in Detail
+    assert layout_sms.demoted_count == 9
 
 
 # ---------------------------------------------------------------------------

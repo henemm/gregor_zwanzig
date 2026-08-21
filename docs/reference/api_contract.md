@@ -686,7 +686,7 @@ Epochensekunden**; die lesbare Aufbereitung dort ist als Nebenbefund in #1199 no
 | alert_enabled       | bool             | Alert bei Änderung dieser Metrik? (default: false)     |
 | alert_threshold     | float \| None    | Schwellenwert für Alert (z.B. 5.0 für Temperatur)      |
 | horizons            | dict \| None     | Pro-Metrik-Zeithorizont-Filter (None = alle sichtbar)  |
-| bucket              | str              | Spalten-Gruppierung: `"primary"` (eigene Spalte) \| `"secondary"` (Detail-Zeile), default: `"primary"` |
+| bucket              | str              | Spalten-Gruppierung: `"primary"` (eigene Spalte) \| `"secondary"` (heute ohne eigene Ausgabe), default: `"primary"`. **Es gibt keine Detail-Zeile mehr** (PO-Entscheid 2026-06-06, #587); `secondary` bleibt nur aus Altdaten-Kompatibilität und wird seit #1741 nirgends gerendert. Was jenseits des Telegram-Spaltenbudgets liegt, erscheint in der Kurzübersicht als Tageswert plus Kappungshinweis — siehe `docs/specs/modules/fix_1741_telegram_kappungshinweis.md` |
 | order               | int              | Sortier-Reihenfolge innerhalb des Buckets (default: 0) |
 | sms_threshold       | float \| None    | **Neu Issue #624:** Schwellenwert für SMS-/Telegram-Kurzform (R/PR/W/G). None = Catalog/DEFAULTS-Fallback. Nur für threshold-fähige Metriken sichtbar (Niederschlag, Regenwahrscheinlichkeit, Wind, Böen) |
 

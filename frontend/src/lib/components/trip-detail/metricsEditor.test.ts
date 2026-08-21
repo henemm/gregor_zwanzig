@@ -527,92 +527,15 @@ test('F002-fix: move off→primary (toggle active=true) — keine Metrik landet 
 });
 
 // =============================================================================
-// Issue #365 (Schritt C von #361) — 4-Kanal-Live-Vorschau (AC-1..AC-4)
+// Issue #365 (Schritt C von #361) — 4-Kanal-Live-Vorschau (AC-4)
 // =============================================================================
 //
 // Spec: docs/specs/modules/issue_365_channel_preview_mobile.md
 // Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx (Z. 555-667)
 //
-// applyChannel(primary, secondary, budget) und buildBucketSummary(buckets,
-// friendlyMap) existieren noch NICHT → in RED schlägt der Aufruf fehl (undefined
-// is not a function). AC-5 (responsive) + AC-6 (Marker-Politur) sind rein
-// visuell und werden NICHT hier erzwungen. KEINE Mocks (pure functions).
-
-// ---------- AC-1: applyChannel je Kanal --------------------------------------
-
-test('AC-1: applyChannel Email (Infinity) → inTable==primary, detail==secondary, demoted 0', () => {
-	const primary = ['temperature', 'wind', 'gust'];
-	const secondary = ['cloud_total', 'humidity'];
-	const r = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.email);
-	assert.deepEqual(r.inTable, primary);
-	assert.deepEqual(r.detail, secondary);
-	assert.equal(r.demoted, 0);
-});
-
-test('F001: applyChannel Email gibt eine KOPIE von primary zurück (kein Alias)', () => {
-	const primary = ['temperature', 'wind'];
-	const r = editor.applyChannel(primary, [], editor.CHANNEL_COL_BUDGET.email);
-	assert.deepEqual(r.inTable, primary);
-	assert.notStrictEqual(r.inTable, primary, 'inTable darf nicht dieselbe Referenz wie primary sein');
-});
-
-test('AC-1: applyChannel SMS (0) → inTable==[], detail==alles, demoted==primary.length', () => {
-	const primary = ['temperature', 'wind', 'gust'];
-	const secondary = ['cloud_total'];
-	const r = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.sms);
-	assert.deepEqual(r.inTable, []);
-	assert.deepEqual(r.detail, ['temperature', 'wind', 'gust', 'cloud_total']);
-	assert.equal(r.demoted, primary.length);
-});
-
-test('AC-1: applyChannel mit Budget 5 kappt inTable, demoted==overflow', () => {
-	const primary = ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation', 'wind_chill'];
-	const secondary = ['cloud_total'];
-	const r = editor.applyChannel(primary, secondary, 5);
-	assert.equal(r.inTable.length, 5);
-	assert.deepEqual(r.inTable, ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation']);
-	// Overflow (wind_chill) landet VORNE in detail, vor secondary.
-	assert.deepEqual(r.detail, ['wind_chill', 'cloud_total']);
-	assert.equal(r.demoted, 1);
-});
-
-// Issue #1719 S3 (GREEN, Bestandstest umgedreht): Budget=7 (von 8 korrigiert,
-// die 8. Telegram-Spalte war die Uhrzeit), daher passt genau 7 in inTable
-// ohne Demote.
-test('AC-1: applyChannel Telegram (7) kappt erst ab der 8. Spalte', () => {
-	const primary = ['a', 'b', 'c', 'd', 'e', 'f', 'g']; // genau 7
-	const r = editor.applyChannel(primary, [], editor.CHANNEL_COL_BUDGET.telegram);
-	assert.equal(r.inTable.length, 7);
-	assert.equal(r.demoted, 0);
-});
-
-// ---------- AC-2: 7 primary, Budget 5 → 2 demoted vorne in detail -------------
-
-test('AC-2: 7 primary bei Budget 5 → demoted==2, 2 überzählige vorne in detail', () => {
-	const primary = ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation', 'wind_chill', 'cloud_total'];
-	const secondary = ['humidity'];
-	const r5 = editor.applyChannel(primary, secondary, 5);
-	assert.equal(r5.inTable.length, 5);
-	assert.equal(r5.demoted, 2);
-	// Die 2 überzähligen (wind_chill, cloud_total) stehen VOR secondary.
-	assert.deepEqual(r5.detail.slice(0, 2), ['wind_chill', 'cloud_total']);
-	assert.equal(r5.detail[2], 'humidity');
-
-	// Email zeigt alle 7 ohne Demote.
-	const mail = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.email);
-	assert.equal(mail.inTable.length, 7);
-	assert.equal(mail.demoted, 0);
-});
-
-// ---------- AC-3: SMS keine Tabelle, alles flach in detail --------------------
-
-test('AC-3: SMS-Karte hat keine Tabelle (inTable==[]) — alles in detail', () => {
-	const primary = ['temperature', 'wind'];
-	const secondary = ['cloud_total', 'humidity'];
-	const r = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.sms);
-	assert.deepEqual(r.inTable, []);
-	assert.deepEqual(r.detail, ['temperature', 'wind', 'cloud_total', 'humidity']);
-});
+// AC-1..AC-3 (applyChannel/ChannelLayout) sind mit #1741 entfallen: 0
+// Produktiv-Aufrufer (geprüft gegen WeatherMetricsTab.svelte-Importliste),
+// toter Pfad wie das Backend-Gegenstück ChannelLayout.detail_metrics.
 
 // ---------- AC-4: bucket-bewusste Preset-Summary ------------------------------
 

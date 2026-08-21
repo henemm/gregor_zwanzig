@@ -393,23 +393,17 @@ class TestDayDirectionsNeverBecomeColumns:
         layout = render_for_channel("email", dc, "evening")
 
         in_spalten = [m for m in NEW_IDS if m in layout.table_columns]
-        in_details = [m for m in NEW_IDS if m in layout.detail_metrics]
         assert not in_spalten, (
             f"Geisterspalte(n) {in_spalten} im E-Mail-Layout: "
             f"{layout.table_columns!r}"
-        )
-        assert not in_details, (
-            f"Geister-Detailzeile(n) {in_details} im E-Mail-Layout: "
-            f"{layout.detail_metrics!r}"
         )
 
     @pytest.mark.parametrize("channel", ["telegram", "sms"])
     def test_other_channels_place_none_of_them_in_a_bucket(self, channel):
         """Dieselbe Zusicherung fuer Telegram und SMS. „Laeuft durch dieselbe
         Funktion" ist eine Annahme, kein Nachweis: beide Kanaele haben eigene
-        Spaltenlimits (``CHANNEL_LIMITS``), und SMS verschiebt seine
-        ``primary``-Menge komplett in ``detail_metrics`` — ein Filter, der nur
-        die Tabellenspalten saeuberte, waere hier sichtbar."""
+        Spaltenlimits (``CHANNEL_LIMITS``) — ein Filter, der nur die
+        Tabellenspalten saeuberte, waere hier sichtbar."""
         from output.renderers.channel_layout import render_for_channel
 
         dc = _dc(("temperature", True), (TEMP_LOW, True), (TEMP_HIGH, True),
@@ -417,12 +411,10 @@ class TestDayDirectionsNeverBecomeColumns:
                  ("precipitation", True))
         layout = render_for_channel(channel, dc, "evening")
 
-        gefunden = [m for m in NEW_IDS
-                    if m in layout.table_columns or m in layout.detail_metrics]
+        gefunden = [m for m in NEW_IDS if m in layout.table_columns]
         assert not gefunden, (
-            f"[{channel}] Sichtbarkeits-Gates {gefunden} landen in einem "
-            f"Bucket. Spalten: {layout.table_columns!r}, "
-            f"Detail: {layout.detail_metrics!r}"
+            f"[{channel}] Sichtbarkeits-Gates {gefunden} landen in einer "
+            f"Tabellenspalte: {layout.table_columns!r}"
         )
 
 
