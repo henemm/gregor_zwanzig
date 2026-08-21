@@ -48,12 +48,21 @@ def _uid(tag: str) -> str:
 
 
 def _settings_all_channels() -> Settings:
+    # Die drei Wächter-Sperren (Issue #1476/#1288/#1336) lesen NICHT die
+    # Prod-Felder, sondern eigene Test-Gegenstücke (`telegram_test_chat_id`,
+    # `telegram_test_bot_token`, `seven_sandbox_key`). Lokal befüllt `.env`
+    # (GZ_TELEGRAM_TEST_CHAT_ID/GZ_SEVEN_SANDBOX_KEY) diese beim `Settings()`-
+    # Konstruktor — in CI fehlen sie, die Sperren blocken. Deshalb hier
+    # EXPLIZIT gesetzt, deckungsgleich mit den Prod-Feldern, damit die
+    # Prüfstrecke aus eigener Kraft läuft, unabhängig von der Umgebung.
     return Settings().model_copy(update={
         "smtp_host": "smtp.test.invalid", "smtp_user": "alert@test.invalid",
         "smtp_pass": "secret", "mail_to": "gregor-test@henemm.com",
         "smtp_port": 587, "is_test_mode": False,
         "telegram_bot_token": "test-token-2050", "telegram_chat_id": "99999",
+        "telegram_test_bot_token": "test-token-2050", "telegram_test_chat_id": "99999",
         "sms_to": "+41791234567", "seven_api_key": "test-stub-key",
+        "seven_sandbox_key": "test-stub-key",
     })
 
 
@@ -97,7 +106,8 @@ def test_ac1_zweiter_lauf_liest_den_von_lauf_eins_gebuchten_cooldown():
     """Lauf 2 schweigt wegen des von Lauf 1 gebuchten Cooldowns — eine
     Kontrolle ohne Lauf 1 löst bei identischen Eingangsdaten trotzdem aus."""
     uid, ctrl = _uid("ac1"), _uid("ac1-ctrl")
-    _clean_user(uid); _clean_user(ctrl)
+    _clean_user(uid)
+    _clean_user(ctrl)
     try:
         trip = _deviation_trip("trip-ac1")
         trip.alert_cooldown_minutes = 120
@@ -118,7 +128,8 @@ def test_ac1_zweiter_lauf_liest_den_von_lauf_eins_gebuchten_cooldown():
             "Zustand, nicht von unveränderten Eingangsdaten"
         )
     finally:
-        _clean_user(uid); _clean_user(ctrl)
+        _clean_user(uid)
+        _clean_user(ctrl)
 
 
 def test_ac1b_jeder_lauf_bekommt_eine_eigene_service_instanz():
@@ -182,12 +193,14 @@ def test_ac3_telegram_ratenbegrenzung_aus_lauf_eins_ueberlebt_nicht_bis_lauf_zwe
     unabhängig auslösefähiger Eingangsdaten stumm — die Gegenprobe am Ende
     unterdrückt den Reset gezielt und zeigt genau das."""
     uid, ctrl = _uid("ac3"), _uid("ac3-ctrl")
-    _clean_user(uid); _clean_user(ctrl)
+    _clean_user(uid)
+    _clean_user(ctrl)
     try:
         # Free-Tier-Reserve (#1555) ließe den zweiten Deviation-Alarm schon
         # am Tageslimit scheitern, bevor die Ratenbegrenzung geprüft wird —
         # `standard` hat genug Budget, um NUR die Ratenbegrenzung zu messen.
-        _write_tier(uid, "standard"); _write_tier(ctrl, "standard")
+        _write_tier(uid, "standard")
+        _write_tier(ctrl, "standard")
         settings = _settings_all_channels().model_copy(
             update={"telegram_rate_limit_max_per_window": 1},
         )
@@ -241,7 +254,8 @@ def test_ac3_telegram_ratenbegrenzung_aus_lauf_eins_ueberlebt_nicht_bis_lauf_zwe
             "Haupttest nichts über den Reset selbst"
         )
     finally:
-        _clean_user(uid); _clean_user(ctrl)
+        _clean_user(uid)
+    _clean_user(ctrl)
 
 
 def test_ac4_briefing_naehe_sperre_unterdrueckt_deviation_alarm_auf_allen_kanaelen(monkeypatch):
@@ -310,7 +324,8 @@ def test_ac7_vorbelegter_cooldown_unterdrueckt_einen_sonst_faelligen_alarm():
     """Cooldown wird VOR dem Lauf über `ThrottleStore.record` gesetzt — der
     Lauf zeigt die Wirkung, eine Kontrolle ohne Vorbelegung löst aus."""
     uid, ctrl = _uid("ac7"), _uid("ac7-ctrl")
-    _clean_user(uid); _clean_user(ctrl)
+    _clean_user(uid)
+    _clean_user(ctrl)
     try:
         trip = _deviation_trip("trip-ac7")
         trip.alert_cooldown_minutes = 120
@@ -325,7 +340,8 @@ def test_ac7_vorbelegter_cooldown_unterdrueckt_einen_sonst_faelligen_alarm():
         lauf_k = kontrolle.lauf(at=_AT, zweig="deviation", trip=trip, cached_weather=cached, fresh_weather=fresh)
         assert lauf_k.triggered_count == 1, "Gegenprobe: ohne Vorbelegung muss derselbe Lauf auslösen"
     finally:
-        _clean_user(uid); _clean_user(ctrl)
+        _clean_user(uid)
+    _clean_user(ctrl)
 
 
 def test_ac8_ausloesender_lauf_liefert_gerenderten_inhalt_auf_allen_vier_kanaelen():

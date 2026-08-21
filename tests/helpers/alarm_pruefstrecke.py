@@ -21,9 +21,12 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 from freezegun import freeze_time
+
+if TYPE_CHECKING:
+    from app.trip import Trip
 
 from app.config import Settings
 from output.channels import telegram as telegram_mod
