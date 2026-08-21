@@ -447,3 +447,23 @@ statt `+1` bei Mitternachts-Überlauf" — `_sms_onset_time` (`render.py:537`, A
 Setzt die mit dieser Spec freigegebene Vereinheitlichung um; **nicht** Teil dieser Scheibe.
 GSM-7-Frage ist dort bereits beantwortbar: Die amtliche Warn-SMS versendet die Kürzel
 (`Do12-22`) seit #1948 S5 im selben Kanal — reine ASCII-Buchstaben, GSM-7-fähig.
+
+### 🔴 Vor dem ersten Schreiben rebasen — #2036 (PR #2055) landet unmittelbar
+
+Zugesagte Vorwarnung der #2036-Session. Alles **additiv**, nichts entfernt, aber in genau
+den Dateien dieser Scheibe:
+
+- `alert/model.py`: `km_measured: bool = False` an **allen vier** Event-Dataclasses
+  (`AlertEvent`, `OnsetEvent`, `OnsetShiftEvent`, `CorridorEvent`); zusätzlich
+  `segment_id: str | None = None` an `CorridorEvent`.
+- `alert/render.py`: `_location_of`, `_onset_shift_where`, `_onset_shift_location` reichen
+  `km_measured` an `format_alert_location` durch; **neu** `_corridor_where`; `_corridor_when`
+  und `_render_sms_corridor_only` bauen ihre km-Spanne nicht mehr selbst, sondern gehen über
+  `format_alert_location`.
+- `alert/project.py`: reicht das Flag in der Projektion weiter.
+- Die Ortsauflösung hat danach **vier** Stufen: `location_label` → gemessene km-Spanne →
+  Segment-Kennung → km-Rückfall.
+
+Berührt diese Scheibe direkt: `_onset_shift_line`/`_onset_shift_where` und `_corridor_when`
+sind Textstellen, in denen auch die Zeitangaben sitzen. **Nach dem Merge rebasen und die
+neue Fassung lesen**, nicht auf der alten weiterbauen.
