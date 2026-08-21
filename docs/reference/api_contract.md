@@ -1,7 +1,11 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-20 (Issue #1848 Scheibe A2, `feat-1848-a2-outlook-kennungen` — `display_config.outlook_metrics` speichert die **Kennung** statt des Paars aus Größe und Auswertung: `["temperature", "gust"]` statt `[{"metric_id": "temperature", "aggregation": "max"}, ...]`. Damit verliert der 3-Tages-Ausblick sein eigenes, viertes Vokabular; welche Auswertungen eine Kennung zeigt, leitet der Katalog ab (`compare_outlook_metric_ids.derived_aggregations()`). **Die Paar-Altform bleibt dauerhaft lesbar** (Bestandsdaten, kein Migrationslauf) — zwei Paare derselben Größe werden beim Laden zu EINEM Eintrag; geschrieben wird sie nicht mehr. Zweite Änderung am Vertrag: der **Trip** ist seit ADR-0055 / #1720 S1 neben dem Ortsvergleich schreibende Fläche, beide über dieselbe geteilte Komponente `CompareOutlookLayoutControls.svelte`; deren Auswahlliste zeigt jetzt einen Eintrag je Größe statt getrennter Kästchen für Minimum und Maximum. Drei-Werte-Semantik unverändert, mit einer Klarstellung: eine gefüllte, aber vollständig unauflösbare Auswahl liefert `None` (die sieben festen Spalten) und **nicht** `[]` (Block aus) — unauflösbar ist nicht dasselbe wie bewusst geleert. Keine Go-Änderung (`display_config` bleibt ein opakes Blob mit flachem Merge). Spec: `docs/specs/modules/feat_1848_a2_ausblick_kennungen.md`); 2026-08-14 (Issue #1756 — Send-Idempotenz-Lock: `POST /api/trips/{trip_id}/send`
+**Updated:** 2026-08-21 (Issue #2036, `fix-2036-alarm-kilometer` — neues optionales Waypoint-Feld
+`distance_from_start_km` (Go **und** Python), gemessene GPX-Wegstrecke ab Etappenstart; steuert
+die Alarm-Kurzform-Ortsangabe (`km A-B` statt Segment-Kennung, nur bei belastbarer Messung).
+Details Abschnitt „Waypoint DTO" und Changelog-Eintrag unten. Spec:
+`docs/specs/modules/fix_2036_alarm_kilometer_ortsangabe.md`); 2026-08-20 (Issue #1848 Scheibe A2, `feat-1848-a2-outlook-kennungen` — `display_config.outlook_metrics` speichert die **Kennung** statt des Paars aus Größe und Auswertung: `["temperature", "gust"]` statt `[{"metric_id": "temperature", "aggregation": "max"}, ...]`. Damit verliert der 3-Tages-Ausblick sein eigenes, viertes Vokabular; welche Auswertungen eine Kennung zeigt, leitet der Katalog ab (`compare_outlook_metric_ids.derived_aggregations()`). **Die Paar-Altform bleibt dauerhaft lesbar** (Bestandsdaten, kein Migrationslauf) — zwei Paare derselben Größe werden beim Laden zu EINEM Eintrag; geschrieben wird sie nicht mehr. Zweite Änderung am Vertrag: der **Trip** ist seit ADR-0055 / #1720 S1 neben dem Ortsvergleich schreibende Fläche, beide über dieselbe geteilte Komponente `CompareOutlookLayoutControls.svelte`; deren Auswahlliste zeigt jetzt einen Eintrag je Größe statt getrennter Kästchen für Minimum und Maximum. Drei-Werte-Semantik unverändert, mit einer Klarstellung: eine gefüllte, aber vollständig unauflösbare Auswahl liefert `None` (die sieben festen Spalten) und **nicht** `[]` (Block aus) — unauflösbar ist nicht dasselbe wie bewusst geleert. Keine Go-Änderung (`display_config` bleibt ein opakes Blob mit flachem Merge). Spec: `docs/specs/modules/feat_1848_a2_ausblick_kennungen.md`); 2026-08-14 (Issue #1756 — Send-Idempotenz-Lock: `POST /api/trips/{trip_id}/send`
 lehnt einen zweiten Sendeversuch für denselben `(user_id, trip_id, report_type)`-Schlüssel,
 während ein erster noch läuft, jetzt mit neuem Statuscode 409 ab statt einen echten
 Doppelversand auszulösen (Prozess-lokaler `threading.Lock`, keine Persistenz); Go-Proxy-Timeout
@@ -992,18 +996,30 @@ type Stage struct {
 
 ```go
 type Waypoint struct {
-    ID                string  `json:"id"`
-    Name              string  `json:"name"`
-    Lat               float64 `json:"lat"`
-    Lon               float64 `json:"lon"`
-    ElevationM        int     `json:"elevation_m"`
-    TimeWindow        *string `json:"time_window,omitempty"`
-    ArrivalCalculated *string `json:"arrival_calculated,omitempty"` // Issue #296 — "HH:MM", Backend-berechnet (Naismith)
-    Origin            string  `json:"origin,omitempty"`             // "manual" | "algorithmic"; leer = "manual" (Issue #303)
-    Confirmed         *bool   `json:"confirmed,omitempty"`          // *bool: false bleibt serialisierbar
-    ArrivalOverride   *string `json:"arrival_override,omitempty"`   // User-Override "HH:MM"
+    ID                     string   `json:"id"`
+    Name                   string   `json:"name"`
+    Lat                    float64  `json:"lat"`
+    Lon                    float64  `json:"lon"`
+    ElevationM             int      `json:"elevation_m"`
+    TimeWindow             *string  `json:"time_window,omitempty"`
+    ArrivalCalculated      *string  `json:"arrival_calculated,omitempty"` // Issue #296 — "HH:MM", Backend-berechnet (Naismith)
+    Origin                 string   `json:"origin,omitempty"`             // "manual" | "algorithmic"; leer = "manual" (Issue #303)
+    Confirmed              *bool    `json:"confirmed,omitempty"`          // *bool: false bleibt serialisierbar
+    ArrivalOverride        *string  `json:"arrival_override,omitempty"`   // User-Override "HH:MM"
+    DistanceFromStartKm    *float64 `json:"distance_from_start_km,omitempty"` // Issue #2036 — gemessene GPX-Wegstrecke ab Etappenstart
 }
 ```
+
+**`distance_from_start_km` (Issue #2036):** Optional, `nil`/`None` heißt „nicht gemessen" —
+zu unterscheiden von `0.0` (gültiger Startwert). Wird beim GPX-Import aus dem
+Original-Trackpunkt (`GPXPoint.distance_from_start_km`) übernommen oder nachträglich per
+Track-Auflösung (`src/services/track_resolution.py`) einmalig additiv zurückgeschrieben,
+wenn genau ein GPX-Track im Bestand des Nutzers alle Wegpunkte der Etappe innerhalb 10 m
+enthält. Speist ausschließlich die Alarm-Ortsangabe (`km A-B` statt `Segment N`,
+`renderers/alert/segments.py::format_alert_location`) — kein Einfluss auf Naismith-Gehzeiten
+(rechnen weiterhin auf Luftlinie, #2042). Muss im Go-Modell existieren, da sonst der erste
+Editor-Save (`SaveTrip`) den beim Import gesetzten Wert wieder verwirft (Präzedenzfall
+`suggestion_reason`).
 
 **Berechnung `arrival_calculated`:**
 - Frontend: `computeArrivalTimes(stage, startTime, activityToSpeed(trip.activity))` → gibt Array von HH:MM-Strings
@@ -3661,6 +3677,16 @@ function corridorInside(value, min, max) {
   `TH@18:00 R2.5`, akkumuliert über 60 Min ab Ereignisbeginn, nicht ab Versandzeitpunkt).
   Reine additive Feld-Ergänzung, kein Formatwechsel der Antwortstruktur; E-Mail- und
   Telegram-Langform unverändert. Spec: `docs/specs/modules/fix_2046_onset_menge.md`.
+- 2026-08-21: Issue #2036 — Alarm-Kurzform zeigt als Ortsangabe jetzt eine **gemessene**
+  Kilometer-Spanne (`km A-B`), wenn eine belastbare, aus GPX-Trackdaten stammende Distanz
+  vorliegt — davor unverändert die Segment-Kennung aus #1744 A1. Neues optionales Waypoint-Feld
+  `distance_from_start_km` (Go **und** Python, s. Abschnitt „Waypoint DTO"), neues internes Flag
+  `km_measured` an allen vier Alarm-Ereignistypen (`AlertEvent`, `OnsetEvent`, `OnsetShiftEvent`,
+  `CorridorEvent`) — kein Wire-Format-Feld, steuert nur die Renderer-interne Auflösung. Aus
+  Luftlinie geschätzte Kilometer werden nie als Ortsangabe gezeigt; ohne gemessene Strecke bleibt
+  es bei der Segment-Sprache. Neues Modul `src/services/track_resolution.py` ordnet
+  Bestandstrips ohne gemessene Distanz einmalig einem passenden GPX-Track im Nutzerbestand zu
+  (Read-Modify-Write mit Merge). Spec: `docs/specs/modules/fix_2036_alarm_kilometer_ortsangabe.md`.
 - 2026-08-20: Issue #1948 Scheibe S5 — `OnsetPayload` und `NowcastFramesPayload` (Section 22.5,
   `POST /api/trips/{trip_id}/alert-preview`) bekommen additiv das Feld `segment_id: string | null`,
   analog zu `segment_ids` bei `OfficialAlertPayload` (Vorbedingung aus S4, AC-15) — ohne Segment-
