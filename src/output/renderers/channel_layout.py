@@ -4,7 +4,8 @@ SPEC: docs/specs/modules/issue_360_signal_channel_renderer.md §2–§4.
 
 Pure functions: aus einer ``UnifiedWeatherDisplayConfig`` und einem Kanal
 wird berechnet, welche Metriken als eigene Tabellen-Spalte erscheinen und
-welche in die kompakte Detail-Zeile wandern. Keine I/O, keine Mocks.
+wie viele wegen der Kanal-Grenze verdraengt werden (``demoted_count``).
+Keine I/O, keine Mocks.
 """
 from __future__ import annotations
 
@@ -83,8 +84,29 @@ VISIBILITY_GATE_IDS: frozenset[str] = frozenset({
 class ChannelLayout:
     """Ergebnis der Layout-Berechnung fuer einen Kanal."""
     table_columns: list[str]   # metric_ids in Spalten-Reihenfolge (ohne Zeit)
-    detail_metrics: list[str]  # metric_ids fuer die Detail-Zeile
-    demoted_count: int         # aus primary in Detail verschoben (Logging/Badge)
+    demoted_count: int         # aus primary verdraengt (Logging/Badge/Hinweis)
+
+
+def telegram_metric_notice(demoted_count: int, *, context: str) -> str:
+    """context='vergleich' -> Ortsvergleich-Wortlaut (#1362, unveraendert).
+    context='route' -> Trip-Wortlaut (#1741, neu). Leer, wenn nichts verdraengt wurde.
+
+    Die beiden Wortlaute sind BEWUSST nicht ueber einen gemeinsamen Satzbau
+    gebildet: im Ortsvergleich fehlen die verdraengten Groessen in der
+    Telegram-Nachricht GANZ, im Trip stehen sie unmittelbar darueber in der
+    Kurzuebersicht als Tageswert. Ein gemeinsamer Text waere fuer eine der
+    beiden Flaechen sachlich falsch."""
+    if demoted_count <= 0:
+        return ""
+    if context == "vergleich":
+        return (
+            f"… +{demoted_count} weitere Wettergrößen je Ort (Telegram-Limit) "
+            "— vollständig per E-Mail"
+        )
+    return (
+        f"… +{demoted_count} weitere Wettergrößen nur als Tageswert "
+        "(Telegram-Limit)"
+    )
 
 
 def render_for_channel(
@@ -108,9 +130,6 @@ def render_for_channel(
     primary = sorted(
         [m for m in enabled if m.bucket == "primary"], key=lambda m: m.order,
     )
-    secondary = sorted(
-        [m for m in enabled if m.bucket == "secondary"], key=lambda m: m.order,
-    )
 
     channel_cfg = CHANNEL_LIMITS.get(channel, CHANNEL_LIMITS["telegram"])
     limit = channel_cfg["max_table_cols"]
@@ -124,7 +143,6 @@ def render_for_channel(
 
     return ChannelLayout(
         table_columns=[m.metric_id for m in table],
-        detail_metrics=[m.metric_id for m in (overflow + secondary)],
         demoted_count=len(overflow),
     )
 

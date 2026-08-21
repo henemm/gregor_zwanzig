@@ -24,7 +24,9 @@ from app.metric_catalog import get_sms_code
 from app.models import Corridor, MetricConfig, UnifiedWeatherDisplayConfig
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
-from output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
+from output.renderers.channel_layout import (
+    CHANNEL_LIMITS, render_for_channel, telegram_metric_notice,
+)
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import (
@@ -766,7 +768,9 @@ def render_compare_telegram(
         # Groessen). Je eigene Zeile INNERHALB dieses Ortsblocks, weil beide
         # Zahlen ortsabhaengig sind.
         if layout.demoted_count > 0:
-            block.append("   " + _telegram_metric_notice(layout.demoted_count))
+            block.append("   " + telegram_metric_notice(
+                layout.demoted_count, context="vergleich",
+            ))
         if no_data_count > 0:
             block.append("   " + _telegram_no_data_notice(no_data_count))
         # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter + geteilte,
@@ -849,24 +853,6 @@ def _telegram_notice(omitted: int) -> str:
     if omitted <= 0:
         return ""
     return f"\n… +{omitted} weitere Orte (Telegram-Limit) — vollständig per E-Mail"
-
-
-def _telegram_metric_notice(demoted_count: int) -> str:
-    """Ehrlicher Kuerzungs-Hinweis fuer Metrik-PLATZMANGEL (#1362, AC-2): eine
-    Groesse HAT einen Wert an diesem Ort, passt aber wegen der 7-Zellen-
-    Grenze nicht mehr (``ChannelLayout.demoted_count`` -- Gegenstueck zum
-    Ohne-Daten-Fall, s. ``_telegram_no_data_notice``). Wird als eigene Zeile
-    INNERHALB des jeweiligen Ortsblocks angehaengt (Adversary-Korrektur:
-    Platzverfuegbarkeit ist ortsabhaengig, s. ``render_compare_telegram``) --
-    deshalb OHNE fuehrenden Zeilenumbruch (anders als ``_telegram_notice``,
-    das direkt an den Gesamttext angehaengt wird). Leer, wenn nichts
-    verdraengt wurde."""
-    if demoted_count <= 0:
-        return ""
-    return (
-        f"… +{demoted_count} weitere Wettergrößen je Ort (Telegram-Limit) "
-        "— vollständig per E-Mail"
-    )
 
 
 def _telegram_no_data_notice(no_data_count: int) -> str:
