@@ -192,7 +192,21 @@ Compare-Modell schlicht nicht vorhanden. Siehe Abschnitt „Architektur-Entschei
     Token-Inhalt, Zeichenlänge ≤ 160, ausschließlich GSM-7-Zeichen (`^[A-Za-z0-9@:+\- ]+$`
     o. ä. auf den konkreten Token, kein pauschaler Datei-Grep).
 
-- **AC-6:** Given ein Trip, dessen aktives Segment vor dem berechneten Onset-Zeitpunkt endet
+- **AC-6 — 🔴 VERFALLEN am 2026-08-21 (Issue #2017 Scheibe B).** Die in den Known
+  Limitations festgehaltene Verfalls*bedingung* ist eingetreten: `check_radar_alerts()`
+  fragt den Nowcast nicht mehr über `active.start_point` ab, sondern über
+  `services.trip_segments.position_at_time(trip, active, segment_date, now +
+  RADAR_ONSET_THRESHOLD_MIN // 2)`. Damit läge der Onset per Konstruktion dort, wo der
+  Nutzer zu diesem Zeitpunkt sein wird — der Guard würde **korrekte** Alarme verwerfen.
+  Guard und `tests/tdd/test_radar_alert_segment_end_guard.py` sind entfernt; den
+  Positivnachweis, dass ein später Onset nicht mehr pauschal unterdrückt wird, führt
+  jetzt `tests/tdd/test_issue_822_radar_nowcast_segment.py::
+  test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt`.
+  **AC-1 bis AC-5 dieser Spec bleiben unberührt und in Kraft.** Der Wortlaut bleibt zur
+  Nachvollziehbarkeit stehen — die Entscheidung von #2009 war für ihren Codestand
+  richtig:
+
+  > Given ein Trip, dessen aktives Segment vor dem berechneten Onset-Zeitpunkt endet
   (z. B. Segment endet 18:00, Onset läge bei 18:53) / When `check_radar_alerts()` läuft / Then
   wird kein Alarm versendet und ein Unterdrückungs-Log-Eintrag mit erkennbarem Grund geschrieben;
   liegt der Onset dagegen VOR dem Segmentende, löst derselbe Trip weiterhin regulär aus
@@ -211,7 +225,7 @@ Compare-Modell schlicht nicht vorhanden. Siehe Abschnitt „Architektur-Entschei
 | AC-3 | `tests/tdd/test_radar_onset_threshold_variance.py` | `test_ac3_compare_variance_over_grid_values` |
 | AC-4 | `tests/tdd/test_alert_onset_day_rollover.py` | `test_ac4_email_and_telegram_show_day_on_rollover` |
 | AC-5 | `tests/tdd/test_alert_onset_day_rollover.py` | `test_ac5_sms_token_carries_day_suffix` |
-| AC-6 | `tests/tdd/test_radar_alert_segment_end_guard.py` | `test_ac6_segment_end_guard_suppresses_late_onset` |
+| ~~AC-6~~ (verfallen 2026-08-21, #2017) | — (Datei entfernt) | Nachfolge-Nachweis: `test_issue_822_radar_nowcast_segment.py::test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt` |
 
 ### Bekannte Test-Kollisionen (MODIFY, keine neuen ACs — Bestandssemantik erhalten)
 
@@ -317,4 +331,10 @@ Compare-Modell schlicht nicht vorhanden. Siehe Abschnitt „Architektur-Entschei
 
 ## Changelog
 
+- 2026-08-21: **AC-6 verfallen** (Issue #2017 Scheibe B). Die dokumentierte
+  Verfallsbedingung ist eingetreten — der Nowcast-Abruf läuft nicht mehr über
+  `active.start_point`. Segment-Ende-Guard und zugehörige Testdatei entfernt, AC-6
+  im Wortlaut erhalten und als verfallen gekennzeichnet. AC-1 bis AC-5 unverändert
+  in Kraft. Kein stiller Spec-Widerruf: genau dieser Weg stand in den Known
+  Limitations.
 - 2026-08-20: Initial spec created (Issue #2009)

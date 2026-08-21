@@ -1256,16 +1256,46 @@ class TripAlertService:
                     )
                 continue
 
-            # Genau EIN get_nowcast-Call pro Trip an Segment-Startpunkt
-            lat = active.start_point.lat
-            lon = active.start_point.lon
+            # Genau EIN get_nowcast-Call pro Trip (Budget, #1329) — seit
+            # Issue #2017 an dem Ort, an dem der Nutzer zur MITTE des
+            # Vorwarnfensters sein wird, nicht mehr am Startpunkt des
+            # Segments (den hat er zu diesem Zeitpunkt laengst verlassen;
+            # gemessener Median-Versatz 1,99 km). Die Zusicherung "ein
+            # Abruf" ist damit nicht beruehrt — sie wandert nur mit.
+            #
+            # Onset-frei: `_at` ist ein FESTER Zeitpunkt (halbes Fenster),
+            # kein aus dem Nowcast-Ergebnis abgeleiteter. Der Onset entsteht
+            # erst AUS diesem Abruf (`_onset_dt` unten) — ihn hier zu
+            # benutzen waere ein Zirkelschluss.
+            #
+            # Die Schwelle kommt ueber die MODUL-Referenz, nicht als
+            # `from ... import` gebunden: eine beim Import gebundene Kopie
+            # liefe still am Drift-Schutz aus #2009 vorbei.
+            from services import radar_service as radar_service_mod
+            from services.trip_segments import position_at_time
+
+            _at = now_utc + timedelta(
+                minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+            )
+            _pos = position_at_time(trip, active, segment_date, _at)
+            lat = _pos.lat
+            lon = _pos.lon
+            # Hoehe MUSS mitwandern (#1991/#2017): der neue Ort mit der
+            # alten Hoehe abgefragt entscheidet im Gebirge ueber Regen oder
+            # Schnee. Normalisierung auf ganze Meter HIER, nicht in
+            # `position_at_time()` — `get_nowcast` fuehrt `elevation_m` roh
+            # in den Cache-Schluessel, und `1000` und `1000.0` erzeugten in
+            # #1991 zwei Eintraege fuer denselben Punkt.
+            _elevation_m = (
+                int(round(_pos.elevation_m)) if _pos.elevation_m is not None else None
+            )
             tz = tz_for_coords(lat, lon)
             try:
                 radar_svc = self._get_radar_service()
                 # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
                 # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
                 result = radar_svc.get_nowcast(
-                    lat, lon, elevation_m=active.start_point.elevation_m, priority="polling"
+                    lat, lon, elevation_m=_elevation_m, priority="polling"
                 )
             except Exception as e:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
@@ -1283,35 +1313,6 @@ class TripAlertService:
 
             _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
 
-            # Segment-Ende-Guard (Issue #2009 AC-6): ein Onset jenseits des
-            # Endes des aktiven Segments trifft einen Abschnitt, den der
-            # Nutzer dann laengst hinter sich hat.
-            # 🔴 AUSGLEICHSMASSNAHME MIT VERFALLSBEDINGUNG — die Bedingung
-            # haengt am CODE, nicht an einer Ticketnummer: Der Guard ist
-            # richtig nur, solange der Nowcast oben am START-Punkt des
-            # Segments abgefragt wird (`active.start_point`, Zeile ~1260).
-            # ERSATZLOS ZU ENTFERNEN ist er erst, wenn genau dieser Abruf auf
-            # den interpolierten Aufenthaltsort zum Onset-Zeitpunkt umgestellt
-            # ist (`services.trip_segments.position_at_time()` hier
-            # verdrahtet) — dann laege der Onset per Konstruktion dort, wo der
-            # Nutzer tatsaechlich sein wird, und der Guard verwuerfe KORREKTE
-            # Alarme. Zusammen mit ihm fallen dann AC-6 und
-            # tests/tdd/test_radar_alert_segment_end_guard.py.
-            # 🔴 NICHT am Merge-Ereignis festmachen: #2017 Scheibe A (PR
-            # #2022) ist gemergt und `position_at_time()` existiert seither
-            # (`trip_segments.py:469`) — der Abruf hier laeuft aber
-            # unveraendert ueber `active.start_point`. Wer den Guard auf
-            # "#2017 ist doch gemergt" hin entfernt, reisst genau das Loch
-            # auf, das er schliesst. Pruefe die Zeile, nicht das Ticket.
-            _segment_end = _as_aware_utc(active.end_time)
-            if _segment_end is not None and _onset_dt > _segment_end:
-                logger.debug(
-                    f"Radar alert suppressed: Onset "
-                    f"{_onset_dt.isoformat()} liegt nach dem Ende des aktiven "
-                    f"Segments {active.segment_id} "
-                    f"({_segment_end.isoformat()}) fuer {trip.id}"
-                )
-                continue
 
             # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)
             # Issue #1667 S3: gelesen wird unter dem Datum, dem das GEWAEHLTE
@@ -1393,7 +1394,7 @@ class TripAlertService:
             _label = result.intensity_label
             _label = _label[:1].lower() + _label[1:]
             # Issue #2009: Uhrzeit und Tagesbezug aus DEMSELBEN Zeitpunkt
-            # (`_onset_dt`, oben fuer den Segment-Ende-Guard berechnet) und
+            # (`_onset_dt`, oben berechnet) und
             # DERSELBEN Zone — eine zweite Herleitung koennte auseinander-
             # laufen und "00:23" wieder mehrdeutig machen.
             _onset_time_str = local_fmt(_onset_dt, tz)
