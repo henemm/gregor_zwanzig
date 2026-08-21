@@ -132,9 +132,9 @@ _FE_BRIDGE_EXCEPTIONS = {"temperature_cold"}
 #
 # Fuer Gewitter laufen die beiden Bruecken ab dieser Scheibe bewusst
 # auseinander. Die Wertebereiche-Zeile zieht auf den ordinalen Katalog-Eintrag
-# `thunder_level_max` (kein/mittel/hoch) um — ein Prozent-Bereich 0-100 gegen
-# einen Ordinal-Stundenwert 0/1/2 markierte vorher gerade DANN, wenn Gewitter
-# herrschte (Umkehrung). Die Alarm-Empfindlichkeit bleibt unveraendert unter
+# `thunder_level_max` (kein/leicht/mittel/hoch) um — ein Prozent-Bereich 0-100
+# gegen einen Ordinal-Stundenwert 0/1/2/3 markierte vorher gerade DANN, wenn
+# Gewitter herrschte (Umkehrung). Die Alarm-Empfindlichkeit bleibt unveraendert unter
 # `thunder_level` in `metric_alert_levels` — einer seit #1371 von
 # `trip.corridors[]` vollstaendig entkoppelten Persistenz.
 #
