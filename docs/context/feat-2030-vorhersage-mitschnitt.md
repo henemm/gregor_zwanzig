@@ -140,3 +140,190 @@ Eine Spec zu einem Vorhersage-Mitschnitt existiert **nicht**.
 - **Nebenbefund → #1199:** Der Docstring von `append_suppressed_entry` behauptet, amtliche
   Warnungen würden nicht protokolliert; seit #1467 S4b-1 (`trip_alert.py:1855`) stimmt das
   nicht mehr.
+
+---
+
+# Analysis
+
+## Type
+
+**Feature** — neue Diagnose-Fähigkeit, kein Fehlverhalten im Produkt.
+
+## Der Zuschnitt-Entscheid: ein Einbaupunkt, nicht vier
+
+`_aggregate_for_segment` (`src/services/segment_weather.py:234`) ist die einzige Stelle, die
+**alle** relevanten Eigenschaften auf einmal hat:
+
+- **Cache-Hit (`:148`) und Cache-Miss (`:232`) laufen beide hindurch.** Ein Mitschnitt am
+  Netz-Abruf (`openmeteo.py:628`) sähe nur Misses und damit nicht, was das System im Moment
+  der Alarm-Entscheidung glaubte.
+- Sie deckt **alle vier alarm-/briefingrelevanten Konsumenten** ab: Trip-Δ-Alarm
+  (`trip_alert.py:1602`), Compare-Abweichungsalarm (`compare_location_weather_source.py:174`),
+  Briefing (`trip_report_scheduler.py:2026`, `stage_weather.py:56`).
+- Sie hat **`fetched_at` bereits als Parameter** (`:236`): bei Cache-Treffer den echten
+  Upstream-Abrufzeitpunkt (`weather_cache.py:56-63` — ausdrücklich nie `now()`), bei Miss den
+  echten Abruf. „Wie alt war der Wert, als entschieden wurde" fällt damit ohne Zusatzlogik ab.
+
+### Korrektur gegenüber der Kontext-Annahme: der Nowcast-Pfad gehört NICHT dazu
+
+Die Kontext-Sektion vermutete, ein Mitschnitt ohne Nowcast-Pfad sei für den auslösenden
+Vorfall blind. Das ist an den **Einheiten** widerlegt: die Zahlen aus #2020 (7,4 mm → 29,4 mm)
+sind Vorhersage-**Tagessummen**, also `SegmentWeatherSummary.precip_sum_mm`
+(`src/app/models.py:446`). Nowcast-Frames tragen `precip_mm_h` (`radar_service.py:733`) — eine
+andere Größe. Der Vorfall war ein Regenfall, aber die unbeantwortbare Frage hängt am
+Vorhersage-, nicht am Nowcast-Pfad.
+
+Hinzu kommt: Der Nowcast-Pfad **hat** bereits einen Mitschnitt (`radar_service.py:228/242`).
+Ihm fehlt nur die Aufbewahrung. Ein zweiter Writer dort wäre Doppelarbeit → eigene Mini-Scheibe
+(siehe unten).
+
+## Warum kein Umbau von `weather_snapshot`
+
+Der Snapshot-Dienst hält pro Trip und **Zieltag genau eine** Datei
+(`weather_snapshot.py:137`), geschlüsselt über das Zieldatum, nicht über den Schreibzeitpunkt —
+der 15:30-Stand überschreibt den 05:00-Stand spurlos. Geschrieben wird nur beim Briefing (2×/Tag,
+`trip_report_scheduler.py:1510`) und beim **zugestellten** Alarm (`trip_alert.py:905`). Die
+15-Minuten-Alarmläufe, die den fraglichen Anstieg gesehen haben, schreiben nie. Zudem geht dort
+die Wert-Frische verloren (`snapshot_at = now()`, `:101/:129/:252`).
+
+Drei strukturelle Blocker also: überschreibendes Ein-Datei-Modell, Auslöser am Versand statt am
+Verbrauch, Prune nach Dateizahl statt Alter. Dazu ein Risiko: `weather_snapshot` **ist** die
+eingefrorene Alarm-Vergleichsbasis (ADR-0056, `trip_alert.py:678`; AC-11 in
+`weather_snapshot.py:232-244`) — ein rollierender Schreibpfad darf sie nicht anfassen.
+Wiederverwendet wird nur das **Prune-Muster** (`:182-200`), nicht der Dienst.
+
+## Das Volumen-Problem und seine Lösung
+
+Bedingungslos wären es ~15.000 Zeilen/Tag à ~530 B ≈ 5,5–8 MB/Tag. Regel stattdessen:
+
+> **Schreiben, wenn sich die alarmrelevanten Werte gegenüber dem zuletzt geschriebenen Stand
+> desselben Schlüssels geändert haben — ODER der letzte Eintrag für diesen Schlüssel älter als
+> 60 Minuten ist.**
+
+Der erzwungene Stunden-Takt löst die Mehrdeutigkeit, die reine Änderungserkennung erzeugt hätte:
+Ohne ihn hieße „keine Zeile" *unverändert* ODER *Mitschnitt kaputt* ODER *nie abgerufen*. Mit ihm
+ist eine Lücke > 60 min **eindeutig** ein Fehler oder ein nicht abgerufener Ort. Jede Zeile trägt
+`grund: "aenderung" | "takt"`. Volumen danach: ~3.000–4.000 Zeilen/Tag ≈ 1 MB/Tag.
+
+Zustandsspeicher ist ein prozessweites `dict` (Schlüssel → letzte Werte + Zeitstempel); zulässig,
+weil der Python-Kern ein Langläufer ist (Präzedenz: `get_shared_weather_cache()`,
+`weather_cache.py:305`). Nach einem Neustart schreibt jeder Schlüssel einmal — die gewünschte
+Grundlinie.
+
+## Identität eines Eintrags — bewusst ohne `trip_id`
+
+`_aggregate_for_segment` bekommt **keine Trip-Kennung**, und das ist Absicht: der Docstring
+(`segment_weather.py:245-251`, #1329 Adversary-Fund F001) hält ausdrücklich fest, dass „weder
+Trip- noch Compare-Identität je in einen anderen Aufrufer sickert". Diese Trennung wird **nicht**
+aufgebrochen.
+
+| | Entscheidung |
+|---|---|
+| Dedup-Schlüssel | `lat_lon_startstunde` des Segmentfensters — analog `_nowcast_source_key` (`radar_service.py:719`), damit mit dem Nowcast-Mitschnitt korrelierbar |
+| Zeile trägt zusätzlich | `segment_id`, Fensterzeiten, `day_window_*`, `provider`, `model`, `cache_hit` |
+| Konsument | über `resolve_call_source()` (`call_log.py:87`) — sagt *welcher* Lauf (Briefing/Alarm/Compare) abgerufen hat, ohne Trip-Identität |
+
+⚠️ **`resolve_call_source()` nutzt `inspect.stack()[:25]` (`call_log.py:100`) und ist teuer** —
+darf erst **nach** bestandener Schreib-Prüfung aufgerufen werden, nie davor.
+
+`segment_id` allein ist ein Laufindex (`trip_segments.py:230`, `i + 1`) und über Trips hinweg
+nicht eindeutig — deshalb Beifeld, nicht Schlüssel. Wirklich stabile Kennungen (`Stage.id`,
+`Waypoint.id`, `src/app/trip.py:72/97`) werden von `convert_trip_to_segments` nicht in
+`TripSegment` übertragen; sie nachzurüsten berührt `models.py` (schema-relevant,
+Snapshot-Hook) und ist **nicht** Teil dieser Scheibe. Folge: Verschiebt ein Nutzer einen
+Wegpunkt, beginnt unter der neuen Koordinate eine neue Reihe — kein Datenverlust, nur eine
+neue Grundlinie. Für einen verschobenen Punkt ist das fachlich korrekt.
+
+## Ausfall-Sichtbarkeit (ADR-0018) — vier Zeilen, keine neue Infrastruktur
+
+`internal/scheduler/enrichment_health.go:83-86` gruppiert nach `entry.Path` als **freiem
+String**; ein neuer Pfad-Wert auf Python-Seite erscheint automatisch als eigener Schlüssel unter
+`/api/scheduler/status.enrichment_health` — ausdrücklich zugesichert in
+`src/providers/enrichment_health.py:22-25` (#1992 AC-8). Also: neue Konstante
+`PATH_FORECAST_CAPTURE`, `log_enrichment_call(..., OUTCOME_OK)` nach Erfolg,
+`OUTCOME_UNAVAILABLE` im `except`. **Gedrosselt auf ≤ 1×/15 min**, weil
+`enrichment_calls.jsonl` bewusst keine Rotation hat und vom Go-Aggregator bei jedem
+Status-Abruf komplett gescannt wird.
+
+`check-gregor20.sh` bildet „jetzt − `last_success_at`" generisch — der Dauerausfall wird von
+selbst wachsend sichtbar, ohne Schwellenentscheidung im Code.
+
+Verworfen: Eintrag in `coreBriefingSources` (ADR-0018 schließt das aus, #1115 F002, Wächter-Test);
+nur-bei-Fehler-Protokollieren (`last_success_at` bliebe für immer leer — genau der Kaschier-Modus,
+den ADR-0018 verbietet); eigener Go-Endpunkt (teurer, kein Zusatznutzen).
+
+Semantische Dehnung, offen benannt: `enrichment_health` war für degradierbare *Anreicherungs*-Pfade
+gedacht. Vertretbar, weil #1992 die Erweiterbarkeit per neuem `path`-Wert ausdrücklich zusichert.
+
+## Affected Files
+
+| Datei | Art | Beschreibung |
+|---|---|---|
+| `src/services/forecast_capture.py` | CREATE | Writer, Dedup-/Takt-Regel, Tagesdatei, Prune, Kill-Switch (~105) |
+| `src/services/segment_weather.py` | MODIFY | Aufruf am Ende von `_aggregate_for_segment`, eigenes `try/except` (~10) |
+| `src/providers/enrichment_health.py` | MODIFY | Pfad-Konstante `forecast_capture` (~4) |
+| `tests/unit/test_forecast_capture.py` | CREATE | Verhaltenstests (~105) |
+
+## Scope Assessment
+
+- Files: 2 CREATE, 2 MODIFY
+- Geschätzte LoC: **~224 / 250** — passt ohne Override, aber ohne Reserve
+- Risk Level: **MEDIUM** — heißer Pfad von Briefing *und* Alarm, zwei Tage vor Tourstart
+
+## Zwingende Schutzmaßnahmen
+
+| Risiko | Maßnahme |
+|---|---|
+| Mitschnitt kippt Briefing/Alarm | **Doppeltes `try/except`** — im Writer *und* an der Aufrufstelle (Muster `radar_service.py:727-741`; schützt zusätzlich gegen Importfehler) |
+| Fehlverhalten in Prod ohne Deploy-Fenster | **Kill-Switch `GZ_FORECAST_CAPTURE=0` → No-Op**, Default an (Muster `meteoalarm_budget.py:88-101`). Einzige deploy-freie Rückzugsoption |
+| An der Test-Isolation vorbei in echte Daten schreiben | Pfad bei **jedem** Aufruf über `get_data_root()` (#1633); Referenztest `tests/unit/test_diagnostics_path_resolution.py:38-58/134-149` |
+| Prune löscht Nachbardateien | Enger Glob **plus** Datums-Regex (#1987, Vorbild `weather_snapshot.py:182-200`); Prune nur bei Datumswechsel, nicht bei jedem Schreiben |
+| Zerrissene Zeilen (Schreiben aus `ThreadPoolExecutor`, `comparison_parallel.py:118`) | Zeilen < 4 KiB halten → nur Aggregat, **keine** Zeitreihe |
+| `enrichment_calls.jsonl` wächst unrotiert | Health-Zeilen auf ≤ 1×/15 min drosseln |
+| Plattenplatz | Tagesdatei + 30-Tage-Frist → obere Schranke strukturell, nicht per Disziplin |
+
+## Aufbewahrung
+
+**30 Tage**, Datei pro Tag: `<Datenwurzel>/diagnostics/forecast_capture_YYYY-MM-DD.jsonl`.
+Tourdauer allein wäre zu knapp — die Aufklärung passiert nach der Tour (#2020 wurde am Folgetag
+analysiert). Datei-pro-Tag statt In-Place-Rotation, weil Prune dann ein `unlink` ist statt eines
+Read-Modify-Write der wachsenden Datei (`alert_log.py` ist das abschreckende Gegenbeispiel), weil
+reines Anhängen ohne Sperre threadsicher bleibt und weil der Leser den Vorfallstag am Dateinamen
+findet.
+
+## Bekannte Grenzen (bewusst angenommen)
+
+- Die frühen Rückgaben `segment_weather.py:160` (Budget-Drosselung) und `:207` (Provider-Fehler)
+  laufen **nicht** durch `_aggregate_for_segment` und schreiben nichts. Beide Zustände sind
+  anderswo protokolliert (`forecast_budget.py`-Zähler bzw. `call_log.py:107`). Drei Einbaupunkte
+  im heißen Pfad wären ein schlechter Tausch.
+- Keine Trip-Kennung in der Zeile (siehe oben) — Zuordnung über Koordinate + Zeitfenster.
+- Kein Leser: kein Auswerte-Skript, kein Endpunkt, keine UI. Ausgewertet wird im Vorfall mit
+  `grep`/`jq`.
+
+## Abgetrennt: Nowcast-Aufbewahrung (eigene Mini-Scheibe, ~40 LoC)
+
+`alert_input_capture._prune` (`:41`) begrenzt auf 50 Dateien **pro Branch-Verzeichnis**, und
+`branch="nowcast"` ist für alle Orte gleich (`radar_service.py:728`) — faktische Aufbewahrung
+rund eine Stunde. Fix: Prune **pro `source_key`** (Glob `f"{prefix}_*.json"`), und
+`latest_capture_id` (`:136`) globt denselben Präfix statt `*.json` — der Lookup wird dabei sogar
+schneller, weil er heute jede Datei im Verzeichnis liest. Aufbewahrung springt auf ~12 h pro Ort.
+
+**Nicht** einfach `_MAX_FILES_PER_DIR` erhöhen: `latest_capture_id` liest jede Datei im
+Verzeichnis: 50 → 2000 machte jeden Alarm-Check zu 2000 Lesevorgängen im heißen Pfad.
+
+Getrennt, weil beides zusammen (~264 LoC) einen `loc_limit_override` erzwänge.
+
+## Was NICHT in diese Scheibe gehört
+
+Kein zweiter Nowcast-Writer · kein Mitschnitt am Ortsvergleichs-**Bericht**
+(`comparison_engine.py:394` — daran hängt keine Alarmentscheidung) · keine Rohzeitreihe/Stundenwerte
+· kein Leser/Endpunkt/UI · keine Go-Änderung · keine Nutzer-Skopierung (Systemablage wie
+`call_log.py`) · keine Retention-Nachrüstung für `alert_log.py` · nicht Lücke **O3** · keine
+Verallgemeinerung zu einem geteilten Journal-Framework · kein `config.ini`-Eintrag · keine
+Rückrechnung aus der Previous-Runs-API.
+
+## Open Questions
+
+Keine offenen technischen Fragen. Der einzige PO-Punkt ist die Freigabe der Akzeptanzkriterien
+in Phase 3.
