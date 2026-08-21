@@ -16,6 +16,7 @@ SPEC: docs/specs/modules/radar_nowcast.md
 """
 from __future__ import annotations
 
+import bisect
 import logging
 import os
 from dataclasses import dataclass, field
@@ -82,6 +83,17 @@ HEAVY_RAIN_THRESHOLD_MM_H = 4.0
 # verglichen (precip_1h_mm).
 _OVERTAKE_COMPARE_WINDOW_MIN = 60
 
+# Issue #2020 Fix-Loop 2 (Adversary-Runde 2, F006/F007): feste Obergrenze fuer
+# die Deckung EINES Frames im Vergleichsfenster -- ersetzt die globale
+# Kadenz-Schaetzung (_infer_frame_cadence, entfernt). 15 Minuten ist das
+# GROEBSTE in Produktion vorkommende Raster (INCA, AROME-FR, ICON-D2, ARPAE,
+# `minutely_15`); RADOLAN liefert 5 Minuten. Ein Frame darf nie fuer mehr Zeit
+# einstehen, als das groebste Raster hergibt -- unabhaengig davon, was andere
+# Frames irgendwo in der Liste an Abstaenden aufweisen (das war die Schwaeche
+# jeder globalen Schaetzung, ob Minimum oder Median: ferne Frames konnten die
+# Deckung naher Frames nach oben oder unten verfaelschen).
+_MAX_FRAME_COVERAGE = timedelta(minutes=15)
+
 # Issue #2009: einzige Quelle der Onset-Alarmschwelle, ersetzt die bisher
 # doppelt gepflegten Literale in trip_alert.py und compare_radar_alert.py
 # (ADR-0021 — Trip und Ortsvergleich teilen den Code). Wert 55: am Cron-Takt
@@ -147,50 +159,6 @@ class NowcastResult:
                                      # STUNDE ab jetzt (eigenes Fenster, s.
                                      # _OVERTAKE_COMPARE_WINDOW_MIN) -- vergleichbar
                                      # mit precip_1h_mm im Briefing.
-
-
-def _infer_frame_cadence(frames: list) -> timedelta:
-    """Leitet den Frame-Abstand aus den tatsaechlichen Zeitstempeln ab
-    (Issue #2020, Befund 1) -- Median-Ansatz: der Median der positiven
-    Abstaende zwischen zwei (zeitlich sortierten, deduplizierten)
-    Zeitstempeln gilt als Kadenz. RADOLAN liefert 5-Minuten-Schritte, alle
-    anderen Produktivquellen (INCA, AROME-FR, ICON-D2, ARPAE, `minutely_15`)
-    15-Minuten-Schritte -- der Median erkennt beide korrekt, ohne eine feste
-    Kadenz anzunehmen.
-
-    Weniger als zwei unterscheidbare Zeitstempel -> kein Abstand ableitbar,
-    Rueckfall auf die kleinste in Produktion vorkommende Kadenz (RADOLAN,
-    5 Min) als konservativste Annahme (verhindert Ueberextrapolation staerker
-    als 15 Min).
-
-    Median statt Minimum (Adversary-Fund F002/F003, Team-Lead-Review
-    2026-08-21): Das Minimum ist gegen einen EINZELNEN Ausreisser wehrlos --
-    zwei harmlose Frames irgendwo im 180-Minuten-Nowcast-Horizont mit z. B.
-    1 Minute Abstand (Providerwiederholung, Sidecar-Merge-Artefakt) senken
-    die GLOBAL abgeleitete Kadenz auf diese 1 Minute, und diese Kadenz wird
-    dann auf JEDEN Frame im 60-Minuten-Vergleichsfenster angewandt -- ein
-    real fallender Starkregen wuerde dadurch um ein Vielfaches unterzaehlt
-    (beobachtet: 13,75x bei zwei zusaetzlichen 1-Minuten-Frames weit
-    ausserhalb des Vergleichsfensters). Der Median ist gegen einen
-    einzelnen Ausreisser robust, ohne den Luecken-Schutz aufzugeben: Die
-    nachgelagerte Deckelung in `_derive_result()`
-    (`min(next_ts_in_window, frame.timestamp + _cadence, compare_horizon)`)
-    kappt weiterhin jeden Frame, auf den nicht innerhalb einer Kadenz ein
-    naechster folgt -- dieser Schutz haengt an der Deckelung, nicht am
-    Minimum, und bleibt deshalb unveraendert wirksam.
-    """
-    ts_sorted = sorted({f.timestamp for f in frames})
-    gaps = [
-        b - a for a, b in zip(ts_sorted, ts_sorted[1:])
-        if (b - a).total_seconds() > 0
-    ]
-    if not gaps:
-        return timedelta(minutes=5)
-    gaps_sorted = sorted(gaps)
-    mid = len(gaps_sorted) // 2
-    if len(gaps_sorted) % 2 == 1:
-        return gaps_sorted[mid]
-    return (gaps_sorted[mid - 1] + gaps_sorted[mid]) / 2
 
 
 def _offline_fixture_active() -> bool:
@@ -714,27 +682,33 @@ class RadarNowcastService:
         # Issue #2020: eigenes 60-Min-Vergleichsfenster fuer die Mengen-
         # Ueberholungspruefung (NICHT das 180-Min-Nowcast-Fenster oben -- das
         # waere ein 3h-Wert gegen einen 1h-Briefingwert). Dauer JE Frame aus
-        # der abgeleiteten Kadenz (s. _infer_frame_cadence), NIE ueber das
-        # Fensterende (compare_horizon) UND NIE ueber die Kadenz hinaus
-        # hochgerechnet (Team-Lead-Review 2026-08-21, Befund 1): ein
-        # einzelner Frame nach Datenausfall/Drosselung darf nicht bis zum
-        # vollen Fensterende gestreckt werden -- sonst wuerde ein einziges
-        # Radarbild zu einem hochgerechneten Alarm. Fehlende Frames machen
-        # die Menge dadurch eher zu klein als zu gross (bewusst konservative
-        # Richtung, Spec "Known Limitations").
-        _cadence = _infer_frame_cadence(frames)
+        # seiner UNMITTELBAREN NACHBARSCHAFT in der VOLLSTAENDIGEN Frame-Liste
+        # (Adversary-Runde 2, F006/F007, 2026-08-21: eine GLOBALE Kadenz-
+        # Schaetzung -- ob Minimum oder Median -- laesst sich immer durch
+        # Frames ausserhalb des Vergleichsfensters verfaelschen, in beide
+        # Richtungen. Ein Frame darf daher nur ueber seinen eigenen naechsten
+        # Nachbarn hinausreichen, NIE ueber eine globale Kennzahl). Zusaetzlich
+        # gedeckelt auf `_MAX_FRAME_COVERAGE` (groebstes Produktivraster) UND
+        # NIE ueber das Fensterende (compare_horizon) hinaus: ein einzelner
+        # Frame nach Datenausfall/Drosselung darf nicht bis zum vollen
+        # Fensterende gestreckt werden -- sonst wuerde ein einziges Radarbild
+        # zu einem hochgerechneten Alarm. Fehlende Frames machen die Menge
+        # dadurch eher zu klein als zu gross (bewusst konservative Richtung,
+        # Spec "Known Limitations").
         compare_horizon = now + timedelta(minutes=_OVERTAKE_COMPARE_WINDOW_MIN)
+        all_ts_sorted = sorted({f.timestamp for f in frames})
         compare_window = sorted(
             (f for f in frames if f.timestamp >= now and f.timestamp < compare_horizon),
             key=lambda f: f.timestamp,
         )
         window_precip_mm = 0.0
-        for i, frame in enumerate(compare_window):
-            next_ts_in_window = (
-                compare_window[i + 1].timestamp if i + 1 < len(compare_window)
+        for frame in compare_window:
+            next_idx = bisect.bisect_right(all_ts_sorted, frame.timestamp)
+            next_ts_full = (
+                all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted)
                 else compare_horizon
             )
-            frame_end = min(next_ts_in_window, frame.timestamp + _cadence, compare_horizon)
+            frame_end = min(next_ts_full, frame.timestamp + _MAX_FRAME_COVERAGE, compare_horizon)
             duration_h = max(0.0, (frame_end - frame.timestamp).total_seconds() / 3600.0)
             window_precip_mm += frame.precip_mm_h * duration_h
 

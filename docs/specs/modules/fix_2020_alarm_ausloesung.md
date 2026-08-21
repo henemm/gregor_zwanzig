@@ -175,21 +175,37 @@ return NowcastResult(
 )
 ```
 
-**Als implementiert (weicht vom vereinfachten Pseudocode oben ab, Fix-Loop-Funde F001–F003,
-2026-08-21):**
+**Als implementiert (weicht vom vereinfachten Pseudocode oben ab, Fix-Loop-Funde F001–F002
+(Runde 1) und F006–F007 (Runde 2), 2026-08-21):**
 
 - `max_rate_mm_h` im `NowcastResult` stammt aus `compare_window` (60 Min), nicht aus dem
   180-Min-`window` oben — Begründung siehe Vorbedingungs-Prüfung Punkt 2 (Fix-Loop-
   Korrektur F001). Der lokale `max_rate` bleibt für `intensity_label` unverändert.
-- Die Dauer je Frame wird nicht direkt aus dem Abstand zum nächsten Frame übernommen
-  (das obige `next_ts`-Pseudocode ist vereinfacht), sondern über eine separat abgeleitete
-  Kadenz `_infer_frame_cadence(frames)` gedeckelt: `frame_end = min(next_ts_in_window,
-  frame.timestamp + _cadence, compare_horizon)`. Die Kadenz selbst ist der **Median** der
-  positiven Abstände zwischen allen (sortierten, deduplizierten) Frame-Zeitstempeln — **nicht
-  das Minimum** (Fix-Loop-Korrektur F002/F003: ein einzelner Ausreißer-Abstand irgendwo im
-  180-Min-Horizont, z. B. eine Providerwiederholung, hätte das Minimum auf wenige Minuten
-  gedrückt und dadurch jeden Frame im Vergleichsfenster massiv unterzählt; der Median ist
-  gegen einen einzelnen Ausreißer robust, ohne den Lücken-Schutz der Deckelung aufzugeben).
+- Die Dauer je Frame wird **nicht** aus einer global über die volle Frame-Liste
+  abgeleiteten Kadenz bestimmt (weder Minimum noch Median — beide Ansätze wurden
+  implementiert und beide vom Adversary gebrochen, siehe Fix-Loop-Historie unten), sondern
+  ausschließlich aus der **unmittelbaren Nachbarschaft** des jeweiligen Frames in der
+  vollständigen, zeitlich sortierten Frame-Liste, zusätzlich gedeckelt durch eine feste
+  Modul-Konstante:
+  ```
+  _MAX_FRAME_COVERAGE = timedelta(minutes=15)   # groebstes Produktivraster (INCA,
+                                                 # AROME-FR, ICON-D2, ARPAE, minutely_15);
+                                                 # RADOLAN liefert 5 Minuten.
+  frame_end = min(
+      naechster_frame_zeitstempel_in_der_vollstaendigen_liste,
+      frame.timestamp + _MAX_FRAME_COVERAGE,
+      compare_horizon,
+  )
+  ```
+  Kein Wert außerhalb der unmittelbaren Nachbarschaft eines Frames kann dessen Deckung
+  noch beeinflussen — weder ein ferner Ausreißer-Abstand (F002/F003, Runde 1) noch eine
+  Mehrheit ferner, trockener Frames, die eine globale Kennzahl nach oben ziehen (F006,
+  Runde 2). `_infer_frame_cadence()` (Median-Ansatz, Runde 1) entfällt ersatzlos, ebenso
+  ihr ungetesteter 5-Minuten-Rückfallwert bei weniger als zwei unterscheidbaren
+  Zeitstempeln (F007, Runde 2) — der ist mit der Funktion gegenstandslos, weil die feste
+  Obergrenze `_MAX_FRAME_COVERAGE` diesen Fall jetzt strukturell mitabdeckt (ein isolierter
+  Einzel-Frame wird auf höchstens 15 Minuten Deckung begrenzt, nie auf das Fensterende
+  hochgerechnet).
 
 ```
 # src/services/trip_alert.py — check_radar_alerts(), Ersatz der binaeren Sperre
@@ -348,6 +364,21 @@ Known Limitations zur Wortlaut-Grenze dieser Scheibe.
   dieser Scheibe.
 - **Prognose-Zwischenstände** (wann genau sprang die Vorhersage von 7,4 auf 29,4 mm)
   bleiben unaufgezeichnet — eigenes Ticket #2030.
+- **Starre 60-Minuten-Kante bei `max_rate_mm_h` (Adversary-Fund F008, Runde 2, nicht
+  behoben).** Die Relevanz-Untergrenze `max_rate_mm_h >= HEAVY_RAIN_THRESHOLD_MM_H` prüft
+  ausschließlich Frames innerhalb des starren 60-Minuten-Vergleichsfensters. Anhaltender
+  Regen, der die Schwelle (4,0 mm/h) erst wenige Minuten NACH diesem Schnitt überschreitet
+  (z. B. 3,9 mm/h über 50 Minuten, dann 4,5 mm/h ab Minute 65 — real derselbe,
+  zusammenhängende Regen), erfüllt die Untergrenze nicht, obwohl `window_precip_mm` die
+  Faktor-Schwelle bereits deutlich übersteigt (belegt: 3,575 mm gegen eine 1,0-mm-
+  Ankündigung, Faktor 3,6-fach) — kein Alarm. Das ist die bewusst zurückhaltende Richtung
+  dieser Regel (siehe oben, „eher zu klein als zu groß"), hier jedoch mit einem
+  nachweisbar realen, sich zuspitzenden Zusammenhang statt bloß fehlender Daten. Bewusst
+  nicht behoben in diesem Fix-Loop (Team-Lead-Auftrag Runde 2: „nicht trivial ohne neue
+  Regression auf F001 — braucht eigene Spec-Überlegung"); mögliche Richtung: `max_rate_mm_h`
+  aus einem geringfügig größeren Fenster ableiten oder über einen zweiten, unabhängigen
+  Pfad prüfen. Details: `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`,
+  Abschnitt F008.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -385,3 +416,19 @@ Known Limitations zur Wortlaut-Grenze dieser Scheibe.
   unterzählte dadurch `window_precip_mm` im gesamten Vergleichsfenster (beobachtet:
   13,75-fache Unterzählung) — jetzt Median statt Minimum. ACs inhaltlich unverändert,
   Details siehe `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`.
+- 2026-08-21: Fix-Loop 2 nach Adversary-Verdict BROKEN (Commit `f8a564c5`, Runde 2). Der
+  Median-Ansatz aus Fix-Loop 1 war selbst wieder brechbar: **F006** (CRITICAL) — eine
+  Mehrheit ferner, TROCKENER Frames außerhalb des Vergleichsfensters zog die global
+  abgeleitete Median-Kadenz auf 60 Minuten und rechnete den letzten Nahregen-Frame bis
+  dorthin hoch, wodurch `window_precip_mm` sich verdoppelte (3,0 → 6,0 mm) und ein
+  Alarm-Versand ausgelöst wurde, obwohl die Störframes selbst keinen Regen enthielten.
+  **F007** (CRITICAL) — der Kadenz-Rückfallwert bei weniger als zwei unterscheidbaren
+  Zeitstempeln (5 Min) war durch keinen Test bewacht; ein isolierter Einzel-Frame wäre bei
+  falschem Rückfallwert bis zu 11,6-fach überzählt worden. Da JEDER weitere globale
+  Schätzer (Minimum, Median, künftig denkbare Alternativen) dieselbe Angriffsfläche hätte,
+  wurde `_infer_frame_cadence()` **ersatzlos entfernt** und durch eine
+  nachbarschaftsbasierte Regel mit fester Obergrenze (`_MAX_FRAME_COVERAGE = 15 Min`)
+  ersetzt — kein Wert außerhalb der unmittelbaren Nachbarschaft eines Frames kann dessen
+  Deckung mehr beeinflussen. **F008** (HIGH, bewusst nicht behoben) — siehe Known
+  Limitations. ACs inhaltlich unverändert. Details:
+  `docs/artifacts/fix-2020-alarm-zeitangaben/adversary-dialog.md`, Abschnitt „Runde 2".

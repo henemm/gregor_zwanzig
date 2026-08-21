@@ -208,6 +208,66 @@ def _clean_15min_series_with_far_outlier_pair_f002(lat: float, lon: float) -> li
     return frames
 
 
+def _two_near_frames_f006(lat: float, lon: float) -> list:
+    """Zwei Frames FRUEH im Vergleichsfenster (+2/+17 Min, 6,0 mm/h) --
+    Referenzserie fuer den F006-Waechter (Adversary-Runde 2, 2026-08-21):
+    ohne weitere Frames deckelt die 15-Min-Obergrenze den letzten Frame auf
+    3,0 mm. +2 statt +0 (wie F002): vermeidet, dass der erste Frame durch
+    die Millisekunden-Drift zwischen Fixture-Erzeugung und `_derive_result`-
+    `now` knapp aus dem Fenster faellt."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    return [
+        RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=6.0)
+        for m in (2, 17)
+    ]
+
+
+def _two_near_frames_with_far_dry_frames_f006(lat: float, lon: float) -> list:
+    """Dieselbe Serie PLUS drei voellig TROCKENE Frames weit ausserhalb des
+    60-Min-Vergleichsfensters (+75/+135/+195 Min, 0,0 mm/h, 60-Min-Abstand
+    zueinander -- Adversary-Fund F006: eine GLOBALE Kadenz-Schaetzung
+    (Median von [15,60,60,60] = 60 Min) haette den letzten Nahregen-Frame
+    faelschlich bis auf 60 Min hochgerechnet, obwohl die Stoerframes selbst
+    keinen Regen enthalten und ausserhalb jedes bewerteten Fensters
+    liegen)."""
+    frames = _two_near_frames_f006(lat, lon)
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    for m in (75, 135, 195):
+        frames.append(RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=0.0))
+    return frames
+
+
+def _single_isolated_frame_f007(lat: float, lon: float) -> list:
+    """Genau EIN Frame im gesamten 180-Min-Horizont (+2 Min, 6,0 mm/h) --
+    realistisch nach einer Drosselung/einem Teilausfall (Adversary-Fund
+    F007). Es gibt keinen zweiten Zeitstempel, aus dem sich ein Abstand
+    ableiten liesse -- die feste `_MAX_FRAME_COVERAGE`-Obergrenze muss
+    trotzdem greifen, statt den Frame bis zum Fensterende zu strecken."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    return [RadarFrame(timestamp=now + timedelta(minutes=2), precip_mm_h=6.0)]
+
+
+def _near_frame_with_sparse_far_frames_f003(lat: float, lon: float) -> list:
+    """EIN Frame im Vergleichsfenster (+10 Min, 8,0 mm/h) PLUS drei
+    gleichmaessig verteilte, trockene Frames weit ausserhalb (+100/+160/
+    +220 Min, je 60 Min Abstand). Eine GLOBALE Kadenz-Schaetzung (egal ob
+    Minimum ueber alle Abstaende [90,60,60] -> 60 Min, oder Median -> 60
+    Min) wuerde den Nahregen-Frame bis zum Fensterende hochrechnen
+    (window_precip_mm ~6,667 mm). Die nachbarschaftsbasierte Regel mit
+    fester Obergrenze begrenzt ihn stattdessen auf 15 Min (~2,0 mm) --
+    ein Rueckbau auf JEDE Form globaler Kadenz-Schaetzung wuerde hier
+    auffliegen."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    frames = [RadarFrame(timestamp=now + timedelta(minutes=10), precip_mm_h=8.0)]
+    for m in (100, 160, 220):
+        frames.append(RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=0.0))
+    return frames
+
+
 def _onset_hour(offset_min: int) -> int:
     """UTC-Stunde des Onsets -- muss zum ersten nassen Frame des jeweiligen
     Szenarios passen, sonst findet `_briefing_precip_for_onset` den
@@ -861,37 +921,41 @@ def test_f002_far_outlier_pair_must_not_poison_the_compare_window_amount():
 
 
 # --------------------------------------------------------------------------
-# F003-Waechter (Fix-Loop, Adversary-Fund 2026-08-21): Median statt
-# Minimum bei der Kadenz-Schaetzung
+# F003-Nachfolger (Fix-Loop 2, Adversary-Runde 2, 2026-08-21): globale
+# Kadenz-Schaetzung ersatzlos entfernt (_infer_frame_cadence existiert
+# nicht mehr) -- dieser Test bewacht die NEUE Zusicherung: die Deckung
+# eines Frames haengt allein von seiner unmittelbaren Nachbarschaft ab,
+# nie von einer ueber die volle Frame-Liste gebildeten Kennzahl.
 # --------------------------------------------------------------------------
 
-def test_f003_cadence_median_survives_a_single_far_outlier_gap():
-    """F003: Minimum und Median der Frame-Abstaende fallen bislang in
-    keinem Test auseinander (alle bisherigen Fixtures nutzen ein
-    einheitliches Raster) -- deshalb blieb F002 unentdeckt. Diese Serie hat
-    vier 15-Minuten-Abstaende, einen 120-Minuten-Sprung und einen
-    1-Minuten-Ausreisser: Minimum waere 1 Min, Median ist 15 Min.
+def test_f003_frame_coverage_derives_from_immediate_neighbor_not_global_estimate():
+    """F003-Nachfolger: Ein Rueckbau auf eine globale Kadenz-Schaetzung
+    (gleich ob Minimum oder Median) wuerde fuer diese Serie ein deutlich
+    anderes Ergebnis liefern als die nachbarschaftsbasierte Regel.
 
-    Given eine Frame-Serie mit gemischten Abstaenden.
-    When _infer_frame_cadence() die Kadenz ableitet.
-    Then liefert sie den Median (15 Min), nicht das Minimum (1 Min).
+    Given ein einzelner Nahregen-Frame (+10 Min, 8,0 mm/h) PLUS drei ferne,
+          trockene Frames im 60-Min-Abstand (+100/+160/+220 Min).
+    When get_nowcast() die Serie verarbeitet.
+    Then bleibt window_precip_mm bei ~2,0 mm (15-Min-Obergrenze ab dem
+         eigenen naechsten Nachbarn +100 Min) -- NICHT bei ~6,667 mm, wie es
+         eine globale Kadenz (Minimum ODER Median der Abstaende [90,60,60]
+         -> 60 Min, angewandt bis zum Fensterende) ergeben wuerde.
     """
-    from providers.brightsky import RadarFrame
-    from services.radar_service import _infer_frame_cadence
+    from services.radar_service import RadarNowcastService
 
-    now = datetime.now(timezone.utc)
-    offsets = [0, 15, 30, 45, 60, 180, 181]
-    frames = [
-        RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=1.0)
-        for m in offsets
-    ]
+    radar = RadarNowcastService(frame_source=_near_frame_with_sparse_far_frames_f003)
+    result = radar.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
 
-    cadence = _infer_frame_cadence(frames)
-
-    assert cadence == timedelta(minutes=15), (
-        f"F003: Median der Abstaende [15,15,15,15,120,1] muss 15 Min "
-        f"betragen (war {cadence}). Ein Minimum-Ansatz wuerde faelschlich "
-        f"1 Min liefern und jeden Frame im Vergleichsfenster unterzaehlen."
+    assert result.window_precip_mm == pytest.approx(2.0, abs=0.05), (
+        f"F003-Nachfolger: nachbarschaftsbasierte Deckung (15-Min-Obergrenze "
+        f"ab dem naechsten Frame bei +100 Min) muss ~2,0 mm ergeben (war "
+        f"{result.window_precip_mm})."
+    )
+    assert result.window_precip_mm != pytest.approx(6.667, abs=0.3), (
+        f"F003-Nachfolger: eine GLOBALE Kadenz-Schaetzung (Median/Minimum "
+        f"der Abstaende [90,60,60] -> 60 Min) wuerde den einzelnen Nahregen-"
+        f"Frame faelschlich bis zum Fensterende hochrechnen (~6,667 mm). War "
+        f"{result.window_precip_mm}."
     )
 
 
@@ -956,3 +1020,119 @@ def test_f004_exact_equality_at_both_thresholds_breaks_the_suppression():
         assert len(captured) >= 1, "F004: mail_sink muss aufgerufen werden."
     finally:
         _clean_user(uid)
+
+
+# --------------------------------------------------------------------------
+# F006-Waechter (Fix-Loop 2, Adversary-Runde 2, 2026-08-21): ferne,
+# TROCKENE Frames duerfen window_precip_mm nicht nach OBEN verfaelschen
+# --------------------------------------------------------------------------
+
+def test_f006_far_dry_frames_must_not_inflate_the_window_amount():
+    """F006: Frames ohne jeden Niederschlag, weit ausserhalb des 60-Min-
+    Vergleichsfensters, duerfen die Menge INNERHALB des Fensters nicht
+    veraendern -- weder nach oben noch nach unten. Ein globaler Median
+    ueber [15,60,60,60] (=60 Min) haette den letzten Nahregen-Frame bis zu
+    dieser (falschen) Kadenz hochgerechnet und window_precip_mm von 3,0 mm
+    auf 6,0 mm verdoppelt (Adversary-Reproduktion, Runde 2).
+
+    Given zwei Nahregen-Frame (+0/+15 Min, 6,0 mm/h) UND dieselbe Serie
+          PLUS drei ferne, trockene Frames (+75/+135/+195 Min, 0,0 mm/h).
+    When get_nowcast() beide Serien direkt verarbeitet.
+    Then bleibt window_precip_mm zwischen beiden Faellen IDENTISCH (Vergleich
+         gegeneinander, nicht gegen eine hart notierte Zahl) UND explizit
+         nicht die verdoppelte Menge.
+    """
+    from services.radar_service import RadarNowcastService
+
+    radar_clean = RadarNowcastService(frame_source=_two_near_frames_f006)
+    radar_poisoned = RadarNowcastService(frame_source=_two_near_frames_with_far_dry_frames_f006)
+
+    result_clean = radar_clean.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+    result_poisoned = radar_poisoned.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+
+    assert result_clean.window_precip_mm == pytest.approx(3.0, abs=0.1), (
+        f"F006 Testkonstruktion: window_precip_mm muss ohne die Fernframes "
+        f"~3,0 mm betragen (war {result_clean.window_precip_mm})."
+    )
+    assert result_poisoned.window_precip_mm == pytest.approx(
+        result_clean.window_precip_mm, abs=0.1
+    ), (
+        f"F006: drei ferne, TROCKENE Frames duerfen window_precip_mm nicht "
+        f"veraendern. Sauber={result_clean.window_precip_mm}, mit "
+        f"Fernframes={result_poisoned.window_precip_mm}."
+    )
+    assert result_poisoned.window_precip_mm != pytest.approx(6.0, abs=0.2), (
+        "F006: die verdoppelte Menge (globale Median-Kadenz von 60 Min) "
+        f"darf nicht auftreten (war {result_poisoned.window_precip_mm})."
+    )
+
+
+def test_f006_far_dry_frames_must_not_trigger_a_real_send():
+    """F006 End-to-End: dieselbe Serie darf ueber den echten Versandpfad
+    (`check_radar_alerts()`) keinen Alarm ausloesen -- die Adversary-
+    Reproduktion zeigte genau das (`count=1` statt `count=0`) mit der
+    globalen Median-Kadenz.
+
+    Given Briefing kuendigt 2,0 mm an (Faktor-Schwelle 4,0 mm) UND die
+          F006-Serie mit den drei fernen, trockenen Frames.
+    When check_radar_alerts() laeuft.
+    Then bleibt die Sperre bestehen -- kein Alarm (window_precip_mm bleibt
+         unter der Faktor-Schwelle).
+    """
+    from services.radar_service import RadarNowcastService
+
+    uid = f"tdd-2020-f006-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    _ensure_real_user_dir(uid)
+    try:
+        trip_id = f"tdd-2020-f006-{uuid.uuid4().hex[:6]}"
+        _save_trip_direct(_make_active_trip(trip_id), uid)
+        briefing_precip = 2.0
+        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={_onset_hour(2): briefing_precip})
+
+        radar_svc = RadarNowcastService(frame_source=_two_near_frames_with_far_dry_frames_f006)
+
+        captured: list = []
+        svc = _new_service(uid, radar_svc, captured)
+        count = svc.check_radar_alerts()
+
+        assert count == 0, (
+            f"F006: drei ferne, trockene Frames duerfen keinen echten Alarm "
+            f"auf einer sonst unter der Faktor-Schwelle bleibenden Menge "
+            f"ausloesen. War count={count}."
+        )
+        assert len(captured) == 0, "F006: kein Versand erwartet."
+    finally:
+        _clean_user(uid)
+
+
+# --------------------------------------------------------------------------
+# F007-Waechter (Fix-Loop 2, Adversary-Runde 2, 2026-08-21): ein einzelner,
+# isolierter Frame darf nicht bis zum Fensterende hochgerechnet werden
+# --------------------------------------------------------------------------
+
+def test_f007_single_isolated_frame_is_bounded_by_max_frame_coverage():
+    """F007: Liefert die Frame-Quelle insgesamt nur EINEN Frame (z. B. nach
+    Drosselung/Teilausfall), darf dieser nicht bis zum 60-Min-Fensterende
+    hochgerechnet werden (das waere ~5,8 mm -- der in Runde 2 gefundene,
+    bislang unbewachte Rueckfall-Bug). Die feste `_MAX_FRAME_COVERAGE`-
+    Obergrenze (15 Min) muss stattdessen greifen.
+
+    Given genau ein Frame im gesamten Horizont (+2 Min, 6,0 mm/h).
+    When get_nowcast() die Serie verarbeitet.
+    Then bleibt window_precip_mm bei ~1,5 mm (15-Min-Deckelung ab +2 Min),
+         NICHT bei ~5,8 mm (Hochrechnung bis zum Fensterende).
+    """
+    from services.radar_service import RadarNowcastService
+
+    radar = RadarNowcastService(frame_source=_single_isolated_frame_f007)
+    result = radar.get_nowcast(LAT, LON, elevation_m=ELEVATION_M)
+
+    assert result.window_precip_mm == pytest.approx(1.5, abs=0.05), (
+        f"F007: ein isolierter Frame muss auf ~1,5 mm gedeckelt sein "
+        f"(15-Min-Obergrenze, war {result.window_precip_mm})."
+    )
+    assert result.window_precip_mm != pytest.approx(5.8, abs=0.3), (
+        f"F007: die Hochrechnung bis zum Fensterende (~5,8 mm) darf nicht "
+        f"mehr auftreten (war {result.window_precip_mm})."
+    )
