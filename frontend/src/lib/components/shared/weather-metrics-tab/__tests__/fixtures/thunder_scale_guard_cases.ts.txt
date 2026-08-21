@@ -1,0 +1,190 @@
+# Fixture-Vorlagen fuer thunderScaleLocalCopyGuard.test.ts (#1480).
+# Kein lauffaehiges Modul -- reine Quelltext-Vorlagen fuer den TS-/Svelte-AST.
+# Liegt bewusst AUSSERHALB der Scanflaeche (Endung .ts.txt, nicht .ts/.svelte).
+#
+# Format: `# === <name> ===` leitet einen Abschnitt ein, der bis zum naechsten
+# Marker (oder Dateiende) reicht.
+
+# === a13-fund ===
+// Regel A, Schwelle 3: mind. drei distinkte Stufen-Woerter.
+export const STUFEN = ['NONE', 'MED', 'HIGH'];
+
+# === a13-kontrolle-alertchannel ===
+// Muster alertChannelState.ts -- fremde Skala, nur 2 der 4 Thunder-Woerter.
+export const CHANNEL_URGENCY = ['LOW', 'MODERATE', 'HIGH'];
+
+# === p14-falsche-position ===
+// Die reale neunte #1474-Stelle: alle vier Stufen da, MED an falscher Position.
+export const ORDER_BROKEN = ['NONE', 'MED', 'HIGH', 'LOW'];
+
+# === p14-korrekte-position ===
+export const ORDER_OK = ['NONE', 'LOW', 'MED', 'HIGH'];
+
+# === p16-matches-injizierte-ordnung ===
+// identisch zu p14-falsche-position, eigener Name fuer den Injektions-Test.
+export const ORDER_INJECTED_MATCH = ['NONE', 'MED', 'LOW', 'HIGH'];
+
+# === p16-matches-echte-ordnung ===
+// identisch zu p14-korrekte-position, eigener Name fuer den Injektions-Test.
+export const ORDER_REAL_MATCH = ['NONE', 'LOW', 'MED', 'HIGH'];
+
+# === p15-nicht-bei-none ===
+// Muster thunderThresholdLevels.test.ts -- startet bewusst NICHT bei NONE/kein.
+export const LEVELS_FROM_LEICHT = ['LOW', 'MED', 'HIGH'];
+
+# === c17-zahlen-schwelle-thunder ===
+// Rekonstruiert aus alertMetricLabels.ts::thunderLevelLabel() (46ff82c2).
+export function thunderLevelLabel(num: number): string {
+	if (num > 20) {
+		return 'HOCH';
+	} else if (num > 0) {
+		return 'MITTEL';
+	}
+	return 'KEINE';
+}
+
+# === c17-kontrolle-windstaerke ===
+// Strukturell identisch, aber ausserhalb des thunder/gewitter-Namensraums.
+export function windSpeedLabel(num: number): string {
+	if (num > 20) {
+		return 'stark';
+	} else if (num > 0) {
+		return 'leicht';
+	}
+	return 'still';
+}
+
+# === c9-innere-func-ohne-vererbten-scope ===
+// AC-9-Pendant: die INNERE Funktion traegt keinen eigenen thunder/gewitter-
+// Namensbezug -- sie darf den Scope der aeusseren NICHT erben.
+export function thunderSummary(werte: number[]): string[] {
+	function formatZahl(num: number): string {
+		if (num > 20) {
+			return 'HOCH';
+		} else if (num > 0) {
+			return 'MITTEL';
+		}
+		return 'KEINE';
+	}
+	return werte.map(formatZahl);
+}
+
+# === c9-innere-func-mit-eigenem-scope ===
+// AC-9-Umkehrprobe: hier traegt die INNERE Funktion den Namensteil selbst --
+// sie wird gemeldet, obwohl die aeussere ausserhalb des Scope liegt.
+export function summary(werte: number[]): string[] {
+	function thunderZahl(num: number): string {
+		if (num > 20) {
+			return 'HOCH';
+		} else if (num > 0) {
+			return 'MITTEL';
+		}
+		return 'KEINE';
+	}
+	return werte.map(thunderZahl);
+}
+
+# === c9-innere-arrow-ohne-vererbten-scope ===
+// AC-9-Pendant, zweite Funktionsform: verschachtelte ARROW-Function ohne
+// eigenen thunder/gewitter-Namensbezug -- erbt den Scope der aeusseren nicht.
+export function thunderSummary(werte: number[]): string[] {
+	const formatZahl = (num: number): string => {
+		if (num > 20) {
+			return 'HOCH';
+		} else if (num > 0) {
+			return 'MITTEL';
+		}
+		return 'KEINE';
+	};
+	return werte.map(formatZahl);
+}
+
+# === c9-innere-arrow-mit-eigenem-scope ===
+// AC-9-Umkehrprobe, Arrow-Form: die innere Arrow-Function traegt den
+// Namensteil selbst und wird gemeldet.
+export function summary(werte: number[]): string[] {
+	const thunderZahl = (num: number): string => {
+		if (num > 20) {
+			return 'HOCH';
+		} else if (num > 0) {
+			return 'MITTEL';
+		}
+		return 'KEINE';
+	};
+	return werte.map(thunderZahl);
+}
+
+# === c9-innere-funcexpr-ohne-vererbten-scope ===
+// AC-9-Pendant, dritte Funktionsform: verschachtelte FUNCTION-EXPRESSION ohne
+// eigenen thunder/gewitter-Namensbezug -- erbt den Scope der aeusseren nicht.
+export function thunderSummary(werte: number[]): string[] {
+	const formatZahl = function (num: number): string {
+		if (num > 20) {
+			return 'HOCH';
+		} else if (num > 0) {
+			return 'MITTEL';
+		}
+		return 'KEINE';
+	};
+	return werte.map(formatZahl);
+}
+
+# === c9-innere-funcexpr-mit-eigenem-scope ===
+// AC-9-Umkehrprobe, Function-Expression-Form: die innere Funktion traegt den
+// Namensteil selbst und wird gemeldet.
+export function summary(werte: number[]): string[] {
+	const thunderZahl = function (num: number): string {
+		if (num > 20) {
+			return 'HOCH';
+		} else if (num > 0) {
+			return 'MITTEL';
+		}
+		return 'KEINE';
+	};
+	return werte.map(thunderZahl);
+}
+
+# === d18-behauptet-und-abweichend ===
+// 1:1 aus der echten Quelle uebernommen
+export const TEST_ORDER = ['NONE', 'MED', 'LOW', 'HIGH'];
+
+# === d18-unbehauptet-gleiche-abweichung ===
+// vereinfachte Testreihenfolge, rein zur Fixture-Lesbarkeit
+export const TEST_ORDER = ['NONE', 'MED', 'LOW', 'HIGH'];
+
+# === d18-mehrzeiliger-kommentar ===
+// eingefroren aus dem heutigen
+// Stand der kanonischen Quelle
+export const TEST_ORDER = ['NONE', 'MED', 'LOW', 'HIGH'];
+
+# === e21-marker-ausreichend ===
+// gz-thunder-scale: bewusst geduldete Kopie fuer eine schmale Rueck-Lookup-Stelle
+export const RANG_GEDULDET = ['NONE', 'LOW', 'MED', 'HIGH'];
+
+# === e21-marker-unzureichend ===
+// gz-thunder-scale: x
+export const RANG_UNGEDULDET = ['NONE', 'LOW', 'MED', 'HIGH'];
+
+# === e21-marker-nur-punkte ===
+// gz-thunder-scale: ...............
+export const RANG_PUNKTE = ['NONE', 'LOW', 'MED', 'HIGH'];
+
+# === e21-marker-nur-striche ===
+// gz-thunder-scale: ---------------
+export const RANG_STRICHE = ['NONE', 'LOW', 'MED', 'HIGH'];
+
+# === e21-marker-nur-wiederholung ===
+// gz-thunder-scale: aaaaaaaaaaaaaaa
+export const RANG_WIEDERHOLUNG = ['NONE', 'LOW', 'MED', 'HIGH'];
+
+# === e21-marker-umlaute ===
+// gz-thunder-scale: Zählt für Rücklauf
+export const RANG_UMLAUTE = ['NONE', 'LOW', 'MED', 'HIGH'];
+
+# === e21-marker-grenze-14 ===
+// gz-thunder-scale: Späte Kopie, Naht.
+export const RANG_GRENZE_14 = ['NONE', 'LOW', 'MED', 'HIGH'];
+
+# === e21-marker-grenze-15 ===
+// gz-thunder-scale: Späte Kopie, Nähte.
+export const RANG_GRENZE_15 = ['NONE', 'LOW', 'MED', 'HIGH'];

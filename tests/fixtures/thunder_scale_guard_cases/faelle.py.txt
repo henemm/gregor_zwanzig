@@ -1,0 +1,334 @@
+# Fixture-Vorlagen fuer tests/tdd/test_thunder_scale_local_copy_guard.py
+# (#1480). Kein lauffaehiges Modul -- reine Quelltext-Vorlagen fuer ast.parse.
+# Liegt bewusst AUSSERHALB der Scanflaeche (Endung .py.txt, nicht .py) --
+# analog zu tests/fixtures/ratchet_cases/faelle.py.txt (#1409).
+#
+# Format: `# === <name> ===` leitet einen Abschnitt ein, der bis zum naechsten
+# Marker (oder Dateiende) reicht. `_fall(name)` in der Testdatei liest daraus.
+
+# === a1-string-dict ===
+# Regel A: String-Dict mit Gewitter-Stufen als String-Konstanten.
+_ANZEIGE = {
+    "NONE": "kein",
+    "LOW": "leicht",
+    "MED": "mittel",
+    "HIGH": "hoch",
+}
+
+# === a1-enum-attribut-dict ===
+# Regel A: Dict mit Enum-Attributketten als Schluessel (ast.Attribute statt
+# ast.Constant) -- die Form, die #1474 als ersten Verstoss hatte.
+_RANG = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === a1-liste ===
+_REIHENFOLGE = [ThunderLevel.NONE, ThunderLevel.LOW, ThunderLevel.MED, ThunderLevel.HIGH]
+
+# === a1-tupel ===
+_STUFEN_TUPEL = (ThunderLevel.NONE, ThunderLevel.LOW, ThunderLevel.MED, ThunderLevel.HIGH)
+
+# === a1-set ===
+_STUFEN_SET = {ThunderLevel.NONE, ThunderLevel.LOW, ThunderLevel.MED, ThunderLevel.HIGH}
+
+# === a2-delegiert-dict ===
+# Muster email/helpers.py::_THUNDER_MAP -- mindestens ein Wert delegiert an
+# die externe Quelle, macht das GANZE Dict zu "liest die Quelle".
+_THUNDER_MAP = {
+    "NONE": "—",
+    "LOW": THUNDER_LABEL_DE["LOW"],
+    "MED": THUNDER_LABEL_DE["MED"],
+    "HIGH": THUNDER_LABEL_DE["HIGH"],
+}
+
+# === a3-low-high-only ===
+# Muster alert_urgency.py -- nur LOW/HIGH, kein MED/NONE-Token.
+_URGENCY_WORDS = {
+    "LOW": "gering",
+    "HIGH": "hoch",
+}
+
+# === a4-zwei-tokens ===
+# Muster alert_preset.py -- 2er-Tupel als Bereichsgrenze, keine 2er-Ausnahme
+# gilt hier (die gibt es nur bei Dicts), aber unter der 3-Token-Schwelle.
+_BEREICH = (ThunderLevel.LOW, ThunderLevel.HIGH)
+
+# === a5-membership-tupel ===
+# Muster outlook.py:229 -- Tupel ausschliesslich rechts von `in`.
+def ist_gewitter(level):
+    return level in (ThunderLevel.LOW, ThunderLevel.MED, ThunderLevel.HIGH)
+
+# === b6-elif-kette ===
+# Muster email/html.py:187-196.
+def gewitter_ampel_farbe(level):
+    if level == ThunderLevel.NONE:
+        return "green"
+    elif level == ThunderLevel.MED:
+        return "yellow"
+    elif level == ThunderLevel.HIGH:
+        return "red"
+    return "grey"
+
+# === b6-separate-if ===
+def gewitter_ampel_farbe_getrennt(level):
+    if level == ThunderLevel.NONE:
+        return "green"
+    if level == ThunderLevel.MED:
+        return "yellow"
+    if level == ThunderLevel.HIGH:
+        return "red"
+    return "grey"
+
+# === b6-boolop ===
+def gewitter_ampel_farbe_boolop(level, quelle):
+    if level == ThunderLevel.NONE and quelle == "primary":
+        return "green"
+    elif level == ThunderLevel.MED or level == ThunderLevel.HIGH:
+        return "red"
+    return "grey"
+
+# === b7-fremde-enum-konstruktoren ===
+# Muster risk_engine.py:126-140 -- Zweige erzeugen nur fremde Enum-Werte.
+def gewitter_risiko(level):
+    if level == ThunderLevel.HIGH:
+        return Risk(level=RiskLevel.HIGH)
+    elif level == ThunderLevel.MED:
+        return Risk(level=RiskLevel.MODERATE)
+    return Risk(level=RiskLevel.LOW)
+
+# === c8-zahlen-schwelle-thunder ===
+# Muster email/html.py:198-203.
+def format_thunder_num(num):
+    if num > 20:
+        return "risk"
+    elif num > 0:
+        return "watch"
+    return "clear"
+
+# === c8-kontrolle-windstaerke ===
+# Muster weather_metrics.format_wind_strength() -- strukturell identisch,
+# aber ausserhalb des thunder/gewitter-Namens-Scope.
+def format_wind_strength(num):
+    if num > 20:
+        return "stark"
+    elif num > 0:
+        return "leicht"
+    return "still"
+
+# === c9-innere-func-ohne-vererbten-scope ===
+def gewitter_zusammenfassung(werte):
+    def format_zahl(num):
+        if num > 20:
+            return "risk"
+        elif num > 0:
+            return "watch"
+        return "clear"
+    return [format_zahl(w) for w in werte]
+
+# === c9-innere-func-mit-eigenem-scope ===
+def zusammenfassung(werte):
+    def gewitter_zahl(num):
+        if num > 20:
+            return "risk"
+        elif num > 0:
+            return "watch"
+        return "clear"
+    return [gewitter_zahl(w) for w in werte]
+
+# === b10-match-case-fund ===
+def gewitter_kurzform(level):
+    match level:
+        case ThunderLevel.NONE:
+            return "kein"
+        case ThunderLevel.MED:
+            return "mittel"
+        case ThunderLevel.HIGH:
+            return "hoch"
+        case _:
+            return "?"
+
+# === b10-match-case-fremde-enum ===
+def gewitter_risiko_match(level):
+    match level:
+        case ThunderLevel.HIGH:
+            return Risk(level=RiskLevel.HIGH)
+        case ThunderLevel.MED:
+            return Risk(level=RiskLevel.MODERATE)
+        case _:
+            return Risk(level=RiskLevel.LOW)
+
+# === real1-num-dict ===
+# #1474 Verstoss 1 (trip_report_scheduler.py:1536).
+def _stufen_index():
+    _NUM = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+    return _NUM
+
+# === real2-ord-if-elif ===
+# #1474 Verstoss 2 (trip_report_scheduler.py:1671 + 1705).
+def gewitter_ordnungszahl(level):
+    if level == ThunderLevel.NONE:
+        rang = 0
+    elif level == ThunderLevel.MED:
+        rang = 1
+    elif level == ThunderLevel.HIGH:
+        rang = 2
+    return rang
+
+# === real3-liste-vorkommen-a ===
+# #1474 Verstoss 3 (trip_command_processor.py:810).
+_KURZ_REIHENFOLGE_A = [ThunderLevel.NONE, ThunderLevel.MED, ThunderLevel.HIGH]
+
+# === real4-liste-vorkommen-b ===
+# #1474 Verstoss 4 (trip_command_processor.py:904) -- unabhaengige zweite
+# Kopie derselben Form an anderer Stelle.
+_KURZ_REIHENFOLGE_B = [ThunderLevel.NONE, ThunderLevel.MED, ThunderLevel.HIGH]
+
+# === real5-str-membership-if-elif ===
+# #1474 Verstoss 5 (trip_command_processor.py:680).
+def gewitter_kurzform_aus_text(v):
+    s = str(v)
+    if s in ("MED", "ThunderLevel.MED"):
+        return "mittel"
+    elif s in ("HIGH", "ThunderLevel.HIGH"):
+        return "hoch"
+    else:
+        return "-"
+
+# === real6-thunder-label-dict ===
+# #1474 Verstoss 6 (trip_command_processor.py:134).
+_THUNDER_LABEL = {
+    ThunderLevel.NONE: "kein",
+    ThunderLevel.LOW: "leicht",
+    ThunderLevel.MED: "mäßig",
+    ThunderLevel.HIGH: "hoch",
+}
+
+# === real7-map-emoji-dict ===
+# #1474 Verstoss 7 (trip_command_processor.py:168-169) -- stellvertretend fuer
+# das Paar _MAP_EMOJI/_MAP_PLAIN, hier auf ein Dict verdichtet.
+_MAP_EMOJI = {
+    ThunderLevel.NONE: "⚪",
+    ThunderLevel.LOW: "\U0001f7e1",
+    ThunderLevel.MED: "\U0001f7e0",
+    ThunderLevel.HIGH: "\U0001f534",
+}
+
+# === real8-level-rank-dict ===
+# #1474 Verstoss 8 (comparison_engine.py:280).
+level_rank = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === d18-behauptet-und-abweichend ===
+# Regel D: Kommentar behauptet Paritaet, Inhalt weicht ab (MED/LOW vertauscht).
+# 1:1 aus der echten Quelle uebernommen
+_TEST_ORDER = ["NONE", "MED", "LOW", "HIGH"]
+
+# === d18-unbehauptet-gleiche-abweichung ===
+# dieselbe Abweichung, aber OHNE Paritaetsbehauptung im Kommentar.
+_TEST_ORDER = ["NONE", "MED", "LOW", "HIGH"]
+
+# === d18-mehrzeiliger-kommentar ===
+# eingefroren aus dem heutigen
+# Stand der kanonischen Quelle
+_TEST_ORDER = ["NONE", "MED", "LOW", "HIGH"]
+
+# === d18-phrase-reisst-mitten-im-wortlaut ===
+# eingefroren
+# aus dem heutigen Stand der kanonischen Quelle
+_TEST_ORDER = ["NONE", "MED", "LOW", "HIGH"]
+
+# === e21-marker-ausreichend ===
+# gz-thunder-scale: bewusst geduldete Kopie fuer die schmale Rueck-Lookup-Stelle
+_RANG_GEDULDET = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-unzureichend ===
+# gz-thunder-scale: x
+_RANG_UNGEDULDET = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-nur-punkte ===
+# gz-thunder-scale: ...............
+_RANG_PUNKTE = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-nur-striche ===
+# gz-thunder-scale: ---------------
+_RANG_STRICHE = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-nur-wiederholung ===
+# gz-thunder-scale: aaaaaaaaaaaaaaa
+_RANG_WIEDERHOLUNG = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-umlaute ===
+# gz-thunder-scale: Zählt für Rücklauf
+_RANG_UMLAUTE = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-grenze-14 ===
+# gz-thunder-scale: Späte Kopie, Naht.
+_RANG_GRENZE_14 = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === e21-marker-grenze-15 ===
+# gz-thunder-scale: Späte Kopie, Nähte.
+_RANG_GRENZE_15 = {
+    ThunderLevel.NONE: 0,
+    ThunderLevel.LOW: 1,
+    ThunderLevel.MED: 2,
+    ThunderLevel.HIGH: 3,
+}
+
+# === f24-risklevel-liste ===
+# AC-24: Kern mit RiskLevel-Parametern statt ThunderLevel.
+_RISK_REIHENFOLGE = [RiskLevel.LOW, RiskLevel.MODERATE, RiskLevel.HIGH]
+
+# === f24-risklevel-zahlen-schwelle ===
+# AC-24 fuer REGEL C: derselbe Kern, aber ueber die Namens-Scope-Kette. Der
+# Funktionsname traegt "risiko" (aus name_scope_tokens der RiskLevel-Spec) und
+# ausdruecklich KEIN thunder/gewitter -- mit Gewitter-Parametern muss dieselbe
+# Vorlage still bleiben. Die Zweig-Woerter sind bewusst weder Thunder- noch
+# RiskLevel-Token, damit allein Regel C und nicht Regel A/B antwortet.
+def _risiko_stufe_aus_zahl(wert):
+    if wert > 8:
+        return "hoch"
+    elif wert > 4:
+        return "mittel"
+    return "gering"
