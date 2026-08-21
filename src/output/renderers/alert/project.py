@@ -260,7 +260,10 @@ def to_corridor_events(hits, segments, *, tz) -> tuple[CorridorEvent, ...]:
                 ),
                 km_from=match.start_point.distance_from_start_km,
                 km_to=match.end_point.distance_from_start_km,
-                # Issue #2036: Herkunft der Spanne reist mit.
+                # Issue #2036: Kennung der TATSAECHLICH aufgeloesten Etappe
+                # (Muster `to_alert_message`) und Herkunft der Spanne reisen
+                # mit -- ohne beides kann der Renderer nur km zeigen (F001).
+                segment_id=normalize_segment_id(match.segment_id),
                 km_measured=bool(getattr(match, "distance_measured", False)),
             ))
         except Exception as e:

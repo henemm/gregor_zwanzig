@@ -212,3 +212,174 @@ def test_ac13_unvermessenes_segment_zeigt_nie_die_luftlinien_kilometer():
             f"Gerenderter Alarmtext zeigt eine km-Zahl trotz km_measured=False: "
             f"{rendered!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# F001 (Adversary-Runde 1) — der VIERTE Event-Typ: Schwellen-/Korridor-Alarm
+#
+# `CorridorEvent` traegt `km_measured` seit #2036, aber kein Corridor-Renderer
+# hat das Feld je gelesen: `_corridor_when`/`_corridor_line`/
+# `_render_sms_corridor_only` bauten ihre Ortsangabe direkt aus
+# `ce.km_from`/`ce.km_to`, unter Umgehung von `segments.format_alert_location`.
+# Ergebnis war eine erfundene Luftlinien-km-Angabe in Betreff, E-Mail,
+# Telegram UND SMS (AC-13-Verstoss fuer einen ganzen Event-Typ, AC-15 fuer
+# die Wirksamkeit des Flags).
+# ---------------------------------------------------------------------------
+
+def _corridor_message(km_from=0.0, km_to=6.87, km_measured=False,
+                       segment_id="3", location_label=None):
+    from output.renderers.alert.model import AlertMessage, CorridorEvent
+
+    ce = CorridorEvent(
+        metric_id="gust", value=95.0, bound=80.0, direction="above",
+        occurred_at="11:00", km_from=km_from, km_to=km_to,
+        location_label=location_label, km_measured=km_measured,
+        segment_id=segment_id,
+    )
+    return AlertMessage(
+        trip_short="KHW 403", stand_at="10:00", events=(), source=None,
+        corridor_events=(ce,),
+    )
+
+
+def test_ac13_korridor_alarm_zeigt_nie_die_luftlinien_kilometer():
+    """AC-13 (Korridor-Zweig): Given ein Schwellen-Treffer auf einer
+    UNVERMESSENEN Etappe (`km_measured=False`) / When Betreff, E-Mail,
+    Telegram und SMS gerendert werden / Then erscheint an KEINER dieser
+    vier Stellen eine km-Zahl, sondern die Segment-Sprache."""
+    from output.renderers.alert.render import (
+        render_email, render_sms, render_subject, render_telegram,
+    )
+
+    msg = _corridor_message(km_from=0.0, km_to=6.87, km_measured=False,
+                             segment_id="3")
+
+    subject = render_subject(msg)
+    telegram = render_telegram(msg)
+    sms = render_sms(msg)
+    _html, plain = render_email(msg)
+
+    for name, rendered in (("Betreff", subject), ("Telegram", telegram),
+                            ("SMS", sms), ("E-Mail", plain)):
+        assert not re.search(r"km\s*\d", rendered), (
+            f"{name} zeigt eine km-Zahl trotz km_measured=False "
+            f"(Luftlinie als Ortsangabe): {rendered!r}"
+        )
+    assert "Segment 3" in subject, f"Betreff nennt die Etappe nicht: {subject!r}"
+    assert "Seg 3" in sms, f"SMS nennt die Etappe nicht: {sms!r}"
+
+
+def test_ac1_korridor_alarm_zeigt_gemessene_km_spanne():
+    """AC-1/AC-15 (Korridor-Zweig): Given ein Schwellen-Treffer auf einer
+    VERMESSENEN Etappe / When dieselben vier Renderer laufen / Then zeigen
+    sie 'km 12-20' -- das Flag wirkt dort, wo die Ortsangabe entsteht."""
+    from output.renderers.alert.render import (
+        render_email, render_sms, render_subject, render_telegram,
+    )
+
+    msg = _corridor_message(km_from=12.31, km_to=20.0, km_measured=True,
+                             segment_id="3")
+
+    subject = render_subject(msg)
+    telegram = render_telegram(msg)
+    sms = render_sms(msg)
+    _html, plain = render_email(msg)
+
+    for name, rendered in (("Betreff", subject), ("Telegram", telegram),
+                            ("SMS", sms), ("E-Mail", plain)):
+        assert "km 12-20" in rendered, (
+            f"{name} zeigt die gemessene Spanne nicht: {rendered!r}"
+        )
+
+
+def test_ac15_korridor_projektion_traegt_die_segmentkennung():
+    """AC-15 (Verdrahtung): `to_corridor_events` muss die Kennung des
+    TATSAECHLICH aufgeloesten Segments mitgeben -- ohne sie kann der
+    Renderer bei einer unvermessenen Etappe gar keinen Ort nennen und
+    faellt zwangslaeufig auf die Luftlinien-km zurueck (F001)."""
+    from datetime import datetime, timezone
+
+    from app.models import GPXPoint, TripSegment
+    from output.renderers.alert.project import to_corridor_events
+    from services.corridor_threshold import CorridorHit
+
+    utc = timezone.utc
+    seg = TripSegment(
+        segment_id="3",
+        start_point=GPXPoint(lat=46.6, lon=12.9, elevation_m=1900.0,
+                              distance_from_start_km=0.0),
+        end_point=GPXPoint(lat=46.6, lon=12.9, elevation_m=1900.0,
+                            distance_from_start_km=6.87),
+        start_time=datetime(2026, 7, 1, 6, 0, tzinfo=utc),
+        end_time=datetime(2026, 7, 1, 8, 0, tzinfo=utc),
+        duration_hours=2.0, distance_km=6.87, ascent_m=200.0, descent_m=50.0,
+    )
+    hit = CorridorHit(
+        metric="wind_gust", value=95.0, bound=80.0, direction="above",
+        segment_id="3", occurred_at=datetime(2026, 7, 1, 14, 0, tzinfo=utc),
+    )
+    events = to_corridor_events([hit], [seg], tz=timezone.utc)
+
+    assert len(events) == 1, f"Erwartete ein CorridorEvent: {events!r}"
+    assert getattr(events[0], "segment_id", None) == "3", (
+        "CorridorEvent traegt die Segment-Kennung nicht: "
+        f"{getattr(events[0], 'segment_id', None)!r}"
+    )
+
+
+def test_ortsangabe_ohne_segmentkennung_ist_ueber_alle_event_typen_gleich():
+    """Teilungs-Invariante an der GRENZE der neuen Aufloesung (#1744 AC-7 +
+    #2036 AC-13, Adversary-Runde 1 Rueckfrage A).
+
+    Traegt ein Ereignis KEINE verwertbare Segment-Kennung und ist die Spanne
+    NICHT gemessen, bleibt als Ortsangabe nur die km-Spanne uebrig -- die
+    bewusste Entscheidung aus #1744 AC-7 ("ein Alarm ohne Segment-Kennung
+    muss weiterhin einen Ort nennen und versendet werden"). Dieser Test
+    schreibt nicht fest, dass das *richtig* ist, sondern dass es fuer alle
+    Event-Typen GLEICH ist: der Korridor-Zweig darf nach der F001-Korrektur
+    nicht heimlich wieder ausscheren, und eine spaetere Aenderung dieser
+    Entscheidung muss alle Typen zusammen treffen."""
+    from output.renderers.alert.model import (
+        AlertEvent, AlertMessage, CorridorEvent, OnsetShiftEvent,
+    )
+    from output.renderers.alert.render import render_subject
+    from output.renderers.alert.segments import format_alert_location
+
+    km_from, km_to = 0.0, 6.87
+    erwartet = format_alert_location(None, [None], km_from, km_to,
+                                     km_measured=False)
+
+    alert = AlertEvent(
+        metric_id="gust", value_from=30.0, value_to=95.0, threshold=20.0,
+        cmp="über", occurred_at="11:00", km_from=km_from, km_to=km_to,
+        segment_id=None, km_measured=False,
+    )
+    shift = OnsetShiftEvent(
+        metric_id="thunder", from_time="13:00", to_time="11:00",
+        shift_text="2 h früher", km_from=km_from, km_to=km_to,
+        segment_id=None, km_measured=False,
+    )
+    corridor = CorridorEvent(
+        metric_id="gust", value=95.0, bound=80.0, direction="above",
+        occurred_at="11:00", km_from=km_from, km_to=km_to,
+        segment_id=None, km_measured=False,
+    )
+
+    betreffe = {
+        "AlertEvent": render_subject(AlertMessage(
+            trip_short="KHW 403", stand_at="10:00", events=(alert,), source=None,
+        )),
+        "OnsetShiftEvent": render_subject(AlertMessage(
+            trip_short="KHW 403", stand_at="10:00", events=(), source=None,
+            onset_shift_events=(shift,),
+        )),
+        "CorridorEvent": render_subject(AlertMessage(
+            trip_short="KHW 403", stand_at="10:00", events=(), source=None,
+            corridor_events=(corridor,),
+        )),
+    }
+    for typ, betreff in betreffe.items():
+        assert erwartet in betreff, (
+            f"{typ} weicht von der gemeinsamen Aufloesung {erwartet!r} ab: "
+            f"{betreff!r}"
+        )

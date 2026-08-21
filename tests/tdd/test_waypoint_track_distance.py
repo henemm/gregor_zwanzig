@@ -137,9 +137,21 @@ def test_ac9_kilometerzaehlung_beginnt_je_etappe_neu_bei_null():
     Die Waypoint-Distanzen der dritten Etappe sind bewusst NICHT bei 0
     verankert (40.0 statt 0.0) -- als kaeme die Messung aus einer
     durchlaufenden Gesamt-GPX ueber alle Etappen. `convert_trip_to_segments`
-    muss trotzdem auf 0 normieren."""
+    muss trotzdem auf 0 normieren.
+
+    Adversary-Runde 1 (F003): die urspruenglichen Koordinaten verletzten
+    selbst die Luftlinien-Plausibilitaet (G1->G2 mass 4,047 km Luftlinie bei
+    nur 4,0 km gemessener Spanne) -- die Etappe galt als UNVERMESSEN und der
+    Test bestand allein ueber den Luftlinien-Fallback, der auch VOR #2036
+    schon je Aufruf bei 0 begann. Die Normierung (`base = values[0]`) wurde
+    nie erreicht. Die Koordinaten liegen jetzt so, dass jede Teilstrecke
+    deutlich unter ihrer gemessenen Spanne bleibt (2,698 km bei 4,0 km bzw.
+    4,047 km bei 7,0 km); die Zwischen-Assertion unten haelt fest, dass der
+    beabsichtigte Zweig tatsaechlich laeuft."""
     from app.trip import Trip
-    from services.trip_segments import convert_trip_to_segments
+    from services.trip_segments import (
+        convert_trip_to_segments, stage_measured_distances,
+    )
 
     day1 = _stage("T1", date(2026, 8, 1), [
         _waypoint("G1", 0.0), _waypoint("G2", 3.0, lat=46.61, lon=12.91),
@@ -148,14 +160,30 @@ def test_ac9_kilometerzaehlung_beginnt_je_etappe_neu_bei_null():
         _waypoint("G1", 3.0), _waypoint("G2", 8.0, lat=46.62, lon=12.92),
     ])
     day3 = _stage("T3", date(2026, 8, 3), [
-        _waypoint("G1", 40.0), _waypoint("G2", 44.0, lat=46.63, lon=12.93),
-        _waypoint("G3", 51.0, lat=46.64, lon=12.94),
+        _waypoint("G1", 40.0, lat=46.60, lon=12.90),
+        _waypoint("G2", 44.0, lat=46.62, lon=12.92),
+        _waypoint("G3", 51.0, lat=46.65, lon=12.95),
     ])
     trip = Trip(id="tdd-2036-ac9", name="AC9", stages=[day1, day2, day3])
+
+    # Zwischen-Assertion (F003): ohne sie kann der Test unbemerkt ueber den
+    # Luftlinien-Fallback bestehen, statt die Normierung zu pruefen.
+    measured = stage_measured_distances(day3.waypoints)
+    assert measured is not None, (
+        "Etappe 3 gilt als unvermessen -- der Test wuerde die Normierung "
+        "gar nicht erreichen (Adversary F003)"
+    )
+    assert measured == [0.0, 4.0, 11.0], (
+        f"Normierte Distanzen falsch: {measured}"
+    )
 
     segments = convert_trip_to_segments(trip, date(2026, 8, 3))
     assert segments, "Segmentliste fuer Etappe 3 leer"
     first = segments[0]
+    assert first.distance_measured is True, (
+        "Etappe 3 muss vermessen sein, sonst prueft der Test den "
+        "Luftlinien-Fallback statt der Normierung (Adversary F003)"
+    )
     assert first.start_point.distance_from_start_km == 0.0, (
         f"Etappe 3 startet nicht bei 0 km, sondern bei "
         f"{first.start_point.distance_from_start_km} (Tour-Gesamtdistanz "
@@ -193,6 +221,41 @@ def test_ac8_nicht_monotone_distanzfolge_macht_die_ganze_etappe_unvermessen():
         assert measured is not True, (
             f"Segment {seg.segment_id} gilt trotz nicht-monotoner Etappen-"
             f"Distanzfolge als vermessen (distance_measured={measured!r})"
+        )
+
+
+def test_ac8_rueckwaertslaufende_distanz_bei_gleicher_koordinate():
+    """AC-8 (Monotonie ISOLIERT, Adversary-Runde 1 zu M3): die beiden anderen
+    AC-8-Faelle verletzen IMMER gleichzeitig auch die Luftlinien-Untergrenze
+    -- die Monotonie-Pruefung allein war dadurch von keinem Test bewacht
+    (Mutation "span <= 0 entfernt" blieb gruen).
+
+    Hier liegen beide Wegpunkte auf DERSELBEN Koordinate: die Luftlinie ist
+    0,0 km, die Untergrenze kann also gar nicht greifen. Faellt die Etappe
+    trotzdem durch, dann ausschliesslich wegen der nicht steigenden
+    Distanzfolge."""
+    from app.trip import Trip
+    from services.trip_segments import (
+        convert_trip_to_segments, stage_measured_distances,
+    )
+    from utils.geo import haversine_km
+
+    assert haversine_km(46.6, 12.9, 46.6, 12.9) == 0.0, "Testaufbau kaputt"
+
+    stage = _stage("T1", date(2026, 8, 9), [
+        _waypoint("G1", 5.0, lat=46.6, lon=12.9),
+        _waypoint("G2", 5.0, lat=46.6, lon=12.9),  # Stillstand -> Verstoss
+    ])
+    assert stage_measured_distances(stage.waypoints) is None, (
+        "Nicht steigende Distanzfolge gilt als vermessen, obwohl die "
+        "Luftlinien-Untergrenze hier gar nicht greifen kann"
+    )
+
+    trip = Trip(id="tdd-2036-ac8c", name="AC8c", stages=[stage])
+    segments = convert_trip_to_segments(trip, date(2026, 8, 9))
+    for seg in segments:
+        assert getattr(seg, "distance_measured", None) is not True, (
+            f"Segment {seg.segment_id} gilt trotz Stillstands als vermessen"
         )
 
 

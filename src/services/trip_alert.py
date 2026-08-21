@@ -1140,6 +1140,34 @@ class TripAlertService:
             return None
         return None
 
+    def _resolve_alert_segment(self, trip: "Trip", now_utc: datetime, today: date):
+        """Segment-Auswahl des ALARM-Pfads -- mit vorgeschalteter, einmaliger
+        Nachruestung der gemessenen Wegstrecke (Issue #2036 AC-7).
+
+        AC-7 nennt als Ausloeser ausdruecklich die ERSTE Aufloesung der
+        Alarm-Ortsangabe. Der Briefing-Trichter
+        (`trip_report_scheduler._convert_trip_to_segments`) ruestet ebenfalls
+        nach und bleibt unveraendert bestehen -- er greift aber nicht bei
+        einem Trip mit abgeschaltetem Briefing-Versand und auch nicht bei
+        einem Nowcast-Alarm VOR dem ersten Briefing des Tages. Genau dort
+        bliebe die Etappe sonst dauerhaft auf "Segment N".
+
+        Kein Doppelschreiben: `backfill_stage_distances` kehrt sofort um,
+        sobald alle Wegpunkte der Etappe eine Distanz tragen -- der zweite
+        Lauf fasst die Trip-Datei nicht mehr an.
+
+        GRENZE: nachgeruestet wird die Etappe von `today`. Faellt die
+        Aufloesung auf die Vortagsetappe zurueck (Stufe 2 in
+        `resolve_current_segment`, #1667 S3), bleibt diese unvermessen bis
+        ihr eigener Tag an der Reihe war -- kein zweiter GPX-Durchlauf pro
+        Alarmzyklus, der Lauf hat eine Zeitobergrenze.
+        """
+        from services.track_resolution import backfill_stage_distances
+        from services.trip_segments import resolve_current_segment
+
+        trip = backfill_stage_distances(trip, self._user_id, today)
+        return resolve_current_segment(trip, now_utc, today)
+
     def check_radar_alerts(self) -> int:
         """
         Check all trips for radar-based alerts using segment-aware logic (Issue #822).
@@ -1156,7 +1184,6 @@ class TripAlertService:
         Returns the number of radar alerts triggered.
         """
         from app.loader import load_all_trips
-        from services.trip_segments import resolve_current_segment
 
         now_utc = datetime.now(timezone.utc)
         sent = 0
@@ -1173,7 +1200,7 @@ class TripAlertService:
             # nicht (`get_stage_for_date` loest strikt per `==` auf).
             # `segment_date` ist das Datum, dem das gewaehlte Segment
             # ENTSTAMMT — nicht zwingend `today`, s. Schnappschuss unten.
-            _resolved = resolve_current_segment(trip, now_utc, today)
+            _resolved = self._resolve_alert_segment(trip, now_utc, today)
             if _resolved is None:
                 # Keine Etappe an beiden Tagen oder alle Segmente zeitlich
                 # vorbei → kein Alert (Option Y der Spec)
