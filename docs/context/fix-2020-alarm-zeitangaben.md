@@ -378,3 +378,45 @@ Neubau. Die #2046-Session legt das Folgeticket an, sobald die Spec freigegeben i
 den Nowcast-Vorlauf, nicht den Abweichungsalarm; **kein Ziel dieser Scheibe**. Wenn die
 Zeitangaben-Tests ohnehin eine Referenzzeit durchreichen, ist ein variierender Wert dort
 billig mitzunehmen — sonst liegen lassen und in #1196 buchen.
+
+### Bestandsaufnahme der Zeit-Notationen (2026-08-21, Explore-Durchgang)
+
+**Die Frage nach der Tagesbezug-Schreibweise ist durch den Bestand entschieden — beide
+zuvor erwogenen Varianten waren Neuerfindungen.**
+
+| Kanal | Bestehende Notation für „Uhrzeit an einem anderen Tag" | Fundort |
+|---|---|---|
+| E-Mail + Telegram, **im Abweichungsalarm selbst** | `gestern 18:03 Uhr` / `vor 2 Tagen 18:03 Uhr` | `format_reference_at`, `src/utils/timezone.py:154-169`, gerendert in `render.py:784-786/845-847/949-951` als „Stand: heute … · verglichen mit gestern …" |
+| E-Mail + Telegram, Radar-Onset | `morgen 00:23` (nur „morgen", kein Wochentag) | `_onset_time_label`, `render.py:367-374` |
+| SMS/Premium-SMS, amtliche Warnung | Wochentagskürzel **klebt** an der Stunde, `:00` entfällt: `Do12-22`, `Fr22-Sa03`; am heutigen Tag entfällt das Kürzel ersatzlos (#1948 S5) | `_tag_time`/`_tag_hour`, `official_alerts.py:1896-1943` |
+| SMS/Premium-SMS, Radar-Onset | Zahlensuffix `9:05+1` | `_sms_onset_time`, `render.py:537-550` |
+
+**Beschluss für diese Scheibe:** Langform übernimmt `gestern HH:MM` (Hausnotation
+desselben Alarms), Kurzform übernimmt das klebende Wochentagskürzel (`R7@Do15`).
+Keine dritte Schreibweise.
+
+**Gegen das Zahlensuffix in der Kurzform sprechen drei belegte Gründe:**
+1. `-` ist in der Kurzform bereits dreifach belegt — Wert gefallen (`-R7`, `render.py:987`),
+   Bereichstrenner (`12-22`), km-Spanne (`km8-8`, `render.py:1006`).
+2. Die Fensterform der amtlichen Warnung ist formgleich: `_tag_hour` setzt Minuten, sobald
+   sie nicht auf `:00` liegen ⇒ `15:20-17` neben `17:00-1`.
+3. `+1` deckt strukturell nur die Zukunft ab (`f"{base}+{day_offset}"`, `render.py:550`
+   ⇒ aus `-1` würde `17:00+-1`).
+
+**Restfrage für die AC-Freigabe:** Zieht `_sms_onset_time` (`+1`, Radar-Onset) auf das
+Wochentagskürzel nach? Sonst bleiben zwei Schreibweisen im selben Kanal. Umsetzung wäre
+ein Folgeticket der #2046-Session, nicht Teil dieser Scheibe.
+
+**Weitere Funde, die den Zuschnitt betreffen:**
+- `OnsetShiftEvent` (`model.py:66-85`) hat **kein** Tagesbezug-Feld; `from_time`/`to_time`
+  sind rohe `HH:MM`-Strings. `AlertEvent.occurred_at` (`model.py:98`) ebenso. Beide
+  brauchen das additive Feld.
+- **Kein Leser von `onset_day_offset` außer** `_onset_time_label` und `_sms_onset_time`.
+- Die Kurzform des Δ-Zweigs wirft Minuten **weg**: `@{occurred_at[:2]}` (`render.py:990`),
+  ebenso der Korridor (`render.py:263`). Der Tagesbezug muss dort vor die **Stunde**.
+- **Für „das ist die stärkste Stunde" gibt es im Bestand kein Wort.** Etablierte
+  Bedeutungs-Marker sind nur `ab` (Beginn), `-Beginn`, `jetzt`, `Stand:`,
+  `verglichen mit`, `Gültig:`. Der Trip-Report unterscheidet Erstüberschreitung und Spitze
+  rein über die Klammerstellung (`R@14(R@17)`, `output/tokens/metrics.py:65-67`) — eine
+  Positions-Konvention ohne Wort. AC-3 muss also ein Wort **neu** einführen; dafür gibt es
+  keine Vorlage, wohl aber die Nachbarwörter, an denen es sich ausrichten muss.
