@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from app.metric_catalog import (
     _METRICS, ONSET_AGGREGATION, get_cmp, metric_and_aggregation_for_field,
 )
-from utils.timezone import local_fmt, resolve_location_tz
+from utils.timezone import day_offset, local_fmt, resolve_location_tz
 from .model import (
     AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, OnsetShiftEvent,
 )
@@ -389,14 +389,17 @@ def to_multi_location_onset_alert_message(
     now = datetime.now(timezone.utc)
     events: list[OnsetEvent] = []
     for location_name, loc, nc in valid_groups:
-        onset_time = local_fmt(
-            now + timedelta(minutes=nc.onset_minutes), _tz_for_location(loc, tz),
-        )
+        # Issue #2009: Zone JE ORT aufloesen und den Tagesbezug in DERSELBEN
+        # Zone bilden — ein Buendel kann Orte in verschiedenen Zonen tragen,
+        # eine gemeinsame Zone waere fuer alle bis auf einen still falsch.
+        loc_tz = _tz_for_location(loc, tz)
+        onset_dt = now + timedelta(minutes=nc.onset_minutes)
         events.append(OnsetEvent(
-            onset_minutes=nc.onset_minutes, onset_time=onset_time,
+            onset_minutes=nc.onset_minutes, onset_time=local_fmt(onset_dt, loc_tz),
             km_from=0.0, km_to=0.0, is_convective=nc.is_convective,
             intensity_label=nc.intensity_label, source_label=nc.source,
             location_label=location_name if multi else None,
+            onset_day_offset=day_offset(now, onset_dt, loc_tz),
         ))
     trip_short = (
         ", ".join(name for name, _loc, _nc in valid_groups)

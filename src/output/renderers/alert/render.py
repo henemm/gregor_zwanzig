@@ -300,6 +300,16 @@ def _distinct_source_labels(msg: AlertMessage) -> str:
     return ", ".join(seen)
 
 
+def _onset_time_label(e: OnsetEvent) -> str:
+    """Issue #2009: eindeutiger Klartext-Tagesbezug fuer den Onset-Zeitpunkt.
+
+    `onset_time` ist reines "HH:MM" ohne Datum -- bei einem Onset, der ueber
+    Mitternacht rutscht, ist "00:23" sonst mehrdeutig (heute Nacht oder in
+    ueber 23 Stunden?). Additiv: bei `onset_day_offset == 0` (Normalfall)
+    byte-identisch zu `e.onset_time`."""
+    return f"morgen {e.onset_time}" if e.onset_day_offset else e.onset_time
+
+
 def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
     """Bündel-Zweig (Issue #1041 Slice 1a): je Ort eine Zeile mit Onset-Zeit
     und Intensität (Muster `loc_prefix`, render_email:328-333).
@@ -313,7 +323,7 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
         (
             f"{e.location_label} · {'Gewitter/Hagel' if e.is_convective else 'Regen'} "
             f"in {e.onset_minutes} Min",
-            f"ab {e.onset_time} · {e.intensity_label}",
+            f"ab {_onset_time_label(e)} · {e.intensity_label}",
         )
         for e in msg.events
     ]
@@ -368,7 +378,7 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
     km = _km_str_onset(e)
 
     data_rows = [
-        ("Wo & wann", f"{km} · ab {e.onset_time}"),
+        ("Wo & wann", f"{km} · ab {_onset_time_label(e)}"),
         ("Intensität", e.intensity_label),
         ("Quelle", e.source_label),
     ]
@@ -416,20 +426,24 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
     label = "Gewitter" if e.is_convective else "Regen"
     km = _km_str_onset(e)
     first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} in {e.onset_minutes} Min')}</b>"
-    second = f"{e.onset_time} · {e.intensity_label} · {e.source_label}"
+    second = f"{_onset_time_label(e)} · {e.intensity_label} · {e.source_label}"
     return "\n".join([first, second])
 
 
-def _sms_onset_time(onset_time: str) -> str:
+def _sms_onset_time(onset_time: str, day_offset: int = 0) -> str:
     """Zeitpunkt-Darstellung der Kurznachricht (Issue #1948 S4, AC-11): die
     Stunde OHNE fuehrende Null (`09:05` -> `9:05`, Zeichenbudget), die Minuten
     bleiben zweistellig. Gilt AUSSCHLIESSLICH hier -- E-Mail, Telegram und
     Betreff lesen `e.onset_time` unveraendert, und das Feld selbst wird nicht
-    angefasst."""
+    angefasst.
+
+    Issue #2009: additiver Tages-Suffix (`+1`) bei Mitternachts-Ueberlauf --
+    zeichensparender als der Klartext-Zusatz von E-Mail/Telegram
+    (`_onset_time_label`), GSM-7-vertraeglich (nur Ziffern/`+`). Bei
+    `day_offset == 0` (Normalfall) byte-identisch zum Bestandsverhalten."""
     hour, sep, rest = onset_time.partition(":")
-    if not sep:
-        return onset_time
-    return f"{hour.lstrip('0') or '0'}:{rest}"
+    base = onset_time if not sep else f"{hour.lstrip('0') or '0'}:{rest}"
+    return f"{base}+{day_offset}" if day_offset else base
 
 
 def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
@@ -452,7 +466,7 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     ihn mit (AC-10)."""
     e = msg.events[0]
     kuerzel = "TH" if e.is_convective else "R"
-    token = f"{kuerzel}@{_sms_onset_time(e.onset_time)}"
+    token = f"{kuerzel}@{_sms_onset_time(e.onset_time, e.onset_day_offset)}"
     if getattr(e, "location_label", None):
         head = _ascii_alert_location(e.location_label)
     elif msg.source == COMPARE_RADAR_SOURCE:

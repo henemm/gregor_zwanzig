@@ -40,7 +40,9 @@ from services.throttle_store import ThrottleStore
 from services.trip_day import anchor_tz, trip_local_today
 from services.user_tier import premium_sms_allowed, sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
-from utils.timezone import format_reference_at, local_fmt, to_utc, tz_for_coords
+from utils.timezone import (
+    day_offset, format_reference_at, local_fmt, to_utc, tz_for_coords,
+)
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -1269,7 +1271,46 @@ class TripAlertService:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
                 continue
 
-            if not radar_alert_due(result, threshold_min=20):
+            # Issue #2009: EINE geteilte Schwelle statt zweier Literale
+            # (ADR-0021). Bewusst ueber die Modul-Referenz gelesen, nicht als
+            # `from ... import RADAR_ONSET_THRESHOLD_MIN` gebunden — eine
+            # gebundene Kopie waere eine stille Kopie und wuerde beim
+            # Nachziehen der Quelle auseinanderlaufen.
+            from services import radar_service as radar_service_mod
+
+            if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
+                continue
+
+            _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
+
+            # Segment-Ende-Guard (Issue #2009 AC-6): ein Onset jenseits des
+            # Endes des aktiven Segments trifft einen Abschnitt, den der
+            # Nutzer dann laengst hinter sich hat.
+            # 🔴 AUSGLEICHSMASSNAHME MIT VERFALLSBEDINGUNG — die Bedingung
+            # haengt am CODE, nicht an einer Ticketnummer: Der Guard ist
+            # richtig nur, solange der Nowcast oben am START-Punkt des
+            # Segments abgefragt wird (`active.start_point`, Zeile ~1260).
+            # ERSATZLOS ZU ENTFERNEN ist er erst, wenn genau dieser Abruf auf
+            # den interpolierten Aufenthaltsort zum Onset-Zeitpunkt umgestellt
+            # ist (`services.trip_segments.position_at_time()` hier
+            # verdrahtet) — dann laege der Onset per Konstruktion dort, wo der
+            # Nutzer tatsaechlich sein wird, und der Guard verwuerfe KORREKTE
+            # Alarme. Zusammen mit ihm fallen dann AC-6 und
+            # tests/tdd/test_radar_alert_segment_end_guard.py.
+            # 🔴 NICHT am Merge-Ereignis festmachen: #2017 Scheibe A (PR
+            # #2022) ist gemergt und `position_at_time()` existiert seither
+            # (`trip_segments.py:469`) — der Abruf hier laeuft aber
+            # unveraendert ueber `active.start_point`. Wer den Guard auf
+            # "#2017 ist doch gemergt" hin entfernt, reisst genau das Loch
+            # auf, das er schliesst. Pruefe die Zeile, nicht das Ticket.
+            _segment_end = _as_aware_utc(active.end_time)
+            if _segment_end is not None and _onset_dt > _segment_end:
+                logger.debug(
+                    f"Radar alert suppressed: Onset "
+                    f"{_onset_dt.isoformat()} liegt nach dem Ende des aktiven "
+                    f"Segments {active.segment_id} "
+                    f"({_segment_end.isoformat()}) fuer {trip.id}"
+                )
                 continue
 
             # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)
@@ -1281,7 +1322,6 @@ class TripAlertService:
             # der angekuendigte Regen unerkannt.
             from services.weather_snapshot import WeatherSnapshotService
             _snapshot = WeatherSnapshotService(self._user_id).load_dated(trip.id, segment_date)
-            _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
             _briefing_precip = self._briefing_precip_for_onset(_snapshot, active.segment_id, _onset_dt)
             _briefing_announced = (_briefing_precip is not None and _briefing_precip >= 0.5)
             # Sicherheits-Override (Slice 4, #883): konvektive Gefahr (Gewitter/Hagel)
@@ -1352,10 +1392,15 @@ class TripAlertService:
             # Adjektiv, daher ist [:1].lower() hier immer korrekt.
             _label = result.intensity_label
             _label = _label[:1].lower() + _label[1:]
-            _onset_time_str = local_fmt(now_utc + timedelta(minutes=result.onset_minutes), tz)
+            # Issue #2009: Uhrzeit und Tagesbezug aus DEMSELBEN Zeitpunkt
+            # (`_onset_dt`, oben fuer den Segment-Ende-Guard berechnet) und
+            # DERSELBEN Zone — eine zweite Herleitung koennte auseinander-
+            # laufen und "00:23" wieder mehrdeutig machen.
+            _onset_time_str = local_fmt(_onset_dt, tz)
             _radar_request = RadarAlertRequest(
                 onset_minutes=result.onset_minutes,
                 onset_time=_onset_time_str,
+                onset_day_offset=day_offset(now_utc, _onset_dt, tz),
                 km_from=active.start_point.distance_from_start_km,
                 km_to=active.end_point.distance_from_start_km,
                 # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne

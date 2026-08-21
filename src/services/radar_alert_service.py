@@ -5,12 +5,12 @@ do not depend directly on output.renderers.alert.* or output.channels.email.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.config import Settings
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import render_email, render_subject
-from utils.timezone import local_fmt, tz_for_coords
+from utils.timezone import day_offset, local_fmt, tz_for_coords
 
 
 def _segment_label(active) -> str:
@@ -54,7 +54,8 @@ def build_onset_alert_message(
     lat = active.start_point.lat
     lon = active.start_point.lon
     alert_tz = tz_for_coords(lat, lon)
-    stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+    now_utc = datetime.now(timezone.utc)
+    stand_at = local_fmt(now_utc, alert_tz)
 
     onset_ev = OnsetEvent(
         onset_minutes=onset_minutes,
@@ -65,6 +66,11 @@ def build_onset_alert_message(
         intensity_label=intensity_label,
         source_label=source_label,
         briefing_context=None,
+        # Issue #2009: aus onset_minutes unabhaengig vom aufrufer-formatierten
+        # onset_time neu abgeleitet -- byte-identisch 0 im Normalfall.
+        onset_day_offset=day_offset(
+            now_utc, now_utc + timedelta(minutes=onset_minutes), alert_tz
+        ),
     )
 
     return AlertMessage(
