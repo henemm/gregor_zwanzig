@@ -42,8 +42,8 @@ from services.radar_service import NowcastResult
 
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 from tests.helpers.nowcast_gate_fixtures import (
-    TRIP_ZONE, clean_uid, fresh_uid, make_trip, quiet_window_elsewhere,
-    radar_service, reset_radar_cache,
+    TRIP_ZONE, clean_uid, fresh_uid, frozen_active_window, make_trip,
+    quiet_window_elsewhere, radar_service, reset_radar_cache,
 )
 
 SMS_TO = "+49000000000"
@@ -422,7 +422,16 @@ def _kurznachricht_vom_echten_trip_pfad(frames, telegram_stub, monkeypatch, suff
     Draht ankam. Kein Baustein wird uebersprungen: echte Radar-Frames ->
     echter `RadarNowcastService` -> echtes `NowcastResult` -> echtes
     `check_radar_alerts()` -> echter `NotificationService` -> echter
-    Telegram-Transport."""
+    Telegram-Transport.
+
+    Gestellte Uhr, nicht Wanduhr (#2050): `app.loader.save_trip()` (Compute-
+    on-Save, #802) verwirft die `arrival_start`/`arrival_end`-Vorgabe von
+    `make_trip()` und rechnet die Etappe neu — bei den Default-Koordinaten
+    ist danach nur `[08:00, 20:00)` Ortszeit luecklos aktiv (Beleg und
+    Begruendung: `frozen_active_window()` in
+    `tests/helpers/nowcast_gate_fixtures.py`). Ohne die gestellte Uhr war
+    dieser Helfer ausserhalb dieses Fensters strukturell rot (gemessen
+    2026-08-21: CI-Lauf 19:38 UTC gruen, derselbe Testfall 20:40 UTC rot)."""
     from app.loader import save_trip
     from services.trip_alert import TripAlertService
 
@@ -432,37 +441,38 @@ def _kurznachricht_vom_echten_trip_pfad(frames, telegram_stub, monkeypatch, suff
     clean_uid(uid)
     reset_radar_cache()
     try:
-        quiet_from, quiet_to = quiet_window_elsewhere(zone=TRIP_ZONE)
-        trip = make_trip(
-            trip_id, cooldown_minutes=0, quiet_from=quiet_from, quiet_to=quiet_to,
-        )
-        morgen, abend = briefing_zeiten_fuer_trip(trip)
-        trip.report_config = TripReportConfig(
-            trip_id=trip_id, send_email=False, send_sms=False,
-            send_telegram=True, send_premium_sms=False,
-            alert_on_changes=True, telegram_style="kurzform",
-            morning_time=morgen, evening_time=abend,
-        )
-        # Der PRODUKTIVE Speicherer (`app.loader.save_trip`), nicht der
-        # verkuerzte Test-Helfer: nur er schreibt `telegram_style` mit, und
-        # `check_radar_alerts()` liest den Trip von Platte zurueck.
-        save_trip(trip, user_id=uid)
+        with frozen_active_window():
+            quiet_from, quiet_to = quiet_window_elsewhere(zone=TRIP_ZONE)
+            trip = make_trip(
+                trip_id, cooldown_minutes=0, quiet_from=quiet_from, quiet_to=quiet_to,
+            )
+            morgen, abend = briefing_zeiten_fuer_trip(trip)
+            trip.report_config = TripReportConfig(
+                trip_id=trip_id, send_email=False, send_sms=False,
+                send_telegram=True, send_premium_sms=False,
+                alert_on_changes=True, telegram_style="kurzform",
+                morning_time=morgen, evening_time=abend,
+            )
+            # Der PRODUKTIVE Speicherer (`app.loader.save_trip`), nicht der
+            # verkuerzte Test-Helfer: nur er schreibt `telegram_style` mit, und
+            # `check_radar_alerts()` liest den Trip von Platte zurueck.
+            save_trip(trip, user_id=uid)
 
-        svc = TripAlertService(
-            settings=_telegram_kurzform_settings(), throttle_hours=0,
-            user_id=uid, radar_service=radar_service(frames),
-        )
+            svc = TripAlertService(
+                settings=_telegram_kurzform_settings(), throttle_hours=0,
+                user_id=uid, radar_service=radar_service(frames),
+            )
 
-        sent = svc.check_radar_alerts()
+            sent = svc.check_radar_alerts()
 
-        assert sent == 1, (
-            f"Voraussetzung: genau EIN Radar-Alarm erwartet, war {sent}. "
-            f"Nowcast-Abrufe: {frames.calls!r}"
-        )
-        assert len(telegram_stub.sent) == 1, (
-            f"Erwartet genau EINE Kurznachricht am Draht: {telegram_stub.sent!r}"
-        )
-        return telegram_stub.sent[0].get("text") or ""
+            assert sent == 1, (
+                f"Voraussetzung: genau EIN Radar-Alarm erwartet, war {sent}. "
+                f"Nowcast-Abrufe: {frames.calls!r}"
+            )
+            assert len(telegram_stub.sent) == 1, (
+                f"Erwartet genau EINE Kurznachricht am Draht: {telegram_stub.sent!r}"
+            )
+            return telegram_stub.sent[0].get("text") or ""
     finally:
         clean_uid(uid)
 
