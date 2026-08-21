@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 from app.day_window import display_end_time
-from app.models import SegmentWeatherSummary
+from app.models import SegmentWeatherData, SegmentWeatherSummary
 from services.weather_snapshot import WeatherSnapshotService
 
 
@@ -91,7 +91,20 @@ class WeatherExtractor:
                 available=False,
                 message=f"Kein Snapshot für Trip '{trip_id}' gefunden.",
             )
-        points = [
+        return TimelineResult(
+            trip_id=trip_id,
+            target_date=target_date,
+            points=self._punkte(segments),
+            available=True,
+        )
+
+    @staticmethod
+    def _punkte(segments: List[SegmentWeatherData]) -> List[TimelinePoint]:
+        """Segmente -> Timeline-Wegpunkte. EINE Umrechnung fuer beide Quellen
+        (undatierter Anker und datierter Snapshot, Issue #1818) — eine zweite
+        Kopie dieser Zuordnung wuerde bei jeder Feldaenderung auseinanderlaufen.
+        """
+        return [
             TimelinePoint(
                 # Issue #1599: Anzeige-Ende statt Alarm-Obergrenze.
                 arrival_time=display_end_time(seg.segment),
@@ -101,10 +114,32 @@ class WeatherExtractor:
             )
             for seg in segments
         ]
+
+    def timeline_dated(self, trip_id: str, target_date: date) -> TimelineResult:
+        """Timeline-Wegpunkte aus dem TAGESDATIERTEN Snapshot
+        ``{trip_id}_{YYYY-MM-DD}.json`` (Issue #1818).
+
+        Rein LESEND: ``load_dated`` legt nichts an und veraendert nichts. Der
+        undatierte Anker ``{trip_id}.json`` traegt strukturell nur EINEN Tag
+        (``_write_briefing_anchor`` ueberschreibt ihn je Briefing-Lauf); diese
+        Quelle deckt einen Tag, den der Anker verloren hat, ohne Netzabruf.
+        """
+        segments = self._snapshots.load_dated(trip_id, target_date)
+        if not segments:
+            return TimelineResult(
+                trip_id=trip_id,
+                target_date=target_date,
+                points=[],
+                available=False,
+                message=(
+                    f"Kein datierter Snapshot für Trip '{trip_id}' "
+                    f"am {target_date.isoformat()}."
+                ),
+            )
         return TimelineResult(
             trip_id=trip_id,
             target_date=target_date,
-            points=points,
+            points=self._punkte(segments),
             available=True,
         )
 
