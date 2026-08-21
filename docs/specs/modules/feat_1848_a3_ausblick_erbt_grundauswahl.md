@@ -3,7 +3,7 @@ entity_id: feat_1848_a3_ausblick_erbt_grundauswahl
 type: module
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [ausblick, metrik-kaskade, kanal-modul, adr-0050, issue-1848, issue-2029]
 ---
@@ -192,7 +192,7 @@ als Konzept.
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** neu anzulegen — löst **ADR-0053 Punkt 1** ab (dort: „Ausblick und Stundenverlauf
+- **ADR-Nr.:** [ADR-0059](../../adr/0059-compare-ausblick-erbt-grundauswahl.md) — löst **ADR-0053 Punkt 1** ab (dort: „Ausblick und Stundenverlauf
   bleiben bewusst global, ohne Kaskadenbindung"). Diese Scheibe bindet den Ausblick in **beiden**
   Flächen an die Grundauswahl und wendet damit ADR-0050 Regeln 1–4 auf die Ausgabefläche
   „Ausblick" an. Der Stundenverlauf bleibt unberührt.
@@ -213,6 +213,12 @@ als Konzept.
     das Stufenwort. Da A3 den festen Zweig als Normalfall ablöst, hätte jede Tour Onset-Uhrzeit,
     tragende Zutat und Hagel-Zusatz verloren. Beide Zweige rufen jetzt je Ausgabeort **eine**
     Umsetzung (`thunder_branch.thunder_cell_html/_plain/_compact/_telegram`).
+  - **Geliefert:** Prod (Commit `d3346218`). Löst ADR-0053 Punkt 1 ab (neues
+    [ADR-0059](../../adr/0059-compare-ausblick-erbt-grundauswahl.md)), ergänzt den
+    „Divergenz zum Ortsvergleich"-Abschnitt von ADR-0055 (die dort beschriebene
+    Divergenz besteht seit dieser Scheibe nicht mehr) und löst **AC-13** aus
+    `fix_1719_s3_aus_ist_ein_zustand.md` für den Ausblick-Mountpunkt ab (Übersicht
+    und Stundenverlauf bleiben von AC-13 unverändert erfasst).
   - **A3 dehnt den Entscheid „nur Tagesfenster" aus `fix_1841` AC-3 auf alle Touren aus** — mit
     demselben Grund: der feste Zweig entfällt als Normalfall. **Damit löst A3 #1653/#1671 für die
     3-Tages-Vorschau ab**: die Nachtangabe entfällt aus allen vier Ausblick-Darstellungen

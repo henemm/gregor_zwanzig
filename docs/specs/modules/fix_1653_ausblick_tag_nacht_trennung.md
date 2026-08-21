@@ -413,3 +413,12 @@ bisher nie durch).
   Nachtfensters, Telegram zeigte ihn korrekt (Drei-Wege-Uneinigkeit) — Fix:
   neuer Helfer `_thunder_token_parts()` (`email/outlook.py:38-59`), von
   allen vier Fundstellen genutzt. Status auf `implemented` gesetzt.
+- 2026-08-21 (Issue #1848 Scheibe A3): Die hier eingeführte Tag/Nacht-Trennung
+  der Gewitter-Zelle wird für die **3-Tages-Vorschau** abgelöst — sie zeigt
+  seither nur noch das Tagesfenster, die Nachtangabe entfällt ersatzlos
+  (dehnt `fix_1841` AC-3 auf alle Touren aus, dreifach PO-bestätigt). Für
+  Tages-Briefing, Stundenverlauf und Alarme gilt die hier beschriebene
+  Tag/Nacht-Trennung unverändert fort. Details:
+  `docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md`
+  (Changelog-Eintrag „Implementierung"), Zellenbau jetzt in
+  `src/output/renderers/email/thunder_branch.py`.

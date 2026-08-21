@@ -30,6 +30,15 @@ Stundenverlauf (`hourly_metrics`) und Ausblick (`outlook_metrics`) bleiben in di
 **bewusst global** — eigene, getrennt gespeicherte Auswahllisten, keine Kanal-Ebene. Das ist
 eine Schnitt-Entscheidung (Analyse-Phase, PO-freigegeben 2026-08-13), keine Auslassung.
 
+> 🔴 **Nachtrag 2026-08-21 (Issue #1848 Scheibe A3):** „Global" für den
+> Ausblick hieß bis dahin auch „unabhängig von der Grundauswahl der
+> Fläche" — das ist seither nicht mehr so. Der Ausblick bleibt ohne
+> Kanal-Ebene (dieser Punkt gilt fort), erbt aber jetzt die Grundauswahl und
+> darf nur noch abwählen, exakt wie ein Kanal-Reiter. Details:
+> `docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md`,
+> [ADR-0059](../../adr/0059-compare-ausblick-erbt-grundauswahl.md) (löst
+> ADR-0053 Punkt 1 für den Ausblick ab). Der Stundenverlauf ist unberührt.
+
 ## Source
 
 - **File:** `src/services/report_config_resolver.py`
