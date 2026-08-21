@@ -150,9 +150,13 @@ class PreviewService:
         """
         from services.trip_report_scheduler import TripReportSchedulerService
         scheduler = TripReportSchedulerService(self.settings)
-        # Issue #2036 CI-Nachschlag (PR #2055): eine Vorschau ist "kein
+        # Issue #2036 CI-Nachschlag (PR #2055/#2058): eine Vorschau ist "kein
         # Versand, nur Render" (Modul-Docstring) -- sie darf den
-        # Trip-Bestand nicht als Seiteneffekt veraendern.
+        # Trip-Bestand nicht als Seiteneffekt veraendern. Das Attribut steuert
+        # ALLE Nebenpfade (Trend, Thunder-Fallback) gleichermassen -- die
+        # direkte Zeile darunter uebergibt zusaetzlich noch explizit
+        # persist=False, weil sie ohnehin schon einen Keyword-Wert traegt.
+        scheduler.persist_backfill = False
         segments = scheduler._convert_trip_to_segments(trip, target, persist=False)
         if not segments:
             # Issue #990: Zwei Ursachen unterscheiden, damit die Frontend-
@@ -240,19 +244,19 @@ class PreviewService:
             # bei Morgen-/Abend-Overrides, nur in der Vorschau).
             trend_result = scheduler._build_stage_trend(
                 trip, target, now_utc=now_utc, tz=trip_tz,
-                report_type=report_type, persist=False,
+                report_type=report_type,
             )
             multi_day_trend = trend_result.rows
             outlook_state = trend_result.state
             outlook_horizon_days = trend_result.horizon_days
-        # Issue #2036 CI-Nachschlag (PR #2055, Folgefund): beide Bauwege
-        # bauen Segmente auch fuer zukuenftige Etappen (Trend +3 Tage,
-        # Thunder-Fallback +1/+2) -- ohne persist=False schrieb die Vorschau
-        # ueber genau diesen Nebenpfad trotzdem in den echten Trip-Bestand.
+        # Issue #2036 CI-Nachschlag (PR #2055/#2058): beide Bauwege bauen
+        # Segmente auch fuer zukuenftige Etappen (Trend +3 Tage, Thunder-
+        # Fallback +1/+2) -- ``scheduler.persist_backfill = False`` oben
+        # steuert BEIDE Nebenpfade, damit die Vorschau nicht in den echten
+        # Trip-Bestand schreibt.
         thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
             trip, target, now_utc=now_utc, tz=trip_tz,
             multi_day_trend=multi_day_trend, night_weather=night_weather,
-            persist=False,
         )
 
         # Issue #474: F12 Wetterlage-Label vor format_email berechnen.
