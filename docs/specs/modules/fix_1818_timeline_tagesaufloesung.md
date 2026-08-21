@@ -3,7 +3,7 @@ entity_id: fix_1818_timeline_tagesaufloesung
 type: module
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, timeline, snapshot, bug]
 ---
@@ -12,7 +12,7 @@ tags: [telegram, timeline, snapshot, bug]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-08-21) — geliefert in Prod 84fed6a6, PR #2037
 
 ## Purpose
 
