@@ -256,9 +256,26 @@ describe('AC-S8-14 (a): die Vergleichs-UEBERSICHT traegt jetzt offColumns UND on
 	);
 });
 
-describe('AC-S8-14 (b): Ausblick und Stundenverlauf bleiben ohne Kanal-Ebene', () => {
+// ⚠️ AC-S8-14 (b) TEILWEISE ABGELOEST durch #1848 A3 (PO-Freigabe 2026-08-21).
+//
+// Die Zusicherung lautete: "Ausblick UND Stundenverlauf uebergeben WEDER
+// offColumns NOCH onRestore — Scheibe 8 gibt ausdruecklich nur der
+// Uebersichtstabelle eine Kanal-Ebene; hier entstuende eine Aus-Gruppe ohne
+// Kanal-Reiter, also ohne Bedeutung."
+//
+// Fuer den AUSBLICK trifft die Begruendung seit A3 nicht mehr zu: er hat jetzt
+// eine Grundauswahl-Bindung (ADR-0050 Regeln 1/2, loest ADR-0053 Punkt 1 ab),
+// und seine Kaestchenliste — der bisherige Rueckweg fuer eine abgewaehlte
+// Groesse — ist ersatzlos entfallen (Block A, Issue #2029). Ohne "Aus"-Gruppe
+// gaebe es dort GAR KEINEN Rueckweg mehr (ADR-0050 Regel 4). Dieselbe
+// Ablösung betrifft AC-13 aus fix_1719_s3, s.
+// compare_outlook_metric_selection_structure.test.ts.
+//
+// Der STUNDENVERLAUF bleibt unveraendert: er hat weiterhin seine eigene
+// Kaestchenliste und damit einen funktionierenden Rueckweg — dort waere eine
+// zweite Aus-Gruppe genau die bedeutungslose Doppelung, die S8 ausschloss.
+describe('AC-S8-14 (b): der Stundenverlauf bleibt ohne Kanal-Ebene', () => {
 	for (const [label, file] of [
-		['Ausblick (CompareOutlookLayoutControls)', OUTLOOK_FILE],
 		['Stundenverlauf (CompareHourlyLayoutControls)', HOURLY_FILE]
 	] as [string, string][]) {
 		test(
@@ -290,4 +307,21 @@ describe('AC-S8-14 (b): Ausblick und Stundenverlauf bleiben ohne Kanal-Ebene', (
 			}
 		);
 	}
+
+	test('der Ausblick uebergibt offColumns UND onRestore (#1848 A3, umgedreht)', () => {
+		const ast = parse(readFileSync(OUTLOOK_FILE, 'utf-8'), { modern: true });
+		const rows = findComponentsNamed(ast.fragment, 'WeatherV2Reihenfolge');
+		assert.equal(
+			rows.length,
+			1,
+			`Erwartet genau einen WeatherV2Reihenfolge-Aufruf im Ausblick, gefunden ${rows.length}.`
+		);
+		if (rows.length !== 1) return;
+		assert.ok(
+			findAttr(rows[0], 'offColumns') && findAttr(rows[0], 'onRestore'),
+			'#1848 A3 FAIL: der Ausblick uebergibt kein `offColumns`/`onRestore` mehr. Ohne die ' +
+				'abgeschaffte Kaestchenliste (Block A, #2029) gaebe es keinen Weg, eine abgewaehlte ' +
+				'Groesse zurueckzuholen (ADR-0050 Regel 4).'
+		);
+	});
 });

@@ -22,12 +22,12 @@ from output.renderers.fallback_notice import build_fallback_lines, select_fallba
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
 from output.renderers.compare_outlook_metric_ids import outlook_columns
 from output.renderers.email.helpers import (
-    _AMPEL_STAGE_TONES, _THUNDER_MAP,
+    _AMPEL_STAGE_TONES,
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     format_trend_tokens, render_origin_footer_text,
 )
 from output.renderers.email.thunder_branch import (
-    _thunder_token_parts, resolve_thunder_day_branch,
+    thunder_cell_compact, thunder_column_index,
 )
 from output.renderers.email.profile_signature import profile_signature
 from output.renderers.alert.official_alerts import (
@@ -93,27 +93,14 @@ def _compact_thunder_field(tok: dict, stage: dict) -> str:
     (``thunder_day_origin`` wird bewusst nicht gelesen, PO-Entscheidung 1 der
     Spec -- der Herkunfts-Teil von AC-13 bleibt fuer die Kompakt-Mail in
     Kraft).
-    """
-    branch = resolve_thunder_day_branch(tok, stage)
-    # Der Helfer entscheidet nur ueber `thunder_day_token != "-"`; ob der
-    # Token zerlegbar ist (`_THUNDER_TOKEN_RE`), bleibt Aufrufer-Sache --
-    # analog outlook.render_outlook_plain() (#1671-Nachbesserung: ein
-    # gesetzter, aber unzerlegbarer Token darf nicht abstuerzen, sondern
-    # faellt wie im Altcode auf "kein Gewitter" zurueck).
-    _d = _thunder_token_parts(tok.get("thunder_day_token", "-")) if branch == "day" else None
-    if _d:
-        # Issue #1493: Onset-Stunde wie im Klartext-Ausblick (`_d[1]` wurde
-        # hier bisher verworfen).
-        field = f"⚡{_d[0]}@{_d[1]}{_d[2]}"
-    elif branch in ("day", "none"):
-        field = _THUNDER_MAP["NONE"]["plain"]
-    else:
-        field = tok["thunder_plain"]
 
-    _n = _thunder_token_parts(tok.get("thunder_night_token", "-"))
-    if _n:
-        field += f" · nachts {_n[0]} @{_n[1]}{_n[2]}"
-    return field
+    #1848 A3: der Zellenbau ist nach ``thunder_branch.thunder_cell_compact()``
+    gewandert -- dieselbe Quelle ruft jetzt auch der konfigurierbare
+    Ausblick-Zweig unten. Diese Funktion bleibt als benannte Aufrufstelle
+    stehen (Bestands-Tests und Lesbarkeit der Zeile), traegt aber keine
+    eigene Formatierung mehr.
+    """
+    return thunder_cell_compact(tok, stage)
 
 
 _STABILITY_TEXTS = {
@@ -276,12 +263,22 @@ def render_compact(
                 # -- kein drittes Format. Bei 1..N frei gewaehlten Spalten
                 # traegt das Label die Zuordnung, nicht die Spaltenposition.
                 columns = outlook_columns(outlook_metrics)
+                # #1848 A3: Gewitterspalte aus DEMSELBEN Zellenbau wie der
+                # feste Zweig darunter (_compact_thunder_field) -- `cells`
+                # traegt dort nur das Stufenwort ohne Onset-Uhrzeit und
+                # Nachtanteil.
+                gew_index = thunder_column_index(columns)
                 for stage in multi_day_trend:
                     weekday = stage.get("weekday", "")
                     cells = stage.get("cells") or []
+                    texte = [cells[i] if i < len(cells) else "–"
+                             for i in range(len(columns))]
+                    if gew_index is not None:
+                        texte[gew_index] = _compact_thunder_field(
+                            format_trend_tokens(stage), stage,
+                        )
                     values = "  ".join(
-                        f"{c['label']} {cells[i] if i < len(cells) else '–'}"
-                        for i, c in enumerate(columns)
+                        f"{c['label']} {texte[i]}" for i, c in enumerate(columns)
                     )
                     lines.append(_ascii(f"{weekday:<3} {values}".rstrip()))
             else:

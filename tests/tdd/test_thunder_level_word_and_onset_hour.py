@@ -304,16 +304,25 @@ def _compare_klartext(punkte: list[ForecastDataPoint]) -> str:
 
 def _gewitterfeld(zeile: str) -> str:
     """Das Gewitterfeld einer Klartext-Ausblickzeile — ab dem ``⚡`` bis zum
-    Zeilenende (inklusive Peak-, Herkunfts- und Nachtzusatz).
+    Ende SEINER SPALTE (inklusive Peak-, Herkunfts- und Nachtzusatz).
 
     Ueber das Feld-EINLEITENDE Zeichen abgegrenzt, nicht ueber dessen Inhalt:
     so bleibt die Sonde auch dann sehend, wenn sich der Feldinhalt aendert —
     genau das ist hier der Fall. Trip- und Compare-Zeile unterscheiden sich
     im Vorspann (Etappenname fuehrt nur der Trip, ``show_name=False`` im
     Compare), das Gewitterfeld selbst muss identisch sein.
+
+    🔴 #1848 A3: das Gewitterfeld ist nicht mehr zwangslaeufig das LETZTE der
+    Zeile. Seit der Ausblick die Grundauswahl erbt, koennen weitere Spalten
+    folgen (``… Gewitter ⚡mittel@14 · CAPE  Bewölkung 60 %``). Die
+    Spaltengrenze ist das doppelte Leerzeichen des Trennmusters
+    (``"  ".join``); INNERHALB des Gewitterfelds stehen ausschliesslich
+    einfache Leerzeichen (``" · "``, ``" (hoch @18)"``). Ein ``rstrip()`` bis
+    Zeilenende wuerde die Nachbarspalten mit ins Soll ziehen und den Test an
+    einer Stelle scheitern lassen, die er gar nicht zusichert.
     """
     assert "⚡" in zeile, f"Kein Gewitterfeld in der Ausblickzeile: {zeile!r}"
-    return "⚡" + zeile.split("⚡", 1)[1].rstrip()
+    return ("⚡" + zeile.split("⚡", 1)[1]).split("  ")[0].rstrip()
 
 
 def _telegram_ausblick(bericht) -> str:
@@ -416,7 +425,10 @@ def test_ac3_klartext_ausblick_zeigt_die_onset_stunde():
         f"Der Klartext-Ausblick muss die Onset-Stunde am Gewitterfeld fuehren "
         f"('⚡mittel@14'), wie es die HTML-Ausblickzelle laengst tut: "
         f"{zeile!r}")
-    assert zeile.rstrip().endswith("⚡mittel@14 (hoch @18) · CAPE"), (
+    # #1848 A3: Gleichheit des GEWITTERFELDS statt Zeilenende -- seit der
+    # Ausblick die Grundauswahl erbt, koennen weitere Spalten folgen. Die
+    # zugesicherte Zeichenfolge ist unveraendert.
+    assert _gewitterfeld(zeile) == "⚡mittel@14 (hoch @18) · CAPE", (
         f"Nur die Onset-Stunde kommt hinzu — Peak-Zusatz und Herkunft bleiben "
         f"in Wortlaut und Reihenfolge unveraendert: {zeile!r}")
 
@@ -442,7 +454,12 @@ def test_ac4_kompakt_ausblick_zeigt_dieselbe_onset_stunde():
     assert "Tmittel@14" in zeile, (
         f"Die Kompakt-Ausblickzeile muss dieselbe Onset-Stunde fuehren wie "
         f"der Klartext-Ausblick (ASCII-gefaltet 'Tmittel@14'): {zeile!r}")
-    assert zeile.rstrip().endswith("Tmittel@14 (hoch @18)"), (
+    # #1848 A3: Spaltengrenze statt Zeilenende (s. `_gewitterfeld`). Die
+    # Kompakt-Mail ist ASCII-gefaltet, das "⚡" ist dort ein "T" -- deshalb
+    # hier die Feldabgrenzung von Hand am selben Trennmuster.
+    assert ("T" + zeile.split("Gewitter T", 1)[-1]).split("  ")[0].rstrip() == (
+        "Tmittel@14 (hoch @18)"
+    ), (
         f"Nur die Onset-Stunde kommt hinzu — der Peak-Zusatz bleibt "
         f"unveraendert, eine Herkunft entsteht hier weiterhin nicht: "
         f"{zeile!r}")
@@ -537,10 +554,11 @@ def test_ac6_ohne_gewitter_bleiben_pille_und_ausblick_ohne_stufe_und_stunde():
         f"{pille!r}")
 
     zeile = _ausblick_zeile_text(bericht.email_plain, _AUSBLICK_PLAIN)
-    assert zeile.rstrip().endswith("⚡–"), (
+    # #1848 A3: Gleichheit des GEWITTERFELDS statt Zeilenende (s. dort).
+    assert _gewitterfeld(zeile) == "⚡–", (
         f"Ohne Ereignis bleibt das Gewitterfeld des Ausblicks zeichengleich "
         f"'⚡–': {zeile!r}")
-    assert "@" not in zeile.split("⚡")[-1], (
+    assert "@" not in _gewitterfeld(zeile), (
         f"Ohne Ereignis darf im Gewitterfeld keine Uhrzeit stehen: {zeile!r}")
     for wort in ("leicht", "mittel", "hoch"):
         assert wort not in zeile, (

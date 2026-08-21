@@ -530,22 +530,28 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
     )
 
 
-def test_bestandstrip_behaelt_die_sieben_festen_spalten_in_der_zugestellten_mail():
+def test_bestandstrip_zeigt_die_grundauswahl_in_der_zugestellten_mail():
     """AC-1 (ganze Kette, Bestandsschutz): ohne gesetzte Vorschau-Auswahl
-    stehen weiterhin die sieben festen Spalten samt ACC in der Tabelle.
+    steht der Ausblick weiterhin in der zugestellten Mail -- mit den Groessen
+    der Grundauswahl.
 
-    Mutation 1 am Wirkort (``resolve_outlook_metrics(...) or []``): der
-    Ausblick verschwaende fuer 100 % der heutigen Trips. Dieser Test ist der
-    einzige hier, der schon vor der Lieferung gruen ist -- und muss es
-    BLEIBEN.
+    Bewachte Fehlerklasse unveraendert (Mutation 1 am Wirkort,
+    ``resolve_outlook_metrics(...) or []``): der Ausblick verschwaende fuer
+    100 % der heutigen Trips. Nur das ZIEL des Rueckfalls ist seit #1848 A3
+    die Grundauswahl statt der sieben festen Spalten (AC-3 dort,
+    PO-Freigabe 2026-08-21).
     """
-    html, plain = _zugestellte_teile(_trip(outlook_metrics=None))
+    trip = _trip(outlook_metrics=None)
+    html, plain = _zugestellte_teile(trip)
 
-    assert html_outlook_headers(html) == [
-        "Tag", "N", "D", "R", "PR", "Wind", "Böen", "Gew", "ACC",
-    ], (
-        f"Kopfzeile {html_outlook_headers(html)!r}: ein Trip ohne Auswahl "
-        "zeigt nicht mehr die sieben festen Spalten (AC-1)."
+    kopf = html_outlook_headers(html)
+    assert kopf and kopf[0] == "Tag" and len(kopf) > 1, (
+        f"Kopfzeile {kopf!r}: der Ausblick eines Bestandstrips ist leer oder "
+        "fehlt ganz (AC-1)."
+    )
+    assert kopf[1:] != ["N", "D", "R", "PR", "Wind", "Böen", "Gew", "ACC"], (
+        "Der Ausblick zeigt weiterhin die abgeloesten sieben festen Spalten "
+        f"statt der Grundauswahl: {kopf!r} (#1848 A3, AC-3)."
     )
     assert plain_outlook_block(plain) is not None, (
         "Der Klartext-Ausblick eines Bestandstrips fehlt vollstaendig (AC-1)."

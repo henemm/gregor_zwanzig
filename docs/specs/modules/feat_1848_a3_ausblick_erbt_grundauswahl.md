@@ -184,6 +184,11 @@ als Konzept.
   keinen darstellbaren Wert. Sie stehen deshalb auch nicht in der „Aus"-Gruppe.
 - Die Spaltenköpfe kommen weiterhin aus dem Compare-Katalog (ausgeschriebene deutsche Namen), nicht
   aus den Kürzeln `N/D/R/PR` des alten festen Pfads.
+- **In der 3-Tages-Vorschau ist ein reines Nachtgewitter nicht von „gar kein Gewitter" zu
+  unterscheiden.** Beide Fälle zeigen dasselbe Zeichen für „kein Gewitter". Der PO trägt das
+  bewusst (vorgelegt und bestätigt 2026-08-21): die Vorschau ist auf das Tagesfenster verengt,
+  ein Gewitter außerhalb davon erscheint dort nicht — auch nicht als Hinweis. Tages-Briefing,
+  Stundenverlauf und Alarme führen den Tag/Nacht-Split unverändert weiter.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -202,3 +207,26 @@ als Konzept.
 
 - 2026-08-21: Initial spec — PO-Entscheide: Ortsvergleich koppeln · Grundauswahl gilt immer ·
   Verhalten exakt wie E-Mail/Telegram/SMS (keine zweite Auswahl) · `temperature/avg` fällt ersatzlos
+- 2026-08-21 (Implementierung, PO-Entscheide während der Umsetzung):
+  - **Der Gewitter-Zellenbau wandert in einen geteilten Baustein.** Bis A3 trug ihn allein der
+    feste Sieben-Spalten-Zweig; der konfigurierbare setzte nur `cells` zusammen und zeigte bloß
+    das Stufenwort. Da A3 den festen Zweig als Normalfall ablöst, hätte jede Tour Onset-Uhrzeit,
+    tragende Zutat und Hagel-Zusatz verloren. Beide Zweige rufen jetzt je Ausgabeort **eine**
+    Umsetzung (`thunder_branch.thunder_cell_html/_plain/_compact/_telegram`).
+  - **A3 dehnt den Entscheid „nur Tagesfenster" aus `fix_1841` AC-3 auf alle Touren aus** — mit
+    demselben Grund: der feste Zweig entfällt als Normalfall. **Damit löst A3 #1653/#1671 für die
+    3-Tages-Vorschau ab**: die Nachtangabe entfällt aus allen vier Ausblick-Darstellungen
+    (HTML, Klartext, Kompakt, Telegram). Für Tages-Briefing, Stundenverlauf und Alarme gilt
+    #1653/#1671 unverändert weiter. Kein neues ADR: der bestehende Entscheid wird angewandt,
+    nicht geändert.
+    **Dreifach bestätigt:** 2026-08-14 ursprünglich · 2026-08-21 bestätigt, nachdem die
+    Verwechslungslücke (s. Known Limitations) und der volle Testumfang (20 Zusicherungen in
+    5 Dateien, dazu Golden-Datei und Byte-Referenz) ausdrücklich vorgelegt waren · 2026-08-21
+    ein Mittelweg („Nachtanteil nur zeigen, wenn im Tagesfenster nichts liegt") ausdrücklich
+    abgelehnt — keine Sonderfälle. Zentrale Fundstelle im Code:
+    `src/output/renderers/email/thunder_branch.py`, Kopfkommentar über den Zellenbauern.
+  - **Die „kein Gewitter"-Zelle trägt jetzt das ausdrückliche NONE-Zeichen** aus `_fmt_thunder`
+    statt des generischen Leerwert-Strichs — „gemessen, keine Stufe" statt „kein Wert". Erfüllt
+    `fix_1841` AC-2 auch im festen Zweig und `#1514` AC-S2-4 ohne Teständerung.
+  - Beifang derselben Ursache: der konfigurierbare Klartext-Zweig führte weder **Etappenname**
+    noch **Notizzeile**. Beides hätte ab A3 jede Tour verloren; beides ist ergänzt.

@@ -224,13 +224,19 @@ def test_ac2_altform_paare_werden_beim_laden_zu_je_einer_kennung(tmp_path):
 def test_ac7a_nie_gewaehlte_auswahl_bleibt_abwesend_und_bleibt_von_gewaehlter_trennbar(tmp_path):
     """AC-7 (a): Given ein Trip, der nie eine Ausblick-Auswahl gespeichert hat
     / When der Nutzer eine ANDERE Einstellung aendert und speichert / Then
-    bleibt ``outlook_metrics`` in der Datei abwesend und der Ausblick faellt
-    auf die sieben festen Standardspalten zurueck (aufgeloest: ``None``).
+    bleibt ``outlook_metrics`` in der Datei abwesend, und der Ausblick zeigt
+    die Grundauswahl der Tour.
+
+    ⚠️ NACHGEZOGEN durch #1848 A3 (AC-3, PO-Freigabe 2026-08-21): das
+    Rueckfall-Ziel von "nie gewaehlt" war bis dahin ``None`` (die sieben
+    festen Standardspalten). Der PERSISTENZ-Teil dieses Tests — das Feld
+    bleibt in der Datei abwesend — ist von A3 voellig unberuehrt und bleibt
+    das eigentliche Gegenstueck.
 
     Gegenprobe im selben Test: ein Trip MIT gefuellter Kennungsauswahl muss
-    davon unterscheidbar sein (aufgeloest: nicht ``None``, nicht leer). Ohne
-    diese Gegenprobe waere 'None' trivial erreichbar — auch ein Aufloeser,
-    der jede Kennungsauswahl wegwirft, bestuende die erste Haelfte.
+    davon unterscheidbar sein. Ohne diese Gegenprobe waere die erste Haelfte
+    trivial erreichbar — auch ein Aufloeser, der jede Kennungsauswahl
+    wegwirft, bestuende sie.
     """
     user_id = f"a2-{uuid.uuid4().hex[:8]}"
     trip_id = f"trip-{uuid.uuid4().hex[:8]}"
@@ -245,9 +251,17 @@ def test_ac7a_nie_gewaehlte_auswahl_bleibt_abwesend_und_bleibt_von_gewaehlter_tr
         "'bewusst geleert' nicht mehr zu unterscheiden (AC-7)."
     )
     geladen = _laden(trip_id, tmp_path, user_id)
-    assert _aufgeloest(geladen.display_config) is None, (
-        "Ohne gespeicherte Auswahl muss die Aufloesung None liefern (sieben "
-        f"feste Spalten), sie lieferte {_aufgeloest(geladen.display_config)!r}."
+    nie_gewaehlt = _aufgeloest(geladen.display_config)
+    assert nie_gewaehlt, (
+        "Ohne gespeicherte Auswahl muss die Aufloesung die Grundauswahl "
+        f"liefern, sie lieferte {nie_gewaehlt!r}. ``None`` hiesse Rueckfall "
+        "auf die abgeloesten sieben festen Spalten, ``[]`` schaltete den "
+        "Block ganz ab (#1848 A3, AC-3)."
+    )
+    assert set(nie_gewaehlt) != set(KENNUNGEN), (
+        "Testaufbau: die Grundauswahl dieses Trips ist zufaellig gleich der "
+        f"gewaehlten Auswahl {KENNUNGEN!r} — dann kann die Gegenprobe unten "
+        "'nie gewaehlt' und 'gewaehlt' nicht mehr trennen."
     )
 
     gewaehlt, _, _ = _gespeichert_und_geladen(list(KENNUNGEN), tmp_path)

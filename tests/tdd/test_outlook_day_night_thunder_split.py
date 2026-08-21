@@ -185,14 +185,21 @@ class TestFormatTrendTokensDayNightSplit:
 # ---------------------------------------------------------------------------
 
 class TestHtmlCellDayNight:
-    def test_cell_shows_both_day_and_night_fall_b(self):
-        """AC-2: Tag UND Nacht gleichzeitig sichtbar, nicht nur der Peak."""
+    def test_cell_shows_only_the_day_part_fall_b(self):
+        """⚠️ AC-2 UMGEDREHT (#1848 A3): frueher "Tag UND Nacht gleichzeitig
+        sichtbar, nicht nur der Peak". Die 3-Tages-Vorschau zeigt seither
+        ausschliesslich das TAGESFENSTER (s. Modul-Kopf). Was bleibt: der
+        Tagesteil verschwindet NICHT hinter dem staerkeren Nachtwert -- genau
+        der Fehler 2, den #1653 behoben hat."""
         from src.output.renderers.email.outlook import render_outlook_table
         html = render_outlook_table([_stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")])
-        assert "mittel" in html and "hoch" in html, (
-            "Beide Level muessen in der Zelle stehen: fehlt in HTML"
+        assert "mittel" in html and "@14" in html, (
+            "Der Tagesteil fehlt in der Zelle -- er darf nicht hinter dem "
+            f"staerkeren Nachtwert verschwinden: {html!r}"
         )
-        assert "@14" in html and "@0" in html
+        assert "hoch" not in html and "nachts" not in html, (
+            f"Die Vorschau zeigt eine Nachtangabe (#1848 A3): {html!r}"
+        )
 
     def test_cell_day_word_paired_with_day_hour_fall_b(self):
         """Fehler 1 behoben: 'mittel' und '@14' muessen NAH beieinander
@@ -206,12 +213,27 @@ class TestHtmlCellDayNight:
             f"Tageswort mit Nachtstunde vermischt: {html!r}"
         )
 
-    def test_cell_night_only_fall_a(self):
-        """AC-4: kein Tagesgewitter, aber Nachtgewitter -- Zelle zeigt die
-        Nachtangabe statt eines reinen '-'."""
+    def test_cell_night_only_fall_a_zeigt_kein_gewitter(self):
+        """⚠️ AC-4 UMGEDREHT (#1848 A3): frueher "Zelle zeigt die Nachtangabe
+        statt eines reinen '-'". Ein rein naechtliches Gewitter erscheint in
+        der Vorschau seither gar nicht mehr; die Zelle sagt ausdruecklich
+        "kein Gewitter" (fix_1841 AC-2) und behauptet vor allem KEINE
+        Tagesstufe.
+
+        🔴 Bekannte Grenze, vom PO getragen (A3 Known Limitations): dieser
+        Fall ist damit von "gar kein Gewitter" nicht mehr zu unterscheiden."""
+        from src.output.renderers.email.compare_html import _fmt_thunder
         from src.output.renderers.email.outlook import render_outlook_table
+        import re
         html = render_outlook_table([_stage(hourly_thunder=_FALL_A_HOURLY, thunder="NONE")])
-        assert "hoch" in html and "@0" in html, "Nachtgewitter fehlt in der Zelle"
+        zelle = re.findall(r">([^<>]*)</td>", html)[7]
+        assert zelle == _fmt_thunder(None), (
+            f"Erwartet das ausdrueckliche 'kein Gewitter'-Zeichen, erhalten: "
+            f"{zelle!r}"
+        )
+        assert "hoch" not in html and "nachts" not in html, (
+            f"Die Vorschau zeigt das Nachtgewitter (#1848 A3): {html!r}"
+        )
 
     def test_cell_unchanged_without_thunder(self):
         """AC-5 Regressionsschutz: ohne jedes Gewitter bleibt die Zelle wie
@@ -226,21 +248,28 @@ class TestHtmlCellDayNight:
 # ---------------------------------------------------------------------------
 
 class TestPlainLineDayNight:
-    def test_plain_line_gets_night_addendum_fall_a(self):
-        """Kernauftrag: die Klartext-Mail zeigt bisher NIE eine Uhrzeit oder
-        ein Nachtgewitter. Nach dem Fix erscheint fuer Fall A erstmals eine
-        Nachtangabe mit Uhrzeit."""
+    def test_plain_line_ohne_nachtangabe_fall_a(self):
+        """⚠️ UMGEDREHT (#1848 A3): frueher "fuer Fall A erscheint erstmals
+        eine Nachtangabe mit Uhrzeit". Die Vorschau zeigt seither nur das
+        Tagesfenster -- ein rein naechtliches Gewitter erscheint nicht."""
         from src.output.renderers.email.outlook import render_outlook_plain
         plain = render_outlook_plain([_stage(hourly_thunder=_FALL_A_HOURLY, thunder="NONE")])
-        assert "hoch" in plain, f"Nacht-Stufe fehlt in Klartext-Zeile:\n{plain}"
-        assert "0" in plain.split("\n")[2] or "@0" in plain, (
-            f"Nacht-Uhrzeit fehlt in Klartext-Zeile:\n{plain}"
+        assert "hoch" not in plain and "nachts" not in plain, (
+            f"Die Klartext-Vorschau zeigt eine Nachtangabe (#1848 A3):\n{plain}"
         )
 
-    def test_plain_line_gets_both_fall_b(self):
+    def test_plain_line_zeigt_nur_den_tagesteil_fall_b(self):
+        """⚠️ UMGEDREHT (#1848 A3): frueher wurde hier die Nachtangabe
+        eingefordert. Geblieben ist die #1653-Substanz: der Tagesteil steht
+        da und verschwindet nicht hinter dem staerkeren Nachtwert."""
         from src.output.renderers.email.outlook import render_outlook_plain
         plain = render_outlook_plain([_stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")])
-        assert "hoch" in plain, f"Nachtangabe fehlt:\n{plain}"
+        assert "mittel" in plain and "@14" in plain, (
+            f"Der Tagesteil fehlt in der Klartext-Zeile:\n{plain}"
+        )
+        assert "hoch" not in plain and "nachts" not in plain, (
+            f"Die Klartext-Vorschau zeigt eine Nachtangabe (#1848 A3):\n{plain}"
+        )
 
     def test_plain_line_unchanged_without_thunder(self):
         """AC-5 Regressionsschutz."""
@@ -254,36 +283,57 @@ class TestPlainLineDayNight:
 # ---------------------------------------------------------------------------
 
 class TestTelegramDayNight:
-    def test_telegram_shows_both_fall_b(self):
-        """AC-2: bisher zeigte Telegram bei Fall B NUR '⚡hoch@0' -- das
-        Tagesgewitter 'mittel' um 14 Uhr kam nie durch, weil nur der
-        24h-Peak gezeigt wurde."""
+    def test_telegram_shows_only_the_day_part_fall_b(self):
+        """⚠️ AC-2 UMGEDREHT (#1848 A3): frueher mussten Tag UND Nacht
+        erscheinen. Geblieben ist die #1653-Substanz: bei Fall B zeigte
+        Telegram frueher NUR '⚡hoch@0' -- das Tagesgewitter 'mittel' um
+        14 Uhr kam nie durch, weil nur der 24h-Peak gezeigt wurde. Genau das
+        bleibt abgewehrt."""
         body = _render_telegram([_stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")])
-        assert "mittel" in body, f"Tagesgewitter fehlt in Telegram:\n{body}"
-        assert "hoch" in body, f"Nachtgewitter fehlt in Telegram:\n{body}"
-        assert "@14" in body and "@0" in body
+        assert "mittel" in body and "@14" in body, (
+            f"Tagesgewitter fehlt in Telegram:\n{body}"
+        )
+        assert "hoch" not in body and "nachts" not in body, (
+            f"Die Telegram-Vorschau zeigt eine Nachtangabe (#1848 A3):\n{body}"
+        )
 
-    def test_telegram_night_only_fall_a(self):
+    def test_telegram_night_only_fall_a_zeigt_kein_gewitter(self):
+        """⚠️ UMGEDREHT (#1848 A3): ein rein naechtliches Gewitter erscheint
+        in der Vorschau nicht mehr."""
         body = _render_telegram([_stage(hourly_thunder=_FALL_A_HOURLY, thunder="NONE")])
-        assert "hoch" in body and "@0" in body, f"Nachtgewitter fehlt:\n{body}"
+        assert "hoch" not in body and "nachts" not in body, (
+            f"Die Telegram-Vorschau zeigt das Nachtgewitter (#1848 A3):\n{body}"
+        )
 
     def test_telegram_day_word_not_invented_from_aggregate(self):
         """F004 im dritten Kanal: Aggregat "HIGH", im Tagesfenster aber keine
         Gewitterstunde. Die Bubble zeigte "⚡HIGH · nachts hoch@0" -- ein
-        Tagesgewitter, das es dort nie gab."""
+        Tagesgewitter, das es dort nie gab.
+
+        #1848 A3: der Nachtzusatz entfaellt, die Zusicherung selbst bleibt --
+        aus dem Aggregat darf kein Tagesgewitter entstehen."""
         body = _render_telegram([_stage(hourly_thunder=_FALL_A_HOURLY, thunder="HIGH")])
         assert "⚡HIGH" not in body, (
             f"Telegram erfindet ein Tagesgewitter aus dem Aggregat:\n{body}"
         )
-        assert "⚡– · nachts hoch@0" in body, f"Got:\n{body}"
+        assert "⚡–" in body, f"Got:\n{body}"
+        assert "nachts" not in body, (
+            f"Die Telegram-Vorschau zeigt eine Nachtangabe (#1848 A3):\n{body}"
+        )
 
     def test_telegram_structurally_correct_fall_c(self):
         """Fall C zeigte bisher zufaellig richtig (Tag zufaellig staerker).
-        Nach dem Fix ist das Ergebnis strukturell garantiert -- beide
-        Level muessen unabhaengig von der Staerke erscheinen."""
+        Nach dem Fix ist das Ergebnis strukturell garantiert.
+
+        ⚠️ #1848 A3: geprueft wird jetzt nur noch der Tagesteil -- der
+        Nachtteil ('mittel @22') entfaellt aus der Vorschau. Die Fixture
+        bleibt Fall C (Tag staerker als Nacht), damit weiterhin belegt ist,
+        dass die Zelle dem TAGESFENSTER folgt und nicht dem 24h-Peak."""
         body = _render_telegram([_stage(hourly_thunder=_FALL_C_HOURLY, thunder="HIGH")])
         assert "hoch" in body and "@14" in body
-        assert "mittel" in body and "@22" in body
+        assert "@22" not in body and "nachts" not in body, (
+            f"Die Telegram-Vorschau zeigt eine Nachtangabe (#1848 A3):\n{body}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -476,8 +526,16 @@ class TestStageTrendUsesConfiguredDayWindow:
         assert result.rows
         html = render_outlook_table(result.rows)
         cell = re.findall(r">([^<>]*)</td>", html)[7]
-        assert cell == "mittel @22 · nachts hoch @14", (
+        # #1848 A3: der Nachtteil ('nachts hoch @14' -- die 14-Uhr-Stunde
+        # liegt AUSSERHALB des konfigurierten Fensters 20-23) entfaellt aus
+        # der Vorschau. Die Zusicherung wird dadurch sogar schaerfer: die
+        # Zelle darf ausschliesslich Stunden des konfigurierten Fensters
+        # nennen.
+        assert cell == "mittel @22", (
             f"Gewitter-Zelle folgt nicht dem konfigurierten Fenster 20-23: {cell!r}"
+        )
+        assert "@14" not in cell, (
+            f"Die Zelle nennt eine Stunde ausserhalb des Fensters 20-23: {cell!r}"
         )
 
 
@@ -515,8 +573,15 @@ class TestDayWordComesFromDayToken:
             _stage(hourly_thunder=_FALL_A_HOURLY, thunder="HIGH"),
         ])
         cell = re.findall(r">([^<>]*)</td>", html)[7]
-        assert cell == "nachts hoch @0", (
+        # #1848 A3: die Nachtangabe entfaellt aus der Vorschau -- geblieben
+        # ist die eigentliche Zusicherung: aus dem Aggregat entsteht kein
+        # Tagesgewitter. Der Strich ist das ausdrueckliche "kein Gewitter".
+        from src.output.renderers.email.compare_html import _fmt_thunder
+        assert cell == _fmt_thunder(None), (
             f"Zelle behauptet ein Tagesgewitter aus dem Aggregat: {cell!r}"
+        )
+        assert "hoch" not in cell, (
+            f"Die Vorschau zeigt die Nachtstufe (#1848 A3): {cell!r}"
         )
 
     def test_day_word_follows_token_not_aggregate_level(self):
@@ -580,8 +645,13 @@ class TestPlainDayWordComesFromDayToken:
         row = self._first_row(render_outlook_plain([
             _stage(hourly_thunder=_FALL_A_HOURLY, thunder="HIGH"),
         ]))
-        assert row.endswith("⚡– · nachts hoch @0"), (
+        # #1848 A3: der Nachtzusatz entfaellt; die Zusicherung bleibt --
+        # aus dem Aggregat entsteht kein Tagesgewitter.
+        assert row.endswith("⚡–"), (
             f"Zeile behauptet ein Tagesgewitter aus dem Aggregat: {row!r}"
+        )
+        assert "nachts" not in row, (
+            f"Die Vorschau zeigt eine Nachtangabe (#1848 A3): {row!r}"
         )
 
     def test_plain_day_word_follows_token_not_aggregate_level(self):
@@ -747,22 +817,28 @@ class TestEscalationWithinWindowShowsPeak:
         )
         assert "@15" in plain, f"Stunde der Spitzenstufe fehlt:\n{plain}"
 
-    def test_html_night_shows_peak_stage(self):
+    def test_html_night_peak_erscheint_nicht_in_der_vorschau(self):
+        """⚠️ UMGEDREHT (#1848 A3): frueher wurde hier die Spitzenstufe des
+        NACHT-Gewitters eingefordert ('nachts leicht @1 (hoch @3)'). Die
+        3-Tages-Vorschau zeigt seither nur das Tagesfenster -- die
+        Eskalations-Zusicherung bleibt fuer den TAGES-Fall unveraendert in
+        Kraft (s. ``test_html_day_shows_peak_stage`` oben)."""
         from src.output.renderers.email.outlook import render_outlook_table
         html = render_outlook_table(
             [_stage(hourly_thunder=_ESCALATION_NIGHT_HOURLY, thunder="HIGH")]
         )
-        assert "nachts leicht @1 (hoch @3)" in html, (
-            f"Spitzenstufe des Nachtgewitters unterschlagen:\n{html}"
+        assert "nachts" not in html, (
+            f"Die Vorschau zeigt eine Nachtangabe (#1848 A3):\n{html}"
         )
 
-    def test_plain_night_shows_peak_stage(self):
+    def test_plain_night_peak_erscheint_nicht_in_der_vorschau(self):
+        """Klartext-Pendant zum Test darueber."""
         from src.output.renderers.email.outlook import render_outlook_plain
         plain = render_outlook_plain(
             [_stage(hourly_thunder=_ESCALATION_NIGHT_HOURLY, thunder="HIGH")]
         )
-        assert "nachts leicht @1 (hoch @3)" in plain, (
-            f"Spitzenstufe des Nachtgewitters unterschlagen:\n{plain}"
+        assert "nachts" not in plain, (
+            f"Die Vorschau zeigt eine Nachtangabe (#1848 A3):\n{plain}"
         )
 
     def test_no_escalation_no_extra_text(self):
