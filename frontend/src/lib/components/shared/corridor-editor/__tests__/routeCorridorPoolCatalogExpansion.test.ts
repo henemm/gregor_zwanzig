@@ -19,6 +19,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -29,8 +30,15 @@ import {
 	addRow,
 	ROUTE_CTX_DEFAULTS,
 	ROUTE_METRIC_DEFS,
+	ORDINAL_ENUM,
 	type RouteMetricDef,
 } from '../corridorEditorState.ts';
+
+// AC-6 Test A: Zielstufen der Migration werden gegen die kanonische Enum-
+// Quelle abgeleitet, nicht gegen eigene Zahlenliterale — eine zusaetzliche
+// Stufe in ORDINAL_ENUM verschiebt die Bedeutung nicht still.
+const MED_ORDINAL = ORDINAL_ENUM.indexOf('MED');
+const HIGH_ORDINAL = ORDINAL_ENUM.indexOf('HIGH');
 
 const MODULE_SPECIFIER = '../compareMetricCatalogLoader.ts';
 
@@ -550,21 +558,33 @@ describe('Scheibe B / AC-4: Standardwert einer neu hinzugefuegten Gewitter-Zeile
 });
 
 describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und umgerechnet', () => {
-	// Prozent -> Stufe (Spec § Implementation Details Punkt 3):
-	//   null -> null · 0|1|2 unveraendert · 0-33 -> 0 · 34-66 -> 1 · 67-100 -> 2
-	const MIGRATION_CASES: Array<{ from: [number | null, number | null]; to: [number | null, number | null]; why: string }> = [
-		{ from: [null, 40], to: [null, 1], why: 'die alte Vorgabe "bis 40 %" wird "bis mittel"' },
-		{ from: [null, 0], to: [null, 0], why: '0 ist bereits ordinal (kein) und bleibt' },
-		{ from: [null, 1], to: [null, 1], why: '1 ist bereits ordinal (mittel) und bleibt' },
-		{ from: [null, 2], to: [null, 2], why: '2 ist bereits ordinal (hoch) und bleibt' },
+	// Prozent -> Stufe (Spec § Implementation Details Punkt 1, #2012-Korrektur):
+	//   null -> null · JEDE Zahl als Prozent gedeutet (kein "schon ordinal"-
+	//   Sonderzweig mehr) · 0-33 -> 0 (kein) · 34-66 -> 2 (mittel) · 67-100 -> 3 (hoch)
+	//   Stufe 1 ("leicht") ist ueber die Migration nie erreichbar (Spec Punkt 4).
+	const MIGRATION_CASES: Array<{
+		from: [number | null, number | null];
+		to: [number | null, number | null];
+		why: string;
+		word?: string;
+	}> = [
+		{ from: [null, 40], to: [null, MED_ORDINAL], why: 'die alte Vorgabe "bis 40 %" wird "bis mittel" (AC-1)', word: 'mittel' },
+		{ from: [null, 0], to: [null, 0], why: '0 Prozent liegt im ersten Drittel -> kein' },
+		{
+			from: [null, 1],
+			to: [null, 0],
+			why: 'der einzige Produktivwert (1 Prozent) liegt im ersten Drittel -> kein, NICHT mehr "bereits ordinal (mittel)" (AC-2)',
+			word: 'kein',
+		},
+		{ from: [null, 2], to: [null, 0], why: '2 Prozent liegt im ersten Drittel -> kein, NICHT mehr "bereits ordinal (hoch)"' },
 		{ from: [null, 33], to: [null, 0], why: 'oberes Ende des ersten Drittels -> kein' },
-		{ from: [null, 34], to: [null, 1], why: 'unteres Ende des zweiten Drittels -> mittel' },
-		{ from: [null, 66], to: [null, 1], why: 'oberes Ende des zweiten Drittels -> mittel' },
-		{ from: [null, 67], to: [null, 2], why: 'unteres Ende des dritten Drittels -> hoch' },
-		{ from: [null, 100], to: [null, 2], why: 'Prozent-Maximum -> hoch' },
+		{ from: [null, 34], to: [null, MED_ORDINAL], why: 'unteres Ende des zweiten Drittels -> mittel' },
+		{ from: [null, 66], to: [null, MED_ORDINAL], why: 'oberes Ende des zweiten Drittels -> mittel' },
+		{ from: [null, 67], to: [null, HIGH_ORDINAL], why: 'unteres Ende des dritten Drittels -> hoch' },
+		{ from: [null, 100], to: [null, HIGH_ORDINAL], why: 'Prozent-Maximum -> hoch (AC-3, Stufe "hoch" erstmals erreichbar)', word: 'hoch' },
 		{ from: [null, null], to: [null, null], why: 'beidseitig offen bleibt beidseitig offen' },
-		{ from: [50, null], to: [1, null], why: 'auch die Untergrenze wird umgerechnet' },
-		{ from: [0, 100], to: [0, 2], why: 'beide Grenzen unabhaengig voneinander' },
+		{ from: [50, null], to: [MED_ORDINAL, null], why: 'auch die Untergrenze wird umgerechnet' },
+		{ from: [0, 100], to: [0, HIGH_ORDINAL], why: 'beide Grenzen unabhaengig voneinander (AC-5)' },
 	];
 
 	for (const c of MIGRATION_CASES) {
@@ -588,6 +608,15 @@ describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und 
 				false,
 				'AC-3 FAIL: die Zeile traegt noch den alten Prozent-Schluessel'
 			);
+			// AC-1/AC-2: das ANGEZEIGTE Stufenwort pruefen, nicht nur den nackten
+			// Index — der Alt-Test blieb seit #1474 gruen, weil er nur Zahlen verglich.
+			if (c.word != null && c.to[1] != null) {
+				assert.equal(
+					row!.ordinalLabels?.[c.to[1] as number],
+					c.word,
+					`AC-1/AC-2 FAIL: angezeigtes Stufenwort fuer Index ${c.to[1]} ist nicht "${c.word}"`
+				);
+			}
 		});
 	}
 
@@ -626,7 +655,7 @@ describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und 
 		);
 		assert.equal(gewitter.length, 1, `AC-3 FAIL: ${gewitter.length} Gewitter-Eintraege gespeichert statt genau einem`);
 		assert.equal(gewitter[0].metric, 'thunder_level_max');
-		assert.deepEqual(gewitter[0].range, [null, 1]);
+		assert.deepEqual(gewitter[0].range, [null, MED_ORDINAL]);
 		assert.equal(gewitter[0].notify, true, 'notify/mark der Alt-Zeile muessen erhalten bleiben');
 		assert.equal(gewitter[0].mark, true);
 		// Die Nachbar-Zeile bleibt unberuehrt.
@@ -660,5 +689,66 @@ describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und 
 		const row = result.rows.find((r) => r.metric === 'wind_gust');
 		assert.ok(row);
 		assert.equal(row!.max, 40, 'die 40 km/h Boeen-Grenze darf nicht zu einer Stufe verrechnet werden');
+	});
+});
+
+// AC-6 Test B (Struktur, sekundaer zu Test A oben) — #2012, Spec Punkt 2:
+// percentBoundToOrdinal() darf die beiden migrierten Zielstufen NICHT als
+// rohe Zahlenliterale 2/3 zurueckgeben, sondern muss sie ueber die
+// bewachte kanonische Quelle ORDINAL_ENUM.indexOf('MED'|'HIGH') ableiten —
+// sonst bleibt die Funktion dem lokalen Kopie-Waechter
+// thunderScaleLocalCopyGuard.test.ts (#1480) unsichtbar (Zahlen statt
+// Stufen-Woerter, kein "thunder"/"gewitter" im Funktionsnamen).
+// Bauform: reiner Quelltext-Scan wie thunderScaleLocalCopyGuard.test.ts —
+// ergaenzt Test A (Verhalten), ersetzt ihn nicht.
+describe('AC-6 Test B: percentBoundToOrdinal() gibt keine rohen Zahlenliterale 2/3 zurueck', () => {
+	const CORRIDOR_STATE_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'corridorEditorState.ts');
+
+	function extractFunctionBody(source: string, fnMarker: string): string {
+		const startIdx = source.indexOf(fnMarker);
+		assert.ok(startIdx >= 0, `AC-6 FAIL: "${fnMarker}" nicht in corridorEditorState.ts gefunden`);
+		const braceOpen = source.indexOf('{', startIdx);
+		let depth = 0;
+		let i = braceOpen;
+		for (; i < source.length; i++) {
+			if (source[i] === '{') depth++;
+			else if (source[i] === '}') {
+				depth--;
+				if (depth === 0) break;
+			}
+		}
+		return source.slice(braceOpen, i + 1);
+	}
+
+	test('Quelltext von percentBoundToOrdinal enthaelt keinen "return 2" / "return 3" Literal', () => {
+		const source = readFileSync(CORRIDOR_STATE_PATH, 'utf-8');
+		const body = extractFunctionBody(source, 'function percentBoundToOrdinal(');
+		const rawLiteralReturns = [...body.matchAll(/\breturn\s+(-?\d+(?:\.\d+)?)\b/g)].map((m) => m[1]);
+		assert.equal(
+			rawLiteralReturns.includes('2'),
+			false,
+			'AC-6 FAIL: percentBoundToOrdinal() gibt eine rohe "2" zurueck statt ' +
+				'ORDINAL_ENUM.indexOf(\'MED\') — die Migration haengt an einer unbewachten Zahl, ' +
+				'nicht an der kanonischen Skalen-Quelle'
+		);
+		assert.equal(
+			rawLiteralReturns.includes('3'),
+			false,
+			'AC-6 FAIL: percentBoundToOrdinal() gibt eine rohe "3" zurueck statt ' +
+				'ORDINAL_ENUM.indexOf(\'HIGH\') — die Migration haengt an einer unbewachten Zahl, ' +
+				'nicht an der kanonischen Skalen-Quelle'
+		);
+	});
+
+	test('Quelltext von percentBoundToOrdinal referenziert ORDINAL_ENUM.indexOf', () => {
+		const source = readFileSync(CORRIDOR_STATE_PATH, 'utf-8');
+		const body = extractFunctionBody(source, 'function percentBoundToOrdinal(');
+		assert.match(
+			body,
+			/ORDINAL_ENUM\.indexOf\(/,
+			'AC-6 FAIL: percentBoundToOrdinal() leitet die Zielstufen nicht ueber ' +
+				'ORDINAL_ENUM.indexOf(...) ab — die strukturelle Kopplung an die kanonische ' +
+				'Skalen-Quelle fehlt'
+		);
 	});
 });
