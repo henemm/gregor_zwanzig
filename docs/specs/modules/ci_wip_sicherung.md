@@ -19,13 +19,13 @@ tags: [ci, deploy, wip-safety]
 Der CI-Schritt „Staging-Verdict schreiben (CI smoke)" führt bei jedem Merge nach `main` ein
 `git reset --hard origin/main` im Haupt-Checkout `/home/hem/gregor_zwanzig` aus — ohne
 WIP-Sicherung. Dieser Checkout ist zugleich das Arbeitsverzeichnis interaktiver Sessions und
-der Produktions-Serving-Ordner. Ein neues Skript `.claude/hooks/wip_safety.sh` sichert
+der Produktions-Serving-Ordner. Ein neues Skript `scripts/wip_safety.sh` sichert
 uncommittete getrackte Änderungen als Stash-Objekt + Tag, bevor der Reset sie verwirft, nach
 dem bewährten Vorbild aus `deploy-gregor-prod.sh`.
 
 ## Source
 
-- **File:** `.claude/hooks/wip_safety.sh` (neu)
+- **File:** `scripts/wip_safety.sh` (neu)
 - **Identifier:** Shell-Skript, aufgerufen mit einem Repo-Pfad als Argument
 
 ## Estimated Scope
@@ -68,7 +68,7 @@ dem bewährten Vorbild aus `deploy-gregor-prod.sh`.
 `.github/workflows/ci.yml` — Schritt „Staging-Verdict schreiben (CI smoke)": vor der
 bestehenden `ssh ... "cd /home/hem/gregor_zwanzig && git fetch origin && git reset --hard
 origin/main && ..."`-Zeile wird ein Aufruf von `wip_safety.sh` eingefügt. Das Skript wird dabei
-aus `origin/main` bezogen (z. B. `git show origin/main:.claude/hooks/wip_safety.sh | bash -s --
+aus `origin/main` bezogen (z. B. `git show origin/main:scripts/wip_safety.sh | bash -s --
 /home/hem/gregor_zwanzig` oder ein `git fetch` + `git show`-Äquivalent per SSH), nicht aus dem
 Arbeitsbaum des Servers — beim allererstmaligen Rollout liegt das Skript dort noch nicht auf
 dem aktuellen Stand (Henne-Ei, siehe Context-Doc Punkt 5). Schlägt die Sicherung fehl (Exit

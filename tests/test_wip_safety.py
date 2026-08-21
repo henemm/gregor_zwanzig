@@ -2,7 +2,7 @@
 
 Prueflinge:
 
-* ``.claude/hooks/wip_safety.sh`` (Shell-Skript, Aufruf ``bash wip_safety.sh <repo>``)
+* ``scripts/wip_safety.sh`` (Shell-Skript, Aufruf ``bash wip_safety.sh <repo>``)
 * ``.github/workflows/ci.yml`` — Verdrahtung im Schritt "Staging-Verdict schreiben (CI smoke)"
 
 Alle Verhaltenstests laufen gegen ein ECHTES Wegwerf-Git-Repo (``tempfile.mkdtemp``,
@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = REPO_ROOT / ".claude" / "hooks" / "wip_safety.sh"
+SCRIPT = REPO_ROOT / "scripts" / "wip_safety.sh"
 CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 
 COMMITTED_TEXT = "stand aus origin/main\n"
