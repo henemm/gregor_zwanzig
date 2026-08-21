@@ -145,3 +145,108 @@ getrennte Sperrzeit-Töpfe, `throttle_store.py:41-49`).
   (`e2c4a50f`).
 - **R5 — Beobachtbarkeit.** Die Briefing-Unterdrückung des Nowcasts hinterlässt keine
   Spur im `alert_log`. Ohne sie ist Beanstandung 4 auch künftig nicht nachweisbar.
+- **R6 — Die Abweichungsalarm-Mail hat keinen Inhalts-Validator.**
+  `radar_alert_mail_validator.py:105` macht bei allem außer `X-GZ-Mail-Type: radar-alert`
+  ein No-Op; `briefing_mail_validator.py:574` überspringt `deviation-alert` ausdrücklich.
+  Das Renderer-Gate (`renderer_mail_gate.py:47`) bewacht zwar `renderers/alert/*.py`,
+  der geforderte Nachweis lässt sich aber mit einer **Radar**-Alarm-Mail erbringen,
+  während die Änderung die **Abweichungs**-Alarm-Mail trifft. Genau die Mail aus diesem
+  Ticket ist die eine, die kein Validator prüft. → Gate-Befund für #1197.
+
+## Analysis
+
+### Type
+
+**Bug.** Kein Rechen- und kein Zeitzonenfehler, sondern ein Darstellungsfehler mit
+einer gemeinsamen Wurzel.
+
+### Root Cause (eine Ursache, drei Symptome)
+
+> **Die Projektionsschicht wirft den Kalendertag weg, und der Renderer formuliert jede
+> Zeitangabe so, als läge sie in der Zukunft — geprüft wird das nirgends.**
+
+`_peak_occurred_at()` und die Onset-Werte tragen ein vollständiges `datetime`
+(`weather_change_detection.py:301`). Erst `_fmt_occurred_at()`/`_fmt_onset_at()`
+(`project.py:67,91`) reduzieren es auf `HH:MM`. Ab da ist nicht mehr entscheidbar, ob
+der Zeitpunkt heute, morgen oder — wie hier — schon vorbei ist. Der Renderer setzt die
+Zahlen anschließend ohne Vorbehalt in eine Zukunftsform („Beginn verschiebt sich auf
+15:00"), obwohl es zum Versandzeitpunkt 15:30 war. Daraus folgen alle drei Symptome:
+die scheinbar widersprüchlichen Zeiten (**B3**), der fehlende Tagesbezug (**B4**) und
+die als Vorhersage gelesene Rückschau (**B1**).
+
+### Warum die Meldung nicht früher kommen konnte
+
+Untersucht und **ausgeschlossen**: Die Abweichungsprüfung läuft alle 15 Minuten
+(`internal/scheduler/scheduler.go:192,369-373`), holt die Vorhersage bei **jedem** Lauf
+frisch (`trip_alert.py:1537-1564`) und hat **keinen** Ergebnis-Cache — der einzige
+Cache im Provider ist die 7-Tage-Modellverfügbarkeit (`providers/openmeteo.py:238`),
+nicht die Werte. Zwischen Briefing (05:02 UTC) und Alarm (13:30 UTC) lagen ~34 Läufe.
+Die Erkennungslatenz ist damit auf höchstens 15 Minuten gedeckelt.
+
+**Schlussfolgerung: Open-Meteo hat den Regenbeginn nachträglich auf einen bereits
+verstrichenen Zeitpunkt vorverlegt.** Der Alarm um 15:30 war so früh wie technisch
+möglich. Ein früheres Warnen ist nicht die Lösung — die Meldung muss lediglich sagen,
+dass das Ereignis bereits läuft, statt es als bevorstehend zu formulieren.
+
+### Falle: der Tagesbezug aus #2009 verträgt keine Vergangenheit
+
+`day_offset()` (`src/utils/timezone.py`, aus #2009) liefert auch **negative** Werte.
+Die Anzeige daneben prüft aber nur auf Wahrheitswert:
+
+```
+render.py:310:  return f"morgen {e.onset_time}" if e.onset_day_offset else e.onset_time
+```
+
+Im Nowcast-Pfad folgenlos (dort ist der Beginn immer in der Zukunft, Vorwärtsfenster
+`radar_service.py:599-602`). Beim Abweichungsalarm sind vergangene Zeitpunkte der
+Normalfall — unverändert übernommen würde aus „gestern 15:00" ein **„morgen 15:00"**.
+Der Baustein wird wiederverwendet, die Anzeige muss auf den exakten Tagesversatz
+gehärtet werden.
+
+### Technischer Ansatz
+
+1. `to_alert_message()` nimmt zusätzlich `now_utc` entgegen. Beide Aufrufer berechnen
+   es ohnehin schon bzw. können es trivial reichen:
+   `notification_service.py:662` (`datetime.now(timezone.utc)`) und
+   `validator_render_service.py:144`.
+2. Die Projektion berechnet je Zeitangabe den Tagesversatz über `day_offset()` und
+   legt ihn — zusammen mit der Information „liegt bereits zurück" — aufs Modell
+   (`AlertEvent`, `OnsetShiftEvent`). **Rechnen in der Projektion, Worte im Renderer**
+   — dieselbe Arbeitsteilung wie in #2009 (`radar_alert_service.py:71`).
+3. Der Renderer benennt, welche Größe eine Zeile meint, und stellt jeder Uhrzeit den
+   Tagesbezug voran. Für **alle vier Kanäle** — E-Mail, Telegram, SMS, Premium-SMS.
+4. `_onset_time_label()` wird auf den exakten Tagesversatz gehärtet.
+
+**Bewusst NICHT gewählt:** ein Filter, der vergangene Ereignisse unterdrückt (R3). Er
+hätte die beanstandete Mail gar nicht verhindert — der Regen lief um 18:15 noch, das
+Etappenfenster reichte bis 20:00. Und er würde weiterhin wertvolle Meldungen
+verschlucken („es regnet seit einer Stunde, 29 mm bis heute Abend"). Der Fehler ist die
+Formulierung, nicht die Zustellung.
+
+### Affected Files
+
+| Datei | Änderung | Beschreibung |
+|---|---|---|
+| `src/output/renderers/alert/model.py` | MODIFY | Tagesversatz + Vergangenheits-Merker an `AlertEvent`/`OnsetShiftEvent` |
+| `src/output/renderers/alert/project.py` | MODIFY | `now_utc` entgegennehmen, `day_offset()` je Zeitangabe, Felder füllen |
+| `src/output/renderers/alert/render.py` | MODIFY | Zeilenbezeichnung + Tagesbezug in allen vier Kanälen; `_onset_time_label` härten |
+| `src/services/notification_service.py` | MODIFY | `now_utc` durchreichen (≈3 Zeilen) |
+| `src/services/validator_render_service.py` | MODIFY | dito (≈3 Zeilen) |
+| `tests/tdd/test_alert_zeitangaben_2020.py` | CREATE | RED-Nachweis: Vergangenheit, Tagesgrenze, kombinierter Fall, alle vier Kanäle |
+
+### Scope Assessment
+
+- Dateien: **5 MODIFY + 1 CREATE**
+- Geschätzt: **+80/-25** Produktivcode, **+150** Test → **LoC-Limit 250 wird gerissen**,
+  Anhebung auf 500 einplanen
+- Risiko: **MEDIUM–HIGH** — kritischer Pfad, vier Kanäle, `render.py` wird parallel
+  von #1948 S6 angefasst
+
+### Open Questions
+
+- [ ] **Beanstandung 4 braucht eine Produktentscheidung.** Der Nowcast wurde bewusst
+      unterdrückt, weil das Briefing den Regen schon angekündigt hatte
+      (`trip_alert.py:1330`). Nur: angekündigt waren **7,4 mm**, gekommen sind
+      **29,4 mm** — „redundant" trifft es nicht. Empfehlung in der Spec vorlegen,
+      Entscheidung beim PO.
+
