@@ -531,6 +531,14 @@ def test_ac_b7_nachtrag_haelt_auch_ein_kleines_uebergebenes_limit_ein():
 
 # Ist-Stand vor dieser Scheibe, aufgezeichnet am 2026-08-21 aus echten
 # Renderer-Aufrufen (nicht aus der Spec abgeschrieben).
+#
+# AUSNAHME Cooldown-Zeile: die beiden E-Mail-Goldens tragen bereits den
+# Wortlaut, den Teil C dieser Scheibe (AC-C1/AC-C2) herstellt — der
+# bestehende Satz plus Quellen-Zusatz, in DERSELBEN Zeile, Leerzeichen als
+# Fuge. Wortlaut aus `test_multi_location_onset_alert.py` uebernommen, damit
+# die beiden Fassungen nicht auseinanderlaufen. Bis Teil C implementiert ist,
+# sind die beiden E-Mail-Waechter deshalb ROT; SMS/Betreff/Telegram bleiben
+# byte-identisch und gruen (der Cooldown-Satz steht nur in der E-Mail).
 GOLDEN_SMS = "Ziel: TH@16:45"
 GOLDEN_SUBJECT = "[KHW 403] 🏁 Ziel · Gewitter in 25 Min"
 GOLDEN_TELEGRAM = (
@@ -548,7 +556,9 @@ GOLDEN_EMAIL_PLAIN = (
     "Briefing: nicht angekündigt\n"
     "\n"
     "Stand: heute 16:20\n"
-    "Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden.\n"
+    "Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. "
+    "Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift "
+    "dieser Cooldown nicht.\n"
     "\n"
     "Regen-/Gewitter-Alarm · Radar (DWD)"
 )
@@ -561,7 +571,9 @@ GOLDEN_EMAIL_PLAIN_BUNDLE = (
     "Bozen · Regen in 35 Min: ab 16:55 · leichter Regen\n"
     "\n"
     "Stand: heute 16:20 · Quelle: Radar (DWD), AROME-FR\n"
-    "Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden.\n"
+    "Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. "
+    "Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift "
+    "dieser Cooldown nicht.\n"
     "\n"
     "Regen-/Gewitter-Alarm · Radar (DWD)"
 )
@@ -573,8 +585,15 @@ def test_ac_b8_gewoehnliche_nowcast_meldung_bleibt_auf_allen_kanaelen_gleich():
     THEN ist die Ausgabe byte-identisch zum Stand vor dieser Scheibe —
     keine neue Zeile, kein Praefix, keine Leerzeile.
 
-    Heute GRUEN; wird dieser Test durch die Implementierung rot, leckt die
-    Kennzeichnung in einen Fall ohne Treffer."""
+    ZWEI Rot-Ursachen, die NICHT verwechselt werden duerfen:
+
+    * Weicht ausschliesslich die COOLDOWN-ZEILE ab, ist Teil C (AC-C1/AC-C2)
+      unvollstaendig — der Satz bekommt dort den Quellen-Zusatz in derselben
+      Zeile. Kein Befund an Teil B.
+    * Taucht ``"Erg "`` oder eine Bezugszeile auf, leckt die Nachtrags-
+      Kennzeichnung in einen Fall OHNE Registertreffer. Das ist ein Befund
+      an der Implementierung, und die Erwartung wird nicht aufgeweicht,
+      sondern die Ausloesebedingung des Tokens geschaerft (Spec AC-B9)."""
     msg = _onset_msg()
 
     assert render_sms(msg) == GOLDEN_SMS
@@ -587,7 +606,12 @@ def test_ac_b8_gewoehnliche_nowcast_meldung_bleibt_auf_allen_kanaelen_gleich():
 def test_ac_b8_gebuendelte_nowcast_mail_bleibt_gleich():
     """AC-B8 (Buendel-Zweig) GIVEN einen gebuendelten Mehr-Orte-Onset OHNE
     Nachtrag WHEN die E-Mail gerendert wird THEN bleibt der Plain-Text
-    byte-identisch zum Stand vor dieser Scheibe."""
+    byte-identisch zum Stand vor dieser Scheibe.
+
+    Dieselben zwei Rot-Ursachen wie im Einzel-Zweig (s.o.): weicht nur die
+    Cooldown-Zeile ab, fehlt Teil C in ``_render_email_onset_multi``;
+    taucht ``"Erg "`` oder eine Bezugszeile auf, leckt die Kennzeichnung in
+    einen Fall ohne Registertreffer."""
     _, plain = render_email(_bundle_onset_msg())
     assert plain == GOLDEN_EMAIL_PLAIN_BUNDLE
 
