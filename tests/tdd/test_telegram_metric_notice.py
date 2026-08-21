@@ -21,7 +21,7 @@ import dataclasses
 
 from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 from output.renderers import narrow
-from output.renderers.channel_layout import ChannelLayout
+from output.renderers.channel_layout import ChannelLayout, telegram_metric_notice
 from output.renderers.trip_report import TripReportFormatter
 
 from tests.tdd import _min_temp_felt_fixtures as F
@@ -141,6 +141,44 @@ def test_notice_appears_exactly_once_across_bubbles_with_multiple_segments():
             assert fragment not in " ".join(b.split()), (
                 f"AC-3: Hinweistext in einer Segment-Tabellen-Bubble gefunden: {b!r}"
             )
+
+
+# --- F001 (Adversary-Fund, Gegenpruefung) -- die beiden Wortlaute sind ---
+# --- BEWUSST verschieden (kein Kanal ersetzt einen anderen) und muessen --
+# --- deshalb je Kontext WOERTLICH gepinnt werden, nicht nur am Fragment --
+# --- "+N weitere Wettergrößen", das in beiden Wortlauten identisch ist. --
+# --- Erwartung ist ein Literal in diesem Test, NICHT aus channel_layout.py
+# --- importiert/abgeleitet -- sonst bewacht der Test die Quelle nicht. ---
+
+
+def test_vergleich_notice_full_wording_is_pinned_and_route_wording_absent():
+    text = telegram_metric_notice(2, context="vergleich")
+    assert text == (
+        "… +2 weitere Wettergrößen je Ort (Telegram-Limit) "
+        "— vollständig per E-Mail"
+    ), f"F001: Vergleichs-Wortlaut weicht ab: {text!r}"
+    assert "nur als Tageswert" not in text, (
+        f"F001: Trip-Wortlaut-Fragment im Vergleichs-Text gefunden: {text!r}"
+    )
+
+
+def test_route_notice_full_wording_is_pinned_and_vergleich_wording_absent():
+    text = telegram_metric_notice(2, context="route")
+    assert text == (
+        "… +2 weitere Wettergrößen nur als Tageswert (Telegram-Limit)"
+    ), f"F001: Trip-Wortlaut weicht ab: {text!r}"
+    assert "je Ort" not in text, (
+        f"F001: Vergleichs-Wortlaut-Fragment 'je Ort' im Trip-Text gefunden: {text!r}"
+    )
+    assert "vollständig per E-Mail" not in text, (
+        f"F001: Vergleichs-Wortlaut-Fragment 'vollständig per E-Mail' im "
+        f"Trip-Text gefunden: {text!r}"
+    )
+
+
+def test_notice_is_empty_string_for_zero_demoted_in_both_contexts():
+    assert telegram_metric_notice(0, context="vergleich") == ""
+    assert telegram_metric_notice(0, context="route") == ""
 
 
 # --- AC-6: toter Pfad entfernt --------------------------------------------
