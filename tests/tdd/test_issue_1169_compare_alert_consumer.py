@@ -754,9 +754,12 @@ def test_ac7_trip_alert_rendering_unchanged():
     # `location_label` nie — steht oben unveraendert und gilt weiter.
     assert subject == "[GR20] Segment 1 · ↑ Niedersch: 2,0 mm→18,0 mm", subject
     assert plain == (
-        "Niedersch +800% seit dem Briefing\n\n"
-        "↑ +800 % · Änderung über deiner Alarm-Schwelle (10,0 mm)\n\n"
-        "Niedersch · mm: 2,0 mm ↑ 18,0 mm +800 %\n"
+        # Issue #1948 S6 (AC-9): H1 nennt Von-/Bis-Wert statt der entfallenen
+        # berechneten Prozent-Änderung.
+        "Niedersch 2,0 mm → 18,0 mm seit dem Briefing\n\n"
+        # AC-8: kein berechnetes Δ% mehr im Verdikt-Badge.
+        "↑ Änderung über deiner Alarm-Schwelle (10,0 mm)\n\n"
+        "Niedersch · mm: 2,0 mm ↑ 18,0 mm\n"
         "Änderung 16,0 mm: über Alarm-Schwelle 10,0 mm ✗\n"
         "Wo & wann: Segment 1\n\n"
         "Stand: heute 14:00 · verglichen mit dem letzten Briefing"
@@ -770,7 +773,10 @@ def test_ac7_trip_alert_rendering_unchanged():
     ), plain
     assert telegram_text == (
         "<b>GR20 · Segment 1 · ↑ Niedersch</b>\n"
-        "Niedersch · Schwelle 10,0 mm · 2,0 mm ↑ 18,0 mm · Änderung über"
+        "Niedersch · Schwelle 10,0 mm · 2,0 mm ↑ 18,0 mm · Änderung über\n"
+        # Issue #1948 S6 (AC-11): Telegram fuehrt seither dieselbe Stand-
+        # Zeile wie die E-Mail (reference_at ist hier None -> Rueckfalltext).
+        "Stand: heute 14:00 · verglichen mit dem letzten Briefing"
     ), telegram_text
 
 
