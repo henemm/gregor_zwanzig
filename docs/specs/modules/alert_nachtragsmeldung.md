@@ -4,7 +4,7 @@ type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
 status: draft
-version: "1.3"
+version: "1.4"
 tags: [alerts, trip, issue-2018, issue-1467, nachtrag, event-identity]
 ---
 
@@ -513,10 +513,26 @@ Der genaue Zusatztext ist beim Implementieren gegen die Zeichenbudget-
 Praxis der E-Mail (kein hartes Limit, aber Lesbarkeit) zu prüfen; die
 FACHLICHE Aussage — Cooldown gilt NUR quelleneigen — ist bindend.
 
-**Einziges bewusst angefasstes Golden:** `tests/tdd/test_multi_location_onset_alert.py:39-48`
-(bit-eingefroren, `EXPECTED_PLAIN`) wird auf den neuen Satz aktualisiert —
-das ist die einzige Testdatei, die die Cooldown-Zeile als vollständigen
-String statt als Substring prüft.
+**🔴 Auflage (bindend, Korrektur 5): der Zusatz steht in DERSELBEN
+Klartext-Zeile wie der bestehende Satz, mit einem Leerzeichen als Fuge —
+KEINE eigene Zeile, KEIN eigener Absatz.** `test_official_alert_plaintext_part.py:121`
+und `test_alert_mail_body_alignment.py:135` klassifizieren den Mailkörper
+zeilen-/blockweise per Substring; eine eigene Zeile kippt diese
+Reihenfolge-Wächter. In der HTML-Fassung gilt dasselbe sinngemäß: der
+Zusatz landet INNERHALB des bestehenden `<span …>`-Blocks, nicht als
+eigener Block.
+
+**Bewusst angefasstes Golden — EINE Datei, ZWEI Konstanten (Korrektur 5):**
+`tests/tdd/test_multi_location_onset_alert.py` ist die einzige Testdatei,
+die die Cooldown-Zeile als vollständigen String statt als Substring prüft.
+Sie trägt den Satz allerdings ZWEIMAL: in `EXPECTED_PLAIN` (Zeile ~47) und
+in `EXPECTED_HTML` (Zeile ~88); beide werden im selben Test byte-identisch
+geprüft. **Beide Konstanten werden aktualisiert.** Die frühere Formulierung
+("`EXPECTED_PLAIN` ist das einzige Golden mit der Cooldown-Zeile") war
+sachlich falsch — am Code widerlegt. Das erweitert den freigegebenen Umfang
+NICHT: es ist dieselbe eine Aussage in zwei Darstellungen derselben Datei,
+und ein nur halb aktualisiertes Golden bliebe nach GREEN dauerhaft rot.
+Kein weiteres Golden wird angefasst.
 
 ## Invarianten
 
@@ -663,7 +679,8 @@ String statt als Substring prüft.
 | `tests/tdd/test_alert_stufenwort.py::test_ac14_sms_bleibt_unveraendert_regressionswaechter` | prüft den SMS-Text eines GEWÖHNLICHEN Alarms auf exakt `"km 0-4: TH:M->H@15"` — erscheint das neue Token hier, ist das ein Befund an der Implementierung (Token leckt in einen Fall ohne Treffer), NICHT am Test; die Erwartung wird nicht aufgeweicht |
 | `tests/tdd/test_telegram_kurzstil_trip_alert.py:315` | prüft Byte-Identität Kurzstil-Telegram == SMS-Text bei einem gewöhnlichen Alarm — dieselbe Schärfe wie oben |
 | S6-Wächter zu `AC-12` (Stand-Zeile nur Telegram, Kurzstil byte-identisch zur SMS) | das neue Token heißt nicht `Stand:` und sitzt im SMS-Text — es wird vom Kurzstil miterbt, die Byte-Identität bleibt gewahrt (eigenes Regressions-AC hier, AC-B10) |
-| `tests/tdd/test_multi_location_onset_alert.py:39-48` | EINZIGES bewusst angefasstes Golden (Teil C) |
+| `tests/tdd/test_multi_location_onset_alert.py` (`EXPECTED_PLAIN` ~47 UND `EXPECTED_HTML` ~88) | EINZIGE bewusst angefasste Golden-Datei (Teil C) — beide Konstanten tragen den Cooldown-Satz und werden beide aktualisiert (Korrektur 5) |
+| `tests/tdd/test_official_alert_plaintext_part.py:121`, `tests/tdd/test_alert_mail_body_alignment.py:135` | zeilen-/blockweise Reihenfolge-Wächter — bleiben grün, weil der Cooldown-Zusatz in DERSELBEN Zeile steht (Korrektur 5) |
 | Alle übrigen Cooldown-Substring-Wächter (s. Teil C) | bleiben grün, weil der bestehende Substring erhalten bleibt |
 
 ## Test-Plan
@@ -1040,14 +1057,23 @@ Test-Postfach bzw. Test-Chat.
   - Test: neuer Substring-Test auf den Zusatztext, PLUS alle vier
     bestehenden Substring-Wächter (S. Wächter-Tabelle) bleiben unverändert
     grün.
+  - **Auflage (Korrektur 5):** Der Zusatz steht in DERSELBEN Klartext-
+    Zeile wie der bestehende Satz (Leerzeichen als Fuge), nicht als eigene
+    Zeile — sonst kippen die zeilen-/blockweisen Reihenfolge-Wächter
+    `test_official_alert_plaintext_part.py:121` und
+    `test_alert_mail_body_alignment.py:135`. Beide laufen als Wächter mit
+    und bleiben grün.
   - Schicht: Kern.
 
-- **AC-C2:** Given den bit-eingefrorenen Golden-Test
-  `test_multi_location_onset_alert.py:39-48`, When diese Scheibe
-  abgeschlossen ist, Then ist `EXPECTED_PLAIN` bewusst auf den neuen
-  Cooldown-Satz aktualisiert — als EINZIGES angefasstes Golden.
-  - Test: `test_multi_location_onset_alert.py` grün mit aktualisiertem
-    `EXPECTED_PLAIN`.
+- **AC-C2 (präzisiert, Korrektur 5):** Given den bit-eingefrorenen
+  Golden-Test `test_multi_location_onset_alert.py`, When diese Scheibe
+  abgeschlossen ist, Then sind BEIDE Konstanten, die den Cooldown-Satz
+  tragen, bewusst auf den neuen Wortlaut aktualisiert — `EXPECTED_PLAIN`
+  (Zeile ~47) UND `EXPECTED_HTML` (Zeile ~88) — als EINZIGE angefasste
+  Golden-Datei.
+  - Test: `test_multi_location_onset_alert.py` grün mit beiden
+    aktualisierten Konstanten. Ein nur in `EXPECTED_PLAIN` gepflegter
+    Stand lässt den Test dauerhaft rot und gilt als unfertig.
   - Schicht: Kern.
 
 - **AC-C3:** Given den Commit-Verlauf dieser Scheibe, When man ihn
@@ -1190,3 +1216,21 @@ Test-Postfach bzw. Test-Chat.
   Coordinator, nicht neu beim PO vorgelegt: der PO-Entscheid zur
   Zustellmenge (Korrektur 3) lag bereits vor und ist eindeutig — die
   AC-Formulierung verletzte ihn, nicht umgekehrt.
+- 2026-08-21 (Korrektur 5, gleicher Tag, Version 1.4, **während der
+  TDD-RED-Phase**): Zwei Ungenauigkeiten in Teil C, vom RED-Agenten am Code
+  aufgedeckt und gegengeprüft. **(a)** Die Behauptung "`EXPECTED_PLAIN` ist
+  das einzige Golden mit der Cooldown-Zeile" ist falsch:
+  `tests/tdd/test_multi_location_onset_alert.py` trägt den Satz zweimal —
+  `EXPECTED_PLAIN` (~47) und `EXPECTED_HTML` (~88) —, beide werden im
+  selben Test byte-identisch geprüft. Beide werden aktualisiert; das
+  erweitert den freigegebenen Umfang nicht (dieselbe Aussage, dieselbe
+  Datei, zwei Darstellungen), ein halb gepflegtes Golden bliebe sonst nach
+  GREEN dauerhaft rot. **(b)** Neue bindende Auflage: der Cooldown-Zusatz
+  MUSS in derselben Klartext-Zeile stehen (Leerzeichen als Fuge) bzw. im
+  bestehenden `<span>`-Block der HTML-Fassung — eine eigene Zeile kippt die
+  zeilen-/blockweisen Reihenfolge-Wächter
+  `test_official_alert_plaintext_part.py:121` und
+  `test_alert_mail_body_alignment.py:135`. Beide als Wächter in die Tabelle
+  aufgenommen. Ausserdem festgelegt: `alert_log`-Feldnamen für AC-B13 sind
+  `is_addendum` (bool) und `addendum_reported_at` (ISO-String), genau
+  diese zwei Felder kommen hinzu.
