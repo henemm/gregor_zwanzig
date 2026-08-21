@@ -81,6 +81,11 @@ _MAX_UNDATED_ANCHOR_AGE = timedelta(hours=26)
 # zu kappen (AC-8).
 _ALARM_ANCHOR_CEILING = timedelta(hours=4)
 
+# Issue #2020: Ueberholungs-Faktor der Nowcast-Sperre gegen das Briefing.
+# Analog RADAR_ONSET_THRESHOLD_MIN-Muster (#2009/ADR-0021) -- eine benannte
+# Konstante statt Hartverdrahtung.
+_BRIEFING_OVERTAKE_FACTOR = 2.0
+
 # Issue #1460 (P1a, loest #1444 S1 ab): der Wertebereich (`corridors[].notify`)
 # ist KEIN Alarm-Ausloeser mehr -- eine absolute Grenze widerspricht ADR-0009
 # (Alarme sind Abweichungs-Waechter). Der frueher hier gefuehrte
@@ -1350,10 +1355,37 @@ class TripAlertService:
             # Sicherheits-Override (Slice 4, #883): konvektive Gefahr (Gewitter/Hagel)
             # durchbricht die Briefing-Unterdrückung. Normaler (nicht-konvektiver)
             # angekündigter Regen bleibt unterdrückt (reines Δ-Modell).
-            if _briefing_announced and not result.is_convective:
+            #
+            # #2020 A3: Ueberholungs-Pruefung statt binaerer Sperre. Menge gegen
+            # Menge (window_precip_mm vs. _briefing_precip), Rate nur als
+            # Relevanz-Untergrenze (max_rate_mm_h >= HEAVY_RAIN_THRESHOLD_MM_H).
+            # UND-Verknuepfung (nicht ODER) haelt die Regel fuer festen
+            # _briefing_precip monoton in beiden Groessen (AC-3). Bewusst ueber
+            # die Modul-Referenz gelesen (radar_service_mod), nicht als
+            # `from ... import` gebundene Kopie (analog RADAR_ONSET_THRESHOLD_MIN,
+            # ADR-0021).
+            _overtaking = (
+                _briefing_announced
+                and result.window_precip_mm >= _briefing_precip * _BRIEFING_OVERTAKE_FACTOR
+                and result.max_rate_mm_h >= radar_service_mod.HEAVY_RAIN_THRESHOLD_MM_H
+            )
+            if _briefing_announced and not result.is_convective and not _overtaking:
                 logger.debug(
                     f"Radar alert suppressed: briefing had {_briefing_precip} mm for {trip.id}"
                 )
+                try:
+                    alert_log.append_suppressed_entry(
+                        self._user_id, entity_id=trip.id, entity_type="trip",
+                        reason=alert_log.REASON_NOWCAST,
+                        gate_reason=f"briefing_announced:{_briefing_precip}mm",
+                        effective_channels=effective_channels,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Radar alert: Unterdrueckungs-Protokoll (Briefing-Ankuendigung) "
+                        "fuer Trip %s fehlgeschlagen (%s) — der Alarm blieb aus, nur der "
+                        "Protokoll-Eintrag fehlt.", trip.id, e,
+                    )
                 continue
 
             # Doppel-Alert-Guard (Issue #818 AC-4)

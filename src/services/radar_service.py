@@ -70,6 +70,18 @@ _NOWCAST_HORIZON_MIN = 180
 # dieselbe Zahl referenziert statt eine zweite Kopie zu pflegen.
 NOWCAST_HORIZON_MIN = _NOWCAST_HORIZON_MIN
 
+# Issue #2020: extrahierte Schwelle -- war Inline-Literal in intensity_to_text().
+# Dieselbe Zahl, die die Ueberholungs-Pruefung in trip_alert.py als
+# Relevanz-Untergrenze auf max_rate_mm_h referenziert (keine zweite,
+# unabhaengige Zahl).
+HEAVY_RAIN_THRESHOLD_MM_H = 4.0
+
+# Issue #2020: eigenes, auf eine Stunde begrenztes Vergleichsfenster fuer die
+# Mengen-Ueberholungspruefung -- bewusst NICHT _NOWCAST_HORIZON_MIN (180 Min),
+# sonst wuerde ein Drei-Stunden-Wert gegen einen Ein-Stunden-Briefingwert
+# verglichen (precip_1h_mm).
+_OVERTAKE_COMPARE_WINDOW_MIN = 60
+
 # Issue #2009: einzige Quelle der Onset-Alarmschwelle, ersetzt die bisher
 # doppelt gepflegten Literale in trip_alert.py und compare_radar_alert.py
 # (ADR-0021 — Trip und Ortsvergleich teilen den Code). Wert 55: am Cron-Takt
@@ -121,6 +133,53 @@ class NowcastResult:
                                      # (Issue #1628 S1). Pure observability signal --
                                      # radar_alert_due() treats onset_minutes=None
                                      # identically either way.
+    max_rate_mm_h: float = 0.0      # Issue #2020: Spitzenrate im 180-Min-Fenster --
+                                     # nur noch Relevanz-Untergrenze fuer die
+                                     # Ueberholungspruefung, kein Faktor-Vergleich.
+    window_precip_mm: float = 0.0   # Issue #2020: akkumulierte Menge in der ERSTEN
+                                     # STUNDE ab jetzt (eigenes Fenster, s.
+                                     # _OVERTAKE_COMPARE_WINDOW_MIN) -- vergleichbar
+                                     # mit precip_1h_mm im Briefing.
+
+
+def _infer_frame_cadence(frames: list) -> timedelta:
+    """Leitet den Frame-Abstand aus den tatsaechlichen Zeitstempeln ab
+    (Issue #2020, Befund 1) -- Minimum-Ansatz: der kleinste positive
+    Abstand zwischen zwei (sortierten, deduplizierten) Zeitstempeln gilt
+    als Kadenz. RADOLAN liefert 5-Minuten-Schritte, alle anderen
+    Produktivquellen (INCA, AROME-FR, ICON-D2, ARPAE, `minutely_15`)
+    15-Minuten-Schritte -- das Minimum erkennt beide korrekt, ohne eine
+    feste Kadenz anzunehmen, und bleibt bei gemischten/unregelmaessigen
+    Serien konservativ (kuerzester beobachteter Abstand = engste, also
+    am wenigsten hochrechnende Annahme).
+
+    Weniger als zwei unterscheidbare Zeitstempel -> kein Abstand ableitbar,
+    Rueckfall auf die kleinste in Produktion vorkommende Kadenz (RADOLAN,
+    5 Min) als konservativste Annahme (verhindert Ueberextrapolation staerker
+    als 15 Min).
+
+    Abwaegung Minimum vs. Median (Team-Lead-Review 2026-08-21): Minimum
+    gewinnt, weil eine zu SCHWACHE Menge nur Alarme unterdrueckt, nie
+    welche erfindet ("im Zweifel zurueckhaltend, nie alarmfreudig", Spec
+    Known Limitations) -- der sicherheitsrelevante Fehler dieses Tickets
+    (#2020) war ein zu spaeter, nicht ein zu frueher Alarm. Der Preis: bei
+    UNREGELMAESSIGER Frame-Folge zaehlt das Minimum systematisch zu wenig.
+    Liefert eine 15-Min-Quelle einmalig zwei Frames im 5-Min-Abstand, wird
+    die Kadenz faelschlich 5 Min -- JEDER Frame bekommt dann nur 5 statt
+    15 Minuten zugerechnet, die Stundenmenge faellt auf ein Drittel, und
+    eine echte Ueberholung koennte dadurch verfehlt werden. Bei den
+    heutigen Quellen unwahrscheinlich (je Quelle einheitliches Raster),
+    aber bewusst zugunsten der Fehlalarm-Vermeidung in Kauf genommen --
+    diese Abwaegung nicht stillschweigend zurueckbauen.
+    """
+    ts_sorted = sorted({f.timestamp for f in frames})
+    gaps = [
+        b - a for a, b in zip(ts_sorted, ts_sorted[1:])
+        if (b - a).total_seconds() > 0
+    ]
+    if not gaps:
+        return timedelta(minutes=5)
+    return min(gaps)
 
 
 def _offline_fixture_active() -> bool:
@@ -179,7 +238,7 @@ class RadarNowcastService:
             return INTENSITY_DRY
         if mm_per_h < 1.0:
             return INTENSITY_LIGHT
-        if mm_per_h < 4.0:
+        if mm_per_h < HEAVY_RAIN_THRESHOLD_MM_H:
             return INTENSITY_MODERATE
         return INTENSITY_HEAVY
 
@@ -637,6 +696,33 @@ class RadarNowcastService:
             and not frames
         )
 
+        # Issue #2020: eigenes 60-Min-Vergleichsfenster fuer die Mengen-
+        # Ueberholungspruefung (NICHT das 180-Min-Nowcast-Fenster oben -- das
+        # waere ein 3h-Wert gegen einen 1h-Briefingwert). Dauer JE Frame aus
+        # der abgeleiteten Kadenz (s. _infer_frame_cadence), NIE ueber das
+        # Fensterende (compare_horizon) UND NIE ueber die Kadenz hinaus
+        # hochgerechnet (Team-Lead-Review 2026-08-21, Befund 1): ein
+        # einzelner Frame nach Datenausfall/Drosselung darf nicht bis zum
+        # vollen Fensterende gestreckt werden -- sonst wuerde ein einziges
+        # Radarbild zu einem hochgerechneten Alarm. Fehlende Frames machen
+        # die Menge dadurch eher zu klein als zu gross (bewusst konservative
+        # Richtung, Spec "Known Limitations").
+        _cadence = _infer_frame_cadence(frames)
+        compare_horizon = now + timedelta(minutes=_OVERTAKE_COMPARE_WINDOW_MIN)
+        compare_window = sorted(
+            (f for f in frames if f.timestamp >= now and f.timestamp < compare_horizon),
+            key=lambda f: f.timestamp,
+        )
+        window_precip_mm = 0.0
+        for i, frame in enumerate(compare_window):
+            next_ts_in_window = (
+                compare_window[i + 1].timestamp if i + 1 < len(compare_window)
+                else compare_horizon
+            )
+            frame_end = min(next_ts_in_window, frame.timestamp + _cadence, compare_horizon)
+            duration_h = max(0.0, (frame_end - frame.timestamp).total_seconds() / 3600.0)
+            window_precip_mm += frame.precip_mm_h * duration_h
+
         return NowcastResult(
             onset_minutes=onset_minutes,
             intensity_label=intensity_label,
@@ -646,6 +732,8 @@ class RadarNowcastService:
             convective_checked=self._convective_checked,
             throttled=throttled,
             data_unavailable=data_unavailable,
+            max_rate_mm_h=max_rate,
+            window_precip_mm=window_precip_mm,
         )
 
 

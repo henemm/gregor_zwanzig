@@ -90,16 +90,31 @@ def _hourlong_rain_frame_source(rate: float, *, convective: bool = False):
 
 
 def _spike_then_moderate_frames_ac2(lat: float, lon: float) -> list:
-    """Spitze 6.0 mm/h (10 Min) + gemaessigt 1.0 mm/h (48 Min) -> ~1.8 mm gesamt.
+    """Spitze 6.0 mm/h (erste 10 Min, zwei 5-Min-Frames) + abklingender
+    Regen (~0.96 mm/h, zehn weitere 5-Min-Frames) im GLEICHMAESSIGEN
+    5-Minuten-Raster (RADOLAN-Kadenz) ueber die volle Vergleichsstunde,
+    OHNE Stille am Fensterende -> ~1.8 mm gesamt.
 
     Deckt sich mit dem illustrativen AC-2-Beispiel der Spec (Briefing 1,0 mm,
-    Faktor-Schwelle 2,0 mm, real 1,8 mm -- Faktor nicht erfuellt).
+    Faktor-Schwelle 2,0 mm, real ~1,8 mm -- Faktor nicht erfuellt).
+
+    Issue #2020 (Team-Lead-Review 2026-08-21): die fruehere 2-Frame-Fassung
+    (Spitze bei +2 Min, EIN Frame bei +12 Min, danach keine weiteren Frames)
+    baute implizit auf der inzwischen abgeschafften Ueber-Extrapolation auf
+    -- der letzte Frame wurde bis zum Fensterende (60 Min) hochgerechnet,
+    obwohl real ab Minute 12 gar keine Daten mehr vorlagen. Eine echte
+    Quelle liefert bei 48 Minuten anhaltendem (wenn auch abklingendem)
+    Regen weiterhin Frames im Produktivraster -- diese Fassung bildet das
+    nach: durchgehende Kadenz, `_infer_frame_cadence()` leitet daraus 5 Min
+    ab, kein Frame wird ueber sein eigenes Intervall hinaus gestreckt.
     """
     from providers.brightsky import RadarFrame
     now = datetime.now(timezone.utc)
+    offsets = [2, 7, 12, 17, 22, 27, 32, 37, 42, 47, 52, 57]
+    rates = [6.0, 6.0] + [0.96] * 10
     return [
-        RadarFrame(timestamp=now + timedelta(minutes=2), precip_mm_h=6.0),
-        RadarFrame(timestamp=now + timedelta(minutes=12), precip_mm_h=1.0),
+        RadarFrame(timestamp=now + timedelta(minutes=m), precip_mm_h=r)
+        for m, r in zip(offsets, rates)
     ]
 
 

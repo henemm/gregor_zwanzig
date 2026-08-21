@@ -72,6 +72,21 @@ def _wet_frames(lat: float, lon: float) -> list:
     ]
 
 
+def _wet_frames_below_overtake_floor(lat: float, lon: float) -> list:
+    """Issue #2020: gewoehnlicher angekuendigter Regen UNTER der
+    Starkregen-Untergrenze (HEAVY_RAIN_THRESHOLD_MM_H=4.0 mm/h) -- die neue
+    Ueberholungs-Pruefung in check_radar_alerts() kann hier strukturell nie
+    greifen (max_rate_mm_h < 4.0), unabhaengig von der akkumulierten Menge.
+    Bewacht weiterhin den reinen Briefing-Unterdrueckungs-Pfad aus #818
+    AC-1, ohne von der #2020-Ausnahme ueberholt zu werden."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    return [
+        RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=2.0),
+        RadarFrame(timestamp=now + timedelta(minutes=20), precip_mm_h=3.0),
+    ]
+
+
 def _make_active_trip(trip_id: str) -> Trip:
     """2-Waypoint-Trip mit ganztägig aktivem Segment (00:00-23:59 Ortszeit).
 
@@ -248,7 +263,22 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
 
     RED-Treiber: check_radar_alerts prüft den Snapshot noch nicht.
     Alert feuert trotzdem → count >= 1, erwartet 0 → AssertionError.
+
+    Issue #2020 (Team-Lead-Review): Frame-Quelle auf
+    `_wet_frames_below_overtake_floor` umgestellt (2.0/3.0 mm/h statt
+    4.0/8.0 mm/h) — mit den alten Raten wuerde die neue Ueberholungs-
+    Pruefung (#2020 Scheibe 1) den Alarm bewusst durchlassen, weil die
+    reale Menge die Ankuendigung (1,2 mm) inzwischen um mehr als das
+    Doppelte uebersteigt. Die neuen Raten bleiben unter der
+    Starkregen-Untergrenze (4,0 mm/h) und koennen die Ueberholung
+    strukturell nie ausloesen — der urspruengliche Pruefzweck (reine
+    Briefing-Unterdrueckung) bleibt unveraendert bewacht. Zusaetzlicher
+    Nachweis, dass der Unterdrueckungs-Zweig tatsaechlich durchlaufen
+    wurde (nicht nur durch einen fruehen `radar_alert_due()`-Ausstieg):
+    ein `REASON_NOWCAST`-Protokoll-Eintrag mit `briefing_announced:`-Grund
+    (#2020 AC-6).
     """
+    from services import alert_log
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
@@ -259,7 +289,8 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
         trip_id = f"tdd-818-ac1-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
 
-        # Briefing: 1.2 mm für die Onset-UTC-Stunde (onset = now+5min aus _wet_frames)
+        # Briefing: 1.2 mm für die Onset-UTC-Stunde (onset = now+5min aus
+        # _wet_frames_below_overtake_floor)
         # onset_h statt now_h vermeidet Race Condition bei XX:55-XX:59 UTC.
         onset_h = (datetime.now(timezone.utc) + timedelta(minutes=5)).hour
         _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={onset_h: 1.2})
@@ -267,7 +298,7 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
         captured: list = []
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
-            radar_service=RadarNowcastService(frame_source=_wet_frames),
+            radar_service=RadarNowcastService(frame_source=_wet_frames_below_overtake_floor),
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
 
@@ -280,6 +311,15 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
         )
         assert len(captured) == 0, (
             "AC-1: mail_sink darf nicht aufgerufen werden — Regen war im Briefing angekündigt."
+        )
+
+        # Nachweis (#2020): der Unterdrueckungs-Zweig wurde tatsaechlich
+        # erreicht, nicht nur durch einen fruehen Ausstieg umgangen.
+        incidents = alert_log.read_undelivered(uid, entity_id=trip_id, entity_type="trip")
+        gate_reasons = {r for i in incidents if i.trigger == alert_log.REASON_NOWCAST for r in i.reasons}
+        assert any(r.startswith("briefing_announced:") for r in gate_reasons), (
+            f"AC-1/#2020: erwarte einen 'briefing_announced:'-Protokoll-Eintrag als "
+            f"Nachweis, dass die Briefing-Sperre tatsaechlich griff. Gefunden: {gate_reasons!r}."
         )
     finally:
         _clean_user(uid)
