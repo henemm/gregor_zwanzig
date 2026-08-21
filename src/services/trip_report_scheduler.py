@@ -1459,7 +1459,7 @@ class TripReportSchedulerService:
         # nur Rohdaten (intensity_label, onset_minutes) — die Textformatierung
         # (Renderer-Aufruf) passiert im NotificationService (Architektur-Grenze).
         starkregen_nowcast = self._build_starkregen_hint(
-            trip, segments, datetime.now(timezone.utc),
+            trip, segments, datetime.now(timezone.utc), target_date,
         )
 
         # 8. NotificationService: render + send (Issue #1022).
@@ -1746,6 +1746,7 @@ class TripReportSchedulerService:
         trip: "Trip",
         segments: List[TripSegment],
         now_utc: datetime,
+        target_date: Optional[date] = None,
     ) -> Optional[Tuple[str, int]]:
         """Starkregen-Kurzfristhinweis (Issue #1439): liefert die Rohdaten
         (``intensity_label``, ``onset_minutes``) fuer den planmaessigen
@@ -1806,14 +1807,58 @@ class TripReportSchedulerService:
 
         from services.radar_service import INTENSITY_HEAVY, RadarNowcastService
 
-        lat = active.start_point.lat
-        lon = active.start_point.lon
+        # Issue #2017: abgefragt wird die Position zur MITTE des eigenen
+        # Vorhersagefensters, nicht der Startpunkt des Segments. Der Offset ist
+        # bewusst ein ANDERER als im Alarm-Pfad (`trip_alert.py`,
+        # `RADAR_ONSET_THRESHOLD_MIN // 2`): dieser Pfad kennt keinen
+        # Onset-Grenzwert und akzeptiert jeden Treffer im vollen
+        # 180-Minuten-Fenster, sein Fehlerfenster ist entsprechend groesser.
+        # Geteilt wird die POSITIONSBERECHNUNG, nicht der Offset — und schon
+        # gar nicht die Segmentwahl oben (die bleibt vorwaertsgerichtet,
+        # #1667 S3).
+        from services import radar_service as radar_service_mod
+        from services.trip_segments import position_at_time
+
+        _at = now_utc + timedelta(minutes=radar_service_mod.NOWCAST_HORIZON_MIN // 2)
+        # `target_date` ist der Ortstag, unter dem die Segmente oben gebaut
+        # wurden; ohne ihn muesste `position_at_time()` den Tag aus einem
+        # UTC-Zeitstempel raten und laege oestlich/westlich der Datumsgrenze
+        # daneben. Optional mit Fallback, damit bestehende Aufrufer
+        # unveraendert bleiben.
+        _seg_date = target_date if target_date is not None else active.start_time.date()
+        # Fail-soft wie der Nowcast-Abruf darunter (ADR-0018, #1439 AC-4):
+        # Der Starkregen-Hinweis ist eine ZUGABE zum Briefing. Wirft die
+        # Positionsbestimmung, darf das den Hinweis kosten — nicht das
+        # Briefing, in dem er stehen sollte. Beim 90-Minuten-Offset dieses
+        # Pfads ist der Tagesueberlauf real erreichbar (der 27-Minuten-Offset
+        # des Alarm-Pfads erreicht ihn unter den heutigen Tagesfenster-Regeln
+        # nicht), die Vorwaertssuche laedt dort also wirklich den Folgetag.
+        # Eigener `try` statt Aufnahme in den Nowcast-`try` unten: derselbe
+        # Weg (`return None`), aber eine unterscheidbare Meldung — sonst
+        # firmierte ein Positionsfehler als fehlgeschlagener Abruf.
+        try:
+            _pos = position_at_time(trip, active, _seg_date, _at)
+        except Exception as e:
+            logger.warning(
+                "Starkregen-Kurzfristhinweis: Positionsbestimmung fuer %s "
+                "fehlgeschlagen (%s) — der Hinweis entfaellt, das Briefing "
+                "selbst bleibt unberuehrt.",
+                trip.id, e,
+            )
+            return None
+        lat = _pos.lat
+        lon = _pos.lon
+        # Hoehe wandert mit, auf ganze Meter normalisiert — Begruendung wie
+        # im Alarm-Pfad (Cache-Schluessel, #1991).
+        _elevation_m = (
+            int(round(_pos.elevation_m)) if _pos.elevation_m is not None else None
+        )
         try:
             radar_svc = RadarNowcastService()
             # Issue #1329 C2: der Scheduler ist ein Hintergrund-/Cron-Prozess
             # wie der 15-Minuten-Alarm-Poll, kein direkter Nutzerklick.
             result = radar_svc.get_nowcast(
-                lat, lon, elevation_m=active.start_point.elevation_m, priority="polling"
+                lat, lon, elevation_m=_elevation_m, priority="polling"
             )
         except Exception as e:
             logger.warning(f"Starkregen-Kurzfristhinweis: Nowcast fehlgeschlagen fuer {trip.id}: {e}")

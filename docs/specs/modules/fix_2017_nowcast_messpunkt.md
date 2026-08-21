@@ -382,6 +382,30 @@ Segment-Startpunkt.
    Interpolationspunkts (die Aussage „irgendwo in diesem Kilometerbereich" bleibt korrekt,
    unabhängig davon, wo innerhalb der Spanne abgefragt wurde).
 
+7. 🔴 **Der einzige reale Zusatzverbrauch: Trip↔Ortsvergleich teilen keinen Cache-Eintrag
+   mehr.** Der Ortsvergleich misst an festen Preset-Koordinaten (er kennt keine Etappen,
+   `compare_radar_alert.py:13-16`), der Trip-Pfad seit #2017 an der interpolierten Position.
+   Lag ein Preset-Ort bisher exakt auf einem Trip-Wegpunkt, teilten sich beide Pfade innerhalb
+   der Cache-TTL einen Abruf; das entfällt — zwei Cache-Schlüssel, zwei Abrufe. **Das ist die
+   einzige Stelle, an der diese Änderung real zusätzliches API-Kontingent kostet.**
+
+   Einordnung, ohne zu beschönigen und ohne zu dramatisieren: Der gemeinsame Treffer setzte
+   Koordinatengleichheit auf vier Nachkommastellen voraus (~11 m) und war damit Zufall, kein
+   Regelfall. Der Alarm-Takt beträgt 900 s, die Cache-TTL 300 s — der Trip-Poll profitierte
+   ohnehin nie von seinem eigenen Vorlauf-Cache; betroffen ist allein das Zusammentreffen
+   zweier *verschiedener* Funktionen im selben 300-s-Fenster. Der Verbrauchsstrom, der das
+   Budget trägt (96 Läufe/Tag je Job), ändert seine Abrufzahl nicht.
+
+   **Sichtbar gehalten statt weggeschrieben:** `tests/unit/test_radar_nowcast_cache_sharing.py`
+   führt beide Aussagen getrennt — der Mechanismus-Wächter
+   (`test_end_to_end_trip_and_compare_radar_paths_share_one_fetch`) prüft weiterhin scharf,
+   dass zwei Aufrufer an *derselben* Stelle einen Abruf teilen (ADR-0033 unverändert in
+   Kraft), und
+   `test_end_to_end_trip_und_vergleich_am_selben_wegpunkt_erzeugen_zwei_fetches` hält den
+   Preis fest. Die Erwartung des Mechanismus-Wächters auf „2 Abrufe" umzustellen wäre der
+   falsche Weg gewesen: „2" ist auch das Ergebnis eines vollständig defekten Caches, die
+   Zusicherung wäre dann durch ihre eigene Verletzung erfüllt.
+
 6. **Kein Tages-Überlauf in der Messgrundlage getroffen.** Bei der Wirksamkeitsmessung (Trip
    `5f534011`) trat in keiner Kombination aus Variante/Horizont ein Tagesüberlauf auf (0
    übersprungene Onset-Punkte). AC-6 (Tagesgrenzen-Überschreitung) ist damit durch Konstruktion
@@ -398,6 +422,11 @@ Segment-Startpunkt.
 ## Changelog
 
 - 2026-08-20: Initial spec created (Issue #2017)
+- 2026-08-21: Scheibe B geliefert (Verdrahtung beider Pfade, Segment-Ende-Guard-Rückbau).
+  Known Limitation 7 ergänzt: Trip und Ortsvergleich teilen keinen Cache-Eintrag mehr,
+  wenn ein Preset-Ort auf einem Trip-Wegpunkt liegt — der einzige reale Zusatzverbrauch
+  dieser Änderung, mit getrenntem Mechanismus-Wächter belegt statt durch eine
+  aufgeweichte Erwartung verdeckt.
 - 2026-08-20: AC-11 präzisiert (Adversary-Finding F003, Scheibe A) — geprüft werden beide
   Enden des **Grenzverhaltens von `position_at_time()`** (Vorschau-Zweig unten, Fail-soft-
   Klemmung oben), nicht der von dort unerreichbare Klemm-Ausdruck in `_interpolate_point()`.

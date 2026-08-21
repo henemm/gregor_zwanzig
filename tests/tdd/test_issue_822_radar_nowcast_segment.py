@@ -20,6 +20,47 @@ Mock-Regel: KEIN Mock()/patch()/MagicMock.
 - TripAlertService(radar_service=RadarNowcastService(frame_source=...)) injiziert den Seam.
 
 SPEC: docs/specs/modules/issue_822_radar_nowcast_segment.md
+
+═══════════════════════════════════════════════════════════════════════════
+Issue #2017 (Scheibe B) — Stufe 3 der Verfeinerungskette
+═══════════════════════════════════════════════════════════════════════════
+
+Der Abfragepunkt des Radar-Nowcasts hat drei Stufen durchlaufen:
+
+  | Stufe | Issue  | Abfragepunkt                                        |
+  |-------|--------|-----------------------------------------------------|
+  | 1     | #656   | `waypoints[0]` — erster Wegpunkt des Tages           |
+  | 2     | #822   | `active.start_point` — Start des aktiven Segments    |
+  | 3     | #2017  | Position zur Mitte des Vorwarnfensters (interpoliert)|
+
+AC-2 und AC-3 dieser Datei sind die Nachweise der STUFE 2. Sie pruefen die
+Abfrage-Koordinate gegen `active.start_point` und schreiben damit ab Stufe 3
+den Fehler fest, den #2017 behebt — der Startpunkt ist der Wegpunkt, den der
+Wanderer bereits verlassen hat (gemessener Median-Versatz 1,99 km bei einem
+Vorwarnfenster von 55 Min). Beide werden deshalb mit #2017 EINZELN und
+begruendet auf den interpolierten Punkt umgestellt:
+
+- Die Aussage aus #822 bleibt erhalten: geprueft wird weiterhin, dass die
+  Abfrage dem AKTIVEN SEGMENT folgt und nicht `waypoints[0]`. Der erwartete
+  Punkt liegt per Konstruktion auf der Strecke dieses Segments — waehlte der
+  Pruefling wieder das falsche Segment (oder `waypoints[0]`), risse der Test
+  genauso wie vorher.
+- Neu ist allein, WO auf dieser Strecke: nicht mehr am Anfang, sondern beim
+  Zeitanteil `(jetzt + RADAR_ONSET_THRESHOLD_MIN // 2 - start_time) /
+  Segmentdauer`. Fuer den VORSCHAU-Fall (Wanderer noch nicht losgelaufen)
+  bleibt die Antwort unveraendert `start_point` — Stufe 2 wird nicht
+  widerrufen, sondern verfeinert.
+
+Der Erwartungswert wird in `_erwartete_messposition()` ANALYTISCH aus den
+Segmentgrenzen gerechnet, nicht durch Aufruf von `position_at_time()` — sonst
+prueefte der Test den Prueefling gegen sich selbst.
+
+Neu hinzugekommen (ADDITIV, keine bestehende Testfunktion ersetzt):
+  test_2017_ac8_nowcast_an_interpolierter_position_mit_hoehe
+  test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt
+  test_2017_ac12_genau_ein_get_nowcast_aufruf_je_lauf
+
+SPEC #2017: docs/specs/modules/fix_2017_nowcast_messpunkt.md (AC-8/AC-10/AC-12)
 """
 from __future__ import annotations
 
@@ -165,6 +206,65 @@ def _clean_user(uid: str) -> None:
         shutil.rmtree(d)
 
 
+# --------------------------------------------------------------------------
+# #2017: analytisch erwarteter Messpunkt (kein Aufruf von position_at_time)
+# --------------------------------------------------------------------------
+
+def _alarm_offset_minuten() -> int:
+    """Zieloffset des ALARM-Pfads = halbes Vorwarnfenster.
+
+    Gelesen ueber die MODUL-Referenz, nie als `from ... import` gebunden: der
+    Laufzeit-Drift-Waechter aus #2009 (`test_radar_onset_threshold_variance.py
+    ::test_ac1_shared_threshold_drives_both_paths`) setzt die Konstante zur
+    Laufzeit um; eine beim Import gebundene Kopie liefe still daran vorbei.
+    """
+    from services import radar_service as radar_service_mod
+
+    return radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+
+
+def _erwartete_messposition(trip, now_utc: datetime, offset_minuten: int):
+    """(aktives Segment, Zeitanteil p, (lat, lon, elevation_m)) zum Zeitpunkt
+    `now_utc + offset_minuten` — ANALYTISCH gerechnet.
+
+    Bewusst OHNE `position_at_time()`: der Erwartungswert entsteht hier aus
+    den Segmentgrenzen und der linearen Formel, nicht aus dem Pruefling. Sonst
+    waere der Test gegen jede Verfaelschung des Prueflings blind, weil er sie
+    mitmachte.
+
+    Die SEGMENTWAHL kommt aus `resolve_current_segment()` — derselben Quelle,
+    aus der auch `check_radar_alerts()` sie bezieht. Damit prueft der Test
+    weiterhin die #822-Aussage (die Abfrage folgt dem aktiven Segment) und
+    zusaetzlich die #2017-Aussage (sie folgt der Position IM Segment).
+    """
+    from services.trip_day import trip_local_today
+    from services.trip_segments import resolve_current_segment
+
+    aufgeloest = resolve_current_segment(trip, now_utc, trip_local_today(trip, now_utc))
+    assert aufgeloest is not None, (
+        "Testvoraussetzung: es muss ein aktives Segment geben"
+    )
+    active, _segment_date = aufgeloest
+    at = now_utc + timedelta(minutes=offset_minuten)
+    spanne = (active.end_time - active.start_time).total_seconds()
+    assert spanne > 0, "Testvoraussetzung: das Segment braucht eine echte Dauer"
+    p = (at - active.start_time).total_seconds() / spanne
+    assert 0.0 < p < 1.0, (
+        f"Testvoraussetzung: der Zieloffset muss INNERHALB des aktiven "
+        f"Segments liegen (Zeitanteil p={p:.4f}) — sonst prueft der Fall die "
+        f"Vorwaertssuche/Klemmung statt der Interpolation"
+    )
+    sp, ep = active.start_point, active.end_point
+    hoehe = None
+    if sp.elevation_m is not None and ep.elevation_m is not None:
+        hoehe = sp.elevation_m + p * (ep.elevation_m - sp.elevation_m)
+    return active, p, (
+        sp.lat + p * (ep.lat - sp.lat),
+        sp.lon + p * (ep.lon - sp.lon),
+        hoehe,
+    )
+
+
 def _ensure_real_user_dir(uid: str) -> None:
     """Issue #1133: trip_alert.py/alert_state.py schreiben alert_log/
     radar_alert_throttle weiterhin über die relative "data/users/..."-
@@ -253,8 +353,21 @@ def test_ac2_segment_selection_by_time():
       Segment-1 (wp0→wp1): [now-2h, now-1h]  → bereits vorbei
       Segment-2 (wp1→wp2): [now-1h, now+1h]  → aktiv
 
-    Nachweis Fall (a): get_nowcast erhält Segment-2.start_point.lat/lon = wp1-Coords.
-    RED: check_radar_alerts nutzt stage.waypoints[0] → wp0.lat/lon.
+    Nachweis Fall (a): get_nowcast erhält einen Punkt AUF Segment 2 — seit
+    #2017 nicht mehr dessen Startpunkt (wp1), sondern die zur Fenstermitte
+    (`jetzt + RADAR_ONSET_THRESHOLD_MIN // 2`) interpolierte Position
+    zwischen wp1 und wp2.
+    RED (#822, historisch): check_radar_alerts nutzte stage.waypoints[0] → wp0.
+    RED (#2017, heute): check_radar_alerts nutzt active.start_point → wp1.
+
+    🔴 Warum die Erwartung angepasst wurde (Verfeinerungskette #656 → #822 →
+    #2017): Die #822-Aussage „die Abfrage folgt dem AKTIVEN SEGMENT, nicht
+    waypoints[0]" bleibt vollstaendig erhalten — der erwartete Punkt liegt per
+    Konstruktion auf der Strecke wp1→wp2 und ist von wp0 wie von wp1 klar
+    verschieden. Geaendert hat sich nur die Stelle AUF dieser Strecke: der
+    Startpunkt ist der Wegpunkt, den der Wanderer bereits verlassen hat
+    (Median 1,99 km Versatz, #2017). Die bisherige Toleranz `< 0.01°` (≈1,1 km)
+    war zugleich die Stelle, an der der alte Punkt festgeschrieben war.
 
     Nachweis Fall (c): Trip mit Segmenten alle in der Vergangenheit → count=0.
     RED: Heute keine Logik für „alle Segmente vorbei → kein Alert" implementiert.
@@ -305,26 +418,57 @@ def test_ac2_segment_selection_by_time():
             radar_service=RadarNowcastService(frame_source=_recording_frames),
         )
         svc.clear_radar_throttle(trip_id)
+        # Bezugszeitpunkt fuer die Erwartung: unmittelbar VOR dem Lauf
+        # abgenommen. Die Uhr laeuft hier mit (`tick=True`), der Pruefling
+        # nimmt sein eigenes `now` Sekundenbruchteile spaeter — der Unterschied
+        # schlaegt bei 120 Min Segmentdauer mit weniger als 1e-4 ° durch und
+        # liegt damit weit unter der Toleranz.
+        now_ref = datetime.now(timezone.utc)
         svc.check_radar_alerts()
 
         assert len(recorded_coords) >= 1, (
             "AC-2(a): get_nowcast nicht aufgerufen — kein Segment als aktiv erkannt"
         )
 
-        # Erwarteter Segment-2-Startpunkt: wp1 (lat_base+0.10, lon_base+0.10)
-        expected_lat = lat_base + 0.10
-        expected_lon = lon_base + 0.10
+        # #2017: erwarteter Punkt = analytische Interpolation auf Segment 2
+        # (wp1→wp2) zur Mitte des Vorwarnfensters.
+        from app.loader import load_all_trips
+
+        trip_von_platte = next(
+            t for t in load_all_trips(user_id=uid) if t.id == trip_id
+        )
+        active, p, (expected_lat, expected_lon, _h) = _erwartete_messposition(
+            trip_von_platte, now_ref, _alarm_offset_minuten(),
+        )
         actual_lat, actual_lon = recorded_coords[0]
 
-        assert abs(actual_lat - expected_lat) < 0.01, (
-            f"AC-2(a): get_nowcast mit falscher lat={actual_lat:.4f}; "
-            f"erwartet Segment-2.start_point.lat={expected_lat:.4f} (wp1). "
-            f"Vermutlich stage.waypoints[0].lat={lat_base:.4f} (wp0) genutzt."
+        # Nicht-Trivialitaet: der erwartete Punkt muss vom Segment-Startpunkt
+        # UND von waypoints[0] messbar abweichen — sonst waere die Zusicherung
+        # in beiden Richtungen leer.
+        assert abs(expected_lat - active.start_point.lat) > 0.01, (
+            f"Testvoraussetzung: interpolierter Punkt (lat {expected_lat:.4f}) "
+            f"und Segment-Startpunkt (lat {active.start_point.lat:.4f}) muessen "
+            f"sich unterscheiden, Zeitanteil p={p:.4f}"
         )
-        assert abs(actual_lon - expected_lon) < 0.01, (
-            f"AC-2(a): get_nowcast mit falscher lon={actual_lon:.4f}; "
-            f"erwartet Segment-2.start_point.lon={expected_lon:.4f} (wp1). "
-            f"Vermutlich stage.waypoints[0].lon={lon_base:.4f} (wp0) genutzt."
+        assert abs(expected_lat - lat_base) > 0.01, (
+            "Testvoraussetzung: interpolierter Punkt und waypoints[0] muessen "
+            "sich unterscheiden (#822-Aussage bleibt pruefbar)"
+        )
+
+        assert abs(actual_lat - expected_lat) < 0.002, (
+            f"AC-2(a)/#2017: get_nowcast mit lat={actual_lat:.4f}; erwartet der "
+            f"zur Fenstermitte interpolierte Punkt auf Segment 2 "
+            f"lat={expected_lat:.4f} (Zeitanteil p={p:.4f} zwischen wp1 "
+            f"{active.start_point.lat:.4f} und wp2 {active.end_point.lat:.4f}). "
+            f"lat={active.start_point.lat:.4f} waere der ALTE Messpunkt "
+            f"(Segment-Startpunkt, #822), lat={lat_base:.4f} der noch aeltere "
+            f"(waypoints[0], vor #822)."
+        )
+        assert abs(actual_lon - expected_lon) < 0.002, (
+            f"AC-2(a)/#2017: get_nowcast mit lon={actual_lon:.4f}; erwartet "
+            f"lon={expected_lon:.4f} (interpoliert, p={p:.4f}). "
+            f"lon={active.start_point.lon:.4f} waere der ALTE Messpunkt, "
+            f"lon={lon_base:.4f} der noch aeltere (waypoints[0])."
         )
 
         # --- Fall (c): alle Segmente bereits vorbei → kein Alert ---
@@ -398,8 +542,19 @@ def test_ac3_nowcast_called_at_segment_coordinates():
       Segment-1 (wp0→wp1): [now-2h, now-0.5h] → vorbei
       Segment-2 (wp1→wp2): [now-0.5h, now+1.5h] → aktiv
 
-    Nachweis: recorded_coords[0] muss (SEG_LAT, SEG_LON) sein, NICHT (WP0_LAT, WP0_LON).
-    Genau 1 get_nowcast-Call pro Trip-Lauf.
+    Nachweis: recorded_coords[0] muss ein Punkt AUF Segment 2 sein, NICHT
+    (WP0_LAT, WP0_LON). Genau 1 get_nowcast-Call pro Trip-Lauf.
+
+    🔴 Angepasst mit #2017 (Verfeinerungskette #656 → #822 → #2017): geprueft
+    wurde bisher exakte Gleichheit mit `active.start_point` = (SEG_LAT,
+    SEG_LON). Seit #2017 ist der Messpunkt die zur Mitte des Vorwarnfensters
+    (`jetzt + RADAR_ONSET_THRESHOLD_MIN // 2`) interpolierte Position zwischen
+    SEG und SEG_END. Die #822-Aussage bleibt: der Punkt stammt aus dem
+    AKTIVEN Segment, nicht aus `waypoints[0]` — er liegt auf der Strecke
+    SEG→SEG_END und ist von WP0 weit entfernt. Fuer den Vorschau-Fall
+    (Wanderer noch nicht losgelaufen) liefert #2017 unveraendert
+    `start_point`; hier ist das Segment aktiv, deshalb greift die
+    Verfeinerung.
 
     Hinweis: _save_trip_direct umgeht Naismith Compute-on-Save (Issue #802).
     Die Ortszeit-Umrechnung macht seit #1667 S1 der Helfer; die Koordinaten
@@ -449,25 +604,45 @@ def test_ac3_nowcast_called_at_segment_coordinates():
             radar_service=RadarNowcastService(frame_source=_recording_wet_frames),
         )
         svc.clear_radar_throttle(trip_id)
+        # s. AC-2: Bezugszeitpunkt unmittelbar vor dem Lauf, Uhr laeuft mit.
+        now_ref = datetime.now(timezone.utc)
         svc.check_radar_alerts()
 
         assert call_count[0] == 1, (
             f"AC-3: get_nowcast muss genau 1× aufgerufen werden, war {call_count[0]}"
         )
 
+        from app.loader import load_all_trips
+
+        trip_von_platte = next(
+            t for t in load_all_trips(user_id=uid) if t.id == trip_id
+        )
+        active, p, (expected_lat, expected_lon, _h) = _erwartete_messposition(
+            trip_von_platte, now_ref, _alarm_offset_minuten(),
+        )
         actual_lat, actual_lon = recorded_coords[0]
 
-        # Nachweis: Koordinaten = SEG_LAT/SEG_LON (Segment-2.start_point = wp1),
-        # NICHT WP0_LAT/WP0_LON (waypoints[0] = wp0 — alter Ist-Code-Pfad).
-        assert abs(actual_lat - SEG_LAT) < 0.01, (
-            f"AC-3: get_nowcast mit falscher lat={actual_lat:.4f}; "
-            f"erwartet Segment-2.start_point.lat=SEG_LAT={SEG_LAT:.4f}; "
-            f"heute vermutlich waypoints[0].lat=WP0_LAT={WP0_LAT:.4f}"
+        assert abs(expected_lat - SEG_LAT) > 0.01, (
+            f"Testvoraussetzung: der interpolierte Punkt (lat "
+            f"{expected_lat:.4f}) muss sich vom Segment-Startpunkt SEG_LAT="
+            f"{SEG_LAT:.4f} messbar unterscheiden (p={p:.4f})"
         )
-        assert abs(actual_lon - SEG_LON) < 0.01, (
-            f"AC-3: get_nowcast mit falscher lon={actual_lon:.4f}; "
-            f"erwartet Segment-2.start_point.lon=SEG_LON={SEG_LON:.4f}; "
-            f"heute vermutlich waypoints[0].lon=WP0_LON={WP0_LON:.4f}"
+
+        # Nachweis: Koordinaten = interpolierter Punkt AUF Segment 2
+        # (SEG→SEG_END), NICHT SEG_LAT/SEG_LON (Startpunkt, #822-Stand) und
+        # erst recht nicht WP0_LAT/WP0_LON (waypoints[0], vor #822).
+        assert abs(actual_lat - expected_lat) < 0.002, (
+            f"AC-3/#2017: get_nowcast mit lat={actual_lat:.4f}; erwartet der "
+            f"interpolierte Punkt lat={expected_lat:.4f} (p={p:.4f} zwischen "
+            f"SEG_LAT={SEG_LAT:.4f} und SEG_END_LAT={SEG_END_LAT:.4f}). "
+            f"lat=SEG_LAT waere der ALTE Messpunkt (Segment-Startpunkt), "
+            f"lat=WP0_LAT={WP0_LAT:.4f} der noch aeltere (waypoints[0])."
+        )
+        assert abs(actual_lon - expected_lon) < 0.002, (
+            f"AC-3/#2017: get_nowcast mit lon={actual_lon:.4f}; erwartet "
+            f"lon={expected_lon:.4f} (interpoliert, p={p:.4f}). "
+            f"lon=SEG_LON={SEG_LON:.4f} waere der ALTE Messpunkt, "
+            f"lon=WP0_LON={WP0_LON:.4f} der noch aeltere."
         )
     finally:
         _clean_user(uid)
@@ -905,3 +1080,344 @@ def test_ac8_mandantentrennung_isolated():
     finally:
         _clean_user(uid_a)
         _clean_user(uid_b)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Issue #2017 Scheibe B — Wiring des Messpunkts (AC-8 / AC-10 / AC-12)
+#
+# ADDITIV: keine der Testfunktionen oberhalb wird ersetzt. Die Bausteine
+# kommen aus `tests/helpers/nowcast_gate_fixtures.py` (echte Trips auf der
+# isolierten Datenwurzel, echter `frame_source`-DI-Seam, `mail_sink`-Zaehler)
+# — dieselbe Ausstattung, die `test_radar_alert_segment_end_guard.py` und
+# `test_radar_onset_threshold_variance.py` fuer denselben Pfad benutzen.
+#
+# 🔴 Gestellte Uhr, nicht Wanduhr: `make_trip()` baut seine Etappe aus
+# HH:MM-Ortszeiten auf einem Kalendertag. Ein Zieloffset ueber Mitternacht
+# haette kein aktives Segment mehr (und der Fall pruefte dann die
+# Vorwaertssuche statt der Interpolation). Bezugszeitpunkt und Ort sind
+# dieselben wie in den beiden Schwesterdateien: mittags, Reykjavik (UTC+0
+# ganzjaehrig), damit die HH:MM-Angaben direkt aus der gestellten UTC-Zeit
+# ablesbar sind.
+# ══════════════════════════════════════════════════════════════════════════
+
+from tests.helpers.nowcast_gate_fixtures import (  # noqa: E402
+    CountingFrameSource, clean_uid, fresh_uid, make_trip, reset_radar_cache,
+    save_trip, settings_email_only, write_user_tier,
+)
+
+_MITTAGS_2017 = "2026-08-11T12:00:00+00:00"
+
+
+def _aufzeichnender_radar_dienst(frame_source):
+    """Echte `RadarNowcastService`-UNTERKLASSE, die nur mitschreibt — kein
+    Mock: `get_nowcast()` ruft `super()` auf, die gesamte Entscheidungslogik
+    (Cache, Region, `_derive_result`) laeuft unveraendert, und alle uebrigen
+    Methoden (`source_label()` u. a.) bleiben die echten.
+
+    Warum nicht der vorhandene `frame_source`-Seam: der bekommt nur
+    `(lat, lon)`. Die HOEHE (`elevation_m`, seit #1991 Teil der Abfrage) ist
+    dort strukturell unsichtbar — genau sie soll aber mitwandern (#2017 AC-8).
+
+    Klasse innerhalb der Funktion, weil `RadarNowcastService` erst zur
+    Laufzeit importiert wird (Import-Reihenfolge dieser Datei).
+    """
+    from services.radar_service import RadarNowcastService
+
+    class _Aufzeichnend(RadarNowcastService):
+        def __init__(self, fs) -> None:
+            super().__init__(frame_source=fs)
+            self.calls: list[dict] = []
+
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+            self.calls.append({
+                "lat": lat, "lon": lon, "elevation_m": elevation_m,
+                "priority": priority,
+            })
+            return super().get_nowcast(
+                lat, lon, elevation_m=elevation_m, priority=priority,
+            )
+
+    return _Aufzeichnend(frame_source)
+
+
+def _alarm_lauf_2017(
+    uid: str, trip_id: str, *, start: str, ende: str, onset_minutes: int = 8,
+):
+    """Ein echter `check_radar_alerts()`-Lauf unter gestellter Uhr.
+
+    Liefert `(sent, mails, dienst, frames, trip, now_utc)` — `trip` ist das
+    von der Platte GELESENE Objekt (dasselbe, mit dem der Pruefling arbeitet),
+    damit die Erwartung nicht aus einer zweiten, evtl. abweichenden Fassung
+    gerechnet wird.
+    """
+    from app.loader import load_all_trips
+    from services.trip_alert import TripAlertService
+
+    clean_uid(uid)
+    with freeze_time(_MITTAGS_2017):
+        now_utc = datetime.now(timezone.utc)
+        write_user_tier(uid, "premium")
+        save_trip(make_trip(trip_id, arrival_start=start, arrival_end=ende), uid)
+        trip = next(t for t in load_all_trips(user_id=uid) if t.id == trip_id)
+
+        reset_radar_cache()
+        frames = CountingFrameSource(onset_minutes=onset_minutes)
+        dienst = _aufzeichnender_radar_dienst(frames)
+        mails: list = []
+        svc = TripAlertService(
+            settings=settings_email_only(), throttle_hours=2, user_id=uid,
+            radar_service=dienst,
+            mail_sink=lambda subject, body: mails.append((subject, body)),
+        )
+        sent = svc.check_radar_alerts()
+        return sent, mails, dienst, frames, trip, now_utc
+
+
+def test_2017_ac8_nowcast_an_interpolierter_position_mit_hoehe():
+    """AC-8: `check_radar_alerts()` fragt den Nowcast an der zur Fenstermitte
+    interpolierten Position ab — inklusive Hoehe — statt am Segment-Startpunkt.
+
+    Given ein aktives Geh-Segment 11:00–15:00 (Reykjavik, UTC+0), gestellte
+    Uhr 12:00 / When der Radar-Alarm-Pfad laeuft / Then traegt der
+    `get_nowcast()`-Aufruf die Position zum Zeitpunkt
+    `jetzt + RADAR_ONSET_THRESHOLD_MIN // 2` (Zeitanteil 87/240 ≈ 0,3625) und
+    deren interpolierte Hoehe, nicht `active.start_point`.
+
+    RED heute: `trip_alert.py` liest `lat/lon/elevation_m` unveraendert aus
+    `active.start_point` (Zeile ~1259-1268).
+    """
+    uid = fresh_uid("2017-ac8")
+    try:
+        sent, _mails, dienst, _frames, trip, now_utc = _alarm_lauf_2017(
+            uid, "trip-2017-ac8", start="11:00", ende="15:00",
+        )
+        assert dienst.calls, (
+            f"Testvoraussetzung: get_nowcast wurde nicht aufgerufen "
+            f"(sent={sent}) — ohne Abruf ist nichts zu pruefen"
+        )
+        active, p, (soll_lat, soll_lon, soll_hoehe) = _erwartete_messposition(
+            trip, now_utc, _alarm_offset_minuten(),
+        )
+        sp = active.start_point
+
+        # Nicht-Trivialitaet in allen drei Groessen.
+        assert abs(soll_lat - sp.lat) > 0.01 and abs(soll_lon - sp.lon) > 0.01, (
+            f"Testvoraussetzung: interpolierter Punkt ({soll_lat:.5f}, "
+            f"{soll_lon:.5f}) und Startpunkt ({sp.lat:.5f}, {sp.lon:.5f}) "
+            f"muessen sich messbar unterscheiden, p={p:.4f}"
+        )
+        assert soll_hoehe is not None and abs(soll_hoehe - sp.elevation_m) > 5.0, (
+            f"Testvoraussetzung: interpolierte Hoehe {soll_hoehe} und "
+            f"Start-Hoehe {sp.elevation_m} muessen sich unterscheiden"
+        )
+
+        ruf = dienst.calls[0]
+        assert abs(ruf["lat"] - soll_lat) < 1e-6 and abs(ruf["lon"] - soll_lon) < 1e-6, (
+            f"AC-8: get_nowcast an ({ruf['lat']:.5f}, {ruf['lon']:.5f}); "
+            f"erwartet der zur Fenstermitte interpolierte Punkt "
+            f"({soll_lat:.5f}, {soll_lon:.5f}), Zeitanteil p={p:.4f} zwischen "
+            f"({sp.lat:.5f}, {sp.lon:.5f}) und "
+            f"({active.end_point.lat:.5f}, {active.end_point.lon:.5f}). "
+            f"Der Startpunkt ({sp.lat:.5f}, {sp.lon:.5f}) ist der Ort, den der "
+            f"Wanderer zu diesem Zeitpunkt laengst verlassen hat."
+        )
+        assert ruf["elevation_m"] is not None, (
+            "AC-8: die Abfrage muss eine Hoehe tragen (#1991) — sonst wird der "
+            "neue Ort mit unbekannter Hoehe abgefragt"
+        )
+        # Toleranz 0,5 m: die Aufrufstelle darf auf ganze Meter normalisieren
+        # (Docstring `position_at_time`), muss es aber nicht.
+        assert abs(ruf["elevation_m"] - soll_hoehe) <= 0.5, (
+            f"AC-8: get_nowcast mit elevation_m={ruf['elevation_m']}; erwartet "
+            f"die MITGEWANDERTE Hoehe {soll_hoehe:.2f} m (interpoliert zwischen "
+            f"{sp.elevation_m} m und {active.end_point.elevation_m} m). "
+            f"{sp.elevation_m} m waere die Hoehe des verlassenen Startpunkts — "
+            f"neuer Ort, alte Hoehe (#2017 Risiko 2)."
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt():
+    """AC-10: der Segment-Ende-Guard aus #2009 ist entfernt — POSITIVNACHWEIS.
+
+    Given ein aktives Segment, das in 20 Minuten endet, und ein Onset in 53
+    Minuten (nach ALTEM Massstab also hinter `active.end_time`) / When
+    `check_radar_alerts()` laeuft / Then wird der Alarm regulaer gesendet.
+
+    Reine Abwesenheit des alten Tests genuegt ausdruecklich nicht: dieser Fall
+    haelt fest, dass der Pfad die Meldung wirklich AUSGIBT, nicht nur, dass
+    niemand mehr das Gegenteil prueft. Nach der Umstellung des Messpunkts
+    liegt der Onset per Konstruktion dort, wo der Nutzer dann sein wird — der
+    Guard verwuerfe damit KORREKTE Alarme (Verfallsbedingung im
+    Kommentarblock `trip_alert.py` ueber `_segment_end`).
+
+    RED heute: der Guard unterdrueckt genau diesen Fall (`sent == 0`); der
+    Widerspruch zu `test_radar_alert_segment_end_guard.py::
+    test_ac6_segment_end_guard_suppresses_late_onset` ist gewollt — jene Datei
+    faellt in derselben Aenderung.
+    """
+    onset_minutes = 53  # erreichbarer Rasterwert, <= RADAR_ONSET_THRESHOLD_MIN
+    uid = fresh_uid("2017-ac10")
+    try:
+        sent, mails, _dienst, _frames, _trip, _now = _alarm_lauf_2017(
+            uid, "trip-2017-ac10", start="11:50", ende="12:20",
+            onset_minutes=onset_minutes,
+        )
+        assert sent == 1, (
+            f"AC-10: Segment endet in 20 Min, Onset liegt bei {onset_minutes} "
+            f"Min — nach Entfernung des Segment-Ende-Guards MUSS der Alarm "
+            f"regulaer ausgeloest werden, erhalten sent={sent}. sent=0 heisst: "
+            f"der Guard (trip_alert.py, `_onset_dt > _segment_end`) lebt noch."
+        )
+        assert len(mails) == 1, (
+            f"AC-10: erwartet genau EINE zugestellte Alarm-Mail, erhalten "
+            f"{len(mails)} — der Alarm muss den Kanal wirklich erreichen, "
+            f"nicht nur gezaehlt werden"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_2017_ac12_genau_ein_get_nowcast_aufruf_je_lauf():
+    """AC-12 (Budget-Invariante, Alarm-Pfad): genau EIN `get_nowcast()`-Aufruf
+    pro Trip und Durchlauf — die Verlegung des Abrufpunkts erhoeht die Zahl
+    der Abrufe nicht.
+
+    Gezaehlt wird an ZWEI Naehten: am `get_nowcast()`-Seam (die Zusicherung
+    selbst) und am `frame_source`-Seam (dort entstehen die realen Kosten).
+    Der Kommentar `trip_alert.py` ("Genau EIN get_nowcast-Call pro Trip an
+    Segment-Startpunkt") hielt das bisher nur als Prosa fest und verliert mit
+    dieser Aenderung seinen Anker.
+
+    RED heute nicht wegen der ZAHL — die stimmt bereits —, sondern weil der
+    eine Aufruf am falschen Ort erfolgt. Beides gehoert in EINE Zusicherung:
+    "ein Abruf, und zwar am neuen Messpunkt". Ein iteratives Nachfassen an der
+    Onset-Position (Variante 2, in der Spec ausgeschlossen) risse die
+    Zaehlung, ein unveraenderter Startpunkt die Ortsangabe.
+    """
+    uid = fresh_uid("2017-ac12")
+    try:
+        sent, _mails, dienst, frames, trip, now_utc = _alarm_lauf_2017(
+            uid, "trip-2017-ac12", start="11:00", ende="15:00",
+        )
+        assert len(dienst.calls) == 1, (
+            f"AC-12: erwartet genau EIN get_nowcast() je Trip und Lauf, "
+            f"erhalten {len(dienst.calls)} (sent={sent}): {dienst.calls!r}"
+        )
+        assert frames.call_count == 1, (
+            f"AC-12: erwartet genau EINEN echten Frame-Abruf (Kostenstelle), "
+            f"erhalten {frames.call_count}"
+        )
+        _active, p, (soll_lat, soll_lon, _h) = _erwartete_messposition(
+            trip, now_utc, _alarm_offset_minuten(),
+        )
+        ruf = dienst.calls[0]
+        assert abs(ruf["lat"] - soll_lat) < 1e-6 and abs(ruf["lon"] - soll_lon) < 1e-6, (
+            f"AC-12: der EINE Abruf muss am neuen Messpunkt erfolgen — "
+            f"({ruf['lat']:.5f}, {ruf['lon']:.5f}) statt erwartet "
+            f"({soll_lat:.5f}, {soll_lon:.5f}), p={p:.4f}"
+        )
+        assert ruf["priority"] == "polling", (
+            f"AC-12: der Scheduler-Abruf bleibt drosselbar (`polling`), war "
+            f"{ruf['priority']!r} — sonst umgeht die Verlegung das Budget-Gate"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_2017_fadv1_positionsfehler_eines_trips_kostet_den_anderen_nicht_den_alarm(
+    monkeypatch,
+):
+    """F-ADV1 (Adversary, HIGH): Scheitert die Positionsbestimmung fuer EINEN
+    Trip, muessen die uebrigen Trips desselben Nutzers ihren Radar-Alarm
+    trotzdem bekommen.
+
+    Vor #2017 stand an dieser Stelle ein trivialer Attributzugriff
+    (`active.start_point.lat`), seither ein Aufruf mit Verzweigungen,
+    Datumsarithmetik und iterativem Nachladen des Folgetags. Ohne eigene
+    Absicherung reisst eine Ausnahme daraus die gesamte Trip-Schleife in
+    `check_radar_alerts()` mit — `load_all_trips()` sortiert nicht
+    (`loader.py`), es traefe also zufaellig wechselnde Trips, und
+    `api/routers/scheduler.py` faengt darum herum nichts ab. Dieselbe
+    Fehlerklasse hat #1479 fuer drei ANDERE Aufrufstellen derselben Datei
+    bereits geschlossen.
+
+    Geprueft wird an der Stelle, an der es WIRKT: nicht "der Aufruf steht in
+    einem try", sondern "der zweite Trip bekommt seine Mail".
+
+    🔴 Warum die Naht und keine kaputten Daten: `position_at_time()` ist
+    fail-soft gebaut und faengt die erreichbaren Datenfehler selbst ab. Es
+    GIBT einen echten Datenpfad, der wirft — ein Wegpunkt ohne Koordinate am
+    Folgetag laesst `convert_trip_to_segments()` in der Vorwaertssuche mit
+    `TypeError` scheitern —, aber er ist nur ueber einen Tagesueberlauf
+    erreichbar, und den erreicht der Zieloffset dieses Pfads
+    (`RADAR_ONSET_THRESHOLD_MIN // 2` = 27 min) unter den heutigen
+    Tagesfenster-Regeln nicht: das Ziel-Segment haelt ein Mindestfenster von
+    einer Stunde, der Ueberlauf braucht mehr als 27 Minuten Vorlauf ueber das
+    Tagesende hinaus. Nachgemessen; im Hinweis-Pfad (Offset 90 min) ist genau
+    dieser Datenfall erreichbar und wird dort auch mit echten Daten geprueft
+    (`test_trip_report_scheduler_starkregen_hint.py`).
+    Die Absicherung hier ist also STRUKTURELL begruendet — die Regel, die den
+    Fall heute unerreichbar macht, ist eine Zusicherung der Segmentbildung,
+    keine dieses Pfads.
+
+    Kein Mock: `services.trip_segments.position_at_time` wird durch eine
+    ECHTE Funktion ersetzt, die fuer genau einen Trip wirft und fuer alle
+    anderen an die ECHTE Implementierung DELEGIERT (Muster
+    `test_starkregen_kurzfristhinweis.py::_install_fake_nowcast`). Die
+    Entscheidungslogik selbst wird nicht ersetzt.
+    """
+    from services import trip_segments as trip_segments_mod
+    from services.trip_alert import TripAlertService
+
+    uid = fresh_uid("2017-fadv1")
+    kaputt_id, gesund_id = "trip-fadv1-kaputt", "trip-fadv1-gesund"
+    clean_uid(uid)
+    try:
+        with freeze_time(_MITTAGS_2017):
+            write_user_tier(uid, "premium")
+            # Zwei Trips DESSELBEN Nutzers, beide mit aktivem Geh-Segment.
+            save_trip(make_trip(kaputt_id, arrival_start="11:00", arrival_end="15:00"), uid)
+            save_trip(make_trip(gesund_id, arrival_start="11:00", arrival_end="15:00"), uid)
+
+            echt = trip_segments_mod.position_at_time
+
+            def _wirft_fuer_einen(trip, active, segment_date, at):
+                if trip.id == kaputt_id:
+                    raise RuntimeError(
+                        "simulierter Ausfall der Positionsbestimmung"
+                    )
+                return echt(trip, active, segment_date, at)
+
+            monkeypatch.setattr(
+                trip_segments_mod, "position_at_time", _wirft_fuer_einen
+            )
+
+            reset_radar_cache()
+            frames = CountingFrameSource(onset_minutes=8)
+            mails: list = []
+            svc = TripAlertService(
+                settings=settings_email_only(), throttle_hours=2, user_id=uid,
+                radar_service=_aufzeichnender_radar_dienst(frames),
+                mail_sink=lambda subject, body: mails.append((subject, body)),
+            )
+            sent = svc.check_radar_alerts()
+
+        assert sent == 1, (
+            f"F-ADV1: der gesunde Trip {gesund_id!r} MUSS seinen Alarm "
+            f"bekommen, obwohl die Positionsbestimmung fuer {kaputt_id!r} "
+            f"geworfen hat — erhalten sent={sent}. Reisst die Ausnahme die "
+            f"Schleife mit, kommt hier 0 an (oder der Aufruf wirft ganz)."
+        )
+        assert len(mails) == 1, (
+            f"F-ADV1: erwartet genau EINE zugestellte Mail (die des gesunden "
+            f"Trips), erhalten {len(mails)}"
+        )
+        assert frames.call_count == 1, (
+            f"F-ADV1: der kaputte Trip darf kein Kontingent verbrauchen — "
+            f"sein Abruf kommt gar nicht erst zustande. Frame-Abrufe: "
+            f"{frames.call_count}"
+        )
+    finally:
+        clean_uid(uid)

@@ -252,43 +252,19 @@ def test_two_default_instances_mimicking_trip_and_compare_construction_share_cac
     )
 
 
-def test_end_to_end_trip_and_compare_radar_paths_share_one_fetch(monkeypatch):
-    """AC-9 (End-to-End): `TripAlertService.check_radar_alerts()` und
-    `CompareRadarAlertService._detect_triggered_locations()` konstruieren
-    JEWEILS ihre EIGENE `RadarNowcastService()` OHNE `frame_source`
-    (echte Produktionspfade, `trip_alert.py:556-561`,
-    `compare_radar_alert.py:172-176`). Monkeypatch ersetzt NUR, welche
-    Klasse referenziert wird (echter Python-Klassenaustausch ueber
-    Vererbung, kein Mock/patch von Verhalten) durch eine Variante mit
-    voreingestelltem zaehlendem `frame_source` -- die eigentliche
-    Cache-/Singleton-Logik der echten `RadarNowcastService` bleibt dabei
-    unveraendert wirksam, weil die Ersatzklasse von ihr erbt."""
-    from app.loader import save_trip
+def _e2e_trip(lat: float, lon: float):
+    """Trip mit einer ganztaegigen Etappe -- gemeinsamer Aufbau der beiden
+    End-to-End-Faelle unten (Wegpunkt 1 bei ``(lat, lon)``, 1000 m)."""
     from app.trip import Stage, Trip, Waypoint
-    from app.user import SavedLocation
-    from services.compare_radar_alert import CompareRadarAlertService
-    from services.trip_alert import TripAlertService
 
-    source = CountingFrameSource()
-
-    class _PreWiredRadarNowcastService(RadarNowcastService):
-        def __init__(self, *a, **kw):
-            kw.setdefault("frame_source", source)
-            super().__init__(*a, **kw)
-
-    import services.radar_service as radar_service_module
-    monkeypatch.setattr(radar_service_module, "RadarNowcastService", _PreWiredRadarNowcastService)
-
-    lat, lon = 46.5, 12.0
-    today = date.today()
-    trip = Trip(
+    return Trip(
         id="ac9-e2e-trip",
         name="AC9 E2E Trip",
         stages=[
             Stage(
                 id="T1",
                 name="Heute",
-                date=today,
+                date=date.today(),
                 start_time=time(0, 0),
                 waypoints=[
                     Waypoint(
@@ -303,23 +279,181 @@ def test_end_to_end_trip_and_compare_radar_paths_share_one_fetch(monkeypatch):
             )
         ],
     )
+
+
+def _messpunkt_des_trips(trip):
+    """``(lat, lon, elevation_m)``, an denen ``check_radar_alerts()`` seit
+    Issue #2017 fuer ``trip`` abfragt: die zur Mitte des Vorwarnfensters
+    interpolierte Position auf dem aktiven Segment.
+
+    Reine FIXTURE-Berechnung, keine Zusicherung -- die Tests hier pruefen die
+    Cache-TEILUNG, nicht den Messpunkt. Dass der Messpunkt selbst stimmt,
+    bewachen `test_issue_822_radar_nowcast_segment.py` und
+    `test_radar_alert_follows_ortstag.py`.
+
+    Die Schwelle kommt ueber die MODUL-Referenz (Drift-Waechter #2009).
+    """
+    from services import radar_service as radar_service_mod
+    from services.trip_day import trip_local_today
+    from services.trip_segments import position_at_time, resolve_current_segment
+
+    now_utc = datetime.now(timezone.utc)
+    aufgeloest = resolve_current_segment(trip, now_utc, trip_local_today(trip, now_utc))
+    assert aufgeloest is not None, "Fixture-Voraussetzung: aktives Segment noetig"
+    active, segment_date = aufgeloest
+    at = now_utc + timedelta(
+        minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+    )
+    pos = position_at_time(trip, active, segment_date, at)
+    return pos.lat, pos.lon, int(round(pos.elevation_m))
+
+
+def _vorverdrahtete_klasse(monkeypatch, source):
+    """Ersetzt NUR, welche Klasse `trip_alert`/`compare_radar_alert`
+    referenzieren -- echter Python-Klassenaustausch ueber Vererbung, kein
+    Mock/patch von Verhalten. Die Cache-/Singleton-Logik der echten
+    `RadarNowcastService` bleibt voll wirksam, weil die Ersatzklasse erbt."""
+
+    class _PreWiredRadarNowcastService(RadarNowcastService):
+        def __init__(self, *a, **kw):
+            kw.setdefault("frame_source", source)
+            super().__init__(*a, **kw)
+
+    import services.radar_service as radar_service_module
+
+    monkeypatch.setattr(
+        radar_service_module, "RadarNowcastService", _PreWiredRadarNowcastService
+    )
+
+
+def test_end_to_end_trip_and_compare_radar_paths_share_one_fetch(monkeypatch):
+    """AC-9 (End-to-End, MECHANISMUS): `TripAlertService.check_radar_alerts()`
+    und `CompareRadarAlertService._detect_triggered_locations()` konstruieren
+    JEWEILS ihre EIGENE `RadarNowcastService()` OHNE `frame_source` (echte
+    Produktionspfade, `trip_alert.py:556-561`, `compare_radar_alert.py:172-176`).
+    Fragen beide DIESELBE Stelle ab, teilen sie sich EINEN Fetch.
+
+    #1329 C2 -> #2017: Die Zusicherung von ADR-0033 ("ein Kontingent, ein
+    Zaehler") ist unveraendert und wird hier unveraendert scharf bewacht. Was
+    sich geaendert hat, ist nur, WO der Trip-Pfad abfragt: seit #2017 nicht
+    mehr am Segment-Startpunkt, sondern an der zur Fenstermitte interpolierten
+    Position. Der Vergleichs-Ort wird deshalb DORTHIN gelegt -- damit prueft
+    dieser Fall weiterhin genau das, was er immer geprueft hat (teilen sich
+    zwei Aufrufer an derselben Stelle einen Fetch?), statt an einer
+    Koordinaten-Zufaelligkeit zu haengen.
+
+    Der Fall, dass Trip und Vergleich am NOMINELL selben Ort inzwischen zwei
+    Fetches erzeugen, ist die andere Aussage und hat seinen eigenen Test
+    darunter -- er ersetzt diesen hier NICHT: "2 Fetches" ist auch das
+    Ergebnis eines vollstaendig defekten Caches und taugt darum nicht als
+    Waechter ueber den Mechanismus.
+
+    Die Hoehe gehoert seit #1991 zum Cache-Schluessel
+    (`radar_cache.py::_key`) und muss deshalb ebenfalls uebereinstimmen.
+    """
+    from app.loader import save_trip
+    from app.user import SavedLocation
+    from services.compare_radar_alert import CompareRadarAlertService
+    from services.trip_alert import TripAlertService
+
+    source = CountingFrameSource()
+    _vorverdrahtete_klasse(monkeypatch, source)
+
+    trip = _e2e_trip(46.5, 12.0)
     save_trip(trip)
+    mess_lat, mess_lon, mess_hoehe = _messpunkt_des_trips(trip)
 
     trip_svc = TripAlertService(user_id="default")
     trip_svc.clear_radar_throttle(trip.id)
     trip_svc.check_radar_alerts()
 
-    loc = SavedLocation(id="loc-ac9-e2e", name="Ort", lat=lat, lon=lon, elevation_m=1000)
+    assert source.calls, (
+        "Voraussetzung: der Trip-Pfad hat gar nicht abgefragt -- ohne ersten "
+        "Fetch sagt der Zaehler unten nichts ueber Cache-Teilung"
+    )
+
+    loc = SavedLocation(
+        id="loc-ac9-e2e", name="Ort",
+        lat=mess_lat, lon=mess_lon, elevation_m=mess_hoehe,
+    )
     compare_svc = CompareRadarAlertService(user_id="default")
     compare_svc._detect_triggered_locations(
         "preset-ac9-e2e", ["loc-ac9-e2e"], {"loc-ac9-e2e": loc}
     )
 
     assert source.call_count == 1, (
-        "AC-9 End-to-End: Trip-Radar-Check und Compare-Radar-Check am "
-        f"selben Ort ueber die tatsaechlichen Produktionskonstruktionspfade "
-        f"muessen sich EINEN Fetch teilen, tatsaechliche Fetches: "
-        f"{source.call_count}"
+        "AC-9 End-to-End: Trip-Radar-Check und Compare-Radar-Check an "
+        f"DERSELBEN Stelle ({mess_lat:.5f}, {mess_lon:.5f}, {mess_hoehe} m) "
+        f"ueber die tatsaechlichen Produktionskonstruktionspfade muessen sich "
+        f"EINEN Fetch teilen, tatsaechliche Fetches: {source.call_count} "
+        f"({source.calls!r}). Zwei Fetches an derselben Stelle heissen: der "
+        f"geteilte Singleton-Cache greift nicht mehr."
+    )
+
+
+def test_end_to_end_trip_und_vergleich_am_selben_wegpunkt_erzeugen_zwei_fetches(
+    monkeypatch,
+):
+    """#2017: Ein Vergleichs-Ort, der auf einem TRIP-WEGPUNKT liegt, teilt
+    sich seit dieser Aenderung KEINEN Fetch mehr mit dem Trip-Pfad.
+
+    Grund: Der Ortsvergleich misst an festen Preset-Koordinaten (er kennt
+    keine Etappen, `compare_radar_alert.py:13-16`), der Trip-Pfad seit #2017
+    an der zur Fenstermitte interpolierten Position. Zwei verschiedene
+    Stellen, zwei Cache-Schluessel, zwei Fetches.
+
+    Dieser Fall haelt den PREIS der Aenderung fest, nicht ein Ziel: es ist die
+    einzige Stelle, an der #2017 real zusaetzliches API-Kontingent kostet.
+    Die Einordnung steht in den Known Limitations von
+    `docs/specs/modules/fix_2017_nowcast_messpunkt.md` -- der gemeinsame
+    Treffer setzte exakte Koordinatengleichheit voraus und war damit Zufall,
+    kein Regelfall; ausserdem ist der Alarm-Takt (900 s) laenger als die
+    Cache-TTL (300 s), der Trip-Poll profitierte also ohnehin nie von seinem
+    eigenen Vorlauf-Cache.
+
+    🔴 Dieser Test ersetzt den Mechanismus-Waechter darueber NICHT. "2
+    Fetches" ist auch das Ergebnis eines vollstaendig defekten Caches --
+    allein stuende hier eine Zusicherung, die durch ihre eigene Verletzung
+    erfuellt waere.
+    """
+    from app.loader import save_trip
+    from app.user import SavedLocation
+    from services.compare_radar_alert import CompareRadarAlertService
+    from services.trip_alert import TripAlertService
+
+    source = CountingFrameSource()
+    _vorverdrahtete_klasse(monkeypatch, source)
+
+    lat, lon = 46.5, 12.0
+    trip = _e2e_trip(lat, lon)
+    save_trip(trip)
+    mess_lat, mess_lon, _mess_hoehe = _messpunkt_des_trips(trip)
+
+    # Voraussetzung: die beiden Stellen muessen sich ueberhaupt unterscheiden
+    # -- sonst waere der Fall trivial wahr (und stuende im Widerspruch zum
+    # Mechanismus-Waechter oben).
+    assert (round(mess_lat, 4), round(mess_lon, 4)) != (round(lat, 4), round(lon, 4)), (
+        f"Voraussetzung: der Messpunkt ({mess_lat:.5f}, {mess_lon:.5f}) muss "
+        f"sich vom Wegpunkt ({lat}, {lon}) unterscheiden -- sonst misst dieser "
+        f"Fall nichts"
+    )
+
+    trip_svc = TripAlertService(user_id="default")
+    trip_svc.clear_radar_throttle(trip.id)
+    trip_svc.check_radar_alerts()
+
+    loc = SavedLocation(id="loc-2017-preis", name="Ort", lat=lat, lon=lon, elevation_m=1000)
+    compare_svc = CompareRadarAlertService(user_id="default")
+    compare_svc._detect_triggered_locations(
+        "preset-2017-preis", ["loc-2017-preis"], {"loc-2017-preis": loc}
+    )
+
+    assert source.call_count == 2, (
+        f"#2017: Trip-Pfad (interpoliert, {mess_lat:.5f}/{mess_lon:.5f}) und "
+        f"Vergleichs-Pfad (fester Preset-Ort, {lat}/{lon}) fragen zwei "
+        f"verschiedene Stellen ab -- erwartet sind 2 Fetches, gezaehlt "
+        f"{source.call_count} ({source.calls!r}). EIN Fetch hiesse, dass einer "
+        f"der beiden Pfade nicht dort misst, wo er soll."
     )
 
 
