@@ -420,3 +420,24 @@ ein Folgeticket der #2046-Session, nicht Teil dieser Scheibe.
   rein über die Klammerstellung (`R@14(R@17)`, `output/tokens/metrics.py:65-67`) — eine
   Positions-Konvention ohne Wort. AC-3 muss also ein Wort **neu** einführen; dafür gibt es
   keine Vorlage, wohl aber die Nachbarwörter, an denen es sich ausrichten muss.
+
+### Zeichenbudget der Kurznachricht: Δ- und Onset-Zweig sind getrennt (belegt 2026-08-21)
+
+Von der #2046-Session am Code geprüft, nicht referiert:
+
+- `_render_sms_body` (`render.py:1107-1108`) hat einen **frühen Return**:
+  `if msg.source is not None: return _render_sms_onset(msg, limit)`. Eine `AlertMessage` ist
+  damit **entweder** Onset (`source != None`, `model.py:118`) **oder** Δ — nie beides in einem
+  gerenderten Text.
+- Jeder Zweig hat seinen **eigenen** Hardcut: Onset `render.py:614`, Δ `render.py:1155`. Das
+  `limit` wird pro `render_sms()`-Aufruf gemessen, nicht über beide Befunde hinweg.
+- Die Addendum-Mechanik (`"Erg "`-Präfix, `render.py:1067-1071`) bündelt nur **innerhalb
+  eines** `render_sms()`-Aufrufs, also mehrere Befunde derselben Alarmart.
+
+**Folge für diese Scheibe:** Das Restmengen-Token (`Rest{mm}@{HH}`, ~8–9 Zeichen) zehrt
+allein am Δ-Budget. Die 160-Zeichen-Prüfung (AC-7) ist **unabhängig** von #2046 aufzustellen;
+kein gemeinsamer Messpunkt, kein Merge-Halt.
+
+🔴 **Grenze der Auskunft, ausdrücklich benannt:** Belegt ist die **Renderer-Weiche**, nicht
+der Versandweg. Würden zwei Alarmarten **vor** `render_sms` zu einer Sendung zusammengefasst,
+wäre das eine andere Frage. Im Renderer passiert es nachweislich nicht.
