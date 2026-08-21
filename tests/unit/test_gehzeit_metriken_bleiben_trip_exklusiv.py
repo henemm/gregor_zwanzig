@@ -93,14 +93,21 @@ def _im_ausblick_waehlbar(
     metric_ids: tuple[str, ...] = GEHZEIT_METRIC_IDS, resolver=resolve_outlook_metrics
 ) -> list[str]:
     """Tuer 3: welche der genannten Kennungen loest der 3-Tages-Ausblick auf?
-    Probiert je Kennung alle im Register vorgesehenen Auswertungen durch."""
+
+    #1848 A2: der Ausblick speichert reine KENNUNGEN, die Auswertungen leitet
+    der Katalog ab -- eine Probe je Auswertung gibt es nicht mehr, weil sich
+    eine einzelne Auswertung gar nicht mehr auswaehlen laesst. Die Zusicherung
+    ist unveraendert und wird dadurch sogar direkter: was hier auftaucht, ist
+    genau das, was ein Nutzer im Ausblick speichern koennte. Der Rueckgabewert
+    behaelt die Form ``"kennung/auswertung"``, damit die Positivkontrolle und
+    die Gegenprobe unveraendert lesbar bleiben."""
     register = {m.id: m for m in get_all_metrics()}
     treffer: list[str] = []
     for metric_id in metric_ids:
+        if not resolver([metric_id]):
+            continue
         aggregationen = getattr(register.get(metric_id), "default_aggregations", ("min", "max"))
-        for aggregation in aggregationen or ("min", "max"):
-            if resolver([{"metric_id": metric_id, "aggregation": aggregation}]):
-                treffer.append(f"{metric_id}/{aggregation}")
+        treffer.extend(f"{metric_id}/{a}" for a in (aggregationen or ("min", "max")))
     return sorted(treffer)
 
 

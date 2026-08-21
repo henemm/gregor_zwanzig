@@ -45,9 +45,10 @@ from tests.helpers.trip_outlook_selection import (  # noqa: E402
 )
 
 LAT, LON = 46.65, 12.85
-NIEDERSCHLAG = {"metric_id": "precipitation", "aggregation": "sum"}
-BOEEN = {"metric_id": "gust", "aggregation": "max"}
-SCHNEEHOEHE = {"metric_id": "snow_depth", "aggregation": "max"}
+# #1848 A2: Auswahl-Bausteine sind reine Kennungen (vorher Paare, #1373).
+NIEDERSCHLAG = "precipitation"
+BOEEN = "gust"
+SCHNEEHOEHE = "snow_depth"
 
 _MAIL_FIELDS: dict = {
     "smtp_host": "dummy.invalid", "smtp_port": 587,

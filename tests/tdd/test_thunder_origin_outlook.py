@@ -646,10 +646,8 @@ def test_ac11b_compare_ausblick_mit_metrikauswahl_nennt_die_herkunft():
         — eine Herkunft, die nicht zur gezeigten Stufe gehoert (genau der
         AC-12-Fehler aus Scheibe 1).
     """
-    auswahl = resolve_outlook_metrics([
-        {"metric_id": "temperature", "aggregation": "max"},
-        {"metric_id": "thunder", "aggregation": "max"},
-    ])
+    # #1848 A2: reine Kennungen; die Auswertungen leitet der Katalog ab.
+    auswahl = resolve_outlook_metrics(["temperature", "thunder"])
     assert auswahl and len(auswahl) == 2, (
         f"Die Auswahl muss durch den produktiven Aufloeser kommen und die "
         f"Gewitter-Spalte enthalten: {auswahl!r}")

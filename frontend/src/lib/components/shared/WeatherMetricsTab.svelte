@@ -91,7 +91,8 @@
 	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
 	// Schwellen-Slider/Winner-Box/Save-Default-Fallback unveraendert, Teil 3).
 	import {
-		type CompareSelectionEntry, normalizeStoredActiveMetrics, toStoredActiveMetrics
+		type CompareSelectionEntry, normalizeStoredActiveMetrics,
+		normalizeStoredOutlookMetrics, toStoredActiveMetrics
 	} from './weather-metrics-tab/compareMetricSelection.ts';
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): geteilter Katalog-Cache — eine
 	// Anfrage pro Seiten-Load fuer Auswahlliste, Schwellen-Editor und
@@ -451,11 +452,11 @@
 			if (layout) cb[ch] = channelOverrideFromMetrics(layout, allCatalogIds(), fMap);
 		}
 		channelBuckets = cb;
-		// Issue #1720 S1: gespeicherte Vorschau-Auswahl (Neuformat
-		// {metric_id, aggregation}) in Auswahl-Schluessel uebersetzen —
+		// Issue #1720 S1 / #1848 A2: gespeicherte Vorschau-Auswahl (Kennungen,
+		// oder Paar-Altform aus Bestandsdaten) in Kennungen uebersetzen —
 		// DIESELBE Umkehrung wie im Ortsvergleich, kein zweiter Lesepfad. Ein
 		// roher Cast auf string[] liesse die Haken nach dem Neuladen leer.
-		const om = normalizeStoredActiveMetrics(trip!.display_config?.outlook_metrics, compareCatalog);
+		const om = normalizeStoredOutlookMetrics(trip!.display_config?.outlook_metrics, compareCatalog);
 		outlookMetricKeys = om;
 		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, cb, om);
 	}
@@ -522,7 +523,7 @@
 			// Picker zeigte keinen Haken. Baseline zieht mit, sonst gaelte der
 			// Reiter ohne jede Nutzergeste als geaendert.
 			if (context === 'route' && trip && catalogLoaded && !isDirty) {
-				outlookMetricKeys = normalizeStoredActiveMetrics(
+				outlookMetricKeys = normalizeStoredOutlookMetrics(
 					trip.display_config?.outlook_metrics, compareCatalog,
 				);
 				savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform,
@@ -885,9 +886,11 @@
 			// Nutzer kaeme aus dem "Block aus"-Zustand nie wieder heraus
 			// (RMW-Pflicht, Fehlerklasse #102 -> #1159). `null` (nie eingestellt)
 			// reicht den Altwert unveraendert durch.
+			// Issue #1848 A2: reine Kennungen, ungewandelt (wie hourly_metrics
+			// und wie der Ortsvergleich seit dieser Scheibe).
 			outlook_metrics: outlookMetricKeys === null
 				? trip!.display_config?.outlook_metrics
-				: toStoredActiveMetrics(outlookMetricKeys, compareCatalog),
+				: outlookMetricKeys,
 		};
 	}
 

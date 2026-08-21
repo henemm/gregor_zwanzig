@@ -48,24 +48,22 @@ from output.renderers.compare_outlook_metric_ids import (  # noqa: E402
     resolve_trip_outlook_metrics,
 )
 
-# Auswertung je Kennung im Ausblick-Neuformat (#1373). Alle Paare sind im
-# Compare-Katalog aufloesbar AUSSER ``confidence`` (selectable=False, dort gar
-# nicht gefuehrt) -- s. Hinweis im AC-3-Test.
-AGGREGATION = {
-    "precipitation": "sum",
-    "temperature": "max",
-    "gust": "max",
-    "wind": "max",
-    "snow_depth": "max",
-    "confidence": "min",
-}
+# Alle hier verwendeten Kennungen sind im Compare-Katalog aufloesbar AUSSER
+# ``confidence`` (selectable=False, dort gar nicht gefuehrt) -- s. Hinweis im
+# AC-3-Test.
+#
+# #1848 A2: die Ausblick-Auswahl speichert reine KENNUNGEN; die frueher hier
+# gefuehrte Auswertung je Kennung ist kein Speicherinhalt mehr, sondern wird
+# vom Katalog abgeleitet. Fuer die Zusicherung dieses Tests -- der
+# Kaskaden-Schnitt trifft in beiden Flaechen DIESELBE Kennungsmenge -- ist das
+# folgenlos: geschnitten wurde schon immer auf ``metric_id``.
 
 KANAL = "email"
 
 
 def _ausblick_auswahl(kennungen):
-    """Ausblick-Auswahl im Speicherformat ``{metric_id, aggregation}``."""
-    return [{"metric_id": k, "aggregation": AGGREGATION[k]} for k in kennungen]
+    """Ausblick-Auswahl im Speicherformat: reine Kennungen (#1848 A2)."""
+    return list(kennungen)
 
 
 def _dc(*, grundauswahl, kanal_layout=None, ausblick=None):
@@ -119,7 +117,7 @@ def _ausblick_kennungen(dc, report_type):
         "Die Ausblick-Auswahl wurde gar nicht aufgeloest (None) -- dann "
         "vergleicht dieser Test zwei Flaechen, von denen eine leer ist."
     )
-    return {e["metric_id"] for e in aufgeloest}
+    return set(aufgeloest)
 
 
 # ═════════════════════════ AC-1 — abgewaehlte Groesse ═════════════════════════
@@ -191,7 +189,7 @@ def test_ac2_leere_grundauswahl_liefert_none_und_schneidet_in_keiner_flaeche():
     )
 
     ausblick = resolve_trip_outlook_metrics(dc, "morning")
-    assert [e["metric_id"] for e in (ausblick or [])] == eingabe, (
+    assert list(ausblick or []) == eingabe, (
         f"Ausblick: bei leerer Grundauswahl wurde geschnitten. Erwartet die "
         f"unveraenderte Auswahl {eingabe!r}, erhalten {ausblick!r} (D4, "
         "AC-16 aus #1720 S1)."

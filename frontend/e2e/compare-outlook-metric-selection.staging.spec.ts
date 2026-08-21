@@ -1,11 +1,20 @@
 // Staging-Validierung — Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl
 // (Issue #1406 Scheibe A). Auswahl-Block auf das gruppierte Muster von #1411
-// gehoben (24 statt 26 Zeilen, unabhaengige Kaestchen bei Temperatur/
-// gefuehlter Temperatur). Namensregel (CLAUDE.md): Datei nach Verhalten
+// gehoben (24 statt 26 Zeilen). Namensregel (CLAUDE.md): Datei nach Verhalten
 // benannt, nicht nach Ticket — die Ticket-Referenz steht in den Testtiteln.
 //
+// 🔴 UMGESTELLT in Issue #1848 Scheibe A2: die frueher hier gepruefte
+// Halbauswahl (unabhaengige Kaestchen fuer Temperatur-Hoechst- und
+// -Tiefstwert) ist abgeschafft. Der Ausblick speichert die KENNUNG, jede
+// Groesse hat genau EIN Kaestchen, und Tief und Hoch stehen seit #1848 A1 in
+// EINER Spannen-Zelle. Die Zusicherungen sind entsprechend umgedreht, nicht
+// entfernt; zusaetzlich pruefen AC-4 und Adversary-2 jetzt mit, dass die
+// Paar-ALTFORM aus Bestandsdaten weiterhin gelesen und auf Kennungen
+// normalisiert wird.
+//
 // Spec: docs/specs/modules/feat_1406a_ausblick_geteiltes_element.md
-// Workflow: feat-1406a-ausblick-geteiltes-element
+//       docs/specs/modules/feat_1848_a2_ausblick_kennungen.md
+// Workflow: feat-1406a-ausblick-geteiltes-element · feat-1848-a2-outlook-kennungen
 //
 // AC-6/AC-7 (Mail) sind bewusst NICHT hier — deterministisch belegt
 // (kein Versand, Kontingent-Schonung #1329).
@@ -139,34 +148,34 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		const outlook = outlookContainer(panel);
 		await expect(outlook.getByTestId('compare-layout-outlook-metrics')).toBeVisible({ timeout: 10000 });
 
+		// #1848 A2: JEDE Groesse — auch Temperatur und gefuehlte Temperatur —
+		// bekommt genau EINE Zeile mit genau EINEM Kaestchen. Die frueheren
+		// Mehrfach-Zeilen (`-metric-row-…` mit je einem `-option-…-max`/`-min`)
+		// sind entfallen: seit A2 speichert der Ausblick die Kennung, eine
+		// Halbauswahl gibt es nicht mehr. Die Zusicherung „Zeile je Groesse,
+		// keine doppelten Testids" bleibt und wird dabei einfacher, nicht
+		// schwaecher — sie gilt jetzt fuer alle 24 gleich.
 		let rowCount = 0;
 		for (const group of groups) {
-			const isMulti = group.options.length > 1;
-			const rowTestId = isMulti
-				? `compare-layout-outlook-metric-row-${group.metric_id}`
-				: `compare-layout-outlook-metric-${group.metric_id}`;
+			const rowTestId = `compare-layout-outlook-metric-${group.metric_id}`;
 			const row = outlook.getByTestId(rowTestId);
 			await expect(row, `Zeile fuer ${group.metric_id} (${rowTestId}) fehlt`).toHaveCount(1);
+			await expect(
+				row.locator('input[type="checkbox"]'),
+				`AC-1 (#1848 A2): ${group.metric_id} muss genau EIN Kaestchen haben, auch bei ` +
+					`${group.options.length} Auswertungen`
+			).toHaveCount(1);
+			await expect(
+				outlook.locator(`[data-testid="compare-layout-outlook-metric-row-${group.metric_id}"]`),
+				`#1848 A2: fuer ${group.metric_id} existiert noch die alte Mehrfach-Auswertungs-Zeile`
+			).toHaveCount(0);
 			rowCount += 1;
-
-			if (isMulti) {
-				for (const o of group.options) {
-					await expect(
-						outlook.getByTestId(`compare-layout-outlook-option-${group.metric_id}-${o.aggregation}`)
-					).toHaveCount(1);
-				}
-			} else {
-				await expect(
-					outlook.locator(`[data-testid="compare-layout-outlook-choices-${group.metric_id}"]`)
-				).toHaveCount(0);
-				await expect(row.locator('input[type="checkbox"]')).toHaveCount(1);
-			}
 		}
 		expect(rowCount, 'AC-1: 24 Zeilen im Ausblick-Auswahl-Block gezaehlt').toBe(24);
 
 		const overviewTempRow = panel.getByTestId('weather-metrics-vergleich-row-temperature');
 		await expect(overviewTempRow, 'Uebersicht zeigt ebenfalls eine Temperatur-Zeile').toHaveCount(1);
-		const outlookTempRow = outlook.getByTestId('compare-layout-outlook-metric-row-temperature');
+		const outlookTempRow = outlook.getByTestId('compare-layout-outlook-metric-temperature');
 		await expect(outlookTempRow).toHaveCount(1);
 
 		// Scope: NUR der Wetter-Metriken-Panel (Uebersicht + Ausblick), nicht die
@@ -203,33 +212,43 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		});
 	});
 
-	// ── AC-2 ────────────────────────────────────────────────────────────────
-	test('AC-2 (#1406 A): Hoechst- und Tiefstwert der Temperatur unabhaengig ankreuzbar', async ({ page }) => {
+	// ── AC-2 — UMGESTELLT in #1848 A2 ───────────────────────────────────────
+	// Vorher: "Hoechst- und Tiefstwert der Temperatur unabhaengig ankreuzbar".
+	// Genau diese Halbauswahl hat A2 abgeschafft (PO-Entscheid 2026-08-20):
+	// gespeichert wird die Kennung, Tief und Hoch stehen seit #1848 A1 in EINER
+	// Spannen-Zelle. Die Zusicherung ist umgedreht: EIN Kaestchen schaltet die
+	// ganze Groesse, und es gibt kein zweites daneben.
+	test('AC-2 (#1848 A2): Temperatur ist EIN Kaestchen — keine getrennten Auswertungen mehr', async ({ page }) => {
 		const suffix = Date.now();
-		const locA = await createLocation(page, `1406a-AC2-A-${suffix}`);
-		const locB = await createLocation(page, `1406a-AC2-B-${suffix}`);
-		const locC = await createLocation(page, `1406a-AC2-C-${suffix}`);
-		const id = await createPreset(page, `1406a-AC2-${suffix}`, [locA, locB, locC], {
+		const locA = await createLocation(page, `1848a2-AC2-A-${suffix}`);
+		const locB = await createLocation(page, `1848a2-AC2-B-${suffix}`);
+		const locC = await createLocation(page, `1848a2-AC2-C-${suffix}`);
+		const id = await createPreset(page, `1848a2-AC2-${suffix}`, [locA, locB, locC], {
 			outlook_metrics: []
 		});
 
 		const panel = await openMetricsTab(page, id);
 		const outlook = outlookContainer(panel);
-		const maxBox = outlook.getByTestId('compare-layout-outlook-option-temperature-max').locator('input');
-		const minBox = outlook.getByTestId('compare-layout-outlook-option-temperature-min').locator('input');
-		await expect(maxBox).not.toBeChecked();
-		await expect(minBox).not.toBeChecked();
+		const tempRow = outlook.getByTestId('compare-layout-outlook-metric-temperature');
+		await expect(tempRow, 'Temperatur-Zeile fehlt im Ausblick-Auswahl-Block').toHaveCount(1);
+		await expect(
+			tempRow.locator('input[type="checkbox"]'),
+			'AC-2 (#1848 A2): Temperatur muss genau EIN Kaestchen haben'
+		).toHaveCount(1);
+		await expect(
+			outlook.locator('[data-testid^="compare-layout-outlook-option-temperature-"]'),
+			'AC-2 (#1848 A2): es existieren noch getrennte Auswertungs-Kaestchen fuer die Temperatur'
+		).toHaveCount(0);
 
-		await maxBox.check();
-		await expect(maxBox).toBeChecked();
-		await expect(minBox, 'Hoechstwert-Klick darf Tiefstwert nicht beeinflussen').not.toBeChecked();
-
-		await minBox.check();
-		await expect(minBox).toBeChecked();
-		await expect(maxBox, 'Tiefstwert-Klick darf Hoechstwert nicht abwaehlen').toBeChecked();
+		const tempBox = tempRow.locator('input');
+		await expect(tempBox).not.toBeChecked();
+		await tempBox.check();
+		await expect(tempBox).toBeChecked();
+		await tempBox.uncheck();
+		await expect(tempBox, 'ein Klick muss die ganze Groesse wieder abwaehlen').not.toBeChecked();
 
 		await page.screenshot({
-			path: '../docs/artifacts/feat-1406a-ausblick-geteiltes-element/ac-2-both-checked.png'
+			path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/ac-2-one-box-per-metric.png'
 		});
 	});
 
@@ -248,42 +267,49 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 
 		const panel = await openMetricsTab(page, id);
 		const outlook = outlookContainer(panel);
-		const maxBox = outlook.getByTestId('compare-layout-outlook-option-temperature-max').locator('input');
-		const minBox = outlook.getByTestId('compare-layout-outlook-option-temperature-min').locator('input');
+		// #1848 A2: ein Kaestchen je Groesse, gespeichert wird die Kennung.
+		// Zwei verschiedene Groessen statt zweier Auswertungen derselben --
+		// so bleibt "zwei Klicks, zwei Eintraege, Reihenfolge erhalten" pruefbar.
+		const tempBox = outlook.getByTestId('compare-layout-outlook-metric-temperature').locator('input');
+		const gustBox = outlook.getByTestId('compare-layout-outlook-metric-gust').locator('input');
 
 		const putPromise1 = page.waitForResponse(
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
 			{ timeout: 8000 }
 		);
-		await maxBox.check();
+		await tempBox.check();
 		await putPromise1;
 		const putPromise2 = page.waitForResponse(
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
 			{ timeout: 8000 }
 		);
-		await minBox.check();
+		await gustBox.check();
 		await putPromise2;
 		await page.waitForTimeout(500);
 
 		const getRes = await page.request.get(`/api/compare/presets/${id}`);
 		const savedPreset = await getRes.json();
-		const savedOutlook = (savedPreset.display_config?.outlook_metrics ?? []) as { metric_id: string }[];
+		const savedOutlook = (savedPreset.display_config?.outlook_metrics ?? []) as string[];
 		expect(
-			savedOutlook.map((m) => m.metric_id).sort(),
-			'AC-4: display_config.outlook_metrics enthaelt Temperatur (beide Auswertungen)'
-		).toEqual(['temperature', 'temperature']);
+			savedOutlook.every((m) => typeof m === 'string'),
+			`#1848 A2: display_config.outlook_metrics muss reine Kennungen fuehren: ${JSON.stringify(savedOutlook)}`
+		).toBe(true);
+		expect(
+			savedOutlook,
+			'AC-4: display_config.outlook_metrics enthaelt beide gewaehlten Kennungen in Klickreihenfolge'
+		).toEqual(['temperature', 'gust']);
 
 		const reloadedPanel = await openMetricsTab(page, id);
 		const reloadedOutlook = outlookContainer(reloadedPanel);
 		await expect(
-			reloadedOutlook.getByTestId('compare-layout-outlook-option-temperature-max').locator('input')
+			reloadedOutlook.getByTestId('compare-layout-outlook-metric-temperature').locator('input')
 		).toBeChecked();
 		await expect(
-			reloadedOutlook.getByTestId('compare-layout-outlook-option-temperature-min').locator('input')
+			reloadedOutlook.getByTestId('compare-layout-outlook-metric-gust').locator('input')
 		).toBeChecked();
 
 		await page.screenshot({
-			path: '../docs/artifacts/feat-1406a-ausblick-geteiltes-element/ac-4-persisted-after-reload.png'
+			path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/ac-4-persisted-after-reload.png'
 		});
 
 		const metricsRes = await request.get('/api/compare/metrics');
@@ -305,19 +331,26 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 
 		const existingRes = await page.request.get(`/api/compare/presets/${existingMeta!.id}`);
 		const existingPreset = await existingRes.json();
+		// #1848 A2: gespeichert wird die Kennung -- ein Bestands-Vergleich kann
+		// aber noch die PAAR-ALTFORM tragen. Genau das ist der Sinn dieses
+		// Teils: die Bedienflaeche muss beide lesen und daraus dieselbe
+		// Kennungsmenge anzeigen. Zwei Paare derselben Groesse (Tief UND Hoch)
+		// ergeben dabei EINEN Haken, nicht zwei.
 		const storedOutlook = existingPreset.display_config?.outlook_metrics as
-			| { metric_id: string; aggregation: string }[]
+			| (string | { metric_id: string; aggregation: string })[]
 			| null
 			| undefined;
-		const keyByPair = new Map(catalog.metrics.map((m) => [`${m.metric_id}:${m.aggregation}`, m.key]));
-		const DEFAULT_OUTLOOK = [
-			'temp_min_c', 'temp_max_c', 'precip_sum_mm', 'pop_max_pct',
-			'wind_max_kmh', 'gust_max_kmh', 'thunder_level_max'
+		const DEFAULT_OUTLOOK_IDS = [
+			'temperature', 'precipitation', 'rain_probability', 'wind', 'gust', 'thunder'
 		];
-		const expectedActiveKeys =
+		const expectedActiveIds =
 			storedOutlook && storedOutlook.length > 0
-				? storedOutlook.map((m) => keyByPair.get(`${m.metric_id}:${m.aggregation}`)).filter(Boolean)
-				: DEFAULT_OUTLOOK;
+				? Array.from(
+						new Set(
+							storedOutlook.map((m) => (typeof m === 'string' ? m : m.metric_id)).filter(Boolean)
+						)
+					)
+				: DEFAULT_OUTLOOK_IDS;
 
 		const existingPanel = await openMetricsTab(page, existingMeta!.id);
 		const existingOutlook = outlookContainer(existingPanel);
@@ -325,21 +358,23 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 			timeout: 10000
 		});
 		for (const group of groups) {
-			for (const opt of group.options) {
-				const isMulti = group.options.length > 1;
-				const checkboxLocator = isMulti
-					? existingOutlook.getByTestId(`compare-layout-outlook-option-${group.metric_id}-${opt.aggregation}`).locator('input')
-					: existingOutlook.getByTestId(`compare-layout-outlook-metric-${group.metric_id}`).locator('input');
-				const shouldBeActive = expectedActiveKeys.includes(opt.key);
-				if (shouldBeActive) {
-					await expect(checkboxLocator, `${opt.key}: erwartet angehakt (unveraenderte Bestandsauswahl)`).toBeChecked();
-				} else {
-					await expect(checkboxLocator, `${opt.key}: erwartet NICHT angehakt (unveraenderte Bestandsauswahl)`).not.toBeChecked();
-				}
+			const checkboxLocator = existingOutlook
+				.getByTestId(`compare-layout-outlook-metric-${group.metric_id}`)
+				.locator('input');
+			if (expectedActiveIds.includes(group.metric_id)) {
+				await expect(
+					checkboxLocator,
+					`${group.metric_id}: erwartet angehakt (unveraenderte Bestandsauswahl)`
+				).toBeChecked();
+			} else {
+				await expect(
+					checkboxLocator,
+					`${group.metric_id}: erwartet NICHT angehakt (unveraenderte Bestandsauswahl)`
+				).not.toBeChecked();
 			}
 		}
 		await page.screenshot({
-			path: '../docs/artifacts/feat-1406a-ausblick-geteiltes-element/ac-4-existing-preset-untouched.png'
+			path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/ac-4-existing-preset-untouched.png'
 		});
 	});
 
@@ -349,11 +384,8 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		const locA = await createLocation(page, `1406a-AC5-A-${suffix}`);
 		const locB = await createLocation(page, `1406a-AC5-B-${suffix}`);
 		const locC = await createLocation(page, `1406a-AC5-C-${suffix}`);
-		const startOrder = [
-			{ metric_id: 'wind', aggregation: 'max' },
-			{ metric_id: 'precipitation', aggregation: 'sum' },
-			{ metric_id: 'gust', aggregation: 'max' }
-		];
+		// #1848 A2: reine Kennungen im Speicherformat.
+		const startOrder = ['wind', 'precipitation', 'gust'];
 		const id = await createPreset(page, `1406a-AC5-${suffix}`, [locA, locB, locC], {
 			outlook_metrics: startOrder
 		});
@@ -363,10 +395,10 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		const rows = outlook.locator('[data-testid="wm2-reihenfolge-row"]');
 		await expect(rows).toHaveCount(3, { timeout: 10000 });
 		const initialOrder = await rows.evaluateAll((els) => els.map((e) => e.getAttribute('data-metric-id')));
-		expect(initialOrder).toEqual(['wind_max_kmh', 'precip_sum_mm', 'gust_max_kmh']);
+		expect(initialOrder).toEqual(['wind', 'precipitation', 'gust']);
 
-		const source = outlook.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust_max_kmh"]');
-		const target = outlook.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind_max_kmh"]');
+		const source = outlook.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]');
+		const target = outlook.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]');
 		await source.scrollIntoViewIfNeeded();
 		await target.scrollIntoViewIfNeeded();
 		const sBox = await source.boundingBox();
@@ -380,11 +412,12 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		await page.waitForTimeout(120);
 		await page.mouse.up();
 
-		// Zwei Vokabulare: der DOM zeigt die flachen Katalog-KEYS
-		// (`data-metric-id`), der persistierte `outlook_metrics`-Eintrag
-		// speichert Groesse+Auswertung (`metric_id`+`aggregation`) — beide
-		// muessen dieselbe Reihenfolge tragen, nur mit anderem Vokabular.
-		const expectedDomOrder = ['gust_max_kmh', 'wind_max_kmh', 'precip_sum_mm'];
+		// #1848 A2: EIN Vokabular. Der DOM (`data-metric-id`) und der
+		// persistierte `outlook_metrics`-Eintrag tragen beide die Kennung --
+		// vorher waren es zwei Vokabulare (flacher Katalog-Key im DOM,
+		// Groesse+Auswertung im Speicher). Die Zusicherung "dieselbe
+		// Reihenfolge auf beiden Seiten" bleibt und wird direkter pruefbar.
+		const expectedDomOrder = ['gust', 'wind', 'precipitation'];
 		const expectedMetricIdOrder = ['gust', 'wind', 'precipitation'];
 		await expect
 			.poll(async () => rows.evaluateAll((els) => els.map((e) => e.getAttribute('data-metric-id'))), {
@@ -397,9 +430,7 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 				async () => {
 					const r = await request.get(`/api/compare/presets/${id}`);
 					const body = await r.json();
-					return ((body.display_config?.outlook_metrics ?? []) as { metric_id: string }[]).map(
-						(m) => m.metric_id
-					);
+					return (body.display_config?.outlook_metrics ?? []) as string[];
 				},
 				{ message: 'AC-5: die gezogene Reihenfolge muss serverseitig persistent sein', timeout: 8000 }
 			)
@@ -419,23 +450,21 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		});
 
 		const removeRow = reloadedOutlook.locator(
-			'[data-testid="wm2-reihenfolge-row"][data-metric-id="precip_sum_mm"]'
+			'[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]'
 		);
 		await removeRow.getByRole('button', { name: 'Aus' }).click();
 		await expect
 			.poll(async () => reloadedRows.evaluateAll((els) => els.map((e) => e.getAttribute('data-metric-id'))), {
 				timeout: 5000
 			})
-			.toEqual(['gust_max_kmh', 'wind_max_kmh']);
+			.toEqual(['gust', 'wind']);
 
 		await expect
 			.poll(
 				async () => {
 					const r = await request.get(`/api/compare/presets/${id}`);
 					const body = await r.json();
-					return ((body.display_config?.outlook_metrics ?? []) as { metric_id: string }[]).map(
-						(m) => m.metric_id
-					);
+					return (body.display_config?.outlook_metrics ?? []) as string[];
 				},
 				{ message: 'AC-5: "Aus" muss serverseitig persistent sein', timeout: 8000 }
 			)
@@ -467,34 +496,35 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 
 		const panel = await openMetricsTab(page, id);
 		const outlook = outlookContainer(panel);
-		const maxBox = outlook.getByTestId('compare-layout-outlook-option-temperature-max').locator('input');
-		await expect(maxBox).not.toBeChecked();
+		// #1848 A2: ein Kaestchen je Groesse, geschaltet wird die Kennung.
+		const tempBox = outlook.getByTestId('compare-layout-outlook-metric-temperature').locator('input');
+		await expect(tempBox).not.toBeChecked();
 
 		// An -> Aus -> An in schneller Folge, ohne auf einzelne PUTs zu warten.
-		await maxBox.click();
-		await maxBox.click();
-		await maxBox.click();
+		await tempBox.click();
+		await tempBox.click();
+		await tempBox.click();
 		// Netto-Effekt von drei Klicks aus dem Startzustand "aus": an.
-		await expect(maxBox).toBeChecked();
+		await expect(tempBox).toBeChecked();
 		await page.waitForLoadState('networkidle');
 		await page.waitForTimeout(800);
 
 		const getRes = await page.request.get(`/api/compare/presets/${id}`);
 		const saved = await getRes.json();
-		const savedIds = ((saved.display_config?.outlook_metrics ?? []) as { metric_id: string; aggregation: string }[]);
+		const savedIds = (saved.display_config?.outlook_metrics ?? []) as string[];
 		expect(
-			savedIds.some((m) => m.metric_id === 'temperature' && m.aggregation === 'max'),
+			savedIds.includes('temperature'),
 			`AC-4-Regression: Server-Stand nach schnellem Dreifach-Klick muss "an" sein, tatsaechlich: ${JSON.stringify(savedIds)}`
 		).toBe(true);
 
 		const reloadedPanel = await openMetricsTab(page, id);
 		const reloadedOutlook = outlookContainer(reloadedPanel);
 		await expect(
-			reloadedOutlook.getByTestId('compare-layout-outlook-option-temperature-max').locator('input')
+			reloadedOutlook.getByTestId('compare-layout-outlook-metric-temperature').locator('input')
 		).toBeChecked();
 
 		await page.screenshot({
-			path: '../docs/artifacts/feat-1406a-ausblick-geteiltes-element/adv-1-rapid-toggle-consistent.png'
+			path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/adv-1-rapid-toggle-consistent.png'
 		});
 	});
 
@@ -525,6 +555,11 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 		// mit bereits konkretem Array gestartet, identisch zu den 7
 		// Default-Spalten, um den Adversary-Fall "alle abwaehlen" isoliert zu
 		// pruefen.
+		// #1848 A2: bewusst in der PAAR-ALTFORM angelegt — so liegen
+		// Bestandsdaten auf Staging. Der Fall prueft damit gleich mit, dass die
+		// Bedienflaeche die Altform liest und die beiden Temperatur-Paare als
+		// EINEN Haken zeigt (sonst faende die Abwahl-Schleife unten sieben
+		// statt sechs Kaestchen).
 		const id = await createPreset(page, `1406a-ADV2-${suffix}`, [locA, locB, locC], {
 			outlook_metrics: [
 				{ metric_id: 'temperature', aggregation: 'min' },
@@ -547,14 +582,10 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 		// ist genau der Container, der erst nach dem Laden erscheint.
 		await expect(outlook.getByTestId('compare-layout-outlook-metrics')).toBeVisible({ timeout: 10000 });
 
-		const defaultKeys = [
-			{ metricId: 'temperature', aggregation: 'min' },
-			{ metricId: 'temperature', aggregation: 'max' },
-			{ metricId: 'precipitation', aggregation: 'sum' },
-			{ metricId: 'rain_probability', aggregation: 'max' },
-			{ metricId: 'wind', aggregation: 'max' },
-			{ metricId: 'gust', aggregation: 'max' },
-			{ metricId: 'thunder', aggregation: 'max' }
+		// #1848 A2: sechs KENNUNGEN statt sieben Paaren -- Temperatur-Tief und
+		// -Hoch sind ein Eintrag geworden.
+		const defaultMetricIds = [
+			'temperature', 'precipitation', 'rain_probability', 'wind', 'gust', 'thunder'
 		];
 		async function uncheckAndConfirm(box: Locator): Promise<void> {
 			const putPromise = page.waitForResponse(
@@ -576,17 +607,16 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 				return false;
 			}
 		}
-		for (const k of defaultKeys) {
-			const box = outlook
-				.getByTestId(`compare-layout-outlook-option-${k.metricId}-${k.aggregation}`)
-				.locator('input');
-			if (!(await existsSoon(box))) continue; // Einzel-Options-Gruppe -> andere Zeilenform
+		// #1848 A2: EINE Zeilenform fuer alle Groessen -- die frueher noetige
+		// Fallunterscheidung (Mehrfach-Option vs. Einzel-Zeile) entfaellt.
+		for (const mid of defaultMetricIds) {
+			const box = outlook.getByTestId(`compare-layout-outlook-metric-${mid}`).locator('input');
+			expect(
+				await existsSoon(box),
+				`#1848 A2: Ausblick-Kaestchen fuer ${mid} fehlt — die Bestands-Altform wurde beim ` +
+					'Lesen nicht auf Kennungen normalisiert'
+			).toBe(true);
 			if (await box.isChecked()) await uncheckAndConfirm(box);
-		}
-		// Einzel-Options-Zeilen unter denselben Groessen (falls vorhanden) separat.
-		for (const mid of ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder']) {
-			const single = outlook.getByTestId(`compare-layout-outlook-metric-${mid}`).locator('input');
-			if ((await existsSoon(single)) && (await single.isChecked())) await uncheckAndConfirm(single);
 		}
 
 		// Server-Stand ist die eigentliche Aussage (nicht nur der DOM) — s.

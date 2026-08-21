@@ -36,10 +36,11 @@ for _pfad in (REPO_ROOT, REPO_ROOT / "src"):
     if str(_pfad) not in sys.path:
         sys.path.insert(0, str(_pfad))
 
-VORSCHAU = [
-    {"metric_id": "precipitation", "aggregation": "sum"},
-    {"metric_id": "gust", "aggregation": "max"},
-]
+# #1848 A2: gespeichert werden reine Kennungen statt Groesse-Auswertung-Paare.
+# Fuer die beiden Zusicherungen dieser Datei (Read-Modify-Write und
+# Drei-Werte-Semantik) ist nur die Elementform gewechselt -- was geprueft wird,
+# ist unveraendert.
+VORSCHAU = ["precipitation", "gust"]
 
 
 def _trip(trip_id: str, dc):
@@ -226,11 +227,7 @@ def test_gefuellte_auswahl_ueberlebt_den_roundtrip_in_reihenfolge(tmp_path):
     """
     user_id = f"tdd-1720-{uuid.uuid4().hex[:8]}"
     trip_id = f"trip-{uuid.uuid4().hex[:8]}"
-    auswahl = [
-        {"metric_id": "thunder", "aggregation": "max"},
-        {"metric_id": "temperature", "aggregation": "max"},
-        {"metric_id": "precipitation", "aggregation": "sum"},
-    ]
+    auswahl = ["thunder", "temperature", "precipitation"]
     trip = _trip(trip_id, _display_config(trip_id, outlook_metrics=auswahl))
 
     geladen = _speichern_und_laden(trip, tmp_path, user_id)

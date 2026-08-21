@@ -15,6 +15,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from app.metric_catalog import normalize_outlook_metric_ids
 from app.models import (
     AlertMetric,
     AlertRule,
@@ -945,7 +946,11 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         telegram_kurzform=data.get("telegram_kurzform", False),
         alert_preset=data.get("alert_preset"),  # Issue #846
         metric_alert_levels=_migrate_metric_alert_levels(data.get("metric_alert_levels")),  # Issue #946/#959
-        outlook_metrics=data.get("outlook_metrics"),  # Issue #1720 S1
+        # Issue #1720 S1 / #1848 A2: beim Lesen auf reine Kennungen
+        # normalisieren -- Bestandsdateien halten die Paar-Altform, und zwei
+        # Paare derselben Groesse (Tief UND Hoch) sind EINE Kennung. `None`
+        # (Feld fehlt) und `[]` (bewusst geleert) bleiben unterscheidbar.
+        outlook_metrics=normalize_outlook_metric_ids(data.get("outlook_metrics")),
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 
@@ -1557,7 +1562,10 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             # bekaeme jeder Trip nach dem ersten Speichern ein explizites
             # `outlook_metrics` und "nie gesetzt" (sieben feste Spalten) waere
             # von "bewusst geleert" (Block entfaellt) nicht mehr zu trennen.
-            **({"outlook_metrics": dc.outlook_metrics}
+            # Issue #1848 A2: geschrieben wird die KENNUNGSFORM. Ein Bestands-
+            # Trip, der nur weitergespeichert wird, verlaesst damit die
+            # Paar-Altform -- das bedingte `is not None` bleibt unberuehrt.
+            **({"outlook_metrics": normalize_outlook_metric_ids(dc.outlook_metrics)}
                if dc.outlook_metrics is not None else {}),
         }
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)

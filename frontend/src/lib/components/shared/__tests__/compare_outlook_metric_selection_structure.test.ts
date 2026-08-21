@@ -194,31 +194,129 @@ function attributeReferencesIdentifier(attr: any, identifierName: string): boole
 			visitExpr(n[key]);
 		}
 	}
+	forEachAttributeExpression(attr, visitExpr);
+	return hit;
+}
+
+/** Laeuft ueber ALLE Ausdruecke eines Attributs (ExpressionTag, Template-
+ *  Literal-Interpolation, Svelte-native `"prefix-{expr}"`-Mischform) und ruft
+ *  `visit` je Ausdrucks-Wurzel auf. Gemeinsame Grundlage der Ausdrucks-Helfer
+ *  unten — die Notation bleibt damit ueberall gleich egal. */
+function forEachAttributeExpression(attr: any, visit: (expr: unknown) => void): void {
+	if (!attr) return;
 	const value = attr.value;
 	if (Array.isArray(value)) {
 		for (const part of value) {
-			if (part?.type === 'ExpressionTag') visitExpr(part.expression);
+			if (part?.type === 'ExpressionTag') visit(part.expression);
 		}
 	} else if (value?.type === 'ExpressionTag') {
-		visitExpr(value.expression);
+		visit(value.expression);
 	}
+}
+
+/** Prueft rekursiv, ob IRGENDWO im Ausdrucks-Subtree eines Attributs der
+ *  KONKRETE Member-Pfad `objectName.propertyName` steht (nicht-berechneter
+ *  Zugriff, also `group.metric_id`, nicht `group[x]`).
+ *
+ *  Warum eigener Helfer (Adversary-Befund F-ADV3, #1848 A2, HIGH): der
+ *  allgemeine `attributeReferencesIdentifier(attr, 'group')` ist an dieser
+ *  Stelle BLIND — `group.options[0].key` referenziert `group` genauso gut wie
+ *  `group.metric_id`. Belegt durch Mutation: `makeOutlookMetricHandler(
+ *  group.options[0].key)` liess alle 12 Tests dieser Datei gruen, obwohl die
+ *  Fehlermeldung woertlich die Kennung zusicherte. Genau der Rueckfall auf den
+ *  alten Katalog-Schluessel bricht aber AC-1/AC-8 in Produktion. */
+function attributeReferencesMemberPath(attr: any, objectName: string, propertyName: string): boolean {
+	let hit = false;
+	function visitExpr(node: unknown): void {
+		if (hit || node === null || typeof node !== 'object') return;
+		if (Array.isArray(node)) {
+			node.forEach(visitExpr);
+			return;
+		}
+		const n = node as Record<string, any>;
+		if (isMemberPath(n, objectName, propertyName)) {
+			hit = true;
+			return;
+		}
+		for (const key of Object.keys(n)) {
+			if (key === 'parent' || key === 'loc') continue;
+			visitExpr(n[key]);
+		}
+	}
+	forEachAttributeExpression(attr, visitExpr);
+	return hit;
+}
+
+/** `objectName.propertyName` als AST-Knoten — nicht berechnet, damit
+ *  `group['metric_id']`-Umwege nicht stillschweigend als Treffer zaehlen. */
+function isMemberPath(node: any, objectName: string, propertyName: string): boolean {
+	return (
+		node?.type === 'MemberExpression' &&
+		node.computed !== true &&
+		node.object?.type === 'Identifier' &&
+		node.object.name === objectName &&
+		node.property?.type === 'Identifier' &&
+		node.property.name === propertyName
+	);
+}
+
+/** Schaerfste Form fuer Handler-Attribute: irgendwo im Attribut steht ein
+ *  Aufruf `calleeName(objectName.propertyName, ...)` — das ERSTE Argument ist
+ *  exakt der Member-Pfad. Damit ist nicht nur belegt, dass die Kennung im
+ *  Ausdruck vorkommt, sondern dass sie genau die Stelle besetzt, an der der
+ *  Schluessel uebergeben wird. */
+function attributeCallsWithMemberArgument(
+	attr: any,
+	calleeName: string,
+	objectName: string,
+	propertyName: string
+): boolean {
+	let hit = false;
+	function visitExpr(node: unknown): void {
+		if (hit || node === null || typeof node !== 'object') return;
+		if (Array.isArray(node)) {
+			node.forEach(visitExpr);
+			return;
+		}
+		const n = node as Record<string, any>;
+		if (
+			n.type === 'CallExpression' &&
+			n.callee?.type === 'Identifier' &&
+			n.callee.name === calleeName &&
+			isMemberPath((n.arguments ?? [])[0], objectName, propertyName)
+		) {
+			hit = true;
+			return;
+		}
+		for (const key of Object.keys(n)) {
+			if (key === 'parent' || key === 'loc') continue;
+			visitExpr(n[key]);
+		}
+	}
+	forEachAttributeExpression(attr, visitExpr);
 	return hit;
 }
 
 /** Prueft, ob ein Attributwert (welcher Notation auch immer) mit einem
- *  statischen Text-Praefix beginnt UND zusaetzlich `identifierName` referenziert
- *  — Beweis fuer `compare-layout-outlook-metric-${group.metric_id}`-artige
- *  Testids, unabhaengig von Template-Literal- vs. Svelte-Mischform-Notation. */
-function attributeHasPrefixAndIdentifier(attr: any, prefix: string, identifierName: string): boolean {
+ *  statischen Text-Praefix beginnt UND den Member-Pfad
+ *  `objectName.propertyName` einsetzt — Beweis fuer
+ *  `compare-layout-outlook-metric-${group.metric_id}`-artige Testids,
+ *  unabhaengig von Template-Literal- vs. Svelte-Mischform-Notation. */
+function attributeHasPrefixAndMemberPath(
+	attr: any,
+	prefix: string,
+	objectName: string,
+	propertyName: string
+): boolean {
 	if (!attr) return false;
 	const value = attr.value;
 	if (Array.isArray(value)) {
 		const startsWithPrefix = value[0]?.type === 'Text' && value[0].data === prefix;
-		return startsWithPrefix && attributeReferencesIdentifier(attr, identifierName);
+		return startsWithPrefix && attributeReferencesMemberPath(attr, objectName, propertyName);
 	}
 	if (value?.type === 'ExpressionTag' && value.expression?.type === 'TemplateLiteral') {
 		const startsWithPrefix = value.expression.quasis?.[0]?.value?.raw === prefix;
-		return startsWithPrefix && attributeReferencesIdentifier(attr, identifierName);
+		return startsWithPrefix && attributeReferencesMemberPath(attr, objectName, propertyName);
 	}
 	return false;
 }
@@ -269,7 +367,7 @@ describe('AC-1: Ausblick-Auswahl-Block gruppiert ueber groupCompareCatalog(catal
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('AC-3: Einzel-Options-Gruppen rendern weiterhin nur eine einfache Checkbox, kein AggregationMetricRow', () => {
-	test('im Gruppierungs-Block existiert eine Checkbox-Zeile mit Testid-Praefix `compare-layout-outlook-metric-`, an `group` gebunden', () => {
+	test('im Gruppierungs-Block existiert eine Checkbox-Zeile mit Testid-Praefix `compare-layout-outlook-metric-`, geschluesselt ueber `group.metric_id`', () => {
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
 		assert.ok(
@@ -287,16 +385,19 @@ describe('AC-3: Einzel-Options-Gruppen rendern weiterhin nur eine einfache Check
 			}
 		}
 		const matchFound = checkboxTestids.some((attr) =>
-			attributeHasPrefixAndIdentifier(attr, 'compare-layout-outlook-metric-', 'group')
+			attributeHasPrefixAndMemberPath(attr, 'compare-layout-outlook-metric-', 'group', 'metric_id')
 		);
 		assert.ok(
 			matchFound,
 			'AC-3 FAIL (RED): keine Checkbox-/Label-Zeile mit `compare-layout-outlook-metric-`-Testid, ' +
-				'die auf `group` (statt des alten `entry`) verweist, im Gruppierungs-Block gefunden.'
+				'die den Zeilen-Schluessel aus `group.metric_id` (der Kennung) bildet, im ' +
+				'Gruppierungs-Block gefunden. Ein blosser `group`-Bezug genuegt NICHT — ' +
+				'`group.options[0].key` wuerde das alte Katalog-Vokabular ins Testid schreiben ' +
+				'(#1848 A2, Adversary F-ADV3).'
 		);
 	});
 
-	test('die Einzel-Checkbox bleibt am unveraenderten Handler `isOutlookMetricActive` haengen', () => {
+	test('die Einzel-Checkbox bleibt am unveraenderten Handler `isOutlookMetricActive` haengen — mit der Kennung als Schluessel', () => {
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
 		assert.ok(eachBlocks.length >= 1, 'AC-3 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
@@ -305,80 +406,114 @@ describe('AC-3: Einzel-Options-Gruppen rendern weiterhin nur eine einfache Check
 		const inputs = eachBlocks.flatMap((block) => findElementsNamed(block.body, 'input'));
 		const checkedUsesHandler = inputs.some((input) => {
 			const checkedAttr = findAttr(input, 'checked');
-			return checkedAttr && attributeReferencesIdentifier(checkedAttr, 'isOutlookMetricActive');
+			return (
+				checkedAttr &&
+				attributeCallsWithMemberArgument(checkedAttr, 'isOutlookMetricActive', 'group', 'metric_id')
+			);
 		});
 		assert.ok(
 			checkedUsesHandler,
 			'AC-3/AC-4 FAIL (RED): keine Checkbox im Gruppierungs-Block, deren `checked`-Attribut ' +
-				'`isOutlookMetricActive` (unveraenderter Handler, Zeilen 47-57) referenziert.'
+				'`isOutlookMetricActive(group.metric_id)` aufruft (unveraenderter Handler, Zeilen 47-57) — ' +
+				'der Haken muss ueber die KENNUNG gelesen werden, nicht ueber ' +
+				'`group.options[0].key` (#1848 A2, Adversary F-ADV3).'
 		);
 	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AC-2 / AC-4: Mehrfach-Options-Gruppen ueber AggregationMetricRow mode="multiple"
+// AC-2 / AC-4 — UMGESTELLT in Issue #1848 Scheibe A2
+//
+// Vorher stand hier: "Mehrfach-Options-Gruppen (Temperatur, gefuehlte
+// Temperatur) rendern je Auswertung ein eigenes Kaestchen ueber
+// AggregationMetricRow mode='multiple'". Genau dieses Verhalten hat A2
+// abgeschafft (Spec AC-8, PO-Entscheid 2026-08-20): der Ausblick speichert die
+// KENNUNG, eine Halbauswahl laesst sich gar nicht mehr ablegen, und seit
+// #1848 A1 stehen Tief und Hoch ohnehin in EINER Spannen-Zelle der Mail. Zwei
+// Kaestchen wuerden etwas anderes versprechen, als herauskommt.
+//
+// Die Zusicherung ist deshalb UMGEDREHT statt geloescht: es darf keinen
+// Mehrfach-Zweig mehr geben, und jede Gruppe -- auch die mit mehreren
+// Auswertungen -- haengt an genau EINEM Kaestchen, das die Kennung schaltet.
+// Dieselbe Nachweistiefe wie vorher (AST der echten Komponente), nur mit dem
+// heutigen Sollzustand.
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-2: Mehrfach-Options-Gruppen (Temperatur, gefuehlte Temperatur) ueber AggregationMetricRow mode="multiple"', () => {
-	test('im Gruppierungs-Block wird AggregationMetricRow mit mode="multiple" und options={group.options} aufgerufen', () => {
+describe('AC-2 [#1848 A2]: kein Mehrfach-Auswertungs-Zweig mehr — ein Kaestchen je Groesse', () => {
+	test('im Gruppierungs-Block gibt es keinen AggregationMetricRow-Aufruf mehr', () => {
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
 		assert.ok(
 			eachBlocks.length >= 1,
-			'AC-2 FAIL (RED): ohne den groupCompareCatalog-Block (AC-1) gibt es keine Gruppe, in der ' +
-				'AggregationMetricRow mode="multiple" haengen koennte.'
+			'AC-2 FAIL: ohne den groupCompareCatalog-Block (AC-1) gibt es keine Gruppe zu pruefen.'
 		);
-		if (eachBlocks.length === 0) return;
 
 		const rows = eachBlocks.flatMap((block) => findComponentsNamed(block.body, 'AggregationMetricRow'));
-		assert.ok(
-			rows.length >= 1,
-			'AC-2 FAIL (RED): kein `AggregationMetricRow`-Aufruf im Ausblick-Gruppierungs-Block gefunden.'
+		assert.equal(
+			rows.length,
+			0,
+			`AC-2 FAIL (#1848 A2): es haengen noch ${rows.length} AggregationMetricRow-Aufrufe im ` +
+				'Ausblick-Gruppierungs-Block. Temperatur und gefuehlte Temperatur bekaemen damit ' +
+				'weiterhin je Auswertung ein eigenes Kaestchen — eine Auswahl, die das Backend seit ' +
+				'A2 gar nicht mehr speichern kann.'
 		);
-		if (rows.length === 0) return;
+	});
 
-		const withMultipleMode = rows.filter((row) => attrIsStaticText(findAttr(row, 'mode'), 'multiple'));
-		assert.ok(
-			withMultipleMode.length >= 1,
-			'AC-2 FAIL (RED): kein AggregationMetricRow-Aufruf mit `mode="multiple"` im Ausblick.'
+	test('genau EIN Kaestchen je Gruppe, und es schaltet die Kennung (`group.metric_id`)', () => {
+		const ast = parseComponent(OUTLOOK_COMPONENT);
+		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
+		assert.ok(eachBlocks.length >= 1, 'AC-2 FAIL: kein groupCompareCatalog-Block (s. AC-1).');
+
+		const inputs = eachBlocks.flatMap((block) => findElementsNamed(block.body, 'input'));
+		assert.equal(
+			inputs.length,
+			1,
+			`AC-2 FAIL (#1848 A2): der Gruppierungs-Block enthaelt ${inputs.length} Eingabefelder — ` +
+				'erwartet genau eines (ein Kaestchen je Groesse, ohne Sonderzweig).'
 		);
 
-		const withOptionsFromGroup = withMultipleMode.some((row) => {
-			const optionsAttr = findAttr(row, 'options');
-			return optionsAttr && attributeReferencesIdentifier(optionsAttr, 'group');
-		});
+		const onchange = findAttr(inputs[0], 'onchange');
 		assert.ok(
-			withOptionsFromGroup,
-			'AC-2 FAIL (RED): `options`-Prop des AggregationMetricRow-Aufrufs verweist nicht auf `group` ' +
-				'(erwartet `options={group.options}`, die tatsaechlichen Katalog-Optionen der Gruppe).'
+			onchange && attributeReferencesIdentifier(onchange, 'makeOutlookMetricHandler'),
+			'AC-2/AC-4 FAIL: das Kaestchen ruft beim Umschalten nicht `makeOutlookMetricHandler` auf.'
+		);
+		assert.ok(
+			onchange &&
+				attributeCallsWithMemberArgument(onchange, 'makeOutlookMetricHandler', 'group', 'metric_id'),
+			'AC-2 FAIL (#1848 A2): der Umschalt-Handler bekommt als ersten Parameter nicht ' +
+				'`group.metric_id`. Erwartet ist exakt `makeOutlookMetricHandler(group.metric_id)` — die ' +
+				'KENNUNG. Ein anderer Pfad unter `group` (namentlich `group.options[0].key`, der ' +
+				'Katalog-Schluessel einer einzelnen Auswertung) schreibt beim Speichern wieder das alte ' +
+				'Vokabular und bricht AC-1/AC-8 in Produktion.'
 		);
 	});
 });
 
-describe('AC-4: beide Zweige leiten checked/selectedChoiceIds weiterhin aus materializedOutlookKeys ab', () => {
-	test('AggregationMetricRow selectedChoiceIds={materializedOutlookKeys} — direkte Bindung, keine neue Zwischenvariable', () => {
+describe('AC-4 [#1848 A2]: Anzeige und Umschalten lesen weiterhin aus DERSELBEN Quelle', () => {
+	test('jedes Kaestchen haengt mit `checked` an isOutlookMetricActive — keine zweite Quelle daneben', () => {
+		// Die Kette Anzeige/Umschalten aus EINER Materialisierung (#1366 F001)
+		// ist unveraendert tragend -- nur der Schluessel ist jetzt die Kennung.
+		// AC-3 zeigt, dass es die Bindung GIBT; hier wird geprueft, dass KEIN
+		// Kaestchen daneben eine andere Quelle benutzt.
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(eachBlocks.length >= 1, 'AC-4 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
-		if (eachBlocks.length === 0) return;
+		assert.ok(eachBlocks.length >= 1, 'AC-4 FAIL: kein groupCompareCatalog-Block (s. AC-1).');
 
-		const rows = eachBlocks.flatMap((block) => findComponentsNamed(block.body, 'AggregationMetricRow'));
-		const wired = rows.some((row) => {
-			const attr = findAttr(row, 'selectedChoiceIds');
-			return attr && attributeReferencesIdentifier(attr, 'materializedOutlookKeys');
-		});
-		assert.ok(
-			wired,
-			'AC-4 FAIL (RED): kein AggregationMetricRow-Aufruf mit `selectedChoiceIds`, das ' +
-				'`materializedOutlookKeys` referenziert — die Mehrfach-Auswertung wuerde aus einer ' +
-				'anderen/neuen Quelle als die bisherige Checkbox-Liste lesen (Datenverlust-Risiko AC-4).'
-		);
+		const inputs = eachBlocks.flatMap((block) => findElementsNamed(block.body, 'input'));
+		assert.ok(inputs.length >= 1, 'AC-4 FAIL: kein Kaestchen im Gruppierungs-Block.');
+		for (const input of inputs) {
+			const checkedAttr = findAttr(input, 'checked');
+			assert.ok(
+				checkedAttr &&
+					attributeCallsWithMemberArgument(checkedAttr, 'isOutlookMetricActive', 'group', 'metric_id'),
+				'AC-4 FAIL: ein Kaestchen im Gruppierungs-Block liest seinen Haken nicht aus ' +
+					'`isOutlookMetricActive(group.metric_id)` — entweder haengt die Anzeige an einer anderen ' +
+					'Funktion oder an einem anderen Schluessel als das Umschalten (z. B. ' +
+					'`group.options[0].key`). Beides laesst Anzeige und Umschalten auf verschiedene ' +
+					'Quellen laufen (Fehlerklasse #1366 F001).'
+			);
+		}
 	});
-
-	// Die Einzel-Zweig-Haelfte von AC-4 (checked aus isOutlookMetricActive, das
-	// intern materializedOutlookKeys.includes(...) nutzt, Zeilen 47-51,
-	// UNVERAENDERT) ist bereits durch den AC-3-Test oben bewiesen — kein
-	// zweiter Nachweis derselben Kette noetig.
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -445,19 +580,42 @@ describe('AC-5 [REGRESSIONSSCHUTZ, bereits GRUEN]: Reihenfolge-/„Aus"-Block (W
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('AC-8: Ausblick uebergibt einen testidPrefix ungleich dem Uebersichts-Default (kein doppeltes data-testid)', () => {
-	test('der Ausblick-Aufruf von AggregationMetricRow traegt eine testidPrefix-Prop', () => {
+	test('die Ausblick-Zeile traegt ein eigenes Testid-Praefix, das nicht mit dem der Uebersicht kollidiert', () => {
+		// #1848 A2 umgestellt: frueher lief diese Zusicherung ueber die
+		// `testidPrefix`-Prop des Ausblick-Aufrufs von AggregationMetricRow.
+		// Den Aufruf gibt es nicht mehr (s. AC-2) — die Kollisionsgefahr, die
+		// hier bewacht wird, entsteht damit gar nicht erst. Der Sache nach
+		// geprueft wird weiterhin dasselbe: die Ausblick-Zeilen tragen ein
+		// EIGENES Praefix, nicht das der Uebersicht.
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(eachBlocks.length >= 1, 'AC-8 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
-		if (eachBlocks.length === 0) return;
+		assert.ok(eachBlocks.length >= 1, 'AC-8 FAIL: kein groupCompareCatalog-Block (s. AC-1).');
 
 		const rows = eachBlocks.flatMap((block) => findComponentsNamed(block.body, 'AggregationMetricRow'));
-		const withPrefix = rows.some((row) => findAttr(row, 'testidPrefix'));
+		assert.equal(
+			rows.length,
+			0,
+			'AC-8 FAIL: der Ausblick mountet wieder AggregationMetricRow — dann braucht er auch ' +
+				'wieder eine eigene `testidPrefix`-Prop, sonst kollidiert das Testid mit dem der ' +
+				'Uebersicht (`aggregation-metric-row-temperature` doppelt im DOM).'
+		);
+
+		const testids: any[] = [];
+		for (const block of eachBlocks) {
+			for (const el of findElementsNamed(block.body, 'label').concat(findElementsNamed(block.body, 'input'))) {
+				const attr = findAttr(el, 'data-testid') ?? findAttr(el, 'testid');
+				if (attr) testids.push(attr);
+			}
+		}
 		assert.ok(
-			withPrefix,
-			'AC-8 FAIL (RED): kein AggregationMetricRow-Aufruf im Ausblick uebergibt eine ' +
-				'`testidPrefix`-Prop — ohne sie kollidiert das Testid mit dem der Uebersicht ' +
-				'(`aggregation-metric-row-temperature` doppelt im DOM).'
+			testids.some((attr) =>
+				attributeHasPrefixAndMemberPath(attr, 'compare-layout-outlook-metric-', 'group', 'metric_id')
+			),
+			'AC-8 FAIL: keine Ausblick-Zeile mit dem eigenen Praefix ' +
+				'`compare-layout-outlook-metric-` UND dem Schluessel `group.metric_id` gefunden — ohne ' +
+				'eigenes Praefix waeren Ausblick- und Uebersichts-Zeile im DOM nicht auseinanderzuhalten, ' +
+				'und mit einem anderen `group`-Pfad (`group.options[0].key`) traege die Zeile das alte ' +
+				'Katalog-Vokabular statt der Kennung.'
 		);
 	});
 

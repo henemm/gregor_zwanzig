@@ -130,8 +130,8 @@ from tests.helpers.compare_order import (
     sms_index, sms_kuerzel, telegram_zellen, uebersichts_label,
 )
 from tests.helpers.outlook_columns import (
-    assert_soll_menge_ist_plausibel, compare_outlook_soll_paare,
-    compare_outlook_soll_spalten,
+    assert_soll_menge_ist_plausibel, compare_outlook_soll_kennungen,
+    compare_outlook_soll_paare, compare_outlook_soll_spalten,
 )
 from tests.tdd import _min_temp_felt_fixtures as F
 # Issue #1719 S2 AC-11: geteilter Premium-SMS-Stub (echter lokaler HTTP-
@@ -2344,6 +2344,8 @@ _S2_KLARTEXT_UEBERSCHRIFT = "3-Tages-Ausblick"
 
 _S2_SOLL = compare_outlook_soll_spalten()
 _S2_SOLL_PAARE = compare_outlook_soll_paare()
+# #1848 A2: das Speicherformat der Bedienflaeche sind seither die Kennungen.
+_S2_SOLL_KENNUNGEN = compare_outlook_soll_kennungen()
 _S2_SOLL_IDS = [f"{s['metric_id']}:{s['aggregation']}" for s in _S2_SOLL]
 
 _S2_STARTTAG = date(2026, 7, 20)
@@ -2413,7 +2415,7 @@ def _s2_mail(thunder_name: str = "MED") -> tuple[str, str]:
         created_at=datetime(2026, 7, 20, 4, 1),
     )
     return render_compare_email(
-        ergebnis, outlook_enabled=True, outlook_metrics=list(_S2_SOLL_PAARE),
+        ergebnis, outlook_enabled=True, outlook_metrics=list(_S2_SOLL_KENNUNGEN),
     )
 
 
@@ -2563,16 +2565,32 @@ def test_ac_s2_2_soll_menge_wird_gerechnet_und_ist_plausibel():
     # deckungsgleich, aber nicht per Konstruktion -- genau deshalb geprueft.
     from output.renderers.compare_outlook_metric_ids import resolve_outlook_metrics
 
-    aufgeloest = resolve_outlook_metrics(list(_S2_SOLL_PAARE))
-    # #1848 A1: ``resolve_outlook_metrics()`` arbeitet auf PAAR-Ebene (vor
-    # dem Spalten-Merge) -- Massstab ist deshalb die flache Paar-Menge
-    # ``_S2_SOLL_PAARE``, nicht mehr die (seither kleinere) Spalten-Menge
-    # ``_S2_SOLL``.
-    assert aufgeloest is not None and len(aufgeloest) == len(_S2_SOLL_PAARE), (
-        f"AC-S2-2: ``resolve_outlook_metrics()`` verwirft "
-        f"{len(_S2_SOLL_PAARE) - len(aufgeloest or [])} der {len(_S2_SOLL_PAARE)} "
-        "Katalog-Paare -- Katalog-Zugehoerigkeit und Feld-Aufloesung sind "
-        "auseinandergelaufen, die verworfenen Groessen haetten gar keine Spalte"
+    aufgeloest = resolve_outlook_metrics(list(_S2_SOLL_KENNUNGEN))
+    # #1848 A2: ``resolve_outlook_metrics()`` arbeitet auf KENNUNGS-Ebene --
+    # Massstab ist deshalb die Kennungsmenge. Die Zusicherung ist unveraendert
+    # (kein Eintrag der Soll-Auswahl darf verworfen werden) und dank
+    # Listenvergleich sogar schaerfer als die frueheren Laengen: auch eine
+    # veraenderte Reihenfolge faellt jetzt auf.
+    assert aufgeloest == list(_S2_SOLL_KENNUNGEN), (
+        f"AC-S2-2: ``resolve_outlook_metrics()`` liefert {aufgeloest!r} statt "
+        f"{list(_S2_SOLL_KENNUNGEN)!r} -- Katalog-Zugehoerigkeit und "
+        "Feld-Aufloesung sind auseinandergelaufen, die verworfenen Groessen "
+        "haetten gar keine Spalte"
+    )
+    # Die Paar-Ebene bleibt zusaetzlich bewacht: jede Soll-Kennung muss ueber
+    # den Katalog wieder auf ihre Paare fuehren, sonst waere die Umstellung
+    # auf Kennungen ein stiller Spaltenverlust.
+    from output.renderers.compare_outlook_metric_ids import derived_aggregations
+
+    abgeleitete_paare = [
+        {"metric_id": k, "aggregation": a}
+        for k in _S2_SOLL_KENNUNGEN for a in derived_aggregations(k)
+    ]
+    assert len(abgeleitete_paare) == len(_S2_SOLL_PAARE), (
+        f"AC-S2-2: aus den {len(_S2_SOLL_KENNUNGEN)} Soll-Kennungen leitet der "
+        f"Katalog {len(abgeleitete_paare)} Paare ab, der Katalog liefert aber "
+        f"{len(_S2_SOLL_PAARE)} -- die Kennungs-Umstellung (#1848 A2) hat "
+        "Auswertungen verloren"
     )
     kinds = Counter(s["kind"] for s in _S2_SOLL)
     assert kinds["ordinal"] >= 1 and kinds["enum"] >= 1 and kinds["range"] >= 1, (

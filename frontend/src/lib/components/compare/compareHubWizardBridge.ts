@@ -23,6 +23,7 @@ import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/
 // Lade-Pfad — Alt- UND Neuformat der gespeicherten Metrik-Auswahl.
 import {
 	normalizeStoredActiveMetrics,
+	normalizeStoredOutlookMetrics,
 	registeredCompareMetricCatalog,
 	type CompareSelectionEntry
 } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
@@ -204,7 +205,7 @@ export function buildHubPutPayload(
 		// `null` -> undefined, damit der Key unangetastet round-trippt.
 		outlookMetricKeys:
 			edit.outlookMetricKeys ??
-			normalizeStoredActiveMetrics(displayConfig.outlook_metrics) ??
+			normalizeStoredOutlookMetrics(displayConfig.outlook_metrics) ??
 			undefined,
 		outlookEnabled: edit.outlookEnabled ?? preset.outlook_enabled,
 		// Issue #1361/#1372 S1b: 1:1 Round-Trip wie alle anderen HubEdit-Felder.
@@ -716,7 +717,7 @@ export function hydrateLayoutFieldsFromPreset(
 		// (#1373), damit die Bedienflaeche Auswahl-Schluessel sieht. Der
 		// Aufrufer muss die Katalogantwort abwarten (sonst Rohform, s.
 		// hydrateWeatherMetricsFromPreset).
-		outlookMetricKeys: normalizeStoredActiveMetrics(displayConfig.outlook_metrics, catalog),
+		outlookMetricKeys: normalizeStoredOutlookMetrics(displayConfig.outlook_metrics, catalog),
 		outlookEnabled: preset.outlook_enabled ?? true
 	};
 }

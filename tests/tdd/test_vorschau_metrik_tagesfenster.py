@@ -50,7 +50,7 @@ from tests.helpers.trip_outlook_selection import (  # noqa: E402
 )
 
 _UTC = ZoneInfo("UTC")
-GEWITTER = {"metric_id": "thunder", "aggregation": "max"}
+GEWITTER = "thunder"   # #1848 A2: reine Kennung statt Paar
 DAY_START, DAY_END = 4, 19
 
 
