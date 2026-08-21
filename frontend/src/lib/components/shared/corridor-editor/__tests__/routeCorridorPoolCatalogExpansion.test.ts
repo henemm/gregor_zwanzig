@@ -19,8 +19,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 import {
@@ -692,7 +692,72 @@ describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und 
 	});
 });
 
-// AC-6 Test B (Struktur, sekundaer zu Test A oben) — #2012, Spec Punkt 2:
+// AC-6 Test A-2 (F001-Fix, Adversary-Mutation): Test A oben vergleicht das
+// Migrationsergebnis gegen MED_ORDINAL/HIGH_ORDINAL — beides Werte, die die
+// Testdatei SELBST per ORDINAL_ENUM.indexOf(...) berechnet und die mit dem
+// heutigen Stand ['NONE','LOW','MED','HIGH'] zufaellig mit den Zahlenliteralen
+// 2/3 uebereinstimmen. Ein Produktivcode, der `return (1 + 1);` /
+// `return (1 + 2);` statt `ORDINAL_ENUM.indexOf('MED'|'HIGH')` zurueckgibt,
+// bleibt fuer Test A unsichtbar, weil BEIDE Seiten denselben Zahlenwert
+// liefern. Dieser Test verschiebt die kanonische Skala selbst (eine
+// eingeschobene Zwischenstufe VOR 'MED' verschiebt MED UND HIGH je um +1
+// Index) und importiert eine Kopie des Moduls mit der verschobenen Skala
+// dynamisch — nur eine echte `ORDINAL_ENUM.indexOf(...)`-Kopplung liefert
+// dann noch die richtigen, neuen Indizes.
+describe('AC-6 Test A-2: die Migration folgt einer VERSCHOBENEN ORDINAL_ENUM (Kopplungsnachweis)', () => {
+	const CORRIDOR_STATE_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'corridorEditorState.ts');
+	const ENUM_LINE = "export const ORDINAL_ENUM = ['NONE', 'LOW', 'MED', 'HIGH'] as const;";
+	const SHIFTED_ENUM_LINE = "export const ORDINAL_ENUM = ['NONE', 'LOW', 'SEVERE', 'MED', 'HIGH'] as const;";
+	const TMP_PATH = resolve(
+		dirname(fileURLToPath(import.meta.url)),
+		'..',
+		`corridorEditorState.__tmp_ac6_shifted_${process.pid}.ts`
+	);
+
+	test('eine vor "MED" eingeschobene Stufe verschiebt MED (2->3) UND HIGH (3->4) — die Migration muss folgen', async () => {
+		const original = readFileSync(CORRIDOR_STATE_PATH, 'utf-8');
+		assert.ok(
+			original.includes(ENUM_LINE),
+			'Testannahme verletzt: ORDINAL_ENUM-Deklaration in corridorEditorState.ts hat sich veraendert — Test anpassen'
+		);
+		const shiftedSource = original.replace(ENUM_LINE, SHIFTED_ENUM_LINE);
+		writeFileSync(TMP_PATH, shiftedSource, 'utf-8');
+		try {
+			const mod: typeof import('../corridorEditorState.ts') = await import(pathToFileURL(TMP_PATH).href);
+			const shiftedMed = mod.ORDINAL_ENUM.indexOf('MED' as never);
+			const shiftedHigh = mod.ORDINAL_ENUM.indexOf('HIGH' as never);
+			assert.equal(shiftedMed, 3, 'Testannahme verletzt: MED verschiebt sich nicht wie erwartet von 2 auf 3');
+			assert.equal(shiftedHigh, 4, 'Testannahme verletzt: HIGH verschiebt sich nicht wie erwartet von 3 auf 4');
+
+			const extraDefs = await routeExtraDefs();
+			const rowMed = mod
+				.buildRoutePool([{ metric: 'thunder_level', range: [null, 40], notify: true, mark: true }], undefined, extraDefs)
+				.rows.find((r) => r.metric === 'thunder_level_max');
+			assert.ok(rowMed, 'AC-6 FAIL: die migrierte Zeile fehlt in der verschobenen Skala (MED-Fall)');
+			assert.equal(
+				rowMed!.max,
+				shiftedMed,
+				'AC-6 FAIL: "bis 40%" migriert nicht auf den NEUEN Index von MED (3) — die Migration ' +
+					'haengt an einer festen Zahl statt an ORDINAL_ENUM.indexOf(\'MED\')'
+			);
+
+			const rowHigh = mod
+				.buildRoutePool([{ metric: 'thunder_level', range: [null, 100], notify: true, mark: true }], undefined, extraDefs)
+				.rows.find((r) => r.metric === 'thunder_level_max');
+			assert.ok(rowHigh, 'AC-6 FAIL: die migrierte Zeile fehlt in der verschobenen Skala (HIGH-Fall)');
+			assert.equal(
+				rowHigh!.max,
+				shiftedHigh,
+				'AC-6 FAIL: "bis 100%" migriert nicht auf den NEUEN Index von HIGH (4) — die Migration ' +
+					'haengt an einer festen Zahl statt an ORDINAL_ENUM.indexOf(\'HIGH\')'
+			);
+		} finally {
+			rmSync(TMP_PATH, { force: true });
+		}
+	});
+});
+
+// AC-6 Test B (Struktur, sekundaer zu Test A/A-2 oben) — #2012, Spec Punkt 2:
 // percentBoundToOrdinal() darf die beiden migrierten Zielstufen NICHT als
 // rohe Zahlenliterale 2/3 zurueckgeben, sondern muss sie ueber die
 // bewachte kanonische Quelle ORDINAL_ENUM.indexOf('MED'|'HIGH') ableiten —
@@ -720,35 +785,43 @@ describe('AC-6 Test B: percentBoundToOrdinal() gibt keine rohen Zahlenliterale 2
 		return source.slice(braceOpen, i + 1);
 	}
 
-	test('Quelltext von percentBoundToOrdinal enthaelt keinen "return 2" / "return 3" Literal', () => {
+	// F001-Fix (Adversary): die alte Pruefung war zweigeteilt und GLOBAL ueber
+	// den ganzen Funktionskoerper — "kein nacktes Zahlenliteral irgendwo" UND
+	// "ORDINAL_ENUM.indexOf( kommt irgendwo vor" bestehen beide weiter, wenn
+	// NUR der MED-Zweig auf einen Ausdruck wie `(1 + 1)` verfaelscht wird
+	// (kein nacktes Literal, und der HIGH-Zweig liefert weiterhin ein
+	// "indexOf("-Vorkommen). Diese Fassung zerlegt die Funktion in ihre
+	// einzelnen return-Anweisungen und verlangt PRO ZWEIG exakt
+	// `ORDINAL_ENUM.indexOf('<STUFE>')` — kein Ausdruck, kein Zahlenliteral,
+	// keine andere Stufe.
+	test('jeder return-Zweig ist EXAKT ORDINAL_ENUM.indexOf(<eigene Stufe>) — kein Ausdruck, kein Zahlenliteral', () => {
 		const source = readFileSync(CORRIDOR_STATE_PATH, 'utf-8');
 		const body = extractFunctionBody(source, 'function percentBoundToOrdinal(');
-		const rawLiteralReturns = [...body.matchAll(/\breturn\s+(-?\d+(?:\.\d+)?)\b/g)].map((m) => m[1]);
+		const returns = [...body.matchAll(/return\s+([^;]+);/g)].map((m) => m[1].trim());
 		assert.equal(
-			rawLiteralReturns.includes('2'),
-			false,
-			'AC-6 FAIL: percentBoundToOrdinal() gibt eine rohe "2" zurueck statt ' +
-				'ORDINAL_ENUM.indexOf(\'MED\') — die Migration haengt an einer unbewachten Zahl, ' +
-				'nicht an der kanonischen Skalen-Quelle'
+			returns.length,
+			4,
+			'Testannahme verletzt: percentBoundToOrdinal() hat nicht mehr genau 4 return-Anweisungen ' +
+				'(null-Guard + 3 Stufen-Zweige) — Test an die neue Struktur anpassen'
+		);
+		const [nullReturn, noneReturn, medReturn, highReturn] = returns;
+		assert.equal(nullReturn, 'null', 'AC-6 FAIL: der null-Guard gibt nicht mehr "null" zurueck');
+		assert.equal(
+			noneReturn,
+			"ORDINAL_ENUM.indexOf('NONE')",
+			'AC-6 FAIL: der NONE-Zweig ist kein reiner ORDINAL_ENUM.indexOf(\'NONE\')-Aufruf'
 		);
 		assert.equal(
-			rawLiteralReturns.includes('3'),
-			false,
-			'AC-6 FAIL: percentBoundToOrdinal() gibt eine rohe "3" zurueck statt ' +
-				'ORDINAL_ENUM.indexOf(\'HIGH\') — die Migration haengt an einer unbewachten Zahl, ' +
-				'nicht an der kanonischen Skalen-Quelle'
+			medReturn,
+			"ORDINAL_ENUM.indexOf('MED')",
+			'AC-6 FAIL: der MED-Zweig ist kein reiner ORDINAL_ENUM.indexOf(\'MED\')-Aufruf — ein ' +
+				'wertgleicher Ausdruck wie "(1 + 1)" faellt hier durch, obwohl er nicht an die ' +
+				'kanonische Skalen-Quelle gekoppelt ist'
 		);
-	});
-
-	test('Quelltext von percentBoundToOrdinal referenziert ORDINAL_ENUM.indexOf', () => {
-		const source = readFileSync(CORRIDOR_STATE_PATH, 'utf-8');
-		const body = extractFunctionBody(source, 'function percentBoundToOrdinal(');
-		assert.match(
-			body,
-			/ORDINAL_ENUM\.indexOf\(/,
-			'AC-6 FAIL: percentBoundToOrdinal() leitet die Zielstufen nicht ueber ' +
-				'ORDINAL_ENUM.indexOf(...) ab — die strukturelle Kopplung an die kanonische ' +
-				'Skalen-Quelle fehlt'
+		assert.equal(
+			highReturn,
+			"ORDINAL_ENUM.indexOf('HIGH')",
+			'AC-6 FAIL: der HIGH-Zweig ist kein reiner ORDINAL_ENUM.indexOf(\'HIGH\')-Aufruf'
 		);
 	});
 });
