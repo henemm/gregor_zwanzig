@@ -97,12 +97,24 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 			timeout: 10000
 		});
 
-		// Eine Groesse abwaehlen, die in der Grundvorbelegung aktiv ist.
-		const boeen = abschnitt.getByTestId('compare-layout-outlook-metric-gust').locator('input');
-		await expect(boeen, 'Vorbedingung: Böen ist vor der Abwahl angehakt').toBeChecked();
+		// #1848 A3: abgewaehlt wird ueber den "Aus"-Knopf der Reihenfolge-Liste
+		// — die Kaestchenliste ist ersatzlos entfallen (Block A, #2029). Die
+		// Zusicherung dieses Tests ist davon unberuehrt: der SERVERSTAND nach
+		// der Abwahl, und dass der Klickpfad keine Konsolenfehler wirft. Der
+		// reine DOM-Weg (Aus-Gruppe, Reload, Zurueckholen) ist in
+		// ausblick-erbt-grundauswahl.staging.spec.ts::AC-7 abgedeckt und hier
+		// bewusst nur noch angerissen, statt ihn doppelt zu pflegen.
+		const boeenZeile = abschnitt.locator(
+			'[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]'
+		);
+		await expect(boeenZeile, 'Vorbedingung: Böen ist vor der Abwahl aktiv').toBeVisible({
+			timeout: 10000
+		});
 		const gespeichertePut = wartetAufAutosave(page, trip.id);
-		await boeen.uncheck();
-		await expect(boeen).not.toBeChecked();
+		await boeenZeile.getByRole('button', { name: 'Aus' }).click();
+		await expect(
+			abschnitt.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]')
+		).toHaveCount(0);
 
 		await gespeichertePut;
 		await page.waitForLoadState('networkidle');
@@ -128,13 +140,15 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 			'AC-6: die uebrigen Groessen muessen erhalten bleiben (nur Böen abgewaehlt)'
 		).toBeGreaterThan(0);
 
-		// Neuladen: die Abwahl ueberlebt.
+		// Neuladen: die Abwahl ueberlebt. #1848 A3: sichtbar daran, dass "gust"
+		// NICHT in der aktiven Liste steht — die Aus-Gruppe und das
+		// Zurueckholen pruefen wir nicht doppelt (s. o.).
 		const reiterNachReload = await oeffneMetrikenReiter(page, trip.id);
 		const abschnittNachReload = vorschauAbschnitt(reiterNachReload);
 		await expect(
-			abschnittNachReload.getByTestId('compare-layout-outlook-metric-gust').locator('input'),
+			abschnittNachReload.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]'),
 			'AC-6: nach dem Neuladen ist die Abwahl verloren — Hinweis auf einen fehlenden Lesepfad (initFromTrip ohne normalizeStoredActiveMetrics)'
-		).not.toBeChecked();
+		).toHaveCount(0);
 
 		await page.screenshot({
 			path: '../docs/artifacts/feat-1720-vorschau-metriken/ac-6-abwahl-ueberlebt-reload.png',
@@ -161,14 +175,17 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 		const abschnitt = vorschauAbschnitt(reiter);
 		await expect(abschnitt).toBeVisible({ timeout: 10000 });
 
-		// Mindestens eine Groesse gewaehlt — das ist die Bedingung, unter der
-		// der Hinweis im Ortsvergleich erscheint. Nur so ist die Abwesenheit im
+		// Mindestens eine Groesse aktiv — das ist die Bedingung, unter der der
+		// Hinweis im Ortsvergleich erscheint. Nur so ist die Abwesenheit im
 		// Trip eine Aussage und kein Nebeneffekt einer leeren Auswahl.
-		const niederschlag = abschnitt
-			.getByTestId('compare-layout-outlook-metric-precipitation')
-			.locator('input');
-		if (!(await niederschlag.isChecked())) await niederschlag.check();
-		await expect(niederschlag, 'Vorbedingung: mindestens eine Groesse ist gewaehlt').toBeChecked();
+		// #1848 A3: der Ausblick erbt die Grundauswahl, ein frischer Trip hat
+		// also von sich aus aktive Zeilen — die Vorbedingung muss nicht mehr
+		// per Kaestchen hergestellt werden (die Liste ist entfallen), sie wird
+		// nur noch belegt.
+		await expect(
+			abschnitt.locator('[data-testid="wm2-reihenfolge-row"]').first(),
+			'Vorbedingung: mindestens eine Groesse ist im Ausblick aktiv'
+		).toBeVisible({ timeout: 10000 });
 
 		await expect(
 			abschnitt.getByTestId('compare-layout-outlook-email-only-hint'),
@@ -224,8 +241,20 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 		});
 	});
 
-	// ── AC-11 (Oberflaeche gegen Backend-Katalog) ───────────────────────────
-	test('AC-11 (#1720 S1): der Picker speist sich aus GET /api/compare/metrics', async ({
+	// ── AC-10/AC-11 ─────────────────────────────────────────────────────────
+	// ⚠️ #1848 A3: die Zusicherung "der PICKER bietet jede Katalog-Groesse an"
+	// ist ERSATZLOS entfallen — es gibt keinen Picker mehr (Block A, #2029).
+	// Welche Groessen der Ausblick zeigt, entscheidet seit A3 die Grundauswahl
+	// der Tour, nicht der Katalog; das deckt
+	// ausblick-erbt-grundauswahl.staging.spec.ts::AC-5 ab ("eine Groesse
+	// ausserhalb der Grundauswahl erscheint weder aktiv noch in der
+	// Aus-Gruppe").
+	//
+	// Was BLEIBT und hier weitergeprueft wird: AC-10 (#710) — der Katalog, aus
+	// dem sich die Bedienflaeche speist, darf "confidence" gar nicht erst
+	// anbieten. Diese Zusicherung haengt am Endpoint, nicht an der Liste, und
+	// waere mit der Datei sonst stillschweigend verschwunden.
+	test('AC-10 (#710): der Ausblick-Katalog bietet "Vorhersage-Genauigkeit" nicht an', async ({
 		page,
 		request
 	}) => {
@@ -237,23 +266,19 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 			katalog.metrics.some((m) => m.metric_id === 'confidence'),
 			'AC-10: der Katalog darf "confidence" nicht anbieten (PO-Entscheid #710)'
 		).toBe(false);
+		expect(
+			katalog.metrics.length,
+			'Vakuum-Schutz: ein leerer Katalog machte die Zusicherung oben trivial wahr'
+		).toBeGreaterThan(20);
 
+		// Gegenprobe an der Bedienflaeche: "confidence" taucht auch dort nicht
+		// auf — weder aktiv noch in der Aus-Gruppe.
 		const reiter = await oeffneMetrikenReiter(page, trip.id);
 		const abschnitt = vorschauAbschnitt(reiter);
 		await expect(abschnitt).toBeVisible({ timeout: 10000 });
-
-		const groessen = new Set(katalog.metrics.map((m) => m.metric_id));
-		for (const metricId of groessen) {
-			const einzel = abschnitt.getByTestId(`compare-layout-outlook-metric-${metricId}`);
-			const mehrfach = abschnitt.getByTestId(`compare-layout-outlook-metric-row-${metricId}`);
-			expect(
-				(await einzel.count()) + (await mehrfach.count()),
-				`AC-11: der Picker bietet die Katalog-Groesse ${metricId} nicht an`
-			).toBeGreaterThan(0);
-		}
 		await expect(
-			abschnitt.getByTestId('compare-layout-outlook-metric-confidence'),
-			'AC-10: "Vorhersage-Genauigkeit" darf im Picker nicht auftauchen'
+			abschnitt.locator('[data-metric-id="confidence"]'),
+			'AC-10: "Vorhersage-Genauigkeit" darf im Ausblick nicht auftauchen'
 		).toHaveCount(0);
 	});
 });

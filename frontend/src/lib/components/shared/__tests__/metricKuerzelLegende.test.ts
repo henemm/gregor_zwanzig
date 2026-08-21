@@ -1065,9 +1065,16 @@ const EINBETTUNGEN = [
 		name: 'Ausblick (CompareOutlookLayoutControls)',
 		datei: () => join(SHARED, 'CompareOutlookLayoutControls.svelte'),
 		waehle: () => true,
+		// #1848 A3: der Ausblick erbt die Grundauswahl seiner Flaeche und
+		// bekommt sie als Prop (`grundauswahl`). Ohne Saat waere sie im
+		// Instance-Script nicht herleitbar, und die Herleitung von
+		// `materializedOutlookKeys` (die daraus entsteht) schluege fehl.
+		// Gesaet wird die ECHTE Vergleichs-Grundauswahl -- dieselbe Menge, die
+		// WeatherMetricsTab.svelte am Ortsvergleich-Mount durchreicht.
 		saat: () => ({
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
-			metricKeys: null
+			metricKeys: null,
+			grundauswahl: gerendertVergleich()
 		})
 	},
 	{

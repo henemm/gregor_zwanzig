@@ -60,6 +60,20 @@ def _diff(erwartet: list[str], ist: list[str]) -> str:
     return "\nerwartet:\n" + "\n".join(erwartet) + "\nist:\n" + "\n".join(ist)
 
 
+def _altpfad_trip():
+    """Die Vorbedingung des AC-1-Bestandsschutzes: eine Tour, die den FESTEN
+    Ausblick zeigt.
+
+    ⚠️ #1848 A3 (PO-Freigabe 2026-08-21): dafuer genuegt ein fehlendes
+    ``outlook_metrics`` nicht mehr -- "nie eingestellt" heisst seither
+    "nichts abgewaehlt", und der Ausblick erbt die Grundauswahl. Der feste
+    Zweig bleibt fuer Touren OHNE Grundauswahl in Kraft (ADR-0050 D4); dort
+    bewachen die beiden Aufzeichnungen unveraendert weiter, dass "Feld fehlt"
+    nicht mit "bewusst geleert" verwechselt wird (Mutation 4). Die
+    Referenzdateien werden NICHT nachgezogen."""
+    return trip(outlook_metrics=None, enabled_ids=set())
+
+
 # ═════════════ AC-1 — Bestandsschutz gegen die aufgezeichnete Referenz ═══════
 
 def test_ac1_kompakt_ausblick_ohne_auswahl_ist_byte_identisch_zur_referenz():
@@ -73,7 +87,7 @@ def test_ac1_kompakt_ausblick_ohne_auswahl_ist_byte_identisch_zur_referenz():
     Verglichen wird gegen eine DATEI, nicht gegen einen zweiten Aufruf
     desselben Codes im selben Lauf.
     """
-    body, _ = versendete_teile(trip(outlook_metrics=None))
+    body, _ = versendete_teile(_altpfad_trip())
     block = compact_outlook_block(body)
 
     assert block is not None, "Kein Ausblick in der Kompakt-Mail (AC-1)."
@@ -89,7 +103,7 @@ def test_ac1_telegram_ausblick_ohne_auswahl_ist_byte_identisch_zur_referenz():
     Kompakt-Mail und Telegram haben getrennte Renderer (``compact.py`` /
     ``narrow.py``) -- eine Aufzeichnung allein deckt den anderen nicht ab.
     """
-    _, bubbles = versendete_teile(trip(outlook_metrics=None))
+    _, bubbles = versendete_teile(_altpfad_trip())
     bubble = telegram_outlook_bubble(bubbles)
 
     assert bubble is not None, f"Keine Ausblick-Bubble: {bubbles!r} (AC-1)"

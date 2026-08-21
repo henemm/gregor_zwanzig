@@ -153,23 +153,32 @@ def test_ac1_tagesgewitter_sichtbar_trotz_none_im_aggregat():
         day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
     )
     html, plain = render_trip_mail(dc, [row])
-    erwartet = _fmt_thunder(ThunderLevel.HIGH, None, ["cape"])
+    # #1848 A3: der Metrik-Zweig ruft denselben Zellenbau wie der feste Zweig
+    # (`thunder_branch.thunder_cell_html`/`…_plain`) -- die Stufe kommt
+    # weiterhin aus dem TAGESFENSTER, traegt jetzt aber ihre Onset-Uhrzeit
+    # (#1493) und die ausgabeort-eigene Schreibweise. Die hier bewachte
+    # Zusicherung ist unveraendert: das gehzeit-geklemmte Aggregat meldet
+    # NONE, jede Zelle mit "hoch" beweist das Tagesfenster als Quelle.
+    stufe_mit_herkunft = _fmt_thunder(ThunderLevel.HIGH, None, ["cape"])
+    erwartet_html = stufe_mit_herkunft.replace("hoch", "hoch @14", 1)
+    erwartet_plain = "⚡" + stufe_mit_herkunft.replace("hoch", "hoch@14", 1)
 
     assert html_outlook_headers(html) == ["Tag", "Gewitter"], (
         f"Testaufbau: unerwartete Kopfzeile {html_outlook_headers(html)!r}."
     )
     zeilen = html_outlook_body_rows(html)
     zelle = zeilen[0][1] if zeilen else None
-    assert zelle == erwartet, (
-        f"HTML-Gewitterzelle {zelle!r} statt {erwartet!r} -- die Spalte "
+    assert zelle == erwartet_html, (
+        f"HTML-Gewitterzelle {zelle!r} statt {erwartet_html!r} -- die Spalte "
         "zeigt weiterhin das gehzeit-geklemmte Aggregat (NONE) statt der "
         "Tagesfenster-Stufe (AC-1)."
     )
 
     block = plain_outlook_block(plain)
-    assert block is not None and f"Gewitter {erwartet}" in block, (
-        f"Klartext-Ausblick:\n{block}\nenthaelt nicht 'Gewitter {erwartet}' "
-        "-- dieselbe Ursache wie im HTML-Zweig (AC-1)."
+    assert block is not None and f"Gewitter {erwartet_plain}" in block, (
+        f"Klartext-Ausblick:\n{block}\nenthaelt nicht "
+        f"'Gewitter {erwartet_plain}' -- dieselbe Ursache wie im HTML-Zweig "
+        "(AC-1)."
     )
 
 
@@ -201,7 +210,17 @@ def test_ac3_keine_nachtangabe_im_metrik_zweig():
     Nachtfenster) / When die Trip-Mail erzeugt wird / Then enthaelt die
     3-Tages-Vorschau KEINE Nachtangabe -- weder als eigene Spalte noch als
     Zusatz in der Gewitterzelle (PO-Entscheid 2026-08-14, bewusste
-    Abweichung von #1653/#1671)."""
+    Abweichung von #1653/#1671).
+
+    #1848 A3: dieser Entscheid gilt seither fuer ALLE Touren, nicht mehr nur
+    fuer den Metrik-Zweig -- der feste Zweig entfaellt als Normalfall, und die
+    Nachtangabe ist aus allen VIER Ausblick-Darstellungen entfernt. DREIFACH
+    bestaetigt (2026-08-14 · 2026-08-21 mit Kenntnis von Verwechslungsluecke
+    und Testumfang · 2026-08-21 Mittelweg ausdruecklich abgelehnt); Begruendung
+    und Tragweite stehen an der zentralen Fundstelle
+    ``output/renderers/email/thunder_branch.py`` (Kopfkommentar). Der
+    Geltungsbereich bleibt strikt die 3-Tages-Vorschau; Tages-Briefing,
+    Stundenverlauf und Alarme fuehren den Tag/Nacht-Split unveraendert."""
     dc = display_config(outlook_metrics=[GEWITTER])
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
@@ -306,22 +325,42 @@ def test_ac6_ohne_traegerliste_erscheint_die_stufe_ohne_herkunft():
     )
 
 
-def test_ac7_trip_ohne_auswahl_bleibt_altpfad_unberuehrt():
-    """AC-7: Given einen Trip OHNE gesetzte Spaltenauswahl / When eine Zeile
-    gebaut wird / Then bleibt der Row-Dict OHNE 'cells' -- der Altpfad
-    (feste sieben Spalten inkl. Nachtangabe/Ampelfarben) bleibt in Kraft.
+def test_ac7_trip_ohne_grundauswahl_bleibt_altpfad_unberuehrt():
+    """⚠️ AC-7 NACHGEZOGEN durch #1848 A3.
 
-    Regressionsschutz -- heute bereits gruen (Metrik-Zweig greift nur bei
-    aufgeloester Auswahl) und muss es bleiben."""
-    dc = display_config()  # outlook_metrics unberuehrt (Altbestand)
+    Bis dahin lautete die Bedingung "OHNE gesetzte SPALTENAUSWAHL": ein
+    fehlendes ``outlook_metrics`` liess den Metrik-Zweig ruhen und der feste
+    Zweig blieb in Kraft. Genau das kehrt A3 um -- "nie eingestellt" heisst
+    seither "nichts abgewaehlt", der Ausblick erbt die Grundauswahl (AC-3
+    der A3-Spec). Der feste Zweig bleibt fuer den verbliebenen Fall
+    zustaendig: KEINE Grundauswahl, also kein Maximum (ADR-0050 D4).
+
+    Given einen Trip ohne Grundauswahl / When eine Zeile gebaut wird / Then
+    bleibt der Row-Dict OHNE 'cells' -- der Altpfad (feste sieben Spalten
+    inkl. Nachtangabe/Ampelfarben) bleibt in Kraft.
+    """
+    dc = display_config(leere_grundauswahl=True)  # kein Maximum (D4)
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
         day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
     )
     assert "cells" not in row, (
-        f"Row {row!r} traegt 'cells', obwohl keine Spaltenauswahl gesetzt "
-        "ist -- der Metrik-Zweig darf ohne Auswahl nicht greifen (AC-7)."
+        f"Row {row!r} traegt 'cells', obwohl keine Grundauswahl gesetzt "
+        "ist -- ohne Maximum darf der Metrik-Zweig nicht greifen (AC-7, D4)."
+    )
+
+    # Gegenprobe: MIT Grundauswahl greift er sehr wohl -- sonst waere die
+    # Zusicherung oben auch dann gruen, wenn der Metrik-Zweig gar nicht mehr
+    # erreichbar ist.
+    row_mit = build_outlook_row(
+        AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
+        trip_display_config=display_config(), report_type="evening",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+    )
+    assert row_mit.get("cells"), (
+        "Gegenprobe gescheitert: mit Grundauswahl muss der Metrik-Zweig "
+        "greifen (#1848 A3, AC-3) -- sonst bewacht der Test oben nichts."
     )
 
 
@@ -429,7 +468,10 @@ def test_m6_tagesfenster_stufe_kommt_aus_dem_tagesfenster_nicht_aus_24h():
         day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
     )
     html, _ = render_trip_mail(dc, [row])
-    erwartet = _fmt_thunder(ThunderLevel.MED)
+    # #1848 A3: die Zelle traegt jetzt die Onset-Uhrzeit (#1493). Die
+    # Mutations-Gegenprobe bleibt scharf: das 24h-Maximum HIGH liegt
+    # ausserhalb des Tagesfensters und darf nirgends erscheinen.
+    erwartet = f"{_fmt_thunder(ThunderLevel.MED)} @14"
 
     zeilen = html_outlook_body_rows(html)
     zelle = zeilen[0][1] if zeilen else None

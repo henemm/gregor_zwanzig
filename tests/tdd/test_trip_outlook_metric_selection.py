@@ -58,6 +58,26 @@ LEGENDE_ALT = "N Nacht-Tief"
 LEGENDE_NEU = "N Tagestief"
 
 
+def _dc_altpfad():
+    """Die Vorbedingung des AC-1-Bestandsschutzes: ein Trip, der den FESTEN
+    Sieben-Spalten-Ausblick zeigt.
+
+    ⚠️ #1848 A3 (PO-Freigabe 2026-08-21): bis dahin genuegte dafuer ein
+    fehlendes ``outlook_metrics`` -- "nie eingestellt" hiess "sieben feste
+    Spalten". Seither heisst es "nichts abgewaehlt", und der Ausblick erbt
+    die Grundauswahl (Spec "Known Limitations": "Die Ausblick-Tabelle wird
+    fuer bestehende Touren breiter"). Der feste Zweig bleibt fuer Touren ganz
+    OHNE Grundauswahl in Kraft (ADR-0050 D4) -- genau dort bewacht die
+    Aufzeichnung weiter, was sie immer bewacht hat: dass "Feld fehlt" nicht
+    mit "bewusst geleert" verwechselt wird und der Block nicht still
+    verschwindet.
+
+    Die Referenzdateien werden deshalb NICHT nachgezogen. Sie bleiben Byte
+    fuer Byte gueltig -- nur die Vorbedingung ist jetzt ausgesprochen statt
+    stillschweigend."""
+    return display_config(leere_grundauswahl=True)
+
+
 # ══════════════════════════ AC-1 — Bestandsschutz ════════════════════════════
 
 def test_ac1_bestandstrip_html_ausblick_bleibt_byte_identisch():
@@ -68,7 +88,7 @@ def test_ac1_bestandstrip_html_ausblick_bleibt_byte_identisch():
     Faengt Mutation 1 (``resolve_outlook_metrics(...) or []``): der Ausblick
     waere fuer 100 % der heutigen Trips still leer.
     """
-    html, _ = render_trip_mail(display_config(), outlook_rows())
+    html, _ = render_trip_mail(_dc_altpfad(), outlook_rows())
     tabelle = html_outlook_table(html)
 
     assert tabelle is not None, (
@@ -103,7 +123,7 @@ def test_ac1_bestandstrip_legende_bleibt_bis_auf_die_ac8_korrektur_identisch():
     Ganzzeilen-Vergleich statt Teilstring-Suche: so faellt auch auf, wenn bei
     der Korrektur ein anderes Zeichen mitwandert.
     """
-    html, _ = render_trip_mail(display_config(), outlook_rows())
+    html, _ = render_trip_mail(_dc_altpfad(), outlook_rows())
     legende = html_outlook_legend(html)
 
     assert legende is not None, (
@@ -129,7 +149,7 @@ def test_ac1_bestandstrip_klartext_ausblick_bleibt_byte_identisch():
     Der Klartext-Zweig (``plain.py:309/338``) hat eine EIGENE Bedingung; ein
     Fehler dort faellt im HTML nicht auf.
     """
-    _, plain = render_trip_mail(display_config(), outlook_rows())
+    _, plain = render_trip_mail(_dc_altpfad(), outlook_rows())
     block = plain_outlook_block(plain)
 
     assert block is not None, "Der Klartext-Ausblick fehlt vollstaendig (AC-1)."
@@ -249,7 +269,7 @@ def test_ac8_legende_nennt_spalte_n_nicht_mehr_als_nachtwert():
     Then bezeichnet die Legende die Spalte "N" als Tageswert, nicht als
     "Nacht-Tief" -- die Zahl ist das Tages-Minimum im Wanderfenster.
     """
-    html, _ = render_trip_mail(display_config(), outlook_rows())
+    html, _ = render_trip_mail(_dc_altpfad(), outlook_rows())
     legende = html_outlook_legend(html)
 
     assert legende is not None, "Legende fehlt im Altbestand (AC-1/AC-8)."

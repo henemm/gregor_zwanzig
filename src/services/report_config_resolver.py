@@ -246,7 +246,9 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     """
     from app.loader import _corridor_from_dict
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
-    from output.renderers.compare_outlook_metric_ids import resolve_outlook_metrics
+    from output.renderers.compare_outlook_metric_ids import (
+        resolve_compare_outlook_metrics,
+    )
     from output.renderers.compare_metric_ids import (
         resolve_channel_enabled_metrics, resolve_enabled_metrics,
     )
@@ -284,20 +286,30 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         # schon aus hatte, bleibt unberuehrt.
         hourly_enabled = False
 
+    # Issue #1703 Scheibe 8: die Grundauswahl der Uebersichtstabelle wird EINMAL
+    # aufgeloest und dient doppelt -- als unveraendertes `enabled_metrics` UND
+    # als MAXIMUM, gegen das jede Kanal-Auswahl geschnitten wird (ADR-0050).
+    # Issue #1848 A3: dieselbe Menge ist jetzt auch das Maximum des Ausblicks
+    # (dritter Konsument, KEINE zweite Aufloesung) -- deshalb steht sie vor der
+    # Ausblick-Aufloesung darunter.
+    global_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
+    channel_raw = display_config.get("channel_active_metrics")
+
     # Issue #1361/#1368 (AC-8): eine bewusst geleerte Ausblick-Auswahl laesst
     # den ganzen Block entfallen -- eine Tagestabelle mit nur der Wochentag-
     # Spalte hat keinen Nutzwert (identische Kopplung wie beim Stundenverlauf
     # daruerber). Fehlendes Feld (None) bleibt unberuehrt.
-    resolved_outlook_metrics = resolve_outlook_metrics(display_config.get("outlook_metrics"))
+    # Issue #1848 A3 (AC-6): geklemmt wird gegen `global_metrics` -- der
+    # Ausblick erbt die Grundauswahl in BEIDEN Flaechen gleich (loest ADR-0053
+    # Punkt 1 ab). Nur eine ausdrueckliche Leerauswahl liefert weiterhin `[]`;
+    # ein Totalschnitt faellt auf die volle Grundauswahl zurueck (AC-10), der
+    # Block verschwindet also nicht stillschweigend.
+    resolved_outlook_metrics = resolve_compare_outlook_metrics(
+        display_config.get("outlook_metrics"), global_metrics,
+    )
     outlook_enabled = preset.get("outlook_enabled", True)
     if outlook_enabled and resolved_outlook_metrics == []:
         outlook_enabled = False
-
-    # Issue #1703 Scheibe 8: die Grundauswahl der Uebersichtstabelle wird EINMAL
-    # aufgeloest und dient doppelt -- als unveraendertes `enabled_metrics` UND
-    # als MAXIMUM, gegen das jede Kanal-Auswahl geschnitten wird (ADR-0050).
-    global_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
-    channel_raw = display_config.get("channel_active_metrics")
 
     return CompareRenderOptions(
         enabled_metrics=global_metrics,

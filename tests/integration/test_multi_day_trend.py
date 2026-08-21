@@ -389,6 +389,30 @@ class TestTrendRendering:
             },
         ]
 
+    @staticmethod
+    def _dc_ohne_grundauswahl():
+        """Eine ``display_config`` OHNE Grundauswahl (ADR-0050 D4).
+
+        #1848 A3: der Ausblick erbt die Grundauswahl und rendert dann ueber
+        den konfigurierbaren Zweig -- der liest seine Zellentexte aus
+        ``stage["cells"]``, die ``build_outlook_row()`` vorrechnet. Die
+        hand-gebauten Zeilen von ``_make_trend_data_v4()`` tragen die nicht;
+        gegen sie gerendert saehe der konfigurierbare Zweig ueberall "–" und
+        dieser Test pruefte ein Vakuum.
+
+        Diese Klasse prueft den FESTEN Zweig (Tag/N/D/R/PR/Wind/Boeen/Gew),
+        und der bleibt fuer genau diesen Fall in Kraft: ``metrics == []``
+        heisst "kein Maximum definiert", also kein Schnitt und kein Erben
+        (D4, ``allowed_metric_ids_for_report_type()``). Damit steht hier
+        ausdruecklich, welcher der beiden Zweige geprueft wird -- vorher hing
+        das an einem Default.
+        """
+        from app.metric_catalog import build_default_display_config
+
+        dc = build_default_display_config()
+        dc.metrics = []
+        return dc
+
     def _make_trend_data_v4(self) -> list[dict]:
         """Trend-Zeilen im echten #911-Spaltenformat (Commits 9f14fd39/2205639e) --
         das Format, das _build_stage_trend() (trip_report_scheduler.py) heute
@@ -467,11 +491,12 @@ class TestTrendRendering:
             trip_name="GR221 Mallorca",
             report_type="evening",
             multi_day_trend=trend,
+            display_config=self._dc_ohne_grundauswahl(),
         )
 
         # AC-9 (#911): Eyebrow "Ausblick · nächste 3 Tage" über der OutlookTable
         assert "Ausblick" in report.email_html
-        # Wochentag- und Temperatur-Spalten (N=Nacht-Tief, D=Tag-Hoch)
+        # Wochentag- und Temperatur-Spalten (N=Tagestief, D=Tag-Hoch)
         assert "Mi" in report.email_html
         assert "6°" in report.email_html
         assert "14°" in report.email_html
@@ -492,6 +517,7 @@ class TestTrendRendering:
             trip_name="GR221 Mallorca",
             report_type="evening",
             multi_day_trend=trend,
+            display_config=self._dc_ohne_grundauswahl(),
         )
 
         assert "Nächste Etappen" in report.email_plain

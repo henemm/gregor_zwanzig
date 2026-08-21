@@ -25,8 +25,9 @@
 	import type { CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
 	import {
 		materializeOutlookMetricKeys,
-		toggleOutlookMetricKeyFromState
+		toggleCompareMetricKey
 	} from './weather-metrics-tab/compareMetricOrder.ts';
+	import { splitChannelMetricsForDisplay } from './weather-metrics-tab/channelMetricLayouts.ts';
 
 	// Issue #1720 S1: flache Props statt `CompareWizardState`-Bindung — dasselbe
 	// Bauteil bedient jetzt Ortsvergleich UND Trip (parametrisiert statt
@@ -34,8 +35,16 @@
 	// bisher AUSSERHALB: der Vergleich schreibt in den wiz-State, der Trip in
 	// seinen `$state` + `scheduleAutoSave()`.
 	interface Props {
-		/** `null` = nie eingestellt (sieben feste Spalten), `[]` = bewusst leer. */
+		/** `null` = nie eingestellt (nichts abgewaehlt), `[]` = bewusst leer. */
 		metricKeys: string[] | null;
+		/** Issue #1848 A3: die Grundauswahl der FLAECHE — die Ausgangsmenge,
+		 *  aus der der Ausblick nur noch ABWAEHLEN darf (ADR-0050 Regel 1/2,
+		 *  loest ADR-0053 Punkt 1 ab). Der Ortsvergleich reicht seine
+		 *  Katalog-Schluessel durch (`temp_max_c`), der Trip seine Kennungen
+		 *  (`temperature`) — beide Vokabulare werden hier auf die Kennung
+		 *  normalisiert. `null`/leer = kein Maximum bekannt (D4): Verhalten
+		 *  wie vor A3. */
+		grundauswahl?: string[] | null;
 		/** Bereits geladene Antwort von GET /api/compare/metrics — dieselbe
 		 *  Liste wie die Uebersichts-Grundauswahl (kein zweiter Abruf). */
 		catalog: CompareSelectionEntry[];
@@ -62,24 +71,8 @@
 	let {
 		metricKeys, catalog, onMetricKeys, onOutlookCommit,
 		title = '3-Tages-Ausblick', enabled = true, onEnabledChange,
-		showEmailOnlyHint = true
+		showEmailOnlyHint = true, grundauswahl = null
 	}: Props = $props();
-
-	// „Nie eingestellt" (`null`) = die heutigen sieben Ausblick-Spalten; eine
-	// bewusst geleerte Auswahl (`[]`) bleibt leer und laesst den Block ganz
-	// entfallen (AC-8). Anzeige UND Umschalt-Handler nutzen ZWINGEND dieselbe
-	// Materialisierung (Issue #1366 F001).
-	const materializedOutlookKeys = $derived(materializeOutlookMetricKeys(metricKeys));
-
-	function isOutlookMetricActive(key: string): boolean {
-		return materializedOutlookKeys.includes(key);
-	}
-
-	function makeOutlookMetricHandler(key: string) {
-		return function handleOutlookMetric(): void {
-			onMetricKeys(toggleOutlookMetricKeyFromState(metricKeys, key));
-		};
-	}
 
 	function handleEnabledToggle(checked: boolean): void {
 		onEnabledChange?.(checked);
@@ -120,9 +113,63 @@
 		return map;
 	});
 
-	function onOutlookRemove(key: string): void {
-		makeOutlookMetricHandler(key)();
+	// Issue #1848 A3: die Grundauswahl der Flaeche, uebersetzt in das Vokabular
+	// des Ausblicks (KENNUNGEN seit A2). Die Zuordnung Katalog-Schluessel ->
+	// Kennung kommt aus DEMSELBEN gruppierten Katalog wie die Beschriftungen
+	// (`groupCompareCatalog`), nicht aus einer zweiten Tabelle. Groessen ohne
+	// Ausblick-Katalogzeile (kein Tageswert, z. B. `confidence`) fallen heraus:
+	// sie erscheinen weder in der aktiven Liste noch in der „Aus"-Gruppe
+	// (AC-5, Spec „Known Limitations").
+	const grundauswahlKennungen = $derived.by(() => {
+		if (grundauswahl === null) return null;
+		const kennungJeSchluessel: Record<string, string> = {};
+		for (const group of groupCompareCatalog(catalog)) {
+			for (const option of group.options) kennungJeSchluessel[option.key] = group.metric_id;
+		}
+		const gesehen = new Set<string>();
+		const kennungen: string[] = [];
+		for (const eintrag of grundauswahl) {
+			const id = kennungJeSchluessel[eintrag] ?? eintrag;
+			if (gesehen.has(id) || !outlookMetricById[id]) continue;
+			gesehen.add(id);
+			kennungen.push(id);
+		}
+		return kennungen;
+	});
+
+	// Issue #1848 A3 (AC-12): DIESELBE Mengenrechnung wie die Kanal-Reiter —
+	// `splitChannelMetricsForDisplay(Grundauswahl, Auswahl)`, kein zweiter
+	// Algorithmus. `metricKeys === null` (nie eingestellt) heisst „nichts
+	// abgewaehlt": die Auswahl IST die Grundauswahl. Ohne bekannte
+	// Grundauswahl (Altbestand/Katalog nicht geladen) bleibt es beim Verhalten
+	// vor A3 (ADR-0050 D4: kein Maximum -> nicht schneiden).
+	const ausblickSpalten = $derived.by(() => {
+		const grund = grundauswahlKennungen;
+		if (grund === null || grund.length === 0) {
+			return { active: materializeOutlookMetricKeys(metricKeys), off: [] as string[] };
+		}
+		return splitChannelMetricsForDisplay(grund, metricKeys ?? grund);
+	});
+	const materializedOutlookKeys = $derived(ausblickSpalten.active);
+	const offOutlookKeys = $derived(ausblickSpalten.off);
+
+	/** Abwaehlen („Aus") und Zurueckholen („Ein") sind dieselbe Operation auf
+	 *  derselben Liste — nur die Richtung unterscheidet sich. Materialisiert
+	 *  wird ZWINGEND aus derselben Quelle wie die Anzeige (#1366 F001);
+	 *  Zurueckholen haengt die Groesse ans Ende an (Trip-Muster, #1359 AC-2)
+	 *  und schreibt ausschliesslich in `outlook_metrics`, nie in die
+	 *  Grundauswahl (AC-9). */
+	function toggleOutlookKey(key: string): void {
+		onMetricKeys(toggleCompareMetricKey(materializedOutlookKeys, key));
 		onOutlookCommit?.();
+	}
+
+	function onOutlookRemove(key: string): void {
+		toggleOutlookKey(key);
+	}
+
+	function onOutlookRestore(key: string): void {
+		toggleOutlookKey(key);
 	}
 
 	function handleOutlookDndReorder(newOrder: string[]): void {
@@ -148,64 +195,41 @@
 		testid="compare-layout-outlook-enabled-toggle"
 	/>
 {/if}
-<div
-	data-testid="compare-layout-outlook-metrics"
-	style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px"
->
-	<!-- Issue #1406 Scheibe A (Epic #1372 S4b Scheibe 2): eine Zeile je
-	     Wettergroesse (24 statt 26) — analog zur Vergleichs-Uebersicht seit
-	     #1411 (WeatherMetricsTab.svelte:918-948).
+<!-- Issue #1848 A3 (Block A, Issue #2029): die zweite Kaestchenliste entfaellt
+     ERSATZLOS. Der Ausblick verhaelt sich ab hier exakt wie E-Mail, Telegram
+     und SMS: Ausgangsmenge ist die Grundauswahl der Flaeche, abgewaehlt wird
+     ueber den „Aus"-Knopf der Reihenfolge-Liste, zurueckgeholt ueber die
+     „Aus"-Gruppe darunter (ADR-0050 Regel 4 — loest AC-13 aus fix_1719_s3 ab,
+     deren Begruendung genau diese Kaestchen waren).
 
-	     Issue #1848 A2: EIN Kaestchen je Groesse, angehakt und umgeschaltet
-	     ueber die KENNUNG (`group.metric_id`). Die frueheren Sonderzeilen fuer
-	     Temperatur und gefuehlte Temperatur (je Auswertung ein eigenes
-	     Kaestchen ueber AggregationMetricRow mode='multiple') entfallen: seit
-	     A1 stehen Tief und Hoch in EINER Spannen-Zelle der Mail, und seit A2
-	     laesst sich die Halbauswahl gar nicht mehr speichern. Zwei Kaestchen
-	     wuerden etwas anderes versprechen, als herauskommt. Die Auswertung
-	     bleibt sichtbar, wo sie eindeutig ist (eine Auswertung je Groesse). -->
-	{#each groupCompareCatalog(catalog) as group (group.metric_id)}
-		<label class="outlook-metric-row" data-testid={`compare-layout-outlook-metric-${group.metric_id}`}>
-			<input
-				type="checkbox"
-				checked={isOutlookMetricActive(group.metric_id)}
-				onchange={makeOutlookMetricHandler(group.metric_id)}
-			/>
-			<span>{group.label}</span>
-			<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen. Bei
-			     mehreren Auswertungen (Temperatur, gefuehlte Temperatur) traegt
-			     die Zeile keine — die Kennung zeigt beide Tagesenden. -->
-			{#if group.options.length === 1 && group.options[0].aggregation_label}
-				<span class="outlook-aggregation" data-testid={`compare-layout-outlook-aggregation-${group.metric_id}`}>{group.options[0].aggregation_label}</span>
-			{/if}
-		</label>
-	{/each}
-</div>
-
-<!-- DERSELBE geteilte Reihenfolge-Baustein wie bei Uebersicht und
+     DERSELBE geteilte Reihenfolge-Baustein wie bei Uebersicht und
      Stundenverlauf (WeatherV2Reihenfolge, ADR-0024) — kein Compare-Eigenbau.
      activeChannel="email": der Ausblick existiert nur in der E-Mail
      (render_compare_email), analog der Begruendung im Stundenverlauf-Block. -->
-{#if materializedOutlookKeys.length > 0}
-	{#if showEmailOnlyHint}
-		<p class="outlook-email-hint" data-testid="compare-layout-outlook-email-only-hint">
-			Erscheint nur in der E-Mail.
-		</p>
+<div data-testid="compare-layout-outlook-metrics">
+	{#if materializedOutlookKeys.length > 0 || offOutlookKeys.length > 0}
+		{#if showEmailOnlyHint}
+			<p class="outlook-email-hint" data-testid="compare-layout-outlook-email-only-hint">
+				Erscheint nur in der E-Mail.
+			</p>
+		{/if}
+		<Card padding={0} style="margin-top: 6px">
+			<WeatherV2Reihenfolge
+				primaryColumns={materializedOutlookKeys}
+				metricById={outlookMetricById}
+				friendlyMap={{}}
+				activeChannel="email"
+				highlight={null}
+				onRemove={onOutlookRemove}
+				onDndReorder={handleOutlookDndReorder}
+				onMode={noopOutlookMode}
+				offColumns={offOutlookKeys}
+				onRestore={onOutlookRestore}
+				kuerzelById={outlookKuerzelById}
+			/>
+		</Card>
 	{/if}
-	<Card padding={0} style="margin-top: 6px">
-		<WeatherV2Reihenfolge
-			primaryColumns={materializedOutlookKeys}
-			metricById={outlookMetricById}
-			friendlyMap={{}}
-			activeChannel="email"
-			highlight={null}
-			onRemove={onOutlookRemove}
-			onDndReorder={handleOutlookDndReorder}
-			onMode={noopOutlookMode}
-			kuerzelById={outlookKuerzelById}
-		/>
-	</Card>
-{/if}
+</div>
 
 <style>
 	.outlook-email-hint {
@@ -213,22 +237,5 @@
 		color: var(--g-ink-muted);
 		line-height: 1.5;
 		margin: 10px 0 0;
-	}
-	.outlook-metric-row {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: var(--g-text-sm);
-		color: var(--g-ink);
-	}
-	/* Issue #1401: Auswertung als eigenes, abgesetztes Element. */
-	.outlook-aggregation {
-		font-size: 11px;
-		color: var(--g-ink-3);
-		background: var(--g-paper);
-		border: 1px solid var(--g-rule-soft);
-		border-radius: 3px;
-		padding: 0 5px;
-		white-space: nowrap;
 	}
 </style>

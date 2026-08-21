@@ -282,28 +282,37 @@ def test_ac4_morgen_override_schliesst_in_beiden_flaechen_identisch_aus():
 def test_ac5_fehlende_ausblick_auswahl_bleibt_none():
     """AC-5: GIVEN ein Trip MIT Grundauswahl, dessen Feld ``outlook_metrics``
     nicht gesetzt ist (``None``, Altbestand) / WHEN
-    ``resolve_trip_outlook_metrics()`` aufgerufen wird / THEN bleibt der
-    Rueckgabewert ``None`` -- der neue Schnitt greift nur auf einer bereits
-    aufgeloesten Liste und verwandelt "Feld fehlt" nicht in "leer".
+    ``resolve_trip_outlook_metrics()`` aufgerufen wird / THEN kommt die
+    GANZE Grundauswahl zurueck -- niemals ``[]``.
 
-    Explizit auf ``is None`` geprueft, nicht auf Falsy: die Verwechslung mit
-    ``[]`` ist genau der Fehler, der den Ausblick fuer 100 % der heutigen
-    Trips still abschalten wuerde.
+    ⚠️ NACHGEZOGEN durch #1848 A3 (AC-3, PO-Freigabe 2026-08-21): bis dahin
+    lieferte dieser Fall ``None`` ("Feld fehlt" -> die sieben festen
+    Spalten). Seither heisst "nie eingestellt" = "nichts abgewaehlt", und der
+    Ausblick zeigt exakt die Groessen des Trips.
+
+    Der Kern der Zusicherung ist unveraendert und bleibt der wichtige Teil:
+    das Ergebnis darf NICHT ``[]`` sein -- diese Verwechslung wuerde den
+    Ausblick-Block fuer 100 % der heutigen Trips still abschalten (ADR-0037
+    Drei-Werte-Semantik).
     """
     dc = _dc(
         grundauswahl=[("precipitation", {"enabled": True}),
                       ("gust", {"enabled": True})],
         ausblick=None,
     )
-    # Vorbedingung ueber die gemeinsame Quelle: ein Maximum IST definiert, der
-    # Schnitt waere also scharf -- er darf hier trotzdem nicht zuschlagen.
+    # Vorbedingung ueber die gemeinsame Quelle: ein Maximum IST definiert.
     assert _erlaubte_kennungen(dc, "morning") == {"precipitation", "gust"}
 
     ergebnis = resolve_trip_outlook_metrics(dc, "morning")
-    assert ergebnis is None, (
-        f"Erwartet None ('Feld fehlt' -> die bisherigen sieben festen "
-        f"Spalten), erhalten {ergebnis!r}. [] wuerde den Ausblick-Block ganz "
-        "abschalten (ADR-0037 Drei-Werte-Semantik)."
+    assert ergebnis != [], (
+        "Erwartet die Grundauswahl, erhalten []. [] heisst 'bewusst geleert' "
+        "und wuerde den Ausblick-Block ganz abschalten (ADR-0037 "
+        "Drei-Werte-Semantik)."
+    )
+    assert ergebnis is not None and set(ergebnis) == {"precipitation", "gust"}, (
+        f"Erwartet die GANZE Grundauswahl ['precipitation', 'gust'], erhalten "
+        f"{ergebnis!r}. ``None`` hiesse Rueckfall auf die sieben festen "
+        "Spalten -- genau das loest #1848 A3 ab (AC-3)."
     )
 
 

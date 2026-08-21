@@ -354,13 +354,27 @@ def record_reference(force: bool = False) -> list[Path]:
 
     Schreibt ohne ``force`` NICHT ueber eine vorhandene Aufzeichnung: eine
     Referenz, die man bei rotem Test neu erzeugen kann, bewacht nichts.
+
+    #1848 A3: aufgezeichnet wird der FESTE Sieben-Spalten-Zweig -- er gilt
+    seither nur noch fuer Touren ganz ohne Grundauswahl (ADR-0050 D4). Der
+    Aufruf muss dieselbe Vorbedingung setzen wie die AC-1-Tests
+    (``test_trip_outlook_metric_selection._dc_altpfad()``), sonst zeichnete
+    er den konfigurierbaren Zweig auf und die Referenz bewachte etwas
+    anderes als der Test.
     """
-    html, plain = render_trip_mail(display_config(), outlook_rows())
+    html, plain = render_trip_mail(display_config(leere_grundauswahl=True),
+                                   outlook_rows())
     inhalte = {
         REFERENCE_TABLE: html_outlook_table(html),
         REFERENCE_LEGEND: html_outlook_legend(html),
         REFERENCE_PLAIN: plain_outlook_block(plain),
     }
+    # 🔴 ``outlook_legend.html`` traegt bewusst den ALTEN Wortlaut
+    # ("N Nacht-Tief"): ``test_ac1_bestandstrip_legende_...`` rechnet daraus
+    # das Soll ("N Tagestief") und prueft die AC-8-Korrektur damit gegen eine
+    # unabhaengige Quelle. Wer die Legende mit-aufzeichnet, laesst den Test
+    # die Korrektur gegen sich selbst pruefen -- er waere danach immer gruen.
+    inhalte.pop(REFERENCE_LEGEND, None)
     fehlend = [p.name for p, t in inhalte.items() if not t]
     if fehlend:
         raise RuntimeError(f"Kein Ausblick gerendert fuer: {fehlend} -- "

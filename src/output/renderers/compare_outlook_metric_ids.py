@@ -126,24 +126,85 @@ def resolve_outlook_metrics(outlook_metrics: object) -> list[str] | None:
     return resolved
 
 
-def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[str] | None:
-    """Trip-Vorschau (#1720 S1): aufgeloest UND gegen die Grundauswahl
-    geschnitten. Der Ortsvergleich ruft weiterhin ``resolve_outlook_metrics()``
-    direkt -- er kennt bewusst kein globales Maximum (ADR-0053).
+def outlook_grundauswahl_ids(metric_ids: object) -> list[str]:
+    """Grundauswahl-Kennungen -> die davon im Ausblick DARSTELLBAREN (#1848 A3).
 
-    Geschnitten wird gegen dieselbe gemeinsame Quelle wie das Kanal-Layout:
+    Reihenfolge der Eingabe, jede Kennung hoechstens einmal. Groessen ohne
+    Tagesauswertung (kein Compare-Katalog-Paar mit ``SegmentWeatherSummary``-
+    Feld, z. B. ``confidence``) fallen heraus: sie haetten in der Tagestabelle
+    keinen darstellbaren Wert und stehen deshalb auch nicht in der
+    "Aus"-Gruppe (Spec "Known Limitations").
+    """
+    gesehen: set[str] = set()
+    ergebnis: list[str] = []
+    for metric_id in metric_ids or ():
+        if metric_id in gesehen or not derived_aggregations(metric_id):
+            continue
+        gesehen.add(metric_id)
+        ergebnis.append(metric_id)
+    return ergebnis
+
+
+def _erbe_grundauswahl(
+    gespeichert: list[str] | None, grundauswahl: list[str] | None, herkunft: str,
+) -> list[str] | None:
+    """ADR-0050 Regeln 1/2/4 auf die Ausgabeflaeche "Ausblick" (#1848 A3).
+
+    EINE Umsetzung fuer beide Flaechen -- Trip und Ortsvergleich reichen nur
+    ihre je eigene Grundauswahl herein (Trip/Compare-Teilungs-Invariante).
+    Der Ausblick verhaelt sich damit wie ein Kanal: die Grundauswahl ist die
+    Ausgangsmenge, die gespeicherte Auswahl darf davon nur ABWAEHLEN.
+
+    * ``gespeichert == []`` -- bewusst geleert, der Block entfaellt ganz
+      (AC-11, unveraendert).
+    * ``grundauswahl`` leer/``None`` -- kein Maximum definiert (ADR-0050 D4):
+      kein Schnitt, Altverhalten. ``None`` faellt weiterhin auf die sieben
+      festen Spalten zurueck.
+    * ``gespeichert is None`` -- nie etwas eingestellt heisst "nichts
+      abgewaehlt": die GANZE Grundauswahl (AC-3), nicht die frueheren sieben
+      festen Spalten.
+    * sonst der Schnitt: eine in der Grundauswahl abgewaehlte Groesse
+      erscheint nie, egal was gespeichert ist (AC-4/AC-6).
+
+    🔴 Bleibt nach dem Schnitt NICHTS uebrig, ist das NICHT ``[]`` (AC-10):
+    ``[]`` heisst "bewusst geleert" und laesst den Block bei
+    ``html.py:1356``/``plain.py:314`` kommentarlos verschwinden. Eine
+    gespeicherte, aber vollstaendig ausserhalb der Grundauswahl liegende
+    Auswahl (Altbestand, geaenderte Grundauswahl) faellt stattdessen auf die
+    volle Grundauswahl zurueck -- sichtbar protokolliert. "Unaufloesbar" und
+    "bewusst geleert" duerfen nie denselben Zustand erzeugen.
+    """
+    if gespeichert == []:
+        return []
+    if not grundauswahl:
+        return gespeichert
+    if gespeichert is None:
+        return list(grundauswahl)
+    aktiv = [metric_id for metric_id in gespeichert if metric_id in grundauswahl]
+    if aktiv:
+        return aktiv
+    logger.warning(
+        "Ausblick: keine Groesse aus %s liegt in der %s (%s) — Rueckfall auf "
+        "die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist "
+        "NICHT bewusst geleert)", gespeichert, herkunft, grundauswahl,
+    )
+    return list(grundauswahl)
+
+
+def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[str] | None:
+    """Trip-Vorschau: die Grundauswahl ist die Ausgangsmenge (#1720 S1/#1848 A3).
+
+    Grundauswahl-Quelle ist dieselbe gemeinsame Funktion wie beim Kanal-Layout:
     ``UnifiedWeatherDisplayConfig.allowed_metric_ids_for_report_type()``
     (ADR-0050 Regel 1/2 auf die Ausgabeflaeche "Vorschau" ausgeweitet,
-    PO-Entscheid 2026-08-14; EINE Quelle seit #1848 Scheibe A -- vorher trug
-    diese Funktion eine eigene Nachbildung der Regeln). Hier bleibt nur die
-    Anwendung auf das ``{metric_id, aggregation}``-Vokabular: ``None`` von der
-    gemeinsamen Quelle heisst "kein Maximum definiert" (D4) -> kein Schnitt,
-    die Reihenfolge der Auswahl bleibt erhalten.
+    PO-Entscheid 2026-08-14; EINE Quelle seit #1848 Scheibe A). ``dc.metrics``
+    liefert dazu nur die REIHENFOLGE -- ueber die Zugehoerigkeit entscheidet
+    allein die gemeinsame Quelle.
 
-    Die Drei-Werte-Semantik von ``resolve_outlook_metrics()`` bleibt
-    unberuehrt: ``None`` (Feld fehlt ODER nichts aufloesbar, #1848 A2) bleibt
-    ``None``, ``[]`` (bewusst geleert) bleibt ``[]`` -- der Schnitt wirkt nur
-    auf einer bereits aufgeloesten, nicht-leeren Liste.
+    #1848 A3: ``None`` (nie eingestellt) heisst nicht mehr "sieben feste
+    Spalten", sondern "nichts abgewaehlt" -> die ganze Grundauswahl. Die
+    Regelanwendung selbst steht in ``_erbe_grundauswahl()``, gemeinsam mit dem
+    Ortsvergleich.
 
     🔴 ``dc`` MUSS der ungekollabierte Stand sein: geschnitten wird gegen die
     kanal-neutrale ``get_metrics_for_report_type()``, denn der Ausblick hat
@@ -151,13 +212,54 @@ def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[str] | No
     ``per_channel_layouts["email"]`` (#429) darf eine global aktive, gewaehlte
     Groesse nicht aus der Vorschau schneiden (Adversary-Finding F001).
     """
-    resolved = resolve_outlook_metrics(getattr(dc, "outlook_metrics", None))
-    if not resolved:
-        return resolved
+    gespeichert = resolve_outlook_metrics(getattr(dc, "outlook_metrics", None))
     allowed = dc.allowed_metric_ids_for_report_type(report_type)
-    if allowed is None:
-        return resolved
-    return [metric_id for metric_id in resolved if metric_id in allowed]
+    grundauswahl = None if allowed is None else outlook_grundauswahl_ids(
+        [mc.metric_id for mc in getattr(dc, "metrics", None) or ()
+         if mc.metric_id in allowed]
+    )
+    return _erbe_grundauswahl(gespeichert, grundauswahl, "Trip-Grundauswahl")
+
+
+def resolve_compare_outlook_metrics(
+    outlook_metrics: object, enabled_metrics: list[str] | None,
+) -> list[str] | None:
+    """Ortsvergleich-Ausblick: dieselbe Kopplung wie im Trip (#1848 A3, AC-6).
+
+    ``enabled_metrics`` ist die bereits aufgeloeste Grundauswahl der
+    Uebersichtstabelle (``resolve_enabled_metrics(active_metrics)``, Renderer-
+    Kennungen) -- dieselbe Menge, die seit #1703 Scheibe 8 schon als MAXIMUM
+    fuer die Kanal-Auswahl dient. ``None`` (Feld fehlt, Altbestand) heisst
+    weiterhin "kein Maximum definiert" und schneidet nicht.
+
+    Loest ADR-0053 Punkt 1 ab ("Ausblick bleibt bewusst ohne Kaskadenbindung"):
+    die Bindung gilt ab dieser Scheibe in BEIDEN Flaechen gleich.
+    """
+    gespeichert = resolve_outlook_metrics(outlook_metrics)
+    grundauswahl = None if enabled_metrics is None else outlook_grundauswahl_ids(
+        _kennungen_aus_renderer_ids(enabled_metrics)
+    )
+    return _erbe_grundauswahl(gespeichert, grundauswahl, "Ortsvergleich-Grundauswahl")
+
+
+def _kennungen_aus_renderer_ids(renderer_ids: list[str]) -> list[str]:
+    """Renderer-Kennungen der Uebersicht -> Katalog-Kennungen des Ausblicks.
+
+    Der Umkehr-Index wird aus dem Compare-Katalog GERECHNET (``key`` ->
+    ``metric_id``) statt getippt -- eine zweite Uebersetzungstabelle waere
+    genau das vierte Vokabular, das ``compare_metric_ids`` vermeidet. Mehrere
+    Auswertungen derselben Groesse fallen dabei auf dieselbe Kennung zusammen;
+    die Reihenfolge des ersten Vorkommens bleibt erhalten.
+    """
+    from output.renderers.compare_metric_catalog import get_compare_metric_catalog
+    from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
+
+    umkehr: dict[str, str] = {}
+    for eintrag in get_compare_metric_catalog():
+        renderer_id = FRONTEND_TO_RENDERER_METRIC_ID.get(eintrag["key"])
+        if renderer_id is not None:
+            umkehr.setdefault(renderer_id, eintrag["metric_id"])
+    return [umkehr[r] for r in renderer_ids if r in umkehr]
 
 
 def outlook_columns(metrics: object) -> list[dict]:
@@ -340,7 +442,9 @@ def format_outlook_range_cell(raw_min: object, raw_max: object, column: dict) ->
 
 __all__ = [
     "derived_aggregations",
+    "outlook_grundauswahl_ids",
     "resolve_outlook_metrics",
+    "resolve_compare_outlook_metrics",
     "resolve_trip_outlook_metrics",
     "outlook_columns",
     "format_outlook_value",
