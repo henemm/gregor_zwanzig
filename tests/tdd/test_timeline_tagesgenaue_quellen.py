@@ -642,3 +642,184 @@ def test_hinweistext_nennt_das_briefing_kommando_ohne_falsches_versprechen():
             f"fuellt — das tut sie nicht, `morgen`/`heute` schreiben keinen "
             f"Anker (#1007):\n{body}"
         )
+
+
+# ══════════════════════ Adversary-Findings F005 / F001 ══════════════════════
+#
+# Beide Tests decken Zusicherungen ab, die der Adversary-Durchgang als
+# UNGEPRUEFT nachgewiesen hat (docs/artifacts/fix-1818-timeline-
+# zweitagesanker/adversary-dialog.md, F001 CRITICAL und F005 HIGH).
+# ---------------------------------------------------------------------------
+
+def _platzhalter_segmente(tag: date, *, seg_id: int) -> list[SegmentWeatherData]:
+    """Der Wegpunkt eines GESCHEITERTEN Segment-Abrufs (WEATHER-04) — exakt
+    das Objekt, das ``_fetch_weather`` bei aufgebrauchtem Retry-Budget
+    anlegt (``trip_report_scheduler.py:2035-2044``): ``SegmentWeatherSummary()``
+    ohne einen einzigen Messwert, ``has_error=True``, ``provider="unknown"``.
+
+    Auf Touren mit Kontingent-Limits (429) ist das kein Sonderfall, sondern
+    Alltag: der Anker traegt den Tag dann technisch, inhaltlich aber nichts.
+    """
+    ankunft = datetime(tag.year, tag.month, tag.day, 8, 0, tzinfo=timezone.utc)
+    vorlage = _seg(ankunft, seg_id=seg_id, temp_min=0.0, temp_max=0.0)
+    return [SegmentWeatherData(
+        segment=vorlage.segment,
+        timeseries=None,
+        aggregated=SegmentWeatherSummary(),
+        fetched_at=ankunft,
+        provider="unknown",
+        has_error=True,
+        error_message="HTTP 429 (Kontingent)",
+    )]
+
+
+def test_leerer_fehlerplatzhalter_im_anker_verliert_gegen_echte_werte():
+    """Adversary F005.
+
+    GIVEN der Anker traegt fuer HEUTE nur einen inhaltsleeren
+          Fehler-Platzhalter (Teil-Ausfall des Abrufs), waehrend der datierte
+          Snapshot ``{trip}_{heute}.json`` desselben Tages vollstaendige
+          Messwerte (21–29 °C) enthaelt,
+    WHEN  der Nutzer ``timeline_heute`` abfragt,
+    THEN  zeigt die Antwort die ECHTEN Werte aus dem datierten Snapshot — und
+          NICHT die Fragezeichen des Platzhalters.
+
+    Ohne die Nutzbarkeitspruefung genuegt die blosse EXISTENZ eines
+    Wegpunkts, damit der Tag als „vom Anker getragen" gilt: der Rueckfall
+    wird uebersprungen und der Nutzer sieht „🌡 ?–? °C", obwohl die Werte
+    lokal vorliegen.
+    """
+    with freeze_time(EMPFANGEN_UTC):
+        trip = _trip("f005-platzhalter", [HEUTE, MORGEN])
+        # Lauf 1 — Morgen-Briefing mit vollstaendigen Daten: Anker UND
+        # datierter Snapshot fuer HEUTE tragen 21–29 °C.
+        _briefing_lauf(
+            trip.id,
+            _tages_segmente(HEUTE, seg_id=1, temp_min=21.0, temp_max=29.0),
+            HEUTE,
+        )
+        # Lauf 2 — Nachladung aus dem Abfragepfad, deren Abruf scheitert:
+        # ueberschreibt den Anker mit dem leeren Platzhalter, laesst den
+        # datierten Snapshot unberuehrt (``_fetch_and_save_snapshot`` schreibt
+        # keinen datierten).
+        _briefing_lauf_ohne_datierten(
+            trip.id, _platzhalter_segmente(HEUTE, seg_id=1), HEUTE,
+        )
+        assert (get_snapshots_dir("default") / f"{trip.id}_{HEUTE}.json").exists(), (
+            "Testaufbau: der datierte Snapshot fuer heute muss vorliegen."
+        )
+        body = _befehl(trip, "### query: timeline_heute").confirmation_body
+
+    assert "🌡 ?–? °C" not in body, (
+        f"F005: der inhaltsleere Fehler-Platzhalter des Ankers gewinnt gegen "
+        f"die echten Werte des datierten Snapshots:\n{body}"
+    )
+    assert "🌡 21–29 °C" in body, (
+        f"F005: die real vorliegenden Werte '🌡 21–29 °C' aus dem datierten "
+        f"Snapshot fehlen:\n{body}"
+    )
+
+
+def test_ohne_brauchbare_werte_ueberall_erscheint_die_ehrliche_datenluecke():
+    """Adversary F005, Grenzfall — KEINE der beiden Quellen traegt Werte.
+
+    GIVEN ein Briefing-Lauf fuer MORGEN ist im Abruf gescheitert und hat
+          BEIDE Quellen mit inhaltsleeren Fehler-Platzhaltern belegt (Anker
+          UND datierter Snapshot ``{trip}_{morgen}.json``), obwohl der Trip an
+          diesem Tag eine Etappe hat,
+    WHEN  der Nutzer ``timeline_morgen`` abfragt,
+    THEN  erscheint die ehrliche Datenluecken-Meldung — weder „🌡 ?–? °C"
+          noch die Tourplanungs-Aussage „Keine Etappe geplant".
+
+    Prueft beide Haelften der Nutzbarkeitsregel an EINEM Fall: der Platzhalter
+    des Ankers muss verworfen werden UND der Platzhalter des datierten
+    Snapshots darf nicht nachgezogen werden. ``_fmt_timeline`` erreicht
+    ``_tagesaussage_ohne_daten`` nur bei LEERER Punktliste — jeder
+    verbliebene Platzhalter verdeckt die Fehlanzeige.
+    """
+    with freeze_time(EMPFANGEN_UTC):
+        trip = _trip("f005-luecke", [HEUTE, MORGEN])
+        _briefing_lauf(trip.id, _platzhalter_segmente(MORGEN, seg_id=2), MORGEN)
+        assert (get_snapshots_dir("default") / f"{trip.id}_{MORGEN}.json").exists(), (
+            "Testaufbau: der datierte Snapshot fuer morgen muss existieren und "
+            "seinerseits nur Platzhalter tragen — sonst prueft dieser Test nur "
+            "die halbe Regel."
+        )
+        body = _befehl(trip, "### query: timeline_morgen").confirmation_body
+
+    assert "🌡 ?–? °C" not in body, (
+        f"F005: statt einer ehrlichen Fehlanzeige zeigt die Antwort die "
+        f"Fragezeichen des Fehler-Platzhalters:\n{body}"
+    )
+    assert FALSCHAUSSAGE not in body, (
+        f"F005: die Antwort behauptet {FALSCHAUSSAGE!r}, obwohl morgen eine "
+        f"Etappe existiert:\n{body}"
+    )
+    assert LUECKE in body, (
+        f"F005: erwartete ehrliche Fehlanzeige {LUECKE!r} fehlt:\n{body}"
+    )
+
+
+def test_rueckfall_wegpunkt_rutscht_nicht_in_den_nachbartag():
+    """Adversary F001 — der zweite Tagesfilter ueber die Rueckfall-Punkte.
+
+    GIVEN der datierte Snapshot ``{trip}_{heute}.json`` enthaelt ZWEI
+          Wegpunkte: einen spaet am Ortstag heute (22:00 Ortszeit, 10–18 °C)
+          und einen, dessen Ankunft die lokale Mitternacht ueberschreitet und
+          damit auf MORGEN faellt (01:30 Ortszeit, 30–40 °C); der Anker
+          traegt nach dem Abend-Briefing nur MORGEN (12–19 °C),
+    WHEN  der Nutzer heute UND morgen abfragt,
+    THEN  erscheint der Wegpunkt nach lokaler Mitternacht in KEINER der
+          beiden Ansichten — der Rueckfall zieht nur, was ortszeitlich
+          wirklich zum angefragten Tag gehoert.
+
+    Ohne den Tagesfilter in ``_mit_datiertem_rueckfall`` landet dieser
+    Wegpunkt in der gemeinsamen Punktliste und faerbt die MORGEN-Ansicht ein,
+    obwohl er aus der HEUTE-Datei stammt: die Datei ist nach dem NOMINELLEN
+    ``target_date`` benannt, ihre Wegpunkte tragen aber echte Zeitstempel.
+
+    Ortszeit ist die Aufloesungsebene (ADR-0044/#1795): Korsika liegt im
+    August auf UTC+2, 23:30 UTC ist dort bereits 01:30 des Folgetages.
+    """
+    with freeze_time(EMPFANGEN_UTC):
+        trip = _trip("f001-nachbartag", [HEUTE, MORGEN])
+        spaet = _seg(
+            datetime(HEUTE.year, HEUTE.month, HEUTE.day, 20, 0, tzinfo=timezone.utc),
+            seg_id=1, temp_min=10.0, temp_max=18.0,
+        )
+        nach_mitternacht = _seg(
+            datetime(HEUTE.year, HEUTE.month, HEUTE.day, 23, 30, tzinfo=timezone.utc),
+            seg_id=2, temp_min=30.0, temp_max=40.0,
+        )
+        # Lauf 1 — Morgen-Briefing: datierter Snapshot fuer HEUTE mit beiden
+        # Wegpunkten (die Datei traegt das nominelle Datum, nicht die Ortstage
+        # ihrer Wegpunkte).
+        _briefing_lauf(trip.id, [spaet, nach_mitternacht], HEUTE)
+        # Lauf 2 — Abend-Briefing: ueberschreibt den Anker mit MORGEN.
+        _briefing_lauf(
+            trip.id,
+            _tages_segmente(MORGEN, seg_id=3, temp_min=12.0, temp_max=19.0),
+            MORGEN,
+        )
+        heute_body = _befehl(trip, "### query: timeline_heute").confirmation_body
+        morgen_body = _befehl(trip, "### query: timeline_morgen").confirmation_body
+
+    # Vorbedingung: der Rueckfall greift ueberhaupt.
+    assert "🕐 22:00" in heute_body and "🌡 10–18 °C" in heute_body, (
+        f"Testaufbau: der Rueckfall fuer heute greift nicht:\n{heute_body}"
+    )
+    assert "🌡 12–19 °C" in morgen_body, (
+        f"Testaufbau: die morgigen Ankerwerte fehlen:\n{morgen_body}"
+    )
+    assert "🌡 30–40 °C" not in morgen_body, (
+        f"F001: der Wegpunkt aus der HEUTE-Datei, der ortszeitlich auf MORGEN "
+        f"faellt, ist in die morgige Ansicht gerutscht:\n{morgen_body}"
+    )
+    assert "🕐 01:30" not in morgen_body, (
+        f"F001: die 01:30-Zeile stammt aus dem datierten Snapshot fuer HEUTE "
+        f"und gehoert nicht in die morgige Ansicht:\n{morgen_body}"
+    )
+    assert "🌡 30–40 °C" not in heute_body, (
+        f"F001: der Wegpunkt nach lokaler Mitternacht erscheint in der "
+        f"heutigen Ansicht:\n{heute_body}"
+    )

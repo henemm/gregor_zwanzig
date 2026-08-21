@@ -16,12 +16,16 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip
 from services.trip_day import anchor_tz, display_tz, trip_local_now, trip_local_today
 from utils.timezone import UTC, local_dt, local_fmt, local_hour
+
+if TYPE_CHECKING:  # nur fuer die Typangabe — zur Laufzeit bleibt der
+    # Import von ``weather_extractor`` wie bisher call-time (Issue #1818).
+    from services.weather_extractor import TimelineResult
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +144,51 @@ _THUNDER_LABEL = {
     "MED": "mäßig",
     "HIGH": "hoch",
 }
+
+# Issue #1818: der Hinweis, der die ehrliche Fehlanzeige begleitet — je Tag
+# das Kommando, das FUER DIESEN TAG ein Briefing ausloest. `/heute`/`/morgen`
+# versenden ein volles Briefing, schreiben aber KEINEN Anker
+# (`trip_report_scheduler.py:1495-1501`, #1007). Der Text sagt deshalb
+# ausschliesslich die ZUSTELLUNG des Briefings zu — ein Versprechen, dass sich
+# die Timeline-Ansicht danach fuelle, waere falsch und erzeugte eine
+# Frustschleife (Kontext-Risiko 5).
+_BRIEFING_HINWEIS = {
+    "today": "mit /heute wird dir das Briefing für heute sofort zugestellt",
+    "tomorrow": "mit /morgen wird dir das Briefing für morgen sofort zugestellt",
+}
+
+# Issue #1818 (Adversary-Finding F005): die Groessen, aus denen die vier
+# Formatierer ihre Tagesaussage bauen -- `_fmt_timeline` zeigt genau
+# temp_min_c/temp_max_c/wind_max_kmh/precip_sum_mm/thunder_level_max,
+# `_aggregate_day` aggregiert dieselben plus pop_max_pct (Buttons/Glance).
+# Ein Wegpunkt, der KEINE davon traegt, kann in keiner Ausgabe etwas anderes
+# als Fragezeichen erzeugen.
+_TAGESWERTE = (
+    "temp_min_c", "temp_max_c", "wind_max_kmh", "precip_sum_mm",
+    "thunder_level_max", "pop_max_pct",
+)
+
+
+def _traegt_tageswerte(point) -> bool:
+    """POSITIV-Kriterium (Issue #1818, F005): traegt dieser Wegpunkt
+    mindestens EINEN auswertbaren Tageswert?
+
+    Bewusst KEINE Negativliste bekannter Fehlerformen: `_fetch_weather`
+    erzeugt bei einem teilweise gescheiterten Abruf ein Segment mit
+    `SegmentWeatherSummary()` (alle Felder None) und `has_error=True`
+    (`trip_report_scheduler.py:2033-2043`) -- aber `has_error` ueberlebt die
+    Umrechnung in `TimelinePoint` gar nicht (dort steht nur `metrics`), und
+    kuenftige Ausfallformen saehen wieder anders aus. Geprueft wird deshalb,
+    was der Punkt LIEFERT, nicht woran er gescheitert ist.
+
+    Nicht gelesen werden die Nicht-Messgroessen der `SegmentWeatherSummary`
+    (`aggregation_config` traegt mit `{}` einen nicht-`None`-Default,
+    `cape_model_id` ist Herkunft, `wind_dir_deg_avg` ein Test-Alias) -- eine
+    generische "irgendein Feld ist gesetzt"-Pruefung wuerde den leeren
+    Platzhalter faelschlich als brauchbar durchwinken.
+    """
+    return any(getattr(point.metrics, feld, None) is not None
+               for feld in _TAGESWERTE)
 
 # Issue #1001: Aktionen-Bubble-Keyboard (Multi-Bubble-Telegram-Redesign).
 # Eigenes Praefix `act_` verhindert Kollision mit den `dd_*`/`tl_*`-Drilldown-
@@ -542,8 +591,17 @@ class TripCommandProcessor:
             _fetch_and_save_snapshot(trip=trip, user_id=user_id, today=today, tomorrow=tomorrow)
             timeline = extractor.timeline(trip.id)
 
+        # Fix #1818: der undatierte Anker traegt strukturell nur EINEN Tag —
+        # der jeweils fehlende wird, falls vorhanden, aus dem datierten
+        # Snapshot rein lesend ergaenzt (kein Abruf, kein Schreibvorgang).
+        timeline = self._mit_datiertem_rueckfall(
+            timeline, trip.id, user_id,
+            ((today, tz_heute), (tomorrow, tz_morgen)),
+        )
+
         if query_key == "glance":
-            body = self._fmt_glance(timeline, today, tomorrow, tz_heute, tz_morgen)
+            body = self._fmt_glance(timeline, today, tomorrow, tz_heute, tz_morgen,
+                                    trip=trip)
             return CommandResult(
                 success=True, command="glance",
                 confirmation_subject=f"[{trip.name}] Glance",
@@ -552,7 +610,7 @@ class TripCommandProcessor:
                 reply_markup=_GLANCE_BUTTONS,
             )
         elif query_key == "heute_gewitter":
-            body = self._fmt_gewitter(timeline, today, tz_heute)
+            body = self._fmt_gewitter(timeline, today, tz_heute, trip=trip)
             return CommandResult(
                 success=True, command="heute_gewitter",
                 confirmation_subject=f"[{trip.name}] Gewitter heute",
@@ -560,7 +618,8 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
         elif query_key == "timeline_heute":
-            body = self._fmt_timeline(timeline, today, "Heute", "today", tz_heute)
+            body = self._fmt_timeline(timeline, today, "Heute", "today", tz_heute,
+                                      trip=trip)
             return CommandResult(
                 success=True, command="timeline_heute",
                 confirmation_subject=f"[{trip.name}] Timeline heute",
@@ -569,7 +628,8 @@ class TripCommandProcessor:
                 reply_markup=self._timeline_buttons(timeline, today, "today", tz_heute),
             )
         elif query_key == "timeline_morgen":
-            body = self._fmt_timeline(timeline, tomorrow, "Morgen", "tomorrow", tz_morgen)
+            body = self._fmt_timeline(timeline, tomorrow, "Morgen", "tomorrow", tz_morgen,
+                                      trip=trip)
             return CommandResult(
                 success=True, command="timeline_morgen",
                 confirmation_subject=f"[{trip.name}] Timeline morgen",
@@ -834,6 +894,83 @@ class TripCommandProcessor:
             lines.append(line)
         return "\n".join(lines)
 
+    def _mit_datiertem_rueckfall(self, timeline: "TimelineResult", trip_id: str,
+                                 user_id: str, tage) -> "TimelineResult":
+        """Gestufte Quellenaufloesung JE angefragtem Tag (Issue #1818).
+
+        Der undatierte Anker ``{trip_id}.json`` traegt strukturell nur EINEN
+        Tag: ``_write_briefing_anchor`` (``trip_report_scheduler.py:1505-1512``)
+        ueberschreibt ihn je Briefing-Lauf vollstaendig. Nach dem
+        Morgen-Briefing fehlt darin morgen, nach dem Abend-Briefing heute.
+
+        Reihenfolge (AC-4): der Anker hat Vorrang, sobald er fuer den Tag
+        AUSWERTBARE Werte traegt (`_traegt_tageswerte`, F005) — die blosse
+        Existenz eines Wegpunkts genuegt nicht, sonst gewaenne ein
+        inhaltsleerer Fehler-Platzhalter gegen echte Werte. Nur fuer einen
+        Tag, den er so nicht traegt, wird der bereits vorliegende datierte
+        Snapshot ``{trip_id}_{YYYY-MM-DD}.json`` rein LESEND nachgezogen — kein
+        Netzabruf, kein Schreibvorgang (AC-7). Der Tagesfilter ist derselbe
+        wie in ``_aggregate_day``/``_fmt_timeline`` (Ortstag, #1795), damit
+        ein Rueckfall-Wegpunkt nicht in einen fremden Tag rutscht.
+
+        ``tage`` ist eine Folge von ``(target_date, tz)``-Paaren.
+        """
+        if not timeline.available:
+            return timeline
+        from services.weather_extractor import WeatherExtractor
+        extractor = WeatherExtractor(user_id=user_id)
+        ergaenzt = []
+        verworfen: set[int] = set()
+        for target_date, tz in tage:
+            tages_idx = [i for i, p in enumerate(timeline.points)
+                         if local_dt(p.arrival_time, tz).date() == target_date]
+            if any(_traegt_tageswerte(timeline.points[i]) for i in tages_idx):
+                continue  # der Anker traegt den Tag mit Werten — er gewinnt (AC-4)
+            # Der Anker traegt fuer diesen Tag hoechstens inhaltsleere
+            # Fehler-Platzhalter (F005). Die werden verworfen: bleiben sie
+            # liegen, gewinnt „🌡 ?–? °C" gegen echte Werte aus dem datierten
+            # Snapshot — und wenn auch der nichts hergibt, verdecken sie die
+            # ehrliche Datenluecken-Meldung, weil die Punktliste der
+            # Formatierer dann nicht leer ist.
+            verworfen.update(tages_idx)
+            datiert = extractor.timeline_dated(trip_id, target_date)
+            ergaenzt.extend(
+                p for p in datiert.points
+                if local_dt(p.arrival_time, tz).date() == target_date
+                and _traegt_tageswerte(p)
+            )
+        if not ergaenzt and not verworfen:
+            return timeline
+        return dataclasses.replace(
+            timeline,
+            points=[p for i, p in enumerate(timeline.points)
+                    if i not in verworfen] + ergaenzt,
+        )
+
+    def _tagesaussage_ohne_daten(self, trip: Optional[Trip], target_date: date,
+                                 day_token: str, *, zusatz: str = "") -> str:
+        """Was ueber ``target_date`` zu sagen ist, wenn KEINE Wetterdaten
+        vorliegen (Issue #1818).
+
+        Bisher sagten alle vier Formatierer pauschal „Keine Etappe geplant" —
+        eine Aussage ueber die TOURPLANUNG, obwohl das System nur etwas ueber
+        den DATENBESTAND weiss. ``convert_trip_to_segments`` beantwortet die
+        Planungsfrage netzfrei und rein tourplan-basiert (kein Wetter, kein
+        Schreibvorgang): nichtleere Liste = es gibt an diesem Tag eine Etappe.
+
+        ``trip=None`` (Direktaufruf eines Formatierers ohne Trip-Kontext)
+        behaelt das bisherige Verhalten bei — ohne Tourplan ist die
+        Unterscheidung nicht entscheidbar.
+        """
+        if trip is not None:
+            from services.trip_segments import convert_trip_to_segments
+            if convert_trip_to_segments(trip, target_date):
+                hinweis = _BRIEFING_HINWEIS.get(day_token)
+                if hinweis:
+                    return f"noch keine Wetterdaten — {hinweis}."
+                return "noch keine Wetterdaten."
+        return f"Keine Etappe geplant{zusatz}"
+
     def _aggregate_day(self, timeline, target_date, tz) -> Optional[dict]:
         """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte.
 
@@ -911,10 +1048,15 @@ class TripCommandProcessor:
             f"🌧 {precip}mm  ⛈ Gewitter: {thunder_label}"
         )
 
-    def _fmt_glance(self, timeline, today, tomorrow, tz_heute, tz_morgen) -> str:
+    def _fmt_glance(self, timeline, today, tomorrow, tz_heute, tz_morgen,
+                    *, trip: Optional[Trip] = None) -> str:
         """Fix #1795 AC-4: je Tag die Zone SEINER EIGENEN Etappe — ``tz_heute``
         für ``today``, ``tz_morgen`` für ``tomorrow`` (nicht eine gemeinsame
-        Zone für beide Tage)."""
+        Zone für beide Tage).
+
+        Fix #1818: ``trip`` trennt „keine Wetterdaten" von „keine Etappe"
+        (s. ``_tagesaussage_ohne_daten``) — je Zeile eigenstaendig, damit der
+        vorhandene Tag unveraendert aggregiert bleibt (AC-5)."""
         if not timeline.available:
             return (
                 "Kein Wetter-Snapshot verfügbar. "
@@ -926,14 +1068,20 @@ class TripCommandProcessor:
         if agg_heute:
             lines.append(self._fmt_day_agg(agg_heute, f"heute ({today:%d.%m})"))
         else:
-            lines.append(f"heute ({today:%d.%m}): Keine Etappe geplant")
+            lines.append(f"heute ({today:%d.%m}): " + self._tagesaussage_ohne_daten(
+                trip, today, "today"))
         if agg_morgen:
             lines.append(self._fmt_day_agg(agg_morgen, f"morgen ({tomorrow:%d.%m})"))
         else:
-            lines.append(f"morgen ({tomorrow:%d.%m}): Keine Etappe geplant")
+            lines.append(f"morgen ({tomorrow:%d.%m}): " + self._tagesaussage_ohne_daten(
+                trip, tomorrow, "tomorrow"))
         return "\n".join(lines)
 
-    def _fmt_gewitter(self, timeline, today, tz) -> str:
+    def _fmt_gewitter(self, timeline, today, tz,
+                      *, trip: Optional[Trip] = None) -> str:
+        """Fix #1818: ``trip`` trennt „keine Wetterdaten" von „keine Etappe"
+        (s. ``_tagesaussage_ohne_daten``); der Zusatz „— kein Gewitter-Status"
+        bleibt dem tatsaechlich etappenlosen Tag vorbehalten (AC-6)."""
         if not timeline.available:
             return (
                 "Kein Wetter-Snapshot verfügbar. "
@@ -941,7 +1089,8 @@ class TripCommandProcessor:
             )
         agg = self._aggregate_day(timeline, today, tz)
         if not agg:
-            return f"Heute ({today:%d.%m}): Keine Etappe geplant — kein Gewitter-Status."
+            return f"Heute ({today:%d.%m}): " + self._tagesaussage_ohne_daten(
+                trip, today, "today", zusatz=" — kein Gewitter-Status.")
         thunder = agg["thunder"]
         label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
         # Issue #1475 S5a: derselbe geteilte Textbaustein wie in den Mail-
@@ -966,8 +1115,12 @@ class TripCommandProcessor:
             suffix = f" · {herkunft}{suffix}"
         return f"⛈ Gewitter heute ({today:%d.%m}): {label}{suffix}"
 
-    def _fmt_timeline(self, timeline, target_date, label: str, day_token: str, tz) -> str:
+    def _fmt_timeline(self, timeline, target_date, label: str, day_token: str, tz,
+                      *, trip: Optional[Trip] = None) -> str:
         """Vertikale Timeline: pro Wegpunkt zwei Zeilen (Zeit/Höhe + Metriken).
+
+        Fix #1818: ``trip`` trennt „keine Wetterdaten" von „keine Etappe"
+        (s. ``_tagesaussage_ohne_daten``).
 
         Fix #1795: sowohl der Tagesfilter (``local_dt(...).date()``, AC-3) als
         auch die 🕐-Uhrzeit (``local_fmt``, AC-1/AC-5) laufen über die
@@ -984,7 +1137,8 @@ class TripCommandProcessor:
             key=lambda p: p.arrival_time,
         )
         if not pts:
-            return f"{label} ({target_date:%d.%m}): Keine Etappe geplant"
+            return f"{label} ({target_date:%d.%m}): " + self._tagesaussage_ohne_daten(
+                trip, target_date, day_token)
 
         lines = [f"📋 Timeline · {label} ({target_date:%d.%m})", ""]
         for p in pts:
