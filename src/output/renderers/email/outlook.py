@@ -31,7 +31,8 @@ if TYPE_CHECKING:
 from app.metric_catalog import get_metric
 from output.renderers.email.helpers import format_trend_tokens
 from output.renderers.email.thunder_branch import (
-    _thunder_token_parts, resolve_thunder_day_branch,
+    resolve_thunder_day_branch, thunder_cell_html, thunder_cell_plain,
+    thunder_column_index,
 )
 from output.renderers.email.design_tokens import FONT_DATA, tone_css
 from utils.geo import degrees_to_compass
@@ -132,17 +133,24 @@ def render_outlook_table(
         head = "".join(
             f'<th {_oh_style}>{_html.escape(c["label"])}</th>' for c in columns
         )
+        # #1848 A3: die Gewitter-Zelle entsteht aus DEMSELBEN Zellenbau wie im
+        # festen Zweig darunter (thunder_cell_html) -- `cells` traegt dort nur
+        # das Stufenwort, ohne Onset-Uhrzeit, Nachtanteil, Herkunft und Hagel.
+        gew_index = thunder_column_index(columns)
         body = ""
         for stage in rows:
             cells = stage.get("cells") or []
             # Issue #1849: Ampel-Hintergruende parallel zu den Zellentexten.
             cell_bg = stage.get("cell_bg") or []
+            texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
+            if gew_index is not None:
+                texte[gew_index] = thunder_cell_html(format_trend_tokens(stage), stage)
             body += (
                 '<tr>' + _otd(stage.get("weekday", "–"))
                 + "".join(
-                    _otd(_html.escape(cells[i] if i < len(cells) else "–"),
+                    _otd(_html.escape(text),
                          bg=cell_bg[i] if i < len(cell_bg) else "")
-                    for i in range(len(columns))
+                    for i, text in enumerate(texte)
                 )
                 + '</tr>'
             )
@@ -169,17 +177,6 @@ def render_outlook_table(
         f'</tr></thead>'
     )
 
-    # Issue #1474: LOW ("leicht") ergaenzt -- Wort aus der geteilten Quelle
-    # (metric_format.THUNDER_LABEL_DE, "geteilte Quelle statt Kopien").
-    # Str-Enum-Hash-Aequivalenz (s. metric_format.py): der rohe String-Key
-    # findet denselben Eintrag wie die ThunderLevel-Instanz.
-    from output.metric_format import THUNDER_LABEL_DE as _THUNDER_LABEL_DE
-    from output.metric_format import format_hail_note as _format_hail_note
-    _THUNDER_LEVEL_LABEL = {
-        "LOW": _THUNDER_LABEL_DE["LOW"],
-        "MED": _THUNDER_LABEL_DE["MED"],
-        "HIGH": _THUNDER_LABEL_DE["HIGH"],
-    }
     # Fix #1801 S1: MED/HIGH aus tone_css() (EINE Quelle); LOW bleibt bewusst
     # ein abweichender, eigener Gelbton ausserhalb des Ampel-Vokabulars
     # (Spec „Nicht-Ziele").
@@ -206,54 +203,13 @@ def render_outlook_table(
         hourly_gust = stage.get("hourly_gust") or ()
         gust_kmh = max((float(g.value) if hasattr(g, "value") else float(g)
                         for g in hourly_gust if g is not None), default=None)
-        # F002: Gew = Stufe + Uhrzeit (kein Fake-%), Hintergrund nach Level
+        # F002: Gew = Stufe + Uhrzeit (kein Fake-%), Hintergrund nach Level.
+        # #1848 A3: der Zellenbau (Tag/Nacht-Split #1653, Onset-Uhrzeit,
+        # Herkunft #1680 S5a, Hagel-Zusatz #1475) steht jetzt in
+        # `thunder_cell_html()` -- DIESELBE Quelle, die auch der
+        # konfigurierbare Zweig oben ruft.
         thunder_level = (stage.get("thunder", "NONE") or "NONE").upper()
-        # Issue #1653: Tag- und Nachtanteil getrennt, damit ein Nachtgewitter
-        # nicht mehr hinter dem staerkeren Tageswert verschwindet -- oder
-        # umgekehrt. Wort UND Uhrzeit des Tagesteils stammen aus demselben
-        # Token und damit aus demselben Fenster; vorher kam das Wort aus
-        # `stage["thunder"]` (auf die Gehzeit geklemmtes Aggregat) und nur die
-        # Uhrzeit aus dem Tagesfenster -- zwei Rechnungen, die nur meist
-        # uebereinstimmten: sagte das Aggregat "NONE", waehrend im Tagesfenster
-        # ein Gewitter lag, verschwand der Tagesteil ganz.
-        day_part = None
-        d_tok = tokens.get("thunder_day_token", "-")
-        _d = _thunder_token_parts(d_tok)
-        if _d:
-            day_part = f"{_d[0]} @{_d[1]}{_d[2]}"
-            # Issue #1680 S5a: die tragende Zutat unmittelbar hinter der
-            # Uhrzeit des Tagesteils -- vor Nacht- und Hagel-Zusatz (AC-1/AC-5).
-            _origin = tokens.get("thunder_day_origin")
-            if _origin:
-                day_part += f" · {_origin}"
-        elif not (stage.get("hourly_thunder") or ()) and thunder_level in (
-            "LOW", "MED", "HIGH",
-        ):
-            # Ohne jede Stundenreihe kann der Split nichts sagen -- dann wie
-            # bisher die Stufe des Aggregats ohne Uhrzeit (Alt-Fixtures).
-            day_part = _THUNDER_LEVEL_LABEL[thunder_level]
-
-        night_part = None
-        n_tok = tokens.get("thunder_night_token", "-")
-        _m = _thunder_token_parts(n_tok)
-        if _m:
-            night_part = f"nachts {_m[0]} @{_m[1]}{_m[2]}"
-
-        if day_part and night_part:
-            gew_str = f"{day_part} · {night_part}"
-        elif day_part:
-            gew_str = day_part
-        elif night_part:
-            gew_str = night_part
-        else:
-            gew_str = "–"
-
-        if gew_str != "–":
-            # Issue #1475 Nachbesserung (Punkt 4b): rein deskriptiver
-            # Hagel-Zusatz an der Gewitter-Zelle (ADR-0007, kein Rat).
-            _hail_note = _format_hail_note(stage.get("hail"))
-            if _hail_note:
-                gew_str += f" · {_hail_note}"
+        gew_str = thunder_cell_html(tokens, stage)
 
         n_str = f"{temp_min:.0f}°" if temp_min is not None else "–"
         d_str = f"{temp_max:.0f}°" if temp_max is not None else "–"
@@ -333,12 +289,28 @@ def render_outlook_plain(
         if metrics is not None:
             from output.renderers.compare_outlook_metric_ids import outlook_columns
 
+            columns = outlook_columns(metrics)
             cells = stage.get("cells") or []
+            texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
+            # #1848 A3: Gewitterfeld aus DEMSELBEN Zellenbau wie der feste
+            # Zweig darunter -- mit Onset-Uhrzeit, Nachtanteil, Herkunft und
+            # Hagel statt bloss dem Stufenwort aus `cells`.
+            gew_index = thunder_column_index(columns)
+            if gew_index is not None:
+                texte[gew_index] = thunder_cell_plain(format_trend_tokens(stage), stage)
             values = "  ".join(
-                f"{c['label']} {cells[i] if i < len(cells) else '–'}"
-                for i, c in enumerate(outlook_columns(metrics))
+                f"{c['label']} {texte[i]}" for i, c in enumerate(columns)
             )
-            lines.append(f"{weekday:<3} {values}".rstrip())
+            # #1848 A3: Etappenname und Notiz stehen auch hier -- der feste
+            # Zweig darunter fuehrt beide seit jeher, und seit A3 laeuft JEDE
+            # Tour ueber diesen Zweig. Ohne sie verloere der Klartext-Ausblick
+            # die Zuordnung Zeile -> Etappe. `show_name=False` (Ortsvergleich,
+            # #1368) laesst das Feld wie bisher entfallen.
+            name_field = f"{stage.get('name', ''):<26} " if show_name else ""
+            lines.append(f"{weekday:<3} {name_field}{values}".rstrip())
+            note = stage.get("note")
+            if note:
+                lines.append(f"    ↳ {note}")
             continue
 
         tok = format_trend_tokens(stage)
@@ -346,66 +318,17 @@ def render_outlook_plain(
         # Precip str — zero decision from format_trend_tokens
         precip_str = tok["precip_str"]
 
-        # Issue #1653: das Tageswort stammt aus derselben Quelle wie in der
-        # HTML-Zelle -- `thunder_day_token` (nach Tagesfenster gefilterte
-        # Stundenreihe), nicht mehr aus `stage["thunder"]` ueber
-        # `tok['thunder_plain']` (auf die Gehzeit geklemmtes Aggregat). Zwei
-        # Rechnungen, die nur meist uebereinstimmten: sagte das Aggregat
-        # "NONE", waehrend im Tagesfenster ein Gewitter lag, verschwand es
-        # hier ganz -- und umgekehrt behauptete die Zeile ein Tagesgewitter,
-        # wenn das Aggregat eine Stufe trug, die Stundenreihe im Tagesfenster
-        # aber leer war.
-        # Issue #1671: Zweigwahl aus dem geteilten Helfer (identisch zu
-        # compact.py/narrow.py) -- nur die Formatierung bleibt hier lokal.
-        from output.renderers.email.helpers import _THUNDER_MAP
-        branch = resolve_thunder_day_branch(tok, stage)
-        # Der Helfer entscheidet nur ueber `thunder_day_token != "-"`; ob
-        # der Token tatsaechlich zerlegbar ist (`_THUNDER_TOKEN_RE`),
-        # bleibt Aufrufer-Sache -- ein gesetzter, aber unzerlegbarer Token
-        # fiel im Altcode auf denselben Zweig zurueck wie "none" (ein
-        # ungesetzter Token bedeutet immer auch keinen hourly_thunder-Wert
-        # dieser Stunde). Reines `if branch == "day": thunder_word = ...`
-        # ohne diesen Guard wuerde bei einem unzerlegbaren Token mit
-        # `_dm is None` abstuerzen (TypeError beim Subscript).
-        _dm = _thunder_token_parts(tok.get("thunder_day_token", "-")) if branch == "day" else None
-        if _dm:
-            # Issue #1493: die Onset-Stunde (`_dm[1]`) wurde hier bisher
-            # verworfen, obwohl HTML-Ausblickzelle, Telegram und SMS sie
-            # laengst fuehren -- Tag- und Nachtteil sprechen jetzt dieselbe
-            # Grammatik (loest AC-2 aus #1680 S5a ab).
-            thunder_word = f"⚡{_dm[0]}@{_dm[1]}{_dm[2]}"
-            # Issue #1680 S5a: derselbe Zusatz wie in der HTML-Zelle, aus
-            # demselben Token.
-            _origin = tok.get("thunder_day_origin")
-            if _origin:
-                thunder_word += f" · {_origin}"
-        elif branch in ("day", "none"):
-            # Stundenreihe da, im Tagesfenster aber kein Gewitter (bzw. ein
-            # gesetzter, aber unzerlegbarer Tages-Token).
-            thunder_word = _THUNDER_MAP["NONE"]["plain"]
-        else:
-            # Ohne jede Stundenreihe (Alt-Aufrufer, Compare) bleibt es beim
-            # Aggregatwort -- der Split kann dort nichts sagen.
-            thunder_word = tok["thunder_plain"]
+        # Issue #1653/#1493/#1680 S5a/#1475: Tageswort aus dem Tagesfenster
+        # mit Onset-Uhrzeit, Herkunft, Nacht- und Hagel-Zusatz. #1848 A3: der
+        # Zellenbau steht in `thunder_cell_plain()` -- DIESELBE Quelle, die
+        # auch der konfigurierbare Zweig oben ruft.
+        thunder_word = thunder_cell_plain(tok, stage)
 
         name_field = f"{name:<26} " if show_name else ""
         line = (
             f"{weekday:<3} {name_field}{tok['temp_str']:<8} "
             f"{precip_str:<5} {tok['wind_str']:<5} {thunder_word}"
         )
-        # Issue #1653: Nacht-Zusatz mit Uhrzeit -- die Klartext-Zeile zeigte
-        # bisher ausschliesslich das Tageswort, ein Nachtgewitter erschien
-        # dort nie.
-        _n_tok = tok.get("thunder_night_token", "-")
-        _nm = _thunder_token_parts(_n_tok)
-        if _nm:
-            line += f" · nachts {_nm[0]} @{_nm[1]}{_nm[2]}"
-        # Issue #1475 Nachbesserung (Punkt 4b): derselbe deskriptive
-        # Hagel-Zusatz wie in der HTML-Ausblick-Tabelle (geteilte Quelle).
-        from output.metric_format import format_hail_note
-        _note = format_hail_note(stage.get("hail"))
-        if _note:
-            line = f"{line} · {_note}"
         lines.append(line)
 
         note = stage.get("note")

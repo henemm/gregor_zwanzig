@@ -261,17 +261,22 @@ def test_ac6_zuordnung_ist_ueber_frisch_gestartete_prozesse_unveraendert():
 # AC-3 — unaufloesbar ist NICHT dasselbe wie bewusst geleert
 # ---------------------------------------------------------------------------
 
-def test_ac3_unaufloesbare_auswahl_zeigt_die_sieben_festen_spalten_und_warnt(caplog):
+def test_ac3_unaufloesbare_auswahl_zeigt_die_grundauswahl_und_warnt(caplog):
     """AC-3: Given ein Trip, dessen gespeicherte Ausblick-Auswahl
     ausschliesslich unaufloesbare Eintraege enthaelt / When das Briefing
-    gerendert wird / Then erscheint der 3-Tages-Ausblick mit den sieben festen
-    Standardspalten UND eine Warnung wird protokolliert — der Block
-    verschwindet NICHT.
+    gerendert wird / Then erscheint der 3-Tages-Ausblick UND eine Warnung
+    wird protokolliert — der Block verschwindet NICHT.
 
-    Heute kollabiert die Auswahl zu ``[]`` (M5), und ``[]`` heisst in der
-    Drei-Werte-Semantik 'bewusst geleert': der Ausblick verschwindet
-    kommentarlos, statt zurueckzufallen. Genau das ist der Rueckroll-Fehlerpfad
-    R-A2-3 — nicht als Fehler sichtbar, sondern als stille Abwesenheit.
+    Die bewachte Fehlerklasse ist unveraendert der Rueckroll-Fehlerpfad
+    R-A2-3: die Auswahl kollabiert zu ``[]``, und ``[]`` heisst in der
+    Drei-Werte-Semantik 'bewusst geleert' — der Ausblick verschwaende
+    kommentarlos, statt zurueckzufallen. Nicht als Fehler sichtbar, sondern
+    als stille Abwesenheit.
+
+    ⚠️ NACHGEZOGEN durch #1848 A3 (AC-10, PO-Freigabe 2026-08-21): das
+    Rueckfall-ZIEL sind nicht mehr die sieben festen Standardspalten, sondern
+    die Grundauswahl der Tour. Der Rueckfall selbst — und die Warnung — sind
+    unveraendert Gegenstand dieses Tests.
     """
     from tests.helpers.trip_outlook_selection import (
         display_config, html_outlook_headers, html_outlook_table,
@@ -287,13 +292,30 @@ def test_ac3_unaufloesbare_auswahl_zeigt_die_sieben_festen_spalten_und_warnt(cap
     assert html_outlook_table(html) is not None, (
         "Der 3-Tages-Ausblick fehlt in der HTML-Mail vollstaendig. Eine "
         "unaufloesbare Auswahl wurde wie 'bewusst geleert' behandelt und hat "
-        "den Block abgeschaltet, statt auf die sieben festen Standardspalten "
-        "zurueckzufallen (AC-3, R-A2-3/M5)."
+        "den Block abgeschaltet, statt auf die Grundauswahl zurueckzufallen "
+        "(AC-3, R-A2-3/M5)."
     )
     kopf = html_outlook_headers(html)
-    assert kopf[:1] == ["Tag"] and all(k in kopf for k in FESTE_SIEBEN), (
-        f"Der Ausblick zeigt die Kopfzeile {kopf!r} statt der sieben festen "
-        f"Standardspalten {FESTE_SIEBEN!r} (AC-3)."
+    # #1848 A3: Rueckfall-Ziel ist die Grundauswahl der Tour. Gegen die
+    # DARSTELLBAREN Kennungen der Grundauswahl geprueft, nicht gegen eine
+    # getippte Spaltenliste -- so zieht die Erwartung mit dem Katalog mit.
+    from output.renderers.compare_outlook_metric_ids import (
+        outlook_columns, outlook_grundauswahl_ids,
+    )
+    grund = outlook_grundauswahl_ids(
+        [mc.metric_id for mc in dc.metrics
+         if mc.metric_id in (dc.allowed_metric_ids_for_report_type("evening") or set())]
+    )
+    erwartet = [c["label"] for c in outlook_columns(grund)]
+    assert kopf == ["Tag"] + erwartet, (
+        f"Der Ausblick zeigt die Kopfzeile {kopf!r} statt der Grundauswahl "
+        f"{erwartet!r} (AC-3)."
+    )
+    # Gegenprobe auf die abgeloesten Kuerzel -- ohne "Wind"/"Böen", die im
+    # Katalog gleich heissen und deshalb nichts unterscheiden.
+    assert not set(kopf) & (set(FESTE_SIEBEN) - {"Wind", "Böen"}), (
+        f"Die Kopfzeile {kopf!r} enthaelt Kuerzel der abgeloesten sieben "
+        f"festen Spalten {FESTE_SIEBEN!r} (#1848 A3)."
     )
     assert plain_outlook_block(plain), (
         "Im Klartext-Teil derselben Mail fehlt der Ausblick-Block (AC-3)."

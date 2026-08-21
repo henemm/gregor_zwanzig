@@ -37,8 +37,10 @@ from output.renderers.day_window import (
 )
 from output.metric_format import THUNDER_LABEL_DE
 from output.renderers.compare_outlook_metric_ids import outlook_columns
-from output.renderers.email.helpers import _THUNDER_MAP, fmt_val, format_trend_tokens
-from output.renderers.email.thunder_branch import resolve_thunder_day_branch
+from output.renderers.email.helpers import fmt_val, format_trend_tokens
+from output.renderers.email.thunder_branch import (
+    thunder_cell_telegram, thunder_column_index,
+)
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
     render_official_alerts_unavailable_plain,
@@ -558,12 +560,20 @@ def _outlook_lines(
     lines: list[str] = ["Ausblick"]
     if outlook_metrics is not None:
         columns = outlook_columns(outlook_metrics)
+        # #1848 A3: Gewitterteil aus DEMSELBEN Zellenbau wie der feste Zweig
+        # darunter (thunder_cell_telegram) -- `cells` traegt dort nur das
+        # Stufenwort ohne Token-Uhrzeit, Herkunft und Nachtanteil.
+        gew_index = thunder_column_index(columns)
         for stage in multi_day_trend:
             weekday = stage.get("weekday", "")
             cells = stage.get("cells") or []
+            texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
+            if gew_index is not None:
+                texte[gew_index] = thunder_cell_telegram(
+                    format_trend_tokens(stage), stage,
+                )
             values = "  ".join(
-                f"{c['label']}: {cells[i] if i < len(cells) else '–'}"
-                for i, c in enumerate(columns)
+                f"{c['label']}: {texte[i]}" for i, c in enumerate(columns)
             )
             lines.extend(_wrap(f"{weekday}  {values}", _TG_PROSE_WIDTH))
             note = stage.get("note")
@@ -584,25 +594,12 @@ def _outlook_lines(
         # Tagesfenster. Vorher fiel dieser Zweig auf `thunder_plain` (das auf
         # die Gehzeit geklemmte Aggregat) zurueck und schrieb "⚡HIGH · nachts
         # hoch@0" -- ein Tagesgewitter, das es im Tagesfenster nicht gab.
-        dt = tok.get("thunder_day_token", "-")
-        nt = tok.get("thunder_night_token", "-")
         # Issue #1671: Zweigwahl aus dem geteilten Helfer (identisch zu
-        # compact.py/outlook.py) -- die Formatierung bleibt hier unveraendert.
-        branch = resolve_thunder_day_branch(tok, stage)
-        if branch == "day":
-            thunder_part = f"⚡{dt}"
-            # Issue #1680 S5a: die tragende Zutat hinter der Tagesstufe --
-            # derselbe Token wie in HTML- und Klartext-Mail (AC-3). Ein
-            # Zeilenumbruch auf _TG_PROSE_WIDTH ist hinnehmbar (Wort-Umbruch).
-            _origin = tok.get("thunder_day_origin")
-            if _origin:
-                thunder_part += f" · {_origin}"
-        elif branch == "none":
-            thunder_part = _THUNDER_MAP["NONE"]["plain"]
-        else:
-            thunder_part = tok["thunder_plain"]
-        if nt != "-":
-            thunder_part += f" · nachts {nt}"
+        # compact.py/outlook.py). #1848 A3: auch die Formatierung steht jetzt
+        # dort (`thunder_cell_telegram`) -- DIESELBE Quelle, die der
+        # konfigurierbare Zweig oben ruft. Ein Zeilenumbruch auf
+        # _TG_PROSE_WIDTH bleibt hinnehmbar (Wort-Umbruch).
+        thunder_part = thunder_cell_telegram(tok, stage)
         trend_line = f"{weekday}  {tok['temp_str']}  {precip_part}  {wind_part}  {thunder_part}"
         lines.extend(_wrap(trend_line, _TG_PROSE_WIDTH))
         note = stage.get("note")

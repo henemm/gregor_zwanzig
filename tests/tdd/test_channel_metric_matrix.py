@@ -2828,7 +2828,11 @@ def test_ac_s2_5_beide_tagesaggregationen_fuellen_dieselben_felder():
 _S2_UNVERAENDERTE_ZELLEN = {
     "sunny_hours": "4.0 h", "wind_max_kmh": "15 km/h", "cloud_avg_pct": "50 %",
     "visibility_min_m": "20000 m", "precip_sum_mm": "4.4 mm", "uv_index_max": "4",
-    ("temp_min_c", "temp_max_c"): "6/18", "thunder_level_max": "mittel",
+    # #1848 A3: die Gewitter-Zelle des Ortsvergleich-Ausblicks entsteht jetzt
+    # aus DEMSELBEN Zellenbau wie sein fester Zweig (thunder_branch) und
+    # traegt deshalb die Onset-Uhrzeit (#1493). Vorher zeigten die beiden
+    # Compare-Renderpfade fuer dieselbe Stundenreihe Verschiedenes.
+    ("temp_min_c", "temp_max_c"): "6/18", "thunder_level_max": "mittel @4",
     "gust_max_kmh": "25 km/h", "freezing_level_m": "3000 m", "pop_max_pct": "55 %",
     "humidity_avg_pct": "70 %", "dewpoint_avg_c": "5 °C",
     "snowfall_limit_m": "2200 m", "precip_type_dominant": "Regen",

@@ -122,7 +122,15 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 	});
 
 	// ── AC-1/AC-3/AC-8 ──────────────────────────────────────────────────────
-	test('AC-1/AC-3/AC-8 (#1406 A): 24 Zeilen, Einzel-Optionen ohne Zusatzelement, keine doppelten Testids', async ({
+	// ⚠️ #1848 A3 ZUGESCHNITTEN: der Titel lautete "24 Zeilen, Einzel-Optionen
+	// ohne Zusatzelement, keine doppelten Testids". Die 24-Zeilen-Haelfte
+	// bediente die Kaestchenliste, die Block A (#2029) ersatzlos entfernt hat
+	// — sie ist hier entfallen. Die zwei uebrigen Zusicherungen haengen NICHT
+	// an der Liste und bleiben: die Gruppierungs-Rechnung des Katalogs (26
+	// flache Eintraege -> 24 Groessen, genau zwei davon mehrfach ausgewertet)
+	// und die AC-8-Zusicherung, dass im Wetter-Metriken-Panel keine
+	// unerwarteten doppelten `data-testid` stehen.
+	test('AC-1/AC-8 (#1406 A): Katalog gruppiert 26 Eintraege zu 24 Groessen, keine doppelten Testids im Panel', async ({
 		page,
 		request
 	}) => {
@@ -148,35 +156,13 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		const outlook = outlookContainer(panel);
 		await expect(outlook.getByTestId('compare-layout-outlook-metrics')).toBeVisible({ timeout: 10000 });
 
-		// #1848 A2: JEDE Groesse — auch Temperatur und gefuehlte Temperatur —
-		// bekommt genau EINE Zeile mit genau EINEM Kaestchen. Die frueheren
-		// Mehrfach-Zeilen (`-metric-row-…` mit je einem `-option-…-max`/`-min`)
-		// sind entfallen: seit A2 speichert der Ausblick die Kennung, eine
-		// Halbauswahl gibt es nicht mehr. Die Zusicherung „Zeile je Groesse,
-		// keine doppelten Testids" bleibt und wird dabei einfacher, nicht
-		// schwaecher — sie gilt jetzt fuer alle 24 gleich.
-		let rowCount = 0;
-		for (const group of groups) {
-			const rowTestId = `compare-layout-outlook-metric-${group.metric_id}`;
-			const row = outlook.getByTestId(rowTestId);
-			await expect(row, `Zeile fuer ${group.metric_id} (${rowTestId}) fehlt`).toHaveCount(1);
-			await expect(
-				row.locator('input[type="checkbox"]'),
-				`AC-1 (#1848 A2): ${group.metric_id} muss genau EIN Kaestchen haben, auch bei ` +
-					`${group.options.length} Auswertungen`
-			).toHaveCount(1);
-			await expect(
-				outlook.locator(`[data-testid="compare-layout-outlook-metric-row-${group.metric_id}"]`),
-				`#1848 A2: fuer ${group.metric_id} existiert noch die alte Mehrfach-Auswertungs-Zeile`
-			).toHaveCount(0);
-			rowCount += 1;
-		}
-		expect(rowCount, 'AC-1: 24 Zeilen im Ausblick-Auswahl-Block gezaehlt').toBe(24);
-
-		const overviewTempRow = panel.getByTestId('weather-metrics-vergleich-row-temperature');
-		await expect(overviewTempRow, 'Uebersicht zeigt ebenfalls eine Temperatur-Zeile').toHaveCount(1);
-		const outlookTempRow = outlook.getByTestId('compare-layout-outlook-metric-temperature');
-		await expect(outlookTempRow).toHaveCount(1);
+		// #1848 A3: die Zeilen-/Kaestchen-Schleife ist entfallen (s. Kopf des
+		// Tests). Was der Ausblick zeigt, entscheidet jetzt die Grundauswahl —
+		// geprueft in ausblick-erbt-grundauswahl.staging.spec.ts::AC-5.
+		await expect(
+			panel.getByTestId('weather-metrics-vergleich-row-temperature'),
+			'Uebersicht zeigt weiterhin eine Temperatur-Zeile'
+		).toHaveCount(1);
 
 		// Scope: NUR der Wetter-Metriken-Panel (Uebersicht + Ausblick), nicht die
 		// ganze Seite — Kopfzeile/Navi (brand-wordmark, drag-handle etc.) tragen
@@ -202,9 +188,6 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 			unexpectedDupes,
 			`AC-8: unerwartete doppelte data-testid-Werte im DOM: ${JSON.stringify(unexpectedDupes)}`
 		).toEqual([]);
-		expect(await outlookTempRow.getAttribute('data-testid')).not.toBe(
-			await overviewTempRow.getAttribute('data-testid')
-		);
 
 		await page.screenshot({
 			path: '../docs/artifacts/feat-1406a-ausblick-geteiltes-element/ac-1-3-8-grouped-list.png',
@@ -212,45 +195,18 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		});
 	});
 
-	// ── AC-2 — UMGESTELLT in #1848 A2 ───────────────────────────────────────
-	// Vorher: "Hoechst- und Tiefstwert der Temperatur unabhaengig ankreuzbar".
-	// Genau diese Halbauswahl hat A2 abgeschafft (PO-Entscheid 2026-08-20):
-	// gespeichert wird die Kennung, Tief und Hoch stehen seit #1848 A1 in EINER
-	// Spannen-Zelle. Die Zusicherung ist umgedreht: EIN Kaestchen schaltet die
-	// ganze Groesse, und es gibt kein zweites daneben.
-	test('AC-2 (#1848 A2): Temperatur ist EIN Kaestchen — keine getrennten Auswertungen mehr', async ({ page }) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `1848a2-AC2-A-${suffix}`);
-		const locB = await createLocation(page, `1848a2-AC2-B-${suffix}`);
-		const locC = await createLocation(page, `1848a2-AC2-C-${suffix}`);
-		const id = await createPreset(page, `1848a2-AC2-${suffix}`, [locA, locB, locC], {
-			outlook_metrics: []
-		});
-
-		const panel = await openMetricsTab(page, id);
-		const outlook = outlookContainer(panel);
-		const tempRow = outlook.getByTestId('compare-layout-outlook-metric-temperature');
-		await expect(tempRow, 'Temperatur-Zeile fehlt im Ausblick-Auswahl-Block').toHaveCount(1);
-		await expect(
-			tempRow.locator('input[type="checkbox"]'),
-			'AC-2 (#1848 A2): Temperatur muss genau EIN Kaestchen haben'
-		).toHaveCount(1);
-		await expect(
-			outlook.locator('[data-testid^="compare-layout-outlook-option-temperature-"]'),
-			'AC-2 (#1848 A2): es existieren noch getrennte Auswertungs-Kaestchen fuer die Temperatur'
-		).toHaveCount(0);
-
-		const tempBox = tempRow.locator('input');
-		await expect(tempBox).not.toBeChecked();
-		await tempBox.check();
-		await expect(tempBox).toBeChecked();
-		await tempBox.uncheck();
-		await expect(tempBox, 'ein Klick muss die ganze Groesse wieder abwaehlen').not.toBeChecked();
-
-		await page.screenshot({
-			path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/ac-2-one-box-per-metric.png'
-		});
-	});
+	// ── AC-2 (#1848 A2) — ERSATZLOS ENTFERNT in #1848 A3 ────────────────────
+	// Zugesichert war: "Temperatur ist EIN Kaestchen — keine getrennten
+	// Auswertungen mehr" (A2 hatte die Halbauswahl abgeschafft, PO-Entscheid
+	// 2026-08-20). Mit Block A (#2029) gibt es gar keine Kaestchen mehr, an
+	// denen sich "genau eines" zeigen liesse. Die Sache dahinter — eine
+	// Groesse ist EIN Eintrag, eine Halbauswahl laesst sich nicht ablegen —
+	// ist seither strukturell erzwungen statt bedienbar: der Ausblick spricht
+	// nur noch Kennungen (kein Katalog-Schluessel mehr in `outlook_metrics`),
+	// und genau das bewachen `test_outlook_metric_id_persistence.py` sowie der
+	// AST-Waechter `outlook_erbt_grundauswahl_structure.test.ts`. Ein Ersatz
+	// auf der "Aus"-Flaeche waere eine Zusicherung ueber etwas, das dort nicht
+	// mehr entstehen kann.
 
 	// ── AC-4 ────────────────────────────────────────────────────────────────
 	test('AC-4 (#1406 A): gespeicherte Auswahl ueberlebt Reload — neu UND an einem Bestands-Vergleich', async ({
@@ -267,24 +223,29 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 
 		const panel = await openMetricsTab(page, id);
 		const outlook = outlookContainer(panel);
-		// #1848 A2: ein Kaestchen je Groesse, gespeichert wird die Kennung.
-		// Zwei verschiedene Groessen statt zweier Auswertungen derselben --
-		// so bleibt "zwei Klicks, zwei Eintraege, Reihenfolge erhalten" pruefbar.
-		const tempBox = outlook.getByTestId('compare-layout-outlook-metric-temperature').locator('input');
-		const gustBox = outlook.getByTestId('compare-layout-outlook-metric-gust').locator('input');
-
-		const putPromise1 = page.waitForResponse(
-			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
-			{ timeout: 8000 }
-		);
-		await tempBox.check();
-		await putPromise1;
-		const putPromise2 = page.waitForResponse(
-			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
-			{ timeout: 8000 }
-		);
-		await gustBox.check();
-		await putPromise2;
+		// #1848 A3: geschaltet wird ueber "Ein" in der Aus-Gruppe statt ueber
+		// Kaestchen. Die Zusicherung ist unveraendert: zwei Gesten, zwei
+		// Eintraege, Reihenfolge der Gesten erhalten, reine Kennungen im
+		// Speicher, und der Stand ueberlebt den Reload. Start ist die bewusst
+		// LEERE Auswahl (`outlook_metrics: []`) -- dann stehen alle Groessen
+		// der Grundauswahl in der Aus-Gruppe und lassen sich einzeln holen.
+		const ausGruppe = outlook.getByTestId('wm2-aus-gruppe');
+		await expect(ausGruppe, 'Vorbedingung: leere Auswahl zeigt die Aus-Gruppe').toBeVisible({
+			timeout: 10000
+		});
+		const einSchalten = async (metricId: string) => {
+			const putPromise = page.waitForResponse(
+				(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
+				{ timeout: 8000 }
+			);
+			await ausGruppe
+				.locator(`[data-testid="wm2-aus-row"][data-metric-id="${metricId}"]`)
+				.getByRole('button', { name: 'Ein' })
+				.click();
+			await putPromise;
+		};
+		await einSchalten('temperature');
+		await einSchalten('gust');
 		await page.waitForTimeout(500);
 
 		const getRes = await page.request.get(`/api/compare/presets/${id}`);
@@ -296,25 +257,21 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		).toBe(true);
 		expect(
 			savedOutlook,
-			'AC-4: display_config.outlook_metrics enthaelt beide gewaehlten Kennungen in Klickreihenfolge'
+			'AC-4: display_config.outlook_metrics enthaelt beide geholten Kennungen in Klickreihenfolge'
 		).toEqual(['temperature', 'gust']);
 
 		const reloadedPanel = await openMetricsTab(page, id);
 		const reloadedOutlook = outlookContainer(reloadedPanel);
 		await expect(
-			reloadedOutlook.getByTestId('compare-layout-outlook-metric-temperature').locator('input')
-		).toBeChecked();
+			reloadedOutlook.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temperature"]')
+		).toBeVisible({ timeout: 10000 });
 		await expect(
-			reloadedOutlook.getByTestId('compare-layout-outlook-metric-gust').locator('input')
-		).toBeChecked();
+			reloadedOutlook.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]')
+		).toBeVisible();
 
 		await page.screenshot({
 			path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/ac-4-persisted-after-reload.png'
 		});
-
-		const metricsRes = await request.get('/api/compare/metrics');
-		const catalog = (await metricsRes.json()) as { metrics: CatalogEntry[] };
-		const groups = groupByMetricId(catalog.metrics);
 
 		// AC-4 zweiter Teil: Bestands-Vergleich, NICHT von diesem Lauf angelegt
 		// (Regel-Vorgabe der Aufgabe). Dynamisch ermittelt statt hartkodierter
@@ -357,22 +314,33 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		await expect(existingOutlook.getByTestId('compare-layout-outlook-metrics')).toBeVisible({
 			timeout: 10000
 		});
-		for (const group of groups) {
-			const checkboxLocator = existingOutlook
-				.getByTestId(`compare-layout-outlook-metric-${group.metric_id}`)
-				.locator('input');
-			if (expectedActiveIds.includes(group.metric_id)) {
-				await expect(
-					checkboxLocator,
-					`${group.metric_id}: erwartet angehakt (unveraenderte Bestandsauswahl)`
-				).toBeChecked();
-			} else {
-				await expect(
-					checkboxLocator,
-					`${group.metric_id}: erwartet NICHT angehakt (unveraenderte Bestandsauswahl)`
-				).not.toBeChecked();
-			}
-		}
+		// #1848 A3: abgelesen wird die AKTIVE Reihenfolge-Liste statt der Haken.
+		// 🔴 Bewusst nur die scharfe Richtung geprueft — "die aktive Liste
+		// enthaelt NICHTS, was nicht in der Bestandsauswahl steht, und jede
+		// Groesse hoechstens einmal". Die Umkehrung ("jede erwartete Kennung
+		// ist aktiv") waere seit A3 kein sauberes Soll mehr: der Ausblick
+		// klemmt gegen die Grundauswahl des Vergleichs, eine dort abgewaehlte
+		// Groesse erscheint zu Recht nirgends. Sie einzufordern erzeugte
+		// Fehlalarme an einem Bestands-Vergleich, dessen Grundauswahl dieser
+		// Test gar nicht kennt.
+		// Die eigentliche Zusicherung bleibt vollstaendig: die Paar-Altform
+		// wird auf Kennungen normalisiert -- zwei Paare derselben Groesse
+		// (Tief UND Hoch) ergeben EINEN Eintrag, nicht zwei.
+		const aktiveIds = await existingOutlook
+			.locator('[data-testid="wm2-reihenfolge-row"]')
+			.evaluateAll((els) => els.map((e) => e.getAttribute('data-metric-id')));
+		expect(
+			aktiveIds.filter((id) => !expectedActiveIds.includes(id as string)),
+			`Die aktive Ausblick-Liste zeigt Groessen, die nicht in der Bestandsauswahl stehen: ${JSON.stringify(aktiveIds)}`
+		).toEqual([]);
+		expect(
+			aktiveIds.length,
+			`Die Paar-Altform wurde nicht auf Kennungen normalisiert — doppelte Eintraege: ${JSON.stringify(aktiveIds)}`
+		).toBe(new Set(aktiveIds).size);
+		expect(
+			aktiveIds.length,
+			'Vakuum-Schutz: eine leere aktive Liste machte die Zusicherungen oben trivial wahr'
+		).toBeGreaterThan(0);
 		await page.screenshot({
 			path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/ac-4-existing-preset-untouched.png'
 		});
@@ -485,7 +453,11 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 	// Doppel-Klick-Analog: schnelles Doppel-Toggle auf DASSELBE Kaestchen
 	// (an -> aus) darf keinen Race erzeugen, der den Server-Stand vom
 	// UI-Stand abweichen laesst.
-	test('Adversary (#1406 A): schnelles An/Aus desselben Kaestchens bleibt konsistent', async ({ page }) => {
+	// #1848 A3: geschaltet wird ueber "Ein"/"Aus" statt ueber ein Kaestchen —
+	// die bewachte Fehlerklasse ist unveraendert: drei Gesten in schneller
+	// Folge, ohne auf die einzelnen PUTs zu warten, duerfen den Server-Stand
+	// nicht auf einem Zwischenwert stehen lassen.
+	test('Adversary (#1406 A): schnelles Ein/Aus derselben Groesse bleibt konsistent', async ({ page }) => {
 		const suffix = Date.now();
 		const locA = await createLocation(page, `1406a-ADV1-A-${suffix}`);
 		const locB = await createLocation(page, `1406a-ADV1-B-${suffix}`);
@@ -496,16 +468,22 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 
 		const panel = await openMetricsTab(page, id);
 		const outlook = outlookContainer(panel);
-		// #1848 A2: ein Kaestchen je Groesse, geschaltet wird die Kennung.
-		const tempBox = outlook.getByTestId('compare-layout-outlook-metric-temperature').locator('input');
-		await expect(tempBox).not.toBeChecked();
+		const aktiveTemp = outlook.locator(
+			'[data-testid="wm2-reihenfolge-row"][data-metric-id="temperature"]'
+		);
+		const ausTemp = outlook
+			.getByTestId('wm2-aus-gruppe')
+			.locator('[data-testid="wm2-aus-row"][data-metric-id="temperature"]');
+		await expect(ausTemp, 'Vorbedingung: Temperatur startet abgewaehlt').toBeVisible({
+			timeout: 10000
+		});
 
-		// An -> Aus -> An in schneller Folge, ohne auf einzelne PUTs zu warten.
-		await tempBox.click();
-		await tempBox.click();
-		await tempBox.click();
-		// Netto-Effekt von drei Klicks aus dem Startzustand "aus": an.
-		await expect(tempBox).toBeChecked();
+		// Ein -> Aus -> Ein in schneller Folge, ohne auf einzelne PUTs zu warten.
+		await ausTemp.getByRole('button', { name: 'Ein' }).click();
+		await aktiveTemp.getByRole('button', { name: 'Aus' }).click();
+		await ausTemp.getByRole('button', { name: 'Ein' }).click();
+		// Netto-Effekt von drei Gesten aus dem Startzustand "aus": an.
+		await expect(aktiveTemp).toBeVisible();
 		await page.waitForLoadState('networkidle');
 		await page.waitForTimeout(800);
 
@@ -514,33 +492,37 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 		const savedIds = (saved.display_config?.outlook_metrics ?? []) as string[];
 		expect(
 			savedIds.includes('temperature'),
-			`AC-4-Regression: Server-Stand nach schnellem Dreifach-Klick muss "an" sein, tatsaechlich: ${JSON.stringify(savedIds)}`
+			`AC-4-Regression: Server-Stand nach schneller Dreifach-Geste muss "an" sein, tatsaechlich: ${JSON.stringify(savedIds)}`
 		).toBe(true);
 
 		const reloadedPanel = await openMetricsTab(page, id);
 		const reloadedOutlook = outlookContainer(reloadedPanel);
 		await expect(
-			reloadedOutlook.getByTestId('compare-layout-outlook-metric-temperature').locator('input')
-		).toBeChecked();
+			reloadedOutlook.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temperature"]')
+		).toBeVisible({ timeout: 10000 });
 
 		await page.screenshot({
 			path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/adv-1-rapid-toggle-consistent.png'
 		});
 	});
 
-	// Leer-Zustand: ALLE Ausblick-Kaestchen abwaehlen (bewusste Leerauswahl)
-	// darf den Auswahl-Block selbst nicht zum Verschwinden bringen (nur der
-	// Reihenfolge-Block darunter entfaellt, Zeile 147 der Komponente) — sonst
-	// gaebe es keinen Weg zurueck zur Auswahl.
+	// Leer-Zustand: ALLE Groessen abwaehlen (bewusste Leerauswahl) darf den
+	// Ausblick-Block nicht unbedienbar machen — sonst gaebe es keinen Weg
+	// zurueck.
+	// 🔴 #1848 A3 macht diese Zusicherung WICHTIGER, nicht kleiner: bis dahin
+	// war der Rueckweg die Kaestchenliste, die stehen blieb. Die gibt es nicht
+	// mehr (Block A, #2029) — der einzige Rueckweg ist jetzt die "Aus"-Gruppe
+	// (ADR-0050 Regel 4). Bleibt sie bei Totalabwahl nicht stehen, ist der
+	// Ausblick dauerhaft verloren.
 	// WICHTIG: der Ausblick-Block fehlt komplett im DOM, solange der Katalog
-	// laedt (`WeatherMetricsTab.svelte:1026`, bewusst so gebaut,
-	// `compareCatalogLoaded`-Gate). JEDE Existenzpruefung eines einzelnen
-	// Kaestchens muss deshalb auf das Element WARTEN, nie per Sofort-`count()`
+	// laedt (`WeatherMetricsTab.svelte`, bewusst so gebaut,
+	// `compareCatalogLoaded`-Gate). JEDE Existenzpruefung einer einzelnen
+	// Zeile muss deshalb auf das Element WARTEN, nie per Sofort-`count()`
 	// entscheiden — ein zu frueher `count()===0` liest "noch nicht da" als
-	// "gibt es nicht" und ueberspringt das Kaestchen dauerhaft (Ex-Befund
+	// "gibt es nicht" und ueberspringt die Zeile dauerhaft (Ex-Befund
 	// #1423, tatsaechlich ein Test-Bug, kein Produktfehler — root-caused
 	// durch das Team, s. Wait + `existsSoon` unten).
-	test('Adversary (#1406 A): alle Ausblick-Kaestchen abgewaehlt — Auswahl-Block bleibt bedienbar', async ({ page }) => {
+	test('Adversary (#1406 A): alle Ausblick-Groessen abgewaehlt — die Aus-Gruppe bleibt der Rueckweg', async ({ page }) => {
 		const suffix = Date.now();
 		const locA = await createLocation(page, `1406a-ADV2-A-${suffix}`);
 		const locB = await createLocation(page, `1406a-ADV2-B-${suffix}`);
@@ -576,8 +558,8 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 		const outlook = outlookContainer(panel);
 		// WURZEL-FIX: der Ausblick-Block existiert erst NACH Katalog-Ladeende
 		// im DOM (`compareCatalogLoaded`-Gate, s. Kommentar oben). Ohne diesen
-		// Wait koennte eine Existenzpruefung auf das erste Kaestchen treffen,
-		// waehrend der Block noch gar nicht gemountet ist, und es fuer immer
+		// Wait koennte eine Existenzpruefung auf die erste Zeile treffen,
+		// waehrend der Block noch gar nicht gemountet ist, und sie fuer immer
 		// als "gibt es nicht" ueberspringen. `compare-layout-outlook-metrics`
 		// ist genau der Container, der erst nach dem Laden erscheint.
 		await expect(outlook.getByTestId('compare-layout-outlook-metrics')).toBeVisible({ timeout: 10000 });
@@ -587,12 +569,12 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 		const defaultMetricIds = [
 			'temperature', 'precipitation', 'rain_probability', 'wind', 'gust', 'thunder'
 		];
-		async function uncheckAndConfirm(box: Locator): Promise<void> {
+		async function ausSchaltenUndBestaetigen(zeile: Locator): Promise<void> {
 			const putPromise = page.waitForResponse(
 				(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
 				{ timeout: 8000 }
 			);
-			await box.uncheck();
+			await zeile.getByRole('button', { name: 'Aus' }).click();
 			await putPromise;
 			await page.waitForLoadState('networkidle');
 		}
@@ -607,16 +589,20 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 				return false;
 			}
 		}
-		// #1848 A2: EINE Zeilenform fuer alle Groessen -- die frueher noetige
-		// Fallunterscheidung (Mehrfach-Option vs. Einzel-Zeile) entfaellt.
+		// #1848 A2/A3: EINE Zeilenform fuer alle Groessen. Dass die
+		// Paar-Altform beim Lesen auf Kennungen normalisiert wird, zeigt sich
+		// daran, dass die beiden Temperatur-Paare EINE Zeile ergeben — sonst
+		// faende die Schleife sieben statt sechs.
 		for (const mid of defaultMetricIds) {
-			const box = outlook.getByTestId(`compare-layout-outlook-metric-${mid}`).locator('input');
+			const zeile = outlook.locator(
+				`[data-testid="wm2-reihenfolge-row"][data-metric-id="${mid}"]`
+			);
 			expect(
-				await existsSoon(box),
-				`#1848 A2: Ausblick-Kaestchen fuer ${mid} fehlt — die Bestands-Altform wurde beim ` +
+				await existsSoon(zeile),
+				`#1848 A2: Ausblick-Zeile fuer ${mid} fehlt — die Bestands-Altform wurde beim ` +
 					'Lesen nicht auf Kennungen normalisiert'
 			).toBe(true);
-			if (await box.isChecked()) await uncheckAndConfirm(box);
+			await ausSchaltenUndBestaetigen(zeile);
 		}
 
 		// Server-Stand ist die eigentliche Aussage (nicht nur der DOM) — s.
@@ -632,15 +618,32 @@ test.describe('Ortsvergleich-Ausblick — Runde 2: Adversary-Grenzfaelle (#1406 
 			)
 			.toBe(0);
 
-		// Auswahl-Block selbst (die 24-Zeilen-Liste) bleibt sichtbar und
-		// bedienbar — nur der Reihenfolge-Block darunter darf entfallen.
+		// 🔴 Der Kern der Zusicherung seit #1848 A3: die aktive Liste ist leer,
+		// aber der Block bleibt da und die Aus-Gruppe traegt jede abgewaehlte
+		// Groesse. Waere sie mit der letzten Abwahl verschwunden, gaebe es
+		// keinen Rueckweg mehr (ADR-0050 Regel 4).
 		await expect(outlook.getByTestId('compare-layout-outlook-metrics')).toBeVisible();
 		await expect(outlook.locator('[data-testid="wm2-reihenfolge-row"]')).toHaveCount(0);
+		const ausGruppe = outlook.getByTestId('wm2-aus-gruppe');
+		await expect(
+			ausGruppe,
+			'Adversary: nach der Totalabwahl fehlt die Aus-Gruppe — der Ausblick waere unwiederbringlich leer'
+		).toBeVisible();
+		for (const mid of defaultMetricIds) {
+			await expect(
+				ausGruppe.locator(`[data-testid="wm2-aus-row"][data-metric-id="${mid}"]`),
+				`Adversary: ${mid} fehlt in der Aus-Gruppe und ist damit nicht zurueckholbar`
+			).toBeVisible();
+		}
 
 		// Zurueck: eine Groesse wieder anwaehlen funktioniert weiterhin.
-		const windBox = outlook.getByTestId('compare-layout-outlook-metric-wind').locator('input');
-		await windBox.check();
-		await expect(windBox).toBeChecked();
+		await ausGruppe
+			.locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]')
+			.getByRole('button', { name: 'Ein' })
+			.click();
+		await expect(
+			outlook.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]')
+		).toBeVisible();
 
 		await page.screenshot({
 			path: '../docs/artifacts/feat-1406a-ausblick-geteiltes-element/adv-2-empty-then-reselect.png'

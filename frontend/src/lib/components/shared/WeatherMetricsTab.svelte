@@ -1400,9 +1400,13 @@
 				<!-- Issue #1720 S1: dasselbe Bauteil, flach parametrisiert. Der
 				     Vergleich fuehrt zusaetzlich den Ein/Aus-Schalter
 				     (outlook_enabled); der Trip nicht (AC-13). -->
+				<!-- Issue #1848 A3 (AC-2/AC-6): die Ortsvergleich-eigene
+				     Grundauswahl — DIESELBE Quelle wie die Uebersichts-Kopplung
+				     der Kanal-Reiter (`materializedActiveMetricKeys`, :1083). -->
 				<CompareOutlookLayoutControls
 					metricKeys={wiz.outlookMetricKeys}
 					catalog={compareCatalog}
+					grundauswahl={materializedActiveMetricKeys}
 					onMetricKeys={onCompareOutlookMetricKeys}
 					{onOutlookCommit}
 					enabled={wiz.outlookEnabled}
@@ -1783,9 +1787,13 @@
 				     geladenen Katalog bleibt der Block aus statt leer zu erscheinen. -->
 				{#if !createMode && sections.includes('ausblick') && compareCatalogLoaded}
 				<div data-testid="weather-metrics-ausblick">
+					<!-- Issue #1848 A3 (AC-2/AC-3): die Trip-eigene Grundauswahl
+					     (`buckets.primary`) — dieselbe Menge, gegen die auch die
+					     Kanal-Reiter schneiden. -->
 					<CompareOutlookLayoutControls
 						metricKeys={outlookMetricKeys}
 						catalog={compareCatalog}
+						grundauswahl={buckets.primary}
 						onMetricKeys={onOutlookMetricKeys}
 						title="3-Tages-Vorschau"
 						showEmailOnlyHint={false}
