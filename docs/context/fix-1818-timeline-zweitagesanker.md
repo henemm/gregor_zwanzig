@@ -24,6 +24,32 @@ Wetter-Anker traegt strukturell nur EINEN Tag.
 Nach dem Abend-Briefing traegt er morgen → `timeline_heute` faellt aus. Die betroffene Seite
 wechselt im Tagesrhythmus.
 
+### Der Fehltext steht an VIER Stellen, nicht an einer
+
+`_aggregate_day` ist die gemeinsame Datenquelle **dreier** Formatierer; jeder hat seine eigene
+Fehlanzeige, jede mit demselben Denkfehler (Challenger-Befund 1):
+
+| Formatierer | Zeile | Text |
+|---|---|---|
+| `_fmt_timeline` | `:1007` | `"{label} ({datum}): Keine Etappe geplant"` |
+| `_fmt_glance` (heute-Zweig) | `:929` | `"heute (…): Keine Etappe geplant"` |
+| `_fmt_glance` (morgen-Zweig) | `:933` | `"morgen (…): Keine Etappe geplant"` |
+| `_fmt_gewitter` | `:944` | `"Heute (…): Keine Etappe geplant — kein Gewitter-Status"` |
+
+`glance` steht **namentlich im Bug-Titel**. Eine Loesung, die nur `_fmt_timeline` anfasst,
+laesst das gemeldete Symptom bestehen und waere trotzdem gruen, wenn die Tests der Wirkkette
+folgen. Alle vier Stellen gehoeren in den Aenderungs-Scope.
+
+### Ein dritter Ankerzustand (selten, aber real)
+
+Neben „traegt heute" und „traegt morgen" gibt es einen dritten: `send_test_report`
+(`trip_report_scheduler.py:1024-1050`, Nutzerkommando `### report: morning|evening`) waehlt
+ueber `select_test_stage` `:981-1023` einen **Fallback-Tag**, der weder heute noch morgen ist;
+`_send_trip_report` `:1245-1248` korrigiert `target_date` darauf, bevor der Anker geschrieben
+wird. Der Anker bleibt in sich konsistent, traegt aber einen beliebigen Zukunftstag. Eine
+Loesung, die **je angefragtem Tag aufloest**, ist dagegen unempfindlich; eine Loesung, die aus
+dem Ankerzustand global auf „heute oder morgen" schliesst, waere es nicht.
+
 ## Zwei Sperren, die einen naiven Fix wirkungslos machen
 
 **Sperre A — der Nachlade-Pfad ist doppelt verriegelt.**
@@ -84,8 +110,11 @@ scheidet damit aus Betriebsgruenden aus, nicht aus Geschmacksgruenden.
   Vergleichsbasis taugen. Neue Schreibpfade muessen die Herkunft bewusst setzen.
 - **Read-Modify-Write statt Replace** (CLAUDE.md, BUG-DATALOSS-GR221): `save()` ist heute ein
   reiner Replace — jede Erweiterung des Ankers muss das beruecksichtigen.
-- **Ehrliche Fehlanzeige statt Falschaussage:** `_fmt_gewitter` `:938-941` trennt bereits
-  „kein Snapshot verfuegbar" von „keine Etappe geplant" — das Vorbild fehlt nur der Timeline.
+- **Ehrliche Fehlanzeige statt Falschaussage:** `_fmt_gewitter` `:937-941` trennt „kein Snapshot
+  verfuegbar" von „keine Etappe geplant" — **aber nur auf oberster Ebene** (`not
+  timeline.available`, also gar kein Anker). Der **tagesgenaue** Fall `:944` faellt in
+  denselben Fehltext zurueck. Das Muster taugt als Vorbild fuer die Form, nicht als Beleg,
+  dass die Stelle schon richtig waere (Challenger-Befund 1).
 
 ## Dependencies
 
@@ -121,6 +150,20 @@ scheidet damit aus Betriebsgruenden aus, nicht aus Geschmacksgruenden.
    ueberschreibende Laeufe — kommt in **keinem** Test vor. Ein RED-Test muss den Anker daher
    ueber **zwei aufeinanderfolgende `_write_briefing_anchor`-artige Schreibvorgaenge** aufbauen,
    sonst ist er trivial gruen.
-5. **Nur ein `target_date`-Feld.** Die Ankerstruktur kann zwei Tage im `segments`-Array tragen,
+5. **Der Verweis auf `morgen` fuellt die Timeline NICHT (hoch, formulierungsrelevant).**
+   Das Kommando `morgen` (`trip_command_processor.py:534` → `_trigger_on_demand` `:588-620` →
+   `send_on_demand_report`) versendet ein volles Briefing, schreibt aber **keinen Anker**:
+   `write_anchor_and_reset_memory` steigt bei `on_demand=True` bewusst aus
+   (`trip_report_scheduler.py:1495-1501`, #1007). Ein Hinweistext der Form „dann fuellt sich
+   die Timeline" waere also falsch und erzeugte eine Frustschleife — der Nutzer drueckte
+   danach denselben Knopf und saehe dieselbe Fehlanzeige. Der Text darf nur zusichern, was
+   eintritt: **das Briefing wird zugestellt**.
+6. **Dritte Kopie derselben Quellenkette (mittel, Architektur).** `trip_alert.py:629-750`
+   (#1916, #1661) implementiert bereits eine gestufte „welcher Snapshot gilt fuer Tag X"-Kette.
+   Eine zweite, unabhaengige Kette im Abfragepfad ist vertretbar — Anzeige und Δ-Vergleich
+   haben unterschiedliche Vertrauensregeln (`briefing_backed` gilt nur fuer den Vergleich) —
+   muss in der Spec aber **begruendet** werden, sonst entsteht beim naechsten Ticket eine
+   dritte (Challenger-Befund 3).
+7. **Nur ein `target_date`-Feld.** Die Ankerstruktur kann zwei Tage im `segments`-Array tragen,
    aber nicht zwei Zieltage benennen. Jeder Leser, der `load_target_date()` als Torwaechter
    nutzt, bekaeme eine halbe Wahrheit.
