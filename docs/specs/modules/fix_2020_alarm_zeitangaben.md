@@ -3,10 +3,16 @@ entity_id: fix_2020_alarm_zeitangaben
 type: module
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: superseded
 version: "1.0"
 tags: [alert, deviation-alert, zeitangaben, issue-2020, scheibe-2]
 ---
+
+> ⚠️ **ABGELÖST am 2026-08-21 durch `fix_2020_alarm_blickrichtung.md`.**
+> Diese Spec war nie freigegeben. Der PO hat den reinen Wortlaut-Zuschnitt zurückgewiesen:
+> eine verständlich formulierte Meldung, die ausschließlich Vergangenes erzählt, hilft
+> nicht. Die Nachfolge-Spec dreht die Blickrichtung (Restmenge ab jetzt + Ende) und
+> übernimmt die Zeitangaben-Kriterien dieser Spec als Teilaspekt.
 
 # Abweichungsalarm: Zeitangaben sagen, was sie meinen und wann sie liegen (Scheibe 2)
 
