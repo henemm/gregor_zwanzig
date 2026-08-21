@@ -34,6 +34,15 @@ Darstellung zu sprengen.
 - **File:** `src/output/renderers/narrow.py` — neue Funktion `render_telegram_bubbles()`
   ersetzt `render_narrow()` für `channel == "telegram"` vollständig (Breaking Replace).
   Entfernt: `_tg_segment_line()`, `_tg_extra_detail_line()`, `_tg_day_footer()`,
+  **[Nachtrag 2026-08-21, #1741]** außerdem entfiel im selben Commit (`6b27798f`) die
+  Aufrufstelle von `_detail_lines()` — die Detail-Zeile fiel damit für Telegram ganz weg.
+  Das setzt die **PO-Entscheidung vom 2026-06-06** um („Kein ‚→ Detail'-Knopf, keine
+  Detail-Zeile", Issue #587, s. `WeatherV2Reihenfolge.svelte:4`), war hier aber nie
+  protokolliert. Weil `_detail_lines()` und `ChannelLayout.detail_metrics` stehen blieben,
+  sah der Wegfall 7 Wochen später wie eine vergessene Verkabelung aus und wurde als Bug
+  #1741 gemeldet. Beide sind seit #1741 (`cbd1a650`) entfernt; jenseits des
+  Spaltenbudgets liegende Metriken erscheinen in der Kurzübersicht als Tageswert plus
+  Kappungshinweis. Siehe `docs/specs/modules/fix_1741_telegram_kappungshinweis.md`.
   der Text-Befehls-Footer-Block (Zeile 531-536) und die `cmd_hint`-Zeile. Wiederverwendet:
   `_narrow_table()` (Zeile 115-151, bislang nur für den abgeschalteten Signal-Kanal
   aktiv), `_wrap()`, `_compact_label()`, `_tg_vortag_line()`.
