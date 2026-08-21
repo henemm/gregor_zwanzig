@@ -150,7 +150,10 @@ class PreviewService:
         """
         from services.trip_report_scheduler import TripReportSchedulerService
         scheduler = TripReportSchedulerService(self.settings)
-        segments = scheduler._convert_trip_to_segments(trip, target)
+        # Issue #2036 CI-Nachschlag (PR #2055): eine Vorschau ist "kein
+        # Versand, nur Render" (Modul-Docstring) -- sie darf den
+        # Trip-Bestand nicht als Seiteneffekt veraendern.
+        segments = scheduler._convert_trip_to_segments(trip, target, persist=False)
         if not segments:
             # Issue #990: Zwei Ursachen unterscheiden, damit die Frontend-
             # Erkennung aus #421 (matcht "waypoint" case-insensitive) nur beim

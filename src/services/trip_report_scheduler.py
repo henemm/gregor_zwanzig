@@ -1936,7 +1936,9 @@ class TripReportSchedulerService:
     def _convert_trip_to_segments(
         self,
         trip: "Trip",
-        target_date: date
+        target_date: date,
+        *,
+        persist: bool = True,
     ) -> List[TripSegment]:
         """Thin delegator — real logic lives in services.trip_segments (Issue #822).
 
@@ -1948,6 +1950,13 @@ class TripReportSchedulerService:
         Produktionspfad fuer BESTANDS-Trips -- der Import-Weg (AC-6) deckt
         nur neu angelegte Etappen ab. Fail-soft und ohne Treffer folgenlos:
         der Trip laeuft dann unveraendert weiter (AC-10).
+
+        Args:
+            persist: an ``backfill_stage_distances`` durchgereicht (Issue
+                #2036 CI-Nachschlag, PR #2055). Default ``True`` fuer alle
+                Versandpfade (Alarm, Briefing-Dispatch, On-Demand-Fetch).
+                ``PreviewService`` ruft mit ``False`` -- eine Vorschau darf
+                den Trip-Bestand nicht als Seiteneffekt veraendern.
         """
         from services.track_resolution import backfill_stage_distances
         from services.trip_segments import convert_trip_to_segments
@@ -1956,7 +1965,9 @@ class TripReportSchedulerService:
         # gibt es keinen GPX-Bestand, also auch nichts nachzutragen.
         user_id = getattr(self, "_user_id", None)
         if user_id:
-            trip = backfill_stage_distances(trip, user_id, target_date)
+            trip = backfill_stage_distances(
+                trip, user_id, target_date, persist=persist,
+            )
         return convert_trip_to_segments(trip, target_date)
 
     def _clamp_segments_to_today(

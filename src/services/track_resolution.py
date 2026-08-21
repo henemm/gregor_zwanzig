@@ -106,7 +106,9 @@ def resolve_stage_track_km(
 _failed_lookups: set = set()
 
 
-def backfill_stage_distances(trip, user_id: str, target_date) -> object:
+def backfill_stage_distances(
+    trip, user_id: str, target_date, *, persist: bool = True,
+) -> object:
     """Traegt die gemessene Wegstrecke der Etappe zu ``target_date`` einmalig
     nach und schreibt sie additiv an den Trip zurueck (Issue #2036 AC-7).
 
@@ -118,13 +120,22 @@ def backfill_stage_distances(trip, user_id: str, target_date) -> object:
     Fail-soft: jeder Fehler laesst den Trip unveraendert -- eine fehlende
     Kilometerangabe ist ein Schoenheitsfehler, ein ausgefallener Alarm nicht.
 
+    Args:
+        persist: Bei ``False`` (Issue #2036 CI-Nachschlag, PR #2055) wird die
+            aufgeloeste Distanz nur INS RUECKGABEOBJEKT geschrieben, nicht
+            via ``save_trip`` auf die Platte. Fuer reine Vorschau-Pfade
+            (``PreviewService`` -- "kein Versand, nur Render"): eine Ansicht
+            darf den Trip-Bestand nicht als Seiteneffekt veraendern, egal
+            welcher ``user_id`` sie zugerechnet wird. Alarm- und
+            Briefing-Versandpfade lassen den Default (persistieren).
+
     Returns:
         Den (ggf. ergaenzten) Trip -- immer ein verwendbares Objekt.
     """
     try:
         import dataclasses
 
-        from app.loader import get_data_dir, save_trip
+        from app.loader import get_data_dir
 
         stage = trip.get_stage_for_date(target_date)
         if stage is None or not stage.waypoints:
@@ -150,10 +161,13 @@ def backfill_stage_distances(trip, user_id: str, target_date) -> object:
         updated = dataclasses.replace(trip, stages=[
             new_stage if s.id == stage.id else s for s in trip.stages
         ])
-        save_trip(updated, user_id=user_id)
+        if persist:
+            from app.loader import save_trip
+
+            save_trip(updated, user_id=user_id)
         logger.info(
             "Track-Aufloesung: Etappe %s von Trip %s nachtraeglich vermessen "
-            "(%d Wegpunkte)", stage.id, trip.id, len(distances),
+            "(%d Wegpunkte, persist=%s)", stage.id, trip.id, len(distances), persist,
         )
         return updated
     except Exception as e:
