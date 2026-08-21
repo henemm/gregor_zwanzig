@@ -1277,7 +1277,29 @@ class TripAlertService:
             _at = now_utc + timedelta(
                 minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
             )
-            _pos = position_at_time(trip, active, segment_date, _at)
+            # Absicherung je Trip, nicht um den Stapellauf (Adversary
+            # F-ADV1, Muster `fix_1479`): Vor #2017 stand hier ein trivialer
+            # Attributzugriff (`active.start_point.lat`); jetzt steht hier ein
+            # Aufruf mit Verzweigungen, Datumsarithmetik und iterativem
+            # Nachladen des Folgetags. Wirft der fuer EINEN Trip, verloeren
+            # sonst ALLE weiteren Trips dieses Nutzers ihren Radar-Alarm —
+            # `load_all_trips()` sortiert nicht, es traefe also zufaellig
+            # wechselnde Trips, und `api/routers/scheduler.py` faengt darum
+            # herum nichts ab.
+            # Eigener `try` statt Aufnahme in den Nowcast-`try` unten: der
+            # Fehler nimmt denselben Weg (`continue`), bekommt aber eine
+            # UNTERSCHEIDBARE Meldung. Unter "Radar nowcast failed" abgelegt
+            # waere er stiller als vorher — er kommt gar nicht vom Abruf.
+            try:
+                _pos = position_at_time(trip, active, segment_date, _at)
+            except Exception as e:
+                logger.error(
+                    "Radar alert: Positionsbestimmung fuer Trip %s "
+                    "fehlgeschlagen (%s) — dieser Trip wird uebersprungen, die "
+                    "uebrigen Trips dieses Nutzers laufen weiter.",
+                    trip.id, e,
+                )
+                continue
             lat = _pos.lat
             lon = _pos.lon
             # Hoehe MUSS mitwandern (#1991/#2017): der neue Ort mit der

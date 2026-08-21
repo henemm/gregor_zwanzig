@@ -371,3 +371,109 @@ def test_ac12_starkregen_hinweis_ruft_get_nowcast_genau_einmal(monkeypatch):
             f"AC-12: der Briefing-Nowcast bleibt ein drosselbarer "
             f"Hintergrund-Abruf (`polling`, #1329 C2), war {ruf['priority']!r}"
         )
+
+
+# ═══════════════════════════ Adversary F-ADV1 ═════════════════════════════
+
+
+def test_fadv1_positionsfehler_kostet_nur_den_hinweis_nicht_das_briefing(monkeypatch):
+    """F-ADV1 (Adversary, HIGH): Scheitert die Positionsbestimmung, darf das
+    den Starkregen-Hinweis kosten — nicht das Briefing, in dem er stehen
+    sollte.
+
+    Der Hinweis ist eine ZUGABE (#1439 AC-4, ADR-0018: fail-soft bei
+    Fetch-Fehlern). Vor #2017 stand an der Stelle ein Attributzugriff, seither
+    ein Aufruf mit Vorwaertssuche ueber die Tagesgrenze. Ohne eigene
+    Absicherung nimmt eine Ausnahme daraus das ganze Briefing mit.
+
+    🔴 ECHTE DATEN, keine Naht: Der Fehler entsteht hier so, wie er im Betrieb
+    entstuende — ein Wegpunkt des FOLGETAGS ohne Koordinate (beschaedigte
+    Persistenz, dieselbe Familie wie #1479). Die Vorwaertssuche des
+    90-Minuten-Offsets (`NOWCAST_HORIZON_MIN // 2`) laedt diesen Folgetag
+    wirklich nach, und `convert_trip_to_segments()` scheitert dort mit
+    `TypeError`. Nachgemessen: mit dem 27-Minuten-Offset des Alarm-Pfads ist
+    derselbe Datenfall NICHT erreichbar — das Ziel-Segment haelt ein
+    Mindestfenster von einer Stunde, der Ueberlauf braucht mehr Vorlauf.
+    Genau deshalb wird der Alarm-Pfad drueben ueber die Modul-Naht geprueft
+    und dieser hier mit echten Daten.
+
+    Die heutige Etappe endet um 19:59 Ortszeit (Island = UTC+0), das
+    Ziel-Segment laeuft danach im Mindestfenster bis 20:59. Gestellte Uhr auf
+    19:30: `jetzt + 90 min` = 21:00 liegt dahinter, die Vorwaertssuche muss
+    also den Folgetag laden.
+    """
+    from app.trip import Stage, Trip, Waypoint
+
+    with freeze_time("2026-08-18T19:30:00+00:00"):
+        heute = date_type.today()
+        morgen = heute + timedelta(days=1)
+
+        def _wp(uid_, lat, lon, ankunft, hoehe=500.0):
+            return Waypoint(
+                id=uid_, name=uid_, lat=lat, lon=lon, elevation_m=hoehe,
+                arrival_override=ankunft,
+            )
+
+        trip = Trip(
+            id=f"trip-fadv1-{uuid.uuid4().hex[:6]}",
+            name="#2017 F-ADV1",
+            official_alerts_enabled=False,
+            stages=[
+                Stage(id="S-heute", name="Heute", date=heute, waypoints=[
+                    _wp("H0", LAT, LON, "18:00"),
+                    _wp("H1", LAT + 0.4, LON + 0.4, "19:59"),
+                ]),
+                # 🔴 Der Schaden: Wegpunkt ohne Koordinate am FOLGETAG.
+                Stage(id="S-morgen", name="Morgen", date=morgen, waypoints=[
+                    _wp("M0", None, LON + 0.5, "08:00"),
+                    _wp("M1", LAT + 0.6, LON + 0.6, "16:00"),
+                ]),
+            ],
+        )
+        trip.report_config = TripReportConfig(
+            trip_id=trip.id, send_email=False, send_telegram=False, send_sms=False,
+        )
+
+        # Testvoraussetzung: der Datenfall muss den Fehler wirklich ausloesen —
+        # sonst prueft der Fall nur, dass ein gesunder Trip ein Briefing bekommt.
+        from services import radar_service as radar_service_mod
+        from services.trip_segments import convert_trip_to_segments, position_at_time
+
+        segmente = convert_trip_to_segments(trip, heute)
+        aktiv = _lokale_segmentwahl(segmente, datetime.now(timezone.utc))
+        assert aktiv is not None, "Testvoraussetzung: aktives Segment noetig"
+        at = datetime.now(timezone.utc) + timedelta(
+            minutes=radar_service_mod.NOWCAST_HORIZON_MIN // 2
+        )
+        try:
+            position_at_time(trip, aktiv, heute, at)
+        except TypeError:
+            pass
+        else:
+            raise AssertionError(
+                "Testvoraussetzung: `position_at_time()` MUSS fuer diese "
+                "Fixture werfen — sonst belegt der Fall die Absicherung nicht"
+            )
+
+        calls: list = []
+        _install_aufzeichnenden_nowcast(monkeypatch, calls)
+        rec = _ReportRecorder()
+        rec.install(monkeypatch)
+
+        # Wirft der Positionsfehler ungefangen, kommt `_run_briefing` gar
+        # nicht bis zum Report — der Test bricht dann mit dem TypeError ab.
+        _outcome, report = _run_briefing(rec, _uid("2017-fadv1"), trip)
+
+    assert report.email_plain, (
+        "F-ADV1: das Briefing muss trotz gescheiterter Positionsbestimmung "
+        "gebaut und gerendert werden — der Hinweis ist eine Zugabe, kein "
+        "Bestandteil"
+    )
+    assert calls == [], (
+        f"F-ADV1: ohne Position darf gar kein Nowcast abgerufen werden "
+        f"(kein Kontingent fuer eine Abfrage ohne Ort), erhalten {calls!r}"
+    )
+    assert "ab ca." not in report.email_plain, (
+        "F-ADV1: ohne Nowcast darf keine Starkregen-Hinweiszeile im Briefing "
+        f"stehen.\n{report.email_plain}"
+    )

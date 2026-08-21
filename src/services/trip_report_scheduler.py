@@ -1826,7 +1826,26 @@ class TripReportSchedulerService:
         # daneben. Optional mit Fallback, damit bestehende Aufrufer
         # unveraendert bleiben.
         _seg_date = target_date if target_date is not None else active.start_time.date()
-        _pos = position_at_time(trip, active, _seg_date, _at)
+        # Fail-soft wie der Nowcast-Abruf darunter (ADR-0018, #1439 AC-4):
+        # Der Starkregen-Hinweis ist eine ZUGABE zum Briefing. Wirft die
+        # Positionsbestimmung, darf das den Hinweis kosten — nicht das
+        # Briefing, in dem er stehen sollte. Beim 90-Minuten-Offset dieses
+        # Pfads ist der Tagesueberlauf real erreichbar (der 27-Minuten-Offset
+        # des Alarm-Pfads erreicht ihn unter den heutigen Tagesfenster-Regeln
+        # nicht), die Vorwaertssuche laedt dort also wirklich den Folgetag.
+        # Eigener `try` statt Aufnahme in den Nowcast-`try` unten: derselbe
+        # Weg (`return None`), aber eine unterscheidbare Meldung — sonst
+        # firmierte ein Positionsfehler als fehlgeschlagener Abruf.
+        try:
+            _pos = position_at_time(trip, active, _seg_date, _at)
+        except Exception as e:
+            logger.warning(
+                "Starkregen-Kurzfristhinweis: Positionsbestimmung fuer %s "
+                "fehlgeschlagen (%s) — der Hinweis entfaellt, das Briefing "
+                "selbst bleibt unberuehrt.",
+                trip.id, e,
+            )
+            return None
         lat = _pos.lat
         lon = _pos.lon
         # Hoehe wandert mit, auf ganze Meter normalisiert — Begruendung wie

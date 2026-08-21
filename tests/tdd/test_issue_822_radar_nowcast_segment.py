@@ -1324,3 +1324,100 @@ def test_2017_ac12_genau_ein_get_nowcast_aufruf_je_lauf():
         )
     finally:
         clean_uid(uid)
+
+
+def test_2017_fadv1_positionsfehler_eines_trips_kostet_den_anderen_nicht_den_alarm(
+    monkeypatch,
+):
+    """F-ADV1 (Adversary, HIGH): Scheitert die Positionsbestimmung fuer EINEN
+    Trip, muessen die uebrigen Trips desselben Nutzers ihren Radar-Alarm
+    trotzdem bekommen.
+
+    Vor #2017 stand an dieser Stelle ein trivialer Attributzugriff
+    (`active.start_point.lat`), seither ein Aufruf mit Verzweigungen,
+    Datumsarithmetik und iterativem Nachladen des Folgetags. Ohne eigene
+    Absicherung reisst eine Ausnahme daraus die gesamte Trip-Schleife in
+    `check_radar_alerts()` mit — `load_all_trips()` sortiert nicht
+    (`loader.py`), es traefe also zufaellig wechselnde Trips, und
+    `api/routers/scheduler.py` faengt darum herum nichts ab. Dieselbe
+    Fehlerklasse hat #1479 fuer drei ANDERE Aufrufstellen derselben Datei
+    bereits geschlossen.
+
+    Geprueft wird an der Stelle, an der es WIRKT: nicht "der Aufruf steht in
+    einem try", sondern "der zweite Trip bekommt seine Mail".
+
+    🔴 Warum die Naht und keine kaputten Daten: `position_at_time()` ist
+    fail-soft gebaut und faengt die erreichbaren Datenfehler selbst ab. Es
+    GIBT einen echten Datenpfad, der wirft — ein Wegpunkt ohne Koordinate am
+    Folgetag laesst `convert_trip_to_segments()` in der Vorwaertssuche mit
+    `TypeError` scheitern —, aber er ist nur ueber einen Tagesueberlauf
+    erreichbar, und den erreicht der Zieloffset dieses Pfads
+    (`RADAR_ONSET_THRESHOLD_MIN // 2` = 27 min) unter den heutigen
+    Tagesfenster-Regeln nicht: das Ziel-Segment haelt ein Mindestfenster von
+    einer Stunde, der Ueberlauf braucht mehr als 27 Minuten Vorlauf ueber das
+    Tagesende hinaus. Nachgemessen; im Hinweis-Pfad (Offset 90 min) ist genau
+    dieser Datenfall erreichbar und wird dort auch mit echten Daten geprueft
+    (`test_trip_report_scheduler_starkregen_hint.py`).
+    Die Absicherung hier ist also STRUKTURELL begruendet — die Regel, die den
+    Fall heute unerreichbar macht, ist eine Zusicherung der Segmentbildung,
+    keine dieses Pfads.
+
+    Kein Mock: `services.trip_segments.position_at_time` wird durch eine
+    ECHTE Funktion ersetzt, die fuer genau einen Trip wirft und fuer alle
+    anderen an die ECHTE Implementierung DELEGIERT (Muster
+    `test_starkregen_kurzfristhinweis.py::_install_fake_nowcast`). Die
+    Entscheidungslogik selbst wird nicht ersetzt.
+    """
+    from services import trip_segments as trip_segments_mod
+    from services.trip_alert import TripAlertService
+
+    uid = fresh_uid("2017-fadv1")
+    kaputt_id, gesund_id = "trip-fadv1-kaputt", "trip-fadv1-gesund"
+    clean_uid(uid)
+    try:
+        with freeze_time(_MITTAGS_2017):
+            write_user_tier(uid, "premium")
+            # Zwei Trips DESSELBEN Nutzers, beide mit aktivem Geh-Segment.
+            save_trip(make_trip(kaputt_id, arrival_start="11:00", arrival_end="15:00"), uid)
+            save_trip(make_trip(gesund_id, arrival_start="11:00", arrival_end="15:00"), uid)
+
+            echt = trip_segments_mod.position_at_time
+
+            def _wirft_fuer_einen(trip, active, segment_date, at):
+                if trip.id == kaputt_id:
+                    raise RuntimeError(
+                        "simulierter Ausfall der Positionsbestimmung"
+                    )
+                return echt(trip, active, segment_date, at)
+
+            monkeypatch.setattr(
+                trip_segments_mod, "position_at_time", _wirft_fuer_einen
+            )
+
+            reset_radar_cache()
+            frames = CountingFrameSource(onset_minutes=8)
+            mails: list = []
+            svc = TripAlertService(
+                settings=settings_email_only(), throttle_hours=2, user_id=uid,
+                radar_service=_aufzeichnender_radar_dienst(frames),
+                mail_sink=lambda subject, body: mails.append((subject, body)),
+            )
+            sent = svc.check_radar_alerts()
+
+        assert sent == 1, (
+            f"F-ADV1: der gesunde Trip {gesund_id!r} MUSS seinen Alarm "
+            f"bekommen, obwohl die Positionsbestimmung fuer {kaputt_id!r} "
+            f"geworfen hat — erhalten sent={sent}. Reisst die Ausnahme die "
+            f"Schleife mit, kommt hier 0 an (oder der Aufruf wirft ganz)."
+        )
+        assert len(mails) == 1, (
+            f"F-ADV1: erwartet genau EINE zugestellte Mail (die des gesunden "
+            f"Trips), erhalten {len(mails)}"
+        )
+        assert frames.call_count == 1, (
+            f"F-ADV1: der kaputte Trip darf kein Kontingent verbrauchen — "
+            f"sein Abruf kommt gar nicht erst zustande. Frame-Abrufe: "
+            f"{frames.call_count}"
+        )
+    finally:
+        clean_uid(uid)
