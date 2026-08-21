@@ -260,8 +260,17 @@ def test_ac13_email_column_selection_and_order(metric_id):
 
 
 def _telegram_cells(dc: UnifiedWeatherDisplayConfig) -> list[str]:
-    layout = render_for_channel("telegram", dc, "evening")
-    return layout.table_columns + layout.detail_metrics
+    """Prueft die Kaskaden-AUSWAHL fuer Telegram, nicht die Sichtbarkeit in
+    Tabelle/Kurzuebersicht (s. Kommentar bei ``test_ac4_*_telegram_table_
+    budget`` weiter unten) -- deshalb die rohe Kanal-Auswahl
+    (``get_metrics_for_channel``), nicht ``ChannelLayout.table_columns``
+    (das kappt bei 7 Slots). Die reinen Sichtbarkeits-Gates
+    (``VISIBILITY_GATE_IDS``) bleiben ausgenommen -- sie landen strukturell
+    nie in einem Bucket, unabhaengig von der Kaskade (#1741)."""
+    return [
+        m.metric_id for m in dc.get_metrics_for_channel("telegram", "evening")
+        if m.metric_id not in VISIBILITY_GATE_IDS
+    ]
 
 
 @pytest.mark.parametrize("metric_id", _ALL_METRIC_IDS)
@@ -869,8 +878,12 @@ def _kaskade_mail_headers(dc: UnifiedWeatherDisplayConfig, report_type: str = "e
 
 
 def _kaskade_telegram_cells(dc: UnifiedWeatherDisplayConfig, report_type: str = "evening") -> list[str]:
-    layout = render_for_channel("telegram", dc, report_type)
-    return layout.table_columns + layout.detail_metrics
+    """Kaskaden-AUSWAHL fuer Telegram (nicht Sichtbarkeit) -- s. Docstring
+    von ``_telegram_cells`` oben, gleiche Begruendung (#1741)."""
+    return [
+        m.metric_id for m in dc.get_metrics_for_channel("telegram", report_type)
+        if m.metric_id not in VISIBILITY_GATE_IDS
+    ]
 
 
 def _kaskade_sms_text(dc: UnifiedWeatherDisplayConfig, report_type: str = "evening") -> str:
