@@ -199,6 +199,37 @@ def test_ac4_e2e_zweig_a_alert_log_capture_id_matches_written_input_record():
     )
 
 
+def _erwarteter_messpunkt(trip, now_utc):
+    """``(lat, lon)``, an denen ``check_radar_alerts()`` seit Issue #2017
+    abfragt: die zur Mitte des Vorwarnfensters interpolierte Position auf dem
+    aktiven Segment.
+
+    ANALYTISCH aus den Segmentgrenzen gerechnet — bewusst OHNE
+    ``position_at_time()``: der Erwartungswert darf nicht aus dem Pruefling
+    stammen, sonst machte er jede Verfaelschung mit.
+
+    Der Zieloffset kommt ueber die MODUL-Referenz auf
+    ``RADAR_ONSET_THRESHOLD_MIN``, nie als ``from ... import`` gebunden — der
+    Laufzeit-Drift-Waechter aus #2009 setzt die Konstante zur Laufzeit um.
+    """
+    from datetime import timedelta
+
+    from services import radar_service as radar_service_mod
+    from services.trip_day import trip_local_today
+    from services.trip_segments import resolve_current_segment
+
+    aufgeloest = resolve_current_segment(trip, now_utc, trip_local_today(trip, now_utc))
+    assert aufgeloest is not None, "Testvoraussetzung: aktives Segment noetig"
+    active, _segment_date = aufgeloest
+    at = now_utc + timedelta(
+        minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+    )
+    spanne = (active.end_time - active.start_time).total_seconds()
+    p = max(0.0, min(1.0, (at - active.start_time).total_seconds() / spanne))
+    sp, ep = active.start_point, active.end_point
+    return (sp.lat + p * (ep.lat - sp.lat), sp.lon + p * (ep.lon - sp.lon))
+
+
 def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
     """AC-4 (E2E, F002): GIVEN ein echter Nowcast-Alarm-Lauf
     (``check_radar_alerts``, echter ``RadarNowcastService`` ueber die
@@ -209,7 +240,25 @@ def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
     Eintrag (``REASON_NOWCAST``), WHEN beide gelesen werden, THEN tragen
     sie DIESELBE ``capture_id``. Faengt die Mutation
     ``capture_id=_nowcast_capture_id`` -> ``capture_id=None`` in
-    ``trip_alert.py`` (Zeile ~1373)."""
+    ``trip_alert.py`` (Zeile ~1373).
+
+    #1948 AC-4 -> #2017: Die Zusicherung ist unveraendert "der geschriebene
+    Eingangs-Datensatz gehoert zu GENAU DIESEM Abruf". Bis #2017 wurde sie
+    ueber den Korrelations-Schluessel des Segment-STARTPUNKTS geprueft
+    (``_nowcast_source_key(42.20, 9.10)``, die Wegpunkt-Koordinate). Seit
+    #2017 fragt ``check_radar_alerts()`` an der zur Mitte des Vorwarnfensters
+    interpolierten Position ab und legt den Datensatz folglich unter DEREN
+    Schluessel ab.
+
+    🔴 Nachgezogen, nicht gelockert: Geprueft wird weiterhin, dass der
+    Datensatz zu genau diesem Abruf gehoert — nur wird der erwartete Ort
+    jetzt ANALYTISCH aus den Segmentgrenzen gerechnet
+    (``_erwarteter_messpunkt()``, ohne Aufruf von ``position_at_time()``,
+    sonst pruefte der Test den Pruefling gegen sich selbst). Ein "irgendeine
+    Capture-Datei existiert" waere die Aufweichung, die hier ausdruecklich
+    NICHT stattfindet: der Fall verlangt genau eine Datei, deren
+    ``source_key`` auf den interpolierten Punkt zeigt UND messbar vom
+    Startpunkt abweicht. Wird der Messpunkt verfaelscht, reisst er."""
     from datetime import datetime, timedelta, timezone
     from datetime import time as time_type
 
@@ -279,10 +328,40 @@ def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
         f"war result={result!r}, mails={mails!r}"
     )
 
+    # #2017: Der Datensatz liegt unter dem Schluessel des INTERPOLIERTEN
+    # Punktes, nicht mehr unter dem des Wegpunkts. Gelesen wird der
+    # `source_key` aus dem Datensatz selbst (der Dateiname laeuft durch
+    # `_safe_key()`), und der erwartete Ort wird analytisch gerechnet.
+    soll_lat, soll_lon = _erwarteter_messpunkt(trip, now_utc)
+    assert abs(soll_lat - lat) > 0.005 and abs(soll_lon - lon) > 0.005, (
+        f"Testvoraussetzung: interpolierter Punkt ({soll_lat:.5f}, "
+        f"{soll_lon:.5f}) und Segment-Startpunkt ({lat}, {lon}) muessen sich "
+        f"messbar unterscheiden — sonst kann der Fall den Messpunkt nicht "
+        f"unterscheiden und waere trivial wahr"
+    )
+
     capture_dir = get_data_root() / "debug" / "alert_input" / "nowcast"
-    capture_files = sorted(capture_dir.glob(f"{_nowcast_source_key(lat, lon)}_*.json"))
-    assert capture_files, "Kein Eingangs-Datensatz unter data/debug/alert_input/nowcast/ gefunden."
-    written_capture_id = json.loads(capture_files[-1].read_text())["capture_id"]
+    capture_files = sorted(capture_dir.glob("*.json"))
+    assert len(capture_files) == 1, (
+        f"Erwartet wird GENAU EIN Eingangs-Datensatz unter "
+        f"data/debug/alert_input/nowcast/ (ein Abruf je Lauf, #2017 AC-12), "
+        f"gefunden: {[f.name for f in capture_files]!r}"
+    )
+    datensatz = json.loads(capture_files[0].read_text())
+    ist_lat, ist_lon = (float(x) for x in datensatz["source_key"].split("_")[:2])
+    assert (abs(ist_lat - soll_lat) < 5e-4 and abs(ist_lon - soll_lon) < 5e-4), (
+        f"Der Eingangs-Datensatz gehoert nicht zu diesem Abruf: sein "
+        f"source_key zeigt auf ({ist_lat}, {ist_lon}), abgefragt wurde der "
+        f"zur Fenstermitte interpolierte Punkt ({soll_lat:.5f}, "
+        f"{soll_lon:.5f}). ({lat}, {lon}) waere der Segment-Startpunkt, also "
+        f"der Messpunkt VOR #2017."
+    )
+    assert datensatz["source_key"] == _nowcast_source_key(ist_lat, ist_lon), (
+        f"source_key {datensatz['source_key']!r} folgt nicht der geteilten "
+        f"Formel `_nowcast_source_key()` — Schreib- und Lesepfad liefen "
+        f"auseinander (#1948 AC-4)"
+    )
+    written_capture_id = datensatz["capture_id"]
     assert written_capture_id, "Eingangs-Datensatz traegt keine capture_id."
 
     log_entry = _read_log(uid)["entries"][-1]
