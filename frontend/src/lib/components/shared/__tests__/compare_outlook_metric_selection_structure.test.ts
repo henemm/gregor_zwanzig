@@ -517,11 +517,14 @@ describe('AC-4 [#1848 A2]: Anzeige und Umschalten lesen weiterhin aus DERSELBEN 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AC-5 (REGRESSIONSSCHUTZ — bereits heute GRUEN, muss es bleiben)
+// AC-5 (primaryColumns/onRemove/onDndReorder: REGRESSIONSSCHUTZ, bleibt GRUEN)
+// + AC-13-Abloesung (#1848 A3): offColumns/onRestore MUESSEN jetzt gesetzt
+// sein — umgedreht gegenueber dem urspruenglichen #1719-S3-Waechter (RED bis
+// zur Implementierung von A3 Teil (b)).
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-5 [REGRESSIONSSCHUTZ, bereits GRUEN]: Reihenfolge-/„Aus"-Block (WeatherV2Reihenfolge) bleibt unberuehrt', () => {
-	test('WeatherV2Reihenfolge wird weiterhin mit primaryColumns/onRemove/onDndReorder aufgerufen — Nicht-Umfang laut Spec', () => {
+describe('AC-5 [primaryColumns/onRemove/onDndReorder REGRESSIONSSCHUTZ] + AC-1/AC-7 [#1848 A3, offColumns/onRestore]: Reihenfolge-/„Aus"-Block (WeatherV2Reihenfolge)', () => {
+	test('WeatherV2Reihenfolge wird weiterhin mit primaryColumns/onRemove/onDndReorder aufgerufen, UND jetzt zusaetzlich mit offColumns/onRestore (#1848 A3)', () => {
 		// Dieser Test prueft KEIN neues Verhalten dieser Lieferung. Er ist HEUTE
 		// bereits gruen (Issue #1361 Befund 2/#1368, `8fc4d210`, live 2026-07-27)
 		// und MUSS es nach der Implementierung von #1406 Scheibe A bleiben — die
@@ -552,25 +555,32 @@ describe('AC-5 [REGRESSIONSSCHUTZ, bereits GRUEN]: Reihenfolge-/„Aus"-Block (W
 			onDndReorderAttr && attributeReferencesIdentifier(onDndReorderAttr, 'handleOutlookDndReorder'),
 			'REGRESSION: `onDndReorder` des WeatherV2Reihenfolge-Aufrufs wurde veraendert (AC-5 Nicht-Umfang-Verstoss).'
 		);
-		// Issue #1719 S3 (Adversary-Fund F001, BROKEN): "Aus ist ein Zustand"
-		// gilt NUR fuer den Trip-Kanal-Reiter (WeatherMetricsTab.svelte, route-
-		// Kontext) — diese Einbettung arbeitet auf einem flachen Array ohne
-		// Kanal-Ebene und hat bereits einen funktionierenden Rueckweg (Checkbox
-		// darueber). `offColumns`/`onRestore` sind OPTIONALE Props ohne
-		// Vorgabewert — die Naht ist die PROP-ANWESENHEIT (Spec Abschnitt 1),
-		// nicht ein `context`-String. Werden sie hier durchgereicht, entsteht
-		// eine ungewollte Aus-Gruppe im Ortsvergleich (AC-13-Verstoss).
-		assert.equal(
-			findAttr(row, 'offColumns'),
-			undefined,
-			'AC-13 FAIL: der Ausblick-Aufruf von WeatherV2Reihenfolge uebergibt jetzt `offColumns` — ' +
-				'das erzeugt eine Aus-Gruppe im Ortsvergleich, wo ADR-0050 Regel 4 nicht gilt.'
+		// 🔴 AC-13-ABLOESUNG (#1848 A3, PO-Entscheid 2026-08-21): die Begruendung
+		// von #1719 S3 -- der Ausblick habe "bereits einen funktionierenden
+		// Rueckweg (Checkbox darueber)" -- entfaellt mit A3 Block A: die
+		// Kaestchenliste selbst wird abgeschafft (s.
+		// outlook_erbt_grundauswahl_structure.test.ts, AC-1/AC-2). Ohne sie
+		// gibt es KEIN Kaestchen mehr, ueber das man etwas zurueckholen
+		// koennte -- die Aus-Gruppe von WeatherV2Reihenfolge UEBERNIMMT diese
+		// Rolle jetzt, exakt wie im Trip-Kanal-Reiter (ADR-0050 Regel 4 gilt ab
+		// A3 auch fuer den Ausblick, loest ADR-0053 Punkt 1 ab). Die
+		// Zusicherung ist deshalb UMGEDREHT, nicht geloescht: `offColumns`/
+		// `onRestore` MUESSEN jetzt gesetzt sein.
+		// SPEC: docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md
+		//   AC-1/AC-7, Mutations-Gegenprobe M-2.
+		const offColumnsAttr = findAttr(row, 'offColumns');
+		assert.ok(
+			offColumnsAttr,
+			'AC-1/AC-7 FAIL (#1848 A3): der Ausblick-Aufruf von WeatherV2Reihenfolge ' +
+				'uebergibt kein `offColumns` mehr — ohne die abgeschaffte Kaestchenliste ' +
+				'(AC-1) waere eine abgewaehlte Groesse nicht mehr zurueckholbar (ADR-0050 ' +
+				'Regel 4, loest AC-13 aus fix_1719_s3 ab).'
 		);
-		assert.equal(
-			findAttr(row, 'onRestore'),
-			undefined,
-			'AC-13 FAIL: der Ausblick-Aufruf von WeatherV2Reihenfolge uebergibt jetzt `onRestore` — ' +
-				'siehe offColumns-Befund oben, dieselbe Naht.'
+		const onRestoreAttr = findAttr(row, 'onRestore');
+		assert.ok(
+			onRestoreAttr,
+			'AC-1/AC-7 FAIL (#1848 A3): der Ausblick-Aufruf von WeatherV2Reihenfolge ' +
+				'uebergibt kein `onRestore` mehr — dieselbe Naht wie offColumns oben.'
 		);
 	});
 });
