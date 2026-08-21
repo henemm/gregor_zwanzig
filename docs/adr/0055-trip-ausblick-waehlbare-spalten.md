@@ -177,6 +177,16 @@ Wer den Ortsvergleich später nachziehen will: Der Schnitt sitzt bewusst
 **außerhalb** von `resolve_outlook_metrics()`, damit der Compare-Pfad unberührt
 bleibt. Eine Vereinheitlichung muss ihn **hineinziehen**, nicht danebenlegen.
 
+> **Nachtrag 2026-08-21 (Issue #1848 Scheibe A3) — die Divergenz ist
+> aufgehoben.** [ADR-0059](0059-compare-ausblick-erbt-grundauswahl.md) zieht
+> den Schnitt genau wie hier vorausgesagt in die geteilte Auflösung hinein:
+> der Compare-Ausblick wird seither ebenfalls gegen seine Grundauswahl
+> (`resolve_enabled_metrics(active_metrics)`) geschnitten und nutzt dieselbe
+> Drei-Werte-Semantik (Punkt 2 dieses ADR, Nachtrag 2026-08-20) wie der
+> Trip-Ausblick. Trip und Ortsvergleich verhalten sich seither **identisch**.
+> Dieser Abschnitt bleibt als Beleg stehen, dass die Divergenz eine bewusste,
+> befristete Zuschnitt-Folge war — keine dauerhafte Festlegung.
+
 ## Folgen
 
 - Bestandstrips ohne Bedienung der neuen Fläche bleiben byte-identisch —

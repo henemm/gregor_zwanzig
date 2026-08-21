@@ -646,7 +646,9 @@ den Ablösungsvermerk (#664 → abgelöst durch #1703 S7), ebenso der Docstring 
 
 **Zuschnitt-Grenze, bewusst offen:** Ausblick (`outlook_columns()`) und
 Stundenverlauf (`hourly_selectable_metric_ids()`) des Ortsvergleichs führen
-weiterhin je eine einzige globale Liste ohne Kanal-Ebene (ADR-0053 Punkt 1) —
+weiterhin je eine einzige globale Liste ohne Kanal-Ebene (ADR-0053 Punkt 1,
+für den Ausblick seit 2026-08-21 durch ADR-0059 abgelöst — s. Nachtrag unten;
+für den Stundenverlauf gilt ADR-0053 Punkt 1 fort) —
 für sie gibt es keine kanalbezogene Soll-Reihenfolge, gegen die sich prüfen
 ließe. Ein Wächter dafür bräuchte zuerst deren eigene Kanal-Kette.
 
@@ -683,6 +685,18 @@ Ausblick (`outlook_metrics`) bleiben **global** — eigene, getrennt
 gespeicherte Auswahllisten, bewusste Schnitt-Entscheidung (ADR-0053), keine
 Auslassung. Eine Folge-Scheibe müsste dieselbe Kette (Resolver, Persistenz,
 Editor) dafür wiederholen.
+
+> **Nachtrag 2026-08-21 (Issue #1848 Scheibe A3, ✅ ERLEDIGT):** Die
+> Folge-Scheibe für den Ausblick kam — mit anderem Zuschnitt als hier
+> erwartet. Statt einer Kanal-Ebene bekam der Ausblick eine **Bindung an die
+> Grundauswahl** (dasselbe Muster wie der Trip-Ausblick, ADR-0055): keine
+> unabhängige zweite Auswahl mehr, nur noch Abwählen/Zurückholen aus der
+> Grundauswahl der Fläche. `outlook_metrics` bleibt ohne Kanal-Ebene — dieser
+> Teil der obigen Aussage gilt fort. Der **Stundenverlauf** ist von diesem
+> Nachtrag nicht betroffen und bleibt wie oben beschrieben. Details:
+> `docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md`,
+> [ADR-0059](../adr/0059-compare-ausblick-erbt-grundauswahl.md) (löst
+> ADR-0053 Punkt 1 für den Ausblick ab).
 
 Bauform: additiv. `CompareRenderOptions.enabled_metrics` behält seine
 Bedeutung (reine globale Auflösung); `enabled_metrics_by_channel` tritt
