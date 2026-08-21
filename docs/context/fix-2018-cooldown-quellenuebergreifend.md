@@ -293,3 +293,60 @@ Voll-Alarm durch, nie als Nachtrag.
 - **Eigene Tickets, nicht hier:** O-C „Radar-Dringlichkeit differenzieren" (Kollateralschaden
   an der Kanal-Schwelle, ADR-0046), O-D-Ausweitung auf weitere Gefahrenarten jenseits `wet`,
   Änderungsalarm als dritte Prüfrichtung (S4b-3, in der Spec bereits als offen vermerkt).
+
+---
+
+## Stand nach der Spec-Freigabe (2026-08-21)
+
+- **Spec freigegeben** (PO 'go'): `docs/specs/modules/alert_nachtragsmeldung.md`, 30 ACs,
+  Workflow-Phase `Spec Approved`, `loc_limit_override 500`.
+- **Branch:** `fix-2018-nachtragsmeldung`, Basis `cba7ffa3` (enthält #1948 S6 und #2009).
+- **Nächster Schritt:** `/40-tdd-red`.
+
+### Korrektur an einer früheren eigenen Festlegung
+
+Ich hatte als Tech-Lead-Entscheid gesetzt: „amtliche ROT-Warnung bricht immer als Voll-Alarm
+durch". Beim Ausformulieren zeigte sich, dass das **keine Bewahrung, sondern eine Änderung**
+des Ist-Zustands gewesen wäre: Heute wird eine amtliche Warnung — auch ROT — unterdrückt,
+wenn kurz zuvor ein Nowcast für dieselbe Lage zugestellt wurde (`exceeds("HIGH","HIGH")` ist
+`False`; bewacht von `test_alert_gate.py:757-793`). Der Entscheid ist **zurückgenommen**;
+das Bestandsverhalten bleibt unangetastet. Das Anliegen ist trotzdem erfüllt, und zwar
+struktureller: Der Nachtrags-Zweig ist baulich auf `match["source"]=="official" and
+new_source=="nowcast"` begrenzt, eine amtliche Meldung kann also gar nicht zum Nachtrag
+herabgestuft werden.
+
+### Vom Spec-Schreiber gefangener Fehler in meiner eigenen Vorgabe
+
+Meine Anweisung „die beiden Compare-Aufrufstellen ignorieren den dritten Ausgang einfach"
+war **still falsch**: Das geteilte Gate kippt für die nachtragsfähige Konstellation seinen
+`.allowed`-Wert von `False` auf `True`, unabhängig vom Aufrufer. Ohne Eingriff wären dort
+bisher unterdrückte Dubletten **ungekennzeichnet durchgelaufen**. Behoben durch je eine
+Zeile (`identity_gate.allowed and not identity_gate.is_addendum`) plus Regressions-AC-B15.
+Muster: [[reference_fix_wirkungslos_weil_ein_spaeteres_tor_ihn_verwirft]] in der Gegenrichtung
+— nicht ein späteres Tor verwirft den Fix, sondern der Fix öffnet ein früheres Tor.
+
+### Zonen-Abgrenzung in `src/app/trip_alert.py` (mit Parallelsitzungen abgestimmt)
+
+| Sitzung | Zone |
+|---|---|
+| **#2018 (ich)** | `check_event_identity_gate`-Aufrufe (~1437-1445 Nowcast, ~1838-1849 amtlich), `record_event_identity` (~1526-1533, ~1923-1932), Renderer-Übergabe (~1469), `cooldown_display` (~1366-1371) |
+| #2017 B | `get_nowcast`-Abrufstelle (~1259), Segment-Ende-Guard, `trip_report_scheduler.py:1809-1815` |
+| #2020 | `_briefing_announced` (~1326-1340), `detect_changes` (~1059) |
+
+🔴 **Alle Zeilennummern sind Näherungen zum Stand `cba7ffa3`** — #1948 S6 und #2009 sind in
+den letzten 24 h oberhalb eingefügt worden. **Nach Funktionsnamen suchen, nie nach Zeile.**
+
+### Auflagen aus der S6-Sitzung (bereits in der Spec verankert)
+
+1. **Der Bindestrich ist in der SMS-Grammatik doppelt belegt** — `LEVELS.get(int(round(v)),
+   "-")` liefert für Werte außerhalb 0–3 denselben Glyph wie Stufe 0 (`TH:M->-`, `TH:-->-`).
+   Das Nachtrags-Token trägt deshalb keinen Bindestrich (`"Erg "`).
+2. **Telegram-Kurzstil sendet den SMS-Text**, nicht den Telegram-Text. Die Kennzeichnung sitzt
+   deshalb im SMS-Text und wird vom Kurzstil miterbt — sonst erreichte sie Satelliten- und
+   Kurzstil-Nutzer nicht.
+3. **Gewitterstufen als Wort, aus `THUNDER_LABEL_DE` importiert**, nie lokal nachgebaut
+   (Wächter aus #1480). Werte auf der Leiter werden Wort, Abstände bleiben Zahl mit Einheit.
+4. Zwei Wächter prüfen gezielt, dass das Token **nur** im Nachtragsfall auftaucht:
+   `test_alert_stufenwort.py::test_ac14_sms_bleibt_unveraendert_regressionswaechter` und
+   `test_telegram_kurzstil_trip_alert.py:315`. **Rot dort = Befund an der Implementierung,
+   nicht am Test** — Auslösebedingung schärfen, nie die Erwartung aufweichen.
