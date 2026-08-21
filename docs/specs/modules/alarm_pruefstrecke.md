@@ -174,14 +174,14 @@ Eingangsdaten dafür sprächen).
   `monkeypatch.setattr` auf dem Modul erzwungen gesperrt, When ein Prüflauf mit einer amtlichen
   Warnung gefahren wird, die ohne die Sperre einen Versand auslösen würde, Then liefert der Lauf
   `triggered_count == 0` und leere Kanal-Listen für alle vier Kanäle.
-  - Test: amtliche Testmeldung als Eingangsdaten, `check_official_alert_gate` sperren,
+  - Test: amtliche Testmeldung als Eingangsdaten, `check_official_alert_gate` **auf `trip_alert`** sperren,
     Nullbefund über alle vier Kanäle nachweisen.
 
 - **AC-6:** Given der Radar-Zweig-Gate-Baustein (`check_nowcast_gate`) wird per
   `monkeypatch.setattr` auf dem Modul erzwungen gesperrt, When ein Prüflauf mit
   Nowcast-Frames gefahren wird, die ohne die Sperre einen Onset-Alarm auslösen würden, Then
   liefert der Lauf `triggered_count == 0` und leere Kanal-Listen für alle vier Kanäle.
-  - Test: Frames-Fixture mit garantiertem Onset (`_GuaranteedWetRadar`-Muster), Gate sperren,
+  - Test: Frames-Fixture mit garantiertem Onset (`_GuaranteedWetRadar`-Muster), `check_nowcast_gate` **auf `trip_alert`** sperren,
     Nullbefund über alle vier Kanäle nachweisen.
 
 - **AC-7:** Given ein Prüflauf wird mit vorbelegtem Zustand gestartet, der die Auslöseentscheidung
@@ -240,3 +240,24 @@ Eingangsdaten dafür sprächen).
 - 2026-08-21: Testdateiname korrigiert (`test_alarm_pruefstrecke_selbstschutz.py` statt
   Issue-Nummer im Namen, CLAUDE.md-Regel „Testdateien nach Verhalten benennen"), Pfadauflösung
   relativ zur Testdatei ergänzt, AC-4 auf reines Beobachtungsergebnis umformuliert.
+
+## Nachtrag 2026-08-21: Wo die Gate-Sperre ansetzen muss
+
+Beim Schreiben der RED-Tests am Code festgestellt und verifiziert — die Sperre aus AC-4 bis AC-6
+muss je Baustein an einem **anderen Modul** ansetzen, sonst wirkt sie nicht:
+
+| AC | Baustein | Patch-Ziel | Warum |
+|---|---|---|---|
+| AC-4 | `check_briefing_imminent` | `alert_gate` | `trip_alert.py:967` importiert ihn **lokal pro Aufruf** — der Patch auf `alert_gate` wird bei jedem Aufruf frisch gezogen und wirkt. |
+| AC-5 | `check_official_alert_gate` | `trip_alert` | Auf **Modulebene** importiert (`trip_alert.py:22-27`), damit fest an `trip_alert` gebunden. |
+| AC-6 | `check_nowcast_gate` | `trip_alert` | dito. |
+
+Ein Patch auf `alert_gate` würde bei AC-5/AC-6 ins Leere laufen: die realen Aufrufe bei
+`trip_alert.py:1239` und `:1901` blieben unverändert, der Lauf löste trotz „Sperre" aus, und der
+Test wäre rot **aus dem falschen Grund** — nicht weil die Prüfstrecke etwas gefangen hat, sondern
+weil die Sperre nie scharf war. Das etablierte Muster dafür steht in
+`tests/tdd/test_issue_1088_official_alert_triggers.py:800,848`, das dieselben zwei Bausteine
+ebenfalls auf `trip_alert` patcht.
+
+Die Acceptance Criteria selbst sind davon unberührt — geprüft wird unverändert die Wirkung
+(`triggered_count == 0`, leere Kanal-Listen), präzisiert wurde nur der technische Angriffspunkt.
