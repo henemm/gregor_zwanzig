@@ -311,3 +311,179 @@ und die RED-Tests setzen sie explizit.
       **29,4 mm** — „redundant" trifft es nicht. Empfehlung in der Spec vorlegen,
       Entscheidung beim PO.
 
+
+## Nachtrag 2026-08-21 (Scheibe 2, Session `intake-2020-scheibe2`)
+
+Nach Auslieferung von Scheibe 1 (Auslösung, Prod `b423c913`) neu bzw. korrigiert:
+
+- **AC-7 der Spec ist erledigt.** Die Briefing-Unterdrückung schreibt seit Scheibe 1
+  `alert_log.append_suppressed_entry(reason=REASON_NOWCAST, gate_reason="briefing_announced:<mm>mm")`
+  (`src/services/trip_alert.py:1390`). Der Punkt entfällt aus dem Zuschnitt.
+- **Das Nicht-Ziel „Auslöseregel des Nowcasts ändern" ist überholt.** Scheibe 1 hat genau
+  das getan (Mengen-Überholung bricht die Sperre). Der Absatz muss umgeschrieben werden.
+- 🔴 **Für den Tagesbezug in der Kurznachricht existiert bereits eine Notation:**
+  `_sms_onset_time()` (`render.py:537-550`) hängt bei Versatz `+1` an — GSM-7-verträglich,
+  zeichensparend, eingeführt mit #2009. Der Abweichungsalarm-Zweig
+  (`_sms_onset_shift_token`, `render.py:300-307`) hat keine. **Keine zweite Notation
+  einführen** — der geteilte Tageswort-Baustein muss diese Schreibweise für den
+  Kurzkanal übernehmen. (Hinweis der #2046-Session, dort `_sms_onset_time` unberührt.)
+- **SMS-Weiche:** `render_sms` → `_render_sms_body` (`render.py:1042-1080`),
+  `if msg.source is not None` → Onset-Zweig (#2046), sonst Δ-/Korridor-/Onset-Shift-Zweig
+  (diese Scheibe).
+- **Datei-Nachbarschaft:** #2036 (`fix-2036-alarm-kilometer`) ergänzt `km_measured: bool = False`
+  additiv am Ende aller vier Event-Dataclasses und ändert die Ortsangabe-Zeile in `render.py`
+  (`km{A}-{B}` → `km {A}-{B}`, Ratsche `test_alert_location_vocabulary.py:534` verbietet
+  `km` direkt vor einer Ziffer). Merge steht bevor — vor dem Schreiben rebasen.
+
+### 🔴 Nachtrag: `-1` als Zahlensuffix ist im Kurzkanal NICHT eindeutig (selbst geprüft)
+
+Anlass war der Hinweis der #2046-Session, die Fensterform der amtlichen Warn-SMS (`13-22`)
+lasse sich vom Tagesversatz unterscheiden, weil das Fenster keine Minuten trage. **Das
+trägt nicht.** `_tag_hour()` (`official_alerts.py:1896-1902`) schreibt Minuten sehr wohl,
+sobald sie nicht auf `:00` liegen — ein Fenster lautet dann `15:20-17`. Damit sind
+
+- Gültigkeitsfenster `15:20-17` und
+- Tagesversatz `17:00-1`
+
+beide „Uhrzeit mit Minuten, Bindestrich, Zahl" und nicht mehr per Form trennbar.
+
+Dazu kommt: Im Kurzkanal existieren bereits **zwei** Tagesbezug-Schreibweisen —
+`17:00+1` (Zahlensuffix, Onset-Zweig, #2009) und das **Wochentagskürzel** `Sa03` bzw.
+`Do12-22` (amtliche Warnung, #1948 S5, `official_alerts.py:1934-1943`). Für den
+Vergangenheitsfall des Abweichungsalarms (Normalfall `-1`) ist das Wochentagskürzel die
+eindeutigere Fortsetzung: Buchstaben kollidieren mit keiner Stundenzahl.
+
+**Zu entscheiden in der Spec (AC-Freigabe durch den PO), nicht implizit:** Welche der
+beiden bestehenden Notationen trägt den Tagesbezug des Abweichungsalarms im Kurzkanal?
+Eine dritte kommt nicht in Frage.
+
+Nebenbefund für die Umsetzung: `_sms_onset_time` hängt das Vorzeichen fest an
+(`f"{base}+{day_offset}"`, `render.py:550`) — mit `day_offset = -1` entstünde `17:00+-1`.
+Wer die Zahlensuffix-Variante wählt, muss dort auf `f"{day_offset:+d}"` (byte-identisch
+für `0`/`+1`, also regressionsfrei).
+
+Beispiel für die dichteste Stelle der Kurzform, falls die Spec eines zeigt (mit #2036
+und #2046 zusammen): `Ziel: R2.5@18:00…`.
+
+**Zuschnitt des AC (Bitte der #2046-Session, übernommen):** Fällt die Wahl auf das
+Wochentagskürzel, wird `+1` aus #2009 (Onset-Kurzform) zur dann einzigen abweichenden
+Notation im selben Kanal. Das AC muss diese Frage ausdrücklich mitbeantworten — entweder
+„gilt auch für den Onset-Suffix, Umstellung in eigenem Ticket" oder „Onset bleibt bewusst
+bei `+1`, Begründung X". Sonst entsteht die dritte Notation als Altbestand statt als
+Neubau. Die #2046-Session legt das Folgeticket an, sobald die Spec freigegeben ist.
+
+**Prüfpunkt aus dem Alarm-Versand-Audit (nur lesende Session, kein Ticket):**
+`docs/context/fix-2009-nowcast-vorlauf.md:162` hält fest, dass kein Test prüft, ob
+`onset_minutes` überhaupt variieren kann — der Default 8 maskiert das suiteweit. Betrifft
+den Nowcast-Vorlauf, nicht den Abweichungsalarm; **kein Ziel dieser Scheibe**. Wenn die
+Zeitangaben-Tests ohnehin eine Referenzzeit durchreichen, ist ein variierender Wert dort
+billig mitzunehmen — sonst liegen lassen und in #1196 buchen.
+
+### Bestandsaufnahme der Zeit-Notationen (2026-08-21, Explore-Durchgang)
+
+**Die Frage nach der Tagesbezug-Schreibweise ist durch den Bestand entschieden — beide
+zuvor erwogenen Varianten waren Neuerfindungen.**
+
+| Kanal | Bestehende Notation für „Uhrzeit an einem anderen Tag" | Fundort |
+|---|---|---|
+| E-Mail + Telegram, **im Abweichungsalarm selbst** | `gestern 18:03 Uhr` / `vor 2 Tagen 18:03 Uhr` | `format_reference_at`, `src/utils/timezone.py:154-169`, gerendert in `render.py:784-786/845-847/949-951` als „Stand: heute … · verglichen mit gestern …" |
+| E-Mail + Telegram, Radar-Onset | `morgen 00:23` (nur „morgen", kein Wochentag) | `_onset_time_label`, `render.py:367-374` |
+| SMS/Premium-SMS, amtliche Warnung | Wochentagskürzel **klebt** an der Stunde, `:00` entfällt: `Do12-22`, `Fr22-Sa03`; am heutigen Tag entfällt das Kürzel ersatzlos (#1948 S5) | `_tag_time`/`_tag_hour`, `official_alerts.py:1896-1943` |
+| SMS/Premium-SMS, Radar-Onset | Zahlensuffix `9:05+1` | `_sms_onset_time`, `render.py:537-550` |
+
+**Beschluss für diese Scheibe:** Langform übernimmt `gestern HH:MM` (Hausnotation
+desselben Alarms), Kurzform übernimmt das klebende Wochentagskürzel (`R7@Do15`).
+Keine dritte Schreibweise.
+
+**Gegen das Zahlensuffix in der Kurzform sprechen drei belegte Gründe:**
+1. `-` ist in der Kurzform bereits dreifach belegt — Wert gefallen (`-R7`, `render.py:987`),
+   Bereichstrenner (`12-22`), km-Spanne (`km8-8`, `render.py:1006`).
+2. Die Fensterform der amtlichen Warnung ist formgleich: `_tag_hour` setzt Minuten, sobald
+   sie nicht auf `:00` liegen ⇒ `15:20-17` neben `17:00-1`.
+3. `+1` deckt strukturell nur die Zukunft ab (`f"{base}+{day_offset}"`, `render.py:550`
+   ⇒ aus `-1` würde `17:00+-1`).
+
+**Restfrage für die AC-Freigabe:** Zieht `_sms_onset_time` (`+1`, Radar-Onset) auf das
+Wochentagskürzel nach? Sonst bleiben zwei Schreibweisen im selben Kanal. Umsetzung wäre
+ein Folgeticket der #2046-Session, nicht Teil dieser Scheibe.
+
+**Weitere Funde, die den Zuschnitt betreffen:**
+- `OnsetShiftEvent` (`model.py:66-85`) hat **kein** Tagesbezug-Feld; `from_time`/`to_time`
+  sind rohe `HH:MM`-Strings. `AlertEvent.occurred_at` (`model.py:98`) ebenso. Beide
+  brauchen das additive Feld.
+- **Kein Leser von `onset_day_offset` außer** `_onset_time_label` und `_sms_onset_time`.
+- Die Kurzform des Δ-Zweigs wirft Minuten **weg**: `@{occurred_at[:2]}` (`render.py:990`),
+  ebenso der Korridor (`render.py:263`). Der Tagesbezug muss dort vor die **Stunde**.
+- **🔴 KORREKTUR 2026-08-21 (PO-Rückfrage „ist das ein Begriff, den wir sonst verwenden?"):
+  Das Wort „stärkste" gibt es im Bestand sehr wohl** — `output/renderers/email/helpers.py:1786`
+  schreibt seit #795/#1493 `Gewitter {Stufe} ab {HH}:00 · stärkste {HH}:00` in die
+  Briefing-Mail. Die ursprüngliche Behauptung dieses Dokuments („dafür gibt es kein Wort")
+  war falsch; sie kam von einer Suche, die nur die Alarm-Renderer abgedeckt hat und die
+  Briefing-Fläche ausgelassen hat. **Lehre: Vokabular-Fragen über ALLE Ausgabeflächen
+  greppen, nicht nur über die gerade bearbeitete.**
+- Damit ist „stärkste Stunde" keine Neueinführung, sondern die Fortsetzung eines
+  bestehenden Sprachgebrauchs — mit Substantiv, weil „stärkste" allein grammatisch
+  unvollständig ist. Die verbleibende Uneinheitlichkeit (Briefing „stärkste 15:00" vs.
+  Alarm „stärkste Stunde 17:00") ist bewusst NICHT in dieser Scheibe angeglichen: die
+  Briefing-Zeile ist eine andere Fläche, und das Alarm-Vokabular wird in **#2050 B-2**
+  normiert („Beginn / stärkste Stunde / Ende"). Befund dort gebucht.
+- **`max.` ist im Bestand die Form für den WERT, nicht für den Zeitpunkt** (`Temp max`,
+  `Wind max X km/h (HH:00)`, `_AGGREGATION_LABELS_DE` in `metric_catalog.py:894-895`).
+  Deshalb scheidet `max. 17:00` aus: es setzt eine Zahl-Erwartung, liefert aber eine Uhrzeit.
+- Etablierte Bedeutungs-Marker der Alarm-Fläche bleiben `ab` (Beginn), `-Beginn`, `jetzt`,
+  `Stand:`, `verglichen mit`, `Gültig:`. Der Trip-Report unterscheidet Erstüberschreitung
+  und Spitze rein über die Klammerstellung (`R@14(R@17)`, `output/tokens/metrics.py:65-67`)
+  — eine Positions-Konvention ohne Wort.
+
+### Zeichenbudget der Kurznachricht: Δ- und Onset-Zweig sind getrennt (belegt 2026-08-21)
+
+Von der #2046-Session am Code geprüft, nicht referiert:
+
+- `_render_sms_body` (`render.py:1107-1108`) hat einen **frühen Return**:
+  `if msg.source is not None: return _render_sms_onset(msg, limit)`. Eine `AlertMessage` ist
+  damit **entweder** Onset (`source != None`, `model.py:118`) **oder** Δ — nie beides in einem
+  gerenderten Text.
+- Jeder Zweig hat seinen **eigenen** Hardcut: Onset `render.py:614`, Δ `render.py:1155`. Das
+  `limit` wird pro `render_sms()`-Aufruf gemessen, nicht über beide Befunde hinweg.
+- Die Addendum-Mechanik (`"Erg "`-Präfix, `render.py:1067-1071`) bündelt nur **innerhalb
+  eines** `render_sms()`-Aufrufs, also mehrere Befunde derselben Alarmart.
+
+**Folge für diese Scheibe:** Das Restmengen-Token (`Rest{mm}@{HH}`, ~8–9 Zeichen) zehrt
+allein am Δ-Budget. Die 160-Zeichen-Prüfung (AC-7) ist **unabhängig** von #2046 aufzustellen;
+kein gemeinsamer Messpunkt, kein Merge-Halt.
+
+🔴 **Grenze der Auskunft, ausdrücklich benannt:** Belegt ist die **Renderer-Weiche**, nicht
+der Versandweg. Würden zwei Alarmarten **vor** `render_sms` zu einer Sendung zusammengefasst,
+wäre das eine andere Frage. Im Renderer passiert es nachweislich nicht.
+
+**Folgeticket #2054** (von der #2046-Session angelegt): „Onset-Kurznachricht: Wochentagskürzel
+statt `+1` bei Mitternachts-Überlauf" — `_sms_onset_time` (`render.py:537`, Aufruf `:595`).
+Setzt die mit dieser Spec freigegebene Vereinheitlichung um; **nicht** Teil dieser Scheibe.
+GSM-7-Frage ist dort bereits beantwortbar: Die amtliche Warn-SMS versendet die Kürzel
+(`Do12-22`) seit #1948 S5 im selben Kanal — reine ASCII-Buchstaben, GSM-7-fähig.
+
+### 🔴 Vor dem ersten Schreiben rebasen — #2036 (PR #2055) landet unmittelbar
+
+Zugesagte Vorwarnung der #2036-Session. Alles **additiv**, nichts entfernt, aber in genau
+den Dateien dieser Scheibe:
+
+- `alert/model.py`: `km_measured: bool = False` an **allen vier** Event-Dataclasses
+  (`AlertEvent`, `OnsetEvent`, `OnsetShiftEvent`, `CorridorEvent`); zusätzlich
+  `segment_id: str | None = None` an `CorridorEvent`.
+- `alert/render.py`: `_location_of`, `_onset_shift_where`, `_onset_shift_location` reichen
+  `km_measured` an `format_alert_location` durch; **neu** `_corridor_where`; `_corridor_when`
+  und `_render_sms_corridor_only` bauen ihre km-Spanne nicht mehr selbst, sondern gehen über
+  `format_alert_location`.
+- `alert/project.py`: reicht das Flag in der Projektion weiter.
+- Die Ortsauflösung hat danach **vier** Stufen: `location_label` → gemessene km-Spanne →
+  Segment-Kennung → km-Rückfall.
+
+Berührt diese Scheibe direkt: `_onset_shift_line`/`_onset_shift_where` und `_corridor_when`
+sind Textstellen, in denen auch die Zeitangaben sitzen. **Nach dem Merge rebasen und die
+neue Fassung lesen**, nicht auf der alten weiterbauen.
+
+**Nachtrag #2036:** `_corridor_when` ist nach dem Merge **zweigeteilt** — die Ortsangabe zieht
+das neue `_corridor_where` (über `format_alert_location`), `_corridor_when` hängt nur noch
+`· {ce.occurred_at}` an. Der Zeitanteil sitzt dort also **isoliert**; die Ortslogik ist für
+diese Scheibe nicht mehr anzufassen. `_onset_shift_where` behält seine Bauart, bekommt nur
+`km_measured=` als zusätzliches Argument. `weather_change_detection.py` fasst #2036 nicht an.

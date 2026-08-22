@@ -3671,6 +3671,24 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-22: Issue #2020 Scheibe 2 — der Abweichungsalarm für
+  Niederschlags-Summen-Ereignisse schaut nach vorn statt zurück: statt „stärkste
+  Stunde war um X" nennt die Ereigniszeile jetzt die ab Versandzeitpunkt noch
+  fallende Restmenge und die letzte noch bevorstehende Regenstunde (E-Mail/
+  Telegram: „noch ~N mm, letzter Regen gegen HH:MM"; SMS-Kompakt-Token
+  `Rest{mm}@{HH}`). Kommt nichts mehr, wird das ausdrücklich benannt samt
+  Fensterende, statt die Zeile stillschweigend wegzulassen. Zusätzlich tragen
+  ALLE Zeitangaben im Abweichungsalarm (`AlertEvent`, `OnsetShiftEvent`) jetzt
+  ihren Tagesbezug (gestern/heute/morgen im Klartext, Wochentagskürzel `@Do15`
+  in der Kurzform) und weisen bereits verstrichene Zeitpunkte als vergangen aus
+  (`seit`/`war`). Gerechnet wird aus einer durchgereichten Referenzzeit
+  `now_utc`, nicht mehr aus der Systemuhr. Additive `AlertEvent`-Felder
+  (`occurred_day_offset`, `occurred_is_past`, `occurred_weekday`,
+  `remaining_mm`, `remaining_until_time`/`_day_offset`/`_weekday`,
+  `window_end_time`/`_day_offset`) — kein Wire-Format-Feld, steuert nur die
+  Renderer-interne Auflösung (Muster #2036). Nicht-Niederschlags-Metriken
+  (Wind, Temperatur, ...) behalten die bisherige "stärkste Stunde"-Form
+  unverändert. Spec: `docs/specs/modules/fix_2020_alarm_blickrichtung.md`.
 - 2026-08-21: Issue #2046 — `OnsetPayload` (Section 22.5, `POST /api/trips/{trip_id}/
   alert-preview`) bekommt additiv das Feld `onset_precip_mm: float | null`. Speist die neue
   Mengenangabe im SMS-/Premium-SMS-/Telegram-Kurzstil-Onset-Token (`R2.5@18:00` bzw.

@@ -14,6 +14,8 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from typing import TYPE_CHECKING, Optional
 
+from utils.timezone import to_utc
+
 if TYPE_CHECKING:  # pragma: no cover - nur fuer Typpruefer
     from app.models import TripSegment
 
@@ -82,6 +84,65 @@ def window_end_utc_exclusive(
         .astimezone(timezone.utc)
         + timedelta(hours=1)
     )
+
+
+def segment_window_points(
+    start_time: datetime, end_time: datetime, points,
+) -> list:
+    """Die Stundenpunkte, die zu GENAU diesem Segmentfenster gehoeren.
+
+    🔴 EINE Quelle fuer zwei Rechnungen (Issue #2020 Scheibe 2, Befunde
+    F001/F005). Aus dieser Punktmenge entsteht ueber
+    ``segment_weather._aggregate_for_segment()`` die Fenster-Gesamtmenge
+    ``SegmentWeatherSummary.precip_sum_mm`` -- und genau dieselbe Menge ist
+    ``WeatherChange.new_value``, von der der Abweichungsalarm seine Restmenge
+    ABZIEHT (``bereits_gefallen = new_value - remaining``). Laufen beide
+    Seiten ueber verschiedene Punktmengen, driftet die Differenz: sie wird
+    negativ oder die Restmenge uebersteigt die Gesamtmenge. Beide Kanten sind
+    in #2020 tatsaechlich aufgetreten, jede einzeln entdeckt -- deshalb steht
+    die Regel jetzt an EINER Stelle statt zweimal nebeneinander.
+
+    Regeln, unveraendert uebernommen aus dem bisherigen Inline-Filter in
+    ``_aggregate_for_segment()``:
+
+    * Grenzen und Punkte werden auf die volle Stunde gefloort (Issue #1334:
+      Vergleich ueber volle Zeitstempel statt nur die Stundenzahl -- ein
+      reiner Stundenvergleich zog sonst dieselbe Uhrzeit von JEDEM Tag der
+      Reihe).
+    * Die Endstunde ist EXKLUSIV (Bug #806): jede Stunde gehoert genau EINEM
+      Segment, sonst zaehlt die Randstunde in zwei Segmenten mit.
+    * Faellt ein Segment vollstaendig in eine Stunde (``start_floor ==
+      end_floor``, z. B. 14:10-14:40), waere das Fenster mit der
+      Exklusiv-Regel LEER. Dann gilt der Punkt AUF dieser Stunde (Bug #856).
+      Ohne diesen Zweig behauptete der Alarm bei kurzen Zwischensegmenten,
+      es sei alles gefallen und es komme nichts mehr -- beides falsch
+      (Befund F005). Kurze Segmente sind real: ``trip_segments`` kennt fuer
+      Zwischensegmente keine Mindestdauer, nur das Ziel-Segment hat eine.
+
+    ``to_utc()`` auf beiden Seiten: Hausnorm ist naive UTC
+    (``ForecastDataPoint.__post_init__``, #1345), Segmentgrenzen sind je nach
+    Aufrufer naiv ODER aware -- und ein aware Zeitstempel mit tzinfo != UTC
+    muss ERST umgerechnet werden, bevor er gestrippt wird (#1345, Adversary
+    F001 dort), sonst gilt die Ortszeit als Weltzeit.
+    """
+    start_floor = to_utc(start_time).replace(
+        minute=0, second=0, microsecond=0, tzinfo=None,
+    )
+    end_floor = to_utc(end_time).replace(
+        minute=0, second=0, microsecond=0, tzinfo=None,
+    )
+    treffer = []
+    for dp in points or ():
+        ts = getattr(dp, "ts", None)
+        if ts is None:
+            continue
+        ts = to_utc(ts).replace(tzinfo=None)
+        if (
+            (ts == start_floor) if start_floor == end_floor
+            else (start_floor <= ts < end_floor)
+        ):
+            treffer.append(dp)
+    return treffer
 
 
 def display_end_time(segment: "TripSegment") -> datetime:

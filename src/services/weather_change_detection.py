@@ -9,7 +9,7 @@ SPEC: docs/specs/modules/weather_change_detection.md v2.0
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
@@ -296,6 +296,112 @@ def _as_utc(ts: "datetime | None") -> "datetime | None":
     Fenstergrenzen können fehlen; der zentrale Guard verlangt ein ``datetime``).
     """
     return _as_utc_aware(ts) if ts is not None else None
+
+
+# --- Issue #2020 Scheibe 2: Restmenge ab Versandzeit + letzte Regenstunde ----
+
+# Mess-Schwelle "hat es ueberhaupt geregnet", KEINE Alarm-Schwelle: gefragt
+# ist, ob eine Stunde noch Regen traegt, nicht ob sie alarmwuerdig ist.
+_PRECIP_MEASURABLE_MM = 0.1
+
+
+def _precip_remaining(
+    new_data: "SegmentWeatherData", now_utc: "datetime",
+) -> "tuple[float | None, datetime | None]":
+    """Issue #2020 Scheibe 2: (Restmenge ab `now_utc`, letzte Regenstunde).
+
+    🔴 ZWEI VERSCHIEDENE Rueckgaben, die nie verwechselt werden duerfen:
+
+    * `None` = **konnte nicht bestimmt werden** (keine Zeitreihe, kaputte
+      Fenstergrenzen, irgendein Fehler). Der Alarm sagt dann ueber die
+      Restmenge GAR NICHTS und faellt auf den "staerkste Stunde"-Kopf
+      zurueck -- richtig, weil er sie nicht kennt.
+    * `0.0` = **bestimmt, und es kommt nachweislich nichts mehr**. Der Alarm
+      sagt das ausdruecklich ("kein weiterer Regen bis Tagesende").
+
+    `0.0` ist also eine positive AUSSAGE, keine Verlegenheit. Wer den
+    Fehlerfall auf `0.0` legt, laesst den Alarm dem Wanderer aus einem
+    technischen Defekt heraus Entwarnung geben -- in genau der Nachricht,
+    deren ganzer Zweck die Vorwaerts-Aussage ist. Der Vergleich mit
+    `_peak_occurred_at()` traegt hier NICHT: dessen `None` laesst nur eine
+    Uhrzeit weg, es behauptet nichts.
+
+    Geschwisterfunktion von `_peak_occurred_at()` und damit an dieselbe
+    BINDENDE Fenster-Invariante gebunden: gerechnet wird ausschliesslich
+    ueber die Stundenwerte INNERHALB des Segmentfensters, nie ueber den
+    Kalendertag und nie ueber die ganze Reihe. Begruendung steht in
+    `segment_weather._aggregate_for_segment()` (:292-308): sonst nennt der
+    Alarm eine andere Stunde als das Briefing, und beide Vergleichsseiten
+    rechneten mit verschiedenen Fenstern.
+
+    🔴 Die Punktmenge kommt aus `day_window.segment_window_points()` -- also
+    aus DERSELBEN Funktion, aus der auch die Fenster-Gesamtmenge
+    (`new_value`) entsteht. Das ist keine Bequemlichkeit, sondern die
+    Bedingung dafuer, dass `bereits_gefallen = new_value - remaining`
+    ueberhaupt eine sinnvolle Zahl sein kann. Ein selbst gebauter
+    Fenstervergleich hat hier bereits ZWEIMAL danebengelegen: einmal an der
+    Endstunde (F001, Restmenge groesser als die Gesamtmenge) und einmal bei
+    Segmenten unter einer Stunde (F005, gar kein Treffer -> "alles gefallen,
+    es kommt nichts mehr", obwohl die volle Menge noch ausstand).
+
+    Ausdruecklich NICHT uebernommen wird der Leerfenster-Rueckfall von
+    `_peak_occurred_at()` (`if not window: window = points`). Fuer eine
+    Uhrzeit ist er harmlos; fuer eine Menge, die gegen `new_value`
+    verrechnet wird, bricht er die Fenster-Invariante -- die Restmenge kaeme
+    dann aus der ganzen Reihe statt aus dem Fenster. Ein leeres Fenster heisst
+    hier deshalb "nicht bestimmbar" (`(None, None)`), nicht "es kommt nichts
+    mehr".
+
+    Restmenge = Summe der `precip_1h_mm`-Stundenwerte des Fensters, deren
+    Stunde nicht bereits VOLLSTAENDIG vergangen ist. Die angebrochene Stunde
+    (die, in der `now_utc` liegt) zaehlt VOLL mit -- `precip_1h_mm` ist ein
+    Stundenwert ohne untertaegige Rate, eine anteilige Kuerzung taeuschte
+    eine Genauigkeit vor, die das Modell nicht hergibt; die volle Zaehlung
+    ist die konservative Richtung.
+
+    Letzte Regenstunde = spaeteste dieser noch nicht vergangenen Stunden mit
+    >= `_PRECIP_MEASURABLE_MM`. Bewusst ueber das GESAMTE restliche Fenster,
+    nicht nur ueber die laufende Regenphase: zwei getrennte Phasen im selben
+    Fenster sind ein realer Fall, und eine Meldung, die beim ersten Regenende
+    "nichts mehr" saegt, waere dann falsch. Kein Treffer -> `None` (der
+    Aufrufer sagt dann ausdruecklich "kein weiterer Regen").
+
+    Best-effort wie `_peak_occurred_at()`: wirft nie -- ein Rechen-Detail
+    darf keinen Alarm verschlucken. Der Rueckfall ist aber `(None, None)`
+    (nicht bestimmbar), nie `(0.0, None)` (s. o.).
+    """
+    try:
+        from app.day_window import segment_window_points
+
+        seg = new_data.segment
+        points = getattr(getattr(new_data, "timeseries", None), "data", None) or []
+        if not points:
+            return None, None  # nicht bestimmbar -- KEINE Entwarnung
+        fenster = segment_window_points(seg.start_time, seg.end_time, points)
+        if not fenster:
+            # Die Reihe deckt das Segment nicht ab. KEIN Rueckfall auf die
+            # ganze Reihe (s. Docstring) und keine Entwarnung -- wir wissen
+            # ueber dieses Fenster schlicht nichts.
+            return None, None
+        now = _as_utc_aware(now_utc)
+        remaining = 0.0
+        ends_at: "datetime | None" = None
+        for p in fenster:
+            ts = _as_utc(p.ts)
+            # Stunde vollstaendig vergangen -> zaehlt weder zur Restmenge
+            # noch zum Ende (ihr Ende liegt bei ts + 1 h).
+            if ts + timedelta(hours=1) <= now:
+                continue
+            try:
+                mm = float(getattr(p, "precip_1h_mm", None))
+            except (TypeError, ValueError):
+                continue
+            remaining += mm
+            if mm >= _PRECIP_MEASURABLE_MM and (ends_at is None or ts > ends_at):
+                ends_at = ts
+        return remaining, ends_at
+    except Exception:
+        return None, None  # nicht bestimmbar -- KEINE Entwarnung
 
 
 def _peak_occurred_at(
