@@ -231,6 +231,26 @@ Ergebnis alle drei Kandidaten gleichzeitig beschreibt.
     nachgetragene Distanz, alle übrigen Etappen sowie ein zuvor manuell in die JSON-Datei
     eingefügtes, dem Python-Modell unbekanntes Feld bleiben unverändert.
 
+- **AC-11:** Given zwei GPX-Kandidaten weichen an ZWEI voneinander unabhängigen Stellen der Etappe
+  ab (zwei getrennte Wegvarianten statt einer einzelnen) / When die Track-Auflösung ihre
+  Ergebnisgleichheit prüft / Then normiert sie auf den **ersten Wegpunkt der Etappe** — denselben
+  Bezugspunkt, den auch die dem Nutzer angezeigte Wegstrecke verwendet
+  (`trip_segments.stage_measured_distances`, `base = values[0]`, :150-151) — und entscheidet damit
+  über genau die Größe, die der Nutzer zu sehen bekommt.
+  - Test: Zwei Kandidaten, deren normierte Wegpunkt-Abweichung **auf den ersten** Wegpunkt bezogen
+    höchstens 10 m beträgt, **auf den letzten** Wegpunkt bezogen aber mehr als 10 m
+    (durchgerechnet: `a` mit +8 m Umweg zwischen G1 und G2, `b` mit +16 m Umweg zwischen G3 und
+    G4 ⇒ Abweichung `b - a` auf den ersten bezogen `[0, -8, -8, +8]` m, auf den letzten bezogen
+    `[-8, -16, -16, 0]` m). `resolve_stage_track_km()` liefert ein Ergebnis. Der Test hält beide
+    Bedingungen zur Laufzeit per Testaufbau-Assertion nach.
+  - **Nachweisführung:** Fängt die Mutation „Bezugspunkt der Normierung gewechselt"
+    (`norm[i] = roh[i] - roh[-1]`). Alle übrigen AC-Tests bauen nur EINEN Umweg an fester Stelle;
+    die Abweichung zwischen zwei solchen Kandidaten ist eine Stufenfunktion mit Extrema an beiden
+    Enden, weshalb die maximale Abweichung dort unabhängig vom gewählten Bezugspunkt ist und die
+    Mutation unsichtbar bliebe. Ein falscher Bezugspunkt liefert keine falschen Kilometerwerte
+    (zurückgegeben werden unverändert die rohen Werte des ersten Kandidaten), aber
+    Fehlklassifikationen in beide Richtungen — fälschlich `None` statt Ergebnis und umgekehrt.
+
 ## Nicht Teil dieser Spec
 
 - **Scheibe 2 (Sichtbarkeit des stillen Fehlschlags)** ist per PO-Entscheid 2026-08-22 auf nach der
@@ -326,3 +346,9 @@ Wächter behält — sie darf nicht ersatzlos entfallen, nur ihr Auslöser ände
 ## Changelog
 
 - 2026-08-22: Initial spec created
+- 2026-08-22: **AC-11 nachgeschärft** (Adversary-Runde, Finding F001, HIGH): die Bindung des
+  Ergebnisvergleichs an denselben Bezugspunkt wie die Nutzer-Anzeige (erster Wegpunkt der Etappe)
+  war zwar unter „Festgelegte Schwellenwerte" als Vergleichsbasis genannt, aber durch kein AC
+  prüfbar gemacht — die Mutation `roh[0]` → `roh[-1]` ließ alle Tests grün, weil sämtliche
+  Fixtures nur eine einzelne Abweichungsstelle bauen. AC-11 schließt die Lücke mit zwei
+  unabhängigen Abweichungsstellen.

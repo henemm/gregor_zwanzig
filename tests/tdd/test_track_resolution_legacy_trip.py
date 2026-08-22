@@ -600,6 +600,11 @@ def _schreibe_gpx(punkte, ziel: Path, name: str = "tdd-2073") -> Path:
 # verschiebt ausschliesslich die kumulierte Wegstrecke ab dieser Stelle.
 _UMWEG_INDEX = 60
 
+# Zweite Umweg-Stelle, ZWISCHEN G3 (Index 281) und G4 (Index 457): gemessen
+# 707 m von G3 und 783 m von G4 entfernt. Erlaubt zwei UNABHAENGIGE
+# Abweichungsstellen in einer Etappe (Issue #2073, Adversary-Finding F001).
+_UMWEG_INDEX_HINTEN = 370
+
 
 def _umweg_punkt(a, b, extra_m: float):
     """Punkt zwischen `a` und `b`, der den Weg um genau `extra_m` verlaengert.
@@ -630,18 +635,23 @@ def _umweg_punkt(a, b, extra_m: float):
     return (a[0] + h, a[1], a[2])
 
 
-def _kandidat_mit_umweg(ziel: Path, extra_m: float) -> Path:
+def _kandidat_mit_umweg(
+    ziel: Path, extra_m: float, *, index: int = _UMWEG_INDEX,
+) -> Path:
     """Tag-1-Track mit einem eingefuegten Umweg von `extra_m` Metern.
 
     Die WEGPUNKTE bleiben unangetastet an ihrem Ort (weiterhin 0,0 m vom
     naechsten Trackpunkt) -- der Kandidat besteht also die
     Vollstaendigkeitsregel und erreicht den Ergebnisvergleich ueberhaupt
     erst. Nur die kumulierte Wegstrecke AB dem Umweg waechst.
+
+    `index` waehlt die Trackpunkt-Stelle, hinter der eingefuegt wird, und
+    damit, welche Wegpunkte der Umweg verschiebt (alle NACH dieser Stelle).
     """
     punkte = _track_punkte(_GPX_TAG1)
     if extra_m > 0.0:
-        p = _umweg_punkt(punkte[_UMWEG_INDEX], punkte[_UMWEG_INDEX + 1], extra_m)
-        punkte = punkte[: _UMWEG_INDEX + 1] + [p] + punkte[_UMWEG_INDEX + 1:]
+        p = _umweg_punkt(punkte[index], punkte[index + 1], extra_m)
+        punkte = punkte[: index + 1] + [p] + punkte[index + 1:]
     return _schreibe_gpx(punkte, ziel, name=f"Tag 1 (+{extra_m:.0f} m)")
 
 
@@ -661,23 +671,31 @@ def _treffer(stage, gpx_pfad):
     )
 
 
-def _normierte_km(stage, gpx_pfad):
+def _normierte_km(stage, gpx_pfad, *, bezug: int = 0):
     """Wegpunkt-Kilometer dieser Datei, auf den Etappenstart normiert
-    (`norm[i] = roh[i] - roh[0]`, wie `trip_segments.py:150-151`)."""
+    (`norm[i] = roh[i] - roh[0]`, wie `trip_segments.py:150-151`).
+
+    `bezug` waehlt den Bezugswegpunkt und ist ausschliesslich fuer AC-11 da:
+    dort wird gegengerechnet, was ein ANDERER Bezugspunkt (der letzte statt
+    der erste Wegpunkt) ergaebe. Produktiv gilt immer `bezug=0`.
+    """
     hit = _treffer(stage, gpx_pfad)
     assert hit is not None, (
         f"Testaufbau: {gpx_pfad.name} besteht die Vollstaendigkeitsregel "
         f"nicht und wuerde den Ergebnisvergleich nie erreichen"
     )
     werte = [hit[wp.id] for wp in stage.waypoints]
-    return [w - werte[0] for w in werte]
+    return [w - werte[bezug] for w in werte]
 
 
-def _abweichung_m(stage, a: Path, b: Path) -> float:
+def _abweichung_m(stage, a: Path, b: Path, *, bezug: int = 0) -> float:
     """Groesste normierte Wegpunkt-Abweichung zwischen zwei Kandidaten (m)."""
     return max(
         abs(x - y)
-        for x, y in zip(_normierte_km(stage, a), _normierte_km(stage, b))
+        for x, y in zip(
+            _normierte_km(stage, a, bezug=bezug),
+            _normierte_km(stage, b, bezug=bezug),
+        )
     ) * 1000.0
 
 
@@ -1079,4 +1097,81 @@ def test_ac10_rueckschreiben_nach_dubletten_aufloesung_erhaelt_go_only_felder():
     assert after.get("multi_day_trend_morning") is True, (
         "Go-only-Feld 'multi_day_trend_morning' beim Zurueckschreiben "
         "verloren -- Replace statt Read-Modify-Write"
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-11 — der Vergleich normiert auf DENSELBEN Bezugspunkt wie die Anzeige
+#
+# Adversary-Finding F001 (`docs/artifacts/fix-2073-ergebnisgleichheit/
+# adversary-dialog.md`): die Mutation `werte[0]` -> `werte[-1]` in
+# `_normalisiert` (`track_resolution.py:79-80`) liess ALLE 27 Tests gruen.
+# Grund: jede bisherige Fixture baut genau EINEN Umweg an fester Stelle. Die
+# Abweichung zwischen zwei solchen Kandidaten ist dann eine Stufenfunktion,
+# deren Extrema an beiden Enden liegen -- die maximale Abweichung ist damit
+# unabhaengig davon, auf welches Ende normiert wird. Erst ZWEI unabhaengige
+# Abweichungsstellen trennen die beiden Bezugspunkte.
+# ---------------------------------------------------------------------------
+
+def test_ac11_vergleich_normiert_auf_denselben_bezugspunkt_wie_die_anzeige(
+    tmp_path,
+):
+    """AC-11: Given zwei Kandidaten weichen an ZWEI unabhaengigen Stellen der
+    Etappe voneinander ab / When die Track-Aufloesung ihre Ergebnisgleichheit
+    prueft / Then normiert sie auf den ERSTEN Wegpunkt der Etappe -- denselben
+    Bezugspunkt, den auch die dem Nutzer angezeigte Wegstrecke verwendet
+    (`trip_segments.stage_measured_distances`, `base = values[0]`) -- und
+    liefert hier folglich ein Ergebnis.
+
+    Durchgerechnete Konstellation (`r` = die rohen Werte des unveraenderten
+    Tag-1-Tracks, [0.0, 2.9345, 6.1364, 9.6067] km):
+
+        a-umweg-8m-vorn.gpx      Umweg +8 m zwischen G1 und G2 (Index 60)
+            roh = [r0, r1+8m, r2+8m, r3+8m]
+        b-umweg-16m-hinten.gpx   Umweg +16 m zwischen G3 und G4 (Index 370)
+            roh = [r0, r1,    r2,    r3+16m]
+
+        Abweichung b - a, normiert auf den ERSTEN Wegpunkt (Spec-Formel):
+            [0, -8, -8, +8] m   -> Maximum  8 m <= 10 m -> ergebnisgleich
+        Abweichung b - a, normiert auf den LETZTEN Wegpunkt (Mutation):
+            [-8, -16, -16, 0] m -> Maximum 16 m >  10 m -> NICHT ergebnisgleich
+
+    Der Bezugspunkt kippt die Entscheidung also wirklich. Beide Bedingungen
+    werden unten zur Laufzeit nachgerechnet, damit der Test nicht bei einer
+    stillen Fixture-Drift zufaellig gruen bleibt."""
+    gpx_dir = tmp_path / "gpx"
+    gpx_dir.mkdir()
+    a = _kandidat_mit_umweg(
+        gpx_dir / "a-umweg-8m-vorn.gpx", 8.0, index=_UMWEG_INDEX,
+    )
+    b = _kandidat_mit_umweg(
+        gpx_dir / "b-umweg-16m-hinten.gpx", 16.0, index=_UMWEG_INDEX_HINTEN,
+    )
+
+    stage = _stage1()
+    auf_ersten = _abweichung_m(stage, a, b, bezug=0)
+    auf_letzten = _abweichung_m(stage, a, b, bezug=-1)
+    assert auf_ersten <= 10.0, (
+        f"Testaufbau: auf den ersten Wegpunkt normiert muessen die Kandidaten "
+        f"ergebnisgleich sein, gemessen {auf_ersten:.2f} m"
+    )
+    assert auf_letzten > 10.0, (
+        f"Testaufbau: auf den letzten Wegpunkt normiert muessen sie "
+        f"AUSEINANDERFALLEN, sonst unterscheidet der Test die Bezugspunkte "
+        f"nicht, gemessen {auf_letzten:.2f} m"
+    )
+
+    result = _resolve(stage, gpx_dir)
+
+    assert result is not None, (
+        f"Der Ergebnisvergleich normiert nicht auf den ersten Wegpunkt: auf "
+        f"diesen bezogen liegen die Kandidaten nur {auf_ersten:.1f} m "
+        f"auseinander (ergebnisgleich), auf den letzten bezogen {auf_letzten:.1f} m. "
+        f"Wer auf einem anderen Bezugspunkt vergleicht, klassifiziert etwas "
+        f"anderes als das, was der Nutzer angezeigt bekommt"
+    )
+    assert result["G2"] == pytest.approx(2.9425, abs=0.0015), (
+        f"Zurueckgegeben werden die ROHEN Werte des ersten Kandidaten in "
+        f"sorted()-Reihenfolge (a-umweg-8m-vorn.gpx, G2 = 2,9345 + 8 m): "
+        f"{result!r}"
     )
