@@ -422,7 +422,20 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        statt `R2.5@0:23+1`, Beginn und Ende unabhängig bewertet (`TH@Do18:00@Fr3:00 R2.5`) —
        dieselbe Schreibweise, die derselbe Kanal für Abweichungsalarme (#2020 S2) und amtliche
        Warnungen (#1948 S5) bereits führt. Bei Tagesversatz 0 bleibt die Ausgabe byte-identisch.
-     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst), `onset_day_offset`/`onset_weekday` (additiv, #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel, `onset_day_offset` selbst existiert bereits seit #2009), `event_end_time`/`event_end_day_offset`/`event_end_weekday`/`event_ongoing_beyond_horizon` (additiv — `event_end_time`/`event_end_day_offset`/`event_ongoing_beyond_horizon` seit #2051 S1, `event_end_weekday` seit #2054 analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet, da Beginn und Ende an verschiedenen Kalendertagen liegen können — Ende desselben Ereignisses aus `NowcastResult.event_end_minutes`/`.event_ongoing_beyond_horizon` abgeleitet)
+       **Seit #2051 S3** tragen die sechs Langform-Stellen (Betreff, E-Mail Trip/Mehr-Orte,
+       Telegram rich, Briefing-Kurzfristhinweis, Kommando-Antwort) zusätzlich, in dieser
+       Reihenfolge hinter der Ende-Angabe, die **Reichweite der Radar-Quelle**
+       (` · Radar reicht bis HH:MM`, entfällt bei gesetztem `event_ongoing_beyond_horizon` —
+       die Untergrenzenform trägt die Aussage bereits implizit) und die **Güte der
+       Ortsangabe** (` · Ortsangabe ab HH:MM unscharf`, wenn Beginn oder Ende jenseits von
+       `LOCATION_SHARPNESS_LIMIT_MIN = 60` Minuten Vorlauf liegen). Die Kurzform (SMS/
+       Premium-SMS/Telegram-Kurzstil) trägt davon **nur** die Güte, als ein Zeichen `?`
+       unmittelbar hinter dem letzten Zeit-Token der Zeitgruppe — `R2.5@15:00?` (ein Token),
+       `TH@18:00@20:00? R2.5` (Beginn+Ende), `R2.5 now@20:00?` (laufendes Ereignis, #2050 S2b),
+       `TH@18:00 >@20:00?` (Horizont-Überlauf). Bewusst `?`, nicht `~`: `~` fällt in der
+       ASCII-Faltung auf `-`, was hinter einer Uhrzeit wie ein abgeschnittener Zeitbereich
+       läse. Die Reichweite selbst bleibt in der Kurzform abgewählt (Zeichenbudget).
+     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst), `onset_day_offset`/`onset_weekday` (additiv, #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel, `onset_day_offset` selbst existiert bereits seit #2009), `event_end_time`/`event_end_day_offset`/`event_end_weekday`/`event_ongoing_beyond_horizon` (additiv — `event_end_time`/`event_end_day_offset`/`event_ongoing_beyond_horizon` seit #2051 S1, `event_end_weekday` seit #2054 analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet, da Beginn und Ende an verschiedenen Kalendertagen liegen können — Ende desselben Ereignisses aus `NowcastResult.event_end_minutes`/`.event_ongoing_beyond_horizon` abgeleitet), `source_reach_time`/`source_reach_day_offset`/`location_sharpness_limit_time`/`location_sharpness_limit_day_offset` (additiv, #2051 S3 — Reichweite bzw. Güte-Grenzzeit, aus `NowcastResult.source_reach_minutes` bzw. der `LOCATION_SHARPNESS_LIMIT_MIN`-Prüfung über `onset_minutes`/`event_end_minutes` abgeleitet; `None`, wenn die jeweilige Angabe nicht erscheinen soll)
      - `AlertMessage.cooldown_display` trägt den dynamischen Cooldown-Text (z.B. „2 Stunden")
      - `src/outputs/radar_alert.py` ist gelöscht — kein separater Inline-Body-Bau mehr
    - **Throttle-Semantik unverändert** (Issue #773): `radar_alert_throttle.json` + `alert_log` auch bei Best-Effort-Versandfehlern
