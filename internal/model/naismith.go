@@ -105,40 +105,74 @@ func formatHHMM(totalMin int) string {
 // arrival[0] = Start; arrival[i] = arrival[i-1] + naismithHours(dist, asc, desc).
 // Pausentag (0 Wegpunkte): keine Berechnung, kein Feld.
 // sp: Tempoparameter aus ActivitySpeed(trip.Activity).
-// segmentDistanceKm liefert die Wegstrecke zwischen zwei Wegpunkten in km —
-// Issue #2042.
+// measuredSlackKm spiegelt _MEASURED_SLACK_KM der Python-Regel: 10 m Zugabe,
+// die die Rundung gespeicherter Werte abfaengt -- nicht mehr.
+const measuredSlackKm = 0.01
+
+// stageMeasuredDistances liefert die gemessene Wegstrecke je Wegpunkt, auf den
+// Etappenstart normiert -- oder nil, wenn die Etappe als UNVERMESSEN gilt
+// (Issue #2082).
 //
-// Tragen BEIDE Wegpunkte eine gemessene Strecke (DistanceFromStartKm, seit
-// #2036), ist deren Differenz die tatsächlich zu gehende Strecke. Sonst bleibt
-// es bei der Luftlinie wie im Bestand. Die Entscheidung fällt je Wegpunktpaar,
-// nicht je Etappe.
+// Spiegelt Python stage_measured_distances (services/trip_segments.py). Eine
+// Etappe ist nur vermessen, wenn
 //
-// Eine negative Differenz kann es bei korrekten Daten nicht geben; sie würde
-// die Gehzeit verkürzen und damit genau den Fehler erzeugen, den #2042 behebt.
-// Deshalb fällt auch dieser Fall auf die Luftlinie zurück.
+//  1. JEDER Wegpunkt einen Wert traegt (0 ist gueltig, fehlend nicht),
+//  2. die Werte STRIKT monoton steigen, und
+//  3. jede Teilstrecke mindestens so gross ist wie die Luftlinie zwischen den
+//     beiden Wegpunkten -- ein Track kann nie kuerzer sein als die direkte
+//     Verbindung.
 //
-// Spiegelt Python _segment_distance_km.
-func segmentDistanceKm(prev, wp Waypoint) float64 {
-	if prev.DistanceFromStartKm != nil && wp.DistanceFromStartKm != nil {
-		delta := *wp.DistanceFromStartKm - *prev.DistanceFromStartKm
-		if delta >= 0 {
-			return delta
+// Verletzt EIN Paar die Regel, gilt die GESAMTE Etappe als unvermessen: eine
+// teilweise vermessene Etappe waere eine Ankunftszeit, die an einer Stelle
+// stimmt und an der naechsten still falsch ist -- und sie widerspraeche der
+// Ortsangabe desselben Briefings, die schon je Etappe entscheidet.
+func stageMeasuredDistances(wps []Waypoint) []float64 {
+	if len(wps) == 0 {
+		return nil
+	}
+	values := make([]float64, len(wps))
+	for i, wp := range wps {
+		if wp.DistanceFromStartKm == nil {
+			return nil
+		}
+		values[i] = *wp.DistanceFromStartKm
+	}
+	for i := 0; i < len(values)-1; i++ {
+		span := values[i+1] - values[i]
+		if span <= 0 { // nicht strikt monoton
+			return nil
+		}
+		luftlinie := haversineKm(wps[i].Lat, wps[i].Lon, wps[i+1].Lat, wps[i+1].Lon)
+		if span+measuredSlackKm < luftlinie {
+			return nil
 		}
 	}
-	return haversineKm(prev.Lat, prev.Lon, wp.Lat, wp.Lon)
+	base := values[0]
+	out := make([]float64, len(values))
+	for i, v := range values {
+		out[i] = v - base
+	}
+	return out
 }
 
 func ComputeStageArrivals(stage *Stage, sp ActivitySpeeds) {
 	if stage == nil || len(stage.Waypoints) == 0 {
 		return
 	}
+	measured := stageMeasuredDistances(stage.Waypoints)
+
 	cur := float64(parseStartMinutes(stage.StartTime))
 	first := formatHHMM(int(math.Round(cur)))
 	stage.Waypoints[0].ArrivalCalculated = &first
 
 	for i := 1; i < len(stage.Waypoints); i++ {
 		prev, wp := stage.Waypoints[i-1], stage.Waypoints[i]
-		dist := segmentDistanceKm(prev, wp)
+		var dist float64
+		if measured != nil {
+			dist = measured[i] - measured[i-1]
+		} else {
+			dist = haversineKm(prev.Lat, prev.Lon, wp.Lat, wp.Lon)
+		}
 		dElev := float64(wp.ElevationM - prev.ElevationM)
 		asc := math.Max(0, dElev)
 		desc := math.Max(0, -dElev)
