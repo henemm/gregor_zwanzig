@@ -1,6 +1,8 @@
 """Issue #2050 Scheibe S2b — Waechter: laufendes Regen-/Gewitterereignis.
 
 SPEC: docs/specs/modules/alarm_szenario_laufendes_ereignis.md (AC-1..AC-15)
+Zusaetzlich AC-11b: Gegenrichtung zu AC-11 (Befund der Parallelsession #2065,
+`alert_gate.py:489-494`) -- die Entdopplung darf keinen NEUEN Alarm fressen.
 
 Laeuft ein Ereignis zum Zeitpunkt des Alarmlaufs BEREITS, meldet Gregor es
 heute als bevorstehend ("Regen in 8 Min"): `_derive_result` filtert
@@ -16,19 +18,30 @@ MagicMock: Frames ueber die DI-Naht `frame_source=` eines echten
 Transport (lokale Stubs der Pruefstrecke) bzw. `mail_sink`. Kein echter Versand.
 
 WORTLAUT-VERTRAG dieser Scheibe (GREEN zieht nach). Die Herkunft ist bewusst
-getrennt ausgewiesen -- das eine ist Freigabe, das andere Entwurfsentscheidung:
+getrennt ausgewiesen -- Freigabe ist nicht dasselbe wie Entwurfsentscheidung:
 
-  * VOM PRODUCT OWNER bei der Freigabe ausgewaehlt (verbindlich, steht so
-    nicht in der Spec): E-Mail/Telegram-Langform/Betreff/`/jetzt`/
-    Briefing-Zeile melden "Regen laeuft bereits" statt einer Beginn-Angabe,
-    das Ende als "endet voraussichtlich HH:MM"; ist im verfuegbaren
-    Datenbestand kein Ende erkennbar, steht dort "kein Ende im Sichtfenster
-    (bis HH:MM)" mit der Uhrzeit des LETZTEN verfuegbaren Frames -- ohne
-    erfundene Dauer.
-  * EIGENE WAHL dieser Scheibe (keine PO-Vorlage, weil kein Beispieltext
-    vorlag): die Kurznachricht (SMS/Premium-SMS/Telegram-Kurzform) ersetzt
-    `R@HH:MM` durch `R>HH:MM` bzw. `TH>HH:MM` ("laeuft, bis"); der
-    `@`-Beginn-Marker verschwindet, das Zeichenbudget bleibt gewahrt.
+  * LAUFEND-AUSSAGE, vom Product Owner bei der S2b-Freigabe ausgewaehlt:
+    E-Mail/Telegram-Langform/Betreff/`/jetzt`/Briefing-Zeile melden
+    "Regen laeuft bereits" statt einer Beginn-Angabe.
+  * ENDE-AUSSAGE aus #2051 S1, PO-Entscheid 2026-08-22 (unser urspruenglicher
+    Wortlaut ist zurueckgezogen). Nachgelesen im Quelltext
+    `render.py::_onset_end_suffix`/`_sms_onset_ende` auf
+    `origin/feat-2051-s1-dauer-und-ende`. ZWEI Formen, entschieden allein am
+    R4-Waechter `event_ongoing_beyond_horizon` -- bekanntes Ende
+    (Trockenuebergang beobachtet, unsere Lage A): ` · letzter Regen gegen
+    HH:MM`, Kurznachricht `@HH:MM` direkt angehaengt (`R2.5@18:00@20:00`);
+    Untergrenze (Zeitreihe/Horizont ausgegangen, Lage B): ` · Regen
+    mindestens bis HH:MM`, Kurznachricht ` >@HH:MM`.
+  * LAUFEND-MARKER der Kurznachricht, PO-Entscheid 2026-08-22 (verbindlich):
+    das Wort `now` steht dort, wo sonst der Beginn stuende, danach
+    unveraendert die Ende-Grammatik -- `R2.0 now@12:45` bei bekanntem Ende,
+    `R2.0 now >@14:30` bei der Untergrenze, `TH now@12:45` beim Gewitter.
+
+🔴 Die Kurznachricht (SMS, Premium-SMS, Telegram-Kurzform) ist ENGLISCH --
+`R` = Rain, `TH` = Thunder, und deshalb `now` statt "jetzt". Nur die
+Langformen (E-Mail, Telegram-Langform) sprechen Deutsch. Jedes neue Wort in
+der Kurzform ist englisch, auch wenn dieselbe Aussage in der E-Mail deutsch
+lautet: Langform `letzter Regen gegen 12:30`, Kurzform `R2.0 now@12:30`.
 """
 from __future__ import annotations
 
@@ -44,7 +57,9 @@ from app.loader import save_trip
 from output.renderers.alert.project import to_multi_location_onset_alert_message
 from output.renderers.alert.render import render_email, render_telegram
 from services.radar_cache import reset_shared_radar_cache_for_tests
-from services.radar_service import NowcastResult, RadarNowcastService
+from services.radar_service import (
+    INTENSITY_DRY, NowcastResult, RadarNowcastService,
+)
 
 from tests.helpers.alarm_pruefstrecke import AlarmPruefstrecke
 from tests.tdd.test_952_onset_alert_fidelity import _clean_user
@@ -62,17 +77,32 @@ _AT_LAUF = _AT + timedelta(minutes=7)    # 10:07 UTC = 12:07 Ortszeit
 # Sommerzeit (UTC+2). LITERALE -- bewusst nicht aus derselben Zonenaufloesung
 # gezogen, die der Pruefling benutzt.
 TZ_ORT = ZoneInfo("Europe/Paris")
-ENDE_LOKAL = "12:45"       # Slot +45 Min: erstes trockenes Frame (Lage A)
-HORIZONT_LOKAL = "14:30"   # Slot +150 Min: letztes verfuegbares Frame (Lage B)
-BEGINN_LOKAL = "12:30"     # Slot +30 Min: kuenftiger Beginn (Lage E)
+# Die beiden Ende-Zeiten sind an der GEMERGTEN Ableitung
+# `_derive_wet_block_end()` (#2051 S1) gemessen, nicht aus der Lage
+# geschaetzt -- sie folgen zwei verschiedenen Konventionen, und das ist dort
+# Absicht: bei bekanntem Ende zaehlt das letzte NASSE Frame, bei der
+# Untergrenze die Reichweite seiner Deckung.
+ENDE_LOKAL = "12:30"       # Lage A: letztes nasses Frame (Slot +30)
+HORIZONT_LOKAL = "14:45"   # Lage B: Deckungsende des letzten Frames (Slot +150 +15)
+BEGINN_LOKAL = "12:45"     # Lage E: kuenftiger Beginn (Slot +45)
 
-# PO-Wortlaut (Freigabe): "Regen läuft bereits" / "endet voraussichtlich
-# HH:MM" / "kein Ende im Sichtfenster (bis HH:MM)".
-LAEUFT = "läuft bereits"
-ENDE_FORM = f"endet voraussichtlich {ENDE_LOKAL}"
-KEIN_ENDE = "kein Ende im Sichtfenster"
-# Eigene Wahl (keine PO-Vorlage): Laufend-Token der Kurznachricht.
-SMS_LAUFEND = "R>"
+LAEUFT = "läuft bereits"                             # S2b-Freigabe
+# Ende-Wortlaut aus #2051 S1 (PO-Entscheid 2026-08-22), Lage A = bekanntes
+# Ende, Lage B = belegte Untergrenze.
+ENDE_WORTLAUT = "letzter Regen gegen"          # Ende bekannt (Lage A)
+ENDE_FORM = f"{ENDE_WORTLAUT} {ENDE_LOKAL}"
+UNTERGRENZE_WORTLAUT = "Regen mindestens bis"  # kein Ende absehbar (Lage B)
+UNTERGRENZE_FORM = f"{UNTERGRENZE_WORTLAUT} {HORIZONT_LOKAL}"
+# Kurznachricht: `@HH:MM` = "hoert um HH:MM auf", ` >@HH:MM` = "hoert
+# fruehestens um HH:MM auf". Das `>` traegt die Bedeutung, es ist kein
+# Trennzeichen (`render.py::_sms_onset_ende`). Lage B laeuft ebenfalls, traegt
+# also zusaetzlich den `now`-Marker.
+SMS_UNTERGRENZE = f"now >@{HORIZONT_LOKAL}"
+# Kurznachricht (ENGLISCH): `now` an der Stelle des Beginns, danach die
+# Ende-Grammatik aus #2051. `12:15` waere der falsche kuenftige Beginn, den
+# die Laufend-Kurznachricht nicht mehr behaupten darf.
+SMS_LAUFEND = f"now@{ENDE_LOKAL}"
+SMS_FALSCHER_BEGINN = "@12:15"
 # Die Beginn-Angabe ("in 8 Min"). Negative Vorschau, damit der Cooldown-Satz
 # ("... hoechstens einmal in 30 Minuten") nicht als Beginn-Angabe zaehlt.
 _BEGINN_MIN = re.compile(r"in \d+ Min(?![a-zäöüA-Z])")
@@ -97,15 +127,22 @@ def _uid(tag: str) -> str:
 
 
 def _quelle(*, nass_bis: int, nass_von: int = 0, konvektiv: bool = False,
-            gesamt: int = 11):
-    """Frames im 15-Min-Raster ab `_SLOT`; die Slots `[nass_von, nass_bis)`
-    liegen ueber der Trockenschwelle (`_DRY_THRESHOLD_MM_H`, 0,1 mm/h)."""
+            gesamt: int = 11, ab=None, rate: float = 2.0):
+    """Frames im 15-Min-Raster ab `ab` (Default `_SLOT`); die Slots
+    `[nass_von, nass_bis)` liegen ueber der Trockenschwelle
+    (`_DRY_THRESHOLD_MM_H`, 0,1 mm/h) mit `rate` mm/h.
+
+    `ab`/`rate` sind Vorbelegungen fuer AC-11b (zweite, eigenstaendige Lage zu
+    einem spaeteren Rasterslot) -- die Defaults halten alle uebrigen Lagen
+    unveraendert."""
+    anker = _SLOT if ab is None else ab
+
     def _frames(lat: float, lon: float) -> list:
         from providers.brightsky import RadarFrame
         return [
             RadarFrame(
-                timestamp=_SLOT + timedelta(minutes=15 * k),
-                precip_mm_h=2.0 if nass_von <= k < nass_bis else 0.0,
+                timestamp=anker + timedelta(minutes=15 * k),
+                precip_mm_h=rate if nass_von <= k < nass_bis else 0.0,
                 is_convective=konvektiv and nass_von <= k < nass_bis,
             )
             for k in range(gesamt)
@@ -130,9 +167,22 @@ def _laeuft_endet_im_slot():
     return _quelle(nass_bis=1)
 
 
-# Lage E: Normalfall -- jetzt trocken, Beginn erst Slot +30 Min.
+# Lage E: Normalfall -- jetzt trocken, Beginn erst Slot +45 Min. (Bewusst
+# NICHT Slot +30: dort faellt der kuenftige Beginn auf dieselbe Ortszeit wie
+# das Ende der Lage A, und ein Literal haette zwei Bedeutungen.)
 def _erst_spaeter():
-    return _quelle(nass_von=2, nass_bis=5)
+    return _quelle(nass_von=3, nass_bis=6)
+
+
+# Lage F (AC-11b): zweite, eigenstaendige Lage 75 Min spaeter -- eigener
+# Rasterslot, jetzt trocken, Beginn erst +23 Min und mit 12 mm/h deutlich
+# staerker als die 2 mm/h der ersten Lage.
+_SLOT2 = _SLOT + timedelta(minutes=75)        # 11:15 UTC
+_AT_LAUF2 = _SLOT2 + timedelta(minutes=7)     # 11:22 UTC, derselbe Cron-Versatz
+
+
+def _neue_lage_spaeter():
+    return _quelle(nass_von=2, nass_bis=5, ab=_SLOT2, rate=12.0)
 
 
 def _radar(quelle) -> RadarNowcastService:
@@ -232,11 +282,27 @@ def test_ac3_laufendes_gewitter_wird_ebenfalls_als_laufend_gemeldet():
 
 
 def test_ac4_laufendes_ereignis_nennt_das_voraussichtliche_ende():
-    """AC-4: das erste trockene Frame nach der laufenden nassen Strecke liegt
-    bei Slot +45 Min -> die Nachricht nennt diesen Zeitpunkt als Ende."""
-    text = _kanaltext(_test_lauf("ac4", _laeuft_mit_ende()))
+    """AC-4: auf die laufende nasse Strecke folgt bei Slot +45 Min ein
+    trockenes Frame -- der Trockenuebergang ist damit BEOBACHTET und das Ende
+    bekannt. Genannt wird das letzte NASSE Frame (Slot +30), so leitet
+    `_derive_wet_block_end()` (#2051 S1, gemergt) es ab; an dieser Ableitung
+    ist der Erwartungswert gemessen, nicht aus der Lage geschaetzt.
+
+    Gegenrichtung mitgeprueft (Muster #2051 AC-20): weder die Langform
+    "Regen mindestens bis" noch das Kurznachrichten-Praefix ` >` duerfen
+    vorkommen. Beide sagen "hoert FRUEHESTENS um 12:45 auf" -- die Umkehrung.
+    Ohne diese Haelfte waere ein Renderer, der IMMER die Untergrenzen-Form
+    baut, hier wie in AC-5 gruen."""
+    lauf = _test_lauf("ac4", _laeuft_mit_ende())
+    text = _kanaltext(lauf) + "\n" + "\n".join(lauf.sms)
     assert ENDE_FORM in text, (
-        f"AC-4: das Ende ({ENDE_FORM!r}, erstes trockenes Frame) fehlt.\n{text}"
+        f"AC-4: das bekannte Ende ({ENDE_FORM!r}, letztes nasses Frame) "
+        f"fehlt.\n{text}"
+    )
+    assert UNTERGRENZE_WORTLAUT not in text and " >" not in text, (
+        f"AC-4: die Untergrenzen-Form ({UNTERGRENZE_WORTLAUT!r} bzw. ` >`) "
+        f"behauptet, das Ende sei UNBEKANNT -- hier ist der Trockenuebergang "
+        f"aber beobachtet.\n{text}"
     )
 
 
@@ -245,11 +311,22 @@ def test_ac5_kein_ende_im_datenbestand_wird_ausdruecklich_gesagt():
     ausdruecklich, dass kein Ende erkennbar ist, und nennt die Reichweite
     (Uhrzeit des letzten Frames) -- OHNE eine Dauer zu erfinden."""
     lauf = _test_lauf("ac5", _laeuft_ohne_ende())
-    text = _kanaltext(lauf)
-    erwartet = f"{KEIN_ENDE} (bis {HORIZONT_LOKAL})"   # PO-Wortlaut
-    assert erwartet in text, (
-        f"AC-5: {erwartet!r} fehlt -- Aussage samt Reichweite (letztes "
-        f"verfuegbares Frame), triggered_count={lauf.triggered_count}.\n{text}"
+    text = _kanaltext(lauf) + "\n" + "\n".join(lauf.sms)
+    assert SMS_UNTERGRENZE in text, (
+        f"AC-5: die Kurznachricht muss die Untergrenzen-Form "
+        f"{SMS_UNTERGRENZE!r} tragen -- ohne das `>` liest der Wanderer "
+        f"'hoert um {HORIZONT_LOKAL} auf' statt 'fruehestens'.\n{text}"
+    )
+    assert UNTERGRENZE_FORM in text, (
+        f"AC-5: {UNTERGRENZE_FORM!r} fehlt -- die Zeitreihe ist ausgegangen, "
+        f"waehrend es noch regnete, die Uhrzeit des letzten verfuegbaren "
+        f"Frames ist damit belegte Untergrenze und kein Ende "
+        f"(triggered_count={lauf.triggered_count}).\n{text}"
+    )
+    assert ENDE_WORTLAUT not in text, (
+        f"AC-5: die Form des BEKANNTEN Endes ('letzter Regen gegen') darf hier "
+        f"nicht stehen -- sie behauptet einen beobachteten Trockenuebergang, "
+        f"den es im Datenbestand nicht gibt.\n{text}"
     )
     assert not _BEGINN_MIN.search(text), (
         f"AC-5: es darf KEINE erfundene Dauer im Text stehen.\n{text}"
@@ -284,9 +361,10 @@ def test_ac7_telegram_langform_sagt_laeuft_bereits():
 
 
 def test_ac8_kurznachricht_kennzeichnet_den_laufend_fall():
-    """AC-8: SMS und Premium-SMS ersetzen die Beginn-Zeitpunkt-Form `R@HH:MM`
-    durch die Laufend-Form `R>HH:MM` -- der `@`-Beginn-Marker verschwindet,
-    das Zeichenbudget (140) bleibt gewahrt."""
+    """AC-8: SMS und Premium-SMS behaupten keinen kuenftigen Beginn mehr. Das
+    Ende steht in der #2051-Form (`@HH:MM`, bekanntes Ende -- Lage A hat den
+    Trockenuebergang beobachtet), davor der Laufend-Marker. Zeichenbudget
+    (140) bleibt gewahrt."""
     lauf = _test_lauf("ac8", _laeuft_mit_ende())
     assert lauf.sms and lauf.premium_sms, (
         f"AC-8 Vorbedingung: sms={lauf.sms!r} premium_sms={lauf.premium_sms!r}"
@@ -294,11 +372,17 @@ def test_ac8_kurznachricht_kennzeichnet_den_laufend_fall():
     for kanal, texte in (("sms", lauf.sms), ("premium_sms", lauf.premium_sms)):
         text = "\n".join(texte)
         assert SMS_LAUFEND in text, (
-            f"AC-8 ({kanal}): Kennzeichnung {SMS_LAUFEND!r} fehlt.\n{text}"
+            f"AC-8 ({kanal}): Laufend-Marker samt Ende-Token {SMS_LAUFEND!r} "
+            f"fehlt.\n{text}"
         )
-        assert "@" not in text, (
-            f"AC-8 ({kanal}): 'R@HH:MM' behauptet weiter einen kuenftigen "
-            f"Beginn.\n{text}"
+        assert SMS_FALSCHER_BEGINN not in text, (
+            f"AC-8 ({kanal}): {SMS_FALSCHER_BEGINN!r} behauptet weiter einen "
+            f"kuenftigen Beginn -- das naechste kuenftige Frame.\n{text}"
+        )
+        assert " >" not in text, (
+            f"AC-8 ({kanal}): ` >` ist in der #2051-Grammatik die "
+            f"UNTERGRENZEN-Form. Lage A hat ein beobachtetes Ende -- hier "
+            f"waere sie eine Falschaussage.\n{text}"
         )
         assert all(len(t) <= 140 for t in texte), (
             f"AC-8 ({kanal}): Zeichenbudget 140 gerissen: {[len(t) for t in texte]}"
@@ -314,8 +398,9 @@ def test_ac9_telegram_kurzform_erbt_den_laufend_text_der_sms():
     assert SMS_LAUFEND in text, (
         f"AC-9: die Kurzform traegt {SMS_LAUFEND!r} nicht wie die SMS.\n{text}"
     )
-    assert "@" not in text, (
-        f"AC-9: die Kurzform behauptet weiter einen kuenftigen Beginn.\n{text}"
+    assert SMS_FALSCHER_BEGINN not in text, (
+        f"AC-9: die Kurzform behauptet weiter einen kuenftigen Beginn "
+        f"({SMS_FALSCHER_BEGINN!r}).\n{text}"
     )
 
 
@@ -394,6 +479,76 @@ def test_ac11_unveraenderte_laufende_lage_loest_kein_zweites_mal_aus():
     )
 
 
+def test_ac11b_neues_ereignis_nach_laufendem_wird_nicht_als_wiederholung_unterdrueckt():
+    """AC-11b: die GEGENRICHTUNG zu AC-11 -- die gefaehrlichere, weil ihr
+    Schaden ein AUSBLEIBENDER Alarm ist (Befund #2065).
+
+    `check_event_identity_gate` vergleicht Punkt gegen Punkt und wertet eine
+    Differenz bis `NOWCAST_HORIZON_MIN` (180 Min) als Duplikat
+    (`alert_gate.py:489-494`). Der Laufend-Fall bucht mit `now_utc` einen
+    Punkt, den es vorher gar nicht gab -- eine 75 Min spaeter aufziehende,
+    EIGENSTAENDIGE Lage liegt damit im Duplikat-Fenster und darf trotzdem
+    nicht verschluckt werden. Sie kommt ueber die Eskalationspruefung durch
+    (V2, `alert_gate.py:669` -- "muss IMMER durchkommen"): 12 mm/h gegen
+    2 mm/h ist eine echte Verschaerfung. Sperrzeit wieder aus; den
+    Identitaets-Gate beruehrt das nicht (der Radar-Pfad ruft ihn OHNE
+    `cooldown_minutes` auf, sein Fenster bleibt 180 Min)."""
+    uid = _uid("ac11b")
+    trip = _ohne_sperrzeit(uid, _aufbau(uid, "ac11b"))
+    lat, lon = trip.stages[0].waypoints[0].lat, trip.stages[0].waypoints[0].lon
+
+    # Konstruktions-Gegenprobe: beide Laeufe sehen die Lage, die sie sollen.
+    with freeze_time(_AT_LAUF):
+        reset_shared_radar_cache_for_tests()
+        lage1 = _radar(_laeuft_endet_im_slot()).get_nowcast(lat, lon)
+    with freeze_time(_SLOT):
+        reset_shared_radar_cache_for_tests()
+        lage1_am_slotstart = _radar(_laeuft_endet_im_slot()).get_nowcast(lat, lon)
+    with freeze_time(_AT_LAUF2):
+        reset_shared_radar_cache_for_tests()
+        lage2 = _radar(_neue_lage_spaeter()).get_nowcast(lat, lon)
+    reset_shared_radar_cache_for_tests()
+    assert lage1.onset_minutes is None and lage1_am_slotstart.onset_minutes == 0, (
+        f"AC-11b Konstruktion: Lauf 1 muss die LAUFENDE Lage ohne kuenftigen "
+        f"Beginn sehen (onset={lage1.onset_minutes}, am Slot-Start "
+        f"{lage1_am_slotstart.onset_minutes})."
+    )
+    assert lage2.onset_minutes == 23 and not getattr(lage2, "already_running", False), (
+        f"AC-11b Konstruktion: Lauf 2 muss eine NEUE Lage mit kuenftigem "
+        f"Beginn sehen, nicht dieselbe laufende (onset={lage2.onset_minutes})."
+    )
+    assert lage2.max_rate_mm_h >= 10.0, (
+        f"AC-11b Konstruktion: Lauf 2 muss deutlich staerker sein als Lauf 1 "
+        f"-- sonst traegt die Eskalation nicht (war {lage2.max_rate_mm_h})."
+    )
+
+    # Positivkontrolle auf frischem Datentraeger: die zweite Lage ist FUER SICH
+    # alarmwuerdig. Ohne sie waere eine Stille unten nicht von "diese Lage
+    # loest generell nicht aus" unterscheidbar.
+    kontrolle = _uid("ac11b-ctrl")
+    trip_k = _ohne_sperrzeit(kontrolle, _aufbau(kontrolle, "ac11b-ctrl"))
+    lauf_k = _lauf(kontrolle, trip_k, _neue_lage_spaeter(), at=_AT_LAUF2)
+    assert lauf_k.triggered_count == 1, (
+        f"AC-11b Positivkontrolle: die zweite Lage muss allein ausloesen "
+        f"(war {lauf_k.triggered_count})."
+    )
+
+    strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
+    lauf1 = _lauf(uid, trip, _laeuft_endet_im_slot(), strecke=strecke)
+    assert lauf1.triggered_count == 1, (
+        f"AC-11b Vorbedingung: Lauf 1 muss ausloesen und die Ereignis-"
+        f"Identitaet buchen -- ohne diese Buchung prueft der zweite Lauf "
+        f"nichts (war {lauf1.triggered_count})."
+    )
+
+    lauf2 = _lauf(uid, trip, _neue_lage_spaeter(), at=_AT_LAUF2, strecke=strecke)
+    assert lauf2.triggered_count == 1, (
+        f"AC-11b: die neue, eigenstaendige und staerkere Lage darf NICHT als "
+        f"Wiederholung des laufenden Ereignisses unterdrueckt werden "
+        f"(war {lauf2.triggered_count})."
+    )
+
+
 def test_ac12_ortsvergleich_buendel_traegt_den_laufenden_ort_mit():
     """AC-12: ein Buendel aus einem laufenden Ort (ohne bestimmbaren
     kuenftigen Beginn) und einem Ort mit kuenftigem Beginn -- der laufende
@@ -403,7 +558,7 @@ def test_ac12_ortsvergleich_buendel_traegt_den_laufenden_ort_mit():
         onset_minutes=None, intensity_label="Starker Regen", source="radar",
     )
     laufend.already_running = True
-    laufend.running_until_minutes = 38
+    laufend.event_end_minutes = 23   # Feldname aus #2051 S1 (gemergt)
     kuenftig = NowcastResult(
         onset_minutes=25, intensity_label="Leichter Regen", source="radar",
     )
@@ -441,6 +596,55 @@ def test_ac13_laufender_fall_ohne_kuenftigen_beginn_liefert_alle_vier_kanaele():
     )
 
 
+def test_ac13b_staerke_im_laufend_fall_entspricht_dem_laufenden_bild():
+    """AC-13b: die Staerke des LAUFENDEN Bildes darf nicht verlorengehen.
+
+    `max_rate`/`is_convective` entstehen heute nur aus dem Zukunftsfenster
+    (`f.timestamp >= now`) -- im Laufend-Fall ohne kuenftigen Regen bleibt
+    davon "Kein Niederschlag" uebrig. Folgen: der sinnlose Satz "Kein
+    Niederschlag laeuft bereits" (gegen AC-13, "gueltige Kanal-Inhalte"), ein
+    laufendes Gewitter ohne Gewitter-Kennzeichen (gegen AC-3) und die
+    NIEDRIGSTE Dringlichkeitsstufe, waehrend es schuettet -- was ueber die
+    Eskalationspruefung auf AC-11b zurueckwirkt.
+
+    Referenz sind DIESELBEN Frames am Slot-Start, wo das nasse Frame im
+    Zukunftsfenster liegt und heute schon ein Regen-Label ergibt: aus dem
+    Pruefling selbst, aber aus einem Moment ohne strittiges Verhalten."""
+    uid = _uid("ac13b")
+    trip = _aufbau(uid, "ac13b")
+    lat, lon = trip.stages[0].waypoints[0].lat, trip.stages[0].waypoints[0].lon
+    with freeze_time(_SLOT):
+        reset_shared_radar_cache_for_tests()
+        referenz = _radar(_laeuft_endet_im_slot()).get_nowcast(lat, lon)
+    with freeze_time(_AT_LAUF):
+        reset_shared_radar_cache_for_tests()
+        laufend = _radar(_laeuft_endet_im_slot()).get_nowcast(lat, lon)
+        reset_shared_radar_cache_for_tests()
+        gewitter = _radar(_quelle(nass_bis=1, konvektiv=True)).get_nowcast(lat, lon)
+    reset_shared_radar_cache_for_tests()
+
+    assert referenz.intensity_label != INTENSITY_DRY, (
+        f"AC-13b Konstruktion: am Slot-Start muss dieselbe Lage ein "
+        f"Regen-Label ergeben (war {referenz.intensity_label!r})."
+    )
+    assert laufend.intensity_label == referenz.intensity_label, (
+        f"AC-13b: dieselben Frames, nur {_AT_LAUF - _SLOT} spaeter gemessen -- "
+        f"die Staerke darf nicht auf {laufend.intensity_label!r} umkippen, "
+        f"waehrend das laufende Frame {referenz.intensity_label!r} zeigt."
+    )
+    assert gewitter.is_convective, (
+        "AC-13b: ein LAUFENDES Gewitter muss konvektiv bleiben -- sonst "
+        "verliert die Nachricht das Gewitter-Kennzeichen (AC-3)."
+    )
+
+    lauf = _lauf(uid, trip, _laeuft_endet_im_slot())
+    text = _kanaltext(lauf)
+    assert INTENSITY_DRY not in text, (
+        f"AC-13b: '{INTENSITY_DRY}' darf in einer Laufend-Meldung nicht "
+        f"stehen -- das ist kein gueltiger Kanal-Inhalt.\n{text}"
+    )
+
+
 def test_ac14_jetzt_antwort_meldet_das_laufende_ereignis_als_laufend():
     """AC-14: `/jetzt` (`format_now_text`) macht dieselbe Falschaussage aus
     derselben Datenbasis -- heute steht dort bei laufendem Ereignis ohne
@@ -448,8 +652,11 @@ def test_ac14_jetzt_antwort_meldet_das_laufende_ereignis_als_laufend():
     result = NowcastResult(
         onset_minutes=None, intensity_label="Starker Regen", source="radar",
     )
+    # Feldnamen aus #2051 S1 (gemergt): das Ende heisst `event_end_minutes`,
+    # der Untergrenzen-Waechter `event_ongoing_beyond_horizon`. S2b legt nur
+    # `already_running` daneben -- kein zweites Ende-Feld.
     result.already_running = True
-    result.running_until_minutes = 38   # 10:07 + 38 Min = 10:45 UTC = 12:45 Ortszeit
+    result.event_end_minutes = 23   # 10:07 + 23 Min = 10:30 UTC = 12:30 Ortszeit
     with freeze_time(_AT_LAUF):
         text = RadarNowcastService().format_now_text(
             result, tz=TZ_ORT, include_source=False,
@@ -471,7 +678,7 @@ def test_ac15_briefing_kurzfristzeile_weist_das_ereignis_als_laufend_aus():
         try:
             text = format_starkregen_hint(
                 "Starker Regen", None, tz=TZ_ORT,
-                already_running=True, running_until_minutes=38,
+                already_running=True, event_end_minutes=23,
             )
         except TypeError as e:
             text = f"<TypeError: {e}>"

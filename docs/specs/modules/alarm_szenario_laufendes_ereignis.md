@@ -234,6 +234,53 @@ Intervall ab T) — das ist in sich konsistent, aber eine Annahme, nicht extern 
   - Test: `format_starkregen_hint(...)` mit einem `already_running=True`-Eingang aufrufen; der
     Rückgabetext enthält die Laufend-Formulierung.
 
+## Nachtrag 2026-08-22: Abhängigkeit von #2051 S1 und Wortlaut-Entscheid
+
+Nach der Freigabe dieser Spec stellte sich heraus, dass **Issue #2051 Scheibe S1**
+(`feat-2051-s1-dauer-und-ende`, PR #2074) die **Ende-Aussage bereits gebaut hat** — inklusive
+`NowcastResult.event_end_minutes`, `event_ongoing_beyond_horizon`, `_derive_wet_block_end()`,
+geteilter Anzeigefassung und Verzweigung in allen sechs Formatierern.
+
+**Folgen für diese Scheibe:**
+
+1. **Der Ende-Wortlaut wird NICHT hier erfunden**, sondern von #2051 S1 übernommen:
+   | Fall | Langform | Kurznachricht |
+   |---|---|---|
+   | Ende bekannt | `letzter Regen gegen HH:MM` | `R2.5@18:00@20:00` — zweites Zeit-Token **ohne** `>` |
+   | kein Ende absehbar | `Regen mindestens bis HH:MM` | `R2.5@18:00 >@20:00` — Leerzeichen, `>`, Zeit-Token |
+   | kein Ende ableitbar | Angabe entfällt | `R2.5@18:00` |
+   | Gewitter | wie oben | `TH@18:00@20:00 R2.5` |
+
+   🔴 Das `>` ist **kein** Schmuck: `@20:00` heisst „hört um 20:00 auf", ` >@20:00` heisst „hört
+   frühestens um 20:00 auf". Gegensätzliche Aussagen — beim einen kann man danach loslaufen,
+   beim anderen weiss man nur, dass es vorher nicht aufhört. Alle Zeit-Token sind
+   **minutengenau** (INCA/AROME liefern im 15-Minuten-Raster; `20:45` auf `20` zu kürzen wäre
+   bis zu 45 Minuten daneben).
+
+   Der PO hatte bei der Freigabe dieser Spec einen abweichenden Wortlaut ausgewählt
+   (`endet voraussichtlich HH:MM` / `kein Ende im Sichtfenster (bis HH:MM)`), ohne zu wissen,
+   dass er am selben Tag für #2051 S1 bereits eine andere Fassung derselben Aussage freigegeben
+   hatte. **PO-Entscheid 2026-08-22 nach Vorlage des Konflikts: die #2051-Fassung gilt.**
+   Begründung: dort bereits breiter verdrahtet und vom Vorhersage-Pfad mitbenutzt
+   (`render.py:298`) — eine Sprache im Produkt statt zweier.
+
+2. **Reihenfolge:** #2051 S1 wird zuerst gemerged, danach rebast diese Scheibe darauf.
+   Die Ende-Rechnung wird **nicht nachgebaut**, sondern deren `event_end_*`-Felder genutzt.
+
+3. **Was hier echte, eigene Arbeit bleibt:** `already_running` existiert auf deren Branch nicht.
+   Vor allem: deren `event_end_minutes` ist per Definition `None`, sobald `onset_minutes`
+   `None` ist (dort AC-19, freigegeben, getestet, Adversary-geprüft — auf Anfrage bewusst nicht
+   aufgeweicht). Genau der Fall dieser Scheibe fällt dort also heraus: **Ereignis läuft jetzt
+   und endet noch in der laufenden Viertelstunde** — kein künftiger Beginn, aber ein
+   bestimmbares Ende. Dazu die vier Stellen, die Zukunft voraussetzen (AC-10 bis AC-13),
+   die bei #2051 S1 unangetastet bleiben.
+
+4. **Fremdbefund, nicht Teil dieser Scheibe:** Issue **#2063** — die Onset-Uhrzeit ist in etwa
+   jedem zweiten Lauf eine Minute zu früh, weil `local_fmt` (`src/utils/timezone.py:133`)
+   Sekunden abschneidet statt zu runden. Betrifft jede über diesen Weg gebildete Uhrzeit,
+   Ende-Angaben eingeschlossen. Scheitert ein Wächter dieser Scheibe an genau einer Minute,
+   ist das die erste Spur — **nicht** ein Anlass, eine Zusicherung aufzuweichen.
+
 ## Known Limitations
 
 - **Nicht Teil dieser Scheibe:** die 55-Minuten-Meldeschwelle (`RADAR_ONSET_THRESHOLD_MIN`,
