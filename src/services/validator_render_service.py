@@ -27,6 +27,7 @@ from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.project import (
     event_end_display,  # Issue #2051 S1
+    location_sharpness_display, source_reach_display,  # Issue #2051 S3
     to_alert_message,
 )
 from output.renderers.alert.render import (
@@ -156,6 +157,18 @@ def render_alert_preview(
             # Aussage als der Versand, pruefte die Verifikation etwas, das so
             # nie beim Nutzer ankommt, und meldete gruen (AC-14b).
             already_running=getattr(body.onset, "already_running", False),
+            # Issue #2051 S3: Reichweite/Guete des Payloads, `getattr` aus
+            # demselben Grund wie oben (API-Payload UND Replay-Namespace).
+            source_reach_time=getattr(body.onset, "source_reach_time", None),
+            source_reach_day_offset=getattr(
+                body.onset, "source_reach_day_offset", 0,
+            ),
+            location_sharpness_limit_time=getattr(
+                body.onset, "location_sharpness_limit_time", None,
+            ),
+            location_sharpness_limit_day_offset=getattr(
+                body.onset, "location_sharpness_limit_day_offset", 0,
+            ),
         )
         msg = AlertMessage(
             trip_short=trip_obj.name,
@@ -288,6 +301,15 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
     _end_time, _end_offset, _end_ongoing, _end_weekday = event_end_display(
         now, result, alert_tz,
     )
+    # Issue #2051 S3: Reichweite und Guete-Grenzzeit aus DEMSELBEN
+    # `_derive_result`-Ergebnis, ueber dieselben geteilten Fassungen wie
+    # der Ende-Wert oben -- der Replay-Weg muss dieselbe Aussage zeigen wie
+    # der Produktivpfad (Muster event_end_display, AC-10).
+    _reach_time, _reach_offset = source_reach_display(now, result, alert_tz)
+    _sharp_time, _sharp_offset = location_sharpness_display(
+        now, result.onset_minutes, getattr(result, "event_end_minutes", None),
+        alert_tz,
+    )
     onset_ns = SimpleNamespace(
         onset_minutes=result.onset_minutes or 0,
         # Issue #2050 S2b: aus DEMSELBEN `_derive_result`-Ergebnis wie alles
@@ -315,6 +337,11 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
         event_end_day_offset=_end_offset,
         event_end_weekday=_end_weekday,  # Issue #2054
         event_ongoing_beyond_horizon=_end_ongoing,
+        # Issue #2051 S3: additiv, analog event_end_* oben.
+        source_reach_time=_reach_time,
+        source_reach_day_offset=_reach_offset,
+        location_sharpness_limit_time=_sharp_time,
+        location_sharpness_limit_day_offset=_sharp_offset,
     )
     out = render_alert_preview(
         trip_obj, SimpleNamespace(onset=onset_ns, official=None, nowcast_frames=None),

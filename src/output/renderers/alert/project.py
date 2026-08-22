@@ -74,6 +74,52 @@ def event_end_display(
     return local_fmt(end_dt, tz), offset, ongoing, weekday
 
 
+def source_reach_display(now_utc: datetime, nowcast, tz) -> tuple[str | None, int]:
+    """Anzeigefassung der Reichweite der Quelle (Issue #2051 S3):
+    `("HH:MM", Versatz)` oder `(None, 0)`.
+
+    EINE Fassung fuer BEIDE Onset-Pfade (Muster `event_end_display`).
+    `(None, 0)`, wenn keine Reichweite bekannt ist (`source_reach_minutes is
+    None` -- keine Beobachtung im Fenster) ODER `event_ongoing_beyond_horizon`
+    gesetzt ist (E5) -- die S1-Untergrenzenform (`Regen mindestens bis
+    HH:MM`) traegt die Reichweiten-Aussage in diesem Fall bereits implizit;
+    eine zusaetzliche Reichweiten-Angabe waere Dopplung.
+    """
+    reach_minutes = getattr(nowcast, "source_reach_minutes", None)
+    if reach_minutes is None:
+        return None, 0
+    if bool(getattr(nowcast, "event_ongoing_beyond_horizon", False)):
+        return None, 0
+    reach_dt = now_utc + timedelta(minutes=reach_minutes)
+    return local_fmt(reach_dt, tz), day_offset(now_utc, reach_dt, tz)
+
+
+def location_sharpness_display(
+    now_utc: datetime, onset_minutes: int | None, event_end_minutes: int | None, tz,
+) -> tuple[str | None, int]:
+    """Anzeigefassung der Guete-Grenzzeit (Issue #2051 S3): `("HH:MM",
+    Versatz)` der Grenzzeit `now + LOCATION_SHARPNESS_LIMIT_MIN` oder
+    `(None, 0)`, wenn WEDER `onset_minutes` NOCH `event_end_minutes` jenseits
+    der Grenze liegen (oder beide `None` sind).
+
+    Die Entscheidung wird HIER getroffen (E4) -- der Renderer prueft
+    anschliessend nur noch auf `None`, keine zweite Schwellpruefung dort
+    (sonst zwei Wahrheiten, Muster AC-20). Liest die Grenze bei JEDEM
+    Aufruf ueber die Modulreferenz, bindet sie NICHT beim Import (AC-16,
+    Laufzeit-Drift-Schutz -- Muster `RADAR_ONSET_THRESHOLD_MIN`)."""
+    import services.radar_service as radar_service_mod
+
+    limit = radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN
+    jenseits = (
+        (onset_minutes is not None and onset_minutes > limit)
+        or (event_end_minutes is not None and event_end_minutes > limit)
+    )
+    if not jenseits:
+        return None, 0
+    limit_dt = now_utc + timedelta(minutes=limit)
+    return local_fmt(limit_dt, tz), day_offset(now_utc, limit_dt, tz)
+
+
 def _resolve_metric_id(field: str, direction: str) -> str:
     """summary_field → catalog metric_id, disambiguiert per Richtung.
 
@@ -565,6 +611,13 @@ def to_multi_location_onset_alert_message(
         # Issue #2054: Versatz und Kuerzel aus DEMSELBEN Zeitpunkt und
         # DERSELBEN Ortszone -- zwei Herleitungen koennten auseinanderlaufen.
         _onset_offset = day_offset(now, onset_dt, loc_tz)
+        # Issue #2051 S3: Reichweite und Guete-Grenzzeit JE ORT in DERSELBEN
+        # Ortszone wie Beginn/Ende (`loc_tz`), ueber dieselben geteilten
+        # Fassungen wie der Trip-Pfad (ADR-0021).
+        _reach_time, _reach_offset = source_reach_display(now, nc, loc_tz)
+        _sharp_time, _sharp_offset = location_sharpness_display(
+            now, nc.onset_minutes, getattr(nc, "event_end_minutes", None), loc_tz,
+        )
         events.append(OnsetEvent(
             already_running=_laufend,
             onset_minutes=nc.onset_minutes or 0,
@@ -595,6 +648,11 @@ def to_multi_location_onset_alert_message(
             # deshalb erreichen -- er darf nicht mehr stromaufwaerts in einem
             # fehlenden Ende aufgeloest werden (AC-5/AC-20).
             event_ongoing_beyond_horizon=_end_ongoing,
+            # Issue #2051 S3: additiv, ueber dieselben geteilten Fassungen.
+            source_reach_time=_reach_time,
+            source_reach_day_offset=_reach_offset,
+            location_sharpness_limit_time=_sharp_time,
+            location_sharpness_limit_day_offset=_sharp_offset,
         ))
     trip_short = (
         ", ".join(name for name, _loc, _nc in valid_groups)

@@ -150,6 +150,21 @@ class OnsetEvent:
     # bewusst KEIN zweites Ende-Feld daneben, sonst gaebe es zwei Wahrheiten
     # ueber denselben Zeitpunkt.
     already_running: bool = False
+    # Issue #2051 S3: additiv, optional (Muster `event_end_time`/
+    # `event_end_day_offset` o.). Reichweite der Quelle als reines "HH:MM"
+    # -- Quelle `NowcastResult.source_reach_minutes`. `None` heisst "keine
+    # Beobachtung im Fenster ODER `event_ongoing_beyond_horizon` gesetzt"
+    # (E5) -- die Entscheidung ist bereits in `project.source_reach_display`
+    # getroffen, der Renderer prueft nur noch auf `None`.
+    source_reach_time: str | None = None
+    source_reach_day_offset: int = 0
+    # Issue #2051 S3: additiv, optional. Grenzzeit der Ortsschaerfe
+    # (`now + LOCATION_SHARPNESS_LIMIT_MIN`) als reines "HH:MM" -- Quelle
+    # `project.location_sharpness_display`. `None` heisst "weder Beginn
+    # noch Ende liegen jenseits der Grenze" -- keine zweite Schwellpruefung
+    # hier (sonst zwei Wahrheiten, Muster AC-20).
+    location_sharpness_limit_time: str | None = None
+    location_sharpness_limit_day_offset: int = 0
 
 
 @dataclass(frozen=True)

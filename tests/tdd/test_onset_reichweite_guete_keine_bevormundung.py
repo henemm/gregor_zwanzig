@@ -143,12 +143,32 @@ def test_ac15_keine_der_sieben_textstellen_traegt_eine_handlungsempfehlung():
         "prueft dieser Test nichts Neues."
     )
 
-    treffer: dict[str, list[str]] = {}
-    for name, text in texte.items():
-        text_klein = text.lower()
-        gefunden = [m for m in _VERBOTENE_MUSTER if m in text_klein]
-        if gefunden:
-            treffer[name] = gefunden
+    def _pruefe(kandidaten: dict[str, str]) -> dict[str, list[str]]:
+        gefunden: dict[str, list[str]] = {}
+        for name, text in kandidaten.items():
+            text_klein = text.lower()
+            treffer_hier = [m for m in _VERBOTENE_MUSTER if m in text_klein]
+            if treffer_hier:
+                gefunden[name] = treffer_hier
+        return gefunden
+
+    # Positivkontrolle des DETEKTORS selbst (nicht der Produktivfunktion):
+    # ein synthetischer, ABSICHTLICH verbotener Satz muss von DERSELBEN
+    # Pruefschleife erkannt werden -- sonst waere die Negativpruefung unten
+    # trivial wahr, weil `_VERBOTENE_MUSTER`/die Schleife selbst nie greifen
+    # KOENNTE (z. B. falscher Variablenname, leere Liste, Gross-/
+    # Kleinschreibungsfehler). Lehre aus #2054: ein "not in"/"leere Menge"-
+    # Befund ohne Nachweis, dass er sonst ANSCHLUEGE, prueft nichts.
+    synthetischer_verstoss = _pruefe({
+        "synthetisch": "Radar reicht bis 20:00. Verlass dich nicht darauf.",
+    })
+    assert synthetischer_verstoss, (
+        "Vorbedingung: der Detektor muss einen ABSICHTLICH eingebauten "
+        "Verstoss erkennen -- sonst waere die Negativpruefung unten "
+        "trivial wahr."
+    )
+
+    treffer = _pruefe(texte)
 
     assert not treffer, (
         f"RED/AC-15: verbotene Handlungsempfehlung gefunden: {treffer}\n"

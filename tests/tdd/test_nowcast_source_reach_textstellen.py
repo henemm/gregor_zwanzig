@@ -157,29 +157,33 @@ def test_ac3_reichweite_erscheint_in_allen_sechs_textstellen():
 
 @freeze_time(_FROZEN_UTC)
 def test_ac9_untergrenzenform_unterdrueckt_die_reichweite_vollstaendig():
-    """AC-9 GIVEN einen Onset-Alarm mit `event_ongoing_beyond_horizon=True`
-    (S1-Untergrenzenform, `Regen mindestens bis HH:MM`) und einer im
-    uebrigen gesetzten Reichweite
-    WHEN die sechs betroffenen Textstellen gerendert werden
-    THEN enthaelt JEDE die S1-Untergrenzenform `Regen mindestens bis 19:30`,
-    aber KEINE zusaetzlich `Radar reicht bis` -- die Untergrenzenform traegt
-    die Reichweiten-Aussage bereits implizit (E5).
-
-    Die Positivkontrolle (Untergrenzenform IST da) steht im selben Test wie
-    die Negativpruefung (Reichweite fehlt) -- sonst waere Letzteres trivial
-    wahr, weil der heutige Code auch die Reichweite selbst noch gar nicht
-    kennt.
+    """AC-9 GIVEN denselben Aufbau EINMAL mit `event_ongoing_beyond_horizon
+    =True` (S1-Untergrenzenform, `Regen mindestens bis HH:MM`) und EINMAL mit
+    `False` -- sonst identisch (gleiches `event_end_minutes`, gleiche
+    `source_reach_minutes`), nur der EINE Waechter verschoben
+    WHEN die sechs betroffenen Textstellen fuer BEIDE Faelle gerendert
+    werden
+    THEN fehlt `Radar reicht bis` bei `True` VOLLSTAENDIG (die
+    Untergrenzenform traegt die Reichweiten-Aussage bereits implizit, E5)
+    UND derselbe Aufbau erzeugt `Radar reicht bis 20:00` bei `False` in
+    JEDER der sechs Stellen -- Positivkontrolle: erst das Paar beweist, dass
+    die Unterdrueckung aus E5 tatsaechlich WIRKT und nicht bloss nichts
+    verdrahtet ist (Muster AC-6, Lehre aus #2075-Fehlklassifikation ohne
+    Gegenprobe).
 
     RED heute: `NowcastResult` kennt `source_reach_minutes` nicht
     (`TypeError`)."""
-    nc = _nowcast(
+    waechter_gesetzt = _texte(_nowcast(
         event_end_minutes=_ENDE_MIN, event_ongoing_beyond_horizon=True,
         source_reach_minutes=_REACH_MIN,
-    )
-    texte = _texte(nc)
+    ))
+    waechter_nicht_gesetzt = _texte(_nowcast(
+        event_end_minutes=_ENDE_MIN, event_ongoing_beyond_horizon=False,
+        source_reach_minutes=_REACH_MIN,
+    ))
 
     ohne_untergrenze = {
-        name: text for name, text in texte.items()
+        name: text for name, text in waechter_gesetzt.items()
         if f"Regen mindestens bis {_ENDE_HHMM}" not in text
     }
     assert not ohne_untergrenze, (
@@ -187,13 +191,26 @@ def test_ac9_untergrenzenform_unterdrueckt_die_reichweite_vollstaendig():
         f"{_befund(ohne_untergrenze)}"
     )
 
-    mit_reichweite = {
-        name: text for name, text in texte.items() if "Radar reicht bis" in text
+    mit_reichweite_trotz_waechter = {
+        name: text for name, text in waechter_gesetzt.items()
+        if "Radar reicht bis" in text
     }
-    assert not mit_reichweite, (
+    assert not mit_reichweite_trotz_waechter, (
         f"RED/E5: diese Stellen zeigen die Reichweite trotz gesetztem "
         f"R4-Waechter -- Dopplung mit der Untergrenzenform: "
-        f"{_befund(mit_reichweite)}"
+        f"{_befund(mit_reichweite_trotz_waechter)}"
+    )
+
+    ohne_reichweite_ohne_waechter = {
+        name: text for name, text in waechter_nicht_gesetzt.items()
+        if f"Radar reicht bis {_REACH_HHMM}" not in text
+    }
+    assert not ohne_reichweite_ohne_waechter, (
+        f"Positivkontrolle: derselbe Aufbau MUSS die Reichweite zeigen, "
+        f"sobald ausschliesslich der R4-Waechter auf False steht -- sonst "
+        f"beweist die Negativpruefung oben nur eine ueberhaupt nicht "
+        f"existierende Angabe, keine echte Unterdrueckung: "
+        f"{_befund(ohne_reichweite_ohne_waechter)}"
     )
 
 
@@ -204,37 +221,61 @@ def test_ac9_untergrenzenform_unterdrueckt_die_reichweite_vollstaendig():
 
 @freeze_time(_FROZEN_UTC)
 def test_ac10_guete_zeile_bleibt_trotz_e5_unterdrueckung_unveraendert():
-    """AC-10 GIVEN denselben Aufbau wie AC-9 (`event_ongoing_beyond_horizon
-    =True`) mit zusaetzlich einem Beginn jenseits der Guete-Grenze
-    (`onset_minutes=75`)
-    WHEN die Texte gerendert werden
-    THEN erscheint die Guete-Zeile `Ortsangabe ab 19:00 unscharf`
-    UNVERAENDERT in allen sechs Stellen, WAEHREND `Radar reicht bis`
-    weiterhin VOLLSTAENDIG fehlt -- die E5-Unterdrueckung betrifft
-    ausschliesslich die Reichweiten-Angabe, beide Entscheidungen bleiben
-    unabhaengig voneinander.
+    """AC-10 GIVEN denselben Aufbau wie AC-9 (Beginn jenseits der
+    Guete-Grenze, `onset_minutes=75`), EINMAL mit `event_ongoing_beyond_
+    horizon=True` und EINMAL mit `False` -- sonst identisch
+    WHEN die Texte fuer BEIDE Faelle gerendert werden
+    THEN erscheint die Guete-Zeile `Ortsangabe ab 19:00 unscharf` in BEIDEN
+    Faellen UNVERAENDERT (der Beginn ist in beiden Faellen derselbe, die
+    Guete-Entscheidung haengt nicht am R4-Waechter), WAEHREND `Radar reicht
+    bis` NUR bei `True` fehlt und bei `False` (Positivkontrolle) erscheint
+    -- die E5-Unterdrueckung betrifft ausschliesslich die
+    Reichweiten-Angabe, beide Entscheidungen bleiben unabhaengig
+    voneinander.
 
     RED heute: `NowcastResult` kennt `source_reach_minutes` nicht
     (`TypeError`)."""
-    nc = _nowcast(
+    waechter_gesetzt = _texte(_nowcast(
         onset_minutes=_ONSET_JENSEITS_GUETE,
         event_end_minutes=_ENDE_MIN, event_ongoing_beyond_horizon=True,
         source_reach_minutes=_REACH_MIN,
-    )
-    texte = _texte(nc)
+    ))
+    waechter_nicht_gesetzt = _texte(_nowcast(
+        onset_minutes=_ONSET_JENSEITS_GUETE,
+        event_end_minutes=_ENDE_MIN, event_ongoing_beyond_horizon=False,
+        source_reach_minutes=_REACH_MIN,
+    ))
 
-    ohne_guete = {
-        name: text for name, text in texte.items()
-        if f"Ortsangabe ab {_GUETE_HHMM} unscharf" not in text
-    }
-    assert not ohne_guete, (
-        f"RED: diese Stellen tragen die Guete-Zeile nicht: {_befund(ohne_guete)}"
-    )
+    for label, texte in (
+        ("Waechter=True", waechter_gesetzt), ("Waechter=False", waechter_nicht_gesetzt),
+    ):
+        ohne_guete = {
+            name: text for name, text in texte.items()
+            if f"Ortsangabe ab {_GUETE_HHMM} unscharf" not in text
+        }
+        assert not ohne_guete, (
+            f"RED ({label}): diese Stellen tragen die Guete-Zeile nicht -- "
+            f"sie muss unabhaengig vom R4-Waechter stehen: {_befund(ohne_guete)}"
+        )
 
-    mit_reichweite = {
-        name: text for name, text in texte.items() if "Radar reicht bis" in text
+    mit_reichweite_trotz_waechter = {
+        name: text for name, text in waechter_gesetzt.items()
+        if "Radar reicht bis" in text
     }
-    assert not mit_reichweite, (
+    assert not mit_reichweite_trotz_waechter, (
         f"Die Reichweite darf trotz Guete-Fall weiter unterdrueckt bleiben "
-        f"(E5, unabhaengig von der Guete-Entscheidung): {_befund(mit_reichweite)}"
+        f"(E5, unabhaengig von der Guete-Entscheidung): "
+        f"{_befund(mit_reichweite_trotz_waechter)}"
+    )
+
+    ohne_reichweite_ohne_waechter = {
+        name: text for name, text in waechter_nicht_gesetzt.items()
+        if f"Radar reicht bis {_REACH_HHMM}" not in text
+    }
+    assert not ohne_reichweite_ohne_waechter, (
+        f"Positivkontrolle: derselbe Aufbau (inkl. Guete-Fall) MUSS die "
+        f"Reichweite zeigen, sobald ausschliesslich der R4-Waechter auf "
+        f"False steht -- sonst beweist die Negativpruefung oben nur eine "
+        f"ueberhaupt nicht existierende Angabe: "
+        f"{_befund(ohne_reichweite_ohne_waechter)}"
     )

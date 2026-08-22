@@ -483,7 +483,7 @@ def _render_subject_onset(msg: AlertMessage) -> str:
     # behauptbares Ende bleibt der Betreff byte-identisch (AC-19).
     return (
         f"[{msg.trip_short}] {km} · {label} {_onset_wann_kopf(e)}"
-        f"{_onset_end_suffix(e)}"
+        f"{_onset_end_suffix(e)}{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
     )
 
 
@@ -582,6 +582,35 @@ def _onset_end_suffix(e: OnsetEvent) -> str:
     return f" · letzter Regen gegen {ende}"
 
 
+def _onset_reach_suffix(e: OnsetEvent) -> str:
+    """Issue #2051 S3: Langform-Reichweiten-Angabe als anhaengbares Stueck
+    oder LEER. `source_reach_time` ist bereits `None`, wenn keine
+    Reichweite bekannt ist ODER `event_ongoing_beyond_horizon` gesetzt ist
+    (E5 -- die S1-Untergrenzenform traegt die Reichweiten-Aussage bereits
+    implizit) -- die Entscheidung faellt in `project.source_reach_display`,
+    hier nur noch ein `None`-Check (Muster `_onset_end_suffix`)."""
+    reach = getattr(e, "source_reach_time", None)
+    if not reach:
+        return ""
+    reach = _time_with_day(reach, getattr(e, "source_reach_day_offset", 0))
+    return f" · Radar reicht bis {reach}"
+
+
+def _onset_sharpness_suffix(e: OnsetEvent) -> str:
+    """Issue #2051 S3: Langform-Guete-Angabe als anhaengbares Stueck oder
+    LEER. `location_sharpness_limit_time` ist bereits `None`, wenn weder
+    Beginn noch Ende jenseits der Grenze liegen (E4) -- Entscheidung faellt
+    in `project.location_sharpness_display`, hier nur noch ein
+    `None`-Check (keine zweite Schwellpruefung, Muster AC-20)."""
+    limit = getattr(e, "location_sharpness_limit_time", None)
+    if not limit:
+        return ""
+    limit = _time_with_day(
+        limit, getattr(e, "location_sharpness_limit_day_offset", 0),
+    )
+    return f" · Ortsangabe ab {limit} unscharf"
+
+
 def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
     """Bündel-Zweig (Issue #1041 Slice 1a): je Ort eine Zeile mit Onset-Zeit
     und Intensität (Muster `loc_prefix`, render_email:328-333).
@@ -598,7 +627,8 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
             # Issue #2051 S1: das Ende JE ORT aus dessen eigenem Event -- ein
             # Buendel kann Orte mit verschiedenen Ende-Zeiten tragen. Ohne
             # behauptbares Ende bleibt die Zeile byte-identisch (AC-19).
-            f"{_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)} · "
+            f"{_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"
+            f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)} · "
             f"{e.intensity_label}",
         )
         for e in msg.events
@@ -676,7 +706,8 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
         # Zeile -- eine eigene Datenzeile nur fuer das Ende waere im
         # Ende-losen Normalfall eine leere Zeile (ADR-0052, Label-Wert-Form).
         ("Wo & wann",
-         f"{km} · {_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"),
+         f"{km} · {_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"
+         f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"),
         ("Intensität", e.intensity_label),
         ("Quelle", e.source_label),
     ]
@@ -745,7 +776,8 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
     # Issue #2051 S1: das Ende additiv HINTER der Beginn-Zeit, vor Intensitaet
     # und Quelle -- ohne behauptbares Ende byte-identisch wie bisher (AC-19).
     second = (
-        f"{_onset_wann_zeile(e)}{_onset_end_suffix(e)} · "
+        f"{_onset_wann_zeile(e)}{_onset_end_suffix(e)}"
+        f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)} · "
         f"{e.intensity_label} · {e.source_label}"
     )
     # Issue #2018 (AC-B3): die Bezugszeile steht als EIGENE Zeile zwischen Kopf
@@ -840,6 +872,26 @@ def _sms_onset_ende(e: OnsetEvent) -> str:
     )
 
 
+def _sms_onset_sharpness_marker(e: OnsetEvent) -> str:
+    """Issue #2051 S3 (E8, Spec v1.1 -- Nachtrag aus der Abstimmung mit
+    #2054): das Guete-Zeichen der Kurzform -- `"?"` oder leer.
+
+    Bindet an die GANZE Zeitgruppe, nicht an einen einzelnen Zeitpunkt: der
+    Aufrufer haengt das Ergebnis IMMER ans Ende des bereits VOLLSTAENDIG
+    gebildeten Zeit-Tokens an (Beginn+Ende bzw. `now`+Ende) -- diese
+    Funktion selbst kennt die innere Form dieses Tokens nicht und darf sie
+    auch nicht kennen (Laufzeit-unabhaengig vom #2054-Wochentagskuerzel,
+    das INNERHALB von `_sms_onset_time()` entsteht). Waere der Beginn
+    diesseits der Guete-Grenze und nur das Ende jenseits (AC-5), stuende
+    eine Marke am Beginn-Token an der einen Zeit, die scharf ist -- am
+    LETZTEN Token der Gruppe ist sie das nicht.
+
+    `?` statt `~`: `~` gehoert zur GSM-7-Extension-Tabelle (2 Septets) und
+    wird vom Transport hart auf `-` gefaltet (`_ASCII_EXTENSION_
+    REPLACEMENTS`, unten). `?` steht im GSM-7-BASISzeichensatz."""
+    return "?" if getattr(e, "location_sharpness_limit_time", None) else ""
+
+
 def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     """Issue #1948 S4: die Nowcast-/Onset-Kurznachricht nennt einen ZEITPUNKT
     (`TH@15:40`) statt eines Countdowns (`TH!8`) und spricht im Kopf dieselbe
@@ -865,10 +917,19 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     # drei Token-Zweige unten: so traegt AUCH der Gewitter-Zweig das Ende an
     # der Zeit (`TH@18:00@20:00 R2.5`) und nicht hinter der Menge -- sonst
     # bliebe dort eine stille Luecke.
-    zeit = _sms_onset_time(
-        e.onset_time, e.onset_day_offset,
-        getattr(e, "onset_weekday", None),  # Issue #2054
-    ) + _sms_onset_ende(e)
+    # Issue #2051 S3 (E8): einmalig berechnet, dem jeweils LETZTEN Zeit-Token
+    # der Gruppe angehaengt -- unabhaengig davon, welchen Zweig (Normalform
+    # unten oder Laufend-Form) der Text nimmt. Unabhaengig vom #2054-
+    # Wochentagskuerzel, das INNERHALB von `_sms_onset_time()` entsteht
+    # (Token-Anfang) -- unsere Marke sitzt am Token-ENDE (E8).
+    guete_marker = _sms_onset_sharpness_marker(e)
+    zeit = (
+        _sms_onset_time(
+            e.onset_time, e.onset_day_offset,
+            getattr(e, "onset_weekday", None),  # Issue #2054
+        ) + _sms_onset_ende(e)
+        + guete_marker
+    )
     menge = _sms_onset_menge(getattr(e, "onset_precip_mm", None))
     if getattr(e, "already_running", False):
         # Issue #2050 S2b (PO-Entscheid 2026-08-22): `now` steht dort, wo
@@ -876,7 +937,7 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
         # Kurzform (`R` = Rain, `TH` = Thunder). Die Ende-Grammatik aus #2051
         # haengt unveraendert dahinter (`now@20:00` bekanntes Ende,
         # `now >@20:00` Untergrenze), damit es nur EINE Ende-Form gibt.
-        ende = _sms_onset_ende(e)
+        ende = _sms_onset_ende(e) + guete_marker
         if menge is None:
             token = f"{kuerzel} now{ende}"
         elif kuerzel == "TH":

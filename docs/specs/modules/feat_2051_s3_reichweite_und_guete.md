@@ -4,7 +4,7 @@ type: feature
 created: 2026-08-22
 updated: 2026-08-22
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [alarm, briefing, nowcast, radar, reichweite, guete]
 ---
 
@@ -190,6 +190,39 @@ Güte-Kennzeichnung mit dem Wächter `event_ongoing_beyond_horizon` gleich —
 der feuert aber nur, wenn es bis zum Horizont durchregnet, und deckt den
 eigentlichen PO-Fall (großer Vorlauf bei einem Ereignis, das VOR dem
 Horizont endet) gerade nicht ab. Genau diese Lücke schließt S3.
+
+**E8 — Das `?` bindet an die ZEITGRUPPE, nicht an einen einzelnen Zeitpunkt.**
+(Nachtrag 2026-08-22, aus der Abstimmung mit #2054.) Die Kurzform trägt
+oft ZWEI Zeit-Token, nicht eines: Beginn und Ende hängen aneinander
+(`TH@18:00@20:00 R2.5`), bei laufendem Ereignis steht `now` an der
+Beginn-Stelle (#2050 S2b), und bei Horizont-Überlauf trägt das Ende ein
+`>`-Präfix. Die Spec ließ offen, an welches davon das `?` hängt — drei
+Lesarten waren möglich (`@18:00?@20:00`, `@18:00@20:00?`, `R2.5?`).
+
+**Entschieden: unmittelbar hinter dem LETZTEN Zeit-Token der Gruppe**, also
+`TH@18:00@20:00? R2.5`. Drei Gründe:
+
+(a) **Semantische Deckung mit der Langform.** Diese sagt `Ortsangabe ab
+HH:MM unscharf` — eine Aussage über die Vorhersage ab einer Grenze, nicht
+über einen einzelnen Wert (E4 nennt bewusst die Grenzzeit, nicht den
+betroffenen Wert). Eine Marke an genau einem der beiden Zeitpunkte
+behauptete eine Zuordnung, die die Langform gerade nicht macht.
+
+(b) **Der AC-5-Fall bräche sonst.** Dort liegt der BEGINN diesseits der
+Grenze und nur das ENDE jenseits. Ein `?` am Beginn stünde dann an der
+einen Zeit, die scharf ist — die Marke wäre nicht bloß unpräzise, sondern
+am falschen Wert.
+
+(c) **Hinter der Menge wäre irreführend** (`R2.5?` läse sich als
+Unsicherheit über die Millimeter, nicht über den Ort).
+
+**Abgrenzung zu #2054:** Deren Wochentagskürzel sitzt am Token-ANFANG
+direkt hinter dem `@` und ohne Leerzeichen (`R2.5@Do15:00`, gebildet in
+`_sms_onset_time()`), unsere Marke am ENDE der Gruppe. Die Kombination ist
+`TH@Do18:00@Fr3:00?` und damit unabhängig von der Merge-Reihenfolge
+eindeutig. Da S3 nach #2054 rebast, liegt die Pflicht zur Prüfung der
+KOMBINATION bei S3: AC-11 deckt deshalb ausdrücklich auch den
+Zwei-Token-Fall ab, nicht nur den Beginn.
 
 ## Implementation Details
 
@@ -429,7 +462,10 @@ gespiegelt (Vorwarnung analog #2046 F002/S1).
 - **AC-11:** Given einen Onset-Alarm mit Güte-Fall (Beginn oder Ende
   jenseits der Grenze) / When `_render_sms_onset` (SMS, Premium-SMS,
   Telegram-Kurzstil) gerendert wird / Then trägt der Text genau EIN
-  Zeichen `?` unmittelbar hinter dem Zeit-Token (z. B. `R2.5@15:00?`), und
+  Zeichen `?` unmittelbar hinter dem LETZTEN Zeit-Token der Zeitgruppe
+  (E8) — bei einem Token `R2.5@15:00?`, beim Paar `TH@18:00@20:00? R2.5`,
+  bei laufendem Ereignis `R2.5 now@20:00?`, bei Horizont-Überlauf
+  `TH@18:00 >@20:00?` —, und
   der resultierende Text bleibt unter 140 GSM-7-Zeichen auch im
   Extremfall (langer Ortsname, `onset_precip_mm=99.9`, kombiniertes
   Untergrenzen- und Güte-Token).
@@ -591,3 +627,9 @@ festnageln — laufen unverändert grün oder werden additiv fortgeschrieben
 
 - 2026-08-22: Initial spec created (#2051 Scheibe S3, Reichweite der Quelle
   und Güte-Kennzeichnung).
+- 2026-08-22 (v1.1): **E8** ergänzt — Bindung des `?` an die Zeitgruppe
+  statt an einen einzelnen Zeitpunkt; AC-11 um den Zwei-Token-Fall und die
+  Kombination mit dem #2054-Wochentagskürzel erweitert. Anlass: Abstimmung
+  mit der #2054-Sitzung, die dieselbe Kurzform am Token-Anfang ändert.
+  Keine Umkehr einer freigegebenen Entscheidung — Schließung einer Lücke,
+  die die Freigabefassung offenließ.

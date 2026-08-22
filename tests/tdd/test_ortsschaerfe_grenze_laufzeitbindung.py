@@ -118,3 +118,49 @@ def test_ac16_guete_zeile_kippt_am_gepatchten_grenzwert_nicht_am_alten(monkeypat
         f"RED: bei {limit + 1} Minuten (jenseits der GEPATCHTEN Grenze von "
         f"{limit}) muss die Guete-Zeile erscheinen: {knapp_ueber_neuem_wert!r}"
     )
+
+
+@freeze_time(_FROZEN_UTC)
+def test_ac16_starkregen_hint_liest_die_grenze_ebenfalls_zur_laufzeit(monkeypatch):
+    """AC-16 (Adversary-Fund F001) GIVEN denselben gepatchten Grenzwert wie
+    oben, diesmal geprueft am ZWEITEN in der Spec genannten Leser
+    (`format_starkregen_hint`, `starkregen_hint.py`) -- der urspruengliche
+    Test deckte nur `project.py` ab; der Produktivcode in `starkregen_hint.py`
+    war zwar korrekt (liest ueber die Modulreferenz), aber UNGEPRUEFT.
+
+    WHEN `format_starkregen_hint` fuer eine Ereigniszeit knapp UEBER dem
+    NEUEN Wert (91 Min) bzw. knapp UNTER dem NEUEN, aber UEBER dem ALTEN
+    Wert (61 Min) rendert
+    THEN kippt die Guete-Zeile exakt am GEPATCHTEN Grenzwert, nicht am
+    alten Default 60 -- ein echter Top-Level-Import
+    (`from services.radar_service import LOCATION_SHARPNESS_LIMIT_MIN`)
+    statt der Modulreferenz wuerde diesen Test rot machen, weil er den
+    gepatchten Wert nicht mehr saehe.
+
+    Die Erwartung wird wie oben aus DERSELBEN Modulreferenz gelesen, nicht
+    als Zahl im Test dupliziert."""
+    monkeypatch.setattr(
+        radar_service_mod, "LOCATION_SHARPNESS_LIMIT_MIN", _NEUER_GRENZWERT_MIN,
+    )
+    limit = radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN
+
+    from output.renderers.email.starkregen_hint import format_starkregen_hint
+
+    def _hint_fuer(minuten: int) -> str:
+        return format_starkregen_hint(
+            "Mäßiger Regen", minuten, tz=_TZ,
+        )
+
+    knapp_ueber_altem_wert = _hint_fuer(limit - 29)  # 61 bei limit=90
+    knapp_ueber_neuem_wert = _hint_fuer(limit + 1)   # 91 bei limit=90
+
+    assert "Ortsangabe ab" not in knapp_ueber_altem_wert, (
+        f"F001: bei {limit - 29} Minuten (jenseits der ALTEN, aber "
+        f"diesseits der GEPATCHTEN Grenze von {limit}) darf die Guete-Zeile "
+        f"in starkregen_hint.py NICHT erscheinen: {knapp_ueber_altem_wert!r}"
+    )
+    assert "Ortsangabe ab" in knapp_ueber_neuem_wert, (
+        f"F001: bei {limit + 1} Minuten (jenseits der GEPATCHTEN Grenze von "
+        f"{limit}) muss die Guete-Zeile in starkregen_hint.py erscheinen: "
+        f"{knapp_ueber_neuem_wert!r}"
+    )
