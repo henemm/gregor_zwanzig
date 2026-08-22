@@ -105,12 +105,20 @@ def test_ac2_unvermessene_etappe_bleibt_unveraendert():
     )
 
 
-def test_ac3_rueckfall_gilt_je_abschnitt_nicht_je_etappe():
-    """AC-3: Ein unvermessener Wegpunkt entwertet nicht die ganze Etappe."""
+def test_ac3_rueckfall_gilt_je_etappe_nicht_je_abschnitt():
+    """UMGEKEHRT durch #2082 (frueher: Rueckfall je Abschnitt).
+
+    #2042 legte fest, dass ein unvermessener Abschnitt nur sich selbst auf
+    Luftlinie zurueckwirft. Das war falsch: Die Ortsangabe der Alarme
+    entscheidet je Etappe, sodass dieselbe Etappe in zwei Aussagen desselben
+    Briefings verschieden beurteilt wurde. Seit #2082 gilt die kanonische
+    Etappen-Regel -- eine Luecke entwertet die GANZE Etappe.
+
+    Ausfuehrlich bewacht in tests/tdd/test_gehzeit_etappenregel.py.
+    """
     luft = _luftlinie_km()
     gemessen = luft * 2.0
 
-    # G1->G2 vermessen, G2->G3 nicht (G3 traegt keine Strecke).
     stage = _stage([
         _wp("G1", _LON_A, km=0.0),
         _wp("G2", _LON_B, km=gemessen),
@@ -119,16 +127,10 @@ def test_ac3_rueckfall_gilt_je_abschnitt_nicht_je_etappe():
 
     result = compute_stage_arrivals(stage, "")
     ab1 = _minutes(result.waypoints[1].arrival_calculated) - _minutes("08:00")
-    ab2 = (
-        _minutes(result.waypoints[2].arrival_calculated)
-        - _minutes(result.waypoints[1].arrival_calculated)
-    )
 
-    assert ab1 == pytest.approx(gemessen / _flat_kmh() * 60.0, abs=1.0), (
-        "Der vermessene Abschnitt muss gemessen rechnen"
-    )
-    assert ab2 == pytest.approx(luft / _flat_kmh() * 60.0, abs=1.0), (
-        "Der unvermessene Abschnitt muss auf die Luftlinie zurueckfallen"
+    assert ab1 == pytest.approx(luft / _flat_kmh() * 60.0, abs=1.0), (
+        "Auch der vermessene Abschnitt muss zurueckfallen, sobald ein "
+        "Wegpunkt der Etappe keinen Messwert traegt (#2082)"
     )
 
 
