@@ -165,6 +165,9 @@ def _safe_float(v, default: float = 0.0) -> float:
         return default
 
 
+_AMPEL_BAND_RISK = {"green": "ok", "yellow": "yellow", "orange": "watch", "red": "risk"}
+
+
 def _thunder_risk_level(thunder) -> Optional[str]:
     """Bestimmt den Risiko-Beitrag von Gewitter fuer `_row_risk` (Issue #1418
     Fehler 1; Issue #1927 v1.1: eigenstaendige Gelb-Stufe fuer LOW). `r["thunder"]`
@@ -178,25 +181,21 @@ def _thunder_risk_level(thunder) -> Optional[str]:
     historische Zahlenwert (Regressionsschutz AC-7, #1377 — Gewitter war
     dort ausdruecklich ausgenommen) bleibt als Fallback erhalten.
 
-    LOW liefert seit v1.1 eine eigenstaendige 'yellow'-Stufe statt wie zuvor
-    zusammen mit MED auf 'watch' verschmolzen zu werden — Angleichung an die
-    bereits bestehende `_THUNDER_AMPEL_BAND`-Zuordnung
-    (`metric_format.py`: NONE→green, LOW→yellow, MED→orange, HIGH→red).
-    Liefert 'risk'/'watch'/'yellow'/None (kein Beitrag) — nie einen Absturz.
+    Die Stufen-Uebersetzung liest seit Issue #2011 tatsaechlich
+    `thunder_ampel_band()` (`metric_format.py`: NONE→green, LOW→yellow,
+    MED→orange, HIGH→red) statt einer eigenen Wort-Kette; NONE liefert damit
+    'ok' statt None (an jeder Pruefstelle gleich wirkungslos, s. Spec
+    fix_2010_2011_gewitter_stufenwoerter „Known Limitations").
+    Liefert 'risk'/'watch'/'yellow'/'ok'/None (kein Beitrag) — nie einen Absturz.
     """
     if isinstance(thunder, str):
-        level = thunder.upper()
-        if level == "HIGH":
-            return "risk"
-        if level == "MED":
-            return "watch"
-        if level == "LOW":
-            return "yellow"
-        if level == "NONE":
-            return None
+        band = thunder_ampel_band(ThunderLevel.__members__.get(thunder.upper()))
+        if band is not None:
+            return _AMPEL_BAND_RISK[band]
 
     num = _safe_float(thunder, None)
     if num is not None:
+        # gz-thunder-scale: roher Zahlenwert (Legacy-Datenpfad #1425), keine diskrete Stufe -- bewusst kein thunder_ampel_band()
         if num > 20:
             return "risk"
         if num > 0:

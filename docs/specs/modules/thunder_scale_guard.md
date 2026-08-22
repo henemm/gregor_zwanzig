@@ -187,8 +187,9 @@ nutzersichtbare Defekte sind (#2010, #2011).
    **Nicht-Leerlauf-Test** wie für die Basislinie, dazu ein **Granularitäts-Nachweis**: eine
    konstruierte Kopie in einer kanonischen Datei unter anderem Symbolnamen **muss** gemeldet
    werden.
-2. **Benannte Altlasten-Basislinie** (`ALTLASTEN` im Backend-Wächter, 9 Einträge): die bekannten
-   Kopien aus #1474. **Symbolgeschlüsselt** über `(Datei, Symbol-/Funktionsname, Regel)` —
+2. **Benannte Altlasten-Basislinie** (`ALTLASTEN` im Backend-Wächter, ursprünglich 9 Einträge,
+   seit #2010/#2011 noch 3): die bekannten Kopien aus #1474. **Symbolgeschlüsselt** über
+   `(Datei, Symbol-/Funktionsname, Regel)` —
    **niemals** über Zeilennummern (#1466); jeder Eintrag trägt Grund und Tracking-Issue. Die Liste
    darf nur schrumpfen. Gegen Verrotten schützt ein **Nicht-Leerlauf-Test**: erzeugt ein Eintrag
    heute keinen echten Fund mehr (Symbol saniert, umbenannt, verschoben), wird der Wächter **rot**
@@ -545,10 +546,14 @@ unfangbar bleibt" — bewusst nicht Teil dieser Lieferung:
    Mitgliedsnamen, Scan-Wurzeln als Argumente), wird aber vorerst nur auf `ThunderLevel`
    angewandt — ein späterer `RiskLevel`-Wächter kostet dadurch ~20–30 LoC statt Neubau.
 5. **Die 10 bestehenden Kopien im Produktivcode werden nicht saniert.** Das ist ausdrücklich
-   nicht Teil dieses Workflows (#2010, #2011 decken zwei davon in eigenen PRs ab). Der Wächter
-   startet als Ratsche mit benannter, nur schrumpfender Duldungsliste — heute **neun**
-   Basislinien-Einträge (davon 7 in `src/services/`, 2 in `email/html.py`) plus der eine
-   Marker-Fall in `narrow.py`. Die beiden Go-Kopien liegen außerhalb der Python-Scanfläche.
+   nicht Teil dieses Workflows. Der Wächter startet als Ratsche mit benannter, nur schrumpfender
+   Duldungsliste — bei Einführung **neun** Basislinien-Einträge (davon 7 in `src/services/`,
+   2 in `email/html.py`) plus der eine Marker-Fall in `narrow.py`. **#2010/#2011 (2026-08-22)**
+   haben sechs davon saniert (4× `src/services/trip_command_processor.py`: `_THUNDER_LABEL`,
+   `_MAP_EMOJI`, `_MAP_PLAIN`, `_handle_hours_drilldown`; 2× `src/output/renderers/email/html.py`:
+   `_thunder_risk_level` Regel B und C) — verbleibend **drei** Einträge (`day_window.py` und
+   zwei `trip_report_scheduler.py`-Symbole). Die beiden Go-Kopien liegen außerhalb der
+   Python-Scanfläche.
 6. **Regel A/P laufen nicht auf Testdateien** — eine korrekte Fixture führt zwangsläufig alle
    vier Stufen-Wörter und würde 16 Dauerfeuer-Treffer erzeugen. Nur Regel D läuft dort.
 7. **Ein falsch schlagender Wächter blockiert jeden PR jeder Session** — beide CI-Jobs (`test`,
@@ -617,3 +622,10 @@ unfangbar bleibt" — bewusst nicht Teil dieser Lieferung:
   Marker in `src/output/renderers/narrow.py` besteht die verschärfte Prüfung unverändert
   (47 sinnvolle Zeichen, 16 verschiedene). Neue Fixtures und Grenzproben von beiden Seiten
   (14 → rot, 15 → grün): 50 → 56 Backend-, 30 → 36 Frontend-Tests.
+- 2026-08-22: `ALTLASTEN` um sechs sanierte Einträge geschrumpft (#2010, #2011) — 9 → 3.
+  `trip_command_processor.py::_THUNDER_LABEL`/`_MAP_EMOJI`/`_MAP_PLAIN`/`_handle_hours_drilldown`
+  leiten ihre Wörter jetzt aus `THUNDER_LABEL_DE` ab statt sie lokal zu kopieren;
+  `email/html.py::_thunder_risk_level` ruft für den String-/Enum-Pfad tatsächlich
+  `thunder_ampel_band()` auf (Regel B und C). Verbleibende drei Einträge (`day_window.py`,
+  zwei `trip_report_scheduler.py`-Symbole) unverändert. Details:
+  `docs/specs/modules/fix_2010_2011_gewitter_stufenwoerter.md`.
