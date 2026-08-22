@@ -326,8 +326,14 @@ def _derive_wet_block_end(
         next_idx = bisect.bisect_right(all_ts_sorted, ts)
         next_ts = all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted) else None
 
-        if coverage_end >= horizon:
-            # Der Block reicht bis an den Horizont der Quelle.
+        if coverage_end >= horizon and (next_ts is None or next_ts > horizon):
+            # Der Block reicht bis an den Horizont der Quelle -- und zwar nur
+            # dann, wenn wirklich KEIN Frame mehr innerhalb des Fensters
+            # folgt (#2075). Ohne die zweite Bedingung kippt ein Frame, das
+            # kurz vor dem Horizont endet (`coverage_end >= horizon` durch
+            # die Deckelung auf `horizon`, obwohl noch ein Nachbar folgt),
+            # diesen Zweig faelschlich in "ongoing" und meldet die
+            # Untergrenzen-Form statt des echten, belegten Endes.
             return horizon, True
         if next_ts is None:
             # Zeitreihe abgeschnitten, letzter bekannter Frame noch nass.
