@@ -1889,3 +1889,123 @@ def test_2018_normalfall_ohne_kaputten_eintrag_loggt_keine_warnung(caplog):
         )
     finally:
         clean_uid(uid)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Issue #2065 — Verschaerfung ueberholt die Radar-Sperrzeit
+# SPEC: docs/specs/modules/fix_2065_verschaerfung_ueberholt_sperre.md
+#
+# Der Ortsvergleich ist PO-seitig zurueckgestellt: die Ausnahme wirkt
+# ausschliesslich im Trip-Pfad. Konstruktiv abgesichert dadurch, dass der neue
+# Vergleichs-Helfer im Aufrufgraphen von `check_nowcast_gate` gar nicht
+# vorkommt — das Gate bleibt in Signatur UND Verhalten unveraendert (AC-12).
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_ac12_2065_check_nowcast_gate_bekommt_keinen_pflichtparameter_dazu():
+    """AC-12 (Regressionswaechter, HEUTE SCHON GRUEN — kein RED-Nachweis).
+
+    GIVEN den Ortsvergleich-Radarpfad (`compare_radar_alert.py`), der
+    `check_nowcast_gate` als zweiter Produktiv-Aufrufer benutzt, WHEN die
+    #2065-Aenderung ausgeliefert ist, THEN nimmt das Gate keine neuen
+    Parameter OHNE Vorgabewert entgegen — weder eine Verschaerfungsangabe noch
+    eine Vergleichsbasis wandert nachtraeglich in den geteilten Baustein.
+
+    Geprueft wird die Menge der PFLICHT-Parameter (ohne Default), nicht die
+    Gesamtsignatur: ein rein optionaler Zusatz bliebe erlaubt, ein neuer
+    Pflichtparameter braeche jeden Bestandsaufrufer. Zusaetzlich wird
+    ausdruecklich verboten, dass eine Mengen-/Basis-Angabe ueberhaupt in
+    dieser Signatur auftaucht (auch nicht mit Default) — der Speicherzugriff
+    gehoert laut Spec NICHT in den geteilten Baustein."""
+    import inspect
+
+    from services.alert_gate import check_nowcast_gate
+
+    params = inspect.signature(check_nowcast_gate).parameters
+    pflicht = {
+        name for name, p in params.items()
+        if p.default is inspect.Parameter.empty
+        and p.kind not in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
+    }
+    erwartet = {
+        "user_id", "throttle_scope", "throttle_key", "cooldown_minutes",
+        "quiet_from", "quiet_to", "context_label", "now", "zone",
+    }
+    assert pflicht == erwartet, (
+        f"check_nowcast_gate hat seine PFLICHT-Parameter veraendert: "
+        f"neu={sorted(pflicht - erwartet)!r}, entfallen={sorted(erwartet - pflicht)!r} "
+        f"(voller Parametersatz: {sorted(params)!r})"
+    )
+    verbotene = {
+        n for n in params
+        if "precip" in n or "overtake" in n or "ueberhol" in n
+        or "verschaerf" in n or "escalat" in n or "eskalat" in n
+    }
+    assert not verbotene, (
+        f"check_nowcast_gate darf keine Verschaerfungs-/Mengenangabe kennen — "
+        f"der Vergleich lebt im Trip-Pfad, nicht im geteilten Baustein: "
+        f"{sorted(verbotene)!r}"
+    )
+
+
+def test_ac14_2065_adr_0021_und_s3_spec_tragen_einen_datierten_nachtrag():
+    """AC-14. ``# doc-compliance-test`` (Ausnahme von der Dateiinhalt-Regel,
+    CLAUDE.md; Vorbild `test_ac21_adr_0021_traegt_einen_datierten_s4b_nachtrag`).
+
+    GIVEN ADR-0021 schreibt die feste Reihenfolge Ruhezeit -> Sperrzeit ->
+    Tages-Obergrenze als geteilten Baustein fuer Trip UND Ortsvergleich fest,
+    WHEN #2065 eine Ausnahme in diese Kette einfuehrt, THEN traegt ADR-0021
+    einen DATIERTEN Nachtrag mit Bezug auf '#2065' — einsortiert NACH dem
+    letzten bestehenden Nachtrag (#2018) — der die Ausnahme beschreibt UND
+    begruendet, warum der Ortsvergleich sie nicht bekommt; zusaetzlich traegt
+    `docs/specs/modules/rework_1467_s3_nowcast.md` (die Spec der geteilten
+    Gate-Kette) einen entsprechenden Nachtrag.
+
+    Eine dokumentierte Entscheidung wird nie still zurueckgenommen.
+
+    RED heute: beide Nachtraege fehlen."""
+    import re
+    from pathlib import Path
+
+    wurzel = Path(__file__).resolve().parents[2]
+
+    adr = (wurzel / "docs" / "adr" / "0021-shared-deviation-alert-engine.md").read_text(
+        encoding="utf-8"
+    )
+    treffer = re.search(r"Nachtrag \(Issue #2065, (\d{4}-\d{2}-\d{2})\)", adr)
+    assert treffer is not None, (
+        "ADR-0021 muss einen Nachtrag im Format der bestehenden tragen: "
+        "'**Nachtrag (Issue #2065, JJJJ-MM-TT):**'"
+    )
+    pos_2018 = adr.find("Nachtrag (Issue #2018")
+    assert pos_2018 != -1, "Der bestehende #2018-Nachtrag darf nicht verschwinden"
+    assert treffer.start() > pos_2018, (
+        f"Der #2065-Nachtrag muss NACH dem #2018-Nachtrag stehen "
+        f"(Reihenfolge = Chronologie; pos_2018={pos_2018}, "
+        f"pos_2065={treffer.start()})"
+    )
+    absatz = adr[treffer.start():]
+    naechster = absatz.find("\n- **Nachtrag (", 1)
+    if naechster != -1:
+        absatz = absatz[:naechster]
+    assert "Ortsvergleich" in absatz, (
+        "Der #2065-Nachtrag muss ausdruecklich begruenden, warum der "
+        "ORTSVERGLEICH die Ausnahme NICHT bekommt."
+    )
+    assert "Sperrzeit" in absatz, (
+        "Der #2065-Nachtrag muss benennen, welche Stufe der Kette die Ausnahme "
+        "betrifft (Sperrzeit)."
+    )
+
+    spec = (wurzel / "docs" / "specs" / "modules" / "rework_1467_s3_nowcast.md").read_text(
+        encoding="utf-8"
+    )
+    assert "#2065" in spec, (
+        "Die Spec der geteilten Gate-Kette (rework_1467_s3_nowcast.md) muss den "
+        "neuen Zweig mitfuehren — sonst beschreibt sie eine Kette, die es so "
+        "nicht mehr gibt."
+    )
+    spec_absatz = spec[spec.find("#2065"):][:1200]
+    assert re.search(r"\d{4}-\d{2}-\d{2}", spec_absatz), (
+        "Der #2065-Nachtrag in rework_1467_s3_nowcast.md muss DATIERT sein."
+    )
