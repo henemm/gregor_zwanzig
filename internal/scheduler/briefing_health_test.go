@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -748,5 +749,263 @@ func TestBriefingHealthEndedOutageKeepsCountButClearsStreakField(t *testing.T) {
 	if got := bh["provider_error_streak_since"]; got != nil {
 		t.Errorf("provider_error_streak_since: want real nil (AC-1/AC-4: outage ended 8h ago, beyond the %v gap threshold), got %#v (%T)",
 			providerErrorStreakGapThreshold, got, got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TDD RED — Issue #2073 Scheibe 2 (AC-10 bis AC-13): Betreiber-Aggregat über
+// das nutzerbezogene Journal users/<uid>/diagnostics/
+// track_resolution_failures.jsonl, geschrieben von
+// src/services/track_resolution_health.py.
+//
+// Spec: docs/specs/modules/fix_2073_s2_sichtbarer_fehlschlag.md
+//
+// Bauart-Zwilling zu analyzeAlertAnchorRejections (#1661): gleiche zwei
+// Signale (streakSince + recentCount), gleiche Datenschutzgrenze (#252).
+//
+// OFFENER PUNKT (bewusst NICHT gepinnt): die Gap-Schwelle. Die Spec lässt sie
+// offen ("Kadenzwahl dort begründen"), deshalb liegen alle Zeitstempel hier
+// nur 5 Minuten auseinander — unter jeder plausiblen Schwelle. Der Zuschnitt
+// verdient eine eigene Begründung in der GREEN-Phase: _failed_lookups dämpft
+// auf HÖCHSTENS EINE Zeile je Etappe und Prozess, ein dauerhaft defekter Trip
+// erzeugt also nach der ersten Zeile tagelang keine weitere. Eine kurze
+// Schwelle (60 min wie beim Anker) ließe den Streak fast sofort auslaufen,
+// obwohl die Degradierung anhält — das wäre kein mit der Ausfalldauer
+// WACHSENDES Signal im Sinne von ADR-0018.
+// ---------------------------------------------------------------------------
+
+// writeTrackResolutionJournal writes a real
+// users/<uid>/diagnostics/track_resolution_failures.jsonl from the given RAW
+// lines — raw on purpose, so AC-13 can inject a deliberately corrupt one.
+func writeTrackResolutionJournal(t *testing.T, tmpDir, userID string, lines ...string) {
+	t.Helper()
+	dir := filepath.Join(tmpDir, "users", userID, "diagnostics")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	body := strings.Join(lines, "\n") + "\n"
+	path := filepath.Join(dir, "track_resolution_failures.jsonl")
+	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+		t.Fatalf("write track_resolution_failures.jsonl: %v", err)
+	}
+}
+
+// trackResolutionFailureLine builds one FULL journal line, exactly as the
+// Python writer produces it (ts + trip_id + stage_id + reason + detail).
+// Deliberately full: AC-11 requires that the Go side counts such a line
+// correctly while decoding nothing but the timestamp.
+func trackResolutionFailureLine(ts time.Time, tripID, stageID, reason string) string {
+	return `{"ts":"` + ts.Format(time.RFC3339) +
+		`","trip_id":"` + tripID +
+		`","stage_id":"` + stageID +
+		`","reason":"` + reason +
+		`","detail":111.0}`
+}
+
+// AC-10 (Aggregat): zwei Nutzer, je ein Fehlschlag innerhalb der Gap-Schwelle
+// -> recentCount summiert beide, streakSince nennt den FRÜHESTEN Zeitpunkt
+// der zusammenhängenden Serie.
+func TestTrackResolutionFailuresAggregateAcrossTwoUsers(t *testing.T) {
+	tmpDir := t.TempDir()
+	now := time.Now().UTC().Truncate(time.Second)
+	frueh := now.Add(-10 * time.Minute)
+	spaet := now.Add(-5 * time.Minute)
+
+	writeTrackResolutionJournal(t, tmpDir, "tdd-2073-s2-anna",
+		trackResolutionFailureLine(frueh, "tour-anna", "T1", "no_candidate_within_tolerance"))
+	writeTrackResolutionJournal(t, tmpDir, "tdd-2073-s2-bodo",
+		trackResolutionFailureLine(spaet, "tour-bodo", "T2", "ambiguous_result"))
+
+	since, recent := analyzeTrackResolutionFailures(tmpDir, now)
+
+	if recent != 2 {
+		t.Errorf("recentCount: want 2 (über BEIDE Nutzer summiert), got %d", recent)
+	}
+	if want := frueh.Format(time.RFC3339); since != want {
+		t.Errorf("streakSince: want %s (frühester Zeitpunkt der Serie), got %q", want, since)
+	}
+}
+
+// AC-10 (Status-Endpunkt): dieselben zwei Signale erscheinen als
+// Top-Level-Schlüssel unter briefing_health — und der ausgegebene Körper
+// trägt KEINE Nutzer-, Trip- oder Etappenkennung (AC-11, Datenschutz #252).
+func TestTrackResolutionFailureStatusKeysCarryNoIdentifiers(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-2073-s2-anna", "tdd-2073-s2-bodo")
+	now := time.Now().UTC().Truncate(time.Second)
+	frueh := now.Add(-10 * time.Minute)
+
+	writeTrackResolutionJournal(t, tmpDir, "tdd-2073-s2-anna",
+		trackResolutionFailureLine(frueh, "tour-anna", "T1", "no_candidate_within_tolerance"))
+	writeTrackResolutionJournal(t, tmpDir, "tdd-2073-s2-bodo",
+		trackResolutionFailureLine(now.Add(-5*time.Minute), "tour-bodo", "T2", "ambiguous_result"))
+
+	code, body, rawBody := callStatusEndpoint(t, sched)
+	if code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", code)
+	}
+	bh := body["briefing_health"].(map[string]any)
+
+	if got := bh["track_resolution_failures_recent_count"]; got != float64(2) {
+		t.Errorf("track_resolution_failures_recent_count: want 2, got %v", got)
+	}
+	if got := bh["track_resolution_failure_streak_since"]; got != frueh.Format(time.RFC3339) {
+		t.Errorf("track_resolution_failure_streak_since: want %s, got %v",
+			frueh.Format(time.RFC3339), got)
+	}
+
+	verboten := []string{
+		"tdd-2073-s2-anna", "tdd-2073-s2-bodo", // Nutzerkennung
+		"tour-anna", "tour-bodo", // Trip-Kennung
+		"no_candidate_within_tolerance", "ambiguous_result", // Grund
+	}
+	for _, id := range verboten {
+		if strings.Contains(rawBody, id) {
+			t.Errorf("Datenschutzgrenze #252 verletzt: Antwort enthält %q", id)
+		}
+	}
+}
+
+// AC-11: die Decoder-Struct trägt AUSSCHLIESSLICH den Zeitstempel — wie
+// anchorRejectedEntry. Eine volle Journalzeile (mit trip_id/stage_id/reason)
+// wird trotzdem korrekt gezählt: json.Unmarshal ignoriert Unbekanntes, und es
+// wird nichts davon weitergereicht.
+func TestTrackResolutionFailureEntryDecodesOnlyTheTimestamp(t *testing.T) {
+	typ := reflect.TypeOf(trackResolutionFailureEntry{})
+	if typ.NumField() != 1 {
+		t.Fatalf("Datenschutzgrenze #252: die Decoder-Struct darf GENAU ein Feld "+
+			"tragen (nur den Zeitstempel), hat aber %d", typ.NumField())
+	}
+	if name := typ.Field(0).Name; name != "Ts" {
+		t.Errorf("das einzige Feld muss der Zeitstempel sein, ist %q", name)
+	}
+
+	tmpDir := t.TempDir()
+	now := time.Now().UTC().Truncate(time.Second)
+	writeTrackResolutionJournal(t, tmpDir, "tdd-2073-s2-voll",
+		trackResolutionFailureLine(now.Add(-5*time.Minute), "tour-voll", "T3", "implausible_measurement"))
+
+	_, recent := analyzeTrackResolutionFailures(tmpDir, now)
+	if recent != 1 {
+		t.Errorf("eine VOLLE Journalzeile muss trotzdem zählen: want 1, got %d", recent)
+	}
+}
+
+// AC-10 (Adversary-Finding F003): "Fehlschlaege der LETZTEN 24 h" — ein
+// Eintrag ausserhalb des Fensters darf den Recent-Count nicht aufblaehen. Ohne
+// diesen Waechter laesst sich der Zeitfilter ersatzlos entfernen
+// (recentCount := len(failureTimes)), ohne dass ein Test rot wird — der Kern
+// von "recent" waere dann ungeprueft.
+//
+// Beide Eintraege liegen im SELBEN Journal, damit der Test nicht versehentlich
+// nur die Nutzer-Aggregation prueft. Der alte Eintrag liegt zugleich weiter
+// zurueck als die Gap-Schwelle, der frische innerhalb — streakSince muss also
+// den FRISCHEN nennen und darf nicht ueber die Luecke hinweg zusammenlaufen.
+func TestTrackResolutionFailuresRecentCountExcludesEntriesOlderThan24h(t *testing.T) {
+	tmpDir := t.TempDir()
+	now := time.Now().UTC().Truncate(time.Second)
+	alt := now.Add(-30 * time.Hour)   // ausserhalb der 24h
+	frisch := now.Add(-2 * time.Hour) // innerhalb der 24h
+
+	writeTrackResolutionJournal(t, tmpDir, "tdd-2073-s2-fenster",
+		trackResolutionFailureLine(alt, "tour-alt", "T1", "no_candidate_within_tolerance"),
+		trackResolutionFailureLine(frisch, "tour-frisch", "T2", "ambiguous_result"))
+
+	since, recent := analyzeTrackResolutionFailures(tmpDir, now)
+
+	if recent != 1 {
+		t.Errorf("recentCount: want 1 (nur der Eintrag von vor %v zaehlt, der von vor %v ist aelter als 24h), got %d",
+			now.Sub(frisch), now.Sub(alt), recent)
+	}
+	if want := frisch.Format(time.RFC3339); since != want {
+		t.Errorf("streakSince: want %s (der alte Eintrag liegt jenseits der Gap-Schwelle), got %q", want, since)
+	}
+}
+
+// Adversary-Finding F002: die Gap-Schwelle war nur in eine Richtung bewacht —
+// alle Fixtures nutzten Luecken von 5-10 Minuten, eine Vergroesserung der
+// Konstante auf einen praktisch unendlichen Wert liess alles gruen (Mutation
+// M12: 26h -> 100000h). Ein Streak, der beliebig weit zurueckreicht, meldet
+// eine laengst beendete Degradierung als andauernd.
+//
+// Die Luecken sind deshalb bewusst ABSOLUT gewaehlt, nicht aus der Konstante
+// abgeleitet: eine aus der Konstante berechnete Luecke waechst mit der
+// Mutation mit und faengt sie nie. Geprueft wird damit das Band, das die
+// dokumentierte Begruendung der Konstante aufspannt (Tages-Rhythmus aus
+// Briefing/Deploy): eine Luecke von 12h muss verbinden, eine von 48h nicht.
+// Der exakte Zahlenwert bleibt frei waehlbar, solange er in diesem Band liegt.
+func TestTrackResolutionFailureStreakDoesNotBridgeGapOverThreshold(t *testing.T) {
+	tmpDir := t.TempDir()
+	now := time.Now().UTC().Truncate(time.Second)
+	// Der spaetere Eintrag liegt 1h vor "jetzt", damit der Streak ueberhaupt
+	// noch laeuft; der fruehere 48h davor, also jenseits jedes plausiblen
+	// Tages-Rhythmus.
+	spaet := now.Add(-1 * time.Hour)
+	frueh := spaet.Add(-48 * time.Hour)
+
+	writeTrackResolutionJournal(t, tmpDir, "tdd-2073-s2-luecke",
+		trackResolutionFailureLine(frueh, "tour-x", "T1", "ambiguous_result"),
+		trackResolutionFailureLine(spaet, "tour-x", "T2", "ambiguous_result"))
+
+	since, _ := analyzeTrackResolutionFailures(tmpDir, now)
+
+	if want := spaet.Format(time.RFC3339); since != want {
+		t.Errorf("streakSince: want %s — die Luecke von 48h ueberschreitet die Schwelle %v, der Streak darf nicht bis %s zurueckreichen; got %q",
+			want, trackResolutionFailureStreakGapThreshold,
+			frueh.Format(time.RFC3339), since)
+	}
+
+	// Positivkontrolle: dieselben zwei Eintraege mit einer Luecke von 12h
+	// laufen sehr wohl zu einem Streak zusammen. Ohne sie bewiese der spaete
+	// Zeitpunkt oben nichts — er ergaebe sich auch, wenn der Rueckwaertslauf
+	// ueberhaupt nicht arbeitete oder die Schwelle auf 0 stuende.
+	nahDir := t.TempDir()
+	nah := spaet.Add(-12 * time.Hour)
+	writeTrackResolutionJournal(t, nahDir, "tdd-2073-s2-luecke-nah",
+		trackResolutionFailureLine(nah, "tour-x", "T1", "ambiguous_result"),
+		trackResolutionFailureLine(spaet, "tour-x", "T2", "ambiguous_result"))
+
+	sinceNah, _ := analyzeTrackResolutionFailures(nahDir, now)
+	if want := nah.Format(time.RFC3339); sinceNah != want {
+		t.Errorf("Positivkontrolle gescheitert: bei einer Luecke von 12h (innerhalb der Schwelle %v) muss der Streak bis %s zurueckreichen, got %q",
+			trackResolutionFailureStreakGapThreshold, want, sinceNah)
+	}
+}
+
+// AC-12: kein Journal vorhanden (frischer Deploy) -> Leer-/Null-Defaults,
+// kein Fehler, kein Panic.
+func TestTrackResolutionFailuresZeroWhenNoJournalExists(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	since, recent := analyzeTrackResolutionFailures(tmpDir, time.Now().UTC())
+
+	if since != "" {
+		t.Errorf("streakSince: want \"\" ohne Journal, got %q", since)
+	}
+	if recent != 0 {
+		t.Errorf("recentCount: want 0 ohne Journal, got %d", recent)
+	}
+}
+
+// AC-13: eine beschädigte Zeile zwischen zwei gültigen wird übersprungen, die
+// beiden gültigen zählen weiter — fail-soft, kein Absturz.
+func TestTrackResolutionFailuresSkipCorruptLineBetweenValidOnes(t *testing.T) {
+	tmpDir := t.TempDir()
+	now := time.Now().UTC().Truncate(time.Second)
+	erste := now.Add(-10 * time.Minute)
+	zweite := now.Add(-5 * time.Minute)
+
+	writeTrackResolutionJournal(t, tmpDir, "tdd-2073-s2-kaputt",
+		trackResolutionFailureLine(erste, "tour-x", "T1", "ambiguous_result"),
+		`{"ts":"2026-08-22T10:00:00Z","trip_id":`, // abgeschnitten, kein gültiges JSON
+		trackResolutionFailureLine(zweite, "tour-x", "T2", "ambiguous_result"))
+
+	since, recent := analyzeTrackResolutionFailures(tmpDir, now)
+
+	if recent != 2 {
+		t.Errorf("recentCount: want 2 (die beiden gültigen Zeilen), got %d", recent)
+	}
+	if want := erste.Format(time.RFC3339); since != want {
+		t.Errorf("streakSince: want %s, got %q", want, since)
 	}
 }
