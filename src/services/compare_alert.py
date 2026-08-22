@@ -324,6 +324,29 @@ class CompareAlertService:
             # (`config.channels`), nur der tatsaechliche Versand wurde gefiltert
             # (rote Linie #638).
             alle_changes = [c for t in triggered for c in t["changes"]]
+            # Issue #2050 S6 (E-1): Ereigniszeit/Messpunkt nur, wenn ALLE
+            # gebuendelten Aenderungen bzw. Orte uebereinstimmen
+            # (`unique_or_none`) -- Abweichungszweig kennt strukturell keine
+            # Vorwarnzeit und kein Ereignisende (analog Trip).
+            _e1_event_at_dt = alert_log.unique_or_none(
+                c.occurred_at for c in alle_changes
+            )
+            _e1_event_at = (
+                _e1_event_at_dt.isoformat() if _e1_event_at_dt is not None else None
+            )
+            _e1_loc_id = alert_log.unique_or_none(t["loc"].id for t in triggered)
+            _e1_measurement_point = (
+                {"location_id": _e1_loc_id} if _e1_loc_id is not None else None
+            )
+            _e1_reference_at_dt = alert_log.unique_or_none(
+                t["anchor_fetched_at"] for t in triggered
+            )
+            _e1_reference_at = (
+                _e1_reference_at_dt.isoformat() if _e1_reference_at_dt is not None else None
+            )
+            _e1_source = alert_log.unique_or_none(
+                t["anchor_provider"] for t in triggered
+            )
             alert_log.append_entry(
                 self._user_id, entity_id=preset_id, entity_type="compare",
                 changes_count=len(alle_changes),
@@ -335,6 +358,10 @@ class CompareAlertService:
                 reachable_channels=sorted(reachable_all),
                 below_threshold_channels=below_threshold_all,
                 blocked_reason_codes=blocked_reason_codes_all,
+                event_at=_e1_event_at,
+                measurement_point=_e1_measurement_point,
+                reference_at=_e1_reference_at,
+                source=_e1_source,
             )
             if not any_sent:
                 continue
@@ -462,6 +489,9 @@ class CompareAlertService:
             # Alarm-Footer -- `None`, wenn kein Anker geladen wurde
             # (Bootstrap-Fall, `cached=[]`).
             "anchor_fetched_at": cached[0].fetched_at if cached else None,
+            # Issue #2050 S6 (E-1): Rohwert-Quelle desselben Ankers, additiv
+            # mitgefuehrt -- fuer `alert_log.append_entry(source=...)`.
+            "anchor_provider": cached[0].provider if cached else None,
         }
 
     @staticmethod

@@ -147,8 +147,20 @@ class WeatherSnapshotService:
         self,
         trip_id: str,
         target_date: date,
+        *,
+        segment_fetched_at: bool = False,
     ) -> Optional[List[SegmentWeatherData]]:
-        """Load dated forecast snapshot from {trip_id}_{YYYY-MM-DD}.json."""
+        """Load dated forecast snapshot from {trip_id}_{YYYY-MM-DD}.json.
+
+        `segment_fetched_at=True` liefert je Segment seinen EIGENEN
+        Erhebungszeitpunkt statt des Schreibzeitpunkts der Datei (Issue #2050
+        S6, E-1). Bewusst opt-in und per Vorgabe AUS: derselbe Wert speist
+        ueber `trip_alert._check_deviation_alerts()` den nutzersichtbaren
+        Referenz-Zeitpunkt im Alarm-Footer (#1916), und `format_reference_at()`
+        verzweigt am KALENDERTAG — eine Verschiebung um Minuten ueber
+        Mitternacht machte aus "07:00" ein "gestern 23:55 Uhr". Diese Scheibe
+        ist rein additiv und darf keine Anzeige verschieben; die
+        Protokoll-Ableitung fragt den genaueren Wert deshalb ausdruecklich an."""
         filepath = self._snapshots_dir / f"{trip_id}_{target_date.isoformat()}.json"
 
         if not filepath.exists():
@@ -170,7 +182,10 @@ class WeatherSnapshotService:
                         segment=segment,
                         timeseries=timeseries,
                         aggregated=aggregated,
-                        fetched_at=snapshot_at,
+                        fetched_at=(
+                            _segment_fetched_at(seg_data, snapshot_at)
+                            if segment_fetched_at else snapshot_at
+                        ),
                         provider=provider,
                     )
                 )
@@ -445,6 +460,27 @@ def _deserialize_summary(data: dict) -> SegmentWeatherSummary:
     return SegmentWeatherSummary(**kwargs)
 
 
+def _segment_fetched_at(seg_data: dict, snapshot_at: datetime) -> datetime:
+    """Erhebungszeitpunkt DIESES Segments (Issue #2050 S6, E-1): der
+    mitgeschriebene eigene Wert, sonst der Schreibzeitpunkt der Datei --
+    Bestandsdateien ohne das additive Feld verhalten sich unveraendert.
+
+    Bewusst NUR ueber `load_dated(segment_fetched_at=True)` erreichbar, also
+    allein fuer die Protokoll-Ableitung: dort fragt E-1, auf welchen Abruf
+    sich der Briefing-Vergleich beruft. Ueberall sonst -- rollierender
+    Alarm-Anker, undatierter Rueckfall, Alarm-Footer (#1916) -- bemisst sich
+    der Zeitpunkt weiter am SCHREIBzeitpunkt der Datei (Tagesgrenze #823,
+    Ceiling-Fallback #1987)."""
+    roh = seg_data.get("fetched_at")
+    if not roh:
+        return snapshot_at
+    try:
+        wert = datetime.fromisoformat(roh)
+    except (TypeError, ValueError):
+        return snapshot_at
+    return wert if wert.tzinfo else wert.replace(tzinfo=timezone.utc)
+
+
 def _serialize_segment(seg: SegmentWeatherData) -> dict:
     """Serialize a single SegmentWeatherData to dict, with optional hourly."""
     entry: dict = {
@@ -480,6 +516,16 @@ def _serialize_segment(seg: SegmentWeatherData) -> dict:
             ) if v is not None
         },
         "aggregated": _serialize_summary(seg.aggregated),
+        # Issue #2050 S6 (E-1): der EIGENE Erhebungszeitpunkt dieses Segments.
+        # Bis hierher ging er beim Laden verloren (alle Segmente erbten den
+        # Schreibzeitpunkt der Datei) -- damit war der Zeitpunkt, auf den sich
+        # ein Briefing-Vergleich beruft, nachtraeglich nicht mehr belegbar.
+        # Additiv: fehlt der Schluessel (Bestandsdateien), gilt weiter der
+        # Schreibzeitpunkt.
+        **(
+            {"fetched_at": seg.fetched_at.isoformat()}
+            if seg.fetched_at is not None else {}
+        ),
     }
     if seg.timeseries is not None:
         hourly = []
