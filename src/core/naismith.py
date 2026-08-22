@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Tuple
 from utils.geo import haversine_km
 
 if TYPE_CHECKING:
-    from app.trip import Stage
+    from app.trip import Stage, Waypoint
 
 _DEFAULT_START = "08:00"
 
@@ -85,6 +85,31 @@ def _naismith_hours(
     return dist_km / sp[0] + asc_m / sp[1] + desc_m / sp[2]
 
 
+def _segment_distance_km(prev: "Waypoint", wp: "Waypoint") -> float:
+    """Wegstrecke zwischen zwei Wegpunkten in km — Issue #2042.
+
+    Tragen BEIDE Wegpunkte eine gemessene Strecke (`distance_from_start_km`,
+    seit #2036), ist deren Differenz die tatsaechlich zu gehende Strecke.
+    Sonst bleibt es bei der Luftlinie wie im Bestand.
+
+    Die Entscheidung faellt je Wegpunktpaar, nicht je Etappe: eine teilweise
+    vermessene Etappe rechnet die vermessenen Abschnitte gemessen.
+
+    Eine negative Differenz kann es bei korrekten Daten nicht geben; sie wuerde
+    die Gehzeit verkuerzen und damit genau den Fehler erzeugen, den #2042
+    behebt. Deshalb faellt auch dieser Fall auf die Luftlinie zurueck.
+
+    Spiegelt Go segmentDistanceKm.
+    """
+    prev_km = getattr(prev, "distance_from_start_km", None)
+    wp_km = getattr(wp, "distance_from_start_km", None)
+    if prev_km is not None and wp_km is not None:
+        delta = float(wp_km) - float(prev_km)
+        if delta >= 0.0:
+            return delta
+    return haversine_km(prev.lat, prev.lon, wp.lat, wp.lon)
+
+
 def compute_stage_arrivals(stage: "Stage", activity: str) -> "Stage":
     """Berechnet arrival_calculated für jeden Wegpunkt — funktional, neue Stage.
 
@@ -116,7 +141,7 @@ def compute_stage_arrivals(stage: "Stage", activity: str) -> "Stage":
             new_waypoints.append(new_wp)
         else:
             prev = stage.waypoints[i - 1]
-            dist = haversine_km(prev.lat, prev.lon, wp.lat, wp.lon)
+            dist = _segment_distance_km(prev, wp)
             d_elev = float((wp.elevation_m or 0) - (prev.elevation_m or 0))
             asc = max(0.0, d_elev)
             desc = max(0.0, -d_elev)

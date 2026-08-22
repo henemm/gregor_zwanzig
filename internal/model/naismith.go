@@ -105,6 +105,29 @@ func formatHHMM(totalMin int) string {
 // arrival[0] = Start; arrival[i] = arrival[i-1] + naismithHours(dist, asc, desc).
 // Pausentag (0 Wegpunkte): keine Berechnung, kein Feld.
 // sp: Tempoparameter aus ActivitySpeed(trip.Activity).
+// segmentDistanceKm liefert die Wegstrecke zwischen zwei Wegpunkten in km —
+// Issue #2042.
+//
+// Tragen BEIDE Wegpunkte eine gemessene Strecke (DistanceFromStartKm, seit
+// #2036), ist deren Differenz die tatsächlich zu gehende Strecke. Sonst bleibt
+// es bei der Luftlinie wie im Bestand. Die Entscheidung fällt je Wegpunktpaar,
+// nicht je Etappe.
+//
+// Eine negative Differenz kann es bei korrekten Daten nicht geben; sie würde
+// die Gehzeit verkürzen und damit genau den Fehler erzeugen, den #2042 behebt.
+// Deshalb fällt auch dieser Fall auf die Luftlinie zurück.
+//
+// Spiegelt Python _segment_distance_km.
+func segmentDistanceKm(prev, wp Waypoint) float64 {
+	if prev.DistanceFromStartKm != nil && wp.DistanceFromStartKm != nil {
+		delta := *wp.DistanceFromStartKm - *prev.DistanceFromStartKm
+		if delta >= 0 {
+			return delta
+		}
+	}
+	return haversineKm(prev.Lat, prev.Lon, wp.Lat, wp.Lon)
+}
+
 func ComputeStageArrivals(stage *Stage, sp ActivitySpeeds) {
 	if stage == nil || len(stage.Waypoints) == 0 {
 		return
@@ -115,7 +138,7 @@ func ComputeStageArrivals(stage *Stage, sp ActivitySpeeds) {
 
 	for i := 1; i < len(stage.Waypoints); i++ {
 		prev, wp := stage.Waypoints[i-1], stage.Waypoints[i]
-		dist := haversineKm(prev.Lat, prev.Lon, wp.Lat, wp.Lon)
+		dist := segmentDistanceKm(prev, wp)
 		dElev := float64(wp.ElevationM - prev.ElevationM)
 		asc := math.Max(0, dElev)
 		desc := math.Max(0, -dElev)

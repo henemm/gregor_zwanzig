@@ -3,7 +3,7 @@ entity_id: fix_2042_gehzeit_wegstrecke
 type: module
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: approved
 version: "1.0"
 tags: [naismith, gehzeit, wegstrecke, khw]
 ---
@@ -12,7 +12,7 @@ tags: [naismith, gehzeit, wegstrecke, khw]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO, 2026-08-22
 
 ## Purpose
 
@@ -94,3 +94,4 @@ Nicht angefasst werden: `_naismith_hours` (Summenformel), Auf-/Abstiegsanteile, 
 ## Changelog
 
 - 2026-08-22: Initial spec created (#2042)
+- 2026-08-22: ACs vom PO freigegeben; umgesetzt in `src/core/naismith.py` und `internal/model/naismith.go`
