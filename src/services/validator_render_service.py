@@ -25,7 +25,10 @@ from app.profile import ActivityProfile
 from app.trip import Trip
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.alert.model import AlertMessage, OnsetEvent
-from output.renderers.alert.project import to_alert_message
+from output.renderers.alert.project import (
+    event_end_display,  # Issue #2051 S1
+    to_alert_message,
+)
 from output.renderers.alert.render import (
     render_email,
     render_sms,
@@ -125,6 +128,19 @@ def render_alert_preview(
             # dieser Zweig sowohl den API-Payload (`OnsetPayload`) als auch
             # den Replay-SimpleNamespace bedient -- Muster `segment_id` o.
             onset_precip_mm=getattr(body.onset, "onset_precip_mm", None),
+            # Issue #2051 S1: Ende-Angabe des Payloads, `getattr` aus
+            # demselben Grund wie oben (API-Payload UND Replay-Namespace).
+            event_end_time=getattr(body.onset, "event_end_time", None),
+            event_end_day_offset=getattr(
+                body.onset, "event_end_day_offset", 0,
+            ),
+            # Issue #2051 S1 (Spec v1.1): der R4-Waechter waehlt die
+            # Ende-Textform -- er muss den Renderer auch auf dem Vorschauweg
+            # erreichen, sonst zeigt die Vorschau eine andere Aussage als der
+            # Versand.
+            event_ongoing_beyond_horizon=getattr(
+                body.onset, "event_ongoing_beyond_horizon", False,
+            ),
         )
         msg = AlertMessage(
             trip_short=trip_obj.name,
@@ -251,6 +267,9 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
 
     alert_tz = _alert_tz_for_trip(trip_obj)
     onset_time = now + timedelta(minutes=result.onset_minutes)
+    _end_time, _end_offset, _end_ongoing = event_end_display(
+        now, result, alert_tz,
+    )
     onset_ns = SimpleNamespace(
         onset_minutes=result.onset_minutes,
         onset_time=local_fmt(onset_time, alert_tz)[-5:],  # "HH:MM"-Anteil
@@ -266,6 +285,13 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
         # onset_minutes/intensity_label -- der Replay-Weg muss dieselbe Zahl
         # zeigen wie der Produktivpfad (AC-10).
         onset_precip_mm=result.onset_precip_mm,
+        # Issue #2051 S1: Ende aus DEMSELBEN `_derive_result`-Ergebnis, ueber
+        # die geteilte Anzeigefassung -- samt R4-Waechter, der die Textform
+        # waehlt. Der Replay-Weg zeigt damit exakt dasselbe wie der
+        # Produktivpfad.
+        event_end_time=_end_time,
+        event_end_day_offset=_end_offset,
+        event_ongoing_beyond_horizon=_end_ongoing,
     )
     out = render_alert_preview(
         trip_obj, SimpleNamespace(onset=onset_ns, official=None, nowcast_frames=None),

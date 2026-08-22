@@ -1495,6 +1495,17 @@ class TripAlertService:
             # DERSELBEN Zone — eine zweite Herleitung koennte auseinander-
             # laufen und "00:23" wieder mehrdeutig machen.
             _onset_time_str = local_fmt(_onset_dt, tz)
+            # Issue #2051 S1: Ende-Uhrzeit, ihr EIGENER Tagesbezug und der
+            # R4-Waechter ueber die geteilte Fassung, die auch das
+            # Ortsvergleich-Buendel benutzt (ADR-0021). Der Waechter reist
+            # ausdruecklich MIT: er waehlt im Renderer die Textform
+            # (Untergrenze vs. bekanntes Ende, Spec v1.1). Lazy importiert wie
+            # die uebrigen Renderer-Bausteine dieses Pfads.
+            from output.renderers.alert.project import event_end_display
+
+            _end_time_str, _end_day_offset, _end_ongoing = event_end_display(
+                now_utc, result, tz,
+            )
             _radar_request = RadarAlertRequest(
                 onset_minutes=result.onset_minutes,
                 onset_time=_onset_time_str,
@@ -1514,6 +1525,11 @@ class TripAlertService:
                 # liefert (analog `is_convective=result.is_convective`) -- rein
                 # beschreibend, ohne Einfluss auf die Ausloeseregel.
                 onset_precip_mm=result.onset_precip_mm,
+                # Issue #2051 S1: Ende desselben Ereignisses -- beschreibend,
+                # ohne Einfluss auf die Ausloeseregel (wie onset_precip_mm).
+                event_end_time=_end_time_str,
+                event_end_day_offset=_end_day_offset,
+                event_ongoing_beyond_horizon=_end_ongoing,
                 tz=tz,
             )
 

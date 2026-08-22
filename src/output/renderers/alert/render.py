@@ -479,7 +479,12 @@ def _render_subject_onset(msg: AlertMessage) -> str:
     e = msg.events[0]
     label = "Gewitter" if e.is_convective else "Regen"
     km = _km_str_onset(e)
-    return f"[{msg.trip_short}] {km} · {label} in {e.onset_minutes} Min"
+    # Issue #2051 S1: das Ende additiv HINTER der Beginn-Angabe -- ohne
+    # behauptbares Ende bleibt der Betreff byte-identisch (AC-19).
+    return (
+        f"[{msg.trip_short}] {km} · {label} in {e.onset_minutes} Min"
+        f"{_onset_end_suffix(e)}"
+    )
 
 
 def _distinct_source_labels(msg: AlertMessage) -> str:
@@ -510,6 +515,45 @@ def _onset_time_label(e: OnsetEvent) -> str:
     return _time_with_day(e.onset_time, e.onset_day_offset)
 
 
+def _onset_end_suffix(e: OnsetEvent) -> str:
+    """Issue #2051 S1: Langform-Ende-Angabe als anhaengbares Stueck oder LEER,
+    wenn es gar kein Ende gibt (`event_end_time is None` -- kein Beginn
+    erkannt, keine Frames; dann faellt die Angabe ersatzlos weg).
+
+    ZWEI Formen, entschieden allein am R4-Waechter
+    `event_ongoing_beyond_horizon` (Spec v1.1, PO-Entscheid 2026-08-22):
+
+      * Waechter NICHT gesetzt -> ` · letzter Regen gegen HH:MM`. Die Quelle
+        hat den Trockenuebergang beobachtet, das Ende ist bekannt.
+      * Waechter gesetzt -> ` · Regen mindestens bis HH:MM`. Die Zeitreihe
+        bzw. der 180-Min-Horizont ist ausgegangen, waehrend es noch regnete:
+        die Zahl ist eine BELEGTE Untergrenze, aber kein bekanntes Ende.
+
+    Die beiden Saetze sagen Gegensaetzliches ("hoert um HH:MM auf" vs. "hoert
+    bis HH:MM nicht auf"). Sie entstehen deshalb hier in EINEM Ausdruck mit
+    genau einer Weiche -- zwei getrennte Zweige, die je einen ganzen Satz
+    bauen, koennten unbemerkt beide dieselbe Form schreiben (AC-20).
+
+    Der Tagesbezug wird eigenstaendig aus `event_end_day_offset` gebildet und
+    NICHT vom Beginn kopiert: Beginn 23:50 (Versatz 0) und Ende 00:40
+    (Versatz 1) liegen an verschiedenen Kalendertagen. Aufgeloest ueber
+    DENSELBEN gemeinsamen Baustein `_time_with_day()`, den #2020 Scheibe 2
+    eingefuehrt hat -- `_onset_time_label` (o.) selbst bleibt unangetastet
+    (Zusage an `fix-2020-zeitangaben-wortlaut`).
+
+    Die Fuge ` · ` gehoert bewusst zum Rueckgabewert: alle drei Langform-
+    Stellen (Betreff, E-Mail, Telegram) reihen ihre Angaben mit diesem
+    Trenner, und so bleibt der Bestandstext ohne Ende ohne haengendes
+    Trennzeichen."""
+    ende = getattr(e, "event_end_time", None)
+    if not ende:
+        return ""
+    ende = _time_with_day(ende, getattr(e, "event_end_day_offset", 0))
+    if getattr(e, "event_ongoing_beyond_horizon", False):
+        return f" · Regen mindestens bis {ende}"
+    return f" · letzter Regen gegen {ende}"
+
+
 def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
     """Bündel-Zweig (Issue #1041 Slice 1a): je Ort eine Zeile mit Onset-Zeit
     und Intensität (Muster `loc_prefix`, render_email:328-333).
@@ -523,7 +567,11 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
         (
             f"{e.location_label} · {'Gewitter/Hagel' if e.is_convective else 'Regen'} "
             f"in {e.onset_minutes} Min",
-            f"ab {_onset_time_label(e)} · {e.intensity_label}",
+            # Issue #2051 S1: das Ende JE ORT aus dessen eigenem Event -- ein
+            # Buendel kann Orte mit verschiedenen Ende-Zeiten tragen. Ohne
+            # behauptbares Ende bleibt die Zeile byte-identisch (AC-19).
+            f"ab {_onset_time_label(e)}{_onset_end_suffix(e)} · "
+            f"{e.intensity_label}",
         )
         for e in msg.events
     ]
@@ -596,7 +644,10 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
     km = _km_str_onset(e)
 
     data_rows = [
-        ("Wo & wann", f"{km} · ab {_onset_time_label(e)}"),
+        # Issue #2051 S1: Beginn und Ende gehoeren in DIESELBE "Wo & wann"-
+        # Zeile -- eine eigene Datenzeile nur fuer das Ende waere im
+        # Ende-losen Normalfall eine leere Zeile (ADR-0052, Label-Wert-Form).
+        ("Wo & wann", f"{km} · ab {_onset_time_label(e)}{_onset_end_suffix(e)}"),
         ("Intensität", e.intensity_label),
         ("Quelle", e.source_label),
     ]
@@ -662,7 +713,12 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
     label = "Gewitter" if e.is_convective else "Regen"
     km = _km_str_onset(e)
     first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} in {e.onset_minutes} Min')}</b>"
-    second = f"{_onset_time_label(e)} · {e.intensity_label} · {e.source_label}"
+    # Issue #2051 S1: das Ende additiv HINTER der Beginn-Zeit, vor Intensitaet
+    # und Quelle -- ohne behauptbares Ende byte-identisch wie bisher (AC-19).
+    second = (
+        f"{_onset_time_label(e)}{_onset_end_suffix(e)} · "
+        f"{e.intensity_label} · {e.source_label}"
+    )
     # Issue #2018 (AC-B3): die Bezugszeile steht als EIGENE Zeile zwischen Kopf
     # und Detailtext -- bei `None` bleibt der Text unveraendert.
     if msg.addendum_reference:
@@ -708,6 +764,39 @@ def _sms_onset_menge(value: float | None) -> str | None:
     return _fmt_num("R", value)
 
 
+def _sms_onset_ende(e: OnsetEvent) -> str:
+    """Issue #2051 S1: das Ende-Token der Kurznachricht oder leer.
+
+    Dieselbe Zeitform wie das Beginn-Token (`_sms_onset_time`: Stunde ohne
+    fuehrende Null, Tages-Suffix `+1` beim Mitternachts-Ueberlauf) -- zwei
+    benachbarte Zeit-Token in unterschiedlicher Granularitaet waeren eine
+    eigene Fehlerquelle. Ohne Ende (`event_end_time is None`) bleibt das
+    Token leer und die Kurzform ist byte-identisch zu #2046 -- kein
+    haengendes `@`.
+
+    ZWEI Formen, entschieden allein am R4-Waechter (Spec v1.1, Schreibweise
+    vom PO vorgegeben 2026-08-22):
+
+      * nicht gesetzt -> `@HH:MM` direkt am Beginn-Token (`R2.5@18:00@20:00`)
+      * gesetzt       -> ` >@HH:MM`, also Leerzeichen, `>`, Zeit-Token
+        (`R2.5@18:00 >@20:00`) -- die Untergrenzen-Form.
+
+    Hier haengt an EINEM Zeichen die Bedeutung: `>` fehlt, und aus "regnet
+    mindestens bis" wird "hoert auf um". Auf der Huette am Karnischen
+    Hoehenweg kommt nur die Premium-SMS an, die denselben `sms_body` traegt --
+    es gibt dort keinen zweiten Kanal, der die Aussage richtigstellt. Das
+    Praefix wird deshalb an dieser einen Stelle gebildet und dem gemeinsamen
+    Zeit-Token nur vorangestellt (AC-20)."""
+    ende = getattr(e, "event_end_time", None)
+    if not ende:
+        return ""
+    praefix = " >" if getattr(e, "event_ongoing_beyond_horizon", False) else ""
+    return (
+        f"{praefix}@"
+        f"{_sms_onset_time(ende, getattr(e, 'event_end_day_offset', 0))}"
+    )
+
+
 def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     """Issue #1948 S4: die Nowcast-/Onset-Kurznachricht nennt einen ZEITPUNKT
     (`TH@15:40`) statt eines Countdowns (`TH!8`) und spricht im Kopf dieselbe
@@ -728,7 +817,12 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     ihn mit (AC-10)."""
     e = msg.events[0]
     kuerzel = "TH" if e.is_convective else "R"
-    zeit = _sms_onset_time(e.onset_time, e.onset_day_offset)
+    # Issue #2051 S1: das Ende-Token haengt unmittelbar am Beginn-Token
+    # (`R2.5@18:00@20:00`). Bewusst hier zusammengefasst statt in jedem der
+    # drei Token-Zweige unten: so traegt AUCH der Gewitter-Zweig das Ende an
+    # der Zeit (`TH@18:00@20:00 R2.5`) und nicht hinter der Menge -- sonst
+    # bliebe dort eine stille Luecke.
+    zeit = _sms_onset_time(e.onset_time, e.onset_day_offset) + _sms_onset_ende(e)
     menge = _sms_onset_menge(getattr(e, "onset_precip_mm", None))
     if menge is None:
         token = f"{kuerzel}@{zeit}"

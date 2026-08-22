@@ -107,7 +107,10 @@ class TripReportRequest:
     # (intensity_label, onset_minutes) vom Scheduler ermittelt (kein Renderer-
     # Import dort, Architektur-Grenze). None = kein Treffer/Guard aktiv.
     # Die Textformatierung passiert hier im NotificationService.
-    starkregen_nowcast: tuple[str, int] | None = None
+    # Issue #2051 S1: die Datenform traegt zusaetzlich Ende und R4-Waechter
+    # (`event_end_minutes`, `event_ongoing_beyond_horizon`) — das alte
+    # Zwei-Tupel konnte das Ende gar nicht transportieren.
+    starkregen_nowcast: tuple[str, int, int | None, bool] | None = None
 
 
 @dataclass
@@ -200,6 +203,19 @@ class RadarAlertRequest:
     # die Onset-Kurznachricht nennt. Ohne sie bleibt der Versand
     # byte-identisch (zahlenlose Alt-Form).
     onset_precip_mm: float | None = None
+    # Issue #2051 S1: additiv, optional (Muster `onset_precip_mm` o.). Ende
+    # desselben Ereignisses als reines "HH:MM" und sein EIGENER Tagesbezug --
+    # gebildet dort, wo auch `onset_time`/`onset_day_offset` entstehen
+    # (`trip_alert.check_radar_alerts`), damit beide dieselbe Zone benutzen.
+    # `None` heisst "kein Ende ableitbar"; ohne die Felder bleibt der Versand
+    # byte-identisch.
+    event_end_time: str | None = None
+    event_end_day_offset: int = 0
+    # Issue #2051 S1 (Spec v1.1): der R4-Waechter reist MIT der Uhrzeit bis in
+    # den Renderer, weil er dort ueber die Textform entscheidet (Untergrenze
+    # vs. bekanntes Ende, AC-20). Ohne ihn kaeme im Waechterfall die
+    # Normalform an und behauptete ein Ende, das die Daten nicht hergeben.
+    event_ongoing_beyond_horizon: bool = False
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -379,9 +395,16 @@ class NotificationService:
         if request.starkregen_nowcast is not None:
             from output.renderers.email.starkregen_hint import format_starkregen_hint
 
-            _intensity_label, _onset_minutes = request.starkregen_nowcast
+            (
+                _intensity_label, _onset_minutes,
+                _event_end_minutes, _event_ongoing,
+            ) = request.starkregen_nowcast
             starkregen_hint_text = format_starkregen_hint(
                 _intensity_label, _onset_minutes, tz=request.trip_tz,
+                # Issue #2051 S1: Ende und Waechter aus DEMSELBEN
+                # Nowcast-Ergebnis, das schon Label und Beginn liefert.
+                event_end_minutes=_event_end_minutes,
+                event_ongoing_beyond_horizon=_event_ongoing,
             )
 
         report = self._formatter.format_email(
@@ -1324,6 +1347,10 @@ class NotificationService:
             segment_id=request.segment_id,  # Issue #1744 A1
             onset_day_offset=request.onset_day_offset,  # Issue #2009
             onset_precip_mm=request.onset_precip_mm,  # Issue #2046
+            event_end_time=request.event_end_time,  # Issue #2051 S1
+            event_end_day_offset=request.event_end_day_offset,  # Issue #2051 S1
+            # Issue #2051 S1 (Spec v1.1): waehlt die Ende-Textform im Renderer.
+            event_ongoing_beyond_horizon=request.event_ongoing_beyond_horizon,
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.
