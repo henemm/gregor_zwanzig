@@ -32,6 +32,8 @@ per `freeze_time`.
 from __future__ import annotations
 
 import inspect
+import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -50,6 +52,16 @@ _FROZEN_UTC = "2026-08-21 16:00:00+00:00"
 # ungleich dem heutigen Default, damit ein hart getippter "60" im
 # Produktivcode auffliegt.
 _NEUER_GRENZWERT_MIN = 90
+
+
+def _minuten(hhmm: str) -> int:
+    stunde, _, minute = hhmm.partition(":")
+    return int(stunde) * 60 + int(minute)
+
+
+def _abstand_minuten(a: str, b: str) -> int:
+    roh = abs(_minuten(a) - _minuten(b))
+    return min(roh, 24 * 60 - roh)
 
 
 def test_prueling_stammt_aus_diesem_arbeitsbaum():
@@ -114,9 +126,25 @@ def test_ac16_guete_zeile_kippt_am_gepatchten_grenzwert_nicht_am_alten(monkeypat
         f"NICHT erscheinen -- sonst liest der Produktivcode weiterhin den "
         f"alten Wert 60 statt der Modulvariable: {knapp_ueber_altem_wert!r}"
     )
-    assert "Ortsangabe ab" in knapp_ueber_neuem_wert, (
+    treffer = re.search(r"Ortsangabe ab (\d{1,2}:\d{2}) unscharf", knapp_ueber_neuem_wert)
+    assert treffer is not None, (
         f"RED: bei {limit + 1} Minuten (jenseits der GEPATCHTEN Grenze von "
         f"{limit}) muss die Guete-Zeile erscheinen: {knapp_ueber_neuem_wert!r}"
+    )
+    # Adversary-Fund F004 (sinngemaess auf AC-16 uebertragen): Praesenz allein
+    # beweist nur, DASS die Bedingung am gepatchten Wert kippt -- nicht, dass
+    # die ANGEZEIGTE Grenzzeit selbst aus derselben Modulvariable stammt statt
+    # aus einer zweiten, unabhaengigen (z. B. hart kopierten `now + 60`)
+    # Berechnung. Die Erwartung wird deshalb aus DERSELBEN eingefrorenen Uhr
+    # und DERSELBEN Modulvariable hergeleitet, nicht als "19:30" getippt.
+    frozen_utc = datetime.fromisoformat(_FROZEN_UTC)
+    erwartete_grenzzeit = (
+        (frozen_utc + timedelta(minutes=limit)).astimezone(_TZ).strftime("%H:%M")
+    )
+    assert _abstand_minuten(treffer.group(1), erwartete_grenzzeit) <= 1, (
+        f"F004-Klasse: die angezeigte Grenzzeit {treffer.group(1)!r} stammt "
+        f"nicht aus dem gepatchten Grenzwert {limit} (erwartet "
+        f"{erwartete_grenzzeit!r}): {knapp_ueber_neuem_wert!r}"
     )
 
 
@@ -159,8 +187,20 @@ def test_ac16_starkregen_hint_liest_die_grenze_ebenfalls_zur_laufzeit(monkeypatc
         f"diesseits der GEPATCHTEN Grenze von {limit}) darf die Guete-Zeile "
         f"in starkregen_hint.py NICHT erscheinen: {knapp_ueber_altem_wert!r}"
     )
-    assert "Ortsangabe ab" in knapp_ueber_neuem_wert, (
+    treffer = re.search(r"Ortsangabe ab (\d{1,2}:\d{2}) unscharf", knapp_ueber_neuem_wert)
+    assert treffer is not None, (
         f"F001: bei {limit + 1} Minuten (jenseits der GEPATCHTEN Grenze von "
         f"{limit}) muss die Guete-Zeile in starkregen_hint.py erscheinen: "
         f"{knapp_ueber_neuem_wert!r}"
+    )
+    # F004-Klasse (sinngemaess auf F001 uebertragen): Praesenz allein beweist
+    # nicht, dass die ANGEZEIGTE Grenzzeit aus derselben Modulvariable stammt.
+    frozen_utc = datetime.fromisoformat(_FROZEN_UTC)
+    erwartete_grenzzeit = (
+        (frozen_utc + timedelta(minutes=limit)).astimezone(_TZ).strftime("%H:%M")
+    )
+    assert _abstand_minuten(treffer.group(1), erwartete_grenzzeit) <= 1, (
+        f"F004-Klasse: die angezeigte Grenzzeit {treffer.group(1)!r} in "
+        f"starkregen_hint.py stammt nicht aus dem gepatchten Grenzwert "
+        f"{limit} (erwartet {erwartete_grenzzeit!r}): {knapp_ueber_neuem_wert!r}"
     )
