@@ -1147,6 +1147,7 @@ def _group_by_calendar_day(points: list, tz: ZoneInfo, cap: int = 3) -> list[tup
 
 def _build_location_outlook_rows(
     loc: LocationResult, outlook_metrics: list[dict] | None = None,
+    outlook_metric_formats: dict[str, bool] | None = None,
 ) -> list[dict]:
     """AC-5/AC-8: bis zu 3 Tages-Zeilen aus `outlook_hourly_data`, ueber
     denselben Aggregator (`summarize_points`) und denselben Zeilenbau
@@ -1174,6 +1175,11 @@ def _build_location_outlook_rows(
         weekday = _WEEKDAYS_DE_OUTLOOK[day.weekday()]
         rows.append(build_outlook_row(
             summary, day_points, weekday, tz, metrics=outlook_metrics,
+            # Issue #2049: der Ortsvergleich hat kein `trip_display_config`,
+            # aus dem `build_outlook_row` die Zuordnung selbst holen koennte --
+            # sie muss hier ausdruecklich ankommen, sonst bleibt der
+            # Umschalter des Ortsvergleichs-Editors wirkungslos.
+            outlook_metric_formats=outlook_metric_formats,
         ))
     return rows
 
@@ -1216,6 +1222,7 @@ def _render_location_outlook(
     loc: LocationResult, index: int,
     outlook_metrics: list[dict] | None = None,
     with_location: bool = False,
+    outlook_metric_formats: dict[str, bool] | None = None,
 ) -> str:
     """AC-5/AC-9: Ausblick-Tabelle je Ort; entfaellt fail-soft bei Fehler
     bzw. leerem `outlook_hourly_data` (kein Crash, restliche Mail
@@ -1233,7 +1240,8 @@ def _render_location_outlook(
     Baustein aus #1486 (kein Compare-eigener Nachbau)."""
     if loc.error is not None or not loc.outlook_hourly_data:
         return _render_outlook_unavailable(loc, index, with_location)
-    rows = _build_location_outlook_rows(loc, outlook_metrics)
+    rows = _build_location_outlook_rows(
+        loc, outlook_metrics, outlook_metric_formats)
     if not rows:
         return _render_outlook_unavailable(loc, index, with_location)
     # Issue #1378: dieselbe angeschriebene Zeitbasis wie beim Stundenblock
@@ -1551,6 +1559,7 @@ def render_compare_html(
     corridors: list[Corridor] | None = None,
     outlook_enabled: bool = False,
     outlook_metrics: list[dict] | None = None,
+    outlook_metric_formats: dict[str, bool] | None = None,
     undelivered: list | None = None,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
@@ -1599,6 +1608,10 @@ def render_compare_html(
             wie `active_metrics`). Filtert UND ordnet die Wert-Spalten der
             Tagestabelle. `None` (Altbestand) = die bisherigen sieben festen
             Spalten, unveraendert.
+        outlook_metric_formats: Issue #2049 — Roh/Einfach je Ausblick-Groesse
+            (`{kennung: bool}`, ``True`` = Einfach). `None`/fehlender Eintrag
+            = Rohzahl, der Ausblick-Default ist hart "Roh". Wirkt auf den
+            Zellentext, NICHT auf die Ampel-Hintergrundtoenung.
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
@@ -1663,6 +1676,7 @@ def render_compare_html(
         # ortslos.
         return section + _render_location_outlook(
             loc, i, outlook_metrics, with_location=not section,
+            outlook_metric_formats=outlook_metric_formats,
         )
 
     per_location_html = "".join(

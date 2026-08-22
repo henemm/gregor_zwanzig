@@ -238,6 +238,22 @@ def mit_outlook_metrics(dc, outlook_metrics):
         ) from exc
 
 
+def mit_outlook_metric_formats(dc, formats):
+    """Setzt die Roh/Einfach-Zuordnung des Ausblicks -- mit sprechendem
+    RED-Fehler, solange das Feld in ``UnifiedWeatherDisplayConfig`` fehlt
+    (#2049, Spec Source: src/app/models.py:860)."""
+    try:
+        return dataclasses.replace(dc, outlook_metric_formats=formats)
+    except TypeError as exc:
+        raise AssertionError(
+            "UnifiedWeatherDisplayConfig kennt das Feld "
+            "'outlook_metric_formats' noch nicht (#2049, Spec Source: "
+            "src/app/models.py:860, Sibling von 'outlook_metrics'). Ohne "
+            "dieses Feld kann eine Roh/Einfach-Zuordnung je Ausblick-Groesse "
+            f"weder gespeichert noch gerendert werden.\nUrsprungsfehler: {exc}"
+        ) from exc
+
+
 def _segment_weather():
     from app.models import (
         ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,

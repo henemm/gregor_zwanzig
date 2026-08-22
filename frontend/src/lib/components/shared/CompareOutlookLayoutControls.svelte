@@ -28,6 +28,7 @@
 		toggleCompareMetricKey
 	} from './weather-metrics-tab/compareMetricOrder.ts';
 	import { splitChannelMetricsForDisplay } from './weather-metrics-tab/channelMetricLayouts.ts';
+	import { outlookFriendlyCapable } from './weather-metrics-tab/outlookFriendlyCapability.ts';
 
 	// Issue #1720 S1: flache Props statt `CompareWizardState`-Bindung — dasselbe
 	// Bauteil bedient jetzt Ortsvergleich UND Trip (parametrisiert statt
@@ -67,11 +68,21 @@
 		 *  uebergibt `false`: seine Auswahl wirkt seit dieser Scheibe in
 		 *  allen vier Ausgabeorten. */
 		showEmailOnlyHint?: boolean;
+		/** Issue #2049: Roh/Einfach je Groesse (`true` = Einfach), gespeichert
+		 *  in `display_config.outlook_metric_formats`. `null`/fehlend = nie
+		 *  eingestellt, also durchgaengig Roh. */
+		metricFormats?: Record<string, boolean> | null;
+		/** Neue Roh/Einfach-Zuordnung nach oben melden. OHNE diesen Prop
+		 *  erscheint KEIN Umschalter — eine Flaeche, die die Einstellung nicht
+		 *  speichern kann, darf sie auch nicht anbieten (sonst genau der
+		 *  wirkungslose Schalter, der #2049 ausgeloest hat). */
+		onMetricFormats?: (formats: Record<string, boolean>) => void;
 	}
 	let {
 		metricKeys, catalog, onMetricKeys, onOutlookCommit,
 		title = '3-Tages-Ausblick', enabled = true, onEnabledChange,
-		showEmailOnlyHint = true, grundauswahl = null
+		showEmailOnlyHint = true, grundauswahl = null,
+		metricFormats = null, onMetricFormats
 	}: Props = $props();
 
 	function handleEnabledToggle(checked: boolean): void {
@@ -177,10 +188,25 @@
 		onOutlookCommit?.();
 	}
 
-	// Roh/Einfach-Umschalter gibt es im Vergleich nicht (indicatorCapable() ist
-	// fuer die Compare-Metrik-IDs durchgaengig false). Named function statt
-	// Inline-Closure im Markup (Safari-Factory-Muster).
-	function noopOutlookMode(): void {}
+	// Issue #2049: der Roh/Einfach-Umschalter des Ausblicks. Bis hierher war er
+	// eine Attrappe (leere `friendlyMap`, No-Op-Handler) — ein Klick veraenderte
+	// nichts. Named functions statt Inline-Closures (Safari-Factory-Muster).
+	const outlookFriendlyMap = $derived(metricFormats ?? {});
+
+	function onOutlookMode(id: string, useIndicator: boolean): void {
+		// Read-Modify-Write auf der bestehenden Zuordnung: ein Umschalten darf
+		// die Einstellung der anderen Groessen nicht verlieren.
+		onMetricFormats?.({ ...outlookFriendlyMap, [id]: useIndicator });
+		onOutlookCommit?.();
+	}
+
+	// Sichtbar ist der Umschalter nur, wo er auch wirkt: DIESELBE Liste, gegen
+	// die der Backend-Formatierer verzweigt (AC-4). Kann die Flaeche die
+	// Einstellung nicht speichern (kein `onMetricFormats`), erscheint gar
+	// keiner — der Zustand vor dieser Aenderung.
+	function outlookModeCapable(id: string): boolean {
+		return onMetricFormats !== undefined && outlookFriendlyCapable(id);
+	}
 </script>
 
 <SectionH {title} />
@@ -217,12 +243,13 @@
 			<WeatherV2Reihenfolge
 				primaryColumns={materializedOutlookKeys}
 				metricById={outlookMetricById}
-				friendlyMap={{}}
+				friendlyMap={outlookFriendlyMap}
 				activeChannel="email"
 				highlight={null}
 				onRemove={onOutlookRemove}
 				onDndReorder={handleOutlookDndReorder}
-				onMode={noopOutlookMode}
+				onMode={onOutlookMode}
+				modeCapable={outlookModeCapable}
 				offColumns={offOutlookKeys}
 				onRestore={onOutlookRestore}
 				kuerzelById={outlookKuerzelById}

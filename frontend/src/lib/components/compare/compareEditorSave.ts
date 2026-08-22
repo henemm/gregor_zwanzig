@@ -47,6 +47,9 @@ export interface CompareEditorEdits {
 	// Neuformat (Größe + Auswertung) über dieselbe Katalogantwort wie
 	// active_metrics — kein viertes Vokabular. undefined = Feld nicht editiert.
 	outlookMetricKeys?: string[] | null;
+	// Issue #2049: Roh/Einfach je Ausblick-Größe (`true` = Einfach), paralleles
+	// Feld zu outlookMetricKeys. undefined = Feld nicht editiert.
+	outlookMetricFormats?: Record<string, boolean> | null;
 	// Issue #1361/#1368: 3-Tages-Ausblick-Sektion ein/aus (Top-Level, analog
 	// hourlyEnabled). Optional → rückwärtskompatibel.
 	outlookEnabled?: boolean;
@@ -177,6 +180,15 @@ export function buildComparePresetSavePayload(
 		// Feld, das noch durch die Paar-Übersetzung `toStoredActiveMetrics()`
 		// lief; `active_metrics` behält sie (ADR-0037).
 		displayConfig.outlook_metrics = edits.outlookMetricKeys;
+	}
+
+	if (edits.outlookMetricFormats !== undefined && edits.outlookMetricFormats !== null) {
+		// Issue #2049: paralleles Feld, dieselbe Regel wie eine Zeile darüber —
+		// explizit schreiben, damit ein Zurücksetzen auf „Roh" den Server
+		// erreicht (mergeConfigMap überschreibt Keys nur, löscht sie nie).
+		// `null` (nie eingestellt) bleibt ungesendet und round-trippt über
+		// `...original.display_config`.
+		displayConfig.outlook_metric_formats = edits.outlookMetricFormats;
 	}
 
 	// Issue #1170: metric_alert_levels lebt in display_config (analog Trip).
@@ -319,6 +331,10 @@ export interface NewComparePresetFields {
 	// `outlook_metrics` wird dann gar nicht gesendet (Default bleibt „die
 	// bisherigen sieben Spalten"), analog hourlyMetricKeys.
 	outlookMetricKeys?: string[] | null;
+	// Issue #2049: `null` = „nie eingestellt" -- der Schluessel
+	// `outlook_metric_formats` wird dann gar nicht gesendet (Default: alles
+	// Roh), analog outlookMetricKeys.
+	outlookMetricFormats?: Record<string, boolean> | null;
 	metricAlertLevels: Record<string, string>;
 	// Issue #1461 S3b-2b: Kanal-Schwelle beim Anlegen (PO-Entscheid 2026-08-06,
 	// Spec v1.3) — nur nicht-leere Werte werden gesendet (analog
@@ -428,6 +444,11 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 			// Issue #1848 A2: reine Kennungen, ungewandelt (s. Hub-Speicherweg).
 			...(fields.outlookMetricKeys != null
 				? { outlook_metrics: fields.outlookMetricKeys }
+				: {}),
+			// Issue #2049: analog outlook_metrics -- `null` laesst den
+			// Schluessel weg ("nie eingestellt" = alles Roh).
+			...(fields.outlookMetricFormats != null
+				? { outlook_metric_formats: fields.outlookMetricFormats }
 				: {}),
 			...(Object.keys(fields.metricAlertLevels).length > 0
 				? { metric_alert_levels: fields.metricAlertLevels }

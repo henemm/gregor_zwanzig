@@ -158,6 +158,69 @@ def format_precip_intensity(mm: Optional[float]) -> str:
     return "stark"
 
 
+def format_precip_daily_sum(mm: Optional[float]) -> str:
+    """Niederschlags-Wortstufe einer TAGESSUMME (Issue #2049, AC-9).
+
+    Bewusst NICHT ``format_precip_intensity``: jene Schwellen (2/10 mm) meinen
+    einen Stundenwert. Der 3-Tages-Ausblick zeigt die Tagessumme, fuer die
+    dieselben Schwellen jeden Tag als "stark" beschriften wuerden.
+
+      None oder 0 -> "trocken"
+      <=5 mm      -> "leicht"
+      <=20 mm     -> "mäßig"
+      >20 mm      -> "stark"
+    """
+    if mm is None or mm <= 0:
+        return "trocken"
+    if mm <= 5:
+        return "leicht"
+    if mm <= 20:
+        return "mäßig"
+    return "stark"
+
+
+def format_rain_probability_scale(pct: Optional[float]) -> str:
+    """Regenwahrscheinlichkeits-Wortskala (Issue #2049, AC-7).
+
+    Reine Zustandsbeschreibung ohne Handlungsempfehlung (ADR-0007):
+
+      <25 %  -> "unwahrscheinlich"
+      <50 %  -> "möglich"
+      <75 %  -> "wahrscheinlich"
+      >=75 % -> "sehr wahrscheinlich"
+    None -> "–" (wie ``format_wind_strength``).
+    """
+    if pct is None:
+        return "–"
+    if pct < 25:
+        return "unwahrscheinlich"
+    if pct < 50:
+        return "möglich"
+    if pct < 75:
+        return "wahrscheinlich"
+    return "sehr wahrscheinlich"
+
+
+def format_sunshine_scale(hours: Optional[float]) -> str:
+    """Sonnenstunden-Wortskala einer TAGESSUMME (Issue #2049, AC-8).
+
+      <2 h  -> "trübe"
+      <5 h  -> "wechselhaft"
+      <8 h  -> "freundlich"
+      >=8 h -> "sonnig"
+    None -> "–" (wie ``format_wind_strength``).
+    """
+    if hours is None:
+        return "–"
+    if hours < 2:
+        return "trübe"
+    if hours < 5:
+        return "wechselhaft"
+    if hours < 8:
+        return "freundlich"
+    return "sonnig"
+
+
 def compute_dominant_wmo(data) -> Optional[int]:
     """Most severe WMO code from hourly data points."""
     codes = [dp.wmo_code for dp in data if getattr(dp, 'wmo_code', None) is not None]

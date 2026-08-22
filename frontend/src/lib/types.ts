@@ -300,6 +300,10 @@ export interface DisplayConfig {
 	// bleibt lesbar, wird aber nicht mehr geschrieben.
 	// Feld fehlt = die sieben festen Spalten; `[]` = der Block entfaellt ganz.
 	outlook_metrics?: string[];
+	// Issue #2049: Roh/Einfach je Vorschau-Groesse (`true` = Einfach). PARALLELES
+	// Feld, damit `outlook_metrics` eine reine Kennungsliste bleibt. Fehlende
+	// Kennung = Roh; das Feld ganz fehlend = nie eingestellt.
+	outlook_metric_formats?: Record<string, boolean>;
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).

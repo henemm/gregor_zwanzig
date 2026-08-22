@@ -191,6 +191,11 @@ class CompareRenderOptions:
     # `active_metrics`, #1373). `None` = Feld fehlt (Altbestand, bisherige
     # sieben Spalten), `[]` = bewusst leer (Block entfaellt).
     outlook_metrics: Optional[list[dict]] = None
+    # Issue #2049: Roh/Einfach je Ausblick-Groesse aus demselben
+    # display_config-Blob, `{kennung: bool}` (True = Einfach). Paralleles Feld
+    # zu `outlook_metrics`, das damit eine reine Kennungsliste bleibt. `None`
+    # = nie eingestellt; fehlende Kennung = Rohzahl (Default hart "Roh").
+    outlook_metric_formats: Optional[dict] = None
     # Issue #1703 Scheibe 8: kanal-eigene Auswahl der UEBERSICHTSTABELLE, je
     # Kanal bereits gegen die Grundauswahl geschnitten (ADR-0050 Regel 1/2 ueber
     # `resolve_channel_enabled_metrics`). Keys: "email"/"telegram"/"sms" --
@@ -247,7 +252,7 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     from app.loader import _corridor_from_dict
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
     from output.renderers.compare_outlook_metric_ids import (
-        resolve_compare_outlook_metrics,
+        resolve_compare_outlook_formats, resolve_compare_outlook_metrics,
     )
     from output.renderers.compare_metric_ids import (
         resolve_channel_enabled_metrics, resolve_enabled_metrics,
@@ -318,6 +323,13 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         corridors=corridors or None,
         outlook_enabled=outlook_enabled,
         outlook_metrics=resolved_outlook_metrics,
+        # Issue #2049: dieselbe Regel wie im Trip (EINE Normalisierung, siehe
+        # resolve_compare_outlook_formats) -- nicht-faehige Kennungen und
+        # nicht-boolesche Werte fallen hier heraus, damit ein wirkungsloser
+        # Zustand gar nicht erst in den Renderpfad gelangt.
+        outlook_metric_formats=resolve_compare_outlook_formats(
+            display_config.get("outlook_metric_formats"),
+        ),
         enabled_metrics_by_channel={
             ch: resolve_channel_enabled_metrics(global_metrics, channel_raw, ch)
             for ch in ("email", "telegram", "sms")

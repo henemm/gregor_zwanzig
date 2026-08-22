@@ -2,13 +2,13 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
-**Last Updated:** 2026-08-14 (Bug #1801 S2 — neue Ampel-Palette (Punkt/Fläche/Text) für
+**Last Updated:** 2026-08-22 (Issue #2049 — Abgrenzung „Metric Display Contract" (Sektion 4/5)
+gegen die eigene, unabhängige Roh/Einfach-Entscheidung des 3-Tages-Ausblicks (Sektion 6,
+`display_config.outlook_metric_formats`) ergänzt, s.u.)
+
+**Vorherige Aktualisierung:** 2026-08-14 (Bug #1801 S2 — neue Ampel-Palette (Punkt/Fläche/Text) für
 gelb/orange/rot, WCAG-Fix grüner Zelltext (`G_AMPEL_TEXT_GREEN`); `html.py`/`outlook.py`
 beziehen die Zellfarben seither aus `design_tokens.tone_css()` statt eigener Kopien)
-
-**Vorherige Aktualisierung:** 2026-07-29 (Issue #1377 Scheibe B1, `506c25f4` — Zell-Tönung/`_row_risk`
-lesen den zentralen Ampel-Katalog statt hartcodierter Schwellen; Sicht bekommt erstmals
-eine Zellhintergrund-Tönung)
 
 **Acceptance Validators (seit Issue #733):**
 - **Trip-Briefing-Mail** (beide Formate: `full` HTML / `compact` Nur-Text): `.claude/hooks/briefing_mail_validator.py` (dispatcht auf `X-GZ-Mail-Type` + `X-GZ-Format` Header)
@@ -204,6 +204,16 @@ X-GZ-Format:    full | compact
 
 Der vollständige Vertrag aller Wetter-Metriken in der Briefing-Mail wird hier **einmalig** festgelegt.
 Die **alleinige Quelle** der Anzeige-Entscheidung ist `use_friendly_format` in `MetricConfig`.
+
+**Abgrenzung (seit Issue #2049):** Dieser Vertrag gilt für die Stundentabellen/Segmente
+(Sektion 4/5). Der **3-Tages-Ausblick** (Sektion 6, Trip **und** Ortsvergleich) hat seit
+#2049 eine eigene, unabhängige Roh/Einfach-Entscheidung —
+`display_config.outlook_metric_formats` statt `use_friendly_format` —, eigene
+Fähigkeitsliste (`OUTLOOK_FRIENDLY_CAPABLE`, zehn statt fünfzehn Größen) und teils eigene
+Wortskalen (Regenwahrscheinlichkeit/Sonnenstunden/Niederschlag-Tagessumme sind hier neu
+und weichen bei Niederschlag bewusst von den Stunden-Schwellen dieser Tabelle ab). Details:
+`docs/reference/api_contract.md` (`outlook_metric_formats`), Spec
+`docs/specs/modules/fix_2049_ausblick_darstellungsform.md`.
 
 **Single Source of Truth: Metrik-spezifische Anzeige-Regeln**
 

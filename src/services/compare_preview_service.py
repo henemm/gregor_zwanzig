@@ -202,6 +202,9 @@ class ComparePreviewService:
             corridors=opts.corridors,
             outlook_enabled=opts.outlook_enabled,
             outlook_metrics=opts.outlook_metrics,
+            # Issue #2049: Vorschau und Versand zeigen denselben Ausblick --
+            # die Roh/Einfach-Zuordnung muss beide Wege gehen.
+            outlook_metric_formats=opts.outlook_metric_formats,
         )
 
     def _load_preset(self, preset_id: str, *, user_id: str) -> dict:
