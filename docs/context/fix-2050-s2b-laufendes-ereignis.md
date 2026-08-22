@@ -160,3 +160,121 @@ ADR-0056 (rollierender Alarm-Anker) — vor der Spec gegenlesen.
   "Regen laeuft schon"-Szenario baut man ueber ein Zwischensegment.
 - **R7 — Nicht nur Regen.** `OnsetEvent.is_convective` deckt Gewitter/Hagel mit ab. Ein laufendes
   Gewitter faellt unter dieselbe Anforderung; die Spec darf nicht auf Niederschlag verengen.
+
+---
+
+# Analysis
+
+## Type
+
+**Bug** (nutzersichtbares Fehlverhalten mit Vorfallbeleg vom 21.08.), geschnitten als Scheibe des
+Enhancement-Tickets #2050.
+
+## Die tragende Erkenntnis
+
+Der gesamte Radar-Zweig setzt an **vier unabhaengigen Stellen** voraus, dass ein Radar-Ereignis in
+der **Zukunft** liegt. Diese Praemisse steht seit dem Merge von #2020 S2 sogar ausformuliert im
+Code (`render.py:497-511`: *"`OnsetEvent` kennt kein Vergangenheits-Kennzeichen (Radar blickt nach
+vorn)"*). B-1 bricht genau diese Praemisse — und jede der vier Stellen muss mitziehen, sonst
+ueberlebt der Defekt dort still weiter.
+
+Alle vier haengen am selben Ausdruck `onset_minutes is not None`:
+
+| # | Stelle | Verhalten bei `already_running=True, onset_minutes=None` | Schwere |
+|---|---|---|---|
+| 1 | `trip_alert.py:145-148` `radar_alert_due` | liefert `False` ⇒ **gar kein Alarm**, Renderer nie erreicht | sperrt den Fall komplett |
+| 2 | `compare_radar_alert.py:64-79` `_identity_inputs` | `onset_at=None` ⇒ `_times_overlap` (`alert_gate.py:490-512`) findet nie einen Kandidaten ⇒ **Entdopplung wird stiller No-Op** | wirkt, sieht aber funktionsfaehig aus |
+| 3 | `trip_alert.py:1382` / `project.py:509-511` | `now + timedelta(minutes=None)` ⇒ **Absturz** | laut |
+| 4 | `project.py:494` | filtert laufende Orte vor dem `OnsetEvent`-Bau heraus ⇒ **Ortsvergleich schweigt** | still |
+
+🔴 Nr. 2 ist der gefaehrlichste Punkt: Ein Test, der nur "laeuft UND regnet weiter" baut, sieht
+davon nichts — dort ist `onset_minutes` gesetzt und alles verhaelt sich normal. Der Fall wird nur
+sichtbar, wenn das Ereignis **innerhalb der laufenden Viertelstunde endet**. Dieselbe Fehlerfamilie
+wie dreimal zuvor in diesem Ticket: ein Zweig wirkt grün, weil die Bedingung ihn nie erreicht.
+
+## Affected Files
+
+| Datei | Aenderung | Beschreibung |
+|---|---|---|
+| `src/services/radar_service.py` | MODIFY | Erkennung im `_derive_result`; `NowcastResult` um Laufend-Kennzeichen + Ende erweitern; `format_now_text` (`/jetzt`) |
+| `src/output/renderers/alert/model.py` | MODIFY | `OnsetEvent` additiv um Laufend-Kennzeichen + Ende-Zeit + Tagesversatz |
+| `src/output/renderers/alert/render.py` | MODIFY | geteilter Helfer neben `_onset_time_label`; Verzweigung in allen Onset-Formatierern (E-Mail einzeln/Buendel, Telegram-Langform, Betreff, SMS-Token) |
+| `src/services/trip_alert.py` | MODIFY | `radar_alert_due` (:145), Zeitableitung + Dedup-Identitaet (:1382), `RadarAlertRequest`-Bau (:1498) |
+| `src/services/compare_radar_alert.py` | MODIFY | `_identity_inputs` (:64-79) |
+| `src/output/renderers/alert/project.py` | MODIFY | Filter (:494) und Zeitableitung (:509-511) im Compare-Buendel |
+| `src/services/notification_service.py` | MODIFY | `RadarAlertRequest`: `onset_minutes` optional, neue Felder durchreichen |
+| `src/services/radar_alert_service.py` | MODIFY? | Aufrufer beim Implementieren per Grep klaeren — moeglicherweise Legacy/Preview |
+| `src/output/renderers/email/starkregen_hint.py` | MODIFY | Briefing-Kurzfristzeile |
+| `src/services/validator_render_service.py` | MODIFY? | Replay-Payload-Schema, nur falls es die Felder tragen muss |
+| `docs/specs/modules/alarm_szenario_laufendes_ereignis.md` | CREATE | Spec dieser Scheibe |
+| `tests/tdd/test_alarm_szenario_laufendes_ereignis.py` | CREATE | Waechter nach S2a-Muster ueber die Pruefstrecke |
+
+## Scope Assessment
+
+- Dateien: 10-12 (davon 2 neu)
+- LoC produktiv: ~180-260 ⇒ **`loc_limit_override` auf 300** noetig (Default 250)
+- LoC Test: ~150-250 ⇒ `test_loc_limit_override` vorsorglich setzen
+- Risk Level: **MEDIUM-HIGH** — kritischer Alarmpfad, aber ausschliesslich additiv; der Normalfall
+  (Ereignis liegt wirklich in der Zukunft) bleibt unveraendert und ist als Regressions-Invariante
+  pruefbar.
+
+## Technical Approach (Empfehlung)
+
+**Gewaehlt: den Laufend-Zustand erkennen und durchreichen** — nicht: die Ausloesung unterdruecken.
+
+1. **Erkennung** in `_derive_result` (`radar_service.py:~700`), wo Frames, Fenster und `now` bereits
+   zusammenliegen. Ein Ereignis laeuft, wenn das Frame, dessen Gueltigkeitsintervall `now` enthaelt,
+   ueber der Trockenschwelle liegt. Die Vorwaerts-Konvention ist keine Neuerfindung: die
+   Mengenrechnung `_accumulate_precip_mm` (`radar_service.py:200-242`, `_MAX_FRAME_COVERAGE`)
+   rechnet heute schon so. Damit werden Ausloeseentscheidung und Mengenrechnung deckungsgleich.
+2. **Ende** = erstes trockenes Frame nach der laufenden nassen Strecke. Regnet es bis ueber den
+   Sichthorizont hinaus (INCA real ~165 Min), gibt es **kein** Ende zu nennen — dann wird das
+   ausdruecklich gesagt, statt eine Dauer zu erfinden.
+3. **`onset_minutes` bleibt unangetastet.** Es behaelt seine Rolle als Torwaechter und
+   Dedup-Bestandteil; der Laufend-Zustand liegt additiv daneben. Das haelt die Gate-Kette, an der
+   #2065 parallel arbeitet, aus dem Spiel.
+4. **Die vier Stellen aus der Tabelle ziehen mit** — jede einzeln als Akzeptanzkriterium, sonst
+   bewacht sie kein Test (Praezedenz: `onset_precip_mm` musste bei #2046 an denselben Stellen
+   nachgezogen werden).
+5. **Renderer**: ein geteilter Helfer neben `_onset_time_label`, aufgesetzt auf den bestehenden
+   Baustein `_time_with_day(zeit, offset, is_past=)`. Alle vier Kanaele verzweigen an ihrer
+   vorhandenen Stelle. **Pflicht, nicht Kuer:** ohne Textaenderung liest der Nutzer sonst
+   "Regen in 0 Min" — der Fix waere schlimmer als der Bug.
+
+**Verworfen: Ausloesung unterdruecken** ("gar nicht melden", von Szenario 1 ausdruecklich erlaubt).
+Begruendung: widerspricht dem Produktgrundsatz *NUR Daten, keine Bevormundung* — ob ein bereits
+laufender Regen fuer ihn wichtig ist, entscheidet der Wanderer; ein stiller Nicht-Alarm ist zudem
+von einem technischen Ausfall nicht unterscheidbar (Anforderung D-2 verlangt fuer jede
+Unterdrueckung einen benannten Grund). **Diese Wahl ist die eine echte PO-Entscheidung dieser
+Scheibe** und wird bei der AC-Freigabe vorgelegt.
+
+## Flut-Gegenprobe
+
+Kein neues Risiko. `check_nowcast_gate` (`alert_gate.py:140-184`) ist ein reiner Cooldown auf der
+Trip-/Preset-Kennung, laeuft **vor** `radar_alert_due` und ist von `onset_minutes` unabhaengig. Ein
+durchregnender Nachmittag loest daher hoechstens im Cooldown-Takt aus, nicht alle 15 Minuten. Die
+Entdopplung wirkt als zweite Sperre — aber erst, wenn Punkt 2 der Tabelle behoben ist.
+
+## Selbst entschieden (keine PO-Fragen)
+
+- **`/jetzt` ist im Scope.** Die Sofort-Abfrage macht dieselbe Falschaussage aus derselben
+  Datenbasis; sie auszunehmen hiesse, den Bug halb zu beheben.
+- **Kein Ende absehbar ⇒ genau das sagen**, keine erfundene Mindestdauer.
+- **Gewitter ist eingeschlossen**, nicht nur Niederschlag (`is_convective`).
+- **Die 55-Minuten-Meldeschwelle bleibt unberuehrt** — sie gehoert zu Anforderung A-1, nicht zu B-1.
+
+## Open Questions
+
+- [ ] **PO:** Laeuft der Regen beim Alarmlauf bereits — melden (mit Angabe, bis wann er anhaelt)
+      oder in diesem Fall gar nichts schicken? *Empfehlung: melden.*
+- [ ] **Beim Implementieren zu klaeren:** Hat `radar_alert_service.py:build_onset_alert_message`
+      noch produktive Aufrufer, oder ist es Legacy/Preview? (Grep auf Aufrufer.)
+- [ ] **Beim Implementieren zu klaeren:** Traegt das Replay-Payload-Schema
+      (`validator_render_service.py`) die neuen Felder, oder reicht Durchreichen?
+
+## Ungeprueft geblieben (bewusst offengelegt)
+
+Welche Intervall-Konvention die drei Datenquellen **extern** zusichern, ist aus dem Code nicht
+belegbar. Wir uebernehmen die Konvention, nach der die App bereits ihre Mengen rechnet. Das ist
+in sich konsistent, aber eine Annahme — nachpruefbar nur ueber einen Live-Abgleich von
+Frame-Zeitstempel gegen tatsaechliche Messzeit.
