@@ -38,7 +38,8 @@ for _pfad in (REPO_ROOT, REPO_ROOT / "src"):
 # beide auseinander, verglichen Bestandsschutz (S1, HTML/Klartext) und diese
 # Scheibe (Kompakt/Telegram) zwei verschiedene Welten.
 from tests.helpers.trip_outlook_selection import (  # noqa: E402
-    REFERENCE_DIR, mit_outlook_metrics, utc_process_tz,
+    REFERENCE_DIR, mit_outlook_metric_formats, mit_outlook_metrics,
+    utc_process_tz,
 )
 from tests.tdd.test_trip_outlook_dispatch_mail import (  # noqa: E402
     _fixture_scheduler_klasse,
@@ -90,7 +91,8 @@ def _settings(user_id: str):
 
 
 def trip(*, outlook_metrics, enabled_ids=None, telegram_layout_ids=None,
-         stage_count: int = 5, email_format: str = "compact"):
+         stage_count: int = 5, email_format: str = "compact",
+         outlook_metric_formats=None):
     """Tour ab heute: der Abendbericht zielt auf MORGEN, der Ausblick zeigt
     die drei Etappen danach.
 
@@ -98,6 +100,8 @@ def trip(*, outlook_metrics, enabled_ids=None, telegram_layout_ids=None,
     ``_build_stage_trend()`` ``rows=None``/``state=NO_STAGES``, also den
     Zustands-Fallback-Zweig (AC-4, zweiter Fall).
     ``telegram_layout_ids`` setzt ``per_channel_layouts["telegram"]`` (AC-5).
+    ``outlook_metric_formats`` (#2049): Roh/Einfach-Zuordnung je Ausblick-
+    Groesse, ``{metric_id: bool}``, ``True`` = Einfach.
     """
     from app.metric_catalog import build_default_display_config
     from app.models import TripReportConfig
@@ -129,6 +133,8 @@ def trip(*, outlook_metrics, enabled_ids=None, telegram_layout_ids=None,
         }
     if outlook_metrics is not None:
         dc = mit_outlook_metrics(dc, outlook_metrics)
+    if outlook_metric_formats is not None:
+        dc = mit_outlook_metric_formats(dc, outlook_metric_formats)
 
     t = Trip(id=trip_id, name="Karnischer Höhenweg", stages=stages,
              display_config=dc, official_warnings=None)
