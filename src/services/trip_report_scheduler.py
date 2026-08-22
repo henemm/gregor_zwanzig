@@ -1701,8 +1701,9 @@ class TripReportSchedulerService:
         partial_outage_hint: str | None = None,
         render_options: Optional["ReportRenderOptions"] = None,
         starkregen_nowcast: Optional[
-            Tuple[str, Optional[int], Optional[int], bool, bool]
-        ] = None,  # Issue #2050 S2b: fuenftes Glied `already_running`
+            Tuple[str, Optional[int], Optional[int], bool, bool, Optional[int]]
+        ] = None,  # Issue #2050 S2b: fuenftes Glied `already_running`;
+        # Issue #2051 S3: sechstes Glied `source_reach_minutes`
     ) -> TripReportRequest:
         """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
 
@@ -1759,11 +1760,14 @@ class TripReportSchedulerService:
         segments: List[TripSegment],
         now_utc: datetime,
         target_date: Optional[date] = None,
-    ) -> Optional[Tuple[str, Optional[int], Optional[int], bool, bool]]:
+    ) -> Optional[
+        Tuple[str, Optional[int], Optional[int], bool, bool, Optional[int]]
+    ]:
         """Starkregen-Kurzfristhinweis (Issue #1439): liefert die Rohdaten
         (``intensity_label``, ``onset_minutes``, seit Issue #2051 S1
         zusaetzlich ``event_end_minutes`` und
-        ``event_ongoing_beyond_horizon``, seit #2050 S2b ``already_running``;
+        ``event_ongoing_beyond_horizon``, seit #2050 S2b ``already_running``,
+        seit #2051 S3 ``source_reach_minutes``;
         ``onset_minutes`` ist seither optional, weil ein laufendes Ereignis
         ohne kuenftigen Beginn auskommt) fuer den planmaessigen
         Briefing-Pfad, wenn der bereits produktive `RadarNowcastService`
@@ -1898,10 +1902,15 @@ class TripReportSchedulerService:
         # Issue #2050 S2b: `already_running` als fuenftes Glied. Ohne es kaeme
         # der Laufend-Zustand am Formatierer nie an -- der Renderer-Zweig
         # waere gebaut und unerreichbar.
+        # Issue #2051 S3 (Adversary-Fund F002): `source_reach_minutes` als
+        # SECHSTES Glied. Genau DIESER Pfad kennt keinen Vorlauf-Deckel und
+        # ist damit die Flaeche, aus der der Ticket-Realfall stammt -- ohne
+        # dieses Glied kaeme die Reichweite hier NIE an, waehrend die Guete
+        # (haengt an Feldern, die schon im Tupel waren) sehr wohl ankommt.
         return (
             result.intensity_label, result.onset_minutes,
             result.event_end_minutes, result.event_ongoing_beyond_horizon,
-            result.already_running,
+            result.already_running, result.source_reach_minutes,
         )
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:

@@ -121,6 +121,16 @@ _ONSET_PRECIP_WINDOW_MIN = 60
 RADAR_ONSET_THRESHOLD_MIN = 55
 _DRY_THRESHOLD_MM_H = 0.1
 
+# Issue #2051 S3 (E2): eigener Name neben RADAR_ONSET_THRESHOLD_MIN (55) --
+# die 55 ist eine AUSLOESESCHWELLE (feuert der Alarm?), diese 60 eine
+# GUETE-GRENZE (wie belastbar ist die Ortsangabe?). Belegt durch den
+# Kommentar oben ("jenseits ~60 Min sinkt die Ortsschaerfe des
+# INCA-Extrapolationsprodukts deutlich"). Downstream-Leser (render.py,
+# starkregen_hint.py, project.py) referenzieren die MODUL-Variable
+# (`radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN`), nie ein Import zur
+# Bindezeit -- Laufzeit-Drift-Schutz wie bei RADAR_ONSET_THRESHOLD_MIN.
+LOCATION_SHARPNESS_LIMIT_MIN = 60
+
 # Issue #1461 S3a: benannte Intensitaets-Label-Konstanten statt Inline-Strings
 # in intensity_to_text() -- alert_urgency.py vergleicht gegen diese Konstanten
 # statt gegen Zeichenketten-Duplikate (E3). Wortlaut unveraendert.
@@ -221,6 +231,14 @@ class NowcastResult:
     # beiden Waechter-Faellen eine BEOBACHTETE Zahl -- die Reichweite der
     # Quelle bzw. den letzten bekannten nassen Frame. Als Untergrenze genannt
     # behauptet sie kein Ende und unterschlaegt zugleich nichts.
+    source_reach_minutes: Optional[int] = None
+    # Issue #2051 S3: Minuten ab jetzt bis zum Ende der Deckung des LETZTEN
+    # gelieferten Frames, gedeckelt am 180-Min-Horizont. NICHT dasselbe wie
+    # der Horizont selbst -- die Quelle kann frueher enden (Datenluecke,
+    # kuerzeres Produkt). `None` nur, wenn im Nowcast-Fenster ueberhaupt
+    # keine Frames vorliegen (throttled/data_unavailable/echte
+    # Providerluecke) -- ein durchgehend TROCKENES Fenster hat trotzdem eine
+    # Reichweite (bis zu 180).
 
 
 def _offline_fixture_active() -> bool:
@@ -631,6 +649,32 @@ class RadarNowcastService:
                     satz += f", Regen mindestens bis {_end_str}"
                 else:
                     satz += f", letzter Regen gegen {_end_str}"
+            # Issue #2051 S3 (E5): Reichweite additiv hinter dem Ende, aber
+            # NICHT bei gesetztem R4-Waechter -- die Untergrenzenform traegt
+            # die Reichweiten-Aussage bereits implizit.
+            if (
+                result.source_reach_minutes is not None
+                and not result.event_ongoing_beyond_horizon
+            ):
+                _reach_str = _hhmm(
+                    now + timedelta(minutes=result.source_reach_minutes)
+                )
+                satz += f" · Radar reicht bis {_reach_str}"
+            # Issue #2051 S3 (E4): Guete-Grenze -- ausgeloest, wenn Beginn
+            # ODER Ende jenseits der Grenze liegen. Genannt wird die
+            # GRENZZEIT selbst (now + LOCATION_SHARPNESS_LIMIT_MIN), nicht
+            # der betroffene Wert.
+            _limit = LOCATION_SHARPNESS_LIMIT_MIN
+            _jenseits_guete = (
+                (result.onset_minutes is not None and result.onset_minutes > _limit)
+                or (
+                    result.event_end_minutes is not None
+                    and result.event_end_minutes > _limit
+                )
+            )
+            if _jenseits_guete:
+                _guete_str = _hhmm(now + timedelta(minutes=_limit))
+                satz += f" · Ortsangabe ab {_guete_str} unscharf"
             lines.append(satz + ".")
 
         if result.convective_checked is False:
@@ -1053,6 +1097,29 @@ class RadarNowcastService:
             (f.precip_mm_h for f in compare_window), default=0.0
         )
 
+        # Issue #2051 S3 (E1): Reichweite der Quelle -- unabhaengig vom
+        # Regen-Zustand, deshalb NICHT an onset_ts/event_end gekoppelt. Der
+        # LETZTE Frame in `window` (dem 180-Min-Nowcast-Fenster) liefert
+        # seine eigene Deckung nach exakt derselben Mechanik wie
+        # `_accumulate_precip_mm`/`_derive_wet_block_end`: naechster
+        # Nachbar aus der VOLLSTAENDIGEN Frame-Liste (oder der Horizont,
+        # wenn keiner folgt), gedeckelt auf `_MAX_FRAME_COVERAGE`, nie ueber
+        # den Horizont hinaus. `window` leer -> `None` (keine Beobachtung,
+        # nicht "Reichweite null").
+        source_reach_minutes: Optional[int] = None
+        if window:
+            _last_reach_ts = max(f.timestamp for f in window)
+            _next_idx = bisect.bisect_right(all_ts_sorted, _last_reach_ts)
+            _next_ts_full = (
+                all_ts_sorted[_next_idx] if _next_idx < len(all_ts_sorted) else horizon
+            )
+            _reach_end = min(
+                _next_ts_full, _last_reach_ts + _MAX_FRAME_COVERAGE, horizon,
+            )
+            source_reach_minutes = max(
+                0, round((_reach_end - now).total_seconds() / 60.0)
+            )
+
         return NowcastResult(
             onset_minutes=onset_minutes,
             intensity_label=intensity_label,
@@ -1068,6 +1135,7 @@ class RadarNowcastService:
             already_running=already_running,  # Issue #2050 S2b
             event_end_minutes=event_end_minutes,  # Issue #2051 S1
             event_ongoing_beyond_horizon=event_ongoing_beyond_horizon,  # #2051 S1
+            source_reach_minutes=source_reach_minutes,  # Issue #2051 S3
         )
 
 

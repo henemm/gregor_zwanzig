@@ -244,3 +244,122 @@ class TestAC7_NoOnsetReturns200WithNullFields:
                 f"AC-7: '{field}' muss null sein, wenn kein Onset erkannt "
                 f"wurde: {data!r}"
             )
+
+
+# ═══════════════════════ Issue #2051 S3 (Rebase-Nachtrag) ═══════════════════════
+#
+# Adversary-Runde (#2051 S3, nach dem Rebase auf #2054): `_render_nowcast_
+# replay()` setzte `event_end_*` auf dem `SimpleNamespace`, aber NIE
+# `source_reach_*`/`location_sharpness_*` -- `getattr(..., default)` liess
+# das still auf `None` fallen, ohne dass ein Test es fing. Wichtiger als eine
+# gewoehnliche Luecke: der `nowcast_frames`-Zweig ist der EINZIGE Pfad, ueber
+# den sich Alarm-Verhalten auf Staging ueberhaupt pruefen laesst (S1 hat alle
+# 20 Kriterien darueber gemessen) -- ohne den Fix waeren Reichweite und Guete
+# auf Staging nicht "rot", sondern UNSICHTBAR gewesen.
+
+
+def _block_mit_reichweite_frames(now: datetime) -> list[dict]:
+    """Nasser Block +20 bis +150 Minuten (10-Minuten-Raster), Trockenframe
+    bei +160, danach keine weitere Beobachtung -- Muster
+    `test_onset_reichweite_guete_kanalparitaet.py::_FesterBlockMitReichweite`.
+
+    Von Hand hergeleitet: Beginn 20 Min (< RADAR_ONSET_THRESHOLD_MIN=55),
+    Ende 150 Min (> LOCATION_SHARPNESS_LIMIT_MIN=60 -> Guete-Zeile),
+    Reichweite aus der Deckung des letzten Frames (+160, kein Nachbar mehr)
+    = 160 + `_MAX_FRAME_COVERAGE` (15) = 175 Min."""
+    frames = [
+        {"timestamp": (now + timedelta(minutes=m)).isoformat(),
+         "precip_mm_h": 3.0, "is_convective": False}
+        for m in range(20, 151, 10)
+    ]
+    frames.append({
+        "timestamp": (now + timedelta(minutes=160)).isoformat(),
+        "precip_mm_h": 0.0, "is_convective": False,
+    })
+    return frames
+
+
+def _minuten(hhmm: str) -> int:
+    stunde, _, minute = hhmm.partition(":")
+    return int(stunde) * 60 + int(minute)
+
+
+def _abstand_minuten(a: str, b: str) -> int:
+    roh = abs(_minuten(a) - _minuten(b))
+    return min(roh, 24 * 60 - roh)
+
+
+class TestS3_ReichweiteUndGueteImReplay:
+    def test_replay_pfad_zeigt_reichweite_und_guete_wie_der_live_pfad(
+        self, client, stub_trip,
+    ):
+        """Issue #2051 S3 GIVEN einen Frame-Mitschnitt mit bekanntem Ende
+        (jenseits der Guete-Grenze) und bekannter Reichweite (letzter Frame
+        vor Fensterende)
+        WHEN der Replay-Weg (`_render_nowcast_replay` -> `render_alert_
+        preview`) die Vorschau baut -- derselbe Pfad, ueber den Staging
+        Alarm-Verhalten misst
+        THEN traegt der Klartext-Teil zusaetzlich zur Beginn-Angabe sowohl
+        `Radar reicht bis HH:MM` als auch `Ortsangabe ab HH:MM unscharf`,
+        JE MIT dem aus den Frames HERGELEITETEN Wert (Toleranz 1 Minute
+        Wanduhr-Versatz) -- nicht nur irgendeine HH:MM-Zeichenkette.
+
+        Adversary-Fund F004 (Adversary-Runde 3): eine reine Format- und
+        Verschiedenheits-Pruefung liess `"23:59"`/`"00:01"` unbemerkt durch.
+        Der Fixture-Trip hat keine Wegpunkte -- `_alert_tz_for_trip` faellt
+        deshalb auf UTC zurueck (kein Zonenumrechnungs-Risiko), die
+        erwarteten Werte werden direkt aus `request_now` + den bekannten
+        Minutenzahlen gebildet (Muster `test_2051s3_briefing_hinweis_
+        traegt_die_reichweite_ueber_den_echten_scheduler_pfad`, F003).
+
+        RED vor dem urspruenglichen Fix: `_render_nowcast_replay` reichte
+        `source_reach_*`/`location_sharpness_*` nicht durch -- `getattr(...,
+        default)` liess beide Angaben ersatzlos entfallen."""
+        user_id, trip_id = stub_trip
+        request_now = datetime.now(timezone.utc)
+        body = {"nowcast_frames": {
+            "source": "radar", "frames": _block_mit_reichweite_frames(request_now),
+            "km_from": 2.0, "km_to": 6.0,
+        }}
+        resp = client.post(
+            f"/api/trips/{trip_id}/alert-preview",
+            params={"user_id": user_id}, json=body,
+        )
+        assert resp.status_code == 200, f"Body: {resp.text[:300]}"
+        data = resp.json()
+        assert data.get("onset_detected") is True, (
+            f"Voraussetzung: der Beginn bei +20 Min muss erkannt werden: {data!r}"
+        )
+        plain = data["email_plain"]
+
+        reach_treffer = re.search(r"Radar reicht bis (\d{2}:\d{2})", plain)
+        assert reach_treffer is not None, (
+            f"RED: der Replay-Weg nennt keine Reichweite: {plain!r}"
+        )
+        guete_treffer = re.search(r"Ortsangabe ab (\d{2}:\d{2}) unscharf", plain)
+        assert guete_treffer is not None, (
+            f"RED: der Replay-Weg nennt keine Guete-Zeile: {plain!r}"
+        )
+
+        # F004: beide Werte einzeln gegen die aus den Frames hergeleitete
+        # Erwartung pruefen -- Reichweite = letzter Frame (+160) + 15 Min
+        # (_MAX_FRAME_COVERAGE) = 175 Min; Guete-Grenze = now + 60 Min
+        # (LOCATION_SHARPNESS_LIMIT_MIN). `_alert_tz_for_trip` liefert UTC
+        # fuer diesen wegpunktlosen Fixture-Trip, `request_now` ist bereits
+        # UTC -- keine Zonenumrechnung noetig.
+        erwartete_reichweite = (
+            (request_now + timedelta(minutes=175)).strftime("%H:%M")
+        )
+        erwartete_guete_grenze = (
+            (request_now + timedelta(minutes=60)).strftime("%H:%M")
+        )
+        assert _abstand_minuten(reach_treffer.group(1), erwartete_reichweite) <= 1, (
+            f"F004: die Reichweite {reach_treffer.group(1)!r} stammt nicht "
+            f"aus den injizierten Frames (erwartet nahe "
+            f"{erwartete_reichweite!r}): {plain!r}"
+        )
+        assert _abstand_minuten(guete_treffer.group(1), erwartete_guete_grenze) <= 1, (
+            f"F004: die Guete-Grenzzeit {guete_treffer.group(1)!r} stammt "
+            f"nicht aus der 60-Minuten-Grenze (erwartet nahe "
+            f"{erwartete_guete_grenze!r}): {plain!r}"
+        )

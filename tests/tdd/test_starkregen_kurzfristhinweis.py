@@ -231,10 +231,14 @@ def _install_fake_nowcast(
     intensity_label: str = INTENSITY_DRY,
     is_convective: bool = False,
     raise_exc: Exception | None = None,
+    source_reach_minutes: int | None = None,
 ) -> None:
     """Ersetzt `RadarNowcastService.get_nowcast` durch eine echte Funktion, die ein
     echtes `NowcastResult` liefert (Transport-Grenze, kein Live-Netz, kein Mock-Objekt).
-    `calls` haelt (lat, lon, priority)-Tupel jedes Aufrufs fest (AC-1/AC-2-Nachweis)."""
+    `calls` haelt (lat, lon, priority)-Tupel jedes Aufrufs fest (AC-1/AC-2-Nachweis).
+
+    `source_reach_minutes` additiv (Issue #2051 S3): ohne sie bleibt das
+    `NowcastResult` unveraendert (`None`, Bestandsverhalten)."""
 
     def _fake_get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
         calls.append((lat, lon, priority))
@@ -243,6 +247,7 @@ def _install_fake_nowcast(
         return NowcastResult(
             onset_minutes=onset_minutes, intensity_label=intensity_label,
             source="radar", is_convective=is_convective,
+            source_reach_minutes=source_reach_minutes,
         )
 
     monkeypatch.setattr(RadarNowcastService, "get_nowcast", _fake_get_nowcast)
@@ -418,6 +423,88 @@ def test_ac3_email_und_telegram_zeigen_identische_hinweiszeile(monkeypatch):
     telegram_text = "\n".join(report.telegram_bubbles)
     assert hint_line in telegram_text, (
         f"AC-3: Dieselbe Hinweiszeile muss in der Telegram-Ausgabe erscheinen.\n{telegram_text}"
+    )
+
+
+# ═══════════════════════ Issue #2051 S3 (Adversary-Fund F002) ═══════════════════════
+
+
+def test_2051s3_briefing_hinweis_traegt_die_reichweite_ueber_den_echten_scheduler_pfad(
+    monkeypatch,
+):
+    """Issue #2051 S3, Adversary-Fund F002: `_build_starkregen_hint()` gab bis
+    zu diesem Fix ein Fuenf-Tupel zurueck, das `result.source_reach_minutes`
+    NICHT enthielt -- die Reichweite kam am Briefing-Kurzfristhinweis nie an,
+    obwohl genau dieser Pfad (ohne Vorlauf-Deckel) der Ticket-Realfall ist.
+
+    Der bisherige Test fuer `source_reach_minutes` in `format_starkregen_hint`
+    (`test_nowcast_source_reach_textstellen.py`) ruft die Funktion DIREKT auf
+    und umgeht damit den einzigen produktiven Aufrufer
+    (`NotificationService`s Tupel-Entpackung) -- eine gestubbte Naht. DIESER
+    Test faehrt stattdessen den ECHTEN Scheduler-Pfad
+    (`_send_trip_report_outcome` -> `_build_starkregen_hint` -> Tupel ->
+    `NotificationService` -> `format_starkregen_hint` -> echter Renderer),
+    Muster AC-3 oben.
+
+    GIVEN ein `NowcastResult` mit `intensity_label=INTENSITY_HEAVY`,
+    `onset_minutes` gesetzt UND `source_reach_minutes=120`
+    WHEN der echte Briefing-Pfad laeuft
+    THEN traegt der Klartext-Teil zusaetzlich zur bestehenden Hinweiszeile
+    `Radar reicht bis HH:MM` MIT der aus den injizierten 120 Minuten
+    HERGELEITETEN Uhrzeit -- nicht nur irgendeine.
+
+    Adversary-Fund F003 (Adversary-Runde 2): eine reine Format-Pruefung
+    (`\\d{2}:\\d{2}`) liess ein auf `9999` verfaelschtes sechstes Tupelglied
+    unbemerkt durch -- der Test bewachte, DASS etwas dasteht, nicht DASS es
+    stimmt. Island (LAT/LON dieser Datei) ist UTC+0 ganzjaehrig, deshalb
+    entspricht die erwartete Uhrzeit direkt `datetime.now(UTC) + 120 Min`,
+    mit einer Wanduhr-Toleranz von 1 Minute (Muster
+    `test_onset_reichweite_guete_kanalparitaet.py`).
+
+    RED vor dem Fix: das Fuenf-Tupel transportierte `source_reach_minutes`
+    nicht -- `NotificationService` uebergab es folglich nie an
+    `format_starkregen_hint`, die Reichweite fehlte im Text."""
+    uid = _uid("s3-reach")
+    trip = _active_trip(f"trip-s3-reach-{uuid.uuid4().hex[:6]}")
+
+    calls: list = []
+    _install_fake_nowcast(
+        monkeypatch, calls, onset_minutes=15, intensity_label=INTENSITY_HEAVY,
+        source_reach_minutes=120,
+    )
+
+    recorder = _ReportRecorder()
+    recorder.install(monkeypatch)
+    _outcome, report = _run_briefing(recorder, uid, trip)
+
+    assert len(calls) >= 1, "Testvoraussetzung: get_nowcast() muss aufgerufen worden sein."
+    assert _HINT_MARKER in report.email_plain, (
+        f"Vorbedingung: die bestehende Hinweiszeile muss weiterhin stehen: "
+        f"{report.email_plain}"
+    )
+    treffer = re.search(r"Radar reicht bis (\d{2}:\d{2})", report.email_plain)
+    assert treffer is not None, (
+        f"F002: die Reichweite kommt ueber den echten Scheduler-Pfad nicht "
+        f"am Briefing-Hinweis an: {report.email_plain}"
+    )
+
+    # F003: der WERT muss aus den injizierten 120 Minuten hergeleitet sein,
+    # nicht nur irgendeine HH:MM-Zeichenkette. `datetime.now()` erst NACH
+    # dem Lauf gelesen (Island ist ganzjaehrig UTC+0, keine Zonenumrechnung
+    # noetig) -- die 1-Minuten-Toleranz deckt den Zeitversatz zwischen
+    # diesem Aufruf und dem `datetime.now()` im Produktivcode ab (Muster
+    # `test_onset_reichweite_guete_kanalparitaet.py::_abstand_minuten`).
+    def _minuten(hhmm: str) -> int:
+        stunde, _, minute = hhmm.partition(":")
+        return int(stunde) * 60 + int(minute)
+
+    erwartet = (datetime.now(timezone.utc) + timedelta(minutes=120)).strftime("%H:%M")
+    abstand = abs(_minuten(treffer.group(1)) - _minuten(erwartet))
+    abstand = min(abstand, 24 * 60 - abstand)
+    assert abstand <= 1, (
+        f"F003: die Reichweiten-Uhrzeit {treffer.group(1)!r} stammt nicht "
+        f"aus den injizierten 120 Minuten (erwartet nahe {erwartet!r} UTC, "
+        f"Island ist ganzjaehrig UTC+0): {report.email_plain}"
     )
 
 

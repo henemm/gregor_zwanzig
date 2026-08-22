@@ -259,6 +259,13 @@ class OnsetPayload(BaseModel):
     # Feld zeigte die Vorschau im Waechterfall die falsche der beiden Formen
     # und damit nicht mehr das, was der Produktivpfad sendet.
     event_ongoing_beyond_horizon: bool = False
+    # Issue #2051 S3: Reichweite der Quelle und Guete-Grenzzeit, additiv und
+    # optional -- Muster `event_end_time` o. Ohne sie zeigt der Vorschauweg
+    # keine dieser beiden Angaben (Vorwarnung analog #2046 F002/S1).
+    source_reach_time: str | None = None
+    source_reach_day_offset: int = 0
+    location_sharpness_limit_time: str | None = None
+    location_sharpness_limit_day_offset: int = 0
 
 
 class OfficialAlertPayload(BaseModel):

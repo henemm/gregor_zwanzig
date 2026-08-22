@@ -1702,7 +1702,9 @@ class TripAlertService:
             from output.renderers.alert.official_alerts import (
                 _de_weekday_short,  # Issue #2054: EIN Kuerzel-Erzeuger
             )
-            from output.renderers.alert.project import event_end_display
+            from output.renderers.alert.project import (
+                event_end_display, location_sharpness_display, source_reach_display,
+            )
 
             _end_time_str, _end_day_offset, _end_ongoing, _end_weekday = (
                 event_end_display(now_utc, result, tz)
@@ -1711,6 +1713,16 @@ class TripAlertService:
             # DEMSELBEN Zeitpunkt und DERSELBEN Zone -- eine zweite Herleitung
             # koennte auseinanderlaufen (Muster #2009 o.).
             _onset_day_offset = day_offset(now_utc, _onset_dt, tz)
+            # Issue #2051 S3: Reichweite und Guete-Grenzzeit ueber dieselben
+            # geteilten Fassungen, die auch der Ortsvergleich-Pfad benutzt
+            # (ADR-0021).
+            _reach_time_str, _reach_day_offset = source_reach_display(
+                now_utc, result, tz,
+            )
+            _sharp_time_str, _sharp_day_offset = location_sharpness_display(
+                now_utc, result.onset_minutes,
+                getattr(result, "event_end_minutes", None), tz,
+            )
             _radar_request = RadarAlertRequest(
                 onset_minutes=result.onset_minutes,
                 already_running=result.already_running,  # Issue #2050 S2b
@@ -1741,6 +1753,11 @@ class TripAlertService:
                 event_end_day_offset=_end_day_offset,
                 event_end_weekday=_end_weekday,  # Issue #2054
                 event_ongoing_beyond_horizon=_end_ongoing,
+                # Issue #2051 S3: additiv.
+                source_reach_time=_reach_time_str,
+                source_reach_day_offset=_reach_day_offset,
+                location_sharpness_limit_time=_sharp_time_str,
+                location_sharpness_limit_day_offset=_sharp_day_offset,
                 tz=tz,
             )
 

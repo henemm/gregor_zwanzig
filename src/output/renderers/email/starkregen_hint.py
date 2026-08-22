@@ -21,6 +21,7 @@ def format_starkregen_hint(
     event_end_minutes: int | None = None,
     event_ongoing_beyond_horizon: bool = False,
     already_running: bool = False,
+    source_reach_minutes: int | None = None,
 ) -> str:
     """"Starker Regen ab ca. HH:MM (in ~N Min), letzter Regen gegen HH:MM." —
     identisches Format wie `RadarNowcastService.format_now_text()` fuer den
@@ -36,7 +37,16 @@ def format_starkregen_hint(
     (`Regen mindestens bis HH:MM`) statt eines bekannten Endes
     (`letzter Regen gegen HH:MM`). Beide Formen entstehen an dieser einen
     Stelle mit genau einer Weiche, damit sie nicht ineinander rutschen
-    (AC-20)."""
+    (AC-20).
+
+    Issue #2051 S3: `source_reach_minutes` ist additiv und defaultet (Muster
+    o.). Reichweite und Guete werden HIER selbst aus `onset_minutes`/
+    `event_end_minutes` abgeleitet (kein Aufruf der `project.py`-Fassungen
+    -- dieser Baustein liegt in einem anderen Modul und bekommt schon heute
+    nur Rohwerte, kein `OnsetEvent`). Die Guete-Grenze wird ueber die
+    MODUL-Referenz auf `radar_service` gelesen, nie per Import gebunden
+    (AC-16, Laufzeit-Drift-Schutz)."""
+    import services.radar_service as radar_service_mod
     from utils.timezone import local_dt
 
     now = datetime.now(timezone.utc)
@@ -58,6 +68,24 @@ def format_starkregen_hint(
             satz += f", Regen mindestens bis {end_str}"
         else:
             satz += f", letzter Regen gegen {end_str}"
+    # Issue #2051 S3 (E5): Reichweite additiv, aber NICHT bei gesetztem
+    # R4-Waechter -- die Untergrenzenform traegt die Reichweiten-Aussage
+    # bereits implizit.
+    if source_reach_minutes is not None and not event_ongoing_beyond_horizon:
+        reach_str = local_dt(
+            now + timedelta(minutes=source_reach_minutes), tz,
+        ).strftime("%H:%M")
+        satz += f" · Radar reicht bis {reach_str}"
+    # Issue #2051 S3 (E4): Guete-Grenze -- ausgeloest, wenn Beginn ODER Ende
+    # jenseits der Grenze liegen. Genannt wird die GRENZZEIT selbst.
+    limit = radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN
+    jenseits_guete = (
+        (onset_minutes is not None and onset_minutes > limit)
+        or (event_end_minutes is not None and event_end_minutes > limit)
+    )
+    if jenseits_guete:
+        guete_str = local_dt(now + timedelta(minutes=limit), tz).strftime("%H:%M")
+        satz += f" · Ortsangabe ab {guete_str} unscharf"
     return satz + "."
 
 

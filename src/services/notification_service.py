@@ -113,7 +113,13 @@ class TripReportRequest:
     # Issue #2050 S2b: fuenftes Glied `already_running`, und `onset_minutes`
     # wird optional — ein laufendes Ereignis, das in der laufenden
     # Viertelstunde endet, hat keinen kuenftigen Beginn.
-    starkregen_nowcast: tuple[str, int | None, int | None, bool, bool] | None = None
+    # Issue #2051 S3: sechstes Glied `source_reach_minutes` -- additiv, wie
+    # die vorherigen Erweiterungen dieses Tupels. Ohne es kaeme die
+    # Reichweite an DIESEM Pfad (dem einzigen ohne Vorlauf-Deckel, aus dem
+    # der Ticket-Realfall stammt) nie beim Formatierer an.
+    starkregen_nowcast: (
+        tuple[str, int | None, int | None, bool, bool, int | None] | None
+    ) = None
 
 
 @dataclass
@@ -237,6 +243,19 @@ class RadarAlertRequest:
     # durch den Zustand ersetzt wird; das Ende kommt weiter aus den
     # `event_end_*`-Feldern.
     already_running: bool = False
+    # Issue #2051 S3: additiv, optional (Muster `event_end_time`/
+    # `event_end_day_offset` o.). Reichweite der Quelle als reines "HH:MM",
+    # gebildet in `trip_alert.check_radar_alerts` ueber die geteilte
+    # Fassung `project.source_reach_display` -- derselbe Baustein, den auch
+    # der Ortsvergleich-Pfad benutzt (ADR-0021). `None` heisst "keine
+    # Reichweite bekannt ODER durch E5 unterdrueckt".
+    source_reach_time: str | None = None
+    source_reach_day_offset: int = 0
+    # Issue #2051 S3: additiv, optional. Grenzzeit der Ortsschaerfe, gebildet
+    # ueber `project.location_sharpness_display`. `None` heisst "weder
+    # Beginn noch Ende liegen jenseits der Grenze".
+    location_sharpness_limit_time: str | None = None
+    location_sharpness_limit_day_offset: int = 0
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -419,6 +438,7 @@ class NotificationService:
             (
                 _intensity_label, _onset_minutes,
                 _event_end_minutes, _event_ongoing, _already_running,
+                _source_reach_minutes,
             ) = request.starkregen_nowcast
             starkregen_hint_text = format_starkregen_hint(
                 _intensity_label, _onset_minutes, tz=request.trip_tz,
@@ -429,6 +449,10 @@ class NotificationService:
                 # Issue #2050 S2b: der Laufend-Zustand ebenfalls aus demselben
                 # Ergebnis -- er entscheidet ueber die BEGINN-Angabe der Zeile.
                 already_running=_already_running,
+                # Issue #2051 S3: die Reichweite ebenfalls aus demselben
+                # Ergebnis -- Adversary-Fund F002, der Pfad ohne Vorlauf-
+                # Deckel liess sie sonst nie beim Formatierer ankommen.
+                source_reach_minutes=_source_reach_minutes,
             )
 
         report = self._formatter.format_email(
@@ -1381,6 +1405,11 @@ class NotificationService:
             event_end_weekday=request.event_end_weekday,  # Issue #2054
             # Issue #2051 S1 (Spec v1.1): waehlt die Ende-Textform im Renderer.
             event_ongoing_beyond_horizon=request.event_ongoing_beyond_horizon,
+            # Issue #2051 S3: additiv durchgereicht.
+            source_reach_time=request.source_reach_time,
+            source_reach_day_offset=request.source_reach_day_offset,
+            location_sharpness_limit_time=request.location_sharpness_limit_time,
+            location_sharpness_limit_day_offset=request.location_sharpness_limit_day_offset,
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.
