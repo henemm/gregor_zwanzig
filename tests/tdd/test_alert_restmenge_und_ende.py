@@ -51,7 +51,10 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.config import Settings
-from app.day_window import resolve_configured_window, window_end_utc_exclusive
+from app.day_window import (
+    resolve_configured_window, segment_window_points,
+    window_end_utc_exclusive,
+)
 from app.models import (
     ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
     SegmentWeatherData, SegmentWeatherSummary, TripSegment,
@@ -1031,4 +1034,86 @@ def test_restmenge_bleibt_an_die_fenster_gesamtmenge_gekoppelt(zuschnitt, stunde
         f"{zuschnitt} @ {stunde}:00 — die Restmenge ({remaining}) ist groesser "
         f"als die gesamte Fenstermenge ({new_value}). Genau so sah Befund "
         f"F001 aus."
+    )
+
+
+# --------------------------------------------------------------------------
+# Absicherung des Leerfenster-Guards (kein AC): deckt die Zeitreihe das
+# Segment gar nicht ab, weiss der Alarm nichts — und sagt dann auch nichts.
+# --------------------------------------------------------------------------
+
+def test_reihe_ohne_ueberlappung_mit_dem_segment_erfindet_keine_entwarnung():
+    """Absicherung des Leerfenster-Guards (gehoert zu keinem der 14 ACs — sie
+    schuetzt die Umsetzung von AC-3).
+
+    GIVEN ein Segment am FOLGETAG (Tagesfenster 4-19 des 21.08.) und eine
+          Stundenreihe, die ausschliesslich den 20.08. abdeckt — die beiden
+          ueberlappen sich zeitlich also nicht. Das Fenster-Aggregat ist
+          trotzdem befuellt: genau so sieht ein Cache-Treffer eines anderen
+          Tages oder ein Segment jenseits des Vorhersagehorizonts aus.
+    WHEN  die Nachricht gerendert wird
+    THEN  sagt sie ueber die Restmenge GAR NICHTS und faellt auf den
+          Bestands-Kopf zurueck.
+
+    `segment_window_points()` liefert hier eine leere Punktmenge. Gaebe der
+    Guard dafuer `0.0` statt `None` zurueck, stuende im Text "kein weiterer
+    Regen bis Tagesende" — eine Entwarnung, die aus einer Datenluecke
+    erfunden waere. Dieselbe Falschaussage wie in F005, nur ueber die dritte
+    Kante derselben Funktion; an dieser Fensterkante ist die Rechnung bereits
+    zweimal gebrochen (F001, F005).
+
+    Geprueft wird der TEXT, nicht der Rueckgabewert: die Zusicherung wirkt
+    dort, wo der Nutzer sie liest.
+    """
+    folgetag = TAG + timedelta(days=1)
+    beginn, ende = _fenstergrenzen(FENSTER_TAG, tag=folgetag)
+    segment = TripSegment(
+        segment_id="Ziel",
+        start_point=GPXPoint(lat=ISLAND_LAT, lon=ISLAND_LON, elevation_m=800.0,
+                             distance_from_start_km=0.0),
+        end_point=GPXPoint(lat=ISLAND_LAT + 0.1, lon=ISLAND_LON + 0.1,
+                           elevation_m=900.0, distance_from_start_km=9.0),
+        start_time=beginn, end_time=ende,
+        duration_hours=(ende - beginn).total_seconds() / 3600.0,
+        distance_km=9.0, ascent_m=100.0, descent_m=100.0,
+    )
+    # Fixtur-Schutz: die Reihe (20.08.) darf das Segment (21.08.) wirklich
+    # nicht schneiden -- sonst pruefte dieser Test einen anderen Fall.
+    assert not segment_window_points(beginn, ende, _punkte(REIHE_AC1)), (
+        "Fixtur-Schutz: Segment und Stundenreihe duerfen sich nicht ueberlappen"
+    )
+
+    alt = _stand_fuer(segment, REIHE_AC1, ANGEKUENDIGT)
+    neu = _stand_fuer(segment, REIHE_AC1, SUMME_AC1)
+    changes = WeatherChangeDetectionService().detect_changes(
+        alt, neu, include_absolute=False,
+    )
+    regen = [c for c in changes if c.metric == "precip_sum_mm"]
+    assert regen, f"Fixtur-Schutz: der Detektor muss ausloesen; {changes!r}"
+
+    msg = _nachricht(regen, [neu], now_utc=_uhr(10))
+    _html, plain = render_email(msg)
+    telegram = render_telegram(msg)
+    sms = render_sms(msg, 160)
+
+    for kanal, text in (("email_plain", plain), ("telegram", telegram)):
+        assert text.strip(), f"{kanal}: Die Meldung muss trotzdem rausgehen"
+        # Positiv-Anker: die Meldung ist vollstaendig, nur die Restmengen-
+        # Aussage fehlt -- sonst waere dieser Test schon durch eine leere
+        # Nachricht zufrieden.
+        assert "stärkste Stunde" in text, (
+            f"{kanal}: Ohne bestimmbare Restmenge greift der Bestands-Kopf; "
+            f"bekam:\n{text}"
+        )
+        assert "kein weiterer Regen" not in text, (
+            f"{kanal}: Eine Zeitreihe, die das Segment nicht abdeckt, ist eine "
+            f"DATENLUECKE — keine Entwarnung. Genau diese Verwechslung war "
+            f"F005; bekam:\n{text}"
+        )
+        assert "Ab jetzt" not in text and "Bis jetzt" not in text, (
+            f"{kanal}: Ohne Punktmenge gibt es keine der beiden "
+            f"Blickrichtungs-Zeilen; bekam:\n{text}"
+        )
+    assert "Rest" not in sms, (
+        f"Kurzform darf kein Restmengen-Token erfinden; bekam {sms!r}"
     )
