@@ -463,6 +463,18 @@ jobs:
           scp -i /tmp/deploy_key -o StrictHostKeyChecking=no \
             /tmp/ci_e2e_findings.json \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/ci_e2e_findings.json
+          # Sicherheitsnetz (#2047): der Verdict-Schritt resettet den Haupt-Checkout
+          # hart auf origin/main — dieser Ordner ist zugleich Arbeitsverzeichnis
+          # interaktiver Sessions. Uncommittete getrackte Arbeit wird deshalb vorher
+          # als Stash-Objekt + Tag gesichert. Das Skript wird aus origin/main bezogen
+          # (nicht aus dem Arbeitsbaum): beim ersten Rollout liegt es dort noch nicht
+          # auf Stand. Schlägt die Sicherung fehl, bricht der Schritt ab (bash -e),
+          # bevor der Reset unten läuft. Ablage per `mktemp` statt festem /tmp-Pfad:
+          # auf dem Server existieren weitere lokale Accounts, ein vorab gelegter
+          # Symlink würde die `>`-Umleitung sonst umbiegen.
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "cd /home/hem/gregor_zwanzig && t=\$(mktemp /tmp/ci_wip_safety.XXXXXX) && git fetch origin 2>/dev/null && git show origin/main:scripts/wip_safety.sh > \"\$t\" && bash \"\$t\" /home/hem/gregor_zwanzig; rc=\$?; rm -f \"\$t\"; exit \$rc"
           # Issue #1031 Root Cause: staging_gate verlangt bei Telegram-berührenden
           # Changes einen Live-Test (#686 AC-5) — dafür müssen die Staging-Bot-Creds
           # (GZ_TELEGRAM_TEST_CHAT_ID etc.) aus der Server-seitigen Staging-.env

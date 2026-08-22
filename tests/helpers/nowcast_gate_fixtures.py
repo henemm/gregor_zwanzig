@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
+from contextlib import contextmanager
 from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -432,6 +433,44 @@ def make_trip(
     trip.alert_quiet_from = quiet_from
     trip.alert_quiet_to = quiet_to
     return trip
+
+
+@contextmanager
+def frozen_active_window(hour_utc: int = 12):
+    """Gestellte Uhr, nicht Wanduhr (#2050, Vorbild #2017 Scheibe B in
+    ``test_issue_822_radar_nowcast_segment.py``): fuer Aufrufer, die einen
+    ``make_trip()``-Trip ueber das PRODUKTIVE ``app.loader.save_trip()``
+    speichern — nicht den verkuerzten ``save_trip()`` dieser Datei.
+
+    ``app.loader.save_trip()`` fuehrt Compute-on-Save aus (Issue #802):
+    ``arrival_start``/``arrival_end`` aus ``make_trip()`` werden dabei
+    VERWORFEN und ``compute_stage_arrivals()`` rechnet WP0/WP1 stattdessen ab
+    einem Default-Start 08:00 Ortszeit per Naismith neu. Bei den
+    Default-Koordinaten dieser Datei (``TRIP_LAT``/``TRIP_LON``, Reykjavik,
+    ganzjaehrig UTC+0) ergibt das 08:00-11:22. Das anschliessende
+    Ziel-Segment (``src/services/trip_segments.py``) verlaengert die
+    Abdeckung bis zum Ende des Default-Tagesfensters (Stunde 19 inklusive ->
+    20:00 Ortszeit exklusiv), eine Vorschau deckt alles VOR 08:00 ab —
+    luecklos aktiv ist damit NUR ``[08:00, 20:00)`` Ortszeit. Ausserhalb
+    davon (20:00-24:00) liefert ``resolve_current_segment()`` ``None`` und
+    ``check_radar_alerts()`` bricht vor dem Nowcast-Abruf ab — abhaengig
+    davon, wann die Testsuite laeuft (gemessen 2026-08-21, #2050: CI-Lauf um
+    19:38 UTC gruen, derselbe Testfall um 20:40 UTC rot).
+
+    Dieser Helfer stellt die Uhr auf ``hour_utc:00`` UTC HEUTE — der Default
+    (12 Uhr) liegt mittig im garantiert aktiven Fenster, unabhaengig von der
+    tatsaechlichen Wanduhr beim Testlauf. Wie in der Vorbild-Datei wird NICHT
+    aus der Wanduhr gerechnet (das waere genau das Anti-Muster, das
+    ``test_fixture_wallclock_ratchet.py`` bewacht) — der Ankerpunkt ist ein
+    fester, weit von beiden Fensterkanten entfernter Wert.
+    """
+    from freezegun import freeze_time
+
+    anker = datetime.combine(
+        date_type.today(), datetime.min.time(), tzinfo=TRIP_ZONE,
+    ) + timedelta(hours=hour_utc)
+    with freeze_time(anker):
+        yield anker
 
 
 def save_trip(trip: Trip, user_id: str) -> None:
