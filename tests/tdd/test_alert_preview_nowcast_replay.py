@@ -244,3 +244,91 @@ class TestAC7_NoOnsetReturns200WithNullFields:
                 f"AC-7: '{field}' muss null sein, wenn kein Onset erkannt "
                 f"wurde: {data!r}"
             )
+
+
+# ═══════════════════════ Issue #2051 S3 (Rebase-Nachtrag) ═══════════════════════
+#
+# Adversary-Runde (#2051 S3, nach dem Rebase auf #2054): `_render_nowcast_
+# replay()` setzte `event_end_*` auf dem `SimpleNamespace`, aber NIE
+# `source_reach_*`/`location_sharpness_*` -- `getattr(..., default)` liess
+# das still auf `None` fallen, ohne dass ein Test es fing. Wichtiger als eine
+# gewoehnliche Luecke: der `nowcast_frames`-Zweig ist der EINZIGE Pfad, ueber
+# den sich Alarm-Verhalten auf Staging ueberhaupt pruefen laesst (S1 hat alle
+# 20 Kriterien darueber gemessen) -- ohne den Fix waeren Reichweite und Guete
+# auf Staging nicht "rot", sondern UNSICHTBAR gewesen.
+
+
+def _block_mit_reichweite_frames(now: datetime) -> list[dict]:
+    """Nasser Block +20 bis +150 Minuten (10-Minuten-Raster), Trockenframe
+    bei +160, danach keine weitere Beobachtung -- Muster
+    `test_onset_reichweite_guete_kanalparitaet.py::_FesterBlockMitReichweite`.
+
+    Von Hand hergeleitet: Beginn 20 Min (< RADAR_ONSET_THRESHOLD_MIN=55),
+    Ende 150 Min (> LOCATION_SHARPNESS_LIMIT_MIN=60 -> Guete-Zeile),
+    Reichweite aus der Deckung des letzten Frames (+160, kein Nachbar mehr)
+    = 160 + `_MAX_FRAME_COVERAGE` (15) = 175 Min."""
+    frames = [
+        {"timestamp": (now + timedelta(minutes=m)).isoformat(),
+         "precip_mm_h": 3.0, "is_convective": False}
+        for m in range(20, 151, 10)
+    ]
+    frames.append({
+        "timestamp": (now + timedelta(minutes=160)).isoformat(),
+        "precip_mm_h": 0.0, "is_convective": False,
+    })
+    return frames
+
+
+class TestS3_ReichweiteUndGueteImReplay:
+    def test_replay_pfad_zeigt_reichweite_und_guete_wie_der_live_pfad(
+        self, client, stub_trip,
+    ):
+        """Issue #2051 S3 GIVEN einen Frame-Mitschnitt mit bekanntem Ende
+        (jenseits der Guete-Grenze) und bekannter Reichweite (letzter Frame
+        vor Fensterende)
+        WHEN der Replay-Weg (`_render_nowcast_replay` -> `render_alert_
+        preview`) die Vorschau baut -- derselbe Pfad, ueber den Staging
+        Alarm-Verhalten misst
+        THEN traegt der Klartext-Teil zusaetzlich zur Beginn-Angabe sowohl
+        `Radar reicht bis HH:MM` als auch `Ortsangabe ab HH:MM unscharf`,
+        mit Werten, die aus den Frames HERGELEITET sind (Toleranz 1 Minute
+        Wanduhr-Versatz), nicht nur irgendein Format.
+
+        RED vor dem Fix: `_render_nowcast_replay` reichte `source_reach_*`/
+        `location_sharpness_*` nicht durch -- `getattr(..., default)` liess
+        beide Angaben ersatzlos entfallen."""
+        user_id, trip_id = stub_trip
+        request_now = datetime.now(timezone.utc)
+        body = {"nowcast_frames": {
+            "source": "radar", "frames": _block_mit_reichweite_frames(request_now),
+            "km_from": 2.0, "km_to": 6.0,
+        }}
+        resp = client.post(
+            f"/api/trips/{trip_id}/alert-preview",
+            params={"user_id": user_id}, json=body,
+        )
+        assert resp.status_code == 200, f"Body: {resp.text[:300]}"
+        data = resp.json()
+        assert data.get("onset_detected") is True, (
+            f"Voraussetzung: der Beginn bei +20 Min muss erkannt werden: {data!r}"
+        )
+        plain = data["email_plain"]
+
+        reach_treffer = re.search(r"Radar reicht bis (\d{2}:\d{2})", plain)
+        assert reach_treffer is not None, (
+            f"RED: der Replay-Weg nennt keine Reichweite: {plain!r}"
+        )
+        guete_treffer = re.search(r"Ortsangabe ab (\d{2}:\d{2}) unscharf", plain)
+        assert guete_treffer is not None, (
+            f"RED: der Replay-Weg nennt keine Guete-Zeile: {plain!r}"
+        )
+        # Wertkontrolle relativ statt absolut (Muster AC-6-Test oben, das die
+        # Trip-Zone dieses Fixture-Trips ebenfalls nicht kennt): die Guete-
+        # Grenzzeit muss NACH der Reichweite-unabhaengigen Beginn-Zeit liegen
+        # und darf nicht mit ihr identisch sein -- sonst waere hier nur ein
+        # zufaelliges HH:MM durchgereicht worden, keine echte Ableitung.
+        assert guete_treffer.group(1) != reach_treffer.group(1), (
+            f"Guete-Grenzzeit und Reichweite sind identisch -- vermutlich "
+            f"beide auf denselben (falschen) Platzhalter zurueckgefallen: "
+            f"{plain!r}"
+        )
