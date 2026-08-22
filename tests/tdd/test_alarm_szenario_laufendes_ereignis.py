@@ -1,0 +1,482 @@
+"""Issue #2050 Scheibe S2b — Waechter: laufendes Regen-/Gewitterereignis.
+
+SPEC: docs/specs/modules/alarm_szenario_laufendes_ereignis.md (AC-1..AC-15)
+
+Laeuft ein Ereignis zum Zeitpunkt des Alarmlaufs BEREITS, meldet Gregor es
+heute als bevorstehend ("Regen in 8 Min"): `_derive_result` filtert
+`f.timestamp >= now` und verwirft damit das Frame der laufenden Viertelstunde
+(Frames tragen den Slot-Start im Raster :00/:15/:30/:45, der Cron laeuft
+:07/:22/:37/:52 -- "in 8 Min" ist deshalb nicht der gemessene, sondern der
+einzig moegliche Wert).
+
+Alle Kanal-Waechter fahren ueber die `AlarmPruefstrecke` (S1) gegen die ECHTE
+Ausloeseentscheidung (`check_radar_alerts()`) -- kein Mock()/patch()/
+MagicMock: Frames ueber die DI-Naht `frame_source=` eines echten
+`RadarNowcastService`, Kanaltexte ueber den echten Telegram-/seven.io-
+Transport (lokale Stubs der Pruefstrecke) bzw. `mail_sink`. Kein echter Versand.
+
+WORTLAUT-VERTRAG dieser Scheibe (GREEN zieht nach). Die Herkunft ist bewusst
+getrennt ausgewiesen -- das eine ist Freigabe, das andere Entwurfsentscheidung:
+
+  * VOM PRODUCT OWNER bei der Freigabe ausgewaehlt (verbindlich, steht so
+    nicht in der Spec): E-Mail/Telegram-Langform/Betreff/`/jetzt`/
+    Briefing-Zeile melden "Regen laeuft bereits" statt einer Beginn-Angabe,
+    das Ende als "endet voraussichtlich HH:MM"; ist im verfuegbaren
+    Datenbestand kein Ende erkennbar, steht dort "kein Ende im Sichtfenster
+    (bis HH:MM)" mit der Uhrzeit des LETZTEN verfuegbaren Frames -- ohne
+    erfundene Dauer.
+  * EIGENE WAHL dieser Scheibe (keine PO-Vorlage, weil kein Beispieltext
+    vorlag): die Kurznachricht (SMS/Premium-SMS/Telegram-Kurzform) ersetzt
+    `R@HH:MM` durch `R>HH:MM` bzw. `TH>HH:MM` ("laeuft, bis"); der
+    `@`-Beginn-Marker verschwindet, das Zeichenbudget bleibt gewahrt.
+"""
+from __future__ import annotations
+
+import re
+import uuid
+from datetime import timedelta
+from zoneinfo import ZoneInfo
+
+import pytest
+from freezegun import freeze_time
+
+from app.loader import save_trip
+from output.renderers.alert.project import to_multi_location_onset_alert_message
+from output.renderers.alert.render import render_email, render_telegram
+from services.radar_cache import reset_shared_radar_cache_for_tests
+from services.radar_service import NowcastResult, RadarNowcastService
+
+from tests.helpers.alarm_pruefstrecke import AlarmPruefstrecke
+from tests.tdd.test_952_onset_alert_fidelity import _clean_user
+from tests.tdd.test_alarm_pruefstrecke_selbstschutz import (
+    _AT, _radar_trip, _settings_all_channels, _write_premium_profile,
+)
+
+# `_AT` (10:00 UTC) taugt als Laufzeitpunkt NICHT: dort faellt `now` genau auf
+# den Slot-Start, `f.timestamp >= now` behielte das Frame und der Defekt waere
+# unsichtbar. Der Versatz +7 Min bildet den echten Cron-Takt ab.
+_SLOT = _AT                              # 10:00 UTC -- Beginn des laufenden Slots
+_AT_LAUF = _AT + timedelta(minutes=7)    # 10:07 UTC = 12:07 Ortszeit
+
+# Ortszeit der Etappe: Korsika (42.20/9.10) -> Europe/Paris, am 2026-04-05
+# Sommerzeit (UTC+2). LITERALE -- bewusst nicht aus derselben Zonenaufloesung
+# gezogen, die der Pruefling benutzt.
+TZ_ORT = ZoneInfo("Europe/Paris")
+ENDE_LOKAL = "12:45"       # Slot +45 Min: erstes trockenes Frame (Lage A)
+HORIZONT_LOKAL = "14:30"   # Slot +150 Min: letztes verfuegbares Frame (Lage B)
+BEGINN_LOKAL = "12:30"     # Slot +30 Min: kuenftiger Beginn (Lage E)
+
+# PO-Wortlaut (Freigabe): "Regen läuft bereits" / "endet voraussichtlich
+# HH:MM" / "kein Ende im Sichtfenster (bis HH:MM)".
+LAEUFT = "läuft bereits"
+ENDE_FORM = f"endet voraussichtlich {ENDE_LOKAL}"
+KEIN_ENDE = "kein Ende im Sichtfenster"
+# Eigene Wahl (keine PO-Vorlage): Laufend-Token der Kurznachricht.
+SMS_LAUFEND = "R>"
+# Die Beginn-Angabe ("in 8 Min"). Negative Vorschau, damit der Cooldown-Satz
+# ("... hoechstens einmal in 30 Minuten") nicht als Beginn-Angabe zaehlt.
+_BEGINN_MIN = re.compile(r"in \d+ Min(?![a-zäöüA-Z])")
+
+_ANGELEGT: list[str] = []
+
+
+@pytest.fixture(autouse=True)
+def _aufraeumen():
+    """Jeder Test raeumt die von ihm angelegten `user_id`-Ablagen ab —
+    Datentraeger und Test-Postfach werden mit Parallelsessions geteilt."""
+    _ANGELEGT.clear()
+    yield
+    for uid in _ANGELEGT:
+        _clean_user(uid)
+
+
+def _uid(tag: str) -> str:
+    uid = f"tdd-2050-s2b-{tag}-{uuid.uuid4().hex[:6]}"
+    _ANGELEGT.append(uid)
+    return uid
+
+
+def _quelle(*, nass_bis: int, nass_von: int = 0, konvektiv: bool = False,
+            gesamt: int = 11):
+    """Frames im 15-Min-Raster ab `_SLOT`; die Slots `[nass_von, nass_bis)`
+    liegen ueber der Trockenschwelle (`_DRY_THRESHOLD_MM_H`, 0,1 mm/h)."""
+    def _frames(lat: float, lon: float) -> list:
+        from providers.brightsky import RadarFrame
+        return [
+            RadarFrame(
+                timestamp=_SLOT + timedelta(minutes=15 * k),
+                precip_mm_h=2.0 if nass_von <= k < nass_bis else 0.0,
+                is_convective=konvektiv and nass_von <= k < nass_bis,
+            )
+            for k in range(gesamt)
+        ]
+    return _frames
+
+
+# Lage A: laeuft und hoert im Sichtfenster auf (Ende = Slot +45 Min).
+def _laeuft_mit_ende(konvektiv: bool = False):
+    return _quelle(nass_bis=3, konvektiv=konvektiv)
+
+
+# Lage B: laeuft ueber den verfuegbaren Datenbestand hinaus (kein Ende).
+def _laeuft_ohne_ende():
+    return _quelle(nass_bis=11)
+
+
+# Lage C: laeuft, hoert aber IN der laufenden Viertelstunde auf -- KEIN
+# kuenftiges Frame ist nass, ein kuenftiger Beginn ist nicht bestimmbar
+# (`onset_minutes is None`). NUR diese Lage erreicht die Bruchstellen 1-3.
+def _laeuft_endet_im_slot():
+    return _quelle(nass_bis=1)
+
+
+# Lage E: Normalfall -- jetzt trocken, Beginn erst Slot +30 Min.
+def _erst_spaeter():
+    return _quelle(nass_von=2, nass_bis=5)
+
+
+def _radar(quelle) -> RadarNowcastService:
+    return RadarNowcastService(frame_source=quelle)
+
+
+def _aufbau(uid: str, tag: str, **flags):
+    """Nutzer (Premium-Profil fuer den vierten Kanal) + Trip mit allen vier
+    Kanaelen. Aufbau unter der gestellten Uhr, weil `save_trip()` die
+    Ankunftszeiten beim Schreiben neu rechnet (Compute-on-Save, #802)."""
+    _clean_user(uid)
+    _write_premium_profile(uid, _AT)
+    with freeze_time(_AT):
+        return _radar_trip(
+            uid, f"trip-2050-s2b-{tag}", send_email=True, send_telegram=True,
+            send_sms=True, send_premium_sms=True, **flags,
+        )
+
+
+def _ohne_sperrzeit(uid: str, trip):
+    """Sperrzeit aus (`alert_cooldown_minutes = 0`). PFLICHT fuer den
+    Entdopplungs-Waechter: `check_radar_alerts()` liest den Trip vom
+    Datentraeger, der Wert muss also mitgespeichert werden."""
+    trip.alert_cooldown_minutes = 0
+    with freeze_time(_AT):
+        save_trip(trip, user_id=uid)
+    return trip
+
+
+def _lauf(uid: str, trip, quelle, *, at=_AT_LAUF, strecke=None):
+    s = strecke or AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
+    return s.lauf(at=at, zweig="radar", trip=trip, radar_service=_radar(quelle))
+
+
+def _mailtext(lauf) -> str:
+    return "\n".join(f"{betreff}\n{koerper}" for betreff, koerper in lauf.mail)
+
+
+def _kanaltext(lauf) -> str:
+    """Betreff + Mailkoerper + Telegram-Text eines Laufs, zusammengelegt."""
+    return _mailtext(lauf) + "\n" + "\n".join(lauf.telegram)
+
+
+def _test_lauf(tag: str, quelle, **flags):
+    """Ein Prueflauf auf eigener `user_id` (Aufraeumen per Fixture)."""
+    uid = _uid(tag)
+    return _lauf(uid, _aufbau(uid, tag, **flags), quelle)
+
+
+def test_ac1_laufendes_ereignis_wird_als_laufend_gemeldet():
+    """AC-1: das den aktuellen Rasterslot deckende Frame ist nass -> die
+    Nachricht meldet "laeuft bereits" statt einer Beginn-Angabe."""
+    lauf = _test_lauf("ac1", _laeuft_mit_ende())
+    assert lauf.triggered_count == 1, (
+        f"AC-1 Vorbedingung: der Lauf muss ausloesen -- sonst prueft der "
+        f"Wortlaut nichts (war {lauf.triggered_count})."
+    )
+    text = _kanaltext(lauf)
+    assert LAEUFT in text, f"AC-1: {LAEUFT!r} fehlt.\n{text}"
+    assert not _BEGINN_MIN.search(text), (
+        f"AC-1: kein Kanal darf einen kuenftigen Beginn behaupten.\n{text}"
+    )
+
+
+def test_ac2_kuenftiger_beginn_bleibt_unveraendert_bei_der_beginn_angabe():
+    """AC-2: Regressions-Invariante -- BEWUSST von Anfang an GRUEN. Liegt das
+    Ereignis wirklich in der Zukunft (jetzt trocken, nasses Frame erst Slot
+    +30 Min), bleibt der bisherige Wortlaut unveraendert."""
+    lauf = _test_lauf("ac2", _erst_spaeter())
+    assert lauf.triggered_count == 1, (
+        f"AC-2 Vorbedingung: der Normalfall muss ausloesen "
+        f"(war {lauf.triggered_count})."
+    )
+    text = _kanaltext(lauf)
+    assert _BEGINN_MIN.search(text), (
+        f"AC-2: der Normalfall MUSS die Beginn-Angabe 'in N Min' behalten.\n{text}"
+    )
+    assert BEGINN_LOKAL in text, f"AC-2: Beginn-Uhrzeit {BEGINN_LOKAL} fehlt.\n{text}"
+    assert LAEUFT not in text, (
+        f"AC-2: ein kuenftiger Beginn darf NICHT als laufend erscheinen.\n{text}"
+    )
+
+
+def test_ac3_laufendes_gewitter_wird_ebenfalls_als_laufend_gemeldet():
+    """AC-3: dieselbe Lage konvektiv -- auch das laufende Gewitter wird als
+    laufend gemeldet, nicht nur laufender Regen (`is_convective`)."""
+    lauf = _test_lauf("ac3", _laeuft_mit_ende(konvektiv=True))
+    text = _kanaltext(lauf)
+    assert "Gewitter" in text, (
+        f"AC-3 Vorbedingung: die Lage muss als Gewitter erkannt sein "
+        f"(triggered_count={lauf.triggered_count}).\n{text}"
+    )
+    assert LAEUFT in text, f"AC-3: das laufende GEWITTER zeigt {LAEUFT!r} nicht.\n{text}"
+    assert not _BEGINN_MIN.search(text), (
+        f"AC-3: kein Kanal darf einen kuenftigen Gewitterbeginn behaupten.\n{text}"
+    )
+
+
+def test_ac4_laufendes_ereignis_nennt_das_voraussichtliche_ende():
+    """AC-4: das erste trockene Frame nach der laufenden nassen Strecke liegt
+    bei Slot +45 Min -> die Nachricht nennt diesen Zeitpunkt als Ende."""
+    text = _kanaltext(_test_lauf("ac4", _laeuft_mit_ende()))
+    assert ENDE_FORM in text, (
+        f"AC-4: das Ende ({ENDE_FORM!r}, erstes trockenes Frame) fehlt.\n{text}"
+    )
+
+
+def test_ac5_kein_ende_im_datenbestand_wird_ausdruecklich_gesagt():
+    """AC-5: alle verfuegbaren Frames sind nass -> die Nachricht sagt
+    ausdruecklich, dass kein Ende erkennbar ist, und nennt die Reichweite
+    (Uhrzeit des letzten Frames) -- OHNE eine Dauer zu erfinden."""
+    lauf = _test_lauf("ac5", _laeuft_ohne_ende())
+    text = _kanaltext(lauf)
+    erwartet = f"{KEIN_ENDE} (bis {HORIZONT_LOKAL})"   # PO-Wortlaut
+    assert erwartet in text, (
+        f"AC-5: {erwartet!r} fehlt -- Aussage samt Reichweite (letztes "
+        f"verfuegbares Frame), triggered_count={lauf.triggered_count}.\n{text}"
+    )
+    assert not _BEGINN_MIN.search(text), (
+        f"AC-5: es darf KEINE erfundene Dauer im Text stehen.\n{text}"
+    )
+
+
+def test_ac6_alarm_mail_sagt_laeuft_bereits_statt_ab_uhrzeit():
+    """AC-6: der E-Mail-Zweig (Einzelort) verliert die Beginn-Form
+    "ab HH:MM"/"in N Min" und traegt stattdessen die Laufend-Aussage."""
+    lauf = _test_lauf("ac6", _laeuft_mit_ende())
+    assert lauf.mail, f"AC-6 Vorbedingung: keine E-Mail ({lauf.triggered_count})."
+    text = _mailtext(lauf)
+    assert LAEUFT in text, f"AC-6: die E-Mail sagt nicht {LAEUFT!r}.\n{text}"
+    assert "ab 12:15" not in text, (
+        f"AC-6: die E-Mail behauptet weiterhin einen Beginn ('ab 12:15' -- das "
+        f"naechste kuenftige Frame).\n{text}"
+    )
+    assert not _BEGINN_MIN.search(text), (
+        f"AC-6: die E-Mail traegt weiterhin die Beginn-Angabe.\n{text}"
+    )
+
+
+def test_ac7_telegram_langform_sagt_laeuft_bereits():
+    """AC-7: derselbe Lauf, Telegram-Langform (rich) -- dieselbe Aussage."""
+    lauf = _test_lauf("ac7", _laeuft_mit_ende())
+    assert lauf.telegram, f"AC-7 Vorbedingung: kein Telegram ({lauf.triggered_count})."
+    text = "\n".join(lauf.telegram)
+    assert LAEUFT in text, f"AC-7: Telegram sagt nicht {LAEUFT!r}.\n{text}"
+    assert not _BEGINN_MIN.search(text), (
+        f"AC-7: Telegram traegt weiterhin die Beginn-Angabe.\n{text}"
+    )
+
+
+def test_ac8_kurznachricht_kennzeichnet_den_laufend_fall():
+    """AC-8: SMS und Premium-SMS ersetzen die Beginn-Zeitpunkt-Form `R@HH:MM`
+    durch die Laufend-Form `R>HH:MM` -- der `@`-Beginn-Marker verschwindet,
+    das Zeichenbudget (140) bleibt gewahrt."""
+    lauf = _test_lauf("ac8", _laeuft_mit_ende())
+    assert lauf.sms and lauf.premium_sms, (
+        f"AC-8 Vorbedingung: sms={lauf.sms!r} premium_sms={lauf.premium_sms!r}"
+    )
+    for kanal, texte in (("sms", lauf.sms), ("premium_sms", lauf.premium_sms)):
+        text = "\n".join(texte)
+        assert SMS_LAUFEND in text, (
+            f"AC-8 ({kanal}): Kennzeichnung {SMS_LAUFEND!r} fehlt.\n{text}"
+        )
+        assert "@" not in text, (
+            f"AC-8 ({kanal}): 'R@HH:MM' behauptet weiter einen kuenftigen "
+            f"Beginn.\n{text}"
+        )
+        assert all(len(t) <= 140 for t in texte), (
+            f"AC-8 ({kanal}): Zeichenbudget 140 gerissen: {[len(t) for t in texte]}"
+        )
+
+
+def test_ac9_telegram_kurzform_erbt_den_laufend_text_der_sms():
+    """AC-9: bei `telegram_style="kurzform"` traegt Telegram denselben
+    Kurznachrichten-Text wie die SMS (geerbtes Verhalten seit #1948 S4)."""
+    lauf = _test_lauf("ac9", _laeuft_mit_ende(), telegram_style="kurzform")
+    assert lauf.telegram, f"AC-9 Vorbedingung: kein Telegram ({lauf.triggered_count})."
+    text = "\n".join(lauf.telegram)
+    assert SMS_LAUFEND in text, (
+        f"AC-9: die Kurzform traegt {SMS_LAUFEND!r} nicht wie die SMS.\n{text}"
+    )
+    assert "@" not in text, (
+        f"AC-9: die Kurzform behauptet weiter einen kuenftigen Beginn.\n{text}"
+    )
+
+
+def test_ac10_ereignis_endet_in_der_laufenden_viertelstunde_loest_trotzdem_aus():
+    """AC-10: nasser aktueller Slot, ausschliesslich TROCKENE kuenftige
+    Frames -> `onset_minutes is None`. Heute liefert `radar_alert_due()`
+    daran `False` und der Alarm faellt ERSATZLOS aus (Bruchstelle 1).
+
+    Vorgeschaltet die Konstruktions-Gegenprobe: DIESELBEN Frames, einmal zur
+    Cron-Laufzeit 10:07 und einmal exakt auf dem Slot-Start 10:00 gemessen.
+    Ohne sie waere "kein kuenftiger Beginn" nicht von "gar kein Regen"
+    unterscheidbar -- und der Waechter beruehrte den Laufend-Zweig nie."""
+    uid = _uid("ac10")
+    trip = _aufbau(uid, "ac10")
+    lat, lon = trip.stages[0].waypoints[0].lat, trip.stages[0].waypoints[0].lon
+    # Frame-Cache ist ein Prozess-Singleton mit Koordinaten-Schluessel
+    # (TTL 300 s) -- ohne Reset lieferte die zweite Messung die erste zurueck.
+    with freeze_time(_AT_LAUF):
+        reset_shared_radar_cache_for_tests()
+        versteckt = _radar(_laeuft_endet_im_slot()).get_nowcast(lat, lon)
+    with freeze_time(_SLOT):
+        reset_shared_radar_cache_for_tests()
+        sichtbar = _radar(_laeuft_endet_im_slot()).get_nowcast(lat, lon)
+    reset_shared_radar_cache_for_tests()
+    assert versteckt.onset_minutes is None, (
+        f"AC-10 Konstruktion: zur Cron-Laufzeit darf KEIN kuenftiger Beginn "
+        f"bestimmbar sein (war {versteckt.onset_minutes})."
+    )
+    assert sichtbar.onset_minutes == 0, (
+        f"AC-10 Konstruktion: dieselben Frames, gemessen auf dem Slot-Start, "
+        f"muessen das nasse Frame zeigen (onset 0, war {sichtbar.onset_minutes}) "
+        f"-- sonst regnet es gar nicht und der Waechter misst Luft."
+    )
+
+    lauf = _lauf(uid, trip, _laeuft_endet_im_slot())
+    assert lauf.triggered_count == 1, (
+        f"AC-10: das Ereignis laeuft JETZT und endet in der laufenden "
+        f"Viertelstunde -- ein Alarm muss trotzdem raus. War "
+        f"triggered_count={lauf.triggered_count}."
+    )
+
+
+def test_ac11_unveraenderte_laufende_lage_loest_kein_zweites_mal_aus():
+    """AC-11: zweiter Prueflauf mit identischer, weiterhin laufender Lage ->
+    kein zweiter Alarm. Die Sperrzeit ist AUSGESCHALTET
+    (`alert_cooldown_minutes = 0`), sonst waere der Test aus dem falschen
+    Grund gruen und wuerde die Entdopplung ueberhaupt nicht messen. Die
+    Kontrolle auf frischem Datentraeger zeigt, dass die Stille aus dem
+    gebuchten Zustand kommt, nicht aus den Eingangsdaten."""
+    uid, kontrolle = _uid("ac11"), _uid("ac11-ctrl")
+    trip = _ohne_sperrzeit(uid, _aufbau(uid, "ac11"))
+    assert trip.alert_cooldown_minutes == 0, (
+        "AC-11 Vorbedingung: die Sperrzeit MUSS aus sein, sonst misst der "
+        "Waechter den Cooldown statt der Entdopplung."
+    )
+    strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
+    lauf1 = _lauf(uid, trip, _laeuft_endet_im_slot(), strecke=strecke)
+    assert lauf1.triggered_count == 1, (
+        f"AC-11 Vorbedingung: Lauf 1 muss ausloesen und die Ereignis-Identitaet "
+        f"buchen (war {lauf1.triggered_count})."
+    )
+
+    at2 = _AT_LAUF + timedelta(minutes=15)
+    lauf2 = _lauf(uid, trip, _laeuft_endet_im_slot(), at=at2, strecke=strecke)
+    assert lauf2.triggered_count == 0, (
+        f"AC-11: dasselbe laufende Ereignis darf kein zweites Mal gemeldet "
+        f"werden (war {lauf2.triggered_count})."
+    )
+
+    trip_k = _ohne_sperrzeit(kontrolle, _aufbau(kontrolle, "ac11-ctrl"))
+    lauf_k = _lauf(kontrolle, trip_k, _laeuft_endet_im_slot(), at=at2)
+    assert lauf_k.triggered_count == 1, (
+        f"AC-11 Gegenprobe: dieselben Eingangsdaten zum selben Zeitpunkt OHNE "
+        f"Lauf 1 muessen ausloesen -- sonst kommt die Stille oben nicht von der "
+        f"Entdopplung (war {lauf_k.triggered_count})."
+    )
+
+
+def test_ac12_ortsvergleich_buendel_traegt_den_laufenden_ort_mit():
+    """AC-12: ein Buendel aus einem laufenden Ort (ohne bestimmbaren
+    kuenftigen Beginn) und einem Ort mit kuenftigem Beginn -- der laufende
+    Ort faellt heute VOR dem `OnsetEvent`-Bau aus dem Filter
+    (`nc.onset_minutes is not None`, Bruchstelle 4)."""
+    laufend = NowcastResult(
+        onset_minutes=None, intensity_label="Starker Regen", source="radar",
+    )
+    laufend.already_running = True
+    laufend.running_until_minutes = 38
+    kuenftig = NowcastResult(
+        onset_minutes=25, intensity_label="Leichter Regen", source="radar",
+    )
+    with freeze_time(_AT_LAUF):
+        msg = to_multi_location_onset_alert_message(
+            [("Laufend-Ort", laufend), ("Zukunft-Ort", kuenftig)],
+            tz=TZ_ORT, stand_at="12:07",
+        )
+        _html, plain = render_email(msg)
+        text = f"{plain}\n{render_telegram(msg)}"
+    assert "Zukunft-Ort" in text, (
+        f"AC-12 Vorbedingung: der Ort mit kuenftigem Beginn muss im Buendel "
+        f"stehen.\n{text}"
+    )
+    assert "Laufend-Ort" in text, (
+        f"AC-12: der laufende Ort darf NICHT vor dem Nachrichtenbau "
+        f"herausfallen.\n{text}"
+    )
+    assert LAEUFT in text, f"AC-12: Laufend-Aussage fehlt.\n{text}"
+
+
+def test_ac13_laufender_fall_ohne_kuenftigen_beginn_liefert_alle_vier_kanaele():
+    """AC-13: derselbe Eingangsfall wie AC-10/AC-11 laeuft ohne Exception
+    durch (`now + timedelta(minutes=None)` stuerzt ab, sobald Bruchstelle 1
+    faellt) und liefert gueltige Inhalte auf allen vier Kanaelen."""
+    lauf = _test_lauf("ac13", _laeuft_endet_im_slot())
+    assert lauf.mail and lauf.telegram and lauf.sms and lauf.premium_sms, (
+        f"AC-13: alle vier Kanaele muessen Inhalt tragen: mail={lauf.mail!r} "
+        f"telegram={lauf.telegram!r} sms={lauf.sms!r} "
+        f"premium_sms={lauf.premium_sms!r}"
+    )
+    assert LAEUFT in _kanaltext(lauf), (
+        f"AC-13: die Nachricht muss trotz fehlendem kuenftigen Beginn die "
+        f"Laufend-Aussage tragen.\n{_kanaltext(lauf)}"
+    )
+
+
+def test_ac14_jetzt_antwort_meldet_das_laufende_ereignis_als_laufend():
+    """AC-14: `/jetzt` (`format_now_text`) macht dieselbe Falschaussage aus
+    derselben Datenbasis -- heute steht dort bei laufendem Ereignis ohne
+    kuenftigen Beginn die Entwarnung "kein Regen erwartet"."""
+    result = NowcastResult(
+        onset_minutes=None, intensity_label="Starker Regen", source="radar",
+    )
+    result.already_running = True
+    result.running_until_minutes = 38   # 10:07 + 38 Min = 10:45 UTC = 12:45 Ortszeit
+    with freeze_time(_AT_LAUF):
+        text = RadarNowcastService().format_now_text(
+            result, tz=TZ_ORT, include_source=False,
+        )
+    assert LAEUFT in text, f"AC-14: die /jetzt-Antwort sagt nicht {LAEUFT!r}.\n{text}"
+    assert ENDE_LOKAL in text, f"AC-14: das Ende ({ENDE_LOKAL}) fehlt.\n{text}"
+    assert "kein Regen erwartet" not in text, f"AC-14: Entwarnung.\n{text}"
+
+
+def test_ac15_briefing_kurzfristzeile_weist_das_ereignis_als_laufend_aus():
+    """AC-15: `format_starkregen_hint` traegt heute unbedingt die Beginn-Form
+    "ab ca. HH:MM (in ~N Min)"; der Laufend-Eingang muss stattdessen die
+    Laufend-Aussage liefern. Der `TypeError` der noch fehlenden Signatur wird
+    in den Text gefaltet, damit der Test an der ASSERTION scheitert und die
+    Ursache im Fehlerbericht sichtbar bleibt."""
+    from output.renderers.email.starkregen_hint import format_starkregen_hint
+
+    with freeze_time(_AT_LAUF):
+        try:
+            text = format_starkregen_hint(
+                "Starker Regen", None, tz=TZ_ORT,
+                already_running=True, running_until_minutes=38,
+            )
+        except TypeError as e:
+            text = f"<TypeError: {e}>"
+    assert LAEUFT in text, (
+        f"AC-15: die Briefing-Zeile weist das Ereignis nicht als {LAEUFT!r} "
+        f"aus.\n{text}"
+    )
+    assert ENDE_LOKAL in text, f"AC-15: das Ende ({ENDE_LOKAL}) fehlt.\n{text}"
