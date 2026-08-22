@@ -279,6 +279,16 @@ def _block_mit_reichweite_frames(now: datetime) -> list[dict]:
     return frames
 
 
+def _minuten(hhmm: str) -> int:
+    stunde, _, minute = hhmm.partition(":")
+    return int(stunde) * 60 + int(minute)
+
+
+def _abstand_minuten(a: str, b: str) -> int:
+    roh = abs(_minuten(a) - _minuten(b))
+    return min(roh, 24 * 60 - roh)
+
+
 class TestS3_ReichweiteUndGueteImReplay:
     def test_replay_pfad_zeigt_reichweite_und_guete_wie_der_live_pfad(
         self, client, stub_trip,
@@ -291,12 +301,20 @@ class TestS3_ReichweiteUndGueteImReplay:
         Alarm-Verhalten misst
         THEN traegt der Klartext-Teil zusaetzlich zur Beginn-Angabe sowohl
         `Radar reicht bis HH:MM` als auch `Ortsangabe ab HH:MM unscharf`,
-        mit Werten, die aus den Frames HERGELEITET sind (Toleranz 1 Minute
-        Wanduhr-Versatz), nicht nur irgendein Format.
+        JE MIT dem aus den Frames HERGELEITETEN Wert (Toleranz 1 Minute
+        Wanduhr-Versatz) -- nicht nur irgendeine HH:MM-Zeichenkette.
 
-        RED vor dem Fix: `_render_nowcast_replay` reichte `source_reach_*`/
-        `location_sharpness_*` nicht durch -- `getattr(..., default)` liess
-        beide Angaben ersatzlos entfallen."""
+        Adversary-Fund F004 (Adversary-Runde 3): eine reine Format- und
+        Verschiedenheits-Pruefung liess `"23:59"`/`"00:01"` unbemerkt durch.
+        Der Fixture-Trip hat keine Wegpunkte -- `_alert_tz_for_trip` faellt
+        deshalb auf UTC zurueck (kein Zonenumrechnungs-Risiko), die
+        erwarteten Werte werden direkt aus `request_now` + den bekannten
+        Minutenzahlen gebildet (Muster `test_2051s3_briefing_hinweis_
+        traegt_die_reichweite_ueber_den_echten_scheduler_pfad`, F003).
+
+        RED vor dem urspruenglichen Fix: `_render_nowcast_replay` reichte
+        `source_reach_*`/`location_sharpness_*` nicht durch -- `getattr(...,
+        default)` liess beide Angaben ersatzlos entfallen."""
         user_id, trip_id = stub_trip
         request_now = datetime.now(timezone.utc)
         body = {"nowcast_frames": {
@@ -322,13 +340,26 @@ class TestS3_ReichweiteUndGueteImReplay:
         assert guete_treffer is not None, (
             f"RED: der Replay-Weg nennt keine Guete-Zeile: {plain!r}"
         )
-        # Wertkontrolle relativ statt absolut (Muster AC-6-Test oben, das die
-        # Trip-Zone dieses Fixture-Trips ebenfalls nicht kennt): die Guete-
-        # Grenzzeit muss NACH der Reichweite-unabhaengigen Beginn-Zeit liegen
-        # und darf nicht mit ihr identisch sein -- sonst waere hier nur ein
-        # zufaelliges HH:MM durchgereicht worden, keine echte Ableitung.
-        assert guete_treffer.group(1) != reach_treffer.group(1), (
-            f"Guete-Grenzzeit und Reichweite sind identisch -- vermutlich "
-            f"beide auf denselben (falschen) Platzhalter zurueckgefallen: "
-            f"{plain!r}"
+
+        # F004: beide Werte einzeln gegen die aus den Frames hergeleitete
+        # Erwartung pruefen -- Reichweite = letzter Frame (+160) + 15 Min
+        # (_MAX_FRAME_COVERAGE) = 175 Min; Guete-Grenze = now + 60 Min
+        # (LOCATION_SHARPNESS_LIMIT_MIN). `_alert_tz_for_trip` liefert UTC
+        # fuer diesen wegpunktlosen Fixture-Trip, `request_now` ist bereits
+        # UTC -- keine Zonenumrechnung noetig.
+        erwartete_reichweite = (
+            (request_now + timedelta(minutes=175)).strftime("%H:%M")
+        )
+        erwartete_guete_grenze = (
+            (request_now + timedelta(minutes=60)).strftime("%H:%M")
+        )
+        assert _abstand_minuten(reach_treffer.group(1), erwartete_reichweite) <= 1, (
+            f"F004: die Reichweite {reach_treffer.group(1)!r} stammt nicht "
+            f"aus den injizierten Frames (erwartet nahe "
+            f"{erwartete_reichweite!r}): {plain!r}"
+        )
+        assert _abstand_minuten(guete_treffer.group(1), erwartete_guete_grenze) <= 1, (
+            f"F004: die Guete-Grenzzeit {guete_treffer.group(1)!r} stammt "
+            f"nicht aus der 60-Minuten-Grenze (erwartet nahe "
+            f"{erwartete_guete_grenze!r}): {plain!r}"
         )
