@@ -1015,9 +1015,13 @@ zu unterscheiden von `0.0` (gültiger Startwert). Wird beim GPX-Import aus dem
 Original-Trackpunkt (`GPXPoint.distance_from_start_km`) übernommen oder nachträglich per
 Track-Auflösung (`src/services/track_resolution.py`) einmalig additiv zurückgeschrieben,
 wenn genau ein GPX-Track im Bestand des Nutzers alle Wegpunkte der Etappe innerhalb 10 m
-enthält. Speist ausschließlich die Alarm-Ortsangabe (`km A-B` statt `Segment N`,
-`renderers/alert/segments.py::format_alert_location`) — kein Einfluss auf Naismith-Gehzeiten
-(rechnen weiterhin auf Luftlinie, #2042). Muss im Go-Modell existieren, da sonst der erste
+enthält. Speist die Alarm-Ortsangabe (`km A-B` statt `Segment N`,
+`renderers/alert/segments.py::format_alert_location`) **und seit #2042 die Naismith-Gehzeiten**:
+Die Gehzeit je Abschnitt beruht auf der Differenz der gemessenen Strecken zweier
+aufeinanderfolgender Wegpunkte statt auf deren Luftlinie. Der Rückfall auf Luftlinie gilt
+**je Abschnitt**, nicht je Etappe — er greift, wenn einer der beiden Wegpunkte keine gemessene
+Strecke trägt oder die Differenz negativ wäre. Etappen ohne gemessene Strecke rechnen damit
+unverändert wie zuvor. Muss im Go-Modell existieren, da sonst der erste
 Editor-Save (`SaveTrip`) den beim Import gesetzten Wert wieder verwirft (Präzedenzfall
 `suggestion_reason`).
 
@@ -3671,6 +3675,21 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-22: Issue #2042 — Ankunftszeiten folgen der **gemessenen Wegstrecke** statt der
+  Luftlinie: `ComputeStageArrivals` (`internal/model/naismith.go`) und
+  `compute_stage_arrivals` (`src/core/naismith.py`) rechnen die Gehzeit je Abschnitt aus der
+  Differenz der `distance_from_start_km` zweier aufeinanderfolgender Wegpunkte. **Kein neues
+  Feld, keine Migration** — die Größe existiert seit #2036, sie wird nur nicht mehr ignoriert.
+  Rückfall auf Luftlinie gilt **je Abschnitt**, nicht je Etappe: er greift, wenn einer der
+  beiden Wegpunkte keine gemessene Strecke trägt oder die Differenz negativ wäre. Etappen ohne
+  gemessene Strecke liefern damit byte-identische Zeiten wie zuvor. **Nutzersichtbar:** Auf
+  vermessenen Etappen rücken `arrival_calculated` und die daraus abgeleiteten Zeitfenster nach
+  hinten — gemessen Faktor 1,17–1,59 gegenüber der Luftlinie; die Zeiten waren vorher
+  systematisch zu früh. Python/Go-Parität durch je einen Paritätstest gedeckt
+  (`test_ac5_paritaet_erwartungswerte_fuer_die_go_seite`,
+  `TestArrivals_2042_ParityWithPython`) — auf Staging ist sie strukturell nicht beobachtbar,
+  weil kein API-Pfad Pythons Berechnung unabhängig von Go exponiert. Spec:
+  `docs/specs/modules/fix_2042_gehzeit_wegstrecke.md`.
 - 2026-08-22: Issue #2051 Scheibe S1 — `OnsetPayload` (Section 22.5, `POST /api/trips/{trip_id}/
   alert-preview`) bekommt additiv die Felder `event_end_time: string | null`,
   `event_end_day_offset: int = 0` und `event_ongoing_beyond_horizon: bool = false`. Ende und Dauer
