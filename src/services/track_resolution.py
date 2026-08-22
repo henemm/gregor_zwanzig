@@ -12,10 +12,15 @@ Zwei Regeln machen das Nachtragen belastbar statt raterisch:
   Etappe innerhalb der Toleranz enthaelt. Ein einziger manuell verschobener
   oder ergaenzter Wegpunkt (>10 m abseits) laesst die GANZE Etappe
   unvermessen (AC-12).
-* **Eindeutigkeit** -- passen mehrere Dateien gleichermassen (etwa eine
-  Einzeletappen- UND eine Gesamt-GPX), wird KEINE geraten (AC-11).
+* **Ergebnisgleichheit** -- passen mehrere Dateien, entscheidet nicht ihre
+  ANZAHL, sondern ob sie zu derselben Wegstrecke fuehren: liefern alle
+  Kandidaten je Wegpunkt dieselben (auf den Etappenstart normierten)
+  Kilometer, darf die Aufloesung sich entscheiden; erst bei wirklich
+  abweichenden Ergebnissen wird KEINE geraten (Issue #2073, vorher AC-11 aus
+  #2036: "mehr als eine passende Datei" genuegte fuer den Abbruch, womit eine
+  blosse Kopie derselben Datei die Etappe unnoetig ausfallen liess).
 
-Ohne eindeutigen Treffer liefert die Auflösung ``None``; die Ortsangabe
+Ohne verwertbaren Treffer liefert die Auflösung ``None``; die Ortsangabe
 bleibt dann byte-identisch bei ``Segment N`` (AC-10).
 """
 from __future__ import annotations
@@ -33,6 +38,12 @@ logger = logging.getLogger("track_resolution")
 # 10 m deckt Koordinatenrundung ab und liegt drei Groessenordnungen unter
 # dem Fehlerfall (Spec "Festgelegte Schwellenwerte").
 DEFAULT_TOLERANCE_M = 10.0
+
+# Hoechstabstand, bis zu dem zwei Kandidaten als ergebnisgleich gelten
+# (Issue #2073). Bewusst von der Zuordnungstoleranz ABGELEITET statt neu
+# hingeschrieben: verglichen wird derselbe Ortsabstand, es gibt nur EINE
+# 10-m-Zahl im Modul.
+RESULT_EQUALITY_TOLERANCE_M = DEFAULT_TOLERANCE_M
 
 
 def _match_track(
@@ -56,6 +67,42 @@ def _match_track(
     return result
 
 
+def _normalisiert(hit: Dict[str, float], waypoints: List) -> List[float]:
+    """Wegpunkt-Kilometer eines Kandidaten, auf den Etappenstart normiert.
+
+    ``distance_from_start_km`` kumuliert ab dem Anfang des jeweiligen GPX-
+    Tracks, nicht ab dem Etappenstart: eine Einzeletappen-GPX beginnt bei
+    0 km, eine durchlaufende Gesamt-Tour-GPX fuer dieselbe Etappe z. B. bei
+    50 km. Verglichen wird deshalb dasselbe, was der Nutzer spaeter sieht --
+    ``trip_segments.stage_measured_distances`` (:150-151) normiert genauso.
+    """
+    werte = [hit[wp.id] for wp in waypoints]
+    return [w - werte[0] for w in werte]
+
+
+def _ergebnisse_sind_gleich(
+    matches: List[Dict[str, float]], waypoints: List,
+) -> bool:
+    """Liefern ALLE Kandidaten praktisch dieselbe Wegstrecke (Issue #2073)?
+
+    Geprueft wird PAARWEISE ueber alle ``n*(n-1)/2`` Paare, nicht gegen einen
+    Referenzkandidaten: bei einer harten Schwelle ist Gleichheit nicht
+    transitiv. Laege B 9 m ueber A und C 9 m unter A, bestuenden beide den
+    Referenzvergleich gegen A, laegen aber 18 m auseinander -- das wuerde die
+    Toleranz stillschweigend verdoppeln.
+    """
+    normiert = [_normalisiert(hit, waypoints) for hit in matches]
+    grenze_km = RESULT_EQUALITY_TOLERANCE_M / 1000.0
+    for i in range(len(normiert)):
+        for j in range(i + 1, len(normiert)):
+            if any(
+                abs(a - b) > grenze_km
+                for a, b in zip(normiert[i], normiert[j])
+            ):
+                return False
+    return True
+
+
 def resolve_stage_track_km(
     stage, gpx_dir, tolerance_m: float = DEFAULT_TOLERANCE_M,
 ) -> Optional[Dict[str, float]]:
@@ -67,9 +114,12 @@ def resolve_stage_track_km(
         tolerance_m: Hoechstabstand Wegpunkt <-> Trackpunkt in Metern.
 
     Returns:
-        ``{waypoint_id: distance_from_start_km}`` bei GENAU einem passenden
-        Track, sonst ``None`` (kein Treffer, mehrdeutig, oder mindestens ein
-        Wegpunkt abseits).
+        ``{waypoint_id: distance_from_start_km}``, sobald alle passenden
+        Tracks dieselbe Wegstrecke liefern -- die ROHEN, unnormierten Werte
+        des ersten Kandidaten in ``sorted(...)``-Reihenfolge (die Normierung
+        ist ausschliesslich Vergleichs-Hilfsmittel, kein Rueckgabeformat).
+        Sonst ``None`` (kein Treffer, abweichende Ergebnisse, oder mindestens
+        ein Wegpunkt abseits).
     """
     from core.gpx_parser import parse_gpx
 
@@ -91,10 +141,10 @@ def resolve_stage_track_km(
         hit = _match_track(waypoints, track.points or [], tolerance_m)
         if hit is not None:
             matches.append(hit)
-        if len(matches) > 1:
-            return None  # mehrdeutig -- nicht raten (AC-11)
-    if len(matches) != 1:
+    if not matches:
         return None
+    if not _ergebnisse_sind_gleich(matches, waypoints):
+        return None  # widerspruechliche Ergebnisse -- nicht raten (#2073)
     return matches[0]
 
 
