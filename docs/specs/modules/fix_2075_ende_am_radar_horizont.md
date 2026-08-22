@@ -45,7 +45,7 @@ zurückgibt.
 
 ## Estimated Scope
 
-- **LoC:** ~3 Produktivcode, ~85 Test.
+- **LoC:** ~8 Produktivcode, ~85 Test.
 - **Files:** 2 (1 MODIFY, 1 CREATE).
 - **Effort:** low.
 
@@ -64,24 +64,45 @@ zurückgibt.
 `_derive_wet_block_end` bildet je nassem Frame eine `coverage_end` aus dessen
 eigener Deckung (`ts + _MAX_FRAME_COVERAGE`), gedeckelt auf den Horizont —
 ermittelt aber unmittelbar danach `next_ts` (Zeitstempel des nächsten
-Frame-Nachbarn, `bisect_right` über `all_ts_sorted`), ohne ihn einzurechnen.
-Der Fix besteht aus **zwei** Teilen — der im Ticket vorgeschlagene Einzeiler
-(Teil 1 allein) hält der Gegenprobe am Randfall `T = 13:33` **nicht** stand
-(siehe AC-2):
+Frame-Nachbarn, `bisect_right` über `all_ts_sorted`).
+
+Der ursprünglich vorgeschlagene erste Fix-Teil rechnete diesen Nachbarn
+zusätzlich in `coverage_end` selbst ein (`coverage_end = min(coverage_end,
+next_ts)`) — analog zur Nachbar-Deckung in den beiden Geschwistern
+`_accumulate_precip_mm` und `_laufendes_frame`. Die Mutations-Gegenprobe des
+Adversary (Befund F001, 2026-08-22) hat gezeigt, dass diese Einrechnung an
+KEINER der drei Stellen wirkt, an denen `coverage_end` danach ausgelesen
+wird:
+
+- Der Horizont-Zweig (`coverage_end >= horizon and (next_ts is None or
+  next_ts > horizon)`) liefert mit und ohne die Nachbar-Einrechnung dasselbe
+  Ergebnis, weil dessen zweite Bedingung (`next_ts > horizon`) bereits genau
+  den Fall abfängt, den die Einrechnung hätte ausschließen sollen.
+- `return coverage_end, True` im `next_ts is None`-Zweig wird nur erreicht,
+  wenn `next_ts` bereits `None` ist — dort hat die Einrechnung keinen
+  Angriffspunkt mehr.
+- `if next_ts > coverage_end: return coverage_end, False` — diese Bedingung
+  ist genau dann wahr, wenn `next_ts` größer als das UNVERÄNDERTE
+  `coverage_end` ist, und dann gilt `min(coverage_end, next_ts) ==
+  coverage_end`: die Einrechnung ändert den Rückgabewert also nicht.
+
+Anders als bei `_accumulate_precip_mm` (summiert in einem BEKANNTEN Fenster)
+und `_laufendes_frame` (bestimmt die Deckung eines EINZELNEN Frames) SUCHT
+`_derive_wet_block_end` die Fenstergrenze erst (siehe Docstring) — die
+Nachbar-Deckung wirkt bei den Geschwistern, weil sie dort das Ergebnis
+unmittelbar begrenzt; hier prüfen alle drei Auslesestellen `next_ts` bereits
+direkt, sodass eine zusätzliche Einrechnung in `coverage_end` redundant ist.
+Der eigentliche Fix ist deshalb ein Einzeiler — die zusätzliche Bedingung im
+Horizont-Zweig:
 
 ```python
 coverage_end = min(ts + _MAX_FRAME_COVERAGE, horizon)
 next_idx = bisect.bisect_right(all_ts_sorted, ts)
 next_ts = all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted) else None
 
-# Teil 1: den Nachbarn in die Deckungsgrenze einrechnen -- dieselbe
-# Nachbar-Deckungslogik wie in `_accumulate_precip_mm` und `_laufendes_frame`.
-if next_ts is not None:
-    coverage_end = min(coverage_end, next_ts)
-
-# Teil 2: der Horizont-Zweig darf nur noch greifen, wenn wirklich KEIN Frame
-# mehr innerhalb des Fensters folgt -- sonst kippt ein Trockenframe exakt AUF
-# dem Horizont den Zweig faelschlich in "ongoing", bevor er ausgewertet wird.
+# Der Horizont-Zweig darf nur noch greifen, wenn wirklich KEIN Frame mehr
+# innerhalb des Fensters folgt -- sonst kippt ein Trockenframe exakt AUF dem
+# Horizont den Zweig faelschlich in "ongoing", bevor er ausgewertet wird.
 if coverage_end >= horizon and (next_ts is None or next_ts > horizon):
     return horizon, True
 if next_ts is None:
@@ -90,14 +111,10 @@ if next_ts > coverage_end:
     return coverage_end, False
 ```
 
-Teil 1 allein schließt die fehlerhafte Zone `T = 13:21 … 13:31` (Nachbar
-jenseits des reinen `coverage_end`-Deckels, aber innerhalb des Horizonts).
-Teil 2 ist zusätzlich nötig für `T = 13:33`: dort liegt der nächste
-(trockene) Frame exakt auf dem Horizont, `coverage_end` bleibt nach Teil 1
-`== horizon`, und ohne Teil 2 griffe der Horizont-Zweig weiterhin, bevor der
-trockene Frame bei 13:35 überhaupt ausgewertet wird. Beide Teile zusammen
-sind die vollständige Angleichung an die beiden funktionierenden Geschwister
-— kein neuer Mechanismus, keine neue Zahl.
+Diese eine Bedingung schließt beide Randfälle: sowohl die fehlerhafte Zone
+`T = 13:21 … 13:31` (Nachbar innerhalb des Horizonts, aber jenseits des
+reinen `coverage_end`-Deckels) als auch `T = 13:33` (nächster, trockener
+Frame exakt auf dem Horizont) — siehe AC-1 und AC-2.
 
 ## Expected Behavior
 
@@ -132,10 +149,10 @@ sind die vollständige Angleichung an die beiden funktionierenden Geschwister
 - **AC-2:** Given denselben Rahmen wie AC-1, aber mit `T = 13:33` und einem
   tatsächlich vorhandenen, trockenen Frame exakt auf dem Horizont (13:35) /
   When `_derive_wet_block_end` ausgewertet wird / Then ist das Ende `13:33`
-  und `ongoing_beyond_horizon = False` — nicht `(horizon, True)`. Dieser Fall
-  wird von Teil 1 der Lösung allein NICHT repariert (`coverage_end` bleibt
-  nach der Nachbar-Einrechnung `== horizon`); erst Teil 2 (Horizont-Zweig nur
-  bei fehlendem Folge-Frame) schließt ihn.
+  und `ongoing_beyond_horizon = False` — nicht `(horizon, True)`. Eine bloße
+  Nachbar-Einrechnung in `coverage_end` allein repariert diesen Fall NICHT
+  (`coverage_end` bleibt dabei `== horizon`); erst die zusätzliche Bedingung
+  im Horizont-Zweig (nur bei fehlendem Folge-Frame) schließt ihn.
   - Test: Unit-Test mit explizitem Trockenframe auf dem Horizont-Zeitstempel,
     `(end_ts, ongoing)` gegen `(13:33, False)` geprüft.
 
