@@ -111,18 +111,26 @@ def test_ac4_email_and_telegram_show_day_on_rollover():
 def test_ac5_sms_token_carries_day_suffix():
     """AC-5: Given denselben Mitternachts-Ueberlauf-Fall / When die
     Kurznachricht (SMS und Premium-SMS teilen `_render_sms_onset`) gerendert
-    wird / Then traegt der Token ein zeichensparendes Tages-Suffix
-    ("TH@0:23+1"), bleibt GSM-7-vertraeglich und unter der 160-Zeichen-
-    Grenze; ohne Tageswechsel bleibt der Token exakt wie bisher."""
-    rollover_event = _onset_event(onset_time="00:23", onset_day_offset=1)
+    wird / Then traegt der Token einen zeichensparenden Tagesbezug, bleibt
+    GSM-7-vertraeglich und unter der 160-Zeichen-Grenze; ohne Tageswechsel
+    bleibt der Token exakt wie bisher.
+
+    Issue #2054: der Tagesbezug steht seither als vorangestelltes
+    Wochentagskuerzel ("TH@Sa0:23") statt als Zahlensuffix ("TH@0:23+1") --
+    dieselbe Schreibweise wie bei Abweichungsalarm und amtlicher Warnung. Die
+    Zusicherung dieses Tests ist unveraendert: ein Ueberlauf ist sichtbar, ein
+    Nicht-Ueberlauf nicht."""
+    rollover_event = _onset_event(
+        onset_time="00:23", onset_day_offset=1, onset_weekday="Sa",
+    )
     sms = render_sms(_onset_msg(rollover_event))
 
-    assert "TH@0:23+1" in sms, (
-        f"Erwartetes Tages-Suffix-Token 'TH@0:23+1' fehlt in der SMS: {sms!r}"
+    assert "TH@Sa0:23" in sms, (
+        f"Erwarteter Tagesbezugs-Token 'TH@Sa0:23' fehlt in der SMS: {sms!r}"
     )
     assert len(sms) <= 160, f"SMS ueberschreitet die 160-Zeichen-Grenze: {len(sms)} — {sms!r}"
 
-    token_match = re.search(r"(TH|R)@\d{1,2}:\d{2}(?:\+\d+)?", sms)
+    token_match = re.search(r"(TH|R)@(?:[A-Za-z]{2})?\d{1,2}:\d{2}", sms)
     assert token_match, f"Kein Onset-Zeitpunkt-Token in der SMS gefunden: {sms!r}"
     token = token_match.group(0)
     assert re.fullmatch(r"[A-Za-z0-9@:+\-]+", token), (
@@ -136,8 +144,9 @@ def test_ac5_sms_token_carries_day_suffix():
     assert "TH@15:40" in control_sms, (
         f"Ohne Tageswechsel muss der Token unveraendert erscheinen: {control_sms!r}"
     )
-    assert "+1" not in control_sms, (
-        f"Ohne Tageswechsel darf kein Tages-Suffix erscheinen: {control_sms!r}"
+    assert "+1" not in control_sms and "Sa15:40" not in control_sms, (
+        f"Ohne Tageswechsel darf KEIN Tagesbezug erscheinen — weder das alte "
+        f"Suffix noch das Kuerzel (#2054): {control_sms!r}"
     )
 
 
@@ -283,8 +292,11 @@ def test_f001_compare_versandpfad_traegt_den_tagesbezug_je_ort():
 
 def test_f001_compare_kurznachricht_traegt_das_tages_suffix():
     """F001, SMS-Halfte: die Kurznachricht des Ortsvergleichs-Onset-Alarms
-    traegt das `+1`-Suffix, wenn der fuehrende Ort ueber Mitternacht rutscht
-    — und NICHT, wenn er es nicht tut.
+    traegt den Tagesbezug, wenn der fuehrende Ort ueber Mitternacht rutscht
+    — und NICHT, wenn er es nicht tut. Seit #2054 ist dieser Tagesbezug das
+    vorangestellte Wochentagskuerzel (`R@Mi0:23`) statt des Zahlensuffixes;
+    die bewachte Zusicherung (Offset entsteht je Ort in DESSEN Zone) ist
+    unveraendert.
 
     Wirkort ist `to_multi_location_onset_alert_message()` selbst: dort
     entsteht der Offset des Ortsvergleichs-Pfades (`check_all_compare_
@@ -310,17 +322,23 @@ def test_f001_compare_kurznachricht_traegt_das_tages_suffix():
             tz=ZoneInfo("Europe/Vienna"), stand_at="23:30",
         ))
 
-    assert "R@0:23+1" in wien_fuehrt, (
+    # Der 2026-08-11 ist ein DIENSTAG, der Folgetag also ein Mittwoch ("Mi").
+    assert "R@Mi0:23" in wien_fuehrt, (
         f"Wien rutscht auf 00:23 des Folgetags — die Kurznachricht haette "
-        f"'R@0:23+1' tragen muessen: {wien_fuehrt!r}"
+        f"'R@Mi0:23' tragen muessen: {wien_fuehrt!r}"
     )
     assert len(wien_fuehrt) <= 160, (
         f"Kurznachricht ueberschreitet die 160-Zeichen-Grenze: "
         f"{len(wien_fuehrt)} — {wien_fuehrt!r}"
     )
-    assert "R@22:23" in rvk_fuehrt and "+1" not in rvk_fuehrt, (
-        f"Reykjavik bleibt am selben Tag (22:23) — kein Tages-Suffix "
-        f"erlaubt, und die Zone muss je Ort aufgeloest werden: {rvk_fuehrt!r}"
+    assert (
+        "R@22:23" in rvk_fuehrt
+        and "+1" not in rvk_fuehrt
+        and not re.search(r"@(Mo|Di|Mi|Do|Fr|Sa|So)", rvk_fuehrt)
+    ), (
+        f"Reykjavik bleibt am selben Tag (22:23) — kein Tagesbezug erlaubt "
+        f"(weder Suffix noch Kuerzel), und die Zone muss je Ort aufgeloest "
+        f"werden: {rvk_fuehrt!r}"
     )
 
 

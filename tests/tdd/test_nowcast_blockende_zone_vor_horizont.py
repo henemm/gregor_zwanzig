@@ -124,7 +124,7 @@ def _onset_event_aus_ableitung(raster: dict[int, float]) -> OnsetEvent:
     `OnsetEvent`. Handgesetzte Felder wuerden hier nur den Renderer pruefen,
     nicht die Kette — und genau die Kette ist der Gegenstand von AC-8."""
     nc = _ergebnis(raster)
-    end_time, end_offset, end_ongoing = event_end_display(_NOW, nc, _TZ)
+    end_time, end_offset, end_ongoing, end_weekday = event_end_display(_NOW, nc, _TZ)  # Issue #2054
     return OnsetEvent(
         onset_minutes=nc.onset_minutes or 0,
         onset_time="12:55",  # 10:55 UTC in Ortszeit; fuer das Ende belanglos
@@ -133,6 +133,7 @@ def _onset_event_aus_ableitung(raster: dict[int, float]) -> OnsetEvent:
         event_end_time=end_time,
         event_end_day_offset=end_offset,
         event_ongoing_beyond_horizon=end_ongoing,
+        event_end_weekday=end_weekday,
     )
 
 

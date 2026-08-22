@@ -128,11 +128,19 @@ def render_alert_preview(
             # dieser Zweig sowohl den API-Payload (`OnsetPayload`) als auch
             # den Replay-SimpleNamespace bedient -- Muster `segment_id` o.
             onset_precip_mm=getattr(body.onset, "onset_precip_mm", None),
+            # Issue #2054: Tagesbezug des Beginns UND seine Darstellung --
+            # ohne beides zeigt die Vorschau eine andere Schreibweise als der
+            # Versand. `getattr` aus demselben Grund wie oben.
+            onset_day_offset=getattr(body.onset, "onset_day_offset", 0),
+            onset_weekday=getattr(body.onset, "onset_weekday", None),
             # Issue #2051 S1: Ende-Angabe des Payloads, `getattr` aus
             # demselben Grund wie oben (API-Payload UND Replay-Namespace).
             event_end_time=getattr(body.onset, "event_end_time", None),
             event_end_day_offset=getattr(
                 body.onset, "event_end_day_offset", 0,
+            ),
+            event_end_weekday=getattr(  # Issue #2054
+                body.onset, "event_end_weekday", None,
             ),
             # Issue #2051 S1 (Spec v1.1): der R4-Waechter waehlt die
             # Ende-Textform -- er muss den Renderer auch auf dem Vorschauweg
@@ -277,7 +285,7 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
 
     alert_tz = _alert_tz_for_trip(trip_obj)
     onset_time = now + timedelta(minutes=result.onset_minutes or 0)
-    _end_time, _end_offset, _end_ongoing = event_end_display(
+    _end_time, _end_offset, _end_ongoing, _end_weekday = event_end_display(
         now, result, alert_tz,
     )
     onset_ns = SimpleNamespace(
@@ -305,6 +313,7 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
         # Produktivpfad.
         event_end_time=_end_time,
         event_end_day_offset=_end_offset,
+        event_end_weekday=_end_weekday,  # Issue #2054
         event_ongoing_beyond_horizon=_end_ongoing,
     )
     out = render_alert_preview(

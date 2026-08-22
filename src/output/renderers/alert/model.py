@@ -95,6 +95,13 @@ class OnsetEvent:
     # unveraenderten Normalfall (0). Beide Onset-Pfade setzen es (Trip UND
     # Ortsvergleich-Buendel, ADR-0021).
     onset_day_offset: int = 0
+    # Issue #2054: drittes Glied der Tripel-Konvention (`<name>_time` +
+    # `<name>_day_offset` + `<name>_weekday`, wie `AlertEvent.occurred_*`) --
+    # das DE-Wochentagskuerzel des Beginn-Zeitpunkts in ORTSZEIT, gebildet
+    # dort, wo auch der Versatz entsteht. Gelesen AUSSCHLIESSLICH von der
+    # Kurzform, die damit dieselbe Schreibweise fuehrt wie Abweichungsalarm
+    # (#2020 S2) und amtliche Warnung (#1948 S5). `None` bei Versatz 0.
+    onset_weekday: str | None = None
     # Issue #2046: additiv, optional (Muster `onset_day_offset` o.). Erwartete
     # Niederschlagsmenge (mm) der STUNDE AB DEM BEGINN — Quelle
     # `NowcastResult.onset_precip_mm`. Gelesen AUSSCHLIESSLICH vom
@@ -120,6 +127,10 @@ class OnsetEvent:
     # Beginn kopiert: Beginn 23:50 (Versatz 0) und Ende 00:40 (Versatz 1)
     # liegen an verschiedenen Kalendertagen.
     event_end_day_offset: int = 0
+    # Issue #2054: Wochentagskuerzel des ENDE-Zeitpunkts, analog
+    # `onset_weekday` -- und aus demselben Grund eigenstaendig: Beginn und
+    # Ende koennen an verschiedenen Kalendertagen liegen (23:50 -> 00:40).
+    event_end_weekday: str | None = None
     # Issue #2051 S1 (Spec v1.1, PO-Entscheid 2026-08-22): der R4-Waechter
     # `NowcastResult.event_ongoing_beyond_horizon` — die Frames bzw. der
     # 180-Min-Horizont sind ausgegangen, waehrend der letzte bekannte Frame

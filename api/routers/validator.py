@@ -241,11 +241,18 @@ class OnsetPayload(BaseModel):
     # Beginn), additiv und optional -- Muster `segment_id` o. Ohne sie rendert
     # der Vorschauweg die zahlenlose Alt-Form.
     onset_precip_mm: float | None = None
+    # Issue #2054: Tagesbezug des Beginns und seine Darstellung in der
+    # Kurzform, additiv und optional -- Muster `onset_precip_mm` o. Ohne die
+    # Felder verwirft pydantic sie STILL und die Vorschau zeigt einen
+    # Zeitpunkt von heute, wo der Versand einen von morgen meldet.
+    onset_day_offset: int = 0
+    onset_weekday: str | None = None
     # Issue #2051 S1: Ende des Ereignisses ("HH:MM") und sein eigener
     # Tagesbezug, additiv und optional -- Muster `onset_precip_mm` o. Ohne sie
     # rendert der Vorschauweg die Ausweichform ohne Ende.
     event_end_time: str | None = None
     event_end_day_offset: int = 0
+    event_end_weekday: str | None = None  # Issue #2054
     # Issue #2051 S1 (Spec v1.1): der R4-Waechter braucht ein EIGENES Feld --
     # seit der Umkehr auf die Untergrenzen-Form loest ihn die erzeugende Seite
     # nicht mehr in einem fehlenden Ende auf, er waehlt die Textform. Ohne das

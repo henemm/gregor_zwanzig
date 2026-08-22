@@ -416,8 +416,13 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        um). Dieselbe Unterscheidung gilt in der Langform: `letzter Regen gegen HH:MM` bzw.
        `Regen mindestens bis HH:MM`, in allen sieben Textstellen (E-Mail-Betreff, E-Mail
        Trip/Mehr-Orte, Telegram rich, SMS/Premium-SMS/Telegram-Kurzstil, Briefing-
-       Kurzfristhinweis, Inbound-Kommando-Antwort).
-     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst), `event_end_time`/`event_end_day_offset`/`event_ongoing_beyond_horizon` (additiv, #2051 S1 — Ende desselben Ereignisses mit eigenem Tagesbezug, aus `NowcastResult.event_end_minutes`/`.event_ongoing_beyond_horizon` abgeleitet)
+       Kurzfristhinweis, Inbound-Kommando-Antwort). **Seit #2054** trägt eine Uhrzeit, die an
+       einem anderen Kalendertag als der Versandzeitpunkt liegt, in der Kurzform ein
+       vorangestelltes DE-Wochentagskürzel statt des vorherigen Zahlensuffixes: `R2.5@Sa0:23`
+       statt `R2.5@0:23+1`, Beginn und Ende unabhängig bewertet (`TH@Do18:00@Fr3:00 R2.5`) —
+       dieselbe Schreibweise, die derselbe Kanal für Abweichungsalarme (#2020 S2) und amtliche
+       Warnungen (#1948 S5) bereits führt. Bei Tagesversatz 0 bleibt die Ausgabe byte-identisch.
+     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst), `onset_day_offset`/`onset_weekday` (additiv, #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel, `onset_day_offset` selbst existiert bereits seit #2009), `event_end_time`/`event_end_day_offset`/`event_end_weekday`/`event_ongoing_beyond_horizon` (additiv — `event_end_time`/`event_end_day_offset`/`event_ongoing_beyond_horizon` seit #2051 S1, `event_end_weekday` seit #2054 analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet, da Beginn und Ende an verschiedenen Kalendertagen liegen können — Ende desselben Ereignisses aus `NowcastResult.event_end_minutes`/`.event_ongoing_beyond_horizon` abgeleitet)
      - `AlertMessage.cooldown_display` trägt den dynamischen Cooldown-Text (z.B. „2 Stunden")
      - `src/outputs/radar_alert.py` ist gelöscht — kein separater Inline-Body-Bau mehr
    - **Throttle-Semantik unverändert** (Issue #773): `radar_alert_throttle.json` + `alert_log` auch bei Best-Effort-Versandfehlern

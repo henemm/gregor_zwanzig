@@ -755,20 +755,29 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
     return "\n".join([first, second])
 
 
-def _sms_onset_time(onset_time: str, day_offset: int = 0) -> str:
+def _sms_onset_time(
+    onset_time: str, day_offset: int = 0, weekday: str | None = None,
+) -> str:
     """Zeitpunkt-Darstellung der Kurznachricht (Issue #1948 S4, AC-11): die
     Stunde OHNE fuehrende Null (`09:05` -> `9:05`, Zeichenbudget), die Minuten
     bleiben zweistellig. Gilt AUSSCHLIESSLICH hier -- E-Mail, Telegram und
     Betreff lesen `e.onset_time` unveraendert, und das Feld selbst wird nicht
     angefasst.
 
-    Issue #2009: additiver Tages-Suffix (`+1`) bei Mitternachts-Ueberlauf --
-    zeichensparender als der Klartext-Zusatz von E-Mail/Telegram
-    (`_onset_time_label`), GSM-7-vertraeglich (nur Ziffern/`+`). Bei
-    `day_offset == 0` (Normalfall) byte-identisch zum Bestandsverhalten."""
+    Issue #2054: der Tagesbezug steht als vorangestelltes DE-Wochentagskuerzel
+    (`Sa0:23`) und nicht mehr als Zahlensuffix (`0:23+1`) -- dieselbe
+    Schreibweise, die derselbe Kanal fuer Abweichungsalarme (#2020 S2) und
+    amtliche Warnungen (#1948 S5) schon fuehrt. Zweck ist Vereinheitlichung:
+    danach kennt die Kurzform genau EINE Schreibweise fuer den Sachverhalt
+    "diese Uhrzeit liegt an einem anderen Kalendertag".
+
+    Ueber die Anzeige entscheidet der VERSATZ, nicht das Vorhandensein des
+    Kuerzels: ein Gate auf `weekday` wuerde bei fehlendem Kuerzel still den
+    Tagesbezug verschlucken (AC-10). Bei `day_offset == 0` (Normalfall)
+    byte-identisch zum Bestandsverhalten."""
     hour, sep, rest = onset_time.partition(":")
     base = onset_time if not sep else f"{hour.lstrip('0') or '0'}:{rest}"
-    return f"{base}+{day_offset}" if day_offset else base
+    return f"{weekday or ''}{base}" if day_offset else base
 
 
 # Issue #2046: Untergrenze, ab der eine Mengenangabe in der Kurznachricht
@@ -821,8 +830,13 @@ def _sms_onset_ende(e: OnsetEvent) -> str:
         return ""
     praefix = " >" if getattr(e, "event_ongoing_beyond_horizon", False) else ""
     return (
-        f"{praefix}@"
-        f"{_sms_onset_time(ende, getattr(e, 'event_end_day_offset', 0))}"
+        f"{praefix}@" + _sms_onset_time(
+            ende,
+            getattr(e, "event_end_day_offset", 0),
+            # Issue #2054: das Kuerzel des ENDE-Zeitpunkts, nicht das des
+            # Beginns -- beide Zeitpunkte werden unabhaengig bewertet.
+            getattr(e, "event_end_weekday", None),
+        )
     )
 
 
@@ -851,7 +865,10 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     # drei Token-Zweige unten: so traegt AUCH der Gewitter-Zweig das Ende an
     # der Zeit (`TH@18:00@20:00 R2.5`) und nicht hinter der Menge -- sonst
     # bliebe dort eine stille Luecke.
-    zeit = _sms_onset_time(e.onset_time, e.onset_day_offset) + _sms_onset_ende(e)
+    zeit = _sms_onset_time(
+        e.onset_time, e.onset_day_offset,
+        getattr(e, "onset_weekday", None),  # Issue #2054
+    ) + _sms_onset_ende(e)
     menge = _sms_onset_menge(getattr(e, "onset_precip_mm", None))
     if getattr(e, "already_running", False):
         # Issue #2050 S2b (PO-Entscheid 2026-08-22): `now` steht dort, wo

@@ -198,6 +198,12 @@ class RadarAlertRequest:
     # mehrdeutig. Berechnet wird er dort, wo `onset_time` entsteht
     # (`trip_alert.check_radar_alerts`), damit beide dieselbe Zone benutzen.
     onset_day_offset: int = 0
+    # Issue #2054: Wochentagskuerzel des Onset-Zeitpunkts -- reiner
+    # Passthrough bis in den Renderer, gebildet dort, wo auch der Versatz
+    # entsteht (`trip_alert.check_radar_alerts`), damit beide dieselbe Zone
+    # benutzen. `None` bei Versatz 0; ohne das Feld bliebe der Tagesbezug in
+    # der Kurzform ohne Darstellung.
+    onset_weekday: str | None = None
     # Issue #2018: additiv, optional (Muster `briefing_context`). Traegt die
     # ausformulierte Bezugszeile, wenn das Ereignis-Identitaets-Gate diese
     # Meldung als NACHTRAG zu einer bereits zugestellten amtlichen Warnung
@@ -217,6 +223,10 @@ class RadarAlertRequest:
     # byte-identisch.
     event_end_time: str | None = None
     event_end_day_offset: int = 0
+    # Issue #2054: Wochentagskuerzel des ENDE-Zeitpunkts (Muster
+    # `onset_weekday` o.) -- eigenstaendig, weil Beginn und Ende an
+    # verschiedenen Kalendertagen liegen koennen.
+    event_end_weekday: str | None = None
     # Issue #2051 S1 (Spec v1.1): der R4-Waechter reist MIT der Uhrzeit bis in
     # den Renderer, weil er dort ueber die Textform entscheidet (Untergrenze
     # vs. bekanntes Ende, AC-20). Ohne ihn kaeme im Waechterfall die
@@ -1364,9 +1374,11 @@ class NotificationService:
             briefing_context=request.briefing_context,
             segment_id=request.segment_id,  # Issue #1744 A1
             onset_day_offset=request.onset_day_offset,  # Issue #2009
+            onset_weekday=request.onset_weekday,  # Issue #2054
             onset_precip_mm=request.onset_precip_mm,  # Issue #2046
             event_end_time=request.event_end_time,  # Issue #2051 S1
             event_end_day_offset=request.event_end_day_offset,  # Issue #2051 S1
+            event_end_weekday=request.event_end_weekday,  # Issue #2054
             # Issue #2051 S1 (Spec v1.1): waehlt die Ende-Textform im Renderer.
             event_ongoing_beyond_horizon=request.event_ongoing_beyond_horizon,
         )
