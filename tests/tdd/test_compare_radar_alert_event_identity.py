@@ -842,11 +842,14 @@ def _parameter_form(fn) -> list[tuple[str, str, bool]]:
 def test_ac17_signaturen_des_geteilten_bausteins_bleiben_unveraendert():
     """AC-17: Diese Scheibe verdrahtet den bestehenden Baustein nur an zwei
     NEUEN Aufrufstellen — `check_event_identity_gate`, `record_event_identity`
-    und `resolve_hazard_class` behalten ihre S4b-1-Signatur unveraendert (kein
-    neuer Parameter, keine geaenderte Uebergabeart, kein neuer Default).
+    und `resolve_hazard_class` bekommen fuer Compare KEINEN Parameter dazu und
+    keine geaenderte Uebergabeart.
 
-    Regressionstest — heute schon gruen; er faellt erst, wenn jemand den
-    geteilten Baustein fuer Compare „passend macht" statt ihn zu benutzen."""
+    Regressionstest — er faellt, sobald jemand den geteilten Baustein fuer
+    Compare „passend macht" statt ihn zu benutzen. Die Listen sind ein
+    EXAKTER Vergleich: auch eine Erweiterung fuer einen anderen Aufrufer
+    faellt hier auf und muss — wie unten fuer #2065 geschehen — mit
+    Begruendung eingetragen werden."""
     from services.alert_gate import (
         check_event_identity_gate, record_event_identity, resolve_hazard_class,
     )
@@ -862,6 +865,13 @@ def test_ac17_signaturen_des_geteilten_bausteins_bleiben_unveraendert():
         ("window_start", "KEYWORD_ONLY", True),
         ("window_end", "KEYWORD_ONLY", True),
         ("cooldown_minutes", "KEYWORD_ONLY", True),
+        # Issue #2065, 2026-08-22: zulaessig, weil TRIP-seitig und rein
+        # optional — Vorgabewert `False`, den kein Compare-Aufrufer setzt.
+        # Der Ortsvergleich verhaelt sich damit unveraendert; die Ausnahme
+        # „Verschaerfung ueberholt die Sperrzeit" wirkt ausschliesslich im
+        # Trip-Zweig (ADR-0021-Nachtrag vom selben Tag, Abschnitt „warum der
+        # Ortsvergleich sie NICHT bekommt").
+        ("quantitative_escalation", "KEYWORD_ONLY", True),
     ], f"check_event_identity_gate: {_parameter_form(check_event_identity_gate)!r}"
 
     assert _parameter_form(record_event_identity) == [

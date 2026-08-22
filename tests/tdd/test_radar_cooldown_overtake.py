@@ -680,6 +680,16 @@ def test_ac10_gescheiterte_zustellung_schreibt_die_vergleichsbasis_nicht_fort():
     (das effektive Kanal-Set ist nicht leer, der Lauf bricht nicht vorher ab),
     ist aber nicht erreichbar.
 
+    🔴 Die `test_smtp_*`-Felder MUESSEN mitgeleert werden: `AlarmPruefstrecke`
+    ruft `Settings.with_user_profile(uid)` (`config.py:355`), und weil
+    `tdd-…` eine Test-Kennung ist, laeuft das ueber `Settings.for_testing()`
+    (`config.py:318`) — das befuellt `smtp_host/-user/-pass` aus
+    `test_smtp_*` WIEDER. Ein nur auf `smtp_*` geleertes Objekt waere im Lauf
+    also erneut sendefaehig. Die Konstruktionspruefung haengt deshalb am
+    Objekt, mit dem der Lauf TATSAECHLICH faehrt (nach `with_user_profile`),
+    nicht am Rohobjekt davor — sonst bliebe ein kuenftiger Eingriff in
+    `for_testing()` hier unbemerkt.
+
     RED heute: schon Lauf 3 loest nicht aus."""
     uid = _uid("ac10")
     try:
@@ -687,10 +697,19 @@ def test_ac10_gescheiterte_zustellung_schreibt_die_vergleichsbasis_nicht_fort():
             uid, "ac10", send_telegram=False, send_sms=False, send_premium_sms=False,
         )
         laut = _settings_all_channels()
-        stumm = laut.model_copy(update={"smtp_host": "", "smtp_user": "", "smtp_pass": ""})
-        assert laut.can_send_email() and not stumm.can_send_email(), (
+        stumm = laut.model_copy(update={
+            "smtp_host": "", "smtp_user": "", "smtp_pass": "",
+            "test_smtp_user": "", "test_smtp_pass": "",
+        })
+        assert laut.with_user_profile(uid).can_send_email(), (
+            "AC-10 Testkonstruktion: der LAUTE Lauf braucht einen erreichbaren "
+            "E-Mail-Kanal — geprueft am Objekt, mit dem die Pruefstrecke faehrt."
+        )
+        assert not stumm.with_user_profile(uid).can_send_email(), (
             "AC-10 Testkonstruktion: der stumme Lauf braucht einen konfigurierten, "
-            "aber NICHT erreichbaren E-Mail-Kanal."
+            "aber NICHT erreichbaren E-Mail-Kanal — geprueft NACH "
+            "`with_user_profile()`, weil erst dort `for_testing()` die "
+            "Zugangsdaten wieder einsetzen wuerde."
         )
 
         strecke_laut = AlarmPruefstrecke(user_id=uid, settings=laut)
@@ -796,3 +815,136 @@ def test_ac13_die_ueberholungsentscheidung_protokolliert_basis_und_menge(caplog)
         )
     finally:
         _clean_user(uid)
+
+
+# ───────────────── F001 (Adversary #2065): Durchbruch ohne Ausloeser ─────────
+#
+# Nach einem erfolgreichen Durchbruch ist der Durchgang NICHT MEHR gesperrt —
+# er verhaelt sich ab da wie ein freier Lauf. Scheitert er anschliessend am
+# Ausloese-Guard (`radar_alert_due`, Onset jenseits
+# `RADAR_ONSET_THRESHOLD_MIN`), bleibt er genauso still wie ein freier Lauf in
+# derselben Lage: kein Alarm UND kein `alert_log`-Eintrag. „Nicht
+# alarmwuerdig" ist in diesem System kein Unterdrueckungs-Ereignis
+# (`trip_alert.py`, Ausloese- und Doppel-Alarm-Guard schreiben auch im freien
+# Lauf nichts). Ein `cooldown`-Eintrag waere hier FALSCH — die Sperrzeit hat
+# diesen Lauf ja gerade nicht unterdrueckt.
+
+
+def _spaeter_regen(rate_mm_h: float, minute: int = 56):
+    """EIN Frame jenseits des Ausloese-Horizonts: Onset `minute` Minuten
+    (> `RADAR_ONSET_THRESHOLD_MIN` = 55) -> `radar_alert_due` ist False. Im
+    60-Minuten-Vergleichsfenster traegt er trotzdem `60 - minute` Minuten
+    Deckung, liefert also eine echte Menge fuer die Ueberholungspruefung."""
+    def _quelle(lat: float, lon: float) -> list:
+        from providers.brightsky import RadarFrame
+        from datetime import timezone as _tz
+        jetzt = datetime.now(_tz.utc)
+        return [
+            RadarFrame(timestamp=jetzt + timedelta(minutes=minute),
+                       precip_mm_h=rate_mm_h),
+        ]
+    return _quelle
+
+
+def _gemessenes_ergebnis(trip, quelle, at: datetime):
+    """Wie `_gemessene_menge`, aber das ganze `NowcastResult` — hier wird
+    zusaetzlich der Onset gebraucht."""
+    lat, lon = trip.stages[0].waypoints[0].lat, trip.stages[0].waypoints[0].lon
+    with freeze_time(at):
+        reset_shared_radar_cache_for_tests()
+        ergebnis = _radar(quelle).get_nowcast(lat, lon)
+        reset_shared_radar_cache_for_tests()
+    return ergebnis
+
+
+def test_f001_durchbruch_ohne_ausloeser_verhaelt_sich_wie_ein_freier_lauf(caplog):
+    """F001. GIVEN eine laufende Sperrzeit und eine Lage, die die
+    Ueberholungsbedingungen erfuellt, deren Regen aber erst JENSEITS des
+    Ausloese-Horizonts beginnt, WHEN der Lauf laeuft, THEN bricht er die
+    Sperrzeit durch (Protokollzeile „Durchbruch") und bleibt danach genauso
+    still wie ein freier Lauf in derselben Lage — kein Alarm, KEIN
+    `alert_log`-Eintrag, insbesondere keiner mit Grund `cooldown`.
+
+    Positivkontrolle im selben Test (PFLICHT): derselbe Lauf auf einem Trip
+    OHNE gebuchte Sperre. Ohne sie bewiese die Stille oben nur, dass die Lage
+    nicht alarmwuerdig ist — nicht, dass sich der durchgebrochene Lauf
+    IDENTISCH zum freien verhaelt. Genau diese Gleichheit ist die Zusicherung.
+    """
+    from services import radar_service as radar_service_mod
+
+    uid, frei = _uid("f001"), _uid("f001-frei")
+    basis_mm = 1.0
+    try:
+        trip = _aufbau(uid, "f001")
+        ergebnis = _gemessenes_ergebnis(trip, _spaeter_regen(60.0), _AT)
+        assert ergebnis.onset_minutes is not None, "Testkonstruktion: Onset fehlt"
+        assert ergebnis.onset_minutes > radar_service_mod.RADAR_ONSET_THRESHOLD_MIN, (
+            f"F001 Testkonstruktion: der Regen muss JENSEITS des "
+            f"Ausloese-Horizonts ({radar_service_mod.RADAR_ONSET_THRESHOLD_MIN} "
+            f"Min) beginnen, sonst scheitert der Lauf gar nicht am "
+            f"Ausloese-Guard (Onset {ergebnis.onset_minutes})."
+        )
+        menge = ergebnis.window_precip_mm
+        assert menge >= 2.0 and menge >= basis_mm * 2.0, (
+            f"F001 Testkonstruktion: die Lage muss die Ueberholung LOCKER "
+            f"erfuellen (Menge {menge} gegen Basis {basis_mm}) — sonst kaeme "
+            f"die Stille von der Ueberholungspruefung statt vom Ausloese-Guard."
+        )
+
+        strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
+        lauf1 = strecke.lauf(
+            at=_AT, zweig="radar", trip=trip,
+            radar_service=_radar(_kurze_spitze(_rate_spitze(basis_mm))),
+        )
+        assert lauf1.triggered_count == 1, (
+            f"F001 Vorbedingung: Lauf 1 muss ausloesen und {basis_mm} mm als "
+            f"Vergleichsbasis buchen (war {lauf1.triggered_count})."
+        )
+
+        at2 = _AT + timedelta(minutes=30)
+        caplog.clear()
+        with caplog.at_level(logging.DEBUG, logger="trip_alert"):
+            lauf2 = strecke.lauf(
+                at=at2, zweig="radar", trip=trip,
+                radar_service=_radar(_spaeter_regen(60.0)),
+            )
+        zeile = _entscheidungszeile(caplog, basis_mm, menge)
+        assert zeile is not None and "Durchbruch" in zeile, (
+            f"F001: der Lauf MUSS die Sperrzeit durchbrochen haben — sonst "
+            f"prueft dieser Test den Ausloese-Guard hinter einer Sperre, die "
+            f"gar nicht gefallen ist. Protokollzeile: {zeile!r}"
+        )
+        assert lauf2.triggered_count == 0, (
+            f"F001: jenseits des Ausloese-Horizonts darf kein Alarm rausgehen "
+            f"(war {lauf2.triggered_count})."
+        )
+        assert _gruende(uid, trip, at2) == set(), (
+            f"F001: ein durchgebrochener Lauf ist NICHT MEHR gesperrt — er darf "
+            f"am Ausloese-Guard keinen Unterdrueckungs-Eintrag hinterlassen, "
+            f"schon gar nicht mit Grund {alert_log.REASON_COOLDOWN!r}. "
+            f"Protokolliert wurde: {_gruende(uid, trip, at2)!r}"
+        )
+
+        # Positivkontrolle: derselbe Lauf ohne jede Sperre.
+        frei_trip = _aufbau(frei, "f001-frei")
+        frei_strecke = AlarmPruefstrecke(
+            user_id=frei, settings=_settings_all_channels(),
+        )
+        frei_lauf = frei_strecke.lauf(
+            at=at2, zweig="radar", trip=frei_trip,
+            radar_service=_radar(_spaeter_regen(60.0)),
+        )
+        assert frei_lauf.triggered_count == lauf2.triggered_count == 0, (
+            f"F001 Positivkontrolle: der freie Lauf muss sich genauso verhalten "
+            f"(frei={frei_lauf.triggered_count}, durchgebrochen="
+            f"{lauf2.triggered_count})."
+        )
+        assert _gruende(frei, frei_trip, at2) == _gruende(uid, trip, at2) == set(), (
+            f"F001 Positivkontrolle: auch der freie Lauf schreibt hier keinen "
+            f"Eintrag — die Gleichheit ist die Zusicherung. frei="
+            f"{_gruende(frei, frei_trip, at2)!r}, durchgebrochen="
+            f"{_gruende(uid, trip, at2)!r}"
+        )
+    finally:
+        _clean_user(uid)
+        _clean_user(frei)

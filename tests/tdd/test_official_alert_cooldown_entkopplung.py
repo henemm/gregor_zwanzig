@@ -93,7 +93,14 @@ def _aenderungsalarm_zugestellt_um(user_id: str, vor_minuten: int) -> datetime:
 
 
 def _sperrzeit_eintrag(user_id: str):
-    return (read_throttle_state(user_id).get(SCOPE_TRIP) or {}).get(TRIP)
+    """Issue #2065: der Eintrag traegt seit dieser Aenderung die zuletzt
+    gemeldete Menge mit (`{"at": iso, "precip_mm": float|null}`). Gelesen
+    wird deshalb ueber die oeffentliche Store-Schnittstelle, die BEIDE
+    Formate kennt — die Zusicherung dieses Tests ist "es steht ein neuerer
+    Zeitpunkt drin", nicht "die Datei sieht so und so aus"."""
+    from services.throttle_store import ThrottleStore
+
+    return ThrottleStore(user_id).last_sent(SCOPE_TRIP, TRIP)
 
 
 # ═══════════ AC-4 (Kernfall): Eskalation kommt trotz Sperrzeit an ═══════════
@@ -196,7 +203,7 @@ def test_ac5_amtlicher_alarm_schreibt_weiterhin_in_den_trip_sperrzeit_topf(nutze
     assert nachher != vorher, (
         f"Der Eintrag muss NEU sein, nicht der vorbelegte: vorher={vorher!r}, "
         f"nachher={nachher!r}")
-    assert datetime.fromisoformat(nachher) > vorher_moment, (
+    assert nachher > vorher_moment, (
         f"Der neue Eintrag muss nach {vorher_moment} liegen, steht auf {nachher!r}")
 
 

@@ -23,6 +23,8 @@ from services.alert_gate import (
     check_event_identity_gate,
     check_nowcast_gate,
     check_official_alert_gate,
+    last_nowcast_precip_mm,
+    radar_overtakes_cooldown,
     record_event_identity,
     record_nowcast_sent,
     resolve_hazard_class,
@@ -1176,6 +1178,30 @@ class TripAlertService:
         trip = backfill_stage_distances(trip, self._user_id, today)
         return resolve_current_segment(trip, now_utc, today)
 
+    def _protokolliere_radar_unterdrueckung(
+        self, trip: "Trip", gate_reason: Optional[str], effective_channels,
+    ) -> None:
+        """Unterdrueckungs-Protokoll des Radar-Zweigs (Issue #2065 zieht die
+        bestehende Fassung hierher, weil der Sperrzeit-Fall jetzt an mehreren
+        Stellen enden kann).
+
+        Absicherung je Trip, nicht um den Stapellauf: scheitert der
+        Protokoll-Eintrag EINES Trips, verlieren sonst ALLE weiteren Trips
+        dieses Nutzers ihren Radar-Alarm (Muster `fix_1479`)."""
+        try:
+            alert_log.append_suppressed_entry(
+                self._user_id, entity_id=trip.id, entity_type="trip",
+                reason=alert_log.REASON_NOWCAST, gate_reason=gate_reason,
+                effective_channels=effective_channels,
+            )
+        except Exception as e:
+            logger.error(
+                "Radar alert: Unterdrueckungs-Protokoll fuer Trip %s "
+                "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), "
+                "nur der Protokoll-Eintrag fehlt.",
+                trip.id, e, gate_reason,
+            )
+
     def check_radar_alerts(self) -> int:
         """
         Check all trips for radar-based alerts using segment-aware logic (Issue #822).
@@ -1286,7 +1312,16 @@ class TripAlertService:
                 zone=anchor_tz(trip, now_utc),
                 throttle_store=self._throttle_store,
             )
-            if not gate.allowed:
+            # Issue #2065: die SPERRZEIT ist die einzige Stufe der Kette, die
+            # eine quantitative Verschaerfung ueberholen darf. Der Lauf haelt
+            # deshalb hier nicht mehr an, sondern holt die Daten und
+            # entscheidet weiter unten gegen die zuletzt gemeldete Menge.
+            # Ruhezeit (#1955, unbrechbar) und Tages-Obergrenze bleiben
+            # unveraendert harte Stops.
+            _sperrzeit_offen = (
+                not gate.allowed and gate.reason == alert_log.REASON_COOLDOWN
+            )
+            if not gate.allowed and not _sperrzeit_offen:
                 logger.debug(
                     f"Radar alert suppressed ({gate.reason}) for trip {trip.id}"
                 )
@@ -1295,19 +1330,9 @@ class TripAlertService:
                 # Trips dieses Nutzers ihren Radar-Alarm (Muster `fix_1479`).
                 # Breite Klausel + laute Meldung mit Kennung, wie beim
                 # Nowcast-Abruf ein paar Zeilen weiter unten.
-                try:
-                    alert_log.append_suppressed_entry(
-                        self._user_id, entity_id=trip.id, entity_type="trip",
-                        reason=alert_log.REASON_NOWCAST, gate_reason=gate.reason,
-                        effective_channels=effective_channels,
-                    )
-                except Exception as e:
-                    logger.error(
-                        "Radar alert: Unterdrueckungs-Protokoll fuer Trip %s "
-                        "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), "
-                        "nur der Protokoll-Eintrag fehlt.",
-                        trip.id, e, gate.reason,
-                    )
+                self._protokolliere_radar_unterdrueckung(
+                    trip, gate.reason, effective_channels,
+                )
                 continue
 
             # Genau EIN get_nowcast-Call pro Trip (Budget, #1329) — seit
@@ -1353,6 +1378,10 @@ class TripAlertService:
                     "uebrigen Trips dieses Nutzers laufen weiter.",
                     trip.id, e,
                 )
+                if _sperrzeit_offen:
+                    self._protokolliere_radar_unterdrueckung(
+                        trip, gate.reason, effective_channels,
+                    )
                 continue
             lat = _pos.lat
             lon = _pos.lon
@@ -1375,7 +1404,78 @@ class TripAlertService:
                 )
             except Exception as e:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
+                if _sperrzeit_offen:
+                    self._protokolliere_radar_unterdrueckung(
+                        trip, gate.reason, effective_channels,
+                    )
                 continue
+
+            # Issue #2065: die gemessene Menge wird HIER festgehalten --
+            # `result` traegt weiter unten die NotificationResult, die
+            # Vergleichsbasis der naechsten Runde muss aber aus DIESEM Abruf
+            # stammen.
+            _menge_mm = result.window_precip_mm
+
+            # Issue #2065: Ueberholungs-Entscheidung gegen die zuletzt
+            # gemeldete Menge. Bewusst VOR dem Ausloese-Guard
+            # (`radar_alert_due`): so bekommt jeder Lauf, der AN DER SPERRZEIT
+            # haengenbleibt, weiterhin seinen Protokoll-Eintrag mit Grund
+            # `cooldown` — unabhaengig davon, ob die Lage alarmwuerdig waere.
+            #
+            # 🔴 Nach einem erfolgreichen Durchbruch gilt das NICHT mehr, und
+            # das ist Absicht: der Durchgang ist dann nicht mehr gesperrt und
+            # verhaelt sich ab hier wie ein freier Lauf. Scheitert er
+            # anschliessend am Ausloese-Guard (`radar_alert_due`) oder am
+            # Doppel-Alarm-Guard, bleibt er genauso still wie ein freier Lauf
+            # in derselben Lage — „nicht alarmwuerdig" ist in diesem System
+            # kein Unterdrueckungs-Ereignis und bekommt keinen `alert_log`-
+            # Eintrag. Ein `cooldown`-Eintrag waere dort schlicht falsch: die
+            # Sperrzeit hat diesen Lauf ja gerade NICHT unterdrueckt. Die
+            # Entscheidung selbst bleibt ueber die `logger.info`-Zeile weiter
+            # unten nachvollziehbar (AC-13, beide Ausgaenge). Festgenagelt in
+            # `tests/tdd/test_radar_cooldown_overtake.py`
+            # (`test_f001_durchbruch_ohne_ausloeser_verhaelt_sich_wie_ein_freier_lauf`).
+            _ueberholt_sperrzeit = False
+            if _sperrzeit_offen:
+                _basis_mm = last_nowcast_precip_mm(
+                    user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
+                    throttle_key=trip.id, throttle_store=self._throttle_store,
+                )
+                _ueberholt_sperrzeit = radar_overtakes_cooldown(
+                    basis_mm=_basis_mm, menge_mm=_menge_mm,
+                )
+                # Beide Zahlen in EINER Zeile, damit im Nachhinein
+                # nachvollziehbar ist, GEGEN WAS entschieden wurde -- fuer
+                # beide Ausgaenge (Durchbruch und Stille).
+                logger.info(
+                    "Radar alert: Sperrzeit-Ueberholung fuer Trip %s geprueft — "
+                    "Vergleichsbasis %s mm, gemessene Menge %.1f mm: %s",
+                    trip.id,
+                    "unbekannt" if _basis_mm is None else f"{_basis_mm:.1f}",
+                    _menge_mm,
+                    "Durchbruch" if _ueberholt_sperrzeit else "Sperrzeit bleibt",
+                )
+                if not _ueberholt_sperrzeit:
+                    self._protokolliere_radar_unterdrueckung(
+                        trip, gate.reason, effective_channels,
+                    )
+                    continue
+                # Die Tages-Obergrenze wurde wegen des Abbruchs an der
+                # Sperrzeit nie geprueft (feste Reihenfolge, ADR-0021) -- der
+                # Durchbruch darf sie nicht stillschweigend mit-ueberspringen.
+                # Rein lesend; gebucht wird weiterhin erst nach Zustellung.
+                if not alert_daily_limit.is_allowed(
+                    self._user_id, now_utc, anchor_tz(trip, now_utc),
+                    reason="nowcast",
+                ):
+                    logger.debug(
+                        "Radar alert suppressed (Tages-Obergrenze nach "
+                        "Sperrzeit-Durchbruch) for trip %s", trip.id,
+                    )
+                    self._protokolliere_radar_unterdrueckung(
+                        trip, alert_log.REASON_DAILY_LIMIT, effective_channels,
+                    )
+                    continue
 
             # Issue #2009: EINE geteilte Schwelle statt zweier Literale
             # (ADR-0021). Bewusst ueber die Modul-Referenz gelesen, nicht als
@@ -1574,6 +1674,11 @@ class TripAlertService:
                     [_radar_request.segment_id] if _radar_request.segment_id else []
                 ),
                 severity=_radar_urgency, now=now_utc, point_at=_onset_dt,
+                # Issue #2065: dieselbe Mengen-Feststellung, die schon die
+                # Sperrzeit ueberholt hat -- die Stufenskala saettigt bei
+                # 4 mm/h und kann die Verschaerfung nicht sehen. Ohne diese
+                # Haelfte bliebe der Alarm aus, nur mit anderem Grund.
+                quantitative_escalation=_ueberholt_sperrzeit,
             )
             if not _identity_gate.allowed:
                 logger.debug(
@@ -1669,6 +1774,10 @@ class TripAlertService:
                 throttle_key=trip.id, now=datetime.now(timezone.utc),
                 zone=anchor_tz(trip, now_utc),
                 throttle_store=self._throttle_store,
+                # Issue #2065: Vergleichsbasis der naechsten Runde --
+                # Selbstbremsung, die naechste Verschaerfung muss den vollen
+                # Faktor gegen DIESE Menge erreichen.
+                precip_mm=_menge_mm,
             )
             # Issue #1467 S4b-1 (AC-2/AC-3, F001-Symmetrie): NUR nach
             # erfolgreicher Zustellung -- ein spaeterer amtlicher Alarm
