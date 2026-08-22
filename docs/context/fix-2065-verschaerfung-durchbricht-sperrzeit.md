@@ -143,6 +143,19 @@ Es fehlt also genau ein Wert: die zuletzt **gemeldete** `window_precip_mm` je
 | `tests/tdd/test_alarm_pruefstrecke_selbstschutz.py` | patcht `check_nowcast_gate` (:304-310) — reagiert auf Signaturaenderungen |
 | `tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py` | Zonenfuehrung durch dieselbe Kette |
 | `tests/tdd/test_issue_1088_official_alert_triggers.py` | prueft die Aufrufreihenfolge `check_nowcast_gate` → `check_event_identity_gate` → Versand (:788-822) |
+| `tests/tdd/test_nowcast_briefing_overtake.py` | die Briefing-Ueberholung aus #2020 S1 — Einzelaufrufe ohne Sperrzeit-Gedaechtnis; muss unveraendert gruen bleiben |
+| `tests/tdd/test_nowcast_suppression_logging.py` | prueft die `alert_log`-Eintraege bei Gate-Abweisung — ein neuer Durchbruchsgrund beruehrt sie |
+
+Ergaenzungen zur Pruefstrecke: `Zweig = Literal["deviation", "official", "radar"]`
+(`alarm_pruefstrecke.py:40`); Zeit ausschliesslich ueber `freeze_time(at)` in `lauf()` (`:162`),
+`now_utc=` ist bewusst nicht durchgereicht. Weitere Helfer in der Szenario-Datei:
+`_kurze_spitze(rate_mm_h)` (:96-108) und `_gelesene_briefing_werte(uid, trip, seit)` (:60-79) —
+letzterer liest die Vergleichswerte aus `alert_log.read_undelivered()`, statt sie
+nachzurechnen.
+
+Die feste Reihenfolge ist zusaetzlich in `docs/specs/modules/rework_1467_s3_nowcast.md:12-20`
+niedergeschrieben (Abbruch bei der ersten greifenden Stufe) — die Spec muss also mitgezogen
+werden, nicht nur die ADR.
 
 ## Risks & Considerations
 
