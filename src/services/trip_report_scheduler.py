@@ -1700,7 +1700,9 @@ class TripReportSchedulerService:
         catchup_prefix: str | None,
         partial_outage_hint: str | None = None,
         render_options: Optional["ReportRenderOptions"] = None,
-        starkregen_nowcast: Optional[Tuple[str, int, Optional[int], bool]] = None,
+        starkregen_nowcast: Optional[
+            Tuple[str, Optional[int], Optional[int], bool, bool]
+        ] = None,  # Issue #2050 S2b: fuenftes Glied `already_running`
     ) -> TripReportRequest:
         """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
 
@@ -1757,11 +1759,13 @@ class TripReportSchedulerService:
         segments: List[TripSegment],
         now_utc: datetime,
         target_date: Optional[date] = None,
-    ) -> Optional[Tuple[str, int, Optional[int], bool]]:
+    ) -> Optional[Tuple[str, Optional[int], Optional[int], bool, bool]]:
         """Starkregen-Kurzfristhinweis (Issue #1439): liefert die Rohdaten
         (``intensity_label``, ``onset_minutes``, seit Issue #2051 S1
         zusaetzlich ``event_end_minutes`` und
-        ``event_ongoing_beyond_horizon``) fuer den planmaessigen
+        ``event_ongoing_beyond_horizon``, seit #2050 S2b ``already_running``;
+        ``onset_minutes`` ist seither optional, weil ein laufendes Ereignis
+        ohne kuenftigen Beginn auskommt) fuer den planmaessigen
         Briefing-Pfad, wenn der bereits produktive `RadarNowcastService`
         (#656) fuer den Startpunkt des aktiven/naechsten Segments Starkregen
         innerhalb von `NOWCAST_HORIZON_MIN` erkennt.
@@ -1876,16 +1880,28 @@ class TripReportSchedulerService:
             logger.warning(f"Starkregen-Kurzfristhinweis: Nowcast fehlgeschlagen fuer {trip.id}: {e}")
             return None
 
-        if result.onset_minutes is None or result.intensity_label != INTENSITY_HEAVY:
+        # Issue #2050 S2b: ein bereits LAUFENDES Ereignis hat keinen kuenftigen
+        # Beginn, wenn es in der laufenden Viertelstunde endet -- an dieser
+        # Bedingung brach der Briefing-Hinweis fuer genau diesen Fall ab,
+        # bevor irgendetwas geprueft wurde. Die STAERKE-Schwelle bleibt
+        # unangetastet: sie liest seit S2b auch das laufende Frame mit, ein
+        # laufender Starkregen erfuellt sie also aus eigener Kraft.
+        if result.intensity_label != INTENSITY_HEAVY:
+            return None
+        if result.onset_minutes is None and not result.already_running:
             return None
 
         # Issue #2051 S1: Ende und R4-Waechter wandern mit -- das alte
         # Zwei-Tupel konnte das Ende gar nicht transportieren. Rohdaten
         # bleiben Rohdaten: die Textformatierung passiert weiterhin im
         # NotificationService (Architektur-Grenze).
+        # Issue #2050 S2b: `already_running` als fuenftes Glied. Ohne es kaeme
+        # der Laufend-Zustand am Formatierer nie an -- der Renderer-Zweig
+        # waere gebaut und unerreichbar.
         return (
             result.intensity_label, result.onset_minutes,
             result.event_end_minutes, result.event_ongoing_beyond_horizon,
+            result.already_running,
         )
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:

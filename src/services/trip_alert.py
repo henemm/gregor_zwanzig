@@ -143,9 +143,17 @@ class AlertCheckRunResult:
 
 
 def radar_alert_due(result: object, threshold_min: int) -> bool:
-    """Return True when rain onset is within threshold_min minutes."""
+    """Return True when rain onset is within threshold_min minutes.
+
+    Issue #2050 S2b: ein BEREITS LAUFENDES Ereignis loest ebenfalls aus. Bis
+    hierher entschied allein `onset_minutes`, und endete der Regen innerhalb
+    der laufenden Viertelstunde, gab es keinen Beginn mehr in der Zukunft --
+    der Alarm fiel ersatzlos aus, obwohl es gerade regnete (Bruchstelle 1).
+    """
     onset = getattr(result, "onset_minutes", None)
-    return onset is not None and onset <= threshold_min
+    if onset is not None and onset <= threshold_min:
+        return True
+    return bool(getattr(result, "already_running", False))
 
 
 def _trip_telegram_style(trip: "Trip") -> str:
@@ -1379,7 +1387,12 @@ class TripAlertService:
             if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
                 continue
 
-            _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
+            # Issue #2050 S2b: ohne kuenftigen Beginn (laufendes Ereignis, das
+            # in der laufenden Viertelstunde endet) waere `timedelta(
+            # minutes=None)` ein Absturz. Bezugszeitpunkt ist dann JETZT --
+            # dieser Wert traegt die Ereignis-Identitaet (Entdopplung) und den
+            # Briefing-Vergleich, beide brauchen einen Zeitpunkt (Bruchstelle 3).
+            _onset_dt = now_utc + timedelta(minutes=result.onset_minutes or 0)
 
 
             # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)
@@ -1508,6 +1521,7 @@ class TripAlertService:
             )
             _radar_request = RadarAlertRequest(
                 onset_minutes=result.onset_minutes,
+                already_running=result.already_running,  # Issue #2050 S2b
                 onset_time=_onset_time_str,
                 onset_day_offset=day_offset(now_utc, _onset_dt, tz),
                 km_from=active.start_point.distance_from_start_km,

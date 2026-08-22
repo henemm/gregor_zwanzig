@@ -47,7 +47,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -190,6 +190,31 @@ _AT_LAUF2 = _SLOT2 + timedelta(minutes=7)     # 11:22 UTC, derselbe Cron-Versatz
 
 def _neue_lage_spaeter():
     return _quelle(nass_von=2, nass_bis=5, ab=_SLOT2, rate=12.0)
+
+
+def _quelle_jetzt(*, laufend: bool, rate: float = 10.0):
+    """Dieselben Lagen wie oben, aber am RASTER DER WANDUHR ausgerichtet --
+    fuer die zwei Ketten-Waechter (AC-11c, AC-15b), die ueber Bausteine
+    laufen, die ihre eigene Uhr benutzen und sich nicht einfrieren lassen.
+
+    `laufend=True` -> nur der aktuelle Slot ist nass (Lage C: laeuft, kein
+    kuenftiger Beginn). `laufend=False` -> der aktuelle Slot ist trocken, der
+    Regen beginnt in einem der naechsten Frames (Positivkontrolle).
+    Faellt die Wanduhr genau auf eine Rastergrenze, deckt das Frame `now`
+    weiterhin ab (`ts <= now < ts + 15 Min`) -- die Lage bleibt dieselbe."""
+    def _frames(lat: float, lon: float) -> list:
+        from providers.brightsky import RadarFrame
+        jetzt = datetime.now(timezone.utc)
+        slot = jetzt.replace(
+            minute=(jetzt.minute // 15) * 15, second=0, microsecond=0,
+        )
+        nass = (lambda k: k == 0) if laufend else (lambda k: 1 <= k <= 3)
+        return [
+            RadarFrame(timestamp=slot + timedelta(minutes=15 * k),
+                       precip_mm_h=rate if nass(k) else 0.0)
+            for k in range(11)
+        ]
+    return _frames
 
 
 def _radar(quelle) -> RadarNowcastService:
@@ -509,7 +534,18 @@ def test_ac11_unveraenderte_laufende_lage_loest_kein_zweites_mal_aus():
         f"buchen (war {lauf1.triggered_count})."
     )
 
-    at2 = _AT_LAUF + timedelta(minutes=15)
+    # 🔴 +5 Min, NICHT +15: die Spec verlangt fuer Lauf 2 eine UNVERAENDERTE
+    # Lage ("weiterhin laufend, weiterhin kein kuenftiger Beginn"). Bei +15
+    # Min deckt der Slot 10:15 die Pruefzeit ab -- und der ist in Lage C
+    # TROCKEN, das Ereignis waere dann wirklich vorbei. Lauf 2 schwiege dann
+    # aus Mangel an Lage statt wegen der Entdopplung, und dieser Waechter
+    # waere wertlos. Bitte nicht "aufraeumend" zurueckdrehen.
+    #
+    # Gefunden hat das die Positivkontrolle unten, nicht der Haupttest: Sie
+    # laeuft auf frischem Datentraeger, wo es keine Entdopplung gibt, die
+    # etwas unterdruecken koennte -- und loeste trotzdem nicht aus. Ohne sie
+    # waere AC-11 gruen gewesen, waehrend die Entdopplung unbewacht blieb.
+    at2 = _AT_LAUF + timedelta(minutes=5)
     lauf2 = _lauf(uid, trip, _laeuft_endet_im_slot(), at=at2, strecke=strecke)
     assert lauf2.triggered_count == 0, (
         f"AC-11: dasselbe laufende Ereignis darf kein zweites Mal gemeldet "
@@ -593,6 +629,81 @@ def test_ac11b_neues_ereignis_nach_laufendem_wird_nicht_als_wiederholung_unterdr
         f"Wiederholung des laufenden Ereignisses unterdrueckt werden "
         f"(war {lauf2.triggered_count})."
     )
+
+
+def test_ac11c_ortsvergleich_meldet_dasselbe_laufende_ereignis_nicht_zweimal():
+    """AC-11c: die Entdopplung des ORTSVERGLEICHS (Adversary-Fund F001).
+
+    AC-11/AC-11b bewachen sie nur auf der Trip-Seite -- die Pruefstrecke kennt
+    keinen Compare-Zweig. `compare_radar_alert._identity_inputs` war damit
+    unbewacht: Ohne den Laufend-Zweig bliebe `onset_at` dort `None`, und
+    `_times_overlap` faende NIE einen Kandidaten. Die Entdopplung waere ein
+    stiller No-Op -- sie saehe funktionsfaehig aus und wirkte nie.
+
+    Direkt gegen `CompareRadarAlertService` (Muster AC-12), Sperrzeit AUS
+    (`alert_cooldown_minutes = 0`), damit nicht sie statt der Entdopplung
+    entscheidet. Positivkontrolle auf frischem Zustand: sonst waere ein
+    schweigender zweiter Lauf nicht von "diese Lage loest generell nicht aus"
+    zu unterscheiden."""
+    from app.loader import save_location
+    from services.compare_radar_alert import CompareRadarAlertService
+
+    from tests.tdd.test_compare_radar_alert import (
+        _CoordFrameSource, _clean_user as _clean_compare_user, _location,
+        _radar_preset, _settings_email_capable_dummy, _write_preset_file,
+    )
+
+    lat, lon = 46.0207, 7.7491
+
+    def _lauf(uid: str) -> list:
+        """Ein Prueflauf wie ein Cron-Tick: frische Instanz, eigener Mail-Abgriff."""
+        reset_shared_radar_cache_for_tests()
+        mails: list = []
+        CompareRadarAlertService(
+            settings=_settings_email_capable_dummy(), user_id=uid,
+            radar_service=_radar(_CoordFrameSource(
+                {(lat, lon): _quelle_jetzt(laufend=True, rate=2.0)(lat, lon)},
+            )),
+            mail_sink=lambda subject, body: mails.append((subject, body)),
+        ).check_all_compare_presets()
+        return mails
+
+    def _aufbau_preset(uid: str) -> None:
+        _clean_compare_user(uid)
+        save_location(_location("loc-s2b", "Zermatt-S2b", lat, lon), user_id=uid)
+        preset = _radar_preset(
+            f"cp-{uid}", ["loc-s2b"], ["gregor-test@henemm.com"],
+        )
+        preset["alert_cooldown_minutes"] = 0
+        _write_preset_file(uid, [preset])
+
+    uid, kontrolle = _uid("ac11c"), _uid("ac11c-ctrl")
+    try:
+        _aufbau_preset(uid)
+        erste = _lauf(uid)
+        assert len(erste) == 1, (
+            f"AC-11c Vorbedingung: der erste Lauf muss die laufende Lage melden "
+            f"und ihre Ereignis-Identitaet buchen (war {len(erste)} Mails)."
+        )
+        assert LAEUFT in erste[0][1], (
+            f"AC-11c Vorbedingung: die Ortsvergleich-Mail muss die "
+            f"Laufend-Aussage tragen.\n{erste[0][1]}"
+        )
+
+        zweite = _lauf(uid)
+        assert zweite == [], (
+            f"AC-11c: dasselbe laufende Ereignis darf im Ortsvergleich kein "
+            f"zweites Mal gemeldet werden (war {len(zweite)} Mails)."
+        )
+
+        _aufbau_preset(kontrolle)
+        assert len(_lauf(kontrolle)) == 1, (
+            "AC-11c Positivkontrolle: dieselbe Lage auf frischem Zustand MUSS "
+            "melden -- sonst kommt die Stille oben nicht von der Entdopplung."
+        )
+    finally:
+        _clean_compare_user(uid)
+        _clean_compare_user(kontrolle)
 
 
 def test_ac12_ortsvergleich_buendel_traegt_den_laufenden_ort_mit():
@@ -712,6 +823,61 @@ def test_ac14_jetzt_antwort_meldet_das_laufende_ereignis_als_laufend():
     assert "kein Regen erwartet" not in text, f"AC-14: Entwarnung.\n{text}"
 
 
+def test_ac14b_vorschau_sagt_dasselbe_wie_der_versand():
+    """AC-14b: der Vorschau-/Replay-Weg (`/alert-preview`, Frame-Mitschnitt)
+    muss fuer den Laufend-Fall DIESELBE Aussage liefern wie der Versand.
+
+    Betrieblicher Grund, kein aesthetischer: Mit dieser Vorschau wird beim
+    Ausrollen geprueft. Zeigte sie etwas anderes als der Versandweg, pruefte
+    die Staging-Verifikation eine Aussage, die so nie beim Nutzer ankommt --
+    und meldete gruen. #2051 musste dort ihre Ende-Felder aus genau diesem
+    Grund nachziehen; dieser Waechter haelt fest, dass es beim naechsten Feld
+    nicht wieder vergessen wird.
+
+    Beide Seiten laufen ueber DIESELBEN Frames (Lage C)."""
+    from types import SimpleNamespace
+
+    from services.validator_render_service import _render_nowcast_replay
+
+    uid = _uid("ac14b")
+    trip = _aufbau(uid, "ac14b")
+    lat, lon = trip.stages[0].waypoints[0].lat, trip.stages[0].waypoints[0].lon
+    body = SimpleNamespace(
+        source="radar", km_from=0.0, km_to=8.0, segment_id="1",
+        frames=[
+            SimpleNamespace(
+                timestamp=f.timestamp.isoformat(),
+                precip_mm_h=f.precip_mm_h, is_convective=f.is_convective,
+            )
+            for f in _laeuft_endet_im_slot()(lat, lon)
+        ],
+    )
+    with freeze_time(_AT_LAUF):
+        reset_shared_radar_cache_for_tests()
+        vorschau = _render_nowcast_replay(trip, body)
+    reset_shared_radar_cache_for_tests()
+
+    assert vorschau["onset_detected"], (
+        "AC-14b: die Vorschau meldet 'kein Onset', waehrend der Versandweg "
+        "alarmiert -- ein laufendes Ereignis IST ein Ereignis."
+    )
+    vorschau_text = "\n".join(
+        str(vorschau.get(k) or "") for k in ("subject", "email_plain", "telegram")
+    )
+    versand = _kanaltext(_lauf(uid, trip, _laeuft_endet_im_slot()))
+    for aussage in (LAEUFT, f"{ENDE_WORTLAUT} {LAGE_C_ENDE_LOKAL}"):
+        assert aussage in versand, (
+            f"AC-14b Vorbedingung: der VERSAND muss {aussage!r} tragen.\n{versand}"
+        )
+        assert aussage in vorschau_text, (
+            f"AC-14b: die Vorschau sagt {aussage!r} nicht -- sie zeigt damit "
+            f"etwas anderes als der Versand.\n{vorschau_text}"
+        )
+    assert not _BEGINN_MIN.search(vorschau_text), (
+        f"AC-14b: die Vorschau behauptet einen kuenftigen Beginn.\n{vorschau_text}"
+    )
+
+
 def test_ac15_briefing_kurzfristzeile_weist_das_ereignis_als_laufend_aus():
     """AC-15: `format_starkregen_hint` traegt heute unbedingt die Beginn-Form
     "ab ca. HH:MM (in ~N Min)"; der Laufend-Eingang muss stattdessen die
@@ -733,3 +899,66 @@ def test_ac15_briefing_kurzfristzeile_weist_das_ereignis_als_laufend_aus():
         f"aus.\n{text}"
     )
     assert ENDE_LOKAL in text, f"AC-15: das Ende ({ENDE_LOKAL}) fehlt.\n{text}"
+
+
+def test_ac15b_briefing_kette_stellt_die_laufend_zeile_wirklich_zu(monkeypatch):
+    """AC-15b: dieselbe Zusicherung wie AC-15, aber an der WIRKSTELLE
+    (Adversary-Fund F002).
+
+    AC-15 ruft den Formatierer direkt auf und bewies deshalb nur, dass der
+    Renderer-Zweig gebaut ist -- nicht, dass ihn je etwas erreicht. Tat es
+    nicht: `_build_starkregen_hint` brach bei `onset_minutes is None` ab,
+    fuehrte `already_running` nicht im Rohdaten-Tupel, und die Aufrufstelle
+    im NotificationService uebergab den Parameter nie. Drei Huerden
+    hintereinander, jede fuer sich ausreichend -- dieselbe Familie wie der
+    stille Ausstieg im Vorschau-Weg.
+
+    Dieser Waechter faehrt die ECHTE Kette (Scheduler -> Rohdaten-Tupel ->
+    NotificationService -> Renderer) ueber den produktiven Briefing-Pfad. Der
+    Nowcast kommt aus der echten Ableitung ueber die DI-Naht `frame_source`,
+    nur der Netzzugriff ist ersetzt.
+
+    Positivkontrolle zuerst: der kuenftige Beginn muss ueber DIESELBE Kette
+    eine Zeile erzeugen -- sonst vergleicht der Hauptfall zwei leere
+    Briefings."""
+    from tests.tdd.test_starkregen_kurzfristhinweis import (
+        _ReportRecorder, _active_trip, _run_briefing,
+    )
+
+    # Die ECHTE `get_nowcast`-Implementierung, nur mit gestellter Frame-
+    # Quelle -- vor dem Patchen gebunden, sonst riefe sie sich selbst auf.
+    _echte_get_nowcast = RadarNowcastService.get_nowcast
+
+    def _kette(quelle):
+        def _mit_frames(self, lat, lon, elevation_m=None, priority="user_briefing"):
+            reset_shared_radar_cache_for_tests()
+            return _echte_get_nowcast(
+                RadarNowcastService(frame_source=quelle), lat, lon,
+                elevation_m=elevation_m, priority=priority,
+            )
+        return _mit_frames
+
+    def _briefingtext(quelle) -> str:
+        monkeypatch.setattr(RadarNowcastService, "get_nowcast", _kette(quelle))
+        recorder = _ReportRecorder()
+        recorder.install(monkeypatch)
+        _outcome, bericht = _run_briefing(
+            recorder, _uid("ac15b"), _active_trip(f"trip-s2b-{uuid.uuid4().hex[:6]}"),
+        )
+        return bericht.email_plain
+
+    kontrolle = _briefingtext(_quelle_jetzt(laufend=False))
+    assert _BEGINN_MIN.search(kontrolle) or "ab ca." in kontrolle, (
+        f"AC-15b Positivkontrolle: der kuenftige Beginn muss ueber die Kette "
+        f"eine Kurzfristzeile erzeugen -- sonst prueft der Hauptfall zwei "
+        f"leere Briefings.\n{kontrolle}"
+    )
+
+    laufend = _briefingtext(_quelle_jetzt(laufend=True))
+    assert LAEUFT in laufend, (
+        f"AC-15b: die Briefing-Kurzfristzeile erreicht den Laufend-Fall nicht "
+        f"-- der Renderer-Zweig ist gebaut, aber unerreichbar.\n{laufend}"
+    )
+    assert not _BEGINN_MIN.search(laufend) and "ab ca." not in laufend, (
+        f"AC-15b: die Zeile behauptet weiterhin einen kuenftigen Beginn.\n{laufend}"
+    )

@@ -17,9 +17,10 @@ from zoneinfo import ZoneInfo
 
 
 def format_starkregen_hint(
-    intensity_label: str, onset_minutes: int, *, tz: ZoneInfo,
+    intensity_label: str, onset_minutes: int | None, *, tz: ZoneInfo,
     event_end_minutes: int | None = None,
     event_ongoing_beyond_horizon: bool = False,
+    already_running: bool = False,
 ) -> str:
     """"Starker Regen ab ca. HH:MM (in ~N Min), letzter Regen gegen HH:MM." —
     identisches Format wie `RadarNowcastService.format_now_text()` fuer den
@@ -39,9 +40,16 @@ def format_starkregen_hint(
     from utils.timezone import local_dt
 
     now = datetime.now(timezone.utc)
-    onset_time = now + timedelta(minutes=onset_minutes)
-    time_str = local_dt(onset_time, tz).strftime("%H:%M")
-    satz = f"{intensity_label} ab ca. {time_str} (in ~{onset_minutes} Min)"
+    if already_running:
+        # Issue #2050 S2b: laeuft das Ereignis zur Briefing-Erstellung
+        # bereits, ist die Beginn-Angabe eine Falschaussage -- und
+        # `onset_minutes` darf hier `None` sein (kein kuenftiger Beginn
+        # bestimmbar). Die Ende-Angabe unten bleibt unveraendert.
+        satz = f"{intensity_label} läuft bereits"
+    else:
+        onset_time = now + timedelta(minutes=onset_minutes)
+        time_str = local_dt(onset_time, tz).strftime("%H:%M")
+        satz = f"{intensity_label} ab ca. {time_str} (in ~{onset_minutes} Min)"
     if event_end_minutes is not None:
         end_str = local_dt(
             now + timedelta(minutes=event_end_minutes), tz,
