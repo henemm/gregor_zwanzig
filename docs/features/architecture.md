@@ -407,8 +407,17 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        nach der Zeit — hinter `TH` bleibt die Stufen-Position frei). Ohne belastbare Zahl
        (`None`, unter 0,1 mm, Daten nicht verfügbar) bleibt die zahlenlose Form
        (`R@18:00`/`TH@18:00`) erhalten; E-Mail- und Telegram-Langform sind unverändert und
-       zeigen weiterhin `intensity_label` als Wort.
-     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst)
+       zeigen weiterhin `intensity_label` als Wort. **Seit #2051 S1** trägt der Token
+       zusätzlich das Ende des zusammenhängenden nassen Blocks, abgeleitet aus denselben
+       bereits abgerufenen Nowcast-Frames: `@HH:MM` direkt hinter dem Mengen-Token
+       (`R2.5@18:00@20:00`). Reicht der nasse Block über den 180-Min-Horizont hinaus oder
+       bricht die Frame-Zeitreihe ab, wird stattdessen eine belegte Untergrenze angezeigt
+       (` >@HH:MM`, PO-Entscheid 2026-08-22 — kehrt die ursprüngliche Weglass-Entscheidung
+       um). Dieselbe Unterscheidung gilt in der Langform: `letzter Regen gegen HH:MM` bzw.
+       `Regen mindestens bis HH:MM`, in allen sieben Textstellen (E-Mail-Betreff, E-Mail
+       Trip/Mehr-Orte, Telegram rich, SMS/Premium-SMS/Telegram-Kurzstil, Briefing-
+       Kurzfristhinweis, Inbound-Kommando-Antwort).
+     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst), `event_end_time`/`event_end_day_offset`/`event_ongoing_beyond_horizon` (additiv, #2051 S1 — Ende desselben Ereignisses mit eigenem Tagesbezug, aus `NowcastResult.event_end_minutes`/`.event_ongoing_beyond_horizon` abgeleitet)
      - `AlertMessage.cooldown_display` trägt den dynamischen Cooldown-Text (z.B. „2 Stunden")
      - `src/outputs/radar_alert.py` ist gelöscht — kein separater Inline-Body-Bau mehr
    - **Throttle-Semantik unverändert** (Issue #773): `radar_alert_throttle.json` + `alert_log` auch bei Best-Effort-Versandfehlern
