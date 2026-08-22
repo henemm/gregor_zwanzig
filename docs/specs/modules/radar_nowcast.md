@@ -119,6 +119,11 @@ Testdatei: `tests/tdd/test_feature_656_radar_nowcast.py` (mock-frei).
   (Naismith), nicht dem tatsächlichen Fortschritt. Sie beseitigt den *systematischen*
   Bias (der Startpunkt liegt immer zurück, nie voraus), nicht die *stochastische*
   Abweichung vom Plan. Details und Messung: `fix_2017_nowcast_messpunkt.md`.
+  Der Befehl `/jetzt` (`TripCommandProcessor._show_now`) ist ein eigener, mit **#2052**
+  zeitgleich nachgezogener Pfad: er nutzt denselben Baustein, misst aber bewusst zu
+  `now_utc` selbst statt zur Fenstermitte — eine Sofortabfrage fragt nach dem Ort, an dem
+  der Nutzer *steht*, nicht nach dem, an dem er bei Ereigniseintritt stehen wird.
+  Details: `fix_2052_now_aufenthaltsort.md`.
 - "Kollisionskurs" im MVP = Onset-/Annäherungs-Trend im Punkt-Nowcast, kein voll-physikalisches Zell-Tracking mit Bewegungsvektor.
 - RADOLAN deckt nur DE + Grenzregionen, INCA nur AT. Für Italien (inkl. Korsika, PO-Entscheidung 2026-07-09) liefert seit Issue #1648 **ausschließlich** ARPAE ICON-2I (2 km, via Open-Meteo) den Nowcast — der frühere Radar-DPC (Protezione Civile, #1162) ist ersatzlos entfernt, weil er strukturell nur eine einzelne Vergangenheits-Momentaufnahme lieferte und das Nowcast-Fenster (`timestamp >= now`) damit nie erreichen konnte. Reicht ARPAE nicht, fällt die Kette weiter auf AROME-FR/ICON-D2 (siehe `radar_nowcast_france.md`/`radar_nowcast_icon_d2.md`) bzw. zuletzt `minutely_15`. Konvektions-Indikator (WMO-weather_code) ist in Open-Meteo verfügbar; BrightSky/GeoSphere-Pfade haben kein natives Konvektions-Feld und nutzen einen Open-Meteo-Sidecar (ADR-0018) — ARPAE führt weather_code bereits mit, kein Sidecar nötig. Damit gibt es für Italien kein natives Radar-Konvektionssignal mehr (vormals Zielbild #1174).
 - Latenz-AC (< 10 s) abhängig von Fremd-API-Verfügbarkeit; Fallback-Kette bei Timeout/Leerantwort.

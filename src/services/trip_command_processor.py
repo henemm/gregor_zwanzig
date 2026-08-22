@@ -1522,19 +1522,49 @@ class TripCommandProcessor:
                 ),
                 trip_name=trip.name,
             )
-        wp = stage.waypoints[0]
+        # Issue #2052: gemessen wird am AUFENTHALTSORT, nicht am Etappenstart.
+        # Zielzeitpunkt ist bewusst `now_utc` selbst -- anders als Alarm-/
+        # Briefing-Pfad (#2017), die zur Fenstermitte einer VORWARNUNG messen.
+        # /jetzt ist eine Sofortabfrage nach dem Ort, an dem der Nutzer STEHT.
+        from services.trip_segments import position_at_time, resolve_current_segment
+
+        resolved = resolve_current_segment(trip, now_utc, today)
+        if resolved is not None:
+            active, segment_date = resolved
+            try:
+                pos = position_at_time(trip, active, segment_date, now_utc)
+            except Exception as e:
+                logger.error(
+                    "Jetzt-Befehl: Positionsbestimmung fuer Trip %s "
+                    "fehlgeschlagen (%s) -- falle zurueck auf den ersten "
+                    "Wegpunkt der Etappe.",
+                    trip.id, e,
+                )
+                pos = stage.waypoints[0]
+        else:
+            # Vorrangkette liefert None: der Etappentag ist abgelaufen (typ.
+            # nach 23:00 Ortszeit). Der Wanderer ist dann am Tagesziel, nicht
+            # am Etappenstart -- letzterer waere die volle Etappenlaenge daneben.
+            pos = stage.waypoints[-1]
+
+        # #1991: `elevation_m` geht roh in den Cache-Schluessel -- 1000 vs.
+        # 1000.0 sind sonst zwei Eintraege fuer denselben Punkt. Die
+        # Normalisierung wohnt deshalb hier an der Aufrufstelle.
+        elevation_m = (
+            int(round(pos.elevation_m)) if pos.elevation_m is not None else None
+        )
         svc = RadarNowcastService()
         # Issue #1329 C2: /jetzt ist eine Nutzeraktion -- explizit
         # user_briefing (Default, nie gedrosselt), zur Dokumentation der Absicht.
         result = svc.get_nowcast(
-            wp.lat, wp.lon, elevation_m=wp.elevation_m, priority="user_briefing"
+            pos.lat, pos.lon, elevation_m=elevation_m, priority="user_briefing"
         )
         # Issue #1402: ohne tz faellt format_now_text() auf das argumentlose
         # .astimezone() zurueck -- deutet die Onset-Zeit in der PROZESS-
         # Zeitzone des Servers statt der Ortszeit des Wegpunkts.
         from utils.timezone import tz_for_coords
 
-        body = svc.format_now_text(result, tz=tz_for_coords(wp.lat, wp.lon))
+        body = svc.format_now_text(result, tz=tz_for_coords(pos.lat, pos.lon))
         return CommandResult(
             success=True, command="now",
             confirmation_subject=f"[{trip.name}] Nowcast",
