@@ -131,6 +131,14 @@ class OnsetEvent:
     # entscheidet AUSSCHLIESSLICH dieses Feld darueber, an EINER Stelle je
     # Textform (`_onset_end_suffix` / `_sms_onset_ende`).
     event_ongoing_beyond_horizon: bool = False
+    # Issue #2050 S2b: das Ereignis laeuft zum Meldezeitpunkt BEREITS. Additiv,
+    # Default aus -> der Normalfall (Ereignis liegt in der Zukunft) bleibt
+    # byte-identisch. Ersetzt in jeder Textform die BEGINN-Angabe ("in 8 Min"
+    # / "ab 12:15" / das `@HH:MM`-Zeittoken) durch den Zustand; die
+    # ENDE-Angabe kommt unveraendert aus den `event_end_*`-Feldern oben --
+    # bewusst KEIN zweites Ende-Feld daneben, sonst gaebe es zwei Wahrheiten
+    # ueber denselben Zeitpunkt.
+    already_running: bool = False
 
 
 @dataclass(frozen=True)

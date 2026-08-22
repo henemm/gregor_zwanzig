@@ -141,6 +141,13 @@ def render_alert_preview(
             event_ongoing_beyond_horizon=getattr(
                 body.onset, "event_ongoing_beyond_horizon", False,
             ),
+            # Issue #2050 S2b: der Laufend-Zustand entscheidet ueber die
+            # BEGINN-Angabe ("laeuft bereits" statt "in N Min") und muss den
+            # Renderer deshalb auch hier erreichen. Der Vorschauweg ist das,
+            # womit beim Ausrollen geprueft wird -- zeigte er eine andere
+            # Aussage als der Versand, pruefte die Verifikation etwas, das so
+            # nie beim Nutzer ankommt, und meldete gruen (AC-14b).
+            already_running=getattr(body.onset, "already_running", False),
         )
         msg = AlertMessage(
             trip_short=trip_obj.name,
@@ -259,19 +266,26 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
     svc = RadarNowcastService()
     now = datetime.now(timezone.utc)
     result = svc._derive_result(frames, body_nf.source, now=now)
-    if result.onset_minutes is None:
+    # Issue #2050 S2b: ein bereits laufendes Ereignis IST ein Ereignis, auch
+    # ohne kuenftigen Beginn -- sonst meldete die Vorschau "kein Onset",
+    # waehrend der Versandweg alarmiert (AC-14b).
+    if result.onset_minutes is None and not result.already_running:
         return {
             "onset_detected": False, "subject": None, "email_html": None,
             "email_plain": None, "telegram": None, "sms": None,
         }
 
     alert_tz = _alert_tz_for_trip(trip_obj)
-    onset_time = now + timedelta(minutes=result.onset_minutes)
+    onset_time = now + timedelta(minutes=result.onset_minutes or 0)
     _end_time, _end_offset, _end_ongoing = event_end_display(
         now, result, alert_tz,
     )
     onset_ns = SimpleNamespace(
-        onset_minutes=result.onset_minutes,
+        onset_minutes=result.onset_minutes or 0,
+        # Issue #2050 S2b: aus DEMSELBEN `_derive_result`-Ergebnis wie alles
+        # andere -- die Vorschau sagt damit "laeuft bereits", wo der Versand
+        # es sagt.
+        already_running=result.already_running,
         onset_time=local_fmt(onset_time, alert_tz)[-5:],  # "HH:MM"-Anteil
         km_from=body_nf.km_from, km_to=body_nf.km_to,
         is_convective=result.is_convective,

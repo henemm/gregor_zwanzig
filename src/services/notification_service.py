@@ -110,7 +110,10 @@ class TripReportRequest:
     # Issue #2051 S1: die Datenform traegt zusaetzlich Ende und R4-Waechter
     # (`event_end_minutes`, `event_ongoing_beyond_horizon`) — das alte
     # Zwei-Tupel konnte das Ende gar nicht transportieren.
-    starkregen_nowcast: tuple[str, int, int | None, bool] | None = None
+    # Issue #2050 S2b: fuenftes Glied `already_running`, und `onset_minutes`
+    # wird optional — ein laufendes Ereignis, das in der laufenden
+    # Viertelstunde endet, hat keinen kuenftigen Beginn.
+    starkregen_nowcast: tuple[str, int | None, int | None, bool, bool] | None = None
 
 
 @dataclass
@@ -172,7 +175,10 @@ class RadarAlertRequest:
     (`TripAlertService.check_radar_alerts`) loest ihn immer ueber
     `tz_for_coords()` auf (nie `None`).
     """
-    onset_minutes: int
+    # Issue #2050 S2b: `None`, wenn das Ereignis bereits laeuft und in der
+    # laufenden Viertelstunde endet -- dann ist kein kuenftiger Beginn
+    # bestimmbar (`already_running` traegt die Aussage).
+    onset_minutes: int | None
     onset_time: str
     km_from: float
     km_to: float
@@ -216,6 +222,11 @@ class RadarAlertRequest:
     # vs. bekanntes Ende, AC-20). Ohne ihn kaeme im Waechterfall die
     # Normalform an und behauptete ein Ende, das die Daten nicht hergeben.
     event_ongoing_beyond_horizon: bool = False
+    # Issue #2050 S2b: das Ereignis laeuft zum Meldezeitpunkt bereits. Additiv,
+    # Default aus. Reist bis in den Renderer, weil dort die BEGINN-Angabe
+    # durch den Zustand ersetzt wird; das Ende kommt weiter aus den
+    # `event_end_*`-Feldern.
+    already_running: bool = False
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -397,7 +408,7 @@ class NotificationService:
 
             (
                 _intensity_label, _onset_minutes,
-                _event_end_minutes, _event_ongoing,
+                _event_end_minutes, _event_ongoing, _already_running,
             ) = request.starkregen_nowcast
             starkregen_hint_text = format_starkregen_hint(
                 _intensity_label, _onset_minutes, tz=request.trip_tz,
@@ -405,6 +416,9 @@ class NotificationService:
                 # Nowcast-Ergebnis, das schon Label und Beginn liefert.
                 event_end_minutes=_event_end_minutes,
                 event_ongoing_beyond_horizon=_event_ongoing,
+                # Issue #2050 S2b: der Laufend-Zustand ebenfalls aus demselben
+                # Ergebnis -- er entscheidet ueber die BEGINN-Angabe der Zeile.
+                already_running=_already_running,
             )
 
         report = self._formatter.format_email(
@@ -1336,7 +1350,11 @@ class NotificationService:
     ) -> NotificationResult:
         """Radar-Onset-Alert: rendern und über konfigurierte Kanäle versenden."""
         onset_event = OnsetEvent(
-            onset_minutes=request.onset_minutes,
+            # Issue #2050 S2b: ohne kuenftigen Beginn traegt `onset_minutes`
+            # `None` -- der Renderer-Vertrag verlangt eine Zahl, liest sie im
+            # Laufend-Fall aber nirgends (jede Textform verzweigt vorher).
+            onset_minutes=request.onset_minutes or 0,
+            already_running=request.already_running,  # Issue #2050 S2b
             onset_time=request.onset_time,
             km_from=request.km_from,
             km_to=request.km_to,

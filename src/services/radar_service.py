@@ -188,11 +188,21 @@ class NowcastResult:
     # Beginn -- das Fenster ab jetzt deckt dann fast nur Trockenzeit ab und
     # untertriebe die Menge systematisch. BEWUSST beschreibend: kein Leser in
     # radar_alert_due()/der #2020-Ueberholungsregel.
+    already_running: bool = False
+    # Issue #2050 S2b: laeuft das Ereignis zum Abfragezeitpunkt BEREITS? True,
+    # wenn das Frame, dessen Deckung `now` enthaelt, ueber der Trockenschwelle
+    # liegt. Additiv NEBEN `onset_minutes`, nicht an dessen Stelle -- der
+    # Beginn behaelt seine Rolle als Torwaechter und Dedup-Bestandteil. Gilt
+    # unabhaengig davon, ob der Regen in ein kuenftiges Frame hineindauert
+    # (`onset_minutes` gesetzt) oder in der laufenden Viertelstunde endet
+    # (`onset_minutes is None`); nur im zweiten Fall traegt S2b zusaetzlich
+    # das Ende bei, weil #2051 es dort per AC-19 offen laesst.
     event_end_minutes: Optional[int] = None
     # Issue #2051 S1: Minuten ab jetzt bis zum Ende des zusammenhaengenden
     # nassen Blocks, analog `onset_minutes`. `None`, wenn `onset_minutes`
     # `None` ist -- ohne Beginn gibt es kein Ende, das behauptet werden
-    # koennte. Abgeleitet aus DENSELBEN `frames` (kein zweiter Quellenabruf).
+    # koennte. AUSNAHME seit #2050 S2b: laeuft das Ereignis bereits, ist das
+    # Ende auch ohne Beginn bestimmbar (Deckungsgrenze des laufenden Frames). Abgeleitet aus DENSELBEN `frames` (kein zweiter Quellenabruf).
     # Die DAUER ist stets `event_end_minutes - onset_minutes` und wird
     # absichtlich NICHT als drittes Feld gespeichert -- eine zweite Quelle der
     # Wahrheit koennte auseinanderlaufen.
@@ -332,6 +342,43 @@ def _derive_wet_block_end(
     # ein Schleifen-Element. Ohne nassen Frame (leeres Fenster) bleibt der
     # Beginn selbst das Ende.
     return last_wet_ts, False
+
+
+def _laufendes_frame(frames: list, now: datetime):
+    """Das Frame, dessen Gueltigkeitsintervall `now` enthaelt, plus dessen
+    Deckungsende -- oder `None` (Issue #2050 S2b, B-1).
+
+    Frames tragen den SLOT-START (15-Min-Raster :00/:15/:30/:45) und gelten
+    VORWAERTS -- dieselbe Konvention, nach der `_accumulate_precip_mm` seit
+    #2020 seine Mengen rechnet. Deshalb liegt das Frame der LAUFENDEN
+    Viertelstunde immer vor `now` und faellt aus dem Zukunftsfenster
+    (`f.timestamp >= now`) heraus; genau daran scheiterte bisher jede Aussage
+    ueber ein bereits laufendes Ereignis.
+
+    Keine neue Toleranzzahl: Dedup je Zeitstempel wie dort ("hoeherer Wert
+    gewinnt"), Deckung bis zum eigenen naechsten Nachbarn, spaetestens nach
+    `_MAX_FRAME_COVERAGE`. Reicht sie nicht bis `now` (Datenluecke), gibt es
+    kein laufendes Bild -- dann `None` statt einer Hochrechnung.
+
+    Rueckgabe: `(timestamp, rate_mm_h, is_convective, deckung_ende)`.
+    """
+    by_ts: dict[datetime, float] = {}
+    konvektiv: dict[datetime, bool] = {}
+    for f in frames:
+        vorhanden = by_ts.get(f.timestamp)
+        if vorhanden is None or f.precip_mm_h > vorhanden:
+            by_ts[f.timestamp] = f.precip_mm_h
+            konvektiv[f.timestamp] = bool(f.is_convective)
+    reihe = sorted(by_ts.items())
+    for i, (ts, rate) in enumerate(reihe):
+        if ts > now:
+            break
+        deckung_ende = ts + _MAX_FRAME_COVERAGE
+        if i + 1 < len(reihe) and reihe[i + 1][0] < deckung_ende:
+            deckung_ende = reihe[i + 1][0]
+        if ts <= now < deckung_ende:
+            return ts, rate, konvektiv[ts], deckung_ende
+    return None
 
 
 class RadarNowcastService:
@@ -509,7 +556,13 @@ class RadarNowcastService:
         """
         lines: list[str] = []
 
-        if result.onset_minutes is None:
+        # Issue #2050 S2b: ein bereits laufendes Ereignis geht in den Zweig
+        # unten, auch wenn kein kuenftiger Beginn bestimmbar ist -- sonst
+        # antwortet `/jetzt` mit der Entwarnung "kein Regen erwartet",
+        # waehrend es regnet.
+        if result.onset_minutes is None and not getattr(
+            result, "already_running", False
+        ):
             if result.data_unavailable:
                 # Issue #1628 S3: bei einem echten Fetch-Fehler ist
                 # `intensity_label` (frames=[] -> "Kein Niederschlag") und der
@@ -546,11 +599,17 @@ class RadarNowcastService:
                 # die Prozess-Zeitzone des Servers statt ehrlich UTC).
                 return moment.strftime("%H:%M")
 
-            time_str = _hhmm(now + timedelta(minutes=result.onset_minutes))
-            satz = (
-                f"{result.intensity_label} ab ca. {time_str}"
-                f" (in ~{result.onset_minutes} Min)"
-            )
+            if getattr(result, "already_running", False):
+                # Issue #2050 S2b: kein Beginn, sondern der Zustand. Die
+                # Ende-Angabe unten haengt unveraendert dahinter -- eine
+                # zweite Ende-Weiche waere eine zweite Wahrheit.
+                satz = f"{result.intensity_label} läuft bereits"
+            else:
+                time_str = _hhmm(now + timedelta(minutes=result.onset_minutes))
+                satz = (
+                    f"{result.intensity_label} ab ca. {time_str}"
+                    f" (in ~{result.onset_minutes} Min)"
+                )
             # Issue #2051 S1 (AC-14): das Ende desselben Ereignisses, aus
             # DEMSELBEN `now` wie der Beginn abgeleitet. Der R4-Waechter
             # waehlt seit Spec v1.1 (PO-Entscheid 2026-08-22) die FORM statt
@@ -846,17 +905,32 @@ class RadarNowcastService:
                 onset_ts = frame.timestamp
                 break
 
+        # Issue #2050 S2b: laeuft das Ereignis JETZT? Das entscheidende Frame
+        # liegt per Konstruktion VOR `now` und ist in `window` nicht enthalten.
+        _laufend = _laufendes_frame(frames, now)
+        already_running = bool(
+            _laufend is not None and _laufend[1] >= _DRY_THRESHOLD_MM_H
+        )
+
         # Max rate im 180-Min-Nowcast-Fenster -- speist NUR intensity_label
         # (Anzeige). NICHT die Ueberholungspruefung: das NowcastResult-Feld
         # max_rate_mm_h wird weiter unten separat aus dem 60-Min-Vergleichs-
         # fenster gebildet (Adversary-Fund F001, 2026-08-21), damit Raten-
         # und Mengenfenster deckungsgleich sind.
+        #
+        # Issue #2050 S2b: das LAUFENDE Frame zaehlt fuer die Anzeige mit.
+        # Ohne es bliebe von einem Ereignis, das in der laufenden
+        # Viertelstunde endet, "Kein Niederschlag" uebrig -- der Alarm saehe
+        # den Satz "Kein Niederschlag laeuft bereits" und liefe in der
+        # NIEDRIGSTEN Dringlichkeitsstufe, waehrend es schuettet.
         max_rate = max((f.precip_mm_h for f in window), default=0.0)
+        if already_running:
+            max_rate = max(max_rate, _laufend[1])
 
         # Convective flag: any wet frame in window with convective indicator
         is_convective = any(
             f.is_convective for f in window if f.precip_mm_h >= _DRY_THRESHOLD_MM_H
-        )
+        ) or bool(already_running and _laufend[2])
 
         intensity_label = self.intensity_to_text(max_rate, is_convective=is_convective)
 
@@ -943,6 +1017,23 @@ class RadarNowcastService:
             event_end_minutes = max(
                 0, round((_end_ts - now).total_seconds() / 60.0)
             )
+        elif already_running:
+            # Issue #2050 S2b: genau die Luecke, die AC-19 von #2051 offen
+            # laesst ("ohne Beginn kein Ende") -- das Ereignis laeuft, hoert
+            # aber in der laufenden Viertelstunde auf, ein kuenftiger Beginn
+            # ist deshalb nicht bestimmbar. Der nasse Block besteht dann aus
+            # dem laufenden Frame, dessen ZEITSTEMPEL per Konstruktion in der
+            # Vergangenheit liegt. Genannt wird darum seine DECKUNGSGRENZE --
+            # dieselbe Konvention, die der Untergrenzen-Zweig von #2051 schon
+            # verwendet. Der Frame-Zeitstempel waere eine Aussage ueber die
+            # Vergangenheit im Gewand einer Auskunft ueber die Zukunft: der
+            # Wanderer stuende im Regen und laese, dass er vorbei ist.
+            _end_ts, event_ongoing_beyond_horizon = _derive_wet_block_end(
+                frames, all_ts_sorted, _laufend[0], horizon,
+            )
+            event_end_minutes = max(
+                0, round((max(_end_ts, _laufend[3]) - now).total_seconds() / 60.0)
+            )
 
         # Issue #2020 Adversary-Fund F001: max_rate_mm_h fuer die
         # Ueberholungspruefung MUSS aus demselben Fenster stammen wie
@@ -968,6 +1059,7 @@ class RadarNowcastService:
             max_rate_mm_h=compare_window_max_rate_mm_h,
             window_precip_mm=window_precip_mm,
             onset_precip_mm=onset_precip_mm,  # Issue #2046
+            already_running=already_running,  # Issue #2050 S2b
             event_end_minutes=event_end_minutes,  # Issue #2051 S1
             event_ongoing_beyond_horizon=event_ongoing_beyond_horizon,  # #2051 S1
         )

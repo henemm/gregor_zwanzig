@@ -65,9 +65,15 @@ def _identity_inputs(nowcast, now_utc: datetime) -> tuple:
     """Issue #1917 S4b-2: `(Gefahrenklasse, Dringlichkeit, Onset-Zeitpunkt)`
     einer Nowcast-Meldung — EINE Ableitung fuer Pruefung UND Registrierung,
     damit beide Seiten nie auseinanderlaufen koennen."""
+    # Issue #2050 S2b: ohne kuenftigen Beginn, aber mit laufendem Ereignis ist
+    # JETZT der Bezugszeitpunkt. Bliebe `onset_at` hier `None`, faende
+    # `_times_overlap` (`alert_gate.py`) nie einen Kandidaten und die
+    # Entdopplung waere ein stiller No-Op -- funktionsfaehig aussehend, aber
+    # ohne Wirkung (Bruchstelle 2).
     onset_at = (
         now_utc + timedelta(minutes=nowcast.onset_minutes)
-        if nowcast.onset_minutes is not None else None
+        if nowcast.onset_minutes is not None
+        else (now_utc if getattr(nowcast, "already_running", False) else None)
     )
     return (
         resolve_hazard_class(is_convective=nowcast.is_convective),

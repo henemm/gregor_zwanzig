@@ -482,7 +482,7 @@ def _render_subject_onset(msg: AlertMessage) -> str:
     # Issue #2051 S1: das Ende additiv HINTER der Beginn-Angabe -- ohne
     # behauptbares Ende bleibt der Betreff byte-identisch (AC-19).
     return (
-        f"[{msg.trip_short}] {km} · {label} in {e.onset_minutes} Min"
+        f"[{msg.trip_short}] {km} · {label} {_onset_wann_kopf(e)}"
         f"{_onset_end_suffix(e)}"
     )
 
@@ -513,6 +513,34 @@ def _onset_time_label(e: OnsetEvent) -> str:
     Vergangenheits-Kennzeichen (Radar blickt nach vorn), daher `is_past=False`.
     """
     return _time_with_day(e.onset_time, e.onset_day_offset)
+
+
+def _onset_wann_kopf(e: OnsetEvent) -> str:
+    """Kopfzeilen-Form: "in 8 Min" -- oder "laeuft bereits" (Issue #2050 S2b).
+
+    EINE Weiche fuer Betreff, E-Mail-H1/-Buendelzeile und Telegram-Kopf: die
+    vier Stellen sagten denselben Satz in vier Kopien, und genau so entstand
+    B-1 an vier Stellen gleichzeitig. Die Ende-Angabe haengt unveraendert
+    ueber `_onset_end_suffix()` dahinter."""
+    if getattr(e, "already_running", False):
+        return "läuft bereits"
+    return f"in {e.onset_minutes} Min"
+
+
+def _onset_wann_zeile(e: OnsetEvent, *, praefix: str = "") -> str:
+    """Detailzeilen-Form: der ZEITPUNKT -- oder "laeuft bereits" (#2050 S2b).
+
+    Getrennt von `_onset_wann_kopf`, weil die Detailzeile den ZEITPUNKT nennt
+    und die Kopfzeile die RESTZEIT; im Laufend-Fall fallen beide zusammen.
+
+    `praefix` gehoert der Aufrufstelle: die E-Mail schreibt "ab 15:40", die
+    Telegram-Langform nennt die Uhrzeit nackt ("15:40"). Ein hier fest
+    eingebautes "ab " hat genau diesen Unterschied eingeebnet und
+    `test_alert_sms_onset_zeitpunkt::test_ac10` rot gemacht -- im
+    Laufend-Fall entfaellt das Praefix mit der Uhrzeit zusammen."""
+    if getattr(e, "already_running", False):
+        return "läuft bereits"
+    return f"{praefix}{_onset_time_label(e)}"
 
 
 def _onset_end_suffix(e: OnsetEvent) -> str:
@@ -566,11 +594,11 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
     data_rows = [
         (
             f"{e.location_label} · {'Gewitter/Hagel' if e.is_convective else 'Regen'} "
-            f"in {e.onset_minutes} Min",
+            f"{_onset_wann_kopf(e)}",
             # Issue #2051 S1: das Ende JE ORT aus dessen eigenem Event -- ein
             # Buendel kann Orte mit verschiedenen Ende-Zeiten tragen. Ohne
             # behauptbares Ende bleibt die Zeile byte-identisch (AC-19).
-            f"ab {_onset_time_label(e)}{_onset_end_suffix(e)} · "
+            f"{_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)} · "
             f"{e.intensity_label}",
         )
         for e in msg.events
@@ -640,14 +668,15 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
     e = msg.events[0]
     label = "Gewitter" if e.is_convective else "Regen"
     badge_text = "Radar-Nowcast"
-    h1 = f"{label} in {e.onset_minutes} Min"
+    h1 = f"{label} {_onset_wann_kopf(e)}"
     km = _km_str_onset(e)
 
     data_rows = [
         # Issue #2051 S1: Beginn und Ende gehoeren in DIESELBE "Wo & wann"-
         # Zeile -- eine eigene Datenzeile nur fuer das Ende waere im
         # Ende-losen Normalfall eine leere Zeile (ADR-0052, Label-Wert-Form).
-        ("Wo & wann", f"{km} · ab {_onset_time_label(e)}{_onset_end_suffix(e)}"),
+        ("Wo & wann",
+         f"{km} · {_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"),
         ("Intensität", e.intensity_label),
         ("Quelle", e.source_label),
     ]
@@ -712,11 +741,11 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
     e = msg.events[0]
     label = "Gewitter" if e.is_convective else "Regen"
     km = _km_str_onset(e)
-    first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} in {e.onset_minutes} Min')}</b>"
+    first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} {_onset_wann_kopf(e)}')}</b>"
     # Issue #2051 S1: das Ende additiv HINTER der Beginn-Zeit, vor Intensitaet
     # und Quelle -- ohne behauptbares Ende byte-identisch wie bisher (AC-19).
     second = (
-        f"{_onset_time_label(e)}{_onset_end_suffix(e)} · "
+        f"{_onset_wann_zeile(e)}{_onset_end_suffix(e)} · "
         f"{e.intensity_label} · {e.source_label}"
     )
     # Issue #2018 (AC-B3): die Bezugszeile steht als EIGENE Zeile zwischen Kopf
@@ -824,7 +853,20 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     # bliebe dort eine stille Luecke.
     zeit = _sms_onset_time(e.onset_time, e.onset_day_offset) + _sms_onset_ende(e)
     menge = _sms_onset_menge(getattr(e, "onset_precip_mm", None))
-    if menge is None:
+    if getattr(e, "already_running", False):
+        # Issue #2050 S2b (PO-Entscheid 2026-08-22): `now` steht dort, wo
+        # sonst das Beginn-Zeittoken stuende -- ENGLISCH wie die ganze
+        # Kurzform (`R` = Rain, `TH` = Thunder). Die Ende-Grammatik aus #2051
+        # haengt unveraendert dahinter (`now@20:00` bekanntes Ende,
+        # `now >@20:00` Untergrenze), damit es nur EINE Ende-Form gibt.
+        ende = _sms_onset_ende(e)
+        if menge is None:
+            token = f"{kuerzel} now{ende}"
+        elif kuerzel == "TH":
+            token = f"TH now{ende} R{menge}"
+        else:
+            token = f"R{menge} now{ende}"
+    elif menge is None:
         token = f"{kuerzel}@{zeit}"
     elif kuerzel == "TH":
         # Issue #2046: im Gewitter-Fall steht die Menge als EIGENES Token NACH

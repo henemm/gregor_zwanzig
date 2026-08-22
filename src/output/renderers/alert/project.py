@@ -523,8 +523,14 @@ def to_multi_location_onset_alert_message(
     normalized = [
         (g[0], g[1], g[2]) if len(g) == 3 else (g[0], None, g[1]) for g in groups
     ]
+    # Issue #2050 S2b: ein Ort, an dem es GERADE regnet, gehoert in das
+    # Buendel -- auch wenn kein kuenftiger Beginn bestimmbar ist. Bis hierher
+    # entschied allein `onset_minutes is not None`, und damit fiel genau der
+    # laufende Ort still heraus, bevor sein `OnsetEvent` ueberhaupt gebaut
+    # wurde (Bruchstelle 4).
     valid_groups = [
-        (name, loc, nc) for name, loc, nc in normalized if nc.onset_minutes is not None
+        (name, loc, nc) for name, loc, nc in normalized
+        if nc.onset_minutes is not None or getattr(nc, "already_running", False)
     ]
     if not valid_groups:
         raise ValueError(
@@ -539,10 +545,18 @@ def to_multi_location_onset_alert_message(
         # Zone bilden — ein Buendel kann Orte in verschiedenen Zonen tragen,
         # eine gemeinsame Zone waere fuer alle bis auf einen still falsch.
         loc_tz = _tz_for_location(loc, tz)
-        onset_dt = now + timedelta(minutes=nc.onset_minutes)
+        # Issue #2050 S2b: laeuft das Ereignis bereits und ist kein kuenftiger
+        # Beginn bestimmbar, ist der Bezugszeitpunkt JETZT -- `timedelta(
+        # minutes=None)` waere ein Absturz (Bruchstelle 3). `onset_minutes`
+        # faellt dann auf 0 zurueck; gelesen wird es in diesem Fall nirgends,
+        # weil jede Textform auf `already_running` verzweigt.
+        _laufend = getattr(nc, "already_running", False)
+        onset_dt = now + timedelta(minutes=nc.onset_minutes or 0)
         _end_time, _end_offset, _end_ongoing = event_end_display(now, nc, loc_tz)
         events.append(OnsetEvent(
-            onset_minutes=nc.onset_minutes, onset_time=local_fmt(onset_dt, loc_tz),
+            already_running=_laufend,
+            onset_minutes=nc.onset_minutes or 0,
+            onset_time=local_fmt(onset_dt, loc_tz),
             km_from=0.0, km_to=0.0, is_convective=nc.is_convective,
             intensity_label=nc.intensity_label, source_label=nc.source,
             location_label=location_name if multi else None,
