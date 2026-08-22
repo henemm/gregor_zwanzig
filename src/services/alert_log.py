@@ -272,6 +272,100 @@ def capture_kwargs_from_alerts(alerts: Iterable) -> dict:
     return {}
 
 
+def unique_or_none(values: Iterable):
+    """Liefert den einen Wert, wenn alle NICHT-``None``-Werte uebereinstimmen
+    und mindestens einer vorhanden ist; sonst ``None`` (Issue #2050 S6).
+
+    Reine Mehrdeutigkeitspruefung -- es wird nichts abgeleitet, nur
+    entschieden, ob ein bereits bekannter Wert EINDEUTIG genug ist, um ihn
+    im Protokoll (E-1) zu berichten. Ohne diese Pruefung waere ein Eintrag
+    mit mehreren Segmenten/Orten/Zeitpunkten gezwungen, WILLKUERLICH eines
+    davon als "den" Messpunkt zu behaupten."""
+    gefunden = False
+    ergebnis = None
+    for wert in values:
+        if wert is None:
+            continue
+        if not gefunden:
+            ergebnis = wert
+            gefunden = True
+        elif wert != ergebnis:
+            return None
+    return ergebnis if gefunden else None
+
+
+def nowcast_onset_at(nowcast, now_utc: datetime) -> datetime:
+    """Ereignisbeginn eines Nowcast-Ergebnisses (Issue #2050 S6, E-1).
+
+    EINE Ableitung fuer BEIDE Flaechen (Trip-Radar und Ortsvergleich-Radar,
+    ADR-0021). Ohne kuenftigen Beginn (laufendes Ereignis, `onset_minutes is
+    None`, S2b) ist der Bezugszeitpunkt JETZT -- der Beginn ist an diesem
+    Zweig damit IMMER bestimmbar."""
+    return now_utc + timedelta(minutes=getattr(nowcast, "onset_minutes", None) or 0)
+
+
+def nowcast_event_end_at(nowcast, now_utc: datetime) -> "datetime | None":
+    """Voraussichtliches Ereignisende desselben Nowcast-Ergebnisses, oder
+    ``None``, wenn keines bestimmbar ist (Issue #2050 S6, E-1)."""
+    ende_min = getattr(nowcast, "event_end_minutes", None)
+    return now_utc + timedelta(minutes=ende_min) if ende_min is not None else None
+
+
+# Issue #2050 S6 (E-1): die sechs additiven Groessen und ihr erwarteter Typ.
+# Reihenfolge ist die Serialisierungsreihenfolge im Eintrag.
+_E1_FIELD_TYPES = {
+    "lead_time_minutes": int,
+    "event_at": str,
+    "event_end_at": str,
+    "measurement_point": dict,
+    "reference_at": str,
+    "source": str,
+}
+
+
+def _apply_e1_fields(
+    entry: dict, *, entity_id: str,
+    lead_time_minutes=None, event_at=None, event_end_at=None,
+    measurement_point=None, reference_at=None, source=None,
+) -> None:
+    """Additive E-1-Groessen additiv-defensiv in ``entry`` schreiben
+    (Issue #2050 S6). ``None`` -> Absenz (kein Schluessel, kein ``null``).
+
+    Fail-soft, aber NICHT still (AC-15): ein Wert, der nicht zum erwarteten
+    Typ passt oder sich nicht JSON-serialisieren laesst, entsteht NICHT im
+    Eintrag, aber die Funktion wirft nie eine Ausnahme -- ein Fehler in der
+    Beweisaufnahme darf den Alarm nie verhindern (die drei ``append_entry()``-
+    Aufrufstellen in ``trip_alert.py`` sind ungeschuetzt). Die Absenz wird
+    laut protokolliert (`logger.warning` mit Schluessel + `entity_id`), sonst
+    behauptete das Protokoll faelschlich "diese Groesse gab es hier nicht",
+    wo in Wahrheit ein Defekt vorlag."""
+    for schluessel, wert in (
+        ("lead_time_minutes", lead_time_minutes),
+        ("event_at", event_at),
+        ("event_end_at", event_end_at),
+        ("measurement_point", measurement_point),
+        ("reference_at", reference_at),
+        ("source", source),
+    ):
+        if wert is None:
+            continue
+        erwarteter_typ = _E1_FIELD_TYPES[schluessel]
+        try:
+            if not isinstance(wert, erwarteter_typ):
+                raise TypeError(
+                    f"{schluessel} muss {erwarteter_typ.__name__} sein, "
+                    f"war {type(wert).__name__}"
+                )
+            json.dumps(wert)  # Serialisierbarkeits-Probe
+        except Exception as e:
+            logger.warning(
+                "alert_log: %s fuer entity_id=%s fehlerhaft geformt (%s) -- "
+                "der Eintrag entsteht ohne dieses Feld.", schluessel, entity_id, e,
+            )
+            continue
+        entry[schluessel] = wert
+
+
 def append_entry(
     user_id: str,
     *,
@@ -291,6 +385,12 @@ def append_entry(
     capture_ids: Optional[Iterable[str]] = None,
     is_addendum: bool = False,
     addendum_reported_at: Optional[str] = None,
+    lead_time_minutes: Optional[int] = None,
+    event_at: Optional[str] = None,
+    event_end_at: Optional[str] = None,
+    measurement_point: Optional[dict] = None,
+    reference_at: Optional[str] = None,
+    source: Optional[str] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -380,6 +480,14 @@ def append_entry(
     if is_addendum:  # additiv (#2018): Nachtrag statt zweitem Voll-Alarm
         entry["is_addendum"] = True
         entry["addendum_reported_at"] = addendum_reported_at
+    # Issue #2050 S6 (E-1): gemeldete Vorwarnzeit, Ereigniszeit, Messpunkt,
+    # Vergleichsbasis, Quelle -- additiv, defensiv, nie werfend (AC-15).
+    _apply_e1_fields(
+        entry, entity_id=entity_id,
+        lead_time_minutes=lead_time_minutes, event_at=event_at,
+        event_end_at=event_end_at, measurement_point=measurement_point,
+        reference_at=reference_at, source=source,
+    )
 
     _append(user_id, "entries" if reachable else "not_delivered", entry)
 
@@ -408,6 +516,12 @@ def append_suppressed_entry(
     gate_reason: str,
     effective_channels: Iterable[str],
     capture_id: Optional[str] = None,
+    lead_time_minutes: Optional[int] = None,
+    event_at: Optional[str] = None,
+    event_end_at: Optional[str] = None,
+    measurement_point: Optional[dict] = None,
+    reference_at: Optional[str] = None,
+    source: Optional[str] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag fuer eine VOR dem Versand abgewiesene
     Meldung an (#1467 S3, Aenderung (d)).
@@ -476,6 +590,15 @@ def append_suppressed_entry(
     }
     if capture_id is not None:  # additiv (#1948), siehe append_entry()
         entry["capture_id"] = capture_id
+    # Issue #2050 S6 (E-1): dieselben sechs Groessen, nur soweit am jeweiligen
+    # Gate bereits bekannt -- der Aufrufer uebergibt an fruehen Gates schlicht
+    # nichts (Absenz durch Nicht-Uebergabe).
+    _apply_e1_fields(
+        entry, entity_id=entity_id,
+        lead_time_minutes=lead_time_minutes, event_at=event_at,
+        event_end_at=event_end_at, measurement_point=measurement_point,
+        reference_at=reference_at, source=source,
+    )
     _append(user_id, "not_delivered", entry)
 
 

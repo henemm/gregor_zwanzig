@@ -1,7 +1,12 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-22 (Issue #2049, `fix-2049-vorschau-einfach` — neues Sibling-Feld
+**Updated:** 2026-08-22 (Issue #2050 Scheibe S6, `feat-2050-s6-protokoll-vorwarnzeit` —
+`WeatherSnapshotService.load_dated()` bekommt additiven keyword-only Parameter
+`segment_fetched_at: bool = False`; datierte Snapshot-Segmente tragen additiv ihren eigenen
+`fetched_at`-Wert. Rein Python-intern, keine Go-/Frontend-Änderung, keine neue Route. Details
+Abschnitt „WeatherSnapshotService — Dated Snapshot Storage (Issue #747)", Spec:
+`docs/specs/modules/alarm_protokoll_vorwarnzeit.md`); 2026-08-22 (Issue #2049, `fix-2049-vorschau-einfach` — neues Sibling-Feld
 `display_config.outlook_metric_formats: Record<string, boolean>` neben `outlook_metrics`
 macht den bis dahin wirkungslosen Roh/Einfach-Umschalter im 3-Tages-Ausblick wirksam:
 `true` = Wortstufe/Symbol, fehlend/`false` = Rohzahl (harter Default, unabhängig von
@@ -4267,7 +4272,7 @@ Diese Sektion dokumentiert interne Service-Klassen, die nicht über REST-Endpoin
 | Methode | Signatur | Verhalten |
 |---------|----------|----------|
 | `save_dated()` | `(trip_id: str, target_date: date, segments: List[SegmentWeatherData]) → None` | Schreibt datierte Kopie zu `{trip_id}_{YYYY-MM-DD}.json`. Ruft intern `_prune_dated_snapshots()` auf. Fehler werden geloggt, nicht geworfen. |
-| `load_dated()` | `(trip_id: str, target_date: date) → Optional[List[SegmentWeatherData]]` | Lädt datierte Snapshot-Datei für den angegebenen Tag. Gibt `None` zurück wenn Datei nicht vorhanden (kein Absturz). Deserialisialisiert `SegmentWeatherData` mit Enum-Rekonstruktion. |
+| `load_dated()` | `(trip_id: str, target_date: date, *, segment_fetched_at: bool = False) → Optional[List[SegmentWeatherData]]` | Lädt datierte Snapshot-Datei für den angegebenen Tag. Gibt `None` zurück wenn Datei nicht vorhanden (kein Absturz). Deserialisialisiert `SegmentWeatherData` mit Enum-Rekonstruktion. Issue #2050 S6: additiver keyword-only Parameter `segment_fetched_at` (Default `False`, bestehende Aufrufer unverändert). `True` liefert je Segment dessen EIGENEN Erhebungszeitpunkt (aus dem gleichnamigen, additiven `fetched_at`-Feld je Segment im JSON) statt des Schreibzeitpunkts der Datei (`snapshot_at`); fehlt das Feld (Bestandsdateien) oder ist es unlesbar, fällt es fail-soft auf `snapshot_at` zurück. Bewusst opt-in — nur die Alarm-Protokoll-Ableitung (`alert_log.py`, `reference_at`) fragt den genaueren Wert an, alle anderen Leser (Alarm-Footer #1916, rollierender Alarm-Anker) bemessen sich weiter am Schreibzeitpunkt, da `format_reference_at()` am Kalendertag verzweigt. |
 | `_prune_dated_snapshots()` | `(trip_id: str) → None` | Löscht älteste datierte Snapshots für diesen Trip, behält maximal 7 (mtime-sortiert). Fehler beim Löschen werden geloggt. |
 | `save()` | `(trip_id: str, segments: List[SegmentWeatherData], target_date: date, *, briefing_backed: bool = True) → None` | Speichert auf `{trip_id}.json` für Alert-Pfad, ansonsten unverändert. Issue #1699: zusätzliches keyword-only Feld `briefing_backed` im JSON hält die Herkunft fest — nur ein Snapshot aus einem regulären Briefing taugt als Abweichungs-Alarm-Vergleichsbasis (ADR-0009). Default `True` (bestehende Aufrufer: Briefing-Lauf, Compare-Presets, unverändert); `False` setzt ausschließlich der reine Abfrage-Pfad (`trip_command_processor._fetch_and_save_snapshot`, z. B. `glance`/`gewitter`/`timeline`). |
 | `load()` | _(bestehend, unverändert)_ | Lädt von `{trip_id}.json` für Alert-Pfad. Byte-identisch vor/nach Issue #747. |
@@ -4300,6 +4305,7 @@ _snapshot_svc.save_dated(trip_id, target_date, segment_weather)  # neu, Issue #7
 - Bestehende `save()`-/`load()`-Methoden sind byte-identisch
 - Alert-Pfad (`trip_alert.py`) nutzt nur `save()`/`load()` — keine Verhaltensänderung
 - Bestandsdaten in `{trip_id}.json` bleiben unverändert
+- 2026-08-22: Issue #2050 S6 — `WeatherSnapshotService.load_dated()` bekommt additiven keyword-only Parameter `segment_fetched_at: bool = False`. Segmente im datierten JSON tragen zusätzlich ihren eigenen `fetched_at`-Wert (additiv, `_serialize_segment`). Nur die Alarm-Protokoll-Ableitung setzt `segment_fetched_at=True`; alle anderen Aufrufer unverändert. Details: `docs/specs/modules/alarm_protokoll_vorwarnzeit.md`.
 - 2026-08-17: Issue #1699 — `WeatherSnapshotService.save()` bekommt additiven keyword-only Parameter `briefing_backed: bool = True` (Herkunftsmerkmal des undatierten Snapshots) und neue Lesemethode `load_briefing_backed()` (fail-soft auf `True`). `TripAlertService._get_cached_weather` lehnt in Stufe 3 der #1916-Prioritätskette (undatierter Rückfall) einen nicht briefing-gestützten Anker für den Abweichungs-Alarm mit dem vierten Ablehnungsgrund `not_briefing_backed` ab (`diagnostics/alert_anchor_rejected.jsonl`, neben `wrong_day`/`too_old`/`missing` aus #1661); amtliche Warnungen (Geometrie-Lesart) bleiben unberührt. Siehe Zeile 3921 ff. oben und `docs/specs/modules/fix_1699_anker_ohne_briefing.md`.
 - 2026-05-30: Issue #461 — Compare-Presets Daily Dispatch (Cronjob): New `POST /api/scheduler/compare-presets-daily` endpoint (section 17) triggered daily by Go scheduler at 06:00 UTC. Filters presets by `schedule='daily'`, runs Compare Engine, renders/sends emails via Resend, updates `letzter_versand` and `top_ort_letzter_versand` fields. Per-preset error isolation; BetterStack Heartbeat pinged only on `error_count==0` (Readiness Principle). Config field `HeartbeatComparePresets` added to Go config; Go scheduler job count increased from 5 to 6. Tests: 11 new comprehensive tests in `test_issue_461_compare_preset_dispatch.py`.
 - 2026-05-30: Added section 18 — Authentication Endpoints (Issue #450 Passkey/WebAuthn V1): 5 passkey endpoints (register/begin|finish, login/begin|finish, delete), password auth methods (register, login), profile endpoint with `has_passkey`+`passkeys[]`. User model extended with `PasskeyCredentials[]` and `PasswordHash` now optional. Rate-limit 30/h per IP (alle 5 Endpoints), challenge TTL 5 min, RP-ID isolation (prod vs staging), 64 KB body cap.

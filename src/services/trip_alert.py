@@ -158,6 +158,58 @@ def radar_alert_due(result: object, threshold_min: int) -> bool:
     return bool(getattr(result, "already_running", False))
 
 
+def _radar_e1_fields(
+    *, entity_id: str, result, now_utc: datetime, onset_dt: datetime,
+    active, snapshot,
+) -> dict:
+    """Die fuenf E-1-Groessen des Radar-Nowcast-Zweigs (Issue #2050 S6).
+
+    EINE Ableitung fuer alle drei Protokollstellen dieses Zweigs
+    (Briefing-Gate, Ereignis-Identitaet, Versand) — sonst stuende derselbe
+    Vorfall je nach Ausgang mit verschiedenen Zeitangaben im Protokoll.
+
+    `snapshot` ist zugleich die Vergleichsbasis, deren Ankuendigung das
+    Briefing-Gate ueberhaupt erst begruendet; fehlt sie, bleibt `reference_at`
+    weg statt erfunden zu werden. `source` ist der ROHE Quellen-Schluessel,
+    NICHT `radar_svc.source_label(...)`: die Beschriftung ist ein zweites
+    Vokabular fuer dieselbe Sache (Regel O1) und aendert sich ausserdem, was
+    rueckwirkend die Bedeutung alter Eintraege verschoebe (Spec-Abschnitt
+    "Korrektur: `source` ist immer der rohe Schluessel").
+
+    Absicherung wie die Nachbarschritte derselben Schleife (Nowcast-Abruf,
+    Unterdrueckungs-Protokoll): die Ableitung steht VOR dem Versand, ein
+    Fehler hier duerfte deshalb nie den Alarm verhindern — und erst recht
+    nicht die uebrigen Trips desselben Nutzers mitreissen (Muster
+    `fix_1479`). Sie scheitert fail-soft zu "gar keine Zusatzfelder", aber
+    NICHT still (AC-15): ohne die Meldung behauptete das Protokoll
+    faelschlich "diese Groessen gab es hier nicht", wo in Wahrheit ein Defekt
+    vorlag.
+    """
+    try:
+        ende_dt = alert_log.nowcast_event_end_at(result, now_utc)
+        return {
+            "lead_time_minutes": result.onset_minutes,
+            "event_at": onset_dt.isoformat(),
+            "event_end_at": ende_dt.isoformat() if ende_dt else None,
+            "measurement_point": {
+                "segment_id": normalize_segment_id(active.segment_id),
+                "km_from": active.start_point.distance_from_start_km,
+                "km_to": active.end_point.distance_from_start_km,
+            },
+            "reference_at": (
+                snapshot[0].fetched_at.isoformat() if snapshot else None
+            ),
+            "source": result.source,
+        }
+    except Exception as e:
+        logger.warning(
+            "alert_log: E-1-Groessen fuer entity_id=%s nicht ableitbar (%s) — "
+            "der Alarm laeuft weiter, der Eintrag entsteht ohne diese Felder.",
+            entity_id, e,
+        )
+        return {}
+
+
 def _trip_telegram_style(trip: "Trip") -> str:
     """Issue #1260 S3: aufgelöster Telegram-Stil des Trips ("rich" Default).
 
@@ -407,6 +459,14 @@ class TripAlertService:
         # Issue #1459: Alarm-Protokoll VOR dem Zustellbarkeits-Guard — die
         # Funktion entscheidet selbst, ob der Eintrag nach `entries` (mindestens
         # ein Kanal kam an, Ist-Verhalten) oder nach `not_delivered` geht (D4).
+        # Issue #2050 S6 (E-1): Ereigniszeit und Messpunkt nur, wenn ALLE
+        # gebuendelten Aenderungen dieses EINEN Eintrags denselben Wert tragen
+        # (`unique_or_none`) -- sonst behauptete der Eintrag willkuerlich eines
+        # von mehreren Segmenten. Vorwarnzeit und Ereignisende kennt dieser
+        # Zweig strukturell nicht; Vergleichsbasis und Quelle stammen aus dem
+        # ANKER, der im Erstlauf fehlen darf (dann Absenz statt Erfindung).
+        _e1_occurred_at = alert_log.unique_or_none(c.occurred_at for c in to_report)
+        _e1_segment_id = alert_log.unique_or_none(c.segment_id for c in to_report)
         alert_log.append_entry(
             self._user_id,
             entity_id=trip.id,
@@ -427,6 +487,16 @@ class TripAlertService:
             below_threshold_channels=self._last_below_threshold_channels,
             blocked_reason_codes=notif_result.blocked_reason_codes,
             capture_id=capture_id,
+            event_at=(
+                _e1_occurred_at.isoformat() if _e1_occurred_at is not None else None
+            ),
+            measurement_point=(
+                {"segment_id": _e1_segment_id} if _e1_segment_id is not None else None
+            ),
+            reference_at=(
+                anchor_fetched.isoformat() if anchor_fetched is not None else None
+            ),
+            source=cached_weather[0].provider if cached_weather else None,
         )
         delivered = notif_result.sent
         if not delivered:
@@ -1503,9 +1573,23 @@ class TripAlertService:
             # gerade gewonnener Alarm bliebe unbegruendet unterdrueckt bzw.
             # der angekuendigte Regen unerkannt.
             from services.weather_snapshot import WeatherSnapshotService
-            _snapshot = WeatherSnapshotService(self._user_id).load_dated(trip.id, segment_date)
+            # Issue #2050 S6 (E-1): `segment_fetched_at=True` -- die
+            # Vergleichsbasis im Protokoll soll den Abruf benennen, auf den
+            # sich der Briefing-Vergleich wirklich beruft. Nur HIER opt-in
+            # (s. `load_dated()`): der Alarm-Footer #1916 laeuft ueber
+            # `_get_cached_weather()` und bleibt beim Schreibzeitpunkt.
+            _snapshot = WeatherSnapshotService(self._user_id).load_dated(
+                trip.id, segment_date, segment_fetched_at=True,
+            )
             _briefing_precip = self._briefing_precip_for_onset(_snapshot, active.segment_id, _onset_dt)
             _briefing_announced = (_briefing_precip is not None and _briefing_precip >= 0.5)
+            # Issue #2050 S6 (E-1): die an DIESEM Zweig bekannten Groessen --
+            # EINMAL abgeleitet und an allen drei Protokollstellen dieses
+            # Zweigs identisch (Briefing-Gate, Ereignis-Identitaet, Versand).
+            _e1 = _radar_e1_fields(
+                entity_id=trip.id, result=result, now_utc=now_utc,
+                onset_dt=_onset_dt, active=active, snapshot=_snapshot,
+            )
             # Sicherheits-Override (Slice 4, #883): konvektive Gefahr (Gewitter/Hagel)
             # durchbricht die Briefing-Unterdrückung. Normaler (nicht-konvektiver)
             # angekündigter Regen bleibt unterdrückt (reines Δ-Modell).
@@ -1535,6 +1619,7 @@ class TripAlertService:
                         reason=alert_log.REASON_NOWCAST,
                         gate_reason=f"briefing_announced:{_briefing_precip}mm",
                         effective_channels=effective_channels,
+                        **_e1,
                     )
                 except Exception as e:
                     logger.error(
@@ -1701,6 +1786,7 @@ class TripAlertService:
                         self._user_id, entity_id=trip.id, entity_type="trip",
                         reason=alert_log.REASON_NOWCAST, gate_reason=_identity_gate.reason,
                         effective_channels=effective_channels,
+                        **_e1,
                     )
                 except Exception as e:
                     logger.error(
@@ -1767,6 +1853,7 @@ class TripAlertService:
                     _identity_gate.addendum_reported_at.isoformat()
                     if _identity_gate.addendum_reported_at is not None else None
                 ),
+                **_e1,
             )
             delivered = result.sent
             if not delivered:
@@ -2128,11 +2215,27 @@ class TripAlertService:
                 f"Official alert suppressed ({_identity_gate.reason}) for trip {trip.id}"
             )
             try:
+                # Issue #2050 S6 (E-1): hier liegt GENAU EINE Warnung vor --
+                # Ereigniszeit und Quelle sind bekannt, der Messpunkt nur,
+                # wenn ihre Segmentliste eindeutig ist. Vorwarnzeit und
+                # Vergleichsbasis kennt der amtliche Zweig strukturell nicht.
+                _e1_segment_id = alert_log.unique_or_none(_segment_ids)
                 alert_log.append_suppressed_entry(
                     self._user_id, entity_id=trip.id, entity_type="trip",
                     reason=alert_log.REASON_OFFICIAL_ALERT,
                     gate_reason=_identity_gate.reason,
                     effective_channels=effective_channels,
+                    event_at=(
+                        _alert.valid_from.isoformat() if _alert.valid_from else None
+                    ),
+                    event_end_at=(
+                        _alert.valid_to.isoformat() if _alert.valid_to else None
+                    ),
+                    measurement_point=(
+                        {"segment_id": _e1_segment_id}
+                        if _e1_segment_id is not None else None
+                    ),
+                    source=_alert.source,
                 )
             except Exception as e:
                 logger.error(
@@ -2166,6 +2269,20 @@ class TripAlertService:
             # leer und die Warnung bei der Segment-Sprache (AC-10).
             segment_km=measured_segment_km(segments),
         )
+        # Issue #2050 S6 (E-1): Ereigniszeit, Messpunkt und Quelle nur, wenn
+        # ALLE Warnungen dieses EINEN Eintrags darin uebereinstimmen
+        # (`unique_or_none`) -- sonst behauptete der Eintrag willkuerlich eine
+        # von mehreren. Vorwarnzeit und Vergleichsbasis kennt dieser Zweig
+        # strukturell nicht.
+        _e1_valid_from = alert_log.unique_or_none(
+            a.valid_from for a, _segment_ids in official_notices
+        )
+        _e1_valid_to = alert_log.unique_or_none(
+            a.valid_to for a, _segment_ids in official_notices
+        )
+        _e1_segment_id = alert_log.unique_or_none(
+            sid for _a, _segment_ids in official_notices for sid in (_segment_ids or [])
+        )
         # Issue #1459: amtliche Warnungen tragen ihre Gefahrenart in `hazards`,
         # NICHT als Register-Kennung in `metrics` (eigenes Vokabular, O1).
         alert_log.append_entry(
@@ -2181,6 +2298,14 @@ class TripAlertService:
             reachable_channels=result.sent_channels,
             below_threshold_channels=_official_suppressed,
             blocked_reason_codes=result.blocked_reason_codes,
+            event_at=_e1_valid_from.isoformat() if _e1_valid_from else None,
+            event_end_at=_e1_valid_to.isoformat() if _e1_valid_to else None,
+            measurement_point=(
+                {"segment_id": _e1_segment_id} if _e1_segment_id is not None else None
+            ),
+            source=alert_log.unique_or_none(
+                a.source for a, _segment_ids in official_notices
+            ),
             # Issue #1944: Herkunft der versendeten Warnungen (ein Mitschnitt
             # -> `capture_id`, mehrere -> `capture_ids`).
             **alert_log.capture_kwargs_from_alerts(

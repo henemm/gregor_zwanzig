@@ -97,6 +97,13 @@ def _format_cooldown_display(cooldown_minutes: int) -> str:
     return f"{cooldown_minutes} Minuten"
 
 
+# Issue #2050 S6 (E-1): Ereigniszeit-Ableitung aus dem GETEILTEN Baustein --
+# dieselbe Fassung benutzt der Trip-Radar-Zweig (`trip_alert.py`), damit
+# Protokoll-Beginn und -Ende auf beiden Flaechen nicht auseinanderlaufen.
+_onset_at = alert_log.nowcast_onset_at
+_event_end_at = alert_log.nowcast_event_end_at
+
+
 class CompareRadarAlertService:
     """Prüft je Compare-Preset/Ort den Radar-Nowcast und versendet gebündelte
     Onset-Alarm-Mails an die Preset-Empfänger (Parallelpfad zu
@@ -240,11 +247,21 @@ class CompareRadarAlertService:
                 f"fuer {preset_id}:{loc.id}"
             )
             try:
+                # Issue #2050 S6 (E-1): `nowcast`/`loc` liegen hier EINZELN vor
+                # (innere Schleife) -- alles bekannt bis auf `reference_at`
+                # (strukturell `None`, wie beim Radar-Compare-Zweig generell --
+                # es gibt hier keine "bereits im Briefing angekuendigt"-Pruefung).
+                _event_end_dt = _event_end_at(nowcast, now_utc)
                 alert_log.append_suppressed_entry(
                     self._user_id, entity_id=preset_id, entity_type="compare",
                     reason=alert_log.REASON_NOWCAST,
                     gate_reason=identity_gate.reason,
                     effective_channels=effective_channels,
+                    lead_time_minutes=nowcast.onset_minutes,
+                    event_at=_onset_at(nowcast, now_utc).isoformat(),
+                    event_end_at=_event_end_dt.isoformat() if _event_end_dt else None,
+                    measurement_point={"location_id": loc.id},
+                    source=nowcast.source,
                 )
             except Exception as e:
                 logger.error(
@@ -282,6 +299,30 @@ class CompareRadarAlertService:
             cooldown_display=_format_cooldown_display(cooldown_minutes),
             telegram_style=effective_compare_telegram_style(preset),
         )
+        # Issue #2050 S6 (E-1): nur, wenn ALLE getriggerten Orte uebereinstimmen
+        # (`unique_or_none`) -- `reference_at` bleibt strukturell `None`
+        # (dieser Zweig kennt keine "bereits im Briefing angekuendigt"-Pruefung,
+        # anders als der Trip-Pfad).
+        _e1_lead_time = alert_log.unique_or_none(
+            nowcast.onset_minutes for _name, _loc, nowcast in triggered
+        )
+        _e1_event_at_dt = alert_log.unique_or_none(
+            _onset_at(nowcast, now_utc) for _name, _loc, nowcast in triggered
+        )
+        _e1_event_at = _e1_event_at_dt.isoformat() if _e1_event_at_dt is not None else None
+        _e1_event_end_dt = alert_log.unique_or_none(
+            _event_end_at(nowcast, now_utc) for _name, _loc, nowcast in triggered
+        )
+        _e1_event_end_at = (
+            _e1_event_end_dt.isoformat() if _e1_event_end_dt is not None else None
+        )
+        _e1_loc_id = alert_log.unique_or_none(loc.id for _name, loc, _nowcast in triggered)
+        _e1_measurement_point = (
+            {"location_id": _e1_loc_id} if _e1_loc_id is not None else None
+        )
+        _e1_source = alert_log.unique_or_none(
+            nowcast.source for _name, _loc, nowcast in triggered
+        )
         # Issue #1459: gemischt konvektive/nicht-konvektive Orte ergeben BEIDE
         # Register-Paare in EINEM Eintrag.
         alert_log.append_entry(
@@ -297,6 +338,9 @@ class CompareRadarAlertService:
             reachable_channels=notif_result.sent_channels,
             below_threshold_channels=suppressed,
             blocked_reason_codes=notif_result.blocked_reason_codes,
+            lead_time_minutes=_e1_lead_time,
+            event_at=_e1_event_at, event_end_at=_e1_event_end_at,
+            measurement_point=_e1_measurement_point, source=_e1_source,
         )
         if not notif_result.sent:
             return False

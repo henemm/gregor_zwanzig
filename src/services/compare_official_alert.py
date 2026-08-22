@@ -223,11 +223,19 @@ class CompareOfficialAlertService:
                 if alert in for_loc:
                     for_loc.remove(alert)
                 try:
+                    # Issue #2050 S6 (E-1): dieser Zweig steht INNERHALB der
+                    # `for loc_id in loc_ids`-Schleife -- Warnung und Ort sind
+                    # hier je EIN Wert, `measurement_point` ist deshalb IMMER
+                    # eindeutig (kein `unique_or_none` noetig).
                     alert_log.append_suppressed_entry(
                         self._user_id, entity_id=preset_id, entity_type="compare",
                         reason=alert_log.REASON_OFFICIAL_ALERT,
                         gate_reason=identity_gate.reason,
                         effective_channels=effective_channels,
+                        event_at=alert.valid_from.isoformat() if alert.valid_from else None,
+                        event_end_at=alert.valid_to.isoformat() if alert.valid_to else None,
+                        measurement_point={"location_id": loc_id},
+                        source=alert.source,
                     )
                 except Exception as e:
                     logger.error(
@@ -261,6 +269,27 @@ class CompareOfficialAlertService:
             mail_sink=self._mail_sink, sms_sink=self._sms_sink,
             telegram_sink=self._telegram_sink,
         )
+        # Issue #2050 S6 (E-1): Ereigniszeit/Messpunkt/Quelle nur, wenn ALLE
+        # Warnungen dieses Eintrags uebereinstimmen (`unique_or_none`) --
+        # amtliche Warnungen kennen strukturell keine Vorwarnzeit und keine
+        # Vergleichsbasis (analog Trip).
+        _e1_event_at_dt = alert_log.unique_or_none(
+            a.valid_from for a, _loc_ids in tagged_alerts
+        )
+        _e1_event_at = _e1_event_at_dt.isoformat() if _e1_event_at_dt is not None else None
+        _e1_event_end_at_dt = alert_log.unique_or_none(
+            a.valid_to for a, _loc_ids in tagged_alerts
+        )
+        _e1_event_end_at = (
+            _e1_event_end_at_dt.isoformat() if _e1_event_end_at_dt is not None else None
+        )
+        _e1_loc_id = alert_log.unique_or_none(
+            loc_id for _a, loc_ids in tagged_alerts for loc_id in loc_ids
+        )
+        _e1_measurement_point = (
+            {"location_id": _e1_loc_id} if _e1_loc_id is not None else None
+        )
+        _e1_source = alert_log.unique_or_none(a.source for a, _loc_ids in tagged_alerts)
         # Issue #1459: die Gefahrenart steht in `hazards`, nicht in `metrics` (O1).
         alert_log.append_entry(
             self._user_id, entity_id=preset_id, entity_type="compare",
@@ -275,6 +304,8 @@ class CompareOfficialAlertService:
             reachable_channels=result.sent_channels,
             below_threshold_channels=suppressed,
             blocked_reason_codes=result.blocked_reason_codes,
+            event_at=_e1_event_at, event_end_at=_e1_event_end_at,
+            measurement_point=_e1_measurement_point, source=_e1_source,
             # Issue #1944: derselbe geteilte Baustein wie im Trip-Pfad.
             **alert_log.capture_kwargs_from_alerts(
                 [a for a, _loc_ids in tagged_alerts]
