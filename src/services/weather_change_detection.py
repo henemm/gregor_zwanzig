@@ -328,13 +328,29 @@ def _precip_remaining(
 
     Geschwisterfunktion von `_peak_occurred_at()` und damit an dieselbe
     BINDENDE Fenster-Invariante gebunden: gerechnet wird ausschliesslich
-    ueber die Stundenwerte INNERHALB des Segmentfensters
-    (`seg_start`/`seg_end`, wie oben), nie ueber den Kalendertag und nie
-    ueber die ganze Reihe. Begruendung steht in
+    ueber die Stundenwerte INNERHALB des Segmentfensters, nie ueber den
+    Kalendertag und nie ueber die ganze Reihe. Begruendung steht in
     `segment_weather._aggregate_for_segment()` (:292-308): sonst nennt der
     Alarm eine andere Stunde als das Briefing, und beide Vergleichsseiten
-    rechneten mit verschiedenen Fenstern. Die Endgrenze ist dabei EXKLUSIV
-    (`< seg_end`) -- s. die Begruendung an der Filterzeile unten.
+    rechneten mit verschiedenen Fenstern.
+
+    🔴 Die Punktmenge kommt aus `day_window.segment_window_points()` -- also
+    aus DERSELBEN Funktion, aus der auch die Fenster-Gesamtmenge
+    (`new_value`) entsteht. Das ist keine Bequemlichkeit, sondern die
+    Bedingung dafuer, dass `bereits_gefallen = new_value - remaining`
+    ueberhaupt eine sinnvolle Zahl sein kann. Ein selbst gebauter
+    Fenstervergleich hat hier bereits ZWEIMAL danebengelegen: einmal an der
+    Endstunde (F001, Restmenge groesser als die Gesamtmenge) und einmal bei
+    Segmenten unter einer Stunde (F005, gar kein Treffer -> "alles gefallen,
+    es kommt nichts mehr", obwohl die volle Menge noch ausstand).
+
+    Ausdruecklich NICHT uebernommen wird der Leerfenster-Rueckfall von
+    `_peak_occurred_at()` (`if not window: window = points`). Fuer eine
+    Uhrzeit ist er harmlos; fuer eine Menge, die gegen `new_value`
+    verrechnet wird, bricht er die Fenster-Invariante -- die Restmenge kaeme
+    dann aus der ganzen Reihe statt aus dem Fenster. Ein leeres Fenster heisst
+    hier deshalb "nicht bestimmbar" (`(None, None)`), nicht "es kommt nichts
+    mehr".
 
     Restmenge = Summe der `precip_1h_mm`-Stundenwerte des Fensters, deren
     Stunde nicht bereits VOLLSTAENDIG vergangen ist. Die angebrochene Stunde
@@ -355,33 +371,23 @@ def _precip_remaining(
     (nicht bestimmbar), nie `(0.0, None)` (s. o.).
     """
     try:
+        from app.day_window import segment_window_points
+
         seg = new_data.segment
         points = getattr(getattr(new_data, "timeseries", None), "data", None) or []
-        seg_start = _as_utc(seg.start_time)
-        seg_end = _as_utc(seg.end_time)
-        now = _as_utc_aware(now_utc)
-        if seg_start is None or seg_end is None or not points:
+        if not points:
             return None, None  # nicht bestimmbar -- KEINE Entwarnung
+        fenster = segment_window_points(seg.start_time, seg.end_time, points)
+        if not fenster:
+            # Die Reihe deckt das Segment nicht ab. KEIN Rueckfall auf die
+            # ganze Reihe (s. Docstring) und keine Entwarnung -- wir wissen
+            # ueber dieses Fenster schlicht nichts.
+            return None, None
+        now = _as_utc_aware(now_utc)
         remaining = 0.0
         ends_at: "datetime | None" = None
-        for p in points:
-            if p.ts is None:
-                continue
+        for p in fenster:
             ts = _as_utc(p.ts)
-            # Endgrenze EXKLUSIV -- anders als in `_peak_occurred_at()` oben.
-            # Kein Versehen, sondern die einzige Grenze, die hier stimmen kann:
-            # `new_value` ist `aggregated.precip_sum_mm`, und diese Summe
-            # entsteht in `_aggregate_for_segment()` aus genau
-            # `start_floor <= ts < end_floor` (segment_weather.py:276-282,
-            # Bug #806: jede Stunde gehoert genau EINEM Segment). Die
-            # Projektion rechnet `bereits_gefallen = new_value - remaining` --
-            # zaehlte die Restmenge die Stunde AUF `end_time` mit, waere die
-            # Differenz negativ und die Restmenge groesser als die
-            # Fenster-Gesamtmenge (gemessen: 24 statt 22 mm, beides von AC-2
-            # ausdruecklich verboten). `_peak_occurred_at()` faellt das nicht
-            # auf, weil es nur eine Uhrzeit liefert und nichts verrechnet.
-            if not (seg_start <= ts < seg_end):
-                continue
             # Stunde vollstaendig vergangen -> zaehlt weder zur Restmenge
             # noch zum Ende (ihr Ende liegt bei ts + 1 h).
             if ts + timedelta(hours=1) <= now:
