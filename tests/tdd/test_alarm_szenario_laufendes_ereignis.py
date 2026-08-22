@@ -85,6 +85,13 @@ TZ_ORT = ZoneInfo("Europe/Paris")
 ENDE_LOKAL = "12:30"       # Lage A: letztes nasses Frame (Slot +30)
 HORIZONT_LOKAL = "14:45"   # Lage B: Deckungsende des letzten Frames (Slot +150 +15)
 BEGINN_LOKAL = "12:45"     # Lage E: kuenftiger Beginn (Slot +45)
+# Lage C endet IN der laufenden Viertelstunde. Genannt wird die Deckungsgrenze
+# des laufenden Frames (Slot +15), NICHT sein Zeitstempel (Slot +0) -- der
+# laege VOR dem Pruefzeitpunkt 12:07 und waere eine Aussage ueber die
+# Vergangenheit im Gewand einer Auskunft ueber die Zukunft.
+LAGE_C_ENDE_LOKAL = "12:15"
+LAGE_C_FRAME_LOKAL = "12:00"
+PRUEFZEIT_MIN = 12 * 60 + 7   # 12:07 Ortszeit, in Minuten seit Mitternacht
 
 LAEUFT = "läuft bereits"                             # S2b-Freigabe
 # Ende-Wortlaut aus #2051 S1 (PO-Entscheid 2026-08-22), Lage A = bekanntes
@@ -303,6 +310,45 @@ def test_ac4_laufendes_ereignis_nennt_das_voraussichtliche_ende():
         f"AC-4: die Untergrenzen-Form ({UNTERGRENZE_WORTLAUT!r} bzw. ` >`) "
         f"behauptet, das Ende sei UNBEKANNT -- hier ist der Trockenuebergang "
         f"aber beobachtet.\n{text}"
+    )
+
+
+def test_ac4b_ende_in_der_laufenden_viertelstunde_liegt_nach_dem_pruefzeitpunkt():
+    """AC-4b: endet das laufende Ereignis IN der laufenden Viertelstunde, ist
+    das genannte Ende die Deckungsgrenze des laufenden Frames (12:15) und
+    NICHT dessen Zeitstempel (12:00).
+
+    Die eigentliche Zusicherung ist nicht die Zahl, sondern ihre Lage: die
+    genannte Zeit muss NACH dem Pruefzeitpunkt (12:07) liegen. Sonst liest
+    der Wanderer, waehrend er im Regen steht, dass der Regen vorbei sei --
+    eine Aussage ueber die Vergangenheit im Gewand einer Auskunft ueber die
+    Zukunft. Die Konvention ist nicht neu: der Untergrenzen-Zweig aus
+    #2051 S1 nennt ebenfalls die Deckungsgrenze (Lage B, 14:45 statt 14:30).
+
+    Beide Richtungen: dreht jemand auf den Frame-Zeitstempel zurueck, faellt
+    dieser Test -- ueber die Zahl UND ueber den Lagevergleich."""
+    lauf = _test_lauf("ac4b", _laeuft_endet_im_slot())
+    text = _kanaltext(lauf) + "\n" + "\n".join(lauf.sms)
+    assert f"{ENDE_WORTLAUT} {LAGE_C_ENDE_LOKAL}" in text, (
+        f"AC-4b: erwartet {ENDE_WORTLAUT!r} mit der Deckungsgrenze "
+        f"{LAGE_C_ENDE_LOKAL} (triggered_count={lauf.triggered_count}).\n{text}"
+    )
+    assert LAGE_C_FRAME_LOKAL not in text, (
+        f"AC-4b: {LAGE_C_FRAME_LOKAL} ist der Zeitstempel des laufenden "
+        f"Frames und liegt VOR dem Pruefzeitpunkt -- als Ende genannt sagt er "
+        f"dem Wanderer, der Regen sei vorbei, waehrend es regnet.\n{text}"
+    )
+    assert f"now@{LAGE_C_ENDE_LOKAL}" in text, (
+        f"AC-4b: die Kurznachricht muss dieselbe Deckungsgrenze tragen "
+        f"('now@{LAGE_C_ENDE_LOKAL}').\n{text}"
+    )
+    treffer = re.search(rf"{ENDE_WORTLAUT} (\d{{1,2}}):(\d{{2}})", text)
+    assert treffer, f"AC-4b: keine Ende-Uhrzeit im Text gefunden.\n{text}"
+    genannt = int(treffer.group(1)) * 60 + int(treffer.group(2))
+    assert genannt > PRUEFZEIT_MIN, (
+        f"AC-4b: das genannte Ende ({treffer.group(0)!r}) liegt VOR dem "
+        f"Pruefzeitpunkt 12:07 -- ein Ende in der Vergangenheit ist keine "
+        f"Auskunft ueber ein laufendes Ereignis.\n{text}"
     )
 
 
