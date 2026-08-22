@@ -57,8 +57,12 @@ dem bewährten Vorbild aus `deploy-gregor-prod.sh`.
    Fehlermeldung auf stderr, die explizit benennt, dass ungesicherte Arbeit vorliegt, Exit
    ungleich 0. Das Skript darf in diesem Fall keinen Erfolg vortäuschen — der Aufrufer (CI)
    muss den nachfolgenden `git reset --hard` unterlassen.
-5. Ist `$SAFETY` gesetzt: Tag `deploy-safety/ci-$(date -u +%Y%m%d-%H%M%S)` auf das Stash-Objekt
-   setzen (`git -C <repo_dir> tag <TAG> <SAFETY>`), dann eine Meldung mit dem vollständigen
+5. Ist `$SAFETY` gesetzt: Tag `deploy-safety/ci-$(date -u +%Y%m%d-%H%M%S)-${SAFETY:0:12}` auf das
+   Stash-Objekt setzen — die Objekt-Kurzform im Namen hält zwei Läufe derselben UTC-Sekunde
+   auseinander (AC-10). Schlägt das Setzen fehl, weil derselbe Tag bereits auf **genau dieses**
+   Stash-Objekt zeigt, ist die Arbeit bereits gesichert: Erfolgsmeldung inklusive
+   Wiederherstellungs-Befehl, Exit 0 (AC-11). Schlägt es aus einem anderen Grund fehl, bricht
+   das Skript ab (AC-9) (`git -C <repo_dir> tag <TAG> <SAFETY>`), dann eine Meldung mit dem vollständigen
    Wiederherstellungs-Befehl ausgeben, analog zur Zeile in `deploy-gregor-prod.sh:159`
    (`git -C <repo_dir> stash apply <SAFETY>` bzw. über den Tag-Namen).
 6. Untrackte Dateien werden nicht angefasst — `git stash create` erfasst sie standardmäßig
@@ -140,6 +144,36 @@ ungleich 0), bricht der CI-Schritt ab, bevor der Reset läuft.
     `git reset --hard origin/main`, und die Aufrufzeile referenziert `origin/main` als Quelle
     des Skripts.
 
+- **AC-9:** Given das Stash-Objekt wurde erzeugt, aber der Tag lässt sich nicht setzen — und
+  zwar aus einem anderen Grund als einem bereits vorhandenen Tag auf **genau diesem** Objekt
+  (Namensraum blockiert, oder der vorhandene Tag zeigt auf einen **abweichenden** Stand) /
+  When `wip_safety.sh` läuft / Then ist der Exit-Code ungleich 0 und die Meldung benennt, dass
+  die Arbeit NICHT dauerhaft gesichert ist — ohne Tag sammelt die GC das Stash-Objekt ein, der
+  Aufrufer darf deshalb NICHT hart resetten.
+  - Test: Echtes Wegwerf-Repo, in dem ein Tag `deploy-safety` (ohne Suffix) den Namensraum als
+    Datei-Ref belegt; Git kann darunter keine Unter-Refs mehr anlegen (D/F-Konflikt). Geprüft
+    werden Exit-Code, Meldungstext und dass kein `deploy-safety/ci-*`-Tag zurückbleibt.
+
+- **AC-10:** Given zwei Sicherungsläufe folgen unmittelbar aufeinander (zwei schnelle Merges —
+  der `deploy`-Job hat kein `concurrency:`-Gate) / When `wip_safety.sh` zweimal läuft / Then
+  gelingen beide Läufe, es entstehen zwei unterscheidbare Tags, und jede Sicherung ist einzeln
+  wiederherstellbar.
+  - Test: Zwei Läufe mit unterschiedlichem WIP-Inhalt gegen dasselbe Wegwerf-Repo; geprüft
+    werden zwei Tags, dass jeder Tag-Name auf die ersten 12 Zeichen der SHA seines
+    Ziel-Objekts endet (Kollisionsfreiheit auch innerhalb derselben UTC-Sekunde), und dass
+    `stash apply` je Tag den zugehörigen Inhalt zurückholt.
+
+- **AC-11:** Given die uncommittete Arbeit ist bereits gesichert und hat sich seither nicht
+  geändert (alltäglich: mehrere Merges am selben Tag) / When `wip_safety.sh` innerhalb
+  derselben UTC-Sekunde erneut läuft und deshalb denselben Tag-Namen erzeugt / Then gelingen
+  beide Läufe mit Exit 0, es bleibt bei genau einem Tag, und die Arbeit ist darüber
+  wiederherstellbar — ein Abbruch wäre eine Lieferblockade, obwohl die Arbeit gesichert IST.
+  - Test: Zwei Läufe gegen dasselbe Wegwerf-Repo bei **unverändertem** Arbeitsbaum, auf den
+    Sekundenbeginn synchronisiert (keine gefälschte Uhr); geprüft werden beide Exit-Codes,
+    genau ein Tag, derselbe Tag-Name in beiden Ausgaben, und dass der aus der zweiten Ausgabe
+    geparste Wiederherstellungs-Befehl nach `git reset --hard origin/main` real ausgeführt den
+    Dateiinhalt zurückholt.
+
 ## Known Limitations
 
 - Untrackte Dateien sind nicht durch die Sicherung abgedeckt — das ist beabsichtigt, weil der
@@ -163,3 +197,6 @@ ungleich 0), bricht der CI-Schritt ab, bevor der Reset läuft.
 ## Changelog
 
 - 2026-08-21: Initial spec created
+- 2026-08-21: AC-11 (Idempotenz bei unverändertem Arbeitsbaum) ergänzt, AC-9 auf den Fall
+  „abweichendes Objekt bzw. echter Tag-Fehler" präzisiert — Adversary-Befund: zwei Läufe in
+  derselben Sekunde bei gleichem Inhalt brachen die CI-Kette ab, obwohl die Arbeit gesichert war.

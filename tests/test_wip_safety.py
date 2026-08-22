@@ -15,6 +15,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -295,6 +296,162 @@ def test_untrackte_dateien_bleiben_unangetastet(repo: Path):
     assert untracked.exists(), "der Reset darf die untrackte Datei nicht entfernen"
     assert untracked.read_text(encoding="utf-8") == untracked_text
     assert "?? unversioniert.txt" in _git(repo, "status", "--porcelain").stdout
+
+
+def test_nicht_setzbarer_tag_bricht_mit_fehler_ab(repo: Path):
+    """AC-9.
+
+    GIVEN die Sicherung gelingt, aber der Tag laesst sich nicht setzen
+    WHEN wip_safety.sh laeuft
+    THEN ist der Exit-Code ungleich 0 und die Meldung benennt, dass die Arbeit zwar
+         gesichert, aber nicht verankert ist — ohne Tag sammelt die GC das
+         Stash-Objekt ein, der Aufrufer darf NICHT hart resetten.
+
+    Gewaehlter Weg: ein Tag ``deploy-safety`` (ohne Suffix) belegt den Namensraum als
+    Datei-Ref. Git kann darunter keine Unter-Refs mehr anlegen (D/F-Konflikt:
+    "'refs/tags/deploy-safety' exists; cannot create ..."). Das ist unabhaengig vom
+    konkreten Tag-Namen und damit deterministisch, ohne den Zeitstempel zu kennen.
+    """
+    _git(repo, "tag", "deploy-safety", "HEAD")
+    (repo / TRACKED).write_text(WIP_TEXT, encoding="utf-8")
+
+    probe = _git(repo, "stash", "create", "probe", check=False)
+    assert probe.stdout.strip(), (
+        "Vorbedingung: stash create muss hier ein Objekt liefern — geprueft wird der "
+        "Tag-Zweig, nicht der Stash-Zweig"
+    )
+    blocked = _git(repo, "tag", "deploy-safety/ci-probe", probe.stdout.strip(), check=False)
+    assert blocked.returncode != 0, (
+        "Vorbedingung verfehlt: der Tag liess sich doch setzen — der Testzustand muss "
+        "anders konstruiert werden"
+    )
+
+    proc = _run_wip_safety(repo)
+
+    assert proc.returncode != 0, (
+        "ohne Tag ist die Sicherung fluechtig (GC) — die Kette darf nicht mit einem "
+        f"harten Reset weiterlaufen (stdout={proc.stdout!r})"
+    )
+    message = (proc.stderr + proc.stdout).lower()
+    assert "gesichert" in message, (
+        f"Meldung muss den Zustand der Arbeit benennen, war: {message!r}"
+    )
+    assert "tag" in message, (
+        f"Meldung muss benennen, dass der Tag fehlt, war: {message!r}"
+    )
+    assert _safety_tags(repo) == [], "es darf kein Sicherungs-Tag zurueckbleiben"
+
+
+def test_zwei_laeufe_hintereinander_erzeugen_zwei_wiederherstellbare_sicherungen(
+    repo: Path,
+):
+    """AC-10.
+
+    GIVEN zwei Sicherungslaeufe unmittelbar hintereinander (zwei schnelle Merges —
+          der deploy-Job hat kein concurrency-Gate)
+    WHEN wip_safety.sh zweimal laeuft
+    THEN gelingen beide, es entstehen zwei unterscheidbare Tags, und jede Sicherung
+         ist einzeln wiederherstellbar.
+
+    Der Tag-Name traegt die Kurzform des gesicherten Objekts — deshalb kollidieren
+    auch zwei Laeufe innerhalb derselben UTC-Sekunde nicht. Genau das wird geprueft:
+    jeder Tag endet auf die ersten 12 Zeichen der SHA seines Ziel-Objekts.
+    """
+    first_text = "erster Lauf: WIP-Arbeit A\n"
+    second_text = "zweiter Lauf: WIP-Arbeit B\n"
+
+    (repo / TRACKED).write_text(first_text, encoding="utf-8")
+    first = _run_wip_safety(repo)
+    assert first.returncode == 0, f"stderr={first.stderr}"
+
+    (repo / TRACKED).write_text(second_text, encoding="utf-8")
+    second = _run_wip_safety(repo)
+    assert second.returncode == 0, f"stderr={second.stderr}"
+
+    tags = _safety_tags(repo)
+    assert len(tags) == 2, f"zwei unterscheidbare Sicherungs-Tags erwartet: {tags}"
+
+    for tag in tags:
+        target = _git(repo, "rev-parse", tag).stdout.strip()
+        assert tag.endswith(target[:12]), (
+            f"Tag {tag!r} traegt die Objekt-Kurzform nicht — zwei Laeufe in derselben "
+            "UTC-Sekunde wuerden im Namen kollidieren"
+        )
+
+    _git(repo, "reset", "--hard", "origin/main")
+    restored = {}
+    for tag in tags:
+        _git(repo, "stash", "apply", tag)
+        restored[tag] = (repo / TRACKED).read_text(encoding="utf-8")
+        _git(repo, "checkout", "--", TRACKED)
+
+    assert sorted(restored.values()) == sorted([first_text, second_text]), (
+        f"beide Sicherungen muessen einzeln wiederherstellbar sein: {restored}"
+    )
+
+
+def test_zweiter_lauf_bei_unveraendertem_arbeitsbaum_gilt_als_gesichert(repo: Path):
+    """AC-11.
+
+    GIVEN uncommittete Arbeit liegt im Repo und wurde bereits gesichert, ohne dass sich
+          seither etwas geaendert hat (alltaeglich: mehrere Merges am selben Tag)
+    WHEN wip_safety.sh ein zweites Mal in derselben UTC-Sekunde laeuft — gleicher Inhalt
+         ergibt dasselbe Stash-Objekt und damit denselben Tag-Namen
+    THEN gelingen beide Laeufe (Exit 0), es bleibt bei genau einem Tag, und die Arbeit ist
+         darueber wiederherstellbar. Ein Abbruch waere eine Lieferblockade: ab dem zweiten
+         Merge kaeme kein Deploy mehr durch, obwohl die Arbeit laengst gesichert IST.
+
+    Die Kollision braucht beide Laeufe innerhalb derselben UTC-Sekunde. Statt die Uhr zu
+    faelschen wird auf den Sekundenbeginn synchronisiert und real zweimal gestartet;
+    landen die Laeufe doch auf zwei Sekunden (zwei Tags), wird der Versuch wiederholt.
+    """
+    (repo / TRACKED).write_text(WIP_TEXT, encoding="utf-8")
+
+    first = second = None
+    for _ in range(5):
+        for stale in _safety_tags(repo):
+            _git(repo, "tag", "-d", stale)
+        time.sleep(1.0 - (time.time() % 1.0) + 0.02)  # kurz nach dem Sekundenwechsel starten
+        first = _run_wip_safety(repo)
+        second = _run_wip_safety(repo)
+        if len(_safety_tags(repo)) == 1:
+            break
+    else:
+        raise AssertionError(
+            "die beiden Laeufe fielen fuenfmal in verschiedene UTC-Sekunden — die "
+            "Namenskollision liess sich nicht herstellen"
+        )
+
+    assert first.returncode == 0, f"erster Lauf scheiterte: {first.stderr}"
+    assert second.returncode == 0, (
+        "der zweite Lauf bei unveraendertem Arbeitsbaum muss gelingen — die Arbeit ist "
+        f"bereits gesichert (rc={second.returncode}, stderr={second.stderr!r})"
+    )
+
+    tags = _safety_tags(repo)
+    assert len(tags) == 1, f"genau ein Sicherungs-Tag erwartet, gefunden: {tags}"
+    tag = tags[0]
+    assert tag in first.stdout and tag in second.stdout, (
+        f"beide Laeufe muessen denselben Tag {tag} nennen: {first.stdout!r} / {second.stdout!r}"
+    )
+
+    match = re.search(r"git\b[^\n]*?stash\s+apply\s+\S+", second.stdout)
+    assert match, (
+        "auch der zweite Lauf muss den Wiederherstellungs-Befehl nennen, stdout war: "
+        f"{second.stdout!r}"
+    )
+    command = match.group(0).strip("`'\"(),. ")
+
+    _git(repo, "reset", "--hard", "origin/main")
+    assert (repo / TRACKED).read_text(encoding="utf-8") == COMMITTED_TEXT
+
+    restore = subprocess.run(
+        shlex.split(command), cwd=str(repo), capture_output=True, text=True
+    )
+    assert restore.returncode == 0, (
+        f"ausgegebener Befehl {command!r} scheiterte: {restore.stderr.strip()}"
+    )
+    assert (repo / TRACKED).read_text(encoding="utf-8") == WIP_TEXT
 
 
 def test_ci_ruft_die_sicherung_vor_dem_harten_reset_aus_origin_main_auf():
