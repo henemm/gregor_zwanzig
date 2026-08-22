@@ -274,3 +274,73 @@ func TestConfigMergePreservesUnsentDisplayConfigKeys(t *testing.T) {
 		})
 	}
 }
+
+// TestOutlookMetricFormatsTravelsWithoutStructChange deckt #2049 AC-13 ab: das
+// NEUE Unterfeld `display_config.outlook_metric_formats` (Roh/Einfach je
+// Ausblick-Groesse) reist ohne jede Erweiterung von model.Trip.DisplayConfig
+// oder mergeConfigMap durch den Read-Modify-Write — DisplayConfig ist schemalos
+// (map[string]interface{}), gemerged wird nur die oberste Schluesselebene.
+//
+// Zwei Zusicherungen in einem Lauf, weil sie nur ZUSAMMEN etwas beweisen:
+//  1. das neue Feld kommt vollstaendig an (Kennung + boolescher Wert), statt
+//     unterwegs an einem fehlenden Struct-Feld vorbei verloren zu gehen;
+//  2. der NICHT mitgesendete Sibling `outlook_metrics` ueberlebt — genau die
+//     Blind-Replace-Fehlerklasse (#102), die das neue Feld sonst gegen die
+//     bestehende Ausblick-Auswahl eintauschen wuerde.
+//
+// Kein Mock: echter http.HandlerFunc via httptest gegen einen echten Store.
+func TestOutlookMetricFormatsTravelsWithoutStructChange(t *testing.T) {
+	s := newTestStore(t)
+	trip := model.Trip{
+		ID:   "outlook-formats-trip",
+		Name: "Outlook Formats Trip",
+		Stages: []model.Stage{{
+			ID: "S1", Name: "D1", Date: "2026-05-01",
+			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
+		}},
+		DisplayConfig: map[string]interface{}{
+			"outlook_metrics":   []interface{}{"gust", "sunshine"},
+			"telegram_kurzform": false,
+		},
+	}
+	if err := s.SaveTrip(&trip); err != nil {
+		t.Fatalf("seed SaveTrip failed: %v", err)
+	}
+
+	r := chi.NewRouter()
+	r.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(s))
+
+	// Teil-PUT wie der Editor ihn beim Umschalten absetzt: NUR das neue Feld.
+	body := `{"outlook_metric_formats":{"gust":true,"sunshine":false}}`
+	req := httptest.NewRequest(http.MethodPut, "/api/trips/outlook-formats-trip/weather-config", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	got, err := s.LoadTrip("outlook-formats-trip")
+	if err != nil || got == nil {
+		t.Fatalf("failed to reload trip: %v", err)
+	}
+
+	formats, ok := got.DisplayConfig["outlook_metric_formats"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("outlook_metric_formats fehlt oder ist kein Mapping nach dem Roundtrip: %#v",
+			got.DisplayConfig["outlook_metric_formats"])
+	}
+	if formats["gust"] != true {
+		t.Errorf("outlook_metric_formats[gust]: erwartet true, erhalten %#v", formats["gust"])
+	}
+	if formats["sunshine"] != false {
+		t.Errorf("outlook_metric_formats[sunshine]: erwartet false, erhalten %#v", formats["sunshine"])
+	}
+
+	// Der nicht mitgesendete Sibling darf nicht verschwinden (#102-Klasse).
+	metrics, ok := got.DisplayConfig["outlook_metrics"].([]interface{})
+	if !ok || len(metrics) != 2 || metrics[0] != "gust" || metrics[1] != "sunshine" {
+		t.Errorf("outlook_metrics: erwartet unveraendert [gust sunshine], erhalten %#v",
+			got.DisplayConfig["outlook_metrics"])
+	}
+}

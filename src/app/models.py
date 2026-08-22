@@ -858,6 +858,15 @@ class UnifiedWeatherDisplayConfig:
     # sieben festen Spalten · [] = der Ausblick-Block entfaellt ganz · gefuellt
     # = gewaehlte Groessen in Auswahlreihenfolge.
     outlook_metrics: Optional[list[str]] = None
+    # Issue #2049: Roh/Einfach je Ausblick-Groesse, {kennung: bool} (True =
+    # Einfach). PARALLELES Feld statt Objektform in `outlook_metrics` -- jenes
+    # bleibt eine reine Kennungsliste (#1848 A2), strukturell dasselbe Muster
+    # wie `channel_layouts` neben `metrics`. Fehlende Kennung = Roh; der
+    # Ausblick-Default ist hart "Roh" und folgt bewusst NICHT dem
+    # `default_format_mode` des Katalogs (der waere fuer cloud_total/sunshine/
+    # wind_direction symbol/scale und aenderte bestehende Trips ohne jede
+    # Nutzeraktion).
+    outlook_metric_formats: Optional[dict[str, bool]] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:

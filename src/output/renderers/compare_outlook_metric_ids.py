@@ -262,8 +262,50 @@ def _kennungen_aus_renderer_ids(renderer_ids: list[str]) -> list[str]:
     return [umkehr[r] for r in renderer_ids if r in umkehr]
 
 
-def outlook_columns(metrics: object) -> list[dict]:
+def resolve_trip_outlook_formats(dc: object) -> dict[str, bool] | None:
+    """Trip-Vorschau: die Roh/Einfach-Zuordnung je Groesse (#2049).
+
+    Bewusst eine EIGENE Funktion neben ``resolve_trip_outlook_metrics()``
+    statt eines zweiten Rueckgabewerts: jene Funktion hat mehrere Aufrufer
+    (Renderer wie Zeilenbau), die ausschliesslich die Kennungsliste brauchen.
+
+    Der Ausblick hat keine Kanal-Ebene (ADR-0055 Punkt 2) und keinen
+    Report-Typ-Bezug -- die Zuordnung gilt global je Flaeche, es gibt also
+    nichts zu kaskadieren. ``None`` (nie eingestellt) heisst "alles Roh".
+    """
+    from app.metric_catalog import normalize_outlook_metric_formats
+
+    return normalize_outlook_metric_formats(
+        getattr(dc, "outlook_metric_formats", None))
+
+
+def resolve_compare_outlook_formats(
+    outlook_metric_formats: object,
+) -> dict[str, bool] | None:
+    """Ortsvergleich-Ausblick: dieselbe Regel wie im Trip (#2049).
+
+    Die Ortsvergleichs-Konfiguration ist ein roher ``display_config``-Dict
+    (kein Dataclass wie beim Trip) -- deshalb nimmt diese Funktion den
+    gespeicherten Wert direkt entgegen statt ein Traegerobjekt. Die Regel
+    selbst ist EINE (``normalize_outlook_metric_formats``), damit die beiden
+    Flaechen nicht auseinanderlaufen koennen.
+    """
+    from app.metric_catalog import normalize_outlook_metric_formats
+
+    return normalize_outlook_metric_formats(outlook_metric_formats)
+
+
+def outlook_columns(metrics: object, formats: object = None) -> list[dict]:
     """Auswahl -> geordnete Spalten-Beschreibung fuer den Ausblick-Renderer.
+
+    ``formats`` (#2049): Roh/Einfach-Zuordnung ``{kennung: bool}``. Jede Spalte
+    einer auf Einfach gestellten UND ausblick-faehigen Groesse traegt
+    ``"friendly": True``; ``format_outlook_value()`` verzweigt daran. Der
+    Default ist hart Roh -- ohne ``formats`` (oder ohne Eintrag) entsteht das
+    Feld gar nicht erst, die Spalten bleiben damit zeichengleich zum bisherigen
+    Stand (AC-2/AC-12). Eine nicht-faehige Kennung bekommt das Feld NIE, auch
+    wenn ein Flag gespeichert ist (AC-4: Sichtbarkeit und Wirkung haengen an
+    derselben Faehigkeitsliste).
 
     ``label`` kommt aus dem Compare-Katalog (deutsch, seit #1401 A1 der Name
     des zentralen Registers), NICHT aus ``MetricDefinition.col_label``: dessen
@@ -284,8 +326,13 @@ def outlook_columns(metrics: object) -> list[dict]:
     gespeicherte Auswahl. Die Paar-Altform wird weiterhin angenommen (auf ihre
     Kennung reduziert), damit ein direkter Aufruf mit Bestandsdaten nicht
     stillschweigend leer laeuft."""
-    from app.metric_catalog import normalize_outlook_metric_ids
+    from app.metric_catalog import (
+        normalize_outlook_metric_formats, normalize_outlook_metric_ids,
+    )
 
+    # Die Normalisierung filtert nicht-faehige Kennungen bereits heraus --
+    # derselbe Ladepfad-Helfer wie in `loader.py`, keine zweite Regel hier.
+    friendly_ids = normalize_outlook_metric_formats(formats) or {}
     columns: list[dict] = []
     dropped: list[str] = []
     for metric_id in normalize_outlook_metric_ids(metrics) or []:
@@ -304,6 +351,9 @@ def outlook_columns(metrics: object) -> list[dict]:
                 "decimals": catalog.get("decimals", 0),
                 "kind": catalog.get("kind", "range"),
                 "aggregation_label": catalog.get("aggregation_label", ""),
+                # Rein additiv: nur die auf Einfach gestellten Spalten
+                # bekommen ueberhaupt einen Schluessel (AC-12).
+                **({"friendly": True} if friendly_ids.get(metric_id) else {}),
             })
     if dropped:
         # #1848 A2: die Verwerfung war hier bislang STUMM -- eine Spalte
@@ -367,8 +417,52 @@ def _merge_min_max_pairs(columns: list[dict]) -> list[dict]:
             "decimals": col.get("decimals", 0),
             "kind": "range",
             "aggregation_label": "",
+            # #2049 (AC-11): diese Funktion baut ein NEUES Dict und kopiert nur
+            # die hier gelisteten Schluessel -- ohne diese Zeile ginge das
+            # Roh/Einfach-Flag beim Zusammenfuehren still verloren. Additiv wie
+            # oben: fehlt es, entsteht der Schluessel nicht.
+            **({"friendly": True} if col.get("friendly") else {}),
         })
     return merged
+
+
+_FRIENDLY_CLOUD_IDS = ("cloud_total", "cloud_low", "cloud_mid", "cloud_high")
+
+
+def _friendly_outlook_text(metric_id: object, number: float) -> str | None:
+    """Wort-/Symbolform einer Ausblick-Groesse oder ``None`` (Issue #2049).
+
+    Wiederverwendung statt Parallel-Logik (AC-10): Himmelsrichtung, Wolken-
+    symbol und Wind-/Boeen-Wortstufe kommen aus den bestehenden Helfern, die
+    dieselbe Aussage anderswo im Produkt schon treffen. Neu sind allein die
+    drei Skalen, fuer die es bisher gar keine Wortform gab -- und die
+    Niederschlags-Skala ist bewusst die TAGESSUMMEN-Skala, nicht die
+    Stundenskala ``format_precip_intensity`` (AC-9).
+
+    Die Schluesselmenge dieser Verzweigung ist ``OUTLOOK_FRIENDLY_CAPABLE``
+    (app.metric_catalog) -- dieselbe Liste, an der das Frontend die
+    Sichtbarkeit des Umschalters festmacht (AC-4).
+    """
+    from output.metric_format import cloud_emoji
+    from services.weather_metrics import (
+        format_precip_daily_sum, format_rain_probability_scale,
+        format_sunshine_scale, format_wind_strength,
+    )
+    from utils.geo import degrees_to_compass
+
+    if metric_id == "wind_direction":
+        return degrees_to_compass(number)
+    if metric_id in _FRIENDLY_CLOUD_IDS:
+        return cloud_emoji(number)
+    if metric_id in ("wind", "gust"):
+        return format_wind_strength(number)
+    if metric_id == "precipitation":
+        return format_precip_daily_sum(number)
+    if metric_id == "rain_probability":
+        return format_rain_probability_scale(number)
+    if metric_id == "sunshine":
+        return format_sunshine_scale(number)
+    return None
 
 
 def format_outlook_value(value: object, column: dict) -> str:
@@ -400,6 +494,22 @@ def format_outlook_value(value: object, column: dict) -> str:
         number = float(value)
     except (TypeError, ValueError):
         return str(value)
+    # #2049: "Einfach" heisst im Ausblick DIESELBE Zeichenkette in allen vier
+    # Ausgabeorten -- `stage["cells"]` ist ein geteilter Kanal fuer HTML und
+    # Text, ein HTML-Ampelpunkt erschiene in Klartext und Telegram als
+    # Quelltext (AC-6). Die Ampel traegt die HTML-Zelle ohnehin als
+    # Hintergrundtoenung (`_metric_column_bg`, unabhaengig von diesem Flag).
+    if column.get("friendly") is True:
+        friendly = _friendly_outlook_text(column.get("metric_id"), number)
+        if friendly is not None:
+            return friendly
+        logger.warning(
+            "format_outlook_value: %r ist als Einfach markiert, hat hier aber "
+            "keine Wortform — Rueckfall auf die Rohzahl. Faehigkeitsliste "
+            "(metric_catalog.OUTLOOK_FRIENDLY_CAPABLE) und Verzweigung "
+            "(_friendly_outlook_text) sind auseinandergelaufen (#2049 AC-4).",
+            column.get("metric_id"),
+        )
     decimals = column.get("decimals") or 0
     text = f"{number:.{int(decimals)}f}"
     unit = column.get("unit") or ""
@@ -445,7 +555,9 @@ __all__ = [
     "outlook_grundauswahl_ids",
     "resolve_outlook_metrics",
     "resolve_compare_outlook_metrics",
+    "resolve_compare_outlook_formats",
     "resolve_trip_outlook_metrics",
+    "resolve_trip_outlook_formats",
     "outlook_columns",
     "format_outlook_value",
     "format_outlook_range_cell",

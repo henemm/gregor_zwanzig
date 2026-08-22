@@ -60,11 +60,20 @@
 		 *  flächenblinde Quelle würde den Vergleich falsch beschriften. Größen
 		 *  ohne Eintrag bekommen GAR KEINE Marke, keine leere (AC-9). */
 		kuerzelById: Record<string, string[]>;
+		/** Issue #2049: welche Groessen einen Roh/Einfach-Umschalter bekommen.
+		 *  Ohne Uebergabe bleibt es bei `indicatorCapable()` — der Kanal-Reiter
+		 *  (Stundentabelle der Mail) verhaelt sich damit unveraendert. Der
+		 *  3-Tages-Ausblick uebergibt seine EIGENE Liste
+		 *  (`outlookFriendlyCapable`), weil dort andere Groessen eine
+		 *  Einfach-Form haben (kein `thunder`/`cape`, dafuer `sunshine`) und
+		 *  weil Sichtbarkeit und Backend-Wirkung an derselben Quelle haengen
+		 *  muessen. */
+		modeCapable?: (id: string) => boolean;
 	}
 
 	let {
 		primaryColumns, metricById, friendlyMap, activeChannel, highlight, onRemove, onDndReorder, onMode,
-		offColumns, onRestore, kuerzelById,
+		offColumns, onRestore, kuerzelById, modeCapable = indicatorCapable,
 	}: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
@@ -98,7 +107,7 @@
 		{#snippet row(id: string, i: number)}
 			{@const m = metricById[id]}
 			{@const hl = highlight && highlight.id === id}
-			{@const hasInd = indicatorCapable(id)}
+			{@const hasInd = modeCapable(id)}
 			{@const useIndicator = friendlyMap[id] === true}
 			{@const kurzform = kuerzelById[id]}
 			{#if showCutLine && i === tgBudget}

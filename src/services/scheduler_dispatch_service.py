@@ -498,6 +498,10 @@ def send_one_compare_preset(
         corridors=opts.corridors,
         outlook_enabled=opts.outlook_enabled,
         outlook_metrics=opts.outlook_metrics,
+        # Issue #2049: dieselbe Zuordnung wie in der Vorschau (compare_preview_
+        # service) -- sonst zeigte die versendete Mail etwas anderes als die
+        # Vorschau, an der der Nutzer sie eingestellt hat.
+        outlook_metric_formats=opts.outlook_metric_formats,
     )
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
     # gemeldeten Stand). Best-effort: ein fehlgeschlagener Snapshot-Write darf

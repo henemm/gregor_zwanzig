@@ -273,6 +273,18 @@
 		scheduleAutoSave();
 	}
 
+	// Issue #2049 (route): Roh/Einfach je Vorschau-Groesse. `null` = nie
+	// eingestellt (alles Roh). Gehoert — wie outlookMetricKeys — in
+	// snapshot()/isDirty UND handleDiscard(), sonst bliebe der Reiter nach einer
+	// reinen Umschaltung faelschlich „sauber" und der Speichern-Weg feuerte nie.
+	let outlookMetricFormats = $state<Record<string, boolean> | null>(null);
+
+	function onOutlookMetricFormats(formats: Record<string, boolean>): void {
+		outlookMetricFormats = formats;
+		userTouched = true;
+		scheduleAutoSave();
+	}
+
 	// Effektive Sicht eines Kanals: eigener Eintrag, sonst die globale Auswahl.
 	function channelView(ch: ChannelId): ChannelOverride {
 		return channelBuckets[ch] ?? { buckets, friendlyMap };
@@ -358,16 +370,17 @@
 	// Issue #1720 S1: outlookMetricKeys gehoert in Dirty-Vergleich UND Snapshot —
 	// sonst bleibt der Reiter nach einer reinen Vorschau-Aenderung „sauber".
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled, channelBuckets, outlookMetricKeys }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled, channelBuckets, outlookMetricKeys, outlookMetricFormats }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
 		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean,
 		cb: Record<ChannelId, ChannelOverride | null> = channelBuckets,
-		om: string[] | null = outlookMetricKeys
+		om: string[] | null = outlookMetricKeys,
+		ofm: Record<string, boolean> | null = outlookMetricFormats
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb, outlookMetricKeys: om });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb, outlookMetricKeys: om, outlookMetricFormats: ofm });
 	}
 
 	function allCatalogIds(): string[] {
@@ -458,7 +471,12 @@
 		// roher Cast auf string[] liesse die Haken nach dem Neuladen leer.
 		const om = normalizeStoredOutlookMetrics(trip!.display_config?.outlook_metrics, compareCatalog);
 		outlookMetricKeys = om;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, cb, om);
+		// Issue #2049: Roh/Einfach der Vorschau — anders als die Auswahl braucht
+		// die Zuordnung keine Katalog-Uebersetzung (sie ist bereits nach
+		// Kennungen geschluesselt), haengt also nicht am compareCatalog-Fetch.
+		const ofm = trip!.display_config?.outlook_metric_formats ?? null;
+		outlookMetricFormats = ofm;
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, cb, om, ofm);
 	}
 
 	// Issue #1332 F003 (Fix-Loop 2): eigener, idempotenter Ladepfad fuer die
@@ -829,6 +847,9 @@
 			// Reiter nach dem Verwerfen dirty. `?? null` ist hier richtig: `null`
 			// heisst "nie eingestellt" und ist ein gueltiger Zustand.
 			outlookMetricKeys = snap.outlookMetricKeys ?? null;
+			// Issue #2049: dieselbe Begruendung — ohne diese Zeile bliebe der
+			// Reiter nach dem Verwerfen einer Roh/Einfach-Aenderung dirty.
+			outlookMetricFormats = snap.outlookMetricFormats ?? null;
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
@@ -891,6 +912,13 @@
 			outlook_metrics: outlookMetricKeys === null
 				? trip!.display_config?.outlook_metrics
 				: outlookMetricKeys,
+			// Issue #2049: dieselbe RMW-Bauart wie `outlook_metrics` darueber —
+			// explizit statt nur ueber den Spread, damit ein bewusstes
+			// Zuruecksetzen auf Roh nicht vom Altwert verdeckt wird. `null` (nie
+			// eingestellt) reicht den Altwert unveraendert durch.
+			outlook_metric_formats: outlookMetricFormats === null
+				? trip!.display_config?.outlook_metric_formats
+				: outlookMetricFormats,
 		};
 	}
 
@@ -1180,6 +1208,14 @@
 		if (wiz) wiz.outlookMetricKeys = keys;
 	}
 
+	// Issue #2049: Roh/Einfach der Ortsvergleichs-Vorschau — derselbe
+	// Speicherweg wie die Auswahl darueber (wiz-State, persistiert vom
+	// Commit-Wrapper in CompareTabs). Read-Modify-Write passiert bereits in
+	// CompareOutlookLayoutControls; hier kommt die fertige Zuordnung an.
+	function onCompareOutlookMetricFormats(formats: Record<string, boolean>) {
+		if (wiz) wiz.outlookMetricFormats = formats;
+	}
+
 	function onCompareOutlookEnabled(checked: boolean) {
 		if (wiz) wiz.outlookEnabled = checked;
 	}
@@ -1408,6 +1444,8 @@
 					catalog={compareCatalog}
 					grundauswahl={materializedActiveMetricKeys}
 					onMetricKeys={onCompareOutlookMetricKeys}
+					metricFormats={wiz.outlookMetricFormats}
+					onMetricFormats={onCompareOutlookMetricFormats}
 					{onOutlookCommit}
 					enabled={wiz.outlookEnabled}
 					onEnabledChange={onCompareOutlookEnabled}
@@ -1500,7 +1538,12 @@
 				hasLabelColumn={false}
 			>
 				{#snippet editor({ channel })}
-					<Card padding={0}>
+					<!-- Issue #2049: eigener Testanker. `wm2-reihenfolge-row` gibt es
+					     auf dieser Seite ZWEIMAL (Kanal-Reiter hier, 3-Tages-Vorschau
+					     weiter unten) — ohne Anker kann ein Test die beiden Bloecke
+					     nicht auseinanderhalten, und genau diese Verwechslung hielt
+					     den Roh/Einfach-Test blind fuer den Vorschau-Bug. -->
+					<Card padding={0} data-testid="weather-metrics-kanal-reihenfolge">
 						<WeatherV2Reihenfolge
 							primaryColumns={activeChannelSections.active}
 							{metricById}
@@ -1790,11 +1833,17 @@
 					<!-- Issue #1848 A3 (AC-2/AC-3): die Trip-eigene Grundauswahl
 					     (`buckets.primary`) — dieselbe Menge, gegen die auch die
 					     Kanal-Reiter schneiden. -->
+					<!-- Issue #2049: der Roh/Einfach-Umschalter der Vorschau —
+					     dieselbe Bedienflaeche wie im Ortsvergleich (:1441),
+					     nur der Speicherweg unterscheidet sich (hier
+					     Trip-Auto-Save, dort der wiz-State + Commit-Wrapper). -->
 					<CompareOutlookLayoutControls
 						metricKeys={outlookMetricKeys}
 						catalog={compareCatalog}
 						grundauswahl={buckets.primary}
 						onMetricKeys={onOutlookMetricKeys}
+						metricFormats={outlookMetricFormats}
+						onMetricFormats={onOutlookMetricFormats}
 						title="3-Tages-Vorschau"
 						showEmailOnlyHint={false}
 					/>

@@ -984,6 +984,52 @@ def normalize_outlook_metric_ids(stored: object) -> Optional[list[str]]:
     return kennungen
 
 
+# Issue #2049: die Groessen, die im 3-Tages-Ausblick eine Einfach-Form haben.
+# EINE Quelle fuer BEIDE Seiten: das Frontend macht die Sichtbarkeit des
+# Roh/Einfach-Umschalters daran fest (`outlookFriendlyCapability.ts`, gegen
+# diese Liste per Drift-Test verglichen), das Backend die Formatierungs-
+# verzweigung (`compare_outlook_metric_ids._friendly_outlook_text`). Damit kann
+# keine Groesse einen sichtbaren, aber wirkungslosen Umschalter zeigen (AC-4) --
+# genau der Bug, der #2049 ausgeloest hat.
+#
+# NICHT enthalten und warum (Spec "Metrik-Matrix"): `thunder` zeigt roh bereits
+# das Stufenwort · `temperature`/`wind_chill` haben produktweit keine
+# Einfach-Form · `cape` kommt im Ausblick strukturell nicht vor
+# (`selectable=False`) · `visibility` bewusst nicht (#814 AC-5).
+OUTLOOK_FRIENDLY_CAPABLE: frozenset = frozenset({
+    "wind_direction", "cloud_total", "cloud_low", "cloud_mid", "cloud_high",
+    "wind", "gust", "precipitation", "rain_probability", "sunshine",
+})
+
+
+def outlook_friendly_capable(metric_id: object) -> bool:
+    """Hat diese Groesse im Ausblick eine Einfach-Form? (Issue #2049, AC-3)"""
+    return isinstance(metric_id, str) and metric_id in OUTLOOK_FRIENDLY_CAPABLE
+
+
+def normalize_outlook_metric_formats(stored: object) -> Optional[dict[str, bool]]:
+    """Gespeicherte Roh/Einfach-Zuordnung des Ausblicks -> geprueftes Mapping.
+
+    Ladepfad-Haelfte der Speicherform ``display_config.outlook_metric_formats``
+    (Issue #2049, AC-1) -- Sibling von ``outlook_metrics``, das dadurch eine
+    reine ``list[str]`` bleibt (keine Rueckkehr zur Objektform, #1848 A2).
+
+    Dieselbe Drei-Werte-Semantik wie ``normalize_outlook_metric_ids()``:
+    ``None`` heisst "kein Mapping" (nie eingestellt), ein leeres Mapping heisst
+    "nichts auf Einfach gestellt".
+
+    Verworfen wird alles, was einen wirkungslosen Zustand einschleppen wuerde:
+    nicht-boolesche Werte (der Umschalter kennt nur zwei Stellungen) und
+    Kennungen ausserhalb von ``OUTLOOK_FRIENDLY_CAPABLE`` -- fuer die gibt es
+    im Ausblick gar keinen Umschalter, ein gespeichertes Flag koennte also nur
+    aus einem Fehler stammen und nie etwas bewirken.
+    """
+    if not isinstance(stored, dict):
+        return None
+    return {k: v for k, v in stored.items()
+            if isinstance(v, bool) and outlook_friendly_capable(k)}
+
+
 def aggregation_label_de(aggregation: object) -> str:
     """Deutsche Beschriftung einer Auswertung (``""`` wenn unbekannt)."""
     return _AGGREGATION_LABELS_DE.get(aggregation, "") if isinstance(aggregation, str) else ""

@@ -820,6 +820,8 @@
 		wizardState.hourlyMetricKeys = hydrated.hourlyMetricKeys;
 		wizardState.hourlyEnabled = hydrated.hourlyEnabled;
 		wizardState.outlookMetricKeys = hydrated.outlookMetricKeys;
+		// Issue #2049: Roh/Einfach je Ausblick-Groesse, aus derselben Hydration.
+		wizardState.outlookMetricFormats = hydrated.outlookMetricFormats ?? null;
 		wizardState.outlookEnabled = hydrated.outlookEnabled;
 		lastPersistedLayoutSnapshot = hydrated;
 		layoutHydrated = true;
@@ -854,6 +856,12 @@
 				// unangetasteten Zustand in eine Leerauswahl.
 				outlookMetricKeys:
 					wizardState.outlookMetricKeys === null ? null : [...wizardState.outlookMetricKeys],
+				// Issue #2049: analog oben — `null` (nie eingestellt) bleibt
+				// `null` und laesst den Schluessel unangetastet round-trippen.
+				outlookMetricFormats:
+					wizardState.outlookMetricFormats == null
+						? null
+						: { ...wizardState.outlookMetricFormats },
 				outlookEnabled: wizardState.outlookEnabled
 			};
 			const before = lastPersistedLayoutSnapshot ?? current;

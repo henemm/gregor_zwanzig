@@ -149,6 +149,7 @@ def render_comparison_text(
     *,
     outlook_enabled: bool = False,
     outlook_metrics: list[dict] | None = None,
+    outlook_metric_formats: dict[str, bool] | None = None,
     hourly_metrics: list[str] | None = None,
     hourly_enabled: bool = True,
     undelivered: list | None = None,
@@ -287,7 +288,11 @@ def render_comparison_text(
         # haengt NICHT an dieser Bedingung (Issue #1323, bleibt unabhaengig).
         have_hourly = hourly_enabled and bool(loc_result.hourly_data)
         outlook_rows = (
-            _build_location_outlook_rows(loc_result, outlook_metrics)
+            # Issue #2049: dieselbe Zuordnung wie der HTML-Pfad -- der
+            # Pflicht-Validator liest nur HTML und ist im Klartext blind
+            # (#1366-Erfahrung), die Zellen muessen trotzdem uebereinstimmen.
+            _build_location_outlook_rows(
+                loc_result, outlook_metrics, outlook_metric_formats)
             if outlook_enabled and loc_result.outlook_hourly_data else []
         )
         # Fix #1505 (AC-4): bei eingeschaltetem Ausblick ohne Zeilen (weder
@@ -422,6 +427,7 @@ def render_compare_email(
     corridors: list[Corridor] | None = None,
     outlook_enabled: bool = False,
     outlook_metrics: list[dict] | None = None,
+    outlook_metric_formats: dict[str, bool] | None = None,
     undelivered: list | None = None,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
@@ -458,6 +464,7 @@ def render_compare_email(
         corridors=corridors,
         outlook_enabled=outlook_enabled,
         outlook_metrics=outlook_metrics,
+        outlook_metric_formats=outlook_metric_formats,
         # Issue #1461 S3b-1: geteilter Hinweis-Baustein, derselbe wie im Trip.
         undelivered=undelivered,
     )
@@ -468,6 +475,8 @@ def render_compare_email(
         # der Pflicht-Validator liest nur HTML, der Klartext braucht sie
         # deshalb eigenstaendig (#1366-Erfahrung).
         outlook_metrics=outlook_metrics,
+        # Issue #2049: aus demselben Grund auch die Roh/Einfach-Zuordnung.
+        outlook_metric_formats=outlook_metric_formats,
         # Issue #1366 F003 (Staging-Fund, AC-4): dieselbe Quelle wie der
         # HTML-Pfad oben -- vorher kannte render_comparison_text diese beiden
         # Parameter gar nicht, der Klartext-Teil zeigte die Stundentabelle

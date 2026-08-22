@@ -443,6 +443,7 @@ def build_outlook_row(
     day_window_end_hour: Optional[int] = None,
     hiking_extrema: Optional[dict] = None,
     segments: Optional[list] = None,
+    outlook_metric_formats: Optional[dict] = None,
 ) -> dict:
     """Baut ein Ausblick-Row-Dict aus einer SegmentWeatherSummary + Punktliste.
 
@@ -486,6 +487,15 @@ def build_outlook_row(
     col["field"])`` der ``cells``-Schleife des konfigurierbaren Pfads.
     Fehlender Key/``None`` faellt fail-soft auf das Etappenaggregat zurueck.
 
+    ``outlook_metric_formats`` (#2049): Roh/Einfach je Ausblick-Groesse
+    (``{kennung: bool}``). Wie bei ``metrics`` hat die ausdrueckliche Uebergabe
+    Vorrang; ohne sie wird die Zuordnung aus ``trip_display_config``
+    aufgeloest, damit der Zeitplaner auch dafuer kein Renderer-Vokabular
+    braucht. Die ZELLEN entstehen hier genau einmal und speisen alle vier
+    Ausgabeorte -- deshalb ist dies die einzige Stelle, an der das Flag
+    ankommen muss (die Kopfzeilen der Renderer brauchen es nicht, ihre
+    Beschriftung aendert sich nicht).
+
     ``segments`` (#1848 A1, Alternative zu ``hiking_extrema``): der Aufrufer
     (``trip_report_scheduler.py``) hat ``seg_weather`` bereits vorliegen,
     darf aber ``output.renderers.day_window`` selbst nicht importieren
@@ -501,6 +511,15 @@ def build_outlook_row(
         )
 
         metrics = resolve_trip_outlook_metrics(trip_display_config, report_type)
+    if outlook_metric_formats is None and trip_display_config is not None:
+        # #2049: dieselbe Bauart wie `metrics` eine Zeile darueber -- der
+        # Zeitplaner reicht die ungekollabierte Konfiguration durch, die
+        # Aufloesung passiert in der Ausgabeschicht.
+        from output.renderers.compare_outlook_metric_ids import (
+            resolve_trip_outlook_formats,
+        )
+
+        outlook_metric_formats = resolve_trip_outlook_formats(trip_display_config)
     from output.metric_format import thunder_label_value
     from output.tokens.dto import HourlyValue
     from utils.timezone import local_hour as _lh
@@ -649,7 +668,7 @@ def build_outlook_row(
         # Gewitterspalte am oben (#1841) aufgeloesten Tagesfenster vorbeigehen.
         cells: list[str] = []
         cell_bg: list[str] = []
-        for col in outlook_columns(metrics):
+        for col in outlook_columns(metrics, outlook_metric_formats):
             ordinal = col.get("kind") == "ordinal"
             # #1848 A1 (AC-4..AC-8): eine zusammengefuehrte Spannen-Spalte
             # traegt `field_min`/`field_max` statt `field` -- BEIDE Seiten

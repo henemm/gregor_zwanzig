@@ -314,6 +314,10 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     # Registrierung wandert deshalb unten zum Laufzeit-Eintrag (Muster
     # METRIC_PRIORITY/HOURLY_EXCLUSION_REASON).
     ("src/app/metric_catalog.py", "COMPACT_LABEL_EXCEPTIONS", "schluessel"),
+    # Issue #2049: OUTLOOK_FRIENDLY_CAPABLE ist die Soll-Menge fuer den
+    # Roh/Einfach-Umschalter im 3-Tages-Ausblick -- geteilte Quelle mit dem
+    # Frontend (Drift-Test gegen outlookFriendlyCapability.ts).
+    ("src/app/metric_catalog.py", "OUTLOOK_FRIENDLY_CAPABLE", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['alpen-trekking']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['wandern']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['skitouren']['metrics']", "element"),
@@ -331,6 +335,10 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "compare_hourly_metric_ids.py", "HOURLY_EXCLUDED_METRIC_IDS", "element"),
     (_R + "compare_hourly_metric_ids.py", "HOURLY_DEFAULT_METRIC_IDS", "element"),
     (_R + "compare_metric_ids.py", "RENDERER_TO_TRIP_METRIC_ID", "wert"),
+    # Issue #2049: die vier Wolken-Kennungen, fuer die
+    # `_friendly_outlook_text` eine Einfach-Form kennt -- Teilmenge von
+    # OUTLOOK_FRIENDLY_CAPABLE, eigenstaendig registriert (eigene Fundstelle).
+    (_R + "compare_outlook_metric_ids.py", "_FRIENDLY_CLOUD_IDS", "element"),
     (_R + "email/compare_html.py", "_HOUR_FMT_OVERRIDES", "schluessel"),
     (_R + "email/compare_html.py", "_HOUR_SEV_OVERRIDES", "schluessel"),
     (_R + "email/helpers.py", "NO_HOURLY_COLUMN_METRIC_IDS", "element"),

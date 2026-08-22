@@ -502,3 +502,391 @@ def test_ac1_normalize_outlook_metric_formats(stored, erwartet):
         f"normalize_outlook_metric_formats({stored!r}) == {ergebnis!r} statt "
         f"{erwartet!r}."
     )
+
+
+# =============================================================================
+# T11-T13 — Ortsvergleich (Adversary-Finding F001, PO-Entscheid 2026-08-22).
+#
+# Die Spec sagt die Umschaltung fuer BEIDE Flaechen zu ("je Trip/Ortsvergleich",
+# "Trip-Editor und Ortsvergleich-Editor") und fuehrt in den Known Limitations
+# keine Ortsvergleich-Ausnahme. Der Ortsvergleich hat aber einen EIGENEN
+# Renderpfad: ``render_compare_email()`` -> ``compare_html._build_location_
+# outlook_rows()`` -> ``build_outlook_row()``, ohne ``trip_display_config``.
+# Ein im Trip wirksames Flag ist dort strukturell None.
+#
+# Traegermetrik ist 'gust': die geteilte Compare-Tagesfixtur setzt
+# ``gust_kmh=25.0`` auf JEDEM Punkt, ``summarize_points()`` fuellt daraus
+# ``gust_max_kmh``. Der Roh-Test unten prueft das ausdruecklich ("25 km/h") --
+# waere das Feld wie ``wind_direction_avg_deg`` nie befuellt, zeigte die Zelle
+# "–" und dieser Test wuerde rot, statt beide Faelle still gleich aussehen zu
+# lassen (die RED-Falle des Trip-Tests).
+# =============================================================================
+
+_COMPARE_AUSWAHL = ["gust"]
+
+
+def _compare_mail(formats):
+    """Echter Compare-Renderpfad mit Roh/Einfach-Zuordnung -> (HTML, Klartext).
+
+    Kennt der Renderer den Parameter nicht, wird der Signaturfehler in eine
+    inhaltliche Aussage uebersetzt (Muster aus
+    ``test_compare_outlook_metric_selection._render_mail``)."""
+    from output.renderers.comparison import render_compare_email
+
+    from tests.tdd.test_compare_outlook_metric_selection import _result
+
+    try:
+        return render_compare_email(
+            _result(),
+            outlook_enabled=True,
+            outlook_metrics=_COMPARE_AUSWAHL,
+            outlook_metric_formats=formats,
+        )
+    except TypeError as exc:
+        raise AssertionError(
+            "Die Vergleichs-Mail kennt keine Roh/Einfach-Zuordnung: "
+            "render_compare_email() nimmt den Parameter "
+            "'outlook_metric_formats' nicht entgegen (#2049). Der Umschalter "
+            "im Ortsvergleichs-Editor bliebe damit wirkungslos -- genau die "
+            f"Attrappe, die dieses Ticket beseitigt.\nUrsprungsfehler: {exc}"
+        ) from exc
+
+
+def _compare_outlook_zelle(html: str) -> str:
+    """Die eine Wert-Zelle der ersten Ausblick-Tagesszeile (Spalte 2 = Böen)."""
+    from tests.tdd.test_compare_outlook_metric_selection import (
+        _body_rows, _headers, _outlook_tables,
+    )
+
+    tabellen = _outlook_tables(html)
+    assert tabellen, (
+        "HTML-Vergleichsmail: Es gibt keine Ausblick-Tabelle -- ohne sie "
+        "prueft dieser Test nichts."
+    )
+    kopf = _headers(tabellen[0])
+    assert kopf == ["Tag", "Böen"], (
+        f"Kopfzeile {kopf!r} -- erwartet 'Tag'+'Böen' aus der Auswahl "
+        f"{_COMPARE_AUSWAHL!r}."
+    )
+    zeilen = _body_rows(tabellen[0])
+    assert zeilen and len(zeilen[0]) > 1, (
+        f"Ausblick-Tabelle ohne verwertbare Datenzeile: {zeilen!r}"
+    )
+    return zeilen[0][1]
+
+
+def test_ac5_ortsvergleich_zeigt_wortstufe_in_html_und_klartext():
+    """AC-5 (Ortsvergleich): Given ein Ortsvergleich mit
+    ``outlook_metric_formats={"gust": True}`` / When die Vergleichs-Mail
+    gerendert wird / Then zeigen HTML-Ausblick UND Klartext-Ausblick die
+    Wortstufe statt der km/h-Zahl -- dieselbe Zeichenkette, aus derselben
+    Auswahl (der Pflicht-Validator liest nur HTML und ist im Klartext blind,
+    #1366)."""
+    from services.weather_metrics import format_wind_strength
+
+    html, plain = _compare_mail({"gust": True})
+    erwartet = format_wind_strength(25.0)
+
+    zelle = _compare_outlook_zelle(html)
+    assert zelle == erwartet, (
+        f"HTML-Vergleichsmail: Die Boeen-Zelle lautet {zelle!r} statt der "
+        f"Wortstufe {erwartet!r} -- 'Einfach' wirkt im Ortsvergleich nicht "
+        "(Adversary-Finding F001)."
+    )
+
+    from tests.tdd.test_compare_outlook_metric_selection import (
+        _plain_outlook_blocks,
+    )
+
+    bloecke = _plain_outlook_blocks(plain)
+    assert bloecke, "Klartext-Vergleichsmail: kein Ausblick-Block gefunden."
+    text = "\n".join(bloecke[0][1])
+    assert erwartet in text, (
+        f"Klartext-Vergleichsmail: Der Ausblick-Block zeigt {erwartet!r} "
+        f"nicht.\nBlock:\n{text}"
+    )
+    assert "25 km/h" not in text, (
+        f"Klartext-Vergleichsmail: Der Ausblick-Block zeigt weiterhin die "
+        f"Rohzahl '25 km/h'.\nBlock:\n{text}"
+    )
+
+
+def test_ac2_ortsvergleich_ohne_formats_bleibt_roh():
+    """AC-2 (Ortsvergleich): Given ein Ortsvergleich OHNE
+    ``outlook_metric_formats`` / When die Vergleichs-Mail gerendert wird /
+    Then zeigt die Boeen-Zelle unveraendert die Rohzahl mit Einheit.
+
+    Zweite Aufgabe dieses Tests: er belegt, dass die Traegermetrik in der
+    Fixtur ueberhaupt befuellt ist. Waere sie es nicht, stuende hier "–" und
+    der Einfach-Test darueber koennte gar nichts nachweisen."""
+    html, _plain = _compare_mail(None)
+    zelle = _compare_outlook_zelle(html)
+    assert zelle == "25 km/h", (
+        f"HTML-Vergleichsmail: Die Boeen-Zelle lautet {zelle!r} statt der "
+        "Rohform '25 km/h' (AC-2: der Ausblick-Default ist hart 'Roh')."
+    )
+
+
+@pytest.mark.parametrize("stored,erwartet", [
+    ({"gust": True, "wind": False}, {"gust": True, "wind": False}),
+    ({"temperature": True}, {}),
+    ({"gust": "ja"}, {}),
+    ([], None),
+    (None, None),
+])
+def test_ac1_resolve_compare_outlook_formats(stored, erwartet):
+    """AC-1 (Ortsvergleich): Given ein gespeicherter Rohwert aus der
+    Ortsvergleichs-``display_config`` / When ``resolve_compare_outlook_
+    formats()`` ihn aufloest / Then gilt dieselbe Regel wie im Trip-Pendant
+    ``resolve_trip_outlook_formats()`` -- nicht-faehige Kennungen und
+    nicht-boolesche Werte fallen heraus, ein Nicht-Dict liefert ``None``.
+    Zwei Flaechen, EINE Regel (Trip/Compare-Teilungs-Invariante)."""
+    try:
+        from output.renderers.compare_outlook_metric_ids import (
+            resolve_compare_outlook_formats,
+        )
+    except ImportError as exc:
+        raise AssertionError(
+            "compare_outlook_metric_ids kennt "
+            "'resolve_compare_outlook_formats()' noch nicht (#2049) -- ohne "
+            "sie erreicht eine gespeicherte Ortsvergleichs-Zuordnung den "
+            f"Renderpfad nie.\nUrsprungsfehler: {exc}"
+        ) from exc
+
+    ergebnis = resolve_compare_outlook_formats(stored)
+    assert ergebnis == erwartet, (
+        f"resolve_compare_outlook_formats({stored!r}) == {ergebnis!r} statt "
+        f"{erwartet!r}."
+    )
+
+
+def test_ac1_compare_render_options_tragen_die_zuordnung():
+    """AC-1 (Ortsvergleich): Given ein Ortsvergleichs-Preset mit
+    ``display_config.outlook_metric_formats`` / When
+    ``resolve_compare_render_options()`` es aufloest / Then tragen die
+    Render-Optionen die geprueft Zuordnung -- das ist der EINE Weg, auf dem
+    die gespeicherte Einstellung Versand UND Vorschau erreicht (analog
+    ``outlook_metrics``); ohne dieses Feld bliebe der Editor-Schalter ohne
+    jede Wirkung auf die Mail."""
+    from services.report_config_resolver import resolve_compare_render_options
+
+    from tests.tdd.test_compare_outlook_metric_selection import _preset
+
+    preset = _preset(outlook_metrics=["gust"],
+                     outlook_metric_formats={"gust": True, "temperature": True})
+    opts = resolve_compare_render_options(preset)
+    sentinel = object()
+    wert = getattr(opts, "outlook_metric_formats", sentinel)
+    assert wert is not sentinel, (
+        "Die aufgeloesten Compare-Render-Optionen tragen kein Feld "
+        "'outlook_metric_formats' -- eine gespeicherte Roh/Einfach-Zuordnung "
+        "erreicht damit weder Versand noch Vorschau (#2049). Vorhandene "
+        f"Felder: {sorted(vars(opts))}"
+    )
+    assert wert == {"gust": True}, (
+        f"outlook_metric_formats == {wert!r} statt {{'gust': True}} -- die "
+        "nicht-faehige Kennung 'temperature' muss beim Aufloesen herausfallen."
+    )
+
+
+# =============================================================================
+# T14/T15 — die beiden AEUSSERSTEN Kettenglieder (Adversary Runde 2, F002).
+#
+# Die Kette hat sechs Glieder; vier davon waren bewacht, die zwei letzten
+# nicht: der Vorschau-Dienst und der echte Versand. Ausgerechnet dort sieht der
+# Nutzer die Wirkung -- entfernt man die Durchreichung, bleibt alles gruen.
+#
+# Geprueft wird die ERZEUGTE AUSGABE, nicht die Signatur: der Aufzeichner
+# delegiert vollstaendig an den echten ``render_compare_email`` und haelt
+# dessen HTML fest (Muster aus test_compare_outlook.py -- echte
+# Aufzeichner-Funktion, kein Mock-Framework). Danach bricht er ab, damit kein
+# Transport angefasst wird (#1477).
+#
+# Kein Netz: die autouse-Fixture-Provider-Umgebung aus tests/conftest.py
+# liefert die Wetterdaten (s. test_issue_346_fixture_provider.py).
+# =============================================================================
+
+from tests.tdd.test_compare_outlook import (  # noqa: E402
+    _preset as _compare_preset,
+    _resolvable_location,
+    compare_env,  # noqa: F401 -- pytest-Fixture, hier ueber den Namensraum genutzt
+)
+
+# Die vier Wortstufen, ZUR LAUFZEIT aus dem echten Helfer berechnet statt als
+# Literale notiert (Muster T9/AC-10): eine spaeter abdriftende Skala macht
+# diese Tests rot, statt sie an einer veralteten Kopie vorbeilaufen zu lassen.
+def _wind_wortstufen() -> set[str]:
+    from services.weather_metrics import format_wind_strength
+
+    return {format_wind_strength(v) for v in (5.0, 20.0, 30.0, 50.0)}
+
+
+class _CompareMailErzeugt(Exception):
+    """Traegt die ECHTE, fertig gerenderte Mail aus dem Dienst heraus."""
+
+    def __init__(self, html: str, text: str):
+        self.html = html
+        self.text = text
+        super().__init__("Vergleichsmail erzeugt")
+
+
+def _erzeugte_vergleichsmail(aufruf) -> tuple[str, str]:
+    """Fuehrt ``aufruf`` (Dienst) aus und liefert die dabei ECHT gerenderte
+    Mail. Der Aufzeichner ruft den Originalrenderer auf -- gepruefte wird
+    damit die Ausgabe, nicht die Parameteruebergabe -- und bricht danach ab,
+    bevor der Dienst irgendetwas versendet."""
+    import output.renderers.comparison as comparison_mod
+
+    original = comparison_mod.render_compare_email
+
+    def _aufzeichnend(*args, **kwargs):
+        html, text = original(*args, **kwargs)   # ECHTER Renderer
+        raise _CompareMailErzeugt(html, text)
+
+    comparison_mod.render_compare_email = _aufzeichnend
+    try:
+        with pytest.raises(_CompareMailErzeugt) as exc:
+            aufruf()
+        return exc.value.html, exc.value.text
+    finally:
+        comparison_mod.render_compare_email = original
+
+
+def _dienst_preset(preset_id: str, loc_id: str, formats):
+    """Ortsvergleich mit Boeen-Ausblick; ``formats`` = gespeicherte
+    Roh/Einfach-Zuordnung (oder ``None`` fuer den Bestandsfall)."""
+    dc: dict = {"outlook_metrics": ["gust"]}
+    if formats is not None:
+        dc["outlook_metric_formats"] = formats
+    return _compare_preset(preset_id, loc_id, display_config=dc)
+
+
+def _boeen_zelle_aus_dienst_mail(html: str) -> str:
+    from tests.tdd.test_compare_outlook_metric_selection import (
+        _body_rows, _headers, _outlook_tables,
+    )
+
+    tabellen = _outlook_tables(html)
+    assert tabellen, (
+        "Die vom Dienst erzeugte Mail enthaelt keine Ausblick-Tabelle -- ohne "
+        "sie prueft dieser Test nichts (Fehlerklasse 'gestubbte Naht')."
+    )
+    kopf = _headers(tabellen[0])
+    assert kopf == ["Tag", "Böen"], (
+        f"Kopfzeile {kopf!r} -- erwartet 'Tag'+'Böen'; die Ausblick-Auswahl "
+        "des Presets kam im Dienst nicht an."
+    )
+    zeilen = _body_rows(tabellen[0])
+    assert zeilen and len(zeilen[0]) > 1, f"Keine Datenzeile: {zeilen!r}"
+    return zeilen[0][1]
+
+
+def test_f002_vorschaudienst_zeigt_die_umschaltung_in_der_erzeugten_mail(
+    compare_env, tmp_path,  # noqa: F811
+):
+    """F002: Given ein Ortsvergleich mit ``outlook_metric_formats`` / When die
+    VORSCHAU des Dienstes erzeugt wird (``ComparePreviewService``) / Then
+    steht in der erzeugten Mail die Wortstufe, nicht die km/h-Zahl.
+
+    Der Dienst ist das vorletzte Kettenglied; ohne seine Durchreichung
+    (compare_preview_service.py) zeigte die Vorschau etwas anderes als die
+    Einstellung, an der der Nutzer sie vorgenommen hat."""
+    from app.loader import get_data_dir, save_location
+    from services.compare_preview_service import ComparePreviewService
+    from tests.helpers.compare_briefings import write_compare_briefings
+
+    user_id = compare_env
+    loc = _resolvable_location("loc-2049-preview")
+    preset = _dienst_preset("cp-2049-preview", loc.id, {"gust": True})
+    save_location(loc, user_id=user_id)
+    write_compare_briefings(get_data_dir(user_id), [preset])
+
+    html, _text = _erzeugte_vergleichsmail(
+        lambda: ComparePreviewService().render_email_preview(
+            preset["id"], user_id=user_id),
+    )
+    zelle = _boeen_zelle_aus_dienst_mail(html)
+    assert zelle in _wind_wortstufen(), (
+        f"Die Boeen-Zelle der VORSCHAU lautet {zelle!r} statt einer Wortstufe "
+        f"aus {sorted(_wind_wortstufen())} -- die Roh/Einfach-Zuordnung "
+        "erreicht den Vorschau-Renderer nicht (F002)."
+    )
+
+
+def test_f002_versandpfad_zeigt_die_umschaltung_in_der_erzeugten_mail(
+    compare_env, tmp_path,  # noqa: F811
+):
+    """F002: Given derselbe Ortsvergleich / When der ECHTE Versandpfad
+    (``send_one_compare_preset``) die Mail baut / Then steht auch dort die
+    Wortstufe.
+
+    Letztes Kettenglied und das einzige, dessen Ergebnis wirklich beim
+    Empfaenger landet. Kein Versand: der Aufzeichner bricht ab, sobald die
+    Mail gerendert ist (#1477)."""
+    from app.config import Settings
+    from services.scheduler_dispatch_service import send_one_compare_preset
+
+    user_id = compare_env
+    loc = _resolvable_location("loc-2049-dispatch")
+    preset = _dienst_preset("cp-2049-dispatch", loc.id, {"gust": True})
+    settings = Settings().with_user_profile(user_id).model_copy(
+        update={"mail_to": "gregor-test@henemm.com"}
+    )
+
+    html, _text = _erzeugte_vergleichsmail(
+        lambda: send_one_compare_preset(
+            dict(preset), settings, user_id, str(tmp_path),
+            all_locations_cache=[loc],
+        ),
+    )
+    zelle = _boeen_zelle_aus_dienst_mail(html)
+    assert zelle in _wind_wortstufen(), (
+        f"Die Boeen-Zelle der VERSANDMAIL lautet {zelle!r} statt einer "
+        f"Wortstufe aus {sorted(_wind_wortstufen())} -- die Roh/Einfach-"
+        "Zuordnung erreicht den Versandpfad nicht (F002). Der Empfaenger saehe "
+        "etwas anderes als die Vorschau."
+    )
+
+
+def test_f003_bestandsvergleich_ohne_zuordnung_rendert_unveraendert_rohzahlen(
+    compare_env, tmp_path,  # noqa: F811
+):
+    """F003 (Bestandsschutz der Ortsvergleichs-Ausblick-Flaeche): Given ein
+    Ortsvergleich OHNE ``outlook_metric_formats`` -- also JEDER Bestands-
+    Vergleich / When der echte Versandpfad seine Mail baut / Then zeigt die
+    Ausblick-Zelle unveraendert die Rohzahl mit Einheit, und KEINE der drei
+    neuen Wortskalen taucht im Ausblick-Block auf.
+
+    Warum ein eigener Test statt einer Erweiterung des Golden
+    (``tests/test_compare_top_n_render_invariance.py``): dessen Preset-Fixtur
+    setzt ``outlook_enabled=False`` -- der Ausblick-Pfad laeuft dort
+    strukturell nie. Ihn dafuer auf ``True`` zu stellen aenderte die
+    aufgezeichneten Golden-Bytes eines Tests, der eine voellig andere Frage
+    bewacht (Top-N-Invarianz), und machte ihn zum Wackelkandidaten fuer beide
+    Themen. Der Bestandsschutz gehoert an die Flaeche, um die es geht."""
+    from app.config import Settings
+    from services.scheduler_dispatch_service import send_one_compare_preset
+
+    user_id = compare_env
+    loc = _resolvable_location("loc-2049-bestand")
+    preset = _dienst_preset("cp-2049-bestand", loc.id, None)
+    settings = Settings().with_user_profile(user_id).model_copy(
+        update={"mail_to": "gregor-test@henemm.com"}
+    )
+
+    html, _text = _erzeugte_vergleichsmail(
+        lambda: send_one_compare_preset(
+            dict(preset), settings, user_id, str(tmp_path),
+            all_locations_cache=[loc],
+        ),
+    )
+    zelle = _boeen_zelle_aus_dienst_mail(html)
+    assert zelle.endswith("km/h") and any(c.isdigit() for c in zelle), (
+        f"Die Boeen-Zelle eines Bestands-Vergleichs lautet {zelle!r} statt "
+        "einer Rohzahl mit Einheit -- die Neuerung wirkt ungefragt auf jeden "
+        "bestehenden Ortsvergleich (AC-2/AC-12)."
+    )
+    assert zelle not in _wind_wortstufen(), (
+        f"Die Boeen-Zelle {zelle!r} ist eine Wortstufe, obwohl nichts "
+        "umgeschaltet wurde -- der Ausblick-Default ist hart 'Roh'."
+    )

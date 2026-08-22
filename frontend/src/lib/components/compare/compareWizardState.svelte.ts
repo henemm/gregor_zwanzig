@@ -55,6 +55,11 @@ export class CompareWizardState {
 	// (die heutigen sieben Spalten), `[]` = bewusste Leerauswahl (Block
 	// entfaellt) — dieselbe Semantik wie hourlyMetricKeys/activeMetricKeys.
 	outlookMetricKeys = $state<string[] | null>(null);
+	// Issue #2049: Roh/Einfach je Ausblick-Groesse (`true` = Einfach), aus
+	// display_config.outlook_metric_formats. `null` = „nie eingestellt" (alles
+	// Roh) — paralleles Feld, damit outlookMetricKeys eine reine Kennungsliste
+	// bleibt.
+	outlookMetricFormats = $state<Record<string, boolean> | null>(null);
 	metricsManuallyEdited = $state(false);
 	// Issue #443 — Step 5 Versand-Felder
 	sendEmail = $state(true);
@@ -163,6 +168,7 @@ export class CompareWizardState {
 			channelActiveMetricKeys: { ...this.channelActiveMetricKeys },
 			hourlyMetricKeys: this.hourlyMetricKeys,
 			outlookMetricKeys: this.outlookMetricKeys, // Issue #1361/#1368
+			outlookMetricFormats: this.outlookMetricFormats, // Issue #2049
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170
 			channelThresholds: this.channelThresholds, // Issue #1461 S3b-2b
 			telegramStyle: this.telegramStyle // Issue #1260 S5
@@ -204,6 +210,7 @@ export class CompareWizardState {
 			radarAlertEnabled: this.radarAlertEnabled, // Issue #1041 Slice 2
 			hourlyEnabled: this.hourlyEnabled, // Issue #1107
 			outlookMetricKeys: this.outlookMetricKeys, // Issue #1361/#1368
+			outlookMetricFormats: this.outlookMetricFormats, // Issue #2049
 			outlookEnabled: this.outlookEnabled,
 			metricAlertLevels: this.metricAlertLevels, // Issue #1170
 			channelThresholds: this.channelThresholds, // Issue #1461 S3b-2b

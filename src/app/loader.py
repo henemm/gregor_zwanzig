@@ -15,7 +15,9 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from app.metric_catalog import normalize_outlook_metric_ids
+from app.metric_catalog import (
+    normalize_outlook_metric_formats, normalize_outlook_metric_ids,
+)
 from app.models import (
     AlertMetric,
     AlertRule,
@@ -954,6 +956,10 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         # Paare derselben Groesse (Tief UND Hoch) sind EINE Kennung. `None`
         # (Feld fehlt) und `[]` (bewusst geleert) bleiben unterscheidbar.
         outlook_metrics=normalize_outlook_metric_ids(data.get("outlook_metrics")),
+        # Issue #2049: paralleles Feld, dieselbe Drei-Werte-Semantik. Nicht-
+        # faehige Kennungen und nicht-boolesche Werte fallen beim Lesen heraus.
+        outlook_metric_formats=normalize_outlook_metric_formats(
+            data.get("outlook_metric_formats")),
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 
@@ -1574,6 +1580,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             # Paar-Altform -- das bedingte `is not None` bleibt unberuehrt.
             **({"outlook_metrics": normalize_outlook_metric_ids(dc.outlook_metrics)}
                if dc.outlook_metrics is not None else {}),
+            # Issue #2049: ebenfalls BEDINGT -- ein unbedingt geschriebenes
+            # leeres Mapping machte "nie eingestellt" von "alles auf Roh"
+            # ununterscheidbar (dieselbe Begruendung wie eine Zeile darueber).
+            **({"outlook_metric_formats":
+                normalize_outlook_metric_formats(dc.outlook_metric_formats)}
+               if dc.outlook_metric_formats is not None else {}),
         }
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
         if dc.per_channel_layouts is not None:

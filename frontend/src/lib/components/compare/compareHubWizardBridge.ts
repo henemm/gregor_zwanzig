@@ -122,6 +122,8 @@ export interface HubEdit {
 	dayWindowEndHour?: number;
 	// Issue #1361 Befund 2/#1368: Ausblick-Auswahl + Schalter.
 	outlookMetricKeys?: string[] | null;
+	// Issue #2049: Roh/Einfach je Ausblick-Groesse.
+	outlookMetricFormats?: Record<string, boolean> | null;
 	outlookEnabled?: boolean;
 	// Issue #1461 S3b-2b: Kanal-Schwelle, TOP-LEVEL Feld (Go-Model
 	// ComparePreset.AlertChannelThresholds), analog metricAlertLevels.
@@ -206,6 +208,12 @@ export function buildHubPutPayload(
 		outlookMetricKeys:
 			edit.outlookMetricKeys ??
 			normalizeStoredOutlookMetrics(displayConfig.outlook_metrics) ??
+			undefined,
+		// Issue #2049: analog outlookMetricKeys -- `null` -> undefined, damit
+		// der Schluessel bei "nie eingestellt" unangetastet round-trippt.
+		outlookMetricFormats:
+			edit.outlookMetricFormats ??
+			(displayConfig.outlook_metric_formats as Record<string, boolean> | undefined) ??
 			undefined,
 		outlookEnabled: edit.outlookEnabled ?? preset.outlook_enabled,
 		// Issue #1361/#1372 S1b: 1:1 Round-Trip wie alle anderen HubEdit-Felder.
@@ -696,6 +704,12 @@ export interface LayoutSnapshot {
 	// "Wetter-Metriken", derselbe Commit-Wrapper). `null`/`[]` tragen dieselbe
 	// Unterscheidung wie oben.
 	outlookMetricKeys: string[] | null;
+	// Issue #2049: Roh/Einfach je Ausblick-Groesse -- `null` = nie eingestellt.
+	// OPTIONAL, anders als die Felder darueber: `undefined` (Aufrufer kennt das
+	// Feld nicht) und `null` (nie eingestellt) bedeuten hier dasselbe, es gibt
+	// also nichts zu unterscheiden. Ein Pflichtfeld haette jeden bestehenden
+	// Snapshot-Aufrufer bruchreif gemacht, ohne dafuer etwas zu bewachen.
+	outlookMetricFormats?: Record<string, boolean> | null;
 	outlookEnabled: boolean;
 }
 
@@ -718,6 +732,10 @@ export function hydrateLayoutFieldsFromPreset(
 		// Aufrufer muss die Katalogantwort abwarten (sonst Rohform, s.
 		// hydrateWeatherMetricsFromPreset).
 		outlookMetricKeys: normalizeStoredOutlookMetrics(displayConfig.outlook_metrics, catalog),
+		// Issue #2049: bereits nach Kennungen geschluesselt -- keine
+		// Katalog-Uebersetzung noetig, anders als bei der Auswahl darueber.
+		outlookMetricFormats:
+			(displayConfig.outlook_metric_formats as Record<string, boolean> | undefined) ?? null,
 		outlookEnabled: preset.outlook_enabled ?? true
 	};
 }
@@ -756,6 +774,10 @@ export function flushPendingLayoutSave(
 		// Felder nicht kennt, meldet "nichts geaendert" und der Ausblick bliebe
 		// unspeicherbar (bekannte Falle, s. Dirty-Check-Erfahrung #1373).
 		outlookMetricKeys: s.outlookMetricKeys == null ? null : [...s.outlookMetricKeys],
+		// Issue #2049: aus demselben Grund wie die Zeile darueber -- ohne das
+		// Feld im Diff meldete der Waechter "nichts geaendert" und eine reine
+		// Roh/Einfach-Umschaltung waere unspeicherbar.
+		outlookMetricFormats: s.outlookMetricFormats == null ? null : { ...s.outlookMetricFormats },
 		outlookEnabled: s.outlookEnabled
 	});
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
@@ -763,6 +785,7 @@ export function flushPendingLayoutSave(
 		hourlyMetricKeys: current.hourlyMetricKeys,
 		hourlyEnabled: current.hourlyEnabled,
 		outlookMetricKeys: current.outlookMetricKeys,
+		outlookMetricFormats: current.outlookMetricFormats,
 		outlookEnabled: current.outlookEnabled
 	});
 }
@@ -778,6 +801,7 @@ export function rollbackLayoutSnapshot(
 		hourlyMetricKeys?: string[] | null;
 		hourlyEnabled?: boolean;
 		outlookMetricKeys?: string[] | null;
+		outlookMetricFormats?: Record<string, boolean> | null;
 		outlookEnabled?: boolean;
 	},
 	before: LayoutSnapshot
@@ -785,5 +809,8 @@ export function rollbackLayoutSnapshot(
 	state.hourlyMetricKeys = before.hourlyMetricKeys;
 	state.hourlyEnabled = before.hourlyEnabled;
 	state.outlookMetricKeys = before.outlookMetricKeys ?? null;
+	// Issue #2049: gehoert wie die Auswahl in den Rollback -- sonst bliebe nach
+	// einem fehlgeschlagenen PUT eine Umschaltung sichtbar, die nie ankam.
+	state.outlookMetricFormats = before.outlookMetricFormats ?? null;
 	state.outlookEnabled = before.outlookEnabled ?? true;
 }
