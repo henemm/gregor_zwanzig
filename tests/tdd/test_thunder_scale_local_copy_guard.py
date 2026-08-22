@@ -290,49 +290,6 @@ ALTLASTEN = (
         "Nacht-Zusatz fuehrt LOW/MED/HIGH lokal, NONE absichtlich ausgelassen",
     ),
     Altlast(
-        "src/output/renderers/email/html.py",
-        "_thunder_risk_level",
-        "B",
-        "eigene Stufen-Wort-Kette statt thunder_ampel_band(), obwohl der "
-        "Docstring die Angleichung behauptet",
-        "#2011",
-    ),
-    Altlast(
-        "src/output/renderers/email/html.py",
-        "_thunder_risk_level",
-        "C",
-        "Zahlen-Fallback verschmilzt LOW und MED zu 'watch'",
-        "#2011",
-    ),
-    Altlast(
-        "src/services/trip_command_processor.py",
-        "_THUNDER_LABEL",
-        "A",
-        "Telegram-Label mit Wortdrift ('maessig' statt 'mittel')",
-        "#2010",
-    ),
-    Altlast(
-        "src/services/trip_command_processor.py",
-        "_MAP_EMOJI",
-        "A",
-        "Emoji-Karte mit Wortdrift ('keins'/'maessig')",
-        "#2010",
-    ),
-    Altlast(
-        "src/services/trip_command_processor.py",
-        "_MAP_PLAIN",
-        "A",
-        "Klartext-Karte, unabhaengig gepflegtes Duplikat von _MAP_EMOJI",
-        "#2010",
-    ),
-    Altlast(
-        "src/services/trip_command_processor.py",
-        "_handle_hours_drilldown",
-        "B",
-        "Stundentabelle verzweigt auf rohe Stufen-Strings mit eigenen Woertern",
-        "#2010",
-    ),
-    Altlast(
         "src/services/trip_report_scheduler.py",
         "_thunder_entry_from_trend_row",
         "B",
@@ -1133,6 +1090,86 @@ def test_altlasten_basislinie_deckt_nichts_zu_das_nicht_in_ihr_steht(bestand_ohn
         "ALTLASTEN aufnehmen, sondern beheben:\n"
         + "\n".join(f"  Code reference: {d} ({s}, Regel {r})" for d, s, r in unbekannt)
     )
+
+
+# ---------------------------------------------------------------------------
+# #2010/#2011: ALTLASTEN schrumpft um die sechs sanierten Eintraege (AC-8),
+# Marker-Positivkontrolle fuer den Regel-C-Fallback (AC-9).
+# Spec: docs/specs/modules/fix_2010_2011_gewitter_stufenwoerter.md
+# ---------------------------------------------------------------------------
+
+
+def test_ac8_2010_2011_sechs_eintraege_sind_aus_altlasten_gestrichen():
+    """AC-8: Nach dem Fix sind exakt die drei NICHT von #2010/#2011
+    betroffenen Eintraege in ALTLASTEN uebrig -- die sechs sanierten
+    Eintraege (html.py::_thunder_risk_level Regel B/C,
+    trip_command_processor.py::_THUNDER_LABEL/_MAP_EMOJI/_MAP_PLAIN/
+    _handle_hours_drilldown) sind gestrichen. Struktureller Nachweis ueber
+    ALTLASTEN selbst (Laenge/Inhalt vor/nach dem Fix), keine neu erfundene
+    String-Pruefung."""
+    verbleibende = {e.key for e in ALTLASTEN}
+    sanierte = {
+        ("src/output/renderers/email/html.py", "_thunder_risk_level", "B"),
+        ("src/output/renderers/email/html.py", "_thunder_risk_level", "C"),
+        ("src/services/trip_command_processor.py", "_THUNDER_LABEL", "A"),
+        ("src/services/trip_command_processor.py", "_MAP_EMOJI", "A"),
+        ("src/services/trip_command_processor.py", "_MAP_PLAIN", "A"),
+        ("src/services/trip_command_processor.py", "_handle_hours_drilldown", "B"),
+    }
+    noch_vorhanden = verbleibende & sanierte
+    assert not noch_vorhanden, (
+        "Sanierte #2010/#2011-Eintraege noch in ALTLASTEN vorhanden -- Zeile "
+        f"streichen: {sorted(noch_vorhanden)}"
+    )
+    erwartete_rest = {
+        ("src/app/day_window.py", "_NIGHT_ADDENDUM_WORD", "A"),
+        ("src/services/trip_report_scheduler.py", "_thunder_entry_from_trend_row", "B"),
+        ("src/services/trip_report_scheduler.py", "_build_thunder_forecast", "B"),
+    }
+    assert verbleibende == erwartete_rest, (
+        f"ALTLASTEN nach dem Fix: erwartet genau {sorted(erwartete_rest)}, "
+        f"gefunden {sorted(verbleibende)}"
+    )
+
+
+def test_ac9_regelc_fundstelle_ohne_marker_meldet_einen_fund_positivkontrolle():
+    """AC-9 Positivkontrolle: Beweis, dass der Marker-Mechanismus tatsaechlich
+    wirkt und nicht nur zufaellig gruen ist -- derselbe Zahlen-Fallback-Zweig
+    (Struktur wie html.py::_thunder_risk_level) OHNE Marker-Kommentar erzeugt
+    einen echten Regel-C-Fund."""
+    quelle = (
+        "def _thunder_risk_level(thunder):\n"
+        "    num = _safe_float(thunder, None)\n"
+        "    if num is not None:\n"
+        "        if num > 20:\n"
+        "            return 'risk'\n"
+        "        if num > 0:\n"
+        "            return 'watch'\n"
+        "    return None\n"
+    )
+    findings = scan_source(quelle, "<ac9-ohne-marker>", _thunder_spec(), rules=("C",))  # noqa: F821
+    assert len(findings) == 1, f"erwartet 1 Regel-C-Fund ohne Marker: {_refs(findings)}"
+
+
+def test_ac9_regelc_fundstelle_mit_marker_bleibt_gruen():
+    """AC-9 Gegenprobe: derselbe Zweig MIT begruendetem Marker-Kommentar
+    (Duldungsstufe 3, direkt ueber der Fundstelle 'if num > 20:') bleibt
+    gruen -- das ist der Mechanismus, ueber den die Fundstelle nach dem Fix
+    von 'benannte Altlast' auf 'begruendete Duldung' wechselt, OHNE die
+    Zahlen-Schwellen selbst zu aendern."""
+    quelle = (
+        "def _thunder_risk_level(thunder):\n"
+        "    num = _safe_float(thunder, None)\n"
+        "    if num is not None:\n"
+        "        # gz-thunder-scale: verarbeitet rohen Zahlenwert, keine diskrete Stufe\n"
+        "        if num > 20:\n"
+        "            return 'risk'\n"
+        "        if num > 0:\n"
+        "            return 'watch'\n"
+        "    return None\n"
+    )
+    findings = scan_source(quelle, "<ac9-mit-marker>", _thunder_spec(), rules=("C",))  # noqa: F821
+    assert findings == [], f"Marker sollte den Fund durchlassen: {_refs(findings)}"
 
 
 @pytest.fixture(scope="module")

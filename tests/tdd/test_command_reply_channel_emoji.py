@@ -154,9 +154,11 @@ def test_dd_hours_today_email_has_no_circle_emoji_but_word(env):
     assert not _CIRCLE_EMOJI_RE.search(body), (
         f"Kreis-Emoji im E-Mail-Kanal gefunden:\n{body}"
     )
-    assert ("mäßig" in body) or ("hoch" in body), (
-        f"Erwartet Gewitter-Wort 'mäßig' oder 'hoch' im E-Mail-Body:\n{body}"
+    # Issue #2010: kanonisches Wort ist "mittel", nicht "mäßig".
+    assert ("mittel" in body) or ("hoch" in body), (
+        f"Erwartet Gewitter-Wort 'mittel' oder 'hoch' im E-Mail-Body:\n{body}"
     )
+    assert "mäßig" not in body, f"'mäßig' (Wortdrift #2010) noch im Body:\n{body}"
 
 
 # ---------------------------------------------------------------------------
@@ -187,9 +189,11 @@ def test_dd_thunder_today_email_has_no_circle_emoji_but_word(env):
     assert not _CIRCLE_EMOJI_RE.search(body), (
         f"Kreis-Emoji im E-Mail-Kanal gefunden:\n{body}"
     )
-    assert ("mäßig" in body) or ("hoch" in body), (
-        f"Erwartet Gewitter-Wort 'mäßig' oder 'hoch' im E-Mail-Body:\n{body}"
+    # Issue #2010: kanonisches Wort ist "mittel", nicht "mäßig".
+    assert ("mittel" in body) or ("hoch" in body), (
+        f"Erwartet Gewitter-Wort 'mittel' oder 'hoch' im E-Mail-Body:\n{body}"
     )
+    assert "mäßig" not in body, f"'mäßig' (Wortdrift #2010) noch im Body:\n{body}"
 
 
 def test_dd_thunder_today_telegram_keeps_circle_emoji(env):
