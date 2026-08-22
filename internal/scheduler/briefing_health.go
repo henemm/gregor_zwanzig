@@ -169,20 +169,134 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 		}
 	}
 
-	return map[string]any{
-		"open_pending_briefings":                openCount,
-		"degraded_segments_total":               degradedTotal,
-		"oldest_pending_age_hours":              oldestAgeHours,
-		"last_provider_error_at":                lastProviderErrorAt,
-		"provider_error_streak_since":           providerErrorStreakSince,
-		"provider_errors_recent_count":          providerErrorsRecentCount,
-		"corrupt_trips_total":                   corruptTripsTotal,
-		"corrupt_trips_last_run_at":             corruptTripsLastRunAt,
-		"briefing_dispatch_error_streak_since":  dispatchErrorStreakSince,
-		"briefing_dispatch_errors_recent_count": dispatchErrorsRecentCount,
-		"alert_anchor_rejected_streak_since":    anchorRejectedStreakSince,
-		"alert_anchor_rejected_recent_count":    anchorRejectedRecentCount,
+	// Issue #2073 Scheibe 2 (AC-10): derselbe Bauart-Zwilling für den bislang
+	// unerfassten Ausfallpfad "die Track-Auflösung einer Etappe scheitert".
+	// Bei #2070 blieben 3 von 13 Etappen wochenlang still unvermessen (Ortsangabe
+	// fällt auf "Segment N" zurück) — ADR-0018 verlangt für einen degradierbaren
+	// Datenpfad ein mit der Ausfalldauer WACHSENDES Signal. Namens- und
+	// Formelanalogie zu alert_anchor_rejected_* ist Absicht: die externe
+	// Eskalation rechnet unverändert now - <streak_since>.
+	var trackResolutionStreakSince any
+	trackResolutionRecentCount := 0
+	if s.store != nil {
+		if since, recent := analyzeTrackResolutionFailures(s.store.DataDir, time.Now().UTC()); since != "" || recent > 0 {
+			if since != "" {
+				trackResolutionStreakSince = since
+			}
+			trackResolutionRecentCount = recent
+		}
 	}
+
+	return map[string]any{
+		"open_pending_briefings":                 openCount,
+		"degraded_segments_total":                degradedTotal,
+		"oldest_pending_age_hours":               oldestAgeHours,
+		"last_provider_error_at":                 lastProviderErrorAt,
+		"provider_error_streak_since":            providerErrorStreakSince,
+		"provider_errors_recent_count":           providerErrorsRecentCount,
+		"corrupt_trips_total":                    corruptTripsTotal,
+		"corrupt_trips_last_run_at":              corruptTripsLastRunAt,
+		"briefing_dispatch_error_streak_since":   dispatchErrorStreakSince,
+		"briefing_dispatch_errors_recent_count":  dispatchErrorsRecentCount,
+		"alert_anchor_rejected_streak_since":     anchorRejectedStreakSince,
+		"alert_anchor_rejected_recent_count":     anchorRejectedRecentCount,
+		"track_resolution_failure_streak_since":  trackResolutionStreakSince,
+		"track_resolution_failures_recent_count": trackResolutionRecentCount,
+	}
+}
+
+// trackResolutionFailureStreakGapThreshold is the maximum gap between two
+// consecutive track-resolution failures that still counts as one contiguous
+// degradation.
+//
+// Deliberately NOT alertAnchorRejectedGapThreshold (60min), even though the
+// same alert run writes both: the Python writer damps track-resolution
+// failures via _failed_lookups to AT MOST ONE line per stage and PROCESS
+// (parsing the whole GPX inventory has a per-run time budget). A permanently
+// broken stage therefore produces one line and then stays quiet until the
+// service restarts — with an hour-long threshold the streak would lapse
+// within minutes while the degradation continues, which is exactly the
+// "Kaschieren" ADR-0018 forbids. 26h (as for the dispatch twin) covers the
+// daily briefing/deploy rhythm that produces the next line.
+//
+// Known limit: a process running longer than 26h without a restart lets the
+// streak lapse although the stage is still unmeasured. The 24h recent count
+// keeps the same limitation; both are bounded by the writer's damping, not by
+// this threshold.
+const trackResolutionFailureStreakGapThreshold = 26 * time.Hour
+
+// trackResolutionFailureEntry mirrors one line of
+// users/<uid>/diagnostics/track_resolution_failures.jsonl, written by
+// src/services/track_resolution_health.py's record_track_resolution_failure
+// (Issue #2073 Scheibe 2). Privacy (#252): only the timestamp is decoded —
+// NEVER trip_id, stage_id, reason or detail. All of them are present in the
+// file (they are what makes the journal useful on the Python side) and must
+// not cross this boundary.
+type trackResolutionFailureEntry struct {
+	Ts string `json:"ts"`
+}
+
+// analyzeTrackResolutionFailures scans every user's track-resolution journal
+// and derives the same two signals as analyzeAlertAnchorRejections, for Issue
+// #2073 Scheibe 2 AC-10:
+//   - streakSince: earliest timestamp (RFC3339) of the current contiguous
+//     failure streak (adjacent failures no more than
+//     trackResolutionFailureStreakGapThreshold apart), so now-streakSince GROWS
+//     with the degradation. Empty once the streak has lapsed — a successful
+//     resolution writes no line, so the forward gap against now is what ends a
+//     series.
+//   - recentCount: failures within the last 24h, summed over ALL users.
+//
+// Fail-soft: missing/corrupt files or lines are skipped, never a panic.
+func analyzeTrackResolutionFailures(dataDir string, now time.Time) (string, int) {
+	var failureTimes []time.Time
+	matches, _ := filepath.Glob(filepath.Join(dataDir, "users", "*", "diagnostics", "track_resolution_failures.jsonl"))
+	for _, match := range matches {
+		f, err := os.Open(match)
+		if err != nil {
+			continue // fail-soft: one unreadable user must not break the aggregate
+		}
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var entry trackResolutionFailureEntry
+			if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+				continue // skip corrupt line, keep scanning
+			}
+			ts, err := time.Parse(time.RFC3339, entry.Ts)
+			if err != nil {
+				continue
+			}
+			failureTimes = append(failureTimes, ts)
+		}
+		f.Close()
+	}
+	if len(failureTimes) == 0 {
+		return "", 0
+	}
+
+	sort.Slice(failureTimes, func(i, j int) bool { return failureTimes[i].Before(failureTimes[j]) })
+
+	recentCount := 0
+	cutoff := now.Add(-24 * time.Hour)
+	for _, ts := range failureTimes {
+		if ts.After(cutoff) {
+			recentCount++
+		}
+	}
+
+	newest := failureTimes[len(failureTimes)-1]
+	if now.Sub(newest) > trackResolutionFailureStreakGapThreshold {
+		return "", recentCount
+	}
+
+	streakStart := newest
+	for i := len(failureTimes) - 1; i > 0; i-- {
+		if failureTimes[i].Sub(failureTimes[i-1]) > trackResolutionFailureStreakGapThreshold {
+			break
+		}
+		streakStart = failureTimes[i-1]
+	}
+	return streakStart.Format(time.RFC3339), recentCount
 }
 
 // alertAnchorRejectedGapThreshold is the maximum gap between two consecutive
