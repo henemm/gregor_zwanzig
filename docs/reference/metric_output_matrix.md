@@ -698,6 +698,21 @@ Editor) dafür wiederholen.
 > [ADR-0059](../adr/0059-compare-ausblick-erbt-grundauswahl.md) (löst
 > ADR-0053 Punkt 1 für den Ausblick ab).
 
+> **Nachtrag 2026-08-22 (Issue #2049, ✅ ERLEDIGT):** Der Ausblick hat neben
+> der *Auswahl* jetzt auch eine **Darstellungsform** je Metrik — Roh
+> (`44 km/h`, `225`) oder Einfach (`sehr stark`, `SW`). Gespeichert als
+> `display_config.outlook_metric_formats`, ein **separates** `{id: bool}`-Dict
+> neben `outlook_metrics`; letzteres bleibt dadurch eine reine `list[str]`
+> (keine Rückkehr zur Objektform, #1848 A2). Einen Umschalter bekommen nur die
+> zehn Kennungen aus `metric_catalog.OUTLOOK_FRIENDLY_CAPABLE`
+> (`wind_direction`, `cloud_total/_low/_mid/_high`, `wind`, `gust`,
+> `precipitation`, `rain_probability`, `sunshine`); `visibility` bewusst nicht
+> (#814 AC-5). Ohne gesetztes Feld bleibt es bei „Roh" — Bestandstrips ändern
+> ihr Aussehen nicht. Die Fähigkeitsliste ist **eine** Quelle für Frontend und
+> Backend: eine erzwungene Markierung an einer Metrik ohne Umschalter bleibt
+> wirkungslos (auf Staging gegengeprüft). Details:
+> `docs/specs/modules/fix_2049_ausblick_darstellungsform.md`.
+
 Bauform: additiv. `CompareRenderOptions.enabled_metrics` behält seine
 Bedeutung (reine globale Auflösung); `enabled_metrics_by_channel` tritt
 daneben. Kein Go-Schema-Change — `DisplayConfig`
