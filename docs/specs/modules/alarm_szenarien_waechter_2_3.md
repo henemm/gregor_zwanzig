@@ -26,12 +26,20 @@ in S1 gebaute `AlarmPruefstrecke` — ohne Produktivcode zu ändern und ohne die
 
 ## Source
 
-- **File (neu):** `tests/tdd/test_alarm_pruefstrecke_radar_serie_mit_sperre.py` (Wächter 1,
-  Szenario 2), `tests/tdd/test_alarm_pruefstrecke_gewitter_vorverlegung.py` (Wächter 2,
+- **File (neu):** `tests/tdd/test_alarm_szenario_briefing_ueberholung_zeitreihe.py` (Wächter 1,
+  Szenario 2), `tests/tdd/test_alarm_szenario_gewitter_vorverlegung.py` (Wächter 2,
   Szenario 3)
 - **Identifier:** keine neuen Produktiv-Symbole — beide Dateien nutzen ausschließlich
   `AlarmPruefstrecke`/`AlarmPruefstreckeLauf` (`tests/helpers/alarm_pruefstrecke.py`) und
-  bestehende produktive Schreibwege (`WeatherSnapshotService.save_alarm_anchor`, `alert_log`).
+  bestehende produktive Schreibwege (`WeatherSnapshotService.save_dated`, `alert_log`).
+
+> **Korrektur beim Bau (2026-08-22):** Der Briefing-Anker wird über `save_dated()` gesetzt, nicht
+> über `save_alarm_anchor()`. Der Radar-Zweig liest den Briefing-Wert über
+> `WeatherSnapshotService(...).load_dated(trip.id, segment_date)` (`trip_alert.py:1362`);
+> `save_alarm_anchor()` schreibt eine andere Datei (`{trip_id}_alarm_anchor_{channel}.json`), die
+> nur `load_alarm_anchor` liest. Über den falschen Weg wäre AC-1 **still grün** geworden — ohne
+> Briefing greift `_briefing_announced` nicht, der Alarm feuert dann ohne jede Überholung und der
+> Wächter hätte nichts bewacht.
 
 > Schicht: Python-Core-Testinfrastruktur (`tests/tdd/`) — kein Produktivcode in `src/`/`api/`
 > wird geändert, kein Go-/Frontend-Anteil.
@@ -115,6 +123,14 @@ Default 12:00 UTC) — kein Test hängt von der Wanduhr ab.
   löst der Lauf genau einen Alarm aus und alle vier Kanäle tragen den gerenderten Inhalt.
   - Test: `AlarmPruefstrecke.lauf(zweig="radar", ...)` mit Briefing-Snapshot 1 mm und
     Radar-Frames für 11 mm; `triggered_count == 1`, alle vier Kanal-Listen nicht leer.
+  - Vorgeschalteter Sonden-Lauf (Fix-Loop 2026-08-22, Adversary-Finding F002): ein Lauf mit
+    ~0,5 mm überholt die Ankündigung NICHT, muss schweigen und protokolliert dabei den vom
+    Prüfling GELESENEN Briefing-Wert (`gate_reason` `briefing_announced:1.0mm`,
+    `trip_alert.py:1393`, gelesen über `alert_log.read_undelivered()`). Damit ist die
+    Ankündigung positiv nachgewiesen statt vorausgesetzt: bricht der Lesepfad
+    (`load_dated`, `trip_alert.py:1363`), greift die Unterdrückung nicht mehr, der Sonden-Lauf
+    löst aus und AC-1 wird rot — vorher blieb er in genau diesem Fall grün, weil ein Alarm
+    ohne jede Überholung von einem Alarm wegen Überholung nicht unterscheidbar war.
 
 - **AC-2:** Given der erste Prüflauf hat ausgelöst und dabei eine Sperrzeit gebucht, When ein
   zweiter Prüflauf mit unveränderter Lage (gleiches Briefing, gleicher Radar-Wert) kurz danach
@@ -127,7 +143,11 @@ Default 12:00 UTC) — kein Test hängt von der Wanduhr ab.
     `gate_reason == alert_log.REASON_COOLDOWN` ("cooldown") nachweisen — NICHT mit einem
     `"briefing_announced:"`-Präfix, der die andere Unterdrückungsursache anzeigen würde.
 
-- **AC-3:** Given die Sperrzeit aus dem ersten Prüflauf ist zum Zeitpunkt des dritten Prüflaufs
+- **AC-3:** ⚠️ **Gemessen rot am 2026-08-22 — ausgelagert nach Issue #2065, nicht Teil dieser
+  Lieferung.** Der Wächter wurde gebaut, ausgeführt und schlägt fehl; die Zusicherung ist heute
+  im Produktivcode nicht erfüllt (Details unter „Known Limitations"). Wortlaut zur
+  Nachvollziehbarkeit:
+  Given die Sperrzeit aus dem ersten Prüflauf ist zum Zeitpunkt des dritten Prüflaufs
   noch aktiv, When der dritte Prüflauf mit deutlich verschärfter Lage (höhere Regenmenge als in
   Lauf 1 und 2) fährt, Then löst dieser Lauf trotz der noch laufenden Sperre einen Alarm aus.
   - Test: dritter Lauf innerhalb desselben Sperrfensters mit verschärften Eingangsdaten fahren,
@@ -167,13 +187,38 @@ Default 12:00 UTC) — kein Test hängt von der Wanduhr ab.
   - Test: identischer Lauf zu AC-5 mit deaktiviertem `thunder_onset`-Level;
     `triggered_count == 0`.
 
+- **AC-8:** Given ein Trip, dessen Briefing nur 0,5 mm ankündigte, und eine Radarlage von
+  ~1,5 mm im Vergleichsfenster — die den Überholungs-FAKTOR damit deutlich überschreitet
+  (2 × 0,5 mm = 1,0 mm), aber unter der absoluten Relevanz-Untergrenze von 2,0 mm bleibt, When
+  ein einzelner Prüflauf über den Radar-Zweig fährt, Then bleibt der Lauf ohne Alarm, und das
+  Alarmprotokoll weist die Briefing-Ankündigung als Grund aus.
+  - Test: eigene `user_id`, Briefing-Snapshot 0,5 mm, Radar-Frames 9 mm/h über 10 Minuten;
+    `triggered_count == 0`, kein Kanalinhalt, `briefing_announced:0.5mm` im
+    Unterdrückungs-Protokoll. Die Faktor-Bedingung wird vor dem Lauf am echten
+    `get_nowcast()`-Ergebnis gegen `trip_alert._BRIEFING_OVERTAKE_FACTOR` (Modul-Referenz)
+    als ERFÜLLT nachgewiesen — sonst prüfte der Fall wieder nur den Faktor.
+  - Warum zusätzlich zu AC-4 (Fix-Loop 2026-08-22, Adversary-Finding F001): die
+    Überholungsprüfung ist eine UND-Verknüpfung aus Faktor-Schwelle und absoluter Untergrenze
+    (`trip_alert.py:1381-1385`). AC-4s ~1,83 mm scheitern bereits am Faktor (2 × 1,0 mm), die
+    absolute Untergrenze wird dort nie zur wirksamen Bedingung — ihr Wegfall
+    (`_OVERTAKE_MIN_ABSOLUTE_MM = 0.0`) blieb von allen sechs Wächtern unbemerkt.
+
 ## Known Limitations
 
-- AC-3 kann nach heutigem Code-Stand strukturell nicht grün sein (`check_nowcast_gate` prüft die
-  Sperrzeit unbedingt VOR jeder Eskalations-/Überholungsbewertung, `trip_alert.py:1239-1273`,
-  ohne Ausnahme für verschärfte Lagen). Zeigt sich das beim Schreiben des Tests, wird das als
-  Befund gemeldet (eigene Scheibe) statt hier Produktivcode zu ändern — passend zur harten
-  Randbedingung dieser Scheibe.
+- **AC-3 ist gemessen rot und nach Issue #2065 ausgelagert (2026-08-22).** Der Wächter wurde
+  gebaut und ausgeführt; er scheitert mit dem protokollierten Unterdrückungsgrund `cooldown`
+  (`alert_log.REASON_COOLDOWN`), nicht mit `briefing_announced:`. Damit ist am Wirkort belegt,
+  was die Analyse vermutet hatte: `check_nowcast_gate` prüft die Sperrzeit unbedingt VOR jeder
+  Eskalations-/Überholungsbewertung (`trip_alert.py:1239-1273` vs. `:1381`) und nimmt keinen
+  Parameter entgegen, über den es von einer Verschärfung erfahren könnte
+  (`alert_gate.py:140-184`). **Anforderung A-3 aus #2050 ist damit verletzt** — ein
+  Produktivfehler, kein Testproblem. Der Testcode liegt unverändert in #2065; diese Scheibe
+  liefert ihn nicht mit, weil sie keinen Produktivcode ändert und ein roter Kerntest nicht
+  mergefähig ist. Die Nummerierung der übrigen ACs bleibt unverändert, damit die Lücke sichtbar
+  bleibt statt zu verschwinden.
+- Abgrenzung dazu: #2020 Scheibe 1 hat die **Briefing-Ankündigungs-Sperre** bei
+  Mengen-Überholung gebrochen, **nicht** den Cooldown nach einem eigenen Alarm. Wer #2020 S1 als
+  „A-3 ist erledigt" liest, liegt falsch.
 - `alert_state.reset()` verwirft `event_identity:`-Schlüssel still (`alert_state.py:38-45`,
   bereits in der S1-Spec vermerkt) — betrifft diese Scheibe nicht direkt, da keiner der beiden
   Wächter über eine Briefing-Grenze hinweg vorbelegten Zustand voraussetzt.
@@ -203,3 +248,13 @@ Default 12:00 UTC) — kein Test hängt von der Wanduhr ab.
 
 - 2026-08-22: Initial spec created (Scheibe S2a aus #2050, verdichtet aus
   `docs/context/feat-2050-s2a-waechter-szenarien-2-3.md`).
+- 2026-08-22: Nach dem Bau — AC-3 gemessen rot, nach #2065 ausgelagert (Anforderung A-3 im
+  Produktivcode verletzt). Dateinamen an die Umsetzung angeglichen. Briefing-Anker über
+  `save_dated()` statt `save_alarm_anchor()` korrigiert; der ursprüngliche Weg hätte AC-1 still
+  grün werden lassen. Lieferumfang damit 6 Wächter.
+- 2026-08-22 (Fix-Loop nach Adversary-Verdict BROKEN): AC-8 ergänzt (absolute Untergrenze der
+  Überholung unabhängig vom Faktor bewacht, F001) und AC-1 um den Sonden-Lauf erweitert
+  (Briefing-Ankündigung positiv nachgewiesen statt vorausgesetzt, F002). Beide Mutationen sind
+  jetzt gemessen rot — Nachweis in
+  `docs/artifacts/feat-2050-s2a-waechter-szenarien-2-3/mutations-nachweis-fixloop.txt`.
+  Lieferumfang damit 7 Wächter, weiterhin ohne jede Produktivcode-Änderung.
