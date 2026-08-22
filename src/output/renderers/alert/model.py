@@ -107,6 +107,30 @@ class OnsetEvent:
     # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
     # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
     km_measured: bool = False
+    # Issue #2051 S1: additiv, optional (Muster `onset_precip_mm`/
+    # `onset_day_offset` o.). Ende desselben Ereignisses als reines "HH:MM"
+    # — Quelle `NowcastResult.event_end_minutes`. `None` heisst "es gibt
+    # keines" (kein Beginn erkannt, keine Frames); die Ende-Angabe entfaellt
+    # dann ersatzlos. Gesetzt von den BEIDEN Onset-Pfaden (Trip UND
+    # Ortsvergleich-Buendel, ADR-0021) ueber die geteilte Fassung
+    # `project.event_end_display`.
+    event_end_time: str | None = None
+    # Issue #2051 S1: Tagesbezug des Endes, analog `onset_day_offset` — aber
+    # BEWUSST eigenstaendig aus dem Ende-Zeitpunkt abgeleitet und nicht vom
+    # Beginn kopiert: Beginn 23:50 (Versatz 0) und Ende 00:40 (Versatz 1)
+    # liegen an verschiedenen Kalendertagen.
+    event_end_day_offset: int = 0
+    # Issue #2051 S1 (Spec v1.1, PO-Entscheid 2026-08-22): der R4-Waechter
+    # `NowcastResult.event_ongoing_beyond_horizon` — die Frames bzw. der
+    # 180-Min-Horizont sind ausgegangen, waehrend der letzte bekannte Frame
+    # noch nass war. `event_end_time` traegt dann trotzdem eine BELEGTE Zahl;
+    # dieses Feld waehlt nur ihre Textform: `True` → Untergrenze
+    # ("Regen mindestens bis HH:MM" / " >@HH:MM"), `False` → bekanntes Ende
+    # ("letzter Regen gegen HH:MM" / "@HH:MM"). Die beiden Formen sagen
+    # Gegensaetzliches und duerfen nie ineinander rutschen (AC-20); deshalb
+    # entscheidet AUSSCHLIESSLICH dieses Feld darueber, an EINER Stelle je
+    # Textform (`_onset_end_suffix` / `_sms_onset_ende`).
+    event_ongoing_beyond_horizon: bool = False
 
 
 @dataclass(frozen=True)

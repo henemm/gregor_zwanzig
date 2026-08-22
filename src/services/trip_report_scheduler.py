@@ -1465,8 +1465,9 @@ class TripReportSchedulerService:
         # Segment-Auswahl/Naehe-Guard/Budget-Gate/Fetch laufen VOR dem Bau des
         # TripReportRequest, damit ein zu weit entferntes Segment oder ein
         # ausgeschoepftes Tagesbudget keinen Nowcast-Call verursacht. Liefert
-        # nur Rohdaten (intensity_label, onset_minutes) — die Textformatierung
-        # (Renderer-Aufruf) passiert im NotificationService (Architektur-Grenze).
+        # nur Rohdaten (intensity_label, onset_minutes, Ende, Waechter) — die
+        # Textformatierung (Renderer-Aufruf) passiert im NotificationService
+        # (Architektur-Grenze).
         starkregen_nowcast = self._build_starkregen_hint(
             trip, segments, datetime.now(timezone.utc), target_date,
         )
@@ -1699,7 +1700,7 @@ class TripReportSchedulerService:
         catchup_prefix: str | None,
         partial_outage_hint: str | None = None,
         render_options: Optional["ReportRenderOptions"] = None,
-        starkregen_nowcast: Optional[Tuple[str, int]] = None,
+        starkregen_nowcast: Optional[Tuple[str, int, Optional[int], bool]] = None,
     ) -> TripReportRequest:
         """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
 
@@ -1756,9 +1757,11 @@ class TripReportSchedulerService:
         segments: List[TripSegment],
         now_utc: datetime,
         target_date: Optional[date] = None,
-    ) -> Optional[Tuple[str, int]]:
+    ) -> Optional[Tuple[str, int, Optional[int], bool]]:
         """Starkregen-Kurzfristhinweis (Issue #1439): liefert die Rohdaten
-        (``intensity_label``, ``onset_minutes``) fuer den planmaessigen
+        (``intensity_label``, ``onset_minutes``, seit Issue #2051 S1
+        zusaetzlich ``event_end_minutes`` und
+        ``event_ongoing_beyond_horizon``) fuer den planmaessigen
         Briefing-Pfad, wenn der bereits produktive `RadarNowcastService`
         (#656) fuer den Startpunkt des aktiven/naechsten Segments Starkregen
         innerhalb von `NOWCAST_HORIZON_MIN` erkennt.
@@ -1876,7 +1879,14 @@ class TripReportSchedulerService:
         if result.onset_minutes is None or result.intensity_label != INTENSITY_HEAVY:
             return None
 
-        return (result.intensity_label, result.onset_minutes)
+        # Issue #2051 S1: Ende und R4-Waechter wandern mit -- das alte
+        # Zwei-Tupel konnte das Ende gar nicht transportieren. Rohdaten
+        # bleiben Rohdaten: die Textformatierung passiert weiterhin im
+        # NotificationService (Architektur-Grenze).
+        return (
+            result.intensity_label, result.onset_minutes,
+            result.event_end_minutes, result.event_ongoing_beyond_horizon,
+        )
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:
         """Issue #816 (B): Alert-Melde-Gedächtnis nach Briefing-Versand löschen.

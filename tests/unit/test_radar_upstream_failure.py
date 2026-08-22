@@ -245,7 +245,15 @@ def test_format_now_text_shows_data_gap_hint_not_false_all_clear():
 
 def test_format_now_text_dry_result_wording_unchanged():
     """AC-7: der Normalfall (echt trocken, Fehlerfeld False) bleibt
-    zeichenidentisch zum bisherigen Wortlaut."""
+    zeichenidentisch zum bisherigen Wortlaut.
+
+    Issue #2051 S1 (AC-18) schreibt den Goldstring an EINER Stelle fort: die
+    Stundenzahl leitet sich seither zur Laufzeit aus `_NOWCAST_HORIZON_MIN`
+    (180) ab und lautet damit "3 Stunden" statt der zuvor doppelt gepflegten
+    "2 Stunden". Die Zusicherung DIESES Tests bleibt unveraendert -- geprueft
+    wird weiter, dass der echte Trockenfall NICHT in den
+    "nicht moeglich"-Zweig aus #1628 rutscht.
+    """
     result = NowcastResult(
         onset_minutes=None, intensity_label="Kein Niederschlag",
         source="minutely_15", frames=[], data_unavailable=False,
@@ -255,7 +263,7 @@ def test_format_now_text_dry_result_wording_unchanged():
     text = svc.format_now_text(result, include_source=False)
 
     assert text == (
-        "Kein Niederschlag.\nIn den nächsten 2 Stunden kein Regen erwartet."
+        "Kein Niederschlag.\nIn den nächsten 3 Stunden kein Regen erwartet."
     ), f"AC-7: Normalfall-Wortlaut darf sich nicht aendern, tatsaechlich: {text!r}"
 
 

@@ -188,6 +188,29 @@ class NowcastResult:
     # Beginn -- das Fenster ab jetzt deckt dann fast nur Trockenzeit ab und
     # untertriebe die Menge systematisch. BEWUSST beschreibend: kein Leser in
     # radar_alert_due()/der #2020-Ueberholungsregel.
+    event_end_minutes: Optional[int] = None
+    # Issue #2051 S1: Minuten ab jetzt bis zum Ende des zusammenhaengenden
+    # nassen Blocks, analog `onset_minutes`. `None`, wenn `onset_minutes`
+    # `None` ist -- ohne Beginn gibt es kein Ende, das behauptet werden
+    # koennte. Abgeleitet aus DENSELBEN `frames` (kein zweiter Quellenabruf).
+    # Die DAUER ist stets `event_end_minutes - onset_minutes` und wird
+    # absichtlich NICHT als drittes Feld gespeichert -- eine zweite Quelle der
+    # Wahrheit koennte auseinanderlaufen.
+    event_ongoing_beyond_horizon: bool = False
+    # Issue #2051 S1, R4-Waechter: die Frames bzw. der 180-Min-Horizont sind
+    # ausgegangen, waehrend der letzte bekannte Frame noch nass war. `False`
+    # heisst "das echte Ende ist bekannt" -- konsistent mit
+    # throttled/data_unavailable als Beobachtbarkeits-Signal.
+    #
+    # Bei `True` rendern alle sieben Textstellen die UNTERGRENZEN-Form
+    # (`Regen mindestens bis HH:MM` bzw. ` >@HH:MM`) statt der Normalform
+    # (`letzter Regen gegen HH:MM` / `@HH:MM`) -- Spec-Fassung 1.1,
+    # PO-Entscheid 2026-08-22. Der urspruengliche Entwurf 1.0 liess die
+    # Ende-Angabe hier ersatzlos WEG (Muster #2046 fuer die fehlende Menge);
+    # das verwarf eine wahre Aussage, denn `event_end_minutes` traegt in
+    # beiden Waechter-Faellen eine BEOBACHTETE Zahl -- die Reichweite der
+    # Quelle bzw. den letzten bekannten nassen Frame. Als Untergrenze genannt
+    # behauptet sie kein Ende und unterschlaegt zugleich nichts.
 
 
 def _offline_fixture_active() -> bool:
@@ -240,6 +263,75 @@ def _accumulate_precip_mm(
         duration_h = max(0.0, (frame_end - ts).total_seconds() / 3600.0)
         total += rate * duration_h
     return total
+
+
+def _derive_wet_block_end(
+    frames: list, all_ts_sorted: list, onset_ts: datetime, horizon: datetime,
+) -> tuple[datetime, bool]:
+    """Ende des zusammenhaengenden nassen Blocks ab `onset_ts` (Issue #2051 S1).
+
+    Rueckgabe `(end_ts, ongoing_beyond_horizon)`. Bewusst ein GESCHWISTER von
+    `_accumulate_precip_mm` und nicht dessen Erweiterung: dort wird in einem
+    BEKANNTEN Fenster summiert, hier wird die Fenstergrenze erst gesucht.
+    Dieselbe Deckungsmechanik, KEINE neue Toleranzzahl.
+
+    Die drei Abbruchgruende im Einzelnen:
+      * Trockenframe (`precip_mm_h < _DRY_THRESHOLD_MM_H`): eine
+        QUELLENAUSSAGE "hier hat es aufgehoert" -- der Block endet real, am
+        letzten tatsaechlich nassen Frame. Nicht ueberbruecken, sonst
+        verschmelzen zwei getrennte Ereignisse zu einer ueberlangen Dauer.
+      * Luecke groesser als die Deckung eines Frames (`_MAX_FRAME_COVERAGE`):
+        keine Beobachtung, aber DANACH wieder eine -- das Ende liegt an der
+        Deckungsgrenze, nicht am naechsten wieder nassen Frame.
+      * Deckung reicht bis an den Horizont ODER es folgt gar keine
+        Beobachtung mehr: das echte Ende ist unbekannt (R4) ->
+        `ongoing_beyond_horizon=True`. Der zurueckgegebene Zeitpunkt ist dann
+        nur die Reichweite der Beobachtung -- kein behauptbares Ende, aber
+        eine BELEGTE UNTERGRENZE. Die Textkonsumenten nennen ihn deshalb in
+        der Untergrenzen-Form (`Regen mindestens bis HH:MM` / ` >@HH:MM`)
+        statt ihn wegzulassen (Spec-Fassung 1.1, PO-Entscheid 2026-08-22).
+    """
+    # Dedup je Zeitstempel wie in `_accumulate_precip_mm` (hoeherer Wert
+    # gewinnt) -- sonst entschiede bei Providerwiederholung/Sidecar-Merge die
+    # Reihenfolge darueber, ob ein Zeitpunkt als nass oder trocken gilt.
+    by_ts: dict[datetime, float] = {}
+    for frame in frames:
+        if not (onset_ts <= frame.timestamp <= horizon):
+            continue
+        existing = by_ts.get(frame.timestamp)
+        if existing is None or frame.precip_mm_h > existing:
+            by_ts[frame.timestamp] = frame.precip_mm_h
+
+    last_wet_ts = onset_ts
+    for ts, rate in sorted(by_ts.items()):
+        if rate < _DRY_THRESHOLD_MM_H:
+            return last_wet_ts, False
+        last_wet_ts = ts
+
+        # Deckung DIESES Frames -- dieselbe Rechnung wie in
+        # `_accumulate_precip_mm`: eigener naechster Nachbar aus der
+        # VOLLSTAENDIGEN Frame-Liste, gedeckelt auf `_MAX_FRAME_COVERAGE`, nie
+        # ueber das Fensterende hinaus.
+        coverage_end = min(ts + _MAX_FRAME_COVERAGE, horizon)
+        next_idx = bisect.bisect_right(all_ts_sorted, ts)
+        next_ts = all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted) else None
+
+        if coverage_end >= horizon:
+            # Der Block reicht bis an den Horizont der Quelle.
+            return horizon, True
+        if next_ts is None:
+            # Zeitreihe abgeschnitten, letzter bekannter Frame noch nass.
+            return coverage_end, True
+        if next_ts > coverage_end:
+            # Luecke groesser als die Deckung -- danach folgt zwar wieder eine
+            # Beobachtung, aber die dazwischenliegende Zeit ist unbeobachtet.
+            return coverage_end, False
+
+    # Unerreichbar, solange `all_ts_sorted` aus denselben `frames` stammt: ein
+    # nahtlos anschliessender naechster Frame innerhalb des Fensters ist auch
+    # ein Schleifen-Element. Ohne nassen Frame (leeres Fenster) bleibt der
+    # Beginn selbst das Ende.
+    return last_wet_ts, False
 
 
 class RadarNowcastService:
@@ -428,27 +520,53 @@ class RadarNowcastService:
                 lines.append("Bitte selbst beobachten.")
             else:
                 lines.append(result.intensity_label + ".")
-                lines.append("In den nächsten 2 Stunden kein Regen erwartet.")
+                # Issue #2051 S1 (AC-18): die Stundenzahl haengt am
+                # tatsaechlich geprueften Horizont und ist KEINE zweite,
+                # unabhaengige Zahl -- genau diese Doppelpflege hat die Drift
+                # erzeugt (der Satz sagte "2 Stunden", waehrend #1945 den
+                # Horizont laengst auf 180 Min angehoben hatte).
+                lines.append(
+                    f"In den nächsten {_NOWCAST_HORIZON_MIN // 60} Stunden "
+                    f"kein Regen erwartet."
+                )
         else:
             now = datetime.now(tz=timezone.utc)
-            onset_time = now + timedelta(minutes=result.onset_minutes)
-            if tz is not None:
-                # Issue #1402: local_dt() statt rohem .astimezone(tz) --
-                # geht ueber den zentralen Naiv-Guard (hier zwar bereits
-                # aware, aber konsistent mit dem EINEN Umrechner).
-                from utils.timezone import local_dt
 
-                time_str = local_dt(onset_time, tz).strftime("%H:%M")
-            else:
+            def _hhmm(moment: datetime) -> str:
+                if tz is not None:
+                    # Issue #1402: local_dt() statt rohem .astimezone(tz) --
+                    # geht ueber den zentralen Naiv-Guard (hier zwar bereits
+                    # aware, aber konsistent mit dem EINEN Umrechner).
+                    from utils.timezone import local_dt
+
+                    return local_dt(moment, tz).strftime("%H:%M")
                 # Kein tz uebergeben (Fail-soft-Pfad, Wächter-abgesichert
-                # fuer Produktivcode) -- onset_time ist bereits UTC-aware,
+                # fuer Produktivcode) -- `moment` ist bereits UTC-aware,
                 # NICHT das argumentlose .astimezone() nutzen (deutet sonst
                 # die Prozess-Zeitzone des Servers statt ehrlich UTC).
-                time_str = onset_time.strftime("%H:%M")
-            lines.append(
+                return moment.strftime("%H:%M")
+
+            time_str = _hhmm(now + timedelta(minutes=result.onset_minutes))
+            satz = (
                 f"{result.intensity_label} ab ca. {time_str}"
-                f" (in ~{result.onset_minutes} Min)."
+                f" (in ~{result.onset_minutes} Min)"
             )
+            # Issue #2051 S1 (AC-14): das Ende desselben Ereignisses, aus
+            # DEMSELBEN `now` wie der Beginn abgeleitet. Der R4-Waechter
+            # waehlt seit Spec v1.1 (PO-Entscheid 2026-08-22) die FORM statt
+            # die Angabe zu unterdruecken: bei abgeschnittener Zeitreihe ist
+            # der Zeitpunkt eine belegte Untergrenze, kein bekanntes Ende.
+            # Wortgleich mit `format_starkregen_hint` (dort dieselbe Weiche),
+            # damit E-Mail und Kommando-Antwort keine zwei Dialekte sprechen.
+            if result.event_end_minutes is not None:
+                _end_str = _hhmm(
+                    now + timedelta(minutes=result.event_end_minutes)
+                )
+                if result.event_ongoing_beyond_horizon:
+                    satz += f", Regen mindestens bis {_end_str}"
+                else:
+                    satz += f", letzter Regen gegen {_end_str}"
+            lines.append(satz + ".")
 
         if result.convective_checked is False:
             lines.append("Gewitter-Check nicht verfügbar.")
@@ -813,6 +931,19 @@ class RadarNowcastService:
                 onset_ts + timedelta(minutes=_ONSET_PRECIP_WINDOW_MIN),
             )
 
+        # Issue #2051 S1: Ende des zusammenhaengenden nassen Blocks aus
+        # DERSELBEN `frames`-Liste (kein zweiter Quellenabruf) -- der Nutzer
+        # erfaehrt bisher nur, WANN es anfaengt. Ohne Beginn kein Ende.
+        event_end_minutes: Optional[int] = None
+        event_ongoing_beyond_horizon = False
+        if onset_ts is not None:
+            _end_ts, event_ongoing_beyond_horizon = _derive_wet_block_end(
+                frames, all_ts_sorted, onset_ts, horizon,
+            )
+            event_end_minutes = max(
+                0, round((_end_ts - now).total_seconds() / 60.0)
+            )
+
         # Issue #2020 Adversary-Fund F001: max_rate_mm_h fuer die
         # Ueberholungspruefung MUSS aus demselben Fenster stammen wie
         # window_precip_mm (60 Min compare_window), sonst legitimiert ein
@@ -837,6 +968,8 @@ class RadarNowcastService:
             max_rate_mm_h=compare_window_max_rate_mm_h,
             window_precip_mm=window_precip_mm,
             onset_precip_mm=onset_precip_mm,  # Issue #2046
+            event_end_minutes=event_end_minutes,  # Issue #2051 S1
+            event_ongoing_beyond_horizon=event_ongoing_beyond_horizon,  # #2051 S1
         )
 
 

@@ -34,6 +34,39 @@ logger = logging.getLogger("alert_project")
 COMPARE_RADAR_SOURCE = "compare-radar"
 
 
+def event_end_display(
+    now_utc: datetime, nowcast, tz,
+) -> tuple[str | None, int, bool]:
+    """Anzeigefassung des Ereignis-Endes (Issue #2051 S1):
+    `("HH:MM", Versatz, Untergrenze?)`.
+
+    EINE Fassung fuer BEIDE Onset-Pfade (Trip-Radar-Alarm und
+    Ortsvergleich-Buendel, ADR-0021) — zwei Kopien dieser vier Zeilen wuerden
+    genau so auseinanderlaufen wie die Uhrzeit-/Tagesbezugs-Ableitung des
+    Beginns es koennte.
+
+    `(None, 0, False)` heisst "es gibt kein Ende" — das Nowcast-Ergebnis
+    traegt keines (kein Beginn erkannt, keine Frames).
+
+    Das dritte Feld ist der R4-Waechter `event_ongoing_beyond_horizon`. Seit
+    dem PO-Entscheid vom 2026-08-22 (Spec v1.1) unterdrueckt er die
+    Ende-Angabe NICHT mehr, sondern waehlt ihre FORM: `True` heisst "der
+    genannte Zeitpunkt ist eine belegte Untergrenze, kein bekanntes Ende".
+    Er reist deshalb GEMEINSAM mit der Uhrzeit — eine Textstelle, die nur die
+    Uhrzeit bekaeme, wuerde eine Untergrenze als bekanntes Ende ausgeben und
+    damit das Gegenteil der Datenlage behaupten (AC-20).
+
+    Der Tagesversatz stammt aus dem ENDE-Zeitpunkt, nicht vom Beginn: Beginn
+    23:50 und Ende 00:40 liegen an verschiedenen Kalendertagen.
+    """
+    end_minutes = getattr(nowcast, "event_end_minutes", None)
+    if end_minutes is None:
+        return None, 0, False
+    ongoing = bool(getattr(nowcast, "event_ongoing_beyond_horizon", False))
+    end_dt = now_utc + timedelta(minutes=end_minutes)
+    return local_fmt(end_dt, tz), day_offset(now_utc, end_dt, tz), ongoing
+
+
 def _resolve_metric_id(field: str, direction: str) -> str:
     """summary_field → catalog metric_id, disambiguiert per Richtung.
 
@@ -507,6 +540,7 @@ def to_multi_location_onset_alert_message(
         # eine gemeinsame Zone waere fuer alle bis auf einen still falsch.
         loc_tz = _tz_for_location(loc, tz)
         onset_dt = now + timedelta(minutes=nc.onset_minutes)
+        _end_time, _end_offset, _end_ongoing = event_end_display(now, nc, loc_tz)
         events.append(OnsetEvent(
             onset_minutes=nc.onset_minutes, onset_time=local_fmt(onset_dt, loc_tz),
             km_from=0.0, km_to=0.0, is_convective=nc.is_convective,
@@ -519,6 +553,17 @@ def to_multi_location_onset_alert_message(
             # dieser Pfad sein OnsetEvent selbst baut (ADR-0021: Trip und
             # Ortsvergleich teilen die Ausgabe).
             onset_precip_mm=nc.onset_precip_mm,
+            # Issue #2051 S1: Ende und sein EIGENER Tagesbezug in DERSELBEN
+            # Ortszone wie der Beginn (`loc_tz`) -- ein Buendel kann Orte in
+            # verschiedenen Zonen tragen. Geteilte Fassung `event_end_display`,
+            # dieselbe, die der Trip-Pfad benutzt (ADR-0021).
+            event_end_time=_end_time,
+            event_end_day_offset=_end_offset,
+            # Issue #2051 S1 (Spec v1.1): der R4-Waechter waehlt die TEXTFORM
+            # des Endes (Untergrenze vs. bekanntes Ende) und muss den Renderer
+            # deshalb erreichen -- er darf nicht mehr stromaufwaerts in einem
+            # fehlenden Ende aufgeloest werden (AC-5/AC-20).
+            event_ongoing_beyond_horizon=_end_ongoing,
         ))
     trip_short = (
         ", ".join(name for name, _loc, _nc in valid_groups)
