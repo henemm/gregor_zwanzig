@@ -280,3 +280,13 @@ beschädigte Zeile wird übersprungen, nie ein Panic.
 ## Changelog
 
 - 2026-08-22: Initial spec created
+- 2026-08-22 (nach der Staging-Messung): AC-12 traf den Wortlaut nur zur Hälfte. Der Endpoint
+  meldet ohne laufende Serie `track_resolution_failure_streak_since` als **`null`**, nicht als
+  leeren String — der Go-Handler legt den intern zurückgegebenen `""` nicht in die Antwort-Map
+  (`briefing_health.go:179-188`), womit das Feld dem `null` seiner Nachbarn folgt. Der AC-Test
+  prüfte die interne Hilfsfunktion, nicht den ausgelieferten JSON-Schlüssel — dieselbe Naht, die
+  ADR-0018 sichtbar machen will, war im Nachweis selbst ungemessen. Die AC-Absicht (neutraler
+  Leerwert, `recent_count=0`, kein Fehler) ist erfüllt; korrigiert wurde die **Beschreibung** in
+  `docs/reference/api_contract.md`, nicht das Verhalten — auf `""` umzustellen bräche die
+  Konsistenz mit `provider_error_*` und `alert_anchor_rejected_*`, auf die der Monitor in
+  `henemm-infra` bereits rechnet.
