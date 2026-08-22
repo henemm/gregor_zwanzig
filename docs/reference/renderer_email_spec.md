@@ -2,11 +2,15 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
-**Last Updated:** 2026-08-22 (Issue #2049 — Abgrenzung „Metric Display Contract" (Sektion 4/5)
-gegen die eigene, unabhängige Roh/Einfach-Entscheidung des 3-Tages-Ausblicks (Sektion 6,
-`display_config.outlook_metric_formats`) ergänzt, s.u.)
+**Last Updated:** 2026-08-22 (Issue #2011 — `_thunder_risk_level()` ruft für String-/Enum-Rohwerte
+jetzt tatsächlich `thunder_ampel_band()` auf statt einer eigenen Stufen-Wort-Kette; nur der
+numerische Legacy-Fallback bleibt hartcodiert, s.u.)
 
-**Vorherige Aktualisierung:** 2026-08-14 (Bug #1801 S2 — neue Ampel-Palette (Punkt/Fläche/Text) für
+**Vorherige Aktualisierung:** 2026-08-22 (Issue #2049 — Abgrenzung „Metric Display Contract" (Sektion 4/5)
+gegen die eigene, unabhängige Roh/Einfach-Entscheidung des 3-Tages-Ausblicks (Sektion 6,
+`display_config.outlook_metric_formats`) ergänzt)
+
+**Davor:** 2026-08-14 (Bug #1801 S2 — neue Ampel-Palette (Punkt/Fläche/Text) für
 gelb/orange/rot, WCAG-Fix grüner Zelltext (`G_AMPEL_TEXT_GREEN`); `html.py`/`outlook.py`
 beziehen die Zellfarben seither aus `design_tokens.tone_css()` statt eigener Kopien)
 
@@ -67,8 +71,11 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
     Wind/Böen/Regen/Regenwahrscheinlichkeit/Sicht
     einheitlich aus `severity_for`/`ampel_level` und den Katalog-Schwellen der
     „Best-Practice-Schwellen"-Tabelle unten (Wind z.B. 30/50/70 km/h, nicht mehr die alte
-    fixe 20-km/h-Grenze). Gewitter bleibt ausdrücklich hartcodiert (kein `display_thresholds`
-    im Katalog): rot ab >30, orange >20-30, gelb >0-20 (`html.py:658-659`).
+    fixe 20-km/h-Grenze). Gewitter läuft für String-/Enum-Rohwerte seit #2011 über die
+    kanonische `thunder_ampel_band()` (`green/yellow/orange/red` → `ok/yellow/watch/risk`,
+    `metric_format.py`); nur der numerische Legacy-Fallback (seltener Rohdatenpfad #1425)
+    bleibt ausdrücklich hartcodiert, zweistufig, ohne `display_thresholds` im Katalog:
+    rot ab >20, orange >0-20 (`_thunder_risk_level()`, `html.py:171-203`).
 - **Mobile-Tabelle:** `EmailHourList` zwei-Zeilen-Format (neu ab Issue #884; ersetzt `_render_mobile_compact_rows`)
   - Hauptzeile: Zeit (mono bold, 26px breit) · Wetter-Glyph · Temp · gefühlte Temp · Risk-Dot
   - Detailzeile: Wind/Regen/Sicht/UV/Höhe komprimiert

@@ -181,11 +181,14 @@ def test_ac1_dd_thunder_today_returns_hourly_list(env):
         f"Erwartet ≥6 HH:MM-Zeilen, gefunden {len(time_lines)}:\n{body}"
     )
 
-    # Mindestens eines der Stufen-Labels muss vorkommen
-    label_keywords = ["keins", "mäßig", "hoch", "⚪", "🟡", "🔴"]
+    # Mindestens eines der Stufen-Labels muss vorkommen (Issue #2010: kanonische
+    # Woerter "kein"/"mittel", nicht "keins"/"mäßig").
+    label_keywords = ["kein", "mittel", "hoch", "⚪", "🟡", "🔴"]
     assert any(kw in body for kw in label_keywords), (
         f"Keine Stufen-Labels in:\n{body}"
     )
+    assert "mäßig" not in body, f"'mäßig' (Wortdrift #2010) noch im Body:\n{body}"
+    assert "keins" not in body, f"'keins' (Wortdrift #2010) noch im Body:\n{body}"
 
 
 # ---------------------------------------------------------------------------

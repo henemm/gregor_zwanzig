@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Optional
 
 from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip
+from output.metric_format import THUNDER_LABEL_DE, thunder_ampel_band
 from services.trip_day import anchor_tz, display_tz, trip_local_now, trip_local_today
 from utils.timezone import UTC, local_dt, local_fmt, local_hour
 
@@ -136,14 +137,25 @@ _MORGEN_BUTTONS = {
     ]
 }
 
-_THUNDER_LABEL = {
-    "NONE": "kein",
-    # Issue #1474 Adversary-Folgeaudit: LOW fehlte -- fiel auf den
-    # Unbekannt-Fallback "?" zurueck, obwohl LOW ein bekannter Wert ist.
-    "LOW": "leicht",
-    "MED": "mäßig",
-    "HIGH": "hoch",
-}
+# Kreis-Emoji je Ampelband der Stufe (`thunder_ampel_band`, metric_format.py) --
+# das Symbol stellt das Band dar, es ist keine zweite Stufen-Zuordnung.
+_BAND_EMOJI = {"green": "⚪", "yellow": "🟢", "orange": "🟡", "red": "🔴"}
+
+
+def _thunder_words() -> dict:
+    """Stufenname -> deutsches Wort, bei JEDEM Aufruf frisch aus
+    ``THUNDER_LABEL_DE`` abgeleitet (Issue #2010: die fruehere Wert-Kopie war
+    auf "mäßig"/"keins" abgedriftet)."""
+    return {level.name: label for level, label in THUNDER_LABEL_DE.items()}
+
+
+def _thunder_symbols() -> dict:
+    """Stufenname -> Kreis-Emoji, ueber das Ampelband der Stufe abgeleitet."""
+    return {
+        level.name: _BAND_EMOJI[thunder_ampel_band(level)]
+        for level in THUNDER_LABEL_DE
+    }
+
 
 # Issue #1818: der Hinweis, der die ehrliche Fehlanzeige begleitet — je Tag
 # das Kommando, das FUER DIESEN TAG ein Briefing ausloest. `/heute`/`/morgen`
@@ -218,12 +230,9 @@ def _thunder_fmt(value, *, with_emoji: bool = True) -> str:
     Issue #1222 AC-6: E-Mail/SMS bekommen KEIN Kreis-Emoji (nur das Wort),
     Telegram bleibt byte-identisch mit Emoji.
     """
-    # Issue #1474 Adversary-Folgeaudit: LOW fehlte in beiden Karten -- fiel
-    # auf "· keine Daten" zurueck, obwohl LOW ein bekannter Wert ist.
-    _MAP_EMOJI = {
-        "NONE": "⚪ keins", "LOW": "🟢 leicht", "MED": "🟡 mäßig", "HIGH": "🔴 hoch",
-    }
-    _MAP_PLAIN = {"NONE": "keins", "LOW": "leicht", "MED": "mäßig", "HIGH": "hoch"}
+    _MAP_PLAIN = _thunder_words()
+    _symbole = _thunder_symbols()
+    _MAP_EMOJI = {k: f"{_symbole[k]} {wort}" for k, wort in _MAP_PLAIN.items()}
     if value is None:
         return "· keine Daten"
     key = value.value if hasattr(value, "value") else str(value)
@@ -794,6 +803,10 @@ class TripCommandProcessor:
         rain_map  = {p.ts: p.value for p in r_rain.points}  if r_rain.available  else {}
         thund_map = {p.ts: p.value for p in r_thund.points} if r_thund.available else {}
 
+        # Issue #2010: dieselbe abgeleitete Quelle wie `_thunder_fmt` statt
+        # einer eigenen Verzweigung mit eigenen Woertern.
+        thunder_karte = _thunder_symbols() if with_emoji else _thunder_words()
+
         lines = [f"📅 Stunden · {label} ({today_date:%d.%m})", ""]
         for pt in r_temp.points:
             h = f"{local_hour(pt.ts, tz):02d}"
@@ -803,17 +816,12 @@ class TripCommandProcessor:
             rain_val = rain_map.get(pt.ts)
             rain = f"{rain_val:.1f}mm" if rain_val is not None else "?"
             thund_val = thund_map.get(pt.ts)
-            if thund_val is None or str(thund_val) in ("NONE", "ThunderLevel.NONE"):
-                t_sym = "—"
-            # Issue #1474 Adversary-Folgeaudit: LOW fiel bisher mangels
-            # eigenem Zweig in den ELSE-Fall und wurde faelschlich als
-            # starkes Gewitter (🔴/hoch) angezeigt.
-            elif str(thund_val) in ("LOW", "ThunderLevel.LOW"):
-                t_sym = "🟢" if with_emoji else "leicht"
-            elif str(thund_val) in ("MED", "ThunderLevel.MED"):
-                t_sym = "🟡" if with_emoji else "mäßig"
-            else:
-                t_sym = "🔴" if with_emoji else "hoch"
+            # `str(ThunderLevel.MED)` liefert je nach Python-Version "MED" oder
+            # "ThunderLevel.MED" -- beide Schreibweisen enden auf dem Stufennamen.
+            stufe = None if thund_val is None else str(thund_val).rsplit(".", 1)[-1]
+            # NONE bleibt eigener Zweig: die Stundenzeile zeigt einen Strich
+            # statt eines Wortes.
+            t_sym = "—" if stufe in (None, "NONE") else thunder_karte.get(stufe, "—")
             lines.append(f"{h}  {temp:<7} {wind:<8} {rain:<6} {t_sym}")
 
         markup = {"inline_keyboard": [[{"text": back_btn, "callback_data": back_cb}]]}
@@ -1025,7 +1033,7 @@ class TripCommandProcessor:
         t_max = f"{agg['temp_max']:.0f}" if agg['temp_max'] is not None else "?"
         t_min = f"{agg['temp_min']:.0f}" if agg['temp_min'] is not None else "?"
         wind = f"{agg['wind_max']:.0f}" if agg['wind_max'] is not None else "?"
-        thunder_label = _THUNDER_LABEL.get(agg['thunder'].value if agg['thunder'] else "NONE", "?")
+        thunder_label = _thunder_words().get(agg['thunder'].value if agg['thunder'] else "NONE", "?")
         # Issue #1680 S3 (Spec D3, abgeloeste Entscheidung): die tragende(n)
         # Zutat(en) der oben gezeigten Tagesstufe -- aus DEMSELBEN Aggregat,
         # das auch `agg['thunder']` traegt (`_aggregate_day()`, EINE Rechnung
@@ -1092,7 +1100,7 @@ class TripCommandProcessor:
             return f"Heute ({today:%d.%m}): " + self._tagesaussage_ohne_daten(
                 trip, today, "today", zusatz=" — kein Gewitter-Status.")
         thunder = agg["thunder"]
-        label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
+        label = _thunder_words().get(thunder.value if thunder else "NONE", "?")
         # Issue #1475 S5a: derselbe geteilte Textbaustein wie in den Mail-
         # Renderern (#1481 DRY, call-time Import) -- rein deskriptiv NEBEN der
         # Gewitterstufe, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
@@ -1152,7 +1160,7 @@ class TripCommandProcessor:
             wind = f"{m.wind_max_kmh:.0f}" if m.wind_max_kmh is not None else "?"
             precip = f"{m.precip_sum_mm:.1f}" if m.precip_sum_mm is not None else "0.0"
             thunder = m.thunder_level_max
-            t_label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
+            t_label = _thunder_words().get(thunder.value if thunder else "NONE", "?")
             # Issue #1680 S3 (Spec D2): die tragende(n) Zutat(en) DIESES
             # Wegpunkts -- `thunder_level_max` UND `thunder_level_max_signals`
             # stammen aus DEMSELBEN `m` (`SegmentWeatherSummary`, von
