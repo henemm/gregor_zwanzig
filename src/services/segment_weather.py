@@ -263,24 +263,18 @@ class SegmentWeatherService:
         # tzinfo gestrippt wird -- ein reines .replace(tzinfo=None) wuerde
         # die lokale Uhrzeit als UTC missdeuten und falsche Stunden
         # zuordnen (analog zu app/models.py:155).
-        start_floor = to_utc(segment.start_time).replace(
-            minute=0, second=0, microsecond=0, tzinfo=None
+        # Issue #2020 Scheibe 2: die Filterung wohnt seither in
+        # `app.day_window.segment_window_points()` -- verhaltensgleich zum
+        # bisherigen Inline-Filter (Bug #806 Exklusiv-Ende, Bug #856
+        # Punkttreffer bei Segmenten unter einer Stunde), aber GETEILT mit
+        # `weather_change_detection._precip_remaining()`. Grund: der
+        # Abweichungsalarm zieht seine Restmenge von der hier gebildeten
+        # Fenster-Gesamtmenge ab; zwei getrennte Filter liessen die Differenz
+        # driften (Befunde F001/F005, s. Docstring dort).
+        from app.day_window import segment_window_points
+        filtered_data = segment_window_points(
+            segment.start_time, segment.end_time, timeseries.data,
         )
-        end_floor = to_utc(segment.end_time).replace(
-            minute=0, second=0, microsecond=0, tzinfo=None
-        )
-        # Bug #806: Randstunde exklusiv am Ende (< end_floor), damit jede Stunde
-        # genau einem Segment gehört (Vermeidung von Widersprüchen bei Start-Punkt-Sampling).
-        # Bug #856: Wenn Start- und Endstunde identisch sind (Segment < 1h, gleiche UTC-Stunde),
-        # würde < end_floor immer False liefern → Fallback auf == start_floor.
-        filtered_data = [
-            dp for dp in timeseries.data
-            if (
-                (dp.ts == start_floor)
-                if start_floor == end_floor
-                else (start_floor <= dp.ts < end_floor)
-            )
-        ]
         from app.models import NormalizedTimeseries as NTS
         filtered_ts = NTS(meta=timeseries.meta, data=filtered_data)
         self._debug.add(f"filtered.points: {len(filtered_data)} (of {len(timeseries.data)})")

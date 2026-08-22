@@ -61,8 +61,12 @@ from output.renderers.alert.project import to_alert_message
 from output.renderers.alert.render import (
     _render_sms_body, render_email, render_sms, render_telegram,
 )
+from providers.openmeteo import OpenMeteoProvider
 from services.notification_service import NotificationService
-from services.weather_change_detection import WeatherChangeDetectionService
+from services.segment_weather import SegmentWeatherService
+from services.weather_change_detection import (
+    WeatherChangeDetectionService, _precip_remaining,
+)
 from utils.timezone import local_fmt
 
 # Island: ganzjaehrig UTC+0 -> Ortszeit == Weltzeit (s. Modul-Docstring).
@@ -826,4 +830,205 @@ def test_versandweg_reicht_die_referenzzeit_durch():
         f"Der Versandweg muss die Restmenge ab jetzt zustellen — fehlt sie, "
         f"ist die Referenzzeit unterwegs verloren gegangen und der Alarm "
         f"meldet wieder nur Vergangenheit; bekam:\n{body}"
+    )
+
+
+# --------------------------------------------------------------------------
+# Absicherung kurzer Segmente (kein AC): ein Segment unter einer Stunde darf
+# keine doppelte Falschaussage erzeugen.
+# --------------------------------------------------------------------------
+
+def _zwischensegment(start: datetime, ende: datetime) -> TripSegment:
+    """Ein GEWOEHNLICHES Zwischensegment, kein "Ziel".
+
+    Das Ziel-Segment bekommt in `trip_segments` eine erzwungene
+    Mindestdauer von einer Stunde (:294-311) -- der Kurzsegment-Fall ist ueber
+    `_segment()` oben deshalb gar nicht erreichbar. Zwischensegmente zwischen
+    eng beieinanderliegenden Wegpunkten kennen keine Mindestdauer
+    (`trip_segments.py:220-243`, Bug #856), koennen also durchaus in eine
+    einzige Stunde fallen.
+    """
+    return TripSegment(
+        segment_id="2",
+        start_point=GPXPoint(lat=ISLAND_LAT, lon=ISLAND_LON, elevation_m=800.0,
+                             distance_from_start_km=4.0),
+        end_point=GPXPoint(lat=ISLAND_LAT + 0.01, lon=ISLAND_LON + 0.01,
+                           elevation_m=850.0, distance_from_start_km=5.0),
+        start_time=start, end_time=ende,
+        duration_hours=(ende - start).total_seconds() / 3600.0,
+        distance_km=1.0, ascent_m=50.0, descent_m=0.0,
+    )
+
+
+def _stand_fuer(segment: TripSegment, stunden: dict[int, float],
+                summe: float | None) -> SegmentWeatherData:
+    """Etappen-Datenstand zu EINEM beliebigen Segment (nicht nur zum
+    Tagesfenster-Ziel wie `_data()`)."""
+    return SegmentWeatherData(
+        segment=segment,
+        timeseries=NormalizedTimeseries(
+            meta=ForecastMeta(provider=Provider.OPENMETEO, model="test",
+                              grid_res_km=1.0),
+            data=_punkte(stunden),
+        ),
+        aggregated=SegmentWeatherSummary(temp_max_c=12.0, precip_sum_mm=summe),
+        fetched_at=datetime(TAG.year, TAG.month, TAG.day, 6, 0,
+                            tzinfo=timezone.utc),
+        provider="openmeteo",
+    )
+
+
+def _fenstermenge(segment: TripSegment, stunden: dict[int, float]) -> float:
+    """Die Fenster-Gesamtmenge, wie sie PRODUKTIV entsteht.
+
+    Faehrt das echte `_aggregate_for_segment()` -- kein nachgebauter Filter,
+    kein gesetzter Wert. Genau diese Zahl wird als `WeatherChange.new_value`
+    zur Vergleichsgrundlage, von der die Restmenge abgezogen wird. Der
+    `OpenMeteoProvider` wird nur konstruiert (`.name`/`select_model()` sind
+    rein rechnend); es gibt keinen Netzzugriff.
+    """
+    stand = _stand_fuer(segment, stunden, None)
+    aggregiert = SegmentWeatherService(OpenMeteoProvider())._aggregate_for_segment(
+        segment, stand.timeseries, fetched_at=stand.fetched_at,
+    )
+    return aggregiert.aggregated.precip_sum_mm
+
+
+def test_kurzsegment_unter_einer_stunde_meldet_die_lage_richtig_herum():
+    """Absicherung kurzer Segmente (gehoert zu keinem der 14 ACs — sie
+    schuetzt die Umsetzung von AC-1 und AC-3).
+
+    GIVEN ein Zwischensegment, das VOLLSTAENDIG in eine Stunde faellt
+          (14:10-14:40 UTC), und eine Reihe mit 5 mm exakt um 14:00. Die
+          Fenster-Gesamtmenge wird aus dem ECHTEN `_aggregate_for_segment()`
+          geholt, nicht gesetzt.
+    WHEN  die Nachricht bei Referenzzeit 12:00 gerendert wird — zwei Stunden
+          VOR dem Regen
+    THEN  meldet sie, dass die volle Menge noch aussteht.
+
+    Ohne den Punkttreffer-Sonderfall (`start_floor == end_floor`) matcht kein
+    einziger Datenpunkt: weder 14:00 noch 15:00 liegen in [14:10, 14:40).
+    Die Restmenge waere 0, `bereits_gefallen` = `new_value` — und der Alarm
+    behauptete GLEICHZEITIG "~5 mm gefallen" (obwohl nichts gefallen ist) und
+    "kein weiterer Regen" (obwohl 100 % noch aussteht). Beide Aussagen falsch,
+    beide in derselben Meldung.
+    """
+    reihe = {14: 5.0}
+    segment = _zwischensegment(
+        datetime(TAG.year, TAG.month, TAG.day, 14, 10, tzinfo=timezone.utc),
+        datetime(TAG.year, TAG.month, TAG.day, 14, 40, tzinfo=timezone.utc),
+    )
+    menge = _fenstermenge(segment, reihe)
+    assert menge == 5.0, (
+        f"Fixtur-Schutz: die produktive Fenster-Aggregation muss die "
+        f"14-Uhr-Stunde sehen; bekam {menge!r}"
+    )
+
+    alt = _stand_fuer(segment, reihe, 0.0)
+    neu = _stand_fuer(segment, reihe, menge)
+    changes = WeatherChangeDetectionService(
+        thresholds={"precip_sum_mm": 1.0},
+    ).detect_changes(alt, neu, include_absolute=False)
+    regen = [c for c in changes if c.metric == "precip_sum_mm"]
+    assert regen, f"Fixtur-Schutz: der Detektor muss ausloesen; {changes!r}"
+
+    msg = _nachricht(regen, [neu], now_utc=_uhr(12))
+    _html, plain = render_email(msg)
+    telegram = render_telegram(msg)
+
+    for kanal, text in (("email_plain", plain), ("telegram", telegram)):
+        assert "Ab jetzt: noch ~5 mm, letzter Regen gegen 14:00" in text, (
+            f"{kanal}: Zwei Stunden vor dem Regen steht die VOLLE Menge noch "
+            f"aus; bekam:\n{text}"
+        )
+        assert "Bis jetzt: ~0 mm gefallen" in text, (
+            f"{kanal}: Vor dem Regen darf nichts als gefallen gelten; "
+            f"bekam:\n{text}"
+        )
+        assert "kein weiterer Regen" not in text, (
+            f"{kanal}: Eine Entwarnung waere hier die gefaehrlichste "
+            f"Falschaussage der Meldung — der Regen kommt erst noch; "
+            f"bekam:\n{text}"
+        )
+
+
+# --------------------------------------------------------------------------
+# Absicherung der KOPPLUNG (kein AC): Restmenge und Fenster-Gesamtmenge
+# muessen ueber dieselbe Punktmenge laufen. F001 und F005 waren beide
+# Verletzungen genau dieser einen Invariante — sie gehoert einmal explizit
+# bewacht, statt bei jeder neuen Kante einzeln entdeckt zu werden.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "zuschnitt",
+    ["tagesfenster_mit_punkt_auf_der_endgrenze", "kurzsegment_unter_einer_stunde",
+     "gewoehnliches_zwischensegment"],
+)
+@pytest.mark.parametrize("stunde", [0, 14, 23], ids=["frueh", "mittendrin", "spaet"])
+def test_restmenge_bleibt_an_die_fenster_gesamtmenge_gekoppelt(zuschnitt, stunde):
+    """Absicherung der Kopplungs-Invariante (gehoert zu keinem der 14 ACs).
+
+    GIVEN drei Segment-Zuschnitte, die je eine andere Fensterkante treffen —
+          Tagesfenster mit einem Datenpunkt EXAKT auf der Endgrenze (Befund
+          F001), ein Segment vollstaendig innerhalb einer Stunde (Befund
+          F005) und ein gewoehnliches Zwischensegment als Normalfall —
+          jeweils gegen DIESELBE Stundenreihe
+    WHEN  `_precip_remaining()` und das echte `_aggregate_for_segment()`
+          ueber diese Reihe laufen, zu drei verschiedenen Referenzzeiten
+    THEN  gilt in jedem Fall `0 <= new_value - remaining <= new_value`.
+
+    Das ist die Invariante hinter der ganzen Funktion: die Projektion bildet
+    `bereits_gefallen = new_value - remaining`. Laufen beide Seiten ueber
+    verschiedene Punktmengen, wird die Differenz negativ (Restmenge zaehlt
+    eine Stunde mit, die in der Gesamtmenge fehlt) oder sie erreicht faelsch-
+    lich die Gesamtmenge (Restmenge findet gar keinen Punkt). Beide Kanten
+    sind in #2020 real aufgetreten — dieser Test faengt kuenftige, ohne dass
+    jemand die konkrete Kante vorher kennen muss.
+    """
+    reihe = {**REIHE_AC1, 20: 2.0}
+    zuschnitte = {
+        # Ziel-Tagesfenster 4-19: Segment-Ende 20:00, und die Reihe traegt
+        # einen Punkt GENAU dort.
+        "tagesfenster_mit_punkt_auf_der_endgrenze": _segment(FENSTER_TAG),
+        "kurzsegment_unter_einer_stunde": _zwischensegment(
+            datetime(TAG.year, TAG.month, TAG.day, 15, 10, tzinfo=timezone.utc),
+            datetime(TAG.year, TAG.month, TAG.day, 15, 40, tzinfo=timezone.utc),
+        ),
+        "gewoehnliches_zwischensegment": _zwischensegment(
+            datetime(TAG.year, TAG.month, TAG.day, 12, 0, tzinfo=timezone.utc),
+            datetime(TAG.year, TAG.month, TAG.day, 17, 0, tzinfo=timezone.utc),
+        ),
+    }
+    segment = zuschnitte[zuschnitt]
+
+    new_value = _fenstermenge(segment, reihe)
+    remaining, _ende = _precip_remaining(
+        _stand_fuer(segment, reihe, new_value), _uhr(stunde),
+    )
+
+    assert new_value, (
+        f"Fixtur-Schutz: jeder Zuschnitt muss Regen im Fenster sehen, sonst "
+        f"pruefte dieser Fall nichts; bekam {new_value!r}"
+    )
+    assert remaining is not None, (
+        f"Fixtur-Schutz: die Restmenge muss bestimmbar sein — `None` hiesse, "
+        f"der Zuschnitt {zuschnitt!r} findet gar kein Fenster"
+    )
+
+    bereits_gefallen = new_value - remaining
+    assert bereits_gefallen >= 0, (
+        f"{zuschnitt} @ {stunde}:00 — bereits gefallen ist NEGATIV "
+        f"({new_value} - {remaining} = {bereits_gefallen}). Die Restmenge "
+        f"zaehlt eine Stunde mit, die in der Fenster-Gesamtmenge fehlt: beide "
+        f"Seiten laufen nicht mehr ueber dieselbe Punktmenge."
+    )
+    assert bereits_gefallen <= new_value, (
+        f"{zuschnitt} @ {stunde}:00 — bereits gefallen ({bereits_gefallen}) "
+        f"uebersteigt die Fenster-Gesamtmenge ({new_value}); die Restmenge "
+        f"({remaining}) ist negativ geworden."
+    )
+    assert remaining <= new_value, (
+        f"{zuschnitt} @ {stunde}:00 — die Restmenge ({remaining}) ist groesser "
+        f"als die gesamte Fenstermenge ({new_value}). Genau so sah Befund "
+        f"F001 aus."
     )
