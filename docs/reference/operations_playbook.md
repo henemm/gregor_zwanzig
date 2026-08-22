@@ -306,6 +306,44 @@ andere Session fertig ist". Diese Pattsituation existiert nicht mehr — der Dep
 Code hart auf `origin/main` (untracked Live-Daten unberührt, echte uncommittete WIP wird vorher
 als stash-Commit + `deploy-safety/*`-Tag gesichert).
 
+### WIP-Sicherung: zwei Stellen, ein Muster (#2047)
+
+Der Haupt-Checkout `/home/hem/gregor_zwanzig` wird an **zwei** Stellen hart auf `origin/main`
+zurückgesetzt. Beide sichern uncommittete getrackte Arbeit vorher ab:
+
+| Wo | Skript | Tag-Präfix |
+|---|---|---|
+| Prod-Deploy | `henemm-infra/scripts/deploy-gregor-prod.sh:149-161` | `deploy-safety/<UTC-Zeitstempel>` |
+| CI-Schritt „Staging-Verdict schreiben (CI smoke)" | `scripts/wip_safety.sh` (dieses Repo) | `deploy-safety/ci-<UTC-Zeitstempel>-<stash-sha>` |
+
+Bis #2047 sicherte **nur** der Prod-Deploy ab; der CI-Schritt resettete ungesichert — bei
+jedem Merge nach `main`. Das ist behoben.
+
+**Wiederherstellen:**
+
+```bash
+git -C /home/hem/gregor_zwanzig tag --list 'deploy-safety/*'   # Sicherungspunkte auflisten
+git -C /home/hem/gregor_zwanzig stash apply <TAG>              # zurückholen
+```
+
+Die Meldung des jeweiligen Laufs nennt den fertigen Befehl bereits — im CI-Fall im
+Job-Protokoll des `deploy`-Jobs.
+
+**Drei Eigenheiten, die man kennen muss:**
+
+- `git stash create`, **nicht** `stash push` — der Arbeitsbaum wird mit anderen Sessions
+  geteilt und darf sich durch die Sicherung nicht bewegen. Der Tag verankert das Objekt,
+  sonst sammelt die GC es ein.
+- **Untrackte Dateien sind nicht abgedeckt** — beabsichtigt: `git reset --hard` fasst sie
+  ebenfalls nicht an, die Abdeckung ist deckungsgleich mit dem Schaden.
+- **Schlägt die Sicherung fehl, bricht die CI-Kette ab, bevor der Reset läuft.** Ein roter
+  Verdict-Schritt kann also bedeuten: „hier lag ungesicherte Arbeit". Zeigt ein
+  gleichnamiger Tag auf *dasselbe* Objekt, gilt die Arbeit als gesichert und der Lauf geht
+  weiter — nur bei abweichendem Objekt wird abgebrochen.
+
+`scripts/wip_safety.sh` ist eigenständig aufrufbar (`bash scripts/wip_safety.sh <repo-dir>`)
+und durch `tests/test_wip_safety.py` gegen echte Wegwerf-Repos abgesichert.
+
 ---
 
 ## Daten-Schema-Reworks — Anti-Pattern-Codebeispiele
