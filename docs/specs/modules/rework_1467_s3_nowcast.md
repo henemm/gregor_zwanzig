@@ -469,9 +469,33 @@ ausgelieferten Code + gezielt gesetzte Zustandsdateien (Rezept aus S2 AG5/AG6), 
   Compare-eigene Zweitfassung fortzuführen. Kein neues Architekturprinzip, nur konsequente
   Anwendung des bestehenden auf den letzten noch abweichenden Pfad.
 
+## Nachträge
+
+- **Nachtrag (Issue #2065, 2026-08-22):** die feste Reihenfolge des Bausteins bleibt
+  Ruhezeit → Sperrzeit → Tages-Obergrenze, und `check_nowcast_gate()` bleibt in
+  Signatur UND Verhalten unverändert. Neu ist, was der **Trip-Zweig** mit dem
+  Ergebnis `REASON_COOLDOWN` macht: er hält nicht mehr sofort an, sondern holt den
+  Nowcast (weiterhin **genau EIN** `get_nowcast`-Abruf je Trip, #1329) und prüft mit
+  `alert_gate.radar_overtakes_cooldown()`, ob die gemessene Menge die zuletzt
+  gemeldete deutlich übersteigt (≥ 2,0-fach UND ≥ 2,0 mm im 60-Minuten-Fenster).
+  Kein Treffer → unverändert Stille mit Protokollgrund `cooldown`. Treffer → der Lauf
+  läuft weiter wie im ungesperrten Fall, **inklusive erneuter Prüfung der
+  Tages-Obergrenze** (sie wurde wegen des Abbruchs an der Sperrzeit nie erreicht) und
+  mit derselben Mengen-Feststellung als `quantitative_escalation` an
+  `check_event_identity_gate()`. Die Vergleichsbasis ist die zuletzt gemeldete Menge
+  im `ThrottleStore` (`{"at": iso, "precip_mm": float|null}`, Alt-Einträge als reiner
+  ISO-String bleiben lesbar); sie wird — wie die Sperrzeit selbst — ausschließlich
+  NACH erfolgreicher Zustellung fortgeschrieben (`record_nowcast_sent(precip_mm=…)`,
+  F001-Symmetrie). **Ruhezeit (#1955) und Tages-Obergrenze bleiben unbrechbar.** Der
+  **Ortsvergleich-Nowcast bleibt unverändert** — er schreibt keine Vergleichsmenge und
+  bekommt die Ausnahme nicht (PO-Rückstellung). Details:
+  `docs/specs/modules/fix_2065_verschaerfung_ueberholt_sperre.md`, ADR-0021-Nachtrag
+  vom selben Tag.
+
 ## Changelog
 
 - 2026-08-08: Initiale Spec. Vier Änderungen (a)–(d) nach PO-Entscheidungen E1–E4
   (`docs/context/rework-1467-s3-nowcast.md`) zugeschnitten, geteilter Baustein von Anfang an
   mit beiden Nowcast-Pfaden verdrahtet (Abweichung von der Strategie-Agent-Empfehlung, Analyse
   E1). Zeilenangaben gegen den Ist-Stand vom 2026-08-08 verifiziert.
+- 2026-08-22: Nachtrag zu Issue #2065 (Verschärfung überholt die Sperrzeit im Trip-Zweig).

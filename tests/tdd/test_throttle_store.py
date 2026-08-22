@@ -656,3 +656,71 @@ def test_dead_code_is_throttled_removed():
         "Toter Code _is_throttled() ist noch vorhanden — muss laut Spec "
         "(docs/specs/modules/throttle_store.md) entfernt werden"
     )
+
+
+# ═════════════ Issue #2065 AC-11: Alt-Format bleibt lesbar ═══════════════════
+# SPEC: docs/specs/modules/fix_2065_verschaerfung_ueberholt_sperre.md
+#
+# Der Eintrag wird um die zuletzt gemeldete Menge erweitert
+# (`{"at": iso, "precip_mm": float|null}`). Bestandsdateien tragen einen
+# REINEN ISO-String — der muss gueltig lesbar bleiben, und ein `record()` auf
+# EINEN Schluessel darf die uebrigen Bestandseintraege nicht anfassen
+# (Read-Modify-Write, nie Replace).
+
+
+def test_ac11_2065_alt_format_bleibt_lesbar_und_record_beruehrt_nur_einen_schluessel(tmp_path):
+    """AC-11 (Regressionswaechter, HEUTE SCHON GRUEN — kein RED-Nachweis).
+
+    GIVEN ein `throttle_state.json` im ALTEN Format (jeder Eintrag ein reiner
+    ISO-Zeitstempel ohne Mengenangabe), WHEN ein Lauf gegen diese Datei prueft
+    und anschliessend EINEN Schluessel neu schreibt, THEN bleibt die Sperrzeit
+    unveraendert wirksam, die Datei bleibt lesbar und kein Bestandsdatum geht
+    verloren.
+
+    Geprueft wird ueber die oeffentliche Store-Schnittstelle
+    (`is_throttled`/`last_sent`/`record`), nicht ueber den JSON-Rohtext: die
+    Zusicherung lautet "Bestandsdaten bleiben nutzbar", nicht "die Datei sieht
+    so und so aus". Der Rohtext wird nur EINMAL gelesen, um zu belegen, dass
+    die Alt-Eintraege im Alt-Format auf Platte lagen — sonst pruefte der Test
+    seine eigene Schreibweise."""
+    from services.throttle_store import ThrottleStore
+
+    user_dir = tmp_path / "u-2065-ac11"
+    user_dir.mkdir()
+    alt = datetime(2026, 8, 22, 9, 0, tzinfo=timezone.utc)
+    frisch = datetime(2026, 8, 22, 10, 30, tzinfo=timezone.utc)
+    _write_json(user_dir / "throttle_state.json", {
+        "radar": {"trip-alt": alt.isoformat(), "trip-unberuehrt": alt.isoformat()},
+        "trip": {"trip-alt": alt.isoformat()},
+    })
+    roh = json.loads((user_dir / "throttle_state.json").read_text())
+    assert isinstance(roh["radar"]["trip-unberuehrt"], str), (
+        "Testkonstruktion: die Bestandseintraege muessen im ALTEN Format "
+        "(reiner String) auf Platte liegen."
+    )
+
+    store = ThrottleStore("u-2065-ac11", data_dir=user_dir)
+    assert store.last_sent("radar", "trip-alt") == alt, (
+        "AC-11: ein Alt-Eintrag muss weiterhin als Zeitpunkt lesbar sein."
+    )
+    assert store.is_throttled("radar", "trip-alt", 120, alt + timedelta(minutes=30)), (
+        "AC-11: die Sperrzeit muss aus einem Alt-Eintrag heraus greifen."
+    )
+    assert not store.is_throttled("radar", "trip-alt", 120, alt + timedelta(minutes=150)), (
+        "AC-11: nach Ablauf der Sperrzeit darf ein Alt-Eintrag nicht mehr sperren."
+    )
+
+    store.record("radar", "trip-alt", frisch)
+
+    frischer_store = ThrottleStore("u-2065-ac11", data_dir=user_dir)
+    assert frischer_store.last_sent("radar", "trip-alt") == frisch, (
+        "AC-11: der neu geschriebene Eintrag muss zurueckgelesen werden koennen."
+    )
+    assert frischer_store.last_sent("radar", "trip-unberuehrt") == alt, (
+        "AC-11: der NICHT geschriebene Bestandseintrag im selben Scope muss "
+        "unangetastet bleiben (Read-Modify-Write, nie Replace)."
+    )
+    assert frischer_store.last_sent("trip", "trip-alt") == alt, (
+        "AC-11: der gleichnamige Schluessel in einem ANDEREN Scope darf vom "
+        "Schreibvorgang nicht mitgenommen werden."
+    )

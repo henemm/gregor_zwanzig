@@ -391,13 +391,75 @@ def record_nowcast_sent(
     now: datetime,
     zone: ZoneInfo,
     throttle_store: Optional[ThrottleStore] = None,
+    precip_mm: Optional[float] = None,
 ) -> None:
     """Tageszaehler und Sperrzeit buchen — NUR nach erfolgreicher Zustellung.
     #1726: `zone` ist PFLICHT; wer hier eine andere uebergibt als
     `check_nowcast_gate()`, fuellt einen anderen Zaehler als den geprueften.
+
+    Issue #2065: `precip_mm` ist die gemeldete Menge und wird zur
+    Vergleichsbasis der naechsten Ueberholungspruefung
+    (`radar_overtakes_cooldown`). Sie wird — wie die Sperrzeit selbst —
+    ausschliesslich NACH erfolgreicher Zustellung fortgeschrieben
+    (F001-Symmetrie); wer sie weglaesst, hinterlaesst keine Basis.
     """
     alert_daily_limit.increment(user_id, now, zone)
-    _resolve_store(user_id, throttle_store).record(throttle_scope, throttle_key, now)
+    _resolve_store(user_id, throttle_store).record(
+        throttle_scope, throttle_key, now, precip_mm=precip_mm,
+    )
+
+
+# Issue #2065: Definition von "deutlich schlimmer" fuer die Sperrzeit-
+# Ueberholung. Muster identisch zur PO-freigegebenen Briefing-Ueberholung
+# (`trip_alert.py`, F008/#2020), aber mit EIGENEN Konstanten: die
+# Vergleichsbasis ist eine andere (zuletzt GEMELDETE Menge statt
+# Briefing-Ankuendigung), beide Regler sind deshalb eigenstaendig nachziehbar.
+_COOLDOWN_OVERTAKE_FACTOR = 2.0
+_COOLDOWN_OVERTAKE_MIN_ABSOLUTE_MM = 2.0
+
+
+def radar_overtakes_cooldown(
+    *, basis_mm: Optional[float], menge_mm: Optional[float],
+) -> bool:
+    """Ueberholt diese Lage die laufende Sperrzeit? (Issue #2065)
+
+    UND-verknuepft: die Menge muss das `_COOLDOWN_OVERTAKE_FACTOR`-fache der
+    zuletzt gemeldeten Menge erreichen UND fuer sich genommen ueber
+    `_COOLDOWN_OVERTAKE_MIN_ABSOLUTE_MM` liegen. Ohne die absolute
+    Untergrenze verdoppelte sich auch ein Nieselregen "deutlich".
+
+    Fehlt die Vergleichsbasis (kein gespeicherter Wert — z.B. Sperre vom
+    Kurzfristhinweis im Briefing gebucht), gibt es keinen Durchbruch: ein
+    Durchbruch ohne Nachweis waere die gefaehrlichere Fehlerrichtung
+    (Alarmflut), die Stille hier die konservative.
+
+    🔴 Bewusst NICHT in `check_nowcast_gate()`: der Vergleich lebt im
+    Trip-Pfad. Der geteilte Baustein bliebe sonst nicht in Signatur UND
+    Verhalten unveraendert und der PO-zurueckgestellte Ortsvergleich bekaeme
+    die Ausnahme still mit.
+    """
+    if basis_mm is None or menge_mm is None:
+        return False
+    return (
+        menge_mm >= basis_mm * _COOLDOWN_OVERTAKE_FACTOR
+        and menge_mm >= _COOLDOWN_OVERTAKE_MIN_ABSOLUTE_MM
+    )
+
+
+def last_nowcast_precip_mm(
+    *,
+    user_id: str,
+    throttle_scope: str,
+    throttle_key: str,
+    throttle_store: Optional[ThrottleStore] = None,
+) -> Optional[float]:
+    """Die zuletzt gemeldete Menge zu dieser Sperre — die Vergleichsbasis der
+    Ueberholungspruefung (Issue #2065). `None`, wenn der Eintrag aus dem
+    Alt-Format stammt oder ohne Mengenangabe gebucht wurde."""
+    _, precip_mm = _resolve_store(user_id, throttle_store).last_sent_with_precip(
+        throttle_scope, throttle_key,
+    )
+    return precip_mm
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -626,6 +688,7 @@ def check_event_identity_gate(
     window_start: Optional[datetime] = None,
     window_end: Optional[datetime] = None,
     cooldown_minutes: Optional[int] = None,
+    quantitative_escalation: bool = False,
 ) -> GateResult:
     """Darf diese Meldung raus, oder ist sie ein quellenuebergreifendes
     Duplikat einer bereits gemeldeten Meldung (Issue #1467 Scheibe S4b-1)?
@@ -647,7 +710,15 @@ def check_event_identity_gate(
     Verschaerfung (hoehere Dringlichkeit) muss IMMER durchkommen, auch wenn
     ihr Zeitfenster das bereits abgedeckte NICHT wesentlich erweitert
     (AC-10) -- das ist die Absicherung gegen die gefaehrlichste
-    Fehlerrichtung "Alarm bleibt aus"."""
+    Fehlerrichtung "Alarm bleibt aus".
+
+    Issue #2065: `quantitative_escalation` ist eine bereits vom Aufrufer
+    getroffene MENGEN-Feststellung, ODER-verknuepft mit der bestehenden
+    Stufenpruefung. Notwendig, weil die dreistufige Skala
+    LOW/MODERATE/HIGH bei 4 mm/h saettigt: eine Verdreifachung von 11 auf
+    30 mm/h ist zweimal `HIGH`, `exceeds("HIGH","HIGH")` also False — die
+    Verschaerfung ist an dieser Stelle strukturell unsichtbar. Vorbelegt mit
+    `False`: kein Bestandsaufrufer aendert sein Verhalten."""
     if hazard_class is None:
         return _ALLOWED
 
@@ -666,7 +737,7 @@ def check_event_identity_gate(
     new_source = "nowcast" if point_at is not None else "official"
     addendum_direction = match["source"] == "official" and new_source == "nowcast"
 
-    if alert_urgency.exceeds(severity, match["severity"]):
+    if quantitative_escalation or alert_urgency.exceeds(severity, match["severity"]):
         # V2 — struktureller erster Zweig, bricht IMMER durch. In der
         # Nachtrags-Richtung geht DIESELBE Zustellung raus, nur als Nachtrag
         # statt als zweiter voller Alarm (AC-A1); sonst unveraendert.

@@ -252,3 +252,31 @@ dieser Scheibe (Scheibe 2, #1169).
   Architekturprinzip — derselbe geteilte Baustein, nur mit einem dritten,
   eng umgrenzten Ausgang. Details:
   `docs/specs/modules/alert_nachtragsmeldung.md`.
+
+- **Nachtrag (Issue #2065, 2026-08-22):** die feste Reihenfolge Ruhezeit →
+  **Sperrzeit** → Tages-Obergrenze bekommt an genau EINER Stufe eine
+  Ausnahme: eine **quantitativ deutliche Verschärfung überholt die
+  Sperrzeit**. Anlass war ein gemessener Fall — ein Radar-Alarm über ~10 mm
+  bucht 120 Minuten Sperre, 90 Minuten später schweigt eine auf ~27,5 mm
+  verdreifachte Lage mit Protokollgrund `cooldown`. „Deutlich schlimmer" ist
+  quantitativ definiert (`radar_overtakes_cooldown()`: Menge ≥ 2,0 × zuletzt
+  gemeldete Menge UND ≥ 2,0 mm im 60-Minuten-Vergleichsfenster) und lebt
+  **nicht** im geteilten Baustein: `check_nowcast_gate()` bleibt in Signatur
+  UND Verhalten unverändert, den Vergleich führt allein der Trip-Zweig
+  (`trip_alert.py::check_radar_alerts`) durch, nachdem das Gate `cooldown`
+  gemeldet hat. **Ruhezeit und Tages-Obergrenze bleiben unbrechbar** — die
+  Ruhezeit per PO-Entscheid (#1955), die Tages-Obergrenze wird im
+  Durchbruchspfad ausdrücklich ERNEUT geprüft, weil die Kette bisher schon an
+  der Sperrzeit kurzschloss. Weil die dreistufige Schwere-Skala bei 4 mm/h
+  sättigt, reist dieselbe Mengen-Feststellung als optionales
+  `quantitative_escalation` in `check_event_identity_gate()` mit; ohne diese
+  zweite Hälfte wechselte nur der Protokollgrund von `cooldown` auf
+  `event_duplicate` und der Alarm bliebe trotzdem aus. Der **Ortsvergleich
+  bekommt diese Ausnahme NICHT**: er ist PO-seitig zurückgestellt, und die
+  Ausnahme braucht eine Vergleichsbasis (die zuletzt gemeldete Menge im
+  `ThrottleStore`), die im Ortsvergleich niemand schreibt. Genau deshalb liegt
+  der Vergleich im Trip-Pfad statt im geteilten Gate — so bleibt
+  `compare_radar_alert.py` unberührt, ohne Signatur-Passagiere und ohne toten
+  Default. Eine spätere Übernahme in den Ortsvergleich wäre eine eigene,
+  spezifizierte Entscheidung. Details:
+  `docs/specs/modules/fix_2065_verschaerfung_ueberholt_sperre.md`.

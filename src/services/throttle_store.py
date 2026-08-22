@@ -49,7 +49,9 @@ class ThrottleStore:
       belegt; eine Wiederverwendung ließe die beiden Alarmarten einander
       gegenseitig unterdrücken.
 
-    Struktur der Datei: ``{scope: {key: iso_timestamp}}``.
+    Struktur der Datei: ``{scope: {key: {"at": iso, "precip_mm": float|null}}}``
+    (Issue #2065). Bestandseintraege im Alt-Format ``{scope: {key: iso}}``
+    bleiben lesbar.
     """
 
     def __init__(self, user_id: str, data_dir: Optional[Path] = None) -> None:
@@ -68,6 +70,18 @@ class ThrottleStore:
         data = self._load()
         return self._parse(data.get(scope, {}).get(key))
 
+    def last_sent_with_precip(
+        self, scope: str, key: str
+    ) -> tuple[Optional[datetime], Optional[float]]:
+        """Zeitpunkt UND zuletzt gemeldete Menge (Issue #2065).
+
+        Bewusst eine EIGENE Lesemethode statt einer Ueberladung von
+        `last_sent()`: dessen 15+ Aufrufer erwarten ein `datetime`, nicht ein
+        Paar. Bei einem Alt-Eintrag (reiner ISO-String, keine Mengenangabe)
+        ist die Menge `None` — der Aufrufer entscheidet konservativ."""
+        raw = self._load().get(scope, {}).get(key)
+        return self._parse(raw), self._parse_precip(raw)
+
     def is_throttled(
         self, scope: str, key: str, cooldown_minutes: Optional[int], now: datetime
     ) -> bool:
@@ -81,8 +95,19 @@ class ThrottleStore:
             return False
         return now - last < timedelta(minutes=cooldown_minutes)
 
-    def record(self, scope: str, key: str, now: datetime) -> None:
-        self._update(lambda data: data.setdefault(scope, {}).__setitem__(key, now.isoformat()))
+    def record(
+        self, scope: str, key: str, now: datetime,
+        precip_mm: Optional[float] = None,
+    ) -> None:
+        """Issue #2065: geschrieben wird ausschliesslich das neue Format
+        `{"at": iso, "precip_mm": float|null}`. Aufrufer ohne Mengenangabe
+        (z.B. der Kurzfristhinweis im Briefing) hinterlassen `null` — daraus
+        entsteht spaeter keine Vergleichsbasis."""
+        eintrag = {
+            "at": now.isoformat(),
+            "precip_mm": float(precip_mm) if precip_mm is not None else None,
+        }
+        self._update(lambda data: data.setdefault(scope, {}).__setitem__(key, eintrag))
 
     def clear(self, scope: str, key: str) -> None:
         def _op(data: dict) -> None:
@@ -159,6 +184,10 @@ class ThrottleStore:
 
     @staticmethod
     def _parse(raw: object) -> Optional[datetime]:
+        # Issue #2065: zwei Eintragsformen -- Bestandsdaten tragen den reinen
+        # ISO-String, neue Eintraege ein Objekt mit `at` und `precip_mm`.
+        if isinstance(raw, dict):
+            raw = raw.get("at")
         if not raw or not isinstance(raw, str):
             return None
         try:
@@ -168,6 +197,17 @@ class ThrottleStore:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
+
+    @staticmethod
+    def _parse_precip(raw: object) -> Optional[float]:
+        """Menge aus einem Eintrag — `None` fuer Alt-Eintraege (reiner
+        String) und fuer neue Eintraege ohne Mengenangabe (Issue #2065)."""
+        if not isinstance(raw, dict):
+            return None
+        wert = raw.get("precip_mm")
+        if isinstance(wert, bool) or not isinstance(wert, (int, float)):
+            return None
+        return float(wert)
 
     # --- Migration (lazy, idempotent, beim ersten Zugriff pro Nutzer) ---
 
