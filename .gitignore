@@ -32,6 +32,7 @@ node_modules/
 .claude/next_ticket_cache.json
 .claude/file_claims.json
 .claude/file_claims.json.lock
+.claude/file_claims.lock
 
 # Claude Code (transient)
 .claude/current_task.json
