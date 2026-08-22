@@ -91,6 +91,12 @@ type Waypoint struct {
 	Origin          string  `json:"origin,omitempty"`           // "manual" | "algorithmic"; leer = "manual"
 	Confirmed       *bool   `json:"confirmed,omitempty"`        // *bool: false bleibt serialisierbar, nur nil wird ausgelassen
 	ArrivalOverride *string `json:"arrival_override,omitempty"` // User-Override "HH:MM"
+	// Issue #2036 — gemessene Wegstrecke vom Etappenstart [km] aus dem
+	// Original-GPX-Track. *float64: 0.0 ist ein gueltiger Etappenstart und
+	// muss serialisierbar bleiben, nur nil ("nicht gemessen") faellt weg.
+	// Ohne dieses Feld wischt der erste Editor-Save den vom Python-Kern
+	// geschriebenen Wert stumm weg (Praezedenzfall suggestion_reason).
+	DistanceFromStartKm *float64 `json:"distance_from_start_km,omitempty"`
 }
 
 type Stage struct {

@@ -148,6 +148,10 @@ def segments_to_trip(
             lon=seg.start_point.lon,
             elevation_m=int(seg.start_point.elevation_m),
             time_window=tw,  # Issue #1004: GPX-Import-Artefakt, nie autoritativ
+            # Issue #2036: gemessene Wegstrecke des ORIGINAL-Trackpunkts
+            # mitnehmen -- sie wurde bislang direkt nach der Segmentbildung
+            # verworfen und musste danach aus Luftlinie geschaetzt werden.
+            distance_from_start_km=seg.start_point.distance_from_start_km,
         ))
 
     # Last waypoint: end of last segment
@@ -163,6 +167,7 @@ def segments_to_trip(
         lon=last.end_point.lon,
         elevation_m=int(last.end_point.elevation_m),
         time_window=tw_end,  # Issue #1004: GPX-Import-Artefakt, nie autoritativ
+        distance_from_start_km=last.end_point.distance_from_start_km,  # Issue #2036
     ))
 
     stage = Stage(
@@ -230,6 +235,11 @@ def gpx_to_stage_data(
             "lon": wp.lon,
             "elevation_m": wp.elevation_m,
             "time_window": str(wp.time_window) if wp.time_window else None,
+            # Issue #2036: die gemessene Wegstrecke muss den API-Vertrag
+            # mitreisen -- der Editor schickt genau dieses Dict spaeter an
+            # `SaveTrip` zurueck; fehlt der Schluessel hier, ist der Wert
+            # nach dem ersten Speichern weg (Praezedenzfall #303).
+            "distance_from_start_km": wp.distance_from_start_km,
         }
         for wp in stage.waypoints
     ]

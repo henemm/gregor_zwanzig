@@ -460,6 +460,11 @@ def _serialize_segment(seg: SegmentWeatherData) -> dict:
         "end_elevation_m": seg.segment.end_point.elevation_m,
         "end_distance_from_start_km": seg.segment.end_point.distance_from_start_km,
         "distance_km": seg.segment.distance_km,
+        # Issue #2036: Herkunft der km-Spanne (gemessen vs. Luftlinie) gehoert
+        # MIT in den Anker -- aus einem geladenen Segment entsteht sonst still
+        # wieder eine ungemessene Ortsangabe. `False` bleibt weg, damit
+        # Bestands-Anker byte-identisch bleiben.
+        **({"distance_measured": True} if seg.segment.distance_measured else {}),
         "ascent_m": seg.segment.ascent_m,
         "descent_m": seg.segment.descent_m,
         "duration_hours": seg.segment.duration_hours,
@@ -546,4 +551,7 @@ def _reconstruct_segment(seg_data: dict) -> TripSegment:
         # Alt-Anker ohne die Felder laden dadurch unveraendert.
         day_window_start_hour=seg_data.get("day_window_start_hour"),
         day_window_end_hour=seg_data.get("day_window_end_hour"),
+        # Issue #2036: fehlender Schluessel -> False (Alt-Anker sind
+        # unvermessen und zeigen weiter die Segmentnummer).
+        distance_measured=bool(seg_data.get("distance_measured", False)),
     )

@@ -51,12 +51,22 @@ def _resolve_metric_id(field: str, direction: str) -> str:
     )
 
 
+def _trip_segment(entry):
+    """`SegmentWeatherData` ODER blankes `TripSegment` -> `TripSegment`
+    (Issue #2036). Beide Bauformen kommen an: der Aenderungspfad reicht
+    Wetterdaten herein, der Korridor-Pfad kann auch die nackten Segmente
+    liefern. Ohne diese Normalisierung endet die zweite Bauform im
+    `except`-Zweig und der Treffer verschwindet stumm."""
+    return getattr(entry, "segment", entry)
+
+
 def _find_segment(segments, segment_id: str):
     """Referenziertes Segment. Bei nicht auflösbarer/leerer segment_id Fallback
     auf das erste Segment (kein Crash im Versandpfad — der Detector liefert
     nicht immer eine exakte segment_id)."""
     match = next(
-        (s for s in segments if str(s.segment.segment_id) == str(segment_id)),
+        (s for s in segments
+         if str(_trip_segment(s).segment_id) == str(segment_id)),
         segments[0] if segments else None,
     )
     if match is None:
@@ -110,6 +120,7 @@ def _onset_shift_text(delta_seconds: float) -> str:
 def _to_onset_shift_event(
     ch, *, tz, km_from: float, km_to: float,
     segment_id: str | None = None, location_label: str | None = None,
+    km_measured: bool = False,
 ) -> OnsetShiftEvent:
     metric_id, _aggregation = metric_and_aggregation_for_field(ch.metric)
     return OnsetShiftEvent(
@@ -119,6 +130,7 @@ def _to_onset_shift_event(
         shift_text=_onset_shift_text(ch.delta),
         km_from=km_from, km_to=km_to,
         segment_id=segment_id, location_label=location_label,
+        km_measured=km_measured,  # Issue #2036
     )
 
 
@@ -139,16 +151,19 @@ def to_alert_message(
     events: list[AlertEvent] = []
     onset_events: list[OnsetShiftEvent] = []
     for ch in changes:
-        match = _find_segment(segments, ch.segment_id)
-        km_from = match.segment.start_point.distance_from_start_km
-        km_to = match.segment.end_point.distance_from_start_km
+        match = _trip_segment(_find_segment(segments, ch.segment_id))
+        km_from = match.start_point.distance_from_start_km
+        km_to = match.end_point.distance_from_start_km
+        # Issue #2036: Herkunft der Spanne (gemessen vs. Luftlinie) reist mit.
+        km_measured = bool(getattr(match, "distance_measured", False))
         # Issue #1468: Beginn-Verschiebungen tragen einen ZEITPUNKT und gehen
         # deshalb NICHT durch den Zahlen-Formatierer (s. `OnsetShiftEvent`).
         if _is_onset_change(ch):
             onset_events.append(_to_onset_shift_event(
-                ch, tz=_tz_for_location(match.segment.start_point, tz),
+                ch, tz=_tz_for_location(match.start_point, tz),
                 km_from=km_from, km_to=km_to,
-                segment_id=normalize_segment_id(match.segment.segment_id),
+                segment_id=normalize_segment_id(match.segment_id),
+                km_measured=km_measured,
             ))
             continue
         metric_id = _resolve_metric_id(ch.metric, ch.direction)
@@ -159,14 +174,15 @@ def to_alert_message(
             metric_id=metric_id, value_from=ch.old_value, value_to=ch.new_value,
             threshold=ch.threshold, cmp=cmp,
             occurred_at=_fmt_occurred_at(
-                ch.occurred_at, _tz_for_location(match.segment.start_point, tz)
+                ch.occurred_at, _tz_for_location(match.start_point, tz)
             ),
             km_from=km_from, km_to=km_to,
             # Issue #1744 A1: die Kennung der TATSAECHLICH aufgeloesten Etappe
             # (nicht `ch.segment_id` — `_find_segment` faellt bei nicht
             # aufloesbarer Kennung auf das erste Segment zurueck, und der Alarm
             # muss den Ort nennen, den er auch km-seitig meint).
-            segment_id=normalize_segment_id(match.segment.segment_id),
+            segment_id=normalize_segment_id(match.segment_id),
+            km_measured=km_measured,  # Issue #2036
         ))
     corridor_events = (
         to_corridor_events(corridor_hits, segments, tz=tz) if corridor_hits else ()
@@ -235,15 +251,20 @@ def to_corridor_events(hits, segments, *, tz) -> tuple[CorridorEvent, ...]:
     for hit in hits:
         try:
             metric_id = _resolve_corridor_metric_id(hit.metric, hit.direction)
-            match = _find_segment(segments, hit.segment_id)
+            match = _trip_segment(_find_segment(segments, hit.segment_id))
             events.append(CorridorEvent(
                 metric_id=metric_id, value=hit.value, bound=hit.bound,
                 direction=hit.direction,
                 occurred_at=_fmt_occurred_at(
-                    hit.occurred_at, _tz_for_location(match.segment.start_point, tz)
+                    hit.occurred_at, _tz_for_location(match.start_point, tz)
                 ),
-                km_from=match.segment.start_point.distance_from_start_km,
-                km_to=match.segment.end_point.distance_from_start_km,
+                km_from=match.start_point.distance_from_start_km,
+                km_to=match.end_point.distance_from_start_km,
+                # Issue #2036: Kennung der TATSAECHLICH aufgeloesten Etappe
+                # (Muster `to_alert_message`) und Herkunft der Spanne reisen
+                # mit -- ohne beides kann der Renderer nur km zeigen (F001).
+                segment_id=normalize_segment_id(match.segment_id),
+                km_measured=bool(getattr(match, "distance_measured", False)),
             ))
         except Exception as e:
             logger.warning(

@@ -306,6 +306,22 @@ def compute_has_gap(
     return not expected.issubset(rendered)
 
 
+def _measured_event_km(alert_msg) -> dict:
+    """Gemessene km-Spanne je Segment-Kennung aus den bereits projizierten
+    Alarm-Ereignissen (Issue #2036). Quelle fuer den EINGEBETTETEN amtlichen
+    Warnblock, damit beide Haelften derselben Mail dieselbe Ortssprache
+    sprechen (#1744 AC-6). Ungemessene Ereignisse liefern keinen Eintrag --
+    die Warnung bleibt dort bei "Segment N"."""
+    result: dict = {}
+    for e in list(alert_msg.events) + list(alert_msg.onset_shift_events):
+        if not getattr(e, "km_measured", False):
+            continue
+        seg = getattr(e, "segment_id", None)
+        if seg:
+            result[str(seg)] = (e.km_from, e.km_to)
+    return result
+
+
 def _official_source_url_for(dto_notices: list) -> str | None:
     """Quelle-Link der führenden (höchststufigen) Warnung (Issue #1216 F002).
     Für variant="standalone" derzeit ungenutzt (der Thin-Wrapper reicht 1:1 an
@@ -851,6 +867,7 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         sms_sink: Optional[object] = None,
         telegram_style: str = "rich",
+        segment_km: Optional[dict] = None,
     ) -> NotificationResult:
         """Standalone amtlicher Alert ohne Wetter-Delta (Issue #1088; Format-
         Fidelity zur Design-Vorlage in Issue #1216).
@@ -872,7 +889,11 @@ class NotificationService:
             if first_wp is not None
             else ZoneInfo("UTC")
         )
-        dto_notices = build_official_alert_notices(trip, notices)
+        # Issue #2036: gemessene km-Spannen mitgeben -- ohne sie bleibt die
+        # amtliche Warnung byte-identisch bei der Segment-Sprache.
+        dto_notices = build_official_alert_notices(
+            trip, notices, segment_km=segment_km,
+        )
         source_label = _official_source_label_for(dto_notices)
         source_url = _official_source_url_for(dto_notices)
         # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
@@ -1395,7 +1416,13 @@ class NotificationService:
             # daraus die DTOs (ohne Trip faellt die Segment-Gesamtzahl leer
             # aus, "gesamte Route"-Verdichtung entfaellt ersatzlos, s.
             # `_trip_total_segment_ids`-Docstring).
-            embed_notices = build_official_alert_notices(None, official_notices)
+            # Issue #2036: dieselbe Ortssprache wie der Aenderungs-Teil
+            # DERSELBEN Mail -- die km-Spannen stammen aus den bereits
+            # projizierten Ereignissen, nicht aus einer zweiten Quelle.
+            embed_notices = build_official_alert_notices(
+                None, official_notices,
+                segment_km=_measured_event_km(alert_msg),
+            )
             embed_source = _official_source_label_for(embed_notices)
             embedded_html = render_warn_block(
                 embed_notices, variant="embedded", source_label=embed_source,

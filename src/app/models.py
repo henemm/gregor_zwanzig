@@ -432,6 +432,12 @@ class TripSegment:
     # Segment, das ohne Trip-Bezug entsteht.
     day_window_start_hour: Optional[int] = None
     day_window_end_hour: Optional[int] = None
+    # Issue #2036: additiv, Default aus. `True` NUR, wenn die km-Spanne
+    # dieses Segments aus echter GPX-Wegstrecke stammt und die Etappe die
+    # Plausibilitaetspruefung bestanden hat (`trip_segments`). `False`
+    # heisst: `distance_from_start_km` ist eine Luftlinien-Kumulation und
+    # darf NIE als Ortsangabe erscheinen (AC-13).
+    distance_measured: bool = False
 
 
 @dataclass

@@ -80,6 +80,13 @@ class Waypoint:
     confirmed: Optional[bool] = None          # True = bestätigt; False bleibt erhalten (≠ None)
     suggestion_reason: Optional[str] = None   # "detected_peak" | "detected_valley" | "detected_pass" | "legacy_suggested"
     arrival_override: Optional[str] = None    # User-Override "HH:MM"
+    # Issue #2036: additiv, optional. Gemessene Wegstrecke vom Etappen-/
+    # Tourstart bis zu diesem Wegpunkt [km], aus dem ORIGINAL-GPX-Track
+    # (`GPXPoint.distance_from_start_km`). `None` heisst "nicht gemessen" --
+    # ausdruecklich NICHT dasselbe wie `0.0` (gueltiger Etappenstart).
+    # Nur ein gemessener Wert darf je als km-Ortsangabe erscheinen; eine aus
+    # Luftlinie (`haversine_km`) abgeleitete Zahl nie (AC-13).
+    distance_from_start_km: Optional[float] = None
 
     def __str__(self) -> str:
         tw = f" ({self.time_window})" if self.time_window else ""

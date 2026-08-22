@@ -409,6 +409,15 @@ class TripReportSchedulerService:
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._notification_service = NotificationService(self._settings, user_id)
         self._user_id = user_id
+        # Issue #2036 CI-Nachschlag (PR #2058): Objekt-Attribut statt
+        # durchgereichtem Keyword-Parameter an _build_stage_trend /
+        # _collect_future_stage_weather -- diese Methoden werden von
+        # mehreren netzfreien Tests komplett ueberschrieben (Test-Doubles),
+        # ein neuer Keyword-Parameter dort ist fuer sie ein Signaturbruch.
+        # PreviewService._build_report schaltet dieses Attribut direkt nach
+        # dem Konstruieren auf False -- eine Vorschau darf den Trip-Bestand
+        # nicht als Seiteneffekt veraendern (AC-7 Nebenpfad).
+        self.persist_backfill: bool = True
 
     def send_reports(self, report_type: str) -> int:
         """
@@ -1936,14 +1945,51 @@ class TripReportSchedulerService:
     def _convert_trip_to_segments(
         self,
         trip: "Trip",
-        target_date: date
+        target_date: date,
+        *,
+        persist: Optional[bool] = None,
     ) -> List[TripSegment]:
         """Thin delegator — real logic lives in services.trip_segments (Issue #822).
 
         Behaviour is bit-identical to the previous inline implementation;
         the refactor is a pure Extract Function with no semantic change.
+
+        Issue #2036: davor die einmalige Nachruestung der gemessenen
+        Wegstrecke aus dem GPX-Bestand des Nutzers (AC-7). Sie ist der
+        Produktionspfad fuer BESTANDS-Trips -- der Import-Weg (AC-6) deckt
+        nur neu angelegte Etappen ab. Fail-soft und ohne Treffer folgenlos:
+        der Trip laeuft dann unveraendert weiter (AC-10).
+
+        Args:
+            persist: an ``backfill_stage_distances`` durchgereicht (Issue
+                #2036 CI-Nachschlag, PR #2055/#2058). ``None`` (Default)
+                heisst: das Objekt-Attribut ``self.persist_backfill``
+                entscheidet (Default ``True`` fuer alle Versandpfade --
+                Alarm, Briefing-Dispatch, On-Demand-Fetch). Ein expliziter
+                Wert hier gewinnt immer -- so ruft ``PreviewService`` diesen
+                direkten Aufruf mit ``persist=False``, waehrend die
+                Nebenpfade ueber ``_build_stage_trend`` /
+                ``_collect_future_stage_weather`` OHNE Keyword rufen und
+                stattdessen ueber das am Scheduler gesetzte Attribut
+                gesteuert werden (Signaturbruch-Fix #2058: diese beiden
+                Methoden werden von Test-Doubles komplett ueberschrieben).
         """
+        # `getattr` mit Default: die Segment-Umwandlung ist eine reine
+        # Funktion und wird auch an teilinitialisierten Instanzen gerufen
+        # (kein __init__-Durchlauf, also auch kein persist_backfill-Attribut).
+        effective_persist = (
+            getattr(self, "persist_backfill", True) if persist is None else persist
+        )
+        from services.track_resolution import backfill_stage_distances
         from services.trip_segments import convert_trip_to_segments
+        # `getattr`: die Segment-Umwandlung ist eine reine Funktion und wird
+        # auch an teilinitialisierten Instanzen gerufen -- ohne Nutzerbezug
+        # gibt es keinen GPX-Bestand, also auch nichts nachzutragen.
+        user_id = getattr(self, "_user_id", None)
+        if user_id:
+            trip = backfill_stage_distances(
+                trip, user_id, target_date, persist=effective_persist,
+            )
         return convert_trip_to_segments(trip, target_date)
 
     def _clamp_segments_to_today(
@@ -2269,6 +2315,14 @@ class TripReportSchedulerService:
         Wetterabruf mit Retry-Backoff liegt: eine eigene Aufloesung koennte
         bereits den naechsten Ortstag tragen, waehrend ``target_date`` noch auf
         dem alten steht.
+
+        Issue #2036 CI-Nachschlag (PR #2055/#2058): der Trend baut Segmente
+        fuer BIS ZU DREI zukuenftige Etappen, nicht nur fuer ``target_date``.
+        Ob ``_convert_trip_to_segments`` dabei persistiert, steuert NICHT
+        ein Parameter hier (Signaturbruch fuer Test-Doubles, die diese
+        Methode komplett ueberschreiben), sondern das Objekt-Attribut
+        ``self.persist_backfill`` -- ``PreviewService`` schaltet es am
+        Scheduler auf ``False``, bevor diese Methode gerufen wird.
         """
         from app.models import OutlookState, TrendResult
         from providers.openmeteo import (
@@ -2468,6 +2522,11 @@ class TripReportSchedulerService:
         diese Funktion trifft selbst KEINE Tagesentscheidung (kein eigener
         Fundort), sie haelt nur den Zeitpunkt auf demselben Weg wie der
         Rest des Briefing-Aufbaus.
+
+        Issue #2036 CI-Nachschlag (PR #2055/#2058): der Fallback-Fetch baut
+        ebenfalls Segmente fuer zukuenftige Etappen (analog
+        ``_build_stage_trend``) -- auch hier steuert ``self.persist_backfill``
+        am Scheduler-Objekt, nicht ein Parameter hier (Begruendung s.o.).
         """
         from app.day_window import resolve_configured_window
 

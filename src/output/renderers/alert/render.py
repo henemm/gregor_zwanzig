@@ -195,8 +195,15 @@ def _location_of(events, location_label: str | None = None) -> str:
     sinnlose km-Spanne eines Punktes ohne km-Kontext; der Trip-Pfad setzt das
     Feld nie."""
     a, b = km_span(events)
+    # Issue #2036: die km-Spanne verdraengt die Segmentnummer nur, wenn sie
+    # bei JEDEM beteiligten Ereignis aus echter Wegstrecke stammt -- eine
+    # gemischte Menge waere eine Ortsangabe, die zur Haelfte geraten ist.
+    measured = bool(events) and all(
+        getattr(e, "km_measured", False) for e in events
+    )
     return format_alert_location(
         location_label, [e.segment_id for e in events], a, b,
+        km_measured=measured,
     )
 
 
@@ -238,8 +245,22 @@ def _km_str_onset(e: OnsetEvent) -> str:
 # --- Schwellen-Treffer (Issue #1444 S1, ADR-0013: eigener Render-Vertrag,
 # KEIN "vorher", KEIN "von A auf B") -----------------------------------------
 
+def _corridor_where(ce: CorridorEvent) -> str:
+    """Ortsangabe EINES Schwellen-Treffers (Issue #2036, Adversary F001) --
+    ueber DIESELBE geteilte Aufloesung wie alle anderen Alarmarten
+    (`segments.format_alert_location`). Vorher baute dieser Zweig seine
+    km-Spanne selbst und umging damit sowohl die Segment-Sprache (#1744)
+    als auch die Echtheitspruefung (#2036 AC-13): eine unvermessene Etappe
+    zeigte eine aus Luftlinie erfundene Kilometerangabe."""
+    return format_alert_location(
+        ce.location_label, [getattr(ce, "segment_id", None)],
+        ce.km_from, ce.km_to,
+        km_measured=getattr(ce, "km_measured", False),
+    )
+
+
 def _corridor_when(ce: CorridorEvent) -> str:
-    when = ce.location_label or f"km {int(round(ce.km_from))}–{int(round(ce.km_to))}"
+    when = _corridor_where(ce)
     if ce.occurred_at:
         when += f" · {ce.occurred_at}"
     return when
@@ -269,6 +290,7 @@ def _sms_corridor_token(ce: CorridorEvent) -> str:
 def _onset_shift_where(oe: OnsetShiftEvent) -> str:
     return format_alert_location(
         oe.location_label, [oe.segment_id], oe.km_from, oe.km_to,
+        km_measured=getattr(oe, "km_measured", False),  # Issue #2036
     )
 
 
@@ -288,6 +310,8 @@ def _onset_shift_location(msg: AlertMessage) -> str:
     return format_alert_location(
         msg.location_label, [oe.segment_id for oe in evs],
         min(oe.km_from for oe in evs), max(oe.km_to for oe in evs),
+        # Issue #2036: alles-oder-nichts wie in `_location_of`.
+        km_measured=all(getattr(oe, "km_measured", False) for oe in evs),
     )
 
 
@@ -1034,9 +1058,17 @@ def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
     if msg.location_label:
         head = f"{trip} {_ascii(msg.location_label)[:24]}: "
     else:
-        a = min(ce.km_from for ce in msg.corridor_events)
-        b = max(ce.km_to for ce in msg.corridor_events)
-        head = f"{trip} km{int(round(a))}-{int(round(b))}: "
+        # Issue #2036 (Adversary F001): dieselbe Aufloesung wie Betreff,
+        # E-Mail und Telegram -- Segment-Sprache bzw. gemessene km-Spanne,
+        # nie eine aus Luftlinie erfundene Zahl (AC-13). Alles-oder-nichts
+        # ueber die Treffer desselben Laufs, analog `_location_of`.
+        evs = msg.corridor_events
+        where = format_alert_location(
+            None, [getattr(ce, "segment_id", None) for ce in evs],
+            min(ce.km_from for ce in evs), max(ce.km_to for ce in evs),
+            km_measured=all(getattr(ce, "km_measured", False) for ce in evs),
+        )
+        head = f"{trip} {_ascii_alert_location(where)}: "
     body = head + " ".join(_sms_corridor_token(ce) for ce in msg.corridor_events)
     return body if len(body) <= limit else body[:limit]
 

@@ -276,10 +276,12 @@ für `ComparePreset`-Orte auf, ohne die Auswertungslogik zu duplizieren. Wetter-
 und beim Report-Versand (`send_one_compare_preset()`) aktualisiert; der 15-Minuten-Check liest
 nur. Versand ohne Trip-Bindung über `NotificationService.send_location_deviation_alert()`; der
 geteilte Alert-Renderer löst den Ortsbezug seit #1744 A1 in **einer** Funktion
-(`renderers/alert/segments.py::format_alert_location`) über drei Stufen auf: gesetztes
-`location_label` → Ortsname (Ortsvergleich), sonst Segment-Kennung über
-`format_segment_reference` (`Segment 3–5`, `🏁 Ziel` — dieselbe Sprache wie die amtliche
-Warnung), sonst km-Spanne als Rückfall. Die Kurznachricht (SMS/Premium-SMS) nennt bewusst
+(`renderers/alert/segments.py::format_alert_location`) auf, seit **#2036** (2026-08-21) vier
+Stufen statt drei: gesetztes `location_label` → Ortsname (Ortsvergleich), sonst **gemessene**
+km-Spanne (`km A-B`, nur wenn `km_measured=True` — die Distanz stammt aus echter GPX-Wegstrecke,
+nie aus Luftlinie), sonst Segment-Kennung über `format_segment_reference` (`Segment 3–5`,
+`🏁 Ziel` — dieselbe Sprache wie die amtliche Warnung), sonst km-Spanne (ungemessen) als
+letzter Rückfall für Altdaten ohne Segment-Kennung. Die Kurznachricht (SMS/Premium-SMS) nennt bewusst
 weiterhin keinen Ortsbezug. Alarmkonfiguration ist in Scheibe 2 hartkodiert
 (Default-Sensitivität „standard", 120 Min Cooldown, nur E-Mail) — editierbare UI folgt in
 Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cron-Job
@@ -348,8 +350,10 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
    - 4 Render-Pfade: `render_subject()`, `render_email()`, `render_telegram()`, `render_sms()`
    - Projektion: `to_alert_message()` erzeugt `AlertMessage` aus `WeatherChange`-Events
    - Dynamischer Betreff: `Trip · Ortsangabe · Richtung · Metrik`; faktisch-generische H1.
-     Die Ortsangabe kommt aus der **einen** Auflösung `_location_of` (`render.py:101`, seit #1744 A1):
-     `location_label` (Ortsvergleich) → Segment-Kennung → km-Spanne als Rückfall. Der Funktionsname
+     Die Ortsangabe kommt aus der **einen** Auflösung `_location_of` (`render.py:101`, seit #1744 A1,
+     erweitert um die gemessene km-Stufe in **#2036**):
+     `location_label` (Ortsvergleich) → gemessene km-Spanne (`km_measured=True`) → Segment-Kennung
+     → km-Spanne (ungemessen) als Rückfall. Der Funktionsname
      `_km_str` ist ein Relikt — hier stand bis 2026-08-13 noch `km`, das war seit A1 überholt
    - Severity-Sortierung pro Metrik; ASCII-SMS ≤140 Zeichen mit Überlauf-Marker
    - Enthält NICHT: Stundentabellen, Ausblick, Gewitter-Vorschau, Pills, Vortag-Vergleich, Statistik
@@ -390,8 +394,8 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
    - **Kanonischer Render-Pfad (Issue #919):** `check_radar_alerts` konstruiert `AlertMessage(OnsetEvent(...))` und leitet durch dieselben vier Renderer wie der Abweichungs-Alert:
      - `render_subject(msg)` — Betreff: `[<trip>] <Ortsangabe> · Regen/Gewitter in <m> Min`,
        an einer echt zugestellten Mail gemessen z.B. `[KHW 403] 🏁 Ziel · Regen in 25 Min`.
-       Ortsangabe nach derselben dreistufigen Auflösung wie oben (seit #1744 A1; hier stand bis
-       2026-08-13 noch die km-Spanne)
+       Ortsangabe nach derselben (seit #2036 vierstufigen) Auflösung wie oben (seit #1744 A1;
+       hier stand bis 2026-08-13 noch die km-Spanne)
      - `render_email(msg)` — HTML + Plain mit Onset-Uhrzeit, Intensity-Label, Quellenangabe, Cooldown-Block
      - `render_telegram(msg)` — Fettzeile + Detail mit Onset-Uhrzeit und Quelle
      - `render_sms(msg)` — Token `R@<hh:mm>` (Regen) oder `TH@<hh:mm>` (Gewitter), Zeitpunkt statt
