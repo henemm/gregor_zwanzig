@@ -178,12 +178,161 @@ werden, nicht nur die ADR.
    (`_onset_dt`-Berechnung) angefasst. Abgesprochen 2026-08-22: **#2065 zuerst**, S2b rebast
    darauf.
 
-## Offene Entscheidung fuer die Spec
+---
 
-A-3 nennt **drei** Sperren (Sperrzeit, Tageslimit, Entdopplung), #2065 misst nur die Sperrzeit.
-Zuschnitt-Optionen: nur Sperrzeit · Sperrzeit + Tageslimit (beide liegen in derselben Funktion,
-Zusatzaufwand gering; Tageslimit ist zugleich Szenario 7 / D-3) · alle drei. Empfehlung und
-Begruendung gehoeren in die Analyse-Phase.
+# Analysis (Phase 2, 2026-08-22)
+
+## Type
+
+**Bug.** Nutzersichtbares Fehlverhalten: ein Alarm ueber eine deutliche Verschaerfung bleibt aus.
+
+## Befund A — hinter der Sperrzeit steht eine ZWEITE Wand (GEMESSEN)
+
+Der wichtigste Analyse-Ertrag, unabhaengig zweifach hergeleitet (eigene Messung + Challenger)
+und **empirisch belegt**, nicht nur gerechnet. Aufruf der echten Entdopplung mit der
+Konstellation der Pruefstrecke (Lauf 1 meldet bei T+5 mit `HIGH`, Lauf 3 prueft 90 Min spaeter
+bei T+95 mit `HIGH`):
+
+```
+Lauf 3 (HIGH gegen HIGH):       allowed=False  reason='event_duplicate'
+Gegenprobe (Eintrag MODERATE):  allowed=True   reason=None
+```
+
+Die **Gegenprobe ist der Beweis, dass die Eskalationsstelle erreicht wird** — ohne sie koennte
+„blockiert" auch heissen, der Zweig sei gar nicht ausgewertet worden.
+
+Rechenweg (`alert_gate.py:458-467`, `:489-494`, `:601-614`, `NOWCAST_HORIZON_MIN = 180`,
+`radar_service.py:69`):
+
+| Schritt | Wert | Ergebnis |
+|---|---|---|
+| Zeitabstand der Ereigniszeitpunkte | 90 Min ≤ 180 Min | Treffer im Register |
+| Eskalation `exceeds("HIGH","HIGH")` | `2 > 2` | False |
+| V1-Ausnahme `_covers_materially_more` | abgedeckt bis T+275, noetig T+365 | greift nicht |
+| **Ergebnis** | | `REASON_EVENT_DUPLICATE` |
+
+**Konsequenz:** Ein Fix, der nur die Sperrzeit oeffnet, macht den roten Test **nicht** gruen —
+er wechselt nur den Protokollgrund von `cooldown` auf `event_duplicate`. Die Zuschnitt-Option
+„nur Sperrzeit" ist damit nicht eine schwaechere Variante, sondern **keine Loesung**.
+
+Beide Sperren scheitern an **derselben** Ursache: einer Schwere-Skala, die bei 4 mm/h zumacht.
+Das ist eine Ursache, nicht zwei — und deshalb ein Fix, nicht zwei.
+
+## Befund B — die Menge existiert zum Zeitpunkt der Sperrpruefung noch nicht
+
+`check_nowcast_gate` laeuft in `trip_alert.py:1269`, der Nowcast-Abruf erst in `:1365`. Die
+Groesse, an der Verschaerfung gemessen wird (`window_precip_mm`), entsteht also **nach** dem
+Gate. Ein gesperrter Lauf holt heute gar keine Daten (`continue` bei `:1303`).
+
+Daraus folgt zwingend: im Sperrzeit-Fall muss **zusaetzlich** abgerufen werden. Keine Bauform
+kommt daran vorbei. Kosten: Prueftakt 15 Min (`scheduler.go`), Sperrzeit-Vorgabe 2 h,
+Radar-Cache-TTL 300 s (`radar_cache.py:67`) → bis zu **7 zusaetzliche Abrufe je Sperrfenster
+und Tour**, gegen ein Tagesbudget von 9000 (`forecast_budget.py:40`). Unkritisch, gehoert aber
+in den PR benannt. Die Invariante „genau EIN `get_nowcast` je Trip" (`trip_alert.py:1305`,
+#1329) bleibt gewahrt, wenn der Sperrzeit-Fall in denselben Abruf laeuft statt einen zweiten
+auszuloesen.
+
+## Befund C — ein zweiter Schreiber teilt sich den Sperrzeit-Topf
+
+`trip_report_scheduler.py:1574` bucht dieselbe `radar`-Sperre fuer den Kurzfristhinweis im
+Briefing — **ohne** Mengenangabe. Die Vergleichsbasis kann also legitim fehlen. Regel:
+**fehlende Vergleichsbasis ⇒ kein Durchbruch** (konservativ). Das ist die richtige
+Fehlerrichtung — Alarmflut zu vermeiden wiegt schwerer als Durchlaessigkeit, und ein Durchbruch
+ohne Vergleichsbasis waere ein Durchbruch ohne Nachweis.
+
+## Technischer Ansatz (Entscheidung)
+
+**Eine geteilte Vergleichsfunktion, zwei Wirkorte.** Die Definition von „deutlich schlimmer"
+existiert genau **einmal** (Anforderung C-3) und wird an beiden blockierenden Stellen benutzt:
+
+| # | Baustein | Wirkung |
+|---|---|---|
+| 1 | Neuer Helfer in `alert_gate.py`, Nachbarschaft `record_nowcast_sent` | Vergleicht aktuelle Menge gegen gespeicherte Vergleichsbasis. Faktor **und** absolute Untergrenze, UND-verknuepft — Muster der Briefing-Ueberholung, aber **eigene benannte Konstanten** (andere Vergleichsbasis) |
+| 2 | `trip_alert.py::check_radar_alerts` | Bei `gate.reason == REASON_COOLDOWN` **kein sofortiges `continue`** mehr: in den Abruf laufen, dann den Helfer befragen. Kein Treffer → unveraendert unterdruecken (Protokollgrund bleibt `cooldown`) |
+| 3 | `check_event_identity_gate` | Optionaler Parameter, der die quantitative Verschaerfung in den **bestehenden ersten Eskalationszweig** (`alert_gate.py:669`) einspeist — ODER-verknuepft mit `exceeds(...)`. Struktur „Eskalation zuerst" bleibt unangetastet |
+| 4 | `ThrottleStore` | Eintrag von reinem ISO-String auf `{"at": …, "precip_mm": …}` erweitern; alter Reinstring bleibt gueltig lesbar (`_parse`, `throttle_store.py:161-172`). Neue Lesemethode statt Ueberladung von `last_sent` (15+ Aufrufer) |
+| 5 | `record_nowcast_sent` | Optionaler Mengen-Parameter, durchgereicht an `.record()`. Buchung weiterhin **nur nach erfolgreicher Zustellung** (F001-Symmetrie) |
+
+**`check_nowcast_gate` bleibt in Signatur und Verhalten unveraendert.** Damit bleiben die drei
+Ordnungstests (`test_alert_gate.py:88/129/163`) und der Ortsvergleich (`compare_radar_alert.py`)
+unberuehrt — der Helfer taucht dort schlicht nicht im Aufrufgraphen auf. Das ist die sauberste
+Erfuellung der PO-Rueckstellung: keine Signatur-Passagiere, kein toter Default.
+
+**Verworfen:**
+- *Gates umsortieren* — behebt den gemessenen Fall nicht (Befund A und Kernbefund 2).
+- *Vergleich in `check_nowcast_gate` selbst* — zoege den Speicherzugriff in den geteilten
+  Baustein und beruehrte Ortsvergleich und Ordnungstests am falschen Ort.
+- *Die bestehende `LOW/MODERATE/HIGH`-Leiter um eine vierte Stufe erweitern* — aendert die
+  Bedeutung einer Groesse, die an vielen Stellen gelesen wird (Kanal-Schwellen ADR-0046,
+  amtliche Warnstufen), fuer einen lokalen Zweck. Grosse Flaeche, kleiner Ertrag.
+
+## Verfall der Vergleichsbasis
+
+Die Vergleichsbasis lebt **im selben Eintrag** wie der Sperrzeit-Zeitstempel und wird bei jeder
+erfolgreichen Zustellung ueberschrieben. Keine zweite Uhr. Gelesen wird sie ohnehin nur, solange
+die Sperre laeuft.
+
+Fehlerrichtung, die das bewusst in Kauf nimmt: nach einem durchgebrochenen 27,5-mm-Alarm braucht
+die naechste Verschaerfung im selben Fenster den vollen Faktor **gegen 27,5 mm**, nicht mehr
+gegen die alten 10 mm. Das ist erwuenschtes Selbstbremsen und genau der Schutz gegen die
+Kettenreaktion aus Risk 2 — keine Luecke.
+
+## Zuschnitt (Entscheidung)
+
+**Sperrzeit + Entdopplung. Tageslimit NICHT.**
+
+- *Sperrzeit* — der gemessene Fall.
+- *Entdopplung* — **zwingend**, sonst wird der rote Test nicht gruen (Befund A). Nicht
+  Scope-Ausweitung, sondern Teil derselben Ursache.
+- *Tageslimit* — bewusst ausgelassen, mit Begruendung: bei `tier=premium` ohnehin `None`
+  (`user_tier.py:45-64`), also fuer den akuten Fall wirkungslos; es ist als Szenario 7 /
+  Anforderung D-3 bereits eigener Scheibe S3 in #2050 zugeordnet; und die Kette bricht bei
+  Sperrzeit ab, bevor das Tageslimit ueberhaupt geprueft wurde.
+
+**Wichtig und AC-pflichtig:** Weil `check_nowcast_gate` bei Sperrzeit kurzschliesst, wurde das
+Tageslimit im Ueberholungsfall **noch nie geprueft**. Der Durchbruch darf es nicht stillschweigend
+mit ueberspringen — im Override-Pfad ist es erneut zu pruefen und bleibt hartes Stop. Sonst
+raeumte dieser Fix eine zweite Sperre ab, ohne es zu sagen.
+
+A-3 wird damit **teilweise** erfuellt (zwei von drei Sperren). Das gehoert so in die Spec — nicht
+als „A-3 erledigt" verbuchen.
+
+## Scope Assessment
+
+| | |
+|---|---|
+| Produktivdateien | 4 (`alert_gate.py`, `trip_alert.py`, `throttle_store.py`, ggf. Konstanten) |
+| Geschaetzte LoC (Produktivcode) | ~+140 / −20 — **eng am 250er-Limit**, Doku zaehlt nicht mit |
+| Testdateien | Zeitreihen-Szenario (neu), `test_alert_gate.py`, `test_throttle_store.py`, `test_nowcast_suppression_logging.py` |
+| Doku | ADR-0021 datierter Nachtrag · `docs/specs/modules/rework_1467_s3_nowcast.md` Nachtrag |
+| Risiko | **HIGH** — kritischer Alarmpfad, geteilter Baustein, Schema-Aenderung |
+
+## Umsetzungsreihenfolge
+
+1. `throttle_store.py`: Schema-Erweiterung + Rueckwaerts-Lesbarkeit, Roundtrip-Test.
+2. `alert_gate.py`: Vergleichs-Helfer + benannte Konstanten + Mengen-Parameter an
+   `record_nowcast_sent` + optionaler Eskalations-Parameter am Entdopplungs-Gate.
+3. ADR-0021-Nachtrag und Spec-Nachtrag (inkl. Satz, **warum** der Ortsvergleich nicht mitkommt).
+4. `trip_alert.py`: Kontrollfluss im Sperrzeit-Fall, Weitergabe an beide Wirkorte, erneute
+   Tageslimit-Pruefung im Override-Pfad.
+5. Zeitreihen-Szenario auf der Pruefstrecke (Reproduktion 11 → 30 mm/h).
+6. Protokoll-Test fuer den neuen Durchbruchsgrund.
+
+## Adversary-Schwerpunkte (fuer spaeter vormerken)
+
+- Fehlende Vergleichsbasis (`precip_mm=None` durch den Briefing-Schreiber, Befund C) muss
+  **konservativ** entscheiden — gezielt mutieren.
+- Untergrenze entfernen → muss rot werden. Faktor verfaelschen → muss rot werden.
+- Der Entdopplungs-Zweig: pruefen, dass die Gegenprobe den Zweig auch **erreicht** (siehe die
+  MODERATE-Gegenprobe oben) — sonst beweist ein gruener Test nichts.
+- Ruhezeit muss weiterhin **unbrechbar** sein (#1955).
+- Tageslimit im Override-Pfad muss weiterhin greifen.
+
+## Open Questions
+
+Keine blockierenden. Die im Ticket offen gelassene Vergleichsbasis-Frage (C-3) ist durch die
+PO-freigegebene Praezedenz aus #2020 F008 beantwortet; die konkreten Schwellenwerte gehen als
+ACs auf Deutsch in die Spec und werden dort freigegeben.
 
 ## Nebenbefund
 
