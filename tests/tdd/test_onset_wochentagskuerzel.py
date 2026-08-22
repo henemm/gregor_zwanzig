@@ -89,6 +89,11 @@ FREITAG_1200_UTC = "2026-08-21T12:00:00+00:00"
 # (+53 Min) faellt auf 22:33 UTC — UTC-Tag immer noch FREITAG, Ortstag bereits
 # SAMSTAG. Genau dieser Zeitpunkt trennt Ortstag von UTC-Tag (AC-9).
 FREITAG_2140_UTC = "2026-08-21T21:40:00+00:00"
+# 23:00 UTC am Freitag: der Beginn (+53 Min) faellt auf 23:53 und bleibt damit
+# am Versandtag, das ENDE des nassen Blocks (Deckungsgrenze des einzigen
+# Frames, +15 Min) auf 00:08 des Folgetags. Genau dieser Zeitpunkt trennt die
+# beiden Bildungsstellen: nur das ENDE traegt hier einen Versatz (F001).
+FREITAG_2300_UTC = "2026-08-21T23:00:00+00:00"
 
 
 def onset_event(**kw) -> OnsetEvent:
@@ -380,6 +385,56 @@ def test_ac3_endzeit_traegt_das_kuerzel():
     )
     assert not ALTFORM_RE.search(sms), (
         f"Die Altform steht noch am Ende-Token: {sms!r}"
+    )
+
+
+# ══════════ AC-3, der WIRKORT: die Ende-Bildungsstelle (F001) ════════════════
+
+
+def test_ac3_wirkort_endezeit_kuerzel_entsteht_am_echten_versandpfad(
+    telegram_stub, monkeypatch,
+):
+    """AC-3 (Wirkort) GIVEN einen Trip-Radar-Alarm, dessen Regenbeginn NOCH am
+    Versandtag liegt, dessen Ereignis-ENDE aber hinter Mitternacht faellt
+    WHEN die Kurznachricht ueber den ECHTEN Versandpfad
+    (`TripAlertService.check_radar_alerts()`) erzeugt und zugestellt wird
+    THEN traegt die Endzeit ein aus dem ZEITSTEMPEL abgeleitetes Kuerzel, die
+    Beginnzeit dagegen keines.
+
+    Adversary-Finding F001 (HIGH): der Test zu AC-3 oben konstruiert sein
+    `OnsetEvent` mit `event_end_weekday="Sa"` als LITERAL und prueft damit nur
+    den Renderer. Die Bildungszeile in `project.event_end_display()` blieb
+    unbewacht — sie komplett abzuschalten liess das gesamte Repo gruen: AC-1
+    und AC-7 fahren zwar den echten Pfad, behaupten ueber das Ende-Token aber
+    nichts, und ein fehlendes Kuerzel erzeugt keine Altform, sondern
+    verschluckt den Tagesbezug STILL (`>@0:08` statt `>@Sa0:08`).
+
+    Der Aufbau trennt die beiden Bildungsstellen bewusst: Freitag 23:00
+    Ortszeit + 53 Min = 23:53 (Beginn, Versatz 0), Ende an der Deckungsgrenze
+    des einzigen Frames (+15 Min) = 00:08 am Samstag (Versatz 1). Ein Kuerzel
+    am Ende kann hier also NICHT versehentlich aus der Beginn-Bildungsstelle
+    stammen. Da nur ein Frame vorliegt, ist das Ende eine belegte Untergrenze
+    (`event_ongoing_beyond_horizon`) und erscheint in der `>`-Form.
+
+    Reykjavik-Koordinaten (`make_trip`-Default, ganzjaehrig UTC+0): die
+    Ortszeit ist direkt aus der gestellten UTC-Zeit ablesbar.
+    """
+    text = _kurznachricht_vom_trip_pfad(
+        FREITAG_2300_UTC, telegram_stub, monkeypatch,
+        ankunft_start="22:00", ankunft_ende="02:00",
+    )
+
+    assert ">@Sa0:08" in text, (
+        f"Das Ende (00:08 des Folgetags) haette sein Kuerzel aus dem "
+        f"ENDE-Zeitstempel ableiten muessen — erwartet '>@Sa0:08'. "
+        f"Kurznachricht: {text!r}"
+    )
+    assert "@23:53" in text and "Sa23:53" not in text, (
+        f"Der Beginn bleibt am Versandtag (23:53) und darf KEIN Kuerzel "
+        f"tragen — beide Zeitpunkte werden unabhaengig bewertet: {text!r}"
+    )
+    assert not ALTFORM_RE.search(text), (
+        f"Die Altform steht noch am Ende-Token: {text!r}"
     )
 
 

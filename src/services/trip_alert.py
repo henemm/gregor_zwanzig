@@ -44,7 +44,7 @@ from services.trip_day import anchor_tz, trip_local_today
 from services.user_tier import premium_sms_allowed, sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import (
-    day_offset, format_reference_at, local_fmt, to_utc, tz_for_coords,
+    day_offset, format_reference_at, local_dt, local_fmt, to_utc, tz_for_coords,
 )
 
 if TYPE_CHECKING:
@@ -1614,16 +1614,27 @@ class TripAlertService:
             # ausdruecklich MIT: er waehlt im Renderer die Textform
             # (Untergrenze vs. bekanntes Ende, Spec v1.1). Lazy importiert wie
             # die uebrigen Renderer-Bausteine dieses Pfads.
+            from output.renderers.alert.official_alerts import (
+                _de_weekday_short,  # Issue #2054: EIN Kuerzel-Erzeuger
+            )
             from output.renderers.alert.project import event_end_display
 
-            _end_time_str, _end_day_offset, _end_ongoing = event_end_display(
-                now_utc, result, tz,
+            _end_time_str, _end_day_offset, _end_ongoing, _end_weekday = (
+                event_end_display(now_utc, result, tz)
             )
+            # Issue #2054: Versatz und Wochentagskuerzel des BEGINNS aus
+            # DEMSELBEN Zeitpunkt und DERSELBEN Zone -- eine zweite Herleitung
+            # koennte auseinanderlaufen (Muster #2009 o.).
+            _onset_day_offset = day_offset(now_utc, _onset_dt, tz)
             _radar_request = RadarAlertRequest(
                 onset_minutes=result.onset_minutes,
                 already_running=result.already_running,  # Issue #2050 S2b
                 onset_time=_onset_time_str,
-                onset_day_offset=day_offset(now_utc, _onset_dt, tz),
+                onset_day_offset=_onset_day_offset,
+                onset_weekday=(
+                    _de_weekday_short(local_dt(_onset_dt, tz))
+                    if _onset_day_offset else None
+                ),
                 km_from=active.start_point.distance_from_start_km,
                 km_to=active.end_point.distance_from_start_km,
                 # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne
@@ -1643,6 +1654,7 @@ class TripAlertService:
                 # ohne Einfluss auf die Ausloeseregel (wie onset_precip_mm).
                 event_end_time=_end_time_str,
                 event_end_day_offset=_end_day_offset,
+                event_end_weekday=_end_weekday,  # Issue #2054
                 event_ongoing_beyond_horizon=_end_ongoing,
                 tz=tz,
             )

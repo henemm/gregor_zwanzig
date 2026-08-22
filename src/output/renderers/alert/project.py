@@ -36,9 +36,9 @@ COMPARE_RADAR_SOURCE = "compare-radar"
 
 def event_end_display(
     now_utc: datetime, nowcast, tz,
-) -> tuple[str | None, int, bool]:
+) -> tuple[str | None, int, bool, str | None]:
     """Anzeigefassung des Ereignis-Endes (Issue #2051 S1):
-    `("HH:MM", Versatz, Untergrenze?)`.
+    `("HH:MM", Versatz, Untergrenze?, Wochentagskuerzel)`.
 
     EINE Fassung fuer BEIDE Onset-Pfade (Trip-Radar-Alarm und
     Ortsvergleich-Buendel, ADR-0021) — zwei Kopien dieser vier Zeilen wuerden
@@ -58,13 +58,20 @@ def event_end_display(
 
     Der Tagesversatz stammt aus dem ENDE-Zeitpunkt, nicht vom Beginn: Beginn
     23:50 und Ende 00:40 liegen an verschiedenen Kalendertagen.
+
+    Issue #2054: das vierte Feld ist die DARSTELLUNG desselben Versatzes fuer
+    die Kurzform -- das Wochentagskuerzel in DERSELBEN Zone `tz`, aus der auch
+    der Versatz stammt (ein aus der UTC-Zeit gebildetes Kuerzel laege kurz
+    nach Ortsmitternacht um einen Tag daneben). `None` bei Versatz 0.
     """
     end_minutes = getattr(nowcast, "event_end_minutes", None)
     if end_minutes is None:
-        return None, 0, False
+        return None, 0, False, None
     ongoing = bool(getattr(nowcast, "event_ongoing_beyond_horizon", False))
     end_dt = now_utc + timedelta(minutes=end_minutes)
-    return local_fmt(end_dt, tz), day_offset(now_utc, end_dt, tz), ongoing
+    offset = day_offset(now_utc, end_dt, tz)
+    weekday = _de_weekday_short(local_dt(end_dt, tz)) if offset else None
+    return local_fmt(end_dt, tz), offset, ongoing, weekday
 
 
 def _resolve_metric_id(field: str, direction: str) -> str:
@@ -552,7 +559,12 @@ def to_multi_location_onset_alert_message(
         # weil jede Textform auf `already_running` verzweigt.
         _laufend = getattr(nc, "already_running", False)
         onset_dt = now + timedelta(minutes=nc.onset_minutes or 0)
-        _end_time, _end_offset, _end_ongoing = event_end_display(now, nc, loc_tz)
+        _end_time, _end_offset, _end_ongoing, _end_weekday = event_end_display(
+            now, nc, loc_tz,
+        )
+        # Issue #2054: Versatz und Kuerzel aus DEMSELBEN Zeitpunkt und
+        # DERSELBEN Ortszone -- zwei Herleitungen koennten auseinanderlaufen.
+        _onset_offset = day_offset(now, onset_dt, loc_tz)
         events.append(OnsetEvent(
             already_running=_laufend,
             onset_minutes=nc.onset_minutes or 0,
@@ -560,7 +572,11 @@ def to_multi_location_onset_alert_message(
             km_from=0.0, km_to=0.0, is_convective=nc.is_convective,
             intensity_label=nc.intensity_label, source_label=nc.source,
             location_label=location_name if multi else None,
-            onset_day_offset=day_offset(now, onset_dt, loc_tz),
+            onset_day_offset=_onset_offset,
+            onset_weekday=(
+                _de_weekday_short(local_dt(onset_dt, loc_tz))
+                if _onset_offset else None
+            ),
             # Issue #2046: die Mengenangabe der Kurznachricht kommt im
             # Ortsvergleich-Buendel aus DEMSELBEN NowcastResult wie im
             # Trip-Pfad -- sonst entstuende hier eine stille Luecke, weil
@@ -573,6 +589,7 @@ def to_multi_location_onset_alert_message(
             # dieselbe, die der Trip-Pfad benutzt (ADR-0021).
             event_end_time=_end_time,
             event_end_day_offset=_end_offset,
+            event_end_weekday=_end_weekday,  # Issue #2054
             # Issue #2051 S1 (Spec v1.1): der R4-Waechter waehlt die TEXTFORM
             # des Endes (Untergrenze vs. bekanntes Ende) und muss den Renderer
             # deshalb erreichen -- er darf nicht mehr stromaufwaerts in einem
