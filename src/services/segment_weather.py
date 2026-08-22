@@ -17,7 +17,6 @@ from app.config import Location
 from app.day_window import display_end_time
 from app.debug import DebugBuffer
 from app.models import SegmentWeatherData, SegmentWeatherSummary, TripSegment
-from utils.timezone import to_utc
 
 logger = logging.getLogger(__name__)
 
