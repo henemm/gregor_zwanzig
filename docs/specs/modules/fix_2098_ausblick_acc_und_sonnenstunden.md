@@ -116,11 +116,18 @@ Befund C (Erweiterung) — ACC im Klartext:
   `sum`, analog zur Katalog-Definition `summary_fields={"sum": "sunny_hours"}`) und nicht
   einem beliebigen Platzhalter oder dem Wert nur eines Segments.
 
-- **AC-3:** Given eine Trip-Etappe mit genau einem Segment / When das Trip-Briefing gerendert
-  wird / Then bleibt die Sonnenstunden-Anzeige unverändert zum bisherigen Verhalten (dieser
-  Pfad war nie betroffen, da `aggregate_stage()` hier nicht aufgerufen wird) — der Test für
-  diesen Fix MUSS über eine Mehrsegment-Etappe geführt werden, ein Einzelsegment-Test wäre
-  falsch grün.
+- **AC-3:** Given dieselbe Etappe einmal als ein Segment und einmal auf mehrere Segmente
+  verteilt / When beide Fassungen im Ausblick gerendert werden / Then zeigen beide einen
+  Sonnenstunden-Wert, und die mehrteilige Fassung zeigt die Summe ihrer Segmente statt `–` —
+  der Nachweis MUSS über die mehrteilige Fassung geführt werden, weil nur sie den Verlust
+  sichtbar macht.
+
+  > **Richtigstellung (RED-Phase, 2026-08-23):** Die ursprüngliche Begründung („Einzelsegment
+  > war nie betroffen") gilt nur für die Kompaktzeile — dort bremst
+  > `compact_summary.py:262-268` die Aggregation bei einem Segment ab. Der **Ausblick** ruft
+  > `aggregate_stage()` bedingungslos (`trip_report_scheduler.py:2422`) und verliert die
+  > Sonnenstunden daher auch bei Einzelsegment-Etappen. Die Zusicherung bleibt inhaltlich
+  > gleich scharf, die Begründung ist korrigiert.
 
 - **AC-4:** Given den vollständigen Metrik-Katalog mit `summary_fields` / When alle Felder von
   `SegmentWeatherSummary` gegen die `aggregation_config` von `summarize_points()` abgeglichen
