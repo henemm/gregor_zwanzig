@@ -335,6 +335,11 @@ _E1_FIELD_TYPES = {
     "measurement_point": dict,
     "reference_at": str,
     "source": str,
+    # Issue #2050 S4b (E-1): Zahl und km-Lage der ausgefallenen Messpunkte der
+    # Ausdehnungs-Messung. Ohne Eintrag HIER liefe das Feld an der
+    # additiv-defensiven Serialisierung vorbei (Typpruefung, Absenz bei
+    # `None`, fail-soft mit Meldung).
+    "measurement_gaps": dict,
 }
 
 
@@ -342,6 +347,7 @@ def _apply_e1_fields(
     entry: dict, *, entity_id: str,
     lead_time_minutes=None, event_at=None, event_end_at=None,
     measurement_point=None, reference_at=None, source=None,
+    measurement_gaps=None,
 ) -> None:
     """Additive E-1-Groessen additiv-defensiv in ``entry`` schreiben
     (Issue #2050 S6). ``None`` -> Absenz (kein Schluessel, kein ``null``).
@@ -361,6 +367,7 @@ def _apply_e1_fields(
         ("measurement_point", measurement_point),
         ("reference_at", reference_at),
         ("source", source),
+        ("measurement_gaps", measurement_gaps),
     ):
         if wert is None:
             continue
@@ -406,6 +413,7 @@ def append_entry(
     measurement_point: Optional[dict] = None,
     reference_at: Optional[str] = None,
     source: Optional[str] = None,
+    measurement_gaps: Optional[dict] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -497,11 +505,14 @@ def append_entry(
         entry["addendum_reported_at"] = addendum_reported_at
     # Issue #2050 S6 (E-1): gemeldete Vorwarnzeit, Ereigniszeit, Messpunkt,
     # Vergleichsbasis, Quelle -- additiv, defensiv, nie werfend (AC-15).
+    # Issue #2050 S4b: `measurement_gaps` derselbe Weg -- aus wie vielen
+    # Messpunkten die Ausdehnung stammt, gehoert zur Nachvollziehbarkeit.
     _apply_e1_fields(
         entry, entity_id=entity_id,
         lead_time_minutes=lead_time_minutes, event_at=event_at,
         event_end_at=event_end_at, measurement_point=measurement_point,
         reference_at=reference_at, source=source,
+        measurement_gaps=measurement_gaps,
     )
 
     _append(user_id, "entries" if reachable else "not_delivered", entry)
@@ -537,6 +548,7 @@ def append_suppressed_entry(
     measurement_point: Optional[dict] = None,
     reference_at: Optional[str] = None,
     source: Optional[str] = None,
+    measurement_gaps: Optional[dict] = None,
     convective_checked: Optional[bool] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag fuer eine VOR dem Versand abgewiesene
@@ -623,6 +635,7 @@ def append_suppressed_entry(
         lead_time_minutes=lead_time_minutes, event_at=event_at,
         event_end_at=event_end_at, measurement_point=measurement_point,
         reference_at=reference_at, source=source,
+        measurement_gaps=measurement_gaps,
     )
     _append(user_id, "not_delivered", entry)
 

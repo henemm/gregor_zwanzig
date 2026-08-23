@@ -33,8 +33,8 @@ from freezegun import freeze_time
 from app.config import Settings
 from app.loader import get_briefings_dir, get_data_dir
 from app.models import (
-    ForecastMeta, NormalizedTimeseries, Provider, SegmentWeatherData,
-    SegmentWeatherSummary,
+    ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider,
+    SegmentWeatherData, SegmentWeatherSummary,
 )
 from services.radar_service import NowcastResult
 from services.trip_alert import TripAlertService
@@ -87,6 +87,17 @@ _E1_GROESSEN = (
 _VERGLEICHSBASIS_AT = datetime.fromisoformat(_UHR_TIROL).astimezone(
     timezone.utc
 ) - timedelta(hours=1)
+
+# Angekuendigte Stundenmenge des Briefings fuer den UNTERDRUECKTEN Lauf.
+# Sie muss zwei Bedingungen zugleich erfuellen, damit die
+# Briefing-Unterdrueckung wirklich greift (`trip_alert.py`, Zweig
+# `_briefing_announced and ... and not _overtaking`):
+#   * >= 0,5 mm  -> das Briefing gilt als "hat Regen angekuendigt"
+#   * so gross, dass die gemessenen 3,0 mm des Nowcasts sie NICHT ueberholen
+#     (Ueberholung ab dem Doppelten der Ankuendigung)
+# 5,0 mm erfuellt beides mit Abstand. Der Testaufbau prueft die zweite
+# Bedingung unten selbst nach, statt sich auf diese Rechnung zu verlassen.
+_BRIEFING_MENGE_MM = 5.0
 
 
 class _LueckenRadar(_ZonenRadar):
@@ -168,14 +179,45 @@ def _protokoll(uid: str) -> dict:
     return json.loads(pfad.read_text()) if pfad.exists() else {}
 
 
-def _schreibe_vergleichsbasis(uid: str, trip_id: str, tag_datum, fetched_at) -> None:
+def _stundenreihe(stundenmenge_mm: float | None) -> list:
+    """Stuendliche Zeitreihe ueber zwei Tage mit ueberall derselben
+    angekuendigten Menge — oder LEER, wenn keine Menge gewuenscht ist.
+
+    Ueber zwei volle Tage statt nur der Ereignisstunde: welche Stunde der
+    Pruefling nachschlaegt, haengt an `onset_minutes` und der gestellten Uhr.
+    Eine einzelne, hier ausgerechnete Stunde waere genau die Sorte Literal,
+    die still danebenliegt, sobald sich der Aufbau verschiebt.
+    """
+    if stundenmenge_mm is None:
+        return []
+    tagesbeginn = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0,
+    )
+    return [
+        ForecastDataPoint(
+            ts=tagesbeginn + timedelta(hours=stunde),
+            precip_1h_mm=stundenmenge_mm,
+        )
+        for stunde in range(48)
+    ]
+
+
+def _schreibe_vergleichsbasis(
+    uid: str, trip_id: str, tag_datum, fetched_at,
+    stundenmenge_mm: float | None = None,
+) -> None:
     """Einen Briefing-Schnappschuss fuer den Tag anlegen, damit
     `reference_at` ueberhaupt entstehen kann (AC-9).
 
-    Die Zeitreihe bleibt LEER: `_briefing_precip_for_onset()` liefert dann
-    `None`, die Briefing-Unterdrueckung greift nicht und der Alarm laeuft
-    durch — `reference_at` haengt allein am Vorhandensein des Schnappschusses
+    Ohne `stundenmenge_mm` bleibt die Zeitreihe LEER:
+    `_briefing_precip_for_onset()` liefert dann `None`, die
+    Briefing-Unterdrueckung greift nicht und der Alarm laeuft durch —
+    `reference_at` haengt allein am Vorhandensein des Schnappschusses
     (`snapshot[0].fetched_at`), nicht an einer angekuendigten Menge.
+
+    MIT `stundenmenge_mm` ist es umgekehrt: das Briefing hat Regen
+    angekuendigt, der Alarm wird unterdrueckt und landet in `not_delivered`
+    (zweiter Schreibpfad, `append_suppressed_entry`).
     """
     from services.weather_snapshot import WeatherSnapshotService
 
@@ -186,7 +228,7 @@ def _schreibe_vergleichsbasis(uid: str, trip_id: str, tag_datum, fetched_at) -> 
                 meta=ForecastMeta(
                     provider=Provider.OPENMETEO, model="test", grid_res_km=1.0,
                 ),
-                data=[],
+                data=_stundenreihe(stundenmenge_mm),
             ),
             aggregated=SegmentWeatherSummary(precip_sum_mm=0.0),
             fetched_at=fetched_at,
@@ -198,6 +240,7 @@ def _schreibe_vergleichsbasis(uid: str, trip_id: str, tag_datum, fetched_at) -> 
 def _lauf(
     radar: _ZonenRadar, *, tag: str = "lauf", uid: str | None = None,
     strecke_km: float | None = None, vergleichsbasis_at=None,
+    briefing_menge_mm: float | None = None,
 ) -> _Lauf:
     """Ein echter `check_radar_alerts()`-Lauf (Muster `_zonen_lauf`,
     `test_regen_ausdehnung_textstellen.py`), zusaetzlich mit dem geschriebenen
@@ -213,6 +256,11 @@ def _lauf(
     `vergleichsbasis_at` legt zusaetzlich einen Briefing-Schnappschuss mit
     diesem Erhebungszeitpunkt an (nur AC-9 braucht ihn, s.
     `_schreibe_vergleichsbasis`).
+
+    `briefing_menge_mm` fuellt dessen Zeitreihe mit einer angekuendigten
+    Stundenmenge — damit laeuft derselbe Aufbau in die
+    Briefing-Unterdrueckung und schreibt ueber den ZWEITEN Protokollpfad
+    (`append_suppressed_entry`) nach `not_delivered`.
     """
     uid = uid or _uid(tag)
     lat1, lon1 = _endpunkt(strecke_km)
@@ -246,8 +294,12 @@ def _lauf(
                 "trip_id": trip_id, "send_email": True, "send_telegram": False,
             },
         }))
-        if vergleichsbasis_at is not None:
-            _schreibe_vergleichsbasis(uid, trip_id, tag_datum, vergleichsbasis_at)
+        if vergleichsbasis_at is not None or briefing_menge_mm is not None:
+            _schreibe_vergleichsbasis(
+                uid, trip_id, tag_datum,
+                vergleichsbasis_at or datetime.now(timezone.utc),
+                stundenmenge_mm=briefing_menge_mm,
+            )
 
         captured: list[dict] = []
         svc = TripAlertService(
@@ -288,14 +340,37 @@ def _versand_eintrag(lauf: _Lauf) -> dict:
     return treffer[0]
 
 
-def _messluecken(lauf: _Lauf) -> dict:
-    eintrag = _versand_eintrag(lauf)
+def _unterdrueckungs_eintrag(lauf: _Lauf) -> dict:
+    """Der Protokoll-Eintrag eines UNTERDRUECKTEN Laufs — zweiter Schreibpfad
+    (`append_suppressed_entry` -> `not_delivered`).
+
+    Zugleich die Positivkontrolle des Aufbaus: nur wenn nichts versendet wurde
+    UND `entries` leer bleibt, misst der Test wirklich den
+    Unterdrueckungspfad. Sonst pruefte er versehentlich wieder
+    `append_entry()`, und die Regression an der zweiten Weiterreichung bliebe
+    unbemerkt.
+    """
+    treffer = [e for e in lauf.not_delivered if e.get("entity_id") == lauf.trip_id]
+    assert lauf.sent == 0 and not lauf.entries and len(treffer) == 1, (
+        f"Testvoraussetzung: der Lauf muss UNTERDRUECKT worden sein — nichts "
+        f"versendet (sent={lauf.sent}), nichts in `entries` "
+        f"({lauf.entries!r}) und GENAU EIN Eintrag in `not_delivered` "
+        f"({lauf.not_delivered!r})"
+    )
+    return treffer[0]
+
+
+def _luecken_feld(eintrag: dict) -> dict:
     assert "measurement_gaps" in eintrag, (
         f"Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist "
         f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
         f"Ausdehnung stammt. Eintrag: {eintrag!r}"
     )
     return eintrag["measurement_gaps"]
+
+
+def _messluecken(lauf: _Lauf) -> dict:
+    return _luecken_feld(_versand_eintrag(lauf))
 
 
 def _erwartete_gap_km(lauf: _Lauf, indizes: list[int]) -> list[float]:
@@ -318,11 +393,16 @@ def _erwartete_gap_km(lauf: _Lauf, indizes: list[int]) -> list[float]:
 
 def _pruefe_luecken(
     lauf: _Lauf, radar: _LueckenRadar, *, punkte_erwartet: int,
+    eintrag: dict | None = None,
 ) -> dict:
     """Die drei Zahlen gegen den Aufbau pruefen — alle drei ABGELEITET:
     `points_total` aus der Zahl der tatsaechlichen Abrufe, `points_measured`
     aus der Differenz zu den ausgefallenen Indizes, `gap_km` aus deren
-    Koordinaten."""
+    Koordinaten.
+
+    Ohne `eintrag` wird der zugestellte Eintrag geprueft (`entries`), mit
+    `eintrag` der uebergebene — so gilt fuer BEIDE Protokollpfade dieselbe
+    Wertpruefung, statt dass der zweite eine eigene, schwaechere bekommt."""
     assert len(lauf.km) == punkte_erwartet, (
         f"Testvoraussetzung: {punkte_erwartet} Messpunkte erwartet (der "
         f"Aufbau haengt daran), gesehen {len(lauf.km)}"
@@ -332,7 +412,7 @@ def _pruefe_luecken(
     # dem fehlenden Feld verborgen.
     ausgefallen = radar.ausgefallene_indizes
     erwartete_km = _erwartete_gap_km(lauf, ausgefallen)
-    luecken = _messluecken(lauf)
+    luecken = _messluecken(lauf) if eintrag is None else _luecken_feld(eintrag)
 
     assert luecken.get("points_total") == len(lauf.km), (
         f"`points_total` muss die Zahl der Messpunkte nennen "
@@ -716,3 +796,49 @@ def test_alteintrag_ohne_messluecken_feld_bleibt_unveraendert():
         f"entries={lauf.entries!r}"
     )
     _pruefe_luecken(lauf, radar, punkte_erwartet=6)
+
+
+# ---------------------------------------------------------------------------
+# AC-1 am ZWEITEN Schreibpfad: der unterdrueckte Alarm (`not_delivered`).
+# ---------------------------------------------------------------------------
+
+def test_unterdrueckter_alarm_haelt_die_luecke_genauso_fest():
+    """AC-1 GIVEN ein Lauf mit Messluecke, den das Briefing-Gate UNTERDRUECKT
+    / WHEN er protokolliert wird / THEN traegt sein Eintrag in
+    `not_delivered` dieselbe `measurement_gaps`-Angabe wie ein zugestellter.
+
+    Warum eigener Test: `measurement_gaps` nimmt zwei Wege ins Protokoll —
+    `append_entry()` fuer den zugestellten Alarm und `append_suppressed_entry()`
+    fuer den unterdrueckten. Alle uebrigen Tests dieser Datei laufen ueber den
+    ERSTEN. Die zweite Weiterreichung war damit unbewacht: sie ersatzlos zu
+    entfernen liess jeden anderen Test gruen (Adversary-Fund F001).
+
+    Fachlich ist das kein Randfall — gerade der unterdrueckte Alarm muss
+    nachtraeglich belegen koennen, auf welcher Datenlage die Entscheidung fiel.
+    Ein Eintrag, der die Unterdrueckung festhaelt, aber verschweigt, dass die
+    Ausdehnung aus fuenf von sechs Punkten stammt, ist genau die
+    Ununterscheidbarkeit, die diese Scheibe beseitigt.
+
+    Geprueft wird ueber DIESELBE Wertpruefung wie der zugestellte Pfad
+    (`_pruefe_luecken`), nicht ueber eine schwaechere Praesenz-Abfrage: km-Lage
+    aus der Geometrie abgeleitet, `points_total`/`points_measured` aus dem
+    Aufbau.
+    """
+    radar = _LueckenRadar(luecken={2: {"data_unavailable": True}})
+    lauf = _lauf(radar, tag="unterdrueckt", briefing_menge_mm=_BRIEFING_MENGE_MM)
+
+    eintrag = _unterdrueckungs_eintrag(lauf)
+
+    # Testvoraussetzung: es muss die BRIEFING-Unterdrueckung sein. Die frueher
+    # greifenden Gates (Sperrzeit, Quellenausfall) protokollieren ueber einen
+    # anderen Helfer, der die E-1-Groessen gar nicht entgegennimmt — liefe der
+    # Test dort hinein, pruefte er eine Stelle, an der das Feld konstruktiv
+    # nie ankommt, und der Fehlschlag benannte die falsche Ursache.
+    gruende = {g.get("reason") for g in eintrag.get("channels_not_sent", [])}
+    assert any(str(g).startswith("briefing_announced:") for g in gruende), (
+        f"Testvoraussetzung: der Lauf muss an der BRIEFING-Ankuendigung "
+        f"gescheitert sein (Grund `briefing_announced:…`), gesehen "
+        f"{gruende!r} — sonst misst dieser Test einen anderen Sperrgrund."
+    )
+
+    _pruefe_luecken(lauf, radar, punkte_erwartet=6, eintrag=eintrag)

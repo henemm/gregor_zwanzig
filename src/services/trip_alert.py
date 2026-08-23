@@ -177,9 +177,42 @@ def _zonen_messwert(result):
     return result
 
 
+def _messluecken_felder(punkte, ergebnisse) -> dict:
+    """Zahl und km-Lage der AUSGEFALLENEN Messpunkte der Ausdehnungs-Messung
+    (Issue #2050 S4b, Anforderung E-1).
+
+    Eine Luecke ist ein Punkt ohne verwertbares Ergebnis (`None`): geworfener
+    Abruf, `throttled` und `data_unavailable` sind derselbe Fall in
+    verschiedener Form (`_zonen_messwert`). `derive_rain_zones` uebergeht sie
+    kommentarlos — ohne diese Buchfuehrung waere eine Ausdehnung aus vier von
+    sechs Punkten nachtraeglich nicht von einer vollstaendig vermessenen zu
+    unterscheiden.
+
+    Das Feld entsteht IMMER, sobald die Mehrpunkt-Abfrage lief — auch mit
+    leerer `gap_km`-Liste. Eine Absenz hiesse sonst zugleich "alles gemessen",
+    "Alteintrag von vor dieser Scheibe" und "Ableitung gescheitert", also
+    genau die Ununterscheidbarkeit, die diese Ableitung beseitigen soll.
+
+    Die km-Lage stammt aus derselben Groesse, aus der auch die Zonen ihre
+    Spanne bilden (`distance_from_start_km`), auf eine Nachkommastelle
+    gerundet wie die gemessene Spanne im Text.
+    """
+    luecken = [
+        round(punkt.distance_from_start_km, 1)
+        for punkt, ergebnis in zip(punkte, ergebnisse) if ergebnis is None
+    ]
+    return {
+        "measurement_gaps": {
+            "points_total": len(ergebnisse),
+            "points_measured": len(ergebnisse) - len(luecken),
+            "gap_km": luecken,
+        }
+    }
+
+
 def _radar_e1_fields(
     *, entity_id: str, result, now_utc: datetime, onset_dt: datetime,
-    active, snapshot,
+    active, snapshot, punkte=None, zonen_ergebnisse=None,
 ) -> dict:
     """Die fuenf E-1-Groessen des Radar-Nowcast-Zweigs (Issue #2050 S6).
 
@@ -206,7 +239,7 @@ def _radar_e1_fields(
     """
     try:
         ende_dt = alert_log.nowcast_event_end_at(result, now_utc)
-        return {
+        felder = {
             "lead_time_minutes": result.onset_minutes,
             "event_at": onset_dt.isoformat(),
             "event_end_at": ende_dt.isoformat() if ende_dt else None,
@@ -227,6 +260,23 @@ def _radar_e1_fields(
             entity_id, e,
         )
         return {}
+    # Issue #2050 S4b: EIGENER Auffang, bewusst NICHT der gemeinsame oben.
+    # Der gibt bei einem Fehler `{}` zurueck — ein Fehler in dieser
+    # NACHRANGIGEN Buchfuehrung risse damit alle sechs bestehenden E-1-Groessen
+    # mit und loeschte Messpunkt, Ereigniszeit und Quelle aus dem Eintrag. Das
+    # waere eine Regression gegen #2050 S6, also schlechter als der Stand vor
+    # dieser Scheibe. Scheitert die Ableitung, fehlt genau EIN Feld (AC-9).
+    if punkte is not None and zonen_ergebnisse is not None:
+        try:
+            felder.update(_messluecken_felder(punkte, zonen_ergebnisse))
+        except Exception as e:
+            logger.warning(
+                "alert_log: Messluecken der Ausdehnung fuer entity_id=%s nicht "
+                "ableitbar (%s) — der Alarm laeuft weiter, der Eintrag entsteht "
+                "ohne dieses Feld, die uebrigen E-1-Groessen bleiben.",
+                entity_id, e,
+            )
+    return felder
 
 
 def _trip_telegram_style(trip: "Trip") -> str:
@@ -1896,9 +1946,15 @@ class TripAlertService:
             # Issue #2050 S6 (E-1): die an DIESEM Zweig bekannten Groessen --
             # EINMAL abgeleitet und an allen drei Protokollstellen dieses
             # Zweigs identisch (Briefing-Gate, Ereignis-Identitaet, Versand).
+            # Issue #2050 S4b: `_punkte`/`_zonen_ergebnisse` sind die ROHFORM
+            # der Ausdehnungs-Messung, positionsgleich — aus ihnen entsteht die
+            # Buchfuehrung ueber die ausgefallenen Messpunkte. Die verdichteten
+            # Zonen taugen dafuer nicht: `derive_rain_zones` uebergeht eine
+            # Luecke kommentarlos, danach ist sie nicht mehr rekonstruierbar.
             _e1 = _radar_e1_fields(
                 entity_id=trip.id, result=result, now_utc=now_utc,
                 onset_dt=_onset_dt, active=active, snapshot=_snapshot,
+                punkte=_punkte, zonen_ergebnisse=_zonen_ergebnisse,
             )
             # Sicherheits-Override (Slice 4, #883): konvektive Gefahr (Gewitter/Hagel)
             # durchbricht die Briefing-Unterdrückung. Normaler (nicht-konvektiver)
