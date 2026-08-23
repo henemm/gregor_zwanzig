@@ -653,6 +653,13 @@ def to_multi_location_onset_alert_message(
             source_reach_day_offset=_reach_offset,
             location_sharpness_limit_time=_sharp_time,
             location_sharpness_limit_day_offset=_sharp_offset,
+            # Issue #2050 S4b-2: die ausgefallene Gewitterpruefung erreicht den
+            # Renderer auch auf DIESEM Pfad -- er baut sein `OnsetEvent` selbst,
+            # ohne den Umweg ueber `RadarAlertRequest`. Ohne diese Zeile waere
+            # der Ortsvergleich still leiser als der Trip (AC-6). Punkt 2
+            # (Messluecken) ist hier gegenstandslos: dieser Pfad kennt keine
+            # Ausdehnung (`km_from=km_to=0.0`, nie `rain_zones`).
+            convective_checked=getattr(nc, "convective_checked", True),
         ))
     trip_short = (
         ", ".join(name for name, _loc, _nc in valid_groups)

@@ -176,6 +176,19 @@ class OnsetEvent:
     # Streckenkonzept und laesst das Feld leer (AC-15). Die km-Zahlen
     # erscheinen im Text erst, wenn `km_measured` gesetzt ist (AC-8).
     rain_zones: tuple["RainZone", ...] = ()
+    # Issue #2050 S4b-2: hat die Gewitterpruefung ueberhaupt stattgefunden?
+    # Quelle `NowcastResult.convective_checked` (`False` bei ausgefallenem
+    # INCA-Beiabruf). Default `True` -- ein `False`-Default wuerde jede
+    # Bestandslage, die das Feld nicht setzt, faelschlich als "ungeprueft"
+    # beschriften (AC-8). Gesetzt von BEIDEN Onset-Pfaden (Trip UND
+    # Ortsvergleich, ADR-0021) und vom Vorschauweg.
+    convective_checked: bool = True
+    # Issue #2050 S4b-2: km-Lage der AUSGEFALLENEN Messpunkte der
+    # Ausdehnungs-Messung (`trip_alert._messluecken_felder`). Bewusst ein
+    # `tuple` und KEIN dict: dieses dataclass ist `frozen=True` und muss
+    # hashbar bleiben. Leer heisst "keine Luecke bekannt" -- ausdruecklich
+    # NICHT "alles gemessen" (AC-14): der Text schweigt in beiden Faellen.
+    gap_km: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)
