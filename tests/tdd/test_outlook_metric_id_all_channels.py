@@ -82,10 +82,14 @@ def test_ac4_temperatur_kennung_zeigt_ueberall_dieselbe_eine_spannen_spalte():
         f"Kennungsauswahl {AUSWAHL!r} wurde verworfen und wie 'bewusst "
         "geleert' behandelt (AC-4)."
     )
-    assert len(kopf) == 2, (
+    # #2098: hinter der Auswahl steht die fest angehaengte ACC-Zusatzspalte
+    # (Tag + 1 Metrikspalte + ACC) -- die Zusicherung "GENAU EINE
+    # Temperatur-Spalte" wird deshalb an der Auswahl-Mitte geprueft.
+    assert kopf == ["Tag", "Temperatur", "ACC"], (
         f"HTML-Mail: Die Ausblick-Tabelle hat die Kopfzeile {kopf!r}. Aus der "
         "einen Kennung 'temperature' muss GENAU EINE Wert-Spalte entstehen "
-        "(neben 'Tag') — Tief und Hoch gehoeren in dieselbe Zelle (AC-4)."
+        "(neben 'Tag' und der festen ACC-Spalte) — Tief und Hoch gehoeren in "
+        "dieselbe Zelle (AC-4)."
     )
 
     zellen = {

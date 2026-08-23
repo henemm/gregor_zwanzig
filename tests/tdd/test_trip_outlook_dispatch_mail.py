@@ -49,6 +49,13 @@ LAT, LON = 46.65, 12.85
 NIEDERSCHLAG = "precipitation"
 BOEEN = "gust"
 SCHNEEHOEHE = "snow_depth"
+# #2098 AC-13: ACC steht seit der Behebung als fest angehaengte Zusatzspalte
+# HINTER der Auswahl -- ausserhalb des Metrik-Systems, damit ADR-0005/#710
+# (Confidence nicht waehlbar) unberuehrt bleibt. Die Zusicherung dieser Datei
+# bleibt unveraendert scharf: die Kopfzeile wird weiterhin VOLLSTAENDIG
+# verglichen, die Zusatzspalte ist Teil der Erwartung statt aus ihr
+# herausgefiltert.
+_ACC = "ACC"
 
 _MAIL_FIELDS: dict = {
     "smtp_host": "dummy.invalid", "smtp_port": 587,
@@ -250,7 +257,7 @@ def test_ac2_zugestellte_html_mail_zeigt_genau_die_gewaehlten_spalten():
     assert OUTLOOK_EYEBROW in html, (
         "Die zugestellte Mail enthaelt gar keinen Ausblick-Block (AC-2)."
     )
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html) == ["Tag", "Niederschlag", "Böen", _ACC], (
         f"Kopfzeile {html_outlook_headers(html)!r} -- die sieben festen "
         "Spalten (N/D/R/PR/Wind/Böen/Gew) waeren der unveraenderte Zustand."
     )
@@ -272,7 +279,7 @@ def test_ac3_zugestellter_klartext_zeigt_dieselben_spalten_wie_das_html():
         "Der Klartext-Teil der zugestellten Mail hat keinen Ausblick (AC-3)."
     )
     kopf = html_outlook_headers(html)[1:]
-    assert kopf == ["Niederschlag", "Böen"], f"Vorbedingung (AC-2): {kopf!r}"
+    assert kopf == ["Niederschlag", "Böen", _ACC], f"Vorbedingung (AC-2): {kopf!r}"
     zeile = block.splitlines()[1]
     positionen = [zeile.find(label) for label in kopf]
     assert all(p >= 0 for p in positionen), (
@@ -322,7 +329,7 @@ def test_ac14_manipulierte_auswahl_erreicht_die_zugestellte_mail_nicht():
                  enabled_ids={"precipitation"})
     html, plain = _zugestellte_teile(trip)
 
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag"], (
+    assert html_outlook_headers(html) == ["Tag", "Niederschlag", _ACC], (
         f"Kopfzeile {html_outlook_headers(html)!r}: die zugestellte Mail zeigt "
         "eine Groesse ausserhalb der Grundauswahl (AC-14)."
     )
@@ -350,7 +357,8 @@ def test_ac15_globale_abwahl_entfernt_die_spalte_im_naechsten_lauf():
     trip = _trip(outlook_metrics=[NIEDERSCHLAG, BOEEN],
                  enabled_ids={"precipitation", "gust"})
     html_vorher, _ = _zugestellte_teile(trip)
-    assert html_outlook_headers(html_vorher) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html_vorher) == ["Tag", "Niederschlag", "Böen",
+                                                 _ACC], (
         f"Vorbedingung von AC-15: {html_outlook_headers(html_vorher)!r}"
     )
 
@@ -359,7 +367,7 @@ def test_ac15_globale_abwahl_entfernt_die_spalte_im_naechsten_lauf():
             mc.enabled = False
 
     html_nachher, plain_nachher = _zugestellte_teile(trip)
-    assert html_outlook_headers(html_nachher) == ["Tag", "Niederschlag"], (
+    assert html_outlook_headers(html_nachher) == ["Tag", "Niederschlag", _ACC], (
         "Nach der globalen Abwahl von 'Böen' zeigt die Vorschau die Spalte "
         f"weiterhin: {html_outlook_headers(html_nachher)!r} (AC-15)."
     )
@@ -379,7 +387,7 @@ def test_ac16_leere_grundauswahl_schneidet_auch_die_zugestellte_mail_nicht():
     html, _ = _zugestellte_teile(trip)
 
     assert html_outlook_headers(html) == [
-        "Tag", "Niederschlag", "Böen", "Schneehöhe",
+        "Tag", "Niederschlag", "Böen", "Schneehöhe", _ACC,
     ], (
         f"Kopfzeile {html_outlook_headers(html)!r}: bei leerer Grundauswahl "
         "wurde geschnitten -- Totalausfall fuer jeden Altbestand (AC-16)."
@@ -431,7 +439,7 @@ def test_ac17_eigenes_email_kanal_layout_schneidet_die_vorschau_nicht():
 
     html, plain = _zugestellte_teile(trip)
 
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html) == ["Tag", "Niederschlag", "Böen", _ACC], (
         f"Kopfzeile {html_outlook_headers(html)!r}: 'Böen' ist global aktiv "
         "und ausdruecklich gewaehlt, faellt aber wegen des E-Mail-eigenen "
         "Kanal-Layouts aus der Vorschau -- der Ausblick hat keine "
@@ -462,7 +470,7 @@ def test_ac17_ueberschrift_und_zahl_bleiben_bei_engem_kanal_layout_gepaart():
                  email_layout_ids={"gust"})
     html, _ = _zugestellte_teile(trip)
 
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html) == ["Tag", "Niederschlag", "Böen", _ACC], (
         f"Kopfzeile {html_outlook_headers(html)!r} (AC-17)."
     )
     zeilen = html_outlook_body_rows(html)
@@ -505,7 +513,8 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
                  report_overrides={"gust": {"evening_enabled": False}},
                  trend_reports=("morning", "evening"), ohne_nachtblock=True)
     html_versand, _ = _zugestellte_teile(trip, report_type="morning")
-    assert html_outlook_headers(html_versand) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html_versand) == ["Tag", "Niederschlag", "Böen",
+                                                  _ACC], (
         f"Vorbedingung: {html_outlook_headers(html_versand)!r} (AC-17)."
     )
 
@@ -574,7 +583,15 @@ def test_bestandstrip_zeigt_die_grundauswahl_in_der_zugestellten_mail():
     assert klartext is not None, (
         "Der Klartext-Ausblick eines Bestandstrips fehlt vollstaendig (AC-1)."
     )
-    ohne_acc = [z for z in klartext.splitlines()[1:] if z.strip() and "ACC" not in z]
+    # Notiz-Fortsetzungszeilen ("    ↳ …", outlook.py:311-313) gehoeren zur
+    # Zeile darueber und tragen keine Spalten -- geprueft werden die
+    # WERTZEILEN.
+    wertzeilen = [z for z in klartext.splitlines()[1:]
+                  if z.strip() and not z.lstrip().startswith("↳")]
+    assert wertzeilen, (
+        f"Der Klartext-Ausblick hat gar keine Wertzeile:\n{klartext}\n(AC-1)"
+    )
+    ohne_acc = [z for z in wertzeilen if "ACC" not in z]
     assert not ohne_acc, (
         f"Diese Klartext-Ausblick-Zeilen fuehren kein ACC: {ohne_acc!r} "
         "(#2098 AC-13/Befund C -- der Farbpunkt des HTML braucht im Klartext "

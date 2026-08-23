@@ -163,7 +163,8 @@ def test_ac1_tagesgewitter_sichtbar_trotz_none_im_aggregat():
     erwartet_html = stufe_mit_herkunft.replace("hoch", "hoch @14", 1)
     erwartet_plain = "⚡" + stufe_mit_herkunft.replace("hoch", "hoch@14", 1)
 
-    assert html_outlook_headers(html) == ["Tag", "Gewitter"], (
+    # #2098: hinter der Auswahl steht die fest angehaengte ACC-Zusatzspalte.
+    assert html_outlook_headers(html) == ["Tag", "Gewitter", "ACC"], (
         f"Testaufbau: unerwartete Kopfzeile {html_outlook_headers(html)!r}."
     )
     zeilen = html_outlook_body_rows(html)

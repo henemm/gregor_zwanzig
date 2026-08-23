@@ -39,6 +39,43 @@ from utils.geo import degrees_to_compass
 
 
 # ---------------------------------------------------------------------------
+# ACC-Stufen — EINE Quelle fuer Farbpunkt (HTML) und Wort (Klartext)
+# ---------------------------------------------------------------------------
+
+# Issue #2098 Befund C: der Farbpunkt ist im HTML der einzige Informations-
+# traeger, im Klartext braucht dieselbe Aussage ein Wort ("HTML=Normalfassung,
+# Farbe im HTML ⇒ WORT im Klartext"). Beide lesen dieselben vier Untergrenzen,
+# damit Wort und Punkt nicht auseinanderdriften koennen.
+# (Untergrenze | None = Restfall, Farbe, Klartext-Wort)
+_ACC_STUFEN = (
+    (80, "#2f8a3e", "hoch"),
+    (60, "#e3b008", "mittel"),
+    (40, "#e07b1a", "niedrig"),
+    (None, "#c52a22", "sehr niedrig"),
+)
+_ACC_KEIN_WERT = "–"
+ACC_LABEL = "ACC"
+
+
+def _acc_stufe(conf_pct) -> tuple[str, str] | None:
+    """(Farbe, Klartext-Wort) zu einer Prognose-Genauigkeit; ``None`` ohne Wert."""
+    try:
+        v = float(conf_pct)
+    except (TypeError, ValueError):
+        return None
+    for grenze, farbe, wort in _ACC_STUFEN:
+        if grenze is None or v >= grenze:
+            return farbe, wort
+    return None
+
+
+def _acc_wort(conf_pct) -> str:
+    """Klartext-Entsprechung des ACC-Farbpunkts (#2098 AC-6/AC-11/AC-12)."""
+    stufe = _acc_stufe(conf_pct)
+    return stufe[1] if stufe else _ACC_KEIN_WERT
+
+
+# ---------------------------------------------------------------------------
 # render_outlook_table — extrahiert aus html.py (Z.1116-1271, AC-1/AC-2)
 # ---------------------------------------------------------------------------
 
@@ -100,21 +137,12 @@ def render_outlook_table(
 
     # 4-stufiger ACC-Dot aus confidence_pct
     # hoch>=80=ok, mittel>=60=caution, niedrig>=40=warn, sehr_niedrig<40=danger
+    # #2098: Stufen aus `_ACC_STUFEN` -- dieselbe Quelle wie das Klartext-Wort.
     def _acc_dot(conf_pct) -> str:
-        if conf_pct is None:
-            return "–"
-        try:
-            v = float(conf_pct)
-        except (TypeError, ValueError):
-            return "–"
-        if v >= 80:
-            color = "#2f8a3e"
-        elif v >= 60:
-            color = "#e3b008"
-        elif v >= 40:
-            color = "#e07b1a"
-        else:
-            color = "#c52a22"
+        stufe = _acc_stufe(conf_pct)
+        if stufe is None:
+            return _ACC_KEIN_WERT
+        color = stufe[0]
         return (
             f'<span style="display:inline-block;width:10px;height:10px;'
             f'border-radius:50%;background:{color};"></span>'
@@ -126,6 +154,9 @@ def render_outlook_table(
         f'padding:6px 4px;text-align:center;font-family:{FONT_DATA};'
         f'font-size:10px;font-weight:600;color:#3a3835;white-space:nowrap;"'
     )
+    # #2098 Befund B: die ACC-Kopfzelle gilt fuer BEIDE Zweige -- der Trip
+    # laeuft seit #1848 A3 praktisch immer ueber den konfigurierbaren.
+    _acc_th = f'<th {_oh_style}>{ACC_LABEL}</th>' if show_acc else ""
     if metrics is not None:
         from output.renderers.compare_outlook_metric_ids import outlook_columns
 
@@ -145,6 +176,15 @@ def render_outlook_table(
             texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
             if gew_index is not None:
                 texte[gew_index] = thunder_cell_html(format_trend_tokens(stage), stage)
+            # #2098 Befund B: ACC HINTER den gewaehlten Spalten -- am
+            # `outlook_columns()`/`cells`-Mechanismus vorbei, damit
+            # `confidence` nie eine waehlbare Metrik wird (ADR-0005/#710).
+            # Kopf- und Datenzelle haengen an DEMSELBEN `show_acc`, ein
+            # Auseinanderlaufen von Beschriftung und Wert ist damit
+            # ausgeschlossen (AC-10).
+            acc_td = (
+                _otd(_acc_dot(stage.get("confidence_pct"))) if show_acc else ""
+            )
             body += (
                 '<tr>' + _otd(stage.get("weekday", "–"))
                 + "".join(
@@ -152,17 +192,17 @@ def render_outlook_table(
                          bg=cell_bg[i] if i < len(cell_bg) else "")
                     for i, text in enumerate(texte)
                 )
+                + acc_td
                 + '</tr>'
             )
         return (
             '<table cellpadding="0" cellspacing="0" '
             'style="border-collapse:collapse;width:100%;'
             'border-top:2px solid #1d1c1a;">'
-            f'<thead><tr><th {_oh_style}>Tag</th>{head}</tr></thead>'
+            f'<thead><tr><th {_oh_style}>Tag</th>{head}{_acc_th}</tr></thead>'
             f'<tbody>{body}</tbody></table>'
         )
 
-    _acc_th = f'<th {_oh_style}>ACC</th>' if show_acc else ""
     outlook_thead = (
         f'<thead><tr>'
         f'<th {_oh_style}>Tag</th>'
@@ -270,9 +310,11 @@ def render_outlook_plain(
 ) -> str:
     """Rendert den Klartext-Ausblick-Block.
 
-    ``show_acc`` existiert fuer Signatur-Symmetrie mit
-    ``render_outlook_table``; der Klartext-Ausblick zeigte schon im
-    Ist-Zustand keine ACC-Spalte, daher ohne Effekt.
+    ``show_acc`` haengt im konfigurierbaren Zweig (``metrics`` gesetzt) das
+    ACC-Wort hinter die gewaehlten Spalten -- die Klartext-Entsprechung des
+    HTML-Farbpunkts (#2098 Befund C). Der Altform-Zweig zeigte ACC noch nie
+    und bleibt unveraendert; ``show_acc=False`` (Ortsvergleich) laesst die
+    Spalte in beiden Zweigen entfallen.
 
     ``metrics`` (#1361): gesetzte Auswahl ersetzt die festen Wert-Tokens
     durch die gewaehlten Groessen. ``heading`` (#1368): Compare schreibt
@@ -299,7 +341,13 @@ def render_outlook_plain(
             if gew_index is not None:
                 texte[gew_index] = thunder_cell_plain(format_trend_tokens(stage), stage)
             values = "  ".join(
-                f"{c['label']} {texte[i]}" for i, c in enumerate(columns)
+                [f"{c['label']} {texte[i]}" for i, c in enumerate(columns)]
+                # #2098 Befund C: der ACC-Farbpunkt des HTML ist fuer
+                # Klartext-Leser unsichtbar -- dieselbe Aussage als Wort,
+                # aus derselben Stufenquelle, an derselben Position
+                # (hinter den gewaehlten Spalten) wie im HTML.
+                + ([f"{ACC_LABEL} {_acc_wort(stage.get('confidence_pct'))}"]
+                   if show_acc else [])
             )
             # #1848 A3: Etappenname und Notiz stehen auch hier -- der feste
             # Zweig darunter fuehrt beide seit jeher, und seit A3 laeuft JEDE

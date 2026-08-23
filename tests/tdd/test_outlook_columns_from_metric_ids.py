@@ -307,7 +307,9 @@ def test_ac3_unaufloesbare_auswahl_zeigt_die_grundauswahl_und_warnt(caplog):
          if mc.metric_id in (dc.allowed_metric_ids_for_report_type("evening") or set())]
     )
     erwartet = [c["label"] for c in outlook_columns(grund)]
-    assert kopf == ["Tag"] + erwartet, (
+    # #2098: die fest angehaengte ACC-Zusatzspalte steht hinter der Auswahl
+    # und stammt nicht aus `outlook_columns()` (#710 unberuehrt).
+    assert kopf == ["Tag"] + erwartet + ["ACC"], (
         f"Der Ausblick zeigt die Kopfzeile {kopf!r} statt der Grundauswahl "
         f"{erwartet!r} (AC-3)."
     )

@@ -50,6 +50,10 @@ TEMPERATUR = "temperature"
 GEWITTER = "thunder"
 SCHNEEHOEHE = "snow_depth"
 CONFIDENCE = "confidence"
+# #2098 AC-13: ACC ist seit der Behebung eine fest angehaengte Zusatzspalte
+# HINTER der Auswahl -- ausserhalb des Metrik-Systems, damit ADR-0005/#710
+# (Confidence nicht waehlbar) unberuehrt bleibt.
+_ACC = "ACC"
 
 # Die EINE dokumentierte Abweichung zwischen Aufzeichnung und Sollstand
 # (AC-8 / Implementation Details 5): `temp_lo` ist `summary.temp_min_c`, das
@@ -202,7 +206,7 @@ def test_ac5_spalten_erscheinen_in_auswahlreihenfolge_im_html():
                                outlook_rows(metrics=auswahl))
 
     assert html_outlook_headers(html) == [
-        "Tag", "Gewitter", "Temperatur", "Niederschlag",
+        "Tag", "Gewitter", "Temperatur", "Niederschlag", _ACC,
     ], (
         f"Kopfzeile {html_outlook_headers(html)!r} folgt nicht der "
         "Auswahlreihenfolge. Katalog-Reihenfolge waere ['Niederschlag', "
@@ -295,7 +299,7 @@ def test_ac9_aktive_auswahl_zeigt_keine_abkuerzungs_legende_mehr():
     html, _ = render_trip_mail(display_config(outlook_metrics=auswahl),
                                outlook_rows(metrics=auswahl))
 
-    assert html_outlook_headers(html) == ["Tag", "Böen", "Niederschlag"], (
+    assert html_outlook_headers(html) == ["Tag", "Böen", "Niederschlag", _ACC], (
         f"Vorbedingung von AC-9: {html_outlook_headers(html)!r}"
     )
     assert html_outlook_legend(html) is None, (
@@ -339,10 +343,27 @@ def test_ac10_manipulierte_confidence_auswahl_wird_beim_rendern_verworfen(caplog
         html, plain = render_trip_mail(display_config(outlook_metrics=auswahl),
                                        outlook_rows(metrics=auswahl))
 
+    # #2098: ACC steht seit der Behebung als fest angehaengte Zusatzspalte
+    # hinter der Auswahl (ausserhalb des Metrik-Systems, #710 unberuehrt).
+    # Massstab ist deshalb der Renderlauf OHNE den manipulierten Eintrag --
+    # abgeleitet statt im Test abgeschrieben: der manipulierte Eintrag darf
+    # die Kopfzeile ueberhaupt nicht veraendern.
     kopf = html_outlook_headers(html)
-    assert kopf == ["Tag", "Niederschlag"], (
+    ohne_manipulation = html_outlook_headers(
+        render_trip_mail(display_config(outlook_metrics=[NIEDERSCHLAG]),
+                         outlook_rows(metrics=[NIEDERSCHLAG]))[0]
+    )
+    assert kopf == ohne_manipulation, (
         f"Der manipulierte 'confidence'-Eintrag hat eine Spalte erzeugt: "
-        f"{kopf!r}. Er muss beim Rendern serverseitig verworfen werden (AC-10)."
+        f"{kopf!r} statt {ohne_manipulation!r}. Er muss beim Rendern "
+        "serverseitig verworfen werden (AC-10)."
+    )
+    from app.metric_catalog import get_metric
+    confidence_label = get_metric(CONFIDENCE).label_de
+    assert confidence_label not in kopf, (
+        f"Die Kopfzeile traegt die Katalog-Beschriftung von 'confidence' "
+        f"({confidence_label!r}) -- der Eintrag ist als waehlbare Spalte "
+        f"durchgeschlagen: {kopf!r} (AC-10/#710)."
     )
     block = plain_outlook_block(plain)
     assert block is not None and "Prognose" not in block, (
@@ -389,7 +410,10 @@ def test_ac11_jede_angebotene_groesse_erscheint_auch_als_spalte():
     # Auswertung an ("Temperatur Maximum") -- PO-Vorgabe 2026-07-27, keine
     # zwei gleich beschrifteten Spalten. Gegen ``label`` verglichen forderte
     # der Test dreimal "Temperatur" und damit das Gegenteil der Vorgabe.
-    assert kopf[1:] == [e["ueberschrift"] for e in soll], (
+    # #2098: die fest angehaengte ACC-Zusatzspalte steht HINTER der Auswahl
+    # und stammt nicht aus dem Picker-Katalog (#710) -- sie gehoert deshalb
+    # zur Erwartung, nicht zum Soll aus dem Katalog.
+    assert kopf[1:] == [e["ueberschrift"] for e in soll] + [_ACC], (
         "Gerenderte Spalten weichen von den im Picker angebotenen Groessen ab. "
         f"Fehlend: {[e['ueberschrift'] for e in soll if e['ueberschrift'] not in kopf]!r} "
         f"(AC-11)"
@@ -412,7 +436,7 @@ def test_ac14_nicht_grundausgewaehlte_groesse_erscheint_in_keinem_teil():
     # Zeilen wie ein korrekt schneidender Scheduler sie baut (s. Dateikopf).
     html, plain = render_trip_mail(dc, outlook_rows(metrics=[NIEDERSCHLAG]))
 
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag"], (
+    assert html_outlook_headers(html) == ["Tag", "Niederschlag", _ACC], (
         f"Kopfzeile {html_outlook_headers(html)!r}: eine Groesse ausserhalb "
         "der Grundauswahl erscheint. Die Vorschau darf nur abwaehlen, nie "
         "hinzufuegen (AC-14)."
@@ -458,7 +482,7 @@ def test_ac16_leere_grundauswahl_schneidet_die_vorschau_nicht():
     html, plain = render_trip_mail(dc, outlook_rows(metrics=auswahl))
 
     assert html_outlook_headers(html) == [
-        "Tag", "Niederschlag", "Böen", "Schneehöhe",
+        "Tag", "Niederschlag", "Böen", "Schneehöhe", _ACC,
     ], (
         f"Kopfzeile {html_outlook_headers(html)!r}: bei leerer Grundauswahl "
         "wurde geschnitten. D4: kein Maximum definiert -> nicht schneiden, "
