@@ -276,6 +276,12 @@ Preview-Abhängigkeit vom Onset-Pfad.
   - **Längen-Budget insgesamt unkritisch** (Limit 140, harter Endschnitt `body[:limit]`):
     Trip mit Segmentnamen +3 Zeichen, Trip-km-Rückfall +4 Zeichen, Compare mit kurzem
     Ortsnamen −4 Zeichen (kürzer als vorher), nur der lange Ortsname wächst nennenswert.
+  - **2026-08-23 geschlossen (#2078):** Der harte Endschnitt `body[:limit]` konnte bei
+    ausreichend langem Ortsnamen mitten ins Zeit-Token schneiden (`Sa0:40` → `Sa0:4`,
+    liest sich wie eine andere echte Uhrzeit). Fix in
+    `docs/specs/modules/fix_2078_onset_sms_zeit_token_schnitt.md`: Kopf-Anteil wird jetzt
+    VOR dem Zusammenbau auf 24 Zeichen gekappt (analog `_render_sms_corridor_only`), der
+    harte Endschnitt bleibt als Sicherheitsnetz bestehen.
 - **Kurznachricht wertet weiterhin nur das führende Event aus** — kein `+N`-Zähler, PO-Entscheid
   3b. Bei mehreren gleichzeitig auslösenden Orten verschweigt die Nachricht die übrigen; das
   ist gewollt (ein Zähler würde Vollständigkeit versprechen, die er nicht einlöst), gehört aber
