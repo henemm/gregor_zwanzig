@@ -111,6 +111,12 @@ def _convert_trip_to_segments(trip: Trip, target_date: date) -> list[TripSegment
     return segments
 ```
 
+> **Hinweis (2026-08-23, #2109):** Diese Skizze zeigt den ursprünglichen Story-3-Entwurf. Die
+> heutige Implementierung ruft in `_convert_trip_to_segments` zusätzlich
+> `backfill_stage_distances()` auf und persistiert das nachgerüstete Trip-Objekt via
+> `self._last_converted_trip` (Instanz-Attribut-Seitenkanal) an die Aufrufer zurück — Details in
+> `docs/specs/modules/fix_2109_kilometrierung_backfill_propagation.md`.
+
 ### 2. Active Trip Filter
 
 Nur Trips mit Stage fuer heute (Morning) oder morgen (Evening) werden verarbeitet:
