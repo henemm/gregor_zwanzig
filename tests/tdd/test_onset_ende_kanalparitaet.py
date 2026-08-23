@@ -42,6 +42,7 @@ from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 
 import pytest
+from freezegun import freeze_time
 
 import output.channels.telegram as tg_module
 from app.config import Settings
@@ -55,19 +56,34 @@ from tests.helpers.nowcast_gate_fixtures import (
     TRIP_LAT, TRIP_LON, TRIP_ZONE, clean_uid, fresh_uid, make_trip,
     quiet_window_elsewhere, radar_service, reset_radar_cache,
 )
-
-# Langform-Wortlaut (#2020 S2), mit gefangener Uhrzeit.
-_LANGFORM_RE = re.compile(r"letzter Regen gegen (\d{1,2}:\d{2})")
-# Kurzform: Beginn-Token, unmittelbar gefolgt vom MINUTENGENAUEN Ende-Token
-# (`@HH:MM`). Kein optionaler Minutenteil: die Spec ist an dieser Stelle
-# uneinheitlich, den Ausschlag gibt AC-16 (dort, wo die exakte Laenge zaehlt,
-# budgetiert sie `@23:59`) sowie die Konsistenz mit dem Beginn-Token aus #2046
-# (`R2.5@18:00`). Die Toleranz NICHT wiederherstellen — ein Ausdruck, der
-# `@20` und `@20:00` gleichermassen annimmt, bewacht keines der beiden
-# Formate.
-_KURZFORM_RE = re.compile(
-    r"@(?P<beginn>\d{1,2}:\d{2})@(?P<ende>\d{1,2}:\d{2})\b"
+from tests.helpers.tagesbezug import (
+    KURZFORM_ZEIT_TOKEN, expected_day_and_time, extract_day_and_time,
 )
+
+# Issue #2096: der WERT (Tagesbezug + Uhrzeit) kommt aus
+# `tests/helpers/tagesbezug.py` — eine nackte `HH:MM`-Regex traf ab ~21:05
+# UTC nicht mehr, weil der Renderer bei Tagesuebergang korrekt `morgen 00:12`
+# bzw. `Mo1:18` schreibt.
+#
+# Was hier als Regex BLEIBT, ist allein die STRUKTUR: das Ende-Token haengt
+# UNMITTELBAR am Beginn-Token, und beide sind minutengenau (`@HH:MM`, kein
+# optionaler Minutenteil — die Spec ist uneinheitlich, den Ausschlag gibt
+# AC-16, die dort `@23:59` budgetiert). Die Toleranz NICHT wiederherstellen:
+# ein Ausdruck, der `@20` und `@20:00` gleichermassen annimmt, bewacht keines
+# der beiden Formate. Der Tagesbezug ist in diesem Ausdruck bewusst optional
+# — geprueft wird er nicht hier, sondern gegen den hergeleiteten Wert.
+_KURZFORM_STRUKTUR_RE = re.compile(
+    rf"@{KURZFORM_ZEIT_TOKEN}@{KURZFORM_ZEIT_TOKEN}"
+)
+
+# Gestellte Uhr statt Wanduhr (#2096): mittags, weit von beiden
+# Mitternachtsgrenzen. Den Tagesuebergang selbst faehrt
+# `test_tagesbezug_ueberlauf_spaetuhr.py` als eigener Fall — weggefroren
+# waere er nicht bewacht, sondern umgangen. Nebenwirkung: beide Flaechen
+# sehen denselben Zeitpunkt, die frueher noetige Ein-Minuten-Toleranz
+# entfaellt und verglichen wird auf Gleichheit.
+_GEFRORENE_UHR = "2026-08-22 12:00:00+00:00"
+_JETZT_UTC = datetime.fromisoformat(_GEFRORENE_UHR)
 
 # Nasser Block: +20 bis +80 Minuten im 10-Minuten-Raster, danach TROCKEN.
 # Das erwartete Ende ist damit von Hand hergeleitet (letzter nasser Frame vor
@@ -335,29 +351,12 @@ def _text_vom_ortsvergleich_pfad(frames, telegram_stub, monkeypatch, *, stil: st
             shutil.rmtree(d, ignore_errors=True)
 
 
-def _minuten(hhmm: str) -> int:
-    stunde, _, minute = hhmm.partition(":")
-    return int(stunde) * 60 + (int(minute) if minute else 0)
-
-
-def _abstand_minuten(a: str, b: str) -> int:
-    """Abstand zweier `HH:MM`-Angaben in Minuten, ueber Mitternacht hinweg."""
-    roh = abs(_minuten(a) - _minuten(b))
-    return min(roh, 24 * 60 - roh)
-
-
-# Die beiden Laeufe liegen Sekundenbruchteile auseinander; springt dazwischen
-# die Minute um, unterscheiden sich die aus "Minuten ab jetzt" zurueck-
-# gerechneten Uhrzeiten um genau 1 Minute. Groesser darf der Abstand nicht
-# sein — das waere ein echter Wertunterschied zwischen den Flaechen.
-_WANDUHR_TOLERANZ_MIN = 1
-
-
 # ---------------------------------------------------------------------------
 # AC-15 — Langform: Trip und Ortsvergleich nennen dasselbe Ende
 # ---------------------------------------------------------------------------
 
 
+@freeze_time(_GEFRORENE_UHR)
 def test_ac15_langform_traegt_in_beiden_flaechen_dasselbe_ende(
     telegram_stub, monkeypatch,
 ):
@@ -368,12 +367,13 @@ def test_ac15_langform_traegt_in_beiden_flaechen_dasselbe_ende(
     beide auf denselben Koordinaten und im reichen Telegram-Stil
     WHEN beide Alarme tatsaechlich abgesetzt werden
     THEN traegt die Ende-Angabe in BEIDEN Flaechen denselben Wortlaut
-    (`letzter Regen gegen HH:MM`) und denselben Wert — keine Flaeche zeigt
-    das Ende, ohne dass es die andere auch taete.
+    (`letzter Regen gegen ...`) und dasselbe Paar aus Tagesbezug und Uhrzeit —
+    keine Flaeche zeigt das Ende, ohne dass es die andere auch taete.
 
     Zusaetzlich wird der Wert gegen das aus den Frames HERGELEITETE Ende
     (Beginn + 80 Min) geprueft, nicht nur die beiden Flaechen gegeneinander:
-    zwei gleich falsche Angaben waeren sonst gruen.
+    zwei gleich falsche Angaben waeren sonst gruen. Issue #2096: geprueft
+    wird das PAAR — eine Uhrzeit ohne ihren Kalendertag ist keine Aussage.
 
     RED heute: `NowcastResult` kennt `event_end_minutes` nicht — beide Texte
     nennen ueberhaupt kein Ende."""
@@ -384,33 +384,21 @@ def test_ac15_langform_traegt_in_beiden_flaechen_dasselbe_ende(
         frames, telegram_stub, monkeypatch, stil="rich",
     )
 
-    trip_treffer = _LANGFORM_RE.search(trip_text)
-    cmp_treffer = _LANGFORM_RE.search(cmp_text)
-    fehlend = [
-        name for name, t in (("Trip", trip_treffer), ("Ortsvergleich", cmp_treffer))
-        if t is None
-    ]
-    assert not fehlend, (
-        f"RED: diese Flaeche(n) nennen kein Ende: {fehlend}\n"
-        f"  Trip          = {trip_text!r}\n  Ortsvergleich = {cmp_text!r}"
+    erwartet = expected_day_and_time(
+        frames.erwartetes_ende_utc, _JETZT_UTC, TRIP_ZONE,
     )
-
-    erwartet = frames.erwartetes_ende_utc.astimezone(TRIP_ZONE).strftime("%H:%M")
-    for name, treffer, text in (
-        ("Trip", trip_treffer, trip_text),
-        ("Ortsvergleich", cmp_treffer, cmp_text),
-    ):
-        assert _abstand_minuten(treffer.group(1), erwartet) <= _WANDUHR_TOLERANZ_MIN, (
-            f"{name} nennt {treffer.group(1)} statt des aus den Frames "
-            f"hergeleiteten Endes {erwartet}: {text!r}"
+    gemessen = {
+        name: extract_day_and_time(text, "letzter Regen gegen")
+        for name, text in (("Trip", trip_text), ("Ortsvergleich", cmp_text))
+    }
+    for name, paar in gemessen.items():
+        assert paar == erwartet, (
+            f"{name} nennt als Ende {paar!r} statt des aus den Frames "
+            f"hergeleiteten Paares {erwartet!r}: "
+            f"{(trip_text if name == 'Trip' else cmp_text)!r}"
         )
-
-    assert _abstand_minuten(
-        trip_treffer.group(1), cmp_treffer.group(1)
-    ) <= _WANDUHR_TOLERANZ_MIN, (
-        "Trip und Ortsvergleich nennen verschiedene Ende-Uhrzeiten:\n"
-        f"  Trip          = {trip_treffer.group(1)}\n"
-        f"  Ortsvergleich = {cmp_treffer.group(1)}"
+    assert gemessen["Trip"] == gemessen["Ortsvergleich"], (
+        f"Trip und Ortsvergleich nennen verschiedene Enden: {gemessen!r}"
     )
 
 
@@ -419,6 +407,7 @@ def test_ac15_langform_traegt_in_beiden_flaechen_dasselbe_ende(
 # ---------------------------------------------------------------------------
 
 
+@freeze_time(_GEFRORENE_UHR)
 def test_ac15_kurzform_traegt_in_beiden_flaechen_dasselbe_ende_token(
     telegram_stub, monkeypatch,
 ):
@@ -427,7 +416,8 @@ def test_ac15_kurzform_traegt_in_beiden_flaechen_dasselbe_ende_token(
     und Premium-SMS bekommen
     WHEN beide Alarme abgesetzt werden
     THEN traegt das minutengenaue Ende-Token (`@HH:MM`) in BEIDEN Flaechen
-    denselben Wert.
+    dasselbe Paar aus Tagesbezug (DE-Wochentagskuerzel) und Uhrzeit, und es
+    haengt UNMITTELBAR am Beginn-Token.
 
     Warum eigens geprueft: die Kurzform ist ein anderer Codepfad als die
     Langform (`_render_sms_onset` statt `_render_telegram_onset`), und auf der
@@ -449,31 +439,21 @@ def test_ac15_kurzform_traegt_in_beiden_flaechen_dasselbe_ende_token(
         frames, telegram_stub, monkeypatch, stil="kurzform",
     )
 
-    trip_treffer = _KURZFORM_RE.search(trip_text)
-    cmp_treffer = _KURZFORM_RE.search(cmp_text)
-    fehlend = [
-        name for name, t in (("Trip", trip_treffer), ("Ortsvergleich", cmp_treffer))
-        if t is None
-    ]
-    assert not fehlend, (
-        f"RED: diese Flaeche(n) tragen kein Ende-Token: {fehlend}\n"
-        f"  Trip          = {trip_text!r}\n  Ortsvergleich = {cmp_text!r}"
+    erwartet = expected_day_and_time(
+        frames.erwartetes_ende_utc, _JETZT_UTC, TRIP_ZONE, style="kurzform",
     )
-
-    erwartet = frames.erwartetes_ende_utc.astimezone(TRIP_ZONE).strftime("%H:%M")
-    for name, treffer, text in (
-        ("Trip", trip_treffer, trip_text),
-        ("Ortsvergleich", cmp_treffer, cmp_text),
-    ):
-        assert _abstand_minuten(treffer.group("ende"), erwartet) <= _WANDUHR_TOLERANZ_MIN, (
-            f"{name} nennt das Ende {treffer.group('ende')!r} statt des aus "
-            f"den Frames hergeleiteten Endes {erwartet}: {text!r}"
+    gemessen: dict[str, tuple[str | None, str]] = {}
+    for name, text in (("Trip", trip_text), ("Ortsvergleich", cmp_text)):
+        assert _KURZFORM_STRUKTUR_RE.search(text), (
+            f"RED: {name} traegt kein minutengenaues Ende-Token unmittelbar "
+            f"am Beginn-Token: {text!r}"
+        )
+        gemessen[name] = extract_day_and_time(text, "@", style="kurzform")
+        assert gemessen[name] == erwartet, (
+            f"{name} nennt als Ende {gemessen[name]!r} statt des aus den "
+            f"Frames hergeleiteten Paares {erwartet!r}: {text!r}"
         )
 
-    assert _abstand_minuten(
-        trip_treffer.group("ende"), cmp_treffer.group("ende"),
-    ) <= _WANDUHR_TOLERANZ_MIN, (
-        "Trip und Ortsvergleich tragen verschiedene Ende-Token:\n"
-        f"  Trip          = {trip_treffer.group('ende')!r}\n"
-        f"  Ortsvergleich = {cmp_treffer.group('ende')!r}"
+    assert gemessen["Trip"] == gemessen["Ortsvergleich"], (
+        f"Trip und Ortsvergleich tragen verschiedene Ende-Token: {gemessen!r}"
     )

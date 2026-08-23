@@ -54,7 +54,6 @@ import dataclasses
 import http.server
 import inspect
 import json
-import re
 import shutil
 import socket
 import threading
@@ -62,6 +61,7 @@ from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 
 import pytest
+from freezegun import freeze_time
 
 import output.channels.telegram as tg_module
 from app.config import Settings
@@ -75,12 +75,22 @@ from tests.helpers.nowcast_gate_fixtures import (
     TRIP_LAT, TRIP_LON, TRIP_ZONE, clean_uid, fresh_uid, make_trip,
     quiet_window_elsewhere, radar_service, reset_radar_cache,
 )
+from tests.helpers.tagesbezug import expected_day_and_time, extract_day_and_time
 
-# Langform-Wortlaute, mit gefangener Uhrzeit.
-_REACH_RE = re.compile(r"Radar reicht bis (\d{1,2}:\d{2})")
-_GUETE_RE = re.compile(r"Ortsangabe ab (\d{1,2}:\d{2}) unscharf")
-# Kurzform: das Guete-Zeichen `?` unmittelbar hinter einem Zeit-Token.
-_KURZFORM_GUETE_RE = re.compile(r"@(?P<beginn>\d{1,2}:\d{2})\?")
+# Issue #2096: gestellte Uhr statt Wanduhr. Die frueheren nackten
+# `HH:MM`-Regexe trafen ab ~21:05 UTC nicht mehr, weil der Renderer bei
+# Tagesuebergang korrekt `morgen 00:12` schreibt -- die Ampel wurde abends rot
+# ohne Produktivdefekt. Geprueft wird jetzt das PAAR aus Tagesbezug und
+# Uhrzeit (`tests/helpers/tagesbezug.py`), gestellt wird die Uhr auf die
+# Mittagsstunde: der Tagesuebergang selbst laeuft in
+# `test_tagesbezug_ueberlauf_spaetuhr.py` als eigener Fall, der ihn
+# tatsaechlich durchfaehrt statt ihn wegzufrieren.
+#
+# Nebenwirkung, die den Vergleich schaerft: beide Flaechen sehen unter der
+# gestellten Uhr denselben Zeitpunkt. Die frueher noetige Ein-Minuten-Toleranz
+# (`_abstand_minuten`) entfaellt -- verglichen wird auf Gleichheit.
+_GEFRORENE_UHR = "2026-08-22 12:00:00+00:00"
+_JETZT_UTC = datetime.fromisoformat(_GEFRORENE_UHR)
 
 # Nasser Block: +20 bis +150 Minuten im 10-Minuten-Raster, danach TROCKEN,
 # danach KEINE weiteren Frames mehr.
@@ -341,22 +351,6 @@ def _text_vom_ortsvergleich_pfad(frames, telegram_stub, monkeypatch, *, stil: st
             shutil.rmtree(d, ignore_errors=True)
 
 
-def _minuten(hhmm: str) -> int:
-    stunde, _, minute = hhmm.partition(":")
-    return int(stunde) * 60 + (int(minute) if minute else 0)
-
-
-def _abstand_minuten(a: str, b: str) -> int:
-    roh = abs(_minuten(a) - _minuten(b))
-    return min(roh, 24 * 60 - roh)
-
-
-# Die beiden Laeufe liegen Sekundenbruchteile auseinander; springt dazwischen
-# die Minute um, unterscheiden sich die zurueckgerechneten Uhrzeiten um
-# hoechstens 1 Minute -- kein echter Wertunterschied.
-_WANDUHR_TOLERANZ_MIN = 1
-
-
 def test_prueling_stammt_aus_diesem_arbeitsbaum():
     """Vorbedingung (kein AC): Alarm-Services werden RELATIV ZU DIESER
     Testdatei aufgeloest."""
@@ -377,6 +371,7 @@ def test_prueling_stammt_aus_diesem_arbeitsbaum():
 # ---------------------------------------------------------------------------
 
 
+@freeze_time(_GEFRORENE_UHR)
 def test_ac14_langform_traegt_in_beiden_flaechen_reichweite_und_guete(
     telegram_stub, monkeypatch,
 ):
@@ -387,10 +382,14 @@ def test_ac14_langform_traegt_in_beiden_flaechen_reichweite_und_guete(
     (`CompareRadarAlertService.check_all_compare_presets`), beide im reichen
     Telegram-Stil
     WHEN beide Alarme tatsaechlich abgesetzt werden
-    THEN tragen BEIDE Texte dieselbe Reichweite (`Radar reicht bis HH:MM`)
-    UND dieselbe Guete-Grenzzeit (`Ortsangabe ab HH:MM unscharf`) -- gegen
-    das aus den Frames HERGELEITETE Ende geprueft, nicht nur gegeneinander
-    (zwei gleich falsche Angaben waeren sonst gruen).
+    THEN tragen BEIDE Texte dieselbe Reichweite (`Radar reicht bis ...`)
+    UND dieselbe Guete-Grenzzeit (`Ortsangabe ab ... unscharf`) -- gegen
+    das aus den Frames HERGELEITETE Paar aus TAGESBEZUG und Uhrzeit geprueft,
+    nicht nur gegeneinander (zwei gleich falsche Angaben waeren sonst gruen).
+
+    Issue #2096: geprueft wird das Paar, nicht die nackte `HH:MM`-Form. Eine
+    Uhrzeit ohne ihren Kalendertag ist auf der Huette am Karnischen Hoehenweg
+    keine Aussage, sondern eine Vermutung.
 
     RED heute: `RadarAlertRequest`/`NowcastResult`/`OnsetEvent` kennen die
     neuen Felder nicht -- keiner der beiden Texte nennt Reichweite oder
@@ -402,57 +401,24 @@ def test_ac14_langform_traegt_in_beiden_flaechen_reichweite_und_guete(
         frames, telegram_stub, monkeypatch, stil="rich",
     )
 
-    trip_reach = _REACH_RE.search(trip_text)
-    cmp_reach = _REACH_RE.search(cmp_text)
-    fehlend_reach = [
-        n for n, t in (("Trip", trip_reach), ("Ortsvergleich", cmp_reach)) if t is None
-    ]
-    assert not fehlend_reach, (
-        f"RED: diese Flaeche(n) nennen keine Reichweite: {fehlend_reach}\n"
-        f"  Trip          = {trip_text!r}\n  Ortsvergleich = {cmp_text!r}"
-    )
-
-    erwartete_reichweite = (
-        frames.erwartete_reichweite_utc.astimezone(TRIP_ZONE).strftime("%H:%M")
-    )
-    for name, treffer, text in (
-        ("Trip", trip_reach, trip_text), ("Ortsvergleich", cmp_reach, cmp_text),
+    for anker, ziel_utc, was in (
+        ("Radar reicht bis", frames.erwartete_reichweite_utc, "Reichweite"),
+        ("Ortsangabe ab", frames.erwartete_guete_grenze_utc, "Guete-Grenzzeit"),
     ):
-        assert _abstand_minuten(treffer.group(1), erwartete_reichweite) <= _WANDUHR_TOLERANZ_MIN, (
-            f"{name} nennt {treffer.group(1)} statt der aus den Frames "
-            f"hergeleiteten Reichweite {erwartete_reichweite}: {text!r}"
+        erwartet = expected_day_and_time(ziel_utc, _JETZT_UTC, TRIP_ZONE)
+        gemessen = {
+            name: extract_day_and_time(text, anker)
+            for name, text in (("Trip", trip_text), ("Ortsvergleich", cmp_text))
+        }
+        for name, paar in gemessen.items():
+            assert paar == erwartet, (
+                f"{name} nennt als {was} {paar!r} statt des aus den Frames "
+                f"hergeleiteten Paares {erwartet!r}: "
+                f"{(trip_text if name == 'Trip' else cmp_text)!r}"
+            )
+        assert gemessen["Trip"] == gemessen["Ortsvergleich"], (
+            f"Trip und Ortsvergleich nennen verschiedene {was}n: {gemessen!r}"
         )
-    assert _abstand_minuten(trip_reach.group(1), cmp_reach.group(1)) <= _WANDUHR_TOLERANZ_MIN, (
-        "Trip und Ortsvergleich nennen verschiedene Reichweiten:\n"
-        f"  Trip          = {trip_reach.group(1)}\n"
-        f"  Ortsvergleich = {cmp_reach.group(1)}"
-    )
-
-    trip_guete = _GUETE_RE.search(trip_text)
-    cmp_guete = _GUETE_RE.search(cmp_text)
-    fehlend_guete = [
-        n for n, t in (("Trip", trip_guete), ("Ortsvergleich", cmp_guete)) if t is None
-    ]
-    assert not fehlend_guete, (
-        f"RED: diese Flaeche(n) nennen keine Guete-Zeile: {fehlend_guete}\n"
-        f"  Trip          = {trip_text!r}\n  Ortsvergleich = {cmp_text!r}"
-    )
-
-    erwartete_guete = (
-        frames.erwartete_guete_grenze_utc.astimezone(TRIP_ZONE).strftime("%H:%M")
-    )
-    for name, treffer, text in (
-        ("Trip", trip_guete, trip_text), ("Ortsvergleich", cmp_guete, cmp_text),
-    ):
-        assert _abstand_minuten(treffer.group(1), erwartete_guete) <= _WANDUHR_TOLERANZ_MIN, (
-            f"{name} nennt {treffer.group(1)} statt der hergeleiteten "
-            f"Guete-Grenzzeit {erwartete_guete}: {text!r}"
-        )
-    assert _abstand_minuten(trip_guete.group(1), cmp_guete.group(1)) <= _WANDUHR_TOLERANZ_MIN, (
-        "Trip und Ortsvergleich nennen verschiedene Guete-Grenzzeiten:\n"
-        f"  Trip          = {trip_guete.group(1)}\n"
-        f"  Ortsvergleich = {cmp_guete.group(1)}"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -460,6 +426,7 @@ def test_ac14_langform_traegt_in_beiden_flaechen_reichweite_und_guete(
 # ---------------------------------------------------------------------------
 
 
+@freeze_time(_GEFRORENE_UHR)
 def test_ac14_kurzform_traegt_in_beiden_flaechen_dasselbe_guete_zeichen(
     telegram_stub, monkeypatch,
 ):
@@ -467,13 +434,17 @@ def test_ac14_kurzform_traegt_in_beiden_flaechen_dasselbe_guete_zeichen(
     Telegram-KURZSTIL -- dem Stil, der denselben `sms_body` traegt, den SMS
     und Premium-SMS bekommen
     WHEN beide Alarme abgesetzt werden
-    THEN traegt das Guete-Zeichen `?` in BEIDEN Flaechen denselben
-    Zeit-Token, und die Reichweite steht in KEINER Flaeche in der Kurzform
-    (E6).
+    THEN traegt das Guete-Zeichen `?` in BEIDEN Flaechen dasselbe Paar aus
+    Tagesbezug (DE-Wochentagskuerzel) und Zeit-Token, und die Reichweite
+    steht in KEINER Flaeche in der Kurzform (E6).
 
     Warum eigens geprueft: die Kurzform ist ein anderer Codepfad als die
     Langform, und auf der Huette am Karnischen Hoehenweg kommt NUR
     Premium-SMS an.
+
+    Issue #2096: das Guete-Zeichen haengt am LETZTEN Zeit-Token der Gruppe --
+    hier am Ende-Token. Geprueft wird deshalb gegen das aus den Frames
+    hergeleitete ENDE-Paar, nicht nur Flaeche gegen Flaeche.
 
     RED heute: keiner der beiden Texte traegt ein Guete-Zeichen."""
     frames = _FesterBlockMitReichweite()
@@ -485,28 +456,27 @@ def test_ac14_kurzform_traegt_in_beiden_flaechen_dasselbe_guete_zeichen(
         frames, telegram_stub, monkeypatch, stil="kurzform",
     )
 
-    trip_treffer = _KURZFORM_GUETE_RE.search(trip_text)
-    cmp_treffer = _KURZFORM_GUETE_RE.search(cmp_text)
-    fehlend = [
-        n for n, t in (("Trip", trip_treffer), ("Ortsvergleich", cmp_treffer))
-        if t is None
-    ]
-    assert not fehlend, (
-        f"RED: diese Flaeche(n) tragen kein Guete-Zeichen: {fehlend}\n"
-        f"  Trip          = {trip_text!r}\n  Ortsvergleich = {cmp_text!r}"
+    erwartet = expected_day_and_time(
+        frames.erwartetes_ende_utc, _JETZT_UTC, TRIP_ZONE, style="kurzform",
     )
-    assert _abstand_minuten(
-        trip_treffer.group("beginn"), cmp_treffer.group("beginn"),
-    ) <= _WANDUHR_TOLERANZ_MIN, (
+    gemessen = {
+        name: extract_day_and_time(text, "@", style="kurzform")
+        for name, text in (("Trip", trip_text), ("Ortsvergleich", cmp_text))
+    }
+    for name, paar in gemessen.items():
+        assert paar == erwartet, (
+            f"{name} haengt das Guete-Zeichen an {paar!r} statt an das "
+            f"hergeleitete Ende-Paar {erwartet!r}: "
+            f"{(trip_text if name == 'Trip' else cmp_text)!r}"
+        )
+    assert gemessen["Trip"] == gemessen["Ortsvergleich"], (
         "Trip und Ortsvergleich haengen das Guete-Zeichen an "
-        "unterschiedliche Zeit-Token:\n"
-        f"  Trip          = {trip_treffer.group('beginn')}\n"
-        f"  Ortsvergleich = {cmp_treffer.group('beginn')}"
+        f"unterschiedliche Zeit-Token: {gemessen!r}"
     )
 
-    erwartete_reichweite = (
-        frames.erwartete_reichweite_utc.astimezone(TRIP_ZONE).strftime("%H:%M")
-    )
+    erwartete_reichweite = expected_day_and_time(
+        frames.erwartete_reichweite_utc, _JETZT_UTC, TRIP_ZONE,
+    )[1]
     assert erwartete_reichweite not in trip_text, (
         f"Die Reichweite darf in der Trip-Kurzform nicht auftauchen (E6): "
         f"{trip_text!r}"

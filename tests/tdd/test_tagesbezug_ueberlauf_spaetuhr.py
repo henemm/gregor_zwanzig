@@ -54,7 +54,7 @@ _JETZT_UTC = datetime.fromisoformat(_GEFRORENE_UHR)
 
 @freeze_time(_GEFRORENE_UHR)
 def test_langform_quellenreichweite_faellt_auf_den_folgetag(
-    telegram_stub, monkeypatch,
+    telegram_stub, monkeypatch,  # noqa: F811 (importierte Fixture)
 ):
     """AC-12 (Mechanismus Langform-Reichweite) GIVEN eine gestellte Uhr, bei
     der die Quellen-Reichweite auf den Folgetag faellt
@@ -88,7 +88,7 @@ def test_langform_quellenreichweite_faellt_auf_den_folgetag(
 
 @freeze_time(_GEFRORENE_UHR)
 def test_langform_ereignisende_faellt_auf_den_folgetag(
-    telegram_stub, monkeypatch,
+    telegram_stub, monkeypatch,  # noqa: F811 (importierte Fixture)
 ):
     """AC-12 (Mechanismus Langform-Ende) GIVEN dieselbe gestellte Uhr, bei der
     das Ereignis-Ende auf den Folgetag faellt
@@ -127,7 +127,7 @@ def test_langform_ereignisende_faellt_auf_den_folgetag(
 
 @freeze_time(_GEFRORENE_UHR)
 def test_kurzform_guete_token_traegt_das_wochentagskuerzel(
-    telegram_stub, monkeypatch,
+    telegram_stub, monkeypatch,  # noqa: F811 (importierte Fixture)
 ):
     """AC-12 (Mechanismus Kurzform) GIVEN dieselbe gestellte Uhr
     WHEN beide Flaechen im Telegram-KURZSTIL gerendert werden -- dem Stil, der

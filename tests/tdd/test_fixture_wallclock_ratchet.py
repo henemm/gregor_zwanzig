@@ -188,18 +188,14 @@ _HEUTE_TRAEGER = {"date", "datetime", "date_type", "datetime_type"}
 #    arrival_local` und deckt damit auch die W1-vs-W2-Sequenz ab.
 #
 # 2) test_starkregen_kurzfristhinweis.py::_trip_with_segment_offset
-#    Die Pruefaussage IST die exakte Vorlaufzeit: 90 Minuten (jenseits von
-#    NOWCAST_HORIZON_MIN=60) darf keinen Nowcast-Abruf ausloesen, 30 Minuten
-#    schon. Jede Klemmung wuerde 90 auf weniger stauchen und den Test ins
-#    Gegenteil verkehren. „Segmentbeginn exakt +90 min, auf dem Etappentag" ist
-#    aber unrepraesentierbar, sobald weniger als 90 Minuten des lokalen Tages
-#    uebrig sind — der erste Wegpunkt MUSS auf dem Etappentag liegen
-#    (`wp_days[0]` ist strukturell 0), und ein Etappendatum ist genau ein
-#    Kalendertag. Keine Zeitzone loest das: sie verschiebt das Fenster nur.
-#    Die Datei erkennt das selbst und ueberspringt an der Grenze laut
-#    (`pytest.skip`) — sie ist dort also nicht still falsch, sondern
-#    hoerbar abwesend. Ein echter Fix braeuchte tagesuebergreifende Etappen,
-#    also Produktivcode — Gegenstand von #1667 S3, nicht von S1.
+#    ERLEDIGT und aus der Liste entfernt (#2096). Die Fixture leitete ihr
+#    Etappendatum aus der Wanduhr ab und uebersprang sich an der
+#    Mitternachtsgrenze laut selbst (`pytest.skip`) — hoerbar abwesend statt
+#    still falsch, aber eben auch: abends bewachte sie nichts. Beide Aufrufer
+#    stellen die Uhr jetzt fest (`freeze_time`); damit entfaellt sowohl der
+#    Skip als auch die Wanduhr-Ableitung des Etappendatums, und der Scanner
+#    findet die Funktion nicht mehr. Der Shrink-Waechter unten hat den
+#    veralteten Eintrag prompt gemeldet — genau seine Aufgabe.
 #
 # 🔴 Der Shrink-Waechter unten faengt nur VERALTETE Eintraege, nicht neue
 # unbegruendete: eine Ausnahmeliste kann sich strukturell nicht selbst gegen
@@ -211,7 +207,6 @@ _HEUTE_TRAEGER = {"date", "datetime", "date_type", "datetime_type"}
 # Format je Eintrag: (repo-relativer Pfad, Funktionsname)
 KNOWN_VIOLATIONS: frozenset[tuple[str, str]] = frozenset({
     ("tests/unit/test_alarm_zeitfenster_ziel.py", "_radar_mails_fuer_spaetankunft"),
-    ("tests/tdd/test_starkregen_kurzfristhinweis.py", "_trip_with_segment_offset"),
 })
 
 
