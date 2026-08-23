@@ -27,6 +27,7 @@ import json
 import shutil
 import uuid
 from datetime import date as date_type, datetime, time, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from freezegun import freeze_time
