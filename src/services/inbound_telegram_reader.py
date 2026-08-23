@@ -54,6 +54,7 @@ _SHORTCUT_MAP = {
     "/timeline_heute": "timeline_heute",
     "/timeline_morgen": "timeline_morgen",
     "/hilfe": "hilfe",
+    "/strecke": "strecke",  # Issue #2051 S4
 }
 
 
