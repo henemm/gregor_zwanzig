@@ -87,6 +87,36 @@ test('AC-5: Pausentag (0 Wegpunkte) → []', () => {
 	assert.deepEqual(computeArrivalTimes(s, s.start_time), []);
 });
 
+// =============================================================================
+// TDD RED: Issue #2110 — Track-Distanz statt Haversine, wenn die Stage
+// vollstaendig vermessen ist (distance_from_start_km je Wegpunkt).
+// Spec: docs/specs/modules/fix_2110_gui_gpx_km.md (AC-5)
+// `distance_from_start_km` existiert im `Waypoint`-Type noch NICHT (kommt in
+// Phase 6) — hier als lockeres Objekt-Literal gesetzt, `wp()` liefert den Rest.
+// =============================================================================
+
+test('AC-5: vollstaendig vermessene Stage nutzt Track-Distanz statt Haversine fuer die Ankunftszeit', () => {
+	// Haversine (42.0,9.0)→(42.009,9.0) ≈ 1.0 km → +15 min bei 4 km/h flach.
+	// Track-Distanz wird bewusst auf 4.0 km gesetzt → +60 min. Nur bei echter
+	// Track-Nutzung landet die Ankunft auf "09:00", nicht "08:15".
+	const s = stage(
+		's1',
+		[
+			{ ...wp('w1', 'Start', 42.0, 9.0, 1000), distance_from_start_km: 0 },
+			{ ...wp('w2', 'Ziel', 42.009, 9.0, 1000), distance_from_start_km: 4.0 }
+		],
+		'08:00'
+	);
+	const arrivals = computeArrivalTimes(s, s.start_time);
+	assert.equal(arrivals.length, 2);
+	assert.equal(arrivals[0], '08:00');
+	assert.equal(
+		arrivals[1],
+		'09:00',
+		`erwartet Track-Distanz 4 km → +1h Ankunft "09:00" (Haversine wäre nur ~1 km → "08:15"), erhalten ${arrivals[1]}`
+	);
+});
+
 test('AC-5: Default-Startzeit 08:00 wenn startTime fehlt', () => {
 	const s = stage('s1', [wp('w1', 'Start', 42.0, 9.0, 1000)]);
 	const arrivals = computeArrivalTimes(s);

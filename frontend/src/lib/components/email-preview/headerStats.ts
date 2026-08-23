@@ -26,9 +26,25 @@ export function haversineKm(a: Waypoint, b: Waypoint): number {
 }
 
 /**
+ * Issue #2110 — true, wenn ALLE Wegpunkte der Etappe eine echte, aus dem GPX-Track
+ * vermessene Distanz (`distance_from_start_km`) tragen. Nur dann darf die Track-Distanz
+ * statt der Haversine-Luftlinie genutzt werden; ein einziger fehlender Wert lässt die
+ * GESAMTE Etappe auf Haversine zurückfallen (kein segmentweises Mischen).
+ */
+export function stageHasFullTrackDistance(wps: Waypoint[] | null | undefined): boolean {
+	if (!wps || wps.length === 0) return false;
+	return wps.every((wp) => {
+		const d = wp?.distance_from_start_km;
+		return d !== undefined && d !== null && Number.isFinite(d);
+	});
+}
+
+/**
  * Berechnet Header-Statistiken für eine Etappe aus ihren Waypoints.
  *
- * - distanceKm: Summe der Haversine-Distanzen zwischen aufeinanderfolgenden Waypoints
+ * - distanceKm: Track-Distanz (letzter minus erster `distance_from_start_km`), wenn die
+ *   Etappe vollständig vermessen ist (#2110), sonst Summe der Haversine-Distanzen
+ *   zwischen aufeinanderfolgenden Waypoints
  * - ascentM: Summe positiver Höhendifferenzen
  * - descentM: Summe negativer Höhendifferenzen (als positiver Wert)
  * - maxElevationM: Max über alle Waypoints
@@ -48,6 +64,7 @@ export function computeHeaderStats(stage: Stage | null | undefined): HeaderStats
 		return empty;
 	}
 	const wps = stage.waypoints;
+	const useTrack = stageHasFullTrackDistance(wps);
 	let distanceKm = 0;
 	let ascentM = 0;
 	let descentM = 0;
@@ -58,11 +75,17 @@ export function computeHeaderStats(stage: Stage | null | undefined): HeaderStats
 			maxElevationM = wps[i].elevation_m;
 		}
 		if (i > 0) {
-			distanceKm += haversineKm(wps[i - 1], wps[i]);
+			if (!useTrack) distanceKm += haversineKm(wps[i - 1], wps[i]);
 			const delta = wps[i].elevation_m - wps[i - 1].elevation_m;
 			if (delta > 0) ascentM += delta;
 			else descentM += -delta;
 		}
+	}
+
+	if (useTrack) {
+		distanceKm =
+			(wps[wps.length - 1].distance_from_start_km as number) -
+			(wps[0].distance_from_start_km as number);
 	}
 
 	return {

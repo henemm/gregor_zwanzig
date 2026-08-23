@@ -86,6 +86,61 @@ test('Single waypoint: no segments, no distance, but elevation visible', () => {
 	assert.equal(stats.descentM, 0);
 });
 
+// =============================================================================
+// TDD RED: Issue #2110 — Track-Distanz statt Haversine, wenn Etappe vollständig
+// vermessen ist (distance_from_start_km je Wegpunkt).
+// Spec: docs/specs/modules/fix_2110_gui_gpx_km.md (AC-1, AC-2, AC-3)
+// `distance_from_start_km` existiert im `Waypoint`-Type noch NICHT (kommt in
+// Phase 6) — hier bewusst als lockeres Objekt-Literal gesetzt, `wp()` deckt
+// den Rest ab. `--experimental-strip-types` prüft zur Laufzeit keine Typen.
+// =============================================================================
+
+test('AC-1: vollstaendig vermessene Etappe nutzt Track-Distanz statt Haversine-Summe', () => {
+	// Haversine (47.0,11.0)→(47.009,11.0) ≈ 1.0 km (s.o.), Track-Distanz wird
+	// hier bewusst auf 5.0 km gesetzt — deutlich verschieden, damit die
+	// Assertion nur bei echter Track-Nutzung erfüllt ist.
+	const stage: Stage = {
+		id: 's1', name: 'demo', date: '2026-05-11',
+		waypoints: [
+			{ ...wp('A', 47.0, 11.0, 800), distance_from_start_km: 0 },
+			{ ...wp('B', 47.009, 11.0, 800), distance_from_start_km: 5.0 }
+		]
+	};
+	const stats = computeHeaderStats(stage);
+	assert.equal(
+		stats.distanceKm,
+		5.0,
+		`erwartet Track-Distanz 5.0 km (Haversine wäre ~1.0 km), erhalten ${stats.distanceKm}`
+	);
+});
+
+test('AC-3: teilweise vermessene Etappe (ein Wegpunkt ohne distance_from_start_km) faellt komplett auf Haversine zurueck — kein Mischen', () => {
+	const coordsOnly: Stage = {
+		id: 's1', name: 'demo', date: '2026-05-11',
+		waypoints: [
+			wp('A', 47.0, 11.0, 800),
+			wp('B', 47.003, 11.0, 900),
+			wp('C', 47.009, 11.0, 800)
+		]
+	};
+	const expectedHaversine = computeHeaderStats(coordsOnly).distanceKm;
+
+	const partiallyMeasured: Stage = {
+		id: 's1', name: 'demo', date: '2026-05-11',
+		waypoints: [
+			{ ...wp('A', 47.0, 11.0, 800), distance_from_start_km: 0 },
+			wp('B', 47.003, 11.0, 900), // fehlt: distance_from_start_km
+			{ ...wp('C', 47.009, 11.0, 800), distance_from_start_km: 5.0 }
+		]
+	};
+	const stats = computeHeaderStats(partiallyMeasured);
+	assert.equal(
+		stats.distanceKm,
+		expectedHaversine,
+		`teilweise vermessene Etappe muss exakt dem reinen Haversine-Fall entsprechen (kein Segment-Mischen), erwartet ${expectedHaversine}, erhalten ${stats.distanceKm}`
+	);
+});
+
 test('Multiple stages with various profiles', () => {
 	// Flacher Trail
 	const flat: Stage = {

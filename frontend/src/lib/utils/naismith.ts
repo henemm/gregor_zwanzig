@@ -11,7 +11,7 @@
 //
 // Distanz: gemeinsame haversineKm aus headerStats.ts (DRY, kein eigener Haversine).
 
-import { haversineKm } from '../components/email-preview/headerStats.ts';
+import { haversineKm, stageHasFullTrackDistance } from '../components/email-preview/headerStats.ts';
 import type { ActivityType, Stage } from '../types';
 
 const SPEED_FLAT_KMH = 4.0;
@@ -98,13 +98,17 @@ export function computeArrivalTimes(stage: Stage, startTime?: string, speedFlatK
 	if (!wps || wps.length === 0) return [];
 
 	const speed = speedFlatKmh ?? SPEED_FLAT_KMH;
+	// #2110: Track-Distanz nur bei vollstaendig vermessener Stage, sonst Haversine.
+	const useTrack = stageHasFullTrackDistance(wps);
 	let cur = parseStartMinutes(startTime);
 	const arrivals: string[] = [formatHHMM(Math.round(cur))];
 
 	for (let i = 1; i < wps.length; i++) {
 		const prev = wps[i - 1];
 		const wp = wps[i];
-		const dist = haversineKm(prev, wp);
+		const dist = useTrack
+			? (wp.distance_from_start_km as number) - (prev.distance_from_start_km as number)
+			: haversineKm(prev, wp);
 		const dElev = wp.elevation_m - prev.elevation_m;
 		const ascent = Math.max(0, dElev);
 		const descent = Math.max(0, -dElev);
