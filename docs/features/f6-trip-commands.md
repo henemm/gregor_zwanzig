@@ -1,6 +1,8 @@
 # Trip-Befehle — Email-Reply & Telegram (F6)
 
-**Updated:** 2026-06-13 (Briefing-Mail lesbar: D/W/G-Kürzel aus E-Mail-Betreff entfernt — neu `[GZ#GRANK] Tag 3 — Morgen — Gewitter` ohne Zahlenkürzel); 2026-06-12 (Bug #775 — Trip-Shortcode-Routing: E-Mail-Betreff trägt neuen `[GZ#XXXX]`-Shortcode als primären Routing-Key, RFC-2047-Dekodierung, toleranter Whitespace-Lookup als Fallback); 2026-06-11 (Issue #731 — Befehlssatz vereinheitlicht: abruf-zentriert (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE), PAUSE/SKIP/CONFIG entfernt); 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
+**Updated:** 2026-08-23 (Issue #2051 Scheibe S4 — neues Abfrage-Kommando `STRECKE`/`/strecke`:
+Regen-Ereignisflächen entlang der Reststrecke des aktuell aktiven Wegabschnitts, erreichbar über
+Email und Telegram); 2026-06-13 (Briefing-Mail lesbar: D/W/G-Kürzel aus E-Mail-Betreff entfernt — neu `[GZ#GRANK] Tag 3 — Morgen — Gewitter` ohne Zahlenkürzel); 2026-06-12 (Bug #775 — Trip-Shortcode-Routing: E-Mail-Betreff trägt neuen `[GZ#XXXX]`-Shortcode als primären Routing-Key, RFC-2047-Dekodierung, toleranter Whitespace-Lookup als Fallback); 2026-06-11 (Issue #731 — Befehlssatz vereinheitlicht: abruf-zentriert (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE), PAUSE/SKIP/CONFIG entfernt); 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
 
 Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
 - **Email:** Du antwortest auf einen bestehenden Report (alle 5 Minuten abgerufen)
@@ -56,6 +58,7 @@ Diese Befehle zeigen Wetter-Informationen **ohne** Trip-State zu veraendern.
 | `JETZT` / `NOW` | Nowcast (Regen/Gewitter naechste ~2h) |
 | `GEWITTER` | Gewittergefahr heutige Etappe (stuendlich) |
 | `STATUS` | Heute + kommende Etappen (ohne vergangene) |
+| `STRECKE` / `STRECKE <km>` | Regen-Ereignisflächen entlang der Reststrecke des aktuell aktiven Wegabschnitts (Issue #2051 S4) |
 | `HILFE` / `HELP` | Verfuegbare Befehle anzeigen |
 
 **Beispiel:**
@@ -64,6 +67,56 @@ HEUTE
 ```
 
 Gregor antwortet mit dem Wetter fuer die heutige Etappe.
+
+---
+
+### `STRECKE` — Regen-Ereignisflächen entlang der Reststrecke (Issue #2051 S4)
+
+Zeigt die Regen-Ereignisflächen entlang der Reststrecke des **aktuell aktiven
+Wegabschnitts** (nicht der ganzen Tagesetappe — siehe Grenze unten). Erreichbar über
+Email (Freitext `STRECKE` in der ersten Zeile) und Telegram (Freitext `strecke` oder
+Slash `/strecke`). Anders als die Kurzbefehle im Bot-Menü (Abschnitt „Telegram —
+Abfrage-Befehle" unten) taucht `/strecke` **nicht** im Telegram-Bot-Menü auf — es muss
+getippt werden.
+
+**Ohne Argument:** Ausgangspunkt ist die aktuelle Planposition.
+
+**Mit Argument** (`STRECKE 5` bzw. `/strecke 5`): Ausgangspunkt ist der selbst genannte
+km-Stand, bezogen auf die stage-kumulative Kilometrierung des aktiven Segments.
+Gültiger Bereich: `[Segment-Start-km, Segment-Ende-km]` (beide Ränder eingeschlossen),
+Dezimalwerte erlaubt. Werte außerhalb des Bereichs oder nicht-numerische Eingaben werden
+abgelehnt — kein Wetterabruf.
+
+**Antwort:**
+- Email: je Regen-Ereignisfläche eine Zeile mit km-Spanne, Zeitspanne, Intensität und
+  Quelle im Klartext (`Radar (DWD)`, `INCA (GeoSphere AT)`).
+- Telegram: dieselben Zeilen ohne Quelle-Spalte (Platzgrund).
+- Jede Antwort mit Messung schließt mit `Geprüft: km {von}-{bis}.` — der tatsächlich
+  geprüften Spanne (aus den erfolgreich abgefragten Punkten, nicht den geplanten).
+
+**Drei ehrliche Sonderfälle:**
+- Keine aktive Etappe/kein auflösbarer Standort — derselbe Text wie `JETZT` in derselben
+  Situation.
+- Kilometrierung für die Etappe nicht verfügbar (auch nach Nachrüst-Versuch) — keine
+  Streckenangabe möglich, kein Wetterabruf.
+- Kein Regen im geprüften Abschnitt erkannt — eigener Hinweistext samt geprüfter Spanne.
+
+**Bekannte Grenze:** Die Antwort deckt nur das aktuell aktive Wegpunkt-Segment ab, nicht
+die volle Resttagesetappe (Bestandsgrenze aus S2a/S2b im Alarm-Pfad — dieselben Bausteine
+`derive_rain_zones()`/`points_along_remaining_route()` — hier nur über die
+`Geprüft:`-Zeile sichtbar gemacht, nicht behoben). Kein SMS-/Premium-SMS-Kanal (dort gibt
+es keinen Inbound-Kommando-Pfad).
+
+**Beispiel:**
+```
+STRECKE
+```
+oder mit eigenem km-Stand:
+```
+STRECKE 5
+```
+
+Spec: `docs/specs/modules/feat_2051_s4_strecke_kommando.md`
 
 ---
 
@@ -257,6 +310,7 @@ MORGEN
 JETZT (oder NOW)
 GEWITTER
 STATUS
+STRECKE (auch STRECKE <km>, oder /strecke)
 HILFE
 ```
 

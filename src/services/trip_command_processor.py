@@ -80,7 +80,7 @@ class CommandResult:
 
 _COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
-_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now", "weiter", "pause", "skip"}
+_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now", "weiter", "pause", "skip", "strecke"}
 
 # Bare-keyword mapping (case-insensitive): keyword → internal key
 # Kanalübergreifender Grundbefehlssatz (Issue #731): HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE/PAUSE/SKIP
@@ -99,6 +99,7 @@ _BARE_KEYWORD_MAP = {
     "glance":   "glance",
     "pause":    "pause",
     "skip":     "skip",
+    "strecke":  "strecke",
 }
 
 _PAUSE_DURATION_RE = re.compile(r"^(\d+)\s*([dh]?)$")
@@ -523,6 +524,8 @@ class TripCommandProcessor:
             return self._apply_pause(trip, value, msg.user_id)
         elif key == "skip":
             return self._apply_skip(trip, msg.user_id)
+        elif key == "strecke":
+            return self._show_strecke(trip, value, msg.received_at, msg.user_id, msg.channel)
 
         # Should not reach here due to whitelist check above
         return CommandResult(
@@ -1382,6 +1385,7 @@ class TripCommandProcessor:
             "  MORGEN                – Wetter der morgigen Etappe\n"
             "  JETZT                 – Nowcast Regen/Gewitter nächste ~2h\n"
             "  GEWITTER              – Gewittergefahr heutige Etappe\n"
+            "  STRECKE [km]           – Regen-Ereignisflächen entlang der Reststrecke\n"
             "  RUHETAG [N]           – Etappen um N Tage verschieben (Standard: 1)\n"
             "  STATUS                – Heute und kommende Etappen\n"
             "  PAUSE [2d / 12h]      – Briefings für Dauer unterbrechen\n"
@@ -1587,6 +1591,161 @@ class TripCommandProcessor:
             reply_markup={"inline_keyboard": [[{"text": "🔄 Aktualisieren", "callback_data": "now"}]]},
         )
 
+    def _show_strecke(
+        self, trip: Trip, value: Optional[str], now_utc: datetime,
+        user_id: str, channel: str,
+    ) -> CommandResult:
+        """Regen-Ereignisflaechen entlang der Reststrecke (Issue #2051 S4).
+
+        Drei ehrliche Sonderfaelle VOR jedem Nowcast-Aufruf (E6): keine
+        aktive Etappe (wortgleich zu `_show_now`, AC-18), unvermessene
+        Kilometrierung (AC-17), ungueltiges km-Argument (AC-15/16). Der
+        erste Abfragepunkt faehrt `priority="user_briefing"` (nie
+        gedrosselt), die Folgepunkte `priority="polling"` und fallen
+        fail-soft aus (E1). Jede Antwort MIT Messung traegt zusaetzlich die
+        tatsaechlich geprueften km-Grenzen (E7).
+        """
+        from services.radar_service import RadarNowcastService
+        from services.rain_extent import derive_rain_zones
+        from services.track_resolution import backfill_stage_distances
+        from services.trip_alert import _zonen_messwert
+        from services.trip_segments import (
+            points_along_remaining_route, points_from_km, resolve_current_segment,
+        )
+        from utils.timezone import tz_for_coords
+
+        today = trip_local_today(trip, now_utc)
+        trip = backfill_stage_distances(trip, user_id, today, persist=True)
+        resolved = resolve_current_segment(trip, now_utc, today)
+        if resolved is None:
+            return CommandResult(  # AC-18: wortgleich zu _show_now
+                success=False, command="strecke",
+                confirmation_subject=f"[{trip.name}] Kein heutiger Standort",
+                confirmation_body=(
+                    "Keine heutige Etappe gefunden. "
+                    "Aktueller Position/Standort unbekannt — "
+                    "bitte Etappenplan prüfen."
+                ),
+                trip_name=trip.name,
+            )
+        active, segment_date = resolved
+
+        if not active.distance_measured:
+            # AC-17: geprueft VOR jedem Nowcast-Aufruf -- kein Budget wird
+            # fuer eine Antwort verbraucht, die ohnehin nicht kommen kann.
+            body = (
+                "Kilometrierung für die heutige Etappe nicht verfügbar — "
+                "keine Streckenangabe möglich."
+                if value is None else
+                "Kilometrierung für die heutige Etappe nicht verfügbar — "
+                "die km-Angabe kann nicht ausgewertet werden."
+            )
+            return CommandResult(
+                success=False, command="strecke",
+                confirmation_subject=f"[{trip.name}] Kilometrierung fehlt",
+                confirmation_body=body,
+                trip_name=trip.name,
+            )
+
+        if value is not None:
+            # E5: Bereich [start_point-km, end_point-km] des aktiven
+            # Segments, oberer Rand eingeschlossen (AC-14). Ungueltige
+            # Eingaben werden abgelehnt, nicht geklemmt (AC-15/16).
+            seg_start_km = active.start_point.distance_from_start_km
+            seg_end_km = active.end_point.distance_from_start_km
+            try:
+                start_km = float(value)
+            except ValueError:
+                start_km = None
+            if start_km is None or not (seg_start_km <= start_km <= seg_end_km):
+                return CommandResult(
+                    success=False, command="strecke",
+                    confirmation_subject=f"[{trip.name}] Ungültige km-Angabe",
+                    confirmation_body=(
+                        "Ungültige km-Angabe. Gültiger Bereich für die "
+                        f"aktuelle Etappe: {int(round(seg_start_km))}"
+                        f"–{int(round(seg_end_km))} km."
+                    ),
+                    trip_name=trip.name,
+                )
+            points = points_from_km(trip, active, segment_date, start_km)
+        else:
+            points = points_along_remaining_route(trip, active, segment_date, now_utc)
+
+        # E1: erster Punkt user_briefing (nie gedrosselt), Folgepunkte
+        # polling + fail-soft (Muster trip_alert.py:1748-1770).
+        svc = RadarNowcastService()
+        ergebnisse: list = []
+        for i, p in enumerate(points):
+            prio = "user_briefing" if i == 0 else "polling"
+            elevation_m = (
+                int(round(p.elevation_m)) if p.elevation_m is not None else None
+            )
+            try:
+                result = svc.get_nowcast(
+                    p.lat, p.lon, elevation_m=elevation_m, priority=prio,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Strecke-Kommando: Nowcast fuer Punkt %d (km %.1f) des "
+                    "Trips %s fehlgeschlagen (%s) -- der Punkt faellt aus "
+                    "der Ausdehnung heraus, das Kommando laeuft weiter.",
+                    i, p.distance_from_start_km, trip.id, e,
+                )
+                ergebnisse.append(None)
+                continue
+            ergebnisse.append(_zonen_messwert(result))
+
+        spanne = _geprueft_spanne(points, ergebnisse)
+        geprueft_zeile = (
+            f"Geprüft: km {int(round(spanne[0]))}-{int(round(spanne[1]))}."
+            if spanne is not None else ""
+        )
+
+        # E1: fallen ALLE Folgepunkte aus, obwohl mehr als einer geplant
+        # war, gibt es keine km-Zonen-Angabe (AC-7) -- genau 1 geplanter
+        # Punkt ist dagegen der volle Messumfang, kein Ausfall (AC-6).
+        folgepunkte = ergebnisse[1:]
+        if len(points) > 1 and folgepunkte and all(e is None for e in folgepunkte):
+            text = (
+                "Ausdehnung entlang der Reststrecke konnte nicht ermittelt "
+                "werden — nur der Startpunkt lieferte Daten."
+            )
+            if geprueft_zeile:
+                text = f"{text} {geprueft_zeile}"
+            return CommandResult(
+                success=True, command="strecke",
+                confirmation_subject=f"[{trip.name}] Strecke",
+                confirmation_body=text,
+                trip_name=trip.name,
+            )
+
+        zonen = tuple(derive_rain_zones(points, ergebnisse))
+        if not zonen:
+            text = "Kein Regen entlang des geprüften Abschnitts erkannt."
+            if geprueft_zeile:
+                text = f"{text} {geprueft_zeile}"
+            return CommandResult(
+                success=True, command="strecke",
+                confirmation_subject=f"[{trip.name}] Strecke",
+                confirmation_body=text,
+                trip_name=trip.name,
+            )
+
+        tz = tz_for_coords(points[0].lat, points[0].lon)
+        body = (
+            _fmt_strecke_email(zonen, tz, now_utc) if channel == "email"
+            else _fmt_strecke_telegram(zonen, tz, now_utc)
+        )
+        if geprueft_zeile:
+            body = f"{body}\n{geprueft_zeile}"
+        return CommandResult(
+            success=True, command="strecke",
+            confirmation_subject=f"[{trip.name}] Strecke",
+            confirmation_body=body,
+            trip_name=trip.name,
+        )
+
     def _cancel_trip(self, trip: Trip, user_id: str = "default") -> CommandResult:
         """Disable report scheduling for the trip."""
         if trip.report_config:
@@ -1674,3 +1833,70 @@ class TripCommandProcessor:
             ):
                 return True
         return False
+
+
+# ---------------------------------------------------------------------------
+# /strecke: Streckenspanne + Renderer (Issue #2051 S4, E3/E7)
+# ---------------------------------------------------------------------------
+
+def _geprueft_spanne(
+    punkte: list, ergebnisse: list,
+) -> Optional[tuple[float, float]]:
+    """km-Spanne der ERFOLGREICH abgefragten Punkte (nicht der geplanten,
+    Issue #2051 S4, E7). None, wenn kein einziger Punkt ein Ergebnis lieferte
+    (defensiv -- bei priority=user_briefing fuer den ersten Punkt in der
+    Praxis nicht erreichbar, s. E1)."""
+    kms = [
+        p.distance_from_start_km
+        for p, e in zip(punkte, ergebnisse) if e is not None
+    ]
+    if not kms:
+        return None
+    return (min(kms), max(kms))
+
+
+def _fmt_strecke_email(zonen: tuple, tz, now_utc: datetime) -> str:
+    """Tabellarische Zeile je Zone: km-Spanne, Zeitspanne, Intensitaet,
+    Quelle (Issue #2051 S4, E3). `now_utc` ist der Abrufzeitpunkt, gegen den
+    die relativen `onset_minutes`/`event_end_minutes` in absolute HH:MM
+    umgerechnet werden -- IMMER derselbe Wert, den `_show_strecke` fuer die
+    Nowcast-Abrufe verwendet hat, NIE `datetime.now()` (AC-23).
+
+    Quelle wird als Klartext ausgegeben (`RadarNowcastService.source_label()`,
+    Muster `trip_alert.py:2210/2316`) -- die rohe Quelle (`"radar"`, `"INCA"`)
+    ist ein interner Schluessel, kein Nutzertext (team-lead-Entscheidung: die
+    Klartext-Uebersetzung ist Teil von E2, keine Testanpassung darf sie
+    umgehen)."""
+    from services.radar_service import RadarNowcastService
+
+    svc = RadarNowcastService()
+    zeilen = []
+    for z in zonen:
+        beginn = local_fmt(now_utc + timedelta(minutes=z.onset_minutes), tz)
+        ende = (
+            local_fmt(now_utc + timedelta(minutes=z.event_end_minutes), tz)
+            if z.event_end_minutes is not None else "?"
+        )
+        zeilen.append(
+            f"km {int(round(z.km_from))}-{int(round(z.km_to))}: "
+            f"{beginn}-{ende}, {z.intensity_label}, {svc.source_label(z.source)}"
+        )
+    return "\n".join(zeilen)
+
+
+def _fmt_strecke_telegram(zonen: tuple, tz, now_utc: datetime) -> str:
+    """Verdichtete Fassung: eine Zeile je Zone, km-Spanne, Zeitspanne,
+    Intensitaet -- ohne Quelle-Spalte (Platzgrund, Issue #2051 S4). Derselbe
+    Zeitanker-Vertrag wie `_fmt_strecke_email` (AC-23)."""
+    zeilen = []
+    for z in zonen:
+        beginn = local_fmt(now_utc + timedelta(minutes=z.onset_minutes), tz)
+        ende = (
+            local_fmt(now_utc + timedelta(minutes=z.event_end_minutes), tz)
+            if z.event_end_minutes is not None else "?"
+        )
+        zeilen.append(
+            f"km {int(round(z.km_from))}-{int(round(z.km_to))}: "
+            f"{beginn}-{ende}, {z.intensity_label}"
+        )
+    return "\n".join(zeilen)

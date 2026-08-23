@@ -1672,6 +1672,33 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/trip_command_processor.py::_resume_trip::0": (
         "B18 (#1405) — _resume_trip: dito."
     ),
+    # --- Issue #2051 S4 (/strecke-Kommando, Adversary-Runde 3): dieselbe
+    # B18-Signatur wie _show_now/_show_status/_handle_query oben -- nach
+    # einem Aufruf (get_nowcast(...)/derive_rain_zones(...)/den beiden
+    # Renderern) folgt ein unbedingtes `success=True`, das nicht auf den
+    # Aufruf Bezug nimmt. Fachlich geprueft (team-lead-Auftrag): `success`
+    # wird von KEINEM Aufrufer gelesen (inbound_telegram_reader.py,
+    # inbound_email_reader.py senden confirmation_subject/-body IMMER
+    # gleich zurueck, unabhaengig vom Wert) -- die Unterscheidung hat heute
+    # keine Verhaltensauswirkung. Fachlich ist `success=True` in allen drei
+    # Zweigen zudem korrekt: das Kommando hat eine gueltige, ehrliche
+    # Antwort verfasst (auch der Ausfall-Zweig AC-7 ist per Spec E1 eine
+    # normale, keine fehlgeschlagene Antwort -- Analogie zu AC-6). Dieselbe
+    # Bestandsentscheidung wie bei den bereits gelisteten Query-Kommandos:
+    # Reparatur-Vorrat (B18), keine Ausnahme in INTENTIONAL_CONSTANT_SUCCESS
+    # (die bleibt strukturell auf den einen Webhook-Fall beschraenkt, AC-14).
+    "src/services/trip_command_processor.py::_show_strecke::0": (
+        "B18 (#1405, Analogie) — _show_strecke: alle Folgepunkte ausgefallen "
+        "(AC-7), nach der Fail-soft-Nowcast-Schleife."
+    ),
+    "src/services/trip_command_processor.py::_show_strecke::1": (
+        "B18 (#1405, Analogie) — _show_strecke: kein Regen erkannt (AC-19), "
+        "nach derive_rain_zones(...)."
+    ),
+    "src/services/trip_command_processor.py::_show_strecke::2": (
+        "B18 (#1405, Analogie) — _show_strecke: Zonen gebildet (Normalfall), "
+        "nach _fmt_strecke_email(...)/_fmt_strecke_telegram(...)."
+    ),
     # --- B17 + der eine neue Fundort: beide zählen ohne Gegenzähler.
     "src/services/trip_report_scheduler.py::send_reports::0": (
         "B17 (#1405) — send_reports: sent_count ohne Gegenzähler, return int."

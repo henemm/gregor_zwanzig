@@ -18,9 +18,27 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Sequence
 
+from services.radar_service import (
+    INTENSITY_CONVECTIVE,
+    INTENSITY_HEAVY,
+    INTENSITY_LIGHT,
+    INTENSITY_MODERATE,
+)
+
 if TYPE_CHECKING:  # pragma: no cover — nur fuer Typpruefung
     from app.models import GPXPoint
     from services.radar_service import NowcastResult
+
+# Issue #2051 S4 (E2): Rangfolge fuer den staerksten Intensitaetswert einer
+# Zone. `INTENSITY_DRY` kommt in einer Zone strukturell nicht vor -- nur
+# nasse Punkte (`onset_minutes is not None`) gehen ueberhaupt in die
+# Zonenbildung ein.
+_INTENSITY_RANK = {
+    INTENSITY_LIGHT: 0,
+    INTENSITY_MODERATE: 1,
+    INTENSITY_HEAVY: 2,
+    INTENSITY_CONVECTIVE: 3,
+}
 
 
 @dataclass(frozen=True)
@@ -36,11 +54,18 @@ class RainZone:
     Beginn und spaetestes Ende unter ihren eigenen Punkten, nie eine globale
     Spanne ueber mehrere Zonen (AC-6). `event_end_minutes` ist `None`, wenn
     kein Punkt der Zone ein Ende kennt.
+
+    `intensity_label`/`source` sind additiv (Issue #2051 S4, E2): der
+    staerkste Intensitaetswert bzw. die rohe Quelle des km-kleinsten Punkts
+    der Zone. Beide tragen den Default `""`, bestehende S2a/S2b-Konstruktionen
+    (alle mit Keyword-Argumenten) bleiben unveraendert lauffaehig.
     """
     km_from: float
     km_to: float
     onset_minutes: int
     event_end_minutes: int | None
+    intensity_label: str = ""
+    source: str = ""
 
 
 def derive_rain_zones(
@@ -54,21 +79,31 @@ def derive_rain_zones(
     uebersprungen, jeder uebrige trockene Punkt schliesst die laufende Zone.
     """
     zonen: list[RainZone] = []
-    laufend: list[tuple[float, int, int | None]] = []
+    laufend: list[tuple[float, int, int | None, str, str]] = []
 
     def _abschliessen() -> None:
         if not laufend:
             return
         zonen.append(
             RainZone(
-                km_from=min(k for k, _o, _e in laufend),
-                km_to=max(k for k, _o, _e in laufend),
-                onset_minutes=min(o for _k, o, _e in laufend),
+                km_from=min(k for k, _o, _e, _i, _s in laufend),
+                km_to=max(k for k, _o, _e, _i, _s in laufend),
+                onset_minutes=min(o for _k, o, _e, _i, _s in laufend),
                 event_end_minutes=(
-                    max(e for _k, _o, e in laufend if e is not None)
-                    if any(e is not None for _k, _o, e in laufend)
+                    max(e for _k, _o, e, _i, _s in laufend if e is not None)
+                    if any(e is not None for _k, _o, e, _i, _s in laufend)
                     else None
                 ),
+                # Issue #2051 S4 (E2): staerkster Wert unter den Punkten der
+                # Zone, unabhaengig von seiner Position.
+                intensity_label=max(
+                    (i for _k, _o, _e, i, _s in laufend),
+                    key=lambda label: _INTENSITY_RANK.get(label, -1),
+                ),
+                # Issue #2051 S4 (E2): rohe Quelle des ERSTEN (km-kleinsten)
+                # Punkts -- `laufend` wird in Punkt-Reihenfolge (aufsteigende
+                # km) befuellt, kein Mehrheitsentscheid.
+                source=laufend[0][4],
             )
         )
         laufend.clear()
@@ -85,6 +120,8 @@ def derive_rain_zones(
                 punkt.distance_from_start_km,
                 onset,
                 getattr(ergebnis, "event_end_minutes", None),
+                getattr(ergebnis, "intensity_label", ""),
+                getattr(ergebnis, "source", ""),
             )
         )
     _abschliessen()

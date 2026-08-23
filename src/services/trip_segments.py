@@ -713,3 +713,29 @@ def points_along_remaining_route(
         )
         for i in range(1, anzahl)
     ]
+
+
+def points_from_km(
+    trip: "Trip", active: TripSegment, segment_date: date, start_km: float,
+) -> List[GPXPoint]:
+    """Wie ``points_along_remaining_route()``, aber der Startpunkt ist die vom
+    Nutzer genannte, STAGE-kumulative Kilometrierung (Issue #2051 S4, E5) --
+    nicht die Planposition. Aufrufer prueft VORHER ``active.distance_measured``
+    und die Bereichsgrenzen ``[active.start_point.distance_from_start_km,
+    active.end_point.distance_from_start_km]`` (E5); diese Funktion nimmt
+    ``start_km`` innerhalb dieses Bereichs als gegeben an."""
+    seg_start_km = active.start_point.distance_from_start_km
+    seg_end_km = active.end_point.distance_from_start_km
+    frac = (
+        (start_km - seg_start_km) / (seg_end_km - seg_start_km)
+        if seg_end_km > seg_start_km else 0.0
+    )
+    start = _lerp_point(active.start_point, active.end_point, frac)
+    rest_km = seg_end_km - start_km
+    if rest_km < RADAR_ZONE_POINT_SPACING_KM:
+        return [start]
+    anzahl = min(RADAR_ZONE_MAX_POINTS, int(rest_km // RADAR_ZONE_POINT_SPACING_KM) + 1)
+    return [start] + [
+        _lerp_point(start, active.end_point, (i * RADAR_ZONE_POINT_SPACING_KM) / rest_km)
+        for i in range(1, anzahl)
+    ]
