@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import unicodedata
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from app.metric_catalog import (
     format_metric_value, get_alert_label, get_decimals, get_label_for_field,
@@ -25,6 +26,11 @@ from .model import (
 )
 from .project import COMPARE_RADAR_SOURCE
 from .segments import _renderable_segment_ids, format_alert_location
+
+if TYPE_CHECKING:  # pragma: no cover — nur fuer Typpruefung
+    # Muster `model.py`: der Renderer haengt sich zur LAUFZEIT nicht an die
+    # Service-Schicht, nur die Typpruefung kennt die Zonen-Datenklasse.
+    from services.rain_extent import RainZone
 
 
 def _sorted(msg: AlertMessage) -> list[AlertEvent]:
@@ -481,9 +487,13 @@ def _render_subject_onset(msg: AlertMessage) -> str:
     km = _km_str_onset(e)
     # Issue #2051 S1: das Ende additiv HINTER der Beginn-Angabe -- ohne
     # behauptbares Ende bleibt der Betreff byte-identisch (AC-19).
+    # Issue #2051 S2b: die Ausdehnung als LETZTES Element derselben Kette --
+    # ohne Zonen bzw. auf unvermessener Etappe bleibt der Betreff
+    # byte-identisch (AC-1).
     return (
         f"[{msg.trip_short}] {km} · {label} {_onset_wann_kopf(e)}"
         f"{_onset_end_suffix(e)}{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
+        f"{_onset_extent_suffix(e)}"
     )
 
 
@@ -655,8 +665,13 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
             # Issue #2051 S1: das Ende JE ORT aus dessen eigenem Event -- ein
             # Buendel kann Orte mit verschiedenen Ende-Zeiten tragen. Ohne
             # behauptbares Ende bleibt die Zeile byte-identisch (AC-19).
+            # Issue #2051 S2b: dokumentierter No-op -- dieser Zweig laeuft nur
+            # ueber den Ortsvergleich-Buendelpfad, der `rain_zones` nie setzt
+            # (S2a AC-15). Angehaengt, damit die sieben Aufrufstellen nicht
+            # schweigend auseinanderlaufen (AC-3).
             f"{_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"
-            f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)} · "
+            f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
+            f"{_onset_extent_suffix(e)} · "
             f"{e.intensity_label}",
         )
         for e in msg.events
@@ -807,9 +822,12 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
     first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} {_onset_wann_kopf(e)}')}</b>"
     # Issue #2051 S1: das Ende additiv HINTER der Beginn-Zeit, vor Intensitaet
     # und Quelle -- ohne behauptbares Ende byte-identisch wie bisher (AC-19).
+    # Issue #2051 S2b: die Ausdehnung als LETZTES Suffix der Detailzeile, vor
+    # Intensitaet und Quelle -- ohne Zonen byte-identisch wie bisher (AC-2).
     second = (
         f"{_onset_wann_zeile(e)}{_onset_end_suffix(e)}"
-        f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)} · "
+        f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
+        f"{_onset_extent_suffix(e)} · "
         f"{e.intensity_label} · {e.source_label}"
     )
     # Issue #2018 (AC-B3): die Bezugszeile steht als EIGENE Zeile zwischen Kopf
@@ -924,6 +942,40 @@ def _sms_onset_sharpness_marker(e: OnsetEvent) -> str:
     return "?" if getattr(e, "location_sharpness_limit_time", None) else ""
 
 
+def _sms_onset_extent_suffix(zonen: tuple[RainZone, ...], budget: int) -> str:
+    """Issue #2051 S2b: Zonen-Kuerzel der Kurzform (` km8-12,19-21`) oder leer.
+
+    `budget` ist die Anzahl noch verfuegbarer Zeichen NACH dem Rest des Textes
+    (`limit - len(bisheriger_body)`) -- das Kuerzel haengt sich nur an, wenn es
+    VOLLSTAENDIG hineinpasst; passt nicht einmal die erste Zone, entfaellt die
+    Angabe komplett. Bei mehreren Zonen werden von vorn so viele genommen, wie
+    vollstaendig passen -- nie eine angeschnittene Spanne, nie ein haengendes
+    Komma.
+
+    Der Grund ist fachlich, nicht kosmetisch: `km8-1` waere im Satellitenkanal
+    eine FALSCHE Angabe, keine fehlende -- und auf der Huette am Karnischen
+    Hoehenweg kommt nur die Premium-SMS an, es gibt dort keinen zweiten Kanal,
+    der sie richtigstellt.
+
+    EIN `km`-Praefix vor der ersten Spanne, danach nur noch `X-Y`-Paare
+    (Zeichenbudget). Ganzzahlig gerundet und mit ASCII-Bindestrich wie die
+    Langform (`_onset_extent_suffix`) -- unterschiedliche Wortform, identischer
+    Zahleninhalt (AC-10). Die Sichtbarkeitsregel (`km_measured`, leere Zonen)
+    kennt diese Funktion bewusst NICHT, sie kennt nur das Budget; entschieden
+    wird sie an der Aufrufstelle, wie in der Langform."""
+    if not zonen:
+        return ""
+    genommen: list[str] = []
+    for z in zonen:
+        kandidat = genommen + [f"{int(round(z.km_from))}-{int(round(z.km_to))}"]
+        if len(" km" + ",".join(kandidat)) > budget:
+            break
+        genommen = kandidat
+    if not genommen:
+        return ""
+    return " km" + ",".join(genommen)
+
+
 def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     """Issue #1948 S4: die Nowcast-/Onset-Kurznachricht nennt einen ZEITPUNKT
     (`TH@15:40`) statt eines Countdowns (`TH!8`) und spricht im Kopf dieselbe
@@ -993,6 +1045,12 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     else:
         head = _ascii_alert_location(_location_of((e,), None))[:24]
     body = f"{head}: {token}"
+    # Issue #2051 S2b: das Zonen-Kuerzel ist das ZULETZT angefuegte Element --
+    # dieselbe Sichtbarkeitsregel wie `_onset_extent_suffix` in der Langform
+    # (nur vermessene Etappe, nur nicht-leere Zonen), und nur so viel, wie
+    # vollstaendig ins Budget passt (AC-4/AC-6/AC-8).
+    if getattr(e, "km_measured", False) and getattr(e, "rain_zones", ()):
+        body += _sms_onset_extent_suffix(e.rain_zones, limit - len(body))
     return body if len(body) <= limit else body[:limit]
 
 

@@ -41,6 +41,7 @@ from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY
 from output.tokens.builder import build_token_line
 from output.tokens.dto import DailyForecast, HourlyValue, MetricSpec, NormalizedForecast
 from output.tokens.render import render_line_with_survivors
+from services.rain_extent import RainZone  # Issue #2051 S2b
 from utils.timezone import local_fmt, tz_for_coords
 
 
@@ -168,6 +169,19 @@ def render_alert_preview(
             ),
             location_sharpness_limit_day_offset=getattr(
                 body.onset, "location_sharpness_limit_day_offset", 0,
+            ),
+            # Issue #2051 S2b: Ausdehnung des Payloads. Ohne diese beiden
+            # Felder zeigte die Vorschau in KEINEM Kanal eine Zonenangabe --
+            # genau die Luecke, die die S2a-Lieferung als "nicht gemessen"
+            # gebucht hat (R4).
+            km_measured=getattr(body.onset, "km_measured", False),
+            rain_zones=tuple(
+                RainZone(
+                    km_from=z.km_from, km_to=z.km_to,
+                    onset_minutes=z.onset_minutes,
+                    event_end_minutes=z.event_end_minutes,
+                )
+                for z in getattr(body.onset, "rain_zones", [])
             ),
         )
         msg = AlertMessage(

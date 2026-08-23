@@ -3426,7 +3426,7 @@ S1-Eingangsprotokoll (`src/services/alert_input_capture.py`, siehe
 |------|-----|------|
 | changes | `ChangePayload[]` | Zweig a (Δ-Alarm): rohe Änderungswerte je Etappe (`metric`, `old_value`, `new_value`, `delta`, `threshold`, `severity`, `direction`, `segment_id`) |
 | segment_times | `SegmentTimePayload[]` | Optional bei `changes` — fehlt es, synthetisiert der Endpoint die Etappen-Zeitfenster aus dem geladenen Trip über dieselbe Produktions-Segmentierung wie der Versandpfad (`convert_trip_to_segments`) |
-| onset | `OnsetPayload` \| null | Radar-Onset (Zweig c, Alt-Form vor S2): `onset_minutes`, `onset_time`, `km_from`, `km_to`, `is_convective`, `intensity_label`, `source_label`, `cooldown_display?`, `segment_id?` (additiv seit #1948 S5, AC-15 — ohne Segment-Kennung fiel der Zweig auf den km-Rückfall zurück), `onset_precip_mm?` (additiv seit #2046 — Menge in mm, akkumuliert über 60 Min ab Ereignisbeginn; `None`/fehlend ⇒ SMS-Onset-Token ohne Zahl), `onset_day_offset?: int = 0`, `onset_weekday?: string \| null` (additiv seit #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel für die Kurzform-Darstellung; ohne die Felder zeigt die Vorschau einen Zeitpunkt von heute, wo der Versand einen von morgen meldet), `event_end_time?: string \| null`, `event_end_day_offset?: int = 0`, `event_end_weekday?: string \| null` (`event_end_weekday` additiv seit #2054, analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet — Beginn und Ende können an verschiedenen Kalendertagen liegen), `event_ongoing_beyond_horizon?: bool = false` (additiv seit #2051 S1 — Ende des zusammenhängenden nassen Blocks mit eigenem Tagesbezug, analog zu `onset_time`/`onset_day_offset`/`onset_weekday`; ohne `event_end_time` rendert der Vorschauweg die Ausweichform ohne Ende; `event_ongoing_beyond_horizon=true` wählt die Untergrenzen-Form `Regen mindestens bis HH:MM` statt `letzter Regen gegen HH:MM`) |
+| onset | `OnsetPayload` \| null | Radar-Onset (Zweig c, Alt-Form vor S2): `onset_minutes`, `onset_time`, `km_from`, `km_to`, `is_convective`, `intensity_label`, `source_label`, `cooldown_display?`, `segment_id?` (additiv seit #1948 S5, AC-15 — ohne Segment-Kennung fiel der Zweig auf den km-Rückfall zurück), `onset_precip_mm?` (additiv seit #2046 — Menge in mm, akkumuliert über 60 Min ab Ereignisbeginn; `None`/fehlend ⇒ SMS-Onset-Token ohne Zahl), `onset_day_offset?: int = 0`, `onset_weekday?: string \| null` (additiv seit #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel für die Kurzform-Darstellung; ohne die Felder zeigt die Vorschau einen Zeitpunkt von heute, wo der Versand einen von morgen meldet), `event_end_time?: string \| null`, `event_end_day_offset?: int = 0`, `event_end_weekday?: string \| null` (`event_end_weekday` additiv seit #2054, analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet — Beginn und Ende können an verschiedenen Kalendertagen liegen), `event_ongoing_beyond_horizon?: bool = false` (additiv seit #2051 S1 — Ende des zusammenhängenden nassen Blocks mit eigenem Tagesbezug, analog zu `onset_time`/`onset_day_offset`/`onset_weekday`; ohne `event_end_time` rendert der Vorschauweg die Ausweichform ohne Ende; `event_ongoing_beyond_horizon=true` wählt die Untergrenzen-Form `Regen mindestens bis HH:MM` statt `letzter Regen gegen HH:MM`), `km_measured?: bool = false`, `rain_zones?: RainZonePayload[]` (additiv seit #2051 S2b — Feldspiegel von `RainZone`: `km_from: float`, `km_to: float`, `onset_minutes: int`, `event_end_minutes?: int`; speist die räumliche Ausdehnung, die S2a in `_onset_extent_suffix()` einführte, jetzt in allen vier betroffenen Vorschau-Texten `subject`/`email_plain`/`telegram`/`sms`; ohne die beiden Felder zeigt kein Kanal eine Ausdehnungsangabe, auch wenn der eigentliche Alarmpfad sie trägt) |
 | official | `OfficialAlertPayload[]` \| null | **NEU (#1948 S2), Zweig b:** amtliche Warnung(en), Feldspiegel von `OfficialAlert` — `source`, `hazard`, `level: int`, `label`, `valid_from?`, `valid_to?`, `url?`, `region_label?`, `dedup_id?`, `segment_ids: string[]` |
 | nowcast_frames | `NowcastFramesPayload` \| null | **NEU (#1948 S2), Zweig c:** Replay eines S1-Nowcast-Mitschnitts — `source`, `frames: [{timestamp, precip_mm_h, is_convective}]`, `km_from`, `km_to`, `segment_id?` (additiv seit #1948 S5, AC-15, analog zu `OnsetPayload`) |
 
@@ -3711,6 +3711,21 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-08-23: Issue #2051 Scheibe S2b — die räumliche Ausdehnung eines Regenereignisses
+  (km-Zonen der Reststrecke, S2a) erscheint jetzt in allen sieben Alarm-Textstellen statt
+  nur in der E-Mail-Trip-Langform: `_onset_extent_suffix()` (bereits seit S2a fertig) hängt
+  zusätzlich am E-Mail-Betreff, an Telegram rich und am Mehr-Orte-Zweig (dort dokumentierter
+  No-op — der Ortsvergleich setzt `rain_zones` nie, kein Streckenkonzept). Neu in der
+  Kurzform (SMS/Premium-SMS/Telegram-Kurzstil): ein Zonen-Kürzel `km8-12` bzw.
+  `km8-12,19-21`, budget-bewusst gebildet — passt es nicht vollständig ins Zeichenbudget,
+  entfällt es vollständig statt angeschnitten zu werden. `OnsetPayload` (Section 22.5,
+  `POST /api/trips/{trip_id}/alert-preview`) bekommt dafür additiv die Felder
+  `km_measured: bool = false` und `rain_zones: RainZonePayload[]` (neuer Feldspiegel von
+  `RainZone`) — ohne sie war kein AC dieser Scheibe über den Vorschau-Endpoint messbar (S2a
+  hatte die Prüffläche `validator_render_service.py` noch nicht erweitert). Reine additive
+  Feld-Ergänzung, kein Formatwechsel; ohne die Felder bleibt jeder Vorschau-Text
+  byte-identisch zum Stand vor dieser Spec. Spec:
+  `docs/specs/modules/feat_2051_s2b_ausdehnung_kanaele.md`.
 - 2026-08-22: Issue #2054 — die Alarm-Kurznachricht (SMS · Premium-SMS · Telegram-Kurzstil)
   schreibt eine Uhrzeit an einem anderen Kalendertag jetzt mit einem vorangestellten
   DE-Wochentagskürzel (`R2.5@Sa0:23`) statt des bisherigen Zahlensuffixes (`R2.5@0:23+1`) —

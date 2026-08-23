@@ -422,7 +422,25 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        statt `R2.5@0:23+1`, Beginn und Ende unabhängig bewertet (`TH@Do18:00@Fr3:00 R2.5`) —
        dieselbe Schreibweise, die derselbe Kanal für Abweichungsalarme (#2020 S2) und amtliche
        Warnungen (#1948 S5) bereits führt. Bei Tagesversatz 0 bleibt die Ausgabe byte-identisch.
-     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst), `onset_day_offset`/`onset_weekday` (additiv, #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel, `onset_day_offset` selbst existiert bereits seit #2009), `event_end_time`/`event_end_day_offset`/`event_end_weekday`/`event_ongoing_beyond_horizon` (additiv — `event_end_time`/`event_end_day_offset`/`event_ongoing_beyond_horizon` seit #2051 S1, `event_end_weekday` seit #2054 analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet, da Beginn und Ende an verschiedenen Kalendertagen liegen können — Ende desselben Ereignisses aus `NowcastResult.event_end_minutes`/`.event_ongoing_beyond_horizon` abgeleitet)
+       **Seit #2051 S2a/S2b** trägt der Token zusätzlich die räumliche Ausdehnung des
+       Regenereignisses als km-Zonen der Reststrecke: `derive_rain_zones()`
+       (`src/services/rain_extent.py`) bildet aus den bereits abgerufenen Nowcast-Frames
+       zusammenhängend nasse km-Spannen; der Baustein `_onset_extent_suffix()` hängt sie in
+       der Langform an (`Nass km 8-12` bzw. bei mehreren getrennt gezählten Zonen
+       `Nass km 8-12, km 19-21` — die trockene Strecke dazwischen erscheint bewusst nicht
+       als zusammengefasste Spanne). S2a bespielte damit zunächst nur die E-Mail-Trip-
+       Langform; S2b (2026-08-23) hängt denselben Baustein zusätzlich an E-Mail-Betreff,
+       Telegram rich und den Mehr-Orte-Zweig (dort dokumentierter No-op — der Ortsvergleich
+       hat kein Streckenkonzept und setzt `rain_zones` nie) und ergänzt die Kurzform
+       (SMS/Premium-SMS/Telegram-Kurzstil) um ein eigenes, budget-bewusstes Zonen-Kürzel
+       `km8-12` bzw. `km8-12,19-21` — als **letztes** Element angehängt und, anders als der
+       Rest der Kurzform, budget-abhängig: passt es nicht vollständig ins verbleibende
+       140-Zeichen-Budget, entfällt es komplett statt angeschnitten zu werden. Sichtbar nur
+       bei vermessener Etappe (`km_measured=True`, echte GPX-Wegstrecke) und nicht-leeren
+       `rain_zones`; ohne beides bleibt jeder betroffene Text byte-identisch zum Stand vor
+       #2051. Spec: `docs/specs/modules/feat_2051_s2a_raeumliche_ausdehnung.md`,
+       `docs/specs/modules/feat_2051_s2b_ausdehnung_kanaele.md`.
+     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst), `onset_day_offset`/`onset_weekday` (additiv, #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel, `onset_day_offset` selbst existiert bereits seit #2009), `event_end_time`/`event_end_day_offset`/`event_end_weekday`/`event_ongoing_beyond_horizon` (additiv — `event_end_time`/`event_end_day_offset`/`event_ongoing_beyond_horizon` seit #2051 S1, `event_end_weekday` seit #2054 analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet, da Beginn und Ende an verschiedenen Kalendertagen liegen können — Ende desselben Ereignisses aus `NowcastResult.event_end_minutes`/`.event_ongoing_beyond_horizon` abgeleitet), `km_measured`/`rain_zones` (additiv, #2051 S2a — `rain_zones: tuple[RainZone, ...]`, Feldspiegel `km_from`/`km_to`/`onset_minutes`/`event_end_minutes`; S2b konsumiert beide Felder zusätzlich in Betreff, Telegram rich, Mehr-Orte-Zweig und Kurzform, ändert sie selbst nicht)
      - `AlertMessage.cooldown_display` trägt den dynamischen Cooldown-Text (z.B. „2 Stunden")
      - `src/outputs/radar_alert.py` ist gelöscht — kein separater Inline-Body-Bau mehr
    - **Throttle-Semantik unverändert** (Issue #773): `radar_alert_throttle.json` + `alert_log` auch bei Best-Effort-Versandfehlern

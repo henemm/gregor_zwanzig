@@ -223,6 +223,15 @@ class SegmentTimePayload(BaseModel):
     end: str    # "HH:MM"
 
 
+class RainZonePayload(BaseModel):
+    """Issue #2051 S2b: eine zusammenhaengend nasse Zone der Reststrecke --
+    Feldspiegel von ``RainZone`` (services/rain_extent.py:26)."""
+    km_from: float
+    km_to: float
+    onset_minutes: int
+    event_end_minutes: int | None = None
+
+
 class OnsetPayload(BaseModel):
     """Issue #1948 S5 (AC-15, Vorbedingung aus S4): `segment_id` additiv
     nachgezogen -- `OfficialAlertPayload` transportiert die Segment-Kennung
@@ -266,6 +275,12 @@ class OnsetPayload(BaseModel):
     source_reach_day_offset: int = 0
     location_sharpness_limit_time: str | None = None
     location_sharpness_limit_day_offset: int = 0
+    # Issue #2051 S2b: raeumliche Ausdehnung, additiv und optional -- Muster
+    # `event_end_time` o. Pydantic verwirft unbekannte Schluessel STILL
+    # (#2046 F002): ohne diese beiden Felder zeigte die Vorschau in keinem
+    # Kanal eine Zonenangabe, obwohl der Payload sie traegt.
+    km_measured: bool = False
+    rain_zones: list[RainZonePayload] = Field(default_factory=list)
 
 
 class OfficialAlertPayload(BaseModel):
