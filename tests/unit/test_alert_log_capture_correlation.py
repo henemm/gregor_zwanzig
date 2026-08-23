@@ -258,7 +258,26 @@ def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
     Capture-Datei existiert" waere die Aufweichung, die hier ausdruecklich
     NICHT stattfindet: der Fall verlangt genau eine Datei, deren
     ``source_key`` auf den interpolierten Punkt zeigt UND messbar vom
-    Startpunkt abweicht. Wird der Messpunkt verfaelscht, reisst er."""
+    Startpunkt abweicht. Wird der Messpunkt verfaelscht, reisst er.
+
+    #2017 -> #2051 S2a: Die #2017-Zusicherung "genau EIN Abruf je Lauf"
+    (AC-12) ist im ALARM-Pfad bewusst abgeloest (Spec
+    ``docs/specs/modules/feat_2051_s2a_raeumliche_ausdehnung.md``, Abschnitt
+    "Abgeloeste Zusicherung"): fuer die raeumliche Ausdehnung des
+    Regenereignisses wird an mehreren Punkten entlang der Reststrecke
+    abgefragt. Im /jetzt-Pfad und im Briefing-Kurzfristhinweis gilt der eine
+    Abruf unveraendert weiter — deren Waechter liegen woanders.
+
+    Der Waechter hier zieht deshalb um, statt sich aufzuweichen:
+    (1) das BUDGET bleibt gedeckelt (``RADAR_ZONE_MAX_POINTS``, ueber die
+    Modul-Referenz gelesen, damit eine Laufzeit-Umstellung der Konstante
+    nicht an einer beim Import gebundenen Kopie vorbeilaeuft);
+    (2) der AUSLOESENDE Datensatz wird ueber die Naehe seines ``source_key``
+    zum analytisch gerechneten #2017-Messpunkt identifiziert — nicht ueber
+    ``sorted(...)[0]``, denn dass der lexikografisch erste Dateiname der
+    Messpunkt ist, gilt nur fuer eine nach Nordosten laufende Route;
+    (3) die ``capture_id`` im ``alert_log`` gehoert zu GENAU DIESEM
+    Datensatz und zu keinem der Folgepunkte."""
     from datetime import datetime, timedelta, timezone
     from datetime import time as time_type
 
@@ -270,6 +289,10 @@ def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
     from services.radar_cache import RadarNowcastCacheService
     from services.radar_service import RadarNowcastService, _nowcast_source_key
     from services.trip_alert import TripAlertService
+    # Modul-Referenz, KEIN `from ... import RADAR_ZONE_MAX_POINTS`: eine beim
+    # Import gebundene Kopie liefe am Laufzeit-Drift-Schutz vorbei (dasselbe
+    # Muster wie in `src/services/trip_alert.py`).
+    from services import trip_segments as trip_segments_mod
 
     from tests.helpers.alert_log_fixtures import fresh_user
     from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
@@ -342,19 +365,47 @@ def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
 
     capture_dir = get_data_root() / "debug" / "alert_input" / "nowcast"
     capture_files = sorted(capture_dir.glob("*.json"))
-    assert len(capture_files) == 1, (
-        f"Erwartet wird GENAU EIN Eingangs-Datensatz unter "
-        f"data/debug/alert_input/nowcast/ (ein Abruf je Lauf, #2017 AC-12), "
-        f"gefunden: {[f.name for f in capture_files]!r}"
+    assert capture_files, (
+        "Kein Eingangs-Datensatz unter data/debug/alert_input/nowcast/ gefunden."
     )
-    datensatz = json.loads(capture_files[0].read_text())
-    ist_lat, ist_lon = (float(x) for x in datensatz["source_key"].split("_")[:2])
-    assert (abs(ist_lat - soll_lat) < 5e-4 and abs(ist_lon - soll_lon) < 5e-4), (
-        f"Der Eingangs-Datensatz gehoert nicht zu diesem Abruf: sein "
-        f"source_key zeigt auf ({ist_lat}, {ist_lon}), abgefragt wurde der "
-        f"zur Fenstermitte interpolierte Punkt ({soll_lat:.5f}, "
-        f"{soll_lon:.5f}). ({lat}, {lon}) waere der Segment-Startpunkt, also "
-        f"der Messpunkt VOR #2017."
+    datensaetze = [json.loads(f.read_text()) for f in capture_files]
+
+    def _koordinaten(ds: dict) -> tuple:
+        return tuple(float(x) for x in ds["source_key"].split("_")[:2])
+
+    # (1) Budget-Deckel: die Zonen-Abfrage darf sich nicht zu einer offenen
+    # Schleife auswachsen. Die Obergrenze kommt aus dem Produktivmodul.
+    deckel = trip_segments_mod.RADAR_ZONE_MAX_POINTS
+    assert len(datensaetze) <= deckel, (
+        f"Die Zonen-Abfrage hat ihr Budget gesprengt: {len(datensaetze)} "
+        f"Eingangs-Datensaetze unter data/debug/alert_input/nowcast/, erlaubt "
+        f"sind hoechstens RADAR_ZONE_MAX_POINTS={deckel} (#2051 S2a). "
+        f"Gefunden: {[f.name for f in capture_files]!r}"
+    )
+
+    # (2) Der AUSLOESENDE Datensatz wird ueber den Ort identifiziert, nicht
+    # ueber die Dateinamen-Reihenfolge: der erste Punkt der Reststrecke ist
+    # unveraendert der #2017-Messpunkt, die uebrigen liefern nur die Zonen.
+    ausloesende = [
+        ds for ds in datensaetze
+        if abs(_koordinaten(ds)[0] - soll_lat) < 5e-4
+        and abs(_koordinaten(ds)[1] - soll_lon) < 5e-4
+    ]
+    assert len(ausloesende) == 1, (
+        f"Genau EIN Eingangs-Datensatz muss auf den zur Fenstermitte "
+        f"interpolierten Messpunkt ({soll_lat:.5f}, {soll_lon:.5f}) zeigen — "
+        f"er traegt die Ausloeseregel. Gefunden wurden {len(ausloesende)} "
+        f"passende unter den source_keys "
+        f"{[ds['source_key'] for ds in datensaetze]!r}. ({lat}, {lon}) waere "
+        f"der Segment-Startpunkt, also der Messpunkt VOR #2017."
+    )
+    datensatz = ausloesende[0]
+    ist_lat, ist_lon = _koordinaten(datensatz)
+    assert datensatz is min(datensaetze, key=lambda ds: ds["captured_at"]), (
+        f"Der Messpunkt-Datensatz ist nicht der ZUERST geschriebene: #2051 S2a "
+        f"sichert zu, dass der erste abgefragte Punkt der #2017-Messpunkt "
+        f"bleibt. Reihenfolge war "
+        f"{[(ds['source_key'], ds['captured_at']) for ds in datensaetze]!r}"
     )
     assert datensatz["source_key"] == _nowcast_source_key(ist_lat, ist_lon), (
         f"source_key {datensatz['source_key']!r} folgt nicht der geteilten "
@@ -363,11 +414,26 @@ def test_ac4_e2e_zweig_c_alert_log_capture_id_matches_written_input_record():
     )
     written_capture_id = datensatz["capture_id"]
     assert written_capture_id, "Eingangs-Datensatz traegt keine capture_id."
+    folgepunkt_ids = {
+        ds["capture_id"] for ds in datensaetze if ds is not datensatz
+    }
+    assert written_capture_id not in folgepunkt_ids, (
+        f"Vorbedingung: jeder Abruf braucht eine EIGENE capture_id, sonst "
+        f"kann der Fall unten Messpunkt und Folgepunkt nicht unterscheiden. "
+        f"capture_ids: {[ds['capture_id'] for ds in datensaetze]!r}"
+    )
 
+    # (3) Der alert_log-Eintrag zeigt auf den AUSLOESENDEN Datensatz — nicht
+    # auf einen der Zonen-Folgepunkte.
     log_entry = _read_log(uid)["entries"][-1]
     assert log_entry.get("reason") == alert_log.REASON_NOWCAST
     assert log_entry.get("capture_id") == written_capture_id, (
         f"alert_log-Eintrag (Zweig c) traegt eine ANDERE capture_id als der "
-        f"Eingangs-Datensatz: log={log_entry.get('capture_id')!r} != "
-        f"input={written_capture_id!r}"
+        f"ausloesende Eingangs-Datensatz: log={log_entry.get('capture_id')!r} "
+        f"!= input={written_capture_id!r}"
+        + (
+            " — er zeigt auf einen Zonen-Folgepunkt statt auf den "
+            "#2017-Messpunkt."
+            if log_entry.get("capture_id") in folgepunkt_ids else ""
+        )
     )

@@ -254,7 +254,22 @@ def test_two_default_instances_mimicking_trip_and_compare_construction_share_cac
 
 def _e2e_trip(lat: float, lon: float):
     """Trip mit einer ganztaegigen Etappe -- gemeinsamer Aufbau der beiden
-    End-to-End-Faelle unten (Wegpunkt 1 bei ``(lat, lon)``, 1000 m)."""
+    End-to-End-Faelle unten (Wegpunkt 1 bei ``(lat, lon)``, 1000 m).
+
+    Issue #2051 S2a: das Segment ist ABSICHTLICH kurz gehalten (Delta 0.005°
+    statt vormals 0.02°, volle Segmentlaenge < 0.7 km). S2a fragt entlang der
+    Reststrecke bis zu ``RADAR_ZONE_MAX_POINTS`` Punkte ab, sobald die
+    Reststrecke >= 2 km ist (``RADAR_ZONE_POINT_SPACING_KM``) -- bei 0.02°
+    (~2,7 km volle Segmentlaenge) waere das Ein-Punkt-Regime, das beide
+    Tests unten voraussetzen ("EIN Fetch teilen sich"/"ZWEI Fetches"),
+    abhaengig von der WANDUHR (dieser Test friert die Zeit nicht ein) nicht
+    mehr garantiert. Mit < 0.7 km voller Segmentlaenge bleibt die
+    Reststrecke IMMER < 2 km, unabhaengig vom Zeitanteil `p` -- das
+    Ein-Punkt-Regime ist damit deterministisch, nicht nur zufaellig
+    zutreffend. Beide Tests pruefen weiterhin den Cache-TEIL-Mechanismus,
+    nicht die S2a-Mehrpunkt-Logik (die hat ihre eigenen Tests in
+    ``tests/tdd/test_regen_ausdehnung_messpunkte.py``).
+    """
     from app.trip import Stage, Trip, Waypoint
 
     return Trip(
@@ -272,7 +287,7 @@ def _e2e_trip(lat: float, lon: float):
                         arrival_override="00:00",
                     ),
                     Waypoint(
-                        id="W2", name="Ziel", lat=lat + 0.02, lon=lon + 0.02,
+                        id="W2", name="Ziel", lat=lat + 0.005, lon=lon + 0.005,
                         elevation_m=1100, arrival_override="23:59",
                     ),
                 ],

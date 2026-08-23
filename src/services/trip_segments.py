@@ -30,6 +30,12 @@ logger = logging.getLogger("trip_segments")
 # ist ein Nachbearbeitungs-Artefakt und macht die Etappe unvermessen.
 _MEASURED_SLACK_KM = 0.01
 
+# Issue #2051 S2a: Abstand ueber der INCA-Zellgroesse (1 km), Deckel deckt bis
+# zu 12 km Reststrecke ab (ueber dem Etappen-Median 9,2 km). Downstream-Leser
+# referenzieren die MODUL-Variable, kein Bindezeit-Import (Drift-Schutz #2009).
+RADAR_ZONE_POINT_SPACING_KM = 2.0
+RADAR_ZONE_MAX_POINTS = 6
+
 
 def _parse_hhmm(value: str) -> Optional[time]:
     """Parse 'HH:MM' to a time object; returns None on malformed input."""
@@ -633,3 +639,77 @@ def position_at_time(
         _LOOKAHEAD_DAYS, last_end_point.lat, last_end_point.lon,
     )
     return last_end_point
+
+
+def _lerp_point(a: GPXPoint, b: GPXPoint, frac: float) -> GPXPoint:
+    """Punkt zwischen ``a`` und ``b`` beim Streckenanteil ``frac`` (Issue #2051
+    S2a). Dieselbe lineare Naeherung wie ``_interpolate_point()`` — dort nach
+    dem Zeitanteil, hier nach dem Streckenanteil."""
+    frac = max(0.0, min(1.0, frac))
+    if a.elevation_m is None and b.elevation_m is None:
+        elev = None
+    else:
+        elev_a = a.elevation_m if a.elevation_m is not None else b.elevation_m
+        elev_b = b.elevation_m if b.elevation_m is not None else a.elevation_m
+        elev = elev_a + frac * (elev_b - elev_a)
+    return GPXPoint(
+        lat=a.lat + frac * (b.lat - a.lat),
+        lon=a.lon + frac * (b.lon - a.lon),
+        elevation_m=elev,
+        distance_from_start_km=(
+            a.distance_from_start_km
+            + frac * (b.distance_from_start_km - a.distance_from_start_km)
+        ),
+    )
+
+
+def _remaining_km(active: TripSegment, at: datetime) -> float:
+    """Reststrecke der AKTIVEN Etappe ab ``at`` (Issue #2051 S2a).
+
+    Ueber den Zeitanteil des Segments, nicht ueber die Luftlinie zum Endpunkt:
+    ``distance_km`` ist auf vermessenen Etappen die echte Wegstrecke, eine
+    Luftlinie waere dort systematisch zu kurz. Liegt ``at`` hinter dem
+    Segmentende (die Vorwaertssuche von ``position_at_time()`` greift dann),
+    ist die Reststrecke 0 — es bleibt beim heutigen Einzelabruf.
+    """
+    if not isinstance(active.segment_id, int) or active.distance_km <= 0.0:
+        return 0.0
+    span_s = (active.end_time - active.start_time).total_seconds()
+    p = 0.0 if span_s <= 0 else (at - active.start_time).total_seconds() / span_s
+    p = max(0.0, min(1.0, p))
+    return (1.0 - p) * active.distance_km
+
+
+def points_along_remaining_route(
+    trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+) -> List[GPXPoint]:
+    """Bis zu ``RADAR_ZONE_MAX_POINTS`` Punkte im Abstand
+    ``RADAR_ZONE_POINT_SPACING_KM`` entlang der Reststrecke der AKTIVEN Etappe
+    ab ``at`` (Issue #2051 S2a).
+
+    Der ERSTE Punkt ist unveraendert ``position_at_time()`` — der heutige
+    Messpunkt (#2017). Liegt die Reststrecke unter dem Punktabstand, bleibt es
+    bei genau diesem einen Punkt, das Verhalten ist dann bit-identisch zum
+    Stand vor dieser Scheibe.
+
+    Die Platzierung der Folgepunkte laeuft ueber die Geometrie (lineare
+    Interpolation zum Endpunkt), nicht ueber ``distance_from_start_km`` —
+    unvermessene Etappen tragen dort keine echte Wegstrecke, gemessen wird
+    aber ueberall (E3). Die km-Zahl einer Zone erscheint erst im Text, wenn
+    die Etappe vermessen ist.
+    """
+    start = position_at_time(trip, active, segment_date, at)
+    rest_km = _remaining_km(active, at)
+    if rest_km < RADAR_ZONE_POINT_SPACING_KM:
+        return [start]
+    anzahl = min(
+        RADAR_ZONE_MAX_POINTS,
+        int(rest_km // RADAR_ZONE_POINT_SPACING_KM) + 1,
+    )
+    return [start] + [
+        _lerp_point(
+            start, active.end_point,
+            (i * RADAR_ZONE_POINT_SPACING_KM) / rest_km,
+        )
+        for i in range(1, anzahl)
+    ]

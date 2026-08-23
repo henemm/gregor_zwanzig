@@ -285,6 +285,22 @@ Segment-Startpunkt.
   pro Trip an Segment-Startpunkt") hielt diese Zusicherung bislang nur als Prosa fest; da genau
   diese Zeile durch Scheibe B angefasst wird, verliert der Kommentar seinen Anker — die
   Invariante gehört ab jetzt in einen Test, nicht in einen Kommentar.
+
+  > **⚠️ Für den Alarm-Pfad ABGELÖST durch #2051 S2a** (`feat_2051_s2a_raeumliche_ausdehnung.md`,
+  > Abschnitt „Abgelöste Zusicherung"). `check_radar_alerts()` fragt seit S2a **mehrere** Punkte
+  > entlang der Reststrecke ab — die räumliche Ausdehnung des Regenereignisses lässt sich aus
+  > einem Punkt nicht bilden. An die Stelle von „genau ein Abruf" tritt eine **Obergrenze**
+  > (`trip_segments.RADAR_ZONE_MAX_POINTS`); der **erste** Punkt bleibt unverändert der hier
+  > spezifizierte #2017-Messpunkt und trägt allein die Auslöseregel, die übrigen liefern nur die
+  > Zonen. Bei einer Reststrecke unterhalb des Punktabstands bleibt es faktisch bei einem Abruf.
+  >
+  > **Unverändert gültig** bleibt AC-12 für den **Starkregen-Hinweis-Pfad**
+  > (`trip_report_scheduler.py`, Wächter `test_ac12_starkregen_hinweis_ruft_get_nowcast_genau_einmal`)
+  > und für den `/jetzt`-Pfad. Die Ablösung ist eng auf den Alarm-Pfad begrenzt.
+  >
+  > Den Alarm-Pfad bewacht seither `tests/unit/test_alert_log_capture_correlation.py`
+  > (`test_ac4_e2e_zweig_c_...`): Budget-Deckel eingehalten **und** der auslösende Datensatz ist
+  > der #2017-Messpunkt, nicht ein Zonen-Folgepunkt.
   - Test: Aufruf-Zähler am `get_nowcast`-Seam (DI-Seam, kein Mock der Entscheidungslogik) über
     einen vollständigen `check_radar_alerts()`-Lauf, Assert `== 1`. Analoger Zähler-Assert für
     den Starkregen-Hinweis-Lauf in `trip_report_scheduler.py`.

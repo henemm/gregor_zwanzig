@@ -256,6 +256,15 @@ class RadarAlertRequest:
     # Beginn noch Ende liegen jenseits der Grenze".
     location_sharpness_limit_time: str | None = None
     location_sharpness_limit_day_offset: int = 0
+    # Issue #2036/#2051 S2a: stammen `km_from`/`km_to` aus echter GPX-
+    # Wegstrecke (`TripSegment.distance_measured`)? Der Trip-Onset-Pfad hat
+    # das Flag bis S2a NIE gesetzt -- ohne es bliebe die Ausdehnung auf JEDER
+    # Etappe stumm, auch auf den vermessenen.
+    km_measured: bool = False
+    # Issue #2051 S2a: die Nass-Zonen der Reststrecke, gebildet aus der
+    # Mehrpunkt-Abfrage (`rain_extent.derive_rain_zones`). Additiv, Default
+    # leer -> ohne sie bleibt der Versand byte-identisch.
+    rain_zones: tuple = ()
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -1410,6 +1419,11 @@ class NotificationService:
             source_reach_day_offset=request.source_reach_day_offset,
             location_sharpness_limit_time=request.location_sharpness_limit_time,
             location_sharpness_limit_day_offset=request.location_sharpness_limit_day_offset,
+            # Issue #2051 S2a: Ausdehnung und die Echtheitspruefung der
+            # km-Zahlen reisen GEMEINSAM -- die Zonen ohne `km_measured`
+            # blieben im Text stumm, das Flag ohne Zonen wirkungslos.
+            km_measured=request.km_measured,
+            rain_zones=tuple(request.rain_zones),
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.

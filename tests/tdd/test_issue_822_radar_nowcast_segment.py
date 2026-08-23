@@ -608,8 +608,20 @@ def test_ac3_nowcast_called_at_segment_coordinates():
         now_ref = datetime.now(timezone.utc)
         svc.check_radar_alerts()
 
-        assert call_count[0] == 1, (
-            f"AC-3: get_nowcast muss genau 1× aufgerufen werden, war {call_count[0]}"
+        # Issue #2051 S2a: die #2017-Zusicherung "genau 1 Aufruf" wird
+        # BEWUSST auf eine Obergrenze abgeloest (Spec, Abschnitt "Abgeloeste
+        # Zusicherung") — S2a fragt bis zu RADAR_ZONE_MAX_POINTS Punkte
+        # entlang der Reststrecke ab. Ueber die Modulreferenz gelesen, nicht
+        # als Literal dupliziert (Drift-Schutz #2009-Muster).
+        from services.trip_segments import RADAR_ZONE_MAX_POINTS
+
+        assert call_count[0] <= RADAR_ZONE_MAX_POINTS, (
+            f"AC-3/#2051 AC-12: get_nowcast darf hoechstens "
+            f"{RADAR_ZONE_MAX_POINTS}× aufgerufen werden (Deckel), war "
+            f"{call_count[0]}"
+        )
+        assert call_count[0] >= 1, (
+            "AC-3: get_nowcast muss mindestens 1× aufgerufen werden, war 0"
         )
 
         from app.loader import load_all_trips
@@ -1280,48 +1292,73 @@ def test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt():
 
 
 def test_2017_ac12_genau_ein_get_nowcast_aufruf_je_lauf():
-    """AC-12 (Budget-Invariante, Alarm-Pfad): genau EIN `get_nowcast()`-Aufruf
-    pro Trip und Durchlauf — die Verlegung des Abrufpunkts erhoeht die Zahl
-    der Abrufe nicht.
+    """#2051 S2a AC-12 (vormals #2017 AC-12, hier bewusst UMGEBAUT statt
+    ersetzt — Spec-Abschnitt "Abgeloeste Zusicherung"): die #2017-Aussage
+    "genau EIN `get_nowcast()`-Aufruf pro Trip" wird auf eine OBERGRENZE
+    abgeloest. #2051 fragt bis zu `RADAR_ZONE_MAX_POINTS` Punkte entlang der
+    Reststrecke ab statt eines einzigen Messpunkts.
 
-    Gezaehlt wird an ZWEI Naehten: am `get_nowcast()`-Seam (die Zusicherung
-    selbst) und am `frame_source`-Seam (dort entstehen die realen Kosten).
-    Der Kommentar `trip_alert.py` ("Genau EIN get_nowcast-Call pro Trip an
-    Segment-Startpunkt") hielt das bisher nur als Prosa fest und verliert mit
-    dieser Aenderung seinen Anker.
+    Gezaehlt wird weiterhin an ZWEI Naehten: am `get_nowcast()`-Seam (die
+    Zusicherung selbst) und am `frame_source`-Seam (dort entstehen die
+    realen Kosten) — beide muessen die Obergrenze einhalten, KEINER darf sie
+    unbemerkt umgehen.
 
-    RED heute nicht wegen der ZAHL — die stimmt bereits —, sondern weil der
-    eine Aufruf am falschen Ort erfolgt. Beides gehoert in EINE Zusicherung:
-    "ein Abruf, und zwar am neuen Messpunkt". Ein iteratives Nachfassen an der
-    Onset-Position (Variante 2, in der Spec ausgeschlossen) risse die
-    Zaehlung, ein unveraenderter Startpunkt die Ortsangabe.
+    RED heute: `services.trip_segments.RADAR_ZONE_MAX_POINTS` existiert noch
+    nicht -> ImportError.
     """
+    from services.trip_segments import RADAR_ZONE_MAX_POINTS
+    from utils.geo import haversine_km
+
     uid = fresh_uid("2017-ac12")
     try:
         sent, _mails, dienst, frames, trip, now_utc = _alarm_lauf_2017(
             uid, "trip-2017-ac12", start="11:00", ende="15:00",
         )
-        assert len(dienst.calls) == 1, (
-            f"AC-12: erwartet genau EIN get_nowcast() je Trip und Lauf, "
-            f"erhalten {len(dienst.calls)} (sent={sent}): {dienst.calls!r}"
+        assert len(dienst.calls) <= RADAR_ZONE_MAX_POINTS, (
+            f"AC-12: erwartet hoechstens {RADAR_ZONE_MAX_POINTS} "
+            f"get_nowcast()-Aufrufe je Trip und Lauf (Deckel), erhalten "
+            f"{len(dienst.calls)} (sent={sent}): {dienst.calls!r}"
         )
-        assert frames.call_count == 1, (
-            f"AC-12: erwartet genau EINEN echten Frame-Abruf (Kostenstelle), "
-            f"erhalten {frames.call_count}"
+        assert frames.call_count <= RADAR_ZONE_MAX_POINTS, (
+            f"AC-12: erwartet hoechstens {RADAR_ZONE_MAX_POINTS} echte "
+            f"Frame-Abrufe (Kostenstelle), erhalten {frames.call_count}"
+        )
+        assert len(dienst.calls) >= 1, (
+            "AC-12: mindestens EIN Aufruf wird weiterhin erwartet, war 0"
         )
         _active, p, (soll_lat, soll_lon, _h) = _erwartete_messposition(
             trip, now_utc, _alarm_offset_minuten(),
         )
         ruf = dienst.calls[0]
         assert abs(ruf["lat"] - soll_lat) < 1e-6 and abs(ruf["lon"] - soll_lon) < 1e-6, (
-            f"AC-12: der EINE Abruf muss am neuen Messpunkt erfolgen — "
+            f"AC-12: der ERSTE Abruf muss am neuen Messpunkt erfolgen — "
             f"({ruf['lat']:.5f}, {ruf['lon']:.5f}) statt erwartet "
             f"({soll_lat:.5f}, {soll_lon:.5f}), p={p:.4f}"
         )
-        assert ruf["priority"] == "polling", (
-            f"AC-12: der Scheduler-Abruf bleibt drosselbar (`polling`), war "
-            f"{ruf['priority']!r} — sonst umgeht die Verlegung das Budget-Gate"
+        for r in dienst.calls:
+            assert r["priority"] == "polling", (
+                f"AC-12: jeder Scheduler-Abruf bleibt drosselbar (`polling`), "
+                f"war {r['priority']!r} — sonst umgeht die Verlegung das "
+                f"Budget-Gate"
+            )
+        # AC-12: alle abgefragten Koordinaten liegen auf der erwarteten
+        # Reststrecke (hoechstens `active.distance_km` vom Segment-Start
+        # entfernt) und keine zwei sind identisch.
+        alle_coords = [(r["lat"], r["lon"]) for r in dienst.calls]
+        assert len(set(alle_coords)) == len(alle_coords), (
+            f"AC-12: keine zwei abgefragten Koordinaten duerfen identisch "
+            f"sein, erhalten {alle_coords!r}"
         )
+        for lat, lon in alle_coords:
+            abstand_vom_start = haversine_km(
+                _active.start_point.lat, _active.start_point.lon, lat, lon,
+            )
+            assert abstand_vom_start <= _active.distance_km + 0.05, (
+                f"AC-12: Koordinate ({lat:.5f},{lon:.5f}) liegt "
+                f"{abstand_vom_start:.3f} km vom Segment-Start entfernt — "
+                f"mehr als die Segmentlaenge {_active.distance_km:.3f} km "
+                f"(nicht auf der Reststrecke)"
+            )
     finally:
         clean_uid(uid)
 
@@ -1403,6 +1440,7 @@ def test_2017_fadv1_positionsfehler_eines_trips_kostet_den_anderen_nicht_den_ala
                 mail_sink=lambda subject, body: mails.append((subject, body)),
             )
             sent = svc.check_radar_alerts()
+            now_utc = datetime.now(timezone.utc)
 
         assert sent == 1, (
             f"F-ADV1: der gesunde Trip {gesund_id!r} MUSS seinen Alarm "
@@ -1414,10 +1452,42 @@ def test_2017_fadv1_positionsfehler_eines_trips_kostet_den_anderen_nicht_den_ala
             f"F-ADV1: erwartet genau EINE zugestellte Mail (die des gesunden "
             f"Trips), erhalten {len(mails)}"
         )
-        assert frames.call_count == 1, (
-            f"F-ADV1: der kaputte Trip darf kein Kontingent verbrauchen — "
-            f"sein Abruf kommt gar nicht erst zustande. Frame-Abrufe: "
-            f"{frames.call_count}"
+
+        # Issue #2051 S2a AC-14 (Umbau, Spec "Abgeloeste Zusicherung"):
+        # bisher gemeinsam gezaehlt (`frames.call_count == 1`, weil der
+        # Einzelpunkt-Abruf des #2017-Standes nur EINE Zahl kannte). Seit
+        # S2a fragt der gesunde Trip bis zu RADAR_ZONE_MAX_POINTS Punkte ab
+        # -- der kaputte Trip verbraucht strukturell weiterhin NULL Punkte,
+        # weil seine Ausnahme VOR jeder Koordinatenberechnung greift (er
+        # kann also gar keinen der gezaehlten Aufrufe beigetragen haben).
+        # Damit sind beide Trips GETRENNT nachweisbar, obwohl `frames` ein
+        # einziges, geteiltes Zaehlobjekt bleibt (derselbe Lauf, dieselbe
+        # Aussage wie das AC: "der Lauf durch beide Trips").
+        #
+        # Die erwartete Punktzahl fuer den GESUNDEN Trip wird ANALYTISCH aus
+        # seiner tatsaechlichen Reststrecke abgeleitet (nicht als Literal
+        # dupliziert) -- dieselbe Formel, die `points_along_remaining_route`
+        # laut Spec implementiert.
+        from app.loader import load_all_trips
+        from services.trip_segments import RADAR_ZONE_MAX_POINTS, RADAR_ZONE_POINT_SPACING_KM
+
+        trip_gesund = next(t for t in load_all_trips(user_id=uid) if t.id == gesund_id)
+        _active, p, _pos = _erwartete_messposition(
+            trip_gesund, now_utc, _alarm_offset_minuten(),
+        )
+        reststrecke_km = (1.0 - p) * _active.distance_km
+        erwartete_punkte = min(
+            RADAR_ZONE_MAX_POINTS,
+            int(reststrecke_km // RADAR_ZONE_POINT_SPACING_KM) + 1,
+        )
+        assert frames.call_count == erwartete_punkte, (
+            f"AC-14: der gesunde Trip {gesund_id!r} muss ALLE erwarteten "
+            f"Punkte seiner Reststrecke ({reststrecke_km:.3f} km) abfragen — "
+            f"erwartet {erwartete_punkte} (Abstand "
+            f"{RADAR_ZONE_POINT_SPACING_KM} km, Deckel "
+            f"{RADAR_ZONE_MAX_POINTS}), erhalten {frames.call_count}. Der "
+            f"kaputte Trip {kaputt_id!r} muss dabei NULL Punkte verbraucht "
+            f"haben (s. Testvoraussetzung sent==1/mails==1 oben)."
         )
     finally:
         clean_uid(uid)
