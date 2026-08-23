@@ -173,9 +173,23 @@ Zwei-Dateien-Vorgabe.
 
 ### Fail-soft (AC-9)
 
-Die neue Ableitung liegt **innerhalb** des bestehenden `try`-Blocks von `_radar_e1_fields()`
-(Muster `_radar_e1_fields` `:207-229`): scheitert sie, entsteht der Alarm trotzdem, nur ohne
-`measurement_gaps` — dieselbe Absicherung wie bei den fünf bestehenden E-1-Größen.
+🔴 **Präzisiert 2026-08-23 nach einem Befund aus der RED-Phase.** Die frühere Fassung („liegt
+innerhalb des bestehenden `try`-Blocks von `_radar_e1_fields()`") war zu grob und hätte eine
+**Regression** eingebaut: der bestehende Auffang gibt bei einem Fehler `{}` zurück, es fielen
+also **alle fünf** bestehenden E-1-Größen mit weg (`measurement_point`, `event_at`,
+`lead_time_minutes`, `reference_at`, `source`). Ein Fehler in der neuen, **nachrangigen**
+Buchführung hätte damit die bestehende E-1-Protokollierung aus #2050 S6 zerstört — schlechter
+als der Zustand vor dieser Scheibe.
+
+**Verbindlich gilt die strenge Lesart:** Die neue Ableitung bekommt einen **eigenen** Auffang.
+Scheitert sie, fehlt **nur** `measurement_gaps`; die fünf bestehenden E-1-Größen stehen
+unverändert im Eintrag, und der Alarm geht raus. Das ist der Wortlaut von AC-9 („kein Ausbleiben
+des gesamten Eintrags") beim Wort genommen.
+
+**Ableitungsfunktion:** eigener Modul-Helfer `_messluecken_felder(punkte, ergebnisse)` in
+`src/services/trip_alert.py` — kein Inline-Block. Nur so ist der Fehlerfall aus AC-9 gezielt an
+der Ableitung selbst prüfbar (statt an `_radar_e1_fields()` als Ganzem), und nur so trägt der
+eigene Auffang.
 
 ### Risiko R3 aufgelöst: Index 0 kann bei einem ausgelösten Alarm nie eine Lücke sein
 
@@ -355,9 +369,11 @@ Steuerungsidee mit mehr Indizes.
 
 ## Risiken
 
-- **R4 — Protokollieren darf den Alarm nie kosten.** Die neue Ableitung liegt innerhalb des
-  bestehenden `try`-Blocks von `_radar_e1_fields()` — dasselbe Fail-soft-Muster wie die fünf
-  bestehenden E-1-Größen (AC-9).
+- **R4 — Protokollieren darf den Alarm nie kosten, und die neue Buchführung darf die alte nicht
+  mitreißen.** Die neue Ableitung `_messluecken_felder()` bekommt einen **eigenen** Auffang, nicht
+  den bestehenden von `_radar_e1_fields()`. Sonst risse ein Fehler in der nachrangigen
+  Lücken-Ableitung alle fünf bestehenden E-1-Größen mit (`{}`-Rückgabe) — eine Regression gegen
+  #2050 S6. Siehe „Fail-soft (AC-9)", dort 2026-08-23 präzisiert.
 - **R5 — Bestandsdaten.** Alarmprotokoll-Einträge ohne `measurement_gaps` müssen lesbar bleiben
   und dürfen nicht umgeschrieben werden — Read-Modify-Write, Muster AC-14 aus #2050 S3b (AC-11).
 - **R6 — AC-12/AC-13 der S4a-Spec waren bis zu dieser Scheibe vollständig ungetestet.** Kein
