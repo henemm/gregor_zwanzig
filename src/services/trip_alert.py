@@ -20,6 +20,8 @@ from services import alert_channel_threshold, alert_daily_limit, alert_input_cap
 from services.alert_briefing_anchor import record_alert_anchor_rejected
 import services.alert_urgency as alert_urgency
 from services.alert_gate import (
+    HAZARD_CLASS_WET,
+    _WET_METRICS,
     check_event_identity_gate,
     check_nowcast_gate,
     check_official_alert_gate,
@@ -131,6 +133,35 @@ def _change_to_capture_dict(change: WeatherChange) -> dict:
         "direction": change.direction,
         "segment_id": change.segment_id,
     }
+
+
+def _delta_event_window(
+    changes: List[WeatherChange], weather: List[SegmentWeatherData],
+) -> tuple[Optional[datetime], Optional[datetime]]:
+    """Zeitintervall aus den Segmentfenstern der NASSEN Aenderungen (Issue
+    #2050 S4c, Spec Implementation Details Punkt 2).
+
+    `WeatherChange.occurred_at` ist in drei von vier Erzeugungspfaden `None`
+    (Befund B der Kontext-Kartierung) und deshalb als Zeitbezug fuer den
+    Δ-Zweig ungeeignet. Stattdessen werden `window_start`/`window_end` aus den
+    Start-/Endzeitpunkten der betroffenen Trip-Segmente gebildet. Laesst sich
+    fuer KEINE der uebergebenen Aenderungen ein Segment mit vollstaendiger
+    Start-/Endzeit auffinden, bleiben beide Werte `None` -- `_times_overlap()`
+    liefert dafuer fail-soft `False` (AC-9), kein Absturz."""
+    segments = {
+        normalize_segment_id(sw.segment.segment_id): sw.segment for sw in weather
+    }
+    starts: list[datetime] = []
+    ends: list[datetime] = []
+    for change in changes:
+        segment = segments.get(normalize_segment_id(change.segment_id))
+        if segment is None or segment.start_time is None or segment.end_time is None:
+            continue
+        starts.append(segment.start_time)
+        ends.append(segment.end_time)
+    if not starts or not ends:
+        return None, None
+    return min(starts), max(ends)
 
 
 @dataclass(frozen=True)
@@ -623,6 +654,44 @@ class TripAlertService:
                 ),
             )
 
+        # Issue #2050 S4c: der Δ-Zweig an der quellenuebergreifenden
+        # Ereignis-Identitaet -- streng pruefen, grosszuegig registrieren
+        # (Spec Implementation Details Punkt 4). Der Zeitbezug entsteht aus
+        # den Segmentfenstern der NASSEN Aenderungen (`_delta_event_window`),
+        # `point_at` bleibt fuer diesen Zweig immer `None` (Befund C) -- sonst
+        # laese der Bestandscode den Eintrag faelschlich als `nowcast` ein.
+        _wet_changes = [c for c in to_report if c.metric in _WET_METRICS]
+        _delta_window_start, _delta_window_end = _delta_event_window(
+            _wet_changes, fresh_weather,
+        )
+        _delta_segment_ids = sorted({
+            sid for sid in (
+                normalize_segment_id(c.segment_id) for c in _wet_changes
+            ) if sid
+        })
+        # Streng (Entscheidung 1): die Klasse ist nur dann 'wet', wenn KEINE
+        # Aenderung des Buendels ausserhalb des `wet`-Kanons liegt -- ein
+        # einziger nicht-nasser Anteil (auch neben nassen Anteilen) macht die
+        # Klasse `None` (AC-5). Nur dann wird die Ereignis-Identitaet
+        # ueberhaupt gefragt (AC-6: kein `AlertStateService.load()` sonst).
+        _delta_hazard_class = resolve_hazard_class(
+            metrics=[c.metric for c in to_report],
+        )
+        if _delta_hazard_class is not None:
+            _identity_gate = check_event_identity_gate(
+                user_id=self._user_id, entity_id=trip.id,
+                hazard_class=_delta_hazard_class, segment_ids=_delta_segment_ids,
+                severity=_urgency, now=now_utc,
+                window_start=_delta_window_start, window_end=_delta_window_end,
+                source="deviation",
+            )
+            if not _identity_gate.allowed:
+                self._protokolliere_unterdrueckung(
+                    trip, reason=alert_log.REASON_FORECAST_CHANGE,
+                    gate_reason=_identity_gate.reason,
+                )
+                return False
+
         # 5. Send alert; guard: only record throttle/log when at least one
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
         notif_result = self._send_alert(
@@ -691,6 +760,26 @@ class TripAlertService:
                 "reported_at": now_iso,
             }
         state_svc.save(trip.id, alert_state)
+
+        # Issue #2050 S4c: grosszuegige Registrierung (Entscheidung 1) --
+        # NACH erfolgreicher Zustellung, unabhaengig vom Ergebnis der Pruefung
+        # oben (Eskalation, V1-Ausnahme, gemischtes Buendel kommen hier alle
+        # an). Ist `_wet_changes` leer, gibt es nichts Nasses zu vermerken;
+        # laesst sich kein Zeitfenster bilden, gibt es nichts Sinnvolles zu
+        # schreiben (AC-6/AC-7/AC-9 konsistent fortgesetzt). ERST NACH dem
+        # obigen `state_svc.save()`: der haelt noch die VOR dieser Scheibe
+        # geladene `alert_state`-Momentaufnahme und wuerde einen zuvor
+        # geschriebenen `event_identity:`-Schluessel sonst mit ihr
+        # ueberschreiben (Read-Modify-Write-Kollision zweier Schreiber auf
+        # demselben Zustand).
+        if _wet_changes and _delta_window_start is not None and _delta_window_end is not None:
+            record_event_identity(
+                user_id=self._user_id, entity_id=trip.id,
+                hazard_class=HAZARD_CLASS_WET, segment_ids=_delta_segment_ids,
+                severity=_urgency, now=datetime.now(timezone.utc),
+                window_start=_delta_window_start, window_end=_delta_window_end,
+                source="deviation",
+            )
 
         # 7. Update throttle (only on success) + persist
         # Issue #2050 S3c: die Sperrzeit wird MIT der Dringlichkeit dieses
@@ -2006,38 +2095,19 @@ class TripAlertService:
                     )
                 continue
 
-            # Doppel-Alert-Guard (Issue #818 AC-4)
-            from services.alert_state import AlertStateService
-            _guard_state = AlertStateService(self._user_id).load(trip.id)
-            _double_suppressed = False
-            for _gkey in [f"precip:{active.segment_id}", f"thunder_level_max:{active.segment_id}"]:
-                _gentry = _guard_state.get(_gkey)
-                if _gentry:
-                    try:
-                        _glast = datetime.fromisoformat(_gentry["reported_at"])
-                        if _glast.tzinfo is None:
-                            _glast = _glast.replace(tzinfo=timezone.utc)
-                        if datetime.now(timezone.utc) - _glast < timedelta(minutes=cooldown_min):
-                            _double_suppressed = True
-                            break
-                    except (KeyError, ValueError):
-                        pass
-            if _double_suppressed:
-                logger.debug(f"Radar alert suppressed by double-alert guard for {trip.id}")
-                # Issue #2050 S3b (Szenario 10, AC-4): eigener Grund, nicht
-                # `cooldown` — der Guard sitzt auf `AlertStateService`-Ebene,
-                # nicht auf dem Sperrzeit-Topf. `_e1` liegt hier bereits vor
-                # und geht mit, wie an den uebrigen Stellen dieses Zweigs.
-                # Issue #2050 S4a (AC-9): fiel die Gewitterpruefung dieses
-                # Abrufs aus, haelt der Eintrag das fest — die Entscheidung
-                # fiel dann ohne Gewitterinformation, und das muss nachtraeglich
-                # belegbar sein (D-2), nicht nur der Sperrgrund.
-                self._protokolliere_unterdrueckung(
-                    trip, reason=alert_log.REASON_NOWCAST,
-                    gate_reason=alert_log.REASON_DOUBLE_ALERT_GUARD,
-                    convective_checked=result.convective_checked, **_e1,
-                )
-                continue
+            # Issue #2050 S4c (Entscheidung 2): der Doppel-Alert-Guard (#818)
+            # ist HIER entfernt, nicht repariert -- er las `precip:<segment>`,
+            # geschrieben wird das Melde-Gedaechtnis aber als
+            # `<change.metric>:<segment_id>` (der reale Schluessel heisst
+            # `precip_sum_mm:<segment>`); der Niederschlags-Teil war seit #818
+            # toter Code, ohne Eskalations-Ausnahme. Die Paarung "Δ meldete,
+            # Radar zieht nach" laeuft ab jetzt ausschliesslich ueber
+            # `check_event_identity_gate()` weiter unten -- der Δ-Zweig
+            # registriert seine nassen Alarme jetzt dort (`check_and_send_alerts`),
+            # der Grund heisst fuer diese Paarung `event_duplicate` statt
+            # `double_alert_guard` (AC-14/AC-15). Der Grund-Code selbst bleibt
+            # in `alert_log.py`/`undelivered_hint.py` fuer historische
+            # Eintraege erhalten.
 
             # Kein Kanal konfiguriert → kein Alert (nichts zu recorden).
             # Spec-Nachtrag 2026-08-11 (#1701, "die achte Stelle"): bewusst
@@ -2200,6 +2270,14 @@ class TripAlertService:
                         self._user_id, entity_id=trip.id, entity_type="trip",
                         reason=alert_log.REASON_NOWCAST, gate_reason=_identity_gate.reason,
                         effective_channels=effective_channels,
+                        # Issue #2050 S4a (AC-9): reist an JEDER Radar-
+                        # Unterdrueckungsstelle mit, auch hier -- diese Stufe
+                        # liegt NACH dem Abruf, die Angabe ist also bekannt.
+                        # Ohne sie waere ein Δ-Registereintrag, der einen Lauf
+                        # mit ausgefallener Gewitterpruefung unterdrueckt, vom
+                        # Eintrag eines mit durchgefuehrter Pruefung nicht
+                        # mehr unterscheidbar.
+                        convective_checked=result.convective_checked,
                         **_e1,
                     )
                 except Exception as e:
@@ -2212,12 +2290,19 @@ class TripAlertService:
                 continue
 
             # Issue #2018: das Gate hat diese Meldung als NACHTRAG zu einer
-            # bereits zugestellten AMTLICHEN Warnung eingestuft — dieselbe
-            # Zustellung wie bisher, nur in anderer FORM. Fehlt der
-            # Meldezeitpunkt (fail-soft aus dem Register), entfaellt die
-            # Uhrzeit ersatzlos statt eines erfundenen Platzhalters.
+            # bereits zugestellten Meldung eingestuft — dieselbe Zustellung
+            # wie bisher, nur in anderer FORM. Fehlt der Meldezeitpunkt
+            # (fail-soft aus dem Register), entfaellt die Uhrzeit ersatzlos
+            # statt eines erfundenen Platzhalters.
+            # Issue #2050 S4c (AC-13): die Formulierung wird quellenabhaengig
+            # -- ein Δ-Vorgaenger ist KEINE amtliche Warnung, die alte,
+            # hartkodierte Formulierung waere fuer ihn falsch.
             if _identity_gate.is_addendum:
-                _bezug = "Ergänzung zur amtlichen Warnung"
+                _bezug = (
+                    "Ergänzung zur gemeldeten Wetterabweichung"
+                    if _identity_gate.addendum_source == "deviation"
+                    else "Ergänzung zur amtlichen Warnung"
+                )
                 if _identity_gate.addendum_reported_at is not None:
                     _bezug += (
                         f" von {local_fmt(_identity_gate.addendum_reported_at, tz)}"

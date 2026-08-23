@@ -360,17 +360,30 @@ def _aktives_segment_id(uid: str, trip):
 
 
 def _doppel_alarm_gedaechtnis_setzen(uid: str, trip) -> None:
-    """Melde-Gedaechtnis so hinterlassen, wie ein soeben zugestellter Alarm es
-    hinterlaesst — ueber den produktiven Speicher `AlertStateService.save()`,
-    nicht per Handschrift in die Datei."""
-    from services.alert_state import AlertStateService
+    """Ereignis-Identitaets-Registereintrag ueber den PRODUKTIVEN Schreibweg
+    (`record_event_identity(..., source="deviation")`) — analog einem soeben
+    zugestellten Abweichungs-Alarm derselben Zelle.
 
-    AlertStateService(uid).save(trip.id, {
-        f"precip:{_aktives_segment_id(uid, trip)}": {
-            "last_reported_value": 1.0,
-            "reported_at": (_AT - timedelta(minutes=5)).isoformat(),
-        },
-    })
+    Issue #2050 S4c (AC-14/AC-15): der fruehere Doppel-Alarm-Guard
+    (`precip:<segment>`-Schluessel im Melde-Gedaechtnis) ist ABGELOEST, nicht
+    repariert — die Paarung "Δ meldete, Radar zieht nach" laeuft seither
+    ausschliesslich ueber die quellenuebergreifende Ereignis-Identitaet. Die
+    Zusicherung dieses Tests (AC-9: der Ausfall der Gewitterpruefung steht im
+    Protokolleintrag) ist davon unberuehrt — nur das VEHIKEL, mit dem
+    ueberhaupt ein Unterdrueckungs-Eintrag entsteht, hat sich geaendert.
+    `severity="HIGH"` haelt den Registereintrag bewusst an der Rangspitze,
+    damit KEINE der beiden Lagen (mit/ohne Gewitterpruefung) ihn im Rang
+    uebersteigt und die V2-Eskalation nicht faelschlich durchbricht."""
+    from services.alert_gate import HAZARD_CLASS_WET, record_event_identity
+
+    record_event_identity(
+        user_id=uid, entity_id=trip.id, hazard_class=HAZARD_CLASS_WET,
+        segment_ids=[str(_aktives_segment_id(uid, trip))], severity="HIGH",
+        source="deviation",
+        window_start=_AT - timedelta(minutes=30),
+        window_end=_AT + timedelta(hours=3),
+        now=_AT - timedelta(minutes=5),
+    )
 
 
 def _kennzeichen(vorfall) -> set:
@@ -418,26 +431,30 @@ def test_ac9_der_ausfall_der_gewitterpruefung_steht_im_protokolleintrag():
     festgehalten (Anforderung D-2: benannter Grund samt der Werte).
 
     Aufbau: KEIN Briefing-Anker (die Briefing-Stufe faellt als
-    Entscheidungsgrund aus), dafuer ein scharf gestellter Doppel-Alarm-Guard —
-    eine NACHGELAGERTE Stufe, die den Lauf anhaelt und dabei protokolliert.
-    Nur so entsteht ueberhaupt ein Eintrag, in dem der Ausfall stehen kann.
+    Entscheidungsgrund aus), dafuer ein scharf gestellter Registereintrag der
+    quellenuebergreifenden Ereignis-Identitaet (Issue #2050 S4c) — eine
+    NACHGELAGERTE Stufe, die den Lauf anhaelt und dabei protokolliert. Nur so
+    entsteht ueberhaupt ein Eintrag, in dem der Ausfall stehen kann.
 
     Gemessen wird als KONTRAST zweier Nutzer, deren Laeufe sich in GENAU EINEM
-    Bit unterscheiden: beide werden am selben Guard unterdrueckt, beide
-    bekommen einen Eintrag mit demselben Sperrgrund — der Eintrag des
-    ausgefallenen Laufs muss auf der Leseseite ein Merkmal tragen, das der
-    andere NICHT hat. Ein blosses „irgendetwas ist anders" reicht nicht: der
-    Zeitstempel ist ausgenommen, und der bestehende Sperrgrund muss in BEIDEN
-    Eintraegen unveraendert stehen bleiben (er darf nicht vom neuen Merkmal
-    verdraengt werden).
+    Bit unterscheiden: beide werden von derselben Ereignis-Identitaet
+    unterdrueckt, beide bekommen einen Eintrag mit demselben Sperrgrund —
+    der Eintrag des ausgefallenen Laufs muss auf der Leseseite ein Merkmal
+    tragen, das der andere NICHT hat. Ein blosses „irgendetwas ist anders"
+    reicht nicht: der Zeitstempel ist ausgenommen, und der bestehende
+    Sperrgrund muss in BEIDEN Eintraegen unveraendert stehen bleiben (er darf
+    nicht vom neuen Merkmal verdraengt werden).
 
-    POSITIVKONTROLLE (dritter Nutzer): DIESELBE Lage OHNE scharfen Guard loest
-    aus. Ohne sie bewiese der Eintrag nur, dass irgendetwas den Lauf anhielt —
-    nicht, dass es der Guard war. Sie steht VOR der Kontrast-Zusicherung,
-    damit sie in der RED-Phase tatsaechlich mitlaeuft.
+    POSITIVKONTROLLE (dritter Nutzer): DIESELBE Lage OHNE Registereintrag
+    loest aus. Ohne sie bewiese der Eintrag nur, dass irgendetwas den Lauf
+    anhielt — nicht, dass es die Ereignis-Identitaet war. Sie steht VOR der
+    Kontrast-Zusicherung, damit sie in der RED-Phase tatsaechlich mitlaeuft.
 
-    ROT heute: der Alarmpfad liest `convective_checked` nicht, beide Eintraege
-    sind ununterscheidbar."""
+    Issue #2050 S4c: der fruehere Doppel-Alarm-Guard (#818), der diese
+    Paarung bis dahin abfing, ist ABGELOEST, nicht repariert — der Sperrgrund
+    heisst seither `event_duplicate` statt `double_alert_guard`. Die
+    Zusicherung selbst (Gewitterpruefungs-Ausfall steht im Eintrag) bleibt
+    WORTGLEICH, nur das Vehikel hat sich geaendert."""
     ohne, mit, frei = _uid("ac9-ohne"), _uid("ac9-mit"), _uid("ac9-frei")
     try:
         seit = _AT - timedelta(minutes=1)
@@ -449,20 +466,20 @@ def test_ac9_der_ausfall_der_gewitterpruefung_steht_im_protokolleintrag():
         lauf_ohne = _guard_lauf(ohne, trip_ohne, gewitterpruefung_lief=False)
         lauf_mit = _guard_lauf(mit, trip_mit, gewitterpruefung_lief=True)
         assert (lauf_ohne.triggered_count, lauf_mit.triggered_count) == (0, 0), (
-            f"AC-9 Vorbedingung: beide Laeufe muessen am Doppel-Alarm-Guard "
-            f"haengen bleiben (war {lauf_ohne.triggered_count} bzw. "
+            f"AC-9 Vorbedingung: beide Laeufe muessen an der Ereignis-"
+            f"Identitaet haengen bleiben (war {lauf_ohne.triggered_count} bzw. "
             f"{lauf_mit.triggered_count})."
         )
 
         # Positivkontrolle VOR der eigentlichen Zusicherung: sonst liefe sie
-        # in der RED-Phase nie mit, und der Nachweis „der Guard ist es, der
-        # anhaelt" faellt genau dann aus, wenn er gebraucht wird.
+        # in der RED-Phase nie mit, und der Nachweis „die Ereignis-Identitaet
+        # ist es, die anhaelt" faellt genau dann aus, wenn er gebraucht wird.
         trip_frei = _aufbau(frei, "ac9-frei", briefing_mm=None)
         lauf_frei = _guard_lauf(frei, trip_frei, gewitterpruefung_lief=False)
         assert lauf_frei.triggered_count == 1, (
-            f"AC-9 Positivkontrolle: dieselbe Lage OHNE scharfen "
-            f"Doppel-Alarm-Guard MUSS ausloesen — sonst sagt die Stille oben "
-            f"nichts ueber den Guard aus (war {lauf_frei.triggered_count}, "
+            f"AC-9 Positivkontrolle: dieselbe Lage OHNE Registereintrag MUSS "
+            f"ausloesen — sonst sagt die Stille oben nichts ueber die "
+            f"Ereignis-Identitaet aus (war {lauf_frei.triggered_count}, "
             f"Gruende: {_gruende(frei, trip_frei, seit)!r})."
         )
 
@@ -475,11 +492,12 @@ def test_ac9_der_ausfall_der_gewitterpruefung_steht_im_protokolleintrag():
         )
         vorfall_ohne, vorfall_mit = vorfaelle_ohne[0], vorfaelle_mit[0]
         for vorfall in (vorfall_ohne, vorfall_mit):
-            assert alert_log.REASON_DOUBLE_ALERT_GUARD in vorfall.reasons, (
+            assert alert_log.REASON_EVENT_DUPLICATE in vorfall.reasons, (
                 f"AC-9 Vorbedingung: der Eintrag muss weiterhin den Sperrgrund "
-                f"{alert_log.REASON_DOUBLE_ALERT_GUARD!r} tragen — der Ausfall "
-                f"der Gewitterpruefung kommt HINZU, er ersetzt den Grund "
-                f"nicht. Gefunden: {sorted(vorfall.reasons)!r}"
+                f"{alert_log.REASON_EVENT_DUPLICATE!r} tragen (Issue #2050 "
+                f"S4c — der fruehere `double_alert_guard` ist abgeloest) — "
+                f"der Ausfall der Gewitterpruefung kommt HINZU, er ersetzt "
+                f"den Grund nicht. Gefunden: {sorted(vorfall.reasons)!r}"
             )
 
         zusatz = _kennzeichen(vorfall_ohne) - _kennzeichen(vorfall_mit)

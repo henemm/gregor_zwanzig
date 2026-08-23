@@ -684,6 +684,18 @@ def test_ac13_radar_nachtrag_nennt_die_wetterabweichung_statt_einer_amtlichen_wa
     Nachtrags-Mechanismus im Aufbau ueberhaupt greift und der Test nicht nur
     einen abwesenden Text feiert.
 
+    Gemessen wird die BEZUGSFORMULIERUNG selbst ("Ergänzung zur gemeldeten
+    Wetterabweichung" vs. "Ergänzung zur amtlichen Warnung"), NICHT das bloße
+    Vorkommen des Wortes "amtlich" im Gesamttext: die statische
+    Cooldown-Fusszeile ("Bei Meldungen aus anderen Quellen (amtliche
+    Warnung/Radar) greift dieser Cooldown nicht.",
+    `src/output/renderers/alert/render.py:674`) enthaelt das Wort in JEDEM
+    Radar-Alarm mit Cooldown-Anzeige, unabhaengig von der Quelle des
+    Vorgaengers — sie behauptet nichts ueber einen Vorgaenger und ist kein
+    Defekt. Eine Pruefung auf das blosse Wort waere in BEIDE Richtungen blind:
+    der Hauptlauf waere immer rot, die Positivkontrolle immer gruen, ganz
+    unabhaengig von der tatsaechlichen Bezugsformulierung.
+
     RED heute: der Radar-Alarm nach einem Δ-Alarm ist ueberhaupt kein Nachtrag
     (kein Bezugstext im Kanalinhalt), weil der Δ-Zweig nichts registriert."""
     uid, ctrl = _uid("ac13"), _uid("ac13-ctrl")
@@ -714,7 +726,11 @@ def test_ac13_radar_nachtrag_nennt_die_wetterabweichung_statt_einer_amtlichen_wa
             f"AC-13: der Radar-Alarm muss als NACHTRAG mit Bezug auf die "
             f"vorherige Meldung herausgehen: {text!r}"
         )
-        assert "amtlich" not in text.lower(), (
+        assert "Ergänzung zur gemeldeten Wetterabweichung" in text, (
+            f"AC-13: der Bezug muss die Vorhersage-Abweichung als Quelle "
+            f"nennen: {text!r}"
+        )
+        assert "Ergänzung zur amtlichen Warnung" not in text, (
             f"AC-13: der Bezug darf keine amtliche Warnung behaupten — es lag "
             f"keine vor: {text!r}"
         )
@@ -729,10 +745,17 @@ def test_ac13_radar_nachtrag_nennt_die_wetterabweichung_statt_einer_amtlichen_wa
             radar_service=_radar(_quelle(RATE_MODERAT_MM_H, konvektiv=True)),
         )
         ktext = "\n".join(kradar.telegram + [b for _s, b in kradar.mail])
-        assert kradar.triggered_count == 1 and "amtlich" in ktext.lower(), (
+        assert kradar.triggered_count == 1, (
+            f"AC-13 Positivkontrolle: der Radar-Lauf muss zustellen (war "
+            f"{kradar.triggered_count})."
+        )
+        assert "Ergänzung zur amtlichen Warnung" in ktext, (
             f"AC-13 Positivkontrolle: nach einer amtlichen Warnung muss der "
-            f"Nachtrag sie weiterhin nennen (count={kradar.triggered_count}): "
-            f"{ktext!r}"
+            f"Nachtrag sie weiterhin nennen: {ktext!r}"
+        )
+        assert "Ergänzung zur gemeldeten Wetterabweichung" not in ktext, (
+            f"AC-13 Positivkontrolle: nach einem amtlichen Vorgaenger darf "
+            f"nicht die Δ-Formulierung erscheinen: {ktext!r}"
         )
     finally:
         _clean_user(uid)

@@ -370,3 +370,69 @@ dieser Scheibe (Scheibe 2, #1169).
   lebt die Ausnahme Caller-seitig im Trip-Pfad, exakt wie schon bei #2065 und
   S3b. Details:
   `docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md`.
+
+- **Nachtrag (Issue #2050 S4c, 2026-08-23):** die quellenübergreifende
+  Ereignis-Identität (Nachträge zu #1467 S4b/S4b-2 und #2018) galt bisher
+  ausschließlich zwischen **Radar** und **amtlich**. Diese Scheibe schließt
+  einen dritten Aufrufer an denselben, unveränderten Mechanismus an: den
+  **Abweichungs-Zweig** (Vorhersage-Änderungsalarm,
+  `trip_alert.py::check_and_send_alerts`).
+
+  **Dritter Auflösungsweg für die Gefahrenklasse.** `resolve_hazard_class()`
+  bekommt einen dritten, optionalen Parameter `metrics` — eine Metrik-Liste
+  statt `is_convective`/`hazard`. Neuer Kanon `_WET_METRICS` (`precip_sum_mm`,
+  `precip_heavy_onset_utc`, `thunder_level_max`, `thunder_onset_utc`),
+  eigenständig neben `_WET_HAZARDS` (amtliche Hazard-STRINGS, anderer
+  Namensraum). Die Klasse ist nur dann `wet`, wenn die Metrik-Liste nicht leer
+  ist UND JEDE Metrik zum Kanon gehört — ein einziger Anteil außerhalb (z. B.
+  Wind oder Schnee) macht die Klasse `None`; Schnee-Metriken gehören
+  ausdrücklich NICHT zum Kanon (physikalisch Niederschlag, aber außerhalb des
+  T2-Kanons).
+
+  **Expliziter Quellenvermerk statt Ableitung.** `check_event_identity_gate()`
+  und `record_event_identity()` bekommen einen additiven, optionalen Parameter
+  `source: "official" | "nowcast" | "deviation"`. Radar und amtlich lassen ihn
+  weiterhin weg — der Fallback (Ableitung aus der Anwesenheit von `point_at`)
+  bleibt für sie identisch, die Signatur bricht für sie nicht. Der
+  Abweichungs-Zweig trägt (wie ein amtlicher Eintrag) ein Zeitintervall statt
+  eines Einzelzeitpunkts und übergibt deshalb IMMER `source="deviation"`
+  explizit — sonst läse ihn die alte Ableitung fälschlich als `"official"`.
+  `addendum_direction` erweitert sich entsprechend um den Fall
+  `match["source"] == "deviation" and new_source == "nowcast"` (bisher nur
+  `"official"`); ein nachfolgender, eskalierender Radar-Alarm nennt dann die
+  gemeldete Wetterabweichung statt einer nie vorliegenden amtlichen Warnung.
+
+  **Zeitbezug aus Segmentfenstern statt `occurred_at`.** `WeatherChange.
+  occurred_at` ist in drei von vier Erzeugungspfaden `None` und als Zeitbezug
+  ungeeignet. Der Δ-Zweig bildet `window_start`/`window_end` stattdessen aus
+  den Start-/Endzeitpunkten der Trip-Segmente der NASSEN Änderungen
+  (`trip_alert.py::_delta_event_window`); `point_at` bleibt für ihn immer
+  `None`. Lässt sich kein Segment mit Zeitfenster auffinden, bleiben beide
+  Werte `None` — `_times_overlap()` liefert dafür fail-soft `False`.
+
+  **Streng prüfen, großzügig registrieren.** Geprüft (Aufruf von
+  `check_event_identity_gate()`) wird nur, wenn die Gefahrenklasse des
+  GESAMTEN Bündels `wet` ist — ein einziger nicht-nasser Anteil lässt die
+  Meldung immer durch, ohne das Register überhaupt zu lesen. Registriert wird
+  dagegen unabhängig vom Prüfergebnis, sobald das Bündel NACH erfolgreicher
+  Zustellung mindestens eine nasse Änderung enthält — Eskalationen, die
+  V1-Ausnahme und gemischte Bündel hinterlassen damit ebenfalls einen
+  Registereintrag für die nassen Anteile.
+
+  **Ablösung des Doppel-Alarm-Wächters (#818).** Der seit #818 zur Hälfte tote
+  Wächter (`trip_alert.py`, Schlüssel `precip:<segment>`/
+  `thunder_level_max:<segment>` — `"precip"` ist kein Metrik-Schlüssel, der
+  reale heißt `precip_sum_mm`) ist ENTFERNT, nicht repariert. Die Paarung
+  „Δ meldete, Radar zieht nach" läuft jetzt ausschließlich über die
+  Ereignis-Identität; der protokollierte Grund wechselt für diese Paarung von
+  `double_alert_guard` auf `event_duplicate`, und — anders als beim alten
+  Wächter — eine echte Eskalation kommt jetzt durch (Verbindung zu #2065/
+  S3c). Der Grund-Code `double_alert_guard` selbst bleibt in `alert_log.py`/
+  `undelivered_hint.py` für historische Einträge erhalten.
+
+  **Ortsvergleich bleibt unberührt.** `compare_alert.py` ruft weder
+  `check_event_identity_gate()` noch `record_event_identity()` auf —
+  Ortsvergleich-Themen sind PO-seitig zurückgestellt, die Anschlussstelle ist
+  kartiert (`docs/context/feat-2050-s4c-ein-ereignis-ein-alarm.md`) und geht
+  als benannte Folgescheibe ins Issue. Details:
+  `docs/specs/modules/feat_2050_s4c_ein_ereignis_ein_alarm.md`.
