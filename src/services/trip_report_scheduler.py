@@ -1245,7 +1245,10 @@ class TripReportSchedulerService:
         # ersetzt die interne Auflösung — kein zweiter Auflöser.
         if target_date is None:
             target_date = self._get_target_date(report_type, trip, now_utc)
+        self._last_converted_trip = None
         segments = self._convert_trip_to_segments(trip, target_date)
+        if self._last_converted_trip is not None:
+            trip = self._last_converted_trip
 
         # Issue #768: Test-Pfad-Fallback — wenn am regulären Zieldatum keine
         # Etappe liegt, weicht NUR der Test-Versand auf die nächste kommende
@@ -1255,7 +1258,10 @@ class TripReportSchedulerService:
             fb = self.select_test_stage(trip, report_type, now_utc)
             if fb is not None:
                 target_date = fb.date
+                self._last_converted_trip = None
                 segments = self._convert_trip_to_segments(trip, target_date)
+                if self._last_converted_trip is not None:
+                    trip = self._last_converted_trip
 
         if not segments:
             logger.warning(f"No segments for trip {trip.id} on {target_date}")
@@ -2025,6 +2031,7 @@ class TripReportSchedulerService:
             trip = backfill_stage_distances(
                 trip, user_id, target_date, persist=effective_persist,
             )
+        self._last_converted_trip = trip
         return convert_trip_to_segments(trip, target_date)
 
     def _clamp_segments_to_today(
@@ -2393,7 +2400,10 @@ class TripReportSchedulerService:
                 horizon_days = OPENMETEO_MAX_FORECAST_DAYS
                 continue
             try:
+                self._last_converted_trip = None
                 segments = self._convert_trip_to_segments(trip, stage.date)
+                if self._last_converted_trip is not None:
+                    trip = self._last_converted_trip
                 if not segments:
                     # Fix #1486: bisher voellig stumm.
                     logger.warning(
@@ -2851,7 +2861,10 @@ class TripReportSchedulerService:
             if not is_within_forecast_horizon(stage.date, today):
                 continue
             try:
+                self._last_converted_trip = None
                 segments = self._convert_trip_to_segments(trip, stage.date)
+                if self._last_converted_trip is not None:
+                    trip = self._last_converted_trip
                 if not segments:
                     continue
                 seg_weather = self._fetch_weather(segments)
