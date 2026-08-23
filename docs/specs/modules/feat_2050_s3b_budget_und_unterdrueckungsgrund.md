@@ -301,6 +301,21 @@ entfernten Schutz unterscheiden lässt:
 | `test_official_alert_cooldown_entkopplung.py::test_ac11_…_bekommt_keinen_grund_ins_protokoll` | der amtliche Pfad protokolliert **keinen** Unterdrückungsgrund (Geltungsbereich Nowcast-only, Lücke E3 offen) | umgeschrieben zu `…_protokolliert_seinen_grund` — erwartet `quiet_hours` als Grund und `official_alert` als Auslöser | sicherte das **Gegenteil** von AC-5 zu; genau diese Beschränkung hebt Szenario 10 auf |
 | `test_compare_radar_alert_daily_limit.py::test_erreichte_tages_obergrenze_verhindert_auch_den_nowcast_abruf` | bei erschöpftem Budget wird **gar nicht** abgerufen (Kostenzusicherung AC-1) | umgeschrieben zu `test_ruhezeit_verhindert_auch_den_nowcast_abruf` — dieselbe Kostenzusicherung, festgenagelt an der Ruhezeit | mit AC-20 strukturell unvereinbar: die Dringlichkeit, die über den Durchbruch entscheidet, entsteht **erst aus dem Abruf**. Die Kostenzusicherung gilt unverändert eine Stufe höher (Ruhezeit/Sperrzeit bleiben harte Stops vor dem Abruf); dass der teurere Abruf keine Meldungsflut einkauft, deckt `test_erreichte_tages_obergrenze_unterdrueckt_den_vergleichs_nowcast` mit derselben Lage ab |
 
+**Nachtrag 2026-08-23 (Messgrößen-Ablösung durch #2050 S3c,
+`docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md`):** S3c hat den harten
+Abbruch am Sperrzeit-Gate des Trip-Änderungsalarms entfernt; der Lauf entscheidet dort jetzt
+**nach** dem Wetterabruf. Der Stellvertreter „0 Wetterabrufe = gesperrt" trägt damit für die
+Sperrzeit nicht mehr (für die vier bewusst stillen Vorlauf-Stellen dieser Spec trägt er
+unverändert). Betroffen ist eine Vorbedingung von AC-10:
+
+| Test | Sicherte zu | Wird | Warum |
+|---|---|---|---|
+| `test_alert_suppression_reason.py::test_ac10_briefing_vorlauf_am_trip_aenderungsalarm_bleibt_still` | Vorbedingung **beider** Trips: `Wetterabrufe == 0` | Vorlauf-Trip unverändert an der Abrufzahl (die Stufe sitzt weiter **vor** dem Abruf); Kontroll-Trip an ausbleibender **Zustellung** plus protokolliertem Grund `cooldown` | die Abrufzahl trennt die beiden Fälle nicht mehr. Beide Trips bekommen jetzt **dieselbe** alarmfähige Lage, was die Grenze zwischen stiller und scharfer Stelle schärfer zieht als zuvor |
+
+Die Zusicherung von AC-10 ist unverändert: der Briefing-Vorlauf erzeugt **keinen** Eintrag, die
+Sperrzeit sehr wohl. Gegenprobe belegt (2026-08-23): `_is_throttled_with_cooldown → False` macht
+den Test rot.
+
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** ADR-0021 (Nachtrag)
@@ -316,6 +331,8 @@ entfernten Schutz unterscheiden lässt:
 
 ## Changelog
 
+- 2026-08-23: Nachtrag „Messgrößen-Ablösung durch #2050 S3c" — Vorbedingung des Kontroll-Trips in
+  AC-10 von der Wetterabruf-Naht auf die Zustellung umgestellt; Zusicherung unverändert.
 - 2026-08-22: Initial spec created (aus `docs/context/feat-2050-s3b-budget-und-unterdrueckungsgrund.md`,
   Analyse-Phase 2026-08-22). Struktureller Befund beim Spec-Schreiben: der in der Analyse
   skizzierte Ansatz „optionaler Eskalations-Parameter an `check_nowcast_gate()`" ist mit der

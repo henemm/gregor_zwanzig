@@ -1,31 +1,34 @@
 """Issue #2050 Scheibe S3a — Waechter Sz 4 (A-3): Verschaerfung ueberholt
 
-Sperrzeit NICHT im Aenderungs-Zweig (Kontrast zum Radar-Zweig).
+die Sperrzeit auch im Aenderungs-Zweig (seit #2050 S3c).
 
 SPEC: docs/specs/modules/alarm_szenarien_waechter_4_9_11.md (AC-1, AC-2)
+      docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md (AC-1)
 
-Der Radar-Zweig-Nachweis fuer dieselbe Anforderung A-3 ist bereits
-vollstaendig durch `tests/tdd/test_radar_cooldown_overtake.py` (Issue #2065)
-erbracht: eine quantitative Verschaerfung UEBERHOLT dort die Sperrzeit. Dieser
-Waechter belegt den GEGENSATZ im Aenderungs-Zweig: `_is_throttled_with_cooldown`
-(`trip_alert.py:306-308`) gibt bedingungslos `False` zurueck, BEVOR ueberhaupt
-eine Verschaerfung geprueft wuerde -- eine noch so deutliche Zuspitzung
-gegenueber Lauf 1 aendert daran nichts.
+Der Radar-Zweig-Nachweis fuer dieselbe Anforderung A-3 ist durch
+`tests/tdd/test_radar_cooldown_overtake.py` (Issue #2065) erbracht: eine
+quantitative Verschaerfung UEBERHOLT dort die Sperrzeit. S3a hielt hier
+zunaechst den GEGENSATZ im Aenderungs-Zweig fest; seit S3c gilt dort
+dieselbe Anforderung, mit einem ordinalen Rangvergleich
+(`alert_urgency.exceeds`) statt einer Faktor-Formel.
 
-Der Aenderungs-Zweig schreibt bei dieser Unterdrueckung KEINEN `alert_log`-
-Eintrag (kein `append_suppressed_entry`-Aufruf an dieser Stelle, anders als
-der Radar-Zweig via `_protokolliere_radar_unterdrueckung`) -- der Nachweis
-laeuft deshalb ueber den UNVERAENDERTEN Sperrzeit-Zeitstempel in
-`ThrottleStore`, nicht ueber das Protokoll.
+Der Nachweis laeuft ueber den Sperrzeit-Zeitstempel in `ThrottleStore` und
+nicht ueber das Protokoll: der Aenderungs-Zweig schreibt bei einem
+DURCHBRUCH ohnehin einen normalen Zustell-Eintrag, und der Zeitstempel zeigt
+unmittelbar, ob die Sperrzeit neu gebucht wurde.
 
-WICHTIG -- dieser Waechter haelt den IST-ZUSTAND fest, nicht das Soll:
-Anforderung A-3 ("eine Verschaerfung ueberholt jede Sperre") gilt laut
-PO-Entscheid vom 2026-08-22 (Issue #2050) AUCH im Aenderungs-Zweig, nicht nur
-im Radar-Zweig. Heute gibt es die Ausnahme dort nicht (`trip_alert.py:306-308`,
-harter `return False` ohne jede Schweregrad-Pruefung). Geschlossen wird die
-Luecke durch Scheibe S3c (#2050); mit ihr KEHRT SICH AC-2 UM und muss dann
-mit-umgeschrieben werden -- ein rot werdendes AC-2 ist nach S3c also der
-erwartete Befund, keine Regression.
+ABLOESUNG (Issue #2050 Scheibe S3c, 2026-08-23): AC-2 sicherte hier zu, dass
+eine Verschaerfung innerhalb der Sperrzeit IMMER ohne Alarm bleibt -- als
+bewusst festgehaltener IST-Zustand, nicht als Soll. Die Datei kuendigte die
+eigene AblOese bereits an. S3c hat die Luecke geschlossen: eine Verschaerfung,
+die die gespeicherte Vergleichsdringlichkeit im RANG uebersteigt, ueberholt
+die Sperrzeit jetzt auch im Aenderungs-Zweig. AC-2 unten ist deshalb
+UMGESCHRIEBEN, nicht geloescht -- dieselbe Flaeche prueft heute das Gegenteil.
+Das ist eine bewusste Ablsoese, KEIN entfernter Schutz: die Gegenproben gegen
+eine zu weite Loesung stehen in
+`docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md` (AC-2 bis
+AC-5) und in `tests/tdd/test_alarm_pruefstrecke_selbstschutz.py` (AC-1/AC-7,
+unveraendert gruen).
 
 Beide Laeufe ueber `AlarmPruefstrecke` (#2050 S1) gegen die ECHTE
 Ausloeseentscheidung `TripAlertService.check_and_send_alerts()`. Kein
@@ -87,18 +90,26 @@ def test_ac1_deutliche_verschaerfung_ohne_vorbelegte_sperrzeit_loest_aus_und_buc
         _clean_user(uid)
 
 
-def test_ac2_verschaerfung_innerhalb_der_sperrzeit_bleibt_ohne_alarm():
+def test_ac2_verschaerfung_innerhalb_der_sperrzeit_ueberholt_seit_s3c():
     """AC-2: dieselbe Sperrzeit ist noch aktiv (aus Lauf 1 gebucht); Lauf 2
     bietet eine gegenueber Lauf 1 NOCHMALS deutlich verschaerfte Lage --
-    trotzdem bleibt der Lauf ohne Alarm. Anders als im Radar-Zweig
+    und ueberholt die Sperrzeit. Wie im Radar-Zweig
     (`test_radar_cooldown_overtake.py`, Issue #2065) gibt es im
-    Aenderungs-Zweig keine Eskalations-Ausnahme.
+    Aenderungs-Zweig seit S3c eine Eskalations-Ausnahme.
 
-    Festgehalten wird damit der IST-Zustand, NICHT das Soll aus Anforderung
-    A-3: nach dem PO-Entscheid vom 2026-08-22 (#2050) soll die Verschaerfung
-    auch hier die Sperre ueberholen. Scheibe S3c (#2050) dreht das um und
-    kehrt die Erwartung dieses Tests um (dann: `triggered_count == 1` und ein
-    NEU gebuchter Sperrzeit-Zeitstempel)."""
+    🔴 ABGELOESTE ZUSICHERUNG: bis Scheibe S3c (#2050, 2026-08-23) hielt
+    dieser Test den IST-Zustand fest -- `triggered_count == 0` und ein
+    UNVERAENDERTER Sperrzeit-Zeitstempel, weil `check_and_send_alerts()` an
+    der Sperrzeit hart abbrach, BEVOR ueberhaupt eine Schwere gebildet wurde.
+    Der PO-Entscheid vom 2026-08-22 verlangte auch hier die Ueberholung
+    (Anforderung A-3, Szenario 4); S3c hat sie gebaut, und damit kehrt sich
+    die Erwartung dieses Tests um. Das ist eine bewusste Ablsoese, kein
+    entfernter Schutz -- die Gegenproben gegen eine zu weite Loesung
+    (identische Wiederholung, abgeschwaechte Lage, fehlende Vergleichsbasis)
+    stehen in `tests/tdd/test_deviation_cooldown_overtake.py` (AC-2 bis AC-5)
+    und in `tests/tdd/test_alarm_pruefstrecke_selbstschutz.py` (AC-1/AC-7).
+    SPEC der Ablsoese:
+    `docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md`."""
     uid = _uid("ac2")
     _clean_user(uid)
     try:
@@ -123,25 +134,32 @@ def test_ac2_verschaerfung_innerhalb_der_sperrzeit_bleibt_ohne_alarm():
 
         # Lauf 2: innerhalb des Sperrfensters aus Lauf 1, mit einer GEGENUEBER
         # Lauf 1 nochmals deutlich verschaerften Lage (2.0 -> 18.0 in Lauf 1,
-        # jetzt 2.0 -> 45.0 -- mehr als das Doppelte des Deltas aus Lauf 1).
+        # jetzt 2.0 -> 45.0). Gemessen ergibt Lauf 1 den Rang MODERATE und
+        # Lauf 2 den Rang HIGH -- ein ECHTER Rangsprung, den S3c als
+        # Ueberholung wertet.
         at2 = _AT + timedelta(minutes=30)
         lauf2 = strecke.lauf(
             at=at2, zweig="deviation", trip=trip,
             cached_weather=[_weather_data(precip_sum_mm=2.0)],
             fresh_weather=[_weather_data(precip_sum_mm=45.0)],
         )
-        assert lauf2.triggered_count == 0, (
-            f"AC-2: der Aenderungs-Zweig kennt keine Eskalations-Ausnahme -- "
-            f"trotz der nochmals verschaerften Lage muss der Lauf innerhalb "
-            f"der Sperrzeit still bleiben. War triggered_count={lauf2.triggered_count}."
+        assert lauf2.triggered_count == 1, (
+            f"AC-2 (seit S3c): der Aenderungs-Zweig kennt eine "
+            f"Eskalations-Ausnahme -- die nochmals verschaerfte Lage (Rang "
+            f"HIGH gegen die gebuchte Basis MODERATE) muss die laufende "
+            f"Sperrzeit ueberholen. War triggered_count={lauf2.triggered_count}."
         )
 
         gebucht_nach_lauf2 = ThrottleStore(uid).last_sent("trip", trip.id)
-        assert gebucht_nach_lauf2 == gebucht_nach_lauf1, (
-            f"AC-2: der Sperrzeit-Zeitstempel darf sich durch Lauf 2 nicht "
-            f"veraendert haben -- das ist der Nachweis, dass der Cooldown-Gate "
-            f"frueh griff, nicht dass zufaellig ein anderer Gate zuschlug "
-            f"(vorher {gebucht_nach_lauf1!r}, nachher {gebucht_nach_lauf2!r})."
+        assert (
+            gebucht_nach_lauf2 is not None
+            and gebucht_nach_lauf2 > gebucht_nach_lauf1
+        ), (
+            f"AC-2 (seit S3c): der Sperrzeit-Zeitstempel muss durch Lauf 2 NEU "
+            f"gebucht sein -- das ist der Nachweis, dass der Durchbruch "
+            f"tatsaechlich bis zur Buchung durchlief und nicht bloss ein "
+            f"anderer Zaehler ansprang (vorher {gebucht_nach_lauf1!r}, nachher "
+            f"{gebucht_nach_lauf2!r})."
         )
     finally:
         _clean_user(uid)

@@ -474,6 +474,51 @@ def last_nowcast_precip_mm(
     return precip_mm
 
 
+def deviation_overtakes_cooldown(
+    *, basis_urgency: Optional[str], urgency: str,
+) -> bool:
+    """Ueberholt diese Lage die laufende Sperrzeit? — Abweichungs-Zweig
+    (Issue #2050 S3c)
+
+    Schwester von `radar_overtakes_cooldown()`, gleiche Grundform (fehlende
+    Vergleichsbasis ⇒ kein Durchbruch), andere Vergleichsformel: ein ordinaler
+    RANGSPRUNG auf der bestehenden LOW/MODERATE/HIGH-Skala statt eines
+    Faktors. Der Radar-Zweig vergleicht EINE physikalische Menge (mm/h), der
+    Abweichungs-Zweig traegt potenziell mehrere heterogene Metriken (°C, km/h,
+    mm) gleichzeitig — ein gemeinsamer Faktor ist auf ihnen nicht definierbar.
+    `alert_urgency.exceeds` ist dafuer bereits etabliertes Vokabular, kein
+    dritter Eskalationsbegriff.
+
+    Bekannte Grenze, bewusst nicht gefangen: die Skala saettigt bei `HIGH` —
+    eine Lage, die von `HIGH` auf noch schlimmer geht, erzeugt keinen
+    Rangsprung und bricht nicht durch (s. Spec „Known Limitations").
+
+    🔴 Bewusst NICHT in `check_nowcast_gate()` und in keinem anderen geteilten
+    Gate: die Verortungs-Begruendung aus #2065 (s.o.) gilt unveraendert — der
+    PO-zurueckgestellte Ortsvergleich darf die Ausnahme nicht erben.
+    """
+    if basis_urgency is None:
+        return False
+    return alert_urgency.exceeds(urgency, basis_urgency)
+
+
+def last_deviation_urgency(
+    *,
+    user_id: str,
+    throttle_scope: str,
+    throttle_key: str,
+    throttle_store: Optional[ThrottleStore] = None,
+) -> Optional[str]:
+    """Die Dringlichkeit, mit der die laufende Sperre gebucht wurde — die
+    Vergleichsbasis der Ueberholungspruefung (Issue #2050 S3c). `None`, wenn
+    der Eintrag aus dem Alt-Format stammt oder ohne Dringlichkeit gebucht
+    wurde (amtlicher Zweig, `trip_alert.py:2480`)."""
+    _, urgency = _resolve_store(user_id, throttle_store).last_sent_with_urgency(
+        throttle_scope, throttle_key,
+    )
+    return urgency
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Issue #1467 Scheibe S4b-1 — quellenuebergreifende Ereignis-Identitaet
 # SPEC: docs/specs/modules/rework_1467_s4b_entdopplung.md

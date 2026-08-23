@@ -86,6 +86,13 @@ betroffen (PO-Entscheidung 2026-07-07).
    Fetch/Nowcast, zusätzlicher Gate-Check `alert_daily_limit.is_allowed(...)`.
    Increment `alert_daily_limit.increment(...)` strikt hinter dem
    bestehenden Recording (~Zeile 206-208), also nur wenn `delivered` truthy war.
+   - **Überholt (Issue #2050 S3c, 2026-08-23):** Diese feste Reihenfolge gilt
+     nur noch, wenn die Sperrzeit geschlossen ist. Ist sie offen, bricht das
+     Cooldown-Gate seither nicht mehr sofort ab — der Tageslimit-Check wird an
+     dieser Stelle ÜBERSPRUNGEN, der Fetch/Nowcast läuft trotzdem, und die
+     Tageslimit-Prüfung wird erst NACH dem Fetch nachgeholt (gemeinsam mit der
+     Sperrzeit-Überholungsprüfung). Geltende Fassung:
+     `docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md`.
 2. Radar-Pfad `check_radar_alerts` (~Zeile 711 ff.): analog nach
    `_is_radar_throttled`-Gate, Increment hinter dem bestehenden
    `_append_alert_log`/Recording (~Zeile 832-849).
@@ -193,3 +200,6 @@ unverändert ohne Reserve (PO-Entscheidung, s. Known Limitations in
 
 - 2026-07-07: Initial spec created
 - 2026-08-07: NowCast-Reserve (#1555) additiv ergänzt
+- 2026-08-23: Hinweis auf die feste Vor-Fetch-Reihenfolge im Deviation-Pfad
+  als überholt markiert (Issue #2050 S3c: Tageslimit-Check läuft bei offener
+  Sperrzeit erst nach dem Fetch)

@@ -63,6 +63,7 @@ from tests.helpers.briefing_imminent_fixtures import (  # noqa: E402
 )
 from tests.helpers.briefing_imminent_fixtures import (  # noqa: E402
     FakeOfficialAlertSource,
+    alarmfaehige_lage,
     compare_change_alert_run,
     compare_official_alert_run,
     compare_official_versand_lauf,
@@ -71,7 +72,7 @@ from tests.helpers.briefing_imminent_fixtures import (  # noqa: E402
     nur_diese_warnquelle,
     ruhezeit_woanders,
     stunde_versetzt,
-    trip_change_alert_run,
+    trip_change_alert_lauf,
     trip_official_alert_run,
     write_location,
     write_trip,
@@ -992,7 +993,19 @@ def test_ac10_briefing_vorlauf_am_trip_aenderungsalarm_bleibt_still():
     faellt eine Stufe weiter in die Sperrzeit und bekommt dort seinen
     Eintrag. Die zweite Haelfte ist heute ROT (AC-2 ist noch nicht umgesetzt),
     die erste gruen — zusammen bewachen sie die Grenze zwischen den neun
-    scharfen und den vier stillen Stellen."""
+    scharfen und den vier stillen Stellen.
+
+    MESSGROESSE DES KONTROLL-TRIPS ABGELOEST durch Issue #2050 S3c
+    (2026-08-23), SPEC
+    ``docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md``:
+    Beide Trips wurden bis dahin an der Wetterabruf-Naht gemessen (0 Abrufe =
+    gesperrt). Fuer den VORLAUF gilt das unveraendert — die Stufe sitzt weiter
+    VOR dem Abruf. Fuer die SPERRZEIT des Kontroll-Trips nicht mehr: sie
+    entscheidet seit S3c erst danach, weil die Schwere der Lage vorher nicht
+    existiert. Beide Trips bekommen deshalb dieselbe alarmfaehige Lage; der
+    Kontroll-Trip wird an seiner ausbleibenden ZUSTELLUNG und am
+    protokollierten Grund gemessen. Das zieht die Grenze schaerfer als zuvor:
+    der Vorlauf-Trip bleibt bei identischer Lage vor dem Abruf stehen."""
     from services.alert_log import REASON_COOLDOWN, REASON_FORECAST_CHANGE
 
     still = vorlauf_fresh_uid("s3b-ac10t-nah")
@@ -1011,14 +1024,21 @@ def test_ac10_briefing_vorlauf_am_trip_aenderungsalarm_bleibt_still():
             record_throttle(uid, _SCOPE_TRIP_AENDERUNG, trip_id,
                             _jetzt() - timedelta(minutes=5))
 
-        assert trip_change_alert_run(still, "trip-2050s3b-ac10t-nah") == 0, (
-            "Vorbedingung: die Vorlauf-Sperre muss VOR dem Wetterabruf greifen"
+        cached, fresh = alarmfaehige_lage()
+
+        abrufe, zugestellt = trip_change_alert_lauf(
+            still, "trip-2050s3b-ac10t-nah", cached=cached, fresh=fresh)
+        assert (abrufe, zugestellt) == (0, []), (
+            f"Vorbedingung: die Vorlauf-Sperre muss VOR dem Wetterabruf "
+            f"greifen — Abrufe={abrufe}, zugestellt={zugestellt!r}"
         )
         _kein_vorfall(still, "trip-2050s3b-ac10t-nah", "trip", seit)
 
-        assert trip_change_alert_run(laut, "trip-2050s3b-ac10t-fern") == 0, (
-            "Vorbedingung: der Kontroll-Trip muss an der SPERRZEIT haengen "
-            "bleiben, nicht am Vorlauf"
+        _, zugestellt_laut = trip_change_alert_lauf(
+            laut, "trip-2050s3b-ac10t-fern", cached=cached, fresh=fresh)
+        assert zugestellt_laut == [], (
+            f"Vorbedingung: der Kontroll-Trip muss an der SPERRZEIT haengen "
+            f"bleiben, nicht am Vorlauf — zugestellt: {zugestellt_laut!r}"
         )
         _genau_ein_grund(
             laut, "trip-2050s3b-ac10t-fern", "trip", seit,
