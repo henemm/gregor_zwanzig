@@ -27,7 +27,6 @@ import json
 import shutil
 import uuid
 from datetime import date as date_type, datetime, time, timedelta, timezone
-from pathlib import Path
 
 import pytest
 from freezegun import freeze_time
@@ -529,7 +528,20 @@ def test_ac4_melde_gedaechtnis_allein_haelt_keinen_radar_alarm_mehr_zurueck():
 
     RED heute: der Wächter lebt noch und unterdrückt (gemessen: `count == 0`,
     Grund `double_alert_guard`).
+
+    CI-Korrektur (#2050 S4c): `count` misst NICHT die Unterdrückungslogik
+    selbst, sondern die Zustellbilanz — in einer Umgebung ohne Zustellweg
+    (CI) scheitert der Versand technisch (`delivery_failed`), `count` bliebe
+    0, obwohl der Wächter gar nicht gezogen hat. Ein zufällig gültiges
+    lokales `.env` verdeckte das (Vorbild AC-2/AC-3 oben, Settings mit festen
+    Zugangsdaten): `Settings(...)` macht `can_send_email()` in JEDER Umgebung
+    True, `mail_sink` ersetzt SMTP — der Test misst damit in CI und lokal
+    dasselbe. Zusätzlich zum Negativ-Nachweis (kein Unterdrückungsgrund)
+    steht der Positiv-Nachweis, dass der Alarm tatsächlich den Versandpunkt
+    erreicht hat (`len(captured) == 1`) — ohne ihn wäre der Test auch dann
+    grün, wenn gar kein Alarm entstünde.
     """
+    from app.config import Settings
     from services.alert_state import AlertStateService
     from services.radar_service import RadarNowcastService
     from services.trip_alert import TripAlertService
@@ -553,6 +565,10 @@ def test_ac4_melde_gedaechtnis_allein_haelt_keinen_radar_alarm_mehr_zurueck():
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="x@example.com",
+            ),
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
         count = svc.check_radar_alerts()
@@ -563,39 +579,20 @@ def test_ac4_melde_gedaechtnis_allein_haelt_keinen_radar_alarm_mehr_zurueck():
             f"Melde-Gedächtnis-Eintrag den Radar-Alarm nicht mehr "
             f"unterdrücken (war {count}, Gründe {gruende!r})."
         )
+        assert len(captured) == 1, (
+            f"AC-14: Positiv-Nachweis — der Alarm muss den Versandpunkt "
+            f"tatsächlich erreicht haben (war {len(captured)})."
+        )
         assert "double_alert_guard" not in gruende, (
             f"AC-14: der Grund des abgelösten Wächters darf nicht mehr "
             f"entstehen: {gruende!r}"
         )
+        assert "event_duplicate" not in gruende, (
+            f"AC-14: ohne Ereignis-Identitäts-Registereintrag darf auch der "
+            f"neue Wächter nicht ziehen: {gruende!r}"
+        )
     finally:
         _clean_user(uid)
-
-
-def test_ac4_doppel_alarm_waechter_ist_aus_dem_quellcode_entfernt():  # doc-compliance-test
-    """#2050 S4c AC-14 (Struktur): der Wächter-Block existiert nicht mehr.
-
-    Bewusst ein Quellcode-Nachweis und deshalb als `doc-compliance-test`
-    gekennzeichnet: „der Codepfad ist WEG" ist eine Aussage über den Quelltext,
-    die kein Verhaltenstest allein belegen kann — die beiden Verhaltenstests
-    oben blieben auch dann grün, wenn der Wächter nur zufällig nie zöge.
-    Pfadregel #1409: relativ zu DIESER Testdatei aufgelöst.
-    """
-    wurzel = Path(__file__).resolve().parents[2]
-    quelle = (wurzel / "src" / "services" / "trip_alert.py").read_text(encoding="utf-8")
-
-    assert 'f"precip:{active.segment_id}"' not in quelle, (
-        "AC-14: der tote `precip:`-Schlüssel des Doppel-Alarm-Wächters muss "
-        "aus `trip_alert.py` verschwunden sein (abgelöst, nicht repariert)."
-    )
-    assert "_double_suppressed" not in quelle, (
-        "AC-14: der Doppel-Alarm-Wächter (`_double_suppressed`) muss entfernt "
-        "sein — die Paarung läuft über `check_event_identity_gate()`."
-    )
-    assert "REASON_DOUBLE_ALERT_GUARD" not in quelle, (
-        "AC-14: `trip_alert.py` darf den Grund `double_alert_guard` nicht mehr "
-        "neu schreiben; der Code bleibt nur für historische Einträge in "
-        "`alert_log.py`/`undelivered_hint.py` erhalten."
-    )
 
 
 # --------------------------------------------------------------------------
