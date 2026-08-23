@@ -332,3 +332,57 @@ def _reset_telegram_rate_limit():
     reset_telegram_rate_limit_for_tests()
     yield
     reset_telegram_rate_limit_for_tests()
+
+# ---------------------------------------------------------------------------
+# Issue #2096: gestellte Wanduhr fuer den GANZEN Lauf
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="session", autouse=True)
+def _gestellte_wanduhr():
+    """Stellt die Uhr des gesamten Laufs auf ``GZ_TEST_WALL_CLOCK_UTC``.
+
+    Nachweis-Werkzeug fuer die Zeitunabhaengigkeit (#2096 AC-10): dieselbe
+    Testmenge muss um 12:00 UTC dasselbe Ergebnis liefern wie um 23:58 UTC.
+    Ohne diesen Schalter liesse sich das nur belegen, indem man auf die
+    entsprechende Tageszeit wartet oder die SYSTEMzeit des Servers verstellt —
+    beides ist keine Option.
+
+    Ohne gesetzte Variable passiert NICHTS: der Normallauf (CI, lokal) laeuft
+    unveraendert auf der echten Wanduhr. Das ist Absicht — ein dauerhaft
+    gestellter Lauf wuerde genau die Zeitabhaengigkeit verdecken, die hier
+    gefunden werden soll.
+
+    Format: ``HH:MM`` (heutiges Datum, UTC) oder ein vollstaendiger
+    ISO-Zeitstempel. ``tick=True``, damit die Zeit waehrend des Laufs weiter
+    voranschreitet — ein vollstaendig stehender Zaehler waere ein anderer
+    Zustand als "der Lauf startet um 23:58".
+
+    Session-Scope und damit AUSSERHALB jedes ``@freeze_time`` einzelner
+    Testfaelle: freezegun stapelt, der innere Zeitpunkt gewinnt.
+
+    Selbst bewacht durch ``tests/tdd/test_gestellte_wanduhr_schalter.py``:
+    ein Nachweiswerkzeug ohne Selbsttest ist genau der blinde Waechter,
+    gegen den dieses Ticket geschrieben ist -- legt man diese Fixture stumm,
+    saehen die vier Uhrzeit-Laeufe weiterhin gruen aus und maessen nichts
+    (Adversary-Finding F001 zu #2096).
+    """
+    from tests.helpers.wanduhr import anker_aus, roh_wert
+
+    roh = roh_wert()
+    if not roh:
+        yield
+        return
+
+    anker = anker_aus(roh)
+
+    # `pydantic.v1.types` leitet Klassen von `datetime.date`/`datetime`
+    # AB. Wird das Modul erst WAEHREND des gefrorenen Fensters importiert,
+    # sind die Basisklassen bereits freezeguns `FakeDate`/`FakeDatetime` und
+    # die Klassendefinition scheitert mit "metaclass conflict" -- ein
+    # Artefakt des Messwerkzeugs, kein Befund. Deshalb vorher laden.
+    import pydantic.v1.types  # noqa: F401
+
+    from freezegun import freeze_time
+
+    with freeze_time(anker, tick=True):
+        yield

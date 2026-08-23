@@ -40,11 +40,12 @@ import re
 import socket
 import threading
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+from freezegun import freeze_time
 
 import output.channels.telegram as tg_module
 from app.config import Settings
@@ -55,6 +56,18 @@ from output.renderers.alert.render import (
 from services.notification_service import NotificationService, RadarAlertRequest
 
 from tests.helpers.nowcast_gate_fixtures import clean_uid, fresh_uid, make_trip
+from tests.helpers.tagesbezug import expected_day_and_time, extract_day_and_time
+
+# Issue #2096: zwei gestellte Uhren fuer den Buendel-Fall, dessen
+# Konstruktor die Uhrzeiten aus `datetime.now()` ableitet. Mittags liegt
+# das Ende (+80 Min) im selben Kalendertag, um 23:30 auf dem FOLGETAG --
+# genau der Fall, an dem die frueheren nackten `HH:MM`-Anker ab ~21:05 UTC
+# scheiterten. Das zweite Feld ist die Positivkontrolle: es sagt, OB der
+# Fall den Ueberlauf-Zweig erreichen muss.
+_GESTELLTE_UHREN = [
+    ("2026-08-22 12:00:00+00:00", False),
+    ("2026-08-22 23:30:00+00:00", True),
+]
 
 # Langform-Wortlaut (#2020 S2). Die Uhrzeit wird als Gruppe gefangen, damit
 # der WERT geprueft werden kann und nicht nur die Floskel.
@@ -347,7 +360,10 @@ def test_ac9_die_ende_angabe_steht_auch_im_html_teil():
 # ---------------------------------------------------------------------------
 
 
-def test_ac10_mehr_orte_buendel_traegt_das_ende_des_fuehrenden_ortes():
+@pytest.mark.parametrize("gestellte_uhr,erwartet_ueberlauf", _GESTELLTE_UHREN)
+def test_ac10_mehr_orte_buendel_traegt_das_ende_des_fuehrenden_ortes(
+    gestellte_uhr, erwartet_ueberlauf,
+):
     """AC-10 GIVEN ein Mehr-Orte-Onset-Buendel (Ortsvergleich) mit ZWEI Orten,
     dessen fuehrender Ort ein `NowcastResult` mit gesetztem
     `event_end_minutes=80` traegt
@@ -357,7 +373,12 @@ def test_ac10_mehr_orte_buendel_traegt_das_ende_des_fuehrenden_ortes():
     im Trip-Pfad (AC-9), nicht bloss eine Beginn-Zeile.
 
     Wanduhrfest: der Buendel-Konstruktor leitet die Uhrzeiten aus
-    `datetime.now()` ab, deshalb Struktur- statt Goldstring-Pruefung.
+    `datetime.now()` ab -- die Uhr ist deshalb gestellt (#2096) und das
+    erwartete Paar aus Tagesbezug und Uhrzeit wird aus DIESER Uhr und den
+    injizierten 80 Minuten HERGELEITET, statt nur die Floskel zu suchen. Mit
+    der frueheren nackten `HH:MM`-Regex traf der Anker ab ~21:05 UTC nicht
+    mehr, weil der Renderer dann korrekt `letzter Regen gegen morgen 01:18`
+    schreibt.
 
     RED heute: `NowcastResult` kennt `event_end_minutes` nicht
     (`TypeError`)."""
@@ -373,14 +394,25 @@ def test_ac10_mehr_orte_buendel_traegt_das_ende_des_fuehrenden_ortes():
         is_convective=False, event_end_minutes=95,
     )
 
-    msg = to_multi_location_onset_alert_message(
-        [("Zermatt", fuehrend), ("Chamonix", zweiter)],
-        tz=timezone.utc, stand_at="10:00",
-    )
-    _html, plain = render_email(msg)
+    with freeze_time(gestellte_uhr):
+        msg = to_multi_location_onset_alert_message(
+            [("Zermatt", fuehrend), ("Chamonix", zweiter)],
+            tz=timezone.utc, stand_at="10:00",
+        )
+        _html, plain = render_email(msg)
+        jetzt = datetime.now(timezone.utc)
 
-    assert _LANGFORM_RE.search(plain), (
-        f"RED: das Mehr-Orte-Buendel nennt kein Ende: {plain!r}"
+    erwartet = expected_day_and_time(
+        jetzt + timedelta(minutes=80), jetzt, timezone.utc,
+    )
+    assert (erwartet[0] is not None) is erwartet_ueberlauf, (
+        f"Positivkontrolle: bei der gestellten Uhr {gestellte_uhr} muss das "
+        f"Ende {'' if erwartet_ueberlauf else 'NICHT '}auf den Folgetag "
+        f"fallen -- hergeleitet wurde {erwartet!r}"
+    )
+    assert extract_day_and_time(plain, "letzter Regen gegen") == erwartet, (
+        f"Das Mehr-Orte-Buendel nennt nicht das aus den injizierten 80 "
+        f"Minuten hergeleitete Ende-Paar {erwartet!r}: {plain!r}"
     )
     assert "Zermatt" in plain, (
         f"Voraussetzung: der fuehrende Ort steht im Buendel-Text: {plain!r}"
@@ -395,7 +427,14 @@ def test_ac10_ohne_ende_bleibt_das_buendel_unveraendert():
 
     Bewusst OHNE das neue Feld konstruiert: dieser Waechter bleibt damit
     unabhaengig vom Modell-Erweiterungsstand gruen und faengt spaeter eine
-    erfundene Ende-Angabe."""
+    erfundene Ende-Angabe.
+
+    Issue #2096: geprueft ueber den Helfer, nicht ueber eine nackte
+    `HH:MM`-Regex. Eine erfundene Ende-Angabe MIT Tagesbezug
+    (`letzter Regen gegen morgen 01:18`) waere an der alten Regex
+    vorbeigelaufen -- der Waechter haette sie zu jeder Tageszeit nach ~21:05
+    UTC durchgewunken. `(None, "")` heisst "der Anker kommt im Text gar nicht
+    vor"."""
     from output.renderers.alert.project import to_multi_location_onset_alert_message
     from services.radar_service import NowcastResult
 
@@ -414,7 +453,7 @@ def test_ac10_ohne_ende_bleibt_das_buendel_unveraendert():
     )
     _html, plain = render_email(msg)
 
-    assert _LANGFORM_RE.search(plain) is None, (
+    assert extract_day_and_time(plain, "letzter Regen gegen") == (None, ""), (
         f"Ohne abgeleitetes Ende darf keine Ende-Angabe entstehen: {plain!r}"
     )
 

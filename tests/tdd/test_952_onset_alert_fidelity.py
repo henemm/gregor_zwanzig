@@ -27,7 +27,6 @@ from __future__ import annotations
 import json
 import re
 import threading
-from datetime import date as date_type
 from datetime import datetime, timedelta
 from datetime import time as time_type
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -155,9 +154,19 @@ def _trip_with_active_segment(trip_id: str, config: TripReportConfig) -> Trip:
     Alert möglich). `arrival_override` auf erstem/letztem Waypoint plus
     passende `stage.start_time` sorgt dafür, dass das Segment zur
     Testlaufzeit aktiv ist (`seg.start_time <= now_utc <= seg.end_time`).
+
+    Issue #2096: das Etappendatum stammt aus derselben ORTSZEIT, aus der
+    `_active_window()` das Fenster rechnet — nicht aus `date_type.today()`
+    (Systemdatum, UTC). Ab 22:00 UTC weichen beide bei Korsika (UTC+2) um
+    einen Tag ab; das Segment landete dann rund 24 Stunden in der
+    Vergangenheit und `check_radar_alerts()` lieferte 0 statt 1. Echte Trips
+    tragen echte `stage.date`-Werte und `trip_alert.py` löst „heute" über
+    `trip_local_today()` in Ortszeit auf (ADR-0044) — der Fehler saß allein
+    im Aufbau.
     """
     lat, lon = 42.20, 9.10
     start_str, end_str, start_time = _active_window(lat, lon)
+    ortsdatum = datetime.now(tz_for_coords(lat, lon)).date()
     wp0 = Waypoint(
         id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0,
         time_window=TimeWindow(start=time_type(0, 0), end=time_type(23, 57)),
@@ -169,7 +178,7 @@ def _trip_with_active_segment(trip_id: str, config: TripReportConfig) -> Trip:
         arrival_override=end_str,
     )
     stage = Stage(
-        id="T1", name="Tag 1", date=date_type.today(),
+        id="T1", name="Tag 1", date=ortsdatum,
         start_time=start_time, waypoints=[wp0, wp1],
     )
     trip = Trip(id=trip_id, name="Onset-Fidelity-Trip", stages=[stage])

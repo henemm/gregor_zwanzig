@@ -31,6 +31,11 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from freezegun import freeze_time
+
+from tests.helpers.tagesbezug import (
+    expected_day_and_time, extract_day_and_time,
+)
 
 pytestmark = pytest.mark.real_data_root
 
@@ -279,19 +284,27 @@ def _block_mit_reichweite_frames(now: datetime) -> list[dict]:
     return frames
 
 
-def _minuten(hhmm: str) -> int:
-    stunde, _, minute = hhmm.partition(":")
-    return int(stunde) * 60 + int(minute)
-
-
-def _abstand_minuten(a: str, b: str) -> int:
-    roh = abs(_minuten(a) - _minuten(b))
-    return min(roh, 24 * 60 - roh)
+# Issue #2096: zwei gestellte Uhren statt der Wanduhr. Mittags liegen alle
+# Zeitangaben im selben Kalendertag, um 23:30 fallen Reichweite (+175 Min) und
+# Guete-Grenze (+60 Min) nachweislich auf den FOLGETAG -- derselbe Fall, an
+# dem die frueheren nackten `HH:MM`-Anker ab ~21:05 UTC scheiterten. Beide
+# Faelle fahren denselben Testkoerper: der Ueberlauf soll DURCHLAUFEN werden,
+# nicht weggefroren, und der Normalfall darf dabei nicht verloren gehen.
+#
+# Das zweite Feld ist die Positivkontrolle: es sagt, OB der Fall den
+# Ueberlauf-Zweig erreichen muss. Ohne diese Angabe bliebe offen, ob der
+# zweite Parameterfall ueberhaupt etwas anderes prueft als der erste
+# (`reference_positivkontrolle_prueft_ob_die_pruefung_misst`).
+_GESTELLTE_UHREN = [
+    ("2026-08-22 12:00:00+00:00", False),
+    ("2026-08-22 23:30:00+00:00", True),
+]
 
 
 class TestS3_ReichweiteUndGueteImReplay:
+    @pytest.mark.parametrize("gestellte_uhr,erwartet_ueberlauf", _GESTELLTE_UHREN)
     def test_replay_pfad_zeigt_reichweite_und_guete_wie_der_live_pfad(
-        self, client, stub_trip,
+        self, client, stub_trip, gestellte_uhr, erwartet_ueberlauf,
     ):
         """Issue #2051 S3 GIVEN einen Frame-Mitschnitt mit bekanntem Ende
         (jenseits der Guete-Grenze) und bekannter Reichweite (letzter Frame
@@ -316,30 +329,23 @@ class TestS3_ReichweiteUndGueteImReplay:
         `source_reach_*`/`location_sharpness_*` nicht durch -- `getattr(...,
         default)` liess beide Angaben ersatzlos entfallen."""
         user_id, trip_id = stub_trip
-        request_now = datetime.now(timezone.utc)
-        body = {"nowcast_frames": {
-            "source": "radar", "frames": _block_mit_reichweite_frames(request_now),
-            "km_from": 2.0, "km_to": 6.0,
-        }}
-        resp = client.post(
-            f"/api/trips/{trip_id}/alert-preview",
-            params={"user_id": user_id}, json=body,
-        )
-        assert resp.status_code == 200, f"Body: {resp.text[:300]}"
-        data = resp.json()
-        assert data.get("onset_detected") is True, (
-            f"Voraussetzung: der Beginn bei +20 Min muss erkannt werden: {data!r}"
-        )
-        plain = data["email_plain"]
-
-        reach_treffer = re.search(r"Radar reicht bis (\d{2}:\d{2})", plain)
-        assert reach_treffer is not None, (
-            f"RED: der Replay-Weg nennt keine Reichweite: {plain!r}"
-        )
-        guete_treffer = re.search(r"Ortsangabe ab (\d{2}:\d{2}) unscharf", plain)
-        assert guete_treffer is not None, (
-            f"RED: der Replay-Weg nennt keine Guete-Zeile: {plain!r}"
-        )
+        with freeze_time(gestellte_uhr):
+            request_now = datetime.now(timezone.utc)
+            body = {"nowcast_frames": {
+                "source": "radar",
+                "frames": _block_mit_reichweite_frames(request_now),
+                "km_from": 2.0, "km_to": 6.0,
+            }}
+            resp = client.post(
+                f"/api/trips/{trip_id}/alert-preview",
+                params={"user_id": user_id}, json=body,
+            )
+            assert resp.status_code == 200, f"Body: {resp.text[:300]}"
+            data = resp.json()
+            assert data.get("onset_detected") is True, (
+                f"Voraussetzung: der Beginn bei +20 Min muss erkannt werden: {data!r}"
+            )
+            plain = data["email_plain"]
 
         # F004: beide Werte einzeln gegen die aus den Frames hergeleitete
         # Erwartung pruefen -- Reichweite = letzter Frame (+160) + 15 Min
@@ -347,19 +353,26 @@ class TestS3_ReichweiteUndGueteImReplay:
         # (LOCATION_SHARPNESS_LIMIT_MIN). `_alert_tz_for_trip` liefert UTC
         # fuer diesen wegpunktlosen Fixture-Trip, `request_now` ist bereits
         # UTC -- keine Zonenumrechnung noetig.
-        erwartete_reichweite = (
-            (request_now + timedelta(minutes=175)).strftime("%H:%M")
-        )
-        erwartete_guete_grenze = (
-            (request_now + timedelta(minutes=60)).strftime("%H:%M")
-        )
-        assert _abstand_minuten(reach_treffer.group(1), erwartete_reichweite) <= 1, (
-            f"F004: die Reichweite {reach_treffer.group(1)!r} stammt nicht "
-            f"aus den injizierten Frames (erwartet nahe "
-            f"{erwartete_reichweite!r}): {plain!r}"
-        )
-        assert _abstand_minuten(guete_treffer.group(1), erwartete_guete_grenze) <= 1, (
-            f"F004: die Guete-Grenzzeit {guete_treffer.group(1)!r} stammt "
-            f"nicht aus der 60-Minuten-Grenze (erwartet nahe "
-            f"{erwartete_guete_grenze!r}): {plain!r}"
-        )
+        #
+        # Issue #2096: geprueft wird das PAAR aus Tagesbezug und Uhrzeit. Bei
+        # der spaeten Uhr faellt beides auf den Folgetag; eine Erwartung ohne
+        # Tageswort waere dort schlicht falsch, und eine nackte
+        # `HH:MM`-Erwartung traefe gar nicht erst.
+        for anker, minuten, was in (
+            ("Radar reicht bis", 175, "Reichweite"),
+            ("Ortsangabe ab", 60, "Guete-Grenzzeit"),
+        ):
+            erwartet = expected_day_and_time(
+                request_now + timedelta(minutes=minuten), request_now,
+                timezone.utc,
+            )
+            assert (erwartet[0] is not None) is erwartet_ueberlauf, (
+                f"Positivkontrolle: bei der gestellten Uhr {gestellte_uhr} "
+                f"muss die {was} {'' if erwartet_ueberlauf else 'NICHT '}auf "
+                f"den Folgetag fallen -- hergeleitet wurde {erwartet!r}"
+            )
+            assert extract_day_and_time(plain, anker) == erwartet, (
+                f"F004: die {was} stammt nicht aus den injizierten Frames "
+                f"(erwartet {erwartet!r}, gemessen "
+                f"{extract_day_and_time(plain, anker)!r}): {plain!r}"
+            )
