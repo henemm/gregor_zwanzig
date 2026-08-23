@@ -611,6 +611,34 @@ def _onset_sharpness_suffix(e: OnsetEvent) -> str:
     return f" · Ortsangabe ab {limit} unscharf"
 
 
+def _onset_extent_suffix(e: OnsetEvent) -> str:
+    """Issue #2051 S2a: Langform-Ausdehnungs-Angabe als anhaengbares Stueck
+    oder LEER (Muster `_onset_end_suffix`).
+
+    Leer in ZWEI Faellen:
+
+    * keine Zonen (`rain_zones` leer) — die Mehrpunkt-Abfrage hat keine
+      zusammenhaengend nasse Strecke gefunden, oder der Pfad setzt das Feld
+      gar nicht (Ortsvergleich, AC-15);
+    * unvermessene Etappe (`km_measured` aus, AC-8) — die km-Lage der Zonen
+      stammt dann aus geschaetzter Kilometrierung und waere glaubwuerdig
+      aussehender Unsinn (dieselbe Regel wie #2036 fuer die Ortsangabe). Die
+      Beschriftung solcher Etappen ueber Wegpunktnamen ist S2b.
+
+    Mehrere Zonen bleiben GETRENNT aufgezaehlt (`km 2-4, km 9-11`) — eine
+    zusammengefasste Huelle wuerde die trockene Strecke dazwischen als nass
+    ausweisen (AC-10, E2). Rundung und ASCII-Bindestrich wie die gemessene
+    km-Spanne in `segments.format_alert_location`.
+    """
+    zonen = getattr(e, "rain_zones", ())
+    if not zonen or not getattr(e, "km_measured", False):
+        return ""
+    spannen = ", ".join(
+        f"km {int(round(z.km_from))}-{int(round(z.km_to))}" for z in zonen
+    )
+    return f" · Nass {spannen}"
+
+
 def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
     """Bündel-Zweig (Issue #1041 Slice 1a): je Ort eine Zeile mit Onset-Zeit
     und Intensität (Muster `loc_prefix`, render_email:328-333).
@@ -705,9 +733,13 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
         # Issue #2051 S1: Beginn und Ende gehoeren in DIESELBE "Wo & wann"-
         # Zeile -- eine eigene Datenzeile nur fuer das Ende waere im
         # Ende-losen Normalfall eine leere Zeile (ADR-0052, Label-Wert-Form).
+        # Issue #2051 S2a: die raeumliche Ausdehnung an DERSELBEN Stelle wie
+        # die uebrigen additiven Angaben dieser Zeile -- ohne Zonen oder auf
+        # unvermessener Etappe bleibt sie byte-identisch (AC-8).
         ("Wo & wann",
          f"{km} · {_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"
-         f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"),
+         f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
+         f"{_onset_extent_suffix(e)}"),
         ("Intensität", e.intensity_label),
         ("Quelle", e.source_label),
     ]

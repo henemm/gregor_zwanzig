@@ -236,18 +236,30 @@ def _assert_messpunkt(calls, erwartet, now_utc, *, label: str, alternative: str 
     Stufe 1 trennt "falsche Etappe/falscher Ortstag" von Stufe 2 "richtige
     Etappe, falsche Stelle darauf" — zwei verschiedene Befunde, zwei
     verschiedene Meldungen.
+
+    Issue #2051 S2a: die Aufrufzahl ist eine OBERGRENZE statt einer festen 1
+    (Spec-Abschnitt "Abgeloeste Zusicherung") — entlang der Reststrecke der
+    aktiven Etappe werden bis zu ``RADAR_ZONE_MAX_POINTS`` Punkte abgefragt.
+    Die Aussage dieser Datei bleibt unberuehrt: JEDER dieser Punkte muss auf
+    der erwarteten Etappe liegen, und der ERSTE ist unveraendert der
+    #2017-Messpunkt. Die Obergrenze kommt ueber die Modulreferenz, nicht als
+    Literal (Drift-Schutz #2009-Muster).
     """
-    assert len(calls) == 1, (
-        f"{label}: erwartet war GENAU EIN Nowcast-Abruf an der Etappe "
-        f"{erwartet.segment_id!r}, erhalten {len(calls)}: {calls!r}. {alternative}"
+    from services.trip_segments import RADAR_ZONE_MAX_POINTS
+
+    assert 1 <= len(calls) <= RADAR_ZONE_MAX_POINTS, (
+        f"{label}: erwartet waren 1 bis {RADAR_ZONE_MAX_POINTS} Nowcast-"
+        f"Abrufe an der Etappe {erwartet.segment_id!r} (Deckel #2051 S2a), "
+        f"erhalten {len(calls)}: {calls!r}. {alternative}"
     )
     punkt = calls[0]
     sp, ep = erwartet.start_point, erwartet.end_point
-    assert _liegt_auf_etappe(punkt, erwartet), (
-        f"{label}: der Abrufpunkt {punkt!r} liegt nicht auf der erwarteten "
-        f"Etappe {erwartet.segment_id!r} "
-        f"(({sp.lat}, {sp.lon}) → ({ep.lat}, {ep.lon})). {alternative}"
-    )
+    for i, kandidat in enumerate(calls):
+        assert _liegt_auf_etappe(kandidat, erwartet), (
+            f"{label}: der Abrufpunkt {kandidat!r} (Nr. {i}) liegt nicht auf "
+            f"der erwarteten Etappe {erwartet.segment_id!r} "
+            f"(({sp.lat}, {sp.lon}) → ({ep.lat}, {ep.lon})). {alternative}"
+        )
     soll, p = _messpunkt_der_etappe(erwartet, now_utc)
     assert punkt == pytest.approx(soll, abs=1e-6), (
         f"{label}: der Abrufpunkt {punkt!r} liegt zwar auf der erwarteten "

@@ -25,7 +25,7 @@ from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import render_email
-from services.radar_service import NowcastResult
+from services.radar_service import NowcastResult, RadarNowcastService
 from utils.geo import haversine_km
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
@@ -349,4 +349,358 @@ def test_ac16_keine_ankunftszeit_rechnung_oder_handlungsempfehlung():
     treffer = _pruefe({"email_trip_plain": plain})
     assert not treffer, (
         f"AC-16: verbotene Formulierung gefunden: {treffer}\nText:\n{plain}"
+    )
+
+
+# --------------------------------------------------------------------------
+# E4 am WIRKORT (Adversary-Finding F001) und der Ausnahme-Zweig des
+# Folgepunkt-Abrufs (F002). Beide nur am Draht pruefbar: die Zusicherung
+# entsteht in `check_radar_alerts()`, nicht im Renderer.
+# --------------------------------------------------------------------------
+
+# Europe/Vienna (UTC+2 im August) -> 12:00 Ortszeit. Feste Uhr wie
+# `test_issue_822_radar_nowcast_segment.UHR_TIROL`: die Punktzahl der
+# Mehrpunkt-Abfrage haengt am Zeitanteil des Segments, ohne gestellte Uhr
+# waere sie wanduhrabhaengig.
+_UHR_TIROL = "2026-08-18T10:00:00+00:00"
+
+# Etappe rein in Nord-Richtung, ~24 km — bei Zeitanteil 87/360 bleiben
+# ~18,2 km Reststrecke und damit die vollen sechs Messpunkte (Deckel).
+_ZONEN_LAT0, _ZONEN_LON0 = 47.0, 11.0
+_ZONEN_LAT1, _ZONEN_LON1 = 47.2158, 11.0
+
+
+def _nass_spannen(plain: str) -> list[str]:
+    """Die einzelnen `km A-B`-Spannen der Ausdehnungs-Angabe (leer: keine)."""
+    import re
+
+    treffer = re.search(r"· Nass (km .*)$", plain, re.MULTILINE)
+    if not treffer:
+        return []
+    return [s.strip() for s in treffer.group(1).split(",")]
+
+
+class _ZonenRadar(RadarNowcastService):
+    """Echte `RadarNowcastService`-Unterklasse am DI-Seam von
+    `TripAlertService` (Muster `_FixedRadar`,
+    `test_alert_log_ereignisgroessen.py`) — liefert je Abruf ein ECHTES
+    `NowcastResult`, gesteuert ueber die Reihenfolge der Abrufe.
+
+    Kein Mock: die zurueckgegebenen Objekte sind die Produktiv-Dataclass mit
+    ihren echten Feldern; gesteuert wird ausschliesslich, WELCHES Ergebnis ein
+    Punkt bekommt.
+    """
+
+    def __init__(
+        self,
+        *,
+        trocken_index: int | None = None,
+        trocken_felder: dict | None = None,
+        ausnahme_index: int | None = None,
+        weitere_trockene: tuple[int, ...] = (),
+    ) -> None:
+        super().__init__()
+        self.aufrufe: list[tuple[float, float]] = []
+        self._trocken_index = trocken_index
+        self._trocken_felder = dict(trocken_felder or {})
+        self._ausnahme_index = ausnahme_index
+        self._weitere_trockene = set(weitere_trockene)
+
+    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+        i = len(self.aufrufe)
+        self.aufrufe.append((lat, lon))
+        if i == self._ausnahme_index:
+            raise RuntimeError(
+                f"Nowcast-Abruf fuer Zonenpunkt {i} absichtlich fehlgeschlagen"
+            )
+        if i == self._trocken_index:
+            return NowcastResult(
+                onset_minutes=None, intensity_label="Kein Regen", source="radar",
+                **self._trocken_felder,
+            )
+        if i in self._weitere_trockene:
+            return NowcastResult(
+                onset_minutes=None, intensity_label="Kein Regen", source="radar",
+            )
+        return NowcastResult(
+            onset_minutes=10, intensity_label="Mäßiger Regen", source="radar",
+            window_precip_mm=3.0, event_end_minutes=40,
+        )
+
+
+def _zonen_lauf(radar: _ZonenRadar) -> tuple[int, list[str], str]:
+    """Ein echter `check_radar_alerts()`-Lauf auf der Etappe oben.
+
+    Liefert `(sent, nass_spannen, body)`. Der Trip wird als Datei geschrieben
+    und vom Pruefling selbst geladen — dieselbe Strecke wie in Produktion.
+    """
+    import json
+    import shutil
+    from pathlib import Path
+
+    from freezegun import freeze_time
+
+    from app.loader import get_briefings_dir
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-2051-s2a-zonen-{uuid.uuid4().hex[:8]}"
+    verzeichnis = (
+        Path(__file__).resolve().parents[2] / "data" / "users" / uid
+    )
+    try:
+        with freeze_time(_UHR_TIROL):
+            luftlinie = haversine_km(
+                _ZONEN_LAT0, _ZONEN_LON0, _ZONEN_LAT1, _ZONEN_LON1,
+            )
+            trip_id = f"tdd-2051-s2a-zonen-trip-{uuid.uuid4().hex[:6]}"
+            trips_dir = get_briefings_dir(uid)
+            trips_dir.mkdir(parents=True, exist_ok=True)
+            data = {
+                "id": trip_id, "name": "Zonen Draht Trip",
+                "stages": [{
+                    "id": "S1", "name": "Tag 1",
+                    "date": stage_date(_ZONEN_LAT0, _ZONEN_LON0).isoformat(),
+                    "waypoints": [
+                        {
+                            "id": "WP0", "name": "WP0",
+                            "lat": _ZONEN_LAT0, "lon": _ZONEN_LON0,
+                            "elevation_m": 1000.0, "arrival_calculated": "11:00",
+                            "distance_from_start_km": 0.0,
+                        },
+                        {
+                            "id": "WP1", "name": "WP1",
+                            "lat": _ZONEN_LAT1, "lon": _ZONEN_LON1,
+                            "elevation_m": 1000.0, "arrival_calculated": "17:00",
+                            "distance_from_start_km": round(luftlinie, 3),
+                        },
+                    ],
+                }],
+                "report_config": {
+                    "trip_id": trip_id, "send_email": True, "send_telegram": False,
+                },
+            }
+            (trips_dir / f"{trip_id}.json").write_text(json.dumps(data))
+
+            captured: list[dict] = []
+            svc = TripAlertService(
+                throttle_hours=2, user_id=uid, radar_service=radar,
+                settings=Settings(
+                    smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                    mail_to="x@example.com",
+                ),
+                mail_sink=lambda subject, body: captured.append(
+                    {"subject": subject, "body": body}
+                ),
+            )
+            svc.clear_radar_throttle(trip_id)
+            sent = svc.check_radar_alerts()
+            body = captured[0]["body"] if captured else ""
+            return sent, _nass_spannen(body), body
+    finally:
+        shutil.rmtree(verzeichnis, ignore_errors=True)
+
+
+def test_e4_punkt_ohne_frames_trennt_die_nasszone_nicht():
+    """E4 am Wirkort (Adversary-Finding F001): ein Folgepunkt, dessen Ergebnis
+    `throttled` bzw. `data_unavailable` traegt, ist eine LUECKE — er darf die
+    umgebende Nass-Zone nicht trennen.
+
+    `radar_service.py:987-1001` belegt, dass beide Merkmale immer mit
+    `onset_minutes=None` einhergehen. Ohne den Filter in `_zonen_messwert()`
+    faellt so ein Punkt in den "trocken"-Zweig von `derive_rain_zones()` und
+    erfindet eine trockene Strecke, die niemand gemessen hat.
+
+    Positivkontrolle im dritten Lauf: ein ECHT trockener Punkt an derselben
+    Stelle MUSS die Zone trennen — sonst waere die Nicht-Trennungs-Pruefung
+    oben trivial wahr, weil dieser Aufbau ueberhaupt nie zwei Zonen erzeugt.
+    """
+    for merkmal in ("throttled", "data_unavailable"):
+        radar = _ZonenRadar(trocken_index=2, trocken_felder={merkmal: True})
+        sent, spannen, body = _zonen_lauf(radar)
+        assert len(radar.aufrufe) == 6, (
+            f"Testvoraussetzung ({merkmal}): sechs Messpunkte erwartet, "
+            f"gesehen {len(radar.aufrufe)}: {radar.aufrufe}"
+        )
+        assert sent >= 1 and spannen, (
+            f"Testvoraussetzung ({merkmal}): der Alarm muss ausgeloest und "
+            f"eine Ausdehnung gerendert worden sein (sent={sent}, "
+            f"spannen={spannen})\nBody:\n{body}"
+        )
+        assert len(spannen) == 1, (
+            f"E4/{merkmal}: der Punkt ohne verwertbare Frames darf die "
+            f"Nass-Zone NICHT trennen — erhalten {len(spannen)} Zonen "
+            f"{spannen}, erwartet genau eine.\nBody:\n{body}"
+        )
+
+    sent_dry, spannen_dry, body_dry = _zonen_lauf(_ZonenRadar(trocken_index=2))
+    assert sent_dry >= 1, (
+        f"Positivkontrolle: der Alarm muss auch hier ausgeloest haben "
+        f"(sent={sent_dry})\nBody:\n{body_dry}"
+    )
+    assert len(spannen_dry) == 2, (
+        f"Positivkontrolle: ein ECHT trockener Punkt an derselben Stelle muss "
+        f"die Zone trennen — sonst misst die Pruefung oben nichts. Erhalten "
+        f"{len(spannen_dry)} Zonen {spannen_dry}, erwartet zwei.\n"
+        f"Body:\n{body_dry}"
+    )
+
+
+def test_ausnahme_beim_folgepunkt_ist_eine_luecke_und_kostet_den_alarm_nicht():
+    """Adversary-Finding F002: wirft der Nowcast-Abruf eines FOLGEPUNKTES,
+    laeuft der Alarm weiter und der Punkt wird zur Luecke — er wird weder als
+    trocken gewertet noch mit dem Ergebnis eines anderen Punktes aufgefuellt.
+
+    Aufbau (sechs Messpunkte): Punkt 0 nass, Punkt 1 wirft, Punkt 2 trocken,
+    Punkte 3+4 nass, Punkt 5 trocken. Korrekt ergibt das zwei Zonen, deren
+    ERSTE aus dem einzelnen Punkt 0 besteht und deshalb identische Grenzen
+    traegt (`km N-N`). Wuerde der Ausnahme-Zweig statt einer Luecke ein
+    fremdes (nasses) Ergebnis anhaengen, waere Punkt 1 Teil der ersten Zone
+    und ihre Grenzen liefen auseinander — genau daran haengt die Pruefung.
+
+    Pendant zu AC-14 (werfendes `position_at_time`); der Fall fuer
+    `get_nowcast` auf Folgepunkten fehlte.
+    """
+    radar = _ZonenRadar(ausnahme_index=1, weitere_trockene=(2, 5))
+    sent, spannen, body = _zonen_lauf(radar)
+
+    assert sent >= 1, (
+        f"Der Fehler EINES Folgepunktes darf den Alarm nicht kosten — "
+        f"sent={sent}\nBody:\n{body}"
+    )
+    assert len(radar.aufrufe) == 6, (
+        f"Testvoraussetzung: sechs Messpunkte erwartet (der Aufbau haengt "
+        f"daran), gesehen {len(radar.aufrufe)}: {radar.aufrufe}"
+    )
+    assert len(spannen) == 2, (
+        f"Erwartet zwei getrennte Zonen (Punkt 0 / Punkte 3+4), erhalten "
+        f"{len(spannen)}: {spannen}\nBody:\n{body}"
+    )
+    von, bis = spannen[0].removeprefix("km ").split("-")
+    assert von == bis, (
+        f"Der werfende Punkt 1 muss eine LUECKE sein: die erste Zone besteht "
+        f"dann allein aus Punkt 0 und traegt identische Grenzen. Erhalten "
+        f"'{spannen[0]}' — der Punkt wurde offenbar mit einem fremden "
+        f"Ergebnis aufgefuellt.\nBody:\n{body}"
+    )
+    zweite_von, zweite_bis = spannen[1].removeprefix("km ").split("-")
+    assert zweite_von != zweite_bis, (
+        f"Positivkontrolle: die zweite Zone (Punkte 3+4) muss auseinander"
+        f"laufende Grenzen tragen — sonst koennte die Pruefung oben schon an "
+        f"der Rundung haengen. Erhalten '{spannen[1]}'.\nBody:\n{body}"
+    )
+
+
+# --------------------------------------------------------------------------
+# Die km-Grenzen an ihrer BILDUNGSSTELLE (Mutations-Befund): alle Tests oben
+# setzen ihre Zonen als Literal und bewachen damit nur den Renderer. Eine
+# Verschiebung jeder Zonengrenze um 1 km in `rain_extent.derive_rain_zones()`
+# bleibt dort unbemerkt.
+# --------------------------------------------------------------------------
+
+
+def _zonen_km_aus_geometrie(radar: _ZonenRadar) -> list[float]:
+    """Kilometrierung der TATSAECHLICH abgefragten Punkte, unabhaengig vom
+    Pruefling gerechnet.
+
+    Der Produktivweg bildet die km-Lage eines Punktes durch Interpolation von
+    `distance_from_start_km` (`trip_segments._lerp_point`). Hier laeuft sie
+    ueber die GEOMETRIE: `radar.aufrufe` haelt die Koordinaten, mit denen der
+    Nowcast wirklich abgerufen wurde, und die Etappe oben ist eine gerade
+    Nord-Strecke mit `distance_from_start_km` 0 am Startwegpunkt. Die
+    Kilometrierung eines Punktes ist damit schlicht seine Entfernung von WP0.
+
+    Bewusst NICHT ueber `derive_rain_zones()` oder
+    `points_along_remaining_route()` — ein Sollwert, den der Pruefling selbst
+    liefert, prueft nichts.
+    """
+    return [
+        haversine_km(_ZONEN_LAT0, _ZONEN_LON0, lat, lon)
+        for lat, lon in radar.aufrufe
+    ]
+
+
+def test_zonengrenzen_werden_aus_der_kilometrierung_der_nassen_punkte_gebildet():
+    """Die im Text stehenden km-Grenzen muessen den nassen Punkten der
+    jeweiligen Zone entsprechen — kleinster km-Wert vorn, groesster hinten.
+
+    Aufbau: sechs Messpunkte, Punkt 2 echt trocken. Er trennt (E2), also zwei
+    Zonen aus den Punkten 0+1 bzw. 3+4+5. Der Sollwert wird aus den
+    Koordinaten der tatsaechlichen Abrufe abgeleitet, nicht hingeschrieben:
+    ein Literal wuerde genau die Stelle ungeprueft lassen, um die es hier
+    geht.
+    """
+    radar = _ZonenRadar(trocken_index=2)
+    sent, spannen, body = _zonen_lauf(radar)
+
+    assert sent >= 1 and len(radar.aufrufe) == 6, (
+        f"Testvoraussetzung: Alarm ausgeloest und sechs Messpunkte erwartet — "
+        f"sent={sent}, Abrufe={radar.aufrufe}\nBody:\n{body}"
+    )
+
+    km = _zonen_km_aus_geometrie(radar)
+    assert all(a < b for a, b in zip(km, km[1:])), (
+        f"Testvoraussetzung: die Messpunkte muessen streckenweise vorwaerts "
+        f"laufen, sonst taugt die abgeleitete Kilometrierung nicht: {km}"
+    )
+
+    # Gruppierung wie E2: der trockene Punkt trennt, alle uebrigen sind nass.
+    nass = [i for i in range(len(km)) if i != 2]
+    gruppen: list[list[int]] = []
+    for i in nass:
+        if gruppen and gruppen[-1][-1] == i - 1:
+            gruppen[-1].append(i)
+        else:
+            gruppen.append([i])
+
+    erwartet = []
+    for gruppe in gruppen:
+        von_km = min(km[i] for i in gruppe)
+        bis_km = max(km[i] for i in gruppe)
+        for wert in (von_km, bis_km):
+            assert abs(wert - round(wert)) < 0.35, (
+                f"Testvoraussetzung: {wert:.3f} km liegt zu dicht an der "
+                f"Rundungsgrenze — der Sollwert waere nicht eindeutig."
+            )
+        erwartet.append(f"km {int(round(von_km))}-{int(round(bis_km))}")
+
+    assert spannen == erwartet, (
+        f"Die km-Grenzen der Nass-Zonen muessen aus der Kilometrierung der "
+        f"nassen Punkte entstehen.\nErwartet {erwartet} (abgeleitet aus den "
+        f"Abruf-Koordinaten: {[round(k, 3) for k in km]}, trocken ist Punkt "
+        f"2)\nErhalten {spannen}\nBody:\n{body}"
+    )
+
+    # Von/Bis-Zuordnung eigens: eine Vertauschung der beiden Grenzen ergaebe
+    # eine rueckwaerts laufende Spanne. Der Vergleich oben faengt das mit,
+    # diese Pruefung benennt es.
+    for spanne in spannen:
+        von, bis = (int(t) for t in spanne.removeprefix("km ").split("-"))
+        assert von < bis, (
+            f"Die kleinere km-Grenze gehoert nach vorn — '{spanne}' laeuft "
+            f"rueckwaerts (km_from/km_to vertauscht).\nBody:\n{body}"
+        )
+
+
+# --------------------------------------------------------------------------
+# Rundung der Zonengrenzen (Adversary-Finding F003): in Produktion sind die
+# km-Werte Interpolations-Ergebnisse und damit grundsaetzlich fraktional.
+# --------------------------------------------------------------------------
+
+def test_fraktionale_zonengrenzen_werden_gerundet_nicht_abgeschnitten():
+    """`8.6/11.4` muss als `km 9-11` erscheinen. Die Werte sind so gewaehlt,
+    dass Runden und Abschneiden AUSEINANDERLAUFEN (abschneiden ergaebe
+    `km 8-11`) — sonst pruefte der Test die Form statt des Werts."""
+    from services.rain_extent import RainZone
+
+    zone = RainZone(km_from=8.6, km_to=11.4, onset_minutes=20, event_end_minutes=40)
+    msg = _onset_msg(_onset_event(km_measured=True, rain_zones=(zone,)))
+
+    _html, plain = render_email(msg)
+
+    assert "Nass km 9-11" in plain, (
+        f"Fraktionale Zonengrenzen 8.6/11.4 muessen gerundet als 'Nass km 9-11' "
+        f"erscheinen:\n{plain}"
+    )
+    assert "km 8-11" not in plain, (
+        f"Abgeschnitten statt gerundet ('km 8-11') ist falsch:\n{plain}"
     )

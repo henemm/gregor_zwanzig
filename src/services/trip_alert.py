@@ -38,6 +38,7 @@ from services.notification_service import (
     RadarAlertRequest,
 )
 from output.renderers.alert.segments import normalize_segment_id
+from services.rain_extent import derive_rain_zones  # Issue #2051 S2a
 from services.trip_segments import measured_segment_km  # Issue #2036
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
@@ -158,6 +159,22 @@ def radar_alert_due(result: object, threshold_min: int) -> bool:
     if onset is not None and onset <= threshold_min:
         return True
     return bool(getattr(result, "already_running", False))
+
+
+def _zonen_messwert(result):
+    """Issue #2051 S2a (E4): ein Nowcast-Ergebnis OHNE verwertbare Frames ist
+    fuer die Zonenbildung `None`, kein "trocken".
+
+    `throttled` (Budget-Drosselung) und `data_unavailable` (Ausfall der
+    Quelle) heissen beide "keine Beobachtung an diesem Punkt". Als trocken
+    gewertet wuerden sie eine Nass-Zone TRENNEN und damit eine Aussage ueber
+    das Wetter erfinden, die die Daten nicht hergeben.
+    """
+    if result is None:
+        return None
+    if getattr(result, "throttled", False) or getattr(result, "data_unavailable", False):
+        return None
+    return result
 
 
 def _radar_e1_fields(
@@ -1564,12 +1581,21 @@ class TripAlertService:
                 )
                 continue
 
-            # Genau EIN get_nowcast-Call pro Trip (Budget, #1329) — seit
-            # Issue #2017 an dem Ort, an dem der Nutzer zur MITTE des
+            # Bis zu RADAR_ZONE_MAX_POINTS get_nowcast-Calls pro Trip
+            # (Budget, #1329; Deckel und Abstand aus `trip_segments`) — seit
+            # Issue #2017 ab dem Ort, an dem der Nutzer zur MITTE des
             # Vorwarnfensters sein wird, nicht mehr am Startpunkt des
             # Segments (den hat er zu diesem Zeitpunkt laengst verlassen;
-            # gemessener Median-Versatz 1,99 km). Die Zusicherung "ein
-            # Abruf" ist damit nicht beruehrt — sie wandert nur mit.
+            # gemessener Median-Versatz 1,99 km).
+            #
+            # Issue #2051 S2a: die #2017-Zusicherung "genau EIN Abruf" ist
+            # BEWUSST auf eine Obergrenze abgeloest (Spec, Abschnitt
+            # "Abgeloeste Zusicherung") — die raeumliche Ausdehnung des
+            # Ereignisses braucht mehrere Messpunkte entlang der
+            # Reststrecke. Der ERSTE Punkt bleibt der #2017-Messpunkt und
+            # traegt unveraendert die Ausloeseregel; die uebrigen liefern
+            # ausschliesslich die Zonen. Unterhalb des Punktabstands
+            # (Reststrecke < 2 km) bleibt es bei genau einem Abruf.
             #
             # Onset-frei: `_at` ist ein FESTER Zeitpunkt (halbes Fenster),
             # kein aus dem Nowcast-Ergebnis abgeleiteter. Der Onset entsteht
@@ -1580,7 +1606,7 @@ class TripAlertService:
             # `from ... import` gebunden: eine beim Import gebundene Kopie
             # liefe still am Drift-Schutz aus #2009 vorbei.
             from services import radar_service as radar_service_mod
-            from services.trip_segments import position_at_time
+            from services import trip_segments as trip_segments_mod
 
             _at = now_utc + timedelta(
                 minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
@@ -1599,7 +1625,12 @@ class TripAlertService:
             # UNTERSCHEIDBARE Meldung. Unter "Radar nowcast failed" abgelegt
             # waere er stiller als vorher — er kommt gar nicht vom Abruf.
             try:
-                _pos = position_at_time(trip, active, segment_date, _at)
+                # Issue #2051 S2a: die Punktbildung ruft `position_at_time()`
+                # selbst — der erste Punkt IST der bisherige Messpunkt.
+                _punkte = trip_segments_mod.points_along_remaining_route(
+                    trip, active, segment_date, _at,
+                )
+                _pos = _punkte[0]
             except Exception as e:
                 logger.error(
                     "Radar alert: Positionsbestimmung fuer Trip %s "
@@ -1638,6 +1669,43 @@ class TripAlertService:
                         trip, gate.reason, effective_channels,
                     )
                 continue
+
+            # Issue #2051 S2a: die uebrigen Punkte der Reststrecke, sequenziell
+            # und mit derselben Prioritaet (Muster
+            # `compare_radar_alert._detect_triggered_locations`).
+            #
+            # Anders als der ERSTE Abruf (oben, traegt die Ausloeseregel)
+            # bricht ein Fehler hier den Trip NICHT ab: ein Punkt ohne
+            # verwertbare Daten ist eine Luecke, weder nass noch trocken (E4),
+            # und darf den Alarm nicht kosten. `throttled`/`data_unavailable`
+            # sind derselbe Fall in Feldform — keine Frames, aber eben auch
+            # kein belegtes "trocken", das eine Zone trennen duerfte.
+            _zonen_ergebnisse: list = [_zonen_messwert(result)]
+            for _p in _punkte[1:]:
+                try:
+                    _zonen_ergebnisse.append(
+                        _zonen_messwert(
+                            radar_svc.get_nowcast(
+                                _p.lat, _p.lon,
+                                elevation_m=(
+                                    int(round(_p.elevation_m))
+                                    if _p.elevation_m is not None else None
+                                ),
+                                priority="polling",
+                            )
+                        )
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Radar alert: Nowcast fuer Zonenpunkt (%.4f, %.4f) des "
+                        "Trips %s fehlgeschlagen (%s) — der Punkt faellt aus "
+                        "der Ausdehnung heraus, der Alarm laeuft weiter.",
+                        _p.lat, _p.lon, trip.id, e,
+                    )
+                    _zonen_ergebnisse.append(None)
+            _rain_zones = tuple(
+                derive_rain_zones(_punkte, _zonen_ergebnisse)
+            )
 
             # Issue #2065: die gemessene Menge wird HIER festgehalten --
             # `result` traegt weiter unten die NotificationResult, die
@@ -1945,6 +2013,13 @@ class TripAlertService:
                 ),
                 km_from=active.start_point.distance_from_start_km,
                 km_to=active.end_point.distance_from_start_km,
+                # Issue #2036/#2051 S2a: stammen diese km-Zahlen aus echter
+                # GPX-Wegstrecke? Die Etappe weiss es (`distance_measured`),
+                # der Onset-Pfad hat sie bis hierher nie gefragt — ohne die
+                # Antwort bliebe die Ausdehnung unten auf jeder Etappe stumm.
+                km_measured=getattr(active, "distance_measured", False),
+                # Issue #2051 S2a: die Nass-Zonen der Reststrecke.
+                rain_zones=_rain_zones,
                 # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne
                 # liefert — nur zusaetzlich mit ihrer Kennung, damit der
                 # Nowcast denselben Ort benennt wie die amtliche Warnung.

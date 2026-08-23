@@ -418,6 +418,32 @@ demselben `<=`-Muster umbauen wie die Tests der Ablösungstabelle.
   Deckel auf 6 Punkte hält das Abrufvolumen konservativ, S2a führt aber kein
   eigenes Gate für den INCA-Pfad ein.
 
+- **Messlücken bleiben unmarkiert und verzerren die Zonenaussage in BEIDE
+  Richtungen** *(nachgetragen 2026-08-23 nach Abstimmung mit der #2050-S4a-
+  Sitzung; keine AC-Änderung, dokumentiert eine durch die Implementierung
+  sichtbar gewordene Grenze).* Ein Punkt ohne verwertbare Daten fällt in
+  `derive_rain_zones` still heraus (`rain_extent.py:77-78`, `continue`). Aus
+  dem gerenderten Text ist ein Ausfall nicht von einem gemessenen
+  Trockenpunkt zu unterscheiden — weder `RainZone` noch `RadarAlertRequest`
+  tragen ein Kennzeichen, an welchem Punkt nicht nachgesehen wurde. Die
+  Ausdehnung kann dadurch
+  - **zu klein** werden (nass, nass, Lücke, trocken → die Zone endet am
+    letzten nassen Punkt, obwohl der Regen über die Lücke hinaus reichen
+    könnte), und
+  - **zu groß** werden (nass, Lücke, nass → beide Punkte landen in EINER
+    Zone, der Text behauptet durchgehende Nässe über die nicht gemessene
+    Strecke).
+
+  In der extremsten Form (erster Punkt nass, alle Folgepunkte aus) schrumpft
+  die Aussage still auf `km X-X` zusammen. Das ist mit E4 vereinbar — E4
+  sichert zu, dass die Lücke nicht selbst als Messwert zählt
+  (`km_from`/`km_to` speisen sich ausschließlich aus nassen Punkten, AC-11),
+  nicht, dass sie zwei Zonen getrennt hält. Die **Nachvollziehbarkeit**
+  (Protokolleintrag mit Zahl und Lage der Lücken) übernimmt **#2050 S4a**,
+  die **Textaussage** beider Verzerrungsrichtungen **#2050 S4b**. Beide
+  Richtungen brauchen getrennte Prüfungen — ein zusammengefasstes Kriterium
+  fängt nur eine davon.
+
 ## Nicht-Ziele
 
 - Die restlichen sechs Textstellen (Betreff, Telegram rich/Kurzstil,

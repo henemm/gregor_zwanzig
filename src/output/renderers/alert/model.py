@@ -6,6 +6,10 @@ Radar-Pfad (#919) ohne Modell-Bruch zu konvergieren.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover — nur fuer Typpruefung
+    from services.rain_extent import RainZone
 
 
 @dataclass(frozen=True)
@@ -165,6 +169,13 @@ class OnsetEvent:
     # hier (sonst zwei Wahrheiten, Muster AC-20).
     location_sharpness_limit_time: str | None = None
     location_sharpness_limit_day_offset: int = 0
+    # Issue #2051 S2a: raeumliche Ausdehnung des Regenereignisses entlang der
+    # Reststrecke — eigenes Feld, weil `km_from`/`km_to` die Segment-Lage
+    # bleiben (#2017 Known Limitation 5): zwei Bedeutungen, zwei Namen (AC-7).
+    # Gesetzt NUR vom Trip-Onset-Pfad; der Ortsvergleich hat kein
+    # Streckenkonzept und laesst das Feld leer (AC-15). Die km-Zahlen
+    # erscheinen im Text erst, wenn `km_measured` gesetzt ist (AC-8).
+    rain_zones: tuple["RainZone", ...] = ()
 
 
 @dataclass(frozen=True)
