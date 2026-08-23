@@ -23,6 +23,8 @@ from services.alert_gate import (
     check_event_identity_gate,
     check_nowcast_gate,
     check_official_alert_gate,
+    deviation_overtakes_cooldown,
+    last_deviation_urgency,
     last_nowcast_precip_mm,
     radar_overtakes_cooldown,
     record_event_identity,
@@ -390,19 +392,24 @@ class TripAlertService:
             return False
 
         # 1b. Throttle-Check mit per-trip Cooldown (AC-2/3)
-        if self._is_throttled_with_cooldown(trip):
+        # Issue #2050 S3c: das Gate BLEIBT, aber es bricht nicht mehr sofort
+        # ab. Zu diesem Zeitpunkt ist die Schwere der Lage strukturell noch
+        # unbekannt — sie entsteht erst aus dem Abruf. Der Aufrufer merkt sich
+        # die offene Sperrzeit und entscheidet unten, mit der Dringlichkeit in
+        # der Hand (dasselbe Caller-seitige Muster wie #2065/S3b im
+        # Radar-Zweig).
+        _sperrzeit_offen = self._is_throttled_with_cooldown(trip)
+        if _sperrzeit_offen:
             logger.debug(f"Alert throttled for trip {trip.id}")
-            # Issue #2050 S3b (Szenario 10, AC-2).
-            self._protokolliere_unterdrueckung(
-                trip, reason=alert_log.REASON_FORECAST_CHANGE,
-                gate_reason=alert_log.REASON_COOLDOWN,
-            )
-            return False
 
         # 1c. Issue #1070: Tages-Obergrenze nach Nutzerlevel (Free/Standard/Premium)
         # Issue #1555: reason="forecast_change" reserviert einen Anteil für NowCast.
         # Issue #1726: der Tageszaehler laeuft auf dem KALENDERTAG DER TOUR.
-        if not alert_daily_limit.is_allowed(
+        # Issue #2050 S3c: bei offener Sperrzeit wird diese Stufe hier
+        # UEBERSPRUNGEN und spaeter real nachgeholt — die feste Reihenfolge
+        # (ADR-0021) bleibt damit gewahrt, und ein Sperrzeit-Durchbruch
+        # ueberspringt das Budget nicht stillschweigend mit.
+        if not _sperrzeit_offen and not alert_daily_limit.is_allowed(
             self._user_id, now_utc, anchor_tz(trip, now_utc), reason="forecast_change",
         ):
             logger.debug(f"Alert suppressed: daily limit reached for trip {trip.id}")
@@ -474,6 +481,60 @@ class TripAlertService:
             f"Detected {len(to_report)} significant changes for trip {trip.id}"
         )
 
+        # Issue #2050 S3c: die Dringlichkeit dieses Laufs entsteht GENAU EINMAL
+        # und traegt drei Entscheidungen — Sperrzeit-Ueberholung,
+        # Budget-Durchbruch und den `severity`-Eintrag im Alarm-Protokoll
+        # (unten). Zwei unabhaengige Berechnungen desselben Werts koennten
+        # still auseinanderlaufen.
+        _urgency = alert_urgency.urgency_from_changes(to_report)
+        _budget_durchbruch = False
+
+        if _sperrzeit_offen:
+            _basis_urgency = last_deviation_urgency(
+                user_id=self._user_id, throttle_scope="trip",
+                throttle_key=trip.id, throttle_store=self._throttle_store,
+            )
+            _ueberholt_sperrzeit = deviation_overtakes_cooldown(
+                basis_urgency=_basis_urgency, urgency=_urgency,
+            )
+            # Beide Stufen in EINER Zeile, damit im Nachhinein nachvollziehbar
+            # ist, GEGEN WAS entschieden wurde — fuer beide Ausgaenge.
+            logger.info(
+                "Alert: Sperrzeit-Ueberholung fuer Trip %s geprueft — "
+                "Vergleichsbasis %s, Dringlichkeit dieses Laufs %s: %s",
+                trip.id, _basis_urgency or "unbekannt", _urgency,
+                "Durchbruch" if _ueberholt_sperrzeit else "Sperrzeit bleibt",
+            )
+            if not _ueberholt_sperrzeit:
+                # Derselbe Protokolleintrag wie vor dieser Scheibe (S3b),
+                # nur zeitlich hinter den Abruf verschoben — kein neuer Grund.
+                self._protokolliere_unterdrueckung(
+                    trip, reason=alert_log.REASON_FORECAST_CHANGE,
+                    gate_reason=alert_log.REASON_COOLDOWN,
+                )
+                return False
+            # Die Tages-Obergrenze wurde oben wegen der offenen Sperrzeit
+            # uebersprungen — der Durchbruch darf sie nicht stillschweigend
+            # mit-ueberspringen (Lehre aus #2065, `:1633-1654`). Rein lesend;
+            # gebucht wird weiterhin erst nach der Zustellung.
+            if not alert_daily_limit.is_allowed(
+                self._user_id, now_utc, anchor_tz(trip, now_utc),
+                reason="forecast_change",
+            ):
+                _budget_durchbruch = self._eskalation_bricht_budget(
+                    trip, now_utc, _urgency,
+                )
+                if not _budget_durchbruch:
+                    logger.debug(
+                        "Alert suppressed (Tages-Obergrenze nach "
+                        "Sperrzeit-Durchbruch) for trip %s", trip.id,
+                    )
+                    self._protokolliere_unterdrueckung(
+                        trip, reason=alert_log.REASON_FORECAST_CHANGE,
+                        gate_reason=alert_log.REASON_DAILY_LIMIT,
+                    )
+                    return False
+
         # Issue #1948 (S1, AC-1): roher Eingangs-Datensatz VOR dem Versand
         # -- capture_user_scoped() ist selbst fail-open.
         capture_id = alert_input_capture.capture_user_scoped(
@@ -518,7 +579,9 @@ class TripAlertService:
             entity_type="trip",
             changes_count=len(to_report),
             severity=alert_urgency.highest_urgency(
-                alert_urgency.urgency_from_changes(to_report),
+                # Issue #2050 S3c: DERSELBE Wert, der oben ueber Sperrzeit und
+                # Budget entschieden hat — nicht neu gerechnet.
+                _urgency,
                 *[
                     alert_urgency.urgency_from_official_level(a.level)
                     for a, _segment_ids in (official_notices or [])
@@ -563,10 +626,22 @@ class TripAlertService:
         state_svc.save(trip.id, alert_state)
 
         # 7. Update throttle (only on success) + persist
-        self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
+        # Issue #2050 S3c: die Sperrzeit wird MIT der Dringlichkeit dieses
+        # Laufs gebucht — Selbstbremsung wie im Radar-Zweig: die naechste Lage
+        # muss DIESEN Rang echt uebersteigen, eine gleichrangige Wiederholung
+        # ueberholt die eigene, gerade gesetzte Basis nicht mehr.
+        self._throttle_store.record(
+            "trip", trip.id, datetime.now(timezone.utc), urgency=_urgency,
+        )
         # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
+        # Issue #2050 S3c: die hoechste heute in dieser Zone ZUGESTELLTE Stufe
+        # waechst bei JEDEM Versand mit (Vergleichsbasis der naechsten
+        # Eskalationspruefung); der verbrauchte Durchbruch wird nur gebucht,
+        # wenn er diesen Lauf auch getragen hat.
         alert_daily_limit.increment(
             self._user_id, now_utc, anchor_tz(trip, now_utc),
+            urgency=_urgency,
+            is_escalation_breakthrough=_budget_durchbruch,
         )
 
         # Issue #1916 Trigger (a): jeder TATSAECHLICH versendete Alarm
@@ -1325,15 +1400,20 @@ class TripAlertService:
 
         Duenne Bruecke auf den geteilten Baustein — sie haelt die Zone (dieselbe,
         die auch Gate und Buchung benutzen, #1726) und die Protokollzeile an
-        EINER Stelle statt an zweien; beide Aufrufstellen im Radar-Zweig
-        entscheiden damit garantiert gegen denselben Zaehler."""
+        EINER Stelle statt an zweien; alle Aufrufstellen entscheiden damit
+        garantiert gegen denselben Zaehler.
+
+        Issue #2050 S3c: seit dieser Scheibe rufen BEIDE Zweige die Bruecke —
+        Radar und Abweichung. Der Deckel `_MAX_ESCALATION_BREAKTHROUGHS`
+        wirkt dadurch geteilt (ein Durchbruch je Zone und Tag ueber beide
+        Zweige), nicht addiert."""
         durchbruch = alert_daily_limit.escalation_breaks_through(
             self._user_id, now_utc, anchor_tz(trip, now_utc), urgency,
         )
         # Beide Ausgaenge in EINER Zeile, damit im Nachhinein nachvollziehbar
         # ist, GEGEN WAS entschieden wurde (Muster der Sperrzeit-Ueberholung).
         logger.info(
-            "Radar alert: Budget-Durchbruch fuer Trip %s geprueft — "
+            "Alert: Budget-Durchbruch fuer Trip %s geprueft — "
             "Dringlichkeit %s: %s",
             trip.id, urgency,
             "Durchbruch" if durchbruch else "Tages-Obergrenze bleibt",

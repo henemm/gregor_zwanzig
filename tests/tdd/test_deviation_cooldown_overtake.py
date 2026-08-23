@@ -1447,6 +1447,132 @@ def test_ac15_der_durchbruch_eines_nutzers_sperrt_den_anderen_nicht():
         _clean_user(uid_b)
 
 
+# ────────── Waechter: Fortschreibung der Tages-Hoechststufe (F001) ───────────
+
+
+@pytest.mark.timeout(120)
+def test_eine_zugestellte_abweichung_hebt_die_hoechststufe_ihrer_zone():
+    """GIVEN die heutige Hoechststufe einer Zone entsteht aus einer echten,
+    zugestellten ABWEICHUNGS-Meldung (nicht aus dem Radar-Zweig), WHEN danach
+    bei erschoepftem Tagesbudget ein Folgelauf DERSELBEN Zone geprueft wird,
+    der die Sperrzeit zwar ueberholt, die bereits zugestellte Stufe aber NICHT
+    uebersteigt, THEN bleibt er still mit Grund `daily_limit` und verbraucht
+    den einen Tages-Durchbruch nicht.
+
+    Warum dieser Test zusaetzlich zu AC-8 noetig ist: dort — wie in AC-9 bis
+    AC-11 und AC-15 — entsteht `max_urgency_sent` ausschliesslich ueber
+    `_zone_vorbelegen()`, also ueber den RADAR-Zweig. Die Frage, ob der
+    Abweichungs-Zweig seine eigene zugestellte Stufe ueberhaupt fortschreibt
+    (`trip_alert.py:641-645`, Argument `urgency=`), blieb damit unbewacht:
+    ohne Fortschreibung faellt die Vergleichsbasis auf `"LOW"` zurueck und ein
+    SCHWAECHERER Folgelauf risse das Tagesbudget faelschlich auf.
+
+    Der Folgelauf laeuft auf einem ZWEITEN Trip derselben Zone: die Sperrzeit
+    haengt am Trip-Schluessel, die Hoechststufe an der Zone. Auf demselben
+    Trip haette der Vorlauf die Sperrzeit-Basis schon auf MODERATE gehoben und
+    die Stille kaeme von der Sperrzeit statt vom Budget.
+
+    🔴 Die erwartete Hoechststufe wird wie in AC-6 aus dem Lauf ABGELEITET
+    (`_dringlichkeit_des_laufs()`), nicht als Literal gesetzt.
+
+    POSITIVKONTROLLE im selben Test (PFLICHT): deckungsgleicher Aufbau, nur
+    ein Folgelauf, der die zugestellte Stufe ECHT uebersteigt — der bekommt
+    den Durchbruch sehr wohl."""
+    uid, ctrl = _uid("maxdev"), _uid("maxdev-ctrl")
+    try:
+        at2 = _AT + timedelta(minutes=30)
+        trip_a = _aufbau(uid, "maxdev-a", tier=TIER_MIT_BUDGET)
+        trip_b = _deviation_trip("trip-2050s3c-maxdev-b")
+        trip_b.alert_cooldown_minutes = COOLDOWN_MIN
+        zone = anchor_tz(trip_a, _AT)
+
+        # Vorlauf: eine ECHTE Zustellung ueber den Abweichungs-Zweig.
+        vorlauf = _dringlichkeit_des_laufs(uid, trip_a, LAGE_MODERATE, _AT)
+        cached_m, fresh_m = _lage(LAGE_MODERATE)
+        strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
+        assert strecke.lauf(
+            at=_AT, zweig="deviation", trip=trip_a,
+            cached_weather=cached_m, fresh_weather=fresh_m,
+        ).triggered_count == 1, (
+            f"Vorbedingung: der Abweichungs-Vorlauf muss zustellen (Gruende: "
+            f"{_gruende(uid, trip_a, _AT)!r})."
+        )
+        assert _zonen_eintrag(uid, zone, _AT).get("max_urgency_sent") == vorlauf, (
+            f"Eine zugestellte Abweichungs-Meldung muss die hoechste heute in "
+            f"{zone} zugestellte Stufe auf ihren eigenen, aus dem Lauf "
+            f"abgeleiteten Rang {vorlauf!r} heben — sonst faellt die naechste "
+            f"Eskalationspruefung auf die leere Basis zurueck. Eintrag: "
+            f"{_zonen_eintrag(uid, zone, _AT)!r}"
+        )
+
+        _budget_ausschoepfen(uid, _AT, zone)
+        _basis_buchen(uid, trip_b, "LOW")
+        stufe = _dringlichkeit_des_laufs(uid, trip_b, LAGE_MODERATE, at2)
+        assert alert_urgency.exceeds(stufe, "LOW"), (
+            f"Testkonstruktion: der Folgelauf ({stufe!r}) muss die "
+            f"Sperrzeit-Basis LOW ueberholen — sonst maesse der Test die "
+            f"Sperrzeit statt der Hoechststufe."
+        )
+        assert not alert_urgency.exceeds(stufe, vorlauf), (
+            f"Testkonstruktion: der Folgelauf ({stufe!r}) darf die bereits "
+            f"zugestellte Stufe ({vorlauf!r}) NICHT uebersteigen."
+        )
+
+        lauf_b = strecke.lauf(
+            at=at2, zweig="deviation", trip=trip_b,
+            cached_weather=cached_m, fresh_weather=fresh_m,
+        )
+        assert lauf_b.triggered_count == 0, (
+            f"Gegenueber einer bereits per Abweichung zugestellten "
+            f"{vorlauf!r}-Lage eskaliert ein gleichrangiger Folgelauf nicht — "
+            f"er darf das erschoepfte Tagesbudget nicht aufreissen (war "
+            f"{lauf_b.triggered_count})."
+        )
+        assert alert_log.REASON_DAILY_LIMIT in _gruende(uid, trip_b, at2), (
+            f"Der Protokollgrund muss {alert_log.REASON_DAILY_LIMIT!r} sein. "
+            f"Gefunden: {_gruende(uid, trip_b, at2)!r}"
+        )
+        assert _durchbruchszaehler(uid, zone, at2) == 0, (
+            f"Der eine Tages-Durchbruch der Zone darf dabei nicht verbraucht "
+            f"werden, gefunden {_durchbruchszaehler(uid, zone, at2)}."
+        )
+
+        # Positivkontrolle: identischer Aufbau, nur der Folgelauf uebersteigt echt.
+        ktrip_a = _aufbau(ctrl, "maxdev-ctrl", tier=TIER_MIT_BUDGET)
+        kzone = anchor_tz(ktrip_a, _AT)
+        kstrecke = AlarmPruefstrecke(user_id=ctrl, settings=_settings_all_channels())
+        assert kstrecke.lauf(
+            at=_AT, zweig="deviation", trip=ktrip_a,
+            cached_weather=cached_m, fresh_weather=fresh_m,
+        ).triggered_count == 1, "Positivkontrolle: der Vorlauf muss zustellen."
+        _budget_ausschoepfen(ctrl, _AT, kzone)
+        _basis_buchen(ctrl, trip_b, "LOW")
+        khoeher = _dringlichkeit_des_laufs(ctrl, trip_b, LAGE_HIGH, at2)
+        assert alert_urgency.exceeds(khoeher, vorlauf), (
+            f"Testkonstruktion der Positivkontrolle: {khoeher!r} muss "
+            f"{vorlauf!r} echt uebersteigen."
+        )
+        kcached, kfresh = _lage(LAGE_HIGH)
+        klauf = kstrecke.lauf(
+            at=at2, zweig="deviation", trip=trip_b,
+            cached_weather=kcached, fresh_weather=kfresh,
+        )
+        assert klauf.triggered_count == 1, (
+            f"Positivkontrolle: bei GENAU DEMSELBEN Aufbau muss ein Folgelauf, "
+            f"der die zugestellte Stufe echt uebersteigt, das erschoepfte "
+            f"Budget durchbrechen — sonst sagt die Stille oben nichts ueber "
+            f"die Hoechststufe aus (war {klauf.triggered_count}, Gruende: "
+            f"{_gruende(ctrl, trip_b, at2)!r})."
+        )
+        assert _durchbruchszaehler(ctrl, kzone, at2) == 1, (
+            f"Positivkontrolle: der Durchbruch muss gebucht sein, gefunden "
+            f"{_durchbruchszaehler(ctrl, kzone, at2)}."
+        )
+    finally:
+        _clean_user(uid)
+        _clean_user(ctrl)
+
+
 # ─────────────────────────────── AC-16 ───────────────────────────────────────
 
 

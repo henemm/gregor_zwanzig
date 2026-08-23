@@ -321,3 +321,52 @@ dieser Scheibe (Scheibe 2, #1169).
   unbrechbar** (PO-Ablehnung #1955). Beide Ausnahmen wirken unabhängig: ein Lauf
   kann an Sperrzeit UND Tagesbudget hängen und beide durchbrechen. Details:
   `docs/specs/modules/feat_2050_s3b_budget_und_unterdrueckungsgrund.md`.
+
+- **Nachtrag (Issue #2050 S3c, 2026-08-23):** beide Ausnahmen der zwei vorigen
+  Nachträge galten bisher **nur für den Radar-/Nowcast-Zweig**. Diese Scheibe
+  überträgt sie auf den **Abweichungs-Zweig** (Vorhersage-Änderungsalarm,
+  `trip_alert.py::check_and_send_alerts`) — und **nur dort**, nicht in den
+  Ortsvergleich.
+
+  **Reichweite.** Eine im Rang echt höhere Lage überholt die laufende
+  **Sperrzeit** des Abweichungs-Zweigs; ist danach zusätzlich das **Tagesbudget**
+  erschöpft, entscheidet dieselbe generische S3b-Brücke
+  (`alert_daily_limit.escalation_breaks_through`) über den Durchbruch. Die
+  Vergleichsbasis ist ein additives Feld `urgency` im Sperrtopf-Eintrag
+  (`throttle_state.json`), geschrieben ausschließlich nach erfolgreicher
+  Zustellung (F001-Symmetrie). Fehlt sie — Bestandsdaten im Alt-Format oder eine
+  vom **amtlichen** Zweig gebuchte Sperre, der weiterhin ohne Dringlichkeit
+  schreibt — gibt es konservativ keinen Durchbruch.
+
+  **Rangvergleich statt Faktor-Formel.** #2065 misst „deutlich schlimmer" im
+  Radar-Zweig über einen Faktor auf der Regenmenge. Das ist hier nicht
+  übertragbar: der Abweichungs-Zweig trägt potenziell mehrere **heterogene
+  Metriken** gleichzeitig (°C, km/h, mm), auf denen kein gemeinsamer Faktor
+  definierbar ist. Entschieden wird deshalb über einen ordinalen **Rangsprung**
+  auf der bestehenden LOW/MODERATE/HIGH-Skala (`alert_urgency.exceeds`) — kein
+  dritter Eskalationsbegriff, dieselbe Skala wie im Budget-Zweig.
+
+  **Bekannte Grenze: die Skala sättigt bei `HIGH`.** Eine Lage, die von `HIGH`
+  auf noch schlimmer eskaliert, erzeugt keinen Rangsprung und bricht die
+  Sperrzeit nicht durch. #2065 löste dasselbe Sättigungsproblem im Radar-Zweig
+  über einen zusätzlichen mm-Kanal; dafür fehlt hier die Normierung über die
+  heterogenen Metriken. Bewusst offen gelassen, nicht übersehen.
+
+  **Der Durchbruch-Deckel ist geteilt, nicht addiert.**
+  `_MAX_ESCALATION_BREAKTHROUGHS = 1` gilt pro Zone und Tag **über beide Zweige
+  hinweg** — Radar und Abweichung teilen sich denselben einen Durchbruch. Sonst
+  könnte eine Lage, die abwechselnd im Radar- und im Abweichungs-Zweig
+  eskaliert, das Tagesbudget mehrfach aufreißen; genau dagegen wurde der Deckel
+  in S3b eingeführt.
+
+  **Unberührt bleiben:** die **Ruhezeit** (weiterhin unbrechbar, PO-Ablehnung
+  #1955) und das **Briefing-Vorlauf**-Gate (#1594 — die Meldung kommt Minuten
+  später vollständig im Briefing an, sie wird ersetzt statt verschluckt). Die
+  **Reihenfolge Ruhezeit → Sperrzeit → Tages-Obergrenze bleibt unverändert**;
+  die Ausnahmen hängen ausschließlich an den beiden hinteren Stufen. Ebenso
+  unverändert bleibt `DeviationAlertEngine` selbst in **Signatur UND
+  Verhalten** — sie ist mit dem PO-zurückgestellten Ortsvergleich geteilt
+  (`compare_alert.py`) und kennt den Sperrtopf strukturell nicht; genau deshalb
+  lebt die Ausnahme Caller-seitig im Trip-Pfad, exakt wie schon bei #2065 und
+  S3b. Details:
+  `docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md`.
