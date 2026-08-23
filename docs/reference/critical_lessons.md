@@ -71,6 +71,30 @@ Drei Fallen dabei, alle teuer gelernt: je Datenpunkt ein **eigener Prozess**
 auswerten (sitzungsweites `freezegun` zerstört pydantic-v1-Importe und erzeugt
 Falsch-Positive); Uhrzeiten in der **Ortszone der Fixture** wählen, nicht in UTC.
 
+**Gegenmittel, nicht nur Messgerät** (seit #2096): `wanduhr_matrix.py` *findet* die
+Abhängigkeit, beseitigen lässt sie sich mit dem Uhr-Schalter. Die Session-Fixture
+`_gestellte_wanduhr` (`tests/conftest.py`) stellt die Uhr auf den Wert der
+Umgebungsvariablen `GZ_TEST_WALL_CLOCK_UTC`; die Ankerbestimmung liegt an **einer**
+Stelle in `tests/helpers/wanduhr.py` (`anker_aus()`), ihr Selbsttest in
+`tests/tdd/test_gestellte_wanduhr_schalter.py`.
+
+```
+GZ_TEST_WALL_CLOCK_UTC=23:55 uv run pytest <testdatei>   # HH:MM = heute, UTC
+GZ_TEST_WALL_CLOCK_UTC=2026-08-15T23:55 uv run pytest <testdatei>   # oder ISO-Stempel
+```
+
+Der Rückgabewert ist **immer** UTC-behaftet — ein naiver Wert würde von `freezegun` als
+Ortszeit gelesen und die Uhr auf einem Server in anderer Zone still um den Zonenversatz
+daneben stellen, ohne dass ein Lauf rot würde. Unbrauchbare Eingaben lösen `ValueError`
+aus, statt stillschweigend irgendeinen Zeitpunkt zu nehmen.
+
+Die zugehörige Falle beim Prüfen: ein Test, der einen tagesbezogenen Wert gegen einen
+nackten `HH:MM`-Anker hält, ist ab Mitternachtsüberlauf blind — er braucht den
+**Tagesbezug** (Wochentagskürzel) im Soll. Wächter dafür:
+`tests/tdd/test_tagesbezug_testwaechter.py`, `tests/tdd/test_tagesbezug_ueberlauf_spaetuhr.py`.
+
 Quelle: #1851 / `docs/specs/modules/fix_1851_alarm_tests_vorlaufsperre.md`;
 Werkzeug aus #1709 / `docs/specs/modules/fix_1709_wallclock_ratsche_indirekt.md`;
+Uhr-Schalter und Tagesbezug aus #2096 /
+`docs/specs/modules/fix_2096_tagesbezug_testwaechter.md`;
 Nebenbefund gebucht in #1199.
