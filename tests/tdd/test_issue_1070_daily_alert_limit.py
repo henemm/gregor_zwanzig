@@ -101,12 +101,24 @@ def _today_str(zone: ZoneInfo) -> str:
     return datetime.now(timezone.utc).astimezone(zone).date().isoformat()
 
 
-def _seed_daily_counter(uid: str, count: int, zone: ZoneInfo = TRIP_ZONE) -> None:
+def _seed_daily_counter(
+    uid: str, count: int, zone: ZoneInfo = TRIP_ZONE,
+    *, max_urgency_sent: str | None = None,
+) -> None:
+    """Zaehlerstand vorbelegen.
+
+    ``max_urgency_sent`` (Issue #2050 S3b): die hoechste heute in dieser Zone
+    bereits ZUGESTELLTE Dringlichkeit. Seit S3b darf eine Lage, die sie ECHT
+    uebersteigt, das erschoepfte Budget einmal je Tag und Zone durchbrechen —
+    ein Zaehler OHNE dieses Feld gilt dabei als „nichts ueber LOW verschickt"
+    und ist damit durchbrechbar. Wer die HARTE Unterdrueckung messen will,
+    muss den Wert also mitgeben."""
+    eintrag: dict = {"date": _today_str(zone), "count": count}
+    if max_urgency_sent is not None:
+        eintrag["max_urgency_sent"] = max_urgency_sent
     path = _counter_path(uid)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(
-        {"zones": {str(zone): {"date": _today_str(zone), "count": count}}}
-    ))
+    path.write_text(json.dumps({"zones": {str(zone): eintrag}}))
 
 
 # ═══════════════════ Modul-Ebene: services.alert_daily_limit ════════════════
@@ -314,7 +326,20 @@ def test_ac1_radar_alert_suppressed_when_free_daily_limit_reached():
     RED: `check_radar_alerts()` prüft an der Recording-Stelle (~Zeile 832 ff.)
     noch kein Tageslimit-Gate — der Alert wird trotz ausgeschöpftem Free-Limit
     tatsächlich versendet (`mail_calls` wird gefüllt statt leer zu bleiben).
+
+    Issue #2050 S3b (Szenario 7) hat dieses AC für den ESKALATIONSFALL
+    abgelöst: übersteigt die Lage die höchste heute in dieser Zone bereits
+    zugestellte Stufe, bricht sie das erschöpfte Budget einmal je Tag und Zone
+    (Spec `feat_2050_s3b_budget_und_unterdrueckungsgrund.md`, AC-15). Hier
+    gemessen wird deshalb weiterhin der NORMALFALL — und zwar ohne jede
+    Annahme über die Lage: die Vergleichsbasis wird auf die HÖCHSTE Stufe der
+    produktiven Skala gesetzt (`highest_urgency(...)`, kein Literal). Über ihr
+    gibt es nichts mehr, `exceeds(x, "HIGH")` ist für jedes x False — eine
+    Eskalation ist damit konstruktiv ausgeschlossen, unabhängig davon, was
+    `_wet_frames` liefert. Den Durchbruchsfall halten AC-15 bis AC-17 in
+    `tests/tdd/test_daily_budget_escalation.py` fest.
     """
+    from services import alert_urgency
     from services.radar_service import RadarNowcastService
     from services.trip_alert import TripAlertService
 
@@ -323,7 +348,9 @@ def test_ac1_radar_alert_suppressed_when_free_daily_limit_reached():
     _clean_user(uid)
     try:
         _write_user_tier(uid, "free")
-        _seed_daily_counter(uid, 2)
+        _seed_daily_counter(uid, 2, max_urgency_sent=alert_urgency.highest_urgency(
+            "LOW", "MODERATE", "HIGH",
+        ))
 
         trip = _make_trip(trip_id, send_email=True, send_telegram=False)
         _save_trip(trip, uid)

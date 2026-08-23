@@ -95,6 +95,30 @@ class CompareAlertService:
         # + die dateibasierte `compare_alert_throttle.json`-Persistenz.
         self._throttle_store = ThrottleStore(user_id)
 
+    def _protokolliere_unterdrueckung(self, preset: dict, gate_reason: str) -> None:
+        """Unterdrueckungs-Protokoll des Vergleichs-Aenderungsalarms
+        (Issue #2050 S3b, Szenario 10 — bis dahin schwieg dieser Pfad, Luecke
+        O3). Spiegelbild des Trip-Pendants, nur mit `entity_type="compare"`.
+
+        Die Protokollierung darf den Stapellauf NIE mitreissen: ein
+        Ortsvergleich, dessen Eintrag scheitert, kostet sonst ALLE uebrigen
+        Ortsvergleiche dieses Nutzers ihren Alarm (Muster `fix_1479`)."""
+        preset_id = preset.get("id", "")
+        try:
+            alert_log.append_suppressed_entry(
+                self._user_id, entity_id=preset_id, entity_type="compare",
+                reason=alert_log.REASON_FORECAST_CHANGE, gate_reason=gate_reason,
+                effective_channels=effective_compare_channels(
+                    preset, self._settings, self._user_id,
+                ),
+            )
+        except Exception as e:
+            logger.error(
+                "Compare-Alert: Unterdrueckungs-Protokoll fuer Preset %s "
+                "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), nur "
+                "der Protokoll-Eintrag fehlt.", preset_id, e, gate_reason,
+            )
+
     def check_all_compare_presets(self) -> int:
         """Prüft alle Compare-Presets dieses Nutzers und versendet Alarme.
 
@@ -150,6 +174,10 @@ class CompareAlertService:
             now = datetime.now(timezone.utc)
             if self._throttle_store.is_throttled("compare_preset", preset_id, cooldown_minutes, now):
                 logger.debug(f"Compare-Alert cooldown active for preset {preset_id}")
+                # Issue #2050 S3b (Szenario 10, AC-6).
+                self._protokolliere_unterdrueckung(
+                    preset, alert_log.REASON_COOLDOWN,
+                )
                 continue
 
             # Issue #1726: die Konfiguration entsteht VOR der Tageslimit-Frage,
@@ -165,6 +193,10 @@ class CompareAlertService:
                 self._user_id, now, config.zone, reason="forecast_change",
             ):
                 logger.debug(f"Compare-Alert suppressed: daily limit reached for preset {preset_id}")
+                # Issue #2050 S3b (Szenario 10, AC-7).
+                self._protokolliere_unterdrueckung(
+                    preset, alert_log.REASON_DAILY_LIMIT,
+                )
                 continue
 
             # Issue #1467 S2 AG2: Ruhezeit VOR den Wetterabruf ziehen — bisher
@@ -192,6 +224,10 @@ class CompareAlertService:
             )
             if quiet_hours_active:
                 logger.debug(f"Compare-Alert quiet hours active for preset {preset_id}")
+                # Issue #2050 S3b (Szenario 10, AC-8).
+                self._protokolliere_unterdrueckung(
+                    preset, alert_log.REASON_QUIET_HOURS,
+                )
                 continue
 
             # Issue #1594: steht das geplante Briefing dieses Vergleichs

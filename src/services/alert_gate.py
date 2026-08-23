@@ -392,6 +392,8 @@ def record_nowcast_sent(
     zone: ZoneInfo,
     throttle_store: Optional[ThrottleStore] = None,
     precip_mm: Optional[float] = None,
+    urgency: Optional[str] = None,
+    is_escalation_breakthrough: bool = False,
 ) -> None:
     """Tageszaehler und Sperrzeit buchen — NUR nach erfolgreicher Zustellung.
     #1726: `zone` ist PFLICHT; wer hier eine andere uebergibt als
@@ -402,8 +404,18 @@ def record_nowcast_sent(
     (`radar_overtakes_cooldown`). Sie wird — wie die Sperrzeit selbst —
     ausschliesslich NACH erfolgreicher Zustellung fortgeschrieben
     (F001-Symmetrie); wer sie weglaesst, hinterlaesst keine Basis.
+
+    Issue #2050 S3b: `urgency` und `is_escalation_breakthrough` gehen
+    unveraendert an `alert_daily_limit.increment()` durch — exakt das Muster,
+    mit dem #2065 hier `precip_mm` ergaenzt hat. Auch sie werden
+    ausschliesslich NACH erfolgreicher Zustellung fortgeschrieben: eine
+    gescheiterte Zustellung darf weder die hoechste Stufe des Tages heben noch
+    den einen Durchbruch verbrauchen.
     """
-    alert_daily_limit.increment(user_id, now, zone)
+    alert_daily_limit.increment(
+        user_id, now, zone,
+        urgency=urgency, is_escalation_breakthrough=is_escalation_breakthrough,
+    )
     _resolve_store(user_id, throttle_store).record(
         throttle_scope, throttle_key, now, precip_mm=precip_mm,
     )

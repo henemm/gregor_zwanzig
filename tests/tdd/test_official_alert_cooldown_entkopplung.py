@@ -295,18 +295,34 @@ def test_ac10_pausierter_trip_alarmiert_amtlich_weiter(nutzer):
         f"(#995): gesendet={gesendet}, Mails={len(mails)}")
 
 
-# ═══ AC-11: der amtliche Pfad protokolliert keine Unterdrueckungsgruende ═══
+# ═══ AC-11: der amtliche Pfad protokolliert seinen Unterdrueckungsgrund ═══
+#
+# ABGELOEST durch #2050 S3b (Szenario 10, AC-5). Bis dahin sicherte dieser Test
+# das GEGENTEIL zu: der amtliche Pfad durfte KEINEN Grund protokollieren
+# (Geltungsbereich strikt Nowcast-only, Luecke E3 ausdruecklich offen). Genau
+# diese Beschraenkung faellt — jede Unterdrueckung bekommt einen benannten
+# Grund. Der Test bleibt deshalb an DERSELBEN Flaeche stehen und prueft sie in
+# der NEUEN Richtung, statt ersatzlos zu verschwinden: sonst liesse sich die
+# Abloesung spaeter nicht mehr von einem stillen "Schutz entfernt"
+# unterscheiden.
+#
+# SPEC: docs/specs/modules/feat_2050_s3b_budget_und_unterdrueckungsgrund.md
 
 
-def test_ac11_unterdrueckter_amtlicher_alarm_bekommt_keinen_grund_ins_protokoll(nutzer):
-    """AC-11 (Regressionswaechter, E3): Scheitert der amtliche Trip-Alarm an der
-    Ruhezeit, entsteht KEIN Protokolleintrag mit einem Unterdrueckungsgrund.
+def test_ac11_unterdrueckter_amtlicher_alarm_protokolliert_seinen_grund(nutzer):
+    """AC-11, abgeloest durch #2050 S3b (vormals E3-Regressionswaechter).
 
-    S3 hat die Grund-Protokollierung ausdruecklich auf die Nowcast-Pfade
-    begrenzt. Der neue Baustein liefert einen ``GateResult.reason`` — die
-    Versuchung, ihn „weil er doch da ist" mitzuschreiben, ist genau die
-    Grenzverschiebung, die diese Scheibe NICHT vornimmt.
+    Scheitert der amtliche Trip-Alarm an der Ruhezeit, entsteht seither SEHR
+    WOHL ein Protokolleintrag — mit dem Grund ``quiet_hours`` und dem
+    Ausloeser ``official_alert``. Neues Verhalten brauchte es dafuer nicht:
+    ``check_official_alert_gate`` liefert den passenden ``GateResult.reason``
+    seit #1467 S4a mit, der Aufrufer verwarf ihn nur.
+
+    Der Ausloeser wird MITGEPRUEFT: Sperrgrund und Ausloeser duerfen nicht
+    verschmelzen, sonst laese das Briefing spaeter „Ruhezeit" als Meldungsart.
     """
+    from services.alert_log import REASON_OFFICIAL_ALERT, REASON_QUIET_HOURS
+
     uid = nutzer("ac11")
     jetzt = datetime.now(timezone.utc).astimezone(TRIP_ZONE)
     ruhezeit_jetzt = ((jetzt - timedelta(minutes=30)).strftime("%H:%M"),
@@ -323,12 +339,15 @@ def test_ac11_unterdrueckter_amtlicher_alarm_bekommt_keinen_grund_ins_protokoll(
     assert (gesendet, mails) == (0, []), (
         f"Voraussetzung: die Ruhezeit muss unterdruecken: gesendet={gesendet}, "
         f"Mails={mails!r}")
-    gruende: set = set()
-    for eintrag in neue:
-        gruende |= suppression_reasons(eintrag)
-    assert gruende == set(), (
-        f"Der amtliche Pfad darf keine Unterdrueckungsgruende protokollieren "
-        f"(E3, Geltungsbereich bleibt Nowcast-only): {gruende!r} in {neue!r}")
+    amtliche = [e for e in neue if e.get("reason") == REASON_OFFICIAL_ALERT]
+    assert len(amtliche) == 1, (
+        f"Der amtliche Pfad muss GENAU EINEN Unterdrueckungs-Eintrag mit dem "
+        f"Ausloeser {REASON_OFFICIAL_ALERT!r} hinterlassen, gefunden "
+        f"{len(amtliche)}: {neue!r}")
+    assert suppression_reasons(amtliche[0]) == {REASON_QUIET_HOURS}, (
+        f"Der amtliche Pfad muss seine Ruhezeit-Unterdrueckung seit #2050 S3b "
+        f"mit dem Grund {REASON_QUIET_HOURS!r} protokollieren (vormals: gar "
+        f"nicht): {amtliche[0]!r}")
 
 
 # ═══ AC-15: gebucht wird ausschliesslich nach erfolgreicher Zustellung ═════

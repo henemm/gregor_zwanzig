@@ -61,6 +61,12 @@ REASON_BELOW_THRESHOLD = "below_channel_threshold"
 # (`services.alert_gate.check_event_identity_gate`) hat dieselbe Meldung
 # bereits ueber eine ANDERE Quelle gesehen (Nowcast <-> amtlich).
 REASON_EVENT_DUPLICATE = "event_duplicate"
+# Issue #2050 S3b (Szenario 10): der Doppel-Alarm-Guard (#818) hat dieselbe
+# Groesse desselben Segments innerhalb der Sperrzeit schon gemeldet. EIGENER
+# Grund, kein `REASON_COOLDOWN`: das ist kein Sperrzeit-Topf auf
+# `ThrottleStore`-Ebene, sondern ein kanaluebergreifender Wiederholungsschutz
+# auf `AlertStateService`-Ebene — die beiden koennen einzeln greifen.
+REASON_DOUBLE_ALERT_GUARD = "double_alert_guard"
 
 # Ausloeser der Meldung selbst (`reason` des Eintrags).
 REASON_FORECAST_CHANGE = "forecast_change"
@@ -542,10 +548,12 @@ def append_suppressed_entry(
     Ohne eingeschalteten Kanal entsteht — wie in `append_entry()` — gar kein
     Eintrag: der Nutzer hat Alarme dort bewusst abgeschaltet.
 
-    Geltungsbereich sind ausschliesslich die beiden Nowcast-Pfade. Der
-    Vorhersage-Aenderungsalarm und die amtliche Warnung protokollieren ihre
-    Unterdrueckungen weiterhin NICHT (offene Luecke O3 in
-    `feat_1459_alert_protokoll.md`).
+    Issue #2050 S3b (Szenario 10): der Geltungsbereich waren bis dahin
+    ausschliesslich die beiden Nowcast-Pfade; Vorhersage-Aenderungsalarm und
+    amtliche Warnung schwiegen (Luecken O3/E3). Seither protokollieren auch
+    sie — in Trip UND Ortsvergleich. BEWUSST weiterhin still bleibt allein der
+    Briefing-Vorlauf (#1233/ADR-0009): dort wird die Meldung ERSETZT, nicht
+    verschluckt, sie kommt Minuten spaeter vollstaendig im Briefing an.
 
     `gate_reason` ist PFLICHT und muss gefuellt sein: ein leerer Wert wuerde
     von `_missed_channels()` beim LESEN still zu `REASON_DELIVERY_FAILED`

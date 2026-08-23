@@ -25,7 +25,7 @@ from typing import Optional
 
 from app.config import Settings
 from app.loader import load_all_locations
-from services import alert_channel_threshold, alert_log
+from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
 from services.alert_gate import (
     check_event_identity_gate,
@@ -190,7 +190,15 @@ class CompareRadarAlertService:
             now=datetime.now(timezone.utc),
             zone=zone,
         )
-        if not gate.allowed:
+        # Issue #2050 S3b (Szenario 7, AC-20): dieselbe Ausnahme wie im
+        # Trip-Radarpfad — bei erschoepfter Tages-Obergrenze haelt der Lauf
+        # hier nicht mehr an, sondern holt die Daten und entscheidet unten
+        # gegen die dort abgeleitete Dringlichkeit. Ruhezeit und Sperrzeit
+        # bleiben an dieser Stelle unveraendert harte Stops.
+        _budget_erschoepft = (
+            not gate.allowed and gate.reason == alert_log.REASON_DAILY_LIMIT
+        )
+        if not gate.allowed and not _budget_erschoepft:
             # Die Protokollierung darf den Stapellauf NIE mitreissen: ein
             # Ortsvergleich, dessen Eintrag scheitert, kostet sonst ALLE
             # uebrigen Ortsvergleiche dieses Nutzers ihren Alarm — genau das
@@ -287,6 +295,38 @@ class CompareRadarAlertService:
             )
             for _name, _loc, nowcast in triggered
         ])
+        # Issue #2050 S3b (Szenario 7, AC-20): jetzt — mit der Dringlichkeit
+        # dieses Abrufs in der Hand — entscheidet der Aufrufer, ob die Lage
+        # das erschoepfte Tagesbudget durchbricht. Geteilter Baustein, dieselbe
+        # Zone wie Gate und Buchung (#1726).
+        _budget_durchbruch = False
+        if _budget_erschoepft:
+            _budget_durchbruch = alert_daily_limit.escalation_breaks_through(
+                self._user_id, now_utc, zone, severity,
+            )
+            logger.info(
+                "Compare-Radar-Alert: Budget-Durchbruch fuer Preset %s geprueft "
+                "— Dringlichkeit %s: %s",
+                preset_id, severity,
+                "Durchbruch" if _budget_durchbruch else "Tages-Obergrenze bleibt",
+            )
+            if not _budget_durchbruch:
+                try:
+                    alert_log.append_suppressed_entry(
+                        self._user_id, entity_id=preset_id, entity_type="compare",
+                        reason=alert_log.REASON_NOWCAST,
+                        gate_reason=alert_log.REASON_DAILY_LIMIT,
+                        effective_channels=effective_channels,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Compare-Radar-Alert: Unterdrueckungs-Protokoll "
+                        "(Tages-Obergrenze) fuer Preset %s fehlgeschlagen (%s) "
+                        "— der Alarm blieb aus, nur der Eintrag fehlt.",
+                        preset_id, e,
+                    )
+                return False
+
         allowed, suppressed = alert_channel_threshold.split_by_threshold(
             effective_channels, severity, preset.get("alert_channel_thresholds"),
         )
@@ -365,6 +405,11 @@ class CompareRadarAlertService:
             user_id=self._user_id, throttle_scope=_THROTTLE_SCOPE,
             throttle_key=preset_id, now=datetime.now(timezone.utc),
             zone=zone,
+            # Issue #2050 S3b: hoechste heute in dieser Zone zugestellte Stufe
+            # bei JEDEM Versand fortschreiben; der verbrauchte Durchbruch nur,
+            # wenn er diesen Lauf getragen hat (F001-Symmetrie).
+            urgency=severity,
+            is_escalation_breakthrough=_budget_durchbruch,
         )
         return True
 
