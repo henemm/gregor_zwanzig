@@ -409,6 +409,99 @@ def test_ac2_geworfene_ausnahme_beim_radarabruf_erzeugt_denselben_ausfall_grund(
         _clean_user(uid)
 
 
+def test_geworfener_abruf_traegt_den_ausfall_grund_auch_bei_offener_sperrzeit():
+    """AC-2, zweite Haelfte — die Zusicherung „UNABHAENGIG von der Sperrzeit".
+
+    GIVEN eine nachweislich OFFENE Sperrzeit aus einem vorangegangenen Alarm,
+    WHEN der Radarabruf im selben Sperrfenster mit einer geworfenen Ausnahme
+    scheitert, THEN traegt der entstehende Vorfall den Ausfall-Grund und
+    NICHT `cooldown`.
+
+    Der Test oben faehrt laut eigenem Docstring bewusst nur den Regelfall ohne
+    Sperrzeit. Damit war die Haelfte der Zusicherung unbewacht, die den alten
+    Zustand beschreibt: bis #2050 S4a protokollierte der Ausnahme-Zweig NUR bei
+    offener Sperrzeit, und dann unter `cooldown`. Wer diese Fassung
+    wiederherstellt, faellt heute keinem Test dieser Datei auf — der Nutzer
+    saehe im Briefing „so hast du es eingestellt", waehrend in Wahrheit die
+    Quelle ausgefallen ist. Genau das faengt dieser Test.
+
+    Die Sperrzeit entsteht ueber den ECHTEN Schreibweg: Lauf 1 loest mit echtem
+    Regen aus und bucht sie dabei selbst (`record_nowcast_sent`, erst nach
+    Zustellung). Dass sie zum Zeitpunkt des Ausfalls noch OFFEN war, wird
+    GEMESSEN statt behauptet — der Kontrolllauf 15 Minuten SPAETER bleibt an
+    ihr haengen und protokolliert `cooldown`. Der Schluss auf den frueheren
+    Zeitpunkt ist zwingend: zwischen beiden Laeufen wurde nichts zugestellt,
+    die Sperrzeit laeuft also unveraendert aus Lauf 1 und ist als
+    zusammenhaengendes Fenster bei +30 offen, wenn sie es bei +45 ist.
+
+    Der Kontrolllauf traegt dieselbe Menge wie Lauf 1 (kein Faktor) und kann
+    die Sperrzeit deshalb nicht ueberholen (#2065) — er misst sie, statt sie
+    zu durchbrechen.
+
+    Reihenfolge mit Absicht: der Ausfall-Vorfall wird VOR dem Kontrolllauf
+    gelesen. Danach lagen zwei Vorfaelle im selben Zeitfenster, und die
+    Zusicherung „genau einer" liesse sich nicht mehr sauber pruefen."""
+    uid = _uid("sperrzeit")
+    try:
+        trip = _aufbau(uid, "sperrzeit")
+        strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
+
+        lauf1 = strecke.lauf(
+            at=_AT, zweig="radar", trip=trip, radar_service=_radar(_dauerregen(11.0)),
+        )
+        assert lauf1.triggered_count == 1, (
+            f"Vorbedingung: Lauf 1 muss ausloesen und dabei die Sperrzeit "
+            f"buchen — ohne sie pruefte dieser Test denselben Fall wie AC-2 "
+            f"(war {lauf1.triggered_count})."
+        )
+
+        at_ausfall = _AT + timedelta(minutes=30)
+        seit_ausfall = at_ausfall - timedelta(minutes=1)
+        ausfall_lauf = strecke.lauf(
+            at=at_ausfall, zweig="radar", trip=trip, radar_service=_AbsturzRadar(),
+        )
+        assert ausfall_lauf.triggered_count == 0, (
+            f"Ein gescheiterter Abruf darf keinen Alarm ausloesen "
+            f"(war {ausfall_lauf.triggered_count})."
+        )
+        assert _nichts_versendet(ausfall_lauf), (
+            f"Kein Kanal darf etwas ausliefern: mail={ausfall_lauf.mail!r} "
+            f"telegram={ausfall_lauf.telegram!r} sms={ausfall_lauf.sms!r} "
+            f"premium_sms={ausfall_lauf.premium_sms!r}"
+        )
+        vorfall = _genau_ein_ausfall(uid, trip.id, "trip", seit_ausfall)
+        assert alert_log.REASON_COOLDOWN not in vorfall.reasons, (
+            f"Der Vorfall darf NICHT {alert_log.REASON_COOLDOWN!r} tragen: die "
+            f"Sperrzeit hat diesen Lauf nicht unterdrueckt, die ausgefallene "
+            f"Quelle hat ihn verhindert. Gefunden {sorted(vorfall.reasons)!r}"
+        )
+
+        at_kontrolle = _AT + timedelta(minutes=45)
+        seit_kontrolle = at_kontrolle - timedelta(minutes=1)
+        kontrolle = strecke.lauf(
+            at=at_kontrolle, zweig="radar", trip=trip,
+            radar_service=_radar(_dauerregen(11.0)),
+        )
+        assert kontrolle.triggered_count == 0, (
+            f"Sperrzeit-Nachweis: der Kontrolllauf mit unveraenderter Menge "
+            f"muss an der Sperrzeit haengenbleiben (war "
+            f"{kontrolle.triggered_count})."
+        )
+        kontroll_vorfaelle = _vorfaelle(uid, trip.id, "trip", seit_kontrolle)
+        assert len(kontroll_vorfaelle) == 1, (
+            f"Sperrzeit-Nachweis: erwartet GENAU EINEN Kontroll-Vorfall, "
+            f"gefunden {len(kontroll_vorfaelle)}: {kontroll_vorfaelle!r}"
+        )
+        assert set(kontroll_vorfaelle[0].reasons) == {alert_log.REASON_COOLDOWN}, (
+            f"Sperrzeit-Nachweis: der Kontrolllauf muss unter "
+            f"{alert_log.REASON_COOLDOWN!r} gebucht sein — nur dann war die "
+            f"Sperrzeit beim Ausfall-Lauf 15 Minuten frueher nachweislich "
+            f"offen. Gefunden {sorted(kontroll_vorfaelle[0].reasons)!r}"
+        )
+    finally:
+        _clean_user(uid)
+
+
 # ─────────────────── AC-3: echte Daten, kein Regen (Abgrenzung) ─────────────
 
 
@@ -639,6 +732,73 @@ def test_ac6_der_ortsvergleich_radarpfad_protokolliert_denselben_ausfall():
         )
         assert mails == [], f"AC-6: es darf nichts versendet werden: {mails!r}"
         _genau_ein_ausfall(uid, preset_id, "compare", seit)
+    finally:
+        compare_clean_uid(uid)
+
+
+def test_geworfener_abruf_im_ortsvergleich_protokolliert_denselben_ausfall():
+    """AC-2 x AC-6 — der Ausnahme-Zweig des Ortsvergleichs.
+
+    GIVEN der Radarabruf des Vergleichs-Pfads scheitert mit einer GEWORFENEN
+    Ausnahme statt mit einem Leerergebnis, WHEN der Pfad geprueft wird, THEN
+    entsteht GENAU EIN Vorfall mit dem Ausfall-Grund und `entity_type ==
+    "compare"`.
+
+    AC-6 faehrt nur die fail-soft-Form (`data_unavailable=True`) und laesst
+    damit die zweite Haelfte der Paritaet unbewacht: der gesamte
+    Ausnahme-Zweig (`compare_radar_alert.py:479-487`) liess sich entfernen,
+    ohne dass ein Test dieser oder einer Nachbardatei rot wurde. Im Betrieb
+    ist genau das der haeufigere Fall — HTTP 503 und Timeout werfen, sie
+    liefern kein leeres Ergebnis.
+
+    Dass der Abruf wirklich WIRFT, wird vorher an den Koordinaten des Orts
+    gemessen: sonst koennte dieser Test unbemerkt denselben Weg wie AC-6
+    fahren und der Ausnahme-Zweig bliebe erneut unbewacht.
+
+    Der Gegenprobe-Blick auf `entity_type == "trip"` ist kein Beiwerk: ein
+    Eintrag unter der falschen Flaeche waere im Vergleichs-Briefing unsichtbar
+    und tauchte stattdessen bei einem gleichnamigen Trip auf."""
+    from services.compare_radar_alert import CompareRadarAlertService
+
+    uid, preset_id = _uid("compare-absturz"), "cp-2050-s4a-absturz"
+    compare_clean_uid(uid)
+    try:
+        compare_write_tier(uid, "premium")  # kein Tageslimit im Weg
+        ort = location("loc-2050-s4a-absturz", "Absturzdorf")
+        save_location(ort, user_id=uid)
+        write_presets(uid, [radar_preset(preset_id, [ort.id], user_id=uid)])
+
+        geworfen = None
+        try:
+            _AbsturzRadar().get_nowcast(
+                ort.lat, ort.lon, elevation_m=ort.elevation_m,
+            )
+        except Exception as e:  # noqa: BLE001 — genau das ist die Vorbedingung
+            geworfen = e
+        assert geworfen is _AbsturzRadar.fehler, (
+            f"Vorbedingung: der Abruf muss eine AUSNAHME werfen (anderer Weg "
+            f"als AC-6), gefangen wurde {geworfen!r}."
+        )
+
+        seit = datetime.now(timezone.utc) - timedelta(minutes=1)
+        mails: list = []
+        sent = CompareRadarAlertService(
+            settings=settings_email_only(), user_id=uid,
+            radar_service=_AbsturzRadar(),
+            mail_sink=lambda subject, body: mails.append((subject, body)),
+        ).check_all_compare_presets()
+
+        assert sent == 0, (
+            f"Vorbedingung: ein gescheiterter Abruf darf keinen "
+            f"Vergleichs-Alarm ausloesen (war {sent})."
+        )
+        assert mails == [], f"Es darf nichts versendet werden: {mails!r}"
+        _genau_ein_ausfall(uid, preset_id, "compare", seit)
+        assert _vorfaelle(uid, preset_id, "trip", seit) == [], (
+            f"Der Vorfall gehoert zur Flaeche 'compare' — unter 'trip' darf "
+            f"nichts stehen, gefunden "
+            f"{_vorfaelle(uid, preset_id, 'trip', seit)!r}"
+        )
     finally:
         compare_clean_uid(uid)
 
