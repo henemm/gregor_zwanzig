@@ -38,11 +38,15 @@ def test_ac1_inca_real_fetch_returns_inca_source():
     WHEN get_nowcast aufgerufen wird
     THEN source == 'INCA' und ≥1 realer Frame mit numerischer Rate (mm/h ≥ 0).
     """
+    from providers.base import ProviderRequestError
     from providers.geosphere import GeoSphereProvider
 
     # API-Erreichbarkeit prüfen — bei nachgewiesenem Ausfall skippen, NICHT wegmocken.
-    if GeoSphereProvider().fetch_nowcast(_WIEN_LAT, _WIEN_LON) is None:
-        pytest.skip("GeoSphere INCA API nicht erreichbar (fetch_nowcast → None)")
+    try:
+        if GeoSphereProvider().fetch_nowcast(_WIEN_LAT, _WIEN_LON) is None:
+            pytest.skip("GeoSphere INCA API nicht erreichbar (fetch_nowcast → None)")
+    except ProviderRequestError as e:
+        pytest.skip(f"GeoSphere INCA API nicht erreichbar (Status {e.status_code})")
 
     result = RadarNowcastService().get_nowcast(_WIEN_LAT, _WIEN_LON)
 
@@ -62,10 +66,14 @@ def test_ac2_inca_parses_all_points_no_attributeerror():
     precip_1h_mm is None) ergibt genau einen Frame mit tz-awarem timestamp
     und numerischer Rate ≥ 0 → len(frames) == len(ts.data).
     """
+    from providers.base import ProviderRequestError
     from providers.geosphere import GeoSphereProvider
 
     provider = GeoSphereProvider()
-    ts = provider.fetch_nowcast(_WIEN_LAT, _WIEN_LON)
+    try:
+        ts = provider.fetch_nowcast(_WIEN_LAT, _WIEN_LON)
+    except ProviderRequestError as e:
+        pytest.skip(f"GeoSphere INCA API nicht erreichbar (Status {e.status_code})")
     if ts is None or not ts.data:
         pytest.skip("GeoSphere INCA API nicht erreichbar / keine Daten")
 

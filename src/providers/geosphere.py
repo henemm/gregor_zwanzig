@@ -487,13 +487,23 @@ class GeoSphereProvider:
             lon: Longitude
 
         Returns:
-            NormalizedTimeseries or None if unavailable
+            NormalizedTimeseries
+
+        Raises:
+            ProviderRequestError: If the request fails with an HTTP error
+                status. The status code is included in the message so
+                callers logging ``str(e)`` see it without extra access
+                (Issue #1658 Scheibe S2).
         """
         try:
             data = self._request(ENDPOINTS["nowcast"], lat, lon, NOWCAST_PARAMS)
             return self._parse_nowcast_response(data)
-        except httpx.HTTPStatusError:
-            return None
+        except httpx.HTTPStatusError as e:
+            raise ProviderRequestError(
+                self.name,
+                f"NOWCAST request failed with status {e.response.status_code}",
+                status_code=e.response.status_code,
+            ) from e
 
     def _fetch_openmeteo_clouds(
         self, lat: float, lon: float, hours: int = 48,
