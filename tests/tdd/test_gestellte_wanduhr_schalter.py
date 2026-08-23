@@ -36,8 +36,11 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import pytest
+from freezegun import freeze_time
 
 from tests.helpers.wanduhr import ENV_NAME, anker_aus, roh_wert
 
@@ -55,6 +58,38 @@ _TOLERANZ_S = 300
 
 _EIGENER_FALL = "test_uhr_folgt_dem_schalter"
 
+# Uhr fuer die `HH:MM`-Faelle des Ankertests unten: die Form leitet ihr Datum
+# aus "heute" ab, ohne gestellte Uhr liesse sich das Ergebnis nicht als
+# Literal hinschreiben.
+_ANKERTEST_UHR = "2026-08-23T06:05:00+00:00"
+
+# Eingabe -> erwarteter Zeitpunkt. Die Erwartung steht hier ausdruecklich als
+# LITERAL, und das ist an dieser einen Stelle richtig statt falsch:
+# `anker_aus()` IST der Prueling und tut nichts anderes, als eine Zeichenkette
+# in einen Zeitpunkt zu wandeln. Jede "Herleitung" wuerde die Funktion
+# nachbauen und damit wieder nur ihre eigene Kopie pruefen -- genau die Falle,
+# aus der dieser Test herausfuehren soll (Adversary-Finding F003 zu #2096:
+# `anker_aus()` stand auf BEIDEN Seiten des Vergleichs, eine Verschiebung um
+# eine Stunde blieb ungefangen).
+_ANKER_PAARE = [
+    # ISO mit `T`-Trenner -- die Form, die der Unterprozess-Fall unten setzt.
+    ("2026-08-22T03:14:00+00:00", datetime(2026, 8, 22, 3, 14, tzinfo=timezone.utc)),
+    # ISO mit Leerzeichen -- die Form, die die Bestandstests als `freeze_time`
+    # Argument fuehren.
+    ("2026-08-22 23:30:00+00:00", datetime(2026, 8, 22, 23, 30, tzinfo=timezone.utc)),
+    # Versatz ungleich UTC: DERSELBE Augenblick, andere Schreibweise.
+    ("2026-08-22T05:14:00+02:00", datetime(2026, 8, 22, 3, 14, tzinfo=timezone.utc)),
+    # Ohne Versatz: gilt als UTC, wird nicht als Ortszeit gedeutet.
+    ("2026-08-22T03:14:00", datetime(2026, 8, 22, 3, 14, tzinfo=timezone.utc)),
+    # `HH:MM` -- heutiger Kalendertag der gestellten Uhr `_ANKERTEST_UHR`.
+    ("23:58", datetime(2026, 8, 23, 23, 58, tzinfo=timezone.utc)),
+    ("12:00", datetime(2026, 8, 23, 12, 0, tzinfo=timezone.utc)),
+    # Nur die Stunde: die Minuten fallen auf 00.
+    ("7", datetime(2026, 8, 23, 7, 0, tzinfo=timezone.utc)),
+]
+
+_UNBRAUCHBAR = ["", "Unsinn", "25:00", "12:99", "2026-13-01T00:00:00+00:00", "-"]
+
 
 def _kernel_uhr(tmp_path: Path) -> datetime:
     """Eine von freezegun UNABHAENGIGE Zeitquelle.
@@ -68,6 +103,52 @@ def _kernel_uhr(tmp_path: Path) -> datetime:
     probe = tmp_path / "uhr.probe"
     probe.write_bytes(b"")
     return datetime.fromtimestamp(probe.stat().st_mtime, timezone.utc)
+
+
+@pytest.mark.parametrize("roh,erwartet", _ANKER_PAARE)
+@freeze_time(_ANKERTEST_UHR)
+def test_anker_aus_wandelt_den_roh_wert_in_den_richtigen_zeitpunkt(roh, erwartet):
+    """GIVEN einen Roh-Wert in einer der beiden Schalter-Formen
+    WHEN `anker_aus()` DIREKT aufgerufen wird -- ohne die Fixture
+    THEN liefert er genau den hinterlegten Zeitpunkt, UTC-behaftet.
+
+    Warum eigens und ohne die Fixture: `anker_aus()` stand bis hierher auf
+    BEIDEN Seiten desselben Vergleichs. Die Fixture friert die Uhr auf seinen
+    Rueckgabewert ein, der Selbsttest bildete seine Erwartung aus demselben
+    Aufruf -- eine Verschiebung der Funktion um eine Stunde blieb dadurch
+    unbemerkt (Adversary-Finding F003). Geprueft war damit nur "die Fixture
+    ruft `anker_aus()` korrekt auf", nicht "`anker_aus()` rechnet korrekt".
+    Dieser Fall schliesst die zweite Haelfte.
+    """
+    ergebnis = anker_aus(roh)
+
+    assert ergebnis == erwartet, (
+        f"anker_aus({roh!r}) lieferte {ergebnis.isoformat()} statt "
+        f"{erwartet.isoformat()}"
+    )
+    # `==` allein genuegt nicht: zwei Zeitpunkte mit verschiedenem Versatz
+    # sind gleich, wenn sie denselben Augenblick meinen. Die Zonenbehaftung
+    # ist aber eine eigene Zusicherung -- ein naiver Wert waere von freezegun
+    # als ORTSZEIT gelesen worden und haette die Uhr auf einem Server in einer
+    # anderen Zone still danebengestellt.
+    assert ergebnis.utcoffset() == timedelta(0), (
+        f"anker_aus({roh!r}) muss UTC-behaftet liefern, war "
+        f"{ergebnis.tzinfo!r}"
+    )
+
+
+@pytest.mark.parametrize("roh", _UNBRAUCHBAR)
+def test_anker_aus_faellt_bei_unbrauchbarer_eingabe_laut_aus(roh):
+    """GIVEN einen Roh-Wert, der keine der beiden Formen ist
+    WHEN `anker_aus()` ihn wandeln soll
+    THEN loest er `ValueError` aus, statt irgendeinen Zeitpunkt zu liefern.
+
+    Festgeschrieben, weil das Schweigen hier teuer waere: ein Schalter, der
+    bei Unsinn stillschweigend einen Zeitpunkt nimmt, stellt die Uhr falsch
+    und laesst die vier Nachweis-Laeufe trotzdem gruen aussehen.
+    """
+    with pytest.raises(ValueError):
+        anker_aus(roh)
 
 
 def test_uhr_folgt_dem_schalter(tmp_path):
