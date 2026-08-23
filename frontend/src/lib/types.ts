@@ -45,6 +45,9 @@ export interface Waypoint {
 	arrival_override?: string;    // User-Override "HH:MM"
 	// Issue #585 — Wegpunkt-Typ (Gipfel, Pass, Hütte, etc.)
 	type?: string;                // 'start' | 'end' | 'summit' | 'pass' | 'valley' | 'hut'
+	// Issue #2110 — real aus dem GPX-Track vermessene Distanz ab Etappenstart (km).
+	// Optional: fehlt/null heißt "nicht gemessen" → Haversine-Fallback.
+	distance_from_start_km?: number | null;
 }
 
 export interface Stage {

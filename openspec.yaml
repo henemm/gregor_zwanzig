@@ -92,6 +92,25 @@ strict_code_gate:
     - "scripts/"
     - "tools/"
     - "e2e/"
+  # Ueberschreibt den Hook-Default vollstaendig (kein Merge, siehe edit_gate.py
+  # _get_config_list) — deshalb Default-Liste hier vollstaendig repliziert,
+  # PLUS ".test.ts$": Frontend-Konvention legt Testdateien oft direkt neben den
+  # Quellcode (z.B. fullProfile.test.ts, naismith.test.ts), nicht in einem
+  # test/tests/__tests__-Ordner. Ohne dieses Muster blockierte edit_gate.py
+  # solche Testdateien faelschlich als Produktivcode in Phase 5 (TDD RED) —
+  # gefunden bei #2110, PO-bestaetigt 2026-08-23.
+  always_allowed_patterns:
+    - "\\.md$"
+    - "\\.txt$"
+    - "\\.json$"
+    - "\\.yaml$"
+    - "\\.yml$"
+    - "\\.toml$"
+    - "\\.gitignore$"
+    - "README"
+    - "CHANGELOG"
+    - "LICENSE"
+    - "\\.test\\.ts$"
 
 # Specs Configuration
 specs:
