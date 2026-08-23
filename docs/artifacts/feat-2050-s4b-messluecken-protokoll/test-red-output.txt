@@ -28,14 +28,14 @@ _____________ test_luecke_in_der_mitte_haelt_zahl_und_km_lage_fest _____________
 >       luecken = _pruefe_luecken(lauf, radar, punkte_erwartet=3)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/tdd/test_radar_messluecken_protokoll.py:322: 
+tests/tdd/test_radar_messluecken_protokoll.py:371: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-7 · ab 12:10 · letzter Regen gegen 12:40 · Nas...999996884, 3.5949999999998226, 5.594999999999956], uid='tdd-2050-s4b-ac1-98305284', trip_id='tdd-2050-s4b-trip-ce10fb')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-7 · ab 12:10 · letzter Regen gegen 12:40 · Nas...999996884, 3.5949999999998226, 5.594999999999956], uid='tdd-2050-s4b-ac1-565b36f1', trip_id='tdd-2050-s4b-trip-18679f')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -44,10 +44,10 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-7
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-ce10fb', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 6.6}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-ce10fb', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-18679f', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 6.6}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-18679f', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 _____________ test_alle_folgepunkte_ausgefallen_ist_der_extremfall _____________
 
     def test_alle_folgepunkte_ausgefallen_ist_der_extremfall():
@@ -61,14 +61,14 @@ _____________ test_alle_folgepunkte_ausgefallen_ist_der_extremfall _____________
 >       luecken = _pruefe_luecken(lauf, radar, punkte_erwartet=6)
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/tdd/test_radar_messluecken_protokoll.py:347: 
+tests/tdd/test_radar_messluecken_protokoll.py:396: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...333791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac2-0f911f03', trip_id='tdd-2050-s4b-trip-69ea63')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...333791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac2-66be95b1', trip_id='tdd-2050-s4b-trip-9c82dc')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -77,10 +77,10 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-2
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-69ea63', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-69ea63', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-9c82dc', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-9c82dc', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 ______ test_echter_befund_ein_kilometer_ist_vom_extremfall_unterscheidbar ______
 
     def test_echter_befund_ein_kilometer_ist_vom_extremfall_unterscheidbar():
@@ -109,14 +109,14 @@ ______ test_echter_befund_ein_kilometer_ist_vom_extremfall_unterscheidbar ______
 >       luecken_echt = _pruefe_luecken(lauf_echt, echt, punkte_erwartet=6)
                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/tdd/test_radar_messluecken_protokoll.py:378: 
+tests/tdd/test_radar_messluecken_protokoll.py:427: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...1165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac3-echt-b1ccec85', trip_id='tdd-2050-s4b-trip-31d474')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...1165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac3-echt-e897b968', trip_id='tdd-2050-s4b-trip-2a0bb4')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -125,10 +125,10 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-2
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-31d474', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-31d474', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-2a0bb4', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-2a0bb4', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 _______________ test_luecken_feld_ist_auch_ohne_luecke_vorhanden _______________
 
     def test_luecken_feld_ist_auch_ohne_luecke_vorhanden():
@@ -145,14 +145,14 @@ _______________ test_luecken_feld_ist_auch_ohne_luecke_vorhanden _______________
 >       luecken_ohne = _pruefe_luecken(lauf_ohne, ohne, punkte_erwartet=6)
                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/tdd/test_radar_messluecken_protokoll.py:412: 
+tests/tdd/test_radar_messluecken_protokoll.py:461: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...1165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac4-ohne-effef469', trip_id='tdd-2050-s4b-trip-e43df5')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...1165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac4-ohne-33df6c5d', trip_id='tdd-2050-s4b-trip-6244ac')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -161,10 +161,10 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-2
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-e43df5', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-e43df5', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-6244ac', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-6244ac', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 _________________ test_geworfene_ausnahme_erscheint_als_luecke _________________
 
     def test_geworfene_ausnahme_erscheint_als_luecke():
@@ -174,14 +174,14 @@ _________________ test_geworfene_ausnahme_erscheint_als_luecke _________________
         lauf = _lauf(radar, tag="ac5")
 >       _pruefe_luecken(lauf, radar, punkte_erwartet=6)
 
-tests/tdd/test_radar_messluecken_protokoll.py:440: 
+tests/tdd/test_radar_messluecken_protokoll.py:489: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...333791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac5-5b14c066', trip_id='tdd-2050-s4b-trip-b34235')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...333791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac5-d03930cc', trip_id='tdd-2050-s4b-trip-c74d96')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -190,12 +190,12 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-2
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-b34235', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-b34235', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-c74d96', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-c74d96', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 ------------------------------ Captured log call -------------------------------
-WARNING  trip_alert:trip_alert.py:1714 Radar alert: Nowcast fuer Zonenpunkt (47.0881, 11.0000) des Trips tdd-2050-s4b-trip-b34235 fehlgeschlagen (Nowcast-Abruf fuer Zonenpunkt 2 absichtlich fehlgeschlagen) — der Punkt faellt aus der Ausdehnung heraus, der Alarm laeuft weiter.
+WARNING  trip_alert:trip_alert.py:1714 Radar alert: Nowcast fuer Zonenpunkt (47.0881, 11.0000) des Trips tdd-2050-s4b-trip-c74d96 fehlgeschlagen (Nowcast-Abruf fuer Zonenpunkt 2 absichtlich fehlgeschlagen) — der Punkt faellt aus der Ausdehnung heraus, der Alarm laeuft weiter.
 _____________________ test_throttled_erscheint_als_luecke ______________________
 
     def test_throttled_erscheint_als_luecke():
@@ -206,14 +206,14 @@ _____________________ test_throttled_erscheint_als_luecke ______________________
         lauf = _lauf(radar, tag="ac6")
 >       _pruefe_luecken(lauf, radar, punkte_erwartet=6)
 
-tests/tdd/test_radar_messluecken_protokoll.py:449: 
+tests/tdd/test_radar_messluecken_protokoll.py:498: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...333791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac6-f2cbb5da', trip_id='tdd-2050-s4b-trip-845857')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...333791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac6-fd6db6e3', trip_id='tdd-2050-s4b-trip-3d3992')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -222,10 +222,10 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-2
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-845857', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-845857', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-3d3992', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-3d3992', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 __________________ test_data_unavailable_erscheint_als_luecke __________________
 
     def test_data_unavailable_erscheint_als_luecke():
@@ -236,14 +236,14 @@ __________________ test_data_unavailable_erscheint_als_luecke __________________
         lauf = _lauf(radar, tag="ac7")
 >       _pruefe_luecken(lauf, radar, punkte_erwartet=6)
 
-tests/tdd/test_radar_messluecken_protokoll.py:458: 
+tests/tdd/test_radar_messluecken_protokoll.py:507: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...333791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac7-ecdc7aa5', trip_id='tdd-2050-s4b-trip-08b973')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...333791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac7-5935148f', trip_id='tdd-2050-s4b-trip-11170b')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -252,10 +252,10 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-2
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-08b973', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-08b973', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-11170b', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-11170b', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 _________ test_ausfall_am_ersten_punkt_erzeugt_keine_ausdehnungszeile __________
 
     def test_ausfall_am_ersten_punkt_erzeugt_keine_ausdehnungszeile():
@@ -298,14 +298,14 @@ _________ test_ausfall_am_ersten_punkt_erzeugt_keine_ausdehnungszeile __________
 >           luecken = _pruefe_luecken(lauf_zweiter, radar_zweiter, punkte_erwartet=6)
                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/tdd/test_radar_messluecken_protokoll.py:503: 
+tests/tdd/test_radar_messluecken_protokoll.py:552: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...5, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac8-zweiter-4ab01027', trip_id='tdd-2050-s4b-trip-f8ca8d')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...5, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac8-zweiter-8726eb9d', trip_id='tdd-2050-s4b-trip-72f497')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -314,16 +314,16 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-2
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-f8ca8d', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-f8ca8d', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-72f497', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-72f497', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 ------------------------------ Captured log call -------------------------------
-ERROR    trip_alert:trip_alert.py:1673 Radar nowcast failed for trip tdd-2050-s4b-trip-762496: Nowcast-Abruf fuer Zonenpunkt 0 absichtlich fehlgeschlagen
-WARNING  trip_alert:trip_alert.py:1714 Radar alert: Nowcast fuer Zonenpunkt (47.0701, 11.0000) des Trips tdd-2050-s4b-trip-f8ca8d fehlgeschlagen (Nowcast-Abruf fuer Zonenpunkt 1 absichtlich fehlgeschlagen) — der Punkt faellt aus der Ausdehnung heraus, der Alarm laeuft weiter.
+ERROR    trip_alert:trip_alert.py:1673 Radar nowcast failed for trip tdd-2050-s4b-trip-2dd385: Nowcast-Abruf fuer Zonenpunkt 0 absichtlich fehlgeschlagen
+WARNING  trip_alert:trip_alert.py:1714 Radar alert: Nowcast fuer Zonenpunkt (47.0701, 11.0000) des Trips tdd-2050-s4b-trip-72f497 fehlgeschlagen (Nowcast-Abruf fuer Zonenpunkt 1 absichtlich fehlgeschlagen) — der Punkt faellt aus der Ausdehnung heraus, der Alarm laeuft weiter.
 __________ test_scheiternde_luecken_ableitung_kostet_den_alarm_nicht ___________
 
-monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x73d1cdf6cb60>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x701c3b1b5160>
 
     def test_scheiternde_luecken_ableitung_kostet_den_alarm_nicht(monkeypatch):
         """AC-9 GIVEN die Ableitung von `measurement_gaps` scheitert / WHEN der
@@ -346,25 +346,34 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x73d1cdf6cb60>
         Praesenz-Pruefung fiele auf einen Eintrag herein, der die Groessen zwar
         fuehrt, aber mit anderen Zahlen.
     
-        `reference_at` ist die sechste E-1-Groesse und fehlt in DIESEM Aufbau
-        zurecht (kein Briefing-Schnappschuss -> `None` -> Absenz, `_apply_e1_fields`
-        schreibt sie dann gar nicht). Sie steht deshalb nicht in der Liste; die
-        Testvoraussetzung unten haelt fest, welche Groessen der Referenzlauf
-        wirklich fuehrt, damit die Pruefung nicht still leerlaeuft.
+        Beide Laeufe legen eigens einen Briefing-Schnappschuss an: ohne ihn bliebe
+        `reference_at` unbestimmbar (`None` -> Absenz, `_apply_e1_fields` schreibt
+        sie dann gar nicht) und die Zusicherung waere fuer die sechste Groesse
+        leer. Die Zeitreihe des Schnappschusses bleibt leer, damit die
+        Briefing-Unterdrueckung nicht greift und der Alarm durchlaeuft. Die
+        Testvoraussetzung unten haelt fest, dass der Referenzlauf wirklich ALLE
+        gepruefen Groessen fuehrt — sonst liefe der Vergleich still leer.
         """
         from services import trip_alert as trip_alert_mod
     
         # Referenzlauf ZUERST, mit identischem Aufbau und noch UNBERUEHRTER
         # Ableitung: er liefert die Sollwerte der bestehenden E-1-Groessen. Ein
         # Literal waere hier wertlos — die Werte haengen an Geometrie und Uhr.
-        referenz = _versand_eintrag(
-            _lauf(_LueckenRadar(luecken={2: {"data_unavailable": True}}), tag="ac9-ref")
-        )
+        referenz = _versand_eintrag(_lauf(
+            _LueckenRadar(luecken={2: {"data_unavailable": True}}), tag="ac9-ref",
+            vergleichsbasis_at=_VERGLEICHSBASIS_AT,
+        ))
         fehlend = [n for n in _E1_GROESSEN if n not in referenz]
         assert not fehlend, (
             f"Testvoraussetzung: der Referenzlauf muss alle gepruefen "
             f"E-1-Groessen fuehren, es fehlen {fehlend} — sonst prueft der "
             f"Vergleich unten nichts. Eintrag: {referenz!r}"
+        )
+        assert datetime.fromisoformat(referenz["reference_at"]) == _VERGLEICHSBASIS_AT, (
+            f"Testvoraussetzung: `reference_at` muss der Erhebungszeitpunkt des "
+            f"geschriebenen Schnappschusses sein ({_VERGLEICHSBASIS_AT.isoformat()}), "
+            f"war {referenz['reference_at']!r} — sonst misst der Vergleich unten "
+            f"einen Wert, den dieser Test gar nicht gesetzt hat."
         )
     
         def _explodiert(*args, **kwargs):
@@ -373,7 +382,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x73d1cdf6cb60>
 >       monkeypatch.setattr(trip_alert_mod, "_messluecken_felder", _explodiert)
 E       AttributeError: <module 'services.trip_alert' from '/home/hem/gregor_zwanzig/.claude/worktrees/ws-2050-s4b/src/services/trip_alert.py'> has no attribute '_messluecken_felder'
 
-tests/tdd/test_radar_messluecken_protokoll.py:560: AttributeError
+tests/tdd/test_radar_messluecken_protokoll.py:618: AttributeError
 _____________ test_zwei_nutzer_teilen_sich_keinen_luecken_eintrag ______________
 
     def test_zwei_nutzer_teilen_sich_keinen_luecken_eintrag():
@@ -395,14 +404,14 @@ _____________ test_zwei_nutzer_teilen_sich_keinen_luecken_eintrag ______________
 >       luecken_a = _pruefe_luecken(lauf_a, radar_a, punkte_erwartet=6)
                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/tdd/test_radar_messluecken_protokoll.py:607: 
+tests/tdd/test_radar_messluecken_protokoll.py:668: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac10-a-d1030da9', trip_id='tdd-2050-s4b-trip-3e2116')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac10-a-a5e97a28', trip_id='tdd-2050-s4b-trip-d48533')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -411,10 +420,10 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-2
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-3e2116', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-3e2116', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-d48533', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-d48533', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 __________ test_alteintrag_ohne_messluecken_feld_bleibt_unveraendert ___________
 
     def test_alteintrag_ohne_messluecken_feld_bleibt_unveraendert():
@@ -447,14 +456,14 @@ __________ test_alteintrag_ohne_messluecken_feld_bleibt_unveraendert ___________
         )
 >       _pruefe_luecken(lauf, radar, punkte_erwartet=6)
 
-tests/tdd/test_radar_messluecken_protokoll.py:657: 
+tests/tdd/test_radar_messluecken_protokoll.py:718: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-tests/tdd/test_radar_messluecken_protokoll.py:286: in _pruefe_luecken
+tests/tdd/test_radar_messluecken_protokoll.py:335: in _pruefe_luecken
     luecken = _messluecken(lauf)
               ^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...33791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac11-1e7c130e', trip_id='tdd-2050-s4b-trip-46dd9d')
+lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:10 · letzter Regen gegen 12:40 · Na...33791165, 13.797641530778028, 15.79729972364441], uid='tdd-2050-s4b-ac11-f2630f22', trip_id='tdd-2050-s4b-trip-6b1fc2')
 
     def _messluecken(lauf: _Lauf) -> dict:
         eintrag = _versand_eintrag(lauf)
@@ -463,10 +472,10 @@ lauf = _Lauf(sent=1, body='Regen in 10 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-2
             f"nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die "
             f"Ausdehnung stammt. Eintrag: {eintrag!r}"
         )
-E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-46dd9d', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
-E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-46dd9d', ...}
+E       AssertionError: Der Protokoll-Eintrag muss `measurement_gaps` fuehren — sonst ist nachtraeglich nicht erkennbar, aus wie vielen Messpunkten die Ausdehnung stammt. Eintrag: {'entity_id': 'tdd-2050-s4b-trip-6b1fc2', 'entity_type': 'trip', 'sent_at': '2026-08-18T10:00:00+00:00', 'changes_count': 1, 'severity': 'MODERATE', 'metrics': [{'metric_id': 'precipitation', 'aggregation': 'sum'}], 'hazards': [], 'reason': 'nowcast', 'channels_sent': ['email'], 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', 'reason': 'channel_disabled'}, {'channel': 'premium_sms', 'reason': 'channel_disabled'}], 'lead_time_minutes': 10, 'event_at': '2026-08-18T10:10:00+00:00', 'event_end_at': '2026-08-18T10:40:00+00:00', 'measurement_point': {'segment_id': '1', 'km_from': 0.0, 'km_to': 23.996}, 'source': 'radar'}
+E       assert 'measurement_gaps' in {'changes_count': 1, 'channels_not_sent': [{'channel': 'telegram', 'reason': 'channel_disabled'}, {'channel': 'sms', '...premium_sms', 'reason': 'channel_disabled'}], 'channels_sent': ['email'], 'entity_id': 'tdd-2050-s4b-trip-6b1fc2', ...}
 
-tests/tdd/test_radar_messluecken_protokoll.py:244: AssertionError
+tests/tdd/test_radar_messluecken_protokoll.py:293: AssertionError
 =========================== short test summary info ============================
 FAILED tests/tdd/test_radar_messluecken_protokoll.py::test_luecke_in_der_mitte_haelt_zahl_und_km_lage_fest
 FAILED tests/tdd/test_radar_messluecken_protokoll.py::test_alle_folgepunkte_ausgefallen_ist_der_extremfall
@@ -479,4 +488,4 @@ FAILED tests/tdd/test_radar_messluecken_protokoll.py::test_ausfall_am_ersten_pun
 FAILED tests/tdd/test_radar_messluecken_protokoll.py::test_scheiternde_luecken_ableitung_kostet_den_alarm_nicht
 FAILED tests/tdd/test_radar_messluecken_protokoll.py::test_zwei_nutzer_teilen_sich_keinen_luecken_eintrag
 FAILED tests/tdd/test_radar_messluecken_protokoll.py::test_alteintrag_ohne_messluecken_feld_bleibt_unveraendert
-============================== 11 failed in 1.36s ==============================
+============================== 11 failed in 1.38s ==============================

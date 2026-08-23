@@ -25,17 +25,23 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import NamedTuple
 
 from freezegun import freeze_time
 
 from app.config import Settings
 from app.loader import get_briefings_dir, get_data_dir
+from app.models import (
+    ForecastMeta, NormalizedTimeseries, Provider, SegmentWeatherData,
+    SegmentWeatherSummary,
+)
 from services.radar_service import NowcastResult
 from services.trip_alert import TripAlertService
 from utils.geo import haversine_km
 
 from tests.helpers.arrival_window_fixtures import stage_date
+from tests.tdd.test_issue_1070_daily_alert_limit import _segment
 from tests.tdd.test_regen_ausdehnung_textstellen import (
     _UHR_TIROL,
     _ZONEN_LAT0,
@@ -66,12 +72,21 @@ _DREI_PUNKTE_KM = 6.6
 # Bewusst namentlich aufgezaehlt und NICHT aus `alert_log._E1_FIELD_TYPES`
 # abgeleitet: eine aus dem Pruefling gezogene Liste hoerte still auf, eine
 # Groesse zu bewachen, sobald sie dort verschwindet.
-# `reference_at` fehlt hier absichtlich — sie entsteht in diesem Aufbau nicht
-# (kein Briefing-Schnappschuss), s. Docstring von AC-9.
+# `reference_at` ist dabei: der AC-9-Aufbau legt eigens einen
+# Briefing-Schnappschuss an, damit die Groesse ueberhaupt entsteht (ohne ihn
+# bliebe sie `None` und die Zusicherung waere fuer sie leer).
 _E1_GROESSEN = (
     "lead_time_minutes", "event_at", "event_end_at", "measurement_point",
-    "source",
+    "reference_at", "source",
 )
+
+# Erhebungszeitpunkt der Vergleichsbasis im AC-9-Aufbau: eine Stunde vor der
+# gestellten Uhr. EINE Variable — sie speist den geschriebenen Schnappschuss
+# und (ueber den Referenzlauf) die Erwartung, damit `reference_at` am WERT
+# haengt und nicht nur an der Anwesenheit des Schluessels.
+_VERGLEICHSBASIS_AT = datetime.fromisoformat(_UHR_TIROL).astimezone(
+    timezone.utc
+) - timedelta(hours=1)
 
 
 class _LueckenRadar(_ZonenRadar):
@@ -153,9 +168,36 @@ def _protokoll(uid: str) -> dict:
     return json.loads(pfad.read_text()) if pfad.exists() else {}
 
 
+def _schreibe_vergleichsbasis(uid: str, trip_id: str, tag_datum, fetched_at) -> None:
+    """Einen Briefing-Schnappschuss fuer den Tag anlegen, damit
+    `reference_at` ueberhaupt entstehen kann (AC-9).
+
+    Die Zeitreihe bleibt LEER: `_briefing_precip_for_onset()` liefert dann
+    `None`, die Briefing-Unterdrueckung greift nicht und der Alarm laeuft
+    durch — `reference_at` haengt allein am Vorhandensein des Schnappschusses
+    (`snapshot[0].fetched_at`), nicht an einer angekuendigten Menge.
+    """
+    from services.weather_snapshot import WeatherSnapshotService
+
+    WeatherSnapshotService(uid).save_dated(trip_id, tag_datum, [
+        SegmentWeatherData(
+            segment=_segment(1),
+            timeseries=NormalizedTimeseries(
+                meta=ForecastMeta(
+                    provider=Provider.OPENMETEO, model="test", grid_res_km=1.0,
+                ),
+                data=[],
+            ),
+            aggregated=SegmentWeatherSummary(precip_sum_mm=0.0),
+            fetched_at=fetched_at,
+            provider="openmeteo",
+        ),
+    ])
+
+
 def _lauf(
     radar: _ZonenRadar, *, tag: str = "lauf", uid: str | None = None,
-    strecke_km: float | None = None,
+    strecke_km: float | None = None, vergleichsbasis_at=None,
 ) -> _Lauf:
     """Ein echter `check_radar_alerts()`-Lauf (Muster `_zonen_lauf`,
     `test_regen_ausdehnung_textstellen.py`), zusaetzlich mit dem geschriebenen
@@ -167,19 +209,24 @@ def _lauf(
     Geometrie gerechnet (gerade Nord-Strecke, `distance_from_start_km` 0 am
     Startwegpunkt): ein Sollwert, den der Pruefling selbst liefert, prueft
     nichts.
+
+    `vergleichsbasis_at` legt zusaetzlich einen Briefing-Schnappschuss mit
+    diesem Erhebungszeitpunkt an (nur AC-9 braucht ihn, s.
+    `_schreibe_vergleichsbasis`).
     """
     uid = uid or _uid(tag)
     lat1, lon1 = _endpunkt(strecke_km)
     with freeze_time(_UHR_TIROL):
         luftlinie = haversine_km(_ZONEN_LAT0, _ZONEN_LON0, lat1, lon1)
         trip_id = f"tdd-2050-s4b-trip-{uuid.uuid4().hex[:6]}"
+        tag_datum = stage_date(_ZONEN_LAT0, _ZONEN_LON0)
         trips_dir = get_briefings_dir(uid)
         trips_dir.mkdir(parents=True, exist_ok=True)
         (trips_dir / f"{trip_id}.json").write_text(json.dumps({
             "id": trip_id, "name": "Messluecken Draht Trip",
             "stages": [{
                 "id": "S1", "name": "Tag 1",
-                "date": stage_date(_ZONEN_LAT0, _ZONEN_LON0).isoformat(),
+                "date": tag_datum.isoformat(),
                 "waypoints": [
                     {
                         "id": "WP0", "name": "WP0",
@@ -199,6 +246,8 @@ def _lauf(
                 "trip_id": trip_id, "send_email": True, "send_telegram": False,
             },
         }))
+        if vergleichsbasis_at is not None:
+            _schreibe_vergleichsbasis(uid, trip_id, tag_datum, vergleichsbasis_at)
 
         captured: list[dict] = []
         svc = TripAlertService(
@@ -533,25 +582,34 @@ def test_scheiternde_luecken_ableitung_kostet_den_alarm_nicht(monkeypatch):
     Praesenz-Pruefung fiele auf einen Eintrag herein, der die Groessen zwar
     fuehrt, aber mit anderen Zahlen.
 
-    `reference_at` ist die sechste E-1-Groesse und fehlt in DIESEM Aufbau
-    zurecht (kein Briefing-Schnappschuss -> `None` -> Absenz, `_apply_e1_fields`
-    schreibt sie dann gar nicht). Sie steht deshalb nicht in der Liste; die
-    Testvoraussetzung unten haelt fest, welche Groessen der Referenzlauf
-    wirklich fuehrt, damit die Pruefung nicht still leerlaeuft.
+    Beide Laeufe legen eigens einen Briefing-Schnappschuss an: ohne ihn bliebe
+    `reference_at` unbestimmbar (`None` -> Absenz, `_apply_e1_fields` schreibt
+    sie dann gar nicht) und die Zusicherung waere fuer die sechste Groesse
+    leer. Die Zeitreihe des Schnappschusses bleibt leer, damit die
+    Briefing-Unterdrueckung nicht greift und der Alarm durchlaeuft. Die
+    Testvoraussetzung unten haelt fest, dass der Referenzlauf wirklich ALLE
+    gepruefen Groessen fuehrt — sonst liefe der Vergleich still leer.
     """
     from services import trip_alert as trip_alert_mod
 
     # Referenzlauf ZUERST, mit identischem Aufbau und noch UNBERUEHRTER
     # Ableitung: er liefert die Sollwerte der bestehenden E-1-Groessen. Ein
     # Literal waere hier wertlos — die Werte haengen an Geometrie und Uhr.
-    referenz = _versand_eintrag(
-        _lauf(_LueckenRadar(luecken={2: {"data_unavailable": True}}), tag="ac9-ref")
-    )
+    referenz = _versand_eintrag(_lauf(
+        _LueckenRadar(luecken={2: {"data_unavailable": True}}), tag="ac9-ref",
+        vergleichsbasis_at=_VERGLEICHSBASIS_AT,
+    ))
     fehlend = [n for n in _E1_GROESSEN if n not in referenz]
     assert not fehlend, (
         f"Testvoraussetzung: der Referenzlauf muss alle gepruefen "
         f"E-1-Groessen fuehren, es fehlen {fehlend} — sonst prueft der "
         f"Vergleich unten nichts. Eintrag: {referenz!r}"
+    )
+    assert datetime.fromisoformat(referenz["reference_at"]) == _VERGLEICHSBASIS_AT, (
+        f"Testvoraussetzung: `reference_at` muss der Erhebungszeitpunkt des "
+        f"geschriebenen Schnappschusses sein ({_VERGLEICHSBASIS_AT.isoformat()}), "
+        f"war {referenz['reference_at']!r} — sonst misst der Vergleich unten "
+        f"einen Wert, den dieser Test gar nicht gesetzt hat."
     )
 
     def _explodiert(*args, **kwargs):
@@ -559,7 +617,10 @@ def test_scheiternde_luecken_ableitung_kostet_den_alarm_nicht(monkeypatch):
 
     monkeypatch.setattr(trip_alert_mod, "_messluecken_felder", _explodiert)
 
-    lauf = _lauf(_LueckenRadar(luecken={2: {"data_unavailable": True}}), tag="ac9")
+    lauf = _lauf(
+        _LueckenRadar(luecken={2: {"data_unavailable": True}}), tag="ac9",
+        vergleichsbasis_at=_VERGLEICHSBASIS_AT,
+    )
 
     assert lauf.sent >= 1 and lauf.body, (
         f"AC-9: eine gescheiterte Protokoll-Ableitung darf den Alarm nicht "
