@@ -47,9 +47,9 @@ allein, dem Nutzer eine Zeit-Ort-Rechnung über ihn selbst auszugeben.
   Limit** in Summe, `workflow.py set-field loc_limit_override 500` vor
   `/40-tdd-red` einplanen (Muster wie S1/S3).
 - **Files:** `trip_segments.py`, `src/services/rain_extent.py` (neu),
-  `trip_alert.py`, `src/services/radar_alert_service.py` (Trip-Onset-
-  Eventbau — Fundstellen-Korrektur, s. Implementation Details),
-  `src/output/renderers/alert/model.py`,
+  `trip_alert.py`, `src/services/notification_service.py` (Trip-Onset-
+  Eventbau `:1386` + `RadarAlertRequest` `:177` — verifizierte Fundstelle,
+  s. Implementation Details), `src/output/renderers/alert/model.py`,
   `src/output/renderers/alert/render.py`
   + `tests/tdd/test_issue_822_radar_nowcast_segment.py` (Umbau),
   `tests/unit/test_radar_nowcast_cache_sharing.py` (Prüfung),
@@ -212,23 +212,44 @@ E-Mail-Trip-Langform-Stelle (`render.py:~601`, dieselbe wie S3s
 `_onset_reach_suffix`). Die übrigen sechs Textstellen bleiben in S2a
 unangetastet.
 
-**Datenweg außerhalb der Renderer**: Der Trip-Onset-Pfad baut das
-`OnsetEvent` NICHT in `project.py`, sondern in
-`src/services/radar_alert_service.py:60` (`build_onset_alert_message`) —
-dort wird `rain_zones` neben den bestehenden Feldern befüllt. Der
-Ortsvergleich-Bündel-Pfad (`project.py:621`,
-`to_multi_location_onset_alert_message`) setzt es nie (AC-15, kein
-Streckenkonzept). *(Fundstellen-Korrektur nach der Kartierung; die
-Zusicherungen AC-7/AC-15 sind unverändert.)*
+**Datenweg außerhalb der Renderer** *(zweifach korrigiert, Stand verifiziert
+in der RED-Phase — die ursprüngliche Spec-Angabe `project.py` und die erste
+Korrektur `radar_alert_service.py` waren BEIDE falsch)*:
 
-**Draht-Lücke `km_measured` (Befund aus der Kartierung, S2a-Scope):**
-`build_onset_alert_message` setzt `km_measured` heute **nie** — das Feld
-bleibt im Trip-Onset-Pfad auf dem Default `False`. Ohne Behebung wäre AC-9
-zwar auf Renderer-Ebene erfüllbar, die Ausdehnung erschiene aber in
-Produktion auf **keiner** Etappe, auch nicht auf den 4 vermessenen. S2a
-verdrahtet daher `TripSegment.distance_measured` → `OnsetEvent.km_measured`
-im Trip-Onset-Pfad mit; AC-9 bekommt zusätzlich zum Renderer-Test einen
-Draht-Test über `check_radar_alerts` (siehe AC-9-Testnotiz).
+Der produktive Trip-Onset-Draht lautet
+`trip_alert.py:1831` (`self._notification_service.send_radar_alert(...)`)
+→ `notification_service.py:1374` (`send_radar_alert`, gefüttert über
+`RadarAlertRequest`, `notification_service.py:177`, befüllt in
+`trip_alert.py:1726`) → `notification_service.py:1386` (`OnsetEvent(...)`).
+**Dort** wird `rain_zones` befüllt, was neue Felder auf `RadarAlertRequest`
+plus Durchreichung in `send_radar_alert` bedeutet.
+
+`radar_alert_service.py:31` (`build_onset_alert_message`) ist **nicht** der
+Produktivpfad: einziger Aufrufer ist der Debug-Endpunkt
+`api/routers/debug.py:110`. Eine Implementierung dort wäre wirkungslos.
+
+Der Ortsvergleich-Bündel-Pfad (`project.py:621`,
+`to_multi_location_onset_alert_message`) setzt `rain_zones` nie (AC-15, kein
+Streckenkonzept). Die Zusicherungen AC-7/AC-15 sind von beiden Korrekturen
+unberührt.
+
+**Draht-Lücke `km_measured` (in der RED-Phase belegt, S2a-Scope):**
+Der Trip-Onset-Pfad setzt `km_measured` heute **nie** — das Feld bleibt auf
+dem Default `False`. Ohne Behebung wäre AC-9 auf Renderer-Ebene erfüllbar,
+die Ausdehnung erschiene aber in Produktion auf **keiner** Etappe, auch
+nicht auf den 4 vermessenen. S2a verdrahtet daher
+`TripSegment.distance_measured` → `OnsetEvent.km_measured` mit. Der
+Draht-Test `test_ac9_draht_km_measured_erreicht_das_gerenderte_onset_event`
+belegt die Lücke: er scheitert mit `AssertionError` (nicht `ImportError`),
+erreicht also den Renderer und findet die Zeile nicht.
+
+**Offener Umbaupunkt für die GREEN-Phase (in RED nicht angefasst):**
+`tests/tdd/test_radar_alert_follows_ortstag.py:240` (`_assert_messpunkt`,
+gemeinsamer Helfer, Aufrufstellen `:317`, `:393`, `:994`, `:1016`) assertet
+`len(calls) == 1` generisch für den Nowcast-Abruf über
+`check_radar_alerts()`. Die Datei ist heute grün (34 Tests) und wird durch
+S2a rot, sobald die dortigen Etappen ≥ 2 km Reststrecke haben — dann mit
+demselben `<=`-Muster umbauen wie die Tests der Ablösungstabelle.
 
 ## Expected Behavior
 
