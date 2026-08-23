@@ -56,6 +56,9 @@ _REASON_LABELS = {
     # #2050 S3b: Doppel-Alarm-Guard (#818) — dieselbe Größe desselben
     # Abschnitts wurde eben schon gemeldet.
     "double_alert_guard": "Wiederholung derselben Meldung",
+    # #2050 S4a: die Wetterquelle war nicht erreichbar — ohne Beschriftung
+    # stuende der rohe Code in der Mail.
+    "data_unavailable": "Wetterdaten nicht verfügbar",
 }
 
 # #1750 E2: Einsortierung je Grund in einen der zwei Bloecke. Ein Vorfall mit
@@ -74,6 +77,12 @@ _REASON_BLOCK = {
     # Zustellfehler — ohne diesen Eintrag fiele der Grund per Default auf
     # "failed" und die Mail behauptete einen Fehler, wo keiner war.
     "double_alert_guard": "withheld",
+    # #2050 S4a: ein Quellenausfall ist KEINE Nutzereinstellung — "so hast du
+    # es eingestellt" waere schlicht falsch. Der Eintrag steht hier trotz des
+    # gleichlautenden Default (`.get(reason, "failed")`), weil die Einordnung
+    # eine Entscheidung ist und nicht dem Zufall eines Rueckfalls ueberlassen
+    # bleiben darf.
+    "data_unavailable": "failed",
 }
 
 _TRIGGER_LABELS = {
