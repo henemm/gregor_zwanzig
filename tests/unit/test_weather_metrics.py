@@ -126,7 +126,7 @@ class TestWeatherMetricsServiceKnownValues:
         """
         GIVEN: Timeseries
         WHEN: compute_basis_metrics(timeseries, tz=None)
-        THEN: aggregation_config has 16 entries with correct functions
+        THEN: aggregation_config has 17 entries with correct functions
 
         Issue #1475 S5a: 12 -> 13 Eintraege — `hail_flag` ("hail_priority")
         ist als Tages-/Etappen-Aggregat hinzugekommen (Spec AC-4).
@@ -135,10 +135,14 @@ class TestWeatherMetricsServiceKnownValues:
         Gewitter-Tagesmaximum tragen (Spec AC-10).
         Issue #1468: 14 -> 16 Eintraege — die beiden Beginn-Zeitpunkte
         ("onset") sind eigene Tages-Aggregate.
+        Issue #2098: 16 -> 17 Eintraege — ohne `sunny_hours` ("sum") fiel der
+        Segmentwert bei jeder Mehrsegment-Etappe still auf `None` und die
+        Sonnenstunden-Spalte des 3-Tages-Ausblicks zeigte "–" (Befund A).
         """
         result = service.compute_basis_metrics(known_timeseries, tz=None)
 
-        assert len(result.aggregation_config) == 16
+        assert len(result.aggregation_config) == 17
+        assert result.aggregation_config["sunny_hours"] == "sum"
         assert result.aggregation_config["temp_min_c"] == "min"
         assert result.aggregation_config["temp_max_c"] == "max"
         assert result.aggregation_config["temp_avg_c"] == "avg"

@@ -133,9 +133,10 @@ def test_ac5_wind_boeen_zeigt_dieselbe_wortstufe_in_allen_vier_ausgaben():
         "HTML-Mail: Der 3-Tages-Ausblick fehlt vollstaendig -- die "
         f"Kennungsauswahl {AUSWAHL!r} kam nicht an (AC-5)."
     )
-    assert kopf == ["Tag", "Böen"], (
+    # #2098: hinter der Auswahl steht die fest angehaengte ACC-Zusatzspalte.
+    assert kopf == ["Tag", "Böen", "ACC"], (
         f"HTML-Mail: Kopfzeile {kopf!r} -- erwartet 'Tag'+'Böen' aus der "
-        f"Auswahl {AUSWAHL!r}."
+        f"Auswahl {AUSWAHL!r} plus der festen ACC-Spalte."
     )
 
     html_zelle = zeilen[0][1] if len(zeilen[0]) > 1 else ""

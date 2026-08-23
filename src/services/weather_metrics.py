@@ -569,6 +569,13 @@ class WeatherMetricsService:
                 "visibility_min_m": "min",
                 "dominant_wmo_code": "max_wmo_severity",
                 "dni_avg_wm2": "avg",
+                # Issue #2098 Befund A: ohne diese Regel iteriert
+                # `aggregate_stage()` `sunny_hours` nicht und die Etappe faellt
+                # auf den Dataclass-Default `None` -- die Sonnenstunden-Spalte
+                # des 3-Tages-Ausblicks zeigte in jeder Zeile "–". "sum" folgt
+                # der Katalog-Definition `summary_fields={"sum": "sunny_hours"}`
+                # (metric_catalog.py:604).
+                "sunny_hours": "sum",
             },
         )
 
