@@ -337,9 +337,6 @@ def _reset_telegram_rate_limit():
 # Issue #2096: gestellte Wanduhr fuer den GANZEN Lauf
 # ---------------------------------------------------------------------------
 
-_WANDUHR_ENV = "GZ_TEST_WALL_CLOCK_UTC"
-
-
 @pytest.fixture(scope="session", autouse=True)
 def _gestellte_wanduhr():
     """Stellt die Uhr des gesamten Laufs auf ``GZ_TEST_WALL_CLOCK_UTC``.
@@ -362,23 +359,21 @@ def _gestellte_wanduhr():
 
     Session-Scope und damit AUSSERHALB jedes ``@freeze_time`` einzelner
     Testfaelle: freezegun stapelt, der innere Zeitpunkt gewinnt.
+
+    Selbst bewacht durch ``tests/tdd/test_gestellte_wanduhr_schalter.py``:
+    ein Nachweiswerkzeug ohne Selbsttest ist genau der blinde Waechter,
+    gegen den dieses Ticket geschrieben ist -- legt man diese Fixture stumm,
+    saehen die vier Uhrzeit-Laeufe weiterhin gruen aus und maessen nichts
+    (Adversary-Finding F001 zu #2096).
     """
-    roh = os.environ.get(_WANDUHR_ENV, "").strip()
+    from tests.helpers.wanduhr import anker_aus, roh_wert
+
+    roh = roh_wert()
     if not roh:
         yield
         return
 
-    from datetime import datetime, time, timezone
-
-    if "-" in roh:
-        anker = datetime.fromisoformat(roh)
-    else:
-        stunde, _, minute = roh.partition(":")
-        anker = datetime.combine(
-            datetime.now(timezone.utc).date(),
-            time(int(stunde), int(minute or 0)),
-            tzinfo=timezone.utc,
-        )
+    anker = anker_aus(roh)
 
     # `pydantic.v1.types` leitet Klassen von `datetime.date`/`datetime`
     # AB. Wird das Modul erst WAEHREND des gefrorenen Fensters importiert,
