@@ -225,7 +225,13 @@ class CompareRadarAlertService:
                 )
             return False
 
-        triggered = self._detect_triggered_locations(preset_id, location_ids, all_locations)
+        # Issue #2050 S4a (AC-6): das Kanal-Set reist mit — der Quellenausfall
+        # eines Orts wird in der Erkennung bemerkt, protokolliert werden kann
+        # er nur mit den Kanaelen, die der Nutzer eingeschaltet hat.
+        triggered = self._detect_triggered_locations(
+            preset_id, location_ids, all_locations,
+            effective_channels=effective_channels,
+        )
         if not triggered:
             return False
 
@@ -413,15 +419,48 @@ class CompareRadarAlertService:
         )
         return True
 
+    def _protokolliere_quellenausfall(
+        self, preset_id: str, location_id: str, effective_channels,
+    ) -> None:
+        """Ausfall-Protokoll des Vergleichs-Radarpfads (Issue #2050 S4a, AC-6).
+
+        Spiegelbild von `TripAlertService._protokolliere_radar_unterdrueckung`
+        — die Schwester-Scheibe S3b hat beide Flaechen im selben Commit
+        bedient; ein Unterdrueckungsgrund, den nur eine Flaeche kennt, waere
+        ein Paritaetsbruch.
+
+        Absicherung je Ort, nicht um den Stapellauf: scheitert der Eintrag
+        EINES Orts, verlieren sonst ALLE uebrigen Ortsvergleiche dieses
+        Nutzers ihren Alarm (Muster `fix_1479`)."""
+        try:
+            alert_log.append_suppressed_entry(
+                self._user_id, entity_id=preset_id, entity_type="compare",
+                reason=alert_log.REASON_NOWCAST,
+                gate_reason=alert_log.REASON_DATA_UNAVAILABLE,
+                effective_channels=effective_channels,
+            )
+        except Exception as e:
+            logger.error(
+                "Compare-Radar-Alert: Unterdrueckungs-Protokoll (Quellen-"
+                "ausfall) fuer %s:%s fehlgeschlagen (%s) — der Alarm blieb "
+                "aus, nur der Protokoll-Eintrag fehlt.",
+                preset_id, location_id, e,
+            )
+
     def _detect_triggered_locations(
-        self, preset_id: str, location_ids: list[str], all_locations: dict
+        self, preset_id: str, location_ids: list[str], all_locations: dict,
+        *, effective_channels=(),
     ) -> list[tuple]:
         """Je Ort im Preset: Nowcast holen, Auslöse-Schwelle prüfen (`radar_alert_due`,
         `trip_alert.py:33`) — reine Detect-Phase, kein Versand.
 
         Liefert `(loc.name, loc, NowcastResult)`-Tripel; das Orts-Objekt wird
         vom Versand für die Ortszeit-Ableitung gebraucht (Issue #1383) und vom
-        Dedup-Gedächtnis für `loc.id`."""
+        Dedup-Gedächtnis für `loc.id`.
+
+        `effective_channels` (Issue #2050 S4a) dient allein dem Ausfall-
+        Protokoll; ohne Angabe entsteht — wie bei jedem Eintrag ohne
+        eingeschalteten Kanal — keiner."""
         radar_service = self._get_radar_service()
         triggered: list[tuple] = []
         for location_id in location_ids:
@@ -439,11 +478,31 @@ class CompareRadarAlertService:
                 )
             except Exception as e:
                 logger.error(f"Compare-Radar-Alert nowcast failed for {preset_id}/{location_id}: {e}")
+                # Issue #2050 S4a (AC-2/AC-6): geworfener Abruf = derselbe
+                # Quellenausfall wie das Leerergebnis unten, nur in anderer
+                # Form. Bis hierher endete er ohne jede Spur im Protokoll.
+                self._protokolliere_quellenausfall(
+                    preset_id, location_id, effective_channels,
+                )
                 continue
             # Issue #2009: geteilte Schwelle aus `services.radar_service`,
             # ueber die Modul-Referenz gelesen (kein `from ... import` — eine
             # gebundene Kopie waere eine stille Kopie). Alias, weil der lokale
             # Name `radar_service` hier bereits die Dienst-Instanz traegt.
+            # Issue #2050 S4a (AC-1/AC-6): ein Fremdausfall der Quelle ist nie
+            # eine Entwarnung — geprueft VOR dem Ausloese-Guard, der den
+            # Marker bewusst nicht liest (dieselbe Reihenfolge wie im
+            # Trip-Radarpfad, ADR-0021).
+            if result.data_unavailable:
+                logger.warning(
+                    "Compare-Radar-Alert: Quellenausfall fuer %s/%s (keine "
+                    "Frames aus der Quelle) — kein Alarm; der Ausfall wird als "
+                    "solcher protokolliert.", preset_id, location_id,
+                )
+                self._protokolliere_quellenausfall(
+                    preset_id, location_id, effective_channels,
+                )
+                continue
             if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
                 continue
             triggered.append((loc.name, loc, result))

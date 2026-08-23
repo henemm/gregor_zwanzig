@@ -67,6 +67,15 @@ REASON_EVENT_DUPLICATE = "event_duplicate"
 # `ThrottleStore`-Ebene, sondern ein kanaluebergreifender Wiederholungsschutz
 # auf `AlertStateService`-Ebene — die beiden koennen einzeln greifen.
 REASON_DOUBLE_ALERT_GUARD = "double_alert_guard"
+# Issue #2050 S4a (Szenario 6, Anforderung B-4): die Radarquelle selbst ist
+# ausgefallen — keine Bilder, kein Ergebnis, also auch keine Entwarnung.
+# EIGENER Grund, keiner der acht oben: die beschreiben ausnahmslos EIGENE
+# Entscheidungen (Nutzereinstellung, Wiederholungsschutz, Budget, Ereignis-
+# Identitaet), ein Fremdausfall ist das Gegenteil davon. ADR-0018 trennt ihn
+# zudem ausdruecklich von der selbst gewaehlten Drosselung (`throttled`) —
+# auf denselben Code gebucht, eskalierte eine spaetere Auswertung den eigenen
+# Rueckzug als Anbieterausfall.
+REASON_DATA_UNAVAILABLE = "data_unavailable"
 
 # Ausloeser der Meldung selbst (`reason` des Eintrags).
 REASON_FORECAST_CHANGE = "forecast_change"
@@ -528,6 +537,7 @@ def append_suppressed_entry(
     measurement_point: Optional[dict] = None,
     reference_at: Optional[str] = None,
     source: Optional[str] = None,
+    convective_checked: Optional[bool] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag fuer eine VOR dem Versand abgewiesene
     Meldung an (#1467 S3, Aenderung (d)).
@@ -598,6 +608,13 @@ def append_suppressed_entry(
     }
     if capture_id is not None:  # additiv (#1948), siehe append_entry()
         entry["capture_id"] = capture_id
+    # Issue #2050 S4a (AC-9, Anforderung D-2): fiel die Gewitterpruefung dieses
+    # Abrufs aus, haelt der Eintrag das fest — nachtraeglich muss belegbar
+    # sein, dass die Entscheidung OHNE Gewitterinformation fiel. Geschrieben
+    # wird NUR der Ausfall (Muster `capture_id`/`is_addendum`): Absenz heisst
+    # "keine Aussage", Normalfaelle und Alt-Eintraege bleiben schema-identisch.
+    if convective_checked is False:
+        entry["convective_checked"] = False
     # Issue #2050 S6 (E-1): dieselben sechs Groessen, nur soweit am jeweiligen
     # Gate bereits bekannt -- der Aufrufer uebergibt an fruehen Gates schlicht
     # nichts (Absenz durch Nicht-Uebergabe).
@@ -630,6 +647,12 @@ class UndeliveredIncident:
     metrics: tuple[tuple[str, str], ...]
     hazards: tuple[str, ...]
     trigger: str
+    # Issue #2050 S4a (AC-9): die Gewitterpruefung mindestens eines Eintrags
+    # dieses Vorfalls ist AUSGEFALLEN. Additiv mit Vorgabewert — Alt-Eintraege
+    # ohne den Schluessel bleiben lesbar und melden schlicht "keine Aussage".
+    # Der Befund muss bis auf die Leseseite durchkommen: was nur in der
+    # JSON-Datei stuende, erreichte weder Briefing noch spaetere Auswertung.
+    convective_check_failed: bool = False
 
 
 def _parse_ts(raw: object) -> Optional[datetime]:
@@ -721,8 +744,14 @@ def read_undelivered(
             g = gruppen[-1]
         else:
             g = {"at": at, "channels": [], "reasons": set(),
-                 "metrics": [], "hazards": [], "trigger": entry.get("reason") or ""}
+                 "metrics": [], "hazards": [], "trigger": entry.get("reason") or "",
+                 "convective_check_failed": False}
             gruppen.append(g)
+        # Issue #2050 S4a (AC-9): ein Vorfall fasst bis zu drei Eintraege
+        # zusammen — der Ausfall EINES davon faerbt den ganzen Vorfall, wie
+        # schon Kanaele und Gruende vereinigt werden.
+        if entry.get("convective_checked") is False:
+            g["convective_check_failed"] = True
         g["channels"] += [c for c in channels if c not in g["channels"]]
         g["reasons"] |= reasons
         g["metrics"] += [
@@ -740,5 +769,6 @@ def read_undelivered(
             metrics=tuple(g["metrics"]),
             hazards=tuple(g["hazards"]),
             trigger=g["trigger"],
+            convective_check_failed=g["convective_check_failed"],
         ))
     return vorfaelle

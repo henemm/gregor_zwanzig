@@ -1387,10 +1387,16 @@ class TripAlertService:
 
     def _protokolliere_radar_unterdrueckung(
         self, trip: "Trip", gate_reason: Optional[str], effective_channels,
+        *, convective_checked: Optional[bool] = None,
     ) -> None:
         """Unterdrueckungs-Protokoll des Radar-Zweigs (Issue #2065 zieht die
         bestehende Fassung hierher, weil der Sperrzeit-Fall jetzt an mehreren
         Stellen enden kann).
+
+        `convective_checked` (Issue #2050 S4a, AC-9) reisen die Aufrufer NACH
+        dem Nowcast-Abruf mit: fiel die Gewitterpruefung aus, muss der Eintrag
+        das festhalten. Vor dem Abruf gibt es die Angabe nicht — dort bleibt
+        sie `None` (keine Aussage) statt erfunden zu werden.
 
         Absicherung je Trip, nicht um den Stapellauf: scheitert der
         Protokoll-Eintrag EINES Trips, verlieren sonst ALLE weiteren Trips
@@ -1400,6 +1406,7 @@ class TripAlertService:
                 self._user_id, entity_id=trip.id, entity_type="trip",
                 reason=alert_log.REASON_NOWCAST, gate_reason=gate_reason,
                 effective_channels=effective_channels,
+                convective_checked=convective_checked,
             )
         except Exception as e:
             logger.error(
@@ -1664,10 +1671,18 @@ class TripAlertService:
                 )
             except Exception as e:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
-                if _sperrzeit_offen:
-                    self._protokolliere_radar_unterdrueckung(
-                        trip, gate.reason, effective_channels,
-                    )
+                # Issue #2050 S4a (AC-2, Anforderung B-4): ein geworfener Abruf
+                # ist derselbe Quellenausfall wie das fail-soft-Leerergebnis
+                # weiter unten, nur in anderer Form — und er bekommt denselben
+                # Grund, UNABHAENGIG davon, ob zufaellig eine Sperrzeit lief.
+                # Die bisherige Fassung protokollierte NUR bei offener
+                # Sperrzeit, und dann mit `cooldown`: der Regelfall (keine
+                # Sperrzeit) blieb voellig still, der Ausnahmefall trug den
+                # falschen Grund — die Sperrzeit hat diesen Lauf ja nicht
+                # unterdrueckt, die Quelle hat ihn verhindert.
+                self._protokolliere_radar_unterdrueckung(
+                    trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
+                )
                 continue
 
             # Issue #2051 S2a: die uebrigen Punkte der Reststrecke, sequenziell
@@ -1770,8 +1785,11 @@ class TripAlertService:
                     "Durchbruch" if _ueberholt_sperrzeit else "Sperrzeit bleibt",
                 )
                 if not _ueberholt_sperrzeit:
+                    # Issue #2050 S4a (AC-9): ab hier liegt ein Abruf vor, also
+                    # reist auch die Frage mit, ob seine Gewitterpruefung lief.
                     self._protokolliere_radar_unterdrueckung(
                         trip, gate.reason, effective_channels,
+                        convective_checked=result.convective_checked,
                     )
                     continue
                 # Die Tages-Obergrenze wurde wegen des Abbruchs an der
@@ -1798,6 +1816,7 @@ class TripAlertService:
                         )
                         self._protokolliere_radar_unterdrueckung(
                             trip, alert_log.REASON_DAILY_LIMIT, effective_channels,
+                            convective_checked=result.convective_checked,
                         )
                         continue
             elif _budget_erschoepft:
@@ -1815,6 +1834,7 @@ class TripAlertService:
                     )
                     self._protokolliere_radar_unterdrueckung(
                         trip, gate.reason, effective_channels,
+                        convective_checked=result.convective_checked,
                     )
                     continue
 
@@ -1824,6 +1844,25 @@ class TripAlertService:
             # gebundene Kopie waere eine stille Kopie und wuerde beim
             # Nachziehen der Quelle auseinanderlaufen.
             from services import radar_service as radar_service_mod
+
+            # Issue #2050 S4a (AC-1, Anforderung B-4): ein Fremdausfall der
+            # Quelle ist NIE eine Entwarnung. Ohne Frames gibt es keinen
+            # Beginn, und der Lauf faellt heute in denselben stummen Ausstieg
+            # wie eine ruhige Viertelstunde — im Protokoll ununterscheidbar von
+            # "geprueft, alles ruhig". Geprueft wird deshalb VOR dem
+            # Ausloese-Guard: `radar_alert_due()` bleibt unveraendert eine
+            # reine Aussage ueber die LAGE, nicht ueber die Datenlage.
+            if result.data_unavailable:
+                logger.warning(
+                    "Radar alert: Quellenausfall fuer Trip %s (keine Frames aus "
+                    "der Quelle) — kein Alarm; der Ausfall wird als solcher "
+                    "protokolliert statt als ruhige Viertelstunde.", trip.id,
+                )
+                self._protokolliere_radar_unterdrueckung(
+                    trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
+                    convective_checked=result.convective_checked,
+                )
+                continue
 
             if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
                 continue
@@ -1880,7 +1919,18 @@ class TripAlertService:
                 and result.window_precip_mm >= _briefing_precip * _BRIEFING_OVERTAKE_FACTOR
                 and result.window_precip_mm >= _OVERTAKE_MIN_ABSOLUTE_MM
             )
-            if _briefing_announced and not result.is_convective and not _overtaking:
+            # Issue #2050 S4a (AC-7, Anforderung B-4): die Unterdrueckung setzt
+            # jetzt voraus, dass die Gewitterpruefung STATTGEFUNDEN hat.
+            # `is_convective` ist per Vorgabe `False` und wird ohne den
+            # Gewitter-Beiabruf nie gesetzt — aus "nicht geprueft" wurde still
+            # "kein Gewitter", und der Sicherheits-Override aus #883 liess sich
+            # damit durch eine NIE STATTGEFUNDENE Pruefung aushebeln. Eine
+            # durchgefuehrte, negative Pruefung traegt die Unterdrueckung
+            # unveraendert (Δ-Modell, Gegenprobe AC-8).
+            if (
+                _briefing_announced and result.convective_checked
+                and not result.is_convective and not _overtaking
+            ):
                 logger.debug(
                     f"Radar alert suppressed: briefing had {_briefing_precip} mm for {trip.id}"
                 )
@@ -1922,9 +1972,14 @@ class TripAlertService:
                 # `cooldown` — der Guard sitzt auf `AlertStateService`-Ebene,
                 # nicht auf dem Sperrzeit-Topf. `_e1` liegt hier bereits vor
                 # und geht mit, wie an den uebrigen Stellen dieses Zweigs.
+                # Issue #2050 S4a (AC-9): fiel die Gewitterpruefung dieses
+                # Abrufs aus, haelt der Eintrag das fest — die Entscheidung
+                # fiel dann ohne Gewitterinformation, und das muss nachtraeglich
+                # belegbar sein (D-2), nicht nur der Sperrgrund.
                 self._protokolliere_unterdrueckung(
                     trip, reason=alert_log.REASON_NOWCAST,
-                    gate_reason=alert_log.REASON_DOUBLE_ALERT_GUARD, **_e1,
+                    gate_reason=alert_log.REASON_DOUBLE_ALERT_GUARD,
+                    convective_checked=result.convective_checked, **_e1,
                 )
                 continue
 
