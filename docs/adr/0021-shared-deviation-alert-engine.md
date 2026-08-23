@@ -280,3 +280,44 @@ dieser Scheibe (Scheibe 2, #1169).
   Default. Eine spätere Übernahme in den Ortsvergleich wäre eine eigene,
   spezifizierte Entscheidung. Details:
   `docs/specs/modules/fix_2065_verschaerfung_ueberholt_sperre.md`.
+
+- **Nachtrag (Issue #2050 S3b, 2026-08-23):** zwei Aussagen früherer Nachträge
+  werden hier abgelöst.
+
+  **(a) Der amtliche Pfad protokolliert.** Der Nachtrag zu #1467 S3 hielt fest,
+  dass der Geltungsbereich der Unterdrückungs-**Protokollierung** strikt
+  Nowcast-only bleibt und die Lücken O3 (Änderungsalarm) und E3 (amtliche
+  Warnung) bewusst offen sind. Das gilt nicht mehr: **jede** Unterdrückung
+  bekommt einen benannten Grund. Der **amtliche** Pfad protokolliert seither
+  seine **Ruhezeit**- und seine **Tages-Obergrenzen**-Unterdrückung — in
+  BEIDEN Flächen (`trip_alert.py::_send_official_alert_only`,
+  `compare_official_alert.py::_check_one_preset`). Neues Verhalten war dort
+  nicht nötig: `check_official_alert_gate()` liefert den passenden
+  `GateResult.reason` seit #1467 S4a mit, der Aufrufer verwarf ihn nur. Ebenso
+  protokolliert der **Vorhersage-Änderungsalarm** seine drei Stufen
+  (Ruhezeit/Sperrzeit/Tages-Obergrenze) und der Trip-Radarzweig den
+  **Doppel-Alarm-Guard** (#818) unter dem eigenen Grund `double_alert_guard` —
+  er sitzt auf `AlertStateService`-Ebene, nicht auf dem Sperrzeit-Topf, und ist
+  deshalb kein `cooldown`. **Bewusst weiterhin still bleibt allein der
+  Briefing-Vorlauf** (#1233/ADR-0009, vier Stellen): dort wird die Meldung
+  ersetzt, nicht verschluckt.
+
+  **(b) Die Tages-Obergrenze bekommt eine Ausnahme.** Der Nachtrag zu #2065
+  sagte, die Tages-Obergrenze bleibe unbrechbar. Sie bekommt jetzt — wie zuvor
+  die Sperrzeit — genau EINE Ausnahme: eine **akute Eskalation der
+  Dringlichkeitsstufe** bricht ein erschöpftes Tagesbudget. Die Bedingung ist
+  UND-verknüpft: die Stufe dieses Abrufs übersteigt echt die höchste heute in
+  dieser Zone bereits **zugestellte** Stufe (`alert_urgency.exceeds`, kein
+  dritter Eskalationsbegriff), UND der Deckel von **einem Durchbruch je Tag und
+  Zone** ist noch frei. Zustand dafür sind zwei additive Felder im Zonen-Eintrag
+  von `alert_daily_count.json` (`max_urgency_sent`, `escalation_breakthroughs`),
+  fortgeschrieben ausschließlich nach erfolgreicher Zustellung
+  (F001-Symmetrie). Reichweite: **nur Nowcast/Radar**, dort aber in BEIDEN
+  Flächen (Trip und Ortsvergleich). Struktur wie bei #2065:
+  `check_nowcast_gate()` bleibt in Signatur UND Verhalten unverändert — die zur
+  Entscheidung nötige Dringlichkeit entsteht erst aus dem Abruf, also nach dem
+  Gate; entschieden wird deshalb Caller-seitig. Die **Reihenfolge Ruhezeit →
+  Sperrzeit → Tages-Obergrenze bleibt unverändert**, und die **Ruhezeit bleibt
+  unbrechbar** (PO-Ablehnung #1955). Beide Ausnahmen wirken unabhängig: ein Lauf
+  kann an Sperrzeit UND Tagesbudget hängen und beide durchbrechen. Details:
+  `docs/specs/modules/feat_2050_s3b_budget_und_unterdrueckungsgrund.md`.

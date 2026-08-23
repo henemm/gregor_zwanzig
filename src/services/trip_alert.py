@@ -276,6 +276,35 @@ class TripAlertService:
         # gesetzt, kein dauerhafter Zustand.
         self._last_below_threshold_channels: set[str] = set()
 
+    def _protokolliere_unterdrueckung(
+        self, trip: "Trip", *, reason: str, gate_reason: Optional[str], **felder,
+    ) -> None:
+        """Unterdrueckungs-Protokoll fuer die bis #2050 S3b stillen Stellen des
+        Trip-Pfads (Szenario 10, Luecken O3/E3): Aenderungsalarm (Ruhezeit,
+        Sperrzeit, Tages-Obergrenze), Doppel-Alarm-Guard und amtliche Warnung.
+
+        `reason` ist der AUSLOESER der Meldung, `gate_reason` der Sperrgrund —
+        die beiden duerfen nicht verschmelzen. Das Kanal-Set wird HIER
+        aufgeloest: die Funktion ist rein, und der Protokoll-Eintrag braucht
+        die Kanaele, die der Nutzer fuer diesen Trip eingeschaltet hat.
+
+        Absicherung je Trip, nicht um den Stapellauf: scheitert der
+        Protokoll-Eintrag EINES Trips, verlieren sonst ALLE weiteren Trips
+        dieses Nutzers ihren Alarm (Muster `fix_1479`)."""
+        try:
+            alert_log.append_suppressed_entry(
+                self._user_id, entity_id=trip.id, entity_type="trip",
+                reason=reason, gate_reason=gate_reason,
+                effective_channels=self._effective_alert_channels(trip),
+                **felder,
+            )
+        except Exception as e:
+            logger.error(
+                "Unterdrueckungs-Protokoll (%s) fuer Trip %s fehlgeschlagen "
+                "(%s) — der Alarm blieb aus (Grund: %s), nur der "
+                "Protokoll-Eintrag fehlt.", reason, trip.id, e, gate_reason,
+            )
+
     def check_and_send_alerts(
         self,
         trip: "Trip",
@@ -342,6 +371,12 @@ class TripAlertService:
         now_utc = datetime.now(timezone.utc)
         if self._is_quiet_hours(trip, now_utc):
             logger.debug(f"Alert suppressed: quiet hours active for trip {trip.id}")
+            # Issue #2050 S3b (Szenario 10, AC-1): benannter Grund statt
+            # stillem Abbruch.
+            self._protokolliere_unterdrueckung(
+                trip, reason=alert_log.REASON_FORECAST_CHANGE,
+                gate_reason=alert_log.REASON_QUIET_HOURS,
+            )
             return False
 
         # 1a2. Issue #1594: steht das geplante Briefing dieses Trips unmittelbar
@@ -357,6 +392,11 @@ class TripAlertService:
         # 1b. Throttle-Check mit per-trip Cooldown (AC-2/3)
         if self._is_throttled_with_cooldown(trip):
             logger.debug(f"Alert throttled for trip {trip.id}")
+            # Issue #2050 S3b (Szenario 10, AC-2).
+            self._protokolliere_unterdrueckung(
+                trip, reason=alert_log.REASON_FORECAST_CHANGE,
+                gate_reason=alert_log.REASON_COOLDOWN,
+            )
             return False
 
         # 1c. Issue #1070: Tages-Obergrenze nach Nutzerlevel (Free/Standard/Premium)
@@ -366,6 +406,11 @@ class TripAlertService:
             self._user_id, now_utc, anchor_tz(trip, now_utc), reason="forecast_change",
         ):
             logger.debug(f"Alert suppressed: daily limit reached for trip {trip.id}")
+            # Issue #2050 S3b (Szenario 10, AC-3).
+            self._protokolliere_unterdrueckung(
+                trip, reason=alert_log.REASON_FORECAST_CHANGE,
+                gate_reason=alert_log.REASON_DAILY_LIMIT,
+            )
             return False
 
         # 2. Fetch fresh weather if not provided
@@ -1272,6 +1317,29 @@ class TripAlertService:
                 trip.id, e, gate_reason,
             )
 
+    def _eskalation_bricht_budget(
+        self, trip: "Trip", now_utc: datetime, urgency: str,
+    ) -> bool:
+        """Darf diese Lage die erschoepfte Tages-Obergrenze durchbrechen?
+        (Issue #2050 S3b, Szenario 7)
+
+        Duenne Bruecke auf den geteilten Baustein — sie haelt die Zone (dieselbe,
+        die auch Gate und Buchung benutzen, #1726) und die Protokollzeile an
+        EINER Stelle statt an zweien; beide Aufrufstellen im Radar-Zweig
+        entscheiden damit garantiert gegen denselben Zaehler."""
+        durchbruch = alert_daily_limit.escalation_breaks_through(
+            self._user_id, now_utc, anchor_tz(trip, now_utc), urgency,
+        )
+        # Beide Ausgaenge in EINER Zeile, damit im Nachhinein nachvollziehbar
+        # ist, GEGEN WAS entschieden wurde (Muster der Sperrzeit-Ueberholung).
+        logger.info(
+            "Radar alert: Budget-Durchbruch fuer Trip %s geprueft — "
+            "Dringlichkeit %s: %s",
+            trip.id, urgency,
+            "Durchbruch" if durchbruch else "Tages-Obergrenze bleibt",
+        )
+        return durchbruch
+
     def check_radar_alerts(self) -> int:
         """
         Check all trips for radar-based alerts using segment-aware logic (Issue #822).
@@ -1391,7 +1459,18 @@ class TripAlertService:
             _sperrzeit_offen = (
                 not gate.allowed and gate.reason == alert_log.REASON_COOLDOWN
             )
-            if not gate.allowed and not _sperrzeit_offen:
+            # Issue #2050 S3b (Szenario 7): zweites, davon UNABHAENGIGES
+            # Signal. Ein erschoepftes Tagesbudget haelt den Lauf ebenfalls
+            # nicht mehr hier an — die Dringlichkeit, gegen die entschieden
+            # wird, entsteht erst aus dem Nowcast-Abruf. Die Ruhezeit bleibt
+            # der einzige unbrechbare Stop (#1955, AC-21). Beide Gruende
+            # schliessen einander an DIESER Stelle aus (`gate.reason` traegt
+            # genau einen Wert), die Reihenfolge Ruhezeit -> Sperrzeit ->
+            # Tages-Obergrenze bleibt damit unangetastet.
+            _budget_erschoepft = (
+                not gate.allowed and gate.reason == alert_log.REASON_DAILY_LIMIT
+            )
+            if not gate.allowed and not _sperrzeit_offen and not _budget_erschoepft:
                 logger.debug(
                     f"Radar alert suppressed ({gate.reason}) for trip {trip.id}"
                 )
@@ -1486,6 +1565,23 @@ class TripAlertService:
             # stammen.
             _menge_mm = result.window_precip_mm
 
+            # Issue #2050 S3b: die Dringlichkeit dieses Abrufs entsteht HIER,
+            # vor beiden Ausnahme-Entscheidungen — bis dahin wurde sie erst
+            # kurz vor dem Versand gebildet (`_radar_request`, weiter unten),
+            # also NACH der Tages-Obergrenzen-Nachpruefung, die sie braucht.
+            # Ableitung und Werte sind unveraendert: `_radar_request` traegt
+            # dieselben zwei Groessen aus DIESEM `result`, und
+            # `urgency_from_radar()` liest das Label case-insensitiv (dort
+            # steht es nur mit kleinem Anfangsbuchstaben).
+            _radar_urgency = alert_urgency.urgency_from_radar(
+                is_convective=result.is_convective,
+                intensity_label=result.intensity_label,
+            )
+            # Traegt der Budget-Durchbruch diesen Lauf? Entscheidet unten
+            # ueber die Buchung (`escalation_breakthroughs`) und bleibt False,
+            # solange das Budget gar nicht im Weg stand.
+            _budget_durchbruch = False
+
             # Issue #2065: Ueberholungs-Entscheidung gegen die zuletzt
             # gemeldete Menge. Bewusst VOR dem Ausloese-Guard
             # (`radar_alert_due`): so bekommt jeder Lauf, der AN DER SPERRZEIT
@@ -1538,12 +1634,39 @@ class TripAlertService:
                     self._user_id, now_utc, anchor_tz(trip, now_utc),
                     reason="nowcast",
                 ):
+                    # Issue #2050 S3b (AC-22): auch DIESE Nachpruefung kennt
+                    # die Eskalations-Ausnahme. Beide Ausnahmen wirken
+                    # unabhaengig — ein Lauf kann an der Sperrzeit UND am
+                    # Budget haengen und beide durchbrechen; ohne die Pruefung
+                    # hier stoppte das erschoepfte Budget den Fall, bevor die
+                    # Ausnahme unten ueberhaupt erreichbar waere.
+                    _budget_durchbruch = self._eskalation_bricht_budget(
+                        trip, now_utc, _radar_urgency,
+                    )
+                    if not _budget_durchbruch:
+                        logger.debug(
+                            "Radar alert suppressed (Tages-Obergrenze nach "
+                            "Sperrzeit-Durchbruch) for trip %s", trip.id,
+                        )
+                        self._protokolliere_radar_unterdrueckung(
+                            trip, alert_log.REASON_DAILY_LIMIT, effective_channels,
+                        )
+                        continue
+            elif _budget_erschoepft:
+                # Issue #2050 S3b (Szenario 7, AC-15 bis AC-17): das Gate hat
+                # an der Tages-Obergrenze gehalten. Jetzt — und erst jetzt,
+                # mit der Dringlichkeit dieses Abrufs in der Hand — entscheidet
+                # der Aufrufer, ob die Lage sie durchbricht.
+                _budget_durchbruch = self._eskalation_bricht_budget(
+                    trip, now_utc, _radar_urgency,
+                )
+                if not _budget_durchbruch:
                     logger.debug(
-                        "Radar alert suppressed (Tages-Obergrenze nach "
-                        "Sperrzeit-Durchbruch) for trip %s", trip.id,
+                        "Radar alert suppressed (Tages-Obergrenze, keine "
+                        "Eskalation) for trip %s", trip.id,
                     )
                     self._protokolliere_radar_unterdrueckung(
-                        trip, alert_log.REASON_DAILY_LIMIT, effective_channels,
+                        trip, gate.reason, effective_channels,
                     )
                     continue
 
@@ -1647,6 +1770,14 @@ class TripAlertService:
                         pass
             if _double_suppressed:
                 logger.debug(f"Radar alert suppressed by double-alert guard for {trip.id}")
+                # Issue #2050 S3b (Szenario 10, AC-4): eigener Grund, nicht
+                # `cooldown` — der Guard sitzt auf `AlertStateService`-Ebene,
+                # nicht auf dem Sperrzeit-Topf. `_e1` liegt hier bereits vor
+                # und geht mit, wie an den uebrigen Stellen dieses Zweigs.
+                self._protokolliere_unterdrueckung(
+                    trip, reason=alert_log.REASON_NOWCAST,
+                    gate_reason=alert_log.REASON_DOUBLE_ALERT_GUARD, **_e1,
+                )
                 continue
 
             # Kein Kanal konfiguriert → kein Alert (nichts zu recorden).
@@ -1767,10 +1898,10 @@ class TripAlertService:
             # entfallen: die Aufloesung ist rein, `trip` bleibt zwischen dem
             # Leer-Check oben (`if not effective_channels`) und dieser Stelle
             # unveraendert.
-            _radar_urgency = alert_urgency.urgency_from_radar(
-                is_convective=_radar_request.is_convective,
-                intensity_label=_radar_request.intensity_label,
-            )
+            # Issue #2050 S3b: `_radar_urgency` steht bereits — es wird jetzt
+            # direkt nach dem Nowcast-Abruf gebildet, weil die
+            # Eskalations-Ausnahme am Tagesbudget es dort schon braucht. Eine
+            # zweite Ableitung hier waere eine stille Kopie derselben Groesse.
             _radar_allowed, _radar_suppressed = alert_channel_threshold.split_by_threshold(
                 effective_channels, _radar_urgency, trip.alert_channel_thresholds,
             )
@@ -1894,6 +2025,13 @@ class TripAlertService:
                 # Selbstbremsung, die naechste Verschaerfung muss den vollen
                 # Faktor gegen DIESE Menge erreichen.
                 precip_mm=_menge_mm,
+                # Issue #2050 S3b: die hoechste heute in dieser Zone
+                # ZUGESTELLTE Stufe waechst bei JEDEM Versand mit (nicht nur
+                # beim Durchbruch) — sie ist die Vergleichsbasis der naechsten
+                # Eskalationspruefung. Der verbrauchte Durchbruch wird nur
+                # gebucht, wenn er diesen Lauf auch getragen hat.
+                urgency=_radar_urgency,
+                is_escalation_breakthrough=_budget_durchbruch,
             )
             # Issue #1467 S4b-1 (AC-2/AC-3, F001-Symmetrie): NUR nach
             # erfolgreicher Zustellung -- ein spaeterer amtlicher Alarm
@@ -2190,11 +2328,19 @@ class TripAlertService:
         Geschrieben wird der Topf weiterhin (s. unten) — nur gelesen nicht mehr.
         """
         now_utc = datetime.now(timezone.utc)
-        if not check_official_alert_gate(
+        # Issue #2050 S3b (Szenario 10, AC-5, Luecke E3): `check_official_alert_gate`
+        # liefert den passenden Grund seit jeher mit — bis dahin verwarf ihn
+        # der Aufrufer. Jetzt wird er weitergereicht statt verschluckt.
+        _gate = check_official_alert_gate(
             user_id=self._user_id,
             quiet_from=trip.alert_quiet_from, quiet_to=trip.alert_quiet_to,
             context_label=trip.id, now=now_utc, zone=anchor_tz(trip, now_utc),
-        ).allowed:
+        )
+        if not _gate.allowed:
+            self._protokolliere_unterdrueckung(
+                trip, reason=alert_log.REASON_OFFICIAL_ALERT,
+                gate_reason=_gate.reason,
+            )
             return False
         # Issue #1594: dieselbe Stufe wie im Aenderungspfad, gleiche Position
         # (nach der Ruhezeit) — die Warnung erscheint im Briefing, das

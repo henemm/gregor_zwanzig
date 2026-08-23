@@ -146,14 +146,32 @@ class CompareOfficialAlertService:
         # `is_silenced` bleibt bewusst AUSSERHALB des Bausteins (AC-9): Trips
         # kennen den Riegel nicht, und ein pausierter Trip soll weiter
         # alarmieren (#995).
-        if not check_official_alert_gate(
+        # Issue #2050 S3b (Szenario 10, AC-9, Luecke E3 spiegelbildlich zum
+        # Trip): der Grund lag hier schon immer vor — bis dahin verwarf ihn
+        # der Aufrufer mitsamt dem `GateResult`.
+        gate = check_official_alert_gate(
             user_id=self._user_id,
             quiet_from=preset.get("alert_quiet_from"),
             quiet_to=preset.get("alert_quiet_to"),
             context_label=preset_id,
             now=datetime.now(timezone.utc),
             zone=zone,
-        ).allowed:
+        )
+        if not gate.allowed:
+            # Absicherung je Preset, nicht um den Stapellauf (Muster `fix_1479`).
+            try:
+                alert_log.append_suppressed_entry(
+                    self._user_id, entity_id=preset_id, entity_type="compare",
+                    reason=alert_log.REASON_OFFICIAL_ALERT,
+                    gate_reason=gate.reason,
+                    effective_channels=self._effective_channels(preset),
+                )
+            except Exception as e:
+                logger.error(
+                    "Compare-Amtlich: Unterdrueckungs-Protokoll fuer Preset %s "
+                    "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), "
+                    "nur der Protokoll-Eintrag fehlt.", preset_id, e, gate.reason,
+                )
             return False
 
         # Issue #1594: dieselbe Stufe wie im Vergleichs-Aenderungspfad, gleiche

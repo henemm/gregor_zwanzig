@@ -16,11 +16,13 @@ Zwei Sorten Test:
 
 * AC-6/AC-7/AC-8 (Ortsvergleich) und AC-10 (Trip) sind ROT — heute wird gar
   nichts protokolliert.
-* AC-9 ist ein Invarianten-Waechter und HEUTE GRUEN: der Geltungsbereich
-  bleibt strikt auf die beiden Nowcast-Pfade begrenzt. Aenderungsalarm und
-  amtliche Warnung bekommen KEINEN der drei Gruende — auch nicht als
-  Nebenwirkung einer Protokollierung, die im geteilten Ruhezeit-/Tageslimit-
-  Baustein statt im Nowcast-Pfad sitzt.
+* AC-9 war ein Invarianten-Waechter auf den Geltungsbereich ("Nowcast-only,
+  Aenderungsalarm und amtliche Warnung bekommen KEINEN der drei Gruende") und
+  ist seit **Issue #2050 Scheibe S3b ABGELOEST**: dort bekommt jede
+  Unterdrueckung einen benannten Grund. Die beiden Tests stehen weiterhin an
+  derselben Flaeche, pruefen sie aber in der NEUEN Richtung
+  (``test_2050s3b_…``, s. Abschnittskopf dort) — ersatzlos geloescht wurde
+  keiner.
 
 Mock-frei: echte Presets/Trips/Orte auf Platte, echte Services, echtes
 ``alert_log.json``; DI-Naehte fuer Radar/Wetter/amtliche Quelle/Versand.
@@ -532,18 +534,37 @@ def test_f004_gescheitertes_protokoll_stoppt_den_trip_lauf_nicht(monkeypatch):
         clean_uid(uid)
 
 
-# ══════════════ Geltungsbereich: NUR die Nowcast-Pfade (AC-9) ═══════════════
+# ═══ Geltungsbereich — ABGELOEST durch #2050 S3b (vormals #1467 S3 AC-9) ════
+#
+# Bis #2050 S3b galt hier die umgekehrte Zusicherung: Aenderungsalarm und
+# amtliche Warnung duerfen KEINEN der drei Gate-Gruende protokollieren
+# (Geltungsbereich strikt Nowcast-only, offene Luecken O3/E3). Genau diese
+# Beschraenkung loest Szenario 10 der Scheibe S3b ab — jede Unterdrueckung
+# bekommt einen benannten Grund. Die beiden Tests bleiben deshalb an DERSELBEN
+# Flaeche stehen und pruefen sie in der NEUEN Richtung, statt ersatzlos zu
+# verschwinden: sonst laese sich die Ablösung spaeter nicht mehr von einem
+# stillen "Schutz entfernt" unterscheiden.
+#
+# SPEC: docs/specs/modules/feat_2050_s3b_budget_und_unterdrueckungsgrund.md
+#       (AC-1 fuer den Aenderungsalarm, AC-9 fuer den amtlichen Vergleichspfad)
 
 
-def test_ac9_aenderungsalarm_bekommt_keinen_unterdrueckungs_grund():
-    """AC-9 (Invariante, heute GRUEN): Ein durch die Ruhezeit unterdrueckter
-    Vorhersage-Aenderungsalarm erzeugt KEINEN Protokoll-Eintrag mit einem der
-    drei neuen Gruende — der Geltungsbereich von (d) bleibt strikt auf die
-    beiden Nowcast-Pfade begrenzt (offene Luecke O3 in
-    ``feat_1459_alert_protokoll.md``, hier ausdruecklich NICHT geschlossen).
+def test_2050s3b_aenderungsalarm_protokolliert_die_ruhezeit_unterdrueckung():
+    """Abgeloest durch #2050 S3b, vormals #1467 S3 AC-9.
 
-    Der Kontroll-Lauf (ohne Ruhezeit) beweist, dass derselbe Aufbau real
-    alarmiert — sonst waere die Zusicherung leer."""
+    Ein durch die Ruhezeit unterdrueckter Vorhersage-Aenderungsalarm erzeugt
+    seit dieser Scheibe SEHR WOHL einen Protokoll-Eintrag — mit dem Grund
+    ``quiet_hours``. Die frueher hier festgeschriebene Gegenaussage
+    ("Geltungsbereich bleibt Nowcast-only, Luecke O3 ausdruecklich offen") ist
+    damit hinfaellig.
+
+    Der Kontroll-Lauf (ohne Ruhezeit) beweist unveraendert, dass derselbe
+    Aufbau real alarmiert — und dass der neue Eintrag NUR bei einer Sperre
+    entsteht, nicht bei jedem Lauf.
+
+    ROT heute: ``trip_alert.py:342-345`` bricht still ab."""
+    from services.alert_log import REASON_QUIET_HOURS
+
     kontrolle, gesperrt = fresh_uid("ac9d-ok"), fresh_uid("ac9d-quiet")
     clean_uid(kontrolle)
     clean_uid(gesperrt)
@@ -562,6 +583,10 @@ def test_ac9_aenderungsalarm_bekommt_keinen_unterdrueckungs_grund():
         assert raus is True, (
             "Voraussetzung: der Aenderungsalarm muss ohne Ruhezeit rausgehen"
         )
+        assert _gate_reasons_in_log(kontrolle) == set(), (
+            f"Ein ZUGESTELLTER Aenderungsalarm darf keinen Unterdrueckungs-"
+            f"Grund protokollieren: {read_log(kontrolle)!r}"
+        )
 
         still = gust_alert_trip("trip-1467s3-ac9-quiet")
         still.alert_quiet_from, still.alert_quiet_to = quiet_window_now()
@@ -574,23 +599,32 @@ def test_ac9_aenderungsalarm_bekommt_keinen_unterdrueckungs_grund():
         assert unterdrueckt is False, (
             "Voraussetzung: die Ruhezeit muss den Aenderungsalarm unterdruecken"
         )
-        assert _gate_reasons_in_log(gesperrt) == set(), (
-            f"Der Aenderungsalarm-Pfad darf keinen der drei Nowcast-"
-            f"Unterdrueckungsgruende protokollieren: {read_log(gesperrt)!r}"
+        assert _gate_reasons_in_log(gesperrt) == {REASON_QUIET_HOURS}, (
+            f"Der Aenderungsalarm-Pfad muss seine Ruhezeit-Unterdrueckung seit "
+            f"#2050 S3b mit dem Grund {REASON_QUIET_HOURS!r} protokollieren "
+            f"(vormals: gar nicht): {read_log(gesperrt)!r}"
         )
     finally:
         clean_uid(kontrolle)
         clean_uid(gesperrt)
 
 
-def test_ac9_amtlicher_alarm_bekommt_keinen_unterdrueckungs_grund():
-    """AC-9 (Invariante, heute GRUEN): Eine durch die Tages-Obergrenze
-    unterdrueckte amtliche Warnung erzeugt KEINEN Protokoll-Eintrag mit einem
-    der drei neuen Gruende.
+def test_2050s3b_amtlicher_alarm_protokolliert_die_tageslimit_unterdrueckung():
+    """Abgeloest durch #2050 S3b, vormals #1467 S3 AC-9.
 
-    Der Kontroll-Lauf (freies Tagesbudget) beweist, dass der Aufbau real
-    alarmiert — und dass der zweite Lauf tatsaechlich an der Tages-Obergrenze
-    scheitert und nicht schon vorher."""
+    Eine durch die Tages-Obergrenze unterdrueckte amtliche Warnung
+    (Ortsvergleich-Pfad) erzeugt seit dieser Scheibe SEHR WOHL einen
+    Protokoll-Eintrag — mit dem Grund ``daily_limit``. Die frueher hier
+    festgeschriebene Gegenaussage (Luecke E3 ausdruecklich offen) ist damit
+    hinfaellig.
+
+    Der Kontroll-Lauf (freies Tagesbudget) beweist unveraendert, dass der
+    Aufbau real alarmiert — und dass der zweite Lauf tatsaechlich an der
+    Tages-Obergrenze scheitert und nicht schon vorher.
+
+    ROT heute: ``compare_official_alert.py:149-157`` verwirft das
+    ``GateResult`` samt seinem Grund."""
+    from services.alert_log import REASON_DAILY_LIMIT
     import services.official_alerts.base as base
     from services.compare_official_alert import CompareOfficialAlertService
     from services.official_alerts import register_official_alert_source
@@ -625,6 +659,10 @@ def test_ac9_amtlicher_alarm_bekommt_keinen_unterdrueckungs_grund():
             f"Voraussetzung: die amtliche Warnung muss bei freiem Tagesbudget "
             f"rausgehen, erhalten {raus}"
         )
+        assert _gate_reasons_in_log(kontrolle) == set(), (
+            f"Eine ZUGESTELLTE amtliche Warnung darf keinen Unterdrueckungs-"
+            f"Grund protokollieren: {read_log(kontrolle)!r}"
+        )
 
         unterdrueckt = CompareOfficialAlertService(
             settings=settings_email_only(), user_id=gesperrt,
@@ -634,9 +672,10 @@ def test_ac9_amtlicher_alarm_bekommt_keinen_unterdrueckungs_grund():
             "Voraussetzung: das erreichte Tageslimit muss die amtliche Warnung "
             "unterdruecken"
         )
-        assert _gate_reasons_in_log(gesperrt) == set(), (
-            f"Der amtliche Pfad darf keinen der drei Nowcast-"
-            f"Unterdrueckungsgruende protokollieren: {read_log(gesperrt)!r}"
+        assert _gate_reasons_in_log(gesperrt) == {REASON_DAILY_LIMIT}, (
+            f"Der amtliche Pfad muss seine Tageslimit-Unterdrueckung seit "
+            f"#2050 S3b mit dem Grund {REASON_DAILY_LIMIT!r} protokollieren "
+            f"(vormals: gar nicht): {read_log(gesperrt)!r}"
         )
     finally:
         base._REGISTERED_SOURCES.clear()

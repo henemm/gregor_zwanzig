@@ -53,6 +53,9 @@ _REASON_LABELS = {
     "below_channel_threshold": "unter deiner Schwelle",
     "premium_sms_no_reply_address": "keine Rückadresse gelernt",
     "premium_sms_reply_address_stale": "Rückadresse veraltet",
+    # #2050 S3b: Doppel-Alarm-Guard (#818) — dieselbe Größe desselben
+    # Abschnitts wurde eben schon gemeldet.
+    "double_alert_guard": "Wiederholung derselben Meldung",
 }
 
 # #1750 E2: Einsortierung je Grund in einen der zwei Bloecke. Ein Vorfall mit
@@ -67,6 +70,10 @@ _REASON_BLOCK = {
     "cooldown": "withheld",
     "daily_limit": "withheld",
     "below_channel_threshold": "withheld",
+    # #2050 S3b: Nutzer-Absicht (der Wiederholungsschutz ist gewollt), kein
+    # Zustellfehler — ohne diesen Eintrag fiele der Grund per Default auf
+    # "failed" und die Mail behauptete einen Fehler, wo keiner war.
+    "double_alert_guard": "withheld",
 }
 
 _TRIGGER_LABELS = {

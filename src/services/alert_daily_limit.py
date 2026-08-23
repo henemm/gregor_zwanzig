@@ -61,12 +61,28 @@ def _load_zones(path: Path) -> dict:
     return {}
 
 
-def _count_for(zones: dict, zone: ZoneInfo, today: str) -> int:
+def _entry_for(zones: dict, zone: ZoneInfo, today: str) -> dict:
+    """Der HEUTIGE Zonen-Eintrag mit ALLEN seinen Feldern — leer, sobald der
+    gespeicherte Ortstag nicht mehr passt (der Tageswechsel setzt JEDES Feld
+    zurueck, nicht nur den Zaehler). Grundlage des Read-Modify-Write auf
+    FELD-Ebene (Issue #2050 S3b): `increment()` ersetzte den Eintrag bis dahin
+    ganz und haette die zwei neuen Felder bei jedem Zaehlschritt verworfen."""
     entry = zones.get(str(zone))
     if not isinstance(entry, dict) or entry.get("date") != today:
-        return 0
+        return {}
+    return entry
+
+
+def _count_for(zones: dict, zone: ZoneInfo, today: str) -> int:
     try:
-        return int(entry.get("count", 0))
+        return int(_entry_for(zones, zone, today).get("count", 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _breakthroughs(entry: dict) -> int:
+    try:
+        return int(entry.get("escalation_breakthroughs", 0) or 0)
     except (TypeError, ValueError):
         return 0
 
@@ -107,7 +123,51 @@ def is_allowed(
     return load(user_id, now, zone) < effective_limit
 
 
-def increment(user_id: str, now: datetime, zone: ZoneInfo) -> None:
+#: Issue #2050 S3b (Szenario 7): hoechstens EIN Durchbruch je Tag und Zone.
+#: Eigener Deckel zusaetzlich zur Eskalationsbedingung — ohne ihn koennte eine
+#: Lage, die sich ueber den Tag stufenweise steigert, das Tagesbudget beliebig
+#: oft aufreissen (Entscheidung 2 der Analyse).
+_MAX_ESCALATION_BREAKTHROUGHS = 1
+
+
+def escalation_breaks_through(
+    user_id: str, now: datetime, zone: ZoneInfo, urgency: str
+) -> bool:
+    """Darf `urgency` das ERSCHOEPFTE Tagesbudget dieser Zone durchbrechen?
+    (Issue #2050 S3b, Szenario 7 / Anforderung D-3)
+
+    Zwei UND-verknuepfte Bedingungen, beide rein lesend:
+
+    1. `urgency` uebersteigt ECHT die hoechste heute in dieser Zone bereits
+       ZUGESTELLTE Stufe (`alert_urgency.exceeds`, dieselbe Rangfolge wie
+       ueberall sonst — kein dritter Eskalationsbegriff). Ein fehlender
+       Eintrag gilt als `"LOW"`: der Tag hat dort noch nichts verschickt,
+       jede echte Stufe darueber ist eine Eskalation.
+    2. Der eine Durchbruch des Tages ist in dieser Zone noch frei.
+
+    Der Aufrufer entscheidet, NICHT das Gate: zum Gate-Zeitpunkt ist die
+    Dringlichkeit strukturell noch unbekannt (sie entsteht erst aus dem
+    Nowcast-Abruf) — dasselbe Caller-seitige Muster wie die
+    Sperrzeit-Ueberholung aus #2065.
+    """
+    from services import alert_urgency
+
+    entry = _entry_for(
+        _load_zones(_counter_path(user_id)), zone, _local_date_str(now, zone)
+    )
+    if not alert_urgency.exceeds(urgency, entry.get("max_urgency_sent") or "LOW"):
+        return False
+    return _breakthroughs(entry) < _MAX_ESCALATION_BREAKTHROUGHS
+
+
+def increment(
+    user_id: str,
+    now: datetime,
+    zone: ZoneInfo,
+    *,
+    urgency: str | None = None,
+    is_escalation_breakthrough: bool = False,
+) -> None:
     """Read-modify-write des Zaehlers DIESER Zone, Reset am dortigen Ortstag.
 
     Issue #1213: atomarer Write (tmp-Datei + `os.replace`) statt direktem
@@ -115,11 +175,34 @@ def increment(user_id: str, now: datetime, zone: ZoneInfo) -> None:
     gleichzeitigem Zugriff (Scheduler + API). Issue #1726: geschrieben wird der
     GESAMTE Zonen-Bestand zurueck, nur mit dem eigenen Schluessel erhoeht —
     Merge auf Zonen-Ebene, nicht bloss auf Datei-Ebene.
+
+    Issue #2050 S3b: der Merge reicht jetzt bis auf FELD-Ebene des eigenen
+    Zonen-Eintrags — `urgency` schreibt `max_urgency_sent` fort (die hoechste
+    heute in dieser Zone zugestellte Stufe), `is_escalation_breakthrough`
+    erhoeht `escalation_breakthroughs`. Beide Felder sind additiv: ein
+    Altbestand ohne sie bleibt lesbar, und alles bereits Gespeicherte
+    (auch Unbekanntes) ueberlebt den Schreibvorgang.
+
+    `urgency` wird bei JEDER zugestellten Meldung mitgegeben, nicht nur beim
+    Durchbruch — sonst wuesste die Zone nach einem normalen MODERATE-Alarm
+    nie, dass heute nichts ueber MODERATE hinausging, und die naechste
+    Eskalationspruefung liefe gegen eine leere Vergleichsbasis.
     """
+    from services import alert_urgency
+
     path = _counter_path(user_id)
     today = _local_date_str(now, zone)
     zones = _load_zones(path)
-    zones[str(zone)] = {"date": today, "count": _count_for(zones, zone, today) + 1}
+    entry = dict(_entry_for(zones, zone, today))
+    entry["date"] = today
+    entry["count"] = _count_for(zones, zone, today) + 1
+    if urgency:
+        entry["max_urgency_sent"] = alert_urgency.highest_urgency(
+            entry.get("max_urgency_sent") or "LOW", urgency,
+        )
+    if is_escalation_breakthrough:
+        entry["escalation_breakthroughs"] = _breakthroughs(entry) + 1
+    zones[str(zone)] = entry
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=".alert_daily_count_", suffix=".tmp")
     try:

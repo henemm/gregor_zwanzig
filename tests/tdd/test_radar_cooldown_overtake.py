@@ -4,6 +4,13 @@ SPEC: docs/specs/modules/fix_2065_verschaerfung_ueberholt_sperre.md
 (AC-1 bis AC-10 und AC-13; AC-11 liegt in `test_throttle_store.py`,
 AC-12/AC-14 in `test_alert_gate.py`.)
 
+ABLOESUNG (Issue #2050 Scheibe S3b, AC-22): `AC-7` sicherte hier ein hartes,
+ausnahmsloses Stoppen am Tageslimit zu. Fuer den ESKALATIONSFALL ist das
+abgeloest — `docs/specs/modules/feat_2050_s3b_budget_und_unterdrueckungsgrund.md`.
+Der Test ist nicht geloescht, sondern in drei benannte Nachfolger
+(`test_ac22_…`) aufgeloest, die den unveraenderten Normalfall, den neuen
+Durchbruch und dessen eigenen Deckel abdecken.
+
 Gemessener Ausgangsbefund (Analyse 2026-08-22): Lauf 1 mit 11 mm/h (~10,08 mm
 im 60-Min-Vergleichsfenster) loest aus und bucht 120 Min Sperrzeit; 90 Minuten
 spaeter schweigt eine auf 30 mm/h (~27,5 mm) verdreifachte Lage mit
@@ -47,8 +54,9 @@ from datetime import datetime, timedelta
 
 from freezegun import freeze_time
 
-from services import alert_log
+from services import alert_log, alert_urgency
 from services.radar_cache import reset_shared_radar_cache_for_tests
+from services.trip_day import anchor_tz
 
 from tests.helpers.alarm_pruefstrecke import AlarmPruefstrecke
 from tests.tdd.test_952_onset_alert_fidelity import _clean_user
@@ -58,6 +66,22 @@ from tests.tdd.test_alarm_pruefstrecke_selbstschutz import (
 from tests.tdd.test_alarm_szenario_briefing_ueberholung_zeitreihe import (
     _dauerregen, _kurze_spitze, _radar,
 )
+# Issue #2050 S3b (AC-22): die drei Nachfolger von AC-7 brauchen dieselbe
+# Stufen-Messung und denselben produktiven Weg zum erschoepften Budget wie die
+# Szenario-7-Datei — geliehen statt nachgebaut, sonst liefen zwei Fassungen
+# derselben Messgrundlage auseinander.
+from tests.tdd.test_daily_budget_escalation import (
+    _budget_ausschoepfen, _gemessene_dringlichkeit, _quelle,
+)
+
+
+def _konvektive_lage(rate_mm_h: float):
+    """Konvektive Lage (Gewitter/Hagel, Stufe HIGH unabhaengig von der Rate).
+
+    EIN nasser Frame acht Minuten voraus: `_accumulate_precip_mm` gibt ihm die
+    volle Deckelung von 15 Minuten (`_MAX_FRAME_COVERAGE`) -> `rate * 15/60`
+    mm im 60-Minuten-Vergleichsfenster. 30 mm/h ergeben damit 7,5 mm."""
+    return _quelle(rate_mm_h, konvektiv=True)
 
 # Die beiden Werte des gemessenen #2065-Falls.
 BASIS_RATE_MM_H = 11.0          # -> ~10,08 mm Vergleichsbasis
@@ -489,68 +513,298 @@ def test_ac6_ruhezeit_bleibt_auch_fuer_extreme_verschaerfung_unbrechbar():
         _clean_user(uid)
 
 
-def test_ac7_erschoepftes_tagesbudget_stoppt_den_durchbruch():
-    """AC-7. GIVEN ein Nutzer mit endlichem Tagesbudget (Tier `standard`,
-    Limit 4), dessen Budget erschoepft ist, WHEN eine Verschaerfung vorliegt,
-    die Faktor UND Untergrenze erfuellt, THEN bleibt der Alarm aus und das
-    Protokoll weist `daily_limit` aus.
+# ───────────── AC-7 -> #2050 S3b AC-22: aufgeloest in drei Nachfolger ────────
+#
+# `test_ac7_erschoepftes_tagesbudget_stoppt_den_durchbruch` sicherte hier ein
+# hartes, AUSNAHMSLOSES Stoppen am Tageslimit zu — auch fuer eine Lage, die
+# gegenueber allem heute Verschickten akut eskaliert. Genau diese
+# Ausnahmslosigkeit loest #2050 S3b (Szenario 7) ab: ein erschoepftes
+# Tagesbudget darf eine sich akut verschaerfende Gewitterlage nicht verhungern
+# lassen. Der Test wird deshalb NICHT geloescht, sondern in drei benannte
+# Nachfolger aufgeloest, die zusammen mehr zusichern als der eine vorher:
+#
+#   1. `…stoppt_ohne_eskalation`                    — der unveraenderte
+#      Normalfall (heute schon gruen, muss es bleiben).
+#   2. `…echte_eskalation_durchbricht_erschoepftes_budget` — der neue Fall.
+#   3. `…eskalationsausnahme_hat_eigene_obergrenze`  — dessen Deckel.
+#
+# Alle drei fahren die Lage DIESER Datei: laufende Sperrzeit UND erschoepftes
+# Budget. Die beiden Ausnahmen sind laut Spec unabhaengig — ein Lauf kann von
+# beiden betroffen sein, und genau dieser Fall wird hier festgenagelt.
 
-    Begruendung: die Kette schliesst heute bei Sperrzeit kurz, das Tageslimit
-    wurde fuer den Ueberholungsfall also NIE geprueft. Der Durchbruch darf es
-    nicht stillschweigend mit-ueberspringen.
+
+def test_ac22_erschoepftes_tagesbudget_stoppt_ohne_eskalation():
+    """#2050 S3b, AC-22, vormals #2065 AC-7 (unveraenderter Normalfall).
+
+    GIVEN ein Nutzer mit endlichem Tagesbudget (Tier `standard`, Limit 4),
+    dessen Budget erschoepft ist, WHEN eine MENGENMAESSIGE Verschaerfung
+    vorliegt, die Faktor UND Untergrenze erfuellt, deren Dringlichkeitsstufe
+    aber NICHT ueber der heute bereits verschickten liegt, THEN bleibt der
+    Alarm aus und das Protokoll weist `daily_limit` aus.
+
+    Der Durchbruch der Sperrzeit darf das Tageslimit nicht stillschweigend
+    mit-ueberspringen — und die neue Eskalations-Ausnahme (#2050 S3b) darf
+    diesen Fall nicht mit aufreissen: 11 mm/h und 30 mm/h sind BEIDE
+    "Starker Regen" (die Skala saettigt bei 4 mm/h), `exceeds("HIGH","HIGH")`
+    ist False. Die Nicht-Eskalation wird deshalb ausdruecklich GEMESSEN, nicht
+    angenommen — ohne diese Messung koennte der Test spaeter aus dem falschen
+    Grund gruen sein.
 
     Kein Premium-Profil (dort gilt gar kein Limit) und deshalb ohne
-    Premium-SMS-Kanal — geprueft wird die Stille, nicht die Kanalparitaet.
-
-    RED heute: der Lauf schweigt mit Grund `cooldown` statt `daily_limit`."""
-    uid = _uid("ac7")
+    Premium-SMS-Kanal — geprueft wird die Stille, nicht die Kanalparitaet."""
+    uid = _uid("ac22-normal")
     try:
         trip = _aufbau(
-            uid, "ac7", tier="standard",
+            uid, "ac22-normal", tier="standard",
             send_sms=False, send_premium_sms=False,
         )
+        at3 = _AT + timedelta(minutes=90)
+        stufe_basis = _gemessene_dringlichkeit(
+            trip, _dauerregen(BASIS_RATE_MM_H), _AT,
+        )
+        stufe_neu = _gemessene_dringlichkeit(
+            trip, _dauerregen(VERSCHAERFT_RATE_MM_H), at3,
+        )
+        assert stufe_basis == "HIGH" and stufe_neu == "HIGH", (
+            f"Testkonstruktion: beide Lagen liegen ueber der Saettigung der "
+            f"Stufenskala (4 mm/h) und sind deshalb BEIDE HIGH — gemessen "
+            f"{stufe_basis!r} und {stufe_neu!r}."
+        )
+        assert not alert_urgency.exceeds(stufe_neu, stufe_basis), (
+            f"Testkonstruktion: die mengenmaessige Verschaerfung darf auf der "
+            f"Stufenskala KEINE Eskalation sein ({stufe_neu!r} gegen "
+            f"{stufe_basis!r}) — sonst prueft dieser Test den Durchbruchsfall "
+            f"statt des Normalfalls."
+        )
+
         strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
         lauf1 = strecke.lauf(
             at=_AT, zweig="radar", trip=trip,
             radar_service=_radar(_dauerregen(BASIS_RATE_MM_H)),
         )
         assert lauf1.triggered_count == 1, (
-            f"AC-7 Vorbedingung: Lauf 1 muss ausloesen (war {lauf1.triggered_count})."
+            f"AC-22 Vorbedingung: Lauf 1 muss ausloesen (war {lauf1.triggered_count})."
         )
 
         # Tageszaehler ueber den PRODUKTIVEN Schreibweg auf das Limit heben
         # (Lauf 1 hat bereits einmal gezaehlt): dieselbe Zone, die auch das
         # Gate benutzt — eine andere fuellte einen anderen Zaehler (#1726).
-        from services import alert_daily_limit
-        from services.trip_day import anchor_tz
-        from services.user_tier import daily_alert_limit
-
-        at3 = _AT + timedelta(minutes=90)
         zone = anchor_tz(trip, at3)
-        limit = daily_alert_limit(uid)
-        assert limit == 4, f"AC-7 Vorbedingung: Tier `standard` muss Limit 4 haben ({limit})"
-        while alert_daily_limit.load(uid, at3, zone) < limit:
-            alert_daily_limit.increment(uid, at3, zone)
-        assert not alert_daily_limit.is_allowed(uid, at3, zone, reason="nowcast"), (
-            "AC-7 Vorbedingung: das Tagesbudget muss erschoepft sein."
-        )
+        _budget_ausschoepfen(uid, at3, zone)
 
         lauf3 = strecke.lauf(
             at=at3, zweig="radar", trip=trip,
             radar_service=_radar(_dauerregen(VERSCHAERFT_RATE_MM_H)),
         )
         assert lauf3.triggered_count == 0, (
-            f"AC-7: das erschoepfte Tagesbudget bleibt hartes Stop, auch fuer "
-            f"eine Verschaerfung (war {lauf3.triggered_count})."
+            f"AC-22: ohne Eskalation auf der Stufenskala bleibt das erschoepfte "
+            f"Tagesbudget hartes Stop, auch fuer eine mengenmaessige "
+            f"Verschaerfung (war {lauf3.triggered_count})."
         )
         gruende = _gruende(uid, trip, at3)
         assert alert_log.REASON_DAILY_LIMIT in gruende, (
-            f"AC-7: der Protokollgrund muss {alert_log.REASON_DAILY_LIMIT!r} "
+            f"AC-22: der Protokollgrund muss {alert_log.REASON_DAILY_LIMIT!r} "
             f"sein — der Durchbruch der Sperrzeit muss das Tageslimit ERNEUT "
             f"pruefen, statt es mit zu ueberspringen. Gefunden: {gruende!r}"
         )
     finally:
         _clean_user(uid)
+
+
+def test_ac22_echte_eskalation_durchbricht_erschoepftes_budget():
+    """#2050 S3b, AC-22, vormals #2065 AC-7 (neuer Fall).
+
+    GIVEN eine laufende Sperrzeit UND ein erschoepftes Tagesbudget, wobei
+    heute in dieser Zone hoechstens MODERATE verschickt wurde, WHEN eine
+    konvektive Lage (HIGH) geprueft wird, die zugleich Faktor und absolute
+    Untergrenze der Sperrzeit-Ueberholung erfuellt, THEN geht der Alarm raus —
+    beide Ausnahmen wirken unabhaengig voneinander im selben Lauf.
+
+    RED heute: der Lauf schweigt mit Grund `daily_limit` an der Nachpruefung,
+    die #2065 hinter dem Sperrzeit-Durchbruch eingezogen hat."""
+    uid = _uid("ac22-durchbruch")
+    basis_mm, neue_mm = 2.5, 7.5
+    try:
+        trip = _aufbau(
+            uid, "ac22-durchbruch", tier="standard",
+            send_sms=False, send_premium_sms=False,
+        )
+        at3 = _AT + timedelta(minutes=90)
+        basis_quelle = _dauerregen(_rate_dauerregen(basis_mm))
+        eskalations_quelle = _konvektive_lage(30.0)
+
+        gemessen_basis = _gemessene_menge(trip, basis_quelle, _AT)
+        gemessen_neu = _gemessene_menge(trip, eskalations_quelle, at3)
+        assert abs(gemessen_basis - basis_mm) < 0.01, (
+            f"Testkonstruktion: Basis erwartet {basis_mm} mm, gemessen "
+            f"{gemessen_basis} mm."
+        )
+        assert gemessen_neu >= max(2.0, gemessen_basis * 2.0), (
+            f"Testkonstruktion: die Lage muss die SPERRZEIT-Ueberholung locker "
+            f"erfuellen ({gemessen_neu} mm gegen Basis {gemessen_basis} mm) — "
+            f"sonst entschiede die Sperrzeit statt des Tagesbudgets."
+        )
+        assert abs(gemessen_neu - neue_mm) < 0.01, (
+            f"Testkonstruktion: neue Menge erwartet {neue_mm} mm, gemessen "
+            f"{gemessen_neu} mm."
+        )
+        stufe_basis = _gemessene_dringlichkeit(trip, basis_quelle, _AT)
+        stufe_neu = _gemessene_dringlichkeit(trip, eskalations_quelle, at3)
+        assert (stufe_basis, stufe_neu) == ("MODERATE", "HIGH"), (
+            f"Testkonstruktion: die Leiter muss MODERATE -> HIGH sein, gemessen "
+            f"{stufe_basis!r} -> {stufe_neu!r} (nur dann ist es eine ECHTE "
+            f"Eskalation und nicht die Saettigung der Skala)."
+        )
+        assert alert_urgency.exceeds(stufe_neu, stufe_basis)
+
+        strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
+        lauf1 = strecke.lauf(
+            at=_AT, zweig="radar", trip=trip, radar_service=_radar(basis_quelle),
+        )
+        assert lauf1.triggered_count == 1, (
+            f"AC-22 Vorbedingung: Lauf 1 muss ausloesen und MODERATE als "
+            f"hoechste Stufe des Tages buchen (war {lauf1.triggered_count})."
+        )
+        zone = anchor_tz(trip, at3)
+        _budget_ausschoepfen(uid, at3, zone)
+
+        lauf3 = strecke.lauf(
+            at=at3, zweig="radar", trip=trip,
+            radar_service=_radar(eskalations_quelle),
+        )
+        assert lauf3.triggered_count == 1, (
+            f"AC-22: eine konvektive HIGH-Lage gegen eine Zone, die heute nur "
+            f"MODERATE verschickt hat, muss BEIDE Schranken durchbrechen — "
+            f"Sperrzeit (mengenmaessig) und Tagesbudget (Eskalation). War "
+            f"triggered_count={lauf3.triggered_count}, protokollierte Gruende: "
+            f"{_gruende(uid, trip, at3)!r}"
+        )
+        assert _gruende(uid, trip, at3) == set(), (
+            f"AC-22: ein durchgebrochener Lauf darf keinen Unterdrueckungs-"
+            f"Eintrag hinterlassen. Protokolliert wurde: "
+            f"{_gruende(uid, trip, at3)!r}"
+        )
+    finally:
+        _clean_user(uid)
+
+
+def test_ac22_eskalationsausnahme_hat_eigene_obergrenze():
+    """#2050 S3b, AC-22, vormals #2065 AC-7 (Deckel des neuen Falls).
+
+    GIVEN in dieser Zone ist der eine Durchbruch des Tages bereits verbraucht
+    (aus einem vorangegangenen ECHTEN Lauf), WHEN eine zweite, noch schwerere
+    Eskalation geprueft wird, THEN bleibt der Alarm aus und das Protokoll
+    weist `daily_limit` aus.
+
+    LEITER LOW -> MODERATE -> HIGH, bewusst so: die Stufenskala saettigt bei
+    HIGH. Waere der erste Durchbruch schon HIGH gewesen, bliebe der zweite
+    Lauf auch OHNE Deckel still — der Test bewachte dann die Saettigung.
+
+    POSITIVKONTROLLE im selben Test (PFLICHT): ein zweiter Nutzer durchlaeuft
+    dieselbe Leiter, bei ihm ist die MODERATE-Meldung aber eine NORMALE
+    Zustellung (Budget zu diesem Zeitpunkt noch frei), es wird also kein
+    Durchbruch verbraucht. Danach sind beide Zustaende deckungsgleich (Budget
+    erschoepft, Sperrzeit laufend, hoechste Stufe MODERATE) — einziger
+    Unterschied ist der verbrauchte Durchbruch.
+
+    RED heute: schon Lauf 2 kommt nicht durch."""
+    uid, ctrl = _uid("ac22-deckel"), _uid("ac22-deckel-ctrl")
+    basis_mm, mittel_mm = 0.55, 2.5
+    try:
+        leichte_quelle = _dauerregen(_rate_dauerregen(basis_mm))
+        mittlere_quelle = _dauerregen(_rate_dauerregen(mittel_mm))
+        eskalations_quelle = _konvektive_lage(30.0)
+        at2, at3 = _AT + timedelta(minutes=30), _AT + timedelta(minutes=60)
+
+        trip = _aufbau(
+            uid, "ac22-deckel", tier="standard",
+            send_sms=False, send_premium_sms=False,
+        )
+        stufen = (
+            _gemessene_dringlichkeit(trip, leichte_quelle, _AT),
+            _gemessene_dringlichkeit(trip, mittlere_quelle, at2),
+            _gemessene_dringlichkeit(trip, eskalations_quelle, at3),
+        )
+        assert stufen == ("LOW", "MODERATE", "HIGH"), (
+            f"Testkonstruktion: die Leiter muss LOW -> MODERATE -> HIGH sein, "
+            f"gemessen {stufen!r}."
+        )
+        mengen = (
+            _gemessene_menge(trip, leichte_quelle, _AT),
+            _gemessene_menge(trip, mittlere_quelle, at2),
+            _gemessene_menge(trip, eskalations_quelle, at3),
+        )
+        assert mengen[1] >= max(2.0, mengen[0] * 2.0), (
+            f"Testkonstruktion: Lauf 2 muss auch die SPERRZEIT ueberholen "
+            f"({mengen[1]} mm gegen Basis {mengen[0]} mm), sonst entschiede sie."
+        )
+        assert mengen[2] >= max(2.0, mengen[1] * 2.0), (
+            f"Testkonstruktion: Lauf 3 muss die fortgeschriebene Sperrzeit-Basis "
+            f"ueberholen ({mengen[2]} mm gegen {mengen[1]} mm), sonst bliebe er "
+            f"schon an ihr haengen statt am Deckel."
+        )
+
+        strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
+        assert strecke.lauf(
+            at=_AT, zweig="radar", trip=trip, radar_service=_radar(leichte_quelle),
+        ).triggered_count == 1, "AC-22 Vorbedingung: der LOW-Lauf muss ausloesen."
+        zone = anchor_tz(trip, at2)
+        _budget_ausschoepfen(uid, at2, zone)
+
+        lauf2 = strecke.lauf(
+            at=at2, zweig="radar", trip=trip, radar_service=_radar(mittlere_quelle),
+        )
+        assert lauf2.triggered_count == 1, (
+            f"AC-22 Vorbedingung: MODERATE gegen eine Zone, die heute nur LOW "
+            f"verschickt hat, muss durchbrechen und damit den EINEN Durchbruch "
+            f"des Tages verbrauchen (war {lauf2.triggered_count}, Gruende: "
+            f"{_gruende(uid, trip, at2)!r})."
+        )
+
+        lauf3 = strecke.lauf(
+            at=at3, zweig="radar", trip=trip,
+            radar_service=_radar(eskalations_quelle),
+        )
+        assert lauf3.triggered_count == 0, (
+            f"AC-22: die Eskalationsausnahme gilt hoechstens EINMAL pro Tag und "
+            f"Zone — auch eine noch schwerere Lage darf danach nicht mehr "
+            f"durchbrechen (war {lauf3.triggered_count})."
+        )
+        assert alert_log.REASON_DAILY_LIMIT in _gruende(uid, trip, at3), (
+            f"AC-22: der Protokollgrund muss {alert_log.REASON_DAILY_LIMIT!r} "
+            f"sein. Gefunden: {_gruende(uid, trip, at3)!r}"
+        )
+
+        # Positivkontrolle: dieselbe Leiter OHNE verbrauchten Durchbruch.
+        ktrip = _aufbau(
+            ctrl, "ac22-deckel-ctrl", tier="standard",
+            send_sms=False, send_premium_sms=False,
+        )
+        kstrecke = AlarmPruefstrecke(user_id=ctrl, settings=_settings_all_channels())
+        assert kstrecke.lauf(
+            at=_AT, zweig="radar", trip=ktrip, radar_service=_radar(leichte_quelle),
+        ).triggered_count == 1, "AC-22 Positivkontrolle: der LOW-Lauf muss ausloesen."
+        assert kstrecke.lauf(
+            at=at2, zweig="radar", trip=ktrip, radar_service=_radar(mittlere_quelle),
+        ).triggered_count == 1, (
+            "AC-22 Positivkontrolle: bei FREIEM Budget ist der MODERATE-Lauf "
+            "eine normale Zustellung (er ueberholt nur die Sperrzeit) und "
+            "verbraucht keinen Durchbruch."
+        )
+        _budget_ausschoepfen(ctrl, at3, anchor_tz(ktrip, at3))
+        klauf3 = kstrecke.lauf(
+            at=at3, zweig="radar", trip=ktrip,
+            radar_service=_radar(eskalations_quelle),
+        )
+        assert klauf3.triggered_count == 1, (
+            f"AC-22 Positivkontrolle: bei deckungsgleichem Zustand, nur OHNE "
+            f"verbrauchten Durchbruch, muss derselbe Lauf durchbrechen — sonst "
+            f"sagt die Stille oben nichts ueber den Deckel aus (war "
+            f"{klauf3.triggered_count}, Gruende: {_gruende(ctrl, ktrip, at3)!r})."
+        )
+    finally:
+        _clean_user(uid)
+        _clean_user(ctrl)
 
 
 # ──────────────────────────── AC-8 / AC-9 / AC-10 ────────────────────────────
