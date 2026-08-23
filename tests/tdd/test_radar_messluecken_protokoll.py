@@ -61,6 +61,18 @@ _GRAD_PRO_KM = (_ZONEN_LAT1 - _ZONEN_LAT0) / haversine_km(
 # Testvoraussetzung geprueft.
 _DREI_PUNKTE_KM = 6.6
 
+# Die BESTEHENDEN E-1-Groessen des Radar-Zweigs (#2050 S6), die ein
+# Fehlschlag der neuen Luecken-Ableitung nicht mitreissen darf (AC-9).
+# Bewusst namentlich aufgezaehlt und NICHT aus `alert_log._E1_FIELD_TYPES`
+# abgeleitet: eine aus dem Pruefling gezogene Liste hoerte still auf, eine
+# Groesse zu bewachen, sobald sie dort verschwindet.
+# `reference_at` fehlt hier absichtlich — sie entsteht in diesem Aufbau nicht
+# (kein Briefing-Schnappschuss), s. Docstring von AC-9.
+_E1_GROESSEN = (
+    "lead_time_minutes", "event_at", "event_end_at", "measurement_point",
+    "source",
+)
+
 
 class _LueckenRadar(_ZonenRadar):
     """Dieselbe Steuerungsidee wie `_ZonenRadar` — echte
@@ -503,21 +515,44 @@ def test_ausfall_am_ersten_punkt_erzeugt_keine_ausdehnungszeile():
 def test_scheiternde_luecken_ableitung_kostet_den_alarm_nicht(monkeypatch):
     """AC-9 GIVEN die Ableitung von `measurement_gaps` scheitert / WHEN der
     Radar-Alarmpfad laeuft / THEN wird der Alarm trotzdem versendet und
-    protokolliert, nur ohne das Feld.
+    protokolliert — NUR ohne dieses eine Feld.
 
     Der Fehler wird an der ABLEITUNG selbst ausgeloest (`_messluecken_felder`),
     nicht an `_radar_e1_fields` als Ganzem — sonst pruefte der Test die
-    bestehende Absicherung der fuenf E-1-Groessen aus #2050 S6 statt der neuen
+    bestehende Absicherung der E-1-Groessen aus #2050 S6 statt der neuen
     Ableitung.
 
-    Bewusst NICHT mitgeprueft: ob die uebrigen E-1-Groessen den Fehlschlag
-    ueberleben. Die Spec sagt an einer Stelle "nur ohne `measurement_gaps`"
-    (das verlangt einen eigenen Auffang) und an anderer "innerhalb des
-    bestehenden `try`-Blocks" (dann fielen alle fuenf mit weg). AC-9 im
-    Wortlaut fordert nur, dass Alarm und Eintrag entstehen — genau das steht
-    hier.
+    Kern der Zusicherung ist die zweite Haelfte: die BESTEHENDEN E-1-Groessen
+    muessen den Fehlschlag ueberleben. Liegt die neue Ableitung im gemeinsamen
+    `try` von `_radar_e1_fields()`, gibt die Funktion `{}` zurueck und reisst
+    alle fuenf mit — ein Fehler in der nachrangigen Luecken-Buchfuehrung
+    loeschte dann Messpunkt, Ereigniszeit und Quelle aus dem Eintrag. Das waere
+    eine Regression gegen #2050 S6, also schlechter als der Stand vor dieser
+    Scheibe. Geprueft wird deshalb namentlich und am WERT (gegen einen
+    Referenzlauf mit identischem Aufbau), nicht als Sammelaussage: eine reine
+    Praesenz-Pruefung fiele auf einen Eintrag herein, der die Groessen zwar
+    fuehrt, aber mit anderen Zahlen.
+
+    `reference_at` ist die sechste E-1-Groesse und fehlt in DIESEM Aufbau
+    zurecht (kein Briefing-Schnappschuss -> `None` -> Absenz, `_apply_e1_fields`
+    schreibt sie dann gar nicht). Sie steht deshalb nicht in der Liste; die
+    Testvoraussetzung unten haelt fest, welche Groessen der Referenzlauf
+    wirklich fuehrt, damit die Pruefung nicht still leerlaeuft.
     """
     from services import trip_alert as trip_alert_mod
+
+    # Referenzlauf ZUERST, mit identischem Aufbau und noch UNBERUEHRTER
+    # Ableitung: er liefert die Sollwerte der bestehenden E-1-Groessen. Ein
+    # Literal waere hier wertlos — die Werte haengen an Geometrie und Uhr.
+    referenz = _versand_eintrag(
+        _lauf(_LueckenRadar(luecken={2: {"data_unavailable": True}}), tag="ac9-ref")
+    )
+    fehlend = [n for n in _E1_GROESSEN if n not in referenz]
+    assert not fehlend, (
+        f"Testvoraussetzung: der Referenzlauf muss alle gepruefen "
+        f"E-1-Groessen fuehren, es fehlen {fehlend} — sonst prueft der "
+        f"Vergleich unten nichts. Eintrag: {referenz!r}"
+    )
 
     def _explodiert(*args, **kwargs):
         raise ValueError("absichtlich unerwartete Datenform")
@@ -535,6 +570,18 @@ def test_scheiternde_luecken_ableitung_kostet_den_alarm_nicht(monkeypatch):
         f"AC-9: die gescheiterte Ableitung darf kein halbes/erfundenes Feld "
         f"hinterlassen, Eintrag: {eintrag!r}"
     )
+    for name in _E1_GROESSEN:
+        assert name in eintrag, (
+            f"AC-9: die gescheiterte Luecken-Ableitung darf die bestehende "
+            f"E-1-Groesse `{name}` nicht mitreissen (#2050 S6) — sie fehlt im "
+            f"Eintrag. Ein gemeinsamer `try`-Block mit `_radar_e1_fields()` "
+            f"tut genau das. Eintrag: {eintrag!r}"
+        )
+        assert eintrag[name] == referenz[name], (
+            f"AC-9: `{name}` muss den Fehlschlag UNVERAENDERT ueberstehen — "
+            f"erwartet {referenz[name]!r} (Referenzlauf mit identischem "
+            f"Aufbau), war {eintrag[name]!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
