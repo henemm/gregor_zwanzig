@@ -488,8 +488,32 @@ Tageszähler vorbelegen), nicht über „auf eine echte Warnung warten".
   eigenständige Prüfketten fortzuführen. Kein neues Architekturprinzip, nur konsequente
   Anwendung des bestehenden auf den letzten noch abweichenden Pfad.
 
+## Abgelöste Messgrößen
+
+**Nachtrag 2026-08-23 (Issue #2050 S3c,
+`docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md`):** S3c hat den harten
+Abbruch am Sperrzeit-Gate des Trip-Änderungsalarms entfernt — der Lauf merkt sich die offene
+Sperrzeit und entscheidet **nach** dem Wetterabruf, weil die Schwere der Lage, gegen die sich
+die Sperrzeit messen muss, vorher strukturell nicht existiert. Damit trägt der Stellvertreter
+„0 Wetterabrufe = gesperrt" für die **Sperrzeit** nicht mehr (für Vorlauf-Sperre und Ruhezeit
+trägt er unverändert). Zwei Tests dieser Spec wurden deshalb **umgeschrieben, nicht gelöscht** —
+sie bleiben an derselben Fläche und messen dieselbe Zusicherung an einer anderen Stelle:
+
+| Test | Sagt heute | Wird |
+|---|---|---|
+| `test_ac5_nachfolgender_aenderungsalarm_bleibt_wie_bisher_gesperrt` | „gesperrt" = `Wetterabrufe == 0` | „gesperrt" = **keine Zustellung** bei alarmfähiger Lage; Kontroll-Nutzer stellt dieselbe Lage zu |
+| `test_ac6_aenderungsalarm_drosselung_unveraendert` | frisch/keine/abgelaufene Sperrzeit, alle drei an der Abrufzahl | dieselben drei Fälle an der Zustellung, mit **identischer** Lage für alle drei; die Durchlass-Fälle sind zugleich Positivkontrolle |
+
+Die **Zusicherung** von AC-5 (zweite Hälfte) und AC-6 ist unverändert: bei aktiver Sperrzeit und
+ohne echte Verschärfung geht kein Änderungsalarm raus. Gegenprobe belegt (2026-08-23): nagelt man
+`_is_throttled_with_cooldown` auf `False`, werden beide Tests rot — der Regressionswächter
+gegen ein „aufräumendes" Entfernen der Drosselung behält seine Zähne. Messweg:
+`tests/helpers/briefing_imminent_fixtures.py::trip_change_alert_lauf()`.
+
 ## Changelog
 
+- 2026-08-23: Nachtrag „Abgelöste Messgrößen" — Messgröße von AC-5 (zweite Hälfte) und AC-6 durch
+  #2050 S3c von der Wetterabruf-Naht auf die Zustellung umgestellt; Zusicherungen unverändert.
 - 2026-08-16: Initiale Spec. Vier Entscheidungen E1–E4 nach PO-Vorgabe vom 2026-08-16
   (`docs/context/rework-1467-s4a-amtlich.md`) zugeschnitten, geteilter Baustein von
   Anfang an mit beiden amtlichen Pfaden verdrahtet. Test-Budget vom PO auf 1000 Zeilen

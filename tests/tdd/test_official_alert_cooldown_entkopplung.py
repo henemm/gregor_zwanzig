@@ -32,8 +32,9 @@ for _p in (str(ROOT), str(ROOT / "src")):
         sys.path.insert(0, _p)
 
 from tests.helpers.briefing_imminent_fixtures import (  # noqa: E402
-    TRIP_ZONE, clean_uid, fresh_uid, protokoll_eintraege, ruhezeit_woanders,
-    stunde_versetzt, trip_change_alert_run, write_trip, write_user_tier,
+    TRIP_ZONE, alarmfaehige_lage, clean_uid, fresh_uid, protokoll_eintraege,
+    ruhezeit_woanders, stunde_versetzt, trip_change_alert_lauf, write_trip,
+    write_user_tier,
 )
 from tests.helpers.nowcast_gate_fixtures import (  # noqa: E402
     read_daily_counter, read_throttle_state, record_throttle,
@@ -212,9 +213,20 @@ def test_ac5_nachfolgender_aenderungsalarm_bleibt_wie_bisher_gesperrt(nutzer):
     bleibt die harmlose Richtung zu — ein Aenderungsalarm NACH dem amtlichen
     Alarm ist innerhalb des Cooldowns weiterhin gesperrt.
 
-    Gemessen an der Wetterabruf-Naht (``_fetch_fresh_weather``): 0 Abrufe heisst
-    „vor dem Abruf gesperrt". Der Kontroll-Nutzer beweist, dass der Zaehler
-    hochgehen kann — ohne ihn misst „0" moeglicherweise eine tote Naht.
+    MESSGROESSE ABGELOEST durch Issue #2050 S3c (2026-08-23), SPEC
+    ``docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md``:
+    Bis dahin galt hier der Stellvertreter „0 Wetterabrufe = vor dem Abruf
+    gesperrt". Seit S3c entscheidet die Sperrzeit erst NACH dem Abruf — die
+    Schwere der Lage, gegen die sie sich messen muss, entsteht erst dort. Ein
+    gesperrter Lauf zaehlt seither einen Abruf, der Stellvertreter misst nichts
+    mehr.
+
+    Die ZUSICHERUNG ist unveraendert und wird jetzt direkt gemessen: bei
+    laufender Sperrzeit und ohne Vergleichsbasis (der amtliche Zweig bucht
+    ohne Dringlichkeit, ``trip_alert.py:2480``) geht KEIN Aenderungsalarm
+    raus. Der Lauf traegt dafuer eine alarmfaehige Lage, sonst bewiese seine
+    Stille nichts. Der Kontroll-Nutzer stellt dieselbe Lage tatsaechlich zu —
+    ohne ihn maesse „keine Zustellung" womoeglich eine tote Naht.
     """
     uid = nutzer("ac5-folge")
     _trip_schreiben(uid)
@@ -227,18 +239,21 @@ def test_ac5_nachfolgender_aenderungsalarm_bleibt_wie_bisher_gesperrt(nutzer):
         f"Voraussetzung: die amtliche Warnung muss zugestellt werden: "
         f"gesendet={gesendet}, Mails={len(mails)}")
 
-    abrufe_gesperrt = trip_change_alert_run(uid, TRIP)
+    cached, fresh = alarmfaehige_lage()
+    _, zustellungen_gesperrt = trip_change_alert_lauf(
+        uid, TRIP, cached=cached, fresh=fresh)
 
     kontrolle = nutzer("ac5-kontrolle")
     _trip_schreiben(kontrolle)
-    abrufe_frei = trip_change_alert_run(kontrolle, TRIP)
+    _, zustellungen_frei = trip_change_alert_lauf(
+        kontrolle, TRIP, cached=cached, fresh=fresh)
 
-    assert abrufe_frei >= 1, (
-        f"Kontroll-Lauf: ohne Sperrzeit MUSS der Aenderungsalarm bis zum "
-        f"Wetterabruf kommen ({abrufe_frei} Abrufe)")
-    assert abrufe_gesperrt == 0, (
+    assert zustellungen_frei, (
+        f"Kontroll-Lauf: ohne Sperrzeit MUSS dieselbe Lage einen "
+        f"Aenderungsalarm zustellen ({zustellungen_frei!r})")
+    assert zustellungen_gesperrt == [], (
         f"Der amtliche Alarm muss den nachfolgenden Aenderungsalarm wie bisher "
-        f"sperren, es waren {abrufe_gesperrt} Wetterabrufe")
+        f"sperren, zugestellt wurde aber: {zustellungen_gesperrt!r}")
 
 
 # ══ AC-6: der Aenderungsalarm-Pfad selbst bleibt vollstaendig unangetastet ══
@@ -250,6 +265,15 @@ def test_ac6_aenderungsalarm_drosselung_unveraendert(nutzer):
     keine und abgelaufene lassen durch. Wuerde jemand
     ``_is_throttled_with_cooldown`` „aufraeumend" mit entfernen, verloere der
     Aenderungsalarm still seine Drosselung.
+
+    MESSGROESSE ABGELOEST durch Issue #2050 S3c (2026-08-23), SPEC
+    ``docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md``:
+    Gemessen wurde bis dahin die Wetterabruf-Naht (0 Abrufe = gesperrt). Seit
+    S3c laeuft auch ein gesperrter Lauf bis zum Abruf durch und entscheidet
+    danach — der Zaehler trennt die drei Faelle nicht mehr. Gemessen wird
+    jetzt die Zusicherung selbst: stellt der Lauf zu oder nicht. Alle drei
+    Nutzer bekommen dieselbe alarmfaehige Lage; die beiden Durchlass-Faelle
+    sind zugleich die Positivkontrolle des Sperr-Falls.
     """
     gesperrt = nutzer("ac6-gesperrt")
     _trip_schreiben(gesperrt)
@@ -262,12 +286,19 @@ def test_ac6_aenderungsalarm_drosselung_unveraendert(nutzer):
     _trip_schreiben(abgelaufen)
     _aenderungsalarm_zugestellt_um(abgelaufen, COOLDOWN_MINUTEN + 30)
 
-    assert trip_change_alert_run(gesperrt, TRIP) == 0, (
-        "Frische Sperrzeit muss den Aenderungsalarm vor dem Wetterabruf stoppen")
-    assert trip_change_alert_run(frei, TRIP) >= 1, (
-        "Ohne Sperrzeit muss der Aenderungsalarm unveraendert durchlaufen")
-    assert trip_change_alert_run(abgelaufen, TRIP) >= 1, (
-        f"Eine {COOLDOWN_MINUTEN + 30} Minuten alte Sperrzeit ist abgelaufen")
+    cached, fresh = alarmfaehige_lage()
+
+    def _zustellungen(uid: str) -> list:
+        return trip_change_alert_lauf(uid, TRIP, cached=cached, fresh=fresh)[1]
+
+    assert _zustellungen(frei), (
+        "Ohne Sperrzeit muss der Aenderungsalarm unveraendert zustellen")
+    assert _zustellungen(abgelaufen), (
+        f"Eine {COOLDOWN_MINUTEN + 30} Minuten alte Sperrzeit ist abgelaufen — "
+        f"derselbe Lauf muss zustellen")
+    assert _zustellungen(gesperrt) == [], (
+        "Frische Sperrzeit muss den Aenderungsalarm stoppen — bei GENAU "
+        "derselben Lage, die die beiden anderen Nutzer zustellen")
 
 
 # ══════ AC-10: ein pausierter Trip alarmiert weiterhin (Absicht #995) ══════

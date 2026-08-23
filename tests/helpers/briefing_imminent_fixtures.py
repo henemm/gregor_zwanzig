@@ -15,6 +15,17 @@ allen drei Einhaengepunkten VOR dem Wetter-/Warnungs-Abruf. „0 Abrufe" heisst
 damit „gesperrt", „>=1 Abruf" heisst „durchgelassen" — gemessen an der Stelle,
 an der die Sperre wirken SOLL, nicht an der, an der ihr Code steht.
 
+🔴 **Geltungsbereich dieses Stellvertreters seit Issue #2050 S3c
+(2026-08-23):** Er gilt weiterhin fuer die VORLAUF-Sperre (#1594), die
+Ruhezeit und alle anderen Stufen, die vor dem Abruf abbrechen. Er gilt NICHT
+mehr fuer die SPERRZEIT im Trip-Aenderungsalarm: die entscheidet seit S3c erst
+NACH dem Abruf, weil die Schwere der Lage vorher strukturell nicht existiert
+(``trip_alert.py`` „1b."). Ein gesperrter Lauf zaehlt dort jetzt einen Abruf.
+Wer die Sperrzeit messen will, nimmt ``trip_change_alert_lauf()`` und prueft
+die ZUSTELLUNG — die Zusicherung selbst ist unveraendert („bei aktiver
+Sperrzeit und ohne echte Verschaerfung geht kein Aenderungsalarm raus").
+SPEC: ``docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md``.
+
 **Keine eingefrorene Systemuhr.** Alle drei Dienstpfade holen ihren Zeitpunkt
 selbst ueber ``datetime.now(timezone.utc)``. Statt die Uhr anzuhalten, legen
 diese Helfer die BRIEFING-ZEITEN relativ zur echten Uhr — ``stunde_versetzt(1)``
@@ -298,26 +309,69 @@ def write_presets(user_id: str, presets: list[dict]) -> Path:
 # ══════════════════ Dienstpfade mit ersetzter Netz-Naht ═════════════════════
 
 
-def trip_change_alert_run(user_id: str, trip_id: str) -> int:
-    """Ein echter ``check_and_send_alerts()``-Lauf des Trip-Aenderungsalarms.
+def alarmfaehige_lage(
+    von_mm: float = 2.0, nach_mm: float = 45.0,
+) -> tuple[list, list]:
+    """``(cached, fresh)`` eines Niederschlags-Sprungs, der die echte
+    ``DeviationAlertEngine`` ausloest (Issue #2050 S3c).
 
-    Returns: Anzahl der Wetterabrufe (0 = vor dem Abruf gesperrt).
+    Die beiden mm-Werte sind EINGABEN, keine abgeleiteten Groessen — dass aus
+    ihnen wirklich ein Alarm entsteht, behauptet dieser Helfer nicht, das
+    beweist in jedem Test der Kontroll-Lauf ohne Sperre. Segmentform geliehen
+    von ``alert_log_fixtures.weather()`` statt nachgebaut: zwei Fassungen
+    derselben Fixture liefen in der Vergangenheit auseinander.
+    """
+    from tests.helpers.alert_log_fixtures import weather
+
+    return ([weather(precip_sum_mm=von_mm)], [weather(precip_sum_mm=nach_mm)])
+
+
+def trip_change_alert_lauf(
+    user_id: str, trip_id: str, *,
+    cached: Optional[list] = None, fresh: Optional[list] = None,
+) -> tuple[int, list]:
+    """Ein echter ``check_and_send_alerts()``-Lauf des Trip-Aenderungsalarms,
+    wahlweise MIT einem Wetterstand an der Abruf-Naht (Issue #2050 S3c).
+
+    Returns: ``(Wetterabrufe, Zustellungen)``. Ohne ``fresh`` liefert die Naht
+    wie bisher nichts zurueck — dann ist die Zustell-Liste strukturell leer und
+    nur die Abrufzahl aussagekraeftig (Stufen VOR dem Abruf). Mit ``cached``
+    und ``fresh`` laeuft die Kette bis zur Zustellung durch, und die
+    Zustell-Liste misst die eigentliche Zusicherung: geht ein Alarm raus?
     """
     from services.trip_alert import TripAlertService
+
+    zugestellt: list = []
 
     class _Zaehlend(TripAlertService):
         fetch_aufrufe = 0
 
         def _fetch_fresh_weather(self, cached_weather):
             type(self).fetch_aufrufe += 1
-            return []
+            return list(fresh or [])
 
     _Zaehlend.fetch_aufrufe = 0
     dienst = _Zaehlend(
         settings=settings_email_only(), throttle_hours=2, user_id=user_id,
+        mail_sink=lambda *a, **kw: zugestellt.append((a, kw)),
     )
-    dienst.check_and_send_alerts(load_trip_obj(user_id, trip_id), cached_weather=[])
-    return _Zaehlend.fetch_aufrufe
+    dienst.check_and_send_alerts(
+        load_trip_obj(user_id, trip_id), cached_weather=list(cached or []),
+    )
+    return _Zaehlend.fetch_aufrufe, zugestellt
+
+
+def trip_change_alert_run(user_id: str, trip_id: str) -> int:
+    """Ein echter ``check_and_send_alerts()``-Lauf des Trip-Aenderungsalarms.
+
+    Returns: Anzahl der Wetterabrufe (0 = vor dem Abruf gesperrt).
+
+    🔴 Der Stellvertreter „0 Abrufe = gesperrt" traegt seit Issue #2050 S3c
+    NICHT mehr fuer die Sperrzeit (s. Moduldoku) — dafuer
+    ``trip_change_alert_lauf()`` mit Wetterstand nehmen und die Zustellung
+    messen.
+    """
+    return trip_change_alert_lauf(user_id, trip_id)[0]
 
 
 def trip_official_alert_run(user_id: str, trip_id: str) -> tuple[bool, list]:
