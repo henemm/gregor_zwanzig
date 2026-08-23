@@ -2,7 +2,11 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
-**Last Updated:** 2026-08-22 (Issue #2011 — `_thunder_risk_level()` ruft für String-/Enum-Rohwerte
+**Last Updated:** 2026-08-23 (Issue #2098 — ACC-Spalte erscheint jetzt auch im konfigurierbaren
+Ausblick-Zweig, fest hinter den gewählten Metriken, mit Klartext-Wort statt nur Farbpunkt;
+Sonnenstunden werden beim Etappen-Aggregat mit der Regel `sum` zusammengefasst statt `–` zu zeigen)
+
+**Vorher:** 2026-08-22 (Issue #2011 — `_thunder_risk_level()` ruft für String-/Enum-Rohwerte
 jetzt tatsächlich `thunder_ampel_band()` auf statt einer eigenen Stufen-Wort-Kette; nur der
 numerische Legacy-Fallback bleibt hartcodiert, s.u.)
 
@@ -44,7 +48,7 @@ Siehe CLAUDE.md für Scope-Details und Pflicht-Gate-Dokumentation.
 | 3 | **Stirnlampe** | ENTFÄLLT | (PO-Entscheidung aus Issue #790 — nicht mehr in neuem Cloud-Design) |
 | 4 | **Segmente** (Stundentabellen) | LIVE | Pro Etappensegment: Segment-Header + zwei-stufige Desktop-Tabelle (Gruppen-Row TEMP/WIND/NIEDERSCHLAG + Einheiten-Row) + Mobile-Variante (`EmailHourList` zwei-Zeilen-Format) |
 | 5 | **Wetter am Ziel** (abgesetzte Sektion) | LIVE | Eigene abgesetzte Sektion mit accent-Eyebrow, Zielname, Ankunftszeiten-Range, identische Tabelle wie Segmente |
-| 6 | **Ausblick** (Folge-Etappen) | LIVE | Nächste 4 Tage als kompakte Zeilen-Tabelle; jede Etappe mit Wochentag + Code + Name + Temp-Range + Risk-Dot (Farbindikator); Gewitter-Badge falls vorhanden |
+| 6 | **Ausblick** (Folge-Etappen) | LIVE | Nächste 4 Tage als kompakte Zeilen-Tabelle; Trip zeigt Wochentag + Code + Name+Note + Temp-Range + (konfigurierbare Metriken) + ACC-Spalte + Risk-Dot; Ortsvergleich ohne ACC-Spalte; Gewitter-Badge falls vorhanden |
 | 7 | **Antwort-Kommandos** | LIVE | Dedizierte Sektion mit 3-spaltigem Grid der Befehle (HEUTE, MORGEN, JETZT/NOW, GEWITTER, PAUSE 2d, SKIP, STOP/WEITER, STATUS, CONFIG, HELP) + Hinweistext |
 | 8 | **Footer** (zweigeteilt) | LIVE | Obere Zeile: Brand + Briefing-Typ; untere Zeile: Links (Trip-Übersicht, Zeitplan, Abmelden) |
 
@@ -88,13 +92,31 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 
 #### Ausblick (Sektion 6)
 - **Struktur:** `<table>` mit einer `<tr>` pro Folge-Etappe
-- **Desktop:** 5 Spalten – Wochentag · Code · Name+Note+ggf. Gewitter-Badge · Temp-Range · Risk-Dot
-- **Mobile:** 3 Spalten – Wochentag · (Name+Code+Note gestapelt) · (Temp+Risk-Dot übereinander)
+- **Zwei Render-Zweige**, unterschieden am Parameter `metrics` von `render_outlook_table()` /
+  `render_outlook_plain()` — **nicht** an der Mail-Art:
+  - **Altform-Zweig** (`metrics=None`): die sieben festen Spalten `N · D · R · PR · Wind · Böen ·
+    Gew`, ACC-Spalte je nach `show_acc`. Trip und Ortsvergleich fuhren früher hierüber; heute nur
+    noch Altbestand ohne aufgelöste Metrik-Auswahl.
+  - **Konfigurierbarer Zweig** (`metrics` gesetzt): die gewählten Metrik-Spalten in
+    Auswahl-Reihenfolge, dahinter die ACC-Spalte je nach `show_acc`. **Trip** fährt seit #1848 A3
+    hierüber, der **Ortsvergleich** seit #1361/#1368.
+- **ACC je Mail-Art:** Trip `show_acc=True` (Spalte erscheint), Ortsvergleich `show_acc=False`
+  (Kopfzelle UND Datenzellen entfallen vollständig). Gilt in **beiden** Zweigen gleich.
 - **Risk-Dot:** `border-radius:50%`, 10×10px, Farbe aus `_AMPEL_DOT_COLORS` (4-stufig seit #1927):
   - green (ok): `#15803d` + `rgba(21,128,61,0.18)`
   - yellow (watch-mild): `#d69500` + `rgba(214,149,0,0.20)`
   - orange (watch-mittel): `#d4530a` + `rgba(212,83,10,0.20)`
   - red (risk): `#a8104a` + `rgba(168,16,74,0.22)`
+- **ACC-Spalte** (Prognose-Genauigkeit; im konfigurierbaren Zweig seit Issue #2098): vier Stufen
+  aus der kanonischen Quelle `_ACC_STUFEN` — **eigene Farbwerte, nicht `_AMPEL_DOT_COLORS`**:
+  - HTML: Farbpunkt — `#2f8a3e` (≥80) · `#e3b008` (≥60) · `#e07b1a` (≥40) · `#c52a22` (<40)
+  - Klartext: deutsches Wort — **hoch** (≥80) / **mittel** (≥60) / **niedrig** (≥40) /
+    **sehr niedrig** (<40)
+  - Fehlender oder nicht lesbarer Wert: `–` in beiden Fassungen
+  - **Keine wählbare Metrik:** `confidence` trägt `selectable=False` (ADR-0005/#710) und kann in
+    der Metrik-Auswahl nicht erscheinen. Die Spalte wird am `outlook_columns()`/`cells`-Mechanismus
+    vorbei fest hinter den gewählten Metriken angehängt.
+- **Sonnenstunden im Ausblick (seit Issue #2098):** Werden beim Aggregieren mehrerer Segmente zu einer Etappe mit der Regel `sum` zusammengefasst (nicht `–`; `sunny_hours` trägt Katalog-Definition `summary_fields={"sum": "sunny_hours"}`)
 - **Gewitter-Badge:** `⚡ Gewitter {zeitangabe}` in `#a8104a` mit light-red Hintergrund und Border
 
 #### Antwort-Kommandos (Sektion 7 – NEU)
