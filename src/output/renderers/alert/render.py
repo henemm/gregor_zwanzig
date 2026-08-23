@@ -464,7 +464,7 @@ def _render_email_onset_shift_only(msg: AlertMessage) -> tuple[str, str]:
 
 
 def _render_sms_onset_shift_only(msg: AlertMessage, limit: int) -> str:
-    head = f"{_ascii_alert_location(_onset_shift_location(msg))}: "
+    head = f"{_ascii_alert_location(_onset_shift_location(msg))[:24]}: "
     body = head + " ".join(
         _sms_onset_shift_token(oe) for oe in msg.onset_shift_events
     )
@@ -955,11 +955,11 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     else:
         token = f"R{menge}@{zeit}"
     if getattr(e, "location_label", None):
-        head = _ascii_alert_location(e.location_label)
+        head = _ascii_alert_location(e.location_label)[:24]
     elif msg.source == COMPARE_RADAR_SOURCE:
-        head = _ascii_alert_location(msg.trip_short)
+        head = _ascii_alert_location(msg.trip_short)[:24]
     else:
-        head = _ascii_alert_location(_location_of((e,), None))
+        head = _ascii_alert_location(_location_of((e,), None))[:24]
     body = f"{head}: {token}"
     return body if len(body) <= limit else body[:limit]
 
