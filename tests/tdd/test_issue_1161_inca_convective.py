@@ -207,11 +207,15 @@ def test_ac3_inca_sidecar_failure_sets_convective_checked_false(monkeypatch):
 def test_ac4_inca_live_get_nowcast_has_convective_checked_field():
     """AC-4: echter Aufruf ohne DI gegen die produktive Source-Chain (Wien) liefert
     ein NowcastResult mit gesetztem `convective_checked`-Feld (bool)."""
+    from providers.base import ProviderRequestError
     from providers.geosphere import GeoSphereProvider
     from services.radar_service import RadarNowcastService
 
-    if GeoSphereProvider().fetch_nowcast(_WIEN_LAT, _WIEN_LON) is None:
-        pytest.skip("GeoSphere INCA API nicht erreichbar (fetch_nowcast -> None)")
+    try:
+        if GeoSphereProvider().fetch_nowcast(_WIEN_LAT, _WIEN_LON) is None:
+            pytest.skip("GeoSphere INCA API nicht erreichbar (fetch_nowcast -> None)")
+    except ProviderRequestError as e:
+        pytest.skip(f"GeoSphere INCA API nicht erreichbar (Status {e.status_code})")
 
     result = RadarNowcastService().get_nowcast(_WIEN_LAT, _WIEN_LON)
 
