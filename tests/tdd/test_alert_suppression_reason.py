@@ -434,38 +434,51 @@ def _aktives_segment_id(uid: str, trip_id: str):
 
 
 def _doppel_alarm_gedaechtnis_setzen(uid: str, trip_id: str) -> None:
-    """Melde-Gedaechtnis so hinterlassen, wie ein soeben zugestellter
-    Aenderungsalarm es hinterlaesst (``trip_alert.py:511-517``) — ueber den
-    produktiven Speicher ``AlertStateService.save()``."""
-    from services.alert_state import AlertStateService
+    """Ereignis-Identitaets-Registereintrag ueber den PRODUKTIVEN Schreibweg
+    (``record_event_identity(..., source="deviation")``) — analog einem
+    soeben zugestellten Abweichungs-Alarm derselben Zelle.
 
-    AlertStateService(uid).save(trip_id, {
-        f"precip:{_aktives_segment_id(uid, trip_id)}": {
-            "last_reported_value": 1.0,
-            "reported_at": _jetzt().isoformat(),
-        },
-    })
+    Issue #2050 S4c (Entscheidung 2): der fruehere Doppel-Alarm-Guard (#818,
+    Melde-Gedaechtnis-Schluessel ``precip:<segment>``) ist ABGELOEST, nicht
+    repariert — die Paarung "Δ meldete, Radar zieht nach" laeuft seither
+    ausschliesslich ueber die quellenuebergreifende Ereignis-Identitaet. Die
+    Zusicherung dieses Tests (Grund wird protokolliert und deutsch
+    beschriftet) ist davon unberuehrt — nur das VEHIKEL hat sich geaendert.
+    ``severity="HIGH"`` haelt den Registereintrag an der Rangspitze, damit
+    die Radar-Lage ihn nicht per V2-Eskalation durchbricht."""
+    from services.alert_gate import HAZARD_CLASS_WET, record_event_identity
+
+    jetzt = _jetzt()
+    record_event_identity(
+        user_id=uid, entity_id=trip_id, hazard_class=HAZARD_CLASS_WET,
+        segment_ids=[str(_aktives_segment_id(uid, trip_id))], severity="HIGH",
+        source="deviation",
+        window_start=jetzt - timedelta(minutes=30),
+        window_end=jetzt + timedelta(hours=3),
+        now=jetzt - timedelta(minutes=5),
+    )
 
 
 def test_ac4_doppel_alarm_guard_wird_protokolliert_und_deutsch_beschriftet():
-    """AC-4: Haelt der Doppel-Alarm-Guard (#818) eine juengere Meldung
-    desselben Segments zurueck, entsteht ein Eintrag mit
-    ``gate_reason == alert_log.REASON_DOUBLE_ALERT_GUARD`` — und die
+    """AC-4: Haelt die quellenuebergreifende Ereignis-Identitaet (Issue #2050
+    S4c) eine juengere Radar-Meldung desselben Segments zurueck, entsteht ein
+    Eintrag mit ``gate_reason == alert_log.REASON_EVENT_DUPLICATE`` — und die
     gerenderte Briefing-Mail zeigt dafuer eine DEUTSCHE Beschriftung im
     Block "ZURUECKGEHALTEN", keinen rohen Code.
 
-    ROT heute doppelt: ``trip_alert.py:1632-1649`` bricht still ab, und
-    ``alert_log.REASON_DOUBLE_ALERT_GUARD`` existiert gar nicht
-    (``AttributeError``)."""
+    Issue #2050 S4c: der fruehere Doppel-Alarm-Guard (#818), der diese
+    Paarung bis dahin mit dem Grund ``double_alert_guard`` abfing, ist
+    ABGELOEST, nicht repariert — der Grund heisst seither
+    ``event_duplicate``. Die Zusicherung selbst (Grund wird protokolliert und
+    deutsch beschriftet) bleibt WORTGLEICH."""
     from services import alert_log
     from output.renderers.email.undelivered_hint import (
         HEADING_FAILED, HEADING_WITHHELD, render_undelivered_plain,
     )
 
-    assert alert_log.REASON_DOUBLE_ALERT_GUARD == "double_alert_guard", (
-        "Der Doppel-Alarm-Guard braucht einen EIGENEN Grund: er ist kein "
-        "Cooldown auf ThrottleStore-Ebene, sondern ein kanaluebergreifender "
-        "Wiederholungsschutz auf AlertStateService-Ebene"
+    assert alert_log.REASON_EVENT_DUPLICATE == "event_duplicate", (
+        "Die quellenuebergreifende Ereignis-Identitaet braucht einen EIGENEN "
+        "Grund fuer die Entdopplung ueber Radar/amtlich/Abweichung hinweg."
     )
 
     kontrolle, gesperrt = fresh_uid("s3b-ac4-ok"), fresh_uid("s3b-ac4-guard")
@@ -486,7 +499,8 @@ def test_ac4_doppel_alarm_guard_wird_protokolliert_und_deutsch_beschriftet():
         mails_ok: list = []
         reset_radar_cache()
         assert _radarlauf(kontrolle, mails_ok) == 1, (
-            "Positivkontrolle: ohne Guard-Eintrag MUSS der Radar-Alarm rausgehen"
+            "Positivkontrolle: ohne Registereintrag MUSS der Radar-Alarm "
+            "rausgehen"
         )
         assert len(mails_ok) == 1
         _kein_vorfall(kontrolle, "trip-2050s3b-ac4-ok", "trip", seit)
@@ -495,19 +509,19 @@ def test_ac4_doppel_alarm_guard_wird_protokolliert_und_deutsch_beschriftet():
         mails_still: list = []
         reset_radar_cache()
         assert _radarlauf(gesperrt, mails_still) == 0, (
-            "Vorbedingung: der Doppel-Alarm-Guard muss den Radar-Alarm halten"
+            "Vorbedingung: die Ereignis-Identitaet muss den Radar-Alarm halten"
         )
         assert mails_still == []
         vorfall = _genau_ein_grund(
             gesperrt, "trip-2050s3b-ac4-guard", "trip", seit,
-            gate_reason=alert_log.REASON_DOUBLE_ALERT_GUARD,
+            gate_reason=alert_log.REASON_EVENT_DUPLICATE,
             ausloeser=alert_log.REASON_NOWCAST,
         )
 
         text = render_undelivered_plain([vorfall], tz=anchor_tz(
             load_trip_obj(gesperrt, "trip-2050s3b-ac4-guard"), _jetzt(),
         ))
-        assert alert_log.REASON_DOUBLE_ALERT_GUARD not in text, (
+        assert alert_log.REASON_EVENT_DUPLICATE not in text, (
             "Im Briefing darf der rohe Code nicht erscheinen — der Grund "
             f"braucht eine deutsche Beschriftung:\n{text}"
         )
@@ -517,7 +531,7 @@ def test_ac4_doppel_alarm_guard_wird_protokolliert_und_deutsch_beschriftet():
             f"Fehler-Block:\n{text}"
         )
         assert HEADING_FAILED not in text, (
-            "Der Doppel-Alarm-Guard ist KEIN Zustellfehler — ein unbekannter "
+            "Die Ereignis-Identitaet ist KEIN Zustellfehler — ein unbekannter "
             "Grund faellt in `_REASON_BLOCK` still auf 'failed' zurueck:\n"
             f"{text}"
         )
