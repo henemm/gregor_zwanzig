@@ -2009,3 +2009,507 @@ def test_ac14_2065_adr_0021_und_s3_spec_tragen_einen_datierten_nachtrag():
     assert re.search(r"\d{4}-\d{2}-\d{2}", spec_absatz), (
         "Der #2065-Nachtrag in rework_1467_s3_nowcast.md muss DATIERT sein."
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Issue #2050 Scheibe S4c — der ABWEICHUNGS-Zweig an der Ereignis-Identitaet
+# SPEC: docs/specs/modules/feat_2050_s4c_ein_ereignis_ein_alarm.md
+# (AC-2, AC-6, AC-7, AC-8, AC-11, AC-12, AC-17)
+#
+# Gemessener Ist-Stand (2026-08-23): `resolve_hazard_class()` kennt genau zwei
+# Eingaenge (`is_convective`, `hazard`) — eine Metrik-Liste nimmt sie nicht
+# entgegen (TypeError). `check_and_send_alerts()` ruft weder
+# `check_event_identity_gate()` noch `record_event_identity()`; nach einem
+# zugestellten Abweichungs-Alarm bleibt das Register leer (Sonde: `register`
+# unveraendert `{}`).
+#
+# Die Trip-Fixtures dieser Scheibe werden GELIEHEN statt nachgebaut
+# (`test_alarm_szenario_ein_ereignis_ein_alarm`): zwei Fassungen derselben
+# Messgrundlage liefen auseinander.
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _s4c():
+    """Die geteilten Fixtures der Scheibe (Import in der Funktion, damit die
+    Bestandsdatei ihre Importliste unveraendert behaelt)."""
+    from tests.tdd import test_alarm_szenario_ein_ereignis_ein_alarm as s4c
+
+    return s4c
+
+
+def _zaehl_spion(monkeypatch):
+    """Zaehlt Aufrufe von `check_event_identity_gate` IM PRUEFLING und
+    delegiert an die ECHTE Funktion — kein Mock, das Verhalten bleibt
+    unveraendert. Gepatcht wird das Modul-Attribut in `services.trip_alert`
+    (dort ist die Funktion gebunden, `trip_alert.py:23`)."""
+    import services.trip_alert as trip_alert_mod
+
+    echte = trip_alert_mod.check_event_identity_gate
+    aufrufe: list = []
+
+    def _spion(**kw):
+        aufrufe.append(kw)
+        return echte(**kw)
+
+    monkeypatch.setattr(trip_alert_mod, "check_event_identity_gate", _spion)
+    return aufrufe
+
+
+# ─────────────────────────────── AC-2 ────────────────────────────────────────
+
+
+@pytest.mark.timeout(120)
+def test_s4c_ac2_zugestellter_abweichungsalarm_registriert_genau_die_nassen_segmente(
+):
+    """AC-2. GIVEN ein Abweichungs-Alarm mit einer nassen (Segment 1) und einer
+    nicht-nassen Aenderung (Segment 2) wird zugestellt, WHEN das Register
+    danach gelesen wird, THEN steht dort GENAU EIN neuer Eintrag mit
+    `source == "deviation"`, dessen `segment_ids` nur das Segment der NASSEN
+    Aenderung traegt, dessen `severity` die Dringlichkeit dieses Laufs ist und
+    dessen Zeitintervall aus dem Segmentfenster der nassen Aenderung stammt.
+
+    Erwartete `severity` und Fenstergrenzen werden ABGELEITET (aus der echten
+    Engine bzw. den uebergebenen Segmenten), nie als Literal gesetzt — sonst
+    bliebe die Bildungsstelle unbewacht.
+
+    RED heute: das Register bleibt leer, der Δ-Zweig registriert nicht."""
+    s4c = _s4c()
+    _AT = s4c._AT
+    uid = s4c._uid("gate-ac2")
+    try:
+        trip = s4c._trip_delta("trip-s4c-ac2")
+        strecke = s4c._strecke(uid)
+        nass_start = s4c._SEG_START
+        nass_ende = s4c._SEG_END
+        trocken_start = nass_ende + timedelta(hours=4)
+        trocken_ende = trocken_start + timedelta(hours=4)
+        cached = [
+            s4c._wd(1, start=nass_start, end=nass_ende, precip_sum_mm=2.0),
+            s4c._wd(2, start=trocken_start, end=trocken_ende, gust_max_kmh=10.0),
+        ]
+        fresh = [
+            s4c._wd(1, start=nass_start, end=nass_ende, precip_sum_mm=18.0),
+            s4c._wd(2, start=trocken_start, end=trocken_ende, gust_max_kmh=90.0),
+        ]
+        erwartete_stufe = s4c._dringlichkeit(uid, trip, cached, fresh, _AT)
+
+        lauf = strecke.lauf(
+            at=_AT, zweig="deviation", trip=trip,
+            cached_weather=cached, fresh_weather=fresh,
+        )
+        assert lauf.triggered_count == 1, (
+            f"AC-2 Vorbedingung: der Lauf muss zustellen (war "
+            f"{lauf.triggered_count})."
+        )
+
+        eintraege = s4c._register(uid, trip.id)
+        assert len(eintraege) == 1, (
+            f"AC-2: genau EIN neuer Registereintrag erwartet, gefunden "
+            f"{len(eintraege)}: {eintraege!r}"
+        )
+        (eintrag,) = eintraege.values()
+        assert eintrag["source"] == "deviation", (
+            f"AC-2: der Eintrag muss die Quelle 'deviation' tragen: {eintrag!r}"
+        )
+        assert set(eintrag["segment_ids"]) == {"1"}, (
+            f"AC-2: nur das Segment der NASSEN Aenderung gehoert in den "
+            f"Eintrag (Segment 2 traegt nur eine Boee): {eintrag!r}"
+        )
+        assert eintrag["severity"] == erwartete_stufe, (
+            f"AC-2: severity muss die Dringlichkeit DIESES Laufs sein "
+            f"({erwartete_stufe!r}): {eintrag!r}"
+        )
+        assert eintrag["window_start"] is not None and eintrag["window_end"] is not None, (
+            f"AC-2: der Δ-Zweig muss ein Zeitintervall registrieren: {eintrag!r}"
+        )
+        assert datetime.fromisoformat(eintrag["window_start"]) == nass_start, (
+            f"AC-2: window_start muss der Beginn des NASSEN Segments sein "
+            f"({nass_start.isoformat()}): {eintrag!r}"
+        )
+        assert datetime.fromisoformat(eintrag["window_end"]) == nass_ende, (
+            f"AC-2: window_end muss das Ende des NASSEN Segments sein "
+            f"({nass_ende.isoformat()}) — nicht das des trockenen: {eintrag!r}"
+        )
+    finally:
+        s4c._clean_user(uid)
+
+
+# ─────────────────────────────── AC-6 ────────────────────────────────────────
+
+
+@pytest.mark.timeout(120)
+def test_s4c_ac6_rein_nicht_nasses_buendel_fragt_das_register_gar_nicht(monkeypatch):
+    """AC-6. GIVEN ein Abweichungs-Alarm enthaelt AUSSCHLIESSLICH nicht-nasse
+    Aenderungen, WHEN er geprueft wird, THEN wird die Ereignis-Identitaet fuer
+    diesen Lauf gar nicht gerufen und die Meldung geht durch.
+
+    Gezaehlt wird `check_event_identity_gate` — NICHT `AlertStateService.load`:
+    die Ladefunktion wird im selben Lauf ohnehin fuer das Melde-Gedaechtnis
+    gerufen und koennte den Befund nicht trennen.
+
+    Positivkontrolle: derselbe Aufbau mit einer NASSEN Aenderung ruft das Gate
+    genau einmal. Ohne sie bewiese der Zaehler `0` nichts (er ist heute in
+    beiden Faellen `0` — genau das ist der RED-Grund)."""
+    s4c = _s4c()
+    _AT = s4c._AT
+    uid, ctrl = s4c._uid("gate-ac6"), s4c._uid("gate-ac6-ctrl")
+    try:
+        aufrufe = _zaehl_spion(monkeypatch)
+
+        trip = s4c._trip_delta("trip-s4c-ac6")
+        cached = [s4c._wd(1, gust_max_kmh=10.0, temp_max_c=10.0)]
+        fresh = [s4c._wd(1, gust_max_kmh=90.0, temp_max_c=40.0)]
+        lauf = s4c._strecke(uid).lauf(
+            at=_AT, zweig="deviation", trip=trip,
+            cached_weather=cached, fresh_weather=fresh,
+        )
+        assert lauf.triggered_count == 1, (
+            f"AC-6: eine rein nicht-nasse Meldung muss durchgehen (war "
+            f"{lauf.triggered_count})."
+        )
+        assert len(aufrufe) == 0, (
+            f"AC-6: fuer ein Buendel ausserhalb des `wet`-Kanons darf die "
+            f"Ereignis-Identitaet gar nicht gerufen werden, gezaehlt: "
+            f"{len(aufrufe)} ({aufrufe!r})"
+        )
+
+        # Positivkontrolle: eine nasse Aenderung ruft das Gate genau einmal.
+        aufrufe.clear()
+        ktrip = s4c._trip_delta("trip-s4c-ac6")
+        kcached = [s4c._wd(1, precip_sum_mm=2.0)]
+        kfresh = [s4c._wd(1, precip_sum_mm=18.0)]
+        klauf = s4c._strecke(ctrl).lauf(
+            at=_AT, zweig="deviation", trip=ktrip,
+            cached_weather=kcached, fresh_weather=kfresh,
+        )
+        assert klauf.triggered_count == 1, (
+            f"AC-6 Positivkontrolle: der nasse Lauf muss zustellen (war "
+            f"{klauf.triggered_count})."
+        )
+        assert len(aufrufe) == 1, (
+            f"AC-6 Positivkontrolle: ein nasses Buendel MUSS die "
+            f"Ereignis-Identitaet genau einmal fragen, gezaehlt: "
+            f"{len(aufrufe)} — der Zaehler oben belegt sonst nichts."
+        )
+    finally:
+        s4c._clean_user(uid)
+        s4c._clean_user(ctrl)
+
+
+# ─────────────────────────────── AC-7 ────────────────────────────────────────
+
+
+@pytest.mark.parametrize("metrik", ["snow_depth_cm", "snow_new_sum_cm", "snowfall_limit_m"])
+def test_s4c_ac7_schnee_metriken_gehoeren_nicht_zum_wet_kanon(metrik):
+    """AC-7 (Baustein). Schnee ist physikalisch Niederschlag, steht aber nicht
+    im T2-Kanon — `resolve_hazard_class(metrics=[<schnee>])` liefert `None`.
+
+    Gegenprobe mit einem plausibel RICHTIGEN Wert (nicht mit `None`): die vier
+    Kanon-Metriken liefern `HAZARD_CLASS_WET`; eine Mischung aus nass und
+    Schnee liefert `None` (die Klasse gilt nur, wenn JEDE Metrik zum Kanon
+    gehoert).
+
+    RED heute: `resolve_hazard_class()` nimmt gar kein `metrics=` entgegen
+    (TypeError)."""
+    from services.alert_gate import HAZARD_CLASS_WET, resolve_hazard_class
+
+    assert resolve_hazard_class(metrics=[metrik]) is None, (
+        f"AC-7: {metrik!r} darf keine Gefahrenklasse ergeben."
+    )
+    assert resolve_hazard_class(metrics=["precip_sum_mm"]) == HAZARD_CLASS_WET, (
+        "AC-7 Gegenprobe: eine echte Kanon-Metrik MUSS `wet` ergeben — sonst "
+        "prueft der Test nur, dass die Funktion immer `None` sagt."
+    )
+    assert resolve_hazard_class(metrics=["precip_sum_mm", metrik]) is None, (
+        f"AC-7: schon EIN Anteil ausserhalb des Kanons ({metrik!r}) macht die "
+        f"Klasse `None` — gemischte Buendel werden nie entdoppelt."
+    )
+
+
+def test_s4c_ac7_leere_metrikliste_ergibt_keine_klasse():
+    """AC-7 (Randfall): eine LEERE Metrik-Liste ist kein `wet` — sonst
+    entstuende eine Klasse aus dem Nichts (`all([])` ist `True`)."""
+    from services.alert_gate import resolve_hazard_class
+
+    assert resolve_hazard_class(metrics=[]) is None
+
+
+@pytest.mark.timeout(120)
+def test_s4c_ac7_schnee_buendel_wird_nie_entdoppelt():
+    """AC-7 (end-to-end). GIVEN ein passender Registereintrag existiert, WHEN
+    ein Abweichungs-Alarm ausschliesslich Schnee meldet, THEN geht er durch.
+
+    Positivkontrolle: derselbe Aufbau mit einer nassen Aenderung derselben
+    Stufe bleibt still."""
+    from services import alert_urgency
+
+    s4c = _s4c()
+    _AT = s4c._AT
+    uid, ctrl = s4c._uid("gate-ac7"), s4c._uid("gate-ac7-ctrl")
+    schnee_levels = {"fresh_snow": "standard", "precipitation_sum": "standard"}
+    schnee_metriken = ("fresh_snow", "precipitation")
+    try:
+        trip = s4c._trip_delta(
+            "trip-s4c-ac7", levels=schnee_levels, metrics=schnee_metriken,
+        )
+        strecke = s4c._strecke(uid)
+        eintrag = s4c._amtlicher_vorlauf(strecke, uid, trip, level=4)
+
+        at2 = _AT + timedelta(minutes=20)
+        cached = [s4c._wd(1, snow_new_sum_cm=0.0)]
+        fresh = [s4c._wd(1, snow_new_sum_cm=40.0)]
+        stufe = s4c._dringlichkeit(uid, trip, cached, fresh, at2)
+        assert not alert_urgency.exceeds(stufe, eintrag["severity"]), (
+            f"Testkonstruktion: der Schnee-Lauf ({stufe!r}) darf den "
+            f"Registereintrag ({eintrag['severity']!r}) nicht uebersteigen."
+        )
+        lauf = strecke.lauf(
+            at=at2, zweig="deviation", trip=trip,
+            cached_weather=cached, fresh_weather=fresh,
+        )
+        assert lauf.triggered_count == 1, (
+            f"AC-7: ein Schnee-Buendel darf nie entdoppelt werden (war "
+            f"{lauf.triggered_count})."
+        )
+
+        ktrip = s4c._trip_delta(
+            "trip-s4c-ac7", levels=schnee_levels, metrics=schnee_metriken,
+        )
+        kstrecke = s4c._strecke(ctrl)
+        s4c._amtlicher_vorlauf(kstrecke, ctrl, ktrip, level=4)
+        kcached = [s4c._wd(1, precip_sum_mm=2.0)]
+        kfresh = [s4c._wd(1, precip_sum_mm=45.0)]
+        kontrolle = kstrecke.lauf(
+            at=at2, zweig="deviation", trip=ktrip,
+            cached_weather=kcached, fresh_weather=kfresh,
+        )
+        assert kontrolle.triggered_count == 0, (
+            f"AC-7 Positivkontrolle: eine NASSE Aenderung derselben Stufe muss "
+            f"im selben Aufbau still bleiben (war {kontrolle.triggered_count})."
+        )
+    finally:
+        s4c._clean_user(uid)
+        s4c._clean_user(ctrl)
+
+
+# ─────────────────────────────── AC-8 ────────────────────────────────────────
+
+
+@pytest.mark.timeout(120)
+def test_s4c_ac8_kaputter_registereintrag_unterdrueckt_nichts():
+    """AC-8 (Fail-soft). GIVEN der Registereintrag ist unvollstaendig (das
+    Feld `segment_ids` fehlt), WHEN ein Abweichungs-Alarm dafuer geprueft
+    wird, THEN unterdrueckt er NICHTS und nichts stuerzt ab.
+
+    Positivkontrolle: derselbe, INTAKTE Eintrag unterdrueckt den identischen
+    Lauf.
+
+    RED heute: die Positivkontrolle stellt zu (kein Gate im Δ-Zweig)."""
+    from services.alert_state import AlertStateService
+
+    s4c = _s4c()
+    _AT = s4c._AT
+    uid, ctrl = s4c._uid("gate-ac8"), s4c._uid("gate-ac8-ctrl")
+    try:
+        trip = s4c._trip_delta("trip-s4c-ac8")
+        strecke = s4c._strecke(uid)
+        s4c._amtlicher_vorlauf(strecke, uid, trip, level=3)
+
+        dienst = AlertStateService(user_id=uid)
+        zustand = dienst.load(trip.id)
+        for schluessel, eintrag in list(zustand.items()):
+            if schluessel.startswith("event_identity:"):
+                eintrag.pop("segment_ids", None)
+        dienst.save(trip.id, zustand)
+
+        at2 = _AT + timedelta(minutes=20)
+        cached, fresh = s4c._regen(2.0, 18.0)
+        lauf = strecke.lauf(
+            at=at2, zweig="deviation", trip=trip,
+            cached_weather=cached, fresh_weather=fresh,
+        )
+        assert lauf.triggered_count == 1, (
+            f"AC-8: ein kaputter Registereintrag darf nichts unterdruecken "
+            f"(war {lauf.triggered_count})."
+        )
+
+        ktrip = s4c._trip_delta("trip-s4c-ac8")
+        kstrecke = s4c._strecke(ctrl)
+        s4c._amtlicher_vorlauf(kstrecke, ctrl, ktrip, level=3)
+        kontrolle = kstrecke.lauf(
+            at=at2, zweig="deviation", trip=ktrip,
+            cached_weather=cached, fresh_weather=fresh,
+        )
+        assert kontrolle.triggered_count == 0, (
+            f"AC-8 Positivkontrolle: der INTAKTE Eintrag muss denselben Lauf "
+            f"unterdruecken (war {kontrolle.triggered_count}) — sonst belegt "
+            f"der Durchlass oben kein Fail-soft."
+        )
+    finally:
+        s4c._clean_user(uid)
+        s4c._clean_user(ctrl)
+
+
+# ─────────────────────────────── AC-11 ───────────────────────────────────────
+
+
+@pytest.mark.timeout(120)
+def test_s4c_ac11_registereintrag_traegt_deviation_statt_der_alten_ableitung():
+    """AC-11. GIVEN ein Abweichungs-Alarm mit Nass-Anteil wurde zugestellt,
+    WHEN sein Registereintrag gelesen wird, THEN traegt er
+    `source == "deviation"` — obwohl er (wie ein amtlicher Eintrag) ein
+    Zeitintervall statt eines Einzelzeitpunkts fuehrt.
+
+    Gegenprobe gegen die ALTE Ableitung (`"nowcast" if point_at is not None
+    else "official"`): sie wird im Test nachvollzogen und liefert fuer diesen
+    Eintrag `"official"` — der Wert muss also aus einem expliziten Parameter
+    stammen, nicht aus der Zeitform.
+
+    RED heute: es entsteht gar kein Eintrag."""
+    s4c = _s4c()
+    _AT = s4c._AT
+    uid = s4c._uid("gate-ac11")
+    try:
+        trip = s4c._trip_delta("trip-s4c-ac11")
+        cached, fresh = s4c._regen(2.0, 18.0)
+        lauf = s4c._strecke(uid).lauf(
+            at=_AT, zweig="deviation", trip=trip,
+            cached_weather=cached, fresh_weather=fresh,
+        )
+        assert lauf.triggered_count == 1, (
+            f"AC-11 Vorbedingung: der Lauf muss zustellen (war "
+            f"{lauf.triggered_count})."
+        )
+        eintraege = s4c._register(uid, trip.id)
+        assert len(eintraege) == 1, (
+            f"AC-11 Vorbedingung: genau ein Eintrag erwartet: {eintraege!r}"
+        )
+        (eintrag,) = eintraege.values()
+
+        alte_ableitung = "nowcast" if eintrag.get("point_at") is not None else "official"
+        assert alte_ableitung == "official", (
+            f"AC-11 Gegenprobe: der Δ-Eintrag darf KEIN `point_at` fuehren "
+            f"(sonst laese ihn der Bestand als Nowcast): {eintrag!r}"
+        )
+        assert eintrag["source"] == "deviation", (
+            f"AC-11: die Quelle muss explizit 'deviation' sein — die alte "
+            f"Ableitung aus der Zeitform haette hier faelschlich "
+            f"{alte_ableitung!r} geliefert: {eintrag!r}"
+        )
+    finally:
+        s4c._clean_user(uid)
+
+
+# ─────────────────────────────── AC-12 ───────────────────────────────────────
+
+
+def test_s4c_ac12_altbestand_ohne_quellenfeld_verhaelt_sich_unveraendert():
+    """AC-12 (Bestandswaechter). GIVEN ein Registereintrag im Format VOR dieser
+    Scheibe (ohne `source`-Feld), WHEN ein amtlicher und ein Radar-Kandidat
+    dagegen geprueft werden — beide OHNE expliziten `source`-Parameter, wie die
+    Bestandsaufrufer —, THEN bleibt sein Verhalten unveraendert: der
+    gleichrangige amtliche Kandidat wird unterdrueckt, der eskalierende
+    Radar-Kandidat wird zum NACHTRAG mit `addendum_source == "official"`.
+
+    Damit ist zugesichert, dass der neue Parameter ADDITIV ist: seine Absenz
+    faellt weiterhin auf die Ableitung aus der Zeitform zurueck."""
+    from services.alert_gate import check_event_identity_gate
+    from services.alert_state import AlertStateService
+
+    uid = fresh_uid("s4c-ac12")
+    clean_uid(uid)
+    try:
+        jetzt = datetime.now(timezone.utc)
+        von, bis = jetzt - timedelta(minutes=30), jetzt + timedelta(hours=3)
+        dienst = AlertStateService(user_id=uid)
+        dienst.save("trip-ac12", {
+            # Altformat (#1467 S4b, vor #2018): KEIN `source`-Feld.
+            f"event_identity:wet:5:{(jetzt - timedelta(minutes=30)).isoformat()}": {
+                "hazard_class": "wet",
+                "segment_ids": ["5"],
+                "severity": "MODERATE",
+                "point_at": None,
+                "window_start": von.isoformat(),
+                "window_end": bis.isoformat(),
+                "reported_at": (jetzt - timedelta(minutes=30)).isoformat(),
+            },
+        })
+
+        amtlich = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac12", hazard_class="wet",
+            segment_ids=["5"], severity="MODERATE", now=jetzt,
+            window_start=von, window_end=bis,
+        )
+        assert amtlich.allowed is False, (
+            f"AC-12: der Alt-Eintrag muss einen gleichrangigen amtlichen "
+            f"Kandidaten weiterhin unterdruecken: {amtlich!r}"
+        )
+
+        nowcast = check_event_identity_gate(
+            user_id=uid, entity_id="trip-ac12", hazard_class="wet",
+            segment_ids=["5"], severity="HIGH", now=jetzt,
+            point_at=jetzt + timedelta(minutes=8),
+        )
+        assert nowcast.allowed is True and nowcast.is_addendum is True, (
+            f"AC-12: ein eskalierender Radar-Kandidat muss weiterhin zum "
+            f"Nachtrag werden: {nowcast!r}"
+        )
+        assert nowcast.addendum_source == "official", (
+            f"AC-12: die Quelle des Alt-Eintrags wird weiterhin fail-soft aus "
+            f"der Anwesenheit von `window_*` abgeleitet: {nowcast!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+# ─────────────────────────────── AC-17 ───────────────────────────────────────
+
+
+@pytest.mark.timeout(120)
+def test_s4c_ac17_ohne_zustellbaren_kanal_entsteht_kein_registereintrag():
+    """AC-17 (F001-Symmetrie). GIVEN ein Abweichungs-Alarm mit Nass-Anteil hat
+    keinen einzigen zustellbaren Kanal, WHEN der Lauf abgeschlossen ist, THEN
+    entsteht KEIN Ereignis-Identitaets-Registereintrag.
+
+    Positivkontrolle: derselbe Trip MIT Kanal legt genau einen Eintrag an —
+    ohne sie waere „kein Eintrag" trivial wahr (heute ist es das, deshalb
+    RED)."""
+    s4c = _s4c()
+    _AT = s4c._AT
+    uid, ctrl = s4c._uid("gate-ac17"), s4c._uid("gate-ac17-ctrl")
+    try:
+        trip = s4c._trip_delta("trip-s4c-ac17", kanaele=False)
+        cached, fresh = s4c._regen(2.0, 18.0)
+        strecke = s4c._strecke(uid)
+        vorher = s4c._register(uid, trip.id)
+        lauf = strecke.lauf(
+            at=_AT, zweig="deviation", trip=trip,
+            cached_weather=cached, fresh_weather=fresh,
+        )
+        assert lauf.triggered_count == 0, (
+            f"AC-17 Vorbedingung: ohne Kanal darf nichts zugestellt werden "
+            f"(war {lauf.triggered_count})."
+        )
+        nachher = s4c._register(uid, trip.id)
+        assert vorher == nachher == {}, (
+            f"AC-17: ohne erfolgreiche Zustellung darf kein "
+            f"`event_identity:`-Schluessel entstehen: {nachher!r}"
+        )
+
+        ktrip = s4c._trip_delta("trip-s4c-ac17", kanaele=True)
+        klauf = s4c._strecke(ctrl).lauf(
+            at=_AT, zweig="deviation", trip=ktrip,
+            cached_weather=cached, fresh_weather=fresh,
+        )
+        assert klauf.triggered_count == 1, (
+            f"AC-17 Positivkontrolle: mit Kanal muss zugestellt werden (war "
+            f"{klauf.triggered_count})."
+        )
+        assert len(s4c._register(ctrl, ktrip.id)) == 1, (
+            f"AC-17 Positivkontrolle: mit erfolgreicher Zustellung MUSS genau "
+            f"ein Eintrag entstehen — sonst belegt die Absenz oben nichts: "
+            f"{s4c._register(ctrl, ktrip.id)!r}"
+        )
+    finally:
+        s4c._clean_user(uid)
+        s4c._clean_user(ctrl)

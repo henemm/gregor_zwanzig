@@ -2386,3 +2386,130 @@ def test_1750_f002_f004_vereinigungsregel_beide_richtungen(reasons, ziel_name, a
     assert len(_block_lines(text, ziel)) == 1, (
         f"Genau eine Zeile im Block {ziel_name} erwartet.\n{text}"
     )
+
+
+# ══════════════════ Issue #2050 S4c — AC-16: `event_duplicate` ═════════════
+# Gemessener Ist-Stand (2026-08-23): `event_duplicate` fehlt in
+# `_REASON_LABELS`/`_REASON_BLOCK` von `undelivered_hint.py` und faellt
+# deshalb doppelt zurueck — auf die Beschriftung „Versand fehlgeschlagen"
+# (`.get(reason, ...)`) und auf den Block „FEHLGESCHLAGEN"
+# (`.get(reason, "failed")`). Der Nutzer liest einen FEHLER, wo bewusst
+# entdoppelt wurde. Mit dieser Scheibe loest der Δ-Zweig den Grund erstmals
+# selbst aus (bisher nur der Radar-Zweig), er wird also sichtbar.
+
+
+def _zeilen_beider_bloecke(text: str) -> tuple[list[str], list[str]]:
+    from output.renderers.email.undelivered_hint import (
+        HEADING_FAILED, HEADING_WITHHELD,
+    )
+
+    return _block_lines(text, HEADING_FAILED), _block_lines(text, HEADING_WITHHELD)
+
+
+def test_2050_s4c_ac16_event_duplicate_steht_im_block_zurueckgehalten():
+    """AC-16. GIVEN ein Alarm wurde wegen `event_duplicate` zurueckgehalten,
+    WHEN das Briefing den Abschnitt „was hat dich nicht erreicht" rendert,
+    THEN erscheint der Vorfall im Block ZURUECKGEHALTEN mit einer deutschen
+    Beschriftung — nicht als „Versand fehlgeschlagen" und nicht als roher
+    Code.
+
+    Positivkontrolle im selben Aufruf: ein `delivery_failed`-Vorfall landet
+    im Block FEHLGESCHLAGEN. Ohne ihn koennte der Test auch dann gruen sein,
+    wenn die Blockzuordnung ueberhaupt nichts unterscheidet.
+
+    RED heute: der Grund faellt auf „Versand fehlgeschlagen"/`failed`
+    zurueck."""
+    from output.renderers.email.undelivered_hint import (
+        has_undelivered, render_undelivered_plain,
+    )
+    from services.alert_log import REASON_EVENT_DUPLICATE, UndeliveredIncident
+
+    tz = _trip_tz()
+    jetzt = datetime.now(timezone.utc)
+    incidents = [
+        UndeliveredIncident(
+            at=jetzt - timedelta(hours=1), channels=("telegram",),
+            reasons=(REASON_EVENT_DUPLICATE,), metrics=(("precipitation", "sum"),),
+            hazards=(), trigger="forecast_change",
+        ),
+        UndeliveredIncident(
+            at=jetzt - timedelta(hours=2), channels=("sms",),
+            reasons=("delivery_failed",), metrics=(("gust", "max"),),
+            hazards=(), trigger="forecast_change",
+        ),
+    ]
+    assert has_undelivered(incidents) is True, (
+        "AC-16 Vorbedingung: ein zurueckgehaltener Vorfall zaehlt als Vorfall."
+    )
+    text = render_undelivered_plain(incidents, tz=tz)
+    failed, withheld = _zeilen_beider_bloecke(text)
+
+    # Ueber den KANAL identifiziert, nicht ueber die Metrik: der Metrikname
+    # wird in der Zeile gekuerzt ("Niedersch"), der Kanal nicht.
+    duplikat_zeilen = [z for z in withheld if "Telegram" in z]
+    assert duplikat_zeilen, (
+        f"AC-16: der entdoppelte Vorfall muss im Block ZURUECKGEHALTEN "
+        f"stehen.\nZURUECKGEHALTEN={withheld!r}\nFEHLGESCHLAGEN={failed!r}"
+    )
+    zeile = duplikat_zeilen[0]
+    assert REASON_EVENT_DUPLICATE not in zeile, (
+        f"AC-16: der rohe Grund-Code darf nicht in der Mail stehen: {zeile!r}"
+    )
+    assert "Versand fehlgeschlagen" not in zeile, (
+        f"AC-16: `event_duplicate` darf nicht auf die Fehler-Beschriftung "
+        f"zurueckfallen: {zeile!r}"
+    )
+    # Positivkontrolle: die Blockzuordnung unterscheidet ueberhaupt.
+    assert any("Versand fehlgeschlagen" in z for z in failed), (
+        f"AC-16 Positivkontrolle: der `delivery_failed`-Vorfall muss im Block "
+        f"FEHLGESCHLAGEN erscheinen — sonst misst die Blockpruefung nichts.\n"
+        f"FEHLGESCHLAGEN={failed!r}"
+    )
+    assert not any("Versand fehlgeschlagen" in z for z in withheld), (
+        f"AC-16: im Block ZURUECKGEHALTEN darf keine Fehler-Beschriftung "
+        f"stehen: {withheld!r}"
+    )
+
+
+def test_2050_s4c_ac16_event_duplicate_traegt_eine_eigene_deutsche_beschriftung():
+    """AC-16 (Wortlaut-Ebene, ohne einen konkreten Text vorzuschreiben): die
+    Beschriftung ist deutscher Klartext (kein Unterstrich-Code) und
+    UNTERSCHEIDET sich von den Beschriftungen der Nachbargruende — eine
+    Sammelbeschriftung „Cooldown" waere fachlich falsch, der Vorfall wurde
+    nicht wegen der Sperrzeit zurueckgehalten."""
+    from output.renderers.email.undelivered_hint import render_undelivered_plain
+    from services.alert_log import (
+        REASON_COOLDOWN, REASON_EVENT_DUPLICATE, UndeliveredIncident,
+    )
+
+    tz = _trip_tz()
+    jetzt = datetime.now(timezone.utc)
+
+    def _zeile(reason: str) -> str:
+        text = render_undelivered_plain([
+            UndeliveredIncident(
+                at=jetzt - timedelta(hours=1), channels=("telegram",),
+                reasons=(reason,), metrics=(("precipitation", "sum"),),
+                hazards=(), trigger="forecast_change",
+            ),
+        ], tz=tz)
+        _failed, withheld = _zeilen_beider_bloecke(text)
+        return withheld[0] if withheld else ""
+
+    duplikat, cooldown = _zeile(REASON_EVENT_DUPLICATE), _zeile(REASON_COOLDOWN)
+    assert cooldown, (
+        "AC-16 Positivkontrolle: der Bestandsgrund `cooldown` muss eine Zeile "
+        "im Block ZURUECKGEHALTEN erzeugen — sonst misst der Helfer nichts."
+    )
+    assert duplikat, (
+        "AC-16: `event_duplicate` muss eine Zeile im Block ZURUECKGEHALTEN "
+        "erzeugen."
+    )
+    assert "_" not in duplikat.rsplit("·", 1)[-1], (
+        f"AC-16: die Beschriftung muss deutscher Klartext sein, kein "
+        f"Code-Bezeichner: {duplikat!r}"
+    )
+    assert duplikat.rsplit("·", 1)[-1].strip() != cooldown.rsplit("·", 1)[-1].strip(), (
+        f"AC-16: `event_duplicate` braucht eine EIGENE Beschriftung, nicht die "
+        f"der Sperrzeit: {duplikat!r} vs. {cooldown!r}"
+    )
