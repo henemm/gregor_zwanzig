@@ -47,8 +47,10 @@ allein, dem Nutzer eine Zeit-Ort-Rechnung über ihn selbst auszugeben.
   Limit** in Summe, `workflow.py set-field loc_limit_override 500` vor
   `/40-tdd-red` einplanen (Muster wie S1/S3).
 - **Files:** `trip_segments.py`, `src/services/rain_extent.py` (neu),
-  `trip_alert.py`, `src/output/renderers/alert/model.py`,
-  `src/output/renderers/alert/project.py`, `src/output/renderers/alert/render.py`
+  `trip_alert.py`, `src/services/radar_alert_service.py` (Trip-Onset-
+  Eventbau — Fundstellen-Korrektur, s. Implementation Details),
+  `src/output/renderers/alert/model.py`,
+  `src/output/renderers/alert/render.py`
   + `tests/tdd/test_issue_822_radar_nowcast_segment.py` (Umbau),
   `tests/unit/test_radar_nowcast_cache_sharing.py` (Prüfung),
   1-2 neue Testdateien.
@@ -210,9 +212,23 @@ E-Mail-Trip-Langform-Stelle (`render.py:~601`, dieselbe wie S3s
 `_onset_reach_suffix`). Die übrigen sechs Textstellen bleiben in S2a
 unangetastet.
 
-**Datenweg außerhalb der Renderer**: Trip-Pfad in `project.py` befüllt
-`rain_zones` neben den bestehenden Feldern; der Ortsvergleich-Pfad setzt es
-nie (AC-15, kein Streckenkonzept).
+**Datenweg außerhalb der Renderer**: Der Trip-Onset-Pfad baut das
+`OnsetEvent` NICHT in `project.py`, sondern in
+`src/services/radar_alert_service.py:60` (`build_onset_alert_message`) —
+dort wird `rain_zones` neben den bestehenden Feldern befüllt. Der
+Ortsvergleich-Bündel-Pfad (`project.py:621`,
+`to_multi_location_onset_alert_message`) setzt es nie (AC-15, kein
+Streckenkonzept). *(Fundstellen-Korrektur nach der Kartierung; die
+Zusicherungen AC-7/AC-15 sind unverändert.)*
+
+**Draht-Lücke `km_measured` (Befund aus der Kartierung, S2a-Scope):**
+`build_onset_alert_message` setzt `km_measured` heute **nie** — das Feld
+bleibt im Trip-Onset-Pfad auf dem Default `False`. Ohne Behebung wäre AC-9
+zwar auf Renderer-Ebene erfüllbar, die Ausdehnung erschiene aber in
+Produktion auf **keiner** Etappe, auch nicht auf den 4 vermessenen. S2a
+verdrahtet daher `TripSegment.distance_measured` → `OnsetEvent.km_measured`
+im Trip-Onset-Pfad mit; AC-9 bekommt zusätzlich zum Renderer-Test einen
+Draht-Test über `check_radar_alerts` (siehe AC-9-Testnotiz).
 
 ## Expected Behavior
 
@@ -300,6 +316,11 @@ nie (AC-15, kein Streckenkonzept).
   wird / Then enthält der Text die Zusatzzeile mit exakt `Nass km 8-12`.
   - Test: Unit-Test gegen die Trip-E-Mail-Renderfunktion mit konstruiertem
     Event, Substring-Prüfung auf den exakten String `Nass km 8-12`.
+  - **Zusätzlicher Draht-Test (Befund Kartierung):** derselbe Nachweis über
+    `check_radar_alerts` mit einer Etappe, die `distance_measured=True`
+    trägt — belegt, dass `km_measured` im Trip-Onset-Pfad überhaupt aus der
+    Etappe abgeleitet wird. Ohne ihn prüft AC-9 nur den Renderer, nicht die
+    Stelle, an der die Zusicherung wirkt.
 
 - **AC-10:** Given zwei getrennte Zonen (km 2-4 und km 9-11) auf einer
   vermessenen Etappe / When dieselbe E-Mail-Langform gerendert wird / Then
