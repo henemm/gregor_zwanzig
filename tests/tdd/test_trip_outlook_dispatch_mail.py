@@ -533,13 +533,25 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
 def test_bestandstrip_zeigt_die_grundauswahl_in_der_zugestellten_mail():
     """AC-1 (ganze Kette, Bestandsschutz): ohne gesetzte Vorschau-Auswahl
     steht der Ausblick weiterhin in der zugestellten Mail -- mit den Groessen
-    der Grundauswahl.
+    der Grundauswahl UND der fest angehaengten ACC-Spalte dahinter.
 
     Bewachte Fehlerklasse unveraendert (Mutation 1 am Wirkort,
     ``resolve_outlook_metrics(...) or []``): der Ausblick verschwaende fuer
     100 % der heutigen Trips. Nur das ZIEL des Rueckfalls ist seit #1848 A3
     die Grundauswahl statt der sieben festen Spalten (AC-3 dort,
     PO-Freigabe 2026-08-21).
+
+    🔴 #2098 (AC-13) nimmt EINE Nebenfolge von #1848 A3 bewusst zurueck:
+    dieser Test verlangte bis hierher, dass die Kopfzeile NICHT auf "ACC"
+    endet -- das Verschwinden der ACC-Spalte im Trip-Normalfall war eine
+    akzeptierte, testverankerte Nebenwirkung des Wechsels auf den
+    konfigurierbaren Renderer-Zweig. Der PO hat sie als Fehler gemeldet
+    (#2098 Befund B, Freigabe 2026-08-23). Die uebrige A3-Absicht bleibt
+    unveraendert gueltig: die Grundauswahl ersetzt die feste
+    Sieben-Spalten-Liste (Zusicherung darunter unveraendert). ACC kehrt
+    NICHT als achte Katalog-Spalte zurueck, sondern als fest angehaengte
+    Zusatzspalte HINTER der Grundauswahl -- ausserhalb der Metrik-Auswahl,
+    damit ADR-0005/#710 (Confidence nicht waehlbar) unberuehrt bleibt.
     """
     trip = _trip(outlook_metrics=None)
     html, plain = _zugestellte_teile(trip)
@@ -553,6 +565,18 @@ def test_bestandstrip_zeigt_die_grundauswahl_in_der_zugestellten_mail():
         "Der Ausblick zeigt weiterhin die abgeloesten sieben festen Spalten "
         f"statt der Grundauswahl: {kopf!r} (#1848 A3, AC-3)."
     )
-    assert plain_outlook_block(plain) is not None, (
+    assert kopf[-1] == "ACC" and len(kopf) > 2, (
+        f"Kopfzeile {kopf!r}: die zugestellte Mail zeigt keine ACC-Spalte "
+        "hinter der Grundauswahl (#2098 AC-13 -- show_acc wird im "
+        "konfigurierbaren Zweig nicht gelesen)."
+    )
+    klartext = plain_outlook_block(plain)
+    assert klartext is not None, (
         "Der Klartext-Ausblick eines Bestandstrips fehlt vollstaendig (AC-1)."
+    )
+    ohne_acc = [z for z in klartext.splitlines()[1:] if z.strip() and "ACC" not in z]
+    assert not ohne_acc, (
+        f"Diese Klartext-Ausblick-Zeilen fuehren kein ACC: {ohne_acc!r} "
+        "(#2098 AC-13/Befund C -- der Farbpunkt des HTML braucht im Klartext "
+        "ein Wort)."
     )
