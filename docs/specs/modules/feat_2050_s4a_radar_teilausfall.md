@@ -286,6 +286,9 @@ schreiben → zweites Briefing senden*; der Anker `last_briefing_at` macht den n
   Wortebene und gehört in eine eigene Scheibe — er berührt alle vier Kanäle, das englische
   SMS-Kurzform-Vokabular und das Renderer-Commit-Gate. Ausdrücklich benannt, nicht vergessen.
   Empfehlung: Folge-Scheibe S4b.
+  **Nachtrag 2026-08-23:** erledigt mit Scheibe **S4b-2** — Langform-Suffix
+  ` · Gewitter ungeprüft`, Kurzform-Marker `#` hinter dem Kürzel (`R`/`TH`). Spec:
+  `docs/specs/modules/feat_2050_s4b2_wortebene_kennzeichnung.md`.
 - **Die Ausdehnungs-Aussage selbst** (die mit #2051 S2a neu entstehende Zusatzzeile): Eine
   Messlücke verzerrt sie heute in **beide** Richtungen, und beide sind eigenständig zu
   formulieren, sonst fängt ein Test nur die eine Hälfte.
@@ -303,6 +306,12 @@ schreiben → zweites Briefing senden*; der Anker `last_briefing_at` macht den n
   Folge-Scheibe S4b, zusammen mit der Gewitter-Beschriftung oben — mit Dringlichkeit, weil die
   Zusatzzeile mit dem #2051-S2a-Merge live geht.** Von #2051 S2a wird die Grenze als *Known
   Limitation* in der dortigen Spec nachgetragen (zugesagt 2026-08-23).
+  **Nachtrag 2026-08-23:** erledigt mit Scheibe **S4b-2** — bewusst **keine** unterschiedliche
+  Formulierung für „zu klein"/„zu groß" (die Zonenbildung selbst bleibt unangetastet, beide
+  Verzerrungsrichtungen behaupten am Ende dasselbe: etwas Ungemessenes), sondern eine einzige
+  Kennzeichnung `gap_km` nicht leer ⇒ Langform-Suffix ` · Ausdehnung unvollständig gemessen`,
+  Kurzform-Marker `>` hinter der Zonen-Liste. Spec:
+  `docs/specs/modules/feat_2050_s4b2_wortebene_kennzeichnung.md`.
 - **Dringlichkeit und Ereignis-Identität** bei ausgefallener Gewitterprüfung
   (`trip_alert.py:1577`, `:1917`, `:2042`): ebenfalls betroffen, aber dort wirkt das Merkmal
   priorisierend statt unterdrückend — ein anderer Entscheidungstyp, eigene Messung nötig.

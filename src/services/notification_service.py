@@ -265,6 +265,17 @@ class RadarAlertRequest:
     # Mehrpunkt-Abfrage (`rain_extent.derive_rain_zones`). Additiv, Default
     # leer -> ohne sie bleibt der Versand byte-identisch.
     rain_zones: tuple = ()
+    # Issue #2050 S4b-2: hat die Gewitterpruefung stattgefunden
+    # (`NowcastResult.convective_checked`)? Reist bis in den Renderer, weil
+    # dort der Text entsteht, der "geprueft, kein Gewitter" von "nicht
+    # geprueft" unterscheidet. Default `True` -- ein `False`-Default
+    # beschriftete jede Bestandslage faelschlich als ungeprueft.
+    convective_checked: bool = True
+    # Issue #2050 S4b-2: km-Lage der ausgefallenen Messpunkte der
+    # Ausdehnungs-Messung (`_messluecken_felder`, dieselbe Buchfuehrung wie im
+    # Alarmprotokoll seit S4b). Additiv, Default leer -> ohne sie bleibt der
+    # Versand byte-identisch.
+    gap_km: tuple = ()
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -1424,6 +1435,11 @@ class NotificationService:
             # blieben im Text stumm, das Flag ohne Zonen wirkungslos.
             km_measured=request.km_measured,
             rain_zones=tuple(request.rain_zones),
+            # Issue #2050 S4b-2: die ausgefallene Gewitterpruefung und die
+            # Messluecken der Ausdehnung -- beide rein beschreibend, sie
+            # aendern nur den Text (Kennzeichnung), nicht die Entscheidung.
+            convective_checked=request.convective_checked,
+            gap_km=tuple(request.gap_km),
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.

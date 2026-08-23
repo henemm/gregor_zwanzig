@@ -2201,6 +2201,17 @@ class TripAlertService:
                 km_measured=getattr(active, "distance_measured", False),
                 # Issue #2051 S2a: die Nass-Zonen der Reststrecke.
                 rain_zones=_rain_zones,
+                # Issue #2050 S4b-2: die Kennzeichnung im Text speist sich aus
+                # DENSELBEN beiden Groessen, die schon Ausloeseentscheidung
+                # (S4a) und Alarmprotokoll (S4b) fuehren -- die Messluecken
+                # ueber `_e1`, also ueber die eine bestehende Ableitung
+                # `_messluecken_felder`. Eine zweite Herleitung koennte
+                # auseinanderlaufen und Text und Protokoll verschiedene
+                # Wahrheiten erzaehlen lassen.
+                convective_checked=result.convective_checked,
+                gap_km=tuple(
+                    _e1.get("measurement_gaps", {}).get("gap_km", ())
+                ),
                 # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne
                 # liefert — nur zusaetzlich mit ihrer Kennung, damit der
                 # Nowcast denselben Ort benennt wie die amtliche Warnung.

@@ -493,7 +493,11 @@ def _render_subject_onset(msg: AlertMessage) -> str:
     return (
         f"[{msg.trip_short}] {km} · {label} {_onset_wann_kopf(e)}"
         f"{_onset_end_suffix(e)}{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
-        f"{_onset_extent_suffix(e)}"
+        # Issue #2050 S4b-2: die beiden Kennzeichnungen als LETZTE Glieder
+        # derselben Kette -- ohne Ausfall bzw. ohne Messluecke bleibt der
+        # Betreff byte-identisch (AC-5/AC-13).
+        f"{_onset_extent_suffix(e)}{_onset_gap_suffix(e)}"
+        f"{_onset_convective_suffix(e)}"
     )
 
 
@@ -649,6 +653,42 @@ def _onset_extent_suffix(e: OnsetEvent) -> str:
     return f" · Nass {spannen}"
 
 
+def _onset_convective_suffix(e: OnsetEvent) -> str:
+    """Issue #2050 S4b-2: Langform-Hinweis auf die AUSGEFALLENE
+    Gewitterpruefung als anhaengbares Stueck oder LEER (Muster
+    `_onset_sharpness_suffix`).
+
+    Ohne ihn beschriftet der Text das Ereignis als "Regen", obwohl niemand
+    geprueft hat, ob es ein Gewitter war -- "geprueft, kein Gewitter" und
+    "nicht geprueft" waeren im Text ununterscheidbar. Der Zusatz nennt nur den
+    Sachverhalt, er leitet keine Handlung ab.
+
+    `getattr` mit Default `True`: eine Bestandslage ohne das Feld gilt als
+    geprueft und bleibt stumm (AC-8)."""
+    if getattr(e, "convective_checked", True):
+        return ""
+    return " · Gewitter ungeprüft"
+
+
+def _onset_gap_suffix(e: OnsetEvent) -> str:
+    """Issue #2050 S4b-2: Langform-Hinweis auf die unvollstaendig gemessene
+    Ausdehnung als anhaengbares Stueck oder LEER.
+
+    DIESELBE Sichtbarkeitsregel wie `_onset_extent_suffix` (Zonen vorhanden UND
+    vermessene Etappe) -- ohne gezeigte Ausdehnung haette der Hinweis keine
+    Bezugsgroesse und haenge in der Luft (AC-15).
+
+    Leere `gap_km` heisst NICHT "alles gemessen": das Feld entsteht auch leer,
+    sobald die Mehrpunkt-Abfrage lief (`trip_alert._messluecken_felder`), und
+    fehlt bei Altdaten ganz. Beide Faelle bleiben stumm (AC-13/AC-14)."""
+    zonen = getattr(e, "rain_zones", ())
+    if not zonen or not getattr(e, "km_measured", False):
+        return ""
+    if not getattr(e, "gap_km", ()):
+        return ""
+    return " · Ausdehnung unvollständig gemessen"
+
+
 def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
     """Bündel-Zweig (Issue #1041 Slice 1a): je Ort eine Zeile mit Onset-Zeit
     und Intensität (Muster `loc_prefix`, render_email:328-333).
@@ -671,7 +711,11 @@ def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
             # schweigend auseinanderlaufen (AC-3).
             f"{_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"
             f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
-            f"{_onset_extent_suffix(e)} · "
+            # Issue #2050 S4b-2: die Kennzeichnungen JE ORT aus dessen eigenem
+            # Event -- ein Buendel kann Orte mit und ohne ausgefallene
+            # Gewitterpruefung tragen (Known Limitation: kein Buendel-Marker).
+            f"{_onset_extent_suffix(e)}{_onset_gap_suffix(e)}"
+            f"{_onset_convective_suffix(e)} · "
             f"{e.intensity_label}",
         )
         for e in msg.events
@@ -754,7 +798,10 @@ def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
         ("Wo & wann",
          f"{km} · {_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"
          f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
-         f"{_onset_extent_suffix(e)}"),
+         # Issue #2050 S4b-2: der Luecken-Hinweis unmittelbar HINTER der
+         # Ausdehnung, auf die er sich bezieht; der Pruefungs-Hinweis danach.
+         f"{_onset_extent_suffix(e)}{_onset_gap_suffix(e)}"
+         f"{_onset_convective_suffix(e)}"),
         ("Intensität", e.intensity_label),
         ("Quelle", e.source_label),
     ]
@@ -827,7 +874,11 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
     second = (
         f"{_onset_wann_zeile(e)}{_onset_end_suffix(e)}"
         f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
-        f"{_onset_extent_suffix(e)} · "
+        # Issue #2050 S4b-2: dieselben zwei Kennzeichnungen wie in E-Mail und
+        # Betreff -- Telegram ist kein nachrangiger Kanal (auf dem Pass ist es
+        # der gelesene).
+        f"{_onset_extent_suffix(e)}{_onset_gap_suffix(e)}"
+        f"{_onset_convective_suffix(e)} · "
         f"{e.intensity_label} · {e.source_label}"
     )
     # Issue #2018 (AC-B3): die Bezugszeile steht als EIGENE Zeile zwischen Kopf
@@ -942,6 +993,33 @@ def _sms_onset_sharpness_marker(e: OnsetEvent) -> str:
     return "?" if getattr(e, "location_sharpness_limit_time", None) else ""
 
 
+def _sms_onset_convective_marker(e: OnsetEvent) -> str:
+    """Issue #2050 S4b-2: das Zeichen der AUSGEFALLENEN Gewitterpruefung --
+    `"#"` oder leer.
+
+    Bindet an das KUERZEL (`R#2.5@18:00`), nicht an die Zeitgruppe wie der
+    Guete-Marker: qualifiziert wird der Sachverhalt selbst (Gewitter oder
+    Regen), nicht der Zeitpunkt.
+
+    `#` statt `?` (durch die Einsetzschaerfe #2051 S3 belegt) und statt `*`
+    (vor einer Zahl als Multiplikation lesbar). GSM-7-BASISzeichen, kein
+    Extension-Faltungsrisiko."""
+    return "" if getattr(e, "convective_checked", True) else "#"
+
+
+def _sms_onset_gap_marker(e: OnsetEvent) -> str:
+    """Issue #2050 S4b-2: das Zeichen der unvollstaendig gemessenen Ausdehnung
+    -- `">"` oder leer.
+
+    Der Aufrufer haengt es an die bereits gebildete Zonen-Liste (`km2-4,9-11>`)
+    und NUR dann, wenn eine Liste entstanden ist: freistehend hinter dem
+    Zeit-Token truege `>` die andere, bestehende Bedeutung der Ende-Grammatik
+    ("Regen mindestens bis", #2051 S1) und waere damit eine FALSCHE Angabe
+    statt einer fehlenden. Auf die Strecke angewandt sagt dasselbe Zeichen
+    dasselbe: "reicht mindestens so weit"."""
+    return ">" if getattr(e, "gap_km", ()) else ""
+
+
 def _sms_onset_extent_suffix(zonen: tuple[RainZone, ...], budget: int) -> str:
     """Issue #2051 S2b: Zonen-Kuerzel der Kurzform (` km8-12,19-21`) oder leer.
 
@@ -996,6 +1074,14 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     ihn mit (AC-10)."""
     e = msg.events[0]
     kuerzel = "TH" if e.is_convective else "R"
+    # Issue #2050 S4b-2: das Zeichen der ausgefallenen Gewitterpruefung haengt
+    # unmittelbar am Kuerzel -- in JEDER Token-Form unten, auch dort, wo das
+    # `R` mit der Mengenangabe verschmilzt (`R#2.5@18:00`). Es steht genau
+    # EINMAL im Text: das zweite `R` des Gewitter-Zweigs (die Menge) traegt es
+    # nicht, es beschriftet keine Ereignisart. Der Weichen-Vergleich unten
+    # bleibt auf `kuerzel` und nicht auf dieser Form -- sonst kippte er still,
+    # sobald die Marke gesetzt ist.
+    kopf = kuerzel + _sms_onset_convective_marker(e)
     # Issue #2051 S1: das Ende-Token haengt unmittelbar am Beginn-Token
     # (`R2.5@18:00@20:00`). Bewusst hier zusammengefasst statt in jedem der
     # drei Token-Zweige unten: so traegt AUCH der Gewitter-Zweig das Ende an
@@ -1023,21 +1109,21 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
         # `now >@20:00` Untergrenze), damit es nur EINE Ende-Form gibt.
         ende = _sms_onset_ende(e) + guete_marker
         if menge is None:
-            token = f"{kuerzel} now{ende}"
+            token = f"{kopf} now{ende}"
         elif kuerzel == "TH":
-            token = f"TH now{ende} R{menge}"
+            token = f"{kopf} now{ende} R{menge}"
         else:
-            token = f"R{menge} now{ende}"
+            token = f"{kopf}{menge} now{ende}"
     elif menge is None:
-        token = f"{kuerzel}@{zeit}"
+        token = f"{kopf}@{zeit}"
     elif kuerzel == "TH":
         # Issue #2046: im Gewitter-Fall steht die Menge als EIGENES Token NACH
         # der Zeit. Die Position unmittelbar hinter `TH` gehoert in der
         # Briefing-Grammatik der Stufe (LEVELS: L/M/H) -- ein `TH2.5` dort
         # waere als Stufe lesbar und damit missverstaendlich.
-        token = f"TH@{zeit} R{menge}"
+        token = f"{kopf}@{zeit} R{menge}"
     else:
-        token = f"R{menge}@{zeit}"
+        token = f"{kopf}{menge}@{zeit}"
     if getattr(e, "location_label", None):
         head = _ascii_alert_location(e.location_label)[:24]
     elif msg.source == COMPARE_RADAR_SOURCE:
@@ -1050,7 +1136,22 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     # (nur vermessene Etappe, nur nicht-leere Zonen), und nur so viel, wie
     # vollstaendig ins Budget passt (AC-4/AC-6/AC-8).
     if getattr(e, "km_measured", False) and getattr(e, "rain_zones", ()):
-        body += _sms_onset_extent_suffix(e.rain_zones, limit - len(body))
+        # Issue #2050 S4b-2: der Platz fuer den Luecken-Marker wird VOR der
+        # Zonenauswahl reserviert. Haengte man ihn danach unbedingt an, fraesse
+        # ihn im Randfall der harte Sicherungsschnitt unten still weg -- der
+        # Text saehe dann vollstaendig gemessen aus, obwohl er es nicht ist,
+        # und keine Pruefung koennte den Unterschied sehen (das Ergebnis waere
+        # byte-identisch zur korrekten Fassung). Im Randfall entfaellt deshalb
+        # die LETZTE ZONE zugunsten des Markers: der Hinweis "unvollstaendig
+        # gemessen" wiegt schwerer als die letzte von vielen Streckenangaben.
+        luecken_marker = _sms_onset_gap_marker(e)
+        zonen = _sms_onset_extent_suffix(
+            e.rain_zones, limit - len(body) - len(luecken_marker),
+        )
+        # Ohne Zonen-Liste entfaellt der Marker mit ihr: freistehend hinter dem
+        # Zeit-Token truege `>` die Ende-Bedeutung ("mindestens bis") und waere
+        # eine falsche Aussage statt einer fehlenden.
+        body += (zonen + luecken_marker) if zonen else ""
     return body if len(body) <= limit else body[:limit]
 
 

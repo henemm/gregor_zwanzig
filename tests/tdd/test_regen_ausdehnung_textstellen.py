@@ -371,10 +371,17 @@ _ZONEN_LAT1, _ZONEN_LON1 = 47.2158, 11.0
 
 
 def _nass_spannen(plain: str) -> list[str]:
-    """Die einzelnen `km A-B`-Spannen der Ausdehnungs-Angabe (leer: keine)."""
+    """Die einzelnen `km A-B`-Spannen der Ausdehnungs-Angabe (leer: keine).
+
+    Gemessen wird bis zum naechsten ` · `-Trenner, NICHT bis zum Zeilenende:
+    die "Wo & wann"-Zeile reiht weitere Angaben hinter der Ausdehnung auf
+    (Issue #2050 S4b-2 haengt dort den Hinweis auf eine unvollstaendig
+    gemessene Ausdehnung an). Bis zum Zeilenende gelesen, wanderte jede
+    kuenftige Nachbarangabe in die "Spanne" hinein und liesse Vergleiche
+    zweier Laeufe scheitern, deren SPANNEN identisch sind."""
     import re
 
-    treffer = re.search(r"· Nass (km .*)$", plain, re.MULTILINE)
+    treffer = re.search(r"· Nass (km [^·\n]*)", plain)
     if not treffer:
         return []
     return [s.strip() for s in treffer.group(1).split(",")]

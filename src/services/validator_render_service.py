@@ -183,6 +183,12 @@ def render_alert_preview(
                 )
                 for z in getattr(body.onset, "rain_zones", [])
             ),
+            # Issue #2050 S4b-2: die ausgefallene Gewitterpruefung. `getattr`
+            # aus demselben Grund wie oben (API-Payload UND Replay-Namespace);
+            # der Default `True` haelt Alt-Clients ohne das Feld stumm.
+            convective_checked=getattr(
+                body.onset, "convective_checked", True,
+            ),
         )
         msg = AlertMessage(
             trip_short=trip_obj.name,
@@ -356,6 +362,10 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
         source_reach_day_offset=_reach_offset,
         location_sharpness_limit_time=_sharp_time,
         location_sharpness_limit_day_offset=_sharp_offset,
+        # Issue #2050 S4b-2: aus DEMSELBEN Dienst, der auch die Frames
+        # ausgewertet hat -- faellt der INCA-Gewitter-Beiabruf aus, sagt der
+        # Replay-Weg dasselbe wie der Versand (AC-7).
+        convective_checked=result.convective_checked,
     )
     out = render_alert_preview(
         trip_obj, SimpleNamespace(onset=onset_ns, official=None, nowcast_frames=None),

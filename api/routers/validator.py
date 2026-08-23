@@ -281,6 +281,11 @@ class OnsetPayload(BaseModel):
     # Kanal eine Zonenangabe, obwohl der Payload sie traegt.
     km_measured: bool = False
     rain_zones: list[RainZonePayload] = Field(default_factory=list)
+    # Issue #2050 S4b-2: hat die Gewitterpruefung stattgefunden? Additiv,
+    # Default `True` -- Muster `event_ongoing_beyond_horizon` o. Pydantic
+    # verwirft unbekannte Schluessel STILL (#2046 F002): ohne dieses Feld
+    # zeigte die Vorschau den Sachverhalt nie, obwohl der Payload ihn traegt.
+    convective_checked: bool = True
 
 
 class OfficialAlertPayload(BaseModel):
