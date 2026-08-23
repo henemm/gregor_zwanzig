@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import math
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
