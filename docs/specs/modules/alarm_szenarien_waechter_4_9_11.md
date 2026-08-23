@@ -60,7 +60,7 @@ Lücke, ohne Produktivcode zu ändern und ohne bestehende Tests anzufassen.
 | `src/services/alert_state.py::AlertStateService.load` (`:61-67`) | method | Liest das Melde-Gedächtnis pro `user_id`/`entity_id` — Grundlage für AC-8 (Sz 11) |
 | `src/services/alert_log.py::read_undelivered` (`:536-...`) | function | Liest Unterdrückungs-Vorfälle EINER `user_id`/Kennung — Grundlage für AC-9 (Sz 11) |
 | `src/utils/timezone.py::day_offset` (`:138-143`) | function | Berechnet den Kalendertag-Versatz, den `onset_day_offset` trägt — Grundlage für Sz 9 |
-| `src/output/renderers/alert/render.py::_time_with_day`/`_sms_onset_time` (`:214-242`, `:758-771`) | function | Wortbildung des Tagesbezugs im Mail-/Telegram- bzw. SMS-Text — Grundlage für AC-3/AC-4 (Sz 9) |
+| `src/output/renderers/alert/render.py::_time_with_day`/`_sms_onset_time` (`:214-242`) | function | Wortbildung des Tagesbezugs im Mail-/Telegram- bzw. SMS-Text — Grundlage für AC-3/AC-4 (Sz 9) |
 | `tests/tdd/test_radar_cooldown_overtake.py` (nicht geändert) | reference | #2065 — bewacht den Radar-Zweig von Sz 4 bereits vollständig, wird hier NICHT dupliziert |
 | `tests/tdd/test_alarm_szenario_gewitter_vorverlegung.py` (nicht geändert) | reference | Vorbild für den Zwei-Nutzer-Aufbau (sequenzielle Läufe, eigene `user_id` je Kontrollzweig) |
 | `src/services/radar_cache.py::reset_shared_radar_cache_for_tests` (`:73-84`) | function | Wird von `.lauf()` automatisch aufgerufen; der Cache selbst ist prozessweit OHNE `user_id`-Schlüssel — Grund für sequenzielle statt parallele Läufe in Sz 11 |
@@ -151,20 +151,21 @@ strukturell identischem Trip-Aufbau (gleiche Region, gleiche Alarmregeln), Läuf
     den beim Bau ermittelten Tagesbezugs-Baustein als auch die Uhrzeit `00:23`.
 
 - **AC-4:** Given denselben auslösenden Lauf wie in AC-3, When der SMS-Text gelesen wird, Then
-  trägt die Kurzform den additiven Tagessuffix (`_sms_onset_time()`, `render.py:758-771` — bei
-  `day_offset == 1` das Suffix `+1`), unterscheidbar von einer taggleichen Beginnzeit ohne
-  Suffix.
-  - Test: `lauf.sms` aus AC-3 enthält die Uhrzeit mit `+1`-Suffix (exakte Kurzform beim Testbau
-    am Renderer-Output ermittelt), NICHT dieselbe Uhrzeit ohne Suffix.
+  trägt die Kurzform den Tagesbezug als vorangestelltes deutsches Wochentagskürzel
+  (`_sms_onset_time()` — bei `day_offset == 1` z. B. `Mo0:23`, Format-Ablösung aus #2054),
+  unterscheidbar von einer taggleichen Beginnzeit ohne Kürzel.
+  - Test: `lauf.sms` aus AC-3 enthält die Uhrzeit mit vorangestelltem Wochentagskürzel (exakte
+    Kurzform beim Testbau am Renderer-Output ermittelt), NICHT dieselbe Uhrzeit ohne Kürzel.
 
 - **AC-5:** Given ein zweiter, unabhängiger Prüflauf mit identischem Aufbau, aber einem
   Radar-Frame, dessen abgeleiteter Regenbeginn noch am selben Ortstag liegt
   (`onset_day_offset == 0`), When dieser Lauf über den Radar-Zweig fährt und auslöst, Then trägt
-  weder der Mail-/Telegram-Text noch der SMS-Text einen Tagesbezug oder Suffix — der
+  weder der Mail-/Telegram-Text noch der SMS-Text einen Tagesbezug — der
   Unterschied zu AC-3/AC-4 kommt ausschließlich vom Feldwert, nicht von einer anderen
   Textvorlage.
   - Test: eigener Trip/`user_id`, `.lauf(zweig="radar", at=<Uhrzeit sodass Onset vor
-    Mitternacht liegt>, ...)`; Text ohne Tageswort, SMS-Kurzform ohne `+`-Suffix.
+    Mitternacht liegt>, ...)`; Text ohne Tageswort, SMS-Kurzform ohne Wochentagskürzel vor der
+    Uhrzeit (Suchmuster mit Positivkontrolle abgesichert).
 
 - **AC-6:** Given zwei Nutzer A und B mit strukturell identischem Trip-Aufbau auf getrennten
   `AlarmPruefstrecke`-Instanzen, When Nutzer A einmal auslöst und anschließend Nutzer B
@@ -275,3 +276,6 @@ strukturell identischem Trip-Aufbau (gleiche Region, gleiche Alarmregeln), Läuf
   „Known Limitations" und AC-7/AC-9 oben), eigenständig mit wiederholter Mutations-Gegenprobe
   nachgewiesen. Finales Verdict: **VERIFIED**
   (`docs/artifacts/feat-2050-s3a-waechter-szenarien-4-9-11/adversary-dialog.md`).
+- 2026-08-23: AC-4 (und die Gegenprobe in AC-5) an die Format-Ablösung aus #2054 angepasst —
+  Wochentagskürzel statt Zahlensuffix —, nach Rebase auf den aktuellen `main`-Stand. Kein
+  Produktivcode berührt.

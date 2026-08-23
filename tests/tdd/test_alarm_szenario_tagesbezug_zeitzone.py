@@ -8,7 +8,8 @@ SPEC: docs/specs/modules/alarm_szenarien_waechter_4_9_11.md (AC-3, AC-4, AC-5)
 `utils/timezone.py:138-143`) macht einen ueber Mitternacht rutschenden
 Regenbeginn eindeutig -- der Renderer-Baustein `_time_with_day()`
 (`render.py:214-242`) haengt bei `day_offset == 1` das Wort "morgen" an,
-`_sms_onset_time()` (`render.py:758-771`) das additive Suffix `+1`. Diese
+`_sms_onset_time()` stellt der Uhrzeit das DE-Wochentagskuerzel voran
+(`Mo0:23`, Format-Abloesung aus #2054 -- zuvor Zahlensuffix `+1`). Diese
 Datei prueft, dass die ECHTE Kette (`check_radar_alerts()` -> Nowcast ->
 Renderer) den Tagesbezug traegt, nicht nur der isolierte Renderer-Aufruf
 (den bereits `test_alert_onset_day_rollover.py` bewacht).
@@ -22,6 +23,7 @@ Transport der `AlarmPruefstrecke`.
 """
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date as date_type
 from datetime import datetime, time as time_type, timedelta, timezone
@@ -49,6 +51,10 @@ _AT = datetime(2026, 5, 10, 23, 50, tzinfo=timezone.utc)  # 23:50 Ortszeit
 # einzelnen Frames (+15 Min Default) sonst selbst ueber Mitternacht hinaus
 # und ein "morgen" am ENDE wuerde die Kontrastprobe faelschlich verunreinigen.
 _AT_KONTRAST = datetime(2026, 5, 10, 20, 0, tzinfo=timezone.utc)  # 20:00 Ortszeit
+
+# Tagesbezug der Kurzform seit #2054: DE-Wochentagskuerzel unmittelbar VOR der
+# Uhrzeit (`Mo0:23`) -- Gegenprobe fuer AC-5.
+_KUERZEL_VOR_UHRZEIT = re.compile(r"(Mo|Di|Mi|Do|Fr|Sa|So)\d{1,2}:\d{2}")
 
 
 def _uid(tag: str) -> str:
@@ -157,10 +163,13 @@ def test_ac3_regenbeginn_ueber_mitternacht_traegt_tagesbezug_im_langtext():
         _clean_user(uid)
 
 
-def test_ac4_sms_kurzform_traegt_additiven_tagessuffix():
+def test_ac4_sms_kurzform_traegt_das_wochentagskuerzel():
     """AC-4: derselbe ausloesende Lauf wie AC-3; der SMS-Text traegt den
-    additiven Tagessuffix `+1` (`_sms_onset_time()`), unterscheidbar von
-    einer taggleichen Beginnzeit ohne Suffix."""
+    Tagesbezug als vorangestelltes DE-Wochentagskuerzel (`_sms_onset_time()`),
+    unterscheidbar von einer taggleichen Beginnzeit ohne Kuerzel.
+
+    Der Prueflauf steht auf Sonntag, 2026-05-10; der Regenbeginn faellt auf
+    Montag, 2026-05-11 -> erwartetes Kuerzel `Mo`."""
     uid = _uid("ac4")
     try:
         trip = _aufbau(uid, "ac4")
@@ -170,14 +179,15 @@ def test_ac4_sms_kurzform_traegt_additiven_tagessuffix():
             f"{lauf.triggered_count})."
         )
         sms_text = "\n".join(lauf.sms)
-        assert "0:23+1" in sms_text, (
-            f"AC-4: die Kurzform traegt den Tagessuffix '+1' nicht.\n{sms_text}"
+        assert "Mo0:23" in sms_text, (
+            f"AC-4: die Kurzform traegt das Wochentagskuerzel 'Mo' vor der "
+            f"Beginnzeit nicht.\n{sms_text}"
         )
-        ohne_suffix = sms_text.replace("0:23+1", "")
-        assert "0:23" not in ohne_suffix, (
-            f"AC-4: '0:23' erscheint auch OHNE das '+1'-Suffix -- die "
-            f"Kurzform muss den Tagessuffix IMMER an dieser Uhrzeit "
-            f"tragen.\n{sms_text}"
+        ohne_kuerzel = sms_text.replace("Mo0:23", "")
+        assert "0:23" not in ohne_kuerzel, (
+            f"AC-4: '0:23' erscheint auch OHNE vorangestelltes "
+            f"Wochentagskuerzel -- die Kurzform muss den Tagesbezug IMMER an "
+            f"dieser Uhrzeit tragen.\n{sms_text}"
         )
     finally:
         _clean_user(uid)
@@ -205,9 +215,14 @@ def test_ac5_regenbeginn_noch_am_selben_tag_bleibt_ohne_tagesbezug():
             f"AC-5: ohne Tageswechsel darf kein 'morgen'-Zusatz erscheinen.\n{text}"
         )
         sms_text = "\n".join(lauf.sms)
-        assert "+" not in sms_text, (
-            f"AC-5: die Kurzform darf ohne Tageswechsel keinen "
-            f"Tagessuffix tragen.\n{sms_text}"
+        assert _KUERZEL_VOR_UHRZEIT.search("Mo0:23"), (
+            "AC-5 Positivkontrolle: das Suchmuster erkennt ein "
+            "vorangestelltes Wochentagskuerzel nicht -- die Gegenprobe waere "
+            "wirkungslos."
+        )
+        assert not _KUERZEL_VOR_UHRZEIT.search(sms_text), (
+            f"AC-5: die Kurzform darf ohne Tageswechsel kein "
+            f"Wochentagskuerzel vor der Uhrzeit tragen.\n{sms_text}"
         )
     finally:
         _clean_user(uid)
