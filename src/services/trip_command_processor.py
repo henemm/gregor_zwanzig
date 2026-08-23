@@ -356,8 +356,14 @@ def _fetch_and_save_snapshot(trip, user_id: str, today, tomorrow) -> None:
 
     try:
         scheduler = TripReportSchedulerService(user_id=user_id)
+        scheduler._last_converted_trip = None
         segments = scheduler._convert_trip_to_segments(trip, today)
+        if scheduler._last_converted_trip is not None:
+            trip = scheduler._last_converted_trip
+        scheduler._last_converted_trip = None
         segments_tomorrow = scheduler._convert_trip_to_segments(trip, tomorrow)
+        if scheduler._last_converted_trip is not None:
+            trip = scheduler._last_converted_trip
         all_segments = segments + segments_tomorrow
         if not all_segments:
             return

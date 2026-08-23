@@ -236,6 +236,38 @@ def test_ac3_heutige_etappe_verliert_kilometrierung_nicht_durch_spaeteren_ausbli
 
 
 # ---------------------------------------------------------------------------
+# AC-7 — On-Demand-Snapshot-Pfad (Adversary-Finding F001): fünfte Aufrufstelle
+# in trip_command_processor.py._fetch_and_save_snapshot() teilt denselben
+# Bug -- zwei Aufrufe (heute, morgen) auf demselben stale `trip`.
+# ---------------------------------------------------------------------------
+
+def test_ac7_on_demand_snapshot_pfad_bewahrt_heutige_etappe():
+    """AC-7 (Adversary-Finding F001): `_fetch_and_save_snapshot()` ruft
+    `scheduler._convert_trip_to_segments(trip, today)` und danach
+    `scheduler._convert_trip_to_segments(trip, tomorrow)` auf demselben
+    `scheduler` auf -- der erste Aufruf rüstet die heutige Etappe nach und
+    speichert, der zweite (morgige) Aufruf darf diese Kilometrierung nicht
+    wieder mit dem stale Stand überschreiben."""
+    from services.trip_command_processor import _fetch_and_save_snapshot
+
+    heute = date.today()
+    morgen = heute + timedelta(days=1)
+    user = _uid("ac7")
+    trip = _trip_mit_n_unvermessenen_etappen(user, [heute, morgen])
+
+    _fetch_and_save_snapshot(trip=trip, user_id=user, today=heute, tomorrow=morgen)
+
+    reloaded = _reload(trip.id, user)
+    heutige_etappe = reloaded.stages[0]
+    assert heutige_etappe.date == heute, "Testaufbau: Etappe 0 ist nicht die heutige"
+    assert _alle_distanzen_gesetzt(heutige_etappe), (
+        "Die HEUTIGE Etappe hat ihre Kilometrierung verloren, obwohl der "
+        f"spaetere Save (morgige Etappe) nicht ihr eigener war: "
+        f"{[wp.distance_from_start_km for wp in heutige_etappe.waypoints]}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # AC-4 — Regressions-Wächter für den Reset-Mechanismus SELBST
 #
 # Strukturell bereits VOR dem Fix grün: der Seitenkanal (`self.
