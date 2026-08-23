@@ -31,6 +31,11 @@ zurück in die lokale Variable, damit nachfolgende Saves nicht rückwirkend Date
 - **File:** `src/services/trip_report_scheduler.py`
 - **Identifier:** `_convert_trip_to_segments()` (:1980-2028), `_build_report()` (:1248, :1258),
   `_build_stage_trend()` (:2396), `_collect_future_stage_weather()` (:2854)
+- **File (Nachtrag Adversary-Finding F001):** `src/services/trip_command_processor.py`
+- **Identifier:** `_fetch_and_save_snapshot()` (:359-360) — On-Demand-Query-Pfad (Telegram
+  „heute"/„morgen"-Abfrage), reproduziert denselben Mechanismus: zwei aufeinanderfolgende
+  `scheduler._convert_trip_to_segments()`-Aufrufe (heute, morgen) teilen dasselbe, nie
+  aktualisierte `trip`-Objekt
 
 > **Schicht-Hinweis:** Python-Core / Domain-Backend (`src/services/`). Kein Go- und kein
 > Frontend-Anteil — reiner Kontrollfluss-Fix innerhalb bestehender Methoden, kein neues Datenfeld,
@@ -38,9 +43,10 @@ zurück in die lokale Variable, damit nachfolgende Saves nicht rückwirkend Date
 
 ## Estimated Scope
 
-- **LoC:** ~25-35 Produktivcode
-- **Files:** 2 (`src/services/trip_report_scheduler.py`, 1 neue Testdatei unter `tests/tdd/`)
-- **Effort:** medium — mechanischer Fix an vier Stellen, aber der Wächter muss echte
+- **LoC:** ~25-35 Produktivcode + ~6-10 (Nachtrag F001)
+- **Files:** 3 (`src/services/trip_report_scheduler.py`, `src/services/trip_command_processor.py`,
+  1 neue Testdatei unter `tests/tdd/`)
+- **Effort:** medium — mechanischer Fix an vier (+1 Nachtrag) Stellen, aber der Wächter muss echte
   Mehrfach-Iteration über den persistierten Zustand nachweisen, nicht nur den Rückgabewert einer
   einzelnen Methode.
 
@@ -177,6 +183,21 @@ Erreichen dieser Zeile, da sie nur greift, wenn Zeile 1248 keine Etappe fand).
     zusätzlich wird nach einem `persist=False`-Aufruf geprüft, dass die Trip-Datei auf der Platte
     zeitlich unverändert bleibt (kein neuer `mtime`).
 
+- **AC-7 (Nachtrag, Adversary-Finding F001):** Given `_fetch_and_save_snapshot()`
+  (`trip_command_processor.py:359-360`, On-Demand-Query-Pfad z.B. Telegram „heute"/„morgen") ruft
+  `scheduler._convert_trip_to_segments(trip, today)` und danach
+  `scheduler._convert_trip_to_segments(trip, tomorrow)` auf, beide Etappen zuvor unvermessen /
+  When der erste Aufruf die heutige Etappe nachrüstet und speichert, der zweite Aufruf danach die
+  morgige Etappe nachrüstet und speichert / Then behält die heutige Etappe ihre Kilometrierung —
+  derselbe Seitenkanal-Mechanismus (`scheduler._last_converted_trip`, Reset vor jedem Aufruf, Lesen
+  danach) wird auch hier angewendet, da `scheduler` eine konkrete `TripReportSchedulerService`-
+  Instanz ist (kein Override-Risiko wie bei AC-4).
+  - Test: Trip mit zwei unvermessenen Etappen (heute, morgen) und passendem GPX-Bestand wird durch
+    `_fetch_and_save_snapshot()` geschickt; anschließend wird der Trip neu von der Platte geladen
+    und die heutige Etappe trägt weiterhin ihre `distance_from_start_km`-Werte, obwohl der zweite
+    (morgige) Save zeitlich später erfolgte. Von der Adversary-Verifikation empirisch als RED
+    nachgewiesen (Repro-Test im Scratchpad der Verifikations-Session).
+
 ## Known Limitations
 
 - **Der schlüsselbasierte Listen-Merge aus #2058 wird nicht angefasst.** `save_trip()` ersetzt
@@ -205,3 +226,7 @@ Erreichen dieser Zeile, da sie nur greift, wenn Zeile 1248 keine Etappe fand).
 ## Changelog
 
 - 2026-08-23: Initial spec created
+- 2026-08-23: AC-7 nachgetragen (Adversary-Finding F001) — fünfte Aufrufstelle
+  `trip_command_processor.py:_fetch_and_save_snapshot()` reproduziert denselben Mechanismus,
+  identischer Fix (Tech-Lead-Entscheidung, transparent begründet, kein separates PO-Gate — analog
+  zur bereits dokumentierten Erweiterung von 2-3 auf 4 Stellen im ursprünglichen Scope)
