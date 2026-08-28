@@ -299,13 +299,30 @@ Preview-Abhängigkeit vom Onset-Pfad.
   `POST /api/trips/{trip_id}/alert-preview?user_id=…` mit Payload
   `{"nowcast_frames": {source, frames[], km_from, km_to}}` → die Antwort trägt
   `onset_detected` und das gerenderte `sms`-Feld. Der Replay nutzt dasselbe `_derive_result`
-  wie der Live-Pfad, keinen Test-Sonderweg — geeignet für AC-3 (Segment-Sprache) und als
+  wie der Live-Pfad, keinen Test-Sonderweg — geeignet für AC-1/AC-2/AC-4/AC-10/AC-11 und als
   zusätzlicher Regen-Nachweis mit echten Frame-Daten.
 - **Kern-Unit-Tests:** direkte Aufrufe von `_render_sms_onset` mit konstruierten
   `OnsetEvent`/`AlertMessage`-Fixtures für alle zehn ACs, deterministisch, ohne Netz.
 - **Grenze:** Für den konvektiven Zweig existiert kein echter S1-Mitschnitt (s. Known
-  Limitations) — der Endpunkt-Nachweis für AC-3 nutzt deshalb konstruierte, nicht
+  Limitations) — der Endpunkt-Nachweis nutzt deshalb konstruierte, nicht
   aufgezeichnete `nowcast_frames`.
+- 🔴 **Grenze des Endpunkts — korrigiert am 2026-08-20 nach der Staging-Messung:**
+  Eine frühere Fassung dieser Sektion behauptete, der Endpunkt sei „geeignet für AC-3
+  (Segment-Sprache)". **Das trifft nicht zu.** Der Endpunkt kann **keine Segment-Kennung
+  transportieren**: `OnsetPayload` (`api/routers/validator.py:226-234`) hat kein
+  Segment-Feld, und der Frame-Replay baut das Onset-Objekt ausschließlich aus
+  `km_from`/`km_to` (`src/services/validator_render_service.py:245-254`). Damit fällt der
+  Kopf über diesen Weg **immer** auf die km-Spanne zurück — unabhängig vom Trip.
+  Auf Staging messbar sind deshalb nur AC-1, AC-2, AC-4, AC-10 und AC-11; **AC-3 und AC-8
+  ruhen allein auf Kern-Unit-Tests**, AC-5 bis AC-9 zusätzlich mangels
+  Compare-seitigem Einspeiseweg.
+
+  **Es ist ein Versehen aus S2, keine Designentscheidung:** der Geschwister-Zweig
+  `OfficialAlertPayload` (ebenda, Z. 237-251) trägt sehr wohl `segment_ids: list[str]`,
+  und die Produktivseite kann es ohnehin — `OnsetEvent.segment_id` existiert seit #1744 A1
+  und wird vom Live-Pfad gesetzt (`src/services/trip_alert.py:1283`). Es fehlt allein die
+  Durchreichung im Testeinspeiseweg (~10 Zeilen). **Als Vorbedingung für S5 vorgemerkt**,
+  damit Segment-Sprache in künftigen Alarm-Scheiben am lebenden System prüfbar wird.
 
 ## Nicht Teil dieser Scheibe
 
