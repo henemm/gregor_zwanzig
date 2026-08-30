@@ -42,7 +42,7 @@ import socket
 import threading
 import urllib.parse
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from app.config import Settings
@@ -172,10 +172,21 @@ def _settings_sms_only(sms_port: int) -> Settings:
 
 
 def _settings_all_short_channels(sms_port: int) -> Settings:
-    """SMS + Premium-SMS (beide ueber denselben seven.io-Stub) + Telegram."""
+    """SMS + Premium-SMS (beide ueber denselben seven.io-Stub) + Telegram.
+
+    `telegram_test_chat_id` MUSS explizit auf denselben Wert wie
+    `telegram_chat_id` gesetzt werden (Issue #1477-Kommentar oben) --
+    ohne ihn greift die Herkunftssperre (#1476,
+    `TelegramOutput._guard_code_origin`) in JEDER Umgebung, die
+    `running_origin()` als "test" erkennt (z.B. CI-Checkouts), findet
+    keine konfigurierte Test-Chat-ID und bricht den Versand mit
+    `OutputConfigError` ab -- lokal (Worktree, andere Herkunft) unsichtbar,
+    in CI ein stiller `count == 0` (Zustellbilanz statt Entscheidung).
+    """
     return Settings(
         smtp_host="", smtp_user="", smtp_pass="", mail_to="",
         telegram_bot_token="tdd-2122-bot-token", telegram_chat_id="99999",
+        telegram_test_chat_id="99999",
         sms_gateway_url=f"http://127.0.0.1:{sms_port}/api/sms",
         seven_api_key="tdd-2122-stub-key", seven_sandbox_key="tdd-2122-stub-key",
         sms_to="+49000000000", sms_from=None,
@@ -203,6 +214,14 @@ def _multi_stage_trip(trip_id: str = "tdd-2122-trip", *, today_index: int = 2, n
         d = today + timedelta(days=i - today_index)
         stages.append(Stage(
             id=f"ST{i + 1}", name=f"Etappe {i + 1}", date=d,
+            # Haertung gegen tests/tdd/test_fixture_wallclock_ratchet.py
+            # (Anti-Muster #1709): ein Wanduhr-Etappendatum (`date.today()`
+            # o.) mit >=2 Wegpunkten OHNE jede Ankunftszeit ist verwundbar
+            # gegen Mitternachts-Rollover. Diese Trips lesen keine
+            # Ankunftszeiten (Stage-Position genuegt fuer die Etappen-
+            # Nummer) -- ein fester `start_time` genuegt zur Immunisierung,
+            # ohne echte Zeitfenster zu erfinden.
+            start_time=time(8, 0),
             waypoints=[
                 Waypoint(id=f"W{i + 1}a", name="Start", lat=47.0 + i * 0.01,
                           lon=11.0 + i * 0.01, elevation_m=1000),
