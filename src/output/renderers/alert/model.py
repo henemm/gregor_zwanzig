@@ -71,6 +71,12 @@ class AlertEvent:
     # Reichweite nennt statt sie zu verschweigen.
     window_end_time: str | None = None
     window_end_day_offset: int = 0
+    # Issue #2122: additiv, optional, Muster `segment_id` (#1744)/`km_measured`
+    # (#2036). 1-basierte chronologische Etappen-Position (Trip.stages sortiert
+    # nach Datum), abgeleitet ueber `Trip.get_stage_for_date()` -- dieselbe Zahl
+    # wie `Trip.numbered_stage_label()`. Gesetzt vom Trip-Abweichungspfad;
+    # der Ortsvergleich setzt sie nie (AC-9).
+    stage_number: int | None = None
 
 
 @dataclass(frozen=True)
@@ -189,6 +195,10 @@ class OnsetEvent:
     # hashbar bleiben. Leer heisst "keine Luecke bekannt" -- ausdruecklich
     # NICHT "alles gemessen" (AC-14): der Text schweigt in beiden Faellen.
     gap_km: tuple[float, ...] = ()
+    # Issue #2122: additiv, optional, Muster `AlertEvent.stage_number` (o.).
+    # Datumsquelle fuer Radar/Onset ist `segment_date` aus
+    # `_resolve_alert_segment` (kann der Vortag sein), NICHT `today`.
+    stage_number: int | None = None
 
 
 @dataclass(frozen=True)
@@ -223,6 +233,8 @@ class OnsetShiftEvent:
     # verstrichen ist, und genau das war der Vorwurf aus #2020.
     to_day_offset: int = 0
     to_is_past: bool = False
+    # Issue #2122: additiv, optional, Muster `AlertEvent.stage_number` (o.).
+    stage_number: int | None = None
 
 
 @dataclass(frozen=True)
@@ -251,6 +263,8 @@ class CorridorEvent:
     # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
     # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
     km_measured: bool = False
+    # Issue #2122: additiv, optional, Muster `AlertEvent.stage_number` (o.).
+    stage_number: int | None = None
 
 
 @dataclass(frozen=True)

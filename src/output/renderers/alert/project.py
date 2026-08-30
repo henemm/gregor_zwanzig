@@ -213,6 +213,7 @@ def _to_onset_shift_event(
     segment_id: str | None = None, location_label: str | None = None,
     km_measured: bool = False,   # Issue #2036
     now_utc=None,                # Issue #2020 Scheibe 2
+    stage_number: int | None = None,  # Issue #2122
 ) -> OnsetShiftEvent:
     to_utc = datetime.fromtimestamp(ch.new_value, timezone.utc)
     to_offset, to_past, _weekday = _when_fields(to_utc, now_utc, tz)
@@ -226,6 +227,7 @@ def _to_onset_shift_event(
         segment_id=segment_id, location_label=location_label,
         km_measured=km_measured,  # Issue #2036
         to_day_offset=to_offset, to_is_past=to_past,
+        stage_number=stage_number,  # Issue #2122
     )
 
 
@@ -296,7 +298,7 @@ def _remaining_fields(eintrag, ch, now_utc, tz) -> dict:
 
 def to_alert_message(
     changes, segments, trip_name, *, tz, stand_at, corridor_hits=None,
-    reference_at=None, now_utc=None,
+    reference_at=None, now_utc=None, stage_number=None,
 ) -> AlertMessage:
     """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None.
 
@@ -314,6 +316,11 @@ def to_alert_message(
     sowie die Restmenge des Niederschlags-Summen-Ereignisses. Sie wird
     UEBERGEBEN, nie hier von der Systemuhr gelesen (AC-13); `None` laesst die
     Ausgabe byte-identisch zum Bestand.
+
+    Issue #2122: `stage_number` ist additiv, optional (Muster `now_utc` o.).
+    Vom Aufrufer bereits ueber `Trip.get_stage_for_date()` aufgeloest -- reist
+    unveraendert auf JEDES erzeugte `AlertEvent`/`OnsetShiftEvent`/
+    `CorridorEvent` durch. `None` laesst die Ausgabe byte-identisch (AC-8).
     """
     events: list[AlertEvent] = []
     onset_events: list[OnsetShiftEvent] = []
@@ -337,6 +344,7 @@ def to_alert_message(
                 segment_id=normalize_segment_id(match.segment_id),
                 km_measured=km_measured,
                 now_utc=now_utc,
+                stage_number=stage_number,
             ))
             continue
         metric_id = _resolve_metric_id(ch.metric, ch.direction)
@@ -361,9 +369,11 @@ def to_alert_message(
             # muss den Ort nennen, den er auch km-seitig meint).
             segment_id=normalize_segment_id(match.segment_id),
             km_measured=km_measured,  # Issue #2036
+            stage_number=stage_number,  # Issue #2122
         ))
     corridor_events = (
-        to_corridor_events(corridor_hits, segments, tz=tz) if corridor_hits else ()
+        to_corridor_events(corridor_hits, segments, tz=tz, stage_number=stage_number)
+        if corridor_hits else ()
     )
     return AlertMessage(
         trip_short=trip_name, stand_at=stand_at, events=tuple(events), source=None,
@@ -416,7 +426,9 @@ def _resolve_corridor_metric_id(alert_metric: str, direction: str) -> str:
     return candidates[0].id
 
 
-def to_corridor_events(hits, segments, *, tz) -> tuple[CorridorEvent, ...]:
+def to_corridor_events(
+    hits, segments, *, tz, stage_number: int | None = None,
+) -> tuple[CorridorEvent, ...]:
     """`CorridorHit`-Liste (`services.corridor_threshold`) → `CorridorEvent`-Tupel
     (Issue #1444 S1). Eigener Render-Vertrag, kein `WeatherChange`-Umweg.
 
@@ -443,6 +455,7 @@ def to_corridor_events(hits, segments, *, tz) -> tuple[CorridorEvent, ...]:
                 # mit -- ohne beides kann der Renderer nur km zeigen (F001).
                 segment_id=normalize_segment_id(match.segment_id),
                 km_measured=bool(getattr(match, "distance_measured", False)),
+                stage_number=stage_number,  # Issue #2122
             ))
         except Exception as e:
             logger.warning(

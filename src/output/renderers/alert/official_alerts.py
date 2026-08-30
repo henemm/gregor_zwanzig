@@ -175,6 +175,11 @@ class OfficialAlertNotice:
     # zurueck (Alt-Aufrufer/handgebaute Test-Notices ohne dieses Feld,
     # Bestandsverhalten unveraendert).
     regions: tuple[str, ...] = ()
+    # Issue #2122: additiv, optional, Muster `AlertEvent.stage_number` (o.).
+    # Etappen-Nummer des Tages, dem der TATSAECHLICH verwendete rollierende
+    # Anker entstammt (`build_official_alert_notices`). Der Compare-Builder
+    # (`build_compare_official_alert_notices`) setzt sie nie (AC-9-Muster).
+    stage_number: int | None = None
 
 
 def render_official_alerts_html(
@@ -2101,11 +2106,14 @@ def render_official_alert_sms(
     garantiert weiterhin, dass die schwerste Warnung IMMER mit greifbarem
     Inhalt in der SMS steht (Adversary F004), jetzt zusaetzlich abgesichert
     durch die Kopf-Rueckfallebene (N-3)."""
-    from .render import _ascii
+    from .render import _ascii, _stage_prefix
 
     ordered = _sort_notices(notices)
     uniform_scope = _uniform_scope(ordered)
     leading = ordered[0]
+    # Issue #2122 (AC-5): das Etappen-Praefix ueber ALLE gebuendelten Warnungen
+    # dieser SMS -- fehlt es bei irgendeiner, entfaellt es GANZ (AC-8-Muster).
+    prefix = _stage_prefix(ordered)
 
     tokens = [
         _ascii(
@@ -2114,7 +2122,7 @@ def render_official_alert_sms(
         )
         for n in ordered
     ]
-    head = _ascii(f"{leading.sms_scope}: ") if uniform_scope else ""
+    head = f"{prefix}{_ascii(f'{leading.sms_scope}: ')}" if uniform_scope else prefix
     # `access_ban` traegt nie eine Stunde -- auch nicht als Fallback-Variante.
     leading_time = (
         "" if leading.alert.hazard in LEVELLESS_HAZARDS
@@ -2163,6 +2171,7 @@ def _measured_km_span(
 def build_official_alert_notices(
     trip: "Trip | None", tagged_alerts: list[tuple["OfficialAlert", list[str]]],
     segment_km: dict[str, tuple[float, float]] | None = None,
+    stage_number: int | None = None,
 ) -> list["OfficialAlertNotice"]:
     """Baut die `OfficialAlertNotice`-DTOs fuer den Trip-Standalone-Alarm
     (Issue #1216): dedupliziert via `dedupe_official_alerts`, leitet
@@ -2177,7 +2186,13 @@ def build_official_alert_notices(
     dieselbe Ortssprache wie Nowcast- und Abweichungsalarm (Teilungs-
     Invariante #1744, AC-3) -- die Aufloesung selbst bleibt die EINE geteilte
     Funktion `segments.format_alert_location`, kein zweiter Pfad. Ohne
-    Eintrag bleibt es byte-identisch bei "Segment N"."""
+    Eintrag bleibt es byte-identisch bei "Segment N".
+
+    Issue #2122: `stage_number` (additiv, optional) ist bereits vom Aufrufer
+    aufgeloest (`notification_service.send_official_alert` liest den
+    tatsaechlich verwendeten rollierenden Anker) -- reist unveraendert auf
+    JEDE erzeugte `OfficialAlertNotice`. `None` laesst die Ausgabe
+    byte-identisch (Regressions-Invariante)."""
     all_ids = _trip_total_segment_ids(trip)
     deduped = _bundle_by_hazard_level(dedupe_official_alerts(tagged_alerts))
     notices = []
@@ -2238,6 +2253,7 @@ def build_official_alert_notices(
             # regions (Adversary F013 Nachzug #1239 Runde 7): alle Regionen des
             # Buendels (`_bundle_by_hazard_level`s dritter Rueckgabewert).
             regions=regions,
+            stage_number=stage_number,  # Issue #2122
         ))
     return notices
 
