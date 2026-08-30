@@ -726,3 +726,200 @@ def test_ac11_all_three_short_channels_carry_the_same_stage_prefix(monkeypatch):
     finally:
         sms_stub.stop()
         tg_stub.stop()
+
+
+# ═══════════════ Adversary-Haertung (Runde 2, Verdict BROKEN) ═══════════════
+#
+# Drei Befunde aus docs/artifacts/fix_2122_etappen_praefix_kurzform/
+# adversary-dialog.md. F001/F002 sind Korrektheits-Luecken in der
+# Datumsableitung, F003 ist eine Testabdeckungs-Luecke (Mutations-Gegenprobe
+# M8 blieb unbewacht).
+
+from freezegun import freeze_time  # noqa: E402
+
+from tests.tdd.conftest import _anker, trip_two_zones  # noqa: E402
+
+# 22:30 UTC am 20.08.2026 = 00:30 Ortszeit auf Korsika am 21.08. -- NACH der
+# ORTS-, VOR der WELTZEIT-Mitternacht (dasselbe Zeitfenster wie
+# test_befehlspfade_folgen_ortszone.py::NACHTS_UTC).
+_F001_NACHTS_UTC = datetime(2026, 8, 20, 22, 30, tzinfo=UTC)
+_F001_D20 = date(2026, 8, 20)
+_F001_D21 = date(2026, 8, 21)
+
+
+def test_f001_deviation_alert_prefix_follows_trip_local_day_not_server_clock():
+    """Adversary F001 (CRITICAL): die Etappen-Nummer MUSS aus dem ORTSTAG der
+    Tour (ADR-0044, `services.trip_day.trip_local_today`) abgeleitet werden,
+    nicht aus der Server-/Weltzeit-Wanduhr (`date.today()` waere ein
+    `ambient_clock`-Rueckfall, Issue #1402 -- Waechter:
+    `tests/test_output_timezone_guard.py`).
+
+    GIVEN eine Zwei-Zonen-Tour (Etappe 0 Neuseeland 20.08., Etappe 1 Korsika
+          21.08.) und ein Sendezeitpunkt 22:30 UTC am 20.08. = 00:30 Ortszeit
+          auf Korsika am 21.08. -- nach der Orts-, vor der Weltzeit-
+          Mitternacht,
+    WHEN  der Abweichungs-Alarm gerendert wird,
+    THEN  traegt er das Praefix der Korsika-Etappe (S2), NICHT das der
+          Neuseeland-Etappe (S1) -- S1 waere exakt der Wert, den eine
+          `date.today()`-Ableitung an diesem Zeitpunkt lieferte (der
+          Weltzeit-Tag ist an diesem Moment noch der 20.08., der Server-
+          Kalendertag unter `freeze_time` ebenfalls -- gemessen ueber
+          `_anker()`).
+    """
+    with freeze_time(_F001_NACHTS_UTC):
+        _anker(_F001_NACHTS_UTC, "Europe/Paris", _F001_D21)
+        trip = trip_two_zones(_F001_D20, trip_id="tdd-2122-f001")
+        stub = _SevenIoStub()
+        try:
+            svc = NotificationService(
+                settings=_settings_sms_only(stub.port),
+                user_id=f"tdd-2122-f001-{uuid.uuid4().hex[:6]}",
+            )
+            svc.send_deviation_alert(
+                trip=trip, weather=[_segment_weather_data()], changes=[_change()],
+                effective_channels={"sms"},
+            )
+            assert len(stub.received) == 1, (
+                f"Setup-Kontrolle: erwartet genau eine SMS, erhalten: {stub.received!r}"
+            )
+            text = stub.received[0]["text"]
+            assert text.startswith("S2 "), (
+                "F001: das Praefix muss die Korsika-Etappe (S2, Ortstag "
+                "21.08.) nennen, nicht die Neuseeland-Etappe (S1, Weltzeit-/"
+                f"Servertag 20.08.). Gemessen: {text!r}"
+            )
+        finally:
+            stub.stop()
+
+
+def test_f002_official_alert_omits_prefix_when_anchor_is_stale():
+    """Adversary F002 (HIGH): ein mehrere Tage alter, fuer die Routen-
+    GEOMETRIE noch gueltiger Ankertag (`trip_alert.py` nutzt ihn dort absichtlich
+    ohne Alters-/Tagespruefung, s. `_kanal_anker_kandidat`-Docstring) darf die
+    Etappen-NUMMER nicht mehr liefern -- eine falsche Nummer ist schlechter als
+    keine (dieselbe Linie wie AC-8: reproduziert zeigte der Anker vor dem Fix
+    `S1` statt der tatsaechlich aktuellen `S3`).
+
+    Gegenprobe im selben Testkoerper: derselbe Trip mit einem FRISCHEN Anker
+    (heute) zeigt weiterhin das Praefix -- das Ausbleiben oben liegt also an
+    der Staleness-Pruefung, nicht an einem toten Codepfad.
+    """
+    trip = _multi_stage_trip()  # heute = 3. von 5 Etappen
+    uid = f"tdd-2122-f002-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    stub = _SevenIoStub()
+    try:
+        weather = [_segment_weather_data()]
+        snap_svc = WeatherSnapshotService(user_id=uid)
+        stale = date.today() - timedelta(days=2)
+        for channel in ("sms", "email", "telegram", "premium_sms"):
+            snap_svc.save_alarm_anchor(trip.id, stale, weather, channel)
+
+        alert = OfficialAlert(
+            source="geosphere_warn", hazard="thunderstorm", level=2,
+            label="Gewitter", valid_from=datetime.now(UTC),
+            valid_to=datetime.now(UTC) + timedelta(hours=3),
+            region_label="Test-Region",
+        )
+        svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=uid)
+        svc.send_official_alert(
+            trip=trip, notices=[(alert, ["1"])], effective_channels={"sms"},
+        )
+        assert len(stub.received) == 1, (
+            f"Setup-Kontrolle: erwartet genau eine SMS, erhalten: {stub.received!r}"
+        )
+        text_stale = stub.received[0]["text"]
+        assert not text_stale.startswith(("S1 ", "S2 ", "S3 ", "S4 ", "S5 ")), (
+            "F002: ein 2 Tage alter Anker darf KEINE Etappen-Nummer erzwingen "
+            f"(insbesondere nicht die falsche 'S1 '), gemessen: {text_stale!r}"
+        )
+
+        # Positivkontrolle: FRISCHER Anker (heute) -> Praefix erscheint.
+        stub.received.clear()
+        for channel in ("sms", "email", "telegram", "premium_sms"):
+            snap_svc.save_alarm_anchor(trip.id, date.today(), weather, channel)
+        svc.send_official_alert(
+            trip=trip, notices=[(alert, ["1"])], effective_channels={"sms"},
+        )
+        assert len(stub.received) == 1, (
+            f"Setup-Kontrolle Gegenprobe: erwartet genau eine SMS, erhalten: "
+            f"{stub.received!r}"
+        )
+        text_fresh = stub.received[0]["text"]
+        assert text_fresh.startswith("S3 "), (
+            "Positivkontrolle: ein FRISCHER Anker (heute) muss weiterhin das "
+            f"Praefix zeigen, gemessen: {text_fresh!r}"
+        )
+    finally:
+        stub.stop()
+        _clean_user(uid)
+
+
+def test_f003_radar_alert_prefix_reaches_the_real_trigger_path():
+    """Adversary F003 (HIGH, Mutations-Gegenprobe M8): das Etappen-Praefix
+    muss auch dann erscheinen, wenn `RadarAlertRequest` NICHT von Hand gebaut
+    wird, sondern aus dem ECHTEN Ausloesepfad
+    (`TripAlertService.check_radar_alerts()` -> `_resolve_alert_segment` ->
+    Bau von `RadarAlertRequest(..., segment_date=segment_date, ...)` in
+    `trip_alert.py:2220-2227`). AC-2/AC-6 dieser Datei pruefen ausschliesslich
+    die KONSUMIERENDE Seite (`NotificationService.send_radar_alert` mit
+    handgebautem `RadarAlertRequest`) -- die reale Verdrahtungsstelle blieb
+    dadurch unbewacht (M8: Entfernen von `segment_date=segment_date` an
+    dieser Stelle liess 0 von ueber 100 gepruefte Tests rot werden).
+
+    Kein Mock: echter `TripAlertService.check_radar_alerts()`, echter Trip auf
+    Platte (`app.loader.save_trip`), echte `RadarNowcastService` ueber die
+    DI-Naht `radar_service=` mit `CountingFrameSource` (Vorbild
+    `tests/helpers/nowcast_gate_fixtures.py`, `test_radar_alert_follows_
+    ortstag.py`), echter lokaler seven.io-HTTP-Stub.
+    """
+    from app.loader import save_trip as loader_save_trip
+    from services.trip_alert import TripAlertService
+    from tests.helpers.nowcast_gate_fixtures import (
+        TRIP_LAT, TRIP_LON, CountingFrameSource, clean_uid, fresh_uid,
+        frozen_active_window, make_trip, radar_service, reset_radar_cache,
+        write_user_tier,
+    )
+
+    reset_radar_cache()
+    uid = fresh_uid("f003-2122")
+    trip_id = "tdd-2122-f003-trip"
+    clean_uid(uid)
+    try:
+        # SMS ist ein Tier-Merkmal (`user_tier.sms_allowed`) -- ohne
+        # "standard"/"premium" wuerde `_effective_alert_channels()` "sms"
+        # wieder herausfiltern, unabhaengig vom Trip-Kanal-Wunsch.
+        write_user_tier(uid, "standard")
+        trip = make_trip(trip_id, lat=TRIP_LAT, lon=TRIP_LON)
+        # Nur SMS aktiv -- die Zusicherung liest den zugestellten SMS-Text.
+        # `TripReportConfig` ist ein einfaches (nicht-pydantic) `@dataclass`
+        # -- Attribute direkt setzen statt `model_copy()`.
+        trip.report_config.send_email = False
+        trip.report_config.send_sms = True
+        stub = _SevenIoStub()
+        try:
+            with frozen_active_window(hour_utc=12):
+                loader_save_trip(trip, user_id=uid)
+                svc = TripAlertService(
+                    settings=_settings_sms_only(stub.port),
+                    throttle_hours=0, user_id=uid,
+                    radar_service=radar_service(CountingFrameSource(onset_minutes=8)),
+                )
+                result = svc.check_radar_alerts()
+            assert result == 1, (
+                f"Setup-Kontrolle: check_radar_alerts() sollte 1 Alarm "
+                f"ausloesen, war {result}"
+            )
+            assert len(stub.received) == 1, (
+                f"Setup-Kontrolle: erwartet genau eine SMS, erhalten: "
+                f"{stub.received!r}"
+            )
+            text = stub.received[0]["text"]
+            assert text.startswith("S1 "), (
+                "F003: das Praefix muss auch ueber den ECHTEN Radar-"
+                f"Ausloesepfad erscheinen (Trip mit 1 Etappe), gemessen: {text!r}"
+            )
+        finally:
+            stub.stop()
+    finally:
+        clean_uid(uid)

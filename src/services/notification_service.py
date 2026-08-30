@@ -34,6 +34,7 @@ from output.channels.premium_sms import PremiumSmsOutput
 from output.channels.sms import SMSOutput
 from output.channels.telegram import TelegramOutput
 from services.trip_command_processor import CommandResult
+from services.trip_day import trip_local_today
 from utils.timezone import local_dt, local_fmt
 
 if TYPE_CHECKING:
@@ -806,11 +807,15 @@ class NotificationService:
         # nennen als die Restmengen-Rechnung.
         now_utc = datetime.now(timezone.utc)
         stand_at = local_fmt(now_utc, alert_tz)
-        # Issue #2122 (AC-1): der Abweichungs-Alarm ist STRIKT `today` (der
+        # Issue #2122 (AC-1): der Abweichungs-Alarm ist STRIKT "heute" (der
         # einzige Anker-Kandidat, `trip_alert._kanal_anker_kandidat` verwirft
         # jeden mit abweichendem `target_date`) -- kein Rueckgriff auf
-        # `_resolve_alert_segment` noetig.
-        stage_number = _stage_number_for_date(trip, date.today())
+        # `_resolve_alert_segment` noetig. "Heute" ist der ORTSTAG der Tour
+        # (Adversary F001, ADR-0044) -- NICHT die Server-/Weltzeit-Wanduhr:
+        # `date.today()` waere um Mitternacht ein `ambient_clock`-Rueckfall
+        # (Issue #1402) und koennte bei einer Tour ausserhalb der Serverzone
+        # die falsche Etappe treffen.
+        stage_number = _stage_number_for_date(trip, trip_local_today(trip, now_utc))
         alert_msg = to_alert_message(
             changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
             corridor_hits=corridor_hits, reference_at=reference_at,
@@ -1014,20 +1019,33 @@ class NotificationService:
             if first_wp is not None
             else ZoneInfo("UTC")
         )
-        # Issue #2122 (AC-5): das Datum des TATSAECHLICH verwendeten
-        # rollierenden Ankers -- dieselbe Kanal-Reihenfolge (`sorted`) wie der
-        # lenient Anker-Rueckfall in `trip_alert._resolve_current_weather`
-        # (erster Treffer gewinnt, keine Alterspruefung). Kein Anker lesbar ->
-        # `today` (Regressions-Invariante fuer den Normalfall).
+        # Issue #2122 (AC-5, Adversary F001/F002): das Datum des TATSAECHLICH
+        # verwendeten rollierenden Ankers -- dieselbe Kanal-Reihenfolge
+        # (`sorted`) wie der lenient Anker-Rueckfall in
+        # `trip_alert._resolve_current_weather` (erster Treffer gewinnt,
+        # keine Alterspruefung dort -- der reicht dort NUR die Routen-
+        # Geometrie weiter, die altersunabhaengig gueltig bleibt). Die
+        # Etappen-NUMMER haengt dagegen sehr wohl vom Tag ab: ein mehrere
+        # Tage alter, fuer die Geometrie noch brauchbarer Anker wuerde sonst
+        # eine FALSCHE Etappe behaupten (F002, reproduziert: S1 statt S3).
+        # Deshalb zaehlt der Anker hier NUR, wenn sein Datum mit dem
+        # ORTSTAG der Tour (F001, ADR-0044 -- NICHT `date.today()`)
+        # uebereinstimmt; sonst `stage_number=None` (kein Praefix) statt
+        # eine geratene Zahl -- dieselbe Linie wie AC-8.
         from services.weather_snapshot import WeatherSnapshotService
 
+        now_utc = datetime.now(timezone.utc)
+        local_today = trip_local_today(trip, now_utc)
         snap_svc = WeatherSnapshotService(user_id=self._user_id)
         anchor_date = None
         for channel in sorted(effective_channels):
             anchor_date = snap_svc.alarm_anchor_target_date(trip.id, channel)
             if anchor_date is not None:
                 break
-        stage_number = _stage_number_for_date(trip, anchor_date or date.today())
+        stage_number = (
+            _stage_number_for_date(trip, local_today)
+            if anchor_date == local_today else None
+        )
         # Issue #2036: gemessene km-Spannen mitgeben -- ohne sie bleibt die
         # amtliche Warnung byte-identisch bei der Segment-Sprache.
         dto_notices = build_official_alert_notices(
