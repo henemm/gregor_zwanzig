@@ -11,7 +11,7 @@ workflow: fix_2122_etappen_praefix_kurzform
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO (Henning) am 2026-08-30, Freigabe der zwölf ACs mit „go"
 
 ## Purpose
 
