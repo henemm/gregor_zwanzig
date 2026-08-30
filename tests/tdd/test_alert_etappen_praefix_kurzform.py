@@ -286,12 +286,20 @@ def test_ac1_deviation_alert_prefix_derived_from_trip_stage_position():
             f"nicht literal gesetzt). Gemessen: {text!r}"
         )
         # Nachweis, dass NUR das Praefix neu ist: der Rest bleibt der
-        # gemessene Bestandstext des Abweichungs-Alarms (Issue #1935/#1779,
+        # gemessene Bestandstext des Abweichungs-Alarms. GEMESSEN (nicht aus
+        # einem Nachbartest abgeschrieben) am 2026-08-30 ueber denselben
+        # Ausloesepfad mit einem Trip OHNE Etappe an `date.today()`
+        # (`_stage_number_for_date()` liefert dann `None` -> kein Praefix):
+        # `'Seg 1: R2->30'`. Die fruehere Erwartung `'Segment 1: R2->30'`
+        # (volles Wort) war seit Commit e9885f08 (#1948 S5, 2026-08-20 --
+        # `_ascii_alert_location()` faltet "Segment " -> "Seg " im SMS-Kopf)
+        # veraltet; der gleichlautende Bestandstest
         # `test_alert_sms_location_positions.py::test_regression_trip_
-        # deviation_alert_sms_text_unchanged`).
-        assert text[len("S3 "):] == "Segment 1: R2->30", (
-            f"AC-1: hinter dem Praefix muss der unveraenderte Bestandstext "
-            f"stehen, gemessen: {text!r}"
+        # deviation_alert_sms_text_unchanged` traegt denselben stalen String
+        # und ist separat zu buchen (nicht Teil dieses Tickets).
+        assert text[len("S3 "):] == "Seg 1: R2->30", (
+            f"AC-1: hinter dem Praefix muss der unveraenderte (gemessene) "
+            f"Bestandstext stehen, gemessen: {text!r}"
         )
     finally:
         stub.stop()
