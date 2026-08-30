@@ -2220,6 +2220,11 @@ class TripAlertService:
                 intensity_label=_label,
                 source_label=radar_svc.source_label(result.source),
                 briefing_context=_briefing_context,
+                # Issue #2122: das Datum, dem das gewaehlte Segment ENTSTAMMT
+                # (kann der Vortag sein, s. `_resolve_alert_segment`-Docstring)
+                # -- NICHT `today` (`notification_service.send_radar_alert`
+                # leitet daraus die Etappen-Nummer ab, AC-6).
+                segment_date=segment_date,
                 # Issue #2046: die Menge der Stunde AB DEM BEGINN aus DEMSELBEN
                 # NowcastResult, das schon onset_minutes/intensity_label
                 # liefert (analog `is_convective=result.is_convective`) -- rein

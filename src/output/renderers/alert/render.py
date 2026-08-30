@@ -217,6 +217,38 @@ def _km_str(msg: AlertMessage) -> str:
     return _location_of(msg.events, msg.location_label)
 
 
+def _stage_prefix(events) -> str:
+    """Issue #2122: die EINE Stelle, an der das Etappen-Praefix der
+    Alarm-Kurzform entsteht -- alle vier Kopf-Zweige stellen ihr Ergebnis
+    voran (`_render_sms_onset_shift_only`, `_render_sms_onset`,
+    `_render_sms_corridor_only`, `_render_sms_body`).
+
+    Fehlt bei IRGENDEINEM Ereignis die Etappen-Nummer, entfaellt das Praefix
+    GANZ -- eine Teilangabe waere unehrlich (dieselbe Logik wie
+    `segments._renderable_segment_ids`, AC-8). Mehr als drei verschiedene
+    Etappen entfallen ebenfalls (Known Limitation, AC-7): eine vierstellige
+    Aufzaehlung kostet mehr Zeichenbudget, als sie an Zuordnung bringt.
+
+    Schreibweise: eine Etappe -> "S5 "; benachbarte -> "S5-6 "; nicht
+    benachbarte -> "S5,7 "."""
+    numbers: list[int] = []
+    for e in events:
+        n = getattr(e, "stage_number", None)
+        if n is None:
+            return ""
+        numbers.append(n)
+    if not numbers:
+        return ""
+    distinct = sorted(set(numbers))
+    if len(distinct) > 3:
+        return ""
+    if len(distinct) == 1:
+        return f"S{distinct[0]} "
+    if distinct[-1] - distinct[0] + 1 == len(distinct):
+        return f"S{distinct[0]}-{distinct[-1]} "
+    return f"S{','.join(str(n) for n in distinct)} "
+
+
 def _time_with_day(
     hhmm: str, day_offset: int = 0, is_past: bool = False,
     *, past_word: str = "seit",
@@ -470,7 +502,8 @@ def _render_email_onset_shift_only(msg: AlertMessage) -> tuple[str, str]:
 
 
 def _render_sms_onset_shift_only(msg: AlertMessage, limit: int) -> str:
-    head = f"{_ascii_alert_location(_onset_shift_location(msg))[:24]}: "
+    prefix = _stage_prefix(msg.onset_shift_events)  # Issue #2122
+    head = f"{prefix}{_ascii_alert_location(_onset_shift_location(msg))[:24]}: "
     body = head + " ".join(
         _sms_onset_shift_token(oe) for oe in msg.onset_shift_events
     )
@@ -1124,12 +1157,14 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
         token = f"{kopf}@{zeit} R{menge}"
     else:
         token = f"{kopf}{menge}@{zeit}"
+    prefix = _stage_prefix(msg.events)  # Issue #2122
     if getattr(e, "location_label", None):
-        head = _ascii_alert_location(e.location_label)[:24]
+        loc = _ascii_alert_location(e.location_label)[:24]
     elif msg.source == COMPARE_RADAR_SOURCE:
-        head = _ascii_alert_location(msg.trip_short)[:24]
+        loc = _ascii_alert_location(msg.trip_short)[:24]
     else:
-        head = _ascii_alert_location(_location_of((e,), None))[:24]
+        loc = _ascii_alert_location(_location_of((e,), None))[:24]
+    head = f"{prefix}{loc}"
     body = f"{head}: {token}"
     # Issue #2051 S2b: das Zonen-Kuerzel ist das ZULETZT angefuegte Element --
     # dieselbe Sichtbarkeitsregel wie `_onset_extent_suffix` in der Langform
@@ -1611,8 +1646,9 @@ def _sms_rest_token(e: AlertEvent) -> str | None:
 def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
     """Reiner Schwellen-Alarm ohne Aenderungs-Anteil (Issue #1444 S1)."""
     trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
+    prefix = _stage_prefix(msg.corridor_events)  # Issue #2122
     if msg.location_label:
-        head = f"{trip} {_ascii(msg.location_label)[:24]}: "
+        head = f"{prefix}{trip} {_ascii(msg.location_label)[:24]}: "
     else:
         # Issue #2036 (Adversary F001): dieselbe Aufloesung wie Betreff,
         # E-Mail und Telegram -- Segment-Sprache bzw. gemessene km-Spanne,
@@ -1624,7 +1660,7 @@ def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
             min(ce.km_from for ce in evs), max(ce.km_to for ce in evs),
             km_measured=all(getattr(ce, "km_measured", False) for ce in evs),
         )
-        head = f"{trip} {_ascii_alert_location(where)}: "
+        head = f"{prefix}{trip} {_ascii_alert_location(where)}: "
     body = head + " ".join(_sms_corridor_token(ce) for ce in msg.corridor_events)
     return body if len(body) <= limit else body[:limit]
 
@@ -1718,7 +1754,14 @@ def _render_sms_body(
         # Issue #1935/#1779 (E3/E4): Trip-Δ-Pfad -- dieselbe Ortsaufloesung
         # wie Betreff/E-Mail/Telegram (`_km_str`), Emoji ENTFERNT statt
         # transliteriert (AC-7), kein Trip-Name mehr (AC-5).
-        head = f"{_ascii_alert_location(_km_str(msg))}: "
+        # Issue #2122: das Etappen-Praefix ueber ALLE Bausteine dieser
+        # Nachricht (Δ-Ereignisse + Beginn-Verschiebungen + Schwellen-Treffer)
+        # -- fehlt es bei irgendeinem, entfaellt es GANZ (AC-8). Der Compare-
+        # Pfad setzt `stage_number` nie -> Praefix bleibt leer (AC-9).
+        prefix = _stage_prefix(
+            list(evs) + list(msg.onset_shift_events) + list(msg.corridor_events)
+        )
+        head = f"{prefix}{_ascii_alert_location(_km_str(msg))}: "
     # Issue #1444 S1 (AC-6): Schwellen-Treffer-Tokens desselben Laufs mit.
     # Issue #2020 Scheibe 2: das Restmengen-Token steht DIREKT neben dem
     # Delta-Token desselben Ereignisses -- sonst stuenden bei mehreren

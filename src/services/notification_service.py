@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
@@ -276,6 +276,12 @@ class RadarAlertRequest:
     # Alarmprotokoll seit S4b). Additiv, Default leer -> ohne sie bleibt der
     # Versand byte-identisch.
     gap_km: tuple = ()
+    # Issue #2122: additiv, optional. Das Datum, dem das gemeldete Segment
+    # ENTSTAMMT (`_resolve_alert_segment()` in `trip_alert.py`) -- NICHT
+    # zwingend `today` (Nachtsegment kann der Vortag sein, AC-6). Der
+    # Trip-Radar-Pfad setzt es immer; der Ortsvergleich-Radar-Pfad baut kein
+    # `RadarAlertRequest` und laesst es damit implizit `None`.
+    segment_date: date | None = None
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -380,6 +386,24 @@ def compute_has_gap(
     }
     expected = set(range(_start, _end + 1))
     return not expected.issubset(rendered)
+
+
+def _stage_number_for_date(trip: "Trip", d: "date | None") -> int | None:
+    """Issue #2122: 1-basierte chronologische Etappen-Position DIESES Datums
+    -- dieselbe Zahl, die `Trip.numbered_stage_label()` im Briefing zeigt
+    (Position in `sorted(trip.stages, key=lambda s: s.date)`, aufgeloest ueber
+    `Trip.get_stage_for_date()`). `None` ohne auflösbares Datum/Etappe (AC-8/
+    AC-9) -- der Renderer laesst das Praefix dann ersatzlos weg."""
+    if d is None:
+        return None
+    stage = trip.get_stage_for_date(d)
+    if stage is None:
+        return None
+    ordered = sorted(trip.stages, key=lambda s: s.date)
+    try:
+        return ordered.index(stage) + 1
+    except ValueError:
+        return None
 
 
 def _measured_event_km(alert_msg) -> dict:
@@ -782,10 +806,15 @@ class NotificationService:
         # nennen als die Restmengen-Rechnung.
         now_utc = datetime.now(timezone.utc)
         stand_at = local_fmt(now_utc, alert_tz)
+        # Issue #2122 (AC-1): der Abweichungs-Alarm ist STRIKT `today` (der
+        # einzige Anker-Kandidat, `trip_alert._kanal_anker_kandidat` verwirft
+        # jeden mit abweichendem `target_date`) -- kein Rueckgriff auf
+        # `_resolve_alert_segment` noetig.
+        stage_number = _stage_number_for_date(trip, date.today())
         alert_msg = to_alert_message(
             changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
             corridor_hits=corridor_hits, reference_at=reference_at,
-            now_utc=now_utc,
+            now_utc=now_utc, stage_number=stage_number,
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
@@ -985,10 +1014,24 @@ class NotificationService:
             if first_wp is not None
             else ZoneInfo("UTC")
         )
+        # Issue #2122 (AC-5): das Datum des TATSAECHLICH verwendeten
+        # rollierenden Ankers -- dieselbe Kanal-Reihenfolge (`sorted`) wie der
+        # lenient Anker-Rueckfall in `trip_alert._resolve_current_weather`
+        # (erster Treffer gewinnt, keine Alterspruefung). Kein Anker lesbar ->
+        # `today` (Regressions-Invariante fuer den Normalfall).
+        from services.weather_snapshot import WeatherSnapshotService
+
+        snap_svc = WeatherSnapshotService(user_id=self._user_id)
+        anchor_date = None
+        for channel in sorted(effective_channels):
+            anchor_date = snap_svc.alarm_anchor_target_date(trip.id, channel)
+            if anchor_date is not None:
+                break
+        stage_number = _stage_number_for_date(trip, anchor_date or date.today())
         # Issue #2036: gemessene km-Spannen mitgeben -- ohne sie bleibt die
         # amtliche Warnung byte-identisch bei der Segment-Sprache.
         dto_notices = build_official_alert_notices(
-            trip, notices, segment_km=segment_km,
+            trip, notices, segment_km=segment_km, stage_number=stage_number,
         )
         source_label = _official_source_label_for(dto_notices)
         source_url = _official_source_url_for(dto_notices)
@@ -1403,6 +1446,11 @@ class NotificationService:
         telegram_style: str = "rich",
     ) -> NotificationResult:
         """Radar-Onset-Alert: rendern und über konfigurierte Kanäle versenden."""
+        # Issue #2122 (AC-2/AC-6): das Datum, dem das gemeldete Segment
+        # ENTSTAMMT (`request.segment_date`) -- NICHT `today`, ein
+        # Nachtsegment kann der Vortag sein. Ortsvergleich-Radar baut kein
+        # `RadarAlertRequest` -> `segment_date` bleibt `None` -> keine Etappe.
+        stage_number = _stage_number_for_date(trip, request.segment_date)
         onset_event = OnsetEvent(
             # Issue #2050 S2b: ohne kuenftigen Beginn traegt `onset_minutes`
             # `None` -- der Renderer-Vertrag verlangt eine Zahl, liest sie im
@@ -1440,6 +1488,7 @@ class NotificationService:
             # aendern nur den Text (Kennzeichnung), nicht die Entscheidung.
             convective_checked=request.convective_checked,
             gap_km=tuple(request.gap_km),
+            stage_number=stage_number,  # Issue #2122
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.
