@@ -430,6 +430,21 @@ dieser Scheibe (Scheibe 2, #1169).
   S3c). Der Grund-Code `double_alert_guard` selbst bleibt in `alert_log.py`/
   `undelivered_hint.py` für historische Einträge erhalten.
 
+  **🔴 Der neue Unterdrückungspfad trägt die E-1-Nachweisfelder — wer das
+  umbaut, verliert sie ohne Fehlermeldung.** `**_e1` wird in `trip_alert.py`
+  an DREI Stellen ausgepackt; die mittlere ist der mit dieser Scheibe
+  entstandene Unterdrückungspfad der Ereignis-Identität. Er trug zunächst
+  **gar keine** E-1-Felder, insbesondere kein `convective_checked` — die
+  S4a-Zusicherung aus ADR-0018 („eine nicht stattgefundene Gewitterprüfung
+  reist bis auf die Leseseite") wäre dort still verloren gegangen, weil ein
+  neuer stummer Ausstieg entstanden wäre. Deshalb bewusst `**_e1` beibehalten
+  statt Wechsel auf `_protokolliere_radar_unterdrueckung()`: **der Helfer nimmt
+  die E-1-Felder nicht entgegen.** Ein Umbau auf ihn sähe wie eine harmlose
+  Vereinheitlichung aus, ließe die Tests grün und würde die Invariante an
+  genau dieser Stelle aushebeln. Felder späterer Scheiben (z. B. das
+  Messlücken-Protokoll aus #2050 S4b) landen durch diese Stelle automatisch
+  mit — das ist gewollt.
+
   **Ortsvergleich bleibt unberührt.** `compare_alert.py` ruft weder
   `check_event_identity_gate()` noch `record_event_identity()` auf —
   Ortsvergleich-Themen sind PO-seitig zurückgestellt, die Anschlussstelle ist
