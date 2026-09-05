@@ -92,7 +92,7 @@ bzw. in den Specs unter `docs/specs/`.
 | [0027](0027-adr-commit-guard-entfernt.md) | Lokales ADR-Commit-Gate (`adr_guard.py`) entfernt — tot seit Plugin-Migration, ADR-Praxis bleibt bestehen | Akzeptiert |
 | [0028](0028-e2e-prod-network-unreachable-admin-loses-never-delete.md) | Prod-Datenbaum wird für E2E netzwerkseitig unerreichbar; `admin` verliert den NEVER_DELETE-Schutz aus #1265 | Akzeptiert |
 | [0029](0029-openmeteo-standard-provider.md) | Open-Meteo als Standard-Wetterdaten-Provider (löst 0002 ab) | Akzeptiert |
-| [0030](0030-session-auth-hmac-cookie.md) | Session-Auth über HMAC-signiertes Cookie (kein JWT, keine Session-Tabelle) | Akzeptiert |
+| [0030](0030-session-auth-hmac-cookie.md) | Session-Auth über HMAC-signiertes Cookie (kein JWT, keine Session-Tabelle) | Abgelöst durch 0060 |
 | [0031](0031-persistenz-dateibasiert-data-users.md) | Dateibasierte JSON-Persistenz unter `data/users/{user_id}/` (keine Datenbank) | Akzeptiert |
 | [0032](0032-wizard-abschaffung-progressive-editoren.md) | Multi-Step-Wizards abgeschafft — progressive Tab-Editoren mit Auto-Save | Akzeptiert |
 | [0033](0033-warn-karte-nur-betroffene-segmente.md) | Amtliche Warn-Karte zeigt nur betroffene Segmente, kein Vollrouten-Gitter (löst #1233/#1216 ab) | Akzeptiert |
@@ -122,3 +122,4 @@ bzw. in den Specs unter `docs/specs/`.
 | [0057](0057-mehrere-gewitter-signalquellen-je-gebiet.md) | Mehrere Gewitter-Signalquellen je Gebiet sind additiv erlaubt — GeoSphere (cape/cin) ergänzt für Österreich den DWD, ohne ihn zu verdrängen (ergänzt 0025/0047, Issue #1758) | Akzeptiert |
 | [0058](0058-wegpunkt-hoehe-an-provider-api.md) | Wegpunkt-Höhe wird an die Provider-Schnittstelle durchgereicht — keine eigene Höhenphysik, kein Transparenzhinweis im Briefing (schreibt 0018 fort, Issue #1991) | Akzeptiert |
 | [0059](0059-compare-ausblick-erbt-grundauswahl.md) | Der 3-Tages-Ausblick verhält sich wie ein Kanal — Grundauswahl statt eigener Liste, für Trip UND Ortsvergleich (löst 0053 Punkt 1 ab, schreibt 0050/0055 fort, Issue #1848 Scheibe A3) | Akzeptiert |
+| [0060](0060-dauerhafte-anmeldung-mit-widerrufsliste.md) | Dauerhafte Anmeldung mit dateibasierter Liste gültiger Sitzungen — Widerruf überlebt den Neustart, „auf allen Geräten abmelden" (löst 0030 ab, Issue #2129 Scheibe S2 von #2127) | Akzeptiert |
