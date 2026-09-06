@@ -49,7 +49,7 @@ Siehe CLAUDE.md für Scope-Details und Pflicht-Gate-Dokumentation.
 | 4 | **Segmente** (Stundentabellen) | LIVE | Pro Etappensegment: Segment-Header + zwei-stufige Desktop-Tabelle (Gruppen-Row TEMP/WIND/NIEDERSCHLAG + Einheiten-Row) + Mobile-Variante (`EmailHourList` zwei-Zeilen-Format) |
 | 5 | **Wetter am Ziel** (abgesetzte Sektion) | LIVE | Eigene abgesetzte Sektion mit accent-Eyebrow, Zielname, Ankunftszeiten-Range, identische Tabelle wie Segmente |
 | 6 | **Ausblick** (Folge-Etappen) | LIVE | Nächste 4 Tage als kompakte Zeilen-Tabelle; Trip zeigt Wochentag + Code + Name+Note + Temp-Range + (konfigurierbare Metriken) + ACC-Spalte + Risk-Dot; Ortsvergleich ohne ACC-Spalte; Gewitter-Badge falls vorhanden |
-| 7 | **Antwort-Kommandos** | LIVE | Dedizierte Sektion mit 3-spaltigem Grid der Befehle (HEUTE, MORGEN, JETZT/NOW, GEWITTER, PAUSE 2d, SKIP, STOP/WEITER, STATUS, CONFIG, HELP) + Hinweistext |
+| 7 | **Antwort-Kommandos** | LIVE | Dedizierte Sektion mit 3-spaltigem Grid der Befehle (HEUTE, MORGEN, JETZT/NOW, GEWITTER, STRECKE [km], RUHETAG [N], STATUS, PAUSE [2d/12h], SKIP, STOP, WEITER, HILFE/HELP) + Hinweistext |
 | 8 | **Footer** (zweigeteilt) | LIVE | Obere Zeile: Brand + Briefing-Typ; untere Zeile: Links (Trip-Übersicht, Zeitplan, Abmelden) |
 
 Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_884_mail_fidelity.md` (AC-1..AC-10).
@@ -120,8 +120,11 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 - **Gewitter-Badge:** `⚡ Gewitter {zeitangabe}` in `#a8104a` mit light-red Hintergrund und Border
 
 #### Antwort-Kommandos (Sektion 7 – NEU)
-- **Grid:** 3 Spalten, zeilenweise gefüllt via `<table>` (aktuell 10 Einträge → 4 Zeilen)
-- **10 Einträge:** HEUTE, MORGEN, JETZT/NOW, GEWITTER, PAUSE 2d, SKIP, STOP/WEITER, STATUS, CONFIG, HELP
+- **Grid:** 3 Spalten, zeilenweise gefüllt via `<table>` (12 Einträge → 4 Zeilen)
+- **12 Einträge, aus `_COMMAND_SPECS` abgeleitet — identisch in Klartext- und HTML-Fußzeile
+  (Issue #2134; vorher fehlte STRECKE in beiden, RUHETAG zusätzlich in HTML):**
+  HEUTE, MORGEN, JETZT (auch NOW), GEWITTER, STRECKE [km], RUHETAG [N], STATUS,
+  PAUSE [2d / 12h], SKIP, STOP, WEITER, HILFE (auch HELP)
 - **Stil:** CMD mono 11px bold + Beschreibung mono 10px `#9a978d`
 - **Hinweistext:** mono 10px, color `#b8b4a8`: "Antworte auf diese E-Mail mit einem Schlüsselwort."
 

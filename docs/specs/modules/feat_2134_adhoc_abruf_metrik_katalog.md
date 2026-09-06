@@ -3,7 +3,7 @@ entity_id: feat_2134_adhoc_abruf_metrik_katalog
 type: feature
 created: 2026-09-06
 updated: 2026-09-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, trip-command-processor, ad-hoc-abruf, single-source-of-truth]
 ---
