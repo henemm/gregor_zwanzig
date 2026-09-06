@@ -165,8 +165,8 @@ Symptom; beim nächsten Wachstum um Login-Tests neu bewerten.**
 
 **Beide Schwellen exakt nachziehen, kein Puffer** (F006): `E2E_MIN_SPECS` ist mechanisch an die
 Listenlänge gebunden (`tests/unit/test_e2e_positivliste_ratschen_bindung.py`, prüft auch Filter C);
-`E2E_MIN_EXECUTED_HAUPT`/`_RATELIMIT` bleiben **Handpflege** — ohne echten Browserlauf nicht statisch
-ableitbar, als Known Limitation benannt statt als gelöst behauptet.
+`E2E_MIN_EXECUTED_HAUPT`/`_RATELIMIT`/`_PWA` bleiben **Handpflege** — ohne echten Browserlauf nicht
+statisch ableitbar, als Known Limitation benannt statt als gelöst behauptet.
 
 **Der rote Restbestand ist veraltet, nicht kaputt:** #1771 S3 hat 200 rote Testfälle diagnostiziert —
 **0 echte Produktfehler**, dafür 22 gesuchte Testids, die es im Frontend nicht mehr gibt. Es gibt
@@ -175,6 +175,31 @@ Einzelfallarbeit. **Diese Messung nicht wiederholen.**
 
 Specs: `fix_1771_s2_playwright_ci_ampel.md` (Lane), `fix_1771_s3_e2e_listen_wachstum.md` (Wachstum,
 Verfahren, Abbruchgrenze).
+
+### Dritter Playwright-Lauf: PWA-Strecke (`--project=pwa`, ab #2128)
+
+Die PWA-Nachweise (`pwa-grundausstattung.spec.ts`, `pwa-update-und-abmelden.spec.ts`) laufen
+**nicht** über die Positivliste, sondern über die feste Projektzuordnung in
+`frontend/playwright.config.ts` (`testMatch: /pwa-.*\.spec\.ts/`, `testIgnore` schließt sie im
+Standardprojekt `tests` aus). Zwei unabhängige Gründe, beide zwingend:
+
+1. **Filter A schließt sie aus:** Beide Dateien enthalten `waitForTimeout` als Nachweis für ein
+   *Ausbleiben* (z. B. „die Seite hat NICHT neu geladen", „der wartende Worker hat NICHT
+   übernommen") — ein Ausbleiben lässt sich nicht per Warte-Assertion erzwingen, nur abwarten.
+   Aufnahme in `.github/ci_e2e_specs.txt` wäre ein Ratschen-Verstoß.
+2. **Eigene Projekt-Einstellung nötig:** Beide Dateien brauchen `serviceWorkers: 'allow'`; die
+   Bestandsstrecke läuft bewusst mit `'block'` (Spec-AC-16), damit der seit #2128 auf jeder Seite
+   registrierte Service Worker ihr Verhalten nicht verändert. Das ist eine Playwright-Projekt-
+   Einstellung, keine Datei-Option — daher eigener CI-Schritt statt Aufnahme in eine der
+   bestehenden Dateilisten.
+
+Schutz gegen stilles Verschwinden einer Datei hängt hier **nicht** an einer Listenlänge, sondern an
+`E2E_MIN_EXECUTED_PWA` (aktuell 27 = 26 Testfälle in 2 Dateien + `global.setup`): fällt eine Datei
+weg, sinkt `expected` darunter und das Gate wird rot. Reihenfolge (nach dem Ratelimit-Zweitlauf) ist
+unkritisch, weil `global.setup.ts` nur einloggt, wenn `playwright/.auth/admin.json` fehlt/abgelaufen
+ist — der dritte Aufruf holt sich keinen eigenen Login und verbrennt kein IP-Kontingent. Details und
+Begründung ausführlich kommentiert in `.github/workflows/ci.yml` (env-Block + Step „Playwright-Specs
+ausführen (Drittlauf, PWA-Strecke --project=pwa)").
 
 ## Thunder-Scale-Wächter (#1480, seit 2026-08-20)
 
