@@ -229,9 +229,31 @@ jobs:
       # alle den storageState (login() in helpers.ts:97-106 kehrt sofort
       # zurueck, wenn die Sitzung schon steht), holen sich also keinen
       # eigenen Login -- nachgemessen in denselben 3 Zyklen, 0 unexpected.
+      #
+      # 🔴 DRITTER Aufruf ab #2128: die PWA-Strecke (`--project=pwa`).
+      # Sie laeuft NICHT ueber die Positivliste, sondern ueber die feste
+      # Projektzuordnung in frontend/playwright.config.ts. Zwei unabhaengige
+      # Gruende, beide zwingend:
+      #   1) Ratschen-Filter A (docs/reference/gates_und_ratschen.md,
+      #      "e2e-Ratsche") schliesst jede Datei mit `waitForTimeout` aus.
+      #      pwa-update-und-abmelden.spec.ts hat 10 solcher Stellen,
+      #      pwa-grundausstattung.spec.ts 2 -- sie sind dort unvermeidbar
+      #      (Nachlauf-Beobachtung: "die Seite hat NICHT nochmal neu geladen",
+      #      "der wartende Worker hat NICHT uebernommen" -- ein Ausbleiben
+      #      laesst sich nicht erwarten, nur abwarten). Aufnahme in die
+      #      Positivliste waere ein Ratschen-Verstoss.
+      #   2) Beide Dateien brauchen `serviceWorkers: 'allow'`. Das ist eine
+      #      PROJEKT-Einstellung; die Bestandsstrecke laeuft bewusst mit
+      #      'block' (AC-16), damit der seit #2128 auf jeder Seite
+      #      registrierte Worker ihr Verhalten nicht veraendert.
+      # Der Schutz gegen "Datei verschwindet klaglos" haengt hier nicht an der
+      # Existenzpruefung der Liste, sondern an E2E_MIN_EXECUTED_PWA: faellt
+      # eine der beiden Dateien weg, sinkt `expected` unter 27 und das Gate
+      # wird rot.
       E2E_MIN_SPECS: 46     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
       E2E_MIN_EXECUTED_HAUPT: 224      # Hauptlauf: 44 Dateien + global.setup -- exakt belegt, kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Zweitlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
+      E2E_MIN_EXECUTED_PWA: 27         # Drittlauf: 26 Faelle in 2 PWA-Dateien + global.setup -- exakt belegt, kein Puffer
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
@@ -364,6 +386,37 @@ jobs:
       - name: E2E-Gate auswerten (Zweitlauf)
         if: steps.specs.outputs.mode == 'positivliste'
         run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_RATELIMIT" python3 .github/scripts/e2e_gate.py /tmp/e2e-report-ratelimit.json
+      - name: Playwright-Specs ausfuehren (Drittlauf, PWA-Strecke --project=pwa)
+        # DRITTER Aufruf, Begruendung ausfuehrlich im env-Block oben:
+        # die PWA-Nachweise brauchen `serviceWorkers: 'allow'` (Projekt-
+        # Einstellung, nicht per Datei-Argument setzbar) und duerfen wegen
+        # Ratschen-Filter A (waitForTimeout) nicht auf die Positivliste.
+        # Deshalb Auswahl ueber die feste Projektzuordnung statt ueber eine
+        # Dateiliste. Die Bestandsstrecke bleibt davon unberuehrt: Projekt
+        # `tests` ignoriert pwa-*.spec.ts, `--project=pwa` beruehrt die
+        # Positivliste nicht.
+        #
+        # Reihenfolge NACH dem bug-703-Zweitlauf ist unkritisch, obwohl der
+        # das IP-Login-Kontingent (30/h) verbrannt hat: `global.setup.ts`
+        # loggt sich nur ein, wenn playwright/.auth/admin.json fehlt oder
+        # abgelaufen ist (isAuthFileValid). Die Datei steht seit dem
+        # Hauptlauf im selben Arbeitsordner, das gz_session-Cookie laeuft
+        # seit #2129 ueber ein Jahr -- der dritte Aufruf holt sich also
+        # KEINEN eigenen Login und kann nicht in 429 laufen.
+        if: steps.specs.outputs.mode == 'positivliste'
+        working-directory: frontend
+        env:
+          CI: "1"
+        # Gleiches Muster wie oben: `|| true` faengt nur den Playwright-
+        # Exit-Code ab, damit der Report GESCHRIEBEN wird -- bewertet wird
+        # ausschliesslich im naechsten Schritt durch e2e_gate.py (unexpected
+        # == 0, skipped == 0, expected >= Schwelle). Ein Fehlschlag macht die
+        # Ampel dort wirklich rot; ein fehlender/unlesbarer Report ebenfalls
+        # (fail-closed im Gate-Skript).
+        run: npx playwright test --project=pwa --reporter=json > /tmp/e2e-report-pwa.json || true
+      - name: E2E-Gate auswerten (Drittlauf, PWA)
+        if: steps.specs.outputs.mode == 'positivliste'
+        run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_PWA" python3 .github/scripts/e2e_gate.py /tmp/e2e-report-pwa.json
       - name: Vermessungslauf -- Zusammenfassung (nicht bewertend, AC-8)
         # Gegenstueck zum vorigen Schritt: im Vermessungsmodus wird NICHT
         # bewertet, sondern nur protokolliert -- Kandidatenzahl und die

@@ -27,7 +27,11 @@ antippt. Sie speichert dabei **keine** Inhalte — das kommt kontrolliert in Sch
 
 - **File:** `frontend/src/service-worker.ts` (neu)
 - **Identifier:** Service-Worker-Ereignisse `install` / `activate` / `fetch` / `message`
-- **Schicht:** Frontend (SvelteKit) — kein Go-, kein Python-Anteil
+- **Schicht:** Frontend (SvelteKit). **Kein Go-Anteil, kein Python-Anwendungscode.** Der einzige
+  Python-Anteil ist ein Prüfmittel: `tests/test_pwa_maskable_icon.py` misst mit Pillow am
+  ausgelieferten Bild, ob das maskable Symbol den nötigen Rand hat (AC-2). Es liest eine Bilddatei
+  und ruft keinen Anwendungscode auf — die Sprache folgt hier dem verfügbaren Bildwerkzeug, nicht
+  einer Schichtzugehörigkeit.
 
 ## Estimated Scope
 
@@ -157,8 +161,22 @@ noch Fuß abschneidet.
 
 ### Schriften
 
-Sieben Schnitte als woff2 unter `frontend/static/fonts/`, auf `latin` beschnitten:
-Inter Tight 400/500/600/700, JetBrains Mono 400/500/600. Einbindung per `@font-face` mit
+**Ist-Stand (weicht bewusst von der ursprünglichen Planung ab):** geliefert sind **zwei** woff2-Dateien
+unter `frontend/static/fonts/`, auf `latin` beschnitten — `inter-tight-latin.woff2` (44 KB) und
+`jetbrains-mono-latin.woff2` (31 KB). Beides sind **variable** Schriften (`fvar`-Tabelle,
+`wght`-Achse): eine Datei deckt die ganze Gewichtsachse ab. Darauf liegen die geplanten **sieben
+`@font-face`-Regeln** in `frontend/src/app.css`, die je Regel ein Gewicht festlegen: Inter Tight
+400/500/600/700, JetBrains Mono 400/500/600.
+
+Ursprünglich geplant waren sieben **einzelne** statische Schnitte als je eigene Datei. Das Ergebnis
+ist funktional gleichwertig — dieselben sieben Gewichte stehen zur Verfügung, ohne dass eine
+`@font-face`-Regel oder eine Nutzung im Stylesheet sich ändert — und spart Datenvolumen und
+Anfragen: 75 KB in 2 Anfragen statt sieben Dateien in sieben Anfragen. Für eine Zielgruppe mit
+schlechter Verbindung, die die Dateien beim ersten Besuch in den Gerätespeicher lädt, ist das der
+Punkt. AC-5 prüft „mindestens eine woff2-Datei vom eigenen Host" und ist von der Umstellung
+unberührt.
+
+Einbindung per `@font-face` mit
 `font-display: swap` in `frontend/src/app.css` (dort stehen bereits `--g-font-ui` und
 `--g-font-data`). Die drei Zeilen `app.html:8-10` (Google-Fonts-Verweis und beide `preconnect`)
 entfallen. Beide Schriften stehen unter der SIL Open Font License; der Lizenztext liegt als
@@ -177,6 +195,52 @@ Die beiden Abmelde-Wege setzen ein Merkmal, die Anmeldeseite räumt **nur darauf
 Bedingungsloses Räumen beim Betreten der Anmeldeseite ist ausdrücklich **nicht** zulässig: dort
 landet auch, wessen Sitzung abgelaufen ist oder wer die Seite schlicht aufruft — das würde die
 Offline-Fähigkeit genau dann zerstören, wenn sie gebraucht wird.
+
+### Betroffene Dateien (Ist-Stand nach Lieferung)
+
+Die Zahl unter „Estimated Scope" war eine Schätzung vor der Arbeit; das hier ist die gemessene
+Liste. Ergänzt wurde alles, was tatsächlich mitgeändert wurde und in der Schätzung fehlte.
+
+**Neu — Programm:**
+- `frontend/src/service-worker.ts` — der Worker selbst
+- `frontend/src/lib/pwa/serviceWorkerUpdate.ts` — Update-Ablauf (Hinweis, Antippen, genau ein Neuladen)
+- `frontend/src/lib/pwa/geraetespeicher.ts` — Räumen von Gerätespeicher und Registrierungen beim Abmelden
+- `frontend/static/offline.html`, `frontend/static/icon-maskable-512.png`
+- `frontend/static/fonts/inter-tight-latin.woff2`, `…/jetbrains-mono-latin.woff2`, `…/LICENSE.txt`
+
+**Geändert — Programm:**
+- `frontend/src/app.css` (sieben `@font-face`-Regeln), `frontend/src/app.html` (Google-Fonts-Verweis raus)
+- `frontend/src/routes/+layout.svelte` (Update- und iOS-Hinweis), `frontend/src/routes/login/+page.svelte`,
+  `frontend/src/routes/logout/+page.server.ts`, `frontend/src/routes/account/+page.svelte`
+- `frontend/src/lib/api.ts` — setzt beim 401-Umleiten das Abmelde-Merkmal (AC-22); ohne diese Stelle
+  bliebe der Worker auf einem Gerät zurück, dessen Nutzer gerade abgemeldet wurde
+- `frontend/static/site.webmanifest`
+
+**Neu — Nachweise:**
+- `frontend/e2e/pwa-grundausstattung.spec.ts`, `frontend/e2e/pwa-update-und-abmelden.spec.ts`,
+  `frontend/e2e/pwaHelpers.ts` (kein Test, gemeinsames Hilfsmittel)
+- `frontend/src/lib/pwa/serviceWorkerUpdate.test.ts` — Vitest, Update-Ablauf ohne Browser
+- `tests/test_pwa_maskable_icon.py` — Pillow-Bildprüfung des maskable Symbols (AC-2)
+- `frontend/e2e/pwa-nachweis.staging.spec.ts`, `frontend/e2e/pwa-2128.staging.setup.ts`,
+  `frontend/e2e/playwright.2128.staging.config.ts` — Staging-Nachweis der vier im Issue #2128 unter
+  „Nachweis" geforderten Punkte; läuft in `/e2e-verify`, nicht in der CI
+- `frontend/e2e/tsconfig.check.json` — Übersetzbarkeits-Nachweis für `frontend/e2e/` (`npm run check`
+  deckt den Ordner nicht ab, `.svelte-kit/tsconfig.json` listet nur `src/` und `tests/`)
+
+**Geändert — Nachweise und Lauf-Rahmen:**
+- `frontend/playwright.config.ts` — Projekt `pwa` (`serviceWorkers: 'allow'`) neben der
+  Bestandsstrecke, die den Worker abgeschaltet bekommt (AC-16); `.staging.spec.ts` ist aus dem
+  Projekt `pwa` ausgenommen
+- `.github/workflows/ci.yml` — dritter Playwright-Aufruf `--project=pwa` samt eigener Schwelle
+  `E2E_MIN_EXECUTED_PWA`. Die beiden PWA-Dateien dürfen **nicht** auf `.github/ci_e2e_specs.txt`:
+  Filter A der e2e-Ratsche (`docs/reference/gates_und_ratschen.md`) schließt jede Datei mit
+  `waitForTimeout` aus, und die Nachweise über ein **Ausbleiben** (die Seite lädt nicht nochmal, der
+  wartende Worker übernimmt nicht) brauchen genau das
+- `frontend/e2e/design-system-lauf-a.spec.ts`, `frontend/e2e/font-weights.spec.ts` — an die selbst
+  ausgelieferten Schriften angepasst (vorher gegen die Google-Fonts-Einbindung geprüft)
+
+**Doku:** `docs/adr/0061-pwa-service-worker-bauform.md`, `docs/adr/README.md`, diese Spec,
+`docs/context/feat-2128-pwa-installierbar.md`.
 
 ## Expected Behavior
 
@@ -369,3 +433,6 @@ Offline-Fähigkeit genau dann zerstören, wenn sie gebraucht wird.
 ## Changelog
 
 - 2026-09-06: Initial spec created (Issue #2128, Scheibe 1 zu Epic #2127)
+- 2026-09-06: Ist-Stand nachgezogen (Befunde aus `/60-validate`): Python-Anteil präzisiert
+  (`tests/test_pwa_maskable_icon.py` ist ein Prüfmittel, kein Anwendungscode), Schriften auf zwei
+  variable Dateien mit sieben `@font-face`-Regeln korrigiert (mit Begründung), Dateiliste ergänzt.

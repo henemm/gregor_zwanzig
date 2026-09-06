@@ -47,8 +47,14 @@ export default defineConfig({
 		},
 		{
 			// Nur die PWA-Nachweise laufen mit aktivem Worker (#2128).
+			// `--project=pwa` waehlt in der CI OHNE Datei-Argumente aus (ci.yml,
+			// Drittlauf) -- deshalb muss die Staging-Fassung hier ausdruecklich
+			// heraus: pwa-nachweis.staging.spec.ts passt auf dasselbe Muster,
+			// zielt aber auf https://staging.… (eigene Config, eigene Anmeldung)
+			// und wuerde gegen den lokalen Vorschauserver zuverlaessig scheitern.
 			name: 'pwa',
 			testMatch: /pwa-.*\.spec\.ts/,
+			testIgnore: /\.staging\.spec\.ts/,
 			dependencies: ['setup'],
 			use: {
 				storageState: 'playwright/.auth/admin.json',

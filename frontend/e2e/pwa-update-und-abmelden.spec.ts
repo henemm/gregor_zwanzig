@@ -1,7 +1,7 @@
 // TDD RED — Issue #2128 (Scheibe 1 zu Epic #2127).
 // Spec: docs/specs/modules/pwa_installierbar_offline_start.md
 // Abgedeckt: AC-8, AC-9, AC-10, AC-11, AC-12, AC-15, AC-17, AC-18, AC-19, AC-20,
-//            AC-23, AC-24
+//            AC-22, AC-23, AC-24
 //
 // AC-12 ist die Gegenprobe zu AC-11: ohne sie waere AC-11 auch durch
 // bedingungsloses Dauer-Raeumen beim Betreten der Anmeldeseite erfuellbar —
@@ -416,10 +416,14 @@ test('AC-19: scheitert das Abmelden am Funkloch, raeumt ein spaeterer Sitzungsab
 	);
 });
 
-test('AC-19: antwortet der Server 401, ist der Nutzer wirklich abgemeldet und es wird geraeumt', async ({
+test('AC-22: antwortet der Server 401, ist der Nutzer wirklich abgemeldet und es wird geraeumt', async ({
 	page,
 	context
 }) => {
+	// AC-22 (nicht AC-19): geprueft wird der 401-Ausgang von "Auf allen Geraeten
+	// abmelden" -- der Nutzer IST abgemeldet, also MUSS geraeumt werden. AC-19
+	// deckt die beiden Faelle darueber ab (500 und Funkloch), in denen gerade
+	// NICHT geraeumt werden darf.
 	// Die Gegenprobe zu den beiden Faellen oben und die Grenze der Regel: 401
 	// heisst, die Sitzung ist bereits fort -- der Nutzer IST abgemeldet, $lib/api
 	// leitet auf die Anmeldeseite, und dort MUSS geraeumt werden (AC-11). Wuerde
