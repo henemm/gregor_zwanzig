@@ -137,6 +137,10 @@ func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
 // kein Preset). Spiegelt LoadTrip (trip.go) mit invertiertem kind-Guard
 // (Issue #1250 Scheibe 7b, AC-31).
 func (s *Store) LoadComparePreset(id string) (*model.ComparePreset, error) {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return nil, ErrInvalidEntityID
+	}
 	path := filepath.Join(s.briefingsDir(), id+".json")
 
 	data, err := os.ReadFile(path)
@@ -197,6 +201,10 @@ func migrateComparePresetSlots(p *model.ComparePreset) {
 // Alt-Datei compare_presets.json wird NICHT mehr angefasst (Rollback-
 // Faehigkeit, AC-32). Kein Array. Spiegelt SaveTrip (trip.go).
 func (s *Store) SaveComparePreset(p model.ComparePreset) error {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(p.ID) {
+		return ErrInvalidEntityID
+	}
 	dir := s.briefingsDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -238,6 +246,10 @@ func (s *Store) SaveComparePresets(presets []model.ComparePreset) error {
 // nicht als JSON lesbare Datei (Datenmuell) faellt fail-open durch zum Remove.
 // Nicht existierende Datei ist kein Fehler (idempotent).
 func (s *Store) DeleteComparePreset(id string) error {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return ErrInvalidEntityID
+	}
 	path := filepath.Join(s.briefingsDir(), id+".json")
 
 	if data, rerr := os.ReadFile(path); rerr == nil {

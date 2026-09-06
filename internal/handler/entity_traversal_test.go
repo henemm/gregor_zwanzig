@@ -521,6 +521,7 @@ func TestTwoRealUsers_AllEntityAttacks_NeverTouchSecondUsersDirectory_AC7(t *tes
 //     zurueck — chi dekodiert %2F nicht selbst. filepath.Join(dir, id+".json")
 //     erhaelt dadurch NIE einen echten Trenner und bleibt im eigenen
 //     Verzeichnis.
+//
 // Beide Wege sind also bereits heute sicher gegen Fremdzugriff — dieser
 // Test ist ein Regressions-/Verteidigungsnachweis (er waere unabhaengig von
 // ValidEntityID bereits heute gruen), keine RED-erzeugende Pruefung. Das
@@ -563,4 +564,87 @@ func TestURLEncodedSeparatorInPathID_NoForeignFileAccess_AC11(t *testing.T) {
 		}
 		assertBobUnchanged(t, bobFile, before)
 	})
+}
+
+// -----------------------------------------------------------------------
+// AC-3/AC-4/AC-5, Fortsetzung — die uebrigen sieben Pfad-Parameter-Routen
+//
+// Adversary-Befund F002 (MEDIUM): die Pre-Checks in weather_config.go (alle
+// vier Handler), compare_preset.go (GetComparePresetHandler) und
+// briefing_subscription.go (beide Handler) liessen sich einzeln entfernen,
+// ohne dass die Suite rot wurde. Abgesichert waren sie nur transitiv ueber
+// den Store-Guard — der aber liefert einen ANDEREN Statuscode (500 bzw. 404).
+//
+// Die Tests unten pruefen deshalb bewusst auf **genau 400**, nicht auf "nicht
+// 2xx": faellt der Pre-Check weg und der Store-Guard springt ein, kippt der
+// Code auf 500/404 und der Test schlaegt an. Ein Test auf "irgendein Fehler"
+// waere hier blind (Abschirmung durch die tiefere Schicht).
+//
+// Kennung ist "." und NICHT "../../bob/user": eine Kennung mit echtem Trenner
+// erreicht diese Handler nie (chi matcht das Ein-Segment-Muster nicht mehr ->
+// 404 VOM ROUTER, siehe Dateianfang). "." ist trennerfrei, erreicht den
+// Handler nachweislich und verstoesst gegen ValidEntityID.
+// -----------------------------------------------------------------------
+
+// entityConfigTestRouter registriert die sieben in F002 genannten Routen mit
+// den echten Pfadmustern aus internal/router/router.go:154-157,187,196,198.
+func entityConfigTestRouter(s *store.Store) *chi.Mux {
+	r := chi.NewRouter()
+	r.Get("/api/trips/{id}/weather-config", GetTripWeatherConfigHandler(s))
+	r.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(s))
+	r.Get("/api/locations/{id}/weather-config", GetLocationWeatherConfigHandler(s))
+	r.Put("/api/locations/{id}/weather-config", PutLocationWeatherConfigHandler(s))
+	r.Get("/api/compare/presets/{id}", GetComparePresetHandler(s))
+	r.Get("/api/briefings/{id}", GetBriefingHandler(s))
+	r.Put("/api/briefings/{id}", UpdateBriefingHandler(s))
+	return r
+}
+
+func TestConfigAndBriefingRoutes_InvalidPathID_Rejected_F002(t *testing.T) {
+	const invalidID = "."
+
+	faelle := []struct {
+		name, method, path, body string
+	}{
+		{"GET_trip_weather_config", http.MethodGet, "/api/trips/" + invalidID + "/weather-config", ""},
+		{"PUT_trip_weather_config", http.MethodPut, "/api/trips/" + invalidID + "/weather-config", `{"metrics":{}}`},
+		{"GET_location_weather_config", http.MethodGet, "/api/locations/" + invalidID + "/weather-config", ""},
+		{"PUT_location_weather_config", http.MethodPut, "/api/locations/" + invalidID + "/weather-config", `{"metrics":{}}`},
+		{"GET_compare_preset", http.MethodGet, "/api/compare/presets/" + invalidID, ""},
+		// kind ist Pflicht und wird VOR der Kennung geprueft (sonst 400
+		// kind_required, was den Pre-Check verdecken wuerde). kind=route
+		// trifft im GET-Handler den Trip-Zweig.
+		{"GET_briefing_route", http.MethodGet, "/api/briefings/" + invalidID + "?kind=route", ""},
+		// Im PUT-Handler delegiert kind=route VOR dem Pre-Check an
+		// UpdateTripHandler — nur kind=vergleich erreicht den hier
+		// bewachten Pre-Check.
+		{"PUT_briefing_vergleich", http.MethodPut, "/api/briefings/" + invalidID + "?kind=vergleich", `{"name":"x"}`},
+	}
+
+	for _, f := range faelle {
+		t.Run(f.name, func(t *testing.T) {
+			base, bobFile, before := seedRealBobForHandler(t)
+			router := entityConfigTestRouter(base)
+			bobDir := base.UserDir("bob")
+			dirBefore := snapshotDir(t, bobDir)
+
+			var req *http.Request
+			if f.body != "" {
+				req = httptest.NewRequest(f.method, f.path, strings.NewReader(f.body))
+			} else {
+				req = httptest.NewRequest(f.method, f.path, nil)
+			}
+			req = withUserCtx(req, "alice")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("F002 %s: erwartet 400 aus dem Handler-Pre-Check, bekam %d: %s", f.name, w.Code, w.Body.String())
+			}
+			assertBobUnchanged(t, bobFile, before)
+			if dirAfter := snapshotDir(t, bobDir); len(dirAfter) != len(dirBefore) {
+				t.Errorf("F002 %s: Bobs Verzeichnis hat sich geaendert (vorher=%d nachher=%d)", f.name, len(dirBefore), len(dirAfter))
+			}
+		})
+	}
 }

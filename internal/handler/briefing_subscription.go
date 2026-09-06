@@ -55,6 +55,10 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 		// (LockBriefing) haengt an s.UserID. Siehe compare_preset.go.
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
+		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+			return
+		}
 
 		if kind == briefingKindRoute {
 			trip, err := s.LoadTrip(id)
@@ -212,6 +216,10 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
+		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+			return
+		}
 
 		// Ab hier gilt der volle Nebenlaeufigkeitsschutz des Preset-Schreibwegs:
 		// dieselbe Sperre und derselbe Fingerabdruck wie

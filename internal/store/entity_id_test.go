@@ -1,6 +1,7 @@
 package store
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -100,22 +101,183 @@ func TestPathTraversal_StoreDirectTripCalls_RejectInvalidID_AC8(t *testing.T) {
 }
 
 // -----------------------------------------------------------------------
+// AC-8, Fortsetzung — dieselbe Zusicherung fuer die uebrigen Entitaeten
+//
+// Adversary-Befund F001 (HIGH): der AC-8-Test oben deckte nur die drei
+// Trip-Methoden. Der Guard liess sich in location.go, compare_preset.go und
+// briefing_fingerprint.go einzeln entfernen, ohne dass `go test ./...` rot
+// wurde — die Spec (Implementation Details Punkt 2) behauptet fuer GENAU
+// diese Methoden "Verteidigung in der Tiefe ... faengt auch Aufrufer, die den
+// Handler-Pre-Check umgehen". Eine unbewachte Behauptung ist keine
+// Zusicherung. Die drei Tests unten schliessen das.
+//
+// LocationsDir() liegt wie briefingsDir() ZWEI Ebenen unter data/users/ --
+// "../../bob/user" trifft also auch von dort aus Bobs echte user.json.
+// -----------------------------------------------------------------------
+
+// snapshotStoreDir liest alle Dateien unter dir rekursiv (relativer Pfad ->
+// Inhalt). Bezugspunkt fuer den Verzeichnis-Diff, den AC-8 zusaetzlich zum
+// Fehler-Rueckgabewert verlangt ("es entsteht/veraendert/verschwindet keine
+// Datei ausserhalb des Verzeichnisses der aufrufenden Nutzer-ID").
+func snapshotStoreDir(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	snap := map[string]string{}
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		data, rerr := os.ReadFile(path)
+		if rerr != nil {
+			return nil
+		}
+		rel, relErr := filepath.Rel(dir, path)
+		if relErr != nil {
+			rel = path
+		}
+		snap[rel] = string(data)
+		return nil
+	})
+	return snap
+}
+
+// assertBobDirUnchanged vergleicht Bobs kompletten Nutzerordner gegen den vor
+// dem Angriff genommenen Abzug.
+func assertBobDirUnchanged(t *testing.T, bobDir string, before map[string]string, kontext string) {
+	t.Helper()
+	after := snapshotStoreDir(t, bobDir)
+	if len(before) != len(after) {
+		t.Fatalf("AC-8 %s: Dateianzahl in Bobs Verzeichnis geaendert: vorher=%d nachher=%d (%v)", kontext, len(before), len(after), after)
+	}
+	for rel, content := range before {
+		if after[rel] != content {
+			t.Errorf("AC-8 %s: Datei %q in Bobs Verzeichnis wurde veraendert", kontext, rel)
+		}
+	}
+}
+
+func TestPathTraversal_StoreDirectLocationCalls_RejectInvalidID_AC8(t *testing.T) {
+	const attack = "../../bob/user"
+
+	t.Run("SaveLocation", func(t *testing.T) {
+		s, bobFile, _ := seedRealBob(t)
+		bobDir := filepath.Dir(bobFile)
+		before := snapshotStoreDir(t, bobDir)
+
+		err := s.SaveLocation(model.Location{ID: attack, Name: "Angriffsort", Lat: 47.0, Lon: 11.0})
+		if err == nil {
+			t.Error("AC-8: SaveLocation mit Traversal-ID erwartet einen Fehler, bekam nil")
+		}
+		assertBobDirUnchanged(t, bobDir, before, "SaveLocation")
+	})
+
+	t.Run("LoadLocation", func(t *testing.T) {
+		s, bobFile, _ := seedRealBob(t)
+		bobDir := filepath.Dir(bobFile)
+		before := snapshotStoreDir(t, bobDir)
+
+		loc, err := s.LoadLocation(attack)
+		if err == nil {
+			t.Errorf("AC-8: LoadLocation(%q) erwartet einen Fehler, bekam loc=%+v err=nil", attack, loc)
+		}
+		assertBobDirUnchanged(t, bobDir, before, "LoadLocation")
+	})
+
+	t.Run("DeleteLocation", func(t *testing.T) {
+		s, bobFile, _ := seedRealBob(t)
+		bobDir := filepath.Dir(bobFile)
+		before := snapshotStoreDir(t, bobDir)
+
+		if err := s.DeleteLocation(attack); err == nil {
+			t.Error("AC-8: DeleteLocation mit Traversal-ID erwartet einen Fehler, bekam nil")
+		}
+		if _, statErr := os.Stat(bobFile); statErr != nil {
+			t.Errorf("AC-8: Bobs echte user.json darf durch DeleteLocation(%q) nicht verschwinden: %v", attack, statErr)
+		}
+		assertBobDirUnchanged(t, bobDir, before, "DeleteLocation")
+	})
+}
+
+func TestPathTraversal_StoreDirectComparePresetCalls_RejectInvalidID_AC8(t *testing.T) {
+	const attack = "../../bob/user"
+
+	t.Run("SaveComparePreset", func(t *testing.T) {
+		s, bobFile, _ := seedRealBob(t)
+		bobDir := filepath.Dir(bobFile)
+		before := snapshotStoreDir(t, bobDir)
+
+		err := s.SaveComparePreset(model.ComparePreset{ID: attack, Name: "Angreifer-Vergleich"})
+		if err == nil {
+			t.Error("AC-8: SaveComparePreset mit Traversal-ID erwartet einen Fehler, bekam nil")
+		}
+		assertBobDirUnchanged(t, bobDir, before, "SaveComparePreset")
+	})
+
+	t.Run("LoadComparePreset", func(t *testing.T) {
+		s, bobFile, _ := seedRealBob(t)
+		bobDir := filepath.Dir(bobFile)
+		before := snapshotStoreDir(t, bobDir)
+
+		p, err := s.LoadComparePreset(attack)
+		if err == nil {
+			t.Errorf("AC-8: LoadComparePreset(%q) erwartet einen Fehler, bekam p=%+v err=nil", attack, p)
+		}
+		assertBobDirUnchanged(t, bobDir, before, "LoadComparePreset")
+	})
+
+	t.Run("DeleteComparePreset", func(t *testing.T) {
+		s, bobFile, _ := seedRealBob(t)
+		bobDir := filepath.Dir(bobFile)
+		before := snapshotStoreDir(t, bobDir)
+
+		if err := s.DeleteComparePreset(attack); err == nil {
+			t.Error("AC-8: DeleteComparePreset mit Traversal-ID erwartet einen Fehler, bekam nil")
+		}
+		if _, statErr := os.Stat(bobFile); statErr != nil {
+			t.Errorf("AC-8: Bobs echte user.json darf durch DeleteComparePreset(%q) nicht verschwinden: %v", attack, statErr)
+		}
+		assertBobDirUnchanged(t, bobDir, before, "DeleteComparePreset")
+	})
+}
+
+// BriefingFingerprint liest fremde BYTES — ohne Guard liefert der Aufruf den
+// sha256 von Bobs echter user.json zurueck. Der Test prueft deshalb nicht nur
+// den Fehler, sondern auch, dass KEIN Fingerabdruck herausgegeben wird: ein
+// Stempel ueber fremden Inhalt ist bereits ein Informationsabfluss (er
+// bestaetigt Existenz und Unveraendertheit einer fremden Datei).
+func TestPathTraversal_StoreBriefingFingerprint_RejectInvalidID_AC8(t *testing.T) {
+	const attack = "../../bob/user"
+
+	s, bobFile, _ := seedRealBob(t)
+	bobDir := filepath.Dir(bobFile)
+	before := snapshotStoreDir(t, bobDir)
+
+	fp, err := s.BriefingFingerprint(attack)
+	if err == nil {
+		t.Errorf("AC-8: BriefingFingerprint(%q) erwartet einen Fehler, bekam fp=%q err=nil", attack, fp)
+	}
+	if fp != "" {
+		t.Errorf("AC-8: BriefingFingerprint(%q) hat einen Stempel ueber eine fremde Datei geliefert: %q", attack, fp)
+	}
+	assertBobDirUnchanged(t, bobDir, before, "BriefingFingerprint")
+}
+
+// -----------------------------------------------------------------------
 // ValidEntityID — Einheitsfaelle der Pruefung selbst
 // -----------------------------------------------------------------------
 
 func TestValidEntityID_RejectsUnsafeSegments(t *testing.T) {
 	cases := []string{
-		"",             // leer
-		"/",            // reiner Trenner
-		"a/b",          // enthaelt Trenner
-		"\\",           // Backslash (Windows-Trenner)
-		"a\\b",         // enthaelt Backslash
-		"a\x00b",       // NUL-Byte eingebettet
-		".",            // Punkt-Segment
-		"..",           // Traversal-Segment
-		"../x",         // beginnt mit Traversal
+		"",               // leer
+		"/",              // reiner Trenner
+		"a/b",            // enthaelt Trenner
+		"\\",             // Backslash (Windows-Trenner)
+		"a\\b",           // enthaelt Backslash
+		"a\x00b",         // NUL-Byte eingebettet
+		".",              // Punkt-Segment
+		"..",             // Traversal-Segment
+		"../x",           // beginnt mit Traversal
 		"../../bob/user", // die im Kontext-Dokument nachgewiesene Ausbruchs-ID
-		".hidden",      // fuehrender Punkt
+		".hidden",        // fuehrender Punkt
 	}
 	for _, id := range cases {
 		if ValidEntityID(id) {

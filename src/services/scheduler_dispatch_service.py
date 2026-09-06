@@ -13,6 +13,7 @@ from pathlib import Path
 
 from app.config import Settings
 from app.loader import (
+    VALID_ENTITY_ID_RE,
     LoaderError,
     _parse_activity_profile,
     compare_preset_to_dict,
@@ -230,6 +231,15 @@ def save_compare_preset_status(
     if data_root is None:
         data_root = str(get_data_root())
 
+    # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau. Ohne sie faende
+    # eine Ausbruchs-Kennung wie "../../bob/user" die user.json eines fremden
+    # Kontos (briefings/ liegt zwei Ebenen unter users/) und dieser
+    # Read-Modify-Write ueberschriebe sie mit Preset-Feldern. Behandelt wie der
+    # "Datei gibt es nicht"-Zweig direkt darunter: stilles return, damit kein
+    # neuer Fehlerausgang fuer die Scheduler-Aufrufer entsteht.
+    if not VALID_ENTITY_ID_RE.match(preset_id):
+        return
+
     path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
     if not path.exists():
         return
@@ -283,6 +293,11 @@ def save_compare_preset_pause(
         data_root = str(get_data_root())
     if now_iso is None:
         now_iso = _datetime.utcnow().isoformat() + "Z"
+
+    # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, identisch zu
+    # save_compare_preset_status (stilles return statt neuem Fehlerausgang).
+    if not VALID_ENTITY_ID_RE.match(preset_id):
+        return
 
     path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
     if not path.exists():

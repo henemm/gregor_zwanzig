@@ -46,6 +46,11 @@ func validateLocation(loc model.Location) error {
 	if loc.ID == "" {
 		return fmt.Errorf("id required")
 	}
+	// Issue #2140 Scheibe 2: die Kennung landet ueber SaveLocation in einem
+	// Dateipfad — ein Trenner darin bricht aus dem Nutzerverzeichnis aus.
+	if !store.ValidEntityID(loc.ID) {
+		return fmt.Errorf("invalid id")
+	}
 	if loc.Name == "" {
 		return fmt.Errorf("name required")
 	}
@@ -121,6 +126,9 @@ func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		existing, err := s.LoadLocation(id)
 		if err != nil {
@@ -176,6 +184,9 @@ func PatchLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		existing, err := s.LoadLocation(id)
 		if err != nil {
@@ -232,6 +243,9 @@ func LocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 		loc, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -254,6 +268,9 @@ func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		if err := s.DeleteLocation(id); err != nil {
 			w.Header().Set("Content-Type", "application/json")

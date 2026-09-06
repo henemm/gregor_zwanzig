@@ -20,7 +20,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.loader import _parse_trip, get_briefings_dir
+from app.loader import VALID_ENTITY_ID_RE, _parse_trip, get_briefings_dir
 from app.metric_catalog import format_metric_value
 from app.models import UnifiedWeatherDisplayConfig
 from app.trip import Trip
@@ -49,6 +49,12 @@ def _load_trip_raw(user_id: str, trip_id: str) -> Optional[dict]:
     kind-spezifische Weiterverarbeitung passiert downstream: der Trip-Pfad
     (`_load_trip_for_validator`) lehnt vergleich explizit ab.
     """
+    # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, spiegelt
+    # store.ValidEntityID auf der Go-Seite. Behandelt wie "nicht vorhanden"
+    # (None -> 404 am Endpunkt), damit der Aufrufer eine Ausbruchs-Kennung
+    # nicht von einem existierenden Briefing unterscheiden kann.
+    if not VALID_ENTITY_ID_RE.match(trip_id):
+        return None
     path = get_briefings_dir(user_id) / f"{trip_id}.json"
     if not path.exists():
         return None

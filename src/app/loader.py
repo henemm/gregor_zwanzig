@@ -1149,6 +1149,18 @@ def get_data_root() -> Path:
 # hinter dem Go-Proxy (der injiziert die Session-Kennung, proxy.go).
 VALID_USER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
+# Issue #2140 Scheibe 2: Zulassungsmuster fuer ENTITAETS-Kennungen (Trip, Ort,
+# Ortsvergleichs-Preset). MUSS deckungsgleich bleiben mit der kanonischen
+# Go-Quelle internal/store/pathsafe.go (``ValidEntityIDRe``) — Paritaets-Test:
+# tests/unit/test_entity_id_pattern_parity.py.
+#
+# Bewusst KEINE ASCII-Whitelist wie bei Nutzer-Kennungen, sondern eine reine
+# Pfadsegment-Pruefung: Bestandsorte tragen Diakritika (``hochfügen``,
+# ``pollença``) und muessen erreichbar bleiben. Erstes Zeichen weder "." noch
+# Trenner noch NUL (deckt "", ".", "..", ".hidden" ab), alle weiteren Zeichen
+# kein Trenner und kein NUL.
+VALID_ENTITY_ID_RE = re.compile(r"^[^./\\\x00][^/\\\x00]*$")
+
 
 def get_data_dir(user_id: str = "default") -> Path:
     """Get the data directory for a user.
