@@ -19,11 +19,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/handler"
+	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/scheduler"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -42,6 +44,12 @@ func newSmsFidelityTestRouter(t *testing.T, pythonURL string) (http.Handler, str
 	cfg.PythonCoreURL = pythonURL
 
 	s := store.New(cfg.DataDir, cfg.UserID)
+
+	// Issue #2129: sessionCookieFor signiert ein Alt-Merkmal; der Legacy-Zweig
+	// laesst es nur durch, wenn das Konto existiert.
+	if err := s.SaveUser(model.User{ID: "user1", CreatedAt: time.Now()}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
 
 	wa, err := webauthn.New(&webauthn.Config{
 		RPID:          cfg.WebAuthnRPID,

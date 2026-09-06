@@ -153,7 +153,7 @@ async function changePassword() {
 - **Input:** Authentifizierter Nutzer gibt aktuelles Passwort, neues Passwort und Bestaetigung ein und klickt "Passwort aendern".
 - **Output (Erfolg):** Gruener Banner "Passwort geaendert", alle drei Felder werden geleert. Backend gibt `200 {"status":"ok"}` zurueck und persistiert den neuen bcrypt-Hash.
 - **Output (Fehler):** Roter Banner mit spezifischer Fehlermeldung; Felder bleiben befuellt.
-- **Side effects:** Der neue bcrypt-Hash wird in der Nutzerdatenbank gespeichert. Bestehende Sessions anderer Geraete bleiben aktiv (kein erzwungenes Logout aller Sessions — ausserhalb des Scopes).
+- **Side effects:** Der neue bcrypt-Hash wird in der Nutzerdatenbank gespeichert. **Überholt seit #2129/ADR-0060:** Ein Passwortwechsel widerruft jetzt alle Anmeldungen des Nutzers auf anderen Geraeten und stellt dem aendernden Geraet sofort ein neues Anmelde-Merkmal aus (siehe `docs/adr/0060-dauerhafte-anmeldung-mit-widerrufsliste.md`).
 
 ### Fehlerszenarien
 
@@ -168,10 +168,11 @@ async function changePassword() {
 
 ## Known Limitations
 
-- Bestehende Sessions anderer Geraete werden nach Passwortaenderung nicht invalidiert. Ein vollstaendiges Session-Revoke waere sicherer, ist aber nicht Teil dieses Scopes.
+- ~~Bestehende Sessions anderer Geraete werden nach Passwortaenderung nicht invalidiert.~~ Behoben durch #2129 (ADR-0060): Passwortwechsel leert die Sitzungsliste des Nutzers bis auf ein frisches Merkmal fuer das aendernde Geraet.
 - Kein Passwort-Staerke-Indikator im Frontend — nur Mindestlaenge 8 Zeichen wird geprueft.
 - Client-seitiger Check (Passwoerter stimmen ueberein) verhindert vermeidbare API-Calls, ersetzt aber nicht die Server-seitige Validierung.
 
 ## Changelog
 
 - 2026-04-16: Initial spec (F71 Passwort aendern, GitHub Issue #71)
+- 2026-09-06: Session-Verhalten bei Passwortaenderung durch #2129 (ADR-0060) ueberholt — Details dort, nicht hier nachpflegen.

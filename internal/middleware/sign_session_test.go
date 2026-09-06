@@ -34,14 +34,25 @@ func TestSignSessionValidateRoundtrip(t *testing.T) {
 	token := SignSession("bob", secret)
 
 	// WHEN: Validating with the same secret
-	userId, ok := validateSession(token, secret)
+	userId, sessionId, issuedAt, isNew, ok := validateSession(token, secret)
 
-	// THEN: Returns the original userId
+	// THEN: Returns the original userId, recognised as the LEGACY format
+	// (SignSession baut weiterhin dreiteilig — Issue #2129 haelt den
+	// Altformat-Zweig fuer den Uebergang offen).
 	if !ok {
 		t.Fatal("expected session to be valid")
 	}
 	if userId != "bob" {
 		t.Errorf("expected userId 'bob', got '%s'", userId)
+	}
+	if isNew {
+		t.Error("SignSession muss das Altformat liefern, nicht das vierteilige")
+	}
+	if sessionId != "" {
+		t.Errorf("Altformat traegt keine Anmelde-Kennung, bekommen '%s'", sessionId)
+	}
+	if issuedAt == 0 {
+		t.Error("Ausstellungszeit muss mitgeliefert werden — der Widerrufs-Vermerk fuer Alt-Merkmale braucht sie")
 	}
 }
 
@@ -50,7 +61,7 @@ func TestSignSessionInvalidWithWrongSecret(t *testing.T) {
 	token := SignSession("charlie", "correct-secret-32-chars-long!!!")
 
 	// WHEN: Validating with wrong secret
-	_, ok := validateSession(token, "wrong-secret-32-chars-long!!!!!")
+	_, _, _, _, ok := validateSession(token, "wrong-secret-32-chars-long!!!!!")
 
 	// THEN: Validation fails
 	if ok {

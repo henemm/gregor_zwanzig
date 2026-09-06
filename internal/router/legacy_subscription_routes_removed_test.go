@@ -19,12 +19,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/handler"
 	authmw "github.com/henemm/gregor-api/internal/middleware"
+	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/scheduler"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -39,6 +41,12 @@ func newTestRouterForLegacySubscriptionCheck(t *testing.T) (http.Handler, string
 	cfg.DataDir = t.TempDir()
 
 	s := store.New(cfg.DataDir, cfg.UserID)
+
+	// Issue #2129: das unten signierte Alt-Merkmal kommt nur durch die
+	// AuthMiddleware, wenn das Konto existiert.
+	if err := s.SaveUser(model.User{ID: "legacy-sub-test-user", CreatedAt: time.Now()}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
 
 	wa, err := webauthn.New(&webauthn.Config{
 		RPID:          cfg.WebAuthnRPID,

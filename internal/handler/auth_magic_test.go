@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -256,8 +257,9 @@ func TestMagicLinkVerifyHandler_ValidCode_SetsSessionCookie(t *testing.T) {
 	if !sessionCookie.HttpOnly {
 		t.Error("gz_session cookie must be HttpOnly")
 	}
-	if sessionCookie.MaxAge != 86400 {
-		t.Errorf("expected MaxAge 86400, got %d", sessionCookie.MaxAge)
+	// Issue #2129: die Anmeldung gilt unbefristet, bis sie widerrufen wird.
+	if sessionCookie.MaxAge != middleware.SessionMaxAgeSeconds {
+		t.Errorf("expected MaxAge %d, got %d", middleware.SessionMaxAgeSeconds, sessionCookie.MaxAge)
 	}
 	if sessionCookie.SameSite != http.SameSiteLaxMode {
 		t.Errorf("expected SameSite=Lax, got %v", sessionCookie.SameSite)

@@ -237,7 +237,7 @@ func TestVerifyEmailHandler_PublicRoute_NotBlockedByAuthMiddleware_AC7(t *testin
 	seedVerifyEmailUser(t, s, "finn")
 	makeVerificationToken(t, s, "finn", "finn-token", time.Now().Add(24*time.Hour))
 
-	wrapped := middleware.AuthMiddleware("test-secret-32-chars-minimum-ok!")(VerifyEmailHandler(s))
+	wrapped := middleware.AuthMiddleware("test-secret-32-chars-minimum-ok!", s)(VerifyEmailHandler(s))
 	req := httptest.NewRequest("POST", "/api/auth/verify-email", strings.NewReader(`{"user":"finn","token":"finn-token"}`))
 	w := httptest.NewRecorder()
 	wrapped.ServeHTTP(w, req)

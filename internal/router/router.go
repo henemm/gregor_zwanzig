@@ -19,14 +19,14 @@ import (
 
 // Deps holds the dependencies required to build the application router.
 type Deps struct {
-	Config           *config.Config
-	Store            *store.Store
-	WeatherProvider  provider.WeatherProvider
-	WebAuthn         *webauthn.WebAuthn
-	ChallengeStore   *handler.ChallengeStore
-	Scheduler        *scheduler.Scheduler
+	Config             *config.Config
+	Store              *store.Store
+	WeatherProvider    provider.WeatherProvider
+	WebAuthn           *webauthn.WebAuthn
+	ChallengeStore     *handler.ChallengeStore
+	Scheduler          *scheduler.Scheduler
 	TelegramTokenStore *handler.TelegramTokenStore
-	GitCommit        string
+	GitCommit          string
 }
 
 // New builds the chi router with all application routes.
@@ -34,7 +34,7 @@ type Deps struct {
 func New(deps Deps) chi.Router {
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
-	r.Use(authmw.AuthMiddleware(deps.Config.SessionSecret))
+	r.Use(authmw.AuthMiddleware(deps.Config.SessionSecret, deps.Store))
 
 	// Auth endpoints (register/login exempt from AuthMiddleware)
 	// Rate-limit register: 5 attempts per IP per hour (Issue #117).
@@ -46,7 +46,11 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/auth/login",
 		loginLimiter.Middleware(handler.LoginHandler(deps.Store, deps.Config.SessionSecret)).ServeHTTP,
 	)
-	r.Post("/api/auth/logout", handler.LogoutHandler())
+	r.Post("/api/auth/logout", handler.LogoutHandler(deps.Store, deps.Config.SessionSecret))
+	// Issue #2129: "auf allen Geraeten abmelden" — authentifiziert, bewusst
+	// NICHT in der Public-Allowlist von AuthMiddleware: der Endpunkt braucht
+	// die Nutzerkennung aus dem geprueften Merkmal.
+	r.Post("/api/auth/logout-all", handler.LogoutAllHandler(deps.Store))
 	forgotLimiter := authmw.NewIPRateLimiter(5, time.Hour)
 	r.Post("/api/auth/forgot-password",
 		forgotLimiter.Middleware(handler.ForgotPasswordHandler(deps.Store, bcrypt.DefaultCost, *deps.Config)).ServeHTTP,
@@ -63,7 +67,7 @@ func New(deps Deps) chi.Router {
 	r.Delete("/api/auth/account", handler.DeleteAccountHandler(deps.Store))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store))
 	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config))
-	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost))
+	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost, deps.Config.SessionSecret))
 	// Issue #1071 — Level-Änderungs-Antrag (authentifiziert, NICHT in Public-Allowlist)
 	r.Post("/api/auth/tier-change-request", handler.RequestTierChangeHandler(deps.Store, *deps.Config))
 	// Bug #590: Telegram /start-Flow — link generation + status polling + internal connect

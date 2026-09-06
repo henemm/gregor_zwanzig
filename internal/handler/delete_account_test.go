@@ -70,9 +70,12 @@ func TestDeleteAccountClearsCookie(t *testing.T) {
 		t.Error("gz_session cookie should be cleared")
 	}
 
-	// Session should be blacklisted
-	if !middleware.IsBlacklisted("bob.123.sig") {
-		t.Error("session should be blacklisted after account deletion")
+	// Issue #2129: die Gaesteliste liegt IM Nutzerordner und ist mit dem Konto
+	// verschwunden. Das ersetzt die abgeloeste prozesslokale Sperrliste und
+	// wirkt anders als diese auch nach einem Dienst-Neustart.
+	if sessions, err := s.LoadSessions("bob"); err != nil || len(sessions) != 0 {
+		t.Errorf("Gaesteliste muss nach der Kontoloeschung leer sein, sind %d (err=%v)",
+			len(sessions), err)
 	}
 }
 

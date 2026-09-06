@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import type { Actions, PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { SESSION_MAX_AGE_SECONDS } from '$lib/auth.js';
 
 
 export const load: PageServerLoad = async ({ url }) => {
@@ -44,7 +45,7 @@ export const actions = {
 					httpOnly: true,
 					sameSite: 'lax',
 					secure: env.NODE_ENV === 'production',
-					maxAge: 86400
+					maxAge: SESSION_MAX_AGE_SECONDS
 				});
 			}
 		}

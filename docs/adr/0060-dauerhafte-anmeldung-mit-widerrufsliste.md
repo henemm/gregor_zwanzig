@@ -36,7 +36,14 @@ steht — nicht mehr, solange eine Frist läuft.
 
 - **Format:** `{userId}.{sessionId}.{ts}.{sig}`, HMAC-SHA256 über
   `{userId}:{sessionId}:{ts}`. `sessionId` sind 16 Zufallsbytes hex. Keine
-  Ablaufprüfung. Die Cookie-Lebensdauer im Browser beträgt mindestens ein Jahr.
+  Ablaufprüfung. Die Cookie-Lebensdauer im Browser beträgt 400 Tage — Browser
+  deckeln persistente Cookies dort, ein höherer Wert wäre eine Zusage, die der
+  Browser nicht einlöst.
+- **Alt und neu werden über die Signatur unterschieden, nicht über die
+  Segmentzahl.** Eine Nutzerkennung mit Punkt erzeugt auch im alten Format vier
+  Segmente; die Teilezahl trennt die Formate also nicht. Geprüft wird zuerst das
+  neue Format, bei Fehlschlag das alte — zwei HMAC-Vergleiche, die Reihenfolge
+  kostet nichts.
 - **Ablage:** `data/users/<user_id>/sessions.json`, bewusst **getrennt** vom
   Nutzer-Datensatz. Die 15 bestehenden `SaveUser`-Aufrufer schreiben stets das
   ganze Nutzerobjekt zurück; läge die Liste dort, könnte ein gleichzeitiger
@@ -57,7 +64,19 @@ steht — nicht mehr, solange eine Frist läuft.
   haben. Nachrüstbar, sobald eine Lastmessung ihn begründet.
 - **Zwei Abmelde-Wege:** „Abmelden" entfernt einen Eintrag, „Auf allen Geräten
   abmelden" (`POST /api/auth/logout-all`) leert die Liste. Passwortwechsel,
-  Passwort-Zurücksetzen und Kontolöschung leeren sie ebenfalls.
+  Passwort-Zurücksetzen und Kontolöschung leeren sie ebenfalls. Der
+  **Passwortwechsel** stellt dem Gerät, an dem er ausgelöst wird, sofort ein
+  neues Merkmal aus: alle anderen Geräte fliegen hinaus, der Wechselnde sperrt
+  sich nicht selbst aus. Beim **Zurücksetzen** eines vergessenen Passworts
+  geschieht das bewusst nicht — dort ist Aussperren im Kompromittierungsfall
+  die richtige Antwort.
+- **Auch Alt-Merkmale sind widerrufbar.** Ein Zeitstempel `legacy_revoked_at`
+  in derselben Datei wird bei jedem Widerruf gesetzt; der Legacy-Zweig weist
+  danach jedes ältere Alt-Merkmal ab. Ohne ihn bliebe ein Nutzer, der sich
+  anmeldet, nichts tut und sich sofort abmeldet, bis zu 24 Stunden angemeldet —
+  sein Merkmal steht auf keiner Liste, es gäbe also nichts zu entfernen. Ein
+  einzelner Wert je Nutzer, kein Verzeichnis einzelner Merkmale; er entfällt
+  mit dem Legacy-Zweig.
 - **Beide Prüfstellen zerlegen von rechts.** Der Go-Dienst zerlegte bisher mit
   `SplitN(".", 3)`, der Frontend-Server war unter #425 AC-7 bereits auf ein
   rechts-verankertes Verfahren umgestellt worden, ohne dass Go nachgezogen

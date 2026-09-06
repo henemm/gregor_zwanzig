@@ -11,6 +11,7 @@ import (
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/mail"
+	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -236,8 +237,9 @@ func TestPasskeyRegisterPublicRoundtrip_Success(t *testing.T) {
 	if sess.SameSite != http.SameSiteLaxMode {
 		t.Errorf("AC-5: expected SameSite=Lax, got %v", sess.SameSite)
 	}
-	if sess.MaxAge != 86400 {
-		t.Errorf("AC-5: expected MaxAge=86400, got %d", sess.MaxAge)
+	// Issue #2129: die Anmeldung gilt unbefristet, bis sie widerrufen wird.
+	if sess.MaxAge != middleware.SessionMaxAgeSeconds {
+		t.Errorf("AC-5: expected MaxAge=%d, got %d", middleware.SessionMaxAgeSeconds, sess.MaxAge)
 	}
 	if !strings.HasPrefix(sess.Value, "passwordless.") {
 		t.Errorf("AC-5: session value should start with 'passwordless.', got %q", sess.Value)

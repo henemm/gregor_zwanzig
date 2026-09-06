@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/store"
 )
 
 const testSecret = "test-secret-32-chars-minimum-ok!"
@@ -35,12 +37,17 @@ func TestValidCookie_Returns200(t *testing.T) {
 	ts := time.Now().Unix()
 	cookie := makeSessionCookie("default", ts, testSecret)
 
+	// Issue #2129: der Legacy-Zweig prueft, ob das Konto noch existiert —
+	// sonst wuerde ein Alt-Merkmal eine geloeschte Kontoerkennung ueberdauern.
+	dataDir := t.TempDir()
+	seedUserRecord(t, dataDir, "default")
+
 	// WHEN: request with valid cookie hits a protected endpoint
 	req := httptest.NewRequest("GET", "/api/trips", nil)
 	req.AddCookie(&http.Cookie{Name: "gz_session", Value: cookie})
 	rr := httptest.NewRecorder()
 
-	handler := AuthMiddleware(testSecret)(dummyHandler())
+	handler := AuthMiddleware(testSecret, store.New(dataDir, "test"))(dummyHandler())
 	handler.ServeHTTP(rr, req)
 
 	// THEN: 200 OK and userId in context
@@ -58,7 +65,7 @@ func TestNoCookie_Returns401(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/trips", nil)
 	rr := httptest.NewRecorder()
 
-	handler := AuthMiddleware(testSecret)(dummyHandler())
+	handler := AuthMiddleware(testSecret, store.New(t.TempDir(), "test"))(dummyHandler())
 	handler.ServeHTTP(rr, req)
 
 	// THEN: 401 Unauthorized
@@ -77,7 +84,7 @@ func TestExpiredCookie_Returns401(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: "gz_session", Value: cookie})
 	rr := httptest.NewRecorder()
 
-	handler := AuthMiddleware(testSecret)(dummyHandler())
+	handler := AuthMiddleware(testSecret, store.New(t.TempDir(), "test"))(dummyHandler())
 	handler.ServeHTTP(rr, req)
 
 	// THEN: 401 Unauthorized
@@ -96,7 +103,7 @@ func TestTamperedHMAC_Returns401(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: "gz_session", Value: cookie})
 	rr := httptest.NewRecorder()
 
-	handler := AuthMiddleware(testSecret)(dummyHandler())
+	handler := AuthMiddleware(testSecret, store.New(t.TempDir(), "test"))(dummyHandler())
 	handler.ServeHTTP(rr, req)
 
 	// THEN: 401 Unauthorized
@@ -121,7 +128,7 @@ func TestMalformedCookie_Returns401(t *testing.T) {
 		req.AddCookie(&http.Cookie{Name: "gz_session", Value: val})
 		rr := httptest.NewRecorder()
 
-		handler := AuthMiddleware(testSecret)(dummyHandler())
+		handler := AuthMiddleware(testSecret, store.New(t.TempDir(), "test"))(dummyHandler())
 		handler.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusUnauthorized {
@@ -136,7 +143,7 @@ func TestHealthEndpoint_NoAuthRequired(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/health", nil)
 	rr := httptest.NewRecorder()
 
-	handler := AuthMiddleware(testSecret)(dummyHandler())
+	handler := AuthMiddleware(testSecret, store.New(t.TempDir(), "test"))(dummyHandler())
 	handler.ServeHTTP(rr, req)
 
 	// THEN: 200 OK (health is exempt from auth)
@@ -155,7 +162,7 @@ func TestWrongSecret_Returns401(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: "gz_session", Value: cookie})
 	rr := httptest.NewRecorder()
 
-	handler := AuthMiddleware(testSecret)(dummyHandler())
+	handler := AuthMiddleware(testSecret, store.New(t.TempDir(), "test"))(dummyHandler())
 	handler.ServeHTTP(rr, req)
 
 	// THEN: 401 Unauthorized

@@ -16,7 +16,6 @@ import (
 	"golang.org/x/oauth2/google"
 
 	"github.com/henemm/gregor-api/internal/config"
-	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -179,17 +178,9 @@ func googleOAuthCallbackHandlerInternal(cfg *config.Config, s *store.Store, user
 			dispatchVerificationMail(s, *cfg, newUser.ID, newUser)
 		}
 
-		sessionToken := middleware.SignSession(userId, cfg.SessionSecret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    sessionToken,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
+		if !issueSession(w, r, s, userId, cfg.SessionSecret) {
+			return
+		}
 
 		http.Redirect(w, r, "/", http.StatusFound)
 	}

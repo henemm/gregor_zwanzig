@@ -119,6 +119,32 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 	}
 }
 
+// issueSession mintet eine Anmelde-Kennung, traegt sie in die Gaesteliste des
+// Nutzers ein und setzt das Anmelde-Cookie (Issue #2129). EINE Stelle fuer alle
+// sechs Anmeldewege: wird eine davon vergessen, sperrt dieser Weg alle seine
+// Nutzer aus, weil ihr Merkmal zwar wohlgeformt, aber nicht gelistet waere.
+//
+// Liefert false, wenn bereits geantwortet wurde (Fehlerfall).
+func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret string) bool {
+	sessionId, err := middleware.NewSessionID()
+	if err != nil {
+		log.Printf("session issue: id generation failed for %s: %v", userId, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"internal error"}`))
+		return false
+	}
+	if err := s.AddSession(userId, sessionId); err != nil {
+		log.Printf("session issue: allowlist write failed for %s: %v", userId, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"store_error"}`))
+		return false
+	}
+	middleware.SetSessionCookie(w, r, middleware.SignSessionWithID(userId, sessionId, secret))
+	return true
+}
+
 func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req authRequest
@@ -151,17 +177,9 @@ func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 			return
 		}
 
-		token := middleware.SignSession(req.Username, secret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
+		if !issueSession(w, r, s, req.Username, secret) {
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
@@ -186,14 +204,10 @@ func DeleteAccountHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		// Blacklist session + clear cookie (like logout)
-		cookie, err := r.Cookie("gz_session")
-		if err == nil && cookie.Value != "" {
-			middleware.BlacklistSession(cookie.Value)
-		}
-		http.SetCookie(w, &http.Cookie{
-			Name: "gz_session", Value: "", Path: "/", HttpOnly: true, MaxAge: -1,
-		})
+		// Die Gaesteliste liegt IM Nutzerordner und ist mit DeleteUser bereits
+		// verschwunden — jedes Merkmal dieses Kontos ist damit dauerhaft
+		// ungueltig, auch nach einem Dienst-Neustart (Issue #2129 AC-16).
+		middleware.ClearSessionCookie(w)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"deleted"}`))
@@ -368,6 +382,13 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			return
 		}
 
+		// Issue #2129 AC-9: Wer sein Passwort zuruecksetzt, WEIL es abgegriffen
+		// wurde, muss den Angreifer damit hinauswerfen — also alle Anmeldungen
+		// widerrufen, nicht nur das Passwort tauschen.
+		if err := s.ClearSessions(req.Username); err != nil {
+			log.Printf("password reset: allowlist clear failed for %s: %v", req.Username, err)
+		}
+
 		s.DeleteResetToken(req.Username)
 
 		w.Write([]byte(`{"status":"ok"}`))
@@ -428,22 +449,62 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
-func LogoutHandler() http.HandlerFunc {
+// LogoutHandler meldet GENAU DIESES Geraet ab: der Eintrag der Anmelde-Kennung
+// verlaesst die Gaesteliste des Nutzers. Weil das dateibasiert geschieht, wirkt
+// der Widerruf auch nach einem Dienst-Neustart (Issue #2129 AC-4); die
+// bisherige prozesslokale Sperrliste ist damit abgeloest.
+//
+// Der Endpunkt ist oeffentlich (kein Auth-Kontext), die Nutzerkennung kommt
+// deshalb aus dem geprueften Merkmal selbst — nie aus einem Standardwert.
+func LogoutHandler(s *store.Store, secret string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("gz_session")
 		if err == nil && cookie.Value != "" {
-			middleware.BlacklistSession(cookie.Value)
+			if userId, sessionId, ok := middleware.SessionFromCookie(cookie.Value, secret); ok {
+				if sessionId != "" {
+					if err := s.RemoveSession(userId, sessionId); err != nil {
+						log.Printf("logout: allowlist removal failed for %s: %v", userId, err)
+					}
+				} else if err := s.RevokeLegacySessions(userId); err != nil {
+					// Alt-Merkmal: es steht auf keiner Gaesteliste, es gaebe
+					// also nichts zu entfernen. Ohne den Widerrufs-Vermerk
+					// bliebe es bis zu 24 Stunden weiter gueltig — die Zusage
+					// "Abmelden wirkt" bekommt auch im Uebergangsfenster
+					// keine Ausnahme.
+					log.Printf("logout: legacy revocation failed for %s: %v", userId, err)
+				}
+			}
 		}
 
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    "",
-			Path:     "/",
-			HttpOnly: true,
-			MaxAge:   -1,
-		})
+		middleware.ClearSessionCookie(w)
 
 		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	}
+}
+
+// LogoutAllHandler meldet den Nutzer auf ALLEN Geraeten ab: die Gaesteliste
+// wird geleert (Issue #2129 AC-6). Authentifiziert — die Nutzerkennung kommt
+// aus dem geprueften Merkmal, nie aus einem Standardwert, sonst waere es ein
+// Widerruf auf fremden Konten.
+func LogoutAllHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := middleware.UserIDFromContext(r.Context())
+		w.Header().Set("Content-Type", "application/json")
+		if userId == "" {
+			w.WriteHeader(401)
+			w.Write([]byte(`{"error":"unauthorized"}`))
+			return
+		}
+
+		if err := s.ClearSessions(userId); err != nil {
+			log.Printf("logout-all: allowlist clear failed for %s: %v", userId, err)
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+
+		middleware.ClearSessionCookie(w)
 		w.Write([]byte(`{"status":"ok"}`))
 	}
 }
@@ -741,7 +802,7 @@ func hasControlChars(s string) bool {
 	return false
 }
 
-func ChangePasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
+func ChangePasswordHandler(s *store.Store, bcryptCost int, secret string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
@@ -786,6 +847,30 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		if err := s.SaveUser(*user); err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"internal error"}`))
+			return
+		}
+
+		// Issue #2129 AC-8: Der Passwortwechsel meldet auf allen ANDEREN
+		// Geraeten ab. Bislang hatte er ueberhaupt keine Session-Wirkung — es
+		// gab damit keinen wirksamen Notweg, ein verlorenes Geraet
+		// auszusperren.
+		//
+		// Das Geraet, an dem gewechselt wird, bekommt sofort einen frischen
+		// Nachweis: Liste leeren, neue Anmelde-Kennung eintragen, neues Cookie
+		// in dieser Antwort. Sonst saehe der Nutzer unmittelbar nach dem
+		// Wechsel eine Seite, deren Datenabrufe alle 401 geben.
+		//
+		// Bewusst NUR hier: Passwort-Zuruecksetzen, Kontoloeschung und "auf
+		// allen Geraeten abmelden" stellen KEIN neues Merkmal aus. Wer
+		// zuruecksetzt, weil das Passwort abgegriffen wurde, soll ausgesperrt
+		// bleiben.
+		if err := s.ClearSessions(userId); err != nil {
+			log.Printf("password change: allowlist clear failed for %s: %v", userId, err)
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"internal error"}`))
+			return
+		}
+		if !issueSession(w, r, s, userId, secret) {
 			return
 		}
 

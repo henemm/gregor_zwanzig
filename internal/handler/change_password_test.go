@@ -14,6 +14,10 @@ import (
 
 // TDD RED: Tests for ChangePasswordHandler — must FAIL until implemented.
 
+// Issue #2129: der Passwortwechsel stellt dem wechselnden Geraet ein frisches
+// Anmelde-Merkmal aus und braucht dafuer das Signatur-Geheimnis.
+const changePwTestSecret = "test-secret-32-chars-minimum-ok!"
+
 func setupUserWithPassword(t *testing.T, s *store.Store, userID, password string) {
 	t.Helper()
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
@@ -37,7 +41,7 @@ func TestChangePasswordHandler_Success(t *testing.T) {
 	req = addUserToContext(req, "alice")
 	w := httptest.NewRecorder()
 
-	ChangePasswordHandler(s, bcrypt.MinCost)(w, req)
+	ChangePasswordHandler(s, bcrypt.MinCost, changePwTestSecret)(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("Expected 200, got %d: %s", w.Code, w.Body.String())
@@ -63,7 +67,7 @@ func TestChangePasswordHandler_WrongOldPassword(t *testing.T) {
 	req = addUserToContext(req, "alice")
 	w := httptest.NewRecorder()
 
-	ChangePasswordHandler(s, bcrypt.MinCost)(w, req)
+	ChangePasswordHandler(s, bcrypt.MinCost, changePwTestSecret)(w, req)
 
 	if w.Code != 403 {
 		t.Fatalf("Expected 403, got %d: %s", w.Code, w.Body.String())
@@ -83,7 +87,7 @@ func TestChangePasswordHandler_NewPasswordTooShort(t *testing.T) {
 	req = addUserToContext(req, "alice")
 	w := httptest.NewRecorder()
 
-	ChangePasswordHandler(s, bcrypt.MinCost)(w, req)
+	ChangePasswordHandler(s, bcrypt.MinCost, changePwTestSecret)(w, req)
 
 	if w.Code != 400 {
 		t.Fatalf("Expected 400, got %d: %s", w.Code, w.Body.String())

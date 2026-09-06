@@ -225,8 +225,16 @@ entscheide dagegen und lese bei jeder Anfrage direkt:
 | alt (3 Teile) | `{userId}.{ts}.{sig}` | `{userId}:{ts}` |
 | **neu (4 Teile)** | `{userId}.{sessionId}.{ts}.{sig}` | `{userId}:{sessionId}:{ts}` |
 
-`sessionId` = 16 Zufallsbytes hex. Die Teilezahl unterscheidet alt und neu eindeutig — deshalb
-bleibt `ts` erhalten, obwohl es für die Gültigkeit nicht mehr gebraucht wird.
+`sessionId` = 16 Zufallsbytes hex. `ts` bleibt erhalten, obwohl es für die Gültigkeit nicht mehr
+gebraucht wird — der Legacy-Zweig braucht es weiter.
+
+**Korrektur 2026-09-06 (bei der Umsetzung gefunden):** Die ursprüngliche Annahme, die *Teilezahl*
+unterscheide alt und neu eindeutig, ist falsch. Eine Nutzerkennung mit Punkt erzeugt auch im alten
+Format vier Segmente — `alice.smith.{ts}.{sig}` ist von `{userId}.{sessionId}.{ts}.{sig}` nicht an
+der Segmentzahl zu trennen. Unterschieden wird stattdessen über die **Signatur**: zuerst wird das
+neue Format geprüft (HMAC über `{userId}:{sessionId}:{ts}`), bei Fehlschlag das alte
+(`{userId}:{ts}`). Beides sind HMAC-Vergleiche, die Reihenfolge kostet nichts. Ohne diese
+Korrektur wäre entweder AC-14 oder der Legacy-Zweig gebrochen.
 
 **Beide Seiten parsen von rechts** (die letzten drei Segmente sind `sessionId`/`ts`/`sig`, alles
 davor ist die userId). Das behebt zugleich Befund 13 (siehe unten).

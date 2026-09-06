@@ -755,7 +755,7 @@ HTML + Client-Side Interactivity
   - User-ID format for OAuth users: `g-{8hex}` to prevent session parsing errors
 - **Magic Link (Issue #449):** `/api/auth/magic-link` + `/api/auth/magic-link/verify` (6-digit OTP per E-Mail)
 
-**Session Format:** Server-side-signed cookie `gz_session = <userId>.<timestamp>.<hmacSig>` (24h TTL, HttpOnly, SameSite=Lax, Secure on HTTPS) — identisch über alle Auth-Methoden hinweg.
+**Session Format (ADR-0060, löst ADR-0030 ab):** Server-side-signed cookie `gz_session = <userId>.<sessionId>.<timestamp>.<hmacSig>` (HttpOnly, SameSite=Lax, Secure on HTTPS, Cookie-Lebensdauer 400 Tage) — identisch über alle Auth-Methoden hinweg. Gültig, solange `sessionId` in `data/users/<user_id>/sessions.json` steht, keine Ablaufprüfung. Abmelden entfernt den Eintrag; `POST /api/auth/logout-all` leert die Liste. Alte dreiteilige Merkmale (`<userId>.<timestamp>.<hmacSig>`) bleiben mit ihrer 24h-TTL gültig und werden bei Gebrauch still auf das neue Format gehoben.
 
 **User Model Extensions (Issues #425, #450):**
 - `PasswordHash` field optional (`omitempty` JSON tag) — leerer Hash für reine OAuth/Passkey-User
@@ -864,7 +864,7 @@ Feld-Definitionen: `internal/model/` und `docs/reference/api_contract.md` Sektio
 
 **Format:** JSON, standard HTTP methods (GET, POST, PUT, DELETE)
 
-**Auth:** Session cookies (format: `<userId>.<timestamp>.<hmacSig>`, set by Login or Passkey endpoints, 24h TTL)
+**Auth:** Session cookies (format: `<userId>.<sessionId>.<timestamp>.<hmacSig>`, set by Login or Passkey endpoints, gültig bis Abmeldung — Details ADR-0060)
 
 ### Frontend → Channels
 
