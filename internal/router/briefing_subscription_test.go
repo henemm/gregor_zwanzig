@@ -59,6 +59,16 @@ func newBriefingTestRouter(t *testing.T) (http.Handler, *store.Store, string) {
 
 	s := store.New(cfg.DataDir, cfg.UserID)
 
+	// Issue #2129: der Legacy-Zweig der AuthMiddleware laesst ein
+	// dreiteiliges Merkmal nur noch durch, wenn das Konto existiert — sonst
+	// ueberdauerte es eine Kontoloeschung. sessionCookieFor signiert
+	// Alt-Merkmale, die Konten muessen also auf der Platte liegen.
+	for _, id := range []string{"user1", "userA", "userB"} {
+		if err := s.SaveUser(model.User{ID: id, CreatedAt: time.Now()}); err != nil {
+			t.Fatalf("SaveUser %s: %v", id, err)
+		}
+	}
+
 	wa, err := webauthn.New(&webauthn.Config{
 		RPID:          cfg.WebAuthnRPID,
 		RPDisplayName: cfg.WebAuthnRPDisplayName,

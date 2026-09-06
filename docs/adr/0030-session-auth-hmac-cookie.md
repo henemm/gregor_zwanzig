@@ -1,6 +1,12 @@
 # ADR-0030: Session-Auth über HMAC-signiertes Cookie (kein JWT, keine Server-Session-Tabelle)
 
-- **Status:** Akzeptiert (rückwirkend dokumentiert 2026-07-22 — gelebte Praxis seit der Auth-Einführung, Issue #1343)
+- **Status:** Abgelöst durch [ADR-0060](0060-dauerhafte-anmeldung-mit-widerrufsliste.md) (2026-09-05, Issue #2129) — ursprünglich akzeptiert, rückwirkend dokumentiert 2026-07-22 (gelebte Praxis seit der Auth-Einführung, Issue #1343)
+
+> **Nachtrag 2026-09-05:** Die unten unter „Verworfene Alternativen" genannte
+> Begründung, eine serverseitige Sitzungsverwaltung sei „bei 24h-TTL und
+> Passwortwechsel als Notweg" verzichtbar, traf nicht zu: Der Passwortwechsel
+> hat bestehende Sitzungen nie invalidiert. Es gab also keinen Notweg.
+> ADR-0060 ersetzt die TTL durch eine dateibasierte Liste gültiger Sitzungen.
 - **Datum:** 2026-07-22
 - **Bezug:** `internal/middleware/auth.go`, `docs/reference/api_contract.md` (Session-Cookie-Format)
 

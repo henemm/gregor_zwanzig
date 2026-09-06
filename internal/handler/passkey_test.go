@@ -416,8 +416,9 @@ func TestPasskeyLoginRoundtrip_Success(t *testing.T) {
 	if !sess.HttpOnly {
 		t.Errorf("AC-2: cookie should be HttpOnly")
 	}
-	if sess.MaxAge != 86400 {
-		t.Errorf("AC-2: expected MaxAge=86400, got %d", sess.MaxAge)
+	// Issue #2129: die Anmeldung gilt unbefristet, bis sie widerrufen wird.
+	if sess.MaxAge != middleware.SessionMaxAgeSeconds {
+		t.Errorf("AC-2: expected MaxAge=%d, got %d", middleware.SessionMaxAgeSeconds, sess.MaxAge)
 	}
 	if sess.SameSite != http.SameSiteLaxMode {
 		t.Errorf("AC-2: expected SameSite=Lax, got %v", sess.SameSite)
@@ -425,9 +426,10 @@ func TestPasskeyLoginRoundtrip_Success(t *testing.T) {
 	if !strings.HasPrefix(sess.Value, "alice.") {
 		t.Errorf("AC-2: cookie should start with 'alice.', got %q", sess.Value)
 	}
+	// Issue #2129: vierteilig — {userId}.{sessionId}.{ts}.{sig}.
 	parts := strings.Split(sess.Value, ".")
-	if len(parts) != 3 {
-		t.Errorf("AC-2: cookie expected 3 dot-segments, got %d", len(parts))
+	if len(parts) != 4 {
+		t.Errorf("AC-2: cookie expected 4 dot-segments, got %d", len(parts))
 	}
 	// F003 / AC-2: Cookie path must be "/" so the session is sent on all routes.
 	if sess.Path != "/" {

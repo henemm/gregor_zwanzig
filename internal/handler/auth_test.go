@@ -14,6 +14,7 @@ import (
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/mail"
+	"github.com/henemm/gregor-api/internal/middleware"
 )
 
 // testRegisterCfg liefert eine Config, deren SMTPHost gesetzt ist, damit der
@@ -476,8 +477,9 @@ func TestLoginHandlerSuccess(t *testing.T) {
 	if !sessionCookie.HttpOnly {
 		t.Error("cookie should be HttpOnly")
 	}
-	if sessionCookie.MaxAge != 86400 {
-		t.Errorf("expected MaxAge 86400, got %d", sessionCookie.MaxAge)
+	// Issue #2129: die Anmeldung gilt unbefristet, bis sie widerrufen wird.
+	if sessionCookie.MaxAge != middleware.SessionMaxAgeSeconds {
+		t.Errorf("expected MaxAge %d, got %d", middleware.SessionMaxAgeSeconds, sessionCookie.MaxAge)
 	}
 
 	// Check cookie starts with username

@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { safeRedirectPath } from '$lib/utils/safeRedirect.js';
+import { SESSION_MAX_AGE_SECONDS } from '$lib/auth.js';
 import type { Actions, PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 
@@ -45,7 +46,7 @@ export const actions = {
 					httpOnly: true,
 					sameSite: 'lax',
 					secure: env.NODE_ENV === 'production',
-					maxAge: 86400,
+					maxAge: SESSION_MAX_AGE_SECONDS,
 				});
 			}
 		}

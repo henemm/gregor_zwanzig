@@ -253,17 +253,9 @@ func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challe
 			return
 		}
 
-		token := middleware.SignSession(entry.UserID, secret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
+		if !issueSession(w, r, s, entry.UserID, secret) {
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"id": entry.UserID})
@@ -362,17 +354,9 @@ func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn
 		}
 
 		userID := mu.WebAuthnName()
-		token := middleware.SignSession(userID, secret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
+		if !issueSession(w, r, s, userID, secret) {
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"id": userID})
@@ -572,17 +556,9 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		// Begin-Schritt übermittelte Adresse dauerhaft unverifiziert.
 		dispatchVerificationMail(s, cfg, entry.UserID, &newUser)
 
-		token := middleware.SignSession(entry.UserID, secret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
+		if !issueSession(w, r, s, entry.UserID, secret) {
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)

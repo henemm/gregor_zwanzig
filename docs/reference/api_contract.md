@@ -140,6 +140,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/google/init` | GET |
 | `/api/auth/login` | POST |
 | `/api/auth/logout` | POST |
+| `/api/auth/logout-all` | POST |
 | `/api/auth/magic-link` | POST |
 | `/api/auth/magic-link/verify` | POST |
 | `/api/auth/passkey/credentials/{id}` | DELETE |
@@ -2247,7 +2248,7 @@ Handles the OAuth callback from Google. Exchanges authorization code for ID toke
 **Side Effects:**
 
 - New `data/users/g-{8hex}/user.json` created for first-time Google users
-- Session cookie `gz_session` set with 7-day expiry
+- Session cookie `gz_session` set, unbefristet gueltig bis zum Widerruf (MaxAge 34560000 = 400 Tage, Issue #2129)
 - Existing users with matching `oauth_sub` skip creation and reuse their account
 
 ### User Data Model (Modified)
@@ -2289,12 +2290,55 @@ type User struct {
 - `frontend/src/routes/register/+page.server.ts` — exposes `data.googleEnabled` flag
 - Conditional button: `{#if data.googleEnabled} <a href="/api/auth/google/init">Mit Google anmelden</a> {/if}`
 
+### POST /api/auth/logout-all — auf allen Geraeten abmelden (Issue #2129)
+
+Authentifiziert (Cookie erforderlich, **nicht** in der Public-Allowlist der
+AuthMiddleware — die Nutzerkennung kommt aus dem geprueften Merkmal).
+
+**Request:** kein Body.
+
+**Response 200:** `{"status":"ok"}`
+
+**Side Effects:**
+- Leert `data/users/<user_id>/sessions.json` — **alle** Anmeldungen dieses Nutzers werden ungueltig, auch die auf anderen Geraeten, und bleiben es nach einem Dienst-Neustart.
+- Loescht das Cookie des aufrufenden Geraets (`MaxAge=-1`).
+- Nur der eigene Nutzer ist betroffen; andere Konten bleiben unberuehrt.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | `{"error":"unauthorized"}` | kein oder ungueltiges Anmelde-Merkmal |
+| 500 | `{"error":"store_error"}` | Gaesteliste nicht schreibbar |
+
+Dieselbe Wirkung loesen **Passwortwechsel** (`PUT /api/auth/password`) und
+**Passwort-Zuruecksetzen** (`POST /api/auth/reset-password`) aus. Die
+**Kontoloeschung** (`DELETE /api/auth/account`) entfernt die Gaesteliste mit dem
+Nutzerordner. `POST /api/auth/logout` entfernt dagegen nur den Eintrag des
+aufrufenden Geraets.
+
+**Ausnahme beim Passwortwechsel:** Er meldet alle **anderen** Geraete ab, stellt
+dem wechselnden Geraet aber sofort ein frisches Merkmal aus (`Set-Cookie` in
+derselben Antwort). Sonst saehe der Nutzer unmittelbar nach dem Wechsel eine
+Seite, deren Datenabrufe alle 401 geben. Zuruecksetzen, Kontoloeschung und
+`logout-all` stellen **kein** neues Merkmal aus — wer zuruecksetzt, weil das
+Passwort abgegriffen wurde, soll ausgesperrt bleiben.
+
+**Uebergangsformat:** Ein Alt-Merkmal steht auf keiner Gaesteliste, ein Widerruf
+haette dort also nichts zu entfernen. Dafuer traegt `sessions.json` zusaetzlich
+`legacy_revoked_at`: Abmelden mit einem Alt-Merkmal setzt den Zeitstempel, und
+danach gilt kein Alt-Merkmal mehr, dessen Ausstellungszeit nicht juenger ist.
+Der Wert wird bei jedem Leeren der Liste mitgesetzt und faellt mit dem
+Legacy-Zweig ersatzlos weg. Ein Alt-Merkmal eines **geloeschten** Kontos wird
+abgewiesen, weil die Pruefstelle die Existenz des Kontos verlangt.
+
 ### Session Handling
 
 Google OAuth users receive the same session mechanism as password-auth users:
-- Cookie: `gz_session` (format: `{userId}.{timestamp}.{sig}`)
+- Cookie: `gz_session` (format: `{userId}.{sessionId}.{timestamp}.{sig}`, signiert ueber `{userId}:{sessionId}:{timestamp}`)
 - User-ID format for OAuth users: `g-{8hex}` (no dots to prevent session parsing errors)
-- Session verification: `frontend/src/lib/auth.ts` → `verifySession()` handles split defensively
+- Session verification: `frontend/src/lib/auth.ts` → `verifySession()` zerlegt von rechts (identisch zum Go-Dienst)
+- Gueltigkeit: das Merkmal gilt unbefristet, solange seine `sessionId` in `data/users/<user_id>/sessions.json` steht (Issue #2129, ADR-0060). Das alte dreiteilige Format `{userId}.{timestamp}.{sig}` bleibt uebergangsweise gueltig, behaelt dabei aber seine 24-Stunden-Grenze und wird beim naechsten authentifizierten Aufruf still durch ein vierteiliges ersetzt.
 
 ---
 
@@ -2582,7 +2626,7 @@ User login with username + password, returns session cookie.
 ```
 
 **Side Effects:**
-- Sets `Set-Cookie: gz_session=<userId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=86400; Secure` (Secure flag active on HTTPS)
+- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure` (Secure flag active on HTTPS)
 
 **Error Responses:**
 
@@ -2656,7 +2700,7 @@ Complete discoverable passkey login. Browser provides `userHandle` from stored c
 ```
 
 **Side Effects:**
-- Sets `Set-Cookie: gz_session=<userId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=86400; Secure`
+- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure`
 - Updates `last_used_at` timestamp on the used credential
 - Increments `sign_count` on the credential (cloning detection)
 - ChallengeStore entry is destroyed after successful `Take()` (replay protection)
@@ -2811,7 +2855,7 @@ Complete passkey login (public, no auth required).
 ```
 
 **Side Effects:**
-- Sets `Set-Cookie: gz_session=<userId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=86400; Secure`
+- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure`
 - Updates `last_used_at` timestamp on the used credential
 - Increments `sign_count` on the credential (cloning detection)
 

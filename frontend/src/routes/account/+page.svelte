@@ -41,6 +41,8 @@
 	let presetError = $state<string | null>(null);
 	let deletePresetTarget: MetricPreset | null = $state(null);
 	let showDeleteAccountDialog = $state(false);
+	let showLogoutAllDialog = $state(false);
+	let logoutAllErrorMsg = $state<string | null>(null);
 
 	// Issue #1068 — Nutzerlevel-Badge (immer sichtbar). Der Wert kommt aus
 	// data.profile.tier (Response-Feld ist serverseitig immer gesetzt, Default "free").
@@ -291,6 +293,23 @@
 		} catch (e: unknown) {
 			const body = e as { detail?: string; error?: string };
 			deleteErrorMsg = body?.detail ?? body?.error ?? 'Löschen fehlgeschlagen';
+		}
+	}
+
+	// Issue #2129 AC-17: auf allen Geräten abmelden — mit Bestätigungsschritt,
+	// weil die Wirkung jedes andere Gerät des Nutzers trifft.
+	function logoutAllDevices() {
+		showLogoutAllDialog = true;
+	}
+
+	async function confirmLogoutAllDevices() {
+		showLogoutAllDialog = false;
+		try {
+			await api.post('/api/auth/logout-all', {});
+			window.location.href = '/login';
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string };
+			logoutAllErrorMsg = body?.detail ?? body?.error ?? 'Abmelden fehlgeschlagen';
 		}
 	}
 </script>
@@ -758,6 +777,23 @@
 		</Card.Content>
 	</Card.Root>
 
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Anmeldungen</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<p class="mb-4 text-sm text-muted-foreground">
+				Deine Anmeldung bleibt bestehen, bis du dich abmeldest. Hast du ein Gerät verloren,
+				kannst du hier alle Anmeldungen auf einmal beenden — auch die auf Geräten, die du
+				gerade nicht zur Hand hast.
+			</p>
+			<Btn variant="outline" onclick={logoutAllDevices}>Auf allen Geräten abmelden</Btn>
+			{#if logoutAllErrorMsg}
+				<p class="mt-2 text-sm text-red-600">{logoutAllErrorMsg}</p>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+
 	<Card.Root class="border-red-200">
 		<Card.Header>
 			<Card.Title class="text-red-700">Gefahrenzone</Card.Title>
@@ -793,6 +829,26 @@
 			<Dialog.Footer>
 				<Btn variant="outline" onclick={() => (deletePresetTarget = null)}>Abbrechen</Btn>
 				<Btn variant="destructive" onclick={confirmDeletePreset}>Löschen</Btn>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- Auf allen Geräten abmelden Dialog -->
+	<Dialog.Root
+		open={showLogoutAllDialog}
+		onOpenChange={(open) => { if (!open) showLogoutAllDialog = false; }}
+	>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Title>Auf allen Geräten abmelden</Dialog.Title>
+				<Dialog.Description>
+					Alle Anmeldungen werden beendet, auch die auf diesem Gerät. Zum Weiterarbeiten
+					musst du dich neu anmelden.
+				</Dialog.Description>
+			</Dialog.Header>
+			<Dialog.Footer>
+				<Btn variant="outline" onclick={() => (showLogoutAllDialog = false)}>Abbrechen</Btn>
+				<Btn variant="destructive" onclick={confirmLogoutAllDevices}>Abmelden</Btn>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>

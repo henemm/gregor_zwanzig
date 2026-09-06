@@ -95,18 +95,15 @@ test('Defensiver Fix: verifySession mit userId "alice.smith" (enthält Punkt)', 
 
 // Sicherstellen: auth.ts exportiert die fixte verifySession (Source-Inspection-Test)
 // RED: Schlägt fehl weil der Fix noch nicht in auth.ts eingebaut ist.
-test('AC-7: auth.ts verifySession nutzt Pop-basierten Split (Source-Inspection)', async () => {
-	const { readFileSync } = await import('node:fs');
-	const { fileURLToPath } = await import('node:url');
-	const { join } = await import('node:path');
+test('AC-7: auth.ts verifySession zerlegt von rechts (Verhalten, echte Funktion)', async () => {
+	// Vormals eine Dateiinhalt-Prüfung auf den String "parts.pop()". Die maß die
+	// Schreibweise, nicht die Zusicherung, und wurde rot, als #2129 dieselbe
+	// Rechts-Verankerung über Index-Zugriff schrieb. Geprüft wird jetzt das
+	// Verhalten am echten Prüfling: eine Nutzerkennung mit Punkt muss
+	// unversehrt herauskommen.
+	const { verifySession } = await import('./auth.ts');
+	const secret = 'test-secret-32-chars-minimum-ok!';
+	const uid = 'user.with.dots';
 
-	const srcDir = fileURLToPath(new URL('..', import.meta.url));
-	const authTs = readFileSync(join(srcDir, 'lib', 'auth.ts'), 'utf-8');
-
-	// Nach dem Fix muss auth.ts parts.pop() verwenden, nicht parts.length !== 3
-	const hasPopBasedSplit = authTs.includes('parts.pop()');
-	assert.ok(
-		hasPopBasedSplit,
-		'auth.ts muss parts.pop() für defensiven Split verwenden (AC-7 Fix noch nicht implementiert)'
-	);
+	assert.deepEqual(verifySession(signSession(uid, secret), secret), { userId: uid });
 });

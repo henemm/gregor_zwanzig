@@ -2,13 +2,31 @@
 entity_id: logout_session_blacklist
 type: module
 created: 2026-04-16
-updated: 2026-04-16
-status: draft
+updated: 2026-09-06
+status: superseded
 version: "1.0"
 tags: [go, sveltekit, auth, logout, session, f15]
 ---
 
 # F15 Phase 1 — Logout + Session-Blacklist
+
+> **ABGELOEST durch `session_allowlist.md` (Issue #2129, ADR-0060), 2026-09-06.**
+>
+> Die hier beschriebene Mechanik existiert nicht mehr. Die prozesslokale
+> In-Memory-Blacklist (`sessionBlacklist sync.Map`) ist ersatzlos entfallen:
+> sie ueberlebte keinen Dienst-Neustart und konnte nur Merkmale sperren, die
+> man kennt — "auf allen Geraeten abmelden" war damit gar nicht moeglich.
+>
+> An ihre Stelle tritt eine dateibasierte **Gaesteliste je Nutzer**
+> (`data/users/<user_id>/sessions.json`). Ein Anmelde-Merkmal ist gueltig,
+> solange seine Anmelde-Kennung dort steht; Abmelden entfernt den Eintrag,
+> "alle Geraete" leert die Liste. Beides wirkt ueber einen Neustart hinweg.
+> Die unten stehende Annahme "In-Memory reicht, Sessions laufen nach 24h ab"
+> traegt seit #2129 nicht mehr — die Anmeldung gilt unbefristet bis zum
+> Widerruf.
+>
+> Was unveraendert gilt: der Endpunkt `POST /api/auth/logout`, das Loeschen des
+> Cookies im Browser und der Abmelde-Knopf im Frontend.
 
 ## Approval
 

@@ -26,7 +26,6 @@ import (
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/mail"
-	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -184,17 +183,9 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 
 		// Success: single-use → delete entry, sign session, set cookie.
 		otpStore.Delete(normalizedEmail)
-		token := middleware.SignSession(entry.userID, cfg.SessionSecret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
+		if !issueSession(w, r, s, entry.userID, cfg.SessionSecret) {
+			return
+		}
 		json.NewEncoder(w).Encode(map[string]string{"id": entry.userID})
 	}
 }

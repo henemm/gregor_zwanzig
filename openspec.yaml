@@ -111,6 +111,16 @@ strict_code_gate:
     - "CHANGELOG"
     - "LICENSE"
     - "\\.test\\.ts$"
+    # PLUS "_test.go$": Go ERZWINGT, dass Testdateien im selben Paketordner
+    # neben der Quelldatei liegen — anders als bei TypeScript gibt es hier
+    # keinen Ausweichordner, den man stattdessen waehlen koennte. Ohne dieses
+    # Muster blockierte edit_gate.py jede Go-Testdatei als Produktivcode und
+    # machte eine Go-TDD-RED-Phase in diesem Projekt unmoeglich (193 vorhandene
+    # *_test.go-Dateien konnten so nie in Phase 5 entstehen). Gleiche Lage und
+    # gleiche Begruendung wie bei ".test.ts$"/#2110 — gefunden bei #2129.
+    # Kein Schutzverlust: Go kompiliert *_test.go nie ins Produktivbinary,
+    # und die Quelldateien daneben bleiben in Phase 5 weiterhin gesperrt.
+    - "_test\\.go$"
 
 # Specs Configuration
 specs:

@@ -16,7 +16,7 @@ tags: [go, auth, account-deletion, f15]
 
 ## Purpose
 
-Eingeloggte User koennen ihren Account loeschen. Alle User-Daten werden kaskadierend entfernt (locations, trips, subscriptions, gpx, snapshots, user.json). Session wird blacklisted und Cookie geloescht.
+Eingeloggte User koennen ihren Account loeschen. Alle User-Daten werden kaskadierend entfernt (locations, trips, subscriptions, gpx, snapshots, user.json). **Seit #2129/ADR-0060:** Da `data/users/{id}/sessions.json` Teil des geloeschten Verzeichnisses ist, werden damit alle Anmeldungen des Nutzers auf allen Geraeten ungueltig, nicht nur die des loeschenden Geraets — davor blacklistete der Logout-Pfad nur die eine aktuelle Session.
 
 ## Scope
 
@@ -55,7 +55,7 @@ func DeleteAccountHandler(s *store.Store) http.HandlerFunc
 1. `userId := middleware.UserIDFromContext(r.Context())`
 2. `s.LoadUser(userId)` → 404 falls nicht gefunden
 3. `s.DeleteUser(userId)` → 500 bei Fehler
-4. Session blacklisten + Cookie loeschen (wie Logout)
+4. Cookie des anfragenden Geraets loeschen — die Sitzungsliste selbst ist mit dem Verzeichnis aus Schritt 3 bereits weg (seit #2129/ADR-0060; zuvor: Session blacklisten wie Logout, nur das eine Geraet)
 5. HTTP 200 `{"status":"deleted"}`
 
 ### Step 3: Route (`cmd/server/main.go`, +1 LoC)
@@ -68,7 +68,7 @@ NICHT exempt von AuthMiddleware — nur eingeloggte User koennen ihren Account l
 
 ## Expected Behavior
 
-- **Eingeloggt + DELETE /api/auth/account:** Account + alle Daten geloescht, Session invalidiert, Cookie geloescht
+- **Eingeloggt + DELETE /api/auth/account:** Account + alle Daten geloescht, alle Sessions auf allen Geraeten invalidiert (seit #2129/ADR-0060), Cookie des anfragenden Geraets geloescht
 - **Nicht eingeloggt:** 401 Unauthorized (durch Middleware)
 - **Nach Loeschung:** Login mit alten Credentials schlaegt fehl (User existiert nicht mehr)
 
@@ -81,3 +81,4 @@ NICHT exempt von AuthMiddleware — nur eingeloggte User koennen ihren Account l
 ## Changelog
 
 - 2026-04-16: Initial spec (F15 Phase 3 — Account Deletion, GitHub Issue #53)
+- 2026-09-06: Session-Invalidierung durch #2129 (ADR-0060) auf alle Geraete ausgeweitet — Details dort, nicht hier nachpflegen.
