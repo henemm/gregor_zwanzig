@@ -569,13 +569,24 @@ test('AC-24: scheitert das Raeumen, bleibt der Merker fuer den naechsten Versuch
 	// Browser (iOS Safari unter Speicherdruck tut genau das), ohne Eingriff in
 	// den Programmcode. Der Schalter liegt im Sitzungsspeicher, damit derselbe
 	// Nachweis die Stoerung anschliessend wieder abstellen kann.
+	//
+	// Derselbe Aufsatz stellt in der zweiten Haelfte den NACHZUEGLER: eine
+	// Ablage, die kurz NACH einem gelungenen Loeschen entsteht. Sie haengt
+	// bewusst am Loeschvorgang selbst und nicht an einer Uhr -- eine feste
+	// Wartezeit trifft mal vor, mal nach dem Raeumen ein (nachgemessen: 2 von
+	// 5 Laeufen daneben) und der Nachweis wuerfelte, ob er den Defekt sieht.
 	await page.addInitScript(() => {
 		const echt = caches.delete.bind(caches);
 		caches.delete = async (name: string) => {
 			if (sessionStorage.getItem('gz-e2e-loeschen-kaputt') === '1') {
 				throw new DOMException('Speicher nicht verfuegbar', 'InvalidStateError');
 			}
-			return echt(name);
+			const weg = await echt(name);
+			if (sessionStorage.getItem('gz-e2e-nachzuegler') === '1') {
+				sessionStorage.removeItem('gz-e2e-nachzuegler');
+				setTimeout(() => void caches.open('gz-nachzuegler-e2e'), 300);
+			}
+			return weg;
 		};
 	});
 
@@ -603,10 +614,37 @@ test('AC-24: scheitert das Raeumen, bleibt der Merker fuer den naechsten Versuch
 
 	// Zweite Haelfte: Stoerung weg. Ohne sie wuerde dieser Nachweis nur ein
 	// Ausbleiben pruefen und waere auch gruen, wenn nie geraeumt wuerde.
-	await page.evaluate(() => sessionStorage.removeItem('gz-e2e-loeschen-kaputt'));
+	//
+	// Zusaetzlich scharf gestellt (#2128): der Nachzuegler. Real entsteht er,
+	// weil der erste Versuch oben die Worker-Registrierung entfernt hat --
+	// SvelteKit legt auf dieser Seite also eine FRISCHE an, und deren
+	// `install` legt den Programmvorrat NEU ab. Ob dieses Nachlegen vor oder
+	// nach dem Loeschen fertig wird, entscheidet allein die
+	// Maschinengeschwindigkeit: lokal gruen, auf dem CI-Laeufer rot
+	// (`{caches: 1, registrations: 0}`). Ein Nachweis, der darauf wartet, sieht
+	// den Defekt nur mit Glueck -- deshalb loest hier das Loeschen selbst einen
+	// Nachzuegler aus, unabhaengig davon, wie schnell der Browser gerade ist.
+	await page.evaluate(() => {
+		sessionStorage.removeItem('gz-e2e-loeschen-kaputt');
+		sessionStorage.setItem('gz-e2e-nachzuegler', '1');
+	});
 	await page.goto('/login');
+
 	await expect
-		.poll(() => storageAndRegistrationCount(page), { timeout: 20_000 })
+		.poll(() => storageAndRegistrationCount(page), { timeout: 12_000 })
+		.toEqual({ caches: 0, registrations: 0 });
+
+	// Nachkontrolle -- der eigentliche Zahn: ein FLUECHTIG leerer Moment ist
+	// kein geraeumtes Geraet. Genau den lieferte die alte Fassung, die ihren
+	// Erfolg an den eigenen Loesch-Rueckgaben festmachte statt am Endzustand:
+	// die Pruefung oben war schon nach Millisekunden zufrieden, waehrend der
+	// Nachzuegler erst danach entstand -- und dann fuer immer stehen blieb.
+	// Der kurze zweite Blick faengt nur den Fall ab, dass gerade in diesem
+	// Augenblick geloescht wird; gruen werden kann er NICHT, wenn ueberhaupt
+	// niemand mehr aufraeumt.
+	await page.waitForTimeout(2_000);
+	await expect
+		.poll(() => storageAndRegistrationCount(page), { timeout: 3_000 })
 		.toEqual({ caches: 0, registrations: 0 });
 });
 

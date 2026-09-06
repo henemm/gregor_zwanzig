@@ -9,7 +9,7 @@
 //   4. Neue Version erscheint als Hinweis und wird erst auf Klick aktiv
 //
 // Bewusst NICHT die 24 ACs der lokalen Strecke nachgebaut -- die laufen bei
-// jedem PR in der CI (`npx playwright test --project=pwa`, ci.yml Drittlauf).
+// jedem PR in der CI (`npx playwright test --project=pwa`, ci.yml Zweitlauf).
 // Diese Datei beantwortet die andere Frage: traegt der WIRKLICH AUSGELIEFERTE
 // Stand das Verhalten? Ein Vorschauserver kann Auslieferungsfehler (Header,
 // Geltungsbereich, nginx-Zwischenschicht) nicht zeigen.

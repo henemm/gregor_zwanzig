@@ -195,11 +195,21 @@ Standardprojekt `tests` aus). Zwei unabhängige Gründe, beide zwingend:
 
 Schutz gegen stilles Verschwinden einer Datei hängt hier **nicht** an einer Listenlänge, sondern an
 `E2E_MIN_EXECUTED_PWA` (aktuell 27 = 26 Testfälle in 2 Dateien + `global.setup`): fällt eine Datei
-weg, sinkt `expected` darunter und das Gate wird rot. Reihenfolge (nach dem Ratelimit-Zweitlauf) ist
-unkritisch, weil `global.setup.ts` nur einloggt, wenn `playwright/.auth/admin.json` fehlt/abgelaufen
-ist — der dritte Aufruf holt sich keinen eigenen Login und verbrennt kein IP-Kontingent. Details und
-Begründung ausführlich kommentiert in `.github/workflows/ci.yml` (env-Block + Step „Playwright-Specs
-ausführen (Drittlauf, PWA-Strecke --project=pwa)").
+weg, sinkt `expected` darunter und das Gate wird rot.
+
+**Die Reihenfolge ist kritisch: PWA-Lauf VOR dem bug-703-Ratelimit-Lauf** (gemessen 2026-09-06).
+Die frühere Begründung — „unkritisch, weil `global.setup.ts` nur einloggt, wenn
+`playwright/.auth/admin.json` fehlt/abgelaufen ist" — beschreibt nur `global.setup` und übersieht
+den datei-eigenen `test.afterAll` in `pwa-update-und-abmelden.spec.ts`: der Nachweis „AC-11: Auf
+allen Geräten abmelden" widerruft absichtlich **alle** Sitzungen inklusive der in `admin.json`, und
+der Hook stellt sie mit **einem echten Login** wieder her. Lief bug-703 davor, war das IP-Kontingent
+(30/Stunde, `internal/router/router.go:45`) leer, dieser Login lief in 429 und die Ampel wurde rot
+(Playwright hängt den Hook-Fehler an das zuletzt gelaufene Ergebnis desselben Workers — gemeldet
+wurde ein roter Testfall, der selbst nichts damit zu tun hatte). Innerhalb einer Stunde füllt sich
+das Kontingent nicht wieder auf, ein Retry hilft nicht. bug-703 selbst braucht keinen Vorlauf und
+läuft deshalb zuletzt. Details und Begründung ausführlich kommentiert in
+`.github/workflows/ci.yml` (env-Block + Step „Playwright-Specs ausführen (Zweitlauf, PWA-Strecke
+--project=pwa)").
 
 ## Thunder-Scale-Wächter (#1480, seit 2026-08-20)
 

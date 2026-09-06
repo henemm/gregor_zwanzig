@@ -93,39 +93,95 @@ export function abmeldungLiegtVor(url: URL): boolean {
 }
 
 /**
- * Alle Speicher loeschen und jede Worker-Registrierung entfernen.
+ * EIN Durchgang: jede Registrierung abmelden, jeden Speicher loeschen.
  *
- * Meldet, ob das VOLLSTAENDIG gelungen ist. Jeder Eintrag wird einzeln
- * versucht: verweigert der Browser eine Speicher-Schnittstelle (iOS Safari
- * unter Speicherdruck, privater Modus), soll das nicht die uebrigen Eintraege
- * mitreissen. Ein Teilerfolg -- Speicher geraeumt, Worker-Abmeldung gescheitert
- * oder umgekehrt -- gilt als Fehlschlag, damit ein zweiter Versuch folgt.
+ * Jeder Eintrag wird einzeln versucht: verweigert der Browser eine
+ * Speicher-Schnittstelle (iOS Safari unter Speicherdruck, privater Modus),
+ * soll das nicht die uebrigen Eintraege mitreissen. Ein Durchgang meldet
+ * bewusst KEIN Ergebnis -- ob geraeumt ist, wird gemessen, nicht gebucht
+ * (siehe `istGeraeumt`).
  */
-export async function raeumeGeraetespeicher(): Promise<boolean> {
-	let vollstaendig = true;
-	const versuche = async (schritt: () => Promise<boolean>): Promise<void> => {
-		try {
-			if (!(await schritt())) vollstaendig = false;
-		} catch {
-			vollstaendig = false;
-		}
-	};
-
+async function einDurchgang(): Promise<void> {
 	if ('serviceWorker' in navigator) {
 		try {
 			for (const reg of await navigator.serviceWorker.getRegistrations()) {
-				await versuche(() => reg.unregister());
+				try {
+					await reg.unregister();
+				} catch {
+					/* naechster Eintrag */
+				}
 			}
 		} catch {
-			vollstaendig = false;
+			/* Schnittstelle verweigert -- die Nachkontrolle sieht es */
 		}
 	}
 	if ('caches' in window) {
 		try {
-			for (const name of await caches.keys()) await versuche(() => caches.delete(name));
+			for (const name of await caches.keys()) {
+				try {
+					await caches.delete(name);
+				} catch {
+					/* naechster Eintrag */
+				}
+			}
 		} catch {
-			vollstaendig = false;
+			/* Schnittstelle verweigert -- die Nachkontrolle sieht es */
 		}
 	}
-	return vollstaendig;
+}
+
+/** Ist wirklich nichts mehr da? Bei Zweifel: nein (fail-closed). */
+async function istGeraeumt(): Promise<boolean> {
+	try {
+		if ('serviceWorker' in navigator) {
+			if ((await navigator.serviceWorker.getRegistrations()).length > 0) return false;
+		}
+		if ('caches' in window) {
+			if ((await caches.keys()).length > 0) return false;
+		}
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+const NACHLAUF_PAUSE_MS = 250;
+const NACHLAUF_RUHE_MS = 1_500;
+const NACHLAUF_FRIST_MS = 10_000;
+
+/**
+ * Alle Speicher loeschen und jede Worker-Registrierung entfernen.
+ *
+ * Meldet, ob das VOLLSTAENDIG gelungen ist -- und zwar GEMESSEN am Endzustand,
+ * nicht gebucht an den einzelnen Loesch-Rueckgaben. Der Unterschied ist keine
+ * Feinheit, sondern der Kern (#2128, in der CI gemessen): SvelteKit legt auf
+ * JEDER Seite eine Worker-Registrierung an. Auf der Anmeldeseite gibt es nach
+ * einem vorangegangenen Raeum-Versuch keine mehr, der Browser installiert also
+ * eine FRISCHE -- und deren `install` legt den Programmvorrat neu an. Ob dieses
+ * Nachlegen vor oder nach dem Loeschen fertig wird, entscheidet allein die
+ * Maschinengeschwindigkeit: lokal gruen, auf dem CI-Laeufer rot
+ * (`{caches: 1, registrations: 0}`). Ein Durchgang, der seinen Erfolg aus den
+ * eigenen Rueckgabewerten ableitet, meldet in genau diesem Fall "gelungen",
+ * verbraucht das Abmelde-Merkmal -- und laesst den nachgelegten Vorrat fuer
+ * immer stehen.
+ *
+ * Darum wird wiederholt geraeumt und nachgemessen, bis der leere Zustand eine
+ * Ruhezeit lang haelt (Nachzuegler sind damit erfasst) oder die Frist ablaeuft.
+ * Laeuft die Frist ab, gilt die letzte Messung -- ein `false` haelt das Merkmal
+ * fuer den naechsten Versuch fest (AC-24).
+ */
+export async function raeumeGeraetespeicher(): Promise<boolean> {
+	const frist = Date.now() + NACHLAUF_FRIST_MS;
+	let leerSeit: number | null = null;
+	for (;;) {
+		await einDurchgang();
+		if (await istGeraeumt()) {
+			if (leerSeit === null) leerSeit = Date.now();
+			if (Date.now() - leerSeit >= NACHLAUF_RUHE_MS) return true;
+		} else {
+			leerSeit = null;
+		}
+		if (Date.now() >= frist) return leerSeit !== null;
+		await new Promise((fertig) => setTimeout(fertig, NACHLAUF_PAUSE_MS));
+	}
 }
