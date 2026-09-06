@@ -37,7 +37,7 @@ Behebt eine Auth-Bypass-Lücke (Issue #2139): Sowohl Go-API (`internal/config/co
 | `internal/egress/guard.go` (`Install`) | Reference Pattern | Bestehendes Vorbild für ein Env-basiertes Fail-safe-Gate nach Config-Load |
 | `internal/scheduler/scheduler_gate.go` (`SchedulerEnabled`) | Reference Pattern | Bestehendes Vorbild für eine reine, testbare Gate-Funktion über `*config.Config` |
 | `frontend/e2e/ci-stack.sh`, `.github/workflows/ci.yml` (`e2e`-Job) | Test Infrastructure | Startet den Go-Stack via `GZ_TEST_FIXTURE_DIR` ohne gesetztes `GZ_SESSION_SECRET` — einziger legitimer Nutzer des Fallback-Pfads, muss von der neuen Go-Prüfung ausgenommen bleiben |
-| `frontend/e2e/e2e-env.sh`, `frontend/e2e/start-preview.sh` | Test Infrastructure | Setzen für Frontend-E2E bereits immer ein echtes `GZ_SESSION_SECRET` — keine Ausnahme im Frontend-Gate nötig |
+| `frontend/e2e/e2e-env.sh`, `frontend/e2e/start-preview.sh`, `.env.e2e` | Test Infrastructure | `e2e-env.sh` zieht `GZ_SESSION_SECRET` **nur** aus einer echten `.env`; im CI existiert die nicht (Secret-Leck-Schutz im öffentlichen Repo), die Variable bleibt dort ungesetzt. `start-preview.sh` sourced zusätzlich das git-getrackte, secret-freie `.env.e2e` mit `GZ_TEST_FIXTURE_DIR=fixtures/openmeteo` — dieselbe Ausnahme-Kennung wie auf der Go-Seite, deshalb braucht auch das Frontend-Gate diese Ausnahme |
 
 ## Scope
 
@@ -77,16 +77,16 @@ if err := config.ValidateSessionSecret(cfg); err != nil {
 
 Stilistisch identisch zum bestehenden `webauthn.New(...)`-Fail-Fast-Block weiter unten in `main.go` (`if err != nil { log.Fatalf(...) }`). Bewusst NICHT in `config.Load()` selbst platziert, da sonst `TestLoadDefaults*` in `internal/config/config_test.go` bricht — diese Tests nutzen `os.Clearenv()` und erwarten ein fehlerfreies `Load()` mit reinen Defaults.
 
-**Frontend — `frontend/src/lib/sessionSecretGate.ts`:** `export function assertSessionSecretConfigured(secret: string | undefined): void` wirft ein `Error`-Objekt, wenn `secret` `undefined`/leer ist, exakt `'dev-secret-change-me'` entspricht, oder kürzer als 32 Zeichen ist. Aufruf auf Modul-Top-Level in `frontend/src/hooks.server.ts`, außerhalb der `handle`-Funktion, direkt nach dem `env`-Import:
+**Frontend — `frontend/src/lib/sessionSecretGate.ts`:** `export function assertSessionSecretConfigured(secret: string | undefined, testFixtureDir?: string): void`. Prüfreihenfolge symmetrisch zur Go-Seite: ist `testFixtureDir` gesetzt, wird sofort zurückgekehrt (CI-E2E-Ausnahme); sonst wirft die Funktion ein `Error`-Objekt, wenn `secret` `undefined`/leer ist, exakt `'dev-secret-change-me'` entspricht, oder kürzer als 32 Zeichen ist. Aufruf auf Modul-Top-Level in `frontend/src/hooks.server.ts`, außerhalb der `handle`-Funktion, direkt nach dem `env`-Import:
 
 ```ts
 import { env } from '$env/dynamic/private';
 import { assertSessionSecretConfigured } from '$lib/sessionSecretGate.js';
 
-assertSessionSecretConfigured(env.GZ_SESSION_SECRET);
+assertSessionSecretConfigured(env.GZ_SESSION_SECRET, env.GZ_TEST_FIXTURE_DIR);
 ```
 
-SvelteKit/`adapter-node` importiert `hooks.server.ts` einmal beim Prozessstart — ein Top-Level-Throw beendet den Serverstart dort, statt erst beim ersten eingehenden Request sichtbar zu werden. Die bisherige Zeile `const secret = env.GZ_SESSION_SECRET ?? 'dev-secret-change-me';` entfällt und wird durch `const secret = env.GZ_SESSION_SECRET as string;` ersetzt — das Gate hat die Anwesenheit und Mindestqualität des Secrets bereits vor Erreichen dieser Zeile sichergestellt.
+SvelteKit/`adapter-node` importiert `hooks.server.ts` einmal beim Prozessstart — ein Top-Level-Throw beendet den Serverstart dort, statt erst beim ersten eingehenden Request sichtbar zu werden. Die Zeile `const secret = env.GZ_SESSION_SECRET ?? 'dev-secret-change-me';` innerhalb von `handle` bleibt bestehen: außerhalb des Fixture-Modus ist der Fallback unerreichbar, weil der Prozess dann gar nicht erst startet; im Fixture-Modus trägt er den CI-E2E-Pfad, wo die Go-API mit ihrem `envconfig`-Default dasselbe Secret verwendet — beide Prozesse müssen dort dieselbe Signatur bilden, sonst schlägt jeder E2E-Login fehl.
 
 ## Expected Behavior
 
@@ -115,6 +115,7 @@ SvelteKit/`adapter-node` importiert `hooks.server.ts` einmal beim Prozessstart �
 - [ ] Test 6: GIVEN `secret` ist exakt `'dev-secret-change-me'` WHEN `assertSessionSecretConfigured(secret)` aufgerufen wird THEN wirft die Funktion einen `Error`.
 - [ ] Test 7: GIVEN `secret` ist kürzer als 32 Zeichen WHEN `assertSessionSecretConfigured(secret)` aufgerufen wird THEN wirft die Funktion einen `Error`.
 - [ ] Test 8: GIVEN `secret` ist ein individuelles 40-Zeichen-Secret ohne Default-Literal WHEN `assertSessionSecretConfigured(secret)` aufgerufen wird THEN wirft die Funktion KEINEN `Error`.
+- [ ] Test 9: GIVEN `secret` ist `undefined` und `testFixtureDir` ist gesetzt (CI-E2E-Konfiguration aus `.env.e2e`) WHEN `assertSessionSecretConfigured(secret, testFixtureDir)` aufgerufen wird THEN wirft die Funktion KEINEN `Error`, sodass der CI-Preview-Server startfähig bleibt.
 
 ## Acceptance Criteria
 
@@ -124,8 +125,12 @@ SvelteKit/`adapter-node` importiert `hooks.server.ts` einmal beim Prozessstart �
 - **AC-2:** Given die Go-API wird mit `GZ_TEST_FIXTURE_DIR` gesetzt und ohne `GZ_SESSION_SECRET` gestartet (CI-E2E-Konfiguration) / When `ValidateSessionSecret(cfg)` aufgerufen wird / Then liefert die Funktion `nil` zurück, sodass der CI-E2E-Stack (`frontend/e2e/ci-stack.sh`) unverändert startfähig bleibt.
   - Test: `internal/config/session_secret_gate_test.go` ruft `ValidateSessionSecret` mit einer `Config` auf, deren `TestFixtureDir` gesetzt und `SessionSecret` leer ist, und prüft `err == nil`.
 
-- **AC-3:** Given der Frontend-Server wird ohne `GZ_SESSION_SECRET` gestartet / When das Modul `frontend/src/hooks.server.ts` beim Prozessstart importiert wird / Then wirft `assertSessionSecretConfigured` einen `Error` und der Serverstart schlägt fehl, statt mit dem unsicheren Default-Secret weiterzulaufen.
+- **AC-3:** Given der Frontend-Server wird ohne `GZ_SESSION_SECRET` und ohne `GZ_TEST_FIXTURE_DIR` gestartet / When das Modul `frontend/src/hooks.server.ts` beim Prozessstart importiert wird / Then wirft `assertSessionSecretConfigured` einen `Error` und der Serverstart schlägt fehl, statt mit dem unsicheren Default-Secret weiterzulaufen.
   - Test: `frontend/src/lib/sessionSecretGate.test.ts` ruft `assertSessionSecretConfigured(undefined)` sowie `assertSessionSecretConfigured('dev-secret-change-me')` auf und prüft jeweils, dass ein `Error` geworfen wird.
+  - Test: `frontend/src/hooks.server.failfast.test.ts` importiert das echte Modul und prüft, dass der Import scheitert (Wirk-Stelle statt nur der Funktion).
+
+- **AC-5:** Given der CI-E2E-Preview-Server wird über `frontend/e2e/start-preview.sh` mit `GZ_TEST_FIXTURE_DIR` aus `.env.e2e` und ohne `GZ_SESSION_SECRET` gestartet / When `hooks.server.ts` importiert wird / Then wirft `assertSessionSecretConfigured` keinen `Error` und der Preview-Server startet, sodass der `e2e`-Job unverändert läuft (symmetrisch zu AC-2 auf der Go-Seite).
+  - Test: `frontend/src/lib/sessionSecretGate.test.ts` (Ausnahme greift / greift ohne `testFixtureDir` nicht) und `frontend/src/hooks.server.failfast.test.ts` (Import gelingt im Fixture-Modus).
 
 - **AC-4:** Given ein gültiges, individuelles Secret mit mindestens 32 Zeichen ist gesetzt (wie in Prod-/Staging-`.env` bereits hinterlegt) / When sowohl `config.ValidateSessionSecret` (Go) als auch `assertSessionSecretConfigured` (Frontend) mit diesem Secret aufgerufen werden / Then liefern beide Prüfungen keinen Fehler und der jeweilige Prozess startet regulär weiter.
   - Test: `internal/config/session_secret_gate_test.go` und `frontend/src/lib/sessionSecretGate.test.ts` enthalten je einen Fall mit einem 40-Zeichen-Zufallssecret ohne Default-Literal und prüfen `err == nil` bzw. dass kein `Error` geworfen wird.
@@ -145,3 +150,4 @@ SvelteKit/`adapter-node` importiert `hooks.server.ts` einmal beim Prozessstart �
 
 - 2026-09-06: Initial spec created based on Issue #2139 analysis
 - 2026-09-06: Test Plan Sektion ergänzt (Spec-Validator-Finding: fehlende Pflichtsektion)
+- 2026-09-06: Frontend-Gate bekommt die `GZ_TEST_FIXTURE_DIR`-Ausnahme (CI-`e2e`-Job startete den Preview-Server ohne Secret — die Annahme „E2E setzt das Secret immer real" galt nur für den lokalen Staging-Pfad); AC-3 präzisiert, AC-5 und Test 9 ergänzt

@@ -34,3 +34,11 @@ test('assertSessionSecretConfigured: exactly 31 chars throws', () => {
 test('assertSessionSecretConfigured: valid 40-char secret does not throw', () => {
 	assert.doesNotThrow(() => assertSessionSecretConfigured('a-genuinely-random-forty-char-secret-12'));
 });
+
+test('assertSessionSecretConfigured: testFixtureDir exception allows missing secret', () => {
+	assert.doesNotThrow(() => assertSessionSecretConfigured(undefined, 'fixtures/openmeteo'));
+});
+
+test('assertSessionSecretConfigured: without testFixtureDir the same secret still throws', () => {
+	assert.throws(() => assertSessionSecretConfigured(undefined, ''));
+});
