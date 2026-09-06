@@ -33,11 +33,26 @@ export default defineConfig({
 			testMatch: /global\.setup\.ts/,
 		},
 		{
+			// Bestandsstrecke (#2128 AC-16): seit es src/service-worker.ts gibt,
+			// registriert SvelteKit auf JEDER Seite einen Worker -- auch im
+			// Vorschaubetrieb. Fuer die Bestandspruefungen wird er abgeschaltet,
+			// damit ihr Verhalten unveraendert bleibt.
 			name: 'tests',
-			testIgnore: /global\.setup\.ts/,
+			testIgnore: [/global\.setup\.ts/, /pwa-.*\.spec\.ts/],
 			dependencies: ['setup'],
 			use: {
 				storageState: 'playwright/.auth/admin.json',
+				serviceWorkers: 'block',
+			},
+		},
+		{
+			// Nur die PWA-Nachweise laufen mit aktivem Worker (#2128).
+			name: 'pwa',
+			testMatch: /pwa-.*\.spec\.ts/,
+			dependencies: ['setup'],
+			use: {
+				storageState: 'playwright/.auth/admin.json',
+				serviceWorkers: 'allow',
 			},
 		},
 	],

@@ -1,6 +1,6 @@
 // TDD RED — Issue #2128 (Scheibe 1 zu Epic #2127).
 // Spec: docs/specs/modules/pwa_installierbar_offline_start.md
-// Abgedeckt: AC-8, AC-9, AC-10, AC-11, AC-12, AC-15
+// Abgedeckt: AC-8, AC-9, AC-10, AC-11, AC-12, AC-15, AC-17, AC-18
 //
 // AC-12 ist die Gegenprobe zu AC-11: ohne sie waere AC-11 auch durch
 // bedingungsloses Dauer-Raeumen beim Betreten der Anmeldeseite erfuellbar —
@@ -17,6 +17,7 @@ import {
 	activateServiceWorker,
 	cacheNames,
 	controllingScriptUrl,
+	programmpfadeImSpeicher,
 	readCacheEntries,
 	storageAndRegistrationCount,
 	triggerServiceWorkerUpdate
@@ -79,17 +80,24 @@ test('AC-9: Antippen uebernimmt die neue Version und laedt genau einmal neu', as
 		{ timeout: 30_000 }
 	);
 
-	await expect
-		.poll(
-			async () => Number(await page.evaluate(() => sessionStorage.getItem('gz-e2e-loads'))),
-			{ timeout: 20_000 }
-		)
-		.toBe(ladungenVorher + 1);
+	// Waehrend des Neuladens ist der Ausfuehrungskontext der Seite kurzzeitig
+	// zerstoert — das ist der Vorgang selbst, kein Befund. Der Fehlwert -1
+	// laesst `poll` weiterprobieren, statt den Nachweis daran scheitern zu
+	// lassen, dass er zufaellig in diesem Moment gemessen hat.
+	const ladungen = async (): Promise<number> => {
+		try {
+			return Number(await page.evaluate(() => sessionStorage.getItem('gz-e2e-loads')));
+		} catch {
+			return -1;
+		}
+	};
+
+	await expect.poll(ladungen, { timeout: 20_000 }).toBe(ladungenVorher + 1);
 
 	// Nachlauf: eine Neulade-Schleife wuerde sich hier zeigen.
 	await page.waitForTimeout(3_000);
 	expect(
-		Number(await page.evaluate(() => sessionStorage.getItem('gz-e2e-loads'))),
+		await ladungen(),
 		'die Seite hat mehr als einmal neu geladen'
 	).toBe(ladungenVorher + 1);
 });
@@ -98,9 +106,34 @@ test('AC-9: Antippen uebernimmt die neue Version und laedt genau einmal neu', as
 // AC-10 — ohne Antippen bleibt die installierte Version aktiv
 // ===========================================================================
 
-test('AC-10: ohne Antippen bleibt die installierte Version aktiv', async ({ page }) => {
+test('AC-10: ohne Antippen bleibt die installierte Version aktiv und es wird nichts uebertragen', async ({
+	page,
+	context,
+	baseURL
+}) => {
 	await activateServiceWorker(page);
+	await page.waitForLoadState('networkidle');
 	const alteSkriptUrl = await controllingScriptUrl(page);
+
+	const programmpfade = new Set(await programmpfadeImSpeicher(page));
+	expect(programmpfade.size, 'kein Programmdatei-Bestand zum Vergleichen').toBeGreaterThan(5);
+
+	// Die Aufzeichnung beginnt VOR dem Ausloesen des Updates — und damit vor
+	// dem `install` des neuen Workers. Ein Fenster, das erst mit dem Hinweis
+	// begaenne, waere blind: ein vorab ladender Worker haette das ganze
+	// Programm schon uebertragen, BEVOR er den Zustand "installed" erreicht,
+	// der den Hinweis ueberhaupt erst ausloest. Das aufgezeichnete Fenster
+	// enthaelt das der Zusicherung vollstaendig und misst strenger.
+	//
+	// `context` statt `page`: Anfragen eines Service Workers meldet Playwright
+	// am Kontext, nicht an der Seite — auf der Seite waeren sie unsichtbar.
+	//
+	// Gezaehlt werden NUR Anfragen, die ein Worker selbst stellt
+	// (`request.serviceWorker()`). Die Seite meldet ihre Anfragen auch dann,
+	// wenn der laufende Worker sie aus dem Geraetespeicher beantwortet und gar
+	// nichts uebertragen wird — die zaehlten sonst falsch mit.
+	const angefragt: { url: string; vomWorker: boolean }[] = [];
+	context.on('request', (r) => angefragt.push({ url: r.url(), vomWorker: !!r.serviceWorker() }));
 
 	await triggerServiceWorkerUpdate(page);
 	await expect(page.getByText('Neue Version verfügbar')).toBeVisible({ timeout: 20_000 });
@@ -110,6 +143,22 @@ test('AC-10: ohne Antippen bleibt die installierte Version aktiv', async ({ page
 	await page.waitForLoadState('networkidle');
 	await page.waitForTimeout(2_000);
 
+	const eigenerUrsprung = new URL(baseURL ?? 'http://localhost:4173').origin;
+	const nachgeladen = [
+		...new Set(
+			angefragt
+				.filter((a) => a.vomWorker)
+				.map((a) => new URL(a.url))
+				.filter((url) => url.origin === eigenerUrsprung && programmpfade.has(url.pathname))
+				.map((url) => url.pathname)
+		)
+	];
+	expect(
+		nachgeladen,
+		'Programmdateien wurden uebertragen, ohne dass der Nutzer zugestimmt hat — ' +
+			'genau das verbietet der Entscheid ("kein ungefragtes Datenvolumen im Funkloch")'
+	).toEqual([]);
+
 	expect(
 		await controllingScriptUrl(page),
 		'die Kontrolle ist ohne Zutun des Nutzers gewechselt'
@@ -118,6 +167,170 @@ test('AC-10: ohne Antippen bleibt die installierte Version aktiv', async ({ page
 		await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting),
 		'die neue Version wartet nicht mehr — sie wurde ungefragt umgeschaltet'
 	).toBe(true);
+});
+
+// ===========================================================================
+// AC-17 — schlaegt die Uebertragung fehl, wird NICHT umgeschaltet
+// ===========================================================================
+
+test('AC-17: scheitert die Uebertragung, bleibt die installierte Fassung aktiv und lauffaehig', async ({
+	page,
+	context
+}) => {
+	await activateServiceWorker(page);
+	const alteSkriptUrl = await controllingScriptUrl(page);
+	const speicherVorher = (await readCacheEntries(page)).map((e) => e.url).sort();
+	expect(speicherVorher.length).toBeGreaterThan(0);
+
+	await triggerServiceWorkerUpdate(page);
+	await expect(page.getByText('Neue Version verfügbar')).toBeVisible({ timeout: 20_000 });
+
+	// Gerät ohne brauchbare Verbindung: jede Uebertragung scheitert, waehrend
+	// der Nutzer antippt.
+	//
+	// BEWUSST ueber `route`/`abort` statt `setOffline`: die Programmdateien
+	// tragen `cache-control: immutable` und liegen im HTTP-Zwischenspeicher des
+	// Browsers. Unter `setOffline` beantwortet der Browser sie daraus — die
+	// Uebertragung gelaenge also, und der Nachweis pruefte einen Fall, den es
+	// gar nicht gibt (nachgemessen: die Kontrolle wechselte). Eine gestellte
+	// Route umgeht den Zwischenspeicher und laesst wirklich nichts durch —
+	// genau die Lage bei einer echten neuen Fassung, deren Dateien der Browser
+	// noch nie gesehen hat.
+	await context.route('**/*', (route) => route.abort());
+	try {
+		await page.getByRole('button', { name: 'Jetzt aktualisieren' }).click();
+		await page.waitForTimeout(5_000);
+
+		expect(
+			await controllingScriptUrl(page),
+			'umgeschaltet, obwohl die neue Fassung gar nicht vollstaendig uebertragen wurde'
+		).toBe(alteSkriptUrl);
+		expect(
+			await page.evaluate(
+				async () => !!(await navigator.serviceWorker.getRegistration())?.waiting
+			),
+			'die neue Fassung wartet nicht mehr'
+		).toBe(true);
+		expect(
+			(await readCacheEntries(page)).map((e) => e.url).sort(),
+			'der Gerätespeicher der alten Fassung wurde angetastet'
+		).toEqual(speicherVorher);
+
+		// Lauffaehig heisst: die alte Fassung bedient weiter aus ihrem Speicher —
+		// ohne Netz erscheint ihre eigene Offline-Seite statt der Browser-
+		// Fehlerseite. Waere der Speicher weggeraeumt worden, faende sie sich nicht.
+		await page.goto('/trips');
+		await expect(page.getByText('Keine Verbindung')).toBeVisible();
+	} finally {
+		await context.unroute('**/*');
+	}
+
+	// Mit Netz laeuft die App normal weiter — weiterhin unter der alten Fassung.
+	await page.goto('/trips');
+	await expect(page.getByTestId('desktop-sidebar')).toBeVisible({ timeout: 20_000 });
+	expect(
+		await controllingScriptUrl(page),
+		'die Kontrolle ist nachtraeglich doch gewechselt'
+	).toBe(alteSkriptUrl);
+});
+
+// ===========================================================================
+// AC-18 — der von SELBST aktiv gewordene Worker zeigt weiterhin die Offline-Seite
+// ===========================================================================
+
+test('AC-18: uebernimmt der wartende Worker von selbst, bleibt die Offline-Seite erreichbar', async ({
+	browser,
+	baseURL
+}) => {
+	// Eigener Kontext: der Nachweis schliesst ALLE Fenster: das ist der Ausloeser,
+	// den es misst. Mit der geteilten `page` ginge das nicht.
+	const context = await browser.newContext({
+		baseURL,
+		storageState: AUTH_STATE,
+		serviceWorkers: 'allow'
+	});
+	// Speichername der Vorfassung. Im Test laeuft zweimal derselbe Bau, also
+	// traegt der wartende Worker denselben Speichernamen wie der laufende — die
+	// Lage "eigener Speicher leer, Stand der Vorfassung liegt daneben" gaebe es
+	// so nie. Sie wird hergestellt, indem der vorhandene Stand auf den Namen der
+	// Vorfassung umzieht. Das ist exakt der Zustand nach einem echten Update.
+	const ALT = 'gz-vorherige-fassung';
+	try {
+		const erste = await context.newPage();
+		await activateServiceWorker(erste);
+		const alteSkriptUrl = await controllingScriptUrl(erste);
+		expect((await readCacheEntries(erste)).length).toBeGreaterThan(0);
+
+		await erste.evaluate(async (alt) => {
+			const ziel = await caches.open(alt);
+			for (const name of await caches.keys()) {
+				if (name === alt) continue;
+				const quelle = await caches.open(name);
+				for (const req of await quelle.keys()) {
+					const res = await quelle.match(req);
+					if (res) await ziel.put(req, res);
+				}
+				await caches.delete(name);
+			}
+		}, ALT);
+		expect(await cacheNames(erste), 'Aufbau misslungen: eigener Speicher nicht leer').toEqual([
+			ALT
+		]);
+		expect(
+			(await readCacheEntries(erste)).some((e) => e.url.endsWith('/offline.html')),
+			'Aufbau misslungen: die Offline-Seite liegt gar nicht im Stand der Vorfassung'
+		).toBe(true);
+
+		await triggerServiceWorkerUpdate(erste);
+		// Der Hinweis wird BEWUSST nicht angetippt.
+
+		// Alle Fenster zu — jetzt macht der Browser den wartenden Worker von
+		// selbst aktiv. Ohne Antippen, nicht abstellbar.
+		await erste.close();
+
+		const zweite = await context.newPage();
+		await zweite.waitForTimeout(2_000); // about:blank ist kein Client im Geltungsbereich
+		await zweite.goto('/');
+		await zweite.waitForFunction(
+			(alt) => {
+				const c = navigator.serviceWorker.controller;
+				return !!c && c.scriptURL !== alt;
+			},
+			alteSkriptUrl,
+			{ timeout: 30_000 }
+		);
+
+		// Vorkehrung 1: der Stand der Vorfassung wurde NICHT weggeraeumt.
+		expect(
+			await cacheNames(zweite),
+			'der frisch aktivierte Worker hat den Stand der Vorfassung weggeraeumt, ' +
+				'obwohl sein eigener Speicher leer war'
+		).toContain(ALT);
+
+		// Damit der naechste Nachweis wirklich die zweite Vorkehrung misst: die
+		// Offline-Seite darf NICHT im eigenen Speicher der neuen Fassung liegen.
+		// Sonst faende sie auch ein Worker, der nur dort nachsieht.
+		expect(
+			(await readCacheEntries(zweite)).some(
+				(e) => e.cacheName !== ALT && e.url.endsWith('/offline.html')
+			),
+			'Aufbau misslungen: die Offline-Seite liegt bereits im eigenen Speicher'
+		).toBe(false);
+
+		// Vorkehrung 2: ohne Netz wird sie ueber ALLE Staende gefunden.
+		// `route`/`abort` statt `setOffline`: die Programmdateien tragen
+		// `cache-control: immutable` und lagen sonst im HTTP-Zwischenspeicher.
+		await context.route('**/*', (route) => route.abort());
+		try {
+			await zweite.goto('/trips');
+			await expect(zweite.getByText('Keine Verbindung')).toBeVisible();
+			await expect(zweite.getByRole('button', { name: 'Erneut versuchen' })).toBeVisible();
+		} finally {
+			await context.unroute('**/*');
+		}
+	} finally {
+		await context.close();
+	}
 });
 
 // ===========================================================================

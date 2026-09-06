@@ -52,18 +52,61 @@ antippt. Sie speichert dabei **keine** Inhalte — das kommt kontrolliert in Sch
 ### Speicherregeln im Service Worker (vier Klassen)
 
 ```
-install   → cache.addAll([...build, ...files])   Cache-Name: "gz-<version>"
-activate  → alle Cache-Namen != "gz-<version>" löschen
+install   → NUR bei Erstinstallation (kein aktiver Worker vorhanden):
+            cache.addAll([...build, ...files])   Cache-Name: "gz-<version>"
+            Bei einem Update wird hier NICHTS geladen — siehe „Download erst auf Antippen"
+activate  → alle Cache-Namen != "gz-<version>" löschen, ABER nur wenn der eigene
+            Speicher gefüllt ist (sonst bliebe nichts übrig — siehe „Der wartende
+            Worker, der von selbst aktiv wird")
 fetch:
   1. url.pathname beginnt mit "/api/"   → return ohne respondWith (Browser holt selbst)
   2. request.mode === "navigate"        → nur Netz; bei Netzfehler caches.match("/offline.html")
                                           NIE caches.put()
   3. Treffer in build/files             → aus dem Speicher, sonst Netz
   4. alles Übrige                       → Netz, ohne Ablage
-message: {type:"SKIP_WAITING"} → self.skipWaiting()
+message: {type:"SKIP_WAITING"} → erst cache.addAll([...build, ...files]),
+                                 danach self.skipWaiting()
 ```
 
 `self.skipWaiting()` steht **ausschließlich** im `message`-Zweig, niemals in `install`.
+
+### Download erst auf Antippen
+
+Der PO-Entscheid im Epic #2127 lautet wörtlich: „Die App arbeitet mit der installierten Version
+weiter und zeigt nur einen Hinweis; **der Download passiert auf Antippen**. Kein ungefragtes
+Datenvolumen im Funkloch." Gemeint ist nicht bloß das Umschalten, sondern das Übertragen der Daten.
+
+Ein Service Worker lädt üblicherweise schon im `install` das ganze Programm vor — also in dem
+Moment, in dem der Browser die neue Fassung bemerkt, lange bevor der Nutzer zustimmt. Genau das ist
+hier untersagt. Deshalb:
+
+- **Erstinstallation** (`registration.active` ist leer): `install` legt die Programmdateien ab. Ohne
+  sie gäbe es keine Offline-Fähigkeit, und der Nutzer lädt die Seite ohnehin gerade.
+- **Update** (ein Worker ist bereits aktiv): `install` lädt **nichts**. Der neue Worker wartet.
+- **Auf Antippen**: der `message`-Zweig lädt die Programmdateien vollständig und ruft erst danach
+  `skipWaiting()` auf. Schlägt das Laden fehl — etwa im Funkloch —, wird **nicht** umgeschaltet; die
+  installierte Fassung bleibt aktiv und lauffähig.
+
+Die Reihenfolge ist bindend: würde `skipWaiting()` vor dem Laden laufen, räumte `activate` den alten
+Speicher weg, während der neue noch leer ist — die App wäre danach ohne Netz unbrauchbar.
+
+### Der wartende Worker, der von selbst aktiv wird
+
+Weil beim Update nichts vorgeladen wird, entsteht ein Zustand, den es sonst nicht gäbe: ein
+wartender Worker mit **leerem** Speicher. Der Browser macht einen solchen Worker von sich aus aktiv,
+sobald alle Fenster der App geschlossen sind — ohne Antippen, das ist nicht abstellbar. Ohne
+Vorkehrung wäre danach der alte Speicher weggeräumt und der neue leer; die Offline-Seite wäre für
+diesen Nutzer dauerhaft fort, und AC-4 nach jedem ignorierten Update kaputt.
+
+Zwei Vorkehrungen, beide nötig — die erste allein genügt nicht:
+
+1. `activate` räumt fremde Speicherstände **nur**, wenn der eigene gefüllt ist.
+2. Die Offline-Seite wird über **alle** Speicherstände gesucht (`caches.match`), nicht nur im
+   eigenen. Sonst fände der frisch aktivierte Worker sie auch dann nicht, wenn der alte Stand noch
+   liegt — er sähe nur seinen eigenen, leeren.
+
+Die übrigen Programmdateien brauchen das nicht: sie tragen versionsabhängige Namen und kommen bei
+bestehender Verbindung ohnehin aus dem Netz, wobei der `fetch`-Zweig sie nachlegt.
 
 ### Update erst auf Nachfrage
 
@@ -200,8 +243,17 @@ Offline-Fähigkeit genau dann zerstören, wenn sie gebraucht wird.
 - **AC-10:** Given eine neue Version wartet und der Nutzer tippt den Hinweis nicht an / When er
   weiter in der App arbeitet / Then bleibt die installierte Version aktiv, und es wird keine
   Programmdatei der neuen Version nachgeladen.
-  - Test: Playwright wartet nach dem Erscheinen des Hinweises, navigiert weiter und prüft, dass die
-    Kontrolle beim alten Worker bleibt.
+  - Test: Playwright zeichnet den Netzwerkverkehr ab dem Erscheinen des Hinweises auf und prüft
+    **beides**: dass die Kontrolle beim alten Worker bleibt **und** dass keine Programmdatei der
+    neuen Fassung übertragen wurde. Die Kontrolle allein genügt nicht — sie ist nur ein
+    Stellvertreter und bliebe auch dann beim alten Worker, wenn im Hintergrund längst das ganze
+    Programm geladen worden wäre. Genau das verbietet der Entscheid.
+
+- **AC-17:** Given eine wartende neue Version und ein Gerät ohne brauchbare Verbindung / When der
+  Nutzer „Jetzt aktualisieren" antippt und das Laden fehlschlägt / Then bleibt die installierte
+  Fassung aktiv und vollständig lauffähig, und der Gerätespeicher der alten Fassung bleibt erhalten.
+  - Test: Playwright lässt die Übertragung der neuen Programmdateien scheitern, tippt den Hinweis an
+    und prüft, dass der bisherige Worker weiterhin die Kontrolle hat und die App bedienbar bleibt.
 
 - **AC-11:** Given ein angemeldeter Nutzer mit gefülltem Gerätespeicher / When er sich abmeldet —
   über die Seitenleiste oder über „Auf allen Geräten abmelden" / Then ist der Gerätespeicher leer und
@@ -239,6 +291,14 @@ Offline-Fähigkeit genau dann zerstören, wenn sie gebraucht wird.
   Then bleibt sie vollständig grün, weil der Service Worker für die Bestandsprüfungen abgeschaltet
   ist und nur die neuen PWA-Prüfungen mit aktivem Worker laufen.
   - Test: Die in `.github/ci_e2e_specs.txt` geführte Strecke läuft unverändert grün durch.
+
+- **AC-18:** Given eine wartende neue Version, die der Nutzer nicht angetippt hat / When alle Fenster
+  der App geschlossen werden, der Browser die wartende Fassung dadurch von selbst aktiv macht und die
+  App danach ohne Netz geöffnet wird / Then erscheint weiterhin die eigene Offline-Seite, nicht die
+  Fehlerseite des Browsers.
+  - Test: Playwright löst ein Update aus, tippt den Hinweis **nicht** an, erzwingt die Übernahme
+    durch den wartenden Worker, schaltet das Netz ab und prüft die Offline-Seite. Gegenprobe: ohne
+    die beiden Vorkehrungen muss dieser Fall rot sein.
 
 ## Known Limitations
 

@@ -29,13 +29,24 @@ export async function activateServiceWorker(page: Page, path = '/'): Promise<voi
 		undefined,
 		{ timeout: 30_000 }
 	);
-	const controlled = await page.evaluate(() => !!navigator.serviceWorker.controller);
-	if (!controlled) {
+	// EIN Neuladen genuegt nicht immer: `clients.claim()` erreicht nur Fenster,
+	// die es im Moment des Aufrufs schon gibt. Faellt das Neuladen genau in das
+	// Aktivierungsfenster des Workers, bleibt DIESES Dokument dauerhaft
+	// unkontrolliert -- kein Warten der Welt aendert das dann noch. Gemessen auf
+	// `/account` (laedt laenger als `/`): erst der zweite Anlauf uebernahm.
+	for (let versuch = 0; versuch < 3; versuch++) {
+		if (await page.evaluate(() => !!navigator.serviceWorker.controller)) return;
 		await page.reload();
-		await page.waitForFunction(() => !!navigator.serviceWorker.controller, undefined, {
-			timeout: 30_000
-		});
+		try {
+			await page.waitForFunction(() => !!navigator.serviceWorker.controller, undefined, {
+				timeout: 5_000
+			});
+			return;
+		} catch {
+			// naechster Anlauf
+		}
 	}
+	throw new Error('kein Service Worker hat die Kontrolle uebernommen');
 }
 
 /** Namen aller Speicher im Gerätespeicher (CacheStorage). */
@@ -60,6 +71,17 @@ export async function readCacheEntries(page: Page): Promise<CacheEntry[]> {
 		}
 		return out;
 	});
+}
+
+/**
+ * Pfade aller Dateien, die der laufende Worker abgelegt hat — also genau die
+ * Liste, die ein vorab ladender Worker anfordern wuerde. Wird aus dem echten
+ * Speicher gelesen statt im Test festgeschrieben: eine feste Liste veraltete
+ * mit dem naechsten Bau und wuerde still nichts mehr bewachen.
+ */
+export async function programmpfadeImSpeicher(page: Page): Promise<string[]> {
+	const entries = await readCacheEntries(page);
+	return [...new Set(entries.map((e) => new URL(e.url).pathname))];
 }
 
 /** Speicher- und Registrierungs-Stand in EINEM Zug gelesen (kein Zwischenstand). */

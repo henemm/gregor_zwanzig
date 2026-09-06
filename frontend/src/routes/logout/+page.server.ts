@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { ABMELDE_MERKMAL } from '$lib/pwa/geraetespeicher';
 
 
 export const actions = {
@@ -13,6 +14,8 @@ export const actions = {
 			});
 		}
 		cookies.delete('gz_session', { path: '/' });
-		redirect(302, '/login');
+		// Issue #2128 AC-11: das Merkmal sagt der Anmeldeseite, dass wirklich
+		// abgemeldet wurde -- nur dann raeumt sie Geraetespeicher und Worker.
+		redirect(302, `/login?${ABMELDE_MERKMAL}=1`);
 	},
 } satisfies Actions;
