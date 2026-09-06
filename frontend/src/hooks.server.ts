@@ -1,6 +1,9 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { verifySession } from '$lib/auth.js';
+import { assertSessionSecretConfigured } from '$lib/sessionSecretGate.js';
+
+assertSessionSecretConfigured(env.GZ_SESSION_SECRET);
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const publicPaths = ['/login', '/register', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/email-preview-dev', '/magic-link', '/magic-link/verify'];
@@ -13,7 +16,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return response;
 	}
 
-	const secret = env.GZ_SESSION_SECRET ?? 'dev-secret-change-me';
+	const secret = env.GZ_SESSION_SECRET as string;
 	const session = event.cookies.get('gz_session');
 	const result = session ? verifySession(session, secret) : null;
 

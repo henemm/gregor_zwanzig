@@ -30,6 +30,12 @@ func main() {
 		log.Fatalf("config error: %v", err)
 	}
 
+	// Issue #2139 — Session-Secret Fail-Fast: ein leeres, unveraendertes oder
+	// zu kurzes Secret erlaubt selbst signierte Session-Cookies.
+	if err := config.ValidateSessionSecret(cfg); err != nil {
+		log.Fatalf("session secret invalid: %v", err)
+	}
+
 	// Issue #1337 — Egress-Waechter: in Staging/Test laufen alle ausgehenden
 	// HTTP-Rufe gegen das Host-Inventar. In Prod ein No-Op.
 	egress.Install(cfg)
