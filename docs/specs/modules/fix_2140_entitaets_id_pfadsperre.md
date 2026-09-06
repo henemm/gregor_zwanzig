@@ -160,6 +160,30 @@ Zeichen-Whitelist.
 > würde einen Test erzeugen, der auch ohne den Fix grün ist. Die Tests müssen vorher belegen, dass
 > die gewählte Kennung ohne Guard tatsächlich in fremdem Gebiet landet (Positivkontrolle).
 
+> **Nachtrag aus der RED-Phase (2026-09-06) — gemessen, nicht angenommen:** Nicht jedes AC
+> reproduziert einen offenen Bug. Die Messung am unveränderten Produktivcode ergab:
+>
+> - **Reproduzieren einen offenen Bug:** AC-1, AC-2, AC-7, AC-8. Die Kennung kommt hier aus dem
+>   **Request-Body** bzw. über einen **direkten Store-Aufruf** — kein Routing dazwischen, das
+>   filtern könnte. `POST /api/trips` mit `{"id":"../../<opfer>/user"}` überschreibt die
+>   `user.json` des fremden Kontos nachweislich; `DeleteTrip` löscht sie.
+> - **Nageln einen heute vom Router getragenen Schutz fest (Regressionswächter):** AC-9 und AC-11.
+>   Eine Kennung mit echtem Trenner erreicht die Handler der Pfad-Parameter-Routen nicht: chi
+>   matcht das Ein-Segment-Muster nicht mehr (404 **vom Router**), und prozent-kodierte Trenner
+>   (`%2F`, `%2e%2e%2f`) dekodiert chi nicht — `chi.URLParam` liefert den Wert weiterhin kodiert,
+>   sodass nie ein echter Trenner in `filepath.Join` ankommt. Starlette löst Dot-Segmente bereits
+>   vor dem Routing auf.
+> - **Vereinheitlichen den Statuscode, sind aber keine Sicherheits-ACs:** AC-3, AC-4, AC-5. Ein
+>   ungültiges, aber trennerfreies Segment wie `.` erreicht den Handler sehr wohl und führt heute
+>   zu 404/204/409 statt zu 400. Gefährlich ist das nicht (`.` + `.json` ergibt `..json`, ein
+>   harmloser Dateiname im eigenen Verzeichnis).
+>
+> **Der Guard gehört trotzdem an alle diese Stellen.** Der heutige Schutz der Pfad-Parameter-Routen
+> ist eine Eigenschaft des Routers, keine Zusicherung dieses Systems: ein Router-Wechsel, ein
+> zugeschaltetes `chimw.CleanPath` oder ein neuer nicht-HTTP-Aufrufer hebt ihn auf, ohne dass ein
+> Test anschlägt. Die ACs 9 und 11 sind genau deshalb als Wächter formuliert — sie halten fest,
+> was heute gilt, damit ein späterer Wegfall auffällt.
+
 - **AC-1:** Given ein angemeldeter Nutzer und die Kennung eines zweiten, real angelegten Nutzers /
   When `POST /api/trips` mit `{"id":"../../<zweiter-nutzer>/user"}` aufgerufen wird / Then antwortet
   die Route mit 400, und die `user.json` des zweiten Nutzers ist danach byte-identisch (Inhalt und
