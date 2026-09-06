@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -20,7 +19,10 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-var validUsernameRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+// validUsernameRe haengt an der kanonischen Quelle in internal/store
+// (Issue #2140) — ein zweites Regex-Literal koennte von der Pfad-Sperre
+// abdriften und Kennungen durchlassen, die der Store dann ablehnt.
+var validUsernameRe = store.ValidUserIDRe
 
 // Passkey/WebAuthn handlers — Issue #450 V1 Add-on.
 //
