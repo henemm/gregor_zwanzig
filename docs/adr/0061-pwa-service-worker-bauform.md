@@ -54,6 +54,19 @@ den Vorabruf beim Überfahren von Verweisen
 (`data-sveltekit-preload-data="hover"`) erfasst — gerade der nutzerbezogene
 Abruf wäre die anfälligste Stelle für eine versehentliche Ablage.
 
+**Feststellung zu Regel 1 (ausdrücklich, kein blinder Fleck):** Regel 1 ist
+heute *wirkungsgleich redundant* zu Regel 4. Entfernt man sie ersatzlos, fällt
+eine `/api/`-Anfrage durch bis Regel 4 — und die legt nichts ab. Es gibt also
+derzeit keinen Nachweis, der allein auf das Entfernen von Regel 1 rot wird; das
+ist kein Versäumnis, sondern die Folge davon, dass Regel 4 nichts tut. Regel 1
+steht als **ausdrückliche Grenze für den Fall, dass Regel 4 je etwas ablegt** —
+und genau dieser Fall ist bewacht: `AC-21` prüft, dass nach normaler Nutzung
+**ausschließlich** Programmdateien im Gerätespeicher liegen, und schlägt damit
+bei jeder Änderung an, die Regel 4 zu einem Ablage-Zweig macht (`/api/` dabei
+automatisch mit erfasst). Beide Nachweise (`AC-6`, `AC-21`) lösen zusätzlich
+einen echten `/api/`-Abruf aus dem Browser aus, weil die Seitenwechsel ihre
+Daten serverseitig holen — ohne ihn berührte kein Nachweis die `/api/`-Grenze.
+
 Regel 2 hält `cache-control: no-cache` aus `frontend/src/hooks.server.ts` in
 Kraft, statt es zu unterlaufen. Ein abgelegtes HTML-Dokument wäre ein
 eingefrorener Stand ohne Kennzeichnung — genau das, was Leitsatz 1 verbietet.
@@ -85,6 +98,16 @@ die Anmeldeseite alle Caches und meldet den Worker ab. Bedingungsloses Räumen
 beim Betreten der Anmeldeseite ist ausdrücklich ausgeschlossen: dort landet auch,
 wessen Sitzung abgelaufen ist oder wer die Seite schlicht aufruft — das würde
 die Offline-Fähigkeit genau dann zerstören, wenn sie gebraucht wird.
+
+Weil „Auf allen Geräten abmelden" sein Redirect-Ziel unterwegs verliert (der
+zentrale 401-Umleiter ersetzt es), trägt dieser Weg das Merkmal zusätzlich im
+Sitzungsspeicher — gesetzt **vor** dem Aufruf. Das Merkmal ist deshalb doppelt
+befristet: der Fehlerzweig räumt es weg (Netzfehler wie 5xx, AC-19), und es
+verfällt nach 60 Sekunden (AC-20). Sonst machte ein liegen gebliebenes Merkmal
+den nächsten, völlig regulären Sitzungsablauf zu einer vermeintlichen Abmeldung
+— die Anmeldeseite räumte still den Gerätespeicher, und AC-12 wäre in der
+Praxis verletzt, ohne dass es jemand bemerkt. Ein echtes Abmelden navigiert
+sofort und liegt weit innerhalb des Fensters.
 
 ### 5. Inhalte bleiben online-gebunden
 

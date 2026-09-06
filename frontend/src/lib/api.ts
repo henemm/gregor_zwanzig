@@ -65,7 +65,14 @@ async function send<T>(
 		if (res.status === 401 && typeof window !== 'undefined') {
 			const redirectTarget = window.location.pathname + window.location.search;
 			window.location.href = `/login?expired=1&redirect=${encodeURIComponent(redirectTarget)}`;
-			throw new Error('Sitzung abgelaufen — bitte neu anmelden.');
+			// Issue #2128: der Status gehoert an den Fehler. Ein Aufrufer muss
+			// unterscheiden koennen, ob er auf der Seite bleibt (dann zeigt er eine
+			// Meldung) oder ob die Umleitung auf die Anmeldeseite bereits laeuft.
+			const abgelaufen = new Error('Sitzung abgelaufen — bitte neu anmelden.') as Error & {
+				status: number;
+			};
+			abgelaufen.status = 401;
+			throw abgelaufen;
 		}
 		// Issue #1395 S3: der gemerkte Stand ist nachweislich veraltet und die
 		// 412-Antwort traegt keinen neuen. Einmal melden, dann nicht mehr im Weg

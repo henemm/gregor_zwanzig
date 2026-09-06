@@ -1,6 +1,6 @@
 // TDD RED — Issue #2128 (Scheibe 1 zu Epic #2127).
 // Spec: docs/specs/modules/pwa_installierbar_offline_start.md
-// Abgedeckt: AC-8, AC-9, AC-10, AC-11, AC-12, AC-15, AC-17, AC-18
+// Abgedeckt: AC-8, AC-9, AC-10, AC-11, AC-12, AC-15, AC-17, AC-18, AC-19, AC-20
 //
 // AC-12 ist die Gegenprobe zu AC-11: ohne sie waere AC-11 auch durch
 // bedingungsloses Dauer-Raeumen beim Betreten der Anmeldeseite erfuellbar —
@@ -331,6 +331,161 @@ test('AC-18: uebernimmt der wartende Worker von selbst, bleibt die Offline-Seite
 	} finally {
 		await context.close();
 	}
+});
+
+// ===========================================================================
+// AC-19 — ein GESCHEITERTER Abmelde-Versuch raeumt nicht nachtraeglich
+// ===========================================================================
+//
+// Der Abmelde-Merker steht VOR dem Aufruf (das Weiterleitungsziel ueberlebt den
+// Weg sonst nicht). Bleibt er nach einem Fehlschlag liegen, wird der naechste,
+// voellig regulaere Sitzungsablauf (401 -> /login?expired=1) als Abmeldung
+// gewertet und die Anmeldeseite raeumt Gerätespeicher und Worker. Bei einer
+// Zielgruppe mit schlechter Verbindung ist der Fehlschlag kein Randfall.
+
+/**
+ * Fuehrt "Auf allen Geraeten abmelden" bei gestoerter Leitung aus und prueft,
+ * dass ein SPAETERER Sitzungsablauf den Gerätespeicher unangetastet laesst.
+ */
+async function abmeldeVersuchScheitertUndRaeumtNichtNach(
+	page: Page,
+	context: import('@playwright/test').BrowserContext,
+	stoerung: (route: import('@playwright/test').Route) => Promise<void> | void,
+	fehlertext: string
+): Promise<void> {
+	await activateServiceWorker(page, '/account');
+	const vorher = (await readCacheEntries(page)).map((e) => e.url).sort();
+	expect(vorher.length, 'kein Bestand im Gerätespeicher — nichts zu verlieren').toBeGreaterThan(0);
+
+	await context.route('**/api/auth/logout-all', stoerung);
+	try {
+		await page.getByRole('button', { name: 'Auf allen Geräten abmelden' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Abmelden', exact: true }).click();
+		// Der Fehlschlag bleibt auf der Seite stehen — es wird NICHT weitergeleitet.
+		await expect(page.getByText(fehlertext)).toBeVisible({ timeout: 15_000 });
+	} finally {
+		await context.unroute('**/api/auth/logout-all');
+	}
+
+	// Spaeter, voellig regulaer: die Sitzung laeuft ab, der zentrale
+	// 401-Umleiter aus $lib/api fuehrt auf die Anmeldeseite. Kein Abmelde-Vorgang.
+	await page.goto('/login?expired=1');
+	await expect(page.locator('input[name="username"]')).toBeVisible();
+	await page.waitForTimeout(3_000);
+
+	expect(
+		(await readCacheEntries(page)).map((e) => e.url).sort(),
+		'ein liegen gebliebener Abmelde-Merker hat einen normalen Sitzungsablauf als Abmeldung ' +
+			'ausgegeben — der Gerätespeicher ist weg und die App ohne Netz unbrauchbar (AC-12)'
+	).toEqual(vorher);
+	expect(
+		await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length),
+		'die Worker-Registrierung wurde ohne Abmelde-Vorgang entfernt'
+	).toBeGreaterThan(0);
+}
+
+test('AC-19: scheitert das Abmelden am Server (500), raeumt ein spaeterer Sitzungsablauf nicht', async ({
+	page,
+	context
+}) => {
+	await abmeldeVersuchScheitertUndRaeumtNichtNach(
+		page,
+		context,
+		(route) =>
+			route.fulfill({
+				status: 500,
+				contentType: 'application/json',
+				body: JSON.stringify({ error: 'Serverfehler beim Abmelden' })
+			}),
+		'Serverfehler beim Abmelden'
+	);
+});
+
+test('AC-19: scheitert das Abmelden am Funkloch, raeumt ein spaeterer Sitzungsablauf nicht', async ({
+	page,
+	context
+}) => {
+	// Geworfener Netzfehler statt Fehlerstatus — der andere Fehlerzweig: hier
+	// bekommt der Aufrufer eine TypeError von `fetch`, keine Antwort mit Status.
+	await abmeldeVersuchScheitertUndRaeumtNichtNach(
+		page,
+		context,
+		(route) => route.abort('failed'),
+		'Abmelden fehlgeschlagen'
+	);
+});
+
+test('AC-19: antwortet der Server 401, ist der Nutzer wirklich abgemeldet und es wird geraeumt', async ({
+	page,
+	context
+}) => {
+	// Die Gegenprobe zu den beiden Faellen oben und die Grenze der Regel: 401
+	// heisst, die Sitzung ist bereits fort -- der Nutzer IST abgemeldet, $lib/api
+	// leitet auf die Anmeldeseite, und dort MUSS geraeumt werden (AC-11). Wuerde
+	// der Merker auch hier weggeraeumt, bliebe der Worker auf einem Geraet
+	// zurueck, dessen Nutzer sich gerade abgemeldet hat.
+	await activateServiceWorker(page, '/account');
+	expect((await readCacheEntries(page)).length).toBeGreaterThan(0);
+
+	await context.route('**/api/auth/logout-all', (route) =>
+		route.fulfill({
+			status: 401,
+			contentType: 'application/json',
+			body: JSON.stringify({ error: 'unauthorized' })
+		})
+	);
+	try {
+		await page.getByRole('button', { name: 'Auf allen Geräten abmelden' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Abmelden', exact: true }).click();
+		// $lib/api leitet bei 401 selbst um -- das Ziel traegt `expired=1`, das
+		// Abmelde-Merkmal steht deshalb nur im Sitzungsspeicher.
+		await page.waitForURL(/\/login\?expired=1/);
+	} finally {
+		await context.unroute('**/api/auth/logout-all');
+	}
+
+	await expect
+		.poll(() => storageAndRegistrationCount(page), { timeout: 20_000 })
+		.toEqual({ caches: 0, registrations: 0 });
+});
+
+// ===========================================================================
+// AC-20 — der Merker verfaellt, wenn die Weiterleitung ausbleibt
+// ===========================================================================
+
+test('AC-20: ein alter Abmelde-Merker raeumt nicht mehr, ein frischer weiterhin schon', async ({
+	page
+}) => {
+	await activateServiceWorker(page);
+	const vorher = (await readCacheEntries(page)).map((e) => e.url).sort();
+	expect(vorher.length).toBeGreaterThan(0);
+
+	// Der Nachweis greift bewusst in den Sitzungsspeicher: ein liegen
+	// gebliebener Merker entsteht auf Wegen, die wir gerade NICHT alle kennen
+	// (deshalb das Zeitfenster). Nachgestellt wird das Ergebnis solcher Wege —
+	// ein Merker, dessen Weiterleitung nie kam.
+	await page.evaluate(() => {
+		sessionStorage.setItem('gz-abgemeldet', String(Date.now() - 5 * 60 * 1000));
+	});
+	await page.goto('/login?expired=1');
+	await expect(page.locator('input[name="username"]')).toBeVisible();
+	await page.waitForTimeout(3_000);
+	expect(
+		(await readCacheEntries(page)).map((e) => e.url).sort(),
+		'ein vor Minuten liegen gebliebener Merker hat geraeumt'
+	).toEqual(vorher);
+
+	// Positivkontrolle im selben Zug: derselbe Merker, nur frisch gesetzt, MUSS
+	// raeumen. Ohne sie waere der Nachweis oben auch dann gruen, wenn Schluessel
+	// oder Format des Merkers gar nicht mehr die des Programms waeren — er
+	// pruefte dann nichts.
+	await page.evaluate(() => {
+		sessionStorage.setItem('gz-abgemeldet', String(Date.now()));
+	});
+	await page.goto('/login');
+	await expect
+		.poll(() => storageAndRegistrationCount(page), { timeout: 20_000 })
+		.toEqual({ caches: 0, registrations: 0 });
 });
 
 // ===========================================================================

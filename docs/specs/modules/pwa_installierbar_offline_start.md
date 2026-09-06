@@ -300,6 +300,33 @@ Offline-Fähigkeit genau dann zerstören, wenn sie gebraucht wird.
     durch den wartenden Worker, schaltet das Netz ab und prüft die Offline-Seite. Gegenprobe: ohne
     die beiden Vorkehrungen muss dieser Fall rot sein.
 
+- **AC-19:** Given ein Nutzer tippt „Auf allen Geräten abmelden" an und der Aufruf scheitert — mit
+  Serverfehler oder weil keine Verbindung besteht / When er danach angemeldet weiterarbeitet und
+  seine Sitzung irgendwann ganz regulär abläuft / Then bleiben Gerätespeicher und Service Worker
+  unangetastet; der gescheiterte Versuch wirkt nicht als Abmeldung nach.
+  - Test: Playwright lässt den Aufruf einmal mit Serverfehler und einmal mit Netzfehler scheitern,
+    ruft danach die Anmeldeseite über den regulären Ablauf-Weg auf und prüft, dass der Speicher
+    unverändert ist.
+
+- **AC-20:** Given ein Abmelde-Merkmal wurde gesetzt, die Weiterleitung ist aber ausgeblieben /
+  When die Anmeldeseite später als eine Minute danach erreicht wird / Then wird nicht geräumt; ein
+  frisch gesetztes Merkmal wirkt dagegen weiterhin.
+  - Test: Playwright prüft beide Fälle im selben Ablauf — das frische Merkmal ist die
+    Positivkontrolle, ohne die der Test auch dann grün wäre, wenn nie geräumt würde.
+
+- **AC-21:** Given normale Nutzung der App — Seitenwechsel, Vorabruf beim Überfahren von Verweisen
+  und ein echter Datenabruf / When der Gerätespeicher danach betrachtet wird / Then enthält er
+  **ausschließlich** Programmdateien; keine einzige andere URL.
+  - Test: Playwright liest jeden Eintrag jedes Speicherstands aus und vergleicht gegen die Liste der
+    Programmpfade. Dieser Fall bewacht die `/api/`-Grenze mittelbar: er schlägt bei jeder künftigen
+    Änderung an, die etwas Fremdes ablegt.
+
+- **AC-22:** Given „Auf allen Geräten abmelden" wird angetippt und der Server antwortet mit 401 /
+  When der Nutzer dadurch auf der Anmeldeseite landet / Then werden Gerätespeicher und Service
+  Worker geräumt — die Sitzung ist tatsächlich beendet, der Nutzer ist abgemeldet.
+  - Test: Playwright legt die Antwort auf 401 und prüft, dass geräumt wird. Abgrenzung zu AC-19:
+    dort bleibt der Nutzer angemeldet, hier nicht — deshalb sind es zwei getrennte Zusicherungen.
+
 ## Known Limitations
 
 - Es werden **keine Inhalte** offline verfügbar — nur die Programmdateien. Wer ohne Netz eine Seite

@@ -1,6 +1,6 @@
 // TDD RED — Issue #2128 (Scheibe 1 zu Epic #2127).
 // Spec: docs/specs/modules/pwa_installierbar_offline_start.md
-// Abgedeckt: AC-1, AC-3, AC-4, AC-5, AC-6, AC-7, AC-13, AC-14
+// Abgedeckt: AC-1, AC-3, AC-4, AC-5, AC-6, AC-7, AC-13, AC-14, AC-21
 //
 // Alle Nachweise laufen ueber echtes Browserverhalten: echter Service Worker,
 // echter Gerätespeicher (CacheStorage), echter Netzverkehr. Kein Mock, kein
@@ -189,11 +189,121 @@ test('AC-6: kein /api/-Eintrag im Speicher, auch nach Vorabruf beim Ueberfahren 
 		await page.waitForLoadState('networkidle');
 	}
 
+	// Die Seitenwechsel oben holen ihre Daten serverseitig — der Browser sieht
+	// dabei nur `__data.json`. Ohne diesen zusaetzlichen Abruf liefe waehrend des
+	// ganzen Nachweises keine einzige `/api/`-Anfrage durch den Worker, und die
+	// `/api/`-Grenze waere hier gar nicht beruehrt (nachgemessen).
+	const apiStatus = await page.evaluate(async () => (await fetch('/api/trips')).status);
+	expect(apiStatus, 'der Datenabruf kam nicht durch — kein belastbarer Nachweis').toBe(200);
+
 	const entries = await readCacheEntries(page);
 	const apiEintraege = entries.filter((e) => e.url.includes('/api/'));
 	expect(
 		apiEintraege.map((e) => e.url),
 		'Datenantworten im Gerätespeicher — der naechste Nutzer desselben Geraets saehe fremde Daten (ADR-0003)'
+	).toEqual([]);
+});
+
+// ===========================================================================
+// AC-21 — im Gerätespeicher liegt AUSSCHLIESSLICH das Programm
+// ===========================================================================
+//
+// Warum zusaetzlich zu AC-6: die `/api/`-Grenze (Regel 1) ist fuer sich allein
+// nicht bewachbar. Wird sie ersatzlos entfernt, faellt eine `/api/`-Anfrage
+// heute durch Regel 4 (Netz ohne Ablage) und landet ebenfalls nicht im
+// Speicher — AC-6 bliebe gruen. Regel 1 ist also heute redundant und steht als
+// ausdrueckliche Grenze fuer den Fall, dass Regel 4 je etwas ablegt
+// (ADR-0061).
+//
+// Genau diese Gefahr bewacht dieser Nachweis: nach normaler Nutzung darf im
+// Speicher nichts liegen, was nicht zum Programm gehoert. Jede kuenftige
+// Aenderung, die Regel 4 zu einem Ablage-Zweig macht, schlaegt hier an — und
+// `/api/` ist dabei automatisch mit erfasst.
+test('AC-21: nach normaler Nutzung liegt ausschliesslich das Programm im Speicher', async ({
+	page,
+	baseURL
+}) => {
+	await activateServiceWorker(page);
+
+	// Ausgangsstand: was `install` abgelegt hat. Das ist per Bauart genau die
+	// Programmliste (`build` + `files`) — sie wird aus dem echten Speicher
+	// gelesen, nicht im Nachweis festgeschrieben, weil eine feste Liste mit dem
+	// naechsten Bau veraltete und still nichts mehr bewachte.
+	const programm = new Set((await readCacheEntries(page)).map((e) => e.url));
+	expect(programm.size, 'kein Programmbestand — es gaebe nichts zu vergleichen').toBeGreaterThan(5);
+	expect(
+		[...programm].filter((u) => u.includes('/api/')),
+		'schon der Ausgangsstand enthaelt Datenantworten'
+	).toEqual([]);
+
+	// Mitgeschnitten wird, WAS waehrend der Nutzung ueberhaupt lief. Ohne das
+	// waere ein leerer Speicher-Zuwachs auch dann gruen, wenn schlicht nichts
+	// passiert ist — der Nachweis pruefte dann nichts.
+	const angefragt: { url: string; art: string; methode: string }[] = [];
+	page.on('request', (r) =>
+		angefragt.push({ url: r.url(), art: r.resourceType(), methode: r.method() })
+	);
+
+	// Normale Nutzung: Ueberfahren der Verweise (loest den Vorabruf aus),
+	// mehrere Seitenwechsel ueber die Navigation (Client-Router, also
+	// Datenabrufe ohne vollen Seitenaufbau).
+	const verweise = page.locator('[data-testid="desktop-sidebar"] a[href^="/"]');
+	const anzahl = await verweise.count();
+	expect(anzahl, 'keine Navigationsverweise gefunden').toBeGreaterThan(0);
+	for (let i = 0; i < anzahl; i++) {
+		await verweise.nth(i).hover();
+		await page.waitForTimeout(200);
+	}
+	for (let i = 0; i < Math.min(anzahl, 4); i++) {
+		await verweise.nth(i).click();
+		await page.waitForLoadState('networkidle');
+	}
+	await page.goto('/account');
+	await page.waitForLoadState('networkidle');
+
+	// Zusaetzlich ein Datenabruf aus der Seite heraus. Er gehoert dazu, weil die
+	// Seitenwechsel oben ihre Daten serverseitig holen (der Browser sieht dabei
+	// nur `__data.json`) — ohne diesen Schritt liefe im Nachweis keine einzige
+	// `/api/`-Anfrage durch den Worker, und die `/api/`-Grenze waere hier
+	// ueberhaupt nicht beruehrt.
+	const apiStatus = await page.evaluate(async () => (await fetch('/api/trips')).status);
+	expect(apiStatus, 'der Datenabruf kam nicht durch — kein belastbarer Nachweis').toBe(200);
+
+	const ursprung = new URL(baseURL ?? 'http://localhost:4173').origin;
+	const eigene = angefragt
+		.filter((a) => a.methode === 'GET')
+		.map((a) => ({ ...a, url: new URL(a.url) }))
+		.filter((a) => a.url.origin === ursprung);
+
+	expect(
+		eigene.filter((a) => a.url.pathname.startsWith('/api/')).length,
+		'waehrend der Nutzung lief kein einziger Datenabruf — der Nachweis liefe leer'
+	).toBeGreaterThan(0);
+	// Anfragen, die im Worker bei Regel 4 ankommen: eigener Ursprung, kein
+	// Seitenaufruf (Regel 2), keine Programmdatei (Regel 3), kein `/api/`
+	// (Regel 1). Gibt es davon keine, koennte eine ablegende Regel 4 gar nicht
+	// auffallen und der Nachweis waere blind.
+	expect(
+		[
+			...new Set(
+				eigene
+					.filter(
+						(a) =>
+							a.art !== 'document' &&
+							!a.url.pathname.startsWith('/api/') &&
+							!programm.has(a.url.href)
+					)
+					.map((a) => a.url.pathname)
+			)
+		].length,
+		'keine Anfrage erreichte Regel 4 — eine ablegende Regel 4 waere hier unsichtbar'
+	).toBeGreaterThan(0);
+
+	const fremd = (await readCacheEntries(page)).filter((e) => !programm.has(e.url));
+	expect(
+		fremd.map((e) => e.url),
+		'im Gerätespeicher liegt etwas, das nicht zum Programm gehoert — der naechste Nutzer ' +
+			'desselben Geraets saehe fremde Inhalte (ADR-0003)'
 	).toEqual([]);
 });
 
