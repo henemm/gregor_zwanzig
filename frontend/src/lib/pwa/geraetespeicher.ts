@@ -46,31 +46,86 @@ export function merkeAbmeldung(): void {
 	sessionStorage.setItem(ABMELDE_MERKER, String(Date.now()));
 }
 
-/** Der Abmelde-Versuch ist gescheitert -- der Merker darf nicht liegen bleiben. */
+/**
+ * Der Merker hat seinen Zweck verloren -- der Abmelde-Versuch ist gescheitert
+ * (AC-19), das Fenster ist abgelaufen (AC-20) oder das Raeumen ist gelungen
+ * (AC-24). In allen drei Faellen darf er nicht liegen bleiben.
+ */
 export function vergissAbmeldung(): void {
 	sessionStorage.removeItem(ABMELDE_MERKER);
 }
 
-/** Lag ein echter Abmelde-Vorgang vor? Verbraucht den Merker. */
-export function abmeldungLiegtVor(url: URL): boolean {
+/**
+ * Gilt der hinterlegte Merker gerade? (AC-20, AC-23)
+ *
+ * Ein Alter ausserhalb `[0, MERKER_FENSTER_MS)` ist unplausibel und zaehlt
+ * NICHT. Negativ wird das Alter, wenn die Geraeteuhr nach dem Setzen
+ * zurueckspringt (Zeitzonenwechsel, NTP-Korrektur) -- ohne diese Schranke waere
+ * jede negative Zahl kleiner als das Fenster, ein zufaellig liegen gebliebener
+ * Merker wuerde also als "gerade eben gesetzt" gelesen und die Anmeldeseite
+ * raeumte. Unlesbare Zeitstempel (`NaN`) fallen ueber `Number.isFinite`
+ * genauso heraus. Bei Zweifeln gilt immer die sichere Seite: nicht raeumen --
+ * ein stehen gebliebener Speicher ist ein Schoenheitsfehler, ein faelschlich
+ * geleerter kostet die Offline-Faehigkeit.
+ */
+function merkerGiltNoch(): boolean {
 	const roh = sessionStorage.getItem(ABMELDE_MERKER);
-	// Bedingungslos verbrauchen: auch ein abgelaufener Merker darf beim
-	// naechsten Aufruf der Anmeldeseite nicht erneut zur Debatte stehen.
-	if (roh !== null) sessionStorage.removeItem(ABMELDE_MERKER);
-	const gesetztUm = Number(roh);
-	const ausMerker =
-		roh !== null && Number.isFinite(gesetztUm) && Date.now() - gesetztUm < MERKER_FENSTER_MS;
+	if (roh === null) return false;
+	const alter = Date.now() - Number(roh);
+	return Number.isFinite(alter) && alter >= 0 && alter < MERKER_FENSTER_MS;
+}
+
+/**
+ * Lag ein echter Abmelde-Vorgang vor?
+ *
+ * Ein Merker, der NICHT (mehr) gilt, wird hier verbraucht -- er darf beim
+ * naechsten Aufruf der Anmeldeseite nicht erneut zur Debatte stehen. Ein
+ * geltender Merker bleibt dagegen stehen, bis das Raeumen nachweislich gelungen
+ * ist (AC-24, `vergissAbmeldung` beim Aufrufer): scheitert eine
+ * Speicher-Schnittstelle, findet ihn so der naechste Versuch. Dauerhaft
+ * haengen bleibt er dabei nicht -- nach Ablauf des Fensters raeumt ihn dieser
+ * Zweig weg.
+ */
+export function abmeldungLiegtVor(url: URL): boolean {
+	const ausMerker = merkerGiltNoch();
+	if (!ausMerker) vergissAbmeldung();
 	return url.searchParams.get(ABMELDE_MERKMAL) === '1' || ausMerker;
 }
 
-/** Alle Speicher loeschen und jede Worker-Registrierung entfernen. */
-export async function raeumeGeraetespeicher(): Promise<void> {
+/**
+ * Alle Speicher loeschen und jede Worker-Registrierung entfernen.
+ *
+ * Meldet, ob das VOLLSTAENDIG gelungen ist. Jeder Eintrag wird einzeln
+ * versucht: verweigert der Browser eine Speicher-Schnittstelle (iOS Safari
+ * unter Speicherdruck, privater Modus), soll das nicht die uebrigen Eintraege
+ * mitreissen. Ein Teilerfolg -- Speicher geraeumt, Worker-Abmeldung gescheitert
+ * oder umgekehrt -- gilt als Fehlschlag, damit ein zweiter Versuch folgt.
+ */
+export async function raeumeGeraetespeicher(): Promise<boolean> {
+	let vollstaendig = true;
+	const versuche = async (schritt: () => Promise<boolean>): Promise<void> => {
+		try {
+			if (!(await schritt())) vollstaendig = false;
+		} catch {
+			vollstaendig = false;
+		}
+	};
+
 	if ('serviceWorker' in navigator) {
-		for (const reg of await navigator.serviceWorker.getRegistrations()) {
-			await reg.unregister();
+		try {
+			for (const reg of await navigator.serviceWorker.getRegistrations()) {
+				await versuche(() => reg.unregister());
+			}
+		} catch {
+			vollstaendig = false;
 		}
 	}
 	if ('caches' in window) {
-		for (const name of await caches.keys()) await caches.delete(name);
+		try {
+			for (const name of await caches.keys()) await versuche(() => caches.delete(name));
+		} catch {
+			vollstaendig = false;
+		}
 	}
+	return vollstaendig;
 }

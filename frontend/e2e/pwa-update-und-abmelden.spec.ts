@@ -1,6 +1,7 @@
 // TDD RED — Issue #2128 (Scheibe 1 zu Epic #2127).
 // Spec: docs/specs/modules/pwa_installierbar_offline_start.md
-// Abgedeckt: AC-8, AC-9, AC-10, AC-11, AC-12, AC-15, AC-17, AC-18, AC-19, AC-20
+// Abgedeckt: AC-8, AC-9, AC-10, AC-11, AC-12, AC-15, AC-17, AC-18, AC-19, AC-20,
+//            AC-23, AC-24
 //
 // AC-12 ist die Gegenprobe zu AC-11: ohne sie waere AC-11 auch durch
 // bedingungsloses Dauer-Raeumen beim Betreten der Anmeldeseite erfuellbar —
@@ -482,6 +483,123 @@ test('AC-20: ein alter Abmelde-Merker raeumt nicht mehr, ein frischer weiterhin 
 	await page.evaluate(() => {
 		sessionStorage.setItem('gz-abgemeldet', String(Date.now()));
 	});
+	await page.goto('/login');
+	await expect
+		.poll(() => storageAndRegistrationCount(page), { timeout: 20_000 })
+		.toEqual({ caches: 0, registrations: 0 });
+});
+
+// ===========================================================================
+// AC-23 — ein unplausibler Zeitstempel faellt auf "nicht raeumen"
+// ===========================================================================
+//
+// Das Zeitfenster aus AC-20 rechnet mit der Geraeteuhr. Springt die nach dem
+// Setzen des Merkers zurueck (Zeitzonenwechsel, NTP-Korrektur unterwegs — bei
+// dieser Zielgruppe der Normalfall, nicht der Sonderfall), liegt der
+// Zeitstempel in der Zukunft. Ohne Schranke ist die Differenz dann negativ und
+// damit IMMER kleiner als das Fenster: der Merker gaelte als eben gesetzt und
+// die Anmeldeseite raeumte, ohne dass sich jemand abgemeldet hat.
+
+/** Setzt den Merker auf `wert` und prueft, dass die Anmeldeseite nichts anruehrt. */
+async function merkerBleibtWirkungslos(
+	page: Page,
+	wert: string,
+	vorher: string[],
+	hinweis: string
+): Promise<void> {
+	await page.evaluate((w) => sessionStorage.setItem('gz-abgemeldet', w), wert);
+	await page.goto('/login');
+	await expect(page.locator('input[name="username"]')).toBeVisible();
+	await page.waitForTimeout(2_000);
+
+	expect((await readCacheEntries(page)).map((e) => e.url).sort(), hinweis).toEqual(vorher);
+	expect(
+		await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length),
+		hinweis
+	).toBeGreaterThan(0);
+}
+
+test('AC-23: ein Merker mit unplausiblem Zeitstempel raeumt nicht', async ({ page }) => {
+	await activateServiceWorker(page);
+	const vorher = (await readCacheEntries(page)).map((e) => e.url).sort();
+	expect(vorher.length).toBeGreaterThan(0);
+
+	// Zeitstempel in der Zukunft: genau das Bild einer zurueckgesprungenen Uhr.
+	await merkerBleibtWirkungslos(
+		page,
+		String(Date.now() + 10 * 60 * 1000),
+		vorher,
+		'ein Merker aus der Zukunft (zurueckgesprungene Geraeteuhr) hat geraeumt — ' +
+			'die App ist ohne Netz unbrauchbar, obwohl sich niemand abgemeldet hat'
+	);
+
+	// Gar nicht als Zahl lesbar — dieselbe sichere Seite.
+	await merkerBleibtWirkungslos(
+		page,
+		'kaputt',
+		vorher,
+		'ein Merker mit unlesbarem Zeitstempel hat geraeumt'
+	);
+
+	// Positivkontrolle: ohne sie waeren beide Faelle oben auch dann gruen, wenn
+	// der Merker gar nicht mehr gelesen wuerde — der Nachweis pruefte dann nichts.
+	await page.evaluate(() => sessionStorage.setItem('gz-abgemeldet', String(Date.now())));
+	await page.goto('/login');
+	await expect
+		.poll(() => storageAndRegistrationCount(page), { timeout: 20_000 })
+		.toEqual({ caches: 0, registrations: 0 });
+});
+
+// ===========================================================================
+// AC-24 — scheitert das Raeumen, gibt es einen zweiten Versuch
+// ===========================================================================
+//
+// Wird das Abmelde-Merkmal schon beim Lesen verbraucht, ist ein Fehlschlag beim
+// Raeumen endgueltig: der naechste Aufruf der Anmeldeseite ist nach AC-12
+// zurecht kein Abmelde-Vorgang mehr und darf nichts nachholen.
+
+test('AC-24: scheitert das Raeumen, bleibt der Merker fuer den naechsten Versuch erhalten', async ({
+	page
+}) => {
+	// Die Speicher-Schnittstelle verweigert das Loeschen — nachgestellt im
+	// Browser (iOS Safari unter Speicherdruck tut genau das), ohne Eingriff in
+	// den Programmcode. Der Schalter liegt im Sitzungsspeicher, damit derselbe
+	// Nachweis die Stoerung anschliessend wieder abstellen kann.
+	await page.addInitScript(() => {
+		const echt = caches.delete.bind(caches);
+		caches.delete = async (name: string) => {
+			if (sessionStorage.getItem('gz-e2e-loeschen-kaputt') === '1') {
+				throw new DOMException('Speicher nicht verfuegbar', 'InvalidStateError');
+			}
+			return echt(name);
+		};
+	});
+
+	await activateServiceWorker(page);
+	const vorher = (await readCacheEntries(page)).map((e) => e.url);
+	expect(vorher.length).toBeGreaterThan(0);
+
+	await page.evaluate(() => {
+		sessionStorage.setItem('gz-e2e-loeschen-kaputt', '1');
+		sessionStorage.setItem('gz-abgemeldet', String(Date.now()));
+	});
+	await page.goto('/login');
+	await expect(page.locator('input[name="username"]')).toBeVisible();
+	await page.waitForTimeout(2_000);
+
+	const nachher = (await readCacheEntries(page)).map((e) => e.url);
+	expect(
+		vorher.filter((u) => !nachher.includes(u)),
+		'Aufbau misslungen: trotz verweigerter Schnittstelle wurde geloescht'
+	).toEqual([]);
+	expect(
+		await page.evaluate(() => sessionStorage.getItem('gz-abgemeldet')),
+		'der Merker wurde trotz gescheitertem Raeumen verbraucht — niemand holt das Raeumen je nach'
+	).not.toBeNull();
+
+	// Zweite Haelfte: Stoerung weg. Ohne sie wuerde dieser Nachweis nur ein
+	// Ausbleiben pruefen und waere auch gruen, wenn nie geraeumt wuerde.
+	await page.evaluate(() => sessionStorage.removeItem('gz-e2e-loeschen-kaputt'));
 	await page.goto('/login');
 	await expect
 		.poll(() => storageAndRegistrationCount(page), { timeout: 20_000 })

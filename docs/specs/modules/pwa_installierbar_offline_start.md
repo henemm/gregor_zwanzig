@@ -327,6 +327,21 @@ Offline-Fähigkeit genau dann zerstören, wenn sie gebraucht wird.
   - Test: Playwright legt die Antwort auf 401 und prüft, dass geräumt wird. Abgrenzung zu AC-19:
     dort bleibt der Nutzer angemeldet, hier nicht — deshalb sind es zwei getrennte Zusicherungen.
 
+- **AC-23:** Given ein Abmelde-Merkmal, dessen Zeitstempel unplausibel ist — in der Zukunft, weil die
+  Geräteuhr zurückgesprungen ist, oder gar nicht lesbar / When die Anmeldeseite erreicht wird / Then
+  wird **nicht** geräumt.
+  - Test: Playwright setzt das Merkmal mit einem Zeitstempel in der Zukunft und einmal mit einem
+    unlesbaren, ruft die Anmeldeseite auf und prüft, dass der Gerätespeicher unverändert ist. Das
+    sichere Verhalten ist immer „nicht räumen": ein stehen gebliebener Speicher ist ein
+    Schönheitsfehler, ein fälschlich geleerter kostet die Offline-Fähigkeit.
+
+- **AC-24:** Given das Räumen scheitert, weil eine Speicher-Schnittstelle des Browsers nicht
+  antwortet / When die Anmeldeseite erneut erreicht wird / Then ist das Merkmal noch vorhanden und
+  es wird nachgeholt.
+  - Test: Playwright lässt das Löschen scheitern und prüft, dass das Merkmal erhalten bleibt; danach
+    ohne Störung erneut und prüft, dass jetzt geräumt wird. Beide Hälften sind nötig — die erste
+    allein wäre auch erfüllt, wenn nie geräumt würde.
+
 ## Known Limitations
 
 - Es werden **keine Inhalte** offline verfügbar — nur die Programmdateien. Wer ohne Netz eine Seite
