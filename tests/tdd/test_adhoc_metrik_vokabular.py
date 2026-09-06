@@ -19,7 +19,6 @@ Datei an und braucht deshalb weder eine Sicherungskopie noch ein
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import pytest
 
@@ -36,8 +35,6 @@ from tests.helpers.adhoc_metrik_fixtures import (
     stundenzeilen,
     text_woerter,
 )
-
-_REPO = Path(__file__).resolve().parents[2]
 
 
 # ===========================================================================
@@ -99,25 +96,42 @@ def test_ac2_humid_liefert_stundenwerte_ueber_den_kanal_eingang():
     )
 
 
-def test_ac2_humidity_steht_in_keiner_erlaubt_liste_des_abrufpfads():
-    """AC-2 (Zusatzbeleg, doc-compliance): `humidity` darf im Abrufpfad
-    namentlich NICHT vorkommen — sonst waere die Groesse per Sonderliste
-    freigeschaltet und der Abruf oben bewiese nichts ueber die Ableitung.
+def test_ac2_humid_folgt_dem_katalog_statt_einer_sonderliste(monkeypatch):
+    """AC-2 (Ableitungsnachweis) GIVEN das col_label der Luftfeuchte wird
+    testweise von `Humid` auf `Feuchte` geaendert WHEN ein Nutzer danach beide
+    Woerter sendet THEN wird `Humid` NICHT mehr erkannt und `Feuchte` WIRD
+    erkannt.
 
-    Dateiinhalt-Pruefung ist hier ausdruecklich von der Spec verlangt
-    (AC-2 "ein grep belegt zusaetzlich ...") und deshalb markiert.
+    Das ist die Spec-Aussage "`humidity` hat in keiner Sonderliste des
+    Abrufpfads einen Eintrag" am VERHALTEN belegt: stuende das Wort irgendwo
+    namentlich in einer Erlaubt-Liste, ueberlebte es die Katalog-Aenderung.
+    Beide Richtungen sind Pflicht (Bauart wie AC-19) — nur das Verschwinden zu
+    pruefen liesse eine Umsetzung durchgehen, die das Wort gar nicht kennt.
     """
-    # doc-compliance-test
-    quelle = _REPO / "src" / "services" / "trip_command_processor.py"
-    text = quelle.read_text(encoding="utf-8")
+    fix = lege_trip_an(
+        "ac2b", lambda i: {**standard_felder(i), "humidity_pct": 55},
+    )
 
-    treffer = [
-        z for z in text.splitlines()
-        if "humidity" in z and not z.lstrip().startswith("#")
-    ]
-    assert not treffer, (
-        f"AC-2: `humidity` wird in {quelle} namentlich gefuehrt — das ist "
-        f"wieder eine handgepflegte Erlaubt-Liste:\n" + "\n".join(treffer)
+    # Positivkontrolle: mit dem Katalogwert `Humid` muss der Abruf gehen.
+    vorher = sende(fix, "Humid", channel="telegram")
+    assert not ist_unbekannt(vorher), (
+        f"AC-2 Vorbedingung: `Humid` wird gar nicht erkannt — die Gegenprobe "
+        f"kann keinen Unterschied zeigen. body={vorher.confirmation_body!r}"
+    )
+
+    with katalog_eintrag_ersetzt(monkeypatch, "humidity", col_label="Feuchte"):
+        altes_wort = sende(fix, "Humid", channel="telegram")
+        neues_wort = sende(fix, "Feuchte", channel="telegram")
+
+    assert ist_unbekannt(altes_wort), (
+        f"AC-2: nach der Katalog-Aenderung darf `Humid` NICHT mehr erkannt "
+        f"werden — die Luftfeuchte ist offenbar per Sonderliste "
+        f"freigeschaltet statt abgeleitet. "
+        f"body={altes_wort.confirmation_body!r}"
+    )
+    assert not ist_unbekannt(neues_wort), (
+        f"AC-2: das neue Katalog-Kuerzel `Feuchte` muss erkannt werden, "
+        f"erhalten body={neues_wort.confirmation_body!r}"
     )
 
 

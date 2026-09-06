@@ -366,6 +366,12 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     ("src/services/day_comparison.py", "_METRIC_ID_TO_ENTRY_ATTR", "schluessel"),
     ("src/services/day_comparison.py", "_DIRECTION_WORDS", "schluessel"),
     ("src/services/day_comparison.py", "_DISPLAY_SALIENCE_OVERRIDES", "schluessel"),
+    # Issue #2134: die drei Bestands-Callback-Token der Telegram-Buttons
+    # (`dd_thunder_today` …) auf Katalog-Kennungen. Die Schluessel sind fremdes
+    # Button-Vokabular, die WERTE sind echte Kennungen — bei einer Umbenennung
+    # im Katalog muss diese Uebersetzung mitgezogen werden, sonst loesen die
+    # Bestands-Buttons still ins Leere auf.
+    ("src/services/trip_command_processor.py", "_DRILLDOWN_TOKEN_METRIC", "wert"),
     ("src/services/weather_change_detection.py",
      "_ALERT_METRIC_TO_CATALOG_ID[AlertMetric.TEMPERATURE_MIN]", "element"),
     ("src/services/weather_change_detection.py",
