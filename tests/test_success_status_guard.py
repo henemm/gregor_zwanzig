@@ -1645,6 +1645,22 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/trip_command_processor.py::_handle_hours_drilldown::0": (
         "B18 (#1405) — _handle_hours_drilldown: nach vier drilldown(...)-Abrufen."
     ),
+    # --- Issue #2134 (Ad-hoc-Abruf aus dem Metrik-Katalog): zwei neue
+    # Fundstellen derselben B18-Signatur, keine neue Klasse.
+    "src/services/trip_command_processor.py::_handle_metric_drilldown::0": (
+        "B18 (#1405, #2134) — _handle_metric_drilldown: unbedingtes "
+        "success=True nach WeatherExtractor(...).drilldown(...). Der "
+        "Ausfall-Zweig davor prueft das Ergebnis sehr wohl "
+        "(`_traegt_werte(res)` -> success=False mit benannter Luecke); "
+        "unverdient ist nur der Erfolgszweig, wie bei _handle_drilldown."
+    ),
+    "src/services/trip_command_processor.py::_show_help::0": (
+        "B18 (#1405, #2134) — _show_help: seit der Ableitung aus "
+        "_COMMAND_SPECS/get_all_metrics() steht ein Aufruf vor dem "
+        "unbedingten success=True. Eine Hilfe KANN nicht scheitern (reine "
+        "Textbildung ohne I/O) — derselbe Reparatur-Vorrat wie "
+        "_show_status, keine Ausnahme in INTENTIONAL_CONSTANT_SUCCESS."
+    ),
     "src/services/trip_command_processor.py::_apply_ruhetag::0": (
         "B18 (#1405) — _apply_ruhetag: nach unzugewiesenem save_trip(...)."
     ),
