@@ -45,6 +45,7 @@ from utils.geo import haversine_km
 from utils.timezone import local_dt, tz_for_coords
 
 if TYPE_CHECKING:
+    from app.models import TripReportConfig
     from app.trip import Stage, Trip
     from services.report_config_resolver import ReportRenderOptions
 
@@ -1092,7 +1093,13 @@ class TripReportSchedulerService:
         finally:
             _release_send_lock(self._user_id, trip.id, report_type)
 
-    def send_on_demand_report(self, trip: "Trip", report_type: str) -> OnDemandErgebnis:
+    def send_on_demand_report(
+        self,
+        trip: "Trip",
+        report_type: str,
+        *,
+        restrict_to_channel: str | None = None,
+    ) -> OnDemandErgebnis:
         """
         Send an on-demand full briefing triggered by an inbound heute/morgen command.
 
@@ -1111,6 +1118,12 @@ class TripReportSchedulerService:
         Args:
             trip: Trip object
             report_type: "morning" (heute) or "evening" (morgen)
+            restrict_to_channel: Issue #2126 — Kanaltreue der Ad-hoc-Antwort.
+                Kanalname ("email"/"sms"/"premium_sms"/"telegram") des
+                Anfragewegs; der Versand geht dann ausschliesslich dorthin,
+                auch wenn der Kanal im Trip abgeschaltet ist (AC-4). `None`
+                (Default) ist das neutrale Element: keine Einschraenkung,
+                exakt die bisherige Kanal-Auflösung.
 
         Returns:
             OnDemandErgebnis(outcome, zieltag) — outcome: "sent" | "no_stage" |
@@ -1131,6 +1144,7 @@ class TripReportSchedulerService:
             # bedeuten Verschiedenes, siehe `_send_trip_report_outcome`.
             outcome = self._send_trip_report_outcome(
                 trip, report_type, on_demand=True, angefordert=True, target_date=zieltag,
+                restrict_to_channel=restrict_to_channel,
             )
         finally:
             _release_send_lock(self._user_id, trip.id, report_type)
@@ -1172,6 +1186,7 @@ class TripReportSchedulerService:
         catchup_prefix: str | None = None,
         angefordert: bool = False,
         target_date: date | None = None,
+        restrict_to_channel: str | None = None,
     ) -> str:
         """
         Generate and send report for a single trip.
@@ -1219,6 +1234,13 @@ class TripReportSchedulerService:
                 sechs bestehenden Aufrufer bleiben unverändert, die Funktion
                 löst den Zieltag wie bisher selbst zum Ausführungszeitpunkt
                 auf.
+            restrict_to_channel: Issue #2126 — Kanalname des Anfragewegs oder
+                `None` (neutral). Wird an `_resolve_channel_flags` gereicht,
+                und zwar an BEIDEN Stellen, an denen Kanal-Flags entstehen:
+                im Haupt-Request (`_build_trip_report_request`) UND im
+                No-Data-Hint-Zweig unten. Nur den Request-Bau umzustellen
+                liesse den Ausfall-Hinweis am eingeschränkten Kanal vorbei
+                laufen.
 
         Returns:
             "no_stage" if no matching stage, "no_weather" if the weather
@@ -1363,20 +1385,21 @@ class TripReportSchedulerService:
             if not on_demand:
                 # On-Demand (#1007) erzeugt weder Hinweis-Versand noch Marker —
                 # der Bot antwortet synchron mit eigenem Hinweistext.
-                config = trip.report_config
+                # Issue #2126: dieselbe Auflösung wie der Haupt-Request — sonst
+                # ginge der Ausfall-Hinweis am eingeschränkten Kanal vorbei.
+                hint_email, hint_sms, hint_premium_sms, hint_telegram = (
+                    self._resolve_channel_flags(
+                        trip.report_config, self._user_id,
+                        restrict_to_channel=restrict_to_channel,
+                    )
+                )
                 self._notification_service.send_no_data_hint(
                     trip,
                     report_type,
-                    send_email=not config or config.send_email,
-                    send_sms=config is not None and config.send_sms and sms_allowed(self._user_id),
-                    send_telegram=config is not None and config.send_telegram,
-                    # Issue #1676 S2a: eigenes Tier-Gate (nur premium), NICHT
-                    # sms_allowed() -- das laesst standard durch (Spec D7).
-                    send_premium_sms=(
-                        config is not None
-                        and config.send_premium_sms
-                        and premium_sms_allowed(self._user_id)
-                    ),
+                    send_email=hint_email,
+                    send_sms=hint_sms,
+                    send_telegram=hint_telegram,
+                    send_premium_sms=hint_premium_sms,
                 )
                 self._write_pending_marker(
                     trip, report_type, target_date,
@@ -1502,6 +1525,7 @@ class TripReportSchedulerService:
             partial_outage_hint=partial_outage_hint,
             render_options=render_options,
             starkregen_nowcast=starkregen_nowcast,
+            restrict_to_channel=restrict_to_channel,
         )
         # 8b. Issue #1467 S2 AG5: Anker und Melde-Gedächtnis hängen an EINER
         # Bedingung, in EINEM geteilten Baustein, den auch der Ortsvergleich
@@ -1684,6 +1708,54 @@ class TripReportSchedulerService:
             return "channels_unreachable"
         return "sent"
 
+    def _resolve_channel_flags(
+        self,
+        config: Optional["TripReportConfig"],
+        user_id: str,
+        *,
+        restrict_to_channel: str | None = None,
+    ) -> tuple[bool, bool, bool, bool]:
+        """Liefert (send_email, send_sms, send_premium_sms, send_telegram).
+
+        Issue #2126: EINE Stelle für die Kanal-Auflösung, die vorher wortgleich
+        zweimal im Fliesstext stand (Haupt-Request und No-Data-Hint-Zweig).
+
+        `restrict_to_channel` überschreibt für den genannten Kanal die
+        Trip-Konfiguration (send_X = True) und setzt alle anderen Kanäle auf
+        False — es wird NICHT zusätzlich UND-verknüpft, sonst bliebe ein im
+        Trip abgeschalteter Anfrageweg stumm (AC-4). Die Tier-Gates
+        (`sms_allowed`/`premium_sms_allowed`) werden dabei nicht übersprungen:
+        überschrieben wird die Trip-Einstellung, nicht die Berechtigung (AC-5).
+        `None` ist das neutrale Element und liefert exakt die alte Formel.
+
+        🔴 Premium-SMS hängt an `premium_sms_allowed()`, NICHT an
+        `sms_allowed()` — in BEIDEN Zweigen (Issue #1676 S2a, ADR-0049,
+        Spec D7). `sms_allowed()` lässt `standard` durch; Premium-SMS spricht
+        ein Satellitengerät an, jede Nachricht kostet, und eine
+        Wiederverwendung des SMS-Gates wäre eine stille Rechte-Ausweitung.
+        Die Unterscheidung war ein eigenes Ticket wert und stand vor #2126
+        als Kommentar an beiden Formelstellen; sie lebt jetzt hier.
+        """
+        if restrict_to_channel is not None:
+            return (
+                restrict_to_channel == "email",
+                restrict_to_channel == "sms" and sms_allowed(user_id),
+                restrict_to_channel == "premium_sms" and premium_sms_allowed(user_id),
+                restrict_to_channel == "telegram",
+            )
+
+        send_email = not config or config.send_email
+        send_sms = config is not None and config.send_sms and sms_allowed(user_id)
+        # Issue #1676 S2a: eigenes Tier-Gate (nur premium), NICHT
+        # sms_allowed() -- das laesst standard durch (Spec D7).
+        send_premium_sms = (
+            config is not None
+            and config.send_premium_sms
+            and premium_sms_allowed(user_id)
+        )
+        send_telegram = config is not None and config.send_telegram
+        return send_email, send_sms, send_premium_sms, send_telegram
+
     def _build_trip_report_request(
         self,
         *,
@@ -1710,6 +1782,7 @@ class TripReportSchedulerService:
             Tuple[str, Optional[int], Optional[int], bool, bool, Optional[int]]
         ] = None,  # Issue #2050 S2b: fuenftes Glied `already_running`;
         # Issue #2051 S3: sechstes Glied `source_reach_minutes`
+        restrict_to_channel: str | None = None,
     ) -> TripReportRequest:
         """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
 
@@ -1719,6 +1792,13 @@ class TripReportSchedulerService:
         """
         config = trip.report_config
         errors = [s for s in segment_weather if s.has_error]
+        # Issue #2126: Kanal-Flags entstehen in `_resolve_channel_flags` —
+        # dieselbe Auflösung benutzt der No-Data-Hint-Zweig.
+        send_email, send_sms, send_premium_sms, send_telegram = (
+            self._resolve_channel_flags(
+                config, self._user_id, restrict_to_channel=restrict_to_channel,
+            )
+        )
         return TripReportRequest(
             trip=trip,
             report_type=report_type,
@@ -1740,16 +1820,10 @@ class TripReportSchedulerService:
             shortcode=getattr(trip, 'shortcode', None) or None,
             stage_total=len(trip.stages) if trip.stages else None,
             trip_url=f"https://gregor20.henemm.com/trips/{trip.id}",
-            send_email=not config or config.send_email,
-            send_sms=config is not None and config.send_sms and sms_allowed(self._user_id),
-            # Issue #1676 S2a: eigenes Tier-Gate (nur premium), NICHT
-            # sms_allowed() -- das laesst standard durch (Spec D7).
-            send_premium_sms=(
-                config is not None
-                and config.send_premium_sms
-                and premium_sms_allowed(self._user_id)
-            ),
-            send_telegram=config is not None and config.send_telegram,
+            send_email=send_email,
+            send_sms=send_sms,
+            send_premium_sms=send_premium_sms,
+            send_telegram=send_telegram,
             test_prefix=allow_test_fallback,
             on_demand_prefix=on_demand,
             catchup_prefix=catchup_prefix,

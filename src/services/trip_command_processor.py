@@ -624,7 +624,10 @@ class TripCommandProcessor:
                     trip_name=msg.trip_name,
                     reply_markup=_GLANCE_BUTTONS,
                 )
-            return self._handle_query(trip, actual_query_key, msg.received_at, msg.user_id)
+            return self._handle_query(
+                trip, actual_query_key, msg.received_at, msg.user_id,
+                channel=msg.channel,
+            )
 
         # hilfe braucht keinen Trip-Lookup
         if key == "hilfe":
@@ -735,8 +738,15 @@ class TripCommandProcessor:
 
     def _handle_query(
         self, trip: Trip, query_key: str, received_at: datetime, user_id: str,
+        *, channel: str | None = None,
     ) -> CommandResult:
         """Dispatch read-only query. Never mutates trip state.
+
+        Issue #2126: `channel` ist der Anfrageweg und geht NUR in den
+        heute/morgen-Zweig, weil nur der einen Briefing-Versand auslöst. Das
+        `report`-Kommando läuft über denselben Draht mit derselben
+        Herkunftskennung und bleibt bewusst mehrkanalig — deshalb sitzt die
+        Einschränkung hier und nicht am Nachrichteneingang in `process()`.
 
         Fix #1795 (ADR-0044): "heute"/"morgen" folgen dem ORTStag der Tour,
         nicht dem UTC-Tag von ``received_at`` — EINE Auflösung
@@ -757,9 +767,13 @@ class TripCommandProcessor:
         # der Scheduler die Wetterdaten selbst holt (keine WeatherExtractor-
         # Timeline nötig).
         if query_key == "heute":
-            return self._trigger_on_demand(trip, "morning", "Heute", user_id)
+            return self._trigger_on_demand(
+                trip, "morning", "Heute", user_id, channel=channel,
+            )
         elif query_key == "morgen":
-            return self._trigger_on_demand(trip, "evening", "Morgen", user_id)
+            return self._trigger_on_demand(
+                trip, "evening", "Morgen", user_id, channel=channel,
+            )
 
         from services.weather_extractor import WeatherExtractor
         extractor = WeatherExtractor(user_id=user_id)
@@ -825,6 +839,7 @@ class TripCommandProcessor:
 
     def _trigger_on_demand(
         self, trip: Trip, report_type: str, label: str, user_id: str,
+        *, channel: str | None = None,
     ) -> CommandResult:
         """Issue #1007: heute/morgen lösen das volle Tages-Briefing aus statt
         des bisherigen Einzeiler-Aggregats. Wiederverwendung des On-Demand-
@@ -837,12 +852,18 @@ class TripCommandProcessor:
         `send_on_demand_report` benutzten Zieltag (`OnDemandErgebnis.zieltag`)
         — kein eigener, im Aufrufer aus `received_at` geratener `target_date`
         mehr (Nebengewinn: der Parameter entfaellt hier ersatzlos).
+
+        Issue #2126: `channel` (der Anfrageweg) wird als `restrict_to_channel`
+        durchgereicht — die Antwort geht ueber GENAU den Draht hinaus, ueber
+        den gefragt wurde, auch wenn er im Trip abgeschaltet ist.
         """
         from services.trip_report_scheduler import TripReportSchedulerService
         query_key = "heute" if report_type == "morning" else "morgen"
         buttons = _HEUTE_BUTTONS if report_type == "morning" else _MORGEN_BUTTONS
         service = TripReportSchedulerService(user_id=user_id)
-        ergebnis = service.send_on_demand_report(trip, report_type)
+        ergebnis = service.send_on_demand_report(
+            trip, report_type, restrict_to_channel=channel,
+        )
         if ergebnis.outcome != "sent":
             return CommandResult(
                 success=True, command=query_key,
