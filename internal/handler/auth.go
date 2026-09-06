@@ -155,6 +155,18 @@ func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 			return
 		}
 
+		// Issue #2140: pfadunsichere Kennung wird abgewiesen, BEVOR sie in den
+		// Pfadbau geht — und zwar mit exakt der Antwort des "Nutzer unbekannt"-
+		// Zweigs unten, damit die Route nicht verraet, welche Kennungen
+		// syntaktisch auffallen.
+		if !store.ValidUserID(req.Username) {
+			log.Printf("login: rejected path-unsafe user id %q", req.Username)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(401)
+			w.Write([]byte(`{"error":"invalid credentials"}`))
+			return
+		}
+
 		user, err := s.LoadUser(req.Username)
 		if err != nil {
 			log.Printf("login: user.json unreadable/corrupt for %s: %v", req.Username, err)
@@ -228,6 +240,15 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 
 		// Always return 200 (no user enumeration)
 		w.Header().Set("Content-Type", "application/json")
+
+		// Issue #2140: identischer Antwortpfad wie der "user == nil"-Zweig
+		// unten — der Enumerationsschutz dieser Route darf durch die neue
+		// Ablehnung keinen unterscheidbaren Fall bekommen.
+		if !store.ValidUserID(req.Username) {
+			log.Printf("password reset: rejected path-unsafe user id %q", req.Username)
+			w.Write([]byte(`{"status":"ok"}`))
+			return
+		}
 
 		user, _ := s.LoadUser(req.Username)
 		if user == nil {
@@ -341,6 +362,15 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			return
 		}
 
+		// Issue #2140: vor dem ersten Store-Zugriff, Antwort identisch zum
+		// "Token fehlt/passt nicht"-Zweig direkt darunter.
+		if !store.ValidUserID(req.Username) {
+			log.Printf("password reset confirm: rejected path-unsafe user id %q", req.Username)
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid token"}`))
+			return
+		}
+
 		resetToken, err := s.LoadResetToken(req.Username)
 		if err != nil || resetToken == nil {
 			w.WriteHeader(400)
@@ -410,6 +440,15 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.User == "" || req.Token == "" {
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"invalid request"}`))
+			return
+		}
+
+		// Issue #2140: vor dem ersten Store-Zugriff, Antwort identisch zum
+		// "Token fehlt/passt nicht"-Zweig direkt darunter.
+		if !store.ValidUserID(req.User) {
+			log.Printf("email verification: rejected path-unsafe user id %q", req.User)
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid token"}`))
 			return
 		}
 

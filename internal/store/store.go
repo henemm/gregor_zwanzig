@@ -13,6 +13,11 @@ func New(dataDir, userID string) *Store {
 
 // WithUser returns a shallow copy of the Store with a different UserID.
 // Empty userId is a no-op: returns the original Store unchanged.
+//
+// Der leere String laeuft BEWUSST nicht ueber ValidUserID (Issue #2140): er
+// wuerde dort als "ungueltig" gelten, obwohl er hier seit jeher schlicht "kein
+// Wechsel" bedeutet. Die Pfadsicherheit haengt nicht an dieser Stelle, sondern
+// an den Store-Methoden, die aus einer Kennung einen Pfad bauen.
 func (s *Store) WithUser(userId string) *Store {
 	if userId == "" {
 		return s

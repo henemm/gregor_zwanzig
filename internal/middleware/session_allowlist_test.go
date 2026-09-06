@@ -331,32 +331,86 @@ func TestNewFormatCookie_NoAllowlistFile_Returns401NotServerError(t *testing.T) 
 }
 
 // AC-14 (Go-Seite): Eine Nutzerkennung mit Punkt wird von rechts zerlegt —
-// beide Formate müssen dieselbe Kennung liefern und dürfen nicht abweisen.
-// Das Frontend-Gegenstück steht in frontend/src/lib/session_format.test.ts.
+// beide Formate müssen dieselbe Kennung liefern.
+//
+// GEMESSEN WIRD SEIT ISSUE #2140 die Zerlegung selbst (validateSession), nicht
+// mehr die Ende-zu-Ende-Strecke über authProbe: die Pfad-Traversal-Sperre
+// lässt eine Kennung mit Punkt nicht mehr an den Datenbestand
+// (store.ValidUserID, `^[a-zA-Z0-9_-]+$`) — ein 200 ist mit dieser Fixture
+// also strukturell nicht mehr erreichbar, die 200-Erwartung hätte den Wächter
+// nur noch über einen Stellvertreter gemessen. Die #2129-Zusicherung "von
+// RECHTS zerlegen" bleibt unverändert bewacht, jetzt an der Stelle, an der sie
+// wirkt. Das Frontend-Gegenstück steht in frontend/src/lib/session_format.test.ts.
 func TestDottedUserID_SplitFromTheRight(t *testing.T) {
-	dataDir := t.TempDir()
 	const uid = "alice.smith"
-	writeAllowlist(t, dataDir, uid, "sess-dot00001")
+	const sid = "sess-dot00001"
 
 	t.Run("neues Format", func(t *testing.T) {
-		cookie := makeNewSessionCookie(uid, "sess-dot00001", time.Now().Unix(), testSecret)
-		rr := authProbe(t, dataDir, testSecret, cookie)
-		if rr.Code != http.StatusOK {
-			t.Fatalf("AC-14: erwartet 200 für %q, bekommen %d", uid, rr.Code)
+		cookie := makeNewSessionCookie(uid, sid, time.Now().Unix(), testSecret)
+		gotUID, gotSID, _, isNew, ok := validateSession(cookie, testSecret)
+		if !ok {
+			t.Fatalf("AC-14: Merkmal mit %q muss gültig zerlegt werden, wurde verworfen", uid)
 		}
-		if rr.Body.String() != uid {
-			t.Errorf("AC-14: erwartet Nutzerkennung %q, bekommen %q", uid, rr.Body.String())
+		if !isNew {
+			t.Errorf("AC-14: vierteiliges Merkmal muss als neues Format gelesen werden")
+		}
+		if gotUID != uid {
+			t.Errorf("AC-14: erwartet Nutzerkennung %q, bekommen %q", uid, gotUID)
+		}
+		if gotSID != sid {
+			t.Errorf("AC-14: erwartet Anmelde-Kennung %q, bekommen %q", sid, gotSID)
 		}
 	})
 
 	t.Run("Altformat", func(t *testing.T) {
 		cookie := makeSessionCookie(uid, time.Now().Unix(), testSecret)
-		rr := authProbe(t, dataDir, testSecret, cookie)
-		if rr.Code != http.StatusOK {
-			t.Fatalf("AC-14: erwartet 200 für Alt-Merkmal mit %q, bekommen %d", uid, rr.Code)
+		gotUID, gotSID, _, isNew, ok := validateSession(cookie, testSecret)
+		if !ok {
+			t.Fatalf("AC-14: Alt-Merkmal mit %q muss gültig zerlegt werden, wurde verworfen", uid)
 		}
-		if rr.Body.String() != uid {
-			t.Errorf("AC-14: erwartet Nutzerkennung %q, bekommen %q", uid, rr.Body.String())
+		if isNew {
+			t.Errorf("AC-14: dreiteiliges Merkmal darf nicht als neues Format gelesen werden")
+		}
+		if gotUID != uid {
+			t.Errorf("AC-14: erwartet Nutzerkennung %q, bekommen %q", uid, gotUID)
+		}
+		if gotSID != "" {
+			t.Errorf("AC-14: Alt-Merkmal trägt keine Anmelde-Kennung, bekommen %q", gotSID)
 		}
 	})
+}
+
+// Issue #2140: Die Pfad-Traversal-Sperre muss auch auf dem Weg durch die
+// Anmelde-Prüfung wirken — und zwar mit 401, NICHT mit einem Serverfehler.
+// Dieselbe Zusicherung wie bei der fehlenden sessions.json
+// (TestNewFormatCookie_NoAllowlistFile_Returns401NotServerError): ein Fehler
+// aus dem Datenbestand darf nie als 5xx durchschlagen.
+//
+// Der scharfe Fall ist "../users/bob": filepath.Join(dataDir, "users",
+// "../users/bob") landet GENAU im Verzeichnis des real angelegten "bob" — vor
+// der Sperre las die Middleware dort dessen echte Gästeliste, fand die
+// Anmelde-Kennung und ließ den Angreifer mit fremder Nutzerkennung durch.
+func TestTraversalUserIDInCookie_Returns401NotServerError(t *testing.T) {
+	dataDir := t.TempDir()
+	writeAllowlist(t, dataDir, "bob", "sess-bobs00001")
+
+	cases := []struct {
+		name   string
+		cookie string
+	}{
+		{"neues Format", makeNewSessionCookie("../bob", "sess-bobs00001", time.Now().Unix(), testSecret)},
+		{"Altformat", makeSessionCookie("../bob", time.Now().Unix(), testSecret)},
+		{"users-Nutzlast trifft Bobs echtes Verzeichnis", makeNewSessionCookie("../users/bob", "sess-bobs00001", time.Now().Unix(), testSecret)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rr := authProbe(t, dataDir, testSecret, tc.cookie)
+			if rr.Code >= 500 {
+				t.Fatalf("#2140: Traversal-Kennung darf keinen Serverfehler ergeben, bekommen %d", rr.Code)
+			}
+			if rr.Code != http.StatusUnauthorized {
+				t.Errorf("#2140: erwartet 401 für Traversal-Kennung, bekommen %d (Kontext-Kennung %q)", rr.Code, rr.Body.String())
+			}
+		})
+	}
 }

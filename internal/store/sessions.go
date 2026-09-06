@@ -37,8 +37,15 @@ type sessionFile struct {
 	LegacyRevokedAt *time.Time `json:"legacy_revoked_at,omitempty"`
 }
 
-func (s *Store) sessionsPath(userId string) string {
-	return filepath.Join(s.UserDir(userId), "sessions.json")
+// sessionsPath ist die gemeinsame Engstelle aller fuenf Einstiege
+// (LoadSessions, HasSession, AddSession, RemoveSession, ClearSessions) — die
+// Pfad-Traversal-Sperre (Issue #2140) sitzt deshalb HIER einmal statt
+// fuenffach in den Methoden.
+func (s *Store) sessionsPath(userId string) (string, error) {
+	if !ValidUserID(userId) {
+		return "", ErrInvalidUserID
+	}
+	return filepath.Join(s.UserDir(userId), "sessions.json"), nil
 }
 
 // readSessionFile liest die Datei ohne Sperre. Eine FEHLENDE Datei ist der
@@ -47,7 +54,11 @@ func (s *Store) sessionsPath(userId string) string {
 // aussperren.
 func (s *Store) readSessionFile(userId string) (sessionFile, error) {
 	var f sessionFile
-	data, err := os.ReadFile(s.sessionsPath(userId))
+	path, err := s.sessionsPath(userId)
+	if err != nil {
+		return f, err
+	}
+	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return f, nil
@@ -61,6 +72,10 @@ func (s *Store) readSessionFile(userId string) (sessionFile, error) {
 }
 
 func (s *Store) writeSessionFile(userId string, f sessionFile) error {
+	path, err := s.sessionsPath(userId)
+	if err != nil {
+		return err
+	}
 	dir := s.UserDir(userId)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -72,7 +87,7 @@ func (s *Store) writeSessionFile(userId string, f sessionFile) error {
 	if err != nil {
 		return err
 	}
-	return writeFileLogged(s.sessionsPath(userId), data)
+	return writeFileLogged(path, data)
 }
 
 // LoadSessions liefert die Gaesteliste eines Nutzers (leer, wenn keine da ist).
@@ -111,6 +126,10 @@ func (s *Store) RevokeLegacySessions(userId string) error {
 
 // HasSession beantwortet die Frage, an der die gesamte unbefristete Anmeldung
 // haengt: steht diese Anmelde-Kennung noch auf der Gaesteliste?
+//
+// Bei einer pfadunsicheren userId ist die Antwort (false, error), nicht
+// (false, nil) — der Aufrufer soll eine Traversal-Kennung nicht mit einer
+// schlicht abgemeldeten Sitzung verwechseln koennen (Issue #2140).
 func (s *Store) HasSession(userId, sessionId string) (bool, error) {
 	if userId == "" || sessionId == "" {
 		return false, nil

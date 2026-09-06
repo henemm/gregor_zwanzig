@@ -46,6 +46,9 @@ func (s *Store) UserDir(id string) string {
 }
 
 func (s *Store) LoadUser(id string) (*model.User, error) {
+	if !ValidUserID(id) {
+		return nil, ErrInvalidUserID
+	}
 	path := filepath.Join(s.UserDir(id), "user.json")
 
 	data, err := os.ReadFile(path)
@@ -65,6 +68,9 @@ func (s *Store) LoadUser(id string) (*model.User, error) {
 }
 
 func (s *Store) SaveUser(user model.User) error {
+	if !ValidUserID(user.ID) {
+		return ErrInvalidUserID
+	}
 	dir := s.UserDir(user.ID)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -80,6 +86,9 @@ func (s *Store) SaveUser(user model.User) error {
 
 // ProvisionUserDirs creates the standard subdirectories for a new user.
 func (s *Store) ProvisionUserDirs(id string) error {
+	if !ValidUserID(id) {
+		return ErrInvalidUserID
+	}
 	base := s.UserDir(id)
 	for _, sub := range []string{"locations", "gpx", "weather_snapshots"} {
 		if err := os.MkdirAll(filepath.Join(base, sub), 0755); err != nil {
@@ -90,6 +99,9 @@ func (s *Store) ProvisionUserDirs(id string) error {
 }
 
 func (s *Store) SaveResetToken(userId string, token model.PasswordResetToken) error {
+	if !ValidUserID(userId) {
+		return ErrInvalidUserID
+	}
 	dir := s.UserDir(userId)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -102,6 +114,9 @@ func (s *Store) SaveResetToken(userId string, token model.PasswordResetToken) er
 }
 
 func (s *Store) LoadResetToken(userId string) (*model.PasswordResetToken, error) {
+	if !ValidUserID(userId) {
+		return nil, ErrInvalidUserID
+	}
 	path := filepath.Join(s.UserDir(userId), "password_reset.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -118,6 +133,9 @@ func (s *Store) LoadResetToken(userId string) (*model.PasswordResetToken, error)
 }
 
 func (s *Store) DeleteResetToken(userId string) error {
+	if !ValidUserID(userId) {
+		return ErrInvalidUserID
+	}
 	path := filepath.Join(s.UserDir(userId), "password_reset.json")
 	err := os.Remove(path)
 	if os.IsNotExist(err) {
@@ -131,6 +149,9 @@ func (s *Store) DeleteResetToken(userId string) error {
 // SaveResetToken. Overwrites an existing file without warning — a second
 // address change intentionally invalidates the first token (AC-7).
 func (s *Store) SaveVerificationToken(userId string, token model.EmailVerificationToken) error {
+	if !ValidUserID(userId) {
+		return ErrInvalidUserID
+	}
 	dir := s.UserDir(userId)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -143,6 +164,9 @@ func (s *Store) SaveVerificationToken(userId string, token model.EmailVerificati
 }
 
 func (s *Store) LoadVerificationToken(userId string) (*model.EmailVerificationToken, error) {
+	if !ValidUserID(userId) {
+		return nil, ErrInvalidUserID
+	}
 	path := filepath.Join(s.UserDir(userId), "email_verification.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -159,6 +183,9 @@ func (s *Store) LoadVerificationToken(userId string) (*model.EmailVerificationTo
 }
 
 func (s *Store) DeleteVerificationToken(userId string) error {
+	if !ValidUserID(userId) {
+		return ErrInvalidUserID
+	}
 	path := filepath.Join(s.UserDir(userId), "email_verification.json")
 	err := os.Remove(path)
 	if os.IsNotExist(err) {
@@ -167,12 +194,21 @@ func (s *Store) DeleteVerificationToken(userId string) error {
 	return err
 }
 
+// DeleteUser ist die schaerfste Stelle des Pfadbaus (os.RemoveAll): ohne die
+// Kennungspruefung wuerde eine Traversal-Kennung hier ein FREMDES Verzeichnis
+// loeschen.
 func (s *Store) DeleteUser(id string) error {
+	if !ValidUserID(id) {
+		return ErrInvalidUserID
+	}
 	dir := s.UserDir(id)
 	return os.RemoveAll(dir)
 }
 
 func (s *Store) UserExists(id string) bool {
+	if !ValidUserID(id) {
+		return false
+	}
 	path := filepath.Join(s.UserDir(id), "user.json")
 	_, err := os.Stat(path)
 	return err == nil
