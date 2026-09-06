@@ -206,7 +206,7 @@ jobs:
       # diese Zahl allein, sondern der Existenzpruefungs-Schritt weiter
       # unten (vor dem Playwright-Lauf).
       #
-      # 🔴 ZWEI Playwright-Aufrufe, deshalb ZWEI Schwellen (#1771 S3).
+      # 🔴 MEHRERE Playwright-Aufrufe, deshalb mehrere Schwellen (#1771 S3).
       # bug-703-login-ratelimit.spec.ts feuert absichtlich 32 Logins ab
       # (frontend/e2e/bug-703-login-ratelimit.spec.ts:27, BURST + 2) und
       # verbraucht damit das IP-Limit aus internal/router/router.go:45
@@ -229,9 +229,53 @@ jobs:
       # alle den storageState (login() in helpers.ts:97-106 kehrt sofort
       # zurueck, wenn die Sitzung schon steht), holen sich also keinen
       # eigenen Login -- nachgemessen in denselben 3 Zyklen, 0 unexpected.
+      # Weil bug-703 das Kontingent fuer die restliche Stunde leerfaehrt und
+      # es innerhalb eines Jobs nicht wieder aufgefuellt wird, laeuft dieser
+      # Aufruf ZULETZT -- siehe Reihenfolge-Absatz beim PWA-Aufruf.
+      #
+      # 🔴 ZWEITER Aufruf ab #2128: die PWA-Strecke (`--project=pwa`).
+      # Sie laeuft NICHT ueber die Positivliste, sondern ueber die feste
+      # Projektzuordnung in frontend/playwright.config.ts. Zwei unabhaengige
+      # Gruende, beide zwingend:
+      #   1) Ratschen-Filter A (docs/reference/gates_und_ratschen.md,
+      #      "e2e-Ratsche") schliesst jede Datei mit `waitForTimeout` aus.
+      #      pwa-update-und-abmelden.spec.ts hat 10 solcher Stellen,
+      #      pwa-grundausstattung.spec.ts 2 -- sie sind dort unvermeidbar
+      #      (Nachlauf-Beobachtung: "die Seite hat NICHT nochmal neu geladen",
+      #      "der wartende Worker hat NICHT uebernommen" -- ein Ausbleiben
+      #      laesst sich nicht erwarten, nur abwarten). Aufnahme in die
+      #      Positivliste waere ein Ratschen-Verstoss.
+      #   2) Beide Dateien brauchen `serviceWorkers: 'allow'`. Das ist eine
+      #      PROJEKT-Einstellung; die Bestandsstrecke laeuft bewusst mit
+      #      'block' (AC-16), damit der seit #2128 auf jeder Seite
+      #      registrierte Worker ihr Verhalten nicht veraendert.
+      # Der Schutz gegen "Datei verschwindet klaglos" haengt hier nicht an der
+      # Existenzpruefung der Liste, sondern an E2E_MIN_EXECUTED_PWA: faellt
+      # eine der beiden Dateien weg, sinkt `expected` unter 27 und das Gate
+      # wird rot.
+      #
+      # 🔴 REIHENFOLGE IST KRITISCH: PWA VOR bug-703 (gemessen 2026-09-06).
+      # Frueher lief die PWA-Strecke zuletzt, mit der Begruendung, sie hole
+      # sich gar keinen eigenen Login (global.setup ueberspringt ihn bei
+      # gueltiger playwright/.auth/admin.json). Das war falsch und hat die
+      # Ampel rot gemacht: die PWA-Strecke widerruft in "AC-11: Auf allen
+      # Geraeten abmelden" ABSICHTLICH alle Sitzungen -- also auch die in
+      # admin.json -- und stellt sie im datei-eigenen `test.afterAll`
+      # (pwa-update-und-abmelden.spec.ts) mit GENAU EINEM echten Login wieder
+      # her, damit spaetere Aufrufe nicht in den Auth-Guard laufen. Lief
+      # bug-703 davor, war das IP-Kontingent (30/Stunde,
+      # internal/router/router.go:45) leer und dieser eine Login lief in 429;
+      # Playwright haengt den Hook-Fehler an das zuletzt gelaufene Ergebnis
+      # desselben Workers -- gemeldet wurde also ein roter Testfall, der
+      # selbst gar nichts damit zu tun hatte. Innerhalb einer Stunde fuellt
+      # sich das Kontingent nicht wieder auf, ein Retry hilft nicht.
+      # bug-703 selbst haengt an KEINEM Vorlauf (sein Kopfkommentar fordert
+      # nur AC-3 vor AC-2 INNERHALB der Datei, per test.describe.serial) --
+      # er muss nur ZULETZT laufen.
       E2E_MIN_SPECS: 46     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
       E2E_MIN_EXECUTED_HAUPT: 224      # Hauptlauf: 44 Dateien + global.setup -- exakt belegt, kein Puffer
-      E2E_MIN_EXECUTED_RATELIMIT: 3    # Zweitlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
+      E2E_MIN_EXECUTED_PWA: 27         # Zweitlauf: 26 Faelle in 2 PWA-Dateien + global.setup -- exakt belegt, kein Puffer
+      E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
@@ -348,12 +392,55 @@ jobs:
         # leer aufgeloeste Ausdrucks-Zuweisung waere zwar fail-closed, aber
         # als "Schwelle fehlt" schwer zu deuten.
         run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_HAUPT" python3 .github/scripts/e2e_gate.py /tmp/e2e-report.json
-      - name: Playwright-Specs ausfuehren (Zweitlauf, nur bug-703)
+      - name: Playwright-Specs ausfuehren (Zweitlauf, PWA-Strecke --project=pwa)
+        # ZWEITER Aufruf, Begruendung ausfuehrlich im env-Block oben:
+        # die PWA-Nachweise brauchen `serviceWorkers: 'allow'` (Projekt-
+        # Einstellung, nicht per Datei-Argument setzbar) und duerfen wegen
+        # Ratschen-Filter A (waitForTimeout) nicht auf die Positivliste.
+        # Deshalb Auswahl ueber die feste Projektzuordnung statt ueber eine
+        # Dateiliste. Die Bestandsstrecke bleibt davon unberuehrt: Projekt
+        # `tests` ignoriert pwa-*.spec.ts, `--project=pwa` beruehrt die
+        # Positivliste nicht.
+        #
+        # 🔴 Reihenfolge VOR dem bug-703-Drittlauf ist KRITISCH, nicht
+        # Geschmack -- diese Strecke braucht genau EINEN freien Login.
+        # Die frueher hier stehende Begruendung ("global.setup.ts loggt sich
+        # bei gueltiger admin.json gar nicht ein, kann also nicht in 429
+        # laufen") war falsch: sie beschreibt nur global.setup und uebersieht
+        # den datei-eigenen `test.afterAll` in
+        # pwa-update-und-abmelden.spec.ts. Der Nachweis "AC-11: Auf allen
+        # Geraeten abmelden" widerruft ABSICHTLICH alle Sitzungen -- also
+        # auch die in playwright/.auth/admin.json --, und der Hook stellt sie
+        # mit einem echten Login wieder her. Lief bug-703 vorher, war das
+        # IP-Kontingent (30/Stunde, internal/router/router.go:45) leer, der
+        # Login lief in 429 und die Ampel wurde rot (gemessen 2026-09-06:
+        # expected=26 unexpected=1, der Hook-Fehler an AC-24 gehaengt).
+        # Innerhalb einer Stunde fuellt sich das Kontingent nicht wieder auf.
+        # NICHT hinter bug-703 zurueckschieben.
+        if: steps.specs.outputs.mode == 'positivliste'
+        working-directory: frontend
+        env:
+          CI: "1"
+        # Gleiches Muster wie oben: `|| true` faengt nur den Playwright-
+        # Exit-Code ab, damit der Report GESCHRIEBEN wird -- bewertet wird
+        # ausschliesslich im naechsten Schritt durch e2e_gate.py (unexpected
+        # == 0, skipped == 0, expected >= Schwelle). Ein Fehlschlag macht die
+        # Ampel dort wirklich rot; ein fehlender/unlesbarer Report ebenfalls
+        # (fail-closed im Gate-Skript).
+        run: npx playwright test --project=pwa --reporter=json > /tmp/e2e-report-pwa.json || true
+      - name: E2E-Gate auswerten (Zweitlauf, PWA)
+        if: steps.specs.outputs.mode == 'positivliste'
+        run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_PWA" python3 .github/scripts/e2e_gate.py /tmp/e2e-report-pwa.json
+      - name: Playwright-Specs ausfuehren (Drittlauf, nur bug-703)
         # Eigener Aufruf, damit das von bug-703 absichtlich verbrannte
         # Login-Kontingent (30/Stunde je IP) den Hauptlauf nicht mehr
-        # erreicht -- A/B-Beleg im env-Block oben. Der Zweitlauf laeuft
-        # NACH dem Hauptlauf; die Reihenfolge innerhalb eines Aufrufs
-        # liesse sich nicht steuern (Playwright sortiert alphabetisch).
+        # erreicht -- A/B-Beleg im env-Block oben. Er laeuft ZULETZT: nach
+        # ihm ist das Kontingent fuer die restliche Stunde leer, jeder
+        # spaetere echte Login liefe in 429 (siehe PWA-Zweitlauf oben). Die
+        # Reihenfolge innerhalb eines Aufrufs liesse sich nicht steuern
+        # (Playwright sortiert alphabetisch) -- daher der eigene Aufruf.
+        # bug-703 selbst braucht KEINEN Vorlauf: sein Kopfkommentar fordert
+        # nur AC-3 vor AC-2 innerhalb der Datei (test.describe.serial).
         if: steps.specs.outputs.mode == 'positivliste'
         working-directory: frontend
         env:
@@ -361,7 +448,7 @@ jobs:
         run: |
           [ -s /tmp/e2e-specs-ratelimit.txt ] || { echo "FEHLER: bug-703-login-ratelimit.spec.ts steht nicht mehr auf der Positivliste -- dann sind beide Schwellen neu zu messen und dieser Schritt zu entfernen."; exit 1; }
           npx playwright test --reporter=json $(cat /tmp/e2e-specs-ratelimit.txt) > /tmp/e2e-report-ratelimit.json || true
-      - name: E2E-Gate auswerten (Zweitlauf)
+      - name: E2E-Gate auswerten (Drittlauf, bug-703)
         if: steps.specs.outputs.mode == 'positivliste'
         run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_RATELIMIT" python3 .github/scripts/e2e_gate.py /tmp/e2e-report-ratelimit.json
       - name: Vermessungslauf -- Zusammenfassung (nicht bewertend, AC-8)

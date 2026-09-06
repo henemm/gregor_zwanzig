@@ -1,0 +1,18 @@
+{
+	"//": "Nur zum Uebersetzbarkeits-Nachweis der e2e-Dateien (#2128): npm run check deckt e2e/ nicht ab (.svelte-kit/tsconfig.json include listet nur src/ und tests/). Kein Bau-Artefakt.",
+	"compilerOptions": {
+		"noEmit": true,
+		"strict": true,
+		"skipLibCheck": true,
+		"module": "esnext",
+		"target": "esnext",
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"rewriteRelativeImportExtensions": true,
+		"resolveJsonModule": true,
+		"esModuleInterop": true,
+		"types": ["node"],
+		"lib": ["esnext", "DOM", "DOM.Iterable"]
+	},
+	"include": ["pwa-nachweis.staging.spec.ts", "pwa-2128.staging.setup.ts", "playwright.2128.staging.config.ts", "pwa-grundausstattung.spec.ts", "pwa-update-und-abmelden.spec.ts", "pwaHelpers.ts"]
+}

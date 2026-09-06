@@ -1,12 +1,32 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import type { ActionData } from './$types.js';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
+	import { abmeldungLiegtVor, raeumeGeraetespeicher, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 
 	let { form, data }: { form: ActionData; data: { googleEnabled: boolean } } = $props();
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
 	// Issue #1006 — Sitzung abgelaufen (zentraler 401-Redirect aus api.ts).
 	const sessionExpired = $derived($page.url.searchParams.get('expired') === '1');
+
+	// Issue #2128 AC-11/AC-12 — Raeumen NUR nach einem echten Abmelde-Vorgang.
+	// Auf /login landet auch, wessen Sitzung abgelaufen ist oder wer die Seite
+	// schlicht aufruft; bedingungsloses Raeumen wuerde die Offline-Faehigkeit
+	// genau dann zerstoeren, wenn sie gebraucht wird.
+	//
+	// Das Merkmal wird erst nach BESTAETIGTEM Raeumen verbraucht (AC-24):
+	// scheitert eine Speicher-Schnittstelle, bliebe der Rest sonst fuer immer
+	// stehen -- ein spaeterer Aufruf der Anmeldeseite waere nach AC-12
+	// zurecht kein Abmelde-Vorgang mehr und duerfte nichts nachholen.
+	onMount(() => {
+		if (!abmeldungLiegtVor($page.url)) return;
+		void raeumeGeraetespeicher()
+			.then((gelungen) => {
+				if (gelungen) vergissAbmeldung();
+			})
+			.catch(() => {});
+	});
 
 	let username = $state(form?.username ?? '');
 </script>

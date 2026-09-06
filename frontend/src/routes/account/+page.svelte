@@ -13,6 +13,7 @@
 	import type { MetricPreset, UserTier } from '$lib/types';
 	import { metricCountLabel, showDefaultBadge, isValidRename, applyRename, removePreset, isEmpty } from '$lib/utils/presetCardHelpers';
 	import { formatNextRun } from '$lib/utils/schedulerTime';
+	import { ABMELDE_MERKMAL, merkeAbmeldung, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	let { data } = $props();
 
 	let displayName = $state(data.profile?.display_name ?? '');
@@ -304,11 +305,31 @@
 
 	async function confirmLogoutAllDevices() {
 		showLogoutAllDialog = false;
+		// Issue #2128 AC-11: dasselbe Abmelde-Merkmal wie beim Abmelden ueber die
+		// Seitenleiste -- geraeumt wird auf der Anmeldeseite. Es steht VOR dem
+		// Aufruf und zusaetzlich im Sitzungsspeicher, weil die Abmeldung sofort
+		// serverseitig wirkt: der zentrale 401-Umleiter kann uns danach jederzeit
+		// von dieser Seite nehmen und ersetzt dabei das Weiterleitungsziel durch
+		// `/login?expired=1&redirect=…` (gemessen, #2128).
+		merkeAbmeldung();
 		try {
 			await api.post('/api/auth/logout-all', {});
-			window.location.href = '/login';
+			window.location.href = `/login?${ABMELDE_MERKMAL}=1`;
 		} catch (e: unknown) {
-			const body = e as { detail?: string; error?: string };
+			const body = e as { detail?: string; error?: string; status?: number };
+			// Issue #2128 AC-19: gescheitert heisst NICHT abgemeldet. Der Merker
+			// muss weg -- sonst gilt der naechste, voellig regulaere
+			// Sitzungsablauf (401 -> /login?expired=1) als Abmeldung und die
+			// Anmeldeseite raeumt still den Gerätespeicher (AC-12). Gilt fuer
+			// beide Fehlerarten gleich, in denen der Nutzer auf dieser Seite
+			// bleibt: geworfener Netzfehler wie 5xx-Antwort.
+			//
+			// AUSNAHME 401: die Sitzung ist bereits fort, der Nutzer ist also
+			// tatsaechlich abgemeldet, und $lib/api leitet in diesem Moment auf
+			// die Anmeldeseite -- dort soll geraeumt werden (AC-11). Bleibt diese
+			// Umleitung wider Erwarten aus, faengt das Zeitfenster des Merkers den
+			// Fall (AC-20).
+			if (body?.status !== 401) vergissAbmeldung();
 			logoutAllErrorMsg = body?.detail ?? body?.error ?? 'Abmelden fehlgeschlagen';
 		}
 	}

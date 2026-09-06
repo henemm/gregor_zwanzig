@@ -802,6 +802,24 @@ HTML + Client-Side Interactivity
 - **Production:** Systemd service `gregor-frontend.service` (port 5173)
 - **Nginx Reverse-Proxy:** Routes `/` to SvelteKit frontend
 
+### PWA (installierbar, Issue #2128, ADR-0061)
+
+Das Frontend ist eine installierbare Progressive Web App:
+
+- **Service Worker:** `frontend/src/service-worker.ts` — handgeführt (kein `vite-plugin-pwa`),
+  vier Speicherregeln: `/api/*` nie im Speicher, Seitenaufrufe (Navigations-Requests) nie
+  abgelegt, Programmdateien (Build-Assets) aus dem Speicher, alles Übrige ohne Ablage.
+- **Update-Verhalten:** Der Download einer neuen Fassung passiert erst auf Antippen des
+  Update-Hinweises (`frontend/src/lib/pwa/serviceWorkerUpdate.ts`), nicht schon beim Erkennen
+  (PO-Entscheid Epic #2127 — kein ungefragtes Datenvolumen im Funkloch).
+  Räumen des Geräte-Speichers beim Abmelden: `frontend/src/lib/pwa/geraetespeicher.ts`.
+- **Offline-Seite:** `frontend/static/offline.html` (eigenständig, kein SvelteKit-Rendering).
+- **Fonts:** lokal ausgeliefert statt über Google Fonts geladen (kein externer Ladepfad mehr).
+- **Icon:** maskable Symbol für die Installation.
+
+Details, Speicherregeln im Volltext und die 24 Acceptance Criteria: `docs/specs/modules/pwa_installierbar_offline_start.md`,
+Bauform-Entscheidung: `docs/adr/0061-pwa-service-worker-bauform.md`.
+
 ### Anlege- und Bearbeitungs-Editoren (Wizards abgeschafft)
 
 Die früheren Multi-Step-Wizards (Trip-Wizard Epic #136, Compare-Wizard Epic #438)
